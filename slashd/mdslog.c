@@ -410,8 +410,9 @@ mds_redo_ino_addrepl(struct psc_journal_enthdr *pje)
 		inoh_extras.inox_repls[j].bs_id = jrir->sjir_ios;
 		psc_crc64_calc(&inoh_extras.inox_crc, &inoh_extras, INOX_OD_CRCSZ);
 
-		rc = mdsio_write(&rootcreds, &inoh_extras, INOX_OD_SZ, &nb,
-		    SL_EXTRAS_START_OFF, 0, mdsio_data, NULL, NULL);
+		rc = mdsio_write(&rootcreds, &inoh_extras, INOX_OD_SZ,
+		    &nb, SL_EXTRAS_START_OFF, 0, mdsio_data, NULL,
+		    NULL);
 
 		if (!rc && nb != INO_OD_SZ)
 			rc = EIO;
@@ -558,15 +559,17 @@ mds_open_logfile(uint64_t batchno, int update, int readonly)
 	}
 
 	/*
-	 * Note we use different file descriptors for read and write.  Luckily,
-	 * Linux maintains the file offset independently for each open.
+	 * Note we use different file descriptors for read and write.
+	 * Luckily, Linux maintains the file offset independently for
+	 * each open.
 	 */
 	logfile = open(log_fn, O_WRONLY | O_SYNC | direct);
 	if (logfile > 0) {
 		/*
-		 * During replay, the offset will be determined by the xid.
-		 * Otherwise, we should always append at the end. This seek
-		 * is needed in case the log file already exists.
+		 * During replay, the offset will be determined by the
+		 * xid.  Otherwise, we should always append at the end.
+		 * This seek is needed in case the log file already
+		 * exists.
 		 */
 		lseek(logfile, 0, SEEK_END);
 		return logfile;
@@ -582,19 +585,21 @@ mds_open_logfile(uint64_t batchno, int update, int readonly)
  * mds_distill_handler - Distill information from the system journal and
  *	write into namespace update or garbage reclaim logs.
  *
- *	Writing the information to secondary logs allows us to recyle the
- *	space in the main system log as quick as possible.  The distill
- *	process is continuous in order to make room for system logs.
- *	Once in a secondary log, we can process them as we see fit.
- *	Sometimes these secondary log files can hang over a long time
- *	because a peer MDS or an IO server is down or slow.
+ *	Writing the information to secondary logs allows us to recyle
+ *	the space in the main system log as quick as possible.  The
+ *	distill process is continuous in order to make room for system
+ *	logs.  Once in a secondary log, we can process them as we see
+ *	fit.  Sometimes these secondary log files can hang over a long
+ *	time because a peer MDS or an IO server is down or slow.
  *
- *	We encode the cursor creation time and hostname into the log file
- *	names to minimize collisions.  If undetected, these collisions
- *	can lead to insidious bugs, especially when on-disk format changes.
+ *	We encode the cursor creation time and hostname into the log
+ *	file names to minimize collisions.  If undetected, these
+ *	collisions can lead to insidious bugs, especially when on-disk
+ *	format changes.
  */
 int
-mds_distill_handler(struct psc_journal_enthdr *pje, int npeers, int replay)
+mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
+    int replay)
 {
 	struct slmds_jent_namespace *jnamespace;
 	static char update_fn[PATH_MAX];
@@ -616,7 +621,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers, int replay)
 		goto check_reclaim;
 
 	if (current_update_logfile == -1)
-		current_update_logfile = mds_open_logfile(next_update_batchno, 1, 0);
+		current_update_logfile =
+		    mds_open_logfile(next_update_batchno, 1, 0);
 
 	if (replay) {
 		next_update_seqno = seqno + 1;
@@ -645,7 +651,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers, int replay)
 		freelock(&mds_update_waitqlock);
 	}
 
-check_reclaim:
+ check_reclaim:
 
 	/*
 	 * If the namespace operation needs to reclaim disk space on I/O
@@ -659,18 +665,21 @@ check_reclaim:
 	    jnamespace->sjnm_op == NS_OP_SETSIZE);
 
 	if (current_reclaim_logfile == -1) {
-		current_reclaim_logfile = mds_open_logfile(next_reclaim_batchno, 0, 0);
+		current_reclaim_logfile =
+		    mds_open_logfile(next_reclaim_batchno, 0, 0);
+
 		/*
- 		 * Here we do one-time seek based on the xid stored in the entry.
- 		 * Although not necessary contiguous, xids are in increasing order.
- 		 */
+		 * Here we do one-time seek based on the xid stored in
+		 * the entry.  Although not necessary contiguous, xids
+		 * are in increasing order.
+		 */
 		if (replay) {
-			size = read(current_reclaim_logfile, reclaimbuf, 
+			size = read(current_reclaim_logfile, reclaimbuf,
 			    SLM_RECLAIM_BATCH * sizeof(struct srm_reclaim_entry));
 			total = size / sizeof(struct srm_reclaim_entry);
 
 			count = 0;
-			entryp = (struct srm_reclaim_entry *)reclaimbuf;
+			entryp = reclaimbuf;
 			while (count < total) {
 				if (entryp->xid == pje->pje_xid)
 					break;
@@ -678,12 +687,13 @@ check_reclaim:
 				count++;
 			}
 			/*
-			 * If we didn't find the entry, this is seek-to-end. If we
-			 * do find it, we will distill again (overwrite should be
-			 * fine).
+			 * If we didn't find the entry, this is
+			 * seek-to-end.  If we do find it, we will
+			 * distill again (overwrite should be fine).
 			 */
-			lseek(current_reclaim_logfile, 
-			    count * sizeof(struct srm_reclaim_entry), SEEK_CUR);
+			lseek(current_reclaim_logfile,
+			    count * sizeof(struct srm_reclaim_entry),
+			    SEEK_CUR);
 		}
 	}
 
@@ -691,7 +701,8 @@ check_reclaim:
 	entry.fid = jnamespace->sjnm_target_fid;
 	entry.gen = jnamespace->sjnm_target_gen;
 
-	size = write(current_reclaim_logfile, &entry, sizeof(struct srm_reclaim_entry));
+	size = write(current_reclaim_logfile, &entry,
+	    sizeof(struct srm_reclaim_entry));
 	if (size != sizeof(struct srm_reclaim_entry))
 		psc_fatal("Fail to write reclaim log file %s", reclaim_fn);
 
@@ -748,9 +759,9 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 	if ((op == NS_OP_UNLINK && sstb->sst_nlink == 1) ||
 	    (op == NS_OP_SETSIZE && sstb->sst_size == 0)) {
 		/*
-		 * We want to reclaim the space taken by the previous generation.
-		 * Note that changing the attributes of a zero-lengh file should
-		 * NOT trigger this code.
+		 * We want to reclaim the space taken by the previous
+		 * generation.  Note that changing the attributes of a
+		 * zero-lengh file should NOT trigger this code.
 		 */
 		jnamespace->sjnm_flag |= SJ_NAMESPACE_RECLAIM;
 		jnamespace->sjnm_target_gen = sstb->sst_gen;
@@ -809,8 +820,9 @@ mds_namespace_rpc_cb(struct pscrpc_request *req,
 		goto rpc_error;
 
 	/*
-	 * Scan the buffer for the entries we have attempted to send to update
-	 * our statistics before dropping our reference to the buffer.
+	 * Scan the buffer for the entries we have attempted to send to
+	 * update our statistics before dropping our reference to the
+	 * buffer.
 	 */
 	i = logbuf->slb_count;
 	buf = logbuf->slb_buf;
@@ -849,8 +861,8 @@ mds_namespace_rpc_cb(struct pscrpc_request *req,
 }
 
 /**
- * mds_reclaim_lwm - Find the lowest garbage reclamation water
- *	mark of all IOSes.
+ * mds_reclaim_lwm - Find the lowest garbage reclamation water mark of
+ *	all IOSes.
  */
 __static uint64_t
 mds_reclaim_lwm(void)
@@ -901,8 +913,8 @@ mds_reclaim_hwm(void)
 }
 
 /**
- * mds_update_lwm - Find the lowest namespace update water
- *	mark of all peer MDSes.
+ * mds_update_lwm - Find the lowest namespace update water mark of all
+ *	peer MDSes.
  */
 __static uint64_t
 mds_update_lwm(void)
@@ -932,8 +944,8 @@ mds_update_lwm(void)
 }
 
 /**
- * mds_read_batch_update - Read a batch of updates from the corresponding
- *	log file and packed them for RPC later.
+ * mds_read_batch_update - Read a batch of updates from the
+ *	corresponding log file and packed them for RPC later.
  */
 struct sl_mds_logbuf *
 mds_read_batch_update(uint64_t seqno)
@@ -980,7 +992,8 @@ mds_read_batch_update(uint64_t seqno)
 		buf->slb_seqno = seqno;
 		atomic_set(&buf->slb_refcnt, 0);
 		INIT_PSC_LISTENTRY(&buf->slb_link);
-		buf->slb_buf = PSC_AGP(buf, sizeof(struct sl_mds_logbuf));
+		buf->slb_buf = PSC_AGP(buf,
+		    sizeof(struct sl_mds_logbuf));
 		goto readit;
 	}
 	/*
@@ -989,7 +1002,8 @@ mds_read_batch_update(uint64_t seqno)
 	 */
 	if (!victim) {
 		spinlock(&mds_update_waitqlock);
-		psc_waitq_wait(&mds_update_waitq, &mds_update_waitqlock);
+		psc_waitq_wait(&mds_update_waitq,
+		    &mds_update_waitqlock);
 		goto restart;
 	}
 	newbuf = 1;
@@ -1069,8 +1083,9 @@ mds_send_batch_update(struct sl_mds_logbuf *logbuf)
 		peerinfo = resm2rpmi(resm)->rpmi_info;
 
 		/*
-		 * Skip if the MDS is busy or the current batch is out of
-		 * its windows.  Note for each MDS, we send updates in order.
+		 * Skip if the MDS is busy or the current batch is out
+		 * of its windows.  Note for each MDS, we send updates
+		 * in order.
 		 */
 		if (peerinfo->sp_flags & SP_FLAG_MIA)
 			continue;
@@ -1099,8 +1114,9 @@ mds_send_batch_update(struct sl_mds_logbuf *logbuf)
 		csvc = slm_getmcsvc(resm);
 		if (csvc == NULL) {
 			/*
-			 * A simplistic way to avoid CPU spinning.  A better
-			 * way is to let the ping thread handle this.
+			 * A simplistic way to avoid CPU spinning.
+			 * A better way is to let the ping thread handle
+			 * this.
 			 */
 			peerinfo->sp_flags |= SP_FLAG_MIA;
 			continue;
@@ -1160,9 +1176,9 @@ mds_update_cursor(void *buf, uint64_t txg)
 	freelock(&mds_txg_lock);
 
 	/*
- 	 * Distill happens outside ZFS. This means if there is no ZFS
- 	 * activity, the following value will be stale.
- 	 */
+	 * Distill happens outside ZFS.  This means if there is no ZFS
+	 * activity, the following value will be stale.
+	 */
 	cursor->pjc_distill_xid = pjournal_next_distill(mdsJournal);
 	cursor->pjc_fid = slm_get_curr_slashid();
 	cursor->pjc_update_seqno = mds_get_next_update_seqno();
@@ -1181,7 +1197,7 @@ mds_current_txg(uint64_t *txg)
 	/*
 	 * Take a snapshot of the transaction group number stored in the
 	 * cursor.  It maybe the current one being used, or the one that
-	 * has already been synced.  And it can change afterwards. This
+	 * has already been synced.  And it can change afterwards.  This
 	 * is okay, we only need to take a little care at replay time.
 	 */
 	spinlock(&mds_txg_lock);
@@ -1250,20 +1266,20 @@ mds_open_cursor(void)
 int
 mds_send_batch_reclaim(uint64_t batchno)
 {
-	uint64_t xid;
-	ssize_t size;
-	struct resprof_mds_info *rpmi;
-	struct sl_resource *res;
-	struct sl_resm *dst_resm;
-	struct iovec iov;
-	struct sl_mds_iosinfo *iosinfo;
-	struct srm_reclaim_entry *entry;
 	int i, ri, rc, count, nios, logfile, didwork;
+	struct pscrpc_request *rq = NULL;
+	struct srm_reclaim_entry *entry;
 	struct slashrpc_cservice *csvc;
+	struct sl_mds_iosinfo *iosinfo;
+	struct resprof_mds_info *rpmi;
+	struct pscrpc_bulk_desc *desc;
 	struct srm_reclaim_req *mq;
 	struct srm_reclaim_rep *mp;
-	struct pscrpc_request *rq = NULL;
-	struct pscrpc_bulk_desc *desc;
+	struct sl_resm *dst_resm;
+	struct sl_resource *res;
+	struct iovec iov;
+	uint64_t xid;
+	ssize_t size;
 
 	didwork = 0;
 
@@ -1285,7 +1301,8 @@ mds_send_batch_reclaim(uint64_t batchno)
 	iov.iov_base = reclaimbuf;
 
 	/* find the xid associated with the last log entry */
-	entry = (struct srm_reclaim_entry *) (reclaimbuf + (count - 1) * sizeof(struct srm_reclaim_entry));
+	entry = PSC_AGP(reclaimbuf, (count - 1) *
+	    sizeof(struct srm_reclaim_entry));
 	xid = entry->xid;
 
 	nios = 0;
@@ -1310,7 +1327,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 
 		RPMI_ULOCK(rpmi);
 		/*
-		 * Send RPC to the IO server and wait for it to complete.
+		 * Send RPC to the I/O server and wait for it to complete.
 		 */
 		DYNARRAY_FOREACH(dst_resm, i, &res->res_members) {
 			csvc = slm_geticsvc_nb(dst_resm, NULL);
@@ -1327,7 +1344,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 			mq->size = iov.iov_len;
 			mq->count = count;
 			psc_crc64_calc(&mq->crc, iov.iov_base, iov.iov_len);
-			
+
 			rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
 			    SRMM_BULK_PORTAL, &iov, 1);
 
@@ -1350,8 +1367,8 @@ mds_send_batch_reclaim(uint64_t batchno)
 	}
 	/*
 	 * If this log file is full and all I/O servers have applied its
-	 * contents, update our progress on the disk first and then remove
-	 * the log file.
+	 * contents, update our progress on the disk first and then
+	 * remove the log file.
 	 */
 	if (didwork == nios && count == SLM_RECLAIM_BATCH) {
 		mds_update_reclaim_prog();
@@ -1370,10 +1387,10 @@ mds_send_reclaim(__unusedx struct psc_thread *thr)
 	uint64_t batchno;
 
 	/*
- 	 * Instead of tracking precisely which reclaim log record has been sent
- 	 * to an I/O node, we track the batch number.  A receiving I/O node can
- 	 * safely ignore any resent records.
- 	 */
+	 * Instead of tracking precisely which reclaim log record has
+	 * been sent to an I/O node, we track the batch number.  A
+	 * receiving I/O node can safely ignore any resent records.
+	 */
 	while (pscthr_run()) {
 
 		batchno = mds_reclaim_lwm();
@@ -1386,7 +1403,6 @@ mds_send_reclaim(__unusedx struct psc_thread *thr)
 		rv = psc_waitq_waitrel_s(&mds_reclaim_waitq,
 		    &mds_reclaim_waitqlock, SL_RECLAIM_MAX_AGE);
 	}
-
 }
 
 /**
@@ -1473,16 +1489,19 @@ mds_inode_sync(struct slash_inode_handle *inoh)
 
 /**
  * mds_bmap_sync - Callback function which is called from
- *   mdsfssyncthr_begin().
+ *	mdsfssyncthr_begin().
  * @data: void * which is the bmap.
- * Notes: this call allows slash2 to optimize crc calculation by only
- *   taking them when the bmap is written, not upon each update to the
- *   bmap.  It is important to note that forward changes may be synced
- *   here.  What that means is that changes which are not part of this
- *   XID session may have snuck in here (ie a crc update came in and
- *   was fully processed before mds_bmap_sync() grabbed the lock.  For
- *   this reason the crc updates must be journaled before manifesting
- *   in the bmap cache.  Otherwise, log replays will look inconsistent.
+ * Notes: this call allows SLASH2 to optimize CRC calculation by only
+ *	taking them when the bmap is written, not upon each update to
+ *	the bmap.  It is important to note that forward changes may be
+ *	synced here.
+ *
+ *	What that means is that changes which are not part of this XID
+ *	session may have snuck in here (i.e. a CRC update came in and
+ *	was fully processed before mds_bmap_sync() grabbed the lock.
+ *	For this reason the CRC updates must be journaled before
+ *	manifesting in the bmap cache.  Otherwise, log replays
+ *	will look inconsistent.
  */
 void
 mds_bmap_sync(void *data)
@@ -1533,9 +1552,10 @@ mds_inode_addrepl_log(void *datap, uint64_t txg)
 }
 
 /**
- * mds_bmap_repl_log - Write a modified replication table to the journal.
- * Note:  bmap must be locked to prevent further changes from sneaking in
- *	before the repl table is committed to the journal.
+ * mds_bmap_repl_log - Write a modified replication table to the
+ *	journal.
+ * Note:  bmap must be locked to prevent further changes from sneaking
+ *	in before the repl table is committed to the journal.
  */
 void
 mds_bmap_repl_log(void *datap, uint64_t txg)
@@ -1543,7 +1563,8 @@ mds_bmap_repl_log(void *datap, uint64_t txg)
 	struct bmapc_memb *bmap = datap;
 	struct slmds_jent_repgen *jrpg;
 
-	jrpg = pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_repgen));
+	jrpg = pjournal_get_buf(mdsJournal,
+	    sizeof(struct slmds_jent_repgen));
 
 	jrpg->sjp_fid = fcmh_2_fid(bmap->bcm_fcmh);
 	jrpg->sjp_bmapno = bmap->bcm_bmapno;
@@ -1563,14 +1584,14 @@ mds_bmap_repl_log(void *datap, uint64_t txg)
 /**
  * mds_bmap_crc_log - Commit bmap CRC changes to the journal.
  * @bmap: the bmap (not locked).
- * @crcs: array of crc / slot pairs.
- * @n: the number of crc / slot pairs.
- * Notes: bmap_crc_writes from the ION are sent here directly because this
- *    function is responsible for updating the cached bmap after the crc
- *    has been committed to the journal.  This allows us to not have to
- *    hold the lock while doing journal I/O with the caveat that we trust
- *    the ION to not send multiple crc updates for the same region which
- *    me may then process out of order.
+ * @crcs: array of CRC / slot pairs.
+ * @n: the number of CRC / slot pairs.
+ * Notes: bmap_crc_writes from the ION are sent here directly because
+ *	this function is responsible for updating the cached bmap after
+ *	the CRC has been committed to the journal.  This allows us to
+ *	not have to hold the lock while doing journal I/O with the
+ *	caveat that we trust the ION to not send multiple CRC updates
+ *	for the same region which we may then process out of order.
  */
 void
 mds_bmap_crc_log(void *datap, uint64_t txg)
@@ -1644,7 +1665,8 @@ mds_journal_init(void)
 
 	res = nodeResm->resm_res;
 	if (res->res_jrnldev[0] == '\0')
-		xmkfn(res->res_jrnldev, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
+		xmkfn(res->res_jrnldev, "%s/%s", sl_datadir,
+		    SL_FN_OPJOURNAL);
 
 	mds_open_cursor();
 
@@ -1742,8 +1764,8 @@ mds_journal_init(void)
 	if (!npeers)
 		return;
 
-	xmkfn(fn, "%s/%s.%s.%lu", SL_PATH_DATADIR, SL_FN_UPDATEPROG, psc_get_hostname(), mds_cursor.pjc_timestamp);
-
+	xmkfn(fn, "%s/%s.%s.%lu", SL_PATH_DATADIR, SL_FN_UPDATEPROG,
+	    psc_get_hostname(), mds_cursor.pjc_timestamp);
 	current_update_progfile = open(fn, O_CREAT | O_RDWR | O_SYNC, 0600);
 	rc = fstat(current_update_progfile, &sb);
 	if (rc < 0)
@@ -1891,12 +1913,15 @@ mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
 		break;
 	}
 	if (hasname) {
-		psc_notify("Redo namespace log: op = %d, name = %s, id = %"PRIx64", rc = %d",
-			   jnamespace->sjnm_op, jnamespace->sjnm_name,
-			   jnamespace->sjnm_target_fid, rc);
+		psclog_info("Redo namespace log: op=%d name=%s "
+		    "id=%"PRIx64" rc=%d",
+		    jnamespace->sjnm_op, jnamespace->sjnm_name,
+		    jnamespace->sjnm_target_fid, rc);
 	} else {
-		psc_notify("Redo namespace log: op = %d, id = %"PRIx64", rc = %d",
-			   jnamespace->sjnm_op, jnamespace->sjnm_target_fid, rc);
+		psclog_info("Redo namespace log: op=%d "
+		    "id=%"PRIx64" rc=%d",
+		    jnamespace->sjnm_op, jnamespace->sjnm_target_fid,
+		    rc);
 	}
 	return (rc);
 }
