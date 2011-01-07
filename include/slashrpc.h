@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2006-2011, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -390,7 +390,6 @@ struct srm_leasebmap_rep {
 	/* fetch fcmh repl table if SRM_LEASEBMAPF_GETREPLTBL */
 	uint32_t		nrepls;
 	sl_replica_t		reptbl[SL_MAX_REPLICAS];
-
 } __packed;
 
 /*
@@ -463,6 +462,7 @@ struct srm_bmap_crcwrt_rep {
 	uint64_t		seq;
 	int32_t			crcup_rc[MAX_BMAP_NCRC_UPDATES];
 	int32_t			rc;
+	int32_t			_pad;
 } __packed;
 
 struct srm_bmap_iod_get {
@@ -525,7 +525,6 @@ struct srm_reclaim_entry {
 	slfid_t			fid;
 	slfgen_t		gen;
 } __packed;
-
 
 /* ------------------------- BEGIN CONTROL MESSAGES ------------------------- */
 
@@ -734,7 +733,6 @@ struct srm_readdir_req {
 struct srm_readdir_rep {
 	uint64_t		size;
 	uint32_t		num;		/* #dirents returned */
-	int32_t			_pad;
 	int32_t			rc;
 /*
  * XXX accompanied by bulk data is (but should not be) in fuse dirent format
