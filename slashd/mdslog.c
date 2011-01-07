@@ -1757,6 +1757,19 @@ mds_journal_init(void)
 		psc_assert(size == count * (int)sizeof(struct update_prog_entry));
 	}
 
+	SL_FOREACH_MDS(resm,
+		if (resm == nodeResm)
+			continue;
+		for (i = 0; i < count; i++) {
+			if (strcmp(update_prog_buf[i].res_name, _res->res_name))
+				continue;
+			if (update_prog_buf[i].res_id != _res->res_id)
+				continue;
+			if (update_prog_buf[i].res_type != _res->res_type)
+				continue;
+			break;
+		}
+	);
 	updatebuf = PSCALLOC(SLM_UPDATE_BATCH * logentrysize);
 	logPndgReqs = pscrpc_nbreqset_init(NULL, mds_namespace_rpc_cb);
 
