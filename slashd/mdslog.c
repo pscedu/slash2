@@ -60,13 +60,6 @@ static int			 logentrysize;
 
 extern struct bmap_timeo_table	 mdsBmapTimeoTbl;
 
-/*
- * Eventually, we are going to retrieve the namespace update and reclaim
- * sequence number from the system journal.
- */
-uint64_t			 next_update_seqno;
-uint64_t			 next_reclaim_seqno;
-
 uint64_t			 next_update_batchno;
 uint64_t			 next_reclaim_batchno;
 
@@ -134,53 +127,6 @@ static struct psc_journal_cursor mds_cursor;
 
 psc_spinlock_t			 mds_txg_lock = SPINLOCK_INIT;
 
-static psc_spinlock_t		 update_seqno_lock = SPINLOCK_INIT;
-static psc_spinlock_t		 reclaim_seqno_lock = SPINLOCK_INIT;
-
-uint64_t
-mds_next_update_seqno(void)
-{
-	uint64_t seqno;
-
-	spinlock(&update_seqno_lock);
-	seqno = next_update_seqno++;
-	freelock(&update_seqno_lock);
-	return (seqno);
-}
-
-uint64_t
-mds_get_next_update_seqno(void)
-{
-	uint64_t seqno;
-
-	spinlock(&update_seqno_lock);
-	seqno = next_update_seqno;
-	freelock(&update_seqno_lock);
-	return (seqno);
-}
-
-uint64_t
-mds_next_reclaim_seqno(void)
-{
-	uint64_t seqno;
-
-	spinlock(&reclaim_seqno_lock);
-	seqno = next_reclaim_seqno++;
-	freelock(&reclaim_seqno_lock);
-	return (seqno);
-}
-
-uint64_t
-mds_get_next_reclaim_seqno(void)
-{
-	uint64_t seqno;
-
-	spinlock(&reclaim_seqno_lock);
-	seqno = next_reclaim_seqno;
-	freelock(&reclaim_seqno_lock);
-	return (seqno);
-}
-
 static void
 mds_record_update_prog(void)
 {
@@ -188,14 +134,13 @@ mds_record_update_prog(void)
 	ssize_t size;
 	struct sl_resm *resm;
 	struct resprof_mds_info *rpmi;
-	struct sl_resource *res;
 	struct sl_mds_peerinfo *peerinfo;
 
 	i = 0;
 	SL_FOREACH_MDS(resm,
 		if (resm == nodeResm)
 			continue;
-		rpmi = res2rpmi(res);
+		rpmi = res2rpmi(_res);
 		peerinfo = rpmi->rpmi_info;
 		update_prog_buf[i].res_id = _res->res_id;
 		update_prog_buf[i].res_type = _res->res_type;
@@ -632,7 +577,6 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	static char update_fn[PATH_MAX];
 	static char reclaim_fn[PATH_MAX];
 	unsigned long off;
-	uint64_t seqno;
 	int size, count, total;
 	struct srm_reclaim_entry entry;
 	struct srm_reclaim_entry *entryp;
@@ -647,32 +591,26 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	if (!npeers)
 		goto check_reclaim;
 
-	if (current_update_logfile == -1)
+	if (current_update_logfile == -1) {
 		current_update_logfile =
 		    mds_open_logfile(next_update_batchno, 1, 0);
+		if (replay) {
 
-	if (replay) {
-		next_update_seqno = seqno + 1;
-		lseek(current_update_logfile, (seqno %
-		    SLM_UPDATE_BATCH) * logentrysize, SEEK_SET);
-	} else {
-		/* make sure we write sequentially - no holes in our log */
-		off = lseek(current_update_logfile, 0, SEEK_CUR);
-		psc_assert(off == (seqno % SLM_UPDATE_BATCH) * logentrysize);
+
+		}
 	}
+
 	size = write(current_update_logfile, pje, logentrysize);
 	if (size != logentrysize)
 		psc_fatal("Fail to write update log file %s", update_fn);
 
-	if (update_seqno_hwm < seqno + 1)
-		update_seqno_hwm = seqno + 1;
-
-	/* see if we need to close the current update log file */
-	if (((seqno + 1) % SLM_UPDATE_BATCH) == 0) {
+	/* see if we need to close the current reclaim log file */
+	off = lseek(current_update_logfile, 0, SEEK_CUR);
+	if (off == SLM_UPDATE_BATCH * sizeof(struct srm_namespace_entry)) {
 		close(current_update_logfile);
 		current_update_logfile = -1;
+		next_update_batchno++;
 
-		/* wake up the namespace log propagator */
 		spinlock(&mds_update_waitqlock);
 		psc_waitq_wakeall(&mds_update_waitq);
 		freelock(&mds_update_waitqlock);
@@ -740,7 +678,6 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 		current_reclaim_logfile = -1;
 		next_reclaim_batchno++;
 
-		/* wake up the namespace log propagator */
 		spinlock(&mds_reclaim_waitqlock);
 		psc_waitq_wakeall(&mds_reclaim_waitq);
 		freelock(&mds_reclaim_waitqlock);
@@ -1208,8 +1145,10 @@ mds_update_cursor(void *buf, uint64_t txg)
 	 */
 	cursor->pjc_distill_xid = pjournal_next_distill(mdsJournal);
 	cursor->pjc_fid = slm_get_curr_slashid();
-	cursor->pjc_update_seqno = mds_get_next_update_seqno();
-	cursor->pjc_reclaim_seqno = mds_get_next_reclaim_seqno();
+
+	/* to be removed */
+	cursor->pjc_update_seqno = -1;
+	cursor->pjc_reclaim_seqno = -1;
 
 	rc = mds_bmap_getcurseq(&cursor->pjc_seqno_hwm, &cursor->pjc_seqno_lwm);
 	if (rc) {
@@ -1707,9 +1646,6 @@ mds_journal_init(void)
 	mdsJournal->pj_commit_txg = mds_cursor.pjc_commit_txg;
 	mdsJournal->pj_distill_xid = mds_cursor.pjc_distill_xid;
 
-	next_update_seqno = mds_cursor.pjc_update_seqno;
-	next_reclaim_seqno = mds_cursor.pjc_reclaim_seqno;
-
 	psc_notify("Journal device is %s", res->res_jrnldev);
 	psc_notify("Last SLASH FID is "SLPRI_FID, mds_cursor.pjc_fid);
 	psc_notify("Last synced ZFS transaction group number is %"PRId64,
@@ -1721,20 +1657,10 @@ mds_journal_init(void)
 	pscthr_init(SLMTHRT_CURSOR, 0, mds_cursor_thread, NULL, 0,
 	    "slmjcursorthr");
 
-	psc_notify("Next update sequence number before log replay is %"PRId64,
-	    next_reclaim_seqno);
-	psc_notify("Next reclaim sequence number before log replay is %"PRId64,
-	    next_update_seqno);
-
 	reclaimbuf = PSCALLOC(SLM_UPDATE_BATCH * logentrysize);
 
 	pjournal_replay(mdsJournal, SLMTHRT_JRNL, "slmjthr",
 	    mds_replay_handler, mds_distill_handler);
-
-	psc_notify("The next update sequence number after log replay is %"PRId64,
-	    next_update_seqno);
-	psc_notify("The next reclaim sequence number after log replay is %"PRId64,
-	    next_reclaim_seqno);
 
 	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm, mds_cursor.pjc_seqno_lwm);
 	psc_notify("Last bmap sequence number low water mark is %"PRId64,
