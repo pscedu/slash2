@@ -1615,6 +1615,7 @@ mds_journal_init(void)
 	static char fn[PATH_MAX];
 	struct resprof_mds_info *rpmi;
 	struct sl_mds_iosinfo *iosinfo;
+	struct sl_mds_peerinfo *peerinfo;
 	struct sl_resource *res;
 	struct sl_resm *resm;
 	struct stat sb;
@@ -1762,6 +1763,13 @@ mds_journal_init(void)
 				continue;
 			break;
 		}
+		if (i >= count)
+			continue;
+		found++;
+		rpmi = res2rpmi(_res);
+		peerinfo = rpmi->rpmi_info;
+		peerinfo->sp_xid = update_prog_buf[i].res_xid;
+		peerinfo->sp_batchno = update_prog_buf[i].res_batchno;
 	);
 	updatebuf = PSCALLOC(SLM_UPDATE_BATCH * logentrysize);
 	logPndgReqs = pscrpc_nbreqset_init(NULL, mds_namespace_rpc_cb);

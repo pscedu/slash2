@@ -131,6 +131,9 @@ struct sl_mds_peerinfo {
 	struct sl_mds_logbuf	 *sp_logbuf;		/* the log buffer being used */
 	int			  sp_flags;		/* see SP_FLAG_* below */
 
+	uint64_t		  sp_xid;
+	uint64_t		  sp_batchno;
+
 	int			  sp_send_count;	/* # of updates in the batch */
 	uint64_t		  sp_send_seqno;	/* next log sequence number to send */
 
