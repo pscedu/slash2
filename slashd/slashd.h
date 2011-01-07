@@ -149,7 +149,8 @@ struct sl_mds_peerinfo {
  */
 struct sl_mds_iosinfo {
 	int			  si_flags;
-	uint64_t		  si_seqno;		/* garbage collection progress */
+	uint64_t		  si_xid;
+	uint64_t		  si_batchno;
 };
 
 /* IOS round-robin counter for assigning IONs.  Attaches at res_pri. */

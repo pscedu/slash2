@@ -192,7 +192,8 @@ mds_update_reclaim_prog(void)
 		strncpy(reclaim_prog_buf[i].res_name, res->res_name, RES_NAME_MAX);
 		reclaim_prog_buf[i].res_id = res->res_id;
 		reclaim_prog_buf[i].res_type = res->res_type;
-		reclaim_prog_buf[i].res_xid = iosinfo->si_seqno;
+		reclaim_prog_buf[i].res_xid = iosinfo->si_batchno;
+		reclaim_prog_buf[i].res_batchno = iosinfo->si_batchno;
 		i++;
 	}
 	lseek(current_reclaim_progfile, 0, SEEK_SET);
@@ -860,8 +861,8 @@ mds_reclaim_lwm(void)
 		iosinfo = rpmi->rpmi_info;
 
 		RPMI_LOCK(rpmi);
-		if (iosinfo->si_seqno < batchno)
-			batchno = iosinfo->si_seqno;
+		if (iosinfo->si_batchno < batchno)
+			batchno = iosinfo->si_batchno;
 		RPMI_ULOCK(rpmi);
 	}
 	psc_assert(batchno != UINT64_MAX);
@@ -885,8 +886,8 @@ mds_reclaim_hwm(void)
 		iosinfo = rpmi->rpmi_info;
 
 		RPMI_LOCK(rpmi);
-		if (iosinfo->si_seqno > batchno)
-			batchno = iosinfo->si_seqno;
+		if (iosinfo->si_batchno > batchno)
+			batchno = iosinfo->si_batchno;
 		RPMI_ULOCK(rpmi);
 	}
 	return (batchno);
@@ -1289,7 +1290,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 		iosinfo = rpmi->rpmi_info;
 
 		RPMI_LOCK(rpmi);
-		if (iosinfo->si_seqno > batchno) {
+		if (iosinfo->si_batchno > batchno) {
 			RPMI_ULOCK(rpmi);
 			didwork++;
 			continue;
@@ -1328,7 +1329,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 			if (rc == 0) {
 				didwork++;
 				if (count == SLM_RECLAIM_BATCH)
-					iosinfo->si_seqno++;
+					iosinfo->si_batchno++;
 				break;
 			}
 		}
@@ -1714,7 +1715,8 @@ mds_journal_init(void)
 		found++;
 		rpmi = res2rpmi(res);
 		iosinfo = rpmi->rpmi_info;
-		iosinfo->si_seqno = reclaim_prog_buf[i].res_xid;
+		iosinfo->si_xid = reclaim_prog_buf[i].res_xid;
+		iosinfo->si_batchno = reclaim_prog_buf[i].res_batchno;
 	}
 	if (found != nios)
 		mds_update_reclaim_prog();
