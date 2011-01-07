@@ -1725,21 +1725,19 @@ mds_journal_init(void)
 	pscthr_init(SLMTHRT_JRECLAIM, 0, mds_send_reclaim, NULL,
 	    0, "slmjreclaimthr");
 
-	/*
-	 * Optionally start a thread to send namespace updates if we
-	 * have peer MDSes.
-	 */
-	if (npeers) {
-		updatebuf = PSCALLOC(SLM_UPDATE_BATCH * logentrysize);
-		logPndgReqs = pscrpc_nbreqset_init(NULL, mds_namespace_rpc_cb);
+	/* We are done if we don't have any peer MDSes */
+	if (!npeers)
+		return;
 
-		/*
-		 * Start a thread to propagate local namespace updates to peers
-		 * after our MDS peer list has been all setup.
-		 */
-		pscthr_init(SLMTHRT_JNAMESPACE, 0, mds_send_update, NULL,
-		    0, "slmjnsthr");
-	}
+	updatebuf = PSCALLOC(SLM_UPDATE_BATCH * logentrysize);
+	logPndgReqs = pscrpc_nbreqset_init(NULL, mds_namespace_rpc_cb);
+
+	/*
+	 * Start a thread to propagate local namespace updates to peers
+	 * after our MDS peer list has been all setup.
+	 */
+	pscthr_init(SLMTHRT_JNAMESPACE, 0, mds_send_update, NULL,
+	    0, "slmjnsthr");
 }
 
 void
