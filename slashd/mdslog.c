@@ -91,6 +91,7 @@ struct update_prog_entry {
 };
 
 struct reclaim_prog_entry {
+	int			 res_dir;		/* sending or receiving */
 	sl_ios_id_t		 res_id;
 	enum sl_res_type	 res_type;
 	uint64_t		 res_xid;
@@ -1301,6 +1302,12 @@ mds_send_batch_reclaim(uint64_t batchno)
 			didwork++;
 			continue;
 		}
+
+		if (iosinfo->si_batchno < batchno) 
+			continue;
+		if (iosinfo->si_xid >= xid) 
+			continue;
+
 		RPMI_ULOCK(rpmi);
 		/*
 		 * Send RPC to the IO server and wait for it to complete.
@@ -1334,6 +1341,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 				rc = mp->rc;
 			if (rc == 0) {
 				didwork++;
+				iosinfo->si_batchno = xid;;
 				if (count == SLM_RECLAIM_BATCH)
 					iosinfo->si_batchno++;
 				break;
