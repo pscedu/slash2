@@ -83,6 +83,14 @@ static int			 current_update_progfile = -1;
 static int			 current_reclaim_logfile = -1;
 static int			 current_reclaim_progfile = -1;
 
+struct update_prog_entry {
+	char			 res_name[RES_NAME_MAX];
+	sl_ios_id_t		 res_id;
+	enum sl_res_type	 res_type;
+	uint64_t		 res_xid;
+	uint64_t		 res_batchno;
+};
+
 struct reclaim_prog_entry {
 	char			 res_name[RES_NAME_MAX];
 	sl_ios_id_t		 res_id;
@@ -91,6 +99,7 @@ struct reclaim_prog_entry {
 	uint64_t		 res_batchno;
 };
 
+struct update_prog_entry	*update_prog_buf;
 struct reclaim_prog_entry	*reclaim_prog_buf;
 
 struct psc_waitq		 mds_update_waitq = PSC_WAITQ_INIT;
@@ -1728,6 +1737,25 @@ mds_journal_init(void)
 	/* We are done if we don't have any peer MDSes */
 	if (!npeers)
 		return;
+
+	xmkfn(fn, "%s/%s.%s.%lu", SL_PATH_DATADIR, SL_FN_UPDATEPROG, psc_get_hostname(), mds_cursor.pjc_timestamp);
+
+	current_update_progfile = open(fn, O_CREAT | O_RDWR | O_SYNC, 0600);
+	rc = fstat(current_update_progfile, &sb);
+	if (rc < 0)
+		psc_fatal("Fail to stat update log file %s", fn);
+	psc_assert((sb.st_size % sizeof(struct update_prog_entry)) == 0);
+
+	i = count = sb.st_size / sizeof(struct update_prog_entry);
+	if (i < npeers)
+		i = npeers;
+
+	update_prog_buf = PSCALLOC(i * sizeof(struct update_prog_entry));
+	if (count) {
+		size = read(current_update_progfile, update_prog_buf,
+		    count * sizeof(struct update_prog_entry));
+		psc_assert(size == count * (int)sizeof(struct update_prog_entry));
+	}
 
 	updatebuf = PSCALLOC(SLM_UPDATE_BATCH * logentrysize);
 	logPndgReqs = pscrpc_nbreqset_init(NULL, mds_namespace_rpc_cb);
