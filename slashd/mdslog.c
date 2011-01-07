@@ -84,7 +84,6 @@ static int			 current_reclaim_logfile = -1;
 static int			 current_reclaim_progfile = -1;
 
 struct update_prog_entry {
-	char			 res_name[RES_NAME_MAX];
 	sl_ios_id_t		 res_id;
 	enum sl_res_type	 res_type;
 	uint64_t		 res_xid;
@@ -92,7 +91,6 @@ struct update_prog_entry {
 };
 
 struct reclaim_prog_entry {
-	char			 res_name[RES_NAME_MAX];
 	sl_ios_id_t		 res_id;
 	enum sl_res_type	 res_type;
 	uint64_t		 res_xid;
@@ -198,7 +196,6 @@ mds_update_reclaim_prog(void)
 			continue;
 		rpmi = res2rpmi(res);
 		iosinfo = rpmi->rpmi_info;
-		strncpy(reclaim_prog_buf[i].res_name, res->res_name, RES_NAME_MAX);
 		reclaim_prog_buf[i].res_id = res->res_id;
 		reclaim_prog_buf[i].res_type = res->res_type;
 		reclaim_prog_buf[i].res_xid = iosinfo->si_batchno;
@@ -1711,8 +1708,6 @@ mds_journal_init(void)
 		if (res->res_type == SLREST_MDS)
 			continue;
 		for (i = 0; i < count; i++) {
-			if (strcmp(reclaim_prog_buf[i].res_name, res->res_name))
-				continue;
 			if (reclaim_prog_buf[i].res_id != res->res_id)
 				continue;
 			if (reclaim_prog_buf[i].res_type != res->res_type)
@@ -1761,8 +1756,6 @@ mds_journal_init(void)
 		if (resm == nodeResm)
 			continue;
 		for (i = 0; i < count; i++) {
-			if (strcmp(update_prog_buf[i].res_name, _res->res_name))
-				continue;
 			if (update_prog_buf[i].res_id != _res->res_id)
 				continue;
 			if (update_prog_buf[i].res_type != _res->res_type)
