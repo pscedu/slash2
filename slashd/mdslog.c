@@ -1297,16 +1297,16 @@ mds_send_batch_reclaim(uint64_t batchno)
 		iosinfo = rpmi->rpmi_info;
 
 		RPMI_LOCK(rpmi);
-		if (iosinfo->si_batchno > batchno) {
+
+		if (iosinfo->si_batchno < batchno) {
+			RPMI_ULOCK(rpmi);
+			continue;
+		}
+		if (iosinfo->si_batchno > batchno || iosinfo->si_xid >= xid) {
 			RPMI_ULOCK(rpmi);
 			didwork++;
 			continue;
 		}
-
-		if (iosinfo->si_batchno < batchno) 
-			continue;
-		if (iosinfo->si_xid >= xid) 
-			continue;
 
 		RPMI_ULOCK(rpmi);
 		/*
