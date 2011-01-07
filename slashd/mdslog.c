@@ -183,7 +183,14 @@ mds_get_next_reclaim_seqno(void)
 }
 
 static void
-mds_update_reclaim_prog(void)
+mds_record_update_prog(void)
+{
+
+
+}
+
+static void
+mds_record_reclaim_prog(void)
 {
 	int i, ri;
 	ssize_t size;
@@ -1371,7 +1378,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 	 * remove the log file.
 	 */
 	if (didwork == nios && count == SLM_RECLAIM_BATCH) {
-		mds_update_reclaim_prog();
+		mds_record_reclaim_prog();
 		mds_remove_logfile(batchno, 0);
 	}
 	return (didwork);
@@ -1754,7 +1761,7 @@ mds_journal_init(void)
 		iosinfo->si_batchno = reclaim_prog_buf[i].res_batchno;
 	}
 	if (found != nios)
-		mds_update_reclaim_prog();
+		mds_record_reclaim_prog();
 
 	/* Always start a thread to send reclaim updates. */
 	pscthr_init(SLMTHRT_JRECLAIM, 0, mds_send_reclaim, NULL,
@@ -1803,6 +1810,8 @@ mds_journal_init(void)
 	);
 	updatebuf = PSCALLOC(SLM_UPDATE_BATCH * logentrysize);
 	logPndgReqs = pscrpc_nbreqset_init(NULL, mds_namespace_rpc_cb);
+	if (found != npeers)
+		mds_record_update_prog();
 
 	/*
 	 * Start a thread to propagate local namespace updates to peers
