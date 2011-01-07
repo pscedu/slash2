@@ -125,18 +125,18 @@ __static PSCLIST_HEAD(mds_reclaim_buflist);
 #define SL_RECLAIM_MAX_AGE	 10
 
 /* a buffer used to read on-disk update log file */
-static char			*updatebuf;
+static void			*updatebuf;
 
 /* a buffer used to read on-disk reclaim log file */
-static char			*reclaimbuf;
+static void			*reclaimbuf;
 
 static void			*mds_cursor_handle;
 static struct psc_journal_cursor mds_cursor;
 
 psc_spinlock_t			 mds_txg_lock = SPINLOCK_INIT;
 
-static psc_spinlock_t		update_seqno_lock = SPINLOCK_INIT;
-static psc_spinlock_t		reclaim_seqno_lock = SPINLOCK_INIT;
+static psc_spinlock_t		 update_seqno_lock = SPINLOCK_INIT;
+static psc_spinlock_t		 reclaim_seqno_lock = SPINLOCK_INIT;
 
 uint64_t
 mds_next_update_seqno(void)
