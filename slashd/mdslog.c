@@ -91,7 +91,6 @@ struct update_prog_entry {
 };
 
 struct reclaim_prog_entry {
-	int			 res_dir;		/* sending or receiving */
 	sl_ios_id_t		 res_id;
 	enum sl_res_type	 res_type;
 	uint64_t		 res_xid;
@@ -185,8 +184,29 @@ mds_get_next_reclaim_seqno(void)
 static void
 mds_record_update_prog(void)
 {
+	int i;
+	ssize_t size;
+	struct sl_resm *resm;
+	struct resprof_mds_info *rpmi;
+	struct sl_resource *res;
+	struct sl_mds_peerinfo *peerinfo;
 
-
+	i = 0;
+	SL_FOREACH_MDS(resm,
+		if (resm == nodeResm)
+			continue;
+		rpmi = res2rpmi(res);
+		peerinfo = rpmi->rpmi_info;
+		update_prog_buf[i].res_id = _res->res_id;
+		update_prog_buf[i].res_type = _res->res_type;
+		update_prog_buf[i].res_xid = peerinfo->sp_xid;
+		update_prog_buf[i].res_batchno = peerinfo->sp_batchno;
+		i++;
+	);
+	lseek(current_update_progfile, 0, SEEK_SET);
+	size = write(current_update_progfile, update_prog_buf,
+	    i * sizeof(struct update_prog_entry));
+	psc_assert(size == i * (int)sizeof(struct update_prog_entry));
 }
 
 static void
