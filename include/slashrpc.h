@@ -339,7 +339,7 @@ struct srm_send_namespace_rep {
 	uint64_t		seqno;		/* the last seqno I have received from you */
 } __packed;
 
-struct srm_namespace_entry {
+struct srt_namespace_entry {
 	uint64_t		sjnm_xid;
 	uint32_t		sjnm_op;			/* operation type (i.e., enum namespace_operation) */
 	int16_t			sjnm_reclen;

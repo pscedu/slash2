@@ -606,7 +606,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 
 	/* see if we need to close the current reclaim log file */
 	off = lseek(current_update_logfile, 0, SEEK_CUR);
-	if (off == SLM_UPDATE_BATCH * sizeof(struct srm_namespace_entry)) {
+	if (off == SLM_UPDATE_BATCH * sizeof(struct srt_namespace_entry)) {
 		close(current_update_logfile);
 		current_update_logfile = -1;
 		next_update_batchno++;
@@ -767,7 +767,7 @@ __static int
 mds_namespace_rpc_cb(struct pscrpc_request *req,
     struct pscrpc_async_args *args)
 {
-	struct srm_namespace_entry *jnamespace;
+	struct srt_namespace_entry *jnamespace;
 	struct sl_mds_peerinfo *peerinfo;
 	struct slashrpc_cservice *csvc;
 	struct sl_mds_logbuf *logbuf;
@@ -1029,7 +1029,7 @@ mds_read_batch_update(uint64_t seqno)
 int
 mds_send_batch_update(struct sl_mds_logbuf *logbuf)
 {
-	struct srm_namespace_entry *jnamespace;
+	struct srt_namespace_entry *jnamespace;
 	struct srm_send_namespace_req *mq;
 	struct slashrpc_cservice *csvc;
 	struct pscrpc_bulk_desc *desc;
