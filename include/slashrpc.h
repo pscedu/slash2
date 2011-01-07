@@ -506,7 +506,7 @@ struct srm_garbage_req {
 	sl_bmapgen_t		bgen;
 } __packed;
 
-struct srm_reclaim_req {			/* bulk data (array of struct srm_reclaim_entry) to follow */
+struct srm_reclaim_req {			/* bulk data (array of struct srt_reclaim_entry) to follow */
 	uint64_t		xid;
 	uint64_t		crc;		/* CRC of the bulk data */
 	int32_t			size;		/* size of the bulk data to follow */
@@ -520,7 +520,7 @@ struct srm_reclaim_rep {
 	uint64_t		seqno;		/* the last seqno I have received from you */
 } __packed;
 
-struct srm_reclaim_entry {
+struct srt_reclaim_entry {
 	uint64_t		xid;
 	slfid_t			fid;
 	slfgen_t		gen;
