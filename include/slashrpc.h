@@ -494,7 +494,7 @@ struct srm_bmap_release_rep {
 } __packed;
 
 struct srm_bmap_minseq_get {
-	int32_t			data;
+	int32_t			seq;
 	int32_t			_pad;
 } __packed;
 
@@ -575,7 +575,7 @@ struct srsm_replst_bhdr {
 	uint8_t			srsb_replpol;
 } __packed;
 
-#define SL_NBITS_REPLST_BHDR	(8)
+#define SL_NBITS_REPLST_BHDR	8
 
 #define SRM_REPLST_PAGESIZ	(1024 * 1024)	/* should be network MSS */
 
