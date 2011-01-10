@@ -1360,7 +1360,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 				rc = mp->rc;
 			if (rc == 0) {
 				didwork++;
-				iosinfo->si_batchno = xid;;
+				iosinfo->si_xid = xid;;
 				if (count == SLM_RECLAIM_BATCH)
 					iosinfo->si_batchno++;
 				break;
