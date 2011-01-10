@@ -573,13 +573,16 @@ int
 mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
     int replay)
 {
-	struct slmds_jent_namespace *jnamespace;
 	static char update_fn[PATH_MAX];
 	static char reclaim_fn[PATH_MAX];
 	unsigned long off;
 	int size, count, total;
+
 	struct srt_reclaim_entry entry;
 	struct srt_reclaim_entry *entryp;
+	struct srt_namespace_entry update_entry;
+	struct srt_namespace_entry *update_entryp;
+	struct slmds_jent_namespace *jnamespace;
 
 	psc_assert(pje->pje_magic == PJE_MAGIC);
 	if (!(pje->pje_type & MDS_LOG_NAMESPACE))
@@ -595,8 +598,26 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 		current_update_logfile =
 		    mds_open_logfile(next_update_batchno, 1, 0);
 		if (replay) {
+			size = read(current_update_logfile, updatebuf,
+			    SLM_UPDATE_BATCH * sizeof(struct srt_namespace_entry));
+			total = size / sizeof(struct srt_namespace_entry);
 
-
+			count = 0;
+			update_entryp = updatebuf;
+			while (count < total) {
+				if (update_entryp->xid == pje->pje_xid)
+					break;
+				update_entryp++;
+				count++;
+			}
+			/*
+			 * If we didn't find the entry, this is
+			 * seek-to-end.  If we do find it, we will
+			 * distill again (overwrite should be fine).
+			 */
+			lseek(current_update_logfile,
+			    count * sizeof(struct srt_namespace_entry),
+			    SEEK_CUR);
 		}
 	}
 
@@ -792,21 +813,21 @@ mds_namespace_rpc_cb(struct pscrpc_request *req,
 	buf = logbuf->slb_buf;
 	do {
 		jnamespace = buf;
-		if (jnamespace->sjnm_xid == peerinfo->sp_send_seqno)
+		if (jnamespace->xid == peerinfo->sp_send_seqno)
 			break;
-		buf = PSC_AGP(buf, jnamespace->sjnm_reclen);
+		buf = PSC_AGP(buf, jnamespace->reclen);
 		i--;
 	} while (i);
 	psc_assert(i > 0);
 	j = i;
 	do {
 		jnamespace = buf;
-		if (jnamespace->sjnm_xid >=
+		if (jnamespace->xid >=
 		    peerinfo->sp_send_seqno + peerinfo->sp_send_count)
 			break;
 		SLM_NSSTATS_INCR(peerinfo, NS_DIR_SEND,
-		    jnamespace->sjnm_op, NS_SUM_PEND);
-		buf = PSC_AGP(buf, jnamespace->sjnm_reclen);
+		    jnamespace->op, NS_SUM_PEND);
+		buf = PSC_AGP(buf, jnamespace->reclen);
 		j--;
 	} while (j);
 	psc_assert(i - j == peerinfo->sp_send_count);
@@ -1064,9 +1085,9 @@ mds_send_batch_update(struct sl_mds_logbuf *logbuf)
 		buf = logbuf->slb_buf;
 		do {
 			jnamespace = buf;
-			if (jnamespace->sjnm_xid == peerinfo->sp_send_seqno)
+			if (jnamespace->xid == peerinfo->sp_send_seqno)
 				break;
-			buf = PSC_AGP(buf, jnamespace->sjnm_reclen);
+			buf = PSC_AGP(buf, jnamespace->reclen);
 			j--;
 		} while (j);
 		psc_assert(j);
@@ -1110,8 +1131,8 @@ mds_send_batch_update(struct sl_mds_logbuf *logbuf)
 			j--;
 			jnamespace = buf;
 			SLM_NSSTATS_INCR(peerinfo, NS_DIR_SEND,
-			    jnamespace->sjnm_op, NS_SUM_PEND);
-			buf = PSC_AGP(buf, jnamespace->sjnm_reclen);
+			    jnamespace->op, NS_SUM_PEND);
+			buf = PSC_AGP(buf, jnamespace->reclen);
 		}
 		rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
 		    SRMM_BULK_PORTAL, &iov, 1);

@@ -340,31 +340,31 @@ struct srm_send_namespace_rep {
 } __packed;
 
 struct srt_namespace_entry {
-	uint64_t		sjnm_xid;
-	uint32_t		sjnm_op;			/* operation type (i.e., enum namespace_operation) */
-	int16_t			sjnm_reclen;
-	int16_t			sjnm_flag;			/* need garbage collection */
+	uint64_t		xid;
+	uint32_t		op;			/* operation type (i.e., enum namespace_operation) */
+	int16_t			reclen;
+	int16_t			flag;			/* need garbage collection */
 
-	uint64_t		sjnm_parent_fid;		/* parent dir FID */
-	uint64_t		sjnm_target_fid;
+	uint64_t		parent_fid;		/* parent dir FID */
+	uint64_t		target_fid;
 
-	uint64_t		sjnm_target_gen;		/* reclaim only */
-	uint64_t		sjnm_new_parent_fid;		/* rename only  */
+	uint64_t		target_gen;		/* reclaim only */
+	uint64_t		new_parent_fid;		/* rename only  */
 
-	uint32_t		sjnm_mask;			/* attribute mask */
+	uint32_t		mask;			/* attribute mask */
 
-	uint32_t		sjnm_mode;			/* file permission */
-	int32_t			sjnm_uid;			/* user ID of owner */
-	int32_t			sjnm_gid;			/* group ID of owner */
-	uint64_t		sjnm_atime;			/* time of last access */
-	uint64_t		sjnm_atime_ns;
-	uint64_t		sjnm_mtime;			/* time of last modification */
-	uint64_t		sjnm_mtime_ns;
-	uint64_t		sjnm_ctime;			/* time of last status change */
-	uint64_t		sjnm_ctime_ns;
+	uint32_t		mode;			/* file permission */
+	int32_t			uid;			/* user ID of owner */
+	int32_t			gid;			/* group ID of owner */
+	uint64_t		atime;			/* time of last access */
+	uint64_t		atime_ns;
+	uint64_t		mtime;			/* time of last modification */
+	uint64_t		mtime_ns;
+	uint64_t		ctime;			/* time of last status change */
+	uint64_t		ctime_ns;
 
-	uint64_t		sjnm_size;			/* total size, in bytes */
-	char			sjnm_name[0];			/* one or two names */
+	uint64_t		size;			/* total size, in bytes */
+	char			name[0];		/* one or two names */
 } __packed;
 
 /* -------------------------- BEGIN BMAP MESSAGES --------------------------- */
