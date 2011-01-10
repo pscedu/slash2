@@ -342,8 +342,6 @@ struct srm_update_rep {
 struct srt_update_entry {
 	uint64_t		xid;
 	uint32_t		op;			/* operation type (i.e., enum namespace_operation) */
-	int16_t			reclen;
-	int16_t			flag;			/* need garbage collection */
 
 	uint64_t		parent_fid;		/* parent dir FID */
 	uint64_t		target_fid;
@@ -364,6 +362,7 @@ struct srt_update_entry {
 	uint64_t		ctime_ns;
 
 	uint64_t		size;			/* total size, in bytes */
+	int16_t			namelen;
 	char			name[0];		/* one or two names */
 } __packed;
 

@@ -76,6 +76,7 @@ static int			 current_update_progfile = -1;
 static int			 current_reclaim_logfile = -1;
 static int			 current_reclaim_progfile = -1;
 
+/* namespace update progress tracker to peer MDSes */
 struct update_prog_entry {
 	sl_ios_id_t		 res_id;
 	enum sl_res_type	 res_type;
@@ -83,6 +84,7 @@ struct update_prog_entry {
 	uint64_t		 res_batchno;
 };
 
+/* garbage reclaim progress tracker to IOSes */
 struct reclaim_prog_entry {
 	sl_ios_id_t		 res_id;
 	enum sl_res_type	 res_type;
@@ -617,7 +619,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	}
 	update_entry.xid = pje->pje_xid;
 	update_entry.op = jnamespace->sjnm_op; 
-	update_entry.reclen = jnamespace->sjnm_namelen; 
+	update_entry.namelen = jnamespace->sjnm_namelen; 
 	update_entry.target_gen = jnamespace->sjnm_target_gen; 
 	update_entry.parent_fid = jnamespace->sjnm_parent_fid;
 	update_entry.target_fid = jnamespace->sjnm_target_fid;
@@ -824,7 +826,7 @@ mds_namespace_rpc_cb(struct pscrpc_request *req,
 		jnamespace = buf;
 		if (jnamespace->xid == peerinfo->sp_send_seqno)
 			break;
-		buf = PSC_AGP(buf, jnamespace->reclen);
+		buf = PSC_AGP(buf, jnamespace->namelen);
 		i--;
 	} while (i);
 	psc_assert(i > 0);
@@ -836,7 +838,7 @@ mds_namespace_rpc_cb(struct pscrpc_request *req,
 			break;
 		SLM_NSSTATS_INCR(peerinfo, NS_DIR_SEND,
 		    jnamespace->op, NS_SUM_PEND);
-		buf = PSC_AGP(buf, jnamespace->reclen);
+		buf = PSC_AGP(buf, jnamespace->namelen);
 		j--;
 	} while (j);
 	psc_assert(i - j == peerinfo->sp_send_count);
@@ -1096,7 +1098,7 @@ mds_send_batch_update(struct sl_mds_logbuf *logbuf)
 			jnamespace = buf;
 			if (jnamespace->xid == peerinfo->sp_send_seqno)
 				break;
-			buf = PSC_AGP(buf, jnamespace->reclen);
+			buf = PSC_AGP(buf, jnamespace->namelen);
 			j--;
 		} while (j);
 		psc_assert(j);
@@ -1141,7 +1143,7 @@ mds_send_batch_update(struct sl_mds_logbuf *logbuf)
 			jnamespace = buf;
 			SLM_NSSTATS_INCR(peerinfo, NS_DIR_SEND,
 			    jnamespace->op, NS_SUM_PEND);
-			buf = PSC_AGP(buf, jnamespace->reclen);
+			buf = PSC_AGP(buf, jnamespace->namelen);
 		}
 		rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
 		    SRMM_BULK_PORTAL, &iov, 1);
