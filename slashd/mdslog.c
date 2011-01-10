@@ -617,9 +617,23 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 			    SEEK_CUR);
 		}
 	}
+	update_entry.xid = pje->pje_xid;
+	update_entry.op = jnamespace->sjnm_op; 
+	update_entry.reclen = jnamespace->sjnm_reclen; 
+	update_entry.target_gen = jnamespace->sjnm_target_gen; 
+	update_entry.parent_fid = jnamespace->sjnm_parent_fid;
+	update_entry.target_fid = jnamespace->sjnm_target_fid;
+	update_entry.new_parent_fid = jnamespace->sjnm_new_parent_fid;
 
-	size = write(current_update_logfile, pje, logentrysize);
-	if (size != logentrysize)
+	update_entry.uid = jnamespace->sjnm_uid;
+	update_entry.gid = jnamespace->sjnm_gid;
+	update_entry.atime = jnamespace->sjnm_atime;
+	update_entry.mtime = jnamespace->sjnm_mtime;
+	update_entry.ctime = jnamespace->sjnm_ctime;
+
+	size = write(current_update_logfile, &update_entry,
+	    sizeof(struct srt_update_entry));
+	if (size != sizeof(struct srt_update_entry))
 		psc_fatal("Fail to write update log file %s", update_fn);
 
 	/* see if we need to close the current reclaim log file */
