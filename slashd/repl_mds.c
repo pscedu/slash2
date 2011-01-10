@@ -678,26 +678,25 @@ mds_repl_node_clearallbusy(struct resm_mds_info *rmmi)
 	locked[1] = psc_spin_haslock(&repl_busytable_lock);
 	locked[2] = RMMI_HASLOCK(rmmi);
 
+	if (0) {
  retry:
+		if (psc_spin_haslock(&repl_busytable_lock))
+			freelock(&repl_busytable_lock);
+		if (PLL_HASLOCK(&globalConfig.gconf_sites))
+			PLL_ULOCK(&globalConfig.gconf_sites);
+	}
 
 	if (!PLL_TRYRLOCK(&globalConfig.gconf_sites, &dummy))
 		goto retry;
-	if (!tryreqlock(&repl_busytable_lock, &dummy)) {
-		PLL_ULOCK(&globalConfig.gconf_sites);
+	if (!tryreqlock(&repl_busytable_lock, &dummy))
 		goto retry;
-	}
-	if (!RMMI_TRYRLOCK(rmmi, &dummy)) {
-		freelock(&repl_busytable_lock);
-		PLL_ULOCK(&globalConfig.gconf_sites);
+	if (!RMMI_TRYRLOCK(rmmi, &dummy))
 		goto retry;
-	}
 
-	PLL_FOREACH(s, &globalConfig.gconf_sites)
-		DYNARRAY_FOREACH(r, n, &s->site_resources)
-			DYNARRAY_FOREACH(resm, j, &r->res_members)
-				if (resm->resm_pri != rmmi)
-					mds_repl_nodes_clearbusy(rmmi,
-					    resm->resm_pri);
+	CONF_FOREACH_RESM(s, r, n, resm, j)
+		if (resm->resm_pri != rmmi)
+			mds_repl_nodes_clearbusy(rmmi,
+			    resm->resm_pri);
 	RMMI_URLOCK(rmmi, locked[2]);
 	ureqlock(&repl_busytable_lock, locked[1]);
 	PLL_URLOCK(&globalConfig.gconf_sites, locked[0]);
