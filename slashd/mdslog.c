@@ -769,29 +769,26 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 		}
 	}
 
-	jnamespace->sjnm_namelen = offsetof(struct slmds_jent_namespace,
-	    sjnm_name);
+	jnamespace->sjnm_namelen = 0;
 	ptr = jnamespace->sjnm_name;
 	*ptr = '\0';
 	rem = sizeof(jnamespace->sjnm_name);
 	if (name) {
-		psc_assert(sizeof(jnamespace->sjnm_name) > NAME_MAX);
-		strlcpy(ptr, name, NAME_MAX + 1);
+		psc_assert(rem >= strlen(name) + 1);
+		strlcpy(ptr, name, MIN(rem - 1, NAME_MAX + 1));
 		len = strlen(ptr) + 1;
 		jnamespace->sjnm_namelen += len;
 		ptr += len;
 		rem -= len;
 	}
 	if (newname) {
-		strlcpy(ptr, newname, MIN(rem, NAME_MAX + 1));
+		psc_assert(rem >= strlen(newname) + 1);
+		strlcpy(ptr, newname, MIN(rem - 1, NAME_MAX + 1));
 		len = strlen(ptr) + 1;
 		jnamespace->sjnm_namelen += len;
 		ptr += len;
 		rem -= len;
 	}
-	ptr[rem - 1] = '\0';
-	psc_assert(logentrysize >= jnamespace->sjnm_namelen +
-	    (int)sizeof(struct psc_journal_enthdr) - 1);
 
 	pjournal_add_entry_distill(mdsJournal, txg,
 	    MDS_LOG_NAMESPACE, jnamespace, jnamespace->sjnm_namelen);
