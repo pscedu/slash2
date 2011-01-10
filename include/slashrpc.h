@@ -325,7 +325,7 @@ struct srt_statfs {
 
 /* ------------------------ BEGIN NAMESPACE MESSAGES ------------------------ */
 
-struct srm_send_namespace_req {
+struct srm_update_req {				/* namespace update */
 	uint64_t		seqno;
 	uint64_t		crc;		/* CRC of the bulk data */
 	int32_t			size;		/* size of the bulk data to follow */
@@ -333,13 +333,13 @@ struct srm_send_namespace_req {
 	int16_t			siteid;		/* Site ID for tracking purpose */
 } __packed;
 
-struct srm_send_namespace_rep {
+struct srm_update_rep {
 	int32_t			rc;
 	int32_t			_pad;
 	uint64_t		seqno;		/* the last seqno I have received from you */
 } __packed;
 
-struct srt_namespace_entry {
+struct srt_update_entry {
 	uint64_t		xid;
 	uint32_t		op;			/* operation type (i.e., enum namespace_operation) */
 	int16_t			reclen;

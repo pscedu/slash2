@@ -81,7 +81,7 @@ int
 slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 {
 	struct slmds_jent_namespace *jnamespace;
-	struct srm_send_namespace_req *mq;
+	struct srm_update_req *mq;
 	struct pscrpc_bulk_desc *desc;
 	struct srm_generic_rep *mp;
 	struct sl_mds_peerinfo *p;
