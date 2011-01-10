@@ -165,12 +165,12 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 	/* If warranted, bump the sequence number.
 	 */
-	spinlock(&biodi->biod_lock);
+	BIOD_LOCK(biodi);
 	if (mq->sbd.sbd_seq > biodi->biod_cur_seqkey[0]) {
 		biodi->biod_cur_seqkey[0] = mq->sbd.sbd_seq;
 		biodi->biod_cur_seqkey[1] = mq->sbd.sbd_key;
 	}
-	freelock(&biodi->biod_lock);
+	BIOD_ULOCK(biodi);
 
 	/*
 	 * Currently we have LNET_MTU = SLASH_SLVR_SIZE = 1MB, therefore
@@ -312,7 +312,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		 */
 		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 
-		spinlock(&biod->biod_lock);
+		BIOD_LOCK(biod);
 
 		/* For the time being, old keys are overwritten and forgotten.
 		 * XXX this should really be fixed.
@@ -320,11 +320,11 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		biod->biod_rls_seqkey[0] = bid->seq;
 		biod->biod_rls_seqkey[1] = bid->key;
 		biod->biod_rls_cnp = rq->rq_conn->c_peer;
-
-		b->bcm_flags |= BMAP_IOD_RLSSEQ;
+		
+		BMAP_SETATTR(b, BMAP_IOD_RLSSEQ);
 		biod_rlssched_locked(biod);
 
-		freelock(&biod->biod_lock);
+		BIOD_ULOCK(biod);
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 	}
  out:

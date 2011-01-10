@@ -49,6 +49,7 @@ struct slvr_ref {
 	uint32_t		 slvr_crc_eoff;	/* crc region length */
 	uint32_t		 slvr_crc_loff;	/* last crc end */
 	uint64_t		 slvr_crc;	/* accumulator  */
+	psc_spinlock_t           slvr_lock;
 	void			*slvr_pri;	/* backptr (bmap_iod_info) */
 	struct sl_buffer	*slvr_slab;
 	struct psclist_head	 slvr_lentry;	/* dirty queue */
@@ -75,14 +76,13 @@ struct slvr_ref {
 #define SLVR_2_BLK(s)		((s)->slvr_num *			\
 				 (SLASH_BMAP_SIZE / SLASH_SLVR_BLKSZ))
 
-#define SLVR_GETLOCK(s)		(&slvr_2_biod(s)->biod_lock)
-#define SLVR_LOCK(s)		spinlock(SLVR_GETLOCK(s))
-#define SLVR_ULOCK(s)		freelock(SLVR_GETLOCK(s))
-#define SLVR_RLOCK(s)		reqlock(SLVR_GETLOCK(s))
-#define SLVR_URLOCK(s, lk)	ureqlock(SLVR_GETLOCK(s), (lk))
-#define SLVR_LOCK_ENSURE(s)	LOCK_ENSURE(SLVR_GETLOCK(s))
-#define SLVR_TRYLOCK(s)		trylock(SLVR_GETLOCK(s))
-#define SLVR_TRYREQLOCK(s, lk)	tryreqlock(SLVR_GETLOCK(s), (lk))
+#define SLVR_LOCK(s)		spinlock(&(s)->slvr_lock)
+#define SLVR_ULOCK(s)		freelock(&(s)->slvr_lock)
+#define SLVR_RLOCK(s)		reqlock(&(s)->slvr_lock)
+#define SLVR_URLOCK(s, lk)	ureqlock(&(s)->slvr_lock, (lk))
+#define SLVR_LOCK_ENSURE(s)	LOCK_ENSURE(&(s)->slvr_lock)
+#define SLVR_TRYLOCK(s)		trylock(&(s)->slvr_lock)
+#define SLVR_TRYREQLOCK(s, lk)	tryreqlock(&(s)->slvr_lock, (lk))
 
 #define SLVR_WAKEUP(b)							\
 	do {								\
@@ -96,7 +96,7 @@ struct slvr_ref {
 		DEBUG_SLVR(PLL_NOTIFY, (s), "SLVR_WAIT");		\
 		while (cond) {						\
 			psc_waitq_wait(&slvr_2_fcmh(s)->fcmh_waitq,	\
-				       &slvr_2_biod(s)->biod_lock);	\
+				       &(s)->slvr_lock);		\
 			SLVR_LOCK(s);					\
 		}							\
 	} while (0)

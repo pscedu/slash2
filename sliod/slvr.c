@@ -183,7 +183,7 @@ slvr_do_crc(struct slvr_ref *s)
 
 		if (!s->slvr_pndgwrts && !s->slvr_compwrts)
 			s->slvr_flags &= ~SLVR_CRCDIRTY;
-
+		//XXX needs a bmap lock here, not a biodi lock
 		slvr_2_crc(s) = crc;
 		slvr_2_crcbits(s) |= BMAP_SLVR_DATA | BMAP_SLVR_CRC;
 		SLVR_ULOCK(s);
@@ -258,7 +258,8 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw)
 		 *  FAULT bit.  Also, we need to know which blocks
 		 *  to mark as dirty after an RPC.
 		 */
-		SLVR_LOCK(s);
+		SLVR_LOCK(s); //ouch.. this may be negatively affecting
+		              // performance.
 		for (i = 0; i < nblks; i++) {
 			//psc_assert(psc_vbitmap_get(s->slvr_slab->slb_inuse,
 			//	       sblk + i));
@@ -394,7 +395,7 @@ void
 slvr_slab_prep(struct slvr_ref *s, enum rw rw)
 {
 	struct sl_buffer *tmp=NULL;
-
+	//XXX may have to lock bmap instead..
 	SLVR_LOCK(s);
  restart:
 	/* slvr_lookup() must pin all slvrs to avoid racing with
@@ -749,16 +750,21 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *b, enum rw rw)
 
 	ts.slvr_num = num;
  retry:
-	spinlock(&b->biod_lock);
+	/* Lock order:  BIOD then SLVR.
+	 */
+	BIOD_LOCK(b);
 
 	s = SPLAY_FIND(biod_slvrtree, &b->biod_slvrs, &ts);
-	/* Note, slvr lock and biod lock are the same.
-	 */
-	if (s && (s->slvr_flags & SLVR_FREEING)) {
-		freelock(&b->biod_lock);
-		goto retry;
+	
+	if (s) {
+		SLVR_LOCK(s);
+		if (s->slvr_flags & SLVR_FREEING) {
+			SLVR_ULOCK(s);
+			BIOD_ULOCK(b);
+			goto retry;
+		}
 
-	} else if (!s) {
+	} else {
 		s = PSCALLOC(sizeof(*s));
 
 		s->slvr_num = num;
@@ -766,10 +772,14 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *b, enum rw rw)
 		s->slvr_pri = b;
 		s->slvr_slab = NULL;
 		INIT_PSC_LISTENTRY(&s->slvr_lentry);
+		INIT_SPINLOCK(&s->slvr_lock);
 
 		SPLAY_INSERT(biod_slvrtree, &b->biod_slvrs, s);
 		bmap_op_start_type(bii_2_bmap(b), BMAP_OPCNT_SLVR);
+
+		SLVR_LOCK(s);
 	}
+	BIOD_ULOCK(b);
 
 	s->slvr_flags |= SLVR_PINNED;
 
@@ -779,9 +789,7 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *b, enum rw rw)
 		s->slvr_pndgreads++;
 	else
 		abort();
-
-	freelock(&b->biod_lock);
-
+	SLVR_ULOCK(s);
 	return (s);
 }
 
@@ -789,18 +797,18 @@ __static void
 slvr_remove(struct slvr_ref *s)
 {
 	struct bmap_iod_info	*b;
-	int                      locked;
 
 	DEBUG_SLVR(PLL_DEBUG, s, "freeing slvr");
 	/* Slvr should be detached from any listheads.
 	 */
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
+	psc_assert(!(s->slvr_flags & SLVR_SPLAYTREE));
+	psc_assert(s->slvr_flags & SLVR_FREEING);
 
 	b = slvr_2_biod(s);
-	locked = reqlock(&b->biod_lock);
-	SPLAY_REMOVE(biod_slvrtree, &b->biod_slvrs, s);
-	ureqlock(&b->biod_lock, locked);
 
+	BIOD_LOCK(b);
+	SPLAY_REMOVE(biod_slvrtree, &b->biod_slvrs, s);
 	bmap_op_done_type(bii_2_bmap(b), BMAP_OPCNT_SLVR);
 
 	PSCFREE(s);
@@ -889,7 +897,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 			psc_assert(!s->slvr_slab);
 			if (s->slvr_flags & SLVR_SPLAYTREE) {
 				s->slvr_flags &= ~SLVR_SPLAYTREE;
-				SLVR_URLOCK(s, locked);
+				SLVR_ULOCK(s);
 				slvr_remove(s);
 			} else
 				SLVR_URLOCK(s, locked);

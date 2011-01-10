@@ -147,7 +147,7 @@ sli_fcmh_ctor(struct fidc_membh *fcmh)
 
 	if (fcmh->fcmh_fg.fg_gen == FGEN_ANY) {		
 		fcmh->fcmh_flags |= FCMH_CTOR_DELAYED;
-		DEBUG_FCMH(PLL_WARN, fcmh, "refusing to open backing file "
+		DEBUG_FCMH(PLL_NOTIFY, fcmh, "refusing to open backing file "
 		   "with FGEN_ANY");
 		/* This is not an error, we just don't have enough info
 		 * to create the backing file.

@@ -106,8 +106,6 @@ struct bmap_iod_info {
 	 */
 	struct bmap_extra_state	 biod_extrastate;
 	uint64_t		 biod_ondiskcrc;
-
-	psc_spinlock_t		 biod_lock;
 	/*
 	 * Accumulate CRC updates until its associated biod_crcup_ref
 	 * structure is full, at which point it is set to NULL and a
@@ -170,6 +168,13 @@ bii_2_bmap(struct bmap_iod_info *bii)
 	bcm = (void *)bii;
 	return (bcm - 1);
 }
+
+#define BIOD_LOCK(b)    BMAP_LOCK(bii_2_bmap(b))
+#define BIOD_ULOCK(b)   BMAP_ULOCK(bii_2_bmap(b))
+#define BIOD_RLOCK(b)   BMAP_RLOCK(bii_2_bmap(b))
+#define BIOD_URLOCK(b, lk)  BMAP_URLOCK(bii_2_bmap(b), (lk))
+#define BIOD_TRYLOCK(b) BMAP_TRYLOCK(bii_2_bmap(b))
+#define BIOD_LOCK_ENSURE(b) BMAP_LOCK_ENSURE(bii_2_bmap(b))
 
 static __inline int
 bmap_iod_timeo_cmp(const void *x, const void *y)

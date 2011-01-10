@@ -146,14 +146,14 @@ slvr_worker_push_crcups(void)
 		if (bcr->bcr_flags & BCR_SCHEDULED)
 			continue;
 
-		if (trylock(&bcr->bcr_biodi->biod_lock)) {
+		if (BIOD_TRYLOCK(bcr->bcr_biodi)) {
 			if (bcr_2_bmap(bcr)->bcm_flags & BMAP_IOD_INFLIGHT) {
 				DEBUG_BCR(PLL_FATAL, bcr, "tried to schedule "
 					  "multiple bcr's xid=%"PRIu64,
 					  bcr->bcr_biodi->biod_bcr_xid_last);
 			} else {
 				bcr_2_bmap(bcr)->bcm_flags |= BMAP_IOD_INFLIGHT;
-				freelock(&bcr->bcr_biodi->biod_lock);
+				BIOD_ULOCK(bcr->bcr_biodi);
 			}
 		} else
 			/* Don't deadlock trying for the biodi lock.
@@ -177,19 +177,19 @@ slvr_worker_push_crcups(void)
 	PLL_FOREACH_SAFE(bcr, tmp, &binflCrcs.binfcrcs_hold) {
 		/* Use trylock avoid deadlock.
 		 */
-		if (!trylock(&bcr->bcr_biodi->biod_lock))
+		if (!BIOD_TRYLOCK(bcr->bcr_biodi))
 			continue;
 
 		else if (now.tv_sec <
 			 (bcr->bcr_age.tv_sec + BIOD_CRCUP_MAX_AGE)) {
-			freelock(&bcr->bcr_biodi->biod_lock);
+			BIOD_ULOCK(bcr->bcr_biodi);
 			continue;
 		}
 
 		bcr_hold_2_ready(&binflCrcs, bcr);
 		DEBUG_BCR(PLL_INFO, bcr, "old, moved to ready");
+		BIOD_ULOCK(bcr->bcr_biodi);
 
-		freelock(&bcr->bcr_biodi->biod_lock);
 	}
 	freelock(&binflCrcs.binfcrcs_lock);
 
@@ -261,10 +261,10 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 			/* Unset the inflight bit on the biodi since
 			 *   bcr_xid_last_bump() will not be called.
 			 */
-			spinlock(&biod->biod_lock);
-			bii_2_bmap(biod)->bcm_flags &= ~BMAP_IOD_INFLIGHT;
+			BIOD_LOCK(biod);
+			BMAP_CLEARATTR(bii_2_bmap(biod), BMAP_IOD_INFLIGHT);
 			bcr_xid_check(bcr);
-			freelock(&biod->biod_lock);
+			BIOD_ULOCK(biod);
 
 			DEBUG_BCR(PLL_ERROR, bcr, "rescheduling");
 
@@ -343,19 +343,19 @@ slvr_worker_int(void)
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
 	psc_assert(slvr_do_crc(s));
 
-	/* NOTE: this lock covers the slvr lock too!
+	/* Lock the biodi first so we don't deadlock with slvr_lookup.
 	 */
-	spinlock(&slvr_2_biod(s)->biod_lock);
-	/* Copy the accumulator to the tmp variable.
-	 */
-	crc = s->slvr_crc;
-	PSC_CRC64_FIN(&crc);
-
+	BIOD_LOCK(slvr_2_biod(s));
+	SLVR_LOCK(s);
 	/* Be paraniod, ensure the sliver is not queued anywhere.
 	 */
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
 	psc_assert(s->slvr_flags & SLVR_CRCING);
 	s->slvr_flags &= ~SLVR_CRCING;
+	/* Copy the accumulator to the tmp variable.
+	 */
+	crc = s->slvr_crc;
+	PSC_CRC64_FIN(&crc);
 
 	if ((s->slvr_flags & SLVR_CRCDIRTY || s->slvr_compwrts) &&
 	    !s->slvr_pndgwrts) {
@@ -366,6 +366,7 @@ slvr_worker_int(void)
 		/* Put the slvr back to the LRU so it may have its slab
 		 *   reaped.
 		 */
+		//XXX lock sliver
 		slvr_2_biod(s)->biod_crcdrty_slvrs--;
 		DEBUG_SLVR(PLL_INFO, s, "prep for move to LRU (ndirty=%u)",
 			   slvr_2_biod(s)->biod_crcdrty_slvrs);
@@ -380,11 +381,12 @@ slvr_worker_int(void)
 	if (bcr) {
 		uint32_t i, found;
 
-		psc_assert(slvr_2_bmap(s)->bcm_flags & BMAP_IOD_BCRSCHED);
 		psc_assert(bcr->bcr_crcup.blkno == slvr_2_bmap(s)->bcm_bmapno);
 		psc_assert(bcr->bcr_crcup.fg.fg_fid == 
 			   slvr_2_bmap(s)->bcm_fcmh->fcmh_fg.fg_fid);
 		psc_assert(bcr->bcr_crcup.nups < MAX_BMAP_INODE_PAIRS);
+		psc_assert(slvr_2_bmap(s)->bcm_flags & BMAP_IOD_BCRSCHED);
+
 		/* If we already have a slot for our slvr_num then
 		 *   reuse it.
 		 */
@@ -443,12 +445,12 @@ slvr_worker_int(void)
 			  (slvr_2_bmap(s)->bcm_flags & BMAP_IOD_BCRSCHED));
 
 		if (slvr_2_bmap(s)->bcm_flags & BMAP_IOD_BCRSCHED)
-			/* The bklog may be empty but a pending bcr may be present
-			 *    on the ready list.
+			/* The bklog may be empty but a pending bcr may be 
+			 *    present on the ready list.
 			 */
 			pll_addtail(&slvr_2_biod(s)->biod_bklog_bcrs, bcr);
 		else {
-			slvr_2_bmap(s)->bcm_flags |= BMAP_IOD_BCRSCHED;
+			BMAP_SETATTR(slvr_2_bmap(s), BMAP_IOD_BCRSCHED);
 			bcr_hold_add(&binflCrcs, bcr);
 		}
 	}
@@ -459,7 +461,8 @@ slvr_worker_int(void)
 	PFL_GETTIMESPEC(&bcr->bcr_age);
 	/* The sliver may go away now.
 	 */
-	freelock(&slvr_2_biod(s)->biod_lock);
+	BIOD_ULOCK(slvr_2_biod(s));
+	SLVR_ULOCK(s);
 	slvr_worker_push_crcups();
 }
 
