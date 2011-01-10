@@ -786,12 +786,12 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 		strlcpy(ptr, newname, MIN(rem - 1, NAME_MAX + 1));
 		len = strlen(ptr) + 1;
 		jnamespace->sjnm_namelen += len;
-		ptr += len;
-		rem -= len;
 	}
 
 	pjournal_add_entry_distill(mdsJournal, txg,
-	    MDS_LOG_NAMESPACE, jnamespace, jnamespace->sjnm_namelen);
+	    MDS_LOG_NAMESPACE, jnamespace, 
+	    offsetof(struct slmds_jent_namespace, sjnm_name) +
+	    jnamespace->sjnm_namelen);
 }
 
 __static int
