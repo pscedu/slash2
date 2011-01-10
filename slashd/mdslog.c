@@ -619,7 +619,6 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	}
 	update_entry.xid = pje->pje_xid;
 	update_entry.op = jnamespace->sjnm_op; 
-	update_entry.namelen = jnamespace->sjnm_namelen; 
 	update_entry.target_gen = jnamespace->sjnm_target_gen; 
 	update_entry.parent_fid = jnamespace->sjnm_parent_fid;
 	update_entry.target_fid = jnamespace->sjnm_target_fid;
@@ -630,6 +629,9 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	update_entry.atime = jnamespace->sjnm_atime;
 	update_entry.mtime = jnamespace->sjnm_mtime;
 	update_entry.ctime = jnamespace->sjnm_ctime;
+
+	update_entry.namelen = jnamespace->sjnm_namelen; 
+	memcpy(update_entry.name, jnamespace->sjnm_name, jnamespace->sjnm_namelen);
 
 	size = write(current_update_logfile, &update_entry,
 	    sizeof(struct srt_update_entry));
