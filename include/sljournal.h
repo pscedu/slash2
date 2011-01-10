@@ -97,7 +97,7 @@ struct slmds_jent_bmapseq {
 	uint64_t		sjbsq_low_wm;
 } __packed;
 
-#define SJ_NAMESPACE_MAGIC	UINT64_C(0xaa5a5aaa43211234)
+#define SJ_NAMESPACE_MAGIC	UINT32_C(0xabcd1234)
 
 #define	SLJ_NAMES_MAX		358
 
@@ -110,10 +110,9 @@ struct slmds_jent_bmapseq {
  * condense them (especially the names) to save network bandwidth.
  */
 struct slmds_jent_namespace {
-	uint64_t		sjnm_magic;			/* debugging */
-	uint32_t		sjnm_op;			/* operation type (i.e., enum namespace_operation) */
-	int16_t			sjnm_reclen;
-	int16_t			sjnm_flag;			/* need garbage collection */
+	uint32_t		sjnm_magic;			/* debugging */
+	uint16_t		sjnm_op;			/* operation type (i.e., enum namespace_operation) */
+	uint16_t		sjnm_flag;			/* need garbage collection */
 
 	uint64_t		sjnm_parent_fid;		/* parent dir FID */
 	uint64_t		sjnm_target_fid;
@@ -135,6 +134,7 @@ struct slmds_jent_namespace {
 
 	uint64_t		sjnm_size;			/* total size, in bytes */
 
+	int16_t			sjnm_namelen;
 	char			sjnm_name[SLJ_NAMES_MAX + 2];	/* one or two names */
 
 } __packed;

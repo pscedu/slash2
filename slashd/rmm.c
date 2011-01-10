@@ -80,6 +80,7 @@ slm_rmm_handle_connect(struct pscrpc_request *rq)
 int
 slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 {
+	struct srt_update_entry *entryp;
 	struct slmds_jent_namespace *jnamespace;
 	struct srm_update_req *mq;
 	struct pscrpc_bulk_desc *desc;
@@ -157,7 +158,7 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 		mp->rc = slm_rmm_apply_update(jnamespace);
 		if (mp->rc)
 			break;
-		jnamespace = PSC_AGP(jnamespace, jnamespace->sjnm_reclen);
+		jnamespace = PSC_AGP(jnamespace, jnamespace->sjnm_namelen);
 	}
 	/* Should I ask for a resend if I have trouble applying updates? */
 	p->sp_recv_seqno = seqno + count;

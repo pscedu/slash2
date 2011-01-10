@@ -573,8 +573,6 @@ int
 mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
     int replay)
 {
-	static char update_fn[PATH_MAX];
-	static char reclaim_fn[PATH_MAX];
 	unsigned long off;
 	int size, count, total;
 	struct slmds_jent_namespace *jnamespace;
@@ -619,7 +617,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	}
 	update_entry.xid = pje->pje_xid;
 	update_entry.op = jnamespace->sjnm_op; 
-	update_entry.reclen = jnamespace->sjnm_reclen; 
+	update_entry.reclen = jnamespace->sjnm_namelen; 
 	update_entry.target_gen = jnamespace->sjnm_target_gen; 
 	update_entry.parent_fid = jnamespace->sjnm_parent_fid;
 	update_entry.target_fid = jnamespace->sjnm_target_fid;
@@ -634,7 +632,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	size = write(current_update_logfile, &update_entry,
 	    sizeof(struct srt_update_entry));
 	if (size != sizeof(struct srt_update_entry))
-		psc_fatal("Fail to write update log file %s", update_fn);
+		psc_fatal("Fail to write update log file");
 
 	/* see if we need to close the current reclaim log file */
 	off = lseek(current_update_logfile, 0, SEEK_CUR);
@@ -701,7 +699,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	size = write(current_reclaim_logfile, &reclaim_entry,
 	    sizeof(struct srt_reclaim_entry));
 	if (size != sizeof(struct srt_reclaim_entry))
-		psc_fatal("Fail to write reclaim log file %s", reclaim_fn);
+		psc_fatal("Fail to write reclaim log file");
 
 	/* see if we need to close the current reclaim log file */
 	off = lseek(current_reclaim_logfile, 0, SEEK_CUR);
@@ -767,7 +765,7 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 		}
 	}
 
-	jnamespace->sjnm_reclen = offsetof(struct slmds_jent_namespace,
+	jnamespace->sjnm_namelen = offsetof(struct slmds_jent_namespace,
 	    sjnm_name);
 	ptr = jnamespace->sjnm_name;
 	*ptr = '\0';
@@ -776,23 +774,23 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 		psc_assert(sizeof(jnamespace->sjnm_name) > NAME_MAX);
 		strlcpy(ptr, name, NAME_MAX + 1);
 		len = strlen(ptr) + 1;
-		jnamespace->sjnm_reclen += len;
+		jnamespace->sjnm_namelen += len;
 		ptr += len;
 		rem -= len;
 	}
 	if (newname) {
 		strlcpy(ptr, newname, MIN(rem, NAME_MAX + 1));
 		len = strlen(ptr) + 1;
-		jnamespace->sjnm_reclen += len;
+		jnamespace->sjnm_namelen += len;
 		ptr += len;
 		rem -= len;
 	}
 	ptr[rem - 1] = '\0';
-	psc_assert(logentrysize >= jnamespace->sjnm_reclen +
+	psc_assert(logentrysize >= jnamespace->sjnm_namelen +
 	    (int)sizeof(struct psc_journal_enthdr) - 1);
 
 	pjournal_add_entry_distill(mdsJournal, txg,
-	    MDS_LOG_NAMESPACE, jnamespace, jnamespace->sjnm_reclen);
+	    MDS_LOG_NAMESPACE, jnamespace, jnamespace->sjnm_namelen);
 }
 
 __static int
@@ -1037,10 +1035,10 @@ mds_read_batch_update(uint64_t seqno)
 		jnamespace = PSC_AGP(logptr,
 		    offsetof(struct psc_journal_enthdr, pje_data));
 		psc_assert(jnamespace->sjnm_magic == SJ_NAMESPACE_MAGIC);
-		psc_assert(jnamespace->sjnm_reclen <= logentrysize);
-		memcpy(ptr, jnamespace, jnamespace->sjnm_reclen);
-		ptr = PSC_AGP(ptr, jnamespace->sjnm_reclen);
-		buf->slb_size += jnamespace->sjnm_reclen;
+		psc_assert(jnamespace->sjnm_namelen <= logentrysize);
+		memcpy(ptr, jnamespace, jnamespace->sjnm_namelen);
+		ptr = PSC_AGP(ptr, jnamespace->sjnm_namelen);
+		buf->slb_size += jnamespace->sjnm_namelen;
 		logptr = PSC_AGP(logptr, logentrysize);
 	}
 	buf->slb_count += nitems;
