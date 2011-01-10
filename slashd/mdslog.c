@@ -577,12 +577,9 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	static char reclaim_fn[PATH_MAX];
 	unsigned long off;
 	int size, count, total;
-
-	struct srt_reclaim_entry entry;
-	struct srt_reclaim_entry *entryp;
-	struct srt_update_entry update_entry;
-	struct srt_update_entry *update_entryp;
 	struct slmds_jent_namespace *jnamespace;
+	struct srt_update_entry update_entry, *update_entryp;
+	struct srt_reclaim_entry reclaim_entry, *reclaim_entryp;
 
 	psc_assert(pje->pje_magic == PJE_MAGIC);
 	if (!(pje->pje_type & MDS_LOG_NAMESPACE))
@@ -665,11 +662,11 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 			total = size / sizeof(struct srt_reclaim_entry);
 
 			count = 0;
-			entryp = reclaimbuf;
+			reclaim_entryp = reclaimbuf;
 			while (count < total) {
-				if (entryp->xid == pje->pje_xid)
+				if (reclaim_entryp->xid == pje->pje_xid)
 					break;
-				entryp++;
+				reclaim_entryp++;
 				count++;
 			}
 			/*
@@ -683,11 +680,11 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 		}
 	}
 
-	entry.xid = pje->pje_xid;
-	entry.fid = jnamespace->sjnm_target_fid;
-	entry.gen = jnamespace->sjnm_target_gen;
+	reclaim_entry.xid = pje->pje_xid;
+	reclaim_entry.fid = jnamespace->sjnm_target_fid;
+	reclaim_entry.gen = jnamespace->sjnm_target_gen;
 
-	size = write(current_reclaim_logfile, &entry,
+	size = write(current_reclaim_logfile, &reclaim_entry,
 	    sizeof(struct srt_reclaim_entry));
 	if (size != sizeof(struct srt_reclaim_entry))
 		psc_fatal("Fail to write reclaim log file %s", reclaim_fn);
