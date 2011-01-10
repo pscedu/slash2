@@ -281,8 +281,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_replrq_req);
 	PRTYPE(struct srm_replst_master_req);
 	PRTYPE(struct srm_replst_slave_req);
-	PRTYPE(struct srm_send_namespace_rep);
-	PRTYPE(struct srm_send_namespace_req);
 	PRTYPE(struct srm_set_bmapreplpol_req);
 	PRTYPE(struct srm_set_newreplpol_req);
 	PRTYPE(struct srm_setattr_req);
@@ -290,14 +288,16 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_statfs_req);
 	PRTYPE(struct srm_symlink_req);
 	PRTYPE(struct srm_unlink_req);
+	PRTYPE(struct srm_update_rep);
+	PRTYPE(struct srm_update_req);
 	PRTYPE(struct srsm_replst_bhdr);
 	PRTYPE(struct srt_authbuf_footer);
 	PRTYPE(struct srt_authbuf_secret);
 	PRTYPE(struct srt_bmapdesc);
-	PRTYPE(struct srt_namespace_entry);
 	PRTYPE(struct srt_reclaim_entry);
 	PRTYPE(struct srt_stat);
 	PRTYPE(struct srt_statfs);
+	PRTYPE(struct srt_update_entry);
 	PRTYPE(struct up_sched_work_item);
 	/* end structs */
 
