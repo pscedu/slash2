@@ -629,14 +629,18 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	update_entry.atime = jnamespace->sjnm_atime;
 	update_entry.mtime = jnamespace->sjnm_mtime;
 	update_entry.ctime = jnamespace->sjnm_ctime;
+	update_entry.atime_ns = jnamespace->sjnm_atime_ns;
+	update_entry.mtime_ns = jnamespace->sjnm_mtime_ns;
+	update_entry.ctime_ns = jnamespace->sjnm_ctime_ns;
 
 	update_entry.namelen = jnamespace->sjnm_namelen; 
 	memcpy(update_entry.name, jnamespace->sjnm_name, jnamespace->sjnm_namelen);
 
-	size = write(current_update_logfile, &update_entry,
-	    sizeof(struct srt_update_entry));
-	if (size != sizeof(struct srt_update_entry))
-		psc_fatal("Fail to write update log file");
+	count = offsetof(struct srt_update_entry, name) + update_entry.namelen;
+	size = write(current_update_logfile, &update_entry, count);
+	if (size != count)
+		psc_fatal("Fail to write update log file, batchno = %"PRId64, 
+		    next_update_batchno);
 
 	/* see if we need to close the current reclaim log file */
 	off = lseek(current_update_logfile, 0, SEEK_CUR);
@@ -703,7 +707,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	size = write(current_reclaim_logfile, &reclaim_entry,
 	    sizeof(struct srt_reclaim_entry));
 	if (size != sizeof(struct srt_reclaim_entry))
-		psc_fatal("Fail to write reclaim log file");
+		psc_fatal("Fail to write reclaim log file, batchno = %"PRId64, 
+		    next_reclaim_batchno);
 
 	/* see if we need to close the current reclaim log file */
 	off = lseek(current_reclaim_logfile, 0, SEEK_CUR);
