@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2007-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2007-2011, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -760,8 +760,9 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 				goto out;
 			}
 			FCMH_LOCK(fcmh);
-			if (mq->attr.sst_size > fcmh_2_fsz(fcmh)) {
+			if (mq->attr.sst_size >= fcmh_2_fsz(fcmh)) {
 				fcmh_2_fsz(fcmh) = mq->attr.sst_size;
+				// xnbmaps
 				FCMH_ULOCK(fcmh);
 				INOH_ULOCK(ih);
 				mds_inode_sync(ih);
