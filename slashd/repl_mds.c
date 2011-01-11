@@ -674,9 +674,9 @@ mds_repl_node_clearallbusy(struct resm_mds_info *rmmi)
 	struct sl_resm *resm;
 	struct sl_site *s;
 
-	locked[0] = PLL_HASLOCK(&globalConfig.gconf_sites);
-	locked[1] = psc_spin_haslock(&repl_busytable_lock);
-	locked[2] = RMMI_HASLOCK(rmmi);
+	PLL_TRYRLOCK(&globalConfig.gconf_sites, locked);
+	tryreqlock(&repl_busytable_lock, locked + 1);
+	RMMI_TRYRLOCK(rmmi, locked + 2);
 
 	if (0) {
  retry:
