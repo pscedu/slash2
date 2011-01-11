@@ -139,6 +139,13 @@ struct bmap_iod_info {
 #define bmap_2_biodi_lentry(b)	bmap_2_biodi(b)->biod_lentry
 #define bmap_2_biodi_slvrs(b)	(&bmap_2_biodi(b)->biod_slvrs)
 
+#define BIOD_LOCK(bii)		BMAP_LOCK(bii_2_bmap(bii))
+#define BIOD_ULOCK(bii)		BMAP_ULOCK(bii_2_bmap(bii))
+#define BIOD_RLOCK(bii)		BMAP_RLOCK(bii_2_bmap(bii))
+#define BIOD_URLOCK(bii, lk)	BMAP_URLOCK(bii_2_bmap(bii), (lk))
+#define BIOD_TRYLOCK(bii)	BMAP_TRYLOCK(bii_2_bmap(bii))
+#define BIOD_LOCK_ENSURE(bii)	BMAP_LOCK_ENSURE(bii_2_bmap(bii))
+
 #define BIOD_CRCUP_MAX_AGE	2		/* in seconds */
 
 uint64_t	bim_getcurseq(void);
@@ -168,13 +175,6 @@ bii_2_bmap(struct bmap_iod_info *bii)
 	bcm = (void *)bii;
 	return (bcm - 1);
 }
-
-#define BIOD_LOCK(b)    BMAP_LOCK(bii_2_bmap(b))
-#define BIOD_ULOCK(b)   BMAP_ULOCK(bii_2_bmap(b))
-#define BIOD_RLOCK(b)   BMAP_RLOCK(bii_2_bmap(b))
-#define BIOD_URLOCK(b, lk)  BMAP_URLOCK(bii_2_bmap(b), (lk))
-#define BIOD_TRYLOCK(b) BMAP_TRYLOCK(bii_2_bmap(b))
-#define BIOD_LOCK_ENSURE(b) BMAP_LOCK_ENSURE(bii_2_bmap(b))
 
 static __inline int
 bmap_iod_timeo_cmp(const void *x, const void *y)
