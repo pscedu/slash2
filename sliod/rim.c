@@ -53,7 +53,6 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	struct pscrpc_bulk_desc *desc;
 	struct srm_reclaim_req *mq;
 	struct srm_reclaim_rep *mp;
-	struct slash_fidgen oldfg;
 	struct iovec iov;
 	char fidfn[PATH_MAX];
 	uint64_t crc, xid;
@@ -88,9 +87,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 
 	entry = iov.iov_base;
 	for (i = 0; i < count; i++) {
-		oldfg.fg_fid = entry->fid;
-		oldfg.fg_gen = entry->gen;
-		fg_makepath(&oldfg, fidfn);
+		fg_makepath(&entry->fg, fidfn);
 
 		/*
 		 * We do upfront garbage collection, so ENOENT should be fine.
@@ -105,11 +102,10 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 			rc = errno;
 
 		psclog_debug("fid="SLPRI_FG", xid=%"PRId64 "rc=%d",
-		    SLPRI_FG_ARGS(&oldfg), entry->xid, rc);
+		    SLPRI_FG_ARGS(&entry->fg), entry->xid, rc);
 		entry++;
 	}
  out:
-
 	PSCFREE(iov.iov_base);
 	return (mp->rc);
 }
