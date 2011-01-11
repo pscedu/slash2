@@ -394,7 +394,7 @@ struct rnd_iterator {
 void
 slmupschedthr_main(struct psc_thread *thr)
 {
-	int uswi_gen, iosidx, off, rc, has_work, val, ndst;
+	int uswi_gen, iosidx, off, rc, has_work, val;
 	struct rnd_iterator wk_i, src_res_i, dst_res_i, src_resm_i, dst_resm_i, bmap_i;
 	struct sl_resource *src_res, *dst_res;
 	struct slmupsched_thread *smut;
