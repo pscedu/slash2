@@ -18,10 +18,9 @@
  */
 
 /*
- * up_sched_res (update scheduler for site resources): this interface
- * provides the mechanism for managing updates such as
- * truncation/deletion garbage collection and replication activity to
- * peer resources.
+ * Update scheduler for site resources: this interface provides the
+ * mechanism for managing updates such as truncation/deletion garbage
+ * collection and replication activity to peer resources.
  */
 
 #include <sys/param.h>
@@ -380,19 +379,31 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	return (0);
 }
 
+struct rnd_iterator {
+	int	ri_n;
+	int	ri_rnd_idx;
+	int	ri_iter;
+};
+
+#define FOREACH_RND(ri, n)							\
+	for ((ri)->ri_n = (n), (ri)->ri_iter = 0,				\
+	    (ri)->ri_rnd_idx = psc_random32u((ri)->ri_n);			\
+	    (ri)->ri_iter < (ri)->ri_n;						\
+	    (ri)->ri_iter++, (ri)->ri_rnd_idx = ((ri)->ri_rnd_idx + 1) % (ri)->ri_n)
+
 void
 slmupschedthr_main(struct psc_thread *thr)
 {
-	int uswi_gen, iosidx, nios, nrq, off, j, k, rc, has_work;
-	int ris, is, rir, ir, rin, rid, in, val, nmemb, ndst;
+	int uswi_gen, iosidx, off, rc, has_work, val, ndst;
+	struct rnd_iterator wk_i, src_res_i, dst_res_i, src_resm_i, dst_resm_i, bmap_i;
 	struct sl_resource *src_res, *dst_res;
 	struct slmupsched_thread *smut;
+	struct slashrpc_cservice *csvc;
 	struct up_sched_work_item *wk;
 	struct site_mds_info *smi;
 	struct sl_resm *src_resm;
 	struct bmapc_memb *bcm;
 	struct sl_site *site;
-	sl_bmapno_t bmapno, nb, ib;
 	void *dummy;
 
 	smut = slmupschedthr(thr);
@@ -402,6 +413,7 @@ slmupschedthr_main(struct psc_thread *thr)
 		if (0)
  restart:
 			sched_yield();
+
 		/* select or wait for a repl rq */
 		spinlock(&smi->smi_lock);
 
@@ -419,16 +431,14 @@ slmupschedthr_main(struct psc_thread *thr)
 
 		smi->smi_flags &= ~SMIF_DIRTYQ;
 
-		nrq = psc_dynarray_len(&smi->smi_upq);
-		rir = psc_random32u(nrq);
-		for (ir = 0; ir < nrq; rir = (rir + 1) % nrq, ir++) {
+		FOREACH_RND(&wk_i, psc_dynarray_len(&smi->smi_upq)) {
 			reqlock(&smi->smi_lock);
 			if (smi->smi_flags & SMIF_DIRTYQ) {
 				freelock(&smi->smi_lock);
 				goto restart;
 			}
 
-			wk = psc_dynarray_getpos(&smi->smi_upq, rir);
+			wk = psc_dynarray_getpos(&smi->smi_upq, wk_i.ri_rnd_idx);
 			USWI_INCREF(wk, USWI_REFT_LOOKUP);
 			freelock(&smi->smi_lock);
 
@@ -457,96 +467,54 @@ slmupschedthr_main(struct psc_thread *thr)
 			wk->uswi_flags &= ~USWIF_BUSY;
 			psc_pthread_mutex_unlock(&wk->uswi_mutex);
 
-			if (fcmh_2_ino(wk->uswi_fcmh)->ino_flags & INOF_IN_PTRUNC) {
-				/* send async request to recompute CRC
-				 * for sliced bmap to ION if not sent
-				 */
-
-				/* if this CRC has failed, try resend */
-			}
-
 			/* find a resource in our site this uswi is destined for */
 			iosidx = -1;
-			DYNARRAY_FOREACH(dst_res, j, &site->site_resources) {
+			FOREACH_RND(&dst_res_i, psc_dynarray_len(&site->site_resources)) {
+				dst_res = psc_dynarray_getpos(&site->site_resources,
+				    dst_res_i.ri_rnd_idx);
 				iosidx = mds_repl_ios_lookup(USWI_INOH(wk),
 				    dst_res->res_id);
 				if (iosidx < 0)
 					continue;
 				off = SL_BITS_PER_REPLICA * iosidx;
 
-				/* got a replication request; find a bmap this ios needs */
-				nb = USWI_NBMAPS(wk);
-				bmapno = psc_random32u(nb);
-				for (ib = 0; ib < nb; ib++,
-				    bmapno = (bmapno + 1) % nb) {
-					if (uswi_gen != wk->uswi_gen)
-						goto skiprepl;
+				if ((fcmh_2_ino(wk->uswi_fcmh)->ino_flags & INOF_IN_PTRUNC) ||
+				    wk->uswi_fcmh->fcmh_sstb.sst_nxbmaps) {
+#if 0
+					has_work = 1;
+
+					bmapno = ih->inoh_ino.ino_ptruncoff / SLASH_BMAP_SIZE;
 					rc = mds_bmap_load(wk->uswi_fcmh, bmapno, &bcm);
 					if (rc)
-						continue;
+						goto restart;
 
 					BMAPOD_READ_START(bcm);
-					val = SL_REPL_GET_BMAP_IOS_STAT(
-					    bcm->bcm_repls, off);
-					switch (val) {
-					case BREPLST_REPL_QUEUED:
-						has_work = 1;
-//						if (bmap is leased to an ION)
-//							break;
+					BMAPOD_READ_DONE(bcm);
 
-						/* Got a bmap; now look for a source. */
-						nios = USWI_NREPLS(wk);
-						ris = psc_random32u(nios);
-						for (is = 0; is < nios; is++,
-						    ris = (ris + 1) % nios) {
-							if (uswi_gen != wk->uswi_gen) {
-								BMAPOD_READ_DONE(bcm);
-								mds_repl_bmap_rel(bcm);
-								goto skiprepl;
-							}
-							src_res = libsl_id2res(USWI_GETREPL(wk, ris).bs_id);
+					if (i am GARBAGE_SCHED) {
+						add to multiwait
+						goto keep_going;
+					}
 
-							/* skip ourself and old/inactive replicas */
-							if (ris == iosidx ||
-							    SL_REPL_GET_BMAP_IOS_STAT(bcm->bcm_repls,
-							    SL_BITS_PER_REPLICA * ris) != BREPLST_VALID)
-								continue;
+					if (i am TRUNCPNDG) {
 
-							BMAPOD_READ_DONE(bcm);
-
-							/* search source nids for an idle, online connection */
-							nmemb = psc_dynarray_len(&src_res->res_members);
-							rin = psc_random32u(nmemb);
-							for (in = 0; in < nmemb; in++,
-							    rin = (rin + 1) % nmemb) {
-								struct slashrpc_cservice *csvc;
-
-								src_resm = psc_dynarray_getpos(&src_res->res_members, rin);
-								csvc = slm_geticsvc_nb(src_resm, NULL);
-								if (csvc == NULL) {
-									if (!psc_multiwait_hascond(&smi->smi_mw,
-									    &resm2rmmi(src_resm)->rmmi_mwcond))
-										if (psc_multiwait_addcond(&smi->smi_mw,
-										    &resm2rmmi(src_resm)->rmmi_mwcond))
-											psc_fatal("multiwait_addcond");
-									continue;
-								}
-								sl_csvc_decref(csvc);
-
-								/* look for a destination resm */
-								/* XXX random? */
-								for (k = 0; k < psc_dynarray_len(&dst_res->res_members); k++)
-									if (slmupschedthr_tryrepldst(wk, bcm,
-									    off, src_resm, dst_res, k))
-										goto restart;
-							}
-							BMAPOD_READ_START(bcm);
+						if (someone has scheduled recompute) {
+							add to multiwait
+							goto keep_going;
 						}
-						BMAPOD_READ_DONE(bcm);
-						break;
-					case BREPLST_GARBAGE:
-						has_work = 1;
-						BMAPOD_READ_DONE(bcm);
+						arrange to do the truncate
+
+						- asynchronously contact an IOS
+						    requesting CRC recalculation for
+						    sliver and mark BREPLST_VALID on
+						    success
+
+						- if BMAP_PERSIST, notify replication
+						    queuer
+
+						goto restart;
+
+					} else if (i am GARBAGE) {
 
 						/* look for a destination resm */
 						ndst = psc_dynarray_len(&dst_res->res_members);
@@ -560,11 +528,83 @@ slmupschedthr_main(struct psc_thread *thr)
 							if (slmupschedthr_trygarbage(wk,
 							    bcm, off, dst_res, rid))
 								goto restart;
+					}
+#endif
+
+				}
+
+				/*
+				 * Select random bmap then scan
+				 * sequentially to check for work.
+				 */
+				FOREACH_RND(&bmap_i, USWI_NBMAPS(wk)) {
+					if (uswi_gen != wk->uswi_gen)
+						goto skiprepl;
+					rc = mds_bmap_load(wk->uswi_fcmh,
+					    bmap_i.ri_rnd_idx, &bcm);
+					if (rc)
+						continue;
+
+					BMAPOD_READ_START(bcm);
+					val = SL_REPL_GET_BMAP_IOS_STAT(
+					    bcm->bcm_repls, off);
+					switch (val) {
+					case BREPLST_REPL_QUEUED:
+						has_work = 1;
+//						if (bmap is leased to an ION)
+//							break;
+
+						/* Got a bmap; now look for a source. */
+						FOREACH_RND(&src_res_i, USWI_NREPLS(wk)) {
+							if (uswi_gen != wk->uswi_gen) {
+								BMAPOD_READ_DONE(bcm);
+								mds_repl_bmap_rel(bcm);
+								goto skiprepl;
+							}
+							src_res = libsl_id2res(
+							    USWI_GETREPL(wk,
+							    src_res_i.ri_rnd_idx).bs_id);
+
+							/* skip ourself and old/inactive replicas */
+							if (src_res_i.ri_rnd_idx == iosidx ||
+							    SL_REPL_GET_BMAP_IOS_STAT(bcm->bcm_repls,
+							    SL_BITS_PER_REPLICA * src_res_i.ri_rnd_idx) != BREPLST_VALID)
+								continue;
+
+							BMAPOD_READ_DONE(bcm);
+
+							/* search source nids for an idle, online connection */
+							FOREACH_RND(&src_resm_i,
+							    psc_dynarray_len(&src_res->res_members)) {
+								src_resm = psc_dynarray_getpos(&src_res->res_members,
+								    src_resm_i.ri_rnd_idx);
+								csvc = slm_geticsvc_nb(src_resm, NULL);
+								if (csvc == NULL) {
+									if (!psc_multiwait_hascond(&smi->smi_mw,
+									    &resm2rmmi(src_resm)->rmmi_mwcond))
+										if (psc_multiwait_addcond(&smi->smi_mw,
+										    &resm2rmmi(src_resm)->rmmi_mwcond))
+											psc_fatal("multiwait_addcond");
+									continue;
+								}
+								sl_csvc_decref(csvc);
+
+								/* look for a destination resm */
+								FOREACH_RND(&dst_resm_i,
+								    psc_dynarray_len(&dst_res->res_members))
+									if (slmupschedthr_tryrepldst(wk,
+									    bcm, off, src_resm, dst_res,
+									    dst_resm_i.ri_rnd_idx))
+										goto restart;
+							}
+							BMAPOD_READ_START(bcm);
+						}
+						BMAPOD_READ_DONE(bcm);
 						break;
 					case BREPLST_REPL_SCHED:
 						has_work = 1;
 						BMAPOD_READ_DONE(bcm);
-						/* FALLTHROUGH */
+						break;
 					}
 					mds_repl_bmap_rel(bcm);
 				}
@@ -613,7 +653,7 @@ slmupschedthr_spawnall(void)
 	int locked;
 
 	locked = PLL_RLOCK(&globalConfig.gconf_sites);
-	PLL_FOREACH(site, &globalConfig.gconf_sites) {
+	CONF_FOREACH_SITE(site) {
 		thr = pscthr_init(SLMTHRT_UPSCHED, 0, slmupschedthr_main,
 		    NULL, sizeof(*smut), "slmupschedthr-%s",
 		    site->site_name + strspn(site->site_name, "@"));
