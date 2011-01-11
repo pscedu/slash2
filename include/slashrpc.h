@@ -274,7 +274,7 @@ struct srt_stat {
 	uint64_t		sst_dev;	/* ID of device containing file */
 	uint32_t		sst_ptruncgen;	/* partial truncate generation */
 	uint32_t		sst_utimgen;    /* utimes generation number */
-	uint32_t		sst__pad0;
+	uint32_t		sst_nxbmaps;	/* # garbage bmaps beyond EOF */
 	uint32_t		sst_mode;	/* file type & permissions (e.g., S_IFREG, S_IRWXU) */
 	uint64_t		sst_nlink;	/* number of hard links */
 	uint32_t		sst_uid;	/* user ID of owner */
@@ -325,12 +325,14 @@ struct srt_statfs {
 
 /* ------------------------ BEGIN NAMESPACE MESSAGES ------------------------ */
 
-struct srm_update_req {				/* namespace update */
+/* namespace update */
+struct srm_update_req {
 	uint64_t		seqno;
 	uint64_t		crc;		/* CRC of the bulk data */
 	int32_t			size;		/* size of the bulk data to follow */
 	int16_t			count;		/* # of entries to follow */
 	int16_t			siteid;		/* Site ID for tracking purpose */
+/* followed by bulk data of srt_update_entry structures */
 } __packed;
 
 struct srm_update_rep {
@@ -341,29 +343,30 @@ struct srm_update_rep {
 
 struct srt_update_entry {
 	uint64_t		xid;
-	uint32_t		op;			/* operation type (i.e., enum namespace_operation) */
+	uint32_t		op;		/* operation type (i.e., enum namespace_operation) */
+	int16_t			namelen;
+	int16_t			_pad;
 
-	uint64_t		parent_fid;		/* parent dir FID */
+	uint64_t		parent_fid;	/* parent dir FID */
 	uint64_t		target_fid;
 
-	uint64_t		target_gen;		/* reclaim only */
-	uint64_t		new_parent_fid;		/* rename only  */
+	uint64_t		target_gen;	/* reclaim only */
+	uint64_t		new_parent_fid;	/* rename only  */
 
-	uint32_t		mask;			/* attribute mask */
+	uint32_t		mask;		/* attribute mask */
 
-	uint32_t		mode;			/* file permission */
-	int32_t			uid;			/* user ID of owner */
-	int32_t			gid;			/* group ID of owner */
-	uint64_t		atime;			/* time of last access */
+	uint32_t		mode;		/* file permission */
+	int32_t			uid;		/* user ID of owner */
+	int32_t			gid;		/* group ID of owner */
+	uint64_t		atime;		/* time of last access */
 	uint64_t		atime_ns;
-	uint64_t		mtime;			/* time of last modification */
+	uint64_t		mtime;		/* time of last modification */
 	uint64_t		mtime_ns;
-	uint64_t		ctime;			/* time of last status change */
+	uint64_t		ctime;		/* time of last status change */
 	uint64_t		ctime_ns;
 
-	uint64_t		size;			/* total size, in bytes */
-	int16_t			namelen;
-	char			name[0];		/* one or two names */
+	uint64_t		size;		/* total size, in bytes */
+	char			name[0];	/* one or two names */
 } __packed;
 
 /* -------------------------- BEGIN BMAP MESSAGES --------------------------- */
@@ -521,8 +524,7 @@ struct srm_reclaim_rep {
 
 struct srt_reclaim_entry {
 	uint64_t		xid;
-	slfid_t			fid;
-	slfgen_t		gen;
+	struct slash_fidgen	fg;
 } __packed;
 
 /* ------------------------- BEGIN CONTROL MESSAGES ------------------------- */
