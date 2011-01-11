@@ -268,7 +268,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	psc_assert(oflags & O_CREAT);
 
-	if (strlen(name) > NAME_MAX) {
+	if (strlen(name) > SL_NAME_MAX) {
 		rc = ENAMETOOLONG;
 		goto out;
 	}
@@ -602,7 +602,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 
 	msfsthr_ensure();
 
-	if (strlen(newname) > NAME_MAX) {
+	if (strlen(newname) > SL_NAME_MAX) {
 		rc = ENAMETOOLONG;
 		goto out;
 	}
@@ -691,7 +691,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	msfsthr_ensure();
 
-	if (strlen(name) > NAME_MAX) {
+	if (strlen(name) > SL_NAME_MAX) {
 		rc = ENAMETOOLONG;
 		goto out;
 	}
@@ -765,7 +765,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	msfsthr_ensure();
 
-	if (strlen(name) > NAME_MAX) {
+	if (strlen(name) > SL_NAME_MAX) {
 		rc = ENAMETOOLONG;
 		goto out;
 	}
@@ -872,7 +872,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		rc = EOPNOTSUPP;
 		goto out;
 	}
-	if (strlen(name) > NAME_MAX) {
+	if (strlen(name) > SL_NAME_MAX) {
 		rc = ENAMETOOLONG;
 		goto out;
 	}
@@ -1080,7 +1080,7 @@ slash_lookuprpc(const struct slash_creds *crp, pscfs_inum_t pinum,
 	struct srm_lookup_rep *mp;
 	int rc;
 
-	if (strlen(name) > NAME_MAX)
+	if (strlen(name) > SL_NAME_MAX)
 		return (ENAMETOOLONG);
 
 	rc = fidc_lookup_load_inode(pinum, &p);
@@ -1363,7 +1363,8 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 
 	msfsthr_ensure();
 
-	if (strlen(oldname) > NAME_MAX || strlen(newname) > NAME_MAX) {
+	if (strlen(oldname) > SL_NAME_MAX ||
+	    strlen(newname) > SL_NAME_MAX) {
 		rc = ENAMETOOLONG;
 		goto out;
 	}
@@ -1501,7 +1502,8 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 
 	msfsthr_ensure();
 
-	if (strlen(buf) >= PATH_MAX || strlen(name) > NAME_MAX) {
+	if (strlen(buf) >= PATH_MAX ||
+	    strlen(name) > SL_NAME_MAX) {
 		rc = ENAMETOOLONG;
 		goto out;
 	}

@@ -616,7 +616,7 @@ slm_rmc_handle_rls_bmap(struct pscrpc_request *rq)
 int
 slm_rmc_handle_rename(struct pscrpc_request *rq)
 {
-	char from[NAME_MAX+1], to[NAME_MAX+1];
+	char from[SL_NAME_MAX + 1], to[SL_NAME_MAX + 1];
 	struct pscrpc_bulk_desc *desc;
 	struct fidc_membh *op, *np;
 	struct srm_rename_req *mq;
@@ -627,12 +627,12 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fromlen <= 1 ||
 	    mq->tolen <= 1) {
-		mp->rc = -ENOENT;
+		mp->rc = ENOENT;
 		return (0);
 	}
-	if (mq->fromlen > NAME_MAX ||
-	    mq->tolen > NAME_MAX) {
-		mp->rc = -EINVAL;
+	if (mq->fromlen > SL_NAME_MAX || mq->fromlen == 0 ||
+	    mq->tolen > SL_NAME_MAX || mq->tolen == 0) {
+		mp->rc = EINVAL;
 		return (0);
 	}
 

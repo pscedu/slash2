@@ -164,6 +164,8 @@ struct statvfs;
 #define SRCI_VERSION		1
 #define SRCI_MAGIC		UINT64_C(0xaabbccddeeff0099)
 
+#define SL_NAME_MAX		255	/* file name component length */
+
 /* SLASH RPC message types. */
 enum {
 	/* control operations */
@@ -617,7 +619,7 @@ struct srm_set_bmapreplpol_req {
 struct srm_create_req {
 	struct slash_fidgen	pfg;		/* parent dir's file ID + generation */
 	struct slash_creds	creds;		/* st_uid owner for new file */
-	char			name[NAME_MAX + 1];
+	char			name[SL_NAME_MAX + 1];
 	uint32_t		mode;		/* mode_t permission for new file */
 
 	/* parameters for fetching first bmap */
@@ -687,14 +689,14 @@ struct srm_io_rep {
 struct srm_link_req {
 	struct slash_fidgen	pfg;		/* parent dir */
 	struct slash_fidgen	fg;
-	char			name[NAME_MAX + 1];
+	char			name[SL_NAME_MAX + 1];
 } __packed;
 
 #define srm_link_rep srm_getattr2_rep
 
 struct srm_lookup_req {
 	struct slash_fidgen	pfg;		/* parent dir */
-	char			name[NAME_MAX + 1];
+	char			name[SL_NAME_MAX + 1];
 } __packed;
 
 #define srm_lookup_rep srm_getattr_rep
@@ -702,7 +704,7 @@ struct srm_lookup_req {
 struct srm_mkdir_req {
 	struct slash_creds	creds;		/* st_uid owner for new file */
 	struct slash_fidgen	pfg;		/* parent dir */
-	char			name[NAME_MAX + 1];
+	char			name[SL_NAME_MAX + 1];
 	uint32_t		mode;
 	int32_t			_pad;
 } __packed;
@@ -711,7 +713,7 @@ struct srm_mkdir_req {
 
 struct srm_mknod_req {
 	struct slash_creds	creds;		/* st_uid owner for new file */
-	char			name[NAME_MAX + 1];
+	char			name[SL_NAME_MAX + 1];
 	struct slash_fidgen	pfg;		/* parent dir */
 	uint32_t		mode;
 	uint32_t		rdev;
@@ -790,7 +792,7 @@ struct srm_statfs_rep {
 struct srm_symlink_req {
 	struct slash_creds	creds;		/* st_uid owner for new file */
 	struct slash_fidgen	pfg;		/* parent dir */
-	char			name[NAME_MAX + 1];
+	char			name[SL_NAME_MAX + 1];
 	uint32_t		linklen;
 	int32_t			_pad;
 /* link path name is in bulk */
@@ -800,7 +802,7 @@ struct srm_symlink_req {
 
 struct srm_unlink_req {
 	slfid_t			pfid;		/* parent dir */
-	char			name[NAME_MAX + 1];
+	char			name[SL_NAME_MAX + 1];
 } __packed;
 
 #define srm_unlink_rep srm_getattr_rep

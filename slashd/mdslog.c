@@ -780,7 +780,7 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 	rem = sizeof(jnamespace->sjnm_name);
 	if (name) {
 		psc_assert(rem >= strlen(name) + 1);
-		strlcpy(ptr, name, MIN(rem - 1, NAME_MAX + 1));
+		strlcpy(ptr, name, MIN(rem - 1, SL_NAME_MAX + 1));
 		len = strlen(ptr) + 1;
 		jnamespace->sjnm_namelen += len;
 		ptr += len;
@@ -788,7 +788,7 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 	}
 	if (newname) {
 		psc_assert(rem >= strlen(newname) + 1);
-		strlcpy(ptr, newname, MIN(rem - 1, NAME_MAX + 1));
+		strlcpy(ptr, newname, MIN(rem - 1, SL_NAME_MAX + 1));
 		len = strlen(ptr) + 1;
 		jnamespace->sjnm_namelen += len;
 	}
