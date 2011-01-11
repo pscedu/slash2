@@ -104,11 +104,11 @@ struct slash_fidgen {
 #define SAMEFG(a, b)								\
 	((a)->fg_fid == (b)->fg_fid && (a)->fg_gen == (b)->fg_gen)
 
-#define COPYFG(d, s)								\
+#define COPYFG(dst, src)							\
 	do {									\
-		psc_assert(sizeof(*(d)) == sizeof(struct slash_fidgen));	\
-		psc_assert(sizeof(*(s)) == sizeof(struct slash_fidgen));	\
-		memcpy((d), (s), sizeof(*(d)));					\
+		psc_assert(sizeof(*(dst)) == sizeof(struct slash_fidgen));	\
+		psc_assert(sizeof(*(src)) == sizeof(struct slash_fidgen));	\
+		memcpy((dst), (src), sizeof(*(dst)));				\
 	} while (0)
 
 #define fid_makepath(fg, fn)	_fg_makepath((fg), (fn), 0)
