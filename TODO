@@ -339,4 +339,5 @@ truncate:
 - initialize new file repl table from parent dir to help with
   persistence policies
 - slashrpc.h cannot rely on system-defined NAME_MAX
+- mds_send_batch_reclaim() should not broadcast to every resm in a res
 - merge mds_reclaim_lwm and similar routines into value-result args
