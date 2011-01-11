@@ -618,8 +618,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 		}
 	}
 	update_entry.xid = pje->pje_xid;
-	update_entry.op = jnamespace->sjnm_op; 
-	update_entry.target_gen = jnamespace->sjnm_target_gen; 
+	update_entry.op = jnamespace->sjnm_op;
+	update_entry.target_gen = jnamespace->sjnm_target_gen;
 	update_entry.parent_fid = jnamespace->sjnm_parent_fid;
 	update_entry.target_fid = jnamespace->sjnm_target_fid;
 	update_entry.new_parent_fid = jnamespace->sjnm_new_parent_fid;
@@ -633,13 +633,13 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	update_entry.mtime_ns = jnamespace->sjnm_mtime_ns;
 	update_entry.ctime_ns = jnamespace->sjnm_ctime_ns;
 
-	update_entry.namelen = jnamespace->sjnm_namelen; 
+	update_entry.namelen = jnamespace->sjnm_namelen;
 	memcpy(update_entry.name, jnamespace->sjnm_name, jnamespace->sjnm_namelen);
 
 	count = offsetof(struct srt_update_entry, name) + update_entry.namelen;
 	size = write(current_update_logfile, &update_entry, count);
 	if (size != count)
-		psc_fatal("Fail to write update log file, batchno = %"PRId64, 
+		psc_fatal("Fail to write update log file, batchno = %"PRId64,
 		    next_update_batchno);
 
 	/* see if we need to close the current reclaim log file */
@@ -701,13 +701,13 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	}
 
 	reclaim_entry.xid = pje->pje_xid;
-	reclaim_entry.fid = jnamespace->sjnm_target_fid;
-	reclaim_entry.gen = jnamespace->sjnm_target_gen;
+	reclaim_entry.fg.fg_fid = jnamespace->sjnm_target_fid;
+	reclaim_entry.fg.fg_gen = jnamespace->sjnm_target_gen;
 
 	size = write(current_reclaim_logfile, &reclaim_entry,
 	    sizeof(struct srt_reclaim_entry));
 	if (size != sizeof(struct srt_reclaim_entry))
-		psc_fatal("Fail to write reclaim log file, batchno = %"PRId64, 
+		psc_fatal("Fail to write reclaim log file, batchno = %"PRId64,
 		    next_reclaim_batchno);
 
 	/* see if we need to close the current reclaim log file */
@@ -794,7 +794,7 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 	}
 
 	pjournal_add_entry_distill(mdsJournal, txg,
-	    MDS_LOG_NAMESPACE, jnamespace, 
+	    MDS_LOG_NAMESPACE, jnamespace,
 	    offsetof(struct slmds_jent_namespace, sjnm_name) +
 	    jnamespace->sjnm_namelen);
 }
@@ -1225,7 +1225,7 @@ mds_cursor_thread(__unusedx struct psc_thread *thr)
 		if (rc)
 			psc_warnx("failed to update cursor, rc = %d", rc);
 		else
-			psc_notify("Cursor updated: txg=%"PRId64", xid=%"PRId64
+			psclog_notice("Cursor updated: txg=%"PRId64", xid=%"PRId64
 			    ", fid=0x%"PRIx64", seqno=(%"PRId64", %"PRId64")",
 			    mds_cursor.pjc_commit_txg,
 			    mds_cursor.pjc_distill_xid,
@@ -1238,9 +1238,9 @@ mds_cursor_thread(__unusedx struct psc_thread *thr)
 void
 mds_open_cursor(void)
 {
-	int rc;
-	size_t nb;
 	mdsio_fid_t mf;
+	size_t nb;
+	int rc;
 
 	rc = mdsio_lookup(MDSIO_FID_ROOT, SL_PATH_CURSOR, &mf,
 	    &rootcreds, NULL);
@@ -1259,9 +1259,9 @@ mds_open_cursor(void)
 	psc_assert(mds_cursor.pjc_fid >= SLFID_MIN);
 
 	slm_set_curr_slashid(mds_cursor.pjc_fid);
-	psc_notify("File system was formated on %"PRIu64" seconds "
+	psclog_notice("File system was formated on %"PRIu64" seconds "
 	    "since the Epoch", mds_cursor.pjc_timestamp);
-	psc_notify("File system was formated on %s",
+	psclog_notice("File system was formated on %s",
 	    ctime((time_t *)&mds_cursor.pjc_timestamp));
 }
 
@@ -1682,11 +1682,11 @@ mds_journal_init(void)
 	mdsJournal->pj_commit_txg = mds_cursor.pjc_commit_txg;
 	mdsJournal->pj_distill_xid = mds_cursor.pjc_distill_xid;
 
-	psc_notify("Journal device is %s", res->res_jrnldev);
-	psc_notify("Last SLASH FID is "SLPRI_FID, mds_cursor.pjc_fid);
-	psc_notify("Last synced ZFS transaction group number is %"PRId64,
+	psclog_notice("Journal device is %s", res->res_jrnldev);
+	psclog_notice("Last SLASH FID is "SLPRI_FID, mds_cursor.pjc_fid);
+	psclog_notice("Last synced ZFS transaction group number is %"PRId64,
 	    mdsJournal->pj_commit_txg);
-	psc_notify("Last distilled SLASH2 transaction number is %"PRId64,
+	psclog_notice("Last distilled SLASH2 transaction number is %"PRId64,
 	    mdsJournal->pj_distill_xid);
 
 	/* we need the cursor thread to start any potential log replay */
@@ -1699,9 +1699,9 @@ mds_journal_init(void)
 	    mds_replay_handler, mds_distill_handler);
 
 	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm, mds_cursor.pjc_seqno_lwm);
-	psc_notify("Last bmap sequence number low water mark is %"PRId64,
+	psclog_notice("Last bmap sequence number low water mark is %"PRId64,
 	    mds_cursor.pjc_seqno_lwm);
-	psc_notify("Last bmap sequence number high water mark is %"PRId64,
+	psclog_notice("Last bmap sequence number high water mark is %"PRId64,
 	    mds_cursor.pjc_seqno_hwm);
 
 	xmkfn(fn, "%s/%s.%s.%lu", SL_PATH_DATADIR, SL_FN_RECLAIMPROG,
