@@ -752,14 +752,30 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			INOH_LOCK(ih);
 			if (ih->inoh_ino.ino_flags &
 			    INOF_IN_PTRUNC) {
+				// XXX bmaps write leases may not be granted
+				// for this bmap or any bmap beyond
+
+				INOH_ULOCK(ih);
 				mp->rc = EAGAIN;
 				goto out;
 			}
+			FCMH_LOCK(fcmh);
+			if (mq->attr.sst_size > fcmh_2_fsz(fcmh)) {
+				fcmh_2_fsz(fcmh) = mq->attr.sst_size;
+				FCMH_ULOCK(fcmh);
+				INOH_ULOCK(ih);
+				mds_inode_sync(ih);
+				goto out;
+			}
+
 			ih->inoh_ino.ino_flags |= INOF_IN_PTRUNC;
 			ih->inoh_ino.ino_ptruncoff = mq->attr.sst_size;
 			ih->inoh_flags |= INOH_INO_DIRTY;
 
-			FCMH_LOCK(fcmh);
+			/* XXX XXX off by one */
+			fcmh->fcmh_sstb.sst_nxbmaps += (fcmh_2_fsz(fcmh) -
+			    mq->attr.sst_size) / SLASH_BMAP_SIZE;
+			fcmh_2_fsz(fcmh) = mq->attr.sst_size;
 			fcmh_2_ptruncgen(fcmh)++;
 			FCMH_ULOCK(fcmh);
 
@@ -768,26 +784,19 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 
 			to_set |= SL_SETATTRF_PTRUNCGEN;
 
-			// bmaps write leases may not be granted
-			// for this bmap or any bmap beyond
-
 			brepls_init(tract, -1);
 			tract[BREPLST_VALID] = BREPLST_TRUNCPNDG;
 
 			i = mq->attr.sst_size / SLASH_BMAP_SIZE;
 			if (mq->attr.sst_size % SLASH_BMAP_SIZE) {
 				if (mds_bmap_load(fcmh, i, &bcm) == 0) {
-					mds_repl_bmap_walk_all(bcm, tract,
-					    NULL, 0);
+					mds_repl_bmap_walkcb(bcm,
+					    tract, NULL, 0,
+					    ptrunc_tally_ios,
+					    &ios_list);
 					mds_repl_bmap_rel(bcm);
 				}
 			}
-
-#if 0
-	- synchronously contact an IOS requesting CRC recalculation for sliver and
-	  mark BREPLST_VALID on success
-	- if BMAP_PERSIST, notify replication queuer
-#endif
 
 			brepls_init(tract, -1);
 			tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE;
@@ -799,15 +808,16 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 					continue;
 
 				BHGEN_INCREMENT(bcm);
-				mds_repl_bmap_walkcb(bcm, tract,
-				    NULL, 0, ptrunc_tally_ios,
-				    &ios_list);
+				mds_repl_bmap_walkcb(bcm, tract, NULL,
+				    0, ptrunc_tally_ios, &ios_list);
 				mds_repl_bmap_rel(bcm);
 			}
 
 			rc = uswi_findoradd(&fcmh->fcmh_fg, &wk);
 			uswi_enqueue_sites(wk, ios_list.iosv, ios_list.nios);
 			uswi_unref(wk);
+
+			// add rq->peer to completion
 		}
 	}
 	/*
