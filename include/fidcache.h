@@ -49,13 +49,13 @@ struct sl_fcmh_ops {
 };
 
 /**
- * fidc_membh - the primary inode cache structure, all updates and
+ * fidc_membh - The primary cached file structure; all updates and
  * lookups into the inode are done through here.
  *
  * fidc_membh tracks cached bmaps (bmap_cache) and clients (via their
  * exports) which hold cached bmaps.
  *
- * Service specific private structures (i.e., fcmh_mds_info,
+ * Service specific private structures (i.e. fcmh_mds_info,
  * fcmh_cli_info, and fcmh_iod_info) are allocated along with the
  * fidc_membh structure.  They can be accessed by calling
  * fcmh_get_pri() defined below.
@@ -64,10 +64,10 @@ struct fidc_membh {
 	struct srt_stat		 fcmh_sstb;	/* higher-level stat(2) buffer */
 	int			 fcmh_flags;	/* see FCMH_* below */
 	psc_spinlock_t		 fcmh_lock;
-	int			 fcmh_refcnt;
-	struct psc_hashent	 fcmh_hentry;
+	int			 fcmh_refcnt;	/* threads referencing us */
+	struct psc_hashent	 fcmh_hentry;	/* hash table membership for lookups */
 	struct psclist_head	 fcmh_lentry;
-	struct psc_waitq	 fcmh_waitq;
+	struct psc_waitq	 fcmh_waitq;	/* wait here for operations */
 	struct bmap_cache	 fcmh_bmaptree;	/* bmap cache splay */
 };
 
