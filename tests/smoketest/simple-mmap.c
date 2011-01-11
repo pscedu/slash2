@@ -34,8 +34,11 @@ main(int argc, char *argv[])
 {
 	char ch;
 	char *map;
-	int i, fd, ret;
+	int i, fd, ret, choice = 0;
 	char *filename = "mmap-test.dat";
+
+	if (argc == 2) 
+		choice = atoi(argv[1]);
 
 	fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0600);
 	if (fd == -1)
@@ -47,7 +50,16 @@ main(int argc, char *argv[])
 	ret = write(fd, &ch, 1);
 	if (ret != 1)
 		err(1, "Error writing last byte of the file.");
-	map = mmap(0, FILE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	if (choice) {
+		/*
+ 		 * This should fail because we turn on direct_io on SLASH2.
+ 		 */
+		printf("Using shared mapping\n");
+		map = mmap(0, FILE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	} else {
+		printf("Using private mapping\n");
+		map = mmap(0, FILE_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+	}
 	if (map == MAP_FAILED)
 		err(1, "Error mmapping the file.");
 	for (i = 0; i < FILE_SIZE; i++) {
