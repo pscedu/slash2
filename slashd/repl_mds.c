@@ -693,6 +693,10 @@ mds_repl_node_clearallbusy(struct resm_mds_info *rmmi)
 	if (!RMMI_TRYRLOCK(rmmi, &dummy))
 		goto retry;
 
+	/*
+	 * XXX optimize by skipping the 2nd of the same (ionA, ionB),
+	 * (ionB, ionA) pair.
+	 */
 	CONF_FOREACH_RESM(s, r, n, resm, j)
 		if (resm->resm_pri != rmmi)
 			mds_repl_nodes_clearbusy(rmmi,
