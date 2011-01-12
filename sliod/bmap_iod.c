@@ -82,9 +82,9 @@ bim_getcurseq(void)
 
 	if (timespeccmp(&ctime, &bimSeq.bim_age, >) ||
 	    bimSeq.bim_minseq == BMAPSEQ_ANY) {
-		struct pscrpc_request *req;
 		struct srm_getbmapminseq_req *mq;
 		struct srm_generic_rep *mp;
+		struct pscrpc_request *req;
 		int rc;
 
 		bimSeq.bim_flags |= BIM_RETRIEVE_SEQ;
@@ -362,7 +362,7 @@ sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 				continue;
 			}
 
-			BMAP_CLEARATTR(bii_2_bmap(biod), 
+			BMAP_CLEARATTR(bii_2_bmap(biod),
 			       BMAP_IOD_RLSSEQ | BMAP_IOD_RLSSCHED);
 
 			bmap_2_bid_sliod(b, &brr->bmaps[i++]);

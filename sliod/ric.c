@@ -121,8 +121,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	//if ((mq->offset + mq->size) >= ((bmapno + 1) * SLASH_BMAP_SIZE)) {
 	if ((mq->offset + mq->size - 1) >= SLASH_BMAP_SIZE) {
 		psc_errorx("req offset / size outside of the bmap's "
-		   "address range off=%u len=%u",
-			   mq->offset, mq->size);
+		    "address range off=%u len=%u",
+		    mq->offset, mq->size);
 		mp->rc = ERANGE;
 		return (mp->rc);
 	}
@@ -159,9 +159,9 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	biodi = bmap_2_biodi(bmap);
 
 	DEBUG_FCMH(PLL_INFO, fcmh, "bmapno=%u size=%u off=%u rw=%d "
-		   "sbd_seq=%"PRId64" biod_cur_seqkey[0]=%"PRId64,
-		   bmap->bcm_bmapno, mq->size, mq->offset, rw,
-		   mq->sbd.sbd_seq, biodi->biod_cur_seqkey[0]);
+	    "sbd_seq=%"PRId64" biod_cur_seqkey[0]=%"PRId64,
+	    bmap->bcm_bmapno, mq->size, mq->offset, rw,
+	    mq->sbd.sbd_seq, biodi->biod_cur_seqkey[0]);
 
 	/* If warranted, bump the sequence number.
 	 */
@@ -320,7 +320,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		biod->biod_rls_seqkey[0] = bid->seq;
 		biod->biod_rls_seqkey[1] = bid->key;
 		biod->biod_rls_cnp = rq->rq_conn->c_peer;
-		
+
 		BMAP_SETATTR(b, BMAP_IOD_RLSSEQ);
 		biod_rlssched_locked(biod);
 
