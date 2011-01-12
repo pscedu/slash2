@@ -497,7 +497,7 @@ struct srm_bmap_release_rep {
 	int32_t			_pad;
 } __packed;
 
-struct srm_bmap_minseq_get {
+struct srm_getbmapminseq_req {
 	int32_t			seq;
 	int32_t			_pad;
 } __packed;
