@@ -6,7 +6,7 @@ reminders:
 	(o) ios - an I/O system (res)
 	(o) iod - the sliod daemon
 - do sl_csvc_wantfree() in all to-CLI csvcs
-- fix the "static" variables in communal/general functions
+- ensure reentrancy of 'static' variables in functions
 
 -----------------------------------------------------------------------
 * Support for st_nblocks for applications such as 'du -h'.
@@ -29,7 +29,9 @@ to be recorded in the changelog.
 Zhihui asks "should we include replicas in the block count?".  I'm on the
 fence about this.
 
- - there should be a slictl/msctl cmd to see this info
+ - there should be a slictl/msctl cmd to see this info:
+
+	(o) msctl -s diskusage:file[,...]
 
 pauln (11/10/2010)
 
@@ -226,15 +228,13 @@ network scheduling
 - preferentiate users
     (o) need classes, always complete a class before moving
 	to next one, files in the same class have same fairness
-- link bandwidth
-- aggregate small files, keep MAX inflight at all times between links
-- need way to prioritize specific endpoint <-> endpoint instead of
-  random to avoid scheduling slow streams over faster streams
+- add network topology descriptions to slash.conf
 
 netsched/libnetsch - universal interface
-- LD_PRELOAD
+- LD_PRELOAD?
 - intercept for recompiling
 - API
+- needs to communicate with other nodes about traffic situation
 
 tracks endpoint connections
 - if new ones are made that utilize the same link, manage and
@@ -300,8 +300,6 @@ API rename
   compromising data integrity.
 - if INOF_IN_PTRUNC is set, do not grant leases past the ino_ptrunc offset
 - GARBAGE transition states:
-    (o)	truncate should produce GARBAGE
-    (o) upsched sends notes to I/O to truncate at certain offset
     (o) confirmation of this truncates metafile
 
 	BMAPOD_MODIFY_START()
@@ -313,16 +311,9 @@ API rename
 	BMAPOD_MODIFY_STOP()
 
 - change upsched to do async callbacks
-- change upsched to do multiple repls simultaneously
-- does upsched get hung up in paul's repl test?
+- does upsched get hung up by recursive repl reqs ?
 
 truncate:
- - add a nbmaps field to the zfs_inode which is maintained separately from
-   sst_size.  this field should be accessible to MDS only
-    -- can this overlap with st_nblks ?
-
-    create a FSBLKS_PER_BMAP constant so nblks and nbmaps scale accordingly
-
  - next, if the target ptrunc offset falls inside a bmap, do more stuff:
     (o) mark the CRC for this bmap as unknown (we don't do this)
 
