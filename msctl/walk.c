@@ -57,7 +57,8 @@ walk(const char *fn, void (*cbf)(const char *, void *), void *arg)
 				    strerror(f->fts_errno));
 				continue;
 			}
-			if (S_ISREG(f->fts_statp->st_mode)) {
+			if (S_ISREG(f->fts_statp->st_mode) ||
+			    S_ISDIR(f->fts_statp->st_mode)) {
 				if (realpath(f->fts_path, buf) == NULL)
 					warn("%s", f->fts_path);
 				else {
@@ -71,8 +72,8 @@ walk(const char *fn, void (*cbf)(const char *, void *), void *arg)
 	} else {
 		if (stat(fn, &stb) == -1)
 			err(1, "%s", fn);
-		else if (!S_ISREG(stb.st_mode))
-			errx(1, "%s: not a regular file", fn);
+		else if (!S_ISREG(stb.st_mode) && !S_ISDIR(stb.st_mode))
+			errx(1, "%s: not a file or directory", fn);
 		else if (realpath(fn, buf) == NULL)
 			err(1, "%s", fn);
 		else
