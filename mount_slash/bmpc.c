@@ -249,6 +249,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *bmpce,
 	/* Replace the bmpc memory.
 	 */
 	bmpc_free(bmpce->bmpce_base);
+	bmpce->bmpce_base = NULL;
 	bmpce_init(bmpcePoolMgr, bmpce);
 	psc_pool_return(bmpcePoolMgr, bmpce);
 }
@@ -515,6 +516,7 @@ bmpc_alloc(void)
 	} else {
 		BMPCSLABS_ULOCK();
 		base = (char *)slb->slb_base + (elem * BMPC_BLKSZ);
+		memset(base, 0, BMPC_BLKSZ);
 	}
 
 	psc_assert(base);
