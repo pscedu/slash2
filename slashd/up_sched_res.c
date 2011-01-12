@@ -147,7 +147,8 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 	else if (rc >= (int)sizeof(fn))
 		rc = ENAMETOOLONG;
 	else
-		rc = mdsio_unlink(mds_upschdir_inum, fn, &rootcreds, NULL);
+		rc = mdsio_unlink(mds_upschdir_inum, fn, &rootcreds,
+		    NULL);
 	if (rc)
 		psc_error("trying to remove upsch link: %s",
 		    slstrerror(rc));
@@ -157,7 +158,6 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 __static void
 uswi_kill(struct up_sched_work_item *wk)
 {
-
 	psc_pthread_mutex_ensure_locked(&wk->uswi_mutex);
 
 	UPSCHED_MGR_ENSURE_LOCKED();
@@ -172,12 +172,14 @@ uswi_kill(struct up_sched_work_item *wk)
 
 	while (psc_atomic32_read(&wk->uswi_refcnt) > 1) {
 		psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
-		psc_multiwaitcond_wait(&wk->uswi_mwcond, &wk->uswi_mutex);
+		psc_multiwaitcond_wait(&wk->uswi_mwcond,
+		    &wk->uswi_mutex);
 		psc_pthread_mutex_lock(&wk->uswi_mutex);
 	}
 
 	if (wk->uswi_fcmh)
-		fcmh_op_done_type(wk->uswi_fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done_type(wk->uswi_fcmh,
+		    FCMH_OPCNT_LOOKUP_FIDC);
 
 	psc_pool_return(upsched_pool, wk);
 }
@@ -253,18 +255,24 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	mq->bmapno = bcm->bcm_bmapno;
 	mq->bgen = bmap_2_bgen(bcm);	/* XXX lock */
 
+	/*
+	 * Mark as SCHED now in case the reply RPC comes in after we
+	 * finish here.
+	 */
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_QUEUED] = BREPLST_REPL_SCHED;
-
 	brepls_init_idx(retifset);
-
-	/* mark it as SCHED here in case the RPC finishes really quickly... */
 	rc = mds_repl_bmap_apply(bcm, tract, retifset, off);
 
 	if (rc == BREPLST_VALID ||
 	    rc == BREPLST_REPL_SCHED)
 		psc_fatalx("invalid bmap replica state: %d", rc);
 
+	/*
+	 * If it was still QUEUED, which means we marked it SCHED, then
+	 * proceed; otherwise, bail: perhaps the user dequeued the
+	 * replication request or something.
+	 */
 	if (rc == BREPLST_REPL_QUEUED) {
 		rc = SL_RSX_WAITREP(rq, mp);
 		if (rc == 0)
@@ -281,7 +289,6 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	/* handle error return failure */
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
-
 	mds_repl_bmap_apply(bcm, tract, NULL, off);
 
  fail:
@@ -294,24 +301,87 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 
 int
 slmupschedthr_tryptrunc(struct up_sched_work_item *wk,
-    struct bmapc_memb *bcm, int off, struct sl_resource *dst_res, int i)
+    struct bmapc_memb *bcm, int off, struct sl_resource *dst_res,
+    int idx)
 {
-#if 0
-	if (someone has scheduled recompute) {
-		add to multiwait
-		    goto keep_going;
+	int tract[NBREPLST], retifset[NBREPLST], rc;
+	struct slmupsched_thread *smut;
+	struct slashrpc_cservice *csvc;
+	struct resm_mds_info *dst_rmmi;
+	struct srm_bmap_ptrunc_req *mq;
+	struct srm_generic_rep *mp;
+	struct pscrpc_request *rq;
+	struct site_mds_info *smi;
+	struct sl_resm *dst_resm;
+	struct psc_thread *thr;
+	struct sl_site *site;
+
+	thr = pscthr_get();
+	smut = slmupschedthr(thr);
+	site = smut->smut_site;
+	smi = site->site_pri;
+
+	dst_resm = psc_dynarray_getpos(&dst_res->res_members, idx);
+	dst_rmmi = dst_resm->resm_pri;
+
+	brepls_init(retifset, 0);
+	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
+
+	/*
+	 * Another ION is already handling the ptrunc CRC recomputation;
+	 * go do something else.
+	 */
+	if (mds_repl_bmap_walk_all(bcm, NULL, retifset,
+	    REPL_WALKF_SCIRCUIT))
+		return (0);
+
+	csvc = slm_geticsvc_nb(dst_resm, NULL);
+	if (csvc == NULL) {
+		if (!psc_multiwait_hascond(&smi->smi_mw,
+		    &dst_rmmi->rmmi_mwcond))
+			psc_multiwait_addcond(&smi->smi_mw,
+			    &dst_rmmi->rmmi_mwcond);
+		return (0);
 	}
-	arrange to do the truncate
 
-	- asynchronously contact an IOS
-	  requesting CRC recalculation for
-	  sliver and mark BREPLST_VALID on
-	  success
+	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRIM_VERSION,
+	    SRMT_BMAP_PTRUNC, rq, mq, mp);
+	if (rc)
+		goto fail;
+	mq->fg = *USWI_FG(wk);
+	mq->bmapno = bcm->bcm_bmapno;
+	mq->offset = fcmh_2_ino(wk->uswi_fcmh)->ino_ptruncoff %
+	    SLASH_BMAP_SIZE;
 
-	- if BMAP_PERSIST, notify replication
-	  queuer
-#endif
-	  return (0);
+	brepls_init(tract, -1);
+	tract[BREPLST_TRUNCPNDG] = BREPLST_TRUNCPNDG;
+	mds_repl_bmap_apply(bcm, tract, NULL, off);
+
+	BMAPOD_MODIFY_DONE(bcm);
+
+	rc = SL_RSX_WAITREP(rq, mp);
+	if (rc == 0)
+		rc = mp->rc;
+	pscrpc_req_finished(rq);
+
+	if (rc == 0) {
+		mds_repl_bmap_rel(bcm);
+		uswi_unref(wk);
+		sl_csvc_decref(csvc);
+		return (1);
+	}
+
+	BMAPOD_MODIFY_START(bcm);
+
+	/* handle error return failure */
+	brepls_init(tract, -1);
+	tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_TRUNCPNDG;
+	mds_repl_bmap_apply(bcm, tract, NULL, off);
+
+ fail:
+	if (csvc)
+		sl_csvc_decref(csvc);
+	return (rc);
 }
 
 int
@@ -392,7 +462,6 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
-
 	mds_repl_bmap_apply(bcm, tract, NULL, off);
 
  fail:
