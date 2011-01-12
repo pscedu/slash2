@@ -197,7 +197,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct sl_gconf);
 	PRTYPE(struct sl_mds_crc_log);
 	PRTYPE(struct sl_mds_iosinfo);
-	PRTYPE(struct sl_mds_logbuf);
 	PRTYPE(struct sl_mds_nsstats);
 	PRTYPE(struct sl_mds_peerinfo);
 	PRTYPE(struct sl_resm);
@@ -348,7 +347,6 @@ main(int argc, char *argv[])
 	PRVAL(MDSCOH_BLOCK);
 	PRVAL(MDSCOH_NONBLOCK);
 	PRVAL(MDSIO_FID_ROOT);
-	PRVAL(MDS_LOG_MAX_LOG_BATCH);
 	PRVAL(MSCC_EXIT);
 	PRVAL(MSCC_RECONFIG);
 	PRVAL(MSCMT_ADDREPLRQ);

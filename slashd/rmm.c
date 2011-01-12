@@ -42,19 +42,29 @@
 #include "sljournal.h"
 
 int
-slm_rmm_apply_update(struct slmds_jent_namespace *jnamespace)
+slm_rmm_apply_update(struct srt_update_entry *entryp)
 {
 	int rc;
+	struct slmds_jent_namespace jnamespace;
 	struct sl_mds_peerinfo *localinfo;
 
+	jnamespace.sjnm_op = entryp->op;
+	jnamespace.sjnm_uid = entryp->uid;
+	jnamespace.sjnm_gid = entryp->gid;
+	jnamespace.sjnm_atime = entryp->atime;
+	jnamespace.sjnm_mtime = entryp->mtime;
+	jnamespace.sjnm_ctime = entryp->ctime;
+	jnamespace.sjnm_namelen = entryp->namelen;
+	memcpy(jnamespace.sjnm_name, entryp->name, entryp->namelen);
+	
 	localinfo = res2rpmi(nodeResProf)->rpmi_info;
-	rc = mds_redo_namespace(jnamespace);
+	rc = mds_redo_namespace(&jnamespace);
 	if (rc)
 		psc_atomic32_inc(&localinfo->sp_stats.ns_stats[NS_DIR_RECV][
-		    jnamespace->sjnm_op][NS_SUM_FAIL]);
+		    jnamespace.sjnm_op][NS_SUM_FAIL]);
 	else
 		psc_atomic32_inc(&localinfo->sp_stats.ns_stats[NS_DIR_RECV][
-		    jnamespace->sjnm_op][NS_SUM_SUCC]);
+		    jnamespace.sjnm_op][NS_SUM_SUCC]);
 	return (rc);
 }
 
@@ -81,7 +91,6 @@ int
 slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 {
 	struct srt_update_entry *entryp;
-	struct slmds_jent_namespace *jnamespace;
 	struct srm_update_req *mq;
 	struct pscrpc_bulk_desc *desc;
 	struct srm_generic_rep *mp;
@@ -90,7 +99,7 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 	struct sl_site *site;
 	struct iovec iov;
 	uint64_t crc, seqno;
-	int i, count;
+	int i, len, count;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -131,37 +140,15 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 		goto out;
 	}
 
-	/*
-	 * Make sure that the seqno number matches what we expect
-	 * (strictly in-order delivery).  If not, reject right away.
-	 */
-	if (p->sp_recv_seqno > seqno) {
-		/*
-		 * This is okay; our peer may have just lost patience
-		 * with us and decide to resend.
-		 */
-		psc_notify("seq number %"PRIx64" is less than %"PRIx64,
-		    seqno, p->sp_recv_seqno);
-		mp->rc = EINVAL;
-		goto out;
-	}
-	if (p->sp_recv_seqno < seqno) {
-		psc_notify("seq number %"PRIx64" is greater than %"PRIx64,
-		    seqno, p->sp_recv_seqno);
-		mp->rc = EINVAL;
-		goto out;
-	}
-
 	/* iterate through the namespace update buffer and apply updates */
-	jnamespace = iov.iov_base;
+	entryp = iov.iov_base;
 	for (i = 0; i < count; i++) {
-		mp->rc = slm_rmm_apply_update(jnamespace);
+		mp->rc = slm_rmm_apply_update(entryp);
 		if (mp->rc)
 			break;
-		jnamespace = PSC_AGP(jnamespace, jnamespace->sjnm_namelen);
+		len = sizeof(struct srt_update_entry) + entryp->namelen;
+		entryp = (struct srt_update_entry *)((char *)entryp + len);
 	}
-	/* Should I ask for a resend if I have trouble applying updates? */
-	p->sp_recv_seqno = seqno + count;
 
  out:
 	PSCFREE(iov.iov_base);

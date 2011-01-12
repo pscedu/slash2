@@ -54,7 +54,6 @@
 #define SLM_CBARG_SLOT_RESPROF	1
 
 struct psc_journal		*mdsJournal;
-static struct pscrpc_nbreqset	*logPndgReqs;
 
 static int			 logentrysize;
 
@@ -62,13 +61,6 @@ extern struct bmap_timeo_table	 mdsBmapTimeoTbl;
 
 uint64_t			 next_update_batchno;
 uint64_t			 next_reclaim_batchno;
-
-/*
- * Low and high water marks of update sequence numbers that need to be
- * propagated.  Note that the pace of each MDS is different.
- */
-static uint64_t			 update_seqno_lwm;
-static uint64_t			 update_seqno_hwm;
 
 static int			 current_update_logfile = -1;
 static int			 current_update_progfile = -1;
@@ -799,67 +791,6 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 	    jnamespace->sjnm_namelen);
 }
 
-__static int
-mds_namespace_rpc_cb(struct pscrpc_request *req,
-    struct pscrpc_async_args *args)
-{
-	struct srt_update_entry *jnamespace;
-	struct sl_mds_peerinfo *peerinfo;
-	struct slashrpc_cservice *csvc;
-	struct sl_mds_logbuf *logbuf;
-	struct sl_resource *res;
-	void *buf;
-	int i, j;
-
-	res = args->pointer_arg[SLM_CBARG_SLOT_RESPROF];
-	peerinfo = res2rpmi(res)->rpmi_info;
-	csvc = args->pointer_arg[SLM_CBARG_SLOT_CSVC];
-	RPMI_LOCK(res2rpmi(res));
-	logbuf = peerinfo->sp_logbuf;
-	if (req->rq_status)
-		goto rpc_error;
-
-	/*
-	 * Scan the buffer for the entries we have attempted to send to
-	 * update our statistics before dropping our reference to the
-	 * buffer.
-	 */
-	i = logbuf->slb_count;
-	buf = logbuf->slb_buf;
-	do {
-		jnamespace = buf;
-		if (jnamespace->xid == peerinfo->sp_send_seqno)
-			break;
-		buf = PSC_AGP(buf, jnamespace->namelen);
-		i--;
-	} while (i);
-	psc_assert(i > 0);
-	j = i;
-	do {
-		jnamespace = buf;
-		if (jnamespace->xid >=
-		    peerinfo->sp_send_seqno + peerinfo->sp_send_count)
-			break;
-		SLM_NSSTATS_INCR(peerinfo, NS_DIR_SEND,
-		    jnamespace->op, NS_SUM_PEND);
-		buf = PSC_AGP(buf, jnamespace->namelen);
-		j--;
-	} while (j);
-	psc_assert(i - j == peerinfo->sp_send_count);
-
-	peerinfo->sp_send_seqno += peerinfo->sp_send_count;
-
- rpc_error:
-	peerinfo->sp_send_count = 0;				/* defensive */
-	peerinfo->sp_flags &= ~SP_FLAG_INFLIGHT;
-
-	atomic_dec(&logbuf->slb_refcnt);
-	RPMI_ULOCK(res2rpmi(res));
-
-	sl_csvc_decref(csvc);
-	return (0);
-}
-
 /**
  * mds_reclaim_lwm - Find the lowest garbage reclamation water mark of
  *	all IOSes.
@@ -919,7 +850,7 @@ mds_reclaim_hwm(void)
 __static uint64_t
 mds_update_lwm(void)
 {
-	uint64_t seqno = UINT64_MAX;
+	uint64_t batchno = UINT64_MAX;
 	struct sl_mds_peerinfo *peerinfo;
 	struct resprof_mds_info *rpmi;
 	struct sl_resm *resm;
@@ -931,131 +862,39 @@ mds_update_lwm(void)
 		peerinfo = rpmi->rpmi_info;
 
 		RPMI_LOCK(rpmi);
-		if (peerinfo->sp_send_seqno < seqno)
-			seqno = peerinfo->sp_send_seqno;
+		if (peerinfo->sp_batchno < batchno) 
+			batchno = peerinfo->sp_batchno;
 		RPMI_ULOCK(rpmi);
 	);
 
-	psc_assert(seqno != UINT64_MAX);
+	psc_assert(batchno != UINT64_MAX);
 
-	/* XXX purge old update log files here before bumping lwm */
-	update_seqno_lwm = seqno;
-	return (seqno);
+	return (batchno);
 }
 
-/**
- * mds_read_batch_update - Read a batch of updates from the
- *	corresponding log file and packed them for RPC later.
- */
-struct sl_mds_logbuf *
-mds_read_batch_update(uint64_t seqno)
+__static uint64_t
+mds_update_hwm(void)
 {
-	int i, newbuf, nitems, logfile;
-	struct slmds_jent_namespace *jnamespace;
-	struct sl_mds_logbuf *buf, *victim;
-	struct psc_thread *thr;
-	void *ptr, *logptr;
-	ssize_t size;
+	uint64_t batchno = 0;
+	struct sl_mds_peerinfo *peerinfo;
+	struct resprof_mds_info *rpmi;
+	struct sl_resm *resm;
 
-	/*
-	 * Currently, there is only one thread manipulating the list.
-	 * Make sure this is the case.
-	 */
-	thr = pscthr_get();
-	slmjnsthr(thr);
+	SL_FOREACH_MDS(resm,
+		if (resm == nodeResm)
+			continue;
+		rpmi = resm2rpmi(resm);
+		peerinfo = rpmi->rpmi_info;
 
- restart:
+		RPMI_LOCK(rpmi);
+		if (peerinfo->sp_batchno > batchno) 
+			batchno = peerinfo->sp_batchno;
+		RPMI_ULOCK(rpmi);
+	);
 
-	i = 0;
-	buf = NULL;
-	newbuf = 0;
-	victim = NULL;
-	psclist_for_each_entry(buf, &mds_update_buflist, slb_link) {
-		i++;
-		if (buf->slb_seqno == seqno)
-			break;
-		/* I am the only thread that can add a reference to a buf */
-		if (!victim && atomic_read(&buf->slb_refcnt) == 0)
-			victim = buf;
-	}
-	if (buf) {
-		if (buf->slb_count == SLM_UPDATE_BATCH)
-			return buf;
-		goto readit;
-	}
-	if (i < SL_UPDATE_MAX_BUF) {
-		newbuf = 1;
-		buf = PSCALLOC(sizeof(struct sl_mds_logbuf) +
-		    SLM_UPDATE_BATCH * logentrysize);
-		buf->slb_size = 0;
-		buf->slb_count = 0;
-		buf->slb_seqno = seqno;
-		atomic_set(&buf->slb_refcnt, 0);
-		INIT_PSC_LISTENTRY(&buf->slb_link);
-		buf->slb_buf = PSC_AGP(buf,
-		    sizeof(struct sl_mds_logbuf));
-		goto readit;
-	}
-	/*
-	 * If we are over the limit and we don't have a victim,
-	 * wait until an RPC returns or times out.
-	 */
-	if (!victim) {
-		spinlock(&mds_update_waitqlock);
-		psc_waitq_wait(&mds_update_waitq,
-		    &mds_update_waitqlock);
-		goto restart;
-	}
-	newbuf = 1;
-	buf = victim;
-	buf->slb_size = 0;
-	buf->slb_count = 0;
-	buf->slb_seqno = seqno;
-	atomic_set(&buf->slb_refcnt, 0);
-	psclist_del(&buf->slb_link, psc_lentry_hd(&buf->slb_link));
+	psc_assert(batchno != UINT64_MAX);
 
- readit:
-
-	logfile = mds_open_logfile(seqno, 1, 1);
-	lseek(logfile, buf->slb_count * logentrysize, SEEK_SET);
-	size = read(logfile, updatebuf,
-	    (SLM_UPDATE_BATCH - buf->slb_count) * logentrysize);
-	close(logfile);
-	/*
-	 * A short read is allowed, but the returned size must be a
-	 * multiple of the log entry size (should be 512 bytes).
-	 */
-	psc_assert((size % logentrysize) == 0);
-
-	nitems = size / logentrysize;
-	psc_assert(nitems + buf->slb_count <= SLM_UPDATE_BATCH);
-
-	ptr = PSC_AGP(buf->slb_buf, buf->slb_size);
-	logptr = updatebuf;
-	for (i = 0; i < nitems; i++) {
-		struct psc_journal_enthdr *pje;
-
-		pje = logptr;
-		psc_assert(pje->pje_magic == PJE_MAGIC);
-
-		jnamespace = PSC_AGP(logptr,
-		    offsetof(struct psc_journal_enthdr, pje_data));
-		psc_assert(jnamespace->sjnm_magic == SJ_NAMESPACE_MAGIC);
-		psc_assert(jnamespace->sjnm_namelen <= logentrysize);
-		memcpy(ptr, jnamespace, jnamespace->sjnm_namelen);
-		ptr = PSC_AGP(ptr, jnamespace->sjnm_namelen);
-		buf->slb_size += jnamespace->sjnm_namelen;
-		logptr = PSC_AGP(logptr, logentrysize);
-	}
-	buf->slb_count += nitems;
-
-	if (newbuf)
-		psclist_add_tail(&buf->slb_link, &mds_update_buflist);
-	/*
-	 * Return the loaded buffer without taking a reference.  This is
-	 * only possible because we are the only thread involved.
-	 */
-	return (buf);
+	return (batchno);
 }
 
 /**
@@ -1063,9 +902,9 @@ mds_read_batch_update(uint64_t seqno)
  *	that want them.
  */
 int
-mds_send_batch_update(struct sl_mds_logbuf *logbuf)
+mds_send_batch_update(uint64_t batchno)
 {
-	struct srt_update_entry *jnamespace;
+	struct srt_update_entry *entryp;
 	struct srm_update_req *mq;
 	struct slashrpc_cservice *csvc;
 	struct pscrpc_bulk_desc *desc;
@@ -1074,8 +913,29 @@ mds_send_batch_update(struct sl_mds_logbuf *logbuf)
 	struct pscrpc_request *rq;
 	struct sl_resm *resm;
 	struct iovec iov;
-	int rc, j, didwork=0;
-	void *buf;
+	int i, rc, len, count, total, didwork=0;
+	uint64_t first_xid = 0, last_xid = 0;
+	int logfile;
+	ssize_t size;
+
+	logfile = mds_open_logfile(batchno, 1, 1);
+	size = read(logfile, updatebuf, SLM_UPDATE_BATCH *
+	    (sizeof(struct srt_update_entry) + NAME_MAX));
+	close(logfile);
+
+	i = size;
+	while (i > 0) {
+		count++;
+		entryp = updatebuf;
+		if (!first_xid)
+			first_xid = entryp->xid;
+		last_xid = entryp->xid;
+		len = sizeof(struct srt_update_entry) + entryp->namelen;
+		i = i - len;
+		entryp = (struct srt_update_entry *) ((char *)entryp + len);
+	}
+	psc_assert(count);
+	psc_assert(i == 0);
 
 	SL_FOREACH_MDS(resm,
 		if (resm == nodeResm)
@@ -1091,25 +951,31 @@ mds_send_batch_update(struct sl_mds_logbuf *logbuf)
 			continue;
 		if (peerinfo->sp_flags & SP_FLAG_INFLIGHT)
 			continue;
-		if (peerinfo->sp_send_seqno < logbuf->slb_seqno ||
-		    peerinfo->sp_send_seqno >= logbuf->slb_seqno + logbuf->slb_count)
+
+		if (peerinfo->sp_batchno < batchno)
+			continue;
+		if (peerinfo->sp_batchno > batchno)
+			continue;
+		if (peerinfo->sp_xid < first_xid || peerinfo->sp_xid > last_xid)
 			continue;
 
 		/* Find out which part of the buffer should be send out */
-		j = logbuf->slb_count;
-		buf = logbuf->slb_buf;
+		i = count;
+		total = size;
+		entryp = updatebuf;
 		do {
-			jnamespace = buf;
-			if (jnamespace->xid == peerinfo->sp_send_seqno)
+			if (entryp->xid >= peerinfo->sp_xid)
 				break;
-			buf = PSC_AGP(buf, jnamespace->namelen);
-			j--;
-		} while (j);
-		psc_assert(j);
+			i--;
+			len = sizeof(struct srt_update_entry) + entryp->namelen;
+			total -= len;
+			entryp = (struct srt_update_entry *) ((char *)entryp + len);
+		} while (total);
 
-		iov.iov_base = buf;
-		iov.iov_len = logbuf->slb_size -
-		    ((char *)buf - (char *)logbuf->slb_buf);
+		psc_assert(total);
+
+		iov.iov_base = entryp;
+		iov.iov_len = total;
 
 		csvc = slm_getmcsvc(resm);
 		if (csvc == NULL) {
@@ -1127,36 +993,26 @@ mds_send_batch_update(struct sl_mds_logbuf *logbuf)
 			sl_csvc_decref(csvc);
 			continue;
 		}
-		mq->seqno = peerinfo->sp_send_seqno;
+		mq->count = i;
 		mq->size = iov.iov_len;
-		mq->count = j;
 		mq->siteid = nodeSite->site_id;
 		psc_crc64_calc(&mq->crc, iov.iov_base, iov.iov_len);
 
-		peerinfo->sp_send_count = j;
-		peerinfo->sp_logbuf = logbuf;
-		peerinfo->sp_flags |= SP_FLAG_INFLIGHT;
-		atomic_inc(&logbuf->slb_refcnt);
-
-		/*
-		 * Be careful, we use the value of j and buf from the
-		 * previous while loop.
-		 */
-		while (j) {
-			j--;
-			jnamespace = buf;
-			SLM_NSSTATS_INCR(peerinfo, NS_DIR_SEND,
-			    jnamespace->op, NS_SUM_PEND);
-			buf = PSC_AGP(buf, jnamespace->namelen);
-		}
 		rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
 		    SRMM_BULK_PORTAL, &iov, 1);
 
-		authbuf_sign(rq, PSCRPC_MSG_REQUEST);
-		rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_RESPROF] = resm->resm_res;
-		rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = peerinfo;
-		psc_assert(pscrpc_nbreqset_add(logPndgReqs, rq) == 0);
-		didwork = 1;
+		rc = SL_RSX_WAITREP(rq, mp);
+		pscrpc_req_finished(rq);
+		rq = NULL;
+
+		if (rc == 0)
+			rc = mp->rc;
+		if (rc == 0) {
+			didwork++;
+			peerinfo->sp_xid = last_xid + 1;
+			if (count == SLM_UPDATE_BATCH)
+				peerinfo->sp_batchno++;
+		}
 	);
 	return (didwork);
 }
@@ -1360,7 +1216,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 				rc = mp->rc;
 			if (rc == 0) {
 				didwork++;
-				iosinfo->si_xid = xid;;
+				iosinfo->si_xid = xid + 1;
 				if (count == SLM_RECLAIM_BATCH)
 					iosinfo->si_batchno++;
 				break;
@@ -1413,9 +1269,8 @@ mds_send_reclaim(__unusedx struct psc_thread *thr)
 void
 mds_send_update(__unusedx struct psc_thread *thr)
 {
-	struct sl_mds_logbuf *buf;
 	int rv, didwork;
-	uint64_t seqno;
+	uint64_t batchno;
 
 	/*
 	 * This thread scans the batches of updates between the low and
@@ -1424,19 +1279,12 @@ mds_send_update(__unusedx struct psc_thread *thr)
 	 * order within one MDS.
 	 */
 	while (pscthr_run()) {
-		pscrpc_nbreqset_reap(logPndgReqs);
-		seqno = mds_update_lwm();
-		/*
-		 * If update_seqno_hwm is zero, then there are no
-		 * local updates.
-		 */
-		if (update_seqno_hwm && seqno < update_seqno_hwm) {
-			buf = mds_read_batch_update(seqno);
-			didwork = mds_send_batch_update(buf);
-			seqno += SLM_UPDATE_BATCH;
-			if (didwork)
-				continue;
-		}
+		batchno = mds_reclaim_lwm();
+		do {
+			didwork = mds_send_batch_update(batchno);
+			batchno++;
+		} while (didwork && (mds_reclaim_hwm() >= batchno));
+
 		spinlock(&mds_update_waitqlock);
 		rv = psc_waitq_waitrel_s(&mds_update_waitq,
 		    &mds_update_waitqlock, SL_UPDATE_MAX_AGE);
@@ -1791,7 +1639,6 @@ mds_journal_init(void)
 		peerinfo->sp_batchno = update_prog_buf[i].res_batchno;
 	);
 	updatebuf = PSCALLOC(SLM_UPDATE_BATCH * logentrysize);
-	logPndgReqs = pscrpc_nbreqset_init(NULL, mds_namespace_rpc_cb);
 	if (found != npeers)
 		mds_record_update_prog();
 

@@ -49,27 +49,6 @@ struct sl_mds_crc_log {
 #define MDS_LOG_NAMESPACE	(_PJE_FLSHFT << 4)
 
 /*
- * If all MDSes are perfectly in sync, then we can use one buffer to read
- * log entries from the log file and send it to all MDSes.  Otherwise, we
- * need to maintain a list of buffers to avoid reading the same log file
- * repeatedly.
- */
-#define	MDS_LOG_MAX_LOG_BATCH	8
-struct sl_mds_logbuf {
-	atomic_t		 slb_refcnt;
-	int			 slb_count;			/* total # of entries */
-	int			 slb_size;			/* total size in bytes */
-	uint64_t		 slb_seqno;			/* starting sequence number */
-	struct psclist_head	 slb_link;
-	/*
-	 * A buffer that is ready for RPC (i.e. packed).  In order to deal
-	 * with timeouts of log entries, we allow a buffer to be filled
-	 * gradually.
-	 */
-	void			*slb_buf;
-};
-
-/*
  * A structure used to describe the log application progress on each site.
  */
 struct site_progress {
