@@ -422,18 +422,18 @@ replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	map[BREPLST_VALID] = '+';
 	map[BREPLST_INVALID] = '-';
 	map[BREPLST_TRUNCPNDG] = 't';
+	map[BREPLST_TRUNCPNDG_SCHED] = 'p';
 	map[BREPLST_GARBAGE] = 'g';
 	map[BREPLST_GARBAGE_SCHED] = 'x';
-	map[BREPLST_BADCRC] = 'c';
 
 	pmap[BREPLST_REPL_SCHED] = 'S';
 	pmap[BREPLST_REPL_QUEUED] = 'Q';
 	pmap[BREPLST_VALID] = '*';
 	pmap[BREPLST_INVALID] = '/';
 	pmap[BREPLST_TRUNCPNDG] = 'T';
+	pmap[BREPLST_TRUNCPNDG] = 'P';
 	pmap[BREPLST_GARBAGE] = 'G';
 	pmap[BREPLST_GARBAGE_SCHED] = 'X';
-	pmap[BREPLST_BADCRC] = 'C';
 
 	dlen = PSC_CTL_DISPLAY_WIDTH - strlen(" new-bmap-repl-policy: ") -
 	    strlen(repl_policies[BRP_ONETIME]);

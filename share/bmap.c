@@ -317,9 +317,9 @@ _log_debug_bmapodv(const struct pfl_callerinfo *pci, int level,
 	ch[BREPLST_REPL_QUEUED] = 'q';
 	ch[BREPLST_VALID] = '+';
 	ch[BREPLST_TRUNCPNDG] = 't';
+	ch[BREPLST_TRUNCPNDG_SCHED] = 'p';
 	ch[BREPLST_GARBAGE] = 'g';
 	ch[BREPLST_GARBAGE_SCHED] = 'x';
-	ch[BREPLST_BADCRC] = 'c';
 
 	for (k = 0, off = 0; k < SL_MAX_REPLICAS;
 	    k++, off += SL_BITS_PER_REPLICA)

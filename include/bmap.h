@@ -203,9 +203,9 @@ struct bmapc_memb {
 #define BREPLST_REPL_QUEUED	2	/* replica needs to be made */
 #define BREPLST_VALID		3	/* replica is active */
 #define BREPLST_TRUNCPNDG	4	/* partial truncation in bmap */
-#define BREPLST_GARBAGE		5	/* marked for deletion */
-#define BREPLST_GARBAGE_SCHED	6	/* being deleted */
-#define BREPLST_BADCRC		7	/* checksum error */
+#define BREPLST_TRUNCPNDG_SCHED	5	/* checksum error */
+#define BREPLST_GARBAGE		6	/* marked for deletion */
+#define BREPLST_GARBAGE_SCHED	7	/* being deleted */
 #define NBREPLST		8
 
 #define BMAP_NULL_CRC		UINT64_C(0x436f5d7c450ed606)
