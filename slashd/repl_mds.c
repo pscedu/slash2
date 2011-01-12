@@ -432,7 +432,6 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 	return (rc);
 }
 
-
 int
 mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
     const sl_replica_t *iosv, int nios)
