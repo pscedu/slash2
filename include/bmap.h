@@ -195,7 +195,7 @@ struct bmapc_memb {
 	    _DEBUG_BMAP_FMT "removing reference (type=%d)",		\
 	    _DEBUG_BMAP_FMTARGS(b), (type))
 
-#define bmap_foff(b) ((b)->bcm_bmapno * SLASH_BMAP_SIZE)
+#define bmap_foff(b)		((b)->bcm_bmapno * SLASH_BMAP_SIZE)
 
 /* bmap per-replica states */
 #define BREPLST_INVALID		0	/* no data present */
