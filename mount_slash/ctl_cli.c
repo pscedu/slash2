@@ -88,7 +88,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    mrq->mrq_fn, slstrerror(rc)));
 
-	if (!S_ISREG(sstb.sst_mode))
+	if (!S_ISREG(sstb.sst_mode) && !S_ISDIR(sstb.sst_mode))
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    mrq->mrq_fn, slstrerror(ENOTSUP)));
 
@@ -174,7 +174,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    mrq->mrq_fn, slstrerror(rc)));
 
-	if (!S_ISREG(sstb.sst_mode))
+	if (!S_ISREG(sstb.sst_mode) && !S_ISDIR(sstb.sst_mode))
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    mrq->mrq_fn, slstrerror(ENOTSUP)));
 
@@ -276,7 +276,7 @@ msctlhnd_set_newreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    mfnrp->mfnrp_fn, slstrerror(rc)));
 
-	if (!S_ISREG(sstb.sst_mode))
+	if (!S_ISREG(sstb.sst_mode) && !S_ISREG(sstb.sst_mode))
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    mfnrp->mfnrp_fn, slstrerror(ENOTSUP)));
 
