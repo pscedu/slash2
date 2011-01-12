@@ -59,7 +59,7 @@ static int			 logentrysize;
 
 extern struct bmap_timeo_table	 mdsBmapTimeoTbl;
 
-uint64_t			 next_update_batchno;
+uint64_t			 current_update_batchno;
 uint64_t			 next_reclaim_batchno;
 
 static int			 current_update_logfile = -1;
@@ -585,7 +585,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 
 	if (current_update_logfile == -1) {
 		current_update_logfile =
-		    mds_open_logfile(next_update_batchno, 1, 0);
+		    mds_open_logfile(current_update_batchno, 1, 0);
 		if (replay) {
 			size = read(current_update_logfile, updatebuf,
 			    SLM_UPDATE_BATCH * sizeof(struct srt_update_entry));
@@ -632,14 +632,14 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	size = write(current_update_logfile, &update_entry, count);
 	if (size != count)
 		psc_fatal("Fail to write update log file, batchno = %"PRId64,
-		    next_update_batchno);
+		    current_update_batchno);
 
 	/* see if we need to close the current reclaim log file */
 	off = lseek(current_update_logfile, 0, SEEK_CUR);
 	if (off == SLM_UPDATE_BATCH * sizeof(struct srt_update_entry)) {
 		close(current_update_logfile);
 		current_update_logfile = -1;
-		next_update_batchno++;
+		current_update_batchno++;
 
 		spinlock(&mds_update_waitqlock);
 		psc_waitq_wakeall(&mds_update_waitq);
