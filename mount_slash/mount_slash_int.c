@@ -85,7 +85,7 @@ msl_biorq_cmp(const void *x, const void *y)
 	return (CMP(a->biorq_off, b->biorq_off));
 }
 
-/* msl_biorq_build - 
+/* msl_biorq_build -
  * Notes: roff is bmap aligned.
  */
 
@@ -102,12 +102,12 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	uint32_t aoff = (roff & ~BMPC_BUFMASK); /* aligned, relative offset */
 	uint32_t alen = len + (roff & BMPC_BUFMASK);
 	uint64_t foff = roff + bmap_foff(b); /* filewise offset */
-	
+
 	DEBUG_BMAP(PLL_INFO, b, "adding req for (off=%u) (size=%u)",
 		   roff, len);
 
 	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "adding req for (off=%u) (size=%u)",
-                   roff, len);
+		   roff, len);
 
 	psc_assert(len);
 	psc_assert((roff + len) <= SLASH_BMAP_SIZE);
@@ -137,8 +137,8 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	 *   Determine and record whether RBW (read-before-write)
 	 *   operations are needed on the first or last pages.
 	 */
-	if (roff & BMPC_BUFMASK && op == BIORQ_WRITE) 
-			rbw = BIORQ_RBWFP;		
+	if (roff & BMPC_BUFMASK && op == BIORQ_WRITE)
+			rbw = BIORQ_RBWFP;
 
 	npages = alen / BMPC_BUFSZ;
 
@@ -214,10 +214,10 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 			 *   page cache entry.  For now bypass
 			 *   bmpce_handle_lru_locked() for this op.
 			 */
-			if (!i && (rbw & BIORQ_RBWFP) && 
+			if (!i && (rbw & BIORQ_RBWFP) &&
 			    (fsz > foff ||
 			     /* If file ends in this page then fetch */
-			     (rfsz > bmpce->bmpce_off && 
+			     (rfsz > bmpce->bmpce_off &&
 			      rfsz < bmpce->bmpce_off + BMPC_BLKSZ))) {
 				    bmpce->bmpce_flags |= BMPCE_RBWPAGE;
 				    psc_atomic16_inc(&bmpce->bmpce_rdref);
@@ -649,7 +649,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 
 	msl_bmap_reap_init(bmap, &mp->sbd);
 
-	DEBUG_BMAP(PLL_INFO, bmap, "rw=%d nid=%"PRIx64" bmapnid=%"PRIx64, 
+	DEBUG_BMAP(PLL_INFO, bmap, "rw=%d nid=%"PRIx64" bmapnid=%"PRIx64,
 		   rw, mp->sbd.sbd_ion_nid, bmap_2_ion(bmap));
 
 	if (getreptbl) {
@@ -1678,7 +1678,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 		 */
 		if (!(r[nr]->biorq_flags & BIORQ_DIO) && ((r[nr]->biorq_flags & BIORQ_READ) ||
 		     (r[nr]->biorq_flags & BIORQ_RBWFP) || (r[nr]->biorq_flags & BIORQ_RBWLP)))
- 			msl_pages_prefetch(r[nr]);
+			msl_pages_prefetch(r[nr]);
 
 		roff += tlen;
 		tsize -= tlen;
