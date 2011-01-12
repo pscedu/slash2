@@ -219,8 +219,8 @@ bmap_flush_create_rpc(struct bmapc_memb *b, struct iovec *iovs,
 	mq->size = size;
 	mq->op = SRMIOP_WR;
 
-	DEBUG_REQ(PLL_INFO, req, "off=%u sz=%u op=%u", mq->offset,
-		  mq->size, mq->op);
+	DEBUG_REQ(PLL_INFO, req, "off=%u sz=%u op=%u",
+	    mq->offset, mq->size, mq->op);
 
 	memcpy(&mq->sbd, &bmap_2_bci(b)->bci_sbd, sizeof(mq->sbd));
 	authbuf_sign(req, PSCRPC_MSG_REQUEST);

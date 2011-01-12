@@ -93,21 +93,21 @@ msl_biorq_cmp(const void *x, const void *y)
 
 __static void
 msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
-		struct msl_fhent *mfh, uint32_t roff, uint32_t len, int op)
+    struct msl_fhent *mfh, uint32_t roff, uint32_t len, int op)
 {
 	struct bmpc_ioreq *r;
 	struct bmap_pagecache *bmpc;
 	struct bmap_pagecache_entry *bmpce, bmpce_search, *bmpce_new;
-	int i, npages=0, rbw=0;
 	uint32_t aoff = (roff & ~BMPC_BUFMASK); /* aligned, relative offset */
 	uint32_t alen = len + (roff & BMPC_BUFMASK);
 	uint64_t foff = roff + bmap_foff(b); /* filewise offset */
+	int i, npages=0, rbw=0;
 
-	DEBUG_BMAP(PLL_INFO, b, "adding req for (off=%u) (size=%u)",
-		   roff, len);
+	DEBUG_BMAP(PLL_INFO, b,
+	    "adding req for (off=%u) (size=%u)", roff, len);
 
-	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "adding req for (off=%u) (size=%u)",
-		   roff, len);
+	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh,
+	    "adding req for (off=%u) (size=%u)", roff, len);
 
 	psc_assert(len);
 	psc_assert((roff + len) <= SLASH_BMAP_SIZE);
@@ -138,7 +138,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	 *   operations are needed on the first or last pages.
 	 */
 	if (roff & BMPC_BUFMASK && op == BIORQ_WRITE)
-			rbw = BIORQ_RBWFP;
+		rbw = BIORQ_RBWFP;
 
 	npages = alen / BMPC_BUFSZ;
 
@@ -175,8 +175,8 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 			bmpce_new = NULL;
 			bmpce_useprep(bmpce, r);
 			bmpce->bmpce_off = aoff + (i * BMPC_BUFSZ);
-			SPLAY_INSERT(bmap_pagecachetree, &bmpc->bmpc_tree,
-				     bmpce);
+			SPLAY_INSERT(bmap_pagecachetree,
+			    &bmpc->bmpc_tree, bmpce);
 		}
 
 		BMPCE_LOCK(bmpce);
@@ -1036,7 +1036,7 @@ msl_dio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 	psc_assert(mq);
 
-	DEBUG_REQ(PLL_TRACE, rq, "completed dio req (op=%d) o=%u s=%u",
+	DEBUG_REQ(PLL_TRACE, rq, "completed dio req (op=%d) off=%u sz=%u",
 	    op, mq->offset, mq->size);
 
  out:
