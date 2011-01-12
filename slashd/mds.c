@@ -1337,6 +1337,14 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
 		INOH_ULOCK(ih);
 		mds_inode_sync(ih);
 		fcmh_wake_locked(fcmh);
+
+#if 0
+	- mark BREPLST_VALID on
+	  success
+	- if BMAP_PERSIST, notify replication
+	  queuer
+#endif
+
 	}
 
 	if (fcmh->fcmh_sstb.sst_mode & (S_ISGID | S_ISUID)) {
