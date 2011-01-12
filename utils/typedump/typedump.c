@@ -245,7 +245,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_bmap_dio_req);
 	PRTYPE(struct srm_bmap_id);
 	PRTYPE(struct srm_bmap_iod_get);
-	PRTYPE(struct srm_bmap_minseq_get);
+	PRTYPE(struct srm_bmap_ptrunc_req);
 	PRTYPE(struct srm_bmap_release_rep);
 	PRTYPE(struct srm_bmap_release_req);
 	PRTYPE(struct srm_connect_req);
@@ -259,6 +259,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_getattr_req);
 	PRTYPE(struct srm_getbmap_full_rep);
 	PRTYPE(struct srm_getbmap_full_req);
+	PRTYPE(struct srm_getbmapminseq_req);
 	PRTYPE(struct srm_io_rep);
 	PRTYPE(struct srm_io_req);
 	PRTYPE(struct srm_leasebmap_rep);
@@ -318,13 +319,13 @@ main(int argc, char *argv[])
 	PRVAL(BMPC_MAXSLBS);
 	PRVAL(BMPC_SLB_NBLKS);
 	PRVAL(BPHXC);
-	PRVAL(BREPLST_BADCRC);
 	PRVAL(BREPLST_GARBAGE);
 	PRVAL(BREPLST_GARBAGE_SCHED);
 	PRVAL(BREPLST_INVALID);
 	PRVAL(BREPLST_REPL_QUEUED);
 	PRVAL(BREPLST_REPL_SCHED);
 	PRVAL(BREPLST_TRUNCPNDG);
+	PRVAL(BREPLST_TRUNCPNDG_SCHED);
 	PRVAL(BREPLST_VALID);
 	PRVAL(BRP_ONETIME);
 	PRVAL(BRP_PERSIST);
