@@ -254,8 +254,13 @@ dircache_new_ents(struct dircache_info *i, size_t size)
 			e->de_flags |= DIRCE_FREEING;
 			dircache_ent_ulock(e);
 			dircache_rls_ents(e, DCFREEF_RELEASE);
-		} else
+		} else {
 			dircache_ent_ulock(e);
+			/* Give someone else a shot to free some 
+			 *   dircache pages.
+			 */
+			break;
+		}
 	}
 	freelock(&m->dcm_lock);
 
