@@ -937,6 +937,7 @@ mds_send_batch_update(uint64_t batchno)
 	    (sizeof(struct srt_update_entry) + NAME_MAX));
 	close(logfile);
 
+	count = 0;
 	i = size;
 	while (i > 0) {
 		count++;
