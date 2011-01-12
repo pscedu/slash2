@@ -729,7 +729,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	fcmh_setattr(p, &mp->pattr, FCMH_SETATTRF_NONE);
 
-	psc_info("pfid=%"PRIx64" mode=0%o name='%s' rc=%d mp->rc=%d",
+	psclog_info("pfid=%"PRIx64" mode=0%o name='%s' rc=%d mp->rc=%d",
 	    mq->pfg.fg_fid, mq->mode, mq->name, rc, mp->rc);
 
 	rc = slc_fcmh_get(&mp->cattr, FCMH_SETATTRF_NONE, &c);
@@ -915,7 +915,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	fcmh_setattr(p, &mp->pattr, FCMH_SETATTRF_NONE);
 
-	psc_info("pfid=%"PRIx64" mode=0%o name='%s' rc=%d mp->rc=%d",
+	psclog_info("pfid=%"PRIx64" mode=0%o name='%s' rc=%d mp->rc=%d",
 	    mq->pfg.fg_fid, mq->mode, mq->name, rc, mp->rc);
 
 	rc = slc_fcmh_get(&mp->cattr, FCMH_SETATTRF_NONE, &c);
@@ -924,8 +924,8 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
  out:
 	pscfs_reply_mknod(pfr, mp ? mp->cattr.sst_fid : 0,
-		mp ? mp->cattr.sst_gen : 0, MSLFS_ENTRY_TIMEO,
-		&stb, MSLFS_ATTR_TIMEO, rc);
+	    mp ? mp->cattr.sst_gen : 0, MSLFS_ENTRY_TIMEO, &stb,
+	    MSLFS_ATTR_TIMEO, rc);
 	if (c)
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	if (p)
@@ -1148,7 +1148,7 @@ msl_lookup_fidcache(const struct slash_creds *cr, pscfs_inum_t pinum,
 	slfid_t child;
 	int rc;
 
-	psc_info("looking for file: %s under inode: "SLPRI_FID,
+	psclog_info("looking for file: %s under inode: "SLPRI_FID,
 	    name, pinum);
 
 	p = fidc_lookup_fid(pinum);
@@ -1431,9 +1431,10 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	else
 		slc_fcmh_initdci(op);
 
-	fcmh_setattr(op, &mp->opattr, FCMH_SETATTRF_NONE | FCMH_SETATTRF_HAVELOCK);
+	fcmh_setattr(op, &mp->srr_opattr, FCMH_SETATTRF_NONE |
+	    FCMH_SETATTRF_HAVELOCK);
 	if (np != np)
-		fcmh_setattr(np, &mp->npattr, FCMH_SETATTRF_NONE);
+		fcmh_setattr(np, &mp->srr_npattr, FCMH_SETATTRF_NONE);
 
  out:
 	if (np)

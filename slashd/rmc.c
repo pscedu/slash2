@@ -672,8 +672,8 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	mp->rc = mdsio_rename(fcmh_2_mdsio_fid(op), from,
 	    fcmh_2_mdsio_fid(np), to, &rootcreds, mds_namespace_log);
 
-	mdsio_fcmh_refreshattr(op, &mp->opattr);
-	mdsio_fcmh_refreshattr(np, &mp->npattr);
+	mdsio_fcmh_refreshattr(op, &mp->srr_opattr);
+	mdsio_fcmh_refreshattr(np, &mp->srr_npattr);
  out:
 	if (np)
 		fcmh_op_done_type(np, FCMH_OPCNT_LOOKUP_FIDC);

@@ -484,7 +484,7 @@ struct srm_bmap_id {
 	sl_bmapno_t		bmapno;
 } __packed;
 
-#define MAX_BMAP_RELEASE 8
+#define MAX_BMAP_RELEASE	8
 struct srm_bmap_release_req {
 	struct srm_bmap_id	bmaps[MAX_BMAP_RELEASE];
 	uint32_t		nbmaps;
@@ -497,8 +497,16 @@ struct srm_bmap_release_rep {
 	int32_t			_pad;
 } __packed;
 
-struct srm_getbmapminseq_req {
+struct srm_getbmapminseq_req {		/* XXX use ping? */
 	int32_t			seq;
+	int32_t			_pad;
+} __packed;
+
+struct srm_bmap_ptrunc_req {
+	struct slash_fidgen	fg;
+	sl_bmapno_t		bmapno;
+	int32_t			offset;
+	int32_t			rc;
 	int32_t			_pad;
 } __packed;
 
@@ -556,7 +564,7 @@ struct srm_replst_master_req {
 	unsigned char		data[56];	/* slave data here if it fits */
 } __packed;
 
-#define srm_replst_master_rep srm_replst_master_req
+#define srm_replst_master_rep	srm_replst_master_req
 
 /*
  * bmap data carrier for a REPL_GETST when data is larger than can
@@ -582,7 +590,7 @@ struct srsm_replst_bhdr {
 
 #define SRM_REPLST_PAGESIZ	(1024 * 1024)	/* should be network MSS */
 
-#define srm_replst_slave_rep srm_replst_slave_req
+#define srm_replst_slave_rep	srm_replst_slave_req
 
 struct srm_repl_schedwk_req {
 	uint64_t		nid;		/* XXX gross */
@@ -600,7 +608,7 @@ struct srm_repl_read_req {
 	int32_t			slvrno;
 } __packed;
 
-#define srm_repl_read_rep srm_io_rep
+#define srm_repl_read_rep	srm_io_rep
 
 struct srm_set_newreplpol_req {
 	struct slash_fidgen	fg;
@@ -654,8 +662,8 @@ struct srm_getattr_rep {
 } __packed;
 
 struct srm_getattr2_rep {
-	struct srt_stat		cattr;
-	struct srt_stat		pattr;
+	struct srt_stat		cattr;		/* child node */
+	struct srt_stat		pattr;		/* parent dir */
 	int32_t			rc;
 	int32_t			_pad;
 } __packed;
@@ -667,8 +675,8 @@ struct srm_io_req {
 	uint32_t		flags:31;
 	uint32_t		op:1;		/* read/write */
 	uint32_t		size;
-	uint32_t		offset;
-	uint32_t		_pad;
+	uint32_t		offset;		/* relative within bmap */
+	int32_t			_pad;
 /* WRITE data is bulk request. */
 } __packed;
 
@@ -692,14 +700,14 @@ struct srm_link_req {
 	char			name[SL_NAME_MAX + 1];
 } __packed;
 
-#define srm_link_rep srm_getattr2_rep
+#define srm_link_rep		srm_getattr2_rep
 
 struct srm_lookup_req {
 	struct slash_fidgen	pfg;		/* parent dir */
 	char			name[SL_NAME_MAX + 1];
 } __packed;
 
-#define srm_lookup_rep srm_getattr_rep
+#define srm_lookup_rep		srm_getattr_rep
 
 struct srm_mkdir_req {
 	struct slash_creds	creds;		/* st_uid owner for new file */
@@ -709,7 +717,7 @@ struct srm_mkdir_req {
 	int32_t			_pad;
 } __packed;
 
-#define srm_mkdir_rep srm_getattr2_rep
+#define srm_mkdir_rep		srm_getattr2_rep
 
 struct srm_mknod_req {
 	struct slash_creds	creds;		/* st_uid owner for new file */
@@ -719,7 +727,7 @@ struct srm_mknod_req {
 	uint32_t		rdev;
 } __packed;
 
-#define srm_mknod_rep srm_getattr2_rep
+#define srm_mknod_rep		srm_getattr2_rep
 
 #define DEF_READDIR_NENTS	100
 #define MAX_READDIR_NENTS	1000
@@ -750,7 +758,7 @@ struct srm_readlink_req {
 struct srm_readlink_rep {
 	int32_t			rc;
 	int32_t			_pad;
-/* buf is in bulk of size PATH_MAX */
+/* buf is in bulk of size SL_PATH_MAX */
 } __packed;
 
 struct srm_rename_req {
@@ -761,9 +769,9 @@ struct srm_rename_req {
 /* 'from' and 'to' component names are in bulk data without terminating NULs */
 } __packed;
 
-#define srm_rename_rep srm_getattr2_rep
-#define opattr pattr
-#define npattr cattr
+#define srm_rename_rep		srm_getattr2_rep
+#define srr_npattr		cattr
+#define srr_opattr		pattr
 
 struct srm_replrq_req {
 	struct slash_fidgen	fg;
@@ -778,7 +786,7 @@ struct srm_setattr_req {
 	int32_t			_pad;
 } __packed;
 
-#define srm_setattr_rep srm_getattr_rep
+#define srm_setattr_rep		srm_getattr_rep
 
 struct srm_statfs_req {
 } __packed;
@@ -798,13 +806,13 @@ struct srm_symlink_req {
 /* link path name is in bulk */
 } __packed;
 
-#define srm_symlink_rep srm_getattr2_rep
+#define srm_symlink_rep		srm_getattr2_rep
 
 struct srm_unlink_req {
 	slfid_t			pfid;		/* parent dir */
 	char			name[SL_NAME_MAX + 1];
 } __packed;
 
-#define srm_unlink_rep srm_getattr_rep
+#define srm_unlink_rep		srm_getattr_rep
 
 #endif /* _SLASHRPC_H_ */
