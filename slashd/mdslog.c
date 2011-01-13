@@ -60,6 +60,12 @@ extern struct bmap_timeo_table	 mdsBmapTimeoTbl;
 uint64_t			 current_update_batchno;
 uint64_t			 current_reclaim_batchno;
 
+psc_spinlock_t			 mds_update_lock = SPINLOCK_INIT;
+psc_spinlock_t			 mds_reclaim_lock = SPINLOCK_INIT;
+
+uint64_t			 current_update_xid = 0;
+uint64_t			 current_reclaim_xid = 0;
+
 static int			 current_update_logfile = -1;
 static int			 current_update_progfile = -1;
 
@@ -632,6 +638,10 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 		}
 	}
 
+	spinlock(&mds_reclaim_lock);
+	current_reclaim_xid = pje->pje_xid;
+	freelock(&mds_reclaim_lock);
+
 	reclaim_entry.xid = pje->pje_xid;
 	reclaim_entry.fg.fg_fid = jnamespace->sjnm_target_fid;
 	reclaim_entry.fg.fg_gen = jnamespace->sjnm_target_gen;
@@ -690,6 +700,11 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 			    SEEK_CUR);
 		}
 	}
+
+	spinlock(&mds_update_lock);
+	current_update_xid = pje->pje_xid;
+	freelock(&mds_update_lock);
+
 	update_entry.xid = pje->pje_xid;
 	update_entry.op = jnamespace->sjnm_op;
 	update_entry.target_gen = jnamespace->sjnm_target_gen;
@@ -834,9 +849,9 @@ mds_reclaim_lwm(void)
 }
 
 __static uint64_t
-mds_reclaim_hwm(void)
+mds_reclaim_hwm(int batchno)
 {
-	uint64_t batchno = 0;
+	uint64_t value = 0;
 	struct sl_mds_iosinfo *iosinfo;
 	struct resprof_mds_info *rpmi;
 	struct sl_resource *res;
@@ -849,11 +864,16 @@ mds_reclaim_hwm(void)
 		iosinfo = rpmi->rpmi_info;
 
 		RPMI_LOCK(rpmi);
-		if (iosinfo->si_batchno > batchno)
-			batchno = iosinfo->si_batchno;
+		if (batchno) {
+			if (iosinfo->si_batchno > value) 
+			    value = iosinfo->si_batchno;
+		} else {
+			if (iosinfo->si_xid > value) 
+			    value = iosinfo->si_xid;
+		}
 		RPMI_ULOCK(rpmi);
 	}
-	return (batchno);
+	return (value);
 }
 
 /**
@@ -1276,9 +1296,15 @@ mds_send_reclaim(__unusedx struct psc_thread *thr)
 
 		batchno = mds_reclaim_lwm();
 		do {
+			spinlock(&mds_reclaim_lock);
+			if (mds_reclaim_hwm(0) > current_reclaim_xid) {
+				freelock(&mds_reclaim_lock);
+				break;
+			}
+			freelock(&mds_reclaim_lock);
 			didwork = mds_send_batch_reclaim(batchno);
 			batchno++;
-		} while (didwork && (mds_reclaim_hwm() >= batchno));
+		} while (didwork && (mds_reclaim_hwm(1) >= batchno));
 
 		spinlock(&mds_reclaim_waitqlock);
 		rv = psc_waitq_waitrel_s(&mds_reclaim_waitq,
@@ -1306,7 +1332,7 @@ mds_send_update(__unusedx struct psc_thread *thr)
 		do {
 			didwork = mds_send_batch_update(batchno);
 			batchno++;
-		} while (didwork && (mds_reclaim_hwm() >= batchno));
+		} while (didwork && (mds_update_hwm() >= batchno));
 
 		spinlock(&mds_update_waitqlock);
 		rv = psc_waitq_waitrel_s(&mds_update_waitq,
@@ -1610,6 +1636,7 @@ mds_journal_init(void)
  		reclaim_entryp++;
 		count++;
 	}
+	current_reclaim_xid = last_reclaim_xid;
 	if (total == SLM_RECLAIM_BATCH)
 		current_reclaim_batchno++;
 	close(logfile);
@@ -1694,6 +1721,7 @@ mds_journal_init(void)
 		update_entryp = (struct srt_update_entry *) ((char *)update_entryp + len);
 	}
 	psc_assert(!total);
+	current_update_xid = last_update_xid;
 	if (total == SLM_UPDATE_BATCH)
 		current_update_batchno++;
 	close(logfile);
