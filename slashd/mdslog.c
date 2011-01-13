@@ -549,7 +549,7 @@ mds_open_logfile(uint64_t batchno, int update, int readonly)
 		return (logfile);
 	}
 	logfile = open(log_fn, O_CREAT | O_TRUNC | O_WRONLY | O_SYNC, 0600);
-	if (logfile < 0)
+	if (logfile == -1)
 		psc_fatal("Failed to create log file %s", log_fn);
 	return (logfile);
 }
@@ -615,7 +615,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 		if (replay) {
 			size = read(current_reclaim_logfile, reclaimbuf,
 			    SLM_RECLAIM_BATCH * sizeof(struct srt_reclaim_entry));
-			if (size < 0)
+			if (size == -1)
 			    psc_fatal("Fail to read reclaim log file, batchno = %"PRId64,
 				current_reclaim_batchno);
 			total = size / sizeof(struct srt_reclaim_entry);
@@ -681,7 +681,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 		if (replay) {
 			size = read(current_update_logfile, updatebuf,
 			    SLM_UPDATE_BATCH * sizeof(struct srt_update_entry));
-			if (size < 0)
+			if (size == -1)
 			    psc_fatal("Fail to read update log file, batchno = %"PRId64,
 				current_update_batchno);
 			total = size / sizeof(struct srt_update_entry);
@@ -966,7 +966,7 @@ mds_send_batch_update(uint64_t batchno)
 	ssize_t size;
 
 	logfile = mds_open_logfile(batchno, 1, 1);
-	if (logfile < 0)
+	if (logfile == -1)
 		psc_fatal("Fail to open update log file, batch = %"PRId64, batchno);
 	size = read(logfile, updatebuf, SLM_UPDATE_BATCH *
 	    (sizeof(struct srt_update_entry) + NAME_MAX));
@@ -1192,7 +1192,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 	didwork = 0;
 
 	logfile = mds_open_logfile(batchno, 0, 1);
-	if (logfile < 0)
+	if (logfile == -1)
 	    psc_fatal("Fail to open reclaim log file, batch = %"PRId64, batchno);
 
 	size = read(logfile, reclaimbuf, SLM_RECLAIM_BATCH *
@@ -1570,19 +1570,18 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 void
 mds_journal_init(void)
 {
-	int i, ri, rc, len, nios, count, total, found, npeers;
-	static char fn[PATH_MAX];
-	struct resprof_mds_info *rpmi;
-	struct sl_mds_iosinfo *iosinfo;
+	uint64_t batchno, last_reclaim_xid = 0, last_update_xid = 0, last_distill_xid = 0;
+	int i, ri, len, nios, count, total, found, npeers, logfile;
+	struct srt_reclaim_entry *reclaim_entryp;
+	struct srt_update_entry *update_entryp;
 	struct sl_mds_peerinfo *peerinfo;
+	struct sl_mds_iosinfo *iosinfo;
+	struct resprof_mds_info *rpmi;
 	struct sl_resource *res;
 	struct sl_resm *resm;
 	struct stat sb;
+	char fn[PATH_MAX];
 	ssize_t size;
-	int logfile;
-	uint64_t batchno, last_reclaim_xid = 0, last_update_xid = 0, last_distill_xid = 0;
-	struct srt_update_entry *update_entryp;
-	struct srt_reclaim_entry *reclaim_entryp;
 
 	/* Make sure we have some I/O servers to work with */
 	nios = 0;
@@ -1590,11 +1589,12 @@ mds_journal_init(void)
 		if (res->res_type != SLREST_MDS)
 			nios++;
 	if (!nios)
-		psc_fatal("Missing I/O servers at site %s", nodeSite->site_name);
+		psc_fatalx("Missing I/O servers at site %s", nodeSite->site_name);
 
 	/* Count the number of peer MDSes we have */
 	npeers = 0;
-	SL_FOREACH_MDS(resm, npeers++);
+	SL_FOREACH_MDS(resm, npeers++)
+		;
 	npeers--;
 
 	mds_open_cursor();
@@ -1602,8 +1602,7 @@ mds_journal_init(void)
 	xmkfn(fn, "%s/%s.%s.%lu", SL_PATH_DATADIR, SL_FN_RECLAIMPROG,
 	    psc_get_hostname(), mds_cursor.pjc_timestamp);
 	current_reclaim_progfile = open(fn, O_CREAT | O_RDWR | O_SYNC, 0600);
-	rc = fstat(current_reclaim_progfile, &sb);
-	if (rc < 0)
+	if (fstat(current_reclaim_progfile, &sb) == -1)
 		psc_fatal("Fail to stat reclaim log file %s", fn);
 	psc_assert((sb.st_size % sizeof(struct reclaim_prog_entry)) == 0);
 
@@ -1642,13 +1641,13 @@ mds_journal_init(void)
 	/* Find out the highest reclaim batchno and xid */
 	batchno = mds_reclaim_lwm(1);
 	logfile = mds_open_logfile(batchno, 0, 1);
-	if (logfile < 0) {
+	if (logfile == -1) {
 		if (batchno) {
 			batchno--;
 			logfile = mds_open_logfile(batchno, 0, 1);
 		}
 	}
-	if (logfile < 0)
+	if (logfile == -1)
 	    psc_fatal("Fail to open reclaim log file, batch = %"PRId64, batchno);
 
 	current_reclaim_batchno = batchno;
@@ -1685,8 +1684,7 @@ mds_journal_init(void)
 	xmkfn(fn, "%s/%s.%s.%lu", SL_PATH_DATADIR, SL_FN_UPDATEPROG,
 	    psc_get_hostname(), mds_cursor.pjc_timestamp);
 	current_update_progfile = open(fn, O_CREAT | O_RDWR | O_SYNC, 0600);
-	rc = fstat(current_update_progfile, &sb);
-	if (rc < 0)
+	if (fstat(current_update_progfile, &sb) == -1)
 		psc_fatal("Fail to stat update log file %s", fn);
 	psc_assert((sb.st_size % sizeof(struct update_prog_entry)) == 0);
 
@@ -1725,13 +1723,13 @@ mds_journal_init(void)
 	/* Find out the highest update batchno and xid */
 	batchno = mds_update_lwm();
 	logfile = mds_open_logfile(batchno, 1, 1);
-	if (logfile < 0) {
+	if (logfile == -1) {
 		if (batchno) {
 			batchno--;
 			logfile = mds_open_logfile(batchno, 1, 1);
 		}
 	}
-	if (logfile < 0)
+	if (logfile == -1)
 	    psc_fatal("Fail to open update log file, batch = %"PRId64, batchno);
 
 	current_update_batchno = batchno;
@@ -1777,7 +1775,6 @@ mds_journal_init(void)
 	mdsJournal = pjournal_open(res->res_jrnldev);
 	if (mdsJournal == NULL)
 		psc_fatal("Fail to open log file %s", res->res_jrnldev);
-
 
 	mdsJournal->pj_npeers = npeers;
 	mdsJournal->pj_commit_txg = mds_cursor.pjc_commit_txg;
