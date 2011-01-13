@@ -824,9 +824,9 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
  *	all IOSes.
  */
 __static uint64_t
-mds_reclaim_lwm(void)
+mds_reclaim_lwm(int batchno)
 {
-	uint64_t batchno = UINT64_MAX;
+	uint64_t value = UINT64_MAX;
 	struct sl_mds_iosinfo *iosinfo;
 	struct resprof_mds_info *rpmi;
 	struct sl_resource *res;
@@ -839,13 +839,18 @@ mds_reclaim_lwm(void)
 		iosinfo = rpmi->rpmi_info;
 
 		RPMI_LOCK(rpmi);
-		if (iosinfo->si_batchno < batchno)
-			batchno = iosinfo->si_batchno;
+		if (batchno) {
+			if (iosinfo->si_batchno < value)
+				value = iosinfo->si_batchno;
+		} else {
+			if (iosinfo->si_xid < value)
+				value = iosinfo->si_xid;
+		}
 		RPMI_ULOCK(rpmi);
 	}
-	psc_assert(batchno != UINT64_MAX);
+	psc_assert(value != UINT64_MAX);
 
-	return (batchno);
+	return (value);
 }
 
 __static uint64_t
@@ -1294,10 +1299,10 @@ mds_send_reclaim(__unusedx struct psc_thread *thr)
 	 */
 	while (pscthr_run()) {
 
-		batchno = mds_reclaim_lwm();
+		batchno = mds_reclaim_lwm(1);
 		do {
 			spinlock(&mds_reclaim_lock);
-			if (mds_reclaim_hwm(0) > current_reclaim_xid) {
+			if (mds_reclaim_lwm(0) > current_reclaim_xid) {
 				freelock(&mds_reclaim_lock);
 				break;
 			}
@@ -1328,7 +1333,7 @@ mds_send_update(__unusedx struct psc_thread *thr)
 	 * order within one MDS.
 	 */
 	while (pscthr_run()) {
-		batchno = mds_reclaim_lwm();
+		batchno = mds_update_lwm();
 		do {
 			didwork = mds_send_batch_update(batchno);
 			batchno++;
@@ -1609,7 +1614,7 @@ mds_journal_init(void)
 		mds_record_reclaim_prog();
 
 	/* Find out the highest reclaim batchno and xid */
-	batchno = mds_reclaim_lwm();
+	batchno = mds_reclaim_lwm(1);
 	logfile = mds_open_logfile(batchno, 0, 1);
 	if (logfile < 0) {
 		if (batchno) {
