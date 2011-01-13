@@ -321,7 +321,8 @@ _mds_repl_bmap_walk(struct bmapc_memb *bcm, const int *tract,
  * @bcm: the bmap.
  * @ios: the ION resource that should stay marked "valid".
  *
- * XXX this should mark others as GARBAGE instead of INVALID to avoid garbage leaks.
+ * XXX this should mark others as GARBAGE instead of INVALID to avoid
+ *	garbage leaks.
  */
 int
 mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
@@ -331,14 +332,16 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 	uint32_t policy;
 
 	/*
-	 * Find/add our replica's IOS ID but instruct mds_repl_ios_lookup_add()
-	 *   not to journal this operation because the inode's repl table
-	 *   will be journaled with this bmap's updated repl bitmap.
-	 * This saves a journal I/O.
+	 * Find/add our replica's IOS ID but instruct
+	 * mds_repl_ios_lookup_add() not to journal this operation
+	 * because the inode's repl table will be journaled with this
+	 * bmap's updated repl bitmap.  This saves a journal I/O.
 	 */
-	iosidx = mds_repl_ios_lookup_add(fcmh_2_inoh(bcm->bcm_fcmh), ios, 1);
+	iosidx = mds_repl_ios_lookup_add(fcmh_2_inoh(bcm->bcm_fcmh),
+	    ios, 1);
 	if (iosidx < 0)
-		psc_fatalx("lookup ios %d: %s", ios, slstrerror(iosidx));
+		psc_fatalx("ios_lookup_add %d: %s", ios,
+		    slstrerror(iosidx));
 
 	BHREPL_POLICY_GET(bcm, policy);
 
