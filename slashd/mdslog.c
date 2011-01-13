@@ -1015,8 +1015,8 @@ mds_send_batch_update(uint64_t batchno)
 
 		psc_assert(total);
 
-		iov.iov_base = entryp;
 		iov.iov_len = total;
+		iov.iov_base = entryp;
 
 		csvc = slm_getmcsvc(resm);
 		if (csvc == NULL) {
@@ -1165,9 +1165,9 @@ mds_open_cursor(void)
 int
 mds_send_batch_reclaim(uint64_t batchno)
 {
-	int i, ri, rc, count, nios, logfile, didwork;
+	int i, ri, rc, len, count, total, nios, logfile, didwork;
 	struct pscrpc_request *rq = NULL;
-	struct srt_reclaim_entry *entry;
+	struct srt_reclaim_entry *entryp;
 	struct slashrpc_cservice *csvc;
 	struct sl_mds_iosinfo *iosinfo;
 	struct resprof_mds_info *rpmi;
@@ -1201,13 +1201,10 @@ mds_send_batch_reclaim(uint64_t batchno)
 	psc_assert((size % sizeof(struct srt_reclaim_entry)) == 0);
 	count = (int) size / (int) sizeof(struct srt_reclaim_entry);
 
-	iov.iov_len = size;
-	iov.iov_base = reclaimbuf;
-
 	/* find the xid associated with the last log entry */
-	entry = PSC_AGP(reclaimbuf, (count - 1) *
+	entryp = PSC_AGP(reclaimbuf, (count - 1) *
 	    sizeof(struct srt_reclaim_entry));
-	xid = entry->xid;
+	xid = entryp->xid;
 
 	nios = 0;
 	SITE_FOREACH_RES(nodeSite, res, ri) {
@@ -1230,6 +1227,26 @@ mds_send_batch_reclaim(uint64_t batchno)
 		}
 
 		RPMI_ULOCK(rpmi);
+
+		/* Find out which part of the buffer should be send out */
+		i = count;
+		total = size;
+		entryp = reclaimbuf;
+		do {
+			if (entryp->xid >= iosinfo->si_xid)
+				break;
+			i--;
+			len = sizeof(struct srt_reclaim_entry);
+			total -= len;
+			entryp = (struct srt_reclaim_entry *) ((char *)entryp + len);
+		} while (total);
+
+		psc_assert(total);
+
+		count = i;
+		iov.iov_len = total;
+		iov.iov_base = entryp;
+
 		/*
 		 * Send RPC to the I/O server and wait for it to complete.
 		 */
