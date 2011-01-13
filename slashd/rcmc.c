@@ -18,7 +18,7 @@
  */
 
 /*
- * Routines for issuing RPC requests to CLIENT from MDS.
+ * Routines for issuing RPC requests to CLI from MDS.
  */
 
 #define PSC_SUBSYS PSS_RPC
@@ -67,7 +67,8 @@ slmrmcthr_replst_slave_eof(struct slm_replst_workreq *rsw,
 }
 
 int
-slmrmcthr_replst_slave_waitrep(struct pscrpc_request *rq, struct up_sched_work_item *wk)
+slmrmcthr_replst_slave_waitrep(struct pscrpc_request *rq,
+    struct up_sched_work_item *wk)
 {
 	struct srm_replst_slave_req *mq;
 	struct srm_replst_slave_rep *mp;
@@ -148,7 +149,7 @@ slmrcmthr_walk_brepls(struct slm_replst_workreq *rsw,
 }
 
 /*
- * slm_rcm_issue_getreplst - issue a GETREPLST reply to a CLIENT from MDS.
+ * slm_rcm_issue_getreplst - Issue a GETREPLST reply to a CLI from MDS.
  */
 int
 slm_rcm_issue_getreplst(struct slm_replst_workreq *rsw,
@@ -184,16 +185,39 @@ slm_rcm_issue_getreplst(struct slm_replst_workreq *rsw,
 	return (rc);
 }
 
+int
+slmrcmthr_walk_bmaps(struct slm_replst_workreq *rsw,
+    struct up_sched_work_item *wk)
+{
+	struct pscrpc_request *rq = NULL;
+	struct bmapc_memb *bcm;
+	sl_bmapno_t n;
+	int rc;
+
+	rc = slm_rcm_issue_getreplst(rsw, wk, 0);
+	if (fcmh_isreg(wk->uswi_fcmh)) {
+		for (n = 0; rc == 0 && n < USWI_NBMAPS(wk); n++) {
+			if (mds_bmap_load(wk->uswi_fcmh, n, &bcm))
+				continue;
+			BMAP_LOCK(bcm);
+			rc = slmrcmthr_walk_brepls(rsw, wk, bcm, n, &rq);
+			bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
+		}
+		if (rq)
+			slmrmcthr_replst_slave_waitrep(rq, wk);
+	} else {
+	}
+	slmrmcthr_replst_slave_eof(rsw, wk);
+	return (rc);
+}
+
 void
 slmrcmthr_main(struct psc_thread *thr)
 {
-	struct up_sched_work_item *wk;
 	struct slm_replst_workreq *rsw;
+	struct up_sched_work_item *wk;
 	struct slmrcm_thread *srcm;
-	struct pscrpc_request *rq;
 	struct fidc_membh *fcmh;
-	struct bmapc_memb *bcm;
-	sl_bmapno_t n;
 	int rc;
 
 	srcm = slmrcmthr(thr);
@@ -202,8 +226,6 @@ slmrcmthr_main(struct psc_thread *thr)
 
 		srcm->srcm_page_bitpos = SRM_REPLST_PAGESIZ * NBBY;
 
-		rc = 0;
-		rq = NULL;
 		if (rsw->rsw_fg.fg_fid == FID_ANY) {
 			PLL_LOCK(&upsched_listhd);
 			PLL_FOREACH(wk, &upsched_listhd) {
@@ -212,19 +234,7 @@ slmrcmthr_main(struct psc_thread *thr)
 					continue;
 				PLL_ULOCK(&upsched_listhd);
 
-				rc = slm_rcm_issue_getreplst(rsw, wk, 0);
-				for (n = 0; rc == 0 && n < USWI_NBMAPS(wk); n++) {
-					if (mds_bmap_load(wk->uswi_fcmh, n, &bcm))
-						continue;
-					BMAP_LOCK(bcm);
-					rc = slmrcmthr_walk_brepls(rsw, wk, bcm, n, &rq);
-					bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
-				}
-				if (rq) {
-					slmrmcthr_replst_slave_waitrep(rq, wk);
-					rq = NULL;
-				}
-				slmrmcthr_replst_slave_eof(rsw, wk);
+				rc = slmrcmthr_walk_bmaps(rsw, wk);
 				PLL_LOCK(&upsched_listhd);
 				uswi_unref(wk);
 				if (rc)
@@ -232,17 +242,7 @@ slmrcmthr_main(struct psc_thread *thr)
 			}
 			PLL_ULOCK(&upsched_listhd);
 		} else if ((wk = uswi_find(&rsw->rsw_fg, NULL)) != NULL) {
-			rc = slm_rcm_issue_getreplst(rsw, wk, 0);
-			for (n = 0; rc == 0 && n < USWI_NBMAPS(wk); n++) {
-				if (mds_bmap_load(wk->uswi_fcmh, n, &bcm))
-					continue;
-				BMAP_LOCK(bcm);
-				rc = slmrcmthr_walk_brepls(rsw, wk, bcm, n, &rq);
-				bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
-			}
-			if (rq)
-				slmrmcthr_replst_slave_waitrep(rq, wk);
-			slmrmcthr_replst_slave_eof(rsw, wk);
+			slmrcmthr_walk_bmaps(rsw, wk);
 			uswi_unref(wk);
 		} else if (mds_repl_loadino(&rsw->rsw_fg, &fcmh) == 0) {
 			/*
@@ -253,20 +253,7 @@ slmrcmthr_main(struct psc_thread *thr)
 			wk = psc_pool_get(upsched_pool);
 			uswi_init(wk, rsw->rsw_fg.fg_fid);
 			wk->uswi_fcmh = fcmh;
-
-			slm_rcm_issue_getreplst(rsw, wk, 0);
-			for (n = 0; n < USWI_NBMAPS(wk); n++) {
-				if (mds_bmap_load(wk->uswi_fcmh, n, &bcm))
-					continue;
-				BMAP_LOCK(bcm);
-				rc = slmrcmthr_walk_brepls(rsw, wk, bcm, n, &rq);
-				bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
-				if (rc)
-					break;
-			}
-			if (rq)
-				slmrmcthr_replst_slave_waitrep(rq, wk);
-			slmrmcthr_replst_slave_eof(rsw, wk);
+			slmrcmthr_walk_bmaps(rsw, wk);
 			fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 			psc_pool_return(upsched_pool, wk);
 		}
