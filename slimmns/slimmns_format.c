@@ -54,8 +54,8 @@ slnewfs_mkdir(const char *fn)
 {
 	if (mkdir(fn, 0700) == -1 && errno != EEXIST)
 		psc_fatal("mkdir %s", fn);
-	if (pw)
-		chown(fn, pw->pw_uid, pw->pw_gid);
+	if (pw && chown(fn, pw->pw_uid, pw->pw_gid) == -1)
+		psc_warn("chown %u %s", pw->pw_uid, fn);
 }
 
 void
@@ -105,8 +105,8 @@ slimmns_create(const char *root, uint32_t depth)
 	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
 	if (fd == -1)
 		psc_fatal("open %s", fn);
-	if (pw)
-		fchown(fd, pw->pw_uid, pw->pw_gid);
+	if (pw && fchown(fd, pw->pw_uid, pw->pw_gid) == -1)
+		psc_warn("chown %u %s", pw->pw_uid, fn);
 
 	memset(&cursor, 0, sizeof(struct psc_journal_cursor));
 	cursor.pjc_magic = PJRNL_CURSOR_MAGIC;
