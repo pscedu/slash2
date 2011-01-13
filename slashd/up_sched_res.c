@@ -189,7 +189,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
     struct bmapc_memb *bcm, int off, struct sl_resm *src_resm,
     struct sl_resource *dst_res, int j)
 {
-	int tract[NBREPLST], retifset[NBREPLST], amt = 0, rc;
+	int tract[NBREPLST], retifset[NBREPLST], amt = 0, rc = 0;
 	struct resm_mds_info *src_rmmi, *dst_rmmi;
 	struct srm_repl_schedwk_req *mq;
 	struct slashrpc_cservice *csvc;
@@ -296,6 +296,8 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 		mds_repl_nodes_adjbusy(src_rmmi, dst_rmmi, -amt);
 	if (csvc)
 		sl_csvc_decref(csvc);
+	if (rc)
+		psc_warnx("replication arrangement failed rc=%d", rc);
 	return (0);
 }
 
@@ -333,7 +335,7 @@ slmupschedthr_tryptrunc(struct up_sched_work_item *wk,
 	 */
 	if (mds_repl_bmap_walk_all(bcm, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT))
-		return (0);
+		return (-1);
 
 	csvc = slm_geticsvc_nb(dst_resm, NULL);
 	if (csvc == NULL) {
@@ -381,14 +383,16 @@ slmupschedthr_tryptrunc(struct up_sched_work_item *wk,
  fail:
 	if (csvc)
 		sl_csvc_decref(csvc);
-	return (rc);
+	if (rc)
+		psc_warnx("partial truncation failed rc=%d", rc);
+	return (0);
 }
 
 int
 slmupschedthr_trygarbage(struct up_sched_work_item *wk,
     struct bmapc_memb *bcm, int off, struct sl_resource *dst_res, int j)
 {
-	int tract[NBREPLST], retifset[NBREPLST], rc;
+	int tract[NBREPLST], retifset[NBREPLST], rc = 0;
 	struct slashrpc_cservice *csvc;
 	struct slmupsched_thread *smut;
 	struct resm_mds_info *dst_rmmi;
@@ -467,6 +471,8 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
  fail:
 	if (csvc)
 		sl_csvc_decref(csvc);
+	if (rc)
+		psc_warnx("garbage reclamation failed rc=%d", rc);
 	return (0);
 }
 
@@ -542,7 +548,6 @@ slmupschedthr_main(struct psc_thread *thr)
 			freelock(&smi->smi_lock);
 
 			rc = uswi_access(wk);
-
 			if (rc == 0) {
 				/* repl must be going away, drop it */
 				slmupschedthr_removeq(wk);
@@ -601,9 +606,8 @@ slmupschedthr_main(struct psc_thread *thr)
 					if (uswi_gen != wk->uswi_gen)
 						goto skiprepl;
  handle_bmap:
-					rc = mds_bmap_load(wk->uswi_fcmh,
-					    bmap_i.ri_rnd_idx, &bcm);
-					if (rc)
+					if (mds_bmap_load(wk->uswi_fcmh,
+					    bmap_i.ri_rnd_idx, &bcm))
 						continue;
 
 					has_work = 1;
@@ -629,7 +633,8 @@ slmupschedthr_main(struct psc_thread *thr)
 							/* skip ourself and old/inactive replicas */
 							if (src_res_i.ri_rnd_idx == iosidx ||
 							    SL_REPL_GET_BMAP_IOS_STAT(bcm->bcm_repls,
-							    SL_BITS_PER_REPLICA * src_res_i.ri_rnd_idx) != BREPLST_VALID)
+							    SL_BITS_PER_REPLICA *
+							    src_res_i.ri_rnd_idx) != BREPLST_VALID)
 								continue;
 
 							BMAPOD_MODIFY_DONE(bcm);
@@ -637,7 +642,8 @@ slmupschedthr_main(struct psc_thread *thr)
 							/* search source nids for an idle, online connection */
 							FOREACH_RND(&src_resm_i,
 							    psc_dynarray_len(&src_res->res_members)) {
-								src_resm = psc_dynarray_getpos(&src_res->res_members,
+								src_resm = psc_dynarray_getpos(
+								    &src_res->res_members,
 								    src_resm_i.ri_rnd_idx);
 								csvc = slm_geticsvc_nb(src_resm, NULL);
 								if (csvc == NULL) {
@@ -663,14 +669,20 @@ slmupschedthr_main(struct psc_thread *thr)
 						break;
 					case BREPLST_TRUNCPNDG:
 						FOREACH_RND(&dst_resm_i,
-						    psc_dynarray_len(&dst_res->res_members))
-							if (slmupschedthr_tryptrunc(wk,
+						    psc_dynarray_len(&dst_res->res_members)) {
+							rc = slmupschedthr_tryptrunc(wk,
 							    bcm, off, dst_res,
-							    dst_resm_i.ri_rnd_idx))
+							    dst_resm_i.ri_rnd_idx);
+							if (rc < 0)
+								break;
+							if (rc > 0)
 								goto restart;
-						RESET_RND_ITER(&bmap_i);
+						}
+						if (rc)
+							RESET_RND_ITER(&bmap_i);
 						break;
 					case BREPLST_GARBAGE_SCHED:
+					case BREPLST_TRUNCPNDG_SCHED:
 						RESET_RND_ITER(&bmap_i);
 						break;
 					case BREPLST_GARBAGE:
