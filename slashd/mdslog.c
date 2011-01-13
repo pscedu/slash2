@@ -522,8 +522,8 @@ mds_open_logfile(uint64_t batchno, int update, int readonly)
 	}
 	if (readonly) {
 		/*
- 		 * The caller should check the return value.
- 		 */
+		 * The caller should check the return value.
+		 */
 		logfile = open(log_fn, O_RDONLY);
 		return logfile;
 	}
@@ -585,9 +585,9 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	psc_assert(jnamespace->sjnm_magic == SJ_NAMESPACE_MAGIC);
 
 	/*
- 	 * Note that distill reclaim before update.  This is the same
- 	 * order we use in recovery.
- 	 */
+	 * Note that distill reclaim before update.  This is the same
+	 * order we use in recovery.
+	 */
 
 	/*
 	 * If the namespace operation needs to reclaim disk space on I/O
@@ -613,7 +613,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 			size = read(current_reclaim_logfile, reclaimbuf,
 			    SLM_RECLAIM_BATCH * sizeof(struct srt_reclaim_entry));
 			if (size < 0)
-			    psc_fatal("Fail to read reclaim log file, batchno = %"PRId64, 
+			    psc_fatal("Fail to read reclaim log file, batchno = %"PRId64,
 				current_reclaim_batchno);
 			total = size / sizeof(struct srt_reclaim_entry);
 
@@ -676,7 +676,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 			size = read(current_update_logfile, updatebuf,
 			    SLM_UPDATE_BATCH * sizeof(struct srt_update_entry));
 			if (size < 0)
-			    psc_fatal("Fail to read update log file, batchno = %"PRId64, 
+			    psc_fatal("Fail to read update log file, batchno = %"PRId64,
 				current_update_batchno);
 			total = size / sizeof(struct srt_update_entry);
 
@@ -870,10 +870,10 @@ mds_reclaim_hwm(int batchno)
 
 		RPMI_LOCK(rpmi);
 		if (batchno) {
-			if (iosinfo->si_batchno > value) 
+			if (iosinfo->si_batchno > value)
 			    value = iosinfo->si_batchno;
 		} else {
-			if (iosinfo->si_xid > value) 
+			if (iosinfo->si_xid > value)
 			    value = iosinfo->si_xid;
 		}
 		RPMI_ULOCK(rpmi);
@@ -900,7 +900,7 @@ mds_update_lwm(void)
 		peerinfo = rpmi->rpmi_info;
 
 		RPMI_LOCK(rpmi);
-		if (peerinfo->sp_batchno < batchno) 
+		if (peerinfo->sp_batchno < batchno)
 			batchno = peerinfo->sp_batchno;
 		RPMI_ULOCK(rpmi);
 	);
@@ -925,7 +925,7 @@ mds_update_hwm(void)
 		peerinfo = rpmi->rpmi_info;
 
 		RPMI_LOCK(rpmi);
-		if (peerinfo->sp_batchno > batchno) 
+		if (peerinfo->sp_batchno > batchno)
 			batchno = peerinfo->sp_batchno;
 		RPMI_ULOCK(rpmi);
 	);
@@ -957,7 +957,7 @@ mds_send_batch_update(uint64_t batchno)
 	ssize_t size;
 
 	logfile = mds_open_logfile(batchno, 1, 1);
-	if (logfile < 0) 
+	if (logfile < 0)
 		psc_fatal("Fail to open update log file, batch = %"PRId64, batchno);
 	size = read(logfile, updatebuf, SLM_UPDATE_BATCH *
 	    (sizeof(struct srt_update_entry) + NAME_MAX));
@@ -1183,7 +1183,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 	didwork = 0;
 
 	logfile = mds_open_logfile(batchno, 0, 1);
-	if (logfile < 0) 
+	if (logfile < 0)
 	    psc_fatal("Fail to open reclaim log file, batch = %"PRId64, batchno);
 
 	size = read(logfile, reclaimbuf, SLM_RECLAIM_BATCH *
@@ -1639,7 +1639,7 @@ mds_journal_init(void)
 			logfile = mds_open_logfile(batchno, 0, 1);
 		}
 	}
-	if (logfile < 0) 
+	if (logfile < 0)
 	    psc_fatal("Fail to open reclaim log file, batch = %"PRId64, batchno);
 
 	current_reclaim_batchno = batchno;
@@ -1651,11 +1651,11 @@ mds_journal_init(void)
 	psc_assert((size % sizeof(struct srt_reclaim_entry)) == 0);
 
 	total = size / sizeof(struct srt_reclaim_entry);
- 	count = 0;
+	count = 0;
 	reclaim_entryp = reclaimbuf;
 	while (count < total) {
 		last_reclaim_xid = reclaim_entryp->xid;
- 		reclaim_entryp++;
+		reclaim_entryp++;
 		count++;
 	}
 	current_reclaim_xid = last_reclaim_xid;
@@ -1722,7 +1722,7 @@ mds_journal_init(void)
 			logfile = mds_open_logfile(batchno, 1, 1);
 		}
 	}
-	if (logfile < 0) 
+	if (logfile < 0)
 	    psc_fatal("Fail to open update log file, batch = %"PRId64, batchno);
 
 	current_update_batchno = batchno;
