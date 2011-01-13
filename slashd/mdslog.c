@@ -147,7 +147,8 @@ mds_record_update_prog(void)
 		update_prog_buf[i].res_batchno = peerinfo->sp_batchno;
 		i++;
 	);
-	lseek(current_update_progfile, 0, SEEK_SET);
+	if (lseek(current_update_progfile, 0, SEEK_SET) == (off_t)-1)
+		psc_warn("lseek");
 	size = write(current_update_progfile, update_prog_buf,
 	    i * sizeof(struct update_prog_entry));
 	psc_assert(size == i * (int)sizeof(struct update_prog_entry));
@@ -174,7 +175,8 @@ mds_record_reclaim_prog(void)
 		reclaim_prog_buf[i].res_batchno = iosinfo->si_batchno;
 		i++;
 	}
-	lseek(current_reclaim_progfile, 0, SEEK_SET);
+	if (lseek(current_reclaim_progfile, 0, SEEK_SET) == (off_t)-1)
+		psc_warn("lseek");
 	size = write(current_reclaim_progfile, reclaim_prog_buf,
 	    i * sizeof(struct reclaim_prog_entry));
 	psc_assert(size == i * (int)sizeof(struct reclaim_prog_entry));
@@ -542,8 +544,9 @@ mds_open_logfile(uint64_t batchno, int update, int readonly)
 		 * During replay, the offset will be determined by the
 		 * xid.
 		 */
-		lseek(logfile, 0, SEEK_END);
-		return logfile;
+		if (lseek(logfile, 0, SEEK_END) == (off_t)-1)
+			psc_warn("lseek");
+		return (logfile);
 	}
 	logfile = open(log_fn, O_CREAT | O_TRUNC | O_WRONLY | O_SYNC, 0600);
 	if (logfile < 0)
@@ -571,11 +574,11 @@ int
 mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
     int replay)
 {
-	unsigned long off;
 	int size, count, total;
 	struct slmds_jent_namespace *jnamespace;
 	struct srt_update_entry update_entry, *update_entryp;
 	struct srt_reclaim_entry reclaim_entry, *reclaim_entryp;
+	off_t off;
 
 	psc_assert(pje->pje_magic == PJE_MAGIC);
 	if (!(pje->pje_type & MDS_LOG_NAMESPACE))
@@ -632,9 +635,10 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 			 * seek-to-end.  If we do find it, we will
 			 * distill again (overwrite should be fine).
 			 */
-			lseek(current_reclaim_logfile,
+			if (lseek(current_reclaim_logfile,
 			    count * sizeof(struct srt_reclaim_entry),
-			    SEEK_CUR);
+			    SEEK_CUR) == (off_t)-1)
+				psc_warn("lseek");
 		}
 	}
 
@@ -654,7 +658,9 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 
 	/* see if we need to close the current reclaim log file */
 	off = lseek(current_reclaim_logfile, 0, SEEK_CUR);
-	if (off == SLM_RECLAIM_BATCH * sizeof(struct srt_reclaim_entry)) {
+	if (off == (off_t)-1)
+		psc_warn("lseek");
+	else if (off == SLM_RECLAIM_BATCH * sizeof(struct srt_reclaim_entry)) {
 		close(current_reclaim_logfile);
 		current_reclaim_logfile = -1;
 		current_reclaim_batchno++;
@@ -695,9 +701,10 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 			 * seek-to-end.  If we do find it, we will
 			 * distill again (overwrite should be fine).
 			 */
-			lseek(current_update_logfile,
+			if (lseek(current_update_logfile,
 			    count * sizeof(struct srt_update_entry),
-			    SEEK_CUR);
+			    SEEK_CUR) == (off_t)-1)
+				psc_warn("lseek");
 		}
 	}
 
@@ -732,7 +739,9 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 
 	/* see if we need to close the current reclaim log file */
 	off = lseek(current_update_logfile, 0, SEEK_CUR);
-	if (off == SLM_UPDATE_BATCH * sizeof(struct srt_update_entry)) {
+	if (off == (off_t)-1)
+		psc_warn("lseek");
+	else if (off == SLM_UPDATE_BATCH * sizeof(struct srt_update_entry)) {
 		close(current_update_logfile);
 		current_update_logfile = -1;
 		current_update_batchno++;
