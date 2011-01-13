@@ -729,15 +729,30 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	to_set = mq->to_set & SL_SETATTRF_CLI_ALL;
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
 		if (mq->attr.sst_size == 0) {
-			/* full truncate */
+			/*
+			 * Full truncate.  If file size is already zero,
+			 * do nothing.
+			*/
 			FCMH_LOCK(fcmh);
-			fcmh_2_gen(fcmh)++;
-			FCMH_ULOCK(fcmh);
+			if (fcmh_2_fsz(fcmh) == 0)
+				FCMH_ULOCK(fcmh);
+			else {
+				struct srt_stat sstb;
 
-			to_set |= SL_SETATTRF_GEN;
+				fcmh_2_gen(fcmh)++;
+				FCMH_ULOCK(fcmh);
 
-			/* XXX: queue changelog updates to every IOS replica */
-			/* XXX: if file size is already 0, don't bump */
+				to_set |= SL_SETATTRF_GEN;
+
+				/* XXX: queue changelog updates to every IOS replica */
+
+				sstb.sst_size = SL_BMAP_START_OFF;
+				mp->rc = mdsio_setattr(
+				    fcmh_2_mdsio_fid(fcmh), &sstb,
+				    SL_SETATTRF_METASIZE, &rootcreds,
+				    NULL, fcmh_2_mdsio_data(fcmh),
+				    NULL);
+			}
 		} else {
 			/* partial truncate */
 			struct slash_inode_handle *ih;
