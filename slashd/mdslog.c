@@ -106,7 +106,8 @@ __static PSCLIST_HEAD(mds_reclaim_buflist);
 /* max # of seconds before an update is propagated */
 #define SL_UPDATE_MAX_AGE	 30
 
-#define SL_RECLAIM_MAX_AGE	 10
+/* max # of seconds before a reclaim is propagated */
+#define SL_RECLAIM_MAX_AGE	 30
 
 /* a buffer used to read on-disk update log file */
 static void			*updatebuf;
