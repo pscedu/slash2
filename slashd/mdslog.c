@@ -982,7 +982,7 @@ mds_send_batch_update(uint64_t batchno)
 		last_xid = entryp->xid;
 		len = sizeof(struct srt_update_entry) + entryp->namelen;
 		i = i - len;
-		entryp = (struct srt_update_entry *) ((char *)entryp + len);
+		entryp = PSC_AGP(entryp, len);
 	}
 	psc_assert(count);
 	psc_assert(i == 0);
@@ -1019,7 +1019,7 @@ mds_send_batch_update(uint64_t batchno)
 			i--;
 			len = sizeof(struct srt_update_entry) + entryp->namelen;
 			total -= len;
-			entryp = (struct srt_update_entry *) ((char *)entryp + len);
+			entryp = PSC_AGP(entryp, len);
 		} while (total);
 
 		psc_assert(total);
@@ -1247,7 +1247,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 			i--;
 			len = sizeof(struct srt_reclaim_entry);
 			total -= len;
-			entryp = (struct srt_reclaim_entry *) ((char *)entryp + len);
+			entryp = PSC_AGP(entryp, len);
 		} while (total);
 
 		psc_assert(total);
@@ -1749,7 +1749,7 @@ mds_journal_init(void)
 		count++;
 		len = sizeof(struct srt_update_entry) + update_entryp->namelen;
 		total -= len;
-		update_entryp = (struct srt_update_entry *) ((char *)update_entryp + len);
+		update_entryp = PSC_AGP(update_entryp, len);
 	}
 	psc_assert(!total);
 	current_update_xid = last_update_xid;
