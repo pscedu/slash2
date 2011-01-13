@@ -343,16 +343,17 @@ Note that file names are unavailable in this mode.
 .Pp
 The following legend lists the states a block map may be in for the
 one-time or persistent replication policies:
-.Bl -column "reclaimi" "one-ti" "Indicator" -offset indent
-.It Sy State   Ta Sy One-time Ta Sy Persistent
-.It ================================
-.It active     Ta Li + Ta Li *
-.It reclaiming Ta Li x Ta Li X
-.It garbage    Ta Li g Ta Li G
-.It inactive   Ta Li - Ta Li /
-.It old        Ta Li q Ta Li Q
-.It scheduled  Ta Li s Ta Li S
-.It truncated  Ta Li t Ta Li T
+.Bl -column "scheduled for replicati" "one-ti" "Indicator" -offset indent
+.It Sy State                   Ta Sy One-time Ta Sy Persistent
+.It ================================================
+.It active                     Ta Li + Ta Li *
+.It inactive                   Ta Li - Ta Li /
+.It queued for replication     Ta Li q Ta Li Q
+.It replicating                Ta Li s Ta Li S
+.It garbage                    Ta Li g Ta Li G
+.It garbage being reclaimed    Ta Li x Ta Li X
+.It truncated                  Ta Li t Ta Li T
+.It resolving truncation       Ta Li p Ta Li P
 .El
 .Pp
 See
