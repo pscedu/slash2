@@ -85,12 +85,12 @@ mdsio_bmap_read(struct bmapc_memb *bmap)
 	int rc;
 
 	rc = zfsslash2_read(&rootcreds, bmap_2_ondisk(bmap), BMAP_OD_SZ,
-	    &nb, (off_t)((BMAP_OD_SZ * bmap->bcm_bmapno) +
-	    SL_BMAP_START_OFF), bmap_2_zfs_fh(bmap));
+	    &nb, (off_t)BMAP_OD_SZ * bmap->bcm_bmapno +
+	    SL_BMAP_START_OFF, bmap_2_zfs_fh(bmap));
 	if (rc == 0 && nb != BMAP_OD_SZ)
 		rc = SLERR_SHORTIO;
 
-	DEBUG_BMAP(PLL_TRACE, bmap, "read bmap (rc=%d)",rc);
+	DEBUG_BMAP(PLL_TRACE, bmap, "read bmap (rc=%d)", rc);
 	return (rc);
 }
 
@@ -101,8 +101,8 @@ mdsio_bmap_read(struct bmapc_memb *bmap)
 int
 mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 {
-	struct sl_mds_crc_log crclog;
 	struct bmap_mds_info *bmdsi = bmap_2_bmdsi(bmap);
+	struct sl_mds_crc_log crclog;
 	uint32_t utimgen, i;
 	size_t nb;
 	int rc;
