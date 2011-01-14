@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2007-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -37,7 +37,7 @@ int			(*fidcReapCb)(struct fidc_membh *);
 struct psc_poolmaster	  fidcPoolMaster;
 struct psc_poolmgr	 *fidcPool;
 struct psc_listcache	  fidcBusyList;		/* active in use */
-struct psc_listcache	  fidcIdleList;			/* identity untouched, but reapable */
+struct psc_listcache	  fidcIdleList;		/* identity untouched, but reapable */
 struct psc_hashtbl	  fidcHtable;
 
 #define	fcmh_get()	psc_pool_get(fidcPool)
@@ -90,8 +90,9 @@ fcmh_setattr(struct fidc_membh *fcmh, struct srt_stat *sstb, int flags)
 
 	if (fcmh_2_fid(fcmh) != SLFID_ROOT &&
 	    fcmh_2_gen(fcmh) > sstb->sst_gen) {
-		DEBUG_FCMH(PLL_WARN, fcmh, "attempt to set attr from a "
-		    "stale generation number!");
+		DEBUG_FCMH(PLL_WARN, fcmh, "attempt to set attr with "
+		    "gen %"PRIu64" from old gen %"PRIu64,
+		    fcmh_2_gen(fcmh), sstb->sst_gen);
 		goto out;
 	}
 
@@ -320,30 +321,32 @@ _fidc_lookup(const struct pfl_callerinfo *pfl_callerinfo,
 		fcmh_op_start_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 
 		if (sl_fcmh_ops.sfop_modify)
-			sl_fcmh_ops.sfop_modify(fcmh, (void *)fgp);
+			sl_fcmh_ops.sfop_modify(fcmh, fgp);
 
 		FCMH_ULOCK(fcmh);
 		*fcmhp = fcmh;
 		return (0);
 	}
-	/* we have failed to find a match in the cache */
+
+	/* We have failed to find a match in the cache */
 	if (flags & FIDC_LOOKUP_CREATE) {
 		if (!try_create) {
-			/* allocate a new fidc handle */
 			psc_hashbkt_unlock(b);
 			fcmh_new = fcmh_get();
 			try_create = 1;
 			goto restart;
 		}
 	 } else {
-		/* FIDC_LOOKUP_CREATE was not specified and the fcmh
+		/*
+		 * FIDC_LOOKUP_CREATE was not specified and the fcmh
 		 *  is not present.
 		 */
 		psc_hashbkt_unlock(b);
 		return (ENOENT);
 	}
 
-	/* OK, we've got a new fcmh.  No need to lock it since
+	/*
+	 * OK, we've got a new fcmh.  No need to lock it since
 	 *  it's not yet visible to other threads.
 	 */
 	fcmh = fcmh_new;
