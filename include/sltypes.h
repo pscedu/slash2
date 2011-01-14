@@ -56,6 +56,9 @@ typedef uint64_t sl_ino_t;
 /* thread local storage */
 #define SL_TLSIDX_FIDBUF	(PFL_TLSIDX_LASTRESERVED)
 
+#define SL_NAME_MAX		255	/* file name component length */
+#define SL_PATH_MAX		4096	/* file path name length */
+
 /* I/O flags */
 enum rw {
 	SL_READ			= 42,
@@ -67,8 +70,8 @@ enum rw {
  * Defines a storage system which can hold a block or blocks of a file.  A number
  * of these structures are statically allocated within the inode of the file and
  * are fixed for the lifetime of the file.  They apply to snapshots as well as
- * the active file.  Such an arrangement saves us from storing the iosystem id
- * within each block at the cost of limiting the number of iosystems which may
+ * the active file.  Such an arrangement saves us from storing the I/O system id
+ * within each block at the cost of limiting the number of I/O systems which may
  * manage the blocks of a given file.
  */
 typedef struct {

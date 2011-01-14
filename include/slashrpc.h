@@ -164,9 +164,6 @@ struct statvfs;
 #define SRCI_VERSION		1
 #define SRCI_MAGIC		UINT64_C(0xaabbccddeeff0099)
 
-#define SL_NAME_MAX		255	/* file name component length */
-#define SL_PATH_MAX		4096	/* file path name length */
-
 /* SLASH RPC message types. */
 enum {
 	/* control operations */
