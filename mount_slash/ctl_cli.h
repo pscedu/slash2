@@ -29,7 +29,7 @@
 
 /* for retrieving info about replication status */
 struct msctlmsg_replst {
-	char			mrs_fn[PATH_MAX];
+	char			mrs_fn[SL_PATH_MAX];
 	struct slash_fidgen	mrs_fg;		/* used intermittenly */
 	char			mrs_iosv[SITE_NAME_MAX][SL_MAX_REPLICAS];
 	uint32_t		mrs_nios;
@@ -38,7 +38,7 @@ struct msctlmsg_replst {
 };
 
 struct msctlmsg_replst_slave {
-	char			mrsl_fn[PATH_MAX];
+	char			mrsl_fn[SL_PATH_MAX];
 	uint32_t		mrsl_boff;	/* bmap starting offset */
 	uint32_t		mrsl_nbmaps;	/* # of bmaps in this chunk */
 	char			mrsl_data[0];	/* bcs_repls data */
@@ -46,19 +46,19 @@ struct msctlmsg_replst_slave {
 
 /* for issuing/controlling replication requests */
 struct msctlmsg_replrq {
-	char			mrq_fn[PATH_MAX];
+	char			mrq_fn[SL_PATH_MAX];
 	char			mrq_iosv[SITE_NAME_MAX][SL_MAX_REPLICAS];
 	uint32_t		mrq_nios;
 	sl_bmapno_t		mrq_bmapno;
 };
 
 struct msctlmsg_fncmd_newreplpol {
-	char			mfnrp_fn[PATH_MAX];
+	char			mfnrp_fn[SL_PATH_MAX];
 	int32_t			mfnrp_pol;
 };
 
 struct msctlmsg_fncmd_bmapreplpol {
-	char			mfbrp_fn[PATH_MAX];
+	char			mfbrp_fn[SL_PATH_MAX];
 	sl_bmapno_t		mfbrp_bmapno;
 	int32_t			mfbrp_pol;
 };
