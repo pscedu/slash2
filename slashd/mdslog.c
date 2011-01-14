@@ -962,7 +962,7 @@ mds_send_batch_update(uint64_t batchno)
 	struct iovec iov;
 	int i, rc, len, npeers, count, total, didwork=0;
 	uint64_t first_xid = 0, last_xid = 0;
-	int logfile;
+	int logfile, record = 0;
 	ssize_t size;
 
 	logfile = mds_open_logfile(batchno, 1, 1);
@@ -1060,14 +1060,19 @@ mds_send_batch_update(uint64_t batchno)
 		if (rc == 0)
 			rc = mp->rc;
 		if (rc == 0) {
+			record++;
 			didwork++;
 			peerinfo->sp_xid = last_xid + 1;
 			if (count == SLM_UPDATE_BATCH)
 				peerinfo->sp_batchno++;
 		}
 	);
-	if (didwork == npeers && count == SLM_UPDATE_BATCH) {
+	/*
+	 * Record the progress first before potentially remove old log file.
+	 */
+	if (record)
 		mds_record_update_prog();
+	if (didwork == npeers && count == SLM_UPDATE_BATCH) {
 		if (batchno >= 1)
 			mds_remove_logfile(batchno-1, 1);
 	}
@@ -1181,7 +1186,7 @@ mds_open_cursor(void)
 int
 mds_send_batch_reclaim(uint64_t batchno)
 {
-	int i, ri, rc, len, count, nentry, total, nios, logfile, didwork;
+	int i, ri, rc, len, count, nentry, total, nios, didwork;
 	struct pscrpc_request *rq = NULL;
 	struct srt_reclaim_entry *entryp;
 	struct slashrpc_cservice *csvc;
@@ -1194,6 +1199,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 	struct sl_resource *res;
 	struct iovec iov;
 	uint64_t xid;
+	int logfile, record = 0;
 	ssize_t size;
 
 	didwork = 0;
@@ -1294,6 +1300,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 			if (rc == 0)
 				rc = mp->rc;
 			if (rc == 0) {
+				record++;
 				didwork++;
 				iosinfo->si_xid = xid + 1;
 				if (count == SLM_RECLAIM_BATCH)
@@ -1303,13 +1310,16 @@ mds_send_batch_reclaim(uint64_t batchno)
 		}
 	}
 	/*
+	 * Record the progress first before potentially remove old log file.
+	 */
+	if (record)
+		mds_record_reclaim_prog();
+	/*
 	 * If this log file is full and all I/O servers have applied its
-	 * contents, update our progress on the disk first and then
-	 * remove an old log file (keep the previous one so that we can
-	 * figure out the last distill xid upon recovery).
+	 * contents, remove an old log file (keep the previous one so that 
+	 * we can figure out the last distill xid upon recovery).
 	 */
 	if (didwork == nios && count == SLM_RECLAIM_BATCH) {
-		mds_record_reclaim_prog();
 		if (batchno >= 1 )
 			mds_remove_logfile(batchno-1, 0);
 	}
