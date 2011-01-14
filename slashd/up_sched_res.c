@@ -933,10 +933,12 @@ upsched_scandir(void)
 
 			brepls_init(tract, -1);
 			tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+			tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_TRUNCPNDG;
+			tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
 
 			/*
 			 * If we crashed, revert all inflight SCHED'ed
-			 * bmaps to OLD.
+			 * bmaps so they get resent.
 			 */
 			for (j = 0; j < USWI_NBMAPS(wk); j++) {
 				if (mds_bmap_load(wk->uswi_fcmh, j, &bcm))
@@ -948,7 +950,7 @@ upsched_scandir(void)
 			}
 
 			/*
-			 * Requeue pending replications on all sites.
+			 * Requeue pending updates on all registered sites.
 			 * If there is no work to do, it will be promptly
 			 * removed by the slmupschedthr.
 			 */
