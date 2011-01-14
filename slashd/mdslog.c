@@ -171,7 +171,7 @@ mds_record_reclaim_prog(void)
 		iosinfo = rpmi->rpmi_info;
 		reclaim_prog_buf[i].res_id = res->res_id;
 		reclaim_prog_buf[i].res_type = res->res_type;
-		reclaim_prog_buf[i].res_xid = iosinfo->si_batchno;
+		reclaim_prog_buf[i].res_xid = iosinfo->si_xid;
 		reclaim_prog_buf[i].res_batchno = iosinfo->si_batchno;
 		i++;
 	}
