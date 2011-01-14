@@ -1236,6 +1236,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
 	}
 
 	/* Ignore updates from old or invalid generation numbers.
+	 * XXX XXX fcmh is not locked here
 	 */
 	if (fcmh_2_gen(fcmh) != c->fg.fg_gen) {
 		int x = (fcmh_2_gen(fcmh) > c->fg.fg_gen) ? 1 : 0;
@@ -1272,7 +1273,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
 
 	if (!bmdsi->bmdsi_wr_ion ||
 	    ion_nid != bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid) {
-		/* Whoops, we recv'd a request from an unexpected nid.
+		/* Whoops, we recv'd a request from an unexpected NID.
 		 */
 		rc = -EINVAL;
 		BMAP_ULOCK(bmap);
@@ -1330,23 +1331,56 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
 
 	if (mq->flags & SRM_BMAPCRCWRT_PTRUNC) {
 		struct slash_inode_handle *ih;
+		int iosidx, tract[NBREPLST];
+		uint32_t bpol;
 
 		ih = fcmh_2_inoh(fcmh);
+		iosidx = mds_repl_ios_lookup(ih,
+		    bmdsi->bmdsi_wr_ion->rmmi_resm->resm_iosid);
+		if (iosidx < 0)
+			psc_errorx("ios not found");
+		else {
+			BMAPOD_MODIFY_START(bmap);
+
+			brepls_init(tract, -1);
+			tract[BREPLST_TRUNCPNDG] = BREPLST_VALID;
+			tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_VALID;
+			mds_repl_bmap_apply(bmap, tract, NULL,
+			    SL_BITS_PER_REPLICA * iosidx);
+
+			BHREPL_POLICY_GET(bmap, bpol);
+
+			brepls_init(tract, -1);
+			tract[BREPLST_TRUNCPNDG] = bpol == BRP_PERSIST ?
+			    BREPLST_REPL_QUEUED : BREPLST_GARBAGE;
+			mds_repl_bmap_walk(bmap, tract, NULL,
+			    REPL_WALKF_MODOTH, &iosidx, 1);
+
+			BMAPOD_MODIFY_DONE(bmap);
+
+			psc_multiwaitcond_wakeup(
+			    &site2smi(bmdsi->bmdsi_wr_ion->rmmi_resm->
+			    resm_site)->smi_mwcond);
+		}
+
 		INOH_LOCK(ih);
 		ih->inoh_ino.ino_flags &= ~INOF_IN_PTRUNC;
 		ih->inoh_ino.ino_ptruncoff = 0;
 		ih->inoh_flags |= INOH_INO_DIRTY;
 		INOH_ULOCK(ih);
 		mds_inode_sync(ih);
-		fcmh_wake_locked(fcmh);
 
 #if 0
-	- mark BREPLST_VALID on
-	  success
-	- if BMAP_PERSIST, notify replication
-	  queuer
+		if (nios) {
+			wk = uswi_find(&bcm->bcm_fcmh->fcmh_fg, NULL);
+			uswi_enqueue_sites(wk, iosv, nios);
+			uswi_unref(wk);
+		}
 #endif
 
+		FCMH_LOCK(fcmh);
+		fcmh_wake_locked(fcmh);
+		FCMH_ULOCK(fcmh);
 	}
 
 	if (fcmh->fcmh_sstb.sst_mode & (S_ISGID | S_ISUID)) {
