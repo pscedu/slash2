@@ -960,7 +960,7 @@ mds_send_batch_update(uint64_t batchno)
 	struct pscrpc_request *rq;
 	struct sl_resm *resm;
 	struct iovec iov;
-	int i, rc, len, count, total, didwork=0;
+	int i, rc, len, npeers, count, total, didwork=0;
 	uint64_t first_xid = 0, last_xid = 0;
 	int logfile;
 	ssize_t size;
@@ -987,9 +987,11 @@ mds_send_batch_update(uint64_t batchno)
 	psc_assert(count);
 	psc_assert(i == 0);
 
+	npeers= 0;
 	SL_FOREACH_MDS(resm,
 		if (resm == nodeResm)
 			continue;
+		npeers++;
 		peerinfo = resm2rpmi(resm)->rpmi_info;
 
 		/*
@@ -1064,6 +1066,11 @@ mds_send_batch_update(uint64_t batchno)
 				peerinfo->sp_batchno++;
 		}
 	);
+	if (didwork == npeers && count == SLM_UPDATE_BATCH) {
+		mds_record_update_prog();
+		if (batchno >= 1)
+			mds_remove_logfile(batchno-1, 1);
+	}
 	return (didwork);
 }
 
@@ -1174,7 +1181,7 @@ mds_open_cursor(void)
 int
 mds_send_batch_reclaim(uint64_t batchno)
 {
-	int i, ri, rc, len, count, total, nios, logfile, didwork;
+	int i, ri, rc, len, count, nentry, total, nios, logfile, didwork;
 	struct pscrpc_request *rq = NULL;
 	struct srt_reclaim_entry *entryp;
 	struct slashrpc_cservice *csvc;
@@ -1252,7 +1259,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 
 		psc_assert(total);
 
-		count = i;
+		nentry = i;
 		iov.iov_len = total;
 		iov.iov_base = entryp;
 
@@ -1272,7 +1279,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 
 			mq->xid = xid;
 			mq->size = iov.iov_len;
-			mq->count = count;
+			mq->count = nentry;
 			psc_crc64_calc(&mq->crc, iov.iov_base, iov.iov_len);
 
 			rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
