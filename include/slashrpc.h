@@ -165,6 +165,7 @@ struct statvfs;
 #define SRCI_MAGIC		UINT64_C(0xaabbccddeeff0099)
 
 #define SL_NAME_MAX		255	/* file name component length */
+#define SL_PATH_MAX		4096	/* file path name length */
 
 /* SLASH RPC message types. */
 enum {
@@ -736,13 +737,13 @@ struct srm_mknod_req {
 struct srm_readdir_req {
 	struct slash_fidgen	fg;
 	uint64_t		offset;
-	uint64_t		size;
+	uint64_t		size;		/* XXX make 32-bit */
 	uint32_t		nstbpref;	/* max prefetched attributes */
 	int32_t			_pad;
 } __packed;
 
 struct srm_readdir_rep {
-	uint64_t		size;
+	uint64_t		size;		/* XXX make 32-bit */
 	uint32_t		num;		/* #dirents returned */
 	int32_t			rc;
 /*
