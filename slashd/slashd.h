@@ -100,6 +100,8 @@ struct site_mds_info {
 
 #define SMIF_DIRTYQ		  (1 << 0)		/* queue has changed */
 
+#define site2smi(site)		 ((struct site_mds_info *)(site)->site_pri)
+
 /* per-MDS eventually consistent namespace stats */
 struct sl_mds_nsstats {
 	psc_atomic32_t		  ns_stats[NS_NDIRS][NS_NOPS + 1][NS_NSUMS];
