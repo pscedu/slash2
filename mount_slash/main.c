@@ -359,7 +359,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 
 	pscfs_reply_create(pfr, mp ? mp->cattr.sst_fid : 0,
-	    mp ? mp->cattr.sst_fg.fg_gen : 0, MSLFS_ENTRY_TIMEO, &stb,
+	    mp ? mp->cattr.sst_gen : 0, MSLFS_ENTRY_TIMEO, &stb,
 	    MSLFS_ATTR_TIMEO, mfh, PSCFS_CREATEF_DIO, rc);
 
 	if (rq)
@@ -962,7 +962,6 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	 * Ensure that the fcmh is still valid, we can't rely
 	 *  only on the inode number, the generation # number
 	 *  must be taken into account.
-	 * NOTE: 'd' must be decref'd.
 	 */
 	dtmp = fidc_lookup_fg(&d->fcmh_fg);
 	if (dtmp != d)
@@ -1032,7 +1031,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 				continue;
 			}
 
-			psc_dbg("adding i+g:"SLPRI_FG,
+			psclog_dbg("adding i+g:"SLPRI_FG,
 			    SLPRI_FG_ARGS(&attr->sst_fg));
 
 			fidc_lookup(&attr->sst_fg, FIDC_LOOKUP_CREATE,
@@ -1503,7 +1502,15 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 
 	msfsthr_ensure();
 
-	if (strlen(buf) >= PATH_MAX ||
+	if (strlen(buf) == 1 || strlen(name) == 1) {
+		rc = ENOENT;
+		goto out;
+	}
+	if (strlen(buf) == 0 || strlen(name) == 0) {
+		rc = EINVAL;
+		goto out;
+	}
+	if (strlen(buf) >= SL_PATH_MAX ||
 	    strlen(name) > SL_NAME_MAX) {
 		rc = ENAMETOOLONG;
 		goto out;
@@ -1728,7 +1735,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	DEBUG_FCMH(PLL_DEBUG, c, "pre setattr");
 	DEBUG_SSTB(PLL_DEBUG, &c->fcmh_sstb, "fcmh %p pre setattr", c);
 
-	psc_dbg("fcmh %p setattr%s%s%s%s%s%s%s", c,
+	psclog_dbg("fcmh %p setattr%s%s%s%s%s%s%s", c,
 	    mq->to_set & PSCFS_SETATTRF_MODE ? " mode" : "",
 	    mq->to_set & PSCFS_SETATTRF_UID ? " uid" : "",
 	    mq->to_set & PSCFS_SETATTRF_GID ? " gid" : "",
