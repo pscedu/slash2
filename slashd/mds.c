@@ -486,13 +486,15 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 	bml->bml_ion_nid = bia->bia_ion_nid;
 	bml->bml_seq = bia->bia_seq;
 
+	mds_repl_inv_except(b, bia->bia_ios);
+
 	return (0);
 }
 
 /**
  * mds_bmap_dupls_find - Find the first lease of a given client based on its
  *     {nid, pid} pair.  Also walk the chain of duplicate leases to count the
- *     number of read and write leases. Note that only the first lease of a
+ *     number of read and write leases.  Note that only the first lease of a
  *     client is linked on the bmdsi->bmdsi_leases list, the rest is linked
  *     on a private chain and tagged with BML_CHAIN flag.
  */
