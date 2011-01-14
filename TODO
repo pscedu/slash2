@@ -309,6 +309,7 @@ API rename
 		decrement nbmaps
 	}
 	BMAPOD_MODIFY_STOP()
+- when extending fsz, deal with xnbmaps.   just mark bmaps in them as INVALID
 
 - change upsched to do async callbacks
 - does upsched get hung up by recursive repl reqs ?
@@ -326,9 +327,9 @@ truncate:
 - need a general mechanism to pass data between msctl/slictl/slmctl
   so we get all the functionality everywhere and don't have to copy huge
   chunks of code
-- slmctl -s peertraffic -s replrqs
+- slmctl -s peertraffic -s replrqs -s diskusage
 - initialize new file repl table from parent dir to help with
   persistence policies
+	- or just tell users to msctl -R everytime...
 - mds_send_batch_reclaim() should not broadcast to every resm in a res
 - need single interface into changing fcmh_fsz to adjust nxbmaps
-- check for strlen(name) == 0 in many RPCs
