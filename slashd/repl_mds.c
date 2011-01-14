@@ -367,7 +367,7 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 	 */
 	brepls_init(tract, -1);
 	tract[BREPLST_VALID] = policy == BRP_PERSIST ?
-	    BREPLST_REPL_QUEUED : BREPLST_INVALID;
+	    BREPLST_REPL_QUEUED : BREPLST_INVALID; // XXX GARBAGE ?
 
 	brepls_init(retifset, 0);
 	retifset[BREPLST_VALID] = 1;
