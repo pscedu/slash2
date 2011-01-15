@@ -1501,7 +1501,6 @@ mds_bmap_destroy(struct bmapc_memb *bcm)
 	psc_assert(bmdsi->bmdsi_readers == 0);
 	psc_assert(bmdsi->bmdsi_assign == NULL);
 	psc_assert(pll_empty(&bmdsi->bmdsi_leases));
-	psc_pthread_rwlock_destroy(&bmdsi->bmdsi_rwlock);
 }
 
 /**

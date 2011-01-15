@@ -65,7 +65,7 @@ struct bmap_mds_info {
 	uint32_t			 bmdsi_xid;		/* last op recv'd from ION */
 	int32_t				 bmdsi_writers;
 	int32_t				 bmdsi_readers;
-	struct psc_pthread_rwlock	 bmdsi_rwlock;
+	pthread_rwlock_t		 bmdsi_rwlock;
 };
 
 /* MDS-specific bcm_flags */
@@ -86,10 +86,12 @@ struct bmap_mds_info {
 #define bmap_2_ondiskcrc(b)	bmap_2_bmi(b)->bmdsi_ondiskcrc
 #define bmap_2_crcs(b, n)	bmap_2_xstate(b)->bes_crcs[n]
 
-#define BMAPOD_RDLOCK(bmdsi)	psc_pthread_rwlock_rdlock(&(bmdsi)->bmdsi_rwlock)
-#define BMAPOD_RDREQLOCK(bmdsi)	psc_pthread_rwlock_rdreqlock(&(bmdsi)->bmdsi_rwlock)
-#define BMAPOD_WRLOCK(bmdsi)	psc_pthread_rwlock_wrlock(&(bmdsi)->bmdsi_rwlock)
-#define BMAPOD_ULOCK(bmdsi)	psc_pthread_rwlock_unlock(&(bmdsi)->bmdsi_rwlock)
+#define BMAPOD_RDLOCK(bmi)	psc_pthread_rwlock_rdlock(&(bmi)->bmdsi_rwlock)
+#define BMAPOD_REQRDLOCK(bmi)	psc_pthread_rwlock_reqrdlock(&(bmi)->bmdsi_rwlock)
+#define BMAPOD_REQWRLOCK(bmi)	psc_pthread_rwlock_reqwrlock(&(bmi)->bmdsi_rwlock)
+#define BMAPOD_ULOCK(bmi)	psc_pthread_rwlock_unlock(&(bmi)->bmdsi_rwlock)
+#define BMAPOD_UREQLOCK(bmi, l)	psc_pthread_rwlock_ureqlock(&(bmi)->bmdsi_rwlock, (l))
+#define BMAPOD_WRLOCK(bmi)	psc_pthread_rwlock_wrlock(&(bmi)->bmdsi_rwlock)
 
 #define BMDSI_LOGCHG_SET(b)	BMAP_SETATTR((b), BMAP_MDS_LOGCHG)
 #define BMDSI_LOGCHG_CLEAR(b)	BMAP_CLEARATTR((b), BMAP_MDS_LOGCHG);
