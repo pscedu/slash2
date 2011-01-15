@@ -713,12 +713,13 @@ ptrunc_tally_ios(struct bmapc_memb *bcm, int iosidx, int val, void *arg)
 int
 slm_rmc_handle_setattr(struct pscrpc_request *rq)
 {
-	int tract[NBREPLST], to_set, rc;
+	int tract[NBREPLST], to_set;
 	struct up_sched_work_item *wk;
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bcm;
+	struct srt_stat sstb;
 	size_t i;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -734,25 +735,22 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			 * do nothing.
 			*/
 			FCMH_LOCK(fcmh);
-			if (fcmh_2_fsz(fcmh) == 0)
+			if (fcmh_2_fsz(fcmh) == 0) {
 				FCMH_ULOCK(fcmh);
-			else {
-				struct srt_stat sstb;
-
-				fcmh_2_gen(fcmh)++;
-				FCMH_ULOCK(fcmh);
-
-				to_set |= SL_SETATTRF_GEN;
-
-				/* XXX: queue changelog updates to every IOS replica */
-
-				sstb.sst_size = SL_BMAP_START_OFF;
-				mp->rc = mdsio_setattr(
-				    fcmh_2_mdsio_fid(fcmh), &sstb,
-				    SL_SETATTRF_METASIZE, &rootcreds,
-				    NULL, fcmh_2_mdsio_data(fcmh),
-				    NULL);
+				goto out;
 			}
+
+			fcmh_2_gen(fcmh)++;
+			FCMH_ULOCK(fcmh);
+
+			to_set |= SL_SETATTRF_GEN;
+
+			/* XXX: queue changelog updates to every IOS replica */
+
+			sstb.sst_size = SL_BMAP_START_OFF;
+			mp->rc = mdsio_setattr(fcmh_2_mdsio_fid(fcmh),
+			    &sstb, SL_SETATTRF_METASIZE, &rootcreds,
+			    NULL, fcmh_2_mdsio_data(fcmh), NULL);
 		} else {
 			/* partial truncate */
 			struct slash_inode_handle *ih;
@@ -781,7 +779,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 				FCMH_ULOCK(fcmh);
 				INOH_ULOCK(ih);
 				mds_inode_sync(ih);
-				goto out;
+				goto apply;
 			}
 
 			ih->inoh_ino.ino_flags |= INOF_IN_PTRUNC;
@@ -829,13 +827,14 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 				mds_repl_bmap_rel(bcm);
 			}
 
-			rc = uswi_findoradd(&fcmh->fcmh_fg, &wk);
+			mp->rc = uswi_findoradd(&fcmh->fcmh_fg, &wk);
 			uswi_enqueue_sites(wk, ios_list.iosv, ios_list.nios);
 			uswi_unref(wk);
 
 			// add rq->peer to completion
 		}
 	}
+ apply:
 	/*
 	 * If the file is open, mdsio_data will be valid and used.
 	 * Otherwise, it will be NULL, and we'll use the mdsio_fid.
