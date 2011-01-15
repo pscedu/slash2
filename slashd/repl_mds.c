@@ -200,10 +200,10 @@ _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int *tract,
     brepl_walkcb_t cbf, void *cbarg)
 {
 	struct bmap_mds_info *bmdsi = bmap_2_bmdsi(bcm);
-	int val, rc = 0;
+	int locked, val, rc = 0;
 
 	/* Take a write lock on the bmapod. */
-	BMAPOD_WRLOCK(bmdsi);
+	locked = BMAPOD_REQWRLOCK(bmdsi);
 
 	if (scircuit)
 		*scircuit = 0;
@@ -239,7 +239,7 @@ _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int *tract,
 	}
 
  out:
-	BMAPOD_ULOCK(bmdsi);
+	BMAPOD_UREQLOCK(bmdsi, locked);
 	return (rc);
 }
 
