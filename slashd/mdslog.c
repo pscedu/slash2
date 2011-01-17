@@ -731,9 +731,9 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	update_entry.namelen = jnamespace->sjnm_namelen;
 	memcpy(update_entry.name, jnamespace->sjnm_name, jnamespace->sjnm_namelen);
 
-	count = offsetof(struct srt_update_entry, name) + update_entry.namelen;
-	size = write(current_update_logfile, &update_entry, count);
-	if (size != count)
+	size = write(current_update_logfile, &update_entry,
+	    sizeof(struct srt_update_entry));
+	if (size != sizeof(struct srt_update_entry))
 		psc_fatal("Fail to write update log file, batchno = %"PRId64,
 		    current_update_batchno);
 
