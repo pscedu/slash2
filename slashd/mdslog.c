@@ -1649,9 +1649,6 @@ mds_journal_init(void)
 		psc_assert((sb.st_size % sizeof(struct reclaim_prog_entry)) == 0);
 
 		i = count = sb.st_size / sizeof(struct reclaim_prog_entry);
-		if (i < nios)
-			i = nios;
-
 		reclaim_prog_buf = PSCALLOC(i * sizeof(struct reclaim_prog_entry));
 		if (count) {
 			size = read(current_reclaim_progfile[index], reclaim_prog_buf,
@@ -1679,6 +1676,7 @@ mds_journal_init(void)
 			if (iosinfo->si_batchno < reclaim_prog_buf[i].res_batchno)
 			    iosinfo->si_batchno = reclaim_prog_buf[i].res_batchno;
 		}
+		PSCFREE(reclaim_prog_buf);
 	}
 
 	/* Find out the highest reclaim batchno and xid */
@@ -1733,9 +1731,6 @@ mds_journal_init(void)
 		psc_assert((sb.st_size % sizeof(struct update_prog_entry)) == 0);
 
 		i = count = sb.st_size / sizeof(struct update_prog_entry);
-		if (i < npeers)
-			i = npeers;
-
 		update_prog_buf = PSCALLOC(i * sizeof(struct update_prog_entry));
 		if (count) {
 			size = read(current_update_progfile[index], update_prog_buf,
@@ -1761,6 +1756,7 @@ mds_journal_init(void)
 			peerinfo->sp_xid = update_prog_buf[i].res_xid;
 			peerinfo->sp_batchno = update_prog_buf[i].res_batchno;
 		);
+		PSCFREE(update_prog_buf);
 	}
 
 	/* Find out the highest update batchno and xid */
