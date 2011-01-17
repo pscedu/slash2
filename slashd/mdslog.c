@@ -74,7 +74,10 @@ static int			 current_reclaim_logfile = -1;
  * affect the previous update in case of a crash/power outage, 
  * I use two files and write them alternately. This way seems 
  * to be easier than making sure that each update happens on 
- * different sectors.
+ * different sectors (we don't need to care about the entry size
+ * and the number of entries).
+ *  
+ * TODO: add some kind of checksum to protect the file contents.
  */
 static int			 current_update_progfile[2];
 static int			 current_reclaim_progfile[2];
