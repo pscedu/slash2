@@ -1678,6 +1678,7 @@ mds_journal_init(void)
 		}
 		PSCFREE(reclaim_prog_buf);
 	}
+	reclaim_prog_buf = PSCALLOC(nios * sizeof(struct reclaim_prog_entry));
 
 	/* Find out the highest reclaim batchno and xid */
 	batchno = mds_reclaim_lwm(1);
@@ -1758,6 +1759,7 @@ mds_journal_init(void)
 		);
 		PSCFREE(update_prog_buf);
 	}
+	update_prog_buf = PSCALLOC(npeers * sizeof(struct update_prog_entry));
 
 	/* Find out the highest update batchno and xid */
 	batchno = mds_update_lwm();
