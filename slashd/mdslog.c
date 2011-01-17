@@ -737,7 +737,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 		psc_fatal("Fail to write update log file, batchno = %"PRId64,
 		    current_update_batchno);
 
-	/* see if we need to close the current reclaim log file */
+	/* see if we need to close the current update log file */
 	off = lseek(current_update_logfile, 0, SEEK_CUR);
 	if (off == (off_t)-1)
 		psc_warn("lseek");
@@ -1188,7 +1188,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 {
 	int i, ri, rc, len, count, nentry, total, nios, didwork;
 	struct pscrpc_request *rq = NULL;
-	struct srt_reclaim_entry *entryp;
+	struct srt_reclaim_entry *entryp, *next_entryp;
 	struct slashrpc_cservice *csvc;
 	struct sl_mds_iosinfo *iosinfo;
 	struct resprof_mds_info *rpmi;
@@ -1227,6 +1227,17 @@ mds_send_batch_reclaim(uint64_t batchno)
 	entryp = PSC_AGP(reclaimbuf, (count - 1) *
 	    sizeof(struct srt_reclaim_entry));
 	xid = entryp->xid;
+
+	/*
+ 	 * Compress our buffer to reduce RPC traffic.
+ 	 */
+	len = offsetof(struct srt_reclaim_entry, padding);
+	entryp = next_entryp = reclaimbuf;
+	for (i = 1; i < count; i++) {
+		entryp++;
+		next_entryp = PSC_AGP(next_entryp, len);
+		memmove(next_entryp, entryp, len);
+	}
 
 	nios = 0;
 	SITE_FOREACH_RES(nodeSite, res, ri) {
