@@ -69,6 +69,13 @@ uint64_t			 current_reclaim_xid = 0;
 static int			 current_update_logfile = -1;
 static int			 current_reclaim_logfile = -1;
 
+/*
+ * To ensure that the current update of the progress does not 
+ * affect the previous update in case of a crash/power outage, 
+ * I use two files and write them alternately. This way seems 
+ * to be easier than making sure that each update happens on 
+ * different sectors.
+ */
 static int			 current_update_progfile[2];
 static int			 current_reclaim_progfile[2];
 
