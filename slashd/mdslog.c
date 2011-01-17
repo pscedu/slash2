@@ -1761,8 +1761,10 @@ mds_journal_init(void)
 			found++;
 			rpmi = res2rpmi(_res);
 			peerinfo = rpmi->rpmi_info;
-			peerinfo->sp_xid = update_prog_buf[i].res_xid;
-			peerinfo->sp_batchno = update_prog_buf[i].res_batchno;
+			if (peerinfo->sp_xid < update_prog_buf[i].res_xid)
+			    peerinfo->sp_xid = update_prog_buf[i].res_xid;
+			if (peerinfo->sp_batchno < update_prog_buf[i].res_batchno)
+			    peerinfo->sp_batchno = update_prog_buf[i].res_batchno;
 		);
 		PSCFREE(update_prog_buf);
 	}
