@@ -951,7 +951,7 @@ mds_update_hwm(void)
 int
 mds_send_batch_update(uint64_t batchno)
 {
-	struct srt_update_entry *entryp;
+	struct srt_update_entry *entryp, *next_entryp;
 	struct srm_update_req *mq;
 	struct slashrpc_cservice *csvc;
 	struct pscrpc_bulk_desc *desc;
@@ -972,20 +972,26 @@ mds_send_batch_update(uint64_t batchno)
 	    (sizeof(struct srt_update_entry) + NAME_MAX));
 	close(logfile);
 
-	count = 0;
-	i = size;
-	while (i > 0) {
-		count++;
-		entryp = updatebuf;
+	psc_assert((size % sizeof(struct srt_update_entry)) == 0);
+	count = (int) size / (int) sizeof(struct srt_update_entry);
+
+	/*
+ 	 * Compress our buffer to reduce RPC traffic.
+ 	 */
+	entryp = next_entryp = updatebuf;
+	for (i = 1; i < count; i++) {
+
 		if (!first_xid)
 			first_xid = entryp->xid;
 		last_xid = entryp->xid;
-		len = sizeof(struct srt_update_entry) + entryp->namelen;
-		i = i - len;
-		entryp = PSC_AGP(entryp, len);
+
+		entryp++;
+		len = offsetof(struct srt_update_entry, _padding) + next_entryp->namelen;
+		next_entryp = PSC_AGP(next_entryp, len);
+
+		len = offsetof(struct srt_update_entry, _padding) + entryp->namelen;
+		memmove(next_entryp, entryp, len);
 	}
-	psc_assert(count);
-	psc_assert(i == 0);
 
 	npeers= 0;
 	SL_FOREACH_MDS(resm,
@@ -1231,8 +1237,8 @@ mds_send_batch_reclaim(uint64_t batchno)
 	/*
  	 * Compress our buffer to reduce RPC traffic.
  	 */
-	len = offsetof(struct srt_reclaim_entry, padding);
 	entryp = next_entryp = reclaimbuf;
+	len = offsetof(struct srt_reclaim_entry, _padding);
 	for (i = 1; i < count; i++) {
 		entryp++;
 		next_entryp = PSC_AGP(next_entryp, len);
