@@ -367,6 +367,7 @@ struct srt_update_entry {
 
 	uint64_t		size;		/* total size, in bytes */
 	char			name[0];	/* one or two names */
+	char			_padding[392];
 } __packed;
 
 /* -------------------------- BEGIN BMAP MESSAGES --------------------------- */
@@ -533,6 +534,7 @@ struct srm_reclaim_rep {
 struct srt_reclaim_entry {
 	uint64_t		xid;
 	struct slash_fidgen	fg;
+	char			padding[488];
 } __packed;
 
 /* ------------------------- BEGIN CONTROL MESSAGES ------------------------- */

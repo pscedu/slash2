@@ -1599,6 +1599,9 @@ mds_journal_init(void)
 	struct stat sb;
 	char fn[PATH_MAX];
 	ssize_t size;
+	
+	psc_assert(sizeof(struct srt_update_entry) == 512);
+	psc_assert(sizeof(struct srt_reclaim_entry) == 512);
 
 	/* Make sure we have some I/O servers to work with */
 	nios = 0;
