@@ -67,10 +67,10 @@ uint64_t			 current_update_xid = 0;
 uint64_t			 current_reclaim_xid = 0;
 
 static int			 current_update_logfile = -1;
-static int			 current_update_progfile = -1;
-
 static int			 current_reclaim_logfile = -1;
-static int			 current_reclaim_progfile = -1;
+
+static int			 current_update_progfile[2];
+static int			 current_reclaim_progfile[2];
 
 /* namespace update progress tracker to peer MDSes */
 struct update_prog_entry {
@@ -134,6 +134,7 @@ mds_record_update_prog(void)
 	struct sl_resm *resm;
 	struct resprof_mds_info *rpmi;
 	struct sl_mds_peerinfo *peerinfo;
+	static int index = 0;
 
 	i = 0;
 	SL_FOREACH_MDS(resm,
@@ -147,11 +148,12 @@ mds_record_update_prog(void)
 		update_prog_buf[i].res_batchno = peerinfo->sp_batchno;
 		i++;
 	);
-	if (lseek(current_update_progfile, 0, SEEK_SET) == (off_t)-1)
+	if (lseek(current_update_progfile[index], 0, SEEK_SET) == (off_t)-1)
 		psc_warn("lseek");
-	size = write(current_update_progfile, update_prog_buf,
+	size = write(current_update_progfile[index], update_prog_buf,
 	    i * sizeof(struct update_prog_entry));
 	psc_assert(size == i * (int)sizeof(struct update_prog_entry));
+	index = (index == 0) ? 1 : 0;
 }
 
 static void
@@ -162,6 +164,7 @@ mds_record_reclaim_prog(void)
 	struct resprof_mds_info *rpmi;
 	struct sl_mds_iosinfo *iosinfo;
 	struct sl_resource *res;
+	static int index = 0;
 
 	i = 0;
 	SITE_FOREACH_RES(nodeSite, res, ri) {
@@ -175,11 +178,12 @@ mds_record_reclaim_prog(void)
 		reclaim_prog_buf[i].res_batchno = iosinfo->si_batchno;
 		i++;
 	}
-	if (lseek(current_reclaim_progfile, 0, SEEK_SET) == (off_t)-1)
+	if (lseek(current_reclaim_progfile[index], 0, SEEK_SET) == (off_t)-1)
 		psc_warn("lseek");
-	size = write(current_reclaim_progfile, reclaim_prog_buf,
+	size = write(current_reclaim_progfile[index], reclaim_prog_buf,
 	    i * sizeof(struct reclaim_prog_entry));
 	psc_assert(size == i * (int)sizeof(struct reclaim_prog_entry));
+	index = (index == 0) ? 1 : 0;
 }
 
 /**
@@ -1605,7 +1609,7 @@ void
 mds_journal_init(void)
 {
 	uint64_t batchno, last_reclaim_xid = 0, last_update_xid = 0, last_distill_xid = 0;
-	int i, ri, len, nios, count, total, found, npeers, logfile;
+	int i, ri, len, nios, count, total, found, npeers, index, logfile;
 	struct srt_reclaim_entry *reclaim_entryp;
 	struct srt_update_entry *update_entryp;
 	struct sl_mds_peerinfo *peerinfo;
@@ -1636,44 +1640,46 @@ mds_journal_init(void)
 
 	mds_open_cursor();
 
-	xmkfn(fn, "%s/%s.%s.%lu", SL_PATH_DATADIR, SL_FN_RECLAIMPROG,
-	    psc_get_hostname(), mds_cursor.pjc_timestamp);
-	current_reclaim_progfile = open(fn, O_CREAT | O_RDWR | O_SYNC, 0600);
-	if (fstat(current_reclaim_progfile, &sb) == -1)
-		psc_fatal("Fail to stat reclaim log file %s", fn);
-	psc_assert((sb.st_size % sizeof(struct reclaim_prog_entry)) == 0);
+	for (index = 0; index < 2; index++) {
+		xmkfn(fn, "%s/%s.%s.%lu.%d", SL_PATH_DATADIR, SL_FN_RECLAIMPROG,
+		    psc_get_hostname(), mds_cursor.pjc_timestamp, index);
+		current_reclaim_progfile[index] = open(fn, O_CREAT | O_RDWR | O_SYNC, 0600);
+		if (fstat(current_reclaim_progfile[index], &sb) == -1)
+			psc_fatal("Fail to stat reclaim log file %s", fn);
+		psc_assert((sb.st_size % sizeof(struct reclaim_prog_entry)) == 0);
 
-	i = count = sb.st_size / sizeof(struct reclaim_prog_entry);
-	if (i < nios)
-		i = nios;
+		i = count = sb.st_size / sizeof(struct reclaim_prog_entry);
+		if (i < nios)
+			i = nios;
 
-	reclaim_prog_buf = PSCALLOC(i * sizeof(struct reclaim_prog_entry));
-	if (count) {
-		size = read(current_reclaim_progfile, reclaim_prog_buf,
-		    count * sizeof(struct reclaim_prog_entry));
-		psc_assert(size == count * (int)sizeof(struct reclaim_prog_entry));
-	}
-	found = 0;
-	SITE_FOREACH_RES(nodeSite, res, ri) {
-		if (res->res_type == SLREST_MDS)
-			continue;
-		for (i = 0; i < count; i++) {
-			if (reclaim_prog_buf[i].res_id != res->res_id)
-				continue;
-			if (reclaim_prog_buf[i].res_type != res->res_type)
-				continue;
-			break;
+		reclaim_prog_buf = PSCALLOC(i * sizeof(struct reclaim_prog_entry));
+		if (count) {
+			size = read(current_reclaim_progfile[index], reclaim_prog_buf,
+			    count * sizeof(struct reclaim_prog_entry));
+			psc_assert(size == count * (int)sizeof(struct reclaim_prog_entry));
 		}
-		if (i >= count)
-			continue;
-		found++;
-		rpmi = res2rpmi(res);
-		iosinfo = rpmi->rpmi_info;
-		iosinfo->si_xid = reclaim_prog_buf[i].res_xid;
-		iosinfo->si_batchno = reclaim_prog_buf[i].res_batchno;
+		found = 0;
+		SITE_FOREACH_RES(nodeSite, res, ri) {
+			if (res->res_type == SLREST_MDS)
+				continue;
+			for (i = 0; i < count; i++) {
+				if (reclaim_prog_buf[i].res_id != res->res_id)
+					continue;
+				if (reclaim_prog_buf[i].res_type != res->res_type)
+					continue;
+				break;
+			}
+			if (i >= count)
+				continue;
+			found++;
+			rpmi = res2rpmi(res);
+			iosinfo = rpmi->rpmi_info;
+			if (iosinfo->si_xid < reclaim_prog_buf[i].res_xid)
+			    iosinfo->si_xid = reclaim_prog_buf[i].res_xid;
+			if (iosinfo->si_batchno < reclaim_prog_buf[i].res_batchno)
+			    iosinfo->si_batchno = reclaim_prog_buf[i].res_batchno;
+		}
 	}
-	if (found != nios)
-		mds_record_reclaim_prog();
 
 	/* Find out the highest reclaim batchno and xid */
 	batchno = mds_reclaim_lwm(1);
@@ -1718,44 +1724,44 @@ mds_journal_init(void)
 	if (!npeers)
 		goto replay_log;
 
-	xmkfn(fn, "%s/%s.%s.%lu", SL_PATH_DATADIR, SL_FN_UPDATEPROG,
-	    psc_get_hostname(), mds_cursor.pjc_timestamp);
-	current_update_progfile = open(fn, O_CREAT | O_RDWR | O_SYNC, 0600);
-	if (fstat(current_update_progfile, &sb) == -1)
-		psc_fatal("Fail to stat update log file %s", fn);
-	psc_assert((sb.st_size % sizeof(struct update_prog_entry)) == 0);
+	for (index = 0; index < 2; index++) {
+		xmkfn(fn, "%s/%s.%s.%lu.%d", SL_PATH_DATADIR, SL_FN_UPDATEPROG,
+		    psc_get_hostname(), mds_cursor.pjc_timestamp, index);
+		current_update_progfile[index] = open(fn, O_CREAT | O_RDWR | O_SYNC, 0600);
+		if (fstat(current_update_progfile[index], &sb) == -1)
+			psc_fatal("Fail to stat update log file %s", fn);
+		psc_assert((sb.st_size % sizeof(struct update_prog_entry)) == 0);
 
-	i = count = sb.st_size / sizeof(struct update_prog_entry);
-	if (i < npeers)
-		i = npeers;
+		i = count = sb.st_size / sizeof(struct update_prog_entry);
+		if (i < npeers)
+			i = npeers;
 
-	update_prog_buf = PSCALLOC(i * sizeof(struct update_prog_entry));
-	if (count) {
-		size = read(current_update_progfile, update_prog_buf,
-		    count * sizeof(struct update_prog_entry));
-		psc_assert(size == count * (int)sizeof(struct update_prog_entry));
-	}
-
-	SL_FOREACH_MDS(resm,
-		if (resm == nodeResm)
-			continue;
-		for (i = 0; i < count; i++) {
-			if (update_prog_buf[i].res_id != _res->res_id)
-				continue;
-			if (update_prog_buf[i].res_type != _res->res_type)
-				continue;
-			break;
+		update_prog_buf = PSCALLOC(i * sizeof(struct update_prog_entry));
+		if (count) {
+			size = read(current_update_progfile[index], update_prog_buf,
+			    count * sizeof(struct update_prog_entry));
+			psc_assert(size == count * (int)sizeof(struct update_prog_entry));
 		}
-		if (i >= count)
-			continue;
-		found++;
-		rpmi = res2rpmi(_res);
-		peerinfo = rpmi->rpmi_info;
-		peerinfo->sp_xid = update_prog_buf[i].res_xid;
-		peerinfo->sp_batchno = update_prog_buf[i].res_batchno;
-	);
-	if (found != npeers)
-		mds_record_update_prog();
+	
+		SL_FOREACH_MDS(resm,
+			if (resm == nodeResm)
+				continue;
+			for (i = 0; i < count; i++) {
+				if (update_prog_buf[i].res_id != _res->res_id)
+					continue;
+				if (update_prog_buf[i].res_type != _res->res_type)
+					continue;
+				break;
+			}
+			if (i >= count)
+				continue;
+			found++;
+			rpmi = res2rpmi(_res);
+			peerinfo = rpmi->rpmi_info;
+			peerinfo->sp_xid = update_prog_buf[i].res_xid;
+			peerinfo->sp_batchno = update_prog_buf[i].res_batchno;
+		);
+	}
 
 	/* Find out the highest update batchno and xid */
 	batchno = mds_update_lwm();
