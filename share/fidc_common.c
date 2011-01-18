@@ -236,12 +236,11 @@ _fidc_lookup(const struct pfl_callerinfo *pfl_callerinfo,
     int setattrflags, struct fidc_membh **fcmhp)
 {
 	struct fidc_membh *tmp, *fcmh, *fcmh_new;
-	struct slash_fidgen searchfg = *fgp;
 	struct psc_hashbkt *b;
 	int rc, try_create = 0;
 
 	_psclog_pci(pfl_callerinfo, PLL_DEBUG, 0,
-	    "fidc_lookup called for fid "SLPRI_FID, searchfg.fg_fid);
+	    "fidc_lookup called for fid "SLPRI_FID, fgp->fg_fid);
 
 	rc = 0;
 	*fcmhp = NULL;
@@ -261,7 +260,7 @@ _fidc_lookup(const struct pfl_callerinfo *pfl_callerinfo,
 		psc_assert(sstb == NULL);
 
 	/* OK.  now check if it is already in the cache */
-	b = psc_hashbkt_get(&fidcHtable, &searchfg.fg_fid);
+	b = psc_hashbkt_get(&fidcHtable, &fgp->fg_fid);
  restart:
 	fcmh = NULL;
 	psc_hashbkt_lock(b);
@@ -270,7 +269,7 @@ _fidc_lookup(const struct pfl_callerinfo *pfl_callerinfo,
 		 * Note that generation number is only used to track
 		 *   truncations.
 		 */
-		if (searchfg.fg_fid != fcmh_2_fid(tmp))
+		if (fgp->fg_fid != fcmh_2_fid(tmp))
 			continue;
 		FCMH_LOCK(tmp);
 
