@@ -1120,10 +1120,6 @@ mds_update_cursor(void *buf, uint64_t txg)
 	cursor->pjc_distill_xid = pjournal_next_distill(mdsJournal);
 	cursor->pjc_fid = slm_get_curr_slashid();
 
-	/* to be removed */
-	cursor->pjc_update_seqno = -1;
-	cursor->pjc_reclaim_seqno = -1;
-
 	rc = mds_bmap_getcurseq(&cursor->pjc_seqno_hwm, &cursor->pjc_seqno_lwm);
 	if (rc) {
 		psc_assert(rc == -EAGAIN);
