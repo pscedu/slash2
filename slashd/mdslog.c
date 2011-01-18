@@ -982,8 +982,8 @@ mds_send_batch_update(uint64_t batchno)
 	logfile = mds_open_logfile(batchno, 1, 1);
 	if (logfile == -1)
 		psc_fatal("Fail to open update log file, batch = %"PRId64, batchno);
-	size = read(logfile, updatebuf, SLM_UPDATE_BATCH *
-	    (sizeof(struct srt_update_entry) + NAME_MAX));
+	size = read(logfile, updatebuf, SLM_UPDATE_BATCH * 
+	    sizeof(struct srt_update_entry));
 	close(logfile);
 
 	psc_assert((size % sizeof(struct srt_update_entry)) == 0);
@@ -1615,7 +1615,7 @@ void
 mds_journal_init(void)
 {
 	uint64_t batchno, last_reclaim_xid = 0, last_update_xid = 0, last_distill_xid = 0;
-	int i, ri, len, nios, count, total, found, npeers, index, logfile;
+	int i, ri, nios, count, total, found, npeers, index, logfile;
 	struct srt_reclaim_entry *reclaim_entryp;
 	struct srt_update_entry *update_entryp;
 	struct sl_mds_peerinfo *peerinfo;
@@ -1782,23 +1782,21 @@ mds_journal_init(void)
 	    psc_fatal("Fail to open update log file, batch = %"PRId64, batchno);
 
 	current_update_batchno = batchno;
-	updatebuf = PSCALLOC(SLM_UPDATE_BATCH * (sizeof(struct srt_update_entry) + NAME_MAX));
+	updatebuf = PSCALLOC(SLM_UPDATE_BATCH * sizeof(struct srt_update_entry));
 
 	size = read(logfile, updatebuf,
-	    SLM_UPDATE_BATCH * (sizeof(struct srt_update_entry) + NAME_MAX));
+	    SLM_UPDATE_BATCH * sizeof(struct srt_update_entry));
 	psc_assert(size >= 0);
+	psc_assert((size % sizeof(struct srt_update_entry)) == 0);
 
+	total = size / sizeof(struct srt_update_entry);
 	count = 0;
-	total = size;
 	update_entryp = updatebuf;
-	while (total >= 0) {
+	while (count < total) {
 		last_update_xid = update_entryp->xid;
+		update_entryp++;
 		count++;
-		len = sizeof(struct srt_update_entry) + update_entryp->namelen;
-		total -= len;
-		update_entryp = PSC_AGP(update_entryp, len);
 	}
-	psc_assert(!total);
 	current_update_xid = last_update_xid;
 	if (total == SLM_UPDATE_BATCH)
 		current_update_batchno++;
