@@ -70,13 +70,13 @@ static int			 current_update_logfile = -1;
 static int			 current_reclaim_logfile = -1;
 
 /*
- * To ensure that the current update of the progress does not 
- * affect the previous update in case of a crash/power outage, 
- * I use two files and write them alternately. This way seems 
- * to be easier than making sure that each update happens on 
+ * To ensure that the current update of the progress does not
+ * affect the previous update in case of a crash/power outage,
+ * I use two files and write them alternately. This way seems
+ * to be easier than making sure that each update happens on
  * different sectors (we don't need to care about the entry size
  * and the number of entries).
- *  
+ *
  * TODO: add some kind of checksum to protect the file contents.
  */
 static int			 current_update_progfile[2];
@@ -929,7 +929,7 @@ mds_update_lwm(int batchno)
 		} else {
 			if (peerinfo->sp_xid < value)
 				value = peerinfo->sp_xid;
-		}    
+		}
 		RPMI_ULOCK(rpmi);
 	);
 	psc_assert(value != UINT64_MAX);
@@ -987,7 +987,7 @@ mds_send_batch_update(uint64_t batchno)
 	logfile = mds_open_logfile(batchno, 1, 1);
 	if (logfile == -1)
 		psc_fatal("Fail to open update log file, batch = %"PRId64, batchno);
-	size = read(logfile, updatebuf, SLM_UPDATE_BATCH * 
+	size = read(logfile, updatebuf, SLM_UPDATE_BATCH *
 	    sizeof(struct srt_update_entry));
 	close(logfile);
 
@@ -995,8 +995,8 @@ mds_send_batch_update(uint64_t batchno)
 	count = (int) size / (int) sizeof(struct srt_update_entry);
 
 	/*
- 	 * Compress our buffer to reduce RPC traffic.
- 	 */
+	 * Compress our buffer to reduce RPC traffic.
+	 */
 	entryp = next_entryp = updatebuf;
 	for (i = 1; i < count; i++) {
 
@@ -1005,10 +1005,10 @@ mds_send_batch_update(uint64_t batchno)
 		last_xid = entryp->xid;
 
 		entryp++;
-		len = offsetof(struct srt_update_entry, _padding) + next_entryp->namelen;
+		len = offsetof(struct srt_update_entry, _pad) + next_entryp->namelen;
 		next_entryp = PSC_AGP(next_entryp, len);
 
-		len = offsetof(struct srt_update_entry, _padding) + entryp->namelen;
+		len = offsetof(struct srt_update_entry, _pad) + entryp->namelen;
 		memmove(next_entryp, entryp, len);
 	}
 
@@ -1250,10 +1250,10 @@ mds_send_batch_reclaim(uint64_t batchno)
 	xid = entryp->xid;
 
 	/*
- 	 * Compress our buffer to reduce RPC traffic.
- 	 */
+	 * Compress our buffer to reduce RPC traffic.
+	 */
 	entryp = next_entryp = reclaimbuf;
-	len = offsetof(struct srt_reclaim_entry, _padding);
+	len = offsetof(struct srt_reclaim_entry, _pad);
 	for (i = 1; i < count; i++) {
 		entryp++;
 		next_entryp = PSC_AGP(next_entryp, len);
@@ -1348,7 +1348,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 		mds_record_reclaim_prog();
 	/*
 	 * If this log file is full and all I/O servers have applied its
-	 * contents, remove an old log file (keep the previous one so that 
+	 * contents, remove an old log file (keep the previous one so that
 	 * we can figure out the last distill xid upon recovery).
 	 */
 	if (didwork == nios && count == SLM_RECLAIM_BATCH) {
@@ -1638,7 +1638,7 @@ mds_journal_init(void)
 	struct stat sb;
 	char fn[PATH_MAX];
 	ssize_t size;
-	
+
 	psc_assert(sizeof(struct srt_update_entry) == 512);
 	psc_assert(sizeof(struct srt_reclaim_entry) == 512);
 
@@ -1756,7 +1756,7 @@ mds_journal_init(void)
 			    count * sizeof(struct update_prog_entry));
 			psc_assert(size == count * (int)sizeof(struct update_prog_entry));
 		}
-	
+
 		SL_FOREACH_MDS(resm,
 			if (resm == nodeResm)
 				continue;
