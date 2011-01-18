@@ -909,9 +909,9 @@ mds_reclaim_hwm(int batchno)
  *	peer MDSes.
  */
 __static uint64_t
-mds_update_lwm(void)
+mds_update_lwm(int batchno)
 {
-	uint64_t batchno = UINT64_MAX;
+	uint64_t value = UINT64_MAX;
 	struct sl_mds_peerinfo *peerinfo;
 	struct resprof_mds_info *rpmi;
 	struct sl_resm *resm;
@@ -923,14 +923,17 @@ mds_update_lwm(void)
 		peerinfo = rpmi->rpmi_info;
 
 		RPMI_LOCK(rpmi);
-		if (peerinfo->sp_batchno < batchno)
-			batchno = peerinfo->sp_batchno;
+		if (batchno) {
+			if (peerinfo->sp_batchno < value)
+				value = peerinfo->sp_batchno;
+		} else {
+			if (peerinfo->sp_xid < value)
+				value = peerinfo->sp_xid;
+		}    
 		RPMI_ULOCK(rpmi);
 	);
-
-	psc_assert(batchno != UINT64_MAX);
-
-	return (batchno);
+	psc_assert(value != UINT64_MAX);
+	return (value);
 }
 
 __static uint64_t
@@ -1403,7 +1406,7 @@ mds_send_update(__unusedx struct psc_thread *thr)
 	 * order within one MDS.
 	 */
 	while (pscthr_run()) {
-		batchno = mds_update_lwm();
+		batchno = mds_update_lwm(1);
 		do {
 			didwork = mds_send_batch_update(batchno);
 			batchno++;
@@ -1770,7 +1773,7 @@ mds_journal_init(void)
 	update_prog_buf = PSCALLOC(npeers * sizeof(struct update_prog_entry));
 
 	/* Find out the highest update batchno and xid */
-	batchno = mds_update_lwm();
+	batchno = mds_update_lwm(1);
 	logfile = mds_open_logfile(batchno, 1, 1);
 	if (logfile == -1) {
 		if (batchno) {
