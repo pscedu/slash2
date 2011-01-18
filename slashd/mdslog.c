@@ -937,9 +937,9 @@ mds_update_lwm(int batchno)
 }
 
 __static uint64_t
-mds_update_hwm(void)
+mds_update_hwm(int batchno)
 {
-	uint64_t batchno = 0;
+	uint64_t value;
 	struct sl_mds_peerinfo *peerinfo;
 	struct resprof_mds_info *rpmi;
 	struct sl_resm *resm;
@@ -951,14 +951,16 @@ mds_update_hwm(void)
 		peerinfo = rpmi->rpmi_info;
 
 		RPMI_LOCK(rpmi);
-		if (peerinfo->sp_batchno > batchno)
-			batchno = peerinfo->sp_batchno;
+		if (batchno) {
+			if (peerinfo->sp_batchno > value)
+				value = peerinfo->sp_batchno;
+		} else {
+			if (peerinfo->sp_xid > value)
+				value = peerinfo->sp_xid;
+		}
 		RPMI_ULOCK(rpmi);
 	);
-
-	psc_assert(batchno != UINT64_MAX);
-
-	return (batchno);
+	return (value);
 }
 
 /**
@@ -1410,7 +1412,7 @@ mds_send_update(__unusedx struct psc_thread *thr)
 		do {
 			didwork = mds_send_batch_update(batchno);
 			batchno++;
-		} while (didwork && (mds_update_hwm() >= batchno));
+		} while (didwork && (mds_update_hwm(1) >= batchno));
 
 		spinlock(&mds_update_waitqlock);
 		rv = psc_waitq_waitrel_s(&mds_update_waitq,
