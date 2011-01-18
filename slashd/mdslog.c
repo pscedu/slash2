@@ -1408,8 +1408,15 @@ mds_send_update(__unusedx struct psc_thread *thr)
 	 * order within one MDS.
 	 */
 	while (pscthr_run()) {
+
 		batchno = mds_update_lwm(1);
 		do {
+			spinlock(&mds_update_lock);
+			if (mds_update_lwm(0) > current_update_xid) {
+				freelock(&mds_update_lock);
+				break;
+			}
+			freelock(&mds_update_lock);
 			didwork = mds_send_batch_update(batchno);
 			batchno++;
 		} while (didwork && (mds_update_hwm(1) >= batchno));
