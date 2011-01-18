@@ -268,6 +268,10 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	psc_assert(oflags & O_CREAT);
 
+	if (strlen(name) == 0) {
+		rc = ENOENT;
+		goto out;
+	}
 	if (strlen(name) > SL_NAME_MAX) {
 		rc = ENAMETOOLONG;
 		goto out;
@@ -602,6 +606,10 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 
 	msfsthr_ensure();
 
+	if (strlen(newname) == 0) {
+		rc = ENOENT;
+		goto out;
+	}
 	if (strlen(newname) > SL_NAME_MAX) {
 		rc = ENAMETOOLONG;
 		goto out;
@@ -691,6 +699,10 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	msfsthr_ensure();
 
+	if (strlen(name) == 0) {
+		rc = ENOENT;
+		goto out;
+	}
 	if (strlen(name) > SL_NAME_MAX) {
 		rc = ENAMETOOLONG;
 		goto out;
@@ -765,6 +777,10 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	msfsthr_ensure();
 
+	if (strlen(name) == 0) {
+		rc = ENOENT;
+		goto out;
+	}
 	if (strlen(name) > SL_NAME_MAX) {
 		rc = ENAMETOOLONG;
 		goto out;
@@ -870,6 +886,10 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	if (!S_ISFIFO(mode)) {
 		rc = EOPNOTSUPP;
+		goto out;
+	}
+	if (strlen(name) == 0) {
+		rc = ENOENT;
 		goto out;
 	}
 	if (strlen(name) > SL_NAME_MAX) {
@@ -1079,6 +1099,8 @@ slash_lookuprpc(const struct slash_creds *crp, pscfs_inum_t pinum,
 	struct srm_lookup_rep *mp;
 	int rc;
 
+	if (strlen(name) == 0)
+		return (ENOENT);
 	if (strlen(name) > SL_NAME_MAX)
 		return (ENAMETOOLONG);
 
@@ -1362,6 +1384,10 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 
 	msfsthr_ensure();
 
+	if (strlen(oldname) == 0 || strlen(newname) == 0) {
+		rc = ENOENT;
+		goto out;
+	}
 	if (strlen(oldname) > SL_NAME_MAX ||
 	    strlen(newname) > SL_NAME_MAX) {
 		rc = ENAMETOOLONG;
@@ -1502,12 +1528,8 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 
 	msfsthr_ensure();
 
-	if (strlen(buf) == 1 || strlen(name) == 1) {
-		rc = ENOENT;
-		goto out;
-	}
 	if (strlen(buf) == 0 || strlen(name) == 0) {
-		rc = EINVAL;
+		rc = ENOENT;
 		goto out;
 	}
 	if (strlen(buf) >= SL_PATH_MAX ||
@@ -1540,7 +1562,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = 0;
 
-	mq->linklen = strlen(buf);
+	mq->linklen = strlen(buf) + 1;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	iov.iov_base = (char *)buf;
