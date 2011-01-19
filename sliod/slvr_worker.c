@@ -97,9 +97,9 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 
 		iovs[i].iov_base = &bcr->bcr_crcup;
 		len += iovs[i].iov_len = sizeof(struct srm_bmap_crcup) +
-			(mq->ncrcs_per_update[i] * 
+			(mq->ncrcs_per_update[i] *
 			 sizeof(struct srm_bmap_crcwire));
-			
+
 
 		psc_crc64_add(&mq->crc, iovs[i].iov_base, iovs[i].iov_len);
 	}
@@ -286,7 +286,7 @@ slvr_worker_int(void)
 	struct slvr_ref		*s;
 	struct timespec		 now;
 	struct biod_crcup_ref	*bcr=NULL;
-	uint64_t              crc;
+	uint64_t		 crc;
 
  start:
 	PFL_GETTIMESPEC(&now);
@@ -382,7 +382,7 @@ slvr_worker_int(void)
 		uint32_t i, found;
 
 		psc_assert(bcr->bcr_crcup.blkno == slvr_2_bmap(s)->bcm_bmapno);
-		psc_assert(bcr->bcr_crcup.fg.fg_fid == 
+		psc_assert(bcr->bcr_crcup.fg.fg_fid ==
 			   slvr_2_bmap(s)->bcm_fcmh->fcmh_fg.fg_fid);
 		psc_assert(bcr->bcr_crcup.nups < MAX_BMAP_INODE_PAIRS);
 		psc_assert(slvr_2_bmap(s)->bcm_flags & BMAP_IOD_BCRSCHED);
@@ -445,7 +445,7 @@ slvr_worker_int(void)
 			  (slvr_2_bmap(s)->bcm_flags & BMAP_IOD_BCRSCHED));
 
 		if (slvr_2_bmap(s)->bcm_flags & BMAP_IOD_BCRSCHED)
-			/* The bklog may be empty but a pending bcr may be 
+			/* The bklog may be empty but a pending bcr may be
 			 *    present on the ready list.
 			 */
 			pll_addtail(&slvr_2_biod(s)->biod_bklog_bcrs, bcr);

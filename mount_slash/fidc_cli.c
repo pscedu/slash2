@@ -149,5 +149,5 @@ struct sl_fcmh_ops sl_fcmh_ops = {
 /* dtor */		slc_fcmh_dtor,
 /* getattr */		slc_fcmh_getattr,
 /* postsetattr */	slc_fcmh_refresh_age,
-/* modify */            NULL
+/* modify */		NULL
 };

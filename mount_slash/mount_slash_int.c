@@ -782,7 +782,8 @@ msl_bmap_load(struct msl_fhent *mfh, sl_bmapno_t n, enum rw rw, struct bmapc_mem
  *	allocated a new is made.
  * @b: the bmap
  * Notes: the bmap is locked to avoid race conditions with import checking.
- *        the bmap's refcnt must have been incremented so that it is not freed from under us.
+ *	the bmap's refcnt must have been incremented so that it is not
+ *	freed from under us.
  * XXX Dev Needed: If the bmap is a read-only then any replica may be
  *	accessed (so long as it is recent).  Therefore
  *	msl_bmap_to_csvc() should have logic to accommodate this.
@@ -1047,13 +1048,13 @@ __static void
 msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 {
 	struct slashrpc_cservice  *csvc;
-	struct pscrpc_request     *req;
-	struct pscrpc_bulk_desc   *desc;
+	struct pscrpc_request	  *req;
+	struct pscrpc_bulk_desc	  *desc;
 	struct bmapc_memb	  *bcm;
 	struct bmap_cli_info	  *bci;
-	struct iovec              *iovs;
-	struct srm_io_req         *mq;
-	struct srm_io_rep         *mp;
+	struct iovec		  *iovs;
+	struct srm_io_req	  *mq;
+	struct srm_io_rep	  *mp;
 
 	size_t len, nbytes, size=r->biorq_len;
 	int i, op, n=0, rc=1;

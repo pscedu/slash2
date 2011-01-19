@@ -28,8 +28,8 @@
 #include "fidc_iod.h"
 #include "fidcache.h"
 
-static int 
-sli_open_backing_file(struct fidc_membh *fcmh) 
+static int
+sli_open_backing_file(struct fidc_membh *fcmh)
 {
 	int rc = 0;
 	char fidfn[PATH_MAX];
@@ -72,7 +72,7 @@ sli_fcmh_reopen(struct fidc_membh *fcmh, const struct slash_fidgen *fg)
 	/* If our generation number is still unknown try to set it here.
 	 */
 	if (fcmh_2_gen(fcmh) == FGEN_ANY && fg->fg_gen != FGEN_ANY)
-		fcmh_2_gen(fcmh) = fg->fg_gen;	
+		fcmh_2_gen(fcmh) = fg->fg_gen;
 
 	if (fg->fg_gen == FGEN_ANY) {
 		/* Noop.  The caller's operation is generation
@@ -98,7 +98,7 @@ sli_fcmh_reopen(struct fidc_membh *fcmh, const struct slash_fidgen *fg)
 		incr = psc_rlim_adj(RLIMIT_NOFILE, 1);
 
 		rc = sli_open_backing_file(fcmh);
-		/* Notify upper layers that open() has failed 
+		/* Notify upper layers that open() has failed
 		 */
 		if (rc) {
 			fcmh->fcmh_flags |= FCMH_CTOR_FAILED;
@@ -116,15 +116,15 @@ sli_fcmh_reopen(struct fidc_membh *fcmh, const struct slash_fidgen *fg)
 	} else if (fg->fg_gen == fcmh_2_gen(fcmh) &&
 		   (fcmh->fcmh_flags & FCMH_CTOR_DELAYED)) {
 
-		incr = psc_rlim_adj(RLIMIT_NOFILE, 1);		
+		incr = psc_rlim_adj(RLIMIT_NOFILE, 1);
 		rc = sli_open_backing_file(fcmh);
 		if (!rc)
-			fcmh->fcmh_flags &= 
+			fcmh->fcmh_flags &=
 				~(FCMH_CTOR_FAILED | FCMH_CTOR_DELAYED);
 		else if (rc && incr)
 			psc_rlim_adj(RLIMIT_NOFILE, -1);
 
-		DEBUG_FCMH(PLL_NOTIFY, fcmh, "open FCMH_CTOR_DELAYED (rc=%d)", 
+		DEBUG_FCMH(PLL_NOTIFY, fcmh, "open FCMH_CTOR_DELAYED (rc=%d)",
 		   rc);
 
 	} else if (fg->fg_gen < fcmh_2_gen(fcmh)) {
@@ -145,7 +145,7 @@ sli_fcmh_ctor(struct fidc_membh *fcmh)
 	struct fcmh_iod_info *fii;
 	int incr, rc = 0;
 
-	if (fcmh->fcmh_fg.fg_gen == FGEN_ANY) {		
+	if (fcmh->fcmh_fg.fg_gen == FGEN_ANY) {
 		fcmh->fcmh_flags |= FCMH_CTOR_DELAYED;
 		DEBUG_FCMH(PLL_NOTIFY, fcmh, "refusing to open backing file "
 		   "with FGEN_ANY");
@@ -187,5 +187,5 @@ struct sl_fcmh_ops sl_fcmh_ops = {
 /* dtor */		sli_fcmh_dtor,
 /* getattr */		NULL,
 /* postsetattr */	NULL,
-/* modify */            sli_fcmh_reopen
+/* modify */		sli_fcmh_reopen
 };

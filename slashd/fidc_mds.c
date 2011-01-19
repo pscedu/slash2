@@ -122,5 +122,5 @@ struct sl_fcmh_ops sl_fcmh_ops = {
 /* dtor */		slm_fcmh_dtor,
 /* getattr */		NULL,
 /* postsetattr */	NULL,
-/* modify */            NULL
+/* modify */		NULL
 };
