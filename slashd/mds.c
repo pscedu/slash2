@@ -1603,6 +1603,17 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 
 	psc_assert(!*bmap);
 
+	FCMH_LOCK(f);
+	rc = (fcmh_2_ino(f)->ino_flags & INOF_IN_PTRUNC) &&
+	    bmapno >= fcmh_2_ino(f)->ino_ptruncoff / SLASH_BMAP_SIZE;
+	FCMH_ULOCK(f);
+	if (rc)
+		/*
+		 * XXX Register client to be awoken with an RPC when the
+		 * truncation is resolved.
+		 */
+		return (EAGAIN);
+
 	rc = mds_bmap_load(f, bmapno, &b);
 	if (rc)
 		return (rc);
