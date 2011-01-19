@@ -111,7 +111,8 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 
 	FCMH_LOCK(bmap->bcm_fcmh);
 	if (fcmh_2_fsz(bmap->bcm_fcmh) != crcup->fsize) {
-		DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh, "new fsize %"PRId64, crcup->fsize);
+		DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh,
+		    "new fsize %"PRId64, crcup->fsize);
 		fcmh_2_fsz(bmap->bcm_fcmh) = crcup->fsize;
 	}
 	utimgen = bmap->bcm_fcmh->fcmh_sstb.sst_utimgen;
@@ -129,7 +130,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	BMAPOD_WRLOCK(bmdsi);
 	for (i = 0; i < crcup->nups; i++) {
 		bmap_2_crcs(bmap, crcup->crcs[i].slot) =
-			crcup->crcs[i].crc;
+		    crcup->crcs[i].crc;
 
 		bmap->bcm_crcstates[crcup->crcs[i].slot] =
 			BMAP_SLVR_DATA | BMAP_SLVR_CRC;
@@ -153,7 +154,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: short I/O");
 		rc = SLERR_SHORTIO;
 	}
-	DEBUG_BMAP(PLL_TRACE, bmap, "wrote bmap (rc=%d)",rc);
+	DEBUG_BMAP(PLL_TRACE, bmap, "wrote bmap (rc=%d)", rc);
 
 	return (rc);
 }
@@ -185,7 +186,7 @@ mds_bmap_repl_update(struct bmapc_memb *bmap)
 		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: short I/O");
 		rc = SLERR_SHORTIO;
 	}
-	DEBUG_BMAP(PLL_TRACE, bmap, "wrote bmap (rc=%d)",rc);
+	DEBUG_BMAP(PLL_TRACE, bmap, "wrote bmap (rc=%d)", rc);
 	BMAPOD_READ_DONE(bmap);
 	return (rc);
 }
@@ -194,9 +195,9 @@ int
 mds_inode_addrepl_update(struct slash_inode_handle *inoh,
     sl_ios_id_t ios, uint32_t pos)
 {
-	size_t nb;
-	int locked, rc = 0;
 	struct slmds_jent_ino_addrepl jrir;
+	int locked, rc = 0;
+	size_t nb;
 
 	jrir.sjir_fid = fcmh_2_fid(inoh->inoh_fcmh);
 	jrir.sjir_ios = ios;
@@ -268,7 +269,7 @@ mdsio_bmap_write(struct bmapc_memb *bmap)
 		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: short I/O");
 		rc = SLERR_SHORTIO;
 	}
-	DEBUG_BMAP(PLL_TRACE, bmap, "wrote bmap (rc=%d)",rc);
+	DEBUG_BMAP(PLL_TRACE, bmap, "wrote bmap (rc=%d)", rc);
 	return (rc);
 }
 
