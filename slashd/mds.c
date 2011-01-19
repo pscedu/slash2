@@ -645,7 +645,7 @@ mds_bmap_getbml(struct bmapc_memb *b, lnet_nid_t cli_nid,
 	PLL_FOREACH(bml, &bmdsi->bmdsi_leases) {
 		if (bml->bml_cli_nidpid.nid == cli_nid &&
 		    bml->bml_cli_nidpid.pid == cli_pid) {
-			struct bmap_mds_lease *tmp=bml;
+			struct bmap_mds_lease *tmp = bml;
 
 			do {
 				if (tmp->bml_seq == seq)
@@ -669,7 +669,7 @@ mds_bmap_getbml(struct bmapc_memb *b, lnet_nid_t cli_nid,
  */
 __static int
 mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
-	 sl_ios_id_t prefios)
+    sl_ios_id_t prefios)
 {
 	struct bmap_mds_info *bmdsi = bml->bml_bmdsi;
 	struct bmapc_memb *b = bmi_2_bmap(bmdsi);
@@ -696,12 +696,12 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 	bmap_op_start_type(b, BMAP_OPCNT_LEASE);
 
 	obml = mds_bmap_dupls_find(bmdsi, &bml->bml_cli_nidpid, &wlease,
-		   &rlease);
+	    &rlease);
 
 	DEBUG_BMAP(PLL_INFO, b, "bml=%p obml=%p (wlease=%d rlease=%d)"
-		   " (nwtrs=%d nrdrs=%d)",
-		   bml, obml, wlease, rlease,
-		   bmdsi->bmdsi_writers, bmdsi->bmdsi_readers);
+	    " (nwtrs=%d nrdrs=%d)",
+	    bml, obml, wlease, rlease,
+	    bmdsi->bmdsi_writers, bmdsi->bmdsi_readers);
 
 	if (obml) {
 		struct bmap_mds_lease *tmp = obml;
@@ -740,9 +740,8 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 			 */
 			bmdsi->bmdsi_writers++;
 
-			if (bmdsi->bmdsi_writers > 1) {
+			if (bmdsi->bmdsi_writers > 1)
 				psc_enter_debugger("bmdsi->bmdsi_writers");
-			}
 
 			if (rlease)
 				/* Remove the read cnt, it has been
