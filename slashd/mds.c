@@ -1285,13 +1285,13 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
 		rc = -EALREADY;
 		BMAP_ULOCK(bmap);
 
-		DEBUG_BMAP(PLL_ERROR, bmap, "EALREADY blkno=%u sz=%"PRId64
-			   " ion=%s", c->blkno, c->fsize,
-			   libcfs_nid2str(ion_nid));
+		DEBUG_BMAP(PLL_ERROR, bmap,
+		    "EALREADY blkno=%u sz=%"PRId64" ion=%s",
+		    c->blkno, c->fsize, libcfs_nid2str(ion_nid));
 
-		DEBUG_FCMH(PLL_ERROR, fcmh, "EALREADY blkno=%u sz=%"PRId64
-			   " ion=%s", c->blkno, c->fsize,
-			   libcfs_nid2str(ion_nid));
+		DEBUG_FCMH(PLL_ERROR, fcmh,
+		    "EALREADY blkno=%u sz=%"PRId64" ion=%s",
+		    c->blkno, c->fsize, libcfs_nid2str(ion_nid));
 		goto out;
 
 	} else {
@@ -1570,7 +1570,7 @@ mds_bmap_load_ion(const struct slash_fidgen *fg, sl_bmapno_t bmapno,
 /**
  * mds_bmap_load_cli - Routine called to retrieve a bmap, presumably so that
  *	it may be sent to a client.  It first checks for existence in
- *	the cache, if needed, the bmap is retrieved from disk.
+ *	the cache otherwise the bmap is retrieved from disk.
  *
  *	mds_bmap_load_cli() also manages the bmap_lease reference
  *	which is used to track the bmaps a particular client knows
@@ -1625,7 +1625,8 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	rc = mds_bmap_bml_add(bml, rw, prefios);
 	if (rc) {
 		if (rc == -SLERR_BMAP_DIOWAIT) {
-			psclist_del(&bml->bml_exp_lentry, &mexpc->mexpc_bmlhd);
+			psclist_del(&bml->bml_exp_lentry,
+			    &mexpc->mexpc_bmlhd);
 			mds_bml_free(bml);
 		} else {
 			if (rc == -SLERR_ION_OFFLINE)
