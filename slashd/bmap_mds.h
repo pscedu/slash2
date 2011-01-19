@@ -208,6 +208,9 @@ struct bmap_mds_lease {
 #define BML_LOCK(bml)		spinlock(&(bml)->bml_lock)
 #define BML_ULOCK(bml)		freelock(&(bml)->bml_lock)
 
+#define BMAP_FOREACH_LEASE(bcm, bml)					\
+	PLL_FOREACH((bml), &bmap_2_bmi(bcm)->bmdsi_leases)
+
 /**
  * bmap_ion_assign - The structure used for tracking the MDS's bmap/ion
  *   assignments.  These structures are stored in a odtable.

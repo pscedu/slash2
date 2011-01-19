@@ -307,16 +307,21 @@ slmupschedthr_tryptrunc(struct up_sched_work_item *wk,
     int idx)
 {
 	int tract[NBREPLST], retifset[NBREPLST], rc;
+	struct srm_bmap_release_req *br_mq;
+	struct srm_bmap_release_rep *br_mp;
 	struct slmupsched_thread *smut;
 	struct slashrpc_cservice *csvc;
 	struct resm_mds_info *dst_rmmi;
 	struct srm_bmap_ptrunc_req *mq;
 	struct srm_generic_rep *mp;
+	struct bmap_mds_lease *bml;
 	struct pscrpc_request *rq;
 	struct site_mds_info *smi;
+	struct bmapc_memb *biter;
 	struct sl_resm *dst_resm;
 	struct psc_thread *thr;
 	struct sl_site *site;
+	sl_bmapno_t i;
 
 	thr = pscthr_get();
 	smut = slmupschedthr(thr);
@@ -336,6 +341,51 @@ slmupschedthr_tryptrunc(struct up_sched_work_item *wk,
 	if (mds_repl_bmap_walk_all(bcm, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT))
 		return (-1);
+
+	/*
+	 * Wait until any leases for this or any bmap after have been
+	 * relinquished.
+	 */
+ restart:
+	rc = 0;
+	for (i = bcm->bcm_bmapno, biter = bcm;
+	    i < USWI_NBMAPS(wk); i++, biter = NULL) {
+		if (biter == NULL)
+			if (mds_bmap_load(wk->uswi_fcmh, i, &biter))
+				continue;
+		BMAP_LOCK(biter);
+		BMAP_FOREACH_LEASE(biter, bml) {
+			BMAP_ULOCK(biter);
+
+			rc = 1;
+
+			csvc = slm_getclcsvc(bml->bml_exp);
+			if (csvc == NULL)
+				continue;
+			rc = SL_RSX_NEWREQ(csvc->csvc_import,
+			    SRCM_VERSION, SRMT_RELEASEBMAP, rq, br_mq,
+			    br_mp);
+			if (rc)
+				goto drop;
+			br_mq->bmaps[0].fid = USWI_FID(wk);
+			br_mq->bmaps[0].bmapno = i;
+			br_mq->nbmaps = 1;
+			SL_RSX_WAITREP(rq, br_mp);
+			pscrpc_req_finished(rq);
+
+ drop:
+			sl_csvc_decref(csvc);
+
+			BMAP_LOCK(biter);
+//			if (seq != seq)
+//				goto restart;
+		}
+		BMAP_ULOCK(biter);
+		if (bcm != biter)
+			mds_repl_bmap_rel(biter);
+	}
+	if (rc)
+		return (0);
 
 	csvc = slm_geticsvc_nb(dst_resm, NULL);
 	if (csvc == NULL) {
