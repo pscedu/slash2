@@ -1369,7 +1369,7 @@ mds_send_reclaim(__unusedx struct psc_thread *thr)
 		batchno = mds_reclaim_lwm(1);
 		do {
 			spinlock(&mds_reclaim_lock);
-			if (mds_reclaim_lwm(0) > current_reclaim_xid) {
+			if (!current_reclaim_xid || (mds_reclaim_lwm(0) > current_reclaim_xid)) {
 				freelock(&mds_reclaim_lock);
 				break;
 			}
@@ -1404,7 +1404,7 @@ mds_send_update(__unusedx struct psc_thread *thr)
 		batchno = mds_update_lwm(1);
 		do {
 			spinlock(&mds_update_lock);
-			if (mds_update_lwm(0) > current_update_xid) {
+			if (!current_update_xid || (mds_update_lwm(0) > current_update_xid)) {
 				freelock(&mds_update_lock);
 				break;
 			}
