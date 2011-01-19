@@ -735,9 +735,8 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			 * do nothing.
 			*/
 			FCMH_LOCK(fcmh);
-			if (fcmh_2_fsz(fcmh) == 0) {
+			if (fcmh_2_fsz(fcmh) == 0)
 				goto out;
-			}
 
 			fcmh_2_gen(fcmh)++;
 			FCMH_ULOCK(fcmh);
@@ -762,11 +761,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 
 			ih = fcmh_2_inoh(fcmh);
 			INOH_LOCK(ih);
-			if (ih->inoh_ino.ino_flags &
-			    INOF_IN_PTRUNC) {
-				// XXX bmaps write leases may not be granted
-				// for this bmap or any bmap beyond
-
+			if (ih->inoh_ino.ino_flags & INOF_IN_PTRUNC) {
 				INOH_ULOCK(ih);
 				mp->rc = EAGAIN;
 				goto out;
@@ -774,7 +769,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			FCMH_LOCK(fcmh);
 			if (mq->attr.sst_size >= fcmh_2_fsz(fcmh)) {
 				fcmh_2_fsz(fcmh) = mq->attr.sst_size;
-				// xnbmaps
+				// XXX adjust xnbmaps
 				FCMH_ULOCK(fcmh);
 				INOH_ULOCK(ih);
 				mds_inode_sync(ih);
@@ -842,11 +837,17 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	    to_set, &rootcreds, &mp->attr, fcmh_2_mdsio_data(fcmh),
 	    mds_namespace_log);
 
+	if (!mp->rc) {
+		FCMH_LOCK(fcmh);
+		fcmh->fcmh_sstb = mp->attr;
+		FCMH_ULOCK(fcmh);
+	}
+
  out:
 	if (fcmh) {
 		if (!mp->rc) {
 			FCMH_RLOCK(fcmh);
-			fcmh->fcmh_sstb = mp->attr;
+			mp->attr =  fcmh->fcmh_sstb;
 		}
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 	}
