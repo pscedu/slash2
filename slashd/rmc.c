@@ -736,7 +736,6 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			*/
 			FCMH_LOCK(fcmh);
 			if (fcmh_2_fsz(fcmh) == 0) {
-				FCMH_ULOCK(fcmh);
 				goto out;
 			}
 
@@ -843,14 +842,14 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	    to_set, &rootcreds, &mp->attr, fcmh_2_mdsio_data(fcmh),
 	    mds_namespace_log);
 
-	if (!mp->rc) {
-		FCMH_LOCK(fcmh);
-		fcmh->fcmh_sstb = mp->attr;
-		FCMH_ULOCK(fcmh);
-	}
  out:
-	if (fcmh)
+	if (fcmh) {
+		if (!mp->rc) {
+			FCMH_RLOCK(fcmh);
+			fcmh->fcmh_sstb = mp->attr;
+		}
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+	}
 	return (0);
 }
 
