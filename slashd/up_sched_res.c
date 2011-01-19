@@ -359,8 +359,6 @@ slmupschedthr_tryptrunc(struct up_sched_work_item *wk,
 	tract[BREPLST_TRUNCPNDG] = BREPLST_TRUNCPNDG;
 	mds_repl_bmap_apply(bcm, tract, NULL, off);
 
-	BMAPOD_MODIFY_DONE(bcm);
-
 	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
@@ -372,8 +370,6 @@ slmupschedthr_tryptrunc(struct up_sched_work_item *wk,
 		sl_csvc_decref(csvc);
 		return (1);
 	}
-
-	BMAPOD_MODIFY_START(bcm);
 
 	/* handle error return failure */
 	brepls_init(tract, -1);
@@ -668,6 +664,7 @@ slmupschedthr_main(struct psc_thread *thr)
 						}
 						break;
 					case BREPLST_TRUNCPNDG:
+						BMAPOD_MODIFY_DONE(bcm);
 						FOREACH_RND(&dst_resm_i,
 						    psc_dynarray_len(&dst_res->res_members)) {
 							rc = slmupschedthr_tryptrunc(wk,
@@ -680,12 +677,14 @@ slmupschedthr_main(struct psc_thread *thr)
 						}
 						if (rc)
 							RESET_RND_ITER(&bmap_i);
+						BMAPOD_MODIFY_START(bcm);
 						break;
 					case BREPLST_GARBAGE_SCHED:
 					case BREPLST_TRUNCPNDG_SCHED:
 						RESET_RND_ITER(&bmap_i);
 						break;
 					case BREPLST_GARBAGE:
+						BMAPOD_MODIFY_DONE(bcm);
 						FOREACH_RND(&dst_resm_i,
 						    psc_dynarray_len(&dst_res->res_members))
 							/*
@@ -698,6 +697,7 @@ slmupschedthr_main(struct psc_thread *thr)
 							    dst_resm_i.ri_rnd_idx))
 								goto restart;
 						RESET_RND_ITER(&bmap_i);
+						BMAPOD_MODIFY_START(bcm);
 						break;
 					case BREPLST_VALID:
 					case BREPLST_INVALID:
