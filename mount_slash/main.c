@@ -2056,8 +2056,8 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-dUX] [-f conf] [-I iosystem] [-M mds] [-o mountopt]\n"
-	    "\t[-p #prefetch] [-S socket] node\n",
+	    "usage: %s [-dUX] [-D datadir] [-f conf] [-I iosystem] [-M mds]\n"
+	    "\t[-o mountopt] [-p #prefetch] [-S socket] node\n",
 	    progname);
 	exit(1);
 }

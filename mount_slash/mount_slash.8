@@ -26,6 +26,7 @@ file system
 .Sh SYNOPSIS
 .Nm mount_slash
 .Op Fl dU
+.Op Fl D Ar datadir
 .Op Fl f Ar conf
 .Op Fl I Ar iosystem
 .Op Fl M Ar mds
@@ -43,6 +44,10 @@ file system under the specified
 .Pp
 The options are as follows:
 .Bl -tag -width Ds
+.It Fl D Ar datadir
+Specify an alternative directory where operation data is stored.
+Defaults to
+.Pa /var/lib/slash .
 .It Fl d
 Enable low-level file system debug messages.
 .It Fl f Ar conf

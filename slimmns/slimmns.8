@@ -26,6 +26,7 @@ backing store file system
 .Sh SYNOPSIS
 .Nm slmkfs
 .Op Fl iW
+.Op Fl D Ar datadir
 .Pa fsroot
 .Sh DESCRIPTION
 The
@@ -45,6 +46,10 @@ file pathname renames and unlinks, and the replication queue.
 .Pp
 The following options are available:
 .Bl -tag -indent Ds
+.It Fl D Ar datadir
+Specify an alternative directory where operation data is stored.
+Defaults to
+.Pa /var/lib/slash .
 .It Fl i
 Format a file system suitable for use with
 .Tn I/O
