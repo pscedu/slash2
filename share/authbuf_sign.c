@@ -74,15 +74,17 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 	struct pscrpc_msg *m;
 	gcry_error_t gerr;
 	gcry_md_hd_t hd;
+	uint32_t i;
 
 	if (msgtype == PSCRPC_MSG_REQUEST)
 		m = rq->rq_reqmsg;
 	else
 		m = rq->rq_repmsg;
 
-	saf = pscrpc_msg_buf(m, 1, sizeof(*saf));
+	saf = pscrpc_msg_buf(m, m->bufcount - 1, sizeof(*saf));
 	saf->saf_secret.sas_magic = AUTHBUF_MAGIC;
-	saf->saf_secret.sas_nonce = psc_atomic64_inc_getnew(&authbuf_nonce);
+	saf->saf_secret.sas_nonce =
+	    psc_atomic64_inc_getnew(&authbuf_nonce);
 
 	pscrpc_req_getprids(rq, &self_prid, &peer_prid);
 	saf->saf_secret.sas_src_nid = self_prid.nid;
@@ -94,9 +96,13 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 	if (gerr)
 		psc_fatalx("gcry_md_copy: %d", gerr);
 
-	gcry_md_write(hd, pscrpc_msg_buf(m, 0, 0),
-	    pscrpc_msg_buflen(m, 0));
-	gcry_md_write(hd, &saf->saf_secret, sizeof(saf->saf_secret));
+	for (i = 0; i < m->bufcount - 1; i++) {
+		/* Authbuf is always the last buf. */
+		gcry_md_write(hd, pscrpc_msg_buf(m, i, 0),
+		    pscrpc_msg_buflen(m, i));
+		gcry_md_write(hd, &saf->saf_secret,
+		    sizeof(saf->saf_secret));
+	}
 
 	psc_base64_encode(gcry_md_read(hd, 0),
 	    saf->saf_hash, authbuf_alglen);
