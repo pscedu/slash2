@@ -1028,7 +1028,7 @@ mds_send_batch_update(uint64_t batchno)
 		if (peerinfo->sp_xid < first_xid || peerinfo->sp_xid > last_xid)
 			continue;
 
-		/* Find out which part of the buffer should be send out */
+		/* Find out which part of the buffer should be sent out */
 		i = count;
 		total = size;
 		entryp = updatebuf;
@@ -1274,7 +1274,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 
 		RPMI_ULOCK(rpmi);
 
-		/* Find out which part of the buffer should be send out */
+		/* Find out which part of the buffer should be sent out */
 		i = count;
 		total = size;
 		entryp = reclaimbuf;
