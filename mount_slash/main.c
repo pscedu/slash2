@@ -2083,8 +2083,10 @@ main(int argc, char *argv[])
 	pscfs_addarg(&args, STD_MOUNT_OPTIONS);
 
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "df:I:M:o:p:S:UX")) != -1)
+	while ((c = getopt(argc, argv, "D:df:I:M:o:p:S:UX")) != -1)
 		switch (c) {
+		case 'D':
+			sl_datadir = optarg;
 		case 'd':
 			pscfs_addarg(&args, "-odebug");
 			break;
