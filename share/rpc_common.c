@@ -87,8 +87,8 @@ slrpc_issue_connect(lnet_nid_t server, struct pscrpc_import *imp,
 	return (rc);
 }
 
-__static int
-slrpc_issue_ping(struct slashrpc_cservice *csvc, uint32_t version)
+int
+_slrpc_issue_ping(struct slashrpc_cservice *csvc, uint32_t version)
 {
 	struct pscrpc_request *rq;
 	struct srm_generic_rep *mp;
@@ -105,6 +105,13 @@ slrpc_issue_ping(struct slashrpc_cservice *csvc, uint32_t version)
 		rc = mp->rc;
 	pscrpc_req_finished(rq);
 	return (rc);
+}
+
+__weak int
+slrpc_issue_ping(struct slashrpc_cservice *csvc, uint32_t version,
+    __unusedx enum slconn_type dst)
+{
+	return (_slrpc_issue_ping(csvc, version));
 }
 
 __weak void
@@ -187,13 +194,16 @@ sl_csvc_markfree(struct slashrpc_cservice *csvc)
 	int locked;
 
 	locked = sl_csvc_reqlock(csvc);
-	psc_atomic32_setmask(&csvc->csvc_flags, CSVCF_ABANDON | CSVCF_WANTFREE);
-	psc_atomic32_clearmask(&csvc->csvc_flags, CSVCF_CONNECTED | CSVCF_CONNECTING);
+	psc_atomic32_setmask(&csvc->csvc_flags,
+	    CSVCF_ABANDON | CSVCF_WANTFREE);
+	psc_atomic32_clearmask(&csvc->csvc_flags,
+	    CSVCF_CONNECTED | CSVCF_CONNECTING);
 	sl_csvc_ureqlock(csvc, locked);
 }
 
 /**
- * sl_csvc_incref - Account for releasing the use of a remote service connection.
+ * sl_csvc_incref - Account for releasing the use of a remote service
+ *	connection.
  * @csvc: client service.
  */
 void
@@ -528,7 +538,8 @@ slconnthr_main(struct psc_thread *thr)
 
  online:
 			sl_csvc_unlock(csvc);
-			rc = slrpc_issue_ping(csvc, sct->sct_version);
+			rc = slrpc_issue_ping(csvc, sct->sct_version,
+			    sct->sct_conntype);
 			/* XXX race */
 			if (rc) {
 				sl_csvc_lock(csvc);

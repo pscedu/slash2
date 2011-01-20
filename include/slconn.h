@@ -211,6 +211,8 @@ void	 slconnthr_spawn(struct sl_resm *, uint32_t, uint32_t, uint64_t,
 		uint32_t, void *, int, void *, enum slconn_type, int,
 		const char *);
 
+int _slrpc_issue_ping(struct slashrpc_cservice *, uint32_t);
+
 extern struct psc_dynarray	lnet_prids;
 extern struct psc_lockedlist	client_csvcs;
 extern struct sl_expcli_ops	sl_expcli_ops;
