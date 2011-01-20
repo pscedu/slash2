@@ -49,6 +49,8 @@ int		 wipe;
 int		 ion;
 struct passwd	*pw;
 
+const char      *datadir = SL_PATH_DATADIR;
+
 void
 slnewfs_mkdir(const char *fn)
 {
@@ -118,7 +120,7 @@ slimmns_create(const char *root, uint32_t depth)
 		psc_fatal("write %s", fn);
 	close(fd);
 
-	xmkfn(fn, "%s/%s.%d.%s.%lu", SL_PATH_DATADIR,
+	xmkfn(fn, "%s/%s.%d.%s.%lu", datadir,
 	    SL_FN_UPDATELOG, 0,
 	    psc_get_hostname(), cursor.pjc_timestamp);
 	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
@@ -126,7 +128,7 @@ slimmns_create(const char *root, uint32_t depth)
 		psc_fatal("open %s", fn);
 	close(fd);
 
-	xmkfn(fn, "%s/%s.%d.%s.%lu", SL_PATH_DATADIR,
+	xmkfn(fn, "%s/%s.%d.%s.%lu", datadir,
 	    SL_FN_RECLAIMLOG, 0,
 	    psc_get_hostname(), cursor.pjc_timestamp);
 	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
@@ -149,8 +151,11 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "iW")) != -1)
+	while ((c = getopt(argc, argv, "D:iW")) != -1)
 		switch (c) {
+		case 'D':
+			datadir = optarg;
+			break;
 		case 'i':
 			ion = 1;
 			break;
