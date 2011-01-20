@@ -502,11 +502,11 @@ mds_remove_logfile(uint64_t batchno, int update)
 	char log_fn[PATH_MAX];
 
 	if (update) {
-		xmkfn(log_fn, "%s/%s.%d.%s.%lu", SL_PATH_DATADIR,
+		xmkfn(log_fn, "%s/%s.%d.%s.%lu", sl_datadir,
 		    SL_FN_UPDATELOG, batchno,
 		    psc_get_hostname(), mds_cursor.pjc_timestamp);
 	} else {
-		xmkfn(log_fn, "%s/%s.%d.%s.%lu", SL_PATH_DATADIR,
+		xmkfn(log_fn, "%s/%s.%d.%s.%lu", sl_datadir,
 		    SL_FN_RECLAIMLOG, batchno,
 		    psc_get_hostname(), mds_cursor.pjc_timestamp);
 	}
@@ -520,11 +520,11 @@ mds_open_logfile(uint64_t batchno, int update, int readonly)
 	int logfile;
 
 	if (update) {
-		xmkfn(log_fn, "%s/%s.%d.%s.%lu", SL_PATH_DATADIR,
+		xmkfn(log_fn, "%s/%s.%d.%s.%lu", sl_datadir,
 		    SL_FN_UPDATELOG, batchno,
 		    psc_get_hostname(), mds_cursor.pjc_timestamp);
 	} else {
-		xmkfn(log_fn, "%s/%s.%d.%s.%lu", SL_PATH_DATADIR,
+		xmkfn(log_fn, "%s/%s.%d.%s.%lu", sl_datadir,
 		    SL_FN_RECLAIMLOG, batchno,
 		    psc_get_hostname(), mds_cursor.pjc_timestamp);
 	}
@@ -1650,7 +1650,7 @@ mds_journal_init(void)
 	mds_open_cursor();
 
 	for (index = 0; index < 2; index++) {
-		xmkfn(fn, "%s/%s.%s.%lu.%d", SL_PATH_DATADIR, SL_FN_RECLAIMPROG,
+		xmkfn(fn, "%s/%s.%s.%lu.%d", sl_datadir, SL_FN_RECLAIMPROG,
 		    psc_get_hostname(), mds_cursor.pjc_timestamp, index);
 		current_reclaim_progfile[index] = open(fn, O_CREAT | O_RDWR | O_SYNC, 0600);
 		if (fstat(current_reclaim_progfile[index], &sb) == -1)
@@ -1730,7 +1730,7 @@ mds_journal_init(void)
 		goto replay_log;
 
 	for (index = 0; index < 2; index++) {
-		xmkfn(fn, "%s/%s.%s.%lu.%d", SL_PATH_DATADIR, SL_FN_UPDATEPROG,
+		xmkfn(fn, "%s/%s.%s.%lu.%d", sl_datadir, SL_FN_UPDATEPROG,
 		    psc_get_hostname(), mds_cursor.pjc_timestamp, index);
 		current_update_progfile[index] = open(fn, O_CREAT | O_RDWR | O_SYNC, 0600);
 		if (fstat(current_update_progfile[index], &sb) == -1)
