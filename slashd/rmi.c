@@ -225,7 +225,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 
 	brepls_init(tract, -1);
 
-	BHGEN_GET(bcm, gen);
+	BHGEN_GET(bcm, &gen);
 	if (mq->rc || mq->bgen != gen) {
 		if (mq->rc == SLERR_BADCRC) {
 			/*
