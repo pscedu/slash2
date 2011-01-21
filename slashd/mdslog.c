@@ -1075,6 +1075,9 @@ mds_send_batch_update(uint64_t batchno)
 
 		if (rc == 0)
 			rc = mp->rc;
+		else
+			peerinfo->sp_fails++;
+
 		if (rc == 0) {
 			record++;
 			didwork++;
@@ -1082,8 +1085,7 @@ mds_send_batch_update(uint64_t batchno)
 			peerinfo->sp_xid = last_xid + 1;
 			if (count == SLM_UPDATE_BATCH)
 				peerinfo->sp_batchno++;
-		} else
-			peerinfo->sp_fails++;
+		}
 	);
 	/*
 	 * Record the progress first before potentially remove old log file.

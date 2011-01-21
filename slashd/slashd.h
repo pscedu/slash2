@@ -133,7 +133,7 @@ struct sl_mds_peerinfo {
 	uint64_t		  sp_xid;
 	uint64_t		  sp_batchno;
 
-	int			  sp_fails;		/* the number of failures */
+	int			  sp_fails;		/* the number of successive RPC failures */
 	int			  sp_skips;		/* the number of times to skip */
 
 	int			  sp_send_count;	/* # of updates in the batch */
