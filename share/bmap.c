@@ -101,7 +101,7 @@ _bmap_op_done(const struct pfl_callerinfo *pci, struct bmapc_memb *b,
 	psc_assert(psc_atomic32_read(&b->bcm_opcnt) >= 0);
 
 	va_start(ap, fmt);
-	_psclog_pci(pci, PLL_DEBUG, 0, fmt, ap);
+	_psclogv_pci(pci, PLL_DEBUG, 0, fmt, ap);
 	va_end(ap);
 
 	if (!psc_atomic32_read(&b->bcm_opcnt)) {
