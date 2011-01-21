@@ -130,11 +130,11 @@ struct sl_mds_nsstats {
  * We allow one pending request per MDS until it responds or timeouts.
  */
 struct sl_mds_peerinfo {
-	struct sl_mds_update_buf *sp_buf;		/* the update buffer being used */
-	int			  sp_flags;		/* see SP_FLAG_* below */
-
 	uint64_t		  sp_xid;
 	uint64_t		  sp_batchno;
+
+	int			  sp_fails;		/* the number of failures */
+	int			  sp_skips;		/* the number of times to skip */
 
 	int			  sp_send_count;	/* # of updates in the batch */
 	uint64_t		  sp_send_seqno;	/* next log sequence number to send */
@@ -143,11 +143,6 @@ struct sl_mds_peerinfo {
 
 	struct sl_mds_nsstats	  sp_stats;
 };
-
-/* sp_flags values */
-#define	SP_FLAG_NONE		   0
-#define	SP_FLAG_MIA		  (1 << 0)
-#define	SP_FLAG_INFLIGHT	  (1 << 1)
 
 /*
  * This structure tracks the progress of garbage collection on each I/O server.

@@ -1012,15 +1012,19 @@ mds_send_batch_update(uint64_t batchno)
 		peerinfo = resm2rpmi(resm)->rpmi_info;
 
 		/*
-		 * Skip if the MDS is busy or the current batch is out
-		 * of its windows.  Note for each MDS, we send updates
-		 * in order.
+		 * A simplistic backoff strategy to avoid CPU spinning.
+		 * A better way could be to let the ping thread handle
+		 * this.
 		 */
-		if (peerinfo->sp_flags & SP_FLAG_MIA)
-			continue;
-		if (peerinfo->sp_flags & SP_FLAG_INFLIGHT)
-			continue;
-
+		if (peerinfo->sp_fails >= 3) {
+			if (peerinfo->sp_skips == 0) {
+			    peerinfo->sp_skips = 3;
+			    continue;
+			} 
+			peerinfo->sp_skips--; 
+			if (peerinfo->sp_skips)
+			   continue;
+		}
 		if (peerinfo->sp_batchno < batchno)
 			continue;
 		if (peerinfo->sp_batchno > batchno)
@@ -1048,12 +1052,7 @@ mds_send_batch_update(uint64_t batchno)
 
 		csvc = slm_getmcsvc(resm);
 		if (csvc == NULL) {
-			/*
-			 * A simplistic way to avoid CPU spinning.
-			 * A better way is to let the ping thread handle
-			 * this.
-			 */
-			peerinfo->sp_flags |= SP_FLAG_MIA;
+			peerinfo->sp_fails++;
 			continue;
 		}
 		rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMM_VERSION,
@@ -1079,10 +1078,12 @@ mds_send_batch_update(uint64_t batchno)
 		if (rc == 0) {
 			record++;
 			didwork++;
+			peerinfo->sp_fails = 0;
 			peerinfo->sp_xid = last_xid + 1;
 			if (count == SLM_UPDATE_BATCH)
 				peerinfo->sp_batchno++;
-		}
+		} else
+			peerinfo->sp_fails++;
 	);
 	/*
 	 * Record the progress first before potentially remove old log file.
