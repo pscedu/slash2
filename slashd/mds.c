@@ -1347,7 +1347,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
 			mds_repl_bmap_apply(bmap, tract, NULL,
 			    SL_BITS_PER_REPLICA * iosidx);
 
-			BHREPL_POLICY_GET(bmap, bpol);
+			BHREPL_POLICY_GET(bmap, &bpol);
 
 			brepls_init(tract, -1);
 			tract[BREPLST_TRUNCPNDG] = bpol == BRP_PERSIST ?

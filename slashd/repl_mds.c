@@ -90,8 +90,8 @@ uswi_cmp(const void *a, const void *b)
 SPLAY_GENERATE(upschedtree, up_sched_work_item, uswi_tentry, uswi_cmp);
 
 int
-_mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios, int add,
-	     int journal)
+_mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
+    int add, int journal)
 {
 	sl_replica_t *repl;
 	uint32_t j = 0, k;
@@ -343,7 +343,7 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 		psc_fatalx("ios_lookup_add %d: %s", ios,
 		    slstrerror(iosidx));
 
-	BHREPL_POLICY_GET(bcm, policy);
+	BHREPL_POLICY_GET(bcm, &policy);
 
 	/* Ensure replica on active IOS is marked valid. */
 	brepls_init(tract, -1);

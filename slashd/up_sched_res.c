@@ -253,7 +253,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 		mq->len = fcmh_2_fsz(wk->uswi_fcmh) % SLASH_BMAP_SIZE;
 	mq->fg = *USWI_FG(wk);
 	mq->bmapno = bcm->bcm_bmapno;
-	mq->bgen = bmap_2_bgen(bcm);	/* XXX lock */
+	BHGEN_GET(bcm, &mq->bgen);
 
 	/*
 	 * Mark as SCHED now in case the reply RPC comes in after we
@@ -633,13 +633,20 @@ slmupschedthr_main(struct psc_thread *thr)
 				if ((fcmh_2_ino(wk->uswi_fcmh)->
 				     ino_flags & INOF_IN_PTRUNC) ||
 				    wk->uswi_fcmh->fcmh_sstb.sst_nxbmaps) {
+					uint64_t offset;
+
 					has_work = 1;
+
+					offset = fcmh_2_ino(wk->
+					    uswi_fcmh)->ino_ptruncoff;
+					if (offset == 0)
+						offset = fcmh_2_fsz(
+						    wk->uswi_fcmh);
 
 					bmap_i.ri_n = USWI_NBMAPS(wk);
 					bmap_i.ri_iter = bmap_i.ri_n - 1;
-					bmap_i.ri_rnd_idx =
-					    fcmh_2_ino(wk->uswi_fcmh)->
-					    ino_ptruncoff / SLASH_BMAP_SIZE;
+					bmap_i.ri_rnd_idx = offset /
+					    SLASH_BMAP_SIZE;
 					uswi_gen = wk->uswi_gen;
 					goto handle_bmap;
 				}

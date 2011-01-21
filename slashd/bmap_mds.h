@@ -121,7 +121,7 @@ struct bmap_mds_info {
 #define BHREPL_POLICY_GET(b, pol)					\
 	do {								\
 		BMAPOD_READ_START(b);					\
-		(pol) = bmap_2_replpol(b);				\
+		*(pol) = bmap_2_replpol(b);				\
 		BMAPOD_READ_DONE(b);					\
 	} while (0)
 
@@ -136,7 +136,7 @@ struct bmap_mds_info {
 #define BHGEN_GET(b, bgen)						\
 	do {								\
 		BMAPOD_READ_START(b);					\
-		(bgen) = bmap_2_bgen(b);				\
+		*(bgen) = bmap_2_bgen(b);				\
 		BMAPOD_READ_DONE(b);					\
 	} while (0)
 
