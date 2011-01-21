@@ -976,6 +976,10 @@ mds_send_batch_update(uint64_t batchno)
 	int logfile, record = 0;
 	ssize_t size;
 
+	struct sl_resource *_res;
+	struct sl_site *_site;
+	int _siter;
+
 	logfile = mds_open_logfile(batchno, 1, 1);
 	if (logfile == -1)
 		psc_fatal("Fail to open update log file, batch = %"PRId64, batchno);
@@ -1005,7 +1009,14 @@ mds_send_batch_update(uint64_t batchno)
 	}
 
 	npeers= 0;
-	SL_FOREACH_MDS(resm,
+
+	CONF_LOCK();
+	CONF_FOREACH_SITE(_site)
+	    SITE_FOREACH_RES(_site, _res, _siter) {
+		if (_res->res_type != SLREST_MDS)
+			continue;
+		resm = psc_dynarray_getpos(
+		    &_res->res_members, 0);
 		if (resm == nodeResm)
 			continue;
 		npeers++;
@@ -1089,7 +1100,8 @@ mds_send_batch_update(uint64_t batchno)
 			if (count == SLM_UPDATE_BATCH)
 				peerinfo->sp_batchno++;
 		}
-	);
+	}
+	CONF_ULOCK();
 	/*
 	 * Record the progress first before potentially remove old log file.
 	 */
