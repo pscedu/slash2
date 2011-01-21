@@ -972,7 +972,7 @@ mds_send_batch_update(uint64_t batchno)
 	struct sl_resm *resm;
 	struct iovec iov;
 	int i, rc, len, npeers, count, total, didwork=0;
-	uint64_t first_xid = 0, last_xid = 0;
+	uint64_t xid;
 	int logfile, record = 0;
 	ssize_t size;
 
@@ -986,16 +986,16 @@ mds_send_batch_update(uint64_t batchno)
 	psc_assert((size % sizeof(struct srt_update_entry)) == 0);
 	count = (int) size / (int) sizeof(struct srt_update_entry);
 
+	/* find the xid associated with the last log entry */
+	entryp = PSC_AGP(updatebuf, (count - 1) *
+	    sizeof(struct srt_update_entry));
+	xid = entryp->xid;
+
 	/*
 	 * Compress our buffer to reduce RPC traffic.
 	 */
 	entryp = next_entryp = updatebuf;
 	for (i = 1; i < count; i++) {
-
-		if (!first_xid)
-			first_xid = entryp->xid;
-		last_xid = entryp->xid;
-
 		entryp++;
 		len = offsetof(struct srt_update_entry, _pad) + next_entryp->namelen;
 		next_entryp = PSC_AGP(next_entryp, len);
@@ -1027,10 +1027,13 @@ mds_send_batch_update(uint64_t batchno)
 		}
 		if (peerinfo->sp_batchno < batchno)
 			continue;
-		if (peerinfo->sp_batchno > batchno)
+		/*
+ 		 * Note that the update xid we can see is not necessarily contiguous.
+ 		 */
+		if (peerinfo->sp_batchno > batchno || peerinfo->sp_xid > xid) {
+			didwork++;
 			continue;
-		if (peerinfo->sp_xid < first_xid || peerinfo->sp_xid > last_xid)
-			continue;
+		}
 
 		/* Find out which part of the buffer should be sent out */
 		i = count;
@@ -1082,7 +1085,7 @@ mds_send_batch_update(uint64_t batchno)
 			record++;
 			didwork++;
 			peerinfo->sp_fails = 0;
-			peerinfo->sp_xid = last_xid + 1;
+			peerinfo->sp_xid = xid + 1;
 			if (count == SLM_UPDATE_BATCH)
 				peerinfo->sp_batchno++;
 		}
@@ -1269,6 +1272,9 @@ mds_send_batch_reclaim(uint64_t batchno)
 			RPMI_ULOCK(rpmi);
 			continue;
 		}
+		/*
+ 		 * Note that the reclaim xid we can see is not necessarily contiguous.
+ 		 */
 		if (iosinfo->si_batchno > batchno || iosinfo->si_xid >= xid) {
 			RPMI_ULOCK(rpmi);
 			didwork++;
