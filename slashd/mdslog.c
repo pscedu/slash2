@@ -987,6 +987,10 @@ mds_send_batch_update(uint64_t batchno)
 	    sizeof(struct srt_update_entry));
 	close(logfile);
 
+	psc_assert(size >= 0);
+	if (size == 0)
+		return (didwork);
+
 	psc_assert((size % sizeof(struct srt_update_entry)) == 0);
 	count = (int) size / (int) sizeof(struct srt_update_entry);
 
@@ -999,13 +1003,14 @@ mds_send_batch_update(uint64_t batchno)
 	 * Compress our buffer to reduce RPC traffic.
 	 */
 	entryp = next_entryp = updatebuf;
+	len = offsetof(struct srt_update_entry, _pad) + entryp->namelen;
 	for (i = 1; i < count; i++) {
-		entryp++;
 		len = offsetof(struct srt_update_entry, _pad) + next_entryp->namelen;
 		next_entryp = PSC_AGP(next_entryp, len);
-
+		entryp++;
 		len = offsetof(struct srt_update_entry, _pad) + entryp->namelen;
 		memmove(next_entryp, entryp, len);
+		size += len;
 	}
 
 	npeers= 0;
@@ -1238,12 +1243,11 @@ mds_send_batch_reclaim(uint64_t batchno)
 	logfile = mds_open_logfile(batchno, 0, 1);
 	if (logfile == -1)
 	    psc_fatal("Fail to open reclaim log file, batch = %"PRId64, batchno);
-
 	size = read(logfile, reclaimbuf, SLM_RECLAIM_BATCH *
 	    sizeof(struct srt_reclaim_entry));
-	psc_assert(size >= 0);
-
 	close(logfile);
+
+	psc_assert(size >= 0);
 	if (size == 0)
 		return (didwork);
 
@@ -1264,10 +1268,12 @@ mds_send_batch_reclaim(uint64_t batchno)
 	 */
 	entryp = next_entryp = reclaimbuf;
 	len = offsetof(struct srt_reclaim_entry, _pad);
+	size = offsetof(struct srt_reclaim_entry, _pad);
 	for (i = 1; i < count; i++) {
 		entryp++;
 		next_entryp = PSC_AGP(next_entryp, len);
 		memmove(next_entryp, entryp, len);
+		size += offsetof(struct srt_reclaim_entry, _pad);
 	}
 
 	nios = 0;
