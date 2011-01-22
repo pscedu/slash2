@@ -135,7 +135,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 		bmap->bcm_crcstates[crcup->crcs[i].slot] =
 			BMAP_SLVR_DATA | BMAP_SLVR_CRC;
 
-		DEBUG_BMAP(PLL_DEBUG, bmap, "slot(%d) crc(%"PRIx64")",
+		DEBUG_BMAP(PLL_INFO, bmap, "slot(%d) crc(%"PRIx64")",
 			   crcup->crcs[i].slot, crcup->crcs[i].crc);
 	}
 	BMAPOD_ULOCK(bmdsi);

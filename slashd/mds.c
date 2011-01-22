@@ -320,7 +320,7 @@ mds_bmap_ion_restart(struct bmap_mds_lease *bml)
 
 	bml->bml_bmdsi->bmdsi_seq = bml->bml_seq;
 
-	DEBUG_BMAP(PLL_DEBUG, bml_2_bmap(bml), "res(%s) ion(%s)",
+	DEBUG_BMAP(PLL_INFO, bml_2_bmap(bml), "res(%s) ion(%s)",
 	    resm->resm_res->res_name, resm->resm_addrbuf);
 
 	return (0);
@@ -1259,7 +1259,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
 	}
 	BMAP_LOCK(bmap);
 
-	DEBUG_BMAP(PLL_DEBUG, bmap, "blkno=%u sz=%"PRId64" ion=%s",
+	DEBUG_BMAP(PLL_INFO, bmap, "blkno=%u sz=%"PRId64" ion=%s",
 	    c->blkno, c->fsize, libcfs_nid2str(ion_nid));
 
 	psc_assert(psc_atomic32_read(&bmap->bcm_opcnt) > 1);
@@ -1475,7 +1475,7 @@ mds_bmap_read(struct bmapc_memb *bcm, __unusedx enum rw rw)
 		return (-EIO);
 	}
 
-	DEBUG_BMAPOD(PLL_DEBUG, bcm, "");
+	DEBUG_BMAPOD(PLL_INFO, bcm, "");
 	return (0);
 }
 
