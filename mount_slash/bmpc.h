@@ -131,7 +131,7 @@ struct bmap_pagecache_entry {
 	    PSCPRI_TIMESPEC_ARGS(&(b)->bmpce_laccess),			\
 	    psc_atomic16_read(&(b)->bmpce_wrref),			\
 	    psc_atomic16_read(&(b)->bmpce_rdref),			\
-	    psclist_conjoint(&(b)->bmpce_lentry, NULL),			\
+		 !(psclist_disjoint(&(b)->bmpce_lentry)),		\
 	    BMPCE_2_BIORQ(b),						\
 	    DEBUG_BMPCE_FLAGS(b), ## __VA_ARGS__)
 
