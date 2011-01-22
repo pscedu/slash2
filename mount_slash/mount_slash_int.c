@@ -223,7 +223,8 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 				    psc_atomic16_inc(&bmpce->bmpce_rdref);
 				    r->biorq_flags |= BIORQ_RBWFP;
 
-			} else if ((i == (npages - 1) && (rbw & BIORQ_RBWLP)) &&
+			} else if ((i == (npages - 1) && 
+				    (rbw & BIORQ_RBWLP)) &&
 				   (fsz > (foff + len) ||
 				    (rfsz > bmpce->bmpce_off &&
 				     rfsz < bmpce->bmpce_off + BMPC_BLKSZ))) {
@@ -238,6 +239,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 			tmp = bmpc_alloc();
 
 			BMPCE_LOCK(bmpce);
+			psc_assert(bmpce->bmpce_flags & BMPCE_GETBUF);
 			bmpce->bmpce_base = tmp;
 			bmpce->bmpce_flags &= ~BMPCE_GETBUF;
 			psc_waitq_wakeall(bmpce->bmpce_waitq);
@@ -457,13 +459,13 @@ bmap_biorq_expire(struct bmapc_memb *b)
 	PLL_FOREACH(biorq, &bmap_2_bmpc(b)->bmpc_new_biorqs) {
 		spinlock(&biorq->biorq_lock);
 		biorq->biorq_flags |= BIORQ_FORCE_EXPIRE;
-		DEBUG_BIORQ(PLL_DEBUG, biorq, "FORCE_EXPIRE");
+		DEBUG_BIORQ(PLL_INFO, biorq, "FORCE_EXPIRE");
 		freelock(&biorq->biorq_lock);
 	}
 	PLL_FOREACH(biorq, &bmap_2_bmpc(b)->bmpc_pndg_biorqs) {
 		spinlock(&biorq->biorq_lock);
 		biorq->biorq_flags |= BIORQ_FORCE_EXPIRE;
-		DEBUG_BIORQ(PLL_DEBUG, biorq, "FORCE_EXPIRE");
+		DEBUG_BIORQ(PLL_INFO, biorq, "FORCE_EXPIRE");
 		freelock(&biorq->biorq_lock);
 	}
 	BMPC_ULOCK(bmap_2_bmpc(b));
@@ -626,7 +628,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 
 	bci = bmap_2_bci(bmap);
 
-	DEBUG_FCMH(PLL_DEBUG, f, "retrieving bmap (bmapno=%u) (rw=%d)",
+	DEBUG_FCMH(PLL_INFO, f, "retrieving bmap (bmapno=%u) (rw=%d)",
 	    bmap->bcm_bmapno, rw);
 
 	rc = SL_RSX_WAITREP(rq, mp);
@@ -931,6 +933,7 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 			DEBUG_REQ(PLL_ERROR, rq, "non-zero status status %d",
 				  rq->rq_status);
 			psc_fatalx("Resolve issues surrounding this failure");
+			
 			// XXX Freeing of dynarray, bmpce's, etc
 			rc = rq->rq_status;
 			goto out;
@@ -1143,7 +1146,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	 */
 	spinlock(&r->biorq_lock);
 	r->biorq_flags |= BIORQ_FLUSHRDY;
-	DEBUG_BIORQ(PLL_DEBUG, r, "BIORQ_FLUSHRDY");
+	DEBUG_BIORQ(PLL_INFO, r, "BIORQ_FLUSHRDY");
 	psc_assert(psclist_conjoint(&r->biorq_lentry,
 	    psc_lentry_hd(&r->biorq_lentry)));
 	atomic_inc(&bmpc->bmpc_pndgwr);
@@ -1177,7 +1180,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 			 */
 			b->bcm_flags |= BMAP_CLI_FLUSHPROC;
 			psc_assert(psclist_disjoint(&b->bcm_lentry));
-			DEBUG_BMAP(PLL_DEBUG, b, "add to bmapFlushQ");
+			DEBUG_BMAP(PLL_INFO, b, "add to bmapFlushQ");
 			lc_addtail(&bmapFlushQ, b);
 		}
 	}
@@ -1235,7 +1238,7 @@ msl_read_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 		bmpce_usecheck(bmpce, BIORQ_READ,
 			       biorq_getaligned_off(r, (i + startpage)));
 
-		DEBUG_BMPCE(PLL_DEBUG, bmpce, "adding to rpc");
+		DEBUG_BMPCE(PLL_INFO, bmpce, "adding to rpc");
 
 		BMPCE_ULOCK(bmpce);
 
@@ -1575,7 +1578,7 @@ msl_pages_copyout(struct bmpc_ioreq *r, char *buf)
 		} else
 			nbytes = MIN(BMPC_BUFSZ, tsize);
 
-		DEBUG_BMPCE(PLL_DEBUG, bmpce, "tsize=%u nbytes=%zu toff=%u",
+		DEBUG_BMPCE(PLL_INFO, bmpce, "tsize=%u nbytes=%zu toff=%u",
 			    tsize, nbytes, toff);
 
 		memcpy(dest, src, nbytes);
@@ -1691,10 +1694,13 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 	/* Note that the offsets used here are file-wise offsets not
 	 *   offsets into the buffer.
 	 */
-	for (i=0, p=buf; i < nr; i++, p+=tlen) {
-		/* Associate the biorq's with the mfh.
-		 */
+	for (i=0, tlen=0, p=buf; i < nr; i++, p+=tlen) {
+	 
+	  /* Associate the biorq's with the mfh.
+	   */
 		pll_addtail(&mfh->mfh_biorqs, r[i]);
+
+		tlen = r[i]->biorq_len;
 
 		if (r[i]->biorq_flags & BIORQ_DIO)
 			msl_pages_dio_getput(r[i], p);
