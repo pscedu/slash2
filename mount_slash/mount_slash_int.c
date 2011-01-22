@@ -1612,7 +1612,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 #define MAX_BMAPS_REQ 4
 	struct bmpc_ioreq *r[MAX_BMAPS_REQ];
 	struct bmapc_memb *b[MAX_BMAPS_REQ];
-	sl_bmapno_t s, e;
+	size_t s, e;
 	size_t tlen, tsize=size;
 	off_t roff;
 	int nr, i, rc;
@@ -1649,7 +1649,8 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 		return (-EINVAL);
 	/* Relativize the length and offset (roff is not aligned).
 	 */
-	roff  = off - (s * SLASH_BMAP_SIZE);
+	roff  = off - (off_t)(s * SLASH_BMAP_SIZE);
+	psc_assert(roff < SLASH_BMAP_SIZE);
 	/* Length of the first bmap request.
 	 */
 	tlen  = MIN((size_t)(SLASH_BMAP_SIZE - roff), size);
