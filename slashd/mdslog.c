@@ -1003,7 +1003,7 @@ mds_send_batch_update(uint64_t batchno)
 	 * Compress our buffer to reduce RPC traffic.
 	 */
 	entryp = next_entryp = updatebuf;
-	len = offsetof(struct srt_update_entry, _pad) + entryp->namelen;
+	size = offsetof(struct srt_update_entry, _pad) + entryp->namelen;
 	for (i = 1; i < count; i++) {
 		len = offsetof(struct srt_update_entry, _pad) + next_entryp->namelen;
 		next_entryp = PSC_AGP(next_entryp, len);
