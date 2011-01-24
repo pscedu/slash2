@@ -37,7 +37,7 @@
 void
 sli_rpc_initsvc(void)
 {
-	pscrpc_svc_handle_t *svh;
+	struct pscrpc_svc_handle *svh;
 
 	/* Create server service to handle requests from clients. */
 	svh = PSCALLOC(sizeof(*svh));

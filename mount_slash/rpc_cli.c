@@ -36,7 +36,7 @@
 void
 slc_rpc_initsvc(void)
 {
-	pscrpc_svc_handle_t *svh;
+	struct pscrpc_svc_handle *svh;
 
 	/* Setup request service for client from MDS. */
 	svh = PSCALLOC(sizeof(*svh));
