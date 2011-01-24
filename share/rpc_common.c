@@ -69,6 +69,7 @@ slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
 		return (rc);
 	rq->rq_timeoutable = 1;
 	mq->magic = csvc->csvc_magic;
+	mq->version = csvc->csvc_version;
 
 	/*
 	 * XXX in this case, we should do an async deal and return NULL
