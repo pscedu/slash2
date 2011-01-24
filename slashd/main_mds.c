@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2008-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -115,7 +115,7 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 		psc_fatal("%s", zpoolname);
 	else if (rc >= (int)sizeof(cmdbuf))
 		psc_fatalx("pool name too long: %s", zpoolname);
-	rc = system(cmdbuf);	
+	rc = system(cmdbuf);
 	if (rc == -1)
 	  psc_error("zpool export failed, will continue");
 
