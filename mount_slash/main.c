@@ -294,8 +294,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
-	    SRMT_CREATE, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_CREATE, rq, mq, mp);
 	if (rc)
 		goto out;
 
@@ -306,7 +305,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mslfs_getcreds(pfr, &mq->creds);
 	strlcpy(mq->name, name, sizeof(mq->name));
 
-	rc = SL_RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
@@ -518,14 +517,13 @@ msl_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
-	    SRMT_GETATTR, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_GETATTR, rq, mq, mp);
 	if (rc)
 		goto out;
 
 	mq->fg = fcmh->fcmh_fg;
 
-	rc = SL_RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
  out:
@@ -647,8 +645,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
-	    SRMT_LINK, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_LINK, rq, mq, mp);
 	if (rc)
 		goto out;
 
@@ -656,7 +653,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	mq->fg = c->fcmh_fg;
 	strlcpy(mq->name, newname, sizeof(mq->name));
 
-	rc = SL_RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
@@ -722,8 +719,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
-	    SRMT_MKDIR, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_MKDIR, rq, mq, mp);
 	if (rc)
 		goto out;
 
@@ -733,7 +729,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mq->mode = mode;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
-	rc = SL_RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
@@ -819,8 +815,8 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		goto out;
 
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
-	    isfile ? SRMT_UNLINK : SRMT_RMDIR, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, isfile ? SRMT_UNLINK : SRMT_RMDIR, rq,
+	    mq, mp);
 	if (rc)
 		goto out;
 
@@ -828,7 +824,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	strlcpy(mq->name, name, sizeof(mq->name));
 
-	rc = SL_RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 
@@ -916,8 +912,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
-	    SRMT_MKNOD, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_MKNOD, rq, mq, mp);
 	if (rc)
 		goto out;
 
@@ -927,7 +922,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mq->mode = mode;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
-	rc = SL_RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
@@ -999,8 +994,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
-	    SRMT_READDIR, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_READDIR, rq, mq, mp);
 	if (rc)
 		goto out;
 
@@ -1029,7 +1023,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	}
 
 	rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMC_BULK_PORTAL, iov, niov);
-	rc = SL_RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
@@ -1118,8 +1112,7 @@ slash_lookuprpc(const struct slash_creds *crp, pscfs_inum_t pinum,
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
-	    SRMT_LOOKUP, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_LOOKUP, rq, mq, mp);
 	if (rc)
 		goto out;
 
@@ -1128,7 +1121,7 @@ slash_lookuprpc(const struct slash_creds *crp, pscfs_inum_t pinum,
 
 	strlcpy(mq->name, name, sizeof(mq->name));
 
-	rc = SL_RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
@@ -1255,8 +1248,7 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
-	    SRMT_READLINK, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_READLINK, rq, mq, mp);
 	if (rc)
 		goto out;
 
@@ -1279,7 +1271,7 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 	rsx_bulkclient(rq, &desc, BULK_PUT_SINK,
 	    SRMC_BULK_PORTAL, &iov, 1);
 
-	rc = SL_RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 
@@ -1423,8 +1415,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION, SRMT_RENAME,
-	    rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_RENAME, rq, mq, mp);
 	if (rc)
 		goto out;
 
@@ -1442,7 +1433,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
 	    iov, 2);
 
-	rc = SL_RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
@@ -1490,11 +1481,10 @@ mslfsop_statfs(struct pscfs_req *pfr)
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
-	    SRMT_STATFS, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_STATFS, rq, mq, mp);
 	if (rc)
 		goto out;
-	rc = SL_RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
@@ -1553,8 +1543,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	if (rc)
 		goto out;
 
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
-	    SRMT_SYMLINK, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_SYMLINK, rq, mq, mp);
 	if (rc)
 		goto out;
 
@@ -1571,7 +1560,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
 	    &iov, 1);
 
-	rc = SL_RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
@@ -1681,8 +1670,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	if (rc)
 		goto out;
 
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
-	    SRMT_SETATTR, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_SETATTR, rq, mq, mp);
 	if (rc)
 		goto out;
 
@@ -1766,7 +1754,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	    mq->to_set & PSCFS_SETATTRF_CTIME ? " ctime" : "",
 	    mq->to_set & PSCFS_SETATTRF_DATASIZE ? " datasize" : "");
 
-	rc = SL_RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)

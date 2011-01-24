@@ -243,8 +243,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	}
 
 	/* Issue replication work request */
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRIM_VERSION,
-	    SRMT_REPL_SCHEDWK, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_REPL_SCHEDWK, rq, mq, mp);
 	if (rc)
 		goto fail;
 	mq->nid = src_resm->resm_nid;
@@ -274,7 +273,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	 * replication request or something.
 	 */
 	if (rc == BREPLST_REPL_QUEUED) {
-		rc = SL_RSX_WAITREP(rq, mp);
+		rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc == 0)
 			rc = mp->rc;
 	}
@@ -362,15 +361,14 @@ slmupschedthr_tryptrunc(struct up_sched_work_item *wk,
 			csvc = slm_getclcsvc(bml->bml_exp);
 			if (csvc == NULL)
 				continue;
-			rc = SL_RSX_NEWREQ(csvc->csvc_import,
-			    SRCM_VERSION, SRMT_RELEASEBMAP, rq, br_mq,
-			    br_mp);
+			rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq,
+			    br_mq, br_mp);
 			if (rc)
 				goto drop;
 			br_mq->bmaps[0].fid = USWI_FID(wk);
 			br_mq->bmaps[0].bmapno = i;
 			br_mq->nbmaps = 1;
-			SL_RSX_WAITREP(rq, br_mp);
+			SL_RSX_WAITREP(csvc, rq, br_mp);
 			pscrpc_req_finished(rq);
 
  drop:
@@ -396,8 +394,7 @@ slmupschedthr_tryptrunc(struct up_sched_work_item *wk,
 		return (0);
 	}
 
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRIM_VERSION,
-	    SRMT_BMAP_PTRUNC, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAP_PTRUNC, rq, mq, mp);
 	if (rc)
 		goto fail;
 	mq->fg = *USWI_FG(wk);
@@ -409,7 +406,7 @@ slmupschedthr_tryptrunc(struct up_sched_work_item *wk,
 	tract[BREPLST_TRUNCPNDG] = BREPLST_TRUNCPNDG;
 	mds_repl_bmap_apply(bcm, tract, NULL, off);
 
-	rc = SL_RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	pscrpc_req_finished(rq);
@@ -475,8 +472,7 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 		goto fail;
 
 	/* Issue garbage reclaim request */
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRIM_VERSION,
-	    SRMT_GARBAGE, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_GARBAGE, rq, mq, mp);
 	if (rc)
 		goto fail;
 	mq->fg = *USWI_FG(wk);
@@ -496,7 +492,7 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 		psc_fatalx("invalid bmap replica state: %d", rc);
 
 	if (rc == BREPLST_GARBAGE) {
-		rc = SL_RSX_WAITREP(rq, mp);
+		rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc == 0)
 			rc = mp->rc;
 	}

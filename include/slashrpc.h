@@ -37,7 +37,7 @@
 struct stat;
 struct statvfs;
 
-#define _SL_RSX_NEWREQN(imp, version, op, rq, nq, qlens, np, plens,	\
+#define _SL_RSX_NEWREQN(csvc, op, rq, nq, qlens, np, plens,		\
 	    mq0)							\
 	{								\
 		psc_assert((nq) > 1);					\
@@ -47,27 +47,27 @@ struct statvfs;
 		(qlens)[(nq) - 1] = sizeof(struct srt_authbuf_footer);	\
 		(plens)[(np) - 1] = sizeof(struct srt_authbuf_footer);	\
 									\
-		RSX_NEWREQN((imp), (version), (op), (rq),		\
-		    (nq), (qlens), (np), (plens), (mq0));		\
+		RSX_NEWREQN((csvc)->csvc_import, (csvc)->csvc_version,	\
+		    (op), (rq), (nq), (qlens), (np), (plens), (mq0));	\
 	}
 
-#define SL_RSX_NEWREQN(imp, version, op, rq, nq, qlens, np, plens, mq0)	\
-	(_SL_RSX_NEWREQN((imp), (version), (op), (rq), (nq), (qlens),	\
+#define SL_RSX_NEWREQN(csvc, op, rq, nq, qlens, np, plens, mq0)		\
+	(_SL_RSX_NEWREQN((csvc), (op), (rq), (nq), (qlens),		\
 	    (np), (plens), (mq0)))
 
-#define _SL_RSX_NEWREQ(imp, version, op, rq, mq, mp)			\
+#define _SL_RSX_NEWREQ(csvc, op, rq, mq, mp)				\
 	{								\
 		int _qlens[2] = { sizeof(*(mq)), 0 };			\
 		int _plens[2] = { sizeof(*(mp)), 0 };			\
 									\
-		SL_RSX_NEWREQN((imp), (version), (op), (rq), 2,		\
-		    _qlens, 2, _plens, (mq));				\
+		SL_RSX_NEWREQN((csvc), (op), (rq), 2, _qlens,		\
+		    2, _plens, (mq));					\
 	}
 
-#define SL_RSX_NEWREQ(imp, version, op, rq, mq, mp)			\
-	(_SL_RSX_NEWREQ((imp), (version), (op), (rq), (mq), (mp)))
+#define SL_RSX_NEWREQ(csvc, op, rq, mq, mp)				\
+	(_SL_RSX_NEWREQ((csvc), (op), (rq), (mq), (mp)))
 
-#define _SL_RSX_WAITREP(rq, mp)						\
+#define _SL_RSX_WAITREP(csvc, rq, mp)					\
 	{								\
 		int _rc;						\
 									\
@@ -78,8 +78,8 @@ struct statvfs;
 		_rc;							\
 	}
 
-#define SL_RSX_WAITREP(rq, mp)						\
-	(_SL_RSX_WAITREP((rq), (mp)))
+#define SL_RSX_WAITREP(csvc, rq, mp)					\
+	(_SL_RSX_WAITREP((csvc), (rq), (mp)))
 
 #define SL_RSX_ALLOCREP(rq, mq, mp)					\
 	 do {								\

@@ -137,8 +137,7 @@ mdscoh_req(struct bmap_mds_lease *bml, int block)
 	if (csvc == NULL)
 		return (-1);
 
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRCM_VERSION,
-	    SRMT_BMAPDIO, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAPDIO, rq, mq, mp);
 	if (rc)
 		goto out;
 
@@ -151,7 +150,7 @@ mdscoh_req(struct bmap_mds_lease *bml, int block)
 	mq->seq = bml->bml_seq;
 
 	if (block == MDSCOH_BLOCK) {
-		rc = SL_RSX_WAITREP(rq, mp);
+		rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc == 0)
 			rc = mp->rc;
 	} else {

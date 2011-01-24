@@ -195,7 +195,7 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 }
 
 int
-sli_rii_issue_repl_read(struct pscrpc_import *imp, int slvrno,
+sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
     int slvridx, struct sli_repl_workrq *w)
 {
 	const struct srm_repl_read_rep *mp;
@@ -210,7 +210,7 @@ sli_rii_issue_repl_read(struct pscrpc_import *imp, int slvrno,
 	    "%d len %u", w, w->srw_fg.fg_fid, w->srw_bmapno, slvrno,
 	    slvridx, w->srw_len);
 
-	rc = SL_RSX_NEWREQ(imp, SRII_VERSION, SRMT_REPL_READ, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_REPL_READ, rq, mq, mp);
 	if (rc)
 		return (rc);
 

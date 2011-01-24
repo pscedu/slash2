@@ -63,8 +63,7 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 	rc = sli_rmi_getimp(&csvc);
 	if (rc)
 		return (rc);
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMI_VERSION,
-	    SRMT_BMAPCRCWRT, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAPCRCWRT, rq, mq, mp);
 	if (rc) {
 		sl_csvc_decref(csvc);
 		return (rc);

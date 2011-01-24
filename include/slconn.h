@@ -66,10 +66,12 @@ struct slconn_thread {
 
 struct slashrpc_cservice {
 	enum slconn_type	 csvc_ctype;
+	uint64_t		 csvc_magic;
 	struct pscrpc_import	*csvc_import;
 	union lockmutex		 csvc_lockinfo;
 	void			*csvc_waitinfo;
 	psc_atomic32_t		 csvc_flags;
+	uint32_t		 csvc_version;
 	int			 csvc_lasterrno;
 	psc_atomic32_t		 csvc_refcnt;
 	time_t			 csvc_mtime;		/* last connection try */
@@ -211,7 +213,7 @@ void	 slconnthr_spawn(struct sl_resm *, uint32_t, uint32_t, uint64_t,
 		uint32_t, void *, int, void *, enum slconn_type, int,
 		const char *);
 
-int _slrpc_issue_ping(struct slashrpc_cservice *, uint32_t);
+int _slrpc_issue_ping(struct slashrpc_cservice *);
 
 extern struct psc_dynarray	lnet_prids;
 extern struct psc_lockedlist	client_csvcs;

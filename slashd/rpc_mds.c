@@ -34,17 +34,17 @@
 #include "slashrpc.h"
 
 int
-slm_rim_issue_ping(struct pscrpc_import *imp)
+slm_rim_issue_ping(struct slashrpc_cservice *csvc)
 {
 	const struct srm_generic_rep *mp;
 	struct pscrpc_request *rq;
 	struct srm_ping_req *mq;
 	int rc;
 
-	rc = SL_RSX_NEWREQ(imp, SRIM_VERSION, SRMT_PING, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_PING, rq, mq, mp);
 	if (rc)
 		return (rc);
-	rc = SL_RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	pscrpc_req_finished(rq);
 	return (rc);
 }

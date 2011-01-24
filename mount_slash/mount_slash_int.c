@@ -614,8 +614,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
-	    SRMT_GETBMAP, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_GETBMAP, rq, mq, mp);
 	if (rc)
 		goto out;
 
@@ -631,7 +630,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 	DEBUG_FCMH(PLL_INFO, f, "retrieving bmap (bmapno=%u) (rw=%d)",
 	    bmap->bcm_bmapno, rw);
 
-	rc = SL_RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0) {
 		rc = mp->rc;
 		if (mp->rc == SLERR_BMAP_DIOWAIT) {
@@ -729,14 +728,13 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw)
 	if (rc)
 		goto out;
 
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
-	    SRMT_BMAPCHWRMODE, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAPCHWRMODE, rq, mq, mp);
 	if (rc)
 		goto out;
 
 	memcpy(&mq->sbd, bmap_2_sbd(b), sizeof(struct srt_bmapdesc));
 	mq->prefios = prefIOS;
-	rc = SL_RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 
@@ -818,7 +816,7 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 			for (j = 0; j < resm->resm_res->res_nnids; j++) {
 				csvc = slc_geticsvc(resm);
 				if (csvc)
-					return (csvc->csvc_import);
+					return (csvc);
 			}
 #endif
 		csvc = slc_geticsvc(resm);
@@ -1088,7 +1086,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 	for (i=0, nbytes=0; i < n; i++, nbytes += len) {
 		len = MIN(LNET_MTU, (size-nbytes));
 
-		rc = SL_RSX_NEWREQ(csvc->csvc_import, SRIC_VERSION, op, req, mq, mp);
+		rc = SL_RSX_NEWREQ(csvc, op, req, mq, mp);
 		if (rc)
 			psc_fatalx("SL_RSX_NEWREQ() failed %d", rc);
 
@@ -1215,8 +1213,7 @@ msl_read_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 
 	psc_assert(csvc);
 
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRIC_VERSION, SRMT_READ,
-	    req, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, req, mq, mp);
 	if (rc)
 		psc_fatalx("SL_RSX_NEWREQ() failed %d", rc);
 

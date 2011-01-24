@@ -1074,8 +1074,8 @@ mds_send_batch_update(uint64_t batchno)
 			peerinfo->sp_fails++;
 			continue;
 		}
-		rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMM_VERSION,
-		    SRMT_NAMESPACE_UPDATE, rq, mq, mp);
+		rc = SL_RSX_NEWREQ(csvc, SRMT_NAMESPACE_UPDATE, rq, mq,
+		    mp);
 		if (rc) {
 			sl_csvc_decref(csvc);
 			continue;
@@ -1088,7 +1088,7 @@ mds_send_batch_update(uint64_t batchno)
 		rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
 		    SRMM_BULK_PORTAL, &iov, 1);
 
-		rc = SL_RSX_WAITREP(rq, mp);
+		rc = SL_RSX_WAITREP(csvc, rq, mp);
 		pscrpc_req_finished(rq);
 		rq = NULL;
 
@@ -1327,8 +1327,8 @@ mds_send_batch_reclaim(uint64_t batchno)
 			csvc = slm_geticsvc_nb(dst_resm, NULL);
 			if (csvc == NULL)
 				continue;
-			rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMM_VERSION,
-				SRMT_RECLAIM, rq, mq, mp);
+			rc = SL_RSX_NEWREQ(csvc, SRMT_RECLAIM, rq, mq,
+			    mp);
 			if (rc) {
 				sl_csvc_decref(csvc);
 				continue;
@@ -1342,7 +1342,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 			rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
 			    SRMM_BULK_PORTAL, &iov, 1);
 
-			rc = SL_RSX_WAITREP(rq, mp);
+			rc = SL_RSX_WAITREP(csvc, rq, mp);
 
 			pscrpc_req_finished(rq);
 			rq = NULL;

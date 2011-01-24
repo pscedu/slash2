@@ -103,8 +103,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    mrq->mrq_fn, slstrerror(rc));
 		goto out;
 	}
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
-	    mh->mh_type == MSCMT_ADDREPLRQ ?
+	rc = SL_RSX_NEWREQ(csvc, mh->mh_type == MSCMT_ADDREPLRQ ?
 	    SRMT_REPL_ADDRQ : SRMT_REPL_DELRQ, rq, mq, mp);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, "%s: %s",
@@ -123,7 +122,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	memcpy(&mq->fg, &fg, sizeof(mq->fg));
 	mq->bmapno = mrq->mrq_bmapno;
 
-	rc = SL_RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
@@ -190,8 +189,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    displayfn, slstrerror(rc));
 		goto out;
 	}
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
-	    SRMT_REPL_GETST, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_REPL_GETST, rq, mq, mp);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, "%s: %s",
 		    displayfn, slstrerror(rc));
@@ -214,7 +212,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	pll_add(&msctl_replsts, &mrsq);
 	added = 1;
 
-	rc = SL_RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc) {
@@ -291,8 +289,7 @@ msctlhnd_set_newreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    mfnrp->mfnrp_fn, slstrerror(rc));
 		goto out;
 	}
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
-	    SRMT_SET_NEWREPLPOL, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_SET_NEWREPLPOL, rq, mq, mp);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, "%s: %s",
 		    mfnrp->mfnrp_fn, slstrerror(rc));
@@ -300,7 +297,7 @@ msctlhnd_set_newreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	}
 	mq->pol = mfnrp->mfnrp_pol;
 	mq->fg = fg;
-	rc = SL_RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
@@ -355,8 +352,7 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    mfbrp->mfbrp_fn, slstrerror(rc));
 		goto out;
 	}
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
-	    SRMT_SET_BMAPREPLPOL, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_SET_BMAPREPLPOL, rq, mq, mp);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, "%s: %s",
 		    mfbrp->mfbrp_fn, slstrerror(rc));
@@ -365,7 +361,7 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	mq->pol = mfbrp->mfbrp_pol;
 	mq->bmapno = mfbrp->mfbrp_bmapno;
 	mq->fg = fg;
-	rc = SL_RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)

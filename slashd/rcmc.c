@@ -53,22 +53,22 @@ slmrmcthr_replst_slave_eof(struct slm_replst_workreq *rsw,
 	struct pscrpc_request *rq;
 	int rc;
 
-	rc = SL_RSX_NEWREQ(rsw->rsw_csvc->csvc_import,
-	    SRCM_VERSION, SRMT_REPL_GETST_SLAVE, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(rsw->rsw_csvc, SRMT_REPL_GETST_SLAVE, rq, mq,
+	    mp);
 	if (rc)
 		return (rc);
 
 	mq->fg = *USWI_FG(wk);
 	mq->id = rsw->rsw_cid;
 	mq->rc = EOF;
-	rc = SL_RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	pscrpc_req_finished(rq);
 	return (rc);
 }
 
 int
-slmrmcthr_replst_slave_waitrep(struct pscrpc_request *rq,
-    struct up_sched_work_item *wk)
+slmrmcthr_replst_slave_waitrep(struct slashrpc_cservice *csvc,
+    struct pscrpc_request *rq, struct up_sched_work_item *wk)
 {
 	struct srm_replst_slave_req *mq;
 	struct srm_replst_slave_rep *mp;
@@ -91,7 +91,7 @@ slmrmcthr_replst_slave_waitrep(struct pscrpc_request *rq,
 	rc = rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
 	    SRCM_BULK_PORTAL, &iov, 1);
 	if (rc == 0) {
-		rc = SL_RSX_WAITREP(rq, mp);
+		rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc == 0)
 			rc = mp->rc;
 	}
@@ -121,14 +121,15 @@ slmrcmthr_walk_brepls(struct slm_replst_workreq *rsw,
 	if (howmany(srcm->srcm_page_bitpos + nbits,
 	    NBBY) > SRM_REPLST_PAGESIZ || *rqp == NULL) {
 		if (*rqp) {
-			rc = slmrmcthr_replst_slave_waitrep(*rqp, wk);
+			rc = slmrmcthr_replst_slave_waitrep(
+			    rsw->rsw_csvc, *rqp, wk);
 			*rqp = NULL;
 			if (rc)
 				return (rc);
 		}
 
-		rc = SL_RSX_NEWREQ(rsw->rsw_csvc->csvc_import,
-		    SRCM_VERSION, SRMT_REPL_GETST_SLAVE, *rqp, mq, mp);
+		rc = SL_RSX_NEWREQ(rsw->rsw_csvc, SRMT_REPL_GETST_SLAVE,
+		    *rqp, mq, mp);
 		if (rc)
 			return (rc);
 		mq->id = rsw->rsw_cid;
@@ -160,8 +161,7 @@ slm_rcm_issue_getreplst(struct slm_replst_workreq *rsw,
 	struct pscrpc_request *rq;
 	int rc;
 
-	rc = SL_RSX_NEWREQ(rsw->rsw_csvc->csvc_import,
-	    SRCM_VERSION, SRMT_REPL_GETST, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(rsw->rsw_csvc, SRMT_REPL_GETST, rq, mq, mp);
 	if (rc)
 		return (rc);
 	mq->id = rsw->rsw_cid;
@@ -180,7 +180,7 @@ slm_rcm_issue_getreplst(struct slm_replst_workreq *rsw,
 	}
 	if (is_eof)
 		mq->rc = EOF;
-	rc = SL_RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	pscrpc_req_finished(rq);
 	return (rc);
 }
@@ -204,7 +204,7 @@ slmrcmthr_walk_bmaps(struct slm_replst_workreq *rsw,
 			bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
 		}
 		if (rq)
-			slmrmcthr_replst_slave_waitrep(rq, wk);
+			slmrmcthr_replst_slave_waitrep(rsw->rsw_csvc, rq, wk);
 	} else {
 	}
 	slmrmcthr_replst_slave_eof(rsw, wk);

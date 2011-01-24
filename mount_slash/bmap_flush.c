@@ -201,8 +201,7 @@ bmap_flush_create_rpc(struct bmapc_memb *b, struct iovec *iovs,
 	if (csvc == NULL)
 		psc_fatalx("msl_bmap_to_csvc() failed to return a client service handle");
 
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRIC_VERSION, SRMT_WRITE,
-	    req, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_WRITE, req, mq, mp);
 	if (rc)
 		psc_fatalx("SL_RSX_NEWREQ() bad time to fail :( rc=%d", -rc);
 
@@ -895,14 +894,13 @@ ms_bmap_release(struct sl_resm *resm)
 	rmci = resm2rmci(resm);
 	psc_assert(rmci->rmci_bmaprls.nbmaps);
 
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
-	    SRMT_RELEASEBMAP, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq, mq, mp);
 	if (rc)
 		goto out;
 
 	memcpy(mq, &rmci->rmci_bmaprls, sizeof(*mq));
 
-	rc = SL_RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 

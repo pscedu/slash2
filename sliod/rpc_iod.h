@@ -80,7 +80,7 @@ int	sli_rmi_setmds(const char *);
 
 int	sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *);
 
-int	sli_rii_issue_repl_read(struct pscrpc_import *, int, int, struct sli_repl_workrq *);
+int	sli_rii_issue_repl_read(struct slashrpc_cservice *, int, int, struct sli_repl_workrq *);
 
 static __inline struct slashrpc_cservice *
 sli_getclcsvc(struct pscrpc_export *exp)

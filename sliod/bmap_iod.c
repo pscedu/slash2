@@ -93,11 +93,11 @@ bim_getcurseq(void)
 		rc = sli_rmi_getimp(&csvc);
 		if (rc)
 			psc_fatalx("mds");
-		rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMI_VERSION,
-		    SRMT_GETBMAPMINSEQ, req, mq, mp);
+		rc = SL_RSX_NEWREQ(csvc, SRMT_GETBMAPMINSEQ, req, mq,
+		    mp);
 		if (rc)
 			psc_fatalx("mds");
-		rc = SL_RSX_WAITREP(req, mp);
+		rc = SL_RSX_WAITREP(csvc, req, mp);
 		if (rc)
 			psc_fatalx("mds");
 
@@ -387,8 +387,7 @@ sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 			continue;
 		}
 
-		rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
-				   SRMT_RELEASEBMAP, rq, mq, mp);
+		rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq, mq, mp);
 		if (rc) {
 			psc_errorx("Failed to generate new RPC req");
 			sl_csvc_decref(csvc);
@@ -396,7 +395,7 @@ sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 		}
 
 		memcpy(mq, brr, sizeof(*mq));
-		rc = SL_RSX_WAITREP(rq, mp);
+		rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc)
 			psc_errorx("RELEASEBMAP req failed");
 
@@ -479,8 +478,7 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 	if (rc)
 		goto out;
 
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
-	    SRMT_GETBMAPCRCS, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_GETBMAPCRCS, rq, mq, mp);
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, b, "could not create request (%d)", rc);
 		goto out;
@@ -491,7 +489,7 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 	memcpy(&mq->fg, &b->bcm_fcmh->fcmh_fg, sizeof(mq->fg));
 	//memcpy(&mq->sbdb, sbdb, sizeof(*sbdb));
 
-	rc = SL_RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc) {
