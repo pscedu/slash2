@@ -205,8 +205,8 @@ bmap_flush_create_rpc(struct bmapc_memb *b, struct iovec *iovs,
 	if (rc)
 		psc_fatalx("SL_RSX_NEWREQ() bad time to fail :( rc=%d", -rc);
 
-	rc = rsx_bulkclient(req, &desc, BULK_GET_SOURCE, SRIC_BULK_PORTAL,
-			    iovs, niovs);
+	rc = rsx_bulkclient(req, &desc, BULK_GET_SOURCE,
+	    SRIC_BULK_PORTAL, iovs, niovs);
 	if (rc)
 		psc_fatalx("rsx_bulkclient() failed with %d", rc);
 
@@ -848,7 +848,7 @@ bmap_flush(void)
 
 		nrpcs = MAX_OUTSTANDING_RPCS - atomic_read(&outstandingRpcCnt);
 		if (nrpcs < 0) {
-			psc_notify("stall flush (nrpcs = %d, outstandingRpcCnt=%d)",
+			psclog_notice("stall flush (nrpcs = %d, outstandingRpcCnt=%d)",
 				nrpcs, atomic_read(&outstandingRpcCnt));
 			break;
 			//psc_waitq_waitrel(&bmapflushwaitq, NULL, &bmapFlushWaitTime);
@@ -905,7 +905,7 @@ ms_bmap_release(struct sl_resm *resm)
 		rc = mp->rc;
 
 	for (i = 0; i < rmci->rmci_bmaprls.nbmaps; i++)
-		psc_notify("fid="SLPRI_FID" bmap=%u key=%"PRId64
+		psclog_notice("fid="SLPRI_FID" bmap=%u key=%"PRId64
 		    " seq=%"PRId64" rc=%d",
 		    rmci->rmci_bmaprls.bmaps[i].fid,
 		    rmci->rmci_bmaprls.bmaps[i].bmapno,
