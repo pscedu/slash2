@@ -352,7 +352,6 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mfh = msl_fhent_new(c);
 
  out:
-
 	if (c) {
 		DEBUG_FCMH(PLL_INFO, c, "new mfh=%p rc=%d name=(%s)", mfh, rc, name);
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
