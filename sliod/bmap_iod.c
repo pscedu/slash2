@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2011, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2009-2011, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -84,7 +84,7 @@ bim_getcurseq(void)
 	    bimSeq.bim_minseq == BMAPSEQ_ANY) {
 		struct srm_getbmapminseq_req *mq;
 		struct srm_generic_rep *mp;
-		struct pscrpc_request *req;
+		struct pscrpc_request *rq;
 		int rc;
 
 		bimSeq.bim_flags |= BIM_RETRIEVE_SEQ;
@@ -93,11 +93,11 @@ bim_getcurseq(void)
 		rc = sli_rmi_getimp(&csvc);
 		if (rc)
 			psc_fatalx("mds");
-		rc = SL_RSX_NEWREQ(csvc, SRMT_GETBMAPMINSEQ, req, mq,
+		rc = SL_RSX_NEWREQ(csvc, SRMT_GETBMAPMINSEQ, rq, mq,
 		    mp);
 		if (rc)
 			psc_fatalx("mds");
-		rc = SL_RSX_WAITREP(csvc, req, mp);
+		rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc)
 			psc_fatalx("mds");
 
