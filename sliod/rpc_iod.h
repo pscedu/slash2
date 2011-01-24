@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2011, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2008-2011, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -53,15 +53,17 @@ struct sli_exp_cli {
 };
 
 /* aliases for connection management */
-#define sli_geticsvcx(resm, exp)						\
-	sl_csvc_get(&(resm)->resm_csvc, 0, (exp), (resm)->resm_nid,		\
-	    SRII_REQ_PORTAL, SRII_REP_PORTAL, SRII_MAGIC, SRII_VERSION,		\
-	    &resm2rmii(resm)->rmii_lock, &resm2rmii(resm)->rmii_waitq, SLCONNT_IOD, NULL)
+#define sli_geticsvcx(resm, exp)					\
+	sl_csvc_get(&(resm)->resm_csvc, 0, (exp), (resm)->resm_nid,	\
+	    SRII_REQ_PORTAL, SRII_REP_PORTAL, SRII_MAGIC, SRII_VERSION,	\
+	    &resm2rmii(resm)->rmii_lock, &resm2rmii(resm)->rmii_waitq,	\
+	    SLCONNT_IOD, NULL)
 
-#define sli_getmcsvcx(resm, exp)						\
-	sl_csvc_get(&(resm)->resm_csvc, 0, (exp), (resm)->resm_nid,		\
-	    SRMI_REQ_PORTAL, SRMI_REP_PORTAL, SRMI_MAGIC, SRMI_VERSION,		\
-	    &resm2rmii(resm)->rmii_lock, &resm2rmii(resm)->rmii_waitq, SLCONNT_MDS, NULL)
+#define sli_getmcsvcx(resm, exp)					\
+	sl_csvc_get(&(resm)->resm_csvc, 0, (exp), (resm)->resm_nid,	\
+	    SRMI_REQ_PORTAL, SRMI_REP_PORTAL, SRMI_MAGIC, SRMI_VERSION,	\
+	    &resm2rmii(resm)->rmii_lock, &resm2rmii(resm)->rmii_waitq,	\
+	    SLCONNT_MDS, NULL)
 
 #define sli_geticsvc(resm)		sli_geticsvcx((resm), NULL)
 #define sli_getmcsvc(resm)		sli_getmcsvcx((resm), NULL)
@@ -76,11 +78,16 @@ int	sli_ric_handler(struct pscrpc_request *);
 int	sli_rii_handler(struct pscrpc_request *);
 
 int	sli_rmi_getimp(struct slashrpc_cservice **);
+void	sli_rmi_read_bminseq(struct pscrpc_request *);
 int	sli_rmi_setmds(const char *);
 
 int	sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *);
 
 int	sli_rii_issue_repl_read(struct slashrpc_cservice *, int, int, struct sli_repl_workrq *);
+
+extern struct pscrpc_svc_handle sli_ric_svc;
+extern struct pscrpc_svc_handle sli_rii_svc;
+extern struct pscrpc_svc_handle sli_rim_svc;
 
 static __inline struct slashrpc_cservice *
 sli_getclcsvc(struct pscrpc_export *exp)
