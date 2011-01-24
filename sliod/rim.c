@@ -124,9 +124,6 @@ sli_rim_handle_repl_schedwk(struct pscrpc_request *rq)
 	else
 		mp->rc = sli_repl_addwk(mq->nid, &mq->fg,
 		    mq->bmapno, mq->bgen, mq->len);
-
-	bim_updateseq(mp->data);
-
 	return (0);
 }
 
@@ -149,9 +146,6 @@ sli_rim_handle_connect(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRIM_MAGIC || mq->version != SRIM_VERSION)
 		mp->rc = -EINVAL;
-
-	bim_updateseq(mp->data);
-
 	return (0);
 }
 

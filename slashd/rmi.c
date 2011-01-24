@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2011, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2008-2011, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -69,7 +69,6 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 	if (mp->rc)
 		return (mp->rc);
 #endif
-	mds_bmap_getcurseq(NULL, &mp->minseq);
 
 	mp->rc = mds_bmap_load_ion(&mq->fg, mq->bmapno, &b);
 	if (mp->rc)
@@ -177,8 +176,6 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
  out:
 	PSCFREE(buf);
 	PSCFREE(iovs);
-
-	mds_bmap_getcurseq(NULL, &mp->seq);
 
 	return (mp->rc);
 }
@@ -294,8 +291,6 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	if (wk)
 		uswi_unref(wk);
 
-	mds_bmap_getcurseq(NULL, &mp->data);
-
 	return (0);
 }
 
@@ -303,6 +298,47 @@ int
 slm_rmi_handle_rls_bmap(struct pscrpc_request *rq)
 {
 	return (mds_handle_rls_bmap(rq, 1));
+}
+
+/**
+ * slm_rmi_handle_garbage - Handle a GARBAGE reply from ION.
+ * @rq: request.
+ */
+int
+slm_rmi_handle_garbage(struct pscrpc_request *rq)
+{
+	struct srm_garbage_req *mq;
+	struct srm_garbage_rep *mp;
+	struct bmapc_memb *bcm;
+	int tract[NBREPLST];
+	int iosidx;
+
+	SL_RSX_ALLOCREP(rq, mq, mp);
+
+	brepls_init(tract, -1);
+	tract[BREPLST_GARBAGE_SCHED] = BREPLST_INVALID;
+
+	mp->rc = mds_bmap_load_ion(&mq->fg, mq->bmapno, &bcm);
+	if (mp->rc)
+		return (0);
+
+	iosidx = mds_repl_ios_lookup(fcmh_2_inoh(bcm->bcm_fcmh),
+	    libsl_nid2resm(rq->rq_export->exp_connection->
+	    c_peer.nid)->resm_iosid);
+	mds_repl_bmap_walk(bcm, tract, NULL, 0, &iosidx, 1);
+	bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
+#if 0
+	brepls_init(retifset, 1);
+	tract[BREPLST_INVALID] = 0;
+
+	for (i = fcmh->fcmh_sstb.sst_nxbmaps; i > 0; i--) {
+		load bmap
+		if ()
+			break;
+		nxbmaps--;
+	}
+#endif
+	return (0);
 }
 
 /**
@@ -316,13 +352,8 @@ slm_rmi_handle_connect(struct pscrpc_request *rq)
 	struct srm_generic_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mq->magic != SRMI_MAGIC || mq->version != SRMI_VERSION) {
+	if (mq->magic != SRMI_MAGIC || mq->version != SRMI_VERSION)
 		mp->rc = EINVAL;
-		goto out;
-	}
-
-	mds_bmap_getcurseq(NULL, &mp->data);
- out:
 	return (0);
 }
 
@@ -337,7 +368,6 @@ slm_rmi_handle_ping(struct pscrpc_request *rq)
 	struct srm_ping_req *mq;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mds_bmap_getcurseq(NULL, &mp->data);
 	return (0);
 }
 
@@ -367,6 +397,9 @@ slm_rmi_handler(struct pscrpc_request *rq)
 	case SRMT_GETBMAPCRCS:
 		rc = slm_rmi_handle_bmap_getcrcs(rq);
 		break;
+	case SRMT_GARBAGE:
+		rc = slm_rmi_handle_garbage(rq);
+		break;
 
 	/* control messages */
 	case SRMT_CONNECT:
@@ -386,6 +419,7 @@ slm_rmi_handler(struct pscrpc_request *rq)
 		rq->rq_status = -ENOSYS;
 		return (pscrpc_error(rq));
 	}
+	slm_ion_pack_bmapminseq(rq->rq_repmsg);
 	authbuf_sign(rq, PSCRPC_MSG_REPLY);
 	pscrpc_target_send_reply_msg(rq, rc, 0);
 	return (rc);

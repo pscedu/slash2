@@ -37,10 +37,79 @@
 struct psc_lockedlist	client_csvcs = PLL_INIT(&client_csvcs,
     struct slashrpc_cservice, csvc_lentry);
 
+int
+slrpc_newgenreq(struct slashrpc_cservice *csvc, int op,
+    struct pscrpc_request **rqp, int qlen, int plen, void *mqp)
+{
+	int qlens[] = { qlen, sizeof(struct srt_authbuf_footer) };
+	int plens[] = { plen, sizeof(struct srt_authbuf_footer) };
+
+	return (RSX_NEWREQN(csvc->csvc_import, csvc->csvc_version, op,
+	    *rqp, nitems(qlens), qlens, nitems(plens), plens,
+	    *(void **)mqp));
+}
+
+__weak int
+slrpc_newreq(struct slashrpc_cservice *csvc, int op,
+    struct pscrpc_request **rqp, int qlen, int plen, void *mqp)
+{
+	return (slrpc_newgenreq(csvc, op, rqp, qlen, plen,
+	    mqp));
+}
+
+int
+slrpc_waitgenrep(struct pscrpc_request *rq, int plen, void *mpp)
+{
+	int rc;
+
+	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
+	rc = pfl_rsx_waitrep(rq, plen, mpp);
+	if (rc == 0)
+		rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
+	return (rc);
+}
+
+__weak int
+slrpc_waitrep(__unusedx struct slashrpc_cservice *csvc,
+    struct pscrpc_request *rq, int plen, void *mpp)
+{
+	return (slrpc_waitgenrep(rq, plen, mpp));
+}
+
+int
+slrpc_allocrepn(struct pscrpc_request *rq, void *mq0p, int q0len,
+    void *mp0p, int np, const int *plens, int rcoff)
+{
+	int *rcp;
+
+	RSX_ALLOCREPNRC(rq, *(void **)mq0p, q0len, *(void **)mp0p, np,
+	    plens, rcoff);
+	rcp = PSC_AGP(*(void **)mp0p, rcoff);
+	*rcp = authbuf_check(rq, PSCRPC_MSG_REQUEST);
+	return (*rcp);
+}
+
+int
+slrpc_allocgenrep(struct pscrpc_request *rq, void *mqp, int qlen,
+    void *mpp, int plen, int rcoff)
+{
+	int plens[] = { plen, sizeof(struct srt_authbuf_footer) };
+
+	return (slrpc_allocrepn(rq, mqp, qlen, mpp, nitems(plens),
+	    plens, rcoff));
+}
+
+__weak int
+slrpc_allocrep(struct pscrpc_request *rq, void *mqp, int qlen,
+    void *mpp, int plen, int rcoff)
+{
+	return (slrpc_allocgenrep(rq, mqp, qlen, mpp, plen, rcoff));
+}
+
 /**
  * slrpc_issue_connect - Attempt connection initiation with a peer.
  * @server: NID of server peer.
- * @imp: import (connection structure) to peer.
+ * @csvc: client service to peer.
  */
 __static int
 slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
@@ -88,10 +157,10 @@ slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
 }
 
 int
-_slrpc_issue_ping(struct slashrpc_cservice *csvc)
+slrpc_issue_ping(struct slashrpc_cservice *csvc)
 {
 	struct pscrpc_request *rq;
-	struct srm_generic_rep *mp;
+	struct srm_ping_rep *mp;
 	struct srm_ping_req *mq;
 	int rc;
 
@@ -100,16 +169,8 @@ _slrpc_issue_ping(struct slashrpc_cservice *csvc)
 		return (rc);
 	rq->rq_timeoutable = 1;
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc == 0)
-		rc = mp->rc;
 	pscrpc_req_finished(rq);
 	return (rc);
-}
-
-__weak int
-slrpc_issue_ping(struct slashrpc_cservice *csvc)
-{
-	return (_slrpc_issue_ping(csvc));
 }
 
 __weak void
@@ -568,7 +629,7 @@ slconnthr_main(struct psc_thread *thr)
 void
 slconnthr_spawn(struct sl_resm *resm, uint32_t rqptl, uint32_t rpptl,
     uint64_t magic, uint32_t version, void *lockp, int flags,
-    void *waitinfo, enum slconn_type conntype, int thrtype,
+    void *waitinfo, enum slconn_type peertype, int thrtype,
     const char *thrnamepre)
 {
 	struct slconn_thread *sct;
@@ -586,7 +647,7 @@ slconnthr_spawn(struct sl_resm *resm, uint32_t rqptl, uint32_t rpptl,
 	sct->sct_lockinfo.lm_ptr = lockp;
 	sct->sct_flags = flags;
 	sct->sct_waitinfo = waitinfo;
-	sct->sct_peertype = conntype;
+	sct->sct_peertype = peertype;
 	pscthr_setready(thr);
 }
 

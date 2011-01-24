@@ -292,7 +292,7 @@ int
 msrcm_handle_connect(struct pscrpc_request *rq)
 {
 	struct srm_connect_req *mq;
-	struct srm_generic_rep *mp;
+	struct srm_connect_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRCM_MAGIC || mq->version != SRCM_VERSION)

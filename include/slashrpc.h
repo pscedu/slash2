@@ -37,62 +37,6 @@
 struct stat;
 struct statvfs;
 
-#define _SL_RSX_NEWREQN(csvc, op, rq, nq, qlens, np, plens,		\
-	    mq0)							\
-	{								\
-		psc_assert((nq) > 1);					\
-		psc_assert((np) > 1);					\
-		psc_assert((qlens)[(nq) - 1] == 0);			\
-		psc_assert((plens)[(np) - 1] == 0);			\
-		(qlens)[(nq) - 1] = sizeof(struct srt_authbuf_footer);	\
-		(plens)[(np) - 1] = sizeof(struct srt_authbuf_footer);	\
-									\
-		RSX_NEWREQN((csvc)->csvc_import, (csvc)->csvc_version,	\
-		    (op), (rq), (nq), (qlens), (np), (plens), (mq0));	\
-	}
-
-#define SL_RSX_NEWREQN(csvc, op, rq, nq, qlens, np, plens, mq0)		\
-	(_SL_RSX_NEWREQN((csvc), (op), (rq), (nq), (qlens),		\
-	    (np), (plens), (mq0)))
-
-#define _SL_RSX_NEWREQ(csvc, op, rq, mq, mp)				\
-	{								\
-		int _qlens[2] = { sizeof(*(mq)), 0 };			\
-		int _plens[2] = { sizeof(*(mp)), 0 };			\
-									\
-		SL_RSX_NEWREQN((csvc), (op), (rq), 2, _qlens,		\
-		    2, _plens, (mq));					\
-	}
-
-#define SL_RSX_NEWREQ(csvc, op, rq, mq, mp)				\
-	(_SL_RSX_NEWREQ((csvc), (op), (rq), (mq), (mp)))
-
-#define _SL_RSX_WAITREP(csvc, rq, mp)					\
-	{								\
-		int _rc;						\
-									\
-		authbuf_sign((rq), PSCRPC_MSG_REQUEST);			\
-		_rc = RSX_WAITREP((rq), (mp));				\
-		if (_rc == 0)						\
-			_rc = authbuf_check((rq), PSCRPC_MSG_REPLY);	\
-		_rc;							\
-	}
-
-#define SL_RSX_WAITREP(csvc, rq, mp)					\
-	(_SL_RSX_WAITREP((csvc), (rq), (mp)))
-
-#define SL_RSX_ALLOCREP(rq, mq, mp)					\
-	 do {								\
-		int _plens[2] = { sizeof(*(mp)),			\
-		    sizeof(struct srt_authbuf_footer) };		\
-									\
-		RSX_ALLOCREPN((rq), (mq), sizeof(*(mq)),		\
-		    (mp), 2, _plens);					\
-		(mp)->rc = authbuf_check((rq), PSCRPC_MSG_REQUEST);	\
-		if ((mp)->rc)						\
-			return ((mp)->rc);				\
-	 } while (0)
-
 /* SLASH RPC channel to MDS from CLI. */
 #define SRMC_REQ_PORTAL		10
 #define SRMC_REP_PORTAL		11
@@ -187,7 +131,7 @@ enum {
 
 	/* garbage operations */
 	SRMT_RECLAIM,			/* trash storage space for a given FID+GEN */
-	SRMT_GARBAGE,			/* trash storage space for a given FID+GEN */
+	SRMT_GARBAGE,			/* trash bmaps past ptrunc */
 
 	/* replication operations */
 	SRMT_REPL_ADDRQ,
@@ -227,7 +171,6 @@ enum {
  */
 
 struct srm_generic_rep {
-	uint64_t		data;		/* context overloadable data */
 	int32_t			rc;		/* return code, 0 for success or slerrno */
 	int32_t			_pad;
 } __packed;
@@ -323,6 +266,10 @@ struct srt_statfs {
 	uint64_t		sf_flag;	/* mount flags */
 	uint64_t		sf_namemax;	/* maximum filename length */
 } __packed;
+
+struct srt_bmapminseq {
+	uint64_t		bminseq;
+};
 
 /* ------------------------ BEGIN NAMESPACE MESSAGES ------------------------ */
 
@@ -462,7 +409,6 @@ struct srm_bmap_crcwrt_req {
 #define SRM_BMAPCRCWRT_PTRUNC	(1 << 0)	/* in response to partial trunc CRC recalc */
 
 struct srm_bmap_crcwrt_rep {
-	uint64_t		seq;
 	int32_t			crcup_rc[MAX_BMAP_NCRC_UPDATES];
 	int32_t			rc;
 	int32_t			_pad;
@@ -496,9 +442,7 @@ struct srm_bmap_release_rep {
 	int32_t			_pad;
 } __packed;
 
-struct srm_getbmapminseq_req {		/* XXX use ping? */
-	int32_t			seq;
-	int32_t			_pad;
+struct srm_getbmapminseq_req {
 } __packed;
 
 struct srm_bmap_ptrunc_req {
@@ -516,6 +460,8 @@ struct srm_garbage_req {
 	sl_bmapno_t		bmapno;
 	sl_bmapgen_t		bgen;
 } __packed;
+
+#define srm_garbage_rep		srm_generic_rep
 
 struct srm_reclaim_req {			/* bulk data (array of struct srt_reclaim_entry) to follow */
 	uint64_t		xid;
@@ -545,9 +491,12 @@ struct srm_connect_req {
 	int32_t			_pad;
 } __packed;
 
+#define srm_connect_rep		srm_generic_rep
+
 struct srm_ping_req {
-	int64_t			data;		/* context overloadable data */
 } __packed;
+
+#define srm_ping_rep		srm_ping_req
 
 /* ----------------------- BEGIN REPLICATION MESSAGES ----------------------- */
 

@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2009-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -21,6 +21,8 @@
  * authbuf_sign - routines for signing and checking the signatures of
  * authbufs on RPC messages.  The secret key is shared among all hosts
  * in a SLASH network.
+ *
+ * The authbuf is transmitted as the last buffer in any given RPC.
  */
 
 #include <gcrypt.h>
@@ -96,13 +98,11 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 	if (gerr)
 		psc_fatalx("gcry_md_copy: %d", gerr);
 
-	for (i = 0; i < m->bufcount - 1; i++) {
-		/* Authbuf is always the last buf. */
+	for (i = 0; i < m->bufcount - 1; i++)
 		gcry_md_write(hd, pscrpc_msg_buf(m, i, 0),
 		    pscrpc_msg_buflen(m, i));
-		gcry_md_write(hd, &saf->saf_secret,
-		    sizeof(saf->saf_secret));
-	}
+	gcry_md_write(hd, &saf->saf_secret,
+	    sizeof(saf->saf_secret));
 
 	psc_base64_encode(gcry_md_read(hd, 0),
 	    saf->saf_hash, authbuf_alglen);
@@ -124,13 +124,17 @@ authbuf_check(struct pscrpc_request *rq, int msgtype)
 	struct pscrpc_msg *m;
 	gcry_error_t gerr;
 	gcry_md_hd_t hd;
+	uint32_t i;
 
 	if (msgtype == PSCRPC_MSG_REQUEST)
 		m = rq->rq_reqmsg;
 	else
 		m = rq->rq_repmsg;
 
-	saf = pscrpc_msg_buf(m, 1, sizeof(*saf));
+	if (m->bufcount < 2)
+		return (EBADMSG);
+
+	saf = pscrpc_msg_buf(m, m->bufcount - 1, sizeof(*saf));
 
 	if (saf == NULL)
 		return (SLERR_AUTHBUF_BADMAGIC);
@@ -149,7 +153,9 @@ authbuf_check(struct pscrpc_request *rq, int msgtype)
 	if (gerr)
 		psc_fatalx("gcry_md_copy: %d", gerr);
 
-	gcry_md_write(hd, pscrpc_msg_buf(m, 0, 0), pscrpc_msg_buflen(m, 0));
+	for (i = 0; i < m->bufcount - 1; i++)
+		gcry_md_write(hd, pscrpc_msg_buf(m, i, 0),
+		    pscrpc_msg_buflen(m, i));
 	gcry_md_write(hd, &saf->saf_secret, sizeof(saf->saf_secret));
 
 	psc_base64_encode(gcry_md_read(hd, 0), buf, authbuf_alglen);

@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2008-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -31,6 +31,10 @@
 #include "slconn.h"
 #include "sliod.h"
 
+struct pscrpc_svc_handle sli_ric_svc;
+struct pscrpc_svc_handle sli_rii_svc;
+struct pscrpc_svc_handle sli_rim_svc;
+
 /**
  * sli_rpc_initsvc - create and initialize RPC services.
  */
@@ -40,7 +44,7 @@ sli_rpc_initsvc(void)
 	struct pscrpc_svc_handle *svh;
 
 	/* Create server service to handle requests from clients. */
-	svh = PSCALLOC(sizeof(*svh));
+	svh = &sli_ric_svc;
 	svh->svh_nbufs = SLI_RIC_NBUFS;
 	svh->svh_bufsz = SLI_RIC_BUFSZ;
 	svh->svh_reqsz = SLI_RIC_BUFSZ;
@@ -54,7 +58,7 @@ sli_rpc_initsvc(void)
 	pscrpc_thread_spawn(svh, struct sliric_thread);
 
 	/* Create server service to handle requests from the MDS server. */
-	svh = PSCALLOC(sizeof(*svh));
+	svh = &sli_rim_svc;
 	svh->svh_nbufs = SLI_RIM_NBUFS;
 	svh->svh_bufsz = SLI_RIM_BUFSZ;
 	svh->svh_reqsz = SLI_RIM_BUFSZ;
@@ -68,7 +72,7 @@ sli_rpc_initsvc(void)
 	pscrpc_thread_spawn(svh, struct slirim_thread);
 
 	/* Create server service to handle requests from other I/O servers. */
-	svh = PSCALLOC(sizeof(*svh));
+	svh = &sli_rii_svc;
 	svh->svh_nbufs = SLI_RII_NBUFS;
 	svh->svh_bufsz = SLI_RII_BUFSZ;
 	svh->svh_reqsz = SLI_RII_BUFSZ;
@@ -85,4 +89,47 @@ sli_rpc_initsvc(void)
 void
 sl_resm_hldrop(__unusedx struct sl_resm *resm)
 {
+}
+
+int
+slrpc_newreq(struct slashrpc_cservice *csvc, int op,
+    struct pscrpc_request **rqp, int qlen, int plen, void *mqp)
+{
+	if (csvc->csvc_ctype == SLCONNT_MDS) {
+		int qlens[] = { qlen, sizeof(struct srt_authbuf_footer) };
+		int plens[] = { plen, sizeof(struct srt_bmapminseq),
+		    sizeof(struct srt_authbuf_footer) };
+
+		return (RSX_NEWREQN(csvc->csvc_import,
+		    csvc->csvc_version, op, *rqp, nitems(qlens), qlens,
+		    nitems(plens), plens, *(void **)mqp));
+	}
+	return (slrpc_newgenreq(csvc, op, rqp, qlen, plen, mqp));
+}
+
+int
+slrpc_waitrep(struct slashrpc_cservice *csvc,
+    struct pscrpc_request *rq, int plen, void *mpp)
+{
+	int rc;
+
+	rc = slrpc_waitgenrep(rq, plen, mpp);
+	if (csvc->csvc_ctype == SLCONNT_MDS)
+		sli_rmi_read_bminseq(rq);
+	return (rc);
+}
+
+int
+slrpc_allocrep(struct pscrpc_request *rq, void *mqp, int qlen,
+    void *mpp, int plen, int rcoff)
+{
+	if (rq->rq_rqbd->rqbd_service == sli_rim_svc.svh_service) {
+		int rc, plens[] = { plen, sizeof(struct srt_authbuf_footer) };
+
+		rc = slrpc_allocrepn(rq, mqp, qlen, mpp, nitems(plens),
+		    plens, rcoff);
+		sli_rmi_read_bminseq(rq);
+		return (rc);
+	}
+	return (slrpc_allocgenrep(rq, mqp, qlen, mpp, plen, rcoff));
 }

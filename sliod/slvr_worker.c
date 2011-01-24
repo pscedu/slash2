@@ -82,13 +82,13 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 		bcr = psc_dynarray_getpos(bcrs, i);
 
 		rc = iod_inode_getinfo(&bcr->bcr_crcup.fg,
-		       &bcr->bcr_crcup.fsize, &bcr->bcr_crcup.utimgen);
+		    &bcr->bcr_crcup.fsize, &bcr->bcr_crcup.utimgen);
 		/* Bail for now if we can't stat() our file objects.
 		 */
 		psc_assert(!rc);
 
-		DEBUG_BCR(PLL_NOTIFY, bcr, "bcrs pos=%d fsz=%"PRId64,
-			  i, bcr->bcr_crcup.fsize);
+		DEBUG_BCR(PLL_NOTIFY, bcr, "bcrs pos=%d fsz=%"PRId64, i,
+		    bcr->bcr_crcup.fsize);
 
 		bcr_xid_check(bcr);
 
@@ -96,9 +96,8 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 
 		iovs[i].iov_base = &bcr->bcr_crcup;
 		len += iovs[i].iov_len = sizeof(struct srm_bmap_crcup) +
-			(mq->ncrcs_per_update[i] *
-			 sizeof(struct srm_bmap_crcwire));
-
+		    (mq->ncrcs_per_update[i] *
+		     sizeof(struct srm_bmap_crcwire));
 
 		psc_crc64_add(&mq->crc, iovs[i].iov_base, iovs[i].iov_len);
 	}
@@ -106,8 +105,8 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 
 	PSC_CRC64_FIN(&mq->crc);
 
-	rc = rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMI_BULK_PORTAL,
-			     iovs, mq->ncrc_updates);
+	rc = rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
+	    SRMI_BULK_PORTAL, iovs, mq->ncrc_updates);
 	PSCFREE(iovs);
 
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
@@ -235,12 +234,9 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 	csvc = args->pointer_arg[1];
 	psc_assert(a);
 
-	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
+	sli_rmi_read_bminseq(rq);
 
-	/* Beware, a failed RPC can result in a NULL mp buf.
-	 */
-	if (!rq->rq_status && !mp->rc && mp)
-		bim_updateseq(mp->seq);
+	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 
 	for (i = 0; i < psc_dynarray_len(a); i++) {
 		bcr = psc_dynarray_getpos(a, i);

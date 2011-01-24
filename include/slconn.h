@@ -98,8 +98,8 @@ struct sl_expcli_ops {
 	void	(*secop_destroy)(void *);
 };
 
-#define _SL_EXP_REGISTER_RESM(exp, getcsvc)				\
-	{								\
+#define SL_EXP_REGISTER_RESM(exp, getcsvc)				\
+	_PFL_RVSTART {							\
 		struct slashrpc_cservice *_csvc = NULL;			\
 		struct sl_resm *_resm;					\
 		int _rc = 0;						\
@@ -128,10 +128,7 @@ struct sl_expcli_ops {
 		} else							\
 			_rc = SLERR_RES_UNKNOWN;			\
 		(_rc);							\
-	}
-
-#define SL_EXP_REGISTER_RESM(exp, getcsvc)				\
-	(_SL_EXP_REGISTER_RESM((exp), getcsvc))
+	} _PFL_RVEND
 
 #define sl_csvc_waitrel_s(csvc, s)	_sl_csvc_waitrelv((csvc), (s), 0L)
 
@@ -191,6 +188,25 @@ struct sl_expcli_ops {
 		}							\
 	} while (0)
 
+#define SL_RSX_NEWREQ(csvc, op, rq, mq, mp)				\
+	slrpc_newreq((csvc), (op), &(rq), sizeof(*(mq)), sizeof(*(mp)),	\
+	    &(mq))
+
+#define SL_RSX_WAITREP(csvc, rq, mp)					\
+	slrpc_waitrep((csvc), (rq), sizeof(*(mp)), &(mp))
+
+#define SL_RSX_ALLOCREP(rq, mq, mp)					\
+	do {								\
+		int _rc;						\
+									\
+		_rc = slrpc_allocrep((rq), &(mq), sizeof(*(mq)),	\
+		    &(mp), sizeof(*(mp)), offsetof(typeof(*(mp)), rc));	\
+		if (_rc)						\
+			return (_rc);					\
+		if ((mp)->rc)						\
+			return ((mp)->rc);				\
+	} while (0)
+
 struct slashrpc_cservice *
 	 sl_csvc_get(struct slashrpc_cservice **, int, struct pscrpc_export *,
 	    lnet_nid_t, uint32_t, uint32_t, uint64_t, uint32_t,
@@ -213,7 +229,21 @@ void	 slconnthr_spawn(struct sl_resm *, uint32_t, uint32_t, uint64_t,
 		uint32_t, void *, int, void *, enum slconn_type, int,
 		const char *);
 
-int _slrpc_issue_ping(struct slashrpc_cservice *);
+int	 slrpc_newgenreq(struct slashrpc_cservice *, int,
+		struct pscrpc_request **, int, int, void *);
+int	 slrpc_newreq(struct slashrpc_cservice *, int,
+		struct pscrpc_request **, int, int, void *);
+
+int	 slrpc_waitgenrep(struct pscrpc_request *, int, void *);
+int	 slrpc_waitrep(struct slashrpc_cservice *,
+		struct pscrpc_request *, int, void *);
+
+int	 slrpc_allocrepn(struct pscrpc_request *, void *, int, void *,
+		int, const int *, int);
+int	 slrpc_allocgenrep(struct pscrpc_request *, void *, int, void *,
+		int, int);
+int	 slrpc_allocrep(struct pscrpc_request *, void *, int, void *,
+		int, int);
 
 extern struct psc_dynarray	lnet_prids;
 extern struct psc_lockedlist	client_csvcs;

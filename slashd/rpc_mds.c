@@ -33,21 +33,9 @@
 #include "slashd.h"
 #include "slashrpc.h"
 
-int
-slm_rim_issue_ping(struct slashrpc_cservice *csvc)
-{
-	const struct srm_generic_rep *mp;
-	struct pscrpc_request *rq;
-	struct srm_ping_req *mq;
-	int rc;
-
-	rc = SL_RSX_NEWREQ(csvc, SRMT_PING, rq, mq, mp);
-	if (rc)
-		return (rc);
-	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	pscrpc_req_finished(rq);
-	return (rc);
-}
+struct pscrpc_svc_handle slm_rmi_svc;
+struct pscrpc_svc_handle slm_rmm_svc;
+struct pscrpc_svc_handle slm_rmc_svc;
 
 void
 slm_rpc_initsvc(void)
@@ -57,7 +45,7 @@ slm_rpc_initsvc(void)
 	struct psc_thread *thr;
 
 	/* Setup request service for MDS from ION. */
-	svh = PSCALLOC(sizeof(*svh));
+	svh = &slm_rmi_svc;
 	svh->svh_nbufs = SLM_RMI_NBUFS;
 	svh->svh_bufsz = SLM_RMI_BUFSZ;
 	svh->svh_reqsz = SLM_RMI_BUFSZ;
@@ -71,7 +59,7 @@ slm_rpc_initsvc(void)
 	pscrpc_thread_spawn(svh, struct slmrmi_thread);
 
 	/* Setup request service for MDS from MDS. */
-	svh = PSCALLOC(sizeof(*svh));
+	svh = &slm_rmm_svc;
 	svh->svh_nbufs = SLM_RMM_NBUFS;
 	svh->svh_bufsz = SLM_RMM_BUFSZ;
 	svh->svh_reqsz = SLM_RMM_BUFSZ;
@@ -85,7 +73,7 @@ slm_rpc_initsvc(void)
 	pscrpc_thread_spawn(svh, struct slmrmm_thread);
 
 	/* Setup request service for MDS from client. */
-	svh = PSCALLOC(sizeof(*svh));
+	svh = &slm_rmc_svc;
 	svh->svh_nbufs = SLM_RMC_NBUFS;
 	svh->svh_bufsz = SLM_RMC_BUFSZ;
 	svh->svh_reqsz = SLM_RMC_BUFSZ;
@@ -113,4 +101,57 @@ sl_resm_hldrop(struct sl_resm *resm)
 		mds_repl_reset_scheduled(resm->resm_iosid);
 		mds_repl_node_clearallbusy(resm->resm_pri);
 	}
+}
+
+void
+slm_ion_pack_bmapminseq(struct pscrpc_msg *m)
+{
+	struct srt_bmapminseq *sbms;
+
+	sbms = pscrpc_msg_buf(m, m->bufcount - 2, sizeof(*sbms));
+	if (sbms)
+		mds_bmap_getcurseq(NULL, &sbms->bminseq);
+	else
+		psc_errorx("unable to pack bmapminseq");
+}
+
+int
+slrpc_newreq(struct slashrpc_cservice *csvc, int op,
+    struct pscrpc_request **rqp, int qlen, int plen, void *mqp)
+{
+	if (csvc->csvc_ctype == SLCONNT_IOD) {
+		int qlens[] = { qlen, sizeof(struct srt_bmapminseq), 0 };
+		int plens[] = { plen, 0 };
+
+		return (RSX_NEWREQN(csvc->csvc_import,
+		    csvc->csvc_version, op, *rqp, nitems(qlens), qlens,
+		    nitems(plens), plens, *(void **)mqp));
+	}
+	return (slrpc_newgenreq(csvc, op, rqp, qlen, plen, mqp));
+}
+
+int
+slrpc_waitrep(struct slashrpc_cservice *csvc,
+    struct pscrpc_request *rq, int plen, void *mpp)
+{
+	int rc;
+
+	if (csvc->csvc_ctype == SLCONNT_IOD)
+		slm_ion_pack_bmapminseq(rq->rq_reqmsg);
+	rc = slrpc_waitgenrep(rq, plen, mpp);
+	return (rc);
+}
+
+int
+slrpc_allocrep(struct pscrpc_request *rq, void *mqp, int qlen,
+    void *mpp, int plen, int rcoff)
+{
+	if (rq->rq_rqbd->rqbd_service == slm_rmi_svc.svh_service) {
+		int plens[] = { plen, sizeof(struct srt_bmapminseq),
+			sizeof(srt_authbuf_footer) };
+
+		return (slrpc_allocrepn(rq, mqp, qlen, mpp, nitems(plens),
+		    plens, rcoff));
+	}
+	return (slrpc_allocgenrep(rq, mqp, qlen, mpp, plen, rcoff));
 }

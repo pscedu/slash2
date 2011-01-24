@@ -101,9 +101,8 @@ bim_getcurseq(void)
 		if (rc)
 			psc_fatalx("mds");
 
+		pscrpc_req_finished(rq);
 		sl_csvc_decref(csvc);
-
-		bim_updateseq(mp->data);
 
 		spinlock(&bimSeq.bim_lock);
 		bimSeq.bim_flags &= ~BIM_RETRIEVE_SEQ;
@@ -378,7 +377,8 @@ sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 		brr->nbmaps = i;
 
-		/* The system can tolerate the loss of these messages so
+		/*
+		 * The system can tolerate the loss of these messages so
 		 *   errors here should not be considered fatal.
 		 */
 		rc = sli_rmi_getimp(&csvc);

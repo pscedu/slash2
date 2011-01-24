@@ -70,6 +70,8 @@ int	slm_rmc_handler(struct pscrpc_request *);
 int	slm_rmi_handler(struct pscrpc_request *);
 int	slm_rmm_handler(struct pscrpc_request *);
 
+void	slm_ion_pack_bmapminseq(struct pscrpc_msg *);
+
 struct slm_rmi_expdata *
 	slm_rmi_getexpdata(struct pscrpc_export *);
 

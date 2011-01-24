@@ -26,6 +26,7 @@
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 
+#include "bmap_iod.h"
 #include "repl_iod.h"
 #include "rpc_iod.h"
 #include "slashrpc.h"
@@ -110,4 +111,25 @@ sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *w)
 	if (csvc)
 		sl_csvc_decref(csvc);
 	return (rc);
+}
+
+void
+sli_rmi_read_bminseq(struct pscrpc_request *rq)
+{
+	struct srt_bmapminseq *sbms;
+	struct pscrpc_msg *m;
+
+	m = rq->rq_repmsg;
+	if (m == NULL)
+		goto error;
+	if (m->bufcount < 3)
+		goto error;
+	sbms = pscrpc_msg_buf(m, m->bufcount - 2, sizeof(*sbms));
+	if (sbms == NULL)
+		goto error;
+	bim_updateseq(sbms->bminseq);
+	return;
+
+ error:
+	psclog_errorx("no message");
 }
