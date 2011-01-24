@@ -1013,7 +1013,7 @@ mds_send_batch_update(uint64_t batchno)
 		size += len;
 	}
 
-	npeers= 0;
+	npeers = 0;
 
 	CONF_LOCK();
 	CONF_FOREACH_SITE(_site)
@@ -1036,16 +1036,16 @@ mds_send_batch_update(uint64_t batchno)
 			if (peerinfo->sp_skips == 0) {
 			    peerinfo->sp_skips = 3;
 			    continue;
-			} 
-			peerinfo->sp_skips--; 
+			}
+			peerinfo->sp_skips--;
 			if (peerinfo->sp_skips)
 			   continue;
 		}
 		if (peerinfo->sp_batchno < batchno)
 			continue;
 		/*
- 		 * Note that the update xid we can see is not necessarily contiguous.
- 		 */
+		 * Note that the update xid we can see is not necessarily contiguous.
+		 */
 		if (peerinfo->sp_batchno > batchno || peerinfo->sp_xid > xid) {
 			didwork++;
 			continue;
@@ -1292,10 +1292,13 @@ mds_send_batch_reclaim(uint64_t batchno)
 			RPMI_ULOCK(rpmi);
 			continue;
 		}
+
 		/*
- 		 * Note that the reclaim xid we can see is not necessarily contiguous.
- 		 */
-		if (iosinfo->si_batchno > batchno || iosinfo->si_xid >= xid) {
+		 * Note that the reclaim xid we can see is not
+		 * necessarily contiguous.
+		 */
+		if (iosinfo->si_batchno > batchno ||
+		    iosinfo->si_xid >= xid) {
 			RPMI_ULOCK(rpmi);
 			didwork++;
 			continue;
@@ -1323,7 +1326,8 @@ mds_send_batch_reclaim(uint64_t batchno)
 		iov.iov_base = entryp;
 
 		/*
-		 * Send RPC to the I/O server and wait for it to complete.
+		 * Send RPC to the I/O server and wait for it to
+		 * complete.
 		 */
 		DYNARRAY_FOREACH(dst_resm, i, &res->res_members) {
 			csvc = slm_geticsvc_nb(dst_resm, NULL);
