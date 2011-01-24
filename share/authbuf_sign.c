@@ -155,7 +155,10 @@ authbuf_check(struct pscrpc_request *rq, int msgtype)
 	psc_base64_encode(gcry_md_read(hd, 0), buf, authbuf_alglen);
 	gcry_md_close(hd);
 
-	if (strcmp(buf, saf->saf_hash))
+	if (strcmp(buf, saf->saf_hash)) {
+		psclog_errorx("authbuf did not hash correctly -- "
+		    "ensure key files are synced");
 		return (SLERR_AUTHBUF_BADHASH);
+	}
 	return (0);
 }
