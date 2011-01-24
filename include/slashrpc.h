@@ -86,7 +86,8 @@ struct statvfs;
 		int _plens[2] = { sizeof(*(mp)),			\
 		    sizeof(struct srt_authbuf_footer) };		\
 									\
-		RSX_ALLOCREPN((rq), (mq), (mp), 2, _plens);		\
+		RSX_ALLOCREPN((rq), (mq), sizeof(*(mq)),		\
+		    (mp), 2, _plens);					\
 		(mp)->rc = authbuf_check((rq), PSCRPC_MSG_REQUEST);	\
 		if ((mp)->rc)						\
 			return ((mp)->rc);				\
