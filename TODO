@@ -298,7 +298,6 @@ API rename
   The UUID could be just a timestamp too.  This would allow admins to
   remove old backing directories at their convenience while not
   compromising data integrity.
-- if INOF_IN_PTRUNC is set, do not grant leases past the ino_ptrunc offset
 - GARBAGE transition states:
     (o) confirmation of this truncates metafile
 
