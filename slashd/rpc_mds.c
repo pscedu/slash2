@@ -120,8 +120,9 @@ slrpc_newreq(struct slashrpc_cservice *csvc, int op,
     struct pscrpc_request **rqp, int qlen, int plen, void *mqp)
 {
 	if (csvc->csvc_ctype == SLCONNT_IOD) {
-		int qlens[] = { qlen, sizeof(struct srt_bmapminseq), 0 };
-		int plens[] = { plen, 0 };
+		int qlens[] = { qlen, sizeof(struct srt_bmapminseq),
+		    sizeof(struct srt_authbuf_footer) };
+		int plens[] = { plen, sizeof(struct srt_authbuf_footer) };
 
 		return (RSX_NEWREQN(csvc->csvc_import,
 		    csvc->csvc_version, op, *rqp, nitems(qlens), qlens,
@@ -148,7 +149,7 @@ slrpc_allocrep(struct pscrpc_request *rq, void *mqp, int qlen,
 {
 	if (rq->rq_rqbd->rqbd_service == slm_rmi_svc.svh_service) {
 		int plens[] = { plen, sizeof(struct srt_bmapminseq),
-			sizeof(srt_authbuf_footer) };
+		    sizeof(struct srt_authbuf_footer) };
 
 		return (slrpc_allocrepn(rq, mqp, qlen, mpp, nitems(plens),
 		    plens, rcoff));
