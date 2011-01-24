@@ -41,35 +41,34 @@ struct psc_lockedlist	client_csvcs = PLL_INIT(&client_csvcs,
  * slrpc_issue_connect - Attempt connection initiation with a peer.
  * @server: NID of server peer.
  * @imp: import (connection structure) to peer.
- * @magic: agreed-upon connection message key.
- * @version: communication protocol version.
  */
 __static int
-slrpc_issue_connect(lnet_nid_t server, struct pscrpc_import *imp,
-    uint64_t magic, uint32_t version, int flags)
+slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
+    int flags)
 {
 	lnet_process_id_t prid, server_id = { server, PSCRPC_SVR_PID };
-	struct pscrpc_request *rq;
 	struct srm_connect_req *mq;
 	struct srm_generic_rep *mp;
+	struct pscrpc_request *rq;
+	struct pscrpc_import *imp;
 	int rc;
 
 	pscrpc_getpridforpeer(&prid, &lnet_prids, server);
 	if (prid.nid == LNET_NID_ANY)
 		return (ENETUNREACH);
 
+	imp = csvc->csvc_import;
 	if (imp->imp_connection)
 		pscrpc_put_connection(imp->imp_connection);
 	imp->imp_connection = pscrpc_get_connection(server_id, prid.nid, NULL);
 	imp->imp_connection->c_imp = imp;
 	imp->imp_connection->c_peer.pid = PSCRPC_SVR_PID;
 
-	rc = SL_RSX_NEWREQ(imp, version, SRMT_CONNECT, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_CONNECT, rq, mq, mp);
 	if (rc)
 		return (rc);
 	rq->rq_timeoutable = 1;
-	mq->magic = magic;
-	mq->version = version;
+	mq->magic = csvc->csvc_magic;
 
 	/*
 	 * XXX in this case, we should do an async deal and return NULL
@@ -78,7 +77,7 @@ slrpc_issue_connect(lnet_nid_t server, struct pscrpc_import *imp,
 	if (flags & CSVCF_NONBLOCK)
 		rq->rq_timeout = 3;
 
-	rc = SL_RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc == 0)
@@ -88,19 +87,18 @@ slrpc_issue_connect(lnet_nid_t server, struct pscrpc_import *imp,
 }
 
 int
-_slrpc_issue_ping(struct slashrpc_cservice *csvc, uint32_t version)
+_slrpc_issue_ping(struct slashrpc_cservice *csvc)
 {
 	struct pscrpc_request *rq;
 	struct srm_generic_rep *mp;
 	struct srm_ping_req *mq;
 	int rc;
 
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, version,
-	    SRMT_PING, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_PING, rq, mq, mp);
 	if (rc)
 		return (rc);
 	rq->rq_timeoutable = 1;
-	rc = SL_RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	pscrpc_req_finished(rq);
@@ -108,10 +106,9 @@ _slrpc_issue_ping(struct slashrpc_cservice *csvc, uint32_t version)
 }
 
 __weak int
-slrpc_issue_ping(struct slashrpc_cservice *csvc, uint32_t version,
-    __unusedx enum slconn_type dst)
+slrpc_issue_ping(struct slashrpc_cservice *csvc)
 {
-	return (_slrpc_issue_ping(csvc, version));
+	return (_slrpc_issue_ping(csvc));
 }
 
 __weak void
@@ -372,6 +369,8 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 		csvc->csvc_lockinfo.lm_ptr = lockp;
 		csvc->csvc_waitinfo = waitinfo;
 		csvc->csvc_ctype = ctype;
+		csvc->csvc_version = version;
+		csvc->csvc_magic = magic;
 
 		if (ctype == SLCONNT_CLI)
 			pll_add(&client_csvcs, csvc);
@@ -437,8 +436,7 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 		psc_atomic32_setmask(&csvc->csvc_flags, CSVCF_CONNECTING);
 		sl_csvc_unlock(csvc);
 
-		rc = slrpc_issue_connect(peernid, csvc->csvc_import,
-		    magic, version, flags);
+		rc = slrpc_issue_connect(peernid, csvc, flags);
 
 		sl_csvc_lock(csvc);
 		psc_atomic32_clearmask(&csvc->csvc_flags,
@@ -538,8 +536,7 @@ slconnthr_main(struct psc_thread *thr)
 
  online:
 			sl_csvc_unlock(csvc);
-			rc = slrpc_issue_ping(csvc, sct->sct_version,
-			    sct->sct_peertype);
+			rc = slrpc_issue_ping(csvc);
 			/* XXX race */
 			if (rc) {
 				sl_csvc_lock(csvc);
