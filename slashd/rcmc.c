@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2008-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -61,7 +61,7 @@ slmrmcthr_replst_slave_eof(struct slm_replst_workreq *rsw,
 	mq->fg = *USWI_FG(wk);
 	mq->id = rsw->rsw_cid;
 	mq->rc = EOF;
-	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	rc = SL_RSX_WAITREP(rsw->rsw_csvc, rq, mp);
 	pscrpc_req_finished(rq);
 	return (rc);
 }
@@ -180,7 +180,7 @@ slm_rcm_issue_getreplst(struct slm_replst_workreq *rsw,
 	}
 	if (is_eof)
 		mq->rc = EOF;
-	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	rc = SL_RSX_WAITREP(rsw->rsw_csvc, rq, mp);
 	pscrpc_req_finished(rq);
 	return (rc);
 }
@@ -200,11 +200,13 @@ slmrcmthr_walk_bmaps(struct slm_replst_workreq *rsw,
 			if (mds_bmap_load(wk->uswi_fcmh, n, &bcm))
 				continue;
 			BMAP_LOCK(bcm);
-			rc = slmrcmthr_walk_brepls(rsw, wk, bcm, n, &rq);
+			rc = slmrcmthr_walk_brepls(rsw, wk, bcm, n,
+			    &rq);
 			bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
 		}
 		if (rq)
-			slmrmcthr_replst_slave_waitrep(rsw->rsw_csvc, rq, wk);
+			slmrmcthr_replst_slave_waitrep(rsw->rsw_csvc,
+			    rq, wk);
 	} else {
 	}
 	slmrmcthr_replst_slave_eof(rsw, wk);
