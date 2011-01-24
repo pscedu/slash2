@@ -501,7 +501,7 @@ slconnthr_main(struct psc_thread *thr)
 			    NULL, resm->resm_nid, sct->sct_rqptl, sct->sct_rpptl,
 			    sct->sct_magic, sct->sct_version,
 			    sct->sct_lockinfo.lm_ptr, sct->sct_waitinfo,
-			    sct->sct_conntype, NULL);
+			    sct->sct_peertype, NULL);
 
 			if (csvc == NULL) {
 				time_t mtime;
@@ -539,7 +539,7 @@ slconnthr_main(struct psc_thread *thr)
  online:
 			sl_csvc_unlock(csvc);
 			rc = slrpc_issue_ping(csvc, sct->sct_version,
-			    sct->sct_conntype);
+			    sct->sct_peertype);
 			/* XXX race */
 			if (rc) {
 				sl_csvc_lock(csvc);
@@ -588,7 +588,7 @@ slconnthr_spawn(struct sl_resm *resm, uint32_t rqptl, uint32_t rpptl,
 	sct->sct_lockinfo.lm_ptr = lockp;
 	sct->sct_flags = flags;
 	sct->sct_waitinfo = waitinfo;
-	sct->sct_conntype = conntype;
+	sct->sct_peertype = conntype;
 	pscthr_setready(thr);
 }
 

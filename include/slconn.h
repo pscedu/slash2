@@ -60,7 +60,7 @@ struct slconn_thread {
 	uint32_t		 sct_version;
 	union lockmutex		 sct_lockinfo;
 	void			*sct_waitinfo;
-	enum slconn_type	 sct_conntype;
+	enum slconn_type	 sct_peertype;
 	int			 sct_flags;
 };
 
