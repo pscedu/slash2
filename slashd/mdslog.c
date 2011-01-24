@@ -1349,13 +1349,13 @@ mds_send_batch_reclaim(uint64_t batchno)
 			    SRMM_BULK_PORTAL, &iov, 1);
 
 			rc = SL_RSX_WAITREP(csvc, rq, mp);
+			if (rc == 0)
+				rc = mp->rc;
 
 			pscrpc_req_finished(rq);
 			rq = NULL;
 			sl_csvc_decref(csvc);
 
-			if (rc == 0)
-				rc = mp->rc;
 			if (rc == 0) {
 				record++;
 				didwork++;
