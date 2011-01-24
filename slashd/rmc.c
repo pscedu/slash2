@@ -105,8 +105,8 @@ int
 slm_rmc_handle_connect(struct pscrpc_request *rq)
 {
 	struct pscrpc_export *e = rq->rq_export;
-	struct srm_connect_req *mq;
-	struct srm_generic_rep *mp;
+	const struct srm_connect_req *mq;
+	struct srm_connect_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRMC_MAGIC || mq->version != SRMC_VERSION)
@@ -119,8 +119,8 @@ slm_rmc_handle_connect(struct pscrpc_request *rq)
 int
 slm_rmc_handle_ping(struct pscrpc_request *rq)
 {
-	struct srm_generic_rep *mp;
-	struct srm_ping_req *mq;
+	const struct srm_ping_req *mq;
+	struct srm_ping_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	return (0);

@@ -348,8 +348,8 @@ slm_rmi_handle_garbage(struct pscrpc_request *rq)
 int
 slm_rmi_handle_connect(struct pscrpc_request *rq)
 {
-	struct srm_connect_req *mq;
-	struct srm_generic_rep *mp;
+	const struct srm_connect_req *mq;
+	struct srm_connect_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRMI_MAGIC || mq->version != SRMI_VERSION)
@@ -364,8 +364,8 @@ slm_rmi_handle_connect(struct pscrpc_request *rq)
 int
 slm_rmi_handle_ping(struct pscrpc_request *rq)
 {
-	struct srm_generic_rep *mp;
-	struct srm_ping_req *mq;
+	const struct srm_ping_req *mq;
+	struct srm_ping_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	return (0);
