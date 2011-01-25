@@ -128,7 +128,7 @@ enum {
 	SRMT_BMAPCHWRMODE,			/* change read/write access mode */
 	SRMT_BMAPCRCWRT,			/* update bmap data checksums */
 	SRMT_BMAPDIO,				/* request client direct I/O on a bmap */
-	SRMT_BMAP_PTRUNC,			/* recompute CRC for ptrunc'd bmap */
+	SRMT_BMAP_PTRUNC,			/* partial truncate and redo CRC for bmap */
 	SRMT_GETBMAP,				/* get client lease for bmap access */
 	SRMT_GETBMAPCRCS,			/* get bmap data checksums */
 	SRMT_GETBMAPMINSEQ,
@@ -136,7 +136,6 @@ enum {
 
 	/* garbage operations */
 	SRMT_RECLAIM,				/* trash storage space for a given FID+GEN */
-	SRMT_GARBAGE,				/* trash bmaps past ptrunc */
 
 	/* replication operations */
 	SRMT_REPL_ADDRQ,
@@ -461,27 +460,20 @@ struct srm_bmap_ptrunc_req {
 	sl_bmapno_t		bmapno;
 	int32_t			offset;
 	int32_t			rc;
-	int32_t			_pad;
+	int32_t			crc;		/* whether to recompute CRC */
 } __packed;
 
 #define srm_bmap_ptrunc_rep	srm_generic_rep
 
 /* ------------------------- BEGIN GARBAGE MESSAGES ------------------------- */
 
-struct srm_garbage_req {
-	struct slash_fidgen	fg;
-	sl_bmapno_t		bmapno;
-	sl_bmapgen_t		bgen;
-} __packed;
-
-#define srm_garbage_rep		srm_generic_rep
-
-struct srm_reclaim_req {			/* bulk data (array of struct srt_reclaim_entry) to follow */
+struct srm_reclaim_req {
 	uint64_t		xid;
 	uint64_t		crc;		/* CRC of the bulk data */
 	int32_t			size;		/* size of the bulk data to follow */
 	int16_t			count;		/* # of entries to follow */
 	int16_t			ios;		/* ID of the IOS */
+/* bulk data is array of struct srt_reclaim_entry */
 } __packed;
 
 struct srm_reclaim_rep {

@@ -397,6 +397,7 @@ slmupschedthr_tryptrunc(struct up_sched_work_item *wk,
 	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAP_PTRUNC, rq, mq, mp);
 	if (rc)
 		goto fail;
+	mq->crc = 1;
 	mq->fg = *USWI_FG(wk);
 	mq->bmapno = bcm->bcm_bmapno;
 	mq->offset = fcmh_2_ino(wk->uswi_fcmh)->ino_ptruncoff %
@@ -472,7 +473,7 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 		goto fail;
 
 	/* Issue garbage reclaim request */
-	rc = SL_RSX_NEWREQ(csvc, SRMT_GARBAGE, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAP_PTRUNC, rq, mq, mp);
 	if (rc)
 		goto fail;
 	mq->fg = *USWI_FG(wk);
