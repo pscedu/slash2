@@ -858,8 +858,8 @@ int
 slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 {
 	struct srm_set_newreplpol_req *mq;
+	struct srm_set_newreplpol_rep *mp;
 	struct slash_inode_handle *ih;
-	struct srm_generic_rep *mp;
 	struct fidc_membh *fcmh;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -894,8 +894,8 @@ int
 slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 {
 	struct srm_set_bmapreplpol_req *mq;
+	struct srm_set_bmapreplpol_rep *mp;
 	struct bmap_mds_info *bmdsi;
-	struct srm_generic_rep *mp;
 	struct fcmh_mds_info *fmi;
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bcm;
@@ -1037,8 +1037,8 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 int
 slm_rmc_handle_addreplrq(struct pscrpc_request *rq)
 {
-	struct srm_generic_rep *mp;
-	struct srm_replrq_req *mq;
+	const struct srm_replrq_req *mq;
+	struct srm_replrq_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = mds_repl_addrq(&mq->fg,
@@ -1049,8 +1049,8 @@ slm_rmc_handle_addreplrq(struct pscrpc_request *rq)
 int
 slm_rmc_handle_delreplrq(struct pscrpc_request *rq)
 {
-	struct srm_generic_rep *mp;
-	struct srm_replrq_req *mq;
+	const struct srm_replrq_req *mq;
+	struct srm_replrq_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = mds_repl_delrq(&mq->fg,

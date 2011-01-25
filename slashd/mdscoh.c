@@ -53,7 +53,7 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 {
 	struct slashrpc_cservice *csvc;
 	struct srm_bmap_dio_req *mq;
-	struct srm_generic_rep *mp;
+	struct srm_bmap_dio_rep *mp;
 	struct bmap_mds_lease *bml;
 	int flags;
 
@@ -115,7 +115,7 @@ mdscoh_req(struct bmap_mds_lease *bml, int block)
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_bmap_dio_req *mq;
-	struct srm_generic_rep *mp;
+	struct srm_bmap_dio_rep *mp;
 	int rc = 0;
 
 	DEBUG_BMAP(PLL_NOTIFY, bml_2_bmap(bml), "bml=%p", bml);

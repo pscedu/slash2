@@ -192,9 +192,9 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	int tract[NBREPLST], retifset[NBREPLST], amt = 0, rc = 0;
 	struct resm_mds_info *src_rmmi, *dst_rmmi;
 	struct srm_repl_schedwk_req *mq;
+	struct srm_repl_schedwk_rep *mp;
 	struct slashrpc_cservice *csvc;
 	struct slmupsched_thread *smut;
-	struct srm_generic_rep *mp;
 	struct pscrpc_request *rq;
 	struct site_mds_info *smi;
 	struct sl_resm *dst_resm;
@@ -312,7 +312,7 @@ slmupschedthr_tryptrunc(struct up_sched_work_item *wk,
 	struct slashrpc_cservice *csvc;
 	struct resm_mds_info *dst_rmmi;
 	struct srm_bmap_ptrunc_req *mq;
-	struct srm_generic_rep *mp;
+	struct srm_bmap_ptrunc_rep *mp;
 	struct bmap_mds_lease *bml;
 	struct pscrpc_request *rq;
 	struct site_mds_info *smi;
@@ -440,7 +440,7 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	struct slmupsched_thread *smut;
 	struct resm_mds_info *dst_rmmi;
 	struct srm_garbage_req *mq;
-	struct srm_generic_rep *mp;
+	struct srm_garbage_rep *mp;
 	struct pscrpc_request *rq;
 	struct site_mds_info *smi;
 	struct sl_resm *dst_resm;

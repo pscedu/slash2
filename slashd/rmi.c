@@ -192,8 +192,8 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	int tract[NBREPLST], retifset[NBREPLST], iosidx, src_iosidx, rc;
 	struct sl_resm *dst_resm, *src_resm;
 	struct srm_repl_schedwk_req *mq;
+	struct srm_repl_schedwk_rep *mp;
 	struct up_sched_work_item *wk;
-	struct srm_generic_rep *mp;
 	struct site_mds_info *smi;
 	struct bmapc_memb *bcm;
 	sl_bmapgen_t gen;

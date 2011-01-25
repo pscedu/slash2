@@ -62,7 +62,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct msctlmsg_replrq *mrq = m;
-	struct srm_generic_rep *mp;
+	struct srm_replrq_rep *mp;
 	struct srm_replrq_req *mq;
 	struct slash_fidgen fg;
 	struct slash_creds cr;
@@ -255,8 +255,8 @@ msctlhnd_set_newreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct msctlmsg_fncmd_newreplpol *mfnrp = m;
 	struct slashrpc_cservice *csvc = NULL;
 	struct srm_set_newreplpol_req *mq;
+	struct srm_set_newreplpol_rep *mp;
 	struct pscrpc_request *rq = NULL;
-	struct srm_generic_rep *mp;
 	struct slash_fidgen fg;
 	struct slash_creds cr;
 	struct srt_stat sstb;
@@ -318,8 +318,8 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct msctlmsg_fncmd_bmapreplpol *mfbrp = m;
 	struct slashrpc_cservice *csvc = NULL;
 	struct srm_set_bmapreplpol_req *mq;
+	struct srm_set_bmapreplpol_rep *mp;
 	struct pscrpc_request *rq = NULL;
-	struct srm_generic_rep *mp;
 	struct slash_fidgen fg;
 	struct slash_creds cr;
 	struct srt_stat sstb;

@@ -87,7 +87,7 @@ sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *w)
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_repl_schedwk_req *mq;
-	struct srm_generic_rep *mp;
+	struct srm_repl_schedwk_rep *mp;
 	int rc;
 
 	rc = sli_rmi_getimp(&csvc);

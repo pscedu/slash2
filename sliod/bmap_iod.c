@@ -83,7 +83,7 @@ bim_getcurseq(void)
 	if (timespeccmp(&ctime, &bimSeq.bim_age, >) ||
 	    bimSeq.bim_minseq == BMAPSEQ_ANY) {
 		struct srm_getbmapminseq_req *mq;
-		struct srm_generic_rep *mp;
+		struct srm_getbmapminseq_rep *mp;
 		struct pscrpc_request *rq;
 		int rc;
 

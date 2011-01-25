@@ -109,6 +109,11 @@ struct statvfs;
 #define SRCI_VERSION		1
 #define SRCI_MAGIC		UINT64_C(0xaabbccddeeff0099)
 
+enum {
+	SLXCTLOP_SET_BMAP_REPLPOL,		/* set replication policy on bmap */
+	SLXCTLOP_SET_FILE_NEWBMAP_REPLPOL	/* set file's default new bmap repl policy */
+};
+
 /* SLASH RPC message types. */
 enum {
 	/* control operations */
@@ -117,50 +122,50 @@ enum {
 	SRMT_PING,
 
 	/* namespace operations */
-	SRMT_NAMESPACE_UPDATE,		/* send a batch of namespace update logs */
+	SRMT_NAMESPACE_UPDATE,			/* send a batch of namespace update logs */
 
 	/* bmap operations */
-	SRMT_BMAPCHWRMODE,		/* change read/write access mode */
-	SRMT_BMAPCRCWRT,		/* update bmap data checksums */
-	SRMT_BMAPDIO,			/* request client direct I/O on a bmap */
-	SRMT_BMAP_PTRUNC,		/* recompute CRC for ptrunc'd bmap */
-	SRMT_GETBMAP,			/* get client lease for bmap access */
-	SRMT_GETBMAPCRCS,		/* get bmap data checksums */
+	SRMT_BMAPCHWRMODE,			/* change read/write access mode */
+	SRMT_BMAPCRCWRT,			/* update bmap data checksums */
+	SRMT_BMAPDIO,				/* request client direct I/O on a bmap */
+	SRMT_BMAP_PTRUNC,			/* recompute CRC for ptrunc'd bmap */
+	SRMT_GETBMAP,				/* get client lease for bmap access */
+	SRMT_GETBMAPCRCS,			/* get bmap data checksums */
 	SRMT_GETBMAPMINSEQ,
-	SRMT_RELEASEBMAP,		/* relinquish a client's bmap access lease */
+	SRMT_RELEASEBMAP,			/* relinquish a client's bmap access lease */
 
 	/* garbage operations */
-	SRMT_RECLAIM,			/* trash storage space for a given FID+GEN */
-	SRMT_GARBAGE,			/* trash bmaps past ptrunc */
+	SRMT_RECLAIM,				/* trash storage space for a given FID+GEN */
+	SRMT_GARBAGE,				/* trash bmaps past ptrunc */
 
 	/* replication operations */
 	SRMT_REPL_ADDRQ,
 	SRMT_REPL_DELRQ,
-	SRMT_REPL_GETST,		/* get replication request status */
-	SRMT_REPL_GETST_SLAVE,		/* all bmap repl info for a file */
-	SRMT_REPL_READ,			/* ION to ION replicate */
-	SRMT_REPL_SCHEDWK,		/* MDS to ION replication staging */
-	SRMT_SET_BMAPREPLPOL,		/* bmap replication policy */
-	SRMT_SET_NEWREPLPOL,		/* file new bmap repl policy */
+	SRMT_REPL_GETST,			/* get replication request status */
+	SRMT_REPL_GETST_SLAVE,			/* all bmap repl info for a file */
+	SRMT_REPL_READ,				/* ION to ION replicate */
+	SRMT_REPL_SCHEDWK,			/* MDS to ION replication staging */
+	SRMT_SET_BMAPREPLPOL,			/* bmap replication policy */
+	SRMT_SET_NEWREPLPOL,			/* file new bmap repl policy */
 
 	/* file system operations */
-	SRMT_CREATE,			/* creat(2) */
-	SRMT_GETATTR,			/* stat(2) */
-	SRMT_LINK,			/* link(2) */
+	SRMT_CREATE,				/* creat(2) */
+	SRMT_GETATTR,				/* stat(2) */
+	SRMT_LINK,				/* link(2) */
 	SRMT_LOOKUP,
-	SRMT_MKDIR,			/* mkdir(2) */
-	SRMT_MKNOD,			/* mknod(2) */
-	SRMT_READ,			/* read(2) */
-	SRMT_READDIR,			/* readdir(2) */
-	SRMT_READLINK,			/* readlink(2) */
-	SRMT_RENAME,			/* rename(2) */
-	SRMT_RMDIR,			/* rmdir(2) */
-	SRMT_SETATTR,			/* chmod(2), chown(2), utimes(2) */
-	SRMT_STATFS,			/* statvfs(2) */
-	SRMT_SYMLINK,			/* symlink(2) */
-	SRMT_UNLINK,			/* unlink(2) */
-	SRMT_WRITE,			/* write(2) */
-	SRMT_XCTL			/* ancillary operation */
+	SRMT_MKDIR,				/* mkdir(2) */
+	SRMT_MKNOD,				/* mknod(2) */
+	SRMT_READ,				/* read(2) */
+	SRMT_READDIR,				/* readdir(2) */
+	SRMT_READLINK,				/* readlink(2) */
+	SRMT_RENAME,				/* rename(2) */
+	SRMT_RMDIR,				/* rmdir(2) */
+	SRMT_SETATTR,				/* chmod(2), chown(2), utimes(2) */
+	SRMT_STATFS,				/* statvfs(2) */
+	SRMT_SYMLINK,				/* symlink(2) */
+	SRMT_UNLINK,				/* unlink(2) */
+	SRMT_WRITE,				/* write(2) */
+	SRMT_XCTL				/* ancillary operation */
 };
 
 /* ----------------------------- BEGIN MESSAGES ----------------------------- */
@@ -379,6 +384,8 @@ struct srm_bmap_dio_req {
 	int32_t			_pad;
 } __packed;
 
+#define srm_bmap_dio_rep	srm_generic_rep
+
 struct srm_bmap_crcwire {
 	uint64_t		crc;		/* CRC of the corresponding sliver */
 	uint32_t		slot;		/* sliver number in the owning bmap */
@@ -442,8 +449,12 @@ struct srm_bmap_release_rep {
 	int32_t			_pad;
 } __packed;
 
-struct srm_getbmapminseq_req {
+struct srm_getbmapminseq_req {		/* XXX use ping */
+	int32_t			rc;
+	int32_t			_pad;
 } __packed;
+
+#define srm_getbmapminseq_rep	srm_generic_rep
 
 struct srm_bmap_ptrunc_req {
 	struct slash_fidgen	fg;
@@ -452,6 +463,8 @@ struct srm_bmap_ptrunc_req {
 	int32_t			rc;
 	int32_t			_pad;
 } __packed;
+
+#define srm_bmap_ptrunc_rep	srm_generic_rep
 
 /* ------------------------- BEGIN GARBAGE MESSAGES ------------------------- */
 
@@ -496,7 +509,7 @@ struct srm_connect_req {
 struct srm_ping_req {
 } __packed;
 
-#define srm_ping_rep		srm_ping_req
+#define srm_ping_rep		srm_generic_rep
 
 /* ----------------------- BEGIN REPLICATION MESSAGES ----------------------- */
 
@@ -550,6 +563,8 @@ struct srm_repl_schedwk_req {
 	int32_t			rc;
 } __packed;
 
+#define srm_repl_schedwk_rep	srm_generic_rep
+
 struct srm_repl_read_req {
 	struct slash_fidgen	fg;
 	uint64_t		len;		/* #bytes in this message, to find #slivers */
@@ -565,11 +580,15 @@ struct srm_set_newreplpol_req {
 	int32_t			_pad;
 } __packed;
 
+#define srm_set_newreplpol_rep	srm_generic_rep
+
 struct srm_set_bmapreplpol_req {
 	struct slash_fidgen	fg;
 	sl_bmapno_t		bmapno;
 	int32_t			pol;
 } __packed;
+
+#define srm_set_bmapreplpol_rep	srm_generic_rep
 
 /* ----------------------- BEGIN FILE SYSTEM MESSAGES ----------------------- */
 
@@ -728,6 +747,8 @@ struct srm_replrq_req {
 	uint32_t		nrepls;
 	sl_bmapno_t		bmapno;		/* bmap to access or -1 for all */
 } __packed;
+
+#define srm_replrq_rep		srm_generic_rep
 
 struct srm_setattr_req {
 	struct srt_stat		attr;

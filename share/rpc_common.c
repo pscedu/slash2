@@ -117,7 +117,7 @@ slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
 {
 	lnet_process_id_t prid, server_id = { server, PSCRPC_SVR_PID };
 	struct srm_connect_req *mq;
-	struct srm_generic_rep *mp;
+	struct srm_connect_rep *mp;
 	struct pscrpc_request *rq;
 	struct pscrpc_import *imp;
 	int rc;
@@ -159,9 +159,9 @@ slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
 int
 slrpc_issue_ping(struct slashrpc_cservice *csvc)
 {
+	const struct srm_ping_req *mq;
 	struct pscrpc_request *rq;
 	struct srm_ping_rep *mp;
-	struct srm_ping_req *mq;
 	int rc;
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_PING, rq, mq, mp);

@@ -47,7 +47,7 @@ int
 sli_rii_handle_connect(struct pscrpc_request *rq)
 {
 	struct srm_connect_req *mq;
-	struct srm_generic_rep *mp;
+	struct srm_connect_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRII_MAGIC || mq->version != SRII_VERSION)

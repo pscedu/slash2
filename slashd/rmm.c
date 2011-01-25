@@ -56,7 +56,7 @@ slm_rmm_apply_update(struct srt_update_entry *entryp)
 	jnamespace.sjnm_ctime = entryp->ctime;
 	jnamespace.sjnm_namelen = entryp->namelen;
 	memcpy(jnamespace.sjnm_name, entryp->name, entryp->namelen);
-	
+
 	localinfo = res2rpmi(nodeResProf)->rpmi_info;
 	rc = mds_redo_namespace(&jnamespace);
 	if (rc)
@@ -75,7 +75,7 @@ int
 slm_rmm_handle_connect(struct pscrpc_request *rq)
 {
 	struct srm_connect_req *mq;
-	struct srm_generic_rep *mp;
+	struct srm_connect_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRMM_MAGIC || mq->version != SRMM_VERSION)
@@ -91,9 +91,9 @@ int
 slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 {
 	struct srt_update_entry *entryp;
-	struct srm_update_req *mq;
 	struct pscrpc_bulk_desc *desc;
-	struct srm_generic_rep *mp;
+	struct srm_update_req *mq;
+	struct srm_update_rep *mp;
 	struct sl_mds_peerinfo *p;
 	struct sl_resource *res;
 	struct sl_site *site;

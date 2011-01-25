@@ -223,7 +223,7 @@ int
 msrcm_handle_releasebmap(struct pscrpc_request *rq)
 {
 	struct srm_bmap_release_req *mq;
-	struct srm_generic_rep *mp;
+	struct srm_bmap_release_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	return (0);
@@ -233,7 +233,7 @@ int
 msrcm_handle_bmapdio(struct pscrpc_request *rq)
 {
 	struct srm_bmap_dio_req *mq;
-	struct srm_generic_rep *mp;
+	struct srm_bmap_dio_rep *mp;
 	struct bmap_cli_info *bci;
 	struct fidc_membh *f;
 	struct bmapc_memb *b;
