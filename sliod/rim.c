@@ -55,16 +55,15 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	struct srm_reclaim_rep *mp;
 	struct iovec iov;
 	char fidfn[PATH_MAX];
-	uint64_t crc, xid;
-	int16_t count;
 	int i, rc, len;
+	uint64_t crc;
+
+	len = offsetof(struct srt_reclaim_entry, _pad);
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	count = mq->count;
-	xid = mq->xid;
-
-	if (count <= 0 || mq->size > LNET_MTU)
+	if (mq->count <= 0 || mq->count > LNET_MTU / len ||
+	    mq->size < 1 || mq->size > LNET_MTU)
 		return (EINVAL);
 
 	iov.iov_len = mq->size;
@@ -85,8 +84,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	}
 
 	entryp = iov.iov_base;
-	len = offsetof(struct srt_reclaim_entry, _pad);
-	for (i = 0; i < count; i++) {
+	for (i = 0; i < mq->count; i++) {
 		fg_makepath(&entryp->fg, fidfn);
 
 		/*
