@@ -34,6 +34,7 @@
 #include "authbuf.h"
 #include "bmap.h"
 #include "bmap_iod.h"
+#include "fidc_iod.h"
 #include "repl_iod.h"
 #include "rpc_iod.h"
 #include "slashrpc.h"
@@ -88,12 +89,12 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 		fg_makepath(&entryp->fg, fidfn);
 
 		/*
-		 * We do upfront garbage collection, so ENOENT should be fine.
-		 * Also simply creating a file  without any I/O won't create
-		 * a backing file on the I/O server.
+		 * We do upfront garbage collection, so ENOENT should be
+		 * fine.  Also simply creating a file  without any I/O
+		 * won't create a backing file on the I/O server.
 		 *
-		 * Anyway, we don't report an error back to MDS because it can
-		 * do nothing.
+		 * Anyway, we don't report an error back to MDS because
+		 * it can do nothing.
 		 */
 		rc = unlink(fidfn);
 		if (rc == -1)
@@ -111,7 +112,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 int
 sli_rim_handle_repl_schedwk(struct pscrpc_request *rq)
 {
-	struct srm_repl_schedwk_req *mq;
+	const struct srm_repl_schedwk_req *mq;
 	struct srm_repl_schedwk_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -126,19 +127,35 @@ sli_rim_handle_repl_schedwk(struct pscrpc_request *rq)
 }
 
 int
-sli_rim_handle_garbage(struct pscrpc_request *rq)
+sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
 {
-	struct srm_garbage_req *mq;
-	struct srm_garbage_rep *mp;
+	const struct srm_bmap_ptrunc_req *mq;
+	struct srm_bmap_ptrunc_rep *mp;
+	struct fidc_membh *fcmh = NULL;
+	struct bmapc_memb *b = NULL;
+	sl_bmapno_t bno;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
+	mp->rc = sli_fcmh_get(&mq->fg, &fcmh);
+	if (mp->rc)
+		goto out;
+	bno = mq->bmapno;
+	if (mq->crc) {
+		bno++;
+	}
+	if (ftruncate(fcmh_2_fd(fcmh), bno * SLASH_BMAP_SIZE) == -1)
+		mp->rc = errno;
+ out:
+	if (b)
+		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 	return (0);
 }
 
 int
 sli_rim_handle_connect(struct pscrpc_request *rq)
 {
-	struct srm_connect_req *mq;
+	const struct srm_connect_req *mq;
 	struct srm_connect_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -161,8 +178,8 @@ sli_rim_handler(struct pscrpc_request *rq)
 	case SRMT_REPL_SCHEDWK:
 		rc = sli_rim_handle_repl_schedwk(rq);
 		break;
-	case SRMT_GARBAGE:
-		rc = sli_rim_handle_garbage(rq);
+	case SRMT_BMAP_PTRUNC:
+		rc = sli_rim_handle_bmap_ptrunc(rq);
 		break;
 	case SRMT_RECLAIM:
 		rc = sli_rim_handle_reclaim(rq);

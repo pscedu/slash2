@@ -53,7 +53,7 @@ struct psc_lockedlist	 sli_replwkq_active =
 	    srw_active_lentry);
 
 int
-sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
+sli_repl_addwk(uint64_t nid, const struct slash_fidgen *fgp,
     sl_bmapno_t bmapno, sl_bmapgen_t bgen, int len)
 {
 	struct sli_repl_workrq *w;

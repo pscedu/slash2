@@ -62,7 +62,8 @@ struct sli_repl_workrq {
 	struct slvr_ref		*srw_slvr_refs[REPL_MAX_INFLIGHT_SLVRS];
 };
 
-int	sli_repl_addwk(uint64_t, struct slash_fidgen *, sl_bmapno_t, sl_bmapgen_t, int);
+int	sli_repl_addwk(uint64_t, const struct slash_fidgen *,
+		sl_bmapno_t, sl_bmapgen_t, int);
 void	sli_repl_init(void);
 
 void	sli_replwkrq_decref(struct sli_repl_workrq *, int);
