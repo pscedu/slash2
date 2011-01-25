@@ -1630,14 +1630,17 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	EXPORT_LOCK(exp);
 	mexpc = sl_exp_getpri_cli(exp);
 	bml->bml_flags |= BML_EXP;
-	psclist_add_tail(&bml->bml_exp_lentry, &mexpc->mexpc_bmlhd);
+	psclist_del(&bml->bml_exp_lentry,                                                                                                                             
+	    &mexpc->mexpc_bmlhd); 
 	EXPORT_ULOCK(exp);
 
 	rc = mds_bmap_bml_add(bml, rw, prefios);
 	if (rc) {
 		if (rc == -SLERR_BMAP_DIOWAIT) {
-			psclist_del(&bml->bml_exp_lentry,
-			    &mexpc->mexpc_bmlhd);
+			EXPORT_LOCK(exp);
+			psclist_del(&bml->bml_exp_lentry, &mexpc->mexpc_bmlhd);
+			EXPORT_ULOCK(exp);
+
 			mds_bml_free(bml);
 		} else {
 			if (rc == -SLERR_ION_OFFLINE)
