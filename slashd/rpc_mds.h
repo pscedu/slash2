@@ -30,8 +30,8 @@ struct pscrpc_export;
 
 #define SLM_RMM_NTHREADS		8
 #define SLM_RMM_NBUFS			1024
-#define SLM_RMM_BUFSZ			128
-#define SLM_RMM_REPSZ			128
+#define SLM_RMM_BUFSZ			256
+#define SLM_RMM_REPSZ			256
 #define SLM_RMM_SVCNAME			"slmrmm"
 
 #define SLM_RMI_NTHREADS		8
