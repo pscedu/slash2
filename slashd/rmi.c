@@ -301,14 +301,14 @@ slm_rmi_handle_rls_bmap(struct pscrpc_request *rq)
 }
 
 /**
- * slm_rmi_handle_garbage - Handle a GARBAGE reply from ION.
+ * slm_rmi_handle_bmap_ptrunc - Handle a BMAP_PTRUNC reply from ION.
  * @rq: request.
  */
 int
-slm_rmi_handle_garbage(struct pscrpc_request *rq)
+slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 {
-	struct srm_garbage_req *mq;
-	struct srm_garbage_rep *mp;
+	struct srm_bmap_ptrunc_req *mq;
+	struct srm_bmap_ptrunc_rep *mp;
 	struct bmapc_memb *bcm;
 	int tract[NBREPLST];
 	int iosidx;
@@ -397,8 +397,8 @@ slm_rmi_handler(struct pscrpc_request *rq)
 	case SRMT_GETBMAPCRCS:
 		rc = slm_rmi_handle_bmap_getcrcs(rq);
 		break;
-	case SRMT_GARBAGE:
-		rc = slm_rmi_handle_garbage(rq);
+	case SRMT_BMAP_PTRUNC:
+		rc = slm_rmi_handle_bmap_ptrunc(rq);
 		break;
 
 	/* control messages */

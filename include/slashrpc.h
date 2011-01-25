@@ -175,8 +175,8 @@ enum {
  */
 
 struct srm_generic_rep {
-	int32_t			rc;		/* return code, 0 for success or slerrno */
-	int32_t			_pad;
+	 int32_t		rc;		/* return code, 0 for success or slerrno */
+	 int32_t		_pad;
 } __packed;
 
 /* ---------------------- BEGIN ENCAPSULATED MESSAGES ----------------------- */
@@ -213,7 +213,7 @@ struct srt_bmapdesc {
 	sl_ios_id_t		sbd_ios_id;
 	sl_bmapno_t		sbd_bmapno;
 	uint32_t		sbd_flags;
-	uint32_t		sbd__pad;
+	 int32_t		sbd__pad;
 } __packed;
 
 /* SLASH RPC transportably safe structures. */
@@ -281,23 +281,23 @@ struct srt_bmapminseq {
 struct srm_update_req {
 	uint64_t		seqno;
 	uint64_t		crc;		/* CRC of the bulk data */
-	int32_t			size;		/* size of the bulk data to follow */
-	int16_t			count;		/* # of entries to follow */
-	int16_t			siteid;		/* Site ID for tracking purpose */
+	 int32_t		size;		/* size of the bulk data to follow */
+	 int16_t		count;		/* # of entries to follow */
+	 int16_t		siteid;		/* Site ID for tracking purpose */
 /* followed by bulk data of srt_update_entry structures */
 } __packed;
 
 struct srm_update_rep {
-	int32_t			rc;
-	int32_t			_pad;
+	 int32_t		rc;
+	 int32_t		_pad;
 	uint64_t		seqno;		/* the last seqno I have received from you */
 } __packed;
 
 struct srt_update_entry {
 	uint64_t		xid;
 	uint32_t		op;		/* operation type (i.e., enum namespace_operation) */
-	int16_t			namelen;
-	int16_t			_pad;
+	 int16_t		namelen;
+	 int16_t		_pad;
 
 	uint64_t		parent_fid;	/* parent dir FID */
 	uint64_t		target_fid;
@@ -308,8 +308,8 @@ struct srt_update_entry {
 	uint32_t		mask;		/* attribute mask */
 
 	uint32_t		mode;		/* file permission */
-	int32_t			uid;		/* user ID of owner */
-	int32_t			gid;		/* group ID of owner */
+	 int32_t		uid;		/* user ID of owner */
+	 int32_t		gid;		/* group ID of owner */
 	uint64_t		atime;		/* time of last access */
 	uint64_t		atime_ns;
 	uint64_t		mtime;		/* time of last modification */
@@ -327,7 +327,7 @@ struct srm_leasebmap_req {
 	struct slash_fidgen	fg;
 	sl_ios_id_t		prefios;	/* client's preferred IOS ID */
 	sl_bmapno_t		bmapno;		/* Starting bmap index number */
-	int32_t			rw;		/* 'enum rw' value for access */
+	 int32_t		rw;		/* 'enum rw' value for access */
 	uint32_t		flags;		/* see SRM_LEASEBMAPF_* below */
 } __packed;
 
@@ -337,8 +337,8 @@ struct srm_leasebmap_req {
 struct srm_leasebmap_rep {
 	struct srt_bmapdesc	sbd;		/* descriptor for bmap */
 	struct bmap_core_state	bcs;
-	int32_t			rc;		/* 0 for success or slerrno */
-	int32_t			_pad;
+	 int32_t		rc;		/* 0 for success or slerrno */
+	 int32_t		_pad;
 	uint32_t		flags;		/* return SRM_LEASEBMAPF_* success */
 
 	/* fetch fcmh repl table if SRM_LEASEBMAPF_GETREPLTBL */
@@ -352,26 +352,26 @@ struct srm_leasebmap_rep {
 struct srm_getbmap_full_req {
 	struct slash_fidgen	fg;
 	sl_bmapno_t		bmapno;
-	int32_t			rw;
+	 int32_t		rw;
 } __packed;
 
 struct srm_getbmap_full_rep {
 	struct bmap_ondisk	bod;
 	uint64_t		minseq;
-	int32_t			rc;
-	int32_t			_pad;
+	 int32_t		rc;
+	 int32_t		_pad;
 } __packed;
 
 struct srm_bmap_chwrmode_req {
 	struct srt_bmapdesc	sbd;
 	sl_ios_id_t		prefios;	/* preferred I/O system ID (if WRITE) */
-	int32_t			_pad;
+	 int32_t		_pad;
 } __packed;
 
 struct srm_bmap_chwrmode_rep {
 	struct srt_bmapdesc	sbd;
-	int32_t			rc;
-	int32_t			_pad;
+	 int32_t		rc;
+	 int32_t		_pad;
 } __packed;
 
 struct srm_bmap_dio_req {
@@ -380,7 +380,7 @@ struct srm_bmap_dio_req {
 	uint32_t		blkno;
 	uint32_t		dio;
 	uint32_t		mode;
-	int32_t			_pad;
+	 int32_t		_pad;
 } __packed;
 
 #define srm_bmap_dio_rep	srm_generic_rep
@@ -388,7 +388,7 @@ struct srm_bmap_dio_req {
 struct srm_bmap_crcwire {
 	uint64_t		crc;		/* CRC of the corresponding sliver */
 	uint32_t		slot;		/* sliver number in the owning bmap */
-	int32_t			_pad;
+	 int32_t		_pad;
 } __packed;
 
 #define MAX_BMAP_INODE_PAIRS	24		/* ~520 bytes (max) per srm_bmap_crcup */
@@ -399,7 +399,7 @@ struct srm_bmap_crcup {
 	uint32_t		blkno;		/* bmap block number */
 	uint32_t		nups;		/* number of CRC updates */
 	uint32_t		utimgen;
-	uint32_t		_pad;
+	 int32_t		_pad;
 	struct srm_bmap_crcwire	crcs[0];	/* see above, MAX_BMAP_INODE_PAIRS max */
 } __packed;
 
@@ -415,15 +415,15 @@ struct srm_bmap_crcwrt_req {
 #define SRM_BMAPCRCWRT_PTRUNC	(1 << 0)	/* in response to partial trunc CRC recalc */
 
 struct srm_bmap_crcwrt_rep {
-	int32_t			crcup_rc[MAX_BMAP_NCRC_UPDATES];
-	int32_t			rc;
-	int32_t			_pad;
+	 int32_t		crcup_rc[MAX_BMAP_NCRC_UPDATES];
+	 int32_t		rc;
+	 int32_t		_pad;
 } __packed;
 
 struct srm_bmap_iod_get {
 	uint64_t		fid;
 	uint32_t		blkno;
-	int32_t			_pad;
+	 int32_t		_pad;
 } __packed;
 
 struct srm_bmap_id {
@@ -439,18 +439,18 @@ struct srm_bmap_id {
 struct srm_bmap_release_req {
 	struct srm_bmap_id	bmaps[MAX_BMAP_RELEASE];
 	uint32_t		nbmaps;
-	int32_t			_pad;
+	 int32_t		_pad;
 } __packed;
 
 struct srm_bmap_release_rep {
-	int32_t			bidrc[MAX_BMAP_RELEASE];
-	int32_t			rc;
-	int32_t			_pad;
+	 int32_t		bidrc[MAX_BMAP_RELEASE];
+	 int32_t		rc;
+	 int32_t		_pad;
 } __packed;
 
 struct srm_getbmapminseq_req {		/* XXX use ping */
-	int32_t			rc;
-	int32_t			_pad;
+	 int32_t		rc;
+	 int32_t		_pad;
 } __packed;
 
 #define srm_getbmapminseq_rep	srm_generic_rep
@@ -458,9 +458,11 @@ struct srm_getbmapminseq_req {		/* XXX use ping */
 struct srm_bmap_ptrunc_req {
 	struct slash_fidgen	fg;
 	sl_bmapno_t		bmapno;
-	int32_t			offset;
-	int32_t			rc;
-	int32_t			crc;		/* whether to recompute CRC */
+	sl_bmapgen_t		bgen;
+	 int32_t		offset;
+	 int32_t		rc;
+	 int32_t		crc;		/* whether to recompute CRC */
+	 int32_t		_pad;
 } __packed;
 
 #define srm_bmap_ptrunc_rep	srm_generic_rep
@@ -470,15 +472,15 @@ struct srm_bmap_ptrunc_req {
 struct srm_reclaim_req {
 	uint64_t		xid;
 	uint64_t		crc;		/* CRC of the bulk data */
-	int32_t			size;		/* size of the bulk data to follow */
-	int16_t			count;		/* # of entries to follow */
-	int16_t			ios;		/* ID of the IOS */
+	 int32_t		size;		/* size of the bulk data to follow */
+	 int16_t		count;		/* # of entries to follow */
+	 int16_t		ios;		/* ID of the IOS */
 /* bulk data is array of struct srt_reclaim_entry */
 } __packed;
 
 struct srm_reclaim_rep {
-	int32_t			rc;		/* return code, 0 for success or slerrno */
-	int32_t			_pad;
+	 int32_t		rc;		/* return code, 0 for success or slerrno */
+	 int32_t		_pad;
 	uint64_t		seqno;		/* the last seqno I have received from you */
 } __packed;
 
@@ -493,7 +495,7 @@ struct srt_reclaim_entry {
 struct srm_connect_req {
 	uint64_t		magic;
 	uint32_t		version;
-	int32_t			_pad;
+	 int32_t		_pad;
 } __packed;
 
 #define srm_connect_rep		srm_generic_rep
@@ -509,12 +511,12 @@ struct srm_ping_req {
 struct srm_replst_master_req {
 	struct slash_fidgen	fg;
 	sl_replica_t		repls[SL_MAX_REPLICAS];
-	int32_t			id;		/* user-provided passback value */
-	int32_t			rc;		/* or EOF */
+	 int32_t		id;		/* user-provided passback value */
+	 int32_t		rc;		/* or EOF */
 	uint32_t		nbmaps;		/* # of bmaps in file */
 	uint32_t		newreplpol;	/* default replication policy */
 	uint32_t		nrepls;		/* # of I/O systems in 'repls' */
-	int32_t			_pad;
+	 int32_t		_pad;
 	unsigned char		data[56];	/* slave data here if it fits */
 } __packed;
 
@@ -526,12 +528,12 @@ struct srm_replst_master_req {
  */
 struct srm_replst_slave_req {
 	struct slash_fidgen	fg;
-	int32_t			id;		/* user-provided passback value */
-	int32_t			len;		/* of bulk data */
-	int32_t			rc;
+	 int32_t		id;		/* user-provided passback value */
+	 int32_t		len;		/* of bulk data */
+	 int32_t		rc;
 	uint32_t		nbmaps;		/* # of bmaps in this chunk */
 	sl_bmapno_t		boff;		/* offset into inode of first bmap in bulk */
-	int32_t			_pad;
+	 int32_t		_pad;
 /* bulk data is sections of bcs_repls data */
 } __packed;
 
@@ -552,7 +554,7 @@ struct srm_repl_schedwk_req {
 	sl_bmapno_t		bmapno;
 	sl_bmapgen_t		bgen;
 	uint32_t		len;
-	int32_t			rc;
+	 int32_t		rc;
 } __packed;
 
 #define srm_repl_schedwk_rep	srm_generic_rep
@@ -561,15 +563,15 @@ struct srm_repl_read_req {
 	struct slash_fidgen	fg;
 	uint64_t		len;		/* #bytes in this message, to find #slivers */
 	sl_bmapno_t		bmapno;
-	int32_t			slvrno;
+	 int32_t		slvrno;
 } __packed;
 
 #define srm_repl_read_rep	srm_io_rep
 
 struct srm_set_newreplpol_req {
 	struct slash_fidgen	fg;
-	int32_t			pol;
-	int32_t			_pad;
+	 int32_t		pol;
+	 int32_t		_pad;
 } __packed;
 
 #define srm_set_newreplpol_rep	srm_generic_rep
@@ -577,7 +579,7 @@ struct srm_set_newreplpol_req {
 struct srm_set_bmapreplpol_req {
 	struct slash_fidgen	fg;
 	sl_bmapno_t		bmapno;
-	int32_t			pol;
+	 int32_t		pol;
 } __packed;
 
 #define srm_set_bmapreplpol_rep	srm_generic_rep
@@ -593,14 +595,14 @@ struct srm_create_req {
 	/* parameters for fetching first bmap */
 	sl_ios_id_t		prefios;	/* preferred I/O system ID */
 	uint32_t		flags;		/* see SRM_BMAPF_* flags */
-	int32_t			_pad;
+	 int32_t		_pad;
 } __packed;
 
 struct srm_create_rep {
 	struct srt_stat		cattr;		/* attrs of new file */
 	struct srt_stat		pattr;		/* parent dir attributes */
-	int32_t			rc;		/* 0 for success or slerrno */
-	int32_t			_pad;
+	 int32_t		rc;		/* 0 for success or slerrno */
+	 int32_t		_pad;
 
 	/* parameters for fetching first bmap */
 	uint32_t		rc2;		/* (for LEASEBMAP) 0 or slerrno */
@@ -617,15 +619,15 @@ struct srm_getattr_req {
 
 struct srm_getattr_rep {
 	struct srt_stat		attr;
-	int32_t			rc;
-	int32_t			_pad;
+	 int32_t		rc;
+	 int32_t		_pad;
 } __packed;
 
 struct srm_getattr2_rep {
 	struct srt_stat		cattr;		/* child node */
 	struct srt_stat		pattr;		/* parent dir */
-	int32_t			rc;
-	int32_t			_pad;
+	 int32_t		rc;
+	 int32_t		_pad;
 } __packed;
 
 struct srm_io_req {
@@ -636,7 +638,7 @@ struct srm_io_req {
 	uint32_t		op:1;		/* read/write */
 	uint32_t		size;
 	uint32_t		offset;		/* relative within bmap */
-	int32_t			_pad;
+	 int32_t		_pad;
 /* WRITE data is bulk request. */
 } __packed;
 
@@ -649,7 +651,7 @@ struct srm_io_req {
 #define SRM_IOF_DIO		(1 << 1)
 
 struct srm_io_rep {
-	int32_t			rc;
+	 int32_t		rc;
 	uint32_t		size;
 /* READ data is in bulk reply. */
 } __packed;
@@ -674,7 +676,7 @@ struct srm_mkdir_req {
 	struct slash_fidgen	pfg;		/* parent dir */
 	char			name[SL_NAME_MAX + 1];
 	uint32_t		mode;
-	int32_t			_pad;
+	 int32_t		_pad;
 } __packed;
 
 #define srm_mkdir_rep		srm_getattr2_rep
@@ -698,13 +700,13 @@ struct srm_readdir_req {
 	uint64_t		offset;
 	uint64_t		size;		/* XXX make 32-bit */
 	uint32_t		nstbpref;	/* max prefetched attributes */
-	int32_t			_pad;
+	 int32_t		_pad;
 } __packed;
 
 struct srm_readdir_rep {
 	uint64_t		size;		/* XXX make 32-bit */
 	uint32_t		num;		/* #dirents returned */
-	int32_t			rc;
+	 int32_t		rc;
 /*
  * XXX accompanied by bulk data is (but should not be) in fuse dirent format
  *	and must be 64-bit aligned.
@@ -716,8 +718,8 @@ struct srm_readlink_req {
 } __packed;
 
 struct srm_readlink_rep {
-	int32_t			rc;
-	int32_t			_pad;
+	 int32_t		rc;
+	 int32_t		_pad;
 /* buf is in bulk of size SL_PATH_MAX */
 } __packed;
 
@@ -744,8 +746,8 @@ struct srm_replrq_req {
 
 struct srm_setattr_req {
 	struct srt_stat		attr;
-	int32_t			to_set;		/* see SETATTR_MASKF_* */
-	int32_t			_pad;
+	 int32_t		to_set;		/* see SETATTR_MASKF_* */
+	 int32_t		_pad;
 } __packed;
 
 #define srm_setattr_rep		srm_getattr_rep
@@ -755,8 +757,8 @@ struct srm_statfs_req {
 
 struct srm_statfs_rep {
 	struct srt_statfs	ssfb;
-	int32_t			rc;
-	int32_t			_pad;
+	 int32_t		rc;
+	 int32_t		_pad;
 } __packed;
 
 struct srm_symlink_req {
@@ -764,7 +766,7 @@ struct srm_symlink_req {
 	struct slash_fidgen	pfg;		/* parent dir */
 	char			name[SL_NAME_MAX + 1];
 	uint32_t		linklen;
-	int32_t			_pad;
+	 int32_t		_pad;
 /* link path name is in bulk */
 } __packed;
 

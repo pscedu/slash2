@@ -440,8 +440,8 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	struct slashrpc_cservice *csvc;
 	struct slmupsched_thread *smut;
 	struct resm_mds_info *dst_rmmi;
-	struct srm_garbage_req *mq;
-	struct srm_garbage_rep *mp;
+	struct srm_bmap_ptrunc_req *mq;
+	struct srm_bmap_ptrunc_rep *mp;
 	struct pscrpc_request *rq;
 	struct site_mds_info *smi;
 	struct sl_resm *dst_resm;
