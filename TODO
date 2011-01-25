@@ -188,20 +188,15 @@ in release but I don't see good performance for 'ls -al'.
 - removing the persistence policy on a bmap should mds_repl_delrq()
   for that bmap
 - merge set_bmapreplpol and friends into a single slfattr interface
-- push O_APPEND writes always to EOF
+- push O_APPEND writes always to EOF instead of the the client-sent offset
 
 - add ctl knobs for changing preferred IOS
 - allow multiple preferred IOS servers
 
-- think about routing blips where MDS<->ION is not quite what a ION<->ION
-  can see each, causing unnecessary replication work processing
+- create a separate dir, .slrepls and keep the fids here.  maintain a
+  maximum number of entries at any time in memory from this dir
 
-- implement mknod, link, symlink
-- keep replication queue in .slrepls and keep around a small pool of sl_replrq
-  at any time, enough to attempt to keep all IONs involved in replication saturated
-    - we can't do this because they are shared with PTRUNC now as well as not
-      being able to saturate inter-ION links
-- add ctlapi for bmpc
+- add msctl -s bmpc
 
 ---------------------------------------------------------
 
@@ -311,7 +306,7 @@ API rename
 - when extending fsz, deal with xnbmaps.   just mark bmaps in them as INVALID
 
 - change upsched to do async callbacks
-- does upsched get hung up by recursive repl reqs ?
+- does upsched get hung up by huge recursive repl reqs ?
 
 truncate:
  - next, if the target ptrunc offset falls inside a bmap, do more stuff:
