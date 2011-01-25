@@ -49,7 +49,7 @@
 int
 sli_rim_handle_reclaim(struct pscrpc_request *rq)
 {
-	struct srt_reclaim_entry *entry;
+	struct srt_reclaim_entry *entryp;
 	struct pscrpc_bulk_desc *desc;
 	struct srm_reclaim_req *mq;
 	struct srm_reclaim_rep *mp;
@@ -57,15 +57,14 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	char fidfn[PATH_MAX];
 	uint64_t crc, xid;
 	int16_t count;
-	int i, rc;
+	int i, rc, len;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	count = mq->count;
 	xid = mq->xid;
 
-	if (count <= 0 || mq->size > LNET_MTU ||
-	    count * (int)sizeof(struct srt_reclaim_entry) != mq->size)
+	if (count <= 0 || mq->size > LNET_MTU)
 		return (EINVAL);
 
 	iov.iov_len = mq->size;
@@ -85,9 +84,10 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 		goto out;
 	}
 
-	entry = iov.iov_base;
+	entryp = iov.iov_base;
+	len = offsetof(struct srt_reclaim_entry, _pad);
 	for (i = 0; i < count; i++) {
-		fg_makepath(&entry->fg, fidfn);
+		fg_makepath(&entryp->fg, fidfn);
 
 		/*
 		 * We do upfront garbage collection, so ENOENT should be fine.
@@ -102,8 +102,8 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 			rc = errno;
 
 		psclog_debug("fid="SLPRI_FG", xid=%"PRId64 "rc=%d",
-		    SLPRI_FG_ARGS(&entry->fg), entry->xid, rc);
-		entry++;
+		    SLPRI_FG_ARGS(&entryp->fg), entryp->xid, rc);
+		entryp = PSC_AGP(entryp, len);
 	}
  out:
 	PSCFREE(iov.iov_base);
