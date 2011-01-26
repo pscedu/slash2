@@ -568,6 +568,7 @@ struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {
 PFLCTL_CLI_DEFS;
 
 const char *progname;
+const char *daemon_name = "mount_slash";
 int recursive;
 
 __dead void

@@ -147,6 +147,7 @@ struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {
 PFLCTL_CLI_DEFS;
 
 const char *progname;
+const char *daemon_name = "slashd";
 
 __dead void
 usage(void)
