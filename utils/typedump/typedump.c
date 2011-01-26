@@ -252,7 +252,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_create_rep);
 	PRTYPE(struct srm_create_req);
 	PRTYPE(struct srm_destroy_req);
-	PRTYPE(struct srm_garbage_req);
 	PRTYPE(struct srm_generic_rep);
 	PRTYPE(struct srm_getattr2_rep);
 	PRTYPE(struct srm_getattr_rep);
@@ -617,7 +616,6 @@ main(int argc, char *argv[])
 	PRVAL(SRMT_CONNECT);
 	PRVAL(SRMT_CREATE);
 	PRVAL(SRMT_DESTROY);
-	PRVAL(SRMT_GARBAGE);
 	PRVAL(SRMT_GETATTR);
 	PRVAL(SRMT_GETBMAP);
 	PRVAL(SRMT_GETBMAPCRCS);
