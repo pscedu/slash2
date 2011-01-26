@@ -1059,7 +1059,7 @@ mds_send_batch_update(uint64_t batchno)
 			if (entryp->xid >= peerinfo->sp_xid)
 				break;
 			i--;
-			len = sizeof(struct srt_update_entry) + entryp->namelen;
+			len = offsetof(struct srt_update_entry, _pad) + entryp->namelen;
 			total -= len;
 			entryp = PSC_AGP(entryp, len);
 		} while (total);
@@ -1309,11 +1309,11 @@ mds_send_batch_reclaim(uint64_t batchno)
 		i = count;
 		total = size;
 		entryp = reclaimbuf;
+		len = offsetof(struct srt_reclaim_entry, _pad);
 		do {
 			if (entryp->xid >= iosinfo->si_xid)
 				break;
 			i--;
-			len = sizeof(struct srt_reclaim_entry);
 			total -= len;
 			entryp = PSC_AGP(entryp, len);
 		} while (total);
