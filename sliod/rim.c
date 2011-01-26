@@ -66,7 +66,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	if (mq->size < len || mq->size > LNET_MTU)
 		return (EINVAL);
 
-	if (mq->count != mp->size/len)
+	if (mq->count != mq->size/len)
 		return (EINVAL);
 
 	iov.iov_len = mq->size;
