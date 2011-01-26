@@ -110,7 +110,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	psc_assert(bmap->bcm_flags & BMAP_MDS_CRC_UP);
 
 	FCMH_LOCK(bmap->bcm_fcmh);
-	if (fcmh_2_fsz(bmap->bcm_fcmh) > crcup->fsize) {
+	if (fcmh_2_fsz(bmap->bcm_fcmh) < crcup->fsize) {
 		DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh,
 		    "new fsize %"PRId64, crcup->fsize);
 		mds_fcmh_increase_fsz(bmap->bcm_fcmh, crcup->fsize);
