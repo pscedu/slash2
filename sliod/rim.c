@@ -63,8 +63,10 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	if (mq->count <= 0 || mq->count > LNET_MTU / len ||
-	    mq->size < 1 || mq->size > LNET_MTU)
+	if (mq->size < len || mq->size > LNET_MTU)
+		return (EINVAL);
+
+	if (mq->count != mp->size/len)
 		return (EINVAL);
 
 	iov.iov_len = mq->size;
