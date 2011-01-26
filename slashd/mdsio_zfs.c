@@ -62,7 +62,7 @@ mdsio_fcmh_setattr(struct fidc_membh *f, int setattrflags)
 int
 mdsio_fcmh_refreshattr(struct fidc_membh *f, struct srt_stat *out_sstb)
 {
-	int locked, rc=0;
+	int locked, rc;
 
 	locked = FCMH_RLOCK(f);
 	rc = mdsio_getattr(fcmh_2_mdsio_fid(f), fcmh_2_mdsio_data(f),
@@ -95,8 +95,8 @@ mdsio_bmap_read(struct bmapc_memb *bmap)
 }
 
 /**
- * mdsio_bmap_crc_update - Handle CRC updates for one bmap by pushing the updates
- *     to ZFS and then log it.
+ * mdsio_bmap_crc_update - Handle CRC updates for one bmap by pushing
+ *	the updates to ZFS and then log it.
  */
 int
 mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
@@ -110,10 +110,10 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	psc_assert(bmap->bcm_flags & BMAP_MDS_CRC_UP);
 
 	FCMH_LOCK(bmap->bcm_fcmh);
-	if (fcmh_2_fsz(bmap->bcm_fcmh) != crcup->fsize) {
+	if (fcmh_2_fsz(bmap->bcm_fcmh) > crcup->fsize) {
 		DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh,
 		    "new fsize %"PRId64, crcup->fsize);
-		fcmh_2_fsz(bmap->bcm_fcmh) = crcup->fsize;
+		mds_fcmh_increase_fsz(bmap->bcm_fcmh, crcup->fsize);
 	}
 	utimgen = bmap->bcm_fcmh->fcmh_sstb.sst_utimgen;
 	FCMH_ULOCK(bmap->bcm_fcmh);
@@ -122,7 +122,8 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 
 	if (utimgen < crcup->utimgen)
 		DEBUG_FCMH(PLL_ERROR, bmap->bcm_fcmh,
-		   "utimgen %d < crcup->utimgen %d", utimgen, crcup->utimgen);
+		   "utimgen %d < crcup->utimgen %d",
+		   utimgen, crcup->utimgen);
 
 	crclog.scl_bmap = bmap;
 	crclog.scl_crcup = crcup;
@@ -133,10 +134,10 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 		    crcup->crcs[i].crc;
 
 		bmap->bcm_crcstates[crcup->crcs[i].slot] =
-			BMAP_SLVR_DATA | BMAP_SLVR_CRC;
+		    BMAP_SLVR_DATA | BMAP_SLVR_CRC;
 
-		DEBUG_BMAP(PLL_INFO, bmap, "slot(%d) crc(%"PRIx64")",
-			   crcup->crcs[i].slot, crcup->crcs[i].crc);
+		DEBUG_BMAP(PLL_INFO, bmap, "slot(%d) crc(%"PSCPRIxCRC64")",
+		    crcup->crcs[i].slot, crcup->crcs[i].crc);
 	}
 	BMAPOD_ULOCK(bmdsi);
 
@@ -148,8 +149,8 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	mds_unreserve_slot();
 
 	if (rc) {
-		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: error (rc=%d)",
-			   rc);
+		DEBUG_BMAP(PLL_ERROR, bmap,
+		    "zfsslash2_write: error (rc=%d)", rc);
 	} else if (nb != BMAP_OD_SZ) {
 		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: short I/O");
 		rc = SLERR_SHORTIO;
@@ -180,8 +181,8 @@ mds_bmap_repl_update(struct bmapc_memb *bmap)
 	mds_unreserve_slot();
 
 	if (rc) {
-		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: error (rc=%d)",
-			   rc);
+		DEBUG_BMAP(PLL_ERROR, bmap,
+		    "zfsslash2_write: error (rc=%d)", rc);
 	} else if (nb != BMAP_OD_SZ) {
 		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: short I/O");
 		rc = SLERR_SHORTIO;
@@ -263,8 +264,8 @@ mdsio_bmap_write(struct bmapc_memb *bmap)
 	    SL_BMAP_START_OFF), 0, bmap_2_zfs_fh(bmap), NULL, NULL);
 
 	if (rc) {
-		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: error (rc=%d)",
-			   rc);
+		DEBUG_BMAP(PLL_ERROR, bmap,
+		    "zfsslash2_write: error (rc=%d)", rc);
 	} else if (nb != BMAP_OD_SZ) {
 		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: short I/O");
 		rc = SLERR_SHORTIO;
@@ -308,8 +309,8 @@ mdsio_inode_write(struct slash_inode_handle *i)
 	     SL_INODE_START_OFF, 0, inoh_2_mdsio_data(i), NULL, NULL);
 
 	if (rc) {
-		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_write: error (rc=%d)",
-			   rc);
+		DEBUG_INOH(PLL_ERROR, i,
+		    "zfsslash2_write: error (rc=%d)", rc);
 	} else if (nb != INO_OD_SZ) {
 		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_write: short I/O");
 		rc = SLERR_SHORTIO;
@@ -354,8 +355,8 @@ mdsio_inode_extras_write(struct slash_inode_handle *i)
 	     SL_EXTRAS_START_OFF, 0, inoh_2_mdsio_data(i), NULL, NULL);
 
 	if (rc) {
-		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_write: error (rc=%d)",
-			   rc);
+		DEBUG_INOH(PLL_ERROR, i,
+		    "zfsslash2_write: error (rc=%d)", rc);
 	} else if (nb != INOX_OD_SZ) {
 		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_write: short I/O");
 		rc = SLERR_SHORTIO;

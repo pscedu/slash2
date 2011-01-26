@@ -768,8 +768,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			}
 			FCMH_LOCK(fcmh);
 			if (mq->attr.sst_size >= fcmh_2_fsz(fcmh)) {
-				fcmh_2_fsz(fcmh) = mq->attr.sst_size;
-				// XXX adjust xnbmaps
+				mds_fcmh_increase_fsz(fcmh, mq->attr.sst_size);
 				FCMH_ULOCK(fcmh);
 				INOH_ULOCK(ih);
 				mds_inode_sync(ih);
@@ -780,9 +779,9 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			ih->inoh_ino.ino_ptruncoff = mq->attr.sst_size;
 			ih->inoh_flags |= INOH_INO_DIRTY;
 
-			/* XXX XXX off by one */
-			fcmh->fcmh_sstb.sst_nxbmaps += (fcmh_2_fsz(fcmh) -
-			    mq->attr.sst_size) / SLASH_BMAP_SIZE;
+			fcmh->fcmh_sstb.sst_nxbmaps +=
+			    fcmh_2_fsz(fcmh) / SLASH_BMAP_SIZE -
+			    mq->attr.sst_size / SLASH_BMAP_SIZE;
 			fcmh_2_fsz(fcmh) = mq->attr.sst_size;
 			fcmh_2_ptruncgen(fcmh)++;
 			FCMH_ULOCK(fcmh);

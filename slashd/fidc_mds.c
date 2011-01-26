@@ -36,6 +36,24 @@
 #include "mdsio.h"
 #include "slashd.h"
 
+void
+mds_fcmh_increase_fsz(struct fidc_membh *fcmh, off_t siz)
+{
+	sl_bmapno_t nb;
+	int locked;
+
+	locked = FCMH_RLOCK(fcmh);
+	if (siz > fcmh_2_fsz(fcmh)) {
+		nb = siz / SLASH_BMAP_SIZE -
+		    fcmh_2_fsz(fcmh) / SLASH_BMAP_SIZE;
+		if (nb > fcmh->fcmh_sstb.sst_nxbmaps)
+			nb = fcmh->fcmh_sstb.sst_nxbmaps;
+		fcmh->fcmh_sstb.sst_nxbmaps -= nb;
+		fcmh_2_fsz(fcmh) = siz;
+	}
+	FCMH_URLOCK(fcmh, locked);
+}
+
 int
 slm_fcmh_ctor(struct fidc_membh *fcmh)
 {
@@ -50,8 +68,8 @@ slm_fcmh_ctor(struct fidc_membh *fcmh)
 	if (rc) {
 		fcmh->fcmh_flags |= FCMH_CTOR_FAILED;
 		fmi->fmi_ctor_rc = rc;
-		DEBUG_FCMH(PLL_WARN, fcmh, "mdsio_lookup_slfid failed (rc=%d)",
-			   rc);
+		DEBUG_FCMH(PLL_WARN, fcmh,
+		    "mdsio_lookup_slfid failed (rc=%d)", rc);
 		return (rc);
 	}
 
@@ -91,7 +109,8 @@ slm_fcmh_dtor(struct fidc_membh *fcmh)
 	    S_ISDIR(fcmh->fcmh_sstb.sst_mode)) {
 		/* XXX Need to worry about other modes here */
 		if (!fmi->fmi_ctor_rc) {
-			rc = mdsio_release(&rootcreds, fmi->fmi_mdsio_data);
+			rc = mdsio_release(&rootcreds,
+			    fmi->fmi_mdsio_data);
 			psc_assert(rc == 0);
 		}
 	}
