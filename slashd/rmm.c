@@ -146,8 +146,8 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 		mp->rc = slm_rmm_apply_update(entryp);
 		if (mp->rc)
 			break;
-		len = sizeof(struct srt_update_entry) + entryp->namelen;
-		entryp = (struct srt_update_entry *)((char *)entryp + len);
+		len = offsetof(struct srt_update_entry, _pad) + entryp->namelen;
+		entryp = PSC_AGP(entryp, len);
 	}
 
  out:
