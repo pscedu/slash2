@@ -1268,13 +1268,12 @@ mds_send_batch_reclaim(uint64_t batchno)
 	 * Compress our buffer to reduce RPC traffic.
 	 */
 	entryp = next_entryp = reclaimbuf;
-	len = offsetof(struct srt_reclaim_entry, _pad);
-	size = offsetof(struct srt_reclaim_entry, _pad);
+	len = size = offsetof(struct srt_reclaim_entry, _pad);
 	for (i = 1; i < count; i++) {
 		entryp++;
 		next_entryp = PSC_AGP(next_entryp, len);
 		memmove(next_entryp, entryp, len);
-		size += offsetof(struct srt_reclaim_entry, _pad);
+		size += len;
 	}
 
 	nios = 0;
