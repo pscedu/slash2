@@ -779,6 +779,11 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			ih->inoh_ino.ino_ptruncoff = mq->attr.sst_size;
 			ih->inoh_flags |= INOH_INO_DIRTY;
 
+			/*
+			 * XXX we can't modify this until we are sure
+			 * there are no bmap leases
+			 */
+
 			fcmh->fcmh_sstb.sst_nxbmaps +=
 			    fcmh_2_fsz(fcmh) / SLASH_BMAP_SIZE -
 			    mq->attr.sst_size / SLASH_BMAP_SIZE;
