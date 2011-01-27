@@ -457,7 +457,7 @@ mds_txg_handler(__unusedx uint64_t *txgp, __unusedx void *data, int op)
 int
 mds_replay_handler(struct psc_journal_enthdr *pje)
 {
-	struct slmds_jent_namespace *jnamespace;
+	struct slmds_jent_namespace *sjnm;
 	int rc = 0;
 
 	psc_info("pje=%p pje_xid=%"PRIx64" pje_txg=%"PRIx64,
@@ -477,17 +477,17 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 		rc = mds_redo_ino_addrepl(pje);
 		break;
 	    case MDS_LOG_NAMESPACE:
-		jnamespace = PJE_DATA(pje);
-		psc_assert(jnamespace->sjnm_magic == SJ_NAMESPACE_MAGIC);
-		rc = mds_redo_namespace(jnamespace);
+		sjnm = PJE_DATA(pje);
+		psc_assert(sjnm->sjnm_magic == SJ_NAMESPACE_MAGIC);
+		rc = mds_redo_namespace(sjnm);
 		/*
 		 * If we fail above, we still skip these SLASH2 FIDs here
 		 * in case a client gets confused.
 		 */
-		if (jnamespace->sjnm_op == NS_OP_CREATE ||
-		    jnamespace->sjnm_op == NS_OP_MKDIR ||
-		    jnamespace->sjnm_op == NS_OP_LINK ||
-		    jnamespace->sjnm_op == NS_OP_SYMLINK)
+		if (sjnm->sjnm_op == NS_OP_CREATE ||
+		    sjnm->sjnm_op == NS_OP_MKDIR ||
+		    sjnm->sjnm_op == NS_OP_LINK ||
+		    sjnm->sjnm_op == NS_OP_SYMLINK)
 			slm_get_next_slashid();
 		break;
 	    default:
@@ -581,7 +581,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
     int replay)
 {
 	int size, count, total;
-	struct slmds_jent_namespace *jnamespace;
+	struct slmds_jent_namespace *sjnm;
 	struct srt_update_entry update_entry, *update_entryp;
 	struct srt_reclaim_entry reclaim_entry, *reclaim_entryp;
 	off_t off;
@@ -590,8 +590,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	if (!(pje->pje_type & MDS_LOG_NAMESPACE))
 		return (0);
 
-	jnamespace = PJE_DATA(pje);
-	psc_assert(jnamespace->sjnm_magic == SJ_NAMESPACE_MAGIC);
+	sjnm = PJE_DATA(pje);
+	psc_assert(sjnm->sjnm_magic == SJ_NAMESPACE_MAGIC);
 
 	/*
 	 * Note that distill reclaim before update.  This is the same
@@ -602,12 +602,12 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	 * If the namespace operation needs to reclaim disk space on I/O
 	 * servers, write the information into the reclaim log.
 	 */
-	if (!(jnamespace->sjnm_flag & SJ_NAMESPACE_RECLAIM))
+	if (!(sjnm->sjnm_flag & SJ_NAMESPACE_RECLAIM))
 		goto check_update;
 
-	psc_assert(jnamespace->sjnm_op == NS_OP_SETATTR ||
-	    jnamespace->sjnm_op == NS_OP_UNLINK ||
-	    jnamespace->sjnm_op == NS_OP_SETSIZE);
+	psc_assert(sjnm->sjnm_op == NS_OP_SETATTR ||
+	    sjnm->sjnm_op == NS_OP_UNLINK ||
+	    sjnm->sjnm_op == NS_OP_SETSIZE);
 
 	if (current_reclaim_logfile == -1) {
 		current_reclaim_logfile =
@@ -653,8 +653,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	freelock(&mds_reclaim_lock);
 
 	reclaim_entry.xid = pje->pje_xid;
-	reclaim_entry.fg.fg_fid = jnamespace->sjnm_target_fid;
-	reclaim_entry.fg.fg_gen = jnamespace->sjnm_target_gen;
+	reclaim_entry.fg.fg_fid = sjnm->sjnm_target_fid;
+	reclaim_entry.fg.fg_gen = sjnm->sjnm_target_gen;
 
 	size = write(current_reclaim_logfile, &reclaim_entry,
 	    sizeof(struct srt_reclaim_entry));
@@ -719,23 +719,23 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	freelock(&mds_update_lock);
 
 	update_entry.xid = pje->pje_xid;
-	update_entry.op = jnamespace->sjnm_op;
-	update_entry.target_gen = jnamespace->sjnm_target_gen;
-	update_entry.parent_fid = jnamespace->sjnm_parent_fid;
-	update_entry.target_fid = jnamespace->sjnm_target_fid;
-	update_entry.new_parent_fid = jnamespace->sjnm_new_parent_fid;
+	update_entry.op = sjnm->sjnm_op;
+	update_entry.target_gen = sjnm->sjnm_target_gen;
+	update_entry.parent_fid = sjnm->sjnm_parent_fid;
+	update_entry.target_fid = sjnm->sjnm_target_fid;
+	update_entry.new_parent_fid = sjnm->sjnm_new_parent_fid;
 
-	update_entry.uid = jnamespace->sjnm_uid;
-	update_entry.gid = jnamespace->sjnm_gid;
-	update_entry.atime = jnamespace->sjnm_atime;
-	update_entry.mtime = jnamespace->sjnm_mtime;
-	update_entry.ctime = jnamespace->sjnm_ctime;
-	update_entry.atime_ns = jnamespace->sjnm_atime_ns;
-	update_entry.mtime_ns = jnamespace->sjnm_mtime_ns;
-	update_entry.ctime_ns = jnamespace->sjnm_ctime_ns;
+	update_entry.uid = sjnm->sjnm_uid;
+	update_entry.gid = sjnm->sjnm_gid;
+	update_entry.atime = sjnm->sjnm_atime;
+	update_entry.mtime = sjnm->sjnm_mtime;
+	update_entry.ctime = sjnm->sjnm_ctime;
+	update_entry.atime_ns = sjnm->sjnm_atime_ns;
+	update_entry.mtime_ns = sjnm->sjnm_mtime_ns;
+	update_entry.ctime_ns = sjnm->sjnm_ctime_ns;
 
-	update_entry.namelen = jnamespace->sjnm_namelen;
-	memcpy(update_entry.name, jnamespace->sjnm_name, jnamespace->sjnm_namelen);
+	update_entry.namelen = sjnm->sjnm_namelen;
+	memcpy(update_entry.name, sjnm->sjnm_name, sjnm->sjnm_namelen);
 
 	size = write(current_update_logfile, &update_entry,
 	    sizeof(struct srt_update_entry));
@@ -769,31 +769,31 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
     uint64_t newparent, const struct srt_stat *sstb, int mask,
     const char *name, const char *newname)
 {
-	struct slmds_jent_namespace *jnamespace;
+	struct slmds_jent_namespace *sjnm;
 	size_t rem, len;
 	char *ptr;
 
-	jnamespace = pjournal_get_buf(mdsJournal,
+	sjnm = pjournal_get_buf(mdsJournal,
 	    sizeof(struct slmds_jent_namespace));
-	jnamespace->sjnm_magic = SJ_NAMESPACE_MAGIC;
-	jnamespace->sjnm_op = op;
-	jnamespace->sjnm_parent_fid = parent;
-	jnamespace->sjnm_target_fid = sstb->sst_fid;
-	jnamespace->sjnm_new_parent_fid = newparent;
-	jnamespace->sjnm_mask = mask;
+	sjnm->sjnm_magic = SJ_NAMESPACE_MAGIC;
+	sjnm->sjnm_op = op;
+	sjnm->sjnm_parent_fid = parent;
+	sjnm->sjnm_target_fid = sstb->sst_fid;
+	sjnm->sjnm_new_parent_fid = newparent;
+	sjnm->sjnm_mask = mask;
 
-	jnamespace->sjnm_uid = sstb->sst_uid;
-	jnamespace->sjnm_gid = sstb->sst_gid;
-	jnamespace->sjnm_mode = sstb->sst_mode;
-	jnamespace->sjnm_atime = sstb->sst_atime;
-	jnamespace->sjnm_atime_ns = sstb->sst_atime_ns;
-	jnamespace->sjnm_mtime = sstb->sst_mtime;
-	jnamespace->sjnm_mtime_ns = sstb->sst_mtime_ns;
-	jnamespace->sjnm_ctime = sstb->sst_ctime;
-	jnamespace->sjnm_ctime_ns = sstb->sst_ctime_ns;
-	jnamespace->sjnm_size = sstb->sst_size;
+	sjnm->sjnm_uid = sstb->sst_uid;
+	sjnm->sjnm_gid = sstb->sst_gid;
+	sjnm->sjnm_mode = sstb->sst_mode;
+	sjnm->sjnm_atime = sstb->sst_atime;
+	sjnm->sjnm_atime_ns = sstb->sst_atime_ns;
+	sjnm->sjnm_mtime = sstb->sst_mtime;
+	sjnm->sjnm_mtime_ns = sstb->sst_mtime_ns;
+	sjnm->sjnm_ctime = sstb->sst_ctime;
+	sjnm->sjnm_ctime_ns = sstb->sst_ctime_ns;
+	sjnm->sjnm_size = sstb->sst_size;
 
-	jnamespace->sjnm_flag = 0;
+	sjnm->sjnm_flag = 0;
 	if ((op == NS_OP_UNLINK && sstb->sst_nlink == 1) ||
 	    (op == NS_OP_SETSIZE && sstb->sst_size == 0)) {
 		/*
@@ -801,23 +801,23 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 		 * generation.  Note that changing the attributes of a
 		 * zero-lengh file should NOT trigger this code.
 		 */
-		jnamespace->sjnm_flag |= SJ_NAMESPACE_RECLAIM;
-		jnamespace->sjnm_target_gen = sstb->sst_gen;
+		sjnm->sjnm_flag |= SJ_NAMESPACE_RECLAIM;
+		sjnm->sjnm_target_gen = sstb->sst_gen;
 		if (op == NS_OP_SETSIZE) {
 			psc_assert(sstb->sst_gen >= 1);
-			jnamespace->sjnm_target_gen--;
+			sjnm->sjnm_target_gen--;
 		}
 	}
 
-	jnamespace->sjnm_namelen = 0;
-	ptr = jnamespace->sjnm_name;
+	sjnm->sjnm_namelen = 0;
+	ptr = sjnm->sjnm_name;
 	*ptr = '\0';
-	rem = sizeof(jnamespace->sjnm_name);
+	rem = sizeof(sjnm->sjnm_name);
 	if (name) {
 		psc_assert(rem >= strlen(name) + 1);
 		strlcpy(ptr, name, MIN(rem - 1, SL_NAME_MAX + 1));
 		len = strlen(ptr) + 1;
-		jnamespace->sjnm_namelen += len;
+		sjnm->sjnm_namelen += len;
 		ptr += len;
 		rem -= len;
 	}
@@ -825,13 +825,13 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 		psc_assert(rem >= strlen(newname) + 1);
 		strlcpy(ptr, newname, MIN(rem - 1, SL_NAME_MAX + 1));
 		len = strlen(ptr) + 1;
-		jnamespace->sjnm_namelen += len;
+		sjnm->sjnm_namelen += len;
 	}
 
 	pjournal_add_entry_distill(mdsJournal, txg,
-	    MDS_LOG_NAMESPACE, jnamespace,
+	    MDS_LOG_NAMESPACE, sjnm,
 	    offsetof(struct slmds_jent_namespace, sjnm_name) +
-	    jnamespace->sjnm_namelen);
+	    sjnm->sjnm_namelen);
 }
 
 /**
@@ -1890,89 +1890,89 @@ mds_unreserve_slot(void)
 }
 
 int
-mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
+mds_redo_namespace(struct slmds_jent_namespace *sjnm)
 {
 	int rc, hasname = 1;
 	struct srt_stat sstb;
 	char *newname;
 
 	memset(&sstb, 0, sizeof(sstb));
-	sstb.sst_fid = jnamespace->sjnm_target_fid,
-	sstb.sst_uid = jnamespace->sjnm_uid;
-	sstb.sst_gid = jnamespace->sjnm_gid;
-	sstb.sst_mode = jnamespace->sjnm_mode;
-	sstb.sst_atime = jnamespace->sjnm_atime;
-	sstb.sst_atime_ns = jnamespace->sjnm_atime_ns;
-	sstb.sst_mtime = jnamespace->sjnm_mtime;
-	sstb.sst_mtime_ns = jnamespace->sjnm_mtime_ns;
-	sstb.sst_ctime = jnamespace->sjnm_ctime;
-	sstb.sst_ctime_ns = jnamespace->sjnm_ctime_ns;
-	sstb.sst_size = jnamespace->sjnm_size;
+	sstb.sst_fid = sjnm->sjnm_target_fid,
+	sstb.sst_uid = sjnm->sjnm_uid;
+	sstb.sst_gid = sjnm->sjnm_gid;
+	sstb.sst_mode = sjnm->sjnm_mode;
+	sstb.sst_atime = sjnm->sjnm_atime;
+	sstb.sst_atime_ns = sjnm->sjnm_atime_ns;
+	sstb.sst_mtime = sjnm->sjnm_mtime;
+	sstb.sst_mtime_ns = sjnm->sjnm_mtime_ns;
+	sstb.sst_ctime = sjnm->sjnm_ctime;
+	sstb.sst_ctime_ns = sjnm->sjnm_ctime_ns;
+	sstb.sst_size = sjnm->sjnm_size;
 
 	if (!sstb.sst_fid) {
 		psc_errorx("Unexpected zero SLASH2 FID.");
 		return (EINVAL);
 	}
 
-	jnamespace->sjnm_name[sizeof(jnamespace->sjnm_name) - 1] = '\0';
-	newname = jnamespace->sjnm_name +
-	    strlen(jnamespace->sjnm_name) + 1;
-	if (newname > jnamespace->sjnm_name +
-	    sizeof(jnamespace->sjnm_name) - 1)
-		newname = jnamespace->sjnm_name +
-		    sizeof(jnamespace->sjnm_name) - 1;
+	sjnm->sjnm_name[sizeof(sjnm->sjnm_name) - 1] = '\0';
+	newname = sjnm->sjnm_name +
+	    strlen(sjnm->sjnm_name) + 1;
+	if (newname > sjnm->sjnm_name +
+	    sizeof(sjnm->sjnm_name) - 1)
+		newname = sjnm->sjnm_name +
+		    sizeof(sjnm->sjnm_name) - 1;
 
-	switch (jnamespace->sjnm_op) {
+	switch (sjnm->sjnm_op) {
 	    case NS_OP_CREATE:
 		rc = mdsio_redo_create(
-			jnamespace->sjnm_parent_fid,
-			jnamespace->sjnm_name, &sstb);
+			sjnm->sjnm_parent_fid,
+			sjnm->sjnm_name, &sstb);
 		break;
 	    case NS_OP_MKDIR:
 		rc = mdsio_redo_mkdir(
-			jnamespace->sjnm_parent_fid,
-			jnamespace->sjnm_name, &sstb);
+			sjnm->sjnm_parent_fid,
+			sjnm->sjnm_name, &sstb);
 		break;
 	    case NS_OP_LINK:
 		rc = mdsio_redo_link(
-			jnamespace->sjnm_parent_fid,
-			jnamespace->sjnm_target_fid,
-			jnamespace->sjnm_name, &sstb);
+			sjnm->sjnm_parent_fid,
+			sjnm->sjnm_target_fid,
+			sjnm->sjnm_name, &sstb);
 		break;
 	    case NS_OP_SYMLINK:
 		rc = mdsio_redo_symlink(
-			jnamespace->sjnm_parent_fid,
-			jnamespace->sjnm_target_fid,
-			jnamespace->sjnm_name, newname, &sstb);
+			sjnm->sjnm_parent_fid,
+			sjnm->sjnm_target_fid,
+			sjnm->sjnm_name, newname, &sstb);
 		break;
 	    case NS_OP_RENAME:
 		rc = mdsio_redo_rename(
-			jnamespace->sjnm_parent_fid,
-			jnamespace->sjnm_name,
-			jnamespace->sjnm_new_parent_fid,
+			sjnm->sjnm_parent_fid,
+			sjnm->sjnm_name,
+			sjnm->sjnm_new_parent_fid,
 			newname, &sstb);
 		break;
 	    case NS_OP_UNLINK:
 		rc = mdsio_redo_unlink(
-			jnamespace->sjnm_parent_fid,
-			jnamespace->sjnm_target_fid,
-			jnamespace->sjnm_name, &sstb);
+			sjnm->sjnm_parent_fid,
+			sjnm->sjnm_target_fid,
+			sjnm->sjnm_name, &sstb);
 		break;
 	    case NS_OP_RMDIR:
 		rc = mdsio_redo_rmdir(
-			jnamespace->sjnm_parent_fid,
-			jnamespace->sjnm_target_fid,
-			jnamespace->sjnm_name, &sstb);
+			sjnm->sjnm_parent_fid,
+			sjnm->sjnm_target_fid,
+			sjnm->sjnm_name, &sstb);
 		break;
 	    case NS_OP_SETSIZE:
 	    case NS_OP_SETATTR:
 		rc = mdsio_redo_setattr(
-			jnamespace->sjnm_target_fid,
-			jnamespace->sjnm_mask, &sstb);
+			sjnm->sjnm_target_fid,
+			sjnm->sjnm_mask, &sstb);
 		hasname = 0;
 		break;
 	    default:
-		psc_errorx("Unexpected opcode %d", jnamespace->sjnm_op);
+		psc_errorx("Unexpected opcode %d", sjnm->sjnm_op);
 		hasname = 0;
 		rc = EINVAL;
 		break;
@@ -1980,12 +1980,12 @@ mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
 	if (hasname) {
 		psclog_info("Redo namespace log: op=%d name=%s "
 		    "id=%"PRIx64" rc=%d",
-		    jnamespace->sjnm_op, jnamespace->sjnm_name,
-		    jnamespace->sjnm_target_fid, rc);
+		    sjnm->sjnm_op, sjnm->sjnm_name,
+		    sjnm->sjnm_target_fid, rc);
 	} else {
 		psclog_info("Redo namespace log: op=%d "
 		    "id=%"PRIx64" rc=%d",
-		    jnamespace->sjnm_op, jnamespace->sjnm_target_fid,
+		    sjnm->sjnm_op, sjnm->sjnm_target_fid,
 		    rc);
 	}
 	return (rc);

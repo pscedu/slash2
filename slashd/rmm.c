@@ -45,26 +45,26 @@ int
 slm_rmm_apply_update(struct srt_update_entry *entryp)
 {
 	int rc;
-	struct slmds_jent_namespace jnamespace;
+	struct slmds_jent_namespace sjnm;
 	struct sl_mds_peerinfo *localinfo;
 
-	jnamespace.sjnm_op = entryp->op;
-	jnamespace.sjnm_uid = entryp->uid;
-	jnamespace.sjnm_gid = entryp->gid;
-	jnamespace.sjnm_atime = entryp->atime;
-	jnamespace.sjnm_mtime = entryp->mtime;
-	jnamespace.sjnm_ctime = entryp->ctime;
-	jnamespace.sjnm_namelen = entryp->namelen;
-	memcpy(jnamespace.sjnm_name, entryp->name, entryp->namelen);
+	sjnm.sjnm_op = entryp->op;
+	sjnm.sjnm_uid = entryp->uid;
+	sjnm.sjnm_gid = entryp->gid;
+	sjnm.sjnm_atime = entryp->atime;
+	sjnm.sjnm_mtime = entryp->mtime;
+	sjnm.sjnm_ctime = entryp->ctime;
+	sjnm.sjnm_namelen = entryp->namelen;
+	memcpy(sjnm.sjnm_name, entryp->name, entryp->namelen);
 
 	localinfo = res2rpmi(nodeResProf)->rpmi_info;
-	rc = mds_redo_namespace(&jnamespace);
+	rc = mds_redo_namespace(&sjnm);
 	if (rc)
 		psc_atomic32_inc(&localinfo->sp_stats.ns_stats[NS_DIR_RECV][
-		    jnamespace.sjnm_op][NS_SUM_FAIL]);
+		    sjnm.sjnm_op][NS_SUM_FAIL]);
 	else
 		psc_atomic32_inc(&localinfo->sp_stats.ns_stats[NS_DIR_RECV][
-		    jnamespace.sjnm_op][NS_SUM_SUCC]);
+		    sjnm.sjnm_op][NS_SUM_SUCC]);
 	return (rc);
 }
 
