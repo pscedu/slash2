@@ -90,7 +90,7 @@ mdsio_bmap_read(struct bmapc_memb *bmap)
 	if (rc == 0 && nb != BMAP_OD_SZ)
 		rc = SLERR_SHORTIO;
 
-	DEBUG_BMAP(PLL_TRACE, bmap, "read bmap (rc=%d)", rc);
+	DEBUG_BMAP(PLL_INFO, bmap, "read bmap (rc=%d)", rc);
 	return (rc);
 }
 
@@ -155,7 +155,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: short I/O");
 		rc = SLERR_SHORTIO;
 	}
-	DEBUG_BMAP(PLL_TRACE, bmap, "wrote bmap (rc=%d)", rc);
+	DEBUG_BMAP(PLL_INFO, bmap, "wrote bmap (rc=%d)", rc);
 
 	return (rc);
 }
@@ -163,15 +163,8 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 int
 mds_bmap_repl_update(struct bmapc_memb *bmap)
 {
-	int rc, logchg = 0;
+	int rc;
 	size_t nb;
-
-	BMAPOD_REQRDLOCK(bmap_2_bmdsi(bmap));
-	BMDSI_LOGCHG_CHECK(bmap, logchg);
-	if (!logchg) {
-		BMAPOD_READ_DONE(bmap);
-		return (0);
-	}
 
 	mds_reserve_slot();
 	rc = zfsslash2_write(&rootcreds, bmap_2_ondisk(bmap),
@@ -187,7 +180,7 @@ mds_bmap_repl_update(struct bmapc_memb *bmap)
 		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: short I/O");
 		rc = SLERR_SHORTIO;
 	}
-	DEBUG_BMAP(PLL_TRACE, bmap, "wrote bmap (rc=%d)", rc);
+	DEBUG_BMAP(PLL_INFO, bmap, "wrote bmap (rc=%d)", rc);
 	BMAPOD_READ_DONE(bmap);
 	return (rc);
 }
@@ -270,7 +263,7 @@ mdsio_bmap_write(struct bmapc_memb *bmap)
 		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: short I/O");
 		rc = SLERR_SHORTIO;
 	}
-	DEBUG_BMAP(PLL_TRACE, bmap, "wrote bmap (rc=%d)", rc);
+	DEBUG_BMAP(PLL_INFO, bmap, "wrote bmap (rc=%d)", rc);
 	return (rc);
 }
 
@@ -287,11 +280,11 @@ mdsio_inode_read(struct slash_inode_handle *i)
 	if (rc) {
 		DEBUG_INOH(PLL_ERROR, i, "inode read error %d", rc);
 	} else if (nb != INO_OD_SZ) {
-		DEBUG_INOH(PLL_NOTICE, i, "short read I/O (%zd vs %zd)",
+		DEBUG_INOH(PLL_INFO, i, "short read I/O (%zd vs %zd)",
 		    nb, INO_OD_SZ);
 		rc = SLERR_SHORTIO;
 	} else {
-		DEBUG_INOH(PLL_TRACE, i, "read inode data=%p",
+		DEBUG_INOH(PLL_INFO, i, "read inode data=%p",
 		    inoh_2_mdsio_data(i));
 //		rc = zfsslash2_getattr(inoh_2_fid(i),
 //		    &inoh_2_fsz(i), inoh_2_mdsio_data(i));
@@ -315,7 +308,7 @@ mdsio_inode_write(struct slash_inode_handle *i)
 		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_write: short I/O");
 		rc = SLERR_SHORTIO;
 	} else {
-		DEBUG_INOH(PLL_TRACE, i, "wrote inode (rc=%d) data=%p",
+		DEBUG_INOH(PLL_INFO, i, "wrote inode (rc=%d) data=%p",
 		    rc, inoh_2_mdsio_data(i));
 #ifdef SHITTY_PERFORMANCE
 		rc = zfsslash2_fsync(&rootcreds, 1, inoh_2_mdsio_data(i));
