@@ -517,7 +517,7 @@ int
 mds_open_logfile(uint64_t batchno, int update, int readonly)
 {
 	char log_fn[PATH_MAX];
-	int logfile;
+	int logfd;
 
 	if (update) {
 		xmkfn(log_fn, "%s/%s.%d.%s.%lu", sl_datadir,
@@ -532,8 +532,8 @@ mds_open_logfile(uint64_t batchno, int update, int readonly)
 		/*
 		 * The caller should check the return value.
 		 */
-		logfile = open(log_fn, O_RDONLY);
-		return logfile;
+		logfd = open(log_fn, O_RDONLY);
+		return logfd;
 	}
 
 	/*
@@ -544,20 +544,20 @@ mds_open_logfile(uint64_t batchno, int update, int readonly)
 	 * During replay, we need to read the file first to find out
 	 * the right position, so we can't use O_WRONLY.
 	 */
-	logfile = open(log_fn, O_RDWR | O_SYNC);
-	if (logfile > 0) {
+	logfd = open(log_fn, O_RDWR | O_SYNC);
+	if (logfd > 0) {
 		/*
 		 * During replay, the offset will be determined by the
 		 * xid.
 		 */
-		if (lseek(logfile, 0, SEEK_END) == (off_t)-1)
+		if (lseek(logfd, 0, SEEK_END) == (off_t)-1)
 			psc_warn("lseek");
-		return (logfile);
+		return (logfd);
 	}
-	logfile = open(log_fn, O_CREAT | O_TRUNC | O_WRONLY | O_SYNC, 0600);
-	if (logfile == -1)
+	logfd = open(log_fn, O_CREAT | O_TRUNC | O_WRONLY | O_SYNC, 0600);
+	if (logfd == -1)
 		psc_fatal("Failed to create log file %s", log_fn);
-	return (logfile);
+	return (logfd);
 }
 
 /**
@@ -973,19 +973,19 @@ mds_send_batch_update(uint64_t batchno)
 	struct iovec iov;
 	int i, rc, len, npeers, count, total, didwork=0;
 	uint64_t xid;
-	int logfile, record = 0;
+	int logfd, record = 0;
 	ssize_t size;
 
 	struct sl_resource *_res;
 	struct sl_site *_site;
 	int _siter;
 
-	logfile = mds_open_logfile(batchno, 1, 1);
-	if (logfile == -1)
+	logfd = mds_open_logfile(batchno, 1, 1);
+	if (logfd == -1)
 		psc_fatal("Fail to open update log file, batch = %"PRId64, batchno);
-	size = read(logfile, updatebuf, SLM_UPDATE_BATCH *
+	size = read(logfd, updatebuf, SLM_UPDATE_BATCH *
 	    sizeof(struct srt_update_entry));
-	close(logfile);
+	close(logfd);
 
 	psc_assert(size >= 0);
 	if (size == 0)
@@ -1236,17 +1236,17 @@ mds_send_batch_reclaim(uint64_t batchno)
 	struct sl_resource *res;
 	struct iovec iov;
 	uint64_t xid;
-	int logfile, record = 0;
+	int logfd, record = 0;
 	ssize_t size;
 
 	didwork = 0;
 
-	logfile = mds_open_logfile(batchno, 0, 1);
-	if (logfile == -1)
+	logfd = mds_open_logfile(batchno, 0, 1);
+	if (logfd == -1)
 	    psc_fatal("Fail to open reclaim log file, batch = %"PRId64, batchno);
-	size = read(logfile, reclaimbuf, SLM_RECLAIM_BATCH *
+	size = read(logfd, reclaimbuf, SLM_RECLAIM_BATCH *
 	    sizeof(struct srt_reclaim_entry));
-	close(logfile);
+	close(logfd);
 
 	psc_assert(size >= 0);
 	if (size == 0)
@@ -1650,7 +1650,7 @@ void
 mds_journal_init(void)
 {
 	uint64_t batchno, last_reclaim_xid = 0, last_update_xid = 0, last_distill_xid = 0;
-	int i, ri, nios, count, total, found, npeers, index, logfile;
+	int i, ri, nios, count, total, found, npeers, index, logfd;
 	struct srt_reclaim_entry *reclaim_entryp;
 	struct srt_update_entry *update_entryp;
 	struct sl_mds_peerinfo *peerinfo;
@@ -1719,20 +1719,20 @@ mds_journal_init(void)
 
 	/* Find out the highest reclaim batchno and xid */
 	batchno = mds_reclaim_lwm(1);
-	logfile = mds_open_logfile(batchno, 0, 1);
-	if (logfile == -1) {
+	logfd = mds_open_logfile(batchno, 0, 1);
+	if (logfd == -1) {
 		if (batchno) {
 			batchno--;
-			logfile = mds_open_logfile(batchno, 0, 1);
+			logfd = mds_open_logfile(batchno, 0, 1);
 		}
 	}
-	if (logfile == -1)
+	if (logfd == -1)
 	    psc_fatal("Fail to open reclaim log file, batch = %"PRId64, batchno);
 
 	current_reclaim_batchno = batchno;
 	reclaimbuf = PSCALLOC(SLM_RECLAIM_BATCH * sizeof(struct srt_reclaim_entry));
 
-	size = read(logfile, reclaimbuf,
+	size = read(logfd, reclaimbuf,
 		SLM_RECLAIM_BATCH * sizeof(struct srt_reclaim_entry));
 	psc_assert(size >= 0);
 	psc_assert((size % sizeof(struct srt_reclaim_entry)) == 0);
@@ -1748,7 +1748,7 @@ mds_journal_init(void)
 	current_reclaim_xid = last_reclaim_xid;
 	if (total == SLM_RECLAIM_BATCH)
 		current_reclaim_batchno++;
-	close(logfile);
+	close(logfd);
 
 	last_distill_xid = last_reclaim_xid;
 
@@ -1799,21 +1799,21 @@ mds_journal_init(void)
 
 	/* Find out the highest update batchno and xid */
 	batchno = mds_update_lwm(1);
-	logfile = mds_open_logfile(batchno, 1, 1);
-	if (logfile == -1) {
+	logfd = mds_open_logfile(batchno, 1, 1);
+	if (logfd == -1) {
 		if (batchno) {
 			batchno--;
-			logfile = mds_open_logfile(batchno, 1, 1);
+			logfd = mds_open_logfile(batchno, 1, 1);
 		}
 	}
-	if (logfile == -1)
+	if (logfd == -1)
 	    psc_fatal("Fail to open update log file, batch = %"PRId64, batchno);
 
 	current_update_batchno = batchno;
 	updatebuf = PSCALLOC(SLM_UPDATE_BATCH *
 	    sizeof(struct srt_update_entry));
 
-	size = read(logfile, updatebuf,
+	size = read(logfd, updatebuf,
 	    SLM_UPDATE_BATCH * sizeof(struct srt_update_entry));
 	psc_assert(size >= 0);
 	psc_assert((size % sizeof(struct srt_update_entry)) == 0);
@@ -1829,7 +1829,7 @@ mds_journal_init(void)
 	current_update_xid = last_update_xid;
 	if (total == SLM_UPDATE_BATCH)
 		current_update_batchno++;
-	close(logfile);
+	close(logfd);
 
 	if (last_distill_xid < last_update_xid)
 		last_distill_xid = last_update_xid;
