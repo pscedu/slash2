@@ -92,7 +92,7 @@ slm_fcmh_ctor(struct fidc_membh *fcmh)
 			   "mdsio_opencreate failed (rc=%d)", rc);
 		}
 	} else
-		DEBUG_FCMH(PLL_WARN, fcmh, "special file, no zfs obj");
+		DEBUG_FCMH(PLL_INFO, fcmh, "special file, no zfs obj");
 
 	return (rc);
 }
