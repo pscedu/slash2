@@ -1883,7 +1883,7 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 	FCMH_ULOCK(f);
 
  out:
-	DEBUG_FCMH(PLL_NOTIFY, f, "write: buf=%p rc=%d sz=%zu off=%"PSCPRIdOFFT,
+	DEBUG_FCMH(PLL_INFO, f, "write: buf=%p rc=%d sz=%zu off=%"PSCPRIdOFFT,
 	    buf, rc, size, off);
 	pscfs_reply_write(pfr, size, rc);
 }
@@ -1923,8 +1923,8 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 		rc = 0;
 	}
  out:
-	DEBUG_FCMH(PLL_NOTIFY, f, "read: buf=%p rc=%d sz=%zu off=%"PSCPRIdOFFT,
-	    buf, rc, size, off);
+	DEBUG_FCMH(PLL_INFO, f, "read: buf=%p rc=%d sz=%zu len=%zd "
+		   "off=%"PSCPRIdOFFT, buf, rc, size, len, off);
 	pscfs_reply_read(pfr, buf, len, rc);
 	PSCFREE(buf);
 }
