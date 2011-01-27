@@ -57,6 +57,7 @@ slm_rmm_apply_update(struct srt_update_entry *entryp)
 	sjnm.sjnm_ctime = entryp->ctime;
 	sjnm.sjnm_parent_fid = entryp->parent_fid;
 	sjnm.sjnm_target_fid = entryp->target_fid;
+
 	sjnm.sjnm_namelen = entryp->namelen;
 	sjnm.sjnm_namelen2 = entryp->namelen2;
 	memcpy(sjnm.sjnm_name, entryp->name,
