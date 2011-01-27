@@ -102,10 +102,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			psc_notify("bmapdesc check Okay");
 			break;
 		}
-		psc_notify("bmapdesc mismatch - sbd:"
+		psc_notify("bmapdesc mismatch - mine:"
 			"(%"PRIx64", %"PRIx32"), peer: (%"PRIx64", %"PRIx32")",
-			mq->sbd.sbd_ion_nid, mq->sbd.sbd_ios_id,
-			pp->nid, nodeResm->resm_res->res_id);
+			pp->nid, nodeResm->resm_res->res_id,
+			mq->sbd.sbd_ion_nid, mq->sbd.sbd_ios_id);
 
 	}
 	if (mp->rc) {
