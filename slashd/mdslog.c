@@ -533,7 +533,7 @@ mds_open_logfile(uint64_t batchno, int update, int readonly)
 		 * The caller should check the return value.
 		 */
 		logfd = open(log_fn, O_RDONLY);
-		return logfd;
+		return (logfd);
 	}
 
 	/*
@@ -580,10 +580,10 @@ int
 mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
     int replay)
 {
-	int size, count, total;
-	struct slmds_jent_namespace *sjnm;
 	struct srt_update_entry update_entry, *update_entryp;
 	struct srt_reclaim_entry reclaim_entry, *reclaim_entryp;
+	struct slmds_jent_namespace *sjnm;
+	int size, count, total;
 	off_t off;
 
 	psc_assert(pje->pje_magic == PJE_MAGIC);
@@ -622,7 +622,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 			size = read(current_reclaim_logfile, reclaimbuf,
 			    SLM_RECLAIM_BATCH * sizeof(struct srt_reclaim_entry));
 			if (size == -1)
-			    psc_fatal("Fail to read reclaim log file, batchno = %"PRId64,
+			    psc_fatal("Fail to read reclaim log file, batchno=%"PRId64,
 				current_reclaim_batchno);
 			total = size / sizeof(struct srt_reclaim_entry);
 
@@ -659,7 +659,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	size = write(current_reclaim_logfile, &reclaim_entry,
 	    sizeof(struct srt_reclaim_entry));
 	if (size != sizeof(struct srt_reclaim_entry))
-		psc_fatal("Fail to write reclaim log file, batchno = %"PRId64,
+		psc_fatal("Fail to write reclaim log file, batchno=%"PRId64,
 		    current_reclaim_batchno);
 
 	/* see if we need to close the current reclaim log file */
@@ -688,7 +688,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 			size = read(current_update_logfile, updatebuf,
 			    SLM_UPDATE_BATCH * sizeof(struct srt_update_entry));
 			if (size == -1)
-			    psc_fatal("Fail to read update log file, batchno = %"PRId64,
+			    psc_fatal("Fail to read update log file, batchno=%"PRId64,
 				current_update_batchno);
 			total = size / sizeof(struct srt_update_entry);
 
@@ -718,6 +718,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	current_update_xid = pje->pje_xid;
 	freelock(&mds_update_lock);
 
+	memset(&update_entry, 0, sizeof(update_entry));
 	update_entry.xid = pje->pje_xid;
 	update_entry.op = sjnm->sjnm_op;
 	update_entry.target_gen = sjnm->sjnm_target_gen;
@@ -735,12 +736,14 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	update_entry.ctime_ns = sjnm->sjnm_ctime_ns;
 
 	update_entry.namelen = sjnm->sjnm_namelen;
-	memcpy(update_entry.name, sjnm->sjnm_name, sjnm->sjnm_namelen);
+	update_entry.namelen2 = sjnm->sjnm_namelen2;
+	memcpy(update_entry.name, sjnm->sjnm_name,
+	    sjnm->sjnm_namelen + sjnm->sjnm_namelen2);
 
 	size = write(current_update_logfile, &update_entry,
 	    sizeof(struct srt_update_entry));
 	if (size != sizeof(struct srt_update_entry))
-		psc_fatal("Fail to write update log file, batchno = %"PRId64,
+		psc_fatal("Fail to write update log file, batchno=%"PRId64,
 		    current_update_batchno);
 
 	/* see if we need to close the current update log file */
@@ -770,11 +773,10 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
     const char *name, const char *newname)
 {
 	struct slmds_jent_namespace *sjnm;
-	size_t rem, len;
-	char *ptr;
 
 	sjnm = pjournal_get_buf(mdsJournal,
 	    sizeof(struct slmds_jent_namespace));
+	memset(sjnm, 0, sizeof(*sjnm));
 	sjnm->sjnm_magic = SJ_NAMESPACE_MAGIC;
 	sjnm->sjnm_op = op;
 	sjnm->sjnm_parent_fid = parent;
@@ -793,7 +795,6 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 	sjnm->sjnm_ctime_ns = sstb->sst_ctime_ns;
 	sjnm->sjnm_size = sstb->sst_size;
 
-	sjnm->sjnm_flag = 0;
 	if ((op == NS_OP_UNLINK && sstb->sst_nlink == 1) ||
 	    (op == NS_OP_SETSIZE && sstb->sst_size == 0)) {
 		/*
@@ -809,29 +810,23 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 		}
 	}
 
-	sjnm->sjnm_namelen = 0;
-	ptr = sjnm->sjnm_name;
-	*ptr = '\0';
-	rem = sizeof(sjnm->sjnm_name);
 	if (name) {
-		psc_assert(rem >= strlen(name) + 1);
-		strlcpy(ptr, name, MIN(rem - 1, SL_NAME_MAX + 1));
-		len = strlen(ptr) + 1;
-		sjnm->sjnm_namelen += len;
-		ptr += len;
-		rem -= len;
+		sjnm->sjnm_namelen = strlen(name);
+//		psc_assert(sjnm->sjnm_namelen <= sizeof(sjnm->sjnm_name));
+		memcpy(sjnm->sjnm_name, name, sjnm->sjnm_namelen);
 	}
 	if (newname) {
-		psc_assert(rem >= strlen(newname) + 1);
-		strlcpy(ptr, newname, MIN(rem - 1, SL_NAME_MAX + 1));
-		len = strlen(ptr) + 1;
-		sjnm->sjnm_namelen += len;
+		sjnm->sjnm_namelen2 = strlen(newname);
+		psc_assert(sjnm->sjnm_namelen + sjnm->sjnm_namelen2 <=
+		    sizeof(sjnm->sjnm_name));
+		memcpy(sjnm->sjnm_name + sjnm->sjnm_namelen, newname,
+		    sjnm->sjnm_namelen2);
 	}
 
 	pjournal_add_entry_distill(mdsJournal, txg,
 	    MDS_LOG_NAMESPACE, sjnm,
 	    offsetof(struct slmds_jent_namespace, sjnm_name) +
-	    sjnm->sjnm_namelen);
+	    sjnm->sjnm_namelen + sjnm->sjnm_namelen2);
 }
 
 /**
@@ -962,18 +957,17 @@ mds_update_hwm(int batchno)
 int
 mds_send_batch_update(uint64_t batchno)
 {
+	int i, rc, npeers, count, total, didwork = 0, logfd, record = 0;
 	struct srt_update_entry *entryp, *next_entryp;
-	struct srm_update_req *mq;
+	struct sl_mds_peerinfo *peerinfo;
 	struct slashrpc_cservice *csvc;
 	struct pscrpc_bulk_desc *desc;
-	struct sl_mds_peerinfo *peerinfo;
-	struct srm_generic_rep *mp;
+	struct srm_update_rep *mp;
+	struct srm_update_req *mq;
 	struct pscrpc_request *rq;
 	struct sl_resm *resm;
 	struct iovec iov;
-	int i, rc, len, npeers, count, total, didwork=0;
 	uint64_t xid;
-	int logfd, record = 0;
 	ssize_t size;
 
 	struct sl_resource *_res;
@@ -982,7 +976,7 @@ mds_send_batch_update(uint64_t batchno)
 
 	logfd = mds_open_logfile(batchno, 1, 1);
 	if (logfd == -1)
-		psc_fatal("Fail to open update log file, batch = %"PRId64, batchno);
+		psc_fatal("Fail to open update log file, batchno=%"PRId64, batchno);
 	size = read(logfd, updatebuf, SLM_UPDATE_BATCH *
 	    sizeof(struct srt_update_entry));
 	close(logfd);
@@ -992,7 +986,7 @@ mds_send_batch_update(uint64_t batchno)
 		return (didwork);
 
 	psc_assert((size % sizeof(struct srt_update_entry)) == 0);
-	count = (int) size / (int) sizeof(struct srt_update_entry);
+	count = (int)size / (int)sizeof(struct srt_update_entry);
 
 	/* find the xid associated with the last log entry */
 	entryp = PSC_AGP(updatebuf, (count - 1) *
@@ -1000,17 +994,16 @@ mds_send_batch_update(uint64_t batchno)
 	xid = entryp->xid;
 
 	/*
-	 * Compress our buffer to reduce RPC traffic.
+	 * Trim padding from buffer to reduce RPC traffic.
 	 */
 	entryp = next_entryp = updatebuf;
-	size = offsetof(struct srt_update_entry, _pad) + entryp->namelen;
+	size = UPDATE_ENTRY_LEN(entryp);
 	for (i = 1; i < count; i++) {
-		len = offsetof(struct srt_update_entry, _pad) + next_entryp->namelen;
-		next_entryp = PSC_AGP(next_entryp, len);
 		entryp++;
-		len = offsetof(struct srt_update_entry, _pad) + entryp->namelen;
-		memmove(next_entryp, entryp, len);
-		size += len;
+		next_entryp = PSC_AGP(next_entryp,
+		    UPDATE_ENTRY_LEN(next_entryp));
+		memmove(next_entryp, entryp, UPDATE_ENTRY_LEN(entryp));
+		size += UPDATE_ENTRY_LEN(entryp);
 	}
 
 	npeers = 0;
@@ -1046,7 +1039,8 @@ mds_send_batch_update(uint64_t batchno)
 		/*
 		 * Note that the update xid we can see is not necessarily contiguous.
 		 */
-		if (peerinfo->sp_batchno > batchno || peerinfo->sp_xid > xid) {
+		if (peerinfo->sp_batchno > batchno ||
+		    peerinfo->sp_xid > xid) {
 			didwork++;
 			continue;
 		}
@@ -1059,9 +1053,9 @@ mds_send_batch_update(uint64_t batchno)
 			if (entryp->xid >= peerinfo->sp_xid)
 				break;
 			i--;
-			len = offsetof(struct srt_update_entry, _pad) + entryp->namelen;
-			total -= len;
-			entryp = PSC_AGP(entryp, len);
+			total -= UPDATE_ENTRY_LEN(entryp);
+			entryp = PSC_AGP(entryp,
+			    UPDATE_ENTRY_LEN(entryp));
 		} while (total);
 
 		psc_assert(total);
@@ -1178,10 +1172,10 @@ mds_cursor_thread(__unusedx struct psc_thread *thr)
 		rc = mdsio_write_cursor(&mds_cursor, sizeof(mds_cursor),
 			mds_cursor_handle, mds_update_cursor);
 		if (rc)
-			psc_warnx("failed to update cursor, rc = %d", rc);
+			psc_warnx("failed to update cursor, rc=%d", rc);
 		else
 			psclog_notice("Cursor updated: txg=%"PRId64", xid=%"PRId64
-			    ", fid=0x%"PRIx64", seqno=(%"PRId64", %"PRId64")",
+			    ", fid="SLPRI_FID", seqno=(%"PRId64", %"PRId64")",
 			    mds_cursor.pjc_commit_txg,
 			    mds_cursor.pjc_distill_xid,
 			    mds_cursor.pjc_fid,
@@ -1223,27 +1217,24 @@ mds_open_cursor(void)
 int
 mds_send_batch_reclaim(uint64_t batchno)
 {
-	int i, ri, rc, len, count, nentry, total, nios, didwork;
+	int i, ri, rc, len, count, nentry, total, nios, logfd, didwork = 0, record = 0;
 	struct srt_reclaim_entry *entryp, *next_entryp;
-	struct pscrpc_request *rq = NULL;
 	struct slashrpc_cservice *csvc;
 	struct sl_mds_iosinfo *iosinfo;
 	struct resprof_mds_info *rpmi;
 	struct pscrpc_bulk_desc *desc;
 	struct srm_reclaim_req *mq;
 	struct srm_reclaim_rep *mp;
+	struct pscrpc_request *rq;
 	struct sl_resm *dst_resm;
 	struct sl_resource *res;
 	struct iovec iov;
 	uint64_t xid;
-	int logfd, record = 0;
 	ssize_t size;
-
-	didwork = 0;
 
 	logfd = mds_open_logfile(batchno, 0, 1);
 	if (logfd == -1)
-	    psc_fatal("Fail to open reclaim log file, batch = %"PRId64, batchno);
+	    psc_fatal("Fail to open reclaim log file, batchno=%"PRId64, batchno);
 	size = read(logfd, reclaimbuf, SLM_RECLAIM_BATCH *
 	    sizeof(struct srt_reclaim_entry));
 	close(logfd);
@@ -1257,7 +1248,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 	 * data structure.
 	 */
 	psc_assert((size % sizeof(struct srt_reclaim_entry)) == 0);
-	count = (int) size / (int) sizeof(struct srt_reclaim_entry);
+	count = (int)size / (int)sizeof(struct srt_reclaim_entry);
 
 	/* find the xid associated with the last log entry */
 	entryp = PSC_AGP(reclaimbuf, (count - 1) *
@@ -1265,7 +1256,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 	xid = entryp->xid;
 
 	/*
-	 * Compress our buffer to reduce RPC traffic.
+	 * Trim padding from buffer to reduce RPC traffic.
 	 */
 	entryp = next_entryp = reclaimbuf;
 	len = size = offsetof(struct srt_reclaim_entry, _pad);
@@ -1308,7 +1299,6 @@ mds_send_batch_reclaim(uint64_t batchno)
 		i = count;
 		total = size;
 		entryp = reclaimbuf;
-		len = offsetof(struct srt_reclaim_entry, _pad);
 		do {
 			if (entryp->xid >= iosinfo->si_xid)
 				break;
@@ -1375,8 +1365,8 @@ mds_send_batch_reclaim(uint64_t batchno)
 	 * we can figure out the last distill xid upon recovery).
 	 */
 	if (didwork == nios && count == SLM_RECLAIM_BATCH) {
-		if (batchno >= 1 )
-			mds_remove_logfile(batchno-1, 0);
+		if (batchno >= 1)
+			mds_remove_logfile(batchno - 1, 0);
 	}
 	return (didwork);
 }
@@ -1727,13 +1717,13 @@ mds_journal_init(void)
 		}
 	}
 	if (logfd == -1)
-	    psc_fatal("Fail to open reclaim log file, batch = %"PRId64, batchno);
+	    psc_fatal("Fail to open reclaim log file, batchno=%"PRId64, batchno);
 
 	current_reclaim_batchno = batchno;
 	reclaimbuf = PSCALLOC(SLM_RECLAIM_BATCH * sizeof(struct srt_reclaim_entry));
 
 	size = read(logfd, reclaimbuf,
-		SLM_RECLAIM_BATCH * sizeof(struct srt_reclaim_entry));
+	    SLM_RECLAIM_BATCH * sizeof(struct srt_reclaim_entry));
 	psc_assert(size >= 0);
 	psc_assert((size % sizeof(struct srt_reclaim_entry)) == 0);
 
@@ -1807,7 +1797,7 @@ mds_journal_init(void)
 		}
 	}
 	if (logfd == -1)
-	    psc_fatal("Fail to open update log file, batch = %"PRId64, batchno);
+	    psc_fatal("Fail to open update log file, batchno=%"PRId64, batchno);
 
 	current_update_batchno = batchno;
 	updatebuf = PSCALLOC(SLM_UPDATE_BATCH *
@@ -1892,9 +1882,9 @@ mds_unreserve_slot(void)
 int
 mds_redo_namespace(struct slmds_jent_namespace *sjnm)
 {
-	int rc, hasname = 1;
+	char name[SL_NAME_MAX + 1], newname[SL_NAME_MAX + 1];
 	struct srt_stat sstb;
-	char *newname;
+	int rc, hasname = 1;
 
 	memset(&sstb, 0, sizeof(sstb));
 	sstb.sst_fid = sjnm->sjnm_target_fid,
@@ -1914,61 +1904,49 @@ mds_redo_namespace(struct slmds_jent_namespace *sjnm)
 		return (EINVAL);
 	}
 
-	sjnm->sjnm_name[sizeof(sjnm->sjnm_name) - 1] = '\0';
-	newname = sjnm->sjnm_name +
-	    strlen(sjnm->sjnm_name) + 1;
-	if (newname > sjnm->sjnm_name +
-	    sizeof(sjnm->sjnm_name) - 1)
-		newname = sjnm->sjnm_name +
-		    sizeof(sjnm->sjnm_name) - 1;
+	if (sjnm->sjnm_namelen) {
+		memcpy(name, sjnm->sjnm_name, sjnm->sjnm_namelen);
+		name[sjnm->sjnm_namelen] = '\0';
+	}
+	if (sjnm->sjnm_namelen2) {
+		memcpy(newname, sjnm->sjnm_name + sjnm->sjnm_namelen,
+		    sjnm->sjnm_namelen2);
+		newname[sjnm->sjnm_namelen2] = '\0';
+	}
 
 	switch (sjnm->sjnm_op) {
 	    case NS_OP_CREATE:
-		rc = mdsio_redo_create(
-			sjnm->sjnm_parent_fid,
-			sjnm->sjnm_name, &sstb);
+		rc = mdsio_redo_create(sjnm->sjnm_parent_fid, name,
+		    &sstb);
 		break;
 	    case NS_OP_MKDIR:
-		rc = mdsio_redo_mkdir(
-			sjnm->sjnm_parent_fid,
-			sjnm->sjnm_name, &sstb);
+		rc = mdsio_redo_mkdir(sjnm->sjnm_parent_fid, name,
+		    &sstb);
 		break;
 	    case NS_OP_LINK:
-		rc = mdsio_redo_link(
-			sjnm->sjnm_parent_fid,
-			sjnm->sjnm_target_fid,
-			sjnm->sjnm_name, &sstb);
+		rc = mdsio_redo_link(sjnm->sjnm_parent_fid,
+		    sjnm->sjnm_target_fid, name, &sstb);
 		break;
 	    case NS_OP_SYMLINK:
-		rc = mdsio_redo_symlink(
-			sjnm->sjnm_parent_fid,
-			sjnm->sjnm_target_fid,
-			sjnm->sjnm_name, newname, &sstb);
+		rc = mdsio_redo_symlink(sjnm->sjnm_parent_fid,
+		    sjnm->sjnm_target_fid, name, newname, &sstb);
 		break;
 	    case NS_OP_RENAME:
-		rc = mdsio_redo_rename(
-			sjnm->sjnm_parent_fid,
-			sjnm->sjnm_name,
-			sjnm->sjnm_new_parent_fid,
-			newname, &sstb);
+		rc = mdsio_redo_rename(sjnm->sjnm_parent_fid, name,
+		    sjnm->sjnm_new_parent_fid, newname, &sstb);
 		break;
 	    case NS_OP_UNLINK:
-		rc = mdsio_redo_unlink(
-			sjnm->sjnm_parent_fid,
-			sjnm->sjnm_target_fid,
-			sjnm->sjnm_name, &sstb);
+		rc = mdsio_redo_unlink(sjnm->sjnm_parent_fid,
+		    sjnm->sjnm_target_fid, name, &sstb);
 		break;
 	    case NS_OP_RMDIR:
-		rc = mdsio_redo_rmdir(
-			sjnm->sjnm_parent_fid,
-			sjnm->sjnm_target_fid,
-			sjnm->sjnm_name, &sstb);
+		rc = mdsio_redo_rmdir(sjnm->sjnm_parent_fid,
+		    sjnm->sjnm_target_fid, name, &sstb);
 		break;
 	    case NS_OP_SETSIZE:
 	    case NS_OP_SETATTR:
-		rc = mdsio_redo_setattr(
-			sjnm->sjnm_target_fid,
-			sjnm->sjnm_mask, &sstb);
+		rc = mdsio_redo_setattr(sjnm->sjnm_target_fid,
+		    sjnm->sjnm_mask, &sstb);
 		hasname = 0;
 		break;
 	    default:
@@ -1979,12 +1957,11 @@ mds_redo_namespace(struct slmds_jent_namespace *sjnm)
 	}
 	if (hasname) {
 		psclog_info("Redo namespace log: op=%d name=%s "
-		    "id=%"PRIx64" rc=%d",
-		    sjnm->sjnm_op, sjnm->sjnm_name,
-		    sjnm->sjnm_target_fid, rc);
+		    "fid="SLPRI_FID" rc=%d",
+		    sjnm->sjnm_op, name, sjnm->sjnm_target_fid, rc);
 	} else {
 		psclog_info("Redo namespace log: op=%d "
-		    "id=%"PRIx64" rc=%d",
+		    "fid="SLPRI_FID" rc=%d",
 		    sjnm->sjnm_op, sjnm->sjnm_target_fid,
 		    rc);
 	}

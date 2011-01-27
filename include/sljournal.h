@@ -91,7 +91,6 @@ struct slmds_jent_ino_addrepl {
 	uint32_t		sjir_nrepls;
 } __packed;
 
-
 struct slmds_jent_bmapseq {
 	uint64_t		sjbsq_high_wm;
 	uint64_t		sjbsq_low_wm;
@@ -99,7 +98,7 @@ struct slmds_jent_bmapseq {
 
 #define SJ_NAMESPACE_MAGIC	UINT32_C(0xabcd1234)
 
-#define	SLJ_NAMES_MAX		358
+#define	SLJ_NAMES_MAX		364
 
 #define SJ_NAMESPACE_RECLAIM	0x01
 
@@ -110,9 +109,11 @@ struct slmds_jent_bmapseq {
  * condense them (especially the names) to save network bandwidth.
  */
 struct slmds_jent_namespace {
-	uint32_t		sjnm_magic;			/* debugging */
-	uint16_t		sjnm_op;			/* operation type (i.e., enum namespace_operation) */
-	uint16_t		sjnm_flag;			/* need garbage collection */
+	uint64_t		sjnm_magic;			/* debugging */
+	uint8_t			sjnm_op;			/* operation type (i.e. enum namespace_operation) */
+	uint8_t			sjnm_namelen;			/* NUL not included */
+	uint8_t			sjnm_namelen2;			/* NUL not included */
+	uint8_t			sjnm_flag;			/* need garbage collection */
 
 	uint64_t		sjnm_parent_fid;		/* parent dir FID */
 	uint64_t		sjnm_target_fid;
@@ -123,8 +124,8 @@ struct slmds_jent_namespace {
 	uint32_t		sjnm_mask;			/* attribute mask */
 
 	uint32_t		sjnm_mode;			/* file permission */
-	int32_t			sjnm_uid;			/* user ID of owner */
-	int32_t			sjnm_gid;			/* group ID of owner */
+	 int32_t		sjnm_uid;			/* user ID of owner */
+	 int32_t		sjnm_gid;			/* group ID of owner */
 	uint64_t		sjnm_atime;			/* time of last access */
 	uint64_t		sjnm_atime_ns;
 	uint64_t		sjnm_mtime;			/* time of last modification */
@@ -132,11 +133,9 @@ struct slmds_jent_namespace {
 	uint64_t		sjnm_ctime;			/* time of last status change */
 	uint64_t		sjnm_ctime_ns;
 
-	uint64_t		sjnm_size;			/* total size, in bytes */
+	uint64_t		sjnm_size;			/* file size */
 
-	int16_t			sjnm_namelen;
-	char			sjnm_name[SLJ_NAMES_MAX + 2];	/* one or two names */
-
+	char			sjnm_name[SLJ_NAMES_MAX];	/* one or two names */
 } __packed;
 
 /*

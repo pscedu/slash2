@@ -295,9 +295,10 @@ struct srm_update_rep {
 
 struct srt_update_entry {
 	uint64_t		xid;
-	uint32_t		op;		/* operation type (i.e., enum namespace_operation) */
-	 int16_t		namelen;
-	 int16_t		_pad;
+	uint8_t			op;		/* operation type (i.e. enum namespace_operation) */
+	uint8_t			namelen;	/* NUL not included */
+	uint8_t			namelen2;	/* NUL not included */
+	 int8_t			_pad;
 
 	uint64_t		parent_fid;	/* parent dir FID */
 	uint64_t		target_fid;
@@ -317,9 +318,12 @@ struct srt_update_entry {
 	uint64_t		ctime;		/* time of last status change */
 	uint64_t		ctime_ns;
 
-	uint64_t		size;		/* total size, in bytes */
-	char			name[392];	/* one or two names */
+	uint64_t		size;		/* file size */
+	char			name[396];	/* one or two names */
 } __packed;
+
+#define UPDATE_ENTRY_LEN(e)						\
+	(offsetof(typeof(*(e)), name) + (e)->namelen + (e)->namelen2)
 
 /* -------------------------- BEGIN BMAP MESSAGES --------------------------- */
 

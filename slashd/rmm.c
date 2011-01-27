@@ -44,10 +44,11 @@
 int
 slm_rmm_apply_update(struct srt_update_entry *entryp)
 {
-	int rc;
-	struct slmds_jent_namespace sjnm;
 	struct sl_mds_peerinfo *localinfo;
+	struct slmds_jent_namespace sjnm;
+	int rc;
 
+	memset(&sjnm, 0, sizeof(sjnm));
 	sjnm.sjnm_op = entryp->op;
 	sjnm.sjnm_uid = entryp->uid;
 	sjnm.sjnm_gid = entryp->gid;
@@ -55,7 +56,9 @@ slm_rmm_apply_update(struct srt_update_entry *entryp)
 	sjnm.sjnm_mtime = entryp->mtime;
 	sjnm.sjnm_ctime = entryp->ctime;
 	sjnm.sjnm_namelen = entryp->namelen;
-	memcpy(sjnm.sjnm_name, entryp->name, entryp->namelen);
+	sjnm.sjnm_namelen2 = entryp->namelen2;
+	memcpy(sjnm.sjnm_name, entryp->name,
+	    entryp->namelen + entryp->namelen2);
 
 	localinfo = res2rpmi(nodeResProf)->rpmi_info;
 	rc = mds_redo_namespace(&sjnm);
@@ -135,7 +138,7 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 				break;
 			}
 	if (p == NULL) {
-		psc_info("fail to find site ID %d", mq->siteid);
+		psclog_info("fail to find site ID %d", mq->siteid);
 		mp->rc = EINVAL;
 		goto out;
 	}
@@ -146,7 +149,7 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 		mp->rc = slm_rmm_apply_update(entryp);
 		if (mp->rc)
 			break;
-		len = offsetof(struct srt_update_entry, _pad) + entryp->namelen;
+		len = UPDATE_ENTRY_LEN(entryp);
 		entryp = PSC_AGP(entryp, len);
 	}
 
