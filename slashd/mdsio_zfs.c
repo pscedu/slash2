@@ -163,7 +163,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 int
 mds_bmap_repl_update(struct bmapc_memb *bmap)
 {
-	int rc;
+	int rc, logchg;
 	size_t nb;
 
 	BMAPOD_REQRDLOCK(bmap_2_bmdsi(bmap));
