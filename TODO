@@ -328,3 +328,4 @@ truncate:
 - mds_send_batch_reclaim() should not broadcast to every resm in a res
 - need single interface into changing fcmh_fsz to adjust nxbmaps
 - ensure all errno values in rpc msgs are standardized
+- clear op-* files on slmkjrnl
