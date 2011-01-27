@@ -139,7 +139,7 @@ psc_spinlock_t			 mds_txg_lock = SPINLOCK_INIT;
 static void
 mds_record_update_prog(void)
 {
-	static int index = 0;
+	static int index;
 	struct sl_mds_peerinfo *peerinfo;
 	struct sl_resm *resm;
 	ssize_t size;
@@ -166,7 +166,7 @@ mds_record_update_prog(void)
 static void
 mds_record_reclaim_prog(void)
 {
-	static int index = 0;
+	static int index;
 	struct sl_mds_iosinfo *iosinfo;
 	struct sl_resource *res;
 	ssize_t size;
@@ -269,7 +269,7 @@ mds_redo_bmap_crc(struct psc_journal_enthdr *pje)
 	jcrc = PJE_DATA(pje);
 	memset(&bmap_disk, 0, sizeof(struct bmap_ondisk));
 
-	psc_info("pje_xid=%"PRIx64" pje_txg=%"PRIx64" fid="SLPRI_FID" "
+	psclog_info("pje_xid=%"PRIx64" pje_txg=%"PRIx64" fid="SLPRI_FID" "
 	    "bmapno=%u ncrcs=%d crc[0]=%"PSCPRIxCRC64,
 	    pje->pje_xid, pje->pje_txg, jcrc->sjc_fid, jcrc->sjc_bmapno,
 	    jcrc->sjc_ncrcs, jcrc->sjc_crc[0].crc);
@@ -308,7 +308,7 @@ mds_redo_bmap_crc(struct psc_journal_enthdr *pje)
 		bmap_wire = &jcrc->sjc_crc[i];
 		bmap_disk.bod_crcs[bmap_wire->slot] = bmap_wire->crc;
 		bmap_disk.bod_crcstates[bmap_wire->slot] |=
-			BMAP_SLVR_DATA | BMAP_SLVR_CRC;
+		    BMAP_SLVR_DATA | BMAP_SLVR_CRC;
 	}
 	psc_crc64_calc(&bmap_disk.bod_crc, &bmap_disk, BMAP_OD_CRCSZ);
 
@@ -380,14 +380,15 @@ mds_redo_ino_addrepl(struct psc_journal_enthdr *pje)
 	if (pos >= SL_DEF_REPLICAS) {
 		memset(&inoh_extras, 0, sizeof(inoh_extras));
 
-		rc = mdsio_read(&rootcreds, &inoh_extras, INOX_OD_SZ, &nb,
-		    SL_EXTRAS_START_OFF, mdsio_data);
+		rc = mdsio_read(&rootcreds, &inoh_extras, INOX_OD_SZ,
+		    &nb, SL_EXTRAS_START_OFF, mdsio_data);
 		if (rc)
 			goto out;
 
 		j = pos - SL_DEF_REPLICAS;
 		inoh_extras.inox_repls[j].bs_id = jrir->sjir_ios;
-		psc_crc64_calc(&inoh_extras.inox_crc, &inoh_extras, INOX_OD_CRCSZ);
+		psc_crc64_calc(&inoh_extras.inox_crc, &inoh_extras,
+		    INOX_OD_CRCSZ);
 
 		rc = mdsio_write(&rootcreds, &inoh_extras, INOX_OD_SZ,
 		    &nb, SL_EXTRAS_START_OFF, 0, mdsio_data, NULL,
@@ -460,7 +461,7 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 	struct slmds_jent_namespace *sjnm;
 	int rc = 0;
 
-	psc_info("pje=%p pje_xid=%"PRIx64" pje_txg=%"PRIx64,
+	psclog_info("pje=%p pje_xid=%"PRIx64" pje_txg=%"PRIx64,
 		 pje, pje->pje_xid, pje->pje_txg);
 
 	switch (pje->pje_type & ~(_PJE_FLSHFT - 1)) {
@@ -491,7 +492,7 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 			slm_get_next_slashid();
 		break;
 	    default:
-		psc_fatal("invalid log entry type %d", pje->pje_type);
+		psc_fatalx("invalid log entry type %d", pje->pje_type);
 	}
 	return (rc);
 }
@@ -503,12 +504,12 @@ mds_remove_logfile(uint64_t batchno, int update)
 
 	if (update) {
 		xmkfn(log_fn, "%s/%s.%d.%s.%lu", sl_datadir,
-		    SL_FN_UPDATELOG, batchno,
-		    psc_get_hostname(), mds_cursor.pjc_timestamp);
+		    SL_FN_UPDATELOG, batchno, psc_get_hostname(),
+		    mds_cursor.pjc_timestamp);
 	} else {
 		xmkfn(log_fn, "%s/%s.%d.%s.%lu", sl_datadir,
-		    SL_FN_RECLAIMLOG, batchno,
-		    psc_get_hostname(), mds_cursor.pjc_timestamp);
+		    SL_FN_RECLAIMLOG, batchno, psc_get_hostname(),
+		    mds_cursor.pjc_timestamp);
 	}
 	unlink(log_fn);
 }
@@ -521,12 +522,12 @@ mds_open_logfile(uint64_t batchno, int update, int readonly)
 
 	if (update) {
 		xmkfn(log_fn, "%s/%s.%d.%s.%lu", sl_datadir,
-		    SL_FN_UPDATELOG, batchno,
-		    psc_get_hostname(), mds_cursor.pjc_timestamp);
+		    SL_FN_UPDATELOG, batchno, psc_get_hostname(),
+		    mds_cursor.pjc_timestamp);
 	} else {
 		xmkfn(log_fn, "%s/%s.%d.%s.%lu", sl_datadir,
-		    SL_FN_RECLAIMLOG, batchno,
-		    psc_get_hostname(), mds_cursor.pjc_timestamp);
+		    SL_FN_RECLAIMLOG, batchno, psc_get_hostname(),
+		    mds_cursor.pjc_timestamp);
 	}
 	if (readonly) {
 		/*
@@ -622,7 +623,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 			size = read(current_reclaim_logfile, reclaimbuf,
 			    SLM_RECLAIM_BATCH * sizeof(struct srt_reclaim_entry));
 			if (size == -1)
-			    psc_fatal("Fail to read reclaim log file, batchno=%"PRId64,
+			    psc_fatal("Failed to read reclaim log file, batchno=%"PRId64,
 				current_reclaim_batchno);
 			total = size / sizeof(struct srt_reclaim_entry);
 
@@ -659,7 +660,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	size = write(current_reclaim_logfile, &reclaim_entry,
 	    sizeof(struct srt_reclaim_entry));
 	if (size != sizeof(struct srt_reclaim_entry))
-		psc_fatal("Fail to write reclaim log file, batchno=%"PRId64,
+		psc_fatal("Failed to write reclaim log file, batchno=%"PRId64,
 		    current_reclaim_batchno);
 
 	/* see if we need to close the current reclaim log file */
@@ -688,7 +689,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 			size = read(current_update_logfile, updatebuf,
 			    SLM_UPDATE_BATCH * sizeof(struct srt_update_entry));
 			if (size == -1)
-			    psc_fatal("Fail to read update log file, batchno=%"PRId64,
+			    psc_fatal("Failed to read update log file, batchno=%"PRId64,
 				current_update_batchno);
 			total = size / sizeof(struct srt_update_entry);
 
@@ -743,7 +744,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	size = write(current_update_logfile, &update_entry,
 	    sizeof(struct srt_update_entry));
 	if (size != sizeof(struct srt_update_entry))
-		psc_fatal("Fail to write update log file, batchno=%"PRId64,
+		psc_fatal("Failed to write update log file, batchno=%"PRId64,
 		    current_update_batchno);
 
 	/* see if we need to close the current update log file */
@@ -976,7 +977,8 @@ mds_send_batch_update(uint64_t batchno)
 
 	logfd = mds_open_logfile(batchno, 1, 1);
 	if (logfd == -1)
-		psc_fatal("Fail to open update log file, batchno=%"PRId64, batchno);
+		psc_fatal("Failed to open update log file, "
+		    "batchno=%"PRId64, batchno);
 	size = read(logfd, updatebuf, SLM_UPDATE_BATCH *
 	    sizeof(struct srt_update_entry));
 	close(logfd);
@@ -1234,7 +1236,8 @@ mds_send_batch_reclaim(uint64_t batchno)
 
 	logfd = mds_open_logfile(batchno, 0, 1);
 	if (logfd == -1)
-	    psc_fatal("Fail to open reclaim log file, batchno=%"PRId64, batchno);
+	    psc_fatal("Failed to open reclaim log file, "
+		"batchno=%"PRId64, batchno);
 	size = read(logfd, reclaimbuf, SLM_RECLAIM_BATCH *
 	    sizeof(struct srt_reclaim_entry));
 	close(logfd);
@@ -1675,7 +1678,7 @@ mds_journal_init(void)
 		    psc_get_hostname(), mds_cursor.pjc_timestamp, index);
 		current_reclaim_progfile[index] = open(fn, O_CREAT | O_RDWR | O_SYNC, 0600);
 		if (fstat(current_reclaim_progfile[index], &sb) == -1)
-			psc_fatal("Fail to stat reclaim log file %s", fn);
+			psc_fatal("Failed to stat reclaim log file %s", fn);
 		psc_assert((sb.st_size % sizeof(struct reclaim_prog_entry)) == 0);
 
 		i = count = sb.st_size / sizeof(struct reclaim_prog_entry);
@@ -1717,7 +1720,7 @@ mds_journal_init(void)
 		}
 	}
 	if (logfd == -1)
-	    psc_fatal("Fail to open reclaim log file, batchno=%"PRId64, batchno);
+	    psc_fatal("Failed to open reclaim log file, batchno=%"PRId64, batchno);
 
 	current_reclaim_batchno = batchno;
 	reclaimbuf = PSCALLOC(SLM_RECLAIM_BATCH * sizeof(struct srt_reclaim_entry));
@@ -1755,7 +1758,7 @@ mds_journal_init(void)
 		    psc_get_hostname(), mds_cursor.pjc_timestamp, index);
 		current_update_progfile[index] = open(fn, O_CREAT | O_RDWR | O_SYNC, 0600);
 		if (fstat(current_update_progfile[index], &sb) == -1)
-			psc_fatal("Fail to stat update log file %s", fn);
+			psc_fatal("Failed to stat update log file %s", fn);
 		psc_assert((sb.st_size % sizeof(struct update_prog_entry)) == 0);
 
 		i = count = sb.st_size / sizeof(struct update_prog_entry);
@@ -1797,7 +1800,7 @@ mds_journal_init(void)
 		}
 	}
 	if (logfd == -1)
-	    psc_fatal("Fail to open update log file, batchno=%"PRId64, batchno);
+	    psc_fatal("Failed to open update log file, batchno=%"PRId64, batchno);
 
 	current_update_batchno = batchno;
 	updatebuf = PSCALLOC(SLM_UPDATE_BATCH *
@@ -1840,7 +1843,7 @@ mds_journal_init(void)
 
 	mdsJournal = pjournal_open(res->res_jrnldev);
 	if (mdsJournal == NULL)
-		psc_fatal("Fail to open log file %s", res->res_jrnldev);
+		psc_fatal("Failed to open log file %s", res->res_jrnldev);
 
 	mdsJournal->pj_npeers = npeers;
 	mdsJournal->pj_commit_txg = mds_cursor.pjc_commit_txg;
