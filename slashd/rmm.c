@@ -63,11 +63,11 @@ slm_rmm_apply_update(struct srt_update_entry *entryp)
 	localinfo = res2rpmi(nodeResProf)->rpmi_info;
 	rc = mds_redo_namespace(&sjnm);
 	if (rc)
-		psc_atomic32_inc(&localinfo->sp_stats.ns_stats[NS_DIR_RECV][
-		    sjnm.sjnm_op][NS_SUM_FAIL]);
+		psc_atomic32_inc(&localinfo->sp_stats.ns_stats[NS_DIR_RECV]
+		    [sjnm.sjnm_op][NS_SUM_FAIL]);
 	else
-		psc_atomic32_inc(&localinfo->sp_stats.ns_stats[NS_DIR_RECV][
-		    sjnm.sjnm_op][NS_SUM_SUCC]);
+		psc_atomic32_inc(&localinfo->sp_stats.ns_stats[NS_DIR_RECV]
+		    [sjnm.sjnm_op][NS_SUM_SUCC]);
 	return (rc);
 }
 
