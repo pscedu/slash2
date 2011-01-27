@@ -166,6 +166,13 @@ mds_bmap_repl_update(struct bmapc_memb *bmap)
 	int rc;
 	size_t nb;
 
+	BMAPOD_REQRDLOCK(bmap_2_bmdsi(bmap));
+        BMDSI_LOGCHG_CHECK(bmap, logchg);
+        if (!logchg) {
+                BMAPOD_READ_DONE(bmap);
+                return (0);
+        }
+
 	mds_reserve_slot();
 	rc = zfsslash2_write(&rootcreds, bmap_2_ondisk(bmap),
 	    BMAP_OD_SZ, &nb, (off_t)((BMAP_OD_SZ * bmap->bcm_bmapno) +
