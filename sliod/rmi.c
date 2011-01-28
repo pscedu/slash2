@@ -131,5 +131,5 @@ sli_rmi_read_bminseq(struct pscrpc_request *rq)
 	return;
 
  error:
-	psclog_errorx("no message");
+	psclog_errorx("no message; opc=%d", m ? (int)m->opc : -1);
 }
