@@ -259,7 +259,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw)
 		 *  to mark as dirty after an RPC.
 		 */
 		SLVR_LOCK(s); //ouch.. this may be negatively affecting
-		              // performance.
+			      // performance.
 		for (i = 0; i < nblks; i++) {
 			//psc_assert(psc_vbitmap_get(s->slvr_slab->slb_inuse,
 			//	       sblk + i));
@@ -298,17 +298,14 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw)
 }
 
 /**
- * slvr_fsbytes_get - read in the blocks which have their respective bits set
- *   in slab bitmap, trying to coalesce where possible.
+ * slvr_fsbytes_get - Read in the blocks which have their respective
+ *	bits set in slab bitmap, trying to coalesce where possible.
  * @s: the sliver.
  */
 int
 slvr_fsbytes_rio(struct slvr_ref *s)
 {
-	int	i;
-	int	rc;
-	int	blk;
-	int	nblks;
+	int i, rc, blk, nblks;
 
 	psc_trace("psc_vbitmap_nfree() = %d",
 		  psc_vbitmap_nfree(s->slvr_slab->slb_inuse));
@@ -394,9 +391,11 @@ slvr_repl_prep(struct slvr_ref *s, int src_or_dst)
 void
 slvr_slab_prep(struct slvr_ref *s, enum rw rw)
 {
-	struct sl_buffer *tmp=NULL;
+	struct sl_buffer *tmp = NULL;
+
 	//XXX may have to lock bmap instead..
 	SLVR_LOCK(s);
+
  restart:
 	/* slvr_lookup() must pin all slvrs to avoid racing with
 	 *   the reaper.
@@ -415,7 +414,7 @@ slvr_slab_prep(struct slvr_ref *s, enum rw rw)
 			 *   in the pool reaper.  To do this we
 			 *   must first allocate to a tmp pointer.
 			 */
-		getbuf:
+ getbuf:
 			SLVR_ULOCK(s);
 
 			tmp = psc_pool_get(slBufsPool);
@@ -442,10 +441,8 @@ slvr_slab_prep(struct slvr_ref *s, enum rw rw)
 		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
 		if (!tmp)
 			goto getbuf;
-		else {
-			s->slvr_slab = tmp;
-			tmp = NULL;
-		}
+		s->slvr_slab = tmp;
+		tmp = NULL;
 
 	} else if (s->slvr_flags & SLVR_SLBFREEING) {
 		DEBUG_SLVR(PLL_INFO, s, "caught slbfreeing");
@@ -462,20 +459,17 @@ slvr_slab_prep(struct slvr_ref *s, enum rw rw)
 }
 
 /**
- * slvr_io_prep - prepare a sliver for an incoming io.  This may entail
+ * slvr_io_prep - Prepare a sliver for an incoming I/O.  This may entail
  *   faulting 32k aligned regions in from the underlying fs.
  * @s: the sliver
  * @off: offset into the slvr (not bmap or file object)
  * @len: len relative to the slvr
- * @rw:  read or write op
+ * @rw: read or write op
  */
 int
 slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw)
 {
-	int		i;
-	int		rc;
-	int		blks;
-	int		unaligned[2] = {-1, -1};
+	int i, rc, blks, unaligned[2] = { -1, -1 };
 
 	SLVR_LOCK(s);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
@@ -550,6 +544,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw)
 		if ((off + len) & SLASH_SLVR_BLKMASK)
 			unaligned[1] = blks;
 
+		/* XXX use psc_vbitmap_setrange() */
 		for (i = blks; i < SLASH_BLKS_PER_SLVR; i++)
 			psc_vbitmap_set(s->slvr_slab->slb_inuse, i);
 	}
@@ -560,7 +555,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw)
 	/* We must have found some work to do.
 	 */
 	psc_assert(psc_vbitmap_nfree(s->slvr_slab->slb_inuse) <
-		   (int)SLASH_BLKS_PER_SLVR);
+		   SLASH_BLKS_PER_SLVR);
 
 	if (s->slvr_flags & SLVR_DATARDY)
 		goto invert;
@@ -649,7 +644,7 @@ slvr_schedule_crc_locked(struct slvr_ref *s)
 }
 
 /**
- * slvr_wio_done - called after a write rpc has completed.  The sliver may
+ * slvr_wio_done - Called after a write RPC has completed.  The sliver may
  *    be FAULTING which is handled separately from DATARDY.  If FAULTING,
  *    this thread must wake up sleepers on the bmap waitq.
  * Notes: conforming with standard lock ordering, this routine drops
@@ -741,7 +736,8 @@ slvr_wio_done(struct slvr_ref *s, uint32_t off, uint32_t len)
 }
 
 /*
- * Lookup or create a sliver reference, ignoring one that is being freed.
+ * slvr_lookup - Lookup or create a sliver reference, ignoring one that
+ *	is being freed.
  */
 struct slvr_ref *
 slvr_lookup(uint32_t num, struct bmap_iod_info *b, enum rw rw)
@@ -755,7 +751,7 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *b, enum rw rw)
 	BIOD_LOCK(b);
 
 	s = SPLAY_FIND(biod_slvrtree, &b->biod_slvrs, &ts);
-	
+
 	if (s) {
 		SLVR_LOCK(s);
 		if (s->slvr_flags & SLVR_FREEING) {
@@ -815,15 +811,15 @@ slvr_remove(struct slvr_ref *s)
 }
 
 /*
- * The reclaim function for slBufsPool.  Note that our
- *   caller psc_pool_get() ensures that we are called exclusviely.
+ * slvr_buffer_reap - The reclaim function for slBufsPool.  Note that
+ *	our caller psc_pool_get() ensures that we are called
+ *	exclusviely.
  */
 int
 slvr_buffer_reap(struct psc_poolmgr *m)
 {
-	struct psc_dynarray	 a;
-	struct slvr_ref		*s;
-	struct slvr_ref		*dummy;
+	struct psc_dynarray a;
+	struct slvr_ref *s, *dummy;
 	int i, n, locked;
 
 	n = 0;
@@ -880,7 +876,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 			psc_assert(!(s->slvr_flags & SLVR_FREEING));
 			psc_assert(s->slvr_slab);
 
-			s->slvr_flags &= ~(SLVR_SLBFREEING|SLVR_DATARDY);
+			s->slvr_flags &= ~(SLVR_SLBFREEING | SLVR_DATARDY);
 
 			DEBUG_SLVR(PLL_DEBUG, s, "freeing slvr slab=%p",
 				   s->slvr_slab);
