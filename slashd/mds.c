@@ -1590,6 +1590,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
     enum rw rw, sl_ios_id_t prefios, struct srt_bmapdesc *sbd,
     struct pscrpc_export *exp, struct bmapc_memb **bmap)
 {
+	struct slashrpc_cservice *csvc;
 	struct bmap_mds_lease *bml;
 	struct slm_exp_cli *mexpc;
 	struct bmapc_memb *b;
@@ -1601,12 +1602,17 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	rc = (f->fcmh_flags & FCMH_IN_PTRUNC) &&
 	    bmapno >= fcmh_2_fsz(f) / SLASH_BMAP_SIZE;
 	FCMH_ULOCK(f);
-	if (rc)
-		/*
-		 * XXX Register client to be awoken with an RPC when the
-		 * truncation is resolved.
-		 */
-		return (EAGAIN);
+	if (rc) {
+		csvc = slm_getclcsvc(exp);
+		FCMH_LOCK(f);
+		if (csvc && (f->fcmh_flags & FCMH_IN_PTRUNC)) {
+			psc_dynarray_add(&fcmh_2_fmi(f)->fmi_ptrunc_clients,
+			    csvc);
+			FCMH_ULOCK(f);
+			return (EAGAIN);
+		}
+		FCMH_ULOCK(f);
+	}
 
 	rc = mds_bmap_load(f, bmapno, &b);
 	if (rc)
@@ -1766,7 +1772,8 @@ slm_ptrunc_core(struct slm_workrq *wkrq)
 				FCMH_LOCK(fcmh);
 				psc_dynarray_add(da, csvc);
 				FCMH_ULOCK(fcmh);
-			}
+			} else
+				sl_csvc_decref(csvc);
 
 			BMAP_LOCK(b);
 		}
