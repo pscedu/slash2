@@ -96,7 +96,7 @@ struct slmds_jent_bmapseq {
 	uint64_t		sjbsq_low_wm;
 } __packed;
 
-#define SJ_NAMESPACE_MAGIC	UINT32_C(0xabcd1234)
+#define SJ_NAMESPACE_MAGIC	UINT64_C(0xabcd12345678dcba)
 
 #define	SLJ_NAMES_MAX		364
 
