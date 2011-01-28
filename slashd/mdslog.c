@@ -978,7 +978,7 @@ mds_send_batch_update(uint64_t batchno)
 	logfd = mds_open_logfile(batchno, 1, 1);
 	if (logfd == -1) {
 		/*
-		 * It is fine that the distill process hasn't written the next 
+		 * It is fine that the distill process hasn't written the next
 		 * log file after closing the old one.
 		 */
 		if (errno != ENOENT) {
@@ -1245,7 +1245,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 	logfd = mds_open_logfile(batchno, 0, 1);
 	if (logfd == -1) {
 		/*
-		 * It is fine that the distill process hasn't written the next 
+		 * It is fine that the distill process hasn't written the next
 		 * log file after closing the old one.
 		 */
 		if (errno != ENOENT) {
@@ -1706,6 +1706,8 @@ mds_journal_init(void)
 			psc_assert(size == count * (int)sizeof(struct reclaim_prog_entry));
 		}
 		for (i = 0; i < count; i++) {
+			if (reclaim_prog_buf[i].res_id == 0)
+				continue;
 			res = libsl_id2res(reclaim_prog_buf[i].res_id);
 			iosinfo = res2rpmi(res)->rpmi_info;
 			if (iosinfo->si_xid < reclaim_prog_buf[i].res_xid)
@@ -1780,6 +1782,8 @@ mds_journal_init(void)
 		}
 
 		for (i = 0; i < count; i++) {
+			if (update_prog_buf[i].res_id == 0)
+				continue;
 			res = libsl_id2res(update_prog_buf[i].res_id);
 			peerinfo = res2rpmi(res)->rpmi_info;
 			if (peerinfo->sp_xid < update_prog_buf[i].res_xid)
