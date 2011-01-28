@@ -229,7 +229,7 @@ struct srt_stat {
 	uint32_t		sst_uid;	/* user ID of owner */
 	uint32_t		sst_gid;	/* group ID of owner */
 	uint64_t		sst_rdev;	/* device ID (if special file) */
-	 int64_t		sst_size;	/* total size, in bytes */
+	uint64_t		sst_size;	/* total size, in bytes */
 	uint64_t		sst_blksize;	/* blocksize for file system I/O */
 	uint64_t		sst_blocks;	/* number of 512B blocks allocated */
 	struct sl_timespec	sst_atim;	/* time of last access */
