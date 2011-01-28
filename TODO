@@ -279,8 +279,6 @@ API rename
 - rename FCMH_CREATE to POPULATE
 
 - upsch items are not getting removed on completion
-- investigate MooseFS, CloudStore, Sector, GlusterFS
-- display FID_ANY/FGEN_ANY as such in logs
 - ensure PINGs only happen every 30 seconds
 - CREATE with mode 0755 doesnt work (check umask?)
 - GETATTR should never return nlinks=0
@@ -293,22 +291,10 @@ API rename
   The UUID could be just a timestamp too.  This would allow admins to
   remove old backing directories at their convenience while not
   compromising data integrity.
-- GARBAGE transition states:
-    (o) confirmation of this truncates metafile
-
-	BMAPOD_MODIFY_START()
-	for (n = nbmaps; n > ptrunc_bmap_no; n--) {
-		set GARBAGE -> INVALID
-		if all INVALID, truncate metafile to bmap n
-		decrement nbmaps
-	}
-	BMAPOD_MODIFY_STOP()
-- when extending fsz, deal with xnbmaps.   just mark bmaps in them as INVALID
 
 - change upsched to do async callbacks
 - does upsched get hung up by huge recursive repl reqs ?
 
-truncate:
  - next, if the target ptrunc offset falls inside a bmap, do more stuff:
     (o) mark the CRC for this bmap as unknown (we don't do this)
 
@@ -325,7 +311,5 @@ truncate:
 - initialize new file repl table from parent dir to help with
   persistence policies
 	- or just tell users to msctl -R everytime...
-- mds_send_batch_reclaim() should not broadcast to every resm in a res
-- need single interface into changing fcmh_fsz to adjust nxbmaps
 - ensure all errno values in rpc msgs are standardized
 - clear op-* files on slmkjrnl
