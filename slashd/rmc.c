@@ -498,24 +498,27 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 int
 slm_rmc_handle_readdir(struct pscrpc_request *rq)
 {
+	struct fidc_membh *fcmh = NULL;
 	struct pscrpc_bulk_desc *desc;
 	struct srm_readdir_req *mq;
 	struct srm_readdir_rep *mp;
-	struct fidc_membh *fcmh;
 	struct iovec iov[2];
 	size_t outsize, nents;
 	int niov;
+
+	iov[0].iov_base = NULL;
+	iov[1].iov_base = NULL;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	mp->rc = slm_fcmh_get(&mq->fg, &fcmh);
 	if (mp->rc)
-		goto out2;
+		goto out;
 
 	if (mq->size > MAX_READDIR_BUFSIZ ||
 	    mq->nstbpref > MAX_READDIR_NENTS) {
 		mp->rc = EINVAL;
-		goto out2;
+		goto out;
 	}
 
 	iov[0].iov_base = PSCALLOC(mq->size);
@@ -541,7 +544,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	    fcmh_2_mdsio_data(fcmh));
 
 	if (mp->rc)
-		goto out1;
+		goto out;
 
 #if 0
 	{
@@ -565,10 +568,9 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	if (desc)
 		pscrpc_free_bulk(desc);
 
- out1:
+ out:
 	PSCFREE(iov[0].iov_base);
 	PSCFREE(iov[1].iov_base);
- out2:
 	if (fcmh)
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 	return (mp->rc);
@@ -582,7 +584,7 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 	struct srm_readlink_rep *mp;
 	struct fidc_membh *fcmh;
 	struct iovec iov;
-	char buf[PATH_MAX];
+	char buf[SL_PATH_MAX];
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slm_fcmh_get(&mq->fg, &fcmh);
@@ -625,14 +627,12 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 
 	op = np = NULL;
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mq->fromlen <= 1 ||
-	    mq->tolen <= 1) {
+	if (mq->fromlen == 0 || mq->tolen == 0) {
 		mp->rc = ENOENT;
 		return (0);
 	}
-	if (mq->fromlen > SL_NAME_MAX || mq->fromlen == 0 ||
-	    mq->tolen > SL_NAME_MAX || mq->tolen == 0) {
-		mp->rc = EINVAL;
+	if (mq->fromlen > SL_NAME_MAX || mq->tolen > SL_NAME_MAX) {
+		mp->rc = ENAMETOOLONG;
 		return (0);
 	}
 
@@ -655,8 +655,9 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 		goto out;
 	pscrpc_free_bulk(desc);
 
-	from[sizeof(from) - 1] = '\0';
-	to[sizeof(to) - 1] = '\0';
+	from[mq->fromlen] = '\0';
+	to[mq->tolen] = '\0';
+
 	/*
 	 * Steps for rename (we may have to perform some steps by sending
 	 * a request to a remote MDS:
@@ -861,12 +862,12 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 int
 slm_rmc_handle_symlink(struct pscrpc_request *rq)
 {
+	char linkname[SL_PATH_MAX];
 	struct pscrpc_bulk_desc *desc;
 	struct srm_symlink_req *mq;
 	struct srm_symlink_rep *mp;
 	struct fidc_membh *p;
 	struct iovec iov;
-	char linkname[PATH_MAX];
 
 	p = NULL;
 
@@ -876,7 +877,7 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 		mp->rc = ENOENT;
 		goto out;
 	}
-	if (mq->linklen >= PATH_MAX) {
+	if (mq->linklen >= SL_PATH_MAX) {
 		mp->rc = ENAMETOOLONG;
 		goto out;
 	}

@@ -1421,8 +1421,8 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	mq->opfg.fg_fid = opinum;
 	mq->npfg.fg_fid = npinum;
 	mq->opfg.fg_gen = mq->npfg.fg_gen = 0;
-	mq->fromlen = strlen(oldname) + 1;
-	mq->tolen = strlen(newname) + 1;
+	mq->fromlen = strlen(oldname);
+	mq->tolen = strlen(newname);
 
 	iov[0].iov_base = (char *)oldname;
 	iov[0].iov_len = mq->fromlen;
@@ -1550,7 +1550,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = 0;
 
-	mq->linklen = strlen(buf) + 1;
+	mq->linklen = strlen(buf);
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	iov.iov_base = (char *)buf;

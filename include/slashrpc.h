@@ -229,7 +229,7 @@ struct srt_stat {
 	uint32_t		sst_uid;	/* user ID of owner */
 	uint32_t		sst_gid;	/* group ID of owner */
 	uint64_t		sst_rdev;	/* device ID (if special file) */
-	uint64_t		sst_size;	/* total size, in bytes */
+	 int64_t		sst_size;	/* total size, in bytes */
 	uint64_t		sst_blksize;	/* blocksize for file system I/O */
 	uint64_t		sst_blocks;	/* number of 512B blocks allocated */
 	struct sl_timespec	sst_atim;	/* time of last access */
@@ -297,8 +297,8 @@ struct srm_update_rep {
 struct srt_update_entry {
 	uint64_t		xid;
 	uint8_t			op;		/* operation type (i.e. enum namespace_operation) */
-	uint8_t			namelen;	/* NUL not included */
-	uint8_t			namelen2;	/* NUL not included */
+	uint8_t			namelen;	/* NUL not counted */
+	uint8_t			namelen2;	/* NUL not counted */
 	 int8_t			_pad;
 
 	uint64_t		parent_fid;	/* parent dir FID */
@@ -737,8 +737,8 @@ struct srm_readlink_rep {
 struct srm_rename_req {
 	struct slash_fidgen	npfg;		/* new parent dir */
 	struct slash_fidgen	opfg;		/* old parent dir */
-	uint32_t		fromlen;
-	uint32_t		tolen;
+	uint32_t		fromlen;	/* NUL not counted */
+	uint32_t		tolen;		/* NUL not counted */
 /* 'from' and 'to' component names are in bulk data without terminating NULs */
 } __packed;
 
@@ -776,7 +776,7 @@ struct srm_symlink_req {
 	struct slash_creds	creds;		/* st_uid owner for new file */
 	struct slash_fidgen	pfg;		/* parent dir */
 	char			name[SL_NAME_MAX + 1];
-	uint32_t		linklen;
+	uint32_t		linklen;	/* NUL not counted */
 	 int32_t		_pad;
 /* link path name is in bulk */
 } __packed;
