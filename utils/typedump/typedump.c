@@ -222,6 +222,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slm_exp_cli);
 	PRTYPE(struct slm_replst_workreq);
 	PRTYPE(struct slm_resmlink);
+	PRTYPE(struct slm_workrq);
 	PRTYPE(struct slmctlmsg_replpair);
 	PRTYPE(struct slmds_jent_bmapseq);
 	PRTYPE(struct slmds_jent_crc);
@@ -248,6 +249,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_bmap_ptrunc_req);
 	PRTYPE(struct srm_bmap_release_rep);
 	PRTYPE(struct srm_bmap_release_req);
+	PRTYPE(struct srm_bmap_wake_req);
 	PRTYPE(struct srm_connect_req);
 	PRTYPE(struct srm_create_rep);
 	PRTYPE(struct srm_create_req);
@@ -517,6 +519,7 @@ main(int argc, char *argv[])
 	PRVAL(FCMH_OPCNT_OPEN);
 	PRVAL(FCMH_OPCNT_UPSCHED);
 	PRVAL(FCMH_OPCNT_WAIT);
+	PRVAL(FCMH_OPCNT_WORKER);
 	PRVAL(INOH_EXTRAS_DIRTY);
 	PRVAL(INOH_HAVE_EXTRAS);
 	PRVAL(INOH_INO_DIRTY);
@@ -597,6 +600,7 @@ main(int argc, char *argv[])
 	PRVAL(SLMTHRT_TIOS);
 	PRVAL(SLMTHRT_UPSCHED);
 	PRVAL(SLMTHRT_USKLNDPL);
+	PRVAL(SLMTHRT_WORKER);
 	PRVAL(SLNCONNT);
 	PRVAL(SLREST_ARCHIVAL_FS);
 	PRVAL(SLREST_CLUSTER_NOSHARE_FS);
@@ -613,6 +617,7 @@ main(int argc, char *argv[])
 	PRVAL(SRMT_BMAPCRCWRT);
 	PRVAL(SRMT_BMAPDIO);
 	PRVAL(SRMT_BMAP_PTRUNC);
+	PRVAL(SRMT_BMAP_WAKE);
 	PRVAL(SRMT_CONNECT);
 	PRVAL(SRMT_CREATE);
 	PRVAL(SRMT_DESTROY);
