@@ -119,6 +119,9 @@ sli_rmi_read_bminseq(struct pscrpc_request *rq)
 	struct srt_bmapminseq *sbms;
 	struct pscrpc_msg *m;
 
+	if (rq->rq_status)
+		return;
+
 	m = rq->rq_repmsg;
 	if (m == NULL)
 		goto error;
