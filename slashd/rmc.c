@@ -682,45 +682,14 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	return (mp->rc);
 }
 
-__static void
-ptrunc_tally_ios(struct bmapc_memb *bcm, int iosidx, int val, void *arg)
-{
-	struct {
-		sl_replica_t	iosv[SL_MAX_REPLICAS];
-		int		nios;
-	} *ios_list = arg;
-	sl_ios_id_t ios_id;
-	int i;
-
-	switch (val) {
-	case BREPLST_VALID:
-	case BREPLST_REPL_SCHED:
-	case BREPLST_REPL_QUEUED:
-		break;
-	default:
-		return;
-	}
-
-	ios_id = bmap_2_repl(bcm, iosidx);
-
-	for (i = 0; i < ios_list->nios; i++)
-		if (ios_list->iosv[i].bs_id == ios_id)
-			return;
-
-	ios_list->iosv[ios_list->nios++].bs_id = ios_id;
-}
-
 int
 slm_rmc_handle_setattr(struct pscrpc_request *rq)
 {
-	int tract[NBREPLST], to_set;
-	struct up_sched_work_item *wk;
+	struct slashrpc_cservice *csvc;
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
 	struct fidc_membh *fcmh;
-	struct bmapc_memb *bcm;
-	struct srt_stat sstb;
-	size_t i;
+	int to_set;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slm_fcmh_get(&mq->attr.sst_fg, &fcmh);
@@ -737,99 +706,33 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			FCMH_LOCK(fcmh);
 			if (fcmh_2_fsz(fcmh) == 0)
 				goto out;
-
 			fcmh_2_gen(fcmh)++;
 			FCMH_ULOCK(fcmh);
 
 			to_set |= SL_SETATTRF_GEN;
-
-			/* XXX: queue changelog updates to every IOS replica */
-
-			sstb.sst_size = SL_BMAP_START_OFF;
-			mp->rc = mdsio_setattr(fcmh_2_mdsio_fid(fcmh),
-			    &sstb, SL_SETATTRF_METASIZE, &rootcreds,
-			    NULL, fcmh_2_mdsio_data(fcmh), NULL);
 		} else {
 			/* partial truncate */
-			struct slash_inode_handle *ih;
-			struct {
-				sl_replica_t	iosv[SL_MAX_REPLICAS];
-				int		nios;
-			} ios_list;
-
-			ios_list.nios = 0;
-
-			ih = fcmh_2_inoh(fcmh);
-			INOH_LOCK(ih);
-			if (ih->inoh_ino.ino_flags & INOF_IN_PTRUNC) {
-				INOH_ULOCK(ih);
+			FCMH_LOCK(fcmh);
+			if (fcmh->fcmh_flags & FCMH_IN_PTRUNC) {
 				mp->rc = EAGAIN;
 				goto out;
 			}
-			FCMH_LOCK(fcmh);
+			fcmh->fcmh_flags |= FCMH_IN_PTRUNC;
 			if (mq->attr.sst_size >= fcmh_2_fsz(fcmh)) {
-				mds_fcmh_increase_fsz(fcmh, mq->attr.sst_size);
 				FCMH_ULOCK(fcmh);
-				INOH_ULOCK(ih);
-				mds_inode_sync(ih);
 				goto apply;
 			}
 
-			ih->inoh_ino.ino_flags |= INOF_IN_PTRUNC;
-			ih->inoh_ino.ino_ptruncoff = mq->attr.sst_size;
-			ih->inoh_flags |= INOH_INO_DIRTY;
+			csvc = slm_getclcsvc(rq->rq_export);
+			psc_dynarray_add(&fcmh_2_fmi(fcmh)->
+			    fmi_ptrunc_clients, csvc);
 
-			/*
-			 * XXX we can't modify this until we are sure
-			 * there are no bmap leases
-			 */
-
+			fcmh_2_ptruncgen(fcmh)++;
 			fcmh->fcmh_sstb.sst_nxbmaps +=
 			    fcmh_2_fsz(fcmh) / SLASH_BMAP_SIZE -
-			    mq->attr.sst_size / SLASH_BMAP_SIZE;
-			fcmh_2_fsz(fcmh) = mq->attr.sst_size;
-			fcmh_2_ptruncgen(fcmh)++;
-			FCMH_ULOCK(fcmh);
-
-			INOH_ULOCK(ih);
-			mds_inode_sync(ih);
-
+			    fcmh->fcmh_sstb.sst_size / SLASH_BMAP_SIZE;
 			to_set |= SL_SETATTRF_PTRUNCGEN;
-
-			brepls_init(tract, -1);
-			tract[BREPLST_VALID] = BREPLST_TRUNCPNDG;
-
-			i = mq->attr.sst_size / SLASH_BMAP_SIZE;
-			if (mq->attr.sst_size % SLASH_BMAP_SIZE) {
-				if (mds_bmap_load(fcmh, i, &bcm) == 0) {
-					mds_repl_bmap_walkcb(bcm,
-					    tract, NULL, 0,
-					    ptrunc_tally_ios,
-					    &ios_list);
-					mds_repl_bmap_rel(bcm);
-				}
-			}
-
-			brepls_init(tract, -1);
-			tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE;
-			tract[BREPLST_REPL_QUEUED] = BREPLST_GARBAGE;
-			tract[BREPLST_VALID] = BREPLST_GARBAGE;
-
-			for (i++; i < fcmh_2_nbmaps(fcmh); i++) {
-				if (mds_bmap_load(fcmh, i, &bcm))
-					continue;
-
-				BHGEN_INCREMENT(bcm);
-				mds_repl_bmap_walkcb(bcm, tract, NULL,
-				    0, ptrunc_tally_ios, &ios_list);
-				mds_repl_bmap_rel(bcm);
-			}
-
-			mp->rc = uswi_findoradd(&fcmh->fcmh_fg, &wk);
-			uswi_enqueue_sites(wk, ios_list.iosv, ios_list.nios);
-			uswi_unref(wk);
-
-			// add rq->peer to completion
+			FCMH_ULOCK(fcmh);
 		}
 	}
  apply:
@@ -840,8 +743,11 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	mp->rc = mdsio_setattr(fcmh_2_mdsio_fid(fcmh), &mq->attr,
 	    to_set, &rootcreds, &mp->attr, fcmh_2_mdsio_data(fcmh),
 	    mds_namespace_log);
+//	mds_fcmh_increase_fsz(fcmh, mq->attr.sst_size);
 
 	if (!mp->rc) {
+		slm_setattr_core(&mq->attr, to_set);
+
 		FCMH_LOCK(fcmh);
 		fcmh->fcmh_sstb = mp->attr;
 		FCMH_ULOCK(fcmh);
@@ -849,10 +755,9 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 
  out:
 	if (fcmh) {
-		if (!mp->rc) {
-			FCMH_RLOCK(fcmh);
-			mp->attr =  fcmh->fcmh_sstb;
-		}
+		FCMH_RLOCK(fcmh);
+		if (mp->rc == 0)
+			mp->attr = fcmh->fcmh_sstb;
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 	}
 	return (0);

@@ -62,6 +62,7 @@ slm_fcmh_ctor(struct fidc_membh *fcmh)
 
 	fmi = fcmh_2_fmi(fcmh);
 	memset(fmi, 0, sizeof(*fmi));
+	psc_dynarray_init(&fmi->fmi_ptrunc_clients);
 
 	rc = mdsio_lookup_slfid(fcmh_2_fid(fcmh), &rootcreds,
 	    &fcmh->fcmh_sstb, &fcmh_2_mdsio_fid(fcmh));
@@ -104,6 +105,8 @@ slm_fcmh_dtor(struct fidc_membh *fcmh)
 	int rc;
 
 	fmi = fcmh_2_fmi(fcmh);
+	psc_assert(psc_dynarray_len(&fmi->fmi_ptrunc_clients) == 0);
+	psc_dynarray_free(&fmi->fmi_ptrunc_clients);
 
 	if (S_ISREG(fcmh->fcmh_sstb.sst_mode) ||
 	    S_ISDIR(fcmh->fcmh_sstb.sst_mode)) {

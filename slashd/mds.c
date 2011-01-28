@@ -42,6 +42,7 @@
 #include "slashd.h"
 #include "slashrpc.h"
 #include "slerr.h"
+#include "up_sched_res.h"
 
 struct odtable				*mdsBmapAssignTable;
 uint64_t				 mdsBmapSequenceNo;
@@ -57,7 +58,6 @@ mds_inode_od_initnew(struct slash_inode_handle *i)
 	/* For now this is a fixed size. */
 	i->inoh_ino.ino_bsz = SLASH_BMAP_SIZE;
 	i->inoh_ino.ino_version = INO_VERSION;
-	i->inoh_ino.ino_flags = 0;
 	i->inoh_ino.ino_nrepls = 0;
 }
 
@@ -1031,7 +1031,8 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 }
 
 /**
- * mds_handle_rls_bmap - handle SRMT_RELEASEBMAP RPC from a client or an I/O server.
+ * mds_handle_rls_bmap - Handle SRMT_RELEASEBMAP RPC from a client or an
+ *	I/O server.
  */
 int
 mds_handle_rls_bmap(struct pscrpc_request *rq, int sliod)
@@ -1331,6 +1332,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
 	if (mq->flags & SRM_BMAPCRCWRT_PTRUNC) {
 		struct slash_inode_handle *ih;
 		int iosidx, tract[NBREPLST];
+		struct slm_workrq *wkrq;
 		uint32_t bpol;
 
 		ih = fcmh_2_inoh(fcmh);
@@ -1362,24 +1364,16 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
 			    resm_site)->smi_mwcond);
 		}
 
-		INOH_LOCK(ih);
-		ih->inoh_ino.ino_flags &= ~INOF_IN_PTRUNC;
-		ih->inoh_ino.ino_ptruncoff = 0;
-		ih->inoh_flags |= INOH_INO_DIRTY;
-		INOH_ULOCK(ih);
-		mds_inode_sync(ih);
-
-#if 0
-		if (nios) {
-			wk = uswi_find(&bcm->bcm_fcmh->fcmh_fg, NULL);
-			uswi_enqueue_sites(wk, iosv, nios);
-			uswi_unref(wk);
-		}
-#endif
-
 		FCMH_LOCK(fcmh);
+		fcmh->fcmh_flags &= ~FCMH_IN_PTRUNC;
 		fcmh_wake_locked(fcmh);
 		FCMH_ULOCK(fcmh);
+
+		wkrq = psc_pool_get(slm_workrq_pool);
+		fcmh_op_start_type(fcmh, FCMH_OPCNT_WORKER);
+		wkrq->wkrq_fcmh = fcmh;
+		wkrq->wkrq_cbf = slm_ptrunc_wake_clients;
+		slm_ptrunc_wake_clients(wkrq);
 	}
 
 	if (fcmh->fcmh_sstb.sst_mode & (S_ISGID | S_ISUID)) {
@@ -1604,8 +1598,8 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	psc_assert(!*bmap);
 
 	FCMH_LOCK(f);
-	rc = (fcmh_2_ino(f)->ino_flags & INOF_IN_PTRUNC) &&
-	    bmapno >= fcmh_2_ino(f)->ino_ptruncoff / SLASH_BMAP_SIZE;
+	rc = (f->fcmh_flags & FCMH_IN_PTRUNC) &&
+	    bmapno >= fcmh_2_fsz(f) / SLASH_BMAP_SIZE;
 	FCMH_ULOCK(f);
 	if (rc)
 		/*
@@ -1638,7 +1632,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 		if (rc == -SLERR_BMAP_DIOWAIT) {
 			EXPORT_LOCK(exp);
 			psclist_del(&bml->bml_exp_lentry,
-			    &mexpc->mexpc_bmlhd); 
+			    &mexpc->mexpc_bmlhd);
 			EXPORT_ULOCK(exp);
 
 			mds_bml_free(bml);
@@ -1658,6 +1652,207 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
  out:
 	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 	return (rc);
+}
+
+void
+slm_setattr_core(struct srt_stat *sstb, int to_set)
+{
+	struct srt_stat metasstb;
+	struct fidc_membh *fcmh;
+	struct slm_workrq *wkrq;
+	int rc;
+
+	if (to_set & PSCFS_SETATTRF_DATASIZE) {
+		rc = slm_fcmh_get(&sstb->sst_fg, &fcmh);
+		psc_assert(rc == 0);
+		if (sstb->sst_size == 0) {
+			/* full truncate - zero all old bmaps */
+			metasstb.sst_size = SL_BMAP_START_OFF;
+			rc = mdsio_setattr(fcmh_2_mdsio_fid(fcmh),
+			    &metasstb, SL_SETATTRF_METASIZE, &rootcreds,
+			    NULL, fcmh_2_mdsio_data(fcmh), NULL);
+			psc_assert(rc == 0);
+		} else {
+			FCMH_LOCK(fcmh);
+			fcmh->fcmh_flags |= FCMH_IN_PTRUNC;
+			FCMH_ULOCK(fcmh);
+
+			/* partial truncate */
+			wkrq = psc_pool_get(slm_workrq_pool);
+			fcmh_op_start_type(fcmh, FCMH_OPCNT_WORKER);
+			wkrq->wkrq_fcmh = fcmh;
+			wkrq->wkrq_cbf = slm_ptrunc_core;
+			lc_add(&slm_workq, wkrq);
+		}
+		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+	}
+}
+
+struct ios_list {
+	sl_replica_t	iosv[SL_MAX_REPLICAS];
+	int		nios;
+};
+
+__static void
+ptrunc_tally_ios(struct bmapc_memb *bcm, int iosidx, int val, void *arg)
+{
+	struct ios_list *ios_list = arg;
+	sl_ios_id_t ios_id;
+	int i;
+
+	switch (val) {
+	case BREPLST_VALID:
+	case BREPLST_REPL_SCHED:
+	case BREPLST_REPL_QUEUED:
+		break;
+	default:
+		return;
+	}
+
+	ios_id = bmap_2_repl(bcm, iosidx);
+
+	for (i = 0; i < ios_list->nios; i++)
+		if (ios_list->iosv[i].bs_id == ios_id)
+			return;
+
+	ios_list->iosv[ios_list->nios++].bs_id = ios_id;
+}
+
+int
+slm_ptrunc_core(struct slm_workrq *wkrq)
+{
+	int rc, wait = 0, tract[NBREPLST];
+	struct srm_bmap_release_req *mq;
+	struct srm_bmap_release_rep *mp;
+	struct up_sched_work_item *uswi;
+	struct slashrpc_cservice *csvc;
+	struct bmap_mds_lease *bml;
+	struct pscrpc_request *rq;
+	struct ios_list ios_list;
+	struct psc_dynarray *da;
+	struct fidc_membh *fcmh;
+	struct bmapc_memb *b;
+	sl_bmapno_t i;
+
+	fcmh = wkrq->wkrq_fcmh;
+	da = &fcmh_2_fmi(fcmh)->fmi_ptrunc_clients;
+
+	/*
+	 * Wait until any leases for this or any bmap after have been
+	 * relinquished.
+	 */
+	FCMH_LOCK(fcmh);
+	i = fcmh_2_fsz(fcmh) / SLASH_BMAP_SIZE;
+	FCMH_ULOCK(fcmh);
+	for (; i < fcmh_2_nbmaps(fcmh); i++) {
+		if (mds_bmap_load(fcmh, i, &b))
+			continue;
+		BMAP_LOCK(b);
+		BMAP_FOREACH_LEASE(b, bml) {
+			BMAP_ULOCK(b);
+
+			csvc = slm_getclcsvc(bml->bml_exp);
+			if (csvc == NULL)
+				continue;
+			if (!psc_dynarray_exists(da, csvc) &&
+			    SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq,
+			    mq, mp) == 0) {
+				mq->bmaps[0].fid = fcmh_2_fid(fcmh);
+				mq->bmaps[0].bmapno = i;
+				mq->nbmaps = 1;
+				SL_RSX_WAITREP(csvc, rq, mp);
+				pscrpc_req_finished(rq);
+
+				FCMH_LOCK(fcmh);
+				psc_dynarray_add(da, csvc);
+				FCMH_ULOCK(fcmh);
+			}
+
+			BMAP_LOCK(b);
+		}
+		if (pll_nitems(&bmap_2_bmi(b)->bmdsi_leases))
+			wait = 1;
+		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+	}
+	if (wait)
+		return (1);
+
+	brepls_init(tract, -1);
+	tract[BREPLST_VALID] = BREPLST_TRUNCPNDG;
+
+	i = fcmh_2_fsz(fcmh) / SLASH_BMAP_SIZE;
+	if (fcmh->fcmh_sstb.sst_size % SLASH_BMAP_SIZE) {
+		if (mds_bmap_load(fcmh, i, &b) == 0) {
+			mds_repl_bmap_walkcb(b, tract, NULL, 0,
+			    ptrunc_tally_ios, &ios_list);
+			mds_repl_bmap_rel(b);
+		}
+	} else {
+		FCMH_LOCK(fcmh);
+		fcmh->fcmh_flags &= ~FCMH_IN_PTRUNC;
+		FCMH_ULOCK(fcmh);
+	}
+
+	brepls_init(tract, -1);
+	tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE;
+	tract[BREPLST_REPL_QUEUED] = BREPLST_GARBAGE;
+	tract[BREPLST_VALID] = BREPLST_GARBAGE;
+
+	for (i++; i < fcmh_2_nbmaps(fcmh); i++) {
+		if (mds_bmap_load(fcmh, i, &b))
+			continue;
+
+		BHGEN_INCREMENT(b);
+		mds_repl_bmap_walkcb(b, tract, NULL, 0,
+		    ptrunc_tally_ios, &ios_list);
+		mds_repl_bmap_rel(b);
+	}
+
+	rc = uswi_findoradd(&fcmh->fcmh_fg, &uswi);
+	if (rc)
+		psc_fatal("uswi_findoradd: %s",
+		    slstrerror(rc));
+	uswi_enqueue_sites(uswi, ios_list.iosv, ios_list.nios);
+	uswi_unref(uswi);
+
+	fcmh_op_done_type(fcmh, FCMH_OPCNT_WORKER);
+	return (0);
+}
+
+int
+slm_ptrunc_wake_clients(struct slm_workrq *wkrq)
+{
+	struct slashrpc_cservice *csvc;
+	struct srm_bmap_wake_req *mq;
+	struct srm_bmap_wake_rep *mp;
+	struct pscrpc_request *rq;
+	struct fcmh_mds_info *fmi;
+	struct fidc_membh *fcmh;
+	struct psc_dynarray *da;
+	int rc;
+
+	fcmh = wkrq->wkrq_fcmh;
+	fmi = fcmh_2_fmi(fcmh);
+	da = &fmi->fmi_ptrunc_clients;
+	FCMH_LOCK(fcmh);
+	while (psc_dynarray_len(da)) {
+		csvc = psc_dynarray_getpos(da, 0);
+		psc_dynarray_remove(da, csvc);
+		FCMH_ULOCK(fcmh);
+
+		rc = SL_RSX_NEWREQ(csvc, SRMT_BMAP_WAKE, rq, mq, mp);
+		if (rc == 0) {
+			mq->fg = fcmh->fcmh_fg;
+			mq->bmapno = fcmh_2_fsz(fcmh) / SLASH_BMAP_SIZE;
+			SL_RSX_WAITREP(csvc, rq, mp);
+			pscrpc_req_finished(rq);
+		}
+		sl_csvc_decref(csvc);
+
+		FCMH_LOCK(fcmh);
+	}
+	fcmh_op_done_type(fcmh, FCMH_OPCNT_WORKER);
+	return (0);
 }
 
 #if PFL_DEBUG > 0

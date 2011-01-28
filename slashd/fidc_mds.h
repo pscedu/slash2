@@ -20,6 +20,8 @@
 #ifndef _FIDC_MDS_H_
 #define _FIDC_MDS_H_
 
+#include "psc_ds/dynarray.h"
+
 #include "fid.h"
 #include "fidcache.h"
 #include "inodeh.h"
@@ -32,7 +34,10 @@ struct fcmh_mds_info {
 	mdsio_fid_t		  fmi_mdsio_fid;	/* underlying mdsio file ID */
 	void			 *fmi_mdsio_data;	/* mdsio descriptor */
 	int			  fmi_ctor_rc;		/* constructor return code */
+	struct psc_dynarray	  fmi_ptrunc_clients;	/* clients awaiting CRC recalc */
 };
+
+#define FCMH_IN_PTRUNC		(_FCMH_FLGSHFT << 0)
 
 #define fcmh_2_fmi(f)		((struct fcmh_mds_info *)fcmh_get_pri(f))
 #define fcmh_2_inoh(f)		(&fcmh_2_fmi(f)->fmi_inodeh)

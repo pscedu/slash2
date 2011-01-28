@@ -37,6 +37,7 @@ struct odtable_receipt;
 struct bmapc_memb;
 struct fidc_membh;
 struct slash_inode_handle;
+struct srt_stat;
 
 /* MDS thread types. */
 enum {
@@ -56,7 +57,8 @@ enum {
 	SLMTHRT_RMM,		/* MDS <- MDS msg svc handler */
 	SLMTHRT_TIOS,		/* I/O stats updater */
 	SLMTHRT_UPSCHED,	/* update scheduler for site resources */
-	SLMTHRT_USKLNDPL	/* userland socket lustre net dev poll thr */
+	SLMTHRT_USKLNDPL,	/* userland socket lustre net dev poll thr */
+	SLMTHRT_WORKER		/* miscellaneous work */
 };
 
 struct slmrmc_thread {
@@ -184,6 +186,12 @@ struct resm_mds_info {
 #define res2rpmi(res)		((struct resprof_mds_info *)(res)->res_pri)
 #define resm2rpmi(resm)		res2rpmi((resm)->resm_res)
 
+struct slm_workrq {
+	int			(*wkrq_cbf)(struct slm_workrq *);
+	struct psc_listentry	  wkrq_lentry;
+	struct fidc_membh	 *wkrq_fcmh;
+};
+
 int		 mds_inode_read(struct slash_inode_handle *);
 int		 mds_inox_load_locked(struct slash_inode_handle *);
 int		 mds_inox_ensure_loaded(struct slash_inode_handle *);
@@ -196,9 +204,13 @@ void		 slmrcmthr_main(struct psc_thread *);
 void		 slmupschedthr_spawnall(void);
 void		 slmtimerthr_spawn(void);
 
-uint64_t	slm_get_curr_slashid(void);
-uint64_t	slm_get_next_slashid(void);
-void		slm_set_curr_slashid(uint64_t);
+uint64_t	 slm_get_curr_slashid(void);
+uint64_t	 slm_get_next_slashid(void);
+void		 slm_set_curr_slashid(uint64_t);
+
+int		 slm_ptrunc_core(struct slm_workrq *);
+int		 slm_ptrunc_wake_clients(struct slm_workrq *);
+void		 slm_setattr_core(struct srt_stat *, int);
 
 extern struct slash_creds			 rootcreds;
 extern struct psc_listcache			 dirtyMdsData;
@@ -207,6 +219,9 @@ extern const struct slash_inode_extras_od	 null_inox_od;
 extern const struct slash_inode_od		 null_inode_od;
 extern struct sl_mds_nsstats			 slm_nsstats_aggr;	/* aggregate namespace stats */
 extern struct sl_mds_peerinfo			*localinfo;
+
+struct psc_poolmgr				*slm_workrq_pool;
+struct psc_listcache				 slm_workq;
 
 static __inline int
 slm_get_rpmi_idx(struct sl_resource *res)

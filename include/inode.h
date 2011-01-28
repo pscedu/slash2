@@ -51,9 +51,9 @@
  * is used to index up to sn_nblks.
  */
 typedef struct slash_snapshot {
-	off_t			sn_off;
-	size_t			sn_nblks;
-	time_t			sn_date;
+	int64_t			sn_off;
+	int64_t			sn_nblks;
+	int64_t			sn_date;
 } sl_snap_t;
 
 /*
@@ -62,13 +62,12 @@ typedef struct slash_snapshot {
  */
 struct slash_inode_od {
 	uint16_t		ino_version;
-	uint16_t		ino_flags;
+	uint16_t		_ino_pad;
 	uint32_t		ino_bsz;			/* bmap size */
 	uint32_t		ino_nrepls;			/* if 0, use ino_prepl */
 //	uint32_t		ino_csnap;			/* current snapshot */
 	uint32_t		ino_replpol;			/* BRP_* policies */
 	sl_replica_t		ino_repls[SL_DEF_REPLICAS];	/* embed a few replicas	*/
-	uint64_t		ino_ptruncoff;			/* partial truncate offset */
 
 	/* must be last */
 	uint64_t		ino_crc;			/* CRC of the inode */
@@ -76,10 +75,7 @@ struct slash_inode_od {
 #define INO_OD_SZ		sizeof(struct slash_inode_od)
 #define INO_OD_CRCSZ		offsetof(struct slash_inode_od, ino_crc)
 
-/* ino_flags */
-#define INOF_IN_PTRUNC		(1 << 0)			/* awaiting partial truncation resolution */
-
-#define INO_VERSION		0x0008
+#define INO_VERSION		0x0001
 
 struct slash_inode_extras_od {
 	sl_snap_t		inox_snaps[SL_DEF_SNAPSHOTS];	/* snapshot pointers */

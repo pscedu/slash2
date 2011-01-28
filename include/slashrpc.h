@@ -129,6 +129,7 @@ enum {
 	SRMT_BMAPCRCWRT,			/* update bmap data checksums */
 	SRMT_BMAPDIO,				/* request client direct I/O on a bmap */
 	SRMT_BMAP_PTRUNC,			/* partial truncate and redo CRC for bmap */
+	SRMT_BMAP_WAKE,				/* client work may now progress after EAGAIN */
 	SRMT_GETBMAP,				/* get client lease for bmap access */
 	SRMT_GETBMAPCRCS,			/* get bmap data checksums */
 	SRMT_GETBMAPMINSEQ,
@@ -452,9 +453,7 @@ struct srm_bmap_release_rep {
 	 int32_t		_pad;
 } __packed;
 
-struct srm_getbmapminseq_req {		/* XXX use ping */
-	 int32_t		rc;
-	 int32_t		_pad;
+struct srm_getbmapminseq_req {			/* XXX use ping */
 } __packed;
 
 #define srm_getbmapminseq_rep	srm_generic_rep
@@ -470,6 +469,14 @@ struct srm_bmap_ptrunc_req {
 } __packed;
 
 #define srm_bmap_ptrunc_rep	srm_generic_rep
+
+struct srm_bmap_wake_req {
+	struct slash_fidgen	fg;
+	sl_bmapno_t		bmapno;
+	 int32_t		_pad;
+};
+
+#define srm_bmap_wake_rep	srm_generic_rep
 
 /* ------------------------- BEGIN GARBAGE MESSAGES ------------------------- */
 
