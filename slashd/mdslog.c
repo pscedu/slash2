@@ -976,9 +976,17 @@ mds_send_batch_update(uint64_t batchno)
 	int _siter;
 
 	logfd = mds_open_logfile(batchno, 1, 1);
-	if (logfd == -1)
-		psc_fatal("Failed to open update log file, "
-		    "batchno=%"PRId64, batchno);
+	if (logfd == -1) {
+		/*
+		 * It is fine that the distill process hasn't written the next 
+		 * log file after closing the old one.
+		 */
+		if (errno != ENOENT) {
+			psc_fatal("Failed to open update log file, "
+			    "batchno=%"PRId64, batchno);
+		}
+		return (didwork);
+	}
 	size = read(logfd, updatebuf, SLM_UPDATE_BATCH *
 	    sizeof(struct srt_update_entry));
 	close(logfd);
@@ -1235,9 +1243,17 @@ mds_send_batch_reclaim(uint64_t batchno)
 	ssize_t size;
 
 	logfd = mds_open_logfile(batchno, 0, 1);
-	if (logfd == -1)
-	    psc_fatal("Failed to open reclaim log file, "
-		"batchno=%"PRId64, batchno);
+	if (logfd == -1) {
+		/*
+		 * It is fine that the distill process hasn't written the next 
+		 * log file after closing the old one.
+		 */
+		if (errno != ENOENT) {
+			psc_fatal("Failed to open reclaim log file, "
+			    "batchno=%"PRId64, batchno);
+		}
+		return (didwork);
+	}
 	size = read(logfd, reclaimbuf, SLM_RECLAIM_BATCH *
 	    sizeof(struct srt_reclaim_entry));
 	close(logfd);
