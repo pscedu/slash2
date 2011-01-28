@@ -1359,6 +1359,12 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
 
 			BMAPOD_MODIFY_DONE(bmap);
 
+			/*
+			 * XXX modify all bmaps after this one and mark
+			 * them INVALID since the sliod will have zeroed
+			 * those regions.
+			 */
+
 			psc_multiwaitcond_wakeup(
 			    &site2smi(bmdsi->bmdsi_wr_ion->rmmi_resm->
 			    resm_site)->smi_mwcond);
