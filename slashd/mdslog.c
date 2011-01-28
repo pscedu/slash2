@@ -727,8 +727,11 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	update_entry.target_fid = sjnm->sjnm_target_fid;
 	update_entry.new_parent_fid = sjnm->sjnm_new_parent_fid;
 
+	update_entry.mode = sjnm->sjnm_mode;
+	update_entry.mask = sjnm->sjnm_mask;
 	update_entry.uid = sjnm->sjnm_uid;
 	update_entry.gid = sjnm->sjnm_gid;
+
 	update_entry.atime = sjnm->sjnm_atime;
 	update_entry.mtime = sjnm->sjnm_mtime;
 	update_entry.ctime = sjnm->sjnm_ctime;
