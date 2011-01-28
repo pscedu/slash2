@@ -1040,12 +1040,12 @@ mds_send_batch_update(uint64_t batchno)
 		 */
 		if (peerinfo->sp_fails >= 3) {
 			if (peerinfo->sp_skips == 0) {
-			    peerinfo->sp_skips = 3;
-			    continue;
+				peerinfo->sp_skips = 3;
+				continue;
 			}
 			peerinfo->sp_skips--;
 			if (peerinfo->sp_skips)
-			   continue;
+				continue;
 		}
 		if (peerinfo->sp_batchno < batchno)
 			continue;
