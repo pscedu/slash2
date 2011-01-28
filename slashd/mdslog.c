@@ -462,7 +462,7 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 	int rc = 0;
 
 	psclog_info("pje=%p pje_xid=%"PRIx64" pje_txg=%"PRIx64,
-		 pje, pje->pje_xid, pje->pje_txg);
+	    pje, pje->pje_xid, pje->pje_txg);
 
 	switch (pje->pje_type & ~(_PJE_FLSHFT - 1)) {
 	    case MDS_LOG_BMAP_REPL:
@@ -765,7 +765,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 
 /**
  * mds_namespace_log - Log namespace operation before we attempt an
- *	operation.  This makes sure that it will be propagated towards
+ *	it.  This makes sure that it will be propagated towards
  *	other MDSes and made permanent before we reply to the client.
  */
 void
@@ -1641,7 +1641,7 @@ void
 mds_journal_init(void)
 {
 	uint64_t batchno, last_reclaim_xid = 0, last_update_xid = 0, last_distill_xid = 0;
-	int i, ri, nios, count, total, found, npeers, index, logfd;
+	int i, ri, nios, count, total, npeers, index, logfd;
 	struct srt_reclaim_entry *reclaim_entryp;
 	struct srt_update_entry *update_entryp;
 	struct sl_mds_peerinfo *peerinfo;
@@ -1661,20 +1661,22 @@ mds_journal_init(void)
 		if (res->res_type != SLREST_MDS)
 			nios++;
 	if (!nios)
-		psc_fatalx("Missing I/O servers at site %s", nodeSite->site_name);
+		psc_fatalx("Missing I/O servers at site %s",
+		    nodeSite->site_name);
 
 	/* Count the number of peer MDSes we have */
 	npeers = 0;
-	SL_FOREACH_MDS(resm, npeers++)
-		;
+	SL_FOREACH_MDS(resm, npeers++);
 	npeers--;
 
 	mds_open_cursor();
 
 	for (index = 0; index < 2; index++) {
-		xmkfn(fn, "%s/%s.%s.%lu.%d", sl_datadir, SL_FN_RECLAIMPROG,
-		    psc_get_hostname(), mds_cursor.pjc_timestamp, index);
-		current_reclaim_progfile[index] = open(fn, O_CREAT | O_RDWR | O_SYNC, 0600);
+		xmkfn(fn, "%s/%s.%s.%lu.%d", sl_datadir,
+		    SL_FN_RECLAIMPROG, psc_get_hostname(),
+		    mds_cursor.pjc_timestamp, index);
+		current_reclaim_progfile[index] = open(fn, O_CREAT |
+		    O_RDWR | O_SYNC, 0600);
 		if (fstat(current_reclaim_progfile[index], &sb) == -1)
 			psc_fatal("Failed to stat reclaim log file %s", fn);
 		psc_assert((sb.st_size % sizeof(struct reclaim_prog_entry)) == 0);
@@ -1682,22 +1684,13 @@ mds_journal_init(void)
 		i = count = sb.st_size / sizeof(struct reclaim_prog_entry);
 		reclaim_prog_buf = PSCALLOC(i * sizeof(struct reclaim_prog_entry));
 		if (count) {
-			size = read(current_reclaim_progfile[index], reclaim_prog_buf,
+			size = read(current_reclaim_progfile[index],
+			    reclaim_prog_buf,
 			    count * sizeof(struct reclaim_prog_entry));
 			psc_assert(size == count * (int)sizeof(struct reclaim_prog_entry));
 		}
-		found = 0;
-		SITE_FOREACH_RES(nodeSite, res, ri) {
-			if (res->res_type == SLREST_MDS)
-				continue;
-			for (i = 0; i < count; i++) {
-				if (reclaim_prog_buf[i].res_id != res->res_id)
-					continue;
-				break;
-			}
-			if (i >= count)
-				continue;
-			found++;
+		for (i = 0; i < count; i++) {
+			res = libsl_id2res(reclaim_prog_buf[i].res_id);
 			iosinfo = res2rpmi(res)->rpmi_info;
 			if (iosinfo->si_xid < reclaim_prog_buf[i].res_xid)
 				iosinfo->si_xid = reclaim_prog_buf[i].res_xid;
@@ -1721,10 +1714,11 @@ mds_journal_init(void)
 	    psc_fatal("Failed to open reclaim log file, batchno=%"PRId64, batchno);
 
 	current_reclaim_batchno = batchno;
-	reclaimbuf = PSCALLOC(SLM_RECLAIM_BATCH * sizeof(struct srt_reclaim_entry));
+	reclaimbuf = PSCALLOC(SLM_RECLAIM_BATCH *
+	    sizeof(struct srt_reclaim_entry));
 
-	size = read(logfd, reclaimbuf,
-	    SLM_RECLAIM_BATCH * sizeof(struct srt_reclaim_entry));
+	size = read(logfd, reclaimbuf, SLM_RECLAIM_BATCH *
+	    sizeof(struct srt_reclaim_entry));
 	psc_assert(size >= 0);
 	psc_assert((size % sizeof(struct srt_reclaim_entry)) == 0);
 
@@ -1744,17 +1738,19 @@ mds_journal_init(void)
 	last_distill_xid = last_reclaim_xid;
 
 	/* Always start a thread to send reclaim updates. */
-	pscthr_init(SLMTHRT_JRECLAIM, 0, mds_send_reclaim, NULL,
-	    0, "slmjreclaimthr");
+	pscthr_init(SLMTHRT_JRECLAIM, 0, mds_send_reclaim, NULL, 0,
+	    "slmjreclaimthr");
 
 	/* We are done if we don't have any peer MDSes */
 	if (!npeers)
 		goto replay_log;
 
 	for (index = 0; index < 2; index++) {
-		xmkfn(fn, "%s/%s.%s.%lu.%d", sl_datadir, SL_FN_UPDATEPROG,
-		    psc_get_hostname(), mds_cursor.pjc_timestamp, index);
-		current_update_progfile[index] = open(fn, O_CREAT | O_RDWR | O_SYNC, 0600);
+		xmkfn(fn, "%s/%s.%s.%lu.%d", sl_datadir,
+		    SL_FN_UPDATEPROG, psc_get_hostname(),
+		    mds_cursor.pjc_timestamp, index);
+		current_update_progfile[index] = open(fn, O_CREAT |
+		    O_RDWR | O_SYNC, 0600);
 		if (fstat(current_update_progfile[index], &sb) == -1)
 			psc_fatal("Failed to stat update log file %s", fn);
 		psc_assert((sb.st_size % sizeof(struct update_prog_entry)) == 0);
@@ -1767,23 +1763,14 @@ mds_journal_init(void)
 			psc_assert(size == count * (int)sizeof(struct update_prog_entry));
 		}
 
-		SL_FOREACH_MDS(resm,
-			if (resm == nodeResm)
-				continue;
-			for (i = 0; i < count; i++) {
-				if (update_prog_buf[i].res_id != resm->resm_iosid)
-					continue;
-				break;
-			}
-			if (i >= count)
-				continue;
-			found++;
-			peerinfo = res2rpmi(resm->resm_res)->rpmi_info;
+		for (i = 0; i < count; i++) {
+			res = libsl_id2res(update_prog_buf[i].res_id);
+			peerinfo = res2rpmi(res)->rpmi_info;
 			if (peerinfo->sp_xid < update_prog_buf[i].res_xid)
 				peerinfo->sp_xid = update_prog_buf[i].res_xid;
 			if (peerinfo->sp_batchno < update_prog_buf[i].res_batchno)
 				peerinfo->sp_batchno = update_prog_buf[i].res_batchno;
-		);
+		}
 		PSCFREE(update_prog_buf);
 	}
 	update_prog_buf = PSCALLOC(npeers * sizeof(struct update_prog_entry));
@@ -1889,6 +1876,8 @@ mds_redo_namespace(struct slmds_jent_namespace *sjnm)
 
 	memset(&sstb, 0, sizeof(sstb));
 	sstb.sst_fid = sjnm->sjnm_target_fid,
+	sstb.sst_gen = sjnm->sjnm_target_gen;
+//	sstb.sst_ptruncgen = sjnm->sjnm_uid;
 	sstb.sst_uid = sjnm->sjnm_uid;
 	sstb.sst_gid = sjnm->sjnm_gid;
 	sstb.sst_mode = sjnm->sjnm_mode;
@@ -1948,6 +1937,7 @@ mds_redo_namespace(struct slmds_jent_namespace *sjnm)
 	    case NS_OP_SETATTR:
 		rc = mdsio_redo_setattr(sjnm->sjnm_target_fid,
 		    sjnm->sjnm_mask, &sstb);
+		slm_setattr_core(&sstb, sjnm->sjnm_mask);
 		hasname = 0;
 		break;
 	    default:
