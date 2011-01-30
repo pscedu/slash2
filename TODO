@@ -274,6 +274,7 @@ tree
 - rename include/buffer.h and share/buffer.c as sliod/slab.h sliod/slab.c
 - move inode.h into slashd
 - rename the zfs_init() alias, it is already a routine in ZFS
+- rename slconfig.h to slcfg.h to disambiguate slco prefix
 
 API rename
 - rename FCMH_CREATE to POPULATE
