@@ -185,11 +185,12 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	mrsl = PSCALLOC(sizeof(*mrsl) + mq->len);
 
 	if (mrsq->mrsq_fn[0] != '\0')
-		strlcpy(mrsl->mrsl_fn, mrsq->mrsq_fn, sizeof(mrsl->mrsl_fn));
+		strlcpy(mrsl->mrsl_fn, mrsq->mrsq_fn,
+		    sizeof(mrsl->mrsl_fn));
 	else
 		/* XXX try to do a reverse lookup of pathname; check cache maybe? */
-		snprintf(mrsl->mrsl_fn, sizeof(mrsl->mrsl_fn), SLPRI_FID,
-		    mq->fg.fg_fid);
+		snprintf(mrsl->mrsl_fn, sizeof(mrsl->mrsl_fn),
+		    SLPRI_FID, mq->fg.fg_fid);
 
 	iov.iov_base = mrsl->mrsl_data;
 	iov.iov_len = mq->len;
@@ -201,8 +202,9 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	    SRCM_BULK_PORTAL, &iov, 1);
 
 	if (mp->rc == 0) {
-		rc = psc_ctlmsg_send(mrsq->mrsq_fd, mrsq->mrsq_mh->mh_id,
-		    MSCMT_GETREPLST_SLAVE, mq->len + sizeof(*mrsl), mrsl);
+		rc = psc_ctlmsg_send(mrsq->mrsq_fd,
+		    mrsq->mrsq_mh->mh_id, MSCMT_GETREPLST_SLAVE,
+		    mq->len + sizeof(*mrsl), mrsl);
 	} else {
 		rc = psc_ctlsenderr(mrsq->mrsq_fd, &mh, "%s",
 		    slstrerror(mq->rc));
@@ -229,6 +231,24 @@ msrcm_handle_releasebmap(struct pscrpc_request *rq)
 	return (0);
 }
 
+/**
+ * msrcm_handle_bmap_wake - Handle a BMAP_WAKE request for CLI from MDS.
+ * @rq: request.
+ */
+int
+msrcm_handle_bmap_wake(struct pscrpc_request *rq)
+{
+	struct srm_wake_bmap_req *mq;
+	struct srm_wake_bmap_rep *mp;
+
+	SL_RSX_ALLOCREP(rq, mq, mp);
+	return (0);
+}
+
+/**
+ * msrcm_handle_bmapdio - Handle a BMAPDIO request for CLI from MDS.
+ * @rq: request.
+ */
 int
 msrcm_handle_bmapdio(struct pscrpc_request *rq)
 {
@@ -249,7 +269,8 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 		goto out;
 	}
 
-	DEBUG_FCMH(PLL_WARN, f, "bmapno=%u seq=%"PRId64, mq->blkno, mq->seq);
+	DEBUG_FCMH(PLL_WARN, f, "bmapno=%u seq=%"PRId64,
+	    mq->blkno, mq->seq);
 
 	mp->rc = bmap_lookup(f, mq->blkno, &b);
 	if (mp->rc)
@@ -270,7 +291,7 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 		mp->rc = ESTALE;
 		goto out;
 	}
-	/* All new read and write IO's will get BIORQ_DIO.
+	/* All new read and write I/O's will get BIORQ_DIO.
 	 */
 	b->bcm_flags |= BMAP_DIO;
 	BMAP_ULOCK(b);
@@ -318,18 +339,24 @@ slc_rcm_handler(struct pscrpc_request *rq)
 	case SRMT_CONNECT:
 		rc = msrcm_handle_connect(rq);
 		break;
+
 	case SRMT_REPL_GETST:
 		rc = msrcm_handle_getreplst(rq);
 		break;
 	case SRMT_REPL_GETST_SLAVE:
 		rc = msrcm_handle_getreplst_slave(rq);
 		break;
+
 	case SRMT_RELEASEBMAP:
 		rc = msrcm_handle_releasebmap(rq);
+		break;
+	case SRMT_BMAP_WAKE:
+		rc = msrcm_handle_bmap_wake(rq);
 		break;
 	case SRMT_BMAPDIO:
 		rc = msrcm_handle_bmapdio(rq);
 		break;
+
 	default:
 		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
 		rq->rq_status = -ENOSYS;
