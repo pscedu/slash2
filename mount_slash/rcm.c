@@ -238,8 +238,8 @@ msrcm_handle_releasebmap(struct pscrpc_request *rq)
 int
 msrcm_handle_bmap_wake(struct pscrpc_request *rq)
 {
-	struct srm_wake_bmap_req *mq;
-	struct srm_wake_bmap_rep *mp;
+	struct srm_bmap_wake_req *mq;
+	struct srm_bmap_wake_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	return (0);
