@@ -80,8 +80,16 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 
 	if (msgtype == PSCRPC_MSG_REQUEST)
 		m = rq->rq_reqmsg;
-	else
+	else {
 		m = rq->rq_repmsg;
+
+		/*
+		 * If there was an invalid opcode or protocol violation,
+		 * no reply message may have been set up.
+		 */
+		if (m == NULL)
+			return;
+	}
 
 	saf = pscrpc_msg_buf(m, m->bufcount - 1, sizeof(*saf));
 	saf->saf_secret.sas_magic = AUTHBUF_MAGIC;
