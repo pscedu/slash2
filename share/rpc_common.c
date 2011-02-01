@@ -470,22 +470,24 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 
 	} else if (psc_atomic32_read(&csvc->csvc_flags) & CSVCF_CONNECTING) {
 
-		if ((flags & CSVCF_NONBLOCK) && arg) {
-			if (sl_csvc_usemultiwait(csvc))
+		if (flags & CSVCF_NONBLOCK) {
+			if (sl_csvc_usemultiwait(csvc) && arg)
 				psc_multiwait_addcond(arg,
-				    csvc->csvc_waitinfo);
+				      csvc->csvc_waitinfo);
 			csvc = NULL;
 			goto out;
-		}
 
-		if (sl_csvc_usemultiwait(csvc))
-			psc_multiwaitcond_wait(csvc->csvc_waitinfo,
-			    csvc->csvc_mutex);
-		else
-			psc_waitq_wait(csvc->csvc_waitinfo,
-			    csvc->csvc_lock);
-		sl_csvc_lock(csvc);
-		goto restart;
+		} else {
+
+			if (sl_csvc_usemultiwait(csvc))
+				psc_multiwaitcond_wait(csvc->csvc_waitinfo,
+				       csvc->csvc_mutex);
+			else
+				psc_waitq_wait(csvc->csvc_waitinfo,
+				       csvc->csvc_lock);
+			sl_csvc_lock(csvc);
+			goto restart;
+		}
 
 	} else if (flags & CSVCF_NORECON) {
 
