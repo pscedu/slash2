@@ -387,6 +387,8 @@ struct mdsio_ops mdsio_ops = {
 	zfsslash2_init,
 	libzfs_exit,
 
+	zfsslash2_setattrmask_2_slflags,
+
 	zfsslash2_access,
 	zfsslash2_getattr,
 	zfsslash2_link,

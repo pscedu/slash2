@@ -76,6 +76,9 @@ struct mdsio_ops {
 	int	(*mio_init)(void);
 	void	(*mio_exit)(void);
 
+	/* utility interface */
+	int	(*mio_setattrmask_2_slflags)(uint);
+
 	/* low-level file system interface */
 	int	(*mio_access)(mdsio_fid_t, int, const struct slash_creds *);
 	int	(*mio_getattr)(mdsio_fid_t, void *, const struct slash_creds *, struct srt_stat *);
@@ -111,6 +114,9 @@ struct mdsio_ops {
 
 #define mdsio_init		mdsio_ops.mio_init			/* zfs_init() */
 #define mdsio_exit		mdsio_ops.mio_exit			/* zfs_exit() */
+
+#define mdsio_setattrmask_2_slflags				\
+				mdsio_ops.mio_setattrmask_2_slflags	/* zfsslash2_setattrmask_2_slflags() */
 
 #define mdsio_access		mdsio_ops.mio_access			/* zfsslash2_access() */
 #define mdsio_getattr		mdsio_ops.mio_getattr			/* zfsslash2_getattr() */

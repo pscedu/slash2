@@ -1960,7 +1960,8 @@ mds_redo_namespace(struct slmds_jent_namespace *sjnm)
 	    case NS_OP_SETATTR:
 		rc = mdsio_redo_setattr(sjnm->sjnm_target_fid,
 		    sjnm->sjnm_mask, &sstb);
-		slm_setattr_core(&sstb, sjnm->sjnm_mask);
+		slm_setattr_core(&sstb,
+		    mdsio_setattrmask_2_slflags(sjnm->sjnm_mask));
 		hasname = 0;
 		break;
 	    default:
