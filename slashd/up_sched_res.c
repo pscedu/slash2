@@ -754,7 +754,7 @@ slmupschedthr_spawnall(void)
 	struct sl_site *site;
 	int locked;
 
-	locked = PLL_RLOCK(&globalConfig.gconf_sites);
+	locked = CONF_RLOCK();
 	CONF_FOREACH_SITE(site) {
 		thr = pscthr_init(SLMTHRT_UPSCHED, 0, slmupschedthr_main,
 		    NULL, sizeof(*smut), "slmupschedthr-%s",
@@ -763,7 +763,7 @@ slmupschedthr_spawnall(void)
 		smut->smut_site = site;
 		pscthr_setready(thr);
 	}
-	PLL_URLOCK(&globalConfig.gconf_sites, locked);
+	CONF_URLOCK(locked);
 }
 
 /**

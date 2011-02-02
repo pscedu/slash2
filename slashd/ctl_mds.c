@@ -122,8 +122,8 @@ slmctlparam_namespace_stats(int fd, struct psc_ctlmsghdr *mh,
     __unusedx struct psc_ctlparam_node *pcn)
 {
 	const char *p_site, *p_act, *p_op, *p_field;
-	int i_r, rc, d_val, o_val, s_val, val;
-	struct sl_resource *r;
+	int rc, d_val, o_val, s_val, val;
+	struct sl_resm *r;
 	struct sl_site *s;
 	char *str;
 	long l;
@@ -182,28 +182,22 @@ slmctlparam_namespace_stats(int fd, struct psc_ctlmsghdr *mh,
 	}
 
 	rc = 1;
-	CONF_LOCK();
-	CONF_FOREACH_SITE(s)
-		SITE_FOREACH_RES(s, r, i_r)
-			if (r->res_type == SLREST_MDS &&
-			    res2rpmi(r)->rpmi_info &&
-			    (strcmp(p_site, "*") == 0 ||
-			     strcasecmp(p_site, s->site_name)) == 0) {
-				struct sl_mds_peerinfo *peerinfo;
+	SL_MDS_WALK(r,
+		struct sl_mds_peerinfo *peerinfo;
 
-				levels[2] = s->site_name;
-				peerinfo = res2rpmi(r)->rpmi_info;
-				rc = slmctlparam_namespace_stats_process(
-				    fd, mh, pcp, levels,
-				    &peerinfo->sp_stats,
-				    d_val, o_val, s_val, val);
-				if (!rc || strcmp(p_site, s->site_name) == 0)
-					goto out;
+		peerinfo = res2rpmi(r->resm_res)->rpmi_info;
+		if (peerinfo == NULL)
+			continue;
+		if (strcasecmp(p_site, s->site_name) && strcmp(p_site, "*"))
+			continue;
 
-				break;	/* goto next site */
-			}
- out:
-	CONF_ULOCK();
+		levels[2] = s->site_name;
+		rc = slmctlparam_namespace_stats_process(fd, mh, pcp,
+		    levels, &peerinfo->sp_stats, d_val, o_val, s_val,
+		    val);
+		if (!rc || strcmp(p_site, s->site_name) == 0)
+			SL_MDS_WALK_SETLAST();
+	);
 	return (rc);
 }
 

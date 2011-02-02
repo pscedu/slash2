@@ -127,6 +127,8 @@ struct sl_gconf {
 
 #define CONF_LOCK()			PLL_LOCK(&globalConfig.gconf_sites)
 #define CONF_ULOCK()			PLL_ULOCK(&globalConfig.gconf_sites)
+#define CONF_RLOCK()			PLL_RLOCK(&globalConfig.gconf_sites)
+#define CONF_URLOCK(lk)			PLL_URLOCK(&globalConfig.gconf_sites, (lk))
 
 #define CONF_FOREACH_SITE(s)		PLL_FOREACH((s), &globalConfig.gconf_sites)
 #define SITE_FOREACH_RES(s, r, i)	DYNARRAY_FOREACH((r), (i), &(s)->site_resources)
@@ -141,7 +143,7 @@ struct sl_gconf {
 		SITE_FOREACH_RES((s), (r), (i))				\
 			RES_FOREACH_MEMB((r), (m), (j))
 
-#define SL_FOREACH_MDS(resm, code)					\
+#define SL_MDS_WALK(resm, code)						\
 	do {								\
 		struct sl_resource *_res;				\
 		struct sl_site *_site;					\
@@ -160,6 +162,9 @@ struct sl_gconf {
 				}					\
 		CONF_ULOCK();						\
 	} while (0)
+
+#define SL_MDS_WALK_SETLAST()						\
+	(_site = pll_last_item(&globalConfig.gconf_sites, struct sl_site))
 
 void			 slcfg_init_res(struct sl_resource *);
 void			 slcfg_init_resm(struct sl_resm *);
