@@ -244,8 +244,8 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 
 		DEBUG_BCR(((rq->rq_status || !mp || mp->rc) ?
 			   PLL_ERROR : PLL_INFO),
-			  bcr, "rq_status=%d rc=%d", rq->rq_status,
-			  mp ? mp->rc : -4096);
+			  bcr, "rq_status=%d rc=%d%s", rq->rq_status,
+			  mp ? mp->rc : -4096, mp ? "" : " (unknown, no buf)");
 
 		psc_assert(bii_2_bmap(biod)->bcm_flags & (BMAP_IOD_INFLIGHT|BMAP_IOD_BCRSCHED));
 
