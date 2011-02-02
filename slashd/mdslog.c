@@ -146,7 +146,7 @@ mds_record_update_prog(void)
 	int i;
 
 	i = 0;
-	SL_FOREACH_MDS(resm,
+	SL_MDS_WALK(resm,
 		if (resm == nodeResm)
 			continue;
 		peerinfo = res2rpmi(resm->resm_res)->rpmi_info;
@@ -907,7 +907,7 @@ mds_update_lwm(int batchno)
 	struct resprof_mds_info *rpmi;
 	struct sl_resm *resm;
 
-	SL_FOREACH_MDS(resm,
+	SL_MDS_WALK(resm,
 		if (resm == nodeResm)
 			continue;
 		rpmi = resm2rpmi(resm);
@@ -935,7 +935,7 @@ mds_update_hwm(int batchno)
 	struct resprof_mds_info *rpmi;
 	struct sl_resm *resm;
 
-	SL_FOREACH_MDS(resm,
+	SL_MDS_WALK(resm,
 		if (resm == nodeResm)
 			continue;
 		rpmi = resm2rpmi(resm);
@@ -1685,7 +1685,7 @@ mds_journal_init(void)
 
 	/* Count the number of peer MDSes we have */
 	npeers = 0;
-	SL_FOREACH_MDS(resm, npeers++);
+	SL_MDS_WALK(resm, npeers++);
 	npeers--;
 
 	mds_open_cursor();
