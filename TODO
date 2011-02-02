@@ -278,6 +278,7 @@ tree
 
 API rename
 - rename FCMH_CREATE to POPULATE
+- mdsio_fid_t -> mdsio_inum_t
 
 - upsch items are not getting removed on completion
 - ensure PINGs only happen every 30 seconds
@@ -314,3 +315,4 @@ API rename
 	- or just tell users to msctl -R everytime...
 - ensure all errno values in rpc msgs are standardized
 - clear op-* files on slmkjrnl
+- convert CONF_LOCK to a rwlock
