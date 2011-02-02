@@ -36,11 +36,11 @@
 #include "mdsio.h"
 #include "slashd.h"
 
-void
+int
 mds_fcmh_increase_fsz(struct fidc_membh *fcmh, off_t siz)
 {
 	sl_bmapno_t nb;
-	int locked;
+	int locked, increase=0;
 
 	locked = FCMH_RLOCK(fcmh);
 	if (siz > fcmh_2_fsz(fcmh)) {
@@ -50,8 +50,10 @@ mds_fcmh_increase_fsz(struct fidc_membh *fcmh, off_t siz)
 			nb = fcmh->fcmh_sstb.sst_nxbmaps;
 		fcmh->fcmh_sstb.sst_nxbmaps -= nb;
 		fcmh_2_fsz(fcmh) = siz;
+		increase = 1;
 	}
 	FCMH_URLOCK(fcmh, locked);
+	return (increase);
 }
 
 int
