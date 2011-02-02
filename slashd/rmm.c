@@ -41,6 +41,8 @@
 #include "slerr.h"
 #include "sljournal.h"
 
+#include "zfs-fuse/zfs_slashlib.h"
+
 int
 slm_rmm_apply_update(struct srt_update_entry *entryp)
 {
@@ -156,6 +158,7 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 		len = UPDATE_ENTRY_LEN(entryp);
 		entryp = PSC_AGP(entryp, len);
 	}
+	zfsslash2_wait_synced(0);
 
  out:
 	PSCFREE(iov.iov_base);
