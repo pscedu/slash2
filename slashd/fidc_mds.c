@@ -39,8 +39,8 @@
 int
 mds_fcmh_increase_fsz(struct fidc_membh *fcmh, off_t siz)
 {
+	int locked, increase = 0;
 	sl_bmapno_t nb;
-	int locked, increase=0;
 
 	locked = FCMH_RLOCK(fcmh);
 	if (siz > fcmh_2_fsz(fcmh)) {
