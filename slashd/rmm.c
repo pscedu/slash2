@@ -149,12 +149,14 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 		goto out;
 	}
 
-	/* iterate through the namespace update buffer and apply updates */
+	/* 
+ 	 * Iterate through the namespace update buffer and apply updates.
+ 	 * If we fail to apply an update, we still report success to our
+ 	 * peer because reporting an error does not help our cause.
+ 	 */
 	entryp = iov.iov_base;
 	for (i = 0; i < count; i++) {
-		mp->rc = slm_rmm_apply_update(entryp);
-		if (mp->rc)
-			break;
+		slm_rmm_apply_update(entryp);
 		len = UPDATE_ENTRY_LEN(entryp);
 		entryp = PSC_AGP(entryp, len);
 	}
