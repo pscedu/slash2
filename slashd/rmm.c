@@ -54,6 +54,7 @@ slm_rmm_apply_update(struct srt_update_entry *entryp)
 	sjnm.sjnm_op = entryp->op;
 	sjnm.sjnm_uid = entryp->uid;
 	sjnm.sjnm_gid = entryp->gid;
+	sjnm.sjnm_mask = entryp->mask;
 	sjnm.sjnm_mode = entryp->mode;
 	sjnm.sjnm_size = entryp->size;
 
