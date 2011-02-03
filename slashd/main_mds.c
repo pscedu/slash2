@@ -251,6 +251,8 @@ main(int argc, char *argv[])
 	fidc_init(sizeof(struct fcmh_mds_info), FIDC_MDS_DEFSZ, NULL);
 	libsl_init(PSCNET_SERVER, 1);
 
+	slm_workers_spawn();
+
 	slm_init();
 
 	slmcohthr_spawn();
