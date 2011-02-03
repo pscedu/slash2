@@ -720,6 +720,8 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			}
 			fcmh->fcmh_flags |= FCMH_IN_PTRUNC;
 			if (mq->attr.sst_size >= fcmh_2_fsz(fcmh)) {
+				mds_fcmh_increase_fsz(fcmh,
+				    mq->attr.sst_size);
 				FCMH_ULOCK(fcmh);
 				goto apply;
 			}
@@ -744,7 +746,6 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	mp->rc = mdsio_setattr(fcmh_2_mdsio_fid(fcmh), &mq->attr,
 	    to_set, &rootcreds, &mp->attr, fcmh_2_mdsio_data(fcmh),
 	    mds_namespace_log);
-//	mds_fcmh_increase_fsz(fcmh, mq->attr.sst_size);
 
 	if (!mp->rc) {
 		slm_setattr_core(&mq->attr, to_set);
