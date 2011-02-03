@@ -1785,6 +1785,8 @@ slm_ptrunc_core(struct slm_workrq *wkrq)
 	brepls_init(tract, -1);
 	tract[BREPLST_VALID] = BREPLST_TRUNCPNDG;
 
+	ios_list.nios = 0;
+
 	i = fcmh_2_fsz(fcmh) / SLASH_BMAP_SIZE;
 	if (fcmh->fcmh_sstb.sst_size % SLASH_BMAP_SIZE) {
 		if (mds_bmap_load(fcmh, i, &b) == 0) {
