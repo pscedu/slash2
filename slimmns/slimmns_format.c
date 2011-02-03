@@ -121,7 +121,7 @@ slimmns_create(const char *root, uint32_t depth)
 		psc_fatal("write %s", fn);
 	close(fd);
 
-	if (wipe) {
+	if (wipe && !ion) {
 		struct dirent *dent;
 		DIR *dp;
 
