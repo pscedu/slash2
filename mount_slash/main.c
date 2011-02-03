@@ -353,7 +353,8 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mfh->mfh_oflags = oflags;
  out:
 	if (c) {
-		DEBUG_FCMH(PLL_INFO, c, "new mfh=%p rc=%d name=(%s) oflags=%o", mfh, rc, name, oflags);
+		DEBUG_FCMH(PLL_INFO, c, "new mfh=%p rc=%d name=(%s) "
+		    "oflags=%o", mfh, rc, name, oflags);
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	}
 
@@ -451,8 +452,8 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	}
 
  out:
-	DEBUG_FCMH(PLL_INFO, c, "new mfh=%p dir=%s rc=%d oflags=%o", *mfhp,
-	   (oflags & O_DIRECTORY) ? "yes" : "no", rc, (*mfhp)->mfh_oflags);
+	DEBUG_FCMH(PLL_INFO, c, "new mfh=%p dir=%s rc=%d oflags=%o",
+	    *mfhp, (oflags & O_DIRECTORY) ? "yes" : "no", rc, oflags);
 
 	if (c)
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
