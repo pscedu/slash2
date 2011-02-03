@@ -1669,7 +1669,6 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 void
 slm_setattr_core(struct srt_stat *sstb, int to_set)
 {
-	struct srt_stat metasstb;
 	struct fidc_membh *fcmh;
 	struct slm_workrq *wkrq;
 	int rc;
@@ -1677,14 +1676,7 @@ slm_setattr_core(struct srt_stat *sstb, int to_set)
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
 		rc = slm_fcmh_get(&sstb->sst_fg, &fcmh);
 		psc_assert(rc == 0);
-		if (sstb->sst_size == 0) {
-			/* full truncate - zero all old bmaps */
-			metasstb.sst_size = SL_BMAP_START_OFF;
-			rc = mdsio_setattr(fcmh_2_mdsio_fid(fcmh),
-			    &metasstb, SL_SETATTRF_METASIZE, &rootcreds,
-			    NULL, fcmh_2_mdsio_data(fcmh), NULL);
-			psc_assert(rc == 0);
-		} else {
+		if (sstb->sst_size) {
 			FCMH_LOCK(fcmh);
 			fcmh->fcmh_flags |= FCMH_IN_PTRUNC;
 			FCMH_ULOCK(fcmh);
