@@ -110,10 +110,10 @@ struct slmds_jent_bmapseq {
  */
 struct slmds_jent_namespace {
 	uint64_t		sjnm_magic;			/* debugging */
-	uint8_t			sjnm_op;			/* operation type (i.e. enum namespace_operation) */
-	uint8_t			sjnm_namelen;			/* NUL not included */
-	uint8_t			sjnm_namelen2;			/* NUL not included */
-	uint8_t			sjnm_flag;			/* need garbage collection */
+	 uint8_t		sjnm_op;			/* operation type (i.e. enum namespace_operation) */
+	 uint8_t		sjnm_namelen;			/* NULL not included */
+	 uint8_t		sjnm_namelen2;			/* NULL not included */
+	 uint8_t		sjnm_flag;			/* need garbage collection */
 
 	uint64_t		sjnm_parent_fid;		/* parent dir FID */
 	uint64_t		sjnm_target_fid;
