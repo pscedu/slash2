@@ -732,6 +732,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	update_entry.uid = sjnm->sjnm_uid;
 	update_entry.gid = sjnm->sjnm_gid;
 
+	update_entry.size = sjnm->sjnm_size;
+
 	update_entry.atime = sjnm->sjnm_atime;
 	update_entry.mtime = sjnm->sjnm_mtime;
 	update_entry.ctime = sjnm->sjnm_ctime;
@@ -1904,13 +1906,14 @@ mds_redo_namespace(struct slmds_jent_namespace *sjnm)
 	sstb.sst_uid = sjnm->sjnm_uid;
 	sstb.sst_gid = sjnm->sjnm_gid;
 	sstb.sst_mode = sjnm->sjnm_mode;
+	sstb.sst_size = sjnm->sjnm_size;
+
 	sstb.sst_atime = sjnm->sjnm_atime;
 	sstb.sst_atime_ns = sjnm->sjnm_atime_ns;
 	sstb.sst_mtime = sjnm->sjnm_mtime;
 	sstb.sst_mtime_ns = sjnm->sjnm_mtime_ns;
 	sstb.sst_ctime = sjnm->sjnm_ctime;
 	sstb.sst_ctime_ns = sjnm->sjnm_ctime_ns;
-	sstb.sst_size = sjnm->sjnm_size;
 
 	if (!sstb.sst_fid) {
 		psc_errorx("Unexpected zero SLASH2 FID.");
