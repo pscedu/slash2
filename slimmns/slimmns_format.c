@@ -20,6 +20,7 @@
 #include <sys/param.h>
 #include <sys/stat.h>
 
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <pwd.h>
@@ -31,8 +32,8 @@
 
 // #include <uuid/uuid.h>
 
-#include "pfl/pfl.h"
 #include "pfl/cdefs.h"
+#include "pfl/pfl.h"
 #include "psc_util/hostname.h"
 #include "psc_util/journal.h"
 #include "psc_util/log.h"
@@ -120,16 +121,38 @@ slimmns_create(const char *root, uint32_t depth)
 		psc_fatal("write %s", fn);
 	close(fd);
 
-	xmkfn(fn, "%s/%s.%d.%s.%lu", datadir,
-	    SL_FN_UPDATELOG, 0,
+	if (wipe) {
+		struct dirent *dent;
+		DIR *dp;
+
+		dp = opendir(datadir);
+		if (dp == NULL) {
+			while ((dent = readdir(dp)) != NULL) {
+				if (strncmp(dent->d_name,
+				    SL_FN_UPDATELOG,
+				    strlen(SL_FN_UPDATELOG)) &&
+				    strncmp(dent->d_name,
+				    SL_FN_RECLAIMLOG,
+				    strlen(SL_FN_RECLAIMLOG)))
+					continue;
+				xmkfn(fn, "%s/%s", datadir,
+				    dent->d_name);
+				if (unlink(fn) == -1)
+					psc_error("unlink %s", fn);
+			}
+		} else {
+			closedir(dp);
+		}
+	}
+
+	xmkfn(fn, "%s/%s.%d.%s.%lu", datadir, SL_FN_UPDATELOG, 0,
 	    psc_get_hostname(), cursor.pjc_timestamp);
 	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
 	if (fd == -1)
 		psc_fatal("open %s", fn);
 	close(fd);
 
-	xmkfn(fn, "%s/%s.%d.%s.%lu", datadir,
-	    SL_FN_RECLAIMLOG, 0,
+	xmkfn(fn, "%s/%s.%d.%s.%lu", datadir, SL_FN_RECLAIMLOG, 0,
 	    psc_get_hostname(), cursor.pjc_timestamp);
 	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
 	if (fd == -1)
