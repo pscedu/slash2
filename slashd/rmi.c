@@ -334,7 +334,8 @@ slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 	brepls_init(retifset, 1);
 	tract[BREPLST_INVALID] = 0;
 
-	for (i = fcmh->fcmh_sstb.sst_nxbmaps; i > 0; i--) {
+	for (i = MAX(nbmaps + fcmh->fcmh_sstb.sst_nxbmaps, bmapno);
+	    i > 0; i--) {
 		load bmap
 		if ()
 			break;
