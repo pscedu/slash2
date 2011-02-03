@@ -59,11 +59,15 @@ fflags_2_rw(int fflags)
  * equivalent in the system stat:
  *
  *	- sst_ptruncgen
+ *	- sst_utimgen
+ *	- sst_nxbmaps
  *	- sst_fg
  */
 void
 sl_externalize_stat(const struct stat *stb, struct srt_stat *sstb)
 {
+//	sstb->sst_fid		= stb->st_ino;
+//	sstb->sst_gen		= FGEN_ANY;
 	sstb->sst_dev		= stb->st_dev;
 	sstb->sst_mode		= stb->st_mode;
 	sstb->sst_nlink		= stb->st_nlink;
