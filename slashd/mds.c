@@ -1676,7 +1676,7 @@ slm_setattr_core(struct srt_stat *sstb, int to_set)
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
 		rc = slm_fcmh_get(&sstb->sst_fg, &fcmh);
 		psc_assert(rc == 0);
-		if (sstb->sst_size) {
+		if (sstb->sst_size && sstb->sst_size < fcmh_2_fsz(fcmh)) {
 			FCMH_LOCK(fcmh);
 			fcmh->fcmh_flags |= FCMH_IN_PTRUNC;
 			FCMH_ULOCK(fcmh);
@@ -1817,7 +1817,7 @@ slm_ptrunc_core(struct slm_workrq *wkrq)
 
 	rc = uswi_findoradd(&fcmh->fcmh_fg, &uswi);
 	if (rc)
-		psc_fatal("uswi_findoradd: %s",
+		psc_fatalx("uswi_findoradd: %s",
 		    slstrerror(rc));
 	uswi_enqueue_sites(uswi, ios_list.iosv, ios_list.nios);
 	uswi_unref(uswi);
