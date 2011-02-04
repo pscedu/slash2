@@ -314,5 +314,4 @@ API rename
   persistence policies
 	- or just tell users to msctl -R everytime...
 - ensure all errno values in rpc msgs are standardized
-- clear op-* files on slmkjrnl
 - convert CONF_LOCK to a rwlock
