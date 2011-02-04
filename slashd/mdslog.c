@@ -1896,11 +1896,12 @@ mds_unreserve_slot(void)
 }
 
 int
-mds_redo_namespace(struct slmds_jent_namespace *sjnm, int reply)
+mds_redo_namespace(struct slmds_jent_namespace *sjnm, int replay)
 {
 	char name[SL_NAME_MAX + 1], newname[SL_NAME_MAX + 1];
 	struct srt_stat sstb;
 	int rc, hasname = 1;
+	struct fidc_membh *fcmh = NULL;
 
 	memset(&sstb, 0, sizeof(sstb));
 	sstb.sst_fid = sjnm->sjnm_target_fid,
@@ -1964,8 +1965,19 @@ mds_redo_namespace(struct slmds_jent_namespace *sjnm, int reply)
 		break;
 	    case NS_OP_SETSIZE:
 	    case NS_OP_SETATTR:
+		if (!replay) {
+			rc = slm_fcmh_peek(&sstb.sst_fg, &fcmh);
+			if (fcmh)
+				FCMH_LOCK(fcmh);
+		}
 		rc = mdsio_redo_setattr(sjnm->sjnm_target_fid,
 		    sjnm->sjnm_mask, &sstb);
+		if (!replay) {
+			if (fcmh) {
+				fcmh->fcmh_sstb = sstb;
+				FCMH_ULOCK(fcmh);
+			}
+		}
 		slm_setattr_core(&sstb,
 		    mdsio_setattrmask_2_slflags(sjnm->sjnm_mask));
 		hasname = 0;

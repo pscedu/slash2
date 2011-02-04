@@ -52,6 +52,7 @@ struct fcmh_mds_info {
 #define inoh_2_fid(ih)		fcmh_2_fid((ih)->inoh_fcmh)
 
 #define slm_fcmh_get(fgp, fp)	fidc_lookup((fgp), FIDC_LOOKUP_CREATE, NULL, 0, (fp))
+#define slm_fcmh_peek(fgp, fp)	fidc_lookup((fgp), FIDC_LOOKUP_NONE, NULL, 0, (fp))
 
 int	mds_fcmh_increase_fsz(struct fidc_membh *, off_t);
 
