@@ -1899,9 +1899,9 @@ int
 mds_redo_namespace(struct slmds_jent_namespace *sjnm, int replay)
 {
 	char name[SL_NAME_MAX + 1], newname[SL_NAME_MAX + 1];
-	struct srt_stat sstb;
-	int rc, hasname = 1;
 	struct fidc_membh *fcmh = NULL;
+	struct srt_stat sstb;
+	int rc;
 
 	memset(&sstb, 0, sizeof(sstb));
 	sstb.sst_fid = sjnm->sjnm_target_fid,
@@ -1924,6 +1924,8 @@ mds_redo_namespace(struct slmds_jent_namespace *sjnm, int replay)
 		return (EINVAL);
 	}
 
+	name[0] = '\0';
+	newname[0] = '\0';
 	if (sjnm->sjnm_namelen) {
 		memcpy(name, sjnm->sjnm_name, sjnm->sjnm_namelen);
 		name[sjnm->sjnm_namelen] = '\0';
@@ -1972,31 +1974,22 @@ mds_redo_namespace(struct slmds_jent_namespace *sjnm, int replay)
 		}
 		rc = mdsio_redo_setattr(sjnm->sjnm_target_fid,
 		    sjnm->sjnm_mask, &sstb);
+		slm_setattr_core(fcmh, &sstb,
+		    mdsio_setattrmask_2_slflags(sjnm->sjnm_mask));
 		if (!replay) {
 			if (fcmh) {
 				fcmh->fcmh_sstb = sstb;
-				FCMH_ULOCK(fcmh);
+				fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 			}
 		}
-		slm_setattr_core(&sstb,
-		    mdsio_setattrmask_2_slflags(sjnm->sjnm_mask));
-		hasname = 0;
 		break;
 	    default:
 		psc_errorx("Unexpected opcode %d", sjnm->sjnm_op);
-		hasname = 0;
 		rc = EINVAL;
 		break;
 	}
-	if (hasname) {
-		psclog_info("Redo namespace log: op=%d name=%s "
-		    "fid="SLPRI_FID" rc=%d",
-		    sjnm->sjnm_op, name, sjnm->sjnm_target_fid, rc);
-	} else {
-		psclog_info("Redo namespace log: op=%d "
-		    "fid="SLPRI_FID" rc=%d",
-		    sjnm->sjnm_op, sjnm->sjnm_target_fid,
-		    rc);
-	}
+	psclog_info("Redo namespace log: op=%d name=%s "
+	    "newname=%s fid="SLPRI_FID" rc=%d",
+	    sjnm->sjnm_op, name, newname, sjnm->sjnm_target_fid, rc);
 	return (rc);
 }
