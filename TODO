@@ -315,3 +315,5 @@ API rename
 	- or just tell users to msctl -R everytime...
 - ensure all errno values in rpc msgs are standardized
 - convert CONF_LOCK to a rwlock
+- we can't hold fcmh in memory at all times just because PTRUNC has to
+  be resolved.  have to store in inode and release fcmh.
