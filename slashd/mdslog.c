@@ -1659,7 +1659,7 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 }
 
 void
-mds_journal_init(void)
+mds_journal_init(int disable_propagation)
 {
 	uint64_t batchno, last_reclaim_xid = 0, last_update_xid = 0, last_distill_xid = 0;
 	int i, ri, nios, count, total, npeers, index, logfd;
@@ -1689,6 +1689,9 @@ mds_journal_init(void)
 	npeers = 0;
 	SL_MDS_WALK(resm, npeers++);
 	npeers--;
+
+	if (disable_propagation)
+		npeers = 0;
 
 	mds_open_cursor();
 

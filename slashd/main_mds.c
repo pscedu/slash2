@@ -55,6 +55,8 @@
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 int			 allow_root_uid = 1;
+int			 disable_propagation = 0;
+
 const char		*progname;
 
 struct psc_poolmaster	 upsched_poolmaster;
@@ -162,7 +164,7 @@ slm_init(void)
 
 	bmap_cache_init(sizeof(struct bmap_mds_info));
 
-	mds_journal_init();
+	mds_journal_init(disable_propagation);
 
 	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_IONBMAPS_ODT);
 	psc_assert(!odtable_load(&mdsBmapAssignTable, fn, "bmapassign"));
@@ -205,7 +207,7 @@ main(int argc, char *argv[])
 	progname = argv[0];
 	cfn = SL_PATH_CONF;
 	sfn = SL_PATH_SLMCTLSOCK;
-	while ((c = getopt(argc, argv, "D:f:p:S:X")) != -1)
+	while ((c = getopt(argc, argv, "D:f:p:S:X:Y")) != -1)
 		switch (c) {
 		case 'D':
 			sl_datadir = optarg;
@@ -221,6 +223,9 @@ main(int argc, char *argv[])
 			break;
 		case 'X': /* undocumented, developer only */
 			allow_root_uid = 1;
+			break;
+		case 'Y': /* undocumented, developer only */
+			disable_propagation = 1;
 			break;
 		default:
 			usage();

@@ -69,7 +69,7 @@ void	mds_namespace_log(int, uint64_t, uint64_t, uint64_t,
 
 void	mds_bmap_sync(void *);
 void	mds_inode_sync(struct slash_inode_handle *);
-void	mds_journal_init(void);
+void	mds_journal_init(int);
 
 int	mds_bmap_repl_update(struct bmapc_memb *);
 int	mds_bmap_crc_update(struct bmapc_memb *, struct srm_bmap_crcup *);
