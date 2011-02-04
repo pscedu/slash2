@@ -80,7 +80,7 @@ void	mds_current_txg(uint64_t *);
 void	mds_reserve_slot(void);
 void	mds_unreserve_slot(void);
 
-int	mds_redo_namespace(struct slmds_jent_namespace *);
+int	mds_redo_namespace(struct slmds_jent_namespace *, int);
 
 extern struct psc_journal *mdsJournal;
 

@@ -70,7 +70,7 @@ slm_rmm_apply_update(struct srt_update_entry *entryp)
 	    entryp->namelen + entryp->namelen2);
 
 	localinfo = res2rpmi(nodeResProf)->rpmi_info;
-	rc = mds_redo_namespace(&sjnm);
+	rc = mds_redo_namespace(&sjnm, 0);
 	if (rc)
 		psc_atomic32_inc(&localinfo->sp_stats.ns_stats[NS_DIR_RECV]
 		    [sjnm.sjnm_op][NS_SUM_FAIL]);

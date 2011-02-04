@@ -480,7 +480,7 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 	    case MDS_LOG_NAMESPACE:
 		sjnm = PJE_DATA(pje);
 		psc_assert(sjnm->sjnm_magic == SJ_NAMESPACE_MAGIC);
-		rc = mds_redo_namespace(sjnm);
+		rc = mds_redo_namespace(sjnm, 1);
 		/*
 		 * If we fail above, we still skip these SLASH2 FIDs here
 		 * in case a client gets confused.
@@ -1896,7 +1896,7 @@ mds_unreserve_slot(void)
 }
 
 int
-mds_redo_namespace(struct slmds_jent_namespace *sjnm)
+mds_redo_namespace(struct slmds_jent_namespace *sjnm, int reply)
 {
 	char name[SL_NAME_MAX + 1], newname[SL_NAME_MAX + 1];
 	struct srt_stat sstb;
