@@ -66,7 +66,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	if (mq->size < len || mq->size > LNET_MTU)
 		return (EINVAL);
 
-	if (mq->count != mq->size/len)
+	if (mq->count != mq->size / len)
 		return (EINVAL);
 
 	iov.iov_len = mq->size;
@@ -92,7 +92,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 
 		/*
 		 * We do upfront garbage collection, so ENOENT should be
-		 * fine.  Also simply creating a file  without any I/O
+		 * fine.  Also simply creating a file without any I/O
 		 * won't create a backing file on the I/O server.
 		 *
 		 * Anyway, we don't report an error back to MDS because
