@@ -506,3 +506,17 @@ By the way, how does NFS/ext2 convert a file handle to an inode?  See ext2_nfs_g
 Right now, we only log the first operation (such as a create), not the second one that 
 creates a link in the by-id namespace.  If the two operations are in different transaction 
 groups, we can have a problem.
+
+02/04/2011
+----------
+
+So far, I can duplicate a tree on a second MDS just fine.  But the size keeps to be 0
+instead of a real size.  I need to propogate the size change along with a CRC update
+from the IOS.  The problem is that the redo works at the ZFS layer, not at the fcmh 
+layer.
+
+I can treat namespace propagation the same way as a request coming from a client.  But 
+the redo operations do not necessarily come in order (e.g., it may be asked to create file
+before its parent exists).
+
+So perhaps a better way is to patch the fcmh if it exists.
