@@ -210,7 +210,7 @@ void		 slm_set_curr_slashid(uint64_t);
 
 int		 slm_ptrunc_core(struct slm_workrq *);
 int		 slm_ptrunc_wake_clients(struct slm_workrq *);
-void		 slm_setattr_core(struct srt_stat *, int);
+void		 slm_setattr_core(struct fidc_membh *, struct srt_stat *, int);
 
 void		 slm_workq_init(void);
 void		 slm_workers_spawn(void);

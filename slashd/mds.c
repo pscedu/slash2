@@ -1667,28 +1667,38 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 }
 
 void
-slm_setattr_core(struct srt_stat *sstb, int to_set)
+slm_setattr_core(struct fidc_membh *fcmh, struct srt_stat *sstb,
+    int to_set)
 {
-	struct fidc_membh *fcmh;
 	struct slm_workrq *wkrq;
-	int rc;
+	int rc = 0;
 
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
-		rc = slm_fcmh_get(&sstb->sst_fg, &fcmh);
-		psc_assert(rc == 0);
+		if (fcmh == NULL) {
+			rc = slm_fcmh_get(&sstb->sst_fg, &fcmh);
+			if (rc) {
+				psclog_errorx("unable to retrieve FID "
+				    SLPRI_FID": %s",
+				    sstb->sst_fid, slstrerror(rc));
+				return;
+			}
+
+			rc = 1;
+		}
+		/* partial truncate */
 		if (sstb->sst_size && sstb->sst_size < fcmh_2_fsz(fcmh)) {
 			FCMH_LOCK(fcmh);
 			fcmh->fcmh_flags |= FCMH_IN_PTRUNC;
 			FCMH_ULOCK(fcmh);
 
-			/* partial truncate */
 			wkrq = psc_pool_get(slm_workrq_pool);
 			fcmh_op_start_type(fcmh, FCMH_OPCNT_WORKER);
 			wkrq->wkrq_fcmh = fcmh;
 			wkrq->wkrq_cbf = slm_ptrunc_core;
 			lc_add(&slm_workq, wkrq);
 		}
-		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+		if (rc)
+			fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 	}
 }
 
