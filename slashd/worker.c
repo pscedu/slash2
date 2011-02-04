@@ -52,15 +52,20 @@ slm_worker_main(__unusedx struct psc_thread *thr)
 }
 
 void
-slm_workers_spawn(void)
+slm_workq_init(void)
 {
-	int i;
-
 	psc_poolmaster_init(&slm_workrq_poolmaster, struct slm_workrq,
 	    wkrq_lentry, PPMF_AUTO, 8, 8, 0, NULL, NULL, NULL,
 	    "workrq");
 	slm_workrq_pool = psc_poolmaster_getmgr(&slm_workrq_poolmaster);
 	lc_reginit(&slm_workq, struct slm_workrq, wkrq_lentry, "workq");
+}
+
+void
+slm_workers_spawn(void)
+{
+	int i;
+
 	for (i = 0; i < SLM_NWORKER_THREADS; i++)
 		pscthr_init(SLMTHRT_WORKER, 0, slm_worker_main,
 		    NULL, 0, "slmwkr%d", i);
