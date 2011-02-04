@@ -43,6 +43,11 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
+/*
+ * Propagating namespace updates from peers is not quite like redo after a system 
+ * crash.  The difference is that the receiving MDS is already up and serving clients.  
+ * Therefore we must work from the fcmh layer, instead of just the ZFS layer.
+ */
 int
 slm_rmm_apply_update(struct srt_update_entry *entryp)
 {
@@ -50,6 +55,29 @@ slm_rmm_apply_update(struct srt_update_entry *entryp)
 	struct slmds_jent_namespace sjnm;
 	int rc;
 
+	switch (entryp->op) {
+	    case NS_OP_CREATE:
+		break;
+	    case NS_OP_LINK:
+		break;
+	    case NS_OP_MKDIR:
+		break;
+	    case NS_OP_RENAME:
+		break;
+	    case NS_OP_RMDIR:
+		break;
+	    case NS_OP_SETSIZE:
+		break;
+	    case NS_OP_SETATTR:
+		break;
+	    case NS_OP_SYMLINK:
+		break;
+	    case NS_OP_UNLINK:
+		break;
+	    default:
+		/* what can I do to make it right? */
+		break;
+	}
 	memset(&sjnm, 0, sizeof(sjnm));
 	sjnm.sjnm_op = entryp->op;
 	sjnm.sjnm_uid = entryp->uid;
