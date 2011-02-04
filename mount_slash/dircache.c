@@ -137,7 +137,7 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 		 * The return code for psc_dynarray_bsearch() tells us
 		 * the position where our name should be to keep the
 		 * the list sorted.  If it is one after the last item,
-		 * then we know for sure the item is not there. Otherwise,
+		 * then we know for sure the item is not there.  Otherwise,
 		 * we still need one more comparison to be sure.
 		 */
 		pos = psc_dynarray_bsearch(&e->de_dents,
@@ -243,7 +243,7 @@ dircache_new_ents(struct dircache_info *i, size_t size)
 	/* Clear more space if needed.
 	 */
 	while ((m->dcm_alloc + size) > m->dcm_maxsz &&
-	       !lc_empty(&m->dcm_lc)) {
+	    !lc_empty(&m->dcm_lc)) {
 		e = lc_peekhead(&m->dcm_lc);
 		if (!e)
 			break;
@@ -256,7 +256,7 @@ dircache_new_ents(struct dircache_info *i, size_t size)
 			dircache_rls_ents(e, DCFREEF_RELEASE);
 		} else {
 			dircache_ent_ulock(e);
-			/* Give someone else a shot to free some 
+			/* Give someone else a shot to free some
 			 *   dircache pages.
 			 */
 			break;
