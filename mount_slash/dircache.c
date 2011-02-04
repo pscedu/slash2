@@ -125,8 +125,8 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 	slfid_t ino = FID_ANY;
 	int found, pos;
 
-	desc.dd_hash	= psc_str_hashify(name);
 	desc.dd_namelen	= strlen(name);
+	desc.dd_hash	= psc_strn_hashify(name, desc.dd_namelen);
 	desc.dd_name	= name;
 
 	/* This lock is equiv to dircache_ent_lock()
@@ -152,7 +152,7 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 				break;
 		}
 		found = 0;
-		for (; pos <= psc_dynarray_len(&e->de_dents); pos++) {
+		for (; pos < psc_dynarray_len(&e->de_dents); pos++) {
 			d = psc_dynarray_getpos(&e->de_dents, pos);
 			if (d->dd_hash != desc.dd_hash)
 				break;
