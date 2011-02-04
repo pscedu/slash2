@@ -702,11 +702,11 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 		if (mq->attr.sst_size == 0) {
 			/*
 			 * Full truncate.  If file size is already zero,
-			 * do nothing.
-			*/
+			 *   we must still bump the generation since size
+			 *   updates from the sliod may be pending for
+			 *   this generation.
+			 */
 			FCMH_LOCK(fcmh);
-			if (fcmh_2_fsz(fcmh) == 0)
-				goto out;
 			fcmh_2_gen(fcmh)++;
 			FCMH_ULOCK(fcmh);
 
@@ -748,7 +748,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	    mds_namespace_log);
 
 	if (!mp->rc) {
-		slm_setattr_core(&mq->attr, to_set);
+		slm_setattr_core(fcmh, &mq->attr, to_set);
 
 		FCMH_LOCK(fcmh);
 		fcmh->fcmh_sstb = mp->attr;
