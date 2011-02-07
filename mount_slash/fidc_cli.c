@@ -120,12 +120,6 @@ slc_fcmh_dtor(struct fidc_membh *fcmh)
 	}
 }
 
-int
-slc_fcmh_getattr(struct fidc_membh *fcmh)
-{
-	return (msl_stat(fcmh, &rootcreds));
-}
-
 #if PFL_DEBUG > 0
 void
 dump_fcmh_flags(int flags)
@@ -147,7 +141,7 @@ dump_fcmh_flags(int flags)
 struct sl_fcmh_ops sl_fcmh_ops = {
 /* ctor */		slc_fcmh_ctor,
 /* dtor */		slc_fcmh_dtor,
-/* getattr */		slc_fcmh_getattr,
+/* getattr */		msl_stat,
 /* postsetattr */	slc_fcmh_refresh_age,
 /* modify */		NULL
 };

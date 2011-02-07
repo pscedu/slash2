@@ -483,7 +483,7 @@ mslfsop_opendir(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags)
 }
 
 int
-msl_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
+msl_stat(struct fidc_membh *fcmh)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -570,7 +570,7 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 	if (rc)
 		goto out;
 
-	rc = msl_stat(f, &creds);
+	rc = msl_stat(f);
 	if (rc)
 		goto out;
 
@@ -1192,7 +1192,7 @@ msl_lookup_fidcache(const struct slash_creds *cr, pscfs_inum_t pinum,
 	 * in a stat RPC.  Note the app is looking based on a name
 	 * here, not based on ID.
 	 */
-	rc = msl_stat(c, cr);
+	rc = msl_stat(c);
 	if (!rc) {
 		if (fgp)
 			*fgp = c->fcmh_fg;

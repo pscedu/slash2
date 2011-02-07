@@ -87,7 +87,7 @@ int	 msl_dio_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int	 msl_io(struct msl_fhent *, char *, size_t, off_t, enum rw);
 int	 msl_io_rpc_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int	 msl_io_rpcset_cb(struct pscrpc_request_set *, void *, int);
-int	 msl_stat(struct fidc_membh *, const struct slash_creds *);
+int	 msl_stat(struct fidc_membh *);
 
 struct msl_fhent *
 	 msl_fhent_new(struct fidc_membh *);
