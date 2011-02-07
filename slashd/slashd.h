@@ -50,6 +50,7 @@ enum {
 	SLMTHRT_JNAMESPACE,	/* namespace propagating thread */
 	SLMTHRT_JRECLAIM,	/* garbage reclamation thread */
 	SLMTHRT_JRNL,		/* journal distill thread */
+	SLMTHRT_ZFS_KSTAT,	/* ZFS stats */
 	SLMTHRT_LNETAC,		/* lustre net accept thr */
 	SLMTHRT_RCM,		/* CLI <- MDS msg issuer */
 	SLMTHRT_RMC,		/* MDS <- CLI msg svc handler */

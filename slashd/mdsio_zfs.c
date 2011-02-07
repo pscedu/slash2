@@ -23,7 +23,10 @@
  * SLASH file's metadata.
  */
 
+#include <poll.h>
+
 #include "pfl/fs.h"
+#include "pfl/fsmod.h"
 #include "psc_util/lock.h"
 #include "psc_util/journal.h"
 
@@ -114,8 +117,9 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 		DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh,
 		    "new fsize %"PRId64, crcup->fsize);
 		/*
- 		 * Make sure we will propagate this change to our peer MDSes.
- 		 */ 
+		 * Make sure we will propagate this change to our peer
+		 * MDSes.
+		 */
 		mds_fcmh_increase_fsz(bmap->bcm_fcmh, crcup->fsize);
 	}
 	utimgen = bmap->bcm_fcmh->fcmh_sstb.sst_utimgen;
@@ -170,11 +174,11 @@ mds_bmap_repl_update(struct bmapc_memb *bmap)
 	size_t nb;
 
 	BMAPOD_REQRDLOCK(bmap_2_bmdsi(bmap));
-        BMDSI_LOGCHG_CHECK(bmap, logchg);
-        if (!logchg) {
-                BMAPOD_READ_DONE(bmap);
-                return (0);
-        }
+	BMDSI_LOGCHG_CHECK(bmap, logchg);
+	if (!logchg) {
+		BMAPOD_READ_DONE(bmap);
+		return (0);
+	}
 
 	mds_reserve_slot();
 	rc = zfsslash2_write(&rootcreds, bmap_2_ondisk(bmap),
@@ -373,14 +377,45 @@ mdsio_inode_extras_write(struct slash_inode_handle *i)
 	return (rc);
 }
 
+void
+slmzfskstatmthr_main(__unusedx struct psc_thread *thr)
+{
+	pscfs_main();
+}
+
 int
 zfsslash2_init(void)
 {
+	struct pscfs_args args = PSCFS_ARGS_INIT(0, NULL);
+	extern struct fuse_lowlevel_ops pscfs_fuse_ops;
+	extern struct fuse_session *fuse_session;
+	extern struct pollfd pscfs_fds[];
+	extern int newfs_fd[2], pscfs_nfds;
 	extern char *fuse_mount_options;
-	extern int newfs_fd[2];
+	char buf[BUFSIZ];
 	int rc;
 
-	newfs_fd[1] = 1;
+#define _PATH_KSTAT "/zfs-kstat"
+	rc = snprintf(buf, sizeof(buf), "umount %s", _PATH_KSTAT);
+	if (rc == -1)
+		psc_fatal("snprintf: umount %s", _PATH_KSTAT);
+	if (rc >= (int)sizeof(buf))
+		psc_fatalx("snprintf: umount %s: too long", _PATH_KSTAT);
+	if (system(buf) == -1)
+		psc_warn("system(%s)", buf);
+
+	if (pipe(newfs_fd) == -1)
+		psc_fatal("pipe");
+
+	pscfs_fds[0].fd = newfs_fd[0];
+	pscfs_fds[0].events = POLLIN;
+	pscfs_nfds = 1;
+
+	fuse_session = fuse_lowlevel_new(&args.pfa_av, &pscfs_fuse_ops,
+	    sizeof(pscfs_fuse_ops), NULL);
+
+	pscthr_init(SLMTHRT_ZFS_KSTAT, 0, slmzfskstatmthr_main, NULL, 0,
+	    "slmzfskstatmthr");
 
 	fuse_mount_options = "";
 	rc = libzfs_init_fusesocket();
