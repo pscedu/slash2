@@ -114,7 +114,7 @@ sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *w)
 }
 
 void
-sli_rmi_read_bminseq(struct pscrpc_request *rq)
+sli_rmi_read_bminseq(struct pscrpc_request *rq, int msgtype)
 {
 	struct srt_bmapminseq *sbms;
 	struct pscrpc_msg *m;
@@ -122,7 +122,10 @@ sli_rmi_read_bminseq(struct pscrpc_request *rq)
 	if (rq->rq_status)
 		return;
 
-	m = rq->rq_repmsg;
+	if (msgtype == PSCRPC_MSG_REQUEST)
+		m = rq->rq_reqmsg;
+	else
+		m = rq->rq_repmsg;
 	if (m == NULL)
 		goto error;
 	if (m->bufcount < 3)

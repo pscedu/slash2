@@ -115,7 +115,7 @@ slrpc_waitrep(struct slashrpc_cservice *csvc,
 
 	rc = slrpc_waitgenrep(rq, plen, mpp);
 	if (csvc->csvc_ctype == SLCONNT_MDS)
-		sli_rmi_read_bminseq(rq);
+		sli_rmi_read_bminseq(rq, PSCRPC_MSG_REPLY);
 	return (rc);
 }
 
@@ -128,7 +128,7 @@ slrpc_allocrep(struct pscrpc_request *rq, void *mqp, int qlen,
 
 		rc = slrpc_allocrepn(rq, mqp, qlen, mpp, nitems(plens),
 		    plens, rcoff);
-		sli_rmi_read_bminseq(rq);
+		sli_rmi_read_bminseq(rq, PSCRPC_MSG_REQUEST);
 		return (rc);
 	}
 	return (slrpc_allocgenrep(rq, mqp, qlen, mpp, plen, rcoff));
