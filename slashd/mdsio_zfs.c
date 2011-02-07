@@ -377,7 +377,10 @@ int
 zfsslash2_init(void)
 {
 	extern char *fuse_mount_options;
+	extern int newfs_fd[2];
 	int rc;
+
+	newfs_fd[1] = 1;
 
 	fuse_mount_options = "";
 	rc = libzfs_init_fusesocket();
