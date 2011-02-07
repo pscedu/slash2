@@ -354,7 +354,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
  out:
 	if (c) {
 		DEBUG_FCMH(PLL_INFO, c, "new mfh=%p rc=%d name=(%s) "
-		    "oflags=%o", mfh, rc, name, oflags);
+		    "oflags=%#o", mfh, rc, name, oflags);
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	}
 
@@ -452,7 +452,7 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	}
 
  out:
-	DEBUG_FCMH(PLL_INFO, c, "new mfh=%p dir=%s rc=%d oflags=%o",
+	DEBUG_FCMH(PLL_INFO, c, "new mfh=%p dir=%s rc=%d oflags=%#o",
 	    *mfhp, (oflags & O_DIRECTORY) ? "yes" : "no", rc, oflags);
 
 	if (c)
@@ -737,7 +737,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	fcmh_setattr(p, &mp->pattr, FCMH_SETATTRF_NONE);
 
-	psclog_info("pfid=%"PRIx64" mode=0%o name='%s' rc=%d mp->rc=%d",
+	psclog_info("pfid=%"PRIx64" mode=%#o name='%s' rc=%d mp->rc=%d",
 	    mq->pfg.fg_fid, mq->mode, mq->name, rc, mp->rc);
 
 	rc = slc_fcmh_get(&mp->cattr, FCMH_SETATTRF_NONE, &c);
@@ -930,7 +930,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	fcmh_setattr(p, &mp->pattr, FCMH_SETATTRF_NONE);
 
-	psclog_info("pfid=%"PRIx64" mode=0%o name='%s' rc=%d mp->rc=%d",
+	psclog_info("pfid=%"PRIx64" mode=%#o name='%s' rc=%d mp->rc=%d",
 	    mq->pfg.fg_fid, mq->mode, mq->name, rc, mp->rc);
 
 	rc = slc_fcmh_get(&mp->cattr, FCMH_SETATTRF_NONE, &c);
