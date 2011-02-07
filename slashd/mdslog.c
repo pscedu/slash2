@@ -780,6 +780,7 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
     uint64_t newparent, const struct srt_stat *sstb, int mask,
     const char *name, const char *newname)
 {
+	int distill;
 	struct slmds_jent_namespace *sjnm;
 
 	sjnm = pjournal_get_buf(mdsJournal,
@@ -803,6 +804,10 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 	sjnm->sjnm_ctime_ns = sstb->sst_ctime_ns;
 	sjnm->sjnm_size = sstb->sst_size;
 
+	/*
+ 	 * We need distill if we have a peer MDS or we need do garbage reclamation.
+ 	 */
+	distill = pjournal_has_peers(mdsJournal);
 	if ((op == NS_OP_UNLINK && sstb->sst_nlink == 1) ||
 	    (op == NS_OP_SETSIZE && sstb->sst_size == 0)) {
 		/*
@@ -810,6 +815,7 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 		 * generation.  Note that changing the attributes of a
 		 * zero-lengh file should NOT trigger this code.
 		 */
+		distill = 1;
 		sjnm->sjnm_flag |= SJ_NAMESPACE_RECLAIM;
 		sjnm->sjnm_target_gen = sstb->sst_gen;
 		if (op == NS_OP_SETSIZE) {
@@ -831,8 +837,8 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 		    sjnm->sjnm_namelen2);
 	}
 
-	pjournal_add_entry_distill(mdsJournal, txg,
-	    MDS_LOG_NAMESPACE, sjnm,
+	pjournal_add_entry(mdsJournal, txg,
+	    MDS_LOG_NAMESPACE, distill, sjnm,
 	    offsetof(struct slmds_jent_namespace, sjnm_name) +
 	    sjnm->sjnm_namelen + sjnm->sjnm_namelen2);
 }
@@ -1571,7 +1577,7 @@ mds_inode_addrepl_log(void *datap, uint64_t txg)
 	    jrir->sjir_fid, jrir->sjir_ios, jrir->sjir_pos);
 
 	pjournal_add_entry(mdsJournal, txg, MDS_LOG_INO_ADDREPL,
-	    jrir, sizeof(struct slmds_jent_ino_addrepl));
+	    0, jrir, sizeof(struct slmds_jent_ino_addrepl));
 
 	pjournal_put_buf(mdsJournal, jrir);
 }
@@ -1601,7 +1607,7 @@ mds_bmap_repl_log(void *datap, uint64_t txg)
 	    jrpg->sjp_fid, jrpg->sjp_bmapno, jrpg->sjp_bgen);
 
 	pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_REPL,
-	    jrpg, sizeof(struct slmds_jent_repgen));
+	    0, jrpg, sizeof(struct slmds_jent_repgen));
 
 	pjournal_put_buf(mdsJournal, jrpg);
 }
@@ -1647,7 +1653,7 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 		    n * sizeof(struct srm_bmap_crcwire));
 
 		pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_CRC,
-		    jcrc, sizeof(struct slmds_jent_crc));
+		    0, jcrc, sizeof(struct slmds_jent_crc));
 	}
 
 	psc_assert(t == crcup->nups);
