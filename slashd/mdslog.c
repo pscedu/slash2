@@ -171,20 +171,22 @@ mds_record_reclaim_prog(void)
 	struct sl_resource *res;
 	ssize_t size;
 	int ri;
+	int nios = 0;
 
 	SITE_FOREACH_RES(nodeSite, res, ri) {
 		if (res->res_type == SLREST_MDS)
 			continue;
 		iosinfo = res2rpmi(res)->rpmi_info;
-		reclaim_prog_buf[ri].res_id = res->res_id;
-		reclaim_prog_buf[ri].res_xid = iosinfo->si_xid;
-		reclaim_prog_buf[ri].res_batchno = iosinfo->si_batchno;
+		reclaim_prog_buf[nios].res_id = res->res_id;
+		reclaim_prog_buf[nios].res_xid = iosinfo->si_xid;
+		reclaim_prog_buf[nios].res_batchno = iosinfo->si_batchno;
+		nios++;
 	}
 	if (lseek(current_reclaim_progfile[index], 0, SEEK_SET) == (off_t)-1)
 		psc_warn("lseek");
 	size = write(current_reclaim_progfile[index], reclaim_prog_buf,
-	    ri * sizeof(struct reclaim_prog_entry));
-	psc_assert(size == ri * (int)sizeof(struct reclaim_prog_entry));
+	    nios * sizeof(struct reclaim_prog_entry));
+	psc_assert(size == nios * (int)sizeof(struct reclaim_prog_entry));
 	index = (index == 0) ? 1 : 0;
 }
 
