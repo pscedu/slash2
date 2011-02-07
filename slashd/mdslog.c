@@ -1978,7 +1978,7 @@ mds_redo_namespace(struct slmds_jent_namespace *sjnm, int replay)
 		    mdsio_setattrmask_2_slflags(sjnm->sjnm_mask));
 		if (!replay) {
 			if (fcmh) {
-				/* setattr() above will fill sstb */
+				/* setattr() above has filled sstb */
 				fcmh->fcmh_sstb = sstb;
 				fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 			}
