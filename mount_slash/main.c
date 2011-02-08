@@ -1642,7 +1642,8 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		rc = EPERM;
 		goto out;
 	}
-	if ((to_set & PSCFS_SETATTRF_UID) && cr.scr_uid) {
+	if ((to_set & PSCFS_SETATTRF_UID) && cr.scr_uid &&
+	    cr.scr_uid != c->fcmh_sstb.sst_uid) {
 		rc = EPERM;
 		goto out;
 	}
