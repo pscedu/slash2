@@ -116,10 +116,6 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	if (fcmh_2_fsz(bmap->bcm_fcmh) < crcup->fsize) {
 		DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh,
 		    "new fsize %"PRId64, crcup->fsize);
-		/*
-		 * Make sure we will propagate this change to our peer
-		 * MDSes.
-		 */
 		extend = mds_fcmh_increase_fsz(bmap->bcm_fcmh, crcup->fsize);
 	}
 	utimgen = bmap->bcm_fcmh->fcmh_sstb.sst_utimgen;
