@@ -41,6 +41,7 @@
 #include "pfl/pfl.h"
 #include "pfl/stat.h"
 #include "pfl/str.h"
+#include "pfl/sys.h"
 #include "pfl/time.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_rpc/rpc.h"
@@ -1614,12 +1615,18 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 	FCMH_LOCK(c);
 	if ((to_set & PSCFS_SETATTRF_MODE) && cr.scr_uid) {
+//		if ((stb->st_mode & ALLPERMS) !=
+//		    (c->fcmh_sstb.sst_mode & ALLPERMS)) {
+//			rc = EINVAL;
+//			goto out;
+//		}
 		if (cr.scr_uid != c->fcmh_sstb.sst_uid) {
 			rc = EPERM;
 			goto out;
 		}
-		if (cr.scr_uid)
-			stb->st_mode &= ~(S_ISUID | S_ISGID);
+		if (cr.scr_gid != c->fcmh_sstb.sst_gid &&
+		    !pscfs_inprocgrouplist(pfr, c->fcmh_sstb.sst_gid))
+			stb->st_mode &= ~S_ISGID;
 	}
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
 		rc = checkcreds(&c->fcmh_sstb, &cr, W_OK);
@@ -1631,39 +1638,17 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		rc = EPERM;
 		goto out;
 	}
-	if (rc == 0 && (to_set & PSCFS_SETATTRF_UID) && cr.scr_uid) {
+	if ((to_set & PSCFS_SETATTRF_UID) && cr.scr_uid) {
 		rc = EPERM;
 		goto out;
 	}
-	if (rc == 0 && (to_set & PSCFS_SETATTRF_GID) && cr.scr_uid) {
-		struct passwd pw, *pwp;
-		gid_t *grpv = NULL;
-		char buf[LINE_MAX];
-		int ngrp = 0;
-
-		rc = getpwuid_r(cr.scr_uid, &pw, buf, sizeof(buf), &pwp);
-		if (rc)
-			goto out;
-
-		getgrouplist(pw.pw_name, cr.scr_gid, NULL, &ngrp);
-		grpv = psc_calloc(ngrp, sizeof(*grpv), 0);
-		rc = getgrouplist(pw.pw_name, cr.scr_gid, grpv, &ngrp);
-		if (rc < 1) {
-			PSCFREE(grpv);
-			rc = EIO;
+	if ((to_set & PSCFS_SETATTRF_GID) && cr.scr_uid) {
+		if (cr.scr_gid != c->fcmh_sstb.sst_gid &&
+		    !pflsys_userisgroupmember(cr.scr_uid, cr.scr_gid,
+		    stb->st_gid)) {
+			rc = EPERM;
 			goto out;
 		}
-
-		rc = EPERM;
-		for (; ngrp >= 0; ngrp--)
-			if (stb->st_gid == grpv[ngrp - 1]) {
-				rc = 0;
-				break;
-			}
-
-		PSCFREE(grpv);
-		if (rc)
-			goto out;
 	}
 
 	rc = slc_rmc_getimp(&csvc);
