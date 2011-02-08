@@ -1782,7 +1782,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 	fcmh_setattr(c, &mp->attr, FCMH_SETATTRF_SAVELOCAL |
 	    FCMH_SETATTRF_HAVELOCK);
-	sl_internalize_stat(&c->fcmh_sstb, stb);
 
 	/* Issue wakeup after calling fcmh_setattr() to avoid needless
 	 *   spinlock contention.
