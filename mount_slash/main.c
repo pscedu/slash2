@@ -953,7 +953,8 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 }
 
 __static void
-mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off, void *data)
+mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
+    void *data)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct fidc_membh *dtmp, *d = NULL;
@@ -1041,8 +1042,10 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 		for (i = 0; i < mq->nstbpref; i++, attr++) {
 			if (attr->sst_fid == FID_ANY ||
 			    attr->sst_fid == 0) {
-				psc_warnx("invalid i+g:"SLPRI_FG", parent: "SLPRI_FID,
-					   SLPRI_FG_ARGS(&attr->sst_fg), fcmh_2_fid(d));
+				psc_warnx("invalid f+g:"SLPRI_FG", "
+				    "parent: "SLPRI_FID,
+				    SLPRI_FG_ARGS(&attr->sst_fg),
+				    fcmh_2_fid(d));
 				continue;
 			}
 
