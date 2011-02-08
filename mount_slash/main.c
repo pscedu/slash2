@@ -1654,6 +1654,11 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			rc = EPERM;
 			goto out;
 		}
+		if (c->fcmh_sstb.sst_mode & (S_ISGID | S_ISUID)) {
+			to_set |= PSCFS_SETATTRF_MODE;
+			stb->st_mode = c->fcmh_sstb.sst_mode &
+			    ~(S_ISGID | S_ISUID);
+		}
 	}
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_SETATTR, rq, mq, mp);
