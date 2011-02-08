@@ -841,6 +841,9 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 	    MDS_LOG_NAMESPACE, distill, sjnm,
 	    offsetof(struct slmds_jent_namespace, sjnm_name) +
 	    sjnm->sjnm_namelen + sjnm->sjnm_namelen2);
+
+	if (!distill)
+		pjournal_put_buf(mdsJournal, sjnm);
 }
 
 /**
