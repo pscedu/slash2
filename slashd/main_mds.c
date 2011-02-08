@@ -178,7 +178,8 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-D datadir] [-f slashconf] [-p zpoolcache] [-S socket] zpoolname\n",
+	    "usage: %s [-D datadir] [-f slashconf] [-p zfspoolcache] [-S socket]\n"
+	    "\tzfspoolname\n",
 	    progname);
 	exit(1);
 }
@@ -257,7 +258,6 @@ main(int argc, char *argv[])
 	libsl_init(PSCNET_SERVER, 1);
 
 	slm_workq_init();
-
 	slm_init();
 
 	slm_workers_spawn();
