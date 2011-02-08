@@ -1600,7 +1600,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
 	struct slash_creds cr;
-	int rc = 0, getting = 0;
+	int rc, getting = 0;
 
 	msfsthr_ensure();
 
@@ -1611,6 +1611,10 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		goto out;
 
 	if (to_set == 0)
+		goto out;
+
+	rc = slc_rmc_getimp(&csvc);
+	if (rc)
 		goto out;
 
 	FCMH_LOCK(c);
@@ -1650,10 +1654,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			goto out;
 		}
 	}
-
-	rc = slc_rmc_getimp(&csvc);
-	if (rc)
-		goto out;
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_SETATTR, rq, mq, mp);
 	if (rc)
