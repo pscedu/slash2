@@ -160,7 +160,7 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 			/* Map the dirent from the desc's offset. */
 			dirent = (void *)(e->de_base + d->dd_offset);
 
-			psc_dbg("ino="SLPRI_FID" off=%"PRId64" nlen=%u "
+			psclog_dbg("fid="SLPRI_FID" off=%"PRId64" nlen=%u "
 			    "type=%#o dname=%.*s lookupname=%s off=%d d=%p",
 			    dirent->pfd_ino, dirent->pfd_off, dirent->pfd_namelen,
 			    dirent->pfd_type, dirent->pfd_namelen, dirent->pfd_name,
@@ -304,7 +304,7 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 	for (j = 0, b = e->de_base, off = 0; j < (int)nents; j++, c++) {
 		dirent = (void *)(b + off);
 
-		psc_dbg("ino=%"PRIx64" off=%"PRId64" "
+		psclog_dbg("fid="SLPRI_FID" off=%"PRId64" "
 		    "nlen=%u type=%#o "
 		    "name=%.*s dirent=%p off=%"PRId64,
 		    dirent->pfd_ino, dirent->pfd_off,
@@ -323,7 +323,7 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 
 	psc_dynarray_sort(&e->de_dents, qsort, dirent_sort_cmp);
 	DYNARRAY_FOREACH(c, j, &e->de_dents)
-		psc_dbg("c=%p hash=%#x namelen=%u name=%.*s",
+		psclog_dbg("c=%p hash=%#x namelen=%u name=%.*s",
 		    c, c->dd_hash, c->dd_namelen, c->dd_namelen, c->dd_name);
 
 	lc_addtail(&m->dcm_lc, e);
