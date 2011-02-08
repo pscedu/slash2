@@ -520,3 +520,51 @@ the redo operations do not necessarily come in order (e.g., it may be asked to c
 before its parent exists).
 
 So perhaps a better way is to patch the fcmh if it exists.
+
+02/08/2011
+----------
+
+So the size seems to be propagated to the peer MDS correctly.  But trying to cat a file will panic
+for now:
+
+zhihui@lemon: /zzh-slash2-lemon/zhihui3/linux-2.6.34$ ls -al
+total 36
+drwxr-xr-x  3 zhihui staff     7 Feb  8 12:20 .
+drwxr-xr-x  3 zhihui staff     3 Feb  8 11:59 ..
+-rw-r--r--  1 zhihui staff 18693 Feb  8 12:20 COPYING
+-rw-r--r--  1 zhihui staff 94031 Feb  8 12:20 CREDITS
+drwxr-xr-x 33 zhihui staff    90 Feb  8 12:20 Documentation
+-rw-r--r--  1 zhihui staff   930 Feb  8 12:20 .gitignore
+-rw-r--r--  1 zhihui staff  4021 Feb  8 12:20 .mailmap
+zhihui@lemon: /zzh-slash2-lemon/zhihui3/linux-2.6.34$ cat COPYING 
+^C^C
+
+
+[1297185387:989826 mseqpollthr:1772:rpc pscrpc_set_import_discon 97] Connection to service via nid 128.182.99.28@tcp10 was lost; in progress operations using this service will fail.
+[1297185715:562807 msfsthr14:1797:def msl_read_rpc_create 1214] [assert] csvc
+
+Program received signal SIGABRT, Aborted.
+[Switching to Thread 0x7fff3b5fe700 (LWP 1797)]
+0x000000302ea328f5 in raise (sig=6) at ../nptl/sysdeps/unix/sysv/linux/raise.c:64
+64        return INLINE_SYSCALL (tgkill, 3, pid, selftid, sig);
+(gdb) bt
+#0  0x000000302ea328f5 in raise (sig=6) at ../nptl/sysdeps/unix/sysv/linux/raise.c:64
+#1  0x000000302ea340d5 in abort () at abort.c:92
+#2  0x00000000004b0537 in _psclogv (pci=0x7fff2c000910, level=PLL_FATAL, options=0, fmt=0x58874f "[assert] %s", ap=0x7fff3b5fd120)
+    at /home/zhihui/projects-lemon/psc_fsutil_libs/psc_util/log.c:309
+#3  0x00000000004b0712 in _psc_fatal (pci=0x7fff2c000910, level=PLL_FATAL, options=0, fmt=0x58874f "[assert] %s")
+    at /home/zhihui/projects-lemon/psc_fsutil_libs/psc_util/log.c:338
+#4  0x00000000004e2dff in msl_read_rpc_create (r=0x7fff2c008bd0, startpage=0, npages=1)
+    at /home/zhihui/projects-lemon/slash_nara/mount_slash/mount_slash_int.c:1214
+#5  0x00000000004e52d9 in msl_pages_prefetch (r=0x7fff2c008bd0) at /home/zhihui/projects-lemon/slash_nara/mount_slash/mount_slash_int.c:1347
+#6  0x00000000004eb415 in msl_io (mfh=0x7fff20000c10, buf=0x7fff2c000bc0 "", size=32768, off=0, rw=SL_READ)
+    at /home/zhihui/projects-lemon/slash_nara/mount_slash/mount_slash_int.c:1683
+#7  0x00000000004c859f in mslfsop_read (pfr=0x7fff3b5fdce0, size=32768, off=0, data=0x7fff20000c10)
+    at /home/zhihui/projects-lemon/slash_nara/mount_slash/main.c:1919
+#8  0x0000000000480251 in pscfs_fuse_handle_read (req=0x7fff2c000930, inum=4503599627370501, size=32768, off=0, fi=0x7fff3b5fdd30)
+    at /home/zhihui/projects-lemon/psc_fsutil_libs/psc_fs/fuse.c:748
+#9  0x00007ffff7dcb620 in do_read (req=<value optimized out>, nodeid=<value optimized out>, inarg=<value optimized out>) at fuse_lowlevel.c:738
+#10 0x000000000047d2c9 in pscfs_fuse_listener_loop (arg=0x0) at /home/zhihui/projects-lemon/psc_fsutil_libs/psc_fs/fuse.c:295
+#11 0x000000302ee07761 in start_thread (arg=0x7fff3b5fe700) at pthread_create.c:301
+#12 0x000000302eae098d in clone () at ../sysdeps/unix/sysv/linux/x86_64/clone.S:115
+
