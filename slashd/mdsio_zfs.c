@@ -59,7 +59,7 @@ mdsio_fcmh_setattr(struct fidc_membh *f, int setattrflags)
 {
 	return (zfsslash2_setattr(fcmh_2_mdsio_fid(f), &f->fcmh_sstb,
 	    setattrflags, &rootcreds, NULL,
-	    fcmh_2_fmi(f)->fmi_mdsio_data, mds_namespace_log));
+	    fcmh_2_fmi(f)->fmi_mdsio_data, NULL));
 }
 
 int
@@ -108,7 +108,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	struct sl_mds_crc_log crclog;
 	uint32_t utimgen, i;
 	size_t nb;
-	int rc;
+	int rc, extend = 0;
 
 	psc_assert(bmap->bcm_flags & BMAP_MDS_CRC_UP);
 
@@ -120,7 +120,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 		 * Make sure we will propagate this change to our peer
 		 * MDSes.
 		 */
-		mds_fcmh_increase_fsz(bmap->bcm_fcmh, crcup->fsize);
+		extend = mds_fcmh_increase_fsz(bmap->bcm_fcmh, crcup->fsize);
 	}
 	utimgen = bmap->bcm_fcmh->fcmh_sstb.sst_utimgen;
 	FCMH_ULOCK(bmap->bcm_fcmh);
@@ -132,6 +132,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 		   "utimgen %d < crcup->utimgen %d",
 		   utimgen, crcup->utimgen);
 
+	crcup->extend = extend;
 	crclog.scl_bmap = bmap;
 	crclog.scl_crcup = crcup;
 

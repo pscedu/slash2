@@ -52,6 +52,7 @@ struct slmds_jent_crc {
 	int32_t			sjc_ncrcs;
 	uint32_t		sjc_utimgen;
 	uint64_t		sjc_fsize;
+	int			sjc_extend;
 	struct srm_bmap_crcwire	sjc_crc[SLJ_MDS_NCRCS];
 } __packed;
 

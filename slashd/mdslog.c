@@ -583,6 +583,7 @@ int
 mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
     int replay)
 {
+	struct slmds_jent_crc *jcrc;
 	struct srt_update_entry update_entry, *update_entryp;
 	struct srt_reclaim_entry reclaim_entry, *reclaim_entryp;
 	struct slmds_jent_namespace *sjnm;
@@ -590,6 +591,11 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	off_t off;
 
 	psc_assert(pje->pje_magic == PJE_MAGIC);
+	if (pje->pje_type & MDS_LOG_BMAP_CRC) {
+		jcrc = PJE_DATA(pje);
+		goto check_update;
+	}
+
 	if (!(pje->pje_type & MDS_LOG_NAMESPACE))
 		return (0);
 
@@ -597,7 +603,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	psc_assert(sjnm->sjnm_magic == SJ_NAMESPACE_MAGIC);
 
 	/*
-	 * Note that distill reclaim before update.  This is the same
+	 * Note that we distill reclaim before update.  This is the same
 	 * order we use in recovery.
 	 */
 
@@ -723,6 +729,21 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 
 	memset(&update_entry, 0, sizeof(update_entry));
 	update_entry.xid = pje->pje_xid;
+
+	/*
+ 	 * Fabricate a setattr update entry to change the size.
+ 	 */
+	if (pje->pje_type & MDS_LOG_BMAP_CRC) {
+
+#define AT_SLASH2SIZE	0x20000
+
+		update_entry.op = NS_OP_SETSIZE;
+		update_entry.mask = AT_SLASH2SIZE;		/* suggest moving def to slash2 header */
+		update_entry.size = jcrc->sjc_fsize;
+		update_entry.target_fid = jcrc->sjc_fid;
+		goto write_update;
+	}
+
 	update_entry.op = sjnm->sjnm_op;
 	update_entry.target_gen = sjnm->sjnm_target_gen;
 	update_entry.parent_fid = sjnm->sjnm_parent_fid;
@@ -747,6 +768,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	update_entry.namelen2 = sjnm->sjnm_namelen2;
 	memcpy(update_entry.name, sjnm->sjnm_name,
 	    sjnm->sjnm_namelen + sjnm->sjnm_namelen2);
+
+ write_update:
 
 	size = write(current_update_logfile, &update_entry,
 	    sizeof(struct srt_update_entry));
@@ -1647,16 +1670,18 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 	jcrc->sjc_bmapno = bmap->bcm_bmapno;
 	jcrc->sjc_ncrcs = crcup->nups;
 	jcrc->sjc_fsize = crcup->fsize;		/* largest known size */
+	jcrc->sjc_extend = crcup->extend;
 	jcrc->sjc_utimgen = crcup->utimgen;     /* utime generation number */
 
 	for (t = 0, n = 0; t < crcup->nups; t += n) {
-		n = MIN(SLJ_MDS_NCRCS, (crcup->nups - t));
 
+		n = MIN(SLJ_MDS_NCRCS, (crcup->nups - t));
 		memcpy(jcrc->sjc_crc, &crcup->crcs[t],
 		    n * sizeof(struct srm_bmap_crcwire));
 
 		pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_CRC,
-		    0, jcrc, sizeof(struct slmds_jent_crc));
+		    jcrc->sjc_extend, jcrc, sizeof(struct slmds_jent_crc));
+		jcrc->sjc_extend = 0;		/* at most one time */
 	}
 
 	psc_assert(t == crcup->nups);

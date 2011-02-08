@@ -404,7 +404,7 @@ struct srm_bmap_crcup {
 	uint32_t		blkno;		/* bmap block number */
 	uint32_t		nups;		/* number of CRC updates */
 	uint32_t		utimgen;
-	 int32_t		_pad;
+	 int32_t		extend;
 	struct srm_bmap_crcwire	crcs[0];	/* see above, MAX_BMAP_INODE_PAIRS max */
 } __packed;
 
