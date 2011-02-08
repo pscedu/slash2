@@ -964,6 +964,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	struct pscrpc_bulk_desc *desc;
 	struct msl_fhent *mfh = data;
 	struct srm_readdir_req *mq;
+	struct slash_creds cr;
 	struct iovec iov[2];
 	int rc = 0, niov = 0;
 
@@ -992,6 +993,13 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		rc = ENOTDIR;
 		goto out;
 	}
+
+	mslfs_getcreds(pfr, &cr);
+	FCMH_LOCK(d);
+	rc = checkcreds(&d->fcmh_sstb, &cr, R_OK);
+	FCMH_ULOCK(d);
+	if (rc)
+		goto out;
 
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
