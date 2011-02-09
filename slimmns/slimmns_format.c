@@ -126,7 +126,7 @@ slimmns_create(const char *root, uint32_t depth)
 		DIR *dp;
 
 		dp = opendir(datadir);
-		if (dp == NULL) {
+		if (dp) {
 			while ((dent = readdir(dp)) != NULL) {
 				if (strncmp(dent->d_name,
 				    SL_FN_UPDATELOG,
@@ -140,7 +140,6 @@ slimmns_create(const char *root, uint32_t depth)
 				if (unlink(fn) == -1)
 					psc_error("unlink %s", fn);
 			}
-		} else {
 			closedir(dp);
 		}
 	}
