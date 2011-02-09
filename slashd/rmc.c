@@ -555,7 +555,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 		for (i = 0; i < mq->nstbpref; i++, attr++) {
 			if (attr->rc || !attr->attr.sst_ino)
 				break;
-			psclog_info("reply: f+g:"SLPRI_FG", mode=0%o",
+			psclog_info("reply: f+g:"SLPRI_FG", mode=%#o",
 				SLPRI_FG_ARGS(attr->attr.sst_fg),
 				attr->attr.sst_mode);
 		}

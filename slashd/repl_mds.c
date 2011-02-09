@@ -355,8 +355,8 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 
 	rc = mds_repl_bmap_walk(bcm, tract, retifset, 0, &iosidx, 1);
 	if (rc)
-		psc_error("bcs_repls is marked OLD or SCHED for "
-		    "fid %"SLPRI_FID" bmap %d iosidx %d",
+		psclog_error("bcs_repls is marked OLD or SCHED for "
+		    "fid "SLPRI_FID" bmap %d iosidx %d",
 		    cmh_2_fid(bcm->bcm_fcmh), bcm->bcm_bmapno, iosidx);
 
 	/*
