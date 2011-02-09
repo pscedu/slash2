@@ -589,14 +589,17 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	struct slmds_jent_namespace *sjnm;
 	int size, count, total;
 	off_t off;
+	uint16_t type;
 
 	psc_assert(pje->pje_magic == PJE_MAGIC);
-	if (pje->pje_type & MDS_LOG_BMAP_CRC) {
+
+	type = pje->pje_type & ~(_PJE_FLSHFT - 1);
+	if (type == MDS_LOG_BMAP_CRC) {
 		jcrc = PJE_DATA(pje);
 		goto check_update;
 	}
 
-	if (!(pje->pje_type & MDS_LOG_NAMESPACE))
+	if (type != MDS_LOG_NAMESPACE)
 		return (0);
 
 	sjnm = PJE_DATA(pje);
@@ -733,7 +736,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	/*
  	 * Fabricate a setattr update entry to change the size.
  	 */
-	if (pje->pje_type & MDS_LOG_BMAP_CRC) {
+	if (type == MDS_LOG_BMAP_CRC) {
 
 #define AT_SLASH2SIZE	0x20000
 
@@ -828,7 +831,7 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 	sjnm->sjnm_size = sstb->sst_size;
 
 	/*
- 	 * We need distill if we have a peer MDS or we need do garbage reclamation.
+ 	 * We need distill if we have a peer MDS or we need to do garbage reclamation.
  	 */
 	distill = pjournal_has_peers(mdsJournal);
 	if ((op == NS_OP_UNLINK && sstb->sst_nlink == 1) ||
