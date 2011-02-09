@@ -317,3 +317,4 @@ API rename
 - convert CONF_LOCK to a rwlock
 - we can't hold fcmh in memory at all times just because PTRUNC has to
   be resolved.  have to store in inode and release fcmh.
+- have slashd umount /zfs-kstat on teardown
