@@ -734,8 +734,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	update_entry.xid = pje->pje_xid;
 
 	/*
- 	 * Fabricate a setattr update entry to change the size.
- 	 */
+	 * Fabricate a setattr update entry to change the size.
+	 */
 	if (type == MDS_LOG_BMAP_CRC) {
 
 #define AT_SLASH2SIZE	0x20000
@@ -831,8 +831,8 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 	sjnm->sjnm_size = sstb->sst_size;
 
 	/*
- 	 * We need distill if we have a peer MDS or we need to do garbage reclamation.
- 	 */
+	 * We need distill if we have a peer MDS or we need to do garbage reclamation.
+	 */
 	distill = pjournal_has_peers(mdsJournal);
 	if ((op == NS_OP_UNLINK && sstb->sst_nlink == 1) ||
 	    (op == NS_OP_SETSIZE && sstb->sst_size == 0)) {
@@ -1668,8 +1668,8 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 	BMAP_ULOCK(bmap);
 
 	/*
- 	 * See if we need to distill the file enlargement information.
- 	 */
+	 * See if we need to distill the file enlargement information.
+	 */
 	distill = crcup->extend;
 	for (t = 0, n = 0; t < crcup->nups; t += n) {
 
@@ -1690,7 +1690,7 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 		pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_CRC,
 		    distill, jcrc, sizeof(struct slmds_jent_crc));
 
-		if (!distill) 
+		if (!distill)
 			pjournal_put_buf(mdsJournal, jcrc);
 		else
 			distill = 0;
