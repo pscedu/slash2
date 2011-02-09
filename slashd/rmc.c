@@ -699,6 +699,8 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 
 	to_set = mq->to_set & SL_SETATTRF_CLI_ALL;
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
+		to_set |= PSCFS_SETATTRF_MTIME;
+		SL_GETTIMESPEC(&mq->attr.sst_mtim);
 		if (mq->attr.sst_size == 0) {
 			/*
 			 * Full truncate.  If file size is already zero,
