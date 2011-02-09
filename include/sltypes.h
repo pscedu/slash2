@@ -56,8 +56,8 @@ typedef uint64_t sl_ino_t;
 /* thread local storage */
 #define SL_TLSIDX_FIDBUF	(PFL_TLSIDX_LASTRESERVED)
 
-#define SL_NAME_MAX		255	/* file name component length */
-#define SL_PATH_MAX		4096	/* file path name length */
+#define SL_NAME_MAX		255		/* file name component length */
+#define SL_PATH_MAX		4096		/* file path name length */
 
 /* I/O flags */
 enum rw {
@@ -96,10 +96,10 @@ typedef uint64_t slfgen_t;
 
 #define SL_SETATTRF_FREPLPOL	SL_SETATTRF_PTRUNCGEN
 
-#define SL_SETATTRF_CLI_ALL	(PSCFS_SETATTRF_MODE  | PSCFS_SETATTRF_UID |		\
-				 PSCFS_SETATTRF_GID   | PSCFS_SETATTRF_DATASIZE |	\
-				 PSCFS_SETATTRF_ATIME | PSCFS_SETATTRF_MTIME |		\
-				 PSCFS_SETATTRF_CTIME)
+#define SL_SETATTRF_CLI_ALL						\
+	(PSCFS_SETATTRF_MODE | PSCFS_SETATTRF_UID |			\
+	 PSCFS_SETATTRF_GID  | PSCFS_SETATTRF_DATASIZE |		\
+	 PSCFS_SETATTRF_ATIME | PSCFS_SETATTRF_MTIME | PSCFS_SETATTRF_CTIME)
 
 #define	SLASH2_IGNORE_MTIME	0x80000
 
@@ -107,5 +107,14 @@ struct sl_timespec {
 	uint64_t		tv_sec;
 	uint64_t		tv_nsec;
 };
+
+#define SL_GETTIMESPEC(ts)						\
+	do {								\
+		struct timespec _ts;					\
+									\
+		PFL_GETTIMESPEC(&_ts);					\
+		(ts)->tv_sec = _ts.tv_sec;				\
+		(ts)->tv_nsec = _ts.tv_nsec;				\
+	} while (0)
 
 #endif /* _SL_TYPES_H_ */
