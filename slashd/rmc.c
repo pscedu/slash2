@@ -917,8 +917,8 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 {
 	struct srm_unlink_req *mq;
 	struct srm_unlink_rep *mp;
-	struct fidc_membh *p;
 	struct slash_fidgen fg;
+	struct fidc_membh *p;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	fg.fg_fid = mq->pfid;
@@ -940,6 +940,12 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	psclog_info("mdsio_unlink: parent="SLPRI_FID", name=%s, rc=%d",
 	    mq->pfid, mq->name, mp->rc);
 
+	if (mp->rc == 0) {
+		FCMH_LOCK(p);
+		SL_GETTIMESPEC(&p->fcmh_sstb.sst_ctim);
+		FCMH_ULOCK(p);
+		mdsio_fcmh_setattr(p, PSCFS_SETATTRF_CTIME);
+	}
 	mdsio_fcmh_refreshattr(p, &mp->attr);
  out:
 	if (p)
