@@ -87,9 +87,9 @@ mds_inode_read(struct slash_inode_handle *i)
 			i->inoh_flags &= ~INOH_INO_NOTLOADED;
 			DEBUG_INOH(PLL_INFO, i, "successfully loaded inode od");
 		} else {
-			DEBUG_INOH(PLL_WARN, i,
-				   "CRC failed want=%"PRIx64", got=%"PRIx64,
-				   i->inoh_ino.ino_crc, crc);
+			DEBUG_INOH(PLL_WARN, i, "CRC failed "
+			    "want=%"PSCPRIxCRC64", got=%"PSCPRIxCRC64,
+			    i->inoh_ino.ino_crc, crc);
 			rc = EIO;
 		}
 	}
@@ -1134,7 +1134,7 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 
 	resm = libsl_nid2resm(bia->bia_ion_nid);
 
-	psclog_debug("fid=%"PRId64" seq=%"PRId64" res=(%s) ion=(%s) bmapno=%u",
+	psclog_debug("fid="SLPRI_FID" seq=%"PRId64" res=(%s) ion=(%s) bmapno=%u",
 	    bia->bia_fid, bia->bia_seq, resm->resm_res->res_name,
 	    libcfs_nid2str(bia->bia_ion_nid), bia->bia_bmapno);
 
@@ -1152,7 +1152,7 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 	if ((time() - bia->bia_start) >= BMAP_TIMEO_MAX) {
 		/* Don't bother with ancient leases.
 		 */
-		psc_warnx("bia timed out, ignoring: fid=%"PRId64" seq=%"PRId64
+		psc_warnx("bia timed out, ignoring: fid="SLPRI_FID" seq=%"PRId64
 			  " res=(%s) ion=(%s) bmapno=%u",
 			  bia->bia_fid, bia->bia_seq, resm->resm_res->res_name,
 			  libcfs_nid2str(bia->bia_ion_nid), bia->bia_bmapno);
@@ -1166,7 +1166,7 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 
 	rc = slm_fcmh_get(&fg, &f);
 	if (rc) {
-		psc_errorx("fid=%"PRId64" failed to load", fg.fg_fid);
+		psc_errorx("fid="SLPRI_FID" failed to load", fg.fg_fid);
 		goto out;
 	}
 
