@@ -499,7 +499,6 @@ int
 slm_rmc_handle_readdir(struct pscrpc_request *rq)
 {
 	struct fidc_membh *fcmh = NULL;
-	struct pscrpc_bulk_desc *desc;
 	struct srm_readdir_req *mq;
 	struct srm_readdir_rep *mp;
 	struct iovec iov[2];
@@ -562,11 +561,8 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	}
 #endif
 
-	mp->rc = rsx_bulkserver(rq, &desc,
-	    BULK_PUT_SOURCE, SRMC_BULK_PORTAL, iov, niov);
-
-	if (desc)
-		pscrpc_free_bulk(desc);
+	mp->rc = rsx_bulkserver(rq, BULK_PUT_SOURCE, SRMC_BULK_PORTAL,
+	    iov, niov);
 
  out:
 	PSCFREE(iov[0].iov_base);
@@ -579,7 +575,6 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 int
 slm_rmc_handle_readlink(struct pscrpc_request *rq)
 {
-	struct pscrpc_bulk_desc *desc;
 	struct srm_readlink_req *mq;
 	struct srm_readlink_rep *mp;
 	struct fidc_membh *fcmh;
@@ -597,10 +592,8 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 
 	iov.iov_base = buf;
 	iov.iov_len = sizeof(buf);
-	mp->rc = rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE,
-	    SRMC_BULK_PORTAL, &iov, 1);
-	if (desc)
-		pscrpc_free_bulk(desc);
+	mp->rc = rsx_bulkserver(rq, BULK_PUT_SOURCE, SRMC_BULK_PORTAL,
+	    &iov, 1);
 
  out:
 	if (fcmh)
@@ -619,7 +612,6 @@ int
 slm_rmc_handle_rename(struct pscrpc_request *rq)
 {
 	char from[SL_NAME_MAX + 1], to[SL_NAME_MAX + 1];
-	struct pscrpc_bulk_desc *desc;
 	struct fidc_membh *op, *np;
 	struct srm_rename_req *mq;
 	struct srm_rename_rep *mp;
@@ -649,11 +641,10 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	iov[1].iov_base = to;
 	iov[1].iov_len = mq->tolen;
 
-	mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
-	    SRMC_BULK_PORTAL, iov, 2);
+	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, SRMC_BULK_PORTAL,
+	    iov, 2);
 	if (mp->rc)
 		goto out;
-	pscrpc_free_bulk(desc);
 
 	from[mq->fromlen] = '\0';
 	to[mq->tolen] = '\0';
@@ -866,7 +857,6 @@ int
 slm_rmc_handle_symlink(struct pscrpc_request *rq)
 {
 	char linkname[SL_PATH_MAX];
-	struct pscrpc_bulk_desc *desc;
 	struct srm_symlink_req *mq;
 	struct srm_symlink_rep *mp;
 	struct fidc_membh *p;
@@ -891,11 +881,10 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 
 	iov.iov_base = linkname;
 	iov.iov_len = mq->linklen;
-	mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
-	    SRMC_BULK_PORTAL, &iov, 1);
+	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, SRMC_BULK_PORTAL,
+	    &iov, 1);
 	if (mp->rc)
 		goto out;
-	pscrpc_free_bulk(desc);
 
 	linkname[mq->linklen] = '\0';
 
