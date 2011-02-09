@@ -65,7 +65,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	uint32_t tsize, sblk, roff[RIC_MAX_SLVRS_PER_IO], len[RIC_MAX_SLVRS_PER_IO];
 	struct slvr_ref *slvr_ref[RIC_MAX_SLVRS_PER_IO];
 	struct iovec iovs[RIC_MAX_SLVRS_PER_IO];
-	struct pscrpc_bulk_desc *desc;
 	struct bmap_iod_info *biodi;
 	struct slash_fidgen *fgp;
 	struct fidc_membh *fcmh;
@@ -209,17 +208,13 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 	psc_assert(!tsize);
 
-	mp->rc = rsx_bulkserver(rq, &desc,
-			(rw == SL_WRITE ? BULK_GET_SINK : BULK_PUT_SOURCE),
-			SRIC_BULK_PORTAL, iovs, nslvrs);
-
+	mp->rc = rsx_bulkserver(rq,
+	    (rw == SL_WRITE ? BULK_GET_SINK : BULK_PUT_SOURCE),
+	    SRIC_BULK_PORTAL, iovs, nslvrs);
 	if (mp->rc) {
 		rc = mp->rc;
 		goto out;
 	}
-
-	if (desc)
-		pscrpc_free_bulk(desc);
 
 	/* Write the sliver back to the filesystem, but only the blocks
 	 *   which are marked '0' in the bitmap.   Here we don't care about

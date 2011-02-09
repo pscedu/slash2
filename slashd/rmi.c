@@ -96,7 +96,6 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 {
 	struct srm_bmap_crcwrt_req *mq;
 	struct srm_bmap_crcwrt_rep *mp;
-	struct pscrpc_bulk_desc *desc;
 	struct iovec *iovs;
 	size_t len = 0;
 	uint64_t crc;
@@ -127,14 +126,10 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 		off += iovs[i].iov_len;
 	}
 
-	mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK, SRMI_BULK_PORTAL,
+	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, SRMI_BULK_PORTAL,
 	    iovs, mq->ncrc_updates);
-	if (desc)
-		pscrpc_free_bulk(desc);
-	else {
+	if (mp->rc) {
 		psc_errorx("rsx_bulkserver() rc=%d", mp->rc);
-		/* rsx_bulkserver() frees the desc on error.
-		 */
 		goto out;
 	}
 

@@ -961,7 +961,6 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	struct srm_readdir_rep *mp = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct dircache_ents *e = NULL;
-	struct pscrpc_bulk_desc *desc;
 	struct msl_fhent *mfh = data;
 	struct srm_readdir_req *mq;
 	struct slash_creds cr;
@@ -1032,7 +1031,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		niov++;
 	}
 
-	rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMC_BULK_PORTAL, iov, niov);
+	rsx_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, iov, niov);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
@@ -1246,13 +1245,12 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
-	struct pscrpc_bulk_desc *desc;
 	struct srm_readlink_req *mq;
 	struct srm_readlink_rep *mp;
 	struct fidc_membh *c = NULL;
 	struct slash_creds creds;
 	struct iovec iov;
-	char buf[PATH_MAX];
+	char buf[SL_PATH_MAX];
 	int rc;
 
 	msfsthr_ensure();
@@ -1280,8 +1278,7 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 
 	iov.iov_base = buf;
 	iov.iov_len = sizeof(buf);
-	rsx_bulkclient(rq, &desc, BULK_PUT_SINK,
-	    SRMC_BULK_PORTAL, &iov, 1);
+	rsx_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, &iov, 1);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
@@ -1379,7 +1376,6 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	struct fidc_membh *np = NULL, *op = NULL;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
-	struct pscrpc_bulk_desc *desc;
 	struct srm_rename_req *mq;
 	struct srm_rename_rep *mp;
 	struct slash_creds cr;
@@ -1442,8 +1438,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	iov[1].iov_base = (char *)newname;
 	iov[1].iov_len = mq->tolen;
 
-	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
-	    iov, 2);
+	rsx_bulkclient(rq, BULK_GET_SOURCE, SRMC_BULK_PORTAL, iov, 2);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
@@ -1521,7 +1516,6 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	struct slashrpc_cservice *csvc = NULL;
 	struct srm_symlink_rep *mp = NULL;
 	struct pscrpc_request *rq = NULL;
-	struct pscrpc_bulk_desc *desc;
 	struct srm_symlink_req *mq;
 	struct slash_creds creds;
 	struct iovec iov;
@@ -1569,8 +1563,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	iov.iov_base = (char *)buf;
 	iov.iov_len = mq->linklen;
 
-	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
-	    &iov, 1);
+	rsx_bulkclient(rq, BULK_GET_SOURCE, SRMC_BULK_PORTAL, &iov, 1);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)

@@ -72,7 +72,6 @@ slmrmcthr_replst_slave_waitrep(struct slashrpc_cservice *csvc,
 {
 	struct srm_replst_slave_req *mq;
 	struct srm_replst_slave_rep *mp;
-	struct pscrpc_bulk_desc *desc;
 	struct slmrcm_thread *srcm;
 	struct psc_thread *thr;
 	struct iovec iov;
@@ -88,8 +87,8 @@ slmrmcthr_replst_slave_waitrep(struct slashrpc_cservice *csvc,
 	mq->len = iov.iov_len;
 	mq->nbmaps = srcm->srcm_page_bitpos / (SL_BITS_PER_REPLICA *
 	    USWI_INOH(wk)->inoh_ino.ino_nrepls + SL_NBITS_REPLST_BHDR);
-	rc = rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
-	    SRCM_BULK_PORTAL, &iov, 1);
+	rc = rsx_bulkclient(rq, BULK_GET_SOURCE, SRCM_BULK_PORTAL, &iov,
+	    1);
 	if (rc == 0) {
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc == 0)

@@ -50,7 +50,6 @@ __static int
 slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 {
 	struct slashrpc_cservice *csvc;
-	struct pscrpc_bulk_desc *desc;
 	struct srm_bmap_crcwrt_req *mq;
 	struct srm_bmap_crcwrt_rep *mp;
 	struct biod_crcup_ref *bcr;
@@ -105,8 +104,8 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 
 	PSC_CRC64_FIN(&mq->crc);
 
-	rc = rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
-	    SRMI_BULK_PORTAL, iovs, mq->ncrc_updates);
+	rc = rsx_bulkclient(rq, BULK_GET_SOURCE, SRMI_BULK_PORTAL, iovs,
+	    mq->ncrc_updates);
 	PSCFREE(iovs);
 
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);

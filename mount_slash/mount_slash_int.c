@@ -1050,7 +1050,6 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 {
 	struct slashrpc_cservice  *csvc;
 	struct pscrpc_request	  *req;
-	struct pscrpc_bulk_desc	  *desc;
 	struct bmapc_memb	  *bcm;
 	struct bmap_cli_info	  *bci;
 	struct iovec		  *iovs;
@@ -1095,10 +1094,9 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 		iovs[i].iov_base = b + nbytes;
 		iovs[i].iov_len  = len;
 
-		rc = rsx_bulkclient(req, &desc,
-				    (op == SRMT_WRITE ?
-				     BULK_GET_SOURCE : BULK_PUT_SINK),
-				    SRIC_BULK_PORTAL, &iovs[i], 1);
+		rc = rsx_bulkclient(req, (op == SRMT_WRITE ?
+		    BULK_GET_SOURCE : BULK_PUT_SINK), SRIC_BULK_PORTAL,
+		    &iovs[i], 1);
 		if (rc)
 			psc_fatalx("rsx_bulkclient() failed %d", rc);
 
@@ -1195,11 +1193,10 @@ msl_read_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 	struct bmap_pagecache_entry *bmpce;
 	struct slashrpc_cservice *csvc;
 	struct pscrpc_request *req;
-	struct pscrpc_bulk_desc *desc;
+	struct psc_dynarray *a;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct iovec *iovs;
-	struct psc_dynarray *a;
 	int rc, i;
 
 	psc_assert(startpage >= 0);
@@ -1247,8 +1244,8 @@ msl_read_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 		psc_dynarray_add(a, bmpce);
 	}
 
-	rc = rsx_bulkclient(req, &desc, BULK_PUT_SINK, SRIC_BULK_PORTAL,
-			    iovs, npages);
+	rc = rsx_bulkclient(req, BULK_PUT_SINK, SRIC_BULK_PORTAL, iovs,
+	    npages);
 	PSCFREE(iovs);
 	if (rc)
 		psc_fatalx("rsx_bulkclient() failed %d", rc);

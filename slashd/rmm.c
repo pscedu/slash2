@@ -103,7 +103,6 @@ int
 slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 {
 	struct srt_update_entry *entryp;
-	struct pscrpc_bulk_desc *desc;
 	struct srm_update_req *mq;
 	struct srm_update_rep *mp;
 	struct sl_mds_peerinfo *p;
@@ -123,13 +122,10 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 	iov.iov_len = mq->size;
 	iov.iov_base = PSCALLOC(mq->size);
 
-	mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
-	    SRMM_BULK_PORTAL, &iov, 1);
+	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, SRMM_BULK_PORTAL,
+	    &iov, 1);
 	if (mp->rc)
 		goto out;
-
-	if (desc)
-		pscrpc_free_bulk(desc);
 
 	psc_crc64_calc(&crc, iov.iov_base, iov.iov_len);
 	if (crc != mq->crc) {

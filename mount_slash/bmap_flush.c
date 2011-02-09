@@ -189,7 +189,6 @@ bmap_flush_create_rpc(struct bmapc_memb *b, struct iovec *iovs,
 		      size_t size, off_t soff, int niovs)
 {
 	struct slashrpc_cservice *csvc;
-	struct pscrpc_bulk_desc *desc;
 	struct pscrpc_request *req;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
@@ -205,8 +204,8 @@ bmap_flush_create_rpc(struct bmapc_memb *b, struct iovec *iovs,
 	if (rc)
 		psc_fatalx("SL_RSX_NEWREQ() bad time to fail :( rc=%d", -rc);
 
-	rc = rsx_bulkclient(req, &desc, BULK_GET_SOURCE,
-	    SRIC_BULK_PORTAL, iovs, niovs);
+	rc = rsx_bulkclient(req, BULK_GET_SOURCE, SRIC_BULK_PORTAL,
+	    iovs, niovs);
 	if (rc)
 		psc_fatalx("rsx_bulkclient() failed with %d", rc);
 

@@ -51,7 +51,6 @@ int
 sli_rim_handle_reclaim(struct pscrpc_request *rq)
 {
 	struct srt_reclaim_entry *entryp;
-	struct pscrpc_bulk_desc *desc;
 	struct srm_reclaim_req *mq;
 	struct srm_reclaim_rep *mp;
 	struct iovec iov;
@@ -72,13 +71,10 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	iov.iov_len = mq->size;
 	iov.iov_base = PSCALLOC(mq->size);
 
-	mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
-	    SRMM_BULK_PORTAL, &iov, 1);
-
+	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, SRMM_BULK_PORTAL,
+	    &iov, 1);
 	if (mp->rc)
 		goto out;
-	if (desc)
-		pscrpc_free_bulk(desc);
 
 	psc_crc64_calc(&crc, iov.iov_base, iov.iov_len);
 	if (crc != mq->crc) {

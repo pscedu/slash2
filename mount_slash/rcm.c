@@ -144,7 +144,6 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	struct msctlmsg_replst_slave *mrsl;
 	struct srm_replst_slave_req *mq;
 	struct srm_replst_slave_rep *mp;
-	struct pscrpc_bulk_desc *desc;
 	struct msctl_replstq *mrsq;
 	struct psc_ctlmsghdr mh;
 	struct iovec iov;
@@ -198,9 +197,8 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	mrsl->mrsl_boff = mq->boff;
 	mrsl->mrsl_nbmaps = mq->nbmaps;
 
-	mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
-	    SRCM_BULK_PORTAL, &iov, 1);
-
+	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, SRCM_BULK_PORTAL,
+	    &iov, 1);
 	if (mp->rc == 0) {
 		rc = psc_ctlmsg_send(mrsq->mrsq_fd,
 		    mrsq->mrsq_mh->mh_id, MSCMT_GETREPLST_SLAVE,

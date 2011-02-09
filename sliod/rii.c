@@ -65,7 +65,6 @@ sli_rii_handle_replread(struct pscrpc_request *rq)
 {
 	const struct srm_repl_read_req *mq;
 	struct srm_repl_read_rep *mp;
-	struct pscrpc_bulk_desc *desc;
 	struct slvr_ref *slvr_ref;
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bcm;
@@ -107,10 +106,8 @@ sli_rii_handle_replread(struct pscrpc_request *rq)
 	iov.iov_base = slvr_ref->slvr_slab->slb_base;
 	iov.iov_len = mq->len;
 
-	mp->rc = rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE,
-	    SRII_BULK_PORTAL, &iov, 1);
-	if (desc)
-		pscrpc_free_bulk(desc);
+	mp->rc = rsx_bulkserver(rq, BULK_PUT_SOURCE, SRII_BULK_PORTAL,
+	    &iov, 1);
 
 	slvr_io_done(slvr_ref, 0, mq->len, SL_READ);
 
@@ -199,14 +196,13 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
     int slvridx, struct sli_repl_workrq *w)
 {
 	const struct srm_repl_read_rep *mp;
-	struct pscrpc_bulk_desc *desc;
 	struct srm_repl_read_req *mq;
 	struct pscrpc_request *rq;
 	struct slvr_ref *s;
 	struct iovec iov;
 	int rc;
 
-	psc_dbg("issue_repl_read: srw %p fg "SLPRI_FID" bmapno %d slvrno %d idx "
+	psclog_dbg("srw %p fg "SLPRI_FID" bmapno %d slvrno %d idx "
 	    "%d len %u", w, w->srw_fg.fg_fid, w->srw_bmapno, slvrno,
 	    slvridx, w->srw_len);
 
@@ -230,8 +226,8 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	iov.iov_base = s->slvr_slab->slb_base;
 	iov.iov_len = mq->len;
 
-	rc = rsx_bulkclient(rq, &desc, BULK_PUT_SINK,
-	    SRII_BULK_PORTAL, &iov, 1);
+	rc = rsx_bulkclient(rq, BULK_PUT_SINK, SRII_BULK_PORTAL, &iov,
+	    1);
 	if (rc)
 		goto out;
 
