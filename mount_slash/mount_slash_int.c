@@ -223,7 +223,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 				    psc_atomic16_inc(&bmpce->bmpce_rdref);
 				    r->biorq_flags |= BIORQ_RBWFP;
 
-			} else if ((i == (npages - 1) && 
+			} else if ((i == (npages - 1) &&
 				    (rbw & BIORQ_RBWLP)) &&
 				   (fsz > (foff + len) ||
 				    (rfsz > bmpce->bmpce_off &&
@@ -931,7 +931,7 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 			DEBUG_REQ(PLL_ERROR, rq, "non-zero status status %d",
 				  rq->rq_status);
 			psc_fatalx("Resolve issues surrounding this failure");
-			
+
 			// XXX Freeing of dynarray, bmpce's, etc
 			rc = rq->rq_status;
 			goto out;
@@ -1693,9 +1693,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 	 *   offsets into the buffer.
 	 */
 	for (i=0, tlen=0, p=buf; i < nr; i++, p+=tlen) {
-	 
-	  /* Associate the biorq's with the mfh.
-	   */
+		/* Associate the biorq's with the mfh. */
 		pll_addtail(&mfh->mfh_biorqs, r[i]);
 
 		tlen = r[i]->biorq_len;
