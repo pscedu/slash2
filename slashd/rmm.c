@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2011, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2008-2011, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -148,11 +148,11 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 		goto out;
 	}
 
-	/* 
- 	 * Iterate through the namespace update buffer and apply updates.
- 	 * If we fail to apply an update, we still report success to our
- 	 * peer because reporting an error does not help our cause.
- 	 */
+	/*
+	 * Iterate through the namespace update buffer and apply updates.
+	 * If we fail to apply an update, we still report success to our
+	 * peer because reporting an error does not help our cause.
+	 */
 	entryp = iov.iov_base;
 	for (i = 0; i < count; i++) {
 		slm_rmm_apply_update(entryp);
