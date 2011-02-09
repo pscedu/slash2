@@ -84,7 +84,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	bmapno = mq->sbd.sbd_bmapno;
 
 	if (mq->size <= 0 || mq->size > LNET_MTU) {
-		psc_errorx("invalid size %u, fid:"SLPRI_FG,
+		psclog_errorx("invalid size %u, fid:"SLPRI_FG,
 		    mq->size, SLPRI_FG_ARGS(fgp));
 		mp->rc = EINVAL;
 		return (mp->rc);
@@ -98,17 +98,17 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		mp->rc = bmapdesc_access_check(&mq->sbd, rw,
 		    nodeResm->resm_res->res_id, pp->nid);
 		if (mp->rc == 0) {
-			psc_notify("bmapdesc check Okay");
+			psclog_notify("bmapdesc check okay");
 			break;
 		}
-		psc_notify("bmapdesc mismatch - mine:"
-			"(%"PRIx64", %"PRIx32"), peer: (%"PRIx64", %"PRIx32")",
-			pp->nid, nodeResm->resm_res->res_id,
-			mq->sbd.sbd_ion_nid, mq->sbd.sbd_ios_id);
+		psclog_notify("bmapdesc mismatch - mine:"
+		    "(%"PRIx64", %"PRIx32"), peer: (%"PRIx64", %"PRIx32")",
+		    pp->nid, nodeResm->resm_res->res_id,
+		    mq->sbd.sbd_ion_nid, mq->sbd.sbd_ios_id);
 
 	}
 	if (mp->rc) {
-		psc_warnx("bmapdesc_access_check failed for fid:"SLPRI_FG,
+		psclog_warnx("bmapdesc_access_check failed for fid:"SLPRI_FG,
 		    SLPRI_FG_ARGS(fgp));
 		return (mp->rc);
 	}
@@ -119,7 +119,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 */
 	//if ((mq->offset + mq->size) >= ((bmapno + 1) * SLASH_BMAP_SIZE)) {
 	if ((mq->offset + mq->size - 1) >= SLASH_BMAP_SIZE) {
-		psc_errorx("req offset / size outside of the bmap's "
+		psclog_errorx("req offset / size outside of the bmap's "
 		    "address range off=%u len=%u",
 		    mq->offset, mq->size);
 		mp->rc = ERANGE;
@@ -129,7 +129,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 #if 0
 	if (mq->sbd.sbd_seq < bim_getcurseq()) {
 		/* Reject old bmapdesc. */
-		psc_warnx("seq %"PRId64" is too old", mq->sbd.sbd_seq);
+		psclog_warnx("seq %"PRId64" is too old", mq->sbd.sbd_seq);
 		mp->rc = EINVAL;
 		return (mp->rc);
 	}
@@ -152,7 +152,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 */
 	rc = bmap_get(fcmh, bmapno, rw, &bmap);
 	if (rc) {
-		psc_errorx("failed to load bmap %u", bmapno);
+		psclog_errorx("failed to load bmap %u", bmapno);
 		goto out;
 	}
 	biodi = bmap_2_biodi(bmap);
@@ -292,7 +292,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		rc = bmap_get(f, bid->bmapno, SL_WRITE, &b);
 		if (rc) {
 			mp->bidrc[i] = rc;
-			psc_errorx("failed to load bmap %u", bid->bmapno);
+			psclog_errorx("failed to load bmap %u", bid->bmapno);
 			continue;
 		}
 
@@ -354,7 +354,7 @@ sli_ric_handler(struct pscrpc_request *rq)
 		rc = sli_ric_handle_rlsbmap(rq);
 		break;
 	default:
-		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
+		psclog_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
 		rq->rq_status = -ENOSYS;
 		return (pscrpc_error(rq));
 	}
