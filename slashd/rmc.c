@@ -619,22 +619,9 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 
 	op = np = NULL;
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mq->fromlen == 0 || mq->tolen == 0) {
-		mp->rc = ENOENT;
-		return (0);
-	}
-	if (mq->fromlen > SL_NAME_MAX || mq->tolen > SL_NAME_MAX) {
-		mp->rc = ENAMETOOLONG;
-		return (0);
-	}
-
-	mp->rc = slm_fcmh_get(&mq->opfg, &op);
-	if (mp->rc)
-		goto out;
-
-	mp->rc = slm_fcmh_get(&mq->npfg, &np);
-	if (mp->rc)
-		goto out;
+	if (mq->fromlen == 0 || mq->tolen == 0 ||
+	    mq->fromlen > SL_NAME_MAX || mq->tolen > SL_NAME_MAX)
+		return (EINVAL);
 
 	iov[0].iov_base = from;
 	iov[0].iov_len = mq->fromlen;
@@ -644,10 +631,18 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, SRMC_BULK_PORTAL,
 	    iov, 2);
 	if (mp->rc)
-		goto out;
+		return (mp->rc);
 
 	from[mq->fromlen] = '\0';
 	to[mq->tolen] = '\0';
+
+	mp->rc = slm_fcmh_get(&mq->opfg, &op);
+	if (mp->rc)
+		goto out;
+
+	mp->rc = slm_fcmh_get(&mq->npfg, &np);
+	if (mp->rc)
+		goto out;
 
 	/*
 	 * Steps for rename (we may have to perform some steps by sending
@@ -671,7 +666,7 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 		fcmh_op_done_type(np, FCMH_OPCNT_LOOKUP_FIDC);
 	if (op)
 		fcmh_op_done_type(op, FCMH_OPCNT_LOOKUP_FIDC);
-	return (mp->rc);
+	return (0);
 }
 
 int
