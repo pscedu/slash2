@@ -1661,30 +1661,39 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 	struct srm_bmap_crcup *crcup = crclog->scl_crcup;
 	struct bmap_mds_info *bmdsi = bmap_2_bmdsi(bmap);
 	struct slmds_jent_crc *jcrc;
-	uint32_t n, t;
+	uint32_t n, t, distill;
 
 	BMAP_LOCK(bmap);
 	psc_assert(bmap->bcm_flags & BMAP_MDS_CRC_UP);
 	BMAP_ULOCK(bmap);
 
-	jcrc = pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_crc));
-	jcrc->sjc_fid = fcmh_2_fid(bmap->bcm_fcmh);
-	jcrc->sjc_ion = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid;
-	jcrc->sjc_bmapno = bmap->bcm_bmapno;
-	jcrc->sjc_ncrcs = crcup->nups;
-	jcrc->sjc_fsize = crcup->fsize;		/* largest known size */
-	jcrc->sjc_extend = crcup->extend;
-	jcrc->sjc_utimgen = crcup->utimgen;     /* utime generation number */
-
+	/*
+ 	 * See if we need to distill the file enlargement information.
+ 	 */
+	distill = crcup->extend;
 	for (t = 0, n = 0; t < crcup->nups; t += n) {
 
 		n = MIN(SLJ_MDS_NCRCS, (crcup->nups - t));
+
+		jcrc = pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_crc));
+		jcrc->sjc_fid = fcmh_2_fid(bmap->bcm_fcmh);
+		jcrc->sjc_ion = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid;
+		jcrc->sjc_bmapno = bmap->bcm_bmapno;
+		jcrc->sjc_ncrcs = n;
+		jcrc->sjc_fsize = crcup->fsize;		/* largest known size */
+		jcrc->sjc_extend = distill;
+		jcrc->sjc_utimgen = crcup->utimgen;     /* utime generation number */
+
 		memcpy(jcrc->sjc_crc, &crcup->crcs[t],
 		    n * sizeof(struct srm_bmap_crcwire));
 
 		pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_CRC,
-		    jcrc->sjc_extend, jcrc, sizeof(struct slmds_jent_crc));
-		jcrc->sjc_extend = 0;		/* at most one time */
+		    distill, jcrc, sizeof(struct slmds_jent_crc));
+
+		if (!distill) 
+			pjournal_put_buf(mdsJournal, jcrc);
+		else
+			distill = 0;
 	}
 
 	psc_assert(t == crcup->nups);
@@ -1694,7 +1703,6 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 	bmap->bcm_flags &= ~BMAP_MDS_CRC_UP;
 	BMAP_ULOCK(bmap);
 
-	pjournal_put_buf(mdsJournal, jcrc);
 }
 
 void
