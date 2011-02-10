@@ -334,6 +334,7 @@ tests that fail because of the FUSE SETATTR refresh bug:
   rmdir/07.t	6, 8
   symlink/06.t	7
   unlink/05.t	6, 8
+  link/06.t	11, 14, 17-18
 
 tests that fail because of the sljournal constraint on small file
 names (1023-byte symlink must fit in SLJ_NAMES_MAX):
@@ -345,6 +346,7 @@ after UNLINK, RENAME operations:
 
   rename/00.t	49, 53, 57, 61
   unlink/00.t	17, 22, 53
+  link/00.t	18-19, 22, 44-45, 48
 
 tests that fail as a result of other tests that fail:
 
@@ -353,12 +355,5 @@ tests that fail as a result of other tests that fail:
 
 unanalyzed test failures remaining:
 
-/home/yanovich/code/advsys/pf/distrib/pjd-fstest-20080816/tests/link/00.t    (Wstat: 0 Tests: 82 Failed: 6)
-  Failed tests:  18-19, 22, 44-45, 48
-/home/yanovich/code/advsys/pf/distrib/pjd-fstest-20080816/tests/link/06.t    (Wstat: 0 Tests: 18 Failed: 4)
-  Failed tests:  11, 14, 17-18
-
-/home/yanovich/code/advsys/pf/distrib/pjd-fstest-20080816/tests/truncate/00.t (Wstat: 0 Tests: 21 Failed: 4)
-  Failed tests:  5-6, 10-11
-/home/yanovich/code/advsys/pf/distrib/pjd-fstest-20080816/tests/truncate/05.t (Wstat: 0 Tests: 15 Failed: 3)
-  Failed tests:  8, 11-12
+  truncate/00.t	5-6, 10-11
+  truncate/05.t	8, 11-12
