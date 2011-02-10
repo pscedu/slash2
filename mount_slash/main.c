@@ -1384,6 +1384,11 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 
 	msfsthr_ensure();
 
+//	if (strcmp(oldname, ".") == 0 || strcmp(oldname, "..") == 0) {
+//		rc = EINVAL;
+//		goto out;
+//	}
+
 	if (strlen(oldname) == 0 || strlen(newname) == 0) {
 		rc = ENOENT;
 		goto out;
@@ -1419,6 +1424,22 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	FCMH_ULOCK(np);
 	if (rc)
 		goto out;
+
+	/*
+	 * XXX missing checks:
+	 *
+	 * [EACCES]	oldpath is a directory and does not allow
+	 *		write permission (needed to update the .. entry).
+	 *
+	 * [EPERM]	The directory containing from is marked sticky, and
+	 *		neither the containing directory nor from are owned by
+	 *		the effective user ID.
+	 *
+	 * [EPERM]	The to file exists, the directory containing to
+	 *		is marked sticky, and neither the containing
+	 *		directory nor to are owned by the effective user
+	 *		ID.
+	 */
 
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
@@ -1646,10 +1667,12 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		rc = EPERM;
 		goto out;
 	}
-	if ((to_set & PSCFS_SETATTRF_UID) && cr.scr_uid &&
-	    cr.scr_uid != c->fcmh_sstb.sst_uid) {
-		rc = EPERM;
-		goto out;
+	if ((to_set & PSCFS_SETATTRF_UID) && cr.scr_uid) {
+		if (cr.scr_uid != c->fcmh_sstb.sst_uid ||
+		    cr.scr_uid != stb->st_uid) {
+			rc = EPERM;
+			goto out;
+		}
 	}
 	if ((to_set & PSCFS_SETATTRF_GID) && cr.scr_uid) {
 		if (cr.scr_gid != c->fcmh_sstb.sst_gid &&
