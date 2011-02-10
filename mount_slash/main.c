@@ -1675,9 +1675,8 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		}
 	}
 	if ((to_set & PSCFS_SETATTRF_GID) && cr.scr_uid) {
-		if (cr.scr_gid != c->fcmh_sstb.sst_gid &&
-		    !pflsys_userisgroupmember(cr.scr_uid, cr.scr_gid,
-		    stb->st_gid)) {
+		if (cr.scr_uid != c->fcmh_sstb.sst_uid ||
+		    !pscfs_inprocgrouplist(pfr, stb->st_gid)) {
 			rc = EPERM;
 			goto out;
 		}
