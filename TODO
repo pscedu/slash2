@@ -319,6 +319,7 @@ API rename
   be resolved.  have to store in inode and release fcmh.
 - have slashd umount /zfs-kstat on teardown
 - disable RENAME and other ops are files in SL_PATH_PREFIX (e.g. mv .slfidns .blah)
+- ensure attrs are loaded before CHECKCREDS() -- perhaps memcmp() against zeroes?
 
 ----------------------------------------------------------------
 pjd POSIX test results
