@@ -1379,18 +1379,25 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	struct fidc_membh *np = NULL, *op = NULL;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
+	struct srt_stat srcsstb, dstsstb;
+	struct slash_fidgen srcfg, dstfg;
 	struct srm_rename_req *mq;
 	struct srm_rename_rep *mp;
 	struct slash_creds cr;
 	struct iovec iov[2];
-	int rc;
+	int sticky, rc;
+
+	srcfg.fg_fid = FID_ANY;
+	dstfg.fg_fid = FID_ANY;
 
 	msfsthr_ensure();
 
-//	if (strcmp(oldname, ".") == 0 || strcmp(oldname, "..") == 0) {
-//		rc = EINVAL;
-//		goto out;
-//	}
+#if 0
+	if (strcmp(oldname, ".") == 0 || strcmp(oldname, "..") == 0) {
+		rc = EINVAL;
+		goto out;
+	}
+#endif
 
 	if (strlen(oldname) == 0 || strlen(newname) == 0) {
 		rc = ENOENT;
@@ -1402,41 +1409,65 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		goto out;
 	}
 
+	mslfs_getcreds(pfr, &cr);
+
 	rc = fidc_lookup_load_inode(opinum, &op);
 	if (rc)
 		goto out;
+	if (cr.scr_uid) {
+		FCMH_LOCK(op);
+		sticky = op->fcmh_sstb.sst_mode & S_ISVTX;
+		if (sticky) {
+			if (op->fcmh_sstb.sst_uid == cr.scr_uid)
+				sticky = 0;
+		} else
+			rc = checkcreds(&op->fcmh_sstb, &cr, W_OK);
+		FCMH_ULOCK(op);
+		if (rc)
+			goto out;
 
-	rc = fidc_lookup_load_inode(npinum, &np);
-	if (rc)
-		goto out;
+		if (sticky) {
+			rc = msl_lookup_fidcache(&cr, opinum,
+			    oldname, &srcfg, &srcsstb);
+			if (rc)
+				goto out;
+			if (srcsstb.sst_uid != cr.scr_uid)
+				rc = EPERM;
+			if (rc)
+				goto out;
+		}
+	}
 
-	mslfs_getcreds(pfr, &cr);
+	if (npinum == opinum) {
+		np = op;
+	} else {
+		rc = fidc_lookup_load_inode(npinum, &np);
+		if (rc)
+			goto out;
+		if (cr.scr_uid) {
+			FCMH_LOCK(np);
+			rc = checkcreds(&np->fcmh_sstb, &cr, W_OK);
+			FCMH_ULOCK(np);
+			if (rc)
+				goto out;
+		}
+	}
 
-	/*
-	 * XXX permissions checks here are wrong;
-	 * they should match CREATE and UNLINK.
-	 */
-	FCMH_LOCK(op);
-	rc = checkcreds(&op->fcmh_sstb, &cr, W_OK);
-	FCMH_ULOCK(op);
-	if (rc)
-		goto out;
-
-	FCMH_LOCK(np);
-	rc = checkcreds(&np->fcmh_sstb, &cr, W_OK);
-	FCMH_ULOCK(np);
-	if (rc)
-		goto out;
+	if (cr.scr_uid) {
+		if (srcfg.fg_fid == FID_ANY) {
+			rc = msl_lookup_fidcache(&cr, opinum,
+			    oldname, &srcfg, &srcsstb);
+			if (rc)
+				goto out;
+		}
+		if (S_ISDIR(srcsstb.sst_mode))
+			rc = checkcreds(&srcsstb, &cr, W_OK);
+		if (rc)
+			goto out;
+	}
 
 	/*
 	 * XXX missing checks:
-	 *
-	 * [EACCES]	oldpath is a directory and does not allow
-	 *		write permission (needed to update the .. entry).
-	 *
-	 * [EPERM]	The directory containing from is marked sticky, and
-	 *		neither the containing directory nor from are owned by
-	 *		the effective user ID.
 	 *
 	 * [EPERM]	The to file exists, the directory containing to
 	 *		is marked sticky, and neither the containing
@@ -1484,10 +1515,10 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		fcmh_setattr(np, &mp->srr_npattr, FCMH_SETATTRF_NONE);
 
  out:
-	if (np)
-		fcmh_op_done_type(np, FCMH_OPCNT_LOOKUP_FIDC);
 	if (op)
 		fcmh_op_done_type(op, FCMH_OPCNT_LOOKUP_FIDC);
+	if (np && np != op)
+		fcmh_op_done_type(np, FCMH_OPCNT_LOOKUP_FIDC);
 
 	pscfs_reply_rename(pfr, rc);
 
