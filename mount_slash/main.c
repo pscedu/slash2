@@ -329,13 +329,8 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		goto out;
 
-	if (oflags & O_APPEND) {
-		FCMH_LOCK(c);
-		c->fcmh_flags |= FCMH_CLI_APPENDWR;
-		FCMH_ULOCK(c);
-	}
 	if (oflags & O_SYNC) {
-		/* XXX write me */
+		/* XXX do we need to do anything special for this? */
 	}
 
 	FCMH_LOCK(c);
@@ -451,11 +446,6 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	    (S_IXUSR | S_IXGRP | S_IXOTH)) == 0)
 		*rflags |= PSCFS_OPENF_DIO;
 
-	if (oflags & O_APPEND) {
-		FCMH_LOCK(c);
-		c->fcmh_flags |= FCMH_CLI_APPENDWR;
-		FCMH_ULOCK(c);
-	}
 	if (oflags & O_TRUNC) {
 		/* XXX write me */
 	}

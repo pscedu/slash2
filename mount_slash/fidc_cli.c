@@ -129,7 +129,6 @@ dump_fcmh_flags(int flags)
 	_dump_fcmh_flags(&flags, &seq);
 	PFL_PRFLAG(FCMH_CLI_HAVEREPLTBL, &flags, &seq);
 	PFL_PRFLAG(FCMH_CLI_FETCHREPLTBL, &flags, &seq);
-	PFL_PRFLAG(FCMH_CLI_APPENDWR, &flags, &seq);
 	PFL_PRFLAG(FCMH_CLI_INITDCI, &flags, &seq);
 	PFL_PRFLAG(FCMH_CLI_TRUNC, &flags, &seq);
 	if (flags)
