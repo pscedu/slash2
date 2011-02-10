@@ -1444,10 +1444,27 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 			goto out;
 		if (cr.scr_uid) {
 			FCMH_LOCK(np);
-			rc = checkcreds(&np->fcmh_sstb, &cr, W_OK);
+			sticky = np->fcmh_sstb.sst_mode & S_ISVTX;
+			if (sticky) {
+				if (np->fcmh_sstb.sst_uid == cr.scr_uid)
+					sticky = 0;
+			} else
+				rc = checkcreds(&np->fcmh_sstb, &cr, W_OK);
 			FCMH_ULOCK(np);
 			if (rc)
 				goto out;
+
+			if (sticky) {
+				rc = msl_lookup_fidcache(&cr, npinum,
+				    newname, &dstfg, &dstsstb);
+				if (rc == 0 &&
+				    dstsstb.sst_uid != cr.scr_uid)
+					rc = EPERM;
+				else
+					rc = 0;
+				if (rc)
+					goto out;
+			}
 		}
 	}
 
@@ -1463,15 +1480,6 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		if (rc)
 			goto out;
 	}
-
-	/*
-	 * XXX missing checks:
-	 *
-	 * [EPERM]	The to file exists, the directory containing to
-	 *		is marked sticky, and neither the containing
-	 *		directory nor to are owned by the effective user
-	 *		ID.
-	 */
 
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
