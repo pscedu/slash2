@@ -640,9 +640,13 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
-	mp->rc = slm_fcmh_get(&mq->npfg, &np);
-	if (mp->rc)
-		goto out;
+	if (SAMEFG(&mq->opfg, &mq->npfg)) {
+		np = op;
+	} else {
+		mp->rc = slm_fcmh_get(&mq->npfg, &np);
+		if (mp->rc)
+			goto out;
+	}
 
 	/*
 	 * Steps for rename (we may have to perform some steps by sending
@@ -659,12 +663,31 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	mp->rc = mdsio_rename(fcmh_2_mdsio_fid(op), from,
 	    fcmh_2_mdsio_fid(np), to, &rootcreds, mds_namespace_log);
 
+	/* update target ctime */
+	if (mp->rc == 0) {
+		struct srt_stat c_sstb;
+		struct fidc_membh *c;
+
+		/* XXX race between RENAME just before and LOOKUP here!! */
+		if (mdsio_lookup(fcmh_2_mdsio_fid(np),
+		    to, NULL, &rootcreds, &c_sstb) == 0 &&
+		    slm_fcmh_get(&c_sstb.sst_fg, &c) == 0) {
+			FCMH_LOCK(c);
+			SL_GETTIMESPEC(&c->fcmh_sstb.sst_ctim);
+			FCMH_ULOCK(c);
+			mdsio_fcmh_setattr(c, PSCFS_SETATTRF_CTIME);
+			fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+		}
+	}
+
 	mdsio_fcmh_refreshattr(op, &mp->srr_opattr);
-	mdsio_fcmh_refreshattr(np, &mp->srr_npattr);
+	if (op != np)
+		mdsio_fcmh_refreshattr(np, &mp->srr_npattr);
+
  out:
 	if (np)
 		fcmh_op_done_type(np, FCMH_OPCNT_LOOKUP_FIDC);
-	if (op)
+	if (op != np)
 		fcmh_op_done_type(op, FCMH_OPCNT_LOOKUP_FIDC);
 	return (0);
 }
