@@ -341,12 +341,12 @@ names (1023-byte symlink must fit in SLJ_NAMES_MAX):
 tests that don't pass due to inability to send FUSE updates to its cache
 after UNLINK, RENAME operations:
 
-  unlink/00.t	17, 22, 53
   rename/00.t	49, 53, 57, 61
+  unlink/00.t	17, 22, 53
 
 tests that don't pass as dependencies on other tests that fail:
 
-  chown/05.t	10-11
+  chown/05.t	10
   rename/04.t	17-18
 
 tests with undetermined reasons for failure:
