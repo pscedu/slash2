@@ -68,7 +68,10 @@
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
-#define STD_MOUNT_OPTIONS	"allow_other,max_write=134217728,big_writes"
+/* XXX Big writes aren't supported on all versions of fuse.
+ */
+//#define STD_MOUNT_OPTIONS	"allow_other,max_write=134217728,big_writes"
+#define STD_MOUNT_OPTIONS	"allow_other,max_write=134217728"
 
 #define mfh_getfid(mfh)		fcmh_2_fid((mfh)->mfh_fcmh)
 #define mfh_getfg(mfh)		(mfh)->mfh_fcmh->fcmh_fg
