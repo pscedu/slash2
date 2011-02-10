@@ -318,3 +318,51 @@ API rename
 - we can't hold fcmh in memory at all times just because PTRUNC has to
   be resolved.  have to store in inode and release fcmh.
 - have slashd umount /zfs-kstat on teardown
+
+----------------------------------------------------------------
+pjd POSIX test results
+
+tests that don't because of the FUSE SETATTR refresh bug:
+
+  chmod/05.t	8
+  chown/05.t	8
+  open/05.t	7
+  open/06.t	69
+  rename/04.t	11, 14-15
+  rmdir/07.t	6, 8
+  symlink/06.t	7
+  unlink/05.t	6, 8
+
+tests that don't pass because of the sljournal constraint on small file
+names (1023-byte symlink must fit in SLJ_NAMES_MAX):
+
+  symlink/03.t	1-2
+
+tests that don't pass due to inability to send FUSE updates to its cache
+after UNLINK, RENAME operations:
+
+  unlink/00.t	17, 22, 53
+  rename/00.t	49, 53, 57, 61
+
+tests that don't pass as dependencies on other tests that fail:
+
+  chown/05.t	10-11
+  rename/04.t	17-18
+
+tests with undetermined reasons for failure:
+
+/home/yanovich/code/advsys/pf/distrib/pjd-fstest-20080816/tests/chown/00.t   (Wstat: 0 Tests: 171 Failed: 8)
+  Failed tests:  84, 88, 141, 145, 149, 153, 160-161
+/home/yanovich/code/advsys/pf/distrib/pjd-fstest-20080816/tests/link/00.t    (Wstat: 0 Tests: 82 Failed: 6)
+  Failed tests:  18-19, 22, 44-45, 48
+/home/yanovich/code/advsys/pf/distrib/pjd-fstest-20080816/tests/link/06.t    (Wstat: 0 Tests: 18 Failed: 4)
+  Failed tests:  11, 14, 17-18
+/home/yanovich/code/advsys/pf/distrib/pjd-fstest-20080816/tests/rename/09.t  (Wstat: 0 Tests: 56 Failed: 8)
+  Failed tests:  20-21, 36-37, 52-54, 56
+/home/yanovich/code/advsys/pf/distrib/pjd-fstest-20080816/tests/rename/10.t  (Wstat: 0 Tests: 188 Failed: 11)
+  Failed tests:  54-56, 79-80, 130-132, 182-184
+
+/home/yanovich/code/advsys/pf/distrib/pjd-fstest-20080816/tests/truncate/00.t (Wstat: 0 Tests: 21 Failed: 4)
+  Failed tests:  5-6, 10-11
+/home/yanovich/code/advsys/pf/distrib/pjd-fstest-20080816/tests/truncate/05.t (Wstat: 0 Tests: 15 Failed: 3)
+  Failed tests:  8, 11-12
