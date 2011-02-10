@@ -290,6 +290,14 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		goto out;
 	}
 
+#if 0
+	FCMH_LOCK(p);
+	rc = checkcreds(&p->fcmh_sstb, &creds, W_OK);
+	FCMH_ULOCK(p);
+	if (rc)
+		goto out;
+#endif
+
 	/*
 	 * Now we've established a local placeholder for this create.
 	 *  any other creates to this pathame will block in
@@ -1540,6 +1548,8 @@ mslfsop_statfs(struct pscfs_req *pfr)
 
 	msfsthr_ensure();
 
+//	checkcreds
+
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
@@ -1678,11 +1688,13 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 	FCMH_LOCK(c);
 	if ((to_set & PSCFS_SETATTRF_MODE) && cr.scr_uid) {
-//		if ((stb->st_mode & ALLPERMS) !=
-//		    (c->fcmh_sstb.sst_mode & ALLPERMS)) {
-//			rc = EINVAL;
-//			goto out;
-//		}
+#if 0
+		if ((stb->st_mode & ALLPERMS) !=
+		    (c->fcmh_sstb.sst_mode & ALLPERMS)) {
+			rc = EINVAL;
+			goto out;
+		}
+#endif
 		if (cr.scr_uid != c->fcmh_sstb.sst_uid) {
 			rc = EPERM;
 			goto out;
@@ -1813,9 +1825,9 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 	FCMH_LOCK(c);
 	/*
-	 * If we are setting mtime or size, tell MDS what we want it
-	 * to be then blindly accept what he returns us; otherwise, we
-	 * SAVELOCAL any updates we have.
+	 * If we are setting mtime or size, we told the MDS what we
+	 * wanted it to be and must now blindly accept what he returns
+	 * to us; otherwise, we SAVELOCAL any updates we've made.
 	 */
 	if (mq->to_set & PSCFS_SETATTRF_MTIME ||
 	    mq->to_set & PSCFS_SETATTRF_DATASIZE) {
