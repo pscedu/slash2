@@ -310,7 +310,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		goto out;
 
-	mq->mode = (!(mode & 0777)) ? (0666 & ~(pscfs_getumask(pfr))) : mode;
+	mq->mode = !(mode & 0777) ? (0666 & ~pscfs_getumask(pfr)) : mode;
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = 0;
 	mq->prefios = prefIOS;
