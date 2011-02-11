@@ -322,6 +322,8 @@ API rename
 - disable RENAME and other ops are files in SL_PATH_PREFIX (e.g. mv .slfidns .blah)
 - ensure attrs are loaded before CHECKCREDS() -- perhaps memcmp() against zeroes?
 - clean up metadata (and replica garbage) for any files clobbered by RENAME, LINK
+- add a generic SRMT_BMAPCTL that bunches up ops such as WAKE, RELEASE,
+  DIO, etc.
 
 ----------------------------------------------------------------
 pjd POSIX test results
