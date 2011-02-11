@@ -386,7 +386,7 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs,
 	uint32_t tot_reqsz=bmap_flush_coalesce_size(biorqs), reqsz;
 	off_t off = 0; /* gcc */
 
-	psc_trace("ENTRY: biorqs=%p tot_reqsz=%u", biorqs, tot_reqsz);
+	psclog_trace("ENTRY: biorqs=%p tot_reqsz=%u", biorqs, tot_reqsz);
 
 	psc_assert(!*iovset);
 	psc_assert(psc_dynarray_len(biorqs) > 0);
@@ -948,7 +948,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 	//   assume an ion unless resm == slc_rmc_resm
 
 	for (;;) {
-		psc_trace("msbmaprlsthr_main() top of loop");
+		psclog_trace("msbmaprlsthr_main() top of loop");
 
 		if (!sortbypass) {
 			lc_sort(&bmapTimeoutQ, qsort, bmap_cli_timeo_cmp);

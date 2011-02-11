@@ -397,13 +397,13 @@ bmpc_reap_locked(void)
 		/* First check for LRU items.
 		 */
 		if (!pll_nitems(&bmpc->bmpc_lru)) {
-			psc_trace("skip bmpc=%p, nothing on lru", bmpc);
+			psclog_trace("skip bmpc=%p, nothing on lru", bmpc);
 			continue;
 		}
 		/* Second, check for age.
 		 */
 		if (timespeccmp(&ts, &bmpc->bmpc_oldest, <)) {
-			psc_trace("skip bmpc=%p, too recent", bmpc);
+			psclog_trace("skip bmpc=%p, too recent", bmpc);
 			continue;
 		}
 

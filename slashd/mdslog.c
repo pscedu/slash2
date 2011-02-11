@@ -1598,7 +1598,7 @@ mds_inode_addrepl_log(void *datap, uint64_t txg)
 	jrir->sjir_pos = r->sjir_pos;
 	jrir->sjir_nrepls = r->sjir_nrepls;
 
-	psc_trace("jlog fid=%"PRIx64" ios=%u pos=%u",
+	psclog_trace("jlog fid=%"PRIx64" ios=%u pos=%u",
 	    jrir->sjir_fid, jrir->sjir_ios, jrir->sjir_pos);
 
 	pjournal_add_entry(mdsJournal, txg, MDS_LOG_INO_ADDREPL,
@@ -1628,7 +1628,7 @@ mds_bmap_repl_log(void *datap, uint64_t txg)
 
 	memcpy(jrpg->sjp_reptbl, bmap->bcm_repls, SL_REPLICA_NBYTES);
 
-	psc_trace("jlog fid=%"PRIx64" bmapno=%u bmapgen=%u",
+	psclog_trace("jlog fid=%"PRIx64" bmapno=%u bmapgen=%u",
 	    jrpg->sjp_fid, jrpg->sjp_bmapno, jrpg->sjp_bgen);
 
 	pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_REPL,

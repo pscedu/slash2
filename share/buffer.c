@@ -218,7 +218,7 @@ sl_buffer_get(struct psc_listcache *lc, int block)
 
 	psc_assert(lc != &slBufsPool->ppm_lc);
 
-	psc_trace("slb from %s", lc->plc_name);
+	psclog_trace("slb from %s", lc->plc_name);
 
 	slb = (block ? lc_getwait(lc) : lc_getnb(lc));
 	return (slb);
@@ -334,7 +334,7 @@ sl_slab_reap(__unusedx struct psc_poolmgr *pool)
 	 */
 	sl_buffer_put(b, &slBufsPool->ppm_lc);
 
-	psc_trace("Reaped %d slabs", nslbs);
+	psclog_trace("Reaped %d slabs", nslbs);
 	return (nslbs);
 }
 
