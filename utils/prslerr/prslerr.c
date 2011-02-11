@@ -69,6 +69,7 @@ main(int argc, char *argv[])
 	printf("%4d [SLERR_GEN_OLD]: %s\n", SLERR_GEN_OLD, slstrerror(SLERR_GEN_OLD));
 	printf("%4d [SLERR_GEN_INVALID]: %s\n", SLERR_GEN_INVALID, slstrerror(SLERR_GEN_INVALID));
 	printf("%4d [SLERR_NOTCONN]: %s\n", SLERR_NOTCONN, slstrerror(SLERR_NOTCONN));
+	printf("%4d [SLERR_BMAP_IN_PTRUNC]: %s\n", SLERR_BMAP_IN_PTRUNC, slstrerror(SLERR_BMAP_IN_PTRUNC));
 	/* end custom errnos */
 	exit(0);
 }

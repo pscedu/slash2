@@ -46,5 +46,6 @@ char *slstrerror(int);
 #define SLERR_GEN_OLD			(_SLERR_START + 20)
 #define SLERR_GEN_INVALID		(_SLERR_START + 21)
 #define SLERR_NOTCONN			(_SLERR_START + 22)
+#define SLERR_BMAP_IN_PTRUNC		(_SLERR_START + 23)
 
 #endif /* _SLERR_H_ */
