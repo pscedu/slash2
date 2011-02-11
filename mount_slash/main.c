@@ -298,11 +298,6 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		goto out;
 #endif
 
-	/*
-	 * Now we've established a local placeholder for this create.
-	 *  any other creates to this pathame will block in
-	 *  fidc_child_wait_locked() until we release the fcmh.
-	 */
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
@@ -1655,6 +1650,7 @@ __static void
 mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
     struct stat *stb, int to_set, void *data)
 {
+	int rc, unset_trunc = 0, getting_attrs = 0;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct msl_fhent *mfh = data;
@@ -1662,7 +1658,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
 	struct slash_creds cr;
-	int rc, getting = 0;
 
 	msfsthr_ensure();
 
@@ -1726,29 +1721,19 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		}
 	}
 
-	rc = SL_RSX_NEWREQ(csvc, SRMT_SETATTR, rq, mq, mp);
-	if (rc)
-		goto out;
-
-	/* We're obtaining the attributes now. */
-	if ((c->fcmh_flags & (FCMH_GETTING_ATTRS | FCMH_HAVE_ATTRS)) == 0) {
-		getting = 1;
-		c->fcmh_flags |= FCMH_GETTING_ATTRS;
-	}
-
-	mq->attr.sst_fg = c->fcmh_fg;
-	mq->to_set = to_set;
-	sl_externalize_stat(stb, &mq->attr);
-
-	if (mq->to_set & PSCFS_SETATTRF_DATASIZE) {
-		struct bmapc_memb *b;
-		struct psc_dynarray a = DYNARRAY_INIT;
-		int j;
-
+	if (to_set & PSCFS_SETATTRF_DATASIZE) {
+		fcmh_wait_locked(c, c->fcmh_flags & FCMH_CLI_TRUNC);
 		/* Make all new I/O's, read and write, wait until this
 		 *   setattr RPC has completed.
 		 */
 		c->fcmh_flags |= FCMH_CLI_TRUNC;
+		unset_trunc = 1;
+	}
+
+	if (to_set & PSCFS_SETATTRF_DATASIZE) {
+		struct bmapc_memb *b;
+		struct psc_dynarray a = DYNARRAY_INIT;
+		int j;
 
 		if (!stb->st_size) {
 			DEBUG_FCMH(PLL_NOTIFY, c,
@@ -1795,6 +1780,21 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	} else
 		FCMH_ULOCK(c);
 
+	rc = SL_RSX_NEWREQ(csvc, SRMT_SETATTR, rq, mq, mp);
+	if (rc)
+		goto out;
+
+	FCMH_LOCK(c);
+	/* We're obtaining the attributes now. */
+	if ((c->fcmh_flags & (FCMH_GETTING_ATTRS | FCMH_HAVE_ATTRS)) == 0) {
+		getting_attrs = 1;
+		c->fcmh_flags |= FCMH_GETTING_ATTRS;
+	}
+
+	mq->attr.sst_fg = c->fcmh_fg;
+	mq->to_set = to_set;
+	sl_externalize_stat(stb, &mq->attr);
+
 	if (mfh)
 		psc_assert(c == mfh->mfh_fcmh);
 
@@ -1802,13 +1802,15 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	DEBUG_SSTB(PLL_DEBUG, &c->fcmh_sstb, "fcmh %p pre setattr", c);
 
 	psclog_dbg("fcmh %p setattr%s%s%s%s%s%s%s", c,
-	    mq->to_set & PSCFS_SETATTRF_MODE ? " mode" : "",
-	    mq->to_set & PSCFS_SETATTRF_UID ? " uid" : "",
-	    mq->to_set & PSCFS_SETATTRF_GID ? " gid" : "",
-	    mq->to_set & PSCFS_SETATTRF_ATIME ? " atime" : "",
-	    mq->to_set & PSCFS_SETATTRF_MTIME ? " mtime" : "",
-	    mq->to_set & PSCFS_SETATTRF_CTIME ? " ctime" : "",
-	    mq->to_set & PSCFS_SETATTRF_DATASIZE ? " datasize" : "");
+	    to_set & PSCFS_SETATTRF_MODE ? " mode" : "",
+	    to_set & PSCFS_SETATTRF_UID ? " uid" : "",
+	    to_set & PSCFS_SETATTRF_GID ? " gid" : "",
+	    to_set & PSCFS_SETATTRF_ATIME ? " atime" : "",
+	    to_set & PSCFS_SETATTRF_MTIME ? " mtime" : "",
+	    to_set & PSCFS_SETATTRF_CTIME ? " ctime" : "",
+	    to_set & PSCFS_SETATTRF_DATASIZE ? " datasize" : "");
+
+	FCMH_ULOCK(c);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
@@ -1822,13 +1824,13 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	 * wanted it to be and must now blindly accept what he returns
 	 * to us; otherwise, we SAVELOCAL any updates we've made.
 	 */
-	if (mq->to_set & PSCFS_SETATTRF_MTIME ||
-	    mq->to_set & PSCFS_SETATTRF_DATASIZE) {
+	if (to_set & PSCFS_SETATTRF_MTIME ||
+	    to_set & PSCFS_SETATTRF_DATASIZE) {
 		c->fcmh_sstb.sst_mtime = mp->attr.sst_mtime;
 		c->fcmh_sstb.sst_mtime_ns = mp->attr.sst_mtime_ns;
 	}
 
-	if (mq->to_set & PSCFS_SETATTRF_DATASIZE) {
+	if (to_set & PSCFS_SETATTRF_DATASIZE) {
 		c->fcmh_sstb.sst_size = mp->attr.sst_size;
 		c->fcmh_sstb.sst_ctime = mp->attr.sst_ctime;
 		c->fcmh_sstb.sst_ctime_ns = mp->attr.sst_ctime_ns;
@@ -1837,21 +1839,19 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	fcmh_setattr(c, &mp->attr, FCMH_SETATTRF_SAVELOCAL |
 	    FCMH_SETATTRF_HAVELOCK);
 
-	/* Issue wakeup after calling fcmh_setattr() to avoid needless
-	 *   spinlock contention.
-	 */
-	if (mq->to_set & PSCFS_SETATTRF_DATASIZE) {
-		DEBUG_FCMH(PLL_NOTIFY, c, "truncate complete");
-		psc_assert(c->fcmh_flags & FCMH_CLI_TRUNC);
-		c->fcmh_flags &= ~FCMH_CLI_TRUNC;
-		fcmh_wake_locked(c);
-	}
 	DEBUG_SSTB(PLL_DEBUG, &c->fcmh_sstb, "fcmh %p post setattr", c);
+
+	if (to_set & PSCFS_SETATTRF_DATASIZE && stb->st_size)
+		unset_trunc = 0;
 
  out:
 	if (c) {
 		FCMH_RLOCK(c);
-		if (rc && getting) {
+		if (unset_trunc) {
+			c->fcmh_flags &= ~FCMH_CLI_TRUNC;
+			fcmh_wake_locked(c);
+		}
+		if (rc && getting_attrs) {
 			c->fcmh_flags &= ~FCMH_GETTING_ATTRS;
 			fcmh_wake_locked(c);
 		}
