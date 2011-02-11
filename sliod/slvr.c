@@ -307,7 +307,7 @@ slvr_fsbytes_rio(struct slvr_ref *s)
 {
 	int i, rc, blk, nblks;
 
-	psc_trace("psc_vbitmap_nfree() = %d",
+	psclog_trace("psc_vbitmap_nfree() = %d",
 		  psc_vbitmap_nfree(s->slvr_slab->slb_inuse));
 
 	if (!(s->slvr_flags & SLVR_DATARDY))
