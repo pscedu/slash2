@@ -413,9 +413,9 @@ slm_rmc_handle_mknod(struct pscrpc_request *rq)
 int
 slm_rmc_handle_create(struct pscrpc_request *rq)
 {
-	struct fidc_membh *p, *c;
 	struct srm_create_rep *mp;
 	struct srm_create_req *mq;
+	struct fidc_membh *p, *c;
 	struct bmapc_memb *bmap;
 	void *mdsio_data;
 	uint32_t pol;
@@ -875,32 +875,24 @@ int
 slm_rmc_handle_symlink(struct pscrpc_request *rq)
 {
 	char linkname[SL_PATH_MAX];
+	struct fidc_membh *p = NULL;
 	struct srm_symlink_req *mq;
 	struct srm_symlink_rep *mp;
-	struct fidc_membh *p;
 	struct iovec iov;
-
-	p = NULL;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
-	if (mq->linklen == 0) {
-		mp->rc = ENOENT;
-		goto out;
-	}
-	if (mq->linklen >= SL_PATH_MAX) {
-		mp->rc = ENAMETOOLONG;
-		goto out;
-	}
-
-	mp->rc = slm_fcmh_get(&mq->pfg, &p);
-	if (mp->rc)
-		goto out;
+	if (mq->linklen == 0 || mq->linklen >= SL_PATH_MAX)
+		return (EINVAL);
 
 	iov.iov_base = linkname;
 	iov.iov_len = mq->linklen;
 	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, SRMC_BULK_PORTAL,
 	    &iov, 1);
+	if (mp->rc)
+		return (mp->rc);
+
+	mp->rc = slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
 		goto out;
 
@@ -916,7 +908,7 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
  out:
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
-	return (mp->rc);
+	return (0);
 }
 
 int
@@ -952,8 +944,8 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 		SL_GETTIMESPEC(&p->fcmh_sstb.sst_ctim);
 		FCMH_ULOCK(p);
 		mdsio_fcmh_setattr(p, PSCFS_SETATTRF_CTIME);
+		mdsio_fcmh_refreshattr(p, &mp->attr);
 	}
-	mdsio_fcmh_refreshattr(p, &mp->attr);
  out:
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
