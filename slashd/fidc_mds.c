@@ -37,7 +37,7 @@
 #include "slashd.h"
 
 int
-mds_fcmh_increase_fsz(struct fidc_membh *fcmh, off_t siz)
+mds_fcmh_increase_fsz(struct fidc_membh *fcmh, uint64_t siz)
 {
 	int locked, increase = 0;
 	sl_bmapno_t nb;
