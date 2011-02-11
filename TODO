@@ -316,7 +316,8 @@ API rename
 - ensure all errno values in rpc msgs are standardized
 - convert CONF_LOCK to a rwlock
 - we can't hold fcmh in memory at all times just because PTRUNC has to
-  be resolved.  have to store in inode and release fcmh.
+  be resolved.  have to store in inode and release fcmh.  we pass the
+  fid to the ptrunc worker and when it processes it loads the fcmh.
 - have slashd umount /zfs-kstat on teardown
 - disable RENAME and other ops are files in SL_PATH_PREFIX (e.g. mv .slfidns .blah)
 - ensure attrs are loaded before CHECKCREDS() -- perhaps memcmp() against zeroes?
