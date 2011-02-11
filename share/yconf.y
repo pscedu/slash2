@@ -337,8 +337,8 @@ statement	: restype_stmt
 		;
 
 restype_stmt	: NAME EQ RESOURCE_TYPE END {
-			psc_notify("Found Fstype Statement: Tok '%s' Val '%s'",
-			   $1, $3);
+			psclog_dbg("found restype statement: tok '%s' val '%s'",
+			    $1, $3);
 			slcfg_store_tok_val($1, $3);
 			PSCFREE($1);
 			PSCFREE($3);
@@ -346,8 +346,8 @@ restype_stmt	: NAME EQ RESOURCE_TYPE END {
 		;
 
 path_stmt	: NAME EQ PATHNAME END {
-			psc_notify("Found Path Statement: Tok '%s' Val '%s'",
-			       $1, $3);
+			psclog_dbg("found path statement: tok '%s' val '%s'",
+			    $1, $3);
 			slcfg_store_tok_val($1, $3);
 			PSCFREE($1);
 			PSCFREE($3);
@@ -355,8 +355,8 @@ path_stmt	: NAME EQ PATHNAME END {
 		;
 
 glob_stmt	: NAME EQ GLOBPATH END {
-			psc_notify("Found Glob Statement: Tok '%s' Val '%s'",
-			       $1, $3);
+			psclog_dbg("found glob statement: tok '%s' Val '%s'",
+			    $1, $3);
 			slcfg_store_tok_val($1, $3);
 			PSCFREE($1);
 			PSCFREE($3);
@@ -364,8 +364,8 @@ glob_stmt	: NAME EQ GLOBPATH END {
 		;
 
 bool_stmt	: NAME EQ BOOL END {
-			psc_notify("Found Bool Statement: Tok '%s' Val '%s'",
-			       $1, $3);
+			psclog_dbg("found bool statement: tok '%s' val '%s'",
+			    $1, $3);
 			slcfg_store_tok_val($1, $3);
 			PSCFREE($1);
 			PSCFREE($3);
@@ -373,8 +373,8 @@ bool_stmt	: NAME EQ BOOL END {
 		;
 
 size_stmt	: NAME EQ SIZEVAL END {
-			psc_notify("Found Sizeval Statement: Tok '%s' Val '%s'",
-			       $1, $3);
+			psclog_dbg("found sizeval statement: tok '%s' val '%s'",
+			    $1, $3);
 			slcfg_store_tok_val($1, $3);
 			PSCFREE($1);
 			PSCFREE($3);
@@ -382,8 +382,8 @@ size_stmt	: NAME EQ SIZEVAL END {
 		;
 
 num_stmt	: NAME EQ NUM END {
-			psc_notify("Found Num Statement: Tok '%s' Val '%s'",
-				$1, $3);
+			psclog_dbg("found num statement: tok '%s' val '%s'",
+			    $1, $3);
 			slcfg_store_tok_val($1, $3);
 			PSCFREE($1);
 			PSCFREE($3);
@@ -391,8 +391,8 @@ num_stmt	: NAME EQ NUM END {
 		;
 
 float_stmt	: NAME EQ FLOATVAL END {
-			psc_notify("Found Float Statement: Tok '%s' Val '%s'",
-			       $1, $3);
+			psclog_dbg("found float statement: tok '%s' val '%s'",
+			    $1, $3);
 			slcfg_store_tok_val($1, $3);
 			PSCFREE($1);
 			PSCFREE($3);
@@ -400,8 +400,8 @@ float_stmt	: NAME EQ FLOATVAL END {
 		;
 
 hexnum_stmt	: NAME EQ HEXNUM END {
-			psc_notify("Found Hexnum Statement: Tok '%s' Val '%s'",
-			       $1, $3);
+			psclog_dbg("found hexnum statement: tok '%s' val '%s'",
+			    $1, $3);
 			slcfg_store_tok_val($1, $3);
 			PSCFREE($1);
 			PSCFREE($3);
@@ -409,8 +409,8 @@ hexnum_stmt	: NAME EQ HEXNUM END {
 		;
 
 quoteds_stmt	: NAME EQ QUOTEDS END {
-			psc_notify("Found Quoted String Statement: Tok '%s' Val '%s'",
-				   $1, $3);
+			psclog_dbg("found quoted string statement: tok '%s' val '%s'",
+			    $1, $3);
 			slcfg_store_tok_val($1, $3);
 			PSCFREE($1);
 			PSCFREE($3);
@@ -419,9 +419,8 @@ quoteds_stmt	: NAME EQ QUOTEDS END {
 		;
 
 lnettcp_stmt	: NAME EQ LNETTCP END {
-			psc_notify("Found Lnettcp String Statement: Tok '%s' Val '%s'",
-				   $1, $3);
-
+			psclog_dbg("found lnettcp string statement: tok '%s' val '%s'",
+			    $1, $3);
 			slcfg_store_tok_val($1, $3);
 			PSCFREE($1);
 			PSCFREE($3);
@@ -523,7 +522,7 @@ slcfg_store_tok_val(const char *tok, char *val)
 	if (e == NULL)
 		return;
 
-	psc_notify("sym entry %p, name %s, type %d",
+	psclog_dbg("sym entry %p, name %s, type %d",
 	    e, e->c_name, e->c_type);
 
 	/*
