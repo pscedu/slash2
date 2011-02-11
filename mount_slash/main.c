@@ -1095,12 +1095,12 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 }
 
 __static int
-slash_lookuprpc(const struct slash_creds *crp, pscfs_inum_t pinum,
-    const char *name, struct slash_fidgen *fgp, struct srt_stat *sstb)
+slash_lookuprpc(pscfs_inum_t pinum, const char *name,
+    struct slash_fidgen *fgp, struct srt_stat *sstb)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
-	struct fidc_membh *m = NULL, *p;
+	struct fidc_membh *m = NULL;
 	struct srm_lookup_req *mq;
 	struct srm_lookup_rep *mp;
 	int rc;
@@ -1109,17 +1109,6 @@ slash_lookuprpc(const struct slash_creds *crp, pscfs_inum_t pinum,
 		return (ENOENT);
 	if (strlen(name) > SL_NAME_MAX)
 		return (ENAMETOOLONG);
-
-	rc = fidc_lookup_load_inode(pinum, &p);
-	if (rc)
-		goto out;
-
-	FCMH_LOCK(p);
-	rc = checkcreds(&p->fcmh_sstb, crp, X_OK);
-	FCMH_ULOCK(p);
-	fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
-	if (rc)
-		goto out;
 
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
@@ -1167,7 +1156,7 @@ slash_lookuprpc(const struct slash_creds *crp, pscfs_inum_t pinum,
 }
 
 static int
-msl_lookup_fidcache(const struct slash_creds *cr, pscfs_inum_t pinum,
+msl_lookup_fidcache(const struct slash_creds *crp, pscfs_inum_t pinum,
     const char *name, struct slash_fidgen *fgp, struct srt_stat *sstb)
 {
 	struct fidc_membh *p, *c;
@@ -1177,11 +1166,17 @@ msl_lookup_fidcache(const struct slash_creds *cr, pscfs_inum_t pinum,
 	psclog_info("looking for file: %s under inode: "SLPRI_FID,
 	    name, pinum);
 
-	p = fidc_lookup_fid(pinum);
-	if (!p)
-		goto out;
+	rc = fidc_lookup_load_inode(pinum, &p);
+	if (rc)
+		return (rc);
 
 	FCMH_LOCK(p);
+	rc = checkcreds(&p->fcmh_sstb, crp, X_OK);
+	if (rc) {
+		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+		return (rc);
+	}
+
 	if (!DIRCACHE_INITIALIZED(p))
 		slc_fcmh_initdci(p);
 	FCMH_ULOCK(p);
@@ -1217,7 +1212,7 @@ msl_lookup_fidcache(const struct slash_creds *cr, pscfs_inum_t pinum,
 	fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	return (rc);
  out:
-	return (slash_lookuprpc(cr, pinum, name, fgp, sstb));
+	return (slash_lookuprpc(pinum, name, fgp, sstb));
 }
 
 __static void
