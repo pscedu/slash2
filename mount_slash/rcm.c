@@ -33,6 +33,7 @@
 #include "bmap_cli.h"
 #include "ctl_cli.h"
 #include "ctlsvr_cli.h"
+#include "fidc_cli.h"
 #include "fidcache.h"
 #include "mount_slash.h"
 #include "rpc_cli.h"
@@ -238,8 +239,21 @@ msrcm_handle_bmap_wake(struct pscrpc_request *rq)
 {
 	struct srm_bmap_wake_req *mq;
 	struct srm_bmap_wake_rep *mp;
+	struct fidc_membh *c = NULL;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
+	mp->rc = fidc_lookup_load_inode(mq->fg.fg_fid, &c);
+	if (mp->rc)
+		goto out;
+	if (c->fcmh_flags & FCMH_CLI_TRUNC) {
+		FCMH_LOCK(c);
+		c->fcmh_flags &= ~FCMH_CLI_TRUNC;
+		fcmh_wake_locked(c);
+		FCMH_ULOCK(c);
+	}
+ out:
+	if (c)
+		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	return (0);
 }
 
