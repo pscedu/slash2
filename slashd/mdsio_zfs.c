@@ -380,6 +380,23 @@ slmzfskstatmthr_main(__unusedx struct psc_thread *thr)
 	pscfs_main();
 }
 
+#define _PATH_KSTAT "/zfs-kstat"
+
+void
+slm_unmount_kstat(void)
+{
+	char buf[BUFSIZ];
+	int rc;
+
+	rc = snprintf(buf, sizeof(buf), "umount %s", _PATH_KSTAT);
+	if (rc == -1)
+		psc_fatal("snprintf: umount %s", _PATH_KSTAT);
+	if (rc >= (int)sizeof(buf))
+		psc_fatalx("snprintf: umount %s: too long", _PATH_KSTAT);
+	if (system(buf) == -1)
+		psclog_warn("system(%s)", buf);
+}
+
 int
 zfsslash2_init(void)
 {
@@ -392,7 +409,6 @@ zfsslash2_init(void)
 	char buf[BUFSIZ];
 	int rc;
 
-#define _PATH_KSTAT "/zfs-kstat"
 	rc = snprintf(buf, sizeof(buf), "umount %s", _PATH_KSTAT);
 	if (rc == -1)
 		psc_fatal("snprintf: umount %s", _PATH_KSTAT);
@@ -418,6 +434,7 @@ zfsslash2_init(void)
 	rc = libzfs_init_fusesocket();
 	if (rc == 0)
 		rc = libzfs_init();
+	atexit(slm_unmount_kstat);
 	return (rc);
 }
 
