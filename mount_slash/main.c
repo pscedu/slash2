@@ -1721,6 +1721,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		}
 	}
 
+ wait_trunc_res:
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
 		fcmh_wait_locked(c, c->fcmh_flags & FCMH_CLI_TRUNC);
 		/* Make all new I/O's, read and write, wait until this
@@ -1813,8 +1814,11 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	FCMH_ULOCK(c);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc == 0)
+	if (rc == 0) {
+		if (mp->rc == SLERR_BMAP_IN_PTRUNC)
+			goto wait_trunc_res;
 		rc = mp->rc;
+	}
 	if (rc)
 		goto out;
 
