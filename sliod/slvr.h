@@ -143,7 +143,7 @@ struct slvr_ref {
 	(s)->slvr_flags & SLVR_REPLDST		? "T" : "-"
 
 #define DEBUG_SLVR(level, s, fmt, ...)					\
-	psc_logs((level), SLISS_SLVR, "slvr@%p num=%hu pw=%hu "		\
+	psclogs((level), SLISS_SLVR, "slvr@%p num=%hu pw=%hu "		\
 	    "pr=%hu cw=%hu "						\
 	    "soff=%u eoff=%u loff=%u "					\
 	    "pri@%p slab@%p flgs:"					\
