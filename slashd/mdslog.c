@@ -737,11 +737,9 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	 * Fabricate a setattr update entry to change the size.
 	 */
 	if (type == MDS_LOG_BMAP_CRC) {
-
-#define AT_SLASH2SIZE	0x20000
-
 		update_entry.op = NS_OP_SETSIZE;
-		update_entry.mask = AT_SLASH2SIZE;		/* suggest moving def to slash2 header */
+		update_entry.mask = mdsio_slflags_2_setattrmask(
+		    PSCFS_SETATTRF_DATASIZE);
 		update_entry.size = jcrc->sjc_fsize;
 		update_entry.target_fid = jcrc->sjc_fid;
 		goto write_update;
