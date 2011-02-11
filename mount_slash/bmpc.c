@@ -208,7 +208,7 @@ bmpc_grow(int nslbs)
 	nalloced = pll_nitems(&bmpcSlabs.bmms_slbs);
 	psc_assert(nalloced <= BMPC_MAXSLBS);
 
-	psc_notify("nalloced (%d/%d)", nalloced, BMPC_MAXSLBS);
+	psclog_dbg("nalloced (%d/%d)", nalloced, BMPC_MAXSLBS);
 
 	if (nalloced == BMPC_MAXSLBS) {
 		rc = -ENOMEM;
@@ -299,7 +299,7 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 	timespecsub(&ts, &bmpcSlabs.bmms_minage, &ts);
 
 	timespecsub(&bmpc->bmpc_oldest, &ts, &expire);
-	psc_notice("bmpc oldest ("PSCPRI_TIMESPEC")",
+	psclog_dbg("bmpc oldest ("PSCPRI_TIMESPEC")",
 	    PSCPRI_TIMESPEC_ARGS(&expire));
 
 	PLL_LOCK(&bmpc->bmpc_lru);
@@ -363,7 +363,7 @@ bmpc_reap_locked(void)
 
 	waiters += atomic_read(&bmpcSlabs.bmms_waiters);
 
-	psc_notify("ENTRY waiters=%d", waiters);
+	psclog_dbg("ENTRY waiters=%d", waiters);
 
 	if (bmpcSlabs.bmms_reap) {
 		/* Wait and return, the thread holding the reap lock
@@ -389,7 +389,7 @@ bmpc_reap_locked(void)
 
 	LIST_CACHE_FOREACH(bmpc, &bmpcLru) {
 #if 0
-		psc_notify("bmpc=%p npages=%d age(%ld:%ld)",
+		psclog_dbg("bmpc=%p npages=%d age(%ld:%ld)",
 			   bmpc, pll_nitems(&bmpc->bmpc_lru),
 			   bmpc->bmpc_oldest.tv_sec, bmpc->bmpc_oldest.tv_nsec);
 #endif
@@ -414,14 +414,14 @@ bmpc_reap_locked(void)
 	}
 	LIST_CACHE_ULOCK(&bmpcLru);
 
-	/* XXX we probably wants the waiter to decrement its owner counter */
+	/* XXX we probably want the waiter to decrement its owner counter */
 	if (nfreed) {
 		atomic_sub(nfreed, &bmpcSlabs.bmms_waiters);
 		if (atomic_read(&bmpcSlabs.bmms_waiters) < 0)
 			atomic_set(&bmpcSlabs.bmms_waiters, 0);
 	}
 
-	psc_notify("nfreed=%d, waiters=%d", nfreed, waiters);
+	psclog_dbg("nfreed=%d, waiters=%d", nfreed, waiters);
 
 	if (waiters > nfreed) {
 		int nslbs = (waiters - nfreed) / BMPC_SLB_NBLKS;
