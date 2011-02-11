@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2011, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2008-2011, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -101,7 +101,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	uint32_t aoff = (roff & ~BMPC_BUFMASK); /* aligned, relative offset */
 	uint32_t alen = len + (roff & BMPC_BUFMASK);
 	uint64_t foff = roff + bmap_foff(b); /* filewise offset */
-	int i, npages=0, rbw=0;
+	int i, npages = 0, rbw = 0;
 
 	DEBUG_BMAP(PLL_INFO, b,
 	    "adding req for (off=%u) (size=%u)", roff, len);
@@ -198,7 +198,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	/* Pass1: Retrieve memory pages from the cache on behalf of our pages
 	 *   stuck in GETBUF.
 	 */
-	for (i=0; i < npages; i++) {
+	for (i = 0; i < npages; i++) {
 		bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
 		/* Only this thread may assign a buffer to the bmpce.
 		 */
@@ -249,7 +249,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 
 	/* Pass2: Sanity Check
 	 */
-	for (i=0; i < npages; i++) {
+	for (i = 0; i < npages; i++) {
 		bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
 
 		BMPCE_LOCK(bmpce);
@@ -335,7 +335,7 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 	psc_assert(!(r->biorq_flags & BIORQ_INFL));
 
 	BMPC_LOCK(bmpc);
-	for (i=0; i < psc_dynarray_len(&r->biorq_pages); i++) {
+	for (i = 0; i < psc_dynarray_len(&r->biorq_pages); i++) {
 		bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
 		BMPCE_LOCK(bmpce);
 
@@ -352,7 +352,7 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 {
 	struct msl_fhent *f=r->biorq_fhent;
 #if FHENT_EARLY_RELEASE
-	int fhent=1;
+	int fhent = 1;
 #endif
 
 	spinlock(&r->biorq_lock);
@@ -708,7 +708,7 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw)
 	struct pscrpc_request *rq = NULL;
 	struct srm_bmap_chwrmode_req *mq;
 	struct srm_bmap_chwrmode_rep *mp;
-	int rc, nretries=0;
+	int rc, nretries = 0;
 
 	psc_assert(rw == SL_WRITE || rw == SL_READ);
  retry:
@@ -908,8 +908,8 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CB_POINTER_SLOT_CSVC];
 	struct bmapc_memb *b;
 	struct bmap_pagecache_entry *bmpce;
-	int op=rq->rq_reqmsg->opc, i, rc;
-	int clearpages=0;
+	int op = rq->rq_reqmsg->opc, i, rc;
+	int clearpages = 0;
 
 	rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
 	if (rc)
@@ -946,7 +946,7 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	 *   not the iov's in the request since some of those may
 	 *   have already been staged in.
 	 */
-	for (i=0; i < psc_dynarray_len(a); i++) {
+	for (i = 0; i < psc_dynarray_len(a); i++) {
 		bmpce = psc_dynarray_getpos(a, i);
 		BMPCE_LOCK(bmpce);
 
@@ -995,7 +995,7 @@ msl_io_rpcset_cb(__unusedx struct pscrpc_request_set *set, void *arg, int rc)
 	struct bmpc_ioreq *r;
 	int i;
 
-	for (i=0; i < psc_dynarray_len(biorqs); i++) {
+	for (i = 0; i < psc_dynarray_len(biorqs); i++) {
 		r = psc_dynarray_getpos(biorqs, i);
 		msl_biorq_destroy(r);
 	}
@@ -1056,8 +1056,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 	struct srm_io_req	  *mq;
 	struct srm_io_rep	  *mp;
 
-	size_t len, nbytes, size=r->biorq_len;
-	int i, op, n=0, rc=1;
+	size_t len, nbytes, size = r->biorq_len;
+	int i, op, n = 0, rc = 1;
 
 	psc_assert(r->biorq_flags & BIORQ_DIO);
 	psc_assert(r->biorq_bmap);
@@ -1082,7 +1082,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 	n = (r->biorq_len / LNET_MTU) + ((r->biorq_len % LNET_MTU) ? 1 : 0);
 	iovs = PSCALLOC(sizeof(*iovs) * n);
 
-	for (i=0, nbytes=0; i < n; i++, nbytes += len) {
+	for (i = 0, nbytes = 0; i < n; i++, nbytes += len) {
 		len = MIN(LNET_MTU, (size-nbytes));
 
 		rc = SL_RSX_NEWREQ(csvc, op, req, mq, mp);
@@ -1218,7 +1218,7 @@ msl_read_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 	a = PSCALLOC(sizeof(*a));
 	psc_dynarray_init(a);
 
-	for (i=0; i < npages; i++) {
+	for (i = 0; i < npages; i++) {
 		bmpce = psc_dynarray_getpos(&r->biorq_pages, i + startpage);
 
 		BMPCE_LOCK(bmpce);
@@ -1349,7 +1349,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 		if ((r->biorq_flags & (BIORQ_RBWFP|BIORQ_RBWLP)) ==
 		    (BIORQ_RBWFP|BIORQ_RBWLP) &&
 		    psc_dynarray_len(&r->biorq_pages) == 2) {
-			for (i=0; i < 2; i++) {
+			for (i = 0; i < 2; i++) {
 				bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
 				psc_assert(biorq_is_my_bmpce(r, bmpce));
 				psc_assert(bmpce->bmpce_flags & BMPCE_RBWPAGE);
@@ -1418,7 +1418,7 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 
 	}
 
-	for (i=0; i < npages; i++) {
+	for (i = 0; i < npages; i++) {
 		bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
 		BMPCE_LOCK(bmpce);
 		DEBUG_BMPCE(PLL_TRACE, bmpce, " ");
@@ -1467,7 +1467,7 @@ msl_pages_copyin(struct bmpc_ioreq *r, char *buf)
 	toff   = r->biorq_off;
 	npages = psc_dynarray_len(&r->biorq_pages);
 
-	for (i=0; i < npages; i++) {
+	for (i = 0; i < npages; i++) {
 		/* All pages are involved, therefore tsize should have value.
 		 */
 		psc_assert(tsize);
@@ -1552,7 +1552,7 @@ msl_pages_copyout(struct bmpc_ioreq *r, char *buf)
 
 	psc_assert(npages);
 
-	for (i=0; i < npages; i++) {
+	for (i = 0; i < npages; i++) {
 		psc_assert(tsize);
 
 		bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
@@ -1601,15 +1601,15 @@ msl_pages_copyout(struct bmpc_ioreq *r, char *buf)
  * @rw: the operation type (SL_READ or SL_WRITE).
  */
 int
-msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
+msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off,
+    enum rw rw)
 {
 #define MAX_BMAPS_REQ 4
 	struct bmpc_ioreq *r[MAX_BMAPS_REQ];
 	struct bmapc_memb *b[MAX_BMAPS_REQ];
-	size_t s, e;
-	size_t tlen, tsize=size;
-	off_t roff;
+	size_t s, e, tlen, tsize = size;
 	int nr, i, rc;
+	off_t roff;
 	char *p;
 
 	psc_assert(mfh);
@@ -1621,7 +1621,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 	FCMH_LOCK(mfh->mfh_fcmh);
 
 	if (!size || (rw == SL_READ &&
-	    (uint64_t)off >= fcmh_2_fsz(mfh->mfh_fcmh))) {
+	    off >= fcmh_2_fsz(mfh->mfh_fcmh))) {
 		FCMH_ULOCK(mfh->mfh_fcmh);
 		rc = 0;
 		goto out;
@@ -1643,15 +1643,15 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 		return (-EINVAL);
 	/* Relativize the length and offset (roff is not aligned).
 	 */
-	roff  = off - (off_t)(s * SLASH_BMAP_SIZE);
+	roff  = off - (s * SLASH_BMAP_SIZE);
 	psc_assert(roff < SLASH_BMAP_SIZE);
 	/* Length of the first bmap request.
 	 */
-	tlen  = MIN((size_t)(SLASH_BMAP_SIZE - roff), size);
+	tlen  = MIN(SLASH_BMAP_SIZE - roff, size);
 	/* Foreach block range, get its bmap and make a request into its
 	 *  page cache.  This first loop retrieves all the pages.
 	 */
-	for (nr=0; s <= e; s++, nr++) {
+	for (nr = 0; s <= e; s++, nr++) {
 		DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh,
 		    "sz=%zu tlen=%zu off=%"PSCPRIdOFFT" roff=%"PSCPRIdOFFT
 		    " rw=%d", tsize, tlen, off, roff, rw);
@@ -1689,7 +1689,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 	/* Note that the offsets used here are file-wise offsets not
 	 *   offsets into the buffer.
 	 */
-	for (i=0, tlen=0, p=buf; i < nr; i++, p+=tlen) {
+	for (i = 0, tlen = 0, p = buf; i < nr; i++, p += tlen) {
 		/* Associate the biorq's with the mfh. */
 		pll_addtail(&mfh->mfh_biorqs, r[i]);
 
@@ -1721,7 +1721,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 	}
 
 	if (rw == SL_WRITE) {
-		fcmh_setlocalsize(mfh->mfh_fcmh, (size_t)(off + size));
+		fcmh_setlocalsize(mfh->mfh_fcmh, off + size);
 		rc = size;
 	} else {
 		ssize_t fsz = fcmh_getsize(mfh->mfh_fcmh);

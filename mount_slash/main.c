@@ -1817,8 +1817,13 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0) {
-		if (mp->rc == SLERR_BMAP_IN_PTRUNC)
+		if (mp->rc == SLERR_BMAP_IN_PTRUNC) {
+			if (getting_attrs) {
+				getting_attrs = 0;
+				c->fcmh_flags &= ~FCMH_GETTING_ATTRS;
+			}
 			goto wait_trunc_res;
+		}
 		rc = mp->rc;
 	}
 	if (rc)
