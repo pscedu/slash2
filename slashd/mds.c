@@ -1615,7 +1615,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 			psc_dynarray_add(&fcmh_2_fmi(f)->fmi_ptrunc_clients,
 			    csvc);
 			FCMH_ULOCK(f);
-			return (EAGAIN);
+			return (SLERR_BMAP_IN_PTRUNC);
 		}
 		FCMH_ULOCK(f);
 	}

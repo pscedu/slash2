@@ -726,7 +726,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			/* partial truncate */
 			FCMH_LOCK(fcmh);
 			if (fcmh->fcmh_flags & FCMH_IN_PTRUNC) {
-				mp->rc = EAGAIN;
+				mp->rc = SLERR_BMAP_IN_PTRUNC;
 				goto out;
 			}
 			fcmh->fcmh_flags |= FCMH_IN_PTRUNC;
