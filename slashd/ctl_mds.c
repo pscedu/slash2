@@ -124,7 +124,6 @@ slmctlparam_namespace_stats(int fd, struct psc_ctlmsghdr *mh,
 	const char *p_site, *p_act, *p_op, *p_field;
 	int rc, d_val, o_val, s_val, val;
 	struct sl_resm *r;
-	struct sl_site *s;
 	char *str;
 	long l;
 
@@ -188,14 +187,15 @@ slmctlparam_namespace_stats(int fd, struct psc_ctlmsghdr *mh,
 		peerinfo = res2rpmi(r->resm_res)->rpmi_info;
 		if (peerinfo == NULL)
 			continue;
-		if (strcasecmp(p_site, s->site_name) && strcmp(p_site, "*"))
+		if (strcasecmp(p_site, r->res_site->site_name) &&
+		    strcmp(p_site, "*"))
 			continue;
 
-		levels[2] = s->site_name;
+		levels[2] = r->res_site->site_name;
 		rc = slmctlparam_namespace_stats_process(fd, mh, pcp,
 		    levels, &peerinfo->sp_stats, d_val, o_val, s_val,
 		    val);
-		if (!rc || strcmp(p_site, s->site_name) == 0)
+		if (!rc || strcmp(p_site, r->res_site->site_name) == 0)
 			SL_MDS_WALK_SETLAST();
 	);
 	return (rc);
