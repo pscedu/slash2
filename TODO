@@ -324,6 +324,9 @@ API rename
 - clean up metadata (and replica garbage) for any files clobbered by RENAME, LINK
 - add a generic SRMT_BMAPCTL that bunches up ops such as WAKE, RELEASE,
   DIO, etc.
+- connection handling is horrible when hosts are down, even ones that
+  are not directly involved
+- do full truncate and unlink do the right things while ptrunc is resolving?
 
 ----------------------------------------------------------------
 pjd POSIX test results
