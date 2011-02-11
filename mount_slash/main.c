@@ -1724,8 +1724,10 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
  wait_trunc_res:
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
 		fcmh_wait_locked(c, c->fcmh_flags & FCMH_CLI_TRUNC);
-		/* Make all new I/O's, read and write, wait until this
-		 *   setattr RPC has completed.
+		/*
+		 * Mark as busy against I/O on this and higher bmaps and
+		 * concurrent truncation requests util the MDS has
+		 * received new CRCs for the freshly truncated region.
 		 */
 		c->fcmh_flags |= FCMH_CLI_TRUNC;
 		unset_trunc = 1;
