@@ -1841,7 +1841,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 	DEBUG_SSTB(PLL_DEBUG, &c->fcmh_sstb, "fcmh %p post setattr", c);
 
-	if (to_set & PSCFS_SETATTRF_DATASIZE && stb->st_size)
+	if ((to_set & PSCFS_SETATTRF_DATASIZE) && stb->st_size)
 		unset_trunc = 0;
 
  out:
