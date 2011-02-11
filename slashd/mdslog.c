@@ -583,13 +583,13 @@ int
 mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
     int replay)
 {
-	struct slmds_jent_crc *jcrc;
 	struct srt_update_entry update_entry, *update_entryp;
 	struct srt_reclaim_entry reclaim_entry, *reclaim_entryp;
-	struct slmds_jent_namespace *sjnm;
+	struct slmds_jent_namespace *sjnm = NULL;
+	struct slmds_jent_crc *jcrc = NULL;
 	int size, count, total;
-	off_t off;
 	uint16_t type;
+	off_t off;
 
 	psc_assert(pje->pje_magic == PJE_MAGIC);
 
@@ -804,8 +804,8 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
     uint64_t newparent, const struct srt_stat *sstb, int mask,
     const char *name, const char *newname)
 {
-	int distill;
 	struct slmds_jent_namespace *sjnm;
+	int distill;
 
 	sjnm = pjournal_get_buf(mdsJournal,
 	    sizeof(struct slmds_jent_namespace));
@@ -967,7 +967,7 @@ mds_update_lwm(int batchno)
 __static uint64_t
 mds_update_hwm(int batchno)
 {
-	uint64_t value;
+	uint64_t value = 0;
 	struct sl_mds_peerinfo *peerinfo;
 	struct resprof_mds_info *rpmi;
 	struct sl_resm *resm;
@@ -1698,7 +1698,6 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 	BMAP_LOCK(bmap);
 	bmap->bcm_flags &= ~BMAP_MDS_CRC_UP;
 	BMAP_ULOCK(bmap);
-
 }
 
 void
