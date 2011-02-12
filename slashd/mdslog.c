@@ -868,6 +868,9 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 
 	if (!distill)
 		pjournal_put_buf(mdsJournal, sjnm);
+
+	psclog_notice("Namespace Op: op = %d, fid = %"PRId64", txg = %"PRId64,
+	    op, sjnm->sjnm_target_fid, txg);
 }
 
 /**
