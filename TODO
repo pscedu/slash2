@@ -327,6 +327,7 @@ API rename
 - connection handling is horrible when hosts are down, even ones that
   are not directly involved
 - do full truncate and unlink do the right things while ptrunc is resolving?
+- add SSL transport which uses keys and can therefore disable authbuf
 
 ----------------------------------------------------------------
 pjd POSIX test results
@@ -335,13 +336,13 @@ tests that fail because of the FUSE SETATTR refresh bug:
 
   chmod/05.t	8
   chown/05.t	8
+  link/06.t	11, 14, 17-18
   open/05.t	7
   open/06.t	69
   rename/04.t	11, 14-15
   rmdir/07.t	6, 8
   symlink/06.t	7
   unlink/05.t	6, 8
-  link/06.t	11, 14, 17-18
 
 tests that fail because of the sljournal constraint on small file
 names (1023-byte symlink must fit in SLJ_NAMES_MAX):
@@ -351,9 +352,9 @@ names (1023-byte symlink must fit in SLJ_NAMES_MAX):
 tests that fail due to inability to send FUSE updates to its cache
 after UNLINK, RENAME operations:
 
+  link/00.t	18-19, 22, 44-45, 48
   rename/00.t	49, 53, 57, 61
   unlink/00.t	17, 22, 53
-  link/00.t	18-19, 22, 44-45, 48
 
 tests that fail as a result of other tests that fail:
 
