@@ -1176,10 +1176,24 @@ mds_update_cursor(void *buf, uint64_t txg)
 	struct psc_journal_cursor *cursor = buf;
 	int rc;
 
-	spinlock(&mds_txg_lock);
-	cursor->pjc_commit_txg = txg;
-	freelock(&mds_txg_lock);
-
+	/*
+ 	 * During the replay, actually as soon as ZFS starts, its group transaction
+ 	 * number starts to increase.  If we crash in the middle of a relay, we can
+ 	 * miss replaying some entries if we update the txg at this point.
+ 	 */
+	if (!mdsJournal->pj_replay) {
+		spinlock(&mds_txg_lock);
+		cursor->pjc_commit_txg = txg;
+		freelock(&mds_txg_lock);
+	} else {
+		/* 	
+		 * Paranoid. Until I am done, no one can make progress in ZFS. Still
+		 * let us wait a bit to make sure the replay thread has updated the
+		 * replay xid.
+		 */
+		sleep(1);
+		cursor->pjc_replay_xid = pjournal_next_replay(mdsJournal);
+	}
 	/*
 	 * Distill happens outside ZFS.  This means if there is no ZFS
 	 * activity, the following value will be stale.
@@ -1904,22 +1918,25 @@ mds_journal_init(int disable_propagation)
 		psc_fatal("Failed to open log file %s", res->res_jrnldev);
 
 	mdsJournal->pj_npeers = npeers;
-	mdsJournal->pj_commit_txg = mds_cursor.pjc_commit_txg;
 	mdsJournal->pj_distill_xid = last_distill_xid;
+	mdsJournal->pj_commit_txg = mds_cursor.pjc_commit_txg;
+	mdsJournal->pj_replay_xid = mds_cursor.pjc_replay_xid;
 
 	psclog_notice("Journal device is %s", res->res_jrnldev);
 	psclog_notice("Last SLASH FID is "SLPRI_FID, mds_cursor.pjc_fid);
 	psclog_notice("Last synced ZFS transaction group number is %"PRId64,
 	    mdsJournal->pj_commit_txg);
-	psclog_notice("Last distilled SLASH2 transaction number is %"PRId64,
-	    mdsJournal->pj_distill_xid);
+	psclog_notice("Last replayed SLASH2 transaction number is %"PRId64,
+	    mdsJournal->pj_replay_xid);
 
 	/* we need the cursor thread to start any potential log replay */
 	pscthr_init(SLMTHRT_CURSOR, 0, mds_cursor_thread, NULL, 0,
 	    "slmjcursorthr");
 
+	mdsJournal->pj_replay = 1;
 	pjournal_replay(mdsJournal, SLMTHRT_JRNL, "slmjthr",
 	    mds_replay_handler, mds_distill_handler);
+	mdsJournal->pj_replay = 0;
 
 	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm, mds_cursor.pjc_seqno_lwm);
 	psclog_notice("Last bmap sequence number low water mark is %"PRId64,
@@ -2036,6 +2053,7 @@ mds_redo_namespace(struct slmds_jent_namespace *sjnm, int replay)
 	}
 	psclog_info("Redo namespace log: op=%d name=%s "
 	    "newname=%s fid="SLPRI_FID" rc=%d",
-	    sjnm->sjnm_op, name, newname, sjnm->sjnm_target_fid, rc);
+	    sjnm->sjnm_op, name[0] != NULL ? name : "null", 
+	    newname[0] != NULL ? newname : "null", sjnm->sjnm_target_fid, rc);
 	return (rc);
 }
