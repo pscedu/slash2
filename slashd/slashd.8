@@ -27,9 +27,9 @@ metadata server daemon
 .Nm slashd
 .Op Fl D Ar datadir
 .Op Fl f Ar conf
-.Op Fl p Ar zpoolcache
+.Op Fl p Ar zfspoolcache
 .Op Fl S Ar socket
-.Ar zpoolname
+.Ar zfspoolname
 .Sh DESCRIPTION
 The
 .Nm
@@ -39,7 +39,7 @@ file system clients and
 .Tn I/O
 nodes.
 .Pp
-.Ar zpoolname
+.Ar zfspoolname
 specifies the name of the
 .Tn ZFS
 pool to import for use as the backing metadata file system.
@@ -56,7 +56,7 @@ Defaults to
 See
 .Xr slash.conf 5
 for more details.
-.It Fl p Ar zpoolcache
+.It Fl p Ar zfspoolcache
 Specify the path to the
 .Tn ZFS
 file system pool cache file.
