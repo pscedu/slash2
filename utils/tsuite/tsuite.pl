@@ -260,9 +260,10 @@ sub parse_conf {
 					$r->{type} = $1;
 				} elsif ($line =~ /^\s*id\s*=\s*(\d+)\s*;\s*$/) {
 					$r->{id} = $1;
-				} elsif ($line =~ /^\s*#\s*\@zfspool\s*=\s*(\w+)\s+(.*)\s*$/) {
-					$r->{zpoolname} = $1;
-					$r->{zpool_args} = $2;
+				} elsif ($line =~ /^\s*#\s*\@zfspool\s*=\s*(\w+)\s+(\w+)\s+(.*)\s*$/) {
+					$r->{zpool_name} = $1;
+					$r->{zpool_cachefile} = $2;
+					$r->{zpool_args} = $3;
 				} elsif ($line =~ /^\s*#\s*\@prefmds\s*=\s*(\w+\@\w+)\s*$/) {
 					$r->{prefmds} = $1;
 				} elsif ($line =~ /^\s*fsroot\s*=\s*(\S+)\s*;\s*$/) {
@@ -323,11 +324,12 @@ foreach $i (@mds) {
 
 		$zfs_fuse &
 		sleep 2
-		$zpool destroy $i->{zpoolname} || true
-		$zpool create -f $i->{zpoolname} $i->{zpool_args}
-		$slimmns_format /$i->{zpoolname}
+		$zpool destroy $i->{zpool_name} || true
+		$zpool set cachefile=$i->{zpool_cachefile} $i->{zpool_name}
+		$zpool create -f $i->{zpool_name} $i->{zpool_args}
+		$slimmns_format /$i->{zpool_name}
 		sync; sync
-		umount /$i->{zpoolname}
+		umount /$i->{zpool_name}
 		pkill zfs-fuse
 
 		mkdir -p $datadir
@@ -351,7 +353,7 @@ foreach $i (@mds) {
 	debug_msg "launching slashd: $i->{rname} : $i->{host}";
 
 	my $dat = $slmgdb;
-	$dat =~ s/%zpool_name%/$i->{zpoolname}/g;
+	$dat =~ s/%zpool_name%/$i->{zpool_name}/g;
 	$dat =~ s/%datadir%/$datadir/g;
 
 	open G, ">", "$base/slashd.$i->{id}.gdbcmd" or fatal "write slashd.gdbcmd";
