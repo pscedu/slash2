@@ -568,3 +568,58 @@ Program received signal SIGABRT, Aborted.
 #11 0x000000302ee07761 in start_thread (arg=0x7fff3b5fe700) at pthread_create.c:301
 #12 0x000000302eae098d in clone () at ../sysdeps/unix/sysv/linux/x86_64/clone.S:115
 
+02/15/2011
+----------
+
+So I was able to duplicate namespace on a different mds, but it takes too much time:
+
+root@lemon: /home/zhihui$ time tar xvfj linux-2.6.34.tar.bz2 -C /zzh-slash2-lemon/ | tail
+linux-2.6.34/virt/kvm/assigned-dev.c
+linux-2.6.34/virt/kvm/coalesced_mmio.c
+linux-2.6.34/virt/kvm/coalesced_mmio.h
+linux-2.6.34/virt/kvm/eventfd.c
+linux-2.6.34/virt/kvm/ioapic.c
+linux-2.6.34/virt/kvm/ioapic.h
+linux-2.6.34/virt/kvm/iodev.h
+linux-2.6.34/virt/kvm/iommu.c
+linux-2.6.34/virt/kvm/irq_comm.c
+linux-2.6.34/virt/kvm/kvm_main.c
+
+real	91m30.234s
+user	0m16.175s
+sys	0m3.263s
+
+Also, the timestamp is not right:
+
+root@lemon: /home/zhihui$ ls -al /zzh-slash2-lemon/linux-2.6.34/virt/kvm
+total 7
+drwxr-xr-x 2 root root    13 May 16  2010 .
+drwxr-xr-x 3 root root     3 May 16  2010 ..
+-rw-r--r-- 1 root root 20140 May 16  2010 assigned-dev.c
+-rw-r--r-- 1 root root  4101 May 16  2010 coalesced_mmio.c
+-rw-r--r-- 1 root root   969 May 16  2010 coalesced_mmio.h
+-rw-r--r-- 1 root root 13721 May 16  2010 eventfd.c
+-rw-r--r-- 1 root root 10871 May 16  2010 ioapic.c
+-rw-r--r-- 1 root root  2289 May 16  2010 ioapic.h
+-rw-r--r-- 1 root root  1987 May 16  2010 iodev.h
+-rw-r--r-- 1 root root  5636 May 16  2010 iommu.c
+-rw-r--r-- 1 root root 12097 May 16  2010 irq_comm.c
+-rw-r--r-- 1 root root   242 May 16  2010 Kconfig
+-rw-r--r-- 1 root root 51063 May 16  2010 kvm_main.c
+root@lemon: /home/zhihui$ ls -al /zzh-slash2/linux-2.6.34/virt/kvm
+total 25
+drwxr-xr-x 2 root root    13 Feb 15 12:57 .
+drwxr-xr-x 3 root root     3 Feb 15 12:57 ..
+-rw-r--r-- 1 root root 20140 Feb 15 12:57 assigned-dev.c
+-rw-r--r-- 1 root root  4101 Feb 15 12:57 coalesced_mmio.c
+-rw-r--r-- 1 root root   969 Feb 15 12:57 coalesced_mmio.h
+-rw-r--r-- 1 root root 13721 Feb 15 12:57 eventfd.c
+-rw-r--r-- 1 root root 10871 Feb 15 12:57 ioapic.c
+-rw-r--r-- 1 root root  2289 Feb 15 12:57 ioapic.h
+-rw-r--r-- 1 root root  1987 Feb 15 12:57 iodev.h
+-rw-r--r-- 1 root root  5636 Feb 15 12:57 iommu.c
+-rw-r--r-- 1 root root 12097 Feb 15 12:57 irq_comm.c
+-rw-r--r-- 1 root root   242 Feb 15 12:57 Kconfig
+-rw-r--r-- 1 root root 51063 Feb 15 12:57 kvm_main.c
+
+The problem is probably at setattr redo.
