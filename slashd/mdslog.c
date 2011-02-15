@@ -72,7 +72,7 @@ static int			 current_reclaim_logfile = -1;
 /*
  * To ensure that the current update of the progress does not
  * affect the previous update in case of a crash/power outage,
- * I use two files and write them alternately. This way seems
+ * I use two files and write them alternately.  This way seems
  * to be easier than making sure that each update happens on
  * different sectors (we don't need to care about the entry size
  * and the number of entries).
@@ -1177,19 +1177,19 @@ mds_update_cursor(void *buf, uint64_t txg)
 	int rc;
 
 	/*
- 	 * During the replay, actually as soon as ZFS starts, its group transaction
- 	 * number starts to increase.  If we crash in the middle of a relay, we can
- 	 * miss replaying some entries if we update the txg at this point.
- 	 */
+	 * During the replay, actually as soon as ZFS starts, its group transaction
+	 * number starts to increase.  If we crash in the middle of a relay, we can
+	 * miss replaying some entries if we update the txg at this point.
+	 */
 	if (!mdsJournal->pj_replay) {
 		spinlock(&mds_txg_lock);
 		cursor->pjc_commit_txg = txg;
 		freelock(&mds_txg_lock);
 	} else {
-		/* 	
-		 * Paranoid. Until I am done, no one can make progress in ZFS. Still
-		 * let us wait a bit to make sure the replay thread has updated the
-		 * replay xid.
+		/*
+		 * Paranoid.  Until I am done, no one can make progress
+		 * in ZFS.  Still let us wait a bit to make sure the
+		 * replay thread has updated the replay xid.
 		 */
 		sleep(1);
 		cursor->pjc_replay_xid = pjournal_next_replay(mdsJournal);
