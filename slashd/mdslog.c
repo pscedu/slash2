@@ -66,6 +66,9 @@ psc_spinlock_t			 mds_reclaim_lock = SPINLOCK_INIT;
 uint64_t			 current_update_xid = 0;
 uint64_t			 current_reclaim_xid = 0;
 
+uint64_t			 sync_update_xid = 0;
+uint64_t			 sync_reclaim_xid = 0;
+
 static int			 current_update_logfile = -1;
 static int			 current_reclaim_logfile = -1;
 
@@ -547,7 +550,7 @@ mds_open_logfile(uint64_t batchno, int update, int readonly)
 	 * During replay, we need to read the file first to find out
 	 * the right position, so we can't use O_WRONLY.
 	 */
-	logfd = open(log_fn, O_RDWR | O_SYNC);
+	logfd = open(log_fn, O_RDWR);
 	if (logfd > 0) {
 		/*
 		 * During replay, the offset will be determined by the
@@ -557,7 +560,7 @@ mds_open_logfile(uint64_t batchno, int update, int readonly)
 			psc_warn("lseek");
 		return (logfd);
 	}
-	logfd = open(log_fn, O_CREAT | O_TRUNC | O_WRONLY | O_SYNC, 0600);
+	logfd = open(log_fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
 	if (logfd == -1)
 		psc_fatal("Failed to create log file %s", log_fn);
 	return (logfd);
@@ -580,8 +583,8 @@ mds_open_logfile(uint64_t batchno, int update, int readonly)
  *	format changes.
  */
 int
-mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
-    int replay)
+mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
+    int action)
 {
 	struct srt_update_entry update_entry, *update_entryp;
 	struct srt_reclaim_entry reclaim_entry, *reclaim_entryp;
@@ -590,6 +593,28 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	int size, count, total;
 	uint16_t type;
 	off_t off;
+
+	/*
+ 	 * Make sure that the distill log hits the disk now.
+ 	 */
+	if (action == 2) {
+
+		spinlock(&mds_update_lock);
+		if (xid < sync_update_xid)  {
+			fsync(current_update_logfile);
+			sync_update_xid = current_update_xid;
+		}
+		freelock(&mds_update_lock);
+
+		spinlock(&mds_reclaim_lock);
+		if (xid < sync_reclaim_xid)  {
+			fsync(current_reclaim_logfile);
+			sync_reclaim_xid = current_reclaim_xid;
+		}
+		freelock(&mds_reclaim_lock);
+
+		return (0);
+	}
 
 	psc_assert(pje->pje_magic == PJE_MAGIC);
 
@@ -630,7 +655,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 		 * the entry.  Although not necessary contiguous, xids
 		 * are in increasing order.
 		 */
-		if (replay) {
+		if (action == 1) {
 			size = read(current_reclaim_logfile, reclaimbuf,
 			    SLM_RECLAIM_BATCH * sizeof(struct srt_reclaim_entry));
 			if (size == -1)
@@ -660,10 +685,6 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 		}
 	}
 
-	spinlock(&mds_reclaim_lock);
-	current_reclaim_xid = pje->pje_xid;
-	freelock(&mds_reclaim_lock);
-
 	reclaim_entry.xid = pje->pje_xid;
 	reclaim_entry.fg.fg_fid = sjnm->sjnm_target_fid;
 	reclaim_entry.fg.fg_gen = sjnm->sjnm_target_gen;
@@ -679,14 +700,23 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	if (off == (off_t)-1)
 		psc_warn("lseek");
 	else if (off == SLM_RECLAIM_BATCH * sizeof(struct srt_reclaim_entry)) {
+
+		spinlock(&mds_reclaim_lock);
+		fsync(current_reclaim_logfile);
 		close(current_reclaim_logfile);
 		current_reclaim_logfile = -1;
 		current_reclaim_batchno++;
+		sync_reclaim_xid = pje->pje_xid;
+		freelock(&mds_reclaim_lock);
 
 		spinlock(&mds_reclaim_waitqlock);
 		psc_waitq_wakeall(&mds_reclaim_waitq);
 		freelock(&mds_reclaim_waitqlock);
 	}
+
+	spinlock(&mds_reclaim_lock);
+	current_reclaim_xid = pje->pje_xid;
+	freelock(&mds_reclaim_lock);
 
  check_update:
 
@@ -696,7 +726,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	if (current_update_logfile == -1) {
 		current_update_logfile =
 		    mds_open_logfile(current_update_batchno, 1, 0);
-		if (replay) {
+		if (action == 1) {
 			size = read(current_update_logfile, updatebuf,
 			    SLM_UPDATE_BATCH * sizeof(struct srt_update_entry));
 			if (size == -1)
@@ -726,9 +756,6 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 		}
 	}
 
-	spinlock(&mds_update_lock);
-	current_update_xid = pje->pje_xid;
-	freelock(&mds_update_lock);
 
 	memset(&update_entry, 0, sizeof(update_entry));
 	update_entry.xid = pje->pje_xid;
@@ -783,14 +810,24 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers,
 	if (off == (off_t)-1)
 		psc_warn("lseek");
 	else if (off == SLM_UPDATE_BATCH * sizeof(struct srt_update_entry)) {
+
+		spinlock(&mds_update_lock);
+		fsync(current_update_logfile);
 		close(current_update_logfile);
 		current_update_logfile = -1;
 		current_update_batchno++;
+		sync_update_xid = pje->pje_xid;
+		freelock(&mds_update_lock);
 
 		spinlock(&mds_update_waitqlock);
 		psc_waitq_wakeall(&mds_update_waitq);
 		freelock(&mds_update_waitqlock);
 	}
+
+	spinlock(&mds_update_lock);
+	current_update_xid = pje->pje_xid;
+	freelock(&mds_update_lock);
+
 	return (0);
 }
 
@@ -1759,7 +1796,7 @@ mds_journal_init(int disable_propagation)
 		    SL_FN_RECLAIMPROG, psc_get_hostname(),
 		    mds_cursor.pjc_timestamp, index);
 		current_reclaim_progfile[index] = open(fn, O_CREAT |
-		    O_RDWR | O_SYNC, 0600);
+		    O_RDWR, 0600);
 		if (fstat(current_reclaim_progfile[index], &sb) == -1)
 			psc_fatal("Failed to stat reclaim log file %s", fn);
 		psc_assert((sb.st_size % sizeof(struct reclaim_prog_entry)) == 0);
@@ -1835,7 +1872,7 @@ mds_journal_init(int disable_propagation)
 		    SL_FN_UPDATEPROG, psc_get_hostname(),
 		    mds_cursor.pjc_timestamp, index);
 		current_update_progfile[index] = open(fn, O_CREAT |
-		    O_RDWR | O_SYNC, 0600);
+		    O_RDWR, 0600);
 		if (fstat(current_update_progfile[index], &sb) == -1)
 			psc_fatal("Failed to stat update log file %s", fn);
 		psc_assert((sb.st_size % sizeof(struct update_prog_entry)) == 0);
