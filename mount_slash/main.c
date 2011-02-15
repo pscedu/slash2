@@ -822,6 +822,8 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	if (rc)
+		goto out;
 	if (rc == 0)
 		rc = mp->rc;
 
@@ -830,13 +832,14 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	FCMH_LOCK(p);
 	if (!rc)
 		fcmh_setattr(p, &mp->attr, FCMH_SETATTRF_HAVELOCK);
-	if (DIRCACHE_INITIALIZED(p))
-		dircache_lookup(&fcmh_2_fci(p)->fci_dci,
-		    name, DC_STALE);
-	else
+	if (DIRCACHE_INITIALIZED(p)) {
+		if (rc == 0 || rc == ENOENT)
+			dircache_lookup(&fcmh_2_fci(p)->fci_dci,
+			    name, DC_STALE);
+	} else
 		slc_fcmh_initdci(p);
 
-	/* XXX if fcmh being unlinked has refcnt 0, purge it from fidcache */
+	/* XXX if fcmh being unlinked now has refcnt 0, purge it from fidcache? */
 
  out:
 	if (p)
