@@ -328,6 +328,12 @@ API rename
   are not directly involved
 - do full truncate and unlink do the right things while ptrunc is resolving?
 - add SSL transport which uses keys and can therefore disable authbuf
+- slmctl -s journal
+	one category would be: how many log space left, current log head,  current log tail, log device name, etc
+	another category would be how many times we wait for log space, how many needs to distill, how many reclaim pending, etc.
+	basically help us to find out the usage of log space, and performance stats.
+	also, current xid, txg, etc.
+	also total # of log entries written
 
 ----------------------------------------------------------------
 pjd POSIX test results
