@@ -1274,9 +1274,9 @@ mds_open_cursor(void)
 	psc_assert(mds_cursor.pjc_fid >= SLFID_MIN);
 
 	slm_set_curr_slashid(mds_cursor.pjc_fid);
-	psclog_notice("File system was formated on %"PRIu64" seconds "
+	psclog_notice("File system was formatted on %"PRIu64" seconds "
 	    "since the Epoch", mds_cursor.pjc_timestamp);
-	psclog_notice("File system was formated on %s",
+	psclog_notice("File system was formatted on %s",
 	    ctime((time_t *)&mds_cursor.pjc_timestamp));
 }
 
@@ -1615,7 +1615,7 @@ mds_inode_addrepl_log(void *datap, uint64_t txg)
 	jrir->sjir_pos = r->sjir_pos;
 	jrir->sjir_nrepls = r->sjir_nrepls;
 
-	psclog_trace("jlog fid=%"PRIx64" ios=%u pos=%u",
+	psclog_trace("jlog fid="SLPRI_FID" ios=%u pos=%u",
 	    jrir->sjir_fid, jrir->sjir_ios, jrir->sjir_pos);
 
 	pjournal_add_entry(mdsJournal, txg, MDS_LOG_INO_ADDREPL,
@@ -1645,7 +1645,7 @@ mds_bmap_repl_log(void *datap, uint64_t txg)
 
 	memcpy(jrpg->sjp_reptbl, bmap->bcm_repls, SL_REPLICA_NBYTES);
 
-	psclog_trace("jlog fid=%"PRIx64" bmapno=%u bmapgen=%u",
+	psclog_trace("jlog fid="SLPRI_FID" bmapno=%u bmapgen=%u",
 	    jrpg->sjp_fid, jrpg->sjp_bmapno, jrpg->sjp_bgen);
 
 	pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_REPL,
@@ -2053,7 +2053,6 @@ mds_redo_namespace(struct slmds_jent_namespace *sjnm, int replay)
 	}
 	psclog_info("Redo namespace log: op=%d name=%s "
 	    "newname=%s fid="SLPRI_FID" rc=%d",
-	    sjnm->sjnm_op, name[0] != NULL ? name : "null", 
-	    newname[0] != NULL ? newname : "null", sjnm->sjnm_target_fid, rc);
+	    sjnm->sjnm_op, name, newname, sjnm->sjnm_target_fid, rc);
 	return (rc);
 }
