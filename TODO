@@ -328,20 +328,12 @@ API rename
   are not directly involved
 - do full truncate and unlink do the right things while ptrunc is resolving?
 - add SSL transport which uses keys and can therefore disable authbuf
-- sljournal constraint on small file names (1023-byte symlink must fit
-  in SLJ_NAMES_MAX):
 - slmctl -s journal
 	one category would be: how many log space left, current log head,  current log tail, log device name, etc
 	another category would be how many times we wait for log space, how many needs to distill, how many reclaim pending, etc.
 	basically help us to find out the usage of log space, and performance stats.
 	also, current xid, txg, etc.
 	also total # of log entries written
-
-- FUSE bug: during LOOKUP, there is no check for invalidated dirs to
-  re-force lookups for child nodes.
-
-  if this gets resolves, we should remove the code that explicitly
-  invalidates FUSE child dentries of a directory when handling CHMOD
 
 - pjd tests used to fail due to inability to send FUSE updates to its
   cache after UNLINK, RENAME operations:
@@ -351,3 +343,13 @@ API rename
 	unlink/00.t	17, 22, 53
 
 - write a ptrunc tester
+
+========================================================= KNOWN CAVEATS
+- sljournal constraint on small file names (1023-byte symlink must fit
+  in SLJ_NAMES_MAX):
+
+- FUSE bug: during LOOKUP, there is no check for invalidated dirs to
+  re-force lookups for child nodes.
+
+  if this gets resolves, we should remove the code that explicitly
+  invalidates FUSE child dentries of a directory when handling CHMOD
