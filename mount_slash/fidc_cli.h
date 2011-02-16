@@ -49,6 +49,7 @@ struct fcmh_cli_info {
 };
 
 #define fcmh_2_fci(f)		((struct fcmh_cli_info *)fcmh_get_pri(f))
+#define fcmh_2_dci(f)		(&fcmh_2_fci(f)->fci_dci)
 
 /* Client-specific fcmh_flags */
 #define FCMH_CLI_HAVEREPLTBL	(_FCMH_FLGSHFT << 0)	/* file replica table present */
