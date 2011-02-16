@@ -1214,7 +1214,7 @@ mds_update_cursor(void *buf, uint64_t txg)
 	 * number starts to increase.  If we crash in the middle of a relay, we can
 	 * miss replaying some entries if we update the txg at this point.
 	 */
-	if ((mdsJournal->pj_flags & PJF_REPLAYINPROG) == 0)) {
+	if ((mdsJournal->pj_flags & PJF_REPLAYINPROG) == 0) {
 		spinlock(&mds_txg_lock);
 		cursor->pjc_commit_txg = txg;
 		freelock(&mds_txg_lock);
