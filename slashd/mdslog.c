@@ -1200,7 +1200,7 @@ mds_send_batch_update(uint64_t batchno)
 }
 
 /**
- * mds_update_cursor - write some system information into our cursor
+ * mds_update_cursor - Write some system information into our cursor
  *	file.  Note that every field must be protected by a spinlock.
  */
 void
@@ -1214,7 +1214,7 @@ mds_update_cursor(void *buf, uint64_t txg)
 	 * number starts to increase.  If we crash in the middle of a relay, we can
 	 * miss replaying some entries if we update the txg at this point.
 	 */
-	if (!mdsJournal->pj_replay) {
+	if ((mdsJournal->pj_flags & PJF_REPLAYINPROG) == 0)) {
 		spinlock(&mds_txg_lock);
 		cursor->pjc_commit_txg = txg;
 		freelock(&mds_txg_lock);
@@ -1973,10 +1973,8 @@ mds_journal_init(int disable_propagation)
 	pscthr_init(SLMTHRT_CURSOR, 0, mds_cursor_thread, NULL, 0,
 	    "slmjcursorthr");
 
-	mdsJournal->pj_replay = 1;
 	pjournal_replay(mdsJournal, SLMTHRT_JRNL, "slmjthr",
 	    mds_replay_handler, mds_distill_handler);
-	mdsJournal->pj_replay = 0;
 
 	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm, mds_cursor.pjc_seqno_lwm);
 	psclog_notice("Last bmap sequence number low water mark is %"PRId64,
