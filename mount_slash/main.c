@@ -1870,12 +1870,11 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		sl_internalize_stat(&c->fcmh_sstb, stb);
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	}
+	pscfs_reply_setattr(pfr, stb, MSLFS_ATTR_TIMEO, rc);
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
-
-	pscfs_reply_setattr(pfr, stb, MSLFS_ATTR_TIMEO, rc);
 }
 
 __static void
