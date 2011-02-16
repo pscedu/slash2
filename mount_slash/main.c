@@ -1647,6 +1647,20 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 		sl_csvc_decref(csvc);
 }
 
+struct msl_dc_inv_entry_data {
+	struct pscfs_req	*mdie_pfr;
+	pscfs_inum_t		 mdie_pinum;
+};
+
+void
+msl_dc_inv_entry(struct dircache_desc *d, void *arg)
+{
+	const struct msl_dc_inv_entry_data *mdie = arg;
+
+	pscfs_notify_inval_entry(mdie->mdie_pfr,
+	    mdie->mdie_pinum, d->dd_name, d->dd_namelen);
+}
+
 __static void
 mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
     struct stat *stb, int to_set, void *data)
@@ -1855,6 +1869,14 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 	if ((to_set & PSCFS_SETATTRF_DATASIZE) && stb->st_size)
 		unset_trunc = 0;
+
+	if (fcmh_isdir(c) && DIRCACHE_INITIALIZED(c)) {
+		struct msl_dc_inv_entry_data mdie;
+
+		mdie.mdie_pfr = pfr;
+		mdie.mdie_pinum = fcmh_2_fid(c);
+		dircache_walk(fcmh_2_dci(c), msl_dc_inv_entry, &mdie);
+	}
 
  out:
 	if (c) {
