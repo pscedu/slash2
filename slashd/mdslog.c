@@ -1955,6 +1955,9 @@ mds_journal_init(int disable_propagation)
 	if (mdsJournal == NULL)
 		psc_fatal("Failed to open log file %s", res->res_jrnldev);
 
+	strncpy(mdsJournal->pj_name, res->res_jrnldev, PJ_NAME_MAX - 1);
+	mdsJournal->pj_name[PJ_NAME_MAX - 1] = '\0';
+
 	mdsJournal->pj_npeers = npeers;
 	mdsJournal->pj_distill_xid = last_distill_xid;
 	mdsJournal->pj_commit_txg = mds_cursor.pjc_commit_txg;
