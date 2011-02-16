@@ -1047,7 +1047,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		for (i = 0; i < mq->nstbpref; i++, attr++) {
 			if (attr->sst_fid == FID_ANY ||
 			    attr->sst_fid == 0) {
-				psc_warnx("invalid f+g:"SLPRI_FG", "
+				psclog_warnx("invalid f+g:"SLPRI_FG", "
 				    "parent: "SLPRI_FID,
 				    SLPRI_FG_ARGS(&attr->sst_fg),
 				    fcmh_2_fid(d));
@@ -2009,7 +2009,7 @@ unmount(const char *mp)
 	if (rc >= (int)sizeof(buf))
 		psc_fatalx("snprintf: umount %s: too long", mp);
 	if (system(buf) == -1)
-		psc_warn("system(%s)", buf);
+		psclog_warn("system(%s)", buf);
 }
 
 void
@@ -2053,7 +2053,7 @@ msl_init(void)
 	if (name) {
 		prefIOS = libsl_str2id(name);
 		if (prefIOS == IOS_ID_ANY)
-			psc_warnx("SLASH2_PIOS_ID (%s) does not resolve to "
+			psclog_warnx("SLASH2_PIOS_ID (%s) does not resolve to "
 			    "a valid IOS, defaulting to IOS_ID_ANY", name);
 	}
 	atexit(unmount_mp);
