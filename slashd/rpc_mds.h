@@ -51,8 +51,10 @@ struct pscrpc_export;
  * Each log record is identified by its transaction ID (xid), which is
  * always increasing, but not necessary contiguous.
  *
- * The size of any individual log file must be less than LNET_MTU so it
- * can be transmitted in a single RPC bulk.
+ * Increasing these values should help logging performance because we 
+ * can then sync less often.  However, the size of any individual log 
+ * file must be less than LNET_MTU so it can always be transmitted in 
+ * a single RPC bulk.
  */
 #define SLM_UPDATE_BATCH		2048			/* namespace updates */
 #define SLM_RECLAIM_BATCH		2048			/* garbage reclamation */
