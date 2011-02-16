@@ -335,39 +335,30 @@ API rename
 	also, current xid, txg, etc.
 	also total # of log entries written
 
-----------------------------------------------------------------
-pjd POSIX test results
+- FUSE bug: during LOOKUP, there is no check for invalidated dirs to
+  re-force lookups for child nodes.
 
-tests that fail because of the FUSE SETATTR refresh bug:
+  if this gets resolves, we should remove the code that explicitly
+  invalidates FUSE child dentries of a directory when handling CHMOD
 
-  chmod/05.t	8
-  chown/05.t	8
-  link/06.t	11, 14, 17-18
-  open/05.t	7
-  open/06.t	69
-  rename/04.t	11, 14-15
-  rmdir/07.t	6, 8
-  symlink/06.t	7
-  unlink/05.t	6, 8
+- pjd tests used to fail because of the sljournal constraint on small
+  file names (1023-byte symlink must fit in SLJ_NAMES_MAX):
 
-tests that fail because of the sljournal constraint on small file
-names (1023-byte symlink must fit in SLJ_NAMES_MAX):
+	symlink/03.t	1-2
 
-  symlink/03.t	1-2
+- pjd tests used to fail due to inability to send FUSE updates to its
+  cache after UNLINK, RENAME operations:
 
-tests that fail due to inability to send FUSE updates to its cache
-after UNLINK, RENAME operations:
+	link/00.t	18-19, 22, 44-45, 48
+	rename/00.t	49, 53, 57, 61
+	unlink/00.t	17, 22, 53
 
-  link/00.t	18-19, 22, 44-45, 48
-  rename/00.t	49, 53, 57, 61
-  unlink/00.t	17, 22, 53
+- pjd tests used to fail because PTRUNC is unfinished:
 
-tests that fail as a result of other tests that fail:
+	truncate/00.t	5-6, 10-11
+	truncate/05.t	8, 11-12
 
-  chown/05.t	10
-  rename/04.t	17-18
+- pjd tests that fail for unknown reasons:
 
-unanalyzed test failures remaining:
-
-  truncate/00.t	5-6, 10-11
-  truncate/05.t	8, 11-12
+	chown/00.t    77
+	symlink/03.t	6-7
