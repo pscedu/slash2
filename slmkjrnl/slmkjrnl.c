@@ -58,9 +58,8 @@ main(int argc, char *argv[])
 {
 	ssize_t nents = SLJ_MDS_JNENTS;
 	char *endp, c, fn[PATH_MAX];
-	unsigned int options;
-	int rc;
 	long l;
+	int rc;
 
 	pfl_init();
 	sl_subsys_register();
@@ -68,7 +67,6 @@ main(int argc, char *argv[])
 	psc_subsys_register(SLMSS_JOURNAL, "jrnl");
 
 	fn[0] = '\0';
-	options = PJH_OPT_NONE;
 	progname = argv[0];
 	while ((c = getopt(argc, argv, "b:D:fn:qv")) != -1)
 		switch (c) {
