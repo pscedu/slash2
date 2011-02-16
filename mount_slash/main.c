@@ -1875,7 +1875,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 		mdie.mdie_pfr = pfr;
 		mdie.mdie_pinum = fcmh_2_fid(c);
-		dircache_walk(fcmh_2_dci(c), msl_dc_inv_entry, &mdie);
+//		dircache_walk(fcmh_2_dci(c), msl_dc_inv_entry, &mdie);
 	}
 
  out:
