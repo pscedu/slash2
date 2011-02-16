@@ -1228,10 +1228,15 @@ mds_update_cursor(void *buf, uint64_t txg)
 		cursor->pjc_replay_xid = pjournal_next_replay(mdsJournal);
 	}
 	/*
-	 * Distill happens outside ZFS.  This means if there is no ZFS
-	 * activity, the following value will be stale.
-	 */
-	cursor->pjc_distill_xid = pjournal_next_distill(mdsJournal);
+ 	 * Be conservative.  We are willing to do extra work than missing some.
+ 	 */
+	spinlock(&mds_distill_lock);
+	if (sync_update_xid < sync_reclaim_xid)
+		cursor->pjc_distill_xid = sync_update_xid;
+	else
+		cursor->pjc_distill_xid = sync_reclaim_xid;
+	freelock(&mds_distill_lock);
+
 	cursor->pjc_fid = slm_get_curr_slashid();
 
 	rc = mds_bmap_getcurseq(&cursor->pjc_seqno_hwm, &cursor->pjc_seqno_lwm);
