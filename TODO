@@ -328,6 +328,8 @@ API rename
   are not directly involved
 - do full truncate and unlink do the right things while ptrunc is resolving?
 - add SSL transport which uses keys and can therefore disable authbuf
+- sljournal constraint on small file names (1023-byte symlink must fit
+  in SLJ_NAMES_MAX):
 - slmctl -s journal
 	one category would be: how many log space left, current log head,  current log tail, log device name, etc
 	another category would be how many times we wait for log space, how many needs to distill, how many reclaim pending, etc.
@@ -341,11 +343,6 @@ API rename
   if this gets resolves, we should remove the code that explicitly
   invalidates FUSE child dentries of a directory when handling CHMOD
 
-- pjd tests used to fail because of the sljournal constraint on small
-  file names (1023-byte symlink must fit in SLJ_NAMES_MAX):
-
-	symlink/03.t	1-2
-
 - pjd tests used to fail due to inability to send FUSE updates to its
   cache after UNLINK, RENAME operations:
 
@@ -353,12 +350,4 @@ API rename
 	rename/00.t	49, 53, 57, 61
 	unlink/00.t	17, 22, 53
 
-- pjd tests used to fail because PTRUNC is unfinished:
-
-	truncate/00.t	5-6, 10-11
-	truncate/05.t	8, 11-12
-
-- pjd tests that fail for unknown reasons:
-
-	chown/00.t    77
-	symlink/03.t	6-7
+- write a ptrunc tester
