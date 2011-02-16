@@ -23,14 +23,14 @@
 #include "inode.h"
 #include "slashrpc.h"
 
-#define SLJ_MDS_JNENTS		(128 * 1024)	/* 131072 */
-#define SLJ_MDS_RA		1024		/* SLJ_MDS_JNENTS % SLJ_MDS_RA == 0 */
-#define SLJ_MDS_NCRCS		MAX_BMAP_INODE_PAIRS
+#define SLJ_MDS_JNENTS			(128 * 1024)		/* 131072 */
+#define SLJ_MDS_RA			1024			/* SLJ_MDS_JNENTS % SLJ_MDS_RA == 0 */
+#define SLJ_MDS_NCRCS			MAX_BMAP_INODE_PAIRS
 
-#define SLJ_MDS_PJET_VOID	0
-#define SLJ_MDS_PJET_INUM	1
-#define SLJ_MDS_PJET_BMAP	2
-#define SLJ_MDS_PJET_INODE	3
+#define SLJ_MDS_PJET_VOID		0
+#define SLJ_MDS_PJET_INUM		1
+#define SLJ_MDS_PJET_BMAP		2
+#define SLJ_MDS_PJET_INODE		3
 
 /**
  * slmds_jent_crc - Used to log CRC updates which come from IONs.
@@ -46,14 +46,14 @@ struct slmds_jent_crc {
 	 * make it to the disk.  When we redo the creation, we will get
 	 * a different ZFS ID.
 	 */
-	uint64_t		sjc_fid;
-	sl_bmapno_t		sjc_bmapno;
-	sl_ios_id_t		sjc_ion;		/* Track the ION which did the I/O */
-	int32_t			sjc_ncrcs;
-	uint32_t		sjc_utimgen;
-	uint64_t		sjc_fsize;
-	int			sjc_extend;
-	struct srm_bmap_crcwire	sjc_crc[SLJ_MDS_NCRCS];
+	uint64_t			sjc_fid;
+	sl_bmapno_t			sjc_bmapno;
+	sl_ios_id_t			sjc_ion;		/* Track the ION which did the I/O */
+	int32_t				sjc_ncrcs;
+	uint32_t			sjc_utimgen;
+	uint64_t			sjc_fsize;
+	int				sjc_extend;
+	struct srm_bmap_crcwire		sjc_crc[SLJ_MDS_NCRCS];
 } __packed;
 
 #define slion_jent_crc slmds_jent_crc
@@ -86,57 +86,58 @@ struct slmds_jent_repgen {
  * @sjir_nrepls: the number of replicas after this update.
  */
 struct slmds_jent_ino_addrepl {
-	slfid_t			sjir_fid;
-	sl_ios_id_t		sjir_ios;
-	uint32_t		sjir_pos;
-	uint32_t		sjir_nrepls;
+	slfid_t				sjir_fid;
+	sl_ios_id_t			sjir_ios;
+	uint32_t			sjir_pos;
+	uint32_t			sjir_nrepls;
 } __packed;
 
 struct slmds_jent_bmapseq {
-	uint64_t		sjbsq_high_wm;
-	uint64_t		sjbsq_low_wm;
+	uint64_t			sjbsq_high_wm;
+	uint64_t			sjbsq_low_wm;
 } __packed;
 
-#define SJ_NAMESPACE_MAGIC	UINT64_C(0xabcd12345678dcba)
+#define SJ_NAMESPACE_MAGIC		UINT64_C(0xabcd12345678dcba)
 
-#define	SLJ_NAMES_MAX		364
+#define	SLJ_NAMES_MAX			364
 
-#define SJ_NAMESPACE_RECLAIM	0x01
+#define SJ_NAMESPACE_RECLAIM		0x01
 
 /*
  * For easy seek within a system log file, each entry has a fixed length
- * of 512 bytes (going 1024 allows us to support longer names to make some
- * POSIX tests happy).  But when we send log entries over the network, we
- * condense them (especially the names) to save network bandwidth.
+ * of 512 bytes (going 1024 allows us to support longer names to make
+ * some POSIX tests happy).  But when we send log entries over the
+ * network, we condense them (especially the names) to save network
+ * bandwidth.
  */
 struct slmds_jent_namespace {
-	uint64_t		sjnm_magic;			/* debugging */
-	 uint8_t		sjnm_op;			/* operation type (i.e. enum namespace_operation) */
-	 uint8_t		sjnm_namelen;			/* NULL not included */
-	 uint8_t		sjnm_namelen2;			/* NULL not included */
-	 uint8_t		sjnm_flag;			/* need garbage collection */
+	uint64_t			sjnm_magic;		/* debugging */
+	 uint8_t			sjnm_op;		/* operation type (i.e. enum namespace_operation) */
+	 uint8_t			sjnm_namelen;		/* NULL not included */
+	 uint8_t			sjnm_namelen2;		/* NULL not included */
+	 uint8_t			sjnm_flag;		/* need garbage collection */
 
-	uint64_t		sjnm_parent_fid;		/* parent dir FID */
-	uint64_t		sjnm_target_fid;
+	uint64_t			sjnm_parent_fid;	/* parent dir FID */
+	uint64_t			sjnm_target_fid;
 
-	uint64_t		sjnm_target_gen;		/* reclaim only */
-	uint64_t		sjnm_new_parent_fid;		/* rename only  */
+	uint64_t			sjnm_target_gen;	/* reclaim only */
+	uint64_t			sjnm_new_parent_fid;	/* rename only  */
 
-	uint32_t		sjnm_mask;			/* attribute mask */
+	uint32_t			sjnm_mask;		/* attribute mask */
 
-	uint32_t		sjnm_mode;			/* file permission */
-	 int32_t		sjnm_uid;			/* user ID of owner */
-	 int32_t		sjnm_gid;			/* group ID of owner */
-	uint64_t		sjnm_atime;			/* time of last access */
-	uint64_t		sjnm_atime_ns;
-	uint64_t		sjnm_mtime;			/* time of last modification */
-	uint64_t		sjnm_mtime_ns;
-	uint64_t		sjnm_ctime;			/* time of last status change */
-	uint64_t		sjnm_ctime_ns;
+	uint32_t			sjnm_mode;		/* file permission */
+	 int32_t			sjnm_uid;		/* user ID of owner */
+	 int32_t			sjnm_gid;		/* group ID of owner */
+	uint64_t			sjnm_atime;		/* time of last access */
+	uint64_t			sjnm_atime_ns;
+	uint64_t			sjnm_mtime;		/* time of last modification */
+	uint64_t			sjnm_mtime_ns;
+	uint64_t			sjnm_ctime;		/* time of last status change */
+	uint64_t			sjnm_ctime_ns;
 
-	uint64_t		sjnm_size;			/* file size */
+	uint64_t			sjnm_size;		/* file size */
 
-	char			sjnm_name[SLJ_NAMES_MAX];	/* one or two names */
+	char				sjnm_name[SLJ_NAMES_MAX]; /* one or two names */
 } __packed;
 
 /*
@@ -156,8 +157,8 @@ struct slmds_jents {
 /*
  * The combined size of the standard header of each log entry (i.e.
  * struct psc_journal_enthdr) and its data, if any, must occupy less
- * than this size.
+ * than or this size.
  */
-#define	SLJ_MDS_ENTSIZE		512
+#define	SLJ_MDS_ENTSIZE			512
 
 #endif /* _SL_JOURNAL_H_ */
