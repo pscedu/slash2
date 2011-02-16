@@ -594,8 +594,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 	off_t off;
 
 	/*
- 	 * Make sure that the distill log hits the disk now.
- 	 */
+	 * Make sure that the distill log hits the disk now.
+	 */
 	if (action == 2) {
 
 		spinlock(&mds_distill_lock);
@@ -1227,9 +1227,11 @@ mds_update_cursor(void *buf, uint64_t txg)
 		sleep(1);
 		cursor->pjc_replay_xid = pjournal_next_replay(mdsJournal);
 	}
+
 	/*
- 	 * Be conservative.  We are willing to do extra work than missing some.
- 	 */
+	 * Be conservative.  We are willing to do extra work than
+	 * missing some.
+	 */
 	spinlock(&mds_distill_lock);
 	if (sync_update_xid < sync_reclaim_xid)
 		cursor->pjc_distill_xid = sync_update_xid;
