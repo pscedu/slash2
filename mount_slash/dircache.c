@@ -129,8 +129,7 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 	desc.dd_hash	= psc_strn_hashify(name, desc.dd_namelen);
 	desc.dd_name	= name;
 
-	/* This lock is equiv to dircache_ent_lock()
-	 */
+	/* This lock is equiv to dircache_ent_lock() */
 	PLL_LOCK(&i->di_list);
 	PLL_FOREACH(e, &i->di_list) {
 		/*
@@ -160,15 +159,19 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 			/* Map the dirent from the desc's offset. */
 			dirent = (void *)(e->de_base + d->dd_offset);
 
-			psclog_dbg("fid="SLPRI_FID" off=%"PRId64" nlen=%u "
-			    "type=%#o dname=%.*s lookupname=%s off=%d d=%p",
-			    dirent->pfd_ino, dirent->pfd_off, dirent->pfd_namelen,
-			    dirent->pfd_type, dirent->pfd_namelen, dirent->pfd_name,
-			    name, d->dd_offset, d);
+			psclog_dbg("fid="SLPRI_FID" off=%"PRId64" "
+			    "nlen=%u type=%#o "
+			    "dname=%.*s lookupname=%s "
+			    "off=%d d=%p",
+			    dirent->pfd_ino, dirent->pfd_off,
+			    dirent->pfd_namelen, dirent->pfd_type,
+			    dirent->pfd_namelen, dirent->pfd_name, name,
+			    d->dd_offset, d);
 
 			if (d->dd_hash == desc.dd_hash &&
 			    d->dd_namelen == desc.dd_namelen &&
-			    strncmp(d->dd_name, desc.dd_name, desc.dd_namelen) == 0) {
+			    strncmp(d->dd_name, desc.dd_name,
+			    desc.dd_namelen) == 0) {
 				if (!(d->dd_flags & DC_LOOKUP)) {
 					e->de_remlookup--;
 					d->dd_flags |= DC_LOOKUP;
@@ -187,9 +190,10 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 
 		if (!e->de_remlookup && (e->de_flags &
 		    (DIRCE_FREEABLE | DIRCE_FREEING)) == DIRCE_FREEABLE) {
-			/* If all of the items have been accessed via lookup then
-			 *   assume that pscfs has an entry cached for each and free
-			 *   the buffer.
+			/*
+			 * If all of the items have been accessed via
+			 * lookup then assume that pscfs has an entry
+			 * cached for each and free the buffer.
 			 */
 			e->de_flags |= DIRCE_FREEING;
 			psc_dynarray_add(&da, e);
