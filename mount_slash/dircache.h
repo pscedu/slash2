@@ -90,7 +90,7 @@ struct dircache_ents {
 	struct psc_dynarray	 de_dents;
 	struct dircache_desc	*de_desc;	/* contains dircache_descs */
 	struct dircache_info	*de_info;
-	unsigned char		*de_base;	/* contains pscfs_dirents */
+	void			*de_base;	/* contains pscfs_dirents */
 };
 
 /* de_flags */
@@ -145,11 +145,12 @@ dirent_sort_cmp(const void *x, const void *y)
 
 struct dircache_ents *
 	dircache_new_ents(struct dircache_info *, size_t);
-void	dircache_rls_ents(struct dircache_ents *, int);
 void	dircache_init(struct dircache_mgr *, const char *, size_t);
 slfid_t	dircache_lookup(struct dircache_info *, const char *, int);
 void	dircache_reg_ents(struct dircache_ents *, size_t);
+void	dircache_rls_ents(struct dircache_ents *, int);
 void	dircache_setfreeable_ents(struct dircache_ents *);
+void	dircache_walk(struct dircache_info *, void (*)(struct dircache_desc *, void *), void *);
 
 #define DCFREEF_RELEASE	(1 << 0)	/* fcmh may be released */
 #define DCFREEF_EARLY	(1 << 1)	/* dircache ent not attached */

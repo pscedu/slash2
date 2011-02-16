@@ -115,6 +115,24 @@ dircache_setfreeable_ents(struct dircache_ents *e)
 		dircache_ent_ulock(e);
 }
 
+void
+dircache_walk(struct dircache_info *i,
+    void (*cbf)(struct dircache_desc *, void *), void *cbarg)
+{
+	struct dircache_desc *d;
+	struct dircache_ents *e;
+	int n;
+
+	PLL_LOCK(&i->di_list);
+	PLL_FOREACH(e, &i->di_list) {
+		DYNARRAY_FOREACH(d, n, &e->de_dents)
+			if ((d->dd_flags & DC_STALE) == 0)
+				cbf(d, cbarg);
+		break;
+	}
+	PLL_ULOCK(&i->di_list);
+}
+
 slfid_t
 dircache_lookup(struct dircache_info *i, const char *name, int flag)
 {
@@ -151,13 +169,12 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 				break;
 		}
 		found = 0;
-		for (; pos < psc_dynarray_len(&e->de_dents); pos++) {
-			d = psc_dynarray_getpos(&e->de_dents, pos);
+		DYNARRAY_FOREACH_CONT(d, pos, &e->de_dents) {
 			if (d->dd_hash != desc.dd_hash)
 				break;
 
 			/* Map the dirent from the desc's offset. */
-			dirent = (void *)(e->de_base + d->dd_offset);
+			dirent = PSC_AGP(e->de_base, d->dd_offset);
 
 			psclog_dbg("fid="SLPRI_FID" off=%"PRId64" "
 			    "nlen=%u type=%#o "
@@ -306,7 +323,7 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 	psc_dynarray_ensurelen(&e->de_dents, nents);
 
 	for (j = 0, b = e->de_base, off = 0; j < (int)nents; j++, c++) {
-		dirent = (void *)(b + off);
+		dirent = PSC_AGP(b, off);
 
 		psclog_dbg("fid="SLPRI_FID" off=%"PRId64" "
 		    "nlen=%u type=%#o "
