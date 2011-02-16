@@ -834,8 +834,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		fcmh_setattr(p, &mp->attr, FCMH_SETATTRF_HAVELOCK);
 	if (DIRCACHE_INITIALIZED(p)) {
 		if (rc == 0 || rc == ENOENT)
-			dircache_lookup(&fcmh_2_fci(p)->fci_dci,
-			    name, DC_STALE);
+			dircache_lookup(fcmh_2_dci(p), name, DC_STALE);
 	} else
 		slc_fcmh_initdci(p);
 
@@ -1015,7 +1014,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		slc_fcmh_initdci(d);
 	FCMH_ULOCK(d);
 
-	e = dircache_new_ents(&fcmh_2_fci(d)->fci_dci, size);
+	e = dircache_new_ents(fcmh_2_dci(d), size);
 
 	iov[niov].iov_base = e->de_base;
 	iov[niov].iov_len = size;
@@ -1179,7 +1178,7 @@ msl_lookup_fidcache(const struct slash_creds *crp, pscfs_inum_t pinum,
 		slc_fcmh_initdci(p);
 	FCMH_ULOCK(p);
 
-	child = dircache_lookup(&fcmh_2_fci(p)->fci_dci, name, DC_LOOKUP);
+	child = dircache_lookup(fcmh_2_dci(p), name, DC_LOOKUP);
 	/* It's OK to unref the parent now.
 	 */
 	fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
@@ -1503,8 +1502,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	FCMH_LOCK(op);
 	if (DIRCACHE_INITIALIZED(op))
 		/* we could move the dircache_ent to newparent here */
-		dircache_lookup(&fcmh_2_fci(op)->fci_dci,
-		    oldname, DC_STALE);
+		dircache_lookup(fcmh_2_dci(op), oldname, DC_STALE);
 	else
 		slc_fcmh_initdci(op);
 
