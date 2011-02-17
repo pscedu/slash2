@@ -15,7 +15,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES rpc %
-.Dd January 26, 2011
+.Dd February 17, 2011
 .Dt SLICTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -242,7 +242,7 @@ The default is
 .\"		bmapRlsQ	=> "Bmaps awaiting release by\n.Tn MDS\nresponse",
 .\"		bmpcLru		=> "Reapable bmap structures",
 .\"		crcqSlvrs	=> "Bmap slivers awaiting checksum",
-.\"		fcmhbusy	=> "File with pending action e.g.\\&\n.Tn I/O",
+.\"		fcmhbusy	=> "Files with pending activity e.g.\\&\n.Tn I/O",
 .\"		fcmhidle	=> "Clean\n.Pq reapable\nfiles",
 .\"		lruSlvrs	=> "Reapable bmap slivers",
 .\"		replwkpnd	=> "Pending replication work"
@@ -304,7 +304,7 @@ is left unspecified, all hash tables will be accessed.
 .It Cm iostats
 .Tn I/O
 statistics.
-.Ar iostatspec
+.Ar subspec
 has the following format:
 .Pp
 .Bd -unfilled -offset indent
@@ -351,7 +351,7 @@ has the following format:
 .Ar list
 may be one of the following:
 .Pp
-.Bl -tag -compact -offset indent -width 18n
+.Bl -tag -compact -offset indent -width 13n
 .It Cm bmapReapQ
 Bmaps to be processed by reaper
 .It Cm bmapRlsQ
@@ -363,7 +363,7 @@ Reapable bmap structures
 .It Cm crcqSlvrs
 Bmap slivers awaiting checksum
 .It Cm fcmhbusy
-File with pending action e.g.\&
+Files with pending activity e.g.\&
 .Tn I/O
 .It Cm fcmhidle
 Clean
