@@ -50,7 +50,7 @@ Instruct
 .Xr slashd 8
 to perform one of the following actions:
 .Pp
-.Bl -tag -compact -offset indent -width 12n
+.Bl -tag -compact -offset 3n -width 13n
 .It Cm exit
 Completely terminate daemon execution.
 .El
@@ -80,7 +80,7 @@ Query/manipulate operational parameters.
 .Ar paramspec
 has the following format:
 .Pp
-.Bd -unfilled -offset indent
+.Bd -unfilled -offset 3n
 .Sm off
 .Oo Ar thread-name Ns Li .\& Oc Ar param
 .Op Oo Li +- Oc Li = Ar value
@@ -210,7 +210,7 @@ the maximum number of open files.
 Specify an alternative socket file.
 The following tokens are replaced in the file name specified:
 .Pp
-.Bl -tag -offset indent -width Ds -compact
+.Bl -tag -offset 3n -width Ds -compact
 .It Cm %h
 the machine hostname
 .It Cm %n
@@ -257,7 +257,7 @@ The default is
 Show values.
 .Ar showspec
 has the following format:
-.Bd -unfilled -offset indent
+.Bd -unfilled -offset 3n
 .Sm off
 .Ar param
 .Op : Ar subspec
@@ -281,14 +281,14 @@ cache members
 Hash table statistics.
 .Ar subspec
 has the following format:
-.Bd -unfilled -offset indent
+.Bd -unfilled -offset 3n
 .Ar hash-table Ns Op , Ns Ar ...
 .Ed
 .Pp
 .Ar hash-table
 may be one of the following:
 .Pp
-.Bl -tag -compact -offset indent -width 12n
+.Bl -tag -compact -offset 3n -width 13n
 .It Cm fidc
 files
 .Po file
@@ -309,14 +309,14 @@ statistics.
 .Ar subspec
 has the following format:
 .Pp
-.Bd -unfilled -offset indent
+.Bd -unfilled -offset 3n
 .Ar iostats Ns Op , Ns Ar ...
 .Ed
 .Pp
 .Ar iostats
 may be one of the following:
 .Pp
-.Bl -tag -compact -offset indent -width Ds
+.Bl -tag -compact -offset 3n -width 3n
 .It Cm jrnlrd- Ns Ar fn ,
 .It Cm jrnlwr- Ns Ar fn
 Data read/written to journal disk file
@@ -351,14 +351,14 @@ Journal statistics.
 .Ar subspec
 has the following format:
 .Pp
-.Bd -unfilled -offset indent
+.Bd -unfilled -offset 3n
 .Ar journal Ns Op , Ns Ar ...
 .Ed
 .Pp
 .Ar journal
 may be one of the following:
 .Pp
-.Bl -tag -compact -offset indent -width 13n
+.Bl -tag -compact -offset 3n -width 13n
 .It Cm op-journal
 Pending operation journal
 .El
@@ -371,14 +371,14 @@ List cache statistics.
 .Ar subspec
 has the following format:
 .Pp
-.Bd -unfilled -offset indent
+.Bd -unfilled -offset 3n
 .Ar list Ns Op , Ns Ar ...
 .Ed
 .Pp
 .Ar list
 may be one of the following:
 .Pp
-.Bl -tag -compact -offset indent -width 13n
+.Bl -tag -compact -offset 3n -width 13n
 .It Cm fcmhbusy
 Files with pending activity e.g.\&
 .Tn I/O
@@ -401,7 +401,7 @@ is left unspecified, all list caches will be accessed.
 Thread logging levels.
 .Ar subspec
 has the following format:
-.Bd -unfilled -offset indent
+.Bd -unfilled -offset 3n
 .Ar thread Ns Op , Ns Ar ...
 .Ed
 .Pp
@@ -418,14 +418,14 @@ Disk-backed data files.
 Memory pool statistics.
 .Ar subspec
 has the following format:
-.Bd -unfilled -offset indent
+.Bd -unfilled -offset 3n
 .Ar pool Ns Op , Ns Ar ...
 .Ed
 .Pp
 .Ar pool
 may be one of the following:
 .Pp
-.Bl -tag -compact -offset indent -width 12n
+.Bl -tag -compact -offset 3n -width 13n
 .It Cm bmap
 Block map structures
 .El
@@ -440,7 +440,7 @@ services.
 Daemon thread activity and statistics.
 .Ar subspec
 has the following format:
-.Bd -unfilled -offset indent
+.Bd -unfilled -offset 3n
 .Ar thread Ns Op , Ns Ar ...
 .Ed
 .Pp
@@ -481,7 +481,7 @@ Options which take
 parameters may be specified by one or more of the following tokens,
 separated by commas:
 .Pp
-.Bl -tag -compact -offset indent -width 16n
+.Bl -tag -compact -offset 3n -width 16n
 .It Cm slmbmaptimeothr
 Bmap lease timeout monitor
 .It Cm slmcohthr
