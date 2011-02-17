@@ -74,6 +74,7 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 	lnet_process_id_t self_prid, peer_prid;
 	struct srt_authbuf_footer *saf;
 	struct pscrpc_msg *m;
+	char ebuf[BUFSIZ];
 	gcry_error_t gerr;
 	gcry_md_hd_t hd;
 	uint32_t i;
@@ -103,8 +104,10 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 	saf->saf_secret.sas_dst_pid = peer_prid.pid;
 
 	gerr = gcry_md_copy(&hd, authbuf_hd);
-	if (gerr)
-		psc_fatalx("gcry_md_copy: %d", gerr);
+	if (gerr) {
+		gpg_strerror_r(gerr, ebuf, sizeof(ebuf));
+		psc_fatalx("gcry_md_copy: %s [%d]", ebuf, gerr);
+	}
 
 	for (i = 0; i < m->bufcount - 1; i++)
 		gcry_md_write(hd, pscrpc_msg_buf(m, i, 0),
@@ -126,9 +129,9 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 int
 authbuf_check(struct pscrpc_request *rq, int msgtype)
 {
+	char buf[AUTHBUF_REPRLEN], ebuf[BUFSIZ];
 	lnet_process_id_t self_prid, peer_prid;
 	struct srt_authbuf_footer *saf;
-	char buf[AUTHBUF_REPRLEN];
 	struct pscrpc_msg *m;
 	gcry_error_t gerr;
 	gcry_md_hd_t hd;
@@ -158,8 +161,10 @@ authbuf_check(struct pscrpc_request *rq, int msgtype)
 		return (SLERR_AUTHBUF_BADPEER);
 
 	gerr = gcry_md_copy(&hd, authbuf_hd);
-	if (gerr)
-		psc_fatalx("gcry_md_copy: %d", gerr);
+	if (gerr) {
+		gpg_strerror_r(gerr, ebuf, sizeof(ebuf));
+		psc_fatalx("gcry_md_copy: %s [%d]", ebuf, gerr);
+	}
 
 	for (i = 0; i < m->bufcount - 1; i++)
 		gcry_md_write(hd, pscrpc_msg_buf(m, i, 0),
