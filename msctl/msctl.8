@@ -54,7 +54,7 @@ Instruct
 .Xr mount_slash 8
 to perform one of the following actions:
 .Pp
-.Bl -tag -compact -offset indent -width 12n
+.Bl -tag -compact -offset 3n -width 13n
 .It Cm exit
 Completely terminate daemon execution.
 .El
@@ -150,7 +150,7 @@ Query/manipulate operational parameters.
 .Ar paramspec
 has the following format:
 .Pp
-.Bd -unfilled -offset indent
+.Bd -unfilled -offset 3n
 .Sm off
 .Oo Ar thread-name Ns Li .\& Oc Ar param
 .Op Oo Li +- Oc Li = Ar value
@@ -367,7 +367,7 @@ This option may be specified multiple times.
 Specify an alternative socket file.
 The following tokens are replaced in the file name specified:
 .Pp
-.Bl -tag -offset indent -width Ds -compact
+.Bl -tag -offset 3n -width Ds -compact
 .It Cm %h
 the machine hostname
 .It Cm %n
@@ -406,7 +406,7 @@ The default is
 Show values.
 .Ar showspec
 has the following format:
-.Bd -unfilled -offset indent
+.Bd -unfilled -offset 3n
 .Sm off
 .Ar param
 .Op : Ar subspec
@@ -430,14 +430,14 @@ cache members.
 Hash table statistics.
 .Ar subspec
 has the following format:
-.Bd -unfilled -offset indent
+.Bd -unfilled -offset 3n
 .Ar hash-table Ns Op , Ns Ar ...
 .Ed
 .Pp
 .Ar hash-table
 may be one of the following:
 .Pp
-.Bl -tag -compact -offset indent -width 12n
+.Bl -tag -compact -offset 3n -width 13n
 .It Cm fidc
 files
 .Po file
@@ -458,14 +458,14 @@ statistics.
 .Ar subspec
 has the following format:
 .Pp
-.Bd -unfilled -offset indent
+.Bd -unfilled -offset 3n
 .Ar iostats Ns Op , Ns Ar ...
 .Ed
 .Pp
 .Ar iostats
 may be one of the following:
 .Pp
-.Bl -tag -compact -offset indent -width Ds
+.Bl -tag -compact -offset 3n -width 3n
 .It Cm lni-rcv- Ns Ar if ,
 .It Cm lni-snd- Ns Ar if
 Data sent/received per
@@ -495,14 +495,14 @@ List cache statistics.
 .Ar subspec
 has the following format:
 .Pp
-.Bd -unfilled -offset indent
+.Bd -unfilled -offset 3n
 .Ar list Ns Op , Ns Ar ...
 .Ed
 .Pp
 .Ar list
 may be one of the following:
 .Pp
-.Bl -tag -compact -offset indent -width 13n
+.Bl -tag -compact -offset 3n -width 13n
 .It Cm bmapflush
 Bmaps awaiting flush completion
 .It Cm bmaptimeout
@@ -527,7 +527,7 @@ is left unspecified, all list caches will be accessed.
 Thread logging levels.
 .Ar subspec
 has the following format:
-.Bd -unfilled -offset indent
+.Bd -unfilled -offset 3n
 .Ar thread Ns Op , Ns Ar ...
 .Ed
 .Pp
@@ -542,14 +542,14 @@ is left unspecified, all threads will be accessed.
 Memory pool statistics.
 .Ar subspec
 has the following format:
-.Bd -unfilled -offset indent
+.Bd -unfilled -offset 3n
 .Ar pool Ns Op , Ns Ar ...
 .Ed
 .Pp
 .Ar pool
 may be one of the following:
 .Pp
-.Bl -tag -compact -offset indent -width 12n
+.Bl -tag -compact -offset 3n -width 13n
 .It Cm bmap
 Block map structures
 .El
@@ -564,7 +564,7 @@ services.
 Daemon thread activity and statistics.
 .Ar subspec
 has the following format:
-.Bd -unfilled -offset indent
+.Bd -unfilled -offset 3n
 .Ar thread Ns Op , Ns Ar ...
 .Ed
 .Pp
@@ -615,7 +615,7 @@ Options which take
 parameters may be specified by one or more of the following tokens,
 separated by commas:
 .Pp
-.Bl -tag -compact -offset indent -width 16n
+.Bl -tag -compact -offset 3n -width 16n
 .It Cm msbflushrpcthr
 Bmap flusher asynchronous
 .Tn RPC
