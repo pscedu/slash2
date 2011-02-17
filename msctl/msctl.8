@@ -15,7 +15,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES rpc fuse %
-.Dd January 26, 2011
+.Dd February 17, 2011
 .Dt MSCTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -395,12 +395,12 @@ The default is
 .\"		bmap		=> qq{Block map structures},
 .\"	},
 .\"	listcaches => {
-.\"		bmapflush	=> qq{Bmaps awaiting flush completion},
-.\"		bmaptimeout	=> qq{Expired bmaps awaiting release},
-.\"		bmpcLru		=> qq{Reapable bmap structures},
-.\"		dircache	=> qq{Directory entries},
-.\"		fcmhbusy	=> qq{Files with pending activity\n.Pq e.g. Tn I/O},
-.\"		fcmhidle	=> qq{Clean\n.Pq reapable\nfiles}
+.\"		bmapflush	=> "Bmaps awaiting flush completion",
+.\"		bmaptimeout	=> "Expired bmaps awaiting release",
+.\"		bmpcLru		=> "Reapable bmap structures",
+.\"		dircache	=> "Directory entries",
+.\"		fcmhbusy	=> "Files with pending activity e.g.\\&\n.Tn I/O",
+.\"		fcmhidle	=> "Clean\n.Pq reapable\nfiles"
 .\"	}
 .It Fl s Ar showspec
 Show values.
@@ -455,7 +455,7 @@ is left unspecified, all hash tables will be accessed.
 .It Cm iostats
 .Tn I/O
 statistics.
-.Ar iostatspec
+.Ar subspec
 has the following format:
 .Pp
 .Bd -unfilled -offset indent
@@ -502,7 +502,7 @@ has the following format:
 .Ar list
 may be one of the following:
 .Pp
-.Bl -tag -compact -offset indent -width 18n
+.Bl -tag -compact -offset indent -width 13n
 .It Cm bmapflush
 Bmaps awaiting flush completion
 .It Cm bmaptimeout
@@ -512,8 +512,8 @@ Reapable bmap structures
 .It Cm dircache
 Directory entries
 .It Cm fcmhbusy
-Files with pending activity
-.Pq e.g. Tn I/O
+Files with pending activity e.g.\&
+.Tn I/O
 .It Cm fcmhidle
 Clean
 .Pq reapable
