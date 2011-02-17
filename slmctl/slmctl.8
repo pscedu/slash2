@@ -15,7 +15,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES rpc %
-.Dd January 26, 2011
+.Dd February 17, 2011
 .Dt SLMCTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -240,6 +240,9 @@ The default is
 .\"		qq{jrnlwr- Ns Ar fn} =>
 .\"		    qq{Data read/written to journal disk file\n.Ar fn .\n.Pp}
 .\"	},
+.\"	journals => {
+.\"		qq{op-journal}	=> qq{Pending operation journal},
+.\"	},
 .\"	listcaches => {
 .\"		fcmhbusy	=> "File with pending action e.g.\\&\n.Tn I/O",
 .\"		fcmhidle	=> "Clean\n.Pq reapable\nfiles",
@@ -303,7 +306,7 @@ is left unspecified, all hash tables will be accessed.
 .It Cm iostats
 .Tn I/O
 statistics.
-.Ar iostatspec
+.Ar subspec
 has the following format:
 .Pp
 .Bd -unfilled -offset indent
@@ -343,6 +346,26 @@ If
 is left unspecified, all
 .Tn I/O
 statistics will be accessed.
+.It Cm journals
+Journal statistics.
+.Ar subspec
+has the following format:
+.Pp
+.Bd -unfilled -offset indent
+.Ar journal Ns Op , Ns Ar ...
+.Ed
+.Pp
+.Ar journal
+may be one of the following:
+.Pp
+.Bl -tag -compact -offset indent -width 16n
+.It Cm op-journal
+Pending operation journal
+.El
+.Pp
+If
+.Ar subspec
+is left unspecified, all journals will be accessed.
 .It Cm listcaches
 List cache statistics.
 .Ar subspec
@@ -355,7 +378,7 @@ has the following format:
 .Ar list
 may be one of the following:
 .Pp
-.Bl -tag -compact -offset indent -width 18n
+.Bl -tag -compact -offset indent -width 16n
 .It Cm fcmhbusy
 File with pending action e.g.\&
 .Tn I/O
