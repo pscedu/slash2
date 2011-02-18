@@ -121,7 +121,6 @@ psc_ctl_prthr_t psc_ctl_prthrs[] = {
 /* RII		*/ NULL,
 /* RIM		*/ NULL,
 /* SLVR_CRC	*/ NULL,
-/* TINTV	*/ NULL,
 /* TIOS		*/ NULL,
 /* USKLNDPL	*/ NULL
 };

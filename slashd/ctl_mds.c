@@ -298,19 +298,19 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* CTL		*/ psc_ctlthr_get,
 /* CTLAC	*/ psc_ctlacthr_get,
 /* CURSOR	*/ NULL,
-/* FSSYNC	*/ NULL,
 /* JNAMESPACE	*/ NULL,
 /* JRECLAIM	*/ NULL,
 /* JRNL		*/ NULL,
+/* ZFS_KSTAT	*/ NULL,
 /* LNETAC	*/ NULL,
 /* RCM		*/ NULL,
 /* RMC		*/ NULL,
 /* RMI		*/ NULL,
 /* RMM		*/ NULL,
-/* TINTV	*/ NULL,
 /* TIOS		*/ NULL,
 /* UPSCHED	*/ NULL,
-/* USKLNDPL	*/ NULL
+/* USKLNDPL	*/ NULL,
+/* WORKER	*/ NULL
 };
 
 psc_ctl_cmd_t psc_ctl_cmds[] = {

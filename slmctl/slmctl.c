@@ -124,19 +124,19 @@ psc_ctl_prthr_t psc_ctl_prthrs[] = {
 /* CTL		*/ psc_ctlthr_pr,
 /* CTLAC	*/ psc_ctlacthr_pr,
 /* CURSOR	*/ NULL,
-/* FSSYNC	*/ NULL,
 /* JNAMESPACE	*/ NULL,
 /* JRECLAIM	*/ NULL,
 /* JRNL		*/ NULL,
+/* ZFS_KSTAT	*/ NULL,
 /* LNETAC	*/ NULL,
 /* RCM		*/ NULL,
 /* RMC		*/ slmrmcthr_pr,
 /* RMI		*/ NULL,
 /* RMM		*/ slmrmmthr_pr,
-/* TINTV	*/ NULL,
 /* TIOS		*/ NULL,
 /* UPSCHED	*/ NULL,
-/* USKLNDPL	*/ NULL
+/* USKLNDPL	*/ NULL,
+/* WORKER	*/ NULL
 };
 
 struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {

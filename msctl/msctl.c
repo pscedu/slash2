@@ -555,7 +555,6 @@ psc_ctl_prthr_t psc_ctl_prthrs[] = {
 /* FSMGR	*/ NULL,
 /* LNETAC	*/ NULL,
 /* RCM		*/ NULL,
-/* TINTV	*/ NULL,
 /* TIOS		*/ NULL,
 /* USKLNDPL	*/ NULL
 };

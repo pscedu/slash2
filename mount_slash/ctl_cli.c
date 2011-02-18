@@ -406,7 +406,6 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* FSMGR	*/ NULL,
 /* LNETAC	*/ NULL,
 /* RCM		*/ NULL,
-/* TINTV	*/ NULL,
 /* TIOS		*/ NULL,
 /* USKLNDPL	*/ NULL
 };

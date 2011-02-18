@@ -94,7 +94,6 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* RII		*/ NULL,
 /* RIM		*/ NULL,
 /* SLVR_CRC	*/ NULL,
-/* TINTV	*/ NULL,
 /* TIOS		*/ NULL,
 /* USKLNDPL	*/ NULL
 };

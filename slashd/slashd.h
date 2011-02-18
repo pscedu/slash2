@@ -46,7 +46,6 @@ enum {
 	SLMTHRT_CTL,		/* control processor */
 	SLMTHRT_CTLAC,		/* control acceptor */
 	SLMTHRT_CURSOR,		/* cursor update thread */
-	SLMTHRT_FSSYNC,		/* file system syncer */
 	SLMTHRT_JNAMESPACE,	/* namespace propagating thread */
 	SLMTHRT_JRECLAIM,	/* garbage reclamation thread */
 	SLMTHRT_JRNL,		/* journal distill thread */
