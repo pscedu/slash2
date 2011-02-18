@@ -27,11 +27,6 @@
 #define SLJ_MDS_RA			1024			/* SLJ_MDS_JNENTS % SLJ_MDS_RA == 0 */
 #define SLJ_MDS_NCRCS			MAX_BMAP_INODE_PAIRS
 
-#define SLJ_MDS_PJET_VOID		0
-#define SLJ_MDS_PJET_INUM		1
-#define SLJ_MDS_PJET_BMAP		2
-#define SLJ_MDS_PJET_INODE		3
-
 /**
  * slmds_jent_crc - Used to log CRC updates which come from IONs.
  * @sjc_fid: file ID.
@@ -55,8 +50,6 @@ struct slmds_jent_crc {
 	int				sjc_extend;
 	struct srm_bmap_crcwire		sjc_crc[SLJ_MDS_NCRCS];
 } __packed;
-
-#define slion_jent_crc slmds_jent_crc
 
 /**
  * slmds_jent_repgen - Log changes to the replication state of a bmap
@@ -139,20 +132,6 @@ struct slmds_jent_namespace {
 
 	char				sjnm_name[SLJ_NAMES_MAX]; /* one or two names */
 } __packed;
-
-/*
- * List all of the journaling structures here so that the maximum
- *  size can be obtained.
- */
-struct slmds_jents {
-	union {
-		struct slmds_jent_repgen	sjr;
-		struct slmds_jent_crc		sjc;
-		struct slmds_jent_ino_addrepl	sjia;
-		struct slmds_jent_bmapseq	sjsq;
-		struct slmds_jent_namespace	sjnm;
-	} slmds_jent_types;
-};
 
 /*
  * The combined size of the standard header of each log entry (i.e.

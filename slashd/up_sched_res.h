@@ -57,10 +57,10 @@ struct up_sched_work_item {
 #define USWI_RLOCK(wk)		psc_pthread_mutex_reqlock(&(wk)->uswi_mutex)
 #define USWI_URLOCK(wk, lk)	psc_pthread_mutex_ureqlock(&(wk)->uswi_mutex, (lk))
 
-enum uswi_reftype {
-/* 0 */	USWI_REFT_TREE,		/* in tree/list in memory */
+enum {
+/* 0 */	USWI_REFT_LOOKUP,	/* uswi_find() temporary */
 /* 1 */	USWI_REFT_SITEUPQ,	/* in scheduler queue for a site */
-/* 2 */	USWI_REFT_LOOKUP	/* uswi_find() temporary */
+/* 2 */	USWI_REFT_TREE		/* in tree/list in memory */
 };
 
 #define USWI_DEBUG(lvl, wk, fmt, ...)					\

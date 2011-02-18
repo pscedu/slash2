@@ -56,9 +56,6 @@
 #define SL_FN_RECLAIMLOG	"op-reclaim"
 #define SL_FN_RECLAIMPROG	"op-reclaim-prog"
 
-
-#define SL_FN_HACK_FID		"hack-fid"
-
 extern const char *sl_datadir;
 
 #endif /* _SLASH_PATHNAMES_H_ */

@@ -215,11 +215,7 @@ void	 dump_fcmh_flags_common(int);
 
 extern struct sl_fcmh_ops	 sl_fcmh_ops;
 extern struct psc_poolmgr	*fidcPool;
-extern struct psc_listcache	 fidcDirtyList;
-extern struct psc_listcache	 fidcCleanList;
 extern struct psc_hashtbl	 fidcHtable;
-
-#define fidcFreeList		fidcPool->ppm_lc
 
 static __inline void *
 fcmh_get_pri(struct fidc_membh *fcmh)

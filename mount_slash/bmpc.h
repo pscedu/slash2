@@ -136,15 +136,6 @@ struct bmap_pagecache_entry {
 	    DEBUG_BMPCE_FLAGS(b), ## __VA_ARGS__)
 
 static __inline int
-bmpce_sort_cmp(const void *x, const void *y)
-{
-	const struct bmap_pagecache_entry * const *pa = x, *a = *pa;
-	const struct bmap_pagecache_entry * const *pb = y, *b = *pb;
-
-	return (CMP(a->bmpce_off, b->bmpce_off));
-}
-
-static __inline int
 bmpce_lrusort_cmp(const void *x, const void *y)
 {
 	const struct bmap_pagecache_entry * const *pa = x, *a = *pa;

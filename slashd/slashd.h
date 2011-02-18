@@ -83,10 +83,6 @@ struct slmupsched_thread {
 	struct sl_site		 *smut_site;
 };
 
-struct slmjns_thread {
-};
-
-PSCTHR_MKCAST(slmjnsthr, slmjns_thread, SLMTHRT_JNAMESPACE)
 PSCTHR_MKCAST(slmrcmthr, slmrcm_thread, SLMTHRT_RCM)
 PSCTHR_MKCAST(slmrmcthr, slmrmc_thread, SLMTHRT_RMC)
 PSCTHR_MKCAST(slmrmithr, slmrmi_thread, SLMTHRT_RMI)
@@ -200,7 +196,6 @@ int		 mds_handle_rls_bmap(struct pscrpc_request *, int);
 
 __dead void	 slmctlthr_main(const char *);
 void		 slmbmaptimeothr_spawn(void);
-void		 slmfssyncthr_spawn(void);
 void		 slmrcmthr_main(struct psc_thread *);
 void		 slmupschedthr_spawnall(void);
 void		 slmtimerthr_spawn(void);
@@ -217,7 +212,6 @@ void		 slm_workq_init(void);
 void		 slm_workers_spawn(void);
 
 extern struct slash_creds			 rootcreds;
-extern struct psc_listcache			 dirtyMdsData;
 extern struct odtable				*mdsBmapAssignTable;
 extern const struct slash_inode_extras_od	 null_inox_od;
 extern const struct slash_inode_od		 null_inode_od;

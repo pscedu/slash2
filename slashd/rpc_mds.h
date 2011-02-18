@@ -51,9 +51,9 @@ struct pscrpc_export;
  * Each log record is identified by its transaction ID (xid), which is
  * always increasing, but not necessary contiguous.
  *
- * Increasing these values should help logging performance because we 
- * can then sync less often.  However, the size of any individual log 
- * file must be less than LNET_MTU so it can always be transmitted in 
+ * Increasing these values should help logging performance because we
+ * can then sync less often.  However, the size of any individual log
+ * file must be less than LNET_MTU so it can always be transmitted in
  * a single RPC bulk.
  */
 #define SLM_UPDATE_BATCH		2048			/* namespace updates */
@@ -73,9 +73,6 @@ int	slm_rmi_handler(struct pscrpc_request *);
 int	slm_rmm_handler(struct pscrpc_request *);
 
 void	slm_ion_pack_bmapminseq(struct pscrpc_msg *);
-
-struct slm_rmi_expdata *
-	slm_rmi_getexpdata(struct pscrpc_export *);
 
 /* aliases for connection management */
 #define slm_getmcsvcx(resm, exp)						\

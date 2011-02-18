@@ -49,7 +49,6 @@ enum {
 
 struct bmapc_memb;
 struct fidc_membh;
-struct srt_bmapdesc_buf;
 
 struct sliric_thread {
 	struct pscrpc_thread	 sirct_prt;

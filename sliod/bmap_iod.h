@@ -59,7 +59,6 @@ struct biod_crcup_ref {
 /* bcr_flags */
 #define	BCR_NONE		0x00
 #define BCR_SCHEDULED		0x01
-#define BCR_BACKLOGGED		0x02
 
 #define bcr_2_bmap(bcr)		bii_2_bmap((bcr)->bcr_biodi)
 
@@ -174,21 +173,6 @@ bii_2_bmap(struct bmap_iod_info *bii)
 	psc_assert(bii);
 	bcm = (void *)bii;
 	return (bcm - 1);
-}
-
-static __inline int
-bmap_iod_timeo_cmp(const void *x, const void *y)
-{
-	const struct bmap_iod_info * const *pa = x, *a = *pa;
-	const struct bmap_iod_info * const *pb = y, *b = *pb;
-
-	if (timespeccmp(&a->biod_age, &b->biod_age, <))
-		return (-1);
-
-	if (timespeccmp(&a->biod_age, &b->biod_age, >))
-		return (1);
-
-	return (0);
 }
 
 #endif /* _SLIOD_BMAP_H_ */
