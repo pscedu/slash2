@@ -229,8 +229,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct slmds_jent_ino_addrepl);
 	PRTYPE(struct slmds_jent_namespace);
 	PRTYPE(struct slmds_jent_repgen);
-	PRTYPE(struct slmds_jents);
-	PRTYPE(struct slmjns_thread);
 	PRTYPE(struct slmrcm_thread);
 	PRTYPE(struct slmrmc_thread);
 	PRTYPE(struct slmrmi_thread);
@@ -411,10 +409,6 @@ main(int argc, char *argv[])
 	PRVAL(SLI_RIM_NTHREADS);
 	PRVAL(SLI_RIM_REPSZ);
 	PRVAL(SLJ_MDS_ENTSIZE);
-	PRVAL(SLJ_MDS_PJET_BMAP);
-	PRVAL(SLJ_MDS_PJET_INODE);
-	PRVAL(SLJ_MDS_PJET_INUM);
-	PRVAL(SLJ_MDS_PJET_VOID);
 	PRVAL(SLJ_MDS_RA);
 	PRVAL(SLJ_NAMES_MAX);
 	PRVAL(SLM_RECLAIM_BATCH);
