@@ -121,6 +121,10 @@ slimmns_create(const char *root, uint32_t depth)
 		psc_fatal("write %s", fn);
 	close(fd);
 
+#if 0
+	/*
+ 	 * Keep this piece of code for now in case we change our mind.
+ 	 */
 	if (wipe && !ion) {
 		struct dirent *dent;
 		DIR *dp;
@@ -143,15 +147,30 @@ slimmns_create(const char *root, uint32_t depth)
 			closedir(dp);
 		}
 	}
+#endif
 
-	xmkfn(fn, "%s/%s.%d.%s.%lu", datadir, SL_FN_UPDATELOG, 0,
+	xmkfn(fn, "%s/%s.%d.%s.%lu",  root, SL_FN_UPDATELOG, 0,
 	    psc_get_hostname(), cursor.pjc_timestamp);
 	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
 	if (fd == -1)
 		psc_fatal("open %s", fn);
 	close(fd);
 
-	xmkfn(fn, "%s/%s.%d.%s.%lu", datadir, SL_FN_RECLAIMLOG, 0,
+	xmkfn(fn, "%s/%s.%s.%lu",  root, SL_FN_UPDATEPROG,
+	    psc_get_hostname(), cursor.pjc_timestamp);
+	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
+	if (fd == -1)
+		psc_fatal("open %s", fn);
+	close(fd);
+
+	xmkfn(fn, "%s/%s.%d.%s.%lu", root, SL_FN_RECLAIMLOG, 0,
+	    psc_get_hostname(), cursor.pjc_timestamp);
+	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
+	if (fd == -1)
+		psc_fatal("open %s", fn);
+	close(fd);
+
+	xmkfn(fn, "%s/%s.%s.%lu",  root, SL_FN_RECLAIMPROG,
 	    psc_get_hostname(), cursor.pjc_timestamp);
 	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
 	if (fd == -1)

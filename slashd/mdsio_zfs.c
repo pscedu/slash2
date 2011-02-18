@@ -465,6 +465,7 @@ struct mdsio_ops mdsio_ops = {
 	zfsslash2_symlink,
 	zfsslash2_unlink,
 	zfsslash2_write,
+	zfsslash2_fsync,
 
 	zfsslash2_replay_create,
 	zfsslash2_replay_link,

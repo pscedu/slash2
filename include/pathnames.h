@@ -50,11 +50,11 @@
 #define SL_FN_IONBMAPS_ODT	"ion_bmaps.odt"
 #define SL_FN_OPJOURNAL		"op-journal"
 
-#define SL_FN_UPDATELOG		"op-update"
-#define SL_FN_UPDATEPROG	"op-update-prog"
+#define SL_FN_UPDATELOG		".op-update"
+#define SL_FN_UPDATEPROG	".op-update-prog"
 
-#define SL_FN_RECLAIMLOG	"op-reclaim"
-#define SL_FN_RECLAIMPROG	"op-reclaim-prog"
+#define SL_FN_RECLAIMLOG	".op-reclaim"
+#define SL_FN_RECLAIMPROG	".op-reclaim-prog"
 
 extern const char *sl_datadir;
 

@@ -68,21 +68,19 @@ uint64_t			 current_reclaim_xid = 0;
 uint64_t			 sync_update_xid = 0;
 uint64_t			 sync_reclaim_xid = 0;
 
-static int			 current_update_logfile = -1;
-static int			 current_reclaim_logfile = -1;
+static void			*update_logfile_handle = NULL;
+static void			*reclaim_logfile_handle = NULL;
 
-/*
- * To ensure that the current update of the progress does not
- * affect the previous update in case of a crash/power outage,
- * I use two files and write them alternately.  This way seems
- * to be easier than making sure that each update happens on
- * different sectors (we don't need to care about the entry size
- * and the number of entries).
- *
- * TODO: add some kind of checksum to protect the file contents.
- */
-static int			 current_update_progfile[2];
-static int			 current_reclaim_progfile[2];
+static off_t			update_logfile_offset;
+static off_t			reclaim_logfile_offset;
+
+static void			*update_progfile_handle = NULL;
+static void			*reclaim_progfile_handle = NULL;
+
+char				update_progfile_name[PATH_MAX];
+char				reclaim_progfile_name[PATH_MAX];
+
+#define	MAX_UPDATE_PROG_ENTRY	32
 
 /* namespace update progress tracker to peer MDSes */
 struct update_prog_entry {
@@ -91,6 +89,8 @@ struct update_prog_entry {
 	sl_ios_id_t		 res_id;
 	int32_t			 _pad;
 };
+
+#define	MAX_RECLAIM_PROG_ENTRY	32
 
 /* garbage reclaim progress tracker to IOSes */
 struct reclaim_prog_entry {
@@ -138,14 +138,46 @@ static struct psc_journal_cursor mds_cursor;
 
 psc_spinlock_t			 mds_txg_lock = SPINLOCK_INIT;
 
+static int
+mds_open_file(char *fn, int flags, void **handle)
+{
+	int rc;
+	mdsio_fid_t mf;
+
+	rc = mdsio_lookup(MDSIO_FID_ROOT, fn, &mf, &rootcreds, NULL);
+	if (rc)
+		return (rc);
+	rc = mdsio_opencreate(mf, &rootcreds, flags, 0, NULL, NULL,
+	    NULL, handle, NULL, NULL);
+	return (rc);
+}
+
+static int
+mds_read_file(void *handle, char *buf, size_t size, size_t *nb, off_t off)
+{
+	int rc;
+
+	rc = mdsio_read(&rootcreds, buf, size, nb, off, handle);
+	return (rc);
+}
+
+static int
+mds_write_file(void *handle, char *buf, size_t size, size_t *nb, off_t off)
+{
+	int rc;
+
+	rc = mdsio_write(&rootcreds, buf, size, nb, off, 0, handle, NULL, NULL);
+	return (rc);
+}
+
+
 static void
 mds_record_update_prog(void)
 {
-	static int index;
 	struct sl_mds_peerinfo *peerinfo;
 	struct sl_resm *resm;
-	ssize_t size;
-	int i;
+	size_t size;
+	int i, rc;
 
 	i = 0;
 	SL_MDS_WALK(resm,
@@ -157,22 +189,19 @@ mds_record_update_prog(void)
 		update_prog_buf[i].res_batchno = peerinfo->sp_batchno;
 		i++;
 	);
-	if (lseek(current_update_progfile[index], 0, SEEK_SET) == (off_t)-1)
-		psc_warn("lseek");
-	size = write(current_update_progfile[index], update_prog_buf,
-	    i * sizeof(struct update_prog_entry));
-	psc_assert(size == i * (int)sizeof(struct update_prog_entry));
-	index = (index == 0) ? 1 : 0;
+	rc = mds_write_file(update_progfile_handle, (void *)update_prog_buf,
+	    i * sizeof(struct update_prog_entry), &size, 0);
+	psc_assert(rc == 0);
+	psc_assert(size == (size_t)i * sizeof(struct update_prog_entry));
 }
 
 static void
 mds_record_reclaim_prog(void)
 {
-	static int index;
 	struct sl_mds_iosinfo *iosinfo;
 	struct sl_resource *res;
-	ssize_t size;
-	int ri;
+	size_t size;
+	int ri, rc;
 	int nios = 0;
 
 	SITE_FOREACH_RES(nodeSite, res, ri) {
@@ -184,12 +213,10 @@ mds_record_reclaim_prog(void)
 		reclaim_prog_buf[nios].res_batchno = iosinfo->si_batchno;
 		nios++;
 	}
-	if (lseek(current_reclaim_progfile[index], 0, SEEK_SET) == (off_t)-1)
-		psc_warn("lseek");
-	size = write(current_reclaim_progfile[index], reclaim_prog_buf,
-	    nios * sizeof(struct reclaim_prog_entry));
-	psc_assert(size == nios * (int)sizeof(struct reclaim_prog_entry));
-	index = (index == 0) ? 1 : 0;
+	rc = mds_write_file(reclaim_progfile_handle, (void *)reclaim_prog_buf,
+	    nios * sizeof(struct reclaim_prog_entry), &size, 0);
+	psc_assert(rc == 0);
+	psc_assert(size == (size_t)nios * sizeof(struct reclaim_prog_entry));
 }
 
 /**
@@ -519,17 +546,17 @@ mds_remove_logfile(uint64_t batchno, int update)
 }
 
 int
-mds_open_logfile(uint64_t batchno, int update, int readonly)
+mds_open_logfile(uint64_t batchno, int update, int readonly, void **handle)
 {
+	int rc;
 	char log_fn[PATH_MAX];
-	int logfd;
 
 	if (update) {
-		xmkfn(log_fn, "%s/%s.%d.%s.%lu", sl_datadir,
+		xmkfn(log_fn, "%s.%d.%s.%lu",
 		    SL_FN_UPDATELOG, batchno, psc_get_hostname(),
 		    mds_cursor.pjc_timestamp);
 	} else {
-		xmkfn(log_fn, "%s/%s.%d.%s.%lu", sl_datadir,
+		xmkfn(log_fn, "%s.%d.%s.%lu",
 		    SL_FN_RECLAIMLOG, batchno, psc_get_hostname(),
 		    mds_cursor.pjc_timestamp);
 	}
@@ -537,8 +564,8 @@ mds_open_logfile(uint64_t batchno, int update, int readonly)
 		/*
 		 * The caller should check the return value.
 		 */
-		logfd = open(log_fn, O_RDONLY);
-		return (logfd);
+		rc = mds_open_file(log_fn, O_RDONLY, handle);
+		return (rc);
 	}
 
 	/*
@@ -549,20 +576,18 @@ mds_open_logfile(uint64_t batchno, int update, int readonly)
 	 * During replay, we need to read the file first to find out
 	 * the right position, so we can't use O_WRONLY.
 	 */
-	logfd = open(log_fn, O_RDWR);
-	if (logfd > 0) {
+	rc = mds_open_file(log_fn, O_RDWR, handle);
+	if (rc == 0) {
 		/*
 		 * During replay, the offset will be determined by the
 		 * xid.
 		 */
-		if (lseek(logfd, 0, SEEK_END) == (off_t)-1)
-			psc_warn("lseek");
-		return (logfd);
+		return (rc);
 	}
-	logfd = open(log_fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
-	if (logfd == -1)
+	rc = mds_open_file(log_fn, O_CREAT | O_TRUNC | O_WRONLY, handle);
+	if (rc)
 		psc_fatal("Failed to create log file %s", log_fn);
-	return (logfd);
+	return (rc);
 }
 
 /**
@@ -589,9 +614,9 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 	struct srt_reclaim_entry reclaim_entry, *reclaim_entryp;
 	struct slmds_jent_namespace *sjnm = NULL;
 	struct slmds_jent_crc *jcrc = NULL;
-	int size, count, total;
+	size_t size;
+	int rc, count, total;
 	uint16_t type;
-	off_t off;
 
 	/*
 	 * Make sure that the distill log hits the disk now.
@@ -599,12 +624,14 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 	if (action == 2) {
 
 		spinlock(&mds_distill_lock);
-		if (xid < sync_update_xid)  {
-			fsync(current_update_logfile);
+		if (xid < sync_update_xid) {
+			psc_assert(update_logfile_handle);
+			mdsio_fsync(&rootcreds, 0, update_logfile_handle);
 			sync_update_xid = current_update_xid;
 		}
 		if (xid < sync_reclaim_xid)  {
-			fsync(current_reclaim_logfile);
+			psc_assert(reclaim_logfile_handle);
+			mdsio_fsync(&rootcreds, 0, reclaim_logfile_handle);
 			sync_reclaim_xid = current_reclaim_xid;
 		}
 		freelock(&mds_distill_lock);
@@ -642,24 +669,24 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 	    sjnm->sjnm_op == NS_OP_UNLINK ||
 	    sjnm->sjnm_op == NS_OP_SETSIZE);
 
-	if (current_reclaim_logfile == -1) {
-		current_reclaim_logfile =
-		    mds_open_logfile(current_reclaim_batchno, 0, 0);
-
+	if (reclaim_logfile_handle == NULL) {
+		mds_open_logfile(current_reclaim_batchno, 0, 0, &reclaim_logfile_handle);
 		/*
 		 * Here we do one-time seek based on the xid stored in
 		 * the entry.  Although not necessary contiguous, xids
 		 * are in increasing order.
 		 */
 		if (action == 1) {
-			size = read(current_reclaim_logfile, reclaimbuf,
-			    SLM_RECLAIM_BATCH * sizeof(struct srt_reclaim_entry));
-			if (size == -1)
+			rc = mds_read_file(reclaim_logfile_handle, reclaimbuf,
+			    SLM_RECLAIM_BATCH * sizeof(struct srt_reclaim_entry), &size, 0);
+			if (rc)
 			    psc_fatal("Failed to read reclaim log file, batchno=%"PRId64,
 				current_reclaim_batchno);
+
 			total = size / sizeof(struct srt_reclaim_entry);
 
 			count = 0;
+			reclaim_logfile_offset = 0;
 			reclaim_entryp = reclaimbuf;
 			while (count < total) {
 				if (reclaim_entryp->xid == pje->pje_xid) {
@@ -668,16 +695,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 				}
 				reclaim_entryp++;
 				count++;
+				reclaim_logfile_offset += sizeof(struct srt_reclaim_entry); 
 			}
-			/*
-			 * If we didn't find the entry, this is
-			 * seek-to-end.  If we do find it, we will
-			 * distill again (overwrite should be fine).
-			 */
-			if (lseek(current_reclaim_logfile,
-			    count * sizeof(struct srt_reclaim_entry),
-			    SEEK_CUR) == (off_t)-1)
-				psc_warn("lseek");
 		}
 	}
 
@@ -685,22 +704,19 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 	reclaim_entry.fg.fg_fid = sjnm->sjnm_target_fid;
 	reclaim_entry.fg.fg_gen = sjnm->sjnm_target_gen;
 
-	size = write(current_reclaim_logfile, &reclaim_entry,
-	    sizeof(struct srt_reclaim_entry));
+	rc = mds_write_file(reclaim_logfile_handle, (void*)&reclaim_entry, 
+	    sizeof(struct srt_reclaim_entry), &size, reclaim_logfile_offset);
 	if (size != sizeof(struct srt_reclaim_entry))
 		psc_fatal("Failed to write reclaim log file, batchno=%"PRId64,
 		    current_reclaim_batchno);
-
-	/* see if we need to close the current reclaim log file */
-	off = lseek(current_reclaim_logfile, 0, SEEK_CUR);
-	if (off == (off_t)-1)
-		psc_warn("lseek");
-	else if (off == SLM_RECLAIM_BATCH * sizeof(struct srt_reclaim_entry)) {
+	
+	reclaim_logfile_offset += sizeof(struct srt_reclaim_entry); 
+	if (reclaim_logfile_offset == SLM_RECLAIM_BATCH * sizeof(struct srt_reclaim_entry)) {
 
 		spinlock(&mds_distill_lock);
-		fsync(current_reclaim_logfile);
-		close(current_reclaim_logfile);
-		current_reclaim_logfile = -1;
+		mdsio_fsync(&rootcreds, 0, reclaim_logfile_handle);
+		mdsio_release(&rootcreds, reclaim_logfile_handle);
+		reclaim_logfile_handle = NULL;
 		current_reclaim_batchno++;
 		sync_reclaim_xid = pje->pje_xid;
 		freelock(&mds_distill_lock);
@@ -719,18 +735,18 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 	if (!npeers)
 		return (0);
 
-	if (current_update_logfile == -1) {
-		current_update_logfile =
-		    mds_open_logfile(current_update_batchno, 1, 0);
+	if (update_logfile_handle == NULL) {
+		mds_open_logfile(current_update_batchno, 1, 0, &update_logfile_handle);
 		if (action == 1) {
-			size = read(current_update_logfile, updatebuf,
-			    SLM_UPDATE_BATCH * sizeof(struct srt_update_entry));
-			if (size == -1)
+			rc = mds_read_file(update_logfile_handle, updatebuf,
+			    SLM_UPDATE_BATCH * sizeof(struct srt_update_entry), &size, 0);
+			if (rc)
 			    psc_fatal("Failed to read update log file, batchno=%"PRId64,
 				current_update_batchno);
 			total = size / sizeof(struct srt_update_entry);
 
 			count = 0;
+			update_logfile_offset = 0;
 			update_entryp = updatebuf;
 			while (count < total) {
 				if (update_entryp->xid == pje->pje_xid) {
@@ -739,16 +755,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 				}
 				update_entryp++;
 				count++;
+				update_logfile_offset += sizeof(struct srt_update_entry); 
 			}
-			/*
-			 * If we didn't find the entry, this is
-			 * seek-to-end.  If we do find it, we will
-			 * distill again (overwrite should be fine).
-			 */
-			if (lseek(current_update_logfile,
-			    count * sizeof(struct srt_update_entry),
-			    SEEK_CUR) == (off_t)-1)
-				psc_warn("lseek");
 		}
 	}
 
@@ -795,22 +803,20 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 
  write_update:
 
-	size = write(current_update_logfile, &update_entry,
-	    sizeof(struct srt_update_entry));
+	rc = mds_write_file(update_logfile_handle, (void *)&update_entry, 
+	    sizeof(struct srt_update_entry), &size, update_logfile_offset);
 	if (size != sizeof(struct srt_update_entry))
 		psc_fatal("Failed to write update log file, batchno=%"PRId64,
 		    current_update_batchno);
 
 	/* see if we need to close the current update log file */
-	off = lseek(current_update_logfile, 0, SEEK_CUR);
-	if (off == (off_t)-1)
-		psc_warn("lseek");
-	else if (off == SLM_UPDATE_BATCH * sizeof(struct srt_update_entry)) {
+	update_logfile_offset += sizeof(struct srt_reclaim_entry); 
+	if (update_logfile_offset == SLM_UPDATE_BATCH * sizeof(struct srt_update_entry)) {
 
 		spinlock(&mds_distill_lock);
-		fsync(current_update_logfile);
-		close(current_update_logfile);
-		current_update_logfile = -1;
+		mdsio_fsync(&rootcreds, 0, update_logfile_handle);
+		mdsio_release(&rootcreds, update_logfile_handle);
+		update_logfile_handle = NULL;
 		current_update_batchno++;
 		sync_update_xid = pje->pje_xid;
 		freelock(&mds_distill_lock);
@@ -1034,7 +1040,7 @@ mds_update_hwm(int batchno)
 int
 mds_send_batch_update(uint64_t batchno)
 {
-	int i, rc, npeers, count, total, didwork = 0, logfd, record = 0;
+	int i, rc, npeers, count, total, didwork = 0, record = 0;
 	struct srt_update_entry *entryp, *next_entryp;
 	struct sl_mds_peerinfo *peerinfo;
 	struct slashrpc_cservice *csvc;
@@ -1044,29 +1050,29 @@ mds_send_batch_update(uint64_t batchno)
 	struct sl_resm *resm;
 	struct iovec iov;
 	uint64_t xid;
-	ssize_t size;
+	size_t size;
+	void *handle;
 
 	struct sl_resource *_res;
 	struct sl_site *_site;
 	int _siter;
 
-	logfd = mds_open_logfile(batchno, 1, 1);
-	if (logfd == -1) {
+	rc = mds_open_logfile(batchno, 1, 1, &handle);
+	if (rc) {
 		/*
 		 * It is fine that the distill process hasn't written the next
 		 * log file after closing the old one.
 		 */
-		if (errno != ENOENT) {
+		if (rc != ENOENT) {
 			psc_fatal("Failed to open update log file, "
 			    "batchno=%"PRId64, batchno);
 		}
 		return (didwork);
 	}
-	size = read(logfd, updatebuf, SLM_UPDATE_BATCH *
-	    sizeof(struct srt_update_entry));
-	close(logfd);
+	rc = mds_read_file(handle, updatebuf, 
+	    SLM_UPDATE_BATCH * sizeof(struct srt_update_entry), &size, 0);
+	mdsio_release(&rootcreds, handle);
 
-	psc_assert(size >= 0);
 	if (size == 0)
 		return (didwork);
 
@@ -1323,7 +1329,7 @@ mds_open_cursor(void)
 int
 mds_send_batch_reclaim(uint64_t batchno)
 {
-	int i, ri, rc, len, count, nentry, total, nios, logfd, didwork = 0, record = 0;
+	int i, ri, rc, len, count, nentry, total, nios, didwork = 0, record = 0;
 	struct srt_reclaim_entry *entryp, *next_entryp;
 	struct slashrpc_cservice *csvc;
 	struct sl_mds_iosinfo *iosinfo;
@@ -1335,25 +1341,25 @@ mds_send_batch_reclaim(uint64_t batchno)
 	struct sl_resource *res;
 	struct iovec iov;
 	uint64_t xid;
-	ssize_t size;
+	size_t size;
+	void *handle;
 
-	logfd = mds_open_logfile(batchno, 0, 1);
-	if (logfd == -1) {
+	rc = mds_open_logfile(batchno, 0, 1, &handle);
+	if (rc) {
 		/*
 		 * It is fine that the distill process hasn't written the next
 		 * log file after closing the old one.
 		 */
-		if (errno != ENOENT) {
+		if (rc != ENOENT) {
 			psc_fatal("Failed to open reclaim log file, "
 			    "batchno=%"PRId64, batchno);
 		}
 		return (didwork);
 	}
-	size = read(logfd, reclaimbuf, SLM_RECLAIM_BATCH *
-	    sizeof(struct srt_reclaim_entry));
-	close(logfd);
+	rc = mds_read_file(handle, reclaimbuf, 
+	    SLM_RECLAIM_BATCH * sizeof(struct srt_reclaim_entry), &size, 0);
+ 	mdsio_release(&rootcreds, handle);
 
-	psc_assert(size >= 0);
 	if (size == 0)
 		return (didwork);
 
@@ -1761,16 +1767,15 @@ void
 mds_journal_init(int disable_propagation)
 {
 	uint64_t batchno, last_reclaim_xid = 0, last_update_xid = 0, last_distill_xid = 0;
-	int i, ri, nios, count, total, npeers, index, logfd;
+	int i, ri, rc, nios, count, total, npeers;
 	struct srt_reclaim_entry *reclaim_entryp;
 	struct srt_update_entry *update_entryp;
 	struct sl_mds_peerinfo *peerinfo;
 	struct sl_mds_iosinfo *iosinfo;
 	struct sl_resource *res;
 	struct sl_resm *resm;
-	struct stat sb;
-	char fn[PATH_MAX];
-	ssize_t size;
+	size_t size;
+	void *handle;
 
 	psc_assert(sizeof(struct srt_update_entry) == 512);
 	psc_assert(sizeof(struct srt_reclaim_entry) == 512);
@@ -1794,57 +1799,62 @@ mds_journal_init(int disable_propagation)
 
 	mds_open_cursor();
 
-	for (index = 0; index < 2; index++) {
-		xmkfn(fn, "%s/%s.%s.%lu.%d", sl_datadir,
-		    SL_FN_RECLAIMPROG, psc_get_hostname(),
-		    mds_cursor.pjc_timestamp, index);
-		current_reclaim_progfile[index] = open(fn, O_CREAT |
-		    O_RDWR, 0600);
-		if (fstat(current_reclaim_progfile[index], &sb) == -1)
-			psc_fatal("Failed to stat reclaim log file %s", fn);
-		psc_assert((sb.st_size % sizeof(struct reclaim_prog_entry)) == 0);
+	/* 
+	 * We need the cursor thread to start any potential log replay.
+	 * Also, without this thread, we can't write anything into ZFS.
+	 * We can't even read from ZFS because a read changes atime.
+	 */
+	pscthr_init(SLMTHRT_CURSOR, 0, mds_cursor_thread, NULL, 0,
+	    "slmjcursorthr");
 
-		i = count = sb.st_size / sizeof(struct reclaim_prog_entry);
-		reclaim_prog_buf = PSCALLOC(i * sizeof(struct reclaim_prog_entry));
-		if (count) {
-			size = read(current_reclaim_progfile[index],
-			    reclaim_prog_buf,
-			    count * sizeof(struct reclaim_prog_entry));
-			psc_assert(size == count * (int)sizeof(struct reclaim_prog_entry));
-		}
-		for (i = 0; i < count; i++) {
-			if (reclaim_prog_buf[i].res_id == 0)
-				continue;
-			res = libsl_id2res(reclaim_prog_buf[i].res_id);
-			iosinfo = res2rpmi(res)->rpmi_info;
-			if (iosinfo->si_xid < reclaim_prog_buf[i].res_xid)
-				iosinfo->si_xid = reclaim_prog_buf[i].res_xid;
-			if (iosinfo->si_batchno < reclaim_prog_buf[i].res_batchno)
-				iosinfo->si_batchno = reclaim_prog_buf[i].res_batchno;
-		}
-		PSCFREE(reclaim_prog_buf);
+	xmkfn(update_progfile_name, "%s.%s.%lu",
+	    SL_FN_RECLAIMPROG, psc_get_hostname(),
+	    mds_cursor.pjc_timestamp);
+
+	rc = mds_open_file(update_progfile_name, O_RDWR, &reclaim_progfile_handle);
+	psc_assert(rc == 0);
+
+	reclaim_prog_buf = PSCALLOC(MAX_RECLAIM_PROG_ENTRY * sizeof(struct reclaim_prog_entry));
+	rc = mds_read_file(reclaim_progfile_handle,
+	    (void *)reclaim_prog_buf,
+	    MAX_RECLAIM_PROG_ENTRY * sizeof(struct reclaim_prog_entry), &size, 0);
+	psc_assert(rc == 0);
+
+	count = size / sizeof(struct reclaim_prog_entry);
+	for (i = 0; i < count; i++) {
+		if (reclaim_prog_buf[i].res_id == 0)
+			continue;
+		res = libsl_id2res(reclaim_prog_buf[i].res_id);
+		iosinfo = res2rpmi(res)->rpmi_info;
+		if (iosinfo->si_xid < reclaim_prog_buf[i].res_xid)
+			iosinfo->si_xid = reclaim_prog_buf[i].res_xid;
+		if (iosinfo->si_batchno < reclaim_prog_buf[i].res_batchno)
+			iosinfo->si_batchno = reclaim_prog_buf[i].res_batchno;
 	}
+	PSCFREE(reclaim_prog_buf);
 	reclaim_prog_buf = PSCALLOC(nios * sizeof(struct reclaim_prog_entry));
 
 	/* Find out the highest reclaim batchno and xid */
 	batchno = mds_reclaim_lwm(1);
-	logfd = mds_open_logfile(batchno, 0, 1);
-	if (logfd == -1) {
+	rc = mds_open_logfile(batchno, 0, 1, &handle);
+	if (rc) {
 		if (batchno) {
 			batchno--;
-			logfd = mds_open_logfile(batchno, 0, 1);
+			rc = mds_open_logfile(batchno, 0, 1, &handle);
 		}
 	}
-	if (logfd == -1)
+	if (rc)
 	    psc_fatal("Failed to open reclaim log file, batchno=%"PRId64, batchno);
 
 	current_reclaim_batchno = batchno;
 	reclaimbuf = PSCALLOC(SLM_RECLAIM_BATCH *
 	    sizeof(struct srt_reclaim_entry));
 
-	size = read(logfd, reclaimbuf, SLM_RECLAIM_BATCH *
-	    sizeof(struct srt_reclaim_entry));
-	psc_assert(size >= 0);
+	rc = mds_read_file(handle, reclaimbuf, SLM_RECLAIM_BATCH *
+	    sizeof(struct srt_reclaim_entry), &size, 0);
+	mdsio_release(&rootcreds, handle);
+
+	psc_assert(rc == 0);
 	psc_assert((size % sizeof(struct srt_reclaim_entry)) == 0);
 
 	total = size / sizeof(struct srt_reclaim_entry);
@@ -1858,7 +1868,6 @@ mds_journal_init(int disable_propagation)
 	current_reclaim_xid = last_reclaim_xid;
 	if (total == SLM_RECLAIM_BATCH)
 		current_reclaim_batchno++;
-	close(logfd);
 
 	last_distill_xid = last_reclaim_xid;
 
@@ -1870,57 +1879,54 @@ mds_journal_init(int disable_propagation)
 	if (!npeers)
 		goto replay_log;
 
-	for (index = 0; index < 2; index++) {
-		xmkfn(fn, "%s/%s.%s.%lu.%d", sl_datadir,
-		    SL_FN_UPDATEPROG, psc_get_hostname(),
-		    mds_cursor.pjc_timestamp, index);
-		current_update_progfile[index] = open(fn, O_CREAT |
-		    O_RDWR, 0600);
-		if (fstat(current_update_progfile[index], &sb) == -1)
-			psc_fatal("Failed to stat update log file %s", fn);
-		psc_assert((sb.st_size % sizeof(struct update_prog_entry)) == 0);
+	xmkfn(reclaim_progfile_name, "%s/%s.%s.%lu.%d", sl_datadir,
+	    SL_FN_UPDATEPROG, psc_get_hostname(),
+	    mds_cursor.pjc_timestamp, index);
 
-		i = count = sb.st_size / sizeof(struct update_prog_entry);
-		update_prog_buf = PSCALLOC(i * sizeof(struct update_prog_entry));
-		if (count) {
-			size = read(current_update_progfile[index], update_prog_buf,
-			    count * sizeof(struct update_prog_entry));
-			psc_assert(size == count * (int)sizeof(struct update_prog_entry));
-		}
+	rc = mds_open_file(reclaim_progfile_name, O_RDWR, &update_progfile_handle);
+	psc_assert(rc == 0);
 
-		for (i = 0; i < count; i++) {
-			if (update_prog_buf[i].res_id == 0)
-				continue;
-			res = libsl_id2res(update_prog_buf[i].res_id);
-			peerinfo = res2rpmi(res)->rpmi_info;
-			if (peerinfo->sp_xid < update_prog_buf[i].res_xid)
-				peerinfo->sp_xid = update_prog_buf[i].res_xid;
-			if (peerinfo->sp_batchno < update_prog_buf[i].res_batchno)
-				peerinfo->sp_batchno = update_prog_buf[i].res_batchno;
-		}
-		PSCFREE(update_prog_buf);
+	update_prog_buf = PSCALLOC(MAX_UPDATE_PROG_ENTRY * sizeof(struct update_prog_entry));
+	rc = mds_read_file(update_progfile_handle,
+	    (void *)update_prog_buf,
+	    MAX_UPDATE_PROG_ENTRY * sizeof(struct update_prog_entry), &size, 0);
+	psc_assert(rc == 0);
+
+	count = size / sizeof(struct update_prog_entry);
+	for (i = 0; i < count; i++) {
+		if (update_prog_buf[i].res_id == 0)
+			continue;
+		res = libsl_id2res(update_prog_buf[i].res_id);
+		peerinfo = res2rpmi(res)->rpmi_info;
+		if (peerinfo->sp_xid < update_prog_buf[i].res_xid)
+			peerinfo->sp_xid = update_prog_buf[i].res_xid;
+		if (peerinfo->sp_batchno < update_prog_buf[i].res_batchno)
+			peerinfo->sp_batchno = update_prog_buf[i].res_batchno;
 	}
+	PSCFREE(update_prog_buf);
 	update_prog_buf = PSCALLOC(npeers * sizeof(struct update_prog_entry));
 
 	/* Find out the highest update batchno and xid */
 	batchno = mds_update_lwm(1);
-	logfd = mds_open_logfile(batchno, 1, 1);
-	if (logfd == -1) {
+	rc = mds_open_logfile(batchno, 1, 1, &handle);
+	if (rc) {
 		if (batchno) {
 			batchno--;
-			logfd = mds_open_logfile(batchno, 1, 1);
+			rc = mds_open_logfile(batchno, 1, 1, &handle);
 		}
 	}
-	if (logfd == -1)
+	if (rc)
 	    psc_fatal("Failed to open update log file, batchno=%"PRId64, batchno);
 
 	current_update_batchno = batchno;
 	updatebuf = PSCALLOC(SLM_UPDATE_BATCH *
 	    sizeof(struct srt_update_entry));
 
-	size = read(logfd, updatebuf,
-	    SLM_UPDATE_BATCH * sizeof(struct srt_update_entry));
-	psc_assert(size >= 0);
+	rc = mds_read_file(handle, updatebuf,
+	    SLM_UPDATE_BATCH * sizeof(struct srt_update_entry), &size, 0);
+	mdsio_release(&rootcreds, handle);
+
+	psc_assert(rc == 0);
 	psc_assert((size % sizeof(struct srt_update_entry)) == 0);
 
 	total = size / sizeof(struct srt_update_entry);
@@ -1934,7 +1940,6 @@ mds_journal_init(int disable_propagation)
 	current_update_xid = last_update_xid;
 	if (total == SLM_UPDATE_BATCH)
 		current_update_batchno++;
-	close(logfd);
 
 	if (last_distill_xid < last_update_xid)
 		last_distill_xid = last_update_xid;
@@ -1968,10 +1973,6 @@ mds_journal_init(int disable_propagation)
 	    mdsJournal->pj_commit_txg);
 	psclog_notice("Last replayed SLASH2 transaction number is %"PRId64,
 	    mdsJournal->pj_replay_xid);
-
-	/* we need the cursor thread to start any potential log replay */
-	pscthr_init(SLMTHRT_CURSOR, 0, mds_cursor_thread, NULL, 0,
-	    "slmjcursorthr");
 
 	pjournal_replay(mdsJournal, SLMTHRT_JRNL, "slmjthr",
 	    mds_replay_handler, mds_distill_handler);

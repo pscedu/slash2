@@ -101,6 +101,7 @@ struct mdsio_ops {
 	int	(*mio_symlink)(const char *, mdsio_fid_t, const char *, const struct slash_creds *, struct srt_stat *, mdsio_fid_t *, sl_getslfid_cb_t, sl_log_update_t);
 	int	(*mio_unlink)(mdsio_fid_t, const char *, const struct slash_creds *, sl_log_update_t);
 	int	(*mio_write)(const struct slash_creds *, const void *, size_t, size_t *, off_t, int, void *, sl_log_write_t, void *);
+	int	(*mio_fsync)(const struct slash_creds *, int, void *);
 
 	/* replay interface */
 	int	(*mio_redo_create)(slfid_t, char *, struct srt_stat *);
@@ -141,6 +142,7 @@ struct mdsio_ops {
 #define mdsio_symlink		mdsio_ops.mio_symlink			/* zfsslash2_symlink() */
 #define mdsio_unlink		mdsio_ops.mio_unlink			/* zfsslash2_unlink() */
 #define mdsio_write		mdsio_ops.mio_write			/* zfsslash2_write() */
+#define mdsio_fsync		mdsio_ops.mio_fsync			/* zfsslash2_fsync() */
 
 #define mdsio_redo_create	mdsio_ops.mio_redo_create		/* zfsslash2_replay_create() */
 #define mdsio_redo_link		mdsio_ops.mio_redo_link			/* zfsslash2_replay_link() */
