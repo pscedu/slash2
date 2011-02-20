@@ -241,7 +241,7 @@ mds_redo_bmap_repl(struct psc_journal_enthdr *pje)
 	rc = mdsio_lookup_slfid(jrpg->sjp_fid, &rootcreds, NULL, &fid);
 	if (rc) {
 		if (rc == ENOENT) {
-			psc_warnx("mdsio_lookup_slfid: %s", slstrerror(rc));
+			psclog_warnx("mdsio_lookup_slfid: %s", slstrerror(rc));
 			return (rc);
 		}
 		psc_fatalx("mdsio_lookup_slfid: %s", slstrerror(rc));
@@ -307,7 +307,7 @@ mds_redo_bmap_crc(struct psc_journal_enthdr *pje)
 
 	rc = mdsio_lookup_slfid(jcrc->sjc_fid, &rootcreds, NULL, &mf);
 	if (rc == ENOENT) {
-		psc_warnx("mdsio_lookup_slfid: %s", slstrerror(rc));
+		psclog_warnx("mdsio_lookup_slfid: %s", slstrerror(rc));
 		return (rc);
 	}
 	if (rc)
@@ -690,7 +690,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 			reclaim_entryp = reclaimbuf;
 			while (count < total) {
 				if (reclaim_entryp->xid == pje->pje_xid) {
-					psc_warnx("Reclaim distill %"PRId64, pje->pje_xid);
+					psclog_warnx("Reclaim distill %"PRId64, pje->pje_xid);
 					break;
 				}
 				reclaim_entryp++;
@@ -750,7 +750,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 			update_entryp = updatebuf;
 			while (count < total) {
 				if (update_entryp->xid == pje->pje_xid) {
-					psc_warnx("Update distill %"PRId64, pje->pje_xid);
+					psclog_warnx("Update distill %"PRId64, pje->pje_xid);
 					break;
 				}
 				update_entryp++;
@@ -942,7 +942,6 @@ mds_reclaim_lwm(int batchno)
 		RPMI_ULOCK(rpmi);
 	}
 	psc_assert(value != UINT64_MAX);
-
 	return (value);
 }
 
@@ -1284,7 +1283,7 @@ mds_cursor_thread(__unusedx struct psc_thread *thr)
 		rc = mdsio_write_cursor(&mds_cursor, sizeof(mds_cursor),
 			mds_cursor_handle, mds_update_cursor);
 		if (rc)
-			psc_warnx("failed to update cursor, rc=%d", rc);
+			psclog_warnx("failed to update cursor, rc=%d", rc);
 		else
 			psclog_notice("Cursor updated: txg=%"PRId64", xid=%"PRId64
 			    ", fid="SLPRI_FID", seqno=(%"PRId64", %"PRId64")",
@@ -1347,13 +1346,12 @@ mds_send_batch_reclaim(uint64_t batchno)
 	rc = mds_open_logfile(batchno, 0, 1, &handle);
 	if (rc) {
 		/*
-		 * It is fine that the distill process hasn't written the next
-		 * log file after closing the old one.
+		 * It is fine that the distill process hasn't written
+		 * the next log file after closing the old one.
 		 */
-		if (rc != ENOENT) {
+		if (rc != ENOENT)
 			psc_fatal("Failed to open reclaim log file, "
 			    "batchno=%"PRId64, batchno);
-		}
 		return (didwork);
 	}
 	rc = mds_read_file(handle, reclaimbuf,
@@ -2021,7 +2019,7 @@ mds_redo_namespace(struct slmds_jent_namespace *sjnm, int replay)
 	sstb.sst_ctime_ns = sjnm->sjnm_ctime_ns;
 
 	if (!sstb.sst_fid) {
-		psc_errorx("Unexpected zero SLASH2 FID.");
+		psclog_errorx("Unexpected zero SLASH2 FID.");
 		return (EINVAL);
 	}
 
@@ -2086,7 +2084,7 @@ mds_redo_namespace(struct slmds_jent_namespace *sjnm, int replay)
 		}
 		break;
 	    default:
-		psc_errorx("Unexpected opcode %d", sjnm->sjnm_op);
+		psclog_errorx("Unexpected opcode %d", sjnm->sjnm_op);
 		rc = EINVAL;
 		break;
 	}
