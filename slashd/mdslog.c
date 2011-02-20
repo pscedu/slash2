@@ -695,7 +695,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 				}
 				reclaim_entryp++;
 				count++;
-				reclaim_logfile_offset += sizeof(struct srt_reclaim_entry); 
+				reclaim_logfile_offset += sizeof(struct srt_reclaim_entry);
 			}
 		}
 	}
@@ -704,13 +704,13 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 	reclaim_entry.fg.fg_fid = sjnm->sjnm_target_fid;
 	reclaim_entry.fg.fg_gen = sjnm->sjnm_target_gen;
 
-	rc = mds_write_file(reclaim_logfile_handle, (void*)&reclaim_entry, 
+	rc = mds_write_file(reclaim_logfile_handle, (void*)&reclaim_entry,
 	    sizeof(struct srt_reclaim_entry), &size, reclaim_logfile_offset);
 	if (size != sizeof(struct srt_reclaim_entry))
 		psc_fatal("Failed to write reclaim log file, batchno=%"PRId64,
 		    current_reclaim_batchno);
-	
-	reclaim_logfile_offset += sizeof(struct srt_reclaim_entry); 
+
+	reclaim_logfile_offset += sizeof(struct srt_reclaim_entry);
 	if (reclaim_logfile_offset == SLM_RECLAIM_BATCH * sizeof(struct srt_reclaim_entry)) {
 
 		spinlock(&mds_distill_lock);
@@ -755,7 +755,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 				}
 				update_entryp++;
 				count++;
-				update_logfile_offset += sizeof(struct srt_update_entry); 
+				update_logfile_offset += sizeof(struct srt_update_entry);
 			}
 		}
 	}
@@ -803,14 +803,14 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 
  write_update:
 
-	rc = mds_write_file(update_logfile_handle, (void *)&update_entry, 
+	rc = mds_write_file(update_logfile_handle, (void *)&update_entry,
 	    sizeof(struct srt_update_entry), &size, update_logfile_offset);
 	if (size != sizeof(struct srt_update_entry))
 		psc_fatal("Failed to write update log file, batchno=%"PRId64,
 		    current_update_batchno);
 
 	/* see if we need to close the current update log file */
-	update_logfile_offset += sizeof(struct srt_reclaim_entry); 
+	update_logfile_offset += sizeof(struct srt_reclaim_entry);
 	if (update_logfile_offset == SLM_UPDATE_BATCH * sizeof(struct srt_update_entry)) {
 
 		spinlock(&mds_distill_lock);
@@ -1069,7 +1069,7 @@ mds_send_batch_update(uint64_t batchno)
 		}
 		return (didwork);
 	}
-	rc = mds_read_file(handle, updatebuf, 
+	rc = mds_read_file(handle, updatebuf,
 	    SLM_UPDATE_BATCH * sizeof(struct srt_update_entry), &size, 0);
 	mdsio_release(&rootcreds, handle);
 
@@ -1356,9 +1356,9 @@ mds_send_batch_reclaim(uint64_t batchno)
 		}
 		return (didwork);
 	}
-	rc = mds_read_file(handle, reclaimbuf, 
+	rc = mds_read_file(handle, reclaimbuf,
 	    SLM_RECLAIM_BATCH * sizeof(struct srt_reclaim_entry), &size, 0);
- 	mdsio_release(&rootcreds, handle);
+	mdsio_release(&rootcreds, handle);
 
 	if (size == 0)
 		return (didwork);
@@ -1799,7 +1799,7 @@ mds_journal_init(int disable_propagation)
 
 	mds_open_cursor();
 
-	/* 
+	/*
 	 * We need the cursor thread to start any potential log replay.
 	 * Also, without this thread, we can't write anything into ZFS.
 	 * We can't even read from ZFS because a read changes atime.
