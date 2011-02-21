@@ -33,12 +33,13 @@
 
 __static const char *slconn_restypes[] = {
 	"client",
-	"standalone",
 	"archiver",
 	"serialfs",
 	"compute",
 	"mds",
-	"parallelfs"
+	"parallelfs",
+	"standalone",
+	"?"
 };
 
 void
@@ -54,6 +55,7 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	static char lastsite[SITE_NAME_MAX], lastres[RES_NAME_MAX];
 	char *site, *nid, *res, addrbuf[RESM_ADDRBUF_SZ];
 	const struct slctlmsg_conn *scc = m;
+	int type;
 
 	strlcpy(addrbuf, scc->scc_addrbuf, sizeof(addrbuf));
 	if (scc->scc_type == SLCTL_REST_CLI) {
@@ -80,6 +82,11 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 		strlcpy(lastres, res, sizeof(lastres));
 	else
 		res = "";
+
+	type = scc->scc_type & ~SLREST_FS;
+	if (type < 0 || type >= nitems(slconn_restypes))
+		type = nitems(slconn_restypes) - 1;
+
 	printf("  %-14s %41s %-10s %c%c%c%c%c %4d\n", res, nid,
 	    strcmp(lastres, res) ? "" : slconn_restypes[scc->scc_type],
 	    scc->scc_flags & CSVCF_CONNECTING		? 'C' : '-',
