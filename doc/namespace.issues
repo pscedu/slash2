@@ -623,3 +623,16 @@ drwxr-xr-x 3 root root     3 Feb 15 12:57 ..
 -rw-r--r-- 1 root root 51063 Feb 15 12:57 kvm_main.c
 
 The problem is probably at setattr redo.
+
+02/21/2011
+----------
+
+So I got log files moved into ZFS:
+
+root@lemon: /home/zhihui$ time tar xvfj linux-2.6.34.tar.bz2 -C /zzh-slash2-lemon/
+
+real	3m18.978s
+user	0m15.517s
+sys	0m3.138s
+
+But some files seem missing from the MDS (wolverine) that receiving the updates.
