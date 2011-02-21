@@ -141,13 +141,14 @@ psc_spinlock_t			 mds_txg_lock = SPINLOCK_INIT;
 static int
 mds_open_file(char *fn, int flags, void **handle)
 {
-	int rc;
 	mdsio_fid_t mf;
+	int rc;
 
 	rc = mdsio_lookup(MDSIO_FID_ROOT, fn, &mf, &rootcreds, NULL);
 	if (rc == ENOENT && (flags & O_CREAT)) {
-		rc = mdsio_opencreatef(MDSIO_FID_ROOT, &rootcreds, flags, 
-		    MDSIO_OPENCRF_NOLINK, 0600, fn, NULL, NULL, handle, NULL, NULL);
+		rc = mdsio_opencreatef(MDSIO_FID_ROOT, &rootcreds,
+		    flags, MDSIO_OPENCRF_NOLINK, 0600, fn, NULL, NULL,
+		    handle, NULL, NULL);
 	} else if (!rc) {
 		rc = mdsio_opencreate(mf, &rootcreds, flags, 0, NULL,
 		    NULL, NULL, handle, NULL, NULL);
@@ -155,24 +156,11 @@ mds_open_file(char *fn, int flags, void **handle)
 	return (rc);
 }
 
-static int
-mds_read_file(void *handle, void *buf, size_t size, size_t *nb, off_t off)
-{
-	int rc;
+#define mds_read_file(h, buf, size, nb, off)				\
+	mdsio_read(&rootcreds, (buf), (size), (nb), (off), (h))
 
-	rc = mdsio_read(&rootcreds, buf, size, nb, off, handle);
-	return (rc);
-}
-
-static int
-mds_write_file(void *handle, const void *buf, size_t size, size_t *nb, off_t off)
-{
-	int rc;
-
-	rc = mdsio_write(&rootcreds, buf, size, nb, off, 0, handle,
-	    NULL, NULL);
-	return (rc);
-}
+#define mds_write_file(h, buf, size, nb, off)				\
+	mdsio_write(&rootcreds, (buf), (size), (nb), (off), 0, (h), NULL, NULL)
 
 static void
 mds_record_update_prog(void)
