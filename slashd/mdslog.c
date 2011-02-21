@@ -54,19 +54,19 @@
 #define SLM_CBARG_SLOT_RESPROF	1
 
 struct prog_tracker {
-	char				 pt_prog_fn[PATH_MAX];
-	void				*pt_prog_buf;
-	void				*pt_prog_handle;
+	char			 pt_prog_fn[PATH_MAX];
+	void			*pt_prog_buf;
+	void			*pt_prog_handle;
 
-	uint64_t			 pt_current_batchno;
-	uint64_t			 pt_current_xid;
-	uint64_t			 pt_sync_xid;
-	void				*pt_logfile_handle;
-	off_t				 pt_logfile_offset;
-	struct psc_waitq		 pt_waitq;
-	psc_spinlock_t			 pt_lock;
-	struct psclist_head		 pt_buflist;
-	void				*pt_buf;
+	uint64_t		 pt_current_batchno;
+	uint64_t		 pt_current_xid;
+	uint64_t		 pt_sync_xid;
+	void			*pt_logfile_handle;
+	off_t			 pt_logfile_offset;
+	struct psc_waitq	 pt_waitq;
+	psc_spinlock_t		 pt_lock;
+	struct psclist_head	 pt_buflist;
+	void			*pt_buf;
 };
 
 struct psc_journal		*mdsJournal;
@@ -745,10 +745,10 @@ mds_update_lwm(int batchno)
 __static uint64_t
 mds_update_hwm(int batchno)
 {
-	uint64_t value = 0;
 	struct sl_mds_peerinfo *peerinfo;
 	struct resprof_mds_info *rpmi;
 	struct sl_resm *resm;
+	uint64_t value = 0;
 
 	SL_MDS_WALK(resm,
 		if (resm == nodeResm)
@@ -1268,8 +1268,8 @@ mds_send_reclaim(__unusedx struct psc_thread *thr)
 void
 mds_send_update(__unusedx struct psc_thread *thr)
 {
-	int rv, didwork;
 	uint64_t batchno;
+	int rv, didwork;
 
 	/*
 	 * This thread scans the batches of updates between the low and
