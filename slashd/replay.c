@@ -283,6 +283,13 @@ mds_redo_ino_addrepl(struct psc_journal_enthdr *pje)
 	return (rc);
 }
 
+/**
+ * mds_redo_namespace - Replay a NAMESPACE modification operation.
+ *	Note: this may not be a replay but could also be a namespace
+ *	update from a remote MDS.
+ * @sjnm: journal entry.
+ * @replay: whether this is a replay or remote MDS update.
+ */
 int
 mds_redo_namespace(struct slmds_jent_namespace *sjnm, int replay)
 {

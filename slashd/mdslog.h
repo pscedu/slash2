@@ -76,6 +76,8 @@ void	mds_current_txg(uint64_t *);
 void	mds_reserve_slot(void);
 void	mds_unreserve_slot(void);
 
+int	mds_redo_namespace(struct slmds_jent_namespace *, int);
+
 int	mds_replay_handler(struct psc_journal_enthdr *);
 
 extern struct psc_journal		*mdsJournal;
