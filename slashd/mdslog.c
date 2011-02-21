@@ -180,7 +180,7 @@ mds_record_update_prog(void)
 		update_prog_buf[i].res_batchno = peerinfo->sp_batchno;
 		i++;
 	);
-	rc = mds_write_file(update_progfile_handle, (void *)update_prog_buf,
+	rc = mds_write_file(update_progfile_handle, update_prog_buf,
 	    i * sizeof(struct update_prog_entry), &size, 0);
 	psc_assert(rc == 0);
 	psc_assert(size == (size_t)i * sizeof(struct update_prog_entry));
@@ -203,7 +203,7 @@ mds_record_reclaim_prog(void)
 		reclaim_prog_buf[nios].res_batchno = iosinfo->si_batchno;
 		nios++;
 	}
-	rc = mds_write_file(reclaim_progfile_handle, (void *)reclaim_prog_buf,
+	rc = mds_write_file(reclaim_progfile_handle, reclaim_prog_buf,
 	    nios * sizeof(struct reclaim_prog_entry), &size, 0);
 	psc_assert(rc == 0);
 	psc_assert(size == (size_t)nios * sizeof(struct reclaim_prog_entry));
@@ -708,8 +708,9 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 	reclaim_entry.fg.fg_fid = sjnm->sjnm_target_fid;
 	reclaim_entry.fg.fg_gen = sjnm->sjnm_target_gen;
 
-	rc = mds_write_file(reclaim_logfile_handle, (void*)&reclaim_entry,
-	    sizeof(struct srt_reclaim_entry), &size, reclaim_logfile_offset);
+	rc = mds_write_file(reclaim_logfile_handle, &reclaim_entry,
+	    sizeof(struct srt_reclaim_entry), &size,
+	    reclaim_logfile_offset);
 	if (size != sizeof(struct srt_reclaim_entry))
 		psc_fatal("Failed to write reclaim log file, batchno=%"PRId64,
 		    current_reclaim_batchno);
@@ -818,7 +819,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 
  write_update:
 
-	rc = mds_write_file(update_logfile_handle, (void *)&update_entry,
+	rc = mds_write_file(update_logfile_handle, &update_entry,
 	    sizeof(struct srt_update_entry), &size,
 	    update_logfile_offset);
 	if (size != sizeof(struct srt_update_entry))
@@ -1838,7 +1839,7 @@ mds_journal_init(int disable_propagation)
 
 	reclaim_prog_buf = PSCALLOC(MAX_RECLAIM_PROG_ENTRY *
 	    sizeof(struct reclaim_prog_entry));
-	rc = mds_read_file(reclaim_progfile_handle, (void *) reclaim_prog_buf,
+	rc = mds_read_file(reclaim_progfile_handle, reclaim_prog_buf,
 	    MAX_RECLAIM_PROG_ENTRY * sizeof(struct reclaim_prog_entry),
 	    &size, 0);
 	psc_assert(rc == 0);
@@ -1912,7 +1913,7 @@ mds_journal_init(int disable_propagation)
 
 	update_prog_buf = PSCALLOC(MAX_UPDATE_PROG_ENTRY * sizeof(struct
 	    update_prog_entry));
-	rc = mds_read_file(update_progfile_handle, (void *)update_prog_buf,
+	rc = mds_read_file(update_progfile_handle, update_prog_buf,
 	    MAX_UPDATE_PROG_ENTRY * sizeof(struct update_prog_entry),
 	    &size, 0);
 	psc_assert(rc == 0);
