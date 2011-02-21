@@ -17,6 +17,7 @@ SRCS+=		mdslog.c
 SRCS+=		metadir.c
 SRCS+=		rcmc.c
 SRCS+=		repl_mds.c
+SRCS+=		replay.c
 SRCS+=		rmc.c
 SRCS+=		rmi.c
 SRCS+=		rmm.c

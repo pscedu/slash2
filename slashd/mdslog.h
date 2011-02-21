@@ -20,11 +20,7 @@
 #ifndef _SLASHD_MDSLOG_H_
 #define _SLASHD_MDSLOG_H_
 
-#include <sys/stat.h>
-
 #include "psc_util/journal.h"
-
-#include "inode.h"
 
 struct bmapc_memb;
 struct fidc_membh;
@@ -80,8 +76,9 @@ void	mds_current_txg(uint64_t *);
 void	mds_reserve_slot(void);
 void	mds_unreserve_slot(void);
 
-int	mds_redo_namespace(struct slmds_jent_namespace *, int);
+int	mds_replay_handler(struct psc_journal_enthdr *);
 
-extern struct psc_journal *mdsJournal;
+extern struct psc_journal		*mdsJournal;
+extern struct psc_journal_cursor	 mds_cursor;
 
 #endif /* _SLASHD_MDSLOG_H_ */
