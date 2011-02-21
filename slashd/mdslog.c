@@ -683,6 +683,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 	    sjnm->sjnm_op == NS_OP_SETSIZE);
 
 	if (reclaim_logfile_handle == NULL) {
+		reclaim_logfile_offset = 0;
 		mds_open_logfile(current_reclaim_batchno, 0, 0, &reclaim_logfile_handle);
 		/*
 		 * Here we do one-time seek based on the xid stored in
@@ -699,7 +700,6 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 			total = size / sizeof(struct srt_reclaim_entry);
 
 			count = 0;
-			reclaim_logfile_offset = 0;
 			reclaim_entryp = reclaimbuf;
 			while (count < total) {
 				if (reclaim_entryp->xid == pje->pje_xid) {
@@ -751,7 +751,13 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 		return (0);
 
 	if (update_logfile_handle == NULL) {
+		update_logfile_offset = 0;
 		mds_open_logfile(current_update_batchno, 1, 0, &update_logfile_handle);
+		/*
+		 * Here we do one-time seek based on the xid stored in
+		 * the entry.  Although not necessary contiguous, xids
+		 * are in increasing order.
+		 */
 		if (action == 1) {
 			rc = mds_read_file(update_logfile_handle, updatebuf,
 			    SLM_UPDATE_BATCH * sizeof(struct srt_update_entry), &size, 0);
@@ -761,7 +767,6 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 			total = size / sizeof(struct srt_update_entry);
 
 			count = 0;
-			update_logfile_offset = 0;
 			update_entryp = updatebuf;
 			while (count < total) {
 				if (update_entryp->xid == pje->pje_xid) {
@@ -774,7 +779,6 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 			}
 		}
 	}
-
 
 	memset(&update_entry, 0, sizeof(update_entry));
 	update_entry.xid = pje->pje_xid;
