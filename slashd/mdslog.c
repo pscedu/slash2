@@ -60,7 +60,7 @@ extern struct bmap_timeo_table	 mdsBmapTimeoTbl;
 uint64_t			 current_update_batchno;
 uint64_t			 current_reclaim_batchno;
 
-psc_spinlock_t			 mds_distill_lock = SPINLOCK_INIT;
+static psc_spinlock_t		 mds_distill_lock = SPINLOCK_INIT;
 
 uint64_t			 current_update_xid = 0;
 uint64_t			 current_reclaim_xid = 0;
@@ -619,25 +619,35 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 	uint16_t type;
 
 	/*
-	 * Make sure that the distill log hits the disk now.
+	 * Make sure that the distill log hits the disk now. This action
+	 * can be called by any process that needs log space.
 	 */
 	if (action == 2) {
 
 		spinlock(&mds_distill_lock);
 		if (xid < sync_update_xid) {
+			sync_update_xid = current_update_xid;
+			freelock(&mds_distill_lock);
+
 			psc_assert(update_logfile_handle);
 			mdsio_fsync(&rootcreds, 0, update_logfile_handle);
-			sync_update_xid = current_update_xid;
+			spinlock(&mds_distill_lock);
 		}
 		if (xid < sync_reclaim_xid)  {
+			sync_reclaim_xid = current_reclaim_xid;
+			freelock(&mds_distill_lock);
+
 			psc_assert(reclaim_logfile_handle);
 			mdsio_fsync(&rootcreds, 0, reclaim_logfile_handle);
-			sync_reclaim_xid = current_reclaim_xid;
-		}
-		freelock(&mds_distill_lock);
+		} else
+			freelock(&mds_distill_lock);
 
 		return (0);
 	}
+
+	/*
+	 * The following can only be executed by the single distill thread.
+	 */
 
 	psc_assert(pje->pje_magic == PJE_MAGIC);
 
@@ -713,11 +723,13 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 	reclaim_logfile_offset += sizeof(struct srt_reclaim_entry);
 	if (reclaim_logfile_offset == SLM_RECLAIM_BATCH * sizeof(struct srt_reclaim_entry)) {
 
-		spinlock(&mds_distill_lock);
 		mdsio_fsync(&rootcreds, 0, reclaim_logfile_handle);
 		mdsio_release(&rootcreds, reclaim_logfile_handle);
+
 		reclaim_logfile_handle = NULL;
 		current_reclaim_batchno++;
+
+		spinlock(&mds_distill_lock);
 		sync_reclaim_xid = pje->pje_xid;
 		freelock(&mds_distill_lock);
 
@@ -813,11 +825,13 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 	update_logfile_offset += sizeof(struct srt_reclaim_entry);
 	if (update_logfile_offset == SLM_UPDATE_BATCH * sizeof(struct srt_update_entry)) {
 
-		spinlock(&mds_distill_lock);
 		mdsio_fsync(&rootcreds, 0, update_logfile_handle);
 		mdsio_release(&rootcreds, update_logfile_handle);
+
 		update_logfile_handle = NULL;
 		current_update_batchno++;
+
+		spinlock(&mds_distill_lock);
 		sync_update_xid = pje->pje_xid;
 		freelock(&mds_distill_lock);
 
