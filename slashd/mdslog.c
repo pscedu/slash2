@@ -1877,9 +1877,9 @@ mds_journal_init(int disable_propagation)
 	if (!npeers)
 		goto replay_log;
 
-	xmkfn(reclaim_progfile_name, "%s/%s.%s.%lu.%d", sl_datadir,
-	    SL_FN_UPDATEPROG, psc_get_hostname(),
-	    mds_cursor.pjc_timestamp, index);
+	xmkfn(reclaim_progfile_name, "%s.%s.%lu",
+	    SL_FN_RECLAIMPROG, psc_get_hostname(),
+	    mds_cursor.pjc_timestamp);
 
 	rc = mds_open_file(reclaim_progfile_name, O_RDWR, &update_progfile_handle);
 	psc_assert(rc == 0);
