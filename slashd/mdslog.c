@@ -156,7 +156,7 @@ mds_open_file(char *fn, int flags, void **handle)
 }
 
 static int
-mds_read_file(void *handle, char *buf, size_t size, size_t *nb, off_t off)
+mds_read_file(void *handle, void *buf, size_t size, size_t *nb, off_t off)
 {
 	int rc;
 
@@ -165,7 +165,7 @@ mds_read_file(void *handle, char *buf, size_t size, size_t *nb, off_t off)
 }
 
 static int
-mds_write_file(void *handle, char *buf, size_t size, size_t *nb, off_t off)
+mds_write_file(void *handle, const void *buf, size_t size, size_t *nb, off_t off)
 {
 	int rc;
 
@@ -173,7 +173,6 @@ mds_write_file(void *handle, char *buf, size_t size, size_t *nb, off_t off)
 	    NULL, NULL);
 	return (rc);
 }
-
 
 static void
 mds_record_update_prog(void)
