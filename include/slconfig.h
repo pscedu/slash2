@@ -56,8 +56,8 @@ enum sl_res_type {
 	SLREST_COMPUTE			= 3,
 	SLREST_MDS			= 4,
 	SLREST_PARALLEL_FS		= 5 | SLREST_FS,
-	SLREST_STANDALONE_FS		= 6 | SLREST_FS,
-}
+	SLREST_STANDALONE_FS		= 6 | SLREST_FS
+};
 
 /* Resource (I/O system, MDS) */
 struct sl_resource {
