@@ -254,8 +254,8 @@ mds_remove_logfile(uint64_t batchno, int update)
 int
 mds_open_logfile(uint64_t batchno, int update, int readonly, void **handle)
 {
-	int rc;
 	char log_fn[PATH_MAX];
+	int rc;
 
 	if (update) {
 		xmkfn(log_fn, "%s.%d.%s.%lu",
@@ -270,8 +270,7 @@ mds_open_logfile(uint64_t batchno, int update, int readonly, void **handle)
 		/*
 		 * The caller should check the return value.
 		 */
-		rc = mds_open_file(log_fn, O_RDONLY, handle);
-		return (rc);
+		return (mds_open_file(log_fn, O_RDONLY, handle));
 	}
 
 	/*
@@ -645,7 +644,7 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 	if (!distill)
 		pjournal_put_buf(mdsJournal, sjnm);
 
-	psclog_notice("Namespace Op: op = %d, fid = %"PRId64", txg = %"PRId64,
+	psclog_notice("namespace op: op=%d fid="SLPRI_FID" txg=%"PRId64,
 	    op, sjnm->sjnm_target_fid, txg);
 }
 
@@ -930,7 +929,8 @@ mds_send_batch_update(uint64_t batchno)
 	}
 	CONF_ULOCK();
 	/*
-	 * Record the progress first before potentially remove old log file.
+	 * Record the progress first before potentially removing an old
+	 * log file.
 	 */
 	if (record)
 		mds_record_update_prog();
