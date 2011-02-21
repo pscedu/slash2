@@ -145,10 +145,13 @@ mds_open_file(char *fn, int flags, void **handle)
 	mdsio_fid_t mf;
 
 	rc = mdsio_lookup(MDSIO_FID_ROOT, fn, &mf, &rootcreds, NULL);
-	if (rc && ((flags & O_CREAT) == 0))
-		return (rc);
-	rc = mdsio_opencreate(mf, &rootcreds, flags, 0, NULL, NULL,
-	    NULL, handle, NULL, NULL);
+	if (rc == ENOENT && (flags & O_CREAT)) {
+		rc = mdsio_opencreate(MDSIO_FID_ROOT, &rootcreds, flags, 0600, fn, NULL,
+		    NULL, handle, NULL, NULL);
+	} else if (!rc) {
+		rc = mdsio_opencreate(mf, &rootcreds, flags, 0, NULL, NULL,
+		    NULL, handle, NULL, NULL);
+	}
 	return (rc);
 }
 
