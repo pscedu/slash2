@@ -1621,7 +1621,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off,
 	FCMH_LOCK(mfh->mfh_fcmh);
 
 	if (!size || (rw == SL_READ &&
-	    off >= fcmh_2_fsz(mfh->mfh_fcmh))) {
+	    off >= (off_t)fcmh_2_fsz(mfh->mfh_fcmh))) {
 		FCMH_ULOCK(mfh->mfh_fcmh);
 		rc = 0;
 		goto out;
@@ -1647,7 +1647,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off,
 	psc_assert(roff < SLASH_BMAP_SIZE);
 	/* Length of the first bmap request.
 	 */
-	tlen  = MIN(SLASH_BMAP_SIZE - roff, size);
+	tlen  = MIN(SLASH_BMAP_SIZE - (size_t)roff, size);
 	/* Foreach block range, get its bmap and make a request into its
 	 *  page cache.  This first loop retrieves all the pages.
 	 */
