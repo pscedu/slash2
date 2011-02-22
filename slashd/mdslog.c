@@ -211,7 +211,7 @@ mds_record_reclaim_prog(void)
 	size_t size;
 
 	SITE_FOREACH_RES(nodeSite, res, ri) {
-		if (res->res_type == SLREST_MDS)
+		if (!RES_ISFS(res))
 			continue;
 		iosinfo = res2rpmi(res)->rpmi_info;
 		reclaim_prog_buf[nios].res_id = res->res_id;
@@ -662,7 +662,7 @@ mds_reclaim_lwm(int batchno)
 	int ri;
 
 	SITE_FOREACH_RES(nodeSite, res, ri) {
-		if (res->res_type == SLREST_MDS)
+		if (!RES_ISFS(res))
 			continue;
 		rpmi = res2rpmi(res);
 		iosinfo = rpmi->rpmi_info;
@@ -691,7 +691,7 @@ mds_reclaim_hwm(int batchno)
 	int ri;
 
 	SITE_FOREACH_RES(nodeSite, res, ri) {
-		if (res->res_type == SLREST_MDS)
+		if (!RES_ISFS(res))
 			continue;
 		rpmi = res2rpmi(res);
 		iosinfo = rpmi->rpmi_info;
@@ -1125,7 +1125,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 
 	nios = 0;
 	SITE_FOREACH_RES(nodeSite, res, ri) {
-		if (res->res_type == SLREST_MDS)
+		if (!RES_ISFS(res))
 			continue;
 		nios++;
 		rpmi = res2rpmi(res);
@@ -1521,7 +1521,7 @@ mds_journal_init(int disable_propagation)
 	/* Make sure we have some I/O servers to work with */
 	nios = 0;
 	SITE_FOREACH_RES(nodeSite, res, ri)
-		if (res->res_type != SLREST_MDS)
+		if (!RES_ISFS(res))
 			nios++;
 	if (!nios)
 		psc_fatalx("Missing I/O servers at site %s",

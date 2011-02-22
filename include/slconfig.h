@@ -47,17 +47,21 @@ struct slashrpc_cservice;
 #define SL_PEER_MAX	16
 #define LNET_NAME_MAX	32
 
-#define SLREST_FS	0x100000
-
 enum sl_res_type {
-	SLREST_NONE			= 0, /* must be zero */
-	SLREST_ARCHIVAL_FS		= 1 | SLREST_FS,
-	SLREST_CLUSTER_NOSHARE_FS	= 2 | SLREST_FS,
-	SLREST_COMPUTE			= 3,
-	SLREST_MDS			= 4,
-	SLREST_PARALLEL_FS		= 5 | SLREST_FS,
-	SLREST_STANDALONE_FS		= 6 | SLREST_FS
+	SLREST_NONE,
+	SLREST_ARCHIVAL_FS,
+	SLREST_CLUSTER_NOSHARE_FS,
+	SLREST_COMPUTE,
+	SLREST_MDS,
+	SLREST_PARALLEL_FS,
+	SLREST_STANDALONE_FS
 };
+
+#define RES_ISFS(res)							\
+	((res)->res_type == SLREST_ARCHIVAL_FS	||			\
+	 (res)->res_type == SLREST_CLUSTER_NOSHARE_FS ||		\
+	 (res)->res_type == SLREST_PARALLEL_FS	||			\
+	 (res)->res_type == SLREST_STANDALONE_FS)
 
 /* Resource (I/O system, MDS) */
 struct sl_resource {
