@@ -469,25 +469,6 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	return (0);
 }
 
-struct rnd_iterator {
-	int	ri_n;
-	int	ri_rnd_idx;
-	int	ri_iter;
-};
-
-#define FOREACH_RND(ri, n)						\
-	for ((ri)->ri_n = (n), (ri)->ri_iter = 0,			\
-	    (ri)->ri_rnd_idx = psc_random32u((ri)->ri_n);		\
-	    (ri)->ri_iter < (ri)->ri_n;					\
-	    (ri)->ri_iter++,						\
-	    (ri)->ri_rnd_idx = ((ri)->ri_rnd_idx + 1) % (ri)->ri_n)
-
-#define RESET_RND_ITER(ri)						\
-	do {								\
-		(ri)->ri_iter = 0;					\
-		(ri)->ri_rnd_idx = psc_random32u((ri)->ri_n);		\
-	} while (0)
-
 void
 slmupschedthr_main(struct psc_thread *thr)
 {
