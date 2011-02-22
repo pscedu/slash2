@@ -833,7 +833,6 @@ msl_try_get_replica_resm(struct bmapc_memb *bcm, int iosidx)
 	struct sl_resource *res;
 	struct rnd_iterator it;
 	struct sl_resm *resm;
-	int j, rnd, nios;
 
 	fci = fcmh_2_fci(bcm->bcm_fcmh);
 	bci = bmap_2_bci(bcm);
