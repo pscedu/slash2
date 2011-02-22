@@ -831,6 +831,7 @@ msl_try_get_replica_resm(struct bmapc_memb *bcm, int iosidx)
 	struct bmap_cli_info *bci;
 	struct fcmh_cli_info *fci;
 	struct sl_resource *res;
+	struct rnd_iterator it;
 	struct sl_resm *resm;
 	int j, rnd, nios;
 
@@ -843,12 +844,17 @@ msl_try_get_replica_resm(struct bmapc_memb *bcm, int iosidx)
 
 	res = libsl_id2res(fci->fci_reptbl[iosidx].bs_id);
 
-	nios = psc_dynarray_len(&res->res_members);
-	rnd = psc_random32u(nios);
-	for (j = 0; j < nios; j++, rnd++) {
-		if (rnd >= nios)
-			rnd = 0;
-		resm = psc_dynarray_getpos(&res->res_members, rnd);
+#if 0
+	FOREACH_RND(&it, psc_dynarray_len(&res->res_members)) {
+		resm = psc_dynarray_getpos(&res->res_members, it.ri_rnd_idx);
+		csvc = slc_geticsvc_nb(resm);
+		if (csvc)
+			return (csvc);
+	}
+#endif
+
+	FOREACH_RND(&it, psc_dynarray_len(&res->res_members)) {
+		resm = psc_dynarray_getpos(&res->res_members, it.ri_rnd_idx);
 		csvc = slc_geticsvc(resm);
 		if (csvc)
 			return (csvc);
