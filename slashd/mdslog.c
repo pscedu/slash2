@@ -1515,6 +1515,7 @@ mds_journal_init(int disable_propagation)
 	size_t size;
 	void *handle;
 
+	psc_assert(MDS_LOG_LAST <= (1 << 15));
 	psc_assert(sizeof(struct srt_update_entry) == 512);
 	psc_assert(sizeof(struct srt_reclaim_entry) == 512);
 

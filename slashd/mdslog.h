@@ -41,8 +41,11 @@ struct sl_mds_crc_log {
 #define MDS_LOG_BMAP_REPL	(_PJE_FLSHFT << 0)
 #define MDS_LOG_BMAP_CRC	(_PJE_FLSHFT << 1)
 #define MDS_LOG_BMAP_SEQ	(_PJE_FLSHFT << 2)
-#define MDS_LOG_INO_ADDREPL	(_PJE_FLSHFT << 3)
-#define MDS_LOG_NAMESPACE	(_PJE_FLSHFT << 4)
+#define MDS_LOG_BMAP_ASSIGN	(_PJE_FLSHFT << 3)
+#define MDS_LOG_INO_ADDREPL	(_PJE_FLSHFT << 4)
+#define MDS_LOG_NAMESPACE	(_PJE_FLSHFT << 5)
+
+#define MDS_LOG_LAST		MDS_LOG_NAMESPACE
 
 /*
  * A structure used to describe the log application progress on each site.
