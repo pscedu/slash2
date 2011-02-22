@@ -195,6 +195,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct sl_expcli_ops);
 	PRTYPE(struct sl_fcmh_ops);
 	PRTYPE(struct sl_gconf);
+	PRTYPE(struct sl_mds_bmap_log);
 	PRTYPE(struct sl_mds_crc_log);
 	PRTYPE(struct sl_mds_iosinfo);
 	PRTYPE(struct sl_mds_nsstats);
