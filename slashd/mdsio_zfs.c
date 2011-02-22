@@ -59,7 +59,7 @@ mdsio_fcmh_setattr(struct fidc_membh *f, int setattrflags)
 {
 	return (zfsslash2_setattr(fcmh_2_mdsio_fid(f), &f->fcmh_sstb,
 	    setattrflags, &rootcreds, NULL,
-	    fcmh_2_fmi(f)->fmi_mdsio_data, NULL));
+	    fcmh_2_fmi(f)->fmi_mdsio_data, NULL)); /* XXX mds_namespace_log */
 }
 
 int
