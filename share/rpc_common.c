@@ -414,12 +414,14 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 		case SLCONNT_IOD:
 			resm = libsl_nid2resm(peernid);
 			if (resm->resm_res->res_type == SLREST_MDS)
-				goto out;
+				psc_fatalx("csvc requested type is IOD "
+				    "but resource is MDS");
 			break;
 		case SLCONNT_MDS:
 			resm = libsl_nid2resm(peernid);
 			if (resm->resm_res->res_type != SLREST_MDS)
-				goto out;
+				psc_fatalx("csvc requested type is MDS "
+				    "but resource is IOD");
 			break;
 		default:
 			psc_fatalx("%d: bad connection type", ctype);
