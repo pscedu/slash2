@@ -1522,7 +1522,7 @@ mds_journal_init(int disable_propagation)
 	/* Make sure we have some I/O servers to work with */
 	nios = 0;
 	SITE_FOREACH_RES(nodeSite, res, ri)
-		if (!RES_ISFS(res))
+		if (RES_ISFS(res))
 			nios++;
 	if (!nios)
 		psc_fatalx("Missing I/O servers at site %s",
