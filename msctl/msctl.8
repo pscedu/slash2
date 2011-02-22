@@ -15,7 +15,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES rpc fuse %
-.Dd February 17, 2011
+.Dd February 22, 2011
 .Dt MSCTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -43,7 +43,7 @@ utility controls
 behavior.
 .Pp
 The options are as follows:
-.Bl -tag -width Ds
+.Bl -tag -width 3n
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/c.mdoc {
 .\"	daemon	=> qq{mount_slash},
 .\"	cmds	=> {
@@ -65,7 +65,7 @@ Perform a
 file system operation.
 .Pp
 The following actions are available:
-.Bl -tag -width 3n
+.Bl -tag -width 1n
 .It Xo
 .Sm off
 .Cm new-repl-policy
@@ -110,7 +110,7 @@ for the given file
 .Pp
 .Ar bmapspec
 has the following format:
-.Bd -literal -offset indent
+.Bd -literal -offset 3n
 .Sm off
 .Ar bmapno-min
 .Op Li -\& Ar bmapno-max
@@ -171,7 +171,7 @@ The default behavior is to apply the operation to all applicable threads.
 .Pp
 .Ar param
 may be one of the following:
-.Bl -tag -width 3n -offset 3n
+.Bl -tag -width 1n -offset 3n
 .It Cm fuse.debug
 .Tn FUSE
 debug messages.
@@ -262,6 +262,14 @@ Threshold for unused items for auto-sized pools before items are freed.
 .It Cm total
 Current number of entries contained in pool.
 .El
+.It Cm pscfs.attr_timeout
+Amount of time to cache
+.Xr stat 2
+information in
+.Tn FUSE .
+.It Cm pscfs.entry_timeout
+Amount of time to cache name space entries in
+.Tn FUSE .
 .It Cm rlim
 Process resource limits.
 See
@@ -290,7 +298,7 @@ systems specified.
 .Pp
 .Ar replrqspec
 has the following format:
-.Bd -unfilled -offset indent
+.Bd -unfilled -offset 3n
 .Sm off
 .Ar ios Op Cm ,\& Ar ...
 .Cm :\& Ar bmapno-min
@@ -343,7 +351,7 @@ Note that file names are unavailable in this mode.
 .Pp
 The following legend lists the states a block map may be in for the
 one-time or persistent replication policies:
-.Bl -column "scheduled for replicati" "one-ti" "Indicator" -offset indent
+.Bl -column "scheduled for replicati" "one-ti" "Indicator" -offset 3n
 .It Sy State                   Ta Sy One-time Ta Sy Persistent
 .It ================================================
 .It active                     Ta Li + Ta Li *
@@ -417,7 +425,7 @@ has the following format:
 may be specified as any non-ambiguous prefix abbreviation of the
 following:
 .Pp
-.Bl -tag -width 3n -offset 3n
+.Bl -tag -width 1n -offset 3n
 .It Cm connections
 Status of
 .Tn SLASH
