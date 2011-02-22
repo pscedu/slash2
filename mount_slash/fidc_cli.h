@@ -27,9 +27,6 @@
 #include "fidcache.h"
 #include "dircache.h"
 
-#define MSLFS_ENTRY_TIMEO	8.0
-#define MSLFS_ATTR_TIMEO	8.0
-
 struct fidc_membh;
 
 struct cli_finfo {

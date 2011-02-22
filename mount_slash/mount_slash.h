@@ -114,5 +114,9 @@ extern struct timespec		 msl_bmap_max_lease;
 extern struct timespec		 msl_bmap_timeo_inc;
 
 extern struct psc_listcache	 bmapTimeoutQ;
+extern struct psc_waitq		 bmapflushwaitq;
+
+extern double			 msl_entry_timeout;
+extern double			 msl_attr_timeout;
 
 #endif /* _MOUNT_SLASH_H_ */
