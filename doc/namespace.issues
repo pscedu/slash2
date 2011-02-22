@@ -636,3 +636,11 @@ user	0m15.517s
 sys	0m3.138s
 
 But some files seem missing from the MDS (wolverine) that receiving the updates.
+
+The above issue seems to be fixed before this submission:
+
+zhihui@lemon: ~$ ls -al /zzh-slash2-lemon/linux-2.6.34/ | wc
+     33     290    1642
+zhihui@lemon: ~$ ls -al /zzh-slash2/linux-2.6.34/ | wc
+     33     290    1642
+
