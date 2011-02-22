@@ -92,9 +92,6 @@ struct slash_creds		 rootcreds = { 0, 0 };
 /* number of attribute prefetch in readdir() */
 int				 nstbpref = DEF_READDIR_NENTS;
 
-double				 msl_entry_timeout = 8.;
-double				 msl_attr_timeout = 8.;
-
 static int msl_lookup_fidcache(const struct slash_creds *, pscfs_inum_t,
     const char *, struct slash_fidgen *, struct srt_stat *);
 
@@ -365,8 +362,8 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 
 	pscfs_reply_create(pfr, mp ? mp->cattr.sst_fid : 0,
-	    mp ? mp->cattr.sst_gen : 0, msl_entry_timeout, &stb,
-	    msl_attr_timeout, mfh, PSCFS_CREATEF_DIO, rc);
+	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
+	    pscfs_attr_timeout, mfh, PSCFS_CREATEF_DIO, rc);
 
 	if (rq)
 		pscrpc_req_finished(rq);
@@ -584,7 +581,7 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
  out:
 	if (f)
 		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
-	pscfs_reply_getattr(pfr, &stb, msl_attr_timeout, rc);
+	pscfs_reply_getattr(pfr, &stb, pscfs_attr_timeout, rc);
 }
 
 __static void
@@ -670,8 +667,8 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 
 	pscfs_reply_link(pfr, mp ? mp->cattr.sst_fid : 0,
-	    mp ? mp->cattr.sst_gen : 0, msl_entry_timeout, &stb,
-	    msl_attr_timeout, rc);
+	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
+	    pscfs_attr_timeout, rc);
 
 	if (rq)
 		pscrpc_req_finished(rq);
@@ -748,8 +745,8 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 
 	pscfs_reply_mkdir(pfr, mp ? mp->cattr.sst_fid : 0,
-	    mp ? mp->cattr.sst_gen : 0, msl_entry_timeout, &stb,
-	    msl_attr_timeout, rc);
+	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
+	    pscfs_attr_timeout, rc);
 
 	if (rq)
 		pscrpc_req_finished(rq);
@@ -939,8 +936,8 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
  out:
 	pscfs_reply_mknod(pfr, mp ? mp->cattr.sst_fid : 0,
-	    mp ? mp->cattr.sst_gen : 0, msl_entry_timeout, &stb,
-	    msl_attr_timeout, rc);
+	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
+	    pscfs_attr_timeout, rc);
 	if (c)
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	if (p)
@@ -1231,7 +1228,7 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		sstb.sst_fid = 0;
 	sl_internalize_stat(&sstb, &stb);
 	pscfs_reply_lookup(pfr, sstb.sst_fid, sstb.sst_gen,
-	    msl_entry_timeout, &stb, msl_attr_timeout, rc);
+	    pscfs_entry_timeout, &stb, pscfs_attr_timeout, rc);
 }
 
 __static void
@@ -1639,8 +1636,8 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 
 	pscfs_reply_symlink(pfr, mp ? mp->cattr.sst_fid : 0,
-	    mp ? mp->cattr.sst_gen : 0, msl_entry_timeout, &stb,
-	    msl_attr_timeout, rc);
+	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
+	    pscfs_attr_timeout, rc);
 
 	if (rq)
 		pscrpc_req_finished(rq);
@@ -1893,7 +1890,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		sl_internalize_stat(&c->fcmh_sstb, stb);
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	}
-	pscfs_reply_setattr(pfr, stb, msl_attr_timeout, rc);
+	pscfs_reply_setattr(pfr, stb, pscfs_attr_timeout, rc);
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
@@ -2225,6 +2222,9 @@ main(int argc, char *argv[])
 
 	slcfg_parse(cfg);
 	msl_init();
+
+	pscfs_entry_timeout = 8.;
+	pscfs_attr_timeout = 8.;
 
 	exit(pscfs_main());
 }
