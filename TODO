@@ -328,7 +328,7 @@ API rename
   are not directly involved
 - do full truncate and unlink do the right things while ptrunc is resolving?
 - add SSL transport which uses keys and can therefore disable authbuf
-- slmctl -s clients do not seem to go away 
+- slmctl -s clients do not seem to go away
 
 - pjd tests used to fail due to inability to send FUSE updates to its
   cache after UNLINK, RENAME operations:
@@ -338,6 +338,8 @@ API rename
 	unlink/00.t	17, 22, 53
 
 - write a ptrunc tester
+- for -s connections, we arguably do not need to show members of the
+  same resource we are part of
 
 ========================================================= KNOWN CAVEATS
 - sljournal constraint on small file names (1023-byte symlink must fit
