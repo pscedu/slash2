@@ -1011,13 +1011,13 @@ msl_io_rpcset_cb(__unusedx struct pscrpc_request_set *set, void *arg, int rc)
 }
 
 int
-msl_io_rpc_cb(__unusedx struct pscrpc_request *req, struct pscrpc_async_args *args)
+msl_io_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
 	struct psc_dynarray *biorqs = args->pointer_arg[1];
 	struct bmpc_ioreq *r;
 	int i;
 
-	DEBUG_REQ(PLL_INFO, req, "biorqs=%p len=%d",
+	DEBUG_REQ(PLL_INFO, rq, "biorqs=%p len=%d",
 		  biorqs, psc_dynarray_len(biorqs));
 
 	DYNARRAY_FOREACH(r, i, biorqs)
@@ -1054,7 +1054,7 @@ __static void
 msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 {
 	struct slashrpc_cservice  *csvc;
-	struct pscrpc_request	  *req;
+	struct pscrpc_request	  *rq;
 	struct bmapc_memb	  *bcm;
 	struct bmap_cli_info	  *bci;
 	struct iovec		  *iovs;
@@ -1090,16 +1090,16 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 	for (i = 0, nbytes = 0; i < n; i++, nbytes += len) {
 		len = MIN(LNET_MTU, (size-nbytes));
 
-		rc = SL_RSX_NEWREQ(csvc, op, req, mq, mp);
+		rc = SL_RSX_NEWREQ(csvc, op, rq, mq, mp);
 		if (rc)
 			psc_fatalx("SL_RSX_NEWREQ() failed %d", rc);
 
-		req->rq_interpret_reply = msl_dio_cb;
+		rq->rq_interpret_reply = msl_dio_cb;
 
 		iovs[i].iov_base = b + nbytes;
 		iovs[i].iov_len  = len;
 
-		rc = rsx_bulkclient(req, (op == SRMT_WRITE ?
+		rc = rsx_bulkclient(rq, (op == SRMT_WRITE ?
 		    BULK_GET_SOURCE : BULK_PUT_SINK), SRIC_BULK_PORTAL,
 		    &iovs[i], 1);
 		if (rc)
@@ -1112,10 +1112,10 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 			(r->biorq_flags & BIORQ_APPEND ? SRM_IOF_APPEND : 0);
 		memcpy(&mq->sbd, &bci->bci_sbd, sizeof(mq->sbd));
 
-		authbuf_sign(req, PSCRPC_MSG_REQUEST);
-		pscrpc_set_add_new_req(r->biorq_rqset, req);
-		if (pscrpc_push_req(req)) {
-			DEBUG_REQ(PLL_ERROR, req, "pscrpc_push_req() failed");
+		authbuf_sign(rq, PSCRPC_MSG_REQUEST);
+		pscrpc_set_add_new_req(r->biorq_rqset, rq);
+		if (pscrpc_push_req(rq)) {
+			DEBUG_REQ(PLL_ERROR, rq, "pscrpc_push_req() failed");
 			psc_fatalx("pscrpc_push_req(), no failover yet");
 		}
 	}
@@ -1197,7 +1197,7 @@ msl_read_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 {
 	struct bmap_pagecache_entry *bmpce;
 	struct slashrpc_cservice *csvc;
-	struct pscrpc_request *req;
+	struct pscrpc_request *rq;
 	struct psc_dynarray *a;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
@@ -1215,7 +1215,7 @@ msl_read_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 
 	psc_assert(csvc);
 
-	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, req, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
 	if (rc)
 		psc_fatalx("SL_RSX_NEWREQ() failed %d", rc);
 
@@ -1249,7 +1249,7 @@ msl_read_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 		psc_dynarray_add(a, bmpce);
 	}
 
-	rc = rsx_bulkclient(req, BULK_PUT_SINK, SRIC_BULK_PORTAL, iovs,
+	rc = rsx_bulkclient(rq, BULK_PUT_SINK, SRIC_BULK_PORTAL, iovs,
 	    npages);
 	PSCFREE(iovs);
 	if (rc)
@@ -1268,16 +1268,16 @@ msl_read_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 	if (!r->biorq_rqset)
 		r->biorq_rqset = pscrpc_prep_set();
 
-	authbuf_sign(req, PSCRPC_MSG_REQUEST);
-	pscrpc_set_add_new_req(r->biorq_rqset, req);
+	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
+	pscrpc_set_add_new_req(r->biorq_rqset, rq);
 	/* Setup the callback, supplying the dynarray as a argument.
 	 */
-	req->rq_interpret_reply = msl_read_cb;
-	req->rq_async_args.pointer_arg[MSL_CB_POINTER_SLOT_BMPCES] = a;
-	req->rq_async_args.pointer_arg[MSL_CB_POINTER_SLOT_BIORQ] = r;
-	req->rq_async_args.pointer_arg[MSL_CB_POINTER_SLOT_CSVC] = csvc;
-	if (pscrpc_push_req(req)) {
-		DEBUG_REQ(PLL_ERROR, req,
+	rq->rq_interpret_reply = msl_read_cb;
+	rq->rq_async_args.pointer_arg[MSL_CB_POINTER_SLOT_BMPCES] = a;
+	rq->rq_async_args.pointer_arg[MSL_CB_POINTER_SLOT_BIORQ] = r;
+	rq->rq_async_args.pointer_arg[MSL_CB_POINTER_SLOT_CSVC] = csvc;
+	if (pscrpc_push_req(rq)) {
+		DEBUG_REQ(PLL_ERROR, rq,
 			  "pscrpc_push_req() failed");
 		psc_fatalx("pscrpc_push_req, no failover yet");
 	}

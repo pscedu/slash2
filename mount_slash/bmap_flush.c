@@ -189,7 +189,7 @@ bmap_flush_create_rpc(struct bmapc_memb *b, struct iovec *iovs,
 		      size_t size, off_t soff, int niovs)
 {
 	struct slashrpc_cservice *csvc;
-	struct pscrpc_request *req;
+	struct pscrpc_request *rq;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	int rc;
@@ -200,29 +200,29 @@ bmap_flush_create_rpc(struct bmapc_memb *b, struct iovec *iovs,
 	if (csvc == NULL)
 		psc_fatalx("msl_bmap_to_csvc() failed to return a client service handle");
 
-	rc = SL_RSX_NEWREQ(csvc, SRMT_WRITE, req, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_WRITE, rq, mq, mp);
 	if (rc)
 		psc_fatalx("SL_RSX_NEWREQ() bad time to fail :( rc=%d", -rc);
 
-	rc = rsx_bulkclient(req, BULK_GET_SOURCE, SRIC_BULK_PORTAL,
+	rc = rsx_bulkclient(rq, BULK_GET_SOURCE, SRIC_BULK_PORTAL,
 	    iovs, niovs);
 	if (rc)
 		psc_fatalx("rsx_bulkclient() failed with %d", rc);
 
-	req->rq_interpret_reply = bmap_flush_rpc_cb;
-	req->rq_async_args.pointer_arg[0] = csvc;
-	req->rq_comp = &rpcComp;
+	rq->rq_interpret_reply = bmap_flush_rpc_cb;
+	rq->rq_async_args.pointer_arg[0] = csvc;
+	rq->rq_comp = &rpcComp;
 
 	mq->offset = soff;
 	mq->size = size;
 	mq->op = SRMIOP_WR;
 
-	DEBUG_REQ(PLL_INFO, req, "off=%u sz=%u op=%u",
+	DEBUG_REQ(PLL_INFO, rq, "off=%u sz=%u op=%u",
 	    mq->offset, mq->size, mq->op);
 
 	memcpy(&mq->sbd, &bmap_2_bci(b)->bci_sbd, sizeof(mq->sbd));
-	authbuf_sign(req, PSCRPC_MSG_REQUEST);
-	return (req);
+	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
+	return (rq);
 }
 
 __static void
@@ -251,7 +251,7 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 		     int niovs)
 {
 	struct slashrpc_cservice *csvc, *tcsvc;
-	struct pscrpc_request *req;
+	struct pscrpc_request *rq;
 	struct bmpc_ioreq *r;
 	struct bmapc_memb *b;
 	off_t soff;
@@ -288,10 +288,10 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 		/* Single RPC case.  Set the appropriate cb handler
 		 *   and attach to the non-blocking request set.
 		 */
-		req = bmap_flush_create_rpc(b, iovs, size, soff, niovs);
-		req->rq_async_args.pointer_arg[1] = biorqs;
+		rq = bmap_flush_create_rpc(b, iovs, size, soff, niovs);
+		rq->rq_async_args.pointer_arg[1] = biorqs;
 		/* biorqs will be freed by the nbreqset callback. */
-		psc_assert(pscrpc_nbreqset_add(pndgReqs, req) == 0);
+		psc_assert(pscrpc_nbreqset_add(pndgReqs, rq) == 0);
 		nrpcs++;
 	} else {
 		/* Deal with a multiple RPC operation */
@@ -307,10 +307,10 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 
 #define LAUNCH_RPC()							\
 	do {								\
-		req = bmap_flush_create_rpc(b, tiov, size, soff, n);	\
-		pscrpc_set_add_new_req(set, req);			\
-		if (pscrpc_push_req(req)) {				\
-			DEBUG_REQ(PLL_ERROR, req,			\
+		rq = bmap_flush_create_rpc(b, tiov, size, soff, n);	\
+		pscrpc_set_add_new_req(set, rq);			\
+		if (pscrpc_push_req(rq)) {				\
+			DEBUG_REQ(PLL_ERROR, rq,			\
 			    "pscrpc_push_req() failed");		\
 			psc_fatalx("no failover yet");			\
 		}							\
