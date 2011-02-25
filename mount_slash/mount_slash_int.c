@@ -578,8 +578,8 @@ msl_bmap_reap_init(struct bmapc_memb *bmap, const struct srt_bmapdesc *sbd)
 }
 
 /**
- * msl_bmap_retrieve - perform a blocking 'LEASEBMAP' operation to retrieve
- *    one or more bmaps from the MDS.
+ * msl_bmap_retrieve - perform a blocking 'LEASEBMAP' operation to
+ *	retrieve one or more bmaps from the MDS.
  * @f: pointer to the fid cache structure to which this bmap belongs.
  * @b: the block id to retrieve (block size == SLASH_BMAP_SIZE).
  * @n: the number of bmaps to retrieve (serves as a simple read-ahead mechanism)
@@ -695,11 +695,11 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
  *
  * XXX have this take a bmapc_memb.
  *
- * Notes:  XXX I think this logic can be simplified when setting mode from
- *    WRONLY to RDWR.  In WRONLY this client already knows the address
- *    of the only ION from which this bmap can be read.  Therefore, it
- *    should be able to interface with that ION without intervention from
- *    the mds.
+ * Notes:  XXX I think this logic can be simplified when setting mode
+ *	from WRONLY to RDWR.  In WRONLY this client already knows the
+ *	address of the only ION from which this bmap can be read.
+ *	Therefore, it should be able to interface with that ION without
+ *	intervention from the MDS.
  */
 __static int
 msl_bmap_modeset(struct bmapc_memb *b, enum rw rw)
@@ -899,9 +899,9 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 }
 
 /**
- * msl_read_cb - rpc callback used only for read or RBW operations.
- *    The primary purpose is to set the bmpce's to DATARDY so that other
- *    threads waiting for DATARDY may be unblocked.
+ * msl_read_cb - RPC callback used only for read or RBW operations.
+ *	The primary purpose is to set the bmpce's to DATARDY so that
+ *	other threads waiting for DATARDY may be unblocked.
  *  Note: Unref of the biorq will happen after the pages have been
  *     copied out to the applicaton buffers.
  */
@@ -1284,9 +1284,9 @@ msl_read_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 }
 
 /**
- * msl_pages_prefetch - Launch read RPCs for pages that are owned by the given
- *     I/O request.  This function is called to perform a pure read request or
- *     a read-before-write for a write request.
+ * msl_pages_prefetch - Launch read RPCs for pages that are owned by the
+ *	given I/O request.  This function is called to perform a pure
+ *	read request or a read-before-write for a write request.
  */
 __static void
 msl_pages_prefetch(struct bmpc_ioreq *r)
@@ -1455,7 +1455,7 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 
 /**
  * msl_pages_copyin - Copy user pages into buffer cache and schedule the
- *    slabs to be sent to the ION backend.
+ *	slabs to be sent to the ION backend.
  * @r: array of request structs.
  * @buf: the source (application) buffer.
  */
@@ -1639,7 +1639,8 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off,
 	FCMH_ULOCK(mfh->mfh_fcmh);
 
 	/* Are these bytes in the cache?
-	 *  Get the start and end block regions from the input parameters.
+	 *  Get the start and end block regions from the input
+	 *  parameters.
 	 */
 	s = off / SLASH_BMAP_SIZE;
 	e = ((off + size) - 1) / SLASH_BMAP_SIZE;
@@ -1662,8 +1663,10 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off,
 		    " rw=%d", tsize, tlen, off, roff, rw);
 
 		psc_assert(tsize);
-		/* Load up the bmap, if it's not available then we're out of
-		 *  luck because we have no idea where the data is!
+		/*
+		 * Load up the bmap, if it's not available then we're
+		 * out of luck because we have no idea where the data
+		 * is!
 		 */
 		rc = msl_bmap_load(mfh, s, rw, &b[nr]);
 		if (rc) {
@@ -1677,8 +1680,8 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off,
 		msl_biorq_build(&r[nr], b[nr], mfh, (roff - (nr * SLASH_BMAP_SIZE)),
 		    tlen, (rw == SL_READ) ? BIORQ_READ : BIORQ_WRITE);
 		/*
-		 * If we are not doing direct I/O, launch read for read requests and pre-read
-		 * for unaligned write requests.
+		 * If we are not doing direct I/O, launch read for read
+		 * requests and pre-read for unaligned write requests.
 		 */
 		if (!(r[nr]->biorq_flags & BIORQ_DIO) && ((r[nr]->biorq_flags & BIORQ_READ) ||
 		     (r[nr]->biorq_flags & BIORQ_RBWFP) || (r[nr]->biorq_flags & BIORQ_RBWLP)))

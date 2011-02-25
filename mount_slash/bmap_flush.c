@@ -67,7 +67,7 @@ bmap_flush_reap_rpcs(void)
 	int i;
 
 	psclog_debug("outstandingRpcCnt=%d (before) rpcComp.rqcomp_compcnt=%d",
-		     atomic_read(&outstandingRpcCnt), atomic_read(&rpcComp.rqcomp_compcnt));
+	    atomic_read(&outstandingRpcCnt), atomic_read(&rpcComp.rqcomp_compcnt));
 
 	/* Only this thread may pull from pndgReqSets dynarray,
 	 *   therefore it can never shrink except by way of this
@@ -119,9 +119,10 @@ bmap_flush_biorq_expired(const struct bmpc_ioreq *a)
 }
 
 /**
- * bmap_flush_coalesce_size - This function determines the size of the region covered by
- *     an array of requests.  Note that these requests can overlap in various ways. But
- *     they have already been ordered based on their offsets.
+ * bmap_flush_coalesce_size - This function determines the size of the
+ *	region covered by an array of requests.  Note that these
+ *	requests can overlap in various ways.  But they have already
+ *	been ordered based on their offsets.
  */
 __static size_t
 bmap_flush_coalesce_size(const struct psc_dynarray *biorqs)
@@ -372,8 +373,9 @@ bmap_flush_biorq_cmp(const void *x, const void *y)
 }
 
 /**
- * bmap_flush_coalesce_map - Scan the given list of bio requests and construct
- *     I/O vectors out of them.  One I/O vector is limited to one page.
+ * bmap_flush_coalesce_map - Scan the given list of bio requests and
+ *	construct I/O vectors out of them.  One I/O vector is limited to
+ *	one page.
  */
 __static int
 bmap_flush_coalesce_map(const struct psc_dynarray *biorqs,
@@ -434,8 +436,8 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs,
 				abort();
 
 			/*
-			 * We might straddle the end offset of the previously
-			 * scheduled I/O request.
+			 * We might straddle the end offset of the
+			 * previously scheduled I/O request.
 			 */
 			if (off - bmpce->bmpce_off >= BMPC_BUFSZ) {
 				/* Similar case to the 'continue' stmt above,
@@ -500,9 +502,9 @@ bmap_flush_biorq_rbwdone(const struct bmpc_ioreq *r)
 	int rc=0;
 
 	bmpce = (r->biorq_flags & BIORQ_RBWFP) ?
-		psc_dynarray_getpos(&r->biorq_pages, 0) :
-		psc_dynarray_getpos(&r->biorq_pages,
-				    psc_dynarray_len(&r->biorq_pages)-1);
+	    psc_dynarray_getpos(&r->biorq_pages, 0) :
+	    psc_dynarray_getpos(&r->biorq_pages,
+		psc_dynarray_len(&r->biorq_pages )- 1);
 
 	BMPCE_LOCK(bmpce);
 	if (bmpce->bmpce_flags & BMPCE_DATARDY)
@@ -527,9 +529,9 @@ bmap_flushready(const struct psc_dynarray *biorqs)
 }
 
 /**
- * bmap_flushable - Check if we can flush the given bmpc (either an I/O request
- *     has expired or we have accumulated a big enough I/O).  This function must
- *     be non-blocking.
+ * bmap_flushable - Check if we can flush the given bmpc (either an I/O
+ *	request has expired or we have accumulated a big enough I/O).
+ *	This function must be non-blocking.
  */
 __static int
 bmap_flushable(struct bmapc_memb *b)
@@ -624,9 +626,9 @@ bmap_flushable(struct bmapc_memb *b)
 }
 
 /**
- * bmap_flush_trycoalesce - Scan the given array of i/o requests for candidates
- *    to flush.  We *only* flush when (1) a request has aged out or (2) we can
- *    construct a large enough I/O.
+ * bmap_flush_trycoalesce - Scan the given array of i/o requests for
+ *	candidates to flush.  We *only* flush when (1) a request has
+ *	aged out or (2) we can construct a large enough I/O.
  */
 __static struct psc_dynarray *
 bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *index)
