@@ -1389,7 +1389,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 }
 
 /**
- * msl_pages_blocking_load - manage data prefetching activities.  This
+ * msl_pages_blocking_load - Manage data prefetching activities.  This
  *	includes waiting on other thread to complete RPC for data in
  *	which we're interested.
  */
@@ -1404,7 +1404,9 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 		if (rc)
 			// XXX need to cleanup properly, you can hit this when mds is down
 			psc_fatalx("pscrpc_set_wait rc=%d", rc);
-		/* The set cb is not being used, msl_read_cb() is
+
+		/*
+		 * The set cb is not being used, msl_read_cb() is
 		 *   called for every rpc in the set.  This was causing
 		 *   the biorq to have its flags mod'd in an incorrect
 		 *   fashion.  For now, the following lines will be moved
@@ -1420,7 +1422,6 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 		 */
 		pscrpc_set_destroy(r->biorq_rqset);
 		r->biorq_rqset = NULL;
-
 	}
 
 	for (i = 0; i < npages; i++) {
