@@ -120,11 +120,11 @@ bmap_flush_biorq_expired(const struct bmpc_ioreq *a)
 }
 
 int
-msl_offline_retry(struct bmpc_ioreq *r)
+_msl_offline_retry(struct bmpc_ioreq *r, int ignore_expire)
 {
 	struct msl_fhent *mfh = r->biorq_fhent;
 
-	if (bmap_flush_biorq_expired(r))
+	if (!ignore_expire && bmap_flush_biorq_expired(r))
 		return (0);
 	if (mfh->mfh_oflags & O_NONBLOCK)
 		return (0);

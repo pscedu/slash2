@@ -1302,12 +1302,12 @@ msl_read_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
  *	given I/O request.  This function is called to perform a pure
  *	read request or a read-before-write for a write request.
  */
-__static void
+__static int
 msl_pages_prefetch(struct bmpc_ioreq *r)
 {
 	struct bmap_pagecache_entry *bmpce;
 	struct bmapc_memb *bcm;
-	int i, npages, sched = 0;
+	int rc = 0, i, npages;
 
 	bcm    = r->biorq_bmap;
 	npages = psc_dynarray_len(&r->biorq_pages);
@@ -1324,7 +1324,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 	if (r->biorq_flags & BIORQ_READ) {
 		int j = -1;
 
-		for (i = 0; i < npages; i++) {
+		for (i = 0; i < npages && !rc; i++) {
 			bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
 			BMPCE_LOCK(bmpce);
 
@@ -1345,24 +1345,20 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 					j = i;
 			} else {
 				if (!biorq_is_my_bmpce(r, bmpce)) {
-					msl_read_rpc_create(r, j, i-j);
+					rc = msl_read_rpc_create(r, j, i-j);
 					j = -1;
-					sched = 1;
 
 				} else if ((i-j) == BMPC_MAXBUFSRPC) {
-					msl_read_rpc_create(r, j, i-j);
+					rc = msl_read_rpc_create(r, j, i-j);
 					j = i;
-					sched = 1;
 				}
 			}
 		}
 
-		if (j >= 0) {
+		if (j >= 0 && !rc)
 			/* Catch any unsent frags at the end of the array.
 			 */
-			msl_read_rpc_create(r, j, i-j);
-			sched = 1;
-		}
+			rc = msl_read_rpc_create(r, j, i-j);
 
 	} else { /* BIORQ_WRITE */
 		if ((r->biorq_flags & (BIORQ_RBWFP|BIORQ_RBWLP)) ==
@@ -1374,8 +1370,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 				psc_assert(bmpce->bmpce_flags & BMPCE_RBWPAGE);
 				psc_assert(!(bmpce->bmpce_flags & BMPCE_DATARDY));
 			}
-			msl_read_rpc_create(r, 0, 2);
-			sched = 1;
+			rc = msl_read_rpc_create(r, 0, 2);
 
 		} else {
 			if (r->biorq_flags & BIORQ_RBWFP) {
@@ -1383,8 +1378,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 				psc_assert(biorq_is_my_bmpce(r, bmpce));
 				psc_assert(!(bmpce->bmpce_flags & BMPCE_DATARDY));
 				psc_assert(bmpce->bmpce_flags & BMPCE_RBWPAGE);
-				msl_read_rpc_create(r, 0, 1);
-				sched = 1;
+				rc = msl_read_rpc_create(r, 0, 1);
 			}
 			if (r->biorq_flags & BIORQ_RBWLP) {
 				bmpce = psc_dynarray_getpos(&r->biorq_pages,
@@ -1392,14 +1386,14 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 				psc_assert(biorq_is_my_bmpce(r, bmpce));
 				psc_assert(!(bmpce->bmpce_flags & BMPCE_DATARDY));
 				psc_assert(bmpce->bmpce_flags & BMPCE_RBWPAGE);
-				msl_read_rpc_create(r, npages - 1, 1);
-				sched = 1;
+				rc = msl_read_rpc_create(r, npages - 1, 1);
 			}
 		}
 	}
 
-	if (sched)
+	if (!rc)
 		r->biorq_flags |= BIORQ_SCHED;
+	return (rc);
 }
 
 /**
@@ -1678,8 +1672,10 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off,
 		    " rw=%d", tsize, tlen, off, roff, rw);
 
 		psc_assert(tsize);
+
+ retry:
 		/*
-		 * Load up the bmap, if it's not available then we're
+		 * Load up the bmap; if it's not available then we're
 		 * out of luck because we have no idea where the data
 		 * is!
 		 */
@@ -1699,8 +1695,16 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off,
 		 * requests and pre-read for unaligned write requests.
 		 */
 		if (!(r[nr]->biorq_flags & BIORQ_DIO) && ((r[nr]->biorq_flags & BIORQ_READ) ||
-		     (r[nr]->biorq_flags & BIORQ_RBWFP) || (r[nr]->biorq_flags & BIORQ_RBWLP)))
-			msl_pages_prefetch(r[nr]);
+		     (r[nr]->biorq_flags & BIORQ_RBWFP) || (r[nr]->biorq_flags & BIORQ_RBWLP))) {
+			rc = msl_pages_prefetch(r[nr]);
+			if (rc) {
+				rc = msl_offline_retry_ignexpire(r[nr]);
+				// release bmap
+				if (rc)
+					goto retry;
+				return (-EIO);
+			}
+		}
 
 		roff += tlen;
 		tsize -= tlen;
