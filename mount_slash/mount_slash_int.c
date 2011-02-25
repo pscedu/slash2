@@ -933,7 +933,7 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 		if (rq->rq_status == -ENOENT)
 			clearpages = 0;
 		else {
-			DEBUG_REQ(PLL_ERROR, rq, "non-zero status status %d",
+			DEBUG_REQ(PLL_ERROR, rq, "non-zero status %d",
 				  rq->rq_status);
 			psc_fatalx("Resolve issues surrounding this failure");
 
@@ -1192,32 +1192,33 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	BMAP_ULOCK(b);
 }
 
-__static void
+__static int
 msl_read_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 {
+	struct slashrpc_cservice *csvc = NULL;
 	struct bmap_pagecache_entry *bmpce;
-	struct slashrpc_cservice *csvc;
-	struct pscrpc_request *rq;
+	struct pscrpc_request *rq = NULL;
 	struct psc_dynarray *a;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct iovec *iovs;
 	int rc, i;
 
+ retry:
 	psc_assert(startpage >= 0);
 	psc_assert(npages <= BMPC_MAXBUFSRPC);
 
 	BMAP_LOCK(r->biorq_bmap);
 	csvc = (r->biorq_bmap->bcm_flags & BMAP_WR) ?
-		msl_bmap_to_csvc(r->biorq_bmap, 1) :
-		msl_bmap_choose_replica(r->biorq_bmap);
+	    msl_bmap_to_csvc(r->biorq_bmap, 1) :
+	    msl_bmap_choose_replica(r->biorq_bmap);
 	BMAP_ULOCK(r->biorq_bmap);
 
 	psc_assert(csvc);
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
 	if (rc)
-		psc_fatalx("SL_RSX_NEWREQ() failed %d", rc);
+		goto error;
 
 	iovs = PSCALLOC(sizeof(*iovs) * npages);
 	a = PSCALLOC(sizeof(*a));
@@ -1276,11 +1277,24 @@ msl_read_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 	rq->rq_async_args.pointer_arg[MSL_CB_POINTER_SLOT_BMPCES] = a;
 	rq->rq_async_args.pointer_arg[MSL_CB_POINTER_SLOT_BIORQ] = r;
 	rq->rq_async_args.pointer_arg[MSL_CB_POINTER_SLOT_CSVC] = csvc;
-	if (pscrpc_push_req(rq)) {
-		DEBUG_REQ(PLL_ERROR, rq,
-			  "pscrpc_push_req() failed");
-		psc_fatalx("pscrpc_push_req, no failover yet");
+	rc = pscrpc_push_req(rq);
+	if (rc)
+		goto error;
+	return (0);
+
+ error:
+	if (rq) {
+		DEBUG_REQ(PLL_ERROR, rq, "req failed");
+		pscrpc_req_finished(rq);
+		rq = NULL;
 	}
+	if (csvc) {
+		sl_csvc_decref(csvc);
+		csvc = NULL;
+	}
+	if (msl_offline_retry(r))
+		goto retry;
+	return (-1);
 }
 
 /**

@@ -278,6 +278,8 @@ struct bmpc_ioreq {
 	    PSCPRI_TIMESPEC_ARGS(&(b)->biorq_issue),			\
 	    DEBUG_BIORQ_FLAGS(b), ## __VA_ARGS__)
 
+int msl_offline_retry(struct bmpc_ioreq *);
+
 static __inline void
 bmpce_freeprep(struct bmap_pagecache_entry *bmpce)
 {

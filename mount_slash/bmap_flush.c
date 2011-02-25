@@ -23,6 +23,7 @@
 #include <stdlib.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/fcntl.h"
 #include "psc_ds/dynarray.h"
 #include "psc_ds/listcache.h"
 #include "psc_rpc/rpc.h"
@@ -118,6 +119,18 @@ bmap_flush_biorq_expired(const struct bmpc_ioreq *a)
 	return (0);
 }
 
+int
+msl_offline_retry(struct bmpc_ioreq *r)
+{
+	struct msl_fhent *mfh = r->biorq_fhent;
+
+	if (bmap_flush_biorq_expired(r))
+		return (0);
+	if (mfh->mfh_oflags & O_NONBLOCK)
+		return (0);
+	return (1);
+}
+
 /**
  * bmap_flush_coalesce_size - This function determines the size of the
  *	region covered by an array of requests.  Note that these
@@ -186,29 +199,31 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 }
 
 __static struct pscrpc_request *
-bmap_flush_create_rpc(struct bmapc_memb *b, struct iovec *iovs,
-		      size_t size, off_t soff, int niovs)
+bmap_flush_create_rpc(void *set, struct bmpc_ioreq *r,
+    struct bmapc_memb *b, struct iovec *iovs, size_t size, off_t soff,
+    int niovs)
 {
-	struct slashrpc_cservice *csvc;
-	struct pscrpc_request *rq;
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	int rc;
 
-	atomic_inc(&outstandingRpcCnt);
-
+ retry:
 	csvc = msl_bmap_to_csvc(b, 1);
 	if (csvc == NULL)
-		psc_fatalx("msl_bmap_to_csvc() failed to return a client service handle");
+		goto error;
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_WRITE, rq, mq, mp);
 	if (rc)
-		psc_fatalx("SL_RSX_NEWREQ() bad time to fail :( rc=%d", -rc);
+		goto error;
 
-	rc = rsx_bulkclient(rq, BULK_GET_SOURCE, SRIC_BULK_PORTAL,
-	    iovs, niovs);
+	rc = rsx_bulkclient(rq, BULK_GET_SOURCE, SRIC_BULK_PORTAL, iovs,
+	    niovs);
 	if (rc)
-		psc_fatalx("rsx_bulkclient() failed with %d", rc);
+		goto error;
+
+	atomic_inc(&outstandingRpcCnt);
 
 	rq->rq_interpret_reply = bmap_flush_rpc_cb;
 	rq->rq_async_args.pointer_arg[0] = csvc;
@@ -223,7 +238,37 @@ bmap_flush_create_rpc(struct bmapc_memb *b, struct iovec *iovs,
 
 	memcpy(&mq->sbd, &bmap_2_bci(b)->bci_sbd, sizeof(mq->sbd));
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
+
+	spinlock(&rq->rq_lock);
+
+	if (set == pndgReqs) {
+		if (pscrpc_nbreqset_add(set, rq))
+			goto error;
+	} else {
+		pscrpc_set_add_new_req(set, rq);
+		rc = pscrpc_push_req(rq);
+		if (rc) {
+			DEBUG_REQ(PLL_ERROR, rq, "send failure: %s",
+			    strerror(rc));
+			pscrpc_set_remove_req(set, rq);
+			goto error;
+		}
+	}
+
 	return (rq);
+
+ error:
+	if (rq) {
+		pscrpc_req_finished_locked(rq);
+		rq = NULL;
+	}
+	if (csvc) {
+		sl_csvc_decref(csvc);
+		csvc = NULL;
+	}
+	if (msl_offline_retry(r))
+		goto retry;
+	return (NULL);
 }
 
 __static void
@@ -247,17 +292,37 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r)
 	BMPC_ULOCK(bmpc);
 }
 
+__static void
+bmap_flush_inflight_unset(struct bmpc_ioreq *r)
+{
+	struct bmap_pagecache *bmpc;
+
+	spinlock(&r->biorq_lock);
+	psc_assert(r->biorq_flags & BIORQ_SCHED);
+	psc_assert(r->biorq_flags & BIORQ_INFL);
+	r->biorq_flags &= ~BIORQ_INFL;
+	DEBUG_BIORQ(PLL_INFO, r, "unset inflight");
+	freelock(&r->biorq_lock);
+
+	bmpc = bmap_2_bmpc(r->biorq_bmap);
+	BMPC_LOCK(bmpc);
+	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
+	pll_addtail(&bmpc->bmpc_new_biorqs, r);
+	BMPC_ULOCK(bmpc);
+}
+
 __static int
 bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 		     int niovs)
 {
 	struct slashrpc_cservice *csvc, *tcsvc;
+	struct pscrpc_request_set *set = NULL;
 	struct pscrpc_request *rq;
 	struct bmpc_ioreq *r;
 	struct bmapc_memb *b;
-	off_t soff;
+	int i, nrpcs = 0;
 	size_t size;
-	int i, nrpcs=0;
+	off_t soff;
 
 	r = psc_dynarray_getpos(biorqs, 0);
 	csvc = msl_bmap_to_csvc(r->biorq_bmap, 1);
@@ -289,14 +354,16 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 		/* Single RPC case.  Set the appropriate cb handler
 		 *   and attach to the non-blocking request set.
 		 */
-		rq = bmap_flush_create_rpc(b, iovs, size, soff, niovs);
-		rq->rq_async_args.pointer_arg[1] = biorqs;
+		rq = bmap_flush_create_rpc(pndgReqs, r, b, iovs, size,
+		    soff, niovs);
+		if (rq == NULL)
+			goto error;
 		/* biorqs will be freed by the nbreqset callback. */
-		psc_assert(pscrpc_nbreqset_add(pndgReqs, rq) == 0);
+		rq->rq_async_args.pointer_arg[1] = biorqs;
+		freelock(&rq->rq_lock);
 		nrpcs++;
 	} else {
 		/* Deal with a multiple RPC operation */
-		struct pscrpc_request_set *set;
 		struct iovec *tiov;
 		int n, j;
 
@@ -308,13 +375,10 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 
 #define LAUNCH_RPC()							\
 	do {								\
-		rq = bmap_flush_create_rpc(b, tiov, size, soff, n);	\
-		pscrpc_set_add_new_req(set, rq);			\
-		if (pscrpc_push_req(rq)) {				\
-			DEBUG_REQ(PLL_ERROR, rq,			\
-			    "pscrpc_push_req() failed");		\
-			psc_fatalx("no failover yet");			\
-		}							\
+		rq = bmap_flush_create_rpc(set, r, b, tiov, size,	\
+		    soff, n);						\
+		if (rq == NULL)						\
+			goto error;					\
 		soff += size;						\
 		nrpcs++;						\
 	} while (0)
@@ -353,6 +417,17 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 		pndgReqsUlock();
 	}
 	return (nrpcs);
+
+ error:
+	bmap_flush_inflight_unset(r);
+	if (set) {
+		spinlock(&set->set_lock);
+		if (set->set_remaining == 0)
+			pscrpc_set_destroy(set);
+		else
+			freelock(&set->set_lock);
+	}
+	return (-1);
 }
 
 __static int
@@ -735,9 +810,9 @@ bmap_flush(void)
 	struct psc_dynarray reqs = DYNARRAY_INIT_NOLOG, bmaps = DYNARRAY_INIT_NOLOG, *biorqs;
 	struct bmap_pagecache *bmpc;
 	struct bmpc_ioreq *r, *tmp;
-	struct iovec *iovs = NULL;
 	struct bmapc_memb *b, *tmpb;
-	int i, j, niovs, nrpcs;
+	struct iovec *iovs = NULL;
+	int n, i, j, niovs, nrpcs;
 
 	i = 0;
 	LIST_CACHE_LOCK(&bmapFlushQ);
@@ -842,15 +917,17 @@ bmap_flush(void)
 			/* Have a set of iov's now.  Let's create an rpc
 			 *   or rpc set and send it out.
 			 */
-			bmap_flush_send_rpcs(biorqs, iovs, niovs);
+			n = bmap_flush_send_rpcs(biorqs, iovs, niovs);
+//			if (n == -1)
+//				mfh->fsync_error = EIO;
 			PSCFREE(iovs);
 		}
 		psc_dynarray_reset(&reqs);
 
 		nrpcs = MAX_OUTSTANDING_RPCS - atomic_read(&outstandingRpcCnt);
 		if (nrpcs < 0) {
-			psclog_notice("stall flush (nrpcs = %d, outstandingRpcCnt=%d)",
-				nrpcs, atomic_read(&outstandingRpcCnt));
+			psclog_notice("stall flush (nrpcs=%d, outstandingRpcCnt=%d)",
+			    nrpcs, atomic_read(&outstandingRpcCnt));
 			break;
 			//psc_waitq_waitrel(&bmapflushwaitq, NULL, &bmapFlushWaitTime);
 		}
