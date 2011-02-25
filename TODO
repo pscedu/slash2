@@ -330,16 +330,17 @@ API rename
 - add SSL transport which uses keys and can therefore disable authbuf
 - slmctl -s clients do not seem to go away
 
+- write a ptrunc tester
+- for -s connections, we arguably do not need to show members of the
+  same resource we are part of
+- patch fuse.ko since fuse_notify_entry_inval() causes segfault
+
 - pjd tests used to fail due to inability to send FUSE updates to its
-  cache after UNLINK, RENAME operations:
+  cache after UNLINK, RENAME operations?
 
 	link/00.t	18-19, 22, 44-45, 48
 	rename/00.t	49, 53, 57, 61
 	unlink/00.t	17, 22, 53
-
-- write a ptrunc tester
-- for -s connections, we arguably do not need to show members of the
-  same resource we are part of
 
 ========================================================= KNOWN CAVEATS
 - sljournal constraint on small file names (1023-byte symlink must fit
