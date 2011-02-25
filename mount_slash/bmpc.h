@@ -18,7 +18,7 @@
  */
 
 /*
- * block map page cache definitions - for managing the in-memory store
+ * Block map page cache definitions - for managing the in-memory store
  * of file regions (bmaps).
  */
 
@@ -44,7 +44,7 @@
 
 #define BMPC_BUFSZ		SLASH_SLVR_BLKSZ
 #define BMPC_BLKSZ		BMPC_BUFSZ
-#define BMPC_SLB_NBLKS		256  /* 8MB slab */
+#define BMPC_SLB_NBLKS		256		/* 8MB slab */
 #define BMPC_DEFSLBS		8
 #define BMPC_MAXSLBS		32
 #define BMPC_BUFMASK		(BMPC_BLKSZ - 1)
@@ -123,7 +123,7 @@ struct bmap_pagecache_entry {
 	(b)->bmpce_flags & BMPCE_EIO			? "E" : ""
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
-	psc_logs((level), PSS_DEF,					\
+	psclogs((level), PSS_DEF,					\
 	    "bmpce@%p fl=%u o=%x b=%p ts="PSCPRI_TIMESPEC" "		\
 	    "wr=%hu rd=%hu "						\
 	    "lru=%d biorq=%p "BMPCE_FLAGS_FORMAT" "fmt,			\
