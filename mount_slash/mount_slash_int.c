@@ -1081,15 +1081,16 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 	bcm = r->biorq_bmap;
 	bci = bmap_2_bci(bcm);
 
+	n = howmany(size, LNET_MTU);
+	iovs = PSCALLOC(sizeof(*iovs) * n);
+
  retry:
 	DEBUG_BIORQ(PLL_INFO, r, "dio req");
 
-	op = r->biorq_flags & BIORQ_WRITE ?
-		SRMT_WRITE : SRMT_READ;
+	op = r->biorq_flags & BIORQ_WRITE ? SRMT_WRITE : SRMT_READ;
 
 	csvc = (op == SRMT_WRITE) ?
-		msl_bmap_to_csvc(bcm, 1) :
-		msl_bmap_choose_replica(bcm);
+	    msl_bmap_to_csvc(bcm, 1) : msl_bmap_choose_replica(bcm);
 	if (csvc == NULL)
 		goto error;
 
@@ -1100,15 +1101,12 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 	 * This buffer hasn't been segmented into LNET sized
 	 *  chunks.  Set up buffers into 1MB chunks or smaller.
 	 */
-	n = (r->biorq_len / LNET_MTU) + ((r->biorq_len % LNET_MTU) ? 1 : 0);
-	iovs = PSCALLOC(sizeof(*iovs) * n);
-
 	for (i = 0, nbytes = 0; i < n; i++, nbytes += len) {
-		len = MIN(LNET_MTU, (size-nbytes));
+		len = MIN(LNET_MTU, size - nbytes);
 
 		rc = SL_RSX_NEWREQ(csvc, op, rq, mq, mp);
 		if (rc)
-			psc_fatalx("SL_RSX_NEWREQ() failed %d", rc);
+			goto error;
 
 		rq->rq_interpret_reply = msl_dio_cb;
 
@@ -1119,20 +1117,20 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 		    BULK_GET_SOURCE : BULK_PUT_SINK), SRIC_BULK_PORTAL,
 		    &iovs[i], 1);
 		if (rc)
-			psc_fatalx("rsx_bulkclient() failed %d", rc);
+			goto error;
 
 		mq->offset = r->biorq_off + nbytes;
 		mq->size = len;
 		mq->op = (op == SRMT_WRITE ? SRMIOP_WR : SRMIOP_RD);
 		mq->flags |= SRM_IOF_DIO |
-			(r->biorq_flags & BIORQ_APPEND ? SRM_IOF_APPEND : 0);
+		    (r->biorq_flags & BIORQ_APPEND ? SRM_IOF_APPEND : 0);
 		memcpy(&mq->sbd, &bci->bci_sbd, sizeof(mq->sbd));
 
 		authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 		pscrpc_set_add_new_req(r->biorq_rqset, rq);
 		if (pscrpc_push_req(rq)) {
-			DEBUG_REQ(PLL_ERROR, rq, "pscrpc_push_req() failed");
-			psc_fatalx("pscrpc_push_req(), no failover yet");
+			pscrpc_set_remove_req(r->biorq_rqset, rq);
+			goto error;
 		}
 	}
 	/* Should be no need for a callback since this call is fully
@@ -1152,7 +1150,6 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
  error:
 	if (rq) {
 		DEBUG_REQ(PLL_ERROR, rq, "req failed");
-		pscrpc_set_remove_req(r->biorq_rqset, rq);
 		pscrpc_req_finished(rq);
 		rq = NULL;
 	}
@@ -1170,6 +1167,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 	}
 	if (msl_offline_retry(r))
 		goto retry;
+	PSCFREE(iovs);
 	return (-1);
 }
 
@@ -1238,11 +1236,14 @@ msl_read_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 	struct slashrpc_cservice *csvc = NULL;
 	struct bmap_pagecache_entry *bmpce;
 	struct pscrpc_request *rq = NULL;
-	struct psc_dynarray *a;
+	struct psc_dynarray *a = NULL;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct iovec *iovs;
 	int rc, i;
+
+	a = PSCALLOC(sizeof(*a));
+	psc_dynarray_init(a);
 
  retry:
 	psc_assert(startpage >= 0);
@@ -1262,8 +1263,6 @@ msl_read_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 		goto error;
 
 	iovs = PSCALLOC(sizeof(*iovs) * npages);
-	a = PSCALLOC(sizeof(*a));
-	psc_dynarray_init(a);
 
 	for (i = 0; i < npages; i++) {
 		bmpce = psc_dynarray_getpos(&r->biorq_pages, i + startpage);
@@ -1295,7 +1294,7 @@ msl_read_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 	    npages);
 	PSCFREE(iovs);
 	if (rc)
-		psc_fatalx("rsx_bulkclient() failed %d", rc);
+		goto error;
 
 	mq->size = npages * BMPC_BUFSZ;
 	mq->op = SRMIOP_RD;
@@ -1335,6 +1334,7 @@ msl_read_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 	}
 	if (msl_offline_retry(r))
 		goto retry;
+	PSCFREE(a);
 	return (-1);
 }
 
@@ -1778,6 +1778,8 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off,
 				// release bmap
 				if (rc)
 					goto retry;
+				for (; i < nr; i++)
+					msl_biorq_destroy(r[i]);
 				return (-EIO);
 			}
 		}
