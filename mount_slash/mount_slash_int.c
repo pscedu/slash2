@@ -895,6 +895,16 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 		if (csvc)
 			return (csvc);
 	}
+
+	/*
+	 * still nothing, go into multiwait, awaking periodically for
+	 * cancelling or ceiling time out.
+	 */
+#if 0
+	for (;;) {
+		psc_multiwait_s(, 1);
+	}
+#endif
 	return (NULL);
 }
 
@@ -1050,11 +1060,11 @@ msl_dio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	return (rc);
 }
 
-__static void
+__static int
 msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 {
-	struct slashrpc_cservice  *csvc;
-	struct pscrpc_request	  *rq;
+	struct slashrpc_cservice  *csvc = NULL;
+	struct pscrpc_request	  *rq = NULL;
 	struct bmapc_memb	  *bcm;
 	struct bmap_cli_info	  *bci;
 	struct iovec		  *iovs;
@@ -1071,6 +1081,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 	bcm = r->biorq_bmap;
 	bci = bmap_2_bci(bcm);
 
+ retry:
 	DEBUG_BIORQ(PLL_INFO, r, "dio req");
 
 	op = r->biorq_flags & BIORQ_WRITE ?
@@ -1079,9 +1090,14 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 	csvc = (op == SRMT_WRITE) ?
 		msl_bmap_to_csvc(bcm, 1) :
 		msl_bmap_choose_replica(bcm);
+	if (csvc == NULL)
+		goto error;
 
-	r->biorq_rqset = pscrpc_prep_set();
-	/* This buffer hasn't been segmented into LNET sized
+	if (r->biorq_rqset == NULL)
+		r->biorq_rqset = pscrpc_prep_set();
+
+	/*
+	 * This buffer hasn't been segmented into LNET sized
 	 *  chunks.  Set up buffers into 1MB chunks or smaller.
 	 */
 	n = (r->biorq_len / LNET_MTU) + ((r->biorq_len % LNET_MTU) ? 1 : 0);
@@ -1131,6 +1147,30 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 	msl_biorq_destroy(r);
 
 	sl_csvc_decref(csvc);
+	return (0);
+
+ error:
+	if (rq) {
+		DEBUG_REQ(PLL_ERROR, rq, "req failed");
+		pscrpc_set_remove_req(r->biorq_rqset, rq);
+		pscrpc_req_finished(rq);
+		rq = NULL;
+	}
+	if (r->biorq_rqset) {
+		spinlock(&r->biorq_rqset->set_lock);
+		if (psc_listhd_empty(&r->biorq_rqset->set_requests)) {
+			pscrpc_set_destroy(r->biorq_rqset);
+			r->biorq_rqset = NULL;
+		} else
+			freelock(&r->biorq_rqset->set_lock);
+	}
+	if (csvc) {
+		sl_csvc_decref(csvc);
+		csvc = NULL;
+	}
+	if (msl_offline_retry(r))
+		goto retry;
+	return (-1);
 }
 
 __static void
@@ -1214,7 +1254,8 @@ msl_read_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 	    msl_bmap_choose_replica(r->biorq_bmap);
 	BMAP_ULOCK(r->biorq_bmap);
 
-	psc_assert(csvc);
+	if (csvc == NULL)
+		goto error;
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
 	if (rc)
@@ -1722,8 +1763,17 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off,
 
 		tlen = r[i]->biorq_len;
 
-		if (r[i]->biorq_flags & BIORQ_DIO)
-			msl_pages_dio_getput(r[i], p);
+		if (r[i]->biorq_flags & BIORQ_DIO) {
+			rc = msl_pages_dio_getput(r[i], p);
+			if (rc) {
+				pll_remove(&mfh->mfh_biorqs, r[i]);
+				rc = msl_offline_retry_ignexpire(r[nr]);
+				// release bmap
+				if (rc)
+					goto retry;
+				return (-EIO);
+			}
+		}
 
 		else {
 			/* Wait here for any pages to be faulted in from

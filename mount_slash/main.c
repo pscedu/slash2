@@ -1289,11 +1289,16 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 		sl_csvc_decref(csvc);
 }
 
-/* Note that this function is called once for each open */
-__static void
+/**
+ * msl_flush_int_locked - Perform main data flush operation.
+ * @mfh: handle corresponding to process file descriptor.
+ * Note that this function is called (at least) once for each open.
+ */
+__static int
 msl_flush_int_locked(struct msl_fhent *mfh)
 {
 	struct bmpc_ioreq *r;
+	int rc;
 
 	PLL_FOREACH(r, &mfh->mfh_biorqs) {
 		spinlock(&r->biorq_lock);
@@ -1310,22 +1315,27 @@ msl_flush_int_locked(struct msl_fhent *mfh)
 		psc_waitq_wait(&msl_fhent_flush_waitq, &mfh->mfh_lock);
 		spinlock(&mfh->mfh_lock);
 	}
+
+	rc = mfh->mfh_flush_rc;
+	mfh->mfh_flush_rc = 0;
+	return (rc);
 }
 
 __static void
 mslfsop_flush(struct pscfs_req *pfr, void *data)
 {
 	struct msl_fhent *mfh = data;
+	int rc;
 
 	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "flushing (mfh=%p)", mfh);
 
 	spinlock(&mfh->mfh_lock);
-	msl_flush_int_locked(mfh);
+	rc = msl_flush_int_locked(mfh);
 	freelock(&mfh->mfh_lock);
 
 	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "done flushing (mfh=%p)", mfh);
 
-	pscfs_reply_flush(pfr, 0);
+	pscfs_reply_flush(pfr, rc);
 }
 
 __static void
@@ -1333,6 +1343,7 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 {
 	struct msl_fhent *mfh = data;
 	struct fidc_membh *c;
+	int rc;
 
 	msfsthr_ensure();
 
@@ -1346,7 +1357,7 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 		freelock(&r->biorq_lock);
 	}
 #else
-	msl_flush_int_locked(mfh);
+	rc = msl_flush_int_locked(mfh);
 	psc_assert(pll_empty(&mfh->mfh_biorqs));
 #endif
 	freelock(&mfh->mfh_lock);
@@ -1355,9 +1366,7 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 
 	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "freeing mfh(%p)", mfh);
 	PSCFREE(mfh);
-//	if (process wants I/O guarentees)
-//		rc = flush;
-	pscfs_reply_close(pfr, 0);
+	pscfs_reply_close(pfr, rc);
 }
 
 __static void

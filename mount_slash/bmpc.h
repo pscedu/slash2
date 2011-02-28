@@ -42,6 +42,8 @@
 #include "bmap.h"
 #include "buffer.h"
 
+struct msl_fhent;
+
 #define BMPC_BUFSZ		SLASH_SLVR_BLKSZ
 #define BMPC_BLKSZ		BMPC_BUFSZ
 #define BMPC_SLB_NBLKS		256		/* 8MB slab */
@@ -240,7 +242,7 @@ struct bmpc_ioreq {
 	struct bmapc_memb		*biorq_bmap;	/* backpointer to our bmap	*/
 	struct pscrpc_request_set	*biorq_rqset;
 	struct psc_waitq		 biorq_waitq;
-	void				*biorq_fhent;	/* back pointer to msl_fhent */
+	struct msl_fhent		*biorq_fhent;	/* back pointer to msl_fhent */
 };
 
 #define	BIORQ_READ			(1 <<  0)
@@ -405,8 +407,8 @@ bmpc_init(struct bmap_pagecache *bmpc)
 }
 
 static __inline void
-bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len, int op,
-		struct bmapc_memb *bmap, void *fhent)
+bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len,
+    int op, struct bmapc_memb *bmap, struct msl_fhent *fhent)
 {
 	memset(ioreq, 0, sizeof(*ioreq));
 	psc_waitq_init(&ioreq->biorq_waitq);

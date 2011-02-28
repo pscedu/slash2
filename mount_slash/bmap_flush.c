@@ -311,7 +311,7 @@ bmap_flush_inflight_unset(struct bmpc_ioreq *r)
 	BMPC_ULOCK(bmpc);
 }
 
-__static int
+__static void
 bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 		     int niovs)
 {
@@ -320,10 +320,11 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 	struct pscrpc_request *rq;
 	struct bmpc_ioreq *r;
 	struct bmapc_memb *b;
-	int i, nrpcs = 0;
+	int rc, i, nrpcs = 0;
 	size_t size;
 	off_t soff;
 
+ retry:
 	r = psc_dynarray_getpos(biorqs, 0);
 	csvc = msl_bmap_to_csvc(r->biorq_bmap, 1);
 	psc_assert(csvc);
@@ -416,18 +417,39 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 		psc_dynarray_add(&pndgReqSets, set);
 		pndgReqsUlock();
 	}
-	return (nrpcs);
+	return;
 
  error:
 	bmap_flush_inflight_unset(r);
 	if (set) {
 		spinlock(&set->set_lock);
-		if (set->set_remaining == 0)
+		if (psc_listhd_empty(&r->biorq_rqset->set_requests))
 			pscrpc_set_destroy(set);
 		else
 			freelock(&set->set_lock);
 	}
-	return (-1);
+
+	/*
+	 * If bmap is still leased, try to reconnect if such behavior is
+	 * requested.
+	 */
+	rc = msl_offline_retry(r);
+	if (rc)
+		goto retry;
+
+	/*
+	 * We may have not reconnected due to bmap expiration.  In this
+	 * case, if the application still requests reconnect behavior,
+	 * we should renew the bmap lease.
+	 */
+	rc = msl_offline_retry_ignexpire(r);
+	if (rc) {
+		/* async refetch lease */
+		//move work to end of flushq
+		return;
+	}
+
+	r->biorq_fhent->mfh_flush_rc = EIO;
 }
 
 __static int
@@ -807,19 +829,21 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *index)
 void
 bmap_flush(void)
 {
-	struct psc_dynarray reqs = DYNARRAY_INIT_NOLOG, bmaps = DYNARRAY_INIT_NOLOG, *biorqs;
+	struct psc_dynarray reqs = DYNARRAY_INIT_NOLOG,
+	    *biorqs, bmaps = DYNARRAY_INIT_NOLOG;
 	struct bmap_pagecache *bmpc;
 	struct bmpc_ioreq *r, *tmp;
 	struct bmapc_memb *b, *tmpb;
 	struct iovec *iovs = NULL;
-	int n, i, j, niovs, nrpcs;
+	int i, j, niovs, nrpcs;
 
 	i = 0;
 	LIST_CACHE_LOCK(&bmapFlushQ);
 	LIST_CACHE_FOREACH_SAFE(b, tmpb, &bmapFlushQ) {
 		BMAP_LOCK(b);
-		DEBUG_BMAP(PLL_INFO, b, "checking for flush (outstandingRpcCnt=%d)",
-			atomic_read(&outstandingRpcCnt));
+		DEBUG_BMAP(PLL_INFO, b,
+		    "checking for flush (outstandingRpcCnt=%d)",
+		    atomic_read(&outstandingRpcCnt));
 		psc_assert(b->bcm_flags & BMAP_CLI_FLUSHPROC);
 
 		bmpc = bmap_2_bmpc(b);
@@ -914,12 +938,11 @@ bmap_flush(void)
 			 */
 			niovs = bmap_flush_coalesce_map(biorqs, &iovs);
 			psc_assert(niovs);
-			/* Have a set of iov's now.  Let's create an rpc
-			 *   or rpc set and send it out.
+
+			/* Have a set of iov's now.  Let's create an RPC
+			 *   or RPC set and send it out.
 			 */
-			n = bmap_flush_send_rpcs(biorqs, iovs, niovs);
-//			if (n == -1)
-//				mfh->fsync_error = EIO;
+			bmap_flush_send_rpcs(biorqs, iovs, niovs);
 			PSCFREE(iovs);
 		}
 		psc_dynarray_reset(&reqs);
