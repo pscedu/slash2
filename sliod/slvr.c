@@ -268,9 +268,9 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw)
 		errno = 0;
 		rc = pwrite(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
 			    slvr_2_fileoff(s, sblk));
-		SLVR_ULOCK(s);
-
-		save_errno = errno;
+		if (rc == -1)
+			save_errno = errno;
+		SLVR_ULOCK(s); 
 	}
 
 	if (rc < 0)
