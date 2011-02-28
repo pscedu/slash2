@@ -201,7 +201,7 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 __static struct pscrpc_request *
 bmap_flush_create_rpc(void *set, struct bmpc_ioreq *r,
     struct bmapc_memb *b, struct iovec *iovs, size_t size, off_t soff,
-    int niovs)
+    int niovs, struct psc_dynarray *biorqs)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -239,9 +239,9 @@ bmap_flush_create_rpc(void *set, struct bmpc_ioreq *r,
 	memcpy(&mq->sbd, &bmap_2_bci(b)->bci_sbd, sizeof(mq->sbd));
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 
-	spinlock(&rq->rq_lock);
-
 	if (set == pndgReqs) {
+		/* biorqs will be freed by the nbreqset callback. */
+		rq->rq_async_args.pointer_arg[1] = biorqs;
 		if (pscrpc_nbreqset_add(set, rq))
 			goto error;
 	} else {
@@ -356,12 +356,9 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 		 *   and attach to the non-blocking request set.
 		 */
 		rq = bmap_flush_create_rpc(pndgReqs, r, b, iovs, size,
-		    soff, niovs);
+		    soff, niovs, biorqs);
 		if (rq == NULL)
 			goto error;
-		/* biorqs will be freed by the nbreqset callback. */
-		rq->rq_async_args.pointer_arg[1] = biorqs;
-		freelock(&rq->rq_lock);
 		nrpcs++;
 	} else {
 		/* Deal with a multiple RPC operation */
@@ -377,7 +374,7 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 #define LAUNCH_RPC()							\
 	do {								\
 		rq = bmap_flush_create_rpc(set, r, b, tiov, size,	\
-		    soff, n);						\
+		    soff, n, NULL);					\
 		if (rq == NULL)						\
 			goto error;					\
 		soff += size;						\
