@@ -211,7 +211,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw)
 	int	i;
 	ssize_t	rc;
 	int	nblks;
-	int	save_errno;
+	int	save_errno = 0;
 	uint64_t *v8;
 
 	nblks = (size + SLASH_SLVR_BLKSZ - 1) / SLASH_SLVR_BLKSZ;
@@ -224,7 +224,8 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw)
 		errno = 0;
 		rc = pread(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
 			   slvr_2_fileoff(s, sblk));
-		save_errno = errno;
+		if (rc == -1)
+			save_errno = errno;
 
 		/* XXX this is a bit of a hack.  Here we'll check crc's
 		 *  only when nblks == an entire sliver.  Only RMW will
@@ -270,7 +271,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw)
 			    slvr_2_fileoff(s, sblk));
 		if (rc == -1)
 			save_errno = errno;
-		SLVR_ULOCK(s); 
+		SLVR_ULOCK(s);
 	}
 
 	if (rc < 0)
