@@ -73,6 +73,8 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 //#define STD_MOUNT_OPTIONS	"allow_other,max_write=134217728,big_writes"
 #define STD_MOUNT_OPTIONS	"allow_other,max_write=134217728"
 
+#define MSL_FS_BLKSIZ		(256 * 1024)
+
 #define mfh_getfid(mfh)		fcmh_2_fid((mfh)->mfh_fcmh)
 #define mfh_getfg(mfh)		(mfh)->mfh_fcmh->fcmh_fg
 
@@ -570,7 +572,7 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 		goto out;
 
 	if (!fcmh_isdir(f))
-		f->fcmh_sstb.sst_blksize = 32768;
+		f->fcmh_sstb.sst_blksize = MSL_FS_BLKSIZ;
 
 	FCMH_LOCK(f);
 	sl_internalize_stat(&f->fcmh_sstb, &stb);
@@ -1227,6 +1229,8 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc == ENOENT)
 		sstb.sst_fid = 0;
 	sl_internalize_stat(&sstb, &stb);
+	if (!S_ISDIR(stb.st_mode))
+		stb.st_blksize = MSL_FS_BLKSIZ;
 	pscfs_reply_lookup(pfr, sstb.sst_fid, sstb.sst_gen,
 	    pscfs_entry_timeout, &stb, pscfs_attr_timeout, rc);
 }
@@ -1559,6 +1563,7 @@ mslfsop_statfs(struct pscfs_req *pfr)
 		goto out;
 
 	sl_internalize_statfs(&mp->ssfb, &sfb);
+	sfb.f_bsize = MSL_FS_BLKSIZ;
 
  out:
 	pscfs_reply_statfs(pfr, &sfb, rc);
