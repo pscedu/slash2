@@ -350,7 +350,7 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 __static void
 msl_biorq_destroy(struct bmpc_ioreq *r)
 {
-	struct msl_fhent *f=r->biorq_fhent;
+	struct msl_fhent *f = r->biorq_fhent;
 #if FHENT_EARLY_RELEASE
 	int fhent = 1;
 #endif
@@ -1311,7 +1311,7 @@ msl_read_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 	pscrpc_set_add_new_req(r->biorq_rqset, rq);
-	/* Setup the callback, supplying the dynarray as a argument.
+	/* Setup the callback, supplying the dynarray as an argument.
 	 */
 	rq->rq_interpret_reply = msl_read_cb;
 	rq->rq_async_args.pointer_arg[MSL_CB_POINTER_SLOT_BMPCES] = a;
@@ -1446,7 +1446,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 
 /**
  * msl_pages_blocking_load - Manage data prefetching activities.  This
- *	includes waiting on other thread to complete RPC for data in
+ *	includes waiting on other threads to complete RPCs for data in
  *	which we're interested.
  */
 __static int
@@ -1501,7 +1501,7 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 			/* Read requests must have had their bmpce's
 			 *   put into DATARDY by now (i.e. all RPCs
 			 *   must have already been completed).
-			 *   Same goes for pages owned by another request.
+			 *   Same goes for pages owned by other requests.
 			 */
 			psc_assert(bmpce->bmpce_flags & BMPCE_DATARDY);
 
@@ -1521,8 +1521,8 @@ msl_pages_copyin(struct bmpc_ioreq *r, char *buf)
 {
 	struct bmap_pagecache_entry *bmpce;
 	uint32_t toff, tsize, nbytes;
-	int i, npages;
 	char *dest, *src;
+	int i, npages;
 
 	src    = buf;
 	tsize  = r->biorq_len;
@@ -1590,7 +1590,7 @@ msl_pages_copyin(struct bmpc_ioreq *r, char *buf)
 		tsize -= nbytes;
 	}
 	psc_assert(!tsize);
-	/* Queue these iov's for send to IOS.
+	/* Queue these iov's for transmission to IOS.
 	 */
 	msl_pages_schedflush(r);
 }
@@ -1730,14 +1730,20 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off,
 		rc = msl_bmap_load(mfh, s, rw, &b[nr]);
 		if (rc) {
 			DEBUG_FCMH(PLL_ERROR, mfh->mfh_fcmh,
-			    "sz=%zu tlen=%zu off=%"PSCPRIdOFFT" roff=%"PSCPRIdOFFT
-			    " rw=%d rc=%d", tsize, tlen, off, roff, rw, rc);
+			    "sz=%zu tlen=%zu off=%"PSCPRIdOFFT" "
+			    "roff=%"PSCPRIdOFFT" rw=%d rc=%d",
+			    tsize, tlen, off, roff, rw, rc);
 			goto out;
 		}
-		/* Re-relativize the offset if this request spans more than 1 bmap.
+
+		/*
+		 * Re-relativize the offset if this request spans more
+		 * than 1 bmap.
 		 */
-		msl_biorq_build(&r[nr], b[nr], mfh, (roff - (nr * SLASH_BMAP_SIZE)),
-		    tlen, (rw == SL_READ) ? BIORQ_READ : BIORQ_WRITE);
+		msl_biorq_build(&r[nr], b[nr], mfh,
+		    roff - (nr * SLASH_BMAP_SIZE), tlen,
+		    (rw == SL_READ) ? BIORQ_READ : BIORQ_WRITE);
+
 		/*
 		 * If we are not doing direct I/O, launch read for read
 		 * requests and pre-read for unaligned write requests.
@@ -1782,9 +1788,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off,
 					msl_biorq_destroy(r[i]);
 				return (-EIO);
 			}
-		}
-
-		else {
+		} else {
 			/* Wait here for any pages to be faulted in from
 			 *    the ION.
 			 */
@@ -1798,8 +1802,10 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off,
 					goto out;
 				}
 
-			(rw == SL_READ) ? msl_pages_copyout(r[i], p) :
-					  msl_pages_copyin(r[i], p);
+			if (rw == SL_READ)
+				msl_pages_copyout(r[i], p);
+			else
+				msl_pages_copyin(r[i], p);
 		}
 		/* Unwind our reference from bmap_get().
 		 */
@@ -1811,11 +1817,13 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off,
 		rc = size;
 	} else {
 		ssize_t fsz = fcmh_getsize(mfh->mfh_fcmh);
-		/* The client cache is operating on pages (ie 32k) so
+
+		/*
+		 * The client cache is operating on pages (i.e. 32k) so
 		 *   any short read must be caught here.
 		 */
 		if (fsz < (ssize_t)(size + off))
-			rc = (size - (size + off - fsz));
+			rc = size - (size + off - fsz);
 		else
 			rc = size;
 	}
