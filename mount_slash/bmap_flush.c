@@ -1141,12 +1141,13 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 					resm = slc_rmc_resm;
 					rmci = resm2rmci(slc_rmc_resm);
 				}
+
+				psc_assert(rmci->rmci_bmaprls.nbmaps <
+				    MAX_BMAP_RELEASE);
+
 				bmap_2_bid(b, &rmci->rmci_bmaprls.bmaps[
 				    rmci->rmci_bmaprls.nbmaps]);
 				rmci->rmci_bmaprls.nbmaps++;
-
-				psc_assert(rmci->rmci_bmaprls.nbmaps <=
-				    MAX_BMAP_RELEASE);
 
 				/* The bmap should be going away now, this
 				 *    will call BMAP_URLOCK().
