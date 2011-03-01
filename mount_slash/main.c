@@ -1052,7 +1052,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 				continue;
 			}
 
-			psclog_dbg("adding i+g:"SLPRI_FG,
+			psclog_dbg("adding f+g:"SLPRI_FG,
 			    SLPRI_FG_ARGS(&attr->sst_fg));
 
 			fidc_lookup(&attr->sst_fg, FIDC_LOOKUP_CREATE,
