@@ -125,7 +125,7 @@ struct bmap_pagecache_entry {
 	(b)->bmpce_flags & BMPCE_EIO			? "E" : ""
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
-	psclogs((level), PSS_DEF,					\
+	psclogs((level), SLSS_BMAP,					\
 	    "bmpce@%p fl=%u o=%x b=%p ts="PSCPRI_TIMESPEC" "		\
 	    "wr=%hu rd=%hu "						\
 	    "lru=%d biorq=%p "BMPCE_FLAGS_FORMAT" "fmt,			\
