@@ -411,7 +411,7 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 	psc_dynarray_free(&r->biorq_pages);
 
 	if (r->biorq_rqset)
-		pscrpc_set_destroy(r->biorq_rqset);
+		pscrpc_set_destroy(r->biorq_rqset); /* XXX assert(#elem == 1) */
 
 	psc_assert(!atomic_read(&r->biorq_waitq.wq_nwaiters));
 
@@ -1458,7 +1458,7 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 	if (r->biorq_rqset) {
 		rc = pscrpc_set_wait(r->biorq_rqset);
 		if (rc)
-			// XXX need to cleanup properly, you can hit this when mds is down
+			/* Cleanup properly when the MDS goes down. */
 			psc_fatalx("pscrpc_set_wait rc=%d", rc);
 
 		/*
@@ -1648,6 +1648,8 @@ msl_pages_copyout(struct bmpc_ioreq *r, char *buf)
 	msl_biorq_destroy(r);
 }
 
+#define MSL_BIORQ_COMPLETE	((void *)0x1)
+
 /**
  * msl_io - I/O gateway routine which bridges pscfs and the SLASH2 client
  *	cache and backend.  msl_io() handles the creation of biorq's
@@ -1663,23 +1665,40 @@ msl_pages_copyout(struct bmpc_ioreq *r, char *buf)
  * @rw: the operation type (SL_READ or SL_WRITE).
  */
 int
-msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off,
-    enum rw rw)
+msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
+    const off_t off, enum rw rw)
 {
 #define MAX_BMAPS_REQ 4
 	struct bmpc_ioreq *r[MAX_BMAPS_REQ];
-	struct bmapc_memb *b[MAX_BMAPS_REQ];
-	size_t s, e, tlen, tsize = size;
+	size_t s, e, tlen, tsize;
+	struct bmapc_memb *b;
 	int nr, i, rc;
 	off_t roff;
 	char *p;
 
+	memset(r, 0, sizeof(r));
+
 	psc_assert(mfh);
 	psc_assert(mfh->mfh_fcmh);
 
-	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "buf=%p size=%zu off=%"PRId64
-		   " rw=%d", buf, size, off, rw);
+	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh,
+	    "buf=%p size=%zu off=%"PRId64" rw=%d",
+	    buf, size, off, rw);
 
+	/*
+	 *  Get the start and end block regions from the input
+	 *  parameters.
+	 */
+	s = off / SLASH_BMAP_SIZE;
+	e = ((off + size) - 1) / SLASH_BMAP_SIZE;
+	nr = e - s + 1;
+	if (nr > MAX_BMAPS_REQ) {
+		rc = -EINVAL;
+		goto out;
+	}
+
+ restart:
+	tsize = size;
 	FCMH_LOCK(mfh->mfh_fcmh);
 
 	if (!size || (rw == SL_READ &&
@@ -1689,45 +1708,45 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off,
 		goto out;
 	}
 
-	/* All I/O's block here for pending truncate requests.
+	/*
+	 * All I/O's block here for pending truncate requests.
+	 * XXX there is a race here.  we should set CLI_TRUNC ourselves
+	 * until we are done setting up the I/O to block intervening
+	 * truncates.
 	 */
 	fcmh_wait_locked(mfh->mfh_fcmh,
-		 mfh->mfh_fcmh->fcmh_flags & FCMH_CLI_TRUNC);
+	    mfh->mfh_fcmh->fcmh_flags & FCMH_CLI_TRUNC);
 	FCMH_ULOCK(mfh->mfh_fcmh);
 
-	/* Are these bytes in the cache?
-	 *  Get the start and end block regions from the input
-	 *  parameters.
-	 */
-	s = off / SLASH_BMAP_SIZE;
-	e = ((off + size) - 1) / SLASH_BMAP_SIZE;
-
-	if ((e - s) > MAX_BMAPS_REQ)
-		return (-EINVAL);
-	/* Relativize the length and offset (roff is not aligned).
-	 */
+	/* Relativize the length and offset (roff is not aligned). */
 	roff  = off - (s * SLASH_BMAP_SIZE);
 	psc_assert(roff < SLASH_BMAP_SIZE);
-	/* Length of the first bmap request.
-	 */
+
+	/* Length of the first bmap request. */
 	tlen  = MIN(SLASH_BMAP_SIZE - (size_t)roff, size);
-	/* Foreach block range, get its bmap and make a request into its
+
+	/*
+	 * Foreach block range, get its bmap and make a request into its
 	 *  page cache.  This first loop retrieves all the pages.
 	 */
-	for (nr = 0; s <= e; s++, nr++) {
+	for (i = 0; i < nr; i++) {
+		if (r[i] && r[i] != MSL_BIORQ_COMPLETE)
+			goto load_next;
+
 		DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh,
-		    "sz=%zu tlen=%zu off=%"PSCPRIdOFFT" roff=%"PSCPRIdOFFT
-		    " rw=%d", tsize, tlen, off, roff, rw);
+		    "sz=%zu tlen=%zu off=%"PSCPRIdOFFT" "
+		    "roff=%"PSCPRIdOFFT" rw=%d",
+		    tsize, tlen, off, roff, rw);
 
 		psc_assert(tsize);
 
- retry:
+ retry_bmap:
 		/*
 		 * Load up the bmap; if it's not available then we're
 		 * out of luck because we have no idea where the data
 		 * is!
 		 */
-		rc = msl_bmap_load(mfh, s, rw, &b[nr]);
+		rc = msl_bmap_load(mfh, i + s, rw, &b);
 		if (rc) {
 			DEBUG_FCMH(PLL_ERROR, mfh->mfh_fcmh,
 			    "sz=%zu tlen=%zu off=%"PSCPRIdOFFT" "
@@ -1740,31 +1759,34 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off,
 		 * Re-relativize the offset if this request spans more
 		 * than 1 bmap.
 		 */
-		msl_biorq_build(&r[nr], b[nr], mfh,
-		    roff - (nr * SLASH_BMAP_SIZE), tlen,
+		msl_biorq_build(&r[i], b, mfh,
+		    roff - (i * SLASH_BMAP_SIZE), tlen,
 		    (rw == SL_READ) ? BIORQ_READ : BIORQ_WRITE);
+		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 
 		/*
 		 * If we are not doing direct I/O, launch read for read
 		 * requests and pre-read for unaligned write requests.
 		 */
-		if (!(r[nr]->biorq_flags & BIORQ_DIO) && ((r[nr]->biorq_flags & BIORQ_READ) ||
-		     (r[nr]->biorq_flags & BIORQ_RBWFP) || (r[nr]->biorq_flags & BIORQ_RBWLP))) {
-			rc = msl_pages_prefetch(r[nr]);
+		if (!(r[i]->biorq_flags & BIORQ_DIO) && ((r[i]->biorq_flags & BIORQ_READ) ||
+		     (r[i]->biorq_flags & BIORQ_RBWFP) || (r[i]->biorq_flags & BIORQ_RBWLP))) {
+			rc = msl_pages_prefetch(r[i]);
 			if (rc) {
-				rc = msl_offline_retry_ignexpire(r[nr]);
-				// release bmap
+				rc = msl_offline_retry_ignexpire(r[i]);
+				msl_biorq_destroy(r[i]);
 				if (rc)
-					goto retry;
-				return (-EIO);
+					goto retry_bmap;
+				rc = -EIO;
+				goto out;
 			}
 		}
 
+		BMAP_CLI_BUMP_TIMEO(b);
+
+ load_next:
 		roff += tlen;
 		tsize -= tlen;
 		tlen  = MIN(SLASH_BMAP_SIZE, tsize);
-
-		BMAP_CLI_BUMP_TIMEO(b[nr]);
 	}
 
 	/* Note that the offsets used here are file-wise offsets not
@@ -1781,12 +1803,13 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off,
 			if (rc) {
 				pll_remove(&mfh->mfh_biorqs, r[i]);
 				rc = msl_offline_retry_ignexpire(r[nr]);
-				// release bmap
-				if (rc)
-					goto retry;
-				for (; i < nr; i++)
+				if (rc) {
 					msl_biorq_destroy(r[i]);
-				return (-EIO);
+					r[i] = NULL;
+					goto restart;
+				}
+				rc = -EIO;
+				goto out;
 			}
 		} else {
 			/* Wait here for any pages to be faulted in from
@@ -1797,8 +1820,8 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off,
 			     (r[i]->biorq_flags & BIORQ_RBWLP)))
 				if ((rc = msl_pages_blocking_load(r[i]))) {
 					DEBUG_BIORQ(PLL_ERROR, r[i],
-						    "msl_pages_blocking_load()"
-						    " error=%d", rc);
+					    "msl_pages_blocking_load()"
+					    " error=%d", rc);
 					goto out;
 				}
 
@@ -1807,9 +1830,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off,
 			else
 				msl_pages_copyin(r[i], p);
 		}
-		/* Unwind our reference from bmap_get().
-		 */
-		bmap_op_done_type(b[i], BMAP_OPCNT_LOOKUP);
+		r[i] = MSL_BIORQ_COMPLETE;
 	}
 
 	if (rw == SL_WRITE) {
@@ -1828,6 +1849,9 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off,
 			rc = size;
 	}
  out:
+	for (i = 0; i < nr; i++)
+		if (r[i] && r[i] != MSL_BIORQ_COMPLETE)
+			msl_biorq_destroy(r[i]);
 	return (rc);
 }
 
