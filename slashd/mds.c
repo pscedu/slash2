@@ -395,6 +395,8 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 
 	bml->bml_flags |= BML_ASSFAIL;
 
+	psclog_warnx("unable to establish a connection to ION for lease");
+
 	return (-SLERR_ION_OFFLINE);
 
  online:
