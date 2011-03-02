@@ -211,7 +211,7 @@ bmap_getf(struct fidc_membh *f, sl_bmapno_t n, enum rw rw, int flags,
 		 */
 		bcm_wait_locked(b, (b->bcm_flags & BMAP_INIT));
 
-	retry:
+ retry:
 		/* Not all lookups are done with the intent of
 		 *   changing the bmap mode.  bmap_lookup() does not
 		 *   specify a rw value.
@@ -227,7 +227,7 @@ bmap_getf(struct fidc_membh *f, sl_bmapno_t n, enum rw rw, int flags,
 			 */
 			if (b->bcm_flags & BMAP_MDCHNG) {
 				bcm_wait_locked(b,
-					(b->bcm_flags & BMAP_MDCHNG));
+				    b->bcm_flags & BMAP_MDCHNG);
 				goto retry;
 
 			} else {
