@@ -329,12 +329,14 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	}
 
 	FCMH_LOCK(c);
-	fci = fcmh_2_fci(c);
+	sl_internalize_stat(&c->fcmh_sstb, &stb);
 
+	if (mp->rc2)
+		goto out;
+	fci = fcmh_2_fci(c);
 	fci->fci_reptbl[0].bs_id = mp->sbd.sbd_ios_id;
 	fci->fci_nrepls = 1;
 	c->fcmh_flags |= FCMH_CLI_HAVEREPLTBL;
-	sl_internalize_stat(&c->fcmh_sstb, &stb);
 	FCMH_ULOCK(c);
 
 	rc = bmap_getf(c, 0, SL_WRITE, BMAPGETF_LOAD |
@@ -344,7 +346,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	msl_bmap_reap_init(bcm, &mp->sbd);
 
-	DEBUG_BMAP(PLL_INFO, bcm, "nid=%"PRIx64" bmapnid=%"PRIx64,
+	DEBUG_BMAP(PLL_INFO, bcm, "nid=%#"PRIx64" bmapnid=%#"PRIx64,
 	    mp->sbd.sbd_ion_nid, bmap_2_ion(bcm));
 
 	SL_REPL_SET_BMAP_IOS_STAT(bcm->bcm_repls, 0, BREPLST_VALID);
