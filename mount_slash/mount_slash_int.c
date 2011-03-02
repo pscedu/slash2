@@ -635,12 +635,6 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
-	if (rc == SLERR_BMAP_DIOWAIT) {
-		/* Retry for bmap to be DIO ready.
-		 */
-		DEBUG_BMAP(PLL_WARN, bmap,
-		    "SLERR_BMAP_DIOWAIT (rt=%d)", nretries);
-	}
 	if (rc)
 		goto out;
 	memcpy(&bmap->bcm_corestate, &mp->bcs, sizeof(mp->bcs));
@@ -665,7 +659,8 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 
  out:
 	FCMH_RLOCK(f);
-	f->fcmh_flags &= ~FCMH_CLI_FETCHREPLTBL;
+	if (getreptbl)
+		f->fcmh_flags &= ~FCMH_CLI_FETCHREPLTBL;
 	FCMH_ULOCK(f);
 	if (rq) {
 		pscrpc_req_finished(rq);
@@ -677,6 +672,11 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 	}
 
 	if (rc == SLERR_BMAP_DIOWAIT) {
+		/* Retry for bmap to be DIO ready.
+		 */
+		DEBUG_BMAP(PLL_WARN, bmap,
+		    "SLERR_BMAP_DIOWAIT (rt=%d)", nretries);
+
 		sleep(BMAP_CLI_DIOWAIT_SECS);
 		if (nretries > (BMAP_CLI_MAX_LEASE * 2))
 			return (-ETIMEDOUT);
