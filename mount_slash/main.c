@@ -328,11 +328,15 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		/* XXX do we need to do anything special for this? */
 	}
 
+	mfh = msl_fhent_new(c);
+	mfh->mfh_oflags = oflags;
+
 	FCMH_LOCK(c);
 	sl_internalize_stat(&c->fcmh_sstb, &stb);
 
 	if (mp->rc2)
 		goto out;
+
 	fci = fcmh_2_fci(c);
 	fci->fci_reptbl[0].bs_id = mp->sbd.sbd_ios_id;
 	fci->fci_nrepls = 1;
@@ -353,8 +357,6 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
 
-	mfh = msl_fhent_new(c);
-	mfh->mfh_oflags = oflags;
  out:
 	if (c) {
 		DEBUG_FCMH(PLL_INFO, c, "new mfh=%p rc=%d name=(%s) "
