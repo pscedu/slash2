@@ -327,17 +327,16 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
  retry:
 	r = psc_dynarray_getpos(biorqs, 0);
 	csvc = msl_bmap_to_csvc(r->biorq_bmap, 1);
-	psc_assert(csvc);
+	if (csvc == NULL)
+		goto error;
 
 	b = r->biorq_bmap;
 	soff = r->biorq_off;
 
-	for (i=0; i < psc_dynarray_len(biorqs); i++) {
+	DYNARRAY_FOREACH(r, i, biorqs) {
 		/* All biorqs should have the same import, otherwise
 		 *   there is a major problem.
 		 */
-		r = psc_dynarray_getpos(biorqs, i);
-
 		tcsvc = msl_bmap_to_csvc(r->biorq_bmap, 1);
 		psc_assert(csvc == tcsvc);
 		sl_csvc_decref(tcsvc);
@@ -350,8 +349,8 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 
 	DEBUG_BIORQ(PLL_INFO, r, "biorq array cb arg (%p)", biorqs);
 
-	if (((size = bmap_flush_coalesce_size(biorqs)) <= LNET_MTU) &&
-	    (niovs <= PSCRPC_MAX_BRW_PAGES)) {
+	size = bmap_flush_coalesce_size(biorqs);
+	if (size <= LNET_MTU && niovs <= PSCRPC_MAX_BRW_PAGES) {
 		/* Single RPC case.  Set the appropriate cb handler
 		 *   and attach to the non-blocking request set.
 		 */
@@ -417,14 +416,17 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 	return;
 
  error:
-	bmap_flush_inflight_unset(r);
 	if (set) {
 		spinlock(&set->set_lock);
-		if (psc_listhd_empty(&r->biorq_rqset->set_requests))
+		if (psc_listhd_empty(&r->biorq_rqset->set_requests)) {
 			pscrpc_set_destroy(set);
-		else
+			r->biorq_rqset = NULL;
+		} else
 			freelock(&set->set_lock);
 	}
+	DYNARRAY_FOREACH(r, i, biorqs)
+		bmap_flush_inflight_unset(r);
+	r = psc_dynarray_getpos(biorqs, 0);
 
 	/*
 	 * If bmap is still leased, try to reconnect if such behavior is
