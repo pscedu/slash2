@@ -550,6 +550,8 @@ msl_bmap_reap_init(struct bmapc_memb *bmap, const struct srt_bmapdesc *sbd)
 	struct bmap_cli_info *bci = bmap_2_bci(bmap);
 	int locked;
 
+	psc_assert(pfl_memchk(sbd, 0, sizeof(*sbd)));
+
 	locked = BMAP_RLOCK(bmap);
 
 	bci->bci_sbd = *sbd;
@@ -578,7 +580,7 @@ msl_bmap_reap_init(struct bmapc_memb *bmap, const struct srt_bmapdesc *sbd)
 }
 
 /**
- * msl_bmap_retrieve - perform a blocking 'LEASEBMAP' operation to
+ * msl_bmap_retrieve - Perform a blocking 'LEASEBMAP' operation to
  *	retrieve one or more bmaps from the MDS.
  * @f: pointer to the fid cache structure to which this bmap belongs.
  * @b: the block id to retrieve (block size == SLASH_BMAP_SIZE).
@@ -631,27 +633,24 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 	    bmap->bcm_bmapno, rw);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc == 0) {
+	if (rc == 0)
 		rc = mp->rc;
-		if (mp->rc == SLERR_BMAP_DIOWAIT) {
-			/* Retry for bmap to be DIO ready.
-			 */
-			DEBUG_BMAP(PLL_WARN, bmap, "SLERR_BMAP_DIOWAIT (rt=%d)",
-				   nretries);
-			rc = mp->rc;
-			goto out;
-		} else
-			memcpy(&bmap->bcm_corestate, &mp->bcs,
-			    sizeof(mp->bcs));
-	} else
+	if (rc == SLERR_BMAP_DIOWAIT) {
+		/* Retry for bmap to be DIO ready.
+		 */
+		DEBUG_BMAP(PLL_WARN, bmap,
+		    "SLERR_BMAP_DIOWAIT (rt=%d)", nretries);
+	}
+	if (rc)
 		goto out;
+	memcpy(&bmap->bcm_corestate, &mp->bcs, sizeof(mp->bcs));
 
 	FCMH_LOCK(f);
 
 	msl_bmap_reap_init(bmap, &mp->sbd);
 
-	DEBUG_BMAP(PLL_INFO, bmap, "rw=%d nid=%"PRIx64" bmapnid=%"PRIx64,
-		   rw, mp->sbd.sbd_ion_nid, bmap_2_ion(bmap));
+	DEBUG_BMAP(PLL_INFO, bmap, "rw=%d nid=%#"PRIx64" bmapnid=%#"PRIx64,
+	    rw, mp->sbd.sbd_ion_nid, bmap_2_ion(bmap));
 
 	if (getreptbl) {
 		/* XXX don't forget that on write we need to invalidate
@@ -659,7 +658,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 		 */
 		fci->fci_nrepls = mp->nrepls;
 		memcpy(&fci->fci_reptbl, &mp->reptbl,
-		       sizeof(sl_replica_t) * SL_MAX_REPLICAS);
+		    sizeof(sl_replica_t) * SL_MAX_REPLICAS);
 		f->fcmh_flags |= FCMH_CLI_HAVEREPLTBL;
 		psc_waitq_wakeall(&f->fcmh_waitq);
 	}
@@ -764,7 +763,8 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw)
 }
 
 int
-msl_bmap_load(struct msl_fhent *mfh, sl_bmapno_t n, enum rw rw, struct bmapc_memb **bp)
+msl_bmap_load(struct msl_fhent *mfh, sl_bmapno_t n, enum rw rw,
+    struct bmapc_memb **bp)
 {
 	int rc;
 	psc_assert(rw == SL_READ || rw == SL_WRITE);
