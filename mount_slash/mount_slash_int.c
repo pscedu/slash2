@@ -550,7 +550,7 @@ msl_bmap_reap_init(struct bmapc_memb *bmap, const struct srt_bmapdesc *sbd)
 	struct bmap_cli_info *bci = bmap_2_bci(bmap);
 	int locked;
 
-	psc_assert(pfl_memchk(sbd, 0, sizeof(*sbd)));
+	psc_assert(!pfl_memchk(sbd, 0, sizeof(*sbd)));
 
 	locked = BMAP_RLOCK(bmap);
 
