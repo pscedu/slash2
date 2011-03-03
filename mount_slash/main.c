@@ -343,9 +343,9 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	c->fcmh_flags |= FCMH_CLI_HAVEREPLTBL;
 	FCMH_ULOCK(c);
 
-	rc = bmap_getf(c, 0, SL_WRITE, BMAPGETF_LOAD |
+	mp->rc2 = bmap_getf(c, 0, SL_WRITE, BMAPGETF_LOAD |
 	    BMAPGETF_NORETRIEVE, &bcm);
-	if (rc)
+	if (mp->rc2)
 		goto out;
 
 	msl_bmap_reap_init(bcm, &mp->sbd);
@@ -358,8 +358,11 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
 
  out:
+	if (mp && rc == 0 && mp->rc == 0 && mp->rc2)
+		DEBUG_FCMH(PLL_WARN, c, "error loading bmap rc=%d",
+		    mp->rc2);
 	if (c) {
-		DEBUG_FCMH(PLL_INFO, c, "new mfh=%p rc=%d name=(%s) "
+		DEBUG_FCMH(PLL_DEBUG, c, "new mfh=%p rc=%d name=(%s) "
 		    "oflags=%#o", mfh, rc, name, oflags);
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	}
