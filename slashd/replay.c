@@ -25,9 +25,9 @@
 #include "fidc_mds.h"
 #include "mdsio.h"
 #include "namespace.h"
+#include "pathnames.h"
 #include "slerr.h"
 #include "sljournal.h"
-#include "pathnames.h"
 
 /**
  * mds_redo_bmap_repl - Replay a replication update on a bmap.  This has
@@ -90,14 +90,13 @@ mds_redo_bmap_repl_common(struct slmds_jent_repgen *jrpg)
 static int
 mds_redo_bmap_repl(struct psc_journal_enthdr *pje)
 {
-	int rc;
 	struct slmds_jent_repgen *jrpg;
+	int rc;
 
 	jrpg = PJE_DATA(pje);
 	rc = mds_redo_bmap_repl_common(jrpg);
 	return (rc);
 }
-
 
 /**
  * mds_redo_bmap_crc - Replay a CRC update.  Because we only log
@@ -302,7 +301,6 @@ mds_redo_ino_addrepl(struct psc_journal_enthdr *pje)
 	return (rc);
 }
 
-
 /**
  * mds_redo_bmap_assign - Replay a bmap assignment update.
  */
@@ -366,7 +364,7 @@ mds_redo_bmap_assign(struct psc_journal_enthdr *pje)
 	rc = mdsio_write(&rootcreds, p, odth.odth_slotsz,
 	   &nb, odth.odth_start + elem * odth.odth_slotsz,
 	   0, handle, NULL, NULL);
-        psc_assert(!rc && nb == odth.odth_slotsz);
+	psc_assert(!rc && nb == odth.odth_slotsz);
 
 	PSCFREE(p);
 	mdsio_release(&rootcreds, handle);
