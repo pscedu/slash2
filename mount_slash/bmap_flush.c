@@ -1249,6 +1249,7 @@ msbmapflushthrrpc_main(__unusedx struct psc_thread *thr)
 void
 msbmapflushthr_spawn(void)
 {
+	struct psc_thread *thr;
 	int i;
 
 	pndgReqs = pscrpc_nbreqset_init(NULL, msl_io_rpc_cb);
@@ -1263,9 +1264,12 @@ msbmapflushthr_spawn(void)
 	lc_reginit(&bmapTimeoutQ, struct bmapc_memb,
 	    bcm_lentry, "bmaptimeout");
 
-	for (i = 0; i < NUM_BMAP_FLUSH_THREADS; i++)
-		pscthr_init(MSTHRT_BMAPFLSH, 0, msbmapflushthr_main,
-		    NULL, 0, "msbflushthr%d", i);
+	for (i = 0; i < NUM_BMAP_FLUSH_THREADS; i++) {
+		thr = pscthr_init(MSTHRT_BMAPFLSH, 0,
+		    msbmapflushthr_main, NULL,
+		    sizeof(struct msbmfl_thread), "msbflushthr%d", i);
+		pscthr_setready(thr);
+	}
 
 	pscthr_init(MSTHRT_BMAPFLSHRPC, 0, msbmapflushthrrpc_main,
 	    NULL, 0, "msbflushrpcthr");
