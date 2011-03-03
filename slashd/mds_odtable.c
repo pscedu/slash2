@@ -1,4 +1,4 @@
-/* $Id: odtable.c 15524 2011-02-17 21:50:02Z yanovich $ */
+/* $Id$ */
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
@@ -18,6 +18,7 @@
  */
 
 #include <sys/param.h>
+
 #include <string.h>
 
 #include "mdsio.h"
@@ -64,17 +65,17 @@ mds_odtable_putitem(struct odtable *odt, void *data, size_t len)
 		memset(p + len, 0, odt->odt_hdr->odth_elemsz - len);
 	psc_crc64_calc(&crc, p, odt->odt_hdr->odth_elemsz);
 
-	/* 
- 	 * Overwrite all fields in case we extend the odtable above.
+	/*
+	 * Overwrite all fields in case we extend the odtable above.
 	 * Note that psc_vbitmap_next() already flips the bit under lock.
- 	 */
+	 */
 	odtf = p + odt->odt_hdr->odth_elemsz;
 	odtf->odtf_crc = crc;
 	odtf->odtf_inuse = ODTBL_INUSE;
 	odtf->odtf_slotno = elem;
 	odtf->odtf_magic = ODTBL_MAGIC;
 
-	/* 
+	/*
 	 * Setup and return the receipt.
 	 */
 	odtr = PSCALLOC(sizeof(*odtr));
@@ -82,7 +83,7 @@ mds_odtable_putitem(struct odtable *odt, void *data, size_t len)
 	odtr->odtr_key = crc;
 
 	rc = mdsio_write(&rootcreds, p, odt->odt_hdr->odth_slotsz,
-	    &nb, odt->odt_hdr->odth_start + elem * odt->odt_hdr->odth_slotsz, 
+	    &nb, odt->odt_hdr->odth_start + elem * odt->odt_hdr->odth_slotsz,
 	    0, odt->odt_handle, NULL, NULL);
 	psc_assert(!rc && nb == odt->odt_hdr->odth_slotsz);
 
@@ -104,7 +105,7 @@ mds_odtable_getitem(struct odtable *odt, const struct odtable_receipt *odtr,
 
 	p = PSCALLOC(odt->odt_hdr->odth_slotsz);
 	rc = mdsio_read(&rootcreds, p, odt->odt_hdr->odth_slotsz,
-	    &nb, odt->odt_hdr->odth_start + odtr->odtr_elem * odt->odt_hdr->odth_slotsz, 
+	    &nb, odt->odt_hdr->odth_start + odtr->odtr_elem * odt->odt_hdr->odth_slotsz,
 	    odt->odt_handle);
 	if (nb != odt->odt_hdr->odth_slotsz) {
 		if (!rc)
@@ -150,12 +151,12 @@ mds_odtable_replaceitem(struct odtable *odt, struct odtable_receipt *odtr,
 
 	p = PSCALLOC(odt->odt_hdr->odth_slotsz);
 	rc = mdsio_read(&rootcreds, p, odt->odt_hdr->odth_slotsz,
-	    &nb, odt->odt_hdr->odth_start + odtr->odtr_elem * odt->odt_hdr->odth_slotsz, 
+	    &nb, odt->odt_hdr->odth_start + odtr->odtr_elem * odt->odt_hdr->odth_slotsz,
 	    odt->odt_handle);
 
 	odtf = p + odt->odt_hdr->odth_elemsz;
 	psc_assert(!odtable_footercheck(odtf, odtr, 1));
-		
+
 	memcpy(p, data, len);
 	if (len < odt->odt_hdr->odth_elemsz)
 		memset(p + len, 0, odt->odt_hdr->odth_elemsz - len);
@@ -166,7 +167,7 @@ mds_odtable_replaceitem(struct odtable *odt, struct odtable_receipt *odtr,
 	psc_info("slot=%zd elemcrc=%"PSCPRIxCRC64, odtr->odtr_elem, crc);
 
 	rc = mdsio_write(&rootcreds, p, odt->odt_hdr->odth_slotsz,
-	    &nb, odt->odt_hdr->odth_start + odtr->odtr_elem * odt->odt_hdr->odth_slotsz, 
+	    &nb, odt->odt_hdr->odth_start + odtr->odtr_elem * odt->odt_hdr->odth_slotsz,
 	    0, odt->odt_handle, NULL, NULL);
 	psc_assert(!rc && nb == odt->odt_hdr->odth_slotsz);
 
@@ -188,7 +189,7 @@ mds_odtable_freeitem(struct odtable *odt, struct odtable_receipt *odtr)
 
 	p = PSCALLOC(odt->odt_hdr->odth_slotsz);
 	rc = mdsio_read(&rootcreds, p, odt->odt_hdr->odth_slotsz,
-	    &nb, odt->odt_hdr->odth_start + odtr->odtr_elem * odt->odt_hdr->odth_slotsz, 
+	    &nb, odt->odt_hdr->odth_start + odtr->odtr_elem * odt->odt_hdr->odth_slotsz,
 	    odt->odt_handle);
 
 	odtf = p + odt->odt_hdr->odth_elemsz;
@@ -255,7 +256,7 @@ mds_odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 	p = PSCALLOC(odt->odt_hdr->odth_slotsz);
 	for (i = 0; i < odt->odt_hdr->odth_nelems; i++) {
 		rc = mdsio_read(&rootcreds, p, odt->odt_hdr->odth_slotsz,
-		    &nb, odt->odt_hdr->odth_start + i * odt->odt_hdr->odth_slotsz, 
+		    &nb, odt->odt_hdr->odth_start + i * odt->odt_hdr->odth_slotsz,
 		    odt->odt_handle);
 
 		odtr.odtr_elem = i;
@@ -338,7 +339,7 @@ mds_odtable_scan(struct odtable *odt,
 		if (!psc_vbitmap_get(odt->odt_bitmap, i))
 			continue;
 		rc = mdsio_read(&rootcreds, p, odt->odt_hdr->odth_slotsz,
-		    &nb, odt->odt_hdr->odth_start + i * odt->odt_hdr->odth_slotsz, 
+		    &nb, odt->odt_hdr->odth_start + i * odt->odt_hdr->odth_slotsz,
 		    odt->odt_handle);
 		if (rc) {
 			psc_warnx("Fail to read slot=%zd, skipping", i);
