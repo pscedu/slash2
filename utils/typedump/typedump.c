@@ -143,6 +143,8 @@ main(int argc, char *argv[])
 	PRTYPE(sl_bmapno_t);
 	PRTYPE(sl_ino_t);
 	PRTYPE(sl_ios_id_t);
+	PRTYPE(sl_lnet_nid_t);
+	PRTYPE(sl_lnet_pid_t);
 	PRTYPE(sl_siteid_t);
 	PRTYPE(slfgen_t);
 	PRTYPE(slfid_t);
@@ -175,6 +177,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct fcmh_mds_info);
 	PRTYPE(struct fidc_membh);
 	PRTYPE(struct mdsio_ops);
+	PRTYPE(struct msbmfl_thread);
 	PRTYPE(struct msctl_replstq);
 	PRTYPE(struct msctlmsg_fncmd_bmapreplpol);
 	PRTYPE(struct msctlmsg_fncmd_newreplpol);
@@ -225,6 +228,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct slm_resmlink);
 	PRTYPE(struct slm_workrq);
 	PRTYPE(struct slmctlmsg_replpair);
+	PRTYPE(struct slmds_jent_assign_rep);
+	PRTYPE(struct slmds_jent_bmap_assign);
 	PRTYPE(struct slmds_jent_bmapseq);
 	PRTYPE(struct slmds_jent_crc);
 	PRTYPE(struct slmds_jent_ino_addrepl);
