@@ -362,6 +362,8 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 
 	sl_csvc_decref(csvc);
 
+	r = psc_dynarray_getpos(biorqs, 0);
+
 	DEBUG_BIORQ(PLL_INFO, r, "biorq array cb arg (%p)", biorqs);
 
 	size = bmap_flush_coalesce_size(biorqs);
