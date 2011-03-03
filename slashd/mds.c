@@ -301,7 +301,7 @@ mds_bmap_ion_restart(struct bmap_mds_lease *bml)
 	if (csvc == NULL) {
 		/*
 		 * This can happen if the MDS finds bmap leases in
-		 * the odtable and we didn't start the I/O server.
+		 * the odtable without a live I/O server connection.
 		 */
 		bml->bml_flags |= BML_ASSFAIL;
 		bml_2_bmap(bml)->bcm_flags |= BMAP_MDS_NOION;
