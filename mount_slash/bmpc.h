@@ -272,7 +272,7 @@ struct bmpc_ioreq {
 	(b)->biorq_flags & BIORQ_FLUSHRDY	? "R" : ""
 
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
-	psc_logs((level), PSS_DEF,					\
+	psclogs((level), PSS_DEF,					\
 	    "biorq@%p fl=%d o=%u l=%u np=%d b=%p ts="PSCPRI_TIMESPEC" "	\
 	    BIORQ_FLAGS_FORMAT" "fmt,					\
 	    (b), (b)->biorq_flags, (b)->biorq_off, (b)->biorq_len,	\
@@ -281,6 +281,7 @@ struct bmpc_ioreq {
 	    DEBUG_BIORQ_FLAGS(b), ## __VA_ARGS__)
 
 int	_msl_offline_retry(struct bmpc_ioreq *, int);
+int	msl_fd_offline_retry(struct msl_fhent *);
 
 #define msl_offline_retry(r)		_msl_offline_retry((r), 0)
 #define msl_offline_retry_ignexpire(r)	_msl_offline_retry((r), 1)
@@ -291,7 +292,7 @@ bmpce_freeprep(struct bmap_pagecache_entry *bmpce)
 	LOCK_ENSURE(&bmpce->bmpce_lock);
 
 	psc_assert(!(bmpce->bmpce_flags &
-		     (BMPCE_FREEING|BMPCE_GETBUF|BMPCE_NEW)));
+	    (BMPCE_FREEING | BMPCE_GETBUF | BMPCE_NEW)));
 	psc_assert(bmpce->bmpce_flags & BMPCE_DATARDY);
 
 	psc_assert(!psc_atomic16_read(&bmpce->bmpce_rdref));
