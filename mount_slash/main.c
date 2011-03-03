@@ -1977,6 +1977,7 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 		goto out;
 	}
 
+	msfsthr(pscthr_get())->mft_failcnt = 1;
 	rc = msl_write(mfh, buf, size, off);
 	if (rc < 0) {
 		rc = -rc;
@@ -2022,6 +2023,7 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 		goto out;
 	}
 
+	msfsthr(pscthr_get())->mft_failcnt = 1;
 	buf = PSCALLOC(size);
 	rc = msl_read(mfh, buf, size, off);
 	if (rc < 0)

@@ -1230,6 +1230,7 @@ void
 msbmapflushthr_main(__unusedx struct psc_thread *thr)
 {
 	while (pscthr_run()) {
+		msbmflthr(pscthr_get())->mbft_failcnt = 1;
 		bmap_flush();
 		psc_waitq_waitrel(&bmapflushwaitq, NULL,
 		    &bmapFlushWaitTime);
