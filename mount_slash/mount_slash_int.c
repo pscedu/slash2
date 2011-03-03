@@ -678,7 +678,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 		    "SLERR_BMAP_DIOWAIT (rt=%d)", nretries);
 
 		sleep(BMAP_CLI_DIOWAIT_SECS);
-		if (nretries > (BMAP_CLI_MAX_LEASE * 2))
+		if (nretries > BMAP_CLI_MAX_LEASE * 2)
 			return (-ETIMEDOUT);
 		goto retry;
 	}
@@ -759,17 +759,6 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw)
 		goto retry;
 	}
 
-	return (rc);
-}
-
-int
-msl_bmap_load(struct msl_fhent *mfh, sl_bmapno_t n, enum rw rw,
-    struct bmapc_memb **bp)
-{
-	int rc;
-	psc_assert(rw == SL_READ || rw == SL_WRITE);
-
-	rc = bmap_get(mfh->mfh_fcmh, n, rw, bp);
 	return (rc);
 }
 
@@ -1670,8 +1659,8 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 {
 #define MAX_BMAPS_REQ 4
 	struct bmpc_ioreq *r[MAX_BMAPS_REQ];
-	size_t s, e, tlen, tsize;
 	struct bmapc_memb *b;
+	size_t s, e, tlen, tsize;
 	int nr, i, rc;
 	off_t roff;
 	char *p;
@@ -1746,12 +1735,13 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 		 * out of luck because we have no idea where the data
 		 * is!
 		 */
-		rc = msl_bmap_load(mfh, i + s, rw, &b);
+		rc = bmap_get(mfh->mfh_fcmh, i + s, rw, &b);
 		if (rc) {
 			DEBUG_FCMH(PLL_ERROR, mfh->mfh_fcmh,
 			    "sz=%zu tlen=%zu off=%"PSCPRIdOFFT" "
 			    "roff=%"PSCPRIdOFFT" rw=%d rc=%d",
 			    tsize, tlen, off, roff, rw, rc);
+			rc = msl_fd_offline_retry(mfh);
 			goto out;
 		}
 

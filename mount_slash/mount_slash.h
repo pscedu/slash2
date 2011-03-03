@@ -56,8 +56,16 @@ struct msrcm_thread {
 };
 
 struct msfs_thread {
+	int				 mft_failcnt;
 	size_t				 mft_uniqid;
 };
+
+struct msbmfl_thread {
+	int				 mbft_failcnt;
+};
+
+PSCTHR_MKCAST(msfsthr, msfs_thread, MSTHRT_FS)
+PSCTHR_MKCAST(msbmflthr, msbmfl_thread, MSTHRT_BMAPFLSH)
 
 struct msl_fhent {			 /* XXX rename */
 	int				 mfh_oflags;	/* open(2) flags */
