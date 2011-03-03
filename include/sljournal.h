@@ -85,9 +85,50 @@ struct slmds_jent_ino_addrepl {
 	uint32_t			sjir_nrepls;
 } __packed;
 
+/*
+ * I had trouble compiling within zfs directory.  So instead of including
+ * lnet/types.h, I did the following.
+ */
+typedef uint64_t sl_lnet_nid_t;
+typedef uint32_t sl_lnet_pid_t;
+
+typedef struct {
+        sl_lnet_nid_t nid;
+        sl_lnet_pid_t pid;   /* node id / process id */
+} sl_lnet_process_id_t;
+
+struct slmds_jent_bmap_assign {
+	sl_lnet_nid_t			sjba_ion_nid;
+	sl_lnet_process_id_t		sjba_lastcli;
+	sl_ios_id_t			sjba_ios;
+	slfid_t				sjba_fid;
+	uint64_t			sjba_seq;
+	sl_bmapno_t			sjba_bmapno;
+	time_t				sjba_start;
+	int				sjba_flags;
+} __packed;
+
 struct slmds_jent_bmapseq {
 	uint64_t			sjbsq_high_wm;
 	uint64_t			sjbsq_low_wm;
+} __packed;
+
+/*
+ * This is a "jumbo" journal entry that combines at most three
+ * changes into one.
+ */
+
+#define	SLJ_ASSIGN_REP_NONE		0x00
+#define	SLJ_ASSIGN_REP_INO		0x01
+#define	SLJ_ASSIGN_REP_REP		0x02
+#define	SLJ_ASSIGN_REP_BMAP		0x04
+
+struct slmds_jent_assign_rep {
+	int				sjar_flag;
+	int				sjar_elem;
+	struct slmds_jent_ino_addrepl	sjar_ino;
+	struct slmds_jent_repgen	sjar_rep;
+	struct slmds_jent_bmap_assign	sjar_bmap;
 } __packed;
 
 #define SJ_NAMESPACE_MAGIC		UINT64_C(0xabcd12345678dcba)

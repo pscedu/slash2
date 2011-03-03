@@ -60,7 +60,7 @@ void	 mds_repl_bmap_rel(struct bmapc_memb *);
 int	_mds_repl_bmap_walk(struct bmapc_memb *, const int *, const int *, int, const int *, int, brepl_walkcb_t, void *);
 int	 mds_repl_delrq(const struct slash_fidgen *, sl_bmapno_t, const sl_replica_t *, int);
 void	 mds_repl_init(void);
-int	 mds_repl_inv_except(struct bmapc_memb *, sl_ios_id_t);
+int	 mds_repl_inv_except(struct bmapc_memb *, sl_ios_id_t, int);
 int	_mds_repl_ios_lookup(struct slash_inode_handle *, sl_ios_id_t, int, int);
 int	 mds_repl_loadino(const struct slash_fidgen *, struct fidc_membh **);
 void	 mds_repl_node_clearallbusy(struct resm_mds_info *);
@@ -116,7 +116,7 @@ void	 mds_repl_reset_scheduled(sl_ios_id_t);
 
 #define mds_repl_nodes_clearbusy(a, b)		 mds_repl_nodes_adjbusy((a), (b), INT_MIN)
 
-#define mds_repl_ios_lookup_add(ih, ios, jrnl)	_mds_repl_ios_lookup((ih), (ios), 1, (jrnl))
+#define mds_repl_ios_lookup_add(ih, ios, log)	_mds_repl_ios_lookup((ih), (ios), 1, log)
 #define mds_repl_ios_lookup(ih, ios)		_mds_repl_ios_lookup((ih), (ios), 0, 0)
 
 extern struct psc_listcache	 slm_replst_workq;

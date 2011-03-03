@@ -164,8 +164,13 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	return (rc);
 }
 
+/*
+ * mds_bmap_repl_update - We update bmap replication status in two cases: (1) 
+ *     An MDS issues a write lease to a client. (2) An MDS performs a replicate
+ *     request.
+ */
 int
-mds_bmap_repl_update(struct bmapc_memb *bmap)
+mds_bmap_repl_update(struct bmapc_memb *bmap, int log)
 {
 	int rc, logchg;
 	size_t nb;
@@ -177,12 +182,14 @@ mds_bmap_repl_update(struct bmapc_memb *bmap)
 		return (0);
 	}
 
-	mds_reserve_slot();
+	if (log)
+		mds_reserve_slot();
 	rc = zfsslash2_write(&rootcreds, bmap_2_ondisk(bmap),
 	    BMAP_OD_SZ, &nb, (off_t)((BMAP_OD_SZ * bmap->bcm_bmapno) +
 	    SL_BMAP_START_OFF), 0, bmap_2_zfs_fh(bmap),
-	    mds_bmap_repl_log, bmap);
-	mds_unreserve_slot();
+	    log ? mds_bmap_repl_log : NULL, bmap);
+	if (log)
+		mds_unreserve_slot();
 
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, bmap,
@@ -198,15 +205,11 @@ mds_bmap_repl_update(struct bmapc_memb *bmap)
 
 int
 mds_inode_addrepl_update(struct slash_inode_handle *inoh,
-    sl_ios_id_t ios, uint32_t pos)
+    sl_ios_id_t ios, uint32_t pos, int log)
 {
 	struct slmds_jent_ino_addrepl jrir;
 	int locked, rc = 0;
 	size_t nb;
-
-	jrir.sjir_fid = fcmh_2_fid(inoh->inoh_fcmh);
-	jrir.sjir_ios = ios;
-	jrir.sjir_pos = pos;
 
 	locked = reqlock(&inoh->inoh_lock);
 
@@ -215,13 +218,19 @@ mds_inode_addrepl_update(struct slash_inode_handle *inoh,
 	psc_assert((inoh->inoh_flags & INOH_INO_DIRTY) ||
 		   (inoh->inoh_flags & INOH_EXTRAS_DIRTY));
 
-	mds_reserve_slot();
+	if (log) {
+		jrir.sjir_fid = fcmh_2_fid(inoh->inoh_fcmh);
+		jrir.sjir_ios = ios;
+		jrir.sjir_pos = pos;
+		mds_reserve_slot();
+	}
 	if (inoh->inoh_flags & INOH_INO_DIRTY) {
 		psc_crc64_calc(&inoh->inoh_ino.ino_crc, &inoh->inoh_ino,
 		    INO_OD_CRCSZ);
 		rc = zfsslash2_write(&rootcreds, &inoh->inoh_ino,
 		    INO_OD_SZ, &nb, SL_INODE_START_OFF, 0,
-		    inoh_2_mdsio_data(inoh), mds_inode_addrepl_log,
+		    inoh_2_mdsio_data(inoh), 
+		    log ? mds_inode_addrepl_log : NULL,
 		    &jrir);
 
 		if (!rc && nb != INO_OD_SZ)
@@ -241,7 +250,8 @@ mds_inode_addrepl_update(struct slash_inode_handle *inoh,
 		    inoh->inoh_extras, INOX_OD_CRCSZ);
 		rc = zfsslash2_write(&rootcreds, &inoh->inoh_extras,
 		    INOX_OD_SZ, &nb, SL_EXTRAS_START_OFF, 0,
-		    inoh_2_mdsio_data(inoh), mds_inode_addrepl_log,
+		    inoh_2_mdsio_data(inoh), 
+		    log ? mds_inode_addrepl_log : NULL,
 		    &jrir);
 
 		if (!rc && nb != INO_OD_SZ)
@@ -251,7 +261,8 @@ mds_inode_addrepl_update(struct slash_inode_handle *inoh,
 
 		inoh->inoh_flags &= ~INOH_EXTRAS_DIRTY;
 	}
-	mds_unreserve_slot();
+	if (log)
+		mds_unreserve_slot();
 
 	ureqlock(&inoh->inoh_lock, locked);
 	return (rc);

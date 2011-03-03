@@ -37,6 +37,7 @@
 #include "psc_util/hostname.h"
 #include "psc_util/journal.h"
 #include "psc_util/log.h"
+#include "psc_util/odtable.h"
 
 #include "creds.h"
 #include "fid.h"
@@ -51,6 +52,9 @@ int		 ion;
 struct passwd	*pw;
 
 const char      *datadir = SL_PATH_DATADIR;
+
+char fn[PATH_MAX];
+struct psc_journal_cursor cursor;
 
 void
 slnewfs_mkdir(const char *fn)
@@ -77,14 +81,60 @@ slimmns_create_int(const char *pdirnam, uint32_t curdepth,
 	}
 }
 
+/*
+ * Create an empty odtable in the ZFS pool.  We also maintain a separate utility
+ * to create/edit/show the odtable (use ZFS fuse mount).
+ */
+void
+slimmns_create_odtable(const char *root)
+{
+	size_t i;
+	struct odtable odt;
+	struct odtable_hdr odth;
+	struct odtable_entftr odtf;
+
+	xmkfn(fn, "%s/%s", root, SL_PATH_BMAP);
+
+	odt.odt_fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
+	if (odt.odt_fd < 0)
+		psc_fatal("open %s", fn);
+
+	odth.odth_nelems = ODT_DEFAULT_TABLE_SIZE;
+	odth.odth_elemsz = ODT_DEFAULT_ITEM_SIZE;
+	odth.odth_slotsz = ODT_DEFAULT_ITEM_SIZE + sizeof(struct odtable_entftr);
+	odth.odth_magic = ODTBL_MAGIC;
+	odth.odth_version = ODTBL_VERS;
+	odth.odth_options = ODTBL_OPT_CRC;
+	odth.odth_start = ODTBL_START;
+
+	odtf.odtf_crc = 0;
+	odtf.odtf_inuse = ODTBL_FREE;
+	odtf.odtf_slotno = 0;
+	odtf.odtf_magic = ODTBL_MAGIC;
+	
+	odt.odt_hdr = &odth;
+
+	if (pwrite(odt.odt_fd, &odth, sizeof(odth), 0) != sizeof(odth))
+		psc_fatal("open %s", fn);
+
+	/* initialize the table by writing the footers of all entries */
+	for (i = 0; i < ODT_DEFAULT_TABLE_SIZE; i++) {
+		odtf.odtf_slotno = i;
+
+		if (pwrite(odt.odt_fd, &odtf, sizeof(odtf),
+		    odtable_getitem_foff(&odt, i) + odth.odth_elemsz) !=
+		    sizeof(odtf))
+			psc_fatal("pwrite %s", fn);
+	}
+	close(odt.odt_fd);
+}
+
 /**
  * slimmns_create - Create an immutable namespace directory structure.
  */
 void
 slimmns_create(const char *root, uint32_t depth)
 {
-	struct psc_journal_cursor cursor;
-	char fn[PATH_MAX];
 	int fd;
 
 	if (!depth)
@@ -121,34 +171,6 @@ slimmns_create(const char *root, uint32_t depth)
 		psc_fatal("write %s", fn);
 	close(fd);
 
-#if 0
-	/*
- 	 * Keep this piece of code for now in case we change our mind.
- 	 */
-	if (wipe && !ion) {
-		struct dirent *dent;
-		DIR *dp;
-
-		dp = opendir(datadir);
-		if (dp) {
-			while ((dent = readdir(dp)) != NULL) {
-				if (strncmp(dent->d_name,
-				    SL_FN_UPDATELOG,
-				    strlen(SL_FN_UPDATELOG)) &&
-				    strncmp(dent->d_name,
-				    SL_FN_RECLAIMLOG,
-				    strlen(SL_FN_RECLAIMLOG)))
-					continue;
-				xmkfn(fn, "%s/%s", datadir,
-				    dent->d_name);
-				if (unlink(fn) == -1)
-					psc_error("unlink %s", fn);
-			}
-			closedir(dp);
-		}
-	}
-#endif
-
 	xmkfn(fn, "%s/%s.%d.%s.%lu",  root, SL_FN_UPDATELOG, 0,
 	    psc_get_hostname(), cursor.pjc_timestamp);
 	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
@@ -176,6 +198,8 @@ slimmns_create(const char *root, uint32_t depth)
 	if (fd == -1)
 		psc_fatal("open %s", fn);
 	close(fd);
+
+	slimmns_create_odtable(root);
 }
 
 __dead void

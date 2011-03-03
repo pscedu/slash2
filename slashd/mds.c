@@ -43,6 +43,7 @@
 #include "slashrpc.h"
 #include "slerr.h"
 #include "up_sched_res.h"
+#include "sljournal.h"
 
 struct odtable				*mdsBmapAssignTable;
 uint64_t				 mdsBmapSequenceNo;
@@ -345,6 +346,14 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	struct bmap_ion_assign bia;
 	struct sl_resm *resm;
 	int nb, j, len;
+	struct slash_inode_handle *ih;
+	int iosidx;
+	uint32_t nrepls;
+
+	struct slmds_jent_ino_addrepl *jrir;
+	struct slmds_jent_repgen *jrpg;
+	struct slmds_jent_bmap_assign *jrba;
+	struct slmds_jent_assign_rep *logentry;
 
 	psc_assert(!bmdsi->bmdsi_wr_ion);
 	psc_assert(!bmdsi->bmdsi_assign);
@@ -400,6 +409,10 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	return (-SLERR_ION_OFFLINE);
 
  online:
+
+	mds_reserve_slot();
+	logentry = pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_assign_rep));
+
 	bmdsi->bmdsi_wr_ion = rmmi = resm->resm_pri;
 	atomic_inc(&rmmi->rmmi_refcnt);
 	sl_csvc_decref(csvc); /* XXX this is really dumb */
@@ -421,8 +434,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	bia.bia_flags = (bmap->bcm_flags & BMAP_DIO) ? BIAF_DIO : 0;
 	bmdsi->bmdsi_seq = bia.bia_seq = mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
 
-	bmdsi->bmdsi_assign = odtable_putitem(mdsBmapAssignTable, &bia,
-	    sizeof(bia));
+	bmdsi->bmdsi_assign = mds_odtable_putitem(mdsBmapAssignTable, &bia, sizeof(bia));
 	if (!bmdsi->bmdsi_assign) {
 		BMAP_LOCK(bmap);
 		bmap->bcm_flags |= BMAP_MDS_NOION;
@@ -444,7 +456,50 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	 */
 	bmap_op_start_type(bmap, BMAP_OPCNT_IONASSIGN);
 
-	mds_repl_inv_except(bmap, bia.bia_ios);
+	ih = fcmh_2_inoh(bmap->bcm_fcmh);
+	nrepls = ih->inoh_ino.ino_nrepls;
+
+	iosidx = mds_repl_ios_lookup_add(ih, bia.bia_ios, 0);
+	if (iosidx < 0)
+		psc_fatalx("ios_lookup_add %d: %s", bia.bia_ios, slstrerror(iosidx));
+	mds_repl_inv_except(bmap, bia.bia_ios, iosidx);
+
+	jrpg = &logentry->sjar_rep;
+	jrba = &logentry->sjar_bmap;
+	jrir = &logentry->sjar_ino;
+
+	logentry->sjar_flag = SLJ_ASSIGN_REP_NONE;
+	if (nrepls != ih->inoh_ino.ino_nrepls) {
+		jrir->sjir_fid = fcmh_2_fid(bmap->bcm_fcmh);
+		jrir->sjir_ios = bia.bia_ios;
+		jrir->sjir_pos = iosidx;
+		jrir->sjir_nrepls = ih->inoh_ino.ino_nrepls; 
+		logentry->sjar_flag |= SLJ_ASSIGN_REP_INO;
+	}
+
+	jrpg->sjp_fid = fcmh_2_fid(bmap->bcm_fcmh);
+	jrpg->sjp_bmapno = bmap->bcm_bmapno;
+	jrpg->sjp_bgen = bmap_2_bgen(bmap);
+	memcpy(jrpg->sjp_reptbl, bmap->bcm_repls, SL_REPLICA_NBYTES);
+	logentry->sjar_flag |= SLJ_ASSIGN_REP_REP;
+
+	jrba->sjba_ion_nid = bia.bia_ion_nid;
+	jrba->sjba_lastcli.nid = bia.bia_lastcli.nid;
+	jrba->sjba_lastcli.pid = bia.bia_lastcli.pid;
+	jrba->sjba_ios = bia.bia_ios;
+	jrba->sjba_fid = bia.bia_fid;
+	jrba->sjba_seq = bia.bia_seq;
+	jrba->sjba_bmapno = bia.bia_bmapno;
+	jrba->sjba_start = bia.bia_start;
+	jrba->sjba_flags = bia.bia_flags;
+	logentry->sjar_flag |= SLJ_ASSIGN_REP_BMAP;
+	logentry->sjar_elem = bmdsi->bmdsi_assign->odtr_elem;
+
+	pjournal_add_entry(mdsJournal, 0, MDS_LOG_BMAP_ASSIGN, 0, logentry,
+	    sizeof(struct slmds_jent_assign_rep));
+
+	pjournal_put_buf(mdsJournal, logentry);
+	mds_unreserve_slot();
 
 	bml->bml_seq = bia.bia_seq;
 
@@ -459,36 +514,94 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 __static int
 mds_bmap_ion_update(struct bmap_mds_lease *bml)
 {
+	int rc;
+	int iosidx;
+	uint32_t nrepls;
 	struct bmapc_memb *b = bml_2_bmap(bml);
 	struct bmap_mds_info *bmdsi = bmap_2_bmdsi(b);
-	struct bmap_ion_assign *bia;
+	struct bmap_ion_assign bia;
+	struct slash_inode_handle *ih;
+
+	struct slmds_jent_ino_addrepl *jrir;
+	struct slmds_jent_repgen *jrpg;
+	struct slmds_jent_bmap_assign *jrba;
+	struct slmds_jent_assign_rep *logentry;
 
 	psc_assert(b->bcm_flags & BMAP_IONASSIGN);
 
-	bia = odtable_getitem(mdsBmapAssignTable, bmdsi->bmdsi_assign);
-	if (!bia) {
+	rc = mds_odtable_getitem(mdsBmapAssignTable, bmdsi->bmdsi_assign,
+		&bia, sizeof(struct bmap_ion_assign));
+	if (!rc) {
 		DEBUG_BMAP(PLL_ERROR, b, "odtable_getitem() failed");
 		return (-1);
 	}
 
-	if (bml->bml_cli_nidpid.nid != bia->bia_lastcli.nid ||
-	    bml->bml_cli_nidpid.pid != bia->bia_lastcli.pid)
+	if (bml->bml_cli_nidpid.nid != bia.bia_lastcli.nid ||
+	    bml->bml_cli_nidpid.pid != bia.bia_lastcli.pid)
 	    psc_assert(b->bcm_flags & BMAP_DIO);
 
-	psc_assert(bia->bia_seq == bmdsi->bmdsi_seq);
-	bia->bia_start = time(NULL);
-	bia->bia_seq = bmdsi->bmdsi_seq = mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
-	bia->bia_lastcli = bml->bml_cli_nidpid;
-	bia->bia_flags = BIAF_DIO;
+	psc_assert(bia.bia_seq == bmdsi->bmdsi_seq);
+	bia.bia_start = time(NULL);
+	bia.bia_seq = bmdsi->bmdsi_seq = mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
+	bia.bia_lastcli = bml->bml_cli_nidpid;
+	bia.bia_flags = BIAF_DIO;
 
-	bmdsi->bmdsi_assign = odtable_replaceitem(mdsBmapAssignTable,
-	    bmdsi->bmdsi_assign, bia, sizeof(*bia));
+	mds_reserve_slot();
+
+	logentry = pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_assign_rep));
+
+	bmdsi->bmdsi_assign = mds_odtable_replaceitem(mdsBmapAssignTable,
+	    bmdsi->bmdsi_assign, &bia, sizeof(bia));
 	psc_assert(bmdsi->bmdsi_assign);
 
-	bml->bml_ion_nid = bia->bia_ion_nid;
-	bml->bml_seq = bia->bia_seq;
+	bml->bml_ion_nid = bia.bia_ion_nid;
+	bml->bml_seq = bia.bia_seq;
 
-	mds_repl_inv_except(b, bia->bia_ios);
+	ih = fcmh_2_inoh(b->bcm_fcmh);
+	nrepls = ih->inoh_ino.ino_nrepls;
+
+	iosidx = mds_repl_ios_lookup_add(ih, bia.bia_ios, 0);
+	if (iosidx < 0)
+		psc_fatalx("ios_lookup_add %d: %s", bia.bia_ios, slstrerror(iosidx));
+
+	mds_repl_inv_except(b, bia.bia_ios, iosidx);
+
+	jrpg = &logentry->sjar_rep;
+	jrba = &logentry->sjar_bmap;
+	jrir = &logentry->sjar_ino;
+
+	logentry->sjar_flag = SLJ_ASSIGN_REP_NONE;
+	if (nrepls != ih->inoh_ino.ino_nrepls) {
+		jrir->sjir_fid = fcmh_2_fid(b->bcm_fcmh);
+		jrir->sjir_ios = bia.bia_ios;
+		jrir->sjir_pos = iosidx;
+		jrir->sjir_nrepls = ih->inoh_ino.ino_nrepls; 
+		logentry->sjar_flag |= SLJ_ASSIGN_REP_INO;
+	}
+
+	jrpg->sjp_fid = fcmh_2_fid(b->bcm_fcmh);
+	jrpg->sjp_bmapno = b->bcm_bmapno;
+	jrpg->sjp_bgen = bmap_2_bgen(b);
+	memcpy(jrpg->sjp_reptbl, b->bcm_repls, SL_REPLICA_NBYTES);
+	logentry->sjar_flag |= SLJ_ASSIGN_REP_REP;
+
+	jrba->sjba_ion_nid = bia.bia_ion_nid;
+	jrba->sjba_lastcli.nid = bia.bia_lastcli.nid;
+	jrba->sjba_lastcli.pid = bia.bia_lastcli.pid;
+	jrba->sjba_ios = bia.bia_ios;
+	jrba->sjba_fid = bia.bia_fid;
+	jrba->sjba_seq = bia.bia_seq;
+	jrba->sjba_bmapno = bia.bia_bmapno;
+	jrba->sjba_start = bia.bia_start;
+	jrba->sjba_flags = bia.bia_flags;
+	logentry->sjar_flag |= SLJ_ASSIGN_REP_BMAP;
+	logentry->sjar_elem = bmdsi->bmdsi_assign->odtr_elem;
+
+	pjournal_add_entry(mdsJournal, 0, MDS_LOG_BMAP_ASSIGN, 0, logentry,
+	    sizeof(struct slmds_jent_assign_rep));
+
+	pjournal_put_buf(mdsJournal, logentry);
+	mds_unreserve_slot();
 
 	return (0);
 }
@@ -995,13 +1108,13 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 			if (!(bml->bml_flags & BML_ASSFAIL)) {
 				/* odtable sanity checks:
 				 */
-				struct bmap_ion_assign *bia;
+				struct bmap_ion_assign bia;
 
-				bia = odtable_getitem(mdsBmapAssignTable,
-						      bmdsi->bmdsi_assign);
-				psc_assert(bia &&
-				   bia->bia_seq == bmdsi->bmdsi_seq);
-				psc_assert(bia->bia_bmapno == b->bcm_bmapno);
+				rc = mds_odtable_getitem(mdsBmapAssignTable,
+				      bmdsi->bmdsi_assign, &bia, sizeof(bia));
+				psc_assert(!rc &&
+				   bia.bia_seq == bmdsi->bmdsi_seq);
+				psc_assert(bia.bia_bmapno == b->bcm_bmapno);
 				/* End sanity checks.
 				 */
 				atomic_dec(&bmdsi->bmdsi_wr_ion->rmmi_refcnt);
@@ -1021,7 +1134,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	bmap_op_done_type(b, BMAP_OPCNT_LEASE);
 
 	if (odtr) {
-		rc = odtable_freeitem(mdsBmapAssignTable, odtr);
+		rc = mds_odtable_freeitem(mdsBmapAssignTable, odtr);
 		DEBUG_BMAP(PLL_NOTIFY, b, "odtable remove seq=%"PRId64" key=%"
 		   PRId64" rc=%d", bml->bml_seq, odtr->odtr_key, rc);
 		bmap_op_done_type(b, BMAP_OPCNT_IONASSIGN);
@@ -1203,7 +1316,7 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 	}
  out:
 	if (rc)
-		odtable_freeitem(mdsBmapAssignTable, odtr);
+		mds_odtable_freeitem(mdsBmapAssignTable, odtr);
 	if (f)
 		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 	if (b)

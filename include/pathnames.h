@@ -26,6 +26,7 @@
  * work that needs to be done; (3) access SLASH2 files by SLASH2 FIDs.
  */
 #define SL_PATH_PREFIX		".sl"
+#define SL_PATH_BMAP		".slbmap"
 #define SL_PATH_UPSCH		".slupsch"
 #define SL_PATH_FIDNS		".slfidns"
 #define SL_PATH_CURSOR		".slcursor"
@@ -47,8 +48,8 @@
 #define SL_PATH_DATADIR		"/var/lib/slash"
 
 #define SL_FN_AUTHBUFKEY	"authbuf.key"
-#define SL_FN_IONBMAPS_ODT	"ion_bmaps.odt"
 #define SL_FN_OPJOURNAL		"op-journal"
+
 
 #define SL_FN_UPDATELOG		".op-update"
 #define SL_FN_UPDATEPROG	".op-update-prog"

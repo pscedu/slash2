@@ -78,9 +78,9 @@ void	mds_bmap_sync(void *);
 void	mds_inode_sync(struct slash_inode_handle *);
 void	mds_journal_init(int);
 
-int	mds_bmap_repl_update(struct bmapc_memb *);
+int	mds_bmap_repl_update(struct bmapc_memb *, int);
 int	mds_bmap_crc_update(struct bmapc_memb *, struct srm_bmap_crcup *);
-int	mds_inode_addrepl_update(struct slash_inode_handle *, sl_ios_id_t, uint32_t);
+int	mds_inode_addrepl_update(struct slash_inode_handle *, sl_ios_id_t, uint32_t, int);
 
 void	mds_current_txg(uint64_t *);
 

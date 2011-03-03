@@ -27,6 +27,7 @@
 #include "namespace.h"
 #include "slerr.h"
 #include "sljournal.h"
+#include "pathnames.h"
 
 /**
  * mds_redo_bmap_repl - Replay a replication update on a bmap.  This has
@@ -34,16 +35,13 @@
  *	tables.
  */
 static int
-mds_redo_bmap_repl(struct psc_journal_enthdr *pje)
+mds_redo_bmap_repl_common(struct slmds_jent_repgen *jrpg)
 {
-	struct slmds_jent_repgen *jrpg;
 	struct bmap_ondisk bmap_disk;
 	void *mdsio_data;
 	mdsio_fid_t fid;
 	size_t nb;
 	int rc;
-
-	jrpg = PJE_DATA(pje);
 
 	memset(&bmap_disk, 0, sizeof(struct bmap_ondisk));
 
@@ -88,6 +86,18 @@ mds_redo_bmap_repl(struct psc_journal_enthdr *pje)
 	mdsio_release(&rootcreds, mdsio_data);
 	return (rc);
 }
+
+static int
+mds_redo_bmap_repl(struct psc_journal_enthdr *pje)
+{
+	int rc;
+	struct slmds_jent_repgen *jrpg;
+
+	jrpg = PJE_DATA(pje);
+	rc = mds_redo_bmap_repl_common(jrpg);
+	return (rc);
+}
+
 
 /**
  * mds_redo_bmap_crc - Replay a CRC update.  Because we only log
@@ -183,10 +193,9 @@ mds_redo_bmap_seq(struct psc_journal_enthdr *pje)
  * mds_redo_ino_addrepl - Replay an inode replication table update.
  */
 static int
-mds_redo_ino_addrepl(struct psc_journal_enthdr *pje)
+mds_redo_ino_addrepl_common(struct slmds_jent_ino_addrepl *jrir)
 {
 	struct slash_inode_extras_od inoh_extras;
-	struct slmds_jent_ino_addrepl *jrir;
 	struct slash_inode_od inoh_ino;
 	void *mdsio_data;
 	mdsio_fid_t fid;
@@ -195,7 +204,6 @@ mds_redo_ino_addrepl(struct psc_journal_enthdr *pje)
 
 	memset(&inoh_ino, 0, sizeof(inoh_ino));
 
-	jrir = PJE_DATA(pje);
 	pos = jrir->sjir_pos;
 	if (pos >= SL_MAX_REPLICAS || pos < 0) {
 		psclog_errorx("ino_nrepls index (%d) is out of range",
@@ -281,6 +289,88 @@ mds_redo_ino_addrepl(struct psc_journal_enthdr *pje)
  out:
 	mdsio_release(&rootcreds, mdsio_data);
 	return (rc);
+}
+
+static int
+mds_redo_ino_addrepl(struct psc_journal_enthdr *pje)
+{
+	int rc;
+	struct slmds_jent_ino_addrepl *jrir;
+
+	jrir = PJE_DATA(pje);
+	rc = mds_redo_ino_addrepl_common(jrir);
+	return (rc);
+}
+
+
+/**
+ * mds_redo_bmap_assign - Replay a bmap assignment update.
+ */
+static int
+mds_redo_bmap_assign(struct psc_journal_enthdr *pje)
+{
+	int rc;
+	void *p, *handle;
+	mdsio_fid_t mf;
+	uint64_t crc;
+	size_t nb, len, elem;
+	struct odtable_hdr odth;
+	struct odtable_entftr *odtf;
+	struct slmds_jent_ino_addrepl *jrir;
+	struct slmds_jent_repgen *jrpg;
+	struct slmds_jent_bmap_assign *jrba;
+	struct slmds_jent_assign_rep *logentry;
+
+	logentry = PJE_DATA(pje);
+	if (logentry->sjar_flag & SLJ_ASSIGN_REP_INO) {
+		jrir = &logentry->sjar_ino;
+		mds_redo_ino_addrepl_common(jrir);
+	}
+
+	psc_assert(logentry->sjar_flag & SLJ_ASSIGN_REP_REP);
+	jrpg = &logentry->sjar_rep;
+	mds_redo_bmap_repl_common(jrpg);
+
+	psc_assert(logentry->sjar_flag & SLJ_ASSIGN_REP_BMAP);
+	jrba = &logentry->sjar_bmap;
+
+	rc = mdsio_lookup(MDSIO_FID_ROOT, SL_PATH_BMAP, &mf, &rootcreds, NULL);
+	psc_assert(rc == 0);
+
+	rc = mdsio_opencreate(mf, &rootcreds, O_RDWR, 0, NULL, NULL,
+	    NULL, &handle, NULL, NULL);
+	psc_assert(!rc && handle);
+
+	rc = mdsio_read(&rootcreds, &odth, sizeof(odth), &nb, 0,
+	    handle);
+	psc_assert(rc == 0 && nb == sizeof(odth));
+
+	psc_assert((odth.odth_magic == ODTBL_MAGIC) &&
+		   (odth.odth_version == ODTBL_VERS));
+
+	elem = logentry->sjar_elem;
+	len = sizeof(struct slmds_jent_bmap_assign);
+
+	p = PSCALLOC(odth.odth_slotsz);
+	memcpy(p, jrba, len);
+	if (len < odth.odth_elemsz)
+		memset(p + len, 0, odth.odth_elemsz - len);
+	psc_crc64_calc(&crc, p, odth.odth_elemsz);
+
+	odtf = p + odth.odth_elemsz;
+	odtf->odtf_crc = crc;
+	odtf->odtf_inuse = ODTBL_INUSE;
+	odtf->odtf_slotno = elem;
+	odtf->odtf_magic = ODTBL_MAGIC;
+
+	rc = mdsio_write(&rootcreds, p, odth.odth_slotsz,
+	   &nb, odth.odth_start + elem * odth.odth_slotsz,
+	   0, handle, NULL, NULL);
+        psc_assert(!rc && nb == odth.odth_slotsz);
+
+	PSCFREE(p);
+	mdsio_release(&rootcreds, handle);
+	return (0);
 }
 
 /**
@@ -414,6 +504,9 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 		break;
 	    case MDS_LOG_INO_ADDREPL:
 		rc = mds_redo_ino_addrepl(pje);
+		break;
+	    case MDS_LOG_BMAP_ASSIGN:
+		rc = mds_redo_bmap_assign(pje);
 		break;
 	    case MDS_LOG_NAMESPACE:
 		sjnm = PJE_DATA(pje);

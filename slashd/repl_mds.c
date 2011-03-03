@@ -90,8 +90,7 @@ uswi_cmp(const void *a, const void *b)
 SPLAY_GENERATE(upschedtree, up_sched_work_item, uswi_tentry, uswi_cmp);
 
 int
-_mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
-    int add, int journal)
+_mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios, int add, int log)
 {
 	sl_replica_t *repl;
 	uint32_t j = 0, k;
@@ -158,8 +157,7 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
 		DEBUG_INOH(PLL_INFO, ih, "add IOS(%u) to repls, replica %d",
 			   ios, ih->inoh_ino.ino_nrepls-1);
 
-		if (journal)
-			mds_inode_addrepl_update(ih, ios, j);
+		mds_inode_addrepl_update(ih, ios, j, log);
 
 		rc = j;
 	}
@@ -325,23 +323,11 @@ _mds_repl_bmap_walk(struct bmapc_memb *bcm, const int *tract,
  *	garbage leaks.
  */
 int
-mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
+mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios, int iosidx)
 {
-	int rc, iosidx, tract[NBREPLST], retifset[NBREPLST];
+	int rc, tract[NBREPLST], retifset[NBREPLST];
 	struct up_sched_work_item *wk;
 	uint32_t policy;
-
-	/*
-	 * Find/add our replica's IOS ID but instruct
-	 * mds_repl_ios_lookup_add() not to journal this operation
-	 * because the inode's repl table will be journaled with this
-	 * bmap's updated repl bitmap.  This saves a journal I/O.
-	 */
-	iosidx = mds_repl_ios_lookup_add(fcmh_2_inoh(bcm->bcm_fcmh),
-	    ios, 1);
-	if (iosidx < 0)
-		psc_fatalx("ios_lookup_add %d: %s", ios,
-		    slstrerror(iosidx));
 
 	BHREPL_POLICY_GET(bcm, &policy);
 
@@ -377,7 +363,7 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 		BHGEN_INCREMENT(bcm);
 
 	/* Write changes to disk. */
-	mds_bmap_repl_update(bcm);
+	mds_bmap_repl_update(bcm, 0);
 
 	/*
 	 * If this bmap is marked for persistent replication,
@@ -404,7 +390,7 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 void
 mds_repl_bmap_rel(struct bmapc_memb *bcm)
 {
-	mds_bmap_repl_update(bcm);
+	mds_bmap_repl_update(bcm, 1);
 	bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
 }
 

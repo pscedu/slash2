@@ -141,8 +141,6 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 void
 slm_init(void)
 {
-	char fn[PATH_MAX];
-
 	psc_poolmaster_init(&upsched_poolmaster, struct up_sched_work_item,
 	    uswi_lentry, PPMF_AUTO, 256, 256, 0, NULL, NULL, NULL,
 	    "upschwk");
@@ -166,12 +164,11 @@ slm_init(void)
 
 	mds_journal_init(disable_propagation);
 
-	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_IONBMAPS_ODT);
-	psc_assert(!odtable_load(&mdsBmapAssignTable, fn, "bmapassign"));
+	mds_odtable_load(&mdsBmapAssignTable, SL_PATH_BMAP, "bmapassign");
 
 	mds_bmap_timeotbl_init();
 
-	odtable_scan(mdsBmapAssignTable, mds_bia_odtable_startup_cb);
+	mds_odtable_scan(mdsBmapAssignTable, mds_bia_odtable_startup_cb);
 }
 
 __dead void
