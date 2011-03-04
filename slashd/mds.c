@@ -66,7 +66,7 @@ int
 mds_inode_read(struct slash_inode_handle *i)
 {
 	uint64_t crc;
-	int rc=0, locked;
+	int rc, locked;
 
 	locked = reqlock(&i->inoh_lock);
 	psc_assert(i->inoh_flags & INOH_INO_NOTLOADED);
@@ -547,7 +547,6 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 	bia.bia_flags = BIAF_DIO;
 
 	mds_reserve_slot();
-
 	logentry = pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_assign_rep));
 
 	bmdsi->bmdsi_assign = mds_odtable_replaceitem(mdsBmapAssignTable,
