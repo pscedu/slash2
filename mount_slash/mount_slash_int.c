@@ -999,13 +999,16 @@ msl_io_rpcset_cb(__unusedx struct pscrpc_request_set *set, void *arg, int rc)
 	struct bmpc_ioreq *r;
 	int i;
 
-	for (i = 0; i < psc_dynarray_len(biorqs); i++) {
-		r = psc_dynarray_getpos(biorqs, i);
-		msl_biorq_destroy(r);
+	if (rc) {
+		DYNARRAY_FOREACH(r, i, biorqs)
+			;
+		return (rc);
 	}
+
+	DYNARRAY_FOREACH(r, i, biorqs)
+		msl_biorq_destroy(r);
 	psc_dynarray_free(biorqs);
 	psc_free(biorqs, 0);
-
 	return (rc);
 }
 
@@ -1014,10 +1017,19 @@ msl_io_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
 	struct psc_dynarray *biorqs = args->pointer_arg[1];
 	struct bmpc_ioreq *r;
-	int i;
+	int rc, i;
 
-	DEBUG_REQ(PLL_INFO, rq, "biorqs=%p len=%d",
-		  biorqs, psc_dynarray_len(biorqs));
+	rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
+	if (rc)
+		return (rc);
+
+	if (rq->rq_status) {
+		DYNARRAY_FOREACH(r, i, biorqs)
+			;
+	}
+
+	DEBUG_REQ(PLL_DEBUG, rq, "biorqs=%p len=%d",
+	    biorqs, psc_dynarray_len(biorqs));
 
 	DYNARRAY_FOREACH(r, i, biorqs)
 		msl_biorq_destroy(r);
@@ -1030,22 +1042,24 @@ msl_io_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 int
 msl_dio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
+	int rc, op = rq->rq_reqmsg->opc;
 	struct srm_io_req *mq;
-	int rc, op=rq->rq_reqmsg->opc;
 
 	psc_assert(op == SRMT_READ || op == SRMT_WRITE);
 
 	rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
 	if (rc)
-		goto out;
+		return (rc);
+
+	if (rq->rq_status) {
+	}
 
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 	psc_assert(mq);
 
-	DEBUG_REQ(PLL_TRACE, rq, "completed dio req (op=%d) off=%u sz=%u",
+	DEBUG_REQ(PLL_DEBUG, rq, "completed dio req (op=%d) off=%u sz=%u",
 	    op, mq->offset, mq->size);
 
- out:
 	return (rc);
 }
 
@@ -1446,27 +1460,30 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 
 	if (r->biorq_rqset) {
 		rc = pscrpc_set_wait(r->biorq_rqset);
-		if (rc)
-			/* Cleanup properly when the MDS goes down. */
-			psc_fatalx("pscrpc_set_wait rc=%d", rc);
 
 		/*
-		 * The set cb is not being used, msl_read_cb() is
-		 *   called for every rpc in the set.  This was causing
+		 * The set cb is not being used; msl_read_cb() is
+		 *   called on every RPC in the set.  This was causing
 		 *   the biorq to have its flags mod'd in an incorrect
 		 *   fashion.  For now, the following lines will be moved
 		 *   here.
 		 */
 		spinlock(&r->biorq_lock);
-		r->biorq_flags &= ~(BIORQ_RBWLP|BIORQ_RBWFP|
-				    BIORQ_INFL|BIORQ_SCHED);
-		DEBUG_BIORQ(PLL_INFO, r, "read cb complete");
-		psc_waitq_wakeall(&r->biorq_waitq);
+		if (rc)
+			r->biorq_flags &= ~BIORQ_INFL;
+		else {
+			r->biorq_flags &= ~(BIORQ_RBWLP | BIORQ_RBWFP |
+			    BIORQ_INFL | BIORQ_SCHED);
+			DEBUG_BIORQ(PLL_INFO, r, "read cb complete");
+			psc_waitq_wakeall(&r->biorq_waitq);
+		}
 		freelock(&r->biorq_lock);
 		/* Destroy and cleanup the set now.
 		 */
 		pscrpc_set_destroy(r->biorq_rqset);
 		r->biorq_rqset = NULL;
+		if (rc)
+			return (rc);
 	}
 
 	for (i = 0; i < npages; i++) {
@@ -1481,7 +1498,7 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 			while (!(bmpce->bmpce_flags & BMPCE_DATARDY)) {
 				DEBUG_BMPCE(PLL_TRACE, bmpce, "waiting");
 				psc_waitq_wait(bmpce->bmpce_waitq,
-					       &bmpce->bmpce_lock);
+				    &bmpce->bmpce_lock);
 				BMPCE_LOCK(bmpce);
 			}
 
@@ -1659,7 +1676,7 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 {
 #define MAX_BMAPS_REQ 4
 	struct bmpc_ioreq *r[MAX_BMAPS_REQ];
-	struct bmapc_memb *b;
+	struct bmapc_memb *b, *bref = NULL;
 	size_t s, e, tlen, tsize;
 	int nr, i, rc;
 	off_t roff;
@@ -1741,7 +1758,8 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 			    "sz=%zu tlen=%zu off=%"PSCPRIdOFFT" "
 			    "roff=%"PSCPRIdOFFT" rw=%d rc=%d",
 			    tsize, tlen, off, roff, rw, rc);
-			rc = msl_fd_offline_retry(mfh);
+			if (msl_fd_offline_retry(mfh))
+				goto retry_bmap;
 			goto out;
 		}
 
@@ -1792,7 +1810,7 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 			rc = msl_pages_dio_getput(r[i], p);
 			if (rc) {
 				pll_remove(&mfh->mfh_biorqs, r[i]);
-				rc = msl_offline_retry_ignexpire(r[nr]);
+				rc = msl_offline_retry_ignexpire(r[i]);
 				if (rc) {
 					msl_biorq_destroy(r[i]);
 					r[i] = NULL;
@@ -1807,13 +1825,41 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 			 */
 			if (rw == SL_READ ||
 			    ((r[i]->biorq_flags & BIORQ_RBWFP) ||
-			     (r[i]->biorq_flags & BIORQ_RBWLP)))
-				if ((rc = msl_pages_blocking_load(r[i]))) {
-					DEBUG_BIORQ(PLL_ERROR, r[i],
-					    "msl_pages_blocking_load()"
-					    " error=%d", rc);
+			     (r[i]->biorq_flags & BIORQ_RBWLP))) {
+				rc = msl_pages_blocking_load(r[i]);
+				if (rc) {
+					rc = msl_offline_retry(r[i]);
+					if (rc) {
+						/*
+						 * The app wants to
+						 * retry the failed I/O.
+						 * What we must do in
+						 * this logic is tricky
+						 * since we don't want
+						 * to re-lease the bmap.
+						 * We hold a fake ref
+						 * to the bmap so it
+						 * doesn't get reclaimed
+						 * until bmap_get() gets
+						 * its own ref.
+						 */
+						if (bref)
+							bmap_op_done_type(bref,
+							    BMAP_OPCNT_BIORQ);
+						bref = r[i]->biorq_bmap;
+						bmap_op_start_type(bref,
+						    BMAP_OPCNT_BIORQ);
+					} else
+						rc = msl_offline_retry_ignexpire(r[i]);
+					if (rc) {
+						msl_biorq_destroy(r[i]);
+						r[i] = NULL;
+						goto restart;
+					}
+					rc = -EIO;
 					goto out;
 				}
+			}
 
 			if (rw == SL_READ)
 				msl_pages_copyout(r[i], p);
@@ -1839,6 +1885,8 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 			rc = size;
 	}
  out:
+	if (bref)
+		bmap_op_done_type(bref, BMAP_OPCNT_BIORQ);
 	for (i = 0; i < nr; i++)
 		if (r[i] && r[i] != MSL_BIORQ_COMPLETE)
 			msl_biorq_destroy(r[i]);
