@@ -42,8 +42,8 @@
 #include "slashd.h"
 #include "slashrpc.h"
 #include "slerr.h"
-#include "up_sched_res.h"
 #include "sljournal.h"
+#include "up_sched_res.h"
 
 struct odtable				*mdsBmapAssignTable;
 uint64_t				 mdsBmapSequenceNo;
@@ -473,7 +473,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 		jrir->sjir_fid = fcmh_2_fid(bmap->bcm_fcmh);
 		jrir->sjir_ios = bia.bia_ios;
 		jrir->sjir_pos = iosidx;
-		jrir->sjir_nrepls = ih->inoh_ino.ino_nrepls; 
+		jrir->sjir_nrepls = ih->inoh_ino.ino_nrepls;
 		logentry->sjar_flag |= SLJ_ASSIGN_REP_INO;
 	}
 
@@ -574,7 +574,7 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 		jrir->sjir_fid = fcmh_2_fid(b->bcm_fcmh);
 		jrir->sjir_ios = bia.bia_ios;
 		jrir->sjir_pos = iosidx;
-		jrir->sjir_nrepls = ih->inoh_ino.ino_nrepls; 
+		jrir->sjir_nrepls = ih->inoh_ino.ino_nrepls;
 		logentry->sjar_flag |= SLJ_ASSIGN_REP_INO;
 	}
 

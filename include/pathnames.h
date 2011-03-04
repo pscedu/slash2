@@ -50,7 +50,6 @@
 #define SL_FN_AUTHBUFKEY	"authbuf.key"
 #define SL_FN_OPJOURNAL		"op-journal"
 
-
 #define SL_FN_UPDATELOG		".op-update"
 #define SL_FN_UPDATEPROG	".op-update-prog"
 
