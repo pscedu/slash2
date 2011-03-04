@@ -907,13 +907,12 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 int
 msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
+	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CB_POINTER_SLOT_CSVC];
 	struct psc_dynarray *a = args->pointer_arg[MSL_CB_POINTER_SLOT_BMPCES];
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CB_POINTER_SLOT_BIORQ];
-	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CB_POINTER_SLOT_CSVC];
-	struct bmapc_memb *b;
 	struct bmap_pagecache_entry *bmpce;
-	int op = rq->rq_reqmsg->opc, i, rc;
-	int clearpages = 0;
+	struct bmapc_memb *b;
+	int clearpages = 0, op = rq->rq_reqmsg->opc, i, rc;
 
 	rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
 	if (rc)
@@ -928,18 +927,11 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	DEBUG_BMAP(PLL_INFO, b, "callback");
 	DEBUG_BIORQ(PLL_INFO, r, "callback bmap=%p", b);
 
-	if (rq->rq_status && rq->rq_status != -ENOENT) {
-		if (rq->rq_status == -ENOENT)
-			clearpages = 0;
-		else {
-			DEBUG_REQ(PLL_ERROR, rq, "non-zero status %d",
-				  rq->rq_status);
-			psc_fatalx("Resolve issues surrounding this failure");
-
-			// XXX Freeing of dynarray, bmpce's, etc
-			rc = rq->rq_status;
-			goto out;
-		}
+	if (rq->rq_status) {
+		DEBUG_REQ(PLL_ERROR, rq, "non-zero status %d",
+		    rq->rq_status);
+		rc = rq->rq_status;
+		goto out;
 	}
 
 	spinlock(&r->biorq_lock);
@@ -959,7 +951,7 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 		if (bmpce->bmpce_flags & BMPCE_RBWPAGE) {
 			/* The RBW stuff needs to be managed outside of
-			 *   the LRU, this is not the best place but should
+			 *   the LRU; this is not the best place but should
 			 *   suffice for now.
 			 */
 			psc_assert(psc_atomic16_read(&bmpce->bmpce_rdref) == 1);
