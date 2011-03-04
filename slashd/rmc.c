@@ -410,6 +410,10 @@ slm_rmc_handle_mknod(struct pscrpc_request *rq)
 	return (0);
 }
 
+/**
+ * slm_rmc_handle_create - Handle a CREATE from CLI.  As an
+ *	optimization, we bundle a write bmap lease in the reply.
+ */
 int
 slm_rmc_handle_create(struct pscrpc_request *rq)
 {
