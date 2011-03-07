@@ -451,6 +451,11 @@ mds_redo_namespace(struct slmds_jent_namespace *sjnm, int replay)
 	    case NS_OP_SETSIZE:
 	    case NS_OP_SETATTR:
 		if (!replay) {
+			/*
+			 * Make sure that we propagate attributes
+			 * to the fcmh layer if work is done at
+			 * the ZFS layer.
+			 */
 			rc = slm_fcmh_peek(&sstb.sst_fg, &fcmh);
 			if (fcmh)
 				FCMH_LOCK(fcmh);
