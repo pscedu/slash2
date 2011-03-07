@@ -172,3 +172,51 @@ So our special transaction mechanism kicks in before we take control.  Not good.
 I opened the od table synchronously (with O_SYNC), it does not look that way.
 
 Fixed, hopefully, in r15709.
+
+03/07/2011
+----------
+
+During replay, I see some complains about "failed to look up fid".  We are creating files under
+a directory in this scenario:
+
+bash-3.2# ls /zhihui_slash2_wolverine/.slfidns/0/0/0 | grep 04c[0-5]
+00100000000004c0
+00100000000004c1
+00100000000004c2
+bash-3.2# ls /zhihui_slash2_wolverine/.slfidns/0/0/0 | grep 0b3[a-d]
+0010000000000b3a
+0010000000000b3b
+0010000000000b3c
+0010000000000b3d
+bash-3.2# ls /zhihui_slash2_wolverine/.slfidns/0/0/0 | grep 0eaa
+bash-3.2# ls /zhihui_slash2_wolverine/.slfidns/0/0/0 | grep 0aea
+0010000000000aea
+
+Here is the log from my fprintf statements:
+
+mkdir: name = fsl, fid = 0x10000000000491, errno = 11		<-- Not sure about this.
+mkdir: name = cpm_qe, fid = 0x10000000000496, errno = 0
+mkdir: name = cpm, fid = 0x10000000000498, errno = 0
+mkdir: name = qe, fid = 0x100000000004a0, errno = 0
+mkdir: name = gpio, fid = 0x100000000004bc, errno = 11
+mkdir: name = nintendo, fid = 0x100000000004c3, errno = 0	<-- Does NOT exist under .slfidns
+mkdir: name = pps, fid = 0x100000000004d3, errno = 0
+mkdir: name = prctl, fid = 0x100000000004d5, errno = 0
+mkdir: name = s390, fid = 0x100000000004e3, errno = 0
+
+......
+
+mkdir: name = include, fid = 0x10000000000aea, errno = 0
+mkdir: name = mach, fid = 0x10000000000aeb, errno = 0
+mkdir: name = mach-dove, fid = 0x10000000000b1d, errno = 0
+mkdir: name = include, fid = 0x10000000000b25, errno = 0
+mkdir: name = mach, fid = 0x10000000000b26, errno = 0
+mkdir: name = mach-ebsa110, fid = 0x10000000000b37, errno = 0
+mkdir: name = include, fid = 0x10000000000b3b, errno = 0
+mkdir: name = mach, fid = 0x10000000000b3c, errno = 0		<-- exists under .slfidns
+mkdir: name = mach-ep93xx, fid = 0x10000000000b49, errno = 0
+
+See: the later-created directory mach exists, but not the earlier created directory nintendo.
+
+This seems to imply operations do not necessarily commit in order.  If so, I guess this may have 
+something to do with ZIL.
