@@ -170,3 +170,5 @@ Note that the file ssi.c is a kernel file in linux 2.6.34.
 
 So our special transaction mechanism kicks in before we take control.  Not good.  I thought may be
 I opened the od table synchronously (with O_SYNC), it does not look that way.
+
+Fixed, hopefully, in r15709.
