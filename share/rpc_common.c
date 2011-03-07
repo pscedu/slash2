@@ -145,7 +145,7 @@ slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
 	 * for temporary failure.
 	 */
 	if (flags & CSVCF_NONBLOCK)
-		rq->rq_timeout = 3;
+		rq->rq_timeout = 1;
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
