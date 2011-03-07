@@ -132,3 +132,41 @@ ZFS does not like nested transactions - it is deadlock-prone.  So we are going t
 a thread whose job is to update the ZFS special file (now named .slcursor and contains
 more fields).  We make sure that the first transaction of every group is the one created
 by this thread.
+
+03/07/2011
+----------
+
+Today (after I moved od table inside ZFS), I untar the linux 2.6.34 tar ball and then crashed the mds. 
+On restart, the MDS looks stuck, and sure it is:
+
+(gdb) bt
+#0  0x00000039ede0aee9 in pthread_cond_wait@@GLIBC_2.3.2 () from /lib64/libpthread.so.0
+#1  0x000000000068a8d8 in cv_wait (cv=0x2aaaab3546e0, mp=0x2aaaab354710) at lib/libsolkerncompat/condvar.c:59
+#2  0x000000000060bc87 in dmu_tx_try_assign (tx=0x2aaaab3145b0, txg_how=2) at lib/libzpool/dmu_tx.c:929
+#3  0x000000000060c139 in dmu_tx_assign (tx=0x2aaaab3145b0, txg_how=2) at lib/libzpool/dmu_tx.c:1091
+#4  0x00000000005dd593 in zfs_create (dvp=0x2aaaacabe7f0, name=0x2aaaad5db070 "ssi.c", vap=0x5c22b560, excl=NONEXCL, mode=0, vpp=0x5c22b690, cr=0x975b10, 
+    flag=0, ct=0x0, vsecp=0x0, funcp=0x0) at zfs-fuse/zfs_vnops.c:1423
+#5  0x0000000000696347 in fop_create (dvp=0x2aaaacabe7f0, name=0x2aaaad5db070 "ssi.c", vap=0x5c22b560, excl=NONEXCL, mode=0, vpp=0x5c22b690, cr=0x975b10, 
+    flags=0, ct=0x0, vsecp=0x0, logfunc=0x0) at lib/libsolkerncompat/vnode.c:1052
+#6  0x00000000005f691b in zfs_replay_create (zfsvfs=0x2aaaad5da000, lr=0x2aaaad5db000, byteswap=B_FALSE) at zfs-fuse/zfs_replay.c:480
+#7  0x000000000065f686 in zil_replay_log_record (zilog=0x2aaaab3401c0, lr=0x2aaaabf27000, zra=0x5c22b950, claim_txg=33) at lib/libzpool/zil.c:1658
+#8  0x000000000065c8fb in zil_parse (zilog=0x2aaaab3401c0, parse_blk_func=0x65f705 <zil_incr_blks>, parse_lr_func=0x65f4a6 <zil_replay_log_record>, 
+    arg=0x5c22b950, txg=33) at lib/libzpool/zil.c:332
+#9  0x000000000065f820 in zil_replay (os=0x2aaaab340540, arg=0x2aaaad5da000, replay_func=0x94b860) at lib/libzpool/zil.c:1712
+#10 0x00000000005da10e in zfsvfs_setup (zfsvfs=0x2aaaad5da000, mounting=B_TRUE) at zfs-fuse/zfs_vfsops.c:1021
+#11 0x00000000005da40a in zfs_domount (vfsp=0x2aaaabe89ba0, osname=0x2aaaacadb000 "zhihui_slash2_wolverine") at zfs-fuse/zfs_vfsops.c:1151
+#12 0x00000000005dab47 in zfs_mount (vfsp=0x2aaaabe89ba0, mvp=0x954ca0, uap=0x5c22bfe0, cr=0x975b10) at zfs-fuse/zfs_vfsops.c:1615
+#13 0x0000000000694bb4 in fsop_mount (vfsp=0x2aaaabe89ba0, mvp=0x954ca0, uap=0x5c22bfe0, cr=0x975b10) at lib/libsolkerncompat/vfs.c:254
+#14 0x00000000005d1b3a in do_mount (spec=0x2aaaab32de40 "zhihui_slash2_wolverine", dir=0x2aaaab32de20 "/zhihui_slash2_wolverine", mflag=0, 
+    opt=0x2aaaab32bf68 "") at zfs-fuse/util.c:334
+#15 0x00000000005ebee4 in cmd_mount_req (sock=11, cmd=0x5c22c0b0) at zfs-fuse/cmd_listener.c:72
+#16 0x00000000005ebfd9 in handle_connection (sock=11) at zfs-fuse/cmd_listener.c:117
+#17 0x00000000005ec208 in zfsfuse_ioctl_queue_worker_thread (init=0x95e5a0) at zfs-fuse/cmd_listener.c:199
+#18 0x00000039ede0673d in start_thread () from /lib64/libpthread.so.0
+#19 0x00000039ed6d3f6d in clone () from /lib64/libc.so.6
+(gdb) up
+
+Note that the file ssi.c is a kernel file in linux 2.6.34.
+
+So our special transaction mechanism kicks in before we take control.  Not good.  I thought may be
+I opened the od table synchronously (with O_SYNC), it does not look that way.
