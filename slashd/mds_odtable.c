@@ -208,6 +208,7 @@ mds_odtable_freeitem(struct odtable *odt, struct odtable_receipt *odtr)
 	psc_assert(!rc && nb == odt->odt_hdr->odth_slotsz);
 
 	PSCFREE(p);
+	PSCFREE(odtr);
 	return (rc);
 }
 
