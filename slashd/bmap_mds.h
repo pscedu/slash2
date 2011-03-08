@@ -225,7 +225,7 @@ struct bmap_ion_assign {
 	sl_bmapno_t		bia_bmapno;
 	time_t			bia_start;
 	int			bia_flags;
-};
+} __packed;
 
 /* bia_flags */
 #define BIAF_DIO		(1 << 0)
