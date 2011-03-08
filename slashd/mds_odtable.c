@@ -57,6 +57,12 @@ mds_odtable_putitem(struct odtable *odt, void *data, size_t len)
 		freelock(&odt->odt_lock);
 		return (NULL);
 	}
+	if (elem >= odt->odt_hdr->odth_nelems) {
+		odt->odt_hdr->odth_nelems = psc_vbitmap_getsize(odt->odt_bitmap);
+		psclog_warn("On-disk table now has %ld elements\n", 
+			odt->odt_hdr->odth_nelems);
+	}
+	
 	freelock(&odt->odt_lock);
 
 	p = PSCALLOC(odt->odt_hdr->odth_slotsz);
