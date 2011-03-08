@@ -788,10 +788,10 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 	 */
 	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
 
-	locked = reqlock(&b->bcm_lock);
+	locked = BMAP_RLOCK(b);
 	resm = libsl_nid2resm(bmap_2_ion(b));
 	psc_assert(resm->resm_nid == bmap_2_ion(b));
-	ureqlock(&b->bcm_lock, locked);
+	BMAP_URLOCK(b, locked);
 
 	if (exclusive) {
 		csvc = slc_geticsvc(resm);
