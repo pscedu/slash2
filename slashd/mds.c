@@ -1137,6 +1137,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		DEBUG_BMAP(PLL_NOTIFY, b, "odtable remove seq=%"PRId64" key=%"
 		   PRId64" rc=%d", bml->bml_seq, odtr->odtr_key, rc);
 		bmap_op_done_type(b, BMAP_OPCNT_IONASSIGN);
+		PSCFREE(odtr);
 	}
 
 	psc_pool_return(bmapMdsLeasePool, bml);
