@@ -108,6 +108,7 @@ mds_odtable_getitem(struct odtable *odt, const struct odtable_receipt *odtr,
 	struct odtable_entftr *odtf;
 
 	psc_assert(len <= odt->odt_hdr->odth_elemsz);
+	psc_assert(odtr->odtr_elem <= odt->odt_hdr->odth_nelems - 1);
 
 	p = PSCALLOC(odt->odt_hdr->odth_slotsz);
 	rc = mdsio_read(&rootcreds, p, odt->odt_hdr->odth_slotsz,
@@ -214,6 +215,7 @@ mds_odtable_freeitem(struct odtable *odt, struct odtable_receipt *odtr)
 	psc_assert(!rc && nb == odt->odt_hdr->odth_slotsz);
 
 	PSCFREE(p);
+	PSCFREE(odtr);
 	return (rc);
 }
 
@@ -339,9 +341,11 @@ mds_odtable_scan(struct odtable *odt,
 
 	psc_assert(odt_handler != NULL);
 
-	odtr = PSCALLOC(sizeof(*odtr));
+	odtr = NULL;
 	p = PSCALLOC(odt->odt_hdr->odth_slotsz);
 	for (i = 0; i < odt->odt_hdr->odth_nelems; i++) {
+		if (!odtr)
+			odtr = PSCALLOC(sizeof(*odtr));
 		if (!psc_vbitmap_get(odt->odt_bitmap, i))
 			continue;
 		rc = mdsio_read(&rootcreds, p, odt->odt_hdr->odth_slotsz,
@@ -365,8 +369,10 @@ mds_odtable_scan(struct odtable *odt,
 		psclog_debug("handing back key=%"PRIx64" slot=%zd odtr=%p",
 		    odtr->odtr_key, i, odtr);
 
-		odt_handler(p, odtr);
+		odt_handler(p, odtr);		/* mds_bia_odtable_startup_cb() */
+		odtr = NULL;
 	}
-	PSCFREE(odtr);
 	PSCFREE(p);
+	if (odtr)
+		PSCFREE(odtr);
 }
