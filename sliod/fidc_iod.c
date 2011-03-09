@@ -30,7 +30,7 @@
 #include "sltypes.h"
 #include "slutil.h"
 
-#define FID_PATH_NAME ".slfidns"
+#define FID_PATH_NAME ".slmd/fidns"
 
 /**
  * sli_fid_makepath - Build the pathname in the FID object root that corresponds
