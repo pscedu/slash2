@@ -246,7 +246,6 @@ main(int argc, char *argv[])
 	 */
 	mdsio_init();
 	import_zpool(argv[0], zfspoolcf);
-	zfsslash2_build_immns_cache();
 
 	rc = mdsio_lookup(MDSIO_FID_ROOT, SL_RPATH_META_DIR,
 	    &mds_metadir_inum, &rootcreds, NULL);
@@ -262,6 +261,8 @@ main(int argc, char *argv[])
 	    &mds_fidnsdir_inum, &rootcreds, NULL);
 	if (rc)
 		psc_fatalx("lookup upschdir: %s", slstrerror(rc));
+
+	zfsslash2_build_immns_cache();
 
 	authbuf_createkeyfile();
 	authbuf_readkeyfile();
