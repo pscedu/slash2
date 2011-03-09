@@ -51,9 +51,8 @@ int		 wipe;
 int		 ion;
 struct passwd	*pw;
 
-const char      *datadir = SL_PATH_DATADIR;
+const char      *datadir = SL_PATH_DATA_DIR;
 
-char fn[PATH_MAX];
 struct psc_journal_cursor cursor;
 
 void
@@ -82,18 +81,19 @@ slimmns_create_int(const char *pdirnam, uint32_t curdepth,
 }
 
 /*
- * Create an empty odtable in the ZFS pool.  We also maintain a separate utility
- * to create/edit/show the odtable (use ZFS fuse mount).
+ * Create an empty odtable in the ZFS pool.  We also maintain a separate
+ * utility to create/edit/show the odtable (use ZFS fuse mount).
  */
 void
-slimmns_create_odtable(const char *root)
+slimmns_create_odtable(const char *metadir)
 {
-	size_t i;
-	struct odtable odt;
-	struct odtable_hdr odth;
 	struct odtable_entftr odtf;
+	struct odtable_hdr odth;
+	struct odtable odt;
+	char fn[PATH_MAX];
+	size_t i;
 
-	xmkfn(fn, "%s/%s", root, SL_PATH_BMAP);
+	xmkfn(fn, "%s/%s", metadir, SL_FN_BMAP_ODTAB);
 
 	odt.odt_fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
 	if (odt.odt_fd < 0)
@@ -111,7 +111,7 @@ slimmns_create_odtable(const char *root)
 	odtf.odtf_inuse = ODTBL_FREE;
 	odtf.odtf_slotno = 0;
 	odtf.odtf_magic = ODTBL_MAGIC;
-	
+
 	odt.odt_hdr = &odth;
 
 	if (pwrite(odt.odt_fd, &odth, sizeof(odth), 0) != sizeof(odth))
@@ -133,15 +133,20 @@ slimmns_create_odtable(const char *root)
  * slimmns_create - Create an immutable namespace directory structure.
  */
 void
-slimmns_create(const char *root, uint32_t depth)
+slimmns_create(const char *fsroot, uint32_t depth)
 {
+	char metadir[PATH_MAX], fn[PATH_MAX];
 	int fd;
 
 	if (!depth)
 		depth = FID_PATH_DEPTH;
 
-	/* create immutable namespace root directory */
-	xmkfn(fn, "%s/%s", root, FID_PATH_NAME);
+	/* create root metadata directory */
+	xmkfn(metadir, "%s/%s", fsroot, SL_RPATH_META_DIR);
+	slnewfs_mkdir(metadir);
+
+	/* create immutable namespace directory */
+	xmkfn(fn, "%s/%s", metadir, SL_RPATH_FIDNS_DIR);
 	slnewfs_mkdir(fn);
 
 	/* create immutable namespace subdirectories */
@@ -151,10 +156,10 @@ slimmns_create(const char *root, uint32_t depth)
 		return;
 
 	/* create replication queue directory */
-	xmkfn(fn, "%s/%s", root, SL_PATH_UPSCH);
+	xmkfn(fn, "%s/%s", metadir, SL_RPATH_UPSCH_DIR);
 	slnewfs_mkdir(fn);
 
-	xmkfn(fn, "%s/%s", root, SL_PATH_CURSOR);
+	xmkfn(fn, "%s/%s", metadir, SL_FN_CURSOR);
 	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
 	if (fd == -1)
 		psc_fatal("open %s", fn);
@@ -171,35 +176,35 @@ slimmns_create(const char *root, uint32_t depth)
 		psc_fatal("write %s", fn);
 	close(fd);
 
-	xmkfn(fn, "%s/%s.%d.%s.%lu",  root, SL_FN_UPDATELOG, 0,
+	xmkfn(fn, "%s/%s.%d.%s.%lu", metadir, SL_FN_UPDATELOG, 0,
 	    psc_get_hostname(), cursor.pjc_timestamp);
 	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
 	if (fd == -1)
 		psc_fatal("open %s", fn);
 	close(fd);
 
-	xmkfn(fn, "%s/%s.%s.%lu",  root, SL_FN_UPDATEPROG,
+	xmkfn(fn, "%s/%s.%s.%lu", metadir, SL_FN_UPDATEPROG,
 	    psc_get_hostname(), cursor.pjc_timestamp);
 	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
 	if (fd == -1)
 		psc_fatal("open %s", fn);
 	close(fd);
 
-	xmkfn(fn, "%s/%s.%d.%s.%lu", root, SL_FN_RECLAIMLOG, 0,
+	xmkfn(fn, "%s/%s.%d.%s.%lu", metadir, SL_FN_RECLAIMLOG, 0,
 	    psc_get_hostname(), cursor.pjc_timestamp);
 	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
 	if (fd == -1)
 		psc_fatal("open %s", fn);
 	close(fd);
 
-	xmkfn(fn, "%s/%s.%s.%lu",  root, SL_FN_RECLAIMPROG,
+	xmkfn(fn, "%s/%s.%s.%lu", metadir, SL_FN_RECLAIMPROG,
 	    psc_get_hostname(), cursor.pjc_timestamp);
 	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
 	if (fd == -1)
 		psc_fatal("open %s", fn);
 	close(fd);
 
-	slimmns_create_odtable(root);
+	slimmns_create_odtable(metadir);
 }
 
 __dead void

@@ -39,7 +39,7 @@
 #include "sltypes.h"
 #include "slutil.h"
 
-const char *sl_datadir = SL_PATH_DATADIR;
+const char *sl_datadir = SL_PATH_DATA_DIR;
 
 enum rw
 fflags_2_rw(int fflags)

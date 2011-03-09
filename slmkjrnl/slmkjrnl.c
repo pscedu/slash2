@@ -39,10 +39,12 @@
 int		 format;
 int		 query;
 int		 verbose;
-const char	*datadir = SL_PATH_DATADIR;
+const char	*datadir = SL_PATH_DATA_DIR;
 const char	*progname;
 struct pscfs	 pscfs;
 struct mdsio_ops mdsio_ops;
+
+mdsio_fid_t	 mds_fidnsdir_inum;
 
 __dead void
 usage(void)

@@ -60,7 +60,6 @@ struct psc_listcache	 slm_replst_workq;
 struct slm_resmlink	*repl_busytable;
 int			 repl_busytable_nents;
 psc_spinlock_t		 repl_busytable_lock = SPINLOCK_INIT;
-sl_ino_t		 mds_upschdir_inum;
 
 __static int
 iosidx_cmp(const void *a, const void *b)
@@ -772,13 +771,6 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 void
 mds_repl_init(void)
 {
-	int rc;
-
-	rc = mdsio_lookup(MDSIO_FID_ROOT, SL_PATH_UPSCH,
-	    &mds_upschdir_inum, &rootcreds, NULL);
-	if (rc)
-		psc_fatalx("lookup repldir: %s", slstrerror(rc));
-
 	mds_repl_buildbusytable();
 	upsched_scandir();
 }

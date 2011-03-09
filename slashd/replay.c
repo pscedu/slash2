@@ -307,18 +307,18 @@ mds_redo_ino_addrepl(struct psc_journal_enthdr *pje)
 static int
 mds_redo_bmap_assign(struct psc_journal_enthdr *pje)
 {
-	int rc;
+	struct slmds_jent_assign_rep *logentry;
+	struct slmds_jent_ino_addrepl *jrir;
+	struct slmds_jent_bmap_assign *jrba;
+	struct slmds_jent_repgen *jrpg;
+	struct bmap_ion_assign *bia;
+	struct odtable_entftr *odtf;
+	struct odtable_hdr odth;
+	size_t nb, len, elem;
 	void *p, *handle;
 	mdsio_fid_t mf;
 	uint64_t crc;
-	size_t nb, len, elem;
-	struct odtable_hdr odth;
-	struct odtable_entftr *odtf;
-	struct slmds_jent_ino_addrepl *jrir;
-	struct slmds_jent_repgen *jrpg;
-	struct slmds_jent_bmap_assign *jrba;
-	struct slmds_jent_assign_rep *logentry;
-	struct bmap_ion_assign *bia; 
+	int rc;
 
 	logentry = PJE_DATA(pje);
 	if (logentry->sjar_flag & SLJ_ASSIGN_REP_INO) {
@@ -333,7 +333,8 @@ mds_redo_bmap_assign(struct psc_journal_enthdr *pje)
 	psc_assert(logentry->sjar_flag & SLJ_ASSIGN_REP_BMAP);
 	jrba = &logentry->sjar_bmap;
 
-	rc = mdsio_lookup(MDSIO_FID_ROOT, SL_PATH_BMAP, &mf, &rootcreds, NULL);
+	rc = mdsio_lookup(mds_metadir_inum, SL_FN_BMAP_ODTAB, &mf,
+	    &rootcreds, NULL);
 	psc_assert(rc == 0);
 
 	rc = mdsio_opencreate(mf, &rootcreds, O_RDWR, 0, NULL, NULL,
@@ -353,7 +354,7 @@ mds_redo_bmap_assign(struct psc_journal_enthdr *pje)
 	p = PSCALLOC(odth.odth_slotsz);
 
 	bia = p;
-	bia->bia_ion_nid = jrba->sjba_ion_nid; 
+	bia->bia_ion_nid = jrba->sjba_ion_nid;
 	bia->bia_lastcli.pid = jrba->sjba_lastcli.pid;
 	bia->bia_lastcli.nid = jrba->sjba_lastcli.nid;
 	bia->bia_ios = jrba->sjba_ios;
@@ -364,7 +365,7 @@ mds_redo_bmap_assign(struct psc_journal_enthdr *pje)
 	bia->bia_flags = jrba->sjba_flags;
 
 	/* I don't think memset() does any good, anyway... */
-	len = sizeof(struct bmap_ion_assign); 
+	len = sizeof(struct bmap_ion_assign);
 	if (len < odth.odth_elemsz)
 		memset(p + len, 0, odth.odth_elemsz - len);
 	psc_crc64_calc(&crc, p, odth.odth_elemsz);

@@ -66,6 +66,7 @@
 #include "slashd/mdsio.h"
 #include "slashd/mdslog.h"
 #include "slashd/namespace.h"
+#include "slashd/odtable_mds.h"
 #include "slashd/repl_mds.h"
 #include "slashd/rpc_mds.h"
 #include "slashd/slashd.h"

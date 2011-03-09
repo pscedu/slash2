@@ -40,7 +40,7 @@ _meta_dir_create(uint32_t curdepth, uint32_t maxdepth)
 		if (mkdir(d, 0700) == -1)
 			psc_fatal("mkdir %s", d);
 
-		if (curdepth < (maxdepth - 1)) {
+		if (curdepth < maxdepth - 1) {
 			if (chdir(d) == -1)
 				psc_fatal("chdir %s", d);
 			_meta_dir_create(curdepth + 1, maxdepth);

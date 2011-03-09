@@ -82,7 +82,6 @@ struct slash_fidgen {
 
 #define FID_PATH_DEPTH		3
 #define FID_PATH_LEN		1024
-#define FID_PATH_NAME		".slfidns"
 
 /* bits per hex char e.g. 0xffff=16 */
 #define BPHXC			4
@@ -110,12 +109,6 @@ struct slash_fidgen {
 		psc_assert(sizeof(*(src)) == sizeof(struct slash_fidgen));	\
 		memcpy((dst), (src), sizeof(*(dst)));				\
 	} while (0)
-
-#define fid_makepath(fg, fn)	_fg_makepath((fg), (fn), 0)
-#define fg_makepath(fg, fn)	_fg_makepath((fg), (fn), 1)
-
-int	 fid_link(slfid_t, const char *);
-void	 _fg_makepath(const struct slash_fidgen *, char *, int);
 
 static __inline int
 sl_sprintf_fid(slfid_t fid, char *buf, size_t len)

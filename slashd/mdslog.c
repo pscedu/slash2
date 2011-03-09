@@ -160,9 +160,9 @@ mds_open_file(char *fn, int flags, void **handle)
 	mdsio_fid_t mf;
 	int rc;
 
-	rc = mdsio_lookup(MDSIO_FID_ROOT, fn, &mf, &rootcreds, NULL);
+	rc = mdsio_lookup(mds_metadir_inum, fn, &mf, &rootcreds, NULL);
 	if (rc == ENOENT && (flags & O_CREAT)) {
-		rc = mdsio_opencreatef(MDSIO_FID_ROOT, &rootcreds,
+		rc = mdsio_opencreatef(mds_metadir_inum, &rootcreds,
 		    flags, MDSIO_OPENCRF_NOLINK, 0600, fn, NULL, NULL,
 		    handle, NULL, NULL);
 	} else if (!rc) {
@@ -237,18 +237,17 @@ mds_txg_handler(__unusedx uint64_t *txgp, __unusedx void *data, int op)
 void
 mds_remove_logfile(uint64_t batchno, int update)
 {
-	char log_fn[PATH_MAX];
+	char logfn[PATH_MAX];
 
-	if (update) {
-		xmkfn(log_fn, "%s/%s.%d.%s.%lu", sl_datadir,
+	if (update)
+		xmkfn(logfn, "%s.%d.%s.%lu",
 		    SL_FN_UPDATELOG, batchno, psc_get_hostname(),
 		    mds_cursor.pjc_timestamp);
-	} else {
-		xmkfn(log_fn, "%s/%s.%d.%s.%lu", sl_datadir,
+	else
+		xmkfn(logfn, "%s.%d.%s.%lu",
 		    SL_FN_RECLAIMLOG, batchno, psc_get_hostname(),
 		    mds_cursor.pjc_timestamp);
-	}
-	unlink(log_fn);
+	mdsio_unlink(mds_metadir_inum, logfn, &rootcreds, NULL);
 }
 
 int
@@ -1040,7 +1039,7 @@ mds_open_cursor(void)
 	size_t nb;
 	int rc;
 
-	rc = mdsio_lookup(MDSIO_FID_ROOT, SL_PATH_CURSOR, &mf,
+	rc = mdsio_lookup(mds_metadir_inum, SL_FN_CURSOR, &mf,
 	    &rootcreds, NULL);
 	psc_assert(rc == 0);
 

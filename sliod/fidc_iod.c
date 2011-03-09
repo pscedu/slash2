@@ -23,18 +23,46 @@
 #include "psc_util/log.h"
 #include "psc_util/rlimit.h"
 
-#include "sltypes.h"
-#include "slutil.h"
 #include "fidc_iod.h"
 #include "fidcache.h"
+#include "mkfn.h"
+#include "slconfig.h"
+#include "sltypes.h"
+#include "slutil.h"
+
+#define FID_PATH_NAME ".slfidns"
+
+/**
+ * sli_fid_makepath - Build the pathname in the FID object root that corresponds
+ *	to a FID, allowing easily lookup of file metadata via FIDs.
+ */
+__static void
+sli_fg_makepath(const struct slash_fidgen *fg, char *fid_path)
+{
+	char a[FID_PATH_DEPTH];
+	int i;
+
+	a[0] = (fg->fg_fid & UINT64_C(0x0000000000f00000)) >> (BPHXC * 5);
+	a[1] = (fg->fg_fid & UINT64_C(0x00000000000f0000)) >> (BPHXC * 4);
+	a[2] = (fg->fg_fid & UINT64_C(0x000000000000f000)) >> (BPHXC * 3);
+
+	for (i=0; i < FID_PATH_DEPTH; i++)
+		a[i] += a[i] < 10 ? 0x30 : 0x57;
+
+	xmkfn(fid_path, "%s/%s/%c/%c/%c/%016"PRIx64"_%"PRIx64,
+	    globalConfig.gconf_fsroot, FID_PATH_NAME,
+	    a[0], a[1], a[2], fg->fg_fid, fg->fg_gen);
+
+	psclog_dbg("fid="SLPRI_FID" fidpath=%s", fg->fg_fid, fid_path);
+}
 
 static int
 sli_open_backing_file(struct fidc_membh *fcmh)
 {
-	int rc = 0;
 	char fidfn[PATH_MAX];
+	int rc = 0;
 
-	fg_makepath(&fcmh->fcmh_fg, fidfn);
+	sli_fg_makepath(&fcmh->fcmh_fg, fidfn);
 	DEBUG_FCMH(PLL_INFO, fcmh, "before opening new backing file");
 	fcmh_2_fd(fcmh) = open(fidfn, O_CREAT | O_RDWR, 0600);
 	if (fcmh_2_fd(fcmh) == -1)
@@ -108,7 +136,7 @@ sli_fcmh_reopen(struct fidc_membh *fcmh, const struct slash_fidgen *fg)
 
 		/* Do some upfront garbage collection.
 		 */
-		fg_makepath(&oldfg, fidfn);
+		sli_fg_makepath(&oldfg, fidfn);
 		if (unlink(fidfn))
 			DEBUG_FCMH(PLL_ERROR, fcmh, "unlink() failed errno=%d",
 				   errno);

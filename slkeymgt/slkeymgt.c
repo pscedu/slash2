@@ -29,7 +29,7 @@
 #include "pathnames.h"
 
 int		 create;
-const char	*sl_datadir = SL_PATH_DATADIR;
+const char	*sl_datadir = SL_PATH_DATA_DIR;
 const char	*progname;
 
 __dead void

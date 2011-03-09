@@ -41,6 +41,7 @@
 #include "mdscoh.h"
 #include "mdsio.h"
 #include "mkfn.h"
+#include "odtable_mds.h"
 #include "pathnames.h"
 #include "repl_mds.h"
 #include "rpc_mds.h"
@@ -141,14 +142,14 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 void
 slm_init(void)
 {
-	psc_poolmaster_init(&upsched_poolmaster, struct up_sched_work_item,
-	    uswi_lentry, PPMF_AUTO, 256, 256, 0, NULL, NULL, NULL,
-	    "upschwk");
+	psc_poolmaster_init(&upsched_poolmaster,
+	    struct up_sched_work_item, uswi_lentry, PPMF_AUTO, 256, 256,
+	    0, NULL, NULL, NULL, "upschwk");
 	upsched_pool = psc_poolmaster_getmgr(&upsched_poolmaster);
 
-	psc_poolmaster_init(&bmapMdsLeasePoolMaster, struct bmap_mds_lease,
-	    bml_bmdsi_lentry, PPMF_AUTO, 256, 256, 0, NULL, NULL, NULL,
-	    "bmplease");
+	psc_poolmaster_init(&bmapMdsLeasePoolMaster,
+	    struct bmap_mds_lease, bml_bmdsi_lentry, PPMF_AUTO, 256,
+	    256, 0, NULL, NULL, NULL, "bmplease");
 	bmapMdsLeasePool = psc_poolmaster_getmgr(&bmapMdsLeasePoolMaster);
 
 	lc_reginit(&slm_replst_workq, struct slm_replst_workreq,
@@ -164,7 +165,7 @@ slm_init(void)
 
 	mds_journal_init(disable_propagation);
 
-	mds_odtable_load(&mdsBmapAssignTable, SL_PATH_BMAP, "bmapassign");
+	mds_odtable_load(&mdsBmapAssignTable, SL_FN_BMAP_ODTAB, "bmapassign");
 
 	mds_bmap_timeotbl_init();
 

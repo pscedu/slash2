@@ -325,8 +325,7 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	if (fcmh_2_mdsio_fid(p) == SLFID_ROOT &&
-	    strncmp(mq->name, SL_PATH_PREFIX,
-	     strlen(SL_PATH_PREFIX)) == 0) {
+	    strcmp(mq->name, SL_RPATH_META_DIR) == 0) {
 		mp->rc = EINVAL;
 		goto out;
 	}
@@ -673,8 +672,8 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 		struct fidc_membh *c;
 
 		/* XXX race between RENAME just before and LOOKUP here!! */
-		if (mdsio_lookup(fcmh_2_mdsio_fid(np),
-		    to, NULL, &rootcreds, &c_sstb) == 0 &&
+		if (mdsio_lookup(fcmh_2_mdsio_fid(np), to, NULL,
+		    &rootcreds, &c_sstb) == 0 &&
 		    slm_fcmh_get(&c_sstb.sst_fg, &c) == 0) {
 			FCMH_LOCK(c);
 			SL_GETTIMESPEC(&c->fcmh_sstb.sst_ctim);

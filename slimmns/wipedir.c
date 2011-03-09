@@ -55,9 +55,8 @@ wipefs(const char *dir)
 		if (f->fts_level < 1)
 			continue;
 		if (S_ISDIR(f->fts_statp->st_mode)) {
-			/* skip slash namespace directories */
-			if (strncmp(f->fts_name, SL_PATH_PREFIX,
-			    strlen(SL_PATH_PREFIX)) == 0)
+			/* skip SLASH internal metadata */
+			if (strcmp(f->fts_name, SL_RPATH_META_DIR) == 0)
 				fts_set(fp, f, FTS_SKIP);
 			else if ((f->fts_info == FTS_DP) &&
 			    rmdir(f->fts_path) == -1)
@@ -67,8 +66,8 @@ wipefs(const char *dir)
 	}
 	fts_close(fp);
 
-	/* remove the slash fid namespace */
-	xmkfn(fn, "%s/%s", dir, SL_PATH_FIDNS);
+	/* remove the SLASH fid namespace */
+	xmkfn(fn, "%s/%s", dir, SL_RPATH_META_DIR, SL_RPATH_FIDNS_DIR);
 	pathv[0] = fn;
 
 	/* XXX security implications of FTS_NOCHDIR? */
@@ -95,7 +94,7 @@ wipefs(const char *dir)
 		return;
 
 	/* remove the slash replication queue */
-	xmkfn(fn, "%s/%s", dir, SL_PATH_UPSCH);
+	xmkfn(fn, "%s/%s", dir, SL_RPATH_META_DIR, SL_RPATH_UPSCH_DIR);
 	pathv[0] = fn;
 
 	/* XXX security implications of FTS_NOCHDIR? */

@@ -37,6 +37,7 @@
 #include "mdscoh.h"
 #include "mdsio.h"
 #include "mdslog.h"
+#include "odtable_mds.h"
 #include "repl_mds.h"
 #include "rpc_mds.h"
 #include "slashd.h"

@@ -124,6 +124,4 @@ extern struct psc_listcache	 slm_replst_workq;
 extern struct slm_resmlink	*repl_busytable;
 extern psc_spinlock_t		 repl_busytable_lock;
 
-extern sl_ino_t			 mds_upschdir_inum;
-
 #endif /* _SL_MDS_REPL_H_ */

@@ -863,7 +863,7 @@ upsched_scandir(void)
 
 	rc = mdsio_opendir(mds_upschdir_inum, &rootcreds, NULL, &data);
 	if (rc)
-		psc_fatalx("mdsio_opendir %s: %s", SL_PATH_UPSCH,
+		psc_fatalx("mdsio_opendir %s: %s", SL_RPATH_UPSCH_DIR,
 		    slstrerror(rc));
 
 	off = 0;
@@ -874,8 +874,8 @@ upsched_scandir(void)
 		rc = mdsio_readdir(&rootcreds, siz,
 			   off, buf, &tsiz, NULL, NULL, 0, data);
 		if (rc)
-			psc_fatalx("mdsio_readdir %s: %s", SL_PATH_UPSCH,
-			    slstrerror(rc));
+			psc_fatalx("mdsio_readdir %s: %s",
+			    SL_RPATH_UPSCH_DIR, slstrerror(rc));
 		if (tsiz == 0)
 			break;
 		for (toff = 0; toff < (off64_t)tsiz;
@@ -947,7 +947,7 @@ upsched_scandir(void)
 	}
 	rc = mdsio_release(&rootcreds, data);
 	if (rc)
-		psc_fatalx("mdsio_release %s: %s", SL_PATH_UPSCH,
+		psc_fatalx("mdsio_release %s: %s", SL_RPATH_UPSCH_DIR,
 		    slstrerror(rc));
 
 	PSCFREE(buf);

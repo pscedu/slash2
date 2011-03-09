@@ -84,7 +84,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 
 	entryp = iov.iov_base;
 	for (i = 0; i < mq->count; i++) {
-		fg_makepath(&entryp->fg, fidfn);
+		sli_fg_makepath(&entryp->fg, fidfn);
 
 		/*
 		 * We do upfront garbage collection, so ENOENT should be

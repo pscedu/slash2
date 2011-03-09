@@ -38,11 +38,16 @@
 #include "inode.h"
 #include "inodeh.h"
 #include "mdsio.h"
+#include "pathnames.h"
 #include "slashd.h"
 #include "slerr.h"
 
 #include "sljournal.h"
 #include "zfs-fuse/zfs_slashlib.h"
+
+mdsio_fid_t		 mds_metadir_inum;
+mdsio_fid_t		 mds_upschdir_inum;
+mdsio_fid_t		 mds_fidnsdir_inum;
 
 static __inline void *
 bmap_2_zfs_fh(struct bmapc_memb *bmap)
@@ -165,7 +170,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 }
 
 /*
- * mds_bmap_repl_update - We update bmap replication status in two cases: (1) 
+ * mds_bmap_repl_update - We update bmap replication status in two cases: (1)
  *     An MDS issues a write lease to a client. (2) An MDS performs a replicate
  *     request.
  */
@@ -229,7 +234,7 @@ mds_inode_addrepl_update(struct slash_inode_handle *inoh,
 		    INO_OD_CRCSZ);
 		rc = zfsslash2_write(&rootcreds, &inoh->inoh_ino,
 		    INO_OD_SZ, &nb, SL_INODE_START_OFF, 0,
-		    inoh_2_mdsio_data(inoh), 
+		    inoh_2_mdsio_data(inoh),
 		    log ? mds_inode_addrepl_log : NULL,
 		    &jrir);
 
@@ -250,9 +255,8 @@ mds_inode_addrepl_update(struct slash_inode_handle *inoh,
 		    inoh->inoh_extras, INOX_OD_CRCSZ);
 		rc = zfsslash2_write(&rootcreds, &inoh->inoh_extras,
 		    INOX_OD_SZ, &nb, SL_EXTRAS_START_OFF, 0,
-		    inoh_2_mdsio_data(inoh), 
-		    log ? mds_inode_addrepl_log : NULL,
-		    &jrir);
+		    inoh_2_mdsio_data(inoh),
+		    log ? mds_inode_addrepl_log : NULL, &jrir);
 
 		if (!rc && nb != INO_OD_SZ)
 			rc = SLERR_SHORTIO;
@@ -446,6 +450,22 @@ zfsslash2_init(void)
 	if (rc == 0)
 		rc = libzfs_init();
 	atexit(slm_unmount_kstat);
+
+	rc = mdsio_lookup(MDSIO_FID_ROOT, SL_RPATH_META_DIR,
+	    &mds_metadir_inum, &rootcreds, NULL);
+	if (rc)
+		psc_fatalx("lookup metadir: %s", slstrerror(rc));
+
+	rc = mdsio_lookup(mds_metadir_inum, SL_RPATH_UPSCH_DIR,
+	    &mds_upschdir_inum, &rootcreds, NULL);
+	if (rc)
+		psc_fatalx("lookup upschdir: %s", slstrerror(rc));
+
+	rc = mdsio_lookup(mds_metadir_inum, SL_RPATH_FIDNS_DIR,
+	    &mds_fidnsdir_inum, &rootcreds, NULL);
+	if (rc)
+		psc_fatalx("lookup upschdir: %s", slstrerror(rc));
+
 	return (rc);
 }
 
@@ -489,7 +509,8 @@ struct mdsio_ops mdsio_ops = {
 };
 
 int
-mdsio_write_cursor(void *buf, size_t size, void *finfo, sl_log_write_t funcp)
+mdsio_write_cursor(void *buf, size_t size, void *finfo,
+    sl_log_write_t funcp)
 {
 	return (zfsslash2_write_cursor(buf, size, finfo, funcp));
 }

@@ -20,41 +20,44 @@
 #ifndef _SLASH_PATHNAMES_H_
 #define _SLASH_PATHNAMES_H_
 
-/*
- * SLASH2 internal files and directories that enable us to (1) find out the
- * last ZFS commit transaction group number; (2) register the replication
- * work that needs to be done; (3) access SLASH2 files by SLASH2 FIDs.
- */
-#define SL_PATH_PREFIX		".sl"
-#define SL_PATH_BMAP		".slbmap"
-#define SL_PATH_UPSCH		".slupsch"
-#define SL_PATH_FIDNS		".slfidns"
-#define SL_PATH_CURSOR		".slcursor"
-
 /* configuration/control socket paths */
 #if 0
 #define SL_PATH_CONF		"/etc/slash.conf"
 #define SL_PATH_SLMCTLSOCK	"/var/run/slash/slashd.%h.sock"
 #define SL_PATH_SLICTLSOCK	"/var/run/slash/sliod.%h.sock"
 #define SL_PATH_MSCTLSOCK	"/var/run/slash/mount_slash.%h.sock"
-#endif
-
+#else
 #define SL_PATH_CONF		"../config/example.conf"
 #define SL_PATH_SLMCTLSOCK	"../slashd.%h.sock"
 #define SL_PATH_SLICTLSOCK	"../sliod.%h.sock"
 #define SL_PATH_MSCTLSOCK	"../mount_slash.%h.sock"
+#endif
 
 /* runtime/data paths */
-#define SL_PATH_DATADIR		"/var/lib/slash"
+#define SL_PATH_DATA_DIR	"/var/lib/slash"
 
 #define SL_FN_AUTHBUFKEY	"authbuf.key"
 #define SL_FN_OPJOURNAL		"op-journal"
 
-#define SL_FN_UPDATELOG		".op-update"
-#define SL_FN_UPDATEPROG	".op-update-prog"
+/*
+ * SLASH2 internal files and directories that enable us to (1) find out the
+ * last ZFS commit transaction group number; (2) register the replication
+ * work that needs to be done; (3) access SLASH2 files by SLASH2 FIDs.
+ */
+#define SL_RPATH_META_DIR	".slmd"
 
-#define SL_FN_RECLAIMLOG	".op-reclaim"
-#define SL_FN_RECLAIMPROG	".op-reclaim-prog"
+#define SL_RPATH_UPSCH_DIR	"upsch"
+#define SL_RPATH_FIDNS_DIR	"fidns"
+
+#define SL_FN_BMAP_ODTAB	"bmap.odtab"
+
+#define SL_FN_UPDATELOG		"op-update"
+#define SL_FN_UPDATEPROG	"op-update-prog"
+
+#define SL_FN_RECLAIMLOG	"op-reclaim"
+#define SL_FN_RECLAIMPROG	"op-reclaim-prog"
+
+#define SL_FN_CURSOR		"cursor"
 
 extern const char *sl_datadir;
 

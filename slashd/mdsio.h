@@ -156,6 +156,9 @@ struct mdsio_ops {
 /* misc API */
 int	 mdsio_write_cursor(void *, size_t, void *, sl_log_write_t);
 
-extern struct mdsio_ops mdsio_ops;
+extern struct mdsio_ops	mdsio_ops;
+extern mdsio_fid_t	mds_upschdir_inum;
+extern mdsio_fid_t	mds_metadir_inum;
+extern mdsio_fid_t	mds_fidnsdir_inum;
 
 #endif
