@@ -538,12 +538,12 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	}
 
 	mp->rc = mdsio_readdir(&rootcreds, mq->size, mq->offset,
-	       iov[0].iov_base, &outsize, &nents, iov[1].iov_base,
-	       mq->nstbpref, fcmh_2_mdsio_data(fcmh));
+	    iov[0].iov_base, &outsize, &nents, iov[1].iov_base,
+	    mq->nstbpref, fcmh_2_mdsio_data(fcmh));
 	mp->size = outsize;
 	mp->num = nents;
 
-	psc_info("mdsio_readdir: rc=%d, data=%p", mp->rc,
+	psclog_info("mdsio_readdir: rc=%d, data=%p", mp->rc,
 	    fcmh_2_mdsio_data(fcmh));
 
 	if (mp->rc)
@@ -1093,7 +1093,7 @@ slm_rmc_handler(struct pscrpc_request *rq)
 		rc = slm_rmc_handle_unlink(rq, 1);
 		break;
 	default:
-		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
+		psclog_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
 		rq->rq_status = -ENOSYS;
 		return (pscrpc_error(rq));
 	}
