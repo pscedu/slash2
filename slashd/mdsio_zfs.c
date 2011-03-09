@@ -450,22 +450,6 @@ zfsslash2_init(void)
 	if (rc == 0)
 		rc = libzfs_init();
 	atexit(slm_unmount_kstat);
-
-	rc = mdsio_lookup(MDSIO_FID_ROOT, SL_RPATH_META_DIR,
-	    &mds_metadir_inum, &rootcreds, NULL);
-	if (rc)
-		psc_fatalx("lookup metadir: %s", slstrerror(rc));
-
-	rc = mdsio_lookup(mds_metadir_inum, SL_RPATH_UPSCH_DIR,
-	    &mds_upschdir_inum, &rootcreds, NULL);
-	if (rc)
-		psc_fatalx("lookup upschdir: %s", slstrerror(rc));
-
-	rc = mdsio_lookup(mds_metadir_inum, SL_RPATH_FIDNS_DIR,
-	    &mds_fidnsdir_inum, &rootcreds, NULL);
-	if (rc)
-		psc_fatalx("lookup upschdir: %s", slstrerror(rc));
-
 	return (rc);
 }
 

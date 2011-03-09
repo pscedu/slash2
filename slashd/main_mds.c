@@ -47,6 +47,7 @@
 #include "rpc_mds.h"
 #include "slashd.h"
 #include "slconfig.h"
+#include "slerr.h"
 #include "slsubsys.h"
 #include "subsys_mds.h"
 #include "up_sched_res.h"
@@ -187,7 +188,7 @@ main(int argc, char *argv[])
 {
 	const char *cfn, *sfn;
 	char *zfspoolcf = NULL;
-	int c;
+	int rc, c;
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -240,12 +241,27 @@ main(int argc, char *argv[])
 	slcfg_parse(cfn);
 
 	/*
-	 * Initialize the mdsio layer. There is where ZFS threads
+	 * Initialize the mdsio layer.  There is where ZFS threads
 	 * are started and the given ZFS pool is imported.
 	 */
 	mdsio_init();
 	import_zpool(argv[0], zfspoolcf);
 	zfsslash2_build_immns_cache();
+
+	rc = mdsio_lookup(MDSIO_FID_ROOT, SL_RPATH_META_DIR,
+	    &mds_metadir_inum, &rootcreds, NULL);
+	if (rc)
+		psc_fatalx("lookup metadir: %s", slstrerror(rc));
+
+	rc = mdsio_lookup(mds_metadir_inum, SL_RPATH_UPSCH_DIR,
+	    &mds_upschdir_inum, &rootcreds, NULL);
+	if (rc)
+		psc_fatalx("lookup upschdir: %s", slstrerror(rc));
+
+	rc = mdsio_lookup(mds_metadir_inum, SL_RPATH_FIDNS_DIR,
+	    &mds_fidnsdir_inum, &rootcreds, NULL);
+	if (rc)
+		psc_fatalx("lookup upschdir: %s", slstrerror(rc));
 
 	authbuf_createkeyfile();
 	authbuf_readkeyfile();
