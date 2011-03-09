@@ -83,7 +83,7 @@ wipefs(const char *dir)
 			    rmdir(f->fts_path) == -1)
 				psc_fatal("rmdir %s", f->fts_path);
 			/* do not descend into hardlinked directories */
-			else if (f->fts_level > 3)
+			else if (f->fts_level > 4)
 				fts_set(fp, f, FTS_SKIP);
 		} else if (unlink(f->fts_path) == -1)
 			psc_error("unlink %s", f->fts_path);
