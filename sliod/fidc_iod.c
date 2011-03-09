@@ -36,7 +36,7 @@
  * sli_fid_makepath - Build the pathname in the FID object root that corresponds
  *	to a FID, allowing easily lookup of file metadata via FIDs.
  */
-__static void
+void
 sli_fg_makepath(const struct slash_fidgen *fg, char *fid_path)
 {
 	char a[FID_PATH_DEPTH];

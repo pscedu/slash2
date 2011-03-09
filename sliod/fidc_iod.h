@@ -38,4 +38,6 @@ int sli_fcmh_getattr(struct fidc_membh *);
 
 #define sli_fcmh_get(fgp, fp)	fidc_lookup((fgp), FIDC_LOOKUP_CREATE, NULL, 0, (fp))
 
+void sli_fg_makepath(const struct slash_fidgen *, char *);
+
 #endif /* _FIDC_IOD_H_ */
