@@ -143,9 +143,6 @@ mds_odtable_getitem(struct odtable *odt, const struct odtable_receipt *odtr,
 	}
 	memcpy(data, p, len);
  out:
-	if (rc) {
-		psclog_warnx("failed");
-	}
 	PSCFREE(p);
 	return (rc);
 }
