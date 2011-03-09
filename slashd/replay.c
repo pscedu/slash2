@@ -39,22 +39,23 @@ mds_redo_bmap_repl_common(struct slmds_jent_repgen *jrpg)
 {
 	struct bmap_ondisk bmap_disk;
 	void *mdsio_data;
-	mdsio_fid_t fid;
+	mdsio_fid_t mf;
 	size_t nb;
 	int rc;
 
 	memset(&bmap_disk, 0, sizeof(struct bmap_ondisk));
 
-	rc = mdsio_lookup_slfid(jrpg->sjp_fid, &rootcreds, NULL, &fid);
+	rc = mdsio_lookup_slfid(jrpg->sjp_fid, &rootcreds, NULL, &mf);
 	if (rc) {
 		if (rc == ENOENT) {
-			psclog_warnx("mdsio_lookup_slfid: %s", slstrerror(rc));
+			psclog_warnx("mdsio_lookup_slfid "SLPRI_FID": %s",
+			    jrpg->sjp_fid, slstrerror(rc));
 			return (rc);
 		}
 		psc_fatalx("mdsio_lookup_slfid: %s", slstrerror(rc));
 	}
 
-	rc = mdsio_opencreate(fid, &rootcreds, O_RDWR, 0, NULL, NULL,
+	rc = mdsio_opencreate(mf, &rootcreds, O_RDWR, 0, NULL, NULL,
 	    NULL, &mdsio_data, NULL, NULL);
 	if (rc)
 		psc_fatalx("mdsio_opencreate: %s", slstrerror(rc));
@@ -118,7 +119,7 @@ mds_redo_bmap_crc(struct psc_journal_enthdr *pje)
 	jcrc = PJE_DATA(pje);
 	memset(&bmap_disk, 0, sizeof(struct bmap_ondisk));
 
-	psclog_info("pje_xid=%"PRIx64" pje_txg=%"PRIx64" fid="SLPRI_FID" "
+	psclog_info("pje_xid=%#"PRIx64" pje_txg=%#"PRIx64" fid="SLPRI_FID" "
 	    "bmapno=%u ncrcs=%d crc[0]=%"PSCPRIxCRC64,
 	    pje->pje_xid, pje->pje_txg, jcrc->sjc_fid, jcrc->sjc_bmapno,
 	    jcrc->sjc_ncrcs, jcrc->sjc_crc[0].crc);
@@ -197,7 +198,7 @@ mds_redo_ino_addrepl_common(struct slmds_jent_ino_addrepl *jrir)
 	struct slash_inode_extras_od inoh_extras;
 	struct slash_inode_od inoh_ino;
 	void *mdsio_data;
-	mdsio_fid_t fid;
+	mdsio_fid_t mf;
 	int pos, j, rc;
 	size_t nb;
 
@@ -210,12 +211,12 @@ mds_redo_ino_addrepl_common(struct slmds_jent_ino_addrepl *jrir)
 		return (EINVAL);
 	}
 
-	rc = mdsio_lookup_slfid(jrir->sjir_fid, &rootcreds, NULL, &fid);
+	rc = mdsio_lookup_slfid(jrir->sjir_fid, &rootcreds, NULL, &mf);
 	if (rc)
 		//psc_fatalx("mdsio_lookup_slfid: %s", slstrerror(rc));
 		return (rc);
 
-	rc = mdsio_opencreate(fid, &rootcreds, O_RDWR, 0, NULL, NULL,
+	rc = mdsio_opencreate(mf, &rootcreds, O_RDWR, 0, NULL, NULL,
 	    NULL, &mdsio_data, NULL, NULL);
 	if (rc)
 		psc_fatalx("mdsio_opencreate: %s", slstrerror(rc));
@@ -507,7 +508,7 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 	struct slmds_jent_namespace *sjnm;
 	int rc = 0;
 
-	psclog_info("pje=%p pje_xid=%"PRIx64" pje_txg=%"PRIx64,
+	psclog_info("pje=%p pje_xid=%#"PRIx64" pje_txg=%#"PRIx64,
 	    pje, pje->pje_xid, pje->pje_txg);
 
 	switch (pje->pje_type & ~(_PJE_FLSHFT - 1)) {
