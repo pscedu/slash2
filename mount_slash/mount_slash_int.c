@@ -1728,7 +1728,7 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 	 *  page cache.  This first loop retrieves all the pages.
 	 */
 	for (i = 0; i < nr; i++) {
-		if (r[i] && r[i] != MSL_BIORQ_COMPLETE)
+		if (r[i])
 			goto load_next;
 
 		DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh,
@@ -1794,6 +1794,9 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 	 *   offsets into the buffer.
 	 */
 	for (i = 0, tlen = 0, p = buf; i < nr; i++, p += tlen) {
+		if (r[i] == MSL_BIORQ_COMPLETE)
+			continue;
+
 		/* Associate the biorq's with the mfh. */
 		pll_addtail(&mfh->mfh_biorqs, r[i]);
 
