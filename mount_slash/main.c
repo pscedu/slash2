@@ -2070,8 +2070,7 @@ msl_init(void)
 	authbuf_readkeyfile();
 
 	libsl_init(PSCNET_CLIENT, 0);
-	fidc_init(sizeof(struct fcmh_cli_info), FIDC_CLI_DEFSZ,
-	    NULL);
+	fidc_init(sizeof(struct fcmh_cli_info), FIDC_CLI_DEFSZ);
 	bmpc_global_init();
 	bmap_cache_init(sizeof(struct bmap_cli_info));
 	dircache_init(&dircacheMgr, "dircache", 262144);

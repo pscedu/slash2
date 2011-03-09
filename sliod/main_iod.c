@@ -131,7 +131,7 @@ main(int argc, char *argv[])
 	sl_drop_privs(allow_root_uid);
 
 	bmap_cache_init(sizeof(struct bmap_iod_info));
-	fidc_init(sizeof(struct fcmh_iod_info), FIDC_ION_DEFSZ, NULL);
+	fidc_init(sizeof(struct fcmh_iod_info), FIDC_ION_DEFSZ);
 	bim_init();
 	slvr_cache_init();
 	sli_repl_init();

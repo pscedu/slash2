@@ -33,7 +33,6 @@
 #include "fidcache.h"
 #include "slutil.h"
 
-int			(*fidcReapCb)(struct fidc_membh *);
 struct psc_poolmaster	  fidcPoolMaster;
 struct psc_poolmgr	 *fidcPool;
 struct psc_listcache	  fidcBusyList;		/* active in use */
@@ -174,12 +173,10 @@ fidc_reap(struct psc_poolmgr *m)
 		 * Consult the context-specific callback handler before
 		 *    freeing.
 		 */
-		if (!fidcReapCb || fidcReapCb(f)) {
-			f->fcmh_flags |= FCMH_CAC_REAPED|FCMH_CAC_TOFREE;
-			lc_remove(&fidcIdleList, f);
-			reap[nreap] = f;
-			nreap++;
-		}
+		f->fcmh_flags |= FCMH_CAC_REAPED|FCMH_CAC_TOFREE;
+		lc_remove(&fidcIdleList, f);
+		reap[nreap] = f;
+		nreap++;
  end:
 		FCMH_ULOCK(f);
 	}
@@ -428,8 +425,7 @@ _fidc_lookup(const struct pfl_callerinfo *pfl_callerinfo,
  * fidc_init - Initialize the FID cache.
  */
 void
-fidc_init(int privsiz, int nobj,
-    int (*fcmh_reap_cb)(struct fidc_membh *))
+fidc_init(int privsiz, int nobj)
 {
 	_psc_poolmaster_init(&fidcPoolMaster,
 	    sizeof(struct fidc_membh) + privsiz,
@@ -445,8 +441,6 @@ fidc_init(int privsiz, int nobj,
 
 	psc_hashtbl_init(&fidcHtable, 0, struct fidc_membh,
 	    fcmh_fg, fcmh_hentry, nobj * 2, NULL, "fidc");
-
-	fidcReapCb = fcmh_reap_cb;
 }
 
 ssize_t
