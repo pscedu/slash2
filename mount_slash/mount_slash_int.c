@@ -1744,12 +1744,13 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 		 * out of luck because we have no idea where the data
 		 * is!
 		 */
-		rc = bmap_get(mfh->mfh_fcmh, i + s, rw, &b);
+		rc = bmap_get(mfh->mfh_fcmh, s + i, rw, &b);
 		if (rc) {
 			DEBUG_FCMH(PLL_ERROR, mfh->mfh_fcmh,
-			    "sz=%zu tlen=%zu off=%"PSCPRIdOFFT" "
-			    "roff=%"PSCPRIdOFFT" rw=%d rc=%d",
-			    tsize, tlen, off, roff, rw, rc);
+			    "bno=%zd sz=%zu tlen=%zu "
+			    "off=%"PSCPRIdOFFT" roff=%"PSCPRIdOFFT" "
+			    "rw=%d rc=%d",
+			    s + i, tsize, tlen, off, roff, rw, rc);
 			if (msl_fd_offline_retry(mfh))
 				goto retry_bmap;
 			goto out;
