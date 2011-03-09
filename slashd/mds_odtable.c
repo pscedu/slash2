@@ -33,6 +33,8 @@
 #include "psc_util/log.h"
 #include "psc_util/odtable.h"
 
+#include "odtable_mds.h"
+
 struct psc_lockedlist psc_odtables =
     PLL_INIT(&psc_odtables, struct odtable, odt_lentry);
 
@@ -59,10 +61,10 @@ mds_odtable_putitem(struct odtable *odt, void *data, size_t len)
 	}
 	if (elem >= odt->odt_hdr->odth_nelems) {
 		odt->odt_hdr->odth_nelems = psc_vbitmap_getsize(odt->odt_bitmap);
-		psclog_warn("On-disk table now has %ld elements\n", 
+		psclog_warn("On-disk table now has %ld elements\n",
 			odt->odt_hdr->odth_nelems);
 	}
-	
+
 	freelock(&odt->odt_lock);
 
 	p = PSCALLOC(odt->odt_hdr->odth_slotsz);
@@ -101,11 +103,11 @@ int
 mds_odtable_getitem(struct odtable *odt, const struct odtable_receipt *odtr,
     void *data, size_t len)
 {
-	void *p;
-	int rc;
+	struct odtable_entftr *odtf;
 	uint64_t crc;
 	size_t nb;
-	struct odtable_entftr *odtf;
+	void *p;
+	int rc;
 
 	psc_assert(len <= odt->odt_hdr->odth_elemsz);
 	psc_assert(odtr->odtr_elem <= odt->odt_hdr->odth_nelems - 1);
@@ -131,9 +133,10 @@ mds_odtable_getitem(struct odtable *odt, const struct odtable_receipt *odtr,
 		psc_crc64_calc(&crc, p, odt->odt_hdr->odth_elemsz);
 		if (crc != odtf->odtf_crc) {
 			odtf->odtf_inuse = ODTBL_BAD;
-			psc_warnx("slot=%zd crc fail odtfcrc=%"PSCPRIxCRC64
-				  " elemcrc=%"PSCPRIxCRC64,
-				  odtr->odtr_elem, odtf->odtf_crc, crc);
+			psclog_warnx("slot=%zd CRC fail "
+			    "odtfcrc=%"PSCPRIxCRC64" "
+			    "elemcrc=%"PSCPRIxCRC64,
+			    odtr->odtr_elem, odtf->odtf_crc, crc);
 			rc = EINVAL;
 			goto out;
 		}
@@ -145,21 +148,21 @@ mds_odtable_getitem(struct odtable *odt, const struct odtable_receipt *odtr,
 }
 
 struct odtable_receipt *
-mds_odtable_replaceitem(struct odtable *odt, struct odtable_receipt *odtr,
-    void *data, size_t len)
+mds_odtable_replaceitem(struct odtable *odt,
+    struct odtable_receipt *odtr, void *data, size_t len)
 {
 	struct odtable_entftr *odtf;
 	uint64_t crc;
+	size_t nb;
 	void *p;
 	int rc;
-	size_t nb;
 
 	psc_assert(len <= odt->odt_hdr->odth_elemsz);
 
 	p = PSCALLOC(odt->odt_hdr->odth_slotsz);
-	rc = mdsio_read(&rootcreds, p, odt->odt_hdr->odth_slotsz,
-	    &nb, odt->odt_hdr->odth_start + odtr->odtr_elem * odt->odt_hdr->odth_slotsz,
-	    odt->odt_handle);
+	rc = mdsio_read(&rootcreds, p, odt->odt_hdr->odth_slotsz, &nb,
+	    odt->odt_hdr->odth_start + odtr->odtr_elem *
+	    odt->odt_hdr->odth_slotsz, odt->odt_handle);
 
 	odtf = p + odt->odt_hdr->odth_elemsz;
 	psc_assert(!odtable_footercheck(odtf, odtr, 1));
@@ -171,11 +174,11 @@ mds_odtable_replaceitem(struct odtable *odt, struct odtable_receipt *odtr,
 	odtr->odtr_key = crc;
 	odtf->odtf_crc = crc;
 
-	psc_info("slot=%zd elemcrc=%"PSCPRIxCRC64, odtr->odtr_elem, crc);
+	psclog_info("slot=%zd elemcrc=%"PSCPRIxCRC64, odtr->odtr_elem, crc);
 
-	rc = mdsio_write(&rootcreds, p, odt->odt_hdr->odth_slotsz,
-	    &nb, odt->odt_hdr->odth_start + odtr->odtr_elem * odt->odt_hdr->odth_slotsz,
-	    0, odt->odt_handle, NULL, NULL);
+	rc = mdsio_write(&rootcreds, p, odt->odt_hdr->odth_slotsz, &nb,
+	    odt->odt_hdr->odth_start + odtr->odtr_elem *
+	    odt->odt_hdr->odth_slotsz, 0, odt->odt_handle, NULL, NULL);
 	psc_assert(!rc && nb == odt->odt_hdr->odth_slotsz);
 
 	return (odtr);
@@ -195,9 +198,9 @@ mds_odtable_freeitem(struct odtable *odt, struct odtable_receipt *odtr)
 	struct odtable_entftr *odtf;
 
 	p = PSCALLOC(odt->odt_hdr->odth_slotsz);
-	rc = mdsio_read(&rootcreds, p, odt->odt_hdr->odth_slotsz,
-	    &nb, odt->odt_hdr->odth_start + odtr->odtr_elem * odt->odt_hdr->odth_slotsz,
-	    odt->odt_handle);
+	rc = mdsio_read(&rootcreds, p, odt->odt_hdr->odth_slotsz, &nb,
+	    odt->odt_hdr->odth_start + odtr->odtr_elem *
+	    odt->odt_hdr->odth_slotsz, odt->odt_handle);
 
 	odtf = p + odt->odt_hdr->odth_elemsz;
 	psc_assert(!odtable_footercheck(odtf, odtr, 1));
@@ -207,11 +210,12 @@ mds_odtable_freeitem(struct odtable *odt, struct odtable_receipt *odtr)
 	psc_vbitmap_unset(odt->odt_bitmap, odtr->odtr_elem);
 	freelock(&odt->odt_lock);
 
-	psc_info("slot=%zd elemcrc=%"PSCPRIxCRC64, odtr->odtr_elem, odtf->odtf_crc);
+	psclog_info("slot=%zd elemcrc=%"PSCPRIxCRC64, odtr->odtr_elem,
+	    odtf->odtf_crc);
 
-	rc = mdsio_write(&rootcreds, p, odt->odt_hdr->odth_slotsz,
-	    &nb, odt->odt_hdr->odth_start + odtr->odtr_elem * odt->odt_hdr->odth_slotsz,
-	    0, odt->odt_handle, NULL, NULL);
+	rc = mdsio_write(&rootcreds, p, odt->odt_hdr->odth_slotsz, &nb,
+	    odt->odt_hdr->odth_start + odtr->odtr_elem *
+	    odt->odt_hdr->odth_slotsz, 0, odt->odt_handle, NULL, NULL);
 	psc_assert(!rc && nb == odt->odt_hdr->odth_slotsz);
 
 	PSCFREE(p);
@@ -224,21 +228,20 @@ mds_odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 {
 	struct odtable *odt = PSCALLOC(sizeof(struct odtable));
 	struct odtable_entftr *odtf;
+	struct odtable_receipt odtr;
 	struct odtable_hdr *odth;
+	mdsio_fid_t mf;
+	size_t nb, i;
 	int rc, frc;
 	va_list ap;
-	size_t nb;
 	void *p;
-	size_t i;
-	mdsio_fid_t mf;
-	struct odtable_receipt odtr;
 
 	psc_assert(t);
 	*t = NULL;
 
 	INIT_SPINLOCK(&odt->odt_lock);
 
-	rc = mdsio_lookup(MDSIO_FID_ROOT, fn, &mf, &rootcreds, NULL);
+	rc = mdsio_lookup(mds_metadir_inum, fn, &mf, &rootcreds, NULL);
 	psc_assert(rc == 0);
 
 	rc = mdsio_opencreate(mf, &rootcreds, O_RDWR, 0, NULL, NULL,
@@ -255,17 +258,20 @@ mds_odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 		   (odth->odth_version == ODTBL_VERS));
 
 	/*
-	 * We used to do mmap() to allow easy indexing.  However, we now support
-	 * auto growth of the bitmap.  Plus, ZFS fuse does NOT like mmap() either.
+	 * We used to do mmap() to allow easy indexing.  However, we now
+	 * support auto growth of the bitmap.  Plus, ZFS fuse does NOT
+	 * like mmap() either.
 	 */
-	odt->odt_bitmap = psc_vbitmap_newf(odt->odt_hdr->odth_nelems, PVBF_AUTO);
+	odt->odt_bitmap = psc_vbitmap_newf(odt->odt_hdr->odth_nelems,
+	    PVBF_AUTO);
 	psc_assert(odt->odt_bitmap);
 
 	p = PSCALLOC(odt->odt_hdr->odth_slotsz);
 	for (i = 0; i < odt->odt_hdr->odth_nelems; i++) {
-		rc = mdsio_read(&rootcreds, p, odt->odt_hdr->odth_slotsz,
-		    &nb, odt->odt_hdr->odth_start + i * odt->odt_hdr->odth_slotsz,
-		    odt->odt_handle);
+		rc = mdsio_read(&rootcreds, p,
+		    odt->odt_hdr->odth_slotsz, &nb,
+		    odt->odt_hdr->odth_start + i *
+		    odt->odt_hdr->odth_slotsz, odt->odt_handle);
 
 		odtr.odtr_elem = i;
 		odtf = p + odt->odt_hdr->odth_elemsz;
@@ -288,23 +294,24 @@ mds_odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 				psc_crc64_calc(&crc, p, odt->odt_hdr->odth_elemsz);
 				if (crc != odtf->odtf_crc) {
 					odtf->odtf_inuse = ODTBL_BAD;
-					psc_warnx("slot=%zd crc fail "
-					    "odtfcrc=%"PSCPRIxCRC64" elemcrc=%"PSCPRIxCRC64,
+					psclog_warnx("slot=%zd CRC fail "
+					    "odtfcrc=%"PSCPRIxCRC64" "
+					    "elemcrc=%"PSCPRIxCRC64,
 					    i, odtf->odtf_crc, crc);
 				}
 			}
 		} else {
 			psc_vbitmap_set(odt->odt_bitmap, i);
-			psc_warnx("slot=%zd ignoring, bad inuse value"
-			    "inuse=0x%"PRIx64,
+			psclog_warnx("slot=%zd ignoring, bad inuse value"
+			    "inuse=%#"PRIx64,
 			    i, odtf->odtf_inuse);
 		}
 	}
 
-	psc_notify("odtable=%p base=%p has %d/%zd slots available"
-		   " elemsz=%zd magic=%"PRIx64,
-		   odt, odt->odt_base, psc_vbitmap_nfree(odt->odt_bitmap),
-		   odth->odth_nelems, odth->odth_elemsz, odth->odth_magic);
+	psclog_info("odtable=%p base=%p has %d/%zd slots available"
+	    " elemsz=%zd magic=%#"PRIx64,
+	    odt, odt->odt_base, psc_vbitmap_nfree(odt->odt_bitmap),
+	    odth->odth_nelems, odth->odth_elemsz, odth->odth_magic);
 
 	INIT_PSC_LISTENTRY(&odt->odt_lentry);
 
@@ -334,8 +341,7 @@ mds_odtable_scan(struct odtable *odt,
 {
 	int rc;
 	void *p;
-	size_t i;
-	size_t nb;
+	size_t i, nb;
 	struct odtable_entftr *odtf;
 	struct odtable_receipt *odtr;
 
@@ -348,12 +354,12 @@ mds_odtable_scan(struct odtable *odt,
 			odtr = PSCALLOC(sizeof(*odtr));
 		if (!psc_vbitmap_get(odt->odt_bitmap, i))
 			continue;
-		rc = mdsio_read(&rootcreds, p, odt->odt_hdr->odth_slotsz,
-		    &nb, odt->odt_hdr->odth_start + i * odt->odt_hdr->odth_slotsz,
-		    odt->odt_handle);
-		if (rc) {
-			psc_warnx("Fail to read slot=%zd, skipping", i);
-		}
+		rc = mdsio_read(&rootcreds, p,
+		    odt->odt_hdr->odth_slotsz, &nb,
+		    odt->odt_hdr->odth_start + i *
+		    odt->odt_hdr->odth_slotsz, odt->odt_handle);
+		if (rc)
+			psclog_warnx("Fail to read slot=%zd, skipping", i);
 		odtf = p + odt->odt_hdr->odth_elemsz;
 
 		odtr->odtr_elem = i;
@@ -362,11 +368,11 @@ mds_odtable_scan(struct odtable *odt,
 		rc = odtable_footercheck(odtf, odtr, 2);
 		psc_assert(rc != ODTBL_FREE_ERR);
 		if (rc) {
-			psc_warnx("slot=%zd marked bad, skipping", i);
+			psclog_warnx("slot=%zd marked bad, skipping", i);
 			continue;
 		}
 
-		psclog_debug("handing back key=%"PRIx64" slot=%zd odtr=%p",
+		psclog_debug("handing back key=%#"PRIx64" slot=%zd odtr=%p",
 		    odtr->odtr_key, i, odtr);
 
 		odt_handler(p, odtr);		/* mds_bia_odtable_startup_cb() */
