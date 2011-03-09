@@ -532,7 +532,7 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 
 	rc = mds_odtable_getitem(mdsBmapAssignTable, bmdsi->bmdsi_assign,
 		&bia, sizeof(struct bmap_ion_assign));
-	if (!rc) {
+	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, b, "odtable_getitem() failed");
 		return (-1);
 	}
