@@ -173,6 +173,9 @@ I opened the od table synchronously (with O_SYNC), it does not look that way.
 
 Fixed, hopefully, in r15709.
 
+Note on 03/09/2011: I don't know why ZIL should replay the creation of a regular file like ssi.c. MDS
+does not do any synchronous I/O (except for some log files, where we use mdsio_fsync()).
+
 03/07/2011
 ----------
 
@@ -220,3 +223,6 @@ See: the later-created directory mach exists, but not the earlier created direct
 
 This seems to imply operations do not necessarily commit in order.  If so, I guess this may have 
 something to do with ZIL.
+
+Note on 03/09/2011: This remains a concern for me although now I can't reproduce it with the
+same process.
