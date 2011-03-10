@@ -240,13 +240,9 @@ mds_remove_logfile(uint64_t batchno, int update)
 	char logfn[PATH_MAX];
 
 	if (update)
-		xmkfn(logfn, "%s.%d.%s.%lu",
-		    SL_FN_UPDATELOG, batchno, psc_get_hostname(),
-		    mds_cursor.pjc_timestamp);
+		xmkfn(logfn, "%s.%d", SL_FN_UPDATELOG, batchno);
 	else
-		xmkfn(logfn, "%s.%d.%s.%lu",
-		    SL_FN_RECLAIMLOG, batchno, psc_get_hostname(),
-		    mds_cursor.pjc_timestamp);
+		xmkfn(logfn, "%s.%d", SL_FN_RECLAIMLOG, batchno);
 	mdsio_unlink(mds_metadir_inum, logfn, &rootcreds, NULL);
 }
 
@@ -257,13 +253,9 @@ mds_open_logfile(uint64_t batchno, int update, int readonly, void **handle)
 	int rc;
 
 	if (update) {
-		xmkfn(log_fn, "%s.%d.%s.%lu",
-		    SL_FN_UPDATELOG, batchno, psc_get_hostname(),
-		    mds_cursor.pjc_timestamp);
+		xmkfn(log_fn, "%s.%d", SL_FN_UPDATELOG, batchno);
 	} else {
-		xmkfn(log_fn, "%s.%d.%s.%lu",
-		    SL_FN_RECLAIMLOG, batchno, psc_get_hostname(),
-		    mds_cursor.pjc_timestamp);
+		xmkfn(log_fn, "%s.%d", SL_FN_RECLAIMLOG, batchno);
 	}
 	if (readonly) {
 		/*
@@ -1545,9 +1537,7 @@ mds_journal_init(int disable_propagation)
 	pscthr_init(SLMTHRT_CURSOR, 0, mds_cursor_thread, NULL, 0,
 	    "slmjcursorthr");
 
-	xmkfn(update_progfile_name, "%s.%s.%lu",
-	    SL_FN_RECLAIMPROG, psc_get_hostname(),
-	    mds_cursor.pjc_timestamp);
+	xmkfn(update_progfile_name, "%s", SL_FN_RECLAIMPROG);
 
 	rc = mds_open_file(update_progfile_name, O_RDWR,
 	    &reclaim_progfile_handle);
@@ -1619,9 +1609,7 @@ mds_journal_init(int disable_propagation)
 	if (!npeers)
 		goto replay_log;
 
-	xmkfn(reclaim_progfile_name, "%s.%s.%lu",
-	    SL_FN_RECLAIMPROG, psc_get_hostname(),
-	    mds_cursor.pjc_timestamp);
+	xmkfn(reclaim_progfile_name, "%s", SL_FN_RECLAIMPROG);
 
 	rc = mds_open_file(reclaim_progfile_name, O_RDWR,
 	    &update_progfile_handle);

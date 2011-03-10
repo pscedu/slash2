@@ -53,6 +53,8 @@ struct passwd	*pw;
 
 const char      *datadir = SL_PATH_DATA_DIR;
 
+#define		 MAX_BUF_LEN		512
+
 struct psc_journal_cursor cursor;
 
 void
@@ -137,6 +139,8 @@ slimmns_create(const char *fsroot, uint32_t depth)
 {
 	char metadir[PATH_MAX], fn[PATH_MAX];
 	int fd;
+	size_t len;
+	char buf[MAX_BUF_LEN];
 
 	if (!depth)
 		depth = FID_PATH_DEPTH;
@@ -176,32 +180,43 @@ slimmns_create(const char *fsroot, uint32_t depth)
 		psc_fatal("write %s", fn);
 	close(fd);
 
-	xmkfn(fn, "%s/%s.%d.%s.%lu", metadir, SL_FN_UPDATELOG, 0,
-	    psc_get_hostname(), cursor.pjc_timestamp);
+	xmkfn(fn, "%s/%s.%d", metadir, SL_FN_UPDATELOG, 0);
 	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
 	if (fd == -1)
 		psc_fatal("open %s", fn);
 	close(fd);
 
-	xmkfn(fn, "%s/%s.%s.%lu", metadir, SL_FN_UPDATEPROG,
-	    psc_get_hostname(), cursor.pjc_timestamp);
+	xmkfn(fn, "%s/%s", metadir, SL_FN_UPDATEPROG);
 	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
 	if (fd == -1)
 		psc_fatal("open %s", fn);
 	close(fd);
 
-	xmkfn(fn, "%s/%s.%d.%s.%lu", metadir, SL_FN_RECLAIMLOG, 0,
-	    psc_get_hostname(), cursor.pjc_timestamp);
+	xmkfn(fn, "%s/%s.%d", metadir, SL_FN_RECLAIMLOG, 0);
 	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
 	if (fd == -1)
 		psc_fatal("open %s", fn);
 	close(fd);
 
-	xmkfn(fn, "%s/%s.%s.%lu", metadir, SL_FN_RECLAIMPROG,
-	    psc_get_hostname(), cursor.pjc_timestamp);
+	xmkfn(fn, "%s/%s", metadir, SL_FN_RECLAIMPROG);
 	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
 	if (fd == -1)
 		psc_fatal("open %s", fn);
+	close(fd);
+
+	xmkfn(fn, "%s/%s", metadir, "timestamp");
+	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
+	if (fd == -1)
+		psc_fatal("open %s", fn);
+
+	snprintf(buf, MAX_BUF_LEN, "This pool was created on %s and on %s",
+		psc_get_hostname(), ctime((time_t *)&cursor.pjc_timestamp));
+
+	len = strlen(buf);
+	len = write(fd, buf, len);
+	if (len != strlen(buf))
+		psc_fatal("write %s", fn);
+
 	close(fd);
 
 	slimmns_create_odtable(metadir);
