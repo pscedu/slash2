@@ -1461,9 +1461,7 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 		 *   here.
 		 */
 		spinlock(&r->biorq_lock);
-		if (rc)
-			r->biorq_flags &= ~BIORQ_INFL;
-		else {
+		if (!rc) {
 			r->biorq_flags &= ~(BIORQ_RBWLP | BIORQ_RBWFP |
 			    BIORQ_INFL | BIORQ_SCHED);
 			DEBUG_BIORQ(PLL_INFO, r, "read cb complete");
