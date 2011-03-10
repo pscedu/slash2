@@ -340,7 +340,8 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 		BMPCE_LOCK(bmpce);
 
 		bmpce_handle_lru_locked(bmpce, bmpc,
-		 (r->biorq_flags & BIORQ_WRITE) ? BIORQ_WRITE : BIORQ_READ, 0);
+		    (r->biorq_flags & BIORQ_WRITE) ?
+		    BIORQ_WRITE : BIORQ_READ, 0);
 
 		BMPCE_ULOCK(bmpce);
 	}
@@ -1461,9 +1462,9 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 		 *   here.
 		 */
 		spinlock(&r->biorq_lock);
+		r->biorq_flags &= ~(BIORQ_INFL | BIORQ_SCHED);
 		if (!rc) {
-			r->biorq_flags &= ~(BIORQ_RBWLP | BIORQ_RBWFP |
-			    BIORQ_INFL | BIORQ_SCHED);
+			r->biorq_flags &= ~(BIORQ_RBWLP | BIORQ_RBWFP);
 			DEBUG_BIORQ(PLL_INFO, r, "read cb complete");
 			psc_waitq_wakeall(&r->biorq_waitq);
 		}
