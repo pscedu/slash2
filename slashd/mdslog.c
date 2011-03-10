@@ -1547,6 +1547,10 @@ mds_journal_init(int disable_propagation)
 		if (reclaim_prog_buf[i].res_id == 0)
 			continue;
 		res = libsl_id2res(reclaim_prog_buf[i].res_id);
+		if (!RES_ISFS(res)) {
+			psclog_warn("Non-FS resource ID in reclaim file %d", res->res_id);
+			continue;
+		}
 		iosinfo = res2rpmi(res)->rpmi_info;
 		if (iosinfo->si_xid < reclaim_prog_buf[i].res_xid)
 			iosinfo->si_xid = reclaim_prog_buf[i].res_xid;
@@ -1619,6 +1623,10 @@ mds_journal_init(int disable_propagation)
 		if (update_prog_buf[i].res_id == 0)
 			continue;
 		res = libsl_id2res(update_prog_buf[i].res_id);
+		if (res->res_type != SLREST_MDS) {
+			psclog_warn("Non-MDS resource ID in update file %d", res->res_id);
+			continue;
+		}
 		peerinfo = res2rpmi(res)->rpmi_info;
 		if (peerinfo->sp_xid < update_prog_buf[i].res_xid)
 			peerinfo->sp_xid = update_prog_buf[i].res_xid;
