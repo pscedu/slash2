@@ -376,15 +376,11 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 	    sjnm->sjnm_op == NS_OP_SETSIZE);
 
 	if (reclaim_logfile_handle == NULL) {
+
 		reclaim_logfile_offset = 0;
 		mds_open_logfile(current_reclaim_batchno, 0, 0,
 		    &reclaim_logfile_handle);
 
-		/*
-		 * Here we do one-time seek based on the xid stored in
-		 * the entry.  Although not necessary contiguous, xids
-		 * are in increasing order.
-		 */
 		if (action == 1) {
 			rc = mds_read_file(reclaim_logfile_handle,
 			    reclaimbuf, SLM_RECLAIM_BATCH *
@@ -450,15 +446,11 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 		return (0);
 
 	if (update_logfile_handle == NULL) {
+
 		update_logfile_offset = 0;
-		mds_open_logfile(current_update_batchno, 1, 0,
+		mds_open_logfile(current_update_batchno, 1, 0, 
 		    &update_logfile_handle);
 
-		/*
-		 * Here we do one-time seek based on the xid stored in
-		 * the entry.  Although not necessary contiguous, xids
-		 * are in increasing order.
-		 */
 		if (action == 1) {
 			rc = mds_read_file(update_logfile_handle,
 			    updatebuf, SLM_UPDATE_BATCH *
