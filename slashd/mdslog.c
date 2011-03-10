@@ -1529,9 +1529,8 @@ mds_journal_init(int disable_propagation)
 	pscthr_init(SLMTHRT_CURSOR, 0, mds_cursor_thread, NULL, 0,
 	    "slmjcursorthr");
 
-	xmkfn(update_progfile_name, "%s", SL_FN_RECLAIMPROG);
-
-	rc = mds_open_file(update_progfile_name, O_RDWR,
+	xmkfn(reclaim_progfile_name, "%s", SL_FN_RECLAIMPROG);
+	rc = mds_open_file(reclaim_progfile_name, O_RDWR,
 	    &reclaim_progfile_handle);
 	psc_assert(rc == 0);
 
@@ -1605,9 +1604,8 @@ mds_journal_init(int disable_propagation)
 	if (!npeers)
 		goto replay_log;
 
-	xmkfn(reclaim_progfile_name, "%s", SL_FN_RECLAIMPROG);
-
-	rc = mds_open_file(reclaim_progfile_name, O_RDWR,
+	xmkfn(update_progfile_name, "%s", SL_FN_UPDATEPROG);
+	rc = mds_open_file(update_progfile_name, O_RDWR,
 	    &update_progfile_handle);
 	psc_assert(rc == 0);
 
