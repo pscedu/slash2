@@ -962,6 +962,7 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 		} else {
 			bmpce->bmpce_flags |= BMPCE_DATARDY;
 			DEBUG_BMPCE(PLL_INFO, bmpce, "datardy via read_cb");
+	//		psc_waitq_wakeall(bmpce->bmpce_waitq);
 			/* Disown bmpce by null'ing the waitq pointer.
 			 */
 			bmpce->bmpce_waitq = NULL;
@@ -1473,8 +1474,16 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 		 */
 		pscrpc_set_destroy(r->biorq_rqset);
 		r->biorq_rqset = NULL;
-		if (rc)
+		if (rc) {
+			for (i = 0; i < npages; i++) {
+				bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
+				BMPCE_LOCK(bmpce);
+				bmpce->bmpce_flags |= BMPCE_EIO;
+				psc_waitq_wakeall(bmpce->bmpce_waitq);
+				BMPCE_ULOCK(bmpce);
+			}
 			return (rc);
+		}
 	}
 
 	for (i = 0; i < npages; i++) {
@@ -1482,16 +1491,25 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 		BMPCE_LOCK(bmpce);
 		DEBUG_BMPCE(PLL_TRACE, bmpce, " ");
 
-		if (!biorq_is_my_bmpce(r, bmpce))
+		if (!biorq_is_my_bmpce(r, bmpce)) {
 			/* For pages not owned by this request,
 			 *    wait for them to become DATARDY.
 			 */
 			while (!(bmpce->bmpce_flags & BMPCE_DATARDY)) {
+				/*
+				 * If the owner gave up, we will contend
+				 * to retry after reacquiring the bmap
+				 * lease.
+				 */
+				if (bmpce->bmpce_flags & BMPCE_EIO)
+					return (EAGAIN);
+
 				DEBUG_BMPCE(PLL_TRACE, bmpce, "waiting");
 				psc_waitq_wait(bmpce->bmpce_waitq,
 				    &bmpce->bmpce_lock);
 				BMPCE_LOCK(bmpce);
 			}
+		}
 
 		if ((r->biorq_flags & BIORQ_READ) ||
 		    !biorq_is_my_bmpce(r, bmpce))
@@ -1622,7 +1640,7 @@ msl_pages_copyout(struct bmpc_ioreq *r, char *buf)
 
 		bmpce_usecheck(bmpce, BIORQ_READ, biorq_getaligned_off(r, i));
 
-		src = (char *)bmpce->bmpce_base;
+		src = bmpce->bmpce_base;
 		if (!i && (toff > bmpce->bmpce_off)) {
 			psc_assert((toff - bmpce->bmpce_off) < BMPC_BUFSZ);
 			src += toff - bmpce->bmpce_off;
