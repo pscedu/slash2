@@ -198,7 +198,7 @@ main(int argc, char *argv[])
 	pfl_init();
 	sl_subsys_register();
 	psc_subsys_register(SLMSS_ZFS, "zfs");
-	psc_subsys_register(SLMSS_JOURNAL, "jrnl");
+	psc_subsys_register(SLMSS_JOURNAL, "log");
 
 #ifdef ZPOOL_PATH
 	append_path(ZPOOL_PATH);
