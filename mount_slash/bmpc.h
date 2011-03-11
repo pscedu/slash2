@@ -258,7 +258,7 @@ struct bmpc_ioreq {
 #define	BIORQ_NOFHENT			(1 << 10)	/* release a file handle before flush is complete */
 #define BIORQ_APPEND			(1 << 11)
 
-#define BIORQ_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s"
+#define BIORQ_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s%s%s"
 #define DEBUG_BIORQ_FLAGS(b)						\
 	(b)->biorq_flags & BIORQ_READ		? "r" : "",		\
 	(b)->biorq_flags & BIORQ_WRITE		? "w" : "",		\
@@ -269,7 +269,9 @@ struct bmpc_ioreq {
 	(b)->biorq_flags & BIORQ_DIO		? "d" : "",		\
 	(b)->biorq_flags & BIORQ_FORCE_EXPIRE	? "x" : "",		\
 	(b)->biorq_flags & BIORQ_DESTROY	? "D" : "",		\
-	(b)->biorq_flags & BIORQ_FLUSHRDY	? "R" : ""
+	(b)->biorq_flags & BIORQ_FLUSHRDY	? "R" : "",		\
+	(b)->biorq_flags & BIORQ_NOFHENT	? "n" : "",		\
+	(b)->biorq_flags & BIORQ_APPEND		? "A" : ""
 
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
 	psclogs((level), PSS_DEF,					\
