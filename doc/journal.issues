@@ -226,3 +226,20 @@ something to do with ZIL.
 
 Note on 03/09/2011: This remains a concern for me although now I can't reproduce it with the
 same process.
+
+03/11/2011
+----------
+
+Fail to reply creation of a file because its parent "obj" does not exist:
+
+root@orange: /zhihui_slash2_orange/.slmd/fidns/0/0/3$ ls -al | grep -B4 000c000000003f74
+-r--r--r--   2 zhihui staff 5288 Mar 11 12:36 000c000000003f6c
+-rw-r--r--   2 zhihui staff 5288 Mar 11 14:01 000c000000003f6d	
+-rwxr-xr-x   2 zhihui staff 5288 Mar 11 14:01 000c000000003f71		<-- gap here
+drwxr-xr-x   3 zhihui staff    5 Mar 11 14:01 000c000000003f73
+-rw-------   2 zhihui staff 5288 Mar 11 14:01 000c000000003f74
+
+
+zhihui@orange: ~/projects-orange/slash_nara/slashd$ g 3f6e log1 | grep mkdir
+1040618:mkdir: name = obj, fid = 0xc000000003f6e, errno = 0
+
