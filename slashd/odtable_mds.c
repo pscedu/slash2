@@ -61,7 +61,7 @@ mds_odtable_putitem(struct odtable *odt, void *data, size_t len)
 	}
 	if (elem >= odt->odt_hdr->odth_nelems) {
 		odt->odt_hdr->odth_nelems = psc_vbitmap_getsize(odt->odt_bitmap);
-		psclog_warn("On-disk table now has %ld elements\n",
+		psclog_warn("On-disk table now has %zd elements",
 			odt->odt_hdr->odth_nelems);
 	}
 
