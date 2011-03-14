@@ -249,3 +249,7 @@ zhihui@orange: ~/projects-orange/slash_nara/slashd$ g 3f6e log1 | grep mkdir
 Looks like ZIL is interfering with our log replay.  I can't decide whether a log
 replay should succeed or not.  So I am thinking about disabling ZIL on MDS and
 will play with it tommorrow.
+
+But I should allow ZIL to happen for our log files, which we need to sync from
+time to time with mdsio_fsync().  There should be NO other sync activities on
+MDS.
