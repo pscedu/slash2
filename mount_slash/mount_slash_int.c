@@ -1479,7 +1479,8 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 				bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
 				BMPCE_LOCK(bmpce);
 				bmpce->bmpce_flags |= BMPCE_EIO;
-				psc_waitq_wakeall(bmpce->bmpce_waitq);
+				if (bmpce->bmpce_waitq)
+					psc_waitq_wakeall(bmpce->bmpce_waitq);
 				BMPCE_ULOCK(bmpce);
 			}
 			return (rc);
@@ -1501,8 +1502,10 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 				 * to retry after reacquiring the bmap
 				 * lease.
 				 */
-				if (bmpce->bmpce_flags & BMPCE_EIO)
+				if (bmpce->bmpce_flags & BMPCE_EIO) {
+					BMPCE_ULOCK(bmpce);
 					return (EAGAIN);
+				}
 
 				DEBUG_BMPCE(PLL_TRACE, bmpce, "waiting");
 				psc_waitq_wait(bmpce->bmpce_waitq,
