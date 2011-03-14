@@ -243,3 +243,9 @@ drwxr-xr-x   3 zhihui staff    5 Mar 11 14:01 000c000000003f73
 zhihui@orange: ~/projects-orange/slash_nara/slashd$ g 3f6e log1 | grep mkdir
 1040618:mkdir: name = obj, fid = 0xc000000003f6e, errno = 0
 
+03/14/2011
+----------
+
+Looks like ZIL is interfering with our log replay.  I can't decide whether a log
+replay should succeed or not.  So I am thinking about disabling ZIL on MDS and
+will play with it tommorrow.
