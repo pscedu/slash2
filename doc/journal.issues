@@ -253,3 +253,11 @@ will play with it tommorrow.
 But I should allow ZIL to happen for our log files, which we need to sync from
 time to time with mdsio_fsync().  There should be NO other sync activities on
 MDS.
+
+Reading the minute details of ZIL, some operations like TX_CREATE, TX_RENAME
+can't be logged out-of-order (see TX_OOO() in sys/zil.h).  So whenever we call 
+mdsio_fsync() on behalf of the distilling process, we are going to put ZIL log 
+entries on-disk as well.
+
+I have done experiments with gdb and read the source code to confirm this
+understanding.
