@@ -126,11 +126,13 @@ mds_redo_bmap_crc(struct psc_journal_enthdr *pje)
 
 	rc = mdsio_lookup_slfid(jcrc->sjc_fid, &rootcreds, NULL, &mf);
 	if (rc == ENOENT) {
-		psclog_warnx("mdsio_lookup_slfid: %s", slstrerror(rc));
+		psclog_warnx("mds_redo_bmap_crc(): fid="SLPRI_FID", rc=%s", 
+		    jcrc->sjc_fid, slstrerror(rc));
 		return (rc);
 	}
 	if (rc)
-		psc_fatalx("mdsio_lookup_slfid: %s", slstrerror(rc));
+		psc_fatalx("mds_redo_bmap_crc(): fid="SLPRI_FID", rc=%s", 
+		    jcrc->sjc_fid, slstrerror(rc));
 
 	rc = mdsio_opencreate(mf, &rootcreds, O_RDWR, 0, NULL,
 	    NULL, NULL, &mdsio_data, NULL, NULL);
