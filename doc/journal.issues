@@ -261,3 +261,15 @@ entries on-disk as well.
 
 I have done experiments with gdb and read the source code to confirm this
 understanding.
+
+03/16/2011
+----------
+
+So I did create test after moving all logs into ZFS:
+
+zhihui@lemon: ~$ ./fio.pthreads -i create.test 2> create.out
+
+I got 550+/sec rate, this is down from 600+/sec rate at @ r15677.
+
+Hopefully I can get some loss back after I disable ZIL for normal
+operations.
