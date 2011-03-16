@@ -507,11 +507,10 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 {
 	struct slmds_jent_namespace *sjnm;
 	int rc = 0;
+	int type;
 
-	psclog_info("pje=%p pje_xid=%#"PRIx64" pje_txg=%#"PRIx64,
-	    pje, pje->pje_xid, pje->pje_txg);
-
-	switch (pje->pje_type & ~(_PJE_FLSHFT - 1)) {
+	type = pje->pje_type & ~(_PJE_FLSHFT - 1);
+	switch (type) {
 	    case MDS_LOG_BMAP_REPL:
 		rc = mds_redo_bmap_repl(pje);
 		break;
@@ -544,5 +543,8 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 	    default:
 		psc_fatalx("invalid log entry type %d", pje->pje_type);
 	}
+	psclog_info("type=%d, xid=%#"PRIx64", txg=%#"PRIx64", rc=%d",
+	    type, pje->pje_xid, pje->pje_txg, rc);
+
 	return (rc);
 }
