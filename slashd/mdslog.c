@@ -627,8 +627,8 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 	if (!distill)
 		pjournal_put_buf(mdsJournal, sjnm);
 
-	psclog_notice("namespace op: op=%d fid="SLPRI_FID" txg=%"PRId64,
-	    op, sjnm->sjnm_target_fid, txg);
+	psclog_notice("namespace op: op=%d, fid="SLPRI_FID", name=%s, new name=%s, txg=%"PRId64,
+	    op, sjnm->sjnm_target_fid, name, newname, txg);
 }
 
 /**
