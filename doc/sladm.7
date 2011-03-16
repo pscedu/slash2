@@ -57,11 +57,10 @@ Next, create a
 .Tn ZFS
 pool with
 .Xr zpool 8
-which will be the master
-.Tn ZFS
-resource for use by the
+for the backing file system used by the
 .Tn SLASH
-metadata server:
+metadata server.
+For example:
 .Bd -literal -offset indent
 # zpool create mypool sda		# single drive
 # zpool create mypool mirror sda sdb	# two mirrored drives
@@ -71,15 +70,14 @@ To allow
 .Tn ZFS
 and
 .Tn SLASH
-to load this file system quickly, create a
-cache dump file:
+to load this file system, create a cache dump file:
 .Bd -literal -offset indent
 # zpool set cachefile=/mypool.zcf mypool
 .Ed
 .Pp
 Before this file system can be used by the
 .Tn SLASH
-metadata server, it needs to be initialized by
+metadata server, it must be initialized by
 .Xr slimmns_format 8 :
 .Bd -literal -offset indent
 # slimmns_format /mypool
@@ -94,7 +92,7 @@ metadata server can access it:
 # umount /mypool
 # pkill zfs-fuse
 .Ed
-.Ss The Metadata Server
+.Ss Metadata Server Po Ss MDS Pc
 The metadata server
 .Xr slashd 8
 requires an on-disk journal for resuming interrupted operations which
@@ -117,14 +115,14 @@ servers needs to be created with
 Next, bring up
 .Xr slashd 8 :
 .Bd -literal -offset indent
-# slashd -f slash.conf -p mypool.zcf mypool
+# slashd -p mypool.zcf mypool
 .Ed
 .Pp
 .Xr slmctl 8
 can be used to control live operation of
 .Xr slashd 8
 once it is running.
-.Ss The Tn Ss I/O Ss Server
+.Ss Tn Ss I/O Ss Server
 The
 .Tn I/O
 server
@@ -157,14 +155,14 @@ or manually with
 Now launch
 .Xr sliod 8 :
 .Bd -literal -offset indent
-# sliod -f slash.conf md@SITE
+# sliod md@SITE
 .Ed
 .Pp
 .Xr slictl 8
 can be used to control live operation of the
 .Tn I/O
 server once it is running.
-.Ss The Client Mount Daemon
+.Ss Client Mount Daemon
 To communicate on a
 .Tn SLASH
 network, the shared network daemon communication key must be installed
@@ -185,8 +183,7 @@ may be used to mount a
 .Tn SLASH
 file system to a directory node on the local system:
 .Bd -literal -offset indent
-# SLASH_MDS_NID="md@SITE" SLASH2_PIOS_ID="io@SITE" \e
-  mount_slash -U -f slash.conf /myfs
+# mount_slash -U -M md@SITE -I io@SITE /myfs
 .Ed
 .Pp
 .Xr msctl 8

@@ -14,7 +14,7 @@
 .\" without express or implied warranty.
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
-.Dd December 19, 2010
+.Dd March 15, 2011
 .Dt SLASH.CONF 5
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -55,14 +55,34 @@ to the given value
 .Ar val .
 The following variables may be set:
 .Bl -tag -offset 3n -width 7n
+.It Ic mymds
+Default
+.Tn MDS
+server resource name.
+This setting applies to
+.Xr sliod 8
+and
+.Xr mount_slash 8
+only.
+.It Ic prefios
+Preferred
+.Tn I/O
+system.
+This setting applies to
+.Xr mount_slash 8
+only.
 .It Ic fs_root
 For
 .Xr sliod 8 ,
-the file system mount point where backend data is stored.
+the file system root where backend data is stored.
+This directory must be initialized with
+.Xr slimmns_format 8 .
 .Pp
-This option may also be used for
-.Xr mount_slash 8
-for local file system caching.
+For
+.Xr mount_slash 8 ,
+the file system root where file data retrieved over a
+.Tn SLASH
+network may be cached locally.
 .It Ic net
 Lustre network name.
 See

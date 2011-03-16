@@ -15,7 +15,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES rpc %
-.Dd March 11, 2011
+.Dd March 16, 2011
 .Dt SLMCTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -27,10 +27,10 @@ daemon runtime control
 .Sh SYNOPSIS
 .Nm slmctl
 .Op Fl HI
-.Op Fl c Ar cmd
 .Op Fl p Ar paramspec
 .Op Fl S Ar socket
 .Op Fl s Ar showspec
+.Op Ar cmd arg ...
 .Sh DESCRIPTION
 The
 .Nm
@@ -38,26 +38,28 @@ utility examines and manipulates
 .Xr slashd 8
 behavior.
 .Pp
-The options are as follows:
-.Bl -tag -width 3n
-.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/c.mdoc {
-.\"	daemon	=> qq{slashd},
-.\"	cmds	=> {
-.\" #		reconfig => "Reload configuration"
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/cmd.mdoc {
+.\"	cmds => {
+.\"		exit => <<'EOF'
+.\"			Instruct
+.\"			.Xr slashd 8
+.\"			to completely terminate daemon execution.
+.\"		EOF
 .\"	}
-.It Fl c Ar cmd
+The supported commands are as follows:
+.Bl -tag -width 3n
+.It Cm exit
 Instruct
 .Xr slashd 8
-to perform one of the following actions:
-.Pp
-.Bl -tag -compact -offset 3n -width 13n
-.It Cm exit
-Completely terminate daemon execution.
+to completely terminate daemon execution.
 .El
 .\" }%
+.Pp
+The options are as follows:
+.Bl -tag -width 3n
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/H.mdoc {
 .It Fl H
-Suppress display of headers.
+Suppress headers when showing data displays.
 .\" }%
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/I.mdoc {
 .It Fl I
@@ -67,7 +69,7 @@ postfixes of demonination such as
 for gigabytes,
 .Sq M
 for megabytes, etc.\&
-.Pq inhuman mode .
+.Pq Do inhuman Dc number mode .
 .\" }%
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/p.mdoc {
 .\"	subsys => {
@@ -87,7 +89,7 @@ has the following format:
 .Sm on
 .Ed
 .Pp
-Some parameters are read-only.
+Some parameters may be read- or write-only.
 Some support modification by the assignment operators
 .Li +=
 and
@@ -205,7 +207,8 @@ the maximum number of open files.
 .El
 .\" }%
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/S.mdoc {
-.\"	sock => "/var/run/slashd. Ns Ic %h Ns Pa .sock"
+.\"	daemon	=> qq{slashd},
+.\"	sock	=> "/var/run/slashd. Ns Ic %h Ns Pa .sock"
 .It Fl S Ar socket
 Specify an alternative socket file.
 The following tokens are replaced in the file name specified:
