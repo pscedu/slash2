@@ -43,7 +43,7 @@ Configuration intended to be applied to all sites on a
 network must be specified in the first section of
 .Nm
 and supports the following directives:
-.Bl -tag -offset indent
+.Bl -tag -offset 3n
 .It Xo
 .Ic global Ar var Li =
 .Ar val Ns Li ;\&
@@ -54,25 +54,32 @@ Set the global variable
 to the given value
 .Ar val .
 The following variables may be set:
-.Pp
-.Bl -tag -offset indent -compact -width Ds
-.It Ic net
-On which Lustre network site access resides.
-.It Ic port
-On which
-.Tn TCP
-port to establish connections.
+.Bl -tag -offset 3n -width 7n
 .It Ic fs_root
 For
-.Tn I/O
-servers, the file system mount point where backend data is stored.
+.Xr sliod 8 ,
+the file system mount point where backend data is stored.
+.Pp
+This option may also be used for
+.Xr mount_slash 8
+for local file system caching.
+.It Ic net
+Lustre network name.
+See
+.Ev LNET_NETWORKS
+in
+.Xr pflenv 7
+for more information.
+.It Ic port
+.Tn TCP
+port used to establish connections.
 .El
 .El
 .Pp
 Additional configuration files may be included at the end of the globals
 section with
 .Ic include :
-.Bd -literal -offset indent
+.Bd -literal -offset 3n
 .Ic include Dq Ar pattern
 .Ed
 .Pp
@@ -87,7 +94,7 @@ Each site resident on a
 network requires its own section in the second part of
 .Nm
 and has the following format:
-.Bd -unfilled -offset indent
+.Bd -unfilled -offset 3n
 .Ic site @ Ns Ar site-name Li {
 .D1 ...
 .Li }
@@ -99,7 +106,7 @@ definition may contain variable definitions and
 resource specifications.
 The following variables may be set:
 .Pp
-.Bl -tag -offset indent -width site_descXX -compact
+.Bl -tag -offset 3n -width site_descXX -compact
 .It Ic site_desc
 Description of site
 .It Ic site_id
@@ -107,7 +114,7 @@ Numerical identifier for site
 .El
 .Pp
 A resource specification has the following form:
-.Bd -unfilled -offset indent
+.Bd -unfilled -offset 3n
 .Ic resource Ar resource-name Li {
 .D1 ...
 .Li }
@@ -116,21 +123,21 @@ A resource specification has the following form:
 Resource specifications may contain variable definition for the
 following variables:
 .Pp
-.Bl -tag -offset indent -width Ds -compact
+.Bl -tag -offset 3n -width Ds -compact
 .It Ic desc
-A string name for this resource
+Short description of this resource.
 .It Ic id
 Numerical identifier for resource, required to be unique for all
-resources
+resources.
 .It Ic ifs
-Interface addresses over which to communicate with other site resources
+Interface addresses over which to communicate with other site resources.
 .It Ic mds
 A Boolean value
 .Ic yes
 or
 .Ic no
 on whether this resource manages site-wide metadata, must be set on at
-least one resource
+least one resource.
 .It Ic peers
 List of peers separated by commas of communication resource partners in
 the form
@@ -141,7 +148,7 @@ Type of resource, one of
 .Ic compute ,
 or
 .Ic parallel_fs ,
-required to be set for all resources
+required to be set for all resources.
 .El
 .Sh EXAMPLES
 The following is an example
