@@ -279,3 +279,15 @@ operations.
 
 If we create a file and then remove it, any in-between CRC update
 will fail with ENOENT.
+
+Within one transaction, a file is created and removed:
+
+[1300384320:281584 slmrmcthr13:13163:def mds_namespace_log 631] namespace op: op=0, fid=0x000c00000000206d, name=log, new name=(null), txg=26
+[1300384320:285865 slmrmcthr26:13176:def mds_namespace_log 631] namespace op: op=3, fid=0x000c00000000206d, name=log, new name=log, txg=26
+[1300384320:286585 slmrmcthr02:13152:def mds_namespace_log 631] namespace op: op=6, fid=0x000c00000000206d, name=(null), new name=(null), txg=26
+[1300384320:312064 slmrmcthr20:13170:def mds_namespace_log 631] namespace op: op=8, fid=0x000c00000000206d, name=log, new name=(null), txg=26
+
+Later when we replay, got:
+
+[1300387772:185805 slmctlthr:14754:def mds_bia_odtable_startup_cb 1284] fid=0x000c00000000206d failed to load
+
