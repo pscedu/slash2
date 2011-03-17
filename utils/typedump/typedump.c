@@ -180,8 +180,9 @@ main(int argc, char *argv[])
 	PRTYPE(struct mdsio_ops);
 	PRTYPE(struct msbmfl_thread);
 	PRTYPE(struct msctl_replstq);
-	PRTYPE(struct msctlmsg_fncmd_bmapreplpol);
-	PRTYPE(struct msctlmsg_fncmd_newreplpol);
+	PRTYPE(struct msctlmsg_bmapreplpol);
+	PRTYPE(struct msctlmsg_fncmd);
+	PRTYPE(struct msctlmsg_newreplpol);
 	PRTYPE(struct msctlmsg_replrq);
 	PRTYPE(struct msctlmsg_replst);
 	PRTYPE(struct msctlmsg_replst_slave);
@@ -355,7 +356,6 @@ main(int argc, char *argv[])
 	PRVAL(MDSCOH_BLOCK);
 	PRVAL(MDSCOH_NONBLOCK);
 	PRVAL(MDSIO_FID_ROOT);
-	PRVAL(MSCC_EXIT);
 	PRVAL(MSCC_RECONFIG);
 	PRVAL(MSCMT_ADDREPLRQ);
 	PRVAL(MSCMT_DELREPLRQ);
@@ -363,6 +363,12 @@ main(int argc, char *argv[])
 	PRVAL(MSCMT_GETFCMH);
 	PRVAL(MSCMT_GETREPLST);
 	PRVAL(MSCMT_GETREPLST_SLAVE);
+	PRVAL(MSCMT_GET_BMAPREPLPOL);
+	PRVAL(MSCMT_GET_NEWREPLPOL);
+	PRVAL(MSCMT_IMPORT);
+	PRVAL(MSCMT_LCACHE_ADD);
+	PRVAL(MSCMT_LCACHE_REMOVE);
+	PRVAL(MSCMT_LCACHE_STATUS);
 	PRVAL(MSCMT_SET_BMAPREPLPOL);
 	PRVAL(MSCMT_SET_NEWREPLPOL);
 	PRVAL(NBREPLST);
