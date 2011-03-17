@@ -1281,7 +1281,8 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 
 	rc = slm_fcmh_get(&fg, &f);
 	if (rc) {
-		psc_errorx("fid="SLPRI_FID" failed to load", fg.fg_fid);
+		psc_errorx("failed to load: item=%zd, fid="SLPRI_FID, 
+			odtr->odtr_elem, fg.fg_fid);
 		goto out;
 	}
 

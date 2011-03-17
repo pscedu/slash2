@@ -210,13 +210,13 @@ mds_odtable_freeitem(struct odtable *odt, struct odtable_receipt *odtr)
 	psc_vbitmap_unset(odt->odt_bitmap, odtr->odtr_elem);
 	freelock(&odt->odt_lock);
 
-	psclog_info("slot=%zd elemcrc=%"PSCPRIxCRC64, odtr->odtr_elem,
-	    odtf->odtf_crc);
-
 	rc = mdsio_write(&rootcreds, p, odt->odt_hdr->odth_slotsz, &nb,
 	    odt->odt_hdr->odth_start + odtr->odtr_elem *
 	    odt->odt_hdr->odth_slotsz, 0, odt->odt_handle, NULL, NULL);
 	psc_assert(!rc && nb == odt->odt_hdr->odth_slotsz);
+
+	psclog_info("slot=%zd elemcrc=%"PSCPRIxCRC64, odtr->odtr_elem,
+	    odtf->odtf_crc);
 
 	PSCFREE(p);
 	PSCFREE(odtr);
