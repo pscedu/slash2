@@ -590,6 +590,7 @@ struct srm_set_newreplpol_req {
 struct srm_set_bmapreplpol_req {
 	struct slash_fidgen	fg;
 	sl_bmapno_t		bmapno;
+	sl_bmapno_t		nbmaps;
 	 int32_t		pol;
 } __packed;
 

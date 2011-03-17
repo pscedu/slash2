@@ -126,8 +126,6 @@ psc_ctl_prthr_t psc_ctl_prthrs[] = {
 };
 
 struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {
-	{ "exit",	SICC_EXIT },
-	{ "reconfig",	SICC_RECONFIG }
 };
 
 PFLCTL_CLI_DEFS;
@@ -139,13 +137,12 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-HI] [-c cmd] [-p paramspec]] [-S socket] [-s value]\n",
+	    "usage: %s [-HI] [-p paramspec]] [-S socket] [-s value] [cmd arg ...]\n",
 	    progname);
 	exit(1);
 }
 
 struct psc_ctlopt opts[] = {
-	{ 'c', PCOF_FUNC, psc_ctlparse_cmd },
 	{ 'H', PCOF_FLAG, &psc_ctl_noheader },
 	{ 'h', PCOF_FUNC, psc_ctlparse_hashtable },
 	{ 'I', PCOF_FLAG, &psc_ctl_inhuman },

@@ -37,7 +37,7 @@ struct msctl_replstq {
 	int				 mrsq_ctlrc;	/* EOF/OK return code to ctl layer */
 	const struct psc_ctlmsghdr	*mrsq_mh;
 	psc_spinlock_t			 mrsq_lock;
-	const char			*mrsq_fn;
+	slfid_t				 mrsq_fid;
 	int				 mrsq_refcnt;
 };
 

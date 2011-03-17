@@ -29,7 +29,7 @@
 
 /* for retrieving info about replication status */
 struct msctlmsg_replst {
-	char			mrs_fn[SL_PATH_MAX];
+	slfid_t			mrs_fid;
 	struct slash_fidgen	mrs_fg;		/* used intermittenly */
 	char			mrs_iosv[SITE_NAME_MAX][SL_MAX_REPLICAS];
 	uint32_t		mrs_nios;
@@ -38,7 +38,7 @@ struct msctlmsg_replst {
 };
 
 struct msctlmsg_replst_slave {
-	char			mrsl_fn[SL_PATH_MAX];
+	slfid_t			mrsl_fid;
 	uint32_t		mrsl_boff;	/* bmap starting offset */
 	uint32_t		mrsl_nbmaps;	/* # of bmaps in this chunk */
 	char			mrsl_data[0];	/* bcs_repls data */
@@ -46,37 +46,47 @@ struct msctlmsg_replst_slave {
 
 /* for issuing/controlling replication requests */
 struct msctlmsg_replrq {
-	char			mrq_fn[SL_PATH_MAX];
+	slfid_t			mrq_fid;
 	char			mrq_iosv[SITE_NAME_MAX][SL_MAX_REPLICAS];
 	uint32_t		mrq_nios;
 	sl_bmapno_t		mrq_bmapno;
 };
 
-struct msctlmsg_fncmd_newreplpol {
-	char			mfnrp_fn[SL_PATH_MAX];
+struct msctlmsg_newreplpol {
+	slfid_t			mfnrp_fid;
 	int32_t			mfnrp_pol;
 };
 
-struct msctlmsg_fncmd_bmapreplpol {
-	char			mfbrp_fn[SL_PATH_MAX];
+struct msctlmsg_bmapreplpol {
+	slfid_t			mfbrp_fid;
 	sl_bmapno_t		mfbrp_bmapno;
+	sl_bmapno_t		mfbrp_nbmaps;
 	int32_t			mfbrp_pol;
+};
+
+struct msctlmsg_fncmd {
+	slfid_t			mfc_fid;
 };
 
 #define REPLRQ_BMAPNO_ALL	(-1)
 
 /* mount_slash message types */
 #define MSCMT_ADDREPLRQ		NPCMT
-#define MSCMT_DELREPLRQ		(NPCMT + 1)
-#define MSCMT_GETREPLST		(NPCMT + 2)
-#define MSCMT_GETREPLST_SLAVE	(NPCMT + 3)
-#define MSCMT_SET_BMAPREPLPOL	(NPCMT + 4)
-#define MSCMT_SET_NEWREPLPOL	(NPCMT + 5)
-#define MSCMT_GETCONNS		(NPCMT + 6)
-#define MSCMT_GETFCMH		(NPCMT + 7)
+#define MSCMT_DELREPLRQ		(NPCMT +  1)
+#define MSCMT_GETCONNS		(NPCMT +  2)
+#define MSCMT_GETFCMH		(NPCMT +  3)
+#define MSCMT_GETREPLST		(NPCMT +  4)
+#define MSCMT_GETREPLST_SLAVE	(NPCMT +  5)
+#define MSCMT_GET_BMAPREPLPOL	(NPCMT +  6)
+#define MSCMT_GET_NEWREPLPOL	(NPCMT +  7)
+#define MSCMT_IMPORT		(NPCMT +  8)
+#define MSCMT_LCACHE_ADD	(NPCMT +  9)
+#define MSCMT_LCACHE_REMOVE	(NPCMT + 10)
+#define MSCMT_LCACHE_STATUS	(NPCMT + 11)
+#define MSCMT_SET_BMAPREPLPOL	(NPCMT + 12)
+#define MSCMT_SET_NEWREPLPOL	(NPCMT + 13)
 
 /* mount_slash control commands */
-#define MSCC_EXIT		0
 #define MSCC_RECONFIG		1
 
 #endif /* _SL_CTL_CLI_H_ */

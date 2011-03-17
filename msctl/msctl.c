@@ -52,17 +52,39 @@ struct psclist_head		 current_mrs_bdata =
 const struct msctlmsg_replst	 zero_mrs;
 
 struct replst_slave_bdata {
-	struct psclist_head	rsb_lentry;
-	sl_bmapno_t		rsb_boff;
-	sl_bmapno_t		rsb_nbmaps;
-	unsigned char		rsb_data[0];
+	struct psclist_head	 rsb_lentry;
+	sl_bmapno_t		 rsb_boff;
+	sl_bmapno_t		 rsb_nbmaps;
+	unsigned char		 rsb_data[0];
 };
 
 struct replrq_arg {
-	char	iosv[SITE_NAME_MAX][SL_MAX_REPLICAS];
-	int	nios;
-	int	code;
-	int	bmapno;
+	char			 iosv[SITE_NAME_MAX][SL_MAX_REPLICAS];
+	int			 nios;
+	int			 opcode;
+	int			 bmapno;
+};
+
+struct lcache_arg {
+	int			 opcode;
+};
+
+struct bmap_range {
+	sl_bmapno_t		 bmin;
+	sl_bmapno_t		 bmax;
+	struct psc_listentry	 lentry;
+};
+
+struct repl_policy_arg {
+	int			 opcode;
+	int			 replpol;
+	struct psc_lockedlist	 branges;
+};
+
+struct fnfidpair {
+	char			 ffp_fn[PATH_MAX];
+	slfid_t			 ffp_fid;
+	struct psc_hashent	 ffp_hentry;
 };
 
 /* keep in sync with BRP_* constants */
@@ -71,6 +93,44 @@ const char *repl_policies[] = {
 	"persist",
 	NULL
 };
+
+struct psc_hashtbl fnfidpairs;
+
+slfid_t
+fn2fid(const char *fn)
+{
+	struct fnfidpair q, *ffp;
+	struct stat stb;
+
+	if (stat(fn, &stb) == -1)
+		err(1, "stat %s", fn);
+
+	q.ffp_fid = stb.st_ino;
+	ffp = psc_hashtbl_search(&fnfidpairs, &q, NULL, NULL);
+	if (ffp)
+		return (ffp->ffp_fid);
+
+	ffp = PSCALLOC(sizeof(*ffp));
+	strlcpy(ffp->ffp_fn, fn, sizeof(ffp->ffp_fn));
+	ffp->ffp_fid = stb.st_ino;
+	psc_hashent_init(&fnfidpairs, &ffp->ffp_hentry);
+	psc_hashtbl_add_item(&fnfidpairs, ffp);
+	return (stb.st_ino);
+}
+
+const char *
+fid2fn(slfid_t fid)
+{
+	static char fn[PATH_MAX];
+	struct fnfidpair q, *ffp;
+
+	q.ffp_fid = fid;
+	ffp = psc_hashtbl_search(&fnfidpairs, &q, NULL, NULL);
+	if (ffp)
+		return (PCPP_STR(ffp->ffp_fn));
+	snprintf(fn, sizeof(fn), "<"SLPRI_FID">", fid);
+	return (PCPP_STR(fn));
+}
 
 int
 rsb_cmp(const void *a, const void *b)
@@ -139,9 +199,7 @@ pack_replst(const char *fn, __unusedx void *arg)
 
 	mrs = psc_ctlmsg_push(MSCMT_GETREPLST,
 	    sizeof(struct msctlmsg_replst));
-	if (strlcpy(mrs->mrs_fn, fn,
-	    sizeof(mrs->mrs_fn)) >= sizeof(mrs->mrs_fn))
-		errx(1, "%s: too long", fn);
+	mrs->mrs_fid = fn2fid(fn);
 }
 
 void
@@ -151,20 +209,18 @@ pack_replrq(const char *fn, void *arg)
 	struct replrq_arg *ra = arg;
 	int n;
 
-	mrq = psc_ctlmsg_push(ra->code,
+	mrq = psc_ctlmsg_push(ra->opcode,
 	    sizeof(struct msctlmsg_replrq));
 	mrq->mrq_bmapno = ra->bmapno;
 	mrq->mrq_nios = ra->nios;
 	for (n = 0; n < ra->nios; n++)
 		strlcpy(mrq->mrq_iosv[n], ra->iosv[n],
 		    sizeof(mrq->mrq_iosv[0]));
-	if (strlcpy(mrq->mrq_fn, fn,
-	    sizeof(mrq->mrq_fn)) >= sizeof(mrq->mrq_fn))
-		errx(1, "%s: too long", fn);
+	mrq->mrq_fid = fn2fid(fn);
 }
 
 void
-parse_replrq(int code, char *replrqspec,
+parse_replrq(int opcode, char *replrqspec,
     void (*packf)(const char *, void *))
 {
 	char *files, *endp, *bmapnos, *bmapno, *next, *bend, *iosv, *ios;
@@ -173,7 +229,7 @@ parse_replrq(int code, char *replrqspec,
 	long l;
 
 	iosv = replrqspec;
-	ra.code = code;
+	ra.opcode = opcode;
 
 	bmapnos = strchr(replrqspec, ':');
 	if (bmapnos == NULL) {
@@ -251,47 +307,75 @@ lookup_repl_policy(const char *name)
 }
 
 void
-h_fncmd_new_repl_policy(char *val, char *fn)
+cmd_new_bmap_repl_policy_one(const char *fn, void *arg)
 {
-	struct msctlmsg_fncmd_newreplpol *mfnrp;
-	int rp;
+	struct msctlmsg_newreplpol *mfnrp;
+	struct repl_policy_arg *a = arg;
 
-	if (val)
-		errx(1, "new-bmap-repl-policy: no policy specified");
-	if (fn == NULL)
-		errx(1, "new-bmap-repl-policy: no file specified");
+	mfnrp = psc_ctlmsg_push(a->opcode, sizeof(*mfnrp));
+	mfnrp->mfnrp_pol = a->replpol;
+	mfnrp->mfnrp_fid = fn2fid(fn);
+}
 
-	rp = lookup_repl_policy(val);
+void
+cmd_new_bmap_repl_policy(int ac, char **av)
+{
+	struct repl_policy_arg arg;
+	const char *s;
+	int i;
 
-	mfnrp = psc_ctlmsg_push(MSCMT_SET_NEWREPLPOL, sizeof(*mfnrp));
-	mfnrp->mfnrp_pol = rp;
-	if (strlcpy(mfnrp->mfnrp_fn, fn,
-	    sizeof(mfnrp->mfnrp_fn)) >= sizeof(mfnrp->mfnrp_fn)) {
-		errno = ENAMETOOLONG;
-		err(1, "%s", fn);
+	s = strchr(av[0], '=');
+	if (s) {
+		arg.opcode = MSCMT_SET_NEWREPLPOL;
+		arg.replpol = lookup_repl_policy(s + 1);
+	} else
+		arg.opcode = MSCMT_GET_NEWREPLPOL;
+
+	if (ac < 2)
+		errx(1, "new-bmap-repl-policy: no file(s) specified");
+	for (i = 1; i < ac; i++)
+		walk(av[i], cmd_new_bmap_repl_policy_one, &arg);
+}
+
+void
+cmd_bmap_repl_policy_one(const char *fn, void *arg)
+{
+	struct msctlmsg_bmapreplpol *mfbrp;
+	struct repl_policy_arg *a = arg;
+	struct bmap_range *br;
+
+	PLL_FOREACH(br, &a->branges) {
+		mfbrp = psc_ctlmsg_push(a->opcode, sizeof(*mfbrp));
+		mfbrp->mfbrp_pol = a->replpol;
+		mfbrp->mfbrp_bmapno = br->bmin;
+		mfbrp->mfbrp_nbmaps = br->bmax - br->bmin + 1;
+		mfbrp->mfbrp_fid = fn2fid(fn);
 	}
 }
 
 void
-h_fncmd_bmap_repl_policy(char *val, char *bmapspec)
+cmd_bmap_repl_policy(int ac, char **av)
 {
-	struct msctlmsg_fncmd_bmapreplpol *mfbrp;
-	char *fn, *bmapno, *next, *endp, *bend;
-	sl_bmapno_t bmin, bmax;
+	char *bmapspec, *bmapno, *next, *endp, *bend, *val;
+	struct bmap_range *br, *br_next;
+	struct repl_policy_arg arg;
 	long l;
-	int rp;
+	int i;
 
-	if (val == NULL)
-		errx(1, "bmap-repl-policy: no policy specified");
+	pll_init(&arg.branges, struct bmap_range, lentry, NULL);
+
+	val = strchr(av[0], '=');
+
+	bmapspec = strchr(av[0], ':');
 	if (bmapspec == NULL)
 		errx(1, "bmap-repl-policy: no bmapspec specified");
+	*bmapspec++ = '\0';
 
-	rp = lookup_repl_policy(val);
-
-	fn = strchr(bmapspec, ':');
-	if (fn == NULL)
-		errx(1, "bmap-repl-policy: no file specified");
-	*fn++ = '\0';
+	if (val) {
+		arg.replpol = lookup_repl_policy(val);
+		arg.opcode = MSCMT_SET_BMAPREPLPOL;
+	} else
+		arg.opcode = MSCMT_GET_BMAPREPLPOL;
 
 	for (bmapno = bmapspec; bmapno; bmapno = next) {
 		if ((next = strchr(bmapno, ',')) != NULL)
@@ -299,60 +383,127 @@ h_fncmd_bmap_repl_policy(char *val, char *bmapspec)
 		l = strtol(bmapno, &endp, 10);
 		if (l < 0 || (sl_bmapno_t)l >= UINT32_MAX || endp == bmapno)
 			errx(1, "%s: invalid bmap number", bmapno);
-		bmin = bmax = l;
+
+		br = PSCALLOC(sizeof(*br));
+		INIT_LISTENTRY(&br->lentry);
+		br->bmin = br->bmax = l;
 
 		/* parse bmap range */
 		if (*endp == '-') {
 			endp++;
 			l = strtol(endp, &bend, 10);
-			if (l < 0 || (sl_bmapno_t)l <= bmin ||
+			if (l < 0 || (sl_bmapno_t)l <= br->bmin ||
 			    (sl_bmapno_t)l >= UINT32_MAX ||
 			    bend == endp || *bend != '\0')
 				errx(1, "%s: invalid bmapspec", endp);
-			bmax = l;
+			br->bmax = l;
 		} else if (*endp != '\0')
 			errx(1, "%s: invalid bmapspec", bmapno);
-		for (; bmin <= bmax; bmin++) {
-			mfbrp = psc_ctlmsg_push(MSCMT_SET_BMAPREPLPOL,
-			    sizeof(*mfbrp));
-			mfbrp->mfbrp_pol = rp;
-			mfbrp->mfbrp_bmapno = bmin;
-			if (strlcpy(mfbrp->mfbrp_fn, fn,
-			    sizeof(mfbrp->mfbrp_fn)) >=
-			    sizeof(mfbrp->mfbrp_fn)) {
-				errno = ENAMETOOLONG;
-				err(1, "%s", fn);
-			}
-		}
+		pll_add(&arg.branges, br);
 	}
+	for (i = 1; i < ac; i++)
+		walk(av[i], cmd_bmap_repl_policy_one, &arg);
+	PLL_FOREACH_SAFE(br, br_next, &arg.branges)
+		PSCFREE(br);
 }
 
-struct fncmd_handler {
-	const char	 *fh_name;
-	void		(*fh_handler)(char *, char *);
-} fncmds[] = {
-	{ "new-bmap-repl-policy",	h_fncmd_new_repl_policy },
-	{ "bmap-repl-policy",		h_fncmd_bmap_repl_policy }
-};
+void
+cmd_lcache_one(const char *fn, void *arg)
+{
+	struct msctlmsg_fncmd *mfc;
+	struct lcache_arg *a = arg;
+
+	mfc = psc_ctlmsg_push(a->opcode, sizeof(*mfc));
+	mfc->mfc_fid = fn2fid(fn);
+}
 
 void
-parse_fncmd(char *cmd)
+cmd_lcache(int ac, char **av)
 {
-	char *p, *val;
-	int n;
+	struct lcache_arg arg;
+	int i;
 
-	p = strchr(cmd, ':');
-	if (p)
-		*p++ = '\0';
-	val = strchr(cmd, '=');
-	if (val)
-		*val++ = '\0';
-	for (n = 0; n < nitems(fncmds); n++)
-		if (strcmp(fncmds[n].fh_name, cmd) == 0) {
-			fncmds[n].fh_handler(p, val);
-			return;
-		}
-	warnx("%s: unknown file command", cmd);
+	if (ac < 2)
+		errx(1, "%s: no file(s) specified", av[0]);
+	if (strcmp(av[0], "lcache-add") == 0)
+		arg.opcode = MSCMT_LCACHE_ADD;
+	else if (strcmp(av[0], "lcache-remove") == 0)
+		arg.opcode = MSCMT_LCACHE_REMOVE;
+	else
+		arg.opcode = MSCMT_LCACHE_STATUS;
+	for (i = 1; i < ac; i++)
+		walk(av[i], cmd_lcache_one, &arg);
+}
+
+void
+cmd_import_one(const char *fn, __unusedx void *arg)
+{
+	struct msctlmsg_fncmd *mfc;
+
+	mfc = psc_ctlmsg_push(MSCMT_IMPORT, sizeof(*mfc));
+	mfc->mfc_fid = fn2fid(fn);
+}
+
+void
+cmd_import(int ac, char **av)
+{
+	int i;
+
+	if (ac < 3)
+		errx(1, "import: no file(s) specified");
+	for (i = 1; i < ac - 1; i++)
+		walk(av[i], cmd_import_one, NULL);
+}
+
+void
+cmd_replrq_one(const char *fn, void *arg)
+{
+	struct msctlmsg_replrq *mrq;
+	struct replrq_arg *a = arg;
+
+	mrq = psc_ctlmsg_push(a->opcode, sizeof(*mrq));
+	mrq->mrq_fid = fn2fid(fn);
+}
+
+void
+cmd_replrq(int ac, char **av)
+{
+	struct replrq_arg arg;
+	int i;
+
+	if (ac < 2)
+		errx(1, "%s: no file(s) specified", av[0]);
+	if (strcmp(av[0], "repl-add") == 0)
+		arg.opcode = MSCMT_ADDREPLRQ;
+	else
+		arg.opcode = MSCMT_DELREPLRQ;
+	for (i = 1; i < ac; i++)
+		walk(av[i], cmd_replrq_one, &arg);
+}
+
+void
+cmd_replst_one(const char *fn, __unusedx void *arg)
+{
+	struct msctlmsg_replst *mrs;
+
+	mrs = psc_ctlmsg_push(MSCMT_GETREPLST, sizeof(*mrs));
+	mrs->mrs_fid = fn2fid(fn);
+}
+
+void
+cmd_replst(int ac, char **av)
+{
+	struct replrq_arg arg;
+	int i;
+
+	if (ac < 2)
+		errx(1, "%s: no file(s) specified", av[0]);
+	if (strcmp(av[0], "repl-add") == 0)
+		arg.opcode = MSCMT_ADDREPLRQ;
+	else
+		arg.opcode = MSCMT_DELREPLRQ;
+	for (i = 1; i < ac; i++)
+		walk(av[i], cmd_replrq_one, &arg);
 }
 
 int
@@ -399,7 +550,7 @@ replst_slave_check(struct psc_ctlmsghdr *mh, const void *m)
 }
 
 void
-replst_slave_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
+fnstat_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	/* XXX add #repls, #bmaps */
 	printf("%4s %54s %6s %6s %6s\n",
@@ -407,7 +558,7 @@ replst_slave_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 }
 
 void
-replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
+fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	char map[NBREPLST], pmap[NBREPLST], rbuf[PSCFMT_RATIO_BUFSIZ];
@@ -437,7 +588,7 @@ replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 
 	dlen = PSC_CTL_DISPLAY_WIDTH - strlen(" new-bmap-repl-policy: ") -
 	    strlen(repl_policies[BRP_ONETIME]);
-	n = printf("%s", current_mrs.mrs_fn);
+	n = printf("%s", fid2fn(current_mrs.mrs_fid));
 	if (n > dlen)
 		printf("\n%*s", dlen, "");
 	else
@@ -511,11 +662,11 @@ replst_savdat(__unusedx struct psc_ctlmsghdr *mh, const void *m)
 	blen = current_mrs.mrs_nbmaps * howmany(SL_BITS_PER_REPLICA *
 	    current_mrs.mrs_nios, NBBY);
 	if (current_mrs.mrs_nbmaps == 0) {
-		replst_slave_prhdr(NULL, NULL);
+		fnstat_prhdr(NULL, NULL);
 		for (blen = 0; blen < PSC_CTL_DISPLAY_WIDTH; blen++)
 			putchar('=');
 		putchar('\n');
-		replst_slave_prdat(NULL, NULL);
+		fnstat_prdat(NULL, NULL);
 	}
 	return (-1);
 }
@@ -535,12 +686,18 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 	PSC_CTLMSG_PRFMT_DEFS,
 	{ NULL,			NULL,			0,					NULL },
 	{ NULL,			NULL,			0,					NULL },
-	{ NULL,			NULL,			0,					replst_savdat },
-	{ replst_slave_prhdr,	replst_slave_prdat,	0,					replst_slave_check },
-	{ NULL,			NULL,			0,					NULL },
-	{ NULL,			NULL,			0,					NULL },
 	{ sl_conn_prhdr,	sl_conn_prdat,		sizeof(struct slctlmsg_conn),		NULL },
-	{ sl_fcmh_prhdr,	sl_fcmh_prdat,		sizeof(struct slctlmsg_fcmh),		NULL }
+	{ sl_fcmh_prhdr,	sl_fcmh_prdat,		sizeof(struct slctlmsg_fcmh),		NULL },
+	{ NULL,			NULL,			0,					replst_savdat },
+	{ fnstat_prhdr,		fnstat_prdat,		0,					replst_slave_check },
+	{ fnstat_prhdr,		fnstat_prdat,		0,					NULL },
+	{ fnstat_prhdr,		fnstat_prdat,		0,					NULL },
+	{ NULL,			NULL,			0,					NULL },
+	{ fnstat_prhdr,		fnstat_prdat,		0,					NULL },
+	{ NULL,			NULL,			0,					NULL },
+	{ NULL,			NULL,			0,					NULL },
+	{ NULL,			NULL,			0,					NULL },
+	{ NULL,			NULL,			0,					NULL }
 };
 
 psc_ctl_prthr_t psc_ctl_prthrs[] = {
@@ -560,8 +717,16 @@ psc_ctl_prthr_t psc_ctl_prthrs[] = {
 };
 
 struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {
-	{ "exit",	MSCC_EXIT },
-	{ "reconfig",	MSCC_RECONFIG }
+	{ "bmap-repl-policy:",		cmd_bmap_repl_policy },
+	{ "import",			cmd_import },
+	{ "lcache-add",			cmd_lcache },
+	{ "lcache-remove",		cmd_lcache },
+	{ "lcache-status",		cmd_lcache },
+	{ "new-bmap-repl-policy:",	cmd_new_bmap_repl_policy },
+//	{ "reconfig",			cmd_reconfig },
+	{ "repl-add",			cmd_replrq },
+	{ "repl-remove",		cmd_replrq },
+	{ "repl-status",		cmd_replst }
 };
 
 PFLCTL_CLI_DEFS;
@@ -574,8 +739,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-HIRv] [-c cmd] [-f cmd] [-p paramspec] [-Q replrqspec]\n"
-	    "\t[-r replrqspec] [-S socket] [-s value] [-U replrqspec]\n",
+	    "usage: %s [-HIRv] [-p paramspec] [-S socket] [-s value] [cmd arg ...]\n",
 	    progname);
 	exit(1);
 }
@@ -602,8 +766,6 @@ parse_dequeue(char *optarg)
 }
 
 struct psc_ctlopt opts[] = {
-	{ 'c', PCOF_FUNC, psc_ctlparse_cmd },
-	{ 'f', PCOF_FUNC, parse_fncmd },
 	{ 'H', PCOF_FLAG, &psc_ctl_noheader },
 	{ 'h', PCOF_FUNC, psc_ctlparse_hashtable },
 	{ 'I', PCOF_FLAG, &psc_ctl_inhuman },
@@ -625,6 +787,8 @@ main(int argc, char *argv[])
 {
 	pfl_init();
 	progname = argv[0];
+	psc_hashtbl_init(&fnfidpairs, 0, struct fnfidpair, ffp_fid,
+	    ffp_hentry, 1024, NULL, "fnfidpairs");
 	psc_ctlcli_main(SL_PATH_MSCTLSOCK, argc, argv, opts,
 	    nitems(opts));
 	if (memcmp(&current_mrs, &zero_mrs, sizeof(current_mrs)))

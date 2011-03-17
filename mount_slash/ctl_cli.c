@@ -37,6 +37,7 @@
 #include "ctl_cli.h"
 #include "ctlsvr.h"
 #include "ctlsvr_cli.h"
+#include "fidc_cli.h"
 #include "mount_slash.h"
 #include "rpc_cli.h"
 #include "slashrpc.h"
@@ -64,6 +65,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct msctlmsg_replrq *mrq = m;
 	struct srm_replrq_rep *mp;
 	struct srm_replrq_req *mq;
+	struct fidc_membh *fcmh;
 	struct slash_fidgen fg;
 	struct slash_creds cr;
 	struct srt_stat sstb;
@@ -73,41 +75,41 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (mrq->mrq_nios < 1 ||
 	    mrq->mrq_nios >= nitems(mrq->mrq_iosv))
 		return (psc_ctlsenderr(fd, mh,
-		    "replication request: %s",
-		    slstrerror(EINVAL)));
+		    "replication request: %s", slstrerror(EINVAL)));
 
 	rc = msctl_getcreds(fd, &cr);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
-		    "unable to obtain credentials: %s",
-		    mrq->mrq_fn, slstrerror(rc)));
+		    SLPRI_FID": unable to obtain credentials: %s",
+		    mrq->mrq_fid, slstrerror(rc)));
 
-	/* ensure path exists in the slash fs */
-	rc = lookup_pathname_fg(mrq->mrq_fn, &cr, &fg, &sstb);
+	rc = fidc_lookup_load_inode(mrq->mrq_fid, &fcmh);
 	if (rc)
-		return (psc_ctlsenderr(fd, mh, "%s: %s",
-		    mrq->mrq_fn, slstrerror(rc)));
+		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
+		    mrq->mrq_fid, slstrerror(rc)));
 
+	FCMH_LOCK(fcmh);
 	if (!S_ISREG(sstb.sst_mode) && !S_ISDIR(sstb.sst_mode))
-		return (psc_ctlsenderr(fd, mh, "%s: %s",
-		    mrq->mrq_fn, slstrerror(ENOTSUP)));
+		rc = ENOTSUP;
+	else
+		rc = checkcreds(&sstb, &cr, W_OK);
+	fg = fcmh->fcmh_fg;
+	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 
-	rc = checkcreds(&sstb, &cr, W_OK);
 	if (rc)
-		return (psc_ctlsenderr(fd, mh, "%s: %s",
-		    mrq->mrq_fn, slstrerror(rc)));
+		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
+		    mrq->mrq_fid, slstrerror(rc)));
 
-	rc = slc_rmc_getimp(&csvc);
-	if (rc) {
-		rc = psc_ctlsenderr(fd, mh, "%s: %s",
-		    mrq->mrq_fn, slstrerror(rc));
+	if (slc_rmc_getimp(&csvc)) {
+		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
+		    mrq->mrq_fid, slstrerror(rc));
 		goto out;
 	}
 	rc = SL_RSX_NEWREQ(csvc, mh->mh_type == MSCMT_ADDREPLRQ ?
 	    SRMT_REPL_ADDRQ : SRMT_REPL_DELRQ, rq, mq, mp);
 	if (rc) {
-		rc = psc_ctlsenderr(fd, mh, "%s: %s",
-		    mrq->mrq_fn, slstrerror(rc));
+		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
+		    mrq->mrq_fid, slstrerror(rc));
 		goto out;
 	}
 
@@ -126,8 +128,8 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
-		rc = psc_ctlsenderr(fd, mh, "%s: %s",
-		    mrq->mrq_fn, slstrerror(rc));
+		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
+		    mrq->mrq_fid, slstrerror(rc));
 	else
 		rc = 1;
 
@@ -148,14 +150,15 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct srm_replst_master_rep *mp;
 	struct msctlmsg_replrq *mrq = m;
 	struct msctl_replstq mrsq;
+	struct fidc_membh *fcmh;
 	struct slash_fidgen fg;
 	struct slash_creds cr;
 	struct srt_stat sstb;
 	int added = 0, rc;
 	char *displayfn;
 
-	displayfn = mrq->mrq_fn;
-	if (strcmp(mrq->mrq_fn, "") == 0) {
+	displayfn = mrq->mrq_fid;
+	if (mrq->mrq_fid == FID_ANY) {
 		displayfn = "<all active replications>";
 		fg.fg_fid = FID_ANY;
 		fg.fg_gen = FGEN_ANY;
@@ -165,22 +168,25 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	rc = msctl_getcreds(fd, &cr);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
-		    "unable to obtain credentials: %s",
-		    mrq->mrq_fn, slstrerror(rc)));
+		    SLPRI_FID": unable to obtain credentials: %s",
+		    mrq->mrq_fid, slstrerror(rc)));
 
-	rc = lookup_pathname_fg(mrq->mrq_fn, &cr, &fg, &sstb);
+	rc = fidc_lookup_load_inode(mrq->mrq_fid, &fcmh);
 	if (rc)
-		return (psc_ctlsenderr(fd, mh, "%s: %s",
-		    mrq->mrq_fn, slstrerror(rc)));
+		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
+		    mrq->mrq_fid, slstrerror(rc)));
 
+	FCMH_LOCK(fcmh);
 	if (!S_ISREG(sstb.sst_mode) && !S_ISDIR(sstb.sst_mode))
-		return (psc_ctlsenderr(fd, mh, "%s: %s",
-		    mrq->mrq_fn, slstrerror(ENOTSUP)));
+		rc = ENOTSUP;
+	else
+		rc = checkcreds(&sstb, &cr, W_OK);
+	fg = fcmh->fcmh_fg;
+	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 
-	rc = checkcreds(&sstb, &cr, W_OK);
 	if (rc)
-		return (psc_ctlsenderr(fd, mh,
-		    "%s: %s", mrq->mrq_fn, slstrerror(rc)));
+		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
+		    mrq->mrq_fid, slstrerror(rc)));
 
  issue:
 	rc = slc_rmc_getimp(&csvc);
@@ -205,7 +211,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	psc_waitq_init(&mrsq.mrsq_waitq);
 	spinlock(&mrsq.mrsq_lock);
 	mrsq.mrsq_fd = fd;
-	mrsq.mrsq_fn = mrq->mrq_fn;
+	mrsq.mrsq_fid = mrq->mrq_fid;
 	mrsq.mrsq_ctlrc = 1;
 	mrsq.mrsq_mh = mh;
 
@@ -252,11 +258,12 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 int
 msctlhnd_set_newreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
-	struct msctlmsg_fncmd_newreplpol *mfnrp = m;
+	struct msctlmsg_newreplpol *mfnrp = m;
 	struct slashrpc_cservice *csvc = NULL;
 	struct srm_set_newreplpol_req *mq;
 	struct srm_set_newreplpol_rep *mp;
 	struct pscrpc_request *rq = NULL;
+	struct fidc_membh *fcmh;
 	struct slash_fidgen fg;
 	struct slash_creds cr;
 	struct srt_stat sstb;
@@ -265,34 +272,36 @@ msctlhnd_set_newreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	rc = msctl_getcreds(fd, &cr);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
-		    "unable to obtain credentials: %s",
-		    mfnrp->mfnrp_fn, slstrerror(rc)));
+		    SLPRI_FID": unable to obtain credentials: %s",
+		    mfnrp->mfnrp_fid, slstrerror(rc)));
 
-	/* ensure path exists in the slash fs */
-	rc = lookup_pathname_fg(mfnrp->mfnrp_fn, &cr, &fg, &sstb);
+	rc = fidc_lookup_load_inode(mfnrp->mfnrp_fid, &fcmh);
 	if (rc)
-		return (psc_ctlsenderr(fd, mh, "%s: %s",
-		    mfnrp->mfnrp_fn, slstrerror(rc)));
+		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
+		    mfnrp->mfnrp_fid, slstrerror(rc)));
 
-	if (!S_ISREG(sstb.sst_mode) && !S_ISREG(sstb.sst_mode))
-		return (psc_ctlsenderr(fd, mh, "%s: %s",
-		    mfnrp->mfnrp_fn, slstrerror(ENOTSUP)));
+	FCMH_LOCK(fcmh);
+	if (!S_ISREG(sstb.sst_mode) && !S_ISDIR(sstb.sst_mode))
+		rc = ENOTSUP;
+	else
+		rc = checkcreds(&sstb, &cr, W_OK);
+	fg = fcmh->fcmh_fg;
+	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 
-	rc = checkcreds(&sstb, &cr, W_OK);
 	if (rc)
-		return (psc_ctlsenderr(fd, mh,
-		    "%s: %s", mfnrp->mfnrp_fn, slstrerror(rc)));
+		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
+		    mfnrp->mfnrp_fid, slstrerror(rc)));
 
 	rc = slc_rmc_getimp(&csvc);
 	if (rc) {
-		rc = psc_ctlsenderr(fd, mh, "%s: %s",
-		    mfnrp->mfnrp_fn, slstrerror(rc));
+		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
+		    mfnrp->mfnrp_fid, slstrerror(rc));
 		goto out;
 	}
 	rc = SL_RSX_NEWREQ(csvc, SRMT_SET_NEWREPLPOL, rq, mq, mp);
 	if (rc) {
-		rc = psc_ctlsenderr(fd, mh, "%s: %s",
-		    mfnrp->mfnrp_fn, slstrerror(rc));
+		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
+		    mfnrp->mfnrp_fid, slstrerror(rc));
 		goto out;
 	}
 	mq->pol = mfnrp->mfnrp_pol;
@@ -302,7 +311,7 @@ msctlhnd_set_newreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 		rc = mp->rc;
 	if (rc)
 		rc = psc_ctlsenderr(fd, mh, "%s: %s",
-		    mfnrp->mfnrp_fn, slstrerror(rc));
+		    mfnrp->mfnrp_fid, slstrerror(rc));
 
  out:
 	if (rq)
@@ -315,11 +324,12 @@ msctlhnd_set_newreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 int
 msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
-	struct msctlmsg_fncmd_bmapreplpol *mfbrp = m;
+	struct msctlmsg_bmapreplpol *mfbrp = m;
 	struct slashrpc_cservice *csvc = NULL;
 	struct srm_set_bmapreplpol_req *mq;
 	struct srm_set_bmapreplpol_rep *mp;
 	struct pscrpc_request *rq = NULL;
+	struct fidc_membh *fcmh;
 	struct slash_fidgen fg;
 	struct slash_creds cr;
 	struct srt_stat sstb;
@@ -328,45 +338,48 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	rc = msctl_getcreds(fd, &cr);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
-		    "unable to obtain credentials: %s",
-		    mfbrp->mfbrp_fn, slstrerror(rc)));
+		    SLPRI_FID": unable to obtain credentials: %s",
+		    mfbrp->mfbrp_fid, slstrerror(rc)));
 
-	/* ensure path exists in the file system */
-	rc = lookup_pathname_fg(mfbrp->mfbrp_fn, &cr, &fg, &sstb);
+	rc = fidc_lookup_load_inode(mfbrp->mfbrp_fid, &fcmh);
 	if (rc)
-		return (psc_ctlsenderr(fd, mh, "%s: %s",
-		    mfbrp->mfbrp_fn, slstrerror(rc)));
+		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
+		    mfbrp->mfbrp_fid, slstrerror(rc)));
 
+	FCMH_LOCK(fcmh);
 	if (!S_ISREG(sstb.sst_mode))
-		return (psc_ctlsenderr(fd, mh, "%s: %s",
-		    mfbrp->mfbrp_fn, slstrerror(ENOTSUP)));
+		rc = ENOTSUP;
+	else
+		rc = checkcreds(&sstb, &cr, W_OK);
+	fg = fcmh->fcmh_fg;
+	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 
-	rc = checkcreds(&sstb, &cr, W_OK);
 	if (rc)
-		return (psc_ctlsenderr(fd, mh, "%s: %s",
-		    mfbrp->mfbrp_fn, slstrerror(rc)));
+		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
+		    mfbrp->mfbrp_fid, slstrerror(rc)));
 
 	rc = slc_rmc_getimp(&csvc);
 	if (rc) {
-		rc = psc_ctlsenderr(fd, mh, "%s: %s",
-		    mfbrp->mfbrp_fn, slstrerror(rc));
+		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
+		    mfbrp->mfbrp_fid, slstrerror(rc));
 		goto out;
 	}
 	rc = SL_RSX_NEWREQ(csvc, SRMT_SET_BMAPREPLPOL, rq, mq, mp);
 	if (rc) {
-		rc = psc_ctlsenderr(fd, mh, "%s: %s",
-		    mfbrp->mfbrp_fn, slstrerror(rc));
+		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
+		    mfbrp->mfbrp_fid, slstrerror(rc));
 		goto out;
 	}
 	mq->pol = mfbrp->mfbrp_pol;
 	mq->bmapno = mfbrp->mfbrp_bmapno;
+	mq->nbmaps = mfbrp->mfbrp_nbmaps;
 	mq->fg = fg;
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
-		rc = psc_ctlsenderr(fd, mh, "%s: %s",
-		    mfbrp->mfbrp_fn, slstrerror(rc));
+		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
+		    mfbrp->mfbrp_fid, slstrerror(rc));
 
  out:
 	if (rq)
@@ -386,12 +399,18 @@ struct psc_ctlop msctlops[] = {
 	PSC_CTLDEFOPS,
 	{ msctlrep_replrq,		sizeof(struct msctlmsg_replrq) },
 	{ msctlrep_replrq,		sizeof(struct msctlmsg_replrq) },
+	{ slctlrep_getconns,		sizeof(struct slctlmsg_conn) },
+	{ slctlrep_getfcmhs,		sizeof(struct slctlmsg_fcmh) },
 	{ msctlrep_getreplst,		sizeof(struct msctlmsg_replst) },
 	{ NULL,				0 },
-	{ msctlhnd_set_newreplpol,	sizeof(struct msctlmsg_fncmd_newreplpol) },
-	{ msctlhnd_set_bmapreplpol,	sizeof(struct msctlmsg_fncmd_bmapreplpol) },
-	{ slctlrep_getconns,		sizeof(struct slctlmsg_conn) },
-	{ slctlrep_getfcmhs,		sizeof(struct slctlmsg_fcmh) }
+	{ NULL,				0 },
+	{ NULL,				0 },
+	{ NULL,				0 },
+	{ NULL,				0 },
+	{ NULL,				0 },
+	{ NULL,				0 },
+	{ msctlhnd_set_newreplpol,	sizeof(struct msctlmsg_newreplpol) },
+	{ msctlhnd_set_bmapreplpol,	sizeof(struct msctlmsg_bmapreplpol) }
 };
 
 psc_ctl_thrget_t psc_ctl_thrgets[] = {
@@ -408,26 +427,6 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* RCM		*/ NULL,
 /* TIOS		*/ NULL,
 /* USKLNDPL	*/ NULL
-};
-
-int
-slcctlcmd_exit(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
-    __unusedx void *m)
-{
-	exit(0);
-}
-
-int
-slcctlcmd_reconfig(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
-    __unusedx void *m)
-{
-	psc_fatalx("not implemented");
-	return (0);
-}
-
-psc_ctl_cmd_t psc_ctl_cmds[] = {
-	slcctlcmd_exit,
-	slcctlcmd_reconfig
 };
 
 PFLCTL_SVR_DEFS;

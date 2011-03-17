@@ -98,10 +98,6 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* USKLNDPL	*/ NULL
 };
 
-psc_ctl_cmd_t psc_ctl_cmds[] = {
-	slictlcmd_exit
-};
-
 PFLCTL_SVR_DEFS;
 
 void

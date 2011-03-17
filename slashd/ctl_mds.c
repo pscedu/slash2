@@ -313,10 +313,6 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* WORKER	*/ NULL
 };
 
-psc_ctl_cmd_t psc_ctl_cmds[] = {
-	slmctlcmd_exit
-};
-
 PFLCTL_SVR_DEFS;
 
 void

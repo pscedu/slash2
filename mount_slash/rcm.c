@@ -82,7 +82,6 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 	struct msctl_replstq *mrsq;
 	struct sl_resource *res;
 	struct psc_ctlmsghdr mh;
-	struct fidc_membh *fcmh;
 	int rc, n;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -93,20 +92,7 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 
 	mh = *mrsq->mrsq_mh;
 
-	if (mrsq->mrsq_fn[0] != '\0')
-		strlcpy(mrs.mrs_fn, mrsq->mrsq_fn, sizeof(mrs.mrs_fn));
-	else {
-		fcmh = fidc_lookup_fg(&mq->fg);
-		if (fcmh) {
-			/* file is in cache, try to recover filename */
-			snprintf(mrs.mrs_fn, sizeof(mrs.mrs_fn),
-			    SLPRI_FID, mq->fg.fg_fid);
-			fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
-		} else {
-			snprintf(mrs.mrs_fn, sizeof(mrs.mrs_fn),
-			    SLPRI_FID, mq->fg.fg_fid);
-		}
-	}
+	mrs.mrs_fid = mrsq->mrsq_fid;
 
 	if (mq->rc) {
 		rc = 1;
@@ -183,20 +169,12 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	}
 
 	mrsl = PSCALLOC(sizeof(*mrsl) + mq->len);
-
-	if (mrsq->mrsq_fn[0] != '\0')
-		strlcpy(mrsl->mrsl_fn, mrsq->mrsq_fn,
-		    sizeof(mrsl->mrsl_fn));
-	else
-		/* XXX try to do a reverse lookup of pathname; check cache maybe? */
-		snprintf(mrsl->mrsl_fn, sizeof(mrsl->mrsl_fn),
-		    SLPRI_FID, mq->fg.fg_fid);
+	mrsl->mrsl_fid = mrsq->mrsq_fid;
+	mrsl->mrsl_boff = mq->boff;
+	mrsl->mrsl_nbmaps = mq->nbmaps;
 
 	iov.iov_base = mrsl->mrsl_data;
 	iov.iov_len = mq->len;
-
-	mrsl->mrsl_boff = mq->boff;
-	mrsl->mrsl_nbmaps = mq->nbmaps;
 
 	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, SRCM_BULK_PORTAL,
 	    &iov, 1);
