@@ -17,6 +17,9 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#include <sys/types.h>
+#include <sys/statvfs.h>
+
 #include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -100,20 +103,26 @@ slfid_t
 fn2fid(const char *fn)
 {
 	struct fnfidpair q, *ffp;
+	struct statvfs sfb;
 	struct stat stb;
 
 	if (stat(fn, &stb) == -1)
 		err(1, "stat %s", fn);
+	if (statvfs(fn, &sfb) == -1)
+		err(1, "statvfs %s", fn);
+
+	if (sfb.f_fsid != SLASH_FSID)
+		errx(1, "%s: file is not in a SLASH file system %lx", fn, sfb.f_fsid);
 
 	q.ffp_fid = stb.st_ino;
-	ffp = psc_hashtbl_search(&fnfidpairs, &q, NULL, NULL);
+	ffp = psc_hashtbl_search(&fnfidpairs, NULL, NULL, &q);
 	if (ffp)
 		return (ffp->ffp_fid);
 
 	ffp = PSCALLOC(sizeof(*ffp));
 	strlcpy(ffp->ffp_fn, fn, sizeof(ffp->ffp_fn));
 	ffp->ffp_fid = stb.st_ino;
-	psc_hashent_init(&fnfidpairs, &ffp->ffp_hentry);
+	psc_hashent_init(&fnfidpairs, ffp);
 	psc_hashtbl_add_item(&fnfidpairs, ffp);
 	return (stb.st_ino);
 }
@@ -125,7 +134,7 @@ fid2fn(slfid_t fid)
 	struct fnfidpair q, *ffp;
 
 	q.ffp_fid = fid;
-	ffp = psc_hashtbl_search(&fnfidpairs, &q, NULL, NULL);
+	ffp = psc_hashtbl_search(&fnfidpairs, NULL, NULL, &q);
 	if (ffp)
 		return (PCPP_STR(ffp->ffp_fn));
 	snprintf(fn, sizeof(fn), "<"SLPRI_FID">", fid);
@@ -372,7 +381,7 @@ cmd_bmap_repl_policy(int ac, char **av)
 	*bmapspec++ = '\0';
 
 	if (val) {
-		arg.replpol = lookup_repl_policy(val);
+		arg.replpol = lookup_repl_policy(val + 1);
 		arg.opcode = MSCMT_SET_BMAPREPLPOL;
 	} else
 		arg.opcode = MSCMT_GET_BMAPREPLPOL;
@@ -693,9 +702,9 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 	{ fnstat_prhdr,		fnstat_prdat,		0,					NULL },
 	{ fnstat_prhdr,		fnstat_prdat,		0,					NULL },
 	{ NULL,			NULL,			0,					NULL },
+	{ NULL,			NULL,			0,					NULL },
+	{ NULL,			NULL,			0,					NULL },
 	{ fnstat_prhdr,		fnstat_prdat,		0,					NULL },
-	{ NULL,			NULL,			0,					NULL },
-	{ NULL,			NULL,			0,					NULL },
 	{ NULL,			NULL,			0,					NULL },
 	{ NULL,			NULL,			0,					NULL }
 };

@@ -406,8 +406,8 @@ struct psc_ctlop msctlops[] = {
 	{ NULL,				0 },
 	{ NULL,				0 },
 	{ NULL,				0 },
-	{ msctlhnd_set_newreplpol,	sizeof(struct msctlmsg_newreplpol) },
-	{ msctlhnd_set_bmapreplpol,	sizeof(struct msctlmsg_bmapreplpol) }
+	{ msctlhnd_set_bmapreplpol,	sizeof(struct msctlmsg_bmapreplpol) },
+	{ msctlhnd_set_newreplpol,	sizeof(struct msctlmsg_newreplpol) }
 };
 
 psc_ctl_thrget_t psc_ctl_thrgets[] = {
