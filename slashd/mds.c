@@ -1801,7 +1801,7 @@ slm_setattr_core(struct fidc_membh *fcmh, struct srt_stat *sstb,
     int to_set)
 {
 	struct slm_workrq *wkrq;
-	int rc = 0;
+	int deref = 0, rc = 0;
 
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
 		if (fcmh == NULL) {
@@ -1813,7 +1813,7 @@ slm_setattr_core(struct fidc_membh *fcmh, struct srt_stat *sstb,
 				return;
 			}
 
-			rc = 1;
+			deref = 1;
 		}
 		/* partial truncate */
 		if (sstb->sst_size && sstb->sst_size < fcmh_2_fsz(fcmh)) {
@@ -1827,7 +1827,7 @@ slm_setattr_core(struct fidc_membh *fcmh, struct srt_stat *sstb,
 			wkrq->wkrq_cbf = slm_ptrunc_core;
 			lc_add(&slm_workq, wkrq);
 		}
-		if (rc)
+		if (deref)
 			fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 	}
 }
