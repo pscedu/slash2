@@ -98,11 +98,11 @@ struct bmap_pagecache_entry {
 #define	BMPCE_FREE		(1 << 5)
 #define	BMPCE_FREEING		(1 << 6)
 #define	BMPCE_INIT		(1 << 7)
-#define	BMPCE_READPNDG		(1 << 8)
+#define	BMPCE_READPNDG		(1 << 8)	/* 0x0100: Pending read */
 #define	BMPCE_RBWPAGE		(1 << 9)
 #define	BMPCE_RBWRDY		(1 << 10)
-#define	BMPCE_INFLIGHT		(1 << 11)	/* I/O in progress */
-#define	BMPCE_EIO		(1 << 12)	/* I/O error */
+#define	BMPCE_INFLIGHT		(1 << 11)	/* 0x0800: I/O in progress */
+#define	BMPCE_EIO		(1 << 12)	/* 0x1000: I/O error */
 
 #define BMPCE_2_BIORQ(b)						\
 	((b)->bmpce_waitq ? (char *)(b)->bmpce_waitq -			\
