@@ -15,7 +15,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES rpc fuse %
-.Dd March 17, 2011
+.Dd March 18, 2011
 .Dt MSCTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -28,10 +28,8 @@ file system mount daemon runtime control
 .Nm msctl
 .Op Fl HIRv
 .Op Fl p Ar paramspec
-.Op Fl Q Ar replrqspec
 .Op Fl S Ar socket
 .Op Fl s Ar showspec
-.Op Fl U Ar replrqspec
 .Op Ar cmd arg ...
 .Sh DESCRIPTION
 The
@@ -46,10 +44,9 @@ behavior.
 .\" #		reconfig => "Reload configuration",
 .\"		"bmap-repl-policy Op = Ar repl-policy\n" .
 .\"		q{.Cm : Ar "bmapspec fn ..."} => <<'EOF',
-.\"			Get or set the replication policy for all bmaps specified in
+.\"			Get or set the replication policy for the bmaps specified by
 .\"			.Ar bmapspec
-.\"			for the given file
-.\"			.Ar fn .
+.\"			for the specified files.
 .\"			.Pp
 .\"			The following replication policies are recognized:
 .\"			.Bl -tag -width one-time
@@ -94,7 +91,7 @@ behavior.
 .\"			Import the local file hierarchy denoted by
 .\"			.Ar src
 .\"			into the
-.\"			.Xr SLASH
+.\"			.Tn SLASH
 .\"			file system at the root specified by
 .\"			.Ar dst .
 .\"			EOF
@@ -133,9 +130,49 @@ behavior.
 .\"			.Cm bmap-repl-policy
 .\"			for more information about replication policies.
 .\"			EOF
-.\"		"repl-add Ar fn ..." => <<'EOF',
+.\"		"repl-add Ns : Ns Ar replrqspec fn ..." => <<'EOF',
+.\"			Enqueue data replication as specified by
+.\"			.Ar replrqspec
+.\"			to the specified files.
+.\"			The
+.\"			.Tn I/O
+.\"			node responsible for the data regions specified will propagate the data
+.\"			to all other
+.\"			.Tn I/O
+.\"			systems specified.
+.\"			.Pp
+.\"			.Ar replrqspec
+.\"			has the following format:
+.\"			.Bd -unfilled -offset 3n
+.\"			.Sm off
+.\"			.Ar ios Op Cm ,\& Ar ...
+.\"			.Cm :\& Ar bmapno-min
+.\"			.Op Cm -\& Ar bmapno-max
+.\"			.Op Cm ,\& Ar ...
+.\"			.Sm on
+.\"			.Ed
+.\"			.Pp
+.\"			If the special value
+.\"			.Sq Li *
+.\"			is supplied as the bmap specification, all present bmaps in the file
+.\"			will be replicated;
+.\"			otherwise, only the bmaps with the given indexes will be replicated.
+.\"			.Pp
+.\"			By default, bmaps are registered for a single replication after which
+.\"			they can be invalidated on any replicas they were copied to if new
+.\"			.Tn I/O
+.\"			is done.
+.\"			See
+.\"			.Cm bmap-repl-policy
+.\"			for information on modifying the replication policy.
 .\"			EOF
-.\"		"repl-remove Ar fn ..." => <<'EOF',
+.\"		"repl-remove Ns : Ns Ar replrqspec fn ..." => <<'EOF',
+.\"			Cancel ongoing file replication requests as specified by
+.\"			.Ar replrqspec .
+.\"			See
+.\"			.Cm repl-add
+.\"			for details on the format of
+.\"			.Ar replrqspec .
 .\"			EOF
 .\"		"repl-status Op Ar fn ..." => <<'EOF',
 .\"			List the status of all replicas of the specified file
@@ -149,11 +186,9 @@ behavior.
 .\"			systems where they have been registered for replication and their status
 .\"			is displayed.
 .\"			.Pp
-.\"			If
+.\"			If no
 .\"			.Ar fn
-.\"			is the special value
-.\"			.Sq \&: ,
-.\"			all pending replications will be queried.
+.\"			arguments are specified all pending replications will be queried.
 .\"			Note that file names are unavailable in this mode.
 .\"			.Pp
 .\"			The following legend lists the states a block map may be in for the
@@ -184,10 +219,9 @@ The supported commands are as follows:
 .Cm : Ar "bmapspec fn ..."
 .Sm on
 .Xc
-Get or set the replication policy for all bmaps specified in
+Get or set the replication policy for the bmaps specified by
 .Ar bmapspec
-for the given file
-.Ar fn .
+for the specified files.
 .Pp
 The following replication policies are recognized:
 .Bl -tag -width one-time
@@ -231,7 +265,7 @@ for inspecting the replication policy of bmaps.
 Import the local file hierarchy denoted by
 .Ar src
 into the
-.Xr SLASH
+.Tn SLASH
 file system at the root specified by
 .Ar dst .
 .It Cm lcache-add Ar fn ...
@@ -265,8 +299,48 @@ allocated to the specified file
 See
 .Cm bmap-repl-policy
 for more information about replication policies.
-.It Cm repl-add Ar fn ...
-.It Cm repl-remove Ar fn ...
+.It Cm repl-add Ns : Ns Ar replrqspec fn ...
+Enqueue data replication as specified by
+.Ar replrqspec
+to the specified files.
+The
+.Tn I/O
+node responsible for the data regions specified will propagate the data
+to all other
+.Tn I/O
+systems specified.
+.Pp
+.Ar replrqspec
+has the following format:
+.Bd -unfilled -offset 3n
+.Sm off
+.Ar ios Op Cm ,\& Ar ...
+.Cm :\& Ar bmapno-min
+.Op Cm -\& Ar bmapno-max
+.Op Cm ,\& Ar ...
+.Sm on
+.Ed
+.Pp
+If the special value
+.Sq Li *
+is supplied as the bmap specification, all present bmaps in the file
+will be replicated;
+otherwise, only the bmaps with the given indexes will be replicated.
+.Pp
+By default, bmaps are registered for a single replication after which
+they can be invalidated on any replicas they were copied to if new
+.Tn I/O
+is done.
+See
+.Cm bmap-repl-policy
+for information on modifying the replication policy.
+.It Cm repl-remove Ns : Ns Ar replrqspec fn ...
+Cancel ongoing file replication requests as specified by
+.Ar replrqspec .
+See
+.Cm repl-add
+for details on the format of
+.Ar replrqspec .
 .It Cm repl-status Op Ar fn ...
 List the status of all replicas of the specified file
 .Ar fn .
@@ -279,11 +353,9 @@ of the file including
 systems where they have been registered for replication and their status
 is displayed.
 .Pp
-If
+If no
 .Ar fn
-is the special value
-.Sq \&: ,
-all pending replications will be queried.
+arguments are specified all pending replications will be queried.
 Note that file names are unavailable in this mode.
 .Pp
 The following legend lists the states a block map may be in for the
@@ -469,48 +541,20 @@ the maximum number of open files.
 .El
 .El
 .\" }%
-.It Fl Q Ar replrqspec
-Perform data replication as specified by
-.Ar replrqspec .
-The
-.Tn I/O
-node responsible for the data regions specified will propagate the data
-to all other
-.Tn I/O
-systems specified.
-.Pp
-.Ar replrqspec
-has the following format:
-.Bd -unfilled -offset 3n
-.Sm off
-.Ar ios Op Cm ,\& Ar ...
-.Cm :\& Ar bmapno-min
-.Op Cm -\& Ar bmapno-max
-.Op Cm ,\& Ar ...
-.Cm :\& Ar filename
-.Sm on
-.Ed
-.Pp
-If the special value
-.Sq Li *
-is supplied as the bmap specification, all present bmaps in the file
-will be replicated;
-otherwise, only the bmaps with the given indexes will be replicated.
-.Pp
-By default, bmaps are registered for a single replication after which
-they can be invalidated on any replicas they were copied to if new
-.Tn I/O
-is done.
-See
-.Fl f
-for information on modifying the replication policy.
-.Pp
-This option may be specified multiple times.
+.It Fl Q Ar replrqspec Ns : Ns Ar fn
+Shorthand for
+.Cm repl-add .
 .It Fl R
 Apply operations on directories recursively.
 .It Fl r Ar file
-Shorthand alias for
+Shorthand for
 .Cm repl-status .
+If
+.Ar fn
+is the special value
+.Sq \&: ,
+all pending replications will be queried.
+Note that file names are unavailable in this mode.
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/S.mdoc {
 .\"	sock => "/var/run/mount_slash. Ns Ic %h Ns Pa .sock"
 .It Fl S Ar socket
@@ -731,15 +775,9 @@ The special value
 .Sq \&?
 may also be specified to display a list of recognized values.
 .\" }%
-.It Fl U Ar replrqspec
-Cancel ongoing file replication requests as specified by
-.Ar replrqspec .
-See
-.Fl Q
-for details on the format of
-.Ar replrqspec .
-.Pp
-This option may be specified multiple times.
+.It Fl U Ar replrqspec Ns : Ns Ar fn
+Shorthand for
+.Cm repl-remove .
 .It Fl v
 Verbose mode:
 display additional information about each operation being performed.
@@ -811,11 +849,11 @@ current directory to a destination
 .Tn I/O
 server:
 .Pp
-.D1 $ msctl -RQ dst-io@SITE:*:.
+.D1 $ msctl -R repl-add:dst-io@SITE:* .
 .Pp
 Locally cache the entire data store:
 .Pp
-.D1 $ msctl -Rf local-cache:.
+.D1 $ msctl -R lcache-add .
 .Sh FILES
 .Bl -tag -width Pa
 .It Pa /var/run/mount_slash. Ns Ic %h Ns Pa .sock
