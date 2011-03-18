@@ -332,7 +332,7 @@ API rename
 
 - write a ptrunc tester
 - for -s connections, we arguably do not need to show members of the
-  same resource we are part of
+  same resource we are part of since we will never connect to them
 - patch fuse.ko since fuse_notify_entry_inval() causes segfault
 - add zfs SPA version to slashd ctlparam
 - add msl local I/O cache support
