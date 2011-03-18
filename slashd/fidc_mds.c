@@ -77,8 +77,8 @@ slm_fcmh_ctor(struct fidc_membh *fcmh)
 	}
 
 	if (fcmh_isdir(fcmh))
-		rc = mdsio_opendir(fcmh_2_mdsio_fid(fcmh),
-		    &rootcreds, NULL, &fmi->fmi_mdsio_data);
+		rc = mdsio_opendir(fcmh_2_mdsio_fid(fcmh), &rootcreds,
+		    NULL, &fmi->fmi_mdsio_data);
 	else if (fcmh_isreg(fcmh)) {
 		slash_inode_handle_init(&fmi->fmi_inodeh, fcmh);
 		rc = mdsio_opencreate(fcmh_2_mdsio_fid(fcmh),
