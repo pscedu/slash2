@@ -328,14 +328,10 @@ mds_redo_bmap_assign(struct psc_journal_enthdr *pje)
 		jrir = &logentry->sjar_ino;
 		mds_redo_ino_addrepl_common(jrir);
 	}
-
-	psc_assert(logentry->sjar_flag & SLJ_ASSIGN_REP_REP);
-	jrpg = &logentry->sjar_rep;
-	mds_redo_bmap_repl_common(jrpg);
-
-	psc_assert(logentry->sjar_flag & SLJ_ASSIGN_REP_BMAP);
-	jrba = &logentry->sjar_bmap;
-
+	if (logentry->sjar_flag & SLJ_ASSIGN_REP_REP) {
+		jrpg = &logentry->sjar_rep;
+		mds_redo_bmap_repl_common(jrpg);
+	}
 	rc = mdsio_lookup(mds_metadir_inum, SL_FN_BMAP_ODTAB, &mf,
 	    &rootcreds, NULL);
 	psc_assert(rc == 0);
@@ -352,32 +348,37 @@ mds_redo_bmap_assign(struct psc_journal_enthdr *pje)
 		   (odth.odth_version == ODTBL_VERS));
 
 	elem = logentry->sjar_elem;
-	len = sizeof(struct slmds_jent_bmap_assign);
-
 	p = PSCALLOC(odth.odth_slotsz);
-
-	bia = p;
-	bia->bia_ion_nid = jrba->sjba_ion_nid;
-	bia->bia_lastcli.pid = jrba->sjba_lastcli.pid;
-	bia->bia_lastcli.nid = jrba->sjba_lastcli.nid;
-	bia->bia_ios = jrba->sjba_ios;
-	bia->bia_fid = jrba->sjba_fid;
-	bia->bia_seq = jrba->sjba_seq;
-	bia->bia_bmapno = jrba->sjba_bmapno;
-	bia->bia_start = jrba->sjba_start;
-	bia->bia_flags = jrba->sjba_flags;
-
-	/* I don't think memset() does any good, anyway... */
-	len = sizeof(struct bmap_ion_assign);
-	if (len < odth.odth_elemsz)
-		memset(p + len, 0, odth.odth_elemsz - len);
-	psc_crc64_calc(&crc, p, odth.odth_elemsz);
-
 	odtf = p + odth.odth_elemsz;
-	odtf->odtf_crc = crc;
-	odtf->odtf_inuse = ODTBL_INUSE;
-	odtf->odtf_slotno = elem;
 	odtf->odtf_magic = ODTBL_MAGIC;
+	odtf->odtf_slotno = elem;
+
+	if (logentry->sjar_flag & SLJ_ASSIGN_REP_BMAP) {
+		bia = p;
+		jrba = &logentry->sjar_bmap;
+		bia->bia_ion_nid = jrba->sjba_ion_nid;
+		bia->bia_lastcli.pid = jrba->sjba_lastcli.pid;
+		bia->bia_lastcli.nid = jrba->sjba_lastcli.nid;
+		bia->bia_ios = jrba->sjba_ios;
+		bia->bia_fid = jrba->sjba_fid;
+		bia->bia_seq = jrba->sjba_seq;
+		bia->bia_bmapno = jrba->sjba_bmapno;
+		bia->bia_start = jrba->sjba_start;
+		bia->bia_flags = jrba->sjba_flags;
+
+		/* I don't think memset() does any good, anyway... */
+		len = sizeof(struct bmap_ion_assign);
+		if (len < odth.odth_elemsz)
+			memset(p + len, 0, odth.odth_elemsz - len);
+		psc_crc64_calc(&crc, p, odth.odth_elemsz);
+
+		odtf->odtf_crc = crc;
+		odtf->odtf_inuse = ODTBL_INUSE;
+	}
+	if (logentry->sjar_flag & SLJ_ASSIGN_REP_FREE) {
+		odtf->odtf_inuse = ODTBL_FREE;
+		psclog_info("Free item %zd", elem);
+	}
 
 	rc = mdsio_write(&rootcreds, p, odth.odth_slotsz,
 	   &nb, odth.odth_start + elem * odth.odth_slotsz,

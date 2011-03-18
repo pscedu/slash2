@@ -122,6 +122,7 @@ struct slmds_jent_bmapseq {
 #define	SLJ_ASSIGN_REP_INO		0x01
 #define	SLJ_ASSIGN_REP_REP		0x02
 #define	SLJ_ASSIGN_REP_BMAP		0x04
+#define	SLJ_ASSIGN_REP_FREE		0x08
 
 struct slmds_jent_assign_rep {
 	int				sjar_flag;

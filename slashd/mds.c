@@ -1004,6 +1004,9 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	struct bmap_mds_info *bmdsi = bml->bml_bmdsi;
 	struct odtable_receipt *odtr = NULL;
 	int rc = 0, locked;
+	struct slmds_jent_assign_rep *logentry;
+	size_t elem;
+	uint64_t key;
 
 	psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 	psc_assert(bml->bml_flags & BML_FREEING);
@@ -1134,10 +1137,21 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	bmap_op_done_type(b, BMAP_OPCNT_LEASE);
 
 	if (odtr) {
+		key = odtr->odtr_key;
+		elem = odtr->odtr_elem;
 		rc = mds_odtable_freeitem(mdsBmapAssignTable, odtr);
-		DEBUG_BMAP(PLL_NOTIFY, b, "odtable remove seq=%"PRId64" key=%"
-		   PRId64" rc=%d", bml->bml_seq, odtr->odtr_key, rc);
+		DEBUG_BMAP(PLL_NOTIFY, b, "odtable remove seq=%"PRId64" key=%" PRId64" rc=%d", 
+			bml->bml_seq, key, rc);
 		bmap_op_done_type(b, BMAP_OPCNT_IONASSIGN);
+
+		mds_reserve_slot();
+		logentry = pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_assign_rep));
+		logentry->sjar_elem = elem;
+		logentry->sjar_flag = SLJ_ASSIGN_REP_FREE;
+		pjournal_add_entry(mdsJournal, 0, MDS_LOG_BMAP_ASSIGN, 0, logentry, 
+			sizeof(struct slmds_jent_assign_rep));
+		pjournal_put_buf(mdsJournal, logentry);
+		mds_unreserve_slot();
 	}
 
 	psc_pool_return(bmapMdsLeasePool, bml);
