@@ -64,11 +64,11 @@ slictlrep_getreplwkst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
-/*
- * slictlcmd_exit - handle an EXIT command to terminate execution.
+/**
+ * slictlcmd_stop - Handle a STOP command to terminate execution.
  */
 __dead int
-slictlcmd_exit(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
+slictlcmd_stop(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
     __unusedx void *m)
 {
 	exit(0);
@@ -78,7 +78,8 @@ struct psc_ctlop slictlops[] = {
 	PSC_CTLDEFOPS,
 	{ slictlrep_getreplwkst,	sizeof(struct slictlmsg_replwkst ) },
 	{ slctlrep_getconns,		sizeof(struct slctlmsg_conn ) },
-	{ slctlrep_getfcmhs,		sizeof(struct slctlmsg_fcmh ) }
+	{ slctlrep_getfcmhs,		sizeof(struct slctlmsg_fcmh ) },
+	{ slictlcmd_stop,		0 }
 };
 
 psc_ctl_thrget_t psc_ctl_thrgets[] = {

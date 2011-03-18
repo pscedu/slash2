@@ -17,6 +17,7 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -89,6 +90,14 @@ replwkst_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	printf(" %6s\n", rbuf);
 }
 
+void
+slictlcmd_stop(int ac, char *av[])
+{
+	if (ac > 1)
+		errx(1, "stop: unknown arguments");
+	psc_ctlmsg_push(SLICMT_STOP, 0);
+}
+
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 	PSC_CTLSHOW_DEFS,
 	{ "connections",	packshow_conns },
@@ -105,7 +114,8 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 	PSC_CTLMSG_PRFMT_DEFS,
 	{ replwkst_prhdr,	replwkst_prdat,		sizeof(struct slictlmsg_replwkst),	NULL },
 	{ sl_conn_prhdr,	sl_conn_prdat,		sizeof(struct slctlmsg_conn),		NULL },
-	{ sl_fcmh_prhdr,	sl_fcmh_prdat,		sizeof(struct slctlmsg_fcmh),		NULL }
+	{ sl_fcmh_prhdr,	sl_fcmh_prdat,		sizeof(struct slctlmsg_fcmh),		NULL },
+	{ NULL,			NULL,			0,					NULL }
 };
 
 psc_ctl_prthr_t psc_ctl_prthrs[] = {
@@ -126,6 +136,7 @@ psc_ctl_prthr_t psc_ctl_prthrs[] = {
 };
 
 struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {
+	{ "stop",	slictlcmd_stop }
 };
 
 PFLCTL_CLI_DEFS;
@@ -137,7 +148,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-HI] [-p paramspec]] [-S socket] [-s value] [cmd arg ...]\n",
+	    "usage: %s [-HI] [-p paramspec] [-S socket] [-s value] [cmd arg ...]\n",
 	    progname);
 	exit(1);
 }

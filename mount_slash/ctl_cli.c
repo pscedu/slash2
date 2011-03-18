@@ -155,11 +155,8 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct slash_creds cr;
 	struct srt_stat sstb;
 	int added = 0, rc;
-	char *displayfn;
 
-	displayfn = mrq->mrq_fid;
 	if (mrq->mrq_fid == FID_ANY) {
-		displayfn = "<all active replications>";
 		fg.fg_fid = FID_ANY;
 		fg.fg_gen = FGEN_ANY;
 		goto issue;
@@ -192,13 +189,13 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	rc = slc_rmc_getimp(&csvc);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, "%s: %s",
-		    displayfn, slstrerror(rc));
+		    fg.fg_fid, slstrerror(rc));
 		goto out;
 	}
 	rc = SL_RSX_NEWREQ(csvc, SRMT_REPL_GETST, rq, mq, mp);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, "%s: %s",
-		    displayfn, slstrerror(rc));
+		    fg.fg_fid, slstrerror(rc));
 		goto out;
 	}
 
@@ -223,7 +220,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		rc = mp->rc;
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, "%s: %s",
-		    displayfn, slstrerror(rc));
+		    fg.fg_fid, slstrerror(rc));
 		goto out;
 	}
 

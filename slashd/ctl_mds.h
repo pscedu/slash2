@@ -36,7 +36,4 @@ struct slmctlmsg_replpair {
 #define SLMCMT_GETCONNS		NPCMT
 #define SLMCMT_GETFCMHS		(NPCMT + 1)
 #define SLMCMT_GETREPLPAIRS	(NPCMT + 2)
-
-/* slashd control commands */
-#define SMCC_EXIT		0
-#define SMCC_RECONFIG		1
+#define SLMCMT_STOP		(NPCMT + 3)

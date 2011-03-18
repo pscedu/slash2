@@ -86,7 +86,4 @@ struct msctlmsg_fncmd {
 #define MSCMT_SET_BMAPREPLPOL	(NPCMT + 12)
 #define MSCMT_SET_NEWREPLPOL	(NPCMT + 13)
 
-/* mount_slash control commands */
-#define MSCC_RECONFIG		1
-
 #endif /* _SL_CTL_CLI_H_ */

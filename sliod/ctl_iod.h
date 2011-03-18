@@ -43,7 +43,4 @@ struct slictlmsg_replwkst {
 #define SLICMT_GET_REPLWKST	NPCMT
 #define SLICMT_GETCONNS		(NPCMT + 1)
 #define SLICMT_GETFCMH		(NPCMT + 2)
-
-/* sliod control commands */
-#define SICC_EXIT		0
-#define SICC_RECONFIG		1
+#define SLICMT_STOP		(NPCMT + 3)
