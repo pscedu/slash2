@@ -1252,8 +1252,10 @@ msl_read_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 	    msl_bmap_choose_replica(r->biorq_bmap);
 	BMAP_ULOCK(r->biorq_bmap);
 
-	if (csvc == NULL)
+	if (csvc == NULL) {
+		rc = -ENOTCONN;
 		goto error;
+	}
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
 	if (rc)
@@ -1329,7 +1331,7 @@ msl_read_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 	if (msl_offline_retry(r))
 		goto retry;
 	PSCFREE(a);
-	return (-1);
+	return (rc);
 }
 
 /**
