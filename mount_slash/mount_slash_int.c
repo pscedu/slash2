@@ -337,12 +337,12 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 	BMPC_LOCK(bmpc);
 	for (i = 0; i < psc_dynarray_len(&r->biorq_pages); i++) {
 		bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
-		BMPCE_LOCK(bmpce);
 
+		/* bmapce with no reference will be freed by the reaper */
+		BMPCE_LOCK(bmpce);
 		bmpce_handle_lru_locked(bmpce, bmpc,
 		    (r->biorq_flags & BIORQ_WRITE) ?
 		    BIORQ_WRITE : BIORQ_READ, 0);
-
 		BMPCE_ULOCK(bmpce);
 	}
 	BMPC_ULOCK(bmpc);
