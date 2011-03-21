@@ -337,6 +337,8 @@ API rename
 - add zfs SPA version to slashd ctlparam
 - add msl local I/O cache support
 - use umount -l if it is supported at teardown
+- client needs to track when MDS goes down and recheck pinned
+  ptrunc bmaps for resolvement
 
 - pjd tests used to fail due to inability to send FUSE updates to its
   cache after UNLINK, RENAME operations?
