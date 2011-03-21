@@ -1265,13 +1265,10 @@ msl_read_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 		bmpce = psc_dynarray_getpos(&r->biorq_pages, i + startpage);
 
 		BMPCE_LOCK(bmpce);
-		/* Sanity checks.
-		 */
+
 		psc_assert(biorq_is_my_bmpce(r, bmpce));
-		/* BMPCE_DATARDY should not be set, otherwise we wouldn't
-		 *   be here.
-		 */
 		psc_assert(!(bmpce->bmpce_flags & BMPCE_DATARDY));
+
 		bmpce_usecheck(bmpce, BIORQ_READ,
 			       biorq_getaligned_off(r, (i + startpage)));
 
