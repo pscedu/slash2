@@ -554,6 +554,7 @@ bmpc_global_init(void)
 	psc_assert(!bmpc_grow(BMPC_DEFSLBS));
 }
 
+#if PFL_DEBUG > 0
 void
 dump_bmpce_flags(uint32_t flags)
 {
@@ -598,3 +599,4 @@ dump_biorq_flags(uint32_t flags)
 		printf(" unknown: %#x", flags);
 	printf("\n");
 }
+#endif

@@ -1299,9 +1299,9 @@ msl_read_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 	mq->op = SRMIOP_RD;
 	memcpy(&mq->sbd, bmap_2_sbd(r->biorq_bmap), sizeof(mq->sbd));
 
-	BMPCE_LOCK(bmpce);
+	spinlock(&r->biorq_lock);
 	r->biorq_flags |= BIORQ_INFL;
-	BMPCE_ULOCK(bmpce);
+	freelock(&r->biorq_lock);
 
 	DEBUG_BIORQ(PLL_NOTIFY, r, "launching read req");
 
@@ -1337,9 +1337,12 @@ msl_read_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 		goto retry;
 	PSCFREE(a);
 
-	BMPCE_LOCK(bmpce);
-	bmpce->bmpce_flags |= BMPCE_EIO;
-	BMPCE_ULOCK(bmpce);
+	for (i = 0; i < npages; i++) {
+		bmpce = psc_dynarray_getpos(&r->biorq_pages, i + startpage);
+		BMPCE_LOCK(bmpce);
+		bmpce->bmpce_flags |= BMPCE_EIO;
+		BMPCE_ULOCK(bmpce);
+	}
 
 	return (rc);
 }

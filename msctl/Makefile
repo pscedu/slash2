@@ -10,6 +10,7 @@ SRCS+=		walk.c
 SRCS+=		${SLASH_BASE}/share/ctlcli_common.c
 SRCS+=		${SLASH_BASE}/share/slerr.c
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
+SRCS+=		${PFL_BASE}/psc_ds/hashtbl.c
 SRCS+=		${PFL_BASE}/psc_ds/vbitmap.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
 SRCS+=		${PFL_BASE}/psc_util/ctlcli.c
