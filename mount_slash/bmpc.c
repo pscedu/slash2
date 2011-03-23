@@ -92,11 +92,12 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 					       bmpce_lrusort_cmp1);
 			} else
 				psc_assert(
-				   psc_atomic16_read(&bmpce->bmpce_wrref)  ||
-				   psc_atomic16_read(&bmpce->bmpce_rdref)  ||
-				   (bmpce->bmpce_flags & BMPCE_READPNDG)   ||
-				   (bmpce->bmpce_flags & BMPCE_GETBUF)     ||
-				   (bmpce->bmpce_flags & BMPCE_DATARDY)    ||
+				   psc_atomic16_read(&bmpce->bmpce_wrref) ||
+				   psc_atomic16_read(&bmpce->bmpce_rdref) ||
+				   (bmpce->bmpce_flags & BMPCE_READPNDG)  ||
+				   (bmpce->bmpce_flags & BMPCE_GETBUF)    ||
+				   (bmpce->bmpce_flags & BMPCE_DATARDY)   ||
+				   (bmpce->bmpce_flags & BMPCE_EIO)       ||
 				   (bmpce->bmpce_flags & BMPCE_INIT));
 
 			psc_atomic16_inc(&bmpce->bmpce_rdref);
@@ -104,7 +105,8 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 
 	} else {
 		psc_assert(bmpce->bmpce_base);
-		psc_assert(bmpce->bmpce_flags & BMPCE_DATARDY);
+		if (!(bmpce->bmpce_flags & BMPCE_EIO))
+			psc_assert(bmpce->bmpce_flags & BMPCE_DATARDY);
 
 		if (op == BIORQ_WRITE) {
 			psc_assert(psc_atomic16_read(&bmpce->bmpce_wrref) > 0);
@@ -117,6 +119,9 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 			if (!psc_atomic16_read(&bmpce->bmpce_rdref))
 				bmpce->bmpce_flags &= ~BMPCE_READPNDG;
 		}
+
+		if (bmpce->bmpce_flags & BMPCE_EIO)
+			return;
 
 		if (!(psc_atomic16_read(&bmpce->bmpce_wrref) ||
 		      psc_atomic16_read(&bmpce->bmpce_rdref))) {
@@ -245,7 +250,8 @@ bmpce_release_locked(struct bmap_pagecache_entry *bmpce,
 	psc_assert(bmpce->bmpce_flags == BMPCE_FREEING);
 
 	psc_assert(SPLAY_REMOVE(bmap_pagecachetree, &bmpc->bmpc_tree, bmpce));
-	pll_remove(&bmpc->bmpc_lru, bmpce);
+	if (pll_conjoint(&bmpc->bmpc_lru, bmpce))
+		pll_remove(&bmpc->bmpc_lru, bmpce);
 	/* Replace the bmpc memory.
 	 */
 	bmpc_free(bmpce->bmpce_base);
@@ -546,4 +552,49 @@ bmpc_global_init(void)
 	lc_reginit(&bmpcLru, struct bmap_pagecache, bmpc_lentry, "bmpclru");
 
 	psc_assert(!bmpc_grow(BMPC_DEFSLBS));
+}
+
+void
+dump_bmpce_flags(uint32_t flags)
+{
+	int seq = 0;
+
+	PFL_PRFLAG(BMPCE_NEW, &flags, &seq);
+	PFL_PRFLAG(BMPCE_GETBUF, &flags, &seq);
+	PFL_PRFLAG(BMPCE_DATARDY, &flags, &seq);
+	PFL_PRFLAG(BMPCE_DIRTY2LRU, &flags, &seq);
+	PFL_PRFLAG(BMPCE_LRU, &flags, &seq);
+	PFL_PRFLAG(BMPCE_FREE, &flags, &seq);
+	PFL_PRFLAG(BMPCE_FREEING, &flags, &seq);
+	PFL_PRFLAG(BMPCE_INIT, &flags, &seq);
+	PFL_PRFLAG(BMPCE_READPNDG, &flags, &seq);
+	PFL_PRFLAG(BMPCE_RBWPAGE, &flags, &seq);
+	PFL_PRFLAG(BMPCE_RBWRDY, &flags, &seq);
+	PFL_PRFLAG(BMPCE_INFLIGHT, &flags, &seq);
+	PFL_PRFLAG(BMPCE_EIO, &flags, &seq);
+	if (flags)
+		printf(" unknown: %#x", flags);
+	printf("\n");
+}
+
+void
+dump_biorq_flags(uint32_t flags)
+{
+	int seq = 0;
+
+	PFL_PRFLAG(BIORQ_READ, &flags, &seq);
+	PFL_PRFLAG(BIORQ_WRITE, &flags, &seq);
+	PFL_PRFLAG(BIORQ_RBWFP, &flags, &seq);
+	PFL_PRFLAG(BIORQ_RBWLP, &flags, &seq);
+	PFL_PRFLAG(BIORQ_SCHED, &flags, &seq);
+	PFL_PRFLAG(BIORQ_INFL, &flags, &seq);
+	PFL_PRFLAG(BIORQ_DIO, &flags, &seq);
+	PFL_PRFLAG(BIORQ_FORCE_EXPIRE, &flags, &seq);
+	PFL_PRFLAG(BIORQ_DESTROY, &flags, &seq);
+	PFL_PRFLAG(BIORQ_FLUSHRDY, &flags, &seq);
+	PFL_PRFLAG(BIORQ_NOFHENT, &flags, &seq);
+	PFL_PRFLAG(BIORQ_APPEND, &flags, &seq);
+	if (flags)
+		printf(" unknown: %#x", flags);
+	printf("\n");
 }

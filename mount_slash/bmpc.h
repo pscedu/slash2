@@ -126,16 +126,18 @@ struct bmap_pagecache_entry {
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP,					\
-	    "bmpce@%p fl=%u o=%x b=%p ts="PSCPRI_TIMESPEC" "		\
+	    "bmpce@%p fl=%u:"BMPCE_FLAGS_FORMAT" "			\
+	    "o=%#x b=%p "						\
+	    "ts="PSCPRI_TIMESPEC" "					\
 	    "wr=%hu rd=%hu "						\
-	    "lru=%d biorq=%p "BMPCE_FLAGS_FORMAT" "fmt,			\
-	    (b), (b)->bmpce_flags, (b)->bmpce_off, (b)->bmpce_base,	\
+	    "lru=%d biorq=%p "fmt,					\
+	    (b), (b)->bmpce_flags, DEBUG_BMPCE_FLAGS(b),		\
+	    (b)->bmpce_off, (b)->bmpce_base,				\
 	    PSCPRI_TIMESPEC_ARGS(&(b)->bmpce_laccess),			\
 	    psc_atomic16_read(&(b)->bmpce_wrref),			\
 	    psc_atomic16_read(&(b)->bmpce_rdref),			\
-		 !(psclist_disjoint(&(b)->bmpce_lentry)),		\
-	    BMPCE_2_BIORQ(b),						\
-	    DEBUG_BMPCE_FLAGS(b), ## __VA_ARGS__)
+	    !(psclist_disjoint(&(b)->bmpce_lentry)), BMPCE_2_BIORQ(b),	\
+	    ## __VA_ARGS__)
 
 static __inline int
 bmpce_lrusort_cmp(const void *x, const void *y)
@@ -274,7 +276,7 @@ struct bmpc_ioreq {
 	(b)->biorq_flags & BIORQ_APPEND		? "A" : ""
 
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
-	psclogs((level), PSS_DEF,					\
+	psclogs((level), SLSS_BMAP,					\
 	    "biorq@%p fl=%d o=%u l=%u np=%d b=%p ts="PSCPRI_TIMESPEC" "	\
 	    BIORQ_FLAGS_FORMAT" "fmt,					\
 	    (b), (b)->biorq_flags, (b)->biorq_off, (b)->biorq_len,	\
@@ -295,7 +297,7 @@ bmpce_freeprep(struct bmap_pagecache_entry *bmpce)
 
 	psc_assert(!(bmpce->bmpce_flags &
 	    (BMPCE_FREEING | BMPCE_GETBUF | BMPCE_NEW)));
-	psc_assert(bmpce->bmpce_flags & BMPCE_DATARDY);
+	psc_assert(bmpce->bmpce_flags & (BMPCE_DATARDY | BMPCE_EIO));
 
 	psc_assert(!psc_atomic16_read(&bmpce->bmpce_rdref));
 	psc_assert(!psc_atomic16_read(&bmpce->bmpce_wrref));

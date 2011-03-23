@@ -264,7 +264,8 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 			 *   block has been assigned.
 			 */
 			psc_assert(bmpce->bmpce_base);
-			psc_assert(bmpce->bmpce_flags & BMPCE_INIT);
+			psc_assert(bmpce->bmpce_flags &
+			    (BMPCE_INIT | BMPCE_EIO));
 			bmpce->bmpce_flags &= ~BMPCE_INIT;
 
 			if (op == BIORQ_READ)
@@ -273,7 +274,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 		BMPCE_ULOCK(bmpce);
 	}
  out:
-	DEBUG_BIORQ(PLL_NOTIFY, r, "new req");
+	DEBUG_BIORQ(PLL_DEBUG, r, "new req");
 	if (op == BIORQ_READ || (r->biorq_flags & BIORQ_DIO))
 		pll_add(&bmap_2_bmpc(b)->bmpc_pndg_biorqs, r);
 	else
@@ -403,10 +404,12 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 		freelock(&f->mfh_lock);
 	}
 #else
-	spinlock(&f->mfh_lock);
-	pll_remove(&f->mfh_biorqs, r);
-	psc_waitq_wakeall(&msl_fhent_flush_waitq);
-	freelock(&f->mfh_lock);
+	if (pll_conjoint(&f->mfh_biorqs, r)) {
+		spinlock(&f->mfh_lock);
+		pll_remove(&f->mfh_biorqs, r);
+		psc_waitq_wakeall(&msl_fhent_flush_waitq);
+		freelock(&f->mfh_lock);
+	}
 #endif
 
 	psc_dynarray_free(&r->biorq_pages);
@@ -1480,6 +1483,7 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 				bmpce->bmpce_flags |= BMPCE_EIO;
 				if (bmpce->bmpce_waitq)
 					psc_waitq_wakeall(bmpce->bmpce_waitq);
+else DEBUG_BMPCE(PLL_MAX, bmpce, "NULL bmpce_waitq");
 				BMPCE_ULOCK(bmpce);
 			}
 			return (rc);
@@ -1564,7 +1568,7 @@ msl_pages_copyin(struct bmpc_ioreq *r, char *buf)
 		/* Set the starting buffer pointer into
 		 *  our cache vector.
 		 */
-		dest = (char *)bmpce->bmpce_base;
+		dest = bmpce->bmpce_base;
 		if (!i && (toff > bmpce->bmpce_off)) {
 			/* The first cache buffer pointer may need
 			 *    a bump if the request offset is unaligned.
@@ -1794,6 +1798,7 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 			if (rc) {
 				rc = msl_offline_retry_ignexpire(r[i]);
 				msl_biorq_destroy(r[i]);
+				r[i] = NULL;
 				if (rc)
 					goto retry_bmap;
 				rc = -EIO;
