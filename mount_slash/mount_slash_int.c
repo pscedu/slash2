@@ -1022,6 +1022,7 @@ msl_io_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 	if (rq->rq_status) {
 		DYNARRAY_FOREACH(r, i, biorqs)
+			/* XXX place these guys back on bmapflushq */
 			;
 	}
 
@@ -1048,14 +1049,13 @@ msl_dio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	if (rc)
 		return (rc);
 
-	if (rq->rq_status) {
-	}
-
+	rc = rq->rq_status;
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 	psc_assert(mq);
 
-	DEBUG_REQ(PLL_DEBUG, rq, "completed dio req (op=%d) off=%u sz=%u",
-	    op, mq->offset, mq->size);
+	DEBUG_REQ(PLL_DEBUG, rq,
+	    "completed dio req (op=%d) off=%u sz=%u rc=%d",
+	    op, mq->offset, mq->size, rc);
 
 	return (rc);
 }
@@ -1299,7 +1299,9 @@ msl_read_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 	mq->op = SRMIOP_RD;
 	memcpy(&mq->sbd, bmap_2_sbd(r->biorq_bmap), sizeof(mq->sbd));
 
+	BMPCE_LOCK(bmpce);
 	r->biorq_flags |= BIORQ_INFL;
+	BMPCE_ULOCK(bmpce);
 
 	DEBUG_BIORQ(PLL_NOTIFY, r, "launching read req");
 
@@ -1334,6 +1336,11 @@ msl_read_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 	if (msl_offline_retry(r))
 		goto retry;
 	PSCFREE(a);
+
+	BMPCE_LOCK(bmpce);
+	bmpce->bmpce_flags |= BMPCE_EIO;
+	BMPCE_ULOCK(bmpce);
+
 	return (rc);
 }
 
