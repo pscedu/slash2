@@ -356,3 +356,7 @@ API rename
 
   if this gets resolves, we should remove the code that explicitly
   invalidates FUSE child dentries of a directory when handling CHMOD
+
+- on MDS resm failure inside msl, clear a bit on all fcmh's pinned by ptrunc
+  whenever we check this flag, if the bit is not set, issue an RPC so
+  that we get registered with the MDS to be notified when ptrunc resolves
