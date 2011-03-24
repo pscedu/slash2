@@ -1878,8 +1878,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	 * wanted it to be and must now blindly accept what he returns
 	 * to us; otherwise, we SAVELOCAL any updates we've made.
 	 */
-	if (to_set & PSCFS_SETATTRF_MTIME ||
-	    to_set & PSCFS_SETATTRF_DATASIZE) {
+	if (to_set & (PSCFS_SETATTRF_MTIME | PSCFS_SETATTRF_DATASIZE)) {
 		c->fcmh_sstb.sst_mtime = mp->attr.sst_mtime;
 		c->fcmh_sstb.sst_mtime_ns = mp->attr.sst_mtime_ns;
 	}
@@ -1903,6 +1902,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 		mdie.mdie_pfr = pfr;
 		mdie.mdie_pinum = fcmh_2_fid(c);
+		/* XXX this currently crashes fuse.ko but needs to happen */
 //		dircache_walk(fcmh_2_dci(c), msl_dc_inv_entry, &mdie);
 	}
 
