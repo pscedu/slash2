@@ -439,6 +439,9 @@ mds_redo_namespace(struct slmds_jent_namespace *sjnm, int replay)
 	}
 
 	switch (sjnm->sjnm_op) {
+	    case NS_OP_RECLAIM:
+		rc = 0;
+		break;
 	    case NS_OP_CREATE:
 		rc = mdsio_redo_create(sjnm->sjnm_parent_fid, name,
 		    &sstb);

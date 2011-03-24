@@ -318,6 +318,9 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		goto out;
 
+	psclog_info("DEBUG: pfid="SLPRI_FID" mode=%#o name='%s' rc=%d",
+	    mp->cattr.sst_fg.fg_fid, mode, name, rc);
+
 	fcmh_setattr(p, &mp->pattr, FCMH_SETATTRF_NONE);
 
 	rc = slc_fcmh_get(&mp->cattr, FCMH_SETATTRF_NONE, &c);
@@ -741,7 +744,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	fcmh_setattr(p, &mp->pattr, FCMH_SETATTRF_NONE);
 
-	psclog_info("pfid="SLPRI_FID" mode=%#o name='%s' rc=%d mp->rc=%d",
+	psclog_info("DEBUG: pfid="SLPRI_FID" mode=%#o name='%s' rc=%d mp->rc=%d",
 	    mq->pfg.fg_fid, mq->mode, mq->name, rc, mp->rc);
 
 	rc = slc_fcmh_get(&mp->cattr, FCMH_SETATTRF_NONE, &c);

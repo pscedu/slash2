@@ -371,9 +371,14 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 	if (!(sjnm->sjnm_flag & SJ_NAMESPACE_RECLAIM))
 		goto check_update;
 
-	psc_assert(sjnm->sjnm_op == NS_OP_SETATTR ||
+	psc_assert(
+	    sjnm->sjnm_op == NS_OP_RECLAIM ||
+	    sjnm->sjnm_op == NS_OP_SETATTR ||
 	    sjnm->sjnm_op == NS_OP_UNLINK ||
 	    sjnm->sjnm_op == NS_OP_SETSIZE);
+
+	psclog_notice("DEBUG: distill now: parent fid="SLPRI_FID", target fid="SLPRI_FID, 
+		sjnm->sjnm_parent_fid, sjnm->sjnm_target_fid);
 
 	if (reclaim_logfile_handle == NULL) {
 
@@ -590,7 +595,8 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 	 * garbage reclamation.
 	 */
 	distill = pjournal_has_peers(mdsJournal);
-	if ((op == NS_OP_UNLINK && sstb->sst_nlink == 1) ||
+	if ((op == NS_OP_RECLAIM) ||
+	    (op == NS_OP_UNLINK && sstb->sst_nlink == 1) ||
 	    (op == NS_OP_SETSIZE && sstb->sst_size == 0)) {
 		/*
 		 * We want to reclaim the space taken by the previous
@@ -604,6 +610,7 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 			psc_assert(sstb->sst_gen >= 1);
 			sjnm->sjnm_target_gen--;
 		}
+		psclog_notice("DEBUG: need reclaim: parent fid="SLPRI_FID", target fid="SLPRI_FID, parent, sstb->sst_fid);
 	}
 
 	if (name) {
@@ -627,8 +634,8 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 	if (!distill)
 		pjournal_put_buf(mdsJournal, sjnm);
 
-	psclog_notice("namespace op: op=%d, fid="SLPRI_FID", name=%s, new name=%s, txg=%"PRId64,
-	    op, sjnm->sjnm_target_fid, name, newname, txg);
+	psclog_notice("namespace op: op=%d, distill=%d, fid="SLPRI_FID", name=%s, new name=%s, size=%"PRId64", txg=%"PRId64,
+	    op, distill, sjnm->sjnm_target_fid, name, newname, sstb->sst_size, txg);
 }
 
 /**
@@ -1103,6 +1110,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 		entryp++;
 		next_entryp = PSC_AGP(next_entryp, len);
 		memmove(next_entryp, entryp, len);
+		psclog_notice("DEBUG: batch reclaim: target fid="SLPRI_FG, SLPRI_FG_ARGS(&entryp->fg));
 		size += len;
 	}
 

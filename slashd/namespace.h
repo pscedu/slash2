@@ -41,6 +41,7 @@ enum namespace_operation {
 /* 6 */	NS_OP_SETATTR,
 /* 7 */	NS_OP_SYMLINK,
 /* 8 */	NS_OP_UNLINK,
+/* 9 */	NS_OP_RECLAIM,
 	NS_NOPS
 };
 

@@ -939,7 +939,7 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 		    mq->name, &rootcreds, mds_namespace_log);
 	mds_unreserve_slot();
 
-	psclog_info("mdsio_unlink: parent="SLPRI_FID", name=%s, rc=%d",
+	psclog_info("DEBUG: mdsio_unlink: parent="SLPRI_FID", name=%s, rc=%d",
 	    mq->pfid, mq->name, mp->rc);
 
 	if (mp->rc == 0) {
