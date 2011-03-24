@@ -192,6 +192,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct resm_cli_info);
 	PRTYPE(struct resm_iod_info);
 	PRTYPE(struct resm_mds_info);
+	PRTYPE(struct resprof_cli_info);
 	PRTYPE(struct resprof_mds_info);
 	PRTYPE(struct site_mds_info);
 	PRTYPE(struct site_progress);
@@ -549,6 +550,7 @@ main(int argc, char *argv[])
 	PRVAL(NS_OP_CREATE);
 	PRVAL(NS_OP_LINK);
 	PRVAL(NS_OP_MKDIR);
+	PRVAL(NS_OP_RECLAIM);
 	PRVAL(NS_OP_RENAME);
 	PRVAL(NS_OP_RMDIR);
 	PRVAL(NS_OP_SETATTR);
