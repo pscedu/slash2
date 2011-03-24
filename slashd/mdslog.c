@@ -377,9 +377,6 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 	    sjnm->sjnm_op == NS_OP_UNLINK ||
 	    sjnm->sjnm_op == NS_OP_SETSIZE);
 
-	psclog_notice("DEBUG: distill now: parent fid="SLPRI_FID", target fid="SLPRI_FID, 
-		sjnm->sjnm_parent_fid, sjnm->sjnm_target_fid);
-
 	if (reclaim_logfile_handle == NULL) {
 
 		reclaim_logfile_offset = 0;
@@ -1109,7 +1106,6 @@ mds_send_batch_reclaim(uint64_t batchno)
 		entryp++;
 		next_entryp = PSC_AGP(next_entryp, len);
 		memmove(next_entryp, entryp, len);
-		psclog_notice("DEBUG: batch reclaim: target fid="SLPRI_FG, SLPRI_FG_ARGS(&entryp->fg));
 		size += len;
 	}
 
