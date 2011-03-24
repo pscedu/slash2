@@ -75,6 +75,10 @@ struct msl_fhent {			 /* XXX rename */
 	struct psc_lockedlist		 mfh_biorqs;	/* track biorqs (flush) */
 };
 
+struct resprof_cli_info {
+	struct psc_dynarray		 rpci_pinned_bmaps;
+};
+
 /*
  * CLIENT-specific private data for struct sl_resm.
  */

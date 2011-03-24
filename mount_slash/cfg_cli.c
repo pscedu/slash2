@@ -26,8 +26,12 @@
 #include "slconfig.h"
 
 void
-slcfg_init_res(__unusedx struct sl_resource *res)
+slcfg_init_res(struct sl_resource *res)
 {
+	struct resprof_cli_info *rpci;
+
+	rpci = resm->resm_pri = PSCALLOC(sizeof(*rpci));
+	psc_dynarray_init(&rpmi->rpmi_pinned_bmaps);
 }
 
 void
