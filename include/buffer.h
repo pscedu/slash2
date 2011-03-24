@@ -105,20 +105,20 @@ struct sl_buffer {
 #define SLB_FLAGS_FMT "%s%s%s%s%s%s%s%s"
 
 #define DEBUG_SLB(level, slb, fmt, ...)					\
-	psc_logs((level), PSS_DEF,					\
-		"slb@%p b:%p sz(%d/%d) bsz:%u"				\
-		" ref:%d umref:%d inf:%d infp:%d fl:"SLB_FLAGS_FMT	\
-		" fcmh:%p lco:%p "fmt,					\
-		(slb), (slb)->slb_base, (slb)->slb_nblks,		\
-		psc_vbitmap_nfree((slb)->slb_inuse),			\
-		(slb)->slb_blksz,					\
-		atomic_read(&(slb)->slb_ref),				\
-		atomic_read(&(slb)->slb_unmapd_ref),			\
-		atomic_read(&(slb)->slb_inflight),			\
-		atomic_read(&(slb)->slb_inflpndg),			\
-		DEBUG_SLB_FLAGS(slb),					\
-		(slb)->slb_lc_fcmh, (slb)->slb_lc_owner,		\
-		## __VA_ARGS__)
+	psclogs((level), PSS_DEF,					\
+	    "slb@%p b:%p sz(%d/%d) bsz:%u"				\
+	    " ref:%d umref:%d inf:%d infp:%d fl:"SLB_FLAGS_FMT		\
+	    " fcmh:%p lco:%p "fmt,					\
+	    (slb), (slb)->slb_base, (slb)->slb_nblks,			\
+	    psc_vbitmap_nfree((slb)->slb_inuse),			\
+	    (slb)->slb_blksz,						\
+	    atomic_read(&(slb)->slb_ref),				\
+	    atomic_read(&(slb)->slb_unmapd_ref),			\
+	    atomic_read(&(slb)->slb_inflight),				\
+	    atomic_read(&(slb)->slb_inflpndg),				\
+	    DEBUG_SLB_FLAGS(slb),					\
+	    (slb)->slb_lc_fcmh, (slb)->slb_lc_owner,			\
+	    ## __VA_ARGS__)
 
 #define DUMP_SLB(level, slb, fmt, ...)					\
 	do {								\
