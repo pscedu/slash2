@@ -30,8 +30,8 @@ slcfg_init_res(struct sl_resource *res)
 {
 	struct resprof_cli_info *rpci;
 
-	rpci = resm->resm_pri = PSCALLOC(sizeof(*rpci));
-	psc_dynarray_init(&rpmi->rpmi_pinned_bmaps);
+	rpci = res->res_pri = PSCALLOC(sizeof(*rpci));
+	psc_dynarray_init(&rpci->rpci_pinned_bmaps);
 }
 
 void
