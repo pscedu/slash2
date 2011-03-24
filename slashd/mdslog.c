@@ -567,7 +567,7 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
     const char *name, const char *newname)
 {
 	struct slmds_jent_namespace *sjnm;
-	int distill;
+	int distill = 0;
 
 	sjnm = pjournal_get_buf(mdsJournal,
 	    sizeof(struct slmds_jent_namespace));
@@ -603,14 +603,13 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 		 * generation.  Note that changing the attributes of a
 		 * zero-lengh file should NOT trigger this code.
 		 */
-		distill = 1;
+		distill += 100;
 		sjnm->sjnm_flag |= SJ_NAMESPACE_RECLAIM;
 		sjnm->sjnm_target_gen = sstb->sst_gen;
 		if (op == NS_OP_SETSIZE) {
 			psc_assert(sstb->sst_gen >= 1);
 			sjnm->sjnm_target_gen--;
 		}
-		psclog_notice("DEBUG: need reclaim: parent fid="SLPRI_FID", target fid="SLPRI_FID, parent, sstb->sst_fid);
 	}
 
 	if (name) {
