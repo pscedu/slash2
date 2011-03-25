@@ -29,6 +29,7 @@
 
 #include "pfl/fcntl.h"
 #include "pfl/stat.h"
+#include "pfl/str.h"
 #include "pfl/types.h"
 #include "psc_util/log.h"
 
@@ -144,6 +145,10 @@ int
 checkcreds(const struct srt_stat *sstb, const struct slash_creds *cr,
     int xmode)
 {
+#if PFL_DEBUG > 0
+	psc_assert(!pfl_memchk(sstb, 0, sizeof(*sstb)));
+#endif
+
 	if (cr->scr_uid == 0)
 		return (0);
 	if (sstb->sst_uid == cr->scr_uid) {
