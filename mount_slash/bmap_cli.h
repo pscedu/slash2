@@ -17,8 +17,8 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#ifndef _SLASH_CLI_BMAP_H_
-#define _SLASH_CLI_BMAP_H_
+#ifndef _SLASH_BMAP_CLI_H_
+#define _SLASH_BMAP_CLI_H_
 
 #include "psc_rpc/rpc.h"
 #include "psc_util/lock.h"
@@ -46,7 +46,7 @@ struct bmap_cli_info {
 
 /* mount_slash specific bcm_flags */
 #define BMAP_CLI_FLUSHPROC	(_BMAP_FLSHFT << 0)	/* proc'd by flush thr */
-#define BMAP_CLI_BIORQEXPIRE    (_BMAP_FLSHFT << 1)
+#define BMAP_CLI_BIORQEXPIRE	(_BMAP_FLSHFT << 1)
 
 #define BMAP_CLI_MAX_LEASE	60 /* seconds */
 #define BMAP_CLI_TIMEO_INC	1
@@ -105,4 +105,4 @@ bmap_cli_timeo_cmp(const void *x, const void *y)
 	return (0);
 }
 
-#endif /* _SLASH_CLI_BMAP_H_ */
+#endif /* _SLASH_BMAP_CLI_H_ */
