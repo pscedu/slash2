@@ -478,9 +478,7 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 				      csvc->csvc_waitinfo);
 			csvc = NULL;
 			goto out;
-
 		} else {
-
 			if (sl_csvc_usemultiwait(csvc))
 				psc_multiwaitcond_wait(csvc->csvc_waitinfo,
 				       csvc->csvc_mutex);
