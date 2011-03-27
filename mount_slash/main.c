@@ -187,6 +187,8 @@ msfsthr_ensure(void)
 		    msfsthr_teardown, sizeof(*mft), "msfsthr%02zu",
 		    id);
 		mft = thr->pscthr_private;
+		psc_multiwait_init(&mft->mft_mw, "%s",
+		    thr->pscthr_name);
 		mft->mft_uniqid = id;
 		pscthr_setready(thr);
 	}

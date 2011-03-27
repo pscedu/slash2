@@ -991,7 +991,7 @@ bmap_2_bid(const struct bmapc_memb *b, struct srm_bmap_id *bid)
 }
 
 static void
-ms_bmap_release(struct sl_resm *resm)
+msl_bmap_release(struct sl_resm *resm)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -1140,7 +1140,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				psc_assert(psc_atomic32_read(
 				    &b->bcm_opcnt) == 1);
 				/* Note that only this thread calls
-				 *   ms_bmap_release() so no reentrancy
+				 *   msl_bmap_release() so no reentrancy
 				 *   exist unless another rls thr is
 				 *   introduced.
 				 */
@@ -1180,7 +1180,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 				if (rmci->rmci_bmaprls.nbmaps ==
 				    MAX_BMAP_RELEASE) {
-					ms_bmap_release(resm);
+					msl_bmap_release(resm);
 					if (psc_dynarray_exists(&rels, resm))
 						psc_dynarray_remove(&rels, resm);
 				} else
@@ -1195,7 +1195,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 		/* Send out partially filled release request.
 		 */
 		DYNARRAY_FOREACH(resm, i, &rels)
-			ms_bmap_release(resm);
+			msl_bmap_release(resm);
 
 		psc_dynarray_reset(&rels);
 
@@ -1251,6 +1251,7 @@ msbmapflushthrrpc_main(__unusedx struct psc_thread *thr)
 void
 msbmapflushthr_spawn(void)
 {
+	struct msbmfl_thread *mbft;
 	struct psc_thread *thr;
 	int i;
 
@@ -1270,6 +1271,9 @@ msbmapflushthr_spawn(void)
 		thr = pscthr_init(MSTHRT_BMAPFLSH, 0,
 		    msbmapflushthr_main, NULL,
 		    sizeof(struct msbmfl_thread), "msbflushthr%d", i);
+		mbft = msbmflthr(thr);
+		psc_multiwait_init(&mbft->mbft_mw, "%s",
+		    thr->pscthr_name);
 		pscthr_setready(thr);
 	}
 

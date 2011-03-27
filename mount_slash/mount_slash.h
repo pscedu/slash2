@@ -22,9 +22,8 @@
 
 #include <sys/types.h>
 
-#include <stdarg.h>
-
 #include "psc_rpc/service.h"
+#include "psc_util/multiwait.h"
 
 #include "bmap.h"
 #include "fidcache.h"
@@ -58,10 +57,12 @@ struct msrcm_thread {
 struct msfs_thread {
 	int				 mft_failcnt;
 	size_t				 mft_uniqid;
+	struct psc_multiwait		 mft_mw;
 };
 
 struct msbmfl_thread {
 	int				 mbft_failcnt;
+	struct psc_multiwait		 mbft_mw;
 };
 
 PSCTHR_MKCAST(msfsthr, msfs_thread, MSTHRT_FS)
@@ -83,8 +84,8 @@ struct resprof_cli_info {
  * CLIENT-specific private data for struct sl_resm.
  */
 struct resm_cli_info {
-	psc_spinlock_t			 rmci_lock;
-	struct psc_waitq		 rmci_waitq;
+	pthread_mutex_t			 rmci_mutex;
+	struct psc_multiwaitcond	 rmci_mwc;
 	struct srm_bmap_release_req	 rmci_bmaprls;
 };
 

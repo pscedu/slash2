@@ -818,7 +818,7 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 }
 
 struct slashrpc_cservice *
-msl_try_get_replica_resm(struct bmapc_memb *bcm, int iosidx)
+msl_try_get_replica_res(struct bmapc_memb *bcm, int iosidx)
 {
 	struct slashrpc_cservice *csvc;
 	struct bmap_cli_info *bci;
@@ -836,18 +836,10 @@ msl_try_get_replica_resm(struct bmapc_memb *bcm, int iosidx)
 
 	res = libsl_id2res(fci->fci_reptbl[iosidx].bs_id);
 
-#if 0
 	FOREACH_RND(&it, psc_dynarray_len(&res->res_members)) {
-		resm = psc_dynarray_getpos(&res->res_members, it.ri_rnd_idx);
+		resm = psc_dynarray_getpos(&res->res_members,
+		    it.ri_rnd_idx);
 		csvc = slc_geticsvc_nb(resm);
-		if (csvc)
-			return (csvc);
-	}
-#endif
-
-	FOREACH_RND(&it, psc_dynarray_len(&res->res_members)) {
-		resm = psc_dynarray_getpos(&res->res_members, it.ri_rnd_idx);
-		csvc = slc_geticsvc(resm);
 		if (csvc)
 			return (csvc);
 	}
@@ -859,11 +851,18 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 {
 	struct slashrpc_cservice *csvc;
 	struct fcmh_cli_info *fci;
+	struct msfs_thread *mft;
+	struct psc_thread *thr;
 	int n, rnd;
+	void *p;
 
 	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
 
 	fci = fcmh_get_pri(b->bcm_fcmh);
+
+	thr = pscthr_get();
+	mft = msfsthr(thr);
+	psc_multiwait_reset(&mft->mft_mw);
 
 	/* first, try preferred IOS */
 	rnd = psc_random32u(fci->fci_nrepls);
@@ -872,7 +871,7 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 			rnd = 0;
 
 		if (fci->fci_reptbl[rnd].bs_id == prefIOS) {
-			csvc = msl_try_get_replica_resm(b, rnd);
+			csvc = msl_try_get_replica_res(b, rnd);
 			if (csvc)
 				return (csvc);
 		}
@@ -884,20 +883,16 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 		if (rnd >= fci->fci_nrepls)
 			rnd = 0;
 
-		csvc = msl_try_get_replica_resm(b, rnd);
+		csvc = msl_try_get_replica_res(b, rnd);
 		if (csvc)
 			return (csvc);
 	}
 
 	/*
-	 * still nothing, go into multiwait, awaking periodically for
+	 * Still nothing, go into multiwait, awaking periodically for
 	 * cancelling or ceiling time out.
 	 */
-#if 0
-	for (;;) {
-		psc_multiwait_s(, 1);
-	}
-#endif
+	psc_multiwait_secs(&mft->mft_mw, &p, 5);
 	return (NULL);
 }
 

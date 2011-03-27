@@ -33,16 +33,16 @@ struct pscrpc_request;
 #define SRCM_SVCNAME	"msrcm"
 
 #define slc_geticsvcxf(resm, fl, exp)						\
-	sl_csvc_get(&(resm)->resm_csvc, (fl), (exp), (resm)->resm_nid,		\
-	    SRIC_REQ_PORTAL, SRIC_REP_PORTAL, SRIC_MAGIC, SRIC_VERSION,		\
-	    &resm2rmci(resm)->rmci_lock, &resm2rmci(resm)->rmci_waitq,		\
-	    SLCONNT_IOD, NULL)
+	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT | (fl), (exp),	\
+	    (resm)->resm_nid, SRIC_REQ_PORTAL, SRIC_REP_PORTAL,			\
+	    SRIC_MAGIC, SRIC_VERSION, &resm2rmci(resm)->rmci_mutex,		\
+	    &resm2rmci(resm)->rmci_mwc,	SLCONNT_IOD, msl_getmw())
 
 #define slc_getmcsvcx(resm, exp)						\
-	sl_csvc_get(&(resm)->resm_csvc, 0, (exp), (resm)->resm_nid,		\
-	    SRMC_REQ_PORTAL, SRMC_REP_PORTAL, SRMC_MAGIC, SRMC_VERSION,		\
-	    &resm2rmci(resm)->rmci_lock, &resm2rmci(resm)->rmci_waitq,		\
-	    SLCONNT_MDS, NULL)
+	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT, (exp),		\
+	    (resm)->resm_nid, SRMC_REQ_PORTAL, SRMC_REP_PORTAL,			\
+	    SRMC_MAGIC, SRMC_VERSION, &resm2rmci(resm)->rmci_mutex,		\
+	    &resm2rmci(resm)->rmci_mwc, SLCONNT_MDS, msl_getmw())
 
 #define slc_geticsvc(resm)		slc_geticsvcxf((resm), 0, NULL)
 #define slc_geticsvcx(resm, exp)	slc_geticsvcxf((resm), 0, (exp))
@@ -55,5 +55,16 @@ int	slc_rmc_getimp(struct slashrpc_cservice **);
 int	slc_rmc_setmds(const char *);
 
 int	slc_rcm_handler(struct pscrpc_request *);
+
+static __inline struct psc_multiwait *
+msl_getmw(void)
+{
+	struct psc_thread *thr;
+
+	thr = pscthr_get();
+	if (thr->pscthr_type == MSTHRT_FS)
+		return (&msfsthr(thr)->mft_mw);
+	return (&msbmflthr(thr)->mbft_mw);
+}
 
 #endif /* _SLC_RPC_H_ */
