@@ -2112,6 +2112,7 @@ msl_init(void)
 	psc_eqpollthr_spawn(MSTHRT_EQPOLL, "mseqpollthr");
 	msctlthr_spawn();
 	mstimerthr_spawn();
+	sl_nbrqthr_spawn(MSTHRT_NBRQ, "msnbrqthr");
 	msbmapflushthr_spawn();
 
 	if ((name = getenv("SLASH_MDS_NID")) == NULL)
