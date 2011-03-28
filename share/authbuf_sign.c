@@ -150,7 +150,7 @@ authbuf_check(struct pscrpc_request *rq, int msgtype)
 	saf = pscrpc_msg_buf(m, m->bufcount - 1, sizeof(*saf));
 
 	if (saf == NULL)
-		return (SLERR_AUTHBUF_BADMAGIC);
+		return (SLERR_AUTHBUF_ABSENT);
 
 	if (saf->saf_secret.sas_magic != AUTHBUF_MAGIC)
 		return (SLERR_AUTHBUF_BADMAGIC);
