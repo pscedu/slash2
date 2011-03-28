@@ -677,6 +677,12 @@ or
 .Cm aggr
 .Pq aggregate .
 .Pp
+.It Cm rpc- Ns Ar addr Ns Cm -rcv ,
+.It Cm rpc- Ns Ar addr Ns Cm -snd
+Data sent/received per
+.Tn RPC
+peer.
+.Pp
 .El
 .Pp
 If
@@ -784,18 +790,19 @@ display additional information about each operation being performed.
 .El
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/thr.mdoc {
 .\"	thrs => {
-.\"		q{msbflushthr Ns Ar %d}		=> qq{Bmap flusher thread},
-.\"		q{msbflushrpcthr}		=> qq{Bmap flusher asynchronous\n.Tn RPC\nreply thread},
-.\"		q{msbrlsthr}			=> qq{Bmap timed releaser thread},
+.\"		q{msbflushthr Ns Ar %d}		=> qq{Bmap flusher},
+.\"		q{msbflushrpcthr}		=> qq{Bmap flusher asynchronous\n.Tn RPC\nreplier},
+.\"		q{msbrlsthr}			=> qq{Bmap timed releaser},
 .\"		q{msconnthr- Ns Ar %s}		=> qq{Remote server connection monitor},
 .\"		q{msctlacthr}			=> qq{.Nm\nconnection acceptor},
 .\"		q{msctlthr}			=> qq{.Nm\nconnection processor},
-.\"		q{mseqpollthr}			=> qq{Lustre\n.Fn LNetEQPoll\nthread},
-.\"		q{msfsmgrthr}			=> qq{Userland file system manager thread\n.Pq e.g. FUSE},
-.\"		q{msfsthr Ns Ar %d}		=> qq{File system system caller service thread},
+.\"		q{mseqpollthr}			=> qq{Lustre\n.Fn LNetEQPoll\nissuer},
+.\"		q{msfsmgrthr}			=> qq{Userland file system manager\n.Pq e.g. FUSE},
+.\"		q{msfsthr Ns Ar %d}		=> qq{File system syscall handler},
+.\"		q{msnbrqthr}			=> qq{Non-blocking\n.Tn RPC\nhandler},
 .\"		q{msrcmthr Ns Ar %02d}		=> qq{.Tn MDS RPC\nrequest service},
-.\"		q{mstiosthr}			=> qq{Timed\n.Tn I/O\nstats updater thread},
-.\"		q{msusklndplthr Ns Ar %d}	=> qq{Lustre userland socket poll thread},
+.\"		q{mstiosthr}			=> qq{Timed\n.Tn I/O\nstats updater},
+.\"		q{msusklndplthr Ns Ar %d}	=> qq{Lustre userland socket poll},
 .\"	}
 .Ss Thread Specification
 Options which take
