@@ -363,4 +363,16 @@ dump_bmap_flags(uint32_t flags)
 		printf(" unknown: %x", flags);
 	printf("\n");
 }
+
+void
+dump_bmap_common(struct bmapc_memb *b)
+{
+	DEBUG_BMAP(PLL_MAX, b, "");
+}
+
+__weak void
+dump_bmap(struct bmapc_memb *b)
+{
+	dump_bmap_common(b);
+}
 #endif
