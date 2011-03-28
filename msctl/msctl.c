@@ -713,7 +713,7 @@ psc_ctl_prthr_t psc_ctl_prthrs[] = {
 /* BMAPFLSH	*/ NULL,
 /* BMAPFLSHRLS	*/ NULL,
 /* BMAPFLSHRPC	*/ NULL,
-/* BMAPREADAHEAD*/ NULL
+/* BMAPREADAHEAD*/ NULL,
 /* CONN		*/ NULL,
 /* CTL		*/ psc_ctlthr_pr,
 /* CTLAC	*/ psc_ctlacthr_pr,
