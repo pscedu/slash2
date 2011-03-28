@@ -33,6 +33,8 @@
 
 struct pscrpc_request;
 
+struct bmap_pagecache_entry;
+
 /* mount_slash thread types */
 enum {
 	MSTHRT_BMAPFLSH,		/* bmap write data flush thread */
@@ -77,10 +79,10 @@ struct msbmflra_thread {
 	struct psc_multiwait		 mbfra_mw;
 };
 
-PSCTHR_MKCAST(msfsthr, msfs_thread, MSTHRT_FS);
-PSCTHR_MKCAST(msbmflthr, msbmfl_thread, MSTHRT_BMAPFLSH);
 PSCTHR_MKCAST(msbmflrlsthr, msbmflrls_thread, MSTHRT_BMAPFLSHRLS);
+PSCTHR_MKCAST(msbmflthr, msbmfl_thread, MSTHRT_BMAPFLSH);
 PSCTHR_MKCAST(msbmfrathr, msbmflra_thread, MSTHRT_BMAPREADAHEAD);
+PSCTHR_MKCAST(msfsthr, msfs_thread, MSTHRT_FS);
 
 #define MS_READAHEAD_MINSEQ		2
 #define MS_READAHEAD_MAXPGS		256
@@ -168,5 +170,8 @@ extern struct timespec		 msl_bmap_timeo_inc;
 
 extern struct psc_listcache	 bmapTimeoutQ;
 extern struct psc_waitq		 bmapflushwaitq;
+
+extern struct psc_listcache	 bmapReadAheadQ;
+extern struct pscrpc_nbreqset	*ra_nbreqset;
 
 #endif /* _MOUNT_SLASH_H_ */
