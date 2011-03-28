@@ -43,6 +43,7 @@ bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *p)
 
 	memset(bmpce, 0, sizeof(*bmpce));
 	INIT_PSC_LISTENTRY(&bmpce->bmpce_lentry);
+	INIT_PSC_LISTENTRY(&bmpce->bmpce_ralentry);
 	INIT_SPINLOCK(&bmpce->bmpce_lock);
 	bmpce->bmpce_flags = BMPCE_NEW;
 	return (0);
@@ -273,6 +274,7 @@ bmpc_freeall_locked(struct bmap_pagecache *bmpc)
 	LOCK_ENSURE(&bmpc->bmpc_lock);
 	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
 	psc_assert(pll_empty(&bmpc->bmpc_new_biorqs));
+	psc_assert(pll_empty(&bmpc->bmpc_pndg_ra));
 
 	for (a = SPLAY_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); a; a = b) {
 		b = SPLAY_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree, a);
