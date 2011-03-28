@@ -37,6 +37,26 @@
 struct psc_lockedlist	client_csvcs = PLL_INIT(&client_csvcs,
     struct slashrpc_cservice, csvc_lentry);
 
+__weak void
+psc_multiwaitcond_wakeup(__unusedx struct psc_multiwaitcond *arg)
+{
+	psc_fatalx("unimplemented stub");
+}
+
+__weak int
+psc_multiwaitcond_waitrel_ts(__unusedx struct psc_multiwaitcond *arg,
+    __unusedx pthread_mutex_t *mutex, __unusedx const struct timespec *ts)
+{
+	psc_fatalx("unimplemented stub");
+}
+
+__weak int
+_psc_multiwait_addcond(__unusedx struct psc_multiwait *mw,
+    __unusedx struct psc_multiwaitcond *cond, __unusedx int masked)
+{
+	psc_fatalx("unimplemented stub");
+}
+
 int
 slrpc_newgenreq(struct slashrpc_cservice *csvc, int op,
     struct pscrpc_request **rqp, int qlen, int plen, void *mqp)
@@ -213,26 +233,6 @@ slrpc_issue_ping(struct slashrpc_cservice *csvc)
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	pscrpc_req_finished(rq);
 	return (rc);
-}
-
-__weak void
-psc_multiwaitcond_wakeup(__unusedx struct psc_multiwaitcond *arg)
-{
-	psc_fatalx("unimplemented stub");
-}
-
-__weak int
-psc_multiwaitcond_waitrel_ts(__unusedx struct psc_multiwaitcond *arg,
-    __unusedx pthread_mutex_t *mutex, __unusedx const struct timespec *ts)
-{
-	psc_fatalx("unimplemented stub");
-}
-
-__weak int
-_psc_multiwait_addcond(__unusedx struct psc_multiwait *mw,
-    __unusedx struct psc_multiwaitcond *cond, __unusedx int masked)
-{
-	psc_fatalx("unimplemented stub");
 }
 
 void
