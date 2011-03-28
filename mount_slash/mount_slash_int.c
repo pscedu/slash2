@@ -1803,13 +1803,21 @@ else DEBUG_BMPCE(PLL_MAX, bmpce, "NULL bmpce_waitq");
 		}
 
 		if ((r->biorq_flags & BIORQ_READ) ||
-		    !biorq_is_my_bmpce(r, bmpce))
+		    !biorq_is_my_bmpce(r, bmpce)) {
+			/* If there was an error retry or give up. */
+			if (bmpce->bmpce_flags & BMPCE_EIO) {
+				BMPCE_ULOCK(bmpce);
+				return (EAGAIN);
+			}
+
 			/* Read requests must have had their bmpce's
 			 *   put into DATARDY by now (i.e. all RPCs
 			 *   must have already been completed).
 			 *   Same goes for pages owned by other requests.
 			 */
-			psc_assert(bmpce->bmpce_flags & BMPCE_DATARDY);
+			psc_assert(bmpce->bmpce_flags &
+			    (BMPCE_DATARDY | BMPCE_EIO));
+		}
 
 		BMPCE_ULOCK(bmpce);
 	}
