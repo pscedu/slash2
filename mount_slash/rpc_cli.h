@@ -24,6 +24,9 @@
 
 struct pscrpc_import;
 struct pscrpc_request;
+struct pscrpc_completion;
+
+extern struct pscrpc_completion rpcComp;
 
 /* SLASH RPC channel for client from MDS. */
 #define SRCM_NTHREADS	8
@@ -62,9 +65,19 @@ msl_getmw(void)
 	struct psc_thread *thr;
 
 	thr = pscthr_get();
-	if (thr->pscthr_type == MSTHRT_FS)
+	
+	switch (thr->pscthr_type) {
+	case MSTHRT_FS:
 		return (&msfsthr(thr)->mft_mw);
-	return (&msbmflthr(thr)->mbft_mw);
+	case MSTHRT_BMAPFLSHRLS:
+		return (&msbmflrlsthr(thr)->mbfrlst_mw);
+	case MSTHRT_BMAPFLSH:
+		return (&msbmflthr(thr)->mbft_mw);
+	case MSTHRT_BMAPREADAHEAD:
+		return (&msbmfrathr(thr)->mbfra_mw);
+	}
+	abort();
+	return (NULL);
 }
 
 #endif /* _SLC_RPC_H_ */
