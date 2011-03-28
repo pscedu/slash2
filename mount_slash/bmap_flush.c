@@ -44,12 +44,13 @@ struct timespec			 bmapFlushDefMaxAge = { 0,   1000000L };	/* one millisecond */
 struct timespec			 bmapFlushWaitTime  = { 0, 100000000L };	/* 100 milliseconds */
 
 struct psc_listcache		 bmapFlushQ;
+struct psc_listcache		 bmapReadAheadQ;
 struct psc_listcache		 bmapTimeoutQ;
+struct pscrpc_completion         rpcComp;
 
 __static struct pscrpc_nbreqset	*pndgReqs;
 __static struct psc_dynarray	 pndgReqSets = DYNARRAY_INIT;
 __static psc_spinlock_t		 pndgReqLock = SPINLOCK_INIT;
-__static struct pscrpc_completion rpcComp;
 __static atomic_t		 outstandingRpcCnt;
 
 #define MAX_OUTSTANDING_RPCS	128
@@ -61,6 +62,7 @@ __static atomic_t		 outstandingRpcCnt;
 struct psc_waitq		bmapflushwaitq = PSC_WAITQ_INIT;
 psc_spinlock_t			bmapflushwaitqlock = SPINLOCK_INIT;
 
+extern struct pscrpc_nbreqset   *ra_nbreqset;
 __static void
 bmap_flush_reap_rpcs(void)
 {
@@ -1096,8 +1098,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				    "race detect, skip");
 				BMAP_ULOCK(b);
 				continue;
-			} else
-				b->bcm_flags &= ~BMAP_TIMEOQ;
+			}
 
 			if (bmpc_queued_ios(&bci->bci_bmpc)) {
 				DEBUG_BMAP(PLL_NOTICE, b,
@@ -1199,15 +1200,21 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 		psc_dynarray_reset(&rels);
 
-		DYNARRAY_FOREACH_REVERSE(b, i, &skips) {
-			BMAP_LOCK(b);
-			if (!(b->bcm_flags & (BMAP_CLI_FLUSHPROC | BMAP_TIMEOQ))) {
-				psc_assert(!(b->bcm_flags & BMAP_DIRTY));
-				b->bcm_flags |= BMAP_TIMEOQ;
-				lc_addstack(&bmapTimeoutQ, b);
-			}
-			BMAP_ULOCK(b);
-		}
+                DYNARRAY_FOREACH_REVERSE(b, i, &skips) {
+                        BMAP_LOCK(b);
+			if (!(b->bcm_flags & BMAP_CLI_FLUSHPROC)) {
+                                psc_assert(!(b->bcm_flags & BMAP_DIRTY));
+                                psc_assert(b->bcm_flags & BMAP_TIMEOQ);
+				if (psclist_conjoint(&b->bcm_lentry,
+						     &bmapTimeoutQ.plc_explist.pexl_pll.pll_listhd))
+                                        psc_assert(b->bcm_lentry.plh_owner ==
+						   (void *)&bmapTimeoutQ.plc_explist);
+                                else
+                                        lc_addstack(&bmapTimeoutQ, b);
+                        }
+                        BMAP_ULOCK(b);
+                }
+
 		psc_dynarray_reset(&skips);
 
 		if (!pscthr_run())
@@ -1245,6 +1252,38 @@ msbmapflushthrrpc_main(__unusedx struct psc_thread *thr)
 	while (pscthr_run()) {
 		pscrpc_completion_wait(&rpcComp);
 		bmap_flush_reap_rpcs();
+		/* At the moment, RA requests share the same
+		 *    completion as bmap reaps.  Therefore, 
+		 *    this thread will deal with ra_nbreqset.
+		 */
+		pscrpc_nbreqset_reap(ra_nbreqset);
+	}
+}
+
+void
+msbmaprathr_main(__unusedx struct psc_thread *thr)
+{
+	int rc;
+	struct bmap_pagecache_entry *bmpce;
+
+	while (pscthr_run()) {
+		bmpce = lc_getwait(&bmapReadAheadQ);
+		BMPCE_LOCK(bmpce);
+		msl_bmpce_getbuf(bmpce);
+		psc_assert(bmpce->bmpce_base);
+		psc_assert(bmpce->bmpce_flags & BMPCE_INIT);
+		bmpce->bmpce_flags &= ~BMPCE_INIT;
+		bmpce->bmpce_flags |= BMPCE_READPNDG;
+		BMPCE_ULOCK(bmpce);
+
+		rc = msl_reada_rpc_launch(bmpce);
+		if (rc) {
+			//XXX clear EIO bmpce from cache
+			//   need a routine which wakes up waiters blocked
+			//   on page fault completion and tell them 
+			//   to retry. until then..
+			abort();
+		}
 	}
 }
 
@@ -1267,6 +1306,9 @@ msbmapflushthr_spawn(void)
 	lc_reginit(&bmapTimeoutQ, struct bmapc_memb,
 	    bcm_lentry, "bmaptimeout");
 
+	lc_reginit(&bmapReadAheadQ, struct bmap_pagecache_entry,
+	    bmpce_ralentry, "bmapreadahead");	
+
 	for (i = 0; i < NUM_BMAP_FLUSH_THREADS; i++) {
 		thr = pscthr_init(MSTHRT_BMAPFLSH, 0,
 		    msbmapflushthr_main, NULL,
@@ -1280,6 +1322,15 @@ msbmapflushthr_spawn(void)
 	pscthr_init(MSTHRT_BMAPFLSHRPC, 0, msbmapflushthrrpc_main,
 	    NULL, 0, "msbflushrpcthr");
 
-	pscthr_init(MSTHRT_BMAPFLSHRLS, 0, msbmaprlsthr_main,
-	    NULL, 0, "msbrlsthr");
+	thr = pscthr_init(MSTHRT_BMAPFLSHRLS, 0, msbmaprlsthr_main,
+	    NULL, sizeof(struct msbmflrls_thread), "msbrlsthr");
+	psc_multiwait_init(&msbmflrlsthr(thr)->mbfrlst_mw, "%s",
+		   thr->pscthr_name);
+	pscthr_setready(thr);
+	
+	thr = pscthr_init(MSTHRT_BMAPREADAHEAD, 0, msbmaprathr_main,
+	    NULL, sizeof(struct msbmflra_thread), "msbrathr");
+	psc_multiwait_init(&msbmfrathr(thr)->mbfra_mw, "%s",
+		   thr->pscthr_name);
+	pscthr_setready(thr);
 }
