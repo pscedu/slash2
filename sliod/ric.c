@@ -213,6 +213,16 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	    SRIC_BULK_PORTAL, iovs, nslvrs);
 	if (mp->rc) {
 		rc = mp->rc;
+		for (i=0; i < nslvrs; i++) {
+			DEBUG_SLVR(PLL_WARN, slvr_ref[i], 
+			   "unwind ref due to bulk error (rw=%d)", rw);
+			SLVR_LOCK(slvr_ref[i]);
+			if (rw == SL_READ)
+				slvr_ref[i]->slvr_pndgreads--;
+			else
+				slvr_ref[i]->slvr_pndgwrts--;
+			SLVR_ULOCK(slvr_ref[i]);
+		}
 		goto out;
 	}
 
