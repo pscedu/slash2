@@ -1451,7 +1451,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry *bmpce)
 	mq->offset = bmpce->bmpce_off;
 	memcpy(&mq->sbd, bmap_2_sbd(b), sizeof(mq->sbd));
 
-	DEBUG_BMPCE(PLL_WARN, bmpce, "launching read ahead req");
+	DEBUG_BMPCE(PLL_INFO, bmpce, "launching read ahead req");
 
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 
