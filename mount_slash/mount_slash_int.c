@@ -1009,6 +1009,7 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 
 	mw = msl_getmw();
 	psc_multiwait_reset(mw);
+	psc_multiwait_entercritsect(mw);
 
 	/* first, try preferred IOS */
 	rnd = psc_random32u(fci->fci_nrepls);
