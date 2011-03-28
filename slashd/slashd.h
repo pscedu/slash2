@@ -51,6 +51,7 @@ enum {
 	SLMTHRT_JRNL,		/* journal distill thread */
 	SLMTHRT_ZFS_KSTAT,	/* ZFS stats */
 	SLMTHRT_LNETAC,		/* lustre net accept thr */
+	SLMTHRT_NBRQ,		/* non-blocking RPC reply handler */
 	SLMTHRT_RCM,		/* CLI <- MDS msg issuer */
 	SLMTHRT_RMC,		/* MDS <- CLI msg svc handler */
 	SLMTHRT_RMI,		/* MDS <- I/O msg svc handler */

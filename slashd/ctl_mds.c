@@ -303,6 +303,7 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* JRNL		*/ NULL,
 /* ZFS_KSTAT	*/ NULL,
 /* LNETAC	*/ NULL,
+/* NBRQ		*/ NULL,
 /* RCM		*/ NULL,
 /* RMC		*/ NULL,
 /* RMI		*/ NULL,

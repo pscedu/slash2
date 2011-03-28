@@ -278,6 +278,7 @@ main(int argc, char *argv[])
 	slm_workers_spawn();
 	slmcohthr_spawn();
 	slmbmaptimeothr_spawn();
+	sl_nbrqthr_spawn(SLMTHRT_NBRQ, "slmnbrqthr");
 	slm_rpc_initsvc();
 
 	/* start an update scheduler thread for each site */

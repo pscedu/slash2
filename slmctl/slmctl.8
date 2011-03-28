@@ -15,7 +15,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES rpc %
-.Dd March 17, 2011
+.Dd March 27, 2011
 .Dt SLMCTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -475,6 +475,7 @@ may also be specified to display a list of recognized values.
 .\"		"slmctlthr"			=> ".Nm\nconnection processor",
 .\"		"slmjcursorthr"			=> "Journal cursor updater thread",
 .\"		"slmjthr"			=> "Master journal thread",
+.\"		"slmnbrqthr"			=> "Non-blocking\n.Tn RPC\nreply handler",
 .\"		"slmlnacthr- Ns Ar %s"		=> ".Tn LNET\nnetwork acceptor thread",
 .\"		"slmrcmthr"			=> "Client\n.Tn RPC\nrequest initiator thread",
 .\"		"slmrmcthr Ns Ar %02d"		=> "Client\n.Tn RPC\nrequest service thread",
@@ -508,6 +509,10 @@ Master journal thread
 .It Cm slmlnacthr- Ns Ar %s
 .Tn LNET
 network acceptor thread
+.It Cm slmnbrqthr
+Non-blocking
+.Tn RPC
+reply handler
 .It Cm slmrcmthr
 Client
 .Tn RPC

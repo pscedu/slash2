@@ -48,7 +48,7 @@ enum {
 	MSTHRT_FS,			/* file system syscall handler workers */
 	MSTHRT_FSMGR,			/* pscfs manager */
 	MSTHRT_LNETAC,			/* lustre net accept thr */
-	MSTHRT_NBRQ,			/* non-blocking RPC handler */
+	MSTHRT_NBRQ,			/* non-blocking RPC reply handler */
 	MSTHRT_RCM,			/* service RPC reqs for client from MDS */
 	MSTHRT_TIOS,			/* timer iostat updater */
 	MSTHRT_USKLNDPL			/* userland socket lustre net dev poll thr */
