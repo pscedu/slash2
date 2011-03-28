@@ -65,7 +65,7 @@ msl_getmw(void)
 	struct psc_thread *thr;
 
 	thr = pscthr_get();
-	
+
 	switch (thr->pscthr_type) {
 	case MSTHRT_FS:
 		return (&msfsthr(thr)->mft_mw);
@@ -76,8 +76,7 @@ msl_getmw(void)
 	case MSTHRT_BMAPREADAHEAD:
 		return (&msbmfrathr(thr)->mbfra_mw);
 	}
-	abort();
-	return (NULL);
+	psc_fatalx("unknown thread type");
 }
 
 #endif /* _SLC_RPC_H_ */
