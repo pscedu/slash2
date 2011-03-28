@@ -38,6 +38,7 @@ struct fcmh_mds_info {
 };
 
 #define FCMH_IN_PTRUNC		(_FCMH_FLGSHFT << 0)
+#define FCMH_SIZE_UPDATE        (_FCMH_FLGSHFT << 1)
 
 #define fcmh_2_fmi(f)		((struct fcmh_mds_info *)fcmh_get_pri(f))
 #define fcmh_2_inoh(f)		(&fcmh_2_fmi(f)->fmi_inodeh)

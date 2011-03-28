@@ -113,27 +113,21 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	struct sl_mds_crc_log crclog;
 	uint32_t utimgen, i;
 	size_t nb;
-	int rc, extend = 0;
+	int rc;
 
 	psc_assert(bmap->bcm_flags & BMAP_MDS_CRC_UP);
 
 	FCMH_LOCK(bmap->bcm_fcmh);
-	if (fcmh_2_fsz(bmap->bcm_fcmh) < crcup->fsize) {
-		DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh,
-		    "new fsize %"PRId64, crcup->fsize);
-		extend = mds_fcmh_increase_fsz(bmap->bcm_fcmh, crcup->fsize);
-	}
+	mds_fcmh_increase_fsz(bmap->bcm_fcmh, crcup->fsize);
 	utimgen = bmap->bcm_fcmh->fcmh_sstb.sst_utimgen;
 	FCMH_ULOCK(bmap->bcm_fcmh);
-
-	rc = mdsio_fcmh_setattr(bmap->bcm_fcmh, PSCFS_SETATTRF_DATASIZE);
 
 	if (utimgen < crcup->utimgen)
 		DEBUG_FCMH(PLL_ERROR, bmap->bcm_fcmh,
 		   "utimgen %d < crcup->utimgen %d",
 		   utimgen, crcup->utimgen);
 
-	crcup->extend = extend;
+	crcup->extend = -1; //XXX noop
 	crclog.scl_bmap = bmap;
 	crclog.scl_crcup = crcup;
 

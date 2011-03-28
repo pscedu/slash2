@@ -24,6 +24,7 @@
 #include <stdio.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/fs.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
@@ -39,21 +40,35 @@
 int
 mds_fcmh_increase_fsz(struct fidc_membh *fcmh, uint64_t siz)
 {
-	int locked, increase = 0;
+	int locked, rc = 0;
 	sl_bmapno_t nb;
 
 	locked = FCMH_RLOCK(fcmh);
-	if (siz > fcmh_2_fsz(fcmh)) {
+	/* Block until other size updates have completed.
+	 */
+	fcmh_wait_locked(fcmh, fcmh->fcmh_flags & FCMH_SIZE_UPDATE);
+	
+	if (siz > (uint64_t)fcmh_2_fsz(fcmh)) {
 		nb = siz / SLASH_BMAP_SIZE -
 		    fcmh_2_fsz(fcmh) / SLASH_BMAP_SIZE;
 		if (nb > fcmh->fcmh_sstb.sst_nxbmaps)
 			nb = fcmh->fcmh_sstb.sst_nxbmaps;
 		fcmh->fcmh_sstb.sst_nxbmaps -= nb;
 		fcmh_2_fsz(fcmh) = siz;
-		increase = 1;
+		fcmh->fcmh_flags |= FCMH_SIZE_UPDATE;
+		
+		DEBUG_FCMH(PLL_INFO, fcmh, "new fsize %"PRId64, siz);
+		FCMH_ULOCK(fcmh);
+		
+		rc = mdsio_fcmh_setattr(fcmh, PSCFS_SETATTRF_DATASIZE);
+		
+		FCMH_LOCK(fcmh);
+		psc_assert(fcmh->fcmh_flags & FCMH_SIZE_UPDATE);
+		fcmh->fcmh_flags &= ~FCMH_SIZE_UPDATE;
+		fcmh_wake_locked(fcmh);
 	}
 	FCMH_URLOCK(fcmh, locked);
-	return (increase);
+	return (rc);
 }
 
 int
@@ -87,7 +102,7 @@ slm_fcmh_ctor(struct fidc_membh *fcmh)
 		if (rc == 0) {
 			rc = mds_inode_read(&fmi->fmi_inodeh);
 			if (rc)
-				psc_fatalx("could not load inode; rc=%d", rc);
+				psc_warn("could not load inode; rc=%d", rc);
 		} else {
 			fcmh->fcmh_flags |= FCMH_CTOR_FAILED;
 			fmi->fmi_ctor_rc = rc;
