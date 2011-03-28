@@ -49,7 +49,6 @@ enum {
 	SLMTHRT_JNAMESPACE,	/* namespace propagating thread */
 	SLMTHRT_JRECLAIM,	/* garbage reclamation thread */
 	SLMTHRT_JRNL,		/* journal distill thread */
-	SLMTHRT_ZFS_KSTAT,	/* ZFS stats */
 	SLMTHRT_LNETAC,		/* lustre net accept thr */
 	SLMTHRT_NBRQ,		/* non-blocking RPC reply handler */
 	SLMTHRT_RCM,		/* CLI <- MDS msg issuer */
@@ -59,7 +58,8 @@ enum {
 	SLMTHRT_TIOS,		/* I/O stats updater */
 	SLMTHRT_UPSCHED,	/* update scheduler for site resources */
 	SLMTHRT_USKLNDPL,	/* userland socket lustre net dev poll thr */
-	SLMTHRT_WORKER		/* miscellaneous work */
+	SLMTHRT_WORKER,		/* miscellaneous work */
+	SLMTHRT_ZFS_KSTAT	/* ZFS stats */
 };
 
 struct slmrmc_thread {

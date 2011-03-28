@@ -143,11 +143,11 @@ psc_ctl_prthr_t psc_ctl_prthrs[] = {
 /* RMC		*/ slmrmcthr_pr,
 /* RMI		*/ NULL,
 /* RMM		*/ slmrmmthr_pr,
-/* ZFS_KSTAT	*/ NULL,
 /* TIOS		*/ NULL,
 /* UPSCHED	*/ NULL,
 /* USKLNDPL	*/ NULL,
-/* WORKER	*/ NULL
+/* WORKER	*/ NULL,
+/* ZFS_KSTAT	*/ NULL
 };
 
 struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {
