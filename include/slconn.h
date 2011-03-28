@@ -245,8 +245,13 @@ int	 slrpc_allocgenrep(struct pscrpc_request *, void *, int, void *,
 int	 slrpc_allocrep(struct pscrpc_request *, void *, int, void *,
 		int, int);
 
+int	sl_nbrqthr_main(void *);
+void	sl_nbrqthr_spawn(int, const char *);
+
 extern struct psc_dynarray	lnet_prids;
 extern struct psc_lockedlist	client_csvcs;
 extern struct sl_expcli_ops	sl_expcli_ops;
+
+extern struct pscrpc_nbreqset	*sl_nbrqset;
 
 #endif /* _SLCONN_H_ */
