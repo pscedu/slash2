@@ -1204,11 +1204,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			if (!(b->bcm_flags & BMAP_CLI_FLUSHPROC)) {
 				psc_assert(!(b->bcm_flags & BMAP_DIRTY));
 				psc_assert(b->bcm_flags & BMAP_TIMEOQ);
-				if (psclist_conjoint(&b->bcm_lentry,
-						     &bmapTimeoutQ.plc_explist.pexl_pll.pll_listhd))
-					psc_assert(b->bcm_lentry.plh_owner ==
-						   (void *)&bmapTimeoutQ.plc_explist);
-				else
+				if (!lc_conjoint(&bmapTimeoutQ, b))
 					lc_addstack(&bmapTimeoutQ, b);
 			}
 			BMAP_ULOCK(b);
