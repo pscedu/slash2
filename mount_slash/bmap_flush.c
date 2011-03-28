@@ -46,7 +46,7 @@ struct timespec			 bmapFlushWaitTime  = { 0, 100000000L };	/* 100 milliseconds *
 struct psc_listcache		 bmapFlushQ;
 struct psc_listcache		 bmapReadAheadQ;
 struct psc_listcache		 bmapTimeoutQ;
-struct pscrpc_completion         rpcComp;
+struct pscrpc_completion	 rpcComp;
 
 __static struct pscrpc_nbreqset	*pndgReqs;
 __static struct psc_dynarray	 pndgReqSets = DYNARRAY_INIT;
@@ -62,7 +62,6 @@ __static atomic_t		 outstandingRpcCnt;
 struct psc_waitq		bmapflushwaitq = PSC_WAITQ_INIT;
 psc_spinlock_t			bmapflushwaitqlock = SPINLOCK_INIT;
 
-extern struct pscrpc_nbreqset   *ra_nbreqset;
 __static void
 bmap_flush_reap_rpcs(void)
 {
@@ -1200,20 +1199,20 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 		psc_dynarray_reset(&rels);
 
-                DYNARRAY_FOREACH_REVERSE(b, i, &skips) {
-                        BMAP_LOCK(b);
+		DYNARRAY_FOREACH_REVERSE(b, i, &skips) {
+			BMAP_LOCK(b);
 			if (!(b->bcm_flags & BMAP_CLI_FLUSHPROC)) {
-                                psc_assert(!(b->bcm_flags & BMAP_DIRTY));
-                                psc_assert(b->bcm_flags & BMAP_TIMEOQ);
+				psc_assert(!(b->bcm_flags & BMAP_DIRTY));
+				psc_assert(b->bcm_flags & BMAP_TIMEOQ);
 				if (psclist_conjoint(&b->bcm_lentry,
 						     &bmapTimeoutQ.plc_explist.pexl_pll.pll_listhd))
-                                        psc_assert(b->bcm_lentry.plh_owner ==
+					psc_assert(b->bcm_lentry.plh_owner ==
 						   (void *)&bmapTimeoutQ.plc_explist);
-                                else
-                                        lc_addstack(&bmapTimeoutQ, b);
-                        }
-                        BMAP_ULOCK(b);
-                }
+				else
+					lc_addstack(&bmapTimeoutQ, b);
+			}
+			BMAP_ULOCK(b);
+		}
 
 		psc_dynarray_reset(&skips);
 
@@ -1253,7 +1252,7 @@ msbmapflushthrrpc_main(__unusedx struct psc_thread *thr)
 		pscrpc_completion_wait(&rpcComp);
 		bmap_flush_reap_rpcs();
 		/* At the moment, RA requests share the same
-		 *    completion as bmap reaps.  Therefore, 
+		 *    completion as bmap reaps.  Therefore,
 		 *    this thread will deal with ra_nbreqset.
 		 */
 		pscrpc_nbreqset_reap(ra_nbreqset);
@@ -1280,7 +1279,7 @@ msbmaprathr_main(__unusedx struct psc_thread *thr)
 		if (rc) {
 			//XXX clear EIO bmpce from cache
 			//   need a routine which wakes up waiters blocked
-			//   on page fault completion and tell them 
+			//   on page fault completion and tell them
 			//   to retry. until then..
 			abort();
 		}
@@ -1307,7 +1306,7 @@ msbmapflushthr_spawn(void)
 	    bcm_lentry, "bmaptimeout");
 
 	lc_reginit(&bmapReadAheadQ, struct bmap_pagecache_entry,
-	    bmpce_ralentry, "bmapreadahead");	
+	    bmpce_ralentry, "bmapreadahead");
 
 	for (i = 0; i < NUM_BMAP_FLUSH_THREADS; i++) {
 		thr = pscthr_init(MSTHRT_BMAPFLSH, 0,
@@ -1327,7 +1326,7 @@ msbmapflushthr_spawn(void)
 	psc_multiwait_init(&msbmflrlsthr(thr)->mbfrlst_mw, "%s",
 		   thr->pscthr_name);
 	pscthr_setready(thr);
-	
+
 	thr = pscthr_init(MSTHRT_BMAPREADAHEAD, 0, msbmaprathr_main,
 	    NULL, sizeof(struct msbmflra_thread), "msbrathr");
 	psc_multiwait_init(&msbmfrathr(thr)->mbfra_mw, "%s",

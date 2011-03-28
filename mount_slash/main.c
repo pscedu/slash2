@@ -93,7 +93,6 @@ struct slash_creds		 rootcreds = { 0, 0 };
 
 /* number of attribute prefetch in readdir() */
 int				 nstbpref = DEF_READDIR_NENTS;
-extern struct pscrpc_nbreqset   *ra_nbreqset;
 
 static int msl_lookup_fidcache(const struct slash_creds *, pscfs_inum_t,
     const char *, struct slash_fidgen *, struct srt_stat *);
