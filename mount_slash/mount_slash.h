@@ -68,37 +68,37 @@ struct msbmfl_thread {
 };
 
 struct msbmflrls_thread {
-       int                              mbfrlst_failcnt;
-       struct psc_multiwait             mbfrlst_mw;
+	int				 mbfrlst_failcnt;
+	struct psc_multiwait		 mbfrlst_mw;
 };
 
 struct msbmflra_thread {
-	int                             mbfra_failcnt;
-	struct psc_multiwait            mbfra_mw;
+	int				 mbfra_failcnt;
+	struct psc_multiwait		 mbfra_mw;
 };
 
 PSCTHR_MKCAST(msfsthr, msfs_thread, MSTHRT_FS);
 PSCTHR_MKCAST(msbmflthr, msbmfl_thread, MSTHRT_BMAPFLSH);
 PSCTHR_MKCAST(msbmflrlsthr, msbmflrls_thread, MSTHRT_BMAPFLSHRLS);
 PSCTHR_MKCAST(msbmfrathr, msbmflra_thread, MSTHRT_BMAPREADAHEAD);
-	
-#define MS_READAHEAD_MINSEQ 2
-#define MS_READAHEAD_MAXPGS 256
-#define MS_READAHEAD_DIRUNK -1
 
-#define MSL_RA_RESET(ra) {					       \
-		(ra)->mra_nseq  = -(MS_READAHEAD_MINSEQ);	       \
-		(ra)->mra_bkwd = MS_READAHEAD_DIRUNK;		       \
-		(ra)->mra_raoff = 0;				       \
-	}
+#define MS_READAHEAD_MINSEQ		2
+#define MS_READAHEAD_MAXPGS		256
+#define MS_READAHEAD_DIRUNK		(-1)
+
+#define MSL_RA_RESET(ra) do {						\
+		(ra)->mra_nseq  = -(MS_READAHEAD_MINSEQ);		\
+		(ra)->mra_bkwd = MS_READAHEAD_DIRUNK;			\
+		(ra)->mra_raoff = 0;					\
+	} while (0)
 
 struct msl_ra {
-	off_t                            mra_loff;  /* last offset */
-	off_t                            mra_raoff; /* current read ahead offset */
-	size_t                           mra_lsz;   /* last size */
-	int                              mra_nseq;  /* num sequential io's */
-	int                              mra_nrios; /* num read io's */
-	int                              mra_bkwd;  /* reverse access io */	
+	off_t				 mra_loff;	/* last offset */
+	off_t				 mra_raoff;	/* current read ahead offset */
+	size_t				 mra_lsz;	/* last size */
+	int				 mra_nseq;	/* num sequential io's */
+	int				 mra_nrios;	/* num read io's */
+	int				 mra_bkwd;	/* reverse access io */
 };
 
 struct msl_fhent {			 /* XXX rename */
@@ -107,7 +107,7 @@ struct msl_fhent {			 /* XXX rename */
 	psc_spinlock_t			 mfh_lock;
 	struct fidc_membh		*mfh_fcmh;
 	struct psc_lockedlist		 mfh_biorqs;	/* track biorqs (flush) */
-	struct msl_ra                    mfh_ra;
+	struct msl_ra			 mfh_ra;
 };
 
 struct resprof_cli_info {
