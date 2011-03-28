@@ -267,11 +267,11 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw)
 			psc_vbitmap_unset(s->slvr_slab->slb_inuse, sblk + i);
 		}
 		errno = 0;
+		SLVR_ULOCK(s);
 		rc = pwrite(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
 			    slvr_2_fileoff(s, sblk));
 		if (rc == -1)
 			save_errno = errno;
-		SLVR_ULOCK(s);
 	}
 
 	if (rc < 0)
@@ -600,6 +600,12 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw)
 			psc_vbitmap_set(s->slvr_slab->slb_inuse, unaligned[1]);
 		//psc_vbitmap_printbin1(s->slvr_slab->slb_inuse);
  out:
+		if (s->slvr_flags & SLVR_FAULTING) {
+			s->slvr_flags |= SLVR_DATARDY;
+			s->slvr_flags &= ~SLVR_FAULTING;
+			DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
+			SLVR_WAKEUP(s);
+		}
 		SLVR_ULOCK(s);
 	}
 
@@ -689,38 +695,18 @@ slvr_wio_done(struct slvr_ref *s, uint32_t off, uint32_t len)
 	if ((off + len) > s->slvr_crc_eoff)
 		s->slvr_crc_eoff =  off + len;
 
+	psc_assert(s->slvr_crc_eoff <= SLASH_BMAP_CRCSIZE);
+
 	if (off != s->slvr_crc_loff)
 		s->slvr_crc_loff = 0;
 
-	psc_assert(s->slvr_crc_eoff <= SLASH_BMAP_CRCSIZE);
+	if (!(s->slvr_flags & SLVR_DATARDY))
+                DEBUG_SLVR(PLL_FATAL, s, "invalid state");
 
-	if (s->slvr_flags & SLVR_FAULTING) {
-		/* This sliver was being paged-in over the network.
-		 */
-		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
-		psc_assert(!(s->slvr_flags & SLVR_REPLDST));
+        DEBUG_SLVR(PLL_INFO, s, "%s", "datardy");
 
-		s->slvr_flags |= SLVR_DATARDY;
-		s->slvr_flags &= ~SLVR_FAULTING;
-
-		DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
-		/* Other threads may be waiting for DATARDY to either
-		 *   read or write to this sliver.  At this point it's
-		 *   safe to wake them up.
-		 * Note: when iterating over the lru list for
-		 *   reclaiming, slvrs with pending writes must be
-		 *   skipped.
-		 */
-		SLVR_WAKEUP(s);
-
-	} else if (s->slvr_flags & SLVR_DATARDY) {
-
-		DEBUG_SLVR(PLL_INFO, s, "%s", "datardy");
-
-		if ((s->slvr_flags & SLVR_LRU) && s->slvr_pndgwrts > 1)
-			slvr_lru_requeue(s, 1);
-	} else
-		DEBUG_SLVR(PLL_FATAL, s, "invalid state");
+        if ((s->slvr_flags & SLVR_LRU) && s->slvr_pndgwrts > 1)
+                slvr_lru_requeue(s, 1);
 
 	/* If there are no more pending writes, schedule a CRC op.
 	 *   Increment slvr_compwrts to prevent a crc op from being skipped
