@@ -179,6 +179,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct fidc_membh);
 	PRTYPE(struct mdsio_ops);
 	PRTYPE(struct msbmfl_thread);
+	PRTYPE(struct msbmflra_thread);
+	PRTYPE(struct msbmflrls_thread);
 	PRTYPE(struct msctl_replstq);
 	PRTYPE(struct msctlmsg_bmapreplpol);
 	PRTYPE(struct msctlmsg_fncmd);
@@ -188,6 +190,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct msctlmsg_replst_slave);
 	PRTYPE(struct msfs_thread);
 	PRTYPE(struct msl_fhent);
+	PRTYPE(struct msl_ra);
 	PRTYPE(struct msrcm_thread);
 	PRTYPE(struct resm_cli_info);
 	PRTYPE(struct resm_iod_info);
@@ -371,6 +374,8 @@ main(int argc, char *argv[])
 	PRVAL(MSCMT_LCACHE_STATUS);
 	PRVAL(MSCMT_SET_BMAPREPLPOL);
 	PRVAL(MSCMT_SET_NEWREPLPOL);
+	PRVAL(MS_READAHEAD_MAXPGS);
+	PRVAL(MS_READAHEAD_MINSEQ);
 	PRVAL(NBREPLST);
 	PRVAL(NBRP);
 	PRVAL(NSLVRCRC_THRS);
@@ -532,6 +537,7 @@ main(int argc, char *argv[])
 	PRVAL(MSTHRT_BMAPFLSH);
 	PRVAL(MSTHRT_BMAPFLSHRLS);
 	PRVAL(MSTHRT_BMAPFLSHRPC);
+	PRVAL(MSTHRT_BMAPREADAHEAD);
 	PRVAL(MSTHRT_CONN);
 	PRVAL(MSTHRT_CTL);
 	PRVAL(MSTHRT_CTLAC);
