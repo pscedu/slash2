@@ -38,6 +38,7 @@ enum {
 	MSTHRT_BMAPFLSH,		/* bmap write data flush thread */
 	MSTHRT_BMAPFLSHRLS,		/* bmap lease releaser */
 	MSTHRT_BMAPFLSHRPC,		/* async buffer thread for RPC reaping */
+	MSTHRT_BMAPREADAHEAD,		/* async thread for read ahead */
 	MSTHRT_CONN,			/* connection monitor */
 	MSTHRT_CTL,			/* control processor */
 	MSTHRT_CTLAC,			/* control acceptor */
@@ -66,8 +67,39 @@ struct msbmfl_thread {
 	struct psc_multiwait		 mbft_mw;
 };
 
-PSCTHR_MKCAST(msfsthr, msfs_thread, MSTHRT_FS)
-PSCTHR_MKCAST(msbmflthr, msbmfl_thread, MSTHRT_BMAPFLSH)
+struct msbmflrls_thread {
+       int                              mbfrlst_failcnt;
+       struct psc_multiwait             mbfrlst_mw;
+};
+
+struct msbmflra_thread {
+	int                             mbfra_failcnt;
+	struct psc_multiwait            mbfra_mw;
+};
+
+PSCTHR_MKCAST(msfsthr, msfs_thread, MSTHRT_FS);
+PSCTHR_MKCAST(msbmflthr, msbmfl_thread, MSTHRT_BMAPFLSH);
+PSCTHR_MKCAST(msbmflrlsthr, msbmflrls_thread, MSTHRT_BMAPFLSHRLS);
+PSCTHR_MKCAST(msbmfrathr, msbmflra_thread, MSTHRT_BMAPREADAHEAD);
+	
+#define MS_READAHEAD_MINSEQ 2
+#define MS_READAHEAD_MAXPGS 256
+#define MS_READAHEAD_DIRUNK -1
+
+#define MSL_RA_RESET(ra) {					       \
+		(ra)->mra_nseq  = -(MS_READAHEAD_MINSEQ);	       \
+		(ra)->mra_bkwd = MS_READAHEAD_DIRUNK;		       \
+		(ra)->mra_raoff = 0;				       \
+	}
+
+struct msl_ra {
+	off_t                            mra_loff;  /* last offset */
+	off_t                            mra_raoff; /* current read ahead offset */
+	size_t                           mra_lsz;   /* last size */
+	int                              mra_nseq;  /* num sequential io's */
+	int                              mra_nrios; /* num read io's */
+	int                              mra_bkwd;  /* reverse access io */	
+};
 
 struct msl_fhent {			 /* XXX rename */
 	int				 mfh_oflags;	/* open(2) flags */
@@ -75,6 +107,7 @@ struct msl_fhent {			 /* XXX rename */
 	psc_spinlock_t			 mfh_lock;
 	struct fidc_membh		*mfh_fcmh;
 	struct psc_lockedlist		 mfh_biorqs;	/* track biorqs (flush) */
+	struct msl_ra                    mfh_ra;
 };
 
 struct resprof_cli_info {
@@ -95,6 +128,10 @@ struct resm_cli_info {
 #define msl_read(fh, buf, size, off)	msl_io((fh), (buf), (size), (off), SL_READ)
 #define msl_write(fh, buf, size, off)	msl_io((fh), (char *)(buf), (size), (off), SL_WRITE)
 
+
+void     msl_bmpce_getbuf(struct bmap_pagecache_entry *);
+int      msl_reada_rpc_launch(struct bmap_pagecache_entry *);
+
 struct slashrpc_cservice *
 	 msl_bmap_to_csvc(struct bmapc_memb *, int);
 void	 msl_bmap_reap_init(struct bmapc_memb *, const struct srt_bmapdesc *);
@@ -104,8 +141,9 @@ int	 msl_io_rpc_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int	 msl_io_rpcset_cb(struct pscrpc_request_set *, void *, int);
 int	 msl_stat(struct fidc_membh *);
 
-struct msl_fhent *
-	 msl_fhent_new(struct fidc_membh *);
+struct msl_fhent * msl_fhent_new(struct fidc_membh *);
+
+int      msl_readahead_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 
 void	 msctlthr_spawn(void);
 void	 mstimerthr_spawn(void);
