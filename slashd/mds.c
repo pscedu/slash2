@@ -197,7 +197,7 @@ slm_bmap_calc_repltraffic(struct bmapc_memb *b)
 }
 
 /**
- * mds_bmap_directio - Called when a new read or write lease is added
+ * mds_bmap_directio_locked - Called when a new read or write lease is added
  *    to the bmap.  Maintains the DIRECTIO status of the bmap based on
  *    the numbers of readers and writers present.
  * @b: the bmap
@@ -206,7 +206,7 @@ slm_bmap_calc_repltraffic(struct bmapc_memb *b)
  * Note: the new bml has yet to be added.
  */
 __static int
-mds_bmap_directio(struct bmapc_memb *b, enum rw rw, lnet_process_id_t *np)
+mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw, lnet_process_id_t *np)
 {
 	struct bmap_mds_info *bmdsi = bmap_2_bmdsi(b);
 	struct bmap_mds_lease *bml;
@@ -305,7 +305,7 @@ mds_bmap_ion_restart(struct bmap_mds_lease *bml)
 		 * the odtable without a live I/O server connection.
 		 */
 		bml->bml_flags |= BML_ASSFAIL;
-		bml_2_bmap(bml)->bcm_flags |= BMAP_MDS_NOION;
+		BMAP_SETATTR(bml_2_bmap(bml), BMAP_MDS_NOION);
 		return (-SLERR_ION_OFFLINE);
 	}
 
@@ -437,18 +437,14 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 
 	bmdsi->bmdsi_assign = mds_odtable_putitem(mdsBmapAssignTable, &bia, sizeof(bia));
 	if (!bmdsi->bmdsi_assign) {
-		BMAP_LOCK(bmap);
-		bmap->bcm_flags |= BMAP_MDS_NOION;
-		BMAP_ULOCK(bmap);
+		BMAP_SETATTR(bmap, BMAP_MDS_NOION);
 		bml->bml_flags |= BML_ASSFAIL;
 
 		DEBUG_BMAP(PLL_ERROR, bmap, "failed odtable_putitem()");
 		return (-SLERR_XACT_FAIL);
 
 	} else {
-		BMAP_LOCK(bmap);
-		bmap->bcm_flags &= ~BMAP_MDS_NOION;
-		BMAP_ULOCK(bmap);
+		BMAP_CLEARATTR(bmap, BMAP_MDS_NOION);
 	}
 	/*
 	 * Signify that a ION has been assigned to this bmap.  This
@@ -527,8 +523,12 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 	struct slmds_jent_repgen *jrpg;
 	struct slmds_jent_bmap_assign *jrba;
 	struct slmds_jent_assign_rep *logentry;
+	int dio;
 
+	BMAP_LOCK(b);
 	psc_assert(b->bcm_flags & BMAP_IONASSIGN);
+	dio = (b->bcm_flags & BMAP_DIO);
+	BMAP_ULOCK(b);
 
 	rc = mds_odtable_getitem(mdsBmapAssignTable, bmdsi->bmdsi_assign,
 		&bia, sizeof(struct bmap_ion_assign));
@@ -539,7 +539,7 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 
 	if (bml->bml_cli_nidpid.nid != bia.bia_lastcli.nid ||
 	    bml->bml_cli_nidpid.pid != bia.bia_lastcli.pid)
-	    psc_assert(b->bcm_flags & BMAP_DIO);
+	    psc_assert(dio);
 
 	psc_assert(bia.bia_seq == bmdsi->bmdsi_seq);
 	bia.bia_start = time(NULL);
@@ -552,6 +552,7 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 
 	bmdsi->bmdsi_assign = mds_odtable_replaceitem(mdsBmapAssignTable,
 	    bmdsi->bmdsi_assign, &bia, sizeof(bia));
+
 	psc_assert(bmdsi->bmdsi_assign);
 
 	bml->bml_ion_nid = bia.bia_ion_nid;
@@ -599,7 +600,6 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 
 	pjournal_add_entry(mdsJournal, 0, MDS_LOG_BMAP_ASSIGN, 0, logentry,
 	    sizeof(struct slmds_jent_assign_rep));
-
 	pjournal_put_buf(mdsJournal, logentry);
 	mds_unreserve_slot();
 
@@ -679,7 +679,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 	if (bml->bml_flags & BML_WRITE)
 		return (EALREADY);
 
-	if ((rc = mds_bmap_directio(b, SL_WRITE, &bml->bml_cli_nidpid)))
+	if ((rc = mds_bmap_directio_locked(b, SL_WRITE, &bml->bml_cli_nidpid)))
 		return (rc);
 
 	mds_bmap_dupls_find(bmdsi, &bml->bml_cli_nidpid,
@@ -701,7 +701,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 		}
 	}
 
-	b->bcm_flags |= BMAP_IONASSIGN;
+	BMAP_SETATTR(b, BMAP_IONASSIGN);
 	bml->bml_flags &= ~BML_READ;
 	bml->bml_flags |= BML_UPGRADE | BML_WRITE;
 
@@ -734,7 +734,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 			 */
 			bmdsi->bmdsi_readers++;
 	}
-	b->bcm_flags &= ~BMAP_IONASSIGN;
+	BMAP_CLEARATTR(b, BMAP_IONASSIGN);
 	bcm_wake_locked(b);
 	return (rc);
 }
@@ -802,7 +802,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 	bcm_wait_locked(b, (b->bcm_flags & BMAP_IONASSIGN));
 
 	if (!(bml->bml_flags & BML_RECOVER) &&
-	    (rc = mds_bmap_directio(b, rw, &bml->bml_cli_nidpid)))
+	    (rc = mds_bmap_directio_locked(b, rw, &bml->bml_cli_nidpid)))
 		/* 'rc != 0' means that we're waiting on an async cb
 		 *    completion.
 		 */
