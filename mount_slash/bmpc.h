@@ -267,6 +267,9 @@ struct bmpc_ioreq {
 #define BIORQ_APPEND			(1 << 11)
 #define BIORQ_READAHEAD			(1 << 12)
 
+#define BIORQ_LOCK(r)			spinlock(&(r)->biorq_lock)
+#define BIORQ_ULOCK(r)			freelock(&(r)->biorq_lock)
+
 #define BIORQ_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s%s%s%s"
 #define DEBUG_BIORQ_FLAGS(b)						\
 	(b)->biorq_flags & BIORQ_READ		? "r" : "",		\
