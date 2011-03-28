@@ -199,6 +199,9 @@ slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
 
 	if (flags & CSVCF_NONBLOCK) {
 		if (flags & CSVCF_USE_MULTIWAIT) {
+			psc_multiwait_addcond(arg,
+			    csvc->csvc_waitinfo);
+
 			rq->rq_interpret_reply = slrpc_connect_cb;
 			rq->rq_async_args.pointer_arg[0] = csvc;
 			rq->rq_async_args.pointer_arg[1] = arg;
