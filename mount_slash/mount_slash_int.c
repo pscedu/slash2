@@ -132,8 +132,6 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	uint64_t foff = roff + bmap_foff(b); /* filewise offset */
 	int i, npages = 0, rbw = 0, maxpages, fetchpgs = 0, bkwdra = 0;
 	uint64_t fsz = fcmh_getsize(mfh->mfh_fcmh);
-	uint64_t raoff; /* read ahead start offset */
-	uint32_t rfsz = fsz - bmap_foff(b);
 
 	DEBUG_BMAP(PLL_INFO, b,
 	    "adding req for (off=%u) (size=%u)", roff, len);
@@ -249,7 +247,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 			i++;
 			continue;
 		}
-		psc_warnx("i=%d npages=%d raoff=%"PRIx64" bmpce_foff=%"PRIx64,
+		psc_info("i=%d npages=%d raoff=%"PRIx64" bmpce_foff=%"PRIx64,
 			  i, npages, mfh->mfh_ra.mra_raoff,
 			  (off_t)(bmpce_search.bmpce_off + bmap_foff(b)));
 		freelock(&mfh->mfh_lock);
@@ -1144,8 +1142,8 @@ msl_readahead_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	struct slashrpc_cservice *csvc;
 	struct bmap_pagecache *bmpc;
 	struct bmap_pagecache_entry *bmpce;
-	struct psc_waitq *wq;
-	int i;
+	struct psc_waitq *wq = NULL;
+	int i = 0;
 
         bmpce = args->pointer_arg[MSL_CB_POINTER_SLOT_BMPCES];
 	csvc = args->pointer_arg[MSL_CB_POINTER_SLOT_CSVC];
