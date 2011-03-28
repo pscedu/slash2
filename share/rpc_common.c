@@ -106,14 +106,50 @@ slrpc_allocrep(struct pscrpc_request *rq, void *mqp, int qlen,
 	return (slrpc_allocgenrep(rq, mqp, qlen, mpp, plen, rcoff));
 }
 
+int
+slrpc_connect_cb(struct pscrpc_request *rq,
+    struct pscrpc_async_args *args)
+{
+	struct slashrpc_cservice *csvc;
+	struct psc_multiwaitcond *mwc;
+	struct srm_connect_rep *mp;
+	int rc;
+
+	rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
+	if (rc == 0)
+		rc = rq->rq_status;
+	if (rc == 0) {
+		mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
+		rc = mp->rc;
+	}
+
+	csvc = args->pointer_arg[0];
+	mwc = args->pointer_arg[1];
+	sl_csvc_lock(csvc);
+	csvc->csvc_mtime = time(NULL);
+	psc_atomic32_clearmask(&csvc->csvc_flags,
+	    CSVCF_CONNECTING);
+	if (rc) {
+		csvc->csvc_import->imp_failed = 1;
+		csvc->csvc_lasterrno = rc;
+	} else {
+		psc_atomic32_setmask(&csvc->csvc_flags,
+		    CSVCF_CONNECTED);
+		psc_multiwaitcond_wakeup(mwc);
+	}
+	sl_csvc_unlock(csvc);
+	return (0);
+}
+
 /**
  * slrpc_issue_connect - Attempt connection initiation with a peer.
  * @server: NID of server peer.
  * @csvc: client service to peer.
+ * @flags: operation flags.
  */
 __static int
 slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
-    int flags)
+    int flags, void *arg)
 {
 	lnet_process_id_t prid, server_id = { server, PSCRPC_SVR_PID };
 	struct srm_connect_req *mq;
@@ -129,7 +165,8 @@ slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
 	imp = csvc->csvc_import;
 	if (imp->imp_connection)
 		pscrpc_put_connection(imp->imp_connection);
-	imp->imp_connection = pscrpc_get_connection(server_id, prid.nid, NULL);
+	imp->imp_connection = pscrpc_get_connection(server_id, prid.nid,
+	    NULL);
 	imp->imp_connection->c_imp = imp;
 	imp->imp_connection->c_peer.pid = PSCRPC_SVR_PID;
 
@@ -140,12 +177,17 @@ slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
 	mq->magic = csvc->csvc_magic;
 	mq->version = csvc->csvc_version;
 
-	/*
-	 * XXX in this case, we should do an async deal and return NULL
-	 * for temporary failure.
-	 */
-	if (flags & CSVCF_NONBLOCK)
-		rq->rq_timeout = 1;
+	if (flags & CSVCF_NONBLOCK) {
+		if (flags & CSVCF_USE_MULTIWAIT) {
+			rq->rq_interpret_reply = slrpc_connect_cb;
+			rq->rq_async_args.pointer_arg[0] = csvc;
+			rq->rq_async_args.pointer_arg[1] = arg;
+			rc = pscrpc_nbreqset_add(sl_nbrqset, rq);
+			return (EWOULDBLOCK);
+		}
+		psclog_warnx("unable to try non-blocking connect without "
+		    "multiwait, reverting to blocking connect");
+	}
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
@@ -330,7 +372,8 @@ sl_csvc_disable(struct slashrpc_cservice *csvc)
 
 	locked = sl_csvc_reqlock(csvc);
 	psc_atomic32_setmask(&csvc->csvc_flags, CSVCF_ABANDON);
-	psc_atomic32_clearmask(&csvc->csvc_flags, CSVCF_CONNECTED | CSVCF_CONNECTING);
+	psc_atomic32_clearmask(&csvc->csvc_flags, CSVCF_CONNECTED |
+	    CSVCF_CONNECTING);
 	sl_csvc_wake(csvc);
 	sl_csvc_ureqlock(csvc, locked);
 }
@@ -497,15 +540,22 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 
 	} else if (csvc->csvc_mtime + CSVC_RECONNECT_INTV < time(NULL)) {
 
-		psc_atomic32_setmask(&csvc->csvc_flags, CSVCF_CONNECTING);
+		psc_atomic32_setmask(&csvc->csvc_flags,
+		    CSVCF_CONNECTING);
 		sl_csvc_unlock(csvc);
 
-		rc = slrpc_issue_connect(peernid, csvc, flags);
+		rc = slrpc_issue_connect(peernid, csvc, flags, arg);
 
 		sl_csvc_lock(csvc);
+
+		if (rc == EWOULDBLOCK) {
+			csvc = NULL;
+			goto out;
+		}
+
+		csvc->csvc_mtime = time(NULL);
 		psc_atomic32_clearmask(&csvc->csvc_flags,
 		    CSVCF_CONNECTING);
-		csvc->csvc_mtime = time(NULL);
 		if (rc) {
 			csvc->csvc_import->imp_failed = 1;
 			csvc->csvc_lasterrno = rc;
