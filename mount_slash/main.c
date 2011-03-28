@@ -93,6 +93,7 @@ struct slash_creds		 rootcreds = { 0, 0 };
 
 /* number of attribute prefetch in readdir() */
 int				 nstbpref = DEF_READDIR_NENTS;
+extern struct pscrpc_nbreqset   *ra_nbreqset;
 
 static int msl_lookup_fidcache(const struct slash_creds *, pscfs_inum_t,
     const char *, struct slash_fidgen *, struct srt_stat *);
@@ -330,10 +331,18 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		goto out;
 
+#if 0
+	if (oflags & O_APPEND) {
+		FCMH_LOCK(c);
+		c->fcmh_flags |= FCMH_CLI_APPENDWR;
+		FCMH_ULOCK(c);
+	}
+
+
 	if (oflags & O_SYNC) {
 		/* XXX do we need to do anything special for this? */
 	}
-
+#endif
 	mfh = msl_fhent_new(c);
 	mfh->mfh_oflags = oflags;
 
@@ -1787,13 +1796,18 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			DEBUG_FCMH(PLL_NOTIFY, c,
 			   "full truncate, orphan bmaps");
 
-			SPLAY_FOREACH(b, bmap_cache, &c->fcmh_bmaptree)
+			SPLAY_FOREACH(b, bmap_cache, &c->fcmh_bmaptree) {
+				bmap_op_start_type(b, BMAP_OPCNT_LOOKUP);
 				psc_dynarray_add(&a, b);
+			}
 
 			FCMH_ULOCK(c);
 
-			DYNARRAY_FOREACH(b, j, &a)
+			DYNARRAY_FOREACH(b, j, &a) {
+				DEBUG_BMAP(PLL_NOTIFY, b, "bmap_orphan");
 				bmap_orphan(b);
+				bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+			}
 
 		} else {
 			uint32_t x = stb->st_size / SLASH_BMAP_SIZE;
@@ -1809,6 +1823,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 				 *   fcmh lock.
 				 */
 				bmap_op_start_type(b, BMAP_OPCNT_TRUNCWAIT);
+				DEBUG_BMAP(PLL_NOTIFY, b, "BMAP_OPCNT_TRUNCWAIT");
 				psc_dynarray_add(&a, b);
 			}
 			FCMH_ULOCK(c);
@@ -1820,6 +1835,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 			DYNARRAY_FOREACH(b, j, &a) {
 				bmap_biorq_waitempty(b);
+				psc_assert(atomic_read(&b->bcm_opcnt) > 1);
 				bmap_op_done_type(b, BMAP_OPCNT_TRUNCWAIT);
 			}
 		}
@@ -2028,6 +2044,9 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	if (rc)
 		goto out;
 
+	DEBUG_FCMH(PLL_INFO, f, "read (start): buf=%p rc=%d sz=%zu len=%zd "
+		   "off=%"PSCPRIdOFFT, buf, rc, size, len, off);
+
 	if (fcmh_isdir(f)) {
 //		psc_fatalx("pscfs gave us a directory");
 		rc = EISDIR;
@@ -2044,9 +2063,9 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 		rc = 0;
 	}
  out:
-	DEBUG_FCMH(PLL_INFO, f, "read: buf=%p rc=%d sz=%zu len=%zd "
-		   "off=%"PSCPRIdOFFT, buf, rc, size, len, off);
 	pscfs_reply_read(pfr, buf, len, rc);
+	DEBUG_FCMH(PLL_INFO, f, "read (end): buf=%p rc=%d sz=%zu len=%zd "
+		   "off=%"PSCPRIdOFFT, buf, rc, size, len, off);
 	PSCFREE(buf);
 }
 
@@ -2085,6 +2104,8 @@ msl_init(void)
 	bmpc_global_init();
 	bmap_cache_init(sizeof(struct bmap_cli_info));
 	dircache_init(&dircacheMgr, "dircache", 262144);
+
+	ra_nbreqset = pscrpc_nbreqset_init(NULL, msl_readahead_cb);
 
 	slc_rpc_initsvc();
 
