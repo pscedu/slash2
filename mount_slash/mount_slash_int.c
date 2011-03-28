@@ -1120,6 +1120,16 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 		}
 		BMPCE_ULOCK(bmpce);
 	}
+
+ out:
+	reqlock(&r->biorq_lock);
+	if (rc)
+		for (i = 0; i < psc_dynarray_len(a); i++) {
+			bmpce = psc_dynarray_getpos(a, i);
+			BMPCE_LOCK(bmpce);
+			bmpce->bmpce_flags |= BMPCE_EIO;
+			BMPCE_ULOCK(bmpce);
+		}
 	freelock(&r->biorq_lock);
 
 	/* Free the dynarray which was allocated in msl_read_rpc_launch().
@@ -1127,7 +1137,6 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	psc_dynarray_free(a);
 	PSCFREE(a);
 
- out:
 	sl_csvc_decref(csvc);
 	return (rc);
 }
