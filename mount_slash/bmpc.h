@@ -77,14 +77,17 @@ struct bmap_pagecache_entry {
 	uint32_t		 bmpce_off;	/* filewise, bmap relative	*/
 	psc_spinlock_t		 bmpce_lock;	/* serialize			*/
 	void			*bmpce_base;	/* base pointer from slb	*/
+	void                    *bmpce_owner;
 	struct psc_waitq	*bmpce_waitq;	/* others block here on I/O	*/
 	struct timespec		 bmpce_laccess;	/* last page access		*/
+	struct psc_listentry     bmpce_ralentry; /* queue read ahead             */
 	SPLAY_ENTRY(bmap_pagecache_entry) bmpce_tentry;
 #ifdef BMPC_RBTREE
 	SPLAY_ENTRY(bmap_pagecache_entry) bmpce_lru_tentry;
 #else
 	struct psc_listentry	 bmpce_lentry;	/* chain on bmap lru		*/
 #endif
+					  
 };
 
 #define BMPCE_LOCK(b)		spinlock(&(b)->bmpce_lock)
@@ -103,12 +106,13 @@ struct bmap_pagecache_entry {
 #define	BMPCE_RBWRDY		(1 << 10)
 #define	BMPCE_INFLIGHT		(1 << 11)	/* 0x0800: I/O in progress */
 #define	BMPCE_EIO		(1 << 12)	/* 0x1000: I/O error */
+#define BMPCE_READA             (1 << 13)       /* read-ahead */
 
 #define BMPCE_2_BIORQ(b)						\
 	((b)->bmpce_waitq ? (char *)(b)->bmpce_waitq -			\
 	 offsetof(struct bmpc_ioreq, biorq_waitq) : NULL)
 
-#define BMPCE_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s%s%s%s"
+#define BMPCE_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
 #define DEBUG_BMPCE_FLAGS(b)						\
 	(b)->bmpce_flags & BMPCE_NEW			? "n" : "",	\
 	(b)->bmpce_flags & BMPCE_GETBUF			? "g" : "",	\
@@ -122,7 +126,8 @@ struct bmap_pagecache_entry {
 	(b)->bmpce_flags & BMPCE_RBWPAGE		? "B" : "",	\
 	(b)->bmpce_flags & BMPCE_RBWRDY			? "R" : "",	\
 	(b)->bmpce_flags & BMPCE_INFLIGHT		? "L" : "",	\
-	(b)->bmpce_flags & BMPCE_EIO			? "E" : ""
+	(b)->bmpce_flags & BMPCE_EIO			? "E" : "",     \
+	(b)->bmpce_flags & BMPCE_READA                  ? "a" : ""
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP,					\
@@ -130,14 +135,14 @@ struct bmap_pagecache_entry {
 	    "o=%#x b=%p "						\
 	    "ts="PSCPRI_TIMESPEC" "					\
 	    "wr=%hu rd=%hu "						\
-	    "lru=%d biorq=%p "fmt,					\
+	    "lru=%d owner=%p "fmt,			                \
 	    (b), (b)->bmpce_flags, DEBUG_BMPCE_FLAGS(b),		\
-	    (b)->bmpce_off, (b)->bmpce_base,				\
+	    (b)->bmpce_off, (b)->bmpce_base,			        \
 	    PSCPRI_TIMESPEC_ARGS(&(b)->bmpce_laccess),			\
 	    psc_atomic16_read(&(b)->bmpce_wrref),			\
 	    psc_atomic16_read(&(b)->bmpce_rdref),			\
-	    !(psclist_disjoint(&(b)->bmpce_lentry)), BMPCE_2_BIORQ(b),	\
-	    ## __VA_ARGS__)
+	    !(psclist_disjoint(&(b)->bmpce_lentry)),		        \
+	    (b)->bmpce_owner, ## __VA_ARGS__)
 
 static __inline int
 bmpce_lrusort_cmp(const void *x, const void *y)
@@ -197,6 +202,7 @@ struct bmap_pagecache {
 #endif
 	struct psc_lockedlist		 bmpc_new_biorqs;
 	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* chain pending I/O requests */
+	struct psc_lockedlist            bmpc_pndg_ra;          /* RA bmpce's pending comp */
 	atomic_t			 bmpc_pndgwr;		/* # pending wr req */
 	psc_spinlock_t			 bmpc_lock;		/* serialize access to splay tree and locked lists  */
 	struct psclist_head		 bmpc_lentry;		/* chain to global LRU lc */
@@ -259,8 +265,9 @@ struct bmpc_ioreq {
 #define	BIORQ_FLUSHRDY			(1 <<  9)
 #define	BIORQ_NOFHENT			(1 << 10)	/* release a file handle before flush is complete */
 #define BIORQ_APPEND			(1 << 11)
+#define BIORQ_READAHEAD                 (1 << 12)
 
-#define BIORQ_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s%s%s"
+#define BIORQ_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s%s%s%s"
 #define DEBUG_BIORQ_FLAGS(b)						\
 	(b)->biorq_flags & BIORQ_READ		? "r" : "",		\
 	(b)->biorq_flags & BIORQ_WRITE		? "w" : "",		\
@@ -272,6 +279,7 @@ struct bmpc_ioreq {
 	(b)->biorq_flags & BIORQ_FORCE_EXPIRE	? "x" : "",		\
 	(b)->biorq_flags & BIORQ_DESTROY	? "D" : "",		\
 	(b)->biorq_flags & BIORQ_FLUSHRDY	? "R" : "",		\
+	(b)->biorq_flags & BIORQ_READAHEAD      ? "a" : "",             \
 	(b)->biorq_flags & BIORQ_NOFHENT	? "n" : "",		\
 	(b)->biorq_flags & BIORQ_APPEND		? "A" : ""
 
@@ -306,22 +314,30 @@ bmpce_freeprep(struct bmap_pagecache_entry *bmpce)
 }
 
 static __inline void
-bmpce_useprep(struct bmap_pagecache_entry *bmpce, struct bmpc_ioreq *biorq)
+bmpce_useprep(struct bmap_pagecache_entry *bmpce, struct bmpc_ioreq *biorq, 
+      struct psc_waitq *wq)
 {
 	psc_assert(!bmpce->bmpce_base);
 	psc_assert(!bmpce->bmpce_waitq);
 	psc_assert(psclist_disjoint(&bmpce->bmpce_lentry));
+	psc_assert(psclist_disjoint(&bmpce->bmpce_ralentry));
 	psc_assert(bmpce->bmpce_flags == BMPCE_NEW);
 	psc_assert(!psc_atomic16_read(&bmpce->bmpce_wrref));
 	psc_assert(!psc_atomic16_read(&bmpce->bmpce_rdref));
 
 	bmpce->bmpce_flags = (BMPCE_GETBUF | BMPCE_INIT);
+	bmpce->bmpce_owner = biorq;
 	/*
 	 * We put the entry back to the splay tree before it
 	 * is fully allocated, so we need this field to remember
 	 * who owns it.  Alternatively, we could use locking.
 	 */
-	bmpce->bmpce_waitq = &biorq->biorq_waitq;
+	if (!wq)
+		bmpce->bmpce_waitq = &biorq->biorq_waitq;
+	else {
+		bmpce->bmpce_flags |= BMPCE_READA;
+		bmpce->bmpce_waitq = wq;
+	}
 }
 
 static __inline void
@@ -358,7 +374,7 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
  *    processing 'r' is responsible for allocating a memory page
  *    and possible faulting in that page from the ION.
  */
-#define biorq_is_my_bmpce(r, b)	(&(r)->biorq_waitq == (b)->bmpce_waitq)
+#define biorq_is_my_bmpce(r, b)	((r) == (b)->bmpce_owner)
 
 #define biorq_getaligned_off(r, nbmpce) (((r)->biorq_off & ~BMPC_BUFMASK) + \
 					 ((nbmpce) * BMPC_BUFSZ))
@@ -400,12 +416,14 @@ bmpc_init(struct bmap_pagecache *bmpc)
 	pll_init(&bmpc->bmpc_lru, struct bmap_pagecache_entry,
 		 bmpce_lentry, &bmpc->bmpc_lock);
 
+	pll_init(&bmpc->bmpc_pndg_ra, struct bmap_pagecache_entry,
+		 bmpce_lentry, &bmpc->bmpc_lock);
+
 	pll_init(&bmpc->bmpc_pndg_biorqs, struct bmpc_ioreq,
 		 biorq_lentry, &bmpc->bmpc_lock);
 
 	pll_init(&bmpc->bmpc_new_biorqs, struct bmpc_ioreq,
 		 biorq_lentry, &bmpc->bmpc_lock);
-
 	/* Add the bmpc to the tail of LRU where it will stay until it's freed.
 	 */
 	lc_add(&bmpcLru, bmpc);
