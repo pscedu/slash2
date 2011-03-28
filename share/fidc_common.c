@@ -523,8 +523,8 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pfl_callerinfo,
 			lc_remove(&fidcBusyList, f);
 			lc_add(&fidcIdleList, f);
 		}
-	} else
-		fcmh_wake_locked(f);
+	}
+	fcmh_wake_locked(f);
 	FCMH_ULOCK(f);
 }
 
