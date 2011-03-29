@@ -1058,7 +1058,8 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 	 * cancelling or ceiling time out.
 	 */
 	psc_multiwait_secs(mw, &p, 5);
-	return (NULL);
+	psc_assert(p);
+	return (slc_geticsvc_nb((struct sl_resm *)p));
 }
 
 /**
@@ -1146,8 +1147,8 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 			bmpce = psc_dynarray_getpos(a, i);
 			BMPCE_LOCK(bmpce);
 			bmpce->bmpce_flags |= BMPCE_EIO;
-			BMPCE_ULOCK(bmpce);
 			BMPCE_WAKE(bmpce);
+			BMPCE_ULOCK(bmpce);
 		}
 	freelock(&r->biorq_lock);
 
@@ -1167,7 +1168,7 @@ msl_readahead_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	struct bmap_pagecache *bmpc;
 	struct bmap_pagecache_entry *bmpce;
 	struct psc_waitq *wq = NULL;
-	int rc, i = 0;
+	int rc;
 
 	bmpce = args->pointer_arg[MSL_CB_POINTER_SLOT_BMPCES];
 	csvc = args->pointer_arg[MSL_CB_POINTER_SLOT_CSVC];
@@ -1182,24 +1183,13 @@ msl_readahead_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	DEBUG_BMPCE(PLL_INFO, bmpce, "ra cb rc=%d", rc);
 
 	pll_remove(&bmpc->bmpc_pndg_ra, bmpce);
-	/* The bmpce must have already been disowned.
-	 */
-	//psc_assert(bmpce->bmpce_owner == NULL);
-
-	if (!i)
-		wq = bmpce->bmpce_waitq;
-	else
-		/* All wq pointers should be from the
-		 *   same fcmh.
-		 */
-		psc_assert(wq == bmpce->bmpce_waitq);
-
 	BMPCE_LOCK(bmpce);
 	if (rc)
 		bmpce->bmpce_flags |= BMPCE_EIO;
 	else
 		bmpce->bmpce_flags |= BMPCE_DATARDY;
 	DEBUG_BMPCE(PLL_INFO, bmpce, "datardy via readahead_cb");
+	wq = bmpce->bmpce_waitq;
 	bmpce->bmpce_waitq = NULL;
 	/* Decref the bmpce here since it may never be used.
 	 */
@@ -1507,8 +1497,8 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry *bmpce)
  error:
 	BMPCE_LOCK(bmpce);
 	bmpce->bmpce_flags |= BMPCE_EIO;
-	BMPCE_ULOCK(bmpce);
 	BMPCE_WAKE(bmpce);
+	BMPCE_ULOCK(bmpce);
 
 	if (rq) {
 		DEBUG_REQ(PLL_ERROR, rq, "req failed");
@@ -1583,10 +1573,14 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	mq->size = npages * BMPC_BUFSZ;
 	mq->op = SRMIOP_RD;
 	memcpy(&mq->sbd, bmap_2_sbd(r->biorq_bmap), sizeof(mq->sbd));
-
-	spinlock(&r->biorq_lock);
-	r->biorq_flags |= BIORQ_INFL;
-	freelock(&r->biorq_lock);
+	
+	/* Only this fsthr has access to the biorq so locking should
+	 *   not be necessary.  BIORQ_INFL can't be set in the caller
+	 *   since it's possible that no rpc's will be sent on behalf
+	 *   this biorq.
+	 */
+	if (!(r->biorq_flags & BIORQ_INFL))
+		r->biorq_flags |= BIORQ_INFL;
 
 	DEBUG_BIORQ(PLL_NOTIFY, r, "launching read req");
 
@@ -1628,8 +1622,8 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 		bmpce = psc_dynarray_getpos(&r->biorq_pages, i + startpage);
 		BMPCE_LOCK(bmpce);
 		bmpce->bmpce_flags |= BMPCE_EIO;
-		BMPCE_ULOCK(bmpce);
 		BMPCE_WAKE(bmpce);
+		BMPCE_ULOCK(bmpce);
 	}
 
 	return (rc);
@@ -1792,8 +1786,8 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 				bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
 				BMPCE_LOCK(bmpce);
 				bmpce->bmpce_flags |= BMPCE_EIO;
-				BMPCE_ULOCK(bmpce);
 				BMPCE_WAKE(bmpce);
+				BMPCE_ULOCK(bmpce);
 			}
 			return (rc);
 		}
