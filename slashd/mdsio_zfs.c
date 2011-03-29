@@ -113,11 +113,13 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	struct sl_mds_crc_log crclog;
 	uint32_t utimgen, i;
 	size_t nb;
-	int rc;
+	int rc, extend = 0;
 
 	psc_assert(bmap->bcm_flags & BMAP_MDS_CRC_UP);
 
 	FCMH_LOCK(bmap->bcm_fcmh);
+	if (crcup->fsize > (uint64_t)fcmh_2_fsz(bmap->bcm_fcmh))
+		extend = 1;
 	mds_fcmh_increase_fsz(bmap->bcm_fcmh, crcup->fsize);
 	utimgen = bmap->bcm_fcmh->fcmh_sstb.sst_utimgen;
 	FCMH_ULOCK(bmap->bcm_fcmh);
@@ -127,7 +129,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 		   "utimgen %d < crcup->utimgen %d",
 		   utimgen, crcup->utimgen);
 
-	crcup->extend = -1; //XXX noop
+	crcup->extend = extend;
 	crclog.scl_bmap = bmap;
 	crclog.scl_crcup = crcup;
 
