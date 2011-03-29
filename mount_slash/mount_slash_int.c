@@ -1006,6 +1006,8 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
 
 	fci = fcmh_get_pri(b->bcm_fcmh);
+	if (fci->fci_nrepls == 0)
+		return NULL;
 
 	mw = msl_getmw();
 	psc_multiwait_reset(mw);
