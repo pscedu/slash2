@@ -8,7 +8,7 @@
 struct pscrpc_nbreqset	*sl_nbrqset;
 
 void
-sl_nbrqthr_main(__unusedx void *arg)
+sl_nbrqthr_main(__unusedx struct psc_thread *thr)
 {
 	while (pscthr_run()) {
 		pscrpc_nbreqset_reap(sl_nbrqset);
@@ -20,5 +20,5 @@ void
 sl_nbrqthr_spawn(int thrtype, const char *thrname)
 {
 	sl_nbrqset = pscrpc_nbreqset_init(NULL, NULL);
-	pscthr_init(thrtype, 0, NULL, NULL, 0, "%s", thrname);
+	pscthr_init(thrtype, 0, sl_nbrqthr_main, NULL, 0, "%s", thrname);
 }
