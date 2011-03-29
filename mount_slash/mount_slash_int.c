@@ -69,6 +69,26 @@ struct timespec msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
 
 struct pscrpc_nbreqset *ra_nbreqset; /* non-blocking set for RA's */
 
+int
+msl_remote_access(struct msl_fhent *mfh)
+{
+	int remote = 0;
+	sl_siteid_t siteid1, siteid2;
+
+	siteid1 = slc_rmc_resm->resm_res->res_site->site_id;
+	siteid2 = FID_GET_SITEID(mfh->mfh_fcmh->fcmh_sstb.sst_fg.fg_fid);
+	if (siteid1 != siteid2)
+		remote = 1;
+	return (remote);
+}
+
+int
+msl_io_remote(struct msl_fhent *mfh, char *buf, const size_t size,
+    const off_t off, enum rw rw)
+{
+	return (0);
+}
+
 __static int
 msl_biorq_cmp(const void *x, const void *y)
 {
@@ -1006,8 +1026,6 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
 
 	fci = fcmh_get_pri(b->bcm_fcmh);
-	if (fci->fci_nrepls == 0)
-		return NULL;
 
 	mw = msl_getmw();
 	psc_multiwait_reset(mw);
@@ -2087,6 +2105,11 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 	uint64_t fsz;
 	off_t roff;
 	char *p;
+
+	if (msl_remote_access(mfh)) {
+		rc = msl_io_remote(mfh, buf, size, off, rw);
+		return (rc);
+	}
 
 	memset(r, 0, sizeof(r));
 
