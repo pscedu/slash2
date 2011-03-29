@@ -450,7 +450,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 	if (update_logfile_handle == NULL) {
 
 		update_logfile_offset = 0;
-		mds_open_logfile(current_update_batchno, 1, 0, 
+		mds_open_logfile(current_update_batchno, 1, 0,
 		    &update_logfile_handle);
 
 		if (action == 1) {
@@ -1214,13 +1214,13 @@ mds_send_batch_reclaim(uint64_t batchno)
 }
 
 /**
- * mds_send_reclaim - Send garbage collection to I/O servers.
+ * slmjreclaimthr_main - Send garbage collection to I/O servers.
  */
 void
-mds_send_reclaim(__unusedx struct psc_thread *thr)
+slmjreclaimthr_main(__unusedx struct psc_thread *thr)
 {
 	uint64_t batchno;
-	int rv, didwork;
+	int didwork;
 
 	/*
 	 * Instead of tracking precisely which reclaim log record has
@@ -1228,7 +1228,6 @@ mds_send_reclaim(__unusedx struct psc_thread *thr)
 	 * receiving I/O node can safely ignore any resent records.
 	 */
 	while (pscthr_run()) {
-
 		batchno = mds_reclaim_lwm(1);
 		do {
 			spinlock(&mds_distill_lock);
@@ -1243,19 +1242,19 @@ mds_send_reclaim(__unusedx struct psc_thread *thr)
 		} while (didwork && (mds_reclaim_hwm(1) >= batchno));
 
 		spinlock(&mds_reclaim_waitqlock);
-		rv = psc_waitq_waitrel_s(&mds_reclaim_waitq,
+		psc_waitq_waitrel_s(&mds_reclaim_waitq,
 		    &mds_reclaim_waitqlock, SL_RECLAIM_MAX_AGE);
 	}
 }
 
 /**
- * mds_send_update - Send local namespace updates to peer MDSes.
+ * slmjnsthr_main - Send local namespace updates to peer MDSes.
  */
 void
-mds_send_update(__unusedx struct psc_thread *thr)
+slmjnsthr_main(__unusedx struct psc_thread *thr)
 {
 	uint64_t batchno;
-	int rv, didwork;
+	int didwork;
 
 	/*
 	 * This thread scans the batches of updates between the low and
@@ -1264,7 +1263,6 @@ mds_send_update(__unusedx struct psc_thread *thr)
 	 * order within one MDS.
 	 */
 	while (pscthr_run()) {
-
 		batchno = mds_update_lwm(1);
 		do {
 			spinlock(&mds_distill_lock);
@@ -1279,7 +1277,7 @@ mds_send_update(__unusedx struct psc_thread *thr)
 		} while (didwork && (mds_update_hwm(1) >= batchno));
 
 		spinlock(&mds_update_waitqlock);
-		rv = psc_waitq_waitrel_s(&mds_update_waitq,
+		psc_waitq_waitrel_s(&mds_update_waitq,
 		    &mds_update_waitqlock, SL_UPDATE_MAX_AGE);
 	}
 }
@@ -1600,7 +1598,7 @@ mds_journal_init(int disable_propagation)
 	last_distill_xid = last_reclaim_xid;
 
 	/* Always start a thread to send reclaim updates. */
-	pscthr_init(SLMTHRT_JRECLAIM, 0, mds_send_reclaim, NULL, 0,
+	pscthr_init(SLMTHRT_JRECLAIM, 0, slmjreclaimthr_main, NULL, 0,
 	    "slmjreclaimthr");
 
 	/* We are done if we don't have any peer MDSes */
@@ -1679,7 +1677,7 @@ mds_journal_init(int disable_propagation)
 	 * Start a thread to propagate local namespace updates to peers
 	 * after our MDS peer list has been all setup.
 	 */
-	pscthr_init(SLMTHRT_JNAMESPACE, 0, mds_send_update, NULL,
+	pscthr_init(SLMTHRT_JNAMESPACE, 0, slmjnsthr_main, NULL,
 	    0, "slmjnsthr");
 
  replay_log:
