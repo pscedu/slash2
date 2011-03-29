@@ -140,39 +140,6 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 		psc_fatalx("zpool import: returned %d", rc);
 }
 
-void
-slm_init(void)
-{
-	psc_poolmaster_init(&upsched_poolmaster,
-	    struct up_sched_work_item, uswi_lentry, PPMF_AUTO, 256, 256,
-	    0, NULL, NULL, NULL, "upschwk");
-	upsched_pool = psc_poolmaster_getmgr(&upsched_poolmaster);
-
-	psc_poolmaster_init(&bmapMdsLeasePoolMaster,
-	    struct bmap_mds_lease, bml_bmdsi_lentry, PPMF_AUTO, 256,
-	    256, 0, NULL, NULL, NULL, "bmplease");
-	bmapMdsLeasePool = psc_poolmaster_getmgr(&bmapMdsLeasePoolMaster);
-
-	lc_reginit(&slm_replst_workq, struct slm_replst_workreq,
-	    rsw_lentry, "replstwkq");
-
-	lc_reginit(&pndgBmapCbs, struct bmap_mds_lease, bml_coh_lentry,
-	    "pendingbml");
-
-	lc_reginit(&inflBmapCbs, struct bmap_mds_lease, bml_coh_lentry,
-	    "inflightbml");
-
-	bmap_cache_init(sizeof(struct bmap_mds_info));
-
-	mds_journal_init(disable_propagation);
-
-	mds_odtable_load(&mdsBmapAssignTable, SL_FN_BMAP_ODTAB, "bmapassign");
-
-	mds_bmap_timeotbl_init();
-
-	mds_odtable_scan(mdsBmapAssignTable, mds_bia_odtable_startup_cb);
-}
-
 __dead void
 usage(void)
 {
@@ -273,12 +240,40 @@ main(int argc, char *argv[])
 	libsl_init(PSCNET_SERVER, 1);
 
 	slm_workq_init();
-	slm_init();
+
+	psc_poolmaster_init(&upsched_poolmaster,
+	    struct up_sched_work_item, uswi_lentry, PPMF_AUTO, 256, 256,
+	    0, NULL, NULL, NULL, "upschwk");
+	upsched_pool = psc_poolmaster_getmgr(&upsched_poolmaster);
+
+	psc_poolmaster_init(&bmapMdsLeasePoolMaster,
+	    struct bmap_mds_lease, bml_bmdsi_lentry, PPMF_AUTO, 256,
+	    256, 0, NULL, NULL, NULL, "bmplease");
+	bmapMdsLeasePool = psc_poolmaster_getmgr(&bmapMdsLeasePoolMaster);
+
+	lc_reginit(&slm_replst_workq, struct slm_replst_workreq,
+	    rsw_lentry, "replstwkq");
+
+	lc_reginit(&pndgBmapCbs, struct bmap_mds_lease, bml_coh_lentry,
+	    "pendingbml");
+
+	lc_reginit(&inflBmapCbs, struct bmap_mds_lease, bml_coh_lentry,
+	    "inflightbml");
+
+	bmap_cache_init(sizeof(struct bmap_mds_info));
+
+	sl_nbrqthr_spawn(SLMTHRT_NBRQ, "slmnbrqthr");
+	mds_journal_init(disable_propagation);
+
+	mds_odtable_load(&mdsBmapAssignTable, SL_FN_BMAP_ODTAB, "bmapassign");
+
+	mds_bmap_timeotbl_init();
+
+	mds_odtable_scan(mdsBmapAssignTable, mds_bia_odtable_startup_cb);
 
 	slm_workers_spawn();
 	slmcohthr_spawn();
 	slmbmaptimeothr_spawn();
-	sl_nbrqthr_spawn(SLMTHRT_NBRQ, "slmnbrqthr");
 	slm_rpc_initsvc();
 
 	/* start an update scheduler thread for each site */
