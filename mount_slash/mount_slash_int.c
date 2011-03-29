@@ -1127,6 +1127,7 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 			BMPCE_LOCK(bmpce);
 			bmpce->bmpce_flags |= BMPCE_EIO;
 			BMPCE_ULOCK(bmpce);
+			BMPCE_WAKE(bmpce);
 		}
 	freelock(&r->biorq_lock);
 
@@ -1487,6 +1488,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry *bmpce)
 	BMPCE_LOCK(bmpce);
 	bmpce->bmpce_flags |= BMPCE_EIO;
 	BMPCE_ULOCK(bmpce);
+	BMPCE_WAKE(bmpce);
 
 	if (rq) {
 		DEBUG_REQ(PLL_ERROR, rq, "req failed");
@@ -1607,6 +1609,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 		BMPCE_LOCK(bmpce);
 		bmpce->bmpce_flags |= BMPCE_EIO;
 		BMPCE_ULOCK(bmpce);
+		BMPCE_WAKE(bmpce);
 	}
 
 	return (rc);
@@ -1769,10 +1772,8 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 				bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
 				BMPCE_LOCK(bmpce);
 				bmpce->bmpce_flags |= BMPCE_EIO;
-				if (bmpce->bmpce_waitq)
-					psc_waitq_wakeall(bmpce->bmpce_waitq);
-else DEBUG_BMPCE(PLL_MAX, bmpce, "NULL bmpce_waitq");
 				BMPCE_ULOCK(bmpce);
+				BMPCE_WAKE(bmpce);
 			}
 			return (rc);
 		}

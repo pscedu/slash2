@@ -90,9 +90,6 @@ struct bmap_pagecache_entry {
 
 };
 
-#define BMPCE_LOCK(b)		spinlock(&(b)->bmpce_lock)
-#define BMPCE_ULOCK(b)		freelock(&(b)->bmpce_lock)
-
 #define	BMPCE_NEW		(1 << 0)
 #define	BMPCE_GETBUF		(1 << 1)
 #define	BMPCE_DATARDY		(1 << 2)
@@ -107,6 +104,17 @@ struct bmap_pagecache_entry {
 #define	BMPCE_INFLIGHT		(1 << 11)	/* 0x0800: I/O in progress */
 #define	BMPCE_EIO		(1 << 12)	/* 0x1000: I/O error */
 #define BMPCE_READA		(1 << 13)	/* read-ahead */
+
+#define BMPCE_LOCK(b)		spinlock(&(b)->bmpce_lock)
+#define BMPCE_ULOCK(b)		freelock(&(b)->bmpce_lock)
+
+#define BMPCE_WAKE(b)							\
+	do {								\
+		if ((b)->bmpce_waitq)					\
+			psc_waitq_wakeall((b)->bmpce_waitq);		\
+		else							\
+			DEBUG_BMPCE(PLL_MAX, b, "NULL bmpce_waitq");	\
+	} while (0)
 
 #define BMPCE_2_BIORQ(b)						\
 	((b)->bmpce_waitq ? (char *)(b)->bmpce_waitq -			\
