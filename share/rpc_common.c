@@ -153,6 +153,7 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 		csvc->csvc_import->imp_failed = 1;
 		csvc->csvc_lasterrno = rc;
 	} else {
+		csvc->csvc_import->imp_state = PSCRPC_IMP_FULL;
 		psc_atomic32_setmask(&csvc->csvc_flags,
 		    CSVCF_CONNECTED);
 		psc_multiwaitcond_wakeup(mwc);
@@ -205,6 +206,7 @@ slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
 			rq->rq_interpret_reply = slrpc_connect_cb;
 			rq->rq_async_args.pointer_arg[0] = csvc;
 			rq->rq_async_args.pointer_arg[1] = arg;
+			authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 			rc = pscrpc_nbreqset_add(sl_nbrqset, rq);
 			return (EWOULDBLOCK);
 		}
