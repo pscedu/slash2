@@ -198,8 +198,9 @@ slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
 
 	if (flags & CSVCF_NONBLOCK) {
 		if (flags & CSVCF_USE_MULTIWAIT) {
-			psc_multiwait_addcond(arg,
-			    csvc->csvc_waitinfo);
+			if (arg)
+				psc_multiwait_addcond(arg,
+				    csvc->csvc_waitinfo);
 
 			rq->rq_interpret_reply = slrpc_connect_cb;
 			rq->rq_async_args.pointer_arg[0] = csvc;
@@ -433,8 +434,8 @@ sl_csvc_create(uint32_t rqptl, uint32_t rpptl)
 struct slashrpc_cservice *
 sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
     struct pscrpc_export *exp, lnet_nid_t peernid, uint32_t rqptl,
-    uint32_t rpptl, uint64_t magic, uint32_t version,
-    void *lockp, void *waitinfo, enum slconn_type ctype, void *arg)
+    uint32_t rpptl, uint64_t magic, uint32_t version, void *lockp,
+    void *waitinfo, enum slconn_type ctype, void *arg)
 {
 	struct slashrpc_cservice *csvc;
 	struct sl_resm *resm;
