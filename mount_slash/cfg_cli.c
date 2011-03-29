@@ -41,7 +41,7 @@ slcfg_init_resm(struct sl_resm *resm)
 
 	rmci = resm->resm_pri = PSCALLOC(sizeof(*rmci));
 	psc_pthread_mutex_init(&rmci->rmci_mutex);
-	psc_multiwaitcond_init(&rmci->rmci_mwc, NULL, PMWCF_WAKEALL,
+	psc_multiwaitcond_init(&rmci->rmci_mwc, resm, PMWCF_WAKEALL,
 	    "csvc-%s", resm->resm_addrbuf);
 }
 
