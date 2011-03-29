@@ -1016,8 +1016,10 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 		if (fci->fci_reptbl[it.ri_rnd_idx].bs_id != prefIOS)
 			continue;
 		csvc = msl_try_get_replica_res(b, it.ri_rnd_idx);
-		if (csvc)
+		if (csvc) {
+			psc_multiwait_leavecritsect(mw);
 			return (csvc);
+		}
 	}
 
 	/* rats, not available; try anyone available now */
@@ -1025,8 +1027,10 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 		if (fci->fci_reptbl[it.ri_rnd_idx].bs_id == prefIOS)
 			continue;
 		csvc = msl_try_get_replica_res(b, it.ri_rnd_idx);
-		if (csvc)
+		if (csvc) {
+			psc_multiwait_leavecritsect(mw);
 			return (csvc);
+		}
 	}
 
 	/*
