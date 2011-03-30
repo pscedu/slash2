@@ -120,7 +120,6 @@ struct resprof_cli_info {
  * CLIENT-specific private data for struct sl_resm.
  */
 struct resm_cli_info {
-	pthread_mutex_t			 rmci_mutex;
 	struct psc_multiwaitcond	 rmci_mwc;
 	struct srm_bmap_release_req	 rmci_bmaprls;
 };

@@ -75,7 +75,7 @@ slc_rmc_setmds(const char *name)
 
 	slconnthr_spawn(slc_rmc_resm, SRMC_REQ_PORTAL, SRMC_REP_PORTAL,
 	    SRMC_MAGIC, SRMC_VERSION,
-	    &resm2rmci(slc_rmc_resm)->rmci_mutex, CSVCF_USE_MULTIWAIT,
+	    &resm2rmci(slc_rmc_resm)->rmci_mwc.mwc_mutex, CSVCF_USE_MULTIWAIT,
 	    &resm2rmci(slc_rmc_resm)->rmci_mwc,
 	    SLCONNT_MDS, MSTHRT_CONN, "ms");
 
