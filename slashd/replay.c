@@ -153,10 +153,12 @@ mds_redo_bmap_crc(struct psc_journal_enthdr *pje)
 	    (off_t)((BMAP_OD_SZ * jcrc->sjc_bmapno) +
 	    SL_BMAP_START_OFF), mdsio_data);
 
-	if (!rc && nb != BMAP_OD_SZ)
-		rc = EIO;
 	if (rc)
 		goto out;
+	if (nb % BMAP_OD_SZ) {
+		rc = EIO;
+		goto out;
+	}
 
 	for (i = 0 ; i < jcrc->sjc_ncrcs; i++) {
 		bmap_wire = &jcrc->sjc_crc[i];
