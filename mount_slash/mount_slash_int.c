@@ -56,7 +56,7 @@
 #include "slerr.h"
 
 /* async RPC pointers */
-#define MSL_CB_POINTER_SLOT_BMPCES	0
+#define MSL_CB_POINTER_SLOT_BMPCE	0
 #define MSL_CB_POINTER_SLOT_CSVC	1
 #define MSL_CB_POINTER_SLOT_BIORQ	2
 #define MSL_CB_POINTER_SLOT_BIORQS	3
@@ -1079,7 +1079,7 @@ int
 msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CB_POINTER_SLOT_CSVC];
-	struct psc_dynarray *a = args->pointer_arg[MSL_CB_POINTER_SLOT_BMPCES];
+	struct psc_dynarray *a = args->pointer_arg[MSL_CB_POINTER_SLOT_BMPCE];
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CB_POINTER_SLOT_BIORQ];
 	struct bmap_pagecache_entry *bmpce;
 	struct bmapc_memb *b;
@@ -1173,7 +1173,7 @@ msl_readahead_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	struct psc_waitq *wq = NULL;
 	int rc;
 
-	bmpce = args->pointer_arg[MSL_CB_POINTER_SLOT_BMPCES];
+	bmpce = args->pointer_arg[MSL_CB_POINTER_SLOT_BMPCE];
 	csvc = args->pointer_arg[MSL_CB_POINTER_SLOT_CSVC];
 	bmpc = args->pointer_arg[MSL_CB_POINTER_SLOT_RA];
 	psc_assert(bmpce && csvc && bmpc);
@@ -1483,7 +1483,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry *bmpce)
 
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 
-	rq->rq_async_args.pointer_arg[MSL_CB_POINTER_SLOT_BMPCES] = bmpce;
+	rq->rq_async_args.pointer_arg[MSL_CB_POINTER_SLOT_BMPCE] = bmpce;
 	rq->rq_async_args.pointer_arg[MSL_CB_POINTER_SLOT_CSVC] = csvc;
 	rq->rq_async_args.pointer_arg[MSL_CB_POINTER_SLOT_RA] = bmap_2_bmpc(b);
 	rq->rq_interpret_reply = NULL;
@@ -1593,7 +1593,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 	/* Setup the callback, supplying the dynarray as an argument.
 	 */
-	rq->rq_async_args.pointer_arg[MSL_CB_POINTER_SLOT_BMPCES] = a;
+	rq->rq_async_args.pointer_arg[MSL_CB_POINTER_SLOT_BMPCE] = a;
 	rq->rq_async_args.pointer_arg[MSL_CB_POINTER_SLOT_CSVC] = csvc;
 	rq->rq_async_args.pointer_arg[MSL_CB_POINTER_SLOT_BIORQ] = r;
 
