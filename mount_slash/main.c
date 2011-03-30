@@ -2095,6 +2095,11 @@ msl_init(void)
 	char *name;
 	int rc;
 
+	extern struct psc_iostats msl_diord_stat;
+	extern struct psc_iostats msl_diowr_stat;
+	extern struct psc_iostats msl_rdcache_stat;
+	extern struct psc_iostats msl_racache_stat;
+
 	authbuf_checkkeyfile();
 	authbuf_readkeyfile();
 
@@ -2112,6 +2117,12 @@ msl_init(void)
 	psc_eqpollthr_spawn(MSTHRT_EQPOLL, "mseqpollthr");
 	msctlthr_spawn();
 	mstimerthr_spawn();
+
+	psc_iostats_init(&msl_diord_stat, "dio-rd");
+	psc_iostats_init(&msl_diowr_stat, "dio-wr");
+	psc_iostats_init(&msl_rdcache_stat, "rd-cache-hit");
+	psc_iostats_init(&msl_racache_stat, "ra-cache-hit");
+
 	sl_nbrqthr_spawn(MSTHRT_NBRQ, "msnbrqthr");
 	msbmapflushthr_spawn();
 

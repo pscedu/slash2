@@ -40,6 +40,7 @@
 #include "psc_rpc/rsx.h"
 #include "psc_util/log.h"
 #include "psc_util/random.h"
+#include "psc_util/iostats.h"
 
 #include "bmap.h"
 #include "bmap_cli.h"
@@ -68,6 +69,11 @@ struct timespec msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
 struct timespec msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
 
 struct pscrpc_nbreqset *ra_nbreqset; /* non-blocking set for RA's */
+
+struct psc_iostats msl_diord_stat;
+struct psc_iostats msl_diowr_stat;
+struct psc_iostats msl_rdcache_stat;
+struct psc_iostats msl_racache_stat;
 
 int
 msl_remote_access(struct msl_fhent *mfh)
@@ -324,7 +330,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 				 */
 				psc_assert(bmpce->bmpce_flags & BMPCE_INIT);
 				psc_assert(!bmpce->bmpce_base);
-				/* Stash the bmap pointer here.
+				/* Stash the bmap pointer in 'owner'.
 				 */
 				bmpce->bmpce_owner = b;
 				bmpce_handle_lru_locked(bmpce, bmpc, op, 1);
@@ -1127,10 +1133,7 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 			bmpce->bmpce_flags |= BMPCE_DATARDY;
 			DEBUG_BMPCE(PLL_INFO, bmpce, "datardy via read_cb");
 			psc_waitq_wakeall(bmpce->bmpce_waitq);
-			/* Disown bmpce by null'ing the waitq pointer.
-			 */
 			bmpce->bmpce_waitq = NULL;
-			bmpce->bmpce_owner = NULL;
 		}
 
 		if (clearpages) {
@@ -1353,6 +1356,9 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 	pscrpc_set_destroy(r->biorq_rqset);
 	r->biorq_rqset = NULL;
 	PSCFREE(iovs);
+
+	psc_iostats_intv_add((op == SRMT_WRITE ? 
+	      &msl_diowr_stat : &msl_diord_stat), size);
 
 	msl_biorq_destroy(r);
 
@@ -1969,15 +1975,10 @@ msl_pages_copyout(struct bmpc_ioreq *r, char *buf)
 	/* Due to page prefecthing, the pages contained in
 	 *   biorq_pages may exceed the requested len.
 	 */
-	for (i=0; i < npages && tsize; i++) {
+	for (i = 0; i < npages && tsize; i++) {
 		bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
 
 		BMPCE_LOCK(bmpce);
-
-		psc_assert(bmpce->bmpce_flags & BMPCE_DATARDY);
-
-		bmpce_usecheck(bmpce, BIORQ_READ, biorq_getaligned_off(r, i));
-
 		src = bmpce->bmpce_base;
 		if (!i && (toff > bmpce->bmpce_off)) {
 			psc_assert((toff - bmpce->bmpce_off) < BMPC_BUFSZ);
@@ -1990,13 +1991,24 @@ msl_pages_copyout(struct bmpc_ioreq *r, char *buf)
 		DEBUG_BMPCE(PLL_INFO, bmpce, "tsize=%u nbytes=%zu toff=%u",
 			    tsize, nbytes, toff);
 
+		psc_assert(bmpce->bmpce_flags & BMPCE_DATARDY);
+		bmpce_usecheck(bmpce, BIORQ_READ, biorq_getaligned_off(r, i));
+
 		memcpy(dest, src, nbytes);
+
+		if (bmpce->bmpce_flags & BMPCE_READA)
+			psc_iostats_intv_add(&msl_racache_stat, nbytes);
+
+		if (biorq_is_my_bmpce(r, bmpce))
+			bmpce->bmpce_owner = NULL;
+		else
+			psc_iostats_intv_add(&msl_rdcache_stat, nbytes);
 		BMPCE_ULOCK(bmpce);
 
 		toff   += nbytes;
 		dest   += nbytes;
 		tbytes += nbytes;
-		tsize  -= nbytes;
+		tsize  -= nbytes;		
 	}
 	psc_assert(!tsize);
 	msl_biorq_destroy(r);
