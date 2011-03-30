@@ -38,9 +38,9 @@
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"
+#include "psc_util/iostats.h"
 #include "psc_util/log.h"
 #include "psc_util/random.h"
-#include "psc_util/iostats.h"
 
 #include "bmap.h"
 #include "bmap_cli.h"
@@ -63,17 +63,17 @@
 #define MSL_CB_POINTER_SLOT_RA		4
 
 /* Flushing fs threads wait here for I/O completion. */
-struct psc_waitq msl_fhent_flush_waitq = PSC_WAITQ_INIT;
+struct psc_waitq	msl_fhent_flush_waitq = PSC_WAITQ_INIT;
 
-struct timespec msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
-struct timespec msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
+struct timespec		msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
+struct timespec		msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
 
 struct pscrpc_nbreqset *ra_nbreqset; /* non-blocking set for RA's */
 
-struct psc_iostats msl_diord_stat;
-struct psc_iostats msl_diowr_stat;
-struct psc_iostats msl_rdcache_stat;
-struct psc_iostats msl_racache_stat;
+struct psc_iostats	msl_diord_stat;
+struct psc_iostats	msl_diowr_stat;
+struct psc_iostats	msl_rdcache_stat;
+struct psc_iostats	msl_racache_stat;
 
 int
 msl_remote_access(struct msl_fhent *mfh)
@@ -1357,7 +1357,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 	r->biorq_rqset = NULL;
 	PSCFREE(iovs);
 
-	psc_iostats_intv_add((op == SRMT_WRITE ? 
+	psc_iostats_intv_add((op == SRMT_WRITE ?
 	      &msl_diowr_stat : &msl_diord_stat), size);
 
 	msl_biorq_destroy(r);
@@ -1579,7 +1579,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	mq->size = npages * BMPC_BUFSZ;
 	mq->op = SRMIOP_RD;
 	memcpy(&mq->sbd, bmap_2_sbd(r->biorq_bmap), sizeof(mq->sbd));
-	
+
 	/* Only this fsthr has access to the biorq so locking should
 	 *   not be necessary.  BIORQ_INFL can't be set in the caller
 	 *   since it's possible that no rpc's will be sent on behalf
@@ -2008,7 +2008,7 @@ msl_pages_copyout(struct bmpc_ioreq *r, char *buf)
 		toff   += nbytes;
 		dest   += nbytes;
 		tbytes += nbytes;
-		tsize  -= nbytes;		
+		tsize  -= nbytes;
 	}
 	psc_assert(!tsize);
 	msl_biorq_destroy(r);

@@ -168,6 +168,11 @@ extern struct psc_waitq		 msl_fhent_flush_waitq;
 extern struct timespec		 msl_bmap_max_lease;
 extern struct timespec		 msl_bmap_timeo_inc;
 
+extern struct psc_iostats	 msl_diord_stat;
+extern struct psc_iostats	 msl_diowr_stat;
+extern struct psc_iostats	 msl_rdcache_stat;
+extern struct psc_iostats	 msl_racache_stat;
+
 extern struct psc_listcache	 bmapTimeoutQ;
 extern struct psc_waitq		 bmapflushwaitq;
 

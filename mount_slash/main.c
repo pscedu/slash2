@@ -2095,11 +2095,6 @@ msl_init(void)
 	char *name;
 	int rc;
 
-	extern struct psc_iostats msl_diord_stat;
-	extern struct psc_iostats msl_diowr_stat;
-	extern struct psc_iostats msl_rdcache_stat;
-	extern struct psc_iostats msl_racache_stat;
-
 	authbuf_checkkeyfile();
 	authbuf_readkeyfile();
 
