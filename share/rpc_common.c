@@ -573,6 +573,11 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 			psc_atomic32_setmask(&csvc->csvc_flags,
 			    CSVCF_CONNECTED);
 	} else {
+		if ((flags & CSVCF_NONBLOCK) &&
+		    sl_csvc_usemultiwait(csvc) && arg)
+			psc_multiwait_addcond(arg,
+			    csvc->csvc_waitinfo);
+
 		rc = csvc->csvc_lasterrno;
 		csvc = NULL;
 		goto out;
