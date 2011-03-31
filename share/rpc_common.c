@@ -126,6 +126,25 @@ slrpc_allocrep(struct pscrpc_request *rq, void *mqp, int qlen,
 	return (slrpc_allocgenrep(rq, mqp, qlen, mpp, plen, rcoff));
 }
 
+void
+sl_csvc_online(struct slashrpc_cservice *csvc)
+{
+	sl_csvc_lock_ensure(csvc);
+
+	csvc->csvc_import->imp_state = PSCRPC_IMP_FULL;
+	csvc->csvc_import->imp_failed = 0;
+	csvc->csvc_import->imp_invalid = 0;
+
+	psc_atomic32_clearmask(&csvc->csvc_flags,
+	    CSVCF_CONNECTING);
+	psc_atomic32_setmask(&csvc->csvc_flags,
+	    CSVCF_CONNECTED);
+
+	csvc->csvc_lasterrno = 0;
+
+	psc_multiwaitcond_wakeup(csvc->csvc_waitinfo);
+}
+
 int
 slrpc_connect_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
@@ -150,15 +169,8 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 	if (rc) {
 		csvc->csvc_import->imp_failed = 1;
 		csvc->csvc_lasterrno = rc;
-	} else {
-		csvc->csvc_import->imp_state = PSCRPC_IMP_FULL;
-		psc_atomic32_setmask(&csvc->csvc_flags,
-		    CSVCF_CONNECTED);
-		csvc->csvc_lasterrno = 0;
-		psc_multiwaitcond_wakeup(csvc->csvc_waitinfo);
-		csvc->csvc_import->imp_failed = 0;
-		csvc->csvc_import->imp_invalid = 0;
-	}
+	} else
+		sl_csvc_online(csvc);
 	sl_csvc_unlock(csvc);
 	return (0);
 }
@@ -181,8 +193,10 @@ slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
 	int rc;
 
 	pscrpc_getpridforpeer(&prid, &lnet_prids, server);
-	if (prid.nid == LNET_NID_ANY)
-		return (ENETUNREACH);
+	if (prid.nid == LNET_NID_ANY) {
+		rc = ENETUNREACH;
+		goto out;
+	}
 
 	imp = csvc->csvc_import;
 	if (imp->imp_connection)
@@ -194,22 +208,20 @@ slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_CONNECT, rq, mq, mp);
 	if (rc)
-		return (rc);
+		goto out;
 	rq->rq_timeoutable = 1;
 	mq->magic = csvc->csvc_magic;
 	mq->version = csvc->csvc_version;
 
 	if (flags & CSVCF_NONBLOCK) {
 		if (flags & CSVCF_USE_MULTIWAIT) {
-			if (arg)
-				psc_multiwait_addcond(arg,
-				    csvc->csvc_waitinfo);
-
 			rq->rq_interpret_reply = slrpc_connect_cb;
 			rq->rq_async_args.pointer_arg[0] = csvc;
 			authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 			rc = pscrpc_nbreqset_add(sl_nbrqset, rq);
-			return (EWOULDBLOCK);
+			if (rc == 0)
+				rc = EWOULDBLOCK;
+			goto out;
 		}
 		psclog_warnx("unable to try non-blocking connect without "
 		    "multiwait, reverting to blocking connect");
@@ -221,6 +233,12 @@ slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
 	if (rc == 0)
 		imp->imp_state = PSCRPC_IMP_FULL;
 	pscrpc_req_finished(rq);
+
+ out:
+	if (rc && (flags & CSVCF_NONBLOCK) &&
+	    (flags & CSVCF_USE_MULTIWAIT) && arg)
+		psc_multiwait_addcond(arg,
+		    csvc->csvc_waitinfo);
 	return (rc);
 }
 
@@ -520,7 +538,6 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 		if (c)
 			pscrpc_put_connection(c);
 
-		psc_atomic32_setmask(&csvc->csvc_flags, CSVCF_CONNECTED);
 		csvc->csvc_mtime = time(NULL);
 
 	} else if (psc_atomic32_read(&csvc->csvc_flags) & CSVCF_CONNECTING) {
@@ -531,16 +548,16 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 				      csvc->csvc_waitinfo);
 			csvc = NULL;
 			goto out;
-		} else {
-			if (sl_csvc_usemultiwait(csvc))
-				psc_multiwaitcond_wait(csvc->csvc_waitinfo,
-				       csvc->csvc_mutex);
-			else
-				psc_waitq_wait(csvc->csvc_waitinfo,
-				       csvc->csvc_lock);
-			sl_csvc_lock(csvc);
-			goto restart;
 		}
+
+		if (sl_csvc_usemultiwait(csvc))
+			psc_multiwaitcond_wait(csvc->csvc_waitinfo,
+			    csvc->csvc_mutex);
+		else
+			psc_waitq_wait(csvc->csvc_waitinfo,
+			    csvc->csvc_lock);
+		sl_csvc_lock(csvc);
+		goto restart;
 
 	} else if (flags & CSVCF_NORECON) {
 
@@ -560,6 +577,11 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 		sl_csvc_lock(csvc);
 
 		if (rc == EWOULDBLOCK) {
+			if ((flags & CSVCF_NONBLOCK) &&
+			    sl_csvc_usemultiwait(csvc) && arg)
+				psc_multiwait_addcond(arg,
+				    csvc->csvc_waitinfo);
+
 			csvc = NULL;
 			goto out;
 		}
@@ -576,10 +598,6 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 			 * that we fail to establish a connection.
 			 */
 			csvc = NULL;
-		} else {
-			psc_atomic32_setmask(&csvc->csvc_flags,
-			    CSVCF_CONNECTED);
-			csvc->csvc_lasterrno = 0;
 		}
 	} else {
 		if ((flags & CSVCF_NONBLOCK) &&
@@ -591,10 +609,8 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 		csvc = NULL;
 		goto out;
 	}
-	if (rc == 0) {
-		csvc->csvc_import->imp_failed = 0;
-		csvc->csvc_import->imp_invalid = 0;
-	}
+	if (rc == 0)
+		sl_csvc_online(csvc);
 	sl_csvc_wake(*csvcp);
 
  out:
