@@ -244,6 +244,8 @@ mds_inode_addrepl_update(struct slash_inode_handle *inoh,
 			inoh->inoh_flags &= ~INOH_INO_NEW;
 			//inoh->inoh_flags |= INOH_EXTRAS_DIRTY;
 		}
+		psclog_info("update: fid="SLPRI_FID", crc=%"PSCPRIxCRC64, 
+			fcmh_2_fid(inoh->inoh_fcmh), inoh->inoh_ino.ino_crc);
 	}
 
 	if (inoh->inoh_flags & INOH_EXTRAS_DIRTY) {
@@ -260,6 +262,8 @@ mds_inode_addrepl_update(struct slash_inode_handle *inoh,
 			DEBUG_INOH(PLL_FATAL, inoh, "rc=%d sync fail", rc);
 
 		inoh->inoh_flags &= ~INOH_EXTRAS_DIRTY;
+		psclog_info("update: fid="SLPRI_FID", extra crc=%"PSCPRIxCRC64, 
+			fcmh_2_fid(inoh->inoh_fcmh), inoh->inoh_extras->inox_crc);
 	}
 	if (log)
 		mds_unreserve_slot();

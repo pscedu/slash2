@@ -248,6 +248,9 @@ mds_redo_ino_addrepl_common(struct slmds_jent_ino_addrepl *jrir)
 			rc = EIO;
 		if (rc)
 			goto out;
+
+		psclog_info("redo: fid="SLPRI_FID", extra crc=%"PSCPRIxCRC64, 
+			jrir->sjir_fid, inoh_extras.inox_crc);
 	}
 	/*
 	 * We always update the inode itself because the number of
@@ -292,7 +295,7 @@ mds_redo_ino_addrepl_common(struct slmds_jent_ino_addrepl *jrir)
 	if (!rc && nb != INO_OD_SZ)
 		rc = EIO;
 
-	psclog_info("fid="SLPRI_FID", crc=%"PSCPRIxCRC64, 
+	psclog_info("redo: fid="SLPRI_FID", crc=%"PSCPRIxCRC64, 
 	    jrir->sjir_fid, inoh_ino.ino_crc);
 
  out:
