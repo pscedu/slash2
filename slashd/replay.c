@@ -208,7 +208,6 @@ mds_redo_ino_addrepl_common(struct slmds_jent_ino_addrepl *jrir)
 	int pos, j, rc;
 	size_t nb;
 
-
 	pos = jrir->sjir_pos;
 	if (pos >= SL_MAX_REPLICAS || pos < 0) {
 		psclog_errorx("ino_nrepls index (%d) is out of range",
@@ -257,6 +256,8 @@ mds_redo_ino_addrepl_common(struct slmds_jent_ino_addrepl *jrir)
 	memset(&inoh_ino, 0, sizeof(inoh_ino));
 	rc = mdsio_read(&rootcreds, &inoh_ino, INO_OD_SZ, &nb,
 		SL_INODE_START_OFF, mdsio_data);
+	if (!rc && nb % INO_OD_SZ)
+		rc = EIO;
 	if (rc)
 		goto out;
 
