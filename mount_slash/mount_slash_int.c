@@ -500,16 +500,14 @@ __static void
 msl_biorq_unref(struct bmpc_ioreq *r)
 {
 	struct bmap_pagecache_entry *bmpce;
-	struct bmap_pagecache *bmpc=bmap_2_bmpc(r->biorq_bmap);
+	struct bmap_pagecache *bmpc = bmap_2_bmpc(r->biorq_bmap);
 	int i;
 
 	psc_assert(r->biorq_flags & BIORQ_DESTROY);
 	psc_assert(!(r->biorq_flags & BIORQ_INFL));
 
 	BMPC_LOCK(bmpc);
-	for (i = 0; i < psc_dynarray_len(&r->biorq_pages); i++) {
-		bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
-
+	DYNARRAY_FOREACH(bmpce, i, &r->biorq_pages) {
 		/* bmapce with no reference will be freed by the reaper */
 		BMPCE_LOCK(bmpce);
 		bmpce_handle_lru_locked(bmpce, bmpc,
@@ -932,7 +930,7 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw)
 	if (rc == SLERR_BMAP_DIOWAIT) {
 		DEBUG_BMAP(PLL_WARN, b, "SLERR_BMAP_DIOWAIT rt=%d", nretries);
 		sleep(BMAP_CLI_DIOWAIT_SECS);
-		if (nretries > (BMAP_CLI_MAX_LEASE * 2))
+		if (nretries > BMAP_CLI_MAX_LEASE * 2)
 			return (-ETIMEDOUT);
 		goto retry;
 	}
@@ -1028,44 +1026,50 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 	struct psc_multiwait *mw;
 	struct rnd_iterator it;
 	void *p;
+	int i;
 
 	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
 
 	fci = fcmh_get_pri(b->bcm_fcmh);
 
 	mw = msl_getmw();
-	psc_multiwait_reset(mw);
-	psc_multiwait_entercritsect(mw);
+	for (i = 0; i < 2; i++) {
+		psc_multiwait_reset(mw);
+		psc_multiwait_entercritsect(mw);
 
-	/* first, try preferred IOS */
-	FOREACH_RND(&it, fci->fci_nrepls) {
-		if (fci->fci_reptbl[it.ri_rnd_idx].bs_id != prefIOS)
-			continue;
-		csvc = msl_try_get_replica_res(b, it.ri_rnd_idx);
-		if (csvc) {
-			psc_multiwait_leavecritsect(mw);
-			return (csvc);
+		/* first, try preferred IOS */
+		FOREACH_RND(&it, fci->fci_nrepls) {
+			if (fci->fci_reptbl[it.ri_rnd_idx].bs_id != prefIOS)
+				continue;
+			csvc = msl_try_get_replica_res(b, it.ri_rnd_idx);
+			if (csvc) {
+				psc_multiwait_leavecritsect(mw);
+				return (csvc);
+			}
 		}
-	}
 
-	/* rats, not available; try anyone available now */
-	FOREACH_RND(&it, fci->fci_nrepls) {
-		if (fci->fci_reptbl[it.ri_rnd_idx].bs_id == prefIOS)
-			continue;
-		csvc = msl_try_get_replica_res(b, it.ri_rnd_idx);
-		if (csvc) {
-			psc_multiwait_leavecritsect(mw);
-			return (csvc);
+		/* rats, not available; try anyone available now */
+		FOREACH_RND(&it, fci->fci_nrepls) {
+			if (fci->fci_reptbl[it.ri_rnd_idx].bs_id == prefIOS)
+				continue;
+			csvc = msl_try_get_replica_res(b, it.ri_rnd_idx);
+			if (csvc) {
+				psc_multiwait_leavecritsect(mw);
+				return (csvc);
+			}
 		}
-	}
 
-	/*
-	 * Still nothing, go into multiwait, awaking periodically for
-	 * cancelling or ceiling time out.
-	 */
-	psc_multiwait_secs(mw, &p, 5);
-	psc_assert(p);
-	return (slc_geticsvc_nb((struct sl_resm *)p));
+		if (i)
+			break;
+
+		/*
+		 * Still nothing, go into multiwait, awaking periodically for
+		 * cancelling or ceiling time out.
+		 */
+		psc_multiwait_secs(mw, &p, 5);
+	}
+	psc_multiwait_leavecritsect(mw);
+	return (NULL);
 }
 
 /**
@@ -1113,8 +1117,7 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	 *   not the iov's in the request since some of those may
 	 *   have already been staged in.
 	 */
-	for (i = 0; i < psc_dynarray_len(a); i++) {
-		bmpce = psc_dynarray_getpos(a, i);
+	DYNARRAY_FOREACH(bmpce, i, a) {
 		BMPCE_LOCK(bmpce);
 
 		psc_assert(bmpce->bmpce_waitq);
@@ -1142,18 +1145,17 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 		}
 		BMPCE_ULOCK(bmpce);
 	}
+	freelock(&r->biorq_lock);
 
  out:
-	reqlock(&r->biorq_lock);
 	if (rc)
-		for (i = 0; i < psc_dynarray_len(a); i++) {
-			bmpce = psc_dynarray_getpos(a, i);
+		DYNARRAY_FOREACH(bmpce, i, a) {
 			BMPCE_LOCK(bmpce);
+			DEBUG_BMPCE(PLL_DEBUG, bmpce, "setting EIO");
 			bmpce->bmpce_flags |= BMPCE_EIO;
 			BMPCE_WAKE(bmpce);
 			BMPCE_ULOCK(bmpce);
 		}
-	freelock(&r->biorq_lock);
 
 	/* Free the dynarray which was allocated in msl_read_rpc_launch().
 	 */
@@ -1170,7 +1172,7 @@ msl_readahead_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	struct slashrpc_cservice *csvc;
 	struct bmap_pagecache *bmpc;
 	struct bmap_pagecache_entry *bmpce;
-	struct psc_waitq *wq = NULL;
+	struct psc_waitq *wq;
 	int rc;
 
 	bmpce = args->pointer_arg[MSL_CB_POINTER_SLOT_BMPCE];
@@ -1205,7 +1207,8 @@ msl_readahead_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 }
 
 int
-msl_io_rpcset_cb(__unusedx struct pscrpc_request_set *set, void *arg, int rc)
+msl_io_rpcset_cb(__unusedx struct pscrpc_request_set *set, void *arg,
+    int rc)
 {
 	struct psc_dynarray *biorqs = arg;
 	struct bmpc_ioreq *r;
@@ -1392,8 +1395,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 __static void
 msl_pages_schedflush(struct bmpc_ioreq *r)
 {
-	struct bmapc_memb *b=r->biorq_bmap;
-	struct bmap_pagecache *bmpc=bmap_2_bmpc(b);
+	struct bmapc_memb *b = r->biorq_bmap;
+	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 
 	BMAP_LOCK(b);
 	BMPC_LOCK(bmpc);
@@ -1454,17 +1457,19 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry *bmpce)
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct bmapc_memb *b = bmpce->bmpce_owner;
-	struct iovec iov;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
+	struct iovec iov;
 	int rc;
 
 	iov.iov_base = bmpce->bmpce_base;
 	iov.iov_len  = BMPC_BUFSZ;
 
 	csvc = msl_bmap_choose_replica(b);
-	if (csvc == NULL)
+	if (csvc == NULL) {
+		rc = ENOTCONN;
 		goto error;
+	}
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
 	if (rc)
@@ -1502,6 +1507,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry *bmpce)
 
  error:
 	BMPCE_LOCK(bmpce);
+	DEBUG_BMPCE(PLL_DEBUG, bmpce, "setting EIO");
 	bmpce->bmpce_flags |= BMPCE_EIO;
 	BMPCE_WAKE(bmpce);
 	BMPCE_ULOCK(bmpce);
@@ -1509,13 +1515,10 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry *bmpce)
 	if (rq) {
 		DEBUG_REQ(PLL_ERROR, rq, "req failed");
 		pscrpc_req_finished(rq);
-		rq = NULL;
 	}
-	if (csvc) {
+	if (csvc)
 		sl_csvc_decref(csvc);
-		csvc = NULL;
-	}
-	return (-1);
+	return (rc);
 }
 
 __static int
@@ -1528,26 +1531,14 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct iovec *iovs;
+	uint32_t off;
 	int rc, i;
 
 	a = PSCALLOC(sizeof(*a));
 	psc_dynarray_init(a);
 
- retry:
 	psc_assert(startpage >= 0);
 	psc_assert(npages <= BMPC_MAXBUFSRPC);
-
-	csvc = (r->biorq_bmap->bcm_flags & BMAP_WR) ?
-	    msl_bmap_to_csvc(r->biorq_bmap, 1) :
-	    msl_bmap_choose_replica(r->biorq_bmap);
-	if (csvc == NULL) {
-		rc = -ENOTCONN;
-		goto error;
-	}
-
-	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
-	if (rc)
-		goto error;
 
 	iovs = PSCALLOC(sizeof(*iovs) * npages);
 
@@ -1566,23 +1557,36 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 		iovs[i].iov_len  = BMPC_BUFSZ;
 
 		if (!i)
-			mq->offset = bmpce->bmpce_off;
+			off = bmpce->bmpce_off;
 		psc_dynarray_add(a, bmpce);
 	}
 
-	rc = rsx_bulkclient(rq, BULK_PUT_SINK, SRIC_BULK_PORTAL, iovs,
-	    npages);
-	PSCFREE(iovs);
+ retry:
+	csvc = (r->biorq_bmap->bcm_flags & BMAP_WR) ?
+	    msl_bmap_to_csvc(r->biorq_bmap, 1) :
+	    msl_bmap_choose_replica(r->biorq_bmap);
+	if (csvc == NULL) {
+		rc = -ENOTCONN;
+		goto error;
+	}
+
+	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
 	if (rc)
 		goto error;
 
+	rc = rsx_bulkclient(rq, BULK_PUT_SINK, SRIC_BULK_PORTAL, iovs,
+	    npages);
+	if (rc)
+		goto error;
+
+	mq->offset = off;
 	mq->size = npages * BMPC_BUFSZ;
 	mq->op = SRMIOP_RD;
 	memcpy(&mq->sbd, bmap_2_sbd(r->biorq_bmap), sizeof(mq->sbd));
 
 	/* Only this fsthr has access to the biorq so locking should
 	 *   not be necessary.  BIORQ_INFL can't be set in the caller
-	 *   since it's possible that no rpc's will be sent on behalf
+	 *   since it's possible that no RPCs will be sent on behalf
 	 *   this biorq.
 	 */
 	if (!(r->biorq_flags & BIORQ_INFL))
@@ -1623,10 +1627,12 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	if (msl_offline_retry(r))
 		goto retry;
 	PSCFREE(a);
+	PSCFREE(iovs);
 
 	for (i = 0; i < npages; i++) {
 		bmpce = psc_dynarray_getpos(&r->biorq_pages, i + startpage);
 		BMPCE_LOCK(bmpce);
+		DEBUG_BMPCE(PLL_DEBUG, bmpce, "setting EIO rc=%d", rc);
 		bmpce->bmpce_flags |= BMPCE_EIO;
 		BMPCE_WAKE(bmpce);
 		BMPCE_ULOCK(bmpce);
@@ -1636,14 +1642,14 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 }
 
 __static int
-msl_launch_read_rpcs(struct bmpc_ioreq *r)
+msl_launch_read_rpcs(struct bmpc_ioreq *r, int *psched)
 {
 	struct bmap_pagecache_entry *bmpce;
-	int sched, npages, i, j = -1;
+	int rc = 0, i, j = -1;
 
-	npages = psc_dynarray_len(&r->biorq_pages);
-	for (i = 0; i < npages; i++) {
-		bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
+	*psched = 0;
+
+	DYNARRAY_FOREACH(bmpce, i, &r->biorq_pages) {
 		BMPCE_LOCK(bmpce);
 		/* If readahead, biorq_getaligned_off needs to account
 		 *    for the number of bmpce's inside biorq_pages.
@@ -1664,25 +1670,25 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 				j = i;
 		} else {
 			if (!biorq_is_my_bmpce(r, bmpce)) {
-				msl_read_rpc_launch(r, j, i-j);
+				rc = msl_read_rpc_launch(r, j, i-j);
 				j = -1;
-				sched = 1;
+				*psched = 1;
 
 			} else if ((i-j) == BMPC_MAXBUFSRPC) {
-				msl_read_rpc_launch(r, j, i-j);
+				rc = msl_read_rpc_launch(r, j, i-j);
 				j = i;
-				sched = 1;
+				*psched = 1;
 			}
 		}
 	}
 	if (j >= 0) {
 		/* Catch any unsent frags at the end of the array.
 		 */
-		msl_read_rpc_launch(r, j, i-j);
-		sched = 1;
+		rc = msl_read_rpc_launch(r, j, i-j);
+		*psched = 1;
 	}
 
-	return (sched);
+	return (rc);
 }
 
 /**
@@ -1704,15 +1710,19 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 
 	psc_assert(!r->biorq_rqset);
 
+	BIORQ_LOCK(r);
+	r->biorq_flags |= BIORQ_SCHED;
+	BIORQ_ULOCK(r);
+
 	/* Only read in the pages owned by this request.  To do this
 	 *   the below loop marks only the iov slots which correspond
 	 *   to page cache entries owned by this request as determined
 	 *   by biorq_is_my_bmpce().
 	 */
-	if (r->biorq_flags & BIORQ_READ)
-		sched = msl_launch_read_rpcs(r);
+	if (r->biorq_flags & BIORQ_READ) {
+		rc = msl_launch_read_rpcs(r, &sched);
 
-	else { /* BIORQ_WRITE */
+	} else { /* BIORQ_WRITE */
 		int i;
 
 		if ((r->biorq_flags & (BIORQ_RBWFP|BIORQ_RBWLP)) ==
@@ -1747,9 +1757,9 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 		}
 	}
 
-	if (!rc && sched) {
+	if (rc || !sched) {
 		BIORQ_LOCK(r);
-		r->biorq_flags |= BIORQ_SCHED;
+		r->biorq_flags &= ~BIORQ_SCHED;
 		BIORQ_ULOCK(r);
 	}
 	return (rc);
@@ -1763,8 +1773,8 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 __static int
 msl_pages_blocking_load(struct bmpc_ioreq *r)
 {
-	int rc = 0, i, npages = psc_dynarray_len(&r->biorq_pages);
 	struct bmap_pagecache_entry *bmpce;
+	int rc = 0, i;
 
 	if (r->biorq_rqset) {
 		rc = pscrpc_set_wait(r->biorq_rqset);
@@ -1788,9 +1798,9 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 		pscrpc_set_destroy(r->biorq_rqset);
 		r->biorq_rqset = NULL;
 		if (rc) {
-			for (i = 0; i < npages; i++) {
-				bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
+			DYNARRAY_FOREACH(bmpce, i, &r->biorq_pages) {
 				BMPCE_LOCK(bmpce);
+				DEBUG_BMPCE(PLL_DEBUG, bmpce, "setting EIO");
 				bmpce->bmpce_flags |= BMPCE_EIO;
 				BMPCE_WAKE(bmpce);
 				BMPCE_ULOCK(bmpce);
@@ -1799,8 +1809,7 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 		}
 	}
 
-	for (i = 0; i < npages; i++) {
-		bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
+	DYNARRAY_FOREACH(bmpce, i, &r->biorq_pages) {
 		BMPCE_LOCK(bmpce);
 		DEBUG_BMPCE(PLL_TRACE, bmpce, " ");
 
@@ -1815,8 +1824,8 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 				 * lease.
 				 */
 				if (bmpce->bmpce_flags & BMPCE_EIO) {
-					BMPCE_ULOCK(bmpce);
-					return (EAGAIN);
+					rc = EAGAIN;
+					break;
 				}
 
 				DEBUG_BMPCE(PLL_NOTIFY, bmpce, "waiting");
@@ -1831,8 +1840,7 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 			/* If there was an error, retry or give up. */
 			if (bmpce->bmpce_flags & BMPCE_EIO) {
 				r->biorq_flags &= ~BIORQ_SCHED;
-				BMPCE_ULOCK(bmpce);
-				return (EAGAIN);
+				rc = EAGAIN;
 			}
 
 			/* Read requests must have had their bmpce's
@@ -1861,19 +1869,17 @@ msl_pages_copyin(struct bmpc_ioreq *r, char *buf)
 	struct bmap_pagecache_entry *bmpce;
 	uint32_t toff, tsize, nbytes;
 	char *dest, *src;
-	int i, npages;
+	int i;
 
 	src    = buf;
 	tsize  = r->biorq_len;
 	toff   = r->biorq_off;
-	npages = psc_dynarray_len(&r->biorq_pages);
 
-	for (i = 0; i < npages; i++) {
+	DYNARRAY_FOREACH(bmpce, i, &r->biorq_pages) {
 		/* All pages are involved, therefore tsize should have value.
 		 */
 		psc_assert(tsize);
 
-		bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
 		/* Re-check RBW sanity.  The waitq pointer within the bmpce
 		 *   must still be valid in order for this check to work.
 		 */
