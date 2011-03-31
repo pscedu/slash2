@@ -38,13 +38,13 @@ extern struct pscrpc_completion rpcComp;
 #define slc_geticsvcxf(resm, fl, exp)						\
 	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT | (fl), (exp),	\
 	    (resm)->resm_nid, SRIC_REQ_PORTAL, SRIC_REP_PORTAL,			\
-	    SRIC_MAGIC, SRIC_VERSION, &resm2rmci(resm)->rmci_mwc.mwc_mutex,	\
+	    SRIC_MAGIC, SRIC_VERSION, &resm2rmci(resm)->rmci_mutex,		\
 	    &resm2rmci(resm)->rmci_mwc,	SLCONNT_IOD, msl_getmw())
 
 #define slc_getmcsvcx(resm, exp)						\
 	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT, (exp),		\
 	    (resm)->resm_nid, SRMC_REQ_PORTAL, SRMC_REP_PORTAL,			\
-	    SRMC_MAGIC, SRMC_VERSION, &resm2rmci(resm)->rmci_mwc.mwc_mutex,	\
+	    SRMC_MAGIC, SRMC_VERSION, &resm2rmci(resm)->rmci_mutex,		\
 	    &resm2rmci(resm)->rmci_mwc, SLCONNT_MDS, msl_getmw())
 
 #define slc_geticsvc(resm)		slc_geticsvcxf((resm), 0, NULL)
