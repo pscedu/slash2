@@ -208,7 +208,6 @@ mds_redo_ino_addrepl_common(struct slmds_jent_ino_addrepl *jrir)
 	int pos, j, rc;
 	size_t nb;
 
-	memset(&inoh_ino, 0, sizeof(inoh_ino));
 
 	pos = jrir->sjir_pos;
 	if (pos >= SL_MAX_REPLICAS || pos < 0) {
@@ -233,7 +232,6 @@ mds_redo_ino_addrepl_common(struct slmds_jent_ino_addrepl *jrir)
 	 */
 	if (pos >= SL_DEF_REPLICAS) {
 		memset(&inoh_extras, 0, sizeof(inoh_extras));
-
 		rc = mdsio_read(&rootcreds, &inoh_extras, INOX_OD_SZ,
 		    &nb, SL_EXTRAS_START_OFF, mdsio_data);
 		if (rc)
@@ -247,8 +245,7 @@ mds_redo_ino_addrepl_common(struct slmds_jent_ino_addrepl *jrir)
 		rc = mdsio_write(&rootcreds, &inoh_extras, INOX_OD_SZ,
 		    &nb, SL_EXTRAS_START_OFF, 0, mdsio_data, NULL,
 		    NULL);
-
-		if (!rc && nb != INO_OD_SZ)
+		if (!rc && nb != INOX_OD_SZ)
 			rc = EIO;
 		if (rc)
 			goto out;
@@ -257,6 +254,7 @@ mds_redo_ino_addrepl_common(struct slmds_jent_ino_addrepl *jrir)
 	 * We always update the inode itself because the number of
 	 * replicas is stored there.
 	 */
+	memset(&inoh_ino, 0, sizeof(inoh_ino));
 	rc = mdsio_read(&rootcreds, &inoh_ino, INO_OD_SZ, &nb,
 		SL_INODE_START_OFF, mdsio_data);
 	if (rc)
@@ -279,6 +277,7 @@ mds_redo_ino_addrepl_common(struct slmds_jent_ino_addrepl *jrir)
 	if (jrir->sjir_nrepls > SL_MAX_REPLICAS ||
 	    jrir->sjir_nrepls <= jrir->sjir_pos)
 		abort();
+
 	inoh_ino.ino_nrepls = jrir->sjir_nrepls;
 
 	if (pos < SL_DEF_REPLICAS)
