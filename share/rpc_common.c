@@ -183,7 +183,7 @@ slrpc_connect_cb(struct pscrpc_request *rq,
  */
 __static int
 slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
-    int flags, void *arg)
+    int flags)
 {
 	lnet_process_id_t prid, server_id = { server, PSCRPC_SVR_PID };
 	struct srm_connect_req *mq;
@@ -559,7 +559,7 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 		    CSVCF_CONNECTING);
 		sl_csvc_unlock(csvc);
 
-		rc = slrpc_issue_connect(peernid, csvc, flags, arg);
+		rc = slrpc_issue_connect(peernid, csvc, flags);
 
 		sl_csvc_lock(csvc);
 
