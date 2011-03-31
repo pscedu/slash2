@@ -548,7 +548,7 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 		csvc = NULL;
 		goto out;
 
-	} else if (csvc->csvc_lasterrno &&
+	} else if (csvc->csvc_lasterrno == 0 ||
 	    csvc->csvc_mtime + CSVC_RECONNECT_INTV < time(NULL)) {
 
 		psc_atomic32_setmask(&csvc->csvc_flags,
