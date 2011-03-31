@@ -193,10 +193,8 @@ slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
 	int rc;
 
 	pscrpc_getpridforpeer(&prid, &lnet_prids, server);
-	if (prid.nid == LNET_NID_ANY) {
-		rc = ENETUNREACH;
-		goto out;
-	}
+	if (prid.nid == LNET_NID_ANY)
+		return (ENETUNREACH);
 
 	imp = csvc->csvc_import;
 	if (imp->imp_connection)
@@ -208,7 +206,7 @@ slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_CONNECT, rq, mq, mp);
 	if (rc)
-		goto out;
+		return (rc);
 	rq->rq_timeoutable = 1;
 	mq->magic = csvc->csvc_magic;
 	mq->version = csvc->csvc_version;
@@ -219,9 +217,9 @@ slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
 			rq->rq_async_args.pointer_arg[0] = csvc;
 			authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 			rc = pscrpc_nbreqset_add(sl_nbrqset, rq);
-			if (rc == 0)
-				rc = EWOULDBLOCK;
-			goto out;
+			if (rc)
+				return (rc);
+			return (EWOULDBLOCK);
 		}
 		psclog_warnx("unable to try non-blocking connect without "
 		    "multiwait, reverting to blocking connect");
@@ -230,15 +228,7 @@ slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
-	if (rc == 0)
-		imp->imp_state = PSCRPC_IMP_FULL;
 	pscrpc_req_finished(rq);
-
- out:
-	if (rc && (flags & CSVCF_NONBLOCK) &&
-	    (flags & CSVCF_USE_MULTIWAIT) && arg)
-		psc_multiwait_addcond(arg,
-		    csvc->csvc_waitinfo);
 	return (rc);
 }
 
@@ -543,9 +533,6 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 	} else if (psc_atomic32_read(&csvc->csvc_flags) & CSVCF_CONNECTING) {
 
 		if (flags & CSVCF_NONBLOCK) {
-			if (sl_csvc_usemultiwait(csvc) && arg)
-				psc_multiwait_addcond(arg,
-				      csvc->csvc_waitinfo);
 			csvc = NULL;
 			goto out;
 		}
@@ -577,11 +564,6 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 		sl_csvc_lock(csvc);
 
 		if (rc == EWOULDBLOCK) {
-			if ((flags & CSVCF_NONBLOCK) &&
-			    sl_csvc_usemultiwait(csvc) && arg)
-				psc_multiwait_addcond(arg,
-				    csvc->csvc_waitinfo);
-
 			csvc = NULL;
 			goto out;
 		}
@@ -600,11 +582,6 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 			csvc = NULL;
 		}
 	} else {
-		if ((flags & CSVCF_NONBLOCK) &&
-		    sl_csvc_usemultiwait(csvc) && arg)
-			psc_multiwait_addcond(arg,
-			    csvc->csvc_waitinfo);
-
 		rc = csvc->csvc_lasterrno;
 		csvc = NULL;
 		goto out;
@@ -616,6 +593,10 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
  out:
 	if (csvc)
 		sl_csvc_incref(csvc);
+	else if ((flags & CSVCF_NONBLOCK) &&
+	    sl_csvc_usemultiwait(*csvcp) && arg)
+		psc_multiwait_addcond(arg,
+		    (*csvcp)->csvc_waitinfo);
 	sl_csvc_ureqlock(*csvcp, locked);
 	return (csvc);
 }
