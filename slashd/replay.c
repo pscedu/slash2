@@ -292,6 +292,9 @@ mds_redo_ino_addrepl_common(struct slmds_jent_ino_addrepl *jrir)
 	if (!rc && nb != INO_OD_SZ)
 		rc = EIO;
 
+	psclog_info("fid="SLPRI_FID", crc=%"PSCPRIxCRC64, 
+	    jrir->sjir_fid, inoh_ino.ino_crc);
+
  out:
 	mdsio_release(&rootcreds, mdsio_data);
 	return (rc);
