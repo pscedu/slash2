@@ -436,7 +436,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 			psc_assert(bmpce->bmpce_base);
 			psc_assert(bmpce->bmpce_flags &
 			    (BMPCE_INIT | BMPCE_EIO));
-			bmpce->bmpce_flags &= ~BMPCE_INIT;
+			bmpce->bmpce_flags &= ~(BMPCE_INIT | BMPCE_EIO);
 
 			if (op == BIORQ_READ)
 				bmpce->bmpce_flags |= BMPCE_READPNDG;
@@ -1189,11 +1189,13 @@ msl_readahead_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 	pll_remove(&bmpc->bmpc_pndg_ra, bmpce);
 	BMPCE_LOCK(bmpce);
-	if (rc)
+	if (rc) {
+		DEBUG_BMPCE(PLL_DEBUG, bmpce, "setting EIO");
 		bmpce->bmpce_flags |= BMPCE_EIO;
-	else
+	} else {
 		bmpce->bmpce_flags |= BMPCE_DATARDY;
-	DEBUG_BMPCE(PLL_INFO, bmpce, "datardy via readahead_cb");
+		DEBUG_BMPCE(PLL_INFO, bmpce, "datardy via readahead_cb");
+	}
 	wq = bmpce->bmpce_waitq;
 	bmpce->bmpce_waitq = NULL;
 	/* Decref the bmpce here since it may never be used.
