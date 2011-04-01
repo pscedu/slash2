@@ -334,6 +334,13 @@ mds_redo_bmap_assign(struct psc_journal_enthdr *pje)
 	int rc;
 
 	logentry = PJE_DATA(pje);
+	elem = logentry->sjar_elem;
+	if (logentry->sjar_flag & SLJ_ASSIGN_REP_FREE)
+		psclog_info("Free item %zd", elem);
+	else {
+		jrba = &logentry->sjar_bmap;
+		psclog_info("fid="SLPRI_FID", flags=%d", jrba->sjba_fid, logentry->sjar_flag);
+	}
 	if (logentry->sjar_flag & SLJ_ASSIGN_REP_INO) {
 		jrir = &logentry->sjar_ino;
 		mds_redo_ino_addrepl_common(jrir);
@@ -357,7 +364,6 @@ mds_redo_bmap_assign(struct psc_journal_enthdr *pje)
 	psc_assert((odth.odth_magic == ODTBL_MAGIC) &&
 		   (odth.odth_version == ODTBL_VERS));
 
-	elem = logentry->sjar_elem;
 	p = PSCALLOC(odth.odth_slotsz);
 	odtf = p + odth.odth_elemsz;
 	odtf->odtf_magic = ODTBL_MAGIC;
@@ -385,10 +391,8 @@ mds_redo_bmap_assign(struct psc_journal_enthdr *pje)
 		odtf->odtf_crc = crc;
 		odtf->odtf_inuse = ODTBL_INUSE;
 	}
-	if (logentry->sjar_flag & SLJ_ASSIGN_REP_FREE) {
+	if (logentry->sjar_flag & SLJ_ASSIGN_REP_FREE)
 		odtf->odtf_inuse = ODTBL_FREE;
-		psclog_info("Free item %zd", elem);
-	}
 
 	rc = mdsio_write(&rootcreds, p, odth.odth_slotsz,
 	   &nb, odth.odth_start + elem * odth.odth_slotsz,
