@@ -87,23 +87,22 @@ struct bmap_pagecache_entry {
 #else
 	struct psc_listentry	 bmpce_lentry;	/* chain on bmap lru		*/
 #endif
-
 };
 
-#define	BMPCE_NEW		(1 << 0)
-#define	BMPCE_GETBUF		(1 << 1)
-#define	BMPCE_DATARDY		(1 << 2)
-#define	BMPCE_DIRTY2LRU		(1 << 3)
-#define	BMPCE_LRU		(1 << 4)
-#define	BMPCE_FREE		(1 << 5)
-#define	BMPCE_FREEING		(1 << 6)
-#define	BMPCE_INIT		(1 << 7)
+#define	BMPCE_NEW		(1 << 0)	/* 0x0001 */
+#define	BMPCE_GETBUF		(1 << 1)	/* 0x0002 */
+#define	BMPCE_DATARDY		(1 << 2)	/* 0x0004 */
+#define	BMPCE_DIRTY2LRU		(1 << 3)	/* 0x0008 */
+#define	BMPCE_LRU		(1 << 4)	/* 0x0010 */
+#define	BMPCE_FREE		(1 << 5)	/* 0x0020 */
+#define	BMPCE_FREEING		(1 << 6)	/* 0x0040 */
+#define	BMPCE_INIT		(1 << 7)	/* 0x0080 */
 #define	BMPCE_READPNDG		(1 << 8)	/* 0x0100: Pending read */
-#define	BMPCE_RBWPAGE		(1 << 9)
-#define	BMPCE_RBWRDY		(1 << 10)
+#define	BMPCE_RBWPAGE		(1 << 9)	/* 0x0200 */
+#define	BMPCE_RBWRDY		(1 << 10)	/* 0x0400 */
 #define	BMPCE_INFLIGHT		(1 << 11)	/* 0x0800: I/O in progress */
 #define	BMPCE_EIO		(1 << 12)	/* 0x1000: I/O error */
-#define BMPCE_READA		(1 << 13)	/* read-ahead */
+#define BMPCE_READA		(1 << 13)	/* 0x2000: read-ahead */
 
 #define BMPCE_LOCK(b)		spinlock(&(b)->bmpce_lock)
 #define BMPCE_ULOCK(b)		freelock(&(b)->bmpce_lock)
