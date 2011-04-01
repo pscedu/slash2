@@ -142,7 +142,8 @@ sl_csvc_online(struct slashrpc_cservice *csvc)
 
 	csvc->csvc_lasterrno = 0;
 
-	psc_multiwaitcond_wakeup(csvc->csvc_waitinfo);
+	if (sl_csvc_usemultiwait(csvc))
+		psc_multiwaitcond_wakeup(csvc->csvc_waitinfo);
 }
 
 int
