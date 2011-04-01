@@ -1952,10 +1952,10 @@ __static size_t
 msl_pages_copyout(struct bmpc_ioreq *r, char *buf)
 {
 	struct bmap_pagecache_entry *bmpce;
-	uint32_t toff;
 	size_t nbytes, tbytes=0, rflen;
 	int i, npages, tsize;
 	char *dest, *src;
+	off_t toff;
 
 	dest   = buf;
 	toff   = r->biorq_off;
@@ -1996,8 +1996,9 @@ msl_pages_copyout(struct bmpc_ioreq *r, char *buf)
 		} else
 			nbytes = MIN(BMPC_BUFSZ, tsize);
 
-		DEBUG_BMPCE(PLL_INFO, bmpce, "tsize=%u nbytes=%zu toff=%u",
-			    tsize, nbytes, toff);
+		DEBUG_BMPCE(PLL_INFO, bmpce,
+		    "tsize=%u nbytes=%zu toff=%"PSCPRIdOFFT,
+		    tsize, nbytes, toff);
 
 		psc_assert(bmpce->bmpce_flags & BMPCE_DATARDY);
 		bmpce_usecheck(bmpce, BIORQ_READ, biorq_getaligned_off(r, i));
