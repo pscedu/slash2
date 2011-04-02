@@ -142,13 +142,12 @@ struct bmap_pagecache_entry {
 	    "o=%#x b=%p "						\
 	    "ts="PSCPRI_TIMESPEC" "					\
 	    "wr=%hu rd=%hu "						\
-	    "lru=%d owner=%p "fmt,					\
+	    "owner=%p "fmt,					\
 	    (b), (b)->bmpce_flags, DEBUG_BMPCE_FLAGS(b),		\
 	    (b)->bmpce_off, (b)->bmpce_base,				\
 	    PSCPRI_TIMESPEC_ARGS(&(b)->bmpce_laccess),			\
 	    psc_atomic16_read(&(b)->bmpce_wrref),			\
 	    psc_atomic16_read(&(b)->bmpce_rdref),			\
-	    !(psclist_disjoint(&(b)->bmpce_lentry)),			\
 	    (b)->bmpce_owner, ## __VA_ARGS__)
 
 static __inline int
@@ -242,6 +241,7 @@ static __inline int
 bmpc_queued_ios(struct bmap_pagecache *bmpc)
 {
 	return (pll_nitems(&bmpc->bmpc_pndg_biorqs) +
+		pll_nitems(&bmpc->bmpc_pndg_ra) +
 		pll_nitems(&bmpc->bmpc_new_biorqs));
 }
 
