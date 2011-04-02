@@ -1964,6 +1964,7 @@ __static void
 mslfsop_umount(void)
 {
 //	unmount_mp();
+//	exit();
 }
 
 #if PFL_DEBUG > 0
