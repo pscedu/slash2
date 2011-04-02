@@ -297,7 +297,8 @@ enum bmap_opcnt_types {
 /*  8 */ BMAP_OPCNT_SLVR,
 /*  9 */ BMAP_OPCNT_BCRSCHED,
 /* 10 */ BMAP_OPCNT_RLSSCHED,
-/* 11 */ BMAP_OPCNT_TRUNCWAIT
+/* 11 */ BMAP_OPCNT_TRUNCWAIT,
+/* 12 */ BMAP_OPCNT_READA
 };
 
 SPLAY_HEAD(bmap_cache, bmapc_memb);
