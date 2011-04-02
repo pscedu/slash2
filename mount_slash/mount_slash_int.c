@@ -334,6 +334,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 				 */
 				bmpce->bmpce_owner = b;
 				bmpce_handle_lru_locked(bmpce, bmpc, op, 1);
+				bmap_op_start_type(b, BMAP_OPCNT_READA);
 				lc_addtail(&bmapReadAheadQ, bmpce);
 
 			} else if (bmpce->bmpce_flags & BMPCE_LRU) {
@@ -1170,6 +1171,7 @@ int
 msl_readahead_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc;
+	struct bmapc_memb *b;
 	struct bmap_pagecache *bmpc;
 	struct bmap_pagecache_entry *bmpce;
 	struct psc_waitq *wq;
@@ -1178,7 +1180,8 @@ msl_readahead_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	bmpce = args->pointer_arg[MSL_CB_POINTER_SLOT_BMPCE];
 	csvc = args->pointer_arg[MSL_CB_POINTER_SLOT_CSVC];
 	bmpc = args->pointer_arg[MSL_CB_POINTER_SLOT_RA];
-	psc_assert(bmpce && csvc && bmpc);
+	b = bmpce->bmpce_owner;
+	psc_assert(bmpce && csvc && bmpc && b);
 
 	rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
 	if (rc == 0)
@@ -1188,6 +1191,7 @@ msl_readahead_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	DEBUG_BMPCE(PLL_INFO, bmpce, "ra cb rc=%d", rc);
 
 	pll_remove(&bmpc->bmpc_pndg_ra, bmpce);
+	
 	BMPCE_LOCK(bmpce);
 	if (rc) {
 		DEBUG_BMPCE(PLL_DEBUG, bmpce, "setting EIO");
@@ -1205,6 +1209,15 @@ msl_readahead_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	BMPC_ULOCK(bmpc);
 	psc_waitq_wakeall(wq);
 	sl_csvc_decref(csvc);
+
+	BMAP_LOCK(b);
+	if (!(b->bcm_flags & (BMAP_CLI_FLUSHPROC|BMAP_TIMEOQ)) &&
+	    (!bmpc_queued_ios(bmpc))) {
+		b->bcm_flags |= BMAP_TIMEOQ;
+		lc_addtail(&bmapTimeoutQ, b);
+	}
+	bmap_op_done_type(b, BMAP_OPCNT_READA);
+
 	return (rc);
 }
 

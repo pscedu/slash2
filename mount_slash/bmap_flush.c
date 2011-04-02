@@ -1100,6 +1100,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			}
 
 			if (bmpc_queued_ios(&bci->bci_bmpc)) {
+				b->bcm_flags &= ~BMAP_TIMEOQ;
 				DEBUG_BMAP(PLL_NOTICE, b,
 				    "descheduling from timeoq");
 				BMAP_ULOCK(b);
@@ -1323,9 +1324,11 @@ msbmapflushthr_spawn(void)
 		   thr->pscthr_name);
 	pscthr_setready(thr);
 
-	thr = pscthr_init(MSTHRT_BMAPREADAHEAD, 0, msbmaprathr_main,
-	    NULL, sizeof(struct msbmflra_thread), "msbrathr");
-	psc_multiwait_init(&msbmfrathr(thr)->mbfra_mw, "%s",
-		   thr->pscthr_name);
-	pscthr_setready(thr);
+	for (i=0; i < 4; i++) {
+		thr = pscthr_init(MSTHRT_BMAPREADAHEAD, 0, msbmaprathr_main,
+			  NULL, sizeof(struct msbmflra_thread), "msbrathr%d", i);
+		psc_multiwait_init(&msbmfrathr(thr)->mbfra_mw, "%s",
+			   thr->pscthr_name);
+		pscthr_setready(thr);
+	}
 }
