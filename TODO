@@ -201,7 +201,7 @@ in release but I don't see good performance for 'ls -al'.
 ---------------------------------------------------------
 
 sliod import
-- slictl -m path
+- slictl import path
     lookup path
 
     approaches:
@@ -213,7 +213,7 @@ sliod import
 	always allow access.
 
 sliod export
-- slictl -x path
+- slictl export path
     lookup path FID and move file to destination
     if recursive, lookup recursively
 
@@ -357,3 +357,22 @@ API rename
 
   if this gets resolves, we should remove the code that explicitly
   invalidates FUSE child dentries of a directory when handling CHMOD
+
+lcache
+- slimmns_format on fsroot.  format:
+	.slmd/fidns/0/0/0/fid_gen (metadata)
+	.slmd/fidns/0/0/0/fid_gen_data
+	.slmd/lcache.pjl
+- lcache-add:
+	on startup, retrigger any lcache-add work that needs to be done
+	log action
+	add items
+	remove log of action
+- lcache-remove:
+	log action
+	remove items
+	remove log of action
+- lcache-status:
+	lookup item and check lcache
+
+on local I/O, page in if fcmh_fid and gen and bmapgen's match what's in the cache
