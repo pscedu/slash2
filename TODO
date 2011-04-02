@@ -220,6 +220,7 @@ sliod export
 ---------------------------------------------------------
 
 network scheduling
+- need slash.conf rules to specify link bandwidth
 - preferentiate users
     (o) need classes, always complete a class before moving
 	to next one, files in the same class have same fairness
@@ -244,7 +245,6 @@ MDS must do this for scheduling traffic between sliods
 
 ------------------------------
 
-- rename SL_PATH_PREFIX to SL_FN_NS_RESERVED_PREFIX
 - add SSL transport for anytime cleartext is untrusted
 - convert authbuf to pki, put hash back inside bdbuf fdbuf
   reasoning: if authbuf succeeded, we trust anything, so there is no
@@ -297,7 +297,7 @@ API rename
 - change upsched to do async callbacks
 - does upsched get hung up by huge recursive repl reqs ?
 
- - next, if the target ptrunc offset falls inside a bmap, do more stuff:
+- if the target ptrunc offset falls inside a bmap, do more stuff:
     (o) mark the CRC for this bmap as unknown (we don't do this)
 
 - use pfl_memchk instead of null inode structures for memcmp
@@ -319,13 +319,11 @@ API rename
   be resolved.  have to store in inode and release fcmh.  we pass the
   fid to the ptrunc worker and when it processes it loads the fcmh.
 - have slashd umount /zfs-kstat on teardown
-- disable RENAME and other ops are files in SL_PATH_PREFIX (e.g. mv .slfidns .blah)
+- disable RENAME and other ops are files in SL_RPATH_META_DIR (e.g. mv .slfidns .blah)
 - ensure attrs are loaded before CHECKCREDS() -- perhaps memcmp() against zeroes?
 - clean up metadata (and replica garbage) for any files clobbered by RENAME, LINK
 - add a generic SRMT_BMAPCTL that bunches up ops such as WAKE, RELEASE,
   DIO, etc.
-- connection handling is horrible when hosts are down, even ones that
-  are not directly involved
 - do full truncate and unlink do the right things while ptrunc is resolving?
 - add SSL transport which uses keys and can therefore disable authbuf
 - slmctl -s clients do not seem to go away
@@ -339,6 +337,9 @@ API rename
 - use umount -l if it is supported at teardown
 - client needs to track when MDS goes down and recheck pinned
   ptrunc bmaps for resolvement
+- on MDS resm failure inside msl, clear a bit on all fcmh's pinned by ptrunc
+  whenever we check this flag, if the bit is not set, issue an RPC so
+  that we get registered with the MDS to be notified when ptrunc resolves
 
 - pjd tests used to fail due to inability to send FUSE updates to its
   cache after UNLINK, RENAME operations?
@@ -356,7 +357,3 @@ API rename
 
   if this gets resolves, we should remove the code that explicitly
   invalidates FUSE child dentries of a directory when handling CHMOD
-
-- on MDS resm failure inside msl, clear a bit on all fcmh's pinned by ptrunc
-  whenever we check this flag, if the bit is not set, issue an RPC so
-  that we get registered with the MDS to be notified when ptrunc resolves
