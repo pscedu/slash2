@@ -644,3 +644,14 @@ zhihui@lemon: ~$ ls -al /zzh-slash2-lemon/linux-2.6.34/ | wc
 zhihui@lemon: ~$ ls -al /zzh-slash2/linux-2.6.34/ | wc
      33     290    1642
 
+04/04/2011
+----------
+
+Looks like a symlink can have an entry in our by-id namespace:
+
+root@orange: /home/zhihui$ ls -al /zhihui_slash2_orange/.slmd/fidns/0/0/8 | tail -3
+-rw-r--r--   2 zhihui staff 5288 Apr  4 11:20 000c0000000085e8
+-rw-r--r--   2 zhihui staff 5288 Apr  4 11:20 000c0000000085e9
+lrwxrwxrwx   2 zhihui staff   33 Dec 31  1969 000c0000000085ea -> ../../platform/generic/system.dts
+
+Not needed, but won't hurt anything.
