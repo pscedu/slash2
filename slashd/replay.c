@@ -74,8 +74,9 @@ mds_redo_bmap_repl_common(struct slmds_jent_repgen *jrpg)
 	psc_assert(!nb || nb == BMAP_OD_SZ);
 
 	memcpy(bmap_disk.bod_repls, jrpg->sjp_reptbl, SL_REPLICA_NBYTES);
+	psc_info("fid="SLPRI_FID" bmapno=%d", jrpg->sjp_fid, jrpg->sjp_bmapno);
 
-	/* XXX recalculate CRC!! */
+	psc_crc64_calc(&bmap_disk.bod_crc, &bmap_disk, BMAP_OD_CRCSZ);
 
 	rc = mdsio_write(&rootcreds, &bmap_disk, BMAP_OD_SZ, &nb,
 	    (off_t)((BMAP_OD_SZ * jrpg->sjp_bmapno) + SL_BMAP_START_OFF),
