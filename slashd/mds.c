@@ -1140,7 +1140,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		key = odtr->odtr_key;
 		elem = odtr->odtr_elem;
 		rc = mds_odtable_freeitem(mdsBmapAssignTable, odtr);
-		DEBUG_BMAP(PLL_NOTIFY, b, "odtable remove seq=%"PRId64" key=%" PRId64" rc=%d", 
+		DEBUG_BMAP(PLL_NOTIFY, b, "odtable remove seq=%"PRId64" key=%" PRId64" rc=%d",
 			bml->bml_seq, key, rc);
 		bmap_op_done_type(b, BMAP_OPCNT_IONASSIGN);
 
@@ -1148,7 +1148,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		logentry = pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_assign_rep));
 		logentry->sjar_elem = elem;
 		logentry->sjar_flag = SLJ_ASSIGN_REP_FREE;
-		pjournal_add_entry(mdsJournal, 0, MDS_LOG_BMAP_ASSIGN, 0, logentry, 
+		pjournal_add_entry(mdsJournal, 0, MDS_LOG_BMAP_ASSIGN, 0, logentry,
 			sizeof(struct slmds_jent_assign_rep));
 		pjournal_put_buf(mdsJournal, logentry);
 		mds_unreserve_slot();
@@ -1295,8 +1295,8 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 
 	rc = slm_fcmh_get(&fg, &f);
 	if (rc) {
-		psc_errorx("failed to load: item=%zd, fid="SLPRI_FID, 
-			odtr->odtr_elem, fg.fg_fid);
+		psc_errorx("failed to load: item=%zd, fid="SLPRI_FID,
+		    odtr->odtr_elem, fg.fg_fid);
 		goto out;
 	}
 
@@ -1574,7 +1574,7 @@ int
 mds_bmap_read(struct bmapc_memb *bcm, __unusedx enum rw rw)
 {
 	struct fidc_membh *f = bcm->bcm_fcmh;
-	int rc;
+	int rc, retifset[NBREPLST];
 
 	/* pread() the bmap from the meta file.
 	 */
@@ -1596,7 +1596,8 @@ mds_bmap_read(struct bmapc_memb *bcm, __unusedx enum rw rw)
 		}
 	}
 
-	/* At this point, the short I/O is an error since the bmap isn't
+	/*
+	 * At this point, the short I/O is an error since the bmap isn't
 	 *    zeros.
 	 */
 	if (rc) {
@@ -1604,6 +1605,11 @@ mds_bmap_read(struct bmapc_memb *bcm, __unusedx enum rw rw)
 		    "bmapno=%u, rc=%d", bcm->bcm_bmapno, rc);
 		return (-EIO);
 	}
+
+	brepls_init(retifset, 0);
+	retifset[BREPLST_VALID] = 1;
+	rc = mds_repl_bmap_walk_all(bcm, NULL, retifset, REPL_WALKF_SCIRCUIT);
+		psc_fatal("bmap has no valid replicas");
 
 	DEBUG_BMAPOD(PLL_INFO, bcm, "");
 	return (0);
