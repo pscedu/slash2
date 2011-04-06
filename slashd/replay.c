@@ -340,7 +340,8 @@ mds_redo_bmap_assign(struct psc_journal_enthdr *pje)
 		psclog_info("Free item %zd", elem);
 	else {
 		jrba = &logentry->sjar_bmap;
-		psclog_info("fid="SLPRI_FID", flags=%d", jrba->sjba_fid, logentry->sjar_flag);
+		psclog_info("Redo item %zd, fid="SLPRI_FID", flags=%d", 
+			elem, jrba->sjba_fid, logentry->sjar_flag);
 	}
 	if (logentry->sjar_flag & SLJ_ASSIGN_REP_INO) {
 		jrir = &logentry->sjar_ino;

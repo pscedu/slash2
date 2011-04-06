@@ -467,14 +467,14 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 
 	logentry->sjar_flag = SLJ_ASSIGN_REP_NONE;
 	if (nrepls != ih->inoh_ino.ino_nrepls) {
-		jrir->sjir_fid = fcmh_2_fid(bmap->bcm_fcmh);
+		jrir->sjir_fid = bia.bia_fid;
 		jrir->sjir_ios = bia.bia_ios;
 		jrir->sjir_pos = iosidx;
 		jrir->sjir_nrepls = ih->inoh_ino.ino_nrepls;
 		logentry->sjar_flag |= SLJ_ASSIGN_REP_INO;
 	}
 
-	jrpg->sjp_fid = fcmh_2_fid(bmap->bcm_fcmh);
+	jrpg->sjp_fid = bia.bia_fid;
 	jrpg->sjp_bmapno = bmap->bcm_bmapno;
 	jrpg->sjp_bgen = bmap_2_bgen(bmap);
 	memcpy(jrpg->sjp_reptbl, bmap->bcm_repls, SL_REPLICA_NBYTES);
@@ -534,6 +534,10 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 		&bia, sizeof(struct bmap_ion_assign));
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, b, "odtable_getitem() failed");
+		return (-1);
+	}
+	if (bia.bia_fid != fcmh_2_fid(b->bcm_fcmh)) {
+		DEBUG_BMAP(PLL_ERROR, b, "different fid="SLPRI_FID, bia.bia_fid);
 		return (-1);
 	}
 
