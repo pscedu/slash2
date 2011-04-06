@@ -500,7 +500,8 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 
 	bml->bml_seq = bia.bia_seq;
 
-	DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh, "bmap assignment");
+	DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh, "bmap assignment, elem = %zd", 
+		   bmdsi->bmdsi_assign->odtr_elem);
 	DEBUG_BMAP(PLL_INFO, bmap, "using res(%s) ion(%s) "
 		   "rmmi(%p) bia(%p)", res->res_name, resm->resm_addrbuf,
 		   bmdsi->bmdsi_wr_ion, bmdsi->bmdsi_assign);
@@ -606,6 +607,9 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 	    sizeof(struct slmds_jent_assign_rep));
 	pjournal_put_buf(mdsJournal, logentry);
 	mds_unreserve_slot();
+
+	DEBUG_FCMH(PLL_INFO, b->bcm_fcmh, "bmap update, elem = %zd", 
+		   bmdsi->bmdsi_assign->odtr_elem);
 
 	return (0);
 }
