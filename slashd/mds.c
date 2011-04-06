@@ -500,7 +500,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 
 	bml->bml_seq = bia.bia_seq;
 
-	DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh, "bmap assignment, elem = %zd", 
+	DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh, "bmap assign, elem = %zd", 
 		   bmdsi->bmdsi_assign->odtr_elem);
 	DEBUG_BMAP(PLL_INFO, bmap, "using res(%s) ion(%s) "
 		   "rmmi(%p) bia(%p)", res->res_name, resm->resm_addrbuf,
