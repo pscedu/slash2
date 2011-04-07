@@ -53,7 +53,7 @@ void
 sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 {
 	static char lastsite[SITE_NAME_MAX], lastres[RES_NAME_MAX];
-	char *site, *nid, *res, addrbuf[RESM_ADDRBUF_SZ];
+	char *p, *site, *nid, *res, addrbuf[RESM_ADDRBUF_SZ];
 	const struct slctlmsg_conn *scc = m;
 	int type;
 
@@ -72,6 +72,9 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 		if (*nid != '\0')
 			*nid++ = '\0';
 	}
+	p = strchr(nid, '@');
+	if (p)
+		*p = '\0';
 
 	if (psc_ctl_lastmsgtype != mh->mh_type ||
 	    strcmp(lastsite, site)) {
