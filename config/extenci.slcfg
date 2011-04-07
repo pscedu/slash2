@@ -1,6 +1,6 @@
 # $Id$
 
-global port=1001;
+global port=50000;
 global net=tcp3;
 
 site @PSC {
@@ -12,6 +12,7 @@ site @PSC {
 		type	= mds;
 		id	= 101;
 		ifs	= wolverine.psc.edu;
+		jrnldev	= /dev/sdb;
 	}
 
 	resource io {
@@ -23,7 +24,7 @@ site @PSC {
 	}
 }
 
-site @FU {
+site @UF {
 	site_desc	= "Florida U";
 	site_id		= 200;
 
@@ -35,3 +36,16 @@ site @FU {
 		ifs	= vmuf.extenci.org;
 	}
 }
+
+#site @FNAL {
+#	site_desc	= "Fermilab";
+#	site_id		= 300;
+#
+#	resource io {
+#		desc	= "Fermilab I/O";
+#		type	= parallel_fs;
+#		id	= 301;
+#		fsroot	= /vm4/slio;
+#		ifs	= slio.fnal.gov;
+#	}
+#}
