@@ -1,0 +1,37 @@
+# $Id$
+
+global port=50000;
+global net=tcp3;
+
+site @PSC {
+	site_desc	= "PSC";
+	site_id		= 100;
+
+	resource md {
+		desc	= "metadata server";
+		type	= mds;
+		id	= 101;
+		ifs	= wolverine.psc.edu;
+	}
+
+	resource io {
+		desc	= "PSC I/O";
+		type	= parallel_fs;
+		id	= 102;
+		fsroot	= /extenci-slio;
+		ifs	= oss01w.psc.jwan.teragrid.org;
+	}
+}
+
+site @FU {
+	site_desc	= "Florida U";
+	site_id		= 200;
+
+	resource io {
+		desc	= "FU I/O";
+		type	= parallel_fs;
+		id	= 201;
+		fsroot	= /vm4/slio;
+		ifs	= vmuf.extenci.org;
+	}
+}
