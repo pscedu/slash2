@@ -340,6 +340,11 @@ API rename
 - on MDS resm failure inside msl, clear a bit on all fcmh's pinned by ptrunc
   whenever we check this flag, if the bit is not set, issue an RPC so
   that we get registered with the MDS to be notified when ptrunc resolves
+- upsched only needs to be spawned for our own site
+  - need way to specify in slash.conf other sites without MDS which MDS
+    should be responsible for replications to resources at that site
+
+      global use_mds=md@PSC
 
 - pjd tests used to fail due to inability to send FUSE updates to its
   cache after UNLINK, RENAME operations?
