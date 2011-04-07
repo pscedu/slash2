@@ -76,15 +76,15 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	if (p)
 		*p = '\0';
 
+	if (strcmp(lastres, res) || strcmp(lastsite, site))
+		strlcpy(lastres, res, sizeof(lastres));
+	else
+		res = "";
 	if (psc_ctl_lastmsgtype != mh->mh_type ||
 	    strcmp(lastsite, site)) {
 		strlcpy(lastsite, site, sizeof(lastsite));
 		printf("%s\n", site);
 	}
-	if (strcmp(lastres, res))
-		strlcpy(lastres, res, sizeof(lastres));
-	else
-		res = "";
 
 	type = scc->scc_type;
 	if (type < 0 || type >= nitems(slconn_restypes))
