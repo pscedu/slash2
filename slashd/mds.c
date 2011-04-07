@@ -500,7 +500,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 
 	bml->bml_seq = bia.bia_seq;
 
-	DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh, "bmap assign, elem = %zd", 
+	DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh, "bmap assign, elem = %zd",
 		   bmdsi->bmdsi_assign->odtr_elem);
 	DEBUG_BMAP(PLL_INFO, bmap, "using res(%s) ion(%s) "
 		   "rmmi(%p) bia(%p)", res->res_name, resm->resm_addrbuf,
@@ -608,7 +608,7 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 	pjournal_put_buf(mdsJournal, logentry);
 	mds_unreserve_slot();
 
-	DEBUG_FCMH(PLL_INFO, b->bcm_fcmh, "bmap update, elem = %zd", 
+	DEBUG_FCMH(PLL_INFO, b->bcm_fcmh, "bmap update, elem = %zd",
 		   bmdsi->bmdsi_assign->odtr_elem);
 
 	return (0);
@@ -1616,13 +1616,9 @@ mds_bmap_read(struct bmapc_memb *bcm, __unusedx enum rw rw)
 
 	brepls_init(retifset, 0);
 	retifset[BREPLST_VALID] = 1;
-
-	psc_assert(SL_REPL_GET_BMAP_IOS_STAT(bcm->bcm_repls, 0));
-
-#if 0
 	rc = mds_repl_bmap_walk_all(bcm, NULL, retifset, REPL_WALKF_SCIRCUIT);
+	if (!rc)
 		psc_fatal("bmap has no valid replicas");
-#endif
 
 	DEBUG_BMAPOD(PLL_INFO, bcm, "");
 	return (0);
