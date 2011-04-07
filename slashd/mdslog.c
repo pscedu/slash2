@@ -1328,47 +1328,6 @@ mds_inode_sync(struct slash_inode_handle *inoh)
 	INOH_ULOCK(inoh);
 }
 
-/**
- * mds_bmap_sync - Callback function which is called from
- *	mdsfssyncthr_begin().
- * @data: void * which is the bmap.
- * Notes: this call allows SLASH2 to optimize CRC calculation by only
- *	taking them when the bmap is written, not upon each update to
- *	the bmap.  It is important to note that forward changes may be
- *	synced here.
- *
- *	What that means is that changes which are not part of this XID
- *	session may have snuck in here (i.e. a CRC update came in and
- *	was fully processed before mds_bmap_sync() grabbed the lock.
- *	For this reason the CRC updates must be journaled before
- *	manifesting in the bmap cache.  Otherwise, log replays
- *	will look inconsistent.
- */
-void
-mds_bmap_sync(void *data)
-{
-	struct bmapc_memb *bmap = data;
-	int rc;
-
-	BMAPOD_RDLOCK(bmap_2_bmdsi(bmap));
-	psc_crc64_calc(&bmap_2_ondiskcrc(bmap), bmap_2_ondisk(bmap),
-	    BMAP_OD_CRCSZ);
-	rc = mdsio_bmap_write(bmap);
-	if (rc)
-		DEBUG_BMAP(PLL_FATAL, bmap, "rc=%d errno=%d sync fail",
-			   rc, errno);
-	else
-		DEBUG_BMAP(PLL_INFO, bmap, "sync ok");
-
-	BMAPOD_ULOCK(bmap_2_bmdsi(bmap));
-
-	if (fcmh_2_inoh(bmap->bcm_fcmh)->inoh_flags & INOH_INO_DIRTY ||
-	    fcmh_2_inoh(bmap->bcm_fcmh)->inoh_flags & INOH_EXTRAS_DIRTY)
-		mds_inode_sync(fcmh_2_inoh(bmap->bcm_fcmh));
-
-	bmap_op_done_type(bmap, BMAP_OPCNT_MDSLOG);
-}
-
 void
 mds_inode_addrepl_log(void *datap, uint64_t txg)
 {
