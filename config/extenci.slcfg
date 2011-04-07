@@ -1,6 +1,6 @@
 # $Id$
 
-global port=50000;
+global port=1001;
 global net=tcp3;
 
 site @PSC {
