@@ -278,27 +278,6 @@ mds_inode_addrepl_update(struct slash_inode_handle *inoh,
 }
 
 int
-mdsio_bmap_write(struct bmapc_memb *bmap)
-{
-	size_t nb;
-	int rc;
-
-	rc = zfsslash2_write(&rootcreds, bmap_2_ondisk(bmap),
-	    BMAP_OD_SZ, &nb, (off_t)((BMAP_OD_SZ * bmap->bcm_bmapno) +
-	    SL_BMAP_START_OFF), 0, bmap_2_zfs_fh(bmap), NULL, NULL);
-
-	if (rc) {
-		DEBUG_BMAP(PLL_ERROR, bmap,
-		    "zfsslash2_write: error (rc=%d)", rc);
-	} else if (nb != BMAP_OD_SZ) {
-		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: short I/O");
-		rc = SLERR_SHORTIO;
-	}
-	DEBUG_BMAP(PLL_INFO, bmap, "wrote bmap (rc=%d)", rc);
-	return (rc);
-}
-
-int
 mdsio_inode_read(struct slash_inode_handle *i)
 {
 	size_t nb;

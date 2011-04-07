@@ -65,7 +65,6 @@ void	mds_namespace_log(int, uint64_t, uint64_t, uint64_t, const
 int	mdsio_fcmh_setattr(struct fidc_membh *, int);
 int     mdsio_fcmh_refreshattr(struct fidc_membh *, struct srt_stat *);
 int	mdsio_bmap_read(struct bmapc_memb *);
-int	mdsio_bmap_write(struct bmapc_memb *);
 int	mdsio_inode_extras_read(struct slash_inode_handle *);
 int	mdsio_inode_extras_write(struct slash_inode_handle *);
 int	mdsio_inode_read(struct slash_inode_handle *);
