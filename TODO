@@ -8,6 +8,18 @@ reminders:
 - do sl_csvc_wantfree() in all to-CLI csvcs
 - ensure reentrancy of 'static' variables in functions
 
+
+-----------------------------------------------------------------------
+
+* Need to make sure that we're not blocking in here needlessly.
+       pscrpc_nbreqset_reap(pndgReqs);
+
+* Bmap flush should have a call which checks the lease validity of a 
+       bmap.  If the lease has expired, then the I/O must be dropped and 
+       EIO returned to the caller.
+
+pauln (03/31/2011)
+
 -----------------------------------------------------------------------
 * Support for st_nblocks for applications such as 'du -h'.
 Initial thoughts are that this value should be stored in the zfs inode.
