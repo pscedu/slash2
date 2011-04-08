@@ -315,13 +315,12 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc == 0)
+	if (rc == 0) {
 		rc = mp->rc;
-
-	psclog_info("pfid="SLPRI_FID" fid="SLPRI_FID", mode=%#o name='%s' rc=%d",
-	    pinum, mp->cattr.sst_fg.fg_fid, mode, name, rc);
-
-	if (rc)
+		psclog_info("pfid="SLPRI_FID" fid="SLPRI_FID
+		    ", mode=%#o name='%s' rc=%d", pinum, 
+		    mp->cattr.sst_fg.fg_fid, mode, name, rc);
+	} else
 		goto out;
 
 	fcmh_setattr(p, &mp->pattr, FCMH_SETATTRF_NONE);
