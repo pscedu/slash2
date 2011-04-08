@@ -1616,7 +1616,12 @@ mds_bmap_read(struct bmapc_memb *bcm, __unusedx enum rw rw)
 
 	brepls_init(retifset, 0);
 	retifset[BREPLST_VALID] = 1;
-	rc = mds_repl_bmap_walk_all(bcm, NULL, retifset, REPL_WALKF_SCIRCUIT);
+	retifset[BREPLST_GARBAGE] = 1;
+	retifset[BREPLST_GARBAGE_SCHED] = 1;
+	retifset[BREPLST_TRUNCPNDG] = 1;
+	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
+	rc = mds_repl_bmap_walk_all(bcm, NULL, retifset,
+	    REPL_WALKF_SCIRCUIT);
 	if (!rc)
 		psc_fatal("bmap has no valid replicas");
 
