@@ -515,9 +515,11 @@ mds_redo_namespace(struct slmds_jent_namespace *sjnm, int replay)
 		rc = EINVAL;
 		break;
 	}
-	psclog_info("Redo namespace log: op=%d name=%s "
-	    "newname=%s fid="SLPRI_FID" rc=%d",
-	    sjnm->sjnm_op, name, newname, sjnm->sjnm_target_fid, rc);
+	if (rc)
+		psclog_error("Redo namespace log: op=%d name=%s "
+			"newname=%s fid="SLPRI_FID" rc=%d",
+			sjnm->sjnm_op, name, newname, 
+			sjnm->sjnm_target_fid, rc);
 	return (rc);
 }
 
