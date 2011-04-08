@@ -410,7 +410,6 @@ _fidc_lookup(const struct pfl_callerinfo *pfl_callerinfo,
 	lc_add(&fidcIdleList, fcmh);
 
 	if (rc) {
-		FCMH_ULOCK(fcmh);
 		fcmh->fcmh_flags |= FCMH_CAC_TOFREE;
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
 	} else {
