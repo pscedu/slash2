@@ -11,8 +11,10 @@ reminders:
 
 -----------------------------------------------------------------------
 
-* Need to make sure that we're not blocking in here needlessly.
-       pscrpc_nbreqset_reap(pndgReqs);
+* In bmap_flush_reap_rpcs() some work should be done to prove that 
+  time is not being needlessly wasted in pscrpc_set_finalize().  The 
+  speed in which pscrpc_nbreqset_reap(pndgReqs) is called determines 
+  how fast we can unblock flush-on-close calls.
 
 * Bmap flush should have a call which checks the lease validity of a 
        bmap.  If the lease has expired, then the I/O must be dropped and 
