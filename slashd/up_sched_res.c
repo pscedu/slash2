@@ -88,7 +88,7 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 	psc_dynarray_remove(&smi->smi_upq, wk);
 	ureqlock(&smi->smi_lock, locked);
 
-	psc_pthread_mutex_reqlock(&wk->uswi_mutex);
+	psc_mutex_reqlock(&wk->uswi_mutex);
 	USWI_DECREF(wk, USWI_REFT_SITEUPQ);
 
 	if (wk->uswi_flags & USWIF_DIE) {
@@ -100,7 +100,7 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 	while (wk->uswi_flags & USWIF_BUSY) {
 		psc_assert(psc_atomic32_read(&wk->uswi_refcnt) > 1);
 		psc_multiwaitcond_wait(&wk->uswi_mwcond, &wk->uswi_mutex);
-		psc_pthread_mutex_lock(&wk->uswi_mutex);
+		psc_mutex_lock(&wk->uswi_mutex);
 	}
 
 	/*
@@ -109,7 +109,7 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 	 */
 	uswi_gen = wk->uswi_gen;
 	wk->uswi_flags |= USWIF_BUSY;
-	psc_pthread_mutex_unlock(&wk->uswi_mutex);
+	psc_mutex_unlock(&wk->uswi_mutex);
 
 	/* Scan for any OLD states. */
 	brepls_init(retifset, 1);
@@ -129,7 +129,7 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 	}
 
 	UPSCHED_MGR_LOCK();
-	psc_pthread_mutex_lock(&wk->uswi_mutex);
+	psc_mutex_lock(&wk->uswi_mutex);
 	if (wk->uswi_gen != uswi_gen) {
 		UPSCHED_MGR_ULOCK();
  keep:
@@ -158,7 +158,7 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 __static void
 uswi_kill(struct up_sched_work_item *wk)
 {
-	psc_pthread_mutex_ensure_locked(&wk->uswi_mutex);
+	psc_mutex_ensure_locked(&wk->uswi_mutex);
 
 	UPSCHED_MGR_ENSURE_LOCKED();
 	PSC_SPLAY_XREMOVE(upschedtree, &upsched_tree, wk);
@@ -174,7 +174,7 @@ uswi_kill(struct up_sched_work_item *wk)
 		psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
 		psc_multiwaitcond_wait(&wk->uswi_mwcond,
 		    &wk->uswi_mutex);
-		psc_pthread_mutex_lock(&wk->uswi_mutex);
+		psc_mutex_lock(&wk->uswi_mutex);
 	}
 
 	if (wk->uswi_fcmh)
@@ -540,10 +540,10 @@ slmupschedthr_main(struct psc_thread *thr)
 
 			has_work = 0;
 
-			psc_pthread_mutex_lock(&wk->uswi_mutex);
+			psc_mutex_lock(&wk->uswi_mutex);
 			uswi_gen = wk->uswi_gen;
 			wk->uswi_flags &= ~USWIF_BUSY;
-			psc_pthread_mutex_unlock(&wk->uswi_mutex);
+			psc_mutex_unlock(&wk->uswi_mutex);
 
 			/* find a res in our site this uswi is destined for */
 			iosidx = -1;
@@ -702,7 +702,7 @@ slmupschedthr_main(struct psc_thread *thr)
 			 * At this point, we did not find a block/src/dst
 			 * resource involving our site needed by this uswi.
 			 */
-			psc_pthread_mutex_lock(&wk->uswi_mutex);
+			psc_mutex_lock(&wk->uswi_mutex);
 			if (has_work || wk->uswi_gen != uswi_gen) {
 				psc_multiwait_addcond_masked(&smi->smi_mw,
 				    &wk->uswi_mwcond, 0);
@@ -758,7 +758,7 @@ uswi_access(struct up_sched_work_item *wk)
 {
 	int locked, rc = 1;
 
-	psc_pthread_mutex_reqlock(&wk->uswi_mutex);
+	psc_mutex_reqlock(&wk->uswi_mutex);
 
 	/* Wait for someone else to finish processing. */
 	locked = PLL_HASLOCK(&upsched_listhd);
@@ -768,7 +768,7 @@ uswi_access(struct up_sched_work_item *wk)
 		psc_multiwaitcond_wait(&wk->uswi_mwcond, &wk->uswi_mutex);
 		if (locked)
 			UPSCHED_MGR_LOCK();
-		psc_pthread_mutex_lock(&wk->uswi_mutex);
+		psc_mutex_lock(&wk->uswi_mutex);
 	}
 
 	if (wk->uswi_flags & USWIF_DIE) {
@@ -778,7 +778,7 @@ uswi_access(struct up_sched_work_item *wk)
 		rc = 0;
 	} else {
 		wk->uswi_flags |= USWIF_BUSY;
-		psc_pthread_mutex_unlock(&wk->uswi_mutex);
+		psc_mutex_unlock(&wk->uswi_mutex);
 	}
 	return (rc);
 }
@@ -786,11 +786,11 @@ uswi_access(struct up_sched_work_item *wk)
 void
 uswi_unref(struct up_sched_work_item *wk)
 {
-	psc_pthread_mutex_reqlock(&wk->uswi_mutex);
+	psc_mutex_reqlock(&wk->uswi_mutex);
 	wk->uswi_flags &= ~USWIF_BUSY;
 	USWI_DECREF(wk, USWI_REFT_LOOKUP);
 	psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
-	psc_pthread_mutex_unlock(&wk->uswi_mutex);
+	psc_mutex_unlock(&wk->uswi_mutex);
 }
 
 struct up_sched_work_item *
@@ -812,7 +812,7 @@ uswi_find(const struct slash_fidgen *fgp, int *locked)
 		UPSCHED_MGR_URLOCK(*locked);
 		return (NULL);
 	}
-	psc_pthread_mutex_lock(&wk->uswi_mutex);
+	psc_mutex_lock(&wk->uswi_mutex);
 	USWI_INCREF(wk, USWI_REFT_LOOKUP);
 	UPSCHED_MGR_ULOCK();
 	*locked = 0;
@@ -839,7 +839,7 @@ uswi_init(struct up_sched_work_item *wk, slfid_t fid)
 	memset(wk, 0, sizeof(*wk));
 	INIT_PSC_LISTENTRY(&wk->uswi_lentry);
 	wk->uswi_flags |= USWIF_BUSY;
-	psc_pthread_mutex_init(&wk->uswi_mutex);
+	psc_mutex_init(&wk->uswi_mutex);
 	psc_multiwaitcond_init(&wk->uswi_mwcond,
 	    NULL, 0, "upsched-"SLPRI_FID, fid);
 	psc_atomic32_set(&wk->uswi_refcnt, 0);
@@ -910,10 +910,10 @@ upsched_scandir(void)
 				psc_fatal("uswi_findoradd: %s",
 				    slstrerror(rc));
 
-			psc_pthread_mutex_lock(&wk->uswi_mutex);
+			psc_mutex_lock(&wk->uswi_mutex);
 			wk->uswi_fcmh = fcmh;
 			wk->uswi_flags &= ~USWIF_BUSY;
-			psc_pthread_mutex_unlock(&wk->uswi_mutex);
+			psc_mutex_unlock(&wk->uswi_mutex);
 
 			brepls_init(tract, -1);
 			tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
@@ -1017,7 +1017,7 @@ uswi_findoradd(const struct slash_fidgen *fgp,
 		} while (!locked);
 	}
 
-	psc_pthread_mutex_lock(&newrq->uswi_mutex);
+	psc_mutex_lock(&newrq->uswi_mutex);
 	USWI_INCREF(newrq, USWI_REFT_TREE);
 	USWI_INCREF(newrq, USWI_REFT_LOOKUP);
 
@@ -1025,7 +1025,7 @@ uswi_findoradd(const struct slash_fidgen *fgp,
 	pll_addtail(&upsched_listhd, newrq);
 	upsched_gen++;
 
-	psc_pthread_mutex_unlock(&newrq->uswi_mutex);
+	psc_mutex_unlock(&newrq->uswi_mutex);
 
 	*wkp = newrq;
 	newrq = NULL;
@@ -1052,7 +1052,7 @@ uswi_enqueue_sites(struct up_sched_work_item *wk,
 	struct sl_site *site;
 	int locked, n;
 
-	locked = psc_pthread_mutex_reqlock(&wk->uswi_mutex);
+	locked = psc_mutex_reqlock(&wk->uswi_mutex);
 	wk->uswi_gen++;
 	for (n = 0; n < nios; n++) {
 		site = libsl_resid2site(iosv[n].bs_id);
@@ -1067,7 +1067,7 @@ uswi_enqueue_sites(struct up_sched_work_item *wk,
 		psc_multiwaitcond_wakeup(&smi->smi_mwcond);
 		freelock(&smi->smi_lock);
 	}
-	psc_pthread_mutex_ureqlock(&wk->uswi_mutex, locked);
+	psc_mutex_ureqlock(&wk->uswi_mutex, locked);
 }
 
 void

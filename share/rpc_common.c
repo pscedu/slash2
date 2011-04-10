@@ -460,7 +460,7 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 	lm.lm_ptr = lockp;
 
 	if (flags & CSVCF_USE_MULTIWAIT)
-		locked = psc_pthread_mutex_reqlock(lm.lm_mutex);
+		locked = psc_mutex_reqlock(lm.lm_mutex);
 	else
 		locked = reqlock(lm.lm_lock);
 	if (exp)
@@ -614,12 +614,12 @@ slconnthr_main(struct psc_thread *thr)
 	sct = thr->pscthr_private;
 	resm = sct->sct_resm;
 	if (sct->sct_flags & CSVCF_USE_MULTIWAIT)
-		psc_pthread_mutex_lock(sct->sct_lockinfo.lm_mutex);
+		psc_mutex_lock(sct->sct_lockinfo.lm_mutex);
 	else
 		spinlock(sct->sct_lockinfo.lm_lock);
 	do {
 		if (sct->sct_flags & CSVCF_USE_MULTIWAIT)
-			psc_pthread_mutex_unlock(sct->sct_lockinfo.lm_mutex);
+			psc_mutex_unlock(sct->sct_lockinfo.lm_mutex);
 		else
 			freelock(sct->sct_lockinfo.lm_lock);
 

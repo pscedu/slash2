@@ -135,7 +135,7 @@ struct sl_expcli_ops {
 #define sl_csvc_lock(csvc)						\
 	do {								\
 		if (sl_csvc_usemultiwait(csvc))				\
-			psc_pthread_mutex_lock((csvc)->csvc_mutex);	\
+			psc_mutex_lock((csvc)->csvc_mutex);		\
 		else							\
 			spinlock((csvc)->csvc_lock);			\
 	} while (0)
@@ -143,20 +143,20 @@ struct sl_expcli_ops {
 #define sl_csvc_unlock(csvc)						\
 	do {								\
 		if (sl_csvc_usemultiwait(csvc))				\
-			psc_pthread_mutex_unlock((csvc)->csvc_mutex);	\
+			psc_mutex_unlock((csvc)->csvc_mutex);		\
 		else							\
 			freelock((csvc)->csvc_lock);			\
 	} while (0)
 
 #define sl_csvc_reqlock(csvc)						\
 	(sl_csvc_usemultiwait(csvc) ?					\
-	    psc_pthread_mutex_reqlock((csvc)->csvc_mutex) :		\
+	    psc_mutex_reqlock((csvc)->csvc_mutex) :			\
 	    reqlock((csvc)->csvc_lock))
 
 #define sl_csvc_ureqlock(csvc, waslocked)				\
 	do {								\
 		if (sl_csvc_usemultiwait(csvc))				\
-			psc_pthread_mutex_ureqlock((csvc)->csvc_mutex,	\
+			psc_mutex_ureqlock((csvc)->csvc_mutex,		\
 			    (waslocked));				\
 		else							\
 			ureqlock((csvc)->csvc_lock, (waslocked));	\
@@ -165,8 +165,7 @@ struct sl_expcli_ops {
 #define sl_csvc_lock_ensure(csvc)					\
 	do {								\
 		if (sl_csvc_usemultiwait(csvc))				\
-			psc_pthread_mutex_ensure_locked(		\
-			    (csvc)->csvc_mutex);			\
+			psc_mutex_ensure_locked((csvc)->csvc_mutex);	\
 		else							\
 			LOCK_ENSURE((csvc)->csvc_lock);			\
 	} while (0)
