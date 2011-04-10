@@ -89,7 +89,8 @@ uswi_cmp(const void *a, const void *b)
 SPLAY_GENERATE(upschedtree, up_sched_work_item, uswi_tentry, uswi_cmp);
 
 int
-_mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios, int add, int log)
+_mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
+    int add, int log)
 {
 	sl_replica_t *repl;
 	uint32_t j = 0, k;
@@ -200,7 +201,10 @@ _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int *tract,
 	int locked, val, rc = 0;
 
 	/* Take a write lock on the bmapod. */
-	locked = BMAPOD_REQWRLOCK(bmdsi);
+	if (tract)
+		locked = BMAPOD_REQWRLOCK(bmdsi);
+	else
+		locked = BMAPOD_REQRDLOCK(bmdsi);
 
 	if (scircuit)
 		*scircuit = 0;
