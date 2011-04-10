@@ -1546,7 +1546,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct iovec *iovs;
-	uint32_t off;
+	uint32_t off = 0;
 	int rc, i;
 
 	a = PSCALLOC(sizeof(*a));
