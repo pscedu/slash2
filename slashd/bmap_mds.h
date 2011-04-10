@@ -65,7 +65,7 @@ struct bmap_mds_info {
 	uint32_t			 bmdsi_xid;		/* last op recv'd from ION */
 	int32_t				 bmdsi_writers;
 	int32_t				 bmdsi_readers;
-	pthread_rwlock_t		 bmdsi_rwlock;
+	struct psc_rwlock		 bmdsi_rwlock;
 };
 
 /* MDS-specific bcm_flags */
@@ -86,15 +86,15 @@ struct bmap_mds_info {
 #define bmap_2_ondiskcrc(b)	bmap_2_bmi(b)->bmdsi_ondiskcrc
 #define bmap_2_crcs(b, n)	bmap_2_xstate(b)->bes_crcs[n]
 
-#define BMAPOD_RDLOCK(bmi)	psc_pthread_rwlock_rdlock(&(bmi)->bmdsi_rwlock)
-#define BMAPOD_REQRDLOCK(bmi)	psc_pthread_rwlock_reqrdlock(&(bmi)->bmdsi_rwlock)
-#define BMAPOD_REQWRLOCK(bmi)	psc_pthread_rwlock_reqwrlock(&(bmi)->bmdsi_rwlock)
-#define BMAPOD_ULOCK(bmi)	psc_pthread_rwlock_unlock(&(bmi)->bmdsi_rwlock)
-#define BMAPOD_UREQLOCK(bmi, l)	psc_pthread_rwlock_ureqlock(&(bmi)->bmdsi_rwlock, (l))
-#define BMAPOD_WRLOCK(bmi)	psc_pthread_rwlock_wrlock(&(bmi)->bmdsi_rwlock)
+#define BMAPOD_RDLOCK(bmi)	psc_rwlock_rdlock(&(bmi)->bmdsi_rwlock)
+#define BMAPOD_REQRDLOCK(bmi)	psc_rwlock_reqrdlock(&(bmi)->bmdsi_rwlock)
+#define BMAPOD_REQWRLOCK(bmi)	psc_rwlock_reqwrlock(&(bmi)->bmdsi_rwlock)
+#define BMAPOD_ULOCK(bmi)	psc_rwlock_unlock(&(bmi)->bmdsi_rwlock)
+#define BMAPOD_UREQLOCK(bmi, l)	psc_rwlock_ureqlock(&(bmi)->bmdsi_rwlock, (l))
+#define BMAPOD_WRLOCK(bmi)	psc_rwlock_wrlock(&(bmi)->bmdsi_rwlock)
 
 #define BMDSI_LOGCHG_SET(b)	BMAP_SETATTR((b), BMAP_MDS_LOGCHG)
-#define BMDSI_LOGCHG_CLEAR(b)	BMAP_CLEARATTR((b), BMAP_MDS_LOGCHG);
+#define BMDSI_LOGCHG_CLEAR(b)	BMAP_CLEARATTR((b), BMAP_MDS_LOGCHG)
 
 #define BMDSI_LOGCHG_CHECK(b, set)					\
 	do {								\
@@ -107,8 +107,24 @@ struct bmap_mds_info {
 
 #define BMAPOD_MODIFY_START(b)	BMAPOD_WRLOCK(bmap_2_bmdsi(b))
 #define BMAPOD_MODIFY_DONE(b)	BMAPOD_ULOCK(bmap_2_bmdsi(b))
-#define BMAPOD_READ_START(b)	BMAPOD_RDLOCK(bmap_2_bmdsi(b))
-#define BMAPOD_READ_DONE(b)	BMAPOD_ULOCK(bmap_2_bmdsi(b))
+
+#define BMAPOD_READ_START(b)						\
+	_PFL_RVSTART {							\
+		int _waslocked = 0;					\
+									\
+		if (psc_rwlock_haswrlock(				\
+		    &bmap_2_bmdsi(b)->bmdsi_rwlock))			\
+			_waslocked = 1;					\
+		else							\
+			BMAPOD_RDLOCK(bmap_2_bmdsi(b));			\
+		_waslocked;						\
+	} _PFL_RVEND
+
+#define BMAPOD_READ_DONE(b, lk)						\
+	do {								\
+		if (!(lk))						\
+			BMAPOD_ULOCK(bmap_2_bmdsi(b));			\
+	} while (0)
 
 #define BHREPL_POLICY_SET(b, pol)					\
 	do {								\
@@ -120,9 +136,11 @@ struct bmap_mds_info {
 
 #define BHREPL_POLICY_GET(b, pol)					\
 	do {								\
-		BMAPOD_READ_START(b);					\
+		int _lk;						\
+									\
+		_lk = BMAPOD_READ_START(b);				\
 		*(pol) = bmap_2_replpol(b);				\
-		BMAPOD_READ_DONE(b);					\
+		BMAPOD_READ_DONE((b), _lk);				\
 	} while (0)
 
 #define BHGEN_INCREMENT(b)						\
@@ -135,9 +153,11 @@ struct bmap_mds_info {
 
 #define BHGEN_GET(b, bgen)						\
 	do {								\
-		BMAPOD_READ_START(b);					\
+		int _lk;						\
+									\
+		_lk = BMAPOD_READ_START(b);				\
 		*(bgen) = bmap_2_bgen(b);				\
-		BMAPOD_READ_DONE(b);					\
+		BMAPOD_READ_DONE((b), _lk);				\
 	} while (0)
 
 struct bmap_timeo_entry {

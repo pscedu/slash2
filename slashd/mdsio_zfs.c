@@ -162,16 +162,16 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: short I/O");
 		rc = SLERR_SHORTIO;
 	}
-	DEBUG_BMAP(PLL_INFO, bmap, "wrote bmap: fid="SLPRI_FID", bmapno=%u, rc=%d",  
+	DEBUG_BMAP(PLL_INFO, bmap, "wrote bmap: fid="SLPRI_FID", bmapno=%u, rc=%d",
 		fcmh_2_fid(bmap->bcm_fcmh), bmap->bcm_bmapno, rc);
 
 	return (rc);
 }
 
-/*
- * mds_bmap_repl_update - We update bmap replication status in two cases: (1)
- *     An MDS issues a write lease to a client. (2) An MDS performs a replicate
- *     request.
+/**
+ * mds_bmap_repl_update - We update bmap replication status in two cases:
+ *	(1) An MDS issues a write lease to a client.
+ *	(2) An MDS performs a replicate request.
  */
 int
 mds_bmap_repl_update(struct bmapc_memb *bmap, int log)
@@ -182,7 +182,7 @@ mds_bmap_repl_update(struct bmapc_memb *bmap, int log)
 	BMAPOD_REQRDLOCK(bmap_2_bmdsi(bmap));
 	BMDSI_LOGCHG_CHECK(bmap, logchg);
 	if (!logchg) {
-		BMAPOD_READ_DONE(bmap);
+		BMAPOD_READ_DONE(bmap, 0);
 		return (0);
 	}
 	psc_assert(SL_REPL_GET_BMAP_IOS_STAT(bmap->bcm_repls, bmap->bcm_bmapno));
@@ -203,9 +203,9 @@ mds_bmap_repl_update(struct bmapc_memb *bmap, int log)
 		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: short I/O");
 		rc = SLERR_SHORTIO;
 	}
-	DEBUG_BMAP(PLL_INFO, bmap, "wrote bmap: fid="SLPRI_FID", bmapno=%u, rc=%d",  
+	DEBUG_BMAP(PLL_INFO, bmap, "wrote bmap: fid="SLPRI_FID", bmapno=%u, rc=%d",
 		fcmh_2_fid(bmap->bcm_fcmh), bmap->bcm_bmapno, rc);
-	BMAPOD_READ_DONE(bmap);
+	BMAPOD_READ_DONE(bmap, 0);
 	return (rc);
 }
 
@@ -249,7 +249,7 @@ mds_inode_addrepl_update(struct slash_inode_handle *inoh,
 			inoh->inoh_flags &= ~INOH_INO_NEW;
 			//inoh->inoh_flags |= INOH_EXTRAS_DIRTY;
 		}
-		psclog_info("update: fid="SLPRI_FID", crc=%"PSCPRIxCRC64", log=%d", 
+		psclog_info("update: fid="SLPRI_FID", crc=%"PSCPRIxCRC64", log=%d",
 		    fcmh_2_fid(inoh->inoh_fcmh), inoh->inoh_ino.ino_crc, log);
 	}
 
@@ -267,7 +267,7 @@ mds_inode_addrepl_update(struct slash_inode_handle *inoh,
 			DEBUG_INOH(PLL_FATAL, inoh, "rc=%d sync fail", rc);
 
 		inoh->inoh_flags &= ~INOH_EXTRAS_DIRTY;
-		psclog_info("update: fid="SLPRI_FID", extra crc=%"PSCPRIxCRC64", log=%d", 
+		psclog_info("update: fid="SLPRI_FID", extra crc=%"PSCPRIxCRC64", log=%d",
 		    fcmh_2_fid(inoh->inoh_fcmh), inoh->inoh_extras->inox_crc, log);
 	}
 	if (log)
