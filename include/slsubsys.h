@@ -24,7 +24,7 @@
 #ifndef _SLSUBSYS_H_
 #define _SLSUBSYS_H_
 
-#include "psc_util/subsys.h"
+#include "pfl/subsys.h"
 
 /* SLash2 SubSystems (SLSS) used to pass caller info */
 #define SLSS_BMAP	(_PSS_LAST + 0)
