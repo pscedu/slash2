@@ -390,7 +390,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 			    sizeof(struct srt_reclaim_entry), &size, 0);
 			if (rc)
 				psc_fatalx("Failed to read reclaim log "
-				    "file, batchno=%"PRId64, ": %s",
+				    "file, batchno=%"PRId64": %s",
 				    current_reclaim_batchno,
 				    slstrerror(rc));
 
