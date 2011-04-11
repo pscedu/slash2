@@ -92,13 +92,14 @@ slm_get_next_slashid(void)
 	uint64_t slid;
 
 	spinlock(&slash_id_lock);
-	slid = next_slash_id++;
 	if (next_slash_id >= (UINT64_C(1) << SLASH_ID_FID_BITS))
 		next_slash_id = SLFID_MIN;
+	slid = next_slash_id++;
 	freelock(&slash_id_lock);
 
-	return (slid | ((uint64_t)nodeResm->resm_site->site_id <<
-	    SLASH_ID_FID_BITS));
+	slid |= ((uint64_t)nodeResm->resm_site->site_id << SLASH_ID_FID_BITS);
+	psclog_info("next slash ID "SLPRI_FID, slid);
+	return slid;
 }
 
 int
