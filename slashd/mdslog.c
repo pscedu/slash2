@@ -282,7 +282,8 @@ mds_open_logfile(uint64_t batchno, int update, int readonly, void **handle)
 	}
 	rc = mds_open_file(log_fn, O_CREAT | O_TRUNC | O_WRONLY, handle);
 	if (rc)
-		psc_fatal("Failed to create log file %s", log_fn);
+		psc_fatalx("Failed to create log file %s: %s", log_fn,
+		    slstrerror(rc));
 	return (rc);
 }
 
@@ -388,9 +389,10 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 			    reclaimbuf, SLM_RECLAIM_BATCH *
 			    sizeof(struct srt_reclaim_entry), &size, 0);
 			if (rc)
-				psc_fatal("Failed to read reclaim log "
-				    "file, batchno=%"PRId64,
-				    current_reclaim_batchno);
+				psc_fatalx("Failed to read reclaim log "
+				    "file, batchno=%"PRId64, ": %s",
+				    current_reclaim_batchno,
+				    slstrerror(rc));
 
 			total = size / sizeof(struct srt_reclaim_entry);
 
@@ -458,9 +460,10 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 			    updatebuf, SLM_UPDATE_BATCH *
 			    sizeof(struct srt_update_entry), &size, 0);
 			if (rc)
-				psc_fatal("Failed to read update log "
-				    "file, batchno=%"PRId64,
-				    current_update_batchno);
+				psc_fatalx("Failed to read update log "
+				    "file, batchno=%"PRId64": %s",
+				    current_update_batchno,
+				    slstrerror(rc));
 			total = size / sizeof(struct srt_update_entry);
 
 			count = 0;
@@ -785,8 +788,9 @@ mds_send_batch_update(uint64_t batchno)
 		 * the next log file after closing the old one.
 		 */
 		if (rc != ENOENT)
-			psc_fatal("Failed to open update log file, "
-			    "batchno=%"PRId64, batchno);
+			psc_fatalx("Failed to open update log file, "
+			    "batchno=%"PRId64": %s",
+			    batchno, slstrerror(rc));
 		return (didwork);
 	}
 	rc = mds_read_file(handle, updatebuf,
@@ -1074,8 +1078,9 @@ mds_send_batch_reclaim(uint64_t batchno)
 		 * the next log file after closing the old one.
 		 */
 		if (rc != ENOENT)
-			psc_fatal("Failed to open reclaim log file, "
-			    "batchno=%"PRId64, batchno);
+			psc_fatalx("Failed to open reclaim log file, "
+			    "batchno=%"PRId64": %s",
+			    batchno, slstrerror(rc));
 		return (didwork);
 	}
 	rc = mds_read_file(handle, reclaimbuf,
@@ -1529,7 +1534,8 @@ mds_journal_init(int disable_propagation)
 		}
 	}
 	if (rc)
-		psc_fatal("Failed to open reclaim log file, batchno=%"PRId64, batchno);
+		psc_fatalx("Failed to open reclaim log file, "
+		    "batchno=%"PRId64": %s", batchno, slstrerror(rc));
 
 	current_reclaim_batchno = batchno;
 	reclaimbuf = PSCALLOC(SLM_RECLAIM_BATCH *
@@ -1604,7 +1610,8 @@ mds_journal_init(int disable_propagation)
 		}
 	}
 	if (rc)
-		psc_fatal("Failed to open update log file, batchno=%"PRId64, batchno);
+		psc_fatalx("Failed to open update log file, "
+		    "batchno=%"PRId64": %s", batchno, slstrerror(rc));
 
 	current_update_batchno = batchno;
 	updatebuf = PSCALLOC(SLM_UPDATE_BATCH *
