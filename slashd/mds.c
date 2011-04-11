@@ -53,49 +53,49 @@ const struct slash_inode_od		 null_inode_od;
 const struct slash_inode_extras_od	 null_inox_od;
 
 __static void
-mds_inode_od_initnew(struct slash_inode_handle *i)
+mds_inode_od_initnew(struct slash_inode_handle *ih)
 {
-	i->inoh_flags = INOH_INO_NEW | INOH_INO_DIRTY;
+	ih->inoh_flags = INOH_INO_NEW | INOH_INO_DIRTY;
 
 	/* For now this is a fixed size. */
-	i->inoh_ino.ino_bsz = SLASH_BMAP_SIZE;
-	i->inoh_ino.ino_version = INO_VERSION;
-	i->inoh_ino.ino_nrepls = 0;
+	ih->inoh_ino.ino_bsz = SLASH_BMAP_SIZE;
+	ih->inoh_ino.ino_version = INO_VERSION;
+	ih->inoh_ino.ino_nrepls = 0;
 }
 
 int
-mds_inode_read(struct slash_inode_handle *i)
+mds_inode_read(struct slash_inode_handle *ih)
 {
 	uint64_t crc;
 	int rc, locked;
 
-	locked = reqlock(&i->inoh_lock);
-	psc_assert(i->inoh_flags & INOH_INO_NOTLOADED);
+	locked = reqlock(&ih->inoh_lock);
+	psc_assert(ih->inoh_flags & INOH_INO_NOTLOADED);
 
-	rc = mdsio_inode_read(i);
+	rc = mdsio_inode_read(ih);
 
-	if (rc == SLERR_SHORTIO && i->inoh_ino.ino_crc == 0 &&
-	    memcmp(&i->inoh_ino, &null_inode_od, INO_OD_CRCSZ) == 0) {
-		DEBUG_INOH(PLL_INFO, i, "detected a new inode");
-		mds_inode_od_initnew(i);
+	if (rc == SLERR_SHORTIO && ih->inoh_ino.ino_crc == 0 &&
+	    memcmp(&ih->inoh_ino, &null_inode_od, INO_OD_CRCSZ) == 0) {
+		DEBUG_INOH(PLL_INFO, ih, "detected a new inode");
+		mds_inode_od_initnew(ih);
 		rc = 0;
 
 	} else if (rc) {
-		DEBUG_INOH(PLL_WARN, i, "mdsio_inode_read: %d", rc);
+		DEBUG_INOH(PLL_WARN, ih, "mdsio_inode_read: %d", rc);
 
 	} else {
-		psc_crc64_calc(&crc, &i->inoh_ino, INO_OD_CRCSZ);
-		if (crc == i->inoh_ino.ino_crc) {
-			i->inoh_flags &= ~INOH_INO_NOTLOADED;
-			DEBUG_INOH(PLL_INFO, i, "successfully loaded inode od");
+		psc_crc64_calc(&crc, &ih->inoh_ino, INO_OD_CRCSZ);
+		if (crc == ih->inoh_ino.ino_crc) {
+			ih->inoh_flags &= ~INOH_INO_NOTLOADED;
+			DEBUG_INOH(PLL_INFO, ih, "successfully loaded inode od");
 		} else {
-			DEBUG_INOH(PLL_WARN, i, "CRC failed "
+			DEBUG_INOH(PLL_WARN, ih, "CRC failed "
 			    "want=%"PSCPRIxCRC64", got=%"PSCPRIxCRC64,
-			    i->inoh_ino.ino_crc, crc);
+			    ih->inoh_ino.ino_crc, crc);
 			rc = EIO;
 		}
 	}
-	ureqlock(&i->inoh_lock, locked);
+	ureqlock(&ih->inoh_lock, locked);
 	return (rc);
 }
 
@@ -476,7 +476,10 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	jrpg->sjp_fid = bia.bia_fid;
 	jrpg->sjp_bmapno = bmap->bcm_bmapno;
 	jrpg->sjp_bgen = bmap_2_bgen(bmap);
+
+	psc_assert(SL_REPL_GET_BMAP_IOS_STAT(bmap->bcm_repls, bmap->bcm_bmapno));
 	memcpy(jrpg->sjp_reptbl, bmap->bcm_repls, SL_REPLICA_NBYTES);
+
 	logentry->sjar_flag |= SLJ_ASSIGN_REP_REP;
 
 	jrba->sjba_ion_nid = bia.bia_ion_nid;
@@ -588,7 +591,10 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 	jrpg->sjp_fid = fcmh_2_fid(b->bcm_fcmh);
 	jrpg->sjp_bmapno = b->bcm_bmapno;
 	jrpg->sjp_bgen = bmap_2_bgen(b);
+
+	psc_assert(SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls, b->bcm_bmapno));
 	memcpy(jrpg->sjp_reptbl, b->bcm_repls, SL_REPLICA_NBYTES);
+
 	logentry->sjar_flag |= SLJ_ASSIGN_REP_REP;
 
 	jrba->sjba_ion_nid = bia.bia_ion_nid;
