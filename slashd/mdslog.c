@@ -1322,7 +1322,7 @@ mds_inode_sync(struct slash_inode_handle *inoh)
 			DEBUG_INOH(PLL_FATAL, inoh, "xtras rc=%d sync fail",
 			    rc);
 		else
-			DEBUG_INOH(PLL_TRACE, inoh, "xtras sync ok");
+			DEBUG_INOH(PLL_NOTIFY, inoh, "xtras sync ok");
 
 		inoh->inoh_flags &= ~INOH_EXTRAS_DIRTY;
 	}
@@ -1347,7 +1347,7 @@ mds_inode_addrepl_log(void *datap, uint64_t txg)
 	jrir->sjir_pos = r->sjir_pos;
 	jrir->sjir_nrepls = r->sjir_nrepls;
 
-	psclog_trace("jlog fid="SLPRI_FID" ios=%u pos=%u",
+	psclog_notify("jlog fid="SLPRI_FID" ios=%u pos=%u",
 	    jrir->sjir_fid, jrir->sjir_ios, jrir->sjir_pos);
 
 	pjournal_add_entry(mdsJournal, txg, MDS_LOG_INO_ADDREPL,
@@ -1377,7 +1377,7 @@ mds_bmap_repl_log(void *datap, uint64_t txg)
 
 	memcpy(jrpg->sjp_reptbl, bmap->bcm_repls, SL_REPLICA_NBYTES);
 
-	psclog_trace("jlog fid="SLPRI_FID" bmapno=%u bmapgen=%u",
+	psclog_notify("jlog fid="SLPRI_FID" bmapno=%u bmapgen=%u",
 	    jrpg->sjp_fid, jrpg->sjp_bmapno, jrpg->sjp_bgen);
 
 	pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_REPL,
