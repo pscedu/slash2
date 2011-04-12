@@ -57,13 +57,13 @@ enum {
 };
 
 static __inline void
-slash_inode_handle_init(struct slash_inode_handle *i,
+slash_inode_handle_init(struct slash_inode_handle *ih,
     struct fidc_membh *f)
 {
-	i->inoh_fcmh = f;
-	i->inoh_extras = NULL;
-	INIT_SPINLOCK(&i->inoh_lock);
-	i->inoh_flags = INOH_INO_NOTLOADED;
+	ih->inoh_fcmh = f;
+	ih->inoh_extras = NULL;
+	INIT_SPINLOCK(&ih->inoh_lock);
+	ih->inoh_flags = INOH_INO_NOTLOADED;
 }
 
 static __inline char *
