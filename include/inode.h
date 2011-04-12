@@ -62,7 +62,7 @@ typedef struct slash_snapshot {
  */
 struct slash_inode_od {
 	uint16_t		ino_version;
-	uint16_t		_ino_pad;
+	uint16_t		ino_flags;			/* immutable, etc. */
 	uint32_t		ino_bsz;			/* bmap size */
 	uint32_t		ino_nrepls;			/* if 0, use ino_prepl */
 //	uint32_t		ino_csnap;			/* current snapshot */
