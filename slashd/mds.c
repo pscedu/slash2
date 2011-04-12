@@ -115,6 +115,7 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 	rc = mdsio_inode_extras_read(ih);
 	if (rc == SLERR_SHORTIO && ih->inoh_extras->inox_crc == 0 &&
 	    memcmp(&ih->inoh_extras, &null_inox_od, INOX_OD_CRCSZ) == 0) {
+		ih->inoh_flags |= INOH_HAVE_EXTRAS;
 		rc = 0;
 	} else if (rc) {
 		DEBUG_INOH(PLL_WARN, ih, "mdsio_inode_extras_read: %d", rc);
@@ -132,7 +133,6 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 	if (rc) {
 		PSCFREE(ih->inoh_extras);
 		ih->inoh_extras = NULL;
-		ih->inoh_flags &= ~INOH_HAVE_EXTRAS;
 	}
 	return (rc);
 }

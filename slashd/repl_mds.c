@@ -93,7 +93,7 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
     int add, int log)
 {
 	sl_replica_t *repl;
-	uint32_t j = 0, k;
+	uint32_t j, k;
 	int rc = -ENOENT;
 
 	INOH_LOCK(ih);
