@@ -8,7 +8,6 @@ reminders:
 - do sl_csvc_wantfree() in all to-CLI csvcs
 - ensure reentrancy of 'static' variables in functions
 
-
 -----------------------------------------------------------------------
 
 * In bmap_flush_reap_rpcs() some work should be done to prove that 
