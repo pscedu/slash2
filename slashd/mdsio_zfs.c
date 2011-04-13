@@ -146,8 +146,6 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	}
 	BMAPOD_ULOCK(bmdsi);
 
-	psc_assert(SL_REPL_GET_BMAP_IOS_STAT(bmap->bcm_repls, bmap->bcm_bmapno));
-
 	mds_reserve_slot();
 	rc = zfsslash2_write(&rootcreds, bmap_2_ondisk(bmap),
 	    BMAP_OD_SZ, &nb, (off_t)((BMAP_OD_SZ * bmap->bcm_bmapno) +
@@ -185,7 +183,6 @@ mds_bmap_repl_update(struct bmapc_memb *bmap, int log)
 		BMAPOD_READ_DONE(bmap, 0);
 		return (0);
 	}
-	psc_assert(SL_REPL_GET_BMAP_IOS_STAT(bmap->bcm_repls, bmap->bcm_bmapno));
 
 	if (log)
 		mds_reserve_slot();

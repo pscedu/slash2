@@ -477,7 +477,6 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	jrpg->sjp_bmapno = bmap->bcm_bmapno;
 	jrpg->sjp_bgen = bmap_2_bgen(bmap);
 
-	psc_assert(SL_REPL_GET_BMAP_IOS_STAT(bmap->bcm_repls, bmap->bcm_bmapno));
 	memcpy(jrpg->sjp_reptbl, bmap->bcm_repls, SL_REPLICA_NBYTES);
 
 	logentry->sjar_flag |= SLJ_ASSIGN_REP_REP;
@@ -592,7 +591,6 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 	jrpg->sjp_bmapno = b->bcm_bmapno;
 	jrpg->sjp_bgen = bmap_2_bgen(b);
 
-	psc_assert(SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls, b->bcm_bmapno));
 	memcpy(jrpg->sjp_reptbl, b->bcm_repls, SL_REPLICA_NBYTES);
 
 	logentry->sjar_flag |= SLJ_ASSIGN_REP_REP;
