@@ -1605,10 +1605,7 @@ mds_bmap_read(struct bmapc_memb *bcm, __unusedx enum rw rw)
 	struct fidc_membh *f = bcm->bcm_fcmh;
 	int rc;
 
-	/* pread() the bmap from the meta file.
-	 */
 	rc = mdsio_bmap_read(bcm);
-
 	/*
 	 * Check for a NULL CRC if we had a good read.  NULL CRC can happen
 	 *    when bmaps are gaps that have not been written yet.   Note
