@@ -1579,6 +1579,23 @@ mds_bmap_initnew(struct bmapc_memb *b)
 	psc_crc64_calc(&bod->bod_crc, bod, BMAP_OD_CRCSZ);
 }
 
+void
+mds_bmap_ensure_valid(struct bmapc_memb *b)
+{
+	int rc, retifset[NBREPLST];
+
+	brepls_init(retifset, 0);
+	retifset[BREPLST_VALID] = 1;
+	retifset[BREPLST_GARBAGE] = 1;
+	retifset[BREPLST_GARBAGE_SCHED] = 1;
+	retifset[BREPLST_TRUNCPNDG] = 1;
+	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
+	rc = mds_repl_bmap_walk_all(b, NULL, retifset,
+	    REPL_WALKF_SCIRCUIT);
+	if (!rc)
+		psc_fatal("bmap has no valid replicas");
+}
+
 /**
  * mds_bmap_read - Retrieve a bmap from the ondisk inode file.
  * @bcm: bmap.
@@ -1588,7 +1605,7 @@ int
 mds_bmap_read(struct bmapc_memb *bcm, __unusedx enum rw rw)
 {
 	struct fidc_membh *f = bcm->bcm_fcmh;
-	int rc, retifset[NBREPLST];
+	int rc;
 
 	/* pread() the bmap from the meta file.
 	 */
@@ -1620,16 +1637,7 @@ mds_bmap_read(struct bmapc_memb *bcm, __unusedx enum rw rw)
 		return (-EIO);
 	}
 
-	brepls_init(retifset, 0);
-	retifset[BREPLST_VALID] = 1;
-	retifset[BREPLST_GARBAGE] = 1;
-	retifset[BREPLST_GARBAGE_SCHED] = 1;
-	retifset[BREPLST_TRUNCPNDG] = 1;
-	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
-	rc = mds_repl_bmap_walk_all(bcm, NULL, retifset,
-	    REPL_WALKF_SCIRCUIT);
-	if (!rc)
-		psc_fatal("bmap has no valid replicas");
+	mds_bmap_ensure_valid(bcm);
 
 	DEBUG_BMAPOD(PLL_INFO, bcm, "");
 	return (0);
