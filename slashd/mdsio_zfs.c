@@ -219,8 +219,6 @@ mds_inode_addrepl_update(struct slash_inode_handle *inoh,
 
 	locked = reqlock(&inoh->inoh_lock);
 
-	jrir.sjir_nrepls = inoh->inoh_ino.ino_nrepls;
-
 	psc_assert((inoh->inoh_flags & INOH_INO_DIRTY) ||
 		   (inoh->inoh_flags & INOH_EXTRAS_DIRTY));
 
@@ -228,6 +226,7 @@ mds_inode_addrepl_update(struct slash_inode_handle *inoh,
 		jrir.sjir_fid = fcmh_2_fid(inoh->inoh_fcmh);
 		jrir.sjir_ios = ios;
 		jrir.sjir_pos = pos;
+		jrir.sjir_nrepls = inoh->inoh_ino.ino_nrepls;
 		mds_reserve_slot();
 	}
 	if (inoh->inoh_flags & INOH_INO_DIRTY) {
