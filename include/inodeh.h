@@ -60,6 +60,7 @@ static __inline void
 slash_inode_handle_init(struct slash_inode_handle *ih,
     struct fidc_membh *f)
 {
+	/* The rest of the fields are zeroed along with the fcmh */
 	ih->inoh_fcmh = f;
 	ih->inoh_extras = NULL;
 	INIT_SPINLOCK(&ih->inoh_lock);
