@@ -645,11 +645,9 @@ bmap_biorq_expire(struct bmapc_memb *b)
 	}
 	BMPC_ULOCK(bmap_2_bmpc(b));
 
-	BMAP_LOCK(b);
 	/* Minimize biorq scanning via this hint.
 	 */
-	b->bcm_flags |= BMAP_CLI_BIORQEXPIRE;
-	BMAP_ULOCK(b);
+	BMAP_SETATTR(b, BMAP_CLI_BIORQEXPIRE);
 
 	psc_waitq_wakeall(&bmapflushwaitq);
 }
