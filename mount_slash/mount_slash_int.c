@@ -2164,13 +2164,14 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 	}
 
  restart:
+	rc = 0;
+
 	tsize = size;
 	FCMH_LOCK(mfh->mfh_fcmh);
 	fsz = fcmh_getsize(mfh->mfh_fcmh);
 
 	if (!size || (rw == SL_READ && off >= (off_t)fsz)) {
 		FCMH_ULOCK(mfh->mfh_fcmh);
-		rc = 0;
 		goto out;
 	}
 	/* Catch read ops which extend beyond EOF.
