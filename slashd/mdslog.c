@@ -469,10 +469,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 			count = 0;
 			update_entryp = updatebuf;
 			while (count < total) {
-				if (update_entryp->xid == pje->pje_xid) {
-					psclog_warnx("Update distill %"PRId64, pje->pje_xid);
+				if (update_entryp->xid == pje->pje_xid)
 					break;
-				}
 				update_entryp++;
 				count++;
 				update_logfile_offset += sizeof(struct srt_update_entry);
