@@ -37,13 +37,22 @@
 static int
 mds_redo_bmap_repl_common(struct slmds_jent_repgen *jrpg)
 {
-	struct bmap_ondisk bmap_disk;
+	struct {
+		struct fidc_membh	f;
+		struct fcmh_fmi_info	fmi;
+	} fd;
+	struct {
+		struct bmapc_memb	b;
+		struct bmap_mds_info	bmi;
+	} bd;
 	void *mdsio_data;
 	mdsio_fid_t mf;
 	size_t nb;
 	int rc;
 
-	memset(&bmap_disk, 0, sizeof(struct bmap_ondisk));
+	memset(&fd, 0, sizeof(fd));
+	memset(&bd, 0, sizeof(bd));
+	bd.b.bcm_fcmh = &fd.f;
 
 	rc = mdsio_lookup_slfid(jrpg->sjp_fid, &rootcreds, NULL, &mf);
 	if (rc) {
@@ -60,9 +69,9 @@ mds_redo_bmap_repl_common(struct slmds_jent_repgen *jrpg)
 	if (rc)
 		psc_fatalx("mdsio_opencreate: %s", slstrerror(rc));
 
-	rc = mdsio_read(&rootcreds, &bmap_disk, BMAP_OD_SZ, &nb,
-	    (off_t)((BMAP_OD_SZ * jrpg->sjp_bmapno) + SL_BMAP_START_OFF),
-	    mdsio_data);
+	rc = mdsio_read(&rootcreds, bmap_2_ondisk(&bd.b), BMAP_OD_SZ, &nb,
+	    (off_t)((BMAP_OD_SZ * jrpg->sjp_bmapno) +
+	    SL_BMAP_START_OFF), mdsio_data);
 
 	/*
 	 * We allow a short read here because it is possible
@@ -73,14 +82,19 @@ mds_redo_bmap_repl_common(struct slmds_jent_repgen *jrpg)
 
 	psc_assert(!nb || nb == BMAP_OD_SZ);
 
-	memcpy(bmap_disk.bod_repls, jrpg->sjp_reptbl, SL_REPLICA_NBYTES);
-	psc_info("fid="SLPRI_FID" bmapno=%d", jrpg->sjp_fid, jrpg->sjp_bmapno);
+	memcpy(bd.b.bcm_repls, jrpg->sjp_reptbl, SL_REPLICA_NBYTES);
+	psclog_info("fid="SLPRI_FID" bmapno=%u",
+	    jrpg->sjp_fid, jrpg->sjp_bmapno);
 
-	psc_crc64_calc(&bmap_disk.bod_crc, &bmap_disk, BMAP_OD_CRCSZ);
+	psc_crc64_calc(&bmap_2_ondiskcrc(&bd.b), bmap_2_ondisk(&bd.b),
+	    BMAP_OD_CRCSZ);
 
-	rc = mdsio_write(&rootcreds, &bmap_disk, BMAP_OD_SZ, &nb,
-	    (off_t)((BMAP_OD_SZ * jrpg->sjp_bmapno) + SL_BMAP_START_OFF),
-	    0, mdsio_data, NULL, NULL);
+	memcpy(fcmh_2_ino(&fd.f), &jrpg->sjp_ino, sizeof(jrpg->sjp_ino));
+	mds_bmap_ensure_valid(&bd.b);
+
+	rc = mdsio_write(&rootcreds, bmap_2_ondisk(&bd.b), BMAP_OD_SZ,
+	    &nb, (off_t)((BMAP_OD_SZ * jrpg->sjp_bmapno) +
+	    SL_BMAP_START_OFF), 0, mdsio_data, NULL, NULL);
 
 	if (!rc && nb != BMAP_OD_SZ)
 		rc = EIO;
@@ -250,8 +264,8 @@ mds_redo_ino_addrepl_common(struct slmds_jent_ino_addrepl *jrir)
 		if (rc)
 			goto out;
 
-		psclog_info("redo: fid="SLPRI_FID", extra crc=%"PSCPRIxCRC64, 
-			jrir->sjir_fid, inoh_extras.inox_crc);
+		psclog_info("redo: fid="SLPRI_FID", extra crc=%"PSCPRIxCRC64,
+		    jrir->sjir_fid, inoh_extras.inox_crc);
 	}
 	/*
 	 * We always update the inode itself because the number of
@@ -296,7 +310,7 @@ mds_redo_ino_addrepl_common(struct slmds_jent_ino_addrepl *jrir)
 	if (!rc && nb != INO_OD_SZ)
 		rc = EIO;
 
-	psclog_info("redo: fid="SLPRI_FID", crc=%"PSCPRIxCRC64, 
+	psclog_info("redo: fid="SLPRI_FID", crc=%"PSCPRIxCRC64,
 	    jrir->sjir_fid, inoh_ino.ino_crc);
 
  out:
@@ -340,7 +354,7 @@ mds_redo_bmap_assign(struct psc_journal_enthdr *pje)
 		psclog_info("Free item %zd", elem);
 	else {
 		jrba = &logentry->sjar_bmap;
-		psclog_info("Redo item %zd, fid="SLPRI_FID", flags=%d", 
+		psclog_info("Redo item %zd, fid="SLPRI_FID", flags=%d",
 			elem, jrba->sjba_fid, logentry->sjar_flag);
 	}
 	if (logentry->sjar_flag & SLJ_ASSIGN_REP_INO) {
@@ -518,7 +532,7 @@ mds_redo_namespace(struct slmds_jent_namespace *sjnm, int replay)
 	if (rc)
 		psclog_error("Redo namespace log: op=%d name=%s "
 			"newname=%s fid="SLPRI_FID" rc=%d",
-			sjnm->sjnm_op, name, newname, 
+			sjnm->sjnm_op, name, newname,
 			sjnm->sjnm_target_fid, rc);
 	return (rc);
 }
