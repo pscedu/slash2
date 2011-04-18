@@ -53,6 +53,7 @@ mds_redo_bmap_repl_common(struct slmds_jent_repgen *jrpg)
 	memset(&fd, 0, sizeof(fd));
 	memset(&bd, 0, sizeof(bd));
 	bd.b.bcm_fcmh = &fd.f;
+	psc_rwlock_init(&bd.bmi.bmdsi_rwlock);
 
 	rc = mdsio_lookup_slfid(jrpg->sjp_fid, &rootcreds, NULL, &mf);
 	if (rc) {
@@ -122,8 +123,15 @@ mds_redo_bmap_repl(struct psc_journal_enthdr *pje)
 static int
 mds_redo_bmap_crc(struct psc_journal_enthdr *pje)
 {
+	struct {
+		struct fidc_membh	f;
+		struct fcmh_mds_info	fmi;
+	} fd;
+	struct {
+		struct bmapc_memb	b;
+		struct bmap_mds_info	bmi;
+	} bd;
 	struct srm_bmap_crcwire *bmap_wire;
-	struct bmap_ondisk bmap_disk;
 	struct slmds_jent_crc *jcrc;
 	struct srt_stat sstb;
 	void *mdsio_data;
@@ -132,7 +140,9 @@ mds_redo_bmap_crc(struct psc_journal_enthdr *pje)
 	size_t nb;
 
 	jcrc = PJE_DATA(pje);
-	memset(&bmap_disk, 0, sizeof(struct bmap_ondisk));
+	memset(&fd, 0, sizeof(fd));
+	memset(&bd, 0, sizeof(bd));
+	bd.b.bcm_fcmh = &fd.f;
 
 	psclog_info("pje_xid=%#"PRIx64" pje_txg=%#"PRIx64" fid="SLPRI_FID" "
 	    "bmapno=%u ncrcs=%d crc[0]=%"PSCPRIxCRC64,
@@ -164,8 +174,8 @@ mds_redo_bmap_crc(struct psc_journal_enthdr *pje)
 			goto out;
 	}
 
-	rc = mdsio_read(&rootcreds, &bmap_disk, BMAP_OD_SZ, &nb,
-	    (off_t)((BMAP_OD_SZ * jcrc->sjc_bmapno) +
+	rc = mdsio_read(&rootcreds, bmap_2_ondisk(&bd.b), BMAP_OD_SZ,
+	    &nb, (off_t)((BMAP_OD_SZ * jcrc->sjc_bmapno) +
 	    SL_BMAP_START_OFF), mdsio_data);
 
 	if (rc)
@@ -177,14 +187,18 @@ mds_redo_bmap_crc(struct psc_journal_enthdr *pje)
 
 	for (i = 0 ; i < jcrc->sjc_ncrcs; i++) {
 		bmap_wire = &jcrc->sjc_crc[i];
-		bmap_disk.bod_crcs[bmap_wire->slot] = bmap_wire->crc;
-		bmap_disk.bod_crcstates[bmap_wire->slot] |=
+		bmap_2_crcs(&bd.b, bmap_wire->slot) = bmap_wire->crc;
+		bd.b.bcm_crcstates[bmap_wire->slot] |=
 		    BMAP_SLVR_DATA | BMAP_SLVR_CRC;
 	}
-	psc_crc64_calc(&bmap_disk.bod_crc, &bmap_disk, BMAP_OD_CRCSZ);
+	psc_crc64_calc(&bmap_2_ondiskcrc(&bd.b), bmap_2_ondisk(&bd.b),
+	    BMAP_OD_CRCSZ);
 
-	rc = mdsio_write(&rootcreds, &bmap_disk, BMAP_OD_SZ, &nb,
-	    (off_t)((BMAP_OD_SZ * jcrc->sjc_bmapno) +
+//	memcpy(fcmh_2_ino(&fd.f), &jrpg->sjp_ino, sizeof(jrpg->sjp_ino));
+//	mds_bmap_ensure_valid(&bd.b);
+
+	rc = mdsio_write(&rootcreds, bmap_2_ondisk(&bd.b), BMAP_OD_SZ,
+	    &nb, (off_t)((BMAP_OD_SZ * jcrc->sjc_bmapno) +
 	    SL_BMAP_START_OFF), 0, mdsio_data, NULL, NULL);
 
 	if (!rc && nb != BMAP_OD_SZ)
