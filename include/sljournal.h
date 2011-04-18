@@ -20,6 +20,9 @@
 #ifndef _SL_JOURNAL_H_
 #define _SL_JOURNAL_H_
 
+#include "lnet/types.h"
+
+#include "slashd/mdsio.h"
 #include "inode.h"
 #include "slashrpc.h"
 
@@ -47,7 +50,7 @@ struct slmds_jent_crc {
 	int32_t				sjc_ncrcs;
 	uint32_t			sjc_utimgen;
 	uint64_t			sjc_fsize;
-	int				sjc_extend;
+	int				sjc_extend;		/* XXX flags */
 	struct srm_bmap_crcwire		sjc_crc[SLJ_MDS_NCRCS];
 } __packed;
 
@@ -68,8 +71,8 @@ struct slmds_jent_repgen {
 } __packed;
 
 /**
- * slmds_jent_ino_addrepl - Add a new replica IOS to the inode or the
- *	inode extras.
+ * slmds_jent_ino_addrepl - Add an IOS to the inode or the
+ *	inode extras replica table.
  * @sjir_fid: what file.
  * @sjir_ios: the IOS being added.
  * @sjir_pos: the slot or position the replica IOS is to be added to.
@@ -82,21 +85,10 @@ struct slmds_jent_ino_addrepl {
 	uint32_t			sjir_nrepls;
 } __packed;
 
-/*
- * I had trouble compiling within zfs directory.  So instead of including
- * lnet/types.h, I did the following.
- */
-typedef uint64_t sl_lnet_nid_t;
-typedef uint32_t sl_lnet_pid_t;
-
-typedef struct {
-        sl_lnet_nid_t nid;
-        sl_lnet_pid_t pid;   /* node id / process id */
-} sl_lnet_process_id_t;
-
 struct slmds_jent_bmap_assign {
-	sl_lnet_nid_t			sjba_ion_nid;
-	sl_lnet_process_id_t		sjba_lastcli;
+	lnet_nid_t			sjba_ion_nid;
+	lnet_process_id_t		sjba_lastcli;
+	int32_t				_sjba_pad;
 	sl_ios_id_t			sjba_ios;
 	slfid_t				sjba_fid;
 	uint64_t			sjba_seq;
@@ -131,8 +123,6 @@ struct slmds_jent_assign_rep {
 
 #define SJ_NAMESPACE_MAGIC		UINT64_C(0xabcd12345678dcba)
 
-#define	SLJ_NAMES_MAX			364
-
 #define SJ_NAMESPACE_RECLAIM		0x01
 
 /*
@@ -145,8 +135,8 @@ struct slmds_jent_assign_rep {
 struct slmds_jent_namespace {
 	uint64_t			sjnm_magic;		/* debugging */
 	 uint8_t			sjnm_op;		/* operation type (i.e. enum namespace_operation) */
-	 uint8_t			sjnm_namelen;		/* NULL not included */
-	 uint8_t			sjnm_namelen2;		/* NULL not included */
+	 uint8_t			sjnm_namelen;		/* NUL not included */
+	 uint8_t			sjnm_namelen2;		/* NUL not included */
 	 uint8_t			sjnm_flag;		/* need garbage collection */
 
 	uint64_t			sjnm_parent_fid;	/* parent dir FID */

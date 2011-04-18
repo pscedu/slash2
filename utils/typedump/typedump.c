@@ -144,8 +144,6 @@ main(int argc, char *argv[])
 	PRTYPE(sl_bmapno_t);
 	PRTYPE(sl_ino_t);
 	PRTYPE(sl_ios_id_t);
-	PRTYPE(sl_lnet_nid_t);
-	PRTYPE(sl_lnet_pid_t);
 	PRTYPE(sl_siteid_t);
 	PRTYPE(slfgen_t);
 	PRTYPE(slfid_t);

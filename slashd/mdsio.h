@@ -50,6 +50,8 @@ typedef void (*sl_log_update_t)(int, uint64_t, uint64_t, uint64_t,
 void	mds_namespace_log(int, uint64_t, uint64_t, uint64_t, const
 		struct srt_stat *, int, const char *, const char *);
 
+#define	SLJ_NAMES_MAX		364
+
 /* predefined mdsio layer "fids" */
 #define MDSIO_FID_ROOT		3		/* XXX FUSE_ROOT_ID? */
 
