@@ -1641,13 +1641,13 @@ mds_bmap_read(struct bmapc_memb *bcm, __unusedx enum rw rw)
 void
 mds_bmap_init(struct bmapc_memb *bcm)
 {
-	struct bmap_mds_info *bmdsi;
+	struct bmap_mds_info *bmi;
 
-	bmdsi = bmap_2_bmdsi(bcm);
-	pll_init(&bmdsi->bmdsi_leases, struct bmap_mds_lease,
+	bmi = bmap_2_bmdsi(bcm);
+	pll_init(&bmi->bmdsi_leases, struct bmap_mds_lease,
 	    bml_bmdsi_lentry, &bcm->bcm_lock);
-	bmdsi->bmdsi_xid = 0;
-	psc_rwlock_init(&bmdsi->bmdsi_rwlock);
+	bmi->bmdsi_xid = 0;
+	psc_rwlock_init(&bmi->bmdsi_rwlock);
 }
 
 void
