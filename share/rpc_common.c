@@ -73,8 +73,7 @@ __weak int
 slrpc_newreq(struct slashrpc_cservice *csvc, int op,
     struct pscrpc_request **rqp, int qlen, int plen, void *mqp)
 {
-	return (slrpc_newgenreq(csvc, op, rqp, qlen, plen,
-	    mqp));
+	return (slrpc_newgenreq(csvc, op, rqp, qlen, plen, mqp));
 }
 
 int
@@ -569,7 +568,7 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 			goto out;
 		}
 
-		csvc->csvc_mtime = time(NULL);
+		csvc->csvc_mtime = time(NULL); /* XXX use monotonic */
 		psc_atomic32_clearmask(&csvc->csvc_flags,
 		    CSVCF_CONNECTING);
 		if (rc) {

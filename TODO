@@ -10,13 +10,13 @@ reminders:
 
 -----------------------------------------------------------------------
 
-* In bmap_flush_reap_rpcs() some work should be done to prove that 
-  time is not being needlessly wasted in pscrpc_set_finalize().  The 
-  speed in which pscrpc_nbreqset_reap(pndgReqs) is called determines 
+* In bmap_flush_reap_rpcs() some work should be done to prove that
+  time is not being needlessly wasted in pscrpc_set_finalize().  The
+  speed in which pscrpc_nbreqset_reap(pndgReqs) is called determines
   how fast we can unblock flush-on-close calls.
 
-* Bmap flush should have a call which checks the lease validity of a 
-       bmap.  If the lease has expired, then the I/O must be dropped and 
+* Bmap flush should have a call which checks the lease validity of a
+       bmap.  If the lease has expired, then the I/O must be dropped and
        EIO returned to the caller.
 
 pauln (03/31/2011)
@@ -348,8 +348,8 @@ API rename
 - add zfs SPA version to slashd ctlparam
 - add msl local I/O cache support
 - use umount -l if it is supported at teardown
-- client needs to track when MDS goes down and recheck pinned
-  ptrunc bmaps for resolvement
+- client needs to track when MDS goes down and recheck pinned ptrunc
+  bmaps for resolvement
 - on MDS resm failure inside msl, clear a bit on all fcmh's pinned by ptrunc
   whenever we check this flag, if the bit is not set, issue an RPC so
   that we get registered with the MDS to be notified when ptrunc resolves
