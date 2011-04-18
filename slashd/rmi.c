@@ -164,7 +164,8 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 		mp->crcup_rc[i] = mds_bmap_crc_write(c,
 		    rq->rq_conn->c_peer.nid, mq);
 		if (mp->crcup_rc[i])
-			psc_errorx("mds_bmap_crc_write() failed: fid="SLPRI_FID", rc=%d",
+			psc_errorx("mds_bmap_crc_write() failed: "
+			    "fid="SLPRI_FID", rc=%d",
 			    c->fg.fg_fid, mp->crcup_rc[i]);
 	}
 
