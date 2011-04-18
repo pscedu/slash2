@@ -67,6 +67,8 @@ void	 mds_repl_node_clearallbusy(struct resm_mds_info *);
 int	 mds_repl_nodes_adjbusy(struct resm_mds_info *, struct resm_mds_info *, int);
 void	 mds_repl_reset_scheduled(sl_ios_id_t);
 
+void	 mds_brepls_check(uint8_t *, int);
+
 /* replication state walking flags */
 #define REPL_WALKF_SCIRCUIT	(1 << 0)	/* short circuit on return value set */
 #define REPL_WALKF_MODOTH	(1 << 1)	/* modify everyone except specified IOS */
