@@ -192,6 +192,26 @@ _mds_repl_iosv_lookup(struct slash_inode_handle *ih,
 	return (0);
 }
 
+void
+mds_brepls_check(uint8_t *repls, int nr)
+{
+	int val, off, i;
+
+	psc_assert(nr > 0 && nr <= SL_MAX_REPLICAS);
+	for (i = 0, off = 0; i < nr; i++, off += SL_BITS_PER_REPLICA) {
+		val = SL_REPL_GET_BMAP_IOS_STAT(repls, off);
+		switch (val) {
+		case BREPLST_VALID:
+		case BREPLST_GARBAGE:
+		case BREPLST_GARBAGE_SCHED:
+		case BREPLST_TRUNCPNDG:
+		case BREPLST_TRUNCPNDG_SCHED:
+			return;
+		}
+	}
+	psc_fatal("no valid replica states exist");
+}
+
 int
 _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int *tract,
     const int *retifset, int flags, int off, int *scircuit,
