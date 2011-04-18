@@ -64,8 +64,9 @@ mds_odtable_putitem(struct odtable *odt, void *data, size_t len)
 		/* XXX either trust the bitmap or initialize the footer of new items */
 
 		odt->odt_hdr->odth_nelems = psc_vbitmap_getsize(odt->odt_bitmap);
-		rc = mdsio_write(&rootcreds, &odt->odt_hdr, sizeof(struct odtable_hdr), 
-			&nb, 0, 0, odt->odt_handle, NULL, NULL);
+		rc = mdsio_write(&rootcreds, &odt->odt_hdr,
+		    sizeof(struct odtable_hdr), &nb, 0, 0,
+		    odt->odt_handle, NULL, NULL);
 		psc_assert(!rc && nb == sizeof(struct odtable_hdr));
 
 		psclog_warn("On-disk table now has %zd elements (used to be %zd)",
@@ -97,8 +98,8 @@ mds_odtable_putitem(struct odtable *odt, void *data, size_t len)
 	odtr->odtr_elem = elem;
 	odtr->odtr_key = crc;
 
-	rc = mdsio_write(&rootcreds, p, odt->odt_hdr->odth_slotsz,
-	    &nb, odt->odt_hdr->odth_start + elem * odt->odt_hdr->odth_slotsz,
+	rc = mdsio_write(&rootcreds, p, odt->odt_hdr->odth_slotsz, &nb,
+	    odt->odt_hdr->odth_start + elem * odt->odt_hdr->odth_slotsz,
 	    0, odt->odt_handle, NULL, NULL);
 	psc_assert(!rc && nb == odt->odt_hdr->odth_slotsz);
 
