@@ -39,7 +39,7 @@ mds_redo_bmap_repl_common(struct slmds_jent_repgen *jrpg)
 {
 	struct {
 		struct fidc_membh	f;
-		struct fcmh_fmi_info	fmi;
+		struct fcmh_mds_info	fmi;
 	} fd;
 	struct {
 		struct bmapc_memb	b;
