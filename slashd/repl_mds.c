@@ -275,8 +275,8 @@ _mds_repl_bmap_walk(struct bmapc_memb *bcm, const int *tract,
 		/* no one specified; apply to all */
 		for (k = 0, off = 0; k < nr;
 		    k++, off += SL_BITS_PER_REPLICA) {
-			trc = _mds_repl_bmap_apply(bcm, tract,
-			    retifset, flags, off, &scircuit, cbf, cbarg);
+			trc = _mds_repl_bmap_apply(bcm, tract, retifset,
+			    flags, off, &scircuit, cbf, cbarg);
 			if (trc)
 				rc = trc;
 			if (scircuit)
@@ -288,8 +288,8 @@ _mds_repl_bmap_walk(struct bmapc_memb *bcm, const int *tract,
 		    off += SL_BITS_PER_REPLICA)
 			if (!iosidx_in(k, iosidx, nios)) {
 				trc = _mds_repl_bmap_apply(bcm, tract,
-				    retifset, flags, off, &scircuit, cbf,
-				    cbarg);
+				    retifset, flags, off, &scircuit,
+				    cbf, cbarg);
 				if (trc)
 					rc = trc;
 				if (scircuit)
@@ -298,10 +298,9 @@ _mds_repl_bmap_walk(struct bmapc_memb *bcm, const int *tract,
 	} else
 		/* modify only the sites specified */
 		for (k = 0; k < nios; k++) {
-			trc = _mds_repl_bmap_apply(bcm, tract,
-			    retifset, flags, iosidx[k] *
-			    SL_BITS_PER_REPLICA, &scircuit, cbf,
-			    cbarg);
+			trc = _mds_repl_bmap_apply(bcm, tract, retifset,
+			    flags, iosidx[k] * SL_BITS_PER_REPLICA,
+			    &scircuit, cbf, cbarg);
 			if (trc)
 				rc = trc;
 			if (scircuit)
