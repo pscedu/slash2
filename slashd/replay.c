@@ -80,7 +80,7 @@ mds_redo_bmap_repl_common(struct slmds_jent_repgen *jrpg)
 
 	psc_crc64_calc(&bod.bod_crc, &bod, BMAP_OD_CRCSZ);
 
-	mds_brepls_check(bod.bod_repls, jrpg->sjp_ino.ino_nrepls);
+	mds_brepls_check(bod.bod_repls, jrpg->sjp_nrepls);
 
 	rc = mdsio_write(&rootcreds, &bod, BMAP_OD_SZ, &nb,
 	    (off_t)((BMAP_OD_SZ * jrpg->sjp_bmapno) +

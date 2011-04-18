@@ -476,6 +476,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	jrpg->sjp_fid = bia.bia_fid;
 	jrpg->sjp_bmapno = bmap->bcm_bmapno;
 	jrpg->sjp_bgen = bmap_2_bgen(bmap);
+	jrpg->sjp_nrepls = ih->inoh_ino.ino_nrepls;
 
 	memcpy(jrpg->sjp_reptbl, bmap->bcm_repls, SL_REPLICA_NBYTES);
 
@@ -590,6 +591,7 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 	jrpg->sjp_fid = fcmh_2_fid(b->bcm_fcmh);
 	jrpg->sjp_bmapno = b->bcm_bmapno;
 	jrpg->sjp_bgen = bmap_2_bgen(b);
+	jrpg->sjp_nrepls = ih->inoh_ino.ino_nrepls;
 
 	memcpy(jrpg->sjp_reptbl, b->bcm_repls, SL_REPLICA_NBYTES);
 

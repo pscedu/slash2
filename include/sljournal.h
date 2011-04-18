@@ -57,16 +57,13 @@ struct slmds_jent_crc {
  * @sjp_fid: what file.
  * @sjp_bmapno: which bmap region.
  * @sjp_bgen: the new bmap generation.
- * @sjp_ino: the slash2 inode
- * @sjp_inox: the slash2 inode extras
  * @sjp_reptbl: the bmap's entire replica bitmap.
  */
 struct slmds_jent_repgen {
 	slfid_t				sjp_fid;
 	sl_bmapno_t			sjp_bmapno;
 	sl_bmapgen_t			sjp_bgen;
-	struct slash_inode_od		sjp_ino;
-	struct slash_inode_extras_od	sjp_inox;
+	uint32_t			sjp_nrepls;
 	uint8_t				sjp_reptbl[SL_REPLICA_NBYTES];
 } __packed;
 
