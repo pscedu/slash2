@@ -250,7 +250,7 @@ struct bmap_ion_assign {
 /* bia_flags */
 #define BIAF_DIO		(1 << 0)
 
-#define mds_bmap_load(f, n, bp)	bmap_get((f), (n), 0, (bp))
+#define mds_bmap_load(f, n, bp)	bmap_get((f), (n), SL_WRITE, (bp))
 
 #define mds_bml_free(bml)	psc_pool_return(bmapMdsLeasePool, (bml))
 
