@@ -58,11 +58,19 @@ msctl_getcreds(int s, struct slash_creds *crp)
 }
 
 int
+msctl_getclientctx(int s, struct pscfs_clientctx *pfcc)
+{
+	pfcc->pfcc_pid = -1;
+	return (0);
+}
+
+int
 msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct msctlmsg_replrq *mrq = m;
+	struct pscfs_clientctx pfcc;
 	struct srm_replrq_rep *mp;
 	struct srm_replrq_req *mq;
 	struct fidc_membh *fcmh;
@@ -82,8 +90,13 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh,
 		    SLPRI_FID": unable to obtain credentials: %s",
 		    mrq->mrq_fid, slstrerror(rc)));
+	rc = msctl_getclientctx(fd, &pfcc);
+	if (rc)
+		return (psc_ctlsenderr(fd, mh,
+		    SLPRI_FID": unable to obtain client context: %s",
+		    mrq->mrq_fid, slstrerror(rc)));
 
-	rc = fidc_lookup_load_inode(mrq->mrq_fid, &fcmh);
+	rc = fidc_lookup_load_inode(mrq->mrq_fid, &fcmh, &pfcc);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mrq->mrq_fid, slstrerror(rc)));
@@ -100,7 +113,8 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mrq->mrq_fid, slstrerror(rc)));
 
-	if (slc_rmc_getimp(&csvc)) {
+	rc = slc_rmc_getimp1(&csvc);
+	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mrq->mrq_fid, slstrerror(rc));
 		goto out;
@@ -149,6 +163,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct srm_replst_master_req *mq;
 	struct srm_replst_master_rep *mp;
 	struct msctlmsg_replrq *mrq = m;
+	struct pscfs_clientctx pfcc;
 	struct msctl_replstq mrsq;
 	struct fidc_membh *fcmh;
 	struct slash_fidgen fg;
@@ -167,8 +182,13 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh,
 		    SLPRI_FID": unable to obtain credentials: %s",
 		    mrq->mrq_fid, slstrerror(rc)));
+	rc = msctl_getclientctx(fd, &pfcc);
+	if (rc)
+		return (psc_ctlsenderr(fd, mh,
+		    SLPRI_FID": unable to obtain client context: %s",
+		    mrq->mrq_fid, slstrerror(rc)));
 
-	rc = fidc_lookup_load_inode(mrq->mrq_fid, &fcmh);
+	rc = fidc_lookup_load_inode(mrq->mrq_fid, &fcmh, &pfcc);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mrq->mrq_fid, slstrerror(rc)));
@@ -186,7 +206,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    mrq->mrq_fid, slstrerror(rc)));
 
  issue:
-	rc = slc_rmc_getimp(&csvc);
+	rc = slc_rmc_getimp1(&csvc);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, "%s: %s",
 		    fg.fg_fid, slstrerror(rc));
@@ -260,6 +280,7 @@ msctlhnd_set_newreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct srm_set_newreplpol_req *mq;
 	struct srm_set_newreplpol_rep *mp;
 	struct pscrpc_request *rq = NULL;
+	struct pscfs_clientctx pfcc;
 	struct fidc_membh *fcmh;
 	struct slash_fidgen fg;
 	struct slash_creds cr;
@@ -271,8 +292,13 @@ msctlhnd_set_newreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh,
 		    SLPRI_FID": unable to obtain credentials: %s",
 		    mfnrp->mfnrp_fid, slstrerror(rc)));
+	rc = msctl_getclientctx(fd, &pfcc);
+	if (rc)
+		return (psc_ctlsenderr(fd, mh,
+		    SLPRI_FID": unable to obtain client context: %s",
+		    mfnrp->mfnrp_fid, slstrerror(rc)));
 
-	rc = fidc_lookup_load_inode(mfnrp->mfnrp_fid, &fcmh);
+	rc = fidc_lookup_load_inode(mfnrp->mfnrp_fid, &fcmh, &pfcc);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfnrp->mfnrp_fid, slstrerror(rc)));
@@ -289,7 +315,7 @@ msctlhnd_set_newreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfnrp->mfnrp_fid, slstrerror(rc)));
 
-	rc = slc_rmc_getimp(&csvc);
+	rc = slc_rmc_getimp1(&csvc);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfnrp->mfnrp_fid, slstrerror(rc));
@@ -326,6 +352,7 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct srm_set_bmapreplpol_req *mq;
 	struct srm_set_bmapreplpol_rep *mp;
 	struct pscrpc_request *rq = NULL;
+	struct pscfs_clientctx pfcc;
 	struct fidc_membh *fcmh;
 	struct slash_fidgen fg;
 	struct slash_creds cr;
@@ -337,8 +364,13 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh,
 		    SLPRI_FID": unable to obtain credentials: %s",
 		    mfbrp->mfbrp_fid, slstrerror(rc)));
+	rc = msctl_getclientctx(fd, &pfcc);
+	if (rc)
+		return (psc_ctlsenderr(fd, mh,
+		    SLPRI_FID": unable to obtain client context: %s",
+		    mfbrp->mfbrp_fid, slstrerror(rc)));
 
-	rc = fidc_lookup_load_inode(mfbrp->mfbrp_fid, &fcmh);
+	rc = fidc_lookup_load_inode(mfbrp->mfbrp_fid, &fcmh, &pfcc);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfbrp->mfbrp_fid, slstrerror(rc)));
@@ -355,7 +387,7 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfbrp->mfbrp_fid, slstrerror(rc)));
 
-	rc = slc_rmc_getimp(&csvc);
+	rc = slc_rmc_getimp1(&csvc);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfbrp->mfbrp_fid, slstrerror(rc));

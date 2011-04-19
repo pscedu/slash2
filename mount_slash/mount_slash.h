@@ -31,6 +31,7 @@
 #include "slashrpc.h"
 #include "slconfig.h"
 
+struct pscfs_req;
 struct pscrpc_request;
 
 struct bmap_pagecache_entry;
@@ -140,7 +141,7 @@ int	 msl_dio_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int	 msl_io(struct msl_fhent *, char *, size_t, off_t, enum rw);
 int	 msl_io_rpc_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int	 msl_io_rpcset_cb(struct pscrpc_request_set *, void *, int);
-int	 msl_stat(struct fidc_membh *);
+int	 msl_stat(struct fidc_membh *, void *);
 
 struct msl_fhent * msl_fhent_new(struct fidc_membh *);
 
@@ -153,8 +154,8 @@ void	 msctlthr_begin(struct psc_thread *);
 
 int	 checkcreds(const struct srt_stat *, const struct slash_creds *, int);
 int	 translate_pathname(const char *, char []);
-int	 lookup_pathname_fg(const char *, struct slash_creds *,
-	    struct slash_fidgen *, struct srt_stat *);
+int	 lookup_pathname_fg(struct pscfs_req *, const char *,
+	    struct slash_creds *, struct slash_fidgen *, struct srt_stat *);
 
 extern char			 ctlsockfn[];
 extern sl_ios_id_t		 prefIOS;

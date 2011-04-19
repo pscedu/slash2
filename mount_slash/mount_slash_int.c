@@ -788,7 +788,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 	}
 	FCMH_ULOCK(f);
 
-	rc = slc_rmc_getimp(&csvc);
+	rc = slc_rmc_getimp1(&csvc);
 	if (rc)
 		goto out;
 	rc = SL_RSX_NEWREQ(csvc, SRMT_GETBMAP, rq, mq, mp);
@@ -898,7 +898,7 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw)
 	 */
 	psc_assert(rw == SL_WRITE && (b->bcm_flags & BMAP_RD));
 
-	rc = slc_rmc_getimp(&csvc);
+	rc = slc_rmc_getimp1(&csvc);
 	if (rc)
 		goto out;
 

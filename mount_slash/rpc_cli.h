@@ -22,9 +22,10 @@
 
 #include "slconn.h"
 
+struct pscfs_req;
+struct pscrpc_completion;
 struct pscrpc_import;
 struct pscrpc_request;
-struct pscrpc_completion;
 
 extern struct pscrpc_completion rpcComp;
 
@@ -54,7 +55,9 @@ extern struct pscrpc_completion rpcComp;
 
 void	slc_rpc_initsvc(void);
 
-int	slc_rmc_getimp(struct slashrpc_cservice **);
+int	slc_rmc_getimp(struct pscfs_req *, struct slashrpc_cservice **);
+int	slc_rmc_getimp1(struct slashrpc_cservice **);
+int	slc_rmc_retry(struct pscfs_req *, int *);
 int	slc_rmc_setmds(const char *);
 
 int	slc_rcm_handler(struct pscrpc_request *);

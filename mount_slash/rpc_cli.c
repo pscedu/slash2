@@ -82,20 +82,51 @@ slc_rmc_setmds(const char *name)
 	return (0);
 }
 
+/**
+ * slc_rmc_retry - Determine if process doesn't want to wait or if
+ *	maximum allowed timeout has been reached for MDS communication.
+ */
 int
-slc_rmc_getimp(struct slashrpc_cservice **csvcp)
+slc_rmc_retry(__unusedx struct pscfs_req *pfr, int *rc)
 {
-	int wait = 1;
+	int retry = 1;
+
+#if 0
+	ctx = fuse_get_context(rq);
+	retry = global setting
+	retry = read_proc_env(ctx->pid, "");
+	retry = hard timeout
+#endif
+	*rc = retry ? 0 : ENOTCONN;
+	return (retry);
+}
+
+int
+slc_rmc_getimp(__unusedx struct pscfs_req *pfr,
+    struct slashrpc_cservice **csvcp)
+{
+	int rc = 0;
 
 	do {
 		*csvcp = slc_getmcsvc(slc_rmc_resm);
-#if 0
-		ctx = fuse_get_context(rq);
-		// if process doesn't want to wait
-			wait = 0
-#endif
-	} while (*csvcp == NULL && wait);
-	return (0);
+		if (*csvcp == NULL) {
+			rc = slc_rmc_resm->resm_csvc->csvc_lasterrno;
+			if (slc_rmc_retry(pfr, &rc))
+				continue;
+		}
+	} while (*csvcp == NULL && rc == 0);
+	return (rc);
+}
+
+int
+slc_rmc_getimp1(struct slashrpc_cservice **csvcp)
+{
+	int rc = 0;
+
+	*csvcp = slc_getmcsvc(slc_rmc_resm);
+	if (*csvcp == NULL)
+		rc = slc_rmc_resm->resm_csvc->csvc_lasterrno;
+	return (rc);
 }
 
 void

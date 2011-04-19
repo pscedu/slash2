@@ -27,6 +27,8 @@
 #include "fidcache.h"
 #include "dircache.h"
 
+struct pscfs_clientctx;
+
 struct fidc_membh;
 
 struct cli_finfo {
@@ -57,21 +59,22 @@ struct fcmh_cli_info {
 void	fcmh_setlocalsize(struct fidc_membh *, uint64_t);
 void	slc_fcmh_initdci(struct fidc_membh *);
 
-#define fidc_lookup_load_inode(fid, fcmhp)				\
-	_fidc_lookup_load_inode(PFL_CALLERINFOSS(SLSS_FCMH), (fid), (fcmhp))
+#define fidc_lookup_load_inode(fid, fcmhp, pfcc)			\
+	_fidc_lookup_load_inode(PFL_CALLERINFOSS(SLSS_FCMH), (fid),	\
+	    (fcmhp), (pfcc))
 
 /**
- * fidc_lookup_load_inode - Create the inode if it doesn't exist, loading
- *	its attributes from the MDS.
+ * fidc_lookup_load_inode - Create the inode if it doesn't exist,
+ *	loading its attributes from the MDS.
  */
 static __inline int
 _fidc_lookup_load_inode(const struct pfl_callerinfo *pci, slfid_t fid,
-    struct fidc_membh **fcmhp)
+    struct fidc_membh **fcmhp, struct pscfs_clientctx *pfcc)
 {
 	struct slash_fidgen fg = { fid, FGEN_ANY };
 
-	return (_fidc_lookup(pci, &fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD,
-	    NULL, 0, fcmhp));
+	return (_fidc_lookup(pci, &fg, FIDC_LOOKUP_CREATE |
+	    FIDC_LOOKUP_LOAD, NULL, 0, fcmhp, pfcc));
 }
 
 #endif /* _FIDC_CLI_H_ */
