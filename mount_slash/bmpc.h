@@ -107,7 +107,7 @@ struct bmap_pagecache_entry {
 #define BMPCE_LOCK(b)		spinlock(&(b)->bmpce_lock)
 #define BMPCE_ULOCK(b)		freelock(&(b)->bmpce_lock)
 
-#define BMPCE_WAIT(b) psc_waitq_wait((b)->bmpce_waitq, &(b)->bmpce_lock);
+#define BMPCE_WAIT(b)		psc_waitq_wait((b)->bmpce_waitq, &(b)->bmpce_lock)
 #define BMPCE_WAKE(b)							\
 	do {								\
 		if ((b)->bmpce_waitq)					\
@@ -143,7 +143,7 @@ struct bmap_pagecache_entry {
 	    "o=%#x b=%p "						\
 	    "ts="PSCPRI_TIMESPEC" "					\
 	    "wr=%hu rd=%hu "						\
-	    "owner=%p "fmt,					\
+	    "owner=%p "fmt,						\
 	    (b), (b)->bmpce_flags, DEBUG_BMPCE_FLAGS(b),		\
 	    (b)->bmpce_off, (b)->bmpce_base,				\
 	    PSCPRI_TIMESPEC_ARGS(&(b)->bmpce_laccess),			\
@@ -290,9 +290,9 @@ struct bmpc_ioreq {
 	(b)->biorq_flags & BIORQ_FORCE_EXPIRE	? "x" : "",		\
 	(b)->biorq_flags & BIORQ_DESTROY	? "D" : "",		\
 	(b)->biorq_flags & BIORQ_FLUSHRDY	? "R" : "",		\
-	(b)->biorq_flags & BIORQ_READAHEAD	? "a" : "",		\
 	(b)->biorq_flags & BIORQ_NOFHENT	? "n" : "",		\
-	(b)->biorq_flags & BIORQ_APPEND		? "A" : ""
+	(b)->biorq_flags & BIORQ_APPEND		? "A" : "",		\
+	(b)->biorq_flags & BIORQ_READAHEAD	? "a" : "",		\
 
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP,					\
@@ -387,15 +387,15 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
  */
 #define biorq_is_my_bmpce(r, b)	((r) == (b)->bmpce_owner)
 
-#define biorq_getaligned_off(r, nbmpce) (((r)->biorq_off & ~BMPC_BUFMASK) + \
-					 ((nbmpce) * BMPC_BUFSZ))
+#define biorq_getaligned_off(r, nbmpce)					\
+	(((r)->biorq_off & ~BMPC_BUFMASK) + ((nbmpce) * BMPC_BUFSZ))
 
-#define biorq_voff_get(r) ((r)->biorq_off + (r)->biorq_len)
+#define biorq_voff_get(r)	((r)->biorq_off + (r)->biorq_len)
 
 #define bmpce_is_rbw_page(r, b, pos)					\
 	(biorq_is_my_bmpce((r), (b)) &&					\
 	 ((!(pos) && ((r)->biorq_flags & BIORQ_RBWFP)) ||		\
-	  (((pos) == (psc_dynarray_len(&(r)->biorq_pages)-1) &&		\
+	  (((pos) == (psc_dynarray_len(&(r)->biorq_pages) - 1) &&	\
 	    ((r)->biorq_flags & BIORQ_RBWLP)))))
 
 int   bmpce_init(struct psc_poolmgr *, void *);
@@ -405,7 +405,7 @@ void *bmpc_alloc(void);
 void  bmpc_free(void *);
 void  bmpc_freeall_locked(struct bmap_pagecache *);
 void  bmpce_eio_remove(struct bmap_pagecache *, struct bmap_pagecache_entry *);
-struct bmap_pagecache_entry * bmpce_lookup_locked(struct bmap_pagecache *, 
+struct bmap_pagecache_entry * bmpce_lookup_locked(struct bmap_pagecache *,
 	  struct bmpc_ioreq *, uint32_t, struct psc_waitq *);
 void  bmpce_handle_lru_locked(struct bmap_pagecache_entry *,
 			      struct bmap_pagecache *, int, int);
