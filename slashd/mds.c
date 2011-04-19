@@ -375,8 +375,8 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 
 	/*
 	 * Try a connection to each member in the resource.  If none
-	 * are immediately available, try again in a block manner before
-	 * returning offline status.
+	 * are immediately available, try again in a blocking manner 
+	 * before returning offline status.
 	 */
 	for (nb = 1; nb > 0; nb--)
 		for (j = 0; j < len; j++) {
@@ -432,12 +432,15 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	bia.bia_flags = (bmap->bcm_flags & BMAP_DIO) ? BIAF_DIO : 0;
 	bmdsi->bmdsi_seq = bia.bia_seq = mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
 
-	bmdsi->bmdsi_assign = mds_odtable_putitem(mdsBmapAssignTable, &bia, sizeof(bia));
+	bmdsi->bmdsi_assign = mds_odtable_putitem(mdsBmapAssignTable, &bia, 
+	    sizeof(bia));
+
 	if (!bmdsi->bmdsi_assign) {
 		BMAP_SETATTR(bmap, BMAP_MDS_NOION);
 		bml->bml_flags |= BML_ASSFAIL;
 
 		DEBUG_BMAP(PLL_ERROR, bmap, "failed odtable_putitem()");
+		// XXX fix me - dont leak the journal buf! 
 		return (-SLERR_XACT_FAIL);
 
 	} else {
