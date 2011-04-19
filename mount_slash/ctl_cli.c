@@ -58,7 +58,7 @@ msctl_getcreds(int s, struct slash_creds *crp)
 }
 
 int
-msctl_getclientctx(int s, struct pscfs_clientctx *pfcc)
+msctl_getclientctx(__unusedx int s, struct pscfs_clientctx *pfcc)
 {
 	pfcc->pfcc_pid = -1;
 	return (0);
