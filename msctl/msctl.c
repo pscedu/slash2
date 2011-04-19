@@ -102,9 +102,10 @@ struct psc_hashtbl fnfidpairs;
 slfid_t
 fn2fid(const char *fn)
 {
-	struct fnfidpair q, *ffp;
+	struct fnfidpair *ffp;
 	struct statvfs sfb;
 	struct stat stb;
+	slfid_t fid;
 
 	if (stat(fn, &stb) == -1)
 		err(1, "stat %s", fn);
@@ -114,15 +115,15 @@ fn2fid(const char *fn)
 	if (sfb.f_fsid != SLASH_FSID)
 		errx(1, "%s: file is not in a SLASH file system %lx", fn, sfb.f_fsid);
 
-	q.ffp_fid = stb.st_ino;
-	ffp = psc_hashtbl_search(&fnfidpairs, NULL, NULL, &q);
+	fid = stb.st_ino;
+	ffp = psc_hashtbl_search(&fnfidpairs, NULL, NULL, &fid);
 	if (ffp)
 		return (ffp->ffp_fid);
 
 	ffp = PSCALLOC(sizeof(*ffp));
+	psc_hashent_init(&fnfidpairs, ffp);
 	strlcpy(ffp->ffp_fn, fn, sizeof(ffp->ffp_fn));
 	ffp->ffp_fid = stb.st_ino;
-	psc_hashent_init(&fnfidpairs, ffp);
 	psc_hashtbl_add_item(&fnfidpairs, ffp);
 	return (stb.st_ino);
 }
@@ -131,10 +132,9 @@ const char *
 fid2fn(slfid_t fid)
 {
 	static char fn[PATH_MAX];
-	struct fnfidpair q, *ffp;
+	struct fnfidpair *ffp;
 
-	q.ffp_fid = fid;
-	ffp = psc_hashtbl_search(&fnfidpairs, NULL, NULL, &q);
+	ffp = psc_hashtbl_search(&fnfidpairs, NULL, NULL, &fid);
 	if (ffp)
 		return (PCPP_STR(ffp->ffp_fn));
 	snprintf(fn, sizeof(fn), "<"SLPRI_FID">", fid);
