@@ -42,8 +42,8 @@ extern struct pscrpc_completion rpcComp;
 	    SRIC_MAGIC, SRIC_VERSION, &resm2rmci(resm)->rmci_mutex,		\
 	    &resm2rmci(resm)->rmci_mwc,	SLCONNT_IOD, msl_getmw())
 
-#define slc_getmcsvcx(resm, exp)						\
-	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT, (exp),		\
+#define slc_getmcsvcx(resm, fl, exp)						\
+	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT | (fl), (exp),	\
 	    (resm)->resm_nid, SRMC_REQ_PORTAL, SRMC_REP_PORTAL,			\
 	    SRMC_MAGIC, SRMC_VERSION, &resm2rmci(resm)->rmci_mutex,		\
 	    &resm2rmci(resm)->rmci_mwc, SLCONNT_MDS, msl_getmw())
@@ -51,7 +51,8 @@ extern struct pscrpc_completion rpcComp;
 #define slc_geticsvc(resm)		slc_geticsvcxf((resm), 0, NULL)
 #define slc_geticsvcx(resm, exp)	slc_geticsvcxf((resm), 0, (exp))
 #define slc_geticsvc_nb(resm)		slc_geticsvcxf((resm), CSVCF_NONBLOCK, NULL)
-#define slc_getmcsvc(resm)		slc_getmcsvcx((resm), NULL)
+#define slc_getmcsvc(resm)		slc_getmcsvcx((resm), 0, NULL)
+#define slc_getmcsvc_nb(resm)		slc_getmcsvcx((resm), CSVC_NONBLOCK, NULL)
 
 void	slc_rpc_initsvc(void);
 
@@ -78,6 +79,8 @@ msl_getmw(void)
 		return (&msbmflthr(thr)->mbft_mw);
 	case MSTHRT_BMAPREADAHEAD:
 		return (&msbmfrathr(thr)->mbfra_mw);
+	case MSTHRT_CTL:
+		return (NULL);
 	}
 	psc_fatalx("unknown thread type");
 }
