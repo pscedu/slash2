@@ -292,7 +292,7 @@ struct bmpc_ioreq {
 	(b)->biorq_flags & BIORQ_FLUSHRDY	? "R" : "",		\
 	(b)->biorq_flags & BIORQ_NOFHENT	? "n" : "",		\
 	(b)->biorq_flags & BIORQ_APPEND		? "A" : "",		\
-	(b)->biorq_flags & BIORQ_READAHEAD	? "a" : "",		\
+	(b)->biorq_flags & BIORQ_READAHEAD	? "a" : ""		\
 
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP,					\
