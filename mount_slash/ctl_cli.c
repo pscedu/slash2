@@ -76,7 +76,6 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct fidc_membh *fcmh;
 	struct slash_fidgen fg;
 	struct slash_creds cr;
-	struct srt_stat sstb;
 	uint32_t n;
 	int rc;
 
@@ -102,10 +101,11 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    mrq->mrq_fid, slstrerror(rc)));
 
 	FCMH_LOCK(fcmh);
-	if (!S_ISREG(sstb.sst_mode) && !S_ISDIR(sstb.sst_mode))
+	if (!S_ISREG(fcmh->fcmh_sstb.sst_mode) &&
+	    !S_ISDIR(fcmh->fcmh_sstb.sst_mode))
 		rc = ENOTSUP;
 	else
-		rc = checkcreds(&sstb, &cr, W_OK);
+		rc = checkcreds(&fcmh->fcmh_sstb, &cr, W_OK);
 	fg = fcmh->fcmh_fg;
 	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 
@@ -168,7 +168,6 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct fidc_membh *fcmh;
 	struct slash_fidgen fg;
 	struct slash_creds cr;
-	struct srt_stat sstb;
 	int added = 0, rc;
 
 	if (mrq->mrq_fid == FID_ANY) {
@@ -194,10 +193,11 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    mrq->mrq_fid, slstrerror(rc)));
 
 	FCMH_LOCK(fcmh);
-	if (!S_ISREG(sstb.sst_mode) && !S_ISDIR(sstb.sst_mode))
+	if (!S_ISREG(fcmh->fcmh_sstb.sst_mode) &&
+	    !S_ISDIR(fcmh->fcmh_sstb.sst_mode))
 		rc = ENOTSUP;
 	else
-		rc = checkcreds(&sstb, &cr, W_OK);
+		rc = checkcreds(&fcmh->fcmh_sstb, &cr, W_OK);
 	fg = fcmh->fcmh_fg;
 	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 
@@ -284,7 +284,6 @@ msctlhnd_set_newreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct fidc_membh *fcmh;
 	struct slash_fidgen fg;
 	struct slash_creds cr;
-	struct srt_stat sstb;
 	int rc;
 
 	rc = msctl_getcreds(fd, &cr);
@@ -304,10 +303,11 @@ msctlhnd_set_newreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    mfnrp->mfnrp_fid, slstrerror(rc)));
 
 	FCMH_LOCK(fcmh);
-	if (!S_ISREG(sstb.sst_mode) && !S_ISDIR(sstb.sst_mode))
+	if (!S_ISREG(fcmh->fcmh_sstb.sst_mode) &&
+	    !S_ISDIR(fcmh->fcmh_sstb.sst_mode))
 		rc = ENOTSUP;
 	else
-		rc = checkcreds(&sstb, &cr, W_OK);
+		rc = checkcreds(&fcmh->fcmh_sstb, &cr, W_OK);
 	fg = fcmh->fcmh_fg;
 	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 
@@ -356,7 +356,6 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct fidc_membh *fcmh;
 	struct slash_fidgen fg;
 	struct slash_creds cr;
-	struct srt_stat sstb;
 	int rc;
 
 	rc = msctl_getcreds(fd, &cr);
@@ -376,10 +375,10 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    mfbrp->mfbrp_fid, slstrerror(rc)));
 
 	FCMH_LOCK(fcmh);
-	if (!S_ISREG(sstb.sst_mode))
+	if (!S_ISREG(fcmh->fcmh_sstb.sst_mode))
 		rc = ENOTSUP;
 	else
-		rc = checkcreds(&sstb, &cr, W_OK);
+		rc = checkcreds(&fcmh->fcmh_sstb, &cr, W_OK);
 	fg = fcmh->fcmh_fg;
 	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 
