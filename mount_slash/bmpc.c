@@ -49,6 +49,89 @@ bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *p)
 	return (0);
 }
 
+struct bmap_pagecache_entry *
+bmpce_lookup_locked(struct bmap_pagecache *bmpc, struct bmpc_ioreq *biorq, 
+		    uint32_t off, struct psc_waitq *wq)
+{
+	struct bmap_pagecache_entry bmpce_search, *bmpce = NULL, 
+		*bmpce_new = NULL;
+
+	LOCK_ENSURE(&bmpc->bmpc_lock);
+
+	bmpce_search.bmpce_off = off;
+
+	while (!bmpce) {
+		bmpce = SPLAY_FIND(bmap_pagecachetree, &bmpc->bmpc_tree,
+			   &bmpce_search);
+		if (bmpce)
+			break;
+
+		else if (bmpce_new == NULL) {
+			BMPC_ULOCK(bmpc);
+			bmpce_new = psc_pool_get(bmpcePoolMgr);
+			BMPC_LOCK(bmpc);
+			continue;
+		} else { 
+			bmpce = bmpce_new;
+			bmpce_new = NULL;
+			bmpce->bmpce_off = bmpce_search.bmpce_off;
+			bmpce_useprep(bmpce, biorq, wq);
+			
+			SPLAY_INSERT(bmap_pagecachetree,
+			     &bmpc->bmpc_tree, bmpce);
+		}
+	}
+	return (bmpce);
+}
+
+__static void
+bmpce_release_locked(struct bmap_pagecache_entry *, struct bmap_pagecache *);
+
+/**
+ * bmpce_eio_remove - Extract an errored page from the page cache.  
+ * @bmpc:  the page cache holding the respective page.
+ * @bmpce:  the page to be removed.
+ * Notes:  block until all waiters on the bmpce have given up.
+ */
+#if 0
+void
+bmpce_eio_remove(struct bmap_pagecache *bmpc, 
+		 struct bmap_pagecache_entry *bmpce)
+{
+	/* Leave the entry in the cache so that a duplicate page is not
+	 *   allocated.
+	 * Note: that the locking order.
+	 *     msl_pages_blocking_load() is where other threads block for 
+	 *     BMPCE_EIO.
+	 */
+	psc_assert(bmpce->bmpce_flags & BMPCE_EIO);
+	psc_assert(psc_atomic16_read(&bmpce->bmpce_rdref) > 0);
+	/* Account for the callers read reference.
+	 */
+	psc_atomic16_dec(&bmpce->bmpce_rdref);
+
+	while (psc_atomic16_read(&bmpce->bmpce_wrref) ||
+	       psc_atomic16_read(&bmpce->bmpce_rdref)) {
+		/* Spin while others relinquish their I/O references.
+		 */
+		DEBUG_BMPCE(PLL_WARN, bmpce, "waiting on refs");
+		psc_waitq_wakeall(bmpce->bmpce_waitq);
+		usleep(10);
+	}
+		
+	BMPC_LOCK(bmpc);
+	BMPCE_LOCK(bmpce);	
+
+	if (bmpce->bmpce_flags & BMPCE_READA) 
+		pll_remove(&bmpc->bmpc_pndg_ra, bmpce);
+	
+	bmpce_freeprep(bmpce);
+	bmpce->bmpce_flags = BMPCE_FREEING;
+	bmpce_release_locked(bmpce, bmpc);
+	BMPC_ULOCK(bmpc);
+}
+#endif
+
 void
 bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 			struct bmap_pagecache *bmpc, int op, int incref)
@@ -58,7 +141,8 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 	LOCK_ENSURE(&bmpc->bmpc_lock);
 	LOCK_ENSURE(&bmpce->bmpce_lock);
 
-	DEBUG_BMPCE(PLL_INFO, bmpce, "op=%d incref=%d", op, incref);
+	DEBUG_BMPCE((bmpce->bmpce_flags & BMPCE_EIO) ? PLL_WARN : PLL_INFO, 
+	    bmpce, "op=%d incref=%d", op, incref);
 
 	psc_assert(psc_atomic16_read(&bmpce->bmpce_wrref) >= 0);
 	psc_assert(psc_atomic16_read(&bmpce->bmpce_rdref) >= 0);
@@ -73,7 +157,7 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 		else
 			if (bmpce->bmpce_flags & BMPCE_LRU)
 				psc_assert(pll_conjoint(&bmpc->bmpc_lru,
-							bmpce));
+					bmpce));
 	}
 
 	if (incref) {
@@ -98,7 +182,6 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 				   (bmpce->bmpce_flags & BMPCE_READPNDG)  ||
 				   (bmpce->bmpce_flags & BMPCE_GETBUF)    ||
 				   (bmpce->bmpce_flags & BMPCE_DATARDY)   ||
-				   (bmpce->bmpce_flags & BMPCE_EIO)       ||
 				   (bmpce->bmpce_flags & BMPCE_INIT));
 
 			psc_atomic16_inc(&bmpce->bmpce_rdref);
@@ -106,6 +189,7 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 
 	} else {
 		psc_assert(bmpce->bmpce_base);
+
 		if (!(bmpce->bmpce_flags & BMPCE_EIO))
 			psc_assert(bmpce->bmpce_flags & BMPCE_DATARDY);
 
@@ -121,12 +205,19 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 				bmpce->bmpce_flags &= ~BMPCE_READPNDG;
 		}
 
-		if (bmpce->bmpce_flags & BMPCE_EIO)
-			return;
-
 		if (!(psc_atomic16_read(&bmpce->bmpce_wrref) ||
 		      psc_atomic16_read(&bmpce->bmpce_rdref))) {
-			if (!(bmpce->bmpce_flags & BMPCE_LRU)) {
+			/* Last ref on an EIO page so remove it.
+			 */
+			if (bmpce->bmpce_flags & BMPCE_EIO) {
+				DEBUG_BMPCE(PLL_WARN, bmpce, "freeing EIO");
+				psc_assert(bmpce->bmpce_waitq);
+				BMPCE_WAKE(bmpce);
+				bmpce_freeprep(bmpce);
+				bmpce_release_locked(bmpce, bmpc);
+				return;
+
+			} else if (!(bmpce->bmpce_flags & BMPCE_LRU)) {
 				bmpce->bmpce_flags |= BMPCE_LRU;
 #ifdef BMPC_PLL_SORT
 				pll_addtail(&bmpc->bmpc_lru, bmpce);
@@ -139,6 +230,15 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 #endif
 				psc_waitq_wakeall(&bmpcSlabs.bmms_waitq);
 			}
+
+		} else if (bmpce->bmpce_flags & BMPCE_EIO) {
+			/* In cases where EIO is present the lock must be 
+			 *   freed no matter what.  This is because we
+			 *   try to free the bmpce above, which when 
+			 *   successful, replaces the bmpce to the pool.
+			 */
+			BMPCE_WAKE(bmpce);
+			BMPCE_ULOCK(bmpce);
 		}
 	}
 
@@ -312,14 +412,23 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 
 	PLL_LOCK(&bmpc->bmpc_lru);
 	PLL_FOREACH_SAFE(bmpce, tmp, &bmpc->bmpc_lru) {
-		spinlock(&bmpce->bmpce_lock);
+		BMPCE_LOCK(bmpce);
 
 		psc_assert(!psc_atomic16_read(&bmpce->bmpce_wrref));
 
 		if (psc_atomic16_read(&bmpce->bmpce_rdref)) {
-			DEBUG_BMPCE(PLL_TRACE, bmpce, "rd ref, skip");
-			freelock(&bmpce->bmpce_lock);
+			DEBUG_BMPCE(PLL_INFO, bmpce, "rd ref, skip");
+			BMPCE_ULOCK(bmpce);
 			continue;
+		}
+
+		if (bmpce->bmpce_flags & BMPCE_EIO) {
+			/* The thread who sets BMPCE_EIO will remove
+			 *   this page from the cache.
+			 */
+			DEBUG_BMPCE(PLL_WARN, bmpce, "BMPCE_EIO, skip");
+			BMPCE_ULOCK(bmpce);
+                        continue;
 		}
 
 		timespecsub(&bmpce->bmpce_laccess, &ts, &expire);
@@ -329,7 +438,7 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 			    "expire=("PSCPRI_TIMESPEC") too recent, skip",
 			    PSCPRI_TIMESPEC_ARGS(&expire));
 
-			freelock(&bmpce->bmpce_lock);
+			BMPCE_ULOCK(bmpce);
 			break;
 
 		} else {

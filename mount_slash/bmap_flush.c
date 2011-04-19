@@ -49,49 +49,39 @@ struct psc_listcache		 bmapTimeoutQ;
 struct pscrpc_completion	 rpcComp;
 
 __static struct pscrpc_nbreqset	*pndgReqs;
-__static struct psc_dynarray	 pndgReqSets = DYNARRAY_INIT;
-__static psc_spinlock_t		 pndgReqLock = SPINLOCK_INIT;
+__static struct psc_listcache	 pndgReqSets;
 __static atomic_t		 outstandingRpcCnt;
 
 #define MAX_OUTSTANDING_RPCS	128
 #define MIN_COALESCE_RPC_SZ	LNET_MTU /* Try for big RPC's */
 
-#define pndgReqsLock()		spinlock(&pndgReqLock)
-#define pndgReqsUlock()		freelock(&pndgReqLock)
-
 struct psc_waitq		bmapflushwaitq = PSC_WAITQ_INIT;
 psc_spinlock_t			bmapflushwaitqlock = SPINLOCK_INIT;
+
+void bmap_flush_inflight_unset(struct bmpc_ioreq *);
 
 __static void
 bmap_flush_reap_rpcs(void)
 {
-	struct pscrpc_request_set *set;
-	int i;
+	struct pscrpc_request_set *set;	
 
 	psclog_debug("outstandingRpcCnt=%d (before) rpcComp.rqcomp_compcnt=%d",
 	    atomic_read(&outstandingRpcCnt), atomic_read(&rpcComp.rqcomp_compcnt));
 
-	/* Only this thread may pull from pndgReqSets dynarray,
+	/* Only this thread may pull from pndgReqSets listcache
 	 *   therefore it can never shrink except by way of this
-	 *   routine.
+	 *   routine.  
+	 * Note:  set failures are handled by set_interpret()
+	 * 
+	 * XXX this looks problematic.. I think that pscrpc_set_finalize()
+	 *   should not block here at all, and hence, the 'set' should
+	 *   not be removed from the LC.   A pscrpc_completion could be 
+	 *   put in place here.  Note that pscrpc_nbreqset_reap() also sleeps
+	 *   for a second.
 	 */
-	for (i=0; i < psc_dynarray_len(&pndgReqSets); i++) {
-		pndgReqsLock();
-		set = psc_dynarray_getpos(&pndgReqSets, i);
-		psc_assert(set);
-		pndgReqsUlock();
+	while ((set = lc_getnb(&pndgReqSets)))
+		pscrpc_set_finalize(set, 0, 1);
 
-		/* XXX handle the return code from pscrpc_set_finalize
-		 *   properly.
-		 */
-		if (!pscrpc_set_finalize(set, 0, 0)) {
-			pndgReqsLock();
-			psc_dynarray_remove(&pndgReqSets, set);
-			pndgReqsUlock();
-			pscrpc_set_destroy(set);
-			i--;
-		}
-	}
 	pscrpc_nbreqset_reap(pndgReqs);
 
 	psclog_debug("outstandingRpcCnt=%d (after)",
@@ -142,6 +132,7 @@ msl_fd_offline_retry(struct msl_fhent *mfh)
 int
 _msl_offline_retry(struct bmpc_ioreq *r, int ignore_expire)
 {
+	//XXX bmap_flush_biorq_expired() is not used properly here.
 	if (!ignore_expire && bmap_flush_biorq_expired(r))
 		return (0);
 	return (msl_fd_offline_retry(r->biorq_fhent));
@@ -200,9 +191,10 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 	int rc;
 
 	rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
-
+	
 	atomic_dec(&outstandingRpcCnt);
-	DEBUG_REQ(PLL_INFO, rq, "done (outstandingRpcCnt=%d)",
+	DEBUG_REQ(rq->rq_err ? PLL_ERROR : PLL_INFO, rq, 
+		  "done (outstandingRpcCnt=%d)",
 		  atomic_read(&outstandingRpcCnt));
 
 	if (atomic_read(&outstandingRpcCnt) < MAX_OUTSTANDING_RPCS / 2)
@@ -308,7 +300,7 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r)
 	BMPC_ULOCK(bmpc);
 }
 
-__static void
+void
 bmap_flush_inflight_unset(struct bmpc_ioreq *r)
 {
 	struct bmap_pagecache *bmpc;
@@ -317,7 +309,7 @@ bmap_flush_inflight_unset(struct bmpc_ioreq *r)
 	psc_assert(r->biorq_flags & BIORQ_SCHED);
 	psc_assert(r->biorq_flags & BIORQ_INFL);
 	r->biorq_flags &= ~BIORQ_INFL;
-	DEBUG_BIORQ(PLL_INFO, r, "unset inflight");
+	DEBUG_BIORQ(PLL_WARN, r, "unset inflight XXX is my lease still valid?");
 	freelock(&r->biorq_lock);
 
 	bmpc = bmap_2_bmpc(r->biorq_bmap);
@@ -427,9 +419,7 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 			psc_assert(n);
 			LAUNCH_RPC();
 		}
-		pndgReqsLock();
-		psc_dynarray_add(&pndgReqSets, set);
-		pndgReqsUlock();
+		lc_addtail(&pndgReqSets, set);
 	}
 	return;
 
@@ -1032,10 +1022,9 @@ msl_bmap_release(struct sl_resm *resm)
 		    rmci->rmci_bmaprls.bmaps[i].bmapno,
 		    rmci->rmci_bmaprls.bmaps[i].key,
 		    rmci->rmci_bmaprls.bmaps[i].seq,
-		    mp ? mp->bidrc[i] : rc);		/* mp could be NULL if !rc */
+		    mp ? mp->bidrc[i] : rc); /* mp could be NULL if !rc */
 	rmci->rmci_bmaprls.nbmaps = 0;
  out:
-
 	if (rc) {
 		/* At this point the bmaps have already been purged from
 		 *   our cache.  If the mds rls request fails then the
@@ -1043,7 +1032,9 @@ msl_bmap_release(struct sl_resm *resm)
 		 *   the client must reacquire leases to perform further
 		 *   I/O on any bmap in this set.
 		 */
-		psc_errorx("bmap release RPC failed rc=%d", rc);
+		psc_errorx("bmap_release failed res=%s:nid=%s (rc=%d)", 
+		    resm->resm_res->res_name, libcfs_nid2str(resm->resm_nid), 
+		    rc);
 	}
 	if (rq)
 		pscrpc_req_finished(rq);
@@ -1237,8 +1228,9 @@ msbmapflushthr_main(__unusedx struct psc_thread *thr)
 	while (pscthr_run()) {
 		msbmflthr(pscthr_get())->mbft_failcnt = 1;
 		bmap_flush();
-		psc_waitq_waitrel(&bmapflushwaitq, NULL,
-		    &bmapFlushWaitTime);
+		psc_info("post bmap_flush");
+		psc_waitq_waitrel(&bmapflushwaitq, NULL, &bmapFlushWaitTime);
+		psc_info("post wakeup");
 	}
 }
 
@@ -1259,7 +1251,6 @@ msbmapflushthrrpc_main(__unusedx struct psc_thread *thr)
 void
 msbmaprathr_main(__unusedx struct psc_thread *thr)
 {
-	int rc;
 	struct bmap_pagecache_entry *bmpce;
 
 	while (pscthr_run()) {
@@ -1272,14 +1263,7 @@ msbmaprathr_main(__unusedx struct psc_thread *thr)
 		bmpce->bmpce_flags |= BMPCE_READPNDG;
 		BMPCE_ULOCK(bmpce);
 
-		rc = msl_reada_rpc_launch(bmpce);
-		if (rc) {
-			//XXX clear EIO bmpce from cache
-			//   need a routine which wakes up waiters blocked
-			//   on page fault completion and tell them
-			//   to retry. until then..
-			abort();
-		}
+		msl_reada_rpc_launch(bmpce);
 	}
 }
 
@@ -1304,6 +1288,9 @@ msbmapflushthr_spawn(void)
 
 	lc_reginit(&bmapReadAheadQ, struct bmap_pagecache_entry,
 	    bmpce_ralentry, "bmapreadahead");
+
+	lc_reginit(&pndgReqSets, struct pscrpc_request_set,
+	    set_lentry, "bmappndgflushsets");
 
 	for (i = 0; i < NUM_BMAP_FLUSH_THREADS; i++) {
 		thr = pscthr_init(MSTHRT_BMAPFLSH, 0,

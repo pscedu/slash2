@@ -72,13 +72,13 @@ slc_rmc_setmds(const char *name)
 
 	/* XXX kill any old MDS and purge any bmap updates being held */
 //	sl_csvc_disable(old->resm_csvc);
-
+#if 0
 	slconnthr_spawn(slc_rmc_resm, SRMC_REQ_PORTAL, SRMC_REP_PORTAL,
 	    SRMC_MAGIC, SRMC_VERSION,
 	    &resm2rmci(slc_rmc_resm)->rmci_mutex, CSVCF_USE_MULTIWAIT,
 	    &resm2rmci(slc_rmc_resm)->rmci_mwc,
 	    SLCONNT_MDS, MSTHRT_CONN, "ms");
-
+#endif
 	return (0);
 }
 

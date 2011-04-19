@@ -132,7 +132,7 @@ struct resm_cli_info {
 #define msl_write(fh, buf, size, off)	msl_io((fh), (char *)(buf), (size), (off), SL_WRITE)
 
 void     msl_bmpce_getbuf(struct bmap_pagecache_entry *);
-int      msl_reada_rpc_launch(struct bmap_pagecache_entry *);
+void     msl_reada_rpc_launch(struct bmap_pagecache_entry *);
 
 struct slashrpc_cservice *
 	 msl_bmap_to_csvc(struct bmapc_memb *, int);

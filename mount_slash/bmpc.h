@@ -107,6 +107,7 @@ struct bmap_pagecache_entry {
 #define BMPCE_LOCK(b)		spinlock(&(b)->bmpce_lock)
 #define BMPCE_ULOCK(b)		freelock(&(b)->bmpce_lock)
 
+#define BMPCE_WAIT(b) psc_waitq_wait((b)->bmpce_waitq, &(b)->bmpce_lock);
 #define BMPCE_WAKE(b)							\
 	do {								\
 		if ((b)->bmpce_waitq)					\
@@ -403,6 +404,9 @@ int   bmpc_grow(int);
 void *bmpc_alloc(void);
 void  bmpc_free(void *);
 void  bmpc_freeall_locked(struct bmap_pagecache *);
+void  bmpce_eio_remove(struct bmap_pagecache *, struct bmap_pagecache_entry *);
+struct bmap_pagecache_entry * bmpce_lookup_locked(struct bmap_pagecache *, 
+	  struct bmpc_ioreq *, uint32_t, struct psc_waitq *);
 void  bmpce_handle_lru_locked(struct bmap_pagecache_entry *,
 			      struct bmap_pagecache *, int, int);
 
