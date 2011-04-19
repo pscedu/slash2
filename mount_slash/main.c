@@ -75,8 +75,34 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 #define MSL_FS_BLKSIZ		(256 * 1024)
 
+#define MSL_RMC_NEWREQ(pfr, csvc, op, rq, mq, mp, rc)			\
+	do {								\
+		do {							\
+			if (rq) {					\
+				pscrpc_req_finished(rq);		\
+				(rq) = NULL;				\
+			}						\
+			if (csvc) {					\
+				sl_csvc_decref(csvc);			\
+				(csvc) = NULL;				\
+			}						\
+			(rc) = slc_rmc_getimp((pfr), &(csvc));		\
+			if (rc)						\
+				break;					\
+			(rc) = SL_RSX_NEWREQ((csvc), (op), (rq), (mq),	\
+			    (mp));					\
+		} while ((rc) && slc_rmc_retry((pfr), &(rc)));		\
+	} while (0)
+
+#define msl_load_fcmh(pfr, inum, fp)					\
+	fidc_lookup_load_inode((inum), (fp), pscfs_getclientctx(pfr))
+
 #define mfh_getfid(mfh)		fcmh_2_fid((mfh)->mfh_fcmh)
 #define mfh_getfg(mfh)		(mfh)->mfh_fcmh->fcmh_fg
+
+static int msl_lookup_fidcache(struct pscfs_req *,
+    const struct slash_creds *, pscfs_inum_t, const char *,
+    struct slash_fidgen *, struct srt_stat *);
 
 sl_ios_id_t			 prefIOS = IOS_ID_ANY;
 const char			*progname;
@@ -93,13 +119,6 @@ struct slash_creds		 rootcreds = { 0, 0 };
 
 /* number of attribute prefetch in readdir() */
 int				 nstbpref = DEF_READDIR_NENTS;
-
-#define msl_load_fcmh(pfr, inum, fp)					\
-	fidc_lookup_load_inode((inum), (fp), pscfs_getclientctx(pfr))
-
-static int msl_lookup_fidcache(struct pscfs_req *,
-    const struct slash_creds *, pscfs_inum_t, const char *,
-    struct slash_fidgen *, struct srt_stat *);
 
 __inline int
 fcmh_checkcreds(struct fidc_membh *f, const struct slash_creds *crp,
@@ -329,7 +348,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	mq->mode = !(mode & 0777) ? (0666 & ~pscfs_getumask(pfr)) : mode;
 	mq->pfg.fg_fid = pinum;
-	mq->pfg.fg_gen = 0;
+	mq->pfg.fg_gen = FGEN_ANY;
 	mq->prefios = prefIOS;
 	mslfs_getcreds(pfr, &mq->creds);
 	strlcpy(mq->name, name, sizeof(mq->name));
@@ -764,7 +783,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	mq->creds = creds;
 	mq->pfg.fg_fid = pinum;
-	mq->pfg.fg_gen = 0;
+	mq->pfg.fg_gen = FGEN_ANY;
 	mq->mode = mode;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
@@ -962,7 +981,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	mq->creds = creds;
 	mq->pfg.fg_fid = pinum;
-	mq->pfg.fg_gen = 0;
+	mq->pfg.fg_gen = FGEN_ANY;
 	mq->mode = mode;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
@@ -1162,7 +1181,7 @@ slash_lookuprpc(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		goto out;
 
 	mq->pfg.fg_fid = pinum;
-	mq->pfg.fg_gen = 0;
+	mq->pfg.fg_gen = FGEN_ANY;
 
 	strlcpy(mq->name, name, sizeof(mq->name));
 
@@ -1534,23 +1553,13 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	}
 
  retry:
-	if (rq)
-		pscrpc_req_finished(rq);
-	if (csvc)
-		sl_csvc_decref(csvc);
-
-	rc = slc_rmc_getimp(pfr, &csvc);
-	if (rc)
-		goto out;
-	rc = SL_RSX_NEWREQ(csvc, SRMT_RENAME, rq, mq, mp);
-	if (rc && slc_rmc_retry(pfr, &rc))
-		goto retry;
+	MSL_RMC_NEWREQ(pfr, csvc, SRMT_RENAME, rq, mq, mp, rc);
 	if (rc)
 		goto out;
 
 	mq->opfg.fg_fid = opinum;
 	mq->npfg.fg_fid = npinum;
-	mq->opfg.fg_gen = mq->npfg.fg_gen = 0;
+	mq->opfg.fg_gen = mq->npfg.fg_gen = FGEN_ANY;
 	mq->fromlen = strlen(oldname);
 	mq->tolen = strlen(newname);
 
@@ -1685,7 +1694,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 
 	mq->creds = creds;
 	mq->pfg.fg_fid = pinum;
-	mq->pfg.fg_gen = 0;
+	mq->pfg.fg_gen = FGEN_ANY;
 
 	mq->linklen = strlen(buf);
 	strlcpy(mq->name, name, sizeof(mq->name));
