@@ -201,7 +201,7 @@ _fidc_lookup_fg(const struct pfl_callerinfo *pfl_callerinfo,
 	struct fidc_membh *fcmhp;
 	int rc;
 
-	rc = _fidc_lookup(pfl_callerinfo, fg, 0, NULL, 0, &fcmhp);
+	rc = _fidc_lookup(pfl_callerinfo, fg, 0, NULL, 0, &fcmhp, NULL);
 	return (rc == 0 ? fcmhp : NULL);
 }
 
@@ -216,7 +216,7 @@ _fidc_lookup_fid(const struct pfl_callerinfo *pfl_callerinfo, slfid_t f)
 	struct fidc_membh *fcmhp;
 	int rc;
 
-	rc = _fidc_lookup(pfl_callerinfo, &t, 0, NULL, 0, &fcmhp);
+	rc = _fidc_lookup(pfl_callerinfo, &t, 0, NULL, 0, &fcmhp, NULL);
 	return (rc == 0 ? fcmhp : NULL);
 
 }
@@ -230,7 +230,7 @@ _fidc_lookup_fid(const struct pfl_callerinfo *pfl_callerinfo, slfid_t f)
 int
 _fidc_lookup(const struct pfl_callerinfo *pfl_callerinfo,
     const struct slash_fidgen *fgp, int flags, struct srt_stat *sstb,
-    int setattrflags, struct fidc_membh **fcmhp)
+    int setattrflags, struct fidc_membh **fcmhp, void *arg)
 {
 	struct fidc_membh *tmp, *fcmh, *fcmh_new;
 	struct psc_hashbkt *b;
@@ -394,7 +394,7 @@ _fidc_lookup(const struct pfl_callerinfo *pfl_callerinfo,
 
 	if (flags & FIDC_LOOKUP_LOAD) {
 		psc_assert(sl_fcmh_ops.sfop_getattr);
-		rc = sl_fcmh_ops.sfop_getattr(fcmh);   /* slc_fcmh_getattr() */
+		rc = sl_fcmh_ops.sfop_getattr(fcmh, arg);	/* slc_fcmh_getattr() */
 	}
 
  out1:

@@ -43,7 +43,7 @@ struct fidc_membh;
 struct sl_fcmh_ops {
 	int	(*sfop_ctor)(struct fidc_membh *);
 	void	(*sfop_dtor)(struct fidc_membh *);
-	int	(*sfop_getattr)(struct fidc_membh *);
+	int	(*sfop_getattr)(struct fidc_membh *, void *);
 	void	(*sfop_postsetattr)(struct fidc_membh *);
 	int	(*sfop_modify)(struct fidc_membh *, const struct slash_fidgen *);
 };
@@ -185,14 +185,14 @@ void	fcmh_decref(struct fidc_membh *, enum fcmh_opcnt_types);
 
 #define fidc_lookup(fgp, lkfl, sstb, safl, fcmhp)			\
 	_fidc_lookup(PFL_CALLERINFOSS(SLSS_FCMH), (fgp), (lkfl),	\
-	    (sstb), (safl), (fcmhp))
+	    (sstb), (safl), (fcmhp), NULL)
 
 #define fidc_lookup_fid(fid)		_fidc_lookup_fid(PFL_CALLERINFOSS(SLSS_FCMH), (fid))
 #define fidc_lookup_fg(fgp)		_fidc_lookup_fg(PFL_CALLERINFOSS(SLSS_FCMH), (fgp))
 
 int	 _fidc_lookup(const struct pfl_callerinfo *,
 	    const struct slash_fidgen *, int, struct srt_stat *, int,
-	    struct fidc_membh **);
+	    struct fidc_membh **, void *);
 
 /* these fidc_lookup() wrappers are used for simple lookups (no flags) */
 struct fidc_membh	*_fidc_lookup_fid(const struct pfl_callerinfo *, slfid_t);
