@@ -2143,7 +2143,7 @@ msl_init(void)
 	bmap_cache_init(sizeof(struct bmap_cli_info));
 	dircache_init(&dircacheMgr, "dircache", 262144);
 
-	ra_nbreqset = pscrpc_nbreqset_init(NULL, msl_readahead_cb);
+	ra_nbreqset = pscrpc_nbreqset_init(NULL, NULL);
 
 	slc_rpc_initsvc();
 

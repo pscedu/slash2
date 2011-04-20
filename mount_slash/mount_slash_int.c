@@ -1166,7 +1166,6 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	freelock(&r->biorq_lock);
 
  out:
-	BMPC_LOCK(bmap_2_bmpc(b));
 	if (rc) {
 		/* Iterate over all pages in the request setting EIO.
 		 *   Additionally, we must wake up any other threads
@@ -1175,11 +1174,11 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 		DYNARRAY_FOREACH(bmpce, i, a) {
 			BMPCE_LOCK(bmpce);
 			bmpce->bmpce_flags |= BMPCE_EIO;
+			DEBUG_BMPCE(PLL_WARN, bmpce, "set eio");
 			BMPCE_WAKE(bmpce);
 			BMPCE_ULOCK(bmpce);
 		}
 	}
-	BMPC_ULOCK(bmap_2_bmpc(b));
 	/* Free the dynarray which was allocated in msl_read_rpc_launch().
 	 */
 	psc_dynarray_free(a);
@@ -1529,7 +1528,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry *bmpce)
 	rq->rq_async_args.pointer_arg[MSL_CB_POINTER_SLOT_BMPCE] = bmpce;
 	rq->rq_async_args.pointer_arg[MSL_CB_POINTER_SLOT_CSVC] = csvc;
 	rq->rq_async_args.pointer_arg[MSL_CB_POINTER_SLOT_RA] = bmap_2_bmpc(b);
-	rq->rq_interpret_reply = NULL;
+	rq->rq_interpret_reply = msl_readahead_cb;
 	rq->rq_comp = &rpcComp;
 
 	/* bmpce_ralentry is available at this point, add
