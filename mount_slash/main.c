@@ -118,7 +118,7 @@ psc_spinlock_t			 msfsthr_uniqidmap_lock = SPINLOCK_INIT;
 struct slash_creds		 rootcreds = { 0, 0 };
 
 /* number of attribute prefetch in readdir() */
-int				 nstbpref = DEF_READDIR_NENTS;
+int				 nstb_prefetch = DEF_READDIR_NENTS;
 
 __inline int
 fcmh_checkcreds(struct fidc_membh *f, const struct slash_creds *crp,
@@ -1016,6 +1016,7 @@ __static void
 mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
     void *data)
 {
+	int nstbpref, rc = 0, niov = 0;
 	struct slashrpc_cservice *csvc = NULL;
 	struct fidc_membh *dtmp, *d = NULL;
 	struct srm_readdir_rep *mp = NULL;
@@ -1025,7 +1026,6 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	struct srm_readdir_req *mq;
 	struct slash_creds cr;
 	struct iovec iov[2];
-	int rc = 0, niov = 0;
 
 	iov[0].iov_base = NULL;
 	iov[1].iov_base = NULL;
@@ -1036,8 +1036,8 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	psc_assert(d);
 
 	/*
-	 * Ensure that the fcmh is still valid, we can't rely
-	 *  only on the inode number, the generation # number
+	 * Ensure that the fcmh is still valid: we can't rely
+	 *  only on the inode number; the generation # number
 	 *  must be taken into account.
 	 */
 	dtmp = fidc_lookup_fg(&d->fcmh_fg);
@@ -1059,6 +1059,22 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	if (rc)
 		goto out;
 
+	e = dircache_new_ents(fcmh_2_dci(d), size);
+
+	iov[niov].iov_base = e->de_base;
+	iov[niov].iov_len = size;
+	niov++;
+
+	nstbpref = MIN(nstb_prefetch, (int)howmany(LNET_MTU - size,
+	    sizeof(struct srm_getattr_rep)));
+	if (nstbpref) {
+		iov[niov].iov_len = nstbpref *
+		    sizeof(struct srm_getattr_rep);
+		iov[niov].iov_base = PSCALLOC(iov[1].iov_len);
+		niov++;
+	}
+
+ retry:
 	MSL_RMC_NEWREQ(pfr, csvc, SRMT_READDIR, rq, mq, mp, rc);
 	if (rc)
 		goto out;
@@ -1066,33 +1082,21 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	mq->fg = d->fcmh_fg;
 	mq->size = size;
 	mq->offset = off;
+	mq->nstbpref = nstbpref;
+
+	rsx_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, iov, niov);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	if (rc && slc_rmc_retry(pfr, &rc))
+		goto retry;
+	if (rc == 0)
+		rc = mp->rc;
+	if (rc)
+		goto out;
 
 	FCMH_LOCK(d);
 	if (!DIRCACHE_INITIALIZED(d))
 		slc_fcmh_initdci(d);
 	FCMH_ULOCK(d);
-
-	e = dircache_new_ents(fcmh_2_dci(d), size);
-
-	iov[niov].iov_base = e->de_base;
-	iov[niov].iov_len = size;
-	niov++;
-
-	mq->nstbpref = MIN(nstbpref, (int)howmany(LNET_MTU - size,
-	    sizeof(struct srm_getattr_rep)));
-	if (mq->nstbpref) {
-		iov[niov].iov_len = mq->nstbpref *
-		    sizeof(struct srm_getattr_rep);
-		iov[niov].iov_base = PSCALLOC(iov[1].iov_len);
-		niov++;
-	}
-
-	rsx_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, iov, niov);
-	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc == 0)
-		rc = mp->rc;
-	if (rc)
-		goto out;
 
 	if (mq->nstbpref) {
 		struct srt_stat *attr = iov[1].iov_base;
@@ -2279,7 +2283,7 @@ main(int argc, char *argv[])
 				errx(1, "invalid readdir statbuf "
 				    "#prefetch (max %d): %s",
 				    MAX_READDIR_NENTS, optarg);
-			nstbpref = (int)l;
+			nstb_prefetch = (int)l;
 			break;
 		case 'S':
 			if (strlcpy(ctlsockfn, optarg,
