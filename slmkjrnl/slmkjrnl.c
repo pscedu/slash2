@@ -246,6 +246,7 @@ pjournal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 	struct slmds_jent_namespace *sjnm;
 	struct slmds_jent_bmap_assign *jrba;
 	char name[SL_NAME_MAX + 1];
+	char newname[SL_NAME_MAX + 1];
 
 	type = pje->pje_type & ~(_PJE_FLSHFT - 1);
 	printf("%6d: ", slot);
@@ -294,6 +295,11 @@ pjournal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 			memcpy(name, sjnm->sjnm_name, sjnm->sjnm_namelen);
 			name[sjnm->sjnm_namelen] = '\0';
 		}
+		newname[0]='\0';
+		if (sjnm->sjnm_namelen2) {
+			memcpy(newname, sjnm->sjnm_name+sjnm->sjnm_namelen, sjnm->sjnm_namelen2);
+			newname[sjnm->sjnm_namelen2] = '\0';
+		}
 
 		switch (sjnm->sjnm_op) {
 		    case NS_OP_RECLAIM:
@@ -312,7 +318,7 @@ pjournal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 			printf("op=symlink");
 			break;
 		    case NS_OP_RENAME:
-			printf("op=rename");
+			printf("op=rename, old name=%s, new name=%s", name, newname);
 			break;
 		    case NS_OP_UNLINK:
 			printf("op=unlink, name=%s", name);
