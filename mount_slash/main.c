@@ -339,10 +339,8 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		goto out;
 #endif
 
-	rc = slc_rmc_getimp(pfr, &csvc);
-	if (rc)
-		goto out;
-	rc = SL_RSX_NEWREQ(csvc, SRMT_CREATE, rq, mq, mp);
+ retry:
+	MSL_RMC_NEWREQ(pfr, csvc, SRMT_CREATE, rq, mq, mp, rc);
 	if (rc)
 		goto out;
 
@@ -354,6 +352,8 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	if (rc && slc_rmc_retry(pfr, &rc))
+		goto retry;
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
@@ -572,16 +572,16 @@ msl_stat(struct fidc_membh *fcmh, void *arg)
 	fcmh->fcmh_flags |= FCMH_GETTING_ATTRS;
 	FCMH_ULOCK(fcmh);
 
-	rc = slc_rmc_getimp(pfr, &csvc);
-	if (rc)
-		goto out;
-	rc = SL_RSX_NEWREQ(csvc, SRMT_GETATTR, rq, mq, mp);
+ retry:
+	MSL_RMC_NEWREQ(pfr, csvc, SRMT_GETATTR, rq, mq, mp, rc);
 	if (rc)
 		goto out;
 
 	mq->fg = fcmh->fcmh_fg;
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	if (rc && slc_rmc_retry(pfr, &rc))
+		goto retry;
 	if (rc == 0)
 		rc = mp->rc;
  out:
@@ -699,11 +699,8 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 		goto out;
 	}
 
-	/* Create, initialize, and send RPC. */
-	rc = slc_rmc_getimp(pfr, &csvc);
-	if (rc)
-		goto out;
-	rc = SL_RSX_NEWREQ(csvc, SRMT_LINK, rq, mq, mp);
+ retry:
+	MSL_RMC_NEWREQ(pfr, csvc, SRMT_LINK, rq, mq, mp, rc);
 	if (rc)
 		goto out;
 
@@ -712,6 +709,8 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	strlcpy(mq->name, newname, sizeof(mq->name));
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	if (rc && slc_rmc_retry(pfr, &rc))
+		goto retry;
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
@@ -774,10 +773,8 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	mslfs_getcreds(pfr, &creds);
 
-	rc = slc_rmc_getimp(pfr, &csvc);
-	if (rc)
-		goto out;
-	rc = SL_RSX_NEWREQ(csvc, SRMT_MKDIR, rq, mq, mp);
+ retry:
+	MSL_RMC_NEWREQ(pfr, csvc, SRMT_MKDIR, rq, mq, mp, rc);
 	if (rc)
 		goto out;
 
@@ -788,6 +785,8 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	if (rc && slc_rmc_retry(pfr, &rc))
+		goto retry;
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
@@ -872,20 +871,18 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		goto out;
 
-	rc = slc_rmc_getimp(pfr, &csvc);
-	if (rc)
-		goto out;
-
-	rc = SL_RSX_NEWREQ(csvc, isfile ? SRMT_UNLINK : SRMT_RMDIR, rq,
-	    mq, mp);
+ retry:
+	MSL_RMC_NEWREQ(pfr, csvc, isfile ? SRMT_UNLINK : SRMT_RMDIR, rq,
+	    mq, mp, rc);
 	if (rc)
 		goto out;
 
 	mq->pfid = pinum;
-
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	if (rc && slc_rmc_retry(pfr, &rc))
+		goto retry;
 	if (rc)
 		goto out;
 	if (rc == 0)
@@ -972,10 +969,8 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		goto out;
 
-	rc = slc_rmc_getimp(pfr, &csvc);
-	if (rc)
-		goto out;
-	rc = SL_RSX_NEWREQ(csvc, SRMT_MKNOD, rq, mq, mp);
+ retry:
+	MSL_RMC_NEWREQ(pfr, csvc, SRMT_MKNOD, rq, mq, mp, rc);
 	if (rc)
 		goto out;
 
@@ -986,6 +981,8 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	if (rc && slc_rmc_retry(pfr, &rc))
+		goto retry;
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
@@ -1064,10 +1061,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	if (rc)
 		goto out;
 
-	rc = slc_rmc_getimp(pfr, &csvc);
-	if (rc)
-		goto out;
-	rc = SL_RSX_NEWREQ(csvc, SRMT_READDIR, rq, mq, mp);
+	MSL_RMC_NEWREQ(pfr, csvc, SRMT_READDIR, rq, mq, mp, rc);
 	if (rc)
 		goto out;
 
@@ -1173,19 +1167,18 @@ slash_lookuprpc(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (strlen(name) > SL_NAME_MAX)
 		return (ENAMETOOLONG);
 
-	rc = slc_rmc_getimp(pfr, &csvc);
-	if (rc)
-		goto out;
-	rc = SL_RSX_NEWREQ(csvc, SRMT_LOOKUP, rq, mq, mp);
+ retry:
+	MSL_RMC_NEWREQ(pfr, csvc, SRMT_LOOKUP, rq, mq, mp, rc);
 	if (rc)
 		goto out;
 
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = FGEN_ANY;
-
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	if (rc && slc_rmc_retry(pfr, &rc))
+		goto retry;
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
@@ -1622,13 +1615,13 @@ mslfsop_statfs(struct pscfs_req *pfr)
 
 //	checkcreds
 
-	rc = slc_rmc_getimp(pfr, &csvc);
-	if (rc)
-		goto out;
-	rc = SL_RSX_NEWREQ(csvc, SRMT_STATFS, rq, mq, mp);
+ retry:
+	MSL_RMC_NEWREQ(pfr, csvc, SRMT_STATFS, rq, mq, mp, rc);
 	if (rc)
 		goto out;
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	if (rc && slc_rmc_retry(pfr, &rc))
+		goto retry;
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
@@ -1684,18 +1677,14 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 		goto out;
 	}
 
-	rc = slc_rmc_getimp(pfr, &csvc);
-	if (rc)
-		goto out;
-
-	rc = SL_RSX_NEWREQ(csvc, SRMT_SYMLINK, rq, mq, mp);
+ retry:
+	MSL_RMC_NEWREQ(pfr, csvc, SRMT_SYMLINK, rq, mq, mp, rc);
 	if (rc)
 		goto out;
 
 	mq->creds = creds;
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = FGEN_ANY;
-
 	mq->linklen = strlen(buf);
 	strlcpy(mq->name, name, sizeof(mq->name));
 
@@ -1705,6 +1694,8 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	rsx_bulkclient(rq, BULK_GET_SOURCE, SRMC_BULK_PORTAL, &iov, 1);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	if (rc && slc_rmc_retry(pfr, &rc))
+		goto retry;
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
