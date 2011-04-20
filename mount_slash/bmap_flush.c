@@ -336,7 +336,7 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 	r = psc_dynarray_getpos(biorqs, 0);
 	csvc = msl_bmap_to_csvc(r->biorq_bmap, 1);
 	if (csvc == NULL)
-		goto error;
+		goto csvc_error;
 
 	b = r->biorq_bmap;
 	soff = r->biorq_off;
@@ -434,6 +434,8 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 	}
 	DYNARRAY_FOREACH(r, i, biorqs)
 		bmap_flush_inflight_unset(r);
+
+ csvc_error:
 	r = psc_dynarray_getpos(biorqs, 0);
 
 	/*
@@ -1225,12 +1227,21 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 void
 msbmapflushthr_main(__unusedx struct psc_thread *thr)
 {
+	struct timespec ts0, ts1;
+
 	while (pscthr_run()) {
 		msbmflthr(pscthr_get())->mbft_failcnt = 1;
+		PFL_GETTIMESPEC(&ts0);
 		bmap_flush();
-		psc_info("post bmap_flush");
+		PFL_GETTIMESPEC(&ts1);
+		timespecsub(&ts1, &ts0, &ts1);		
+		psc_info("bmap_flush "PSCPRI_TIMESPEC, 
+		    PSCPRI_TIMESPEC_ARGS(&ts1));
+		PFL_GETTIMESPEC(&ts0);
 		psc_waitq_waitrel(&bmapflushwaitq, NULL, &bmapFlushWaitTime);
-		psc_info("post wakeup");
+		PFL_GETTIMESPEC(&ts1);
+		psc_info("post wakeup "PSCPRI_TIMESPEC, 
+		    PSCPRI_TIMESPEC_ARGS(&ts1));
 	}
 }
 
