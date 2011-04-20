@@ -332,9 +332,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	}
 
 #if 0
-	FCMH_LOCK(p);
-	rc = checkcreds(&p->fcmh_sstb, &creds, W_OK);
-	FCMH_ULOCK(p);
+	rc = fcmh_checkcreds(p, &creds, W_OK);
 	if (rc)
 		goto out;
 #endif
@@ -376,11 +374,14 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		FCMH_ULOCK(c);
 	}
 
-
 	if (oflags & O_SYNC) {
 		/* XXX do we need to do anything special for this? */
 	}
+	if (oflags & O_NONBLOCK) {
+		/* XXX do we need to do anything special for this? */
+	}
 #endif
+
 	mfh = msl_fhent_new(c);
 	mfh->mfh_oflags = oflags;
 
@@ -452,16 +453,12 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 		goto out;
 
 	if ((oflags & O_ACCMODE) != O_WRONLY) {
-		FCMH_LOCK(c);
-		rc = checkcreds(&c->fcmh_sstb, &creds, R_OK);
-		FCMH_ULOCK(c);
+		rc = fcmh_checkcreds(c, &creds, R_OK);
 		if (rc)
 			goto out;
 	}
 	if (oflags & (O_WRONLY | O_RDWR)) {
-		FCMH_LOCK(c);
-		rc = checkcreds(&c->fcmh_sstb, &creds, W_OK);
-		FCMH_ULOCK(c);
+		rc = fcmh_checkcreds(c, &creds, W_OK);
 		if (rc)
 			goto out;
 	}
@@ -502,9 +499,15 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 		*rflags |= PSCFS_OPENF_DIO;
 
 	if (oflags & O_TRUNC) {
-		/* XXX write me */
+		/*
+		 * XXX write me for pscfs backends that do not separate
+		 * SETATTR st_mode=0
+		 */
 	}
 	if (oflags & O_SYNC) {
+		/* XXX write me */
+	}
+	if (oflags & O_NONBLOCK) {
 		/* XXX write me */
 	}
 
@@ -683,9 +686,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 		goto out;
 	}
 
-	FCMH_LOCK(p);
-	rc = checkcreds(&p->fcmh_sstb, &creds, W_OK);
-	FCMH_ULOCK(p);
+	rc = fcmh_checkcreds(p, &creds, W_OK);
 	if (rc)
 		goto out;
 
@@ -963,9 +964,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	}
 	mslfs_getcreds(pfr, &creds);
 
-	FCMH_LOCK(p);
-	rc = checkcreds(&p->fcmh_sstb, &creds, W_OK);
-	FCMH_ULOCK(p);
+	rc = fcmh_checkcreds(p, &creds, W_OK);
 	if (rc)
 		goto out;
 
@@ -1055,9 +1054,8 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	}
 
 	mslfs_getcreds(pfr, &cr);
-	FCMH_LOCK(d);
-	rc = checkcreds(&d->fcmh_sstb, &cr, R_OK);
-	FCMH_ULOCK(d);
+
+	rc = fcmh_checkcreds(d, &cr, R_OK);
 	if (rc)
 		goto out;
 
@@ -1311,22 +1309,18 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 
 	msfsthr_ensure();
 
-	rc = slc_rmc_getimp(pfr, &csvc);
-	if (rc)
-		goto out;
-	rc = SL_RSX_NEWREQ(csvc, SRMT_READLINK, rq, mq, mp);
+	rc = msl_load_fcmh(pfr, inum, &c);
 	if (rc)
 		goto out;
 
 	mslfs_getcreds(pfr, &creds);
 
-	rc = msl_load_fcmh(pfr, inum, &c);
+	rc = fcmh_checkcreds(c, &creds, R_OK);
 	if (rc)
 		goto out;
 
-	FCMH_LOCK(c);
-	rc = checkcreds(&c->fcmh_sstb, &creds, R_OK);
-	FCMH_ULOCK(c);
+ retry:
+	MSL_RMC_NEWREQ(pfr, csvc, SRMT_READLINK, rq, mq, mp, rc);
 	if (rc)
 		goto out;
 
@@ -1337,6 +1331,8 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 	rsx_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, &iov, 1);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	if (rc && slc_rmc_retry(pfr, &rc))
+		goto retry;
 	if (rc == 0)
 		rc = mp->rc;
 
