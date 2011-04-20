@@ -8,6 +8,18 @@ reminders:
 - do sl_csvc_wantfree() in all to-CLI csvcs
 - ensure reentrancy of 'static' variables in functions
 
+
+-----------------------------------------------------------------------
+
+* bmap flush needs to be reworked so that several threads can be 
+	assigned to flushing bmaps.  The current model is relatively
+	slow because the bmap flush thread undertakes too much work.
+	This means that subsequent requests tend to wait before being
+	pushed out.  When dealing with force-expired requests a 
+	slow down results
+
+pauln (04/19/2011)
+
 -----------------------------------------------------------------------
 
 * In bmap_flush_reap_rpcs() some work should be done to prove that
