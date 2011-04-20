@@ -191,6 +191,9 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra)
 	pjh.pjh_readahead = ra;
 	pjh.pjh_iolen = PSC_ALIGN(sizeof(pjh), stb.st_blksize);
 	pjh.pjh_magic = PJH_MAGIC;
+#if 0
+	pjh.pjh_timestamp = time(NULL);
+#endif
 
 	PSC_CRC64_INIT(&pjh.pjh_chksum);
 	psc_crc64_add(&pjh.pjh_chksum, &pjh,
@@ -364,6 +367,10 @@ pjournal_dump(const char *fn, int verbose)
 	    "  start_offset %#"PRIx64"\n",
 	    fn, PJ_PJESZ(pj), pjh->pjh_nents, pjh->pjh_version,
 	    pjh->pjh_readahead, pjh->pjh_start_off);
+
+#if 0
+	printf("This journal was created on %s", ctime((time_t *)&pjh->pjh_timestamp));
+#endif
 
 	jbuf = pjournal_alloc_buf(pj);
 
