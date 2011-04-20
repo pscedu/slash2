@@ -513,12 +513,6 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw)
 	}
 
 	psc_assert(rw != SL_READ);
-	/* Setting of this flag here is mainly for informative purposes.
-	 *   It may be unset in do_crc so we set it again in wio_done.
-	 * Replication sink buffers do not need a crc new crc to be taken.
-	 */
-	if (!(s->slvr_flags & SLVR_REPLDST))
-		s->slvr_flags |= SLVR_CRCDIRTY;
 
 	if (!off && len == SLASH_SLVR_SIZE) {
 		/* Full sliver write, no need to read blocks from disk.
