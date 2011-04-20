@@ -740,16 +740,16 @@ bmap_flushable(struct bmapc_memb *b)
  *	aged out or (2) we can construct a large enough I/O.
  */
 __static struct psc_dynarray *
-bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *index)
+bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 {
 	int i, idx, large=0, expired=0;
 	struct bmpc_ioreq *r=NULL, *t;
 	struct psc_dynarray b=DYNARRAY_INIT, *a=NULL;
 
-	psc_assert(psc_dynarray_len(biorqs) > *index);
+	psc_assert(psc_dynarray_len(biorqs) > *indexp);
 
-	for (idx=0; (idx + *index) < psc_dynarray_len(biorqs); idx++) {
-		t = psc_dynarray_getpos(biorqs, idx + *index);
+	for (idx=0; (idx + *indexp) < psc_dynarray_len(biorqs); idx++) {
+		t = psc_dynarray_getpos(biorqs, idx + *indexp);
 
 		psc_assert((t->biorq_flags & BIORQ_SCHED) &&
 			   !(t->biorq_flags & BIORQ_INFL));
@@ -829,7 +829,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *index)
 		}
 	}
 
-	*index += idx;
+	*indexp += idx;
 	psc_dynarray_free(&b);
 
 	return (a);
@@ -1047,7 +1047,7 @@ msl_bmap_release(struct sl_resm *resm)
 void
 msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 {
-	struct timespec ctime, wtime = { 0, 0 };
+	struct timespec crtime, wtime = { 0, 0 };
 	struct psc_waitq waitq = PSC_WAITQ_INIT;
 	struct psc_dynarray rels = DYNARRAY_INIT, skips = DYNARRAY_INIT;
 	struct resm_cli_info *rmci;
@@ -1071,7 +1071,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 		} else
 			sortbypass--;
 
-		PFL_GETTIMESPEC(&ctime);
+		PFL_GETTIMESPEC(&crtime);
 
 		wtime.tv_sec = BMAP_CLI_TIMEO_INC;
 
@@ -1100,14 +1100,14 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				continue;
 			}
 
-			if (timespeccmp(&ctime, &bci->bci_etime, <)) {
+			if (timespeccmp(&crtime, &bci->bci_etime, <)) {
 				if (!sawnew)
 					/*
 					 * Set the wait time to
-					 * (etime - ctime)
+					 * (etime - crtime)
 					 */
 					timespecsub(&bci->bci_etime,
-					    &ctime, &wtime);
+					    &crtime, &wtime);
 
 				DEBUG_BMAP(PLL_DEBUG, b, "sawnew=%d", sawnew);
 				psc_dynarray_add(&skips, b);
