@@ -756,24 +756,24 @@ usage(void)
 }
 
 void
-parse_enqueue(char *optarg)
+parse_enqueue(char *arg)
 {
-	parse_replrq(MSCMT_ADDREPLRQ, optarg, pack_replrq);
+	parse_replrq(MSCMT_ADDREPLRQ, arg, pack_replrq);
 }
 
 void
-parse_replst(char *optarg)
+parse_replst(char *arg)
 {
-	if (optarg[0] == ':')
+	if (arg[0] == ':')
 		pack_replst("", NULL);
 	else
-		walk(optarg, pack_replst, NULL);
+		walk(arg, pack_replst, NULL);
 }
 
 void
-parse_dequeue(char *optarg)
+parse_dequeue(char *arg)
 {
-	parse_replrq(MSCMT_DELREPLRQ, optarg, pack_replrq);
+	parse_replrq(MSCMT_DELREPLRQ, arg, pack_replrq);
 }
 
 struct psc_ctlopt opts[] = {

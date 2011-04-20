@@ -67,12 +67,12 @@ uint64_t
 bim_getcurseq(void)
 {
 	struct slashrpc_cservice *csvc;
-	struct timespec ctime;
+	struct timespec crtime;
 	uint64_t seq;
 
  retry:
-	PFL_GETTIMESPEC(&ctime);
-	timespecsub(&ctime, &bim_timeo, &ctime);
+	PFL_GETTIMESPEC(&crtime);
+	timespecsub(&crtime, &bim_timeo, &crtime);
 
 	spinlock(&bimSeq.bim_lock);
 	if (bimSeq.bim_flags & BIM_RETRIEVE_SEQ) {
@@ -80,7 +80,7 @@ bim_getcurseq(void)
 		goto retry;
 	}
 
-	if (timespeccmp(&ctime, &bimSeq.bim_age, >) ||
+	if (timespeccmp(&crtime, &bimSeq.bim_age, >) ||
 	    bimSeq.bim_minseq == BMAPSEQ_ANY) {
 		struct srm_getbmapminseq_req *mq;
 		struct srm_getbmapminseq_rep *mp;

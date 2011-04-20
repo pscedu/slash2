@@ -269,7 +269,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 			  i, npages, mfh->mfh_ra.mra_raoff,
 			  (off_t)(bmpce_search.bmpce_off + bmap_foff(b)));
 		freelock(&mfh->mfh_lock);
-restart:
+ restart:
 		bmpce = bmpce_lookup_locked(bmpc, r, 
 		    (bkwdra ? (aoff + ((npages - 1 - i) * BMPC_BUFSZ)) :
 		     aoff + (i * BMPC_BUFSZ)), 
@@ -378,7 +378,6 @@ restart:
 
 		if (biorq_is_my_bmpce(r, bmpce) &&
 		    (bmpce->bmpce_flags & BMPCE_GETBUF)) {
-			uint64_t fsz  = fcmh_getsize(mfh->mfh_fcmh);
 			uint32_t rfsz = fsz - bmap_foff(b);
 
 			/* Increase the rdref cnt in preparation for any
