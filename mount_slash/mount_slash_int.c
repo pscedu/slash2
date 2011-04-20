@@ -1275,23 +1275,16 @@ msl_io_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	struct bmpc_ioreq *r;
 	int rc, i;
 
-	DEBUG_REQ(rq->rq_err ? PLL_ERROR : PLL_DEBUG, rq, "in here 0 ");
-
-	rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
-	if (rc)
-		return (rc);
-
-	DEBUG_REQ(rq->rq_err ? PLL_ERROR : PLL_DEBUG, rq, "in here 1");
-
-	if (rq->rq_status) {
+	if (rq->rq_status || (rc = authbuf_check(rq, PSCRPC_MSG_REPLY))) {
 		DYNARRAY_FOREACH(r, i, biorqs)
 			bmap_flush_inflight_unset(r);
-		return (rq->rq_status);
-	}
 
-	DEBUG_REQ(rq->rq_err ? PLL_ERROR : PLL_DEBUG, rq, "in here 2");
+		return (rq->rq_status ? rq->rq_status : rc);
+	} 
+
 	DYNARRAY_FOREACH(r, i, biorqs)
 		msl_biorq_destroy(r);
+	// XXX ok not to free biorqs on early return
 	psc_dynarray_free(biorqs);
 	psc_free(biorqs, 0);
 
@@ -1559,6 +1552,8 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry *bmpce)
 	BMPCE_LOCK(bmpce);
 	bmpce->bmpce_flags |= BMPCE_EIO;
 	bmpce_handle_lru_locked(bmpce, bmap_2_bmpc(b), BIORQ_READ, 0);
+	BMPC_ULOCK(bmap_2_bmpc(b));
+
 	bmap_op_done_type(b, BMAP_OPCNT_READA);
 
 	if (rq) {
