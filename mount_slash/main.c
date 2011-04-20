@@ -1752,18 +1752,17 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 	msfsthr_ensure();
 
-	mslfs_getcreds(pfr, &cr);
+	if (to_set == 0)
+		goto out;
 
 	rc = msl_load_fcmh(pfr, inum, &c);
 	if (rc)
 		goto out;
 
-	if (to_set == 0)
-		goto out;
+	if (mfh)
+		psc_assert(c == mfh->mfh_fcmh);
 
-	rc = slc_rmc_getimp(pfr, &csvc);
-	if (rc)
-		goto out;
+	mslfs_getcreds(pfr, &cr);
 
 	FCMH_LOCK(c);
 	if ((to_set & PSCFS_SETATTRF_MODE) && cr.scr_uid) {
@@ -1878,26 +1877,25 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		}
 		psc_dynarray_free(&a);
 
-	} else
-		FCMH_ULOCK(c);
+	}
 
-	rc = SL_RSX_NEWREQ(csvc, SRMT_SETATTR, rq, mq, mp);
-	if (rc)
-		goto out;
-
-	FCMH_LOCK(c);
+	FCMH_RLOCK(c);
 	/* We're obtaining the attributes now. */
 	if ((c->fcmh_flags & (FCMH_GETTING_ATTRS | FCMH_HAVE_ATTRS)) == 0) {
 		getting_attrs = 1;
 		c->fcmh_flags |= FCMH_GETTING_ATTRS;
 	}
+	FCMH_ULOCK(c);
 
+ retry:
+	MSL_RMC_NEWREQ(pfr, csvc, SRMT_SETATTR, rq, mq, mp, rc);
+	if (rc)
+		goto out;
+
+	FCMH_LOCK(c);
 	mq->attr.sst_fg = c->fcmh_fg;
 	mq->to_set = to_set;
 	sl_externalize_stat(stb, &mq->attr);
-
-	if (mfh)
-		psc_assert(c == mfh->mfh_fcmh);
 
 	DEBUG_FCMH(PLL_DEBUG, c, "pre setattr");
 	DEBUG_SSTB(PLL_DEBUG, &c->fcmh_sstb, "fcmh %p pre setattr", c);
@@ -1914,6 +1912,8 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	FCMH_ULOCK(c);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	if (rc && slc_rmc_retry(pfr, &rc))
+		goto retry;
 	if (rc == 0) {
 		if (mp->rc == SLERR_BMAP_IN_PTRUNC) {
 			if (getting_attrs) {
