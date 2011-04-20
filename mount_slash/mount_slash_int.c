@@ -503,6 +503,8 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 
 	/* Block here on an of our EIO'd pages waiting for other threads
 	 *   to release their references.
+	 * Additionally, we need to block for RA pages which have not 
+	 *   yet been marked as EIO.
 	 */
 	DYNARRAY_FOREACH(bmpce, i, &r->biorq_pages) {
 		BMPCE_LOCK(bmpce);
@@ -518,7 +520,19 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 			 */
 			psc_assert(!psc_atomic16_read(&bmpce->bmpce_wrref) &&
 			    psc_atomic16_read(&bmpce->bmpce_rdref) == 1);
-		}
+
+		} else if ((bmpce->bmpce_flags & BMPCE_READA) && 
+		    !(bmpce->bmpce_flags & BMPCE_DATARDY))
+			/* This is a failure but the RA cb has yet to be
+			 *   run on this bmpce.
+			 */
+			while (!(bmpce->bmpce_flags & BMPCE_EIO)) {
+				DEBUG_BMPCE(PLL_WARN, bmpce, 
+				    "waiting on EIO bit to be set");
+				BMPCE_WAIT(bmpce);
+				BMPCE_LOCK(bmpce);
+			}
+
 		BMPCE_ULOCK(bmpce);
 	}
 
@@ -1155,6 +1169,7 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 			DEBUG_BMPCE(PLL_INFO, bmpce, "datardy via read_cb");
 			psc_waitq_wakeall(bmpce->bmpce_waitq);
 			bmpce->bmpce_waitq = NULL;
+			bmpce->bmpce_owner = NULL;
 		}
 
 		if (clearpages) {
@@ -1202,6 +1217,7 @@ msl_readahead_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	csvc = args->pointer_arg[MSL_CB_POINTER_SLOT_CSVC];
 	bmpc = args->pointer_arg[MSL_CB_POINTER_SLOT_RA];
 	b = bmpce->bmpce_owner;
+	bmpce->bmpce_owner = NULL;
 	psc_assert(bmpce && csvc && bmpc && b);
 
 	rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
@@ -1253,6 +1269,8 @@ msl_io_rpcset_cb(__unusedx struct pscrpc_request_set *set, void *arg,
 	struct psc_dynarray *biorqs = arg;
 	struct bmpc_ioreq *r;
 	int i;
+
+	psc_info("set=%p rc=%d", set, rc);
 
 	if (rc) {
 		DYNARRAY_FOREACH(r, i, biorqs)
@@ -1977,7 +1995,8 @@ msl_pages_copyin(struct bmpc_ioreq *r, char *buf)
 		BMPCE_LOCK(bmpce);
 		if (biorq_is_my_bmpce(r, bmpce) &&
 		    !(bmpce->bmpce_flags & BMPCE_DATARDY)) {
-			bmpce->bmpce_flags |= BMPCE_DATARDY;
+			psc_assert(bmpce->bmpce_owner);
+			bmpce->bmpce_flags |= BMPCE_DATARDY;			
 			bmpce->bmpce_flags &= ~(BMPCE_RBWPAGE|BMPCE_RBWRDY);
 			psc_waitq_wakeall(bmpce->bmpce_waitq);
 			bmpce->bmpce_waitq = NULL;
@@ -2060,10 +2079,11 @@ msl_pages_copyout(struct bmpc_ioreq *r, char *buf)
 		if (bmpce->bmpce_flags & BMPCE_READA)
 			psc_iostats_intv_add(&msl_racache_stat, nbytes);
 
-		if (biorq_is_my_bmpce(r, bmpce))
-			bmpce->bmpce_owner = NULL;
-		else
+		if (!biorq_is_my_bmpce(r, bmpce))
 			psc_iostats_intv_add(&msl_rdcache_stat, nbytes);
+		//		else
+		//			bmpce->bmpce_owner = NULL;
+
 		BMPCE_ULOCK(bmpce);
 
 		toff   += nbytes;

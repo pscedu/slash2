@@ -63,7 +63,9 @@ void bmap_flush_inflight_unset(struct bmpc_ioreq *);
 __static void
 bmap_flush_reap_rpcs(void)
 {
-	struct pscrpc_request_set *set;	
+	struct pscrpc_request_set *set;
+	struct psc_lockedlist hold = 
+		PLL_INIT(&hold, struct pscrpc_request_set, set_lentry);
 
 	psclog_debug("outstandingRpcCnt=%d (before) rpcComp.rqcomp_compcnt=%d",
 	    atomic_read(&outstandingRpcCnt), atomic_read(&rpcComp.rqcomp_compcnt));
@@ -79,10 +81,14 @@ bmap_flush_reap_rpcs(void)
 	 *   put in place here.  Note that pscrpc_nbreqset_reap() also sleeps
 	 *   for a second.
 	 */
-	while ((set = lc_getnb(&pndgReqSets)))
-		pscrpc_set_finalize(set, 0, 1);
-
+	while ((set = lc_getnb(&pndgReqSets))) {
+		if (pscrpc_set_finalize(set, 0, 1))
+			pll_add(&hold, set);
+	}
 	pscrpc_nbreqset_reap(pndgReqs);
+
+	while ((set = pll_get(&hold)))
+		lc_add(&pndgReqSets, set);
 
 	psclog_debug("outstandingRpcCnt=%d (after)",
 		 atomic_read(&outstandingRpcCnt));
@@ -241,8 +247,8 @@ bmap_flush_create_rpc(void *set, struct bmpc_ioreq *r,
 	mq->size = size;
 	mq->op = SRMIOP_WR;
 
-	DEBUG_REQ(PLL_INFO, rq, "off=%u sz=%u op=%u",
-	    mq->offset, mq->size, mq->op);
+	DEBUG_REQ(PLL_INFO, rq, "off=%u sz=%u op=%u set=%p",
+	    mq->offset, mq->size, mq->op, set);
 
 	memcpy(&mq->sbd, &bmap_2_bci(b)->bci_sbd, sizeof(mq->sbd));
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
@@ -336,7 +342,7 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 	r = psc_dynarray_getpos(biorqs, 0);
 	csvc = msl_bmap_to_csvc(r->biorq_bmap, 1);
 	if (csvc == NULL)
-		goto csvc_error;
+		goto error;
 
 	b = r->biorq_bmap;
 	soff = r->biorq_off;
@@ -399,7 +405,7 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 				size = n = 0;
 
 			} else if (((size + iovs[j].iov_len) > LNET_MTU) ||
-				   (n == PSCRPC_MAX_BRW_PAGES)) {
+			    (n == PSCRPC_MAX_BRW_PAGES)) {
 				psc_assert(n > 0);
 				LAUNCH_RPC();
 				size = iovs[j].iov_len;
@@ -432,10 +438,16 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 		} else
 			freelock(&set->set_lock);
 	}
-	DYNARRAY_FOREACH(r, i, biorqs)
-		bmap_flush_inflight_unset(r);
 
- csvc_error:
+	DYNARRAY_FOREACH(r, i, biorqs) {
+		if (csvc)
+			bmap_flush_inflight_unset(r);
+		else {
+			BIORQ_LOCK(r);
+			r->biorq_flags &= ~BIORQ_SCHED;
+			BIORQ_ULOCK(r);
+		}
+	}
 	r = psc_dynarray_getpos(biorqs, 0);
 
 	/*
