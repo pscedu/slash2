@@ -308,7 +308,7 @@ bmap_flush_inflight_unset(struct bmpc_ioreq *r)
 	spinlock(&r->biorq_lock);
 	psc_assert(r->biorq_flags & BIORQ_SCHED);
 	psc_assert(r->biorq_flags & BIORQ_INFL);
-	r->biorq_flags &= ~BIORQ_INFL;
+	r->biorq_flags &= ~(BIORQ_INFL|BIORQ_SCHED);
 	DEBUG_BIORQ(PLL_WARN, r, "unset inflight XXX is my lease still valid?");
 	freelock(&r->biorq_lock);
 
@@ -1234,12 +1234,13 @@ msbmapflushthr_main(__unusedx struct psc_thread *thr)
 		PFL_GETTIMESPEC(&ts0);
 		bmap_flush();
 		PFL_GETTIMESPEC(&ts1);
-		timespecsub(&ts1, &ts0, &ts1);		
+		timespecsub(&ts1, &ts0, &ts1);
 		psc_info("bmap_flush "PSCPRI_TIMESPEC, 
 		    PSCPRI_TIMESPEC_ARGS(&ts1));
 		PFL_GETTIMESPEC(&ts0);
 		psc_waitq_waitrel(&bmapflushwaitq, NULL, &bmapFlushWaitTime);
 		PFL_GETTIMESPEC(&ts1);
+		timespecsub(&ts1, &ts0, &ts1);
 		psc_info("post wakeup "PSCPRI_TIMESPEC, 
 		    PSCPRI_TIMESPEC_ARGS(&ts1));
 	}
