@@ -281,8 +281,8 @@ pjournal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 				type, pje->pje_xid, pje->pje_txg, logentry->sjar_elem);
 		else {
 			jrba = &logentry->sjar_bmap;
-			printf("type=%3d, xid=%#"PRIx64", txg=%#"PRIx64", fid="SLPRI_FID, 
-				type, pje->pje_xid, pje->pje_txg, jrba->sjba_fid);
+			printf("type=%3d, xid=%#"PRIx64", txg=%#"PRIx64", fid="SLPRI_FID", flags=%x", 
+				type, pje->pje_xid, pje->pje_txg, jrba->sjba_fid, logentry->sjar_flag);
 		}
 		break;
 	    case MDS_LOG_NAMESPACE:
