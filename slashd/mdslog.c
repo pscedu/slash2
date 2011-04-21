@@ -588,6 +588,9 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 	sjnm->sjnm_ctime_ns = sstb->sst_ctime_ns;
 	sjnm->sjnm_size = sstb->sst_size;
 
+	if (sjnm->sjnm_op == NS_OP_SETATTR)
+		psc_assert(mask);
+
 	/*
 	 * We need distill if we have a peer MDS or we need to do
 	 * garbage reclamation.
