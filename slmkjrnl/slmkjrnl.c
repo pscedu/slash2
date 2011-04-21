@@ -312,10 +312,10 @@ pjournal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 			printf("op=mkdir, name=%s", name);
 			break;
 		    case NS_OP_LINK:
-			printf("op=link");
+			printf("op=link, name=%s", name);
 			break;
 		    case NS_OP_SYMLINK:
-			printf("op=symlink");
+			printf("op=symlink, name=%s", name);
 			break;
 		    case NS_OP_RENAME:
 			printf("op=rename, old name=%s, new name=%s", name, newname);
