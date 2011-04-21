@@ -44,8 +44,6 @@ mds_redo_bmap_repl_common(struct slmds_jent_repgen *jrpg)
 	size_t nb;
 	int rc;
 
-	memset(&bod, 0, sizeof(bod));
-
 	rc = mdsio_lookup_slfid(jrpg->sjp_fid, &rootcreds, NULL, &mf);
 	if (rc) {
 		if (rc == ENOENT) {
@@ -61,6 +59,7 @@ mds_redo_bmap_repl_common(struct slmds_jent_repgen *jrpg)
 	if (rc)
 		psc_fatalx("mdsio_opencreate: %s", slstrerror(rc));
 
+	memset(&bod, 0, sizeof(bod));
 	rc = mdsio_read(&rootcreds, &bod, BMAP_OD_SZ, &nb,
 	    (off_t)((BMAP_OD_SZ * jrpg->sjp_bmapno) +
 	    SL_BMAP_START_OFF), mdsio_data);
