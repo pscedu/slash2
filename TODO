@@ -11,6 +11,15 @@ reminders:
 
 -----------------------------------------------------------------------
 
+* rpc timeouts should correspond to bmap lease timeouts.  In addition, 
+	threads blocked on RA bmpces, or another thread's bmpce fetch
+	should timeout and not block indefinitely.  This does not 
+	completely address the issue from bug 132 but may be a useful
+	asset.
+pauln (04/22/11)
+
+-----------------------------------------------------------------------
+
 * bmap flush needs to be reworked so that several threads can be
 	assigned to flushing bmaps.  The current model is relatively
 	slow because the bmap flush thread undertakes too much work.
