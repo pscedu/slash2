@@ -91,6 +91,12 @@ and the machine's networking configuration.
 See
 .Xr pflenv 7
 for more details.
+.It Ev ZFS_SOCK_NAME
+Override the default
+.Tn ZFS
+named socket pathname.
+Defaults to
+.Pa /var/run/zfs/zfs_socket .
 .El
 .Sh FILES
 .Bl -tag -width Pa -compact
@@ -100,20 +106,16 @@ default
 network configuration
 .It Pa /var/lib/slash/authbuf.key
 inter-daemon communication key
-.It Pa /var/lib/slash/ion_bmaps.odt
-map of
-.Tn I/O
-node file block ownership
 .It Pa /var/lib/slash/op-journal
-pending metafile operations journal
-.It Pa /var/lib/slash/op-namespace
-pending namespace operations journal
-.It Xo
-.Pa /var/run/slashd. Ns Ic %h Ns Pa .sock
-.Xc
+pending metadata operation journal
+.It Pa /var/run/slashd. Ns Ic %h Ns Pa .sock
 default
 .Nm
 control socket
+.It Pa /var/run/zfs/zfs_socket
+default
+.Tn ZFS
+named socket
 .El
 .Sh SEE ALSO
 .Xr slash.conf 5 ,
