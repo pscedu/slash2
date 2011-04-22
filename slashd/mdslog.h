@@ -68,9 +68,9 @@ struct site_progress {
  * Our MDS should be able to recover after being restarted.
  */
 
-void	mds_bmap_crc_log(void *, uint64_t);
-void	mds_bmap_repl_log(void *, uint64_t);
-void	mds_inode_addrepl_log(void *, uint64_t);
+void	mds_bmap_crc_log(void *, uint64_t, int);
+void	mds_bmap_repl_log(void *, uint64_t, int);
+void	mds_inode_addrepl_log(void *, uint64_t, int);
 void	mds_namespace_log(int, uint64_t, uint64_t, uint64_t,
 	    const struct srt_stat *, int, const char *, const char *);
 
@@ -81,8 +81,6 @@ void	mds_journal_init(int);
 int	mds_bmap_repl_update(struct bmapc_memb *, int);
 int	mds_bmap_crc_update(struct bmapc_memb *, struct srm_bmap_crcup *);
 int	mds_inode_addrepl_update(struct slash_inode_handle *, sl_ios_id_t, uint32_t, int);
-
-void	mds_current_txg(uint64_t *);
 
 void	mds_reserve_slot(void);
 void	mds_unreserve_slot(void);

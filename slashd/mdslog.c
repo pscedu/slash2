@@ -937,11 +937,16 @@ mds_send_batch_update(uint64_t batchno)
  *	file.  Note that every field must be protected by a spinlock.
  */
 void
-mds_update_cursor(void *buf, uint64_t txg)
+mds_update_cursor(void *buf, uint64_t txg, int flag)
 {
 	struct psc_journal_cursor *cursor = buf;
 	int rc;
 
+	if (flag == 1) {
+		pjournal_update_txg(mdsJournal, txg);
+		return;
+	}
+		
 	/*
 	 * During the replay, actually as soon as ZFS starts, its group
 	 * transaction number starts to increase.  If we crash in the
@@ -980,20 +985,6 @@ mds_update_cursor(void *buf, uint64_t txg)
 		psc_assert(rc == -EAGAIN);
 		cursor->pjc_seqno_lwm = cursor->pjc_seqno_hwm = BMAPSEQ_ANY;
 	}
-}
-
-void
-mds_current_txg(uint64_t *txg)
-{
-	/*
-	 * Take a snapshot of the transaction group number stored in the
-	 * cursor.  It maybe the current one being used, or the one that
-	 * has already been synced.  And it can change afterwards.  This
-	 * is okay, we only need to take a little care at replay time.
-	 */
-	spinlock(&mds_txg_lock);
-	*txg = mds_cursor.pjc_commit_txg;
-	freelock(&mds_txg_lock);
 }
 
 /**
@@ -1335,7 +1326,7 @@ mds_inode_sync(struct slash_inode_handle *inoh)
 }
 
 void
-mds_inode_addrepl_log(void *datap, uint64_t txg)
+mds_inode_addrepl_log(void *datap, uint64_t txg, __unusedx int flag)
 {
 	struct slmds_jent_ino_addrepl *jrir, *r;
 
@@ -1364,7 +1355,7 @@ mds_inode_addrepl_log(void *datap, uint64_t txg)
  *	in before the repl table is committed to the journal.
  */
 void
-mds_bmap_repl_log(void *datap, uint64_t txg)
+mds_bmap_repl_log(void *datap, uint64_t txg, __unusedx int flag)
 {
 	struct bmapc_memb *bmap = datap;
 	struct slmds_jent_repgen *jrpg;
@@ -1400,7 +1391,7 @@ mds_bmap_repl_log(void *datap, uint64_t txg)
  *	for the same region which we may then process out of order.
  */
 void
-mds_bmap_crc_log(void *datap, uint64_t txg)
+mds_bmap_crc_log(void *datap, uint64_t txg, __unusedx int flag)
 {
 	struct sl_mds_crc_log *crclog = datap;
 	struct bmapc_memb *bmap = crclog->scl_bmap;
@@ -1484,6 +1475,15 @@ mds_journal_init(int disable_propagation)
 
 	if (disable_propagation)
 		npeers = 0;
+
+	res = nodeResm->resm_res;
+	if (res->res_jrnldev[0] == '\0')
+		xmkfn(res->res_jrnldev, "%s/%s", sl_datadir,
+		    SL_FN_OPJOURNAL);
+
+	mdsJournal = pjournal_open(res->res_jrnldev);
+	if (mdsJournal == NULL)
+		psc_fatal("Failed to open log file %s", res->res_jrnldev);
 
 	mds_open_cursor();
 
@@ -1648,15 +1648,6 @@ mds_journal_init(int disable_propagation)
 	    0, "slmjnsthr");
 
  replay_log:
-
-	res = nodeResm->resm_res;
-	if (res->res_jrnldev[0] == '\0')
-		xmkfn(res->res_jrnldev, "%s/%s", sl_datadir,
-		    SL_FN_OPJOURNAL);
-
-	mdsJournal = pjournal_open(res->res_jrnldev);
-	if (mdsJournal == NULL)
-		psc_fatal("Failed to open log file %s", res->res_jrnldev);
 
 	mdsJournal->pj_npeers = npeers;
 	mdsJournal->pj_distill_xid = last_distill_xid;

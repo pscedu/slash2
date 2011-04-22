@@ -41,7 +41,7 @@ typedef uint64_t mdsio_fid_t;
 typedef slfid_t (*sl_getslfid_cb_t)(void);
 
 /* callback to log writes to bmap */
-typedef void (*sl_log_write_t)(void *, uint64_t);
+typedef void (*sl_log_write_t)(void *, uint64_t, int);
 
 /* callback to log updates to namespace */
 typedef void (*sl_log_update_t)(int, uint64_t, uint64_t, uint64_t,

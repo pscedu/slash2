@@ -385,7 +385,7 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios, int iosidx)
 		BHGEN_INCREMENT(bcm);
 
 	/* Write changes to disk. */
-	mds_bmap_repl_update(bcm, 0);
+	rc = mds_bmap_repl_update(bcm, 0);
 
 	/*
 	 * If this bmap is marked for persistent replication,
@@ -403,7 +403,7 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios, int iosidx)
 		uswi_unref(wk);
 	}
 
-	return (0);
+	return (rc);
 }
 
 /**

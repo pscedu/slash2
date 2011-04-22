@@ -558,9 +558,6 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 	bia.bia_lastcli = bml->bml_cli_nidpid;
 	bia.bia_flags = BIAF_DIO;
 
-	mds_reserve_slot();
-	logentry = pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_assign_rep));
-
 	bmdsi->bmdsi_assign = mds_odtable_replaceitem(mdsBmapAssignTable,
 	    bmdsi->bmdsi_assign, &bia, sizeof(bia));
 
@@ -576,7 +573,13 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 	if (iosidx < 0)
 		psc_fatalx("ios_lookup_add %d: %s", bia.bia_ios, slstrerror(iosidx));
 
-	mds_repl_inv_except(b, bia.bia_ios, iosidx);
+	rc = mds_repl_inv_except(b, bia.bia_ios, iosidx);
+	if (rc) {
+		DEBUG_BMAP(PLL_ERROR, b, "mds_repl_inv_except() failed");
+		return (-1);
+	}
+	mds_reserve_slot();
+	logentry = pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_assign_rep));
 
 	jrpg = &logentry->sjar_rep;
 	jrba = &logentry->sjar_bmap;
