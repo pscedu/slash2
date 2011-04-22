@@ -14,7 +14,7 @@
 .\" without express or implied warranty.
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
-.Dd March 16, 2011
+.Dd April 21, 2011
 .Dt SLADM 7
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -68,8 +68,6 @@ For example:
 .Pp
 To allow
 .Tn ZFS
-and
-.Tn SLASH
 to load this file system, create a cache dump file:
 .Bd -literal -offset indent
 # zpool set cachefile=/mypool.zcf mypool
@@ -83,9 +81,21 @@ metadata server, it must be initialized by
 # slimmns_format /mypool
 .Ed
 .Pp
-Now that the file system has been set up, the
+Next, an on-disk table for persistent data storage
+.Po for recovering
+issued
+.Tn I/O
+write leases, for example
+.Pc
+must be created with
+.Xr odtable 1 :
+.Bd -literal -offset indent
+# odtable -o -C /mypool/.slmd/bmap.odtab
+.Ed
+.Pp
+Now that the metadata file system has been set up,
 .Xr zfs-fuse 8
-daemon must be terminated before the
+must be terminated before the
 .Tn SLASH
 metadata server can access it:
 .Bd -literal -offset indent
@@ -95,33 +105,24 @@ metadata server can access it:
 .Ss Metadata Server Po Ss MDS Pc
 The metadata server
 .Xr slashd 8
-requires an on-disk journal for resuming interrupted operations which
-can be created with the
+maintains a journal file for resuming interrupted operations.
+This can be created with the
 .Xr slmkjrnl 8
 utility:
 .Bd -literal -offset indent
 # slmkjrnl -f
 .Ed
 .Pp
-Next, an on-disk table for persistent storage of data pertaining to the
-ownership of file blocks by
-.Tn I/O
-servers needs to be created with
-.Xr odtable 1 :
-.Bd -literal -offset indent
-# odtable -o -C /var/lib/slash/ion_bmaps.odt
-.Ed
-.Pp
-Next, bring up
+Now launch
 .Xr slashd 8 :
 .Bd -literal -offset indent
-# slashd -p mypool.zcf mypool
+# slashd -p /mypool.zcf mypool
 .Ed
 .Pp
 .Xr slmctl 8
 can be used to control live operation of
 .Xr slashd 8
-once it is running.
+once it is online.
 .Ss Tn Ss I/O Ss Server
 The
 .Tn I/O
@@ -161,7 +162,7 @@ Now launch
 .Xr slictl 8
 can be used to control live operation of the
 .Tn I/O
-server once it is running.
+server once it is online.
 .Ss Client Mount Daemon
 To communicate on a
 .Tn SLASH
@@ -181,7 +182,7 @@ Now
 .Xr mount_slash 8
 may be used to mount a
 .Tn SLASH
-file system to a directory node on the local system:
+file system under a directory node on the local system:
 .Bd -literal -offset indent
 # mount_slash -U -M md@SITE -I io@SITE /myfs
 .Ed
