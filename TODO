@@ -406,3 +406,8 @@ lcache
 	lookup item and check lcache
 
 on local I/O, page in if fcmh_fid and gen and bmapgen's match what's in the cache
+
+- rename 'global' keyword to 'set'
+- add more local slash.conf settings:
+	- zfs pool cachefile
+	- zfs pool name
