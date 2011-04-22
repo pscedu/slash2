@@ -1210,7 +1210,7 @@ msl_readahead_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	struct bmapc_memb *b;
 	struct bmap_pagecache *bmpc;
 	struct bmap_pagecache_entry *bmpce;
-	struct psc_waitq *wq;
+	struct psc_waitq *wq = NULL;
 	int rc;
 
 	bmpce = args->pointer_arg[MSL_CB_POINTER_SLOT_BMPCE];
@@ -1246,7 +1246,7 @@ msl_readahead_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 	BMPC_ULOCK(bmpc);
 
-	if (!rc)
+	if (wq)
 		psc_waitq_wakeall(wq);
 
 	sl_csvc_decref(csvc);
@@ -1290,7 +1290,7 @@ msl_io_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
 	struct psc_dynarray *biorqs = args->pointer_arg[1];
 	struct bmpc_ioreq *r;
-	int rc, i;
+	int rc = 0, i;
 
 	if (rq->rq_status || (rc = authbuf_check(rq, PSCRPC_MSG_REPLY))) {
 		DYNARRAY_FOREACH(r, i, biorqs)
