@@ -11,11 +11,11 @@ reminders:
 
 -----------------------------------------------------------------------
 
-* bmap flush needs to be reworked so that several threads can be 
+* bmap flush needs to be reworked so that several threads can be
 	assigned to flushing bmaps.  The current model is relatively
 	slow because the bmap flush thread undertakes too much work.
 	This means that subsequent requests tend to wait before being
-	pushed out.  When dealing with force-expired requests a 
+	pushed out.  When dealing with force-expired requests a
 	slow down results
 
 pauln (04/19/2011)
@@ -307,7 +307,6 @@ API rename
 
 - upsch items are not getting removed on completion
 - ensure PINGs only happen every 30 seconds
-- CREATE with mode 0755 doesnt work (check umask?)
 - GETATTR should never return nlinks=0
 - replace FCMH_CTOR_FAILED with fmi_ctor_rc
 - slimmns -W should instead should rename the top-level its contents in
@@ -344,21 +343,20 @@ API rename
   be resolved.  have to store in inode and release fcmh.  we pass the
   fid to the ptrunc worker and when it processes it loads the fcmh.
 - have slashd umount /zfs-kstat on teardown
+- allow override of /zfs-kstat for running multiple instances of slashd/zfs-fuse
 - disable RENAME and other ops are files in SL_RPATH_META_DIR (e.g. mv .slfidns .blah)
-- ensure attrs are loaded before CHECKCREDS() -- perhaps memcmp() against zeroes?
 - clean up metadata (and replica garbage) for any files clobbered by RENAME, LINK
 - add a generic SRMT_BMAPCTL that bunches up ops such as WAKE, RELEASE,
   DIO, etc.
 - do full truncate and unlink do the right things while ptrunc is resolving?
 - add SSL transport which uses keys and can therefore disable authbuf
-- slmctl -s clients do not seem to go away
+- slmctl/slictl -s clients do not seem to go away
 
 - write a ptrunc tester
 - for -s connections, we arguably do not need to show members of the
   same resource we are part of since we will never connect to them
 - patch fuse.ko since fuse_notify_entry_inval() causes segfault
 - add zfs SPA version to slashd ctlparam
-- add msl local I/O cache support
 - use umount -l if it is supported at teardown
 - client needs to track when MDS goes down and recheck pinned ptrunc
   bmaps for resolvement
@@ -405,7 +403,11 @@ lcache
 - lcache-status:
 	lookup item and check lcache
 
-on local I/O, page in if fcmh_fid and gen and bmapgen's match what's in the cache
+- move namespace in zfs into a subdir so we dont have to do the
+  strcmp(fn, ".slmd") trick
+
+- add msl local I/O cache support:
+  page in if fcmh_fid and gen and bmapgen's match what's in the cache
 
 - rename 'global' keyword to 'set'
 - add more local slash.conf settings:
