@@ -65,9 +65,9 @@ usage(void)
  * @entsz: size of a journal entry.
  * Returns 0 on success, errno on error.
  */
-int
+void
 pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
-    uint32_t ra)
+    uint32_t rs)
 {
 	struct psc_journal_enthdr *pje;
 	struct psc_journal_hdr pjh;
@@ -78,9 +78,9 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	int rc, fd;
 	ssize_t nb;
 
-	if (nents % ra)
+	if (nents % rs)
 		psc_fatalx("number of slots (%u) should be a multiple of "
-		    "readsize(%u)", nents, ra);
+		    "readsize (%u)", nents, rs);
 
 	memset(&pj, 0, sizeof(struct psc_journal));
 	pj.pj_hdr = &pjh;
@@ -98,7 +98,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	pjh.pjh_entsz = entsz;
 	pjh.pjh_nents = nents;
 	pjh.pjh_version = PJH_VERSION;
-	pjh.pjh_readsize = ra;
+	pjh.pjh_readsize = rs;
 	pjh.pjh_iolen = PSC_ALIGN(sizeof(pjh), stb.st_blksize);
 	pjh.pjh_magic = PJH_MAGIC;
 #if 0
@@ -116,7 +116,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 
 	jbuf = psc_alloc(PJ_PJESZ(&pj) * pj.pj_hdr->pjh_readsize,
 			 PAF_PAGEALIGN | PAF_LOCK);
-	for (i = 0; i < ra; i++) {
+	for (i = 0; i < rs; i++) {
 		pje = PSC_AGP(jbuf, PJ_PJESZ(&pj) * i);
 		pje->pje_magic = PJE_MAGIC;
 		pje->pje_type = PJE_FORMAT;
@@ -131,18 +131,17 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 		PSC_CRC64_FIN(&pje->pje_chksum);
 	}
 
-	for (slot = 0; slot < pjh.pjh_nents; slot += ra) {
-		nb = pwrite(pj.pj_fd, jbuf, PJ_PJESZ(&pj) * ra,
+	for (slot = 0; slot < pjh.pjh_nents; slot += rs) {
+		nb = pwrite(pj.pj_fd, jbuf, PJ_PJESZ(&pj) * rs,
 		    PJ_GETENTOFF(&pj, slot));
-		if ((size_t)nb != PJ_PJESZ(&pj) * ra)
-			break;
+		if ((size_t)nb != PJ_PJESZ(&pj) * rs) 
+			psc_fatal("failed to write slot %u", slot);
 	}
 	if (close(fd) == -1)
 		psc_fatal("failed to close journal");
-	psc_free(jbuf, PAF_LOCK | PAF_PAGEALIGN, PJ_PJESZ(&pj) * ra);
-	psclog_info("journal %s formatted: %d slots, %d readahead, error=%d",
-	    fn, nents, ra, rc);
-	return (rc);
+	psc_free(jbuf, PAF_LOCK | PAF_PAGEALIGN, PJ_PJESZ(&pj) * rs);
+	psclog_info("journal %s formatted: %d slots, %d readsize, error=%d",
+	    fn, nents, rs, rc);
 }
 
 void
@@ -335,12 +334,12 @@ pjournal_dump(const char *fn, int verbose)
 		    "readsize %d", pjh->pjh_nents, pjh->pjh_readsize);
 
 	printf("Journal header info for %s:\n"
-	    "  entsize %u\n"
-	    "  nents %u\n"
-	    "  version %u\n"
-	    "  readahead %u\n"
-	    "  start_offset %#"PRIx64"\n",
-	    fn, PJ_PJESZ(pj), pjh->pjh_nents, pjh->pjh_version,
+	    "  Version %u\n"
+	    "  Entry size %u\n"
+	    "  Number of entries %u\n"
+	    "  Batch read size %u\n"
+	    "  Entry start offset %"PRId64"\n\n",
+	    fn, pjh->pjh_version, PJ_PJESZ(pj), pjh->pjh_nents,
 	    pjh->pjh_readsize, pjh->pjh_start_off);
 
 #if 0
@@ -413,7 +412,7 @@ pjournal_dump(const char *fn, int verbose)
 	printf("\n%d slot(s) total, %d in use, %d formatted, "
 	    "%d bad magic, %d bad checksum(s)\n",
 	    ntotal, ndump, nformat, nmagic, nchksum);
-	printf("\nLowest transaction ID=%#"PRIx64", slot=%d\n",
+	printf("\nLowest transaction ID=%#"PRIx64", slot=%d",
 	    lowest_xid, lowest_slot);
 	printf("\nHighest transaction ID=%#"PRIx64", slot=%d\n",
 	    highest_xid, highest_slot);
