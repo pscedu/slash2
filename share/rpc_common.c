@@ -386,9 +386,11 @@ sl_imp_hldrop_cli(void *csvc)
 }
 
 void
-sl_imp_hldrop_resm(void *csvc)
+sl_imp_hldrop_resm(void *arg)
 {
-	sl_csvc_disconnect(csvc);
+	struct sl_resm *resm = arg;
+
+	sl_csvc_disconnect(resm->resm_csvc);
 }
 
 /**
