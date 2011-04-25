@@ -112,7 +112,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra)
 	if ((size_t)nb != pjh.pjh_iolen)
 		psc_fatal("failed to write journal header");
 
-        jbuf = psc_alloc(PJ_PJESZ(&pj) * pj.pj_hdr->pjh_readsize, 
+	jbuf = psc_alloc(PJ_PJESZ(&pj) * pj.pj_hdr->pjh_readsize,
 			 PAF_PAGEALIGN | PAF_LOCK);
 	for (i = 0; i < ra; i++) {
 		pje = PSC_AGP(jbuf, PJ_PJESZ(&pj) * i);
@@ -162,41 +162,41 @@ pjournal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 	switch (type) {
 	    case MDS_LOG_BMAP_REPL:
 		jrpg = PJE_DATA(pje);
-		printf("type=%3d, xid=%#"PRIx64", txg=%#"PRIx64", fid="SLPRI_FID, 
+		printf("type=%3d, xid=%#"PRIx64", txg=%#"PRIx64", fid="SLPRI_FID,
 			type, pje->pje_xid, pje->pje_txg, jrpg->sjp_fid);
 		break;
 	    case MDS_LOG_BMAP_CRC:
 		jcrc = PJE_DATA(pje);
-		printf("type=%3d, xid=%#"PRIx64", txg=%#"PRIx64", fid="SLPRI_FID, 
+		printf("type=%3d, xid=%#"PRIx64", txg=%#"PRIx64", fid="SLPRI_FID,
 			type, pje->pje_xid, pje->pje_txg, jcrc->sjc_fid);
 		break;
 	    case MDS_LOG_BMAP_SEQ:
 		sjsq = PJE_DATA(pje);
-		printf("type=%3d, xid=%#"PRIx64", txg=%#"PRIx64", " 
+		printf("type=%3d, xid=%#"PRIx64", txg=%#"PRIx64", "
 		       "LWM=%#"PRIx64", HWM=%#"PRIx64,
-			type, pje->pje_xid, pje->pje_txg, 
+			type, pje->pje_xid, pje->pje_txg,
 			sjsq->sjbsq_low_wm,
 			sjsq->sjbsq_high_wm);
 		break;
 	    case MDS_LOG_INO_ADDREPL:
 		jrir = PJE_DATA(pje);
-		printf("type=%3d, xid=%#"PRIx64", txg=%#"PRIx64", fid="SLPRI_FID, 
+		printf("type=%3d, xid=%#"PRIx64", txg=%#"PRIx64", fid="SLPRI_FID,
 			type, pje->pje_xid, pje->pje_txg, jrir->sjir_fid);
 		break;
 	    case MDS_LOG_BMAP_ASSIGN:
 		logentry = PJE_DATA(pje);
 		if (logentry->sjar_flag & SLJ_ASSIGN_REP_FREE)
-			printf("type=%3d, xid=%#"PRIx64", txg=%#"PRIx64", item=%d", 
+			printf("type=%3d, xid=%#"PRIx64", txg=%#"PRIx64", item=%d",
 				type, pje->pje_xid, pje->pje_txg, logentry->sjar_elem);
 		else {
 			jrba = &logentry->sjar_bmap;
-			printf("type=%3d, xid=%#"PRIx64", txg=%#"PRIx64", fid="SLPRI_FID", flags=%x", 
+			printf("type=%3d, xid=%#"PRIx64", txg=%#"PRIx64", fid="SLPRI_FID", flags=%x",
 				type, pje->pje_xid, pje->pje_txg, jrba->sjba_fid, logentry->sjar_flag);
 		}
 		break;
 	    case MDS_LOG_NAMESPACE:
 		sjnm = PJE_DATA(pje);
-		printf("type=%3d, xid=%#"PRIx64", txg=%#"PRIx64", fid="SLPRI_FID", ", 
+		printf("type=%3d, xid=%#"PRIx64", txg=%#"PRIx64", fid="SLPRI_FID", ",
 			type, pje->pje_xid, pje->pje_txg, sjnm->sjnm_target_fid);
 
 		name[0]='\0';
@@ -241,7 +241,7 @@ pjournal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 		    case NS_OP_SETATTR:
 			printf("op=setattr, mask=%#x", sjnm->sjnm_mask);
 			break;
-	    	    default:
+		    default:
 			psc_fatalx("invalid namespace op %d", sjnm->sjnm_op);
 		}
 		break;
@@ -301,30 +301,30 @@ pjournal_dump(const char *fn, int verbose)
 
 	pj->pj_hdr = pjh;
 	if (pjh->pjh_magic != PJH_MAGIC)
-		psc_fatal("journal header has a bad magic number "
+		psc_fatalx("journal header has a bad magic number "
 		    "%#"PRIx64, pjh->pjh_magic);
 
 	if (pjh->pjh_version != PJH_VERSION)
-		psc_fatal("journal header has an invalid version "
+		psc_fatalx("journal header has an invalid version "
 		    "number %d", pjh->pjh_version);
 
 	PSC_CRC64_INIT(&chksum);
 	psc_crc64_add(&chksum, pjh, offsetof(struct psc_journal_hdr, pjh_chksum));
 	PSC_CRC64_FIN(&chksum);
 
-	if (pjh->pjh_chksum != chksum) 
-		psc_fatal("journal header has an invalid checksum "
+	if (pjh->pjh_chksum != chksum)
+		psc_fatalx("journal header has an invalid checksum "
 		    "value %"PSCPRIxCRC64" vs %"PSCPRIxCRC64,
 		    pjh->pjh_chksum, chksum);
 
-	if (S_ISREG(statbuf.st_mode)) {
-		if (statbuf.st_size != (off_t)(pjhlen + pjh->pjh_nents * PJ_PJESZ(pj)))
-			psc_fatal("size of the journal log %"PSCPRIdOFFT"d does not match "
-				  "specs in its header", statbuf.st_size);
-	}
-	if (pjh->pjh_nents % pjh->pjh_readsize) 
-		psc_fatal("Number of entries %d is not a multiple of the readsize %d",
-			   pjh->pjh_nents, pjh->pjh_readsize);
+	if (S_ISREG(statbuf.st_mode) && statbuf.st_size !=
+	    (off_t)(pjhlen + pjh->pjh_nents * PJ_PJESZ(pj)))
+		psc_fatalx("size of the journal log %"PSCPRIdOFFT"d does "
+		    "not match specs in its header", statbuf.st_size);
+
+	if (pjh->pjh_nents % pjh->pjh_readsize)
+		psc_fatalx("number of entries %d is not a multiple of the "
+		    "readsize %d", pjh->pjh_nents, pjh->pjh_readsize);
 
 	printf("Journal header info for %s:\n"
 	    "  entsize %u\n"
@@ -339,13 +339,13 @@ pjournal_dump(const char *fn, int verbose)
 	printf("This journal was created on %s", ctime((time_t *)&pjh->pjh_timestamp));
 #endif
 
-        jbuf = psc_alloc(PJ_PJESZ(pj) * pj->pj_hdr->pjh_readsize, 
+	jbuf = psc_alloc(PJ_PJESZ(pj) * pj->pj_hdr->pjh_readsize,
 			 PAF_PAGEALIGN | PAF_LOCK);
 	for (slot = 0; slot < pjh->pjh_nents; slot += pjh->pjh_readsize) {
 
 		nb = pread(pj->pj_fd, jbuf, PJ_PJESZ(pj) * pjh->pjh_readsize, PJ_GETENTOFF(pj, slot));
 		if (nb !=  PJ_PJESZ(pj) * pjh->pjh_readsize)
-			printf("Failed to read %d log entries at slot %d.\n", 
+			printf("Failed to read %d log entries at slot %d.\n",
 				pjh->pjh_readsize, slot);
 
 		for (i = 0; i < pjh->pjh_readsize; i++) {
@@ -353,7 +353,7 @@ pjournal_dump(const char *fn, int verbose)
 			pje = (void *)&jbuf[PJ_PJESZ(pj) * i];
 			if (pje->pje_magic != PJE_MAGIC) {
 				nmagic++;
-				printf("Journal slot %d has a bad magic number.\n", 
+				printf("Journal slot %d has a bad magic number.\n",
 					slot + i);
 				continue;
 			}
@@ -370,7 +370,7 @@ pjournal_dump(const char *fn, int verbose)
 
 			if (pje->pje_chksum != chksum) {
 				nchksum++;
-				printf("Journal slot %d has a bad checksum", 
+				printf("Journal slot %d has a bad checksum",
 					slot + i);
 				continue;
 			}
@@ -388,7 +388,7 @@ pjournal_dump(const char *fn, int verbose)
 				highest_xid = pje->pje_xid;
 				highest_slot = slot + i;
 			}
-			if (lowest_xid > pje->pje_xid) { 
+			if (lowest_xid > pje->pje_xid) {
 				lowest_xid = pje->pje_xid;
 				lowest_slot = slot + i;
 			}
