@@ -18,6 +18,7 @@
  */
 
 #include <err.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -65,7 +66,8 @@ usage(void)
  * Returns 0 on success, errno on error.
  */
 int
-pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra)
+pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
+    uint32_t ra)
 {
 	struct psc_journal_enthdr *pje;
 	struct psc_journal_hdr pjh;
@@ -190,8 +192,10 @@ pjournal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 				type, pje->pje_xid, pje->pje_txg, logentry->sjar_elem);
 		else {
 			jrba = &logentry->sjar_bmap;
-			printf("type=%3d, xid=%#"PRIx64", txg=%#"PRIx64", fid="SLPRI_FID", flags=%x",
-				type, pje->pje_xid, pje->pje_txg, jrba->sjba_fid, logentry->sjar_flag);
+			printf("type=%3d, xid=%#"PRIx64", "
+			    "txg=%#"PRIx64", fid="SLPRI_FID", flags=%x",
+			    type, pje->pje_xid, pje->pje_txg,
+			    jrba->sjba_fid, logentry->sjar_flag);
 		}
 		break;
 	    case MDS_LOG_NAMESPACE:
@@ -206,7 +210,9 @@ pjournal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 		}
 		newname[0]='\0';
 		if (sjnm->sjnm_namelen2) {
-			memcpy(newname, sjnm->sjnm_name+sjnm->sjnm_namelen, sjnm->sjnm_namelen2);
+			memcpy(newname, sjnm->sjnm_name +
+			    sjnm->sjnm_namelen,
+			    sjnm->sjnm_namelen2);
 			newname[sjnm->sjnm_namelen2] = '\0';
 		}
 
@@ -227,7 +233,8 @@ pjournal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 			printf("op=symlink, name=%s", name);
 			break;
 		    case NS_OP_RENAME:
-			printf("op=rename, old name=%s, new name=%s", name, newname);
+			printf("op=rename, old name=%s, new name=%s",
+			    name, newname);
 			break;
 		    case NS_OP_UNLINK:
 			printf("op=unlink, name=%s", name);
@@ -309,7 +316,8 @@ pjournal_dump(const char *fn, int verbose)
 		    "number %d", pjh->pjh_version);
 
 	PSC_CRC64_INIT(&chksum);
-	psc_crc64_add(&chksum, pjh, offsetof(struct psc_journal_hdr, pjh_chksum));
+	psc_crc64_add(&chksum, pjh, offsetof(struct psc_journal_hdr,
+	    pjh_chksum));
 	PSC_CRC64_FIN(&chksum);
 
 	if (pjh->pjh_chksum != chksum)
@@ -343,7 +351,8 @@ pjournal_dump(const char *fn, int verbose)
 			 PAF_PAGEALIGN | PAF_LOCK);
 	for (slot = 0; slot < pjh->pjh_nents; slot += pjh->pjh_readsize) {
 
-		nb = pread(pj->pj_fd, jbuf, PJ_PJESZ(pj) * pjh->pjh_readsize, PJ_GETENTOFF(pj, slot));
+		nb = pread(pj->pj_fd, jbuf, PJ_PJESZ(pj) *
+		    pjh->pjh_readsize, PJ_GETENTOFF(pj, slot));
 		if (nb !=  PJ_PJESZ(pj) * pjh->pjh_readsize)
 			printf("Failed to read %d log entries at slot %d.\n",
 				pjh->pjh_readsize, slot);
@@ -401,10 +410,13 @@ pjournal_dump(const char *fn, int verbose)
 	psc_free(jbuf, PAF_LOCK | PAF_PAGEALIGN, PJ_PJESZ(pj));
 	PSCFREE(pj);
 
-	printf("\n%d slot(s) total, %d in use, %d formatted, %d bad magic, %d bad checksum(s)\n",
+	printf("\n%d slot(s) total, %d in use, %d formatted, "
+	    "%d bad magic, %d bad checksum(s)\n",
 	    ntotal, ndump, nformat, nmagic, nchksum);
-	printf("\nLowest transaction ID = %#"PRIx64", slot = %d", lowest_xid, lowest_slot);
-	printf("\nHighest transaction ID = %#"PRIx64", slot = %d\n", highest_xid, highest_slot);
+	printf("\nLowest transaction ID=%#"PRIx64", slot=%d\n",
+	    lowest_xid, lowest_slot);
+	printf("\nHighest transaction ID=%#"PRIx64", slot=%d\n",
+	    highest_xid, highest_slot);
 }
 
 int
