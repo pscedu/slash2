@@ -190,8 +190,8 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 	} else {
 		psc_assert(bmpce->bmpce_base);
 
-		if (!(bmpce->bmpce_flags & BMPCE_EIO))
-			psc_assert(bmpce->bmpce_flags & BMPCE_DATARDY);
+		//if (!(bmpce->bmpce_flags & BMPCE_EIO))
+		//	psc_assert(bmpce->bmpce_flags & BMPCE_DATARDY);
 
 		if (op == BIORQ_WRITE) {
 			psc_assert(psc_atomic16_read(&bmpce->bmpce_wrref) > 0);
