@@ -272,6 +272,11 @@ pjournal_dump(const char *fn, int verbose)
 	struct stat statbuf;
 	ssize_t pjhlen;
 
+	int first = 1;
+	uint64_t highest_xid, lowest_xid;
+	uint32_t highest_slot, lowest_slot;
+
+	highest_slot = lowest_slot = -1;
 	ntotal = nmagic = nchksum = nformat = ndump = 0;
 
 	pj = PSCALLOC(sizeof(*pj));
@@ -375,6 +380,20 @@ pjournal_dump(const char *fn, int verbose)
 				ndump++;
 				pjournal_dump_entry(slot+i, pje);
 			}
+			if (first) {
+				first = 0;
+				highest_xid = lowest_xid = pje->pje_xid;
+				highest_slot = lowest_slot = slot + i;
+				continue;
+			}
+			if (highest_xid < pje->pje_xid) {
+				highest_xid = pje->pje_xid;
+				highest_slot = slot + i;
+			}
+			if (lowest_xid > pje->pje_xid) { 
+				lowest_xid = pje->pje_xid;
+				lowest_slot = slot + i;
+			}
 		}
 
 	}
@@ -384,8 +403,10 @@ pjournal_dump(const char *fn, int verbose)
 	psc_free(jbuf, PAF_LOCK | PAF_PAGEALIGN, PJ_PJESZ(pj));
 	PSCFREE(pj);
 
-	printf("%d slot(s) total, %d in use, %d formatted, %d bad magic, %d bad checksum(s)\n",
+	printf("\n%d slot(s) total, %d in use, %d formatted, %d bad magic, %d bad checksum(s)\n",
 	    ntotal, ndump, nformat, nmagic, nchksum);
+	printf("\nLowest transaction ID = %#"PRIx64", slot = %d", lowest_xid, lowest_slot);
+	printf("\nHighest transaction ID = %#"PRIx64", slot = %d\n", highest_xid, highest_slot);
 }
 
 int
