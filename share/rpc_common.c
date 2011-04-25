@@ -378,6 +378,19 @@ sl_csvc_disconnect(struct slashrpc_cservice *csvc)
 	pscrpc_abort_inflight(csvc->csvc_import);
 }
 
+void
+sl_imp_hldrop_cli(void *csvc)
+{
+	sl_csvc_markfree(csvc);
+	sl_csvc_disconnect(csvc);
+}
+
+void
+sl_imp_hldrop_resm(void *csvc)
+{
+	sl_csvc_disconnect(csvc);
+}
+
 /**
  * sl_csvc_disable - Mark a connection as no longer available.
  * @csvc: client service.
@@ -417,7 +430,7 @@ sl_csvc_create(uint32_t rqptl, uint32_t rpptl)
 	imp->imp_client->cli_request_portal = rqptl;
 	imp->imp_client->cli_reply_portal = rpptl;
 	imp->imp_max_retries = 2;
-	imp->imp_igntimeout = 1;
+	imp->imp_igntimeout = 1;	/* XXX only if archiver */
 	return (csvc);
 }
 
@@ -468,26 +481,6 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 
 	csvc = *csvcp;
 	if (csvc == NULL) {
-		/* ensure that our peer is of the given resource type */
-		switch (ctype) {
-		case SLCONNT_CLI:
-			break;
-		case SLCONNT_IOD:
-			resm = libsl_nid2resm(peernid);
-			if (resm->resm_res->res_type == SLREST_MDS)
-				psc_fatalx("csvc requested type is IOD "
-				    "but resource is MDS");
-			break;
-		case SLCONNT_MDS:
-			resm = libsl_nid2resm(peernid);
-			if (resm->resm_res->res_type != SLREST_MDS)
-				psc_fatalx("csvc requested type is MDS "
-				    "but resource is IOD");
-			break;
-		default:
-			psc_fatalx("%d: bad connection type", ctype);
-		}
-
 		/* initialize service */
 		csvc = *csvcp = sl_csvc_create(rqptl, rpptl);
 		psc_atomic32_set(&csvc->csvc_flags, flags);
@@ -496,6 +489,32 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 		csvc->csvc_ctype = ctype;
 		csvc->csvc_version = version;
 		csvc->csvc_magic = magic;
+
+		/* ensure that our peer is of the given resource type */
+		switch (ctype) {
+		case SLCONNT_CLI:
+			csvc->csvc_import->imp_hldropf = sl_imp_hldrop_cli;
+			csvc->csvc_import->imp_hldrop_arg = csvc;
+			break;
+		case SLCONNT_IOD:
+			resm = libsl_nid2resm(peernid);
+			if (resm->resm_res->res_type == SLREST_MDS)
+				psc_fatalx("csvc requested type is IOD "
+				    "but resource is MDS");
+			csvc->csvc_import->imp_hldropf = sl_imp_hldrop_resm;
+			csvc->csvc_import->imp_hldrop_arg = resm;
+			break;
+		case SLCONNT_MDS:
+			resm = libsl_nid2resm(peernid);
+			if (resm->resm_res->res_type != SLREST_MDS)
+				psc_fatalx("csvc requested type is MDS "
+				    "but resource is IOD");
+			csvc->csvc_import->imp_hldropf = sl_imp_hldrop_resm;
+			csvc->csvc_import->imp_hldrop_arg = resm;
+			break;
+		default:
+			psc_fatalx("%d: bad connection type", ctype);
+		}
 
 		if (ctype == SLCONNT_CLI)
 			pll_add(&client_csvcs, csvc);
@@ -726,15 +745,21 @@ slconnthr_spawn(struct sl_resm *resm, uint32_t rqptl, uint32_t rpptl,
 void
 sl_exp_hldrop_resm(struct pscrpc_export *exp)
 {
+	char nidbuf[PSCRPC_NIDSTR_SIZE];
 	struct sl_resm *resm;
 
 	resm = libsl_nid2resm(exp->exp_connection->c_peer.nid);
-	sl_csvc_disconnect(resm->resm_csvc);
-	sl_resm_hldrop(resm);
+	if (resm) {
+		sl_csvc_disconnect(resm->resm_csvc);
+		sl_resm_hldrop(resm);
+	} else {
+		pscrpc_nid2str(exp->exp_connection->c_peer.nid, nidbuf);
+		psclog_warnx("no resm for %s", nidbuf);
+	}
 }
 
 /**
- * sl_exp_hldrop - Callback triggered when an export to a CLIENT fails.
+ * sl_exp_hldrop_cli - Callback triggered when an export to a CLIENT fails.
  * @exp: export to RPC CLI peer.
  */
 void
