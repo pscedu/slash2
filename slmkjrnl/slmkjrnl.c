@@ -260,12 +260,12 @@ pjournal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 void
 pjournal_dump(const char *fn, int verbose)
 {
-	int i, count, ntotal, nmagic, nchksum, nformat, ndump;
+	int i, ntotal, nmagic, nchksum, nformat, ndump;
 	struct psc_journal_enthdr *pje;
 	struct psc_journal_hdr *pjh;
 	struct psc_journal *pj;
 	unsigned char *jbuf;
-	uint32_t rs, slot;
+	uint32_t slot;
 	uint64_t chksum;
 	ssize_t nb;
 
@@ -322,8 +322,9 @@ pjournal_dump(const char *fn, int verbose)
 			psc_fatal("size of the journal log %"PSCPRIdOFFT"d does not match "
 				  "specs in its header", statbuf.st_size);
 	}
-
-	pjh = pj->pj_hdr;
+	if (pjh->pjh_nents % pjh->pjh_readsize) 
+		psc_fatal("Number of entries %d is not a multiple of the readsize %d",
+			   pjh->pjh_nents, pjh->pjh_readsize);
 
 	printf("Journal header info for %s:\n"
 	    "  entsize %u\n"
@@ -340,17 +341,14 @@ pjournal_dump(const char *fn, int verbose)
 
         jbuf = psc_alloc(PJ_PJESZ(pj) * pj->pj_hdr->pjh_readsize, 
 			 PAF_PAGEALIGN | PAF_LOCK);
-	for (slot = 0, rs = pjh->pjh_readsize;
-	    slot < pjh->pjh_nents; slot += count) {
+	for (slot = 0; slot < pjh->pjh_nents; slot += pjh->pjh_readsize) {
 
-		count = (pjh->pjh_nents - slot <= rs) ?
-		    (pjh->pjh_nents - slot) : rs;
-		nb = pread(pj->pj_fd, jbuf, PJ_PJESZ(pj) * count, PJ_GETENTOFF(pj, slot));
-		if (nb !=  PJ_PJESZ(pj) * count)
+		nb = pread(pj->pj_fd, jbuf, PJ_PJESZ(pj) * pjh->pjh_readsize, PJ_GETENTOFF(pj, slot));
+		if (nb !=  PJ_PJESZ(pj) * pjh->pjh_readsize)
 			printf("Failed to read %d log entries at slot %d.\n", 
-				count, slot);
+				pjh->pjh_readsize, slot);
 
-		for (i = 0; i < count; i++) {
+		for (i = 0; i < pjh->pjh_readsize; i++) {
 			ntotal++;
 			pje = (void *)&jbuf[PJ_PJESZ(pj) * i];
 			if (pje->pje_magic != PJE_MAGIC) {
