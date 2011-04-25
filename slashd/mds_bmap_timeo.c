@@ -67,7 +67,6 @@ mds_bmap_timeotbl_init(void)
 static void
 mds_bmap_journal_bmapseq(struct slmds_jent_bmapseq *sjbsq)
 {
-	uint64_t txg;
 	struct slmds_jent_bmapseq *buf;
 
 	buf = pjournal_get_buf(mdsJournal,
