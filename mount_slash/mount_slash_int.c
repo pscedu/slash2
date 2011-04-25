@@ -521,18 +521,7 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 			psc_assert(!psc_atomic16_read(&bmpce->bmpce_wrref) &&
 			    psc_atomic16_read(&bmpce->bmpce_rdref) == 1);
 
-		} else if ((bmpce->bmpce_flags & BMPCE_READA) && 
-		    !(bmpce->bmpce_flags & BMPCE_DATARDY))
-			/* This is a failure but the RA cb has yet to be
-			 *   run on this bmpce.
-			 */
-			while (!(bmpce->bmpce_flags & BMPCE_EIO)) {
-				DEBUG_BMPCE(PLL_WARN, bmpce, 
-				    "waiting on EIO bit to be set");
-				BMPCE_WAIT(bmpce);
-				BMPCE_LOCK(bmpce);
-			}
-
+		}
 		BMPCE_ULOCK(bmpce);
 	}
 
