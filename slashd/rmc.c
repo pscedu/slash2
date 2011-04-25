@@ -758,9 +758,11 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	 * If the file is open, mdsio_data will be valid and used.
 	 * Otherwise, it will be NULL, and we'll use the mdsio_fid.
 	 */
+	mds_reserve_slot();
 	mp->rc = mdsio_setattr(fcmh_2_mdsio_fid(fcmh), &mq->attr,
 	    to_set, &rootcreds, &mp->attr, fcmh_2_mdsio_data(fcmh),
 	    mds_namespace_log);
+	mds_unreserve_slot();
 
 	if (!mp->rc) {
 		slm_setattr_core(fcmh, &mq->attr, to_set);
