@@ -8,6 +8,8 @@ reminders:
 - do sl_csvc_wantfree() in all to-CLI csvcs
 - ensure reentrancy of 'static' variables in functions
 
+* Kernel build causes bmap flushq to grow considerably (in the thousands..)
+* Spend some time dealing with sliod crash / restart 
 
 -----------------------------------------------------------------------
 
@@ -126,6 +128,8 @@ this may break semantics for some apps which assume the same inode # to be used.
   as well.  On truncate, the value of ino_lblk needs to be reset as does ino_lblk_sz.
 
 -----------------------------------------------------------------------
+1/26/11
+* ./fio.pthreads  -i MTWT_SZV.ves -- This test is causing unnecessary RBW requests.
 
 1/14/10
 * Deal with problems surrounding full odtable. ATM odtable put errors are not dealt with properly
