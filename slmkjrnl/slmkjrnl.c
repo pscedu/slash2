@@ -78,7 +78,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra)
 
 	if (nents % ra)
 		psc_fatalx("number of slots (%u) should be a multiple of "
-		    "readahead (%u)", nents, ra);
+		    "readsize(%u)", nents, ra);
 
 	memset(&pj, 0, sizeof(struct psc_journal));
 	pj.pj_hdr = &pjh;
@@ -96,7 +96,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra)
 	pjh.pjh_entsz = entsz;
 	pjh.pjh_nents = nents;
 	pjh.pjh_version = PJH_VERSION;
-	pjh.pjh_readahead = ra;
+	pjh.pjh_readsize = ra;
 	pjh.pjh_iolen = PSC_ALIGN(sizeof(pjh), stb.st_blksize);
 	pjh.pjh_magic = PJH_MAGIC;
 #if 0
@@ -112,7 +112,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra)
 	if ((size_t)nb != pjh.pjh_iolen)
 		psc_fatal("failed to write journal header");
 
-        jbuf = psc_alloc(PJ_PJESZ(&pj) * pj.pj_hdr->pjh_readahead, 
+        jbuf = psc_alloc(PJ_PJESZ(&pj) * pj.pj_hdr->pjh_readsize, 
 			 PAF_PAGEALIGN | PAF_LOCK);
 	for (i = 0; i < ra; i++) {
 		pje = PSC_AGP(jbuf, PJ_PJESZ(&pj) * i);
@@ -265,7 +265,7 @@ pjournal_dump(const char *fn, int verbose)
 	struct psc_journal_hdr *pjh;
 	struct psc_journal *pj;
 	unsigned char *jbuf;
-	uint32_t ra, slot;
+	uint32_t rs, slot;
 	uint64_t chksum;
 	ssize_t nb;
 
@@ -327,19 +327,19 @@ pjournal_dump(const char *fn, int verbose)
 	    "  readahead %u\n"
 	    "  start_offset %#"PRIx64"\n",
 	    fn, PJ_PJESZ(pj), pjh->pjh_nents, pjh->pjh_version,
-	    pjh->pjh_readahead, pjh->pjh_start_off);
+	    pjh->pjh_readsize, pjh->pjh_start_off);
 
 #if 0
 	printf("This journal was created on %s", ctime((time_t *)&pjh->pjh_timestamp));
 #endif
 
-        jbuf = psc_alloc(PJ_PJESZ(pj) * pj->pj_hdr->pjh_readahead, 
+        jbuf = psc_alloc(PJ_PJESZ(pj) * pj->pj_hdr->pjh_readsize, 
 			 PAF_PAGEALIGN | PAF_LOCK);
-	for (slot = 0, ra = pjh->pjh_readahead;
+	for (slot = 0, rs = pjh->pjh_readsize;
 	    slot < pjh->pjh_nents; slot += count) {
 
-		count = (pjh->pjh_nents - slot <= ra) ?
-		    (pjh->pjh_nents - slot) : ra;
+		count = (pjh->pjh_nents - slot <= rs) ?
+		    (pjh->pjh_nents - slot) : rs;
 		nb = pread(pj->pj_fd, jbuf, PJ_PJESZ(pj) * count, PJ_GETENTOFF(pj, slot));
 		if (nb !=  PJ_PJESZ(pj) * count)
 			printf("Failed to read %d log entries at slot %d.\n", 
@@ -447,7 +447,7 @@ main(int argc, char *argv[])
 	}
 
 	if (format) {
-		pjournal_format(fn, nents, SLJ_MDS_ENTSIZE, SLJ_MDS_RA);
+		pjournal_format(fn, nents, SLJ_MDS_ENTSIZE, SLJ_MDS_READSZ);
 		if (verbose)
 			warnx("created log file %s with %d %d-byte entries",
 			    fn, SLJ_MDS_JNENTS, SLJ_MDS_ENTSIZE);

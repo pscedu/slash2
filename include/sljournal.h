@@ -27,7 +27,7 @@
 #include "slashrpc.h"
 
 #define SLJ_MDS_JNENTS			(128 * 1024)		/* 131072 */
-#define SLJ_MDS_RA			1024			/* SLJ_MDS_JNENTS % SLJ_MDS_RA == 0 */
+#define SLJ_MDS_READSZ			1024			/* SLJ_MDS_JNENTS % SLJ_MDS_READSZ == 0 */
 #define SLJ_MDS_NCRCS			MAX_BMAP_INODE_PAIRS
 
 /**
