@@ -55,13 +55,20 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	static char lastsite[SITE_NAME_MAX], lastres[RES_NAME_MAX];
 	char *p, *site, *nid, *res, addrbuf[RESM_ADDRBUF_SZ];
 	const struct slctlmsg_conn *scc = m;
+	const char *stype;
 	int type;
+
+	type = scc->scc_type;
+	if (type < 0 || type >= nitems(slconn_restypes))
+		type = nitems(slconn_restypes) - 1;
+	stype = slconn_restypes[scc->scc_type];
 
 	strlcpy(addrbuf, scc->scc_addrbuf, sizeof(addrbuf));
 	if (scc->scc_type == SLCTL_REST_CLI) {
 		site = "clients";
-		res = lastres;
 		nid = addrbuf;
+		stype = "";
+		res = "";
 	} else {
 		/* res@site:1.1.1.1@tcp0 */
 		res = addrbuf;
@@ -71,33 +78,31 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 		nid = site + strcspn(site, ":");
 		if (*nid != '\0')
 			*nid++ = '\0';
+
+		if (strcmp(res, lastres) == 0 &&
+		    strcmp(site, lastsite) == 0) {
+			res = "";
+			stype = "";
+		}
 	}
 	p = strchr(nid, '@');
 	if (p)
 		*p = '\0';
 
-	if (strcmp(lastres, res) || strcmp(lastsite, site))
-		strlcpy(lastres, res, sizeof(lastres));
-	else
-		res = "";
 	if (psc_ctl_lastmsgtype != mh->mh_type ||
-	    strcmp(lastsite, site)) {
-		strlcpy(lastsite, site, sizeof(lastsite));
+	    strcmp(site, lastsite))
 		printf("%s\n", site);
-	}
 
-	type = scc->scc_type;
-	if (type < 0 || type >= nitems(slconn_restypes))
-		type = nitems(slconn_restypes) - 1;
-
-	printf("  %-14s %41s %-10s %c%c%c%c%c %4d\n", res, nid,
-	    strcmp(lastres, res) ? "" : slconn_restypes[scc->scc_type],
+	printf("  %-14s %41s %-10s %c%c%c%c%c %4d\n", res, nid, stype,
 	    scc->scc_flags & CSVCF_CONNECTING		? 'C' : '-',
 	    scc->scc_flags & CSVCF_CONNECTED		? 'O' : '-',
 	    scc->scc_flags & CSVCF_USE_MULTIWAIT	? 'M' : '-',
 	    scc->scc_flags & CSVCF_ABANDON		? 'A' : '-',
 	    scc->scc_flags & CSVCF_WANTFREE		? 'F' : '-',
 	    scc->scc_refcnt);
+
+	strlcpy(lastsite, site, sizeof(lastsite));
+	strlcpy(lastres, res, sizeof(lastres));
 }
 
 void
