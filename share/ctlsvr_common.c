@@ -88,6 +88,9 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 		if (imp && imp->imp_connection)
 			pscrpc_id2str(imp->imp_connection->c_peer,
 			    scc->scc_addrbuf);
+		else
+			strlcpy(scc->scc_addrbuf, "?",
+			    sizeof(scc->scc_addrbuf));
 		scc->scc_type = SLCTL_REST_CLI;
 		scc->scc_flags = psc_atomic32_read(&csvc->csvc_flags);
 		scc->scc_refcnt = psc_atomic32_read(&csvc->csvc_refcnt);
