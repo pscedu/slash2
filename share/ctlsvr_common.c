@@ -63,19 +63,11 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 				scc->scc_type = r->res_type;
 
 				csvc = resm->resm_csvc;
-				if (csvc && sl_csvc_get(&csvc,
-				    (psc_atomic32_read(
-				     &csvc->csvc_flags) &
-				     CSVCF_USE_MULTIWAIT) |
-				    CSVCF_NORECON | CSVCF_NONBLOCK,
-				    NULL, UINT64_C(0), 0, 0, 0, 0,
-				    csvc->csvc_lockinfo.lm_ptr,
-				    csvc->csvc_waitinfo, 0, NULL)) {
+				if (csvc) {
 					scc->scc_flags = psc_atomic32_read(
 					    &csvc->csvc_flags);
 					scc->scc_refcnt = psc_atomic32_read(
-					    &csvc->csvc_refcnt) - 1;
-					sl_csvc_decref(csvc);
+					    &csvc->csvc_refcnt);
 				}
 
 				rc = psc_ctlmsg_sendv(fd, mh, scc);
