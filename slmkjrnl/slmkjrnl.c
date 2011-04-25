@@ -57,98 +57,6 @@ usage(void)
 	exit(1);
 }
 
-__static void *
-pjournal_alloc_buf(struct psc_journal *pj)
-{
-        return (psc_alloc(PJ_PJESZ(pj) * pj->pj_hdr->pjh_readahead,
-            PAF_PAGEALIGN | PAF_LOCK));
-}
-
-/**
- * pjournal_open - Initialize the in-memory representation of a journal.
- * @fn: path to journal on file system.
- */
-struct psc_journal *
-pjournal_open(const char *fn)
-{
-	struct psc_journal_hdr *pjh;
-	struct psc_journal *pj;
-	struct stat statbuf;
-	const char *basefn;
-	uint64_t chksum;
-	ssize_t pjhlen;
-	ssize_t nb;
-
-	pj = PSCALLOC(sizeof(*pj));
-
-	strlcpy(pj->pj_name, pfl_basename(fn), sizeof(pj->pj_name));
-
-	pj->pj_fd = open(fn, O_RDWR | O_DIRECT);
-	if (pj->pj_fd == -1)
-		psc_fatal("failed to open journal %s", fn);
-	if (fstat(pj->pj_fd, &statbuf) == -1)
-		psc_fatal("failed to stat journal %s", fn);
-	basefn = strrchr(fn, '/');
-	if (basefn)
-		basefn++;
-	else
-		basefn = fn;
-
-	/*
-	 * O_DIRECT may impose alignment restrictions so align the buffer
-	 * and perform I/O in multiples of file system block size.
-	 */
-	pjhlen = PSC_ALIGN(sizeof(*pjh), statbuf.st_blksize);
-	pjh = psc_alloc(pjhlen, PAF_PAGEALIGN | PAF_LOCK);
-	nb = pread(pj->pj_fd, pjh, pjhlen, 0);
-	if (nb != pjhlen)
-		psc_fatal("failed to read journal header");
-
-	pj->pj_hdr = pjh;
-	if (pjh->pjh_magic != PJH_MAGIC)
-		psc_fatal("journal header has a bad magic number "
-		    "%#"PRIx64, pjh->pjh_magic);
-
-	if (pjh->pjh_version != PJH_VERSION)
-		psc_fatal("journal header has an invalid version "
-		    "number %d", pjh->pjh_version);
-
-	PSC_CRC64_INIT(&chksum);
-	psc_crc64_add(&chksum, pjh, offsetof(struct psc_journal_hdr, pjh_chksum));
-	PSC_CRC64_FIN(&chksum);
-
-	if (pjh->pjh_chksum != chksum) 
-		psc_fatal("journal header has an invalid checksum "
-		    "value %"PSCPRIxCRC64" vs %"PSCPRIxCRC64,
-		    pjh->pjh_chksum, chksum);
-
-	if (S_ISREG(statbuf.st_mode)) {
-		if (statbuf.st_size != (off_t)(pjhlen + pjh->pjh_nents * PJ_PJESZ(pj)))
-			psc_fatal("size of the journal log %"PSCPRIdOFFT"d does not match "
-				  "specs in its header", statbuf.st_size);
-	}
-
-	return (pj);
-}
-
-/**
- * pjournal_release - Release resources associated with an in-memory
- *	journal.
- * @pj: journal to release.
- */
-__static void
-pjournal_release(struct psc_journal *pj)
-{
-	struct psc_journal_enthdr *pje;
-	int n;
-
-	DYNARRAY_FOREACH(pje, n, &pj->pj_bufs)
-		psc_free(pje, PAF_LOCK | PAF_PAGEALIGN, PJ_PJESZ(pj));
-	psc_dynarray_free(&pj->pj_bufs);
-	psc_free(pj->pj_hdr, PAF_LOCK | PAF_PAGEALIGN, pj->pj_hdr->pjh_iolen);
-	PSCFREE(pj);
-}
-
 /**
  * pjournal_format - Initialize an on-disk journal.
  * @fn: file path to store journal.
@@ -204,7 +112,8 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz, uint32_t ra)
 	if ((size_t)nb != pjh.pjh_iolen)
 		psc_fatal("failed to write journal header");
 
-	jbuf = pjournal_alloc_buf(&pj);
+        jbuf = psc_alloc(PJ_PJESZ(&pj) * pj.pj_hdr->pjh_readahead, 
+			 PAF_PAGEALIGN | PAF_LOCK);
 	for (i = 0; i < ra; i++) {
 		pje = PSC_AGP(jbuf, PJ_PJESZ(&pj) * i);
 		pje->pje_magic = PJE_MAGIC;
@@ -348,7 +257,7 @@ pjournal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
  * @fn: journal filename to query.
  * @verbose: whether to report stats summary or full dump.
  */
-int
+void
 pjournal_dump(const char *fn, int verbose)
 {
 	int i, count, ntotal, nmagic, nchksum, nformat, ndump;
@@ -360,9 +269,55 @@ pjournal_dump(const char *fn, int verbose)
 	uint64_t chksum;
 	ssize_t nb;
 
+	struct stat statbuf;
+	ssize_t pjhlen;
+
 	ntotal = nmagic = nchksum = nformat = ndump = 0;
 
-	pj = pjournal_open(fn);
+	pj = PSCALLOC(sizeof(*pj));
+
+	strlcpy(pj->pj_name, pfl_basename(fn), sizeof(pj->pj_name));
+
+	pj->pj_fd = open(fn, O_RDWR | O_DIRECT);
+	if (pj->pj_fd == -1)
+		psc_fatal("failed to open journal %s", fn);
+	if (fstat(pj->pj_fd, &statbuf) == -1)
+		psc_fatal("failed to stat journal %s", fn);
+
+	/*
+	 * O_DIRECT may impose alignment restrictions so align the buffer
+	 * and perform I/O in multiples of file system block size.
+	 */
+	pjhlen = PSC_ALIGN(sizeof(*pjh), statbuf.st_blksize);
+	pjh = psc_alloc(pjhlen, PAF_PAGEALIGN | PAF_LOCK);
+	nb = pread(pj->pj_fd, pjh, pjhlen, 0);
+	if (nb != pjhlen)
+		psc_fatal("failed to read journal header");
+
+	pj->pj_hdr = pjh;
+	if (pjh->pjh_magic != PJH_MAGIC)
+		psc_fatal("journal header has a bad magic number "
+		    "%#"PRIx64, pjh->pjh_magic);
+
+	if (pjh->pjh_version != PJH_VERSION)
+		psc_fatal("journal header has an invalid version "
+		    "number %d", pjh->pjh_version);
+
+	PSC_CRC64_INIT(&chksum);
+	psc_crc64_add(&chksum, pjh, offsetof(struct psc_journal_hdr, pjh_chksum));
+	PSC_CRC64_FIN(&chksum);
+
+	if (pjh->pjh_chksum != chksum) 
+		psc_fatal("journal header has an invalid checksum "
+		    "value %"PSCPRIxCRC64" vs %"PSCPRIxCRC64,
+		    pjh->pjh_chksum, chksum);
+
+	if (S_ISREG(statbuf.st_mode)) {
+		if (statbuf.st_size != (off_t)(pjhlen + pjh->pjh_nents * PJ_PJESZ(pj)))
+			psc_fatal("size of the journal log %"PSCPRIdOFFT"d does not match "
+				  "specs in its header", statbuf.st_size);
+	}
+
 	pjh = pj->pj_hdr;
 
 	printf("Journal header info for %s:\n"
@@ -378,8 +333,8 @@ pjournal_dump(const char *fn, int verbose)
 	printf("This journal was created on %s", ctime((time_t *)&pjh->pjh_timestamp));
 #endif
 
-	jbuf = pjournal_alloc_buf(pj);
-
+        jbuf = psc_alloc(PJ_PJESZ(pj) * pj->pj_hdr->pjh_readahead, 
+			 PAF_PAGEALIGN | PAF_LOCK);
 	for (slot = 0, ra = pjh->pjh_readahead;
 	    slot < pjh->pjh_nents; slot += count) {
 
@@ -427,11 +382,10 @@ pjournal_dump(const char *fn, int verbose)
 		printf("failed closing journal %s", fn);
 
 	psc_free(jbuf, PAF_LOCK | PAF_PAGEALIGN, PJ_PJESZ(pj));
-	pjournal_release(pj);
+	PSCFREE(pj);
 
 	printf("%d slot(s) total, %d in use, %d formatted, %d bad magic, %d bad checksum(s)\n",
 	    ntotal, ndump, nformat, nmagic, nchksum);
-	return (0);
 }
 
 int
@@ -440,7 +394,6 @@ main(int argc, char *argv[])
 	ssize_t nents = SLJ_MDS_JNENTS;
 	char *endp, c, fn[PATH_MAX];
 	long l;
-	int rc;
 
 	pfl_init();
 	sl_subsys_register();
@@ -494,10 +447,7 @@ main(int argc, char *argv[])
 	}
 
 	if (format) {
-		rc = pjournal_format(fn, nents, SLJ_MDS_ENTSIZE, SLJ_MDS_RA);
-		if (rc)
-			psc_fatalx("failing formatting journal %s: %s",
-			    fn, slstrerror(rc));
+		pjournal_format(fn, nents, SLJ_MDS_ENTSIZE, SLJ_MDS_RA);
 		if (verbose)
 			warnx("created log file %s with %d %d-byte entries",
 			    fn, SLJ_MDS_JNENTS, SLJ_MDS_ENTSIZE);
