@@ -25,7 +25,6 @@
 
 #include "bmap.h"
 #include "bmpc.h"
-#include "inode.h"
 #include "slashrpc.h"
 
 /* number of bmap flush threads */

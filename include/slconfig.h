@@ -35,7 +35,7 @@
 #include "psc_util/alloc.h"
 #include "psc_util/log.h"
 
-#include "inode.h"
+#include "sltypes.h"
 
 struct sl_site;
 struct slashrpc_cservice;

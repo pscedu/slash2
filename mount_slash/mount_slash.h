@@ -27,7 +27,6 @@
 
 #include "bmap.h"
 #include "fidcache.h"
-#include "inode.h"
 #include "slashrpc.h"
 #include "slconfig.h"
 

@@ -35,7 +35,7 @@
 
 #include "bmap_mds.h"
 #include "fid.h"
-#include "inodeh.h"
+#include "inode.h"
 #include "pathnames.h"
 #include "repl_mds.h"
 #include "rpc_mds.h"

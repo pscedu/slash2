@@ -38,8 +38,6 @@
 #include "ctlsvr.h"
 #include "fid.h"
 #include "fidcache.h"
-#include "inode.h"
-#include "inodeh.h"
 #include "mkfn.h"
 #include "pathnames.h"
 #include "slashrpc.h"
@@ -62,6 +60,7 @@
 #include "slashd/bmap_mds.h"
 #include "slashd/ctl_mds.h"
 #include "slashd/fidc_mds.h"
+#include "slashd/inode.h"
 #include "slashd/mdscoh.h"
 #include "slashd/mdsio.h"
 #include "slashd/mdslog.h"
@@ -215,7 +214,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct slash_inode_extras_od);
 	PRTYPE(struct slash_inode_handle);
 	PRTYPE(struct slash_inode_od);
-	PRTYPE(struct slash_snapshot);
 	PRTYPE(struct slashrpc_cservice);
 	PRTYPE(struct slconn_thread);
 	PRTYPE(struct slctlmsg_conn);

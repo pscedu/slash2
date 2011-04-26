@@ -23,7 +23,6 @@
 #include "lnet/types.h"
 
 #include "slashd/mdsio.h"
-#include "inode.h"
 #include "slashrpc.h"
 
 #define SLJ_MDS_JNENTS			(128 * 1024)		/* 131072 */

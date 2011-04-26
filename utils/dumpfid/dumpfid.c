@@ -28,7 +28,7 @@
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 
-#include "inodeh.h"
+#include "slashd/inode.h"
 
 const char *progname;
 

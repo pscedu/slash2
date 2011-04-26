@@ -30,7 +30,6 @@
 #include "psc_util/lock.h"
 
 #include "bmap.h"
-#include "inode.h"
 #include "slashrpc.h"
 
 struct bmap_iod_info;

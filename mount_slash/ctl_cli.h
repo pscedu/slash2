@@ -24,7 +24,7 @@
 #ifndef _SL_CTL_CLI_H_
 #define _SL_CTL_CLI_H_
 
-#include "inode.h"
+#include "fid.h"
 #include "slconfig.h"
 
 /* for retrieving info about replication status */

@@ -37,6 +37,7 @@
 #include "psc_util/alloc.h"
 #include "psc_util/log.h"
 
+#include "fid.h"
 #include "slconfig.h"
 
 enum slconf_sym_type {

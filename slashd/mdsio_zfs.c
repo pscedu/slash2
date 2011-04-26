@@ -36,7 +36,6 @@
 #include "fidc_mds.h"
 #include "fidcache.h"
 #include "inode.h"
-#include "inodeh.h"
 #include "mdsio.h"
 #include "pathnames.h"
 #include "slashd.h"

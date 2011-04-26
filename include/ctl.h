@@ -20,6 +20,7 @@
 #ifndef _SL_CTL_H_
 #define _SL_CTL_H_
 
+#include "fid.h"
 #include "slconfig.h"
 
 struct slctlmsg_conn {

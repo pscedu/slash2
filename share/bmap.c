@@ -29,7 +29,6 @@
 #include "bmap.h"
 #include "bmapdesc.h"
 #include "fidcache.h"
-#include "inode.h"
 #include "slashrpc.h"
 
 __static SPLAY_GENERATE(bmap_cache, bmapc_memb, bcm_tentry, bmap_cmp);

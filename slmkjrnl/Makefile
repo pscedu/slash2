@@ -13,6 +13,7 @@ SRCS+=		${PFL_BASE}/psc_util/alloc.c
 SRCS+=		${PFL_BASE}/psc_util/crc.c
 SRCS+=		${PFL_BASE}/psc_util/init.c
 SRCS+=		${PFL_BASE}/psc_util/iostats.c
+SRCS+=		${PFL_BASE}/psc_util/journal.c
 SRCS+=		${PFL_BASE}/psc_util/log.c
 SRCS+=		${PFL_BASE}/psc_util/pthrutil.c
 SRCS+=		${PFL_BASE}/psc_util/subsys.c
@@ -24,4 +25,4 @@ MODULES+=	lnet-hdrs rt pthread aio zfs pscfs
 include ${SLASHMK}
 
 $(call ADD_FILE_CFLAGS,${PFL_BASE}/psc_util/journal.c,			\
-		-DPSC_SUBSYS=SLMSS_JOURNAL -include slashd/subsys_mds.h)
+	-DPSC_SUBSYS=SLMSS_JOURNAL -include slashd/subsys_mds.h)
