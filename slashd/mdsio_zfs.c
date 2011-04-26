@@ -101,6 +101,34 @@ mdsio_bmap_read(struct bmapc_memb *bmap)
 	return (rc);
 }
 
+int
+mdsio_bmap_write(struct bmapc_memb *bmap, int uptime_mtime, void *logf,
+    void *logarg)
+{
+	BMAPOD_REQRDLOCK(bmap_2_bmdsi(bmap));
+	mds_bmap_ensure_valid(bmap);
+
+	if (logf)
+		mds_reserve_slot();
+	rc = zfsslash2_write(&rootcreds, bmap_2_ondisk(bmap),
+	    BMAP_OD_SZ, &nb, (off_t)((BMAP_OD_SZ * bmap->bcm_bmapno) +
+	    SL_BMAP_START_OFF), update_mtime, bmap_2_zfs_fh(bmap),
+	    logf, logarg);
+	if (logf)
+		mds_unreserve_slot();
+
+	if (rc) {
+		DEBUG_BMAP(PLL_ERROR, bmap,
+		    "zfsslash2_write: error (rc=%d)", rc);
+	} else if (nb != BMAP_OD_SZ) {
+		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: short I/O");
+		rc = SLERR_SHORTIO;
+	}
+	DEBUG_BMAP(PLL_INFO, bmap, "wrote bmap: fid="SLPRI_FID" bmapno=%u rc=%d",
+		fcmh_2_fid(bmap->bcm_fcmh), bmap->bcm_bmapno, rc);
+	BMAPOD_READ_DONE(bmap, 0);
+}
+
 /**
  * mdsio_bmap_crc_update - Handle CRC updates for one bmap by pushing
  *	the updates to ZFS and then log it.
@@ -111,8 +139,8 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	struct bmap_mds_info *bmdsi = bmap_2_bmdsi(bmap);
 	struct sl_mds_crc_log crclog;
 	uint32_t utimgen, i;
+	int extend = 0;
 	size_t nb;
-	int rc, extend = 0;
 
 	psc_assert(bmap->bcm_flags & BMAP_MDS_CRC_UP);
 
@@ -144,27 +172,8 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 		    crcup->crcs[i].slot, crcup->crcs[i].crc);
 	}
 	BMAPOD_ULOCK(bmdsi);
-
-	mds_bmap_ensure_valid(bmap);
-
-	mds_reserve_slot();
-	rc = zfsslash2_write(&rootcreds, bmap_2_ondisk(bmap),
-	    BMAP_OD_SZ, &nb, (off_t)((BMAP_OD_SZ * bmap->bcm_bmapno) +
-	    SL_BMAP_START_OFF), (utimgen == crcup->utimgen),
-	    bmap_2_zfs_fh(bmap), mds_bmap_crc_log, &crclog);
-	mds_unreserve_slot();
-
-	if (rc) {
-		DEBUG_BMAP(PLL_ERROR, bmap,
-		    "zfsslash2_write: error (rc=%d)", rc);
-	} else if (nb != BMAP_OD_SZ) {
-		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: short I/O");
-		rc = SLERR_SHORTIO;
-	}
-	DEBUG_BMAP(PLL_INFO, bmap, "wrote bmap: fid="SLPRI_FID", bmapno=%u, rc=%d",
-		fcmh_2_fid(bmap->bcm_fcmh), bmap->bcm_bmapno, rc);
-
-	return (rc);
+	return (mdsio_bmap_write(bmap, utimgen == crcup->utimgen,
+	    mds_bmap_crc_log, &crclog));
 }
 
 /**
@@ -184,28 +193,8 @@ mds_bmap_repl_update(struct bmapc_memb *bmap, int log)
 		BMAPOD_READ_DONE(bmap, 0);
 		return (0);
 	}
-	mds_bmap_ensure_valid(bmap);
-
-	if (log)
-		mds_reserve_slot();
-	rc = zfsslash2_write(&rootcreds, bmap_2_ondisk(bmap),
-	    BMAP_OD_SZ, &nb, (off_t)((BMAP_OD_SZ * bmap->bcm_bmapno) +
-	    SL_BMAP_START_OFF), 0, bmap_2_zfs_fh(bmap),
-	    log ? mds_bmap_repl_log : NULL, bmap);
-	if (log)
-		mds_unreserve_slot();
-
-	if (rc) {
-		DEBUG_BMAP(PLL_ERROR, bmap,
-		    "zfsslash2_write: error (rc=%d)", rc);
-	} else if (nb != BMAP_OD_SZ) {
-		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: short I/O");
-		rc = SLERR_SHORTIO;
-	}
-	DEBUG_BMAP(PLL_INFO, bmap, "wrote bmap: fid="SLPRI_FID", bmapno=%u, rc=%d",
-		fcmh_2_fid(bmap->bcm_fcmh), bmap->bcm_bmapno, rc);
-	BMAPOD_READ_DONE(bmap, 0);
-	return (rc);
+	return (mdsio_bmap_write(bmap, 0,
+	    log ? mds_bmap_repl_log : NULL, bmap));
 }
 
 int
@@ -248,9 +237,10 @@ mds_inode_addrepl_update(struct slash_inode_handle *inoh,
 			inoh->inoh_flags &= ~INOH_INO_NEW;
 			//inoh->inoh_flags |= INOH_EXTRAS_DIRTY;
 		}
-		psclog_info("update: fid="SLPRI_FID", crc=%"PSCPRIxCRC64
-		    ", log=%d", fcmh_2_fid(inoh->inoh_fcmh),
-		    inoh->inoh_ino.ino_crc, log);
+		psclog_info("update: fid="SLPRI_FID" "
+		    "crc=%"PSCPRIxCRC64" log=%d",
+		    fcmh_2_fid(inoh->inoh_fcmh), inoh->inoh_ino.ino_crc,
+		    log);
 	}
 
 	if (inoh->inoh_flags & INOH_EXTRAS_DIRTY) {
