@@ -282,6 +282,7 @@ pjournal_dump(const char *fn, int verbose)
 	uint64_t highest_xid, lowest_xid;
 	uint32_t highest_slot, lowest_slot;
 
+	highest_xid = lowest_xid = 0;
 	highest_slot = lowest_slot = -1;
 	ntotal = nmagic = nchksum = nformat = ndump = 0;
 
