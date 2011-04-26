@@ -5,9 +5,11 @@ include ${ROOTDIR}/Makefile.path
 
 PROG=		slashd
 MAN+=		slashd.8
+SRCS+=		bmap_mds.c
 SRCS+=		cfg_mds.c
 SRCS+=		ctl_mds.c
 SRCS+=		fidc_mds.c
+SRCS+=		inode.c
 SRCS+=		main_mds.c
 SRCS+=		mds.c
 SRCS+=		mds_bmap_timeo.c

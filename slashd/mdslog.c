@@ -946,7 +946,7 @@ mds_update_cursor(void *buf, uint64_t txg, int flag)
 		pjournal_update_txg(mdsJournal, txg);
 		return;
 	}
-		
+
 	/*
 	 * During the replay, actually as soon as ZFS starts, its group
 	 * transaction number starts to increase.  If we crash in the
@@ -1282,7 +1282,7 @@ slmjnsthr_main(__unusedx struct psc_thread *thr)
 void
 mds_inode_sync(struct slash_inode_handle *inoh)
 {
-	int rc, tmpx = 0;
+	int rc;
 
 	INOH_LOCK(inoh);
 
@@ -1290,25 +1290,18 @@ mds_inode_sync(struct slash_inode_handle *inoh)
 		psc_crc64_calc(&inoh->inoh_ino.ino_crc, &inoh->inoh_ino,
 		    INO_OD_CRCSZ);
 
-		rc = mdsio_inode_write(inoh);
+		rc = mdsio_inode_write(inoh, NULL, NULL);
 		if (rc)
 			DEBUG_INOH(PLL_FATAL, inoh, "rc=%d", rc);
 
-		if (inoh->inoh_flags & INOH_INO_NEW) {
+		if (inoh->inoh_flags & INOH_INO_NEW)
 			inoh->inoh_flags &= ~INOH_INO_NEW;
-			inoh->inoh_flags |= INOH_EXTRAS_DIRTY;
-
-			if (inoh->inoh_extras == NULL) {
-				inoh->inoh_extras = (void *)&null_inox_od;
-				tmpx = 1;
-			}
-		}
 	}
 
 	if (inoh->inoh_flags & INOH_EXTRAS_DIRTY) {
 		psc_crc64_calc(&inoh->inoh_extras->inox_crc,
 		    inoh->inoh_extras, INOX_OD_CRCSZ);
-		rc = mdsio_inode_extras_write(inoh);
+		rc = mdsio_inode_extras_write(inoh, NULL, NULL);
 
 		if (rc)
 			DEBUG_INOH(PLL_FATAL, inoh, "xtras rc=%d sync fail",
@@ -1318,9 +1311,6 @@ mds_inode_sync(struct slash_inode_handle *inoh)
 
 		inoh->inoh_flags &= ~INOH_EXTRAS_DIRTY;
 	}
-
-	if (tmpx)
-		inoh->inoh_extras = NULL;
 
 	INOH_ULOCK(inoh);
 }

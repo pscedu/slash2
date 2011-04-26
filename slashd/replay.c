@@ -272,7 +272,7 @@ mds_redo_ino_addrepl_common(struct slmds_jent_ino_addrepl *jrir)
 
 	/* initialize newly replay-created inode */
 	if (!nb && inoh_ino.ino_crc == 0 &&
-	    memcmp(&inoh_ino, &null_inode_od, INO_OD_CRCSZ) == 0) {
+	    pfl_memchk(&inoh_ino, 0, INO_OD_CRCSZ)) {
 		inoh_ino.ino_bsz = SLASH_BMAP_SIZE;
 		inoh_ino.ino_version = INO_VERSION;
 		if (pos != 0)

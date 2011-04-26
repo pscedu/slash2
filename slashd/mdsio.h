@@ -64,13 +64,15 @@ void	mds_namespace_log(int, uint64_t, uint64_t, uint64_t, const
 	    (mfp), (sstb), (mdsio_datap), (logfunc), (getslfid))
 
 /* high-level interface */
-int	mdsio_fcmh_setattr(struct fidc_membh *, int);
-int     mdsio_fcmh_refreshattr(struct fidc_membh *, struct srt_stat *);
 int	mdsio_bmap_read(struct bmapc_memb *);
+int	mdsio_bmap_write(struct bmapc_memb *, int, void *, void *);
+int     mdsio_fcmh_refreshattr(struct fidc_membh *, struct srt_stat *);
+int	mdsio_fcmh_setattr(struct fidc_membh *, int);
 int	mdsio_inode_extras_read(struct slash_inode_handle *);
-int	mdsio_inode_extras_write(struct slash_inode_handle *);
+int	mdsio_inode_extras_write(struct slash_inode_handle *, void *, void *);
 int	mdsio_inode_read(struct slash_inode_handle *);
-int	mdsio_inode_write(struct slash_inode_handle *);
+int	mdsio_inode_write(struct slash_inode_handle *, void *, void *);
+int	mdsio_write_cursor(void *, size_t, void *, sl_log_write_t);
 
 struct mdsio_ops {
 	/* control interface */
@@ -153,9 +155,6 @@ struct mdsio_ops {
 #define mdsio_redo_setattr	mdsio_ops.mio_redo_setattr		/* zfsslash2_replay_setattr() */
 #define mdsio_redo_symlink	mdsio_ops.mio_redo_symlink		/* zfsslash2_replay_symlink() */
 #define mdsio_redo_unlink	mdsio_ops.mio_redo_unlink		/* zfsslash2_replay_unlink() */
-
-/* misc API */
-int	 mdsio_write_cursor(void *, size_t, void *, sl_log_write_t);
 
 extern struct mdsio_ops	mdsio_ops;
 extern mdsio_fid_t	mds_upschdir_inum;

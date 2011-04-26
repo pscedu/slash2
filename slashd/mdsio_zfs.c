@@ -61,7 +61,7 @@ bmap_2_zfs_fh(struct bmapc_memb *bmap)
 int
 mdsio_fcmh_setattr(struct fidc_membh *f, int setattrflags)
 {
-	return (zfsslash2_setattr(fcmh_2_mdsio_fid(f), &f->fcmh_sstb,
+	return (mdsio_setattr(fcmh_2_mdsio_fid(f), &f->fcmh_sstb,
 	    setattrflags, &rootcreds, NULL,
 	    fcmh_2_fmi(f)->fmi_mdsio_data, NULL)); /* XXX mds_namespace_log */
 }
@@ -73,7 +73,7 @@ mdsio_fcmh_refreshattr(struct fidc_membh *f, struct srt_stat *out_sstb)
 
 	locked = FCMH_RLOCK(f);
 	rc = mdsio_getattr(fcmh_2_mdsio_fid(f), fcmh_2_mdsio_data(f),
-	   &rootcreds, &f->fcmh_sstb);
+	    &rootcreds, &f->fcmh_sstb);
 
 	if (rc)
 		abort();
@@ -91,7 +91,7 @@ mdsio_bmap_read(struct bmapc_memb *bmap)
 	size_t nb;
 	int rc;
 
-	rc = zfsslash2_read(&rootcreds, bmap_2_ondisk(bmap), BMAP_OD_SZ,
+	rc = mdsio_read(&rootcreds, bmap_2_ondisk(bmap), BMAP_OD_SZ,
 	    &nb, (off_t)BMAP_OD_SZ * bmap->bcm_bmapno +
 	    SL_BMAP_START_OFF, bmap_2_zfs_fh(bmap));
 	if (rc == 0 && nb != BMAP_OD_SZ)
@@ -102,263 +102,131 @@ mdsio_bmap_read(struct bmapc_memb *bmap)
 }
 
 int
-mdsio_bmap_write(struct bmapc_memb *bmap, int uptime_mtime, void *logf,
+mdsio_bmap_write(struct bmapc_memb *bmap, int update_mtime, void *logf,
     void *logarg)
 {
+	size_t nb;
+	int rc;
+
 	BMAPOD_REQRDLOCK(bmap_2_bmdsi(bmap));
 	mds_bmap_ensure_valid(bmap);
 
 	if (logf)
 		mds_reserve_slot();
-	rc = zfsslash2_write(&rootcreds, bmap_2_ondisk(bmap),
-	    BMAP_OD_SZ, &nb, (off_t)((BMAP_OD_SZ * bmap->bcm_bmapno) +
-	    SL_BMAP_START_OFF), update_mtime, bmap_2_zfs_fh(bmap),
-	    logf, logarg);
+	rc = mdsio_write(&rootcreds, bmap_2_ondisk(bmap), BMAP_OD_SZ,
+	    &nb, (off_t)((BMAP_OD_SZ * bmap->bcm_bmapno) +
+	    SL_BMAP_START_OFF), update_mtime, bmap_2_zfs_fh(bmap), logf,
+	    logarg);
 	if (logf)
 		mds_unreserve_slot();
 
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, bmap,
-		    "zfsslash2_write: error (rc=%d)", rc);
+		    "mdsio_write: error (rc=%d)", rc);
 	} else if (nb != BMAP_OD_SZ) {
-		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: short I/O");
+		DEBUG_BMAP(PLL_ERROR, bmap, "mdsio_write: short I/O");
 		rc = SLERR_SHORTIO;
 	}
 	DEBUG_BMAP(PLL_INFO, bmap, "wrote bmap: fid="SLPRI_FID" bmapno=%u rc=%d",
-		fcmh_2_fid(bmap->bcm_fcmh), bmap->bcm_bmapno, rc);
+	    fcmh_2_fid(bmap->bcm_fcmh), bmap->bcm_bmapno, rc);
 	BMAPOD_READ_DONE(bmap, 0);
-}
-
-/**
- * mdsio_bmap_crc_update - Handle CRC updates for one bmap by pushing
- *	the updates to ZFS and then log it.
- */
-int
-mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
-{
-	struct bmap_mds_info *bmdsi = bmap_2_bmdsi(bmap);
-	struct sl_mds_crc_log crclog;
-	uint32_t utimgen, i;
-	int extend = 0;
-	size_t nb;
-
-	psc_assert(bmap->bcm_flags & BMAP_MDS_CRC_UP);
-
-	FCMH_LOCK(bmap->bcm_fcmh);
-	if (crcup->fsize > (uint64_t)fcmh_2_fsz(bmap->bcm_fcmh))
-		extend = 1;
-	mds_fcmh_increase_fsz(bmap->bcm_fcmh, crcup->fsize);
-	utimgen = bmap->bcm_fcmh->fcmh_sstb.sst_utimgen;
-	FCMH_ULOCK(bmap->bcm_fcmh);
-
-	if (utimgen < crcup->utimgen)
-		DEBUG_FCMH(PLL_ERROR, bmap->bcm_fcmh,
-		   "utimgen %d < crcup->utimgen %d",
-		   utimgen, crcup->utimgen);
-
-	crcup->extend = extend;
-	crclog.scl_bmap = bmap;
-	crclog.scl_crcup = crcup;
-
-	BMAPOD_WRLOCK(bmdsi);
-	for (i = 0; i < crcup->nups; i++) {
-		bmap_2_crcs(bmap, crcup->crcs[i].slot) =
-		    crcup->crcs[i].crc;
-
-		bmap->bcm_crcstates[crcup->crcs[i].slot] =
-		    BMAP_SLVR_DATA | BMAP_SLVR_CRC;
-
-		DEBUG_BMAP(PLL_INFO, bmap, "slot(%d) crc(%"PSCPRIxCRC64")",
-		    crcup->crcs[i].slot, crcup->crcs[i].crc);
-	}
-	BMAPOD_ULOCK(bmdsi);
-	return (mdsio_bmap_write(bmap, utimgen == crcup->utimgen,
-	    mds_bmap_crc_log, &crclog));
-}
-
-/**
- * mds_bmap_repl_update - We update bmap replication status in two cases:
- *	(1) An MDS issues a write lease to a client.
- *	(2) An MDS performs a replicate request.
- */
-int
-mds_bmap_repl_update(struct bmapc_memb *bmap, int log)
-{
-	int rc, logchg;
-	size_t nb;
-
-	BMAPOD_REQRDLOCK(bmap_2_bmdsi(bmap));
-	BMDSI_LOGCHG_CHECK(bmap, logchg);
-	if (!logchg) {
-		BMAPOD_READ_DONE(bmap, 0);
-		return (0);
-	}
-	return (mdsio_bmap_write(bmap, 0,
-	    log ? mds_bmap_repl_log : NULL, bmap));
-}
-
-int
-mds_inode_addrepl_update(struct slash_inode_handle *inoh,
-    sl_ios_id_t ios, uint32_t pos, int log)
-{
-	struct slmds_jent_ino_addrepl jrir;
-	int locked, rc = 0;
-	size_t nb;
-
-	locked = reqlock(&inoh->inoh_lock);
-
-	psc_assert((inoh->inoh_flags & INOH_INO_DIRTY) ||
-		   (inoh->inoh_flags & INOH_EXTRAS_DIRTY));
-
-	if (log) {
-		jrir.sjir_fid = fcmh_2_fid(inoh->inoh_fcmh);
-		jrir.sjir_ios = ios;
-		jrir.sjir_pos = pos;
-		jrir.sjir_nrepls = inoh->inoh_ino.ino_nrepls;
-		mds_reserve_slot();
-	}
-	if (inoh->inoh_flags & INOH_INO_DIRTY) {
-		psc_crc64_calc(&inoh->inoh_ino.ino_crc, &inoh->inoh_ino,
-		    INO_OD_CRCSZ);
-
-		rc = zfsslash2_write(&rootcreds, &inoh->inoh_ino,
-		    INO_OD_SZ, &nb, SL_INODE_START_OFF, 0,
-		    inoh_2_mdsio_data(inoh),
-		    log ? mds_inode_addrepl_log : NULL,
-		    &jrir);
-
-		if (!rc && nb != INO_OD_SZ)
-			rc = SLERR_SHORTIO;
-		if (rc)
-			DEBUG_INOH(PLL_FATAL, inoh, "rc=%d sync fail", rc);
-
-		inoh->inoh_flags &= ~INOH_INO_DIRTY;
-		if (inoh->inoh_flags & INOH_INO_NEW) {
-			inoh->inoh_flags &= ~INOH_INO_NEW;
-			//inoh->inoh_flags |= INOH_EXTRAS_DIRTY;
-		}
-		psclog_info("update: fid="SLPRI_FID" "
-		    "crc=%"PSCPRIxCRC64" log=%d",
-		    fcmh_2_fid(inoh->inoh_fcmh), inoh->inoh_ino.ino_crc,
-		    log);
-	}
-
-	if (inoh->inoh_flags & INOH_EXTRAS_DIRTY) {
-		psc_crc64_calc(&inoh->inoh_extras->inox_crc,
-		    inoh->inoh_extras, INOX_OD_CRCSZ);
-		rc = zfsslash2_write(&rootcreds, &inoh->inoh_extras,
-		    INOX_OD_SZ, &nb, SL_EXTRAS_START_OFF, 0,
-		    inoh_2_mdsio_data(inoh),
-		    log ? mds_inode_addrepl_log : NULL, &jrir);
-
-		if (!rc && nb != INO_OD_SZ)
-			rc = SLERR_SHORTIO;
-		if (rc)
-			DEBUG_INOH(PLL_FATAL, inoh, "rc=%d sync fail", rc);
-
-		inoh->inoh_flags &= ~INOH_EXTRAS_DIRTY;
-		psclog_info("update: fid="SLPRI_FID", extra crc=%"
-		    PSCPRIxCRC64", log=%d", fcmh_2_fid(inoh->inoh_fcmh),
-		    inoh->inoh_extras->inox_crc, log);
-	}
-	if (log)
-		mds_unreserve_slot();
-
-	ureqlock(&inoh->inoh_lock, locked);
 	return (rc);
 }
 
 int
-mdsio_inode_read(struct slash_inode_handle *i)
+mdsio_inode_read(struct slash_inode_handle *ih)
 {
 	size_t nb;
 	int rc;
 
-	INOH_LOCK_ENSURE(i);
-	rc = zfsslash2_read(&rootcreds, &i->inoh_ino, INO_OD_SZ, &nb,
-	    SL_INODE_START_OFF, inoh_2_mdsio_data(i));
+	INOH_LOCK_ENSURE(ih);
+	rc = mdsio_read(&rootcreds, &ih->inoh_ino, INO_OD_SZ, &nb,
+	    SL_INODE_START_OFF, inoh_2_mdsio_data(ih));
 
 	if (rc) {
-		DEBUG_INOH(PLL_ERROR, i, "inode read error %d", rc);
+		DEBUG_INOH(PLL_ERROR, ih, "inode read error %d", rc);
 	} else if (nb != INO_OD_SZ) {
-		DEBUG_INOH(PLL_INFO, i, "short read I/O (%zd vs %zd)",
+		DEBUG_INOH(PLL_INFO, ih, "short read I/O (%zd vs %zd)",
 		    nb, INO_OD_SZ);
 		rc = SLERR_SHORTIO;
 	} else {
-		DEBUG_INOH(PLL_INFO, i, "read inode data=%p",
-		    inoh_2_mdsio_data(i));
-//		rc = zfsslash2_getattr(inoh_2_fid(i),
-//		    &inoh_2_fsz(i), inoh_2_mdsio_data(i));
+		DEBUG_INOH(PLL_INFO, ih, "read inode data=%p",
+		    inoh_2_mdsio_data(ih));
+//		rc = mdsio_getattr(inoh_2_fid(ih), &inoh_2_fsz(ih),
+//		inoh_2_mdsio_data(ih));
 	}
 	return (rc);
 }
 
 int
-mdsio_inode_write(struct slash_inode_handle *i)
+mdsio_inode_write(struct slash_inode_handle *ih, void *logf, void *arg)
 {
 	size_t nb;
 	int rc;
 
-	rc = zfsslash2_write(&rootcreds, &i->inoh_ino, INO_OD_SZ, &nb,
-	    SL_INODE_START_OFF, 0, inoh_2_mdsio_data(i), NULL, NULL);
+	rc = mdsio_write(&rootcreds, &ih->inoh_ino, INO_OD_SZ, &nb,
+	    SL_INODE_START_OFF, 0, inoh_2_mdsio_data(ih), logf, arg);
 
 	if (rc) {
-		DEBUG_INOH(PLL_ERROR, i,
-		    "zfsslash2_write: error (rc=%d)", rc);
+		DEBUG_INOH(PLL_ERROR, ih,
+		    "mdsio_write: error (rc=%d)", rc);
 	} else if (nb != INO_OD_SZ) {
-		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_write: short I/O");
+		DEBUG_INOH(PLL_ERROR, ih, "mdsio_write: short I/O");
 		rc = SLERR_SHORTIO;
 	} else {
-		DEBUG_INOH(PLL_INFO, i, "wrote inode (rc=%d) data=%p",
-		    rc, inoh_2_mdsio_data(i));
+		DEBUG_INOH(PLL_INFO, ih, "wrote inode (rc=%d) data=%p",
+		    rc, inoh_2_mdsio_data(ih));
 #ifdef SHITTY_PERFORMANCE
-		rc = zfsslash2_fsync(&rootcreds, 1, inoh_2_mdsio_data(i));
+		rc = mdsio_fsync(&rootcreds, 1, inoh_2_mdsio_data(ih));
 		if (rc == -1)
-			psc_fatal("zfsslash2_fsync");
+			psc_fatal("mdsio_fsync");
 #endif
 	}
 	return (rc);
 }
 
 int
-mdsio_inode_extras_read(struct slash_inode_handle *i)
+mdsio_inode_extras_read(struct slash_inode_handle *ih)
 {
 	size_t nb;
 	int rc;
 
-	psc_assert(i->inoh_extras);
-	rc = zfsslash2_read(&rootcreds, i->inoh_extras, INOX_OD_SZ, &nb,
-	    SL_EXTRAS_START_OFF, inoh_2_mdsio_data(i));
+	psc_assert(ih->inoh_extras);
+	rc = mdsio_read(&rootcreds, ih->inoh_extras, INOX_OD_SZ, &nb,
+	    SL_EXTRAS_START_OFF, inoh_2_mdsio_data(ih));
 	if (rc)
-		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_read: error (rc=%d)", rc);
+		DEBUG_INOH(PLL_ERROR, ih, "mdsio_read: error (rc=%d)",
+		    rc);
 	else if (nb != INOX_OD_SZ) {
-		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_read: short I/O");
+		DEBUG_INOH(PLL_ERROR, ih, "mdsio_read: short I/O");
 		rc = SLERR_SHORTIO;
 	}
 	return (rc);
 }
 
 int
-mdsio_inode_extras_write(struct slash_inode_handle *i)
+mdsio_inode_extras_write(struct slash_inode_handle *ih, void *logf,
+    void *arg)
 {
 	size_t nb;
 	int rc;
 
-	psc_assert(i->inoh_extras);
-	rc = zfsslash2_write(&rootcreds, i->inoh_extras, INOX_OD_SZ, &nb,
-	    SL_EXTRAS_START_OFF, 0, inoh_2_mdsio_data(i), NULL, NULL);
+	psc_assert(ih->inoh_extras);
+	rc = mdsio_write(&rootcreds, ih->inoh_extras, INOX_OD_SZ,
+	    &nb, SL_EXTRAS_START_OFF, 0, inoh_2_mdsio_data(ih), logf,
+	    arg);
 
 	if (rc) {
-		DEBUG_INOH(PLL_ERROR, i,
-		    "zfsslash2_write: error (rc=%d)", rc);
+		DEBUG_INOH(PLL_ERROR, ih, "mdsio_write: error (rc=%d)",
+		    rc);
 	} else if (nb != INOX_OD_SZ) {
-		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_write: short I/O");
+		DEBUG_INOH(PLL_ERROR, ih, "mdsio_write: short I/O");
 		rc = SLERR_SHORTIO;
 	} else {
 #ifdef SHITTY_PERFORMANCE
-		rc = zfsslash2_fsync(&rootcreds, 1, inoh_2_mdsio_data(i));
+		rc = mdsio_fsync(&rootcreds, 1, inoh_2_mdsio_data(ih));
 		if (rc == -1)
-			psc_fatal("zfsslash2_fsync");
+			psc_fatal("mdsio_fsync");
 #endif
 	}
 	return (rc);

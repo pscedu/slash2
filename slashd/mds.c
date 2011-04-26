@@ -48,106 +48,6 @@
 
 struct odtable				*mdsBmapAssignTable;
 uint64_t				 mdsBmapSequenceNo;
-const struct bmap_ondisk		 null_bmap_od;
-const struct slash_inode_od		 null_inode_od;
-const struct slash_inode_extras_od	 null_inox_od;
-
-__static void
-mds_inode_od_initnew(struct slash_inode_handle *ih)
-{
-	ih->inoh_flags = INOH_INO_NEW | INOH_INO_DIRTY;
-
-	/* For now this is a fixed size. */
-	ih->inoh_ino.ino_bsz = SLASH_BMAP_SIZE;
-	ih->inoh_ino.ino_version = INO_VERSION;
-	ih->inoh_ino.ino_nrepls = 0;
-}
-
-int
-mds_inode_read(struct slash_inode_handle *ih)
-{
-	uint64_t crc;
-	int rc, locked;
-
-	locked = reqlock(&ih->inoh_lock);
-	psc_assert(ih->inoh_flags & INOH_INO_NOTLOADED);
-
-	rc = mdsio_inode_read(ih);
-
-	if (rc == SLERR_SHORTIO && ih->inoh_ino.ino_crc == 0 &&
-	    memcmp(&ih->inoh_ino, &null_inode_od, INO_OD_CRCSZ) == 0) {
-		DEBUG_INOH(PLL_INFO, ih, "detected a new inode");
-		mds_inode_od_initnew(ih);
-		rc = 0;
-
-	} else if (rc) {
-		DEBUG_INOH(PLL_WARN, ih, "mdsio_inode_read: %d", rc);
-
-	} else {
-		psc_crc64_calc(&crc, &ih->inoh_ino, INO_OD_CRCSZ);
-		if (crc == ih->inoh_ino.ino_crc) {
-			ih->inoh_flags &= ~INOH_INO_NOTLOADED;
-			DEBUG_INOH(PLL_INFO, ih, "successfully loaded inode od");
-		} else {
-			DEBUG_INOH(PLL_WARN, ih, "CRC failed "
-			    "want=%"PSCPRIxCRC64", got=%"PSCPRIxCRC64,
-			    ih->inoh_ino.ino_crc, crc);
-			rc = EIO;
-		}
-	}
-	ureqlock(&ih->inoh_lock, locked);
-	return (rc);
-}
-
-int
-mds_inox_load_locked(struct slash_inode_handle *ih)
-{
-	uint64_t crc;
-	int rc;
-
-	INOH_LOCK_ENSURE(ih);
-
-	psc_assert(!(ih->inoh_flags & INOH_HAVE_EXTRAS));
-
-	psc_assert(ih->inoh_extras == NULL);
-	ih->inoh_extras = PSCALLOC(sizeof(*ih->inoh_extras));
-
-	rc = mdsio_inode_extras_read(ih);
-	if (rc == SLERR_SHORTIO && ih->inoh_extras->inox_crc == 0 &&
-	    memcmp(&ih->inoh_extras, &null_inox_od, INOX_OD_CRCSZ) == 0) {
-		ih->inoh_flags |= INOH_HAVE_EXTRAS;
-		rc = 0;
-	} else if (rc) {
-		DEBUG_INOH(PLL_WARN, ih, "mdsio_inode_extras_read: %d", rc);
-	} else {
-		psc_crc64_calc(&crc, ih->inoh_extras, INOX_OD_CRCSZ);
-		if (crc == ih->inoh_extras->inox_crc)
-			ih->inoh_flags |= INOH_HAVE_EXTRAS;
-		else {
-			psc_errorx("inox CRC fail; disk %"PSCPRIxCRC64
-			    " mem %"PSCPRIxCRC64,
-			    ih->inoh_extras->inox_crc, crc);
-			rc = EIO;
-		}
-	}
-	if (rc) {
-		PSCFREE(ih->inoh_extras);
-		ih->inoh_extras = NULL;
-	}
-	return (rc);
-}
-
-int
-mds_inox_ensure_loaded(struct slash_inode_handle *ih)
-{
-	int locked, rc = 0;
-
-	locked = INOH_RLOCK(ih);
-	if (ATTR_NOTSET(ih->inoh_flags, INOH_HAVE_EXTRAS))
-		rc = mds_inox_load_locked(ih);
-	INOH_URLOCK(ih, locked);
-	return (rc);
-}
 
 int
 mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
@@ -375,7 +275,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 
 	/*
 	 * Try a connection to each member in the resource.  If none
-	 * are immediately available, try again in a blocking manner 
+	 * are immediately available, try again in a blocking manner
 	 * before returning offline status.
 	 */
 	for (nb = 1; nb > 0; nb--)
@@ -432,7 +332,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	bia.bia_flags = (bmap->bcm_flags & BMAP_DIO) ? BIAF_DIO : 0;
 	bmdsi->bmdsi_seq = bia.bia_seq = mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
 
-	bmdsi->bmdsi_assign = mds_odtable_putitem(mdsBmapAssignTable, &bia, 
+	bmdsi->bmdsi_assign = mds_odtable_putitem(mdsBmapAssignTable, &bia,
 	    sizeof(bia));
 
 	if (!bmdsi->bmdsi_assign) {
@@ -440,7 +340,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 		bml->bml_flags |= BML_ASSFAIL;
 
 		DEBUG_BMAP(PLL_ERROR, bmap, "failed odtable_putitem()");
-		// XXX fix me - dont leak the journal buf! 
+		// XXX fix me - dont leak the journal buf!
 		return (-SLERR_XACT_FAIL);
 
 	} else {
@@ -627,11 +527,12 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 }
 
 /**
- * mds_bmap_dupls_find - Find the first lease of a given client based on its
- *     {nid, pid} pair.  Also walk the chain of duplicate leases to count the
- *     number of read and write leases.  Note that only the first lease of a
- *     client is linked on the bmdsi->bmdsi_leases list, the rest is linked
- *     on a private chain and tagged with BML_CHAIN flag.
+ * mds_bmap_dupls_find - Find the first lease of a given client based on
+ *	its {nid, pid} pair.  Also walk the chain of duplicate leases to
+ *	count the number of read and write leases.  Note that only the
+ *	first lease of a client is linked on the bmdsi->bmdsi_leases
+ *	list, the rest is linked on a private chain and tagged with
+ *	BML_CHAIN flag.
  */
 static __inline struct bmap_mds_lease *
 mds_bmap_dupls_find(struct bmap_mds_info *bmdsi, lnet_process_id_t *cnp,
@@ -1160,16 +1061,17 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		key = odtr->odtr_key;
 		elem = odtr->odtr_elem;
 		rc = mds_odtable_freeitem(mdsBmapAssignTable, odtr);
-		DEBUG_BMAP(PLL_NOTIFY, b, "odtable remove seq=%"PRId64" key=%" PRId64" rc=%d",
-			bml->bml_seq, key, rc);
+		DEBUG_BMAP(PLL_NOTIFY, b, "odtable remove seq=%"PRId64" "
+		    "key=%"PRId64" rc=%d", bml->bml_seq, key, rc);
 		bmap_op_done_type(b, BMAP_OPCNT_IONASSIGN);
 
 		mds_reserve_slot();
-		logentry = pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_assign_rep));
+		logentry = pjournal_get_buf(mdsJournal,
+		    sizeof(struct slmds_jent_assign_rep));
 		logentry->sjar_elem = elem;
 		logentry->sjar_flag = SLJ_ASSIGN_REP_FREE;
-		pjournal_add_entry(mdsJournal, 0, MDS_LOG_BMAP_ASSIGN, 0, logentry,
-			sizeof(struct slmds_jent_assign_rep));
+		pjournal_add_entry(mdsJournal, 0, MDS_LOG_BMAP_ASSIGN,
+		    0, logentry, sizeof(struct slmds_jent_assign_rep));
 		pjournal_put_buf(mdsJournal, logentry);
 		mds_unreserve_slot();
 	}
@@ -1554,122 +1456,6 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
 }
 
 /**
- * mds_bmap_initnew - Called when a read request offset exceeds the
- *	bounds of the file causing a new bmap to be created.
- * Notes:  Bmap creation race conditions are prevented because the bmap
- *	handle already exists at this time with
- *	bmapi_mode == BMAP_INIT.
- *
- *	This causes other threads to block on the waitq until
- *	read/creation has completed.
- * More Notes:  this bmap is not written to disk until a client actually
- *	writes something to it.
- */
-__static void
-mds_bmap_initnew(struct bmapc_memb *b)
-{
-	struct bmap_ondisk *bod = bmap_2_ondisk(b);
-	struct fidc_membh *fcmh = b->bcm_fcmh;
-	uint32_t pol;
-	int i;
-
-	for (i = 0; i < SLASH_CRCS_PER_BMAP; i++)
-		bod->bod_crcs[i] = BMAP_NULL_CRC;
-
-	INOH_LOCK(fcmh_2_inoh(fcmh));
-	pol = fcmh_2_ino(fcmh)->ino_replpol;
-	INOH_ULOCK(fcmh_2_inoh(fcmh));
-
-	BHREPL_POLICY_SET(b, pol);
-
-	psc_crc64_calc(&bod->bod_crc, bod, BMAP_OD_CRCSZ);
-}
-
-void
-mds_bmap_ensure_valid(struct bmapc_memb *b)
-{
-	int rc, retifset[NBREPLST];
-
-	brepls_init(retifset, 0);
-	retifset[BREPLST_VALID] = 1;
-	retifset[BREPLST_GARBAGE] = 1;
-	retifset[BREPLST_GARBAGE_SCHED] = 1;
-	retifset[BREPLST_TRUNCPNDG] = 1;
-	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
-	rc = mds_repl_bmap_walk_all(b, NULL, retifset,
-	    REPL_WALKF_SCIRCUIT);
-	if (!rc)
-		psc_fatal("bmap has no valid replicas");
-}
-
-/**
- * mds_bmap_read - Retrieve a bmap from the ondisk inode file.
- * @bcm: bmap.
- * Returns zero on success, negative errno code on failure.
- */
-int
-mds_bmap_read(struct bmapc_memb *bcm, __unusedx enum rw rw)
-{
-	struct fidc_membh *f = bcm->bcm_fcmh;
-	int rc;
-
-	rc = mdsio_bmap_read(bcm);
-	/*
-	 * Check for a NULL CRC if we had a good read.  NULL CRC can happen
-	 *    when bmaps are gaps that have not been written yet.   Note
-	 *    that a short read is tolerated as long as the bmap is zeroed.
-	 */
-	if (!rc || rc == SLERR_SHORTIO) {
-		if (bmap_2_ondiskcrc(bcm) == 0 &&
-		    memcmp(bmap_2_ondisk(bcm), &null_bmap_od,
-		    sizeof(null_bmap_od)) == 0) {
-			DEBUG_BMAPOD(PLL_INFO, bcm, "");
-			mds_bmap_initnew(bcm);
-			DEBUG_BMAPOD(PLL_INFO, bcm, "");
-			return (0);
-		}
-	}
-
-	/*
-	 * At this point, the short I/O is an error since the bmap isn't
-	 *    zeros.
-	 */
-	if (rc) {
-		DEBUG_FCMH(PLL_ERROR, f, "mdsio_bmap_read: "
-		    "bmapno=%u, rc=%d", bcm->bcm_bmapno, rc);
-		return (-EIO);
-	}
-
-	mds_bmap_ensure_valid(bcm);
-
-	DEBUG_BMAPOD(PLL_INFO, bcm, "");
-	return (0);
-}
-
-void
-mds_bmap_init(struct bmapc_memb *bcm)
-{
-	struct bmap_mds_info *bmi;
-
-	bmi = bmap_2_bmdsi(bcm);
-	pll_init(&bmi->bmdsi_leases, struct bmap_mds_lease,
-	    bml_bmdsi_lentry, &bcm->bcm_lock);
-	bmi->bmdsi_xid = 0;
-	psc_rwlock_init(&bmi->bmdsi_rwlock);
-}
-
-void
-mds_bmap_destroy(struct bmapc_memb *bcm)
-{
-	struct bmap_mds_info *bmdsi = bmap_2_bmdsi(bcm);
-
-	psc_assert(bmdsi->bmdsi_writers == 0);
-	psc_assert(bmdsi->bmdsi_readers == 0);
-	psc_assert(bmdsi->bmdsi_assign == NULL);
-	psc_assert(pll_empty(&bmdsi->bmdsi_leases));
-}
-
-/**
  * mds_bmap_loadvalid - Load a bmap if disk I/O is successful and the bmap
  *	has been initialized (i.e. is not all zeroes).
  * @f: fcmh.
@@ -2038,52 +1824,3 @@ slm_ptrunc_wake_clients(struct slm_workrq *wkrq)
 	fcmh_op_done_type(fcmh, FCMH_OPCNT_WORKER);
 	return (0);
 }
-
-#if PFL_DEBUG > 0
-void
-dump_bmap_flags(uint32_t flags)
-{
-	int seq = 0;
-
-	_dump_bmap_flags(&flags, &seq);
-	PFL_PRFLAG(BMAP_MDS_CRC_UP, &flags, &seq);
-	PFL_PRFLAG(BMAP_MDS_CRCWRT, &flags, &seq);
-	PFL_PRFLAG(BMAP_MDS_NOION, &flags, &seq);
-	PFL_PRFLAG(BMAP_MDS_LOGCHG, &flags, &seq);
-	PFL_PRFLAG(BMAP_MDS_DIO, &flags, &seq);
-	PFL_PRFLAG(BMAP_MDS_SEQWRAP, &flags, &seq);
-	if (flags)
-		printf(" unknown: %#x", flags);
-	printf("\n");
-}
-
-void
-dump_bml_flags(uint32_t flags)
-{
-	int seq = 0;
-
-	PFL_PRFLAG(BML_READ, &flags, &seq);
-	PFL_PRFLAG(BML_WRITE, &flags, &seq);
-	PFL_PRFLAG(BML_CDIO, &flags, &seq);
-	PFL_PRFLAG(BML_COHRLS, &flags, &seq);
-	PFL_PRFLAG(BML_COHDIO, &flags, &seq);
-	PFL_PRFLAG(BML_EXP, &flags, &seq);
-	PFL_PRFLAG(BML_TIMEOQ, &flags, &seq);
-	PFL_PRFLAG(BML_BMDSI, &flags, &seq);
-	PFL_PRFLAG(BML_COH, &flags, &seq);
-	PFL_PRFLAG(BML_RECOVER, &flags, &seq);
-	PFL_PRFLAG(BML_CHAIN, &flags, &seq);
-	PFL_PRFLAG(BML_UPGRADE, &flags, &seq);
-	PFL_PRFLAG(BML_EXPFAIL, &flags, &seq);
-	PFL_PRFLAG(BML_FREEING, &flags, &seq);
-	PFL_PRFLAG(BML_ASSFAIL, &flags, &seq);
-	printf("\n");
-}
-#endif
-
-struct bmap_ops bmap_ops = {
-	mds_bmap_init,
-	mds_bmap_read,
-	NULL,
-	mds_bmap_destroy
-};
