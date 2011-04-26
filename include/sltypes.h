@@ -37,8 +37,6 @@ typedef uint32_t sl_bmapgen_t;			/* file block map generation */
 typedef uint16_t sl_siteid_t;
 typedef uint32_t sl_ios_id_t;
 
-typedef uint64_t sl_ino_t;
-
 #define BMAPNO_ANY		((sl_bmapno_t)~0U)
 
 #define IOS_ID_ANY		((sl_ios_id_t)~0U)
