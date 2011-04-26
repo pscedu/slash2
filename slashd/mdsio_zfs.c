@@ -250,7 +250,7 @@ mds_inode_addrepl_update(struct slash_inode_handle *inoh,
 			//inoh->inoh_flags |= INOH_EXTRAS_DIRTY;
 		}
 		psclog_info("update: fid="SLPRI_FID", crc=%"PSCPRIxCRC64
-		    ", log=%d", fcmh_2_fid(inoh->inoh_fcmh), 
+		    ", log=%d", fcmh_2_fid(inoh->inoh_fcmh),
 		    inoh->inoh_ino.ino_crc, log);
 	}
 
@@ -269,7 +269,7 @@ mds_inode_addrepl_update(struct slash_inode_handle *inoh,
 
 		inoh->inoh_flags &= ~INOH_EXTRAS_DIRTY;
 		psclog_info("update: fid="SLPRI_FID", extra crc=%"
-		    PSCPRIxCRC64", log=%d", fcmh_2_fid(inoh->inoh_fcmh), 
+		    PSCPRIxCRC64", log=%d", fcmh_2_fid(inoh->inoh_fcmh),
 		    inoh->inoh_extras->inox_crc, log);
 	}
 	if (log)
@@ -311,7 +311,7 @@ mdsio_inode_write(struct slash_inode_handle *i)
 	int rc;
 
 	rc = zfsslash2_write(&rootcreds, &i->inoh_ino, INO_OD_SZ, &nb,
-	     SL_INODE_START_OFF, 0, inoh_2_mdsio_data(i), NULL, NULL);
+	    SL_INODE_START_OFF, 0, inoh_2_mdsio_data(i), NULL, NULL);
 
 	if (rc) {
 		DEBUG_INOH(PLL_ERROR, i,
@@ -357,7 +357,7 @@ mdsio_inode_extras_write(struct slash_inode_handle *i)
 
 	psc_assert(i->inoh_extras);
 	rc = zfsslash2_write(&rootcreds, i->inoh_extras, INOX_OD_SZ, &nb,
-	     SL_EXTRAS_START_OFF, 0, inoh_2_mdsio_data(i), NULL, NULL);
+	    SL_EXTRAS_START_OFF, 0, inoh_2_mdsio_data(i), NULL, NULL);
 
 	if (rc) {
 		DEBUG_INOH(PLL_ERROR, i,
