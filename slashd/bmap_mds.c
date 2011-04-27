@@ -137,6 +137,7 @@ mds_bmap_destroy(struct bmapc_memb *bcm)
 	psc_assert(bmi->bmdsi_readers == 0);
 	psc_assert(bmi->bmdsi_assign == NULL);
 	psc_assert(pll_empty(&bmi->bmdsi_leases));
+	psc_rwlock_destroy(&bmi->bmdsi_rwlock);
 }
 
 void
