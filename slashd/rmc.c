@@ -158,7 +158,7 @@ slm_rmc_bmapdesc_setup(struct bmapc_memb *bmap,
 		sbd->sbd_flags |= SRM_LEASEBMAPF_DIRECTIO;
 
 	if (rw == SL_WRITE) {
-		struct bmap_mds_info *bmi = bmap_2_bmdsi(bmap);
+		struct bmap_mds_info *bmi = bmap_2_bmi(bmap);
 
 		psc_assert(bmi->bmdsi_wr_ion);
 		sbd->sbd_ion_nid = bmi->bmdsi_wr_ion->rmmi_resm->resm_nid;
@@ -192,7 +192,7 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
-	bmi = bmap_2_bmdsi(b);
+	bmi = bmap_2_bmi(b);
 
 	BMAP_LOCK(b);
 	bml = mds_bmap_getbml(b, rq->rq_conn->c_peer.nid,
@@ -230,7 +230,6 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	const struct srm_leasebmap_req *mq;
 	struct bmapc_memb *bmap = NULL;
 	struct srm_leasebmap_rep *mp;
-	struct bmap_mds_info *bmi;
 	struct fidc_membh *fcmh;
 	int rc = 0;
 
@@ -249,8 +248,6 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	   mq->prefios, &mp->sbd, rq->rq_export, &bmap);
 	if (mp->rc)
 		goto out;
-
-	bmi = bmap_2_bmi(bmap);
 
 	if (mq->flags & SRM_LEASEBMAPF_DIRECTIO)
 		mp->sbd.sbd_flags |= SRM_LEASEBMAPF_DIRECTIO;
@@ -823,7 +820,6 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 {
 	struct srm_set_bmapreplpol_req *mq;
 	struct srm_set_bmapreplpol_rep *mp;
-	struct bmap_mds_info *bmi;
 	struct fcmh_mds_info *fmi;
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bcm;
@@ -858,7 +854,6 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
  out:
 	if (fcmh)
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
-
 	return (0);
 }
 
