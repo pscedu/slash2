@@ -1752,11 +1752,16 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 	msfsthr_ensure();
 
-	if (to_set == 0)
-		goto out;
-
 	rc = msl_load_fcmh(pfr, inum, &c);
 	if (rc)
+		goto out;
+
+	if ((to_set & PSCFS_SETATTRF_UID) && stb->st_uid == (uid_t)-1)
+		to_set &= ~PSCFS_SETATTRF_UID;
+	if ((to_set & PSCFS_SETATTRF_GID) && stb->st_gid == (gid_t)-1)
+		to_set &= ~PSCFS_SETATTRF_GID;
+
+	if (to_set == 0)
 		goto out;
 
 	if (mfh)
@@ -1975,6 +1980,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		sl_internalize_stat(&c->fcmh_sstb, stb);
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	}
+	/* XXX if there is no fcmh, what do we do?? */
 	pscfs_reply_setattr(pfr, stb, pscfs_attr_timeout, rc);
 	if (rq)
 		pscrpc_req_finished(rq);
