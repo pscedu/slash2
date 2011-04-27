@@ -121,7 +121,7 @@ mds_bmap_init(struct bmapc_memb *bcm)
 {
 	struct bmap_mds_info *bmi;
 
-	bmi = bmap_2_bmdsi(bcm);
+	bmi = bmap_2_bmi(bcm);
 	pll_init(&bmi->bmdsi_leases, struct bmap_mds_lease,
 	    bml_bmdsi_lentry, &bcm->bcm_lock);
 	bmi->bmdsi_xid = 0;
@@ -131,12 +131,12 @@ mds_bmap_init(struct bmapc_memb *bcm)
 void
 mds_bmap_destroy(struct bmapc_memb *bcm)
 {
-	struct bmap_mds_info *bmdsi = bmap_2_bmdsi(bcm);
+	struct bmap_mds_info *bmi = bmap_2_bmi(bcm);
 
-	psc_assert(bmdsi->bmdsi_writers == 0);
-	psc_assert(bmdsi->bmdsi_readers == 0);
-	psc_assert(bmdsi->bmdsi_assign == NULL);
-	psc_assert(pll_empty(&bmdsi->bmdsi_leases));
+	psc_assert(bmi->bmdsi_writers == 0);
+	psc_assert(bmi->bmdsi_readers == 0);
+	psc_assert(bmi->bmdsi_assign == NULL);
+	psc_assert(pll_empty(&bmi->bmdsi_leases));
 }
 
 void
@@ -144,10 +144,10 @@ mds_bmap_calc_crc(struct bmapc_memb *bmap)
 {
 	int locked;
 
-	locked = BMAPOD_REQWRLOCK(bmap_2_bmdsi(bmap));
+	locked = BMAPOD_REQWRLOCK(bmap_2_bmi(bmap));
 	psc_crc64_calc(&bmap_2_ondiskcrc(bmap), bmap_2_ondisk(bmap),
 	    BMAP_OD_CRCSZ);
-	BMAPOD_UREQLOCK(bmap_2_bmdsi(bmap), locked);
+	BMAPOD_UREQLOCK(bmap_2_bmi(bmap), locked);
 }
 
 /**
@@ -158,7 +158,7 @@ int
 mds_bmap_crc_update(struct bmapc_memb *bmap, struct
     srm_bmap_crcup *crcup)
 {
-	struct bmap_mds_info *bmdsi = bmap_2_bmdsi(bmap);
+	struct bmap_mds_info *bmi = bmap_2_bmi(bmap);
 	struct sl_mds_crc_log crclog;
 	uint32_t utimgen, i;
 	int extend = 0;
@@ -181,7 +181,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct
 	crclog.scl_bmap = bmap;
 	crclog.scl_crcup = crcup;
 
-	BMAPOD_WRLOCK(bmdsi);
+	BMAPOD_WRLOCK(bmi);
 	for (i = 0; i < crcup->nups; i++) {
 		bmap_2_crcs(bmap, crcup->crcs[i].slot) =
 		    crcup->crcs[i].crc;
@@ -207,13 +207,13 @@ mds_bmap_repl_update(struct bmapc_memb *bmap, int log)
 {
 	int logchg;
 
-	BMAPOD_REQRDLOCK(bmap_2_bmdsi(bmap));
+	BMAPOD_REQRDLOCK(bmap_2_bmi(bmap));
 	BMDSI_LOGCHG_CHECK(bmap, logchg);
 	if (!logchg) {
 		BMAPOD_READ_DONE(bmap, 0);
 		return (0);
 	}
-	BMAPOD_REQWRLOCK(bmap_2_bmdsi(bmap));
+	BMAPOD_REQWRLOCK(bmap_2_bmi(bmap));
 	mds_bmap_calc_crc(bmap);
 	return (mdsio_bmap_write(bmap, 0,
 	    log ? mds_bmap_repl_log : NULL, bmap));
