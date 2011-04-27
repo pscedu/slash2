@@ -70,7 +70,7 @@ mds_bmap_ensure_valid(struct bmapc_memb *b)
 	rc = mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT);
 	if (!rc)
-		psc_fatal("bmap has no valid replicas");
+		psc_fatalx("bmap has no valid replicas");
 }
 
 /**
