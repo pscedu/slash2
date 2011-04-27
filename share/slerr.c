@@ -36,7 +36,7 @@ char *slash_errstrs[] = {
 /*  8 */ "Unknown I/O system",
 /*  9 */ "Unknown I/O node",
 /* 10 */ "I/O node connection could not be established",
-/* 11 */ "I/O node is not a replica",
+/* 11 */ "I/O node does not have a replica",
 /* 12 */ "Transaction could not be started",
 /* 13 */ "Short I/O",
 /* 14 */ "Authorization buffer has bad magic",
