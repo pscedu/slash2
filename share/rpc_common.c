@@ -381,8 +381,8 @@ sl_csvc_disconnect(struct slashrpc_cservice *csvc)
 void
 sl_imp_hldrop_cli(void *csvc)
 {
-	sl_csvc_markfree(csvc);
-	sl_csvc_disconnect(csvc);
+//	sl_csvc_markfree(csvc);
+//	sl_csvc_disconnect(csvc);
 }
 
 void
