@@ -46,10 +46,15 @@ struct sli_repl_workrq;
 #define SLI_RII_REPSZ		256
 #define SLI_RII_SVCNAME		"slirii"
 
+/* counterpart to csvc */
+struct sli_cli_csvc_cpart {
+	psc_spinlock_t			 icccp_lock;
+	struct psc_waitq		 icccp_waitq;
+};
+
 struct sli_exp_cli {
 	struct slashrpc_cservice	*iexpc_csvc;
-	psc_spinlock_t			 iexpc_lock;
-	struct psc_waitq		 iexpc_waitq;
+	struct sli_cli_csvc_cpart	*iexpc_cccp;
 };
 
 /* aliases for connection management */
@@ -97,7 +102,8 @@ sli_getclcsvc(struct pscrpc_export *exp)
 	iexpc = sl_exp_getpri_cli(exp);
 	return (sl_csvc_get(&iexpc->iexpc_csvc, 0, exp, LNET_NID_ANY,
 	    SRCI_REQ_PORTAL, SRCI_REP_PORTAL, SRCI_MAGIC, SRCI_VERSION,
-	    &iexpc->iexpc_lock, &iexpc->iexpc_waitq, SLCONNT_CLI, NULL));
+	    &iexpc->iexpc_cccp->icccp_lock,
+	    &iexpc->iexpc_cccp->icccp_waitq, SLCONNT_CLI, NULL));
 }
 
 #endif /* _RPC_IOD_H_ */

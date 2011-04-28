@@ -377,11 +377,13 @@ sli_ric_handler(struct pscrpc_request *rq)
 void
 iexpc_allocpri(struct pscrpc_export *exp)
 {
+	struct sli_cli_csvc_cpart *icccp;
 	struct sli_exp_cli *iexpc;
 
 	iexpc = exp->exp_private = PSCALLOC(sizeof(*iexpc));
-	INIT_SPINLOCK(&iexpc->iexpc_lock);
-	psc_waitq_init(&iexpc->iexpc_waitq);
+	icccp = iexpc->iexpc_cccp = PSCALLOC(sizeof(*icccp));
+	INIT_SPINLOCK(&icccp->icccp_lock);
+	psc_waitq_init(&icccp->icccp_waitq);
 	sli_getclcsvc(exp);
 }
 
