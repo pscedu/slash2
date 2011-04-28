@@ -114,7 +114,7 @@ struct bmapc_memb {
 	 * next segment of the bmap_ondisk, which must lay contiguous in
 	 * memory for I/O over the network and with ZFS.
 	 */
-	struct bmap_core_state	 bcm_corestate;
+	struct bmap_core_state	 bcm_corestate __attribute__ ((aligned (8)));
 
 #define bcm_crcstates	bcm_corestate.bcs_crcstates
 #define bcm_repls	bcm_corestate.bcs_repls
