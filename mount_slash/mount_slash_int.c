@@ -94,7 +94,23 @@ int
 msl_io_remote(struct msl_fhent *mfh, char *buf, const size_t size,
     const off_t off, enum rw rw)
 {
-	return (0);
+	int i, found = 0;
+	sl_siteid_t siteid;
+	struct sl_resource *res;
+	struct sl_site *remoteSite;
+
+	siteid = FID_GET_SITEID(mfh->mfh_fcmh->fcmh_sstb.sst_fg.fg_fid);
+	remoteSite = libsl_siteid2site(siteid);
+	SITE_FOREACH_RES(remoteSite, res, i)
+		if (res->res_type == SLREST_MDS) {
+			found = 1;
+			break;
+		}
+	if (!found) {
+		psc_errorx("Invalid site ID %d\n", siteid);
+		return EIO;
+	}
+	return EIO;
 }
 
 __static int
