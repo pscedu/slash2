@@ -93,10 +93,36 @@ struct slashrpc_cservice {
 
 #define CSVC_RECONNECT_INTV	10			/* seconds */
 
+#define DEBUG_CSVC(lvl, csvc, fmt, ...)					\
+	do {								\
+		int _flags;						\
+									\
+		_flags = psc_atomic32_read(&(csvc)->csvc_flags);	\
+		psclog((lvl), "csvc@%p fl=%#x:%s%s%s%s%s ref:%d " fmt,	\
+		    (csvc), _flags,					\
+		    _flags & CSVCF_CONNECTING	 ? "C" : "",		\
+		    _flags & CSVCF_CONNECTED	 ? "O" : "",		\
+		    _flags & CSVCF_USE_MULTIWAIT ? "M" : "",		\
+		    _flags & CSVCF_ABANDON	 ? "A" : "",		\
+		    _flags & CSVCF_WANTFREE	 ? "F" : "",		\
+		    psc_atomic32_read(&(csvc)->csvc_refcnt),		\
+		    ##__VA_ARGS__);					\
+	} while (0)
+
 struct sl_expcli_ops {
 	void	(*secop_allocpri)(struct pscrpc_export *);
 	void	(*secop_destroy)(void *);
 };
+
+#define CSVC_CALLERINFO			PFL_CALLERINFO()
+
+#define sl_csvc_get(csvcp, flg, exp, nid,				\
+	    pq, pp, mag, vers, lockp, waitinfo, ctype, arg)		\
+	sl_csvc_get_pci(CSVC_CALLERINFO, (csvcp), (flg), (exp), (nid),	\
+	    (pq), (pp), (mag), (vers), (lockp), (waitinfo), (ctype), (arg))
+
+#define sl_csvc_decref(csvc)		sl_csvc_decref_pci(CSVC_CALLERINFO, (csvc))
+#define sl_csvc_disconnect(csvc)        sl_csvc_disconnect_pci(CSVC_CALLERINFO, (csvc))
 
 #define SL_EXP_REGISTER_RESM(exp, getcsvc)				\
 	_PFL_RVSTART {							\
@@ -135,31 +161,36 @@ struct sl_expcli_ops {
 #define sl_csvc_lock(csvc)						\
 	do {								\
 		if (sl_csvc_usemultiwait(csvc))				\
-			psc_mutex_lock((csvc)->csvc_mutex);		\
+			psc_mutex_lock_pci(CSVC_CALLERINFO,		\
+			    (csvc)->csvc_mutex);			\
 		else							\
-			spinlock((csvc)->csvc_lock);			\
+			spinlock_pci(CSVC_CALLERINFO,			\
+			    (csvc)->csvc_lock);				\
 	} while (0)
 
 #define sl_csvc_unlock(csvc)						\
 	do {								\
 		if (sl_csvc_usemultiwait(csvc))				\
-			psc_mutex_unlock((csvc)->csvc_mutex);		\
+			psc_mutex_unlock_pci(CSVC_CALLERINFO,		\
+			    (csvc)->csvc_mutex);			\
 		else							\
-			freelock((csvc)->csvc_lock);			\
+			freelock_pci(CSVC_CALLERINFO,			\
+			    (csvc)->csvc_lock);				\
 	} while (0)
 
 #define sl_csvc_reqlock(csvc)						\
 	(sl_csvc_usemultiwait(csvc) ?					\
-	    psc_mutex_reqlock((csvc)->csvc_mutex) :			\
-	    reqlock((csvc)->csvc_lock))
+	    psc_mutex_reqlock_pci(CSVC_CALLERINFO, (csvc)->csvc_mutex) :\
+	    reqlock_pci(CSVC_CALLERINFO, (csvc)->csvc_lock))
 
 #define sl_csvc_ureqlock(csvc, waslocked)				\
 	do {								\
 		if (sl_csvc_usemultiwait(csvc))				\
-			psc_mutex_ureqlock((csvc)->csvc_mutex,		\
-			    (waslocked));				\
+			psc_mutex_ureqlock_pci(CSVC_CALLERINFO,		\
+			    (csvc)->csvc_mutex, (waslocked));		\
 		else							\
-			ureqlock((csvc)->csvc_lock, (waslocked));	\
+			ureqlock_pci(CSVC_CALLERINFO,			\
+			    (csvc)->csvc_lock, (waslocked));		\
 	} while (0)
 
 #define sl_csvc_lock_ensure(csvc)					\
@@ -207,11 +238,12 @@ struct sl_expcli_ops {
 	} while (0)
 
 struct slashrpc_cservice *
-	 sl_csvc_get(struct slashrpc_cservice **, int, struct pscrpc_export *,
-	    lnet_nid_t, uint32_t, uint32_t, uint64_t, uint32_t,
-	    void *, void *, enum slconn_type, void *);
-void	 sl_csvc_decref(struct slashrpc_cservice *);
-void	 sl_csvc_disconnect(struct slashrpc_cservice *);
+	 sl_csvc_get_pci(const struct pfl_callerinfo *,
+	     struct slashrpc_cservice **, int, struct pscrpc_export *,
+	     lnet_nid_t, uint32_t, uint32_t, uint64_t, uint32_t,
+	     void *, void *, enum slconn_type, void *);
+void	 sl_csvc_decref_pci(const struct pfl_callerinfo *, struct slashrpc_cservice *);
+void	 sl_csvc_disconnect_pci(const struct pfl_callerinfo *, struct slashrpc_cservice *);
 void	 sl_csvc_incref(struct slashrpc_cservice *);
 void	 sl_csvc_markfree(struct slashrpc_cservice *);
 int	 sl_csvc_useable(struct slashrpc_cservice *);

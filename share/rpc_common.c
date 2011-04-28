@@ -314,24 +314,26 @@ sl_csvc_markfree(struct slashrpc_cservice *csvc)
 	psc_atomic32_clearmask(&csvc->csvc_flags,
 	    CSVCF_CONNECTED | CSVCF_CONNECTING);
 	csvc->csvc_lasterrno = 0;
+	DEBUG_CSVC(PLL_DEBUG, csvc, "marked WANTFREE");
 	sl_csvc_ureqlock(csvc, locked);
 }
 
 /**
- * sl_csvc_incref - Account for releasing the use of a remote service
+ * sl_csvc_decref - Account for releasing the use of a remote service
  *	connection.
  * @csvc: client service.
  */
 void
-sl_csvc_decref(struct slashrpc_cservice *csvc)
+sl_csvc_decref_pci(const struct pfl_callerinfo *pfl_callerinfo,
+    struct slashrpc_cservice *csvc)
 {
 	int rc;
 
 	sl_csvc_reqlock(csvc);
 	rc = psc_atomic32_dec_getnew(&csvc->csvc_refcnt);
 	psc_assert(rc >= 0);
+	DEBUG_CSVC(PLL_DEBUG, csvc, "decref");
 	if (rc == 0) {
-		sl_csvc_wake(csvc);
 		if (psc_atomic32_read(&csvc->csvc_flags) & CSVCF_WANTFREE) {
 			/*
 			 * This should only apply to mount_slash clients
@@ -340,6 +342,8 @@ sl_csvc_decref(struct slashrpc_cservice *csvc)
 			pscrpc_import_put(csvc->csvc_import);
 			if (csvc->csvc_ctype == SLCONNT_CLI)
 				pll_remove(&client_csvcs, csvc);
+			DEBUG_CSVC(PLL_DEBUG, csvc, "freed");
+			PSCFREE(csvc->csvc_lockinfo.lm_ptr);
 			PSCFREE(csvc);
 			return;
 		}
@@ -357,6 +361,7 @@ sl_csvc_incref(struct slashrpc_cservice *csvc)
 {
 	sl_csvc_lock_ensure(csvc);
 	psc_atomic32_inc(&csvc->csvc_refcnt);
+	DEBUG_CSVC(PLL_DEBUG, csvc, "incref");
 }
 
 /**
@@ -365,7 +370,8 @@ sl_csvc_incref(struct slashrpc_cservice *csvc)
  * @csvc: client service.
  */
 void
-sl_csvc_disconnect(struct slashrpc_cservice *csvc)
+sl_csvc_disconnect_pci(const struct pfl_callerinfo *pfl_callerinfo,
+    struct slashrpc_cservice *csvc)
 {
 	int locked;
 
@@ -381,8 +387,9 @@ sl_csvc_disconnect(struct slashrpc_cservice *csvc)
 void
 sl_imp_hldrop_cli(void *csvc)
 {
-//	sl_csvc_markfree(csvc);
-//	sl_csvc_disconnect(csvc);
+	sl_csvc_markfree(csvc);
+	sl_csvc_disconnect(csvc);
+	sl_csvc_decref(csvc);
 }
 
 void
@@ -398,7 +405,8 @@ sl_imp_hldrop_resm(void *arg)
  * @csvc: client service.
  */
 void
-sl_csvc_disable(struct slashrpc_cservice *csvc)
+sl_csvc_disable_pci(const struct pfl_callerinfo *pfl_callerinfo,
+    struct slashrpc_cservice *csvc)
 {
 	int locked;
 
@@ -461,7 +469,8 @@ sl_csvc_create(uint32_t rqptl, uint32_t rpptl)
  * is left in the location referred to by csvcp for retry.
  */
 struct slashrpc_cservice *
-sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
+sl_csvc_get_pci(const struct pfl_callerinfo *pci,
+    struct slashrpc_cservice **csvcp, int flags,
     struct pscrpc_export *exp, lnet_nid_t peernid, uint32_t rqptl,
     uint32_t rpptl, uint64_t magic, uint32_t version, void *lockp,
     void *waitinfo, enum slconn_type ctype, void *arg)
@@ -497,6 +506,7 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 		case SLCONNT_CLI:
 			csvc->csvc_import->imp_hldropf = sl_imp_hldrop_cli;
 			csvc->csvc_import->imp_hldrop_arg = csvc;
+			sl_csvc_incref(csvc);
 			break;
 		case SLCONNT_IOD:
 			resm = libsl_nid2resm(peernid);
@@ -776,6 +786,7 @@ sl_exp_hldrop_cli(struct pscrpc_export *exp)
 		sl_expcli_ops.secop_destroy(exp->exp_private);
 	sl_csvc_reqlock(*csvcp);
 	sl_csvc_markfree(*csvcp);
+	sl_csvc_disconnect(*csvcp);
 	sl_csvc_decref(*csvcp);
 	PSCFREE(exp->exp_private);
 }
