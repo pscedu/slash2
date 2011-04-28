@@ -1155,6 +1155,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 		/*
 		 * Send RPC to the I/O server and wait for it to
 		 * complete.
+		 * XXX use random
 		 */
 		DYNARRAY_FOREACH(dst_resm, i, &res->res_members) {
 			csvc = slm_geticsvc_nb(dst_resm, NULL);
@@ -1194,7 +1195,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 		}
 	}
 	/*
-	 * Record the progress first before potentially remove old log file.
+	 * Record the progress first before potentially removing old log file.
 	 */
 	if (record)
 		mds_record_reclaim_prog();

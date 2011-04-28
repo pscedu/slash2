@@ -86,7 +86,7 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 	}
 
 	/* Lock again and try to free
- 	 */
+	 */
 	BML_LOCK(bml);
 	if (!(bml->bml_flags & BML_FREEING) && (bml->bml_flags & BML_COHRLS)) {
 		bml->bml_flags |= BML_FREEING;
@@ -105,8 +105,8 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 }
 
 /**
- * mdscoh_req - request a lease holder to do direct I/O as the result of a conflicting
- *     access request.
+ * mdscoh_req - Request a lease holder to do direct I/O as the result of
+ *	a conflicting access request.
  */
 int
 mdscoh_req(struct bmap_mds_lease *bml, int block)
