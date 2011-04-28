@@ -76,7 +76,6 @@ struct slash_inode_od {
 	uint32_t		ino_nrepls;			/* if 0, use ino_prepl */
 	uint32_t		ino_replpol;			/* BRP_* policies */
 	sl_replica_t		ino_repls[SL_DEF_REPLICAS];	/* embed a few replicas	*/
-	uint64_t		ino_repls_uniblks[SL_DEF_REPLICAS];
 
 	/* must be last */
 	uint64_t		ino_crc;			/* CRC of the inode */
@@ -87,7 +86,6 @@ struct slash_inode_od {
 struct slash_inode_extras_od {
 	sl_snap_t		inox_snaps[SL_DEF_SNAPSHOTS];	/* snapshot pointers */
 	sl_replica_t		inox_repls[SL_INOX_NREPLICAS];
-	uint64_t		inox_repls_uniblks[SL_INOX_NREPLICAS];
 
 	/* must be last */
 	uint64_t		inox_crc;
