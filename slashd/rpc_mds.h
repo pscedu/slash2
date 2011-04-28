@@ -59,10 +59,15 @@ struct pscrpc_export;
 #define SLM_UPDATE_BATCH		2048			/* namespace updates */
 #define SLM_RECLAIM_BATCH		2048			/* garbage reclamation */
 
+/* counterpart to csvc */
+struct slm_cli_csvc_cpart {
+	psc_spinlock_t			 mcccp_lock;
+	struct psc_waitq		 mcccp_waitq;
+};
+
 struct slm_exp_cli {
 	struct slashrpc_cservice	*mexpc_csvc;
-	psc_spinlock_t			 mexpc_lock;
-	struct psc_waitq		 mexpc_waitq;
+	struct slm_cli_csvc_cpart	*mexpc_cccp;
 	struct psclist_head		 mexpc_bmlhd;		/* bmap leases */
 };
 
@@ -100,7 +105,8 @@ slm_getclcsvc(struct pscrpc_export *exp)
 	mexpc = sl_exp_getpri_cli(exp);
 	return (sl_csvc_get(&mexpc->mexpc_csvc, 0, exp, LNET_NID_ANY,
 	    SRCM_REQ_PORTAL, SRCM_REP_PORTAL, SRCM_MAGIC, SRCM_VERSION,
-	    &mexpc->mexpc_lock, &mexpc->mexpc_waitq, SLCONNT_CLI, NULL));
+	    &mexpc->mexpc_cccp->mcccp_lock,
+	    &mexpc->mexpc_cccp->mcccp_waitq, SLCONNT_CLI, NULL));
 }
 
 #endif /* _RPC_MDS_H_ */

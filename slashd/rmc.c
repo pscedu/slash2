@@ -1118,12 +1118,14 @@ mexpc_destroy(void *arg)
 void
 mexpc_allocpri(struct pscrpc_export *exp)
 {
+	struct slm_cli_csvc_cpart *mcccp;
 	struct slm_exp_cli *mexpc;
 
 	mexpc = exp->exp_private = PSCALLOC(sizeof(*mexpc));
+	mcccp = mexpc->mexpc_cccp = PSCALLOC(sizeof(*mcccp));
 	INIT_PSCLIST_HEAD(&mexpc->mexpc_bmlhd);
-	INIT_SPINLOCK(&mexpc->mexpc_lock);
-	psc_waitq_init(&mexpc->mexpc_waitq);
+	INIT_SPINLOCK(&mcccp->mcccp_lock);
+	psc_waitq_init(&mcccp->mcccp_waitq);
 	slm_getclcsvc(exp);
 }
 
