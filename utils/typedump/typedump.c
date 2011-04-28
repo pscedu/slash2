@@ -218,12 +218,14 @@ main(int argc, char *argv[])
 	PRTYPE(struct slconn_thread);
 	PRTYPE(struct slctlmsg_conn);
 	PRTYPE(struct slctlmsg_fcmh);
+	PRTYPE(struct sli_cli_csvc_cpart);
 	PRTYPE(struct sli_exp_cli);
 	PRTYPE(struct sli_repl_workrq);
 	PRTYPE(struct slictlmsg_replwkst);
 	PRTYPE(struct sliric_thread);
 	PRTYPE(struct slirii_thread);
 	PRTYPE(struct slirim_thread);
+	PRTYPE(struct slm_cli_csvc_cpart);
 	PRTYPE(struct slm_exp_cli);
 	PRTYPE(struct slm_replst_workreq);
 	PRTYPE(struct slm_resmlink);
