@@ -469,7 +469,7 @@ sl_csvc_create(uint32_t rqptl, uint32_t rpptl)
  * is left in the location referred to by csvcp for retry.
  */
 struct slashrpc_cservice *
-sl_csvc_get_pci(const struct pfl_callerinfo *pci,
+sl_csvc_get_pci(const struct pfl_callerinfo *pfl_callerinfo,
     struct slashrpc_cservice **csvcp, int flags,
     struct pscrpc_export *exp, lnet_nid_t peernid, uint32_t rqptl,
     uint32_t rpptl, uint64_t magic, uint32_t version, void *lockp,
