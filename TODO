@@ -9,13 +9,13 @@ reminders:
 - ensure reentrancy of 'static' variables in functions
 
 * Kernel build causes bmap flushq to grow considerably (in the thousands..)
-* Spend some time dealing with sliod crash / restart 
+* Spend some time dealing with sliod crash / restart
 
 -----------------------------------------------------------------------
 
-* rpc timeouts should correspond to bmap lease timeouts.  In addition, 
+* rpc timeouts should correspond to bmap lease timeouts.  In addition,
 	threads blocked on RA bmpces, or another thread's bmpce fetch
-	should timeout and not block indefinitely.  This does not 
+	should timeout and not block indefinitely.  This does not
 	completely address the issue from bug 132 but may be a useful
 	asset.
 pauln (04/22/11)
@@ -71,16 +71,16 @@ fence about this.
 
 pauln (11/10/2010)
 
-Once possible approach is for the I/O server to publish this value along with 
+Once possible approach is for the I/O server to publish this value along with
 the file size.  The only caveat being that for files which are split amongst
 I/O servers, maintaining an accurate running count may be tricky.  Also, where
-partially invalidated (but not yet garbage collected) replicas exist, this 
-could pose some problems because the I/O server won't necessarily know what 
+partially invalidated (but not yet garbage collected) replicas exist, this
+could pose some problems because the I/O server won't necessarily know what
 blocks are allocated to give region of the file.
 
 It may be possible for this method to work in a fashion similar to that of
 file size updates where the largest value is taken.  Of course this assumes
-that the MDS doesn't accept updates from ptrunc'd replica which have yet 
+that the MDS doesn't accept updates from ptrunc'd replica which have yet
 to undergo GC
 
 pauln (04/25/2011)
@@ -377,7 +377,6 @@ API rename
   DIO, etc.
 - do full truncate and unlink do the right things while ptrunc is resolving?
 - add SSL transport which uses keys and can therefore disable authbuf
-- slmctl/slictl -s clients do not seem to go away
 
 - write a ptrunc tester
 - for -s connections, we arguably do not need to show members of the
