@@ -439,3 +439,5 @@ lcache
 - add more local slash.conf settings:
 	- zfs pool cachefile
 	- zfs pool name
+
+- INO_DIRTY needs to take the same fate as BMAP_LOGCHG
