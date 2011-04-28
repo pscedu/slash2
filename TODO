@@ -429,6 +429,8 @@ lcache
 - lcache-status:
 	lookup item and check lcache
 
+- we don't need to hold ino_crc in memory; only needed when doing disk I/O
+
 - move namespace in zfs into a subdir so we dont have to do the
   strcmp(fn, ".slmd") trick
 
