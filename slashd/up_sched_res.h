@@ -64,7 +64,7 @@ enum {
 };
 
 #define USWI_DEBUG(lvl, wk, fmt, ...)					\
-	psc_log((lvl), "uswi@%p f+g:"SLPRI_FG" fl:%s%s ref:%d "		\
+	psclog((lvl), "uswi@%p f+g:"SLPRI_FG" fl:%s%s ref:%d "		\
 	    "gen:%d " fmt,						\
 	    (wk), SLPRI_FG_ARGS(USWI_FG(wk)),				\
 	    (wk)->uswi_flags & USWIF_BUSY	? "b" : "",		\
