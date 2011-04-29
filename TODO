@@ -11,6 +11,24 @@ reminders:
 * Kernel build causes bmap flushq to grow considerably (in the thousands..)
 * Spend some time dealing with sliod crash / restart
 
+
+
+-----------------------------------------------------------------------
+* Investigate sliod direct I/O and / or flushing all buffers prior to 
+releasing odtable entry on slashd.  At some point we need to guarantee 
+that data has been committed to the backing fs prior to giving up the 
+write lease.
+
+* Read-ahead work is needed.. Better detection for large I/O's and fast
+connections vs. small file and latency sensitive workloads.  The current
+approach favors lower latency at the cost of issuing more requests.  (ie
+every RA request is 32k).  For 2 large files, this causes ~500 requests
+to be queued to a sliod - which is a lot.  
+
+* Need to look into increasing the number of ric threads and slabs on the
+sliod.
+
+pauln (04/29/11)
 -----------------------------------------------------------------------
 
 * rpc timeouts should correspond to bmap lease timeouts.  In addition,
