@@ -1,0 +1,29 @@
+# $Id: $
+
+# NCAST configuration
+global port=1301;
+global net=tcp11;
+
+# Pull in all config files
+# include "/etc/slash/conf.d/*"
+
+site @PSCARCH {
+	site_desc       = "PSC Phase0 Archiver";
+	site_id         = 0;
+	resource archmds  {
+		desc    = "PSC Arch MDS";
+		type    = mds;
+		id      = 1;
+		ifs     = 10.10.101.60;
+		jrnldev = /dev/sdah;
+	}
+
+	resource archsliod {
+		desc    = "PSC Phase0 I/O Server";
+		type    = standalone_fs;
+		id      = 0;
+		ifs     = 10.10.101.155;
+		fsroot  = /local/s2io;
+	}
+}
+
