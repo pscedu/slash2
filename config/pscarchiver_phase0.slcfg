@@ -1,4 +1,4 @@
-# $Id: $
+# $Id$
 
 # NCAST configuration
 global port=1301;
