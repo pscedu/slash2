@@ -37,6 +37,7 @@ struct cli_finfo {
 };
 
 struct fcmh_cli_info {
+	struct sl_resm		*fci_resm;
 	struct timeval		 fci_age;
 	union {
 		struct cli_finfo	f;

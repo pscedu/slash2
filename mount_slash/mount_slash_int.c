@@ -78,39 +78,40 @@ struct psc_iostats	msl_racache_stat;
 void bmap_flush_inflight_unset(struct bmpc_ioreq *);
 
 int
-msl_remote_access(struct msl_fhent *mfh)
+msl_io_check_site(struct msl_fhent *mfh)
 {
-	int remote = 0;
-	sl_siteid_t siteid1, siteid2;
-
-	siteid1 = slc_rmc_resm->resm_res->res_site->site_id;
-	siteid2 = FID_GET_SITEID(mfh->mfh_fcmh->fcmh_sstb.sst_fg.fg_fid);
-	if (siteid1 != siteid2)
-		remote = 1;
-	return (remote);
-}
-
-int
-msl_io_remote(struct msl_fhent *mfh, char *buf, const size_t size,
-    const off_t off, enum rw rw)
-{
-	int i, found = 0;
-	sl_siteid_t siteid;
+	int rc, i, found;
+	struct fidc_membh *f;
 	struct sl_resource *res;
-	struct sl_site *remoteSite;
+	struct fcmh_cli_info *fci;
+	struct sl_site *fileSite;
+	sl_siteid_t thisSiteid, fileSiteid;
 
-	siteid = FID_GET_SITEID(mfh->mfh_fcmh->fcmh_sstb.sst_fg.fg_fid);
-	remoteSite = libsl_siteid2site(siteid);
-	SITE_FOREACH_RES(remoteSite, res, i)
-		if (res->res_type == SLREST_MDS) {
-			found = 1;
-			break;
+	f = mfh->mfh_fcmh;
+	fci = fcmh_2_fci(f);
+	if (fci->fci_resm)
+		return (0);
+
+	thisSiteid = slc_rmc_resm->resm_res->res_site->site_id;
+	fileSiteid = FID_GET_SITEID(mfh->mfh_fcmh->fcmh_sstb.sst_fg.fg_fid);
+	if (thisSiteid == fileSiteid) {
+		rc = 0;
+		fci->fci_resm = slc_rmc_resm;
+	} else {
+		found = 0;
+		fileSite = libsl_siteid2site(fileSiteid);
+		SITE_FOREACH_RES(fileSite, res, i)
+			if (res->res_type == SLREST_MDS) {
+				found = 1;
+				fci->fci_resm = psc_dynarray_getpos(&res->res_members, 0);
+				break;
+			}
+		if (!found) {
+			psc_errorx("Invalid site ID %d\n", fileSiteid);
+			rc = ESTALE;
 		}
-	if (!found) {
-		psc_errorx("Invalid site ID %d\n", siteid);
-		return EIO;
 	}
-	return EIO;
+	return (rc);
 }
 
 __static int
@@ -2198,10 +2199,9 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 	off_t roff;
 	char *p;
 
-	if (msl_remote_access(mfh)) {
-		rc = msl_io_remote(mfh, buf, size, off, rw);
+	rc = msl_io_check_site(mfh);
+	if (rc)
 		return (rc);
-	}
 
 	memset(r, 0, sizeof(r));
 
