@@ -19,16 +19,13 @@
 
 #include "pfl/cdefs.h"
 
+#include "fidc_mds.h"
 #include "inode.h"
 #include "mdsio.h"
 #include "mdslog.h"
+#include "slashd.h"
 #include "slerr.h"
 #include "sljournal.h"
-
-struct sl_ino_compat sl_ino_compat_table[] = {
-/* 1 */	{ mds_ino_read_v1, mds_inox_read_v1, 0x400, 0x1000 },
-/* 2 */	{ NULL, NULL, SL_EXTRAS_START_OFF, SL_BMAP_START_OFF },
-};
 
 int
 mds_ino_read_v1(struct slash_inode_handle *ih)
@@ -42,7 +39,7 @@ mds_ino_read_v1(struct slash_inode_handle *ih)
 		sl_replica_t	ino_repls[4];
 		uint64_t	ino_crc;
 	} ino;
-	psc_crc64_t crc;
+	uint64_t crc;
 	size_t nb;
 	int rc;
 
@@ -55,13 +52,12 @@ mds_ino_read_v1(struct slash_inode_handle *ih)
 	psc_crc64_calc(&crc, &ino, sizeof(ino) - sizeof(crc));
 	if (crc != ino.ino_crc)
 		return (EIO);
-	memset(&ih->ih_ino, 0, sizeof(ih->ih_ino));
-	ih->ih_ino.ino_version = ino.ino_version;
-	ih->ih_ino.ino_bsz = ino.ino_bsz;
-	ih->ih_ino.ino_nrepls = ino.ino_nrepls;
-	ih->ih_ino.ino_replpol = ino.ino_replpol;
-	ih->ih_ino.ino_replpol = ino.ino_replpol;
-	memcpy(ih->ih_ino.ino_repls, ino.ino_repls,
+	ih->inoh_ino.ino_version = ino.ino_version;
+	ih->inoh_ino.ino_bsz = ino.ino_bsz;
+	ih->inoh_ino.ino_nrepls = ino.ino_nrepls;
+	ih->inoh_ino.ino_replpol = ino.ino_replpol;
+	ih->inoh_ino.ino_replpol = ino.ino_replpol;
+	memcpy(ih->inoh_ino.ino_repls, ino.ino_repls,
 	    sizeof(ino.ino_repls));
 	return (0);
 }
@@ -74,7 +70,7 @@ mds_inox_read_v1(struct slash_inode_handle *ih)
 		sl_replica_t	inox_repls[60];
 		uint64_t	inox_crc;
 	} inox;
-	psc_crc64_t crc;
+	uint64_t crc;
 	size_t nb;
 	int rc;
 
@@ -87,10 +83,14 @@ mds_inox_read_v1(struct slash_inode_handle *ih)
 	psc_crc64_calc(&crc, &inox, sizeof(inox) - sizeof(crc));
 	if (crc != inox.inox_crc)
 		return (EIO);
-	memset(&ih->ih_extras, 0, sizeof(*ih->ih_extras));
-	memset(&ih->ih_extras->inox_snaps, inox.inox_snaps,
+	memcpy(ih->inoh_extras->inox_snaps, inox.inox_snaps,
 	    sizeof(inox.inox_snaps));
-	memset(&ih->ih_extras->inox_repls, inox.inox_repls,
+	memcpy(ih->inoh_extras->inox_repls, inox.inox_repls,
 	    sizeof(inox.inox_repls));
 	return (0);
 }
+
+struct sl_ino_compat sl_ino_compat_table[] = {
+/* 1 */	{ mds_ino_read_v1, mds_inox_read_v1, 0x400, 0x1000 },
+/* 2 */	{ NULL, NULL, SL_EXTRAS_START_OFF, SL_BMAP_START_OFF },
+};
