@@ -39,15 +39,6 @@ mdsio_inode_dump(struct slash_inode_handle *ih, void *readh)
 	int rc;
 
 	f = ih->inoh_fcmh;
-
-	rc = mdsio_inode_write(ih, NULL, NULL);
-	if (rc)
-		return (rc);
-
-	rc = mdsio_inode_extras_write(ih, NULL, NULL);
-	if (rc)
-		return (rc);
-
 	th = inoh_2_mdsio_data(ih);
 
 	for (i = 0; i < fcmh_2_nbmaps(f) + fcmh_2_nxbmaps(f); i++) {
@@ -62,7 +53,12 @@ mdsio_inode_dump(struct slash_inode_handle *ih, void *readh)
 		if (rc)
 			return (rc);
 	}
-	return (0);
+
+	rc = mdsio_inode_extras_write(ih, NULL, NULL);
+	if (rc)
+		return (rc);
+
+	return (mdsio_inode_write(ih, NULL, NULL));
 }
 
 int
@@ -121,6 +117,64 @@ mds_inode_update(struct slash_inode_handle *ih, int old_version)
 		DEBUG_INOH(PLL_ERROR, ih, "error updating old inode");
 	}
 	return (rc);
+}
+
+int
+mds_inode_update_interrupted(struct slash_inode_handle *ih, int *rc)
+{
+	char fn[NAME_MAX + 1];
+	struct srt_stat sstb;
+	void *h = NULL, *th;
+	int exists = 0;
+	uint64_t crc;
+	size_t nb;
+
+	th = inoh_2_mdsio_data(ih);
+
+	snprintf(fn, sizeof(fn), "%016lx.update",
+	    fcmh_2_fid(ih->inoh_fcmh));
+	*rc = mdsio_opencreate(mds_tmpdir_inum, &rootcreds, O_RDONLY,
+	    0644, fn, NULL, NULL, &h, NULL, NULL);
+	if (*rc)
+		goto out;
+	exists = 1;
+
+	inoh_2_mdsio_data(ih) = h;
+
+	*rc = mdsio_read(&rootcreds, &ih->inoh_ino, INO_OD_SZ, &nb, 0,
+	    h);
+	if (*rc)
+		goto out;
+
+	psc_crc64_calc(&crc, &ih->inoh_ino, INO_OD_CRCSZ);
+	if (crc != ih->inoh_ino.ino_crc) {
+		*rc = EIO;
+		goto out;
+	}
+
+	*rc = mds_inox_ensure_loaded(ih);
+	if (*rc)
+		goto out;
+
+	inoh_2_mdsio_data(ih) = th;
+
+	memset(&sstb, 0, sizeof(sstb));
+	*rc = mdsio_setattr(0, &sstb, SL_SETATTRF_METASIZE, &rootcreds,
+	    NULL, th, NULL);
+	if (*rc)
+		goto out;
+
+	*rc = mdsio_inode_dump(ih, h);
+	if (*rc)
+		goto out;
+
+	mdsio_unlink(mds_tmpdir_inum, fn, &rootcreds, NULL);
+
+ out:
+	if (exists && *rc)
+		mdsio_unlink(mds_tmpdir_inum, fn, &rootcreds, NULL);
+	inoh_2_mdsio_data(ih) = th;
+	return (exists);
 }
 
 int
