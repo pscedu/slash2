@@ -28,6 +28,95 @@
 #include "sljournal.h"
 
 int
+mdsio_inode_update(struct slash_inode_handle *ih, int old_version)
+{
+	char fn[NAME_MAX + 1];
+	struct sl_ino_compat *sic;
+	struct fidc_membh *f;
+	struct bmapc_memb *b;
+	void *h = NULL, *th;
+	sl_bmapno_t i;
+	int rc;
+
+	f = ih->inoh_fcmh;
+	sic = &sl_ino_compat_table[vers];
+	rc = sic->sic_read_ino(ih);
+	if (rc)
+		return (rc);
+	DEBUG_INOH(PLL_INFO, ih, "updating old inode (v %d)", old_version);
+
+	snprintf(fn, sizeof(fn), "%016lx.update", fcmh_2_fid(f));
+	rc = mdsio_opencreate(dir, &rootcreds, O_RDWR | O_CREAT |
+	    O_TRUNC, 0644, fn, NULL, NULL, &h, NULL, NULL);
+	if (rc)
+		goto out;
+
+	/* convert old structures into new into temp file */
+	rc = sic->sic_read_inox(ih);
+	if (rc)
+		goto out;
+
+	th = inoh_2_mdsio_data(ih);
+	inoh_2_mdsio_data(ih) = h;
+	rc = mdsio_inode_dump(ih, th);
+	if (rc)
+		goto out;
+
+	/* move new structures to inode meta file */
+	inoh_2_mdsio_data(ih) = th;
+	rc = mdsio_setattr(0, &stb, SL_SETATTRF_METASIZE, &rootcreds,
+	    NULL, th, NULL);
+	if (rc)
+		goto out;
+
+	rc = mdsio_inode_dump(ih, h);
+	if (rc)
+		goto out;
+
+	mdsio_unlink(&rootcreds, fn, h);
+
+ out:
+	if (h)
+		mdsio_release(&rootcreds, h);
+	if (rc) {
+		mdsio_unlink(&rootcreds, fn, h);
+		DEBUG_INOH(PLL_ERROR, ih, "error updating old inode");
+	}
+	return (rc);
+}
+
+int
+mdsio_inode_dump(struct slash_inode_handle *ih, void *readh)
+{
+	void *th;
+	int rc;
+
+	rc = mds_inode_write(ih, NULL, NULL);
+	if (rc)
+		return (rc);
+
+	rc = mds_inode_extras_write(ih, NULL, NULL);
+	if (rc)
+		return (rc);
+
+	th = inoh_2_mdsio_data(ih);
+
+	for (i = 0; i < fcmh_2_nbmaps(f) + fcmh_2_nxbmaps(f); i++) {
+		inoh_2_mdsio_data(ih) = readh;
+		rc = mds_bmap_load(f, i, &b);
+		inoh_2_mdsio_data(ih) = th;
+		if (rc)
+			return (rc):
+
+		rc = mdsio_bmap_write(bmap, 0, NULL, NULL);
+		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+		if (rc)
+			return (rc):
+	}
+	return (0);
+}
+
+int
 mds_ino_read_v1(struct slash_inode_handle *ih)
 {
 	struct {
@@ -66,7 +155,7 @@ int
 mds_inox_read_v1(struct slash_inode_handle *ih)
 {
 	struct {
-		sl_snap_t	inox_snaps[1];	/* snapshot pointers */
+		sl_snap_t	inox_snaps[1];
 		sl_replica_t	inox_repls[60];
 		uint64_t	inox_crc;
 	} inox;
