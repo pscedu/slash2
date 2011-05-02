@@ -18,7 +18,9 @@
  */
 
 #include "pfl/cdefs.h"
+#include "pfl/fs.h"
 
+#include "bmap_mds.h"
 #include "fidc_mds.h"
 #include "inode.h"
 #include "mdsio.h"
@@ -28,26 +30,61 @@
 #include "sljournal.h"
 
 int
-mdsio_inode_update(struct slash_inode_handle *ih, int old_version)
+mdsio_inode_dump(struct slash_inode_handle *ih, void *readh)
 {
-	char fn[NAME_MAX + 1];
-	struct sl_ino_compat *sic;
 	struct fidc_membh *f;
 	struct bmapc_memb *b;
-	void *h = NULL, *th;
 	sl_bmapno_t i;
+	void *th;
 	int rc;
 
 	f = ih->inoh_fcmh;
-	sic = &sl_ino_compat_table[vers];
+
+	rc = mdsio_inode_write(ih, NULL, NULL);
+	if (rc)
+		return (rc);
+
+	rc = mdsio_inode_extras_write(ih, NULL, NULL);
+	if (rc)
+		return (rc);
+
+	th = inoh_2_mdsio_data(ih);
+
+	for (i = 0; i < fcmh_2_nbmaps(f) + fcmh_2_nxbmaps(f); i++) {
+		inoh_2_mdsio_data(ih) = readh;
+		rc = mds_bmap_load(f, i, &b);
+		inoh_2_mdsio_data(ih) = th;
+		if (rc)
+			return (rc);
+
+		rc = mdsio_bmap_write(b, 0, NULL, NULL);
+		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+		if (rc)
+			return (rc);
+	}
+	return (0);
+}
+
+int
+mds_inode_update(struct slash_inode_handle *ih, int old_version)
+{
+	char fn[NAME_MAX + 1];
+	struct sl_ino_compat *sic;
+	struct srt_stat sstb;
+	void *h = NULL, *th;
+	int rc;
+
+	sic = &sl_ino_compat_table[old_version];
 	rc = sic->sic_read_ino(ih);
 	if (rc)
 		return (rc);
-	DEBUG_INOH(PLL_INFO, ih, "updating old inode (v %d)", old_version);
+	DEBUG_INOH(PLL_INFO, ih, "updating old inode (v %d)",
+	    old_version);
 
-	snprintf(fn, sizeof(fn), "%016lx.update", fcmh_2_fid(f));
-	rc = mdsio_opencreate(dir, &rootcreds, O_RDWR | O_CREAT |
-	    O_TRUNC, 0644, fn, NULL, NULL, &h, NULL, NULL);
+	snprintf(fn, sizeof(fn), "%016lx.update",
+	    fcmh_2_fid(ih->inoh_fcmh));
+	rc = mdsio_opencreate(mds_tmpdir_inum, &rootcreds, O_RDWR |
+	    O_CREAT | O_TRUNC, 0644, fn, NULL, NULL, &h, NULL, NULL);
 	if (rc)
 		goto out;
 
@@ -64,7 +101,8 @@ mdsio_inode_update(struct slash_inode_handle *ih, int old_version)
 
 	/* move new structures to inode meta file */
 	inoh_2_mdsio_data(ih) = th;
-	rc = mdsio_setattr(0, &stb, SL_SETATTRF_METASIZE, &rootcreds,
+	memset(&sstb, 0, sizeof(sstb));
+	rc = mdsio_setattr(0, &sstb, SL_SETATTRF_METASIZE, &rootcreds,
 	    NULL, th, NULL);
 	if (rc)
 		goto out;
@@ -73,47 +111,16 @@ mdsio_inode_update(struct slash_inode_handle *ih, int old_version)
 	if (rc)
 		goto out;
 
-	mdsio_unlink(&rootcreds, fn, h);
+	mdsio_unlink(mds_tmpdir_inum, fn, &rootcreds, NULL);
 
  out:
 	if (h)
 		mdsio_release(&rootcreds, h);
 	if (rc) {
-		mdsio_unlink(&rootcreds, fn, h);
+		mdsio_unlink(mds_tmpdir_inum, fn, &rootcreds, NULL);
 		DEBUG_INOH(PLL_ERROR, ih, "error updating old inode");
 	}
 	return (rc);
-}
-
-int
-mdsio_inode_dump(struct slash_inode_handle *ih, void *readh)
-{
-	void *th;
-	int rc;
-
-	rc = mds_inode_write(ih, NULL, NULL);
-	if (rc)
-		return (rc);
-
-	rc = mds_inode_extras_write(ih, NULL, NULL);
-	if (rc)
-		return (rc);
-
-	th = inoh_2_mdsio_data(ih);
-
-	for (i = 0; i < fcmh_2_nbmaps(f) + fcmh_2_nxbmaps(f); i++) {
-		inoh_2_mdsio_data(ih) = readh;
-		rc = mds_bmap_load(f, i, &b);
-		inoh_2_mdsio_data(ih) = th;
-		if (rc)
-			return (rc):
-
-		rc = mdsio_bmap_write(bmap, 0, NULL, NULL);
-		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
-		if (rc)
-			return (rc):
-	}
-	return (0);
 }
 
 int
