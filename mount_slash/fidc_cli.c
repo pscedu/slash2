@@ -125,7 +125,7 @@ slc_fcmh_ctor(struct fidc_membh *fcmh)
 				break;
 			}
 		if (!found) {
-			psc_errorx("Invalid site ID %d\n", fileSiteid);
+			psc_errorx("Invalid site ID %d", fileSiteid);
 			rc = ESTALE;
 		}
 	}

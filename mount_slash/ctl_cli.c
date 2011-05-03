@@ -358,7 +358,6 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct slash_creds cr;
 	int rc;
 
-
 	rc = msctl_getcreds(fd, &cr);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
