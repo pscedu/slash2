@@ -176,18 +176,16 @@ libsl_profile_dump(void)
 	int n;
 
 	PSCLOG_LOCK();
-	psc_info("Node info: resource %s ID %#x\n"
-	    "\tdesc: %s\n"
-	    "\ttype %d, npeers %u, nnids %u",
-	    r->res_name, r->res_id,
-	    r->res_desc,
-	    r->res_type, r->res_npeers, psc_dynarray_len(&r->res_members));
+	psclog_info("Node info: resource %s ID %#x type %d, npeers %u, "
+	    "nnids %u",
+	    r->res_name, r->res_id, r->res_type, r->res_npeers,
+	    psc_dynarray_len(&r->res_members));
 
 	DYNARRAY_FOREACH(p, n, &r->res_peers)
-		psc_info("\tpeer %d: %s\t%s",
+		psclog_info("\tpeer %d: %s\t%s",
 		    n, p->res_name, p->res_desc);
 	DYNARRAY_FOREACH(resm, n, &r->res_members)
-		psc_info("\tnid %d: %s", n, resm->resm_addrbuf);
+		psclog_info("\tnid %d: %s", n, resm->resm_addrbuf);
 	PSCLOG_UNLOCK();
 }
 

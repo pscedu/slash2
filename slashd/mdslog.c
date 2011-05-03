@@ -1018,6 +1018,7 @@ mds_cursor_thread(__unusedx struct psc_thread *thr)
 void
 mds_open_cursor(void)
 {
+	char *p, tmbuf[26];
 	mdsio_fid_t mf;
 	size_t nb;
 	int rc;
@@ -1041,8 +1042,11 @@ mds_open_cursor(void)
 	slm_set_curr_slashid(mds_cursor.pjc_fid);
 	psclog_notice("File system was formatted on %"PRIu64" seconds "
 	    "since the Epoch", mds_cursor.pjc_timestamp);
-	psclog_notice("File system was formatted on %s",
-	    ctime((time_t *)&mds_cursor.pjc_timestamp));
+	ctime_r((time_t *)&mds_cursor.pjc_timestamp, tmbuf);
+	p = strchr(tmbuf, '\n');
+	if (p)
+		*p = '\0';
+	psclog_notice("File system was formatted on %s", tmbuf);
 }
 
 int
