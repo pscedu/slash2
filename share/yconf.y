@@ -234,26 +234,49 @@ site_resource	: resource_start resource_def SUBSECT_END {
 			struct sl_resource *r;
 			int j, nmds = 0;
 
+			if (currentSite->site_id == 0)
+				yyerror("site %s has no ID assigned",
+				    currentSite->site_name);
+
+			if (currentRes->res_id == 0)
+				yyerror("resource %s@%s has no ID "
+				    "assigned", currentRes->res_name,
+				    currentSite->site_name);
+
+			if (strcmp(currentRes->res_name, "") == 0)
+				yyerror("resource ID %d @%s has no name",
+				    currentRes->res_id, currentSite->site_name);
+
 			if (currentRes->res_type == SLREST_NONE)
-				yyerror("resource %s ID %d has no type specified",
-				    currentRes->res_name, currentRes->res_id);
+				yyerror("resource %s@%s has no type specified",
+				    currentRes->res_name, currentSite->site_name);
 
 			currentRes->res_id = sl_global_id_build(
 			    currentSite->site_id, currentRes->res_id);
 
-			/* resource ID must be unique within one site */
-			DYNARRAY_FOREACH(r, j, &currentSite->site_resources)
+			/* resource name & ID must be unique within a site */
+			DYNARRAY_FOREACH(r, j, &currentSite->site_resources) {
 				if (currentRes->res_id == r->res_id)
-					yyerror("resource %s ID %d already assigned to %s",
-					    currentRes->res_name, currentRes->res_id,
+					yyerror("resource %s@%s ID "
+					    "already assigned to %s",
+					    currentRes->res_name,
+					    currentRes->res_id,
 					    r->res_name);
+				if (strcasecmp(currentRes->res_name,
+				    r->res_name) == 0)
+					yyerror("duplicate resource name %s@%s",
+					    currentRes->res_name,
+					    currentSite->site_name);
+			}
 
 			psc_dynarray_add(&currentSite->site_resources, currentRes);
 
 			DYNARRAY_FOREACH(r, j, &currentSite->site_resources)
 				if (r->res_type == SLREST_MDS &&
 				    ++nmds > 1)
-					yyerror("more than one metadata server");
+					yyerror("site %s has more than "
+					    "one metadata server",
+					    currentSite->site_name);
 
 			slcfg_init_res(currentRes);
 		}
