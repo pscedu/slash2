@@ -83,7 +83,7 @@ main(int argc, char *argv[])
 	pfl_init();
 
 	cp = psc_strdup(progname);
-	snprintf(fn, sizeof(fn), "%s/example.conf", dirname(cp));
+	snprintf(fn, sizeof(fn), "%s/example.slcfg", dirname(cp));
 	PSCFREE(cp);
 
 	setenv("LNET_NETWORKS", "tcp10(" CFS_LOOPBACK_IFNAME ")", 1);
