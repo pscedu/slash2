@@ -77,43 +77,6 @@ struct psc_iostats	msl_racache_stat;
 
 void bmap_flush_inflight_unset(struct bmpc_ioreq *);
 
-int
-msl_io_check_site(struct msl_fhent *mfh)
-{
-	int rc, i, found;
-	struct fidc_membh *f;
-	struct sl_resource *res;
-	struct fcmh_cli_info *fci;
-	struct sl_site *fileSite;
-	sl_siteid_t thisSiteid, fileSiteid;
-
-	f = mfh->mfh_fcmh;
-	fci = fcmh_2_fci(f);
-	if (fci->fci_resm)
-		return (0);
-
-	thisSiteid = slc_rmc_resm->resm_res->res_site->site_id;
-	fileSiteid = FID_GET_SITEID(mfh->mfh_fcmh->fcmh_sstb.sst_fg.fg_fid);
-	if (thisSiteid == fileSiteid) {
-		rc = 0;
-		fci->fci_resm = slc_rmc_resm;
-	} else {
-		found = 0;
-		fileSite = libsl_siteid2site(fileSiteid);
-		SITE_FOREACH_RES(fileSite, res, i)
-			if (res->res_type == SLREST_MDS) {
-				found = 1;
-				fci->fci_resm = psc_dynarray_getpos(&res->res_members, 0);
-				break;
-			}
-		if (!found) {
-			psc_errorx("Invalid site ID %d\n", fileSiteid);
-			rc = ESTALE;
-		}
-	}
-	return (rc);
-}
-
 __static int
 msl_biorq_cmp(const void *x, const void *y)
 {
@@ -824,7 +787,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 	}
 	FCMH_ULOCK(f);
 
-	rc = slc_rmc_getimp1(&csvc);
+	rc = slc_rmc_getimp1(&csvc, fci->fci_resm);
 	if (rc)
 		goto out;
 	rc = SL_RSX_NEWREQ(csvc, SRMT_GETBMAP, rq, mq, mp);
@@ -920,6 +883,12 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw)
 	struct srm_bmap_chwrmode_rep *mp;
 	int rc, nretries = 0;
 
+	struct fcmh_cli_info *fci;
+	struct fidc_membh *f;
+
+	f = b->bcm_fcmh;
+	fci = fcmh_2_fci(f);
+
 	psc_assert(rw == SL_WRITE || rw == SL_READ);
  retry:
 	psc_assert(b->bcm_flags & BMAP_MDCHNG);
@@ -934,7 +903,7 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw)
 	 */
 	psc_assert(rw == SL_WRITE && (b->bcm_flags & BMAP_RD));
 
-	rc = slc_rmc_getimp1(&csvc);
+	rc = slc_rmc_getimp1(&csvc, fci->fci_resm);
 	if (rc)
 		goto out;
 
@@ -2198,10 +2167,6 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 	uint64_t fsz;
 	off_t roff;
 	char *p;
-
-	rc = msl_io_check_site(mfh);
-	if (rc)
-		return (rc);
 
 	memset(r, 0, sizeof(r));
 

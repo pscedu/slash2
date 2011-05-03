@@ -100,12 +100,36 @@ int
 slc_fcmh_ctor(struct fidc_membh *fcmh)
 {
 	struct fcmh_cli_info *fci;
+	int rc, i, found;
+	struct sl_resource *res;
+	struct sl_site *fileSite;
+	sl_siteid_t thisSiteid, fileSiteid;
 
 	fci = fcmh_get_pri(fcmh);
 	memset(fci, 0, sizeof(*fci));
 	slc_fcmh_refresh_age(fcmh);
 
-	return (0);
+	thisSiteid = slc_rmc_resm->resm_res->res_site->site_id;
+	fileSiteid = FID_GET_SITEID(fcmh->fcmh_sstb.sst_fg.fg_fid);
+	/* root's fid is 1 */
+	if (fileSiteid == 0 || fileSiteid == thisSiteid) {
+		rc = 0;
+		fci->fci_resm = slc_rmc_resm;
+	} else {
+		found = 0;
+		fileSite = libsl_siteid2site(fileSiteid);
+		SITE_FOREACH_RES(fileSite, res, i)
+			if (res->res_type == SLREST_MDS) {
+				found = 1;
+				fci->fci_resm = psc_dynarray_getpos(&res->res_members, 0);
+				break;
+			}
+		if (!found) {
+			psc_errorx("Invalid site ID %d\n", fileSiteid);
+			rc = ESTALE;
+		}
+	}
+	return (rc);
 }
 
 void

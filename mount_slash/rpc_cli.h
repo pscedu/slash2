@@ -57,7 +57,7 @@ extern struct pscrpc_completion rpcComp;
 void	slc_rpc_initsvc(void);
 
 int	slc_rmc_getimp(struct pscfs_req *, struct slashrpc_cservice **);
-int	slc_rmc_getimp1(struct slashrpc_cservice **);
+int	slc_rmc_getimp1(struct slashrpc_cservice **, struct sl_resm *);
 int	slc_rmc_retry(struct pscfs_req *, int *);
 int	slc_rmc_setmds(const char *);
 

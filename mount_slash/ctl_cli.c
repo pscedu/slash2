@@ -113,7 +113,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mrq->mrq_fid, slstrerror(rc)));
 
-	rc = slc_rmc_getimp1(&csvc);
+	rc = slc_rmc_getimp1(&csvc, slc_rmc_resm);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mrq->mrq_fid, slstrerror(rc));
@@ -206,7 +206,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    mrq->mrq_fid, slstrerror(rc)));
 
  issue:
-	rc = slc_rmc_getimp1(&csvc);
+	rc = slc_rmc_getimp1(&csvc, slc_rmc_resm);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, "%s: %s",
 		    fg.fg_fid, slstrerror(rc));
@@ -315,7 +315,7 @@ msctlhnd_set_newreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfnrp->mfnrp_fid, slstrerror(rc)));
 
-	rc = slc_rmc_getimp1(&csvc);
+	rc = slc_rmc_getimp1(&csvc, slc_rmc_resm);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfnrp->mfnrp_fid, slstrerror(rc));
@@ -358,6 +358,7 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct slash_creds cr;
 	int rc;
 
+
 	rc = msctl_getcreds(fd, &cr);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
@@ -386,7 +387,7 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfbrp->mfbrp_fid, slstrerror(rc)));
 
-	rc = slc_rmc_getimp1(&csvc);
+	rc = slc_rmc_getimp1(&csvc, slc_rmc_resm);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfbrp->mfbrp_fid, slstrerror(rc));
