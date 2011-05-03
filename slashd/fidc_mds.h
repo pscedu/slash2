@@ -40,13 +40,13 @@ struct fcmh_mds_info {
 #define FCMH_IN_PTRUNC		(_FCMH_FLGSHFT << 0)
 #define FCMH_SIZE_UPDATE	(_FCMH_FLGSHFT << 1)
 
-#define fcmh_2_fmi(f)		((struct fcmh_mds_info *)fcmh_get_pri(f))
 #define fcmh_2_inoh(f)		(&fcmh_2_fmi(f)->fmi_inodeh)
 #define fcmh_2_ino(f)		(&fcmh_2_inoh(f)->inoh_ino)
 #define fcmh_2_mdsio_data(f)	fcmh_2_fmi(f)->fmi_mdsio_data
 #define fcmh_2_mdsio_fid(f)	fcmh_2_fmi(f)->fmi_mdsio_fid
 #define fcmh_2_nrepls(f)	fcmh_2_ino(f)->ino_nrepls
 #define fcmh_2_repl(f, i)	fcmh_2_ino(f)->ino_repls[i].bs_id
+#define fcmh_2_nxbmaps(f)	(f)->fcmh_sstb.sst_nxbmaps
 
 #define inoh_2_mdsio_data(ih)	fcmh_2_mdsio_data((ih)->inoh_fcmh)
 #define inoh_2_fsz(ih)		fcmh_2_fsz((ih)->inoh_fcmh)
@@ -56,5 +56,11 @@ struct fcmh_mds_info {
 #define slm_fcmh_peek(fgp, fp)	fidc_lookup((fgp), FIDC_LOOKUP_NONE, NULL, 0, (fp))
 
 int	mds_fcmh_increase_fsz(struct fidc_membh *, uint64_t);
+
+static __inline struct fcmh_mds_info *
+fcmh_2_fmi(struct fidc_membh *f)
+{
+	return (fcmh_get_pri(f));
+}
 
 #endif /* _FIDC_MDS_H_ */
