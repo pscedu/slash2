@@ -208,7 +208,7 @@ mds_brepls_check(uint8_t *repls, int nr)
 			return;
 		}
 	}
-	psc_fatal("no valid replica states exist");
+	psc_fatalx("no valid replica states exist");
 }
 
 int
