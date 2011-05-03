@@ -2266,6 +2266,7 @@ main(int argc, char *argv[])
 		switch (c) {
 		case 'D':
 			sl_datadir = optarg;
+			break;
 		case 'd':
 			pscfs_addarg(&args, "-odebug");
 			break;
