@@ -43,7 +43,7 @@ struct slmds_jent_crc {
 	 * make it to the disk.  When we redo the creation, we will get
 	 * a different ZFS ID.
 	 */
-	uint64_t			sjc_fid;
+	slfid_t				sjc_fid;
 	sl_bmapno_t			sjc_bmapno;
 	sl_ios_id_t			sjc_ion;		/* Track the ION which did the I/O */
 	int32_t				sjc_ncrcs;
