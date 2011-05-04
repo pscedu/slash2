@@ -1850,6 +1850,12 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 				bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 			}
 
+		} else if (stb->st_size == (ssize_t)fcmh_2_fsz(c)) {
+			/* Noop.  Don't send truncate request if the 
+			 *    sizes match.
+			 */
+			goto out;
+
 		} else {
 			uint32_t x = stb->st_size / SLASH_BMAP_SIZE;
 
