@@ -20,6 +20,8 @@
 #define PSC_SUBSYS SLSS_BMAP
 #include "slsubsys.h"
 
+#include <limits.h>
+
 #include "pfl/cdefs.h"
 #include "psc_ds/tree.h"
 #include "psc_ds/treeutil.h"
