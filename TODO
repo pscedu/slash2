@@ -461,4 +461,6 @@ lcache
 	- zfs pool name
 
 - INO_DIRTY needs to take the same fate as BMAP_LOGCHG
+- ptrunc handling is all wrong: waiting for lease relinquishment must
+  happen before mdsio_setattr()
 - need ability to backup mds metafs
