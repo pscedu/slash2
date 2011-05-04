@@ -1649,6 +1649,11 @@ slm_setattr_core(struct fidc_membh *fcmh, struct srt_stat *sstb,
 			wkrq->wkrq_fcmh = fcmh;
 			wkrq->wkrq_cbf = slm_ptrunc_core;
 			lc_add(&slm_workq, wkrq);
+		} else {
+			FCMH_LOCK(fcmh);
+			fcmh->fcmh_flags &= ~FCMH_IN_PTRUNC;
+			mds_fcmh_increase_fsz(fcmh, sstb->sst_size);
+			FCMH_ULOCK(fcmh);
 		}
 		if (deref)
 			fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);

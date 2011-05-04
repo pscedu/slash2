@@ -696,16 +696,18 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 int
 slm_rmc_handle_setattr(struct pscrpc_request *rq)
 {
+	int nxbmaps_adj, to_set, unbump = 0, unptrunc = 0;
 	struct slashrpc_cservice *csvc;
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
 	struct fidc_membh *fcmh;
-	int to_set;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slm_fcmh_get(&mq->attr.sst_fg, &fcmh);
 	if (mp->rc)
 		goto out;
+
+	FCMH_LOCK(fcmh);
 
 	to_set = mq->to_set & SL_SETATTRF_CLI_ALL;
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
@@ -718,36 +720,28 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			 *   updates from the sliod may be pending for
 			 *   this generation.
 			 */
-			FCMH_LOCK(fcmh);
 			fcmh_2_gen(fcmh)++;
-			FCMH_ULOCK(fcmh);
-
 			to_set |= SL_SETATTRF_GEN;
+			unbump = 1;
 		} else {
 			/* partial truncate */
-			FCMH_LOCK(fcmh);
 			if (fcmh->fcmh_flags & FCMH_IN_PTRUNC) {
 				mp->rc = SLERR_BMAP_IN_PTRUNC;
 				goto out;
 			}
 			fcmh->fcmh_flags |= FCMH_IN_PTRUNC;
-			if (mq->attr.sst_size >= fcmh_2_fsz(fcmh)) {
-				mds_fcmh_increase_fsz(fcmh,
-				    mq->attr.sst_size);
-				FCMH_ULOCK(fcmh);
-				goto apply;
-			}
 
 			csvc = slm_getclcsvc(rq->rq_export);
 			psc_dynarray_add(&fcmh_2_fmi(fcmh)->
 			    fmi_ptrunc_clients, csvc);
 
 			fcmh_2_ptruncgen(fcmh)++;
-			fcmh->fcmh_sstb.sst_nxbmaps +=
-			    fcmh_2_fsz(fcmh) / SLASH_BMAP_SIZE -
+			nxbmaps_adj = fcmh_2_fsz(fcmh) / SLASH_BMAP_SIZE -
 			    fcmh->fcmh_sstb.sst_size / SLASH_BMAP_SIZE;
+			fcmh->fcmh_sstb.sst_nxbmaps += nxbmaps_adj;
 			to_set |= SL_SETATTRF_PTRUNCGEN;
-			FCMH_ULOCK(fcmh);
+
+			unptrunc = 1;
 		}
 	}
  apply:
@@ -761,7 +755,19 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	    mds_namespace_log);
 	mds_unreserve_slot();
 
-	if (!mp->rc) {
+	if (mp->rc) {
+		FCMH_LOCK(fcmh);
+		if (unbump)
+			fcmh_2_gen(fcmh)--;
+		if (unptrunc) {
+			fcmh_2_ptruncgen(fcmh)--;
+			fcmh->fcmh_flags &= ~FCMH_IN_PTRUNC;
+			fcmh->fcmh_sstb.sst_nxbmaps -= nxbmaps_adj;
+			psc_dynarray_remove(&fcmh_2_fmi(fcmh)->
+			    fmi_ptrunc_clients, csvc);
+		}
+		FCMH_ULOCK(fcmh);
+	} else {
 		slm_setattr_core(fcmh, &mq->attr, to_set);
 
 		FCMH_LOCK(fcmh);
