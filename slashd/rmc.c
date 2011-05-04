@@ -756,7 +756,6 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	mds_unreserve_slot();
 
 	if (mp->rc) {
-		FCMH_LOCK(fcmh);
 		if (unbump)
 			fcmh_2_gen(fcmh)--;
 		if (unptrunc) {
@@ -766,13 +765,12 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			psc_dynarray_remove(&fcmh_2_fmi(fcmh)->
 			    fmi_ptrunc_clients, csvc);
 		}
-		FCMH_ULOCK(fcmh);
 	} else {
-		slm_setattr_core(fcmh, &mq->attr, to_set);
-
-		FCMH_LOCK(fcmh);
-		fcmh->fcmh_sstb = mp->attr;
 		FCMH_ULOCK(fcmh);
+		slm_setattr_core(fcmh, &mq->attr, to_set);
+		FCMH_LOCK(fcmh);
+
+		fcmh->fcmh_sstb = mp->attr;
 	}
 
  out:
