@@ -30,7 +30,8 @@
 #include "sljournal.h"
 
 int
-mdsio_inode_dump(struct slash_inode_handle *ih, void *readh)
+mds_inode_dump(struct sl_ino_compat *sic, struct slash_inode_handle *ih,
+    void *readh)
 {
 	struct fidc_membh *f;
 	struct bmapc_memb *b;
@@ -42,23 +43,42 @@ mdsio_inode_dump(struct slash_inode_handle *ih, void *readh)
 	th = inoh_2_mdsio_data(ih);
 
 	for (i = 0; i < fcmh_2_nbmaps(f) + fcmh_2_nxbmaps(f); i++) {
-		inoh_2_mdsio_data(ih) = readh;
-		rc = mds_bmap_load(f, i, &b);
-		inoh_2_mdsio_data(ih) = th;
-		if (rc)
-			return (rc);
+		if (sic == NULL) {
+			inoh_2_mdsio_data(ih) = readh;
+			rc = mds_bmap_load(f, i, &b);
+			inoh_2_mdsio_data(ih) = th;
 
-		rc = mdsio_bmap_write(b, 0, NULL, NULL);
+			if (rc)
+				return (rc);
+		} else {
+			rc = bmap_getf(f, i, SL_WRITE, BMAPGETF_LOAD |
+			    BMAPGETF_NORETRIEVE, &b);
+			if (rc)
+				return (rc);
+
+			rc = sic->sic_read_bmap(b, readh);
+			if (rc) {
+				bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+				return (rc);
+			}
+		}
+
+		rc = mds_bmap_write(b, 0, NULL, NULL);
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 		if (rc)
 			return (rc);
 	}
 
-	rc = mdsio_inode_extras_write(ih, NULL, NULL);
+	rc = mds_inox_write(ih, NULL, NULL);
 	if (rc)
 		return (rc);
 
-	return (mdsio_inode_write(ih, NULL, NULL));
+	rc = mds_inode_write(ih, NULL, NULL);
+	if (rc)
+		return (rc);
+
+	mdsio_fsync(&rootcreds, 1, th);
+	return (0);
 }
 
 int
@@ -74,7 +94,7 @@ mds_inode_update(struct slash_inode_handle *ih, int old_version)
 	rc = sic->sic_read_ino(ih);
 	if (rc)
 		return (rc);
-	DEBUG_INOH(PLL_INFO, ih, "updating old inode (v %d)",
+	DEBUG_INOH(PLL_WARN, ih, "updating old inode (v %d)",
 	    old_version);
 
 	snprintf(fn, sizeof(fn), "%016lx.update",
@@ -91,19 +111,19 @@ mds_inode_update(struct slash_inode_handle *ih, int old_version)
 
 	th = inoh_2_mdsio_data(ih);
 	inoh_2_mdsio_data(ih) = h;
-	rc = mdsio_inode_dump(ih, th);
+	rc = mds_inode_dump(sic, ih, th);
+	inoh_2_mdsio_data(ih) = th;
 	if (rc)
 		goto out;
 
 	/* move new structures to inode meta file */
-	inoh_2_mdsio_data(ih) = th;
 	memset(&sstb, 0, sizeof(sstb));
 	rc = mdsio_setattr(0, &sstb, SL_SETATTRF_METASIZE, &rootcreds,
 	    NULL, th, NULL);
 	if (rc)
 		goto out;
 
-	rc = mdsio_inode_dump(ih, h);
+	rc = mds_inode_dump(NULL, ih, h);
 	if (rc)
 		goto out;
 
@@ -114,7 +134,8 @@ mds_inode_update(struct slash_inode_handle *ih, int old_version)
 		mdsio_release(&rootcreds, h);
 	if (rc) {
 		mdsio_unlink(mds_tmpdir_inum, fn, &rootcreds, NULL);
-		DEBUG_INOH(PLL_ERROR, ih, "error updating old inode");
+		DEBUG_INOH(PLL_ERROR, ih, "error updating old inode "
+		    "rc=%d", rc);
 	}
 	return (rc);
 }
@@ -124,34 +145,45 @@ mds_inode_update_interrupted(struct slash_inode_handle *ih, int *rc)
 {
 	char fn[NAME_MAX + 1];
 	struct srt_stat sstb;
+	struct iovec iovs[2];
+	uint64_t crc, od_crc;
 	void *h = NULL, *th;
+	mdsio_fid_t inum;
 	int exists = 0;
-	uint64_t crc;
 	size_t nb;
 
 	th = inoh_2_mdsio_data(ih);
 
 	snprintf(fn, sizeof(fn), "%016lx.update",
 	    fcmh_2_fid(ih->inoh_fcmh));
-	*rc = mdsio_opencreate(mds_tmpdir_inum, &rootcreds, O_RDONLY,
-	    0644, fn, NULL, NULL, &h, NULL, NULL);
-	if (*rc)
-		goto out;
-	exists = 1;
 
-	inoh_2_mdsio_data(ih) = h;
-
-	*rc = mdsio_read(&rootcreds, &ih->inoh_ino, INO_OD_SZ, &nb, 0,
-	    h);
+	*rc = mdsio_lookup(mds_tmpdir_inum, fn, &inum, &rootcreds, NULL);
 	if (*rc)
 		goto out;
 
-	psc_crc64_calc(&crc, &ih->inoh_ino, INO_OD_CRCSZ);
-	if (crc != ih->inoh_ino.ino_crc) {
-		*rc = EIO;
+	*rc = mdsio_opencreatef(inum, &rootcreds, O_RDONLY,
+	    MDSIO_OPENCRF_NOLINK, 0644, NULL, NULL, NULL, &h, NULL,
+	    NULL);
+	if (*rc)
+		goto out;
+
+	iovs[0].iov_base = &ih->inoh_ino;
+	iovs[0].iov_len = sizeof(ih->inoh_ino);
+	iovs[1].iov_base = &od_crc;
+	iovs[1].iov_len = sizeof(od_crc);
+	*rc = mdsio_preadv(&rootcreds, iovs, nitems(iovs), &nb, 0, h);
+	if (*rc)
+		goto out;
+
+	psc_crc64_calc(&crc, &ih->inoh_ino, sizeof(ih->inoh_ino));
+	if (crc != od_crc) {
+		*rc = SLERR_BADCRC;
 		goto out;
 	}
 
+	exists = 1;
+
+	inoh_2_mdsio_data(ih) = h;
 	*rc = mds_inox_ensure_loaded(ih);
 	if (*rc)
 		goto out;
@@ -164,15 +196,16 @@ mds_inode_update_interrupted(struct slash_inode_handle *ih, int *rc)
 	if (*rc)
 		goto out;
 
-	*rc = mdsio_inode_dump(ih, h);
+	*rc = mds_inode_dump(NULL, ih, h);
 	if (*rc)
 		goto out;
 
 	mdsio_unlink(mds_tmpdir_inum, fn, &rootcreds, NULL);
 
  out:
-	if (exists && *rc)
-		mdsio_unlink(mds_tmpdir_inum, fn, &rootcreds, NULL);
+	if (h)
+		mdsio_release(&rootcreds, h);
+	mdsio_unlink(mds_tmpdir_inum, fn, &rootcreds, NULL);
 	inoh_2_mdsio_data(ih) = th;
 	return (exists);
 }
@@ -181,34 +214,39 @@ int
 mds_ino_read_v1(struct slash_inode_handle *ih)
 {
 	struct {
-		uint16_t	ino_version;
-		uint16_t	ino_flags;
-		uint32_t	ino_bsz;
-		uint32_t	ino_nrepls;
-		uint32_t	ino_replpol;
-		sl_replica_t	ino_repls[4];
-		uint64_t	ino_crc;
+		uint16_t	version;
+		uint16_t	flags;
+		uint32_t	bsz;
+		uint32_t	nrepls;
+		uint32_t	replpol;
+		sl_replica_t	repls[4];
 	} ino;
-	uint64_t crc;
+	uint64_t crc, od_crc;
+	struct iovec iovs[2];
 	size_t nb;
-	int rc;
+	int i, rc;
 
-	rc = mdsio_read(&rootcreds, &ino, sizeof(ino), &nb, 0,
+	iovs[0].iov_base = &ino;
+	iovs[0].iov_len = sizeof(ino);
+	iovs[1].iov_base = &od_crc;
+	iovs[1].iov_len = sizeof(od_crc);
+	rc = mdsio_preadv(&rootcreds, iovs, nitems(iovs), &nb, 0,
 	    inoh_2_mdsio_data(ih));
 
 	if (rc)
 		return (rc);
+	if (nb != sizeof(ino) + sizeof(od_crc))
+		return (SLERR_SHORTIO);
 
-	psc_crc64_calc(&crc, &ino, sizeof(ino) - sizeof(crc));
-	if (crc != ino.ino_crc)
-		return (EIO);
-	ih->inoh_ino.ino_version = ino.ino_version;
-	ih->inoh_ino.ino_bsz = ino.ino_bsz;
-	ih->inoh_ino.ino_nrepls = ino.ino_nrepls;
-	ih->inoh_ino.ino_replpol = ino.ino_replpol;
-	ih->inoh_ino.ino_replpol = ino.ino_replpol;
-	memcpy(ih->inoh_ino.ino_repls, ino.ino_repls,
-	    sizeof(ino.ino_repls));
+	psc_crc64_calc(&crc, &ino, sizeof(ino));
+	if (crc != od_crc)
+		return (SLERR_BADCRC);
+	ih->inoh_ino.ino_version = ino.version;
+	ih->inoh_ino.ino_bsz = ino.bsz;
+	ih->inoh_ino.ino_nrepls = ino.nrepls;
+	ih->inoh_ino.ino_replpol = ino.replpol;
+	for (i = 0; i < 4; i++)
+		ih->inoh_ino.ino_repls[i] = ino.repls[i];
 	return (0);
 }
 
@@ -216,31 +254,80 @@ int
 mds_inox_read_v1(struct slash_inode_handle *ih)
 {
 	struct {
-		sl_snap_t	inox_snaps[1];
-		sl_replica_t	inox_repls[60];
-		uint64_t	inox_crc;
+		sl_snap_t	snaps[1];
+		sl_replica_t	repls[60];
 	} inox;
-	uint64_t crc;
+	uint64_t crc, od_crc;
+	struct iovec iovs[2];
 	size_t nb;
-	int rc;
+	int i, rc;
 
-	rc = mdsio_read(&rootcreds, &inox, sizeof(inox), &nb, 0,
+	memset(&inox, 0, sizeof(inox));
+
+	iovs[0].iov_base = &inox;
+	iovs[0].iov_len = sizeof(inox);
+	iovs[1].iov_base = &od_crc;
+	iovs[1].iov_len = sizeof(od_crc);
+	rc = mdsio_preadv(&rootcreds, iovs, nitems(iovs), &nb, 0x400,
 	    inoh_2_mdsio_data(ih));
 
 	if (rc)
 		return (rc);
+	if (pfl_memchk(&inox, 0, sizeof(inox)) && od_crc == 0)
+		return (0);
+	if (nb != sizeof(inox) + sizeof(od_crc))
+		return (SLERR_SHORTIO);
 
-	psc_crc64_calc(&crc, &inox, sizeof(inox) - sizeof(crc));
-	if (crc != inox.inox_crc)
-		return (EIO);
-	memcpy(ih->inoh_extras->inox_snaps, inox.inox_snaps,
-	    sizeof(inox.inox_snaps));
-	memcpy(ih->inoh_extras->inox_repls, inox.inox_repls,
-	    sizeof(inox.inox_repls));
+	psc_crc64_calc(&crc, &inox, sizeof(inox));
+	if (crc != od_crc)
+		return (SLERR_BADCRC);
+	for (i = 0; i < 60; i++)
+		ih->inoh_extras->inox_repls[i] = inox.repls[i];
+	return (0);
+}
+
+int
+mds_bmap_read_v1(struct bmapc_memb *b, void *readh)
+{
+	struct {
+		uint8_t		crcstates[128];
+		uint8_t		repls[24];
+		uint64_t	crcs[128];
+		uint32_t	gen;
+		uint32_t	replpol;
+	} bod;
+	uint64_t crc, od_crc;
+	struct iovec iovs[2];
+	size_t nb;
+	int i, rc;
+
+	iovs[0].iov_base = &bod;
+	iovs[0].iov_len = sizeof(bod);
+	iovs[1].iov_base = &od_crc;
+	iovs[1].iov_len = sizeof(od_crc);
+	rc = mdsio_preadv(&rootcreds, iovs, nitems(iovs), &nb, 0x1000, readh);
+
+	if (rc)
+		return (rc);
+	if (nb != sizeof(bod) + sizeof(od_crc))
+		return (SLERR_SHORTIO);
+
+	psc_crc64_calc(&crc, &bod, sizeof(bod));
+	if (crc != od_crc)
+		return (SLERR_BADCRC);
+	for (i = 0; i < 128; i++)
+		b->bcm_crcstates[i] = bod.crcstates[i];
+	for (i = 0; i < 24; i++)
+		b->bcm_repls[i] = bod.repls[i];
+	for (i = 0; i < 128; i++)
+		bmap_2_crcs(b, i) = bod.crcs[i];
+	bmap_2_bgen(b) = bod.gen;
+	bmap_2_replpol(b) = bod.replpol;
 	return (0);
 }
 
 struct sl_ino_compat sl_ino_compat_table[] = {
-/* 1 */	{ mds_ino_read_v1, mds_inox_read_v1, 0x400, 0x1000 },
-/* 2 */	{ NULL, NULL, SL_EXTRAS_START_OFF, SL_BMAP_START_OFF },
+/* 0 */	{ NULL, NULL, NULL },
+/* 1 */	{ mds_ino_read_v1, mds_inox_read_v1, mds_bmap_read_v1 },
+/* 2 */	{ NULL, NULL, NULL },
 };
