@@ -255,7 +255,6 @@ _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int *tract,
 	if (tract && tract[val] != -1) {
 		SL_REPL_SET_BMAP_IOS_STAT(bcm->bcm_repls,
 		    off, tract[val]);
-		BMDSI_LOGCHG_SET(bcm);
 	}
 
  out:

@@ -206,14 +206,6 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct
 int
 mds_bmap_repl_update(struct bmapc_memb *bmap, int log)
 {
-	int logchg;
-
-	BMAPOD_REQRDLOCK(bmap_2_bmi(bmap));
-	BMDSI_LOGCHG_CHECK(bmap, logchg);
-	if (!logchg) {
-		BMAPOD_READ_DONE(bmap, 0);
-		return (0);
-	}
 	BMAPOD_REQWRLOCK(bmap_2_bmi(bmap));
 	mds_bmap_calc_crc(bmap);
 	return (mdsio_bmap_write(bmap, 0,
@@ -230,7 +222,6 @@ dump_bmap_flags(uint32_t flags)
 	PFL_PRFLAG(BMAP_MDS_CRC_UP, &flags, &seq);
 	PFL_PRFLAG(BMAP_MDS_CRCWRT, &flags, &seq);
 	PFL_PRFLAG(BMAP_MDS_NOION, &flags, &seq);
-	PFL_PRFLAG(BMAP_MDS_LOGCHG, &flags, &seq);
 	PFL_PRFLAG(BMAP_MDS_DIO, &flags, &seq);
 	PFL_PRFLAG(BMAP_MDS_SEQWRAP, &flags, &seq);
 	if (flags)

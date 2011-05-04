@@ -72,9 +72,8 @@ struct bmap_mds_info {
 #define BMAP_MDS_CRC_UP		(_BMAP_FLSHFT << 0)	/* CRC update in progress */
 #define BMAP_MDS_CRCWRT		(_BMAP_FLSHFT << 1)
 #define BMAP_MDS_NOION		(_BMAP_FLSHFT << 2)
-#define BMAP_MDS_LOGCHG		(_BMAP_FLSHFT << 3)	/* in-mem change made, needs logged */
-#define BMAP_MDS_DIO		(_BMAP_FLSHFT << 4)	/* direct I/O enabled */
-#define BMAP_MDS_SEQWRAP	(_BMAP_FLSHFT << 5)	/* sequence number wrapped */
+#define BMAP_MDS_DIO		(_BMAP_FLSHFT << 3)	/* direct I/O enabled */
+#define BMAP_MDS_SEQWRAP	(_BMAP_FLSHFT << 4)	/* sequence number wrapped */
 
 #define bmap_2_bmdsi(b)		((struct bmap_mds_info *)bmap_get_pri(b))
 #define bmap_2_bmi(b)		((struct bmap_mds_info *)bmap_get_pri(b))
@@ -93,18 +92,6 @@ struct bmap_mds_info {
 #define BMAPOD_ULOCK(bmi)	psc_rwlock_unlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmdsi_rwlock)
 #define BMAPOD_UREQLOCK(bmi, l)	psc_rwlock_ureqlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmdsi_rwlock, (l))
 #define BMAPOD_WRLOCK(bmi)	psc_rwlock_wrlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmdsi_rwlock)
-
-#define BMDSI_LOGCHG_SET(b)	BMAP_SETATTR((b), BMAP_MDS_LOGCHG)
-#define BMDSI_LOGCHG_CLEAR(b)	BMAP_CLEARATTR((b), BMAP_MDS_LOGCHG)
-
-#define BMDSI_LOGCHG_CHECK(b, set)					\
-	do {								\
-		int _locked;						\
-									\
-		_locked = BMAP_RLOCK(b);				\
-		(set) = (b)->bcm_flags & BMAP_MDS_LOGCHG;		\
-		BMAP_URLOCK((b), _locked);				\
-	} while (0)
 
 #define BMAPOD_MODIFY_START(b)	BMAPOD_WRLOCK(bmap_2_bmdsi(b))
 #define BMAPOD_MODIFY_DONE(b)	BMAPOD_ULOCK(bmap_2_bmdsi(b))
@@ -131,7 +118,6 @@ struct bmap_mds_info {
 	do {								\
 		BMAPOD_MODIFY_START(b);					\
 		bmap_2_replpol(b) = (pol);				\
-		BMDSI_LOGCHG_SET(b);					\
 		BMAPOD_MODIFY_DONE(b);					\
 	} while (0)
 
@@ -148,7 +134,6 @@ struct bmap_mds_info {
 	do {								\
 		BMAPOD_MODIFY_START(b);					\
 		bmap_2_bgen(b)++;					\
-		BMDSI_LOGCHG_SET(b);					\
 		BMAPOD_MODIFY_DONE(b);					\
 	} while (0)
 
