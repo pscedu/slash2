@@ -744,7 +744,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			unptrunc = 1;
 		}
 	}
- apply:
+
 	/*
 	 * If the file is open, mdsio_data will be valid and used.
 	 * Otherwise, it will be NULL, and we'll use the mdsio_fid.
