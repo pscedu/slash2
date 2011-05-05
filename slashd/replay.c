@@ -30,77 +30,90 @@
 #include "slerr.h"
 #include "sljournal.h"
 
+#define B_REPLAY_OP_CRC		0
+#define B_REPLAY_OP_REPL	1
+
 /**
  * mds_redo_bmap_repl - Replay a replication update on a bmap.  This has
  *	to be a read-modify-write process because we don't touch the CRC
  *	tables.
  */
 static int
-mds_redo_bmap_repl_common(struct slmds_jent_repgen *jrpg)
+mds_redo_bmap_repl_common(void *jent, int op)
 {
-	struct bmap_ondisk bod;
-	void *mdsio_data;
-	mdsio_fid_t mf;
-	size_t nb;
-	int rc;
+	struct srm_bmap_crcwire *bmap_wire;
+	struct slmds_jent_repgen *jrpg = jent;
+	struct slmds_jent_crc *jcrc = jent;
+	struct fidc_membh *f = NULL;
+	struct bmapc_memb *b = NULL;
+	struct slash_fidgen fg;
+	sl_bmapno_t bno;
+	int i, rc;
 
-	rc = mdsio_lookup_slfid(jrpg->sjp_fid, &rootcreds, NULL, &mf);
-	if (rc) {
-		if (rc == ENOENT) {
-			psclog_warnx("mdsio_lookup_slfid "SLPRI_FID": %s",
-			    jrpg->sjp_fid, slstrerror(rc));
-			return (rc);
-		}
-		psc_fatalx("mdsio_lookup_slfid: %s", slstrerror(rc));
+	switch (op) {
+	case B_REPLAY_OP_REPL:
+		fg.fg_fid = jrpg->sjp_fid;
+		bno = jrpg->sjp_bmapno;
+		break;
+	case B_REPLAY_OP_CRC:
+		fg.fg_fid = jcrc->sjc_fid;
+		bno = jcrc->sjc_bmapno;
+		break;
 	}
 
-	rc = mdsio_opencreate(mf, &rootcreds, O_RDWR, 0, NULL, NULL,
-	    NULL, &mdsio_data, NULL, NULL);
-	if (rc)
-		psc_fatalx("mdsio_opencreate: %s", slstrerror(rc));
-
-	memset(&bod, 0, sizeof(bod));
-	rc = mdsio_read(&rootcreds, &bod, BMAP_OD_SZ, &nb,
-	    (off_t)((BMAP_OD_SZ * jrpg->sjp_bmapno) +
-	    SL_BMAP_START_OFF), mdsio_data);
-
-	/*
-	 * We allow a short read here because it is possible
-	 * that the file was just created by our own replay.
-	 */
+	fg.fg_gen = FGEN_ANY;
+	rc = slm_fcmh_get(&fg, &f);
 	if (rc)
 		goto out;
 
-	psc_assert(!nb || nb == BMAP_OD_SZ);
+	rc = mds_bmap_load(f, bno, &b);
+	if (rc)
+		goto out;
 
-	memcpy(&bod.bod_repls, jrpg->sjp_reptbl, SL_REPLICA_NBYTES);
-	psclog_info("fid="SLPRI_FID" bmapno=%u",
-	    jrpg->sjp_fid, jrpg->sjp_bmapno);
+	switch (op) {
+	case B_REPLAY_OP_REPL:
+		mds_brepls_check(jrpg->sjp_reptbl, jrpg->sjp_nrepls);
 
-	psc_crc64_calc(&bod.bod_crc, &bod, BMAP_OD_CRCSZ);
+		memcpy(&b->bcm_repls, jrpg->sjp_reptbl, SL_REPLICA_NBYTES);
+		psclog_info("fid="SLPRI_FID" bmapno=%u",
+		    jrpg->sjp_fid, jrpg->sjp_bmapno);
+		break;
+	case B_REPLAY_OP_CRC:
+		/* Apply the filesize from the journal entry.
+		 */
+		if (jcrc->sjc_extend) {
+			f->fcmh_sstb.sst_size = jcrc->sjc_fsize;
+			rc = mdsio_setattr(fcmh_2_mdsio_fid(f),
+			    &f->fcmh_sstb, PSCFS_SETATTRF_DATASIZE,
+			    &rootcreds, NULL, fcmh_2_mdsio_data(f),
+			    NULL);
+			if (rc)
+				goto out;
+		}
+		for (i = 0 ; i < jcrc->sjc_ncrcs; i++) {
+			bmap_wire = &jcrc->sjc_crc[i];
+			bmap_2_crcs(b, bmap_wire->slot) = bmap_wire->crc;
+			b->bcm_crcstates[bmap_wire->slot] |=
+			    BMAP_SLVR_DATA | BMAP_SLVR_CRC;
+		}
+		break;
+	}
 
-	mds_brepls_check(bod.bod_repls, jrpg->sjp_nrepls);
+	rc = mds_bmap_write(b, 0, NULL, NULL);
 
-	rc = mdsio_write(&rootcreds, &bod, BMAP_OD_SZ, &nb,
-	    (off_t)((BMAP_OD_SZ * jrpg->sjp_bmapno) +
-	    SL_BMAP_START_OFF), 0, mdsio_data, NULL, NULL);
-
-	if (!rc && nb != BMAP_OD_SZ)
-		rc = EIO;
  out:
-	mdsio_release(&rootcreds, mdsio_data);
+	if (b)
+		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+	if (f)
+		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 	return (rc);
 }
 
 static int
 mds_redo_bmap_repl(struct psc_journal_enthdr *pje)
 {
-	struct slmds_jent_repgen *jrpg;
-	int rc;
-
-	jrpg = PJE_DATA(pje);
-	rc = mds_redo_bmap_repl_common(jrpg);
-	return (rc);
+	return (mds_redo_bmap_repl_common(PJE_DATA(pje),
+	    B_REPLAY_OP_REPL));
 }
 
 /**
@@ -111,79 +124,8 @@ mds_redo_bmap_repl(struct psc_journal_enthdr *pje)
 static int
 mds_redo_bmap_crc(struct psc_journal_enthdr *pje)
 {
-	struct srm_bmap_crcwire *bmap_wire;
-	struct slmds_jent_crc *jcrc;
-	struct bmap_ondisk bod;
-	struct srt_stat sstb;
-	void *mdsio_data;
-	mdsio_fid_t mf;
-	int i, rc;
-	size_t nb;
-
-	jcrc = PJE_DATA(pje);
-	memset(&bod, 0, sizeof(bod));
-
-	psclog_info("pje_xid=%#"PRIx64" pje_txg=%#"PRIx64" fid="SLPRI_FID" "
-	    "bmapno=%u ncrcs=%d crc[0]=%"PSCPRIxCRC64,
-	    pje->pje_xid, pje->pje_txg, jcrc->sjc_fid, jcrc->sjc_bmapno,
-	    jcrc->sjc_ncrcs, jcrc->sjc_crc[0].crc);
-
-	rc = mdsio_lookup_slfid(jcrc->sjc_fid, &rootcreds, NULL, &mf);
-	if (rc == ENOENT) {
-		psclog_warnx("mdsio_lookup_slfid fid="SLPRI_FID" rc=%s",
-		    jcrc->sjc_fid, slstrerror(rc));
-		return (rc);
-	}
-	if (rc)
-		psc_fatalx("mdsio_lookup_slfid fid="SLPRI_FID" rc=%s",
-		    jcrc->sjc_fid, slstrerror(rc));
-
-	rc = mdsio_opencreate(mf, &rootcreds, O_RDWR, 0, NULL,
-	    NULL, NULL, &mdsio_data, NULL, NULL);
-	if (rc)
-		psc_fatalx("mdsio_opencreate: %s", slstrerror(rc));
-
-	/* Apply the filesize from the journal entry.
-	 */
-	if (jcrc->sjc_extend) {
-		sstb.sst_size = jcrc->sjc_fsize;
-		rc = mdsio_setattr(mf, &sstb, PSCFS_SETATTRF_DATASIZE,
-		    &rootcreds, NULL, mdsio_data, NULL);
-		if (rc)
-			goto out;
-	}
-
-	rc = mdsio_read(&rootcreds, &bod, BMAP_OD_SZ, &nb,
-	    (off_t)((BMAP_OD_SZ * jcrc->sjc_bmapno) +
-	    SL_BMAP_START_OFF), mdsio_data);
-
-	if (rc)
-		goto out;
-	if (nb % BMAP_OD_SZ) {
-		rc = EIO;
-		goto out;
-	}
-
-	for (i = 0 ; i < jcrc->sjc_ncrcs; i++) {
-		bmap_wire = &jcrc->sjc_crc[i];
-		bod.bod_crcs[bmap_wire->slot] = bmap_wire->crc;
-		bod.bod_crcstates[bmap_wire->slot] |=
-		    BMAP_SLVR_DATA | BMAP_SLVR_CRC;
-	}
-	psc_crc64_calc(&bod.bod_crc, &bod, BMAP_OD_CRCSZ);
-
-	mds_brepls_check(bod.bod_repls, SL_MAX_REPLICAS);
-
-	rc = mdsio_write(&rootcreds, &bod, BMAP_OD_SZ, &nb,
-	    (off_t)((BMAP_OD_SZ * jcrc->sjc_bmapno) +
-	    SL_BMAP_START_OFF), 0, mdsio_data, NULL, NULL);
-
-	if (!rc && nb != BMAP_OD_SZ)
-		rc = EIO;
-
- out:
-	mdsio_release(&rootcreds, mdsio_data);
-	return (rc);
+	return (mds_redo_bmap_repl_common(PJE_DATA(pje),
+	    B_REPLAY_OP_CRC));
 }
 
 static int
@@ -207,12 +149,10 @@ mds_redo_bmap_seq(struct psc_journal_enthdr *pje)
 static int
 mds_redo_ino_addrepl_common(struct slmds_jent_ino_addrepl *jrir)
 {
-	struct slash_inode_extras_od inoh_extras;
-	struct slash_inode_od inoh_ino;
-	void *mdsio_data;
-	mdsio_fid_t mf;
+	struct slash_inode_handle *ih = NULL;
+	struct slash_fidgen fg;
+	struct fidc_membh *f;
 	int pos, j, rc;
-	size_t nb;
 
 	pos = jrir->sjir_pos;
 	if (pos >= SL_MAX_REPLICAS || pos < 0) {
@@ -221,60 +161,37 @@ mds_redo_ino_addrepl_common(struct slmds_jent_ino_addrepl *jrir)
 		return (EINVAL);
 	}
 
-	rc = mdsio_lookup_slfid(jrir->sjir_fid, &rootcreds, NULL, &mf);
+	fg.fg_fid = jrir->sjir_fid;
+	fg.fg_gen = FGEN_ANY;
+	rc = slm_fcmh_get(&fg, &f);
 	if (rc)
-		//psc_fatalx("mdsio_lookup_slfid: %s", slstrerror(rc));
-		return (rc);
+		goto out;
 
-	rc = mdsio_opencreate(mf, &rootcreds, O_RDWR, 0, NULL, NULL,
-	    NULL, &mdsio_data, NULL, NULL);
-	if (rc)
-		psc_fatalx("mdsio_opencreate: %s", slstrerror(rc));
+	ih = fcmh_2_inoh(f);
+	INOH_LOCK(ih);
 
 	/*
-	 * We allow a short read of the inode here because it is possible
-	 * that the file was just created by our own replay process.
+	 * We allow a short read of the inode here because it is
+	 * possible that the file was just created by our own replay
+	 * process.
 	 */
 	if (pos >= SL_DEF_REPLICAS) {
-		memset(&inoh_extras, 0, sizeof(inoh_extras));
-		rc = mdsio_read(&rootcreds, &inoh_extras, INOX_OD_SZ,
-		    &nb, SL_EXTRAS_START_OFF, mdsio_data);
-		if (rc)
-			goto out;
+		mds_inox_ensure_loaded(ih);
 
 		j = pos - SL_DEF_REPLICAS;
-		inoh_extras.inox_repls[j].bs_id = jrir->sjir_ios;
-		psc_crc64_calc(&inoh_extras.inox_crc, &inoh_extras,
-		    INOX_OD_CRCSZ);
+		ih->inoh_extras->inox_repls[j].bs_id = jrir->sjir_ios;
 
-		rc = mdsio_write(&rootcreds, &inoh_extras, INOX_OD_SZ,
-		    &nb, SL_EXTRAS_START_OFF, 0, mdsio_data, NULL,
-		    NULL);
-		if (!rc && nb != INOX_OD_SZ)
-			rc = EIO;
+		rc = mds_inox_write(ih, NULL, NULL);
 		if (rc)
 			goto out;
 
-		psclog_info("redo: fid="SLPRI_FID", extra crc=%"PSCPRIxCRC64,
-		    jrir->sjir_fid, inoh_extras.inox_crc);
+		psclog_info("redo: fid="SLPRI_FID, jrir->sjir_fid);
 	}
 	/*
 	 * We always update the inode itself because the number of
 	 * replicas is stored there.
 	 */
-	memset(&inoh_ino, 0, sizeof(inoh_ino));
-	rc = mdsio_read(&rootcreds, &inoh_ino, INO_OD_SZ, &nb,
-		SL_INODE_START_OFF, mdsio_data);
-	if (!rc && nb % INO_OD_SZ)
-		rc = EIO;
-	if (rc)
-		goto out;
-
-	/* initialize newly replay-created inode */
-	if (!nb && inoh_ino.ino_crc == 0 &&
-	    pfl_memchk(&inoh_ino, 0, INO_OD_CRCSZ)) {
-		inoh_ino.ino_bsz = SLASH_BMAP_SIZE;
-		inoh_ino.ino_version = INO_VERSION;
+	if (ih->inoh_flags & INOH_INO_NEW) {
 		if (pos != 0)
 			psclog_errorx("ino_nrepls index (%d) in "
 			    "should be 0 for newly created inode", pos);
@@ -284,28 +201,28 @@ mds_redo_ino_addrepl_common(struct slmds_jent_ino_addrepl *jrir)
 			    jrir->sjir_nrepls);
 	}
 
-	if (jrir->sjir_nrepls > SL_MAX_REPLICAS ||
-	    jrir->sjir_nrepls <= jrir->sjir_pos)
-		abort();
+	psc_assert(jrir->sjir_nrepls <= SL_MAX_REPLICAS);
+	psc_assert(jrir->sjir_pos < jrir->sjir_nrepls);
 
-	inoh_ino.ino_nrepls = jrir->sjir_nrepls;
+	ih->inoh_ino.ino_nrepls = jrir->sjir_nrepls;
 
 	if (pos < SL_DEF_REPLICAS)
-		inoh_ino.ino_repls[pos].bs_id = jrir->sjir_ios;
+		ih->inoh_ino.ino_repls[pos].bs_id = jrir->sjir_ios;
 
-	psc_crc64_calc(&inoh_ino.ino_crc, &inoh_ino, INO_OD_CRCSZ);
+	rc = mds_inode_write(ih, NULL, NULL);
+	if (rc)
+		goto out;
 
-	rc = mdsio_write(&rootcreds, &inoh_ino, INO_OD_SZ, &nb,
-	    SL_INODE_START_OFF, 0, mdsio_data, NULL, NULL);
-
-	if (!rc && nb != INO_OD_SZ)
-		rc = EIO;
-
-	psclog_info("redo: fid="SLPRI_FID", crc=%"PSCPRIxCRC64,
-	    jrir->sjir_fid, inoh_ino.ino_crc);
+	psclog_info("redo: fid="SLPRI_FID, jrir->sjir_fid);
 
  out:
-	mdsio_release(&rootcreds, mdsio_data);
+	if (ih)
+		INOH_ULOCK(ih);
+	if (rc)
+		psclog_errorx("redo: fid="SLPRI_FID" rc=%d",
+		    jrir->sjir_fid, rc);
+	if (f)
+		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 	return (rc);
 }
 
@@ -327,9 +244,7 @@ static int
 mds_redo_bmap_assign(struct psc_journal_enthdr *pje)
 {
 	struct slmds_jent_assign_rep *logentry;
-	struct slmds_jent_ino_addrepl *jrir;
 	struct slmds_jent_bmap_assign *jrba;
-	struct slmds_jent_repgen *jrpg;
 	struct bmap_ion_assign *bia;
 	struct odtable_entftr *odtf;
 	struct odtable_hdr odth;
@@ -346,16 +261,13 @@ mds_redo_bmap_assign(struct psc_journal_enthdr *pje)
 	else {
 		jrba = &logentry->sjar_bmap;
 		psclog_info("Redo item %zd, fid="SLPRI_FID", flags=%d",
-			elem, jrba->sjba_fid, logentry->sjar_flag);
+		    elem, jrba->sjba_fid, logentry->sjar_flag);
 	}
-	if (logentry->sjar_flag & SLJ_ASSIGN_REP_INO) {
-		jrir = &logentry->sjar_ino;
-		mds_redo_ino_addrepl_common(jrir);
-	}
-	if (logentry->sjar_flag & SLJ_ASSIGN_REP_REP) {
-		jrpg = &logentry->sjar_rep;
-		mds_redo_bmap_repl_common(jrpg);
-	}
+	if (logentry->sjar_flag & SLJ_ASSIGN_REP_INO)
+		mds_redo_ino_addrepl_common(&logentry->sjar_ino);
+	if (logentry->sjar_flag & SLJ_ASSIGN_REP_REP)
+		mds_redo_bmap_repl_common(&logentry->sjar_rep,
+		    B_REPLAY_OP_REPL);
 	rc = mdsio_lookup(mds_metadir_inum, SL_FN_BMAP_ODTAB, &mf,
 	    &rootcreds, NULL);
 	psc_assert(rc == 0);
@@ -572,8 +484,8 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 	    default:
 		psc_fatalx("invalid log entry type %d", pje->pje_type);
 	}
-	psclog_info("type=%d, xid=%#"PRIx64", txg=%#"PRIx64", rc=%d",
+	psclog_info("replayed journal optype=%d xid=%#"PRIx64" "
+	    "txg=%#"PRIx64" rc=%d",
 	    type, pje->pje_xid, pje->pje_txg, rc);
-
 	return (rc);
 }
