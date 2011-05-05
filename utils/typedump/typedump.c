@@ -29,7 +29,6 @@
 /* start includes */
 #include "authbuf.h"
 #include "bmap.h"
-#include "bmapdesc.h"
 #include "buffer.h"
 #include "cache_params.h"
 #include "creds.h"
@@ -261,6 +260,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_create_rep);
 	PRTYPE(struct srm_create_req);
 	PRTYPE(struct srm_destroy_req);
+	PRTYPE(struct srm_forward_req);
 	PRTYPE(struct srm_generic_rep);
 	PRTYPE(struct srm_getattr2_rep);
 	PRTYPE(struct srm_getattr_rep);
