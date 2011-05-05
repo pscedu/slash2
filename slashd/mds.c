@@ -1624,10 +1624,12 @@ void
 slm_setattr_core(struct fidc_membh *fcmh, struct srt_stat *sstb,
     int to_set)
 {
+	int locked, deref = 0, rc = 0;
 	struct slm_workrq *wkrq;
-	int deref = 0, rc = 0;
+	struct fcmh_mds_info *fmi;
 
-	if (to_set & PSCFS_SETATTRF_DATASIZE) {
+	fmi = fcmh_2_fmi(fcmh);
+	if ((to_set & PSCFS_SETATTRF_DATASIZE) && sstb->sst_size) {
 		if (fcmh == NULL) {
 			rc = slm_fcmh_get(&sstb->sst_fg, &fcmh);
 			if (rc) {
@@ -1639,23 +1641,18 @@ slm_setattr_core(struct fidc_membh *fcmh, struct srt_stat *sstb,
 
 			deref = 1;
 		}
-		/* partial truncate */
-		if (sstb->sst_size && sstb->sst_size < fcmh_2_fsz(fcmh)) {
-			FCMH_LOCK(fcmh);
-			fcmh->fcmh_flags |= FCMH_IN_PTRUNC;
-			FCMH_ULOCK(fcmh);
 
-			wkrq = psc_pool_get(slm_workrq_pool);
-			fcmh_op_start_type(fcmh, FCMH_OPCNT_WORKER);
-			wkrq->wkrq_fcmh = fcmh;
-			wkrq->wkrq_cbf = slm_ptrunc_core;
-			lc_add(&slm_workq, wkrq);
-		} else {
-			FCMH_LOCK(fcmh);
-			fcmh->fcmh_flags &= ~FCMH_IN_PTRUNC;
-			mds_fcmh_increase_fsz(fcmh, sstb->sst_size);
-			FCMH_ULOCK(fcmh);
-		}
+		locked = FCMH_RLOCK(fcmh);
+		fcmh->fcmh_flags |= FCMH_IN_PTRUNC;
+		fmi->fmi_ptrunc_size = sstb->sst_size;
+		FCMH_URLOCK(fcmh, locked);
+
+		wkrq = psc_pool_get(slm_workrq_pool);
+		fcmh_op_start_type(fcmh, FCMH_OPCNT_WORKER);
+		wkrq->wkrq_fcmh = fcmh;
+		wkrq->wkrq_cbf = slm_ptrunc_prepare;
+		lc_add(&slm_workq, wkrq);
+
 		if (deref)
 			fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 	}
@@ -1692,22 +1689,22 @@ ptrunc_tally_ios(struct bmapc_memb *bcm, int iosidx, int val, void *arg)
 }
 
 int
-slm_ptrunc_core(struct slm_workrq *wkrq)
+slm_ptrunc_prepare(struct slm_workrq *wkrq)
 {
-	int rc, wait = 0, tract[NBREPLST];
+	int to_set, rc, wait = 0;
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
-	struct up_sched_work_item *uswi;
 	struct slashrpc_cservice *csvc;
 	struct bmap_mds_lease *bml;
 	struct pscrpc_request *rq;
-	struct ios_list ios_list;
+	struct fcmh_mds_info *fmi;
 	struct psc_dynarray *da;
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *b;
 	sl_bmapno_t i;
 
 	fcmh = wkrq->wkrq_fcmh;
+	fmi = fcmh_2_fmi(fcmh);
 	da = &fcmh_2_fmi(fcmh)->fmi_ptrunc_clients;
 
 	/*
@@ -1715,7 +1712,28 @@ slm_ptrunc_core(struct slm_workrq *wkrq)
 	 * relinquished.
 	 */
 	FCMH_LOCK(fcmh);
-	i = fcmh_2_fsz(fcmh) / SLASH_BMAP_SIZE;
+
+	/*
+	 * XXX bmaps issued in the wild not accounted for in fcmh_fsz
+	 * are skipped here.
+	 */
+	if (fmi->fmi_ptrunc_size >= fcmh_2_fsz(fcmh)) {
+		mds_fcmh_increase_fsz(fcmh, fmi->fmi_ptrunc_size);
+		fcmh->fcmh_flags &= ~FCMH_IN_PTRUNC;
+
+		mds_reserve_slot();
+		rc = mdsio_setattr(fcmh_2_mdsio_fid(fcmh),
+		    &fcmh->fcmh_sstb, PSCFS_SETATTRF_DATASIZE,
+		    &rootcreds, &fcmh->fcmh_sstb,
+		    fcmh_2_mdsio_data(fcmh), mds_namespace_log);
+		mds_unreserve_slot();
+
+		fcmh_op_done_type(fcmh, FCMH_OPCNT_WORKER);
+		slm_ptrunc_wake_clients(wkrq);
+		return (0);
+	}
+
+	i = fmi->fmi_ptrunc_size / SLASH_BMAP_SIZE;
 	FCMH_ULOCK(fcmh);
 	for (; i < fcmh_2_nbmaps(fcmh); i++) {
 		if (mds_bmap_load(fcmh, i, &b))
@@ -1751,30 +1769,65 @@ slm_ptrunc_core(struct slm_workrq *wkrq)
 	if (wait)
 		return (1);
 
+	/* all client leases have been relinquished */
+	/* XXX: wait for any CRC updates coming from sliods */
+
+	FCMH_LOCK(fcmh);
+	to_set = PSCFS_SETATTRF_DATASIZE | SL_SETATTRF_PTRUNCGEN;
+	fcmh_2_ptruncgen(fcmh)++;
+	fcmh->fcmh_sstb.sst_nxbmaps += fcmh_2_fsz(fcmh) / SLASH_BMAP_SIZE -
+	    fmi->fmi_ptrunc_size / SLASH_BMAP_SIZE;
+	fcmh->fcmh_sstb.sst_size = fmi->fmi_ptrunc_size;
+
+	mds_reserve_slot();
+	rc = mdsio_setattr(fcmh_2_mdsio_fid(fcmh), &fcmh->fcmh_sstb,
+	    PSCFS_SETATTRF_DATASIZE, &rootcreds, &fcmh->fcmh_sstb,
+	    fcmh_2_mdsio_data(fcmh), mds_namespace_log);
+	mds_unreserve_slot();
+
+	FCMH_ULOCK(fcmh);
+	slm_ptrunc_apply(wkrq);
+	return (0);
+}
+
+void
+slm_ptrunc_apply(struct slm_workrq *wkrq)
+{
+	int rc, done = 0, tract[NBREPLST];
+	struct up_sched_work_item *uswi;
+	struct ios_list ios_list;
+	struct fidc_membh *fcmh;
+	struct bmapc_memb *b;
+	sl_bmapno_t i;
+
+	fcmh = wkrq->wkrq_fcmh;
+
 	brepls_init(tract, -1);
 	tract[BREPLST_VALID] = BREPLST_TRUNCPNDG;
 
 	ios_list.nios = 0;
 
 	i = fcmh_2_fsz(fcmh) / SLASH_BMAP_SIZE;
-	if (fcmh->fcmh_sstb.sst_size % SLASH_BMAP_SIZE) {
+	if (fcmh_2_fsz(fcmh) % SLASH_BMAP_SIZE) {
+		/*
+		 * If a bmap sliver was sliced, we must await for a
+		 * sliod to reply with the new CRC.
+		 */
 		if (mds_bmap_load(fcmh, i, &b) == 0) {
 			mds_repl_bmap_walkcb(b, tract, NULL, 0,
 			    ptrunc_tally_ios, &ios_list);
 			mds_repl_bmap_rel(b);
 		}
+		i++;
 	} else {
-		FCMH_LOCK(fcmh);
-		fcmh->fcmh_flags &= ~FCMH_IN_PTRUNC;
-		FCMH_ULOCK(fcmh);
+		done = 1;
 	}
 
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE;
-	tract[BREPLST_REPL_QUEUED] = BREPLST_GARBAGE;
 	tract[BREPLST_VALID] = BREPLST_GARBAGE;
 
-	for (i++; i < fcmh_2_nbmaps(fcmh); i++) {
+	for (; i < fcmh_2_nxbmaps(fcmh); i++) {
 		if (mds_bmap_load(fcmh, i, &b))
 			continue;
 
@@ -1791,8 +1844,15 @@ slm_ptrunc_core(struct slm_workrq *wkrq)
 	uswi_enqueue_sites(uswi, ios_list.iosv, ios_list.nios);
 	uswi_unref(uswi);
 
+	if (done) {
+		FCMH_LOCK(fcmh);
+		fcmh->fcmh_flags &= ~FCMH_IN_PTRUNC;
+		fcmh_wake_locked(fcmh);
+		FCMH_ULOCK(fcmh);
+		slm_ptrunc_wake_clients(wkrq);
+	}
+
 	fcmh_op_done_type(fcmh, FCMH_OPCNT_WORKER);
-	return (0);
 }
 
 int

@@ -1851,7 +1851,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			}
 
 		} else if (stb->st_size == (ssize_t)fcmh_2_fsz(c)) {
-			/* Noop.  Don't send truncate request if the 
+			/* Noop.  Don't send truncate request if the
 			 *    sizes match.
 			 */
 			goto out;
@@ -1934,6 +1934,8 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			goto wait_trunc_res;
 		}
 		rc = mp->rc;
+		if (mp->rc == SLERR_BMAP_IN_PTRUNC)
+			unset_trunc = 0;
 	}
 	if (rc)
 		goto out;
@@ -1959,9 +1961,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	    FCMH_SETATTRF_HAVELOCK);
 
 	DEBUG_SSTB(PLL_DEBUG, &c->fcmh_sstb, "fcmh %p post setattr", c);
-
-	if ((to_set & PSCFS_SETATTRF_DATASIZE) && stb->st_size)
-		unset_trunc = 0;
 
 	if (fcmh_isdir(c) && DIRCACHE_INITIALIZED(c)) {
 		struct msl_dc_inv_entry_data mdie;

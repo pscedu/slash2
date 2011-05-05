@@ -204,7 +204,8 @@ uint64_t	 slm_get_curr_slashid(void);
 uint64_t	 slm_get_next_slashid(void);
 void		 slm_set_curr_slashid(uint64_t);
 
-int		 slm_ptrunc_core(struct slm_workrq *);
+int		 slm_ptrunc_prepare(struct slm_workrq *);
+void		 slm_ptrunc_apply(struct slm_workrq *);
 int		 slm_ptrunc_wake_clients(struct slm_workrq *);
 void		 slm_setattr_core(struct fidc_membh *, struct srt_stat *, int);
 

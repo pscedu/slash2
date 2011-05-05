@@ -34,6 +34,7 @@ struct fcmh_mds_info {
 	mdsio_fid_t		  fmi_mdsio_fid;	/* underlying mdsio file ID */
 	void			 *fmi_mdsio_data;	/* mdsio descriptor */
 	int			  fmi_ctor_rc;		/* constructor return code */
+	uint64_t		  fmi_ptrunc_size;	/* new truncate(2) size */
 	struct psc_dynarray	  fmi_ptrunc_clients;	/* clients awaiting CRC recalc */
 };
 

@@ -696,7 +696,7 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 int
 slm_rmc_handle_setattr(struct pscrpc_request *rq)
 {
-	int nxbmaps_adj, to_set, unbump = 0, unptrunc = 0;
+	int to_set, tadj = 0, unbump = 0;
 	struct slashrpc_cservice *csvc;
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
@@ -716,9 +716,9 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 		if (mq->attr.sst_size == 0) {
 			/*
 			 * Full truncate.  If file size is already zero,
-			 *   we must still bump the generation since size
-			 *   updates from the sliod may be pending for
-			 *   this generation.
+			 * we must still bump the generation since size
+			 * updates from the sliod may be pending for
+			 * this generation.
 			 */
 			fcmh_2_gen(fcmh)++;
 			to_set |= SL_SETATTRF_GEN;
@@ -729,54 +729,48 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 				mp->rc = SLERR_BMAP_IN_PTRUNC;
 				goto out;
 			}
+			to_set &= ~PSCFS_SETATTRF_DATASIZE;
+			tadj |= PSCFS_SETATTRF_DATASIZE;
+		}
+	}
+
+	if (to_set) {
+		/*
+		 * If the file is open, mdsio_data will be valid and
+		 * used.  Otherwise, it will be NULL, and we'll use the
+		 * mdsio_fid.
+		 */
+		mds_reserve_slot();
+		mp->rc = mdsio_setattr(fcmh_2_mdsio_fid(fcmh),
+		    &mq->attr, to_set, &rootcreds, &mp->attr,
+		    fcmh_2_mdsio_data(fcmh), mds_namespace_log);
+		mds_unreserve_slot();
+	}
+
+	if (mp->rc) {
+		if (unbump)
+			fcmh_2_gen(fcmh)--;
+	} else {
+		if (tadj & PSCFS_SETATTRF_DATASIZE) {
 			fcmh->fcmh_flags |= FCMH_IN_PTRUNC;
 
 			csvc = slm_getclcsvc(rq->rq_export);
 			psc_dynarray_add(&fcmh_2_fmi(fcmh)->
 			    fmi_ptrunc_clients, csvc);
 
-			fcmh_2_ptruncgen(fcmh)++;
-			nxbmaps_adj = fcmh_2_fsz(fcmh) / SLASH_BMAP_SIZE -
-			    fcmh->fcmh_sstb.sst_size / SLASH_BMAP_SIZE;
-			fcmh->fcmh_sstb.sst_nxbmaps += nxbmaps_adj;
-			to_set |= SL_SETATTRF_PTRUNCGEN;
-
-			unptrunc = 1;
+			mp->rc = SLERR_BMAP_PTRUNC_STARTED;
 		}
-	}
 
-	/*
-	 * If the file is open, mdsio_data will be valid and used.
-	 * Otherwise, it will be NULL, and we'll use the mdsio_fid.
-	 */
-	mds_reserve_slot();
-	mp->rc = mdsio_setattr(fcmh_2_mdsio_fid(fcmh), &mq->attr,
-	    to_set, &rootcreds, &mp->attr, fcmh_2_mdsio_data(fcmh),
-	    mds_namespace_log);
-	mds_unreserve_slot();
+		slm_setattr_core(fcmh, &mq->attr, to_set | tadj);
 
-	if (mp->rc) {
-		if (unbump)
-			fcmh_2_gen(fcmh)--;
-		if (unptrunc) {
-			fcmh_2_ptruncgen(fcmh)--;
-			fcmh->fcmh_flags &= ~FCMH_IN_PTRUNC;
-			fcmh->fcmh_sstb.sst_nxbmaps -= nxbmaps_adj;
-			psc_dynarray_remove(&fcmh_2_fmi(fcmh)->
-			    fmi_ptrunc_clients, csvc);
-		}
-	} else {
-		FCMH_ULOCK(fcmh);
-		slm_setattr_core(fcmh, &mq->attr, to_set);
-		FCMH_LOCK(fcmh);
-
+		/* refresh to latest from mdsio layer */
 		fcmh->fcmh_sstb = mp->attr;
 	}
 
  out:
 	if (fcmh) {
 		FCMH_RLOCK(fcmh);
-		if (mp->rc == 0)
+		if (mp->rc == 0 || mp->rc == SLERR_BMAP_PTRUNC_STARTED)
 			mp->attr = fcmh->fcmh_sstb;
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 	}

@@ -49,6 +49,7 @@ char *slash_errstrs[] = {
 /* 21 */ "File generation invalid",
 /* 22 */ "CONNECT protocol message has not been transmitted",
 /* 23 */ "Bmap is awaiting partial truncation resolution",
+/* 24 */ "Bmap has started partial truncation resolution",
 	NULL
 };
 
