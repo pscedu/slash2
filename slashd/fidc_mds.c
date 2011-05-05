@@ -47,7 +47,7 @@ mds_fcmh_increase_fsz(struct fidc_membh *fcmh, uint64_t siz)
 	/* Block until other size updates have completed.
 	 */
 	fcmh_wait_locked(fcmh, fcmh->fcmh_flags & FCMH_SIZE_UPDATE);
-	
+
 	if (siz > (uint64_t)fcmh_2_fsz(fcmh)) {
 		nb = siz / SLASH_BMAP_SIZE -
 		    fcmh_2_fsz(fcmh) / SLASH_BMAP_SIZE;
@@ -56,12 +56,12 @@ mds_fcmh_increase_fsz(struct fidc_membh *fcmh, uint64_t siz)
 		fcmh->fcmh_sstb.sst_nxbmaps -= nb;
 		fcmh_2_fsz(fcmh) = siz;
 		fcmh->fcmh_flags |= FCMH_SIZE_UPDATE;
-		
+
 		DEBUG_FCMH(PLL_INFO, fcmh, "new fsize %"PRId64, siz);
 		FCMH_ULOCK(fcmh);
-		
+
 		rc = mdsio_fcmh_setattr(fcmh, PSCFS_SETATTRF_DATASIZE);
-		
+
 		FCMH_LOCK(fcmh);
 		psc_assert(fcmh->fcmh_flags & FCMH_SIZE_UPDATE);
 		fcmh->fcmh_flags &= ~FCMH_SIZE_UPDATE;
