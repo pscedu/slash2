@@ -1391,7 +1391,7 @@ mds_bmap_crc_log(void *datap, uint64_t txg, __unusedx int flag)
 	struct sl_mds_crc_log *crclog = datap;
 	struct bmapc_memb *bmap = crclog->scl_bmap;
 	struct srm_bmap_crcup *crcup = crclog->scl_crcup;
-	struct bmap_mds_info *bmdsi = bmap_2_bmdsi(bmap);
+	struct bmap_mds_info *bmdsi = bmap_2_bmi(bmap);
 	struct slmds_jent_crc *jcrc;
 	uint32_t n, t, distill;
 

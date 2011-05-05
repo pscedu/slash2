@@ -113,7 +113,7 @@ slmrcmthr_walk_brepls(struct slm_replst_workreq *rsw,
 
 	thr = pscthr_get();
 	srcm = slmrcmthr(thr);
-	bmdsi = bmap_2_bmdsi(bcm);
+	bmdsi = bmap_2_bmi(bcm);
 
 	nbits = USWI_INOH(wk)->inoh_ino.ino_nrepls *
 	    SL_BITS_PER_REPLICA + SL_NBITS_REPLST_BHDR;

@@ -216,7 +216,7 @@ _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int *tract,
     const int *retifset, int flags, int off, int *scircuit,
     brepl_walkcb_t cbf, void *cbarg)
 {
-	struct bmap_mds_info *bmdsi = bmap_2_bmdsi(bcm);
+	struct bmap_mds_info *bmdsi = bmap_2_bmi(bcm);
 	int locked, val, rc = 0;
 
 	/* Take a write lock on the bmapod. */

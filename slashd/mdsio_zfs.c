@@ -108,7 +108,7 @@ mdsio_bmap_write(struct bmapc_memb *bmap, int update_mtime, void *logf,
 	size_t nb;
 	int rc;
 
-	BMAPOD_REQRDLOCK(bmap_2_bmdsi(bmap));
+	BMAPOD_REQRDLOCK(bmap_2_bmi(bmap));
 	mds_bmap_ensure_valid(bmap);
 
 	if (logf)

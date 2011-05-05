@@ -75,8 +75,7 @@ struct bmap_mds_info {
 #define BMAP_MDS_DIO		(_BMAP_FLSHFT << 3)	/* direct I/O enabled */
 #define BMAP_MDS_SEQWRAP	(_BMAP_FLSHFT << 4)	/* sequence number wrapped */
 
-#define bmap_2_bmdsi(b)		((struct bmap_mds_info *)bmap_get_pri(b))
-#define bmap_2_bmdsassign(b)	bmap_2_bmdsi(b)->bmdsi_assign
+#define bmap_2_bmdsassign(b)	bmap_2_bmi(b)->bmdsi_assign
 #define bmap_2_xstate(b)	(&bmap_2_bmi(b)->bmdsi_extrastate)
 #define bmap_2_bgen(b)		bmap_2_xstate(b)->bes_gen
 #define bmap_2_replpol(b)	bmap_2_xstate(b)->bes_replpol
@@ -98,25 +97,24 @@ bmap_2_bmi(struct bmapc_memb *b)
 	return (bmap_get_pri(b));
 }
 
-#define BMAPOD_MODIFY_START(b)	BMAPOD_WRLOCK(bmap_2_bmdsi(b))
-#define BMAPOD_MODIFY_DONE(b)	BMAPOD_ULOCK(bmap_2_bmdsi(b))
+#define BMAPOD_MODIFY_START(b)	BMAPOD_WRLOCK(bmap_2_bmi(b))
+#define BMAPOD_MODIFY_DONE(b)	BMAPOD_ULOCK(bmap_2_bmi(b))
 
 #define BMAPOD_READ_START(b)						\
 	_PFL_RVSTART {							\
 		int _waslocked = 0;					\
 									\
-		if (psc_rwlock_haswrlock(				\
-		    &bmap_2_bmdsi(b)->bmdsi_rwlock))			\
+		if (psc_rwlock_haswrlock(&bmap_2_bmi(b)->bmdsi_rwlock))	\
 			_waslocked = 1;					\
 		else							\
-			BMAPOD_RDLOCK(bmap_2_bmdsi(b));			\
+			BMAPOD_RDLOCK(bmap_2_bmi(b));			\
 		_waslocked;						\
 	} _PFL_RVEND
 
 #define BMAPOD_READ_DONE(b, lk)						\
 	do {								\
 		if (!(lk))						\
-			BMAPOD_ULOCK(bmap_2_bmdsi(b));			\
+			BMAPOD_ULOCK(bmap_2_bmi(b));			\
 	} while (0)
 
 #define BHREPL_POLICY_SET(b, pol)					\
