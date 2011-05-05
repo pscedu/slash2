@@ -234,15 +234,6 @@ site_resource	: resource_start resource_def SUBSECT_END {
 			struct sl_resource *r;
 			int j, nmds = 0;
 
-			if (currentSite->site_id == 0)
-				yyerror("site %s has no ID assigned",
-				    currentSite->site_name);
-
-			if (currentRes->res_id == 0)
-				yyerror("resource %s@%s has no ID "
-				    "assigned", currentRes->res_name,
-				    currentSite->site_name);
-
 			if (strcmp(currentRes->res_name, "") == 0)
 				yyerror("resource ID %d @%s has no name",
 				    currentRes->res_id, currentSite->site_name);
