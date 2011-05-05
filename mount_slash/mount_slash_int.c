@@ -250,11 +250,11 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 			  (off_t)(bmpce_search.bmpce_off + bmap_foff(b)));
 		freelock(&mfh->mfh_lock);
  restart:
-		bmpce = bmpce_lookup_locked(bmpc, r, 
+		bmpce = bmpce_lookup_locked(bmpc, r,
 		    (bkwdra ? (aoff + ((npages - 1 - i) * BMPC_BUFSZ)) :
-		     aoff + (i * BMPC_BUFSZ)), 
+		     aoff + (i * BMPC_BUFSZ)),
 		    (i < npages) ? NULL : &r->biorq_bmap->bcm_fcmh->fcmh_waitq);
-		
+
 		BMPCE_LOCK(bmpce);
 		if (bmpce->bmpce_flags & BMPCE_INIT)
 			fetchpgs++;
@@ -262,14 +262,14 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 		DEBUG_BMPCE(PLL_INFO, bmpce,
 		    "i=%d, npages=%d maxpages=%d aoff=%u aoff_search=%u",
 		    i, npages, maxpages, aoff, bmpce_search.bmpce_off);
-		
+
 		if (i < npages) {
 			if (bmpce->bmpce_flags & BMPCE_EIO) {
 				/* Don't take on pages marked with EIO.
 				 *   Go back and try again.
 				 */
 				BMPC_ULOCK(bmpc);
-				DEBUG_BMPCE(PLL_WARN, bmpce, 
+				DEBUG_BMPCE(PLL_WARN, bmpce,
 				    "wait and retry for EIO to clear");
 				psc_assert(bmpce->bmpce_waitq);
 				BMPCE_WAIT(bmpce);
@@ -280,14 +280,14 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 			 *   function for all pages needed to
 			 *   fulfill the read and for ra pages
 			 *   which need to be retrieved.
-			 */			
+			 */
 			bmpce_handle_lru_locked(bmpce, bmpc, op, 1);
 			psc_dynarray_add(&r->biorq_pages, bmpce);
 
 		} else {
 			DEBUG_BMPCE(PLL_INFO, bmpce,
 			    "ra i=%d biorq_is_my_bmpce=%d raoff=%"PRIx64
-			    " bmpce_foff=%"PRIx64, i, 
+			    " bmpce_foff=%"PRIx64, i,
 			    biorq_is_my_bmpce(r, bmpce), mfh->mfh_ra.mra_raoff,
 			    (off_t)(bmpce_search.bmpce_off + bmap_foff(b)));
 
@@ -297,12 +297,12 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 			if (bmpce->bmpce_flags & BMPCE_EIO) {
 				/* Don't bother with RA of pages marked EIO.
 				 */
-				DEBUG_BMPCE(PLL_WARN, bmpce, 
+				DEBUG_BMPCE(PLL_WARN, bmpce,
 				    "no RA for EIO page");
-			       
+
 			} else if (biorq_is_my_bmpce(r, bmpce)) {
-				/* Other threads will block on the reada 
-				 *   completion.  The cb handler will decref 
+				/* Other threads will block on the reada
+				 *   completion.  The cb handler will decref
 				 *   the bmpce.
 				 */
 				psc_assert(bmpce->bmpce_flags & BMPCE_INIT);
@@ -328,7 +328,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 				       bmpce_lrusort_cmp1);
 			}
 			spinlock(&mfh->mfh_lock);
-			mfh->mfh_ra.mra_raoff = bmap_foff(b) + 
+			mfh->mfh_ra.mra_raoff = bmap_foff(b) +
 				bmpce_search.bmpce_off;
 			freelock(&mfh->mfh_lock);
 		}
@@ -394,7 +394,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 		bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
 		BMPCE_LOCK(bmpce);
 		if (i < npages)
-			psc_assert(bmpce->bmpce_off == 
+			psc_assert(bmpce->bmpce_off ==
 			   aoff + (i * BMPC_BUFSZ));
 
 		if (op == BIORQ_WRITE)
@@ -483,12 +483,12 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 
 	/* Block here on an of our EIO'd pages waiting for other threads
 	 *   to release their references.
-	 * Additionally, we need to block for RA pages which have not 
+	 * Additionally, we need to block for RA pages which have not
 	 *   yet been marked as EIO.
 	 */
 	DYNARRAY_FOREACH(bmpce, i, &r->biorq_pages) {
 		BMPCE_LOCK(bmpce);
-		if (biorq_is_my_bmpce(r, bmpce) && 
+		if (biorq_is_my_bmpce(r, bmpce) &&
 		    (bmpce->bmpce_flags & BMPCE_EIO)) {
 
 			while (psc_atomic16_read(&bmpce->bmpce_wrref) ||
@@ -496,7 +496,7 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 				BMPCE_WAIT(bmpce);
 				BMPCE_LOCK(bmpce);
 			}
-			/* Only my rd ref should remain. 
+			/* Only my rd ref should remain.
 			 */
 			psc_assert(!psc_atomic16_read(&bmpce->bmpce_wrref) &&
 			    psc_atomic16_read(&bmpce->bmpce_rdref) == 1);
@@ -1137,7 +1137,7 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 			psc_assert(psc_atomic16_read(&bmpce->bmpce_rdref) == 1);
 			psc_atomic16_dec(&bmpce->bmpce_rdref);
 			bmpce->bmpce_flags |= BMPCE_RBWRDY;
-			DEBUG_BMPCE(PLL_INFO, bmpce, 
+			DEBUG_BMPCE(PLL_INFO, bmpce,
 			    "infl dec for RBW, DATARDY not set");
 		} else {
 			bmpce->bmpce_flags |= BMPCE_DATARDY;
@@ -1204,7 +1204,7 @@ msl_readahead_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 	pll_remove(&bmpc->bmpc_pndg_ra, bmpce);
 
-	BMPCE_LOCK(bmpce);	
+	BMPCE_LOCK(bmpce);
 	if (rc)
 		bmpce->bmpce_flags |= BMPCE_EIO;
 	else {
@@ -1272,7 +1272,7 @@ msl_io_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 			bmap_flush_inflight_unset(r);
 
 		return (rq->rq_status ? rq->rq_status : rc);
-	} 
+	}
 
 	DYNARRAY_FOREACH(r, i, biorqs)
 		msl_biorq_destroy(r);
@@ -1674,7 +1674,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 		/* Didn't get far enough for the waitq to be removed.
 		 */
 		psc_assert(bmpce->bmpce_waitq);
-		
+
 		BMPCE_LOCK(bmpce);
 		bmpce->bmpce_flags |= BMPCE_EIO;
 		BMPCE_WAKE(bmpce);
@@ -1843,7 +1843,7 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 		r->biorq_rqset = NULL;
 
 		if (rc) {
-			/* By this point, the bmpce's in biorq_pages have 
+			/* By this point, the bmpce's in biorq_pages have
 			 *   been released.  Don't try to access them here.
 			 */
 			return (rc);
@@ -1859,7 +1859,7 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 			 *    wait for them to become DATARDY
 			 *    or to have failed.
 			 */
-			while (!(bmpce->bmpce_flags & 
+			while (!(bmpce->bmpce_flags &
 				 (BMPCE_DATARDY | BMPCE_EIO))) {
 				/*
 				 * If the owner gave up, we will contend
@@ -1880,7 +1880,7 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 
 		/* If this a read request OR another thread is dealing
 		 *   with this bmpce then check.
-		 */		
+		 */
 		if ((r->biorq_flags & BIORQ_READ) ||
 		    !biorq_is_my_bmpce(r, bmpce)) {
 			/* If there was an error, retry or give up. */
@@ -1971,7 +1971,7 @@ msl_pages_copyin(struct bmpc_ioreq *r, char *buf)
 		if (biorq_is_my_bmpce(r, bmpce) &&
 		    !(bmpce->bmpce_flags & BMPCE_DATARDY)) {
 			psc_assert(bmpce->bmpce_owner);
-			bmpce->bmpce_flags |= BMPCE_DATARDY;			
+			bmpce->bmpce_flags |= BMPCE_DATARDY;
 			bmpce->bmpce_flags &= ~(BMPCE_RBWPAGE|BMPCE_RBWRDY);
 			psc_waitq_wakeall(bmpce->bmpce_waitq);
 			bmpce->bmpce_waitq = NULL;
@@ -2328,11 +2328,11 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 				rc = msl_offline_retry(r[i]);
 				if (rc) {
 					/*
-					 * The app wants to retry the failed 
-					 * I/O. What we must do in this logic 
-					 * is tricky since we don't want to 
-					 * re-lease the bmap.  We hold a fake 
-					 * ref to the bmap so it doesn't get 
+					 * The app wants to retry the failed
+					 * I/O. What we must do in this logic
+					 * is tricky since we don't want to
+					 * re-lease the bmap.  We hold a fake
+					 * ref to the bmap so it doesn't get
 					 * reclaimed until bmap_get() gets
 					 * its own ref.
 					 */
@@ -2352,12 +2352,12 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 				rc = -EIO;
 				goto out;
 			}
-			
+
 			if (rw == SL_READ)
 				tlen = msl_pages_copyout(r[i], p);
 			else
 				tlen = msl_pages_copyin(r[i], p);
-			
+
 			tsize += tlen;
 		}
 		r[i] = MSL_BIORQ_COMPLETE;
