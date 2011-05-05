@@ -123,7 +123,6 @@ enum {
 
 	/* namespace operations */
 	SRMT_NAMESPACE_UPDATE,			/* send a batch of namespace update logs */
-	SRMT_NAMESPACE_FORWARD,			/* a namespace operation request from a peer  */
 
 	/* bmap operations */
 	SRMT_BMAPCHWRMODE,			/* change read/write access mode */
@@ -167,6 +166,8 @@ enum {
 	SRMT_UNLINK,				/* unlink(2) */
 	SRMT_WRITE,				/* write(2) */
 	SRMT_XCTL				/* ancillary operation */
+
+	,SRMT_NAMESPACE_FORWARD			/* a namespace operation request from a peer  */
 };
 
 /* ----------------------------- BEGIN MESSAGES ----------------------------- */
@@ -329,14 +330,12 @@ struct srt_update_entry {
 
 /* namespace forward */
 struct srm_forward_req {
-	int32_t			op;		/* create, mkdir, unlink, rmdir, etc. */
-	 int32_t		_pad1;
+	 int32_t		op;		/* create, mkdir, unlink, rmdir, etc. */
+	uint32_t		mode;
 	struct slash_creds	creds;		/* st_uid owner for new dir/file */
 	struct slash_fidgen	pfg;		/* parent dir */
 	slfid_t			fid;		/* provided by the peer MDS */
 	char			name[SL_NAME_MAX + 1];
-	uint32_t		mode;
-	 int32_t		_pad2;
 } __packed;
 
 /* -------------------------- BEGIN BMAP MESSAGES --------------------------- */
