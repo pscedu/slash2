@@ -199,5 +199,5 @@ slm_rmm_handler(struct pscrpc_request *rq)
 int
 slm_rmm_forward_namespace(__unusedx struct srm_forward_req *rq)
 {
-	return (0);
+	return (ENOSYS);
 }

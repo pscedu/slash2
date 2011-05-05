@@ -342,15 +342,14 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	struct fidc_membh *p = NULL, *c = NULL;
 	struct srm_mkdir_req *mq;
 	struct srm_mkdir_rep *mp;
-	uint32_t pol;
 	struct srm_forward_req req;
-	sl_siteid_t thisSiteid, dirSiteid;
+	uint32_t pol;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	thisSiteid = nodeResm->resm_res->res_site->site_id;
-	dirSiteid = FID_GET_SITEID(mq->pfg.fg_fid);
-	if (thisSiteid != dirSiteid) {
+	if (mq->pfg.fg_fid != SLFID_ROOT &&
+	    nodeResm->resm_res->res_site->site_id !=
+	    FID_GET_SITEID(mq->pfg.fg_fid)) {
 		req.op = 1;
 		req.creds = mq->creds;
 		req.pfg = mq->pfg;
@@ -665,7 +664,7 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	}
 
 	/*
- 	 * TODO: return EXDEV, if the site IDs of the two parents are different.
+	 * TODO: return EXDEV, if the site IDs of the two parents are different.
 	 */
 
 	/* if we get here, op and np must be owned by the current MDS */
