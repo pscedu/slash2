@@ -48,6 +48,7 @@
 
 #define SL_RPATH_UPSCH_DIR	"upsch"
 #define SL_RPATH_FIDNS_DIR	"fidns"
+#define SL_RPATH_TMP_DIR	"tmp"
 
 #define SL_FN_BMAP_ODTAB	"bmap.odtab"
 

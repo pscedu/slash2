@@ -149,6 +149,9 @@ slimmns_create(const char *fsroot, uint32_t depth)
 	xmkfn(metadir, "%s/%s", fsroot, SL_RPATH_META_DIR);
 	slnewfs_mkdir(metadir);
 
+	xmkfn(fn, "%s/%s", metadir, SL_RPATH_TMP_DIR);
+	slnewfs_mkdir(fn);
+
 	/* create immutable namespace directory */
 	xmkfn(fn, "%s/%s", metadir, SL_RPATH_FIDNS_DIR);
 	slnewfs_mkdir(fn);
