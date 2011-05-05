@@ -36,29 +36,33 @@ mds_inode_dump(struct sl_ino_compat *sic, struct slash_inode_handle *ih,
 	struct fidc_membh *f;
 	struct bmapc_memb *b;
 	sl_bmapno_t i;
+	int rc, fl;
 	void *th;
-	int rc;
 
 	f = ih->inoh_fcmh;
 	th = inoh_2_mdsio_data(ih);
 
-	for (i = 0; i < fcmh_2_nbmaps(f) + fcmh_2_nxbmaps(f); i++) {
-		if (sic == NULL) {
-			inoh_2_mdsio_data(ih) = readh;
-			rc = mds_bmap_load(f, i, &b);
-			inoh_2_mdsio_data(ih) = th;
+	fl = BMAPGETF_LOAD | BMAPGETF_NOAUTOINST;
+	if (sic)
+		fl |= BMAPGETF_NORETRIEVE;
 
-			if (rc)
-				return (rc);
-		} else {
-			rc = bmap_getf(f, i, SL_WRITE, BMAPGETF_LOAD |
-			    BMAPGETF_NORETRIEVE, &b);
-			if (rc)
-				return (rc);
+	for (i = 0; ; i++) {
+		inoh_2_mdsio_data(ih) = readh;
+		rc = bmap_getf(f, i, SL_WRITE, fl, &b);
+		inoh_2_mdsio_data(ih) = th;
 
+		if (rc == SLERR_BMAP_INVALID)
+			break;
+
+		if (rc)
+			return (rc);
+
+		if (sic) {
 			rc = sic->sic_read_bmap(b, readh);
 			if (rc) {
 				bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+				if (rc == SLERR_BMAP_INVALID)
+					break;
 				return (rc);
 			}
 		}
@@ -94,7 +98,7 @@ mds_inode_update(struct slash_inode_handle *ih, int old_version)
 	rc = sic->sic_read_ino(ih);
 	if (rc)
 		return (rc);
-	DEBUG_INOH(PLL_WARN, ih, "updating old inode (v %d)",
+	DEBUG_INOH(PLL_INFO, ih, "updating old inode (v %d)",
 	    old_version);
 
 	snprintf(fn, sizeof(fn), "%016lx.update",
@@ -103,6 +107,10 @@ mds_inode_update(struct slash_inode_handle *ih, int old_version)
 	    O_CREAT | O_TRUNC, 0644, fn, NULL, NULL, &h, NULL, NULL);
 	if (rc)
 		goto out;
+
+	psc_assert(ih->inoh_extras == NULL);
+	ih->inoh_extras = PSCALLOC(sizeof(*ih->inoh_extras));
+	ih->inoh_flags |= INOH_HAVE_EXTRAS;
 
 	/* convert old structures into new into temp file */
 	rc = sic->sic_read_inox(ih);
@@ -182,6 +190,10 @@ mds_inode_update_interrupted(struct slash_inode_handle *ih, int *rc)
 	}
 
 	exists = 1;
+
+	psc_assert(ih->inoh_extras == NULL);
+	ih->inoh_extras = PSCALLOC(sizeof(*ih->inoh_extras));
+	ih->inoh_flags |= INOH_HAVE_EXTRAS;
 
 	inoh_2_mdsio_data(ih) = h;
 	*rc = mds_inox_ensure_loaded(ih);
@@ -298,18 +310,23 @@ mds_bmap_read_v1(struct bmapc_memb *b, void *readh)
 	} bod;
 	uint64_t crc, od_crc;
 	struct iovec iovs[2];
-	size_t nb;
+	size_t nb, bsz;
 	int i, rc;
+
+	bsz = sizeof(bod) + sizeof(crc);
 
 	iovs[0].iov_base = &bod;
 	iovs[0].iov_len = sizeof(bod);
 	iovs[1].iov_base = &od_crc;
 	iovs[1].iov_len = sizeof(od_crc);
-	rc = mdsio_preadv(&rootcreds, iovs, nitems(iovs), &nb, 0x1000, readh);
+	rc = mdsio_preadv(&rootcreds, iovs, nitems(iovs), &nb,
+	    bsz * b->bcm_bmapno + 0x1000, readh);
 
 	if (rc)
 		return (rc);
-	if (nb != sizeof(bod) + sizeof(od_crc))
+	if (nb == 0)
+		return (SLERR_BMAP_INVALID);
+	if (nb != bsz)
 		return (SLERR_SHORTIO);
 
 	psc_crc64_calc(&crc, &bod, sizeof(bod));
@@ -328,6 +345,5 @@ mds_bmap_read_v1(struct bmapc_memb *b, void *readh)
 
 struct sl_ino_compat sl_ino_compat_table[] = {
 /* 0 */	{ NULL, NULL, NULL },
-/* 1 */	{ mds_ino_read_v1, mds_inox_read_v1, mds_bmap_read_v1 },
-/* 2 */	{ NULL, NULL, NULL },
+/* 1 */	{ NULL, NULL, NULL },
 };

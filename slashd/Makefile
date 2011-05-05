@@ -9,6 +9,7 @@ SRCS+=		bmap_mds.c
 SRCS+=		cfg_mds.c
 SRCS+=		ctl_mds.c
 SRCS+=		fidc_mds.c
+SRCS+=		ino_compat.c
 SRCS+=		inode.c
 SRCS+=		main_mds.c
 SRCS+=		mds.c

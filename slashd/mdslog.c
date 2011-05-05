@@ -560,8 +560,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
  *	other MDSes and made permanent before we reply to the client.
  */
 void
-mds_namespace_log(int op, uint64_t txg, uint64_t parent,
-    uint64_t newparent, const struct srt_stat *sstb, int mask,
+mds_namespace_log(int op, uint64_t txg, uint64_t pfid,
+    uint64_t npfid, const struct srt_stat *sstb, int mask,
     const char *name, const char *newname)
 {
 	struct slmds_jent_namespace *sjnm;
@@ -572,9 +572,9 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 	memset(sjnm, 0, sizeof(*sjnm));
 	sjnm->sjnm_magic = SJ_NAMESPACE_MAGIC;
 	sjnm->sjnm_op = op;
-	sjnm->sjnm_parent_fid = parent;
+	sjnm->sjnm_parent_fid = pfid;
 	sjnm->sjnm_target_fid = sstb->sst_fid;
-	sjnm->sjnm_new_parent_fid = newparent;
+	sjnm->sjnm_new_parent_fid = npfid;
 	sjnm->sjnm_mask = mask;
 
 	sjnm->sjnm_uid = sstb->sst_uid;
@@ -634,8 +634,13 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 	if (!distill)
 		pjournal_put_buf(mdsJournal, sjnm);
 
-	psclog_notice("namespace op: op=%d, distill=%d, fid="SLPRI_FID", name=%s, new name=%s, size=%"PRId64", txg=%"PRId64,
-	    op, distill, sjnm->sjnm_target_fid, name, newname, sstb->sst_size, txg);
+	psclog_notice("namespace op: optype=%d distill=%d "
+	    "fid="SLPRI_FID" name='%s%s%s' mask=%#x size=%"PRId64" "
+	    "pfid="SLPRI_FID" npfid="SLPRI_FID" txg=%"PRId64,
+	    op, distill,
+	    sjnm->sjnm_target_fid, name,
+	    newname ? "' newname='" : "", newname ? newname : "",
+	    mask, sstb->sst_size, pfid, npfid, txg);
 }
 
 /**
@@ -1292,28 +1297,21 @@ mds_inode_sync(struct slash_inode_handle *inoh)
 	INOH_LOCK(inoh);
 
 	if (inoh->inoh_flags & INOH_INO_DIRTY) {
-		psc_crc64_calc(&inoh->inoh_ino.ino_crc, &inoh->inoh_ino,
-		    INO_OD_CRCSZ);
-
-		rc = mdsio_inode_write(inoh, NULL, NULL);
+		rc = mds_inode_write(inoh, NULL, NULL);
 		if (rc)
 			DEBUG_INOH(PLL_FATAL, inoh, "rc=%d", rc);
-
 		if (inoh->inoh_flags & INOH_INO_NEW)
 			inoh->inoh_flags &= ~INOH_INO_NEW;
+		inoh->inoh_flags &= ~INOH_INO_DIRTY;
 	}
 
 	if (inoh->inoh_flags & INOH_EXTRAS_DIRTY) {
-		psc_crc64_calc(&inoh->inoh_extras->inox_crc,
-		    inoh->inoh_extras, INOX_OD_CRCSZ);
-		rc = mdsio_inode_extras_write(inoh, NULL, NULL);
-
+		rc = mds_inox_write(inoh, NULL, NULL);
 		if (rc)
 			DEBUG_INOH(PLL_FATAL, inoh, "xtras rc=%d sync fail",
 			    rc);
 		else
 			DEBUG_INOH(PLL_NOTIFY, inoh, "xtras sync ok");
-
 		inoh->inoh_flags &= ~INOH_EXTRAS_DIRTY;
 	}
 

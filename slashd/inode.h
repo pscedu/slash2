@@ -39,7 +39,6 @@
 #include "sltypes.h"
 
 #define SL_DEF_SNAPSHOTS	1
-#define SL_MAX_GENS_PER_BLK	4
 
 /*
  * Define metafile offsets.  At the beginning of the metafile is the
@@ -47,9 +46,8 @@
  * (0x400) are extra inode attributes. Block CRCs begin at offset 4096
  * (0x1000).
  */
-#define SL_INODE_START_OFF	UINT64_C(0x0000)
-#define SL_EXTRAS_START_OFF	UINT64_C(0x0400)
-#define SL_BMAP_START_OFF	UINT64_C(0x1000)
+#define SL_EXTRAS_START_OFF	((off_t)0x0400)
+#define SL_BMAP_START_OFF	((off_t)0x1000)
 
 /*
  * Point to an offset within the linear metadata file which holds a
@@ -76,53 +74,63 @@ struct slash_inode_od {
 	uint32_t		ino_nrepls;			/* if 0, use ino_prepl */
 	uint32_t		ino_replpol;			/* BRP_* policies */
 	sl_replica_t		ino_repls[SL_DEF_REPLICAS];	/* embed a few replicas	*/
-
-	/* must be last */
-	uint64_t		ino_crc;			/* CRC of the inode */
 };
-#define INO_OD_SZ		sizeof(struct slash_inode_od)
-#define INO_OD_CRCSZ		offsetof(struct slash_inode_od, ino_crc)
 
 struct slash_inode_extras_od {
 	sl_snap_t		inox_snaps[SL_DEF_SNAPSHOTS];	/* snapshot pointers */
 	sl_replica_t		inox_repls[SL_INOX_NREPLICAS];
-
-	/* must be last */
-	uint64_t		inox_crc;
 };
-#define INOX_OD_SZ		sizeof(struct slash_inode_extras_od)
-#define INOX_OD_CRCSZ		offsetof(struct slash_inode_extras_od, inox_crc)
 
 struct slash_inode_handle {
-	struct slash_inode_od		 inoh_ino;
-	struct slash_inode_extras_od	*inoh_extras;
-	struct fidc_membh		*inoh_fcmh;
-	psc_spinlock_t			 inoh_lock;
-	int				 inoh_flags;
+	struct slash_inode_od	  inoh_ino;
+	struct slash_inode_extras_od *inoh_extras;
+	struct fidc_membh	 *inoh_fcmh;
+	psc_spinlock_t		  inoh_lock;
+	int			  inoh_flags;
 };
 
-#define INOH_LOCK(ih)			spinlock(&(ih)->inoh_lock)
-#define INOH_ULOCK(ih)			freelock(&(ih)->inoh_lock)
-#define INOH_RLOCK(ih)			reqlock(&(ih)->inoh_lock)
-#define INOH_URLOCK(ih, lk)		ureqlock(&(ih)->inoh_lock, (lk))
-#define INOH_LOCK_ENSURE(ih)		LOCK_ENSURE(&(ih)->inoh_lock)
+#define	INOH_INO_DIRTY		(1 << 0)			/* inode needs to be written */
+#define	INOH_EXTRAS_DIRTY	(1 << 1)			/* inoh_extras needs written */
+#define	INOH_HAVE_EXTRAS	(1 << 2)			/* inoh_extras are loaded in mem */
+#define	INOH_INO_NEW		(1 << 3)			/* not yet written to disk */
+#define	INOH_INO_NOTLOADED	(1 << 4)
 
-enum {
-	INOH_INO_DIRTY     = (1 << 0),	/* Inode structures need to be written */
-	INOH_EXTRAS_DIRTY  = (1 << 1),	/* Replication structures need written */
-	INOH_HAVE_EXTRAS   = (1 << 2),	/* inoh_extras are loaded in mem */
-	INOH_INO_NEW       = (1 << 3),	/* Inode has never been written to disk */
-	INOH_INO_NOTLOADED = (1 << 4),
-	INOH_INO_SYNCING   = (1 << 5)
+#define INOH_LOCK(ih)		spinlock(&(ih)->inoh_lock)
+#define INOH_ULOCK(ih)		freelock(&(ih)->inoh_lock)
+#define INOH_RLOCK(ih)		reqlock(&(ih)->inoh_lock)
+#define INOH_URLOCK(ih, lk)	ureqlock(&(ih)->inoh_lock, (lk))
+#define INOH_LOCK_ENSURE(ih)	LOCK_ENSURE(&(ih)->inoh_lock)
+
+#define INOH_FLAGS_FMT		"%s%s%s%s%s"
+#define DEBUG_INOH_FLAGS(i)						\
+	(i)->inoh_flags & INOH_INO_DIRTY	? "D" : "",		\
+	(i)->inoh_flags & INOH_EXTRAS_DIRTY	? "d" : "",		\
+	(i)->inoh_flags & INOH_HAVE_EXTRAS	? "X" : "",		\
+	(i)->inoh_flags & INOH_INO_NEW		? "N" : "",		\
+	(i)->inoh_flags & INOH_INO_NOTLOADED	? "L" : ""
+
+#define DEBUG_INOH(level, ih, fmt, ...)					\
+	_log_debug_inoh(PFL_CALLERINFO(), (level), (ih), (fmt), ## __VA_ARGS__)
+
+struct sl_ino_compat {
+	int			(*sic_read_ino)(struct slash_inode_handle *);
+	int			(*sic_read_inox)(struct slash_inode_handle *);
+	int			(*sic_read_bmap)(struct bmapc_memb *, void *);
 };
+
+int	mds_inode_update(struct slash_inode_handle *, int);
+int	mds_inode_update_interrupted(struct slash_inode_handle *, int *);
+int	mds_inode_read(struct slash_inode_handle *);
+int	mds_inode_write(struct slash_inode_handle *, void *, void *);
+int	mds_inox_write(struct slash_inode_handle *, void *, void *);
+
+extern struct sl_ino_compat sl_ino_compat_table[];
 
 static __inline void
 slash_inode_handle_init(struct slash_inode_handle *ih,
     struct fidc_membh *f)
 {
-	/* The rest of the fields are zeroed along with the fcmh */
 	ih->inoh_fcmh = f;
-	ih->inoh_extras = NULL;
 	INIT_SPINLOCK(&ih->inoh_lock);
 	ih->inoh_flags = INOH_INO_NOTLOADED;
 }
@@ -148,22 +156,11 @@ _debug_ino(char *buf, size_t siz, const struct slash_inode_od *ino)
 		strlcat(rbuf, nbuf, sizeof(rbuf));
 	}
 
-	snprintf(buf, siz,
-	    "v:%x bsz:%u nr:%u nbpol:%u repl:%s crc:%"PRIx64,
-	    ino->ino_version,
+	snprintf(buf, siz, "bsz:%u nr:%u nbpol:%u repl:%s",
 	    ino->ino_bsz, ino->ino_nrepls,
-	    ino->ino_replpol, rbuf, ino->ino_crc);
+	    ino->ino_replpol, rbuf);
 	return (buf);
 }
-
-#define INOH_FLAGS_FMT "%s%s%s%s%s%s"
-#define DEBUG_INOH_FLAGS(i)						\
-	(i)->inoh_flags & INOH_INO_DIRTY	? "D" : "",		\
-	(i)->inoh_flags & INOH_EXTRAS_DIRTY	? "d" : "",		\
-	(i)->inoh_flags & INOH_HAVE_EXTRAS	? "X" : "",		\
-	(i)->inoh_flags & INOH_INO_NEW		? "N" : "",		\
-	(i)->inoh_flags & INOH_INO_NOTLOADED	? "L" : "",		\
-	(i)->inoh_flags & INOH_INO_SYNCING	? "S" : ""
 
 static __inline void
 _log_debug_inoh(const struct pfl_callerinfo *pfl_callerinfo, int level,
@@ -176,12 +173,11 @@ _log_debug_inoh(const struct pfl_callerinfo *pfl_callerinfo, int level,
 	vsnprintf(mbuf, sizeof(mbuf), fmt, ap);
 	va_end(ap);
 
-	_psclog_pci(pfl_callerinfo, level, 0, "inoh@%p fl:"INOH_FLAGS_FMT" %s :: %s",
-	    ih, DEBUG_INOH_FLAGS(ih), _debug_ino(buf, sizeof(buf),
-	    &ih->inoh_ino), mbuf);
+	_psclog_pci(pfl_callerinfo, level, 0,
+	    "inoh@%p fcmh=%p f+g="SLPRI_FG" fl:%#x:"INOH_FLAGS_FMT" %s :: %s",
+	    ih, ih->inoh_fcmh, SLPRI_FG_ARGS(&ih->inoh_fcmh->fcmh_fg),
+	    ih->inoh_flags, DEBUG_INOH_FLAGS(ih),
+	    _debug_ino(buf, sizeof(buf), &ih->inoh_ino), mbuf);
 }
-
-#define DEBUG_INOH(level, ih, fmt, ...)					\
-	_log_debug_inoh(PFL_CALLERINFO(), (level), (ih), (fmt), ## __VA_ARGS__)
 
 #endif /* _SLASHD_INODE_H_ */

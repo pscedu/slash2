@@ -207,6 +207,9 @@ main(int argc, char *argv[])
 
 	slcfg_parse(cfn);
 
+	fidc_init(sizeof(struct fcmh_mds_info), FIDC_MDS_DEFSZ);
+	bmap_cache_init(sizeof(struct bmap_mds_info));
+
 	/*
 	 * Initialize the mdsio layer.  There is where ZFS threads
 	 * are started and the given ZFS pool is imported.
@@ -229,6 +232,11 @@ main(int argc, char *argv[])
 	if (rc)
 		psc_fatalx("lookup upschdir: %s", slstrerror(rc));
 
+	rc = mdsio_lookup(mds_metadir_inum, SL_RPATH_TMP_DIR,
+	    &mds_tmpdir_inum, &rootcreds, NULL);
+	if (rc)
+		psc_fatalx("lookup tmpdir: %s", slstrerror(rc));
+
 	zfsslash2_build_immns_cache();
 
 	authbuf_createkeyfile();
@@ -236,7 +244,6 @@ main(int argc, char *argv[])
 
 	sl_drop_privs(allow_root_uid);
 
-	fidc_init(sizeof(struct fcmh_mds_info), FIDC_MDS_DEFSZ);
 	libsl_init(PSCNET_SERVER, 1);
 
 	slm_workq_init();
@@ -259,8 +266,6 @@ main(int argc, char *argv[])
 
 	lc_reginit(&inflBmapCbs, struct bmap_mds_lease, bml_coh_lentry,
 	    "inflightbml");
-
-	bmap_cache_init(sizeof(struct bmap_mds_info));
 
 	sl_nbrqthr_spawn(SLMTHRT_NBRQ, "slmnbrqthr");
 	mds_journal_init(disable_propagation);

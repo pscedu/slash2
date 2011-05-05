@@ -26,12 +26,22 @@
 #include "repl_mds.h"
 #include "slerr.h"
 
+static __inline void *
+bmap_2_mdsio_data(struct bmapc_memb *bmap)
+{
+	struct fcmh_mds_info *fmi;
+
+	fmi = fcmh_2_fmi(bmap->bcm_fcmh);
+	psc_assert(fmi->fmi_mdsio_data);
+	return (fmi->fmi_mdsio_data);
+}
+
 /**
  * mds_bmap_initnew - Called when a read request offset exceeds the
  *	bounds of the file causing a new bmap to be created.
  * Notes:  Bmap creation race conditions are prevented because the bmap
  *	handle already exists at this time with
- *	bmapi_mode == BMAP_INIT.
+ *	bcm_flags == BMAP_INIT.
  *
  *	This causes other threads to block on the waitq until
  *	read/creation has completed.
@@ -70,7 +80,7 @@ mds_bmap_ensure_valid(struct bmapc_memb *b)
 	rc = mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT);
 	if (!rc)
-		psc_fatalx("bmap has no valid replicas");
+		DEBUG_BMAP(PLL_FATAL, b, "bmap has no valid replicas");
 }
 
 /**
@@ -79,24 +89,32 @@ mds_bmap_ensure_valid(struct bmapc_memb *b)
  * Returns zero on success, negative errno code on failure.
  */
 int
-mds_bmap_read(struct bmapc_memb *bcm, __unusedx enum rw rw,
-    __unusedx int flags)
+mds_bmap_read(struct bmapc_memb *bcm, __unusedx enum rw rw, int flags)
 {
-	struct fidc_membh *f = bcm->bcm_fcmh;
+	size_t nb;
 	int rc;
 
-	rc = mdsio_bmap_read(bcm);
+	rc = mdsio_read(&rootcreds, bmap_2_ondisk(bcm), BMAP_OD_SZ,
+	    &nb, (off_t)BMAP_OD_SZ * bcm->bcm_bmapno +
+	    SL_BMAP_START_OFF, bmap_2_mdsio_data(bcm));
+
+	if (rc == 0 && nb == 0 && (flags & BMAPGETF_NOAUTOINST))
+		return (SLERR_BMAP_INVALID);
+
+	if (rc == 0 && nb != BMAP_OD_SZ)
+		rc = SLERR_SHORTIO;
+
 	/*
-	 * Check for a NULL CRC if we had a good read.  NULL CRC can happen
-	 *    when bmaps are gaps that have not been written yet.   Note
-	 *    that a short read is tolerated as long as the bmap is zeroed.
+	 * Check for a NULL CRC if we had a good read.  NULL CRC can
+	 * happen when bmaps are gaps that have not been written yet.
+	 * Note that a short read is tolerated as long as the bmap is
+	 * zeroed.
 	 */
 	if (!rc || rc == SLERR_SHORTIO) {
 		if (bmap_2_ondiskcrc(bcm) == 0 &&
 		    pfl_memchk(bmap_2_ondisk(bcm), 0, BMAP_OD_SZ)) {
-			DEBUG_BMAPOD(PLL_INFO, bcm, "");
 			mds_bmap_initnew(bcm);
-			DEBUG_BMAPOD(PLL_INFO, bcm, "");
+			DEBUG_BMAPOD(PLL_INFO, bcm, "initialized");
 			return (0);
 		}
 	}
@@ -106,15 +124,53 @@ mds_bmap_read(struct bmapc_memb *bcm, __unusedx enum rw rw,
 	 *    zeros.
 	 */
 	if (rc) {
-		DEBUG_FCMH(PLL_ERROR, f, "mdsio_bmap_read: "
-		    "bmapno=%u, rc=%d", bcm->bcm_bmapno, rc);
-		return (-EIO);
+		DEBUG_BMAP(PLL_ERROR, bcm, "mdsio_read: rc=%d", rc);
+		return (rc);
 	}
 
 	mds_bmap_ensure_valid(bcm);
 
-	DEBUG_BMAPOD(PLL_INFO, bcm, "");
+	DEBUG_BMAPOD(PLL_INFO, bcm, "successfully loaded from disk");
 	return (0);
+}
+
+int
+mds_bmap_write(struct bmapc_memb *bmap, int update_mtime, void *logf,
+    void *logarg)
+{
+	struct iovec iovs[2];
+	uint64_t crc;
+	size_t nb;
+	int rc;
+
+	BMAPOD_REQRDLOCK(bmap_2_bmi(bmap));
+	mds_bmap_ensure_valid(bmap);
+
+	psc_crc64_calc(&crc, bmap_2_ondisk(bmap), BMAP_OD_CRCSZ);
+
+	iovs[0].iov_base = bmap_2_ondisk(bmap);
+	iovs[0].iov_len = BMAP_OD_CRCSZ;
+	iovs[1].iov_base = &crc;
+	iovs[1].iov_len = sizeof(crc);
+
+	if (logf)
+		mds_reserve_slot();
+	rc = mdsio_pwritev(&rootcreds, iovs, nitems(iovs), &nb,
+	    (off_t)((BMAP_OD_SZ * bmap->bcm_bmapno) +
+	    SL_BMAP_START_OFF), update_mtime, bmap_2_mdsio_data(bmap),
+	    logf, logarg);
+	if (logf)
+		mds_unreserve_slot();
+
+	if (rc == 0 && nb != BMAP_OD_SZ)
+		rc = SLERR_SHORTIO;
+	if (rc)
+		DEBUG_BMAP(PLL_ERROR, bmap,
+		    "mdsio_write: error (rc=%d)", rc);
+	else
+		DEBUG_BMAP(PLL_INFO, bmap, "written successfully");
+	BMAPOD_READ_DONE(bmap, 0);
+	return (rc);
 }
 
 void
@@ -141,19 +197,8 @@ mds_bmap_destroy(struct bmapc_memb *bcm)
 	psc_rwlock_destroy(&bmi->bmdsi_rwlock);
 }
 
-void
-mds_bmap_calc_crc(struct bmapc_memb *bmap)
-{
-	int locked;
-
-	locked = BMAPOD_REQWRLOCK(bmap_2_bmi(bmap));
-	psc_crc64_calc(&bmap_2_ondiskcrc(bmap), bmap_2_ondisk(bmap),
-	    BMAP_OD_CRCSZ);
-	BMAPOD_UREQLOCK(bmap_2_bmi(bmap), locked);
-}
-
 /**
- * mdsio_bmap_crc_update - Handle CRC updates for one bmap by pushing
+ * mds_bmap_crc_update - Handle CRC updates for one bmap by pushing
  *	the updates to ZFS and then log it.
  */
 int
@@ -194,8 +239,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct
 		DEBUG_BMAP(PLL_INFO, bmap, "slot(%d) crc(%"PSCPRIxCRC64")",
 		    crcup->crcs[i].slot, crcup->crcs[i].crc);
 	}
-	mds_bmap_calc_crc(bmap);
-	return (mdsio_bmap_write(bmap, utimgen == crcup->utimgen,
+	return (mds_bmap_write(bmap, utimgen == crcup->utimgen,
 	    mds_bmap_crc_log, &crclog));
 }
 
@@ -207,9 +251,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct
 int
 mds_bmap_repl_update(struct bmapc_memb *bmap, int log)
 {
-	BMAPOD_REQWRLOCK(bmap_2_bmi(bmap));
-	mds_bmap_calc_crc(bmap);
-	return (mdsio_bmap_write(bmap, 0,
+	return (mds_bmap_write(bmap, 0,
 	    log ? mds_bmap_repl_log : NULL, bmap));
 }
 

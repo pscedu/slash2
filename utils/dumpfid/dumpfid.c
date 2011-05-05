@@ -18,6 +18,7 @@
  */
 
 #include <sys/param.h>
+#include <sys/uio.h>
 
 #include <err.h>
 #include <fcntl.h>
@@ -44,8 +45,9 @@ dumpfid(const char *fn)
 {
 	struct slash_inode_extras_od inox;
 	struct slash_inode_od ino;
+	struct iovec iovs[2];
+	uint64_t crc, od_crc;
 	char buf[BUFSIZ];
-	uint64_t crc;
 	int fd, j, nr;
 	ssize_t rc;
 
@@ -54,32 +56,41 @@ dumpfid(const char *fn)
 		warn("%s", fn);
 		return;
 	}
-	rc = pread(fd, &ino, INO_OD_SZ, SL_INODE_START_OFF);
+	iovs[0].iov_base = &ino;
+	iovs[0].iov_len = sizeof(ino);
+	iovs[1].iov_base = &od_crc;
+	iovs[1].iov_len = sizeof(od_crc);
+	rc = readv(fd, iovs, nitems(iovs));
 	if (rc == -1) {
 		warn("%s", fn);
 		goto out;
 	}
-	if (rc != INO_OD_SZ) {
+	if (rc != sizeof(ino) + sizeof(od_crc)) {
 		warnx("%s: short I/O, want %zd got %zd",
-		    fn, INO_OD_SZ, rc);
+		    fn, sizeof(ino) + sizeof(od_crc), rc);
 		goto out;
 	}
-	psc_crc64_calc(&crc, &ino, INO_OD_CRCSZ);
+	psc_crc64_calc(&crc, &ino, sizeof(ino));
 	_debug_ino(buf, sizeof(buf), &ino);
-	printf("%s\t%s %s\n", fn, buf, crc == ino.ino_crc ? "OK" : "BAD");
+	printf("%s\t%s %s\n", fn, buf, crc == od_crc ? "OK" : "BAD");
 
-	rc = pread(fd, &inox, INOX_OD_SZ, SL_EXTRAS_START_OFF);
+	lseek(fd, SL_EXTRAS_START_OFF, SEEK_SET);
+	iovs[0].iov_base = &inox;
+	iovs[0].iov_len = sizeof(inox);
+	iovs[1].iov_base = &od_crc;
+	iovs[1].iov_len = sizeof(od_crc);
+	rc = readv(fd, iovs, nitems(iovs));
 	if (rc == -1) {
 		warn("%s", fn);
 		goto out;
 	}
-	if (rc != INOX_OD_SZ) {
+	if (rc != sizeof(inox) + sizeof(od_crc)) {
 		warnx("%s: short I/O, want %zd got %zd",
-		    fn, INOX_OD_SZ, rc);
+		    fn, sizeof(inox) + sizeof(od_crc), rc);
 		goto out;
 	}
-	psc_crc64_calc(&crc, &inox, INOX_OD_CRCSZ);
-	printf("\tcrc: %s xrepls:", crc == inox.inox_crc ? "OK" : "BAD");
+	psc_crc64_calc(&crc, &inox, sizeof(inox));
+	printf("\tcrc: %s xrepls:", crc == od_crc ? "OK" : "BAD");
 	nr = ino.ino_nrepls;
 	if (nr < SL_DEF_REPLICAS)
 		nr = 0;
