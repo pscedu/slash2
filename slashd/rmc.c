@@ -340,9 +340,9 @@ int
 slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 {
 	struct fidc_membh *p = NULL, *c = NULL;
+	struct srm_forward_req req;
 	struct srm_mkdir_req *mq;
 	struct srm_mkdir_rep *mp;
-	struct srm_forward_req req;
 	uint32_t pol;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
