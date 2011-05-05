@@ -102,7 +102,8 @@ slm_fcmh_ctor(struct fidc_membh *fcmh)
 		if (rc == 0) {
 			rc = mds_inode_read(&fmi->fmi_inodeh);
 			if (rc)
-				psc_warn("could not load inode; rc=%d", rc);
+				DEBUG_FCMH(PLL_WARN, fcmh,
+				    "could not load inode; rc=%d", rc);
 		} else {
 			fcmh->fcmh_flags |= FCMH_CTOR_FAILED;
 			fmi->fmi_ctor_rc = rc;
