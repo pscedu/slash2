@@ -290,6 +290,9 @@ void	_bmap_op_done(const struct pfl_callerinfo *,
 int	 bmap_getf(struct fidc_membh *, sl_bmapno_t, enum rw, int,
 	    struct bmapc_memb **);
 
+int	 bmapdesc_access_check(struct srt_bmapdesc *, enum rw,
+	    sl_ios_id_t, uint64_t);
+
 void	_log_debug_bmapodv(const struct pfl_callerinfo *, int,
 	    struct bmapc_memb *, const char *, va_list);
 void	_log_debug_bmapod(const struct pfl_callerinfo *, int,

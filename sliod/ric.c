@@ -31,7 +31,6 @@
 
 #include "authbuf.h"
 #include "bmap_iod.h"
-#include "bmapdesc.h"
 #include "fid.h"
 #include "fidc_iod.h"
 #include "fidcache.h"

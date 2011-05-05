@@ -29,7 +29,6 @@
 #include "psc_util/lock.h"
 
 #include "bmap.h"
-#include "bmapdesc.h"
 #include "fidcache.h"
 #include "slashrpc.h"
 
@@ -280,7 +279,7 @@ _debug_bmapod(struct bmapc_memb *bmap, const char *fmt, ...)
 
 int
 bmapdesc_access_check(struct srt_bmapdesc *sbd, enum rw rw,
-    sl_ios_id_t ios_id, lnet_nid_t ion_nid)
+    sl_ios_id_t ios_id, uint64_t ion_nid)
 {
 	if (rw == SL_READ) {
 		/* Read requests can get by with looser authentication. */
