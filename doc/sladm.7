@@ -81,18 +81,6 @@ metadata server, it must be initialized by
 # slimmns_format /mypool
 .Ed
 .Pp
-Next, an on-disk table for persistent data storage
-.Po for recovering
-issued
-.Tn I/O
-write leases, for example
-.Pc
-must be created with
-.Xr odtable 1 :
-.Bd -literal -offset indent
-# odtable -o -C /mypool/.slmd/bmap.odtab
-.Ed
-.Pp
 Now that the metadata file system has been set up,
 .Xr zfs-fuse 8
 must be terminated before the
