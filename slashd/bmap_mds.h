@@ -76,7 +76,6 @@ struct bmap_mds_info {
 #define BMAP_MDS_SEQWRAP	(_BMAP_FLSHFT << 4)	/* sequence number wrapped */
 
 #define bmap_2_bmdsi(b)		((struct bmap_mds_info *)bmap_get_pri(b))
-#define bmap_2_bmi(b)		((struct bmap_mds_info *)bmap_get_pri(b))
 #define bmap_2_bmdsassign(b)	bmap_2_bmdsi(b)->bmdsi_assign
 #define bmap_2_xstate(b)	(&bmap_2_bmi(b)->bmdsi_extrastate)
 #define bmap_2_bgen(b)		bmap_2_xstate(b)->bes_gen
@@ -92,6 +91,12 @@ struct bmap_mds_info {
 #define BMAPOD_ULOCK(bmi)	psc_rwlock_unlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmdsi_rwlock)
 #define BMAPOD_UREQLOCK(bmi, l)	psc_rwlock_ureqlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmdsi_rwlock, (l))
 #define BMAPOD_WRLOCK(bmi)	psc_rwlock_wrlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmdsi_rwlock)
+
+static __inline struct bmap_mds_info *
+bmap_2_bmi(struct bmapc_memb *b)
+{
+	return (bmap_get_pri(b));
+}
 
 #define BMAPOD_MODIFY_START(b)	BMAPOD_WRLOCK(bmap_2_bmdsi(b))
 #define BMAPOD_MODIFY_DONE(b)	BMAPOD_ULOCK(bmap_2_bmdsi(b))
@@ -239,6 +244,9 @@ struct bmap_ion_assign {
 #define mds_bmap_load(f, n, bp)	bmap_get((f), (n), SL_WRITE, (bp))
 
 #define mds_bml_free(bml)	psc_pool_return(bmapMdsLeasePool, (bml))
+
+int	 mds_bmap_read(struct bmapc_memb *, enum rw);
+int	 mds_bmap_write(struct bmapc_memb *, int, void *, void *);
 
 int	 mds_bmap_crc_write(struct srm_bmap_crcup *, lnet_nid_t,
 	    const struct srm_bmap_crcwrt_req *);
