@@ -196,7 +196,8 @@ slm_rmm_handler(struct pscrpc_request *rq)
 	return (rc);
 }
 
-int slm_rmm_forward_namespace(__unusedx struct srm_forward_req *rq)
+int
+slm_rmm_forward_namespace(__unusedx struct srm_forward_req *rq)
 {
 	return (0);
 }
