@@ -650,14 +650,7 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	}
 
 	/*
-	 * Steps for rename (we may have to perform some steps by sending
-	 * a request to a remote MDS:
-	 *
-	 * (1) Remove the exiting target if any.
-	 * (2) Create the new target in place.
-	 * (3) Remove the old object.
-	 *
-	 * Whoever performs a step should log before proceed.
+ 	 * TODO: return EXDEV, if the site IDs of the two parents are different.
 	 */
 
 	/* if we get here, op and np must be owned by the current MDS */
