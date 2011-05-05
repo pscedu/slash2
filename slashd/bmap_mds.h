@@ -243,7 +243,7 @@ struct bmap_ion_assign {
 
 #define mds_bml_free(bml)	psc_pool_return(bmapMdsLeasePool, (bml))
 
-int	 mds_bmap_read(struct bmapc_memb *, enum rw);
+int	 mds_bmap_read(struct bmapc_memb *, enum rw, int);
 int	 mds_bmap_write(struct bmapc_memb *, int, void *, void *);
 
 int	 mds_bmap_crc_write(struct srm_bmap_crcup *, lnet_nid_t,

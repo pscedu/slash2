@@ -437,7 +437,7 @@ iod_bmap_init(struct bmapc_memb *b)
 
 	PFL_GETTIMESPEC(&biod->biod_age);
 	/* XXX At some point we'll want to let bmaps hang around in the
-	 *   cache to prevent extra reads and crc table fetches.
+	 *   cache to prevent extra reads and CRC table fetches.
 	 */
 	//bmap_op_start_type(b, BMAP_OPCNT_REAPER);
 	//lc_addtail(b, &bmapReapQ);
@@ -454,16 +454,17 @@ iod_bmap_finalcleanup(struct bmapc_memb *b)
 }
 
 /**
- * iod_bmap_retrieve - Load the relevant bmap information from the metadata
- *   server.  In the case of the ION the bmap sections of interest are the
- *   CRC table and the CRC states bitmap.  For now we only load this
- *   information on read.
+ * iod_bmap_retrieve - Load the relevant bmap information from the
+ *	metadata server.  In the case of the ION the bmap sections of
+ *	interest are the CRC table and the CRC states bitmap.  For now
+ *	we only load this information on read.
  * @b: bmap to load.
  * @rw: the bmap access mode.
- * Return zero on success or errno code on failure (likely an RPC problem).
+ * Return zero on success or errno code on failure (likely an RPC
+ *	problem).
  */
 int
-iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
+iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 {
 	struct pscrpc_request *rq = NULL;
 	struct srm_getbmap_full_req *mq;

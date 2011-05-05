@@ -46,6 +46,7 @@
 #include "sltypes.h"
 
 struct fidc_membh;
+struct srt_bmapdesc;
 
 /**
  * bmap_core_state
@@ -280,6 +281,7 @@ struct bmapc_memb {
 /* bmap_get flags */
 #define BMAPGETF_LOAD		(1 << 0)	/* allow loading if not in cache */
 #define BMAPGETF_NORETRIEVE	(1 << 1)	/* when loading, do not invoke retrievef */
+#define BMAPGETF_NOAUTOINST	(1 << 2)	/* do not autoinstantiate */
 
 int	 bmap_cmp(const void *, const void *);
 void	 bmap_cache_init(size_t);
@@ -326,8 +328,8 @@ SPLAY_PROTOTYPE(bmap_cache, bmapc_memb, bcm_tentry, bmap_cmp);
 
 struct bmap_ops {
 	void	(*bmo_init_privatef)(struct bmapc_memb *);
-	int	(*bmo_retrievef)(struct bmapc_memb *, enum rw);
-	int	(*bmo_mode_chngf)(struct bmapc_memb *, enum rw);
+	int	(*bmo_retrievef)(struct bmapc_memb *, enum rw, int);
+	int	(*bmo_mode_chngf)(struct bmapc_memb *, enum rw, int);
 	void	(*bmo_final_cleanupf)(struct bmapc_memb *);
 };
 

@@ -756,12 +756,11 @@ msl_bmap_reap_init(struct bmapc_memb *bmap, const struct srt_bmapdesc *sbd)
 /**
  * msl_bmap_retrieve - Perform a blocking 'LEASEBMAP' operation to
  *	retrieve one or more bmaps from the MDS.
- * @f: pointer to the fid cache structure to which this bmap belongs.
- * @b: the block id to retrieve (block size == SLASH_BMAP_SIZE).
- * @n: the number of bmaps to retrieve (serves as a simple read-ahead mechanism)
+ * @b: the bmap ID to retrieve.
+ * @rw: read or write access
  */
 int
-msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
+msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw, __unusedx int flags)
 {
 	int rc, nretries = 0, getreptbl = 0;
 	struct slashrpc_cservice *csvc = NULL;
@@ -875,7 +874,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
  *	intervention from the MDS.
  */
 __static int
-msl_bmap_modeset(struct bmapc_memb *b, enum rw rw)
+msl_bmap_modeset(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;

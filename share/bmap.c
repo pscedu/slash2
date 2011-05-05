@@ -28,6 +28,8 @@
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
 
+#include "lnet/types.h"
+
 #include "bmap.h"
 #include "fidcache.h"
 #include "slashrpc.h"
@@ -198,7 +200,7 @@ bmap_getf(struct fidc_membh *f, sl_bmapno_t n, enum rw rw, int flags,
 
 	if (do_load) {
 		if ((flags & BMAPGETF_NORETRIEVE) == 0)
-			rc = bmap_ops.bmo_retrievef(b, rw);
+			rc = bmap_ops.bmo_retrievef(b, rw, flags);
 
 		BMAP_LOCK(b);
 		b->bcm_flags &= ~BMAP_INIT;
@@ -237,7 +239,7 @@ bmap_getf(struct fidc_membh *f, sl_bmapno_t n, enum rw rw, int flags,
 				DEBUG_BMAP(PLL_NOTIFY, b,
 				   "about to mode change (rw=%d)", rw);
 
-				rc = bmap_ops.bmo_mode_chngf(b, rw);
+				rc = bmap_ops.bmo_mode_chngf(b, rw, 0);
 				BMAP_LOCK(b);
 				b->bcm_flags &= ~BMAP_MDCHNG;
 				if (!rc)
