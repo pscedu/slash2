@@ -195,3 +195,8 @@ slm_rmm_handler(struct pscrpc_request *rq)
 	pscrpc_target_send_reply_msg(rq, rc, 0);
 	return (rc);
 }
+
+int slm_rmm_forward_namespace(__unusedx struct srm_forward_req *rq)
+{
+	return (0);
+}

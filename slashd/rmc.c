@@ -343,8 +343,23 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	struct srm_mkdir_req *mq;
 	struct srm_mkdir_rep *mp;
 	uint32_t pol;
+	struct srm_forward_req req;
+	sl_siteid_t thisSiteid, dirSiteid;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
+
+	thisSiteid = nodeResm->resm_res->res_site->site_id;
+	dirSiteid = FID_GET_SITEID(mq->pfg.fg_fid);
+	if (thisSiteid != dirSiteid) {
+		req.op = 1;
+		req.creds = mq->creds;
+		req.pfg = mq->pfg;
+		req.fid = slm_get_next_slashid();
+		req.mode = mq->mode;
+		mp->rc = slm_rmm_forward_namespace(&req);
+		goto out;
+	}
+
 	mp->rc = slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
 		goto out;
