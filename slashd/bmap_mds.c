@@ -79,7 +79,8 @@ mds_bmap_ensure_valid(struct bmapc_memb *b)
  * Returns zero on success, negative errno code on failure.
  */
 int
-mds_bmap_read(struct bmapc_memb *bcm, __unusedx enum rw rw)
+mds_bmap_read(struct bmapc_memb *bcm, __unusedx enum rw rw,
+    __unusedx int flags)
 {
 	struct fidc_membh *f = bcm->bcm_fcmh;
 	int rc;
