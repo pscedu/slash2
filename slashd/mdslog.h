@@ -38,14 +38,6 @@ struct sl_mds_crc_log {
 	struct srm_bmap_crcup	*scl_crcup;
 };
 
-/*
- * Keep track of bmap I/O node assignment data.
- */
-struct sl_mds_bmap_log {
-	void			*sbl_bia;
-	uint64_t		 sbl_crc;
-};
-
 #define MDS_LOG_BMAP_REPL	(_PJE_FLSHFT << 0)
 #define MDS_LOG_BMAP_CRC	(_PJE_FLSHFT << 1)
 #define MDS_LOG_BMAP_SEQ	(_PJE_FLSHFT << 2)
@@ -74,7 +66,6 @@ void	mds_inode_addrepl_log(void *, uint64_t, int);
 void	mds_namespace_log(int, uint64_t, uint64_t, uint64_t,
 	    const struct srt_stat *, int, const char *, const char *);
 
-void	mds_bmap_sync(void *);
 void	mds_inode_sync(struct slash_inode_handle *);
 void	mds_journal_init(int);
 

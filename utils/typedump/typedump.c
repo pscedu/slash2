@@ -199,7 +199,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct sl_expcli_ops);
 	PRTYPE(struct sl_fcmh_ops);
 	PRTYPE(struct sl_gconf);
-	PRTYPE(struct sl_mds_bmap_log);
+	PRTYPE(struct sl_ino_compat);
 	PRTYPE(struct sl_mds_crc_log);
 	PRTYPE(struct sl_mds_iosinfo);
 	PRTYPE(struct sl_mds_nsstats);
@@ -444,7 +444,6 @@ main(int argc, char *argv[])
 	PRVAL(SL_DEF_SNAPSHOTS);
 	PRVAL(SL_INFLIGHT_DEC);
 	PRVAL(SL_INFLIGHT_INC);
-	PRVAL(SL_MAX_GENS_PER_BLK);
 	PRVAL(SL_MAX_REPLICAS);
 	PRVAL(SL_NAME_MAX);
 	PRVAL(SL_NBITS_REPLST_BHDR);
@@ -526,12 +525,6 @@ main(int argc, char *argv[])
 	PRVAL(FCMH_OPCNT_UPSCHED);
 	PRVAL(FCMH_OPCNT_WAIT);
 	PRVAL(FCMH_OPCNT_WORKER);
-	PRVAL(INOH_EXTRAS_DIRTY);
-	PRVAL(INOH_HAVE_EXTRAS);
-	PRVAL(INOH_INO_DIRTY);
-	PRVAL(INOH_INO_NEW);
-	PRVAL(INOH_INO_NOTLOADED);
-	PRVAL(INOH_INO_SYNCING);
 	PRVAL(MSTHRT_BMAPFLSH);
 	PRVAL(MSTHRT_BMAPFLSHRLS);
 	PRVAL(MSTHRT_BMAPFLSHRPC);
@@ -666,9 +659,6 @@ main(int argc, char *argv[])
 	PRVAL(USWI_REFT_SITEUPQ);
 	PRVAL(USWI_REFT_TREE);
 	/* end enums */
-
-	PRVAL(INOX_OD_SZ);
-	PRVAL(INOX_OD_CRCSZ);
 
 	PRVAL(SL_REPLICA_NBYTES);
 
