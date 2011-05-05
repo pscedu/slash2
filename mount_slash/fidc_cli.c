@@ -112,7 +112,7 @@ slc_fcmh_ctor(struct fidc_membh *fcmh)
 	thisSiteid = slc_rmc_resm->resm_res->res_site->site_id;
 	fileSiteid = FID_GET_SITEID(fcmh->fcmh_sstb.sst_fg.fg_fid);
 	/* root's fid is 1 */
-	if (fileSiteid == 0 || fileSiteid == thisSiteid) {
+	if (fcmh->fcmh_sstb.sst_fg.fg_fid == 1 || fileSiteid == thisSiteid) {
 		rc = 0;
 		fci->fci_resm = slc_rmc_resm;
 	} else {
