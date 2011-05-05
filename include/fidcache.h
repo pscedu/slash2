@@ -99,7 +99,6 @@ struct fidc_membh {
 #define fcmh_2_fid(f)		(f)->fcmh_fg.fg_fid
 #define fcmh_2_gen(f)		(f)->fcmh_fg.fg_gen
 #define fcmh_2_fsz(f)		(f)->fcmh_sstb.sst_size
-#define fcmh_2_fg(f)		(&(f)->fcmh_fg)
 #define fcmh_2_nbmaps(f)	((sl_bmapno_t)howmany(fcmh_getsize(f), SLASH_BMAP_SIZE))
 #define fcmh_2_ptruncgen(f)	(f)->fcmh_sstb.sst_ptruncgen
 #define fcmh_2_utimgen(f)	(f)->fcmh_sstb.sst_utimgen
