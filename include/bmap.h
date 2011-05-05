@@ -149,11 +149,28 @@ struct bmapc_memb {
 #define BMAP_SETATTR(b, fl)	SETATTR_LOCKED(&(b)->bcm_lock, &(b)->bcm_flags, (fl))
 #define BMAP_CLEARATTR(b, fl)	CLEARATTR_LOCKED(&(b)->bcm_lock, &(b)->bcm_flags, (fl))
 
-#define _DEBUG_BMAP_FMT		"bmap@%p b:%#x flg:%u fid:"SLPRI_FID" opcnt=%u "
-#define _DEBUG_BMAP_FMTARGS(b)	(b), (b)->bcm_bmapno, (b)->bcm_flags,	\
-				(b)->bcm_fcmh ?				\
-				    fcmh_2_fid((b)->bcm_fcmh) : 0,	\
-				psc_atomic32_read(&(b)->bcm_opcnt)
+#define _DEBUG_BMAP_FMT		"bmap@%p bno:%u flg:%#x:"		\
+				"%s%s%s%s%s%s%s%s%s%s%s%s%s%s+ "	\
+				"fid:"SLPRI_FID" opcnt=%u "
+
+#define _DEBUG_BMAP_FMTARGS(b)						\
+	(b), (b)->bcm_bmapno, (b)->bcm_flags,				\
+	(b)->bcm_flags & BMAP_RD	? "R" : "",			\
+	(b)->bcm_flags & BMAP_WR	? "W" : "",			\
+	(b)->bcm_flags & BMAP_INIT	? "I" : "",			\
+	(b)->bcm_flags & BMAP_DIO	? "D" : "",			\
+	(b)->bcm_flags & BMAP_DIORQ	? "Q" : "",			\
+	(b)->bcm_flags & BMAP_CLOSING	? "C" : "",			\
+	(b)->bcm_flags & BMAP_DIRTY	? "d" : "",			\
+	(b)->bcm_flags & BMAP_MEMRLS	? "M" : "",			\
+	(b)->bcm_flags & BMAP_DIRTY2LRU	? "L" : "",			\
+	(b)->bcm_flags & BMAP_TIMEOQ	? "T" : "",			\
+	(b)->bcm_flags & BMAP_IONASSIGN	? "A" : "",			\
+	(b)->bcm_flags & BMAP_MDCHNG	? "G" : "",			\
+	(b)->bcm_flags & BMAP_WAITERS	? "w" : "",			\
+	(b)->bcm_flags & BMAP_ORPHAN	? "O" : "",			\
+	(b)->bcm_fcmh ? fcmh_2_fid((b)->bcm_fcmh) : 0,			\
+	psc_atomic32_read(&(b)->bcm_opcnt)
 
 #define DEBUG_BMAP(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP, _DEBUG_BMAP_FMT fmt,		\
