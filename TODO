@@ -466,3 +466,8 @@ lcache
 - need ability to backup mds metafs
 - make sure replrq over garbage does the right thing (zeroing)
 - mds: do not allow repl changes while IN_PTRUNC
+- mds: lock when checking fgen in fcmh_setattr
+- should replay crcupdate set ion to VALID ?
+- gen not getting bumped on truncate
+- msl should translate -1010 from MDS on open/getbmap to sane error code
+- eliminate nbmaps nxbmaps
