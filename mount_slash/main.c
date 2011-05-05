@@ -743,11 +743,11 @@ __static void
 mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name, mode_t mode)
 {
+	struct fidc_membh *c = NULL, *p = NULL;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_mkdir_rep *mp = NULL;
 	struct srm_mkdir_req *mq;
-	struct fidc_membh *c = NULL, *p = NULL;
 	struct slash_creds creds;
 	struct stat stb;
 	int rc;
