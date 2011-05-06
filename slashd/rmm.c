@@ -219,11 +219,26 @@ slm_rmm_handler(struct pscrpc_request *rq)
 int
 slm_rmm_forward_namespace(sl_siteid_t siteid, __unusedx struct srm_forward_req *req)
 {
-	struct sl_site *site;
+	int _siter;
+	struct sl_resm *resm;
+	struct sl_site *_site;
+	struct sl_resource *_res;
+	struct slashrpc_cservice *csvc;
 
-	site = libsl_resid2site(siteid);
-	if (site == NULL)
+	_site = libsl_resid2site(siteid);
+	if (_site == NULL)
 		return EBADF;
+
+	SITE_FOREACH_RES(_site, _res, _siter) {
+		if (_res->res_type != SLREST_MDS)
+			continue;
+		resm = psc_dynarray_getpos(&_res->res_members, 0);
+	}
+	csvc = slm_getmcsvc(resm);
+	if (csvc == NULL)  {
+		psclog_info("Fail to connect to site %d", siteid);
+		return EIO;
+	}
 
 	return (ENOSYS);
 }
