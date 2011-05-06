@@ -96,7 +96,7 @@ slm_rmm_handle_connect(struct pscrpc_request *rq)
 }
 
 /**
- * slm_rmm_handle_send_namespace - Handle a SEND_NAMESPACE request from
+ * slm_rmm_handle_namespace_update - Handle a NAMESPACE_UPDATE request from
  *	another MDS.
  */
 int
