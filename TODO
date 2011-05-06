@@ -411,7 +411,7 @@ API rename
   - need way to specify in slash.conf other sites without MDS which MDS
     should be responsible for replications to resources at that site
 
-      global use_mds=md@PSC
+      global pref_mds=md@PSC
 
 - pjd tests used to fail due to inability to send FUSE updates to its
   cache after UNLINK, RENAME operations?
@@ -447,7 +447,7 @@ lcache
 - lcache-status:
 	lookup item and check lcache
 
-- we don't need to hold ino_crc in memory; only needed when doing disk I/O
+- we don't need to hold bod_crc in memory; only needed when doing disk I/O
 
 - move namespace in zfs into a subdir so we dont have to do the
   strcmp(fn, ".slmd") trick
@@ -459,15 +459,15 @@ lcache
 - add more local slash.conf settings:
 	- zfs pool cachefile
 	- zfs pool name
+	- lnet_networks
+	- prefMDS, prefIOS
+	   default prefMDS to site local MDS
 
 - INO_DIRTY needs to take the same fate as BMAP_LOGCHG
-- ptrunc handling is all wrong: waiting for lease relinquishment must
-  happen before mdsio_setattr()
 - need ability to backup mds metafs
-- make sure replrq over garbage does the right thing (zeroing)
+- make sure replrq over garbage does the right thing in sliod backfs (zeroing)
 - mds: do not allow repl changes while IN_PTRUNC
-- mds: lock when checking fgen in fcmh_setattr
+- mds: lock when checking fgen in bmap crcupdate
 - should replay crcupdate set ion to VALID ?
-- gen not getting bumped on truncate
 - msl should translate -1010 from MDS on open/getbmap to sane error code
 - eliminate nbmaps nxbmaps
