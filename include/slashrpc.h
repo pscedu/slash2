@@ -338,6 +338,8 @@ struct srm_forward_req {
 	char			name[SL_NAME_MAX + 1];
 } __packed;
 
+#define srm_forward_rep		srm_generic_rep
+
 /* -------------------------- BEGIN BMAP MESSAGES --------------------------- */
 
 struct srm_leasebmap_req {

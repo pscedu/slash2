@@ -167,6 +167,23 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 }
 
 /**
+ * slm_rmm_handle_namespace_forward - Handle a NAMESPACE_FORWARD request from
+ *	another MDS.
+ */
+int
+slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
+{
+	struct srm_forward_req *mq;
+	struct srm_forward_rep *mp;
+
+	SL_RSX_ALLOCREP(rq, mq, mp);
+	psclog_info("op=%d, fid="SLPRI_FID", name=%s", mq->op, mq->fid, mq->name);
+
+	mp->rc = 0;
+	return (mp->rc);
+}
+
+/**
  * slm_rmm_handler - Handle a request for MDS from another MDS.
  */
 int
@@ -185,6 +202,9 @@ slm_rmm_handler(struct pscrpc_request *rq)
 		break;
 	case SRMT_NAMESPACE_UPDATE:
 		rc = slm_rmm_handle_namespace_update(rq);
+		break;
+	case SRMT_NAMESPACE_FORWARD:
+		rc = slm_rmm_handle_namespace_forward(rq);
 		break;
 	default:
 		psc_errorx("unexpected opcode %d", rq->rq_reqmsg->opc);
