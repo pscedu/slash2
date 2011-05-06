@@ -51,7 +51,7 @@ enum slconf_sym_type {
 };
 
 enum slconf_sym_struct {
-	SL_STRUCT_GLOBAL,
+	SL_STRUCT_VAR,
 	SL_STRUCT_RES,
 	SL_STRUCT_SITE
 };
@@ -80,12 +80,13 @@ uint32_t	 slcfg_str2restype(const char *);
 void		 yyerror(const char *, ...);
 int		 yylex(void);
 int		 yyparse(void);
+void		 yywarn(const char *, ...);
 
 /*
  * Define a table macro for each structure type filled in by the config
  */
-#define TABENT_GLBL(name, type, max, field, handler)				\
-	{ name, SL_STRUCT_GLOBAL, type, max, offsetof(struct sl_gconf, field), handler }
+#define TABENT_VAR(name, type, max, field, handler)				\
+	{ name, SL_STRUCT_VAR, type, max, offsetof(struct sl_gconf, field), handler }
 
 #define TABENT_SITE(name, type, max, field, handler)				\
 	{ name, SL_STRUCT_SITE, type, max, offsetof(struct sl_site, field), handler }
@@ -93,11 +94,12 @@ int		 yyparse(void);
 #define TABENT_RES(name, type, max, field, handler)				\
 	{ name, SL_STRUCT_RES, type, max, offsetof(struct sl_resource, field), handler }
 
-/* declare and initialize the global table */
 struct slconf_symbol sym_table[] = {
-	TABENT_GLBL("port",		SL_TYPE_INT,	0,		gconf_port,	NULL),
-	TABENT_GLBL("net",		SL_TYPE_INT,	0,		gconf_netid,	slcfg_str2lnet),
-	TABENT_GLBL("fs_root",		SL_TYPE_STR,	PATH_MAX,	gconf_fsroot,	NULL),
+	TABENT_VAR("port",		SL_TYPE_INT,	0,		gconf_port,	NULL),
+	TABENT_VAR("net",		SL_TYPE_STR,	LNET_NAME_MAX,	gconf_net,	NULL),
+	TABENT_VAR("fs_root",		SL_TYPE_STR,	PATH_MAX,	gconf_fsroot,	NULL),
+	TABENT_VAR("pref_ios",		SL_TYPE_STR,	RES_NAME_MAX,	gconf_prefios,	NULL),
+	TABENT_VAR("pref_mds",		SL_TYPE_STR,	RES_NAME_MAX,	gconf_prefmds,	NULL),
 	TABENT_SITE("site_id",		SL_TYPE_INT,	SITE_MAXID,	site_id,	NULL),
 	TABENT_SITE("site_desc",	SL_TYPE_STRP,	0,		site_desc,	NULL),
 	TABENT_RES ("desc",		SL_TYPE_STRP,	0,		res_desc,	NULL),
@@ -113,7 +115,7 @@ struct sl_resm		*nodeResm;
 
 int			 cfg_errors;
 int			 cfg_lineno;
-const char		*cfg_filename;
+char			 cfg_filename[PATH_MAX];
 struct psclist_head	 cfg_files = PSCLIST_HEAD_INIT(cfg_files);
 
 struct sl_site		*currentSite;
@@ -142,7 +144,7 @@ struct sl_gconf		*currentConf = &globalConfig;
 %token SIZEVAL
 %token FLOATVAL
 
-%token GLOBAL
+%token SET
 %token INCLUDE
 %token RESOURCE_PROFILE
 %token RESOURCE_NAME
@@ -158,14 +160,14 @@ struct sl_gconf		*currentConf = &globalConfig;
 
 %%
 
-config		: globals includes site_profiles
+config		: vars includes site_profiles
 		;
 
-globals		: /* NULL */
-		| global globals
+vars		: /* NULL */
+		| var vars
 		;
 
-global		: GLOBAL statement
+var		: SET statement
 		;
 
 includes	: /* NULL */
@@ -179,8 +181,7 @@ include		: INCLUDE QUOTEDS {
 
 			rc = glob($2, GLOB_BRACE, NULL, &gl);
 			if (rc)
-				warnx("%s:%d: %s: could not glob",
-				    cfg_filename, cfg_lineno, $2);
+				yywarn("%s: could not glob", $2);
 			else {
 				for (i = 0; i < (size_t)gl.gl_pathc; i++)
 					slcfg_add_include($2);
@@ -456,7 +457,10 @@ slcfg_addif(char *ifname, char *netname)
 		return;
 	}
 
-	rc = snprintf(nidstr, sizeof(nidstr), "%s@%s", ifname, netname);
+	if (strcmp(netname, "") == 0)
+		yyerror("no LNET network specified");
+	rc = snprintf(nidstr, sizeof(nidstr), "%s@%s", ifname,
+	    netname);
 	if (rc == -1)
 		psc_fatal("snprintf");
 	if (rc >= (int)sizeof(nidstr))
@@ -480,16 +484,6 @@ slcfg_addif(char *ifname, char *netname)
 	psc_hashtbl_add_item(&globalConfig.gconf_nid_hashtbl, resm);
 
 	psc_dynarray_add(&currentRes->res_members, resm);
-}
-
-uint32_t
-slcfg_str2lnet(const char *net)
-{
-	if (strlcpy(globalConfig.gconf_net, net,
-	    sizeof(globalConfig.gconf_net)) >=
-	    sizeof(globalConfig.gconf_net))
-		psc_fatalx("LNET network name too long: %s", net);
-	return (libcfs_str2net(net));
 }
 
 uint32_t
@@ -546,7 +540,7 @@ slcfg_store_tok_val(const char *tok, char *val)
 	 *  of the symbol was obtained with offsetof().
 	 */
 	switch (e->c_struct) {
-	case SL_STRUCT_GLOBAL:
+	case SL_STRUCT_VAR:
 		ptr = e->c_offset + (char *)currentConf;
 		break;
 	case SL_STRUCT_SITE:
@@ -702,14 +696,18 @@ slcfg_parse(const char *config_file)
 
 	slcfg_add_include(config_file);
 	psclist_for_each_entry_safe(cf, ncf, &cfg_files, cf_lentry) {
-		cfg_filename = cf->cf_fn;
-		yyin = fopen(cfg_filename, "r");
-		if (yyin == NULL)
-			psc_fatal("%s", cfg_filename);
-
-		cfg_lineno = 1;
-		yyparse();
-		fclose(yyin);
+		if (realpath(cf->cf_fn, cfg_filename) == NULL)
+			strlcpy(cfg_filename, cf->cf_fn,
+			    sizeof(cfg_filename));
+		yyin = fopen(cf->cf_fn, "r");
+		if (yyin == NULL) {
+			cfg_lineno = -1;
+			yywarn("%s", strerror(errno));
+		} else {
+			cfg_lineno = 1;
+			yyparse();
+			fclose(yyin);
+		}
 
 		PSCFREE(cf);
 	}
@@ -719,15 +717,18 @@ slcfg_parse(const char *config_file)
 	PLL_LOCK(&globalConfig.gconf_sites);
 	pll_sort(&globalConfig.gconf_sites, qsort, slcfg_site_cmp);
 	PLL_FOREACH(s, &globalConfig.gconf_sites) {
-		psc_dynarray_sort(&s->site_resources, qsort, slcfg_res_cmp);
+		psc_dynarray_sort(&s->site_resources, qsort,
+		    slcfg_res_cmp);
 		DYNARRAY_FOREACH(r, j, &s->site_resources) {
-			psc_dynarray_sort(&r->res_members, qsort, slcfg_resm_cmp);
+			psc_dynarray_sort(&r->res_members, qsort,
+			    slcfg_resm_cmp);
 
 			/* Resolve peer names. */
 			for (i = 0; i < r->res_npeers; i++) {
 				peer = libsl_str2res(r->res_peertmp[i]);
 				if (!peer)
-					errx(1, "Peer resource %s not specified", r->res_peertmp[i]);
+					errx(1, "Peer resource %s not "
+					    "specified", r->res_peertmp[i]);
 				PSCFREE(r->res_peertmp[i]);
 				psc_dynarray_add(&r->res_peers, peer);
 			}
@@ -749,4 +750,20 @@ yyerror(const char *fmt, ...)
 	va_end(ap);
 
 	warnx("%s:%d: %s", cfg_filename, cfg_lineno, buf);
+}
+
+void
+yywarn(const char *fmt, ...)
+{
+	char buf[LINE_MAX];
+	va_list ap;
+
+	va_start(ap, fmt);
+	vsnprintf(buf, sizeof(buf), fmt, ap);
+	va_end(ap);
+
+	if (cfg_lineno == -1)
+		warnx("%s: %s", cfg_filename, buf);
+	else
+		warnx("%s:%d: %s", cfg_filename, cfg_lineno, buf);
 }

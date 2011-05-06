@@ -20,6 +20,7 @@
 %{
 #define YYSTYPE char *
 
+#include <err.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -29,10 +30,13 @@
 
 #include "yconf.h"
 
-extern int cfg_lineno;
+extern char	 cfg_filename[];
+extern int	 cfg_lineno;
+
 extern char *yylval;
 
-void yyerror(const char *, ...);
+void	yyerror(const char *, ...);
+void	yywarn(const char *, ...);
 %}
 
 %option nounput
@@ -53,131 +57,132 @@ sizeval		[0-9]+[KMGTBkmgtb]
 
 %%
 
-;		{ return END; }
-,		{ return NSEP; }
-=		{ return EQ; }
-"{"		{ return SUBSECT_START; }
-"}"		{ return SUBSECT_END; }
+;		{ return (END); }
+,		{ return (NSEP); }
+=		{ return (EQ); }
+"{"		{ return (SUBSECT_START); }
+"}"		{ return (SUBSECT_END); }
 
-include		{ return INCLUDE; }
-global		{ return GLOBAL; }
-site		{ return SITE_PROFILE; }
-resource	{ return RESOURCE_PROFILE; }
-peers		{ return PEERTAG; }
-ifs		{ return INTERFACETAG; }
+include		{ return (INCLUDE); }
+global		{ yywarn("`global' deprecated by `set'"); return (SET); }
+set		{ return (SET); }
+site		{ return (SITE_PROFILE); }
+resource	{ return (RESOURCE_PROFILE); }
+peers		{ return (PEERTAG); }
+ifs		{ return (INTERFACETAG); }
 
 yes {
 	psclog_trace("BOOL %s", yytext);
 	yylval = psc_strdup(yytext);
-	return BOOL;
+	return (BOOL);
 }
 
 no {
 	psclog_trace("BOOL %s", yytext);
 	yylval = psc_strdup(yytext);
-	return BOOL;
+	return (BOOL);
 }
 
 {num} {
 	psclog_trace("NUM %s", yytext);
 	yylval = psc_strdup(yytext);
-	return NUM;
+	return (NUM);
 }
 
 parallel_fs {
 	psclog_trace("Resource type string %s", yytext);
 	yylval = psc_strdup(yytext);
-	return RESOURCE_TYPE;
+	return (RESOURCE_TYPE);
 }
 
 standalone_fs {
 	psclog_trace("Resource type string %s", yytext);
 	yylval = psc_strdup(yytext);
-	return RESOURCE_TYPE;
+	return (RESOURCE_TYPE);
 }
 
 archival_fs {
 	psclog_trace("Resource type string %s", yytext);
 	yylval = psc_strdup(yytext);
-	return RESOURCE_TYPE;
+	return (RESOURCE_TYPE);
 }
 
 mds {
 	psclog_trace("Resource type string %s", yytext);
 	yylval = psc_strdup(yytext);
-	return RESOURCE_TYPE;
+	return (RESOURCE_TYPE);
 }
 
 cluster_noshare_fs {
 	psclog_trace("Resource type string %s", yytext);
 	yylval = psc_strdup(yytext);
-	return RESOURCE_TYPE;
+	return (RESOURCE_TYPE);
 }
 
 compute {
 	psclog_trace("Resource type string %s", yytext);
 	yylval = psc_strdup(yytext);
-	return RESOURCE_TYPE;
+	return (RESOURCE_TYPE);
 }
 
 {hexnum} {
 	psclog_trace("HEXNUM %s", yytext);
 	yylval = psc_strdup(yytext);
-	return HEXNUM;
+	return (HEXNUM);
 }
 
 {lnettcp} {
 	psclog_trace("LNET TCP network string %s", yytext);
 	yylval = psc_strdup(yytext);
-	return LNETTCP;
+	return (LNETTCP);
 }
 
 {name} {
 	psclog_trace("NAME %s", yytext);
 	yylval = psc_strdup(yytext);
-	return NAME;
+	return (NAME);
 }
 
 {pathname} {
 	psclog_trace("PATHNAME %s", yytext);
 	yylval = psc_strdup(yytext);
-	return PATHNAME;
+	return (PATHNAME);
 }
 
 {globpath} {
 	psclog_trace("GLOBPATH %s", yytext);
 	yylval = psc_strdup(yytext);
-	return GLOBPATH;
+	return (GLOBPATH);
 }
 
 {floatv} {
 	psclog_trace("FLOATVAL %s", yytext);
 	yylval = psc_strdup(yytext);
-	return FLOATVAL;
+	return (FLOATVAL);
 }
 
 {sizeval} {
 	psclog_trace("SIZEVAL %s", yytext);
 	yylval = psc_strdup(yytext);
-	return SIZEVAL;
+	return (SIZEVAL);
 }
 
 {sitename} {
 	psclog_trace("SITE_NAME %s", yytext);
 	yylval = psc_strdup(yytext);
-	return SITE_NAME;
+	return (SITE_NAME);
 }
 
 {resname} {
 	psclog_trace("RESOURCE_NAME %s", yytext);
 	yylval = psc_strdup(yytext);
-	return RESOURCE_NAME;
+	return (RESOURCE_NAME);
 }
 
 {ipquad} {
 	psclog_trace("IPADRRESS %s", yytext);
 	yylval = psc_strdup(yytext);
-	return IPADDR;
+	return (IPADDR);
 }
 
 {quotedstr} {
@@ -193,7 +198,7 @@ compute {
 
 	yylval = PSCALLOC(len);
 	strlcpy(yylval, yytext + 1, len);
-	return QUOTEDS;
+	return (QUOTEDS);
 }
 
 @ {

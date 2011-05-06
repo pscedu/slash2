@@ -107,13 +107,16 @@ struct sl_site {
 	sl_siteid_t		 site_id;
 };
 
+/* highest allowed site ID */
 #define SITE_MAXID		((1 << SLASH_ID_SITE_BITS) - 1)
 
 struct sl_gconf {
 	char			 gconf_net[LNET_NAME_MAX];
 	char			 gconf_fsroot[PATH_MAX];
-	uint32_t		 gconf_netid;
 	int			 gconf_port;
+	char			 gconf_prefmds[RES_NAME_MAX];
+	char			 gconf_prefios[RES_NAME_MAX];
+
 	struct psc_lockedlist	 gconf_sites;
 	struct psc_hashtbl	 gconf_nid_hashtbl;
 	psc_spinlock_t		 gconf_lock;
