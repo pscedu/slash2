@@ -210,8 +210,6 @@ slcfg_ifcmp(const char *a, const char *b)
 	return (strcmp(ia, ib));
 }
 
-#define LNETWORKS_STR_SIZE 256
-
 void
 libsl_init(int pscnet_mode, int ismds)
 {
@@ -220,7 +218,7 @@ libsl_init(int pscnet_mode, int ismds)
 		char			 ifn[IFNAMSIZ];
 		struct psclist_head	 lentry;
 	} *lent, *lnext;
-	char ltmp[LNETWORKS_STR_SIZE], lnetstr[LNETWORKS_STR_SIZE];
+	char ltmp[LNETS_MAX], lnetstr[LNETS_MAX];
 	char pbuf[6], *p, addrbuf[HOST_NAME_MAX];
 	struct addrinfo hints, *res, *res0;
 	int netcmp, error, rc, j, k;
