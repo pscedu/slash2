@@ -43,6 +43,8 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
+static int forward_not_yet = 1;
+
 int
 slm_rmm_apply_update(struct srt_update_entry *entryp)
 {
@@ -217,13 +219,19 @@ slm_rmm_handler(struct pscrpc_request *rq)
 }
 
 int
-slm_rmm_forward_namespace(sl_siteid_t siteid, __unusedx struct srm_forward_req *req)
+slm_rmm_forward_namespace(sl_siteid_t siteid, __unusedx struct srm_forward_req *mq)
 {
-	int _siter;
+	int rc, _siter;
 	struct sl_resm *resm;
 	struct sl_site *_site;
 	struct sl_resource *_res;
 	struct slashrpc_cservice *csvc;
+
+	struct srm_forward_rep *mp;
+	struct pscrpc_request *rq;
+
+	if (forward_not_yet)
+		return ENOSYS;
 
 	_site = libsl_resid2site(siteid);
 	if (_site == NULL)
@@ -240,5 +248,14 @@ slm_rmm_forward_namespace(sl_siteid_t siteid, __unusedx struct srm_forward_req *
 		return EIO;
 	}
 
-	return (ENOSYS);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_NAMESPACE_FORWARD, rq, mq, mp);
+	if (rc) {
+		sl_csvc_decref(csvc);
+		return EIO;
+	}
+
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
+
+	sl_csvc_decref(csvc);
+	return (rc);
 }
