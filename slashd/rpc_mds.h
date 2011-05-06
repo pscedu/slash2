@@ -76,7 +76,7 @@ void	slm_rpc_initsvc(void);
 int	slm_rmc_handler(struct pscrpc_request *);
 int	slm_rmi_handler(struct pscrpc_request *);
 int	slm_rmm_handler(struct pscrpc_request *);
-int	slm_rmm_forward_namespace(struct srm_forward_req *);
+int	slm_rmm_forward_namespace(sl_siteid_t, struct srm_forward_req *);
 
 void	slm_ion_pack_bmapminseq(struct pscrpc_msg *);
 

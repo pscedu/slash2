@@ -217,7 +217,13 @@ slm_rmm_handler(struct pscrpc_request *rq)
 }
 
 int
-slm_rmm_forward_namespace(__unusedx struct srm_forward_req *rq)
+slm_rmm_forward_namespace(sl_siteid_t siteid, __unusedx struct srm_forward_req *req)
 {
+	struct sl_site *site;
+
+	site = libsl_resid2site(siteid);
+	if (site == NULL)
+		return EBADF;
+
 	return (ENOSYS);
 }
