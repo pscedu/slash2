@@ -343,7 +343,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 	}
 
 	/*
-	 * The following can only be executed by the single distill thread.
+	 * The following can only be executed by the singleton distill thread.
 	 */
 
 	psc_assert(pje->pje_magic == PJE_MAGIC);
