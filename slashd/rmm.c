@@ -233,7 +233,7 @@ slm_rmm_forward_namespace(sl_siteid_t siteid, __unusedx struct srm_forward_req *
 	if (forward_not_ready)
 		return ENOSYS;
 
-	_site = libsl_resid2site(siteid);
+	_site = libsl_siteid2site(siteid);
 	if (_site == NULL)
 		return EBADF;
 
