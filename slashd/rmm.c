@@ -241,6 +241,7 @@ slm_rmm_forward_namespace(sl_siteid_t siteid, __unusedx struct srm_forward_req *
 		if (_res->res_type != SLREST_MDS)
 			continue;
 		resm = psc_dynarray_getpos(&_res->res_members, 0);
+		break;
 	}
 	csvc = slm_getmcsvc(resm);
 	if (csvc == NULL)  {
