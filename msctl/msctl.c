@@ -746,15 +746,6 @@ const char *progname;
 const char *daemon_name = "mount_slash";
 int recursive;
 
-__dead void
-usage(void)
-{
-	fprintf(stderr,
-	    "usage: %s [-HIRv] [-p paramspec] [-S socket] [-s value] [cmd arg ...]\n",
-	    progname);
-	exit(1);
-}
-
 void
 parse_enqueue(char *arg)
 {
@@ -776,6 +767,15 @@ parse_dequeue(char *arg)
 	parse_replrq(MSCMT_DELREPLRQ, arg, pack_replrq);
 }
 
+__dead void
+usage(void)
+{
+	fprintf(stderr,
+	    "usage: %s [-HInRv] [-p paramspec] [-S socket] [-s value] [cmd arg ...]\n",
+	    progname);
+	exit(1);
+}
+
 struct psc_ctlopt opts[] = {
 	{ 'H', PCOF_FLAG, &psc_ctl_noheader },
 	{ 'h', PCOF_FUNC, psc_ctlparse_hashtable },
@@ -783,6 +783,7 @@ struct psc_ctlopt opts[] = {
 	{ 'i', PCOF_FUNC, psc_ctlparse_iostats },
 	{ 'L', PCOF_FUNC, psc_ctlparse_lc },
 	{ 'm', PCOF_FUNC, psc_ctlparse_meter },
+	{ 'n', PCOF_FLAG, &psc_ctl_nodns },
 	{ 'P', PCOF_FUNC, psc_ctlparse_pool },
 	{ 'p', PCOF_FUNC, psc_ctlparse_param },
 	{ 'Q', PCOF_FUNC, parse_enqueue },

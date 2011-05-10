@@ -27,7 +27,7 @@
 runtime control
 .Sh SYNOPSIS
 .Nm slictl
-.Op Fl HI
+.Op Fl HIn
 .Op Fl p Ar paramspec
 .Op Fl S Ar socket
 .Op Fl s Ar showspec
@@ -71,6 +71,12 @@ for gigabytes,
 .Sq M
 for megabytes, etc.\&
 .Pq Do inhuman Dc number mode .
+.\" }%
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/n.mdoc {
+.It Fl n
+Suppress
+.Tn DNS
+lookups for network addresses.
 .\" }%
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/p.mdoc {
 .\"	subsys => {
