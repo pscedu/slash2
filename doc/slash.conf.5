@@ -35,27 +35,24 @@ Empty lines and lines beginning with
 .Sq Li #
 are ignored.
 .Pp
-This file is divided into two sections:
-global configuration and per-site configuration.
-.Ss Global Configuration
-Configuration intended to be applied to all sites on a
-.Tn SLASH
-network must be specified in the first section of
-.Nm
-and supports the following directives:
+This file is consists of variables and site configurations.
+.Ss Variables
+Variables ascribe defaults to settings in site configuration profiles
+as well as provide access to per-resource settings.
+The syntax is:
 .Bl -tag -offset 3n
 .It Xo
-.Ic global Ar var Li =
+.Ic set Ar var Li =
 .Ar val Ns Li ;\&
 .Xc
 .Pp
-Set the global variable
+Set the variable
 .Ar var
 to the given value
 .Ar val .
 The following variables may be set:
 .Bl -tag -offset 3n -width 7n
-.It Ic mymds
+.It Ic prefmds
 Default
 .Tn MDS
 server resource name.
@@ -92,12 +89,13 @@ in
 for more information.
 .It Ic port
 .Tn TCP
-port used to establish connections.
+port used to establish connections to
+.Tn SLASH
+peers.
 .El
 .El
 .Pp
-Additional configuration files may be included at the end of the globals
-section with
+Additional configuration files may be included with
 .Ic include :
 .Bd -literal -offset 3n
 .Ic include Dq Ar pattern
@@ -108,10 +106,10 @@ The
 argument may be a filename or
 .Xr glob 7
 pattern.
-.Ss Per-Site Configuration
+.Ss Site Configuration
 Each site resident on a
 .Tn SLASH
-network requires its own section in the second part of
+network requires its own section in
 .Nm
 and has the following format:
 .Bd -unfilled -offset 3n
@@ -122,8 +120,8 @@ and has the following format:
 .Pp
 A
 .Ic site
-definition may contain variable definitions and
-resource specifications.
+definition may itself contain variable definitions and resource
+specifications.
 The following variables may be set:
 .Pp
 .Bl -tag -offset 3n -width site_descXX -compact
@@ -149,15 +147,8 @@ Short description of this resource.
 .It Ic id
 Numerical identifier for resource, required to be unique for all
 resources.
-.It Ic ifs
-Interface addresses over which to communicate with other site resources.
-.It Ic mds
-A Boolean value
-.Ic yes
-or
-.Ic no
-on whether this resource manages site-wide metadata, must be set on at
-least one resource.
+.It Ic nodes
+One or more addresses denoting machines belonging to this resource.
 .It Ic peers
 List of peers separated by commas of communication resource partners in
 the form
@@ -166,6 +157,8 @@ the form
 Type of resource, one of
 .Ic archival_fs ,
 .Ic compute ,
+.Ic cluster_noshare_fs ,
+.Ic mds ,
 or
 .Ic parallel_fs ,
 required to be set for all resources.
@@ -174,9 +167,8 @@ required to be set for all resources.
 The following is an example
 .Nm :
 .Bd -literal
-# Global network config
-global port=1000;
-global net=tcp10;
+set port=1000;
+set net=tcp10;
 
 site @sitename {
 	site_desc	= "Site Name";
@@ -186,7 +178,7 @@ site @sitename {
 		desc	= "parallel file system";
 		type	= parallel_fs;
 		id	= 0;
-		ifs	= 128.182.112.110,
+		nodes	= 128.182.112.110,
 			  128.182.112.111,
 			  128.182.112.112,
 			  128.182.112.113;
@@ -198,7 +190,7 @@ site @sitename {
 		desc	= "archival storage system";
 		type	= archival_fs;
 		id	= 1;
-		ifs	= 128.182.112.242,
+		nodes	= 128.182.112.242,
 			  128.182.112.240,
 			  128.182.112.105,
 			  128.182.112.226;
