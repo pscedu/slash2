@@ -46,7 +46,7 @@ floatv		[0-9]*\.?[0-9]+
 globpath	[/][a-zA-Z0-9|/.,_\[\]+?-]+
 hexnum		0[Xx][0-9A-Fa-f]+
 ipquad		[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}
-lnettcp		tcp[0-9]+
+lnettcp		tcp[0-9]+|sdp[0-9]+
 name		[A-Za-z][0-9A-Za-z_.-]+
 num		[0-9]+
 pathname	[/][a-zA-Z0-9/._-]+
