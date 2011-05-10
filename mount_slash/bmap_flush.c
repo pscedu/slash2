@@ -1247,13 +1247,13 @@ msbmapflushthr_main(__unusedx struct psc_thread *thr)
 		bmap_flush();
 		PFL_GETTIMESPEC(&ts1);
 		timespecsub(&ts1, &ts0, &ts1);
-		psc_info("bmap_flush "PSCPRI_TIMESPEC, 
+		psclog_debug("bmap_flush "PSCPRI_TIMESPEC, 
 		    PSCPRI_TIMESPEC_ARGS(&ts1));
 		PFL_GETTIMESPEC(&ts0);
 		psc_waitq_waitrel(&bmapflushwaitq, NULL, &bmapFlushWaitTime);
 		PFL_GETTIMESPEC(&ts1);
 		timespecsub(&ts1, &ts0, &ts1);
-		psc_info("post wakeup "PSCPRI_TIMESPEC, 
+		psclog_debug("post wakeup "PSCPRI_TIMESPEC, 
 		    PSCPRI_TIMESPEC_ARGS(&ts1));
 	}
 }
