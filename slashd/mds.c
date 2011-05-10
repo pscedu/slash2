@@ -1627,7 +1627,6 @@ slm_setattr_core(struct fidc_membh *fcmh, struct srt_stat *sstb,
 	struct slm_workrq *wkrq;
 	struct fcmh_mds_info *fmi;
 
-	fmi = fcmh_2_fmi(fcmh);
 	if ((to_set & PSCFS_SETATTRF_DATASIZE) && sstb->sst_size) {
 		if (fcmh == NULL) {
 			rc = slm_fcmh_get(&sstb->sst_fg, &fcmh);
@@ -1643,6 +1642,7 @@ slm_setattr_core(struct fidc_membh *fcmh, struct srt_stat *sstb,
 
 		locked = FCMH_RLOCK(fcmh);
 		fcmh->fcmh_flags |= FCMH_IN_PTRUNC;
+		fmi = fcmh_2_fmi(fcmh);
 		fmi->fmi_ptrunc_size = sstb->sst_size;
 		FCMH_URLOCK(fcmh, locked);
 

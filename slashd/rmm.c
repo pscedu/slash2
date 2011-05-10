@@ -43,7 +43,7 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
-static int forward_not_yet = 1;
+static int forward_not_ready = 1;
 
 int
 slm_rmm_apply_update(struct srt_update_entry *entryp)
@@ -230,7 +230,7 @@ slm_rmm_forward_namespace(sl_siteid_t siteid, __unusedx struct srm_forward_req *
 	struct srm_forward_rep *mp;
 	struct pscrpc_request *rq;
 
-	if (forward_not_yet)
+	if (forward_not_ready)
 		return ENOSYS;
 
 	_site = libsl_resid2site(siteid);
