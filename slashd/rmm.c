@@ -219,7 +219,8 @@ slm_rmm_handler(struct pscrpc_request *rq)
 }
 
 int
-slm_rmm_forward_namespace(sl_siteid_t siteid, __unusedx struct srm_forward_req *mq)
+slm_rmm_forward_namespace(sl_siteid_t siteid, int op, char *name, 
+	uint32_t mode, struct slash_creds *creds)
 {
 	int rc, _siter;
 	struct sl_resm *resm;
@@ -227,6 +228,7 @@ slm_rmm_forward_namespace(sl_siteid_t siteid, __unusedx struct srm_forward_req *
 	struct sl_resource *_res;
 	struct slashrpc_cservice *csvc;
 
+	struct srm_forward_req *mq;
 	struct srm_forward_rep *mp;
 	struct pscrpc_request *rq;
 
@@ -253,6 +255,13 @@ slm_rmm_forward_namespace(sl_siteid_t siteid, __unusedx struct srm_forward_req *
 	if (rc) {
 		sl_csvc_decref(csvc);
 		return EIO;
+	}
+
+	if (op == 1) {
+		strncpy(mq->name, name, SL_NAME_MAX);
+		mq->creds = *creds;
+		mq->fid = slm_get_next_slashid();
+		mq->mode = mode;
 	}
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);

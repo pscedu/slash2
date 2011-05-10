@@ -340,7 +340,6 @@ int
 slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 {
 	struct fidc_membh *p = NULL, *c = NULL;
-	struct srm_forward_req req;
 	struct srm_mkdir_req *mq;
 	struct srm_mkdir_rep *mp;
 	uint32_t pol;
@@ -351,12 +350,8 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	dirSiteid = FID_GET_SITEID(mq->pfg.fg_fid);
 	if (mq->pfg.fg_fid != SLFID_ROOT &&
 	    nodeResm->resm_res->res_site->site_id != dirSiteid) {
-		req.op = 1;
-		req.creds = mq->creds;
-		req.pfg = mq->pfg;
-		req.fid = slm_get_next_slashid();
-		req.mode = mq->mode;
-		mp->rc = slm_rmm_forward_namespace(dirSiteid, &req);
+		mp->rc = slm_rmm_forward_namespace(dirSiteid, 1, 
+		    mq->name, mq->mode, &mq->creds);
 		goto out;
 	}
 
