@@ -382,7 +382,7 @@ API rename
 - initialize new file repl table from parent dir to help with
   persistence policies
 	- or just tell users to msctl -R everytime...
-- ensure all errno values in rpc msgs are standardized
+- ensure all system errno values in rpc msgs are standardized
 - convert CONF_LOCK to a rwlock
 - we can't hold fcmh in memory at all times just because PTRUNC has to
   be resolved.  have to store in inode and release fcmh.  we pass the
@@ -396,7 +396,7 @@ API rename
 - do full truncate and unlink do the right things while ptrunc is resolving?
 - add SSL transport which uses keys and can therefore disable authbuf
 
-- write a ptrunc tester
+- write a ptrunc tester: truncate(1)
 - for -s connections, we arguably do not need to show members of the
   same resource we are part of since we will never connect to them
 - patch fuse.ko since fuse_notify_entry_inval() causes segfault
@@ -449,27 +449,25 @@ lcache
 
 - we don't need to hold bod_crc in memory; only needed when doing disk I/O
 
-- move namespace in zfs into a subdir so we dont have to do the
-  strcmp(fn, ".slmd") trick
+- move namespace in zfs into a subdir so we dont have to do any
+  strcmp(fn, ".slmd") -> EPERM tricks
 
 - add msl local I/O cache support:
   page in if fcmh_fid and gen and bmapgen's match what's in the cache
 
-- rename 'global' keyword to 'set'
-- add more local slash.conf settings:
-	- zfs pool cachefile
-	- zfs pool name
-	- lnet_networks
-	- prefMDS, prefIOS
-	   default prefMDS to site local MDS
+- parse LNET_NETWORKS format for `lnets' variable and assign lnetname to
+  addresses that resolve from the interface in the pair
 
 - INO_DIRTY needs to take the same fate as BMAP_LOGCHG
 - need ability to backup mds metafs
+  - zpool make snapshopt
+  - zpool dump snapshot
+  - zpool delete snapshot
 - make sure replrq over garbage does the right thing in sliod backfs (zeroing)
 - mds: do not allow repl changes while IN_PTRUNC
 - mds: lock when checking fgen in bmap crcupdate
 - should replay crcupdate set ion to VALID ?
-- msl should translate -1010 from MDS on open/getbmap to sane error code
-- eliminate nbmaps nxbmaps
-- parse LNET_NETWORKS format for `lnets' variable and assign lnetname to
-  addresses that resolve from the interface in the pair
+
+- du
+- df
+- test repl
