@@ -46,11 +46,12 @@ struct pscrpc_export;
 #define SLM_RMC_REPSZ			588
 #define SLM_RMC_SVCNAME			"slmrmc"
 
-
-#define SLM_FORWARD_MKDIR		1
-#define SLM_FORWARD_RMDIR		2
-#define SLM_FORWARD_CREATE		3
-#define SLM_FORWARD_UNLINK		4
+enum slm_fwd_op {
+	SLM_FORWARD_MKDIR,
+	SLM_FORWARD_RMDIR,
+	SLM_FORWARD_CREATE,
+	SLM_FORWARD_UNLINK
+};
 
 /*
  * The number of update or reclaim records saved in the same log file.
@@ -87,16 +88,16 @@ int	slm_rmm_forward_namespace(sl_siteid_t, int, char *, uint32_t, struct slash_c
 void	slm_ion_pack_bmapminseq(struct pscrpc_msg *);
 
 /* aliases for connection management */
-#define slm_getmcsvcx(resm, exp)						\
-	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT, (exp),		\
-	    (resm)->resm_nid, SRMM_REQ_PORTAL, SRMM_REP_PORTAL, SRMM_MAGIC,	\
-	    SRMM_VERSION, &resm2rmmi(resm)->rmmi_mutex,				\
+#define slm_getmcsvcx(resm, exp)					\
+	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT, (exp),	\
+	    (resm)->resm_nid, SRMM_REQ_PORTAL, SRMM_REP_PORTAL,		\
+	    SRMM_MAGIC, SRMM_VERSION, &resm2rmmi(resm)->rmmi_mutex,	\
 	    &resm2rmmi(resm)->rmmi_mwcond, SLCONNT_MDS, NULL)
 
-#define slm_geticsvcxf(resm, exp, fl, arg)					\
-	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT | (fl), (exp),	\
-	    (resm)->resm_nid, SRIM_REQ_PORTAL, SRIM_REP_PORTAL,			\
-	    SRIM_MAGIC,	SRIM_VERSION, &resm2rmmi(resm)->rmmi_mutex,		\
+#define slm_geticsvcxf(resm, exp, fl, arg)				\
+	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT | (fl),	\
+	    (exp), (resm)->resm_nid, SRIM_REQ_PORTAL, SRIM_REP_PORTAL,	\
+	    SRIM_MAGIC,	SRIM_VERSION, &resm2rmmi(resm)->rmmi_mutex,	\
 	    &resm2rmmi(resm)->rmmi_mwcond, SLCONNT_IOD, (arg))
 
 #define slm_getmcsvc(resm)		slm_getmcsvcx((resm), NULL)
