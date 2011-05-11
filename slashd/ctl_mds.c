@@ -220,8 +220,8 @@ slmctlrep_replpair_send(int fd, struct psc_ctlmsghdr *mh,
 	struct resm_mds_info *rmmi0, *rmmi1;
 	struct slm_resmlink *srl;
 
-	rmmi0 = m0->resm_pri;
-	rmmi1 = m1->resm_pri;
+	rmmi0 = resm2rmmi(m0);
+	rmmi1 = resm2rmmi(m1);
 	srl = repl_busytable + MDS_REPL_BUSYNODES(
 	    MIN(rmmi0->rmmi_busyid, rmmi1->rmmi_busyid),
 	    MAX(rmmi0->rmmi_busyid, rmmi1->rmmi_busyid));

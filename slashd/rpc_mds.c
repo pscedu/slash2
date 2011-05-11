@@ -99,7 +99,7 @@ sl_resm_hldrop(struct sl_resm *resm)
 	if (resm->resm_type == SLREST_MDS) {
 	} else {
 		mds_repl_reset_scheduled(resm->resm_iosid);
-		mds_repl_node_clearallbusy(resm->resm_pri);
+		mds_repl_node_clearallbusy(resm2rmmi(resm));
 	}
 }
 

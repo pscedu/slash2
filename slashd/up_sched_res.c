@@ -81,7 +81,7 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 	thr = pscthr_get();
 	smut = slmupschedthr(thr);
 	site = smut->smut_site;
-	smi = site->site_pri;
+	smi = site2smi(site);
 
 	locked = reqlock(&smi->smi_lock);
 	smi->smi_flags |= SMIF_DIRTYQ;
@@ -204,12 +204,12 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	thr = pscthr_get();
 	smut = slmupschedthr(thr);
 	site = smut->smut_site;
-	smi = site->site_pri;
+	smi = site2smi(site);
 
 	dst_resm = psc_dynarray_getpos(&dst_res->res_members, j);
 
-	dst_rmmi = dst_resm->resm_pri;
-	src_rmmi = src_resm->resm_pri;
+	dst_rmmi = resm2rmmi(dst_resm);
+	src_rmmi = resm2rmmi(src_resm);
 
 	/*
 	 * At this point, add this connection to our multiwait.
@@ -320,10 +320,10 @@ slmupschedthr_tryptrunc(struct up_sched_work_item *wk,
 	thr = pscthr_get();
 	smut = slmupschedthr(thr);
 	site = smut->smut_site;
-	smi = site->site_pri;
+	smi = site2smi(site) ;
 
 	dst_resm = psc_dynarray_getpos(&dst_res->res_members, idx);
-	dst_rmmi = dst_resm->resm_pri;
+	dst_rmmi = resm2rmmi(dst_resm);
 
 	brepls_init(retifset, 0);
 	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
@@ -401,10 +401,10 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	thr = pscthr_get();
 	smut = slmupschedthr(thr);
 	site = smut->smut_site;
-	smi = site->site_pri;
+	smi = site2smi(site);
 
 	dst_resm = psc_dynarray_getpos(&dst_res->res_members, j);
-	dst_rmmi = dst_resm->resm_pri;
+	dst_rmmi = resm2rmmi(dst_resm);
 
 	/*
 	 * At this point, add this connection to our multiwait.
@@ -487,7 +487,7 @@ slmupschedthr_main(struct psc_thread *thr)
 
 	smut = slmupschedthr(thr);
 	site = smut->smut_site;
-	smi = site->site_pri;
+	smi = site2smi(site);
 	while (pscthr_run()) {
 		if (0)
  restart:
@@ -1056,7 +1056,7 @@ uswi_enqueue_sites(struct up_sched_work_item *wk,
 	wk->uswi_gen++;
 	for (n = 0; n < nios; n++) {
 		site = libsl_resid2site(iosv[n].bs_id);
-		smi = site->site_pri;
+		smi = site2smi(site);
 
 		spinlock(&smi->smi_lock);
 		if (!psc_dynarray_exists(&smi->smi_upq, wk)) {

@@ -275,14 +275,14 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	mds_repl_bmap_walk(bcm, tract, retifset, 0, &iosidx, 1);
 	mds_repl_bmap_rel(bcm);
 
-	smi = dst_resm->resm_res->res_site->site_pri;
+	smi = site2smi(dst_resm->resm_res->res_site);
 	spinlock(&smi->smi_lock);
 	psc_multiwaitcond_wakeup(&smi->smi_mwcond);
 	freelock(&smi->smi_lock);
  out:
 	if (dst_resm)
-		mds_repl_nodes_adjbusy(src_resm->resm_pri,
-		    dst_resm->resm_pri,
+		mds_repl_nodes_adjbusy(resm2rmmi(src_resm),
+		    resm2rmmi(dst_resm),
 		    -slm_bmap_calc_repltraffic(bcm));
 	if (wk)
 		uswi_unref(wk);

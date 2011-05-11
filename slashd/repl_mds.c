@@ -706,9 +706,9 @@ mds_repl_node_clearallbusy(struct resm_mds_info *rmmi)
 	 * (ionB, ionA) pair.
 	 */
 	CONF_FOREACH_RESM(s, r, n, resm, j)
-		if (resm->resm_pri != rmmi)
+		if (resm2rmmi(resm) != rmmi)
 			mds_repl_nodes_clearbusy(rmmi,
-			    resm->resm_pri);
+			    resm2rmmi(resm));
 	RMMI_URLOCK(rmmi, locked[2]);
 	ureqlock(&repl_busytable_lock, locked[1]);
 	PLL_URLOCK(&globalConfig.gconf_sites, locked[0]);
@@ -731,7 +731,7 @@ mds_repl_buildbusytable(void)
 	PLL_FOREACH(s, &globalConfig.gconf_sites)
 		DYNARRAY_FOREACH(r, n, &s->site_resources)
 			DYNARRAY_FOREACH(resm, j, &r->res_members) {
-				rmmi = resm->resm_pri;
+				rmmi = resm2rmmi(resm);
 				rmmi->rmmi_busyid = repl_busytable_nents++;
 			}
 	PLL_ULOCK(&globalConfig.gconf_sites);

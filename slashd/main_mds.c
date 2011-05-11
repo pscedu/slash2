@@ -226,7 +226,7 @@ main(int argc, char *argv[])
 	 * are started and the given ZFS pool is imported.
 	 */
 	mdsio_init();
-	import_zpool(zpoolname, zpoolcachefn);
+	import_zpool(zpname, zpcachefn);
 
 	rc = mdsio_lookup(MDSIO_FID_ROOT, SL_RPATH_META_DIR,
 	    &mds_metadir_inum, &rootcreds, NULL);
