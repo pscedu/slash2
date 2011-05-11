@@ -210,7 +210,7 @@ mds_bmap_ion_restart(struct bmap_mds_lease *bml)
 		return (-SLERR_ION_OFFLINE);
 	}
 
-	rmmi = resm->resm_pri;
+	rmmi = resm2rmmi(resm);
 
 	atomic_inc(&rmmi->rmmi_refcnt);
 	sl_csvc_decref(csvc);
@@ -271,7 +271,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	} else
 		BMAP_ULOCK(bmap);
 
-	rpmi = res->res_pri;
+	rpmi = res2rpmi(res);
 	len = psc_dynarray_len(&res->res_members);
 
 	/*
@@ -310,9 +310,10 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 
  online:
 	mds_reserve_slot();
-	logentry = pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_assign_rep));
+	logentry = pjournal_get_buf(mdsJournal,
+	    sizeof(struct slmds_jent_assign_rep));
 
-	bmi->bmdsi_wr_ion = rmmi = resm->resm_pri;
+	bmi->bmdsi_wr_ion = rmmi = resm2rmmi(resm);
 	atomic_inc(&rmmi->rmmi_refcnt);
 	sl_csvc_decref(csvc); /* XXX this is really dumb */
 

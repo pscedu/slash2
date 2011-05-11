@@ -46,22 +46,16 @@ floatv		[0-9]*\.?[0-9]+
 globpath	[/][a-zA-Z0-9|/.,_\[\]+?-]+
 hexnum		0[Xx][0-9A-Fa-f]+
 ipquad		[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}
-lnettcp		tcp[0-9]+|sdp[0-9]+
+lnetname	tcp[0-9]+|sdp[0-9]+
 name		[A-Za-z][0-9A-Za-z_.-]+
 num		[0-9]+
 pathname	[/][a-zA-Z0-9/._-]+
 quotedstr	\"[^"]*\"
 resname		[A-Za-z][0-9A-Za-z]+@[A-Z]+
 sitename	@[A-Za-z]+
-sizeval		[0-9]+[KMGTBkmgtb]
+sizeval		[0-9]+[KMGTBkmgtb]?
 
 %%
-
-;		{ return (END); }
-,		{ return (NSEP); }
-=		{ return (EQ); }
-"{"		{ return (SUBSECT_START); }
-"}"		{ return (SUBSECT_END); }
 
 include		{ return (INCLUDE); }
 global		{ yywarn("`global' deprecated by `set'"); return (SET); }
@@ -69,18 +63,19 @@ set		{ return (SET); }
 site		{ return (SITE_PROFILE); }
 resource	{ return (RESOURCE_PROFILE); }
 peers		{ return (PEERTAG); }
-ifs		{ return (INTERFACETAG); }
+ifs		{ yywarn("`ifs' deprecated by `nodes'"); return (NODESTAG); }
+nodes		{ return (NODESTAG); }
 
-yes {
+yes|no {
 	psclog_trace("BOOL %s", yytext);
 	yylval = psc_strdup(yytext);
 	return (BOOL);
 }
 
-no {
-	psclog_trace("BOOL %s", yytext);
+parallel_fs|standalone_fs|archival_fs|mds|cluster_noshare_fs|compute {
+	psclog_trace("Resource type string %s", yytext);
 	yylval = psc_strdup(yytext);
-	return (BOOL);
+	return (RESOURCE_TYPE);
 }
 
 {num} {
@@ -89,52 +84,16 @@ no {
 	return (NUM);
 }
 
-parallel_fs {
-	psclog_trace("Resource type string %s", yytext);
-	yylval = psc_strdup(yytext);
-	return (RESOURCE_TYPE);
-}
-
-standalone_fs {
-	psclog_trace("Resource type string %s", yytext);
-	yylval = psc_strdup(yytext);
-	return (RESOURCE_TYPE);
-}
-
-archival_fs {
-	psclog_trace("Resource type string %s", yytext);
-	yylval = psc_strdup(yytext);
-	return (RESOURCE_TYPE);
-}
-
-mds {
-	psclog_trace("Resource type string %s", yytext);
-	yylval = psc_strdup(yytext);
-	return (RESOURCE_TYPE);
-}
-
-cluster_noshare_fs {
-	psclog_trace("Resource type string %s", yytext);
-	yylval = psc_strdup(yytext);
-	return (RESOURCE_TYPE);
-}
-
-compute {
-	psclog_trace("Resource type string %s", yytext);
-	yylval = psc_strdup(yytext);
-	return (RESOURCE_TYPE);
-}
-
 {hexnum} {
 	psclog_trace("HEXNUM %s", yytext);
 	yylval = psc_strdup(yytext);
 	return (HEXNUM);
 }
 
-{lnettcp} {
-	psclog_trace("LNET TCP network string %s", yytext);
+{lnetname} {
+	psclog_trace("LNETNAME string %s", yytext);
 	yylval = psc_strdup(yytext);
-	return (LNETTCP);
+	return (LNETNAME);
 }
 
 {name} {
@@ -201,15 +160,11 @@ compute {
 	return (QUOTEDS);
 }
 
-@ {
-	return (ATSIGN);
-}
-
 [ \t]*#.*	;
 [ \t]+		;
 [\n]		cfg_lineno++;
 
-.		yyerror("Unrecognized character: %s", yytext);
+.		{ return yytext[0]; }
 
 %%
 

@@ -33,7 +33,7 @@ slcfg_init_resm(struct sl_resm *resm)
 {
 	struct resm_iod_info *rmii;
 
-	rmii = resm->resm_pri = PSCALLOC(sizeof(*rmii));
+	rmii = resm2rmii(resm);
 	INIT_SPINLOCK(&rmii->rmii_lock);
 	psc_waitq_init(&rmii->rmii_waitq);
 }
@@ -42,3 +42,7 @@ void
 slcfg_init_site(__unusedx struct sl_site *site)
 {
 }
+
+int	 cfg_site_pri_sz;
+int	 cfg_res_pri_sz;
+int	 cfg_resm_pri_sz = sizeof(struct resm_iod_info);

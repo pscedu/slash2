@@ -208,6 +208,8 @@ struct srt_authbuf_footer {
 	char			saf__pad[3];
 } __packed;
 
+#define SRM_NIDS_MAX		8
+
 struct srt_bmapdesc {
 	struct slash_fidgen	sbd_fg;
 	uint64_t		sbd_seq;
@@ -520,7 +522,8 @@ struct srt_reclaim_entry {
 struct srm_connect_req {
 	uint64_t		magic;
 	uint32_t		version;
-	 int32_t		_pad;
+	 int32_t		nnids;
+	uint64_t		nids[SRM_NIDS_MAX];
 } __packed;
 
 #define srm_connect_rep		srm_generic_rep
@@ -574,7 +577,7 @@ struct srsm_replst_bhdr {
 #define srm_replst_slave_rep	srm_replst_slave_req
 
 struct srm_repl_schedwk_req {
-	uint64_t		nid;		/* XXX gross */
+	uint64_t		nid;		/* XXX gross, use iosid */
 	struct slash_fidgen	fg;
 	sl_bmapno_t		bmapno;
 	sl_bmapgen_t		bgen;

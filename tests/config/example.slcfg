@@ -1,37 +1,37 @@
 # $Id$
 
-global port=6667;
-global net=tcp10;
+set port=6667;
+set net=tcp10;
 
 site @SITEA {
-	site_desc = "mysite";
-	site_id   = 1;
+	site_desc	= "mysite";
+	site_id		= 1;
 	resource r0 {
-		desc = "desc";
-		type = archival_fs;
-		id   = 2;
-		ifs  = 127.0.0.1;
+		desc	= "desc";
+		type	= mds;
+		id	= 2;
+		nodes	= 127.0.0.1|127.0.0.2;
 	}
 }
 
 site @SITEB {
-	site_desc = "mysite";
-	site_id   = 2;
+	site_desc	= "mysite";
+	site_id		= 2;
 	resource r0 {
-		desc = "desc";
-		type = archival_fs;
-		id   = 2;
-		ifs  = localhost;
+		desc	= "desc";
+		type	= archival_fs;
+		id	= 2;
+		nodes	= 127.0.0.3;
 	}
 }
 
 site @SITEC {
-	site_desc = "mysite";
-	site_id   = 3;
+	site_desc	= "mysite";
+	site_id		= 3;
 	resource r0 {
-		desc = "desc";
-		type = archival_fs;
-		id   = 2;
-		ifs  = localhost;
+		desc	= "desc";
+		type	= archival_fs;
+		id	= 2;
+		nodes	= 127.0.0.4;
 	}
 }

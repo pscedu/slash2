@@ -471,3 +471,5 @@ lcache
 - should replay crcupdate set ion to VALID ?
 - msl should translate -1010 from MDS on open/getbmap to sane error code
 - eliminate nbmaps nxbmaps
+- parse LNET_NETWORKS format for `lnets' variable and assign lnetname to
+  addresses that resolve from the interface in the pair

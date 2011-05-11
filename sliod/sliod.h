@@ -25,6 +25,7 @@
 #include "psc_util/thread.h"
 
 #include "fid.h"
+#include "slconfig.h"
 #include "sltypes.h"
 
 /* sliod thread types */
@@ -71,7 +72,11 @@ struct resm_iod_info {
 	struct psc_waitq	  rmii_waitq;
 };
 
-#define resm2rmii(resm)		((struct resm_iod_info *)(resm)->resm_pri)
+static __inline struct resm_iod_info *
+resm2rmii(struct sl_resm *resm)
+{
+	return (resm_get_pri(resm));
+}
 
 void		slitimerthr_spawn(void);
 __dead void	slictlthr_main(const char *);

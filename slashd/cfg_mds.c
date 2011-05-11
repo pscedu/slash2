@@ -33,7 +33,7 @@ slcfg_init_res(struct sl_resource *res)
 	struct sl_mds_iosinfo *iosinfo;
 	struct resprof_mds_info *rpmi;
 
-	rpmi = res->res_pri = PSCALLOC(sizeof(*rpmi));
+	rpmi = res2rpmi(res);
 	INIT_SPINLOCK(&rpmi->rpmi_lock);
 
 	if (res->res_type == SLREST_MDS) {
@@ -50,7 +50,7 @@ slcfg_init_resm(struct sl_resm *resm)
 {
 	struct resm_mds_info *rmmi;
 
-	rmmi = resm->resm_pri = PSCALLOC(sizeof(*rmmi));
+	rmmi = resm2rmmi(resm);
 	psc_mutex_init(&rmmi->rmmi_mutex);
 	psc_multiwaitcond_init(&rmmi->rmmi_mwcond,
 	    NULL, 0, "rmmi-%s", resm->resm_addrbuf);
@@ -63,7 +63,7 @@ slcfg_init_site(struct sl_site *site)
 {
 	struct site_mds_info *smi;
 
-	smi = site->site_pri = PSCALLOC(sizeof(*smi));
+	smi = site2smi(site);
 	psc_dynarray_init(&smi->smi_upq);
 	INIT_SPINLOCK(&smi->smi_lock);
 	psc_multiwait_init(&smi->smi_mw, "smi-%s",
@@ -71,3 +71,7 @@ slcfg_init_site(struct sl_site *site)
 	psc_multiwaitcond_init(&smi->smi_mwcond, NULL, 0, "smi-%s",
 	    site->site_name + strspn(site->site_name, "@"));
 }
+
+int	 cfg_site_pri_sz = sizeof(struct site_mds_info);
+int	 cfg_res_pri_sz = sizeof(struct resprof_mds_info);
+int	 cfg_resm_pri_sz = sizeof(struct resm_mds_info);

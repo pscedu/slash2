@@ -36,7 +36,11 @@
 
 #include "slconfig.h"
 
-char *progname;
+char	*progname;
+
+int	 cfg_site_pri_sz;
+int	 cfg_res_pri_sz;
+int	 cfg_resm_pri_sz;
 
 int
 psc_usklndthr_get_type(__unusedx const char *namefmt)

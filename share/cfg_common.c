@@ -39,7 +39,7 @@
 
 struct psc_dynarray	lnet_prids = DYNARRAY_INIT;
 
-/*
+/**
  * libsl_resm_lookup - Sanity check this node's resource membership.
  * Notes: must be called after LNET has been initialized.
  */
@@ -60,8 +60,12 @@ libsl_resm_lookup(int ismds)
 		    NULL, NULL, &pp->nid);
 		/* Every nid found by lnet must be a resource member. */
 		if (resm == NULL)
-			psc_fatalx("nid %s is not a member of any resource",
-			    pscrpc_nid2str(pp->nid, nidbuf));
+			continue;
+
+		if (ismds && res->res_type != SLREST_MDS)
+			continue;
+		if (!ismds && res->res_type == SLREST_MDS)
+			continue;
 
 		if (res == NULL)
 			res = resm->resm_res;
@@ -70,10 +74,8 @@ libsl_resm_lookup(int ismds)
 			psc_fatalx("nids must be members of same resource (%s)",
 			    pscrpc_nid2str(pp->nid, nidbuf));
 	}
-	if (ismds && res->res_type != SLREST_MDS)
-		psc_fatal("%s: not configured as MDS", res->res_name);
-	else if (!ismds && res->res_type == SLREST_MDS)
-		psc_fatal("%s: not configured as ION", res->res_name);
+	if (res == NULL)
+		psc_fatalx("host is not a member in any profile");
 	return (resm);
 }
 
@@ -178,9 +180,8 @@ libsl_profile_dump(void)
 	int n;
 
 	PSCLOG_LOCK();
-	psclog_info("Node info: resource %s ID %#x type %d, npeers %u, "
-	    "nnids %u",
-	    r->res_name, r->res_id, r->res_type, r->res_npeers,
+	psclog_info("Node info: resource %s ID %#x type %d, nnids %u",
+	    r->res_name, r->res_id, r->res_type,
 	    psc_dynarray_len(&r->res_members));
 
 	DYNARRAY_FOREACH(p, n, &r->res_peers)
@@ -231,11 +232,14 @@ libsl_init(int pscnet_mode, int ismds)
 	psc_assert(pscnet_mode == PSCNET_CLIENT ||
 	    pscnet_mode == PSCNET_SERVER);
 
-	rc = snprintf(pbuf, sizeof(pbuf), "%d", globalConfig.gconf_port);
+	rc = snprintf(pbuf, sizeof(pbuf), "%d",
+	    globalConfig.gconf_port);
+	if (rc >= (int)sizeof(pbuf)) {
+		rc = -1;
+		errno = ENAMETOOLONG;
+	}
 	if (rc == -1)
 		psc_fatal("LNET port %d", globalConfig.gconf_port);
-	if (rc >= (int)sizeof(pbuf))
-		psc_fatalx("LNET port %d: too long", globalConfig.gconf_port);
 
 	setenv("USOCK_CPORT", pbuf, 0);
 	setenv("LNET_ACCEPT_PORT", pbuf, 0);
@@ -244,7 +248,7 @@ libsl_init(int pscnet_mode, int ismds)
 		err(1, "setenv");
 
 	if (getenv("LNET_NETWORKS")) {
-		psclog_notice("using LNET_NETWORKS (%s) from "
+		psclog_info("using LNET_NETWORKS (%s) from "
 		    "environment", getenv("LNET_NETWORKS"));
 		goto skiplnet;
 	}
@@ -272,18 +276,21 @@ libsl_init(int pscnet_mode, int ismds)
 				memset(&hints, 0, sizeof(hints));
 				hints.ai_family = PF_INET;
 				hints.ai_socktype = SOCK_STREAM;
-				error = getaddrinfo(addrbuf, NULL, &hints, &res0);
+				error = getaddrinfo(addrbuf, NULL,
+				    &hints, &res0);
 				if (error)
-					psc_fatalx("%s: %s", addrbuf, gai_strerror(error));
+					psc_fatalx("%s: %s", addrbuf,
+					    gai_strerror(error));
 
 				for (res = res0; res; res = res->ai_next) {
 					/* get destination routing interface */
-					pflnet_getifnfordst(ifa, res->ai_addr, lent->ifn);
+					pflnet_getifnfordst(ifa,
+					    res->ai_addr, lent->ifn);
 					lent->net = strrchr(m->resm_addrbuf, '@') + 1;
 
 					/*
 					 * Ensure mutual exclusion of this
-					 * interface and lustre network,
+					 * interface and Lustre network,
 					 * ignoring any interface aliases.
 					 */
 					netcmp = 1;
@@ -322,14 +329,16 @@ libsl_init(int pscnet_mode, int ismds)
 	psclist_for_each_entry_safe(lent, lnext, &lnets_hd, lentry) {
 		k = snprintf(ltmp, sizeof(ltmp), "%s%s(%s)",
 		    lnetstr[0] == '\0' ? "" : ",", lent->net, lent->ifn);
+		if (k >= (int)sizeof(ltmp)) {
+			k = -1;
+			errno = ENAMETOOLONG;
+		}
 		if (k == -1)
-			psc_fatal("error formatting lustre network");
-		if (k >= (int)sizeof(ltmp))
-			psc_fatalx("lustre network too long");
+			psc_fatal("error formatting Lustre network");
 
 		if (strlcat(lnetstr, ltmp,
 		    sizeof(lnetstr)) >= sizeof(lnetstr))
-			psc_fatalx("too many lustre networks");
+			psc_fatalx("too many Lustre networks");
 
 		psclist_del(&lent->lentry, &lnets_hd);
 		PSCFREE(lent);
@@ -338,21 +347,30 @@ libsl_init(int pscnet_mode, int ismds)
 	setenv("LNET_NETWORKS", lnetstr, 0);
 
  skiplnet:
-
 	pscrpc_init_portals(pscnet_mode);
 	pscrpc_getlocalprids(&lnet_prids);
 
 	if (pscnet_mode == PSCNET_SERVER) {
 		nodeResm = libsl_resm_lookup(ismds);
 		if (nodeResm == NULL)
-			psc_fatalx("No resource member for this node");
+			psc_fatalx("no resource member found for this node");
 
 		if (nodeResm->resm_res->res_fsroot[0] != '\0')
-			strlcpy(globalConfig.gconf_fsroot, nodeResm->resm_res->res_fsroot,
+			strlcpy(globalConfig.gconf_fsroot,
+			    nodeResm->resm_res->res_fsroot,
 			    sizeof(globalConfig.gconf_fsroot));
 
-		psc_info("Resource %s", nodeResm->resm_res->res_name);
+		if (nodeResm->resm_res->res_jrnldev[0] != '\0')
+			strlcpy(globalConfig.gconf_journal,
+			    nodeResm->resm_res->res_jrnldev,
+			    sizeof(globalConfig.gconf_journal));
+
+		psclog_info("node is a member of resource '%s'",
+		    nodeResm->resm_res->res_name);
 		libsl_profile_dump();
+	} else {
+		setenv("SLASH2_PIOS_ID", globalConfig.gconf_prefios, 0);
+		setenv("SLASH_MDS_NID", globalConfig.gconf_prefmds, 0);
 	}
 }
 

@@ -40,12 +40,11 @@
 struct sl_site;
 struct slashrpc_cservice;
 
-#define SITE_NAME_MAX	32
-#define INTRES_NAME_MAX	32
-#define RES_NAME_MAX	(SITE_NAME_MAX + INTRES_NAME_MAX)
-#define RESM_ADDRBUF_SZ	(RES_NAME_MAX + 1 + PSCRPC_NIDSTR_SIZE)	/* foo@BAR:1.1.1.1@tcp0 */
-#define SL_PEER_MAX	16
-#define LNET_NAME_MAX	32
+#define SITE_NAME_MAX		32
+#define INTRES_NAME_MAX		32
+#define RES_NAME_MAX		(SITE_NAME_MAX + INTRES_NAME_MAX)
+#define RESM_ADDRBUF_SZ		(RES_NAME_MAX + 1 + PSCRPC_NIDSTR_SIZE)	/* foo@BAR:1.1.1.1@tcp0 */
+#define LNET_NAME_MAX		32
 
 enum sl_res_type {
 	SLREST_NONE,
@@ -65,44 +64,50 @@ enum sl_res_type {
 
 /* Resource (I/O system, MDS) */
 struct sl_resource {
-	char			 res_name[RES_NAME_MAX];	/* resource name */
+	char			 res_name[RES_NAME_MAX];
 	char			*res_desc;
-	char			*res_peertmp[SL_PEER_MAX];
-	int			 res_npeers;
 	sl_ios_id_t		 res_id;
 	enum sl_res_type	 res_type;
 	struct psc_dynarray	 res_peers;
 	struct psc_dynarray	 res_members;
 	char			 res_fsroot[PATH_MAX];
 	char			 res_jrnldev[PATH_MAX];
-	void			*res_pri;
 	struct sl_site		*res_site;
 };
 
-/* Resource member (a machine in the I/O system) */
+#define RES_MAXID		((UINT64_C(1) << (sizeof(sl_ios_id_t) * \
+				    NBBY - SLASH_ID_SITE_BITS)) - 1)
+
+static __inline void *
+resprof_get_pri(struct sl_resource *res)
+{
+	return (res + 1);
+}
+
+/* Resource member (a machine in an I/O system) */
 struct sl_resm {
 	char			 resm_addrbuf[RESM_ADDRBUF_SZ];
-	lnet_nid_t		 resm_nid;			/* Node ID for the resource member */
+	lnet_nid_t		 resm_nid;
+	struct psc_dynarray	 resm_nids;
 	struct sl_resource	*resm_res;
 	struct psc_hashent	 resm_hentry;
 	struct slashrpc_cservice*resm_csvc;
-	void			*resm_pri;
 #define resm_site		 resm_res->res_site
 #define resm_type		 resm_res->res_type
 #define resm_iosid		 resm_res->res_id
 };
 
-#define resm_2_resid(r)		(r)->resm_res->res_id
-
-#define RES_MAXID		((UINT64_C(1) << (sizeof(sl_ios_id_t) * \
-				    NBBY - SLASH_ID_SITE_BITS)) - 1)
+static __inline void *
+resm_get_pri(struct sl_resm *resm)
+{
+	return (resm + 1);
+}
 
 /* Site (a collection of I/O systems) */
 struct sl_site {
 	char			 site_name[SITE_NAME_MAX];
 	char			*site_desc;
-	void			*site_pri;			/* struct site_mds_info */
-	struct psclist_head	 site_lentry;
+	struct psc_listentry	 site_lentry;
 	struct psc_dynarray	 site_resources;
 	sl_siteid_t		 site_id;
 };
@@ -110,12 +115,21 @@ struct sl_site {
 /* highest allowed site ID */
 #define SITE_MAXID		((1 << SLASH_ID_SITE_BITS) - 1)
 
+static __inline void *
+site_get_pri(struct sl_site *site)
+{
+	return (site + 1);
+}
+
 struct sl_gconf {
 	char			 gconf_net[LNET_NAME_MAX];
 	char			 gconf_fsroot[PATH_MAX];
 	int			 gconf_port;
 	char			 gconf_prefmds[RES_NAME_MAX];
 	char			 gconf_prefios[RES_NAME_MAX];
+	char			 gconf_journal[PATH_MAX];
+	char			 gconf_zpcachefn[PATH_MAX];
+	char			 gconf_zpname[NAME_MAX];
 
 	struct psc_lockedlist	 gconf_sites;
 	struct psc_hashtbl	 gconf_nid_hashtbl;
@@ -134,18 +148,20 @@ struct sl_gconf {
 		    GCONF_HASHTBL_SZ, NULL, "resnid");			\
 	} while (0)
 
-#define CONF_LOCK()			PLL_LOCK(&globalConfig.gconf_sites)
-#define CONF_ULOCK()			PLL_ULOCK(&globalConfig.gconf_sites)
-#define CONF_RLOCK()			PLL_RLOCK(&globalConfig.gconf_sites)
-#define CONF_URLOCK(lk)			PLL_URLOCK(&globalConfig.gconf_sites, (lk))
+#define CONF_LOCK()			spinlock(&globalConfig.gconf_lock)
+#define CONF_ULOCK()			freelock(&globalConfig.gconf_lock)
+#define CONF_RLOCK()			reqlock(&globalConfig.gconf_lock)
+#define CONF_URLOCK(lk)			ureqlock(&globalConfig.gconf_lock, (lk))
 
 #define CONF_FOREACH_SITE(s)		PLL_FOREACH((s), &globalConfig.gconf_sites)
 #define SITE_FOREACH_RES(s, r, i)	DYNARRAY_FOREACH((r), (i), &(s)->site_resources)
 #define RES_FOREACH_MEMB(r, m, j)	DYNARRAY_FOREACH((m), (j), &(r)->res_members)
+#define RESM_FOREACH_NID(m, n, k)	DYNARRAY_FOREACH((n), (k), &(m)->resm_nids)
 
 #define CONF_FOREACH_SITE_CONT(s)	PLL_FOREACH_CONT((s), &globalConfig.gconf_sites)
 #define SITE_FOREACH_RES_CONT(s, r, i)	DYNARRAY_FOREACH_CONT((r), (i), &(s)->site_resources)
 #define RES_FOREACH_MEMB_CONT(r, m, j)	DYNARRAY_FOREACH_CONT((m), (j), &(r)->res_members)
+#define RESM_FOREACH_NID_CONT(m, n, k)	DYNARRAY_FOREACH_CONT((n), (k), &(m)->resm_nids)
 
 #define CONF_FOREACH_RESM(s, r, i, m, j)				\
 	CONF_FOREACH_SITE(s)						\
@@ -196,11 +212,17 @@ sl_ios_id_t		 libsl_str2id(const char *);
 struct sl_resource	*libsl_str2res(const char *);
 struct sl_resm		*libsl_try_nid2resm(lnet_nid_t);
 
+/* this instance's resource member */
 extern struct sl_resm	*nodeResm;
-extern struct sl_gconf	 globalConfig;
 
 #define nodeSite	nodeResm->resm_site
 #define nodeResProf	nodeResm->resm_res
+
+extern struct sl_gconf	 globalConfig;
+
+extern int		 cfg_site_pri_sz;
+extern int		 cfg_res_pri_sz;
+extern int		 cfg_resm_pri_sz;
 
 /**
  * sl_global_id_build - Produce a global, unique identifier for a resource

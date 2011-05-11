@@ -116,16 +116,24 @@ struct resprof_cli_info {
 	struct psc_dynarray		 rpci_pinned_bmaps;
 };
 
-/*
- * CLIENT-specific private data for struct sl_resm.
- */
+static __inline struct resprof_cli_info *
+res2rpci(struct sl_resource *res)
+{
+	return (resprof_get_pri(res));
+}
+
+/* CLI-specific data for struct sl_resm */
 struct resm_cli_info {
 	pthread_mutex_t			 rmci_mutex;
 	struct psc_multiwaitcond	 rmci_mwc;
 	struct srm_bmap_release_req	 rmci_bmaprls;
 };
 
-#define resm2rmci(resm)			((struct resm_cli_info *)(resm)->resm_pri)
+static __inline struct resm_cli_info *
+resm2rmci(struct sl_resm *resm)
+{
+	return (resm_get_pri(resm));
+}
 
 #define msl_read(fh, buf, size, off)	msl_io((fh), (buf), (size), (off), SL_READ)
 #define msl_write(fh, buf, size, off)	msl_io((fh), (char *)(buf), (size), (off), SL_WRITE)

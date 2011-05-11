@@ -39,6 +39,7 @@
 
 #include "fid.h"
 #include "slconfig.h"
+#include "slerr.h"
 
 enum slconf_sym_type {
 	SL_TYPE_BOOL,
@@ -73,9 +74,9 @@ struct cfg_file {
 };
 
 void		 slcfg_add_include(const char *);
-void		 slcfg_addif(char *, char *);
 uint32_t	 slcfg_str2lnet(const char *);
 uint32_t	 slcfg_str2restype(const char *);
+void		 slcfg_resm_addnid(char *, const char *);
 
 void		 yyerror(const char *, ...);
 int		 yylex(void);
@@ -95,45 +96,43 @@ void		 yywarn(const char *, ...);
 	{ name, SL_STRUCT_RES, type, max, offsetof(struct sl_resource, field), handler }
 
 struct slconf_symbol sym_table[] = {
-	TABENT_VAR("port",		SL_TYPE_INT,	0,		gconf_port,	NULL),
-	TABENT_VAR("net",		SL_TYPE_STR,	LNET_NAME_MAX,	gconf_net,	NULL),
 	TABENT_VAR("fs_root",		SL_TYPE_STR,	PATH_MAX,	gconf_fsroot,	NULL),
+	TABENT_VAR("journal",		SL_TYPE_STR,	PATH_MAX,	gconf_journal,	NULL),
+	TABENT_VAR("net",		SL_TYPE_STR,	LNET_NAME_MAX,	gconf_net,	NULL),
+	TABENT_VAR("nets",		SL_TYPE_STR,	LNET_NAME_MAX,	gconf_net,	NULL),
+	TABENT_VAR("port",		SL_TYPE_INT,	0,		gconf_port,	NULL),
 	TABENT_VAR("pref_ios",		SL_TYPE_STR,	RES_NAME_MAX,	gconf_prefios,	NULL),
 	TABENT_VAR("pref_mds",		SL_TYPE_STR,	RES_NAME_MAX,	gconf_prefmds,	NULL),
-	TABENT_SITE("site_id",		SL_TYPE_INT,	SITE_MAXID,	site_id,	NULL),
+	TABENT_VAR("zpool_cache",	SL_TYPE_STR,	PATH_MAX,	gconf_zpcachefn,NULL),
+	TABENT_VAR("zpool_name",	SL_TYPE_STR,	NAME_MAX,	gconf_zpname,	NULL),
+
 	TABENT_SITE("site_desc",	SL_TYPE_STRP,	0,		site_desc,	NULL),
-	TABENT_RES ("desc",		SL_TYPE_STRP,	0,		res_desc,	NULL),
-	TABENT_RES ("type",		SL_TYPE_INT,	0,		res_type,	slcfg_str2restype),
-	TABENT_RES ("id",		SL_TYPE_INT,	RES_MAXID,	res_id,		NULL),
-	TABENT_RES ("fsroot",		SL_TYPE_STR,	PATH_MAX,	res_fsroot,	NULL),
-	TABENT_RES ("jrnldev",		SL_TYPE_STR,	PATH_MAX,	res_jrnldev,	NULL),
+	TABENT_SITE("site_id",		SL_TYPE_INT,	SITE_MAXID,	site_id,	NULL),
+
+	TABENT_RES("desc",		SL_TYPE_STRP,	0,		res_desc,	NULL),
+	TABENT_RES("fsroot",		SL_TYPE_STR,	PATH_MAX,	res_fsroot,	NULL),
+	TABENT_RES("id",		SL_TYPE_INT,	RES_MAXID,	res_id,		NULL),
+	TABENT_RES("jrnldev",		SL_TYPE_STR,	PATH_MAX,	res_jrnldev,	NULL),
+	TABENT_RES("type",		SL_TYPE_INT,	0,		res_type,	slcfg_str2restype),
 	{ NULL, 0, 0, 0, 0, NULL }
 };
 
-struct sl_gconf		 globalConfig;
-struct sl_resm		*nodeResm;
+struct sl_gconf		   globalConfig;
+struct sl_resm		  *nodeResm;
 
-int			 cfg_errors;
-int			 cfg_lineno;
-char			 cfg_filename[PATH_MAX];
-struct psclist_head	 cfg_files = PSCLIST_HEAD_INIT(cfg_files);
+static int		   cfg_nid_counter = -1;
 
-struct sl_site		*currentSite;
-struct sl_resource	*currentRes;
-struct sl_gconf		*currentConf = &globalConfig;
+int			   cfg_errors;
+int			   cfg_lineno;
+char			   cfg_filename[PATH_MAX];
+struct psclist_head	   cfg_files = PSCLIST_HEAD_INIT(cfg_files);
+
+static struct sl_site	  *currentSite;
+static struct sl_resource *currentRes;
+static struct sl_resm	  *currentResm;
 %}
 
 %start config
-
-%token END
-%token EQ
-
-%token ATSIGN
-%token NSEP
-
-%token SUB
-%token SUBSECT_START
-%token SUBSECT_END
 
 %token NUM
 %token HEXNUM
@@ -154,23 +153,23 @@ struct sl_gconf		*currentConf = &globalConfig;
 
 %token IPADDR
 %token PEERTAG
-%token INTERFACETAG
+%token NODESTAG
 %token QUOTEDS
-%token LNETTCP
+%token LNETNAME
 
 %%
 
 config		: vars includes site_profiles
 		;
 
-vars		: /* NULL */
+vars		: /* nothing */
 		| var vars
 		;
 
 var		: SET statement
 		;
 
-includes	: /* NULL */
+includes	: /* nothing */
 		| include includes
 		;
 
@@ -195,24 +194,25 @@ site_profiles	: site_profile
 		| site_profile site_profiles
 		;
 
-site_profile	: site_prof_start site_defs SUBSECT_END {
+site_profile	: site_prof_start site_defs '}' {
 			if (libsl_siteid2site(currentSite->site_id))
 				yyerror("site %s ID %d already assigned to %s",
 				    currentSite->site_name, currentSite->site_id,
 				    libsl_siteid2site(currentSite->site_id)->site_name);
 
-			pll_add(&currentConf->gconf_sites, currentSite);
+			pll_add(&globalConfig.gconf_sites, currentSite);
 		}
 		;
 
-site_prof_start	: SITE_PROFILE SITE_NAME SUBSECT_START {
+site_prof_start	: SITE_PROFILE SITE_NAME '{' {
 			struct sl_site *s;
 
 			PLL_FOREACH(s, &globalConfig.gconf_sites)
 				if (strcasecmp(s->site_name, $2) == 0)
 					yyerror("duplicate site name: %s", $2);
 
-			currentSite = PSCALLOC(sizeof(*currentSite));
+			currentSite = PSCALLOC(sizeof(*currentSite) +
+			    cfg_site_pri_sz);
 			psc_dynarray_init(&currentSite->site_resources);
 			INIT_PSC_LISTENTRY(&currentSite->site_lentry);
 			if (strlcpy(currentSite->site_name, $2,
@@ -231,7 +231,7 @@ site_resources	: site_resource
 		| site_resources site_resource
 		;
 
-site_resource	: resource_start resource_def SUBSECT_END {
+site_resource	: resource_start resource_def '}' {
 			struct sl_resource *r;
 			int j, nmds = 0;
 
@@ -274,11 +274,12 @@ site_resource	: resource_start resource_def SUBSECT_END {
 		}
 		;
 
-resource_start	: RESOURCE_PROFILE NAME SUBSECT_START {
+resource_start	: RESOURCE_PROFILE NAME '{' {
 			struct sl_resource *r;
 			int j, rc;
 
-			currentRes = PSCALLOC(sizeof(*currentRes));
+			currentRes = PSCALLOC(sizeof(*currentRes) +
+			    cfg_res_pri_sz);
 			currentRes->res_site = currentSite;
 			psc_dynarray_init(&currentRes->res_peers);
 			psc_dynarray_init(&currentRes->res_members);
@@ -287,7 +288,7 @@ resource_start	: RESOURCE_PROFILE NAME SUBSECT_START {
 			    $2, currentSite->site_name);
 			if (rc == -1)
 				psc_fatal("resource %s@%s",
-				$2, currentSite->site_name);
+				    $2, currentSite->site_name);
 			if (rc >= (int)sizeof(currentRes->res_name))
 				psc_fatalx("resource %s@%s: name too long",
 				    $2, currentSite->site_name);
@@ -305,36 +306,34 @@ resource_start	: RESOURCE_PROFILE NAME SUBSECT_START {
 resource_def	: statements
 		;
 
-peerlist	: PEERTAG EQ peers END
+peerlist	: PEERTAG '=' peers ';'
 		;
 
 peers		: peer
-		| peer NSEP peers
+		| peer ',' peers
 		;
 
-peer		: RESOURCE_NAME {
-			if (currentRes->res_npeers >= SL_PEER_MAX)
-				psc_fatalx("reached max (%d) npeers for resource",
-				    SL_PEER_MAX);
-			currentRes->res_peertmp[currentRes->res_npeers] = $1;
-			currentRes->res_npeers++;
-		}
+peer		: RESOURCE_NAME		{ psc_dynarray_add(&currentRes->res_peers, $1); }
 		;
 
-interfacelist	: INTERFACETAG EQ interfaces END
+nodeslist	: NODESTAG '=' nodes ';'
 		;
 
-interfaces	: interface
-		| interface NSEP interfaces
+nodes		: node			{ cfg_nid_counter++; }
+		| node ',' nodes	{ cfg_nid_counter++; }
 		;
 
-interface	: IPADDR ATSIGN LNETTCP	{ slcfg_addif($1, $3); PSCFREE($3); }
-		| IPADDR		{ slcfg_addif($1, currentConf->gconf_net); }
-		| NAME ATSIGN LNETTCP	{ slcfg_addif($1, $3); PSCFREE($3); }
-		| NAME			{ slcfg_addif($1, currentConf->gconf_net); }
+node		: nodeaddr
+		| nodeaddr '|' node
 		;
 
-statements	: /* NULL */
+nodeaddr	: IPADDR '@' LNETNAME	{ slcfg_resm_addnid($1, $3); PSCFREE($3); }
+		| IPADDR		{ slcfg_resm_addnid($1, globalConfig.gconf_net); }
+		| NAME '@' LNETNAME	{ slcfg_resm_addnid($1, $3); PSCFREE($3); }
+		| NAME			{ slcfg_resm_addnid($1, globalConfig.gconf_net); }
+		;
+
+statements	: /* nothing */
 		| statement statements
 		;
 
@@ -346,87 +345,87 @@ statement	: restype_stmt
 		| glob_stmt
 		| hexnum_stmt
 		| float_stmt
-		| lnettcp_stmt
+		| lnetname_stmt
 		| peerlist
-		| interfacelist
+		| nodeslist
 		| quoteds_stmt
 		;
 
-restype_stmt	: NAME EQ RESOURCE_TYPE END {
-			psclog_dbg("found restype statement: tok '%s' val '%s'",
-			    $1, $3);
+restype_stmt	: NAME '=' RESOURCE_TYPE ';' {
+			psclog_debug("found restype statement: "
+			    "tok '%s' val '%s'", $1, $3);
 			slcfg_store_tok_val($1, $3);
 			PSCFREE($1);
 			PSCFREE($3);
 		}
 		;
 
-path_stmt	: NAME EQ PATHNAME END {
-			psclog_dbg("found path statement: tok '%s' val '%s'",
-			    $1, $3);
+path_stmt	: NAME '=' PATHNAME ';' {
+			psclog_debug("found path statement: tok "
+			    "'%s' val '%s'", $1, $3);
 			slcfg_store_tok_val($1, $3);
 			PSCFREE($1);
 			PSCFREE($3);
 		}
 		;
 
-glob_stmt	: NAME EQ GLOBPATH END {
-			psclog_dbg("found glob statement: tok '%s' Val '%s'",
-			    $1, $3);
+glob_stmt	: NAME '=' GLOBPATH ';' {
+			psclog_debug("found glob statement: tok "
+			    "'%s' Val '%s'", $1, $3);
 			slcfg_store_tok_val($1, $3);
 			PSCFREE($1);
 			PSCFREE($3);
 		}
 		;
 
-bool_stmt	: NAME EQ BOOL END {
-			psclog_dbg("found bool statement: tok '%s' val '%s'",
-			    $1, $3);
+bool_stmt	: NAME '=' BOOL ';' {
+			psclog_debug("found bool statement: "
+			    "tok '%s' val '%s'", $1, $3);
 			slcfg_store_tok_val($1, $3);
 			PSCFREE($1);
 			PSCFREE($3);
 		}
 		;
 
-size_stmt	: NAME EQ SIZEVAL END {
-			psclog_dbg("found sizeval statement: tok '%s' val '%s'",
-			    $1, $3);
+size_stmt	: NAME '=' SIZEVAL ';' {
+			psclog_debug("found sizeval statement: "
+			    "tok '%s' val '%s'", $1, $3);
 			slcfg_store_tok_val($1, $3);
 			PSCFREE($1);
 			PSCFREE($3);
 		}
 		;
 
-num_stmt	: NAME EQ NUM END {
-			psclog_dbg("found num statement: tok '%s' val '%s'",
-			    $1, $3);
+num_stmt	: NAME '=' NUM ';' {
+			psclog_debug("found num statement: "
+			    "tok '%s' val '%s'", $1, $3);
 			slcfg_store_tok_val($1, $3);
 			PSCFREE($1);
 			PSCFREE($3);
 		}
 		;
 
-float_stmt	: NAME EQ FLOATVAL END {
-			psclog_dbg("found float statement: tok '%s' val '%s'",
-			    $1, $3);
+float_stmt	: NAME '=' FLOATVAL ';' {
+			psclog_debug("found float statement: "
+			    "tok '%s' val '%s'", $1, $3);
 			slcfg_store_tok_val($1, $3);
 			PSCFREE($1);
 			PSCFREE($3);
 		}
 		;
 
-hexnum_stmt	: NAME EQ HEXNUM END {
-			psclog_dbg("found hexnum statement: tok '%s' val '%s'",
-			    $1, $3);
+hexnum_stmt	: NAME '=' HEXNUM ';' {
+			psclog_debug("found hexnum statement: "
+			    "tok '%s' val '%s'", $1, $3);
 			slcfg_store_tok_val($1, $3);
 			PSCFREE($1);
 			PSCFREE($3);
 		}
 		;
 
-quoteds_stmt	: NAME EQ QUOTEDS END {
-			psclog_dbg("found quoted string statement: tok '%s' val '%s'",
-			    $1, $3);
+quoteds_stmt	: NAME '=' QUOTEDS ';' {
+			psclog_debug("found quoted string statement: "
+			    "tok '%s' val '%s'", $1, $3);
 			slcfg_store_tok_val($1, $3);
 			PSCFREE($1);
 			PSCFREE($3);
@@ -434,9 +433,9 @@ quoteds_stmt	: NAME EQ QUOTEDS END {
 		}
 		;
 
-lnettcp_stmt	: NAME EQ LNETTCP END {
-			psclog_dbg("found lnettcp string statement: tok '%s' val '%s'",
-			    $1, $3);
+lnetname_stmt	: NAME '=' LNETNAME ';' {
+			psclog_debug("found lnetname string statement: "
+			    "tok '%s' val '%s'", $1, $3);
 			slcfg_store_tok_val($1, $3);
 			PSCFREE($1);
 			PSCFREE($3);
@@ -446,36 +445,47 @@ lnettcp_stmt	: NAME EQ LNETTCP END {
 %%
 
 void
-slcfg_addif(char *ifname, char *netname)
+slcfg_resm_addnid(char *addr, const char *lnet)
 {
+	static int nidcnt;
 	char nidstr[PSCRPC_NIDSTR_SIZE];
 	struct sl_resm *resm;
 	int rc;
 
-	if (strchr(ifname, '-')) {
-		yyerror("invalid interface name: %s", ifname);
+	if (strcmp(lnet, "") == 0)
+		yyerror("no Lustre network specified");
+
+	rc = snprintf(nidstr, sizeof(nidstr), "%s@%s", addr, lnet);
+	if (rc >= (int)sizeof(nidstr)) {
+		errno = ENAMETOOLONG;
+		rc = -1;
+	}
+	if (rc == -1)
+		yyerror("resource member %s address %s: %s",
+		    currentRes->res_name, addr, slstrerror(errno));
+	PSCFREE(addr);
+
+	if (nidcnt == cfg_nid_counter) {
+		lnet_nid_t *nidp;
+
+		nidp = PSCALLOC(sizeof(*nidp));
+		*nidp = libcfs_str2nid(nidstr);
+		psc_dynarray_add(&currentResm->resm_nids, nidp);
 		return;
 	}
 
-	if (strcmp(netname, "") == 0)
-		yyerror("no LNET network specified");
-	rc = snprintf(nidstr, sizeof(nidstr), "%s@%s", ifname,
-	    netname);
-	if (rc == -1)
-		psc_fatal("snprintf");
-	if (rc >= (int)sizeof(nidstr))
-		psc_fatalx("interface name too long: %s", ifname);
-	PSCFREE(ifname);
-
-	resm = PSCALLOC(sizeof(*resm));
+	currentResm = resm = PSCALLOC(sizeof(*resm) + cfg_resm_pri_sz);
 	psc_hashent_init(&globalConfig.gconf_nid_hashtbl, resm);
+
 	rc = snprintf(resm->resm_addrbuf, sizeof(resm->resm_addrbuf),
 	    "%s:%s", currentRes->res_name, nidstr);
+	if (rc >= (int)sizeof(resm->resm_addrbuf)) {
+		errno = ENAMETOOLONG;
+		rc = -1;
+	}
 	if (rc == -1)
-		psc_fatal("resource member %s:%s", currentRes->res_name, nidstr);
-	if (rc >= (int)sizeof(resm->resm_addrbuf))
-		psc_fatalx("resource member %s:%s: address too long",
-		    currentRes->res_name, nidstr);
+		yyerror("resource member %s address %s: %s",
+		    currentRes->res_name, nidstr, slstrerror(errno));
 
 	resm->resm_nid = libcfs_str2nid(nidstr);
 	resm->resm_res = currentRes;
@@ -484,6 +494,8 @@ slcfg_addif(char *ifname, char *netname)
 	psc_hashtbl_add_item(&globalConfig.gconf_nid_hashtbl, resm);
 
 	psc_dynarray_add(&currentRes->res_members, resm);
+
+	nidcnt = cfg_nid_counter;
 }
 
 uint32_t
@@ -531,17 +543,17 @@ slcfg_store_tok_val(const char *tok, char *val)
 	if (e == NULL)
 		return;
 
-	psclog_dbg("sym entry %p, name %s, type %d",
+	psclog_debug("sym entry %p, name %s, type %d",
 	    e, e->c_name, e->c_type);
 
 	/*
-	 * Access the correct structure based on the
-	 *  type stored in the symtab entry. The offset
-	 *  of the symbol was obtained with offsetof().
+	 * Access the correct structure based on the type stored in the
+	 * symtab entry.  The offset of the symbol was obtained with
+	 * offsetof().
 	 */
 	switch (e->c_struct) {
 	case SL_STRUCT_VAR:
-		ptr = e->c_offset + (char *)currentConf;
+		ptr = e->c_offset + (char *)&globalConfig;
 		break;
 	case SL_STRUCT_SITE:
 		ptr = e->c_offset + (char *)currentSite;
@@ -575,7 +587,7 @@ slcfg_store_tok_val(const char *tok, char *val)
 			yyerror("invalid value");
 		if (e->c_max && *(uint64_t *)ptr > e->c_max)
 			yyerror("field %s value too large", e->c_name);
-		psclog_debug("SL_TYPE_HEXU64 tok '%s' set to '%"PRIx64"'",
+		psclog_debug("SL_TYPE_HEXU64 tok '%s' set to '%#"PRIx64"'",
 		    e->c_name, *(uint64_t *)ptr);
 		break;
 
@@ -624,7 +636,7 @@ slcfg_store_tok_val(const char *tok, char *val)
 		j = strlen(val);
 		if (j == 0)
 			yyerror("invalid value");
-		c = &val[j-1];
+		c = &val[j - 1];
 
 		switch (tolower(*c)) {
 		case 'b':
@@ -634,13 +646,13 @@ slcfg_store_tok_val(const char *tok, char *val)
 			i = 1024;
 			break;
 		case 'm':
-			i = 1024*1024;
+			i = 1024 * 1024;
 			break;
 		case 'g':
-			i = UINT64_C(1024)*1024*1024;
+			i = UINT64_C(1024) * 1024 * 1024;
 			break;
 		case 't':
-			i = UINT64_C(1024)*1024*1024*1024;
+			i = UINT64_C(1024) * 1024 * 1024 * 1024;
 			break;
 		default:
 			yyerror("sizeval '%s' has invalid postfix", val);
@@ -689,6 +701,7 @@ slcfg_parse(const char *config_file)
 	struct cfg_file *cf, *ncf;
 	struct sl_site *s;
 	int i, j;
+	char *p;
 
 	cfg_errors = 0;
 
@@ -723,14 +736,15 @@ slcfg_parse(const char *config_file)
 			psc_dynarray_sort(&r->res_members, qsort,
 			    slcfg_resm_cmp);
 
-			/* Resolve peer names. */
-			for (i = 0; i < r->res_npeers; i++) {
-				peer = libsl_str2res(r->res_peertmp[i]);
+			/* Resolve peer names */
+			DYNARRAY_FOREACH(p, i, &r->res_peers) {
+				peer = libsl_str2res(p);
 				if (!peer)
-					errx(1, "Peer resource %s not "
-					    "specified", r->res_peertmp[i]);
-				PSCFREE(r->res_peertmp[i]);
-				psc_dynarray_add(&r->res_peers, peer);
+					errx(1, "peer resource %s not "
+					    "specified", p);
+				PSCFREE(p);
+				psc_dynarray_setpos(&r->res_peers, i,
+				    peer);
 			}
 		}
 	}

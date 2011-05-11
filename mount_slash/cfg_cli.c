@@ -30,7 +30,7 @@ slcfg_init_res(struct sl_resource *res)
 {
 	struct resprof_cli_info *rpci;
 
-	rpci = res->res_pri = PSCALLOC(sizeof(*rpci));
+	rpci = res2rpci(res);
 	psc_dynarray_init(&rpci->rpci_pinned_bmaps);
 }
 
@@ -39,7 +39,7 @@ slcfg_init_resm(struct sl_resm *resm)
 {
 	struct resm_cli_info *rmci;
 
-	rmci = resm->resm_pri = PSCALLOC(sizeof(*rmci));
+	rmci = resm2rmci(resm);
 	psc_mutex_init(&rmci->rmci_mutex);
 	psc_multiwaitcond_init(&rmci->rmci_mwc, resm, PMWCF_WAKEALL,
 	    "csvc-%s", resm->resm_addrbuf);
@@ -49,3 +49,7 @@ void
 slcfg_init_site(__unusedx struct sl_site *site)
 {
 }
+
+int	 cfg_site_pri_sz;
+int	 cfg_res_pri_sz = sizeof(struct resprof_cli_info);
+int	 cfg_resm_pri_sz = sizeof(struct resm_cli_info);

@@ -144,8 +144,8 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-D datadir] [-f slashconf] [-p zfspoolcache] [-S socket]\n"
-	    "\tzfspoolname\n",
+	    "usage: %s [-D datadir] [-f slashconf] [-p zpoolcache] [-S socket]\n"
+	    "\t[zpoolname]\n",
 	    progname);
 	exit(1);
 }
@@ -153,8 +153,8 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
+	char *zpcachefn = NULL, *zpname;
 	const char *cfn, *sfn;
-	char *zfspoolcf = NULL;
 	int rc, c;
 
 	/* gcrypt must be initialized very early on */
@@ -183,7 +183,7 @@ main(int argc, char *argv[])
 			cfn = optarg;
 			break;
 		case 'p':
-			zfspoolcf = optarg;
+			zpcachefn = optarg;
 			break;
 		case 'S':
 			sfn = optarg;
@@ -199,13 +199,24 @@ main(int argc, char *argv[])
 		}
 	argc -= optind;
 	argv += optind;
-	if (argc != 1)
+	if (argc != 1 && argc != 0)
 		usage();
 
 	pscthr_init(SLMTHRT_CTL, 0, NULL, NULL,
 	    sizeof(struct psc_ctlthr), "slmctlthr");
 
 	slcfg_parse(cfn);
+
+	if (zpcachefn == NULL && globalConfig.gconf_zpcachefn[0])
+		zpcachefn = globalConfig.gconf_zpcachefn;
+	if (argc)
+		zpname = argv[0];
+	else if (globalConfig.gconf_zpname[0])
+		zpname = globalConfig.gconf_zpname;
+	else {
+		warn("no ZFS pool specified");
+		usage();
+	}
 
 	fidc_init(sizeof(struct fcmh_mds_info), FIDC_MDS_DEFSZ);
 	bmap_cache_init(sizeof(struct bmap_mds_info));
@@ -215,7 +226,7 @@ main(int argc, char *argv[])
 	 * are started and the given ZFS pool is imported.
 	 */
 	mdsio_init();
-	import_zpool(argv[0], zfspoolcf);
+	import_zpool(zpoolname, zpoolcachefn);
 
 	rc = mdsio_lookup(MDSIO_FID_ROOT, SL_RPATH_META_DIR,
 	    &mds_metadir_inum, &rootcreds, NULL);

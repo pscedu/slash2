@@ -99,7 +99,11 @@ struct site_mds_info {
 
 #define SMIF_DIRTYQ		  (1 << 0)		/* queue has changed */
 
-#define site2smi(site)		 ((struct site_mds_info *)(site)->site_pri)
+static __inline struct site_mds_info *
+site2smi(struct sl_site *site)
+{
+	return (site_get_pri(site));
+}
 
 /* per-MDS eventually consistent namespace stats */
 struct sl_mds_nsstats {
@@ -152,9 +156,9 @@ struct sl_mds_iosinfo {
 	uint64_t		  si_batchno;
 };
 
-/* IOS round-robin counter for assigning IONs.  Attaches at res_pri. */
+/* MDS-specific data for struct sl_resource */
 struct resprof_mds_info {
-	int			  rpmi_cnt;
+	int			  rpmi_cnt;		/* IOS round-robin assigner */
 	psc_spinlock_t		  rpmi_lock;
 
 	/* sl_mds_peerinfo for peer MDS or sl_mds_iosinfo for IOS */
@@ -164,7 +168,7 @@ struct resprof_mds_info {
 #define RPMI_LOCK(rpmi)		spinlock(&(rpmi)->rpmi_lock)
 #define RPMI_ULOCK(rpmi)	freelock(&(rpmi)->rpmi_lock)
 
-/* attaches at resm_pri via slcfg_init_resm() */
+/* MDS-specific data for struct sl_resm */
 struct resm_mds_info {
 	pthread_mutex_t		  rmmi_mutex;
 	struct psc_multiwaitcond  rmmi_mwcond;
@@ -179,8 +183,18 @@ struct resm_mds_info {
 #define RMMI_URLOCK(rmmi, lk)	psc_mutex_ureqlock(&(rmmi)->rmmi_mutex, (lk))
 #define RMMI_HASLOCK(rmmi)	psc_mutex_haslock(&(rmmi)->rmmi_mutex)
 
-#define resm2rmmi(resm)		((struct resm_mds_info *)(resm)->resm_pri)
-#define res2rpmi(res)		((struct resprof_mds_info *)(res)->res_pri)
+static __inline struct resm_mds_info *
+resm2rmmi(struct sl_resm *resm)
+{
+	return (resm_get_pri(resm));
+}
+
+static __inline struct resprof_mds_info *
+res2rpmi(struct sl_resource *res)
+{
+	return (resprof_get_pri(res));
+}
+
 #define resm2rpmi(resm)		res2rpmi((resm)->resm_res)
 
 struct slm_workrq {
@@ -228,7 +242,7 @@ slm_get_rpmi_idx(struct sl_resource *res)
 	struct resprof_mds_info *rpmi;
 	int locked, n;
 
-	rpmi = res->res_pri;
+	rpmi = res2rpmi(res);
 	locked = reqlock(&rpmi->rpmi_lock);
 	if (rpmi->rpmi_cnt >= psc_dynarray_len(&res->res_members))
 		rpmi->rpmi_cnt = 0;
