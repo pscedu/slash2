@@ -62,9 +62,9 @@ libsl_resm_lookup(int ismds)
 		if (resm == NULL)
 			continue;
 
-		if (ismds && res->res_type != SLREST_MDS)
+		if (ismds && resm->resm_type != SLREST_MDS)
 			continue;
-		if (!ismds && res->res_type == SLREST_MDS)
+		if (!ismds && resm->resm_type == SLREST_MDS)
 			continue;
 
 		if (res == NULL)
