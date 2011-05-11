@@ -46,6 +46,12 @@ struct pscrpc_export;
 #define SLM_RMC_REPSZ			588
 #define SLM_RMC_SVCNAME			"slmrmc"
 
+
+#define SLM_FORWARD_MKDIR		1
+#define SLM_FORWARD_RMDIR		2
+#define SLM_FORWARD_CREATE		3
+#define SLM_FORWARD_UNLINK		4
+
 /*
  * The number of update or reclaim records saved in the same log file.
  * Each log record is identified by its transaction ID (xid), which is

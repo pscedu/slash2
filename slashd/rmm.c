@@ -257,7 +257,7 @@ slm_rmm_forward_namespace(sl_siteid_t siteid, int op, char *name,
 		return EIO;
 	}
 
-	if (op == 1) {
+	if (op == SLM_FORWARD_MKDIR) {
 		strncpy(mq->name, name, SL_NAME_MAX);
 		mq->creds = *creds;
 		mq->fid = slm_get_next_slashid();
