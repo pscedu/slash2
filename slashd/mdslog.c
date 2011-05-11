@@ -1502,8 +1502,6 @@ mds_journal_init(int disable_propagation)
 
 	count = size / sizeof(struct reclaim_prog_entry);
 	for (i = 0; i < count; i++) {
-		if (reclaim_prog_buf[i].res_id == 0)
-			continue;
 		res = libsl_id2res(reclaim_prog_buf[i].res_id);
 		if (!RES_ISFS(res)) {
 			psclog_warn("Non-FS resource ID in reclaim file %d", res->res_id);
@@ -1578,8 +1576,6 @@ mds_journal_init(int disable_propagation)
 
 	count = size / sizeof(struct update_prog_entry);
 	for (i = 0; i < count; i++) {
-		if (update_prog_buf[i].res_id == 0)
-			continue;
 		res = libsl_id2res(update_prog_buf[i].res_id);
 		if (res->res_type != SLREST_MDS) {
 			psclog_warn("Non-MDS resource ID in update file %d", res->res_id);
