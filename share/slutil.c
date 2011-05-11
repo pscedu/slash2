@@ -61,7 +61,6 @@ fflags_2_rw(int fflags)
  *
  *	- sst_ptruncgen
  *	- sst_utimgen
- *	- sst_nxbmaps
  *	- sst_fg
  */
 void
