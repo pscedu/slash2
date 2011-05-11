@@ -320,7 +320,10 @@ nodeslist	: NODESTAG '=' nodes ';'
 		;
 
 nodes		: node			{ cfg_nid_counter++; }
-		| node ',' nodes	{ cfg_nid_counter++; }
+		| node nodesep nodes
+		;
+
+nodesep		: ','			{ cfg_nid_counter++; }
 		;
 
 node		: nodeaddr
