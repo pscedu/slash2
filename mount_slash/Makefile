@@ -5,6 +5,7 @@ include ${ROOTDIR}/Makefile.path
 
 PROG=		mount_slash
 MAN+=		mount_slash.8
+SRCS+=		bmap_cli.c
 SRCS+=		bmap_flush.c
 SRCS+=		bmpc.c
 SRCS+=		cfg_cli.c

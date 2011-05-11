@@ -20,6 +20,7 @@
 #ifndef _SLC_RPC_H_
 #define _SLC_RPC_H_
 
+#include "mount_slash.h"
 #include "slconn.h"
 
 struct pscfs_req;
