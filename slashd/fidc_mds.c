@@ -41,19 +41,14 @@ int
 mds_fcmh_increase_fsz(struct fidc_membh *fcmh, uint64_t siz)
 {
 	int locked, rc = 0;
-	sl_bmapno_t nb;
 
 	locked = FCMH_RLOCK(fcmh);
 	/* Block until other size updates have completed.
 	 */
 	fcmh_wait_locked(fcmh, fcmh->fcmh_flags & FCMH_SIZE_UPDATE);
+	// assert(flags & PTRUNC == 0)
 
 	if (siz > (uint64_t)fcmh_2_fsz(fcmh)) {
-		nb = siz / SLASH_BMAP_SIZE -
-		    fcmh_2_fsz(fcmh) / SLASH_BMAP_SIZE;
-		if (nb > fcmh->fcmh_sstb.sst_nxbmaps)
-			nb = fcmh->fcmh_sstb.sst_nxbmaps;
-		fcmh->fcmh_sstb.sst_nxbmaps -= nb;
 		fcmh_2_fsz(fcmh) = siz;
 		fcmh->fcmh_flags |= FCMH_SIZE_UPDATE;
 

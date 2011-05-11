@@ -1775,8 +1775,6 @@ slm_ptrunc_prepare(struct slm_workrq *wkrq)
 	FCMH_LOCK(fcmh);
 	to_set = PSCFS_SETATTRF_DATASIZE | SL_SETATTRF_PTRUNCGEN;
 	fcmh_2_ptruncgen(fcmh)++;
-	fcmh->fcmh_sstb.sst_nxbmaps += fcmh_2_fsz(fcmh) / SLASH_BMAP_SIZE -
-	    fmi->fmi_ptrunc_size / SLASH_BMAP_SIZE;
 	fcmh->fcmh_sstb.sst_size = fmi->fmi_ptrunc_size;
 
 	mds_reserve_slot();
@@ -1827,9 +1825,10 @@ slm_ptrunc_apply(struct slm_workrq *wkrq)
 	tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE;
 	tract[BREPLST_VALID] = BREPLST_GARBAGE;
 
-	for (; i < fcmh_2_nxbmaps(fcmh); i++) {
-		if (mds_bmap_load(fcmh, i, &b))
-			continue;
+	for (;; i++) {
+		if (bmap_getf(fcmh, i, SL_WRITE, BMAPGETF_LOAD |
+		    BMAPGETF_NOAUTOINST, &b))
+			break;
 
 		BHGEN_INCREMENT(b);
 		mds_repl_bmap_walkcb(b, tract, NULL, 0,

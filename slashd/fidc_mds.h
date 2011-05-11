@@ -47,11 +47,16 @@ struct fcmh_mds_info {
 #define fcmh_2_mdsio_fid(f)	fcmh_2_fmi(f)->fmi_mdsio_fid
 #define fcmh_2_nrepls(f)	fcmh_2_ino(f)->ino_nrepls
 #define fcmh_2_repl(f, i)	fcmh_2_ino(f)->ino_repls[i].bs_id
-#define fcmh_2_nxbmaps(f)	(f)->fcmh_sstb.sst_nxbmaps
+#define fcmh_2_metafsize(f)	(f)->fcmh_sstb.sst_blksize
 
 #define inoh_2_mdsio_data(ih)	fcmh_2_mdsio_data((ih)->inoh_fcmh)
 #define inoh_2_fsz(ih)		fcmh_2_fsz((ih)->inoh_fcmh)
 #define inoh_2_fid(ih)		fcmh_2_fid((ih)->inoh_fcmh)
+
+#define fcmh_nallbmaps(f)	howmany(fcmh_2_metafsize(f), BMAP_OD_SZ)
+#define fcmh_nvalidbmaps(f)	howmany(fcmh_2_fsz(f), SLASH_BMAP_SIZE)
+
+#define FCMH_HAS_GARBAGE(f)	(fcmh_nallbmaps(f) > fcmh_nvalidbmaps(f))
 
 #define slm_fcmh_get(fgp, fp)	fidc_lookup((fgp), FIDC_LOOKUP_CREATE, NULL, 0, (fp))
 #define slm_fcmh_peek(fgp, fp)	fidc_lookup((fgp), FIDC_LOOKUP_NONE, NULL, 0, (fp))

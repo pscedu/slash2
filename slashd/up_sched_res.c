@@ -483,6 +483,7 @@ slmupschedthr_main(struct psc_thread *thr)
 	struct sl_resm *src_resm;
 	struct bmapc_memb *bcm;
 	struct sl_site *site;
+	struct fidc_membh *f;
 	void *dummy;
 
 	smut = slmupschedthr(thr);
@@ -528,6 +529,8 @@ slmupschedthr_main(struct psc_thread *thr)
 				goto restart;
 			}
 
+			f = wk->uswi_fcmh;
+
 #if 0
 			rc = mds_inox_ensure_loaded(USWI_INOH(wk));
 			if (rc) {
@@ -558,31 +561,36 @@ slmupschedthr_main(struct psc_thread *thr)
 					continue;
 				off = SL_BITS_PER_REPLICA * iosidx;
 
-				FCMH_LOCK(wk->uswi_fcmh);
-				if (wk->uswi_fcmh->fcmh_flags & FCMH_IN_PTRUNC ||
-				    wk->uswi_fcmh->fcmh_sstb.sst_nxbmaps) {
+				FCMH_LOCK(f);
+				if (f->fcmh_flags & FCMH_IN_PTRUNC ||
+				    FCMH_HAS_GARBAGE(f)) {
 					has_work = 1;
 
-					bmap_i.ri_n = USWI_NBMAPS(wk);
+					/*
+					 * rig "random" index at
+					 * ptrunc'd bmap to schedule CRC
+					 * recalc.
+					 */
+					bmap_i.ri_n = fcmh_nvalidbmaps(f);
 					bmap_i.ri_iter = bmap_i.ri_n - 1;
-					bmap_i.ri_rnd_idx =
-					    fcmh_2_fsz(wk->uswi_fcmh) /
+					bmap_i.ri_rnd_idx = fcmh_2_fsz(f) /
 					    SLASH_BMAP_SIZE;
 					uswi_gen = wk->uswi_gen;
-					FCMH_ULOCK(wk->uswi_fcmh);
+					FCMH_ULOCK(f);
 					goto handle_bmap;
 				}
-				FCMH_ULOCK(wk->uswi_fcmh);
+				FCMH_ULOCK(f);
 
 				/*
 				 * Select random bmap then scan
 				 * sequentially to check for work.
 				 */
-				FOREACH_RND(&bmap_i, USWI_NBMAPS(wk)) {
+				FOREACH_RND(&bmap_i,
+				    fcmh_nvalidbmaps(f)) {
 					if (uswi_gen != wk->uswi_gen)
 						goto skiprepl;
  handle_bmap:
-					if (mds_bmap_load(wk->uswi_fcmh,
+					if (mds_bmap_load(f,
 					    bmap_i.ri_rnd_idx, &bcm))
 						continue;
 
@@ -664,8 +672,8 @@ slmupschedthr_main(struct psc_thread *thr)
 						RESET_RND_ITER(&bmap_i);
 						break;
 					case BREPLST_GARBAGE:
-						if (wk->uswi_fcmh->fcmh_flags & FCMH_IN_PTRUNC &&
-						    wk->uswi_fcmh->fcmh_sstb.sst_nxbmaps == 0)
+						if (f->fcmh_flags & FCMH_IN_PTRUNC &&
+						    !FCMH_HAS_GARBAGE(f))
 							break;
 
 						BMAPOD_MODIFY_DONE(bcm);

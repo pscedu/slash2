@@ -330,12 +330,13 @@ slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 	brepls_init(retifset, 1);
 	tract[BREPLST_INVALID] = 0;
 
-	for (i = MAX(nbmaps + fcmh->fcmh_sstb.sst_nxbmaps, bmapno);
+	for (i = fcmh_nallbmaps(fcmh), bmapno);
 	    i > 0; i--) {
 		load bmap
 		if ()
 			break;
-		nxbmaps--;
+		/* truncate metafile to remove garbage collected bmap */
+		mdsio_setattr(METASIZE)
 	}
 #endif
 	return (0);
