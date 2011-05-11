@@ -265,7 +265,11 @@ slm_rmm_forward_namespace(sl_siteid_t siteid, int op, char *name,
 	}
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	if (rc == 0)
+		rc = mp->rc;
 
+	pscrpc_req_finished(rq);
 	sl_csvc_decref(csvc);
+
 	return (rc);
 }
