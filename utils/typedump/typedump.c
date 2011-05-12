@@ -267,6 +267,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_getattr_req);
 	PRTYPE(struct srm_getbmap_full_rep);
 	PRTYPE(struct srm_getbmap_full_req);
+	PRTYPE(struct srm_getbmapminseq_rep);
 	PRTYPE(struct srm_getbmapminseq_req);
 	PRTYPE(struct srm_io_rep);
 	PRTYPE(struct srm_io_req);
@@ -604,6 +605,10 @@ main(int argc, char *argv[])
 	PRVAL(SLMTHRT_USKLNDPL);
 	PRVAL(SLMTHRT_WORKER);
 	PRVAL(SLMTHRT_ZFS_KSTAT);
+	PRVAL(SLM_FORWARD_CREATE);
+	PRVAL(SLM_FORWARD_MKDIR);
+	PRVAL(SLM_FORWARD_RMDIR);
+	PRVAL(SLM_FORWARD_UNLINK);
 	PRVAL(SLNCONNT);
 	PRVAL(SLREST_ARCHIVAL_FS);
 	PRVAL(SLREST_CLUSTER_NOSHARE_FS);
