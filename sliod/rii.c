@@ -131,10 +131,16 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w,
 	if (s->slvr_num == w->srw_len / SLASH_SLVR_SIZE)
 		slvrsiz = w->srw_len % SLASH_SLVR_SIZE;
 	if (rc == 0) {
+		SLVR_LOCK(s);
+		s->slvr_flags |= SLVR_CRCDIRTY;
+		SLVR_ULOCK(s);
 		rc = slvr_do_crc(s);
 		/* XXX check this return code */
 //		if (!rc)
+		if (1) {
+			s->slvr_flags |= SLVR_DATARDY;
 			rc = slvr_fsbytes_wio(s, slvrsiz, 0);
+		}
 	}
 	if (rc)
 		slvr_clear_inuse(s, 0, slvrsiz);
@@ -220,9 +226,13 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	psc_assert((SLASH_BMAP_SIZE % SLASH_SLVR_SIZE) == 0);
 	w->srw_slvr_refs[slvridx] = s =
 	    slvr_lookup(slvrno, bmap_2_biodi(w->srw_bcm), SL_WRITE);
+
 	slvr_slab_prep(s, SL_WRITE);
+
 	slvr_repl_prep(s, SLVR_REPLDST);
+
 	slvr_io_prep(s, 0, mq->len, SL_WRITE);
+
 	iov.iov_base = s->slvr_slab->slb_base;
 	iov.iov_len = mq->len;
 

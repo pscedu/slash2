@@ -51,7 +51,14 @@ sli_ric_handle_connect(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRIC_MAGIC || mq->version != SRIC_VERSION)
 		mp->rc = -EINVAL;
-	psc_assert(e->exp_private == NULL);
+
+	if (e->exp_private)
+		/* No additional state is maintained in the export
+		 *   so this is a not a fatal condition but should
+		 *   be noted.
+		 */
+		psc_warnx("duplicate connect msg detected");
+
 	sl_exp_getpri_cli(e);
 	return (0);
 }
@@ -73,6 +80,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	sl_bmapno_t bmapno, slvrno;
 	int rc = 0, nslvrs, i;
 	lnet_process_id_t *pp;
+	uint64_t seqno;
 
 	sblk = 0; /* gcc */
 
@@ -125,14 +133,14 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		return (mp->rc);
 	}
 
-#if 0
-	if (mq->sbd.sbd_seq < bim_getcurseq()) {
+	seqno = bim_getcurseq();
+	if (mq->sbd.sbd_seq < seqno) {
 		/* Reject old bmapdesc. */
-		psclog_warnx("seq %"PRId64" is too old", mq->sbd.sbd_seq);
+		psclog_warnx("seq %"PRId64" < bim_getcurseq(%"PRId64")", 
+		     mq->sbd.sbd_seq, seqno);
 		mp->rc = EINVAL;
 		return (mp->rc);
 	}
-#endif
 
 	/* Lookup inode and fetch bmap, don't forget to decref bmap
 	 *  on failure.
@@ -280,7 +288,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 	struct bmapc_memb *b;
 	struct slash_fidgen fg;
 	uint32_t i;
-	int rc;
+	int rc, sync;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -289,7 +297,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		goto out;
 	}
 
-	for (i = 0; i < mq->nbmaps; i++) {
+	for (i = 0, sync = 0; i < mq->nbmaps; i++, sync = 0) {
 		bid = &mq->bmaps[i];
 
 		fg.fg_fid = bid->fid;
@@ -297,6 +305,20 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 
 		rc = sli_fcmh_get(&fg, &f);
 		psc_assert(rc == 0);
+
+		/* Fsync here to guarantee that buffers are flushed to 
+		 *   disk before the MDS releases its odtable entry for 
+		 *   this bmap.
+		 */		
+		FCMH_LOCK(f);
+		if (!(f->fcmh_flags & FCMH_CTOR_DELAYED))
+			sync = 1;
+		FCMH_ULOCK(f);
+		if (sync)
+			rc = fsync(fcmh_2_fd(f));
+		if (rc)
+			DEBUG_FCMH(PLL_ERROR, f, "fsync failure rc=%d fd=%d errno=%d", 
+				   rc, fcmh_2_fd(f), errno);
 
 		rc = bmap_get(f, bid->bmapno, SL_WRITE, &b);
 		if (rc) {
@@ -345,8 +367,11 @@ sli_ric_handler(struct pscrpc_request *rq)
 		if (rq->rq_export->exp_private == NULL)
 			rc = SLERR_NOTCONN;
 		EXPORT_ULOCK(rq->rq_export);
-		if (rc)
+		if (rc) {
+			DEBUG_REQ(PLL_ERROR, rq,
+			  "client has not issued SRMT_CONNECT");
 			goto out;
+		}
 	}
 
 	switch (rq->rq_reqmsg->opc) {

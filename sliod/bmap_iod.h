@@ -71,7 +71,7 @@ struct bmap_iod_minseq {
 
 #define BIM_RETRIEVE_SEQ	1
 
-#define BIM_MINAGE		10	/* Seconds */
+#define BIM_MINAGE		5	/* Seconds */
 
 #define SLIOD_BMAP_RLS_WAIT_SECS 2 /* Number of seconds to wait for more
 				    *  bmap releases from the client
@@ -148,7 +148,7 @@ struct bmap_iod_info {
 
 uint64_t	bim_getcurseq(void);
 void		bim_init(void);
-void		bim_updateseq(uint64_t);
+int		bim_updateseq(uint64_t);
 
 void bcr_hold_2_ready(struct biod_infl_crcs *, struct biod_crcup_ref *);
 void bcr_hold_add(struct biod_infl_crcs *, struct biod_crcup_ref *);

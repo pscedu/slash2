@@ -373,18 +373,33 @@ slvr_repl_prep(struct slvr_ref *s, int src_or_dst)
 		   (src_or_dst == SLVR_REPLSRC));
 
 	SLVR_LOCK(s);
-	psc_assert(!(s->slvr_flags & SLVR_REPLDST) &&
-		   !(s->slvr_flags & SLVR_REPLSRC));
+
+	psc_assert(!(s->slvr_flags & (SLVR_REPLDST | SLVR_REPLSRC)));
 
 	if (src_or_dst == SLVR_REPLSRC)
 		psc_assert(s->slvr_pndgreads > 0);
-	else
+	else {
 		psc_assert(s->slvr_pndgwrts > 0);
+		/* The slvr is about to be overwritten by this replication
+		 *   request.   For sanity's sake, wait for pending io
+		 *   competion and set 'faulting' before proceeding.
+		 */
+		if (s->slvr_flags & SLVR_DATARDY) {
+			SLVR_WAIT(s, ((s->slvr_pndgwrts > 1) || 
+				      s->slvr_pndgreads));
+			s->slvr_flags &= ~SLVR_DATARDY;
+		}
+		s->slvr_flags |= SLVR_FAULTING;
+		DEBUG_SLVR(PLL_NOTIFY, s, "slvr dest ready");
+	}
 
 	s->slvr_flags |= src_or_dst;
 
 	DEBUG_SLVR(PLL_INFO, s, "replica_%s", (src_or_dst == SLVR_REPLSRC) ?
 		   "src" : "dst");
+
+	if ((src_or_dst == SLVR_REPLDST) && (s->slvr_flags & SLVR_DATARDY)) {
+	}
 
 	SLVR_ULOCK(s);
 }
@@ -475,14 +490,24 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw)
 	SLVR_LOCK(s);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	/*
-	 * Common courtesy requires us to wait for another threads' work
-	 *   FIRST. Otherwise, we could bail out prematurely when the
-	 *   data is ready without considering the range we want to write.
 	 *
 	 * Note we have taken our read or write references, so the sliver
 	 *   won't be freed from under us.
 	 */
-	if (s->slvr_flags & SLVR_FAULTING) {
+	if (s->slvr_flags & SLVR_REPLDST) {
+		/* The sliver is going to be used for replication.  Ensure
+		 *   proper setup has occurred.
+		 */
+		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
+		psc_assert(s->slvr_flags & SLVR_FAULTING);
+		psc_assert(s->slvr_pndgreads == 0 && s->slvr_pndgwrts == 1);
+
+	} else if (s->slvr_flags & SLVR_FAULTING) {
+		/* Common courtesy requires us to wait for another threads' 
+		 *   work FIRST. Otherwise, we could bail out prematurely 
+		 *   when the data is ready without considering the range 
+		 *   we want to write.		 
+		 */
 		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
 		SLVR_WAIT(s, !(s->slvr_flags & (SLVR_DATARDY|SLVR_DATAERR)));
 		psc_assert((s->slvr_flags & (SLVR_DATARDY|SLVR_DATAERR)));
@@ -500,7 +525,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw)
 	} else if (s->slvr_flags & SLVR_DATARDY) {
 		if (rw == SL_READ)
 			goto out;
-	} else {
+	} else if (!(s->slvr_flags & SLVR_REPLDST)) {
 		/* Importing data into the sliver is now our responsibility,
 		 *  other IO into this region will block until SLVR_FAULTING
 		 *  is released.

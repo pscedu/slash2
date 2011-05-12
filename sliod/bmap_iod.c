@@ -46,21 +46,26 @@ bim_init(void)
 	bimSeq.bim_minseq = 0;
 }
 
-void
+int
 bim_updateseq(uint64_t seq)
 {
+	int invalid = 0;
+
 	spinlock(&bimSeq.bim_lock);
+	
 	if (bimSeq.bim_minseq == BMAPSEQ_ANY ||
-	    (seq > bimSeq.bim_minseq && seq != BMAPSEQ_ANY)) {
+	    (seq >= bimSeq.bim_minseq && seq != BMAPSEQ_ANY)) {
 		bimSeq.bim_minseq = seq;
 		PFL_GETTIMESPEC(&bimSeq.bim_age);
 	} else
-		seq = BMAPSEQ_ANY;
+		invalid = 1;
+
 	freelock(&bimSeq.bim_lock);
 
-	if (seq == BMAPSEQ_ANY)
+	if (invalid)
 		psc_warnx("seq %"PRId64" is invalid (bim_minseq=%"PRId64")",
 			  seq, bimSeq.bim_minseq);
+	return (invalid);
 }
 
 uint64_t
@@ -68,7 +73,7 @@ bim_getcurseq(void)
 {
 	struct slashrpc_cservice *csvc;
 	struct timespec crtime;
-	uint64_t seq;
+	uint64_t seqno = BMAPSEQ_ANY;
 
  retry:
 	PFL_GETTIMESPEC(&crtime);
@@ -92,29 +97,37 @@ bim_getcurseq(void)
 
 		rc = sli_rmi_getimp(&csvc);
 		if (rc)
-			psc_fatalx("mds");
-		rc = SL_RSX_NEWREQ(csvc, SRMT_GETBMAPMINSEQ, rq, mq,
-		    mp);
+			goto out;
+		
+		rc = SL_RSX_NEWREQ(csvc, SRMT_GETBMAPMINSEQ, rq, mq, mp);
 		if (rc)
-			psc_fatalx("mds");
+			goto out;
+
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc)
-			psc_fatalx("mds");
+			goto out;
+
+		seqno = mp->seqno;
 
 		pscrpc_req_finished(rq);
 		sl_csvc_decref(csvc);
-
+		
+		rc = bim_updateseq(seqno);
+	out:
 		spinlock(&bimSeq.bim_lock);
 		bimSeq.bim_flags &= ~BIM_RETRIEVE_SEQ;
 		psc_waitq_wakeall(&bimSeq.bim_waitq);
-		if (rc)
+		if (rc) {
+			psc_warnx("failed to get bmap seqno");
+			freelock(&bimSeq.bim_lock);
 			goto retry;
-	}
+		}
+	}	       
 
-	seq = bimSeq.bim_minseq;
+	seqno = bimSeq.bim_minseq;
 	freelock(&bimSeq.bim_lock);
+	return (seqno);
 
-	return (seq);
 }
 
 void
