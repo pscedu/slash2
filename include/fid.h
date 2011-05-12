@@ -139,7 +139,7 @@ sl_sprinta_fid(slfid_t fid)
 {
 	char *buf;
 
-	pfl_tls_get(SL_TLSIDX_FIDBUF, SL_FIDBUF_LEN, &buf);
+	buf = pfl_tls_get(SL_TLSIDX_FIDBUF, SL_FIDBUF_LEN);
 	sl_sprintf_fid(fid, buf, SL_FIDBUF_LEN);
 	return (buf);
 }
@@ -149,7 +149,7 @@ sl_sprinta_fgen(slfgen_t fgen)
 {
 	char *buf;
 
-	pfl_tls_get(SL_TLSIDX_FIDBUF, SL_FIDBUF_LEN, &buf);
+	buf = pfl_tls_get(SL_TLSIDX_FIDBUF, SL_FIDBUF_LEN);
 	sl_sprintf_fgen(fgen, buf, SL_FIDBUF_LEN);
 	return (buf);
 }
@@ -160,7 +160,7 @@ sl_sprintfa_fg(struct slash_fidgen *fg)
 	char *buf;
 	int rc;
 
-	pfl_tls_get(SL_TLSIDX_FIDBUF, SL_FIDBUF_LEN, &buf);
+	buf = pfl_tls_get(SL_TLSIDX_FIDBUF, SL_FIDBUF_LEN);
 	rc = sl_sprintf_fid(fg->fg_fid, buf, SL_FIDBUF_LEN);
 	buf[rc] = ':';
 	rc = sl_sprintf_fgen(fg->fg_gen, buf + rc, SL_FIDBUF_LEN - rc);
