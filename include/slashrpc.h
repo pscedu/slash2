@@ -472,7 +472,12 @@ struct srm_bmap_release_rep {
 struct srm_getbmapminseq_req {			/* XXX use ping */
 } __packed;
 
-#define srm_getbmapminseq_rep	srm_generic_rep
+struct srm_getbmapminseq_rep {
+	int32_t                 rc;
+        int32_t                _pad;
+	uint64_t                seqno;
+} __packed;
+
 
 struct srm_bmap_ptrunc_req {
 	struct slash_fidgen	fg;
