@@ -482,7 +482,7 @@ cmd_replrq(int ac, char **av)
 
 	if (ac < 2)
 		errx(1, "%s: no file(s) specified", av[0]);
-	if (strcmp(av[0], "repl-add") == 0)
+	if (strncmp(av[0], "repl-add", strlen("repl-add")) == 0)
 		arg.opcode = MSCMT_ADDREPLRQ;
 	else
 		arg.opcode = MSCMT_DELREPLRQ;
@@ -507,12 +507,9 @@ cmd_replst(int ac, char **av)
 
 	if (ac < 2)
 		errx(1, "%s: no file(s) specified", av[0]);
-	if (strcmp(av[0], "repl-add") == 0)
-		arg.opcode = MSCMT_ADDREPLRQ;
-	else
-		arg.opcode = MSCMT_DELREPLRQ;
+	arg.opcode = MSCMT_GETREPLST;
 	for (i = 1; i < ac; i++)
-		walk(av[i], cmd_replrq_one, &arg);
+		walk(av[i], cmd_replst_one, &arg);
 }
 
 int
@@ -615,10 +612,11 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 		    current_mrs.mrs_iosv[iosidx],
 		    bact, bact + bold, rbuf);
 		psclist_for_each_entry(rsb, &current_mrs_bdata, rsb_lentry) {
-			off = SL_BITS_PER_REPLICA * iosidx + SL_NBITS_REPLST_BHDR;
+			off = SL_BITS_PER_REPLICA * iosidx +
+			    SL_NBITS_REPLST_BHDR;
 			for (nb = 0; nb < rsb->rsb_nbmaps; nb++, nbw++,
-			    off += SL_BITS_PER_REPLICA * current_mrs.mrs_nios +
-			    SL_NBITS_REPLST_BHDR) {
+			    off += SL_BITS_PER_REPLICA *
+			    current_mrs.mrs_nios + SL_NBITS_REPLST_BHDR) {
 				if (nbw > 76)
 					nbw = 0;
 				if (nbw == 0)
@@ -626,8 +624,8 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 
 				memset(&bhdr, 0, sizeof(bhdr));
 				pfl_bitstr_copy(&bhdr, 0, rsb->rsb_data, nb *
-				    (SL_NBITS_REPLST_BHDR + SL_BITS_PER_REPLICA * current_mrs.mrs_nios),
-				    SL_NBITS_REPLST_BHDR);
+				    (SL_NBITS_REPLST_BHDR + SL_BITS_PER_REPLICA *
+				     current_mrs.mrs_nios), SL_NBITS_REPLST_BHDR);
 				putchar((bhdr.srsb_replpol == BRP_PERSIST ?
 				    pmap : map)[SL_REPL_GET_BMAP_IOS_STAT(
 				    rsb->rsb_data, off)]);
