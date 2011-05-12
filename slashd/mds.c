@@ -694,7 +694,7 @@ mds_bmap_getbml(struct bmapc_memb *b, lnet_nid_t cli_nid,
 }
 
 /**
- * mds_bmap_ref_add - Add a read or write reference to the bmap's tree
+ * mds_bmap_bml_add - Add a read or write reference to the bmap's tree
  *	and refcnts.  This also calls into the directio_[check|set]
  *	calls depending on the number of read and/or write clients of
  *	this bmap.
