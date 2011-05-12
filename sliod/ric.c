@@ -138,7 +138,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		/* Reject old bmapdesc. */
 		psclog_warnx("seq %"PRId64" < bim_getcurseq(%"PRId64")", 
 		     mq->sbd.sbd_seq, seqno);
-		mp->rc = EINVAL;
+		mp->rc = EKEYEXPIRED;
 		return (mp->rc);
 	}
 
