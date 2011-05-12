@@ -945,6 +945,7 @@ void
 mds_update_cursor(void *buf, uint64_t txg, int flag)
 {
 	struct psc_journal_cursor *cursor = buf;
+	uint64_t hwm, lwm;
 	int rc;
 
 	if (flag == 1) {
@@ -984,11 +985,13 @@ mds_update_cursor(void *buf, uint64_t txg, int flag)
 	freelock(&mds_distill_lock);
 
 	cursor->pjc_fid = slm_get_curr_slashid();
-
-	rc = mds_bmap_getcurseq(&cursor->pjc_seqno_hwm, &cursor->pjc_seqno_lwm);
-	if (rc) {
+	
+	rc = mds_bmap_getcurseq(&hwm, &lwm);
+	if (rc)
 		psc_assert(rc == -EAGAIN);
-		cursor->pjc_seqno_lwm = cursor->pjc_seqno_hwm = BMAPSEQ_ANY;
+	else {
+		cursor->pjc_seqno_lwm = lwm;
+		cursor->pjc_seqno_hwm = hwm;
 	}
 }
 
