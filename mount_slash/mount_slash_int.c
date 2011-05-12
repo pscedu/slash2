@@ -868,6 +868,7 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	psc_assert(b);
 	psc_assert(op == SRMT_READ);
 
+	DEBUG_REQ(PLL_INFO, rq, "bmap=%p biorq=%p", b, r);
 	DEBUG_BMAP(PLL_INFO, b, "callback");
 	DEBUG_BIORQ(PLL_INFO, r, "callback bmap=%p", b);
 
@@ -966,6 +967,8 @@ msl_readahead_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	if (rc == 0)
 		rc = rq->rq_status;
 
+	DEBUG_REQ(PLL_INFO, rq, "bmap=%p bmpce=%p", b, bmpce);
+
 	BMPC_LOCK(bmpc);
 	DEBUG_BMPCE(PLL_INFO, bmpce, "ra cb rc=%d", rc);
 
@@ -1034,6 +1037,8 @@ msl_io_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	struct bmpc_ioreq *r;
 	int rc = 0, i;
 
+	DEBUG_REQ(PLL_INFO, rq, "cb");
+
 	if (rq->rq_status || (rc = authbuf_check(rq, PSCRPC_MSG_REPLY))) {
 		DYNARRAY_FOREACH(r, i, biorqs)
 			bmap_flush_inflight_unset(r);
@@ -1055,6 +1060,8 @@ msl_dio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
 	int rc, op = rq->rq_reqmsg->opc;
 	struct srm_io_req *mq;
+
+	DEBUG_REQ(PLL_INFO, rq, "cb");
 
 	psc_assert(op == SRMT_READ || op == SRMT_WRITE);
 
