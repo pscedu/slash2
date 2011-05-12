@@ -11,8 +11,6 @@ reminders:
 * Kernel build causes bmap flushq to grow considerably (in the thousands..)
 * Spend some time dealing with sliod crash / restart
 
-
-
 -----------------------------------------------------------------------
 * Investigate sliod direct I/O and / or flushing all buffers prior to
 releasing odtable entry on slashd.  At some point we need to guarantee
@@ -85,7 +83,7 @@ fence about this.
 
  - there should be a slictl/msctl cmd to see this info:
 
-	(o) msctl -s diskusage:file[,...]
+	(o) msctl -s repl-disk-usage:file[,...]
 
 pauln (11/10/2010)
 
@@ -105,24 +103,6 @@ pauln (04/25/2011)
 
 -----------------------------------------------------------------------
 TRUNCATE
-* More about truncate, unlink GC.
-
-Unlinked inodes which contain bmaps we should link the fid file into a GC
-directory.  From here we can scan the bmaps and issue GC requests to the
-appropriate IOS's.   If we implement a 2nd generation #, managed by slash2,
-we would use fmt fid_zfs-gen_slash2-gen in the C directory.
-
-* Thinking about truncate.. in the event of an O_TRUNC or truncate() syscall we
-should not invalidate replicas but rather queue truncate or reclamation requests
-for the affected storage backend systems and perform the appropriate truncate
-on the metafile.  Somehow the truncate queue must be persistent on the mds.
-Additionally, a sliver's worth of data may need to be checksummed.
-
-Other garbage collection requests must be handled in a similar fashion.  For
-instance an 'rm' operation must record the fid+gen pair and queue a garbage
-collection request.  For this the replica IOS's should be read from the inode
-and used to generate the requests.  This type of GC should be easy due to ZFS's
-use fo fid+gen pairs.
 
 Truncate is more of a problem because the fid+gen remains, thus making async IOS
 truncate operations problematic because new writes may come from the client before
@@ -138,12 +118,18 @@ this may break semantics for some apps which assume the same inode # to be used.
 * Truncate Implementation
   Non O_TRUNC but otherwise aligned trunc operations should be fairly simple to implement.
   Here two things are required:
-	 1. Zero out the bmap descriptors within the metafile.
-	 2. Record the reclaimable regions so the the IONs may also reclaim that space.
+	 1. Record the reclaimable regions as BREPL_GARBAGE so the the
+	    IONs may reclaim the space.
+	 2. When all IONs are known to be clear, zero out the bmap
+	    descriptors within the metafile: when an notification update
+	    from an ION is received, if all states are INVALID, ptrunc
+	    the metafile.
 
-  The question is, how do we deal with unaligned truncates?  We need some way to denote that
-  the bmap crc is no longer valid.  Actually such a construct is probably needed in other places
-  as well.  On truncate, the value of ino_lblk needs to be reset as does ino_lblk_sz.
+  The question is, how do we deal with unaligned truncates?  We need
+  some way to denote that the bmap crc for the affected sliver is no
+  longer valid.  Actually such a construct is probably needed in other
+  places as well.  On truncate, the value of ino_lblk needs to be reset
+  as does ino_lblk_sz.
 
 -----------------------------------------------------------------------
 1/26/11
@@ -248,13 +234,13 @@ in release but I don't see good performance for 'ls -al'.
 	slfctl -o file ...
 	slfctl -b *:file *:...
 
-----------------------------------------------------------------------
+------------------------------------------------------------------------
 
 - slimmns does more than create the immutable namespace, and should
   be more intuitively named for formatting MDS file systems, such as
   slmkfs, slfmtfs, or slnewfs
 - libsl_init() is getting an ENOMEM somewhere in slashd, maybe LNET
-----------------------------------------------------
+------------------------------------------------------------------------
 - removing the persistence policy on a bmap should mds_repl_delrq()
   for that bmap
 - merge set_bmapreplpol and friends into a single slfattr interface
@@ -263,12 +249,11 @@ in release but I don't see good performance for 'ls -al'.
 - add ctl knobs for changing preferred IOS
 - allow multiple preferred IOS servers
 
-- create a separate dir, .slrepls and keep the fids here.  maintain a
-  maximum number of entries at any time in memory from this dir
+- hold a maximum # entries in mem from .slmd/upsch at any given time?
 
 - add msctl -s bmpc
 
----------------------------------------------------------
+-------------------------------------------------------------------------
 
 sliod import
 - slictl import path
@@ -347,7 +332,7 @@ tree
 - rename slconfig.h to slcfg.h to disambiguate slco prefix
 
 API rename
-- rename FCMH_CREATE to POPULATE
+- rename FCMH_CREATE to POPULATE?
 - mdsio_fid_t -> mdsio_inum_t
 
 - upsch items are not getting removed on completion
@@ -467,6 +452,7 @@ lcache
 - mds: do not allow repl changes while IN_PTRUNC
 - mds: lock when checking fgen in bmap crcupdate
 - should replay crcupdate set ion to VALID ?
+- support multi addresses for resms
 
 - du
 - df
