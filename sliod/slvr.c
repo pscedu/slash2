@@ -695,12 +695,12 @@ slvr_wio_done(struct slvr_ref *s, uint32_t off, uint32_t len)
 		s->slvr_crc_loff = 0;
 
 	if (!(s->slvr_flags & SLVR_DATARDY))
-                DEBUG_SLVR(PLL_FATAL, s, "invalid state");
+		DEBUG_SLVR(PLL_FATAL, s, "invalid state");
 
-        DEBUG_SLVR(PLL_INFO, s, "%s", "datardy");
+	DEBUG_SLVR(PLL_INFO, s, "%s", "datardy");
 
-        if ((s->slvr_flags & SLVR_LRU) && s->slvr_pndgwrts > 1)
-                slvr_lru_requeue(s, 1);
+	if ((s->slvr_flags & SLVR_LRU) && s->slvr_pndgwrts > 1)
+		slvr_lru_requeue(s, 1);
 
 	/* If there are no more pending writes, schedule a CRC op.
 	 *   Increment slvr_compwrts to prevent a crc op from being skipped
@@ -888,10 +888,16 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 void
 slvr_cache_init(void)
 {
-	lc_reginit(&lruSlvrs,  struct slvr_ref, slvr_lentry, "lruSlvrs");
-	lc_reginit(&crcqSlvrs,  struct slvr_ref, slvr_lentry, "crcqSlvrs");
+	lc_reginit(&lruSlvrs, struct slvr_ref, slvr_lentry, "lruSlvrs");
+	lc_reginit(&crcqSlvrs, struct slvr_ref, slvr_lentry, "crcqSlvrs");
 
 	sl_buffer_cache_init();
 
 	slvr_worker_init();
+}
+
+void
+dump_sliver(struct slvr_ref *s)
+{
+	DEBUG_SLVR(PLL_MAX, s, "");
 }
