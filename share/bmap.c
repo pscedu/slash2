@@ -236,7 +236,7 @@ bmap_getf(struct fidc_membh *f, sl_bmapno_t n, enum rw rw, int flags,
 				b->bcm_flags |= BMAP_MDCHNG;
 				BMAP_ULOCK(b);
 
-				DEBUG_BMAP(PLL_NOTIFY, b,
+				DEBUG_BMAP(PLL_INFO, b,
 				   "about to mode change (rw=%d)", rw);
 
 				rc = bmap_ops.bmo_mode_chngf(b, rw, 0);
@@ -251,6 +251,7 @@ bmap_getf(struct fidc_membh *f, sl_bmapno_t n, enum rw rw, int flags,
 		}
 	}
  out:
+	DEBUG_BMAP(PLL_INFO, b, "grabbed");
 	BMAP_ULOCK(b);
 	if (rc)
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
