@@ -52,7 +52,7 @@ bim_updateseq(uint64_t seq)
 	int invalid = 0;
 
 	spinlock(&bimSeq.bim_lock);
-	
+
 	if (bimSeq.bim_minseq == BMAPSEQ_ANY ||
 	    (seq >= bimSeq.bim_minseq && seq != BMAPSEQ_ANY)) {
 		bimSeq.bim_minseq = seq;
@@ -71,7 +71,8 @@ bim_updateseq(uint64_t seq)
 uint64_t
 bim_getcurseq(void)
 {
-	struct slashrpc_cservice *csvc;
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
 	struct timespec crtime;
 	uint64_t seqno = BMAPSEQ_ANY;
 
@@ -89,7 +90,6 @@ bim_getcurseq(void)
 	    bimSeq.bim_minseq == BMAPSEQ_ANY) {
 		struct srm_getbmapminseq_req *mq;
 		struct srm_getbmapminseq_rep *mp;
-		struct pscrpc_request *rq;
 		int rc;
 
 		bimSeq.bim_flags |= BIM_RETRIEVE_SEQ;
@@ -98,7 +98,7 @@ bim_getcurseq(void)
 		rc = sli_rmi_getimp(&csvc);
 		if (rc)
 			goto out;
-		
+
 		rc = SL_RSX_NEWREQ(csvc, SRMT_GETBMAPMINSEQ, rq, mq, mp);
 		if (rc)
 			goto out;
@@ -109,11 +109,17 @@ bim_getcurseq(void)
 
 		seqno = mp->seqno;
 
-		pscrpc_req_finished(rq);
-		sl_csvc_decref(csvc);
-		
 		rc = bim_updateseq(seqno);
 	out:
+		if (rq) {
+			pscrpc_req_finished(rq);
+			rq = NULL;
+		}
+		if (csvc) {
+			sl_csvc_decref(csvc);
+			csvc = NULL;
+		}
+
 		spinlock(&bimSeq.bim_lock);
 		bimSeq.bim_flags &= ~BIM_RETRIEVE_SEQ;
 		psc_waitq_wakeall(&bimSeq.bim_waitq);
@@ -122,12 +128,12 @@ bim_getcurseq(void)
 			freelock(&bimSeq.bim_lock);
 			goto retry;
 		}
-	}	       
+	}
 
 	seqno = bimSeq.bim_minseq;
 	freelock(&bimSeq.bim_lock);
-	return (seqno);
 
+	return (seqno);
 }
 
 void
