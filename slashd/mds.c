@@ -1290,6 +1290,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
 	/* Ignore updates from old or invalid generation numbers.
 	 * XXX XXX fcmh is not locked here
 	 */
+	FCMH_LOCK(fcmh);
 	if (fcmh_2_gen(fcmh) != c->fg.fg_gen) {
 		int x = (fcmh_2_gen(fcmh) > c->fg.fg_gen) ? 1 : 0;
 
@@ -1298,8 +1299,10 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
 		   fcmh_2_gen(fcmh), x ? ">" : "<", c->fg.fg_gen);
 
 		rc = -(x ? SLERR_GEN_OLD : SLERR_GEN_INVALID);
+		FCMH_ULOCK(fcmh);
 		goto out;
 	}
+	FCMH_ULOCK(fcmh);
 
 	/* BMAP_OP #2
 	 * XXX are we sure after restart bmap will be loaded?
