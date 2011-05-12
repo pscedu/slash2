@@ -46,13 +46,13 @@
 #include "sljournal.h"
 #include "up_sched_res.h"
 
-struct odtable				*mdsBmapAssignTable;
-uint64_t				 mdsBmapSequenceNo;
+struct odtable	*mdsBmapAssignTable;
+uint64_t	 mdsBmapSequenceNo;
 
 int
 mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
 {
-	sl_bmapno_t lblk;
+	sl_bmapno_t nb;
 	int locked;
 	//int rc;
 
@@ -62,13 +62,15 @@ mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
 		return (rc);
 #endif
 
-	lblk = fcmh_2_nbmaps(f);
+	nb = fcmh_nvalidbmaps(f);
 
-	psclog_debug("fid="SLPRI_FG" lblk=%u fsz=%"PSCPRIdOFFT,
-	    SLPRI_FG_ARGS(&f->fcmh_fg), lblk, fcmh_2_fsz(f));
+	/* XXX just read the bmap and check for valid state */
+
+	psclog_debug("f+g="SLPRI_FG" nb=%u fsz=%"PSCPRIdOFFT,
+	    SLPRI_FG_ARGS(&f->fcmh_fg), nb, fcmh_2_fsz(f));
 
 	FCMH_URLOCK(f, locked);
-	return (n < lblk);
+	return (n < nb);
 }
 
 int
@@ -82,7 +84,7 @@ slm_bmap_calc_repltraffic(struct bmapc_memb *b)
 	BMAP_LOCK(b);
 	for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++) {
 		if (b->bcm_crcstates[i] & BMAP_SLVR_DATA) {
-			if (b->bcm_bmapno == fcmh_2_nbmaps(f) &&
+			if (b->bcm_bmapno == fcmh_nvalidbmaps(f) &&
 			    i == (int)((fcmh_2_fsz(f) % SLASH_BMAP_SIZE) /
 			    SLASH_SLVR_SIZE)) {
 				amt += fcmh_2_fsz(f) % SLASH_SLVR_SIZE;
@@ -1738,9 +1740,11 @@ slm_ptrunc_prepare(struct slm_workrq *wkrq)
 
 	i = fmi->fmi_ptrunc_size / SLASH_BMAP_SIZE;
 	FCMH_ULOCK(fcmh);
-	for (; i < fcmh_2_nbmaps(fcmh); i++) {
-		if (mds_bmap_load(fcmh, i, &b))
-			continue;
+	for (;; i++) {
+		if (bmap_getf(fcmh, i, SL_WRITE, BMAPGETF_LOAD |
+		    BMAPGETF_NOAUTOINST, &b))
+			break;
+
 		BMAP_LOCK(b);
 		BMAP_FOREACH_LEASE(b, bml) {
 			BMAP_ULOCK(b);

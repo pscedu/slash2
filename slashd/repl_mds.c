@@ -490,7 +490,8 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		brepls_init(ret_if_inact, 1);
 		ret_if_inact[BREPLST_VALID] = 0;
 
-		for (bmapno = 0; bmapno < USWI_NBMAPS(wk); bmapno++) {
+		for (bmapno = 0; bmapno <
+		    fcmh_nvalidbmaps(wk->uswi_fcmh); bmapno++) {
 			if (mds_bmap_load(wk->uswi_fcmh, bmapno, &bcm))
 				continue;
 
@@ -593,7 +594,8 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		retifset[BREPLST_REPL_SCHED] = 1;
 
 		rc = SLERR_REPLS_ALL_INACT;
-		for (bmapno = 0; bmapno < USWI_NBMAPS(wk); bmapno++) {
+		for (bmapno = 0; bmapno <
+		    fcmh_nvalidbmaps(wk->uswi_fcmh); bmapno++) {
 			if (mds_bmap_load(wk->uswi_fcmh, bmapno, &bcm))
 				continue;
 
@@ -773,7 +775,7 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 		brepls_init(tract, -1);
 		tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 
-		for (n = 0; n < USWI_NBMAPS(wk); n++) {
+		for (n = 0; n < fcmh_nvalidbmaps(wk->uswi_fcmh); n++) {
 			if (mds_bmap_load(wk->uswi_fcmh, n, &bcm))
 				continue;
 

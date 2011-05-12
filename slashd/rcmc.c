@@ -148,7 +148,7 @@ slmrcmthr_walk_brepls(struct slm_replst_workreq *rsw,
 	return (0);
 }
 
-/*
+/**
  * slm_rcm_issue_getreplst - Issue a GETREPLST reply to a CLI from MDS.
  */
 int
@@ -166,7 +166,6 @@ slm_rcm_issue_getreplst(struct slm_replst_workreq *rsw,
 	mq->id = rsw->rsw_cid;
 	if (wk) {
 		mq->fg = *USWI_FG(wk);
-		mq->nbmaps = USWI_NBMAPS(wk);
 		mq->nrepls = USWI_NREPLS(wk);
 		mq->newreplpol = USWI_INO(wk)->ino_replpol;
 		memcpy(mq->repls, USWI_INO(wk)->ino_repls,
@@ -195,9 +194,11 @@ slmrcmthr_walk_bmaps(struct slm_replst_workreq *rsw,
 
 	rc = slm_rcm_issue_getreplst(rsw, wk, 0);
 	if (fcmh_isreg(wk->uswi_fcmh)) {
-		for (n = 0; rc == 0 && n < USWI_NBMAPS(wk); n++) {
-			if (mds_bmap_load(wk->uswi_fcmh, n, &bcm))
-				continue;
+		for (n = 0; rc == 0; n++) {
+			if (bmap_getf(wk->uswi_fcmh, n, SL_WRITE,
+			    BMAPGETF_LOAD | BMAPGETF_NOAUTOINST, &bcm))
+				break;
+
 			BMAP_LOCK(bcm);
 			rc = slmrcmthr_walk_brepls(rsw, wk, bcm, n,
 			    &rq);
@@ -206,7 +207,6 @@ slmrcmthr_walk_bmaps(struct slm_replst_workreq *rsw,
 		if (rq)
 			slmrmcthr_replst_slave_waitrep(rsw->rsw_csvc,
 			    rq, wk);
-	} else {
 	}
 	slmrmcthr_replst_slave_eof(rsw, wk);
 	return (rc);

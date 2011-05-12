@@ -117,9 +117,10 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 	retifset[BREPLST_VALID] = 0;
 
 	/* Scan bmaps to see if the inode should disappear. */
-	for (n = 0; n < USWI_NBMAPS(wk); n++) {
-		if (mds_bmap_load(wk->uswi_fcmh, n, &bcm))
-			continue;
+	for (n = 0;; n++) {
+		if (bmap_getf(wk->uswi_fcmh, n, SL_WRITE,
+		    BMAPGETF_LOAD | BMAPGETF_NOAUTOINST, &bcm))
+			break;
 
 		rc = mds_repl_bmap_walk_all(bcm, NULL,
 		    retifset, REPL_WALKF_SCIRCUIT);
@@ -248,7 +249,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 		goto fail;
 	mq->nid = src_resm->resm_nid;
 	mq->len = SLASH_BMAP_SIZE;
-	if (bcm->bcm_bmapno == USWI_NBMAPS(wk) - 1)
+	if (bcm->bcm_bmapno == fcmh_nvalidbmaps(wk->uswi_fcmh) - 1)
 		mq->len = fcmh_2_fsz(wk->uswi_fcmh) % SLASH_BMAP_SIZE;
 	mq->fg = *USWI_FG(wk);
 	mq->bmapno = bcm->bcm_bmapno;
@@ -932,9 +933,10 @@ upsched_scandir(void)
 			 * If we crashed, revert all inflight SCHED'ed
 			 * bmaps so they get resent.
 			 */
-			for (j = 0; j < USWI_NBMAPS(wk); j++) {
-				if (mds_bmap_load(wk->uswi_fcmh, j, &bcm))
-					continue;
+			for (j = 0;; j++) {
+				if (bmap_getf(wk->uswi_fcmh, j, SL_WRITE,
+				    BMAPGETF_LOAD | BMAPGETF_NOAUTOINST, &bcm))
+					break;
 
 				mds_repl_bmap_walk(bcm, tract,
 				    NULL, 0, NULL, 0);
