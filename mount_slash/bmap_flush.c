@@ -1006,9 +1006,17 @@ msl_bmap_release(struct sl_resm *resm)
 	uint32_t i;
 	int rc;
 
+	rmci = resm2rmci(resm);
+
 	csvc = (resm == slc_rmc_resm) ?
 	    slc_getmcsvc(resm) : slc_geticsvc(resm);
 	if (csvc == NULL) {
+		/* Per bug 136.  If the csvc is not available then nuke
+		 *   any pending bmap releases.  For now, this op is 
+		 *   single threaded so resetting nbmaps here should not
+		 *   be racy.
+		 */
+		rmci->rmci_bmaprls.nbmaps = 0;
 		if (resm->resm_csvc)
 			rc = resm->resm_csvc->csvc_lasterrno; /* XXX race */
 		else
@@ -1016,7 +1024,6 @@ msl_bmap_release(struct sl_resm *resm)
 		goto out;
 	}
 
-	rmci = resm2rmci(resm);
 	psc_assert(rmci->rmci_bmaprls.nbmaps);
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq, mq, mp);
@@ -1262,7 +1269,7 @@ void
 msbmapflushthrrpc_main(__unusedx struct psc_thread *thr)
 {
 	while (pscthr_run()) {
-		pscrpc_completion_wait(&rpcComp);
+		pscrpc_completion_waitrel_s(&rpcComp, 1);
 		bmap_flush_reap_rpcs();
 		/* At the moment, RA requests share the same
 		 *    completion as bmap reaps.  Therefore,
