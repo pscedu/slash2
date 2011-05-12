@@ -132,7 +132,8 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w,
 		slvrsiz = w->srw_len % SLASH_SLVR_SIZE;
 	if (rc == 0) {
 		SLVR_LOCK(s);
-		s->slvr_flags |= SLVR_CRCDIRTY;
+		s->slvr_crc_loff = s->slvr_crc_soff = 0;
+		s->slvr_crc_eoff = slvrsiz;
 		SLVR_ULOCK(s);
 		rc = slvr_do_crc(s);
 		/* XXX check this return code */
