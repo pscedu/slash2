@@ -401,9 +401,6 @@ slvr_repl_prep(struct slvr_ref *s, int src_or_dst)
 	DEBUG_SLVR(PLL_INFO, s, "replica_%s", (src_or_dst == SLVR_REPLSRC) ?
 		   "src" : "dst");
 
-	if ((src_or_dst == SLVR_REPLDST) && (s->slvr_flags & SLVR_DATARDY)) {
-	}
-
 	SLVR_ULOCK(s);
 }
 
@@ -493,19 +490,10 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw)
 	SLVR_LOCK(s);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	/*
-	 *
 	 * Note we have taken our read or write references, so the sliver
 	 *   won't be freed from under us.
 	 */
-	if (s->slvr_flags & SLVR_REPLDST) {
-		/* The sliver is going to be used for replication.  Ensure
-		 *   proper setup has occurred.
-		 */
-		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
-		psc_assert(s->slvr_flags & SLVR_FAULTING);
-		psc_assert(s->slvr_pndgreads == 0 && s->slvr_pndgwrts == 1);
-
-	} else if (s->slvr_flags & SLVR_FAULTING) {
+	if (s->slvr_flags & SLVR_FAULTING && !(s->slvr_flags & SLVR_REPLDST)) {
 		/* Common courtesy requires us to wait for another threads' 
 		 *   work FIRST. Otherwise, we could bail out prematurely 
 		 *   when the data is ready without considering the range 
@@ -528,6 +516,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw)
 	} else if (s->slvr_flags & SLVR_DATARDY) {
 		if (rw == SL_READ)
 			goto out;
+
 	} else if (!(s->slvr_flags & SLVR_REPLDST)) {
 		/* Importing data into the sliver is now our responsibility,
 		 *  other IO into this region will block until SLVR_FAULTING
@@ -538,6 +527,23 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw)
 			psc_vbitmap_setall(s->slvr_slab->slb_inuse);
 			goto do_read;
 		}
+
+	} else if (s->slvr_flags & SLVR_REPLDST) {
+		/* The sliver is going to be used for replication.  Ensure
+		 *   proper setup has occurred.
+		 */
+		psc_assert(!off);
+		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
+		psc_assert(s->slvr_flags & SLVR_FAULTING);
+		psc_assert(s->slvr_pndgreads == 0 && s->slvr_pndgwrts == 1);
+
+		blks = len / SLASH_SLVR_BLKSZ + 
+			(len & SLASH_SLVR_BLKMASK) ? 1 : 0;
+
+		psc_vbitmap_setrange(s->slvr_slab->slb_inuse, 0, blks);
+		SLVR_ULOCK(s);
+		
+		return (0);
 	}
 
 	psc_assert(rw != SL_READ);
