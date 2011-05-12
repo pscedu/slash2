@@ -12,10 +12,23 @@ reminders:
 * Spend some time dealing with sliod crash / restart
 
 -----------------------------------------------------------------------
+* Pending I/O Issues:
+	. Sliod threads may be get tied up servicing requests from a 
+	failed client or client connection.  If the socket doesn't immediately
+	fail, the rpc's need to time out.  This can cause requests from other
+	clients to accumulate on the sliod, these requests could time out also.
+	Worse yet, the leases for the blocked clients may expire causing 
+	more problems.  Unfortunately, all of this is exacerbated by the 
+	lack of flow control and aggressive read ahead.	
+
+	. client bmap lease timing needs to begin prior to issuing the rpc.
+		DONE
+
 * Investigate sliod direct I/O and / or flushing all buffers prior to
 releasing odtable entry on slashd.  At some point we need to guarantee
 that data has been committed to the backing fs prior to giving up the
 write lease.
+		DONE
 
 * Read-ahead work is needed.. Better detection for large I/O's and fast
 connections vs. small file and latency sensitive workloads.  The current
@@ -37,6 +50,7 @@ pauln (04/29/11)
 pauln (04/22/11)
 
 -----------------------------------------------------------------------
+
 
 * bmap flush needs to be reworked so that several threads can be
 	assigned to flushing bmaps.  The current model is relatively
