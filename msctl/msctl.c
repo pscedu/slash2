@@ -563,7 +563,7 @@ fnstat_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	/* XXX add #repls, #bmaps */
 	printf("%4s %54s %6s %6s %6s\n",
-	    "file", "bmap-replication-status:", "#activ", "#blks", "%prog");
+	    "file", "bmap-replication-status:", "#valid", "#bmap", "%prog");
 }
 
 void
@@ -577,21 +577,21 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	int n, nbw, off, dlen;
 	uint32_t iosidx;
 
+	map[BREPLST_INVALID] = '-';
 	map[BREPLST_REPL_SCHED] = 's';
 	map[BREPLST_REPL_QUEUED] = 'q';
 	map[BREPLST_VALID] = '+';
-	map[BREPLST_INVALID] = '-';
 	map[BREPLST_TRUNCPNDG] = 't';
 	map[BREPLST_TRUNCPNDG_SCHED] = 'p';
 	map[BREPLST_GARBAGE] = 'g';
 	map[BREPLST_GARBAGE_SCHED] = 'x';
 
+	pmap[BREPLST_INVALID] = '/';
 	pmap[BREPLST_REPL_SCHED] = 'S';
 	pmap[BREPLST_REPL_QUEUED] = 'Q';
 	pmap[BREPLST_VALID] = '*';
-	pmap[BREPLST_INVALID] = '/';
 	pmap[BREPLST_TRUNCPNDG] = 'T';
-	pmap[BREPLST_TRUNCPNDG] = 'P';
+	pmap[BREPLST_TRUNCPNDG_SCHED] = 'P';
 	pmap[BREPLST_GARBAGE] = 'G';
 	pmap[BREPLST_GARBAGE_SCHED] = 'X';
 
@@ -735,8 +735,8 @@ struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {
 	{ "lcache-status",		cmd_lcache },
 	{ "new-bmap-repl-policy:",	cmd_new_bmap_repl_policy },
 //	{ "reconfig",			cmd_reconfig },
-	{ "repl-add",			cmd_replrq },
-	{ "repl-remove",		cmd_replrq },
+	{ "repl-add:",			cmd_replrq },
+	{ "repl-remove:",		cmd_replrq },
 	{ "repl-status",		cmd_replst }
 };
 
