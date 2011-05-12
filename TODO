@@ -461,7 +461,6 @@ lcache
   - zpool delete snapshot
 - make sure replrq over garbage does the right thing in sliod backfs (zeroing)
 - mds: do not allow repl changes while IN_PTRUNC
-- mds: lock when checking fgen in bmap crcupdate
 - should replay crcupdate set ion to VALID ?
 - support multi addresses for resms
 
