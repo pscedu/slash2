@@ -33,7 +33,6 @@ struct msctlmsg_replst {
 	struct slash_fidgen	mrs_fg;		/* used intermittenly */
 	char			mrs_iosv[SITE_NAME_MAX][SL_MAX_REPLICAS];
 	uint32_t		mrs_nios;
-	uint32_t		mrs_nbmaps;	/* accounting for # of slaves */
 	uint32_t		mrs_newreplpol;	/* default replication policy */
 };
 
@@ -41,8 +40,11 @@ struct msctlmsg_replst_slave {
 	slfid_t			mrsl_fid;
 	uint32_t		mrsl_boff;	/* bmap starting offset */
 	uint32_t		mrsl_nbmaps;	/* # of bmaps in this chunk */
+	uint32_t		mrsl_flags;	/* see MRSLF_* flags below */
 	char			mrsl_data[0];	/* bcs_repls data */
 };
+
+#define MRSLF_EOF		1
 
 /* for issuing/controlling replication requests */
 struct msctlmsg_replrq {

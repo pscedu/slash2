@@ -29,7 +29,6 @@
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 #include "pfl/str.h"
-#include "psc_ds/vbitmap.h"
 #include "psc_util/bitflag.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlcli.h"
@@ -49,10 +48,9 @@
 int				 verbose;
 
 struct msctlmsg_replst		 current_mrs;
-struct psc_vbitmap		 current_mrs_bmask;
+int				 current_mrs_eof;
 struct psclist_head		 current_mrs_bdata =
 				    PSCLIST_HEAD_INIT(current_mrs_bdata);
-const struct msctlmsg_replst	 zero_mrs;
 
 struct replst_slave_bdata {
 	struct psclist_head	 rsb_lentry;
@@ -113,10 +111,12 @@ fn2fid(const char *fn)
 		err(1, "statvfs %s", fn);
 
 	if (sfb.f_fsid != SLASH_FSID)
-		errx(1, "%s: file is not in a SLASH file system %lx", fn, sfb.f_fsid);
+		errx(1, "%s: file is not in a SLASH file system %lx",
+		    fn, sfb.f_fsid);
 
 	fid = stb.st_ino;
 	ffp = psc_hashtbl_search(&fnfidpairs, NULL, NULL, &fid);
+
 	if (ffp)
 		return (ffp->ffp_fid);
 
@@ -521,10 +521,9 @@ replst_slave_check(struct psc_ctlmsghdr *mh, const void *m)
 	const struct msctlmsg_replst_slave *mrsl = m;
 	__unusedx struct srsm_replst_bhdr *srsb;
 	struct replst_slave_bdata *rsb;
-	uint32_t nb, nbytes, len;
-	int rc;
+	uint32_t nbytes, len;
 
-	if (memcmp(&current_mrs, &zero_mrs, sizeof(current_mrs)) == 0)
+	if (pfl_memchk(&current_mrs, 0, sizeof(current_mrs)))
 		errx(1, "received unexpected replication status slave message");
 
 	if (mh->mh_size < sizeof(*mrsl))
@@ -536,24 +535,21 @@ replst_slave_check(struct psc_ctlmsghdr *mh, const void *m)
 	len = mh->mh_size - sizeof(*mrsl);
 	if (len > SRM_REPLST_PAGESIZ || len != nbytes)
 		return (sizeof(*mrsl));
-	nb = mrsl->mrsl_nbmaps + psc_vbitmap_nset(&current_mrs_bmask);
-	if (nb > current_mrs.mrs_nbmaps)
-		errx(1, "invalid value in replication status slave message");
 
-	rc = psc_vbitmap_setrange(&current_mrs_bmask, mrsl->mrsl_boff,
-	    mrsl->mrsl_nbmaps);
-	if (rc)
-		psc_fatalx("replication status bmap data: %s", slstrerror(rc));
+	if (mrsl->mrsl_flags & MRSLF_EOF)
+		current_mrs_eof = 1;
+	if (mrsl->mrsl_nbmaps) {
+		rsb = PSCALLOC(sizeof(*rsb) + nbytes);
+		INIT_PSC_LISTENTRY(&rsb->rsb_lentry);
+		rsb->rsb_nbmaps = mrsl->mrsl_nbmaps;
+		rsb->rsb_boff = mrsl->mrsl_boff;
+		memcpy(rsb->rsb_data, mrsl->mrsl_data, nbytes);
+		psclist_add_sorted(&current_mrs_bdata,
+		    &rsb->rsb_lentry, rsb_cmp,
+		    offsetof(struct replst_slave_bdata, rsb_lentry));
+	}
 
-	rsb = PSCALLOC(sizeof(*rsb) + nbytes);
-	INIT_PSC_LISTENTRY(&rsb->rsb_lentry);
-	rsb->rsb_nbmaps = mrsl->mrsl_nbmaps;
-	rsb->rsb_boff = mrsl->mrsl_boff;
-	memcpy(rsb->rsb_data, mrsl->mrsl_data, nbytes);
-	psclist_add_sorted(&current_mrs_bdata, &rsb->rsb_lentry, rsb_cmp,
-	    offsetof(struct replst_slave_bdata, rsb_lentry));
-
-	if (nb != current_mrs.mrs_nbmaps || !rsb_isfull())
+	if (!current_mrs_eof || !rsb_isfull())
 		return (-1);
 	return (0);
 }
@@ -645,19 +641,19 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 		psclist_del(&rsb->rsb_lentry, &current_mrs_bdata);
 		PSCFREE(rsb);
 	}
-	memcpy(&current_mrs, &zero_mrs, sizeof(current_mrs));
+	memset(&current_mrs, 0, sizeof(current_mrs));
+	current_mrs_eof = 0;
 }
 
 int
 replst_savdat(__unusedx struct psc_ctlmsghdr *mh, const void *m)
 {
 	const struct msctlmsg_replst *mrs = m;
-	int blen;
 
 	if (mh->mh_size != sizeof(*mrs))
 		return (sizeof(*mrs));
 
-	if (memcmp(&current_mrs, &zero_mrs, sizeof(current_mrs)))
+	if (!pfl_memchk(&current_mrs, 0, sizeof(current_mrs)))
 		psc_fatalx("communication error: replication status not completed");
 
 	if (mrs->mrs_nios > SL_MAX_REPLICAS)
@@ -665,18 +661,6 @@ replst_savdat(__unusedx struct psc_ctlmsghdr *mh, const void *m)
 		    "replicas out of range (%u)", mrs->mrs_nios);
 
 	memcpy(&current_mrs, mrs, sizeof(current_mrs));
-	psc_vbitmap_resize(&current_mrs_bmask, current_mrs.mrs_nbmaps);
-	psc_vbitmap_clearall(&current_mrs_bmask);
-
-	blen = current_mrs.mrs_nbmaps * howmany(SL_BITS_PER_REPLICA *
-	    current_mrs.mrs_nios, NBBY);
-	if (current_mrs.mrs_nbmaps == 0) {
-		fnstat_prhdr(NULL, NULL);
-		for (blen = 0; blen < PSC_CTL_DISPLAY_WIDTH; blen++)
-			putchar('=');
-		putchar('\n');
-		fnstat_prdat(NULL, NULL);
-	}
 	return (-1);
 }
 
@@ -803,11 +787,8 @@ main(int argc, char *argv[])
 	    ffp_hentry, 1024, NULL, "fnfidpairs");
 	psc_ctlcli_main(SL_PATH_MSCTLSOCK, argc, argv, opts,
 	    nitems(opts));
-	if (memcmp(&current_mrs, &zero_mrs, sizeof(current_mrs)))
+	if (!pfl_memchk(&current_mrs, 0, sizeof(current_mrs)))
 		errx(1, "communication error: replication status "
-		    "not completed (%zd/%zd)",
-		    psc_vbitmap_getsize(&current_mrs_bmask) -
-		    psc_vbitmap_nfree(&current_mrs_bmask),
-		    psc_vbitmap_getsize(&current_mrs_bmask));
+		    "not completed");
 	exit(0);
 }

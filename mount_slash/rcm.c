@@ -80,8 +80,8 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 	struct srm_replst_master_rep *mp;
 	struct msctlmsg_replst mrs;
 	struct msctl_replstq *mrsq;
-	struct sl_resource *res;
 	struct psc_ctlmsghdr mh;
+	struct sl_resource *res;
 	int rc, n;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -104,15 +104,16 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 		mrsq_release(mrsq, rc);
 		return (0);
 	}
-	mrs.mrs_nbmaps = mq->nbmaps;
 	mrs.mrs_newreplpol = mq->newreplpol;
 	mrs.mrs_nios = mq->nrepls;
 	for (n = 0; n < (int)mq->nrepls; n++) {
 		res = libsl_id2res(mq->repls[n].bs_id);
 		if (res)
-			strlcpy(mrs.mrs_iosv[n], res->res_name, RES_NAME_MAX);
+			strlcpy(mrs.mrs_iosv[n], res->res_name,
+			    RES_NAME_MAX);
 		else
-			strlcpy(mrs.mrs_iosv[n], "<unknown IOS>", RES_NAME_MAX);
+			strlcpy(mrs.mrs_iosv[n], "<unknown IOS>",
+			    RES_NAME_MAX);
 	}
 	rc = psc_ctlmsg_sendv(mrsq->mrsq_fd, &mh, &mrs);
 	mrsq_release(mrsq, rc);
@@ -144,19 +145,17 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 
 	mh = *mrsq->mrsq_mh;
 
-	if (mq->rc) {
+	if (mq->rc && mq->rc != EOF) {
 		rc = 1;
-		if (mq->rc != EOF)
-			rc = psc_ctlsenderr(mrsq->mrsq_fd, &mh, "%s",
-			    slstrerror(mq->rc));
+		rc = psc_ctlsenderr(mrsq->mrsq_fd, &mh, "%s",
+		    slstrerror(mq->rc));
 		spinlock(&mrsq->mrsq_lock);
-		if (mq->rc != EOF)
-			mrsq->mrsq_eof = 1;
+		mrsq->mrsq_eof = 1;
 		mrsq_release(mrsq, rc);
 		return (0);
 	}
 
-	if (mq->len < 1 || mq->len > SRM_REPLST_PAGESIZ) {
+	if (mq->len < 0 || mq->len > SRM_REPLST_PAGESIZ) {
 		mp->rc = EINVAL;
 
 		rc = psc_ctlsenderr(mrsq->mrsq_fd, &mh, "%s",
@@ -172,16 +171,24 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	mrsl->mrsl_fid = mrsq->mrsq_fid;
 	mrsl->mrsl_boff = mq->boff;
 	mrsl->mrsl_nbmaps = mq->nbmaps;
+	if (mq->rc == EOF)
+		mrsl->mrsl_flags |= MRSLF_EOF;
 
 	iov.iov_base = mrsl->mrsl_data;
 	iov.iov_len = mq->len;
 
-	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, SRCM_BULK_PORTAL,
-	    &iov, 1);
+	if (mq->len)
+		mp->rc = rsx_bulkserver(rq, BULK_GET_SINK,
+		    SRCM_BULK_PORTAL, &iov, 1);
 	if (mp->rc == 0) {
 		rc = psc_ctlmsg_send(mrsq->mrsq_fd,
 		    mrsq->mrsq_mh->mh_id, MSCMT_GETREPLST_SLAVE,
 		    mq->len + sizeof(*mrsl), mrsl);
+
+		if (mq->rc == EOF) {
+			spinlock(&mrsq->mrsq_lock);
+			mrsq->mrsq_eof = 1;
+		}
 	} else {
 		rc = psc_ctlsenderr(mrsq->mrsq_fd, &mh, "%s",
 		    slstrerror(mq->rc));
@@ -195,7 +202,8 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 }
 
 /**
- * msrcm_handle_releasebmap - Handle a RELEASEBMAP request for CLI from MDS.
+ * msrcm_handle_releasebmap - Handle a RELEASEBMAP request for CLI from
+ *	MDS.
  * @rq: request.
  */
 int

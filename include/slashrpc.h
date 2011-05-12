@@ -545,10 +545,8 @@ struct srm_replst_master_req {
 	sl_replica_t		repls[SL_MAX_REPLICAS];
 	 int32_t		id;		/* user-provided passback value */
 	 int32_t		rc;		/* or EOF */
-	uint32_t		nbmaps;		/* # of bmaps in file */
 	uint32_t		newreplpol;	/* default replication policy */
 	uint32_t		nrepls;		/* # of I/O systems in 'repls' */
-	 int32_t		_pad;
 	unsigned char		data[56];	/* slave data here if it fits */
 } __packed;
 

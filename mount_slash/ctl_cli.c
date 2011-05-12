@@ -247,6 +247,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	while (mrsq.mrsq_ctlrc && mrsq.mrsq_eof == 0) {
 		psc_waitq_wait(&mrsq.mrsq_waitq, &mrsq.mrsq_lock);
 		spinlock(&mrsq.mrsq_lock);
+		/* XXX: if MDS goes down, we're stuck */
 	}
 
 	freelock(&mrsq.mrsq_lock);
@@ -257,6 +258,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		psc_waitq_wait(&mrsq.mrsq_waitq, &mrsq.mrsq_lock);
 		PLL_LOCK(&msctl_replsts);
 		spinlock(&mrsq.mrsq_lock);
+		/* XXX: if MDS goes down, we're stuck */
 	}
 	rc = mrsq.mrsq_ctlrc;
 	pll_remove(&msctl_replsts, &mrsq);
