@@ -342,16 +342,16 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	struct fidc_membh *p = NULL, *c = NULL;
 	struct srm_mkdir_req *mq;
 	struct srm_mkdir_rep *mp;
-	uint32_t pol;
 	sl_siteid_t dirSiteid;
+	uint32_t pol;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	dirSiteid = FID_GET_SITEID(mq->pfg.fg_fid);
 	if (mq->pfg.fg_fid != SLFID_ROOT &&
 	    nodeResm->resm_res->res_site->site_id != dirSiteid) {
-		mp->rc = slm_rmm_forward_namespace(dirSiteid, SLM_FORWARD_MKDIR, 
-		    mq->name, mq->mode, &mq->creds);
+		mp->rc = slm_rmm_forward_namespace(dirSiteid,
+		    SLM_FORWARD_MKDIR, mq->name, mq->mode, &mq->creds);
 		goto out;
 	}
 
@@ -984,7 +984,6 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	struct slm_replst_workreq *rsw;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-
 	rsw = PSCALLOC(sizeof(*rsw));
 	INIT_PSC_LISTENTRY(&rsw->rsw_lentry);
 	rsw->rsw_fg = mq->fg;
