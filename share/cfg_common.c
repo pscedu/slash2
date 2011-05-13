@@ -82,14 +82,12 @@ libsl_resm_lookup(int ismds)
 struct sl_site *
 libsl_siteid2site(sl_siteid_t siteid)
 {
-	struct sl_site *s = NULL, *tmp;
+	struct sl_site *s;
 
 	PLL_LOCK(&globalConfig.gconf_sites);
-	PLL_FOREACH(tmp, &globalConfig.gconf_sites)
-		if (tmp->site_id == siteid) {
-			s = tmp;
+	PLL_FOREACH(s, &globalConfig.gconf_sites)
+		if (s->site_id == siteid)
 			break;
-		}
 	PLL_ULOCK(&globalConfig.gconf_sites);
 	return (s);
 }
