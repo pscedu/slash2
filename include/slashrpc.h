@@ -325,6 +325,7 @@ struct srt_update_entry {
 
 	uint64_t		size;		/* file size */
 	char			name[396];	/* one or two names */
+/* if len1 + len2 > sizeof(name), names are in bulk */
 } __packed;
 
 #define UPDATE_ENTRY_LEN(e)						\
@@ -333,11 +334,12 @@ struct srt_update_entry {
 /* namespace forward */
 struct srm_forward_req {
 	 int16_t		op;		/* create, mkdir, unlink, rmdir, etc. */
+	 int16_t		_pad;
 	uint32_t		mode;
 	struct slash_creds	creds;		/* st_uid owner for new dir/file */
 	struct slash_fidgen	pfg;		/* parent dir */
 	slfid_t			fid;		/* provided by the peer MDS */
-	char			name[SL_NAME_MAX+ 1];
+	char			name[SL_NAME_MAX + 1];
 } __packed;
 
 struct srm_forward_rep {
@@ -422,6 +424,7 @@ struct srm_bmap_crcwire {
 struct srm_bmap_crcup {
 	struct slash_fidgen	fg;
 	uint64_t		fsize;		/* largest known size applied in mds_bmap_crc_update() */
+	uint64_t		blkcnt;		/* st_blocks for us */
 	uint32_t		blkno;		/* bmap block number */
 	uint32_t		nups;		/* number of CRC updates */
 	uint32_t		utimgen;
@@ -651,6 +654,8 @@ struct srm_destroy_req {
 
 struct srm_getattr_req {
 	struct slash_fidgen	fg;
+	sl_ios_id_t		iosid;
+	 int32_t		_pad;
 } __packed;
 
 struct srm_getattr_rep {
