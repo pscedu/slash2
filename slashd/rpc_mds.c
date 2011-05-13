@@ -206,10 +206,8 @@ slrpc_allocrep(struct pscrpc_request *rq, void *mqp, int qlen,
 
 		rc = slrpc_allocrepn(rq, mqp, qlen, mpp, nitems(plens),
 		    plens, rcoff);
-		if (rq->rq_reply_portal == SRMI_REP_PORTAL) {
-			slm_rpc_ion_unpack_statfs(rq, PSCRPC_MSG_REQUEST);
-			slm_rpc_ion_pack_bmapminseq(rq->rq_repmsg);
-		}
+		slm_rpc_ion_unpack_statfs(rq, PSCRPC_MSG_REQUEST);
+		slm_rpc_ion_pack_bmapminseq(rq->rq_repmsg);
 		return (rc);
 	}
 	return (slrpc_allocgenrep(rq, mqp, qlen, mpp, plen, rcoff));
