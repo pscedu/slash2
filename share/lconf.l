@@ -68,79 +68,79 @@ nodes		{ return (NODESTAG); }
 
 yes|no {
 	psclog_trace("BOOL %s", yytext);
-	yylval = psc_strdup(yytext);
+	yylval = pfl_strdup(yytext);
 	return (BOOL);
 }
 
 parallel_fs|standalone_fs|archival_fs|mds|cluster_noshare_fs|compute {
 	psclog_trace("Resource type string %s", yytext);
-	yylval = psc_strdup(yytext);
+	yylval = pfl_strdup(yytext);
 	return (RESOURCE_TYPE);
 }
 
 {num} {
 	psclog_trace("NUM %s", yytext);
-	yylval = psc_strdup(yytext);
+	yylval = pfl_strdup(yytext);
 	return (NUM);
 }
 
 {hexnum} {
 	psclog_trace("HEXNUM %s", yytext);
-	yylval = psc_strdup(yytext);
+	yylval = pfl_strdup(yytext);
 	return (HEXNUM);
 }
 
 {lnetname} {
 	psclog_trace("LNETNAME string %s", yytext);
-	yylval = psc_strdup(yytext);
+	yylval = pfl_strdup(yytext);
 	return (LNETNAME);
 }
 
 {name} {
 	psclog_trace("NAME %s", yytext);
-	yylval = psc_strdup(yytext);
+	yylval = pfl_strdup(yytext);
 	return (NAME);
 }
 
 {pathname} {
 	psclog_trace("PATHNAME %s", yytext);
-	yylval = psc_strdup(yytext);
+	yylval = pfl_strdup(yytext);
 	return (PATHNAME);
 }
 
 {globpath} {
 	psclog_trace("GLOBPATH %s", yytext);
-	yylval = psc_strdup(yytext);
+	yylval = pfl_strdup(yytext);
 	return (GLOBPATH);
 }
 
 {floatv} {
 	psclog_trace("FLOATVAL %s", yytext);
-	yylval = psc_strdup(yytext);
+	yylval = pfl_strdup(yytext);
 	return (FLOATVAL);
 }
 
 {sizeval} {
 	psclog_trace("SIZEVAL %s", yytext);
-	yylval = psc_strdup(yytext);
+	yylval = pfl_strdup(yytext);
 	return (SIZEVAL);
 }
 
 {sitename} {
 	psclog_trace("SITE_NAME %s", yytext);
-	yylval = psc_strdup(yytext);
+	yylval = pfl_strdup(yytext);
 	return (SITE_NAME);
 }
 
 {resname} {
 	psclog_trace("RESOURCE_NAME %s", yytext);
-	yylval = psc_strdup(yytext);
+	yylval = pfl_strdup(yytext);
 	return (RESOURCE_NAME);
 }
 
 {ipquad} {
 	psclog_trace("IPADRRESS %s", yytext);
-	yylval = psc_strdup(yytext);
+	yylval = pfl_strdup(yytext);
 	return (IPADDR);
 }
 

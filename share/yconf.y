@@ -579,7 +579,7 @@ slcfg_store_tok_val(const char *tok, char *val)
 		break;
 
 	case SL_TYPE_STRP:
-		*(char **)ptr = psc_strdup(val);
+		*(char **)ptr = pfl_strdup(val);
 		psclog_debug("SL_TYPE_STRP tok '%s' set to '%s' %p",
 		    e->c_name, *(char **)ptr, ptr);
 		break;

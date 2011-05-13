@@ -86,7 +86,7 @@ main(int argc, char *argv[])
 	progname = argv[0];
 	pfl_init();
 
-	cp = psc_strdup(progname);
+	cp = pfl_strdup(progname);
 	snprintf(fn, sizeof(fn), "%s/example.slcfg", dirname(cp));
 	PSCFREE(cp);
 
