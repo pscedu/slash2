@@ -175,20 +175,12 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 int
 slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 {
-	char *name;
 	struct srm_forward_req *mq;
 	struct srm_forward_rep *mp;
-	struct iovec iov;
 	struct fidc_membh *p = NULL;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	iov.iov_len = mq->namelen;
-	iov.iov_base = PSCALLOC(mq->namelen);
-
-	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, SRMM_BULK_PORTAL, &iov, 1);
-	if (mp->rc)
-		goto out;
 
 	if (mq->op != SLM_FORWARD_MKDIR && mq->op != SLM_FORWARD_RMDIR && 
 	    mq->op != SLM_FORWARD_CREATE && mq->op != SLM_FORWARD_UNLINK) {
@@ -196,8 +188,7 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		goto out;
 	}
 	
-	name = (char *)iov.iov_base;
-	psclog_info("op=%d, fid="SLPRI_FID", name=%s", mq->op, mq->fid, name);
+	psclog_info("op=%d, fid="SLPRI_FID", name=%s", mq->op, mq->fid, mq->name);
 
 	mds_reserve_slot();
 	switch (mq->op) {
@@ -205,7 +196,7 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		mp->rc = slm_fcmh_get(&mq->pfg, &p);
 		if (mp->rc)
 			break;
-		mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(p), name, mq->mode,
+		mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(p), mq->name, mq->mode,
 		    &mq->creds, &mp->cattr, NULL, mds_namespace_log, NULL, mq->fid);
 		break;
 	    default:
@@ -215,7 +206,6 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 
  out:
 
-	PSCFREE(iov.iov_base);
 	return (mp->rc);
 }
 
@@ -261,13 +251,12 @@ slm_rmm_forward_namespace(sl_siteid_t siteid, int op, char *name,
 	struct sl_site *_site;
 	struct sl_resource *_res;
 	struct slashrpc_cservice *csvc;
-	struct iovec iov;
 
 	struct srm_forward_req *mq;
 	struct srm_forward_rep *mp;
 	struct pscrpc_request *rq;
 
-#if 1
+#if 0
 	if (forward_not_ready)
 		return ENOSYS;
 #endif
@@ -299,7 +288,7 @@ slm_rmm_forward_namespace(sl_siteid_t siteid, int op, char *name,
 
 	switch (op) {
 	    case SLM_FORWARD_MKDIR:
-		mq->namelen = strlen(name) + 1;
+		strlcpy(mq->name, name, sizeof(mq->name));
 		mq->creds = *creds;
 		mq->fid = slm_get_next_slashid();
 		mq->mode = mode;
@@ -307,11 +296,6 @@ slm_rmm_forward_namespace(sl_siteid_t siteid, int op, char *name,
 	    default:
 		break;
 	}
-
-	iov.iov_base = name;
-	iov.iov_len = strlen(name) + 1;
-	rsx_bulkclient(rq, BULK_GET_SOURCE, SRMM_BULK_PORTAL, &iov, 1);
-
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)

@@ -333,11 +333,11 @@ struct srt_update_entry {
 /* namespace forward */
 struct srm_forward_req {
 	 int16_t		op;		/* create, mkdir, unlink, rmdir, etc. */
-	 int16_t		namelen;
 	uint32_t		mode;
 	struct slash_creds	creds;		/* st_uid owner for new dir/file */
 	struct slash_fidgen	pfg;		/* parent dir */
 	slfid_t			fid;		/* provided by the peer MDS */
+	char			name[SL_NAME_MAX+ 1];
 } __packed;
 
 struct srm_forward_rep {
