@@ -29,6 +29,7 @@
 #include <sys/types.h>
 
 #include <inttypes.h>
+#include <limits.h>
 
 #include "pfl/str.h"
 #include "psc_util/lock.h"
