@@ -30,8 +30,8 @@ struct pscrpc_export;
 
 #define SLM_RMM_NTHREADS		8
 #define SLM_RMM_NBUFS			1024
-#define SLM_RMM_BUFSZ			256
-#define SLM_RMM_REPSZ			256
+#define SLM_RMM_BUFSZ			512
+#define SLM_RMM_REPSZ			512
 #define SLM_RMM_SVCNAME			"slmrmm"
 
 #define SLM_RMI_NTHREADS		8
@@ -84,8 +84,6 @@ int	slm_rmc_handler(struct pscrpc_request *);
 int	slm_rmi_handler(struct pscrpc_request *);
 int	slm_rmm_handler(struct pscrpc_request *);
 int	slm_rmm_forward_namespace(sl_siteid_t, int, char *, uint32_t, struct slash_creds *);
-
-void	slm_ion_pack_bmapminseq(struct pscrpc_msg *);
 
 /* aliases for connection management */
 #define slm_getmcsvcx(resm, exp)					\
