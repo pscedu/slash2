@@ -187,8 +187,14 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, SRMM_BULK_PORTAL, &iov, 1);
 	if (mp->rc)
 		goto out;
+
+	if (mq->op != SLM_FORWARD_MKDIR && mq->op != SLM_FORWARD_RMDIR && 
+	    mq->op != SLM_FORWARD_CREATE && mq->op != SLM_FORWARD_UNLINK) {
+		mp->rc = EINVAL;
+		goto out;
+	}
 	
-	psclog_info("op=%d, fid="SLPRI_FID", name=%s", mq->op, mq->fid, iov.iov_base);
+	psclog_info("op=%d, fid="SLPRI_FID", name=%s", mq->op, mq->fid, (char *)iov.iov_base);
 
  out:
 
