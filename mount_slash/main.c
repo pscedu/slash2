@@ -581,6 +581,7 @@ msl_stat(struct fidc_membh *fcmh, void *arg)
 		goto out;
 
 	mq->fg = fcmh->fcmh_fg;
+	mq->iosid = prefIOS;
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc))
@@ -623,9 +624,9 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 	mslfs_getcreds(pfr, &creds);
 	/*
 	 * Lookup and possibly create a new fidcache handle for inum.
-	 *  If the fid does not exist in the cache then a placeholder will
-	 *  be allocated.  msl_stat() will detect incomplete attrs via
-	 *  FCMH_GETTING_ATTRS flag and RPC for them.
+	 * If the fid does not exist in the cache then a placeholder
+	 * will be allocated.  msl_stat() will detect incomplete attrs
+	 * via FCMH_GETTING_ATTRS flag and RPC for them.
 	 */
 	rc = msl_load_fcmh(pfr, inum, &f);
 	if (rc)
