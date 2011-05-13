@@ -256,7 +256,7 @@ slm_rmm_forward_namespace(sl_siteid_t siteid, int op, char *name,
 	struct srm_forward_rep *mp;
 	struct pscrpc_request *rq;
 
-#if 0
+#if 1
 	if (forward_not_ready)
 		return ENOSYS;
 #endif
