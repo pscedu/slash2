@@ -19,7 +19,6 @@ SRCS+=		rpc_iod.c
 SRCS+=		sliod_int.c
 SRCS+=		slvr.c
 SRCS+=		slvr_worker.c
-SRCS+=		timer_iod.c
 SRCS+=		${SLASH_BASE}/share/adler32.c
 SRCS+=		${SLASH_BASE}/share/authbuf_mgt.c
 SRCS+=		${SLASH_BASE}/share/authbuf_sign.c
