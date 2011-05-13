@@ -352,7 +352,7 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	if (mq->pfg.fg_fid != SLFID_ROOT &&
 	    nodeResm->resm_res->res_site->site_id != dirSiteid) {
 		mp->rc = slm_rmm_forward_namespace(dirSiteid,
-		    SLM_FORWARD_MKDIR, mq->name, mq->mode, &mq->creds);
+		    SLM_FORWARD_MKDIR, &mq->pfg, mq->name, mq->mode, &mq->creds);
 		goto out;
 	}
 
@@ -430,6 +430,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	struct bmapc_memb *bmap;
 	void *mdsio_data;
 	uint32_t pol;
+	sl_siteid_t dirSiteid;
 
 	p = NULL;
 
@@ -438,6 +439,14 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 		mp->rc = EINVAL;
 		goto out;
 	}
+	dirSiteid = FID_GET_SITEID(mq->pfg.fg_fid);
+	if (mq->pfg.fg_fid != SLFID_ROOT &&
+	    nodeResm->resm_res->res_site->site_id != dirSiteid) {
+		mp->rc = slm_rmm_forward_namespace(dirSiteid,
+		    SLM_FORWARD_CREATE, &mq->pfg, mq->name, mq->mode, &mq->creds);
+		goto out;
+	}
+
 
 	/* Lookup the parent directory in the cache so that the
 	 *   slash2 ino can be translated into the inode for the

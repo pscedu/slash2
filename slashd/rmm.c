@@ -243,7 +243,8 @@ slm_rmm_handler(struct pscrpc_request *rq)
 }
 
 int
-slm_rmm_forward_namespace(sl_siteid_t siteid, int op, char *name, 
+slm_rmm_forward_namespace(sl_siteid_t siteid, int op, 
+	struct slash_fidgen *pfg, char *name, 
 	uint32_t mode, struct slash_creds *creds)
 {
 	int rc, _siter;
@@ -289,6 +290,7 @@ slm_rmm_forward_namespace(sl_siteid_t siteid, int op, char *name,
 	switch (op) {
 	    case SLM_FORWARD_MKDIR:
 		strlcpy(mq->name, name, sizeof(mq->name));
+		mq->pfg	= *pfg;
 		mq->creds = *creds;
 		mq->fid = slm_get_next_slashid();
 		mq->mode = mode;
