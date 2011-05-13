@@ -260,6 +260,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_create_rep);
 	PRTYPE(struct srm_create_req);
 	PRTYPE(struct srm_destroy_req);
+	PRTYPE(struct srm_forward_rep);
 	PRTYPE(struct srm_forward_req);
 	PRTYPE(struct srm_generic_rep);
 	PRTYPE(struct srm_getattr2_rep);
@@ -585,6 +586,7 @@ main(int argc, char *argv[])
 	PRVAL(SLITHRT_RII);
 	PRVAL(SLITHRT_RIM);
 	PRVAL(SLITHRT_SLVR_CRC);
+	PRVAL(SLITHRT_STATFS);
 	PRVAL(SLITHRT_TIOS);
 	PRVAL(SLITHRT_USKLNDPL);
 	PRVAL(SLMTHRT_BMAPTIMEO);
