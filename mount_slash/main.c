@@ -1602,7 +1602,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 }
 
 __static void
-mslfsop_statfs(struct pscfs_req *pfr)
+mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -1617,6 +1617,8 @@ mslfsop_statfs(struct pscfs_req *pfr)
 
  retry:
 	MSL_RMC_NEWREQ(pfr, csvc, SRMT_STATFS, rq, mq, mp, rc);
+	mq->fid = inum;
+	mq->iosid = prefIOS;
 	if (rc)
 		goto out;
 	rc = SL_RSX_WAITREP(csvc, rq, mp);

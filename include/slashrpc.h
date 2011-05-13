@@ -784,6 +784,9 @@ struct srm_setattr_req {
 #define srm_setattr_rep		srm_getattr_rep
 
 struct srm_statfs_req {
+	slfid_t			fid;
+	sl_ios_id_t		iosid;
+	 int32_t		_pad;
 } __packed;
 
 struct srm_statfs_rep {
