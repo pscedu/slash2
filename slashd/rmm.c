@@ -178,9 +178,9 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 	struct srm_forward_req *mq;
 	struct srm_forward_rep *mp;
 	struct fidc_membh *p = NULL;
+	void *mdsio_data;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-
 
 	if (mq->op != SLM_FORWARD_MKDIR && mq->op != SLM_FORWARD_RMDIR && 
 	    mq->op != SLM_FORWARD_CREATE && mq->op != SLM_FORWARD_UNLINK) {
@@ -199,7 +199,21 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(p), mq->name, mq->mode,
 		    &mq->creds, &mp->cattr, NULL, mds_namespace_log, NULL, mq->fid);
 		break;
-	    default:
+	    case SLM_FORWARD_CREATE:
+		mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &mq->creds,
+		    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->name, NULL,
+		    &mp->cattr, &mdsio_data, mds_namespace_log,
+		    slm_get_next_slashid);
+		if (!mp->rc)
+			mdsio_release(&rootcreds, mdsio_data);
+		break;
+	    case SLM_FORWARD_RMDIR:
+		mp->rc = mdsio_rmdir(fcmh_2_mdsio_fid(p),
+		    mq->name, &rootcreds, mds_namespace_log);
+		break;
+	    case SLM_FORWARD_UNLINK:
+		mp->rc = mdsio_unlink(fcmh_2_mdsio_fid(p),
+		    mq->name, &rootcreds, mds_namespace_log);
 		break;
 	}
 	mds_unreserve_slot();
