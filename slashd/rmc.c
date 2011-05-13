@@ -346,6 +346,7 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	uint32_t pol;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
+	mq->name[sizeof(mq->name) - 1] = '\0';
 
 	dirSiteid = FID_GET_SITEID(mq->pfg.fg_fid);
 	if (mq->pfg.fg_fid != SLFID_ROOT &&
@@ -363,7 +364,6 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	pol = p->fcmh_sstb.sstd_freplpol;
 	FCMH_ULOCK(p);
 
-	mq->name[sizeof(mq->name) - 1] = '\0';
 	mds_reserve_slot();
 	mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(p), mq->name, mq->mode,
 	    &mq->creds, &mp->cattr, NULL, mds_namespace_log,

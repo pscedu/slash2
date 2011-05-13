@@ -177,11 +177,22 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 {
 	struct srm_forward_req *mq;
 	struct srm_forward_rep *mp;
+	struct iovec iov;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	psclog_info("op=%d, fid="SLPRI_FID", name=%s", mq->op, mq->fid, mq->name);
 
-	mp->rc = 0;
+	iov.iov_len = mq->namelen;
+	iov.iov_base = PSCALLOC(mq->namelen);
+
+	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, SRMM_BULK_PORTAL, &iov, 1);
+	if (mp->rc)
+		goto out;
+	
+	psclog_info("op=%d, fid="SLPRI_FID", name=%s", mq->op, mq->fid, iov.iov_base);
+
+ out:
+
+	PSCFREE(iov.iov_base);
 	return (mp->rc);
 }
 
@@ -227,12 +238,18 @@ slm_rmm_forward_namespace(sl_siteid_t siteid, int op, char *name,
 	struct sl_site *_site;
 	struct sl_resource *_res;
 	struct slashrpc_cservice *csvc;
+	struct iovec iov;
 
 	struct srm_forward_req *mq;
 	struct srm_forward_rep *mp;
 	struct pscrpc_request *rq;
 
+#if 1
 	if (forward_not_ready)
+		return ENOSYS;
+#endif
+	if (op != SLM_FORWARD_MKDIR && op != SLM_FORWARD_RMDIR && 
+	    op != SLM_FORWARD_CREATE && op != SLM_FORWARD_UNLINK)
 		return ENOSYS;
 
 	_site = libsl_siteid2site(siteid);
@@ -257,12 +274,21 @@ slm_rmm_forward_namespace(sl_siteid_t siteid, int op, char *name,
 		return EIO;
 	}
 
-	if (op == SLM_FORWARD_MKDIR) {
-		strncpy(mq->name, name, SL_NAME_MAX);
+	switch (op) {
+	    case SLM_FORWARD_MKDIR:
+		mq->namelen = strlen(name) + 1;
 		mq->creds = *creds;
 		mq->fid = slm_get_next_slashid();
 		mq->mode = mode;
+		break;
+	    default:
+		break;
 	}
+
+	iov.iov_base = name;
+	iov.iov_len = strlen(name) + 1;
+	rsx_bulkclient(rq, BULK_GET_SOURCE, SRMM_BULK_PORTAL, &iov, 1);
+
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
