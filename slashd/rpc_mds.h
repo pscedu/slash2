@@ -47,9 +47,9 @@ struct pscrpc_export;
 #define SLM_RMC_SVCNAME			"slmrmc"
 
 enum slm_fwd_op {
+	SLM_FORWARD_CREATE,
 	SLM_FORWARD_MKDIR,
 	SLM_FORWARD_RMDIR,
-	SLM_FORWARD_CREATE,
 	SLM_FORWARD_UNLINK
 };
 
