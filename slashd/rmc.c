@@ -245,7 +245,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	mp->flags = mq->flags;
 
 	mp->rc = mds_bmap_load_cli(fcmh, mq->bmapno, mq->flags, mq->rw,
-	   mq->prefios, &mp->sbd, rq->rq_export, &bmap);
+	    mq->prefios, &mp->sbd, rq->rq_export, &bmap);
 	if (mp->rc)
 		goto out;
 
@@ -491,8 +491,8 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	mp->flags = mq->flags;
 
 	bmap = NULL;
-	mp->rc2 = mds_bmap_load_cli(c, 0, mp->flags, SL_WRITE, mq->prefios,
-	    &mp->sbd, rq->rq_export, &bmap);
+	mp->rc2 = mds_bmap_load_cli(c, 0, mp->flags, SL_WRITE,
+	    mq->prefios, &mp->sbd, rq->rq_export, &bmap);
 
 	fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 
@@ -863,11 +863,24 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 {
 	struct srm_statfs_req *mq;
 	struct srm_statfs_rep *mp;
+	struct sl_mds_iosinfo *si;
+	struct sl_resource *res;
 	struct statvfs sfb;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
+	res = libsl_id2res(mq->iosid);
+	if (res == NULL) {
+		mp->rc = SLERR_RES_UNKNOWN;
+		return (0);
+	}
+	si = res2iosinfo(res);
 	mp->rc = mdsio_statfs(&sfb);
 	sl_externalize_statfs(&sfb, &mp->ssfb);
+	mp->ssfb.sf_bsize	= si->si_ssfb.sf_bsize;
+	mp->ssfb.sf_frsize	= si->si_ssfb.sf_frsize;
+	mp->ssfb.sf_blocks	= si->si_ssfb.sf_blocks;
+	mp->ssfb.sf_bfree	= si->si_ssfb.sf_bfree;
+	mp->ssfb.sf_bavail	= si->si_ssfb.sf_bavail;
 	return (0);
 }
 

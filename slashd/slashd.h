@@ -28,6 +28,7 @@
 
 #include "inode.h"
 #include "namespace.h"
+#include "slashrpc.h"
 #include "slconfig.h"
 #include "sltypes.h"
 
@@ -148,12 +149,14 @@ struct sl_mds_peerinfo {
 };
 
 /*
- * This structure tracks the progress of garbage collection on each I/O server.
+ * This structure tracks the progress of garbage collection on each I/O
+ * server.
  */
 struct sl_mds_iosinfo {
 	int			  si_flags;
 	uint64_t		  si_xid;
 	uint64_t		  si_batchno;
+	struct srt_statfs	  si_ssfb;
 };
 
 /* MDS-specific data for struct sl_resource */
@@ -167,6 +170,14 @@ struct resprof_mds_info {
 
 #define RPMI_LOCK(rpmi)		spinlock(&(rpmi)->rpmi_lock)
 #define RPMI_ULOCK(rpmi)	freelock(&(rpmi)->rpmi_lock)
+
+static __inline struct resprof_mds_info *
+res2rpmi(struct sl_resource *res)
+{
+	return (resprof_get_pri(res));
+}
+
+#define res2iosinfo(res)	res2rpmi(res)->rpmi_info
 
 /* MDS-specific data for struct sl_resm */
 struct resm_mds_info {
@@ -187,12 +198,6 @@ static __inline struct resm_mds_info *
 resm2rmmi(struct sl_resm *resm)
 {
 	return (resm_get_pri(resm));
-}
-
-static __inline struct resprof_mds_info *
-res2rpmi(struct sl_resource *res)
-{
-	return (resprof_get_pri(res));
 }
 
 #define resm2rpmi(resm)		res2rpmi((resm)->resm_res)
