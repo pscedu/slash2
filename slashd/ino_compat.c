@@ -101,7 +101,7 @@ mds_inode_update(struct slash_inode_handle *ih, int old_version)
 	DEBUG_INOH(PLL_INFO, ih, "updating old inode (v %d)",
 	    old_version);
 
-	snprintf(fn, sizeof(fn), "%016lx.update",
+	snprintf(fn, sizeof(fn), "%016"PRIx64".update",
 	    fcmh_2_fid(ih->inoh_fcmh));
 	rc = mdsio_opencreate(mds_tmpdir_inum, &rootcreds, O_RDWR |
 	    O_CREAT | O_TRUNC, 0644, fn, NULL, NULL, &h, NULL, NULL);
@@ -162,7 +162,7 @@ mds_inode_update_interrupted(struct slash_inode_handle *ih, int *rc)
 
 	th = inoh_2_mdsio_data(ih);
 
-	snprintf(fn, sizeof(fn), "%016lx.update",
+	snprintf(fn, sizeof(fn), "%016"PRIx64".update",
 	    fcmh_2_fid(ih->inoh_fcmh));
 
 	*rc = mdsio_lookup(mds_tmpdir_inum, fn, &inum, &rootcreds, NULL);
