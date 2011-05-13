@@ -47,7 +47,8 @@
 struct slash_creds rootcreds = { 0, 0 };
 
 int
-iod_inode_getinfo(struct slash_fidgen *fg, uint64_t *size, uint32_t *utimgen)
+iod_inode_getinfo(struct slash_fidgen *fg, uint64_t *size,
+    uint64_t *nblks, uint32_t *utimgen)
 {
 	struct fidc_membh *f;
 	struct stat stb;
@@ -59,6 +60,7 @@ iod_inode_getinfo(struct slash_fidgen *fg, uint64_t *size, uint32_t *utimgen)
 		return (-errno);
 
 	*size = stb.st_size;
+	*nblks = stb.st_blocks;
 
 	FCMH_LOCK(f);
 	*utimgen = f->fcmh_sstb.sst_utimgen;

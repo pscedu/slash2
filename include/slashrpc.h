@@ -424,7 +424,7 @@ struct srm_bmap_crcwire {
 struct srm_bmap_crcup {
 	struct slash_fidgen	fg;
 	uint64_t		fsize;		/* largest known size applied in mds_bmap_crc_update() */
-	uint64_t		blkcnt;		/* st_blocks for us */
+	uint64_t		nblks;		/* st_blocks for us */
 	uint32_t		blkno;		/* bmap block number */
 	uint32_t		nups;		/* number of CRC updates */
 	uint32_t		utimgen;

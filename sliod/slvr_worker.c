@@ -81,7 +81,8 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 		bcr = psc_dynarray_getpos(bcrs, i);
 
 		rc = iod_inode_getinfo(&bcr->bcr_crcup.fg,
-		    &bcr->bcr_crcup.fsize, &bcr->bcr_crcup.utimgen);
+		    &bcr->bcr_crcup.fsize, &bcr->bcr_crcup.nblks,
+		    &bcr->bcr_crcup.utimgen);
 		/* Bail for now if we can't stat() our file objects.
 		 */
 		psc_assert(!rc);
@@ -246,7 +247,7 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 			  bcr, "rq_status=%d rc=%d%s", rq->rq_status,
 			  mp ? mp->rc : -4096, mp ? "" : " (unknown, no buf)");
 
-		psc_assert(bii_2_bmap(biod)->bcm_flags & 
+		psc_assert(bii_2_bmap(biod)->bcm_flags &
 		    (BMAP_IOD_INFLIGHT|BMAP_IOD_BCRSCHED));
 
 		if (rq->rq_status) {
