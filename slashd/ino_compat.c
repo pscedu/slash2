@@ -104,7 +104,7 @@ mds_inode_update(struct slash_inode_handle *ih, int old_version)
 	snprintf(fn, sizeof(fn), "%016"PRIx64".update",
 	    fcmh_2_fid(ih->inoh_fcmh));
 	rc = mdsio_opencreate(mds_tmpdir_inum, &rootcreds, O_RDWR |
-	    O_CREAT | O_TRUNC, 0644, fn, NULL, NULL, &h, NULL, NULL);
+	    O_CREAT | O_TRUNC, 0644, fn, NULL, NULL, &h, NULL, NULL, 0);
 	if (rc)
 		goto out;
 
@@ -171,7 +171,7 @@ mds_inode_update_interrupted(struct slash_inode_handle *ih, int *rc)
 
 	*rc = mdsio_opencreatef(inum, &rootcreds, O_RDONLY,
 	    MDSIO_OPENCRF_NOLINK, 0644, NULL, NULL, NULL, &h, NULL,
-	    NULL);
+	    NULL, 0);
 	if (*rc)
 		goto out;
 

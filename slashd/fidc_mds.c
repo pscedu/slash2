@@ -93,7 +93,7 @@ slm_fcmh_ctor(struct fidc_membh *fcmh)
 		slash_inode_handle_init(&fmi->fmi_inodeh, fcmh);
 		rc = mdsio_opencreate(fcmh_2_mdsio_fid(fcmh),
 		    &rootcreds, O_RDWR, 0, NULL, NULL, NULL,
-		    &fcmh_2_mdsio_data(fcmh), NULL, NULL);
+		    &fcmh_2_mdsio_data(fcmh), NULL, NULL, 0);
 		if (rc == 0) {
 			rc = mds_inode_read(&fmi->fmi_inodeh);
 			if (rc)

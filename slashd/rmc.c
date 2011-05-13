@@ -447,7 +447,6 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 		goto out;
 	}
 
-
 	/* Lookup the parent directory in the cache so that the
 	 *   slash2 ino can be translated into the inode for the
 	 *   underlying fs.
@@ -464,7 +463,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &mq->creds,
 	    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->name, NULL,
 	    &mp->cattr, &mdsio_data, mds_namespace_log,
-	    slm_get_next_slashid);
+	    slm_get_next_slashid, 0);
 	mds_unreserve_slot();
 
 	if (mp->rc)

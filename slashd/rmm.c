@@ -197,13 +197,14 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		if (mp->rc)
 			break;
 		mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(p), mq->name, mq->mode,
-		    &mq->creds, &mp->cattr, NULL, mds_namespace_log, NULL, mq->fid);
+		    &mq->creds, &mp->cattr, NULL, mds_namespace_log, 
+		    NULL, mq->fid);
 		break;
 	    case SLM_FORWARD_CREATE:
 		mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &mq->creds,
 		    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->name, NULL,
 		    &mp->cattr, &mdsio_data, mds_namespace_log,
-		    slm_get_next_slashid);
+		    NULL, mq->fid);
 		if (!mp->rc)
 			mdsio_release(&rootcreds, mdsio_data);
 		break;

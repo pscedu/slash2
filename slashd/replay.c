@@ -273,7 +273,7 @@ mds_redo_bmap_assign(struct psc_journal_enthdr *pje)
 	psc_assert(rc == 0);
 
 	rc = mdsio_opencreate(mf, &rootcreds, O_RDWR, 0, NULL, NULL,
-	    NULL, &handle, NULL, NULL);
+	    NULL, &handle, NULL, NULL, 0);
 	psc_assert(!rc && handle);
 
 	rc = mdsio_read(&rootcreds, &odth, sizeof(odth), &nb, 0,

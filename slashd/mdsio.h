@@ -60,9 +60,9 @@ void	mds_namespace_log(int, uint64_t, uint64_t, uint64_t, const
 #define MDSIO_OPENCRF_NOLINK	(1 << 0)	/* do not create links in FID namespace */
 
 #define mdsio_opencreate(pino, crp, fflags, mode, fn, mfp, sstb,	\
-	    mdsio_datap, logfunc, getslfid)				\
+	    mdsio_datap, logfunc, getslfid, slfid)			\
 	mdsio_opencreatef((pino), (crp), (fflags), 0, (mode), (fn),	\
-	    (mfp), (sstb), (mdsio_datap), (logfunc), (getslfid))
+	    (mfp), (sstb), (mdsio_datap), (logfunc), (getslfid), (slfid))
 
 /* high-level interface */
 int	mdsio_fcmh_refreshattr(struct fidc_membh *, struct srt_stat *);
@@ -87,7 +87,7 @@ struct mdsio_ops {
 	int	(*mio_lookup_slfid)(slfid_t, const struct slash_creds *, struct srt_stat *, mdsio_fid_t *);
 	int	(*mio_mkdir)(mdsio_fid_t, const char *, mode_t, const struct slash_creds *, struct srt_stat *, mdsio_fid_t *, sl_log_update_t, sl_getslfid_cb_t, slfid_t);
 	int	(*mio_mknod)(mdsio_fid_t, const char *, mode_t, const struct slash_creds *, struct srt_stat *, mdsio_fid_t *, sl_log_update_t, sl_getslfid_cb_t);
-	int	(*mio_opencreatef)(mdsio_fid_t, const struct slash_creds *, int, int, mode_t, const char *, mdsio_fid_t *, struct srt_stat *, void *, sl_log_update_t, sl_getslfid_cb_t);
+	int	(*mio_opencreatef)(mdsio_fid_t, const struct slash_creds *, int, int, mode_t, const char *, mdsio_fid_t *, struct srt_stat *, void *, sl_log_update_t, sl_getslfid_cb_t, slfid_t);
 	int	(*mio_opendir)(mdsio_fid_t, const struct slash_creds *, struct slash_fidgen *, void *);
 	int	(*mio_preadv)(const struct slash_creds *, struct iovec *, int, size_t *, off_t, void *);
 	int	(*mio_pwritev)(const struct slash_creds *, const struct iovec *, int, size_t *, off_t, int, void *, sl_log_write_t, void *);

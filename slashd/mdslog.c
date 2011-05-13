@@ -164,10 +164,10 @@ mds_open_file(char *fn, int flags, void **handle)
 	if (rc == ENOENT && (flags & O_CREAT)) {
 		rc = mdsio_opencreatef(mds_metadir_inum, &rootcreds,
 		    flags, MDSIO_OPENCRF_NOLINK, 0600, fn, NULL, NULL,
-		    handle, NULL, NULL);
+		    handle, NULL, NULL, 0);
 	} else if (!rc) {
 		rc = mdsio_opencreate(mf, &rootcreds, flags, 0, NULL,
-		    NULL, NULL, handle, NULL, NULL);
+		    NULL, NULL, handle, NULL, NULL, 0);
 	}
 	return (rc);
 }
@@ -1036,7 +1036,7 @@ mds_open_cursor(void)
 	psc_assert(rc == 0);
 
 	rc = mdsio_opencreate(mf, &rootcreds, O_RDWR, 0, NULL, NULL,
-	    NULL, &mds_cursor_handle, NULL, NULL);
+	    NULL, &mds_cursor_handle, NULL, NULL, 0);
 	psc_assert(!rc && mds_cursor_handle);
 
 	rc = mdsio_read(&rootcreds, &mds_cursor,

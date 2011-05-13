@@ -253,7 +253,7 @@ mds_odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 	psc_assert(rc == 0);
 
 	rc = mdsio_opencreate(mf, &rootcreds, O_RDWR, 0, NULL, NULL,
-	    NULL, &odt->odt_handle, NULL, NULL);
+	    NULL, &odt->odt_handle, NULL, NULL, 0);
 	psc_assert(!rc && odt->odt_handle);
 
 	odth = odt->odt_hdr = PSCALLOC(sizeof(*odth));
