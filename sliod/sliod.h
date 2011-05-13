@@ -30,20 +30,21 @@
 
 /* sliod thread types */
 enum {
-	SLITHRT_BMAPRLS,	/* notify mds of completed write bmaps */
+	SLITHRT_BMAPRLS,	/* notify MDS of completed write bmaps */
 	SLITHRT_CONN,		/* connection monitor */
 	SLITHRT_CTL,		/* control processor */
 	SLITHRT_CTLAC,		/* control acceptor */
-	SLITHRT_LNETAC,		/* lustre net accept thr */
+	SLITHRT_LNETAC,		/* Lustre net accept thr */
 	SLITHRT_REPLFIN,	/* process finished replication work */
 	SLITHRT_REPLPND,	/* process enqueued replication work */
 	SLITHRT_REPLREAP,	/* reap in-flight replication work */
-	SLITHRT_RIC,		/* service RPC requests from CLIENT */
+	SLITHRT_RIC,		/* service RPC requests from CLI */
 	SLITHRT_RII,		/* service RPC requests from ION */
 	SLITHRT_RIM,		/* service RPC requests from MDS */
-	SLITHRT_SLVR_CRC,	/* sliver crc updaters */
+	SLITHRT_SLVR_CRC,	/* sliver CRC updaters */
+	SLITHRT_STATFS,		/* statvfs(2) updater */
 	SLITHRT_TIOS,		/* iostats updater */
-	SLITHRT_USKLNDPL	/* userland socket lustre net dev poll thr */
+	SLITHRT_USKLNDPL	/* userland socket Lustre net dev poll thr */
 };
 
 #define NSLVRCRC_THRS		4	/* perhaps default to ncores + configurable? */
@@ -68,8 +69,8 @@ PSCTHR_MKCAST(slirimthr, slirim_thread, SLITHRT_RIM)
 PSCTHR_MKCAST(sliriithr, slirii_thread, SLITHRT_RII)
 
 struct resm_iod_info {
-	psc_spinlock_t		  rmii_lock;
-	struct psc_waitq	  rmii_waitq;
+	psc_spinlock_t		 rmii_lock;
+	struct psc_waitq	 rmii_waitq;
 };
 
 static __inline struct resm_iod_info *
@@ -84,5 +85,8 @@ __dead void	slictlthr_main(const char *);
 int		iod_inode_getinfo(struct slash_fidgen *, uint64_t *, uint32_t *);
 
 extern struct slash_creds	 rootcreds;
+
+extern struct srt_statfs	 sli_ssfb;
+extern psc_spinlock_t		 sli_ssfb_lock;
 
 #endif /* _SLIOD_H_ */

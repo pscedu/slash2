@@ -17,6 +17,9 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#include <sys/types.h>
+#include <sys/statvfs.h>
+
 #include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,6 +33,7 @@
 #include "psc_util/alloc.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/thread.h"
+#include "psc_util/timerthr.h"
 #include "psc_util/usklndthr.h"
 
 #include "authbuf.h"
@@ -44,9 +48,13 @@
 #include "slerr.h"
 #include "sliod.h"
 #include "slsubsys.h"
+#include "slutil.h"
 #include "slvr.h"
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
+
+struct srt_statfs	 sli_ssfb;
+psc_spinlock_t		 sli_ssfb_lock = SPINLOCK_INIT;
 
 int			 allow_root_uid = 1;
 const char		*progname;
@@ -68,6 +76,24 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
 	n = strlcpy(buf, "sli", PSC_THRNAME_MAX);
 	if (n < PSC_THRNAME_MAX)
 		vsnprintf(buf + n, PSC_THRNAME_MAX - n, namefmt, ap);
+}
+
+void
+slistatfsthr_main(__unusedx struct psc_thread *thr)
+{
+	struct statvfs sfb;
+
+	while (pscthr_run()) {
+		if (statvfs(globalConfig.gconf_fsroot, &sfb) == -1)
+			psclog_error("statvfs %s",
+			    globalConfig.gconf_fsroot);
+		else {
+			spinlock(&sli_ssfb_lock);
+			sl_externalize_statfs(&sfb, &sli_ssfb);
+			freelock(&sli_ssfb_lock);
+		}
+		sleep(5);
+	}
 }
 
 __dead void
@@ -136,7 +162,9 @@ main(int argc, char *argv[])
 	slvr_cache_init();
 	sli_repl_init();
 	sli_rpc_initsvc();
-	slitimerthr_spawn();
+	psc_tiosthr_spawn(SLITHRT_TIOS, "slitiosthr");
+	pscthr_init(SLITHRT_STATFS, 0, slistatfsthr_main, NULL, 0,
+	    "slistatfsthr");
 	sliod_bmaprlsthr_spawn();
 	lc_reginit(&bmapReapQ, struct bmapc_memb, bcm_lentry, "bmapReapQ");
 
