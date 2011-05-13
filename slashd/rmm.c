@@ -287,16 +287,18 @@ slm_rmm_forward_namespace(sl_siteid_t siteid, int op,
 		return EIO;
 	}
 
-	switch (op) {
-	    case SLM_FORWARD_MKDIR:
-		strlcpy(mq->name, name, sizeof(mq->name));
-		mq->pfg	= *pfg;
+	mq->pfg	= *pfg;
+	strlcpy(mq->name, name, sizeof(mq->name));
+
+	if (op == SLM_FORWARD_MKDIR || op == SLM_FORWARD_CREATE) {
+		mq->mode = mode;
 		mq->creds = *creds;
 		mq->fid = slm_get_next_slashid();
-		mq->mode = mode;
-		break;
-	    default:
-		break;
+	} else {
+		mq->mode = 0;
+		mq->fid = 0;
+		mq->creds.scr_uid = 0;
+		mq->creds.scr_gid = 0;
 	}
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);

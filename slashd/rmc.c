@@ -940,15 +940,27 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	struct srm_unlink_rep *mp;
 	struct slash_fidgen fg;
 	struct fidc_membh *p;
+	sl_siteid_t dirSiteid;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
+
 	fg.fg_fid = mq->pfid;
 	fg.fg_gen = FGEN_ANY;
+	mq->name[sizeof(mq->name) - 1] = '\0';
+
+	dirSiteid = FID_GET_SITEID(mq->pfid);
+	if (mq->pfid != SLFID_ROOT &&
+	    nodeResm->resm_res->res_site->site_id != dirSiteid) {
+		mp->rc = slm_rmm_forward_namespace(dirSiteid,
+		    isfile? SLM_FORWARD_UNLINK : SLM_FORWARD_MKDIR, 
+		    &fg, mq->name, 0, NULL);
+		goto out;
+	}
+
 	mp->rc = slm_fcmh_get(&fg, &p);
 	if (mp->rc)
 		goto out;
 
-	mq->name[sizeof(mq->name) - 1] = '\0';
 	mds_reserve_slot();
 	if (isfile)
 		mp->rc = mdsio_unlink(fcmh_2_mdsio_fid(p),
