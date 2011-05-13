@@ -877,13 +877,13 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 	struct statvfs sfb;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
+	mp->rc = mdsio_statfs(&sfb);
 	res = libsl_id2res(mq->iosid);
 	if (res == NULL) {
 		mp->rc = SLERR_RES_UNKNOWN;
 		return (0);
 	}
 	si = res2iosinfo(res);
-	mp->rc = mdsio_statfs(&sfb);
 	sl_externalize_statfs(&sfb, &mp->ssfb);
 	mp->ssfb.sf_bsize	= si->si_ssfb.sf_bsize;
 	mp->ssfb.sf_frsize	= si->si_ssfb.sf_frsize;
