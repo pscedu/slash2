@@ -370,7 +370,12 @@ mds_redo_namespace(struct slmds_jent_namespace *sjnm, int replay)
 		    sjnm->sjnm_namelen2);
 		newname[sjnm->sjnm_namelen2] = '\0';
 	}
-
+	/*
+	 * If the receiving MDS is the one that initiated the namespace
+	 * operation, then we should have already propagated the remote
+	 * operation back to us.  If so, then seeing ENOENT for unlink
+	 * and EXIST for creates should be fine.
+	 */
 	switch (sjnm->sjnm_op) {
 	    case NS_OP_RECLAIM:
 		rc = 0;

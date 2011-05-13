@@ -340,7 +340,12 @@ struct srm_forward_req {
 	slfid_t			fid;		/* provided by the peer MDS */
 } __packed;
 
-#define srm_forward_rep		srm_generic_rep
+struct srm_forward_rep {
+	struct srt_stat		cattr;		/* child node */
+	struct srt_stat		pattr;		/* parent dir */
+	 int32_t		rc;		/* return code, 0 for success or slerrno */
+	 int32_t		_pad;
+} __packed;
 
 /* -------------------------- BEGIN BMAP MESSAGES --------------------------- */
 

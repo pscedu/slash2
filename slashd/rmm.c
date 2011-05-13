@@ -175,9 +175,11 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 int
 slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 {
+	char *name;
 	struct srm_forward_req *mq;
 	struct srm_forward_rep *mp;
 	struct iovec iov;
+	struct fidc_membh *p = NULL;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -194,7 +196,22 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		goto out;
 	}
 	
-	psclog_info("op=%d, fid="SLPRI_FID", name=%s", mq->op, mq->fid, (char *)iov.iov_base);
+	name = (char *)iov.iov_base;
+	psclog_info("op=%d, fid="SLPRI_FID", name=%s", mq->op, mq->fid, name);
+
+	mds_reserve_slot();
+	switch (mq->op) {
+	    case SLM_FORWARD_MKDIR:
+		mp->rc = slm_fcmh_get(&mq->pfg, &p);
+		if (mp->rc)
+			break;
+		mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(p), name, mq->mode,
+		    &mq->creds, &mp->cattr, NULL, mds_namespace_log, NULL, mq->fid);
+		break;
+	    default:
+		break;
+	}
+	mds_unreserve_slot();
 
  out:
 

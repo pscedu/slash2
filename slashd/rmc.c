@@ -367,7 +367,7 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	mds_reserve_slot();
 	mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(p), mq->name, mq->mode,
 	    &mq->creds, &mp->cattr, NULL, mds_namespace_log,
-	    slm_get_next_slashid);
+	    slm_get_next_slashid, 0);
 	mds_unreserve_slot();
 
 	mdsio_fcmh_refreshattr(p, &mp->pattr);
