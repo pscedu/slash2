@@ -78,12 +78,13 @@ struct sli_exp_cli {
 
 void	sli_rpc_initsvc(void);
 
+void	sli_rpc_mds_unpack_bminseq(struct pscrpc_request *, int);
+
 int	sli_rim_handler(struct pscrpc_request *);
 int	sli_ric_handler(struct pscrpc_request *);
 int	sli_rii_handler(struct pscrpc_request *);
 
 int	sli_rmi_getimp(struct slashrpc_cservice **);
-void	sli_rmi_read_bminseq(struct pscrpc_request *, int);
 int	sli_rmi_setmds(const char *);
 
 int	sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *);

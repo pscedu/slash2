@@ -55,7 +55,8 @@ slm_rpc_initsvc(void)
 	svh->svh_type = SLMTHRT_RMI;
 	svh->svh_nthreads = SLM_RMI_NTHREADS;
 	svh->svh_handler = slm_rmi_handler;
-	strlcpy(svh->svh_svc_name, SLM_RMI_SVCNAME, sizeof(svh->svh_svc_name));
+	strlcpy(svh->svh_svc_name, SLM_RMI_SVCNAME,
+	    sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct slmrmi_thread);
 
 	/* Setup request service for MDS from MDS. */
@@ -69,7 +70,8 @@ slm_rpc_initsvc(void)
 	svh->svh_type = SLMTHRT_RMM;
 	svh->svh_nthreads = SLM_RMM_NTHREADS;
 	svh->svh_handler = slm_rmm_handler;
-	strlcpy(svh->svh_svc_name, SLM_RMM_SVCNAME, sizeof(svh->svh_svc_name));
+	strlcpy(svh->svh_svc_name, SLM_RMM_SVCNAME,
+	    sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct slmrmm_thread);
 
 	/* Setup request service for MDS from client. */
@@ -83,7 +85,8 @@ slm_rpc_initsvc(void)
 	svh->svh_type = SLMTHRT_RMC;
 	svh->svh_nthreads = SLM_RMC_NTHREADS;
 	svh->svh_handler = slm_rmc_handler;
-	strlcpy(svh->svh_svc_name, SLM_RMC_SVCNAME, sizeof(svh->svh_svc_name));
+	strlcpy(svh->svh_svc_name, SLM_RMC_SVCNAME,
+	    sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct slmrmc_thread);
 
 	thr = pscthr_init(SLMTHRT_RCM, 0, slmrcmthr_main,
@@ -104,15 +107,51 @@ sl_resm_hldrop(struct sl_resm *resm)
 }
 
 void
-slm_ion_pack_bmapminseq(struct pscrpc_msg *m)
+slm_rpc_ion_pack_bmapminseq(struct pscrpc_msg *m)
 {
 	struct srt_bmapminseq *sbms;
 
+	if (m == NULL) {
+		psclog_errorx("unable to export bmapminseq");
+		return;
+	}
 	sbms = pscrpc_msg_buf(m, m->bufcount - 2, sizeof(*sbms));
-	if (sbms)
-		mds_bmap_getcurseq(NULL, &sbms->bminseq);
-	else
-		psc_errorx("unable to pack bmapminseq");
+	if (sbms == NULL) {
+		psclog_errorx("unable to export bmapminseq");
+		return;
+	}
+	mds_bmap_getcurseq(NULL, &sbms->bminseq);
+}
+
+void
+slm_rpc_ion_unpack_statfs(struct pscrpc_request *rq, int type)
+{
+	struct sl_mds_iosinfo *si;
+	struct srt_statfs *f;
+	struct pscrpc_msg *m;
+	struct sl_resm *resm;
+	lnet_nid_t nid;
+
+	m = type == PSCRPC_MSG_REPLY ? rq->rq_repmsg : rq->rq_reqmsg;
+	nid = rq->rq_import ? rq->rq_import->
+	    imp_connection->c_peer.nid : rq->rq_peer.nid;
+
+	if (m == NULL) {
+		psclog_errorx("unable to import statfs");
+		return;
+	}
+	f = pscrpc_msg_buf(m, m->bufcount - 2, sizeof(*f));
+	if (f == NULL) {
+		psclog_errorx("unable to import statfs");
+		return;
+	}
+	resm = libsl_nid2resm(nid);
+	if (resm == NULL) {
+		psclog_errorx("unknown peer");
+		return;
+	}
+	si = res2iosinfo(resm->resm_res);
+	memcpy(&si->si_ssfb, f, sizeof(*f));
 }
 
 int
@@ -120,9 +159,16 @@ slrpc_newreq(struct slashrpc_cservice *csvc, int op,
     struct pscrpc_request **rqp, int qlen, int plen, void *mqp)
 {
 	if (csvc->csvc_ctype == SLCONNT_IOD) {
-		int qlens[] = { qlen, sizeof(struct srt_bmapminseq),
-		    sizeof(struct srt_authbuf_footer) };
-		int plens[] = { plen, sizeof(struct srt_authbuf_footer) };
+		int qlens[] = {
+			qlen,
+			sizeof(struct srt_bmapminseq),
+			sizeof(struct srt_authbuf_footer)
+		};
+		int plens[] = {
+			plen,
+			sizeof(struct srt_statfs),
+			sizeof(struct srt_authbuf_footer)
+		};
 
 		return (RSX_NEWREQN(csvc->csvc_import,
 		    csvc->csvc_version, op, *rqp, nitems(qlens), qlens,
@@ -138,8 +184,10 @@ slrpc_waitrep(struct slashrpc_cservice *csvc,
 	int rc;
 
 	if (csvc->csvc_ctype == SLCONNT_IOD)
-		slm_ion_pack_bmapminseq(rq->rq_reqmsg);
+		slm_rpc_ion_pack_bmapminseq(rq->rq_reqmsg);
 	rc = slrpc_waitgenrep(rq, plen, mpp);
+	if (csvc->csvc_ctype == SLCONNT_IOD)
+		slm_rpc_ion_unpack_statfs(rq, PSCRPC_MSG_REPLY);
 	return (rc);
 }
 
@@ -147,12 +195,22 @@ int
 slrpc_allocrep(struct pscrpc_request *rq, void *mqp, int qlen,
     void *mpp, int plen, int rcoff)
 {
-	if (rq->rq_rqbd->rqbd_service == slm_rmi_svc.svh_service) {
-		int plens[] = { plen, sizeof(struct srt_bmapminseq),
-		    sizeof(struct srt_authbuf_footer) };
+	int rc;
 
-		return (slrpc_allocrepn(rq, mqp, qlen, mpp, nitems(plens),
-		    plens, rcoff));
+	if (rq->rq_rqbd->rqbd_service == slm_rmi_svc.svh_service) {
+		int plens[] = {
+			plen,
+			sizeof(struct srt_bmapminseq),
+			sizeof(struct srt_authbuf_footer)
+		};
+
+		rc = slrpc_allocrepn(rq, mqp, qlen, mpp, nitems(plens),
+		    plens, rcoff);
+		if (rq->rq_reply_portal == SRMI_REP_PORTAL) {
+			slm_rpc_ion_unpack_statfs(rq, PSCRPC_MSG_REQUEST);
+			slm_rpc_ion_pack_bmapminseq(rq->rq_repmsg);
+		}
+		return (rc);
 	}
 	return (slrpc_allocgenrep(rq, mqp, qlen, mpp, plen, rcoff));
 }

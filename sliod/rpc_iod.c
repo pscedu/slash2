@@ -17,6 +17,9 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#include <sys/types.h>
+#include <sys/statvfs.h>
+
 #include <stdio.h>
 
 #include "pfl/cdefs.h"
@@ -26,6 +29,7 @@
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/service.h"
 
+#include "bmap_iod.h"
 #include "rpc_iod.h"
 #include "slashrpc.h"
 #include "slconn.h"
@@ -54,7 +58,8 @@ sli_rpc_initsvc(void)
 	svh->svh_type = SLITHRT_RIC;
 	svh->svh_nthreads = SLI_RIC_NTHREADS;
 	svh->svh_handler = sli_ric_handler;
-	strlcpy(svh->svh_svc_name, SLI_RIC_SVCNAME, sizeof(svh->svh_svc_name));
+	strlcpy(svh->svh_svc_name, SLI_RIC_SVCNAME,
+	    sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct sliric_thread);
 
 	/* Create server service to handle requests from the MDS server. */
@@ -68,7 +73,8 @@ sli_rpc_initsvc(void)
 	svh->svh_type = SLITHRT_RIM;
 	svh->svh_nthreads = SLI_RIM_NTHREADS;
 	svh->svh_handler = sli_rim_handler;
-	strlcpy(svh->svh_svc_name, SLI_RIM_SVCNAME, sizeof(svh->svh_svc_name));
+	strlcpy(svh->svh_svc_name, SLI_RIM_SVCNAME,
+	    sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct slirim_thread);
 
 	/* Create server service to handle requests from other I/O servers. */
@@ -82,7 +88,8 @@ sli_rpc_initsvc(void)
 	svh->svh_type = SLITHRT_RII;
 	svh->svh_nthreads = SLI_RII_NTHREADS;
 	svh->svh_handler = sli_rii_handler;
-	strlcpy(svh->svh_svc_name, SLI_RII_SVCNAME, sizeof(svh->svh_svc_name));
+	strlcpy(svh->svh_svc_name, SLI_RII_SVCNAME,
+	    sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct slirii_thread);
 }
 
@@ -91,14 +98,68 @@ sl_resm_hldrop(__unusedx struct sl_resm *resm)
 {
 }
 
+void
+sli_rpc_mds_unpack_bminseq(struct pscrpc_request *rq, int msgtype)
+{
+	struct srt_bmapminseq *sbms;
+	struct pscrpc_msg *m;
+
+	if (rq->rq_status)
+		return;
+
+	if (msgtype == PSCRPC_MSG_REQUEST)
+		m = rq->rq_reqmsg;
+	else
+		m = rq->rq_repmsg;
+	if (m == NULL)
+		goto error;
+	if (m->bufcount < 3)
+		goto error;
+	sbms = pscrpc_msg_buf(m, m->bufcount - 2, sizeof(*sbms));
+	if (sbms == NULL)
+		goto error;
+	bim_updateseq(sbms->bminseq);
+	return;
+
+ error:
+	psclog_errorx("no message; msg=%p opc=%d bufc=%d",
+	    m, m ? (int)m->opc : -1, m ? (int)m->bufcount : -1);
+}
+
+void
+sli_rpc_mds_pack_statfs(struct pscrpc_msg *m)
+{
+	struct srt_statfs *f;
+
+	if (m == NULL) {
+		psclog_errorx("msg is NULL");
+		return;
+	}
+	f = pscrpc_msg_buf(m, m->bufcount - 2, sizeof(*f));
+	if (f == NULL) {
+		psclog_errorx("unable to pack statfs");
+		return;
+	}
+	spinlock(&sli_ssfb_lock);
+	memcpy(f, &sli_ssfb, sizeof(*f));
+	freelock(&sli_ssfb_lock);
+}
+
 int
 slrpc_newreq(struct slashrpc_cservice *csvc, int op,
     struct pscrpc_request **rqp, int qlen, int plen, void *mqp)
 {
 	if (csvc->csvc_ctype == SLCONNT_MDS) {
-		int qlens[] = { qlen, sizeof(struct srt_authbuf_footer) };
-		int plens[] = { plen, sizeof(struct srt_bmapminseq),
-		    sizeof(struct srt_authbuf_footer) };
+		int qlens[] = {
+			qlen,
+			sizeof(struct srt_statfs),
+			sizeof(struct srt_authbuf_footer)
+		};
+		int plens[] = {
+			plen,
+			sizeof(struct srt_bmapminseq),
+			sizeof(struct srt_authbuf_footer)
+		};
 
 		return (RSX_NEWREQN(csvc->csvc_import,
 		    csvc->csvc_version, op, *rqp, nitems(qlens), qlens,
@@ -113,9 +174,11 @@ slrpc_waitrep(struct slashrpc_cservice *csvc,
 {
 	int rc;
 
+	if (csvc->csvc_ctype == SLCONNT_MDS)
+		sli_rpc_mds_pack_statfs(rq->rq_reqmsg);
 	rc = slrpc_waitgenrep(rq, plen, mpp);
 	if (csvc->csvc_ctype == SLCONNT_MDS)
-		sli_rmi_read_bminseq(rq, PSCRPC_MSG_REPLY);
+		sli_rpc_mds_unpack_bminseq(rq, PSCRPC_MSG_REPLY);
 	return (rc);
 }
 
@@ -124,11 +187,18 @@ slrpc_allocrep(struct pscrpc_request *rq, void *mqp, int qlen,
     void *mpp, int plen, int rcoff)
 {
 	if (rq->rq_rqbd->rqbd_service == sli_rim_svc.svh_service) {
-		int rc, plens[] = { plen, sizeof(struct srt_authbuf_footer) };
+		int rc, plens[] = {
+			plen,
+			sizeof(struct srt_statfs),
+			sizeof(struct srt_authbuf_footer)
+		};
 
 		rc = slrpc_allocrepn(rq, mqp, qlen, mpp, nitems(plens),
 		    plens, rcoff);
-		sli_rmi_read_bminseq(rq, PSCRPC_MSG_REQUEST);
+		if (rq->rq_reply_portal == SRIM_REP_PORTAL) {
+			sli_rpc_mds_unpack_bminseq(rq, PSCRPC_MSG_REQUEST);
+			sli_rpc_mds_pack_statfs(rq->rq_repmsg);
+		}
 		return (rc);
 	}
 	return (slrpc_allocgenrep(rq, mqp, qlen, mpp, plen, rcoff));

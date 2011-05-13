@@ -112,31 +112,3 @@ sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *w)
 		sl_csvc_decref(csvc);
 	return (rc);
 }
-
-void
-sli_rmi_read_bminseq(struct pscrpc_request *rq, int msgtype)
-{
-	struct srt_bmapminseq *sbms;
-	struct pscrpc_msg *m;
-
-	if (rq->rq_status)
-		return;
-
-	if (msgtype == PSCRPC_MSG_REQUEST)
-		m = rq->rq_reqmsg;
-	else
-		m = rq->rq_repmsg;
-	if (m == NULL)
-		goto error;
-	if (m->bufcount < 3)
-		goto error;
-	sbms = pscrpc_msg_buf(m, m->bufcount - 2, sizeof(*sbms));
-	if (sbms == NULL)
-		goto error;
-	bim_updateseq(sbms->bminseq);
-	return;
-
- error:
-	psclog_errorx("no message; msg=%p opc=%d bufc=%d",
-	    m, m ? (int)m->opc : -1, m ? (int)m->bufcount : -1);
-}

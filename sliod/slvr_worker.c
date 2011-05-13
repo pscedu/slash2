@@ -233,7 +233,7 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 	csvc = args->pointer_arg[1];
 	psc_assert(a);
 
-	sli_rmi_read_bminseq(rq, PSCRPC_MSG_REPLY);
+	sli_rpc_mds_unpack_bminseq(rq, PSCRPC_MSG_REPLY);
 
 	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 
