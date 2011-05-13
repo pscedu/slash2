@@ -21,6 +21,7 @@
 #include <sys/stat.h>
 
 #include <dirent.h>
+#include <err.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <pwd.h>
@@ -29,8 +30,6 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-
-// #include <uuid/uuid.h>
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
@@ -260,7 +259,7 @@ main(int argc, char *argv[])
 
 	sl_getuserpwent(&pw);
 	if (pw == NULL)
-		psc_error("getpwnam %s", SLASH_UID);
+		warn("getpwnam %s", SLASH_UID);
 
 	if (wipe)
 		wipefs(argv[0]);
