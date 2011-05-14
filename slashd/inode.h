@@ -102,6 +102,10 @@ struct slash_inode_handle {
 #define INOH_URLOCK(ih, lk)	ureqlock(&(ih)->inoh_lock, (lk))
 #define INOH_LOCK_ENSURE(ih)	LOCK_ENSURE(&(ih)->inoh_lock)
 
+#define inoh_2_mdsio_data(ih)	fcmh_2_mdsio_data((ih)->inoh_fcmh)
+#define inoh_2_fsz(ih)		fcmh_2_fsz((ih)->inoh_fcmh)
+#define inoh_2_fid(ih)		fcmh_2_fid((ih)->inoh_fcmh)
+
 #define INOH_FLAGS_FMT		"%s%s%s%s%s"
 #define DEBUG_INOH_FLAGS(i)						\
 	(i)->inoh_flags & INOH_INO_DIRTY	? "D" : "",		\
