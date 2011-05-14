@@ -57,8 +57,11 @@
 #include "slutil.h"
 #include "up_sched_res.h"
 
-uint64_t next_slash_id;
-static psc_spinlock_t slash_id_lock = SPINLOCK_INIT;
+#define IS_REMOTE_FID(fid)						\
+	((fid) != SLFID_ROOT && nodeSite->site_id != FID_GET_SITEID(fid))
+
+uint64_t		next_slash_id;
+static psc_spinlock_t	slash_id_lock = SPINLOCK_INIT;
 
 uint64_t
 slm_get_curr_slashid(void)
@@ -133,6 +136,7 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	const struct srm_getattr_req *mq;
 	struct srm_getattr_rep *mp;
 	struct fidc_membh *fcmh;
+	int idx;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slm_fcmh_get(&mq->fg, &fcmh);
@@ -142,6 +146,11 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	FCMH_LOCK(fcmh);
 	mp->attr = fcmh->fcmh_sstb;
 	FCMH_ULOCK(fcmh);
+
+	idx = mds_repl_ios_lookup(fcmh_2_inoh(fcmh), mq->iosid);
+	if (idx >= 0)
+		mp->attr.sst_blocks = fcmh_2_repl_nblks(fcmh, idx);
+
  out:
 	if (fcmh)
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
@@ -342,17 +351,14 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	struct fidc_membh *p = NULL, *c = NULL;
 	struct srm_mkdir_req *mq;
 	struct srm_mkdir_rep *mp;
-	sl_siteid_t dirSiteid;
 	uint32_t pol;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
 
-	dirSiteid = FID_GET_SITEID(mq->pfg.fg_fid);
-	if (mq->pfg.fg_fid != SLFID_ROOT &&
-	    nodeResm->resm_res->res_site->site_id != dirSiteid) {
-		mp->rc = slm_rmm_forward_namespace(dirSiteid,
-		    SLM_FORWARD_MKDIR, &mq->pfg, mq->name, mq->mode, &mq->creds);
+	if (IS_REMOTE_FID(mq->pfg.fg_fid)) {
+		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_MKDIR,
+		    &mq->pfg, mq->name, mq->mode, &mq->creds);
 		goto out;
 	}
 
@@ -430,7 +436,6 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	struct bmapc_memb *bmap;
 	void *mdsio_data;
 	uint32_t pol;
-	sl_siteid_t dirSiteid;
 
 	p = NULL;
 
@@ -439,11 +444,10 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 		mp->rc = EINVAL;
 		goto out;
 	}
-	dirSiteid = FID_GET_SITEID(mq->pfg.fg_fid);
-	if (mq->pfg.fg_fid != SLFID_ROOT &&
-	    nodeResm->resm_res->res_site->site_id != dirSiteid) {
-		mp->rc = slm_rmm_forward_namespace(dirSiteid,
-		    SLM_FORWARD_CREATE, &mq->pfg, mq->name, mq->mode, &mq->creds);
+
+	if (IS_REMOTE_FID(mq->pfg.fg_fid)) {
+		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_CREATE,
+		    &mq->pfg, mq->name, mq->mode, &mq->creds);
 		goto out;
 	}
 
@@ -939,7 +943,6 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	struct srm_unlink_rep *mp;
 	struct slash_fidgen fg;
 	struct fidc_membh *p;
-	sl_siteid_t dirSiteid;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -947,12 +950,10 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	fg.fg_gen = FGEN_ANY;
 	mq->name[sizeof(mq->name) - 1] = '\0';
 
-	dirSiteid = FID_GET_SITEID(mq->pfid);
-	if (mq->pfid != SLFID_ROOT &&
-	    nodeResm->resm_res->res_site->site_id != dirSiteid) {
-		mp->rc = slm_rmm_forward_namespace(dirSiteid,
-		    isfile? SLM_FORWARD_UNLINK : SLM_FORWARD_MKDIR, 
-		    &fg, mq->name, 0, NULL);
+	if (IS_REMOTE_FID(mq->pfid)) {
+		mp->rc = slm_rmm_forward_namespace(isfile?
+		    SLM_FORWARD_UNLINK : SLM_FORWARD_MKDIR, &fg,
+		    mq->name, 0, NULL);
 		goto out;
 	}
 

@@ -83,7 +83,8 @@ void	slm_rpc_initsvc(void);
 int	slm_rmc_handler(struct pscrpc_request *);
 int	slm_rmi_handler(struct pscrpc_request *);
 int	slm_rmm_handler(struct pscrpc_request *);
-int	slm_rmm_forward_namespace(sl_siteid_t, int, struct slash_fidgen *, char *, uint32_t, struct slash_creds *);
+int	slm_rmm_forward_namespace(int, const struct slash_fidgen *,
+	    const char *, uint32_t, const struct slash_creds *);
 
 /* aliases for connection management */
 #define slm_getmcsvcx(resm, exp)					\

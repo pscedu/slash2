@@ -182,12 +182,12 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	if (mq->op != SLM_FORWARD_MKDIR && mq->op != SLM_FORWARD_RMDIR && 
+	if (mq->op != SLM_FORWARD_MKDIR && mq->op != SLM_FORWARD_RMDIR &&
 	    mq->op != SLM_FORWARD_CREATE && mq->op != SLM_FORWARD_UNLINK) {
 		mp->rc = EINVAL;
 		goto out;
 	}
-	
+
 	psclog_info("op=%d, fid="SLPRI_FID", name=%s", mq->op, mq->fid, mq->name);
 
 	mds_reserve_slot();
@@ -197,7 +197,7 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		if (mp->rc)
 			break;
 		mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(p), mq->name, mq->mode,
-		    &mq->creds, &mp->cattr, NULL, mds_namespace_log, 
+		    &mq->creds, &mp->cattr, NULL, mds_namespace_log,
 		    NULL, mq->fid);
 		break;
 	    case SLM_FORWARD_CREATE:
@@ -258,48 +258,50 @@ slm_rmm_handler(struct pscrpc_request *rq)
 }
 
 int
-slm_rmm_forward_namespace(sl_siteid_t siteid, int op, 
-	struct slash_fidgen *pfg, char *name, 
-	uint32_t mode, struct slash_creds *creds)
+slm_rmm_forward_namespace(int op, const struct slash_fidgen *pfg,
+    const char *name, uint32_t mode, const struct slash_creds *creds)
 {
 	int rc, _siter;
 	struct sl_resm *resm;
-	struct sl_site *_site;
-	struct sl_resource *_res;
+	struct sl_site *site;
+	struct sl_resource *res;
 	struct slashrpc_cservice *csvc;
 
 	struct srm_forward_req *mq;
 	struct srm_forward_rep *mp;
 	struct pscrpc_request *rq;
+	sl_siteid_t siteid;
+
+	siteid = FID_GET_SITEID(pfg->fg_fid);
 
 #if 1
 	if (forward_not_ready)
-		return ENOSYS;
+		return (ENOSYS);
 #endif
-	if (op != SLM_FORWARD_MKDIR && op != SLM_FORWARD_RMDIR && 
+	if (op != SLM_FORWARD_MKDIR && op != SLM_FORWARD_RMDIR &&
 	    op != SLM_FORWARD_CREATE && op != SLM_FORWARD_UNLINK)
-		return ENOSYS;
+		return (ENOSYS);
 
-	_site = libsl_siteid2site(siteid);
-	if (_site == NULL)
-		return EBADF;
+	site = libsl_siteid2site(siteid);
+	if (site == NULL)
+		return (EBADF);
 
-	SITE_FOREACH_RES(_site, _res, _siter) {
-		if (_res->res_type != SLREST_MDS)
+	SITE_FOREACH_RES(site, res, _siter) {
+		if (res->res_type != SLREST_MDS)
 			continue;
-		resm = psc_dynarray_getpos(&_res->res_members, 0);
+		resm = psc_dynarray_getpos(&res->res_members, 0);
 		break;
 	}
 	csvc = slm_getmcsvc(resm);
 	if (csvc == NULL)  {
 		psclog_info("Fail to connect to site %d", siteid);
-		return EIO;
+		return (EIO);
 	}
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_NAMESPACE_FORWARD, rq, mq, mp);
 	if (rc) {
 		sl_csvc_decref(csvc);
-		return EIO;
+		return (EIO);
 	}
 
 	mq->pfg	= *pfg;
