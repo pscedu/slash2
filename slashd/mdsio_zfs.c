@@ -116,7 +116,7 @@ zfsslash2_init(void)
 	if (rc >= (int)sizeof(buf))
 		psc_fatalx("snprintf: umount %s: too long", _PATH_KSTAT);
 	if (system(buf) == -1)
-		psc_warn("system(%s)", buf);
+		psclog_warn("system(%s)", buf);
 
 	if (pipe(newfs_fd) == -1)
 		psc_fatal("pipe");

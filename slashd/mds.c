@@ -268,7 +268,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 		bmap->bcm_flags |= BMAP_MDS_NOION;
 		BMAP_ULOCK(bmap);
 
-		psc_warnx("Failed to find pios %d", pios);
+		psclog_warnx("Failed to find pios %d", pios);
 		return (-SLERR_ION_UNKNOWN);
 	} else
 		BMAP_ULOCK(bmap);
@@ -1192,7 +1192,7 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 	    libcfs_nid2str(bia->bia_ion_nid), bia->bia_bmapno);
 
 	if (!bia->bia_fid) {
-		psc_warnx("found fid #0 in odtable");
+		psclog_warnx("found fid #0 in odtable");
 		rc = -EINVAL;
 		goto out;
 	}
@@ -1205,7 +1205,7 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 	if ((time() - bia->bia_start) >= BMAP_TIMEO_MAX) {
 		/* Don't bother with ancient leases.
 		 */
-		psc_warnx("bia timed out, ignoring: fid="SLPRI_FID" seq=%"PRId64
+		psclog_warnx("bia timed out, ignoring: fid="SLPRI_FID" seq=%"PRId64
 			  " res=(%s) ion=(%s) bmapno=%u",
 			  bia->bia_fid, bia->bia_seq, resm->resm_res->res_name,
 			  libcfs_nid2str(bia->bia_ion_nid), bia->bia_bmapno);
@@ -1219,7 +1219,7 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 
 	rc = slm_fcmh_get(&fg, &f);
 	if (rc) {
-		psc_errorx("failed to load: item=%zd, fid="SLPRI_FID,
+		psclog_errorx("failed to load: item=%zd, fid="SLPRI_FID,
 		    odtr->odtr_elem, fg.fg_fid);
 		goto out;
 	}
@@ -1280,11 +1280,11 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
 	rc = slm_fcmh_get(&c->fg, &fcmh);
 	if (rc) {
 		if (rc == ENOENT) {
-			psc_warnx("fid="SLPRI_FID" appears to have been deleted",
+			psclog_warnx("fid="SLPRI_FID" appears to have been deleted",
 			    c->fg.fg_fid);
 			return (0);
 		}
-		psc_errorx("fid="SLPRI_FID" slm_fcmh_get() rc=%d",
+		psclog_errorx("fid="SLPRI_FID" slm_fcmh_get() rc=%d",
 		    c->fg.fg_fid, rc);
 		return (-rc);
 	}
@@ -1397,7 +1397,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
 		iosidx = mds_repl_ios_lookup(ih,
 		    bmi->bmdsi_wr_ion->rmmi_resm->resm_iosid);
 		if (iosidx < 0)
-			psc_errorx("ios not found");
+			psclog_errorx("ios not found");
 		else {
 			BMAPOD_MODIFY_START(bmap);
 

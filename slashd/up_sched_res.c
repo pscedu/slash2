@@ -151,7 +151,7 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 		rc = mdsio_unlink(mds_upschdir_inum, fn, &rootcreds,
 		    NULL);
 	if (rc)
-		psc_error("trying to remove upsch link: %s",
+		psclog_error("trying to remove upsch link: %s",
 		    slstrerror(rc));
 	uswi_kill(wk);
 }
@@ -297,7 +297,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	if (csvc)
 		sl_csvc_decref(csvc);
 	if (rc)
-		psc_warnx("replication arrangement failed rc=%d", rc);
+		psclog_warnx("replication arrangement failed rc=%d", rc);
 	return (0);
 }
 
@@ -379,7 +379,7 @@ slmupschedthr_tryptrunc(struct up_sched_work_item *wk,
 	if (csvc)
 		sl_csvc_decref(csvc);
 	if (rc)
-		psc_warnx("partial truncation failed rc=%d", rc);
+		psclog_warnx("partial truncation failed rc=%d", rc);
 	return (0);
 }
 
@@ -466,7 +466,7 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	if (csvc)
 		sl_csvc_decref(csvc);
 	if (rc)
-		psc_warnx("garbage reclamation failed rc=%d", rc);
+		psclog_warnx("garbage reclamation failed rc=%d", rc);
 	return (0);
 }
 
@@ -535,7 +535,7 @@ slmupschedthr_main(struct psc_thread *thr)
 #if 0
 			rc = mds_inox_ensure_loaded(USWI_INOH(wk));
 			if (rc) {
-				psc_warnx("couldn't load inoh repl table: %s",
+				psclog_warnx("couldn't load inoh repl table: %s",
 				    slstrerror(rc));
 				slmupschedthr_removeq(wk);
 				goto restart;
@@ -907,7 +907,7 @@ upsched_scandir(void)
 			rc = mds_repl_loadino(&fg, &fcmh);
 			if (rc) {
 				/* XXX if ENOENT, remove from repldir and continue */
-				psc_errorx("mds_repl_loadino: %s",
+				psclog_errorx("mds_repl_loadino: %s",
 				    slstrerror(rc));
 				mdsio_unlink(mds_upschdir_inum, fn,
 				    &rootcreds, NULL);

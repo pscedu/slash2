@@ -129,14 +129,14 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, SRMI_BULK_PORTAL,
 	    iovs, mq->ncrc_updates);
 	if (mp->rc) {
-		psc_errorx("rsx_bulkserver() rc=%d", mp->rc);
+		psclog_errorx("rsx_bulkserver() rc=%d", mp->rc);
 		goto out;
 	}
 
 	/* Check the CRC the CRC's! */
 	psc_crc64_calc(&crc, buf, len);
 	if (crc != mq->crc) {
-		psc_errorx("crc verification of crcwrt payload failed");
+		psclog_errorx("crc verification of crcwrt payload failed");
 		mp->rc = SLERR_BADCRC;
 		goto out;
 	}
@@ -148,7 +148,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 		/* Does the bulk payload agree with the original request?
 		 */
 		if (c->nups != mq->ncrcs_per_update[i]) {
-			psc_errorx("nups(%u) != ncrcs_per_update(%u)",
+			psclog_errorx("nups(%u) != ncrcs_per_update(%u)",
 			    c->nups, mq->ncrcs_per_update[i]);
 			mp->crcup_rc[i] = -EINVAL;
 		}
@@ -164,7 +164,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 		mp->crcup_rc[i] = mds_bmap_crc_write(c,
 		    rq->rq_conn->c_peer.nid, mq);
 		if (mp->crcup_rc[i])
-			psc_errorx("mds_bmap_crc_write() failed: "
+			psclog_errorx("mds_bmap_crc_write() failed: "
 			    "fid="SLPRI_FID", rc=%d",
 			    c->fg.fg_fid, mp->crcup_rc[i]);
 	}
@@ -432,7 +432,7 @@ slm_rmi_handler(struct pscrpc_request *rq)
 		break;
 
 	default:
-		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
+		psclog_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
 		rq->rq_status = -ENOSYS;
 		return (pscrpc_error(rq));
 	}
