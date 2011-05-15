@@ -130,12 +130,8 @@ slm_rpc_ion_unpack_statfs(struct pscrpc_request *rq, int type)
 	struct srt_statfs *f;
 	struct pscrpc_msg *m;
 	struct sl_resm *resm;
-	lnet_nid_t nid;
 
 	m = type == PSCRPC_MSG_REPLY ? rq->rq_repmsg : rq->rq_reqmsg;
-	nid = rq->rq_import ? rq->rq_import->
-	    imp_connection->c_peer.nid : rq->rq_peer.nid;
-
 	if (m == NULL) {
 		psclog_errorx("unable to import statfs");
 		return;
@@ -145,7 +141,7 @@ slm_rpc_ion_unpack_statfs(struct pscrpc_request *rq, int type)
 		psclog_errorx("unable to import statfs");
 		return;
 	}
-	resm = libsl_nid2resm(nid);
+	resm = libsl_nid2resm(pscrpc_req_getconn(rq)->c_peer.nid);
 	if (resm == NULL) {
 		psclog_errorx("unknown peer");
 		return;
