@@ -145,11 +145,12 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 
 	FCMH_LOCK(fcmh);
 	mp->attr = fcmh->fcmh_sstb;
+	if (!fcmh_isdir(fcmh)) {
+		idx = mds_repl_ios_lookup(fcmh_2_inoh(fcmh), mq->iosid);
+		if (idx >= 0)
+			mp->attr.sst_blocks = fcmh_2_repl_nblks(fcmh, idx);
+	}
 	FCMH_ULOCK(fcmh);
-
-	idx = mds_repl_ios_lookup(fcmh_2_inoh(fcmh), mq->iosid);
-	if (idx >= 0)
-		mp->attr.sst_blocks = fcmh_2_repl_nblks(fcmh, idx);
 
  out:
 	if (fcmh)
