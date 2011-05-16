@@ -357,11 +357,6 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
 
-	if (IS_REMOTE_FID(mq->pfg.fg_fid)) {
-		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_MKDIR,
-		    &mq->pfg, mq->name, mq->mode, &mq->creds, &mp->cattr);
-		goto out;
-	}
 
 	mp->rc = slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
@@ -371,6 +366,12 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	pol = p->fcmh_sstb.sstd_freplpol;
 	FCMH_ULOCK(p);
 
+	if (IS_REMOTE_FID(mq->pfg.fg_fid)) {
+		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_MKDIR,
+		    &mq->pfg, mq->name, mq->mode, &mq->creds, &mp->cattr);
+		mdsio_fcmh_refreshattr(p, &mp->pattr);
+		goto out;
+	}
 	mds_reserve_slot();
 	mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(p), mq->name, mq->mode,
 	    &mq->creds, &mp->cattr, NULL, mds_namespace_log,
