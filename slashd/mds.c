@@ -1280,8 +1280,8 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
 	rc = slm_fcmh_get(&c->fg, &fcmh);
 	if (rc) {
 		if (rc == ENOENT) {
-			psclog_warnx("fid="SLPRI_FID" appears to have been deleted",
-			    c->fg.fg_fid);
+			psclog_warnx("fid="SLPRI_FID" appears to have "
+			    "been deleted", c->fg.fg_fid);
 			return (0);
 		}
 		psclog_errorx("fid="SLPRI_FID" slm_fcmh_get() rc=%d",
