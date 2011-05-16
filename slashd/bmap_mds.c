@@ -202,25 +202,27 @@ mds_bmap_destroy(struct bmapc_memb *bcm)
  *	the updates to ZFS and then log it.
  */
 int
-mds_bmap_crc_update(struct bmapc_memb *bmap, struct
-    srm_bmap_crcup *crcup)
+mds_bmap_crc_update(struct bmapc_memb *bmap,
+    struct srm_bmap_crcup *crcup)
 {
 	struct bmap_mds_info *bmi = bmap_2_bmi(bmap);
 	struct sl_mds_crc_log crclog;
+	struct fidc_membh *f;
 	uint32_t utimgen, i;
 	int extend = 0;
 
 	psc_assert(bmap->bcm_flags & BMAP_MDS_CRC_UP);
 
-	FCMH_LOCK(bmap->bcm_fcmh);
-	if (crcup->fsize > (uint64_t)fcmh_2_fsz(bmap->bcm_fcmh))
+	f = bmap->bcm_fcmh;
+	FCMH_LOCK(f);
+	if (crcup->fsize > fcmh_2_fsz(f))
 		extend = 1;
-	mds_fcmh_increase_fsz(bmap->bcm_fcmh, crcup->fsize);
-	utimgen = bmap->bcm_fcmh->fcmh_sstb.sst_utimgen;
-	FCMH_ULOCK(bmap->bcm_fcmh);
+	mds_fcmh_increase_fsz(f, crcup->fsize);
+	utimgen = f->fcmh_sstb.sst_utimgen;
+	FCMH_ULOCK(f);
 
 	if (utimgen < crcup->utimgen)
-		DEBUG_FCMH(PLL_ERROR, bmap->bcm_fcmh,
+		DEBUG_FCMH(PLL_ERROR, f,
 		   "utimgen %d < crcup->utimgen %d",
 		   utimgen, crcup->utimgen);
 
@@ -232,7 +234,6 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct
 	for (i = 0; i < crcup->nups; i++) {
 		bmap_2_crcs(bmap, crcup->crcs[i].slot) =
 		    crcup->crcs[i].crc;
-
 		bmap->bcm_crcstates[crcup->crcs[i].slot] =
 		    BMAP_SLVR_DATA | BMAP_SLVR_CRC;
 
