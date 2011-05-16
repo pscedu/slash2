@@ -45,11 +45,12 @@ struct slmds_jent_crc {
 	 */
 	slfid_t				sjc_fid;
 	sl_bmapno_t			sjc_bmapno;
-	sl_ios_id_t			sjc_ion;		/* Track the ION which did the I/O */
-	int32_t				sjc_ncrcs;
+	sl_ios_id_t			sjc_iosid;		/* Track the IOS which did the I/O */
+	 int32_t			sjc_ncrcs;
 	uint32_t			sjc_utimgen;
 	uint64_t			sjc_fsize;
-	int				sjc_extend;		/* XXX flags */
+	uint64_t			sjc_nblks;		/* st_blocks */
+	 int32_t			sjc_extend;		/* XXX flags */
 	struct srm_bmap_crcwire		sjc_crc[SLJ_MDS_NCRCS];
 } __packed;
 
@@ -87,13 +88,12 @@ struct slmds_jent_ino_addrepl {
 struct slmds_jent_bmap_assign {
 	lnet_nid_t			sjba_ion_nid;
 	lnet_process_id_t		sjba_lastcli;
-	int32_t				_sjba_pad;
 	sl_ios_id_t			sjba_ios;
 	slfid_t				sjba_fid;
 	uint64_t			sjba_seq;
+	 int32_t			sjba_flags;
 	sl_bmapno_t			sjba_bmapno;
 	time_t				sjba_start;
-	int				sjba_flags;
 } __packed;
 
 struct slmds_jent_bmapseq {

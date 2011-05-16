@@ -985,7 +985,7 @@ mds_update_cursor(void *buf, uint64_t txg, int flag)
 	freelock(&mds_distill_lock);
 
 	cursor->pjc_fid = slm_get_curr_slashid();
-	
+
 	rc = mds_bmap_getcurseq(&hwm, &lwm);
 	if (rc)
 		psc_assert(rc == -EAGAIN);
@@ -1408,12 +1408,14 @@ mds_bmap_crc_log(void *datap, uint64_t txg, __unusedx int flag)
 
 		n = MIN(SLJ_MDS_NCRCS, (crcup->nups - t));
 
-		jcrc = pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_crc));
+		jcrc = pjournal_get_buf(mdsJournal,
+		    sizeof(struct slmds_jent_crc));
 		jcrc->sjc_fid = fcmh_2_fid(bmap->bcm_fcmh);
-		jcrc->sjc_ion = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid;
+		jcrc->sjc_iosid = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_iosid;
 		jcrc->sjc_bmapno = bmap->bcm_bmapno;
 		jcrc->sjc_ncrcs = n;
 		jcrc->sjc_fsize = crcup->fsize;		/* largest known size */
+		jcrc->sjc_nblks = crcup->nblks;
 		jcrc->sjc_extend = distill;
 		jcrc->sjc_utimgen = crcup->utimgen;     /* utime generation number */
 
@@ -1507,7 +1509,8 @@ mds_journal_init(int disable_propagation)
 	for (i = 0; i < count; i++) {
 		res = libsl_id2res(reclaim_prog_buf[i].res_id);
 		if (!RES_ISFS(res)) {
-			psclog_warn("Non-FS resource ID in reclaim file %d", res->res_id);
+			psclog_warn("Non-FS resource ID %u "
+			    "in reclaim file", res->res_id);
 			continue;
 		}
 		iosinfo = res2rpmi(res)->rpmi_info;
@@ -1570,8 +1573,8 @@ mds_journal_init(int disable_propagation)
 	    &update_progfile_handle);
 	psc_assert(rc == 0);
 
-	update_prog_buf = PSCALLOC(MAX_UPDATE_PROG_ENTRY * sizeof(struct
-	    update_prog_entry));
+	update_prog_buf = PSCALLOC(MAX_UPDATE_PROG_ENTRY *
+	    sizeof(struct update_prog_entry));
 	rc = mds_read_file(update_progfile_handle, update_prog_buf,
 	    MAX_UPDATE_PROG_ENTRY * sizeof(struct update_prog_entry),
 	    &size, 0);
@@ -1581,7 +1584,8 @@ mds_journal_init(int disable_propagation)
 	for (i = 0; i < count; i++) {
 		res = libsl_id2res(update_prog_buf[i].res_id);
 		if (res->res_type != SLREST_MDS) {
-			psclog_warn("Non-MDS resource ID in update file %d", res->res_id);
+			psclog_warnx("Non-MDS resource ID %u "
+			    "in update file", res->res_id);
 			continue;
 		}
 		peerinfo = res2rpmi(res)->rpmi_info;
