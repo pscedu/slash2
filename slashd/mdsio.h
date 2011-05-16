@@ -108,7 +108,7 @@ struct mdsio_ops {
 	int	(*mio_redo_link)(slfid_t, slfid_t, char *, struct srt_stat *);
 	int	(*mio_redo_mkdir)(slfid_t, char *, struct srt_stat *);
 	int	(*mio_redo_rename)(slfid_t, const char *, slfid_t, const char *, struct srt_stat *);
-	int	(*mio_redo_rmdir)(slfid_t, slfid_t, char *, struct srt_stat *);
+	int	(*mio_redo_rmdir)(slfid_t, slfid_t, char *);
 	int	(*mio_redo_setattr)(slfid_t, uint, struct srt_stat *);
 	int	(*mio_redo_symlink)(slfid_t, slfid_t, char *, char *, struct srt_stat *);
 	int	(*mio_redo_unlink)(slfid_t, slfid_t, char *);
