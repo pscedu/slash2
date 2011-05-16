@@ -84,7 +84,7 @@ int	slm_rmc_handler(struct pscrpc_request *);
 int	slm_rmi_handler(struct pscrpc_request *);
 int	slm_rmm_handler(struct pscrpc_request *);
 int	slm_rmm_forward_namespace(int, const struct slash_fidgen *,
-	    char *, uint32_t, const struct slash_creds *);
+	    char *, uint32_t, const struct slash_creds *, struct srt_stat *);
 
 /* aliases for connection management */
 #define slm_getmcsvcx(resm, exp)					\

@@ -359,7 +359,7 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 
 	if (IS_REMOTE_FID(mq->pfg.fg_fid)) {
 		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_MKDIR,
-		    &mq->pfg, mq->name, mq->mode, &mq->creds);
+		    &mq->pfg, mq->name, mq->mode, &mq->creds, &mp->cattr);
 		goto out;
 	}
 
@@ -448,7 +448,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 	if (IS_REMOTE_FID(mq->pfg.fg_fid)) {
 		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_CREATE,
-		    &mq->pfg, mq->name, mq->mode, &mq->creds);
+		    &mq->pfg, mq->name, mq->mode, &mq->creds, &mp->cattr);
 		goto out;
 	}
 
@@ -954,7 +954,7 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	if (IS_REMOTE_FID(mq->pfid)) {
 		mp->rc = slm_rmm_forward_namespace(isfile?
 		    SLM_FORWARD_UNLINK : SLM_FORWARD_MKDIR, &fg,
-		    mq->name, 0, NULL);
+		    mq->name, 0, NULL, NULL);
 		goto out;
 	}
 
