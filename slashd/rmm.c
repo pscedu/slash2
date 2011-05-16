@@ -304,6 +304,7 @@ slm_rmm_forward_namespace(int op, const struct slash_fidgen *pfg,
 		return (EIO);
 	}
 
+	mq->op = op;
 	mq->pfg	= *pfg;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
@@ -313,9 +314,9 @@ slm_rmm_forward_namespace(int op, const struct slash_fidgen *pfg,
 		mq->fid = slm_get_next_slashid();
 	} else {
 		mq->mode = 0;
-		mq->fid = 0;
-		mq->creds.scr_uid = 0;
+		mq->creds.scr_uid = 0;		/* XXX */
 		mq->creds.scr_gid = 0;
+		mq->fid = 0;
 	}
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
