@@ -13,16 +13,16 @@ reminders:
 
 -----------------------------------------------------------------------
 * Pending I/O Issues:
-	. Sliod threads may be get tied up servicing requests from a 
+	. Sliod threads may be get tied up servicing requests from a
 	failed client or client connection.  If the socket doesn't immediately
 	fail, the rpc's need to time out.  This can cause requests from other
 	clients to accumulate on the sliod, these requests could time out also.
-	Worse yet, the leases for the blocked clients may expire causing 
-	more problems.  Unfortunately, all of this is exacerbated by the 
-	lack of flow control and aggressive read ahead.	
+	Worse yet, the leases for the blocked clients may expire causing
+	more problems.  Unfortunately, all of this is exacerbated by the
+	lack of flow control and aggressive read ahead.
 
 -----------------------------------------------------------------------
-* Revisit readdir.  Make sure we're not making unnecessary round trips for 
+* Revisit readdir.  Make sure we're not making unnecessary round trips for
 bulks when the directories are small.
 
 -----------------------------------------------------------------------
@@ -463,7 +463,4 @@ lcache
 - mds: do not allow repl changes while IN_PTRUNC
 - should replay crcupdate set ion to VALID ?
 - support multi addresses for resms
-
-- du
-- df
-- test repl
+- remove inodeh_lock in place of fcmh lock
