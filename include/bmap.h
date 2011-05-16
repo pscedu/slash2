@@ -49,19 +49,19 @@ struct fidc_membh;
 struct srt_bmapdesc;
 
 /**
- * bmap_core_state
+ * bmap_core_state - Basic information needed by all nodes.
  * @bcs_crcstates: bits describing the state of each sliver.
  * @bcs_repls: bitmap used for tracking the replication status of this bmap.
  *
  * This structure must be 64-bit aligned and padded.
  */
 struct bmap_core_state {
-	uint8_t			bcs_crcstates[SLASH_CRCS_PER_BMAP];
-	uint8_t			bcs_repls[SL_REPLICA_NBYTES];
+	uint8_t			 bcs_crcstates[SLASH_CRCS_PER_BMAP];
+	uint8_t			 bcs_repls[SL_REPLICA_NBYTES];
 };
 
 /**
- * bmap_extra_state
+ * bmap_extra_state - Additional fields needed by MDS.
  * @bes_crcs: the CRC table, one 8-byte CRC per sliver.
  * @bes_gen: current generation number.
  * @bes_replpol: replication policy.
@@ -71,13 +71,13 @@ struct bmap_core_state {
 struct bmap_extra_state {
 	uint64_t		bes_crcs[SLASH_CRCS_PER_BMAP];
 	sl_bmapgen_t		bes_gen;
-	uint32_t		bes_replpol;
+	uint32_t		bes_replpol:4;
+	uint32_t		bes_nblks:28;
 };
 
 /**
- * bmap_ondisk - slash bmap over-wire/on-disk structure.  This
- *	structure maps the persistent state of the bmap within the
- *	inode's metafile.
+ * bmap_ondisk - Bmap over-wire/on-disk structure.  This structure maps
+ *	the persistent state of the bmap within the inode's metafile.
  * @bod_bhcrc: on-disk checksum.
 */
 struct bmap_ondisk {
@@ -91,10 +91,10 @@ struct bmap_ondisk {
 };
 
 /**
- * bmapc_memb - central structure for block map caching used in
- *    all slash service contexts (mds, ios, client).  The pool
- *    for this structure and its private area for each service
- *    is initialized in bmap_cache_init().
+ * bmapc_memb - Central structure for block map caching used in all
+ *	SLASH service contexts (mds, ios, client).  The pool for this
+ *	structure and its private area for each service is initialized
+ *	in bmap_cache_init().
  *
  * bmapc_memb sits in the middle of the GFC stratum.
  * XXX some of these elements may need to be moved into the bcm_info_pri
