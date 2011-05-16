@@ -259,7 +259,7 @@ slm_rmm_handler(struct pscrpc_request *rq)
 
 int
 slm_rmm_forward_namespace(int op, const struct slash_fidgen *pfg,
-    const char *name, uint32_t mode, const struct slash_creds *creds)
+    char *name, uint32_t mode, const struct slash_creds *creds)
 {
 	int rc, _siter;
 	struct sl_resm *resm;
@@ -320,9 +320,25 @@ slm_rmm_forward_namespace(int op, const struct slash_fidgen *pfg,
 	}
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc == 0)
-		rc = mp->rc;
+	if (rc)
+		goto out;
 
+	switch (op) {
+	    case SLM_FORWARD_MKDIR:
+		rc = mdsio_redo_mkdir(mq->pfg.fg_fid, name, &mp->cattr);
+		break;
+	    case SLM_FORWARD_RMDIR:
+		rc = mdsio_redo_rmdir(mq->pfg.fg_fid, mq->fid, name);
+		break;
+	    case SLM_FORWARD_CREATE:
+		rc = mdsio_redo_create(mq->pfg.fg_fid, name, &mp->cattr);
+		break;
+	    case SLM_FORWARD_UNLINK:
+		rc = mdsio_redo_unlink(mq->pfg.fg_fid, mq->fid, name);
+		break;
+	}
+
+ out:
 	pscrpc_req_finished(rq);
 	sl_csvc_decref(csvc);
 
