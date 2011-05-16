@@ -111,7 +111,7 @@ struct mdsio_ops {
 	int	(*mio_redo_rmdir)(slfid_t, slfid_t, char *, struct srt_stat *);
 	int	(*mio_redo_setattr)(slfid_t, uint, struct srt_stat *);
 	int	(*mio_redo_symlink)(slfid_t, slfid_t, char *, char *, struct srt_stat *);
-	int	(*mio_redo_unlink)(slfid_t, slfid_t, char *, struct srt_stat *);
+	int	(*mio_redo_unlink)(slfid_t, slfid_t, char *);
 };
 
 #define mdsio_init		mdsio_ops.mio_init			/* zfs_init() */

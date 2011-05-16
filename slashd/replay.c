@@ -402,7 +402,7 @@ mds_redo_namespace(struct slmds_jent_namespace *sjnm, int replay)
 		break;
 	    case NS_OP_UNLINK:
 		rc = mdsio_redo_unlink(sjnm->sjnm_parent_fid,
-		    sjnm->sjnm_target_fid, name, &sstb);
+		    sjnm->sjnm_target_fid, name);
 		break;
 	    case NS_OP_RMDIR:
 		rc = mdsio_redo_rmdir(sjnm->sjnm_parent_fid,
