@@ -221,14 +221,17 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (mp->rc) {
 		rc = mp->rc;
 		for (i=0; i < nslvrs; i++) {
-			DEBUG_SLVR(PLL_WARN, slvr_ref[i],
-			   "unwind ref due to bulk error (rw=%d)", rw);
 			SLVR_LOCK(slvr_ref[i]);
 			if (rw == SL_READ)
 				slvr_ref[i]->slvr_pndgreads--;
 			else
 				slvr_ref[i]->slvr_pndgwrts--;
+
+			slvr_lru_tryunpin_locked(slvr_ref[i]);
 			SLVR_ULOCK(slvr_ref[i]);
+
+			DEBUG_SLVR(PLL_WARN, slvr_ref[i], 
+			   "unwind ref due to bulk error (rw=%d)", rw);
 		}
 		goto out;
 	}
