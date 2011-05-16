@@ -48,7 +48,6 @@ struct up_sched_work_item {
 #define USWI_NREPLS(wk)		USWI_INO(wk)->ino_nrepls
 #define USWI_FG(wk)		(&(wk)->uswi_fcmh->fcmh_fg)
 #define USWI_FID(wk)		USWI_FG(wk)->fg_fid
-#define USWI_NBMAPS(wk)		fcmh_2_nbmaps((wk)->uswi_fcmh)
 
 #define USWI_GETREPL(wk, n)	((n) < SL_DEF_REPLICAS ?		\
 				    USWI_INO(wk)->ino_repls[n] :	\

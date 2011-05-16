@@ -233,8 +233,6 @@ void		 slm_workers_spawn(void);
 
 extern struct slash_creds			 rootcreds;
 extern struct odtable				*mdsBmapAssignTable;
-extern const struct slash_inode_extras_od	 null_inox_od;
-extern const struct slash_inode_od		 null_inode_od;
 extern struct sl_mds_nsstats			 slm_nsstats_aggr;	/* aggregate namespace stats */
 extern struct sl_mds_peerinfo			*localinfo;
 

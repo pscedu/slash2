@@ -81,7 +81,6 @@ struct slash_fidgen {
 #define FSID_LEN		16
 
 #define FID_PATH_DEPTH		3
-#define FID_PATH_LEN		1024
 
 /* bits per hex char e.g. 0xffff=16 */
 #define BPHXC			4

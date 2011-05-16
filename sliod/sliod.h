@@ -79,7 +79,6 @@ resm2rmii(struct sl_resm *resm)
 	return (resm_get_pri(resm));
 }
 
-void		slitimerthr_spawn(void);
 __dead void	slictlthr_main(const char *);
 
 int		iod_inode_getinfo(struct slash_fidgen *, uint64_t *, uint64_t *, uint32_t *);
