@@ -23,6 +23,7 @@
 
 #define PSC_SUBSYS PSS_RPC
 
+#include <fcntl.h>
 #include <stdio.h>
 
 #include "pfl/str.h"
@@ -186,7 +187,7 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 	    mq->op != SLM_FORWARD_CREATE && mq->op != SLM_FORWARD_UNLINK &&
 	    mq->op != SLM_FORWARD_SETATTR) {
 		mp->rc = EINVAL;
-		goto out;
+		return (0);
 	}
 
 	psclog_info("op=%d, fid="SLPRI_FID", name=%s", mq->op, mq->fid, mq->req.name);
@@ -236,7 +237,8 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		break;
 	}
 	mds_unreserve_slot();
- out:
+	if (p)
+		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 	return (mp->rc);
 }
 
