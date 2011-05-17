@@ -975,10 +975,10 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 
 	mds_reserve_slot();
 	if (isfile)
-		mp->rc = mdsio_unlink(fcmh_2_mdsio_fid(p),
+		mp->rc = mdsio_unlink(fcmh_2_mdsio_fid(p), NULL,
 		    mq->name, &rootcreds, mds_namespace_log);
 	else
-		mp->rc = mdsio_rmdir(fcmh_2_mdsio_fid(p),
+		mp->rc = mdsio_rmdir(fcmh_2_mdsio_fid(p), NULL,
 		    mq->name, &rootcreds, mds_namespace_log);
 	mds_unreserve_slot();
 

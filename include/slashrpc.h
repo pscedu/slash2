@@ -350,6 +350,7 @@ struct srm_forward_rep {
 	struct srt_stat		cattr;		/* child node */
 	struct srt_stat		pattr;		/* parent dir */
 	 int32_t		rc;		/* return code, 0 for success or slerrno */
+	slfid_t			fid;		/* provided by the peer MDS */
 	 int32_t		_pad;
 } __packed;
 

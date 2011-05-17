@@ -148,7 +148,7 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 	else if (rc >= (int)sizeof(fn))
 		rc = ENAMETOOLONG;
 	else
-		rc = mdsio_unlink(mds_upschdir_inum, fn, &rootcreds,
+		rc = mdsio_unlink(mds_upschdir_inum, NULL, fn, &rootcreds,
 		    NULL);
 	if (rc)
 		psclog_error("trying to remove upsch link: %s",
@@ -909,7 +909,7 @@ upsched_scandir(void)
 				/* XXX if ENOENT, remove from repldir and continue */
 				psclog_errorx("mds_repl_loadino: %s",
 				    slstrerror(rc));
-				mdsio_unlink(mds_upschdir_inum, fn,
+				mdsio_unlink(mds_upschdir_inum, NULL, fn,
 				    &rootcreds, NULL);
 				continue;
 			}

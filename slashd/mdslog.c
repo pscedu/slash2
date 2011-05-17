@@ -243,7 +243,7 @@ mds_remove_logfile(uint64_t batchno, int update)
 		xmkfn(logfn, "%s.%d", SL_FN_UPDATELOG, batchno);
 	else
 		xmkfn(logfn, "%s.%d", SL_FN_RECLAIMLOG, batchno);
-	mdsio_unlink(mds_metadir_inum, logfn, &rootcreds, NULL);
+	mdsio_unlink(mds_metadir_inum, NULL, logfn, &rootcreds, NULL);
 }
 
 int

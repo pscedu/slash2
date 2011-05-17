@@ -216,14 +216,14 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		mp->rc = slm_fcmh_get(&mq->pfg, &p);
 		if (mp->rc)
 			break;
-		mp->rc = mdsio_rmdir(fcmh_2_mdsio_fid(p),
+		mp->rc = mdsio_rmdir(fcmh_2_mdsio_fid(p), &mq->fid,
 		    mq->req.name, &rootcreds, mds_namespace_log);
 		break;
 	    case SLM_FORWARD_UNLINK:
 		mp->rc = slm_fcmh_get(&mq->pfg, &p);
 		if (mp->rc)
 			break;
-		mp->rc = mdsio_unlink(fcmh_2_mdsio_fid(p),
+		mp->rc = mdsio_unlink(fcmh_2_mdsio_fid(p), &mq->fid,
 		    mq->req.name, &rootcreds, mds_namespace_log);
 		break;
 	    case SLM_FORWARD_SETATTR:
