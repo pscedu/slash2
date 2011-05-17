@@ -464,3 +464,10 @@ lcache
 - should replay crcupdate set ion to VALID ?
 - support multi addresses for resms
 - remove inodeh_lock in place of fcmh lock
+
+fsuuid
+- on file system creation, create a random value
+- send this to in CONNECT replies from MDS
+- if value is not set, write it to sliod fs
+- if set, ensure it matches
+
