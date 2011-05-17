@@ -43,10 +43,10 @@
 
 /*
  * Define metafile offsets.  At the beginning of the metafile is the
- * SLASH2 inode, which is always loaded.  Start from byte offset 1024
- * (0x400) are extra inode attributes. Block CRCs begin at offset 4096
- * (0x1000).
+ * SLASH2 inode, which is always loaded.
  */
+//#define SL_EXTRAS_START_OFF	((off_t)0x0200)
+//#define SL_BMAP_START_OFF	((off_t)0x0600)
 #define SL_EXTRAS_START_OFF	((off_t)0x0400)
 #define SL_BMAP_START_OFF	((off_t)0x1000)
 
@@ -69,25 +69,25 @@ typedef struct {
  * the block store array along with snapshot pointers.
  */
 struct slash_inode_od {
-	uint16_t		ino_version;
-	uint16_t		ino_flags;			/* immutable, etc. */
-	uint32_t		ino_bsz;			/* bmap size */
-	uint32_t		ino_nrepls;			/* if 0, use ino_prepl */
-	uint32_t		ino_replpol;			/* BRP_* policies */
-	sl_replica_t		ino_repls[SL_DEF_REPLICAS];	/* embed a few replicas	*/
+	uint16_t		 ino_version;
+	uint16_t		 ino_flags;			/* immutable, etc. */
+	uint32_t		 ino_bsz;			/* bmap size */
+	uint32_t		 ino_nrepls;			/* if 0, use ino_prepl */
+	uint32_t		 ino_replpol;			/* BRP_* policies */
+	sl_replica_t		 ino_repls[SL_DEF_REPLICAS];	/* embed a few replicas	*/
 };
 
 struct slash_inode_extras_od {
-	sl_snap_t		inox_snaps[SL_DEF_SNAPSHOTS];	/* snapshot pointers */
-	sl_replica_t		inox_repls[SL_INOX_NREPLICAS];
+	sl_snap_t		 inox_snaps[SL_DEF_SNAPSHOTS];	/* snapshot pointers */
+	sl_replica_t		 inox_repls[SL_INOX_NREPLICAS];
 };
 
 struct slash_inode_handle {
-	struct slash_inode_od	  inoh_ino;
+	struct slash_inode_od	 inoh_ino;
 	struct slash_inode_extras_od *inoh_extras;
-	struct fidc_membh	 *inoh_fcmh;
-	psc_spinlock_t		  inoh_lock;
-	int			  inoh_flags;
+	struct fidc_membh	*inoh_fcmh;
+	psc_spinlock_t		 inoh_lock;
+	int			 inoh_flags;
 };
 
 #define	INOH_INO_DIRTY		(1 << 0)			/* inode needs to be written */
