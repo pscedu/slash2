@@ -91,7 +91,7 @@ struct slmds_jent_bmap_assign {
 	sl_ios_id_t			sjba_ios;
 	slfid_t				sjba_fid;
 	uint64_t			sjba_seq;
-	 int32_t			sjba_flags;
+	uint32_t			sjba_flags;
 	sl_bmapno_t			sjba_bmapno;
 	time_t				sjba_start;
 } __packed;
@@ -102,23 +102,22 @@ struct slmds_jent_bmapseq {
 } __packed;
 
 /*
- * This is a "jumbo" journal entry that combines at most three
- * changes into one.
+ * This is a "jumbo" journal entry that combines at most three changes
+ * into one.
  */
+struct slmds_jent_assign_rep {
+	uint32_t			sjar_flags;
+	 int32_t			sjar_elem;
+	struct slmds_jent_ino_addrepl	sjar_ino;
+	struct slmds_jent_repgen	sjar_rep;
+	struct slmds_jent_bmap_assign	sjar_bmap;
+} __packed;
 
 #define	SLJ_ASSIGN_REP_NONE		0x00
 #define	SLJ_ASSIGN_REP_INO		0x01
 #define	SLJ_ASSIGN_REP_REP		0x02
 #define	SLJ_ASSIGN_REP_BMAP		0x04
 #define	SLJ_ASSIGN_REP_FREE		0x08
-
-struct slmds_jent_assign_rep {
-	int				sjar_flag;
-	int				sjar_elem;
-	struct slmds_jent_ino_addrepl	sjar_ino;
-	struct slmds_jent_repgen	sjar_rep;
-	struct slmds_jent_bmap_assign	sjar_bmap;
-} __packed;
 
 #define SJ_NAMESPACE_MAGIC		UINT64_C(0xabcd12345678dcba)
 
