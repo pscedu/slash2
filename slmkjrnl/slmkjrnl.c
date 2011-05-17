@@ -115,7 +115,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 		psc_fatal("failed to write journal header");
 
 	jbuf = psc_alloc(PJ_PJESZ(&pj) * pj.pj_hdr->pjh_readsize,
-			 PAF_PAGEALIGN | PAF_LOCK);
+	    PAF_PAGEALIGN | PAF_LOCK);
 	for (i = 0; i < rs; i++) {
 		pje = PSC_AGP(jbuf, PJ_PJESZ(&pj) * i);
 		pje->pje_magic = PJE_MAGIC;
@@ -134,7 +134,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	for (slot = 0; slot < pjh.pjh_nents; slot += rs) {
 		nb = pwrite(pj.pj_fd, jbuf, PJ_PJESZ(&pj) * rs,
 		    PJ_GETENTOFF(&pj, slot));
-		if ((size_t)nb != PJ_PJESZ(&pj) * rs) 
+		if ((size_t)nb != PJ_PJESZ(&pj) * rs)
 			psc_fatal("failed to write slot %u", slot);
 	}
 	if (close(fd) == -1)
@@ -147,16 +147,15 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 void
 pjournal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 {
-	int type;
+	char name[SL_NAME_MAX + 1], newname[SL_NAME_MAX + 1];
+	struct slmds_jent_assign_rep *logentry;
+	struct slmds_jent_ino_addrepl *jrir;
+	struct slmds_jent_bmap_assign *jrba;
+	struct slmds_jent_namespace *sjnm;
+	struct slmds_jent_bmapseq *sjsq;
 	struct slmds_jent_repgen *jrpg;
 	struct slmds_jent_crc *jcrc;
-	struct slmds_jent_bmapseq *sjsq;
-	struct slmds_jent_ino_addrepl *jrir;
-	struct slmds_jent_assign_rep *logentry;
-	struct slmds_jent_namespace *sjnm;
-	struct slmds_jent_bmap_assign *jrba;
-	char name[SL_NAME_MAX + 1];
-	char newname[SL_NAME_MAX + 1];
+	int type;
 
 	type = pje->pje_type & ~(_PJE_FLSHFT - 1);
 	printf("%6d: ", slot);
@@ -186,21 +185,25 @@ pjournal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 		break;
 	    case MDS_LOG_BMAP_ASSIGN:
 		logentry = PJE_DATA(pje);
-		if (logentry->sjar_flag & SLJ_ASSIGN_REP_FREE)
-			printf("type=%3d, xid=%#"PRIx64", txg=%#"PRIx64", item=%d",
-				type, pje->pje_xid, pje->pje_txg, logentry->sjar_elem);
+		if (logentry->sjar_flags & SLJ_ASSIGN_REP_FREE)
+			printf("type=%3d, xid=%#"PRIx64", "
+			    "txg=%#"PRIx64", item=%d",
+			    type, pje->pje_xid,
+			    pje->pje_txg, logentry->sjar_elem);
 		else {
 			jrba = &logentry->sjar_bmap;
 			printf("type=%3d, xid=%#"PRIx64", "
 			    "txg=%#"PRIx64", fid="SLPRI_FID", flags=%x",
 			    type, pje->pje_xid, pje->pje_txg,
-			    jrba->sjba_fid, logentry->sjar_flag);
+			    jrba->sjba_fid, logentry->sjar_flags);
 		}
 		break;
 	    case MDS_LOG_NAMESPACE:
 		sjnm = PJE_DATA(pje);
-		printf("type=%3d, xid=%#"PRIx64", txg=%#"PRIx64", fid="SLPRI_FID", ",
-			type, pje->pje_xid, pje->pje_txg, sjnm->sjnm_target_fid);
+		printf("type=%3d, xid=%#"PRIx64", txg=%#"PRIx64", "
+		    "fid="SLPRI_FID", ",
+		    type, pje->pje_xid, pje->pje_txg,
+		    sjnm->sjnm_target_fid);
 
 		name[0]='\0';
 		if (sjnm->sjnm_namelen) {
@@ -266,24 +269,16 @@ pjournal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 void
 pjournal_dump(const char *fn, int verbose)
 {
-	int i, ntotal, nmagic, nchksum, nformat, ndump;
+	int i, ntotal, nmagic, nchksum, nformat, ndump, first = 1;
+	uint32_t slot, highest_slot = -1, lowest_slot = -1;
+	uint64_t chksum, highest_xid = 0, lowest_xid = 0;
 	struct psc_journal_enthdr *pje;
 	struct psc_journal_hdr *pjh;
 	struct psc_journal *pj;
-	unsigned char *jbuf;
-	uint32_t slot;
-	uint64_t chksum;
-	ssize_t nb;
-
 	struct stat statbuf;
-	ssize_t pjhlen;
+	unsigned char *jbuf;
+	ssize_t nb, pjhlen;
 
-	int first = 1;
-	uint64_t highest_xid, lowest_xid;
-	uint32_t highest_slot, lowest_slot;
-
-	highest_xid = lowest_xid = 0;
-	highest_slot = lowest_slot = -1;
 	ntotal = nmagic = nchksum = nformat = ndump = 0;
 
 	pj = PSCALLOC(sizeof(*pj));
@@ -297,8 +292,9 @@ pjournal_dump(const char *fn, int verbose)
 		psc_fatal("failed to stat journal %s", fn);
 
 	/*
-	 * O_DIRECT may impose alignment restrictions so align the buffer
-	 * and perform I/O in multiples of file system block size.
+	 * O_DIRECT may impose alignment restrictions so align the
+	 * buffer and perform I/O in multiples of file system block
+	 * size.
 	 */
 	pjhlen = PSC_ALIGN(sizeof(*pjh), statbuf.st_blksize);
 	pjh = psc_alloc(pjhlen, PAF_PAGEALIGN | PAF_LOCK);
@@ -344,7 +340,8 @@ pjournal_dump(const char *fn, int verbose)
 	    pjh->pjh_readsize, pjh->pjh_start_off);
 
 #if 0
-	printf("This journal was created on %s", ctime((time_t *)&pjh->pjh_timestamp));
+	printf("This journal was created on %s",
+	    ctime((time_t *)&pjh->pjh_timestamp));
 #endif
 
 	jbuf = psc_alloc(PJ_PJESZ(pj) * pj->pj_hdr->pjh_readsize,
@@ -449,7 +446,8 @@ main(int argc, char *argv[])
 			l = strtol(optarg, &endp, 10);
 			if (l <= 0 || l > INT_MAX ||
 			    endp == optarg || *endp != '\0')
-				errx(1, "invalid -n nentries: %s", optarg);
+				errx(1, "invalid -n nentries: %s",
+				    optarg);
 			nents = (ssize_t)l;
 			break;
 		case 'q':
