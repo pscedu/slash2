@@ -202,6 +202,9 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		    NULL, mq->fid);
 		break;
 	    case SLM_FORWARD_CREATE:
+		mp->rc = slm_fcmh_get(&mq->pfg, &p);
+		if (mp->rc)
+			break;
 		mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &mq->creds,
 		    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->req.name, NULL,
 		    &mp->cattr, &mdsio_data, mds_namespace_log,
@@ -210,10 +213,16 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 			mdsio_release(&rootcreds, mdsio_data);
 		break;
 	    case SLM_FORWARD_RMDIR:
+		mp->rc = slm_fcmh_get(&mq->pfg, &p);
+		if (mp->rc)
+			break;
 		mp->rc = mdsio_rmdir(fcmh_2_mdsio_fid(p),
 		    mq->req.name, &rootcreds, mds_namespace_log);
 		break;
 	    case SLM_FORWARD_UNLINK:
+		mp->rc = slm_fcmh_get(&mq->pfg, &p);
+		if (mp->rc)
+			break;
 		mp->rc = mdsio_unlink(fcmh_2_mdsio_fid(p),
 		    mq->req.name, &rootcreds, mds_namespace_log);
 		break;
