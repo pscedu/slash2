@@ -1631,7 +1631,9 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 		goto out;
 
 	sl_internalize_statfs(&mp->ssfb, &sfb);
-//	sfb.f_bsize = MSL_FS_BLKSIZ;
+	sfb.f_bfree = sfb.f_bfree * sfb.f_bsize / MSL_FS_BLKSIZ;
+	sfb.f_bavail = sfb.f_bavail * sfb.f_bsize / MSL_FS_BLKSIZ;
+	sfb.f_bsize = MSL_FS_BLKSIZ;
 	sfb.f_fsid = SLASH_FSID;
 
  out:
