@@ -78,23 +78,20 @@ uint64_t			 current_reclaim_batchno;
 
 static psc_spinlock_t		 mds_distill_lock = SPINLOCK_INIT;
 
-uint64_t			 current_update_xid = 0;
-uint64_t			 current_reclaim_xid = 0;
+uint64_t			 current_update_xid;
+uint64_t			 current_reclaim_xid;
 
-uint64_t			 sync_update_xid = 0;
-uint64_t			 sync_reclaim_xid = 0;
+uint64_t			 sync_update_xid;
+uint64_t			 sync_reclaim_xid;
 
-static void			*update_logfile_handle = NULL;
-static void			*reclaim_logfile_handle = NULL;
+static void			*update_logfile_handle;
+static void			*reclaim_logfile_handle;
 
 static off_t			 update_logfile_offset;
 static off_t			 reclaim_logfile_offset;
 
-static void			*update_progfile_handle = NULL;
-static void			*reclaim_progfile_handle = NULL;
-
-char				 update_progfile_name[PATH_MAX];
-char				 reclaim_progfile_name[PATH_MAX];
+static void			*update_progfile_handle;
+static void			*reclaim_progfile_handle;
 
 #define	MAX_UPDATE_PROG_ENTRY	32
 
@@ -1450,8 +1447,9 @@ mds_journal_init(int disable_propagation)
 	struct sl_mds_iosinfo *iosinfo;
 	struct sl_resource *res;
 	struct sl_resm *resm;
-	size_t size;
+	char fn[PATH_MAX];
 	void *handle;
+	size_t size;
 
 	psc_assert(MDS_LOG_LAST_TYPE <= (1 << 15));
 	psc_assert(sizeof(struct srt_update_entry) == 512);
@@ -1493,9 +1491,8 @@ mds_journal_init(int disable_propagation)
 	pscthr_init(SLMTHRT_CURSOR, 0, mds_cursor_thread, NULL, 0,
 	    "slmjcursorthr");
 
-	xmkfn(reclaim_progfile_name, "%s", SL_FN_RECLAIMPROG);
-	rc = mds_open_file(reclaim_progfile_name, O_RDWR,
-	    &reclaim_progfile_handle);
+	xmkfn(fn, "%s", SL_FN_RECLAIMPROG);
+	rc = mds_open_file(fn, O_RDWR, &reclaim_progfile_handle);
 	psc_assert(rc == 0);
 
 	reclaim_prog_buf = PSCALLOC(MAX_RECLAIM_PROG_ENTRY *
@@ -1568,9 +1565,8 @@ mds_journal_init(int disable_propagation)
 	if (!npeers)
 		goto replay_log;
 
-	xmkfn(update_progfile_name, "%s", SL_FN_UPDATEPROG);
-	rc = mds_open_file(update_progfile_name, O_RDWR,
-	    &update_progfile_handle);
+	xmkfn(fn, "%s", SL_FN_UPDATEPROG);
+	rc = mds_open_file(fn, O_RDWR, &update_progfile_handle);
 	psc_assert(rc == 0);
 
 	update_prog_buf = PSCALLOC(MAX_UPDATE_PROG_ENTRY *
