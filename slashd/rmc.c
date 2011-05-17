@@ -554,7 +554,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	niov = 1;
 	if (mq->nstbpref) {
 		niov++;
-		iov[1].iov_len = mq->nstbpref * sizeof(struct srm_getattr_rep);
+		iov[1].iov_len = mq->nstbpref * sizeof(struct srt_stat);
 		iov[1].iov_base = PSCALLOC(iov[1].iov_len);
 	} else {
 		iov[1].iov_len = 0;
@@ -577,7 +577,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	{
 		/* debugging only */
 		unsigned int i;
-		struct srm_getattr_rep *attr;
+		struct srt_stat *attr;
 		attr = iov[1].iov_base;
 		for (i = 0; i < mq->nstbpref; i++, attr++) {
 			if (attr->rc || !attr->attr.sst_ino)

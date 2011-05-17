@@ -1067,10 +1067,10 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	niov++;
 
 	nstbpref = MIN(nstb_prefetch, (int)howmany(LNET_MTU - size,
-	    sizeof(struct srm_getattr_rep)));
+	    sizeof(struct srt_stat)));
 	if (nstbpref) {
 		iov[niov].iov_len = nstbpref *
-		    sizeof(struct srm_getattr_rep);
+		    sizeof(struct srt_stat);
 		iov[niov].iov_base = PSCALLOC(iov[1].iov_len);
 		niov++;
 	}
