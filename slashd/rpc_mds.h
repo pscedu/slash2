@@ -50,7 +50,8 @@ enum slm_fwd_op {
 	SLM_FORWARD_CREATE,
 	SLM_FORWARD_MKDIR,
 	SLM_FORWARD_RMDIR,
-	SLM_FORWARD_UNLINK
+	SLM_FORWARD_UNLINK,
+	SLM_FORWARD_SETATTR
 };
 
 /*
@@ -83,8 +84,8 @@ void	slm_rpc_initsvc(void);
 int	slm_rmc_handler(struct pscrpc_request *);
 int	slm_rmi_handler(struct pscrpc_request *);
 int	slm_rmm_handler(struct pscrpc_request *);
-int	slm_rmm_forward_namespace(int, const struct slash_fidgen *,
-	    char *, uint32_t, const struct slash_creds *, struct srt_stat *);
+int	slm_rmm_forward_namespace(int, const struct slash_fidgen *, char *, 
+	uint32_t, const struct slash_creds *, struct srt_stat *, int32_t);
 
 /* aliases for connection management */
 #define slm_getmcsvcx(resm, exp)					\

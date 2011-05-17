@@ -183,12 +183,13 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	if (mq->op != SLM_FORWARD_MKDIR && mq->op != SLM_FORWARD_RMDIR &&
-	    mq->op != SLM_FORWARD_CREATE && mq->op != SLM_FORWARD_UNLINK) {
+	    mq->op != SLM_FORWARD_CREATE && mq->op != SLM_FORWARD_UNLINK &&
+	    mq->op != SLM_FORWARD_SETATTR) {
 		mp->rc = EINVAL;
 		goto out;
 	}
 
-	psclog_info("op=%d, fid="SLPRI_FID", name=%s", mq->op, mq->fid, mq->name);
+	psclog_info("op=%d, fid="SLPRI_FID", name=%s", mq->op, mq->fid, mq->req.name);
 
 	mds_reserve_slot();
 	switch (mq->op) {
@@ -196,13 +197,13 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		mp->rc = slm_fcmh_get(&mq->pfg, &p);
 		if (mp->rc)
 			break;
-		mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(p), mq->name, mq->mode,
+		mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(p), mq->req.name, mq->mode,
 		    &mq->creds, &mp->cattr, NULL, mds_namespace_log,
 		    NULL, mq->fid);
 		break;
 	    case SLM_FORWARD_CREATE:
 		mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &mq->creds,
-		    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->name, NULL,
+		    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->req.name, NULL,
 		    &mp->cattr, &mdsio_data, mds_namespace_log,
 		    NULL, mq->fid);
 		if (!mp->rc)
@@ -210,17 +211,23 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		break;
 	    case SLM_FORWARD_RMDIR:
 		mp->rc = mdsio_rmdir(fcmh_2_mdsio_fid(p),
-		    mq->name, &rootcreds, mds_namespace_log);
+		    mq->req.name, &rootcreds, mds_namespace_log);
 		break;
 	    case SLM_FORWARD_UNLINK:
 		mp->rc = mdsio_unlink(fcmh_2_mdsio_fid(p),
-		    mq->name, &rootcreds, mds_namespace_log);
+		    mq->req.name, &rootcreds, mds_namespace_log);
+		break;
+	    case SLM_FORWARD_SETATTR:
+		mp->rc = slm_fcmh_get(&mq->pfg, &p);
+		if (mp->rc)
+			break;
+		mp->rc = mdsio_setattr(fcmh_2_mdsio_fid(p),
+		    &mq->req.sstb, mq->to_set, &rootcreds, &mp->cattr, 
+		    fcmh_2_mdsio_data(p), mds_namespace_log);
 		break;
 	}
 	mds_unreserve_slot();
-
  out:
-
 	return (mp->rc);
 }
 
@@ -260,7 +267,7 @@ slm_rmm_handler(struct pscrpc_request *rq)
 int
 slm_rmm_forward_namespace(int op, const struct slash_fidgen *pfg,
     char *name, uint32_t mode, const struct slash_creds *creds, 
-    struct srt_stat *sstb)
+    struct srt_stat *sstb, int32_t to_set)
 {
 	int rc, _siter;
 	struct sl_resm *resm;
@@ -280,7 +287,8 @@ slm_rmm_forward_namespace(int op, const struct slash_fidgen *pfg,
 		return (ENOSYS);
 #endif
 	if (op != SLM_FORWARD_MKDIR && op != SLM_FORWARD_RMDIR &&
-	    op != SLM_FORWARD_CREATE && op != SLM_FORWARD_UNLINK)
+	    op != SLM_FORWARD_CREATE && op != SLM_FORWARD_UNLINK &&
+	    op != SLM_FORWARD_SETATTR)
 		return (ENOSYS);
 
 	site = libsl_siteid2site(siteid);
@@ -307,7 +315,12 @@ slm_rmm_forward_namespace(int op, const struct slash_fidgen *pfg,
 
 	mq->op = op;
 	mq->pfg	= *pfg;
-	strlcpy(mq->name, name, sizeof(mq->name));
+
+	if (op == SLM_FORWARD_SETATTR) {
+		mq->to_set = to_set;
+		mq->req.sstb = *sstb;
+	} else
+		strlcpy(mq->req.name, name, sizeof(mq->req.name));
 
 	if (op == SLM_FORWARD_MKDIR || op == SLM_FORWARD_CREATE) {
 		mq->mode = mode;
@@ -340,6 +353,9 @@ slm_rmm_forward_namespace(int op, const struct slash_fidgen *pfg,
 		break;
 	    case SLM_FORWARD_UNLINK:
 		rc = mdsio_redo_unlink(mq->pfg.fg_fid, mq->fid, name);
+		break;
+	    case SLM_FORWARD_SETATTR:
+		rc = mdsio_redo_setattr(mq->fid, mq->to_set, sstb);
 		break;
 	}
 

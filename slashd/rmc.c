@@ -368,7 +368,7 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 
 	if (IS_REMOTE_FID(mq->pfg.fg_fid)) {
 		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_MKDIR,
-		    &mq->pfg, mq->name, mq->mode, &mq->creds, &mp->cattr);
+		    &mq->pfg, mq->name, mq->mode, &mq->creds, &mp->cattr, 0);
 		mdsio_fcmh_refreshattr(p, &mp->pattr);
 		goto out;
 	}
@@ -449,7 +449,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 	if (IS_REMOTE_FID(mq->pfg.fg_fid)) {
 		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_CREATE,
-		    &mq->pfg, mq->name, mq->mode, &mq->creds, &mp->cattr);
+		    &mq->pfg, mq->name, mq->mode, &mq->creds, &mp->cattr, 0);
 		goto out;
 	}
 
@@ -720,6 +720,13 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	struct fidc_membh *fcmh;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
+
+	if (IS_REMOTE_FID(mq->attr.sst_fg.fg_fid)) {
+		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_SETATTR, 
+		    &mq->attr.sst_fg, NULL, 0, NULL, &mq->attr, mq->to_set);
+		goto out;
+	}
+
 	mp->rc = slm_fcmh_get(&mq->attr.sst_fg, &fcmh);
 	if (mp->rc)
 		goto out;
@@ -955,7 +962,7 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	if (IS_REMOTE_FID(mq->pfid)) {
 		mp->rc = slm_rmm_forward_namespace(isfile?
 		    SLM_FORWARD_UNLINK : SLM_FORWARD_MKDIR, &fg,
-		    mq->name, 0, NULL, NULL);
+		    mq->name, 0, NULL, NULL, 0);
 		goto out;
 	}
 
