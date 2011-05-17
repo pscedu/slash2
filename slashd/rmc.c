@@ -447,12 +447,6 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 		goto out;
 	}
 
-	if (IS_REMOTE_FID(mq->pfg.fg_fid)) {
-		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_CREATE,
-		    &mq->pfg, mq->name, mq->mode, &mq->creds, &mp->cattr, 0);
-		goto out;
-	}
-
 	/* Lookup the parent directory in the cache so that the
 	 *   slash2 ino can be translated into the inode for the
 	 *   underlying fs.
@@ -462,6 +456,15 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 		goto out;
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
+	if (IS_REMOTE_FID(mq->pfg.fg_fid)) {
+		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_CREATE,
+		    &mq->pfg, mq->name, mq->mode, &mq->creds, &mp->cattr, 0);
+		if (!mp->rc) {
+			mp->rc2 = ENOENT;
+			mdsio_fcmh_refreshattr(p, &mp->pattr);
+		}
+		goto out;
+	}
 
 	DEBUG_FCMH(PLL_DEBUG, p, "create op start for %s", mq->name);
 
