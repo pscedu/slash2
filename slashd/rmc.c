@@ -962,16 +962,16 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	fg.fg_gen = FGEN_ANY;
 	mq->name[sizeof(mq->name) - 1] = '\0';
 
+	mp->rc = slm_fcmh_get(&fg, &p);
+	if (mp->rc)
+		goto out;
+
 	if (IS_REMOTE_FID(mq->pfid)) {
 		mp->rc = slm_rmm_forward_namespace(isfile?
 		    SLM_FORWARD_UNLINK : SLM_FORWARD_MKDIR, &fg,
 		    mq->name, 0, NULL, NULL, 0);
 		goto out;
 	}
-
-	mp->rc = slm_fcmh_get(&fg, &p);
-	if (mp->rc)
-		goto out;
 
 	mds_reserve_slot();
 	if (isfile)
