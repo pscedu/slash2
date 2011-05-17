@@ -114,9 +114,9 @@ authbuf_checkkey(const char *fn, struct stat *stb)
 		    fn, sizeof(authbuf_key));
 	if (!S_ISREG(stb->st_mode))
 		psc_fatalx("key file %s: not a file", fn);
-	if ((stb->st_mode & (S_IRWXU | S_IRWXG | S_IRWXO)) != (S_IRUSR | S_IWUSR))
+	if ((stb->st_mode & (ALLPERMS & ~S_IWUSR)) != S_IRUSR)
 		psc_fatalx("key file %s has wrong permissions (0%o), "
-		    "should be 0600", fn, stb->st_mode);
+		    "should be 0400", fn, stb->st_mode & ALLPERMS);
 	if (stb->st_uid != 0)
 		psc_fatalx("key file %s has wrong owner, should be root", fn);
 }
