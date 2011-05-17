@@ -357,18 +357,14 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
 
-
 	mp->rc = slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
 		goto out;
 
-	FCMH_LOCK(p);
-	pol = p->fcmh_sstb.sstd_freplpol;
-	FCMH_ULOCK(p);
-
 	if (IS_REMOTE_FID(mq->pfg.fg_fid)) {
 		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_MKDIR,
-		    &mq->pfg, mq->name, mq->mode, &mq->creds, &mp->cattr, 0);
+		    &mq->pfg, mq->name, mq->mode, &mq->creds,
+		    &mp->cattr, 0);
 		mdsio_fcmh_refreshattr(p, &mp->pattr);
 		goto out;
 	}
@@ -385,6 +381,10 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	 * parent dir.
 	 */
 	if (slm_fcmh_get(&mp->cattr.sst_fg, &c) == 0) {
+		FCMH_LOCK(p);
+		pol = p->fcmh_sstb.sstd_freplpol;
+		FCMH_ULOCK(p);
+
 		FCMH_LOCK(c);
 		c->fcmh_sstb.sstd_freplpol = pol;
 		FCMH_ULOCK(c);
@@ -432,14 +432,12 @@ slm_rmc_handle_mknod(struct pscrpc_request *rq)
 int
 slm_rmc_handle_create(struct pscrpc_request *rq)
 {
+	struct fidc_membh *p = NULL, *c;
 	struct srm_create_rep *mp;
 	struct srm_create_req *mq;
-	struct fidc_membh *p, *c;
 	struct bmapc_memb *bmap;
 	void *mdsio_data;
 	uint32_t pol;
-
-	p = NULL;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->flags & SRM_LEASEBMAPF_GETREPLTBL) {
@@ -456,9 +454,11 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 		goto out;
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
+
 	if (IS_REMOTE_FID(mq->pfg.fg_fid)) {
 		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_CREATE,
-		    &mq->pfg, mq->name, mq->mode, &mq->creds, &mp->cattr, 0);
+		    &mq->pfg, mq->name, mq->mode, &mq->creds,
+		    &mp->cattr, 0);
 		if (!mp->rc) {
 			mp->rc2 = ENOENT;
 			mdsio_fcmh_refreshattr(p, &mp->pattr);
@@ -718,15 +718,16 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 {
 	int to_set, tadj = 0, unbump = 0;
 	struct slashrpc_cservice *csvc;
+	struct fidc_membh *fcmh = NULL;
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
-	struct fidc_membh *fcmh;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	if (IS_REMOTE_FID(mq->attr.sst_fg.fg_fid)) {
-		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_SETATTR, 
-		    &mq->attr.sst_fg, NULL, 0, NULL, &mq->attr, mq->to_set);
+		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_SETATTR,
+		    &mq->attr.sst_fg, NULL, 0, NULL, &mq->attr,
+		    mq->to_set);
 		goto out;
 	}
 
@@ -951,10 +952,10 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 int
 slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 {
+	struct fidc_membh *p = NULL;
 	struct srm_unlink_req *mq;
 	struct srm_unlink_rep *mp;
 	struct slash_fidgen fg;
-	struct fidc_membh *p;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -962,16 +963,16 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	fg.fg_gen = FGEN_ANY;
 	mq->name[sizeof(mq->name) - 1] = '\0';
 
-	mp->rc = slm_fcmh_get(&fg, &p);
-	if (mp->rc)
-		goto out;
-
 	if (IS_REMOTE_FID(mq->pfid)) {
 		mp->rc = slm_rmm_forward_namespace(isfile?
 		    SLM_FORWARD_UNLINK : SLM_FORWARD_MKDIR, &fg,
 		    mq->name, 0, NULL, NULL, 0);
 		goto out;
 	}
+
+	mp->rc = slm_fcmh_get(&fg, &p);
+	if (mp->rc)
+		goto out;
 
 	mds_reserve_slot();
 	if (isfile)
