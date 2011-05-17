@@ -259,7 +259,7 @@ main(int argc, char *argv[])
 
 	sl_getuserpwent(&pw);
 	if (pw == NULL)
-		warn("getpwnam %s", SLASH_UID);
+		psclog_warn("getpwnam %s", SLASH_UID);
 
 	if (wipe)
 		wipefs(argv[0]);
