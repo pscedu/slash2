@@ -17,6 +17,9 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#define PSC_SUBSYS SLSS_FCMH
+#include "slsubsys.h"
+
 #include "pfl/cdefs.h"
 
 #include "fidc_mds.h"
@@ -40,14 +43,16 @@ mds_inode_od_initnew(struct slash_inode_handle *ih)
 int
 mds_inode_read(struct slash_inode_handle *ih)
 {
-	int rc, locked;
 	struct iovec iovs[2];
-	uint64_t crc, od_crc;
+	uint64_t crc, od_crc = 0;
 	uint16_t vers;
+	int rc, locked;
 	size_t nb;
 
 	locked = reqlock(&ih->inoh_lock); /* XXX bad on slow archiver */
 	psc_assert(ih->inoh_flags & INOH_INO_NOTLOADED);
+
+	memset(&ih->inoh_ino, 0, sizeof(ih->inoh_ino));
 
 	iovs[0].iov_base = &ih->inoh_ino;
 	iovs[0].iov_len = sizeof(ih->inoh_ino);
