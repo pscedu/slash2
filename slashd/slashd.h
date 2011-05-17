@@ -181,7 +181,7 @@ res2rpmi(struct sl_resource *res)
 
 /* MDS-specific data for struct sl_resm */
 struct resm_mds_info {
-	pthread_mutex_t		  rmmi_mutex;
+	struct pfl_mutex	  rmmi_mutex;
 	struct psc_multiwaitcond  rmmi_mwcond;
 	int			  rmmi_busyid;
 	struct sl_resm		 *rmmi_resm;

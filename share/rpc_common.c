@@ -45,7 +45,7 @@ psc_multiwaitcond_wakeup(__unusedx struct psc_multiwaitcond *arg)
 
 __weak int
 psc_multiwaitcond_waitrel_ts(__unusedx struct psc_multiwaitcond *arg,
-    __unusedx pthread_mutex_t *mutex, __unusedx const struct timespec *ts)
+    __unusedx struct pfl_mutex *mutex, __unusedx const struct timespec *ts)
 {
 	psc_fatalx("unimplemented stub");
 }

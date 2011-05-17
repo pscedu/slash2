@@ -32,7 +32,7 @@ struct up_sched_work_item {
 	psc_atomic32_t			 uswi_refcnt;
 	int				 uswi_gen;
 	int				 uswi_flags;
-	pthread_mutex_t			 uswi_mutex;
+	struct pfl_mutex		 uswi_mutex;
 	struct psc_multiwaitcond	 uswi_mwcond;
 	struct psclist_head		 uswi_lentry;
 	SPLAY_ENTRY(up_sched_work_item)	 uswi_tentry;

@@ -124,7 +124,7 @@ res2rpci(struct sl_resource *res)
 
 /* CLI-specific data for struct sl_resm */
 struct resm_cli_info {
-	pthread_mutex_t			 rmci_mutex;
+	struct pfl_mutex		 rmci_mutex;
 	struct psc_multiwaitcond	 rmci_mwc;
 	struct srm_bmap_release_req	 rmci_bmaprls;
 };

@@ -48,7 +48,7 @@ enum slconn_type {
 
 union lockmutex {
 	psc_spinlock_t		*lm_lock;
-	pthread_mutex_t		*lm_mutex;
+	struct pfl_mutex	*lm_mutex;
 	void			*lm_ptr;
 };
 
