@@ -256,16 +256,16 @@ mds_redo_bmap_assign(struct psc_journal_enthdr *pje)
 
 	logentry = PJE_DATA(pje);
 	elem = logentry->sjar_elem;
-	if (logentry->sjar_flag & SLJ_ASSIGN_REP_FREE)
+	if (logentry->sjar_flags & SLJ_ASSIGN_REP_FREE)
 		psclog_info("Free item %zd", elem);
 	else {
 		jrba = &logentry->sjar_bmap;
 		psclog_info("Redo item %zd, fid="SLPRI_FID", flags=%d",
-		    elem, jrba->sjba_fid, logentry->sjar_flag);
+		    elem, jrba->sjba_fid, logentry->sjar_flags);
 	}
-	if (logentry->sjar_flag & SLJ_ASSIGN_REP_INO)
+	if (logentry->sjar_flags & SLJ_ASSIGN_REP_INO)
 		mds_redo_ino_addrepl_common(&logentry->sjar_ino);
-	if (logentry->sjar_flag & SLJ_ASSIGN_REP_REP)
+	if (logentry->sjar_flags & SLJ_ASSIGN_REP_REP)
 		mds_redo_bmap_repl_common(&logentry->sjar_rep,
 		    B_REPLAY_OP_REPL);
 	rc = mdsio_lookup(mds_metadir_inum, SL_FN_BMAP_ODTAB, &mf,
@@ -288,7 +288,7 @@ mds_redo_bmap_assign(struct psc_journal_enthdr *pje)
 	odtf->odtf_magic = ODTBL_MAGIC;
 	odtf->odtf_slotno = elem;
 
-	if (logentry->sjar_flag & SLJ_ASSIGN_REP_BMAP) {
+	if (logentry->sjar_flags & SLJ_ASSIGN_REP_BMAP) {
 		bia = p;
 		jrba = &logentry->sjar_bmap;
 		bia->bia_ion_nid = jrba->sjba_ion_nid;
@@ -310,7 +310,7 @@ mds_redo_bmap_assign(struct psc_journal_enthdr *pje)
 		odtf->odtf_crc = crc;
 		odtf->odtf_inuse = ODTBL_INUSE;
 	}
-	if (logentry->sjar_flag & SLJ_ASSIGN_REP_FREE)
+	if (logentry->sjar_flags & SLJ_ASSIGN_REP_FREE)
 		odtf->odtf_inuse = ODTBL_FREE;
 
 	rc = mdsio_write(&rootcreds, p, odth.odth_slotsz,
