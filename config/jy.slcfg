@@ -1,0 +1,41 @@
+# $Id$
+
+set port=1300;
+set net=tcp10;
+
+site @PSC {
+	site_desc	= "PSC";
+	site_id		= 100;
+
+	resource md {
+		desc	= "lime metadata server";
+		type	= mds;
+		id	= 101;
+		nodes	= lime.psc.edu;
+	}
+
+	resource io {
+		desc	= "xmen I/O";
+		type	= parallel_fs;
+		id	= 102;
+		fsroot	= /home/slio-jy;
+		nodes	= stryker.psc.edu,
+			  wolverine.psc.edu;
+	}
+
+	resource kam {
+		desc	= "kaminari desktop";
+		type	= standalone_fs;
+		id	= 103;
+		fsroot	= /slio-jy;
+		nodes	= kaminari.psc.edu;
+	}
+
+	resource cyclops {
+		desc	= "test archiver storage node";
+		type	= standalone_fs;
+		id	= 104;
+		fsroot	= /slio-jy;
+		nodes	= cyclops.psc.edu;
+	}
+}
