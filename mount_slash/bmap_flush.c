@@ -64,7 +64,7 @@ __static void
 bmap_flush_reap_rpcs(void)
 {
 	struct pscrpc_request_set *set;
-	struct psc_lockedlist hold = 
+	struct psc_lockedlist hold =
 		PLL_INIT(&hold, struct pscrpc_request_set, set_lentry);
 
 	psclog_debug("outstandingRpcCnt=%d (before) rpcComp.rqcomp_compcnt=%d",
@@ -72,12 +72,12 @@ bmap_flush_reap_rpcs(void)
 
 	/* Only this thread may pull from pndgReqSets listcache
 	 *   therefore it can never shrink except by way of this
-	 *   routine.  
+	 *   routine.
 	 * Note:  set failures are handled by set_interpret()
-	 * 
+	 *
 	 * XXX this looks problematic.. I think that pscrpc_set_finalize()
 	 *   should not block here at all, and hence, the 'set' should
-	 *   not be removed from the LC.   A pscrpc_completion could be 
+	 *   not be removed from the LC.   A pscrpc_completion could be
 	 *   put in place here.  Note that pscrpc_nbreqset_reap() also sleeps
 	 *   for a second.
 	 */
@@ -197,9 +197,9 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 	int rc;
 
 	rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
-	
+
 	atomic_dec(&outstandingRpcCnt);
-	DEBUG_REQ(rq->rq_err ? PLL_ERROR : PLL_INFO, rq, 
+	DEBUG_REQ(rq->rq_err ? PLL_ERROR : PLL_INFO, rq,
 		  "done (outstandingRpcCnt=%d)",
 		  atomic_read(&outstandingRpcCnt));
 
@@ -1012,7 +1012,7 @@ msl_bmap_release(struct sl_resm *resm)
 	    slc_getmcsvc(resm) : slc_geticsvc(resm);
 	if (csvc == NULL) {
 		/* Per bug 136.  If the csvc is not available then nuke
-		 *   any pending bmap releases.  For now, this op is 
+		 *   any pending bmap releases.  For now, this op is
 		 *   single threaded so resetting nbmaps here should not
 		 *   be racy.
 		 */
@@ -1053,8 +1053,8 @@ msl_bmap_release(struct sl_resm *resm)
 		 *   the client must reacquire leases to perform further
 		 *   I/O on any bmap in this set.
 		 */
-		psc_errorx("bmap_release failed res=%s:nid=%s (rc=%d)", 
-		    resm->resm_res->res_name, libcfs_nid2str(resm->resm_nid), 
+		psc_errorx("bmap_release failed res=%s:nid=%s (rc=%d)",
+		    resm->resm_res->res_name, libcfs_nid2str(resm->resm_nid),
 		    rc);
 	}
 	if (rq)
@@ -1254,13 +1254,13 @@ msbmapflushthr_main(__unusedx struct psc_thread *thr)
 		bmap_flush();
 		PFL_GETTIMESPEC(&ts1);
 		timespecsub(&ts1, &ts0, &ts1);
-		psclog_debug("bmap_flush "PSCPRI_TIMESPEC, 
+		psclog_debug("bmap_flush "PSCPRI_TIMESPEC,
 		    PSCPRI_TIMESPEC_ARGS(&ts1));
 		PFL_GETTIMESPEC(&ts0);
 		psc_waitq_waitrel(&bmapflushwaitq, NULL, &bmapFlushWaitTime);
 		PFL_GETTIMESPEC(&ts1);
 		timespecsub(&ts1, &ts0, &ts1);
-		psclog_debug("post wakeup "PSCPRI_TIMESPEC, 
+		psclog_debug("post wakeup "PSCPRI_TIMESPEC,
 		    PSCPRI_TIMESPEC_ARGS(&ts1));
 	}
 }
