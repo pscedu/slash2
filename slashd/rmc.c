@@ -990,10 +990,10 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 		mdsio_fcmh_setattr(p, PSCFS_SETATTRF_CTIME);
 		mdsio_fcmh_refreshattr(p, &mp->attr);
 	}
-	psclog_info("DEBUG: mdsio_unlink: parent="SLPRI_FID", name=%s, rc=%d",
-	    mq->pfid, mq->name, mp->rc);
 
  out2:
+	psclog_info("DEBUG: mdsio_unlink: parent="SLPRI_FID", name=%s, rc=%d",
+	    mq->pfid, mq->name, mp->rc);
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 	return (0);
