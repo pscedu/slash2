@@ -30,12 +30,19 @@ struct pscrpc_request;
 
 extern struct pscrpc_completion rpcComp;
 
+/* async RPC pointers */
+#define MSL_CBARG_BMPCE		0
+#define MSL_CBARG_CSVC		1
+#define MSL_CBARG_BIORQ		2
+#define MSL_CBARG_BIORQS	3
+#define MSL_CBARG_RA		4
+
 /* SLASH RPC channel for client from MDS. */
-#define SRCM_NTHREADS	8
-#define SRCM_NBUFS	64
-#define SRCM_BUFSZ	512
-#define SRCM_REPSZ	512
-#define SRCM_SVCNAME	"msrcm"
+#define SRCM_NTHREADS			8
+#define SRCM_NBUFS			64
+#define SRCM_BUFSZ			512
+#define SRCM_REPSZ			512
+#define SRCM_SVCNAME			"msrcm"
 
 #define slc_geticsvcxf(resm, fl, exp)						\
 	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT | (fl), (exp),	\
