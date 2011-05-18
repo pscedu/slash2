@@ -93,21 +93,26 @@ struct slash_fidgen {
 #define SLPRI_FG_ARGS(fg)	(fg)->fg_fid, (fg)->fg_gen
 
 #define FID_GET_FLAGS(fid)	((fid) >> (SLASH_ID_SITE_BITS + SLASH_ID_FID_BITS))
-#define FID_GET_SITEID(fid)	(((fid) >> SLASH_ID_FID_BITS) &			\
+#define FID_GET_SITEID(fid)	(((fid) >> SLASH_ID_FID_BITS) &		\
 				    ~(~UINT64_C(0) << SLASH_ID_SITE_BITS))
 #define FID_GET_INUM(fid)	((fid) & ~(~UINT64_C(0) << (SLASH_ID_FID_BITS)))
 
 #define FID_SET_FLAGS(fid, fl)	((fid) |= ((fl) << (SLASH_ID_SITE_BITS + SLASH_ID_FID_BITS)))
 
-#define SAMEFG(a, b)								\
+#define SAMEFG(a, b)							\
 	((a)->fg_fid == (b)->fg_fid && (a)->fg_gen == (b)->fg_gen)
 
-#define COPYFG(dst, src)							\
-	do {									\
-		psc_assert(sizeof(*(dst)) == sizeof(struct slash_fidgen));	\
-		psc_assert(sizeof(*(src)) == sizeof(struct slash_fidgen));	\
-		memcpy((dst), (src), sizeof(*(dst)));				\
+#define COPYFG(dst, src)						\
+	do {								\
+		psc_assert(sizeof(*(dst)) ==				\
+		    sizeof(struct slash_fidgen));			\
+		psc_assert(sizeof(*(src)) ==				\
+		    sizeof(struct slash_fidgen));			\
+		memcpy((dst), (src), sizeof(*(dst)));			\
 	} while (0)
+
+#define IS_REMOTE_FID(fid)						\
+	((fid) != SLFID_ROOT && nodeSite->site_id != FID_GET_SITEID(fid))
 
 static __inline int
 sl_sprintf_fid(slfid_t fid, char *buf, size_t len)
