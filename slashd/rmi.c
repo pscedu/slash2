@@ -186,15 +186,13 @@ int
 slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 {
 	int tract[NBREPLST], retifset[NBREPLST], iosidx, src_iosidx, rc;
-	struct sl_resm *dst_resm, *src_resm;
+	struct sl_resm *dst_resm = NULL, *src_resm;
 	struct srm_repl_schedwk_req *mq;
 	struct srm_repl_schedwk_rep *mp;
 	struct up_sched_work_item *wk;
+	struct bmapc_memb *bcm = NULL;
 	struct site_mds_info *smi;
-	struct bmapc_memb *bcm;
 	sl_bmapgen_t gen;
-
-	dst_resm = NULL;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	wk = uswi_find(&mq->fg, NULL);
@@ -207,14 +205,18 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 
 	iosidx = mds_repl_ios_lookup(USWI_INOH(wk),
 	    dst_resm->resm_res->res_id);
-	if (iosidx < 0)
+	if (iosidx < 0) {
+		DEBUG_USWI(PLL_ERROR, wk,
+		    "res %s not found found in file",
+		    dst_resm->resm_addrbuf);
 		goto out;
+	}
 
-	if (!mds_bmap_exists(wk->uswi_fcmh, mq->bmapno))
+	if (bmap_getf(wk->uswi_fcmh, mq->bmapno, SL_WRITE,
+	    BMAPGETF_LOAD | BMAPGETF_NOAUTOINST, &bcm)) {
+		DEBUG_USWI(PLL_ERROR, wk, "unable to load bmap %d", mq->bmapno);
 		goto out;
-
-	if (mds_bmap_load(wk->uswi_fcmh, mq->bmapno, &bcm))
-		goto out;
+	}
 
 	brepls_init(tract, -1);
 
@@ -280,13 +282,12 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	psc_multiwaitcond_wakeup(&smi->smi_mwcond);
 	freelock(&smi->smi_lock);
  out:
-	if (dst_resm)
+	if (dst_resm && bcm)
 		mds_repl_nodes_adjbusy(resm2rmmi(src_resm),
 		    resm2rmmi(dst_resm),
 		    -slm_bmap_calc_repltraffic(bcm));
 	if (wk)
 		uswi_unref(wk);
-
 	return (0);
 }
 
