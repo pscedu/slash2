@@ -962,17 +962,16 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	fg.fg_fid = mq->pfid;
 	fg.fg_gen = FGEN_ANY;
 	mq->name[sizeof(mq->name) - 1] = '\0';
+	mp->rc = slm_fcmh_get(&fg, &p);
+	if (mp->rc)
+		goto out2;
 
 	if (IS_REMOTE_FID(mq->pfid)) {
 		mp->rc = slm_rmm_forward_namespace(isfile?
 		    SLM_FORWARD_UNLINK : SLM_FORWARD_MKDIR, &fg,
 		    mq->name, 0, NULL, NULL, 0);
-		goto out;
+		goto out1;
 	}
-
-	mp->rc = slm_fcmh_get(&fg, &p);
-	if (mp->rc)
-		goto out;
 
 	mds_reserve_slot();
 	if (isfile)
@@ -983,9 +982,7 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 		    mq->name, &rootcreds, mds_namespace_log);
 	mds_unreserve_slot();
 
-	psclog_info("DEBUG: mdsio_unlink: parent="SLPRI_FID", name=%s, rc=%d",
-	    mq->pfid, mq->name, mp->rc);
-
+ out1:
 	if (mp->rc == 0) {
 		FCMH_LOCK(p);
 		SL_GETTIMESPEC(&p->fcmh_sstb.sst_ctim);
@@ -993,7 +990,10 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 		mdsio_fcmh_setattr(p, PSCFS_SETATTRF_CTIME);
 		mdsio_fcmh_refreshattr(p, &mp->attr);
 	}
- out:
+	psclog_info("DEBUG: mdsio_unlink: parent="SLPRI_FID", name=%s, rc=%d",
+	    mq->pfid, mq->name, mp->rc);
+
+ out2:
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 	return (0);
