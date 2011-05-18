@@ -258,7 +258,7 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	psc_warnx("fid="SLPRI_FID" bmapno=%u seq=%"PRId64,
+	psclog_warnx("fid="SLPRI_FID" bmapno=%u seq=%"PRId64,
 	    mq->fid, mq->blkno, mq->seq);
 
 	f = fidc_lookup_fid(mq->fid);
@@ -356,7 +356,7 @@ slc_rcm_handler(struct pscrpc_request *rq)
 		break;
 
 	default:
-		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
+		psclog_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
 		rq->rq_status = -ENOSYS;
 		return (pscrpc_error(rq));
 	}

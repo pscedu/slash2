@@ -238,7 +238,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 			i++;
 			continue;
 		}
-		psc_info("i=%d npages=%d raoff=%"PRIx64" bmpce_foff=%"PRIx64,
+		psclog_info("i=%d npages=%d raoff=%"PRIx64" bmpce_foff=%"PRIx64,
 			  i, npages, mfh->mfh_ra.mra_raoff,
 			  (off_t)(bmpce_search.bmpce_off + bmap_foff(b)));
 		freelock(&mfh->mfh_lock);
@@ -1008,7 +1008,7 @@ msl_io_rpcset_cb(__unusedx struct pscrpc_request_set *set, void *arg,
 	struct bmpc_ioreq *r;
 	int i;
 
-	psc_info("set=%p rc=%d", set, rc);
+	psclog_info("set=%p rc=%d", set, rc);
 
 	if (rc) {
 		DYNARRAY_FOREACH(r, i, biorqs)

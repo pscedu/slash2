@@ -183,7 +183,7 @@ bmap_flush_coalesce_size(const struct psc_dynarray *biorqs)
 
 	size = (e->biorq_off - s->biorq_off) + e->biorq_len;
 
-	psc_info("array %p has size=%zu array len=%d",
+	psclog_info("array %p has size=%zu array len=%d",
 		 biorqs, size, psc_dynarray_len(biorqs));
 
 	return (size);
@@ -1053,7 +1053,7 @@ msl_bmap_release(struct sl_resm *resm)
 		 *   the client must reacquire leases to perform further
 		 *   I/O on any bmap in this set.
 		 */
-		psc_errorx("bmap_release failed res=%s:nid=%s (rc=%d)",
+		psclog_errorx("bmap_release failed res=%s:nid=%s (rc=%d)",
 		    resm->resm_res->res_name, libcfs_nid2str(resm->resm_nid),
 		    rc);
 	}
