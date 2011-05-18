@@ -120,10 +120,6 @@ If applicable,
 port to use to connect to remote
 .Tn LNET
 peers.
-.It Cm lnet.sdp
-Whether
-.Tn LNET
-is using the sockets direct protocol.
 .It Cm log.file
 File path name where log messages will be written.
 This value is write-only.
@@ -227,7 +223,7 @@ The following tokens are replaced in the file name specified:
 the machine hostname
 .It Cm %n
 the daemon executable base name, i.e.\&
-.Li sliod
+.Dq sliod
 .It Cm %%
 a literal
 .Sq %
@@ -467,6 +463,7 @@ may also be specified to display a list of recognized values.
 .\"		"sliriithr Ns Ar %02d"		=> ".No Inter- Ns Tn I/O RPC\nrequest service thread",
 .\"		"slirimthr Ns Ar %02d"		=> ".Tn MDS RPC\nrequest service thread",
 .\"		"slislvrthr Ns Ar %d"		=> "Sliver monitoring thread",
+.\"		"slistatfsthr"			=> "Periodic\n.Xr statvfs 2\nupdater",
 .\"		"slitiosthr"			=> "Timed\n.Tn I/O\nstats updater thread",
 .\"		"sliusklndplthr Ns Ar %d"	=> "Lustre userland socket poll thread"
 .\"	}
@@ -505,6 +502,10 @@ request service thread
 request service thread
 .It Cm slislvrthr Ns Ar %d
 Sliver monitoring thread
+.It Cm slistatfsthr
+Periodic
+.Xr statvfs 2
+updater
 .It Cm slitiosthr
 Timed
 .Tn I/O
