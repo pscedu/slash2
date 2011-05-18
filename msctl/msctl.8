@@ -448,10 +448,6 @@ If applicable,
 port to use to connect to remote
 .Tn LNET
 peers.
-.It Cm lnet.sdp
-Whether
-.Tn LNET
-is using the sockets direct protocol.
 .It Cm log.file
 File path name where log messages will be written.
 This value is write-only.
@@ -572,7 +568,7 @@ The following tokens are replaced in the file name specified:
 the machine hostname
 .It Cm %n
 the daemon executable base name, i.e.\&
-.Li mount_slash
+.Dq mount_slash
 .It Cm %%
 a literal
 .Sq %
@@ -800,7 +796,6 @@ display additional information about each operation being performed.
 .\"		q{msbflushthr Ns Ar %d}		=> qq{Bmap flusher},
 .\"		q{msbrathr}			=> qq{Bmap read-ahead queuer},
 .\"		q{msbrlsthr}			=> qq{Bmap timed releaser},
-.\"		q{msconnthr- Ns Ar %s}		=> qq{Remote server connection monitor},
 .\"		q{msctlacthr}			=> qq{.Nm\nconnection acceptor},
 .\"		q{msctlthr}			=> qq{.Nm\nconnection processor},
 .\"		q{mseqpollthr}			=> qq{Lustre\n.Fn LNetEQPoll\nissuer},
@@ -828,8 +823,6 @@ Bmap flusher
 Bmap read-ahead queuer
 .It Cm msbrlsthr
 Bmap timed releaser
-.It Cm msconnthr- Ns Ar %s
-Remote server connection monitor
 .It Cm msctlacthr
 .Nm
 connection acceptor
