@@ -217,14 +217,14 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		mp->rc = slm_fcmh_get(&mq->pfg, &p);
 		if (mp->rc)
 			break;
-		mp->rc = mdsio_rmdir(fcmh_2_mdsio_fid(p), &mq->fid,
+		mp->rc = mdsio_rmdir(fcmh_2_mdsio_fid(p), &mp->fid,
 		    mq->req.name, &rootcreds, mds_namespace_log);
 		break;
 	    case SLM_FORWARD_UNLINK:
 		mp->rc = slm_fcmh_get(&mq->pfg, &p);
 		if (mp->rc)
 			break;
-		mp->rc = mdsio_unlink(fcmh_2_mdsio_fid(p), &mq->fid,
+		mp->rc = mdsio_unlink(fcmh_2_mdsio_fid(p), &mp->fid,
 		    mq->req.name, &rootcreds, mds_namespace_log);
 		break;
 	    case SLM_FORWARD_SETATTR:
@@ -355,7 +355,7 @@ slm_rmm_forward_namespace(int op, const struct slash_fidgen *pfg,
 			*sstb = mp->cattr;
 		break;
 	    case SLM_FORWARD_RMDIR:
-		rc = mdsio_redo_rmdir(mq->pfg.fg_fid, mq->fid, name);
+		rc = mdsio_redo_rmdir(mq->pfg.fg_fid, mp->fid, name);
 		break;
 	    case SLM_FORWARD_CREATE:
 		rc = mdsio_redo_create(mq->pfg.fg_fid, name, &mp->cattr);
@@ -363,7 +363,7 @@ slm_rmm_forward_namespace(int op, const struct slash_fidgen *pfg,
 			*sstb = mp->cattr;
 		break;
 	    case SLM_FORWARD_UNLINK:
-		rc = mdsio_redo_unlink(mq->pfg.fg_fid, mq->fid, name);
+		rc = mdsio_redo_unlink(mq->pfg.fg_fid, mp->fid, name);
 		break;
 	    case SLM_FORWARD_SETATTR:
 		rc = mdsio_redo_setattr(mq->fid, mq->to_set, sstb);
