@@ -15,7 +15,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES rpc %
-.Dd May 10, 2011
+.Dd May 18, 2011
 .Dt SLMCTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -81,6 +81,7 @@ lookups for network addresses.
 .\"	subsys => {
 .\"		bmap		=> "Block map structures",
 .\"		fcmh		=> ".Tn FID\ncache members",
+.\"		zfs		=> ".Tn ZFS\nactivity",
 .\"		log		=> "Journaling operations"
 .\"	}
 .It Fl p Ar paramspec
@@ -119,10 +120,6 @@ If applicable,
 port to use to connect to remote
 .Tn LNET
 peers.
-.It Cm lnet.sdp
-Whether
-.Tn LNET
-is using the sockets direct protocol.
 .It Cm log.file
 File path name where log messages will be written.
 This value is write-only.
@@ -156,6 +153,9 @@ Journaling operations
 Memory allocations and releases
 .It Cm rpc
 Network remote procedure calls
+.It Cm zfs
+.Tn ZFS
+activity
 .El
 .Pp
 If
@@ -224,7 +224,7 @@ The following tokens are replaced in the file name specified:
 the machine hostname
 .It Cm %n
 the daemon executable base name, i.e.\&
-.Li slashd
+.Dq slashd
 .It Cm %%
 a literal
 .Sq %
@@ -238,16 +238,17 @@ The default is
 .\"	show => {
 .\"		connections	=> qq{Status of\n.Tn SLASH\npeers on network},
 .\"		fidcache	=> qq{.Tn FID\n.Pq file- Ns Tn ID\ncache members},
-.\"		odtables	=> qq{Disk-backed data files.}
+.\"		odtables	=> qq{Disk-backed data files.},
+.\"		replpairs	=> qq{Replica endpoint traffic.},
 .\"	},
 .\"	hashtables => {
 .\"		fidc		=> qq{files\n.Po file\n.Tn ID\ncache\n.Pc},
-.\"		resnid		=> qq{network resources\n.Pq network Tn ID}
+.\"		resnid		=> qq{network resources\n.Pq network Tn ID},
 .\"	},
 .\"	iostats => {
 .\"		qq{jrnlrd- Ns Ar fn ,} => "",
 .\"		qq{jrnlwr- Ns Ar fn} =>
-.\"		    qq{Data read/written to journal disk file\n.Ar fn .\n.Pp}
+.\"		    qq{Data read/written to journal disk file\n.Ar fn .\n.Pp},
 .\"	},
 .\"	journals => {
 .\"		qq{op-journal}	=> qq{Pending operation journal},
@@ -257,10 +258,10 @@ The default is
 .\"		fcmhidle	=> "Clean\n.Pq reapable\nfiles",
 .\"		inflightbml	=> "Active bmap lease mode updates",
 .\"		pendingbml	=> "Pending bmap lease mode updates",
-.\"		replstwkq	=> "Replication status work buffers"
+.\"		replstwkq	=> "Replication status work buffers",
 .\"	},
 .\"	pools => {
-.\"		bmap		=> qq{Block map structures}
+.\"		bmap		=> qq{Block map structures},
 .\"	}
 .It Fl s Ar showspec
 Show values.
@@ -448,6 +449,8 @@ Block map structures
 If
 .Ar subspec
 is left unspecified, all pools will be accessed.
+.It Cm replpairs
+Replica endpoint traffic.
 .It Cm rpcsvcs
 .Tn RPC
 services.
@@ -481,15 +484,17 @@ may also be specified to display a list of recognized values.
 .\"		"slmctlthr"			=> ".Nm\nconnection processor",
 .\"		"slmjcursorthr"			=> "Journal cursor updater thread",
 .\"		"slmjthr"			=> "Master journal thread",
-.\"		"slmnbrqthr"			=> "Non-blocking\n.Tn RPC\nreply handler",
 .\"		"slmlnacthr- Ns Ar %s"		=> ".Tn LNET\nnetwork acceptor thread",
+.\"		"slmnbrqthr"			=> "Non-blocking\n.Tn RPC\nreply handler",
 .\"		"slmrcmthr"			=> "Client\n.Tn RPC\nrequest initiator thread",
 .\"		"slmrmcthr Ns Ar %02d"		=> "Client\n.Tn RPC\nrequest service thread",
 .\"		"slmrmithr Ns Ar %02d"		=> ".Tn I/O\nnode\n.Tn RPC\nrequest service thread",
 .\"		"slmrmmthr Ns Ar %02d"		=> ".No Inter- Ns Tn MDS RPC\nrequest service thread",
 .\"		"slmtiosthr"			=> "Timed\n.Tn I/O\nstats updater thread",
 .\"		"slmupschedthr- Ns Ar %s"	=> "Per-site update scheduler thread",
-.\"		"slmusklndplthr Ns Ar %d"	=> ".Tn LNET\nuserland socket poll thread"
+.\"		"slmusklndplthr Ns Ar %d"	=> ".Tn LNET\nuserland socket poll thread",
+.\"		"slmwkr Ns Ar %d"		=> "Generic worker",
+.\"		"slmzfskstatmthr"		=> ".Tn ZFS\nstat mount thread",
 .\"	}
 .Ss Thread Specification
 Options which take
@@ -544,6 +549,11 @@ Per-site update scheduler thread
 .It Cm slmusklndplthr Ns Ar %d
 .Tn LNET
 userland socket poll thread
+.It Cm slmwkr Ns Ar %d
+Generic worker
+.It Cm slmzfskstatmthr
+.Tn ZFS
+stat mount thread
 .It Cm everyone
 All threads
 .Pq default, where applicable
