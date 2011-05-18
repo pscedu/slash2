@@ -59,6 +59,8 @@ mds_redo_bmap_repl_common(void *jent, int op)
 		fg.fg_fid = jcrc->sjc_fid;
 		bno = jcrc->sjc_bmapno;
 		break;
+	default:
+		psc_fatalx("invalid op");
 	}
 
 	fg.fg_gen = FGEN_ANY;
