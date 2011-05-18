@@ -93,6 +93,7 @@ struct sl_resm {
 	struct psc_hashent	 resm_hentry;
 	struct slashrpc_cservice*resm_csvc;
 #define resm_site		 resm_res->res_site
+#define resm_siteid		 resm_site->site_id
 #define resm_type		 resm_res->res_type
 #define resm_iosid		 resm_res->res_id
 };

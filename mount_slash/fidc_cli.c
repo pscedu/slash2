@@ -102,14 +102,14 @@ slc_fcmh_ctor(struct fidc_membh *fcmh)
 	struct fcmh_cli_info *fci;
 	struct sl_resource *res;
 	struct sl_site *s;
+	sl_siteid_t siteid;
 	int i;
 
 	fci = fcmh_get_pri(fcmh);
 	slc_fcmh_refresh_age(fcmh);
-	if (IS_REMOTE_FID(fcmh_2_fid(fcmh))) {
-		sl_siteid_t siteid;
-
-		siteid = FID_GET_SITEID(fcmh_2_fid(fcmh));
+	siteid = FID_GET_SITEID(fcmh_2_fid(fcmh));
+	if (fcmh_2_fid(fcmh) != SLFID_ROOT &&
+	    siteid != slc_rmc_resm->resm_siteid) {
 		s = libsl_siteid2site(siteid);
 		if (s == NULL) {
 			psclog_errorx("fid "SLPRI_FID" has "
