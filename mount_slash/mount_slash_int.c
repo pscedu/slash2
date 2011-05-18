@@ -1026,7 +1026,7 @@ msl_io_rpcset_cb(__unusedx struct pscrpc_request_set *set, void *arg,
 int
 msl_io_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
-	struct psc_dynarray *biorqs = args->pointer_arg[1];
+	struct psc_dynarray *biorqs = args->pointer_arg[MSL_CBARG_BIORQS];
 	struct bmpc_ioreq *r;
 	int rc = 0, i;
 

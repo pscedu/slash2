@@ -193,7 +193,7 @@ __static int
 bmap_flush_rpc_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
-	struct slashrpc_cservice *csvc = args->pointer_arg[0];
+	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	int rc;
 
 	rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
@@ -207,7 +207,7 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 		psc_waitq_wakeall(&bmapflushwaitq);
 
 	sl_csvc_decref(csvc);
-	args->pointer_arg[0] = NULL;
+	args->pointer_arg[MSL_CBARG_CSVC] = NULL;
 
 	return (rc);
 }
@@ -240,7 +240,7 @@ bmap_flush_create_rpc(void *set, struct bmpc_ioreq *r,
 	atomic_inc(&outstandingRpcCnt);
 
 	rq->rq_interpret_reply = bmap_flush_rpc_cb;
-	rq->rq_async_args.pointer_arg[0] = csvc;
+	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_comp = &rpcComp;
 
 	mq->offset = soff;
@@ -255,7 +255,7 @@ bmap_flush_create_rpc(void *set, struct bmpc_ioreq *r,
 
 	if (set == pndgReqs) {
 		/* biorqs will be freed by the nbreqset callback. */
-		rq->rq_async_args.pointer_arg[1] = biorqs;
+		rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQS] = biorqs;
 		if (pscrpc_nbreqset_add(set, rq))
 			goto error;
 	} else {
