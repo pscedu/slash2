@@ -17,6 +17,13 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
+#include <ctype.h>
+#include <netdb.h>
 #include <string.h>
 
 #include "pfl/cdefs.h"
@@ -50,12 +57,38 @@ sl_conn_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 }
 
 void
+sl_conn_gethostname(const char *p, char *buf)
+{
+	union {
+		struct sockaddr_storage	ss;
+		struct sockaddr_in	sin;
+		struct sockaddr		sa;
+	} sun;
+
+	if (psc_ctl_nodns)
+		goto cancel;
+
+	if (inet_pton(AF_INET, p, &sun.sin.sin_addr) != 1)
+		goto cancel;
+
+	sun.sa.sa_family = AF_INET;
+	if (getnameinfo(&sun.sa, sizeof(sun), buf, NI_MAXHOST, NULL, 0,
+	    0))
+		goto cancel;
+
+	return;
+
+ cancel:
+	strlcpy(buf, p, NI_MAXHOST);
+}
+
+void
 sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 {
 	static char lastsite[SITE_NAME_MAX], lastres[RES_NAME_MAX];
-	char *p, *site, *nid, *res, addrbuf[RESM_ADDRBUF_SZ];
+	char *p, *site, nid[NI_MAXHOST], *res, addrbuf[RESM_ADDRBUF_SZ];
 	const struct slctlmsg_conn *scc = m;
-	const char *stype;
+	const char *addr, *stype, *prid;
 	int type;
 
 	type = scc->scc_type;
@@ -66,7 +99,17 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	strlcpy(addrbuf, scc->scc_addrbuf, sizeof(addrbuf));
 	if (scc->scc_type == SLCTL_REST_CLI) {
 		site = "clients";
-		nid = addrbuf;
+		prid = addrbuf;
+		addr = prid;
+		if (*addr == 'U') {
+			addr++;
+			while (isdigit(*addr))
+				addr++;
+			if (*addr == '-')
+				addr++;
+			else
+				addr = prid;
+		}
 		stype = "";
 		res = "";
 	} else {
@@ -75,9 +118,10 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 		site = res + strcspn(res, "@");
 		if (*site != '\0')
 			*site++ = '\0';
-		nid = site + strcspn(site, ":");
-		if (*nid != '\0')
-			*nid++ = '\0';
+		p = site + strcspn(site, ":");
+		if (*p == ':')
+			*p++ = '\0';
+		addr = p;
 
 		if (strcmp(res, lastres) == 0 &&
 		    strcmp(site, lastsite) == 0) {
@@ -85,9 +129,10 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 			stype = "";
 		}
 	}
-	p = strchr(nid, '@');
+	p = strchr(addr, '@');
 	if (p)
 		*p = '\0';
+	sl_conn_gethostname(addr, nid);
 
 	if (psc_ctl_lastmsgtype != mh->mh_type ||
 	    strcmp(site, lastsite))
