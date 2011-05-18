@@ -110,8 +110,6 @@ char				 ctlsockfn[PATH_MAX] = SL_PATH_MSCTLSOCK;
 char				 mountpoint[PATH_MAX];
 int				 allow_root_uid = 1;
 
-struct sl_resm			*slc_rmc_resm;
-
 struct psc_vbitmap		 msfsthr_uniqidmap = VBITMAP_INIT_AUTO;
 psc_spinlock_t			 msfsthr_uniqidmap_lock = SPINLOCK_INIT;
 

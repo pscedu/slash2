@@ -30,6 +30,8 @@
 #include "slconn.h"
 #include "slerr.h"
 
+struct sl_resm			*slc_rmc_resm;
+
 /**
  * slc_rpc_initsvc: Initialize CLI RPC services.
  */
