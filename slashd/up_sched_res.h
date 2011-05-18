@@ -62,7 +62,7 @@ enum {
 /* 2 */	USWI_REFT_TREE		/* in tree/list in memory */
 };
 
-#define USWI_DEBUG(lvl, wk, fmt, ...)					\
+#define DEBUG_USWI(lvl, wk, fmt, ...)					\
 	psclog((lvl), "uswi@%p f+g:"SLPRI_FG" fl:%s%s ref:%d "		\
 	    "gen:%d " fmt,						\
 	    (wk), SLPRI_FG_ARGS(USWI_FG(wk)),				\
@@ -74,7 +74,7 @@ enum {
 #define USWI_INCREF(wk, reftype)					\
 	do {								\
 		psc_atomic32_inc(&(wk)->uswi_refcnt);			\
-		USWI_DEBUG(PLL_DEBUG, (wk),				\
+		DEBUG_USWI(PLL_DEBUG, (wk),				\
 		    "grabbed reference [type=%d]", (reftype));		\
 	} while (0)
 
@@ -82,7 +82,7 @@ enum {
 	do {								\
 		psc_assert(psc_atomic32_read(&(wk)->uswi_refcnt) > 0);	\
 		psc_atomic32_dec(&(wk)->uswi_refcnt);			\
-		USWI_DEBUG(PLL_DEBUG, (wk),				\
+		DEBUG_USWI(PLL_DEBUG, (wk),				\
 		    "dropped reference [type=%d]", (reftype));		\
 	} while (0)
 

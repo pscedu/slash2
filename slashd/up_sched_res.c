@@ -1083,5 +1083,5 @@ uswi_enqueue_sites(struct up_sched_work_item *wk,
 void
 dump_uswi(struct up_sched_work_item *wk)
 {
-	USWI_DEBUG(PLL_MAX, wk, "");
+	DEBUG_USWI(PLL_MAX, wk, "");
 }
