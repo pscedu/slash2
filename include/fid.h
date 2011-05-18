@@ -111,9 +111,6 @@ struct slash_fidgen {
 		memcpy((dst), (src), sizeof(*(dst)));			\
 	} while (0)
 
-#define IS_REMOTE_FID(fid)						\
-	((fid) != SLFID_ROOT && nodeSite->site_id != FID_GET_SITEID(fid))
-
 static __inline int
 sl_sprintf_fid(slfid_t fid, char *buf, size_t len)
 {

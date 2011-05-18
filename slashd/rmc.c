@@ -57,6 +57,9 @@
 #include "slutil.h"
 #include "up_sched_res.h"
 
+#define IS_REMOTE_FID(fid)						\
+	((fid) != SLFID_ROOT && nodeSite->site_id != FID_GET_SITEID(fid))
+
 uint64_t		next_slash_id;
 static psc_spinlock_t	slash_id_lock = SPINLOCK_INIT;
 
