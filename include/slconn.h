@@ -28,11 +28,13 @@
 #include <sys/types.h>
 #include <sys/time.h>
 
+#include <stdint.h>
+
 #include "psc_rpc/export.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 
-#include <stdint.h>
+#include "slerr.h"
 
 struct pscrpc_import;
 struct pscrpc_export;
@@ -223,7 +225,14 @@ struct sl_expcli_ops {
 	    &(mq))
 
 #define SL_RSX_WAITREP(csvc, rq, mp)					\
-	slrpc_waitrep((csvc), (rq), sizeof(*(mp)), &(mp))
+	_PFL_RVSTART {							\
+		int _rc;						\
+									\
+		_rc = slrpc_waitrep((csvc), (rq), sizeof(*(mp)), &(mp));\
+		if (_rc == 0 && (mp)->rc == SLERR_NOTCONN)		\
+			sl_csvc_disconnect(csvc);			\
+		_rc;							\
+	} _PFL_RVEND
 
 #define SL_RSX_ALLOCREP(rq, mq, mp)					\
 	do {								\
