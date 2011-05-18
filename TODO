@@ -464,6 +464,7 @@ lcache
 - should replay crcupdate set ion to VALID ?
 - support multi addresses for resms
 - remove inodeh_lock in place of fcmh lock
+- there are duplicate slmrmcthr names
 
 fsuuid
 - on file system creation, create a random value
