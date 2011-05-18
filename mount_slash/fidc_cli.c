@@ -100,37 +100,35 @@ int
 slc_fcmh_ctor(struct fidc_membh *fcmh)
 {
 	struct fcmh_cli_info *fci;
-	int rc, i, found;
 	struct sl_resource *res;
-	struct sl_site *fileSite;
-	sl_siteid_t thisSiteid, fileSiteid;
+	struct sl_site *s;
+	int i;
 
 	fci = fcmh_get_pri(fcmh);
-	memset(fci, 0, sizeof(*fci));
 	slc_fcmh_refresh_age(fcmh);
+	if (IS_REMOTE_FID(fcmh_2_fid(fcmh))) {
+		sl_siteid_t siteid;
 
-	thisSiteid = slc_rmc_resm->resm_res->res_site->site_id;
-	fileSiteid = FID_GET_SITEID(fcmh->fcmh_sstb.sst_fg.fg_fid);
-
-	/* root's fid is 1 without site id encoded in it */
-	if (fcmh->fcmh_sstb.sst_fg.fg_fid == SLFID_ROOT || fileSiteid == thisSiteid) {
-		rc = 0;
-		fci->fci_resm = slc_rmc_resm;
-	} else {
-		found = 0;
-		fileSite = libsl_siteid2site(fileSiteid);
-		SITE_FOREACH_RES(fileSite, res, i)
-			if (res->res_type == SLREST_MDS) {
-				found = 1;
-				fci->fci_resm = psc_dynarray_getpos(&res->res_members, 0);
-				break;
-			}
-		if (!found) {
-			psc_errorx("Invalid site ID %d", fileSiteid);
-			rc = ESTALE;
+		siteid = FID_GET_SITEID(fcmh_2_fid(fcmh));
+		s = libsl_siteid2site(siteid);
+		if (s == NULL) {
+			psclog_errorx("fid "SLPRI_FID" has "
+			    "invalid site ID %d",
+			    fcmh_2_fid(fcmh), siteid);
+			return (ESTALE);
 		}
+		SITE_FOREACH_RES(s, res, i)
+			if (res->res_type == SLREST_MDS) {
+				fci->fci_resm = psc_dynarray_getpos(
+				    &res->res_members, 0);
+				return (0);
+			}
+		psclog_errorx("fid "SLPRI_FID" has invalid site ID %d",
+		    fcmh_2_fid(fcmh), siteid);
+		return (ESTALE);
 	}
-	return (rc);
+	fci->fci_resm = slc_rmc_resm;
+	return (0);
 }
 
 void
