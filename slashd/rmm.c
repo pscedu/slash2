@@ -353,20 +353,35 @@ slm_rmm_forward_namespace(int op, const struct slash_fidgen *pfg,
 		rc = mdsio_redo_mkdir(mq->pfg.fg_fid, name, &mp->cattr);
 		if (!rc)
 			*sstb = mp->cattr;
+		else
+			psclog_error("Redo mkdir failed: fid="SLPRI_FID", name= %s", 
+			    mq->pfg.fg_fid, name);
 		break;
 	    case SLM_FORWARD_RMDIR:
 		rc = mdsio_redo_rmdir(mq->pfg.fg_fid, mp->fid, name);
+		if (rc)
+			psclog_error("Redo rmdir failed: fid="SLPRI_FID", name= %s", 
+			    mq->pfg.fg_fid, name);
 		break;
 	    case SLM_FORWARD_CREATE:
 		rc = mdsio_redo_create(mq->pfg.fg_fid, name, &mp->cattr);
 		if (!rc)
 			*sstb = mp->cattr;
+		else
+			psclog_error("Redo create failed: fid="SLPRI_FID", name= %s", 
+			    mq->pfg.fg_fid, name);
 		break;
 	    case SLM_FORWARD_UNLINK:
 		rc = mdsio_redo_unlink(mq->pfg.fg_fid, mp->fid, name);
+		if (rc)
+			psclog_error("Redo unlink failed: fid="SLPRI_FID", name= %s", 
+			    mq->pfg.fg_fid, name);
 		break;
 	    case SLM_FORWARD_SETATTR:
 		rc = mdsio_redo_setattr(mq->fid, mq->to_set, sstb);
+		if (rc)
+			psclog_error("Redo setattr failed: fid="SLPRI_FID", name= %s", 
+			    mq->fid, name);
 		break;
 	}
 
