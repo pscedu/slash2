@@ -1019,7 +1019,7 @@ msl_io_rpcset_cb(__unusedx struct pscrpc_request_set *set, void *arg,
 	DYNARRAY_FOREACH(r, i, biorqs)
 		msl_biorq_destroy(r);
 	psc_dynarray_free(biorqs);
-	psc_free(biorqs, 0);
+	PSCFREE(biorqs);
 	return (rc);
 }
 
@@ -1043,8 +1043,7 @@ msl_io_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 		msl_biorq_destroy(r);
 	// XXX ok not to free biorqs on early return
 	psc_dynarray_free(biorqs);
-	psc_free(biorqs, 0);
-
+	PSCFREE(biorqs);
 	return (0);
 }
 
