@@ -74,7 +74,7 @@ mds_redo_bmap_repl_common(void *jent, int op)
 	case B_REPLAY_OP_REPL:
 		mds_brepls_check(jrpg->sjp_reptbl, jrpg->sjp_nrepls);
 
-		memcpy(&b->bcm_repls, jrpg->sjp_reptbl, SL_REPLICA_NBYTES);
+		memcpy(b->bcm_repls, jrpg->sjp_reptbl, SL_REPLICA_NBYTES);
 		psclog_info("fid="SLPRI_FID" bmapno=%u",
 		    jrpg->sjp_fid, jrpg->sjp_bmapno);
 		break;
