@@ -968,7 +968,7 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 
 	if (IS_REMOTE_FID(mq->pfid)) {
 		mp->rc = slm_rmm_forward_namespace(isfile ?
-		    SLM_FORWARD_UNLINK : SLM_FORWARD_MKDIR, &fg,
+		    SLM_FORWARD_UNLINK : SLM_FORWARD_RMDIR, &fg,
 		    mq->name, 0, NULL, NULL, 0);
 		goto out;
 	}
