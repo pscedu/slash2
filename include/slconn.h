@@ -229,6 +229,10 @@ struct sl_expcli_ops {
 		int _rc;						\
 									\
 		_rc = slrpc_waitrep((csvc), (rq), sizeof(*(mp)), &(mp));\
+		/*							\
+		 * XXX this horrible hack.  if one side thinks there's	\
+		 * no connection, how can the other side not?		\
+		 */							\
 		if (_rc == 0 && (mp)->rc == SLERR_NOTCONN)		\
 			sl_csvc_disconnect(csvc);			\
 		_rc;							\
