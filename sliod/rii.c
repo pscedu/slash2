@@ -92,7 +92,7 @@ sli_rii_handle_replread(struct pscrpc_request *rq)
 
 	mp->rc = bmap_get(fcmh, mq->bmapno, SL_READ, &bcm);
 	if (mp->rc) {
-		psc_errorx("failed to load fid "SLPRI_FID" bmap %u: %s",
+		psclog_errorx("failed to load fid "SLPRI_FID" bmap %u: %s",
 		    mq->fg.fg_fid, mq->bmapno, slstrerror(mp->rc));
 		goto out;
 	}

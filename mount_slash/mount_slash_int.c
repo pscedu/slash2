@@ -766,7 +766,7 @@ msl_try_get_replica_res(struct bmapc_memb *bcm, int iosidx)
 	fci = fcmh_2_fci(bcm->bcm_fcmh);
 	bci = bmap_2_bci(bcm);
 
-	DEBUG_BMAP(PLL_INFO, bcm, "iosidx=%d", iosidx);
+	DEBUG_BMAPOD(PLL_INFO, bcm, "iosidx=%d", iosidx);
 
 	if (SL_REPL_GET_BMAP_IOS_STAT(bcm->bcm_repls,
 	    iosidx * SL_BITS_PER_REPLICA) != BREPLST_VALID)
@@ -1408,7 +1408,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	if (!(r->biorq_flags & BIORQ_INFL))
 		r->biorq_flags |= BIORQ_INFL;
 
-	DEBUG_BIORQ(PLL_NOTIFY, r, "launching read req");
+	DEBUG_BIORQ(PLL_DEBUG, r, "launching read req");
 
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 	/* Setup the callback, supplying the dynarray as an argument.
