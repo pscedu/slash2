@@ -176,11 +176,13 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 int
 slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 {
+	char *from, *to;
+	void *mdsio_data;
 	struct srm_forward_req *mq;
 	struct srm_forward_rep *mp;
-	struct fidc_membh *p = NULL;
-	void *mdsio_data;
+	struct fidc_membh *p, *op, *np;
 
+	p = op = np = NULL;
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	if (mq->op != SLM_FORWARD_MKDIR && mq->op != SLM_FORWARD_RMDIR &&
@@ -226,6 +228,18 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 			break;
 		mp->rc = mdsio_unlink(fcmh_2_mdsio_fid(p), &mp->fid,
 		    mq->req.name, &rootcreds, mds_namespace_log);
+		break;
+	    case SLM_FORWARD_RENAME:
+		mp->rc = slm_fcmh_get(&mq->fg, &op);
+		if (mp->rc)
+			break;
+		mp->rc = slm_fcmh_get(&mq->fg, &np);
+		if (mp->rc)
+			break;
+		from = mq->req.name;
+		to = mq->req.name + strlen(mq->req.name) + 1;
+		mp->rc = mdsio_rename(fcmh_2_mdsio_fid(op), from,
+		    fcmh_2_mdsio_fid(np), to, &rootcreds, mds_namespace_log);
 		break;
 	    case SLM_FORWARD_SETATTR:
 		/*
@@ -286,7 +300,7 @@ slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
     uint32_t mode, const struct slash_creds *creds, 
     struct srt_stat *sstb, int32_t to_set)
 {
-	int rc, _siter;
+	int rc, len, _siter;
 	struct sl_resm *resm;
 	struct sl_site *site;
 	struct sl_resource *res;
@@ -338,7 +352,12 @@ slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
 		mq->to_set = to_set;
 		mq->req.sstb = *sstb;
 	} else
-		strlcpy(mq->req.name, name, sizeof(mq->req.name));
+		strncpy(mq->req.name, name, sizeof(mq->req.name));
+
+	if (op == SLM_FORWARD_RENAME) {
+		len = strlen(name) + 1;
+		strncpy(mq->req.name + len, newname, sizeof(mq->req.name) - len);
+	}
 
 	if (op == SLM_FORWARD_MKDIR || op == SLM_FORWARD_CREATE) {
 		mq->mode = mode;
