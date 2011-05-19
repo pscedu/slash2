@@ -214,9 +214,12 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 
 	if (bmap_getf(wk->uswi_fcmh, mq->bmapno, SL_WRITE,
 	    BMAPGETF_LOAD | BMAPGETF_NOAUTOINST, &bcm)) {
-		DEBUG_USWI(PLL_ERROR, wk, "unable to load bmap %d", mq->bmapno);
+		DEBUG_USWI(PLL_ERROR, wk, "unable to load bmap %d",
+		    mq->bmapno);
 		goto out;
 	}
+
+	bmap_op_start_type(bcm, BMAP_OPCNT_REPLWK);
 
 	brepls_init(tract, -1);
 
@@ -281,11 +284,14 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	spinlock(&smi->smi_lock);
 	psc_multiwaitcond_wakeup(&smi->smi_mwcond);
 	freelock(&smi->smi_lock);
+
  out:
 	if (dst_resm && bcm)
 		mds_repl_nodes_adjbusy(resm2rmmi(src_resm),
 		    resm2rmmi(dst_resm),
 		    -slm_bmap_calc_repltraffic(bcm));
+	if (bcm)
+		bmap_op_done_type(bcm, BMAP_OPCNT_REPLWK);
 	if (wk)
 		uswi_unref(wk);
 	return (0);
