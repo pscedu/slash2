@@ -278,30 +278,29 @@ struct bmpc_ioreq {
 #define BIORQ_LOCK(r)			spinlock(&(r)->biorq_lock)
 #define BIORQ_ULOCK(r)			freelock(&(r)->biorq_lock)
 
-#define BIORQ_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s%s%s%s"
-#define DEBUG_BIORQ_FLAGS(b)						\
-	(b)->biorq_flags & BIORQ_READ		? "r" : "",		\
-	(b)->biorq_flags & BIORQ_WRITE		? "w" : "",		\
-	(b)->biorq_flags & BIORQ_RBWFP		? "f" : "",		\
-	(b)->biorq_flags & BIORQ_RBWLP		? "l" : "",		\
-	(b)->biorq_flags & BIORQ_SCHED		? "s" : "",		\
-	(b)->biorq_flags & BIORQ_INFL		? "i" : "",		\
-	(b)->biorq_flags & BIORQ_DIO		? "d" : "",		\
-	(b)->biorq_flags & BIORQ_FORCE_EXPIRE	? "x" : "",		\
-	(b)->biorq_flags & BIORQ_DESTROY	? "D" : "",		\
-	(b)->biorq_flags & BIORQ_FLUSHRDY	? "R" : "",		\
-	(b)->biorq_flags & BIORQ_NOFHENT	? "n" : "",		\
-	(b)->biorq_flags & BIORQ_APPEND		? "A" : "",		\
-	(b)->biorq_flags & BIORQ_READAHEAD	? "a" : ""		\
-
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP,					\
-	    "biorq@%p fl=%d o=%u l=%u np=%d b=%p ts="PSCPRI_TIMESPEC" "	\
-	    BIORQ_FLAGS_FORMAT" "fmt,					\
-	    (b), (b)->biorq_flags, (b)->biorq_off, (b)->biorq_len,	\
+	    "biorq@%p fl=%#x:%s%s%s%s%s%s%s%s%s%s%s%s%s "		\
+	    "o=%u l=%u "						\
+	    "np=%d b=%p "						\
+	    "ts="PSCPRI_TIMESPEC" : "fmt,				\
+	    (b), (b)->biorq_flags,					\
+	    (b)->biorq_flags & BIORQ_READ		? "r" : "",	\
+	    (b)->biorq_flags & BIORQ_WRITE		? "w" : "",	\
+	    (b)->biorq_flags & BIORQ_RBWFP		? "f" : "",	\
+	    (b)->biorq_flags & BIORQ_RBWLP		? "l" : "",	\
+	    (b)->biorq_flags & BIORQ_SCHED		? "s" : "",	\
+	    (b)->biorq_flags & BIORQ_INFL		? "i" : "",	\
+	    (b)->biorq_flags & BIORQ_DIO		? "d" : "",	\
+	    (b)->biorq_flags & BIORQ_FORCE_EXPIRE	? "x" : "",	\
+	    (b)->biorq_flags & BIORQ_DESTROY		? "D" : "",	\
+	    (b)->biorq_flags & BIORQ_FLUSHRDY		? "R" : "",	\
+	    (b)->biorq_flags & BIORQ_NOFHENT		? "n" : "",	\
+	    (b)->biorq_flags & BIORQ_APPEND		? "A" : "",	\
+	    (b)->biorq_flags & BIORQ_READAHEAD		? "a" : "",	\
+	    (b)->biorq_off, (b)->biorq_len,				\
 	    psc_dynarray_len(&(b)->biorq_pages), (b)->biorq_bmap,	\
-	    PSCPRI_TIMESPEC_ARGS(&(b)->biorq_issue),			\
-	    DEBUG_BIORQ_FLAGS(b), ## __VA_ARGS__)
+	    PSCPRI_TIMESPEC_ARGS(&(b)->biorq_issue), ## __VA_ARGS__)
 
 int	_msl_offline_retry(struct bmpc_ioreq *, int);
 int	msl_fd_offline_retry(struct msl_fhent *);
