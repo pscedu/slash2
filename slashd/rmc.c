@@ -363,7 +363,7 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 
 	if (IS_REMOTE_FID(mq->pfg.fg_fid)) {
 		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_MKDIR,
-		    &mq->pfg, mq->name, mq->mode, &mq->creds,
+		    &mq->pfg, NULL, mq->name, NULL, mq->mode, &mq->creds,
 		    &mp->cattr, 0);
 		mdsio_fcmh_refreshattr(p, &mp->pattr);
 		goto out;
@@ -457,7 +457,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 	if (IS_REMOTE_FID(mq->pfg.fg_fid)) {
 		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_CREATE,
-		    &mq->pfg, mq->name, mq->mode, &mq->creds,
+		    &mq->pfg, NULL, mq->name, NULL, mq->mode, &mq->creds,
 		    &mp->cattr, 0);
 		if (!mp->rc) {
 			mp->rc2 = ENOENT;
@@ -682,6 +682,14 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 		goto out;
 	}
 
+	if (IS_REMOTE_FID(mq->opfg.fg_fid)) {
+		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_RENAME,
+		    &mq->opfg, &mq->npfg, from, to, 0, &rootcreds,
+		    &mp->cattr, 0);
+		goto out;
+	}
+
+
 	/* if we get here, op and np must be owned by the current MDS */
 	mp->rc = mdsio_rename(fcmh_2_mdsio_fid(op), from,
 	    fcmh_2_mdsio_fid(np), to, &rootcreds, mds_namespace_log);
@@ -764,7 +772,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	if (to_set) {
 		if (IS_REMOTE_FID(mq->attr.sst_fg.fg_fid)) {
 			mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_SETATTR,
-			    &mq->attr.sst_fg, NULL, 0, NULL, &mq->attr,
+			    &mq->attr.sst_fg, NULL, NULL, NULL, 0, NULL, &mq->attr,
 			    to_set);
 			mp->attr = mq->attr;
 		} else {
@@ -975,7 +983,7 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	if (IS_REMOTE_FID(mq->pfid)) {
 		mp->rc = slm_rmm_forward_namespace(isfile ?
 		    SLM_FORWARD_UNLINK : SLM_FORWARD_RMDIR, &fg,
-		    mq->name, 0, NULL, NULL, 0);
+		    NULL, mq->name, NULL, 0, NULL, NULL, 0);
 		goto out;
 	}
 

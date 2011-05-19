@@ -339,6 +339,7 @@ struct srm_forward_req {
 	 int32_t		to_set;
 	struct slash_creds	creds;		/* st_uid owner for new dir/file */
 	struct slash_fidgen	fg;		/* parent dir or target */
+	struct slash_fidgen	nfg;		/* new parent dir or target */
 	slfid_t			fid;		/* new fid provided by the peer MDS */
 	union {
 		struct srt_stat	sstb;

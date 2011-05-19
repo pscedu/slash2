@@ -281,8 +281,9 @@ slm_rmm_handler(struct pscrpc_request *rq)
 }
 
 int
-slm_rmm_forward_namespace(int op, const struct slash_fidgen *fg,
-    char *name, uint32_t mode, const struct slash_creds *creds, 
+slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,  
+    struct slash_fidgen *nfg, char *name, char *newname, 
+    uint32_t mode, const struct slash_creds *creds, 
     struct srt_stat *sstb, int32_t to_set)
 {
 	int rc, _siter;
@@ -331,6 +332,7 @@ slm_rmm_forward_namespace(int op, const struct slash_fidgen *fg,
 
 	mq->op = op;
 	mq->fg	= *fg;
+	mq->nfg	= *nfg;
 
 	if (op == SLM_FORWARD_SETATTR) {
 		mq->to_set = to_set;
@@ -381,6 +383,17 @@ slm_rmm_forward_namespace(int op, const struct slash_fidgen *fg,
 		if (rc)
 			psclog_error("Redo unlink failed: fid="SLPRI_FID", name= %s", 
 			    mq->fg.fg_fid, name);
+		break;
+	    case SLM_FORWARD_RENAME:
+		rc = mdsio_redo_rename(mq->fg.fg_fid, name, mq->nfg.fg_fid, newname, sstb);
+		if (!rc)
+			*sstb = mp->cattr;
+		else {
+			psclog_error("Redo rename failed: fid="SLPRI_FID", name= %s",
+			    mq->fg.fg_fid, name);
+			psclog_error("Redo rename failed: new fid="SLPRI_FID", new name= %s",
+			    mq->nfg.fg_fid, newname);
+		}
 		break;
 	    case SLM_FORWARD_SETATTR:
 		rc = mdsio_redo_setattr(mq->fg.fg_fid, mq->to_set, sstb);
