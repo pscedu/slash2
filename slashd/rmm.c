@@ -233,7 +233,7 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		mp->rc = slm_fcmh_get(&mq->fg, &op);
 		if (mp->rc)
 			break;
-		mp->rc = slm_fcmh_get(&mq->fg, &np);
+		mp->rc = slm_fcmh_get(&mq->nfg, &np);
 		if (mp->rc)
 			break;
 		from = mq->req.name;
