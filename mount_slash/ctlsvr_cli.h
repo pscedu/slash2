@@ -32,6 +32,7 @@ struct psc_ctlmsghdr;
 struct msctl_replstq {
 	struct psclist_head		 mrsq_lentry;
 	struct psc_waitq		 mrsq_waitq;
+	int				 mrsq_id;
 	int				 mrsq_fd;
 	int				 mrsq_eof;	/* whether processing has finished */
 	int				 mrsq_ctlrc;	/* EOF/OK return code to ctl layer */

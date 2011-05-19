@@ -46,6 +46,7 @@
 struct psc_lockedlist	 psc_mlists;
 struct psc_lockedlist	 psc_odtables;
 
+psc_atomic32_t		 msctl_id = PSC_ATOMIC32_INIT(0);
 struct psc_lockedlist	 msctl_replsts = PLL_INIT(&msctl_replsts,
     struct msctl_replstq, mrsq_lentry);
 
@@ -197,7 +198,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	    !S_ISDIR(fcmh->fcmh_sstb.sst_mode))
 		rc = ENOTSUP;
 	else
-		rc = checkcreds(&fcmh->fcmh_sstb, &cr, W_OK);
+		rc = checkcreds(&fcmh->fcmh_sstb, &cr, R_OK);
 	fg = fcmh->fcmh_fg;
 	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 
@@ -220,13 +221,14 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	}
 
 	mq->fg = fg;
-	mq->id = fd;
+	mq->id = psc_atomic32_inc_getnew(&msctl_id);
 
 	memset(&mrsq, 0, sizeof(mrsq));
 	INIT_PSC_LISTENTRY(&mrsq.mrsq_lentry);
 	INIT_SPINLOCK(&mrsq.mrsq_lock);
 	psc_waitq_init(&mrsq.mrsq_waitq);
 	spinlock(&mrsq.mrsq_lock);
+	mrsq.mrsq_id = mq->id;
 	mrsq.mrsq_fd = fd;
 	mrsq.mrsq_fid = mrq->mrq_fid;
 	mrsq.mrsq_ctlrc = 1;
