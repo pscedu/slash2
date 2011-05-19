@@ -20,6 +20,7 @@
 #include <sys/types.h>
 #include <sys/statvfs.h>
 
+#include <ctype.h>
 #include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -138,10 +139,12 @@ fid2fn(slfid_t fid, struct stat *stb)
 
 	ffp = psc_hashtbl_search(&fnfidpairs, NULL, NULL, &fid);
 	if (ffp) {
-		*stb = ffp->ffp_stb;
+		if (stb)
+			*stb = ffp->ffp_stb;
 		return (PCPP_STR(ffp->ffp_fn));
 	}
-	memset(stb, 0, sizeof(*stb));
+	if (stb)
+		memset(stb, 0, sizeof(*stb));
 	snprintf(fn, sizeof(fn), "<"SLPRI_FID">", fid);
 	return (PCPP_STR(fn));
 }
@@ -685,6 +688,42 @@ replst_savdat(__unusedx struct psc_ctlmsghdr *mh, const void *m)
 	return (-1);
 }
 
+void
+ms_ctlmsg_error_prdat(__unusedx const struct psc_ctlmsghdr *mh,
+    const void *m)
+{
+	const struct psc_ctlmsg_error *pce = m;
+	struct fnfidpair *ffp;
+	const char *p, *endp;
+	slfid_t fid;
+	int i;
+
+	if (psc_ctl_lastmsgtype != mh->mh_type &&
+	    psc_ctl_lastmsgtype != -1)
+		fprintf(stderr, "\n");
+	p = pce->pce_errmsg;
+	if (*p++ != '0')
+		goto out;
+	if (*p++ != 'x')
+		goto out;
+	endp = p;
+	for (i = 0; i < 16; i++, endp++)
+		if (!isxdigit(*endp))
+			goto out;
+	if (*endp != ':')
+		goto out;
+	fid = strtoull(p, NULL, 16);
+	ffp = psc_hashtbl_search(&fnfidpairs, NULL, NULL, &fid);
+	if (ffp == NULL)
+		goto out;
+	warnx("%s%s", ffp->ffp_fn, endp);
+	return;
+
+ out:
+     warnx("%s", pce->pce_errmsg);
+}
+
+
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 	PSC_CTLSHOW_DEFS,
 	{ "connections",	packshow_conns },
@@ -695,6 +734,8 @@ struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 	{ "fidcache",		packshow_fcmhs },
 	{ "files",		packshow_fcmhs }
 };
+
+#define psc_ctlmsg_error_prdat ms_ctlmsg_error_prdat
 
 struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 	PSC_CTLMSG_PRFMT_DEFS,
