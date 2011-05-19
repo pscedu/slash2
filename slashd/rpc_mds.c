@@ -136,6 +136,10 @@ slm_rpc_ion_unpack_statfs(struct pscrpc_request *rq, int type)
 		psclog_errorx("unable to import statfs");
 		return;
 	}
+	if (m->bufcount < 2) {
+		psclog_errorx("unable to import statfs");
+		return;
+	}
 	f = pscrpc_msg_buf(m, m->bufcount - 2, sizeof(*f));
 	if (f == NULL) {
 		psclog_errorx("unable to import statfs");
