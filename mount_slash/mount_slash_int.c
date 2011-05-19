@@ -838,6 +838,26 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 	return (NULL);
 }
 
+int
+msl_getrqstatus(struct slashrpc_cservice *csvc,
+    struct pscrpc_request *rq)
+{
+	struct srm_io_rep *mp;
+	int rc;
+
+	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
+	rc = rq->rq_repmsg->status;
+	if (rc == 0)
+		rc = rq->rq_status;
+	if (rc == 0)
+		rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
+	if (rc == 0)
+		rc = mp ? mp->rc : ENOMSG;
+	if (rc == SLERR_NOTCONN)
+		sl_csvc_disconnect(csvc);
+	return (rc);
+}
+
 /**
  * msl_read_cb - RPC callback used only for read or RBW operations.
  *	The primary purpose is to set the bmpce's to DATARDY so that
@@ -853,11 +873,9 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	struct psc_dynarray *a = args->pointer_arg[MSL_CBARG_BMPCE];
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
 	struct bmap_pagecache_entry *bmpce;
-	struct srm_io_rep *mp;
 	struct bmapc_memb *b;
 
 	b = r->biorq_bmap;
-	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 
 	psc_assert(a);
 	psc_assert(b);
@@ -867,15 +885,9 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	DEBUG_BMAP(PLL_INFO, b, "callback");
 	DEBUG_BIORQ(PLL_INFO, r, "callback bmap=%p", b);
 
-	rc = rq->rq_status;
-	if (rc == 0)
-		rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
-	if (rc == 0)
-		rc = mp ? mp->rc : ENOMSG;
+	rc = msl_getrqstatus(csvc, rq);
 	if (rc) {
 		DEBUG_REQ(PLL_ERROR, rq, "non-zero status %d", rc);
-		if (rc == SLERR_NOTCONN)
-			sl_csvc_disconnect(csvc);
 		goto out;
 	}
 
@@ -946,12 +958,11 @@ int
 msl_readahead_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
-	struct slashrpc_cservice *csvc;
-	struct bmapc_memb *b;
-	struct bmap_pagecache *bmpc;
 	struct bmap_pagecache_entry *bmpce;
+	struct slashrpc_cservice *csvc;
 	struct psc_waitq *wq = NULL;
-	struct srm_io_rep *mp;
+	struct bmap_pagecache *bmpc;
+	struct bmapc_memb *b;
 	int rc;
 
 	bmpce = args->pointer_arg[MSL_CBARG_BMPCE];
@@ -961,15 +972,7 @@ msl_readahead_cb(struct pscrpc_request *rq,
 	bmpce->bmpce_owner = NULL;
 	psc_assert(bmpce && csvc && bmpc && b);
 
-	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
-
-	rc = rq->rq_status;
-	if (rc == 0)
-		rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
-	if (rc == 0)
-		rc = mp ? mp->rc : ENOMSG;
-	if (rc == SLERR_NOTCONN)
-		sl_csvc_disconnect(csvc);
+	rc = msl_getrqstatus(csvc, rq);
 
 	DEBUG_REQ(PLL_INFO, rq, "bmap=%p bmpce=%p", b, bmpce);
 
@@ -1039,25 +1042,15 @@ msl_io_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct psc_dynarray *biorqs = args->pointer_arg[MSL_CBARG_BIORQS];
-	struct srm_io_rep *mp;
 	struct bmpc_ioreq *r;
 	int rc = 0, i;
 
 	DEBUG_REQ(PLL_INFO, rq, "cb");
 
-	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
-	rc = rq->rq_status;
-	if (rc == 0)
-		rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
-	if (rc == 0)
-		rc = mp ? mp->rc : ENOMSG;
+	rc = msl_getrqstatus(csvc, rq);
 	if (rc) {
 		DYNARRAY_FOREACH(r, i, biorqs)
 			bmap_flush_inflight_unset(r);
-
-		if (rc == SLERR_NOTCONN)
-			sl_csvc_disconnect(csvc);
-
 		return (rc);
 	}
 
@@ -1074,22 +1067,14 @@ msl_dio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	struct slashrpc_cservice *csvc = rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC];
 	int rc, op = rq->rq_reqmsg->opc;
 	struct srm_io_req *mq;
-	struct srm_io_rep *mp;
 
 	DEBUG_REQ(PLL_INFO, rq, "cb");
 
 	psc_assert(op == SRMT_READ || op == SRMT_WRITE);
 
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
-	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 
-	rc = rq->rq_status;
-	if (rc == 0)
-		rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
-	if (rc == 0)
-		rc = mp ? mp->rc : ENOMSG;
-	if (rc == SLERR_NOTCONN)
-		sl_csvc_disconnect(csvc);
+	rc = msl_getrqstatus(csvc, rq);
 
 	psc_assert(mq);
 

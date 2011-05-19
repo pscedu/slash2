@@ -194,18 +194,9 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
-	struct srm_io_rep *mp;
 	int rc;
 
-	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
-
-	rc = rq->rq_status;
-	if (rc == 0)
-		rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
-	if (rc == 0)
-		rc = mp ? mp->rc : ENOMSG;
-	if (rc == SLERR_NOTCONN)
-		sl_csvc_disconnect(csvc);
+	rc = msl_getrqstatus(csvc, rq);
 
 	atomic_dec(&outstandingRpcCnt);
 	DEBUG_REQ(rq->rq_err ? PLL_ERROR : PLL_INFO, rq,
