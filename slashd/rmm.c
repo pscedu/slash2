@@ -379,7 +379,9 @@ slm_rmm_forward_namespace(int op, const struct slash_fidgen *fg,
 		break;
 	    case SLM_FORWARD_SETATTR:
 		rc = mdsio_redo_setattr(mq->fg.fg_fid, mq->to_set, sstb);
-		if (rc)
+		if (!rc)
+			*sstb = mp->cattr;
+		else
 			psclog_error("Redo setattr failed: fid="SLPRI_FID", name= %s", 
 			    mq->fg.fg_fid, name);
 		break;

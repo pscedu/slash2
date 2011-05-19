@@ -728,17 +728,14 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
-	if (IS_REMOTE_FID(mq->attr.sst_fg.fg_fid)) {
-		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_SETATTR,
-		    &mq->attr.sst_fg, NULL, 0, NULL, &mq->attr,
-		    mq->to_set);
-		goto out;
-	}
-
 	FCMH_LOCK(fcmh);
 
 	to_set = mq->to_set & SL_SETATTRF_CLI_ALL;
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
+		if (IS_REMOTE_FID(mq->attr.sst_fg.fg_fid)) {
+			mp->rc = ENOSYS;
+			goto out;
+		}
 		to_set |= PSCFS_SETATTRF_MTIME;
 		SL_GETTIMESPEC(&mq->attr.sst_mtim);
 		if (mq->attr.sst_size == 0) {
@@ -763,16 +760,23 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	}
 
 	if (to_set) {
-		/*
-		 * If the file is open, mdsio_data will be valid and
-		 * used.  Otherwise, it will be NULL, and we'll use the
-		 * mdsio_fid.
-		 */
-		mds_reserve_slot();
-		mp->rc = mdsio_setattr(fcmh_2_mdsio_fid(fcmh),
-		    &mq->attr, to_set, &rootcreds, &mp->attr,
-		    fcmh_2_mdsio_data(fcmh), mds_namespace_log);
-		mds_unreserve_slot();
+		if (IS_REMOTE_FID(mq->attr.sst_fg.fg_fid)) {
+			mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_SETATTR,
+			    &mq->attr.sst_fg, NULL, 0, NULL, &mq->attr,
+			    to_set);
+			mp->attr = mq->attr;
+		} else {
+			/*
+			 * If the file is open, mdsio_data will be valid and
+			 * used.  Otherwise, it will be NULL, and we'll use the
+			 * mdsio_fid.
+			 */
+			mds_reserve_slot();
+			mp->rc = mdsio_setattr(fcmh_2_mdsio_fid(fcmh),
+			    &mq->attr, to_set, &rootcreds, &mp->attr,
+			    fcmh_2_mdsio_data(fcmh), mds_namespace_log);
+			mds_unreserve_slot();
+		}
 	}
 
 	if (mp->rc) {
