@@ -230,7 +230,8 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 	    case SLM_FORWARD_SETATTR:
 		/*
 		 * This is tough, because we have some logic at the fcmh
-		 * layer dealing with (partial) truncates.
+		 * layer dealing with (partial) truncates.  It is not a
+		 * pure namespace operation.
 		 */
 		mp->rc = slm_fcmh_get(&mq->fg, &p);
 		if (mp->rc)
