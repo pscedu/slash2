@@ -724,16 +724,16 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
+	mp->rc = slm_fcmh_get(&mq->attr.sst_fg, &fcmh);
+	if (mp->rc)
+		goto out;
+
 	if (IS_REMOTE_FID(mq->attr.sst_fg.fg_fid)) {
 		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_SETATTR,
 		    &mq->attr.sst_fg, NULL, 0, NULL, &mq->attr,
 		    mq->to_set);
 		goto out;
 	}
-
-	mp->rc = slm_fcmh_get(&mq->attr.sst_fg, &fcmh);
-	if (mp->rc)
-		goto out;
 
 	FCMH_LOCK(fcmh);
 
