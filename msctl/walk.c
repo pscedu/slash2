@@ -37,7 +37,8 @@
 #include "msctl.h"
 
 void
-walk(const char *fn, void (*cbf)(const char *, void *), void *arg)
+walk(const char *fn, void (*cbf)(const char *, const struct stat *,
+    void *), void *arg)
 {
 	char * const pathv[] = { (char *)fn, NULL };
 	char buf[PATH_MAX];
@@ -47,8 +48,8 @@ walk(const char *fn, void (*cbf)(const char *, void *), void *arg)
 
 	if (recursive) {
 		/* XXX security implications of FTS_NOCHDIR? */
-		fp = fts_open(pathv, FTS_COMFOLLOW |
-		    FTS_NOCHDIR | FTS_PHYSICAL, NULL);
+		fp = fts_open(pathv, FTS_COMFOLLOW | FTS_NOCHDIR |
+		    FTS_PHYSICAL, NULL);
 		if (fp == NULL)
 			psc_fatal("fts_open %s", fn);
 		while ((f = fts_read(fp)) != NULL) {
@@ -64,7 +65,7 @@ walk(const char *fn, void (*cbf)(const char *, void *), void *arg)
 				else {
 					if (verbose)
 						warnx("processing %s", buf);
-					cbf(buf, arg);
+					cbf(buf, f->fts_statp, arg);
 				}
 			}
 		}
@@ -77,6 +78,6 @@ walk(const char *fn, void (*cbf)(const char *, void *), void *arg)
 		else if (realpath(fn, buf) == NULL)
 			err(1, "%s", fn);
 		else
-			cbf(buf, arg);
+			cbf(buf, &stb, arg);
 	}
 }

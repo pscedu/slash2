@@ -83,6 +83,7 @@ struct repl_policy_arg {
 };
 
 struct fnfidpair {
+	struct stat		 ffp_stb;
 	char			 ffp_fn[PATH_MAX];
 	slfid_t			 ffp_fid;
 	struct psc_hashent	 ffp_hentry;
@@ -121,6 +122,7 @@ fn2fid(const char *fn)
 		return (ffp->ffp_fid);
 
 	ffp = PSCALLOC(sizeof(*ffp));
+	ffp->ffp_stb = stb;
 	psc_hashent_init(&fnfidpairs, ffp);
 	strlcpy(ffp->ffp_fn, fn, sizeof(ffp->ffp_fn));
 	ffp->ffp_fid = stb.st_ino;
@@ -129,14 +131,17 @@ fn2fid(const char *fn)
 }
 
 const char *
-fid2fn(slfid_t fid)
+fid2fn(slfid_t fid, struct stat *stb)
 {
 	static char fn[PATH_MAX];
 	struct fnfidpair *ffp;
 
 	ffp = psc_hashtbl_search(&fnfidpairs, NULL, NULL, &fid);
-	if (ffp)
+	if (ffp) {
+		*stb = ffp->ffp_stb;
 		return (PCPP_STR(ffp->ffp_fn));
+	}
+	memset(stb, 0, sizeof(*stb));
 	snprintf(fn, sizeof(fn), "<"SLPRI_FID">", fid);
 	return (PCPP_STR(fn));
 }
@@ -197,12 +202,14 @@ packshow_fcmhs(__unusedx char *fid)
 {
 	struct slctlmsg_fcmh *scf;
 
-	scf = psc_ctlmsg_push(MSCMT_GETFCMH, sizeof(struct slctlmsg_fcmh));
+	scf = psc_ctlmsg_push(MSCMT_GETFCMH,
+	    sizeof(struct slctlmsg_fcmh));
 	scf->scf_fg.fg_fid = FID_ANY;
 }
 
 void
-pack_replst(const char *fn, __unusedx void *arg)
+pack_replst(const char *fn, __unusedx const struct stat *stb,
+    __unusedx void *arg)
 {
 	struct msctlmsg_replst *mrs;
 
@@ -212,11 +219,19 @@ pack_replst(const char *fn, __unusedx void *arg)
 }
 
 void
-pack_replrq(const char *fn, void *arg)
+pack_replrq(const char *fn, const struct stat *stb, void *arg)
 {
 	struct msctlmsg_replrq *mrq;
 	struct replrq_arg *ra = arg;
 	int n;
+
+	if (S_ISDIR(stb->st_mode)) {
+		if (!recursive) {
+			errno = EISDIR;
+			warn("%s", fn);
+		}
+		return;
+	}
 
 	mrq = psc_ctlmsg_push(ra->opcode,
 	    sizeof(struct msctlmsg_replrq));
@@ -230,7 +245,7 @@ pack_replrq(const char *fn, void *arg)
 
 void
 parse_replrq(int opcode, char *replrqspec,
-    void (*packf)(const char *, void *))
+    void (*packf)(const char *, const struct stat *, void *))
 {
 	char *files, *endp, *bmapnos, *bmapno, *next, *bend, *iosv, *ios;
 	struct replrq_arg ra;
@@ -316,7 +331,8 @@ lookup_repl_policy(const char *name)
 }
 
 void
-cmd_new_bmap_repl_policy_one(const char *fn, void *arg)
+cmd_new_bmap_repl_policy_one(const char *fn,
+    __unusedx const struct stat *stb, void *arg)
 {
 	struct msctlmsg_newreplpol *mfnrp;
 	struct repl_policy_arg *a = arg;
@@ -347,7 +363,8 @@ cmd_new_bmap_repl_policy(int ac, char **av)
 }
 
 void
-cmd_bmap_repl_policy_one(const char *fn, void *arg)
+cmd_bmap_repl_policy_one(const char *fn,
+    __unusedx const struct stat *stb, void *arg)
 {
 	struct msctlmsg_bmapreplpol *mfbrp;
 	struct repl_policy_arg *a = arg;
@@ -417,7 +434,8 @@ cmd_bmap_repl_policy(int ac, char **av)
 }
 
 void
-cmd_lcache_one(const char *fn, void *arg)
+cmd_lcache_one(const char *fn, __unusedx const struct stat *stb,
+    void *arg)
 {
 	struct msctlmsg_fncmd *mfc;
 	struct lcache_arg *a = arg;
@@ -445,7 +463,8 @@ cmd_lcache(int ac, char **av)
 }
 
 void
-cmd_import_one(const char *fn, __unusedx void *arg)
+cmd_import_one(const char *fn, __unusedx const struct stat *stb,
+    __unusedx void *arg)
 {
 	struct msctlmsg_fncmd *mfc;
 
@@ -465,7 +484,8 @@ cmd_import(int ac, char **av)
 }
 
 void
-cmd_replrq_one(const char *fn, void *arg)
+cmd_replrq_one(const char *fn, __unusedx const struct stat *stb,
+    void *arg)
 {
 	struct msctlmsg_replrq *mrq;
 	struct replrq_arg *a = arg;
@@ -491,7 +511,8 @@ cmd_replrq(int ac, char **av)
 }
 
 void
-cmd_replst_one(const char *fn, __unusedx void *arg)
+cmd_replst_one(const char *fn, __unusedx const struct stat *stb,
+    __unusedx void *arg)
 {
 	struct msctlmsg_replst *mrs;
 
@@ -566,6 +587,7 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	char map[NBREPLST], pmap[NBREPLST], rbuf[PSCFMT_RATIO_BUFSIZ];
 	struct replst_slave_bdata *rsb, *nrsb;
 	struct srsm_replst_bhdr bhdr;
+	struct stat stb;
 	sl_bmapno_t bact, bold, nb;
 	int n, nbw, off, dlen;
 	uint32_t iosidx;
@@ -590,7 +612,9 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 
 	dlen = PSC_CTL_DISPLAY_WIDTH - strlen(" new-bmap-repl-policy: ") -
 	    strlen(repl_policies[BRP_ONETIME]);
-	n = printf("%s", fid2fn(current_mrs.mrs_fid));
+	n = printf("%s", fid2fn(current_mrs.mrs_fid, &stb));
+	if (S_ISDIR(stb.st_mode))
+		n += printf("/");
 	if (n > dlen)
 		printf("\n%*s", dlen, "");
 	else
@@ -657,7 +681,6 @@ replst_savdat(__unusedx struct psc_ctlmsghdr *mh, const void *m)
 	if (mrs->mrs_nios > SL_MAX_REPLICAS)
 		psc_fatalx("communication error: replication status # "
 		    "replicas out of range (%u)", mrs->mrs_nios);
-
 	memcpy(&current_mrs, mrs, sizeof(current_mrs));
 	return (-1);
 }
@@ -738,7 +761,7 @@ void
 parse_replst(char *arg)
 {
 	if (arg[0] == ':')
-		pack_replst("", NULL);
+		pack_replst("", NULL, NULL);
 	else
 		walk(arg, pack_replst, NULL);
 }

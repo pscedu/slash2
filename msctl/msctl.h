@@ -17,7 +17,9 @@
  * %PSC_END_COPYRIGHT%
  */
 
-void walk(const char *, void (*)(const char *, void *), void *);
+struct stat;
+
+void walk(const char *, void (*)(const char *, const struct stat *, void *), void *);
 
 extern int recursive;
 extern int verbose;
