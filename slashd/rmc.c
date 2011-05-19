@@ -676,9 +676,11 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 			goto out;
 	}
 
-	/*
-	 * TODO: return EXDEV, if the site IDs of the two parents are different.
-	 */
+	if (FID_GET_SITEID(mq->opfg.fg_fid) != 
+	    FID_GET_SITEID(mq->npfg.fg_fid)) {
+		mp->rc = EXDEV;
+		goto out;
+	}
 
 	/* if we get here, op and np must be owned by the current MDS */
 	mp->rc = mdsio_rename(fcmh_2_mdsio_fid(op), from,
