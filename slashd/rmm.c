@@ -228,6 +228,10 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		    mq->req.name, &rootcreds, mds_namespace_log);
 		break;
 	    case SLM_FORWARD_SETATTR:
+		/*
+		 * This is tough, because we have some logic at the fcmh
+		 * layer dealing with (partial) truncates.
+		 */
 		mp->rc = slm_fcmh_get(&mq->fg, &p);
 		if (mp->rc)
 			break;
