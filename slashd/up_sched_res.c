@@ -148,8 +148,8 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 	else if (rc >= (int)sizeof(fn))
 		rc = ENAMETOOLONG;
 	else
-		rc = mdsio_unlink(mds_upschdir_inum, NULL, fn, &rootcreds,
-		    NULL);
+		rc = mdsio_unlink(mds_upschdir_inum, NULL, fn,
+		    &rootcreds, NULL);
 	if (rc)
 		psclog_error("trying to remove upsch link: %s",
 		    slstrerror(rc));
