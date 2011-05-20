@@ -659,8 +659,8 @@ Not needed, but won't hurt anything.
 05/20/2011
 ----------
 
-Saw sporadic errors like below.  Other than this, namespace forwarding (to MDS that owns the
-parent directory) seems working.
+Saw sporadic errors like below.  Other than this and rename forwarding, namespace forwarding to 
+a remote MDS that owns the parent directory seems working.
 
 root@citron: /zzh-slash2/zhihui$ rm goodfile
 rm: cannot remove `goodfile': Numerical result out of range
