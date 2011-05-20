@@ -350,7 +350,6 @@ slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
 
 	mq->op = op;
 	mq->fg	= *fg;
-	mq->nfg	= *nfg;
 
 	if (op == SLM_FORWARD_SETATTR) {
 		mq->to_set = to_set;
@@ -359,6 +358,7 @@ slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
 		strncpy(mq->req.name, name, sizeof(mq->req.name));
 
 	if (op == SLM_FORWARD_RENAME) {
+		mq->nfg	= *nfg;
 		len = strlen(name) + 1;
 		strncpy(mq->req.name + len, newname, sizeof(mq->req.name) - len);
 	}
