@@ -157,7 +157,7 @@ struct slmds_jent_namespace {
 
 	uint64_t			sjnm_size;		/* file size */
 
-	char				sjnm_name[SLJ_NAMES_MAX]; /* one or two names */
+	char				sjnm_name[SL_TWO_NAME_MAX]; /* one or two names */
 } __packed;
 
 /*
