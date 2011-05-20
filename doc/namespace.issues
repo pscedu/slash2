@@ -655,3 +655,13 @@ root@orange: /home/zhihui$ ls -al /zhihui_slash2_orange/.slmd/fidns/0/0/8 | tail
 lrwxrwxrwx   2 zhihui staff   33 Dec 31  1969 000c0000000085ea -> ../../platform/generic/system.dts
 
 Not needed, but won't hurt anything.
+
+05/20/2011
+----------
+
+Saw sporadic errors like below.  Other than this, namespace forwarding (to MDS that owns the
+parent directory) seems working.
+
+root@citron: /zzh-slash2/zhihui$ rm goodfile
+rm: cannot remove `goodfile': Numerical result out of range
+
