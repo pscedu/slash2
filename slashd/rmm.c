@@ -187,7 +187,7 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 
 	if (mq->op != SLM_FORWARD_MKDIR && mq->op != SLM_FORWARD_RMDIR &&
 	    mq->op != SLM_FORWARD_CREATE && mq->op != SLM_FORWARD_UNLINK &&
-	    mq->op != SLM_FORWARD_SETATTR) {
+	    mq->op != SLM_FORWARD_RENAME && mq->op != SLM_FORWARD_SETATTR) {
 		mp->rc = EINVAL;
 		return (0);
 	}
@@ -323,7 +323,7 @@ slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
 #endif
 	if (op != SLM_FORWARD_MKDIR && op != SLM_FORWARD_RMDIR &&
 	    op != SLM_FORWARD_CREATE && op != SLM_FORWARD_UNLINK &&
-	    op != SLM_FORWARD_SETATTR)
+	    op != SLM_FORWARD_RENAME && op != SLM_FORWARD_SETATTR)
 		return (ENOSYS);
 
 	site = libsl_siteid2site(siteid);
