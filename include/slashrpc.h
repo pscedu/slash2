@@ -343,7 +343,7 @@ struct srm_forward_req {
 	slfid_t			fid;		/* new fid provided by the peer MDS */
 	union {
 		struct srt_stat	sstb;
-		char		name[SL_TWO_NAME_MAX];
+		char		name[SL_TWO_NAME_MAX+2];
 	} req;
 } __packed;
 
