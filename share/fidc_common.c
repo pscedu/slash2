@@ -534,8 +534,7 @@ dump_fcmh(struct fidc_membh *f)
 	int locked;
 
 	locked = FCMH_RLOCK(f);
-	psclog_max("fcmh@%p f+g:"SLPRI_FG" ref:%d", f,
-	    SLPRI_FG_ARGS(&f->fcmh_fg), f->fcmh_refcnt);
+	DEBUG_FCMH(PLL_MAX, f, "");
 	FCMH_URLOCK(f, locked);
 }
 
