@@ -22,7 +22,7 @@
 
 /* configuration/control socket paths */
 #if 0
-#define SL_PATH_CONF		"/etc/slash.conf"
+#define SL_PATH_CONF		"/etc/slcfg.conf"
 #define SL_PATH_SLMCTLSOCK	"/var/run/slash/slashd.%h.sock"
 #define SL_PATH_SLICTLSOCK	"/var/run/slash/sliod.%h.sock"
 #define SL_PATH_MSCTLSOCK	"/var/run/slash/mount_slash.%h.sock"
