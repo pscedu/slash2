@@ -1,0 +1,25 @@
+$Id$
+
+This document describes the network stack initialization and slash.slcfg
+automatic profile self discovery.
+
+The following actions are taken depending on the value of the 'nets'
+slash.slcfg option:
+
+  (o) if 'nets' is a single Lustre network name, such as "tcp10",
+      network interface/Lustre network name pairs are constructed from
+      each interface address registered in the system and this specified
+      Lustre network name.  The resulting list of pairs is copied into
+      the daemon process environment as LNET_NETWORKS.
+
+  (o) if 'nets' is the fully fledged LNET_NETWORKS variable, this
+      value is copied to the daemon process environment as
+      LNET_NETWORKS.
+
+These behaviors will be overridden if LNET_NETWORKS is already specified
+in the process environment, which always takes precedence.
+
+LNET_NETWORKS is then parsed to determine routable addresses and their
+corresponding Lustre network names.  These pairs are used to assign
+Lustre networks to the resource node addresses listed in the slash.slcfg
+site resources configuration.
