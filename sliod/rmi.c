@@ -105,6 +105,9 @@ sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *w)
 	if (rc == 0)
 		rc = mp->rc;
 
+	if (mq->rc)
+		psclog_errorx("sent error rc=%d", mq->rc);
+
  out:
 	if (rq)
 		pscrpc_req_finished(rq);
