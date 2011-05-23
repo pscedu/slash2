@@ -429,6 +429,9 @@ lcache
 - should replay crcupdate set ion to VALID ?
 - support multi addresses for resms
 - remove inodeh_lock in place of fcmh lock
+- add stage bmap repl policy
+- for long running I/O patterns by processes that issue no other syscalls,
+  do fcmh's timeout and reload from MDS sst_size/gen values?
 
 fsuuid
 - on file system creation, create a random value
