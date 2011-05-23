@@ -63,7 +63,7 @@ bim_updateseq(uint64_t seq)
 	freelock(&bimSeq.bim_lock);
 
 	if (invalid)
-		psc_warnx("seq %"PRId64" is invalid (bim_minseq=%"PRId64")",
+		psclog_warnx("seq %"PRId64" is invalid (bim_minseq=%"PRId64")",
 			  seq, bimSeq.bim_minseq);
 	return (invalid);
 }
@@ -124,7 +124,7 @@ bim_getcurseq(void)
 		bimSeq.bim_flags &= ~BIM_RETRIEVE_SEQ;
 		psc_waitq_wakeall(&bimSeq.bim_waitq);
 		if (rc) {
-			psc_warnx("failed to get bmap seqno");
+			psclog_warnx("failed to get bmap seqno rc=%d", rc);
 			freelock(&bimSeq.bim_lock);
 			goto retry;
 		}
@@ -402,13 +402,13 @@ sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 		 */
 		rc = sli_rmi_getimp(&csvc);
 		if (rc) {
-			psc_errorx("Failed to get MDS import");
+			psclog_errorx("Failed to get MDS import rc=%d", rc);
 			continue;
 		}
 
 		rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq, mq, mp);
 		if (rc) {
-			psc_errorx("Failed to generate new RPC req");
+			psclog_errorx("Failed to generate new RPC req rc=%d", rc);
 			sl_csvc_decref(csvc);
 			continue;
 		}
@@ -416,7 +416,7 @@ sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 		memcpy(mq, brr, sizeof(*mq));
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc)
-			psc_errorx("RELEASEBMAP req failed");
+			psclog_errorx("RELEASEBMAP req failed rc=%d", rc);
 
 		pscrpc_req_finished(rq);
 		sl_csvc_decref(csvc);
@@ -500,7 +500,8 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_GETBMAPCRCS, rq, mq, mp);
 	if (rc) {
-		DEBUG_BMAP(PLL_ERROR, b, "could not create request (%d)", rc);
+		DEBUG_BMAP(PLL_ERROR, b,
+		    "could not create request rc=%d", rc);
 		goto out;
 	}
 

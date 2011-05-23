@@ -57,7 +57,7 @@ sli_ric_handle_connect(struct pscrpc_request *rq)
 		 *   so this is a not a fatal condition but should
 		 *   be noted.
 		 */
-		psc_warnx("duplicate connect msg detected");
+		psclog_warnx("duplicate connect msg detected");
 
 	sl_exp_getpri_cli(e);
 	return (0);

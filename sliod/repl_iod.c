@@ -96,7 +96,7 @@ sli_repl_addwk(uint64_t nid, const struct slash_fidgen *fgp,
 	rc = bmap_get(w->srw_fcmh, w->srw_bmapno,
 	    SL_READ, &w->srw_bcm);
 	if (rc)
-		psc_errorx("bmap_get %u: %s",
+		psclog_errorx("bmap_get %u: %s",
 		    w->srw_bmapno, slstrerror(rc));
 	else {
 		bmap_op_start_type(w->srw_bcm, BMAP_OPCNT_REPLWK);

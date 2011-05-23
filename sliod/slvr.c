@@ -579,7 +579,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw)
 	}
 
 	//psc_vbitmap_printbin1(s->slvr_slab->slb_inuse);
-	psc_info("psc_vbitmap_nfree()=%d",
+	psclog_info("psc_vbitmap_nfree()=%d",
 		 psc_vbitmap_nfree(s->slvr_slab->slb_inuse));
 	/* We must have found some work to do.
 	 */
