@@ -224,7 +224,11 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	brepls_init(tract, -1);
 
 	BHGEN_GET(bcm, &gen);
-	if (mq->rc || mq->bgen != gen) {
+	if (mq->rc == 0 && mq->bgen != gen)
+		mq->rc = SLERR_GEN_OLD;
+	if (mq->rc) {
+		DEBUG_USWI(PLL_WARN, wk, "rc=%d", mq->rc);
+
 		if (mq->rc == SLERR_BADCRC) {
 			/*
 			 * Bad CRC, media error perhaps.
@@ -372,7 +376,6 @@ slm_rmi_handle_bmap_getminseq(struct pscrpc_request *rq)
 	struct srm_getbmapminseq_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-
 	return (mds_bmap_getcurseq(NULL, &mp->seqno));
 }
 
