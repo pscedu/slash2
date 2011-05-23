@@ -173,7 +173,7 @@ rsb_isfull(void)
 
 void
 rsb_accul_replica_stats(struct replst_slave_bdata *rsb, int iosidx,
-    sl_bmapno_t *bact, sl_bmapno_t *bold)
+    sl_bmapno_t *bact, sl_bmapno_t *both)
 {
 	sl_bmapno_t n;
 	int off;
@@ -183,12 +183,11 @@ rsb_accul_replica_stats(struct replst_slave_bdata *rsb, int iosidx,
 	    off += SL_BITS_PER_REPLICA * current_mrs.mrs_nios +
 	    SL_NBITS_REPLST_BHDR) {
 		switch (SL_REPL_GET_BMAP_IOS_STAT(rsb->rsb_data, off)) {
-		case BREPLST_REPL_SCHED:
-		case BREPLST_REPL_QUEUED:
-			++*bold;
-			break;
 		case BREPLST_VALID:
 			++*bact;
+			break;
+		default:
+			++*both;
 			break;
 		}
 	}
@@ -580,7 +579,7 @@ fnstat_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	/* XXX add #repls, #bmaps */
 	printf("%4s %54s %6s %6s %6s\n",
-	    "file", "bmap-replication-status:", "#valid", "#bmap", "%prog");
+	    "file", "bmap-replication-status:", "#valid", "#bmap", "%res");
 }
 
 void
@@ -591,7 +590,7 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	struct replst_slave_bdata *rsb, *nrsb;
 	struct srsm_replst_bhdr bhdr;
 	struct stat stb;
-	sl_bmapno_t bact, bold, nb;
+	sl_bmapno_t bact, both, nb;
 	int n, nbw, off, dlen;
 	uint32_t iosidx;
 
@@ -630,14 +629,14 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 
 	for (iosidx = 0; iosidx < current_mrs.mrs_nios; iosidx++) {
 		nbw = 0;
-		bact = bold = 0;
+		bact = both = 0;
 		psclist_for_each_entry(rsb, &current_mrs_bdata, rsb_lentry)
-			rsb_accul_replica_stats(rsb, iosidx, &bact, &bold);
+			rsb_accul_replica_stats(rsb, iosidx, &bact, &both);
 
-		psc_fmt_ratio(rbuf, bact, bact + bold);
+		psc_fmt_ratio(rbuf, bact, bact + both);
 		printf("     %-54s %6d %6d %6s",
 		    current_mrs.mrs_iosv[iosidx],
-		    bact, bact + bold, rbuf);
+		    bact, bact + both, rbuf);
 		psclist_for_each_entry(rsb, &current_mrs_bdata, rsb_lentry) {
 			off = SL_BITS_PER_REPLICA * iosidx +
 			    SL_NBITS_REPLST_BHDR;
