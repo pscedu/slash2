@@ -711,11 +711,13 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 		}
 	}
 
-	mdsio_fcmh_refreshattr(op, &mp->srr_opattr);
-	if (op != np)
-		mdsio_fcmh_refreshattr(np, &mp->srr_npattr);
-
  out:
+	if (mp->rc == 0) {
+		mdsio_fcmh_refreshattr(op, &mp->srr_opattr);
+		if (op != np)
+			mdsio_fcmh_refreshattr(np, &mp->srr_npattr);
+	}
+
 	if (np)
 		fcmh_op_done_type(np, FCMH_OPCNT_LOOKUP_FIDC);
 	if (op != np)
