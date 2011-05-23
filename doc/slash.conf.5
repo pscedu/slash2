@@ -14,7 +14,7 @@
 .\" without express or implied warranty.
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
-.Dd May 10, 2011
+.Dd May 23, 2011
 .Dt SLASH.CONF 5
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -51,23 +51,7 @@ Set the variable
 to the given value
 .Ar val .
 The following variables may be set:
-.Bl -tag -offset 3n -width 7n
-.It Ic prefmds
-Default
-.Tn MDS
-server resource name.
-This setting applies to
-.Xr sliod 8
-and
-.Xr mount_slash 8
-only.
-.It Ic prefios
-Preferred
-.Tn I/O
-system.
-This setting applies to
-.Xr mount_slash 8
-only.
+.Bl -tag -offset 3n -width 1n
 .It Ic fs_root
 For
 .Xr sliod 8 ,
@@ -80,8 +64,19 @@ For
 the file system root where file data retrieved over a
 .Tn SLASH
 network may be cached locally.
-.It Ic net
-Lustre network name.
+.It Ic journal
+Set the path of the operation journal file.
+May be a direct device for increased performance.
+Defaults to
+.Pa /var/lib/slash/op-journal .
+This setting applies to
+.Xr slashd 8
+only.
+.It Ic nets
+Lustre network name(s), separated by commas.
+This may alternatively be the value of
+.Ev LNET_NETWORKS
+in its entirety.
 See
 .Ev LNET_NETWORKS
 in
@@ -92,6 +87,36 @@ for more information.
 port used to establish connections to
 .Tn SLASH
 peers.
+.It Ic pref_ios
+Preferred
+.Tn I/O
+system resource name.
+This setting applies to
+.Xr mount_slash 8
+only.
+.It Ic pref_mds
+Default
+.Tn MDS
+resource name.
+This setting applies to
+.Xr sliod 8
+and
+.Xr mount_slash 8
+only.
+.It Ic zpool_name
+The
+.Tn ZFS
+pool name for the backend metadata storage.
+This setting applies to
+.Xr slashd 8
+only.
+.It Ic zpool_cache
+The
+.Tn ZFS
+pool cache file for loading the backend metadata storage.
+This setting applies to
+.Xr slashd 8
+only.
 .El
 .El
 .Pp
@@ -222,6 +247,13 @@ site @sitename {
 	}
 }
 .Ed
+.Sh FILES
+.Bl -tag -width Pa -compact
+.It Pa /etc/slash.conf
+default
+.Tn SLASH
+resource configuration
+.El
 .Sh SEE ALSO
 .Xr sladm 7 ,
 .Xr slashd 8 ,
