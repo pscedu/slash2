@@ -72,47 +72,11 @@ pauln (04/19/2011)
 pauln (03/31/2011)
 
 -----------------------------------------------------------------------
-* Support for st_nblocks for applications such as 'du -h'.
-Initial thoughts are that this value should be stored in the zfs inode.
-Currently we have a 4 byte pad which could be employed if we were to use
-a 1MB block.  A 1MB is the simplest unit for us to use but will result
-in entirely bogus results for trees with lots of small files. I'm not
-sure if there is a way around this problem - people will just have to
-use big files :)
-
-Using the slash2 inode here is not totally out of the question but lookups
-of the nblocks value will be much slower.
-
-The MDS will need to note whether or not the CRC has ever been written, if
-not then the nblocks count will be incremented by 1.  Also journaling
-implications will need to be considered since this value will need to be
-kept relatively accurate.  Further, for MDS replication, this value will need
-to be recorded in the changelog.
-
-Zhihui asks "should we include replicas in the block count?".  I'm on the
-fence about this.
-
- - there should be a slictl/msctl cmd to see this info:
+- account metadata overhead in st_blocks
+- there should be a slictl/msctl cmd to see other/aggr replicas:
 
 	(o) msctl -s repl-disk-usage:file[,...]
 
-pauln (11/10/2010)
-
-Once possible approach is for the I/O server to publish this value along with
-the file size.  The only caveat being that for files which are split amongst
-I/O servers, maintaining an accurate running count may be tricky.  Also, where
-partially invalidated (but not yet garbage collected) replicas exist, this
-could pose some problems because the I/O server won't necessarily know what
-blocks are allocated to give region of the file.
-
-It may be possible for this method to work in a fashion similar to that of
-file size updates where the largest value is taken.  Of course this assumes
-that the MDS doesn't accept updates from ptrunc'd replica which have yet
-to undergo GC
-
-pauln (04/25/2011)
-
------------------------------------------------------------------------
 TRUNCATE
 
 Truncate is more of a problem because the fid+gen remains, thus making async IOS
@@ -215,7 +179,6 @@ in release but I don't see good performance for 'ls -al'.
 
 	Not seeing the above on the server..
 
-- ensure fidc doesn't look up beyond SYM_NLOOPS #loops
 - add some high-level aliases to the replication interface for users:
 
   mid-level persistence control aliases:
@@ -261,6 +224,7 @@ in release but I don't see good performance for 'ls -al'.
 - allow multiple preferred IOS servers
 
 - hold a maximum # entries in mem from .slmd/upsch at any given time?
+- merge uswk into fmi and kill uswi struct
 
 - add msctl -s bmpc
 
@@ -287,7 +251,7 @@ sliod export
 
 network scheduling
 - need slash.conf rules to specify link bandwidth
-- preferentiate users
+- preferentiate users/policies
     (o) need classes, always complete a class before moving
 	to next one, files in the same class have same fairness
 - add network topology descriptions to slash.conf
@@ -345,6 +309,7 @@ tree
 API rename
 - rename FCMH_CREATE to POPULATE?
 - mdsio_fid_t -> mdsio_inum_t
+- mdsio_data_ -> mdsio_fh_t
 
 - upsch items are not getting removed on completion
 - ensure PINGs only happen every 30 seconds
@@ -464,7 +429,6 @@ lcache
 - should replay crcupdate set ion to VALID ?
 - support multi addresses for resms
 - remove inodeh_lock in place of fcmh lock
-- there are duplicate slmrmcthr names
 
 fsuuid
 - on file system creation, create a random value
