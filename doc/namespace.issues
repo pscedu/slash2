@@ -665,3 +665,57 @@ a remote MDS that owns the parent directory seems working.
 root@citron: /zzh-slash2/zhihui$ rm goodfile
 rm: cannot remove `goodfile': Numerical result out of range
 
+05/23/2011
+----------
+
+Here is how I test rename manually:
+
+root@lemon: /home/zhihui$ cd /zzh-slash2
+root@lemon: /zzh-slash2$ mkdir zhihui
+root@lemon: /zzh-slash2$ cd
+root@lemon: ~$ cd /zzh-slash2-lemon
+root@lemon: /zzh-slash2-lemon$ ls
+zhihui
+root@lemon: /zzh-slash2-lemon$ cd zhihui
+root@lemon: /zzh-slash2-lemon/zhihui$ mkdir dir1
+root@lemon: /zzh-slash2-lemon/zhihui$ touch file1
+root@lemon: /zzh-slash2-lemon/zhihui$ ls -ail
+total 12
+4503599627370498 drwxr-xr-x 3 root root 4 May 23 10:21 .
+               1 drwxr-xr-x 3 root root 4 May 23 10:17 ..
+3377699720527874 drwxr-xr-x 2 root root 2 May 23 10:21 dir1
+3377699720527875 -rw-r--r-- 1 root root 0 May 23 10:21 file1
+root@lemon: /zzh-slash2-lemon/zhihui$ mv dir1 dir2
+root@lemon: /zzh-slash2-lemon/zhihui$ mv file1 file2
+root@lemon: /zzh-slash2-lemon/zhihui$ ls -ali
+total 12
+4503599627370498 drwxr-xr-x 3 root root 4 May 23 10:21 .
+               1 drwxr-xr-x 3 root root 4 May 23 10:17 ..
+3377699720527874 drwxr-xr-x 2 root root 2 May 23 10:21 dir2
+3377699720527875 -rw-r--r-- 1 root root 0 May 23 10:21 file2
+
+The above seems working, but the following is weird though:
+
+root@lemon: /zzh-slash2-lemon/zhihui$ rmdir dir2
+root@lemon: /zzh-slash2-lemon/zhihui$ rm file2
+rm: remove regular empty file `file2'? y
+root@lemon: /zzh-slash2-lemon/zhihui$ ls -ali
+total 21
+4503599627370498 drwxr-xr-x 3 root root 4 May 23 10:23 .
+               1 drwxr-xr-x 3 root root 4 May 23 10:17 ..
+3377699720527874 drwxr-xr-x 1 root root 2 May 23 10:21 dir1
+3377699720527875 -rw-r--r-- 1 root root 0 May 23 10:21 file1
+
+The views are different now from two mount points:
+
+root@lemon: /zzh-slash2-lemon/zhihui$ ls -ali /zzh-slash2/zhihui/
+total 19
+4503599627370498 drwxr-xr-x 2 root root 2 May 23 10:20 .
+               1 drwxr-xr-x 3 root root 4 May 23 10:20 ..
+root@lemon: /zzh-slash2-lemon/zhihui$ ls -ali /zzh-slash2-lemon/zhihui/
+total 21
+4503599627370498 drwxr-xr-x 3 root root 4 May 23 10:23 .
+               1 drwxr-xr-x 3 root root 4 May 23 10:17 ..
+3377699720527874 drwxr-xr-x 1 root root 2 May 23 10:21 dir1
+3377699720527875 -rw-r--r-- 1 root root 0 May 23 10:21 file1
+
