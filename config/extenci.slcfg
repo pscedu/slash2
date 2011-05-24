@@ -1,7 +1,7 @@
 # $Id$
 
-global port=50000;
-global net=tcp3;
+set port=50000;
+set net=tcp3;
 
 site @PSC {
 	site_desc	= "PSC";
@@ -11,7 +11,7 @@ site @PSC {
 		desc	= "metadata server";
 		type	= mds;
 		id	= 101;
-		ifs	= wolverine.psc.edu;
+		nodes	= wolverine.psc.edu;
 		jrnldev	= /dev/sdb;
 	}
 
@@ -20,7 +20,7 @@ site @PSC {
 		type	= parallel_fs;
 		id	= 102;
 		fsroot	= /extenci-slio;
-		ifs	= oss01w.psc.jwan.teragrid.org;
+		nodes	= oss01w.psc.jwan.teragrid.org;
 	}
 }
 
@@ -33,7 +33,7 @@ site @UF {
 		type	= parallel_fs;
 		id	= 201;
 		fsroot	= /vm4/slio;
-		ifs	= vmuf.extenci.org;
+		nodes	= vmuf.extenci.org;
 	}
 }
 
@@ -46,6 +46,6 @@ site @UF {
 #		type	= parallel_fs;
 #		id	= 301;
 #		fsroot	= /vm4/slio;
-#		ifs	= slio.fnal.gov;
+#		nodes	= slio.fnal.gov;
 #	}
 #}
