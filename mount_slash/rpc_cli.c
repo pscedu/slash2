@@ -24,6 +24,7 @@
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/service.h"
 
+#include "ctlsvr_cli.h"
 #include "mount_slash.h"
 #include "rpc_cli.h"
 #include "slashrpc.h"
@@ -132,8 +133,16 @@ slc_rmc_getimp1(struct slashrpc_cservice **csvcp, struct sl_resm *resm)
 }
 
 void
-sl_resm_hldrop(__unusedx struct sl_resm *resm)
+sl_resm_hldrop(struct sl_resm *resm)
 {
+	struct msctl_replstq *mrsq;
+
+	if (resm->resm_csvc->csvc_ctype == SLREST_MDS) {
+		PLL_LOCK(&msctl_replsts);
+		PLL_FOREACH(mrsq, &msctl_replsts)
+			mrsq_release(mrsq, ECONNRESET);
+		PLL_ULOCK(&msctl_replsts);
+	}
 }
 
 struct sl_expcli_ops sl_expcli_ops;

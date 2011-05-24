@@ -42,6 +42,8 @@ struct msctl_replstq {
 	int				 mrsq_refcnt;
 };
 
+void mrsq_release(struct msctl_replstq *, int);
+
 extern struct psc_lockedlist msctl_replsts;
 
 #endif /* _SL_CTLSVR_CLI_H_ */
