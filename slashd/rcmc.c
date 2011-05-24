@@ -75,20 +75,25 @@ slmrmcthr_replst_slave_waitrep(struct slashrpc_cservice *csvc,
 	struct slmrcm_thread *srcm;
 	struct psc_thread *thr;
 	struct iovec iov;
-	int rc;
+	int rc = 0;
+	size_t nb;
 
 	thr = pscthr_get();
 	srcm = slmrcmthr(thr);
 
-	iov.iov_base = srcm->srcm_page;
-	iov.iov_len = howmany(srcm->srcm_page_bitpos, NBBY);
+	nb = howmany(srcm->srcm_page_bitpos, NBBY);
 
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
-	mq->len = iov.iov_len;
+	mq->len = nb;
 	mq->nbmaps = srcm->srcm_page_bitpos / (SL_BITS_PER_REPLICA *
 	    USWI_INOH(wk)->inoh_ino.ino_nrepls + SL_NBITS_REPLST_BHDR);
-	rc = rsx_bulkclient(rq, BULK_GET_SOURCE, SRCM_BULK_PORTAL, &iov,
-	    1);
+	if (nb > sizeof(mq->buf)) {
+		iov.iov_base = srcm->srcm_page;
+		iov.iov_len = nb;
+		rc = rsx_bulkclient(rq, BULK_GET_SOURCE,
+		    SRCM_BULK_PORTAL, &iov, 1);
+	} else
+		memcpy(mq->buf, srcm->srcm_page, nb);
 	if (rc == 0) {
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc == 0)
