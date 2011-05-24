@@ -578,6 +578,7 @@ struct srm_replst_slave_req {
 	uint32_t		nbmaps;		/* # of bmaps in this chunk */
 	sl_bmapno_t		boff;		/* offset into inode of first bmap in bulk */
 	 int32_t		_pad;
+	char			buf[312];
 /* bulk data is sections of bcs_repls data */
 } __packed;
 
