@@ -131,6 +131,7 @@ mds_inode_update(struct slash_inode_handle *ih, int old_version)
 	if (rc)
 		goto out;
 
+//	mdsio_rename(mds_tmpdir_inum, NULL, fn, &rootcreds, NULL);
 	rc = mds_inode_dump(NULL, ih, h);
 	if (rc)
 		goto out;
@@ -351,5 +352,6 @@ mds_bmap_read_v1(struct bmapc_memb *b, void *readh)
 
 struct sl_ino_compat sl_ino_compat_table[] = {
 /* 0 */	{ NULL, NULL, NULL },
-/* 1 */	{ NULL, NULL, NULL }
+/* 1 */	{ mds_ino_read_v1, mds_inox_read_v1, mds_bmap_read_v1 },
+/* 2 */	{ NULL, NULL, NULL }
 };
