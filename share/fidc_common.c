@@ -195,13 +195,15 @@ fidc_reap(struct psc_poolmgr *m)
  *	generation number is known.
  */
 struct fidc_membh *
-_fidc_lookup_fg(const struct pfl_callerinfo *pfl_callerinfo,
+_fidc_lookup_fg(const struct pfl_callerinfo *pci,
     const struct slash_fidgen *fg)
 {
 	struct fidc_membh *fcmhp;
 	int rc;
 
-	rc = _fidc_lookup(pfl_callerinfo, fg, 0, NULL, 0, &fcmhp, NULL);
+	PFL_START_TRACE(pci);
+	rc = fidc_lookup(fg, 0, NULL, 0, &fcmhp);
+	PFL_END_TRACE();
 	return (rc == 0 ? fcmhp : NULL);
 }
 
@@ -210,15 +212,16 @@ _fidc_lookup_fg(const struct pfl_callerinfo *pfl_callerinfo,
  *	generation number is not known.
  */
 struct fidc_membh *
-_fidc_lookup_fid(const struct pfl_callerinfo *pfl_callerinfo, slfid_t f)
+_fidc_lookup_fid(const struct pfl_callerinfo *pci, slfid_t f)
 {
 	struct slash_fidgen t = { f, FGEN_ANY };
 	struct fidc_membh *fcmhp;
 	int rc;
 
-	rc = _fidc_lookup(pfl_callerinfo, &t, 0, NULL, 0, &fcmhp, NULL);
+	PFL_START_TRACE(pci);
+	rc = fidc_lookup(&t, 0, NULL, 0, &fcmhp);
+	PFL_END_TRACE();
 	return (rc == 0 ? fcmhp : NULL);
-
 }
 
 /**
@@ -228,16 +231,17 @@ _fidc_lookup_fid(const struct pfl_callerinfo *pfl_callerinfo, slfid_t f)
  *	are ref'd with FCMH_OPCNT_LOOKUP_FIDC.
  */
 int
-_fidc_lookup(const struct pfl_callerinfo *pfl_callerinfo,
+_fidc_lookup(const struct pfl_callerinfo *pci,
     const struct slash_fidgen *fgp, int flags, struct srt_stat *sstb,
     int setattrflags, struct fidc_membh **fcmhp, void *arg)
 {
 	struct fidc_membh *tmp, *fcmh, *fcmh_new;
 	struct psc_hashbkt *b;
-	int rc, try_create = 0;
+	int rc = 0, try_create = 0;
 
-	_psclog_pci(pfl_callerinfo, PLL_DEBUG, 0,
-	    "fidc_lookup called for fid "SLPRI_FID, fgp->fg_fid);
+	PFL_START_TRACE(pci);
+
+	psclog_dbg("fidc_lookup called for fid "SLPRI_FID, fgp->fg_fid);
 
 	rc = 0;
 	*fcmhp = NULL;
@@ -321,7 +325,8 @@ _fidc_lookup(const struct pfl_callerinfo *pfl_callerinfo,
 
 		FCMH_ULOCK(fcmh);
 		*fcmhp = fcmh;
-		return (0);
+		rc = 0;
+		goto out;
 	}
 
 	/* We have failed to find a match in the cache */
@@ -338,7 +343,8 @@ _fidc_lookup(const struct pfl_callerinfo *pfl_callerinfo,
 		 *  is not present.
 		 */
 		psc_hashbkt_unlock(b);
-		return (ENOENT);
+		rc = ENOENT;
+		goto out;
 	}
 
 	/*
@@ -376,7 +382,7 @@ _fidc_lookup(const struct pfl_callerinfo *pfl_callerinfo,
 		rc = sl_fcmh_ops.sfop_ctor(fcmh);
 		if (rc)
 			fcmh->fcmh_flags |= FCMH_CTOR_FAILED;
-		goto out2;
+		goto finish;
 	} else {
 		/*
 		 * Call service specific constructor slc_fcmh_ctor(),
@@ -388,7 +394,7 @@ _fidc_lookup(const struct pfl_callerinfo *pfl_callerinfo,
 		rc = sl_fcmh_ops.sfop_ctor(fcmh);
 		if (rc) {
 			fcmh->fcmh_flags |= FCMH_CTOR_FAILED;
-			goto out1;
+			goto finish;
 		}
 	}
 
@@ -397,9 +403,8 @@ _fidc_lookup(const struct pfl_callerinfo *pfl_callerinfo,
 		rc = sl_fcmh_ops.sfop_getattr(fcmh, arg);	/* slc_fcmh_getattr() */
 	}
 
- out1:
-	FCMH_LOCK(fcmh);
- out2:
+ finish:
+	FCMH_RLOCK(fcmh);
 	fcmh->fcmh_flags &= ~FCMH_CAC_INITING;
 	if (fcmh->fcmh_flags & FCMH_CAC_WAITING) {
 		fcmh->fcmh_flags &= ~FCMH_CAC_WAITING;
@@ -417,6 +422,8 @@ _fidc_lookup(const struct pfl_callerinfo *pfl_callerinfo,
 		fcmh_op_start_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
 	}
+ out:
+	PFL_END_TRACE();
 	return (rc);
 }
 
@@ -461,11 +468,14 @@ fcmh_getsize(struct fidc_membh *h)
  * to the idle list when the _last_ reference is dropped.
  */
 void
-_fcmh_op_start_type(const struct pfl_callerinfo *pfl_callerinfo,
+_fcmh_op_start_type(const struct pfl_callerinfo *pci,
     struct fidc_membh *f, enum fcmh_opcnt_types type)
 {
-	int locked = FCMH_RLOCK(f);
+	int locked;
 
+	PFL_START_TRACE(pci);
+
+	locked = FCMH_RLOCK(f);
 	psc_assert(f->fcmh_refcnt >= 0);
 	f->fcmh_refcnt++;
 
@@ -484,6 +494,7 @@ _fcmh_op_start_type(const struct pfl_callerinfo *pfl_callerinfo,
 		}
 	}
 	FCMH_URLOCK(f, locked);
+	PFL_END_TRACE();
 }
 
 void
@@ -502,9 +513,11 @@ fcmh_decref(struct fidc_membh *f, enum fcmh_opcnt_types type)
 }
 
 void
-_fcmh_op_done_type(const struct pfl_callerinfo *pfl_callerinfo,
+_fcmh_op_done_type(const struct pfl_callerinfo *pci,
     struct fidc_membh *f, enum fcmh_opcnt_types type)
 {
+	PFL_START_TRACE(pci);
+
 	FCMH_RLOCK(f);
 
 	psc_assert(f->fcmh_refcnt > 0);
@@ -525,6 +538,7 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pfl_callerinfo,
 	}
 	fcmh_wake_locked(f);
 	FCMH_ULOCK(f);
+	PFL_END_TRACE();
 }
 
 #if PFL_DEBUG > 0
