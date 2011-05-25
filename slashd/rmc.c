@@ -676,7 +676,7 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 			goto out;
 	}
 
-	if (FID_GET_SITEID(mq->opfg.fg_fid) != 
+	if (FID_GET_SITEID(mq->opfg.fg_fid) !=
 	    FID_GET_SITEID(mq->npfg.fg_fid)) {
 		mp->rc = EXDEV;
 		goto out;
