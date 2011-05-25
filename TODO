@@ -433,6 +433,7 @@ lcache
 - for long running I/O patterns by processes that issue no other syscalls,
   do fcmh's timeout and reload from MDS sst_size/gen values?
 - try locally caching st_blocks in msl
+- msl with sst_size local caching should still take higher values from MDS
 
 fsuuid
 - on file system creation, create a random value
