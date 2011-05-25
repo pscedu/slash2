@@ -150,15 +150,16 @@ uint64_t	bim_getcurseq(void);
 void		bim_init(void);
 int		bim_updateseq(uint64_t);
 
+void bcr_finalize(struct biod_infl_crcs *, struct biod_crcup_ref *);
 void bcr_hold_2_ready(struct biod_infl_crcs *, struct biod_crcup_ref *);
 void bcr_hold_add(struct biod_infl_crcs *, struct biod_crcup_ref *);
-void bcr_ready_add(struct biod_infl_crcs *, struct biod_crcup_ref *);
 void bcr_hold_requeue(struct biod_infl_crcs *, struct biod_crcup_ref *);
 void bcr_ready_add(struct biod_infl_crcs *, struct biod_crcup_ref *);
 void bcr_ready_remove(struct biod_infl_crcs *, struct biod_crcup_ref *);
-void bcr_finalize(struct biod_infl_crcs *, struct biod_crcup_ref *);
 void bcr_xid_check(struct biod_crcup_ref *);
+
 void biod_rlssched_locked(struct bmap_iod_info *);
+
 void sliod_bmaprlsthr_spawn(void);
 
 extern struct psc_listcache bmapRlsQ;
