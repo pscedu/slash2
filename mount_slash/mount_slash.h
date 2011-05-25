@@ -160,7 +160,6 @@ void	 mstimerthr_spawn(void);
 void	 msbmapflushthr_spawn(void);
 void	 msctlthr_begin(struct psc_thread *);
 
-int	 checkcreds(const struct srt_stat *, const struct slash_creds *, int);
 int	 translate_pathname(const char *, char []);
 int	 lookup_pathname_fg(struct pscfs_req *, const char *,
 	    struct slash_creds *, struct slash_fidgen *, struct srt_stat *);
