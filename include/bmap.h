@@ -266,9 +266,10 @@ struct bmapc_memb {
 	} while (0)
 
 /* bmap replication policies */
-#define BRP_ONETIME		0
-#define BRP_PERSIST		1
-#define NBRP			2
+#define BRPOL_ONETIME		0
+#define BRPOL_PERSIST		1
+#define BRPOL_STAGE		2
+#define NBRP			3
 
 #define DEBUG_BMAPOD(level, bmap, fmt, ...)				\
 	_log_debug_bmapod(PFL_CALLERINFOSS(SLSS_BMAP), (level), (bmap),	\

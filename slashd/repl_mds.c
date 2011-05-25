@@ -372,7 +372,7 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios, int iosidx)
 	 * he copied an old bmap and mark it OLD then.
 	 */
 	brepls_init(tract, -1);
-	tract[BREPLST_VALID] = policy == BRP_PERSIST ?
+	tract[BREPLST_VALID] = policy == BRPOL_PERSIST ?
 	    BREPLST_REPL_QUEUED : BREPLST_INVALID; // XXX GARBAGE ?
 
 	brepls_init(retifset, 0);
@@ -392,7 +392,7 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios, int iosidx)
 	 * midst of processing it as this activity now means they
 	 * have more to do.
 	 */
-	if (policy == BRP_PERSIST) {
+	if (policy == BRPOL_PERSIST) {
 		sl_replica_t repl;
 
 		wk = uswi_find(&bcm->bcm_fcmh->fcmh_fg, NULL);

@@ -1410,7 +1410,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
 			BHREPL_POLICY_GET(bmap, &bpol);
 
 			brepls_init(tract, -1);
-			tract[BREPLST_TRUNCPNDG] = bpol == BRP_PERSIST ?
+			tract[BREPLST_TRUNCPNDG] = bpol == BRPOL_PERSIST ?
 			    BREPLST_REPL_QUEUED : BREPLST_GARBAGE;
 			mds_repl_bmap_walk(bmap, tract, NULL,
 			    REPL_WALKF_MODOTH, &iosidx, 1);

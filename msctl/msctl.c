@@ -90,7 +90,7 @@ struct fnfidpair {
 	struct psc_hashent	 ffp_hentry;
 };
 
-/* keep in sync with BRP_* constants */
+/* keep in sync with BRPOL_* constants */
 const char *repl_policies[] = {
 	"one-time",
 	"persist",
@@ -613,7 +613,7 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	pmap[BREPLST_GARBAGE_SCHED] = 'X';
 
 	dlen = PSC_CTL_DISPLAY_WIDTH - strlen(" new-bmap-repl-policy: ") -
-	    strlen(repl_policies[BRP_ONETIME]);
+	    strlen(repl_policies[BRPOL_ONETIME]);
 	n = printf("%s", fid2fn(current_mrs.mrs_fid, &stb));
 	if (S_ISDIR(stb.st_mode))
 		n += printf("/");
@@ -652,7 +652,7 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 				pfl_bitstr_copy(&bhdr, 0, rsb->rsb_data, nb *
 				    (SL_NBITS_REPLST_BHDR + SL_BITS_PER_REPLICA *
 				     current_mrs.mrs_nios), SL_NBITS_REPLST_BHDR);
-				putchar((bhdr.srsb_replpol == BRP_PERSIST ?
+				putchar((bhdr.srsb_replpol == BRPOL_PERSIST ?
 				    pmap : map)[SL_REPL_GET_BMAP_IOS_STAT(
 				    rsb->rsb_data, off)]);
 			}
