@@ -1418,7 +1418,7 @@ mds_bmap_crc_log(void *datap, uint64_t txg, __unusedx int flag)
 		jcrc->sjc_utimgen = crcup->utimgen;     /* utime generation number */
 
 		memcpy(jcrc->sjc_crc, &crcup->crcs[t],
-		    n * sizeof(struct srm_bmap_crcwire));
+		    n * sizeof(struct srt_bmap_crcwire));
 
 		pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_CRC,
 		    distill, jcrc, sizeof(struct slmds_jent_crc));

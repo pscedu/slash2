@@ -112,7 +112,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 	len = mq->ncrc_updates * sizeof(struct srm_bmap_crcup);
 	for (i = 0; i < mq->ncrc_updates; i++)
 		len += mq->ncrcs_per_update[i] *
-		    sizeof(struct srm_bmap_crcwire);
+		    sizeof(struct srt_bmap_crcwire);
 
 	iovs = PSCALLOC(sizeof(*iovs) * mq->ncrc_updates);
 	buf = PSCALLOC(len);
@@ -120,7 +120,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 	for (i=0, off=0; i < mq->ncrc_updates; i++) {
 		iovs[i].iov_base = buf + off;
 		iovs[i].iov_len = (mq->ncrcs_per_update[i] *
-		    sizeof(struct srm_bmap_crcwire)) +
+		    sizeof(struct srt_bmap_crcwire)) +
 		    sizeof(struct srm_bmap_crcup);
 
 		off += iovs[i].iov_len;

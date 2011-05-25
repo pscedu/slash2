@@ -42,7 +42,7 @@ static int
 mds_redo_bmap_repl_common(void *jent, int op)
 {
 	struct slmds_jent_repgen *jrpg = jent;
-	struct srm_bmap_crcwire *bmap_wire;
+	struct srt_bmap_crcwire *bmap_wire;
 	struct slmds_jent_crc *jcrc = jent;
 	struct fidc_membh *f = NULL;
 	struct bmapc_memb *b = NULL;
@@ -464,10 +464,11 @@ mds_redo_namespace(struct slmds_jent_namespace *sjnm, int replay)
 		break;
 	}
 	if (rc)
-		psclog_error("Redo namespace log: op=%d name=%s "
-			"newname=%s fid="SLPRI_FID" rc=%d",
-			sjnm->sjnm_op, name, newname,
-			sjnm->sjnm_target_fid, rc);
+		psclog_errorx("Redo namespace log: "
+		    "op=%d name=%s newname=%s "
+		    "fid="SLPRI_FID" rc=%d",
+		    sjnm->sjnm_op, name, newname,
+		    sjnm->sjnm_target_fid, rc);
 	return (rc);
 }
 

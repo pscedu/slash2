@@ -421,7 +421,7 @@ struct srm_bmap_dio_req {
 
 #define srm_bmap_dio_rep	srm_generic_rep
 
-struct srm_bmap_crcwire {
+struct srt_bmap_crcwire {
 	uint64_t		crc;		/* CRC of the corresponding sliver */
 	uint32_t		slot;		/* sliver number in the owning bmap */
 	 int32_t		_pad;
@@ -437,7 +437,7 @@ struct srm_bmap_crcup {
 	uint32_t		nups;		/* number of CRC updates */
 	uint32_t		utimgen;
 	 int32_t		extend;
-	struct srm_bmap_crcwire	crcs[0];	/* see above, MAX_BMAP_INODE_PAIRS max */
+	struct srt_bmap_crcwire	crcs[0];	/* see above, MAX_BMAP_INODE_PAIRS max */
 } __packed;
 
 #define MAX_BMAP_NCRC_UPDATES	64		/* max number of CRC updates in a batch */

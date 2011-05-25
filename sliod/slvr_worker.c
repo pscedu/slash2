@@ -97,7 +97,7 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 		iovs[i].iov_base = &bcr->bcr_crcup;
 		len += iovs[i].iov_len = sizeof(struct srm_bmap_crcup) +
 		    (mq->ncrcs_per_update[i] *
-		     sizeof(struct srm_bmap_crcwire));
+		     sizeof(struct srt_bmap_crcwire));
 
 		psc_crc64_add(&mq->crc, iovs[i].iov_base, iovs[i].iov_len);
 	}
@@ -418,7 +418,7 @@ slvr_worker_int(void)
 		/* Freed by bcr_ready_remove() */
 		slvr_2_biod(s)->biod_bcr = bcr =
 			PSCALLOC(sizeof(struct biod_crcup_ref) +
-				 (sizeof(struct srm_bmap_crcwire) *
+				 (sizeof(struct srt_bmap_crcwire) *
 				  MAX_BMAP_INODE_PAIRS));
 
 		INIT_PSC_LISTENTRY(&bcr->bcr_lentry);
