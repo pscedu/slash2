@@ -17,6 +17,9 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#define PSC_SUBSYS SLSS_FCMH
+#include "slsubsys.h"
+
 #include "pfl/cdefs.h"
 #include "pfl/fs.h"
 
@@ -103,10 +106,11 @@ mds_inode_update(struct slash_inode_handle *ih, int old_version)
 
 	snprintf(fn, sizeof(fn), "%016"PRIx64".update",
 	    fcmh_2_fid(ih->inoh_fcmh));
-	rc = mdsio_opencreate(mds_tmpdir_inum, &rootcreds, O_RDWR |
-	    O_CREAT | O_TRUNC, 0644, fn, NULL, NULL, &h, NULL, NULL, 0);
+	rc = mdsio_opencreatef(mds_tmpdir_inum, &rootcreds, O_RDWR |
+	    O_CREAT | O_TRUNC, MDSIO_OPENCRF_NOLINK, 0644, fn, NULL,
+	    NULL, &h, NULL, NULL, 0);
 	if (rc)
-		goto out;
+		PFL_GOTOERR(out, rc);
 
 	psc_assert(ih->inoh_extras == NULL);
 	ih->inoh_extras = PSCALLOC(sizeof(*ih->inoh_extras));
@@ -115,26 +119,26 @@ mds_inode_update(struct slash_inode_handle *ih, int old_version)
 	/* convert old structures into new into temp file */
 	rc = sic->sic_read_inox(ih);
 	if (rc)
-		goto out;
+		PFL_GOTOERR(out, rc);
 
 	th = inoh_2_mdsio_data(ih);
 	inoh_2_mdsio_data(ih) = h;
 	rc = mds_inode_dump(sic, ih, th);
 	inoh_2_mdsio_data(ih) = th;
 	if (rc)
-		goto out;
+		PFL_GOTOERR(out, rc);
 
 	/* move new structures to inode meta file */
 	memset(&sstb, 0, sizeof(sstb));
 	rc = mdsio_setattr(0, &sstb, SL_SETATTRF_METASIZE, &rootcreds,
 	    NULL, th, NULL);
 	if (rc)
-		goto out;
+		PFL_GOTOERR(out, rc);
 
 //	mdsio_rename(mds_tmpdir_inum, NULL, fn, &rootcreds, NULL);
 	rc = mds_inode_dump(NULL, ih, h);
 	if (rc)
-		goto out;
+		PFL_GOTOERR(out, rc);
 
 	mdsio_unlink(mds_tmpdir_inum, NULL, fn, &rootcreds, NULL);
 
@@ -168,13 +172,13 @@ mds_inode_update_interrupted(struct slash_inode_handle *ih, int *rc)
 
 	*rc = mdsio_lookup(mds_tmpdir_inum, fn, &inum, &rootcreds, NULL);
 	if (*rc)
-		goto out;
+		PFL_GOTOERR(out, *rc);
 
 	*rc = mdsio_opencreatef(inum, &rootcreds, O_RDONLY,
 	    MDSIO_OPENCRF_NOLINK, 0644, NULL, NULL, NULL, &h, NULL,
 	    NULL, 0);
 	if (*rc)
-		goto out;
+		PFL_GOTOERR(out, *rc);
 
 	iovs[0].iov_base = &ih->inoh_ino;
 	iovs[0].iov_len = sizeof(ih->inoh_ino);
@@ -182,12 +186,12 @@ mds_inode_update_interrupted(struct slash_inode_handle *ih, int *rc)
 	iovs[1].iov_len = sizeof(od_crc);
 	*rc = mdsio_preadv(&rootcreds, iovs, nitems(iovs), &nb, 0, h);
 	if (*rc)
-		goto out;
+		PFL_GOTOERR(out, *rc);
 
 	psc_crc64_calc(&crc, &ih->inoh_ino, sizeof(ih->inoh_ino));
 	if (crc != od_crc) {
 		*rc = SLERR_BADCRC;
-		goto out;
+		PFL_GOTOERR(out, *rc);
 	}
 
 	exists = 1;
@@ -199,7 +203,7 @@ mds_inode_update_interrupted(struct slash_inode_handle *ih, int *rc)
 	inoh_2_mdsio_data(ih) = h;
 	*rc = mds_inox_ensure_loaded(ih);
 	if (*rc)
-		goto out;
+		PFL_GOTOERR(out, *rc);
 
 	inoh_2_mdsio_data(ih) = th;
 
@@ -207,11 +211,11 @@ mds_inode_update_interrupted(struct slash_inode_handle *ih, int *rc)
 	*rc = mdsio_setattr(0, &sstb, SL_SETATTRF_METASIZE, &rootcreds,
 	    NULL, th, NULL);
 	if (*rc)
-		goto out;
+		PFL_GOTOERR(out, *rc);
 
 	*rc = mds_inode_dump(NULL, ih, h);
 	if (*rc)
-		goto out;
+		PFL_GOTOERR(out, *rc);
 
 	mdsio_unlink(mds_tmpdir_inum, NULL, fn, &rootcreds, NULL);
 
