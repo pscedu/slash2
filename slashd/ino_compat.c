@@ -233,7 +233,6 @@ mds_ino_read_v1(struct slash_inode_handle *ih)
 		uint32_t	nrepls;
 		uint32_t	replpol;
 		sl_replica_t	repls[4];
-		uint64_t	repl_nblks[4];
 	} ino;
 	uint64_t crc, od_crc;
 	struct iovec iovs[2];
@@ -259,10 +258,8 @@ mds_ino_read_v1(struct slash_inode_handle *ih)
 	ih->inoh_ino.ino_bsz = ino.bsz;
 	ih->inoh_ino.ino_nrepls = ino.nrepls;
 	ih->inoh_ino.ino_replpol = ino.replpol;
-	for (i = 0; i < 4; i++) {
+	for (i = 0; i < 4; i++)
 		ih->inoh_ino.ino_repls[i] = ino.repls[i];
-		ih->inoh_ino.ino_repl_nblks[i] = ino.repl_nblks[i];
-	}
 	return (0);
 }
 
@@ -272,7 +269,6 @@ mds_inox_read_v1(struct slash_inode_handle *ih)
 	struct {
 		sl_snap_t	snaps[1];
 		sl_replica_t	repls[60];
-		uint64_t	repl_nblks[60];
 	} inox;
 	uint64_t crc, od_crc;
 	struct iovec iovs[2];
@@ -298,10 +294,8 @@ mds_inox_read_v1(struct slash_inode_handle *ih)
 	psc_crc64_calc(&crc, &inox, sizeof(inox));
 	if (crc != od_crc)
 		return (SLERR_BADCRC);
-	for (i = 0; i < 60; i++) {
+	for (i = 0; i < 60; i++)
 		ih->inoh_extras->inox_repls[i] = inox.repls[i];
-		ih->inoh_extras->inox_repl_nblks[i] = inox.repl_nblks[i];
-	}
 	return (0);
 }
 
