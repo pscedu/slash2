@@ -28,11 +28,11 @@
 #include "slerr.h"
 
 static __inline void *
-bmap_2_mdsio_data(struct bmapc_memb *bmap)
+bmap_2_mdsio_data(struct bmapc_memb *b)
 {
 	struct fcmh_mds_info *fmi;
 
-	fmi = fcmh_2_fmi(bmap->bcm_fcmh);
+	fmi = fcmh_2_fmi(b->bcm_fcmh);
 	psc_assert(fmi->fmi_mdsio_data);
 	return (fmi->fmi_mdsio_data);
 }
@@ -86,18 +86,18 @@ mds_bmap_ensure_valid(struct bmapc_memb *b)
 
 /**
  * mds_bmap_read - Retrieve a bmap from the ondisk inode file.
- * @bcm: bmap.
+ * @b: bmap.
  * Returns zero on success, negative errno code on failure.
  */
 int
-mds_bmap_read(struct bmapc_memb *bcm, __unusedx enum rw rw, int flags)
+mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 {
 	size_t nb;
 	int rc;
 
-	rc = mdsio_read(&rootcreds, bmap_2_ondisk(bcm), BMAP_OD_SZ,
-	    &nb, (off_t)BMAP_OD_SZ * bcm->bcm_bmapno +
-	    SL_BMAP_START_OFF, bmap_2_mdsio_data(bcm));
+	rc = mdsio_read(&rootcreds, bmap_2_ondisk(b), BMAP_OD_SZ,
+	    &nb, (off_t)BMAP_OD_SZ * b->bcm_bmapno +
+	    SL_BMAP_START_OFF, bmap_2_mdsio_data(b));
 
 	if (rc == 0 && nb == 0 && (flags & BMAPGETF_NOAUTOINST))
 		return (SLERR_BMAP_INVALID);
@@ -112,10 +112,10 @@ mds_bmap_read(struct bmapc_memb *bcm, __unusedx enum rw rw, int flags)
 	 * zeroed.
 	 */
 	if (!rc || rc == SLERR_SHORTIO) {
-		if (bmap_2_ondiskcrc(bcm) == 0 &&
-		    pfl_memchk(bmap_2_ondisk(bcm), 0, BMAP_OD_SZ)) {
-			mds_bmap_initnew(bcm);
-			DEBUG_BMAPOD(PLL_INFO, bcm, "initialized");
+		if (bmap_2_ondiskcrc(b) == 0 &&
+		    pfl_memchk(bmap_2_ondisk(b), 0, BMAP_OD_SZ)) {
+			mds_bmap_initnew(b);
+			DEBUG_BMAPOD(PLL_INFO, b, "initialized");
 			return (0);
 		}
 	}
@@ -125,18 +125,18 @@ mds_bmap_read(struct bmapc_memb *bcm, __unusedx enum rw rw, int flags)
 	 *    zeros.
 	 */
 	if (rc) {
-		DEBUG_BMAP(PLL_ERROR, bcm, "mdsio_read: rc=%d", rc);
+		DEBUG_BMAP(PLL_ERROR, b, "mdsio_read: rc=%d", rc);
 		return (rc);
 	}
 
-	mds_bmap_ensure_valid(bcm);
+	mds_bmap_ensure_valid(b);
 
-	DEBUG_BMAPOD(PLL_INFO, bcm, "successfully loaded from disk");
+	DEBUG_BMAPOD(PLL_INFO, b, "successfully loaded from disk");
 	return (0);
 }
 
 int
-mds_bmap_write(struct bmapc_memb *bmap, int update_mtime, void *logf,
+mds_bmap_write(struct bmapc_memb *b, int update_mtime, void *logf,
     void *logarg)
 {
 	struct iovec iovs[2];
@@ -144,12 +144,12 @@ mds_bmap_write(struct bmapc_memb *bmap, int update_mtime, void *logf,
 	size_t nb;
 	int rc;
 
-	BMAPOD_REQRDLOCK(bmap_2_bmi(bmap));
-	mds_bmap_ensure_valid(bmap);
+	BMAPOD_REQRDLOCK(bmap_2_bmi(b));
+	mds_bmap_ensure_valid(b);
 
-	psc_crc64_calc(&crc, bmap_2_ondisk(bmap), BMAP_OD_CRCSZ);
+	psc_crc64_calc(&crc, bmap_2_ondisk(b), BMAP_OD_CRCSZ);
 
-	iovs[0].iov_base = bmap_2_ondisk(bmap);
+	iovs[0].iov_base = bmap_2_ondisk(b);
 	iovs[0].iov_len = BMAP_OD_CRCSZ;
 	iovs[1].iov_base = &crc;
 	iovs[1].iov_len = sizeof(crc);
@@ -157,8 +157,8 @@ mds_bmap_write(struct bmapc_memb *bmap, int update_mtime, void *logf,
 	if (logf)
 		mds_reserve_slot();
 	rc = mdsio_pwritev(&rootcreds, iovs, nitems(iovs), &nb,
-	    (off_t)((BMAP_OD_SZ * bmap->bcm_bmapno) +
-	    SL_BMAP_START_OFF), update_mtime, bmap_2_mdsio_data(bmap),
+	    (off_t)((BMAP_OD_SZ * b->bcm_bmapno) +
+	    SL_BMAP_START_OFF), update_mtime, bmap_2_mdsio_data(b),
 	    logf, logarg);
 	if (logf)
 		mds_unreserve_slot();
@@ -166,30 +166,30 @@ mds_bmap_write(struct bmapc_memb *bmap, int update_mtime, void *logf,
 	if (rc == 0 && nb != BMAP_OD_SZ)
 		rc = SLERR_SHORTIO;
 	if (rc)
-		DEBUG_BMAP(PLL_ERROR, bmap,
+		DEBUG_BMAP(PLL_ERROR, b,
 		    "mdsio_write: error (rc=%d)", rc);
 	else
-		DEBUG_BMAP(PLL_INFO, bmap, "written successfully");
-	BMAPOD_READ_DONE(bmap, 0);
+		DEBUG_BMAP(PLL_INFO, b, "written successfully");
+	BMAPOD_READ_DONE(b, 0);
 	return (rc);
 }
 
 void
-mds_bmap_init(struct bmapc_memb *bcm)
+mds_bmap_init(struct bmapc_memb *b)
 {
 	struct bmap_mds_info *bmi;
 
-	bmi = bmap_2_bmi(bcm);
+	bmi = bmap_2_bmi(b);
 	pll_init(&bmi->bmdsi_leases, struct bmap_mds_lease,
-	    bml_bmdsi_lentry, &bcm->bcm_lock);
+	    bml_bmdsi_lentry, &b->bcm_lock);
 	bmi->bmdsi_xid = 0;
 	psc_rwlock_init(&bmi->bmdsi_rwlock);
 }
 
 void
-mds_bmap_destroy(struct bmapc_memb *bcm)
+mds_bmap_destroy(struct bmapc_memb *b)
 {
-	struct bmap_mds_info *bmi = bmap_2_bmi(bcm);
+	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 
 	psc_assert(bmi->bmdsi_writers == 0);
 	psc_assert(bmi->bmdsi_readers == 0);
