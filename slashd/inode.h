@@ -160,10 +160,8 @@ _debug_ino(char *buf, size_t siz, const struct slash_inode_od *ino)
 		    ino->ino_repls[j].bs_id);
 		strlcat(rbuf, nbuf, sizeof(rbuf));
 	}
-
 	snprintf(buf, siz, "bsz:%u nr:%u nbpol:%u repl:%s",
-	    ino->ino_bsz, ino->ino_nrepls,
-	    ino->ino_replpol, rbuf);
+	    ino->ino_bsz, ino->ino_nrepls, ino->ino_replpol, rbuf);
 	return (buf);
 }
 
