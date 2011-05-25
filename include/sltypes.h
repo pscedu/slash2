@@ -93,6 +93,7 @@ typedef uint64_t slfgen_t;
 #define SL_SETATTRF_METASIZE	(_PSCFS_SETATTRF_LAST << 0)	/* metadata file */
 #define SL_SETATTRF_PTRUNCGEN	(_PSCFS_SETATTRF_LAST << 1)	/* partial truncates */
 #define SL_SETATTRF_GEN		(_PSCFS_SETATTRF_LAST << 2)	/* full truncate */
+#define SL_SETATTRF_NBLKS	(_PSCFS_SETATTRF_LAST << 3)	/* st_blocks */
 
 #define SL_SETATTRF_FREPLPOL	SL_SETATTRF_PTRUNCGEN
 

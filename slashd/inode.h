@@ -45,10 +45,8 @@
  * Define metafile offsets.  At the beginning of the metafile is the
  * SLASH2 inode, which is always loaded.
  */
-//#define SL_EXTRAS_START_OFF	((off_t)0x0200)
-//#define SL_BMAP_START_OFF	((off_t)0x0600)
-#define SL_EXTRAS_START_OFF	((off_t)0x0400)
-#define SL_BMAP_START_OFF	((off_t)0x1000)
+#define SL_EXTRAS_START_OFF	((off_t)0x0200)
+#define SL_BMAP_START_OFF	((off_t)0x0600)
 
 /*
  * Point to an offset within the linear metadata file which holds a
@@ -62,7 +60,7 @@ typedef struct {
 	int64_t			sn_date;
 } sl_snap_t;
 
-#define INO_VERSION		0x0001
+#define INO_VERSION		0x0002
 
 /*
  * The inode structure lives at the beginning of the metafile and holds
@@ -75,11 +73,13 @@ struct slash_inode_od {
 	uint32_t		 ino_nrepls;			/* if 0, use ino_prepl */
 	uint32_t		 ino_replpol;			/* BRPOL_* policies */
 	sl_replica_t		 ino_repls[SL_DEF_REPLICAS];	/* embed a few replicas	*/
+	uint64_t		 ino_repl_nblks[SL_DEF_REPLICAS];/* embed a few replicas */
 };
 
 struct slash_inode_extras_od {
 	sl_snap_t		 inox_snaps[SL_DEF_SNAPSHOTS];	/* snapshot pointers */
 	sl_replica_t		 inox_repls[SL_INOX_NREPLICAS];
+	uint64_t		 inox_repl_nblks[SL_INOX_NREPLICAS];
 };
 
 struct slash_inode_handle {

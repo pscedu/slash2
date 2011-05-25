@@ -18,6 +18,7 @@
  */
 
 #include "pfl/cdefs.h"
+#include "pfl/fs.h"
 #include "psc_util/log.h"
 
 #include "bmap_mds.h"
@@ -206,31 +207,57 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
     struct srm_bmap_crcup *crcup)
 {
 	struct bmap_mds_info *bmi = bmap_2_bmi(bmap);
+	struct slash_inode_handle *ih;
 	struct sl_mds_crc_log crclog;
 	struct fidc_membh *f;
 	uint32_t utimgen, i;
-	int extend = 0;
+	sl_ios_id_t iosid;
+	int rc, fl, idx;
 
 	psc_assert(bmap->bcm_flags & BMAP_MDS_CRC_UP);
 
 	f = bmap->bcm_fcmh;
+	ih = fcmh_2_inoh(f);
+
 	FCMH_LOCK(f);
-	if (crcup->fsize > fcmh_2_fsz(f))
-		extend = 1;
-	mds_fcmh_increase_fsz(f, crcup->fsize);
+	fcmh_wait_locked(f, f->fcmh_flags & FCMH_IN_SETATTR);
+
+	iosid = bmi->bmdsi_wr_ion->rmmi_resm->resm_iosid;
+	idx = mds_repl_ios_lookup(ih, iosid);
+	if (idx < 0)
+		psc_fatal("not found");
+	fcmh_2_nblks(f) += crcup->nblks - fcmh_2_repl_nblks(f, idx);
+	fl = SL_SETATTRF_NBLKS;
+
+	if (crcup->fsize > fcmh_2_fsz(f)) {
+		fcmh_2_fsz(f) = crcup->fsize;
+		fl |= PSCFS_SETATTRF_DATASIZE;
+		crcup->extend = 1;
+	}
+	mds_fcmh_setattr(f, fl);
 	utimgen = f->fcmh_sstb.sst_utimgen;
-	FCMH_ULOCK(f);
 
 	if (utimgen < crcup->utimgen)
 		DEBUG_FCMH(PLL_ERROR, f,
 		   "utimgen %d < crcup->utimgen %d",
 		   utimgen, crcup->utimgen);
 
-	crcup->extend = extend;
+	fcmh_set_repl_nblks(f, idx, crcup->nblks);
+	INOH_LOCK(ih);
+	if (idx >= SL_DEF_REPLICAS)
+		rc = mds_inox_write(ih, NULL, NULL);
+	else
+		rc = mds_inode_write(ih, NULL, NULL);
+	INOH_ULOCK(ih);
+//	if (rc)
+//		goto out;
+
+	FCMH_ULOCK(f);
+
 	crclog.scl_bmap = bmap;
 	crclog.scl_crcup = crcup;
 
-	BMAPOD_WRLOCK(bmi);
+	BMAPOD_REQWRLOCK(bmi);
 	for (i = 0; i < crcup->nups; i++) {
 		bmap_2_crcs(bmap, crcup->crcs[i].slot) =
 		    crcup->crcs[i].crc;

@@ -41,8 +41,8 @@
 static int
 mds_redo_bmap_repl_common(void *jent, int op)
 {
-	struct srm_bmap_crcwire *bmap_wire;
 	struct slmds_jent_repgen *jrpg = jent;
+	struct srm_bmap_crcwire *bmap_wire;
 	struct slmds_jent_crc *jcrc = jent;
 	struct fidc_membh *f = NULL;
 	struct bmapc_memb *b = NULL;
@@ -80,25 +80,49 @@ mds_redo_bmap_repl_common(void *jent, int op)
 		psclog_info("fid="SLPRI_FID" bmapno=%u",
 		    jrpg->sjp_fid, jrpg->sjp_bmapno);
 		break;
-	case B_REPLAY_OP_CRC:
+	case B_REPLAY_OP_CRC: {
+		struct slash_inode_handle *ih;
+		int fl, idx;
+
+		FCMH_LOCK(f);
+		ih = fcmh_2_inoh(f);
+		idx = mds_repl_ios_lookup(ih, jcrc->sjc_iosid);
+		if (idx < 0) {
+			psclog_errorx("iosid %d not found in repl "
+			    "table", jcrc->sjc_iosid);
+			goto out;
+		}
+		f->fcmh_sstb.sst_blocks = jcrc->sjc_aggr_nblks;
+		fcmh_set_repl_nblks(f, idx, jcrc->sjc_repl_nblks);
+		INOH_LOCK(ih);
+		if (idx >= SL_DEF_REPLICAS)
+			rc = mds_inox_write(ih, NULL, NULL);
+		else
+			rc = mds_inode_write(ih, NULL, NULL);
+		INOH_ULOCK(ih);
+		if (rc)
+			goto out;
+
+		fl = SL_SETATTRF_NBLKS;
+
 		/* Apply the filesize from the journal entry.
 		 */
 		if (jcrc->sjc_extend) {
 			f->fcmh_sstb.sst_size = jcrc->sjc_fsize;
-			rc = mdsio_setattr(fcmh_2_mdsio_fid(f),
-			    &f->fcmh_sstb, PSCFS_SETATTRF_DATASIZE,
-			    &rootcreds, NULL, fcmh_2_mdsio_data(f),
-			    NULL);
-			if (rc)
-				goto out;
+			fl |= PSCFS_SETATTRF_DATASIZE;
 		}
-		for (i = 0 ; i < jcrc->sjc_ncrcs; i++) {
+		rc = mds_fcmh_setattr(f, fl);
+		if (rc)
+			goto out;
+
+		for (i = 0; i < jcrc->sjc_ncrcs; i++) {
 			bmap_wire = &jcrc->sjc_crc[i];
 			bmap_2_crcs(b, bmap_wire->slot) = bmap_wire->crc;
 			b->bcm_crcstates[bmap_wire->slot] |=
 			    BMAP_SLVR_DATA | BMAP_SLVR_CRC;
 		}
 		break;
+	    }
 	}
 
 	rc = mds_bmap_write(b, 0, NULL, NULL);

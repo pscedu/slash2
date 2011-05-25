@@ -1389,7 +1389,7 @@ mds_bmap_crc_log(void *datap, uint64_t txg, __unusedx int flag)
 	struct sl_mds_crc_log *crclog = datap;
 	struct bmapc_memb *bmap = crclog->scl_bmap;
 	struct srm_bmap_crcup *crcup = crclog->scl_crcup;
-	struct bmap_mds_info *bmdsi = bmap_2_bmi(bmap);
+	struct bmap_mds_info *bmi = bmap_2_bmi(bmap);
 	struct slmds_jent_crc *jcrc;
 	uint32_t n, t, distill;
 
@@ -1403,16 +1403,17 @@ mds_bmap_crc_log(void *datap, uint64_t txg, __unusedx int flag)
 	distill = crcup->extend;
 	for (t = 0, n = 0; t < crcup->nups; t += n) {
 
-		n = MIN(SLJ_MDS_NCRCS, (crcup->nups - t));
+		n = MIN(SLJ_MDS_NCRCS, crcup->nups - t);
 
 		jcrc = pjournal_get_buf(mdsJournal,
 		    sizeof(struct slmds_jent_crc));
 		jcrc->sjc_fid = fcmh_2_fid(bmap->bcm_fcmh);
-		jcrc->sjc_iosid = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_iosid;
+		jcrc->sjc_iosid = bmi->bmdsi_wr_ion->rmmi_resm->resm_iosid;
 		jcrc->sjc_bmapno = bmap->bcm_bmapno;
 		jcrc->sjc_ncrcs = n;
 		jcrc->sjc_fsize = crcup->fsize;		/* largest known size */
-		jcrc->sjc_nblks = crcup->nblks;
+		jcrc->sjc_repl_nblks = crcup->nblks;
+		jcrc->sjc_aggr_nblks = fcmh_2_nblks(bmap->bcm_fcmh);
 		jcrc->sjc_extend = distill;
 		jcrc->sjc_utimgen = crcup->utimgen;     /* utime generation number */
 

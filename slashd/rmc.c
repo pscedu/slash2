@@ -136,7 +136,6 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	const struct srm_getattr_req *mq;
 	struct srm_getattr_rep *mp;
 	struct fidc_membh *fcmh;
-	int idx;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slm_fcmh_get(&mq->fg, &fcmh);
@@ -145,11 +144,6 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 
 	FCMH_LOCK(fcmh);
 	mp->attr = fcmh->fcmh_sstb;
-	if (!fcmh_isdir(fcmh)) {
-		idx = mds_repl_ios_lookup(fcmh_2_inoh(fcmh), mq->iosid);
-		if (idx >= 0)
-			mp->attr.sst_blocks = fcmh_2_repl_nblks(fcmh, idx);
-	}
 	FCMH_ULOCK(fcmh);
 
  out:
@@ -386,9 +380,10 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 		FCMH_ULOCK(p);
 
 		FCMH_LOCK(c);
+		fcmh_wait_locked(c, c->fcmh_flags & FCMH_IN_SETATTR);
 		c->fcmh_sstb.sstd_freplpol = pol;
+		mds_fcmh_setattr(c, SL_SETATTRF_FREPLPOL);
 		FCMH_ULOCK(c);
-		mdsio_fcmh_setattr(c, SL_SETATTRF_FREPLPOL);
 	}
 
  out:
@@ -715,9 +710,9 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 		    &rootcreds, &c_sstb) == 0 &&
 		    slm_fcmh_get(&c_sstb.sst_fg, &c) == 0) {
 			FCMH_LOCK(c);
+			fcmh_wait_locked(c, c->fcmh_flags & FCMH_IN_SETATTR);
 			SL_GETTIMESPEC(&c->fcmh_sstb.sst_ctim);
-			FCMH_ULOCK(c);
-			mdsio_fcmh_setattr(c, PSCFS_SETATTRF_CTIME);
+			mds_fcmh_setattr(c, PSCFS_SETATTRF_CTIME);
 			fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 		}
 	}
@@ -1012,10 +1007,10 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
  out:
 	if (mp->rc == 0) {
 		FCMH_LOCK(p);
+		fcmh_wait_locked(p, p->fcmh_flags & FCMH_IN_SETATTR);
 		SL_GETTIMESPEC(&p->fcmh_sstb.sst_ctim);
-		FCMH_ULOCK(p);
-		mdsio_fcmh_setattr(p, PSCFS_SETATTRF_CTIME);
-		mdsio_fcmh_refreshattr(p, &mp->attr);
+		mds_fcmh_setattr(p, PSCFS_SETATTRF_CTIME);
+		memcpy(&mp->attr, &p->fcmh_sstb, sizeof(mp->attr));
 	}
 	psclog_info("DEBUG: mdsio_unlink: parent="SLPRI_FID", name=%s, rc=%d",
 	    mq->pfid, mq->name, mp->rc);

@@ -1442,9 +1442,10 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
 
 	if (fcmh->fcmh_sstb.sst_mode & (S_ISGID | S_ISUID)) {
 		FCMH_LOCK(fcmh);
+		fcmh_wait_locked(fcmh, fcmh->fcmh_flags & FCMH_IN_SETATTR);
 		fcmh->fcmh_sstb.sst_mode &= ~(S_ISGID | S_ISUID);
+		mds_fcmh_setattr(fcmh, PSCFS_SETATTRF_MODE);
 		FCMH_ULOCK(fcmh);
-		mdsio_fcmh_setattr(fcmh, PSCFS_SETATTRF_MODE);
 	}
 
  out:
@@ -1723,16 +1724,12 @@ slm_ptrunc_prepare(struct slm_workrq *wkrq)
 	 * are skipped here.
 	 */
 	if (fmi->fmi_ptrunc_size >= fcmh_2_fsz(fcmh)) {
-		mds_fcmh_increase_fsz(fcmh, fmi->fmi_ptrunc_size);
+		fcmh_wait_locked(fcmh, fcmh->fcmh_flags & FCMH_IN_SETATTR);
+		if (fmi->fmi_ptrunc_size > fcmh_2_fsz(fcmh)) {
+			fcmh_2_fsz(fcmh) = fmi->fmi_ptrunc_size;
+			mds_fcmh_setattr(fcmh, PSCFS_SETATTRF_DATASIZE);
+		}
 		fcmh->fcmh_flags &= ~FCMH_IN_PTRUNC;
-
-		mds_reserve_slot();
-		rc = mdsio_setattr(fcmh_2_mdsio_fid(fcmh),
-		    &fcmh->fcmh_sstb, PSCFS_SETATTRF_DATASIZE,
-		    &rootcreds, &fcmh->fcmh_sstb,
-		    fcmh_2_mdsio_data(fcmh), mds_namespace_log);
-		mds_unreserve_slot();
-
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_WORKER);
 		slm_ptrunc_wake_clients(wkrq);
 		return (0);

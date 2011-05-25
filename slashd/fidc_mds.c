@@ -38,31 +38,25 @@
 #include "slashd.h"
 
 int
-mds_fcmh_increase_fsz(struct fidc_membh *fcmh, uint64_t siz)
+mds_fcmh_setattr(struct fidc_membh *f, int flags)
 {
-	int locked, rc = 0;
+	int rc = 0;
 
-	locked = FCMH_RLOCK(fcmh);
-	/* Block until other size updates have completed.
-	 */
-	fcmh_wait_locked(fcmh, fcmh->fcmh_flags & FCMH_SIZE_UPDATE);
-	// assert(flags & PTRUNC == 0)
+	FCMH_LOCK_ENSURE(f);
+	psc_assert((f->fcmh_flags & FCMH_IN_SETATTR) == 0);
 
-	if (siz > (uint64_t)fcmh_2_fsz(fcmh)) {
-		fcmh_2_fsz(fcmh) = siz;
-		fcmh->fcmh_flags |= FCMH_SIZE_UPDATE;
+	f->fcmh_flags |= FCMH_IN_SETATTR;
 
-		DEBUG_FCMH(PLL_INFO, fcmh, "new fsize %"PRId64, siz);
-		FCMH_ULOCK(fcmh);
+	DEBUG_FCMH(PLL_INFO, f, "attributes updated, writing");
 
-		rc = mdsio_fcmh_setattr(fcmh, PSCFS_SETATTRF_DATASIZE);
+	FCMH_ULOCK(f);
+	rc = mdsio_setattr(fcmh_2_mdsio_fid(f), &f->fcmh_sstb, flags,
+	    &rootcreds, NULL, fcmh_2_fmi(f)->fmi_mdsio_data, NULL);
+	FCMH_LOCK(f);
+	psc_assert(f->fcmh_flags & FCMH_IN_SETATTR);
 
-		FCMH_LOCK(fcmh);
-		psc_assert(fcmh->fcmh_flags & FCMH_SIZE_UPDATE);
-		fcmh->fcmh_flags &= ~FCMH_SIZE_UPDATE;
-		fcmh_wake_locked(fcmh);
-	}
-	FCMH_URLOCK(fcmh, locked);
+	f->fcmh_flags &= ~FCMH_IN_SETATTR;
+	fcmh_wake_locked(f);
 	return (rc);
 }
 

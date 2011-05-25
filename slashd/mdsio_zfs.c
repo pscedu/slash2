@@ -50,19 +50,12 @@ mdsio_fid_t		 mds_fidnsdir_inum;
 mdsio_fid_t		 mds_tmpdir_inum;
 
 int
-mdsio_fcmh_setattr(struct fidc_membh *f, int setattrflags)
-{
-	return (mdsio_setattr(fcmh_2_mdsio_fid(f), &f->fcmh_sstb,
-	    setattrflags, &rootcreds, NULL,
-	    fcmh_2_fmi(f)->fmi_mdsio_data, NULL)); /* XXX mds_namespace_log */
-}
-
-int
 mdsio_fcmh_refreshattr(struct fidc_membh *f, struct srt_stat *out_sstb)
 {
 	int locked, rc;
 
 	locked = FCMH_RLOCK(f);
+	fcmh_wait_locked(f, f->fcmh_flags & FCMH_IN_SETATTR);
 	rc = mdsio_getattr(fcmh_2_mdsio_fid(f), fcmh_2_mdsio_data(f),
 	    &rootcreds, &f->fcmh_sstb);
 

@@ -49,7 +49,8 @@ struct slmds_jent_crc {
 	 int32_t			sjc_ncrcs;
 	uint32_t			sjc_utimgen;
 	uint64_t			sjc_fsize;
-	uint64_t			sjc_nblks;		/* st_blocks */
+	uint64_t			sjc_aggr_nblks;		/* total st_blocks */
+	uint64_t			sjc_repl_nblks;		/* IOS' st_blocks */
 	 int32_t			sjc_extend;		/* XXX flags */
 	struct srm_bmap_crcwire		sjc_crc[SLJ_MDS_NCRCS];
 } __packed;

@@ -71,8 +71,7 @@ struct bmap_core_state {
 struct bmap_extra_state {
 	uint64_t		bes_crcs[SLASH_CRCS_PER_BMAP];
 	sl_bmapgen_t		bes_gen;
-	uint32_t		bes_replpol:4;
-	uint32_t		bes_nblks:28;
+	uint32_t		bes_replpol;
 };
 
 /**

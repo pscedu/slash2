@@ -64,7 +64,6 @@ void	mds_namespace_log(int, uint64_t, uint64_t, uint64_t, const
 
 /* high-level interface */
 int	mdsio_fcmh_refreshattr(struct fidc_membh *, struct srt_stat *);
-int	mdsio_fcmh_setattr(struct fidc_membh *, int);
 int	mdsio_write_cursor(void *, size_t, void *, sl_log_write_t);
 
 struct mdsio_ops {
