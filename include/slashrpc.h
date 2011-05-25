@@ -252,14 +252,16 @@ struct srt_stat {
 #define sstd_freplpol	sst_ptruncgen		/* new file repl pol for dirs */
 } __packed;
 
-#define DEBUG_SSTB(level, sstb, fmt, ...)					\
-	psc_log((level), "sstb (%p) dev:%"PRIu64" mode:%#o nlink:%"PRIu64" "	\
-	    "uid:%u gid:%u rdev:%"PRIu64" "					\
-	    "sz:%"PRIu64" blksz:%"PRIu64" blkcnt:%"PRIu64" "			\
-	    "atime:%"PRIu64" mtime:%"PRIu64" ctime:%"PRIu64" " fmt,		\
-	    (sstb), (sstb)->sst_dev, (sstb)->sst_mode, (sstb)->sst_nlink,	\
-	    (sstb)->sst_uid, (sstb)->sst_gid, (sstb)->sst_rdev,			\
-	    (sstb)->sst_size, (sstb)->sst_blksize, (sstb)->sst_blocks,		\
+#define DEBUG_SSTB(level, sstb, fmt, ...)				\
+	psclog((level), "sstb (%p) dev:%"PRIu64" mode:%#o "		\
+	    "nlink:%"PRIu64" uid:%u gid:%u "				\
+	    "rdev:%"PRIu64" sz:%"PRIu64" "				\
+	    "blksz:%"PRIu64" blkcnt:%"PRIu64" "				\
+	    "atime:%"PRIu64" mtime:%"PRIu64" ctime:%"PRIu64" " fmt,	\
+	    (sstb), (sstb)->sst_dev, (sstb)->sst_mode,			\
+	    (sstb)->sst_nlink, (sstb)->sst_uid, (sstb)->sst_gid,	\
+	    (sstb)->sst_rdev, (sstb)->sst_size,				\
+	    (sstb)->sst_blksize, (sstb)->sst_blocks,			\
 	    (sstb)->sst_atime, (sstb)->sst_mtime, (sstb)->sst_ctime, ## __VA_ARGS__)
 
 struct srt_statfs {
@@ -751,13 +753,17 @@ struct srm_readdir_req {
 	 int32_t		_pad;
 } __packed;
 
+#define SRM_READDIR_BUFSZ(siz, nents, nstbpref)				\
+	(sizeof(struct srt_stat) * MIN((nstbpref), (nents)) + (siz))
+
 struct srm_readdir_rep {
 	uint64_t		size;		/* XXX make 32-bit */
 	uint32_t		num;		/* #dirents returned */
 	 int32_t		rc;
+	unsigned char		ents[848];
 /*
- * XXX accompanied by bulk data is (but should not be) in fuse dirent format
- *	and must be 64-bit aligned.
+ * XXX accompanied bulk data is (but should not be) in fuse dirent format
+ *	and must be 64-bit aligned if it cannot fit in `buf'.
  */
 } __packed;
 

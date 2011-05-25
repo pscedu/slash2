@@ -1084,6 +1084,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	mq->nstbpref = nstbpref;
 
 	rsx_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, iov, niov);
+	rq->rq_bulk_abortable = 1;
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
@@ -1096,6 +1097,16 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	if (!DIRCACHE_INITIALIZED(d))
 		slc_fcmh_initdci(d);
 	FCMH_ULOCK(d);
+
+	if (SRM_READDIR_BUFSZ(mp->size, mp->num, mq->nstbpref) <=
+	    sizeof(mp->ents)) {
+		size_t sz;
+
+		sz = MIN(mp->num, mq->nstbpref) *
+		    sizeof(struct srt_stat);
+		memcpy(iov[1].iov_base, mp->ents, sz);
+		memcpy(iov[0].iov_base, mp->ents + sz, mp->size);
+	}
 
 	if (mq->nstbpref) {
 		struct srt_stat *attr = iov[1].iov_base;

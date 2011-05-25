@@ -589,8 +589,19 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	}
 #endif
 
-	mp->rc = rsx_bulkserver(rq, BULK_PUT_SOURCE, SRMC_BULK_PORTAL,
-	    iov, niov);
+	if (SRM_READDIR_BUFSZ(mp->size, mp->num, mq->nstbpref) <=
+	    sizeof(mp->ents)) {
+		size_t sz;
+
+		sz = MIN(mp->num, mq->nstbpref) *
+		    sizeof(struct srt_stat);
+		memcpy(mp->ents, iov[1].iov_base, sz);
+		memcpy(mp->ents + sz, iov[0].iov_base, mp->size);
+		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
+	} else {
+		mp->rc = rsx_bulkserver(rq, BULK_PUT_SOURCE, SRMC_BULK_PORTAL,
+		    iov, niov);
+	}
 
  out:
 	PSCFREE(iov[0].iov_base);
