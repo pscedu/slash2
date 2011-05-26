@@ -420,10 +420,6 @@ lcache
   addresses that resolve from the interface in the pair
 
 - INO_DIRTY needs to take the same fate as BMAP_LOGCHG
-- need ability to backup mds metafs
-  - zpool make snapshopt
-  - zpool dump snapshot
-  - zpool delete snapshot
 - make sure replrq over garbage does the right thing in sliod backfs (zeroing)
 - mds: do not allow repl changes while IN_PTRUNC
 - should replay crcupdate set ion to VALID ?
