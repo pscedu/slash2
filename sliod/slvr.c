@@ -122,9 +122,9 @@ slvr_do_crc(struct slvr_ref *s)
 				    slvr_2_crc(s), crc, SLVR_CRCLEN(s));
 
 				DEBUG_BMAP(PLL_ERROR, slvr_2_bmap(s),
-				   "slvrnum=%hu", s->slvr_num);
+				   "CRC failed slvrnum=%hu", s->slvr_num);
 
-				/* Shouln't need a lock, !SLVR_DATADY
+				/* Shouldn't need a lock, !SLVR_DATADY
 				 */
 				s->slvr_crc_eoff = 0;
 
