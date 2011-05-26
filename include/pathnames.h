@@ -59,6 +59,7 @@
 #define SL_FN_RECLAIMPROG	"op-reclaim-prog"
 
 #define SL_FN_CURSOR		"cursor"
+#define SL_FN_FSUUID		"fsuuid"
 
 extern const char *sl_datadir;
 

@@ -37,6 +37,7 @@
 #include "psc_util/journal.h"
 #include "psc_util/log.h"
 #include "psc_util/odtable.h"
+#include "psc_util/random.h"
 
 #include "creds.h"
 #include "fid.h"
@@ -52,8 +53,6 @@ struct passwd	*pw;
 
 const char      *datadir = SL_PATH_DATA_DIR;
 
-#define		 MAX_BUF_LEN		512
-
 struct psc_journal_cursor cursor;
 
 void
@@ -62,11 +61,11 @@ slnewfs_mkdir(const char *fn)
 	if (mkdir(fn, 0700) == -1 && errno != EEXIST)
 		psc_fatal("mkdir %s", fn);
 	if (pw && chown(fn, pw->pw_uid, pw->pw_gid) == -1)
-		psc_warn("chown %u %s", pw->pw_uid, fn);
+		psclog_warn("chown %u %s", pw->pw_uid, fn);
 }
 
 void
-slimmns_create_int(const char *pdirnam, uint32_t curdepth,
+slnewfs_create_int(const char *pdirnam, uint32_t curdepth,
     uint32_t maxdepth)
 {
 	char subdirnam[PATH_MAX];
@@ -76,7 +75,7 @@ slimmns_create_int(const char *pdirnam, uint32_t curdepth,
 		xmkfn(subdirnam, "%s/%x", pdirnam, i);
 		slnewfs_mkdir(subdirnam);
 		if (curdepth < maxdepth)
-			slimmns_create_int(subdirnam, curdepth + 1,
+			slnewfs_create_int(subdirnam, curdepth + 1,
 			    maxdepth);
 	}
 }
@@ -86,7 +85,7 @@ slimmns_create_int(const char *pdirnam, uint32_t curdepth,
  * utility to create/edit/show the odtable (use ZFS fuse mount).
  */
 void
-slimmns_create_odtable(const char *metadir)
+slnewfs_create_odtable(const char *metadir)
 {
 	struct odtable_entftr odtf;
 	struct odtable_hdr odth;
@@ -102,7 +101,8 @@ slimmns_create_odtable(const char *metadir)
 
 	odth.odth_nelems = ODT_DEFAULT_TABLE_SIZE;
 	odth.odth_elemsz = ODT_DEFAULT_ITEM_SIZE;
-	odth.odth_slotsz = ODT_DEFAULT_ITEM_SIZE + sizeof(struct odtable_entftr);
+	odth.odth_slotsz = ODT_DEFAULT_ITEM_SIZE +
+	    sizeof(struct odtable_entftr);
 	odth.odth_magic = ODTBL_MAGIC;
 	odth.odth_version = ODTBL_VERS;
 	odth.odth_options = ODTBL_OPT_CRC;
@@ -130,16 +130,33 @@ slimmns_create_odtable(const char *metadir)
 	close(odt.odt_fd);
 }
 
+void
+slnewfs_touchfile(const char *fmt, ...)
+{
+	char fn[PATH_MAX];
+	va_list ap;
+	int fd;
+
+	va_start(ap, fmt);
+	xmkfnv(fn, fmt, ap);
+	va_end(ap);
+
+	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
+	if (fd == -1)
+		psc_fatal("%s", fn);
+	close(fd);
+}
+
 /**
- * slimmns_create - Create an immutable namespace directory structure.
+ * slnewfs_create - Create an SLASH2 metadata or user data directory
+ *	structure.
  */
 void
-slimmns_create(const char *fsroot, uint32_t depth)
+slnewfs_create(const char *fsroot, uint32_t depth)
 {
 	char metadir[PATH_MAX], fn[PATH_MAX];
+	FILE *fp;
 	int fd;
-	size_t len;
-	char buf[MAX_BUF_LEN];
 
 	if (!depth)
 		depth = FID_PATH_DEPTH;
@@ -148,80 +165,68 @@ slimmns_create(const char *fsroot, uint32_t depth)
 	xmkfn(metadir, "%s/%s", fsroot, SL_RPATH_META_DIR);
 	slnewfs_mkdir(metadir);
 
-	xmkfn(fn, "%s/%s", metadir, SL_RPATH_TMP_DIR);
-	slnewfs_mkdir(fn);
-
-	/* create immutable namespace directory */
+	/* create immutable namespace top directory */
 	xmkfn(fn, "%s/%s", metadir, SL_RPATH_FIDNS_DIR);
 	slnewfs_mkdir(fn);
 
 	/* create immutable namespace subdirectories */
-	slimmns_create_int(fn, 1, depth);
+	slnewfs_create_int(fn, 1, depth);
 
 	if (ion)
 		return;
+
+	/* create temporary processing directory */
+	xmkfn(fn, "%s/%s", metadir, SL_RPATH_TMP_DIR);
+	slnewfs_mkdir(fn);
 
 	/* create replication queue directory */
 	xmkfn(fn, "%s/%s", metadir, SL_RPATH_UPSCH_DIR);
 	slnewfs_mkdir(fn);
 
+	/* create the FSUUID file */
+	xmkfn(fn, "%s/%s", metadir, SL_FN_FSUUID);
+	fp = fopen(fn, "w");
+	if (fp == NULL)
+		psc_fatal("open %s", fn);
+	fprintf(fp, "%16"PRIx64"\n", psc_random64());
+	fclose(fp);
+
+	/* create the journal cursor file */
 	xmkfn(fn, "%s/%s", metadir, SL_FN_CURSOR);
 	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
 	if (fd == -1)
 		psc_fatal("open %s", fn);
 	if (pw && fchown(fd, pw->pw_uid, pw->pw_gid) == -1)
-		psc_warn("chown %u %s", pw->pw_uid, fn);
+		psclog_warn("chown %u %s", pw->pw_uid, fn);
 
 	memset(&cursor, 0, sizeof(struct psc_journal_cursor));
 	cursor.pjc_magic = PJRNL_CURSOR_MAGIC;
 	cursor.pjc_version = PJRNL_CURSOR_VERSION;
 	cursor.pjc_timestamp = time(NULL);
 	cursor.pjc_fid = SLFID_MIN;
-	// uuid_generate(cursor.pjc_uuid);
 	if (pwrite(fd, &cursor, sizeof(cursor), 0) != sizeof(cursor))
 		psc_fatal("write %s", fn);
 	close(fd);
 
-	xmkfn(fn, "%s/%s.%d", metadir, SL_FN_UPDATELOG, 0);
-	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
-	if (fd == -1)
-		psc_fatal("open %s", fn);
-	close(fd);
+	/* more journals */
+	xmkfn(fn, "%s/%s", metadir, SL_FN_CURSOR);
+	slnewfs_touchfile("%s/%s.%d", metadir, SL_FN_UPDATELOG, 0);
+	slnewfs_touchfile("%s/%s", metadir, SL_FN_UPDATEPROG);
+	slnewfs_touchfile("%s/%s.%d", metadir, SL_FN_RECLAIMLOG, 0);
+	slnewfs_touchfile("%s/%s", metadir, SL_FN_RECLAIMPROG);
 
-	xmkfn(fn, "%s/%s", metadir, SL_FN_UPDATEPROG);
-	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
-	if (fd == -1)
-		psc_fatal("open %s", fn);
-	close(fd);
-
-	xmkfn(fn, "%s/%s.%d", metadir, SL_FN_RECLAIMLOG, 0);
-	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
-	if (fd == -1)
-		psc_fatal("open %s", fn);
-	close(fd);
-
-	xmkfn(fn, "%s/%s", metadir, SL_FN_RECLAIMPROG);
-	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
-	if (fd == -1)
-		psc_fatal("open %s", fn);
-	close(fd);
-
+	/* creation time */
 	xmkfn(fn, "%s/%s", metadir, "timestamp");
-	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
-	if (fd == -1)
+	fp = fopen(fn, "w");
+	if (fp == NULL)
 		psc_fatal("open %s", fn);
+	if (fchmod(fileno(fp), 0600) == -1)
+		psclog_warn("chown %u %s", pw->pw_uid, fn);
+	fprintf(fp, "This pool was created %s on %s\n",
+	    ctime((time_t *)&cursor.pjc_timestamp), psc_get_hostname());
+	fclose(fp);
 
-	snprintf(buf, MAX_BUF_LEN, "This pool was created on %s and on %s",
-		psc_get_hostname(), ctime((time_t *)&cursor.pjc_timestamp));
-
-	len = strlen(buf);
-	len = write(fd, buf, len);
-	if (len != strlen(buf))
-		psc_fatal("write %s", fn);
-
-	close(fd);
-
-	slimmns_create_odtable(metadir);
+	slnewfs_create_odtable(metadir);
 }
 
 __dead void
@@ -263,6 +268,6 @@ main(int argc, char *argv[])
 
 	if (wipe)
 		wipefs(argv[0]);
-	slimmns_create(argv[0], 0);
+	slnewfs_create(argv[0], 0);
 	exit(0);
 }
