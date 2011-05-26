@@ -40,6 +40,16 @@ mkfnv(char fn[PATH_MAX], const char *fmt, va_list ap)
 	return (0);
 }
 
+void
+xmkfnv(char fn[PATH_MAX], const char *fmt, va_list ap)
+{
+	va_list apd;
+
+	va_copy(apd, ap);
+	if (mkfnv(fn, fmt, ap))
+		verr(1, fmt, apd);
+}
+
 int
 mkfn(char fn[PATH_MAX], const char *fmt, ...)
 {
@@ -55,15 +65,11 @@ mkfn(char fn[PATH_MAX], const char *fmt, ...)
 void
 xmkfn(char fn[PATH_MAX], const char *fmt, ...)
 {
-	va_list ap;
-	int rc;
+	va_list ap, apd;
 
 	va_start(ap, fmt);
-	rc = mkfnv(fn, fmt, ap);
+	va_copy(apd, ap);
+	if (mkfnv(fn, fmt, ap))
+		verr(1, fmt, apd);
 	va_end(ap);
-
-	if (rc) {
-		va_start(ap, fmt);
-		verr(1, fmt, ap);
-	}
 }
