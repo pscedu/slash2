@@ -544,9 +544,14 @@ struct srm_connect_req {
 	uint32_t		version;
 	 int32_t		nnids;
 	uint64_t		nids[SRM_NIDS_MAX];
+	uint64_t		fsuuid;
 } __packed;
 
-#define srm_connect_rep		srm_generic_rep
+struct srm_connect_rep {
+	uint64_t		fsuuid;
+	 int32_t		rc;
+	 int32_t		_pad;
+} __packed;
 
 struct srm_ping_req {
 } __packed;
