@@ -298,7 +298,7 @@ bmapdesc_access_check(struct srt_bmapdesc *sbd, enum rw rw,
 		if (sbd->sbd_ios_id != ios_id)
 			return (EBADF);
 	} else {
-		psc_errorx("invalid rw mode: %d", rw);
+		psclog_errorx("invalid rw mode: %d", rw);
 		return (EBADF);
 	}
 	return (0);

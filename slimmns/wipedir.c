@@ -62,7 +62,7 @@ wipefs(const char *dir)
 			    rmdir(f->fts_path) == -1)
 				psc_fatal("rmdir %s", f->fts_path);
 		} else if (unlink(f->fts_path) == -1)
-			psc_error("unlink %s", f->fts_path);
+			psclog_error("unlink %s", f->fts_path);
 	}
 	fts_close(fp);
 
@@ -86,7 +86,7 @@ wipefs(const char *dir)
 			else if (f->fts_level > 4)
 				fts_set(fp, f, FTS_SKIP);
 		} else if (unlink(f->fts_path) == -1)
-			psc_error("unlink %s", f->fts_path);
+			psclog_error("unlink %s", f->fts_path);
 	}
 	fts_close(fp);
 
@@ -113,7 +113,7 @@ wipefs(const char *dir)
 			else if (f->fts_level > 1)
 				fts_set(fp, f, FTS_SKIP);
 		} else if (unlink(f->fts_path) == -1)
-			psc_error("unlink %s", f->fts_path);
+			psclog_error("unlink %s", f->fts_path);
 	}
 	fts_close(fp);
 }

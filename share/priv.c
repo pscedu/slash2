@@ -46,7 +46,7 @@ sl_drop_privs(int allow_root_uid)
 	sl_getuserpwent(&pw);
 	if (pw == NULL) {
 		if (allow_root_uid)
-			psc_error("unable to setuid %s", SLASH_UID);
+			psclog_error("unable to setuid %s", SLASH_UID);
 		else
 			psc_fatal("unable to setuid %s", SLASH_UID);
 	} else {

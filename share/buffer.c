@@ -147,7 +147,7 @@ sl_buffer_timedget(struct psc_listcache *lc)
 {
 	struct timespec ts;
 
-	psc_warnx("Blocking get for LRU sl_buffer");
+	psclog_warnx("Blocking get for LRU sl_buffer");
 	slb_set_alloctimer(&ts);
 
 	//struct sl_buffer *slb = lc_gettimed(lc, abstime);
