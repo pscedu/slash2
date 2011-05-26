@@ -103,7 +103,7 @@ struct bmap_iod_info {
 	 * the network and with ZFS.
 	 */
 	struct bmap_extra_state	 biod_extrastate;
-	uint64_t		 biod_ondiskcrc;
+
 	/*
 	 * Accumulate CRC updates until its associated biod_crcup_ref
 	 * structure is full, at which point it is set to NULL and a
