@@ -109,8 +109,6 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 	    bmap_2_mdsio_data(b));
 	if (rc == 0 && nb == 0 && (flags & BMAPGETF_NOAUTOINST))
 		return (SLERR_BMAP_INVALID);
-	if (rc == 0 && nb && nb != BMAP_OD_SZ)
-		rc = SLERR_SHORTIO;
 
 	/*
 	 * Check for a NULL CRC if we had a good read.  NULL CRC can
@@ -118,17 +116,19 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 	 * Note that a short read is tolerated as long as the bmap is
 	 * zeroed.
 	 */
-	if (rc == 0 && (nb == 0 || nb == BMAP_OD_SZ && od_crc == 0 &&
-	    pfl_memchk(bmap_2_ondisk(b), 0, BMAP_OD_CRCSZ))) {
-		mds_bmap_initnew(b);
-		DEBUG_BMAPOD(PLL_INFO, b, "initialized new bmap");
-		return (0);
-	}
-
 	if (rc == 0) {
-		psc_crc64_calc(&crc, bmap_2_ondisk(b), BMAP_OD_CRCSZ);
-		if (od_crc != crc)
-			rc = SLERR_BADCRC;
+		if (nb == 0 || (nb == BMAP_OD_SZ && od_crc == 0 &&
+		    pfl_memchk(bmap_2_ondisk(b), 0, BMAP_OD_CRCSZ))) {
+			    mds_bmap_initnew(b);
+			    DEBUG_BMAPOD(PLL_INFO, b, "initialized new bmap");
+			    return (0);
+		    }
+
+		if (nb == BMAP_OD_SZ) {
+			psc_crc64_calc(&crc, bmap_2_ondisk(b), BMAP_OD_CRCSZ);
+			if (od_crc != crc)
+				rc = SLERR_BADCRC;
+		}
 	}
 
 	/*
