@@ -82,7 +82,6 @@ struct bmap_extra_state {
 struct bmap_ondisk {
 	struct bmap_core_state	bod_corestate;
 	struct bmap_extra_state	bod_extrastate;
-	uint64_t		bod_crc;
 #define bod_repls	bod_corestate.bcs_repls
 #define bod_crcstates	bod_corestate.bcs_crcstates
 #define bod_crcs	bod_extrastate.bes_crcs
@@ -136,8 +135,6 @@ struct bmapc_memb {
 #define BMAP_WAITERS		(1 << 12)	/* has bcm_fcmh waiters */
 #define BMAP_ORPHAN		(1 << 13)	/* removed from fcmh_bmaptree */
 #define _BMAP_FLSHFT		(1 << 14)
-
-#define bmap_2_ondisk(b)	((struct bmap_ondisk *)&(b)->bcm_corestate)
 
 #define BMAP_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bcm_lock)
 #define BMAP_LOCK(b)		spinlock(&(b)->bcm_lock)
@@ -225,10 +222,11 @@ struct bmapc_memb {
 #define BREPLST_GARBAGE_SCHED	7	/* being reclaimed */
 #define NBREPLST		8
 
+/* CRC of a zeroed sliver */
 #define BMAP_NULL_CRC		UINT64_C(0x436f5d7c450ed606)
 
-#define	BMAP_OD_SZ		(sizeof(struct bmap_ondisk))
-#define	BMAP_OD_CRCSZ		(BMAP_OD_SZ - (sizeof(uint64_t)))
+#define	BMAP_OD_CRCSZ		sizeof(struct bmap_ondisk)
+#define	BMAP_OD_SZ		(BMAP_OD_CRCSZ + sizeof(uint64_t))
 
 /* bcs_crcstates flags */
 #define BMAP_SLVR_DATA		(1 << 0)	/* Data present, otherwise slvr is hole */

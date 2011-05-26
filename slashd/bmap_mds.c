@@ -17,6 +17,9 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#define PSC_SUBSYS SLSS_BMAP
+#include "slsubsys.h"
+
 #include "pfl/cdefs.h"
 #include "pfl/fs.h"
 #include "psc_util/log.h"
@@ -92,17 +95,21 @@ mds_bmap_ensure_valid(struct bmapc_memb *b)
 int
 mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 {
+	uint64_t crc, od_crc = 0;
+	struct iovec iovs[2];
 	size_t nb;
 	int rc;
 
-	rc = mdsio_read(&rootcreds, bmap_2_ondisk(b), BMAP_OD_SZ,
-	    &nb, (off_t)BMAP_OD_SZ * b->bcm_bmapno +
-	    SL_BMAP_START_OFF, bmap_2_mdsio_data(b));
-
+	iovs[0].iov_base = bmap_2_ondisk(b);
+	iovs[0].iov_len = BMAP_OD_CRCSZ;
+	iovs[1].iov_base = &od_crc;
+	iovs[1].iov_len = sizeof(od_crc);
+	rc = mdsio_preadv(&rootcreds, iovs, nitems(iovs), &nb,
+	    (off_t)BMAP_OD_SZ * b->bcm_bmapno + SL_BMAP_START_OFF,
+	    bmap_2_mdsio_data(b));
 	if (rc == 0 && nb == 0 && (flags & BMAPGETF_NOAUTOINST))
 		return (SLERR_BMAP_INVALID);
-
-	if (rc == 0 && nb != BMAP_OD_SZ)
+	if (rc == 0 && nb && nb != BMAP_OD_SZ)
 		rc = SLERR_SHORTIO;
 
 	/*
@@ -111,13 +118,17 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 	 * Note that a short read is tolerated as long as the bmap is
 	 * zeroed.
 	 */
-	if (!rc || rc == SLERR_SHORTIO) {
-		if (bmap_2_ondiskcrc(b) == 0 &&
-		    pfl_memchk(bmap_2_ondisk(b), 0, BMAP_OD_SZ)) {
-			mds_bmap_initnew(b);
-			DEBUG_BMAPOD(PLL_INFO, b, "initialized");
-			return (0);
-		}
+	if (rc == 0 && (nb == 0 || nb == BMAP_OD_SZ && od_crc == 0 &&
+	    pfl_memchk(bmap_2_ondisk(b), 0, BMAP_OD_CRCSZ))) {
+		mds_bmap_initnew(b);
+		DEBUG_BMAPOD(PLL_INFO, b, "initialized new bmap");
+		return (0);
+	}
+
+	if (rc == 0) {
+		psc_crc64_calc(&crc, bmap_2_ondisk(b), BMAP_OD_CRCSZ);
+		if (od_crc != crc)
+			rc = SLERR_BADCRC;
 	}
 
 	/*
@@ -157,9 +168,8 @@ mds_bmap_write(struct bmapc_memb *b, int update_mtime, void *logf,
 	if (logf)
 		mds_reserve_slot();
 	rc = mdsio_pwritev(&rootcreds, iovs, nitems(iovs), &nb,
-	    (off_t)((BMAP_OD_SZ * b->bcm_bmapno) +
-	    SL_BMAP_START_OFF), update_mtime, bmap_2_mdsio_data(b),
-	    logf, logarg);
+	    (off_t)BMAP_OD_SZ * b->bcm_bmapno + SL_BMAP_START_OFF,
+	    update_mtime, bmap_2_mdsio_data(b), logf, logarg);
 	if (logf)
 		mds_unreserve_slot();
 

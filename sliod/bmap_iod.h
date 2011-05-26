@@ -136,6 +136,7 @@ struct bmap_iod_info {
 #define bmap_2_biodi_age(b)	bmap_2_biodi(b)->biod_age
 #define bmap_2_biodi_lentry(b)	bmap_2_biodi(b)->biod_lentry
 #define bmap_2_biodi_slvrs(b)	(&bmap_2_biodi(b)->biod_slvrs)
+#define bmap_2_ondisk(b)	((struct bmap_ondisk *)&(b)->bcm_corestate)
 
 #define BIOD_LOCK(bii)		BMAP_LOCK(bii_2_bmap(bii))
 #define BIOD_ULOCK(bii)		BMAP_ULOCK(bii_2_bmap(bii))

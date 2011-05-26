@@ -56,7 +56,6 @@ struct bmap_mds_info {
 	 * the network and with ZFS.
 	 */
 	struct bmap_extra_state		 bmdsi_extrastate;
-	uint64_t			 bmdsi_ondiskcrc;
 
 	struct resm_mds_info		*bmdsi_wr_ion;		/* pointer to write ION */
 	struct psc_lockedlist		 bmdsi_leases;		/* tracked bmap leases */
@@ -80,8 +79,8 @@ struct bmap_mds_info {
 #define bmap_2_bgen(b)		bmap_2_xstate(b)->bes_gen
 #define bmap_2_replpol(b)	bmap_2_xstate(b)->bes_replpol
 #define bmap_2_repl(b, i)	fcmh_2_repl((b)->bcm_fcmh, (i))
-#define bmap_2_ondiskcrc(b)	bmap_2_bmi(b)->bmdsi_ondiskcrc
 #define bmap_2_crcs(b, n)	bmap_2_xstate(b)->bes_crcs[n]
+#define bmap_2_ondisk(b)	((struct bmap_ondisk *)&(b)->bcm_corestate)
 
 #define BMAPOD_CALLERINFO	PFL_CALLERINFO()
 #define BMAPOD_RDLOCK(bmi)	psc_rwlock_rdlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmdsi_rwlock)
