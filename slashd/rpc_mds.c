@@ -208,7 +208,12 @@ slrpc_allocrep(struct pscrpc_request *rq, void *mqp, int qlen,
 		    plens, rcoff);
 		slm_rpc_ion_unpack_statfs(rq, PSCRPC_MSG_REQUEST);
 		slm_rpc_ion_pack_bmapminseq(rq->rq_repmsg);
-		return (rc);
+	} else
+		rc = slrpc_allocgenrep(rq, mqp, qlen, mpp, plen, rcoff);
+	if (rc == 0 && rq->rq_reqmsg->opc == SRMT_CONNECT) {
+		struct srm_connect_rep *mp = *(void **)mpp;
+
+		mp->fsuuid = fsuuid;
 	}
-	return (slrpc_allocgenrep(rq, mqp, qlen, mpp, plen, rcoff));
+	return (rc);
 }

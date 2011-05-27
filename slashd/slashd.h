@@ -231,13 +231,14 @@ void		 slm_setattr_core(struct fidc_membh *, struct srt_stat *, int);
 void		 slm_workq_init(void);
 void		 slm_workers_spawn(void);
 
-extern struct slash_creds			 rootcreds;
-extern struct odtable				*mdsBmapAssignTable;
-extern struct sl_mds_nsstats			 slm_nsstats_aggr;	/* aggregate namespace stats */
-extern struct sl_mds_peerinfo			*localinfo;
+extern struct slash_creds	 rootcreds;
+extern struct odtable		*mdsBmapAssignTable;
+extern struct sl_mds_nsstats	 slm_nsstats_aggr;	/* aggregate namespace stats */
+extern struct sl_mds_peerinfo	*localinfo;
+extern uint64_t			 fsuuid;
 
-struct psc_poolmgr				*slm_workrq_pool;
-struct psc_listcache				 slm_workq;
+extern struct psc_poolmgr	*slm_workrq_pool;
+extern struct psc_listcache	 slm_workq;
 
 static __inline int
 slm_get_rpmi_idx(struct sl_resource *res)
