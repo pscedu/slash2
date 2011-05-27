@@ -79,11 +79,7 @@ Suppress
 lookups for network addresses.
 .\" }%
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/p.mdoc {
-.\"	subsys => {
-.\"		bmap		=> "Block map structures",
-.\"		fcmh		=> ".Tn FID\ncache members",
-.\"		slvr		=> "Sliver\n.Pq Tn I/O No slab\nhandling"
-.\"	}
+.\"	log_xr => "in\n.Xr sliod 8\n"
 .It Fl p Ar paramspec
 Query/manipulate operational parameters.
 .Ar paramspec
@@ -128,58 +124,28 @@ If the
 assignment operator is used, this file will not be truncated.
 .It Cm log.format
 The header prepended to server log messages.
-See
-.Xr pflenv 7
+See the description of
+.Ev PSC_LOG_FORMAT
+in
+.Xr sliod 8
 for details on this format.
 .It Cm log.level Ns Op . Ns Ar subsystem
 The logging level of debug message output.
 .Pp
-.Ar subsystem
-may be one of the following:
-.Pp
-.Bl -tag -compact -offset 3n -width 13n
-.It Cm bmap
-Block map structures
-.It Cm def
-Default
-.It Cm fcmh
-.Tn FID
-cache members
-.It Cm lnet
-Lustre networking stack
-.It Cm mem
-Memory allocations and releases
-.It Cm rpc
-Network remote procedure calls
-.It Cm slvr
-Sliver
-.Pq Tn I/O No slab
-handling
-.El
-.Pp
+See the description of
+.Ev PSC_LOG_LEVEL_ Ns Ar subsys
+in
+.Xr sliod 8
+for a list of available subsystems.
 If
 .Ar subsystem
-is left unspecified, all subsystems will be accessed.
+is not specified, all subsystems will be accessed.
 .Pp
-The log level value may be one of the following:
-.Pp
-.Bl -tag -compact -offset 3n -width 13n
-.It Cm 0 , none
-No logging
-.It Cm 1 , error
-Recoverable failures
-.It Cm 2 , warn
-Something wrong which requires attention
-.Pq default
-.It Cm 3 , notice
-Something unusual which recommends attention
-.It Cm 4 , info
-Informational messages
-.It Cm 5 , debug
-Debugging messages
-.It Cm 6 , trace , all
-All messages
-.El
+See the description of
+.Ev PSC_LOG_LEVEL
+in
+.Xr sliod 8
+for recognized log level values.
 .It Cm pool. Ns Ar name
 Access the memory pool specified by
 .Ar name .
@@ -389,6 +355,8 @@ Pending replication work
 If
 .Ar subspec
 is left unspecified, all list caches will be accessed.
+.It Cm lni
+Lustre network interfaces.
 .It Cm loglevels
 Thread logging levels.
 .Ar subspec
