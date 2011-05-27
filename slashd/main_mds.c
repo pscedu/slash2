@@ -266,21 +266,21 @@ main(int argc, char *argv[])
 		rc = mdsio_opencreate(mf, &rootcreds, O_RDONLY, 0, NULL,
 		    NULL, NULL, &h, NULL, NULL, 0);
 		if (rc)
-			goto skipfsuid;
+			goto skipfsuuid;
 		rc = mdsio_read(&rootcreds, buf, sizeof(buf), &nb, 0,
 		    h);
 		mdsio_release(&rootcreds, h);
 
 		if (rc)
-			goto skipfsuid;
+			goto skipfsuuid;
 		if (nb != sizeof(buf)) {
 			rc = SLERR_SHORTIO;
-			goto skipfsuid;
+			goto skipfsuuid;
 		}
-		fsuuid = strtoll(buf, endp, 16);
+		fsuuid = strtoll(buf, &endp, 16);
 		if (*endp || endp == buf) {
 			rc = EINVAL;
-			goto skipfsuid;
+			goto skipfsuuid;
 		}
 
 		if (0) {
