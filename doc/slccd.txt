@@ -31,3 +31,7 @@ perform the read I/O directly.
 Otherwise, the "last use" field is updated for the data region in
 question so that it stays in the cache and the data is returned to the
 client.
+
+There is no need to build "local cache" support directly into
+mount_slash taking this route.  Local cache is provided by running an
+instance of slccd on the local machine.
