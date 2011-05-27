@@ -20,8 +20,9 @@
 /*
  * Routines implementing replication features in the MDS.
  *
- * This ranges from tracking the replication state of each bmap's copy on
- * each ION and managing replication requests and persistent behavior.
+ * This ranges from tracking the replication state of each bmap's copy
+ * on each ION and managing replication requests and persistent
+ * behavior.
  */
 
 #include <sys/param.h>
