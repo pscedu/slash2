@@ -391,30 +391,8 @@ API rename
   if this gets resolves, we should remove the code that explicitly
   invalidates FUSE child dentries of a directory when handling CHMOD
 
-lcache
-- slimmns_format on fsroot.  format:
-	.slmd/fidns/0/0/0/fid_gen (metadata)
-	.slmd/fidns/0/0/0/fid_gen_data
-	.slmd/lcache.pjl
-- lcache-add:
-	on startup, retrigger any lcache-add work that needs to be done
-	log action
-	add items
-	remove log of action
-- lcache-remove:
-	log action
-	remove items
-	remove log of action
-- lcache-status:
-	lookup item and check lcache
-
-- we don't need to hold bod_crc in memory; only needed when doing disk I/O
-
 - move namespace in zfs into a subdir so we dont have to do any
   strcmp(fn, ".slmd") -> EPERM tricks
-
-- add msl local I/O cache support:
-  page in if fcmh_fid and gen and bmapgen's match what's in the cache
 
 - parse LNET_NETWORKS format for `lnets' variable and assign lnetname to
   addresses that resolve from the interface in the pair
