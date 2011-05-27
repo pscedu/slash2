@@ -702,57 +702,6 @@ msl_bmap_reap_init(struct bmapc_memb *bmap, const struct srt_bmapdesc *sbd)
 	lc_addtail(&bmapTimeoutQ, bmap);
 }
 
-/**
- * msl_bmap_to_csvc - Given a bmap, perform a series of lookups to
- *	locate the ION csvc.  The ION was chosen by the mds and
- *	returned in the msl_bmap_retrieve routine. msl_bmap_to_csvc
- *	queries the configuration to find the ION's private info - this
- *	is where the import pointer is kept.  If no import has yet been
- *	allocated a new is made.
- * @b: the bmap
- * Notes: the bmap is locked to avoid race conditions with import checking.
- *	the bmap's refcnt must have been incremented so that it is not
- *	freed from under us.
- * XXX Dev Needed: If the bmap is a read-only then any replica may be
- *	accessed (so long as it is recent).  Therefore
- *	msl_bmap_to_csvc() should have logic to accommodate this.
- */
-struct slashrpc_cservice *
-msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
-{
-	struct slashrpc_cservice *csvc;
-	struct sl_resm *resm;
-	int locked;
-
-	/* Sanity check on the opcnt.
-	 */
-	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
-
-	locked = BMAP_RLOCK(b);
-	resm = libsl_nid2resm(bmap_2_ion(b));
-	psc_assert(resm->resm_nid == bmap_2_ion(b));
-	BMAP_URLOCK(b, locked);
-
-	if (exclusive) {
-		csvc = slc_geticsvc(resm);
-		if (csvc)
-			psc_assert(csvc->csvc_import->imp_connection->
-			    c_peer.nid == bmap_2_ion(b));
-	} else {
-#if 0
-		/* grab a random resm from any replica */
-		for (n = 0; n < resm->resm_res->res_nnids; n++)
-			for (j = 0; j < resm->resm_res->res_nnids; j++) {
-				csvc = slc_geticsvc(resm);
-				if (csvc)
-					return (csvc);
-			}
-#endif
-		csvc = slc_geticsvc(resm);
-	}
-	return (csvc);
-}
-
 struct slashrpc_cservice *
 msl_try_get_replica_res(struct bmapc_memb *bcm, int iosidx)
 {
@@ -784,20 +733,44 @@ msl_try_get_replica_res(struct bmapc_memb *bcm, int iosidx)
 	return (NULL);
 }
 
+/**
+ * msl_bmap_to_csvc - Given a bmap, perform a series of lookups to
+ *	locate the ION csvc.  The ION was chosen by the MDS and
+ *	returned in the msl_bmap_retrieve routine.
+ * @b: the bmap
+ * @exclusive: whether to return connections to the specific ION the MDS
+ *	told us to use instead of any ION in any IOS whose state is
+ *	marked VALID for this bmap.
+ * XXX: If the bmap is a read-only then any replica may be accessed (so
+ *	long as it is recent).
+ */
 struct slashrpc_cservice *
-msl_bmap_choose_replica(struct bmapc_memb *b)
+msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 {
 	struct slashrpc_cservice *csvc;
 	struct fcmh_cli_info *fci;
 	struct psc_multiwait *mw;
 	struct rnd_iterator it;
+	struct sl_resm *resm;
+	int pidx, i, locked;
 	void *p;
-	int i;
 
 	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
 
-	fci = fcmh_get_pri(b->bcm_fcmh);
+	if (exclusive) {
+		locked = BMAP_RLOCK(b);
+		resm = libsl_nid2resm(bmap_2_ion(b));
+		psc_assert(resm->resm_nid == bmap_2_ion(b));
+		BMAP_URLOCK(b, locked);
 
+		csvc = slc_geticsvc(resm);
+		if (csvc)
+			psc_assert(csvc->csvc_import->imp_connection->
+			    c_peer.nid == bmap_2_ion(b));
+		return (csvc);
+	}
+
+	fci = fcmh_get_pri(b->bcm_fcmh);
 	mw = msl_getmw();
 	for (i = 0; i < 2; i++) {
 		psc_multiwait_reset(mw);
@@ -818,7 +791,8 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 		FOREACH_RND(&it, fci->fci_nrepls) {
 			if (fci->fci_reptbl[it.ri_rnd_idx].bs_id == prefIOS)
 				continue;
-			csvc = msl_try_get_replica_res(b, it.ri_rnd_idx);
+			csvc = msl_try_get_replica_res(b,
+			    it.ri_rnd_idx);
 			if (csvc) {
 				psc_multiwait_leavecritsect(mw);
 				return (csvc);
@@ -829,8 +803,8 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 			break;
 
 		/*
-		 * Still nothing, go into multiwait, awaking periodically for
-		 * cancelling or ceiling time out.
+		 * No connection was immediately available; wait a small
+		 * amount of time to wait for any to come online.
 		 */
 		psc_multiwait_secs(mw, &p, 5);
 	}
@@ -1114,8 +1088,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 
 	op = r->biorq_flags & BIORQ_WRITE ? SRMT_WRITE : SRMT_READ;
 
-	csvc = (op == SRMT_WRITE) ?
-	    msl_bmap_to_csvc(bcm, 1) : msl_bmap_choose_replica(bcm);
+	csvc = msl_bmap_to_csvc(bcm, op == SRMT_WRITE);
 	if (csvc == NULL)
 		goto error;
 
@@ -1378,9 +1351,8 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	}
 
  retry:
-	csvc = (r->biorq_bmap->bcm_flags & BMAP_WR) ?
-	    msl_bmap_to_csvc(r->biorq_bmap, 1) :
-	    msl_bmap_choose_replica(r->biorq_bmap);
+	csvc = msl_bmap_to_csvc(r->biorq_bmap,
+	    r->biorq_bmap->bcm_flags & BMAP_WR);
 	if (csvc == NULL) {
 		rc = -ENOTCONN;
 		goto error;
