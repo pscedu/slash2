@@ -87,8 +87,9 @@ The default is
 .\"		and the machine's networking configuration.
 .\"		EOF
 .\"	subsys => {
-.\"		bmap => qq{Block map structures},
-.\"		fcmh => qq{.Tn FID\ncache members},
+.\"		bmap	=> "Block map structures",
+.\"		fcmh	=> ".Tn FID\ncache members",
+.\"		slvr	=> "Sliver\n.Pq Tn I/O No slab\nhandling",
 .\"	},
 .Sh ENVIRONMENT
 .Bl -tag -width 3n
@@ -251,6 +252,10 @@ Default
 cache members
 .It Cm mem
 Memory allocations and releases
+.It Cm slvr
+Sliver
+.Pq Tn I/O No slab
+handling
 .El
 .Pp
 Examples:
