@@ -113,8 +113,6 @@ int				 allow_root_uid = 1;
 struct psc_vbitmap		 msfsthr_uniqidmap = VBITMAP_INIT_AUTO;
 psc_spinlock_t			 msfsthr_uniqidmap_lock = SPINLOCK_INIT;
 
-struct slash_creds		 rootcreds = { 0, 0 };
-
 /* number of attribute prefetch in readdir() */
 int				 nstb_prefetch = DEF_READDIR_NENTS;
 

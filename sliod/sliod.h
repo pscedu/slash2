@@ -83,8 +83,6 @@ __dead void	slictlthr_main(const char *);
 
 int		iod_inode_getinfo(struct slash_fidgen *, uint64_t *, uint64_t *, uint32_t *);
 
-extern struct slash_creds	 rootcreds;
-
 extern struct srt_statfs	 sli_ssfb;
 extern psc_spinlock_t		 sli_ssfb_lock;
 

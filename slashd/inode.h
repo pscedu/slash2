@@ -129,6 +129,9 @@ int	mds_inode_read(struct slash_inode_handle *);
 int	mds_inode_write(struct slash_inode_handle *, void *, void *);
 int	mds_inox_write(struct slash_inode_handle *, void *, void *);
 
+int	mds_inox_load_locked(struct slash_inode_handle *);
+int	mds_inox_ensure_loaded(struct slash_inode_handle *);
+
 extern struct sl_ino_compat sl_ino_compat_table[];
 
 static __inline void

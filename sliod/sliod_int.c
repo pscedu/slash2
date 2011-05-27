@@ -44,8 +44,6 @@
 #include "sliod.h"
 #include "slvr.h"
 
-struct slash_creds rootcreds = { 0, 0 };
-
 int
 iod_inode_getinfo(struct slash_fidgen *fg, uint64_t *size,
     uint64_t *nblks, uint32_t *utimgen)
