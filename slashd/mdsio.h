@@ -38,6 +38,10 @@ struct srt_stat;
 
 typedef uint64_t mdsio_fid_t;
 
+struct mdsio_fh {
+	void *fh;
+};
+
 /* callback to get a SLASH2 FID */
 typedef slfid_t (*sl_getslfid_cb_t)(void);
 

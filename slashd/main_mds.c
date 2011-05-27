@@ -65,6 +65,7 @@ struct psc_poolmaster	 upsched_poolmaster;
 
 struct slash_creds	 rootcreds = { 0, 0 };
 struct pscfs		 pscfs;
+uint64_t		 fsuuid;
 
 int
 psc_usklndthr_get_type(const char *namefmt)
@@ -155,6 +156,7 @@ main(int argc, char *argv[])
 {
 	char *zpcachefn = NULL, *zpname;
 	const char *cfn, *sfn;
+	mdsio_fid_t mf;
 	int rc, c;
 
 	/* gcrypt must be initialized very early on */
@@ -250,6 +252,45 @@ main(int argc, char *argv[])
 	if (rc)
 		psc_fatalx("lookup %s/%s dir: %s", SL_RPATH_META_DIR,
 		    SL_RPATH_TMP_DIR, slstrerror(rc));
+
+	rc = mdsio_lookup(mds_metadir_inum, SL_FN_FSUUID, &mf,
+	    &rootcreds, NULL);
+	if (rc)
+		psclog_errorx("lookup %s/%s: %s", SL_RPATH_META_DIR,
+		    SL_FN_FSUUID, slstrerror(rc));
+	else {
+		char *endp, buf[17];
+		size_t nb;
+		void *h;
+
+		rc = mdsio_opencreate(mf, &rootcreds, O_RDONLY, 0, NULL,
+		    NULL, NULL, &h, NULL, NULL, 0);
+		if (rc)
+			goto skipfsuid;
+		rc = mdsio_read(&rootcreds, buf, sizeof(buf), &nb, 0,
+		    h);
+		mdsio_release(&rootcreds, h);
+
+		if (rc)
+			goto skipfsuid;
+		if (nb != sizeof(buf)) {
+			rc = SLERR_SHORTIO;
+			goto skipfsuid;
+		}
+		fsuuid = strtoll(buf, endp, 16);
+		if (*endp || endp == buf) {
+			rc = EINVAL;
+			goto skipfsuid;
+		}
+
+		if (0) {
+ skipfsuuid:
+			psclog_errorx("%s/%s: %s",
+			    SL_RPATH_META_DIR, SL_FN_FSUUID,
+			    slstrerror(rc));
+			fsuuid = 0;
+		}
+	}
 
 	zfsslash2_build_immns_cache();
 
