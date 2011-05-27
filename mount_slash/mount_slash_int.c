@@ -752,7 +752,7 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 	struct psc_multiwait *mw;
 	struct rnd_iterator it;
 	struct sl_resm *resm;
-	int pidx, i, locked;
+	int i, locked;
 	void *p;
 
 	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
@@ -1248,7 +1248,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry *bmpce)
 	iov.iov_base = bmpce->bmpce_base;
 	iov.iov_len  = BMPC_BUFSZ;
 
-	csvc = msl_bmap_choose_replica(b);
+	csvc = msl_bmap_to_csvc(b, 0);
 	if (csvc == NULL) {
 		rc = ENOTCONN;
 		goto error;
