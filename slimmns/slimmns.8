@@ -14,7 +14,7 @@
 .\" without express or implied warranty.
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
-.Dd January 20, 2011
+.Dd May 26, 2011
 .Dt SLMKFS 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -61,6 +61,124 @@ server.
 Completely wipe all existing data on the destination file system before
 initializing the internal structure.
 .El
+.\" %PFL_INCLUDE $PFL_BASE/doc/env.mdoc {
+.Sh ENVIRONMENT
+.Bl -tag -width 3n
+.It Ev PSC_DUMPSTACK Pq debugging
+When segmentation violations or fatal error conditions occur, try to
+print a stack trace if this variable is defined.
+.It Ev PSC_LOG_FILE
+This path specifies the file name where log messages are written.
+.It Ev PSC_LOG_FORMAT
+This
+.Xr printf 3 Ns -like
+value is prepended to each log message reported.
+The following specifiers are recognized:
+.Pp
+.Bl -tag -offset 5n -compact -width 6n
+.It Ic B
+source code file base name
+.It Ic D Ns Aq Ar fmt
+.Xr strftime 3 Ns -like
+format of time
+.It Ic F
+source code function name
+.It Ic f
+source code file full path name
+.It Ic H
+full system host name
+.It Ic h
+short system host name
+.It Ic i
+.Tn ID
+of daemon thread which generated log message
+.It Ic L
+numeric level of log message importance
+.It Ic l
+source code file line number
+.It Ic P
+file system request's originating process'
+.Tn PID
+.It Ic N
+daemon base name
+.It Ic n
+symbolic thread name which generated log message
+.It Ic r
+.Tn MPI
+rank of process
+.It Ic s
+seconds since Epoch
+.Pq same as Li %D\*(Lt%s\*(Gt
+.It Ic t
+subsystem
+.Tn ID
+which generated log message
+.It Ic T
+subsystem name which generated log message
+.It Ic U
+file system request's originating process' user
+.Tn ID
+.It Ic u
+microseconds into current second when generated
+.El
+.Pp
+Examples:
+.Bd -literal -offset indent
+[%D<%s>:%06u %n %F %l]
+.Ed
+.It Ev PSC_LOG_LEVEL
+Each log message has an associated
+.Dq level
+numeric value which can be used to filter granularity of importance.
+This environment variable specifies the minimum level of importance
+necessary for messages to be reported.
+.Pp
+The following values are recognized:
+.Pp
+.Bl -tag -compact -offset 3n -width 13n
+.It Cm 0 , none
+No logging
+.It Cm 1 , error
+Recoverable failures
+.It Cm 2 , warn
+Something wrong which requires attention
+.Pq default
+.It Cm 3 , notice
+Something unusual which recommends attention
+.It Cm 4 , info
+Informational messages
+.It Cm 5 , debug
+Debugging messages
+.It Cm 6 , trace , all
+Full trace messages
+.El
+.It Ev PSC_LOG_LEVEL_ Ns Ar subsys
+Like
+.Ev PSC_LOG_LEVEL ,
+but applies only to the given
+.Ar subsys .
+.Pp
+.Ar subsys
+may be one of the following:
+.Pp
+.Bl -tag -compact -offset 3n -width 13n
+.It Cm def
+Default
+.It Cm mem
+Memory allocations and releases
+.El
+.Pp
+Examples:
+.Bd -literal -offset indent
+PSC_LOG_LEVEL_mem=debug
+.Ed
+.It Ev PSC_MAX_NMEMMAPS
+On Linux, specify the number of memory maps the process address space is
+allowed to be divided into via
+.Pa /proc/sys/vm/max_map_count .
+Defaults to one million.
+.El
+.\" }%
 .Sh FILES
 .Bl -tag -width Pa -compact
 .It Ar fsroot Ns Pa /.slfidns
@@ -69,6 +187,5 @@ immutable namespace
 replication queue
 .El
 .Sh SEE ALSO
-.Xr pflenv 7 ,
 .Xr sladm 7 ,
 .Xr slashd 8
