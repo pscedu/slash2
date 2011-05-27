@@ -172,6 +172,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct fcmh_iod_info);
 	PRTYPE(struct fcmh_mds_info);
 	PRTYPE(struct fidc_membh);
+	PRTYPE(struct mdsio_fh);
 	PRTYPE(struct mdsio_ops);
 	PRTYPE(struct msbmfl_thread);
 	PRTYPE(struct msbmflra_thread);
@@ -255,6 +256,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_bmap_release_rep);
 	PRTYPE(struct srm_bmap_release_req);
 	PRTYPE(struct srm_bmap_wake_req);
+	PRTYPE(struct srm_connect_rep);
 	PRTYPE(struct srm_connect_req);
 	PRTYPE(struct srm_create_rep);
 	PRTYPE(struct srm_create_req);
