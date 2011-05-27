@@ -78,7 +78,7 @@ struct bmap_extra_state {
  * bmap_ondisk - Bmap over-wire/on-disk structure.  This structure maps
  *	the persistent state of the bmap within the inode's metafile.
  * @bod_bhcrc: on-disk checksum.
-*/
+ */
 struct bmap_ondisk {
 	struct bmap_core_state	bod_corestate;
 	struct bmap_extra_state	bod_extrastate;
@@ -232,8 +232,7 @@ struct bmapc_memb {
 #define BMAP_SLVR_DATA		(1 << 0)	/* Data present, otherwise slvr is hole */
 #define BMAP_SLVR_CRC		(1 << 1)	/* Has valid CRC */
 #define BMAP_SLVR_CRCDIRTY	(1 << 2)
-#define BMAP_SLVR_WANTREPL	(1 << 3)	/* Queued for replication */
-#define _BMAP_SLVR_LAST		4
+#define _BMAP_SLVR_LAST		3
 
 /*
  * Routines to get and fetch a bmap replica's status.
@@ -265,8 +264,7 @@ struct bmapc_memb {
 /* bmap replication policies */
 #define BRPOL_ONETIME		0
 #define BRPOL_PERSIST		1
-#define BRPOL_STAGE		2
-#define NBRP			3
+#define NBRP			2
 
 #define DEBUG_BMAPOD(level, bmap, fmt, ...)				\
 	_log_debug_bmapod(PFL_CALLERINFOSS(SLSS_BMAP), (level), (bmap),	\

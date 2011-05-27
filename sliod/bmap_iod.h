@@ -138,6 +138,8 @@ struct bmap_iod_info {
 #define bmap_2_biodi_slvrs(b)	(&bmap_2_biodi(b)->biod_slvrs)
 #define bmap_2_ondisk(b)	((struct bmap_ondisk *)&(b)->bcm_corestate)
 
+#define BMAP_SLVR_WANTREPL	(BMAP_SLVR_LAST << 1)	/* Queued for replication */
+
 #define BIOD_LOCK(bii)		BMAP_LOCK(bii_2_bmap(bii))
 #define BIOD_ULOCK(bii)		BMAP_ULOCK(bii_2_bmap(bii))
 #define BIOD_RLOCK(bii)		BMAP_RLOCK(bii_2_bmap(bii))
@@ -145,7 +147,7 @@ struct bmap_iod_info {
 #define BIOD_TRYLOCK(bii)	BMAP_TRYLOCK(bii_2_bmap(bii))
 #define BIOD_LOCK_ENSURE(bii)	BMAP_LOCK_ENSURE(bii_2_bmap(bii))
 
-#define BIOD_CRCUP_MAX_AGE	2		/* in seconds */
+#define BIOD_CRCUP_MAX_AGE	2			/* in seconds */
 
 uint64_t	bim_getcurseq(void);
 void		bim_init(void);
