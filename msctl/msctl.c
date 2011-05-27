@@ -67,10 +67,6 @@ struct replrq_arg {
 	int			 bmapno;
 };
 
-struct lcache_arg {
-	int			 opcode;
-};
-
 struct bmap_range {
 	sl_bmapno_t		 bmin;
 	sl_bmapno_t		 bmax;
@@ -436,35 +432,6 @@ cmd_bmap_repl_policy(int ac, char **av)
 }
 
 void
-cmd_lcache_one(const char *fn, __unusedx const struct stat *stb,
-    void *arg)
-{
-	struct msctlmsg_fncmd *mfc;
-	struct lcache_arg *a = arg;
-
-	mfc = psc_ctlmsg_push(a->opcode, sizeof(*mfc));
-	mfc->mfc_fid = fn2fid(fn);
-}
-
-void
-cmd_lcache(int ac, char **av)
-{
-	struct lcache_arg arg;
-	int i;
-
-	if (ac < 2)
-		errx(1, "%s: no file(s) specified", av[0]);
-	if (strcmp(av[0], "lcache-add") == 0)
-		arg.opcode = MSCMT_LCACHE_ADD;
-	else if (strcmp(av[0], "lcache-remove") == 0)
-		arg.opcode = MSCMT_LCACHE_REMOVE;
-	else
-		arg.opcode = MSCMT_LCACHE_STATUS;
-	for (i = 1; i < ac; i++)
-		walk(av[i], cmd_lcache_one, &arg);
-}
-
-void
 cmd_import_one(const char *fn, __unusedx const struct stat *stb,
     __unusedx void *arg)
 {
@@ -775,9 +742,6 @@ psc_ctl_prthr_t psc_ctl_prthrs[] = {
 struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {
 	{ "bmap-repl-policy:",		cmd_bmap_repl_policy },
 	{ "import",			cmd_import },
-	{ "lcache-add",			cmd_lcache },
-	{ "lcache-remove",		cmd_lcache },
-	{ "lcache-status",		cmd_lcache },
 	{ "new-bmap-repl-policy:",	cmd_new_bmap_repl_policy },
 //	{ "reconfig",			cmd_reconfig },
 	{ "repl-add:",			cmd_replrq },
@@ -823,11 +787,9 @@ usage(void)
 
 struct psc_ctlopt opts[] = {
 	{ 'H', PCOF_FLAG, &psc_ctl_noheader },
-	{ 'h', PCOF_FUNC, psc_ctlparse_hashtable },
 	{ 'I', PCOF_FLAG, &psc_ctl_inhuman },
 	{ 'i', PCOF_FUNC, psc_ctlparse_iostats },
 	{ 'L', PCOF_FUNC, psc_ctlparse_lc },
-	{ 'm', PCOF_FUNC, psc_ctlparse_meter },
 	{ 'n', PCOF_FLAG, &psc_ctl_nodns },
 	{ 'P', PCOF_FUNC, psc_ctlparse_pool },
 	{ 'p', PCOF_FUNC, psc_ctlparse_param },

@@ -15,7 +15,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES rpc fuse %
-.Dd May 18, 2011
+.Dd May 27, 2011
 .Dt MSCTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -61,7 +61,8 @@ behavior.
 .\"			for checking the replication status of bmaps and retrieving the current
 .\"			default replication policy of files.
 .\"			.Pp
-.\"			This is the default mode.
+.\"			This is the default mode, although the policy is always inherited from the
+.\"			parent directory when new files and subdirectories are created.
 .\"			.It Cm persist
 .\"			Perpetually propagate any new
 .\"			.Tn I/O
@@ -94,29 +95,6 @@ behavior.
 .\"			.Tn SLASH
 .\"			file system at the root specified by
 .\"			.Ar dst .
-.\"			EOF
-.\"		"lcache-add Ar fn ..." => <<'EOF',
-.\"			Specify that the contents of the given file
-.\"			.Ar fn
-.\"			be copied to the local cache store specified via the
-.\"			.Ic fs_root
-.\"			.Xr slash.conf 5
-.\"			configuration option.
-.\"			Non-stale data populated from
-.\"			.Tn I/O
-.\"			servers residing in the cache will be accessed instead of consulting
-.\"			remote servers for each read operation.
-.\"			EOF
-.\"		"lcache-remove Ar fn ..." => <<'EOF',
-.\"			Remove any locally cached data content of the specified file
-.\"			.Ar fn .
-.\"			See
-.\"			.Cm local-cache
-.\"			for more information about the local cache store.
-.\"			EOF
-.\"		"lcache-status Ar fn ..." => <<'EOF',
-.\"			Display status of local cache residency of the specified file
-.\"			.Ar fn .
 .\"			EOF
 .\"		"new-bmap-repl-policy Ns Oo = Ns Ar repl-policy Oc Ar fn ..." => <<'EOF',
 .\"			Set the default replication policy for new bmaps
@@ -236,7 +214,8 @@ See
 for checking the replication status of bmaps and retrieving the current
 default replication policy of files.
 .Pp
-This is the default mode.
+This is the default mode, although the policy is always inherited from the
+parent directory when new files and subdirectories are created.
 .It Cm persist
 Perpetually propagate any new
 .Tn I/O
@@ -268,26 +247,6 @@ into the
 .Tn SLASH
 file system at the root specified by
 .Ar dst .
-.It Cm lcache-add Ar fn ...
-Specify that the contents of the given file
-.Ar fn
-be copied to the local cache store specified via the
-.Ic fs_root
-.Xr slash.conf 5
-configuration option.
-Non-stale data populated from
-.Tn I/O
-servers residing in the cache will be accessed instead of consulting
-remote servers for each read operation.
-.It Cm lcache-remove Ar fn ...
-Remove any locally cached data content of the specified file
-.Ar fn .
-See
-.Cm local-cache
-for more information about the local cache store.
-.It Cm lcache-status Ar fn ...
-Display status of local cache residency of the specified file
-.Ar fn .
 .It Cm new-bmap-repl-policy Ns Oo = Ns Ar repl-policy Oc Ar fn ...
 Set the default replication policy for new bmaps
 .Po
@@ -402,10 +361,7 @@ Suppress
 lookups for network addresses.
 .\" }%
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/p.mdoc {
-.\"	subsys => {
-.\"		bmap		=> qq{Block map structures},
-.\"		fcmh		=> qq{.Tn FID\ncache members}
-.\"	}
+.\"	log_xr => "in\n.Xr mount_slash 8\n"
 .It Fl p Ar paramspec
 Query/manipulate operational parameters.
 .Ar paramspec
@@ -456,54 +412,28 @@ If the
 assignment operator is used, this file will not be truncated.
 .It Cm log.format
 The header prepended to server log messages.
-See
-.Xr pflenv 7
+See the description of
+.Ev PSC_LOG_FORMAT
+in
+.Xr mount_slash 8
 for details on this format.
 .It Cm log.level Ns Op . Ns Ar subsystem
 The logging level of debug message output.
 .Pp
-.Ar subsystem
-may be one of the following:
-.Pp
-.Bl -tag -compact -offset 3n -width 13n
-.It Cm bmap
-Block map structures
-.It Cm def
-Default
-.It Cm fcmh
-.Tn FID
-cache members
-.It Cm lnet
-Lustre networking stack
-.It Cm mem
-Memory allocations and releases
-.It Cm rpc
-Network remote procedure calls
-.El
-.Pp
+See the description of
+.Ev PSC_LOG_LEVEL_ Ns Ar subsys
+in
+.Xr mount_slash 8
+for a list of available subsystems.
 If
 .Ar subsystem
-is left unspecified, all subsystems will be accessed.
+is not specified, all subsystems will be accessed.
 .Pp
-The log level value may be one of the following:
-.Pp
-.Bl -tag -compact -offset 3n -width 13n
-.It Cm 0 , none
-No logging
-.It Cm 1 , error
-Recoverable failures
-.It Cm 2 , warn
-Something wrong which requires attention
-.Pq default
-.It Cm 3 , notice
-Something unusual which recommends attention
-.It Cm 4 , info
-Informational messages
-.It Cm 5 , debug
-Debugging messages
-.It Cm 6 , trace , all
-All messages
-.El
+See the description of
+.Ev PSC_LOG_LEVEL
+in
+.Xr mount_slash 8
+for recognized log level values.
 .It Cm pool. Ns Ar name
 Access the memory pool specified by
 .Ar name .
@@ -725,6 +655,8 @@ files
 If
 .Ar subspec
 is left unspecified, all list caches will be accessed.
+.It Cm lni
+Lustre network interfaces.
 .It Cm loglevels
 Thread logging levels.
 .Ar subspec
@@ -796,7 +728,7 @@ display additional information about each operation being performed.
 .\"		q{msbflushthr Ns Ar %d}		=> qq{Bmap flusher},
 .\"		q{msbrathr}			=> qq{Bmap read-ahead queuer},
 .\"		q{msbrlsthr}			=> qq{Bmap timed releaser},
-.\"		q{msctlacthr}			=> qq{.Nm\nconnection acceptor},
+.\"		q{msctlacthr}			=> qq{.Nm\nconnection acceptor/multiplexor},
 .\"		q{msctlthr}			=> qq{.Nm\nconnection processor},
 .\"		q{mseqpollthr}			=> qq{Lustre\n.Fn LNetEQPoll\nissuer},
 .\"		q{msfsmgrthr}			=> qq{Userland file system manager\n.Pq e.g. FUSE},
@@ -825,7 +757,7 @@ Bmap read-ahead queuer
 Bmap timed releaser
 .It Cm msctlacthr
 .Nm
-connection acceptor
+connection acceptor/multiplexor
 .It Cm msctlthr
 .Nm
 connection processor
@@ -863,10 +795,6 @@ current directory to a destination
 server:
 .Pp
 .D1 $ msctl -R repl-add:dst-io@SITE:* .
-.Pp
-Locally cache the entire data store:
-.Pp
-.D1 $ msctl -R lcache-add .
 .Sh FILES
 .Bl -tag -width Pa
 .It Pa /var/run/mount_slash. Ns Ic %h Ns Pa .sock
