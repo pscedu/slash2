@@ -85,9 +85,13 @@ The default is
 .El
 .\" %PFL_INCLUDE $PFL_BASE/doc/env.mdoc {
 .\"	lnets_note => <<'EOF',
-.\"		Override the default Lustre networks determined from
+.\"		.Pp
+.\"		This is determined by default automatically from
 .\"		.Pa slash.conf
-.\"		and the machine's networking configuration.
+.\"		and the machine's networking configuration but can be
+.\"		overridden if set specifically in
+.\"		.Pa slash.conf
+.\"		or in the environment.
 .\"		EOF
 .\"	subsys => {
 .\"		bmap	=> "Block map structures",
@@ -141,9 +145,13 @@ networks and corresponding Lustre network names.
 .It Ev LNET_NETWORKS
 The list of networks and interfaces known to the Lustre networking
 stack.
-Override the default Lustre networks determined from
+.Pp
+This is determined by default automatically from
 .Pa slash.conf
-and the machine's networking configuration.
+and the machine's networking configuration but can be
+overridden if set specifically in
+.Pa slash.conf
+or in the environment.
 .Pp
 Examples:
 .Bd -literal -offset indent
