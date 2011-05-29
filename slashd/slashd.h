@@ -187,11 +187,13 @@ struct resm_mds_info {
 	atomic_t		  rmmi_refcnt;		/* #CLIs using this ion */
 };
 
-#define RMMI_TRYLOCK(rmmi)	psc_mutex_trylock(&(rmmi)->rmmi_mutex)
-#define RMMI_RLOCK(rmmi)	psc_mutex_reqlock(&(rmmi)->rmmi_mutex)
-#define RMMI_TRYRLOCK(rmmi, lk)	psc_mutex_tryreqlock(&(rmmi)->rmmi_mutex, (lk))
-#define RMMI_URLOCK(rmmi, lk)	psc_mutex_ureqlock(&(rmmi)->rmmi_mutex, (lk))
 #define RMMI_HASLOCK(rmmi)	psc_mutex_haslock(&(rmmi)->rmmi_mutex)
+#define RMMI_LOCK(rmmi)		psc_mutex_lock(&(rmmi)->rmmi_mutex)
+#define RMMI_RLOCK(rmmi)	psc_mutex_reqlock(&(rmmi)->rmmi_mutex)
+#define RMMI_TRYLOCK(rmmi)	psc_mutex_trylock(&(rmmi)->rmmi_mutex)
+#define RMMI_TRYRLOCK(rmmi, lk)	psc_mutex_tryreqlock(&(rmmi)->rmmi_mutex, (lk))
+#define RMMI_ULOCK(rmmi)	psc_mutex_unlock(&(rmmi)->rmmi_mutex)
+#define RMMI_URLOCK(rmmi, lk)	psc_mutex_ureqlock(&(rmmi)->rmmi_mutex, (lk))
 
 static __inline struct resm_mds_info *
 resm2rmmi(struct sl_resm *resm)
