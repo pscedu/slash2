@@ -126,6 +126,7 @@ slm_rpc_ion_pack_bmapminseq(struct pscrpc_msg *m)
 void
 slm_rpc_ion_unpack_statfs(struct pscrpc_request *rq, int type)
 {
+	struct resm_mds_info *rmmi;
 	struct sl_mds_iosinfo *si;
 	struct srt_statfs *f;
 	struct pscrpc_msg *m;
@@ -150,8 +151,11 @@ slm_rpc_ion_unpack_statfs(struct pscrpc_request *rq, int type)
 		psclog_errorx("unknown peer");
 		return;
 	}
+	rmmi = resm2rmmi(resm);
+	RMMI_LOCK(rmmi);
 	si = res2iosinfo(resm->resm_res);
 	memcpy(&si->si_ssfb, f, sizeof(*f));
+	RMMI_UNLOCK(rmmi);
 }
 
 int
