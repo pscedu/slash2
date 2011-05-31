@@ -86,6 +86,11 @@ struct slmds_jent_ino_addrepl {
 	uint32_t			sjir_nrepls;
 } __packed;
 
+struct slmds_jent_ino_replpol {
+	slfid_t				sjip_fid;
+	uint32_t			sjip_replpol;
+} __packed;
+
 struct slmds_jent_bmap_assign {
 	lnet_nid_t			sjba_ion_nid;
 	lnet_process_id_t		sjba_lastcli;
