@@ -236,6 +236,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slmds_jent_bmapseq);
 	PRTYPE(struct slmds_jent_crc);
 	PRTYPE(struct slmds_jent_ino_addrepl);
+	PRTYPE(struct slmds_jent_ino_replpol);
 	PRTYPE(struct slmds_jent_namespace);
 	PRTYPE(struct slmds_jent_repgen);
 	PRTYPE(struct slmrcm_thread);
@@ -383,7 +384,7 @@ main(int argc, char *argv[])
 	PRVAL(MS_READAHEAD_MAXPGS);
 	PRVAL(MS_READAHEAD_MINSEQ);
 	PRVAL(NBREPLST);
-	PRVAL(NBRP);
+	PRVAL(NBRPOL);
 	PRVAL(NSLVRCRC_THRS);
 	PRVAL(NUM_BMAP_FLUSH_THREADS);
 	PRVAL(REPL_MAX_INFLIGHT_SLVRS);
