@@ -49,7 +49,7 @@ mds_inode_read(struct slash_inode_handle *ih)
 	int rc, locked;
 	size_t nb;
 
-	locked = reqlock(&ih->inoh_lock); /* XXX bad on slow archiver */
+	locked = INOH_RLOCK(ih); /* XXX bad on slow archiver */
 	psc_assert(ih->inoh_flags & INOH_INO_NOTLOADED);
 
 	memset(&ih->inoh_ino, 0, sizeof(ih->inoh_ino));
@@ -100,7 +100,7 @@ mds_inode_read(struct slash_inode_handle *ih)
 			DEBUG_INOH(PLL_INFO, ih, "successfully loaded inode od");
 		}
 	}
-	ureqlock(&ih->inoh_lock, locked);
+	INOH_URLOCK(ih, locked);
 	return (rc);
 }
 
@@ -263,7 +263,7 @@ mds_inox_ensure_loaded(struct slash_inode_handle *ih)
 }
 
 int
-mds_inode_addrepl_update(struct slash_inode_handle *inoh,
+mds_inode_addrepl_update(struct slash_inode_handle *ih,
     sl_ios_id_t ios, uint32_t pos, int log)
 {
 	struct slmds_jent_ino_addrepl jrir;
@@ -272,21 +272,20 @@ mds_inode_addrepl_update(struct slash_inode_handle *inoh,
 
 	logf = log ? mds_inode_addrepl_log : NULL;
 
-	locked = reqlock(&inoh->inoh_lock);
+	locked = INOH_RLOCK(ih);
 
 	if (log) {
-		jrir.sjir_fid = fcmh_2_fid(inoh->inoh_fcmh);
+		jrir.sjir_fid = fcmh_2_fid(ih->inoh_fcmh);
 		jrir.sjir_ios = ios;
 		jrir.sjir_pos = pos;
-		jrir.sjir_nrepls = inoh->inoh_ino.ino_nrepls;
+		jrir.sjir_nrepls = ih->inoh_ino.ino_nrepls;
 	}
 	if (pos < SL_DEF_REPLICAS)
-		rc = mds_inode_write(inoh, logf, &jrir);
+		rc = mds_inode_write(ih, logf, &jrir);
 	else
-		rc = mds_inox_write(inoh, logf, &jrir);
+		rc = mds_inox_write(ih, logf, &jrir);
 	psclog_info("update: fid="SLPRI_FID" log=%d",
-	    fcmh_2_fid(inoh->inoh_fcmh), log);
-
-	ureqlock(&inoh->inoh_lock, locked);
+	    fcmh_2_fid(ih->inoh_fcmh), log);
+	INOH_URLOCK(ih, locked);
 	return (rc);
 }

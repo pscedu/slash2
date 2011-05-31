@@ -86,7 +86,6 @@ struct slash_inode_handle {
 	struct slash_inode_od	 inoh_ino;
 	struct slash_inode_extras_od *inoh_extras;
 	struct fidc_membh	*inoh_fcmh;
-	psc_spinlock_t		 inoh_lock;
 	int			 inoh_flags;
 };
 
@@ -95,11 +94,12 @@ struct slash_inode_handle {
 #define	INOH_INO_NOTLOADED	(1 << 2)
 #define	INOH_IN_IO		(1 << 3)			/* being written to ZFS */
 
-#define INOH_LOCK(ih)		spinlock(&(ih)->inoh_lock)
-#define INOH_ULOCK(ih)		freelock(&(ih)->inoh_lock)
-#define INOH_RLOCK(ih)		reqlock(&(ih)->inoh_lock)
-#define INOH_URLOCK(ih, lk)	ureqlock(&(ih)->inoh_lock, (lk))
-#define INOH_LOCK_ENSURE(ih)	LOCK_ENSURE(&(ih)->inoh_lock)
+#define INOH_GETLOCK(ih)	(&(ih)->inoh_fcmh->fcmh_lock)
+#define INOH_LOCK(ih)		spinlock(INOH_GETLOCK(ih))
+#define INOH_ULOCK(ih)		freelock(INOH_GETLOCK(ih))
+#define INOH_RLOCK(ih)		reqlock(INOH_GETLOCK(ih))
+#define INOH_URLOCK(ih, lk)	ureqlock(INOH_GETLOCK(ih), (lk))
+#define INOH_LOCK_ENSURE(ih)	LOCK_ENSURE(INOH_GETLOCK(ih))
 
 #define inoh_2_mdsio_data(ih)	fcmh_2_mdsio_data((ih)->inoh_fcmh)
 #define inoh_2_fsz(ih)		fcmh_2_fsz((ih)->inoh_fcmh)
@@ -137,7 +137,6 @@ slash_inode_handle_init(struct slash_inode_handle *ih,
     struct fidc_membh *f)
 {
 	ih->inoh_fcmh = f;
-	INIT_SPINLOCK(&ih->inoh_lock);
 	ih->inoh_flags = INOH_INO_NOTLOADED;
 }
 
