@@ -253,12 +253,10 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 		   utimgen, crcup->utimgen);
 
 	fcmh_set_repl_nblks(f, idx, crcup->nblks);
-	INOH_LOCK(ih);
 	if (idx >= SL_DEF_REPLICAS)
 		rc = mds_inox_write(ih, NULL, NULL);
 	else
 		rc = mds_inode_write(ih, NULL, NULL);
-	INOH_ULOCK(ih);
 //	if (rc)
 //		goto out;
 
