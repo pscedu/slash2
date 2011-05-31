@@ -128,21 +128,12 @@ slm_fcmh_dtor(struct fidc_membh *fcmh)
 		PSCFREE(fmi->fmi_inodeh.inoh_extras);
 }
 
-void
-dump_ino(const struct slash_inode_od *ino)
-{
-	char buf[BUFSIZ];
-
-	_debug_ino(buf, sizeof(buf), ino);
-	printf("%s\n", buf);
-}
-
 static __inline void
 dump_inoh(const struct slash_inode_handle *ih)
 {
 	char buf[BUFSIZ];
 
-	_debug_ino(buf, sizeof(buf), &ih->inoh_ino);
+	_dump_ino(buf, sizeof(buf), &ih->inoh_ino);
 	printf("fl:"INOH_FLAGS_FMT" %s\n", DEBUG_INOH_FLAGS(ih), buf);
 }
 

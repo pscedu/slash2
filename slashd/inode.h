@@ -141,7 +141,7 @@ slash_inode_handle_init(struct slash_inode_handle *ih,
 }
 
 static __inline char *
-_debug_ino(char *buf, size_t siz, const struct slash_inode_od *ino)
+_dump_ino(char *buf, size_t siz, const struct slash_inode_od *ino)
 {
 	char nbuf[LINE_MAX], rbuf[LINE_MAX];
 	int nr, j;
@@ -180,7 +180,15 @@ _log_debug_inoh(const struct pfl_callerinfo *pfl_callerinfo, int level,
 	    "inoh@%p fcmh=%p f+g="SLPRI_FG" fl:%#x:"INOH_FLAGS_FMT" %s :: %s",
 	    ih, ih->inoh_fcmh, SLPRI_FG_ARGS(&ih->inoh_fcmh->fcmh_fg),
 	    ih->inoh_flags, DEBUG_INOH_FLAGS(ih),
-	    _debug_ino(buf, sizeof(buf), &ih->inoh_ino), mbuf);
+	    _dump_ino(buf, sizeof(buf), &ih->inoh_ino), mbuf);
+}
+
+static __inline void
+dump_ino(const struct slash_inode_od *ino)
+{
+	char buf[BUFSIZ];
+
+	fprintf(stderr, "%s", _dump_ino(buf, sizeof(buf), ino));
 }
 
 #endif /* _SLASHD_INODE_H_ */

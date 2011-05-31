@@ -47,7 +47,6 @@ dumpfid(const char *fn)
 	struct slash_inode_od ino;
 	struct iovec iovs[2];
 	uint64_t crc, od_crc;
-	char buf[BUFSIZ];
 	int fd, j, nr;
 	ssize_t rc;
 
@@ -71,8 +70,9 @@ dumpfid(const char *fn)
 		goto out;
 	}
 	psc_crc64_calc(&crc, &ino, sizeof(ino));
-	_dump_ino(buf, sizeof(buf), &ino);
-	printf("%s\t%s %s\n", fn, buf, crc == od_crc ? "OK" : "BAD");
+	printf("%s\t", fn);
+	dump_ino(&ino);
+	printf("   CRC %s\n", crc == od_crc ? "OK" : "BAD");
 
 	lseek(fd, SL_EXTRAS_START_OFF, SEEK_SET);
 	iovs[0].iov_base = &inox;
