@@ -278,7 +278,7 @@ main(int argc, char *argv[])
 			goto skipfsuuid;
 		}
 		fsuuid = strtoll(buf, &endp, 16);
-		if (*endp || endp == buf) {
+		if (*endp != '\n' || endp == buf) {
 			rc = EINVAL;
 			goto skipfsuuid;
 		}
