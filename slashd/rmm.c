@@ -73,7 +73,7 @@ slm_rmm_apply_update(struct srt_update_entry *entryp)
 	    entryp->namelen + entryp->namelen2);
 
 	localinfo = res2rpmi(nodeResProf)->rpmi_info;
-	rc = mds_redo_namespace(&sjnm, 0);
+	rc = mds_replay_namespace(&sjnm, 0);
 	if (rc)
 		psc_atomic32_inc(&localinfo->sp_stats.ns_stats[NS_DIR_RECV]
 		    [sjnm.sjnm_op][NS_SUM_FAIL]);
@@ -251,7 +251,7 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		if (mp->rc)
 			break;
 		mp->rc = mdsio_setattr(fcmh_2_mdsio_fid(p),
-		    &mq->req.sstb, mq->to_set, &rootcreds, &mp->cattr, 
+		    &mq->req.sstb, mq->to_set, &rootcreds, &mp->cattr,
 		    fcmh_2_mdsio_data(p), mds_namespace_log);
 		break;
 	}
@@ -299,9 +299,9 @@ slm_rmm_handler(struct pscrpc_request *rq)
 }
 
 int
-slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,  
-    struct slash_fidgen *nfg, char *name, char *newname, 
-    uint32_t mode, const struct slash_creds *creds, 
+slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
+    struct slash_fidgen *nfg, char *name, char *newname,
+    uint32_t mode, const struct slash_creds *creds,
     struct srt_stat *sstb, int32_t to_set)
 {
 	int rc, len, _siter;
@@ -338,7 +338,7 @@ slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
 	}
 	csvc = slm_getmcsvc(resm);
 	if (csvc == NULL)  {
-		psclog_info("Fail to connect to site %d", siteid);
+		psclog_info("unable to connect to site %d", siteid);
 		return (EIO);
 	}
 
@@ -383,54 +383,39 @@ slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
 		rc = mdsio_redo_mkdir(mq->fg.fg_fid, name, &mp->cattr);
 		if (!rc)
 			*sstb = mp->cattr;
-		else
-			psclog_error("Redo mkdir failed: fid="SLPRI_FID", name= %s", 
-			    mq->fg.fg_fid, name);
 		break;
 	    case SLM_FORWARD_RMDIR:
 		rc = mdsio_redo_rmdir(mq->fg.fg_fid, mp->fid, name);
-		if (rc)
-			psclog_error("Redo rmdir failed: fid="SLPRI_FID", name= %s", 
-			    mq->fg.fg_fid, name);
 		break;
 	    case SLM_FORWARD_CREATE:
 		rc = mdsio_redo_create(mq->fg.fg_fid, name, &mp->cattr);
 		if (!rc)
 			*sstb = mp->cattr;
-		else
-			psclog_error("Redo create failed: fid="SLPRI_FID", name= %s", 
-			    mq->fg.fg_fid, name);
 		break;
 	    case SLM_FORWARD_UNLINK:
 		rc = mdsio_redo_unlink(mq->fg.fg_fid, mp->fid, name);
-		if (rc)
-			psclog_error("Redo unlink failed: fid="SLPRI_FID", name= %s", 
-			    mq->fg.fg_fid, name);
 		break;
 	    case SLM_FORWARD_RENAME:
-		rc = mdsio_redo_rename(mq->fg.fg_fid, name, mq->nfg.fg_fid, newname, sstb);
+		rc = mdsio_redo_rename(mq->fg.fg_fid, name,
+		    mq->nfg.fg_fid, newname, sstb);
 		if (!rc)
 			*sstb = mp->cattr;
-		else {
-			psclog_error("Redo rename failed: fid="SLPRI_FID", name= %s",
-			    mq->fg.fg_fid, name);
-			psclog_error("Redo rename failed: new fid="SLPRI_FID", new name= %s",
-			    mq->nfg.fg_fid, newname);
-		}
 		break;
 	    case SLM_FORWARD_SETATTR:
-		rc = mdsio_redo_setattr(mq->fg.fg_fid, mq->to_set, sstb);
+		rc = mdsio_redo_setattr(mq->fg.fg_fid, mq->to_set,
+		    sstb);
 		if (!rc)
 			*sstb = mp->cattr;
-		else
-			psclog_error("Redo setattr failed: fid="SLPRI_FID", name= %s", 
-			    mq->fg.fg_fid, name);
+		break;
+	    default:
+		rc = EINVAL;
 		break;
 	}
+	psclog_errorx("replay failed: op=%d fid="SLPRI_FID" name=%s rc=%d",
+	    op, mq->fg.fg_fid, name, rc);
 
  out:
 	pscrpc_req_finished(rq);
 	sl_csvc_decref(csvc);
-
 	return (rc);
 }
