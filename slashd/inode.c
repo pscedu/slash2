@@ -287,3 +287,14 @@ mds_inode_addrepl_update(struct slash_inode_handle *ih,
 	INOH_URLOCK(ih, locked);
 	return (rc);
 }
+
+#if PFL_DEBUG > 0
+static __inline void
+dump_inoh(const struct slash_inode_handle *ih)
+{
+	char buf[BUFSIZ];
+
+	_dump_ino(buf, sizeof(buf), &ih->inoh_ino);
+	printf("fl:"INOH_FLAGS_FMT" %s\n", DEBUG_INOH_FLAGS(ih), buf);
+}
+#endif

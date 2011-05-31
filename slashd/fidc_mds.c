@@ -128,14 +128,20 @@ slm_fcmh_dtor(struct fidc_membh *fcmh)
 		PSCFREE(fmi->fmi_inodeh.inoh_extras);
 }
 
-static __inline void
-dump_inoh(const struct slash_inode_handle *ih)
+#if PFL_DEBUG > 0
+void
+dump_fcmh_flags(int flags)
 {
-	char buf[BUFSIZ];
+	int seq = 0;
 
-	_dump_ino(buf, sizeof(buf), &ih->inoh_ino);
-	printf("fl:"INOH_FLAGS_FMT" %s\n", DEBUG_INOH_FLAGS(ih), buf);
+	_dump_fcmh_flags_common(&flags, &seq);
+	PFL_PRFLAG(FCMH_IN_PTRUNC, &flags, &seq);
+	PFL_PRFLAG(FCMH_IN_SETATTR, &flags, &seq);
+	if (flags)
+		printf(" unknown: %#x", flags);
+	printf("\n");
 }
+#endif
 
 struct sl_fcmh_ops sl_fcmh_ops = {
 /* ctor */		slm_fcmh_ctor,
