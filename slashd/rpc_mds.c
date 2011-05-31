@@ -155,7 +155,7 @@ slm_rpc_ion_unpack_statfs(struct pscrpc_request *rq, int type)
 	RMMI_LOCK(rmmi);
 	si = res2iosinfo(resm->resm_res);
 	memcpy(&si->si_ssfb, f, sizeof(*f));
-	RMMI_UNLOCK(rmmi);
+	RMMI_ULOCK(rmmi);
 }
 
 int
