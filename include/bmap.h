@@ -267,11 +267,11 @@ struct bmapc_memb {
 #define NBRPOL			2
 
 #define DEBUG_BMAPOD(level, bmap, fmt, ...)				\
-	_log_debug_bmapod(PFL_CALLERINFOSS(SLSS_BMAP), (level), (bmap),	\
+	_log_dump_bmapod(PFL_CALLERINFOSS(SLSS_BMAP), (level), (bmap),	\
 	    (fmt), ## __VA_ARGS__)
 
 #define DEBUG_BMAPODV(level, bmap, fmt, ap)				\
-	_log_debug_bmapodv(PFL_CALLERINFOSS(SLSS_BMAP), (level),	\
+	_log_dump_bmapodv(PFL_CALLERINFOSS(SLSS_BMAP), (level),		\
 	    (bmap), (fmt), (ap))
 
 /* bmap_get flags */
@@ -291,9 +291,11 @@ int	 bmap_getf(struct fidc_membh *, sl_bmapno_t, enum rw, int,
 int	 bmapdesc_access_check(struct srt_bmapdesc *, enum rw,
 	    sl_ios_id_t, uint64_t);
 
-void	_log_debug_bmapodv(const struct pfl_callerinfo *, int,
+void	_dump_bmap_flags_common(uint32_t *, int *);
+
+void	_log_dump_bmapodv(const struct pfl_callerinfo *, int,
 	    struct bmapc_memb *, const char *, va_list);
-void	_log_debug_bmapod(const struct pfl_callerinfo *, int,
+void	_log_dump_bmapod(const struct pfl_callerinfo *, int,
 	    struct bmapc_memb *, const char *, ...);
 
 #define bmap_lookup(f, n, bp)		bmap_getf((f), (n), 0, 0, (bp))
@@ -359,25 +361,6 @@ brepls_init_idx(int *ar)
 
 	for (i = 0; i < NBREPLST; i++)
 		ar[i] = i;
-}
-
-static __inline void
-_dump_bmap_flags(uint32_t *flags, int *seq)
-{
-	PFL_PRFLAG(BMAP_RD, flags, seq);
-	PFL_PRFLAG(BMAP_WR, flags, seq);
-	PFL_PRFLAG(BMAP_INIT, flags, seq);
-	PFL_PRFLAG(BMAP_DIO, flags, seq);
-	PFL_PRFLAG(BMAP_DIORQ, flags, seq);
-	PFL_PRFLAG(BMAP_CLOSING, flags, seq);
-	PFL_PRFLAG(BMAP_DIRTY, flags, seq);
-	PFL_PRFLAG(BMAP_MEMRLS, flags, seq);
-	PFL_PRFLAG(BMAP_DIRTY2LRU, flags, seq);
-	PFL_PRFLAG(BMAP_TIMEOQ, flags, seq);
-	PFL_PRFLAG(BMAP_IONASSIGN, flags, seq);
-	PFL_PRFLAG(BMAP_MDCHNG, flags, seq);
-	PFL_PRFLAG(BMAP_WAITERS, flags, seq);
-	PFL_PRFLAG(BMAP_ORPHAN, flags, seq);
 }
 
 #endif /* _BMAP_H_ */

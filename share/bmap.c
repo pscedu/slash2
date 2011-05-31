@@ -271,7 +271,7 @@ bmap_cache_init(size_t priv_size)
 }
 
 void
-_debug_bmapod(struct bmapc_memb *bmap, const char *fmt, ...)
+_dump_bmapod(struct bmapc_memb *bmap, const char *fmt, ...)
 {
 	va_list ap;
 
@@ -305,7 +305,7 @@ bmapdesc_access_check(struct srt_bmapdesc *sbd, enum rw rw,
 }
 
 void
-_log_debug_bmapodv(const struct pfl_callerinfo *pci, int level,
+_log_dump_bmapodv(const struct pfl_callerinfo *pci, int level,
     struct bmapc_memb *bmap, const char *fmt, va_list ap)
 {
 	char mbuf[LINE_MAX], rbuf[SL_MAX_REPLICAS + 1],
@@ -345,30 +345,49 @@ _log_debug_bmapodv(const struct pfl_callerinfo *pci, int level,
 }
 
 void
-_log_debug_bmapod(const struct pfl_callerinfo *pci, int level,
+_log_dump_bmapod(const struct pfl_callerinfo *pci, int level,
     struct bmapc_memb *bmap, const char *fmt, ...)
 {
 	va_list ap;
 
 	va_start(ap, fmt);
-	_log_debug_bmapodv(pci, level, bmap, fmt, ap);
+	_log_dump_bmapodv(pci, level, bmap, fmt, ap);
 	va_end(ap);
 }
 
 #if PFL_DEBUG > 0
+void
+_dump_bmap_flags_common(uint32_t *flags, int *seq)
+{
+	PFL_PRFLAG(BMAP_RD, flags, seq);
+	PFL_PRFLAG(BMAP_WR, flags, seq);
+	PFL_PRFLAG(BMAP_INIT, flags, seq);
+	PFL_PRFLAG(BMAP_DIO, flags, seq);
+	PFL_PRFLAG(BMAP_DIORQ, flags, seq);
+	PFL_PRFLAG(BMAP_CLOSING, flags, seq);
+	PFL_PRFLAG(BMAP_DIRTY, flags, seq);
+	PFL_PRFLAG(BMAP_MEMRLS, flags, seq);
+	PFL_PRFLAG(BMAP_DIRTY2LRU, flags, seq);
+	PFL_PRFLAG(BMAP_TIMEOQ, flags, seq);
+	PFL_PRFLAG(BMAP_IONASSIGN, flags, seq);
+	PFL_PRFLAG(BMAP_MDCHNG, flags, seq);
+	PFL_PRFLAG(BMAP_WAITERS, flags, seq);
+	PFL_PRFLAG(BMAP_ORPHAN, flags, seq);
+}
+
 __weak void
 dump_bmap_flags(uint32_t flags)
 {
 	int seq = 0;
 
-	_dump_bmap_flags(&flags, &seq);
+	_dump_bmap_flags_common(&flags, &seq);
 	if (flags)
 		printf(" unknown: %x", flags);
 	printf("\n");
 }
 
 void
-dump_bmap_common(struct bmapc_memb *b)
+_dump_bmap_common(struct bmapc_memb *b)
 {
 	DEBUG_BMAP(PLL_MAX, b, "");
 }
@@ -376,6 +395,6 @@ dump_bmap_common(struct bmapc_memb *b)
 __weak void
 dump_bmap(struct bmapc_memb *b)
 {
-	dump_bmap_common(b);
+	_dump_bmap_common(b);
 }
 #endif

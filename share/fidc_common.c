@@ -566,12 +566,28 @@ dump_fidcache(void)
 	}
 }
 
+void
+_dump_fcmh_flags_common(int *flags, int *seq)
+{
+	PFL_PRFLAG(FCMH_CAC_FREE, flags, seq);
+	PFL_PRFLAG(FCMH_CAC_IDLE, flags, seq);
+	PFL_PRFLAG(FCMH_CAC_BUSY, flags, seq);
+	PFL_PRFLAG(FCMH_CAC_INITING, flags, seq);
+	PFL_PRFLAG(FCMH_CAC_WAITING, flags, seq);
+	PFL_PRFLAG(FCMH_CAC_TOFREE, flags, seq);
+	PFL_PRFLAG(FCMH_CAC_REAPED, flags, seq);
+	PFL_PRFLAG(FCMH_HAVE_ATTRS, flags, seq);
+	PFL_PRFLAG(FCMH_GETTING_ATTRS, flags, seq);
+	PFL_PRFLAG(FCMH_CTOR_FAILED, flags, seq);
+	PFL_PRFLAG(FCMH_CTOR_DELAYED, flags, seq);
+}
+
 __weak void
 dump_fcmh_flags(int flags)
 {
 	int seq = 0;
 
-	_dump_fcmh_flags(&flags, &seq);
+	_dump_fcmh_flags_common(&flags, &seq);
 	if (flags)
 		printf(" unknown: %x", flags);
 	printf("\n");

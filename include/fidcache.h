@@ -209,9 +209,7 @@ void	_fcmh_op_done_type(const struct pfl_callerinfo *, struct fidc_membh *, enum
 #define fcmh_op_done_type(fcmh, type)					\
 	_fcmh_op_done_type(PFL_CALLERINFOSS(SLSS_FCMH), (fcmh), (type))
 
-void	 dump_fidcache(void);
-void	 dump_fcmh(struct fidc_membh *);
-void	 dump_fcmh_flags_common(int);
+void	 _dump_fcmh_flags_common(int *, int *);
 
 extern struct sl_fcmh_ops	 sl_fcmh_ops;
 extern struct psc_poolmgr	*fidcPool;
@@ -221,22 +219,6 @@ static __inline void *
 fcmh_get_pri(struct fidc_membh *fcmh)
 {
 	return (fcmh + 1);
-}
-
-static __inline void
-_dump_fcmh_flags(int *flags, int *seq)
-{
-	PFL_PRFLAG(FCMH_CAC_FREE, flags, seq);
-	PFL_PRFLAG(FCMH_CAC_IDLE, flags, seq);
-	PFL_PRFLAG(FCMH_CAC_BUSY, flags, seq);
-	PFL_PRFLAG(FCMH_CAC_INITING, flags, seq);
-	PFL_PRFLAG(FCMH_CAC_WAITING, flags, seq);
-	PFL_PRFLAG(FCMH_CAC_TOFREE, flags, seq);
-	PFL_PRFLAG(FCMH_CAC_REAPED, flags, seq);
-	PFL_PRFLAG(FCMH_HAVE_ATTRS, flags, seq);
-	PFL_PRFLAG(FCMH_GETTING_ATTRS, flags, seq);
-	PFL_PRFLAG(FCMH_CTOR_FAILED, flags, seq);
-	PFL_PRFLAG(FCMH_CTOR_DELAYED, flags, seq);
 }
 
 #endif /* _SL_FIDCACHE_H_ */

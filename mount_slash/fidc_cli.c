@@ -149,7 +149,7 @@ dump_fcmh_flags(int flags)
 {
 	int seq = 0;
 
-	_dump_fcmh_flags(&flags, &seq);
+	_dump_fcmh_flags_common(&flags, &seq);
 	PFL_PRFLAG(FCMH_CLI_HAVEREPLTBL, &flags, &seq);
 	PFL_PRFLAG(FCMH_CLI_FETCHREPLTBL, &flags, &seq);
 	PFL_PRFLAG(FCMH_CLI_INITDCI, &flags, &seq);

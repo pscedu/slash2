@@ -297,7 +297,7 @@ dump_bmap_flags(uint32_t flags)
 {
 	int seq = 0;
 
-	_dump_bmap_flags(&flags, &seq);
+	_dump_bmap_flags_common(&flags, &seq);
 	PFL_PRFLAG(BMAP_MDS_CRC_UP, &flags, &seq);
 	PFL_PRFLAG(BMAP_MDS_CRCWRT, &flags, &seq);
 	PFL_PRFLAG(BMAP_MDS_NOION, &flags, &seq);

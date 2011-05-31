@@ -71,7 +71,7 @@ dumpfid(const char *fn)
 		goto out;
 	}
 	psc_crc64_calc(&crc, &ino, sizeof(ino));
-	_debug_ino(buf, sizeof(buf), &ino);
+	_dump_ino(buf, sizeof(buf), &ino);
 	printf("%s\t%s %s\n", fn, buf, crc == od_crc ? "OK" : "BAD");
 
 	lseek(fd, SL_EXTRAS_START_OFF, SEEK_SET);
