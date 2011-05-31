@@ -114,10 +114,8 @@ mds_inode_write(struct slash_inode_handle *ih, void *logf, void *arg)
 
 	INOH_LOCK_ENSURE(ih);
 
-	while (ih->inoh_flags & INOH_IN_IO) {
-		usleep(1);
-		INOH_LOCK(ih);
-	}
+	fcmh_wait_locked(ih->inoh_fcmh, ih->inoh_flags & INOH_IN_IO);
+	ih->inoh_flags |= INOH_IN_IO;
 
 	psc_crc64_calc(&crc, &ih->inoh_ino, sizeof(ih->inoh_ino));
 
@@ -126,7 +124,6 @@ mds_inode_write(struct slash_inode_handle *ih, void *logf, void *arg)
 	iovs[1].iov_base = &crc;
 	iovs[1].iov_len = sizeof(crc);
 
-	ih->inoh_flags |= INOH_IN_IO;
 	INOH_ULOCK(ih);
 
 	if (logf)
@@ -138,6 +135,7 @@ mds_inode_write(struct slash_inode_handle *ih, void *logf, void *arg)
 
 	INOH_LOCK(ih);
 	ih->inoh_flags &= ~INOH_IN_IO;
+	fcmh_wake_locked(ih->inoh_fcmh);
 
 	if (rc == 0 && nb != sizeof(ih->inoh_ino) + sizeof(crc))
 		rc = SLERR_SHORTIO;
