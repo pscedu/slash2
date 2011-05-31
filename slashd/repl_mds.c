@@ -92,11 +92,11 @@ int
 _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
     int add, int log)
 {
+	int locked, rc = -ENOENT;
 	sl_replica_t *repl;
 	uint32_t j, k;
-	int rc = -ENOENT;
 
-	INOH_LOCK(ih);
+	locked = INOH_RLOCK(ih);
 
 	/*
 	 * Search the existing replicas to make sure the given ios is not
@@ -160,7 +160,7 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
 		rc = j;
 	}
  out:
-	INOH_ULOCK(ih);
+	INOH_URLOCK(ih, locked);
 	return (rc);
 }
 
