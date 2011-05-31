@@ -1296,7 +1296,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
 	if (fcmh_2_gen(fcmh) != c->fg.fg_gen) {
 		int x = (fcmh_2_gen(fcmh) > c->fg.fg_gen) ? 1 : 0;
 
-		DEBUG_FCMH(x ? PLL_WARN : PLL_ERROR, fcmh,
+		DEBUG_FCMH(x ? PLL_NOTICE : PLL_ERROR, fcmh,
 		   "mds gen (%"PRIu64") %s than crcup gen (%"PRIu64")",
 		   fcmh_2_gen(fcmh), x ? ">" : "<", c->fg.fg_gen);
 
