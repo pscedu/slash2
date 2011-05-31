@@ -44,6 +44,7 @@ struct sl_mds_crc_log {
 #define MDS_LOG_BMAP_ASSIGN	(_PJE_FLSHFT << 3)
 #define MDS_LOG_INO_ADDREPL	(_PJE_FLSHFT << 4)
 #define MDS_LOG_NAMESPACE	(_PJE_FLSHFT << 5)
+#define MDS_LOG_INO_REPLPOL	(_PJE_FLSHFT << 6)
 
 #define MDS_LOG_LAST_TYPE	MDS_LOG_NAMESPACE
 
@@ -63,10 +64,10 @@ struct site_progress {
 void	mds_bmap_crc_log(void *, uint64_t, int);
 void	mds_bmap_repl_log(void *, uint64_t, int);
 void	mds_inode_addrepl_log(void *, uint64_t, int);
+void	mdslog_ino_replpol(void *, uint64_t, int);
 void	mds_namespace_log(int, uint64_t, uint64_t, uint64_t,
 	    const struct srt_stat *, int, const char *, const char *);
 
-void	mds_inode_sync(struct slash_inode_handle *);
 void	mds_journal_init(int);
 
 int	mds_bmap_repl_update(struct bmapc_memb *, int);
@@ -76,7 +77,7 @@ int	mds_inode_addrepl_update(struct slash_inode_handle *, sl_ios_id_t, uint32_t,
 void	mds_reserve_slot(void);
 void	mds_unreserve_slot(void);
 
-int	mds_redo_namespace(struct slmds_jent_namespace *, int);
+int	mds_replay_namespace(struct slmds_jent_namespace *, int);
 
 int	mds_replay_handler(struct psc_journal_enthdr *);
 

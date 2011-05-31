@@ -33,7 +33,7 @@
 __static void
 mds_inode_od_initnew(struct slash_inode_handle *ih)
 {
-	ih->inoh_flags = INOH_INO_NEW | INOH_INO_DIRTY;
+	ih->inoh_flags = INOH_INO_NEW;
 
 	/* For now this is a fixed size. */
 	ih->inoh_ino.ino_bsz = SLASH_BMAP_SIZE;
@@ -114,6 +114,11 @@ mds_inode_write(struct slash_inode_handle *ih, void *logf, void *arg)
 
 	INOH_LOCK_ENSURE(ih);
 
+	while (ih->inoh_flags & INOH_IN_IO) {
+		usleep(1);
+		INOH_LOCK(ih);
+	}
+
 	psc_crc64_calc(&crc, &ih->inoh_ino, sizeof(ih->inoh_ino));
 
 	iovs[0].iov_base = &ih->inoh_ino;
@@ -121,12 +126,18 @@ mds_inode_write(struct slash_inode_handle *ih, void *logf, void *arg)
 	iovs[1].iov_base = &crc;
 	iovs[1].iov_len = sizeof(crc);
 
+	ih->inoh_flags |= INOH_IN_IO;
+	INOH_ULOCK(ih);
+
 	if (logf)
 		mds_reserve_slot();
 	rc = mdsio_pwritev(&rootcreds, iovs, nitems(iovs), &nb, 0, 0,
 	    inoh_2_mdsio_data(ih), logf, arg);
 	if (logf)
 		mds_unreserve_slot();
+
+	INOH_LOCK(ih);
+	ih->inoh_flags &= ~INOH_IN_IO;
 
 	if (rc == 0 && nb != sizeof(ih->inoh_ino) + sizeof(crc))
 		rc = SLERR_SHORTIO;
@@ -143,6 +154,8 @@ mds_inode_write(struct slash_inode_handle *ih, void *logf, void *arg)
 		if (rc == -1)
 			psc_fatal("mdsio_fsync");
 #endif
+		if (ih->inoh_flags & INOH_INO_NEW)
+			ih->inoh_flags &= ~INOH_INO_NEW;
 	}
 	return (rc);
 }
@@ -261,36 +274,18 @@ mds_inode_addrepl_update(struct slash_inode_handle *inoh,
 
 	locked = reqlock(&inoh->inoh_lock);
 
-	psc_assert((inoh->inoh_flags & INOH_INO_DIRTY) ||
-		   (inoh->inoh_flags & INOH_EXTRAS_DIRTY));
-
 	if (log) {
 		jrir.sjir_fid = fcmh_2_fid(inoh->inoh_fcmh);
 		jrir.sjir_ios = ios;
 		jrir.sjir_pos = pos;
 		jrir.sjir_nrepls = inoh->inoh_ino.ino_nrepls;
-
-		mds_reserve_slot();
 	}
-	if (inoh->inoh_flags & INOH_INO_DIRTY) {
+	if (pos < SL_DEF_REPLICAS)
 		rc = mds_inode_write(inoh, logf, &jrir);
-		inoh->inoh_flags &= ~INOH_INO_DIRTY;
-		if (inoh->inoh_flags & INOH_INO_NEW)
-			inoh->inoh_flags &= ~INOH_INO_NEW;
-		psclog_info("fid="SLPRI_FID" log=%d",
-		    fcmh_2_fid(inoh->inoh_fcmh), log);
-
-		logf = NULL;
-	}
-
-	if (inoh->inoh_flags & INOH_EXTRAS_DIRTY) {
+	else
 		rc = mds_inox_write(inoh, logf, &jrir);
-		inoh->inoh_flags &= ~INOH_EXTRAS_DIRTY;
-		psclog_info("update: fid="SLPRI_FID", log=%d",
-		    fcmh_2_fid(inoh->inoh_fcmh), log);
-	}
-	if (log)
-		mds_unreserve_slot();
+	psclog_info("update: fid="SLPRI_FID" log=%d",
+	    fcmh_2_fid(inoh->inoh_fcmh), log);
 
 	ureqlock(&inoh->inoh_lock, locked);
 	return (rc);

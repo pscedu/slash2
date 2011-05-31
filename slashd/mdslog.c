@@ -1290,41 +1290,11 @@ slmjnsthr_main(__unusedx struct psc_thread *thr)
 }
 
 void
-mds_inode_sync(struct slash_inode_handle *inoh)
-{
-	int rc;
-
-	INOH_LOCK(inoh);
-
-	if (inoh->inoh_flags & INOH_INO_DIRTY) {
-		rc = mds_inode_write(inoh, NULL, NULL);
-		if (rc)
-			DEBUG_INOH(PLL_FATAL, inoh, "rc=%d", rc);
-		if (inoh->inoh_flags & INOH_INO_NEW)
-			inoh->inoh_flags &= ~INOH_INO_NEW;
-		inoh->inoh_flags &= ~INOH_INO_DIRTY;
-	}
-
-	if (inoh->inoh_flags & INOH_EXTRAS_DIRTY) {
-		rc = mds_inox_write(inoh, NULL, NULL);
-		if (rc)
-			DEBUG_INOH(PLL_FATAL, inoh, "xtras rc=%d sync fail",
-			    rc);
-		else
-			DEBUG_INOH(PLL_NOTIFY, inoh, "xtras sync ok");
-		inoh->inoh_flags &= ~INOH_EXTRAS_DIRTY;
-	}
-
-	INOH_ULOCK(inoh);
-}
-
-void
 mds_inode_addrepl_log(void *datap, uint64_t txg, __unusedx int flag)
 {
 	struct slmds_jent_ino_addrepl *jrir, *r;
 
-	jrir = pjournal_get_buf(mdsJournal,
-	    sizeof(struct slmds_jent_ino_addrepl));
+	jrir = pjournal_get_buf(mdsJournal, sizeof(*jrir));
 
 	r = datap;
 	jrir->sjir_fid = r->sjir_fid;
@@ -1335,10 +1305,27 @@ mds_inode_addrepl_log(void *datap, uint64_t txg, __unusedx int flag)
 	psclog_notify("jlog fid="SLPRI_FID" ios=%u pos=%u",
 	    jrir->sjir_fid, jrir->sjir_ios, jrir->sjir_pos);
 
-	pjournal_add_entry(mdsJournal, txg, MDS_LOG_INO_ADDREPL,
-	    0, jrir, sizeof(struct slmds_jent_ino_addrepl));
+	pjournal_add_entry(mdsJournal, txg, MDS_LOG_INO_ADDREPL, 0,
+	    jrir, sizeof(*jrir));
 
 	pjournal_put_buf(mdsJournal, jrir);
+}
+
+void
+mdslog_ino_replpol(void *datap, uint64_t txg, __unusedx int flag)
+{
+	struct slmds_jent_ino_replpol *jrip, *r;
+
+	jrip = pjournal_get_buf(mdsJournal, sizeof(*jrip));
+
+	r = datap;
+	jrip->sjip_fid = r->sjip_fid;
+	jrip->sjip_replpol = r->sjip_replpol;
+
+	pjournal_add_entry(mdsJournal, txg, MDS_LOG_INO_REPLPOL, 0,
+	    jrip, sizeof(*jrip));
+
+	pjournal_put_buf(mdsJournal, jrip);
 }
 
 /**

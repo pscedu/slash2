@@ -111,8 +111,6 @@ slm_fcmh_dtor(struct fidc_membh *fcmh)
 	struct fcmh_mds_info *fmi;
 	int rc;
 
-//	psc_assert((ih->ih_flags & INO_DIRTY|INO_EXTRAS_DIRTY) == 0);
-
 	fmi = fcmh_2_fmi(fcmh);
 	psc_assert(psc_dynarray_len(&fmi->fmi_ptrunc_clients) == 0);
 	psc_dynarray_free(&fmi->fmi_ptrunc_clients);

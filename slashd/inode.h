@@ -90,11 +90,10 @@ struct slash_inode_handle {
 	int			 inoh_flags;
 };
 
-#define	INOH_INO_DIRTY		(1 << 0)			/* inode needs to be written */
-#define	INOH_EXTRAS_DIRTY	(1 << 1)			/* inoh_extras needs written */
-#define	INOH_HAVE_EXTRAS	(1 << 2)			/* inoh_extras are loaded in mem */
-#define	INOH_INO_NEW		(1 << 3)			/* not yet written to disk */
-#define	INOH_INO_NOTLOADED	(1 << 4)
+#define	INOH_HAVE_EXTRAS	(1 << 0)			/* inoh_extras are loaded in mem */
+#define	INOH_INO_NEW		(1 << 1)			/* not yet written to disk */
+#define	INOH_INO_NOTLOADED	(1 << 2)
+#define	INOH_IN_IO		(1 << 3)			/* being written to ZFS */
 
 #define INOH_LOCK(ih)		spinlock(&(ih)->inoh_lock)
 #define INOH_ULOCK(ih)		freelock(&(ih)->inoh_lock)
@@ -106,13 +105,12 @@ struct slash_inode_handle {
 #define inoh_2_fsz(ih)		fcmh_2_fsz((ih)->inoh_fcmh)
 #define inoh_2_fid(ih)		fcmh_2_fid((ih)->inoh_fcmh)
 
-#define INOH_FLAGS_FMT		"%s%s%s%s%s"
+#define INOH_FLAGS_FMT		"%s%s%s%s"
 #define DEBUG_INOH_FLAGS(i)						\
-	(i)->inoh_flags & INOH_INO_DIRTY	? "D" : "",		\
-	(i)->inoh_flags & INOH_EXTRAS_DIRTY	? "d" : "",		\
 	(i)->inoh_flags & INOH_HAVE_EXTRAS	? "X" : "",		\
 	(i)->inoh_flags & INOH_INO_NEW		? "N" : "",		\
-	(i)->inoh_flags & INOH_INO_NOTLOADED	? "L" : ""
+	(i)->inoh_flags & INOH_INO_NOTLOADED	? "L" : "",		\
+	(i)->inoh_flags & INOH_IN_IO		? "I" : ""
 
 #define DEBUG_INOH(level, ih, fmt, ...)					\
 	_log_debug_inoh(PFL_CALLERINFO(), (level), (ih), (fmt), ## __VA_ARGS__)

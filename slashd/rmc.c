@@ -54,6 +54,7 @@
 #include "slashd.h"
 #include "slashrpc.h"
 #include "slerr.h"
+#include "sljournal.h"
 #include "slutil.h"
 #include "up_sched_res.h"
 
@@ -837,7 +838,7 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	if (mq->pol < 0 || mq->pol >= NBRP) {
+	if (mq->pol < 0 || mq->pol >= NBRPOL) {
 		mp->rc = EINVAL;
 		return (0);
 	}
@@ -849,11 +850,16 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 	ih = fcmh_2_inoh(fcmh);
 	mp->rc = mds_inox_ensure_loaded(ih);
 	if (mp->rc == 0) {
+		struct slmds_jent_ino_replpol jrip;
+
 		INOH_LOCK(ih);
 		ih->inoh_ino.ino_replpol = mq->pol;
-		ih->inoh_flags |= INOH_INO_DIRTY;
 		INOH_ULOCK(ih);
-		mds_inode_sync(ih);
+
+		jrip.sjip_fid = fcmh_2_fid(ih->inoh_fcmh);
+		jrip.sjip_replpol = ih->inoh_ino.ino_replpol;
+
+		mds_inode_write(ih, mdslog_ino_replpol, &jrip);
 	}
 
  out:
@@ -876,7 +882,7 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	if (mq->pol < 0 || mq->pol >= NBRP) {
+	if (mq->pol < 0 || mq->pol >= NBRPOL) {
 		mp->rc = EINVAL;
 		return (0);
 	}

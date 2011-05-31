@@ -34,12 +34,12 @@
 #define B_REPLAY_OP_REPL	1
 
 /**
- * mds_redo_bmap_repl - Replay a replication update on a bmap.  This has
+ * mds_replay_bmap_repl - Replay a replication update on a bmap.  This has
  *	to be a read-modify-write process because we don't touch the CRC
  *	tables.
  */
 static int
-mds_redo_bmap_repl_common(void *jent, int op)
+mds_replay_bmap_repl_common(void *jent, int op)
 {
 	struct slmds_jent_repgen *jrpg = jent;
 	struct srt_bmap_crcwire *bmap_wire;
@@ -136,26 +136,26 @@ mds_redo_bmap_repl_common(void *jent, int op)
 }
 
 static int
-mds_redo_bmap_repl(struct psc_journal_enthdr *pje)
+mds_replay_bmap_repl(struct psc_journal_enthdr *pje)
 {
-	return (mds_redo_bmap_repl_common(PJE_DATA(pje),
+	return (mds_replay_bmap_repl_common(PJE_DATA(pje),
 	    B_REPLAY_OP_REPL));
 }
 
 /**
- * mds_redo_bmap_crc - Replay a CRC update.  Because we only log
+ * mds_replay_bmap_crc - Replay a CRC update.  Because we only log
  *     CRCs that have been changed in the bmap, this has to be a
  *     read-modify-write process.
  */
 static int
-mds_redo_bmap_crc(struct psc_journal_enthdr *pje)
+mds_replay_bmap_crc(struct psc_journal_enthdr *pje)
 {
-	return (mds_redo_bmap_repl_common(PJE_DATA(pje),
+	return (mds_replay_bmap_repl_common(PJE_DATA(pje),
 	    B_REPLAY_OP_CRC));
 }
 
 static int
-mds_redo_bmap_seq(struct psc_journal_enthdr *pje)
+mds_replay_bmap_seq(struct psc_journal_enthdr *pje)
 {
 	struct slmds_jent_bmapseq *sjsq;
 
@@ -170,15 +170,20 @@ mds_redo_bmap_seq(struct psc_journal_enthdr *pje)
 }
 
 /**
- * mds_redo_ino_addrepl - Replay an inode replication table update.
+ * mds_replay_ino_addrepl - Replay an inode replication table update.
  */
 static int
-mds_redo_ino_addrepl_common(struct slmds_jent_ino_addrepl *jrir)
+mds_replay_ino_addrepl_common(struct slmds_jent_ino_addrepl *jrir)
 {
 	struct slash_inode_handle *ih = NULL;
 	struct slash_fidgen fg;
 	struct fidc_membh *f;
 	int pos, j, rc;
+
+	if (jrir->sjir_fid == FID_ANY) {
+		psclog_errorx("cannot replay on FID_ANY");
+		return (EINVAL);
+	}
 
 	pos = jrir->sjir_pos;
 	if (pos >= SL_MAX_REPLICAS || pos < 0) {
@@ -211,7 +216,7 @@ mds_redo_ino_addrepl_common(struct slmds_jent_ino_addrepl *jrir)
 		if (rc)
 			goto out;
 
-		psclog_info("redo: fid="SLPRI_FID, jrir->sjir_fid);
+		psclog_info("fid="SLPRI_FID, jrir->sjir_fid);
 	}
 	/*
 	 * We always update the inode itself because the number of
@@ -236,38 +241,78 @@ mds_redo_ino_addrepl_common(struct slmds_jent_ino_addrepl *jrir)
 		ih->inoh_ino.ino_repls[pos].bs_id = jrir->sjir_ios;
 
 	rc = mds_inode_write(ih, NULL, NULL);
-	if (rc)
-		goto out;
-
-	psclog_info("redo: fid="SLPRI_FID, jrir->sjir_fid);
 
  out:
 	if (ih)
 		INOH_ULOCK(ih);
-	if (rc)
-		psclog_errorx("redo: fid="SLPRI_FID" rc=%d",
-		    jrir->sjir_fid, rc);
+	psclog(rc ? PLL_ERROR : PLL_DEBUG,
+	    "fid="SLPRI_FID" rc=%d", fg.fg_fid, rc);
 	if (f)
 		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 	return (rc);
 }
 
 static int
-mds_redo_ino_addrepl(struct psc_journal_enthdr *pje)
+mds_replay_ino_addrepl(struct psc_journal_enthdr *pje)
 {
-	int rc;
 	struct slmds_jent_ino_addrepl *jrir;
+	int rc;
 
 	jrir = PJE_DATA(pje);
-	rc = mds_redo_ino_addrepl_common(jrir);
+	rc = mds_replay_ino_addrepl_common(jrir);
+	return (rc);
+}
+
+static int
+mds_replay_ino_replpol(struct psc_journal_enthdr *pje)
+{
+	struct slmds_jent_ino_replpol *jrip;
+	struct slash_inode_handle *ih = NULL;
+	struct slash_fidgen fg;
+	struct fidc_membh *f;
+	int rc;
+
+	jrip = PJE_DATA(pje);
+	if (jrip->sjip_fid == FID_ANY) {
+		psclog_errorx("cannot replay on FID_ANY");
+		return (EINVAL);
+	}
+	if (jrip->sjip_replpol >= NBRPOL) {
+		psclog_errorx("replpol is out of range (%u)",
+		    jrip->sjip_replpol);
+		return (EINVAL);
+	}
+
+	fg.fg_fid = jrip->sjip_fid;
+	fg.fg_gen = FGEN_ANY;
+	rc = slm_fcmh_get(&fg, &f);
+	if (rc)
+		goto out;
+
+	ih = fcmh_2_inoh(f);
+	INOH_LOCK(ih);
+
+	ih->inoh_ino.ino_replpol = jrip->sjip_replpol;
+
+	rc = mds_inode_write(ih, NULL, NULL);
+	if (rc)
+		goto out;
+
+ out:
+	if (ih)
+		INOH_ULOCK(ih);
+	psclog(rc ? PLL_ERROR : PLL_INFO, "fid="SLPRI_FID" rc=%d",
+	    fg.fg_fid, rc);
+	if (f)
+		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 	return (rc);
 }
 
 /**
- * mds_redo_bmap_assign - Replay a bmap assignment update.
+ * mds_replay_bmap_assign - Replay a bmap assignment update.
  */
 static int
-mds_redo_bmap_assign(struct psc_journal_enthdr *pje)
+mds_replay_bmap_assign(struct psc_journal_enthdr *pje)
 {
 	struct slmds_jent_assign_rep *logentry;
 	struct slmds_jent_bmap_assign *jrba;
@@ -283,16 +328,16 @@ mds_redo_bmap_assign(struct psc_journal_enthdr *pje)
 	logentry = PJE_DATA(pje);
 	elem = logentry->sjar_elem;
 	if (logentry->sjar_flags & SLJ_ASSIGN_REP_FREE)
-		psclog_info("Free item %zd", elem);
+		psclog_info("free item %zd", elem);
 	else {
 		jrba = &logentry->sjar_bmap;
-		psclog_info("Redo item %zd, fid="SLPRI_FID", flags=%d",
+		psclog_info("replay item %zd, fid="SLPRI_FID", flags=%d",
 		    elem, jrba->sjba_fid, logentry->sjar_flags);
 	}
 	if (logentry->sjar_flags & SLJ_ASSIGN_REP_INO)
-		mds_redo_ino_addrepl_common(&logentry->sjar_ino);
+		mds_replay_ino_addrepl_common(&logentry->sjar_ino);
 	if (logentry->sjar_flags & SLJ_ASSIGN_REP_REP)
-		mds_redo_bmap_repl_common(&logentry->sjar_rep,
+		mds_replay_bmap_repl_common(&logentry->sjar_rep,
 		    B_REPLAY_OP_REPL);
 	rc = mdsio_lookup(mds_metadir_inum, SL_FN_BMAP_ODTAB, &mf,
 	    &rootcreds, NULL);
@@ -350,14 +395,14 @@ mds_redo_bmap_assign(struct psc_journal_enthdr *pje)
 }
 
 /**
- * mds_redo_namespace - Replay a NAMESPACE modification operation.
+ * mds_replay_namespace - Replay a NAMESPACE modification operation.
  *	Note: this may not be a replay but could also be a namespace
  *	update from a remote MDS.
  * @sjnm: journal entry.
  * @replay: whether this is a replay or remote MDS update.
  */
 int
-mds_redo_namespace(struct slmds_jent_namespace *sjnm, int replay)
+mds_replay_namespace(struct slmds_jent_namespace *sjnm, int replay)
 {
 	char name[SL_NAME_MAX + 1], newname[SL_NAME_MAX + 1];
 	struct fidc_membh *fcmh = NULL;
@@ -381,7 +426,8 @@ mds_redo_namespace(struct slmds_jent_namespace *sjnm, int replay)
 	sstb.sst_ctime_ns = sjnm->sjnm_ctime_ns;
 
 	if (!sstb.sst_fid) {
-		psclog_errorx("Unexpected zero SLASH2 FID.");
+//	 || fid == FID_ANY
+		psclog_errorx("unexpected zero SLASH2 FID");
 		return (EINVAL);
 	}
 
@@ -485,24 +531,28 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 	type = pje->pje_type & ~(_PJE_FLSHFT - 1);
 	switch (type) {
 	    case MDS_LOG_BMAP_REPL:
-		rc = mds_redo_bmap_repl(pje);
+		rc = mds_replay_bmap_repl(pje);
 		break;
 	    case MDS_LOG_BMAP_CRC:
-		rc = mds_redo_bmap_crc(pje);
+		rc = mds_replay_bmap_crc(pje);
 		break;
 	    case MDS_LOG_BMAP_SEQ:
-		rc = mds_redo_bmap_seq(pje);
+		rc = mds_replay_bmap_seq(pje);
 		break;
 	    case MDS_LOG_INO_ADDREPL:
-		rc = mds_redo_ino_addrepl(pje);
+		rc = mds_replay_ino_addrepl(pje);
+		break;
+	    case MDS_LOG_INO_REPLPOL:
+		rc = mds_replay_ino_replpol(pje);
 		break;
 	    case MDS_LOG_BMAP_ASSIGN:
-		rc = mds_redo_bmap_assign(pje);
+		rc = mds_replay_bmap_assign(pje);
 		break;
 	    case MDS_LOG_NAMESPACE:
 		sjnm = PJE_DATA(pje);
 		psc_assert(sjnm->sjnm_magic == SJ_NAMESPACE_MAGIC);
-		rc = mds_redo_namespace(sjnm, 1);
+		rc = mds_replay_namespace(sjnm, 1);
+
 		/*
 		 * If we fail above, we still skip these SLASH2 FIDs here
 		 * in case a client gets confused.

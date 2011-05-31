@@ -142,11 +142,9 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
 			 *  table must be synced.
 			 */
 			psc_assert(ih->inoh_extras);
-			ih->inoh_flags |= INOH_EXTRAS_DIRTY | INOH_INO_DIRTY;
 			repl = ih->inoh_extras->inox_repls;
 			k = j - SL_DEF_REPLICAS;
 		} else {
-			ih->inoh_flags |= INOH_INO_DIRTY;
 			repl = ih->inoh_ino.ino_repls;
 			k = j;
 		}
