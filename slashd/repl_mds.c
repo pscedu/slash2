@@ -99,14 +99,15 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
 	locked = INOH_RLOCK(ih);
 
 	/*
-	 * Search the existing replicas to make sure the given ios is not
-	 *   already there.
+	 * Search the existing replicas to see if the given IOS is
+	 * already there.
 	 */
 	for (j = 0, k = 0, repl = ih->inoh_ino.ino_repls;
 	    j < ih->inoh_ino.ino_nrepls; j++, k++) {
 		if (j >= SL_DEF_REPLICAS) {
-			/* The first few replicas are in the inode itself,
-			 *   the rest are in the extras block.
+			/*
+			 * The first few replicas are in the inode
+			 * itself, the rest are in the extras block.
 			 */
 			if (!(ih->inoh_flags & INOH_HAVE_EXTRAS))
 				if (!(rc = mds_inox_load_locked(ih)))
@@ -124,7 +125,7 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
 		}
 	}
 	/*
-	 * It does not exist, add the replica to the inode if 'add' was
+	 * It does not exist; add the replica to the inode if 'add' was
 	 *   specified, else return.
 	 */
 	if (rc == -ENOENT && add) {
@@ -138,8 +139,8 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
 
 		if (j >= SL_DEF_REPLICAS) {
 			/*
-			 * Note that both the inode structure and replication
-			 *  table must be synced.
+			 * Note that both the inode structure and
+			 * replication table must be synced.
 			 */
 			psc_assert(ih->inoh_extras);
 			repl = ih->inoh_extras->inox_repls;
@@ -153,7 +154,7 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
 		ih->inoh_ino.ino_nrepls++;
 
 		DEBUG_INOH(PLL_INFO, ih, "add IOS(%u) to repls, replica %d",
-			   ios, ih->inoh_ino.ino_nrepls-1);
+		    ios, ih->inoh_ino.ino_nrepls - 1);
 
 		mds_inode_addrepl_update(ih, ios, j, log);
 
