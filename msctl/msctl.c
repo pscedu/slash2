@@ -108,9 +108,11 @@ fn2fid(const char *fn)
 	if (statvfs(fn, &sfb) == -1)
 		err(1, "statvfs %s", fn);
 
+#ifndef HAVE_NO_FUSE_FSID
 	if (sfb.f_fsid != SLASH_FSID)
 		errx(1, "%s: file is not in a SLASH file system %lx",
 		    fn, sfb.f_fsid);
+#endif
 
 	fid = stb.st_ino;
 	ffp = psc_hashtbl_search(&fnfidpairs, NULL, NULL, &fid);
@@ -322,7 +324,7 @@ lookup_repl_policy(const char *name)
 {
 	int n;
 
-	for (n = 0; n < NBRP; n++)
+	for (n = 0; n < NBRPOL; n++)
 		if (strcmp(name, repl_policies[n]) == 0)
 			return (n);
 	errx(1, "%s: invalid replication policy", name);
@@ -589,7 +591,7 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	else
 		printf("%*s", dlen - n, "");
 	printf(" new-bmap-repl-policy: ");
-	if (current_mrs.mrs_newreplpol >= NBRP)
+	if (current_mrs.mrs_newreplpol >= NBRPOL)
 		printf("<unknown: %d>\n", current_mrs.mrs_newreplpol);
 	else
 		printf("%s\n", repl_policies[current_mrs.mrs_newreplpol]);
