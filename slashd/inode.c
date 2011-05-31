@@ -169,6 +169,10 @@ mds_inox_write(struct slash_inode_handle *ih, void *logf, void *arg)
 	INOH_LOCK_ENSURE(ih);
 
 	psc_assert(ih->inoh_extras);
+
+	fcmh_wait_locked(ih->inoh_fcmh, ih->inoh_flags & INOH_IN_IO);
+	ih->inoh_flags |= INOH_IN_IO;
+
 	psc_crc64_calc(&crc, ih->inoh_extras, sizeof(*ih->inoh_extras));
 
 	iovs[0].iov_base = ih->inoh_extras;
@@ -176,12 +180,18 @@ mds_inox_write(struct slash_inode_handle *ih, void *logf, void *arg)
 	iovs[1].iov_base = &crc;
 	iovs[1].iov_len = sizeof(crc);
 
+	INOH_ULOCK(ih);
+
 	if (logf)
 		mds_reserve_slot();
 	rc = mdsio_pwritev(&rootcreds, iovs, nitems(iovs), &nb,
 	    SL_EXTRAS_START_OFF, 0, inoh_2_mdsio_data(ih), logf, arg);
 	if (logf)
 		mds_unreserve_slot();
+
+	INOH_LOCK(ih);
+	ih->inoh_flags &= ~INOH_IN_IO;
+	fcmh_wake_locked(ih->inoh_fcmh);
 
 	if (rc == 0 && nb != sizeof(*ih->inoh_extras) + sizeof(crc))
 		rc = SLERR_SHORTIO;

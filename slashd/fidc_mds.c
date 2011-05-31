@@ -97,7 +97,7 @@ slm_fcmh_ctor(struct fidc_membh *fcmh)
 			fcmh->fcmh_flags |= FCMH_CTOR_FAILED;
 			fmi->fmi_ctor_rc = rc;
 			DEBUG_FCMH(PLL_WARN, fcmh,
-			   "mdsio_opencreate failed (rc=%d)", rc);
+			    "mdsio_opencreate failed (rc=%d)", rc);
 		}
 	} else
 		DEBUG_FCMH(PLL_INFO, fcmh, "special file, no zfs obj");
