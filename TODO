@@ -397,7 +397,6 @@ API rename
 - parse LNET_NETWORKS format for `lnets' variable and assign lnetname to
   addresses that resolve from the interface in the pair
 
-- INO_DIRTY needs to take the same fate as BMAP_LOGCHG
 - make sure replrq over garbage does the right thing in sliod backfs (zeroing)
 - mds: do not allow repl changes while IN_PTRUNC
 - should replay crcupdate set ion to VALID ?
