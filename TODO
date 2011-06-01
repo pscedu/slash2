@@ -309,7 +309,7 @@ tree
 API rename
 - rename FCMH_CREATE to POPULATE?
 - mdsio_fid_t -> mdsio_inum_t
-- mdsio_data_ -> mdsio_fh_t
+- mdsio_data -> mdsio_fh_t
 
 - upsch items are not getting removed on completion
 - ensure PINGs only happen every 30 seconds
@@ -362,6 +362,7 @@ API rename
   same resource we are part of since we will never connect to them
 - patch fuse.ko since fuse_notify_entry_inval() causes segfault
 - add zfs SPA version to slashd ctlparam
+   - is this needed?  /zfs-kstat
 - use umount -l if it is supported at teardown
 - client needs to track when MDS goes down and recheck pinned ptrunc
   bmaps for resolvement
@@ -401,7 +402,6 @@ API rename
 - mds: do not allow repl changes while IN_PTRUNC
 - should replay crcupdate set ion to VALID ?
 - support multi addresses for resms
-- remove inodeh_lock in place of fcmh lock
 - for long running I/O patterns by processes that issue no other syscalls,
   do fcmh's timeout and reload from MDS sst_size/gen values?
     - need fcmh_get() in mslfsop_read()
