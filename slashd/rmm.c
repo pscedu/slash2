@@ -298,6 +298,10 @@ slm_rmm_handler(struct pscrpc_request *rq)
 	return (rc);
 }
 
+/*
+ * TODO:
+ *	- return parent sstb to piggyback updates such as mtime
+ */
 int
 slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
     struct slash_fidgen *nfg, char *name, char *newname,
