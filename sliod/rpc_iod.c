@@ -127,6 +127,44 @@ sli_rpc_mds_unpack_bminseq(struct pscrpc_request *rq, int msgtype)
 }
 
 void
+sli_rpc_mds_unpack_fsuuid(struct pscrpc_request *rq, int msgtype)
+{
+	struct srm_connect_rep *mp;
+	struct srm_connect_req *mq;
+	struct pscrpc_msg *m;
+	uint64_t fsuuid;
+
+	if (rq->rq_status)
+		return;
+
+	if (msgtype == PSCRPC_MSG_REQUEST)
+		m = rq->rq_reqmsg;
+	else
+		m = rq->rq_repmsg;
+	if (m == NULL)
+		goto error;
+	if (m->bufcount < 1)
+		goto error;
+	if (msgtype == PSCRPC_MSG_REQUEST) {
+		mq = pscrpc_msg_buf(m, 0, sizeof(*mq));
+		if (mq == NULL)
+			goto error;
+		fsuuid = mq->fsuuid;
+	} else {
+		mp = pscrpc_msg_buf(m, 0, sizeof(*mp));
+		if (mp == NULL)
+			goto error;
+		fsuuid = mp->fsuuid;
+	}
+
+	return;
+
+ error:
+	psclog_errorx("no message; msg=%p opc=%d bufc=%d",
+	    m, m ? (int)m->opc : -1, m ? (int)m->bufcount : -1);
+}
+
+void
 sli_rpc_mds_pack_statfs(struct pscrpc_msg *m)
 {
 	struct srt_statfs *f;
@@ -177,8 +215,11 @@ slrpc_waitrep(struct slashrpc_cservice *csvc,
 	if (csvc->csvc_ctype == SLCONNT_MDS)
 		sli_rpc_mds_pack_statfs(rq->rq_reqmsg);
 	rc = slrpc_waitgenrep(rq, plen, mpp);
-	if (csvc->csvc_ctype == SLCONNT_MDS)
+	if (csvc->csvc_ctype == SLCONNT_MDS) {
 		sli_rpc_mds_unpack_bminseq(rq, PSCRPC_MSG_REPLY);
+		if (rq->rq_reqmsg->opc == SRMT_CONNECT)
+			sli_rpc_mds_unpack_fsuuid(rq, PSCRPC_MSG_REQUEST);
+	}
 	return (rc);
 }
 
@@ -197,6 +238,8 @@ slrpc_allocrep(struct pscrpc_request *rq, void *mqp, int qlen,
 		    plens, rcoff);
 		sli_rpc_mds_unpack_bminseq(rq, PSCRPC_MSG_REQUEST);
 		sli_rpc_mds_pack_statfs(rq->rq_repmsg);
+		if (rc == 0 && rq->rq_reqmsg->opc == SRMT_CONNECT)
+			sli_rpc_mds_unpack_fsuuid(rq, PSCRPC_MSG_REPLY);
 		return (rc);
 	}
 	return (slrpc_allocgenrep(rq, mqp, qlen, mpp, plen, rcoff));
