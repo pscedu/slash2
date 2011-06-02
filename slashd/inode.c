@@ -147,11 +147,6 @@ mds_inode_write(struct slash_inode_handle *ih, void *logf, void *arg)
 	else {
 		DEBUG_INOH(PLL_INFO, ih, "wrote inode (rc=%d) data=%p",
 		    rc, inoh_2_mdsio_data(ih));
-#ifdef SHITTY_PERFORMANCE
-		rc = mdsio_fsync(&rootcreds, 1, inoh_2_mdsio_data(ih));
-		if (rc == -1)
-			psc_fatal("mdsio_fsync");
-#endif
 		if (ih->inoh_flags & INOH_INO_NEW)
 			ih->inoh_flags &= ~INOH_INO_NEW;
 	}

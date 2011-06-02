@@ -48,7 +48,7 @@ struct psc_listcache		 bmapReadAheadQ;
 struct psc_listcache		 bmapTimeoutQ;
 struct pscrpc_completion	 rpcComp;
 
-struct pscrpc_nbreqset *pndgBmaplsReqs;
+struct pscrpc_nbreqset		*pndgBmaplsReqs;
 __static struct pscrpc_nbreqset	*pndgWrtReqs;
 __static struct psc_listcache	 pndgWrtReqSets;
 __static atomic_t		 outstandingRpcCnt;

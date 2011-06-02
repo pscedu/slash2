@@ -138,8 +138,8 @@ resm2rmci(struct sl_resm *resm)
 #define msl_read(fh, buf, size, off)	msl_io((fh), (buf), (size), (off), SL_READ)
 #define msl_write(fh, buf, size, off)	msl_io((fh), (char *)(buf), (size), (off), SL_WRITE)
 
-void     msl_bmpce_getbuf(struct bmap_pagecache_entry *);
-void     msl_reada_rpc_launch(struct bmap_pagecache_entry *);
+void	 msl_bmpce_getbuf(struct bmap_pagecache_entry *);
+void	 msl_reada_rpc_launch(struct bmap_pagecache_entry *);
 
 struct slashrpc_cservice *
 	 msl_bmap_to_csvc(struct bmapc_memb *, int);
@@ -150,11 +150,11 @@ int	 msl_write_rpc_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int	 msl_write_rpcset_cb(struct pscrpc_request_set *, void *, int);
 int	 msl_stat(struct fidc_membh *, void *);
 int	 msl_getrqstatus(struct slashrpc_cservice *csvc, struct pscrpc_request *);
-int      msl_biorq_cmp(const void *, const void *);
+int	 msl_biorq_cmp(const void *, const void *);
 
 struct msl_fhent * msl_fhent_new(struct fidc_membh *);
 
-int      msl_readahead_cb(struct pscrpc_request *, struct pscrpc_async_args *);
+int	 msl_readahead_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 
 void	 msctlthr_spawn(void);
 void	 mstimerthr_spawn(void);
@@ -183,8 +183,6 @@ extern struct psc_waitq		 bmapflushwaitq;
 
 extern struct psc_listcache	 bmapReadAheadQ;
 extern struct pscrpc_nbreqset	*ra_nbreqset;
-extern struct pscrpc_nbreqset   *pndgBmaplsReqs;
-
-
+extern struct pscrpc_nbreqset	*pndgBmaplsReqs;
 
 #endif /* _MOUNT_SLASH_H_ */

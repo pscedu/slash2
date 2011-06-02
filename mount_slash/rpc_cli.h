@@ -31,12 +31,12 @@ struct pscrpc_request;
 extern struct pscrpc_completion rpcComp;
 
 /* async RPC pointers */
-#define MSL_CBARG_BMPCE		0
-#define MSL_CBARG_CSVC		1
-#define MSL_CBARG_BIORQ		2
-#define MSL_CBARG_BIORQS	3
-#define MSL_CBARG_RA		4
-#define MSL_CBARG_BMAP          4 /* don't mix with RA! */
+#define MSL_CBARG_BMPCE			0
+#define MSL_CBARG_CSVC			1
+#define MSL_CBARG_BIORQ			2
+#define MSL_CBARG_BIORQS		3
+#define MSL_CBARG_RA			4
+#define MSL_CBARG_BMAP			4 /* don't mix with RA! */
 
 /* SLASH RPC channel for client from MDS. */
 #define SRCM_NTHREADS			8
@@ -95,25 +95,24 @@ msl_getmw(void)
 }
 
 #define MSL_GET_RQ_STATUS(csvc, rq, mp, rc)				\
-	{								\
-		rc = (rq)->rq_repmsg->status;				\
-		if (rc == 0)						\
-			rc = (rq)->rq_status;				\
-		if (rc == 0)						\
-			rc = authbuf_check((rq), PSCRPC_MSG_REPLY);	\
-		if (rc == 0)						\
-			rc = (mp) ? (mp)->rc : ENOMSG;			\
-		if (rc == SLERR_NOTCONN)				\
-			sl_csvc_disconnect((csvc));			\
-	}
+	do {								\
+		(rc) = (rq)->rq_repmsg->status;				\
+		if ((rc) == 0)						\
+			(rc) = (rq)->rq_status;				\
+		if ((rc) == 0)						\
+			(rc) = authbuf_check((rq), PSCRPC_MSG_REPLY);	\
+		if ((rc) == 0)						\
+			(rc) = (mp) ? (mp)->rc : ENOMSG;		\
+		if ((rc) == SLERR_NOTCONN)				\
+			sl_csvc_disconnect(csvc);			\
+	} while (0)
 
 #define MSL_GET_RQ_STATUS_TYPE(csvc, rq, type, rc)			\
 	do {								\
 		struct type *_mp;					\
 									\
-		_mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*_mp));	\
-		GET_RQ_STATUS(csvc, rq, _mp, rc);			\
+		_mp = pscrpc_msg_buf((rq)->rq_repmsg, 0, sizeof(*_mp));	\
+		GET_RQ_STATUS((csvc), (rq), _mp, (rc));			\
 	} while (0)
-		
 
 #endif /* _SLC_RPC_H_ */

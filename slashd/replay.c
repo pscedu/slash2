@@ -1,4 +1,3 @@
-
 /* $Id$ */
 /*
  * %PSC_START_COPYRIGHT%

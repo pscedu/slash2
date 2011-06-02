@@ -1,4 +1,3 @@
-
 /* $Id$ */
 /*
  * %PSC_START_COPYRIGHT%
@@ -158,21 +157,21 @@ static void
 slm_rmc_bmapdesc_setup(struct bmapc_memb *bmap,
        struct srt_bmapdesc *sbd, enum rw rw)
 {
-        sbd->sbd_fg = bmap->bcm_fcmh->fcmh_fg;
-        sbd->sbd_bmapno = bmap->bcm_bmapno;
-        if (bmap->bcm_flags & BMAP_DIO)
-                sbd->sbd_flags |= SRM_LEASEBMAPF_DIRECTIO;
+	sbd->sbd_fg = bmap->bcm_fcmh->fcmh_fg;
+	sbd->sbd_bmapno = bmap->bcm_bmapno;
+	if (bmap->bcm_flags & BMAP_DIO)
+		sbd->sbd_flags |= SRM_LEASEBMAPF_DIRECTIO;
 
-        if (rw == SL_WRITE) {
-                struct bmap_mds_info *bmi = bmap_2_bmi(bmap);
+	if (rw == SL_WRITE) {
+		struct bmap_mds_info *bmi = bmap_2_bmi(bmap);
 
-                psc_assert(bmi->bmdsi_wr_ion);
-                sbd->sbd_ion_nid = bmi->bmdsi_wr_ion->rmmi_resm->resm_nid;
-                sbd->sbd_ios_id = bmi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id;
-        } else {
-                sbd->sbd_ion_nid = LNET_NID_ANY;
-                sbd->sbd_ios_id = IOS_ID_ANY;
-        }
+		psc_assert(bmi->bmdsi_wr_ion);
+		sbd->sbd_ion_nid = bmi->bmdsi_wr_ion->rmmi_resm->resm_nid;
+		sbd->sbd_ios_id = bmi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id;
+	} else {
+		sbd->sbd_ion_nid = LNET_NID_ANY;
+		sbd->sbd_ios_id = IOS_ID_ANY;
+	}
 }
 
 /**
@@ -244,7 +243,7 @@ slm_rmc_handle_extendbmapls(struct pscrpc_request *rq)
 		return (0);
 
 	mp->rc = mds_lease_renew(f, &mq->sbd, &mp->sbd, rq->rq_export);
-	
+
 	return (0);
 }
 

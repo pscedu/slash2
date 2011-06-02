@@ -392,7 +392,6 @@ struct srm_leasebmapext_rep {
 	int32_t                 _pad;
 } __packed;
 
-
 #define srm_leasebmapext_rep srm_leasebmap_rep
 
 /*

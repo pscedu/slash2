@@ -318,7 +318,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 				PFL_GETTIMESPEC(&bmpce->bmpce_laccess);
 				pll_remove(&bmpc->bmpc_lru, bmpce);
 				pll_add_sorted(&bmpc->bmpc_lru, bmpce,
-				       bmpce_lrusort_cmp1);
+				    bmpce_lrusort_cmp1);
 			}
 			spinlock(&mfh->mfh_lock);
 			mfh->mfh_ra.mra_raoff = bmap_foff(b) +
@@ -1143,7 +1143,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 	PSCFREE(iovs);
 
 	psc_iostats_intv_add((op == SRMT_WRITE ?
-	      &msl_diowr_stat : &msl_diord_stat), size);
+	    &msl_diowr_stat : &msl_diord_stat), size);
 
 	msl_biorq_destroy(r);
 
@@ -1453,7 +1453,7 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r, int *psched)
 		 *    for the number of bmpce's inside biorq_pages.
 		 */
 		bmpce_usecheck(bmpce, BIORQ_READ,
-		       biorq_getaligned_off(r, i));
+		    biorq_getaligned_off(r, i));
 
 		if (biorq_is_my_bmpce(r, bmpce))
 			psc_assert(!(bmpce->bmpce_flags & BMPCE_DATARDY));
@@ -2009,6 +2009,9 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 			if (msl_fd_offline_retry(mfh))
 				goto retry_bmap;
 			switch (rc) {
+//			case SLERR_BADCRC:
+//				rc = EIO;
+//				break;
 			case SLERR_ION_OFFLINE:
 				rc = EHOSTUNREACH;
 				break;

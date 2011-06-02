@@ -444,7 +444,7 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 	}
 	if (bia.bia_fid != fcmh_2_fid(b->bcm_fcmh)) {
 		/* XXX release bia? */
-		DEBUG_BMAP(PLL_ERROR, b, "different fid="SLPRI_FID, 
+		DEBUG_BMAP(PLL_ERROR, b, "different fid="SLPRI_FID,
 		   bia.bia_fid);
 		return (-1);
 	}
@@ -472,7 +472,7 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 
 	iosidx = mds_repl_ios_lookup_add(ih, bia.bia_ios, 0);
 	if (iosidx < 0)
-		psc_fatalx("ios_lookup_add %d: %s", bia.bia_ios, 
+		psc_fatalx("ios_lookup_add %d: %s", bia.bia_ios,
 		   slstrerror(iosidx));
 
 	rc = mds_repl_inv_except(b, bia.bia_ios, iosidx);
@@ -481,7 +481,7 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 		return (-1);
 	}
 	mds_reserve_slot();
-	logentry = pjournal_get_buf(mdsJournal, 
+	logentry = pjournal_get_buf(mdsJournal,
 	    sizeof(struct slmds_jent_assign_rep));
 
 	jrpg = &logentry->sjar_rep;
@@ -1160,27 +1160,26 @@ mds_handle_rls_bmap(struct pscrpc_request *rq, int sliod)
 }
 
 static struct bmap_mds_lease *
-mds_bml_new(struct bmapc_memb *b, struct pscrpc_export *e, int flags, 
+mds_bml_new(struct bmapc_memb *b, struct pscrpc_export *e, int flags,
 	       lnet_process_id_t *cnp)
 {
 	struct bmap_mds_lease *bml;
 
 	bml = psc_pool_get(bmapMdsLeasePool);
-        memset(bml, 0, sizeof(*bml));
+	memset(bml, 0, sizeof(*bml));
 
-        INIT_PSC_LISTENTRY(&bml->bml_bmdsi_lentry);
-        INIT_PSC_LISTENTRY(&bml->bml_timeo_lentry);
-        INIT_PSC_LISTENTRY(&bml->bml_exp_lentry);
-        INIT_PSC_LISTENTRY(&bml->bml_coh_lentry);
-        INIT_SPINLOCK(&bml->bml_lock);
+	INIT_PSC_LISTENTRY(&bml->bml_bmdsi_lentry);
+	INIT_PSC_LISTENTRY(&bml->bml_timeo_lentry);
+	INIT_PSC_LISTENTRY(&bml->bml_exp_lentry);
+	INIT_PSC_LISTENTRY(&bml->bml_coh_lentry);
+	INIT_SPINLOCK(&bml->bml_lock);
 
 	bml->bml_exp = e;
 	bml->bml_bmdsi = bmap_2_bmi(b);
 	bml->bml_flags = flags;
 	bml->bml_cli_nidpid = *cnp;
 
-        return (bml);
-
+	return (bml);
 }
 
 void
@@ -1242,7 +1241,7 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 		goto out;
 	}
 
-	bml = mds_bml_new(b, NULL, (BML_WRITE | BML_RECOVER), 
+	bml = mds_bml_new(b, NULL, (BML_WRITE | BML_RECOVER),
 		  &bia->bia_lastcli);
 
 	bml->bml_seq = bia->bia_seq;
@@ -1571,18 +1570,18 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	rc = mds_bmap_load(f, bmapno, &b);
 	if (rc)
 		return (rc);
-	
-	bml = mds_bml_new(b, exp, ((rw == SL_WRITE ? BML_WRITE : BML_READ) | 
-				   (flags & SRM_LEASEBMAPF_DIRECTIO ? 
+
+	bml = mds_bml_new(b, exp, ((rw == SL_WRITE ? BML_WRITE : BML_READ) |
+				   (flags & SRM_LEASEBMAPF_DIRECTIO ?
 				    BML_CDIO : 0)),
 	   &exp->exp_connection->c_peer);
-			  
-        EXPORT_LOCK(exp);
+
+	EXPORT_LOCK(exp);
 	mexpc = sl_exp_getpri_cli(exp);
 	bml->bml_flags |= BML_EXP;
 	psclist_add_tail(&bml->bml_exp_lentry, &mexpc->mexpc_bmlhd);
 	EXPORT_ULOCK(exp);
-			  
+
 	rc = mds_bmap_bml_add(bml, rw, prefios);
 	  if (rc) {
 		if (rc == -SLERR_BMAP_DIOWAIT) {
@@ -1610,13 +1609,13 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 }
 
 int
-mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in, 
+mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 		struct srt_bmapdesc *sbd_out, struct pscrpc_export *exp) {
 	struct bmap_mds_lease *bml, *obml;
 	struct bmapc_memb *b;
 	struct slm_exp_cli *mexpc;
 	int rc, rw;
-	
+
 	rc = mds_bmap_load(f, sbd_in->sbd_bmapno, &b);
 	if (rc)
 		return (rc);
@@ -1624,7 +1623,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	/* Lookup the original lease to ensure it actually exists.
 	 */
 	BMAP_LOCK(b);
-	obml = mds_bmap_getbml(b, exp->exp_connection->c_peer.nid, 
+	obml = mds_bmap_getbml(b, exp->exp_connection->c_peer.nid,
 	       exp->exp_connection->c_peer.pid, sbd_in->sbd_seq);
 	BMAP_ULOCK(b);
 
@@ -1632,7 +1631,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 		rc = ENOENT;
 		goto out;
 	}
-	
+
 	if (sbd_in->sbd_ion_nid == LNET_NID_ANY) {
 		if (sbd_in->sbd_ios_id == IOS_ID_ANY)
 			rw = BML_READ;
@@ -1682,7 +1681,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 
 		sbd_out->sbd_key = bml->bml_bmdsi->bmdsi_assign->odtr_key;
 		sbd_out->sbd_ion_nid = bmi->bmdsi_wr_ion->rmmi_resm->resm_nid;
-		sbd_out->sbd_ios_id = 
+		sbd_out->sbd_ios_id =
 			bmi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id;
 	} else {
 		sbd_out->sbd_key = BMAPSEQ_ANY;
@@ -1695,8 +1694,8 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 		sbd_out->sbd_flags |= SRM_LEASEBMAPF_DIRECTIO;
 	BMAP_ULOCK(b);
 
-	/* By this point it should be safe to ignore the error from 
-	 *   mds_bmap_bml_release() since a new lease has already been 
+	/* By this point it should be safe to ignore the error from
+	 *   mds_bmap_bml_release() since a new lease has already been
 	 *   issued.
 	 */
 	BML_LOCK(obml);
@@ -1709,7 +1708,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 
 	DEBUG_BMAP(PLL_WARN, b,
 		   "renew seq=%"PRId64" nid=%"PRId64" pid=%u",
-		   bml->bml_seq, exp->exp_connection->c_peer.nid, 
+		   bml->bml_seq, exp->exp_connection->c_peer.nid,
 		   exp->exp_connection->c_peer.pid);
  out:
 	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
