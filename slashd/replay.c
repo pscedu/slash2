@@ -94,12 +94,10 @@ mds_replay_bmap_repl_common(void *jent, int op)
 		}
 		f->fcmh_sstb.sst_blocks = jcrc->sjc_aggr_nblks;
 		fcmh_set_repl_nblks(f, idx, jcrc->sjc_repl_nblks);
-		INOH_LOCK(ih);
 		if (idx >= SL_DEF_REPLICAS)
 			rc = mds_inox_write(ih, NULL, NULL);
 		else
 			rc = mds_inode_write(ih, NULL, NULL);
-		INOH_ULOCK(ih);
 		if (rc)
 			goto out;
 
