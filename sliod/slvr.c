@@ -105,9 +105,9 @@ slvr_do_crc(struct slvr_ref *s)
 		if (!(s->slvr_flags & SLVR_REPLDST))
 			psc_assert(!psc_vbitmap_nfree(s->slvr_slab->slb_inuse));
 
-		//		else
-		psc_assert((slvr_2_crcbits(s) & BMAP_SLVR_DATA) &&
-			   (slvr_2_crcbits(s) & BMAP_SLVR_CRC));
+		else
+			psc_assert((slvr_2_crcbits(s) & BMAP_SLVR_DATA) &&
+				   (slvr_2_crcbits(s) & BMAP_SLVR_CRC));
 
 		if ((slvr_2_crcbits(s) & BMAP_SLVR_DATA) &&
 		    (slvr_2_crcbits(s) & BMAP_SLVR_CRC)) {
