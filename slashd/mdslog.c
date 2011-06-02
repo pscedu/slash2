@@ -564,8 +564,7 @@ mds_namespace_log(int op, uint64_t txg, uint64_t pfid,
 	struct slmds_jent_namespace *sjnm;
 	int distill = 0;
 
-	sjnm = pjournal_get_buf(mdsJournal,
-	    sizeof(struct slmds_jent_namespace));
+	sjnm = pjournal_get_buf(mdsJournal, sizeof(*sjnm));
 	memset(sjnm, 0, sizeof(*sjnm));
 	sjnm->sjnm_magic = SJ_NAMESPACE_MAGIC;
 	sjnm->sjnm_op = op;
@@ -1341,20 +1340,20 @@ mds_bmap_repl_log(void *datap, uint64_t txg, __unusedx int flag)
 	struct bmapc_memb *bmap = datap;
 	struct slmds_jent_repgen *jrpg;
 
-	jrpg = pjournal_get_buf(mdsJournal,
-	    sizeof(struct slmds_jent_repgen));
+	jrpg = pjournal_get_buf(mdsJournal, sizeof(*jrpg));
 
 	jrpg->sjp_fid = fcmh_2_fid(bmap->bcm_fcmh);
 	jrpg->sjp_bmapno = bmap->bcm_bmapno;
 	jrpg->sjp_bgen = bmap_2_bgen(bmap);
+	jrpg->sjp_nrepls = fcmh_2_nrepls(bmap->bcm_fcmh);
 
 	memcpy(jrpg->sjp_reptbl, bmap->bcm_repls, SL_REPLICA_NBYTES);
 
 	psclog_notify("jlog fid="SLPRI_FID" bmapno=%u bmapgen=%u",
 	    jrpg->sjp_fid, jrpg->sjp_bmapno, jrpg->sjp_bgen);
 
-	pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_REPL,
-	    0, jrpg, sizeof(struct slmds_jent_repgen));
+	pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_REPL, 0, jrpg,
+	    sizeof(*jrpg));
 
 	pjournal_put_buf(mdsJournal, jrpg);
 }
@@ -1393,8 +1392,7 @@ mds_bmap_crc_log(void *datap, uint64_t txg, __unusedx int flag)
 
 		n = MIN(SLJ_MDS_NCRCS, crcup->nups - t);
 
-		jcrc = pjournal_get_buf(mdsJournal,
-		    sizeof(struct slmds_jent_crc));
+		jcrc = pjournal_get_buf(mdsJournal, sizeof(*jcrc));
 		jcrc->sjc_fid = fcmh_2_fid(bmap->bcm_fcmh);
 		jcrc->sjc_iosid = bmi->bmdsi_wr_ion->rmmi_resm->resm_iosid;
 		jcrc->sjc_bmapno = bmap->bcm_bmapno;
@@ -1409,7 +1407,7 @@ mds_bmap_crc_log(void *datap, uint64_t txg, __unusedx int flag)
 		    n * sizeof(struct srt_bmap_crcwire));
 
 		pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_CRC,
-		    distill, jcrc, sizeof(struct slmds_jent_crc));
+		    distill, jcrc, sizeof(*jcrc));
 
 		if (!distill)
 			pjournal_put_buf(mdsJournal, jcrc);
