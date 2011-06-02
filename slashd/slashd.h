@@ -210,6 +210,8 @@ struct slm_workrq {
 };
 
 int		 mds_handle_rls_bmap(struct pscrpc_request *, int);
+int              mds_lease_renew(struct fidc_membh *, struct srt_bmapdesc *, 
+			 struct srt_bmapdesc *, struct pscrpc_export *);
 
 __dead void	 slmctlthr_main(const char *);
 void		 slmbmaptimeothr_spawn(void);

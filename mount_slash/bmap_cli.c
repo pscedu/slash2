@@ -27,6 +27,7 @@
 #include "mount_slash.h"
 #include "slashrpc.h"
 #include "slerr.h"
+#include "bmpc.h"
 
 /**
  * bmapc_memb_init - Initialize a bmap substructure.
@@ -123,6 +124,85 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 	return (rc);
 }
 
+
+__static int
+msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
+			 struct pscrpc_async_args *args) {
+	struct bmapc_memb *b = rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP];
+	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
+	struct srm_leasebmapext_rep *mp = 
+		pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
+	int rc;
+
+	BMAP_LOCK(b);	
+	psc_assert(b->bcm_flags & BMAP_CLI_LEASEEXTREQ);
+	
+	MSL_GET_RQ_STATUS(csvc, rq, mp, rc);
+	if (rc)
+		goto out;
+
+	memcpy(&bmap_2_bci(b)->bci_sbd, &mp->sbd, sizeof(struct srt_bmapdesc));
+
+	PFL_GETTIMESPEC(&bmap_2_bci(b)->bci_xtime);
+
+	timespecadd(&bmap_2_bci(b)->bci_xtime, &msl_bmap_timeo_inc,
+	    &bmap_2_bci(b)->bci_etime);
+	timespecadd(&bmap_2_bci(b)->bci_xtime, &msl_bmap_max_lease,
+	    &bmap_2_bci(b)->bci_xtime);
+ out:	
+	BMAP_CLEARATTR(b, BMAP_CLI_LEASEEXTREQ);
+	BMAP_ULOCK(b);
+
+	DEBUG_BMAP(rc ? PLL_ERROR : PLL_WARN, b, 
+	   "lease extension (rc=%d)", rc);
+
+	return (rc);
+}
+
+void
+msl_bmap_lease_tryext(struct bmapc_memb *b) {
+	int secs;
+
+	BMAP_LOCK(b);
+
+	if (b->bcm_flags & (BMAP_CLI_LEASEEXTREQ | BMAP_TIMEOQ) ||
+	    (secs = bmap_2_bci(b)->bci_xtime.tv_sec - CURRENT_SECONDS) > 
+	    BMAP_CLI_EXTREQSECS) {
+		BMAP_ULOCK(b);
+		return;
+
+	} else {	
+		struct slashrpc_cservice *csvc = NULL;
+		struct pscrpc_request *rq = NULL;
+		struct srm_leasebmapext_req *mq;
+		struct srm_leasebmapext_rep *mp;
+		int rc;
+
+		BMAP_SETATTR(b, BMAP_CLI_LEASEEXTREQ);
+		BMAP_ULOCK(b);
+
+		rc = slc_rmc_getimp1(&csvc, fcmh_2_fci(b->bcm_fcmh)->fci_resm);
+		if (!rc)
+			rc = SL_RSX_NEWREQ(csvc, SRMT_EXTENDBMAPLS, rq, mq, mp);
+		
+		DEBUG_BMAP(rc ? PLL_ERROR : PLL_WARN, b, 
+		   "requesting lease extension (rc=%d) (secs=%d)", rc, secs);
+		if (rc)
+			return;
+		
+		rq->rq_interpret_reply = msl_bmap_lease_tryext_cb;
+		rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
+		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
+		rq->rq_comp = &rpcComp;
+
+		memcpy(&mq->sbd, &bmap_2_bci(b)->bci_sbd, 
+		       sizeof(struct srt_bmapdesc));
+		authbuf_sign(rq, PSCRPC_MSG_REQUEST);
+
+		(int)pscrpc_nbreqset_add(pndgBmaplsReqs, rq);
+	}	
+}
+
 /**
  * msl_bmap_retrieve - Perform a blocking 'LEASEBMAP' operation to
  *	retrieve one or more bmaps from the MDS.
@@ -186,8 +266,9 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw, __unusedx int flags)
 
 	msl_bmap_reap_init(bmap, &mp->sbd);
 
-	DEBUG_BMAP(PLL_INFO, bmap, "rw=%d nid=%#"PRIx64" bmapnid=%#"PRIx64,
-	    rw, mp->sbd.sbd_ion_nid, bmap_2_ion(bmap));
+	DEBUG_BMAP(PLL_INFO, bmap, "rw=%d nid=%#"PRIx64" sbd_seq=%"PRId64
+	   " bmapnid=%"PRIx64, rw, mp->sbd.sbd_ion_nid, 
+	   mp->sbd.sbd_seq, bmap_2_ion(bmap));
 
 	if (getreptbl) {
 		/* XXX don't forget that on write we need to invalidate

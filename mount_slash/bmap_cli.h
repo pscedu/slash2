@@ -46,8 +46,10 @@ struct bmap_cli_info {
 /* mount_slash specific bcm_flags */
 #define BMAP_CLI_FLUSHPROC	(_BMAP_FLSHFT << 0)	/* proc'd by flush thr */
 #define BMAP_CLI_BIORQEXPIRE	(_BMAP_FLSHFT << 1)
+#define BMAP_CLI_LEASEEXTREQ    (_BMAP_FLSHFT << 2)     /* requesting a lease ext */
 
 #define BMAP_CLI_MAX_LEASE	60 /* seconds */
+#define BMAP_CLI_EXTREQSECS     20
 #define BMAP_CLI_TIMEO_INC	1
 #define BMAP_CLI_DIOWAIT_SECS	1
 
@@ -74,7 +76,9 @@ struct bmap_cli_info {
 	} while (0)
 
 void     msl_bmap_cache_rls(struct bmapc_memb *);
+void     msl_bmap_lease_tryext(struct bmapc_memb *);
 void     bmap_biorq_expire(struct bmapc_memb *);
+
 
 extern struct timespec msl_bmap_max_lease;
 extern struct timespec msl_bmap_timeo_inc;

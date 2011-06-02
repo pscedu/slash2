@@ -70,7 +70,7 @@ struct psc_iostats	msl_racache_stat;
 
 void bmap_flush_inflight_unset(struct bmpc_ioreq *);
 
-__static int
+int
 msl_biorq_cmp(const void *x, const void *y)
 {
 	const struct bmpc_ioreq * a = x;
@@ -631,6 +631,7 @@ bmap_biorq_expire(struct bmapc_memb *b)
 	psc_waitq_wakeall(&bmapflushwaitq);
 }
 
+
 void
 bmap_biorq_waitempty(struct bmapc_memb *b)
 {
@@ -989,7 +990,7 @@ msl_readahead_cb(struct pscrpc_request *rq,
 }
 
 int
-msl_io_rpcset_cb(__unusedx struct pscrpc_request_set *set, void *arg,
+msl_write_rpcset_cb(__unusedx struct pscrpc_request_set *set, void *arg,
     int rc)
 {
 	struct psc_dynarray *biorqs = arg;
@@ -1012,7 +1013,7 @@ msl_io_rpcset_cb(__unusedx struct pscrpc_request_set *set, void *arg,
 }
 
 int
-msl_io_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
+msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct psc_dynarray *biorqs = args->pointer_arg[MSL_CBARG_BIORQS];
@@ -1257,6 +1258,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry *bmpce)
 	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
 	if (rc)
 		goto error;
+	//XXX adjust rpc timeout according to bci_xtime
 
 	rc = rsx_bulkclient(rq, BULK_PUT_SINK, SRIC_BULK_PORTAL, &iov, 1);
 	if (rc)
@@ -2014,6 +2016,7 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 			goto out;
 		}
 
+		msl_bmap_lease_tryext(b);
 		/*
 		 * Re-relativize the offset if this request spans more
 		 * than 1 bmap.

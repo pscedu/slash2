@@ -183,7 +183,6 @@ struct bmap_mds_lease {
 	lnet_process_id_t	  bml_cli_nidpid;
 	uint32_t		  bml_flags;
 	psc_spinlock_t		  bml_lock;
-	time_t			  bml_start;
 	struct bmap_mds_info	 *bml_bmdsi;
 	struct pscrpc_export	 *bml_exp;
 	struct psclist_head	  bml_bmdsi_lentry;

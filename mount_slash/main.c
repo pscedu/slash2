@@ -400,8 +400,9 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	msl_bmap_reap_init(bcm, &mp->sbd);
 
-	DEBUG_BMAP(PLL_INFO, bcm, "nid=%#"PRIx64" bmapnid=%#"PRIx64,
-	    mp->sbd.sbd_ion_nid, bmap_2_ion(bcm));
+	DEBUG_BMAP(PLL_INFO, bcm, "nid=%"PRIx64" sbd_seq=%"PRId64
+	   " bmapnid=%"PRIx64, mp->sbd.sbd_ion_nid, mp->sbd.sbd_seq, 
+	   bmap_2_ion(bcm));
 
 	SL_REPL_SET_BMAP_IOS_STAT(bcm->bcm_repls, 0, BREPLST_VALID);
 
@@ -1084,7 +1085,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	rsx_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, iov, niov);
 	rq->rq_bulk_abortable = 1;
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc && slc_rmc_retry(pfr, &rc))
+	if (rc && rc != -ENOTDIR && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (rc == 0)
 		rc = mp->rc;

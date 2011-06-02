@@ -48,8 +48,9 @@ struct psc_listcache		 bmapReadAheadQ;
 struct psc_listcache		 bmapTimeoutQ;
 struct pscrpc_completion	 rpcComp;
 
-__static struct pscrpc_nbreqset	*pndgReqs;
-__static struct psc_listcache	 pndgReqSets;
+struct pscrpc_nbreqset *pndgBmaplsReqs;
+__static struct pscrpc_nbreqset	*pndgWrtReqs;
+__static struct psc_listcache	 pndgWrtReqSets;
 __static atomic_t		 outstandingRpcCnt;
 
 #define MAX_OUTSTANDING_RPCS	128
@@ -70,7 +71,7 @@ bmap_flush_reap_rpcs(void)
 	psclog_debug("outstandingRpcCnt=%d (before) rpcComp.rqcomp_compcnt=%d",
 	    atomic_read(&outstandingRpcCnt), atomic_read(&rpcComp.rqcomp_compcnt));
 
-	/* Only this thread may pull from pndgReqSets listcache
+	/* Only this thread may pull from pndgWrtReqSets listcache
 	 *   therefore it can never shrink except by way of this
 	 *   routine.
 	 * Note:  set failures are handled by set_interpret()
@@ -81,14 +82,14 @@ bmap_flush_reap_rpcs(void)
 	 *   put in place here.  Note that pscrpc_nbreqset_reap() also sleeps
 	 *   for a second.
 	 */
-	while ((set = lc_getnb(&pndgReqSets))) {
+	while ((set = lc_getnb(&pndgWrtReqSets))) {
 		if (pscrpc_set_finalize(set, 0, 1))
 			pll_add(&hold, set);
 	}
-	pscrpc_nbreqset_reap(pndgReqs);
+	pscrpc_nbreqset_reap(pndgWrtReqs);
 
 	while ((set = pll_get(&hold)))
-		lc_add(&pndgReqSets, set);
+		lc_add(&pndgWrtReqSets, set);
 
 	psclog_debug("outstandingRpcCnt=%d (after)",
 		 atomic_read(&outstandingRpcCnt));
@@ -253,7 +254,7 @@ bmap_flush_create_rpc(void *set, struct bmpc_ioreq *r,
 	memcpy(&mq->sbd, &bmap_2_bci(b)->bci_sbd, sizeof(mq->sbd));
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 
-	if (set == pndgReqs) {
+	if (set == pndgWrtReqs) {
 		/* biorqs will be freed by the nbreqset callback. */
 		rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQS] = biorqs;
 		if (pscrpc_nbreqset_add(set, rq))
@@ -321,7 +322,7 @@ bmap_flush_inflight_unset(struct bmpc_ioreq *r)
 	bmpc = bmap_2_bmpc(r->biorq_bmap);
 	BMPC_LOCK(bmpc);
 	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
-	pll_addtail(&bmpc->bmpc_new_biorqs, r);
+	pll_add_sorted(&bmpc->bmpc_new_biorqs, r, msl_biorq_cmp);
 	BMPC_ULOCK(bmpc);
 }
 
@@ -370,7 +371,7 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 		/* Single RPC case.  Set the appropriate cb handler
 		 *   and attach to the non-blocking request set.
 		 */
-		rq = bmap_flush_create_rpc(pndgReqs, r, b, iovs, size,
+		rq = bmap_flush_create_rpc(pndgWrtReqs, r, b, iovs, size,
 		    soff, niovs, biorqs);
 		if (rq == NULL)
 			goto error;
@@ -382,7 +383,7 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 
 		size = 0;
 		set = pscrpc_prep_set();
-		set->set_interpret = msl_io_rpcset_cb;
+		set->set_interpret = msl_write_rpcset_cb;
 		/* biorqs must be freed by the cb. */
 		set->set_arg = biorqs;
 
@@ -425,7 +426,7 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 			psc_assert(n);
 			LAUNCH_RPC();
 		}
-		lc_addtail(&pndgReqSets, set);
+		lc_addtail(&pndgWrtReqSets, set);
 	}
 	return;
 
@@ -1116,6 +1117,9 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				DEBUG_BMAP(PLL_NOTICE, b,
 				    "descheduling from timeoq");
 				BMAP_ULOCK(b);
+				/* Try to extend here also.
+				 */
+				msl_bmap_lease_tryext(b);
 				continue;
 			}
 
@@ -1270,6 +1274,7 @@ msbmapflushthrrpc_main(__unusedx struct psc_thread *thr)
 {
 	while (pscthr_run()) {
 		pscrpc_completion_waitrel_s(&rpcComp, 1);
+		pscrpc_nbreqset_reap(pndgBmaplsReqs);
 		bmap_flush_reap_rpcs();
 		/* At the moment, RA requests share the same
 		 *    completion as bmap reaps.  Therefore,
@@ -1305,7 +1310,8 @@ msbmapflushthr_spawn(void)
 	struct psc_thread *thr;
 	int i;
 
-	pndgReqs = pscrpc_nbreqset_init(NULL, msl_io_rpc_cb);
+	pndgWrtReqs = pscrpc_nbreqset_init(NULL, msl_write_rpc_cb);
+	pndgBmaplsReqs = pscrpc_nbreqset_init(NULL, NULL);
 	pscrpc_completion_init(&rpcComp);
 	atomic_set(&outstandingRpcCnt, 0);
 	//psc_atomic32_set(&bmapflushforceexpired, 0);
@@ -1320,7 +1326,7 @@ msbmapflushthr_spawn(void)
 	lc_reginit(&bmapReadAheadQ, struct bmap_pagecache_entry,
 	    bmpce_ralentry, "bmapreadahead");
 
-	lc_reginit(&pndgReqSets, struct pscrpc_request_set,
+	lc_reginit(&pndgWrtReqSets, struct pscrpc_request_set,
 	    set_lentry, "bmappndgflushsets");
 
 	for (i = 0; i < NUM_BMAP_FLUSH_THREADS; i++) {

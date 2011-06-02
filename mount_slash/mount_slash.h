@@ -146,10 +146,11 @@ struct slashrpc_cservice *
 void	 msl_bmap_reap_init(struct bmapc_memb *, const struct srt_bmapdesc *);
 int	 msl_dio_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int	 msl_io(struct msl_fhent *, char *, size_t, off_t, enum rw);
-int	 msl_io_rpc_cb(struct pscrpc_request *, struct pscrpc_async_args *);
-int	 msl_io_rpcset_cb(struct pscrpc_request_set *, void *, int);
+int	 msl_write_rpc_cb(struct pscrpc_request *, struct pscrpc_async_args *);
+int	 msl_write_rpcset_cb(struct pscrpc_request_set *, void *, int);
 int	 msl_stat(struct fidc_membh *, void *);
 int	 msl_getrqstatus(struct slashrpc_cservice *csvc, struct pscrpc_request *);
+int      msl_biorq_cmp(const void *, const void *);
 
 struct msl_fhent * msl_fhent_new(struct fidc_membh *);
 
@@ -182,5 +183,8 @@ extern struct psc_waitq		 bmapflushwaitq;
 
 extern struct psc_listcache	 bmapReadAheadQ;
 extern struct pscrpc_nbreqset	*ra_nbreqset;
+extern struct pscrpc_nbreqset   *pndgBmaplsReqs;
+
+
 
 #endif /* _MOUNT_SLASH_H_ */

@@ -134,6 +134,7 @@ enum {
 	SRMT_GETBMAPCRCS,			/* get bmap data checksums */
 	SRMT_GETBMAPMINSEQ,
 	SRMT_RELEASEBMAP,			/* relinquish a client's bmap access lease */
+	SRMT_EXTENDBMAPLS,                      /* bmap lease extension request */
 
 	/* garbage operations */
 	SRMT_RECLAIM,				/* trash storage space for a given FID+GEN */
@@ -381,6 +382,19 @@ struct srm_leasebmap_rep {
 	uint32_t		nrepls;
 	sl_replica_t		reptbl[SL_MAX_REPLICAS];
 } __packed;
+
+struct srm_leasebmapext_req {
+	struct srt_bmapdesc     sbd;
+} __packed;
+
+struct srm_leasebmapext_rep {
+	struct srt_bmapdesc     sbd;
+	int32_t                 rc;
+	int32_t                 _pad;
+} __packed;
+
+
+#define srm_leasebmapext_rep srm_leasebmap_rep
 
 /*
  * ION requesting CRC table from the MDS.
