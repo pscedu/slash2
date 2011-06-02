@@ -1047,6 +1047,7 @@ mds_open_cursor(void)
 	slm_set_curr_slashid(mds_cursor.pjc_fid);
 	psclog_notice("File system was formatted on %"PRIu64" seconds "
 	    "since the Epoch", mds_cursor.pjc_timestamp);
+	psclog_notice("SLFID prior to replay="SLPRI_FID, mds_cursor.pjc_fid);
 	ctime_r((time_t *)&mds_cursor.pjc_timestamp, tmbuf);
 	p = strchr(tmbuf, '\n');
 	if (p)
