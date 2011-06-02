@@ -408,6 +408,7 @@ API rename
 - try locally caching st_blocks in msl
 - msl with sst_size local caching should still take higher values from MDS
   in cases of direct I/O
+- use uint32_t for nanosecond atime/mtime/ctime in znode_phys to save space
 
 test & benchmark replication on a large data set
 
