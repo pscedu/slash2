@@ -255,12 +255,14 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 	}
  out:
 	if (b) {
-		DEBUG_BMAP(PLL_INFO, b, "grabbed");
-		BMAP_ULOCK(b);
+		DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b,
+		    "grabbed rc=%d", rc);
 		if (rc)
 			bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
-		else
+		else {
+			BMAP_ULOCK(b);
 			*bp = b;
+		}
 	}
 	PFL_END_TRACE();
 	return (rc);
