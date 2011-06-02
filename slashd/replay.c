@@ -1,3 +1,4 @@
+
 /* $Id$ */
 /*
  * %PSC_START_COPYRIGHT%
@@ -148,8 +149,7 @@ mds_replay_bmap_repl(struct psc_journal_enthdr *pje)
 static int
 mds_replay_bmap_crc(struct psc_journal_enthdr *pje)
 {
-	return (mds_replay_bmap_repl_common(PJE_DATA(pje),
-	    B_REPLAY_OP_CRC));
+	return (mds_replay_bmap_repl_common(PJE_DATA(pje), B_REPLAY_OP_CRC));
 }
 
 static int
