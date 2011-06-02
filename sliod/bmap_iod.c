@@ -521,6 +521,8 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 	BMAP_LOCK(b); /* equivalent to BIOD_LOCK() */
 	memcpy(bmap_2_ondisk(b), &mp->bod, sizeof(mp->bod));
 
+	DEBUG_BMAPOD(PLL_DEBUG, b, "retrieved");
+
 	/* Need to copy any of our slvr CRCs into the table. */
 	if (!SPLAY_EMPTY(bmap_2_biodi_slvrs(b))) {
 		struct slvr_ref *s;
