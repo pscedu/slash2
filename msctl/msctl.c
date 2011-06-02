@@ -555,7 +555,7 @@ void
 fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	char map[NBREPLST], pmap[NBREPLST], rbuf[PSCFMT_RATIO_BUFSIZ];
+	char *label, map[NBREPLST], pmap[NBREPLST], rbuf[PSCFMT_RATIO_BUFSIZ];
 	struct replst_slave_bdata *rsb, *nrsb;
 	struct srsm_replst_bhdr bhdr;
 	struct stat stb;
@@ -581,16 +581,19 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	pmap[BREPLST_GARBAGE] = 'G';
 	pmap[BREPLST_GARBAGE_SCHED] = 'X';
 
-	dlen = PSC_CTL_DISPLAY_WIDTH - strlen(" new-bmap-repl-policy: ") -
-	    strlen(repl_policies[BRPOL_ONETIME]);
 	n = printf("%s", fid2fn(current_mrs.mrs_fid, &stb));
-	if (S_ISDIR(stb.st_mode))
+	if (S_ISDIR(stb.st_mode)) {
 		n += printf("/");
+		label = " repl-policy: ";
+	} else
+		label = " new-bmap-repl-policy: ";
+	dlen = PSC_CTL_DISPLAY_WIDTH - strlen(label) -
+	    strlen(repl_policies[BRPOL_ONETIME]);
 	if (n > dlen)
 		printf("\n%*s", dlen, "");
 	else
 		printf("%*s", dlen - n, "");
-	printf(" new-bmap-repl-policy: ");
+	printf("%s", label);
 	if (current_mrs.mrs_newreplpol >= NBRPOL)
 		printf("<unknown: %d>\n", current_mrs.mrs_newreplpol);
 	else
