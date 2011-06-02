@@ -401,8 +401,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	logentry->sjar_elem = bmi->bmdsi_assign->odtr_elem;
 
 	pjournal_add_entry(mdsJournal, 0, MDS_LOG_BMAP_ASSIGN, 0, logentry,
-	    sizeof(struct slmds_jent_assign_rep));
-
+	    sizeof(struct slmds_jent_assign_rep)); 
 	pjournal_put_buf(mdsJournal, logentry);
 	mds_unreserve_slot();
 
