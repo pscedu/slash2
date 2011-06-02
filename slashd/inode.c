@@ -196,16 +196,10 @@ mds_inox_write(struct slash_inode_handle *ih, void *logf, void *arg)
 	if (rc == 0 && nb != sizeof(*ih->inoh_extras) + sizeof(crc))
 		rc = SLERR_SHORTIO;
 
-	if (rc) {
+	if (rc)
 		DEBUG_INOH(PLL_ERROR, ih, "mdsio_pwritev: error (rc=%d)",
 		    rc);
-	} else {
-#ifdef SHITTY_PERFORMANCE
-		rc = mdsio_fsync(&rootcreds, 1, inoh_2_mdsio_data(ih));
-		if (rc == -1)
-			psc_fatal("mdsio_fsync");
-#endif
-	}
+
 	return (rc);
 }
 
