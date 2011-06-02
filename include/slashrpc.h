@@ -123,6 +123,7 @@ enum {
 
 	/* namespace operations */
 	SRMT_NAMESPACE_UPDATE,			/* send a batch of namespace update logs */
+	SRMT_NAMESPACE_FORWARD,			/* a namespace operation request from a peer */
 
 	/* bmap operations */
 	SRMT_BMAPCHWRMODE,			/* change read/write access mode */
@@ -134,7 +135,7 @@ enum {
 	SRMT_GETBMAPCRCS,			/* get bmap data checksums */
 	SRMT_GETBMAPMINSEQ,
 	SRMT_RELEASEBMAP,			/* relinquish a client's bmap access lease */
-	SRMT_EXTENDBMAPLS,                      /* bmap lease extension request */
+	SRMT_EXTENDBMAPLS,			/* bmap lease extension request */
 
 	/* garbage operations */
 	SRMT_RECLAIM,				/* trash storage space for a given FID+GEN */
@@ -167,8 +168,6 @@ enum {
 	SRMT_UNLINK,				/* unlink(2) */
 	SRMT_WRITE,				/* write(2) */
 	SRMT_XCTL				/* ancillary operation */
-
-	,SRMT_NAMESPACE_FORWARD			/* a namespace operation request from a peer  */
 };
 
 /* ----------------------------- BEGIN MESSAGES ----------------------------- */
