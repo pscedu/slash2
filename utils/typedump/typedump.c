@@ -276,6 +276,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_io_req);
 	PRTYPE(struct srm_leasebmap_rep);
 	PRTYPE(struct srm_leasebmap_req);
+	PRTYPE(struct srm_leasebmapext_rep);
+	PRTYPE(struct srm_leasebmapext_req);
 	PRTYPE(struct srm_link_req);
 	PRTYPE(struct srm_lookup_req);
 	PRTYPE(struct srm_mkdir_req);
@@ -323,6 +325,7 @@ main(int argc, char *argv[])
 	PRVAL(BIM_RETRIEVE_SEQ);
 	PRVAL(BIOD_CRCUP_MAX_AGE);
 	PRVAL(BMAP_CLI_DIOWAIT_SECS);
+	PRVAL(BMAP_CLI_EXTREQSECS);
 	PRVAL(BMAP_CLI_MAX_LEASE);
 	PRVAL(BMAP_CLI_TIMEO_INC);
 	PRVAL(BMAP_SEQLOG_FACTOR);
@@ -378,6 +381,7 @@ main(int argc, char *argv[])
 	PRVAL(MSCMT_SET_NEWREPLPOL);
 	PRVAL(MSL_CBARG_BIORQ);
 	PRVAL(MSL_CBARG_BIORQS);
+	PRVAL(MSL_CBARG_BMAP);
 	PRVAL(MSL_CBARG_BMPCE);
 	PRVAL(MSL_CBARG_CSVC);
 	PRVAL(MSL_CBARG_RA);
@@ -641,6 +645,7 @@ main(int argc, char *argv[])
 	PRVAL(SRMT_CONNECT);
 	PRVAL(SRMT_CREATE);
 	PRVAL(SRMT_DESTROY);
+	PRVAL(SRMT_EXTENDBMAPLS);
 	PRVAL(SRMT_GETATTR);
 	PRVAL(SRMT_GETBMAP);
 	PRVAL(SRMT_GETBMAPCRCS);
@@ -649,6 +654,7 @@ main(int argc, char *argv[])
 	PRVAL(SRMT_LOOKUP);
 	PRVAL(SRMT_MKDIR);
 	PRVAL(SRMT_MKNOD);
+	PRVAL(SRMT_NAMESPACE_FORWARD);
 	PRVAL(SRMT_NAMESPACE_UPDATE);
 	PRVAL(SRMT_PING);
 	PRVAL(SRMT_READ);
