@@ -145,7 +145,7 @@ bmap_lookup_cache_locked(struct fidc_membh *f, sl_bmapno_t n)
 }
 
 /**
- * bmap_getf - Get the specified bmap.
+ * _bmap_get - Get the specified bmap.
  * @f: fcmh.
  * @n: bmap number.
  * @rw: access mode.
@@ -154,11 +154,13 @@ bmap_lookup_cache_locked(struct fidc_membh *f, sl_bmapno_t n)
  * Notes: returns the bmap referenced via bcm_opcnt.
  */
 int
-bmap_getf(struct fidc_membh *f, sl_bmapno_t n, enum rw rw, int flags,
-    struct bmapc_memb **bp)
+_bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
+    sl_bmapno_t n, enum rw rw, int flags, struct bmapc_memb **bp)
 {
 	int rc = 0, do_load = 0, locked, bmaprw = 0;
 	struct bmapc_memb *b;
+
+	PFL_START_TRACE(pci);
 
 	*bp = NULL;
 
@@ -170,7 +172,8 @@ bmap_getf(struct fidc_membh *f, sl_bmapno_t n, enum rw rw, int flags,
 	if (b == NULL) {
 		if ((flags & BMAPGETF_LOAD) == 0) {
 			ureqlock(&f->fcmh_lock, locked);
-			return (ENOENT);
+			rc = ENOENT;
+			goto out;
 		}
 		b = psc_pool_get(bmap_pool);
 		memset(b, 0, bmap_pool->ppm_master->pms_entsize);
@@ -251,13 +254,15 @@ bmap_getf(struct fidc_membh *f, sl_bmapno_t n, enum rw rw, int flags,
 		}
 	}
  out:
-	DEBUG_BMAP(PLL_INFO, b, "grabbed");
-	BMAP_ULOCK(b);
-	if (rc)
-		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
-	else
-		*bp = b;
-
+	if (b) {
+		DEBUG_BMAP(PLL_INFO, b, "grabbed");
+		BMAP_ULOCK(b);
+		if (rc)
+			bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+		else
+			*bp = b;
+	}
+	PFL_END_TRACE();
 	return (rc);
 }
 
@@ -340,7 +345,7 @@ _log_dump_bmapodv(const struct pfl_callerinfo *pci, int level,
 		k--;
 	cbuf[k] = '\0';
 
-	_DEBUG_BMAP(pci, level, bmap, "repls=[%s] crcstates=[0x%s] %s",
+	_DEBUG_BMAP(pci, level, bmap, "repls={%s} crcstates=[0x%s] %s",
 	    rbuf, cbuf, mbuf);
 }
 
