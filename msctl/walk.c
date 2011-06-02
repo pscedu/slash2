@@ -53,13 +53,13 @@ walk(const char *fn, void (*cbf)(const char *, const struct stat *,
 		if (fp == NULL)
 			psc_fatal("fts_open %s", fn);
 		while ((f = fts_read(fp)) != NULL) {
-			if (f->fts_info == FTS_NS) {
+			switch (f->fts_info) {
+			case FTS_NS:
 				warnx("%s: %s", f->fts_path,
 				    strerror(f->fts_errno));
-				continue;
-			}
-			if (S_ISREG(f->fts_statp->st_mode) ||
-			    S_ISDIR(f->fts_statp->st_mode)) {
+				break;
+			case FTS_F:
+			case FTS_D:
 				if (realpath(f->fts_path, buf) == NULL)
 					warn("%s", f->fts_path);
 				else {
@@ -67,6 +67,7 @@ walk(const char *fn, void (*cbf)(const char *, const struct stat *,
 						warnx("processing %s", buf);
 					cbf(buf, f->fts_statp, arg);
 				}
+				break;
 			}
 		}
 		fts_close(fp);
