@@ -152,8 +152,12 @@ authbuf_check(struct pscrpc_request *rq, int msgtype)
 	if (saf == NULL)
 		return (SLERR_AUTHBUF_ABSENT);
 
-	if (saf->saf_secret.sas_magic != AUTHBUF_MAGIC)
+	if (saf->saf_secret.sas_magic != AUTHBUF_MAGIC) {
+		psclog_debug("invalid authbuf magic: "
+		    "%"PRIx64" vs %"PRIx64, saf->saf_secret.sas_magic,
+		    AUTHBUF_MAGIC);
 		return (SLERR_AUTHBUF_BADMAGIC);
+	}
 
 	pscrpc_req_getprids(rq, &self_prid, &peer_prid);
 	if (saf->saf_secret.sas_src_nid != peer_prid.nid ||
