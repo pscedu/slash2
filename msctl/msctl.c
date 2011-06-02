@@ -688,7 +688,7 @@ ms_ctlmsg_error_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	return;
 
  out:
-     warnx("%s", pce->pce_errmsg);
+	warnx("%s", pce->pce_errmsg);
 }
 
 
