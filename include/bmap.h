@@ -232,7 +232,7 @@ struct bmapc_memb {
 #define BMAP_SLVR_DATA		(1 << 0)	/* Data present, otherwise slvr is hole */
 #define BMAP_SLVR_CRC		(1 << 1)	/* Has valid CRC */
 #define BMAP_SLVR_CRCDIRTY	(1 << 2)
-#define _BMAP_SLVR_LAST		3
+#define _BMAP_SLVR_FLSHFT	(1 << 3)
 
 /*
  * Routines to get and fetch a bmap replica's status.
