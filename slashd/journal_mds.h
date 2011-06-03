@@ -30,29 +30,29 @@
 #define SLJ_MDS_NCRCS			MAX_BMAP_INODE_PAIRS
 
 /**
- * slmds_jent_crc - Log bmap CRC updates from IONs.
- * @sjc_fid: file ID.
- * @sjc_bmapno: which bmap region.
- * @sjc_ion: the ion who sent the request.
- * @sjc_crc: array of slots and crcs.
+ * slmds_jent_bmap_crc - Log bmap CRC updates from IONs.
+ * @sjbc_fid: file ID.
+ * @sjbc_bmapno: which bmap region.
+ * @sjbc_ion: the ion who sent the request.
+ * @sjbc_crc: array of slots and crcs.
  * Notes: this is presumed to be the most common entry in the journal.
  */
-struct slmds_jent_crc {
+struct slmds_jent_bmap_crc {
 	/*
 	 * We can't use ZFS ID here because the create operation may not
 	 * make it to the disk.  When we redo the creation, we will get
 	 * a different ZFS ID.
 	 */
-	slfid_t				sjc_fid;
-	sl_bmapno_t			sjc_bmapno;
-	sl_ios_id_t			sjc_iosid;		/* Track the IOS which did the I/O */
-	 int32_t			sjc_ncrcs;
-	uint32_t			sjc_utimgen;
-	uint64_t			sjc_fsize;
-	uint64_t			sjc_aggr_nblks;		/* total st_blocks */
-	uint64_t			sjc_repl_nblks;		/* IOS' st_blocks */
-	 int32_t			sjc_extend;		/* XXX flags */
-	struct srt_bmap_crcwire		sjc_crc[SLJ_MDS_NCRCS];
+	slfid_t				sjbc_fid;
+	sl_bmapno_t			sjbc_bmapno;
+	sl_ios_id_t			sjbc_iosid;		/* which IOS got the I/O */
+	 int32_t			sjbc_ncrcs;
+	uint32_t			sjbc_utimgen;
+	uint64_t			sjbc_fsize;		/* new st_size */
+	uint64_t			sjbc_aggr_nblks;	/* total st_blocks */
+	uint64_t			sjbc_repl_nblks;	/* IOS' st_blocks */
+	 int32_t			sjbc_extend;		/* XXX flags */
+	struct srt_bmap_crcwire		sjbc_crc[SLJ_MDS_NCRCS];
 } __packed;
 
 /**

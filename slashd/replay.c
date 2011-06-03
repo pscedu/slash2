@@ -34,15 +34,13 @@
 #define B_REPLAY_OP_REPLS	1
 
 /**
- * mds_replay_bmap_repl - Replay a replication update on a bmap.  This has
- *	to be a read-modify-write process because we don't touch the CRC
- *	tables.
+ * mds_replay_bmap - Replay an operation on a bmap.
  */
 static int
-mds_replay_bmap_repl_common(void *jent, int op)
+mds_replay_bmap(void *jent, int op)
 {
 	struct slmds_jent_bmap_repls *sjbr = jent;
-	struct slmds_jent_crc *jcrc = jent;
+	struct slmds_jent_crc *sjbc = jent;
 	struct srt_bmap_crcwire *bmap_wire;
 	struct fidc_membh *f = NULL;
 	struct bmapc_memb *b = NULL;
@@ -66,12 +64,9 @@ mds_replay_bmap_repl_common(void *jent, int op)
 	switch (op) {
 	case B_REPLAY_OP_REPLS:
 		mds_brepls_check(sjbr->sjbr_reptbl, sjbr->sjbr_nrepls);
-
 		bmap_2_replpol(b) = sjbr->sjbr_replpol;
 		memcpy(b->bcm_repls, sjbr->sjbr_reptbl,
 		    SL_REPLICA_NBYTES);
-		psclog_info("fid="SLPRI_FID" bmapno=%u",
-		    sjbr->sjbr_fid, sjbr->sjbr_bmapno);
 		break;
 	case B_REPLAY_OP_CRC: {
 		struct slash_inode_handle *ih;
@@ -79,14 +74,14 @@ mds_replay_bmap_repl_common(void *jent, int op)
 
 		FCMH_LOCK(f);
 		ih = fcmh_2_inoh(f);
-		idx = mds_repl_ios_lookup(ih, jcrc->sjc_iosid);
+		idx = mds_repl_ios_lookup(ih, sjbc->sjc_iosid);
 		if (idx < 0) {
 			psclog_errorx("iosid %d not found in repl "
-			    "table", jcrc->sjc_iosid);
+			    "table", sjbc->sjc_iosid);
 			goto out;
 		}
-		f->fcmh_sstb.sst_blocks = jcrc->sjc_aggr_nblks;
-		fcmh_set_repl_nblks(f, idx, jcrc->sjc_repl_nblks);
+		f->fcmh_sstb.sst_blocks = sjbc->sjc_aggr_nblks;
+		fcmh_set_repl_nblks(f, idx, sjbc->sjc_repl_nblks);
 		if (idx >= SL_DEF_REPLICAS)
 			rc = mds_inox_write(ih, NULL, NULL);
 		else
@@ -98,16 +93,16 @@ mds_replay_bmap_repl_common(void *jent, int op)
 
 		/* Apply the filesize from the journal entry.
 		 */
-		if (jcrc->sjc_extend) {
-			f->fcmh_sstb.sst_size = jcrc->sjc_fsize;
+		if (sjbc->sjc_extend) {
+			f->fcmh_sstb.sst_size = sjbc->sjc_fsize;
 			fl |= PSCFS_SETATTRF_DATASIZE;
 		}
 		rc = mds_fcmh_setattr(f, fl);
 		if (rc)
 			goto out;
 
-		for (i = 0; i < jcrc->sjc_ncrcs; i++) {
-			bmap_wire = &jcrc->sjc_crc[i];
+		for (i = 0; i < sjbc->sjc_ncrcs; i++) {
+			bmap_wire = &sjbc->sjc_crc[i];
 			bmap_2_crcs(b, bmap_wire->slot) = bmap_wire->crc;
 			b->bcm_crcstates[bmap_wire->slot] |=
 			    BMAP_SLVR_DATA | BMAP_SLVR_CRC;
@@ -115,6 +110,8 @@ mds_replay_bmap_repl_common(void *jent, int op)
 		break;
 	    }
 	}
+
+	DEBUG_BMAPOD(PLL_DEBUG, b, "replayed bmap op=%d", op);
 
 	rc = mds_bmap_write(b, 0, NULL, NULL);
 
@@ -129,7 +126,7 @@ mds_replay_bmap_repl_common(void *jent, int op)
 static int
 mds_replay_bmap_repls(struct psc_journal_enthdr *pje)
 {
-	return (mds_replay_bmap_repl_common(PJE_DATA(pje),
+	return (mds_replay_bmap(PJE_DATA(pje),
 	    B_REPLAY_OP_REPLS));
 }
 
@@ -141,7 +138,7 @@ mds_replay_bmap_repls(struct psc_journal_enthdr *pje)
 static int
 mds_replay_bmap_crc(struct psc_journal_enthdr *pje)
 {
-	return (mds_replay_bmap_repl_common(PJE_DATA(pje), B_REPLAY_OP_CRC));
+	return (mds_replay_bmap(PJE_DATA(pje), B_REPLAY_OP_CRC));
 }
 
 static int
@@ -163,26 +160,26 @@ mds_replay_bmap_seq(struct psc_journal_enthdr *pje)
  * mds_replay_ino_repls - Replay an inode replication table update.
  */
 static int
-mds_replay_ino_repls_common(struct slmds_jent_ino_repls *jrir)
+mds_replay_ino_repls_common(struct slmds_jent_ino_repls *sjir)
 {
 	struct slash_inode_handle *ih = NULL;
 	struct slash_fidgen fg;
 	struct fidc_membh *f;
 	int pos, j, rc;
 
-	if (jrir->sjir_fid == FID_ANY) {
+	if (sjir->sjir_fid == FID_ANY) {
 		psclog_errorx("cannot replay on FID_ANY");
 		return (EINVAL);
 	}
 
-	pos = jrir->sjir_pos;
+	pos = sjir->sjir_pos;
 	if (pos >= SL_MAX_REPLICAS || pos < 0) {
 		psclog_errorx("ino_nrepls index (%d) is out of range",
 		    pos);
 		return (EINVAL);
 	}
 
-	fg.fg_fid = jrir->sjir_fid;
+	fg.fg_fid = sjir->sjir_fid;
 	fg.fg_gen = FGEN_ANY;
 	rc = slm_fcmh_get(&fg, &f);
 	if (rc)
@@ -200,13 +197,13 @@ mds_replay_ino_repls_common(struct slmds_jent_ino_repls *jrir)
 		mds_inox_ensure_loaded(ih);
 
 		j = pos - SL_DEF_REPLICAS;
-		ih->inoh_extras->inox_repls[j].bs_id = jrir->sjir_ios;
+		ih->inoh_extras->inox_repls[j].bs_id = sjir->sjir_ios;
 
 		rc = mds_inox_write(ih, NULL, NULL);
 		if (rc)
 			goto out;
 
-		psclog_info("fid="SLPRI_FID, jrir->sjir_fid);
+		psclog_info("fid="SLPRI_FID, sjir->sjir_fid);
 	}
 
 	/*
@@ -217,20 +214,20 @@ mds_replay_ino_repls_common(struct slmds_jent_ino_repls *jrir)
 		if (pos != 0)
 			psclog_errorx("ino_nrepls index (%d) in "
 			    "should be 0 for newly created inode", pos);
-		if (jrir->sjir_nrepls != 1)
+		if (sjir->sjir_nrepls != 1)
 			psclog_errorx("ino_nrepls (%d) in "
 			    "should be 1 for newly created inode",
-			    jrir->sjir_nrepls);
+			    sjir->sjir_nrepls);
 	}
 
-	psc_assert(jrir->sjir_nrepls <= SL_MAX_REPLICAS);
-	psc_assert(jrir->sjir_pos < jrir->sjir_nrepls);
+	psc_assert(sjir->sjir_nrepls <= SL_MAX_REPLICAS);
+	psc_assert(sjir->sjir_pos < sjir->sjir_nrepls);
 
-	ih->inoh_ino.ino_replpol = jrir->sjir_replpol;
-	ih->inoh_ino.ino_nrepls = jrir->sjir_nrepls;
+	ih->inoh_ino.ino_replpol = sjir->sjir_replpol;
+	ih->inoh_ino.ino_nrepls = sjir->sjir_nrepls;
 
 	if (pos < SL_DEF_REPLICAS)
-		ih->inoh_ino.ino_repls[pos].bs_id = jrir->sjir_ios;
+		ih->inoh_ino.ino_repls[pos].bs_id = sjir->sjir_ios;
 
 	rc = mds_inode_write(ih, NULL, NULL);
 
@@ -247,11 +244,11 @@ mds_replay_ino_repls_common(struct slmds_jent_ino_repls *jrir)
 static int
 mds_replay_ino_repls(struct psc_journal_enthdr *pje)
 {
-	struct slmds_jent_ino_repls *jrir;
+	struct slmds_jent_ino_repls *sjir;
 	int rc;
 
-	jrir = PJE_DATA(pje);
-	rc = mds_replay_ino_repls_common(jrir);
+	sjir = PJE_DATA(pje);
+	rc = mds_replay_ino_repls_common(sjir);
 	return (rc);
 }
 
@@ -284,7 +281,7 @@ mds_replay_bmap_assign(struct psc_journal_enthdr *pje)
 	if (logentry->sjar_flags & SLJ_ASSIGN_REP_INO)
 		mds_replay_ino_repls_common(&logentry->sjar_ino);
 	if (logentry->sjar_flags & SLJ_ASSIGN_REP_REP)
-		mds_replay_bmap_repl_common(&logentry->sjar_rep,
+		mds_replay_bmap(&logentry->sjar_rep,
 		    B_REPLAY_OP_REPLS);
 	rc = mdsio_lookup(mds_metadir_inum, SL_FN_BMAP_ODTAB, &mf,
 	    &rootcreds, NULL);

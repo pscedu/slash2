@@ -149,12 +149,12 @@ pjournal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 {
 	char name[SL_NAME_MAX + 1], newname[SL_NAME_MAX + 1];
 	struct slmds_jent_assign_rep *logentry;
-	struct slmds_jent_bmap_assign *jrba;
+	struct slmds_jent_bmap_assign *sjba;
 	struct slmds_jent_bmap_repls *sjbr;
-	struct slmds_jent_ino_repls *jrir;
+	struct slmds_jent_ino_repls *sjir;
 	struct slmds_jent_namespace *sjnm;
 	struct slmds_jent_bmapseq *sjsq;
-	struct slmds_jent_crc *jcrc;
+	struct slmds_jent_crc *sjbc;
 	int type;
 
 	type = pje->pje_type & ~(_PJE_FLSHFT - 1);
@@ -166,9 +166,9 @@ pjournal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 			type, pje->pje_xid, pje->pje_txg, sjbr->sjbr_fid);
 		break;
 	    case MDS_LOG_BMAP_CRC:
-		jcrc = PJE_DATA(pje);
+		sjbc = PJE_DATA(pje);
 		printf("type=%3d, xid=%#"PRIx64", txg=%#"PRIx64", fid="SLPRI_FID,
-			type, pje->pje_xid, pje->pje_txg, jcrc->sjc_fid);
+			type, pje->pje_xid, pje->pje_txg, sjbc->sjc_fid);
 		break;
 	    case MDS_LOG_BMAP_SEQ:
 		sjsq = PJE_DATA(pje);
@@ -179,9 +179,9 @@ pjournal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 			sjsq->sjbsq_high_wm);
 		break;
 	    case MDS_LOG_INO_REPLS:
-		jrir = PJE_DATA(pje);
+		sjir = PJE_DATA(pje);
 		printf("type=%3d, xid=%#"PRIx64", txg=%#"PRIx64", fid="SLPRI_FID,
-			type, pje->pje_xid, pje->pje_txg, jrir->sjir_fid);
+			type, pje->pje_xid, pje->pje_txg, sjir->sjir_fid);
 		break;
 	    case MDS_LOG_BMAP_ASSIGN:
 		logentry = PJE_DATA(pje);
@@ -191,11 +191,11 @@ pjournal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 			    type, pje->pje_xid,
 			    pje->pje_txg, logentry->sjar_elem);
 		else {
-			jrba = &logentry->sjar_bmap;
+			sjba = &logentry->sjar_bmap;
 			printf("type=%3d, xid=%#"PRIx64", "
 			    "txg=%#"PRIx64", fid="SLPRI_FID", flags=%x",
 			    type, pje->pje_xid, pje->pje_txg,
-			    jrba->sjba_fid, logentry->sjar_flags);
+			    sjba->sjba_fid, logentry->sjar_flags);
 		}
 		break;
 	    case MDS_LOG_NAMESPACE:

@@ -307,7 +307,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 	struct srt_reclaim_entry reclaim_entry, *reclaim_entryp;
 	struct srt_update_entry update_entry, *update_entryp;
 	struct slmds_jent_namespace *sjnm = NULL;
-	struct slmds_jent_crc *jcrc = NULL;
+	struct slmds_jent_crc *sjbc = NULL;
 	int rc, count, total;
 	uint16_t type;
 	size_t size;
@@ -347,7 +347,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 
 	type = pje->pje_type & ~(_PJE_FLSHFT - 1);
 	if (type == MDS_LOG_BMAP_CRC) {
-		jcrc = PJE_DATA(pje);
+		sjbc = PJE_DATA(pje);
 		goto check_update;
 	}
 
@@ -485,8 +485,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 		update_entry.op = NS_OP_SETSIZE;
 		update_entry.mask = mdsio_slflags_2_setattrmask(
 		    PSCFS_SETATTRF_DATASIZE);
-		update_entry.size = jcrc->sjc_fsize;
-		update_entry.target_fid = jcrc->sjc_fid;
+		update_entry.size = sjbc->sjc_fsize;
+		update_entry.target_fid = sjbc->sjc_fid;
 		goto write_update;
 	}
 
@@ -1360,7 +1360,7 @@ mdslog_bmap_crc(void *datap, uint64_t txg, __unusedx int flag)
 	struct bmapc_memb *bmap = crclog->scl_bmap;
 	struct srm_bmap_crcup *crcup = crclog->scl_crcup;
 	struct bmap_mds_info *bmi = bmap_2_bmi(bmap);
-	struct slmds_jent_crc *jcrc;
+	struct slmds_jent_crc *sjbc;
 	uint32_t n, t, distill;
 
 	BMAP_LOCK(bmap);
@@ -1375,25 +1375,25 @@ mdslog_bmap_crc(void *datap, uint64_t txg, __unusedx int flag)
 
 		n = MIN(SLJ_MDS_NCRCS, crcup->nups - t);
 
-		jcrc = pjournal_get_buf(mdsJournal, sizeof(*jcrc));
-		jcrc->sjc_fid = fcmh_2_fid(bmap->bcm_fcmh);
-		jcrc->sjc_iosid = bmi->bmdsi_wr_ion->rmmi_resm->resm_iosid;
-		jcrc->sjc_bmapno = bmap->bcm_bmapno;
-		jcrc->sjc_ncrcs = n;
-		jcrc->sjc_fsize = crcup->fsize;		/* largest known size */
-		jcrc->sjc_repl_nblks = crcup->nblks;
-		jcrc->sjc_aggr_nblks = fcmh_2_nblks(bmap->bcm_fcmh);
-		jcrc->sjc_extend = distill;
-		jcrc->sjc_utimgen = crcup->utimgen;     /* utime generation number */
+		sjbc = pjournal_get_buf(mdsJournal, sizeof(*sjbc));
+		sjbc->sjc_fid = fcmh_2_fid(bmap->bcm_fcmh);
+		sjbc->sjc_iosid = bmi->bmdsi_wr_ion->rmmi_resm->resm_iosid;
+		sjbc->sjc_bmapno = bmap->bcm_bmapno;
+		sjbc->sjc_ncrcs = n;
+		sjbc->sjc_fsize = crcup->fsize;		/* largest known size */
+		sjbc->sjc_repl_nblks = crcup->nblks;
+		sjbc->sjc_aggr_nblks = fcmh_2_nblks(bmap->bcm_fcmh);
+		sjbc->sjc_extend = distill;
+		sjbc->sjc_utimgen = crcup->utimgen;     /* utime generation number */
 
-		memcpy(jcrc->sjc_crc, &crcup->crcs[t],
+		memcpy(sjbc->sjc_crc, &crcup->crcs[t],
 		    n * sizeof(struct srt_bmap_crcwire));
 
 		pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_CRC,
-		    distill, jcrc, sizeof(*jcrc));
+		    distill, sjbc, sizeof(*sjbc));
 
 		if (!distill)
-			pjournal_put_buf(mdsJournal, jcrc);
+			pjournal_put_buf(mdsJournal, sjbc);
 		else
 			distill = 0;
 	}
