@@ -150,10 +150,11 @@ struct fidc_membh {
 #define DEBUG_FCMH(level, fcmh, fmt, ...)				\
 	psclogs((level), SLSS_FCMH,					\
 	   "fcmh@%p f+g:"SLPRI_FG" flg:"REQ_FCMH_FLAGS_FMT" "		\
-	   "ref:%d sz=%"PRId64" mode=%#o :: "fmt,			\
+	   "ref:%d sz=%"PRId64" blksize=%"PRId64" mode=%#o :: "fmt,	\
 	   (fcmh), SLPRI_FG_ARGS(&(fcmh)->fcmh_fg),			\
 	   DEBUG_FCMH_FLAGS(fcmh),					\
 	   (fcmh)->fcmh_refcnt, fcmh_2_fsz(fcmh),			\
+	   (fcmh)->fcmh_sstb.sst_blksize,				\
 	   fcmh->fcmh_sstb.sst_mode, ## __VA_ARGS__)
 
 /* debugging aid: spit out the reason for the reference count taking/dropping */
