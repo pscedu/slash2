@@ -930,8 +930,8 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	struct odtable_receipt *odtr = NULL;
 	struct slmds_jent_assign_rep *logentry;
 	int rc = 0, locked;
-	size_t elem;
 	uint64_t key;
+	size_t elem;
 
 	psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 	psc_assert(bml->bml_flags & BML_FREEING);
@@ -1066,7 +1066,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		elem = odtr->odtr_elem;
 		rc = mds_odtable_freeitem(mdsBmapAssignTable, odtr);
 		DEBUG_BMAP(PLL_NOTIFY, b, "odtable remove seq=%"PRId64" "
-		    "key=%"PRId64" rc=%d", bml->bml_seq, key, rc);
+		    "key=%#"PRIx64" rc=%d", bml->bml_seq, key, rc);
 		bmap_op_done_type(b, BMAP_OPCNT_IONASSIGN);
 
 		mds_reserve_slot();
