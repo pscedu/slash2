@@ -99,6 +99,7 @@ _bmap_op_done(const struct pfl_callerinfo *pci, struct bmapc_memb *b,
 	va_list ap;
 
 	BMAP_RLOCK(b);
+	b->bcm_flags &= ~BMAP_BUSY;
 	psc_atomic32_dec(&b->bcm_opcnt);
 	psc_assert(psc_atomic32_read(&b->bcm_opcnt) >= 0);
 
@@ -380,6 +381,7 @@ _dump_bmap_flags_common(uint32_t *flags, int *seq)
 	PFL_PRFLAG(BMAP_MDCHNG, flags, seq);
 	PFL_PRFLAG(BMAP_WAITERS, flags, seq);
 	PFL_PRFLAG(BMAP_ORPHAN, flags, seq);
+	PFL_PRFLAG(BMAP_BUSY, flags, seq);
 }
 
 __weak void
