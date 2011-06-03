@@ -246,7 +246,6 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	struct sl_resource *res = libsl_id2res(pios);
 	struct slmds_jent_assign_rep *logentry;
 	struct slmds_jent_bmap_assign *sjba;
-	struct slmds_jent_ino_repls *jrir;
 	struct slashrpc_cservice *csvc;
 	struct resprof_mds_info *rpmi;
 	struct slash_inode_handle *ih;
@@ -350,8 +349,8 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 
 	/*
 	 * Signify that a ION has been assigned to this bmap.  This
-	 *   opcnt ref will stay in place until the bmap has been released
-	 *   by the last client or has been timed out.
+	 * opcnt ref will stay in place until the bmap has been released
+	 * by the last client or has been timed out.
 	 */
 	bmap_op_start_type(bmap, BMAP_OPCNT_IONASSIGN);
 
@@ -364,22 +363,17 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 		    slstrerror(iosidx));
 	mds_repl_inv_except(bmap, bia.bia_ios, iosidx);
 
-	sjba = &logentry->sjar_bmap;
-	jrir = &logentry->sjar_ino;
-
 	logentry->sjar_flags = SLJ_ASSIGN_REP_NONE;
 	if (nrepls != ih->inoh_ino.ino_nrepls) {
-		jrir->sjir_fid = bia.bia_fid;
-		jrir->sjir_ios = bia.bia_ios;
-		jrir->sjir_pos = iosidx;
-		jrir->sjir_nrepls = ih->inoh_ino.ino_nrepls;
+		mdslogfill_ino_repls(bmap->bcm_fcmh,
+		    &logentry->sjar_ino);
 		logentry->sjar_flags |= SLJ_ASSIGN_REP_INO;
 	}
 
 	mdslogfill_bmap_repls(bmap, &logentry->sjar_rep);
-
 	logentry->sjar_flags |= SLJ_ASSIGN_REP_REP;
 
+	sjba = &logentry->sjar_bmap;
 	sjba->sjba_ion_nid = bia.bia_ion_nid;
 	sjba->sjba_lastcli.nid = bia.bia_lastcli.nid;
 	sjba->sjba_lastcli.pid = bia.bia_lastcli.pid;
@@ -415,7 +409,6 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct slmds_jent_assign_rep *logentry;
 	struct slmds_jent_bmap_assign *sjba;
-	struct slmds_jent_ino_repls *jrir;
 	struct slash_inode_handle *ih;
 	struct bmap_ion_assign bia;
 	int rc, iosidx, dio;
@@ -473,22 +466,16 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 	mds_reserve_slot();
 	logentry = pjournal_get_buf(mdsJournal, sizeof(*logentry));
 
-	sjba = &logentry->sjar_bmap;
-	jrir = &logentry->sjar_ino;
-
 	logentry->sjar_flags = SLJ_ASSIGN_REP_NONE;
 	if (nrepls != ih->inoh_ino.ino_nrepls) {
-		jrir->sjir_fid = fcmh_2_fid(b->bcm_fcmh);
-		jrir->sjir_ios = bia.bia_ios;
-		jrir->sjir_pos = iosidx;
-		jrir->sjir_nrepls = ih->inoh_ino.ino_nrepls;
+		mdslogfill_ino_repls(b->bcm_fcmh, &logentry->sjar_ino);
 		logentry->sjar_flags |= SLJ_ASSIGN_REP_INO;
 	}
 
 	mdslogfill_bmap_repls(b, &logentry->sjar_rep);
-
 	logentry->sjar_flags |= SLJ_ASSIGN_REP_REP;
 
+	sjba = &logentry->sjar_bmap;
 	sjba->sjba_ion_nid = bia.bia_ion_nid;
 	sjba->sjba_lastcli.nid = bia.bia_lastcli.nid;
 	sjba->sjba_lastcli.pid = bia.bia_lastcli.pid;

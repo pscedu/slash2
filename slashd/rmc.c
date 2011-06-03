@@ -851,7 +851,6 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 {
 	struct srm_set_newreplpol_req *mq;
 	struct srm_set_newreplpol_rep *mp;
-	struct slash_inode_handle *ih;
 	struct fidc_membh *fcmh;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -865,20 +864,10 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
-	ih = fcmh_2_inoh(fcmh);
-	mp->rc = mds_inox_ensure_loaded(ih);
-	if (mp->rc == 0) {
-		struct slmds_jent_ino_repls sjir;
-
-		INOH_LOCK(ih);
-		ih->inoh_ino.ino_replpol = mq->pol;
-		INOH_ULOCK(ih);
-
-		sjir.sjir_fid = fcmh_2_fid(ih->inoh_fcmh);
-		sjir.sjir_replpol = ih->inoh_ino.ino_replpol;
-
-		mds_inode_write(ih, mdslog_ino_repls, &sjir);
-	}
+	FCMH_LOCK(fcmh);
+	fcmh_2_replpol(fcmh) = mq->pol;
+	mp->rc = mds_inode_write(fcmh_2_inoh(fcmh), mdslog_ino_repls,
+	    fcmh);
 
  out:
 	if (fcmh)

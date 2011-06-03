@@ -138,11 +138,6 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
 		}
 
 		if (j >= SL_DEF_REPLICAS) {
-			/*
-			 * Note that both the inode structure and
-			 * replication table must be synced.
-			 */
-			psc_assert(ih->inoh_extras);
 			repl = ih->inoh_extras->inox_repls;
 			k = j - SL_DEF_REPLICAS;
 		} else {
@@ -154,9 +149,9 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
 		ih->inoh_ino.ino_nrepls++;
 
 		DEBUG_INOH(PLL_INFO, ih, "add IOS(%u) to repls, replica %d",
-		    ios, ih->inoh_ino.ino_nrepls - 1);
+		    ios, j);
 
-		mds_inode_repls_update(ih, ios, j, log);
+		mds_inode_repls_update(ih->inoh_fcmh, log);
 
 		rc = j;
 	}

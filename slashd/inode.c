@@ -227,7 +227,7 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 		DEBUG_INOH(PLL_ERROR, ih, "read inox: %d", rc);
 	} else if (nb != sizeof(*ih->inoh_extras) + sizeof(od_crc)) {
 		rc = SLERR_SHORTIO;
-		DEBUG_INOH(PLL_ERROR, ih, "read inox: %d", rc);
+		DEBUG_INOH(PLL_ERROR, ih, "read inox: %d nb=%zu", rc, nb);
 	} else {
 		psc_crc64_calc(&crc, ih->inoh_extras,
 		    sizeof(*ih->inoh_extras));
@@ -260,29 +260,19 @@ mds_inox_ensure_loaded(struct slash_inode_handle *ih)
 }
 
 int
-mds_inode_repls_update(struct slash_inode_handle *ih,
-    sl_ios_id_t ios, uint32_t pos, int log)
+mds_inode_repls_update(struct fidc_membh *f, int log)
 {
-	struct slmds_jent_ino_repls jrir;
+	struct slash_inode_handle *ih = fcmh_2_inoh(f);
 	int locked, rc = 0;
 	void *logf;
 
 	logf = log ? mdslog_ino_repls : NULL;
 
 	locked = INOH_RLOCK(ih);
-
-	if (log) {
-		jrir.sjir_fid = fcmh_2_fid(ih->inoh_fcmh);
-		jrir.sjir_ios = ios;
-		jrir.sjir_pos = pos;
-		jrir.sjir_nrepls = ih->inoh_ino.ino_nrepls;
-	}
-	if (pos < SL_DEF_REPLICAS)
-		rc = mds_inode_write(ih, logf, &jrir);
-	else
-		rc = mds_inox_write(ih, logf, &jrir);
-	psclog_info("update: fid="SLPRI_FID" log=%d",
-	    fcmh_2_fid(ih->inoh_fcmh), log);
+	rc = mds_inode_write(ih, logf, f);
+	if (rc == 0 && ih->inoh_ino.ino_nrepls >= SL_DEF_REPLICAS)
+		rc = mds_inox_write(ih, logf, f);
+	DEBUG_FCMH(PLL_DEBUG, f, "wrote updated ino_repls log=%d", log);
 	INOH_URLOCK(ih, locked);
 	return (rc);
 }

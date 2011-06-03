@@ -33,6 +33,8 @@
 #define B_REPLAY_OP_CRC		0
 #define B_REPLAY_OP_REPLS	1
 
+#define I_REPLAY_OP_REPLS	0
+
 /**
  * mds_replay_bmap - Replay an operation on a bmap.
  */
@@ -63,9 +65,9 @@ mds_replay_bmap(void *jent, int op)
 
 	switch (op) {
 	case B_REPLAY_OP_REPLS:
-		mds_brepls_check(sjbr->sjbr_reptbl, sjbr->sjbr_nrepls);
+		mds_brepls_check(sjbr->sjbr_repls, sjbr->sjbr_nrepls);
 		bmap_2_replpol(b) = sjbr->sjbr_replpol;
-		memcpy(b->bcm_repls, sjbr->sjbr_reptbl,
+		memcpy(b->bcm_repls, sjbr->sjbr_repls,
 		    SL_REPLICA_NBYTES);
 		break;
 	case B_REPLAY_OP_CRC: {
@@ -157,25 +159,19 @@ mds_replay_bmap_seq(struct psc_journal_enthdr *pje)
 }
 
 /**
- * mds_replay_ino_repls - Replay an inode replication table update.
+ * mds_replay_ino - Replay an inode update.
  */
 static int
-mds_replay_ino_repls_common(struct slmds_jent_ino_repls *sjir)
+mds_replay_ino(void *jent, int op)
 {
+	struct slmds_jent_ino_repls *sjir = jent;
 	struct slash_inode_handle *ih = NULL;
 	struct slash_fidgen fg;
 	struct fidc_membh *f;
-	int pos, j, rc;
+	int j, rc;
 
 	if (sjir->sjir_fid == FID_ANY) {
 		psclog_errorx("cannot replay on FID_ANY");
-		return (EINVAL);
-	}
-
-	pos = sjir->sjir_pos;
-	if (pos >= SL_MAX_REPLICAS || pos < 0) {
-		psclog_errorx("ino_nrepls index (%d) is out of range",
-		    pos);
 		return (EINVAL);
 	}
 
@@ -185,49 +181,53 @@ mds_replay_ino_repls_common(struct slmds_jent_ino_repls *sjir)
 	if (rc)
 		goto out;
 
+	/* It's possible this replay created this inode. */
 	ih = fcmh_2_inoh(f);
 	INOH_LOCK(ih);
 
-	/*
-	 * We allow a short read of the inode here because it is
-	 * possible that the file was just created by our own replay
-	 * process.
-	 */
-	if (pos >= SL_DEF_REPLICAS) {
-		mds_inox_ensure_loaded(ih);
+	switch (op) {
+	case I_REPLAY_OP_REPLS:
+		for (j = 0; j < SL_MAX_REPLICAS; j++)
+			if (sjir->sjir_repls[j])
+				break;
+		psc_assert(j != SL_MAX_REPLICAS);
 
-		j = pos - SL_DEF_REPLICAS;
-		ih->inoh_extras->inox_repls[j].bs_id = sjir->sjir_ios;
+		/*
+		 * We always update the inode itself because the number of
+		 * replicas is stored there.
+		 */
+		if (ih->inoh_flags & INOH_INO_NEW) {
+			if (sjir->sjir_repls[0] == 0)
+				psclog_errorx("ino_repls[0] should be set for "
+				    "newly created inode");
+			if (sjir->sjir_nrepls != 1)
+				psclog_errorx("ino_nrepls (%d) in "
+				    "should be 1 for newly created inode",
+				    sjir->sjir_nrepls);
+		}
 
-		rc = mds_inox_write(ih, NULL, NULL);
-		if (rc)
-			goto out;
+		psc_assert(sjir->sjir_nrepls <= SL_MAX_REPLICAS);
 
-		psclog_info("fid="SLPRI_FID, sjir->sjir_fid);
+		if (sjir->sjir_nrepls >= SL_DEF_REPLICAS) {
+			mds_inox_ensure_loaded(ih);
+			memcpy(ih->inoh_extras->inox_repls,
+			    &sjir->sjir_repls[SL_DEF_REPLICAS],
+			    sizeof(ih->inoh_extras->inox_repls));
+			rc = mds_inox_write(ih, NULL, NULL);
+			if (rc)
+				goto out;
+
+			DEBUG_INOH(PLL_DEBUG, ih, "replayed inox_repls");
+		}
+
+		ih->inoh_ino.ino_replpol = sjir->sjir_replpol;
+		ih->inoh_ino.ino_nrepls = sjir->sjir_nrepls;
+		memcpy(ih->inoh_ino.ino_repls, sjir->sjir_repls,
+		    sizeof(ih->inoh_ino.ino_repls));
+		break;
+	default:
+		psc_fatalx("unknown op");
 	}
-
-	/*
-	 * We always update the inode itself because the number of
-	 * replicas is stored there.
-	 */
-	if (ih->inoh_flags & INOH_INO_NEW) {
-		if (pos != 0)
-			psclog_errorx("ino_nrepls index (%d) in "
-			    "should be 0 for newly created inode", pos);
-		if (sjir->sjir_nrepls != 1)
-			psclog_errorx("ino_nrepls (%d) in "
-			    "should be 1 for newly created inode",
-			    sjir->sjir_nrepls);
-	}
-
-	psc_assert(sjir->sjir_nrepls <= SL_MAX_REPLICAS);
-	psc_assert(sjir->sjir_pos < sjir->sjir_nrepls);
-
-	ih->inoh_ino.ino_replpol = sjir->sjir_replpol;
-	ih->inoh_ino.ino_nrepls = sjir->sjir_nrepls;
-
-	if (pos < SL_DEF_REPLICAS)
-		ih->inoh_ino.ino_repls[pos].bs_id = sjir->sjir_ios;
 
 	rc = mds_inode_write(ih, NULL, NULL);
 
@@ -248,7 +248,7 @@ mds_replay_ino_repls(struct psc_journal_enthdr *pje)
 	int rc;
 
 	sjir = PJE_DATA(pje);
-	rc = mds_replay_ino_repls_common(sjir);
+	rc = mds_replay_ino(sjir, I_REPLAY_OP_REPLS);
 	return (rc);
 }
 
@@ -279,7 +279,7 @@ mds_replay_bmap_assign(struct psc_journal_enthdr *pje)
 		    elem, sjba->sjba_fid, logentry->sjar_flags);
 	}
 	if (logentry->sjar_flags & SLJ_ASSIGN_REP_INO)
-		mds_replay_ino_repls_common(&logentry->sjar_ino);
+		mds_replay_ino(&logentry->sjar_ino, I_REPLAY_OP_REPLS);
 	if (logentry->sjar_flags & SLJ_ASSIGN_REP_REP)
 		mds_replay_bmap(&logentry->sjar_rep,
 		    B_REPLAY_OP_REPLS);

@@ -27,6 +27,7 @@ struct fidc_membh;
 struct slash_inode_handle;
 struct slmds_jent_namespace;
 struct slmds_jent_bmap_repls;
+struct slmds_jent_ino_repls;
 struct srm_bmap_crcup;
 struct srt_stat;
 
@@ -67,11 +68,12 @@ void	mdslog_namespace(int, uint64_t, uint64_t, uint64_t,
 	    const struct srt_stat *, int, const char *, const char *);
 
 void	mdslogfill_bmap_repls(struct bmapc_memb *, struct slmds_jent_bmap_repls *);
+void	mdslogfill_ino_repls(struct fidc_membh *, struct slmds_jent_ino_repls *);
 
 void	mds_journal_init(int);
 
 int	mds_bmap_crc_update(struct bmapc_memb *, struct srm_bmap_crcup *);
-int	mds_inode_repls_update(struct slash_inode_handle *, sl_ios_id_t, uint32_t, int);
+int	mds_inode_repls_update(struct fidc_membh *, int);
 
 void	mds_reserve_slot(void);
 void	mds_unreserve_slot(void);

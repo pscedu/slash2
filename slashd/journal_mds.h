@@ -30,7 +30,7 @@
 #define SLJ_MDS_NCRCS			MAX_BMAP_INODE_PAIRS
 
 /**
- * slmds_jent_bmap_crc - Log bmap CRC updates from IONs.
+ * slmds_jent_bmap_crc - Log for bmap CRC updates from IONs.
  * @sjbc_fid: file ID.
  * @sjbc_bmapno: which bmap region.
  * @sjbc_ion: the ion who sent the request.
@@ -56,14 +56,15 @@ struct slmds_jent_bmap_crc {
 } __packed;
 
 /**
- * slmds_jent_bmap_repls - Log changes to the replication state of a bmap
- *	which occur upon processing a new write for a replicated bmap.
+ * slmds_jent_bmap_repls - Log for updated replication state of a bmap,
+ *	from replication activity, write I/O which invalidates valid
+ *	replicas, etc.
  * @sjbr_fid: what file.
- * @sjbr_bmapno: which bmap region.
+ * @sjbr_bmapno: which bmap.
  * @sjbr_bgen: the new bmap generation.
  * @sjbr_replpol: bmap's replication policy.
- * @sjbr_nrepls: number of items in @sjbr_reptbl.
- * @sjbr_reptbl: the bmap's entire replica bitmap.
+ * @sjbr_nrepls: number of items in @sjbr_repls.
+ * @sjbr_repls: the bmap's replica bitmap.
  */
 struct slmds_jent_bmap_repls {
 	slfid_t				sjbr_fid;
@@ -71,25 +72,34 @@ struct slmds_jent_bmap_repls {
 	sl_bmapgen_t			sjbr_bgen;
 	uint32_t			sjbr_replpol;
 	uint32_t			sjbr_nrepls;
-	uint8_t				sjbr_reptbl[SL_REPLICA_NBYTES];
+	uint8_t				sjbr_repls[SL_REPLICA_NBYTES];
 } __packed;
 
 /**
- * slmds_jent_ino_repls - Update the inode/inox replicas table.
+ * slmds_jent_ino_repls - Log for an updated inode+inox replicas table.
  * @sjir_fid: what file.
- * @sjir_ios: the IOS being added.
- * @sjir_pos: the slot or position the replica IOS is to be added to.
+ * @sjir_replpol: new bmap default replication policy.
  * @sjir_nrepls: the number of replicas after this update.
+ * @sjir_repls: the replicas table.
  */
 struct slmds_jent_ino_repls {
 	slfid_t				sjir_fid;
-	sl_ios_id_t			sjir_ios;
-	uint32_t			sjir_pos;
 	uint32_t			sjir_replpol;
 	uint32_t			sjir_nrepls;
-//	sl_ios_id_t			sjir_repls[SL_MAX_REPLICAS];
+	sl_ios_id_t			sjir_repls[SL_MAX_REPLICAS];
 } __packed;
 
+/**
+ * slmds_jent_ino_repls - Log for a bmap -> ION assignment.
+ * @sjir_ion_nid: ION address.
+ * @sjir_lastcli: client's NID+PID.
+ * @sjir_ios: I/O system ID.
+ * @sjir_fid: file.
+ * @sjir_seq: bmap sequence number.
+ * @sjir_flags:
+ * @sjir_bmapno: which bmap.
+ * @sjir_start: issue timestamp.
+ */
 struct slmds_jent_bmap_assign {
 	lnet_nid_t			sjba_ion_nid;
 	lnet_process_id_t		sjba_lastcli;

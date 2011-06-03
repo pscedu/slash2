@@ -1290,25 +1290,39 @@ slmjnsthr_main(__unusedx struct psc_thread *thr)
 }
 
 void
+mdslogfill_ino_repls(struct fidc_membh *f,
+    struct slmds_jent_ino_repls *sjir)
+{
+	struct slash_inode_handle *ih;
+	int locked;
+
+	locked = FCMH_RLOCK(f);
+	ih = fcmh_2_inoh(f);
+	sjir->sjir_fid = fcmh_2_fid(f);
+	sjir->sjir_nrepls = fcmh_2_nrepls(f);
+	sjir->sjir_replpol = fcmh_2_replpol(f);
+	memcpy(sjir->sjir_repls, ih->inoh_ino.ino_repls,
+	    sizeof(ih->inoh_ino.ino_repls));
+	if (fcmh_2_nrepls(f) >= SL_DEF_REPLICAS)
+		memcpy(&sjir->sjir_repls[SL_DEF_REPLICAS],
+		    ih->inoh_extras->inox_repls,
+		    sizeof(ih->inoh_extras->inox_repls));
+	FCMH_URLOCK(f, locked);
+
+	DEBUG_FCMH(PLL_DEBUG, f, "filled ino_repls journal log");
+}
+
+void
 mdslog_ino_repls(void *datap, uint64_t txg, __unusedx int flag)
 {
-	struct slmds_jent_ino_repls *jrir, *r;
+	struct slmds_jent_ino_repls *sjir;
+	struct fidc_membh *f = datap;
 
-	jrir = pjournal_get_buf(mdsJournal, sizeof(*jrir));
-
-	r = datap;
-	jrir->sjir_fid = r->sjir_fid;
-	jrir->sjir_ios = r->sjir_ios;
-	jrir->sjir_pos = r->sjir_pos;
-	jrir->sjir_nrepls = r->sjir_nrepls;
-
-	psclog_notify("jlog fid="SLPRI_FID" ios=%u pos=%u",
-	    jrir->sjir_fid, jrir->sjir_ios, jrir->sjir_pos);
-
+	sjir = pjournal_get_buf(mdsJournal, sizeof(*sjir));
+	mdslogfill_ino_repls(f, sjir);
 	pjournal_add_entry(mdsJournal, txg, MDS_LOG_INO_REPLS, 0,
-	    jrir, sizeof(*jrir));
-
-	pjournal_put_buf(mdsJournal, jrir);
+	    sjir, sizeof(*sjir));
+	pjournal_put_buf(mdsJournal, sjir);
 }
 
 void
@@ -1327,9 +1341,9 @@ mdslogfill_bmap_repls(struct bmapc_memb *b,
 	sjbr->sjbr_replpol = fcmh_2_replpol(f);
 	FCMH_URLOCK(f, locked);
 
-	memcpy(sjbr->sjbr_reptbl, b->bcm_repls, SL_REPLICA_NBYTES);
+	memcpy(sjbr->sjbr_repls, b->bcm_repls, SL_REPLICA_NBYTES);
 
-	DEBUG_BMAPOD(PLL_DEBUG, b, "filled bmap journal log");
+	DEBUG_BMAPOD(PLL_DEBUG, b, "filled bmap_repls journal log");
 }
 
 /**
