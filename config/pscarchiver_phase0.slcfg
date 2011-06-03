@@ -2,7 +2,7 @@
 
 # NCAST configuration
 global port=1301;
-global net=tcp11;
+global net=sdp11;
 
 # Pull in all config files
 # include "/etc/slash/conf.d/*"
