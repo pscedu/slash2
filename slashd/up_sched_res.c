@@ -574,8 +574,9 @@ slmupschedthr_main(struct psc_thread *thr)
 					 */
 					bmap_i.ri_n = fcmh_nvalidbmaps(f);
 					bmap_i.ri_iter = bmap_i.ri_n - 1;
-					bmap_i.ri_rnd_idx = fcmh_2_fsz(f) /
-					    SLASH_BMAP_SIZE;
+					bmap_i.ri_rnd_idx = howmany(
+					    fcmh_2_fsz(f),
+					    SLASH_BMAP_SIZE) - 1;
 					uswi_gen = wk->uswi_gen;
 					FCMH_ULOCK(f);
 
@@ -703,6 +704,12 @@ slmupschedthr_main(struct psc_thread *thr)
 							    bno == 0)
 								break;
 							mds_bmap_write_repls_rel(b);
+						}
+
+						if (uswi_gen != wk->uswi_gen) {
+							BMAPOD_MODIFY_DONE(b);
+							mds_bmap_write_repls_rel(b);
+							goto skipfile;
 						}
 
 						if (bno == fcmh_nallbmaps(f) - 1)
