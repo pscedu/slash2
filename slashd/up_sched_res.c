@@ -563,8 +563,7 @@ slmupschedthr_main(struct psc_thread *thr)
 				off = SL_BITS_PER_REPLICA * iosidx;
 
 				FCMH_LOCK(f);
-				if (f->fcmh_flags & FCMH_IN_PTRUNC ||
-				    FCMH_HAS_GARBAGE(f)) {
+				if (f->fcmh_flags & FCMH_IN_PTRUNC) {
 					has_work = 1;
 
 					/*
@@ -604,16 +603,25 @@ slmupschedthr_main(struct psc_thread *thr)
 					    bmap_i.ri_rnd_idx, &b))
 						continue;
 
-					has_work = 1;
 					BMAPOD_MODIFY_START(b);
 					val = SL_REPL_GET_BMAP_IOS_STAT(
 					    b->bcm_repls, off);
 					switch (val) {
 					case BREPLST_REPL_QUEUED:
+						has_work = 1;
+						/*
+						 * There is still a
+						 * lease out; we'll wait
+						 * for it to be
+						 * relinquished.
+						 *
+						 * XXX: make sure lease
+						 * drops wake us up.
+						 */
 						if (bmap_2_bmi(b)->bmdsi_wr_ion)
 							break;
 
-						/* Got a bmap; now look for a source. */
+						/* got a bmap; now look for a repl source */
 						FOREACH_RND(&src_res_i, USWI_NREPLS(wk)) {
 							if (uswi_gen != wk->uswi_gen) {
 								BMAPOD_MODIFY_DONE(b);
@@ -633,7 +641,10 @@ slmupschedthr_main(struct psc_thread *thr)
 
 							BMAPOD_MODIFY_DONE(b);
 
-							/* search source nids for an idle, online connection */
+							/*
+							 * Search source nodes for an
+							 * idle, online connection.
+							 */
 							FOREACH_RND(&src_resm_i,
 							    psc_dynarray_len(&src_res->res_members)) {
 								src_resm = psc_dynarray_getpos(
@@ -662,6 +673,7 @@ slmupschedthr_main(struct psc_thread *thr)
 						}
 						break;
 					case BREPLST_TRUNCPNDG:
+						has_work = 1;
 						BMAPOD_MODIFY_DONE(b);
 						FOREACH_RND(&dst_resm_i,
 						    psc_dynarray_len(&dst_res->res_members)) {
@@ -676,8 +688,10 @@ slmupschedthr_main(struct psc_thread *thr)
 						BMAPOD_MODIFY_START(b);
 						break;
 					case BREPLST_GARBAGE:
-						if (f->fcmh_flags & FCMH_IN_PTRUNC)
+						if (f->fcmh_flags & FCMH_IN_PTRUNC) {
+							has_work = 1;
 							break;
+						}
 
 						BMAPOD_MODIFY_DONE(b);
 						mds_bmap_write_repls_rel(b);
@@ -714,6 +728,7 @@ slmupschedthr_main(struct psc_thread *thr)
 
 						if (bno == fcmh_nallbmaps(f) - 1)
 							break;
+						has_work = 1;
 
 						FOREACH_RND(&dst_resm_i,
 						    psc_dynarray_len(&dst_res->res_members))
@@ -727,10 +742,6 @@ slmupschedthr_main(struct psc_thread *thr)
 							    b, off, dst_res,
 							    dst_resm_i.ri_rnd_idx))
 								goto restart;
-						break;
-					case BREPLST_VALID:
-					case BREPLST_INVALID:
-						has_work = 0;
 						break;
 					}
 					BMAPOD_MODIFY_DONE(b);
