@@ -72,8 +72,8 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 	int locked, uswi_gen, rc, retifset[NBREPLST];
 	struct slmupsched_thread *smut;
 	struct site_mds_info *smi;
-	struct bmapc_memb *bcm;
 	struct psc_thread *thr;
+	struct bmapc_memb *b;
 	struct sl_site *site;
 	char fn[FID_MAX_PATH];
 	sl_bmapno_t n;
@@ -119,12 +119,12 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 	/* Scan bmaps to see if the inode should disappear. */
 	for (n = 0;; n++) {
 		if (bmap_getf(wk->uswi_fcmh, n, SL_WRITE,
-		    BMAPGETF_LOAD | BMAPGETF_NOAUTOINST, &bcm))
+		    BMAPGETF_LOAD | BMAPGETF_NOAUTOINST, &b))
 			break;
 
-		rc = mds_repl_bmap_walk_all(bcm, NULL,
+		rc = mds_repl_bmap_walk_all(b, NULL,
 		    retifset, REPL_WALKF_SCIRCUIT);
-		mds_repl_bmap_rel(bcm);
+		mds_bmap_write_repls_rel(b);
 		if (rc)
 			goto keep;
 	}
@@ -187,7 +187,7 @@ uswi_kill(struct up_sched_work_item *wk)
 
 int
 slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
-    struct bmapc_memb *bcm, int off, struct sl_resm *src_resm,
+    struct bmapc_memb *b, int off, struct sl_resm *src_resm,
     struct sl_resource *dst_res, int j)
 {
 	int tract[NBREPLST], retifset[NBREPLST], amt = 0, rc = 0;
@@ -233,7 +233,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 		goto fail;
 
 	amt = mds_repl_nodes_adjbusy(src_rmmi, dst_rmmi,
-	    slm_bmap_calc_repltraffic(bcm));
+	    slm_bmap_calc_repltraffic(b));
 	if (amt == 0) {
 		/* add "src to become unbusy" condition to multiwait */
 		if (!psc_multiwait_hascond(&smi->smi_mw,
@@ -249,11 +249,11 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 		goto fail;
 	mq->nid = src_resm->resm_nid;
 	mq->len = SLASH_BMAP_SIZE;
-	if (bcm->bcm_bmapno == fcmh_nvalidbmaps(wk->uswi_fcmh) - 1)
+	if (b->bcm_bmapno == fcmh_nvalidbmaps(wk->uswi_fcmh) - 1)
 		mq->len = fcmh_2_fsz(wk->uswi_fcmh) % SLASH_BMAP_SIZE;
 	mq->fg = *USWI_FG(wk);
-	mq->bmapno = bcm->bcm_bmapno;
-	BHGEN_GET(bcm, &mq->bgen);
+	mq->bmapno = b->bcm_bmapno;
+	BHGEN_GET(b, &mq->bgen);
 
 	/*
 	 * Mark as SCHED now in case the reply RPC comes in after we
@@ -262,7 +262,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_QUEUED] = BREPLST_REPL_SCHED;
 	brepls_init_idx(retifset);
-	rc = mds_repl_bmap_apply(bcm, tract, retifset, off);
+	rc = mds_repl_bmap_apply(b, tract, retifset, off);
 
 	if (rc == BREPLST_VALID ||
 	    rc == BREPLST_REPL_SCHED)
@@ -280,7 +280,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	}
 	pscrpc_req_finished(rq);
 	if (rc == 0) {
-		mds_repl_bmap_rel(bcm);
+		mds_bmap_write_repls_rel(b);
 		uswi_unref(wk);
 		sl_csvc_decref(csvc);
 		return (1);
@@ -289,7 +289,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	/* handle error return failure */
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
-	mds_repl_bmap_apply(bcm, tract, NULL, off);
+	mds_repl_bmap_apply(b, tract, NULL, off);
 
  fail:
 	if (amt)
@@ -303,7 +303,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 
 int
 slmupschedthr_tryptrunc(struct up_sched_work_item *wk,
-    struct bmapc_memb *bcm, int off, struct sl_resource *dst_res,
+    struct bmapc_memb *b, int off, struct sl_resource *dst_res,
     int idx)
 {
 	int tract[NBREPLST], retifset[NBREPLST], rc;
@@ -333,7 +333,7 @@ slmupschedthr_tryptrunc(struct up_sched_work_item *wk,
 	 * Another ION is already handling the ptrunc CRC recomputation;
 	 * go do something else.
 	 */
-	if (mds_repl_bmap_walk_all(bcm, NULL, retifset,
+	if (mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT))
 		return (-1);
 
@@ -349,14 +349,13 @@ slmupschedthr_tryptrunc(struct up_sched_work_item *wk,
 	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAP_PTRUNC, rq, mq, mp);
 	if (rc)
 		goto fail;
-	mq->crc = 1;
 	mq->fg = *USWI_FG(wk);
-	mq->bmapno = bcm->bcm_bmapno;
+	mq->bmapno = b->bcm_bmapno;
 	mq->offset = fcmh_2_fsz(wk->uswi_fcmh) % SLASH_BMAP_SIZE;
 
 	brepls_init(tract, -1);
 	tract[BREPLST_TRUNCPNDG] = BREPLST_TRUNCPNDG;
-	mds_repl_bmap_apply(bcm, tract, NULL, off);
+	mds_repl_bmap_apply(b, tract, NULL, off);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
@@ -364,7 +363,7 @@ slmupschedthr_tryptrunc(struct up_sched_work_item *wk,
 	pscrpc_req_finished(rq);
 
 	if (rc == 0) {
-		mds_repl_bmap_rel(bcm);
+		mds_bmap_write_repls_rel(b);
 		uswi_unref(wk);
 		sl_csvc_decref(csvc);
 		return (1);
@@ -373,7 +372,7 @@ slmupschedthr_tryptrunc(struct up_sched_work_item *wk,
 	/* handle error return failure */
 	brepls_init(tract, -1);
 	tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_TRUNCPNDG;
-	mds_repl_bmap_apply(bcm, tract, NULL, off);
+	mds_repl_bmap_apply(b, tract, NULL, off);
 
  fail:
 	if (csvc)
@@ -385,7 +384,7 @@ slmupschedthr_tryptrunc(struct up_sched_work_item *wk,
 
 int
 slmupschedthr_trygarbage(struct up_sched_work_item *wk,
-    struct bmapc_memb *bcm, int off, struct sl_resource *dst_res, int j)
+    struct bmapc_memb *b, int off, struct sl_resource *dst_res, int j)
 {
 	int tract[NBREPLST], retifset[NBREPLST], rc = 0;
 	struct slashrpc_cservice *csvc;
@@ -428,8 +427,8 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	if (rc)
 		goto fail;
 	mq->fg = *USWI_FG(wk);
-	mq->bmapno = bcm->bcm_bmapno;
-	mq->bgen = bmap_2_bgen(bcm);
+	mq->bmapno = b->bcm_bmapno;
+	mq->bgen = bmap_2_bgen(b);
 
 	brepls_init(tract, -1);
 	tract[BREPLST_GARBAGE] = BREPLST_GARBAGE_SCHED;
@@ -437,7 +436,7 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	brepls_init_idx(retifset);
 
 	/* mark it as SCHED here in case the RPC finishes really quickly... */
-	rc = mds_repl_bmap_apply(bcm, tract, retifset, off);
+	rc = mds_repl_bmap_apply(b, tract, retifset, off);
 
 	if (rc == BREPLST_VALID ||
 	    rc == BREPLST_REPL_SCHED)
@@ -450,7 +449,7 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	}
 	pscrpc_req_finished(rq);
 	if (rc == 0) {
-		mds_repl_bmap_rel(bcm);
+		mds_bmap_write_repls_rel(b);
 		uswi_unref(wk);
 		sl_csvc_decref(csvc);
 		return (1);
@@ -460,7 +459,7 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
-	mds_repl_bmap_apply(bcm, tract, NULL, off);
+	mds_repl_bmap_apply(b, tract, NULL, off);
 
  fail:
 	if (csvc)
@@ -482,9 +481,10 @@ slmupschedthr_main(struct psc_thread *thr)
 	struct up_sched_work_item *wk;
 	struct site_mds_info *smi;
 	struct sl_resm *src_resm;
-	struct bmapc_memb *bcm;
+	struct bmapc_memb *b;
 	struct sl_site *site;
 	struct fidc_membh *f;
+	sl_bmapno_t bno;
 	void *dummy;
 
 	smut = slmupschedthr(thr);
@@ -568,7 +568,7 @@ slmupschedthr_main(struct psc_thread *thr)
 					has_work = 1;
 
 					/*
-					 * rig "random" index at
+					 * Rig "random" index at
 					 * ptrunc'd bmap to schedule CRC
 					 * recalc.
 					 */
@@ -578,6 +578,13 @@ slmupschedthr_main(struct psc_thread *thr)
 					    SLASH_BMAP_SIZE;
 					uswi_gen = wk->uswi_gen;
 					FCMH_ULOCK(f);
+
+					/*
+					 * Indicate error so the random
+					 * iterator gets reset if we
+					 * can't schedule it.
+					 */
+					rc = 1;
 					goto handle_bmap;
 				}
 				FCMH_ULOCK(f);
@@ -589,27 +596,28 @@ slmupschedthr_main(struct psc_thread *thr)
 				FOREACH_RND(&bmap_i,
 				    fcmh_nvalidbmaps(f)) {
 					if (uswi_gen != wk->uswi_gen)
-						goto skiprepl;
+						goto skipfile;
+					rc = 0;
  handle_bmap:
 					if (mds_bmap_load(f,
-					    bmap_i.ri_rnd_idx, &bcm))
+					    bmap_i.ri_rnd_idx, &b))
 						continue;
 
 					has_work = 1;
-					BMAPOD_MODIFY_START(bcm);
+					BMAPOD_MODIFY_START(b);
 					val = SL_REPL_GET_BMAP_IOS_STAT(
-					    bcm->bcm_repls, off);
+					    b->bcm_repls, off);
 					switch (val) {
 					case BREPLST_REPL_QUEUED:
-						if (bmap_2_bmi(bcm)->bmdsi_wr_ion)
+						if (bmap_2_bmi(b)->bmdsi_wr_ion)
 							break;
 
 						/* Got a bmap; now look for a source. */
 						FOREACH_RND(&src_res_i, USWI_NREPLS(wk)) {
 							if (uswi_gen != wk->uswi_gen) {
-								BMAPOD_MODIFY_DONE(bcm);
-								mds_repl_bmap_rel(bcm);
-								goto skiprepl;
+								BMAPOD_MODIFY_DONE(b);
+								mds_bmap_write_repls_rel(b);
+								goto skipfile;
 							}
 							src_res = libsl_id2res(
 							    USWI_GETREPL(wk,
@@ -617,12 +625,12 @@ slmupschedthr_main(struct psc_thread *thr)
 
 							/* skip ourself and old/inactive replicas */
 							if (src_res_i.ri_rnd_idx == iosidx ||
-							    SL_REPL_GET_BMAP_IOS_STAT(bcm->bcm_repls,
+							    SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls,
 							    SL_BITS_PER_REPLICA *
 							    src_res_i.ri_rnd_idx) != BREPLST_VALID)
 								continue;
 
-							BMAPOD_MODIFY_DONE(bcm);
+							BMAPOD_MODIFY_DONE(b);
 
 							/* search source nids for an idle, online connection */
 							FOREACH_RND(&src_resm_i,
@@ -645,63 +653,86 @@ slmupschedthr_main(struct psc_thread *thr)
 								FOREACH_RND(&dst_resm_i,
 								    psc_dynarray_len(&dst_res->res_members))
 									if (slmupschedthr_tryrepldst(wk,
-									    bcm, off, src_resm, dst_res,
+									    b, off, src_resm, dst_res,
 									    dst_resm_i.ri_rnd_idx))
 										goto restart;
 							}
-							BMAPOD_MODIFY_START(bcm);
+							BMAPOD_MODIFY_START(b);
 						}
 						break;
 					case BREPLST_TRUNCPNDG:
-						BMAPOD_MODIFY_DONE(bcm);
+						BMAPOD_MODIFY_DONE(b);
 						FOREACH_RND(&dst_resm_i,
 						    psc_dynarray_len(&dst_res->res_members)) {
 							rc = slmupschedthr_tryptrunc(wk,
-							    bcm, off, dst_res,
+							    b, off, dst_res,
 							    dst_resm_i.ri_rnd_idx);
 							if (rc < 0)
 								break;
 							if (rc > 0)
 								goto restart;
 						}
-						if (rc)
-							RESET_RND_ITER(&bmap_i);
-						BMAPOD_MODIFY_START(bcm);
-						break;
-					case BREPLST_GARBAGE_SCHED:
-					case BREPLST_TRUNCPNDG_SCHED:
-						RESET_RND_ITER(&bmap_i);
+						BMAPOD_MODIFY_START(b);
 						break;
 					case BREPLST_GARBAGE:
-						if (f->fcmh_flags & FCMH_IN_PTRUNC &&
-						    !FCMH_HAS_GARBAGE(f))
+						if (f->fcmh_flags & FCMH_IN_PTRUNC)
 							break;
 
-						BMAPOD_MODIFY_DONE(bcm);
+						BMAPOD_MODIFY_DONE(b);
+						mds_bmap_write_repls_rel(b);
+
+						/*
+						 * We found garbage.  We
+						 * must scan from EOF
+						 * toward the beginning of
+						 * the file since we
+						 * can't reclaim garbage
+						 * in the middle of a
+						 * file.
+						 */
+						for (bno = fcmh_nallbmaps(f) - 1;;
+						    bno--) {
+							if (uswi_gen != wk->uswi_gen)
+								goto skipfile;
+							if (mds_bmap_load(f,
+							    bno, &b))
+								continue;
+							val = SL_REPL_GET_BMAP_IOS_STAT(
+							    b->bcm_repls, off);
+							if (val != BREPLST_GARBAGE ||
+							    bno == 0)
+								break;
+							mds_bmap_write_repls_rel(b);
+						}
+
+						if (bno == fcmh_nallbmaps(f) - 1)
+							break;
+
 						FOREACH_RND(&dst_resm_i,
 						    psc_dynarray_len(&dst_res->res_members))
 							/*
 							 * We succeed as long as one member
 							 * can do the work because all
 							 * members share the same backend.
+							 * XXX cluster_noshare.
 							 */
 							if (slmupschedthr_trygarbage(wk,
-							    bcm, off, dst_res,
+							    b, off, dst_res,
 							    dst_resm_i.ri_rnd_idx))
 								goto restart;
-						RESET_RND_ITER(&bmap_i);
-						BMAPOD_MODIFY_START(bcm);
 						break;
 					case BREPLST_VALID:
 					case BREPLST_INVALID:
 						has_work = 0;
 						break;
 					}
-					BMAPOD_MODIFY_DONE(bcm);
-					mds_repl_bmap_rel(bcm);
+					BMAPOD_MODIFY_DONE(b);
+					mds_bmap_write_repls_rel(b);
+					if (rc)
+						RESET_RND_ITER(&bmap_i);
 				}
 			}
- skiprepl:
+ skipfile:
 			/*
 			 * XXX - when BREPLST_GARBAGE/SCHED all get fully
 			 * reclaimed, delete metadata.
@@ -862,9 +893,9 @@ upsched_scandir(void)
 	int rc, tract[NBREPLST];
 	char *buf, fn[NAME_MAX];
 	struct fidc_membh *fcmh;
-	struct bmapc_memb *bcm;
 	struct slash_fidgen fg;
 	struct pscfs_dirent *d;
+	struct bmapc_memb *b;
 	off64_t off, toff;
 	size_t siz, tsiz;
 	uint32_t j;
@@ -935,12 +966,12 @@ upsched_scandir(void)
 			 */
 			for (j = 0;; j++) {
 				if (bmap_getf(wk->uswi_fcmh, j, SL_WRITE,
-				    BMAPGETF_LOAD | BMAPGETF_NOAUTOINST, &bcm))
+				    BMAPGETF_LOAD | BMAPGETF_NOAUTOINST, &b))
 					break;
 
-				mds_repl_bmap_walk(bcm, tract,
+				mds_repl_bmap_walk(b, tract,
 				    NULL, 0, NULL, 0);
-				mds_repl_bmap_rel(bcm);
+				mds_bmap_write_repls_rel(b);
 			}
 
 			/*

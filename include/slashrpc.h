@@ -510,10 +510,8 @@ struct srm_bmap_ptrunc_req {
 	struct slash_fidgen	fg;
 	sl_bmapno_t		bmapno;
 	sl_bmapgen_t		bgen;
-	 int32_t		offset;
+	 int32_t		offset;		/* relative to this bmap */
 	 int32_t		rc;
-	 int32_t		crc;		/* whether to recompute CRC */
-	 int32_t		_pad;
 } __packed;
 
 #define srm_bmap_ptrunc_rep	srm_generic_rep
