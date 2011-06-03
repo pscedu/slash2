@@ -148,7 +148,7 @@ struct bmapc_memb {
 #define BMAP_CLEARATTR(b, fl)	CLEARATTR_LOCKED(&(b)->bcm_lock, &(b)->bcm_flags, (fl))
 
 #define _DEBUG_BMAP_FMT		"bmap@%p bno:%u flg:%#x:"		\
-				"%s%s%s%s%s%s%s%s%s%s%s%s%s%s+ "	\
+				"%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s+ "	\
 				"fid:"SLPRI_FID" opcnt=%u "
 
 #define _DEBUG_BMAP_FMTARGS(b)						\
@@ -167,6 +167,7 @@ struct bmapc_memb {
 	(b)->bcm_flags & BMAP_MDCHNG	? "G" : "",			\
 	(b)->bcm_flags & BMAP_WAITERS	? "w" : "",			\
 	(b)->bcm_flags & BMAP_ORPHAN	? "O" : "",			\
+	(b)->bcm_flags & BMAP_BUSY	? "B" : "",			\
 	(b)->bcm_fcmh ? fcmh_2_fid((b)->bcm_fcmh) : 0,			\
 	psc_atomic32_read(&(b)->bcm_opcnt)
 
