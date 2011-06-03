@@ -385,11 +385,11 @@ mds_repl_inv_except(struct bmapc_memb *b, sl_ios_id_t ios, int iosidx)
 	rc = mds_bmap_write(b, 0, NULL, NULL);
 
 	/*
-	 * If this bmap is marked for persistent replication,
-	 * the repl request must exist and should be marked such
-	 * that the replication monitors do not release it in the
-	 * midst of processing it as this activity now means they
-	 * have more to do.
+	 * If this bmap is marked for persistent replication, the repl
+	 * request must exist and should be marked such that the
+	 * replication monitors do not release it in the midst of
+	 * processing it as this activity now means they have more to
+	 * do.
 	 */
 	if (policy == BRPOL_PERSIST) {
 		sl_replica_t repl;

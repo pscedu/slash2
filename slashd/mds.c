@@ -1593,7 +1593,8 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 
 int
 mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
-		struct srt_bmapdesc *sbd_out, struct pscrpc_export *exp) {
+		struct srt_bmapdesc *sbd_out, struct pscrpc_export *exp)
+{
 	struct bmap_mds_lease *bml, *obml;
 	struct bmapc_memb *b;
 	struct slm_exp_cli *mexpc;
