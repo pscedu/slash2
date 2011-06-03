@@ -5,8 +5,8 @@ sub slash_conf {
 	my %h = @_;
 
 	return <<"EOF";
-global port=7001;
-global net=tcp10;
+set port=7001;
+set net=tcp10;
 
 site \@tsuite {
 	site_desc	= "slash test suite";
@@ -134,11 +134,8 @@ our $tmp_base = "/tmp/sltest";
 our $svnroot = 'svn+ssh://frodo/cluster/svn/projects';
 our $intvtimeout = 60*7;	# single op interval timeout
 our $runtimeout = 60*60*8;	# client run duration
-our $src = "/home/yanovich/code/advsys/p4";
+our $src = "/home/yanovich/code/advsys/p";
 our $global_env = {
-	PSC_LOG_LEVEL => 2,
-#	LNET_USESDP => 0,
-#	PSC_LOG_FORMAT => "[%s:%06u %n:%T:%f:%l] ",
 };
 
 our @cli = (

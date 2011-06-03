@@ -170,9 +170,9 @@ if (defined($src)) {
 	fatalx "svn failed" if $?;
 
 	debug_msg "make build";
-	execute "cd $src/fuse/fuse-2.8.1 && ./configure >/dev/null && make >/dev/null";
+	execute "cd $src/distrib/fuse && ./configure >/dev/null && make >/dev/null";
 	fatalx "make failed" if $?;
-	execute "cd $src/slash_nara && make zbuild >/dev/null";
+	execute "cd $src/zfs && make build >/dev/null";
 	fatalx "make failed" if $?;
 	execute "cd $src/slash_nara && make build >/dev/null";
 	fatalx "make failed" if $?;
@@ -185,8 +185,9 @@ my $clicmd = "$base/cli_cmd.sh";
 my $zpool = "$slbase/utils/zpool.sh";
 my $zfs_fuse = "$slbase/utils/zfs-fuse.sh";
 my $slmkjrnl = "$slbase/slmkjrnl/slmkjrnl";
+my $slmctl = "$slbase/slmctl/slmctl";
+my $slictl = "$slbase/slictl/slictl";
 my $slkeymgt = "$slbase/slkeymgt/slkeymgt";
-my $odtable = "$src/psc_fsutil_libs/utils/odtable/odtable";
 my $slimmns_format = "$slbase/slimmns/slimmns_format";
 
 my $ssh_init = <<EOF;
@@ -311,7 +312,7 @@ close CLICMD;
 parse_conf();
 
 my ($i);
-my $need_authbuf_key = 1;
+my $make_authbuf_key = 1;
 
 # Create the MDS file systems
 foreach $i (@mds) {
@@ -335,14 +336,13 @@ foreach $i (@mds) {
 		mkdir -p $datadir
 
 		$slmkjrnl -D $datadir -f
-		$odtable -C -N $datadir/ion_bmaps.odt
 
-		@{[$need_authbuf_key ? <<EOS : "" ]}
+		@{[$make_authbuf_key ? <<EOS : "" ]}
 		$slkeymgt -c -D $datadir
 		cp -p $datadir/authbuf.key $base
 EOS
 EOF
-	$need_authbuf_key = 0;
+	$make_authbuf_key = 0;
 }
 
 waitjobs $intvtimeout;
@@ -384,7 +384,7 @@ foreach $i (@ion) {
 		@{[init_env(%$global_env)]}
 		mkdir -p $datadir
 		mkdir -p $i->{fsroot}
-		$slimmns_format -i $i->{fsroot}
+		$slimmns_format -Wi $i->{fsroot}
 		cp -p $base/authbuf.key $datadir
 EOF
 }
@@ -444,7 +444,7 @@ foreach $i (@mds) {
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
 		runscreen SLMCTL sh -c "sh $tsbase/ctlmon.sh $i->{host} \\
-		    $slbase/slmctl/slmctl -S ctl/slashd.$i->{host}.sock -Pall -Lall -iall || \$SHELL"
+		    $slmctl -S ctl/slashd.$i->{host}.sock -sP -sL -sI || \$SHELL"
 EOF
 }
 
@@ -455,7 +455,7 @@ foreach $i (@ion) {
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
 		runscreen SLICTL sh -c "sh $tsbase/ctlmon.sh $i->{host} \\
-		    $slbase/slictl/slictl -S ctl/sliod.$i->{host}.sock -Pall -Lall -iall || \$SHELL"
+		    $slictl -S ctl/sliod.$i->{host}.sock -sP -sL -sI || \$SHELL"
 EOF
 }
 
@@ -466,7 +466,7 @@ foreach $i (@cli) {
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
 		runscreen MSCTL sh -c "sh $tsbase/ctlmon.sh $i->{host} \\
-		    $slbase/msctl/msctl -S ctl/msl.$i->{host}.sock -Pall -Lall -iall || \$SHELL"
+		    $slbase/msctl/msctl -S ctl/msl.$i->{host}.sock -sP -sL -sI || \$SHELL"
 EOF
 }
 
@@ -500,7 +500,7 @@ foreach $i (@ion) {
 	debug_msg "stopping sliod: $i->{rname} : $i->{host}";
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
-		$slbase/slictl/slictl -S $base/ctl/sliod.%h.sock -c exit
+		$slictl -S $base/ctl/sliod.%h.sock stop
 EOF
 }
 
@@ -511,7 +511,7 @@ foreach $i (@mds) {
 	debug_msg "stopping slashd: $i->{rname} : $i->{host}";
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
-		$slbase/slmctl/slmctl -S $base/ctl/slashd.%h.sock -c exit
+		$slmctl -S $base/ctl/slashd.%h.sock stop
 EOF
 }
 
