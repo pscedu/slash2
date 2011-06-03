@@ -243,7 +243,7 @@ slm_rmc_handle_extendbmapls(struct pscrpc_request *rq)
 		return (0);
 
 	mp->rc = mds_lease_renew(f, &mq->sbd, &mp->sbd, rq->rq_export);
-
+	fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 	return (0);
 }
 
