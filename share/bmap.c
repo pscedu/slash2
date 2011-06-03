@@ -33,6 +33,7 @@
 #include "bmap.h"
 #include "fidcache.h"
 #include "slashrpc.h"
+#include "slerr.h"
 
 __static SPLAY_GENERATE(bmap_cache, bmapc_memb, bcm_tentry, bmap_cmp);
 
@@ -256,8 +257,9 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 	}
  out:
 	if (b) {
-		DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b,
-		    "grabbed rc=%d", rc);
+		DEBUG_BMAP(rc && (rc != SLERR_BMAP_INVALID ||
+		    (flags & BMAPGETF_NOAUTOINST) == 0) ?
+		    PLL_ERROR : PLL_INFO, b, "grabbed rc=%d", rc);
 		if (rc)
 			bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 		else {
