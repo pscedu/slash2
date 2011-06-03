@@ -30,12 +30,14 @@
 #include "psc_rpc/service.h"
 
 #include "bmap_iod.h"
+#include "mkfn.h"
+#include "pathnames.h"
 #include "rpc_iod.h"
 #include "slashrpc.h"
 #include "slconn.h"
 #include "sliod.h"
 
-int			 sli_fsuuid;
+uint64_t		 sli_fsuuid;
 
 struct pscrpc_svc_handle sli_ric_svc;
 struct pscrpc_svc_handle sli_rii_svc;
@@ -163,7 +165,8 @@ sli_rpc_mds_unpack_fsuuid(struct pscrpc_request *rq, int msgtype)
 		return;
 	}
 	if (!sli_fsuuid) {
-		char buf[17], fn[PATH_MAX];
+		char *endp, buf[17], fn[PATH_MAX];
+		FILE *fp;
 
 		buf[0] = '\0';
 		xmkfn(fn, "%s/%s/%s", globalConfig.gconf_fsroot,
