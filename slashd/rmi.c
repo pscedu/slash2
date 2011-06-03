@@ -282,7 +282,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	retifset[BREPLST_TRUNCPNDG] = 0;
 
 	mds_repl_bmap_walk(bcm, tract, retifset, 0, &iosidx, 1);
-	mds_repl_bmap_rel(bcm);
+	mds_bmap_write_repls_rel(bcm);
 
 	smi = site2smi(dst_resm->resm_res->res_site);
 	spinlock(&smi->smi_lock);

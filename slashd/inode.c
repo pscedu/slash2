@@ -260,14 +260,14 @@ mds_inox_ensure_loaded(struct slash_inode_handle *ih)
 }
 
 int
-mds_inode_addrepl_update(struct slash_inode_handle *ih,
+mds_inode_repls_update(struct slash_inode_handle *ih,
     sl_ios_id_t ios, uint32_t pos, int log)
 {
-	struct slmds_jent_ino_addrepl jrir;
+	struct slmds_jent_ino_repls jrir;
 	int locked, rc = 0;
 	void *logf;
 
-	logf = log ? mds_inode_addrepl_log : NULL;
+	logf = log ? mdslog_ino_repls : NULL;
 
 	locked = INOH_RLOCK(ih);
 

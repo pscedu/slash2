@@ -156,7 +156,7 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
 		DEBUG_INOH(PLL_INFO, ih, "add IOS(%u) to repls, replica %d",
 		    ios, ih->inoh_ino.ino_nrepls - 1);
 
-		mds_inode_addrepl_update(ih, ios, j, log);
+		mds_inode_repls_update(ih, ios, j, log);
 
 		rc = j;
 	}
@@ -336,20 +336,20 @@ _mds_repl_bmap_walk(struct bmapc_memb *bcm, const int *tract,
  *	This is a high-level convenience call provided to easily update
  *	status after an ION has received some new I/O, which would make
  *	all other existing copies of the bmap on any other replicas old.
- * @bcm: the bmap.
+ * @b: the bmap.
  * @ios: the ION resource that should stay marked "valid".
  *
  * XXX this should mark others as GARBAGE instead of INVALID to avoid
  *	garbage leaks.
  */
 int
-mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios, int iosidx)
+mds_repl_inv_except(struct bmapc_memb *b, sl_ios_id_t ios, int iosidx)
 {
 	int rc, tract[NBREPLST], retifset[NBREPLST];
 	struct up_sched_work_item *wk;
 	uint32_t policy;
 
-	BHREPL_POLICY_GET(bcm, &policy);
+	BHREPL_POLICY_GET(b, &policy);
 
 	/* Ensure replica on active IOS is marked valid. */
 	brepls_init(tract, -1);
@@ -359,11 +359,11 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios, int iosidx)
 	retifset[BREPLST_INVALID] = 0;
 	retifset[BREPLST_VALID] = 0;
 
-	rc = mds_repl_bmap_walk(bcm, tract, retifset, 0, &iosidx, 1);
+	rc = mds_repl_bmap_walk(b, tract, retifset, 0, &iosidx, 1);
 	if (rc)
 		psclog_error("bcs_repls is marked OLD or SCHED for "
 		    "fid "SLPRI_FID" bmap %d iosidx %d",
-		    fcmh_2_fid(bcm->bcm_fcmh), bcm->bcm_bmapno, iosidx);
+		    fcmh_2_fid(b->bcm_fcmh), b->bcm_bmapno, iosidx);
 
 	/*
 	 * Invalidate all other replicas.
@@ -378,12 +378,11 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios, int iosidx)
 	brepls_init(retifset, 0);
 	retifset[BREPLST_VALID] = 1;
 
-	if (mds_repl_bmap_walk(bcm, tract, retifset, REPL_WALKF_MODOTH,
+	if (mds_repl_bmap_walk(b, tract, retifset, REPL_WALKF_MODOTH,
 	    &iosidx, 1))
-		BHGEN_INCREMENT(bcm);
+		BHGEN_INCREMENT(b);
 
-	/* Write changes to disk. */
-	rc = mds_bmap_repl_update(bcm, 0);
+	rc = mds_bmap_write(b, 0, NULL, NULL);
 
 	/*
 	 * If this bmap is marked for persistent replication,
@@ -395,23 +394,13 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios, int iosidx)
 	if (policy == BRPOL_PERSIST) {
 		sl_replica_t repl;
 
-		wk = uswi_find(&bcm->bcm_fcmh->fcmh_fg, NULL);
+		wk = uswi_find(&b->bcm_fcmh->fcmh_fg, NULL);
 		repl.bs_id = ios;
 		uswi_enqueue_sites(wk, &repl, 1);
 		uswi_unref(wk);
 	}
 
 	return (rc);
-}
-
-/**
- * mds_repl_bmap_rel - Release a bmap after use.
- */
-void
-mds_repl_bmap_rel(struct bmapc_memb *bcm)
-{
-	mds_bmap_repl_update(bcm, 1);
-	bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
 }
 
 /* XXX remove this routine */
@@ -432,7 +421,8 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 		ih = fcmh_2_inoh(fcmh);
 		rc = mds_inox_ensure_loaded(ih);
 		if (rc)
-			psc_fatalx("mds_inox_ensure_loaded: %s", slstrerror(rc));
+			psc_fatalx("mds_inox_ensure_loaded: %s",
+			    slstrerror(rc));
 	}
 	*fp = fcmh;
 
@@ -512,7 +502,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 			if (repl_all_act && mds_repl_bmap_walk_all(bcm, NULL,
 			    ret_if_inact, REPL_WALKF_SCIRCUIT))
 				repl_all_act = 0;
-			mds_repl_bmap_rel(bcm);
+			mds_bmap_write_repls_rel(bcm);
 		}
 		if (bmapno && repl_some_act == 0)
 			rc = EALREADY;
@@ -544,7 +534,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 			} else {
 				rc = mds_repl_bmap_walk(bcm,
 				    tract, retifset, 0, iosidx, nios);
-				mds_repl_bmap_rel(bcm);
+				mds_bmap_write_repls_rel(bcm);
 			}
 		}
 	} else
@@ -602,7 +592,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 			if (mds_repl_bmap_walk(bcm, tract,
 			    retifset, 0, iosidx, nios))
 				rc = 0;
-			mds_repl_bmap_rel(bcm);
+			mds_bmap_write_repls_rel(bcm);
 		}
 	} else if (mds_bmap_exists(wk->uswi_fcmh, bmapno)) {
 		brepls_init(retifset, 0);
@@ -615,7 +605,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		if (rc == 0) {
 			rc = mds_repl_bmap_walk(bcm,
 			    tract, retifset, 0, iosidx, nios);
-			mds_repl_bmap_rel(bcm);
+			mds_bmap_write_repls_rel(bcm);
 		}
 	} else
 		rc = SLERR_BMAP_INVALID;
@@ -781,7 +771,7 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 
 			mds_repl_bmap_walk(bcm, tract,
 			    NULL, 0, &iosidx, 1);
-			mds_repl_bmap_rel(bcm);
+			mds_bmap_write_repls_rel(bcm);
 		}
  end:
 		uswi_enqueue_sites(wk, &repl, 1);

@@ -123,18 +123,19 @@ struct bmapc_memb {
 #define BMAP_RD			(1 << 0)	/* XXX use enum rw */
 #define BMAP_WR			(1 << 1)	/* XXX use enum rw */
 #define BMAP_INIT		(1 << 2)	/* initializing from disk/network */
-#define BMAP_DIO		(1 << 3)
+#define BMAP_DIO		(1 << 3)	/* direct I/O, no client caching */
 #define BMAP_DIORQ		(1 << 4)
-#define BMAP_CLOSING		(1 << 5)
+#define BMAP_CLOSING		(1 << 5)	/* refcnt dropped to zero, removing */
 #define BMAP_DIRTY		(1 << 6)
 #define BMAP_MEMRLS		(1 << 7)
 #define BMAP_DIRTY2LRU		(1 << 8)
-#define BMAP_TIMEOQ		(1 << 9)
-#define BMAP_IONASSIGN		(1 << 10)
+#define BMAP_TIMEOQ		(1 << 9)	/* on timeout queue */
+#define BMAP_IONASSIGN		(1 << 10)	/* has been assigned to an ION for writes */
 #define BMAP_MDCHNG		(1 << 11)
 #define BMAP_WAITERS		(1 << 12)	/* has bcm_fcmh waiters */
 #define BMAP_ORPHAN		(1 << 13)	/* removed from fcmh_bmaptree */
-#define _BMAP_FLSHFT		(1 << 14)
+#define BMAP_BUSY		(1 << 14)	/* temporary processing lock */
+#define _BMAP_FLSHFT		(1 << 15)
 
 #define BMAP_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bcm_lock)
 #define BMAP_LOCK(b)		spinlock(&(b)->bcm_lock)

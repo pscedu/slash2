@@ -38,15 +38,13 @@ struct sl_mds_crc_log {
 	struct srm_bmap_crcup	*scl_crcup;
 };
 
-#define MDS_LOG_BMAP_REPL	(_PJE_FLSHFT << 0)
+#define MDS_LOG_BMAP_REPLS	(_PJE_FLSHFT << 0)
 #define MDS_LOG_BMAP_CRC	(_PJE_FLSHFT << 1)
 #define MDS_LOG_BMAP_SEQ	(_PJE_FLSHFT << 2)
 #define MDS_LOG_BMAP_ASSIGN	(_PJE_FLSHFT << 3)
-#define MDS_LOG_INO_ADDREPL	(_PJE_FLSHFT << 4)
+#define MDS_LOG_INO_REPLS	(_PJE_FLSHFT << 4)
 #define MDS_LOG_NAMESPACE	(_PJE_FLSHFT << 5)
-#define MDS_LOG_INO_REPLPOL	(_PJE_FLSHFT << 6)
-
-#define MDS_LOG_LAST_TYPE	MDS_LOG_NAMESPACE
+#define _MDS_LOG_LAST_TYPE	(_PJE_FLSHFT << 5)
 
 /*
  * A structure used to describe the log application progress on each site.
@@ -61,24 +59,21 @@ struct site_progress {
  * Our MDS should be able to recover after being restarted.
  */
 
-void	mds_bmap_crc_log(void *, uint64_t, int);
-void	mds_bmap_repl_log(void *, uint64_t, int);
-void	mds_inode_addrepl_log(void *, uint64_t, int);
-void	mdslog_ino_replpol(void *, uint64_t, int);
-void	mds_namespace_log(int, uint64_t, uint64_t, uint64_t,
+void	mdslog_bmap_crc(void *, uint64_t, int);
+void	mdslog_bmap_repls(void *, uint64_t, int);
+void	mdslog_ino_repls(void *, uint64_t, int);
+void	mdslog_namespace(int, uint64_t, uint64_t, uint64_t,
 	    const struct srt_stat *, int, const char *, const char *);
 
 void	mds_journal_init(int);
 
-int	mds_bmap_repl_update(struct bmapc_memb *, int);
 int	mds_bmap_crc_update(struct bmapc_memb *, struct srm_bmap_crcup *);
-int	mds_inode_addrepl_update(struct slash_inode_handle *, sl_ios_id_t, uint32_t, int);
+int	mds_inode_repls_update(struct slash_inode_handle *, sl_ios_id_t, uint32_t, int);
 
 void	mds_reserve_slot(void);
 void	mds_unreserve_slot(void);
 
 int	mds_replay_namespace(struct slmds_jent_namespace *, int);
-
 int	mds_replay_handler(struct psc_journal_enthdr *);
 
 extern struct psc_journal		*mdsJournal;

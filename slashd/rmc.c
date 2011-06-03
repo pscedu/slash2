@@ -319,7 +319,7 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mds_reserve_slot();
 	mp->rc = mdsio_link(fcmh_2_mdsio_fid(c), fcmh_2_mdsio_fid(p),
-	    mq->name, &rootcreds, &mp->cattr, mds_namespace_log);
+	    mq->name, &rootcreds, &mp->cattr, mdslog_namespace);
 	mds_unreserve_slot();
 
 	mdsio_fcmh_refreshattr(p, &mp->pattr);
@@ -383,7 +383,7 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	}
 	mds_reserve_slot();
 	mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(p), mq->name, mq->mode,
-	    &mq->creds, &mp->cattr, NULL, mds_namespace_log,
+	    &mq->creds, &mp->cattr, NULL, mdslog_namespace,
 	    slm_get_next_slashid, 0);
 	mds_unreserve_slot();
 
@@ -428,7 +428,7 @@ slm_rmc_handle_mknod(struct pscrpc_request *rq)
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mds_reserve_slot();
 	mp->rc = mdsio_mknod(fcmh_2_mdsio_fid(p), mq->name, mq->mode,
-	    &mq->creds, &mp->cattr, NULL, mds_namespace_log,
+	    &mq->creds, &mp->cattr, NULL, mdslog_namespace,
 	    slm_get_next_slashid);
 	mds_unreserve_slot();
 
@@ -485,7 +485,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	mds_reserve_slot();
 	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &mq->creds,
 	    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->name, NULL,
-	    &mp->cattr, &mdsio_data, mds_namespace_log,
+	    &mp->cattr, &mdsio_data, mdslog_namespace,
 	    slm_get_next_slashid, 0);
 	mds_unreserve_slot();
 
@@ -717,7 +717,7 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 
 	/* if we get here, op and np must be owned by the current MDS */
 	mp->rc = mdsio_rename(fcmh_2_mdsio_fid(op), from,
-	    fcmh_2_mdsio_fid(np), to, &rootcreds, mds_namespace_log);
+	    fcmh_2_mdsio_fid(np), to, &rootcreds, mdslog_namespace);
 
 	/* update target ctime */
 	if (mp->rc == 0) {
@@ -811,7 +811,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			mds_reserve_slot();
 			mp->rc = mdsio_setattr(fcmh_2_mdsio_fid(fcmh),
 			    &mq->attr, to_set, &rootcreds, &mp->attr,
-			    fcmh_2_mdsio_data(fcmh), mds_namespace_log);
+			    fcmh_2_mdsio_data(fcmh), mdslog_namespace);
 			mds_unreserve_slot();
 		}
 	}
@@ -868,16 +868,16 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 	ih = fcmh_2_inoh(fcmh);
 	mp->rc = mds_inox_ensure_loaded(ih);
 	if (mp->rc == 0) {
-		struct slmds_jent_ino_replpol jrip;
+		struct slmds_jent_ino_repls sjir;
 
 		INOH_LOCK(ih);
 		ih->inoh_ino.ino_replpol = mq->pol;
 		INOH_ULOCK(ih);
 
-		jrip.sjip_fid = fcmh_2_fid(ih->inoh_fcmh);
-		jrip.sjip_replpol = ih->inoh_ino.ino_replpol;
+		sjir.sjir_fid = fcmh_2_fid(ih->inoh_fcmh);
+		sjir.sjir_replpol = ih->inoh_ino.ino_replpol;
 
-		mds_inode_write(ih, mdslog_ino_replpol, &jrip);
+		mds_inode_write(ih, mdslog_ino_repls, &sjir);
 	}
 
  out:
@@ -920,8 +920,7 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 		goto out;
 
 	BHREPL_POLICY_SET(bcm, mq->pol);
-
-	mds_repl_bmap_rel(bcm);
+	mds_bmap_write_repls_rel(bcm);
 
  out:
 	if (fcmh)
@@ -985,7 +984,7 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 	mds_reserve_slot();
 	mp->rc = mdsio_symlink(linkname, fcmh_2_mdsio_fid(p), mq->name,
 	    &mq->creds, &mp->cattr, NULL, slm_get_next_slashid,
-	    mds_namespace_log);
+	    mdslog_namespace);
 	mds_unreserve_slot();
 
 	mdsio_fcmh_refreshattr(p, &mp->pattr);
@@ -1022,10 +1021,10 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	mds_reserve_slot();
 	if (isfile)
 		mp->rc = mdsio_unlink(fcmh_2_mdsio_fid(p), NULL,
-		    mq->name, &rootcreds, mds_namespace_log);
+		    mq->name, &rootcreds, mdslog_namespace);
 	else
 		mp->rc = mdsio_rmdir(fcmh_2_mdsio_fid(p), NULL,
-		    mq->name, &rootcreds, mds_namespace_log);
+		    mq->name, &rootcreds, mdslog_namespace);
 	mds_unreserve_slot();
 
  out:
@@ -1036,7 +1035,7 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 		mds_fcmh_setattr(p, PSCFS_SETATTRF_CTIME);
 		memcpy(&mp->attr, &p->fcmh_sstb, sizeof(mp->attr));
 	}
-	psclog_info("DEBUG: mdsio_unlink: parent="SLPRI_FID", name=%s, rc=%d",
+	psclog_info("unlink parent="SLPRI_FID" name=%s rc=%d",
 	    mq->pfid, mq->name, mp->rc);
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);

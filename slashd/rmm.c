@@ -201,7 +201,7 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		if (mp->rc)
 			break;
 		mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(p), mq->req.name, mq->mode,
-		    &mq->creds, &mp->cattr, NULL, mds_namespace_log,
+		    &mq->creds, &mp->cattr, NULL, mdslog_namespace,
 		    NULL, mq->fid);
 		break;
 	    case SLM_FORWARD_CREATE:
@@ -210,7 +210,7 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 			break;
 		mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &mq->creds,
 		    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->req.name, NULL,
-		    &mp->cattr, &mdsio_data, mds_namespace_log,
+		    &mp->cattr, &mdsio_data, mdslog_namespace,
 		    NULL, mq->fid);
 		if (!mp->rc)
 			mdsio_release(&rootcreds, mdsio_data);
@@ -220,14 +220,14 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		if (mp->rc)
 			break;
 		mp->rc = mdsio_rmdir(fcmh_2_mdsio_fid(p), &mp->fid,
-		    mq->req.name, &rootcreds, mds_namespace_log);
+		    mq->req.name, &rootcreds, mdslog_namespace);
 		break;
 	    case SLM_FORWARD_UNLINK:
 		mp->rc = slm_fcmh_get(&mq->fg, &p);
 		if (mp->rc)
 			break;
 		mp->rc = mdsio_unlink(fcmh_2_mdsio_fid(p), &mp->fid,
-		    mq->req.name, &rootcreds, mds_namespace_log);
+		    mq->req.name, &rootcreds, mdslog_namespace);
 		break;
 	    case SLM_FORWARD_RENAME:
 		mp->rc = slm_fcmh_get(&mq->fg, &op);
@@ -239,7 +239,7 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		from = mq->req.name;
 		to = mq->req.name + strlen(mq->req.name) + 1;
 		mp->rc = mdsio_rename(fcmh_2_mdsio_fid(op), from,
-		    fcmh_2_mdsio_fid(np), to, &rootcreds, mds_namespace_log);
+		    fcmh_2_mdsio_fid(np), to, &rootcreds, mdslog_namespace);
 		break;
 	    case SLM_FORWARD_SETATTR:
 		/*
@@ -252,7 +252,7 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 			break;
 		mp->rc = mdsio_setattr(fcmh_2_mdsio_fid(p),
 		    &mq->req.sstb, mq->to_set, &rootcreds, &mp->cattr,
-		    fcmh_2_mdsio_data(p), mds_namespace_log);
+		    fcmh_2_mdsio_data(p), mdslog_namespace);
 		break;
 	}
 	mds_unreserve_slot();

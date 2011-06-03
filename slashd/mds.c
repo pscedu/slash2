@@ -245,9 +245,9 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	struct bmap_mds_info *bmi = bmap_2_bmi(bmap);
 	struct sl_resource *res = libsl_id2res(pios);
 	struct slmds_jent_assign_rep *logentry;
-	struct slmds_jent_bmap_assign *jrba;
-	struct slmds_jent_ino_addrepl *jrir;
-	struct slmds_jent_repgen *jrpg;
+	struct slmds_jent_bmap_assign *sjba;
+	struct slmds_jent_bmap_repls *sjbr;
+	struct slmds_jent_ino_repls *jrir;
 	struct slashrpc_cservice *csvc;
 	struct resprof_mds_info *rpmi;
 	struct slash_inode_handle *ih;
@@ -366,8 +366,8 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 		    slstrerror(iosidx));
 	mds_repl_inv_except(bmap, bia.bia_ios, iosidx);
 
-	jrpg = &logentry->sjar_rep;
-	jrba = &logentry->sjar_bmap;
+	sjbr = &logentry->sjar_rep;
+	sjba = &logentry->sjar_bmap;
 	jrir = &logentry->sjar_ino;
 
 	logentry->sjar_flags = SLJ_ASSIGN_REP_NONE;
@@ -379,29 +379,29 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 		logentry->sjar_flags |= SLJ_ASSIGN_REP_INO;
 	}
 
-	jrpg->sjp_fid = bia.bia_fid;
-	jrpg->sjp_bmapno = bmap->bcm_bmapno;
-	BHGEN_GET(bmap, &jrpg->sjp_bgen);
-	jrpg->sjp_nrepls = ih->inoh_ino.ino_nrepls;
+	sjbr->sjbr_fid = bia.bia_fid;
+	sjbr->sjbr_bmapno = bmap->bcm_bmapno;
+	BHGEN_GET(bmap, &sjbr->sjbr_bgen);
+	sjbr->sjbr_nrepls = ih->inoh_ino.ino_nrepls;
 
-	memcpy(jrpg->sjp_reptbl, bmap->bcm_repls, SL_REPLICA_NBYTES);
+	memcpy(sjbr->sjbr_reptbl, bmap->bcm_repls, SL_REPLICA_NBYTES);
 
 	logentry->sjar_flags |= SLJ_ASSIGN_REP_REP;
 
-	jrba->sjba_ion_nid = bia.bia_ion_nid;
-	jrba->sjba_lastcli.nid = bia.bia_lastcli.nid;
-	jrba->sjba_lastcli.pid = bia.bia_lastcli.pid;
-	jrba->sjba_ios = bia.bia_ios;
-	jrba->sjba_fid = bia.bia_fid;
-	jrba->sjba_seq = bia.bia_seq;
-	jrba->sjba_bmapno = bia.bia_bmapno;
-	jrba->sjba_start = bia.bia_start;
-	jrba->sjba_flags = bia.bia_flags;
+	sjba->sjba_ion_nid = bia.bia_ion_nid;
+	sjba->sjba_lastcli.nid = bia.bia_lastcli.nid;
+	sjba->sjba_lastcli.pid = bia.bia_lastcli.pid;
+	sjba->sjba_ios = bia.bia_ios;
+	sjba->sjba_fid = bia.bia_fid;
+	sjba->sjba_seq = bia.bia_seq;
+	sjba->sjba_bmapno = bia.bia_bmapno;
+	sjba->sjba_start = bia.bia_start;
+	sjba->sjba_flags = bia.bia_flags;
 	logentry->sjar_flags |= SLJ_ASSIGN_REP_BMAP;
 	logentry->sjar_elem = bmi->bmdsi_assign->odtr_elem;
 
-	pjournal_add_entry(mdsJournal, 0, MDS_LOG_BMAP_ASSIGN, 0, logentry,
-	    sizeof(struct slmds_jent_assign_rep)); 
+	pjournal_add_entry(mdsJournal, 0, MDS_LOG_BMAP_ASSIGN, 0,
+	    logentry, sizeof(*logentry));
 	pjournal_put_buf(mdsJournal, logentry);
 	mds_unreserve_slot();
 
@@ -422,9 +422,9 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 	struct bmapc_memb *b = bml_2_bmap(bml);
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct slmds_jent_assign_rep *logentry;
-	struct slmds_jent_bmap_assign *jrba;
-	struct slmds_jent_ino_addrepl *jrir;
-	struct slmds_jent_repgen *jrpg;
+	struct slmds_jent_bmap_assign *sjba;
+	struct slmds_jent_bmap_repls *sjbr;
+	struct slmds_jent_ino_repls *jrir;
 	struct slash_inode_handle *ih;
 	struct bmap_ion_assign bia;
 	int rc, iosidx, dio;
@@ -483,8 +483,8 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 	logentry = pjournal_get_buf(mdsJournal,
 	    sizeof(struct slmds_jent_assign_rep));
 
-	jrpg = &logentry->sjar_rep;
-	jrba = &logentry->sjar_bmap;
+	sjbr = &logentry->sjar_rep;
+	sjba = &logentry->sjar_bmap;
 	jrir = &logentry->sjar_ino;
 
 	logentry->sjar_flags = SLJ_ASSIGN_REP_NONE;
@@ -496,24 +496,24 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 		logentry->sjar_flags |= SLJ_ASSIGN_REP_INO;
 	}
 
-	jrpg->sjp_fid = fcmh_2_fid(b->bcm_fcmh);
-	jrpg->sjp_bmapno = b->bcm_bmapno;
-	jrpg->sjp_bgen = bmap_2_bgen(b);
-	jrpg->sjp_nrepls = ih->inoh_ino.ino_nrepls;
+	sjbr->sjbr_fid = fcmh_2_fid(b->bcm_fcmh);
+	sjbr->sjbr_bmapno = b->bcm_bmapno;
+	sjbr->sjbr_bgen = bmap_2_bgen(b);
+	sjbr->sjbr_nrepls = ih->inoh_ino.ino_nrepls;
 
-	memcpy(jrpg->sjp_reptbl, b->bcm_repls, SL_REPLICA_NBYTES);
+	memcpy(sjbr->sjbr_reptbl, b->bcm_repls, SL_REPLICA_NBYTES);
 
 	logentry->sjar_flags |= SLJ_ASSIGN_REP_REP;
 
-	jrba->sjba_ion_nid = bia.bia_ion_nid;
-	jrba->sjba_lastcli.nid = bia.bia_lastcli.nid;
-	jrba->sjba_lastcli.pid = bia.bia_lastcli.pid;
-	jrba->sjba_ios = bia.bia_ios;
-	jrba->sjba_fid = bia.bia_fid;
-	jrba->sjba_seq = bia.bia_seq;
-	jrba->sjba_bmapno = bia.bia_bmapno;
-	jrba->sjba_start = bia.bia_start;
-	jrba->sjba_flags = bia.bia_flags;
+	sjba->sjba_ion_nid = bia.bia_ion_nid;
+	sjba->sjba_lastcli.nid = bia.bia_lastcli.nid;
+	sjba->sjba_lastcli.pid = bia.bia_lastcli.pid;
+	sjba->sjba_ios = bia.bia_ios;
+	sjba->sjba_fid = bia.bia_fid;
+	sjba->sjba_seq = bia.bia_seq;
+	sjba->sjba_bmapno = bia.bia_bmapno;
+	sjba->sjba_start = bia.bia_start;
+	sjba->sjba_flags = bia.bia_flags;
 	logentry->sjar_flags |= SLJ_ASSIGN_REP_BMAP;
 	logentry->sjar_elem = bmi->bmdsi_assign->odtr_elem;
 
@@ -1872,7 +1872,7 @@ slm_ptrunc_prepare(struct slm_workrq *wkrq)
 	mds_reserve_slot();
 	rc = mdsio_setattr(fcmh_2_mdsio_fid(fcmh), &fcmh->fcmh_sstb,
 	    PSCFS_SETATTRF_DATASIZE, &rootcreds, &fcmh->fcmh_sstb,
-	    fcmh_2_mdsio_data(fcmh), mds_namespace_log);
+	    fcmh_2_mdsio_data(fcmh), mdslog_namespace);
 	mds_unreserve_slot();
 
 	FCMH_ULOCK(fcmh);
@@ -1906,7 +1906,7 @@ slm_ptrunc_apply(struct slm_workrq *wkrq)
 		if (mds_bmap_load(fcmh, i, &b) == 0) {
 			mds_repl_bmap_walkcb(b, tract, NULL, 0,
 			    ptrunc_tally_ios, &ios_list);
-			mds_repl_bmap_rel(b);
+			mds_bmap_write_repls_rel(b);
 		}
 		i++;
 	} else {
@@ -1925,7 +1925,7 @@ slm_ptrunc_apply(struct slm_workrq *wkrq)
 		BHGEN_INCREMENT(b);
 		mds_repl_bmap_walkcb(b, tract, NULL, 0,
 		    ptrunc_tally_ios, &ios_list);
-		mds_repl_bmap_rel(b);
+		mds_bmap_write_repls_rel(b);
 	}
 
 	rc = uswi_findoradd(&fcmh->fcmh_fg, &uswi);

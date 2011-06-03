@@ -107,6 +107,7 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 	rc = mdsio_preadv(&rootcreds, iovs, nitems(iovs), &nb,
 	    (off_t)BMAP_OD_SZ * b->bcm_bmapno + SL_BMAP_START_OFF,
 	    bmap_2_mdsio_data(b));
+
 	if (rc == 0 && nb == 0 && (flags & BMAPGETF_NOAUTOINST))
 		return (SLERR_BMAP_INVALID);
 
@@ -276,19 +277,22 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 		    crcup->crcs[i].slot, crcup->crcs[i].crc);
 	}
 	return (mds_bmap_write(bmap, utimgen == crcup->utimgen,
-	    mds_bmap_crc_log, &crclog));
+	    mdslog_bmap_crc, &crclog));
 }
 
 /**
- * mds_bmap_repl_update - We update bmap replication status in two cases:
- *	(1) An MDS issues a write lease to a client.
- *	(2) An MDS performs a replicate request.
+ * mds_bmap_write_rel - Release a bmap after use.
  */
-int
-mds_bmap_repl_update(struct bmapc_memb *bmap, int log)
+void
+mds_bmap_write_rel(struct bmapc_memb *b, void *logf)
 {
-	return (mds_bmap_write(bmap, 0,
-	    log ? mds_bmap_repl_log : NULL, bmap));
+	int rc;
+
+	/* XXX check that we set this */
+//	psc_assert(b->bcm_flags & BMAP_BUSY);
+
+	rc = mds_bmap_write(b, 0, logf, b);
+	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 }
 
 #if PFL_DEBUG > 0

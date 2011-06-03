@@ -65,6 +65,8 @@ struct bmap_mds_info {
 	int32_t				 bmdsi_writers;
 	int32_t				 bmdsi_readers;
 	struct psc_rwlock		 bmdsi_rwlock;
+
+	pthread_t			 bmi_owner;
 };
 
 /* MDS-specific bcm_flags */
@@ -243,6 +245,9 @@ struct bmap_ion_assign {
 
 int	 mds_bmap_read(struct bmapc_memb *, enum rw, int);
 int	 mds_bmap_write(struct bmapc_memb *, int, void *, void *);
+void	 mds_bmap_write_rel(struct bmapc_memb *, void *);
+
+#define mds_bmap_write_repls_rel(b)	mds_bmap_write_rel((b), mdslog_bmap_repls)
 
 int	 mds_bmap_crc_write(struct srm_bmap_crcup *, lnet_nid_t,
 	    const struct srm_bmap_crcwrt_req *);

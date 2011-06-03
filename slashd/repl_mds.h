@@ -56,7 +56,6 @@ typedef void (*brepl_walkcb_t)(struct bmapc_memb *, int, int, void *);
 
 int	 mds_repl_addrq(const struct slash_fidgen *, sl_bmapno_t, const sl_replica_t *, int);
 int	_mds_repl_bmap_apply(struct bmapc_memb *, const int *, const int *, int, int, int *, brepl_walkcb_t, void *);
-void	 mds_repl_bmap_rel(struct bmapc_memb *);
 int	_mds_repl_bmap_walk(struct bmapc_memb *, const int *, const int *, int, const int *, int, brepl_walkcb_t, void *);
 int	 mds_repl_delrq(const struct slash_fidgen *, sl_bmapno_t, const sl_replica_t *, int);
 void	 mds_repl_init(void);

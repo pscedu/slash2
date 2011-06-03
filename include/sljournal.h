@@ -30,7 +30,7 @@
 #define SLJ_MDS_NCRCS			MAX_BMAP_INODE_PAIRS
 
 /**
- * slmds_jent_crc - Used to log CRC updates which come from IONs.
+ * slmds_jent_crc - Log bmap CRC updates from IONs.
  * @sjc_fid: file ID.
  * @sjc_bmapno: which bmap region.
  * @sjc_ion: the ion who sent the request.
@@ -56,39 +56,38 @@ struct slmds_jent_crc {
 } __packed;
 
 /**
- * slmds_jent_repgen - Log changes to the replication state of a bmap
+ * slmds_jent_bmap_repls - Log changes to the replication state of a bmap
  *	which occur upon processing a new write for a replicated bmap.
- * @sjp_fid: what file.
- * @sjp_bmapno: which bmap region.
- * @sjp_bgen: the new bmap generation.
- * @sjp_reptbl: the bmap's entire replica bitmap.
+ * @sjbr_fid: what file.
+ * @sjbr_bmapno: which bmap region.
+ * @sjbr_bgen: the new bmap generation.
+ * @sjbr_replpol: bmap's replication policy.
+ * @sjbr_nrepls: number of items in @sjbr_reptbl.
+ * @sjbr_reptbl: the bmap's entire replica bitmap.
  */
-struct slmds_jent_repgen {
-	slfid_t				sjp_fid;
-	sl_bmapno_t			sjp_bmapno;
-	sl_bmapgen_t			sjp_bgen;
-	uint32_t			sjp_nrepls;
-	uint8_t				sjp_reptbl[SL_REPLICA_NBYTES];
+struct slmds_jent_bmap_repls {
+	slfid_t				sjbr_fid;
+	sl_bmapno_t			sjbr_bmapno;
+	sl_bmapgen_t			sjbr_bgen;
+	uint32_t			sjbr_replpol;
+	uint32_t			sjbr_nrepls;
+	uint8_t				sjbr_reptbl[SL_REPLICA_NBYTES];
 } __packed;
 
 /**
- * slmds_jent_ino_addrepl - Add an IOS to the inode or the
- *	inode extras replica table.
+ * slmds_jent_ino_repls - Update the inode/inox replicas table.
  * @sjir_fid: what file.
  * @sjir_ios: the IOS being added.
  * @sjir_pos: the slot or position the replica IOS is to be added to.
  * @sjir_nrepls: the number of replicas after this update.
  */
-struct slmds_jent_ino_addrepl {
+struct slmds_jent_ino_repls {
 	slfid_t				sjir_fid;
 	sl_ios_id_t			sjir_ios;
 	uint32_t			sjir_pos;
+	uint32_t			sjir_replpol;
 	uint32_t			sjir_nrepls;
-} __packed;
-
-struct slmds_jent_ino_replpol {
-	slfid_t				sjip_fid;
-	uint32_t			sjip_replpol;
+//	sl_ios_id_t			sjir_repls[SL_MAX_REPLICAS];
 } __packed;
 
 struct slmds_jent_bmap_assign {
@@ -114,8 +113,8 @@ struct slmds_jent_bmapseq {
 struct slmds_jent_assign_rep {
 	uint32_t			sjar_flags;
 	 int32_t			sjar_elem;
-	struct slmds_jent_ino_addrepl	sjar_ino;
-	struct slmds_jent_repgen	sjar_rep;
+	struct slmds_jent_ino_repls	sjar_ino;
+	struct slmds_jent_bmap_repls	sjar_rep;
 	struct slmds_jent_bmap_assign	sjar_bmap;
 } __packed;
 

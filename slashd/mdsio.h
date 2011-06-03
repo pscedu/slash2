@@ -50,10 +50,7 @@ typedef void (*sl_log_write_t)(void *, uint64_t, int);
 
 /* callback to log updates to namespace */
 typedef void (*sl_log_update_t)(int, uint64_t, uint64_t, uint64_t,
-		const struct srt_stat *, int, const char *, const char *);
-
-void	mds_namespace_log(int, uint64_t, uint64_t, uint64_t, const
-		struct srt_stat *, int, const char *, const char *);
+    const struct srt_stat *, int, const char *, const char *);
 
 /* predefined mdsio layer "fids" */
 #define MDSIO_FID_ROOT		3		/* XXX FUSE_ROOT_ID? */

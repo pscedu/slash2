@@ -31,7 +31,7 @@
 #include "sljournal.h"
 
 #define B_REPLAY_OP_CRC		0
-#define B_REPLAY_OP_REPL	1
+#define B_REPLAY_OP_REPLS	1
 
 /**
  * mds_replay_bmap_repl - Replay a replication update on a bmap.  This has
@@ -41,44 +41,37 @@
 static int
 mds_replay_bmap_repl_common(void *jent, int op)
 {
-	struct slmds_jent_repgen *jrpg = jent;
-	struct srt_bmap_crcwire *bmap_wire;
+	struct slmds_jent_bmap_repls *sjbr = jent;
 	struct slmds_jent_crc *jcrc = jent;
+	struct srt_bmap_crcwire *bmap_wire;
 	struct fidc_membh *f = NULL;
 	struct bmapc_memb *b = NULL;
 	struct slash_fidgen fg;
-	sl_bmapno_t bno;
 	int i, rc;
+	union {
+		slfid_t		fid;
+		sl_bmapno_t	bno;
+	} *cp = jent;
 
-	switch (op) {
-	case B_REPLAY_OP_REPL:
-		fg.fg_fid = jrpg->sjp_fid;
-		bno = jrpg->sjp_bmapno;
-		break;
-	case B_REPLAY_OP_CRC:
-		fg.fg_fid = jcrc->sjc_fid;
-		bno = jcrc->sjc_bmapno;
-		break;
-	default:
-		psc_fatalx("invalid op");
-	}
-
+	fg.fg_fid = cp->fid;
 	fg.fg_gen = FGEN_ANY;
 	rc = slm_fcmh_get(&fg, &f);
 	if (rc)
 		goto out;
 
-	rc = mds_bmap_load(f, bno, &b);
+	rc = mds_bmap_load(f, cp->bno, &b);
 	if (rc)
 		goto out;
 
 	switch (op) {
-	case B_REPLAY_OP_REPL:
-		mds_brepls_check(jrpg->sjp_reptbl, jrpg->sjp_nrepls);
+	case B_REPLAY_OP_REPLS:
+		mds_brepls_check(sjbr->sjbr_reptbl, sjbr->sjbr_nrepls);
 
-		memcpy(b->bcm_repls, jrpg->sjp_reptbl, SL_REPLICA_NBYTES);
+		bmap_2_replpol(b) = sjbr->sjbr_replpol;
+		memcpy(b->bcm_repls, sjbr->sjbr_reptbl,
+		    SL_REPLICA_NBYTES);
 		psclog_info("fid="SLPRI_FID" bmapno=%u",
-		    jrpg->sjp_fid, jrpg->sjp_bmapno);
+		    sjbr->sjbr_fid, sjbr->sjbr_bmapno);
 		break;
 	case B_REPLAY_OP_CRC: {
 		struct slash_inode_handle *ih;
@@ -134,10 +127,10 @@ mds_replay_bmap_repl_common(void *jent, int op)
 }
 
 static int
-mds_replay_bmap_repl(struct psc_journal_enthdr *pje)
+mds_replay_bmap_repls(struct psc_journal_enthdr *pje)
 {
 	return (mds_replay_bmap_repl_common(PJE_DATA(pje),
-	    B_REPLAY_OP_REPL));
+	    B_REPLAY_OP_REPLS));
 }
 
 /**
@@ -167,10 +160,10 @@ mds_replay_bmap_seq(struct psc_journal_enthdr *pje)
 }
 
 /**
- * mds_replay_ino_addrepl - Replay an inode replication table update.
+ * mds_replay_ino_repls - Replay an inode replication table update.
  */
 static int
-mds_replay_ino_addrepl_common(struct slmds_jent_ino_addrepl *jrir)
+mds_replay_ino_repls_common(struct slmds_jent_ino_repls *jrir)
 {
 	struct slash_inode_handle *ih = NULL;
 	struct slash_fidgen fg;
@@ -215,6 +208,7 @@ mds_replay_ino_addrepl_common(struct slmds_jent_ino_addrepl *jrir)
 
 		psclog_info("fid="SLPRI_FID, jrir->sjir_fid);
 	}
+
 	/*
 	 * We always update the inode itself because the number of
 	 * replicas is stored there.
@@ -232,6 +226,7 @@ mds_replay_ino_addrepl_common(struct slmds_jent_ino_addrepl *jrir)
 	psc_assert(jrir->sjir_nrepls <= SL_MAX_REPLICAS);
 	psc_assert(jrir->sjir_pos < jrir->sjir_nrepls);
 
+	ih->inoh_ino.ino_replpol = jrir->sjir_replpol;
 	ih->inoh_ino.ino_nrepls = jrir->sjir_nrepls;
 
 	if (pos < SL_DEF_REPLICAS)
@@ -250,58 +245,13 @@ mds_replay_ino_addrepl_common(struct slmds_jent_ino_addrepl *jrir)
 }
 
 static int
-mds_replay_ino_addrepl(struct psc_journal_enthdr *pje)
+mds_replay_ino_repls(struct psc_journal_enthdr *pje)
 {
-	struct slmds_jent_ino_addrepl *jrir;
+	struct slmds_jent_ino_repls *jrir;
 	int rc;
 
 	jrir = PJE_DATA(pje);
-	rc = mds_replay_ino_addrepl_common(jrir);
-	return (rc);
-}
-
-static int
-mds_replay_ino_replpol(struct psc_journal_enthdr *pje)
-{
-	struct slmds_jent_ino_replpol *jrip;
-	struct slash_inode_handle *ih = NULL;
-	struct slash_fidgen fg;
-	struct fidc_membh *f;
-	int rc;
-
-	jrip = PJE_DATA(pje);
-	if (jrip->sjip_fid == FID_ANY) {
-		psclog_errorx("cannot replay on FID_ANY");
-		return (EINVAL);
-	}
-	if (jrip->sjip_replpol >= NBRPOL) {
-		psclog_errorx("replpol is out of range (%u)",
-		    jrip->sjip_replpol);
-		return (EINVAL);
-	}
-
-	fg.fg_fid = jrip->sjip_fid;
-	fg.fg_gen = FGEN_ANY;
-	rc = slm_fcmh_get(&fg, &f);
-	if (rc)
-		goto out;
-
-	ih = fcmh_2_inoh(f);
-	INOH_LOCK(ih);
-
-	ih->inoh_ino.ino_replpol = jrip->sjip_replpol;
-
-	rc = mds_inode_write(ih, NULL, NULL);
-	if (rc)
-		goto out;
-
- out:
-	if (ih)
-		INOH_ULOCK(ih);
-	psclog(rc ? PLL_ERROR : PLL_INFO, "fid="SLPRI_FID" rc=%d",
-	    fg.fg_fid, rc);
-	if (f)
-		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
+	rc = mds_replay_ino_repls_common(jrir);
 	return (rc);
 }
 
@@ -312,7 +262,7 @@ static int
 mds_replay_bmap_assign(struct psc_journal_enthdr *pje)
 {
 	struct slmds_jent_assign_rep *logentry;
-	struct slmds_jent_bmap_assign *jrba;
+	struct slmds_jent_bmap_assign *sjba;
 	struct bmap_ion_assign *bia;
 	struct odtable_entftr *odtf;
 	struct odtable_hdr odth;
@@ -327,15 +277,15 @@ mds_replay_bmap_assign(struct psc_journal_enthdr *pje)
 	if (logentry->sjar_flags & SLJ_ASSIGN_REP_FREE)
 		psclog_info("free item %zd", elem);
 	else {
-		jrba = &logentry->sjar_bmap;
+		sjba = &logentry->sjar_bmap;
 		psclog_info("replay item %zd, fid="SLPRI_FID", flags=%d",
-		    elem, jrba->sjba_fid, logentry->sjar_flags);
+		    elem, sjba->sjba_fid, logentry->sjar_flags);
 	}
 	if (logentry->sjar_flags & SLJ_ASSIGN_REP_INO)
-		mds_replay_ino_addrepl_common(&logentry->sjar_ino);
+		mds_replay_ino_repls_common(&logentry->sjar_ino);
 	if (logentry->sjar_flags & SLJ_ASSIGN_REP_REP)
 		mds_replay_bmap_repl_common(&logentry->sjar_rep,
-		    B_REPLAY_OP_REPL);
+		    B_REPLAY_OP_REPLS);
 	rc = mdsio_lookup(mds_metadir_inum, SL_FN_BMAP_ODTAB, &mf,
 	    &rootcreds, NULL);
 	psc_assert(rc == 0);
@@ -358,16 +308,16 @@ mds_replay_bmap_assign(struct psc_journal_enthdr *pje)
 
 	if (logentry->sjar_flags & SLJ_ASSIGN_REP_BMAP) {
 		bia = p;
-		jrba = &logentry->sjar_bmap;
-		bia->bia_ion_nid = jrba->sjba_ion_nid;
-		bia->bia_lastcli.pid = jrba->sjba_lastcli.pid;
-		bia->bia_lastcli.nid = jrba->sjba_lastcli.nid;
-		bia->bia_ios = jrba->sjba_ios;
-		bia->bia_fid = jrba->sjba_fid;
-		bia->bia_seq = jrba->sjba_seq;
-		bia->bia_bmapno = jrba->sjba_bmapno;
-		bia->bia_start = jrba->sjba_start;
-		bia->bia_flags = jrba->sjba_flags;
+		sjba = &logentry->sjar_bmap;
+		bia->bia_ion_nid = sjba->sjba_ion_nid;
+		bia->bia_lastcli.pid = sjba->sjba_lastcli.pid;
+		bia->bia_lastcli.nid = sjba->sjba_lastcli.nid;
+		bia->bia_ios = sjba->sjba_ios;
+		bia->bia_fid = sjba->sjba_fid;
+		bia->bia_seq = sjba->sjba_seq;
+		bia->bia_bmapno = sjba->sjba_bmapno;
+		bia->bia_start = sjba->sjba_start;
+		bia->bia_flags = sjba->sjba_flags;
 
 		/* I don't think memset() does any good, anyway... */
 		len = sizeof(struct bmap_ion_assign);
@@ -527,8 +477,8 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 
 	type = pje->pje_type & ~(_PJE_FLSHFT - 1);
 	switch (type) {
-	    case MDS_LOG_BMAP_REPL:
-		rc = mds_replay_bmap_repl(pje);
+	    case MDS_LOG_BMAP_REPLS:
+		rc = mds_replay_bmap_repls(pje);
 		break;
 	    case MDS_LOG_BMAP_CRC:
 		rc = mds_replay_bmap_crc(pje);
@@ -536,11 +486,8 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 	    case MDS_LOG_BMAP_SEQ:
 		rc = mds_replay_bmap_seq(pje);
 		break;
-	    case MDS_LOG_INO_ADDREPL:
-		rc = mds_replay_ino_addrepl(pje);
-		break;
-	    case MDS_LOG_INO_REPLPOL:
-		rc = mds_replay_ino_replpol(pje);
+	    case MDS_LOG_INO_REPLS:
+		rc = mds_replay_ino_repls(pje);
 		break;
 	    case MDS_LOG_BMAP_ASSIGN:
 		rc = mds_replay_bmap_assign(pje);

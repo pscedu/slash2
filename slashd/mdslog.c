@@ -552,12 +552,12 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 }
 
 /**
- * mds_namespace_log - Log namespace operation before we attempt an
+ * mdslog_namespace - Log namespace operation before we attempt an
  *	it.  This makes sure that it will be propagated towards
  *	other MDSes and made permanent before we reply to the client.
  */
 void
-mds_namespace_log(int op, uint64_t txg, uint64_t pfid,
+mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
     uint64_t npfid, const struct srt_stat *sstb, int mask,
     const char *name, const char *newname)
 {
@@ -1290,9 +1290,9 @@ slmjnsthr_main(__unusedx struct psc_thread *thr)
 }
 
 void
-mds_inode_addrepl_log(void *datap, uint64_t txg, __unusedx int flag)
+mdslog_ino_repls(void *datap, uint64_t txg, __unusedx int flag)
 {
-	struct slmds_jent_ino_addrepl *jrir, *r;
+	struct slmds_jent_ino_repls *jrir, *r;
 
 	jrir = pjournal_get_buf(mdsJournal, sizeof(*jrir));
 
@@ -1305,61 +1305,44 @@ mds_inode_addrepl_log(void *datap, uint64_t txg, __unusedx int flag)
 	psclog_notify("jlog fid="SLPRI_FID" ios=%u pos=%u",
 	    jrir->sjir_fid, jrir->sjir_ios, jrir->sjir_pos);
 
-	pjournal_add_entry(mdsJournal, txg, MDS_LOG_INO_ADDREPL, 0,
+	pjournal_add_entry(mdsJournal, txg, MDS_LOG_INO_REPLS, 0,
 	    jrir, sizeof(*jrir));
 
 	pjournal_put_buf(mdsJournal, jrir);
 }
 
-void
-mdslog_ino_replpol(void *datap, uint64_t txg, __unusedx int flag)
-{
-	struct slmds_jent_ino_replpol *jrip, *r;
-
-	jrip = pjournal_get_buf(mdsJournal, sizeof(*jrip));
-
-	r = datap;
-	jrip->sjip_fid = r->sjip_fid;
-	jrip->sjip_replpol = r->sjip_replpol;
-
-	pjournal_add_entry(mdsJournal, txg, MDS_LOG_INO_REPLPOL, 0,
-	    jrip, sizeof(*jrip));
-
-	pjournal_put_buf(mdsJournal, jrip);
-}
-
 /**
- * mds_bmap_repl_log - Write a modified replication table to the
+ * mdslog_bmap_repl - Write a modified replication table to the
  *	journal.
  * Note:  bmap must be locked to prevent further changes from sneaking
  *	in before the repl table is committed to the journal.
  */
 void
-mds_bmap_repl_log(void *datap, uint64_t txg, __unusedx int flag)
+mdslog_bmap_repls(void *datap, uint64_t txg, __unusedx int flag)
 {
+	struct slmds_jent_bmap_repls *sjbr;
 	struct bmapc_memb *bmap = datap;
-	struct slmds_jent_repgen *jrpg;
 
-	jrpg = pjournal_get_buf(mdsJournal, sizeof(*jrpg));
+	sjbr = pjournal_get_buf(mdsJournal, sizeof(*sjbr));
 
-	jrpg->sjp_fid = fcmh_2_fid(bmap->bcm_fcmh);
-	jrpg->sjp_bmapno = bmap->bcm_bmapno;
-	jrpg->sjp_bgen = bmap_2_bgen(bmap);
-	jrpg->sjp_nrepls = fcmh_2_nrepls(bmap->bcm_fcmh);
+	sjbr->sjbr_fid = fcmh_2_fid(bmap->bcm_fcmh);
+	sjbr->sjbr_bmapno = bmap->bcm_bmapno;
+	sjbr->sjbr_bgen = bmap_2_bgen(bmap);
+	sjbr->sjbr_nrepls = fcmh_2_nrepls(bmap->bcm_fcmh);
 
-	memcpy(jrpg->sjp_reptbl, bmap->bcm_repls, SL_REPLICA_NBYTES);
+	memcpy(sjbr->sjbr_reptbl, bmap->bcm_repls, SL_REPLICA_NBYTES);
 
 	psclog_notify("jlog fid="SLPRI_FID" bmapno=%u bmapgen=%u",
-	    jrpg->sjp_fid, jrpg->sjp_bmapno, jrpg->sjp_bgen);
+	    sjbr->sjbr_fid, sjbr->sjbr_bmapno, sjbr->sjbr_bgen);
 
-	pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_REPL, 0, jrpg,
-	    sizeof(*jrpg));
+	pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_REPLS, 0, sjbr,
+	    sizeof(*sjbr));
 
-	pjournal_put_buf(mdsJournal, jrpg);
+	pjournal_put_buf(mdsJournal, sjbr);
 }
 
 /**
- * mds_bmap_crc_log - Commit bmap CRC changes to the journal.
+ * mdslog_bmap_crc - Commit bmap CRC changes to the journal.
  * @bmap: the bmap (not locked).
  * @crcs: array of CRC / slot pairs.
  * @n: the number of CRC / slot pairs.
@@ -1371,7 +1354,7 @@ mds_bmap_repl_log(void *datap, uint64_t txg, __unusedx int flag)
  *	for the same region which we may then process out of order.
  */
 void
-mds_bmap_crc_log(void *datap, uint64_t txg, __unusedx int flag)
+mdslog_bmap_crc(void *datap, uint64_t txg, __unusedx int flag)
 {
 	struct sl_mds_crc_log *crclog = datap;
 	struct bmapc_memb *bmap = crclog->scl_bmap;
@@ -1438,7 +1421,7 @@ mds_journal_init(int disable_propagation)
 	void *handle;
 	size_t size;
 
-	psc_assert(MDS_LOG_LAST_TYPE <= (1 << 15));
+	psc_assert(_MDS_LOG_LAST_TYPE <= (1 << 15));
 	psc_assert(sizeof(struct srt_update_entry) == 512);
 	psc_assert(sizeof(struct srt_reclaim_entry) == 512);
 
