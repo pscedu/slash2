@@ -17,6 +17,9 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#define PSC_SUBSYS SLISS_SLVR
+#include "subsys_iod.h"
+
 #include <time.h>
 
 #include "psc_ds/dynarray.h"
