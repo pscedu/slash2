@@ -511,7 +511,6 @@ main(int argc, char *argv[])
 	PRVAL(SRMM_REQ_PORTAL);
 	PRVAL(SRMM_VERSION);
 	PRVAL(SRM_NIDS_MAX);
-	PRVAL(_BMAP_SLVR_LAST);
 	PRVAL(_SLERR_START);
 	PRVAL(dirent_timeo);
 	/* end constants */
