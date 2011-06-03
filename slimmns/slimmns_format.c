@@ -209,7 +209,6 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 	close(fd);
 
 	/* more journals */
-	xmkfn(fn, "%s/%s", metadir, SL_FN_CURSOR);
 	slnewfs_touchfile("%s/%s.%d", metadir, SL_FN_UPDATELOG, 0);
 	slnewfs_touchfile("%s/%s", metadir, SL_FN_UPDATEPROG);
 	slnewfs_touchfile("%s/%s.%d", metadir, SL_FN_RECLAIMLOG, 0);
