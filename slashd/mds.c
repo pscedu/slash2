@@ -1673,7 +1673,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	sbd_out->sbd_bmapno = b->bcm_bmapno;
 	sbd_out->sbd_fg = b->bcm_fcmh->fcmh_fg;
 
-	if (rw == SL_WRITE) {
+	if (rw == BML_WRITE) {
 		struct bmap_mds_info *bmi = bmap_2_bmi(b);
 
 		psc_assert(bmi->bmdsi_wr_ion);
