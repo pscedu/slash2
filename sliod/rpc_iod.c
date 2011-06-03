@@ -35,6 +35,8 @@
 #include "slconn.h"
 #include "sliod.h"
 
+int			 sli_fsuuid;
+
 struct pscrpc_svc_handle sli_ric_svc;
 struct pscrpc_svc_handle sli_rii_svc;
 struct pscrpc_svc_handle sli_rim_svc;
@@ -156,7 +158,37 @@ sli_rpc_mds_unpack_fsuuid(struct pscrpc_request *rq, int msgtype)
 			goto error;
 		fsuuid = mp->fsuuid;
 	}
+	if (!fsuuid) {
+		psclog_warnx("invalid zero fsuuid");
+		return;
+	}
+	if (!sli_fsuuid) {
+		char buf[17], fn[PATH_MAX];
 
+		buf[0] = '\0';
+		xmkfn(fn, "%s/%s/%s", globalConfig.gconf_fsroot,
+		    SL_RPATH_META_DIR, SL_FN_FSUUID);
+		fp = fopen(fn, "r");
+		if (fp == NULL)
+			psc_fatal("open %s", fn);
+		if (fgets(buf, sizeof(buf), fp) == NULL)
+			psclog_errorx("%s", fn);
+		fclose(fp);
+
+		sli_fsuuid = strtol(buf, &endp, 10);
+		if (endp == buf || *endp != '\n')
+			return;
+
+		if (!sli_fsuuid) {
+			fp = fopen(fn, "r");
+			if (fp == NULL)
+				psc_fatal("open %s", fn);
+			fprintf(fp, "%"PRIx64"\n", sli_fsuuid);
+			fclose(fp);
+		}
+	}
+	if (sli_fsuuid != fsuuid)
+		psclog_errorx("fsuuid don't match");
 	return;
 
  error:
