@@ -40,7 +40,7 @@ static int
 mds_replay_bmap(void *jent, int op)
 {
 	struct slmds_jent_bmap_repls *sjbr = jent;
-	struct slmds_jent_crc *sjbc = jent;
+	struct slmds_jent_bmap_crc *sjbc = jent;
 	struct srt_bmap_crcwire *bmap_wire;
 	struct fidc_membh *f = NULL;
 	struct bmapc_memb *b = NULL;
@@ -74,14 +74,14 @@ mds_replay_bmap(void *jent, int op)
 
 		FCMH_LOCK(f);
 		ih = fcmh_2_inoh(f);
-		idx = mds_repl_ios_lookup(ih, sjbc->sjc_iosid);
+		idx = mds_repl_ios_lookup(ih, sjbc->sjbc_iosid);
 		if (idx < 0) {
 			psclog_errorx("iosid %d not found in repl "
-			    "table", sjbc->sjc_iosid);
+			    "table", sjbc->sjbc_iosid);
 			goto out;
 		}
-		f->fcmh_sstb.sst_blocks = sjbc->sjc_aggr_nblks;
-		fcmh_set_repl_nblks(f, idx, sjbc->sjc_repl_nblks);
+		f->fcmh_sstb.sst_blocks = sjbc->sjbc_aggr_nblks;
+		fcmh_set_repl_nblks(f, idx, sjbc->sjbc_repl_nblks);
 		if (idx >= SL_DEF_REPLICAS)
 			rc = mds_inox_write(ih, NULL, NULL);
 		else
@@ -93,16 +93,16 @@ mds_replay_bmap(void *jent, int op)
 
 		/* Apply the filesize from the journal entry.
 		 */
-		if (sjbc->sjc_extend) {
-			f->fcmh_sstb.sst_size = sjbc->sjc_fsize;
+		if (sjbc->sjbc_extend) {
+			f->fcmh_sstb.sst_size = sjbc->sjbc_fsize;
 			fl |= PSCFS_SETATTRF_DATASIZE;
 		}
 		rc = mds_fcmh_setattr(f, fl);
 		if (rc)
 			goto out;
 
-		for (i = 0; i < sjbc->sjc_ncrcs; i++) {
-			bmap_wire = &sjbc->sjc_crc[i];
+		for (i = 0; i < sjbc->sjbc_ncrcs; i++) {
+			bmap_wire = &sjbc->sjbc_crc[i];
 			bmap_2_crcs(b, bmap_wire->slot) = bmap_wire->crc;
 			b->bcm_crcstates[bmap_wire->slot] |=
 			    BMAP_SLVR_DATA | BMAP_SLVR_CRC;

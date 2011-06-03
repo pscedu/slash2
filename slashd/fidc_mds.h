@@ -49,6 +49,7 @@ struct fcmh_mds_info {
 #define fcmh_2_mdsio_data(f)	fcmh_2_fmi(f)->fmi_mdsio_data
 #define fcmh_2_mdsio_fid(f)	fcmh_2_fmi(f)->fmi_mdsio_fid
 #define fcmh_2_nrepls(f)	fcmh_2_ino(f)->ino_nrepls
+#define fcmh_2_replpol(f)	fcmh_2_ino(f)->ino_replpol
 #define fcmh_2_metafsize(f)	(f)->fcmh_sstb.sst_blksize
 #define fcmh_nallbmaps(f)	howmany(fcmh_2_metafsize(f) - SL_BMAP_START_OFF, BMAP_OD_SZ)
 #define fcmh_nvalidbmaps(f)	howmany(fcmh_2_fsz(f), SLASH_BMAP_SIZE)

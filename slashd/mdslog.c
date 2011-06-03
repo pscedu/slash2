@@ -307,7 +307,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 	struct srt_reclaim_entry reclaim_entry, *reclaim_entryp;
 	struct srt_update_entry update_entry, *update_entryp;
 	struct slmds_jent_namespace *sjnm = NULL;
-	struct slmds_jent_crc *sjbc = NULL;
+	struct slmds_jent_bmap_crc *sjbc = NULL;
 	int rc, count, total;
 	uint16_t type;
 	size_t size;
@@ -485,8 +485,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 		update_entry.op = NS_OP_SETSIZE;
 		update_entry.mask = mdsio_slflags_2_setattrmask(
 		    PSCFS_SETATTRF_DATASIZE);
-		update_entry.size = sjbc->sjc_fsize;
-		update_entry.target_fid = sjbc->sjc_fid;
+		update_entry.size = sjbc->sjbc_fsize;
+		update_entry.target_fid = sjbc->sjbc_fid;
 		goto write_update;
 	}
 
@@ -1311,6 +1311,27 @@ mdslog_ino_repls(void *datap, uint64_t txg, __unusedx int flag)
 	pjournal_put_buf(mdsJournal, jrir);
 }
 
+void
+mdslogfill_bmap_repls(struct bmapc_memb *b,
+    struct slmds_jent_bmap_repls *sjbr)
+{
+	struct fidc_membh *f = b->bcm_fcmh;
+	int locked;
+
+	sjbr->sjbr_fid = fcmh_2_fid(f);
+	sjbr->sjbr_bmapno = b->bcm_bmapno;
+	BHGEN_GET(b, &sjbr->sjbr_bgen);
+
+	locked = FCMH_RLOCK(f);
+	sjbr->sjbr_nrepls = fcmh_2_nrepls(f);
+	sjbr->sjbr_replpol = fcmh_2_replpol(f);
+	FCMH_URLOCK(f, locked);
+
+	memcpy(sjbr->sjbr_reptbl, b->bcm_repls, SL_REPLICA_NBYTES);
+
+	DEBUG_BMAPOD(PLL_DEBUG, b, "filled bmap journal log");
+}
+
 /**
  * mdslog_bmap_repl - Write a modified replication table to the
  *	journal.
@@ -1321,23 +1342,12 @@ void
 mdslog_bmap_repls(void *datap, uint64_t txg, __unusedx int flag)
 {
 	struct slmds_jent_bmap_repls *sjbr;
-	struct bmapc_memb *bmap = datap;
+	struct bmapc_memb *b = datap;
 
 	sjbr = pjournal_get_buf(mdsJournal, sizeof(*sjbr));
-
-	sjbr->sjbr_fid = fcmh_2_fid(bmap->bcm_fcmh);
-	sjbr->sjbr_bmapno = bmap->bcm_bmapno;
-	sjbr->sjbr_bgen = bmap_2_bgen(bmap);
-	sjbr->sjbr_nrepls = fcmh_2_nrepls(bmap->bcm_fcmh);
-
-	memcpy(sjbr->sjbr_reptbl, bmap->bcm_repls, SL_REPLICA_NBYTES);
-
-	psclog_notify("jlog fid="SLPRI_FID" bmapno=%u bmapgen=%u",
-	    sjbr->sjbr_fid, sjbr->sjbr_bmapno, sjbr->sjbr_bgen);
-
+	mdslogfill_bmap_repls(b, sjbr);
 	pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_REPLS, 0, sjbr,
 	    sizeof(*sjbr));
-
 	pjournal_put_buf(mdsJournal, sjbr);
 }
 
@@ -1360,7 +1370,7 @@ mdslog_bmap_crc(void *datap, uint64_t txg, __unusedx int flag)
 	struct bmapc_memb *bmap = crclog->scl_bmap;
 	struct srm_bmap_crcup *crcup = crclog->scl_crcup;
 	struct bmap_mds_info *bmi = bmap_2_bmi(bmap);
-	struct slmds_jent_crc *sjbc;
+	struct slmds_jent_bmap_crc *sjbc;
 	uint32_t n, t, distill;
 
 	BMAP_LOCK(bmap);
@@ -1376,17 +1386,17 @@ mdslog_bmap_crc(void *datap, uint64_t txg, __unusedx int flag)
 		n = MIN(SLJ_MDS_NCRCS, crcup->nups - t);
 
 		sjbc = pjournal_get_buf(mdsJournal, sizeof(*sjbc));
-		sjbc->sjc_fid = fcmh_2_fid(bmap->bcm_fcmh);
-		sjbc->sjc_iosid = bmi->bmdsi_wr_ion->rmmi_resm->resm_iosid;
-		sjbc->sjc_bmapno = bmap->bcm_bmapno;
-		sjbc->sjc_ncrcs = n;
-		sjbc->sjc_fsize = crcup->fsize;		/* largest known size */
-		sjbc->sjc_repl_nblks = crcup->nblks;
-		sjbc->sjc_aggr_nblks = fcmh_2_nblks(bmap->bcm_fcmh);
-		sjbc->sjc_extend = distill;
-		sjbc->sjc_utimgen = crcup->utimgen;     /* utime generation number */
+		sjbc->sjbc_fid = fcmh_2_fid(bmap->bcm_fcmh);
+		sjbc->sjbc_iosid = bmi->bmdsi_wr_ion->rmmi_resm->resm_iosid;
+		sjbc->sjbc_bmapno = bmap->bcm_bmapno;
+		sjbc->sjbc_ncrcs = n;
+		sjbc->sjbc_fsize = crcup->fsize;		/* largest known size */
+		sjbc->sjbc_repl_nblks = crcup->nblks;
+		sjbc->sjbc_aggr_nblks = fcmh_2_nblks(bmap->bcm_fcmh);
+		sjbc->sjbc_extend = distill;
+		sjbc->sjbc_utimgen = crcup->utimgen;     /* utime generation number */
 
-		memcpy(sjbc->sjc_crc, &crcup->crcs[t],
+		memcpy(sjbc->sjbc_crc, &crcup->crcs[t],
 		    n * sizeof(struct srt_bmap_crcwire));
 
 		pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_CRC,

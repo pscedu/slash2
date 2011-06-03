@@ -26,6 +26,7 @@ struct bmapc_memb;
 struct fidc_membh;
 struct slash_inode_handle;
 struct slmds_jent_namespace;
+struct slmds_jent_bmap_repls;
 struct srm_bmap_crcup;
 struct srt_stat;
 
@@ -64,6 +65,8 @@ void	mdslog_bmap_repls(void *, uint64_t, int);
 void	mdslog_ino_repls(void *, uint64_t, int);
 void	mdslog_namespace(int, uint64_t, uint64_t, uint64_t,
 	    const struct srt_stat *, int, const char *, const char *);
+
+void	mdslogfill_bmap_repls(struct bmapc_memb *, struct slmds_jent_bmap_repls *);
 
 void	mds_journal_init(int);
 

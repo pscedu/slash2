@@ -233,9 +233,9 @@ main(int argc, char *argv[])
 	PRTYPE(struct slmctlmsg_replpair);
 	PRTYPE(struct slmds_jent_assign_rep);
 	PRTYPE(struct slmds_jent_bmap_assign);
+	PRTYPE(struct slmds_jent_bmap_crc);
 	PRTYPE(struct slmds_jent_bmap_repls);
 	PRTYPE(struct slmds_jent_bmapseq);
-	PRTYPE(struct slmds_jent_crc);
 	PRTYPE(struct slmds_jent_ino_repls);
 	PRTYPE(struct slmds_jent_namespace);
 	PRTYPE(struct slmrcm_thread);

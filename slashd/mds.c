@@ -246,7 +246,6 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	struct sl_resource *res = libsl_id2res(pios);
 	struct slmds_jent_assign_rep *logentry;
 	struct slmds_jent_bmap_assign *sjba;
-	struct slmds_jent_bmap_repls *sjbr;
 	struct slmds_jent_ino_repls *jrir;
 	struct slashrpc_cservice *csvc;
 	struct resprof_mds_info *rpmi;
@@ -312,8 +311,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 
  online:
 	mds_reserve_slot();
-	logentry = pjournal_get_buf(mdsJournal,
-	    sizeof(struct slmds_jent_assign_rep));
+	logentry = pjournal_get_buf(mdsJournal, sizeof(*logentry));
 
 	bmi->bmdsi_wr_ion = rmmi = resm2rmmi(resm);
 	atomic_inc(&rmmi->rmmi_refcnt);
@@ -366,7 +364,6 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 		    slstrerror(iosidx));
 	mds_repl_inv_except(bmap, bia.bia_ios, iosidx);
 
-	sjbr = &logentry->sjar_rep;
 	sjba = &logentry->sjar_bmap;
 	jrir = &logentry->sjar_ino;
 
@@ -379,12 +376,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 		logentry->sjar_flags |= SLJ_ASSIGN_REP_INO;
 	}
 
-	sjbr->sjbr_fid = bia.bia_fid;
-	sjbr->sjbr_bmapno = bmap->bcm_bmapno;
-	BHGEN_GET(bmap, &sjbr->sjbr_bgen);
-	sjbr->sjbr_nrepls = ih->inoh_ino.ino_nrepls;
-
-	memcpy(sjbr->sjbr_reptbl, bmap->bcm_repls, SL_REPLICA_NBYTES);
+	mdslogfill_bmap_repls(bmap, &logentry->sjar_rep);
 
 	logentry->sjar_flags |= SLJ_ASSIGN_REP_REP;
 
@@ -423,7 +415,6 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct slmds_jent_assign_rep *logentry;
 	struct slmds_jent_bmap_assign *sjba;
-	struct slmds_jent_bmap_repls *sjbr;
 	struct slmds_jent_ino_repls *jrir;
 	struct slash_inode_handle *ih;
 	struct bmap_ion_assign bia;
@@ -436,7 +427,7 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 	BMAP_ULOCK(b);
 
 	rc = mds_odtable_getitem(mdsBmapAssignTable,
-	    bmi->bmdsi_assign, &bia, sizeof(struct bmap_ion_assign));
+	    bmi->bmdsi_assign, &bia, sizeof(bia));
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, b, "odtable_getitem() failed");
 		return (-1);
@@ -480,10 +471,8 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 		return (-1);
 	}
 	mds_reserve_slot();
-	logentry = pjournal_get_buf(mdsJournal,
-	    sizeof(struct slmds_jent_assign_rep));
+	logentry = pjournal_get_buf(mdsJournal, sizeof(*logentry));
 
-	sjbr = &logentry->sjar_rep;
 	sjba = &logentry->sjar_bmap;
 	jrir = &logentry->sjar_ino;
 
@@ -496,12 +485,7 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 		logentry->sjar_flags |= SLJ_ASSIGN_REP_INO;
 	}
 
-	sjbr->sjbr_fid = fcmh_2_fid(b->bcm_fcmh);
-	sjbr->sjbr_bmapno = b->bcm_bmapno;
-	sjbr->sjbr_bgen = bmap_2_bgen(b);
-	sjbr->sjbr_nrepls = ih->inoh_ino.ino_nrepls;
-
-	memcpy(sjbr->sjbr_reptbl, b->bcm_repls, SL_REPLICA_NBYTES);
+	mdslogfill_bmap_repls(b, &logentry->sjar_rep);
 
 	logentry->sjar_flags |= SLJ_ASSIGN_REP_REP;
 
@@ -517,8 +501,8 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 	logentry->sjar_flags |= SLJ_ASSIGN_REP_BMAP;
 	logentry->sjar_elem = bmi->bmdsi_assign->odtr_elem;
 
-	pjournal_add_entry(mdsJournal, 0, MDS_LOG_BMAP_ASSIGN, 0, logentry,
-	    sizeof(struct slmds_jent_assign_rep));
+	pjournal_add_entry(mdsJournal, 0, MDS_LOG_BMAP_ASSIGN, 0,
+	    logentry, sizeof(*logentry));
 	pjournal_put_buf(mdsJournal, logentry);
 	mds_unreserve_slot();
 
@@ -927,8 +911,8 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 {
 	struct bmapc_memb *b = bml_2_bmap(bml);
 	struct bmap_mds_info *bmi = bml->bml_bmdsi;
-	struct odtable_receipt *odtr = NULL;
 	struct slmds_jent_assign_rep *logentry;
+	struct odtable_receipt *odtr = NULL;
 	int rc = 0, locked;
 	uint64_t key;
 	size_t elem;
@@ -1071,11 +1055,11 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 
 		mds_reserve_slot();
 		logentry = pjournal_get_buf(mdsJournal,
-		    sizeof(struct slmds_jent_assign_rep));
+		    sizeof(*logentry));
 		logentry->sjar_elem = elem;
 		logentry->sjar_flags = SLJ_ASSIGN_REP_FREE;
 		pjournal_add_entry(mdsJournal, 0, MDS_LOG_BMAP_ASSIGN,
-		    0, logentry, sizeof(struct slmds_jent_assign_rep));
+		    0, logentry, sizeof(*logentry));
 		pjournal_put_buf(mdsJournal, logentry);
 		mds_unreserve_slot();
 	}
