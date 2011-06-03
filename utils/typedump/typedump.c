@@ -43,7 +43,6 @@
 #include "slconfig.h"
 #include "slconn.h"
 #include "slerr.h"
-#include "sljournal.h"
 #include "slsubsys.h"
 #include "sltypes.h"
 #include "slutil.h"
@@ -60,6 +59,7 @@
 #include "slashd/ctl_mds.h"
 #include "slashd/fidc_mds.h"
 #include "slashd/inode.h"
+#include "slashd/journal_mds.h"
 #include "slashd/mdscoh.h"
 #include "slashd/mdsio.h"
 #include "slashd/mdslog.h"
@@ -233,12 +233,11 @@ main(int argc, char *argv[])
 	PRTYPE(struct slmctlmsg_replpair);
 	PRTYPE(struct slmds_jent_assign_rep);
 	PRTYPE(struct slmds_jent_bmap_assign);
+	PRTYPE(struct slmds_jent_bmap_repls);
 	PRTYPE(struct slmds_jent_bmapseq);
 	PRTYPE(struct slmds_jent_crc);
-	PRTYPE(struct slmds_jent_ino_addrepl);
-	PRTYPE(struct slmds_jent_ino_replpol);
+	PRTYPE(struct slmds_jent_ino_repls);
 	PRTYPE(struct slmds_jent_namespace);
-	PRTYPE(struct slmds_jent_repgen);
 	PRTYPE(struct slmrcm_thread);
 	PRTYPE(struct slmrmc_thread);
 	PRTYPE(struct slmrmi_thread);
