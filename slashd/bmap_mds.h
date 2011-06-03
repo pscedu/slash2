@@ -108,7 +108,7 @@ bmap_2_bmi(struct bmapc_memb *b)
 		if (psc_rwlock_haswrlock(&bmap_2_bmi(b)->bmdsi_rwlock))	\
 			_waslocked = 1;					\
 		else							\
-			BMAPOD_RDLOCK(bmap_2_bmi(b));			\
+			_waslocked = BMAPOD_REQRDLOCK(bmap_2_bmi(b));	\
 		_waslocked;						\
 	} _PFL_RVEND
 
@@ -158,9 +158,9 @@ struct bmap_timeo_entry {
 struct bmap_timeo_table {
 	psc_spinlock_t		 btt_lock;
 	/*
-	 * High and low water marks of the bmap sequence number. The MDS communicates
-	 * the low water mark to an I/O server so that the latter can reject timed
-	 * out bmaps.
+	 * High and low water marks of the bmap sequence number.  The
+	 * MDS communicates the low water mark to an I/O server so that
+	 * the latter can reject timed out bmaps.
 	 */
 	uint64_t		 btt_maxseq;
 	uint64_t		 btt_minseq;
