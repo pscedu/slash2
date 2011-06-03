@@ -23,12 +23,12 @@
 
 #include "bmap_mds.h"
 #include "fidc_mds.h"
+#include "journal_mds.h"
 #include "mdsio.h"
 #include "namespace.h"
 #include "pathnames.h"
 #include "repl_mds.h"
 #include "slerr.h"
-#include "sljournal.h"
 
 #define B_REPLAY_OP_CRC		0
 #define B_REPLAY_OP_REPLS	1

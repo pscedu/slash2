@@ -46,6 +46,7 @@
 #include "bmap_mds.h"
 #include "fidc_mds.h"
 #include "fidcache.h"
+#include "journal_mds.h"
 #include "mdsio.h"
 #include "mkfn.h"
 #include "pathnames.h"
@@ -54,7 +55,6 @@
 #include "slashd.h"
 #include "slashrpc.h"
 #include "slerr.h"
-#include "sljournal.h"
 #include "slutil.h"
 #include "up_sched_res.h"
 

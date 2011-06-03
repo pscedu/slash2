@@ -38,6 +38,7 @@
 #include "fidc_mds.h"
 #include "fidcache.h"
 #include "inode.h"
+#include "journal_mds.h"
 #include "mdsio.h"
 #include "mdslog.h"
 #include "mkfn.h"
@@ -46,7 +47,6 @@
 #include "slashd.h"
 #include "slashrpc.h"
 #include "slerr.h"
-#include "sljournal.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
 

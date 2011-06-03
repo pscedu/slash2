@@ -35,12 +35,12 @@
 
 #include "fid.h"
 #include "fidc_mds.h"
+#include "journal_mds.h"
 #include "rpc_mds.h"
 #include "slashd.h"
 #include "slashrpc.h"
 #include "slconn.h"
 #include "slerr.h"
-#include "sljournal.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
 

@@ -34,6 +34,7 @@
 #include "fidc_mds.h"
 #include "fidcache.h"
 #include "inode.h"
+#include "journal_mds.h"
 #include "mdscoh.h"
 #include "mdsio.h"
 #include "mdslog.h"
@@ -43,7 +44,6 @@
 #include "slashd.h"
 #include "slashrpc.h"
 #include "slerr.h"
-#include "sljournal.h"
 #include "up_sched_res.h"
 
 struct odtable	*mdsBmapAssignTable;

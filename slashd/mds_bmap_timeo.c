@@ -29,8 +29,8 @@
 
 #include "bmap.h"
 #include "bmap_mds.h"
+#include "journal_mds.h"
 #include "mdslog.h"
-#include "sljournal.h"
 
 struct bmap_timeo_table	 mdsBmapTimeoTbl;
 struct psc_poolmaster	 bmapMdsLeasePoolMaster;

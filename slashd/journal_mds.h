@@ -17,8 +17,8 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#ifndef _SL_JOURNAL_H_
-#define _SL_JOURNAL_H_
+#ifndef _JOURNAL_MDS_H_
+#define _JOURNAL_MDS_H_
 
 #include "lnet/types.h"
 
@@ -172,4 +172,4 @@ struct slmds_jent_namespace {
  */
 #define	SLJ_MDS_ENTSIZE			512
 
-#endif /* _SL_JOURNAL_H_ */
+#endif /* _JOURNAL_MDS_H_ */

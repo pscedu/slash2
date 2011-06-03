@@ -32,8 +32,8 @@
 #include "mkfn.h"
 #include "pathnames.h"
 #include "slerr.h"
-#include "sljournal.h"
 
+#include "slashd/journal_mds.h"
 #include "slashd/mdsio.h"
 #include "slashd/mdslog.h"
 #include "slashd/namespace.h"
@@ -149,21 +149,21 @@ pjournal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 {
 	char name[SL_NAME_MAX + 1], newname[SL_NAME_MAX + 1];
 	struct slmds_jent_assign_rep *logentry;
-	struct slmds_jent_ino_addrepl *jrir;
 	struct slmds_jent_bmap_assign *jrba;
+	struct slmds_jent_bmap_repls *sjbr;
+	struct slmds_jent_ino_repls *jrir;
 	struct slmds_jent_namespace *sjnm;
 	struct slmds_jent_bmapseq *sjsq;
-	struct slmds_jent_repgen *jrpg;
 	struct slmds_jent_crc *jcrc;
 	int type;
 
 	type = pje->pje_type & ~(_PJE_FLSHFT - 1);
 	printf("%6d: ", slot);
 	switch (type) {
-	    case MDS_LOG_BMAP_REPL:
-		jrpg = PJE_DATA(pje);
+	    case MDS_LOG_BMAP_REPLS:
+		sjbr = PJE_DATA(pje);
 		printf("type=%3d, xid=%#"PRIx64", txg=%#"PRIx64", fid="SLPRI_FID,
-			type, pje->pje_xid, pje->pje_txg, jrpg->sjp_fid);
+			type, pje->pje_xid, pje->pje_txg, sjbr->sjbr_fid);
 		break;
 	    case MDS_LOG_BMAP_CRC:
 		jcrc = PJE_DATA(pje);
@@ -178,7 +178,7 @@ pjournal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 			sjsq->sjbsq_low_wm,
 			sjsq->sjbsq_high_wm);
 		break;
-	    case MDS_LOG_INO_ADDREPL:
+	    case MDS_LOG_INO_REPLS:
 		jrir = PJE_DATA(pje);
 		printf("type=%3d, xid=%#"PRIx64", txg=%#"PRIx64", fid="SLPRI_FID,
 			type, pje->pje_xid, pje->pje_txg, jrir->sjir_fid);

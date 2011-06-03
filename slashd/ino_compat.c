@@ -26,11 +26,11 @@
 #include "bmap_mds.h"
 #include "fidc_mds.h"
 #include "inode.h"
+#include "journal_mds.h"
 #include "mdsio.h"
 #include "mdslog.h"
 #include "slashd.h"
 #include "slerr.h"
-#include "sljournal.h"
 
 int
 mds_inode_dump(struct sl_ino_compat *sic, struct slash_inode_handle *ih,

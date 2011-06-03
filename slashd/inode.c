@@ -24,11 +24,11 @@
 
 #include "fidc_mds.h"
 #include "inode.h"
+#include "journal_mds.h"
 #include "mdsio.h"
 #include "mdslog.h"
 #include "slashd.h"
 #include "slerr.h"
-#include "sljournal.h"
 
 __static void
 mds_inode_od_initnew(struct slash_inode_handle *ih)
