@@ -68,6 +68,8 @@ mds_bmap_initnew(struct bmapc_memb *b)
 	INOH_ULOCK(fcmh_2_inoh(fcmh));
 
 	BHREPL_POLICY_SET(b, pol);
+
+	b->bcm_flags |= BMAP_NEW;
 }
 
 void
