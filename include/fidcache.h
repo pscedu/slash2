@@ -131,31 +131,32 @@ struct fidc_membh {
 			psc_waitq_wakeall(&(f)->fcmh_waitq);		\
 	} while (0)
 
-#define DEBUG_FCMH_FLAGS(fcmh)						\
-	(fcmh)->fcmh_flags & FCMH_CAC_FREE		? "F" : "",	\
-	(fcmh)->fcmh_flags & FCMH_CAC_IDLE		? "i" : "",	\
-	(fcmh)->fcmh_flags & FCMH_CAC_BUSY		? "B" : "",	\
-	(fcmh)->fcmh_flags & FCMH_CAC_INITING		? "I" : "",	\
-	(fcmh)->fcmh_flags & FCMH_CAC_WAITING		? "W" : "",	\
-	(fcmh)->fcmh_flags & FCMH_CAC_TOFREE		? "T" : "",	\
-	(fcmh)->fcmh_flags & FCMH_CAC_REAPED		? "R" : "",	\
-	(fcmh)->fcmh_flags & FCMH_HAVE_ATTRS		? "A" : "",	\
-	(fcmh)->fcmh_flags & FCMH_GETTING_ATTRS		? "G" : "",	\
-	(fcmh)->fcmh_flags & FCMH_CTOR_FAILED		? "f" : "",	\
-	(fcmh)->fcmh_flags & FCMH_CTOR_DELAYED		? "D" : "",	\
-	fcmh_isdir(fcmh)				? "d" : ""
+#ifdef SLASH_MDS
+# define DEBUG_FCMH_BLKSIZE_LABEL "msz"
+#else
+# define DEBUG_FCMH_BLKSIZE_LABEL "bsz"
+#endif
 
-#define REQ_FCMH_FLAGS_FMT	"%s%s%s%s%s%s%s%s%s%s%s%s"
-
-#define DEBUG_FCMH(level, fcmh, fmt, ...)				\
+#define DEBUG_FCMH(level, f, fmt, ...)					\
 	psclogs((level), SLSS_FCMH,					\
-	   "fcmh@%p f+g:"SLPRI_FG" flg:"REQ_FCMH_FLAGS_FMT" "		\
-	   "ref:%d sz=%"PRId64" blksize=%"PRId64" mode=%#o :: "fmt,	\
-	   (fcmh), SLPRI_FG_ARGS(&(fcmh)->fcmh_fg),			\
-	   DEBUG_FCMH_FLAGS(fcmh),					\
-	   (fcmh)->fcmh_refcnt, fcmh_2_fsz(fcmh),			\
-	   (fcmh)->fcmh_sstb.sst_blksize,				\
-	   fcmh->fcmh_sstb.sst_mode, ## __VA_ARGS__)
+	    "fcmh@%p f+g="SLPRI_FG" flg=%#x:%s%s%s%s%s%s%s%s%s%s%s%s "	\
+	    "ref=%d sz=%"PRId64" "DEBUG_FCMH_BLKSIZE_LABEL"=%"PRId64" "	\
+	    "mode=%#o : "fmt,						\
+	    (f), SLPRI_FG_ARGS(&(f)->fcmh_fg), (f)->fcmh_flags,		\
+	    (f)->fcmh_flags & FCMH_CAC_FREE		? "F" : "",	\
+	    (f)->fcmh_flags & FCMH_CAC_IDLE		? "i" : "",	\
+	    (f)->fcmh_flags & FCMH_CAC_BUSY		? "B" : "",	\
+	    (f)->fcmh_flags & FCMH_CAC_INITING		? "I" : "",	\
+	    (f)->fcmh_flags & FCMH_CAC_WAITING		? "W" : "",	\
+	    (f)->fcmh_flags & FCMH_CAC_TOFREE		? "T" : "",	\
+	    (f)->fcmh_flags & FCMH_CAC_REAPED		? "R" : "",	\
+	    (f)->fcmh_flags & FCMH_HAVE_ATTRS		? "A" : "",	\
+	    (f)->fcmh_flags & FCMH_GETTING_ATTRS	? "G" : "",	\
+	    (f)->fcmh_flags & FCMH_CTOR_FAILED		? "f" : "",	\
+	    (f)->fcmh_flags & FCMH_CTOR_DELAYED		? "D" : "",	\
+	    (f)->fcmh_flags & ~(_FCMH_FLGSHFT - 1)	? "+" : "",	\
+	    (f)->fcmh_refcnt, fcmh_2_fsz(f), (f)->fcmh_sstb.sst_blksize,\
+	    (f)->fcmh_sstb.sst_mode, ## __VA_ARGS__)
 
 /* debugging aid: spit out the reason for the reference count taking/dropping */
 enum fcmh_opcnt_types {
