@@ -28,6 +28,7 @@ struct slctlmsg_conn {
 	int32_t			scc_type;	/* SLREST_* or SLCTL_REST_* */
 	int32_t			scc_refcnt;
 	int32_t			scc_flags;	/* CSVCF_* */
+	int32_t			scc_txcr;
 };
 
 #define SLCTL_REST_CLI		0
@@ -35,6 +36,7 @@ struct slctlmsg_conn {
 struct slctlmsg_fcmh {
 	struct slash_fidgen	scf_fg;		/* identity of the file */
 	uint64_t		scf_size;
+	int64_t			scf_blksize;
 	int32_t			scf_ptruncgen;
 	int32_t			scf_utimgen;
 	int32_t			scf_st_mode;

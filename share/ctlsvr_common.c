@@ -19,6 +19,9 @@
 
 #include <stdio.h>
 
+#include "lnet/lib-types.h"
+#include "lnet/lib-lnet.h"
+
 #include "pfl/str.h"
 #include "psc_rpc/rpc.h"
 #include "psc_util/ctl.h"
@@ -30,6 +33,32 @@
 #include "fidcache.h"
 #include "slconfig.h"
 #include "slconn.h"
+
+void
+slctl_fillconn(struct slctlmsg_conn *scc,
+    struct slashrpc_cservice *csvc)
+{
+	struct pscrpc_import *imp;
+	lnet_peer_t *lp;
+
+	memset(scc, 0, sizeof(*scc));
+
+	if (csvc == NULL)
+		return;
+
+	scc->scc_flags = psc_atomic32_read(&csvc->csvc_flags);
+	scc->scc_refcnt = psc_atomic32_read(&csvc->csvc_refcnt);
+
+	imp = csvc->csvc_import;
+	if (imp == NULL || imp->imp_connection == NULL)
+		return;
+
+	lp = lnet_find_peer_locked(imp->imp_connection->c_peer.nid);
+	if (lp == NULL)
+		return;
+
+	scc->scc_txcr = lp->lp_txcredits;
+}
 
 /**
  * slctlrep_getconns - Send a response to a "GETCONNS" inquiry.
@@ -49,31 +78,19 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 	int i, j, rc = 1;
 
 	CONF_LOCK();
-	CONF_FOREACH_SITE(s)
-		SITE_FOREACH_RES(s, r, i)
-			RES_FOREACH_MEMB(r, resm, j) {
-				if (resm == nodeResm)
-					continue;
+	CONF_FOREACH_RESM(s, r, i, resm, j) {
+		if (resm == nodeResm)
+			continue;
 
-				memset(scc, 0, sizeof(*scc));
+		slctl_fillconn(scc, resm->resm_csvc);
+		strlcpy(scc->scc_addrbuf, resm->resm_addrbuf,
+		    sizeof(scc->scc_addrbuf));
+		scc->scc_type = r->res_type;
 
-				strlcpy(scc->scc_addrbuf,
-				    resm->resm_addrbuf,
-				    sizeof(scc->scc_addrbuf));
-				scc->scc_type = r->res_type;
-
-				csvc = resm->resm_csvc;
-				if (csvc) {
-					scc->scc_flags = psc_atomic32_read(
-					    &csvc->csvc_flags);
-					scc->scc_refcnt = psc_atomic32_read(
-					    &csvc->csvc_refcnt);
-				}
-
-				rc = psc_ctlmsg_sendv(fd, mh, scc);
-				if (!rc)
-					goto done;
-			}
+		rc = psc_ctlmsg_sendv(fd, mh, scc);
+		if (!rc)
+			goto done;
+	}
  done:
 	CONF_ULOCK();
 
@@ -82,7 +99,7 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 	PLL_LOCK(&client_csvcs);
 	PLL_FOREACH(csvc, &client_csvcs) {
-		memset(scc, 0, sizeof(*scc));
+		slctl_fillconn(scc, csvc);
 
 		imp = csvc->csvc_import;
 		if (imp && imp->imp_connection)
@@ -92,8 +109,6 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 			strlcpy(scc->scc_addrbuf, "?",
 			    sizeof(scc->scc_addrbuf));
 		scc->scc_type = SLCTL_REST_CLI;
-		scc->scc_flags = psc_atomic32_read(&csvc->csvc_flags);
-		scc->scc_refcnt = psc_atomic32_read(&csvc->csvc_refcnt);
 
 		rc = psc_ctlmsg_sendv(fd, mh, scc);
 		if (!rc)
@@ -105,17 +120,18 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 __static int
 slctlmsg_fcmh_send(int fd, struct psc_ctlmsghdr *mh,
-    struct slctlmsg_fcmh *scf, struct fidc_membh *fcmh)
+    struct slctlmsg_fcmh *scf, struct fidc_membh *f)
 {
-	scf->scf_fg = fcmh->fcmh_fg;
-	scf->scf_ptruncgen = fcmh->fcmh_sstb.sst_ptruncgen;
-	scf->scf_utimgen = fcmh->fcmh_sstb.sst_utimgen;
-	scf->scf_st_mode = fcmh->fcmh_sstb.sst_mode;
-	scf->scf_uid = fcmh->fcmh_sstb.sst_uid;
-	scf->scf_gid = fcmh->fcmh_sstb.sst_gid;
-	scf->scf_flags = fcmh->fcmh_flags;
-	scf->scf_refcnt = fcmh->fcmh_refcnt;
-	scf->scf_size = fcmh_2_fsz(fcmh);
+	scf->scf_fg = f->fcmh_fg;
+	scf->scf_ptruncgen = f->fcmh_sstb.sst_ptruncgen;
+	scf->scf_utimgen = f->fcmh_sstb.sst_utimgen;
+	scf->scf_st_mode = f->fcmh_sstb.sst_mode;
+	scf->scf_uid = f->fcmh_sstb.sst_uid;
+	scf->scf_gid = f->fcmh_sstb.sst_gid;
+	scf->scf_flags = f->fcmh_flags;
+	scf->scf_refcnt = f->fcmh_refcnt;
+	scf->scf_size = fcmh_2_fsz(f);
+	scf->scf_blksize = f->fcmh_sstb.sst_blksize;
 	return (psc_ctlmsg_sendv(fd, mh, scf));
 }
 
@@ -123,16 +139,16 @@ int
 slctlrep_getfcmhs(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct slctlmsg_fcmh *scf = m;
-	struct fidc_membh *fcmh;
 	struct psc_hashbkt *b;
+	struct fidc_membh *f;
 	int rc;
 
 	rc = 1;
 	if (scf->scf_fg.fg_fid == FID_ANY) {
 		PSC_HASHTBL_FOREACH_BUCKET(b, &fidcHtable) {
 			psc_hashbkt_lock(b);
-			PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, fcmh, b) {
-				rc = slctlmsg_fcmh_send(fd, mh, scf, fcmh);
+			PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, f, b) {
+				rc = slctlmsg_fcmh_send(fd, mh, scf, f);
 				if (!rc)
 					break;
 			}
@@ -141,10 +157,10 @@ slctlrep_getfcmhs(int fd, struct psc_ctlmsghdr *mh, void *m)
 				break;
 		}
 	} else {
-		fcmh = fidc_lookup_fid(scf->scf_fg.fg_fid);
-		if (fcmh) {
-			rc = slctlmsg_fcmh_send(fd, mh, scf, fcmh);
-			fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+		f = fidc_lookup_fid(scf->scf_fg.fg_fid);
+		if (f) {
+			rc = slctlmsg_fcmh_send(fd, mh, scf, f);
+			fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 		} else
 			rc = psc_ctlsenderr(fd, mh,
 			    "FID "SLPRI_FID" not in cache",

@@ -52,8 +52,8 @@ __static const char *slconn_restypes[] = {
 void
 sl_conn_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	printf("%-16s %41s %-10s %5s %4s\n",
-	    "network-resource", "host", "type", "flags", "#ref");
+	printf("%-16s %35s %-10s %5s %5s %4s\n",
+	    "network-resource", "host", "type", "flags", "txcr", "#ref");
 }
 
 void
@@ -138,25 +138,37 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	    strcmp(site, lastsite))
 		printf("%s\n", site);
 
-	printf("  %-14s %41s %-10s %c%c%c%c%c %4d\n", res, nid, stype,
+	printf("  %-14s %35s %-10s %c%c%c%c%c %5d %4d\n", res, nid, stype,
 	    scc->scc_flags & CSVCF_CONNECTING		? 'C' : '-',
 	    scc->scc_flags & CSVCF_CONNECTED		? 'O' : '-',
 	    scc->scc_flags & CSVCF_USE_MULTIWAIT	? 'M' : '-',
 	    scc->scc_flags & CSVCF_ABANDON		? 'A' : '-',
 	    scc->scc_flags & CSVCF_WANTFREE		? 'F' : '-',
-	    scc->scc_refcnt);
+	    scc->scc_txcr, scc->scc_refcnt);
 
 	strlcpy(lastsite, site, sizeof(lastsite));
 	strlcpy(lastres, res, sizeof(lastres));
 }
 
+#ifdef SLASH_MDS
+# define BLKSIZE_LABEL "msize"
+#else
+# define BLKSIZE_LABEL "blksize"
+#endif
+
 void
 sl_fcmh_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	printf("%-16s %10s %6s %5s %5s "
-	    "%8s %4s %9s %4s %4s\n",
+	int w;
+
+	w = psc_ctl_get_display_maxwidth() - PSC_CTL_DISPLAY_WIDTH;
+	printf("%-16s %11s %6s %5s %5s "
+	    "%7s %4s %9s %4s %4s",
 	    "file-ID_(in_hex)", "flags", "mode", "uid", "gid",
 	    "size", "#ref", "fgen", "pgen", "ugen");
+	if (w > 6)
+		printf(" %6s", BLKSIZE_LABEL);
+	printf("\n");
 }
 
 void
@@ -164,10 +176,13 @@ sl_fcmh_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 {
 	const struct slctlmsg_fcmh *scf = m;
 	char buf[PSCFMT_HUMAN_BUFSIZ];
+	int w;
 
+	w = psc_ctl_get_display_maxwidth() - PSC_CTL_DISPLAY_WIDTH;
 	psc_fmt_human(buf, scf->scf_size);
-	printf("%016"SLPRIxFID" %c%c%c%c%c%c%c%c%c%c "
-	    "%6o %5u %5u %8s %4d %9s %4u %4u\n",
+	printf("%016"SLPRIxFID" %c%c%c%c%c%c%c%c%c%c%c "
+	    "%6o %5u %5u "
+	    "%7s %4d %9s %4u %4u",
 	    scf->scf_fg.fg_fid,
 	    scf->scf_flags & FCMH_CAC_FREE	? 'F' : '-',
 	    scf->scf_flags & FCMH_CAC_IDLE	? 'i' : '-',
@@ -179,7 +194,11 @@ sl_fcmh_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    scf->scf_flags & FCMH_HAVE_ATTRS	? 'A' : '-',
 	    scf->scf_flags & FCMH_GETTING_ATTRS	? 'G' : '-',
 	    scf->scf_flags & FCMH_CTOR_FAILED	? 'f' : '-',
+	    scf->scf_flags & FCMH_CTOR_DELAYED	? 'D' : '-',
 	    scf->scf_st_mode, scf->scf_uid, scf->scf_gid, buf,
 	    scf->scf_refcnt, sl_sprinta_fgen(scf->scf_fg.fg_gen),
 	    scf->scf_ptruncgen, scf->scf_utimgen);
+	if (w > 6)
+		printf(" %6"PRIu64, scf->scf_blksize);
+	printf("\n");
 }
