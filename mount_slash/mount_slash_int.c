@@ -960,13 +960,10 @@ msl_readahead_cb(struct pscrpc_request *rq,
 	bmpces = args->pointer_arg[MSL_CBARG_BMPCE];
 	csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	bmpc = args->pointer_arg[MSL_CBARG_RA];
-	//b = bmpce->bmpce_owner;
-	//bmpce->bmpce_owner = NULL;
 	psc_assert(bmpces && csvc && bmpc);
 
 	rc = msl_getrqstatus(csvc, rq);
 
-	//DEBUG_REQ(PLL_INFO, rq, "bmap=%p bmpces=%p", b, bmpces);
 	DEBUG_REQ(PLL_INFO, rq, "bmpces=%p", bmpces);
 
 	BMPC_LOCK(bmpc);
