@@ -410,10 +410,6 @@ API rename
   in cases of direct I/O
 - use uint32_t for nanosecond atime/mtime/ctime in znode_phys to save space
 - eradicate getrqstatus()
-
-test & benchmark replication on a large data set
-
-fsuuid
-- if value is not set, write it to sliod fs
-- if set, ensure it matches
-
+- repl pairs are totally borked in MDS
+- keep testing replication
+- fsuuid is broken on recv in sliod
