@@ -40,8 +40,8 @@
 #include "slashrpc.h"
 #include "slconfig.h"
 
-struct timespec			 bmapFlushDefMaxAge = { 0,   1000000L };	/* one millisecond */
-struct timespec			 bmapFlushWaitTime  = { 0, 100000000L };	/* 100 milliseconds */
+struct timespec			 bmapFlushDefMaxAge = { 0, 1000000L };	/* one millisecond */
+struct timespec			 bmapFlushWaitTime  = { 0, 8000000L };	/* 8 milliseconds */
 
 struct psc_listcache		 bmapFlushQ;
 struct psc_listcache		 bmapReadAheadQ;
@@ -53,7 +53,7 @@ __static struct pscrpc_nbreqset	*pndgWrtReqs;
 __static struct psc_listcache	 pndgWrtReqSets;
 __static atomic_t		 outstandingRpcCnt;
 
-#define MAX_OUTSTANDING_RPCS	128
+#define MAX_OUTSTANDING_RPCS	16
 #define MIN_COALESCE_RPC_SZ	LNET_MTU /* Try for big RPC's */
 
 struct psc_waitq		bmapflushwaitq = PSC_WAITQ_INIT;
@@ -204,7 +204,7 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 		  "done (outstandingRpcCnt=%d)",
 		  atomic_read(&outstandingRpcCnt));
 
-	if (atomic_read(&outstandingRpcCnt) < MAX_OUTSTANDING_RPCS / 2)
+	if (atomic_read(&outstandingRpcCnt) < MAX_OUTSTANDING_RPCS)
 		psc_waitq_wakeall(&bmapflushwaitq);
 
 	sl_csvc_decref(csvc);
@@ -335,7 +335,7 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 	struct pscrpc_request *rq;
 	struct bmpc_ioreq *r;
 	struct bmapc_memb *b;
-	int rc, i, nrpcs = 0;
+	int rc, i;
 	size_t size;
 	off_t soff;
 
@@ -898,7 +898,8 @@ bmap_flush(void)
 		if (bmap_flushable(b)) {
 			i++;
 			psc_dynarray_add(&bmaps, b);
-			if (i >= MAX_OUTSTANDING_RPCS) {
+			if (i + atomic_read(&outstandingRpcCnt) >=
+			     MAX_OUTSTANDING_RPCS) {
 				BMAP_ULOCK(b);
 				break;
 			}
@@ -969,16 +970,14 @@ bmap_flush(void)
 			 */
 			bmap_flush_send_rpcs(biorqs, iovs, niovs);
 			PSCFREE(iovs);
+		
+			while ((MAX_OUTSTANDING_RPCS - 
+				atomic_read(&outstandingRpcCnt)) <= 0) {
+				psc_waitq_waitrel(&bmapflushwaitq, NULL, 
+						  &bmapFlushWaitTime);
+			}
 		}
 		psc_dynarray_reset(&reqs);
-
-		nrpcs = MAX_OUTSTANDING_RPCS - atomic_read(&outstandingRpcCnt);
-		if (nrpcs < 0) {
-			psclog_notice("stall flush (nrpcs=%d, outstandingRpcCnt=%d)",
-			    nrpcs, atomic_read(&outstandingRpcCnt));
-			break;
-			//psc_waitq_waitrel(&bmapflushwaitq, NULL, &bmapFlushWaitTime);
-		}
 	}
 
 	psc_dynarray_free(&reqs);
@@ -1260,8 +1259,17 @@ msbmapflushthr_main(__unusedx struct psc_thread *thr)
 		timespecsub(&ts1, &ts0, &ts1);
 		psclog_debug("bmap_flush "PSCPRI_TIMESPEC,
 		    PSCPRI_TIMESPEC_ARGS(&ts1));
+
 		PFL_GETTIMESPEC(&ts0);
-		psc_waitq_waitrel(&bmapflushwaitq, NULL, &bmapFlushWaitTime);
+		while ((MAX_OUTSTANDING_RPCS - 
+			atomic_read(&outstandingRpcCnt)) <= 0) {
+			psc_waitq_waitrel(&bmapflushwaitq, NULL, 
+					  &bmapFlushWaitTime);
+                        psclog_warnx("stall flush (outstandingRpcCnt=%d)",
+			     atomic_read(&outstandingRpcCnt));
+		}
+
+		//psc_waitq_waitrel(&bmapflushwaitq, NULL, &bmapFlushWaitTime);
 		PFL_GETTIMESPEC(&ts1);
 		timespecsub(&ts1, &ts0, &ts1);
 		psclog_debug("post wakeup "PSCPRI_TIMESPEC,
@@ -1284,22 +1292,64 @@ msbmapflushthrrpc_main(__unusedx struct psc_thread *thr)
 	}
 }
 
+
 void
 msbmaprathr_main(__unusedx struct psc_thread *thr)
 {
-	struct bmap_pagecache_entry *bmpce;
+#define MAX_BMPCES_PER_RPC 32
+	struct msl_fhent *mfh, *lmfh;
+	struct bmap_pagecache_entry *bmpces[MAX_BMPCES_PER_RPC], *tmp, *bmpce;
+	int nbmpces, i;
 
 	while (pscthr_run()) {
-		bmpce = lc_getwait(&bmapReadAheadQ);
-		BMPCE_LOCK(bmpce);
-		msl_bmpce_getbuf(bmpce);
-		psc_assert(bmpce->bmpce_base);
-		psc_assert(bmpce->bmpce_flags & BMPCE_INIT);
-		bmpce->bmpce_flags &= ~BMPCE_INIT;
-		bmpce->bmpce_flags |= BMPCE_READPNDG;
-		BMPCE_ULOCK(bmpce);
+		nbmpces = 0;
+		mfh = lc_getwait(&bmapReadAheadQ);
+		if (mfh == lmfh)
+			usleep(100);
 
-		msl_reada_rpc_launch(bmpce);
+		spinlock(&mfh->mfh_lock);
+		psc_assert(mfh->mfh_flags & MSL_FHENT_RASCHED);
+		PLL_FOREACH_SAFE(bmpce, tmp, &mfh->mfh_ra_bmpces) {
+			/* Check for sequentiality
+			 */
+			if (nbmpces && 
+			    (bmpce->bmpce_off != 
+			     bmpces[nbmpces-1]->bmpce_off + BMPC_BUFSZ))
+				break;
+			
+			pll_remove(&mfh->mfh_ra_bmpces, bmpce);
+			bmpces[nbmpces++] = bmpce;
+			
+			if (nbmpces == mfh->mfh_ra.mra_nseq ||
+                            nbmpces == MAX_BMPCES_PER_RPC)
+				break;
+		}
+		
+		if (pll_empty(&mfh->mfh_ra_bmpces)) {
+			mfh->mfh_flags &= ~MSL_FHENT_RASCHED;
+			if (mfh->mfh_flags & MSL_FHENT_CLOSING)
+				psc_waitq_wakeall(&mfh->mfh_fcmh->fcmh_waitq);
+		} else
+			lc_addtail(&bmapReadAheadQ, mfh);
+		freelock(&mfh->mfh_lock);
+
+		
+		for (i=0; i < nbmpces; i++) {
+			/* XXX If read / wr refs are 0 then msl_bmpce_getbuf()
+			 *    should be called in a non-blocking fashion.
+			 */
+			bmpce = bmpces[i];
+
+			BMPCE_LOCK(bmpce);
+			msl_bmpce_getbuf(bmpce);
+			psc_assert(bmpce->bmpce_base);
+			psc_assert(bmpce->bmpce_flags & BMPCE_INIT);
+			bmpce->bmpce_flags &= ~BMPCE_INIT;
+			bmpce->bmpce_flags |= BMPCE_READPNDG;
+			BMPCE_ULOCK(bmpce);
+		}
+		msl_reada_rpc_launch(bmpces, nbmpces);
+		lmfh = mfh;
 	}
 }
 
@@ -1323,8 +1373,8 @@ msbmapflushthr_spawn(void)
 	lc_reginit(&bmapTimeoutQ, struct bmapc_memb,
 	    bcm_lentry, "bmaptimeout");
 
-	lc_reginit(&bmapReadAheadQ, struct bmap_pagecache_entry,
-	    bmpce_ralentry, "bmapreadahead");
+	lc_reginit(&bmapReadAheadQ, struct msl_fhent,
+	    mfh_lentry, "bmapreadahead");
 
 	lc_reginit(&pndgWrtReqSets, struct pscrpc_request_set,
 	    set_lentry, "bmappndgflushsets");
