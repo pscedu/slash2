@@ -131,7 +131,7 @@ struct fidc_membh {
 			psc_waitq_wakeall(&(f)->fcmh_waitq);		\
 	} while (0)
 
-#ifdef SLASH_MDS
+#ifdef _SLASH_MDS
 # define DEBUG_FCMH_BLKSIZE_LABEL "msz"
 #else
 # define DEBUG_FCMH_BLKSIZE_LABEL "bsz"

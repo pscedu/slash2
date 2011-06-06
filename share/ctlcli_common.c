@@ -150,7 +150,7 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	strlcpy(lastres, res, sizeof(lastres));
 }
 
-#ifdef SLASH_MDS
+#ifdef _SLASH_MDS
 # define BLKSIZE_LABEL "msize"
 #else
 # define BLKSIZE_LABEL "blksize"

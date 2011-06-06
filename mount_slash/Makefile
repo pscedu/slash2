@@ -62,7 +62,7 @@ SRCS+=		${PFL_BASE}/psc_util/waitq.c
 
 SRCS+=		${SETRESUID_SRC}
 
-DEFINES+=	-DSLASH_CLIENT
+DEFINES+=	-D_SLASH_CLIENT
 
 MODULES+=	lnet pthread gcrypt pscfs ctl rpc
 

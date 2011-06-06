@@ -248,7 +248,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	fcmh_new = NULL; /* gcc */
 
 	/* sanity checks */
-#ifdef SLASH_CLIENT
+#ifdef _SLASH_CLIENT
 	if (flags & FIDC_LOOKUP_CREATE)
 		psc_assert(sstb || (flags & FIDC_LOOKUP_LOAD));
 #else
