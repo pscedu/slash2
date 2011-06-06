@@ -245,7 +245,7 @@ struct bmap_ion_assign {
 
 int	 mds_bmap_read(struct bmapc_memb *, enum rw, int);
 int	 mds_bmap_write(struct bmapc_memb *, int, void *, void *);
-void	 mds_bmap_write_rel(struct bmapc_memb *, void *);
+int	 mds_bmap_write_rel(struct bmapc_memb *, void *);
 
 #define mds_bmap_write_repls_rel(b)	mds_bmap_write_rel((b), mdslog_bmap_repls)
 

@@ -293,7 +293,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 /**
  * mds_bmap_write_rel - Release a bmap after use.
  */
-void
+int
 mds_bmap_write_rel(struct bmapc_memb *b, void *logf)
 {
 	int rc;
@@ -303,6 +303,7 @@ mds_bmap_write_rel(struct bmapc_memb *b, void *logf)
 
 	rc = mds_bmap_write(b, 0, logf, b);
 	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+	return (rc);
 }
 
 #if PFL_DEBUG > 0
