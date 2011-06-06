@@ -162,21 +162,26 @@ uswi_kill(struct up_sched_work_item *wk)
 	psc_mutex_ensure_locked(&wk->uswi_mutex);
 
 	UPSCHED_MGR_ENSURE_LOCKED();
+
+	wk->uswi_flags |= USWIF_DIE;
+	wk->uswi_flags &= ~USWIF_BUSY;
+
+	USWI_DECREF(wk, USWI_REFT_LOOKUP);
+
+	while (psc_atomic32_read(&wk->uswi_refcnt) > 1) {
+		psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
+		UPSCHED_MGR_ULOCK();
+		psc_multiwaitcond_wait(&wk->uswi_mwcond,
+		    &wk->uswi_mutex);
+		UPSCHED_MGR_LOCK();
+		psc_mutex_lock(&wk->uswi_mutex);
+	}
+
 	PSC_SPLAY_XREMOVE(upschedtree, &upsched_tree, wk);
 	pll_remove(&upsched_listhd, wk);
 	UPSCHED_MGR_ULOCK();
 
 	USWI_DECREF(wk, USWI_REFT_TREE);
-
-	wk->uswi_flags |= USWIF_DIE;
-	wk->uswi_flags &= ~USWIF_BUSY;
-
-	while (psc_atomic32_read(&wk->uswi_refcnt) > 1) {
-		psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
-		psc_multiwaitcond_wait(&wk->uswi_mwcond,
-		    &wk->uswi_mutex);
-		psc_mutex_lock(&wk->uswi_mutex);
-	}
 
 	if (wk->uswi_fcmh)
 		fcmh_op_done_type(wk->uswi_fcmh,
@@ -523,7 +528,7 @@ slmupschedthr_main(struct psc_thread *thr)
 			USWI_INCREF(wk, USWI_REFT_LOOKUP);
 			freelock(&smi->smi_lock);
 
-			rc = uswi_access(wk);
+			rc = uswi_access_lock(wk);
 			if (rc == 0) {
 				/* repl must be going away, drop it */
 				slmupschedthr_removeq(wk);
@@ -795,9 +800,10 @@ slmupschedthr_spawnall(void)
 
 	locked = CONF_RLOCK();
 	CONF_FOREACH_SITE(site) {
-		thr = pscthr_init(SLMTHRT_UPSCHED, 0, slmupschedthr_main,
-		    NULL, sizeof(*smut), "slmupschedthr-%s",
-		    site->site_name + strspn(site->site_name, "@"));
+		thr = pscthr_init(SLMTHRT_UPSCHED, 0,
+		    slmupschedthr_main, NULL, sizeof(*smut),
+		    "slmupschedthr-%s", site->site_name +
+		    strspn(site->site_name, "@"));
 		smut = slmupschedthr(thr);
 		smut->smut_site = site;
 		pscthr_setready(thr);
@@ -806,13 +812,13 @@ slmupschedthr_spawnall(void)
 }
 
 /**
- * uswi_access - Obtain processing access to a update_scheduler request.
+ * _uswi_access - Obtain processing access to a update_scheduler request.
  *	This routine assumes the refcnt has already been bumped.
  * @wk: update_scheduler request to access, locked on return.
  * Returns Boolean true on success or false if the request is going away.
  */
 int
-uswi_access(struct up_sched_work_item *wk)
+_uswi_access(struct up_sched_work_item *wk, int keep_locked)
 {
 	int locked, rc = 1;
 
@@ -823,7 +829,8 @@ uswi_access(struct up_sched_work_item *wk)
 	while (wk->uswi_flags & USWIF_BUSY) {
 		if (locked)
 			UPSCHED_MGR_ULOCK();
-		psc_multiwaitcond_wait(&wk->uswi_mwcond, &wk->uswi_mutex);
+		psc_multiwaitcond_wait(&wk->uswi_mwcond,
+		    &wk->uswi_mutex);
 		if (locked)
 			UPSCHED_MGR_LOCK();
 		psc_mutex_lock(&wk->uswi_mutex);
@@ -834,6 +841,9 @@ uswi_access(struct up_sched_work_item *wk)
 		USWI_DECREF(wk, USWI_REFT_LOOKUP);
 		psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
 		rc = 0;
+
+		if (!keep_locked)
+			psc_mutex_unlock(&wk->uswi_mutex);
 	} else {
 		wk->uswi_flags |= USWIF_BUSY;
 		psc_mutex_unlock(&wk->uswi_mutex);
@@ -899,7 +909,7 @@ uswi_init(struct up_sched_work_item *wk, slfid_t fid)
 	wk->uswi_flags |= USWIF_BUSY;
 	psc_mutex_init(&wk->uswi_mutex);
 	psc_multiwaitcond_init(&wk->uswi_mwcond,
-	    NULL, 0, "upsched-"SLPRI_FID, fid);
+	    NULL, 0, "upsched-%016"SLPRIxFID, fid);
 	psc_atomic32_set(&wk->uswi_refcnt, 0);
 }
 

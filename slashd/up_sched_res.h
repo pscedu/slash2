@@ -64,7 +64,7 @@ enum {
 
 #define DEBUG_USWI(lvl, wk, fmt, ...)					\
 	psclog((lvl), "uswi@%p f+g:"SLPRI_FG" fl:%s%s ref:%d "		\
-	    "gen:%d " fmt,						\
+	    "gen:%d : " fmt,						\
 	    (wk), SLPRI_FG_ARGS(USWI_FG(wk)),				\
 	    (wk)->uswi_flags & USWIF_BUSY	? "b" : "",		\
 	    (wk)->uswi_flags & USWIF_DIE	? "d" : "",		\
@@ -86,9 +86,12 @@ enum {
 		    "dropped reference [type=%d]", (reftype));		\
 	} while (0)
 
+#define uswi_access(wk)		_uswi_access((wk), 0)
+#define uswi_access_lock(wk)	_uswi_access((wk), 1)
+
 struct up_sched_work_item *
 	 uswi_find(const struct slash_fidgen *, int *);
-int	 uswi_access(struct up_sched_work_item *);
+int	 _uswi_access(struct up_sched_work_item *, int);
 int	 uswi_cmp(const void *, const void *);
 void	 uswi_enqueue_sites(struct up_sched_work_item *, const sl_replica_t *, int);
 int	 uswi_findoradd(const struct slash_fidgen *, struct up_sched_work_item **);
