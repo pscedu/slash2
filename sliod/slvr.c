@@ -389,7 +389,7 @@ slvr_repl_prep(struct slvr_ref *s, int src_or_dst)
 		 *   competion and set 'faulting' before proceeding.
 		 */
 		if (s->slvr_flags & SLVR_DATARDY) {
-			SLVR_WAIT(s, ((s->slvr_pndgwrts > 1) || 
+			SLVR_WAIT(s, ((s->slvr_pndgwrts > 1) ||
 				      s->slvr_pndgreads));
 			s->slvr_flags &= ~SLVR_DATARDY;
 		}
@@ -495,10 +495,10 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw)
 	 *   won't be freed from under us.
 	 */
 	if (s->slvr_flags & SLVR_FAULTING && !(s->slvr_flags & SLVR_REPLDST)) {
-		/* Common courtesy requires us to wait for another threads' 
-		 *   work FIRST. Otherwise, we could bail out prematurely 
-		 *   when the data is ready without considering the range 
-		 *   we want to write.		 
+		/* Common courtesy requires us to wait for another threads'
+		 *   work FIRST. Otherwise, we could bail out prematurely
+		 *   when the data is ready without considering the range
+		 *   we want to write.
 		 */
 		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
 		SLVR_WAIT(s, !(s->slvr_flags & (SLVR_DATARDY|SLVR_DATAERR)));
@@ -538,12 +538,12 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw)
 		psc_assert(s->slvr_flags & SLVR_FAULTING);
 		psc_assert(s->slvr_pndgreads == 0 && s->slvr_pndgwrts == 1);
 
-		blks = len / SLASH_SLVR_BLKSZ + 
+		blks = len / SLASH_SLVR_BLKSZ +
 			(len & SLASH_SLVR_BLKMASK) ? 1 : 0;
 
 		psc_vbitmap_setrange(s->slvr_slab->slb_inuse, 0, blks);
 		SLVR_ULOCK(s);
-		
+
 		return (0);
 	}
 
@@ -931,8 +931,34 @@ slvr_cache_init(void)
 	slvr_worker_init();
 }
 
+#if PFL_DEBUG > 0
 void
 dump_sliver(struct slvr_ref *s)
 {
 	DEBUG_SLVR(PLL_MAX, s, "");
 }
+
+void
+dump_sliver_flags(int fl)
+{
+	int seq = 0;
+
+	PFL_PRFLAG(SLVR_NEW, &fl, &seq);
+	PFL_PRFLAG(SLVR_SPLAYTREE, &fl, &seq);
+	PFL_PRFLAG(SLVR_FAULTING, &fl, &seq);
+	PFL_PRFLAG(SLVR_GETSLAB, &fl, &seq);
+	PFL_PRFLAG(SLVR_PINNED, &fl, &seq);
+	PFL_PRFLAG(SLVR_DATARDY, &fl, &seq);
+	PFL_PRFLAG(SLVR_DATAERR, &fl, &seq);
+	PFL_PRFLAG(SLVR_LRU, &fl, &seq);
+	PFL_PRFLAG(SLVR_CRCDIRTY, &fl, &seq);
+	PFL_PRFLAG(SLVR_CRCING, &fl, &seq);
+	PFL_PRFLAG(SLVR_FREEING, &fl, &seq);
+	PFL_PRFLAG(SLVR_SLBFREEING, &fl, &seq);
+	PFL_PRFLAG(SLVR_REPLSRC, &fl, &seq);
+	PFL_PRFLAG(SLVR_REPLDST, &fl, &seq);
+	if (flags)
+		printf(" unknown: %x", flags);
+	printf("\n");
+}
+#endif
