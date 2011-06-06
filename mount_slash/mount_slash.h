@@ -106,11 +106,17 @@ struct msl_ra {
 struct msl_fhent {			 /* XXX rename */
 	int				 mfh_oflags;	/* open(2) flags */
 	int				 mfh_flush_rc;	/* fsync(2) status */
+	int                              mfh_flags;
 	psc_spinlock_t			 mfh_lock;
 	struct fidc_membh		*mfh_fcmh;
 	struct psc_lockedlist		 mfh_biorqs;	/* track biorqs (flush) */
+	struct psc_lockedlist            mfh_ra_bmpces; /* read ahead bmpce's */
+	struct psclist_head              mfh_lentry;
 	struct msl_ra			 mfh_ra;
 };
+
+#define MSL_FHENT_RASCHED (1 << 0)
+#define MSL_FHENT_CLOSING (1 << 1)
 
 struct resprof_cli_info {
 	struct psc_dynarray		 rpci_pinned_bmaps;
@@ -139,7 +145,7 @@ resm2rmci(struct sl_resm *resm)
 #define msl_write(fh, buf, size, off)	msl_io((fh), (char *)(buf), (size), (off), SL_WRITE)
 
 void	 msl_bmpce_getbuf(struct bmap_pagecache_entry *);
-void	 msl_reada_rpc_launch(struct bmap_pagecache_entry *);
+void     msl_reada_rpc_launch(struct bmap_pagecache_entry **, int);
 
 struct slashrpc_cservice *
 	 msl_bmap_to_csvc(struct bmapc_memb *, int);

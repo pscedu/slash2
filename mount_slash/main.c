@@ -1424,6 +1424,7 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 	c = mfh->mfh_fcmh;
 
 	spinlock(&mfh->mfh_lock);
+	mfh->mfh_flags |= MSL_FHENT_CLOSING;
 #if FHENT_EARLY_RELEASE
 	PLL_FOREACH(r, &mfh->mfh_biorqs) {
 		spinlock(&r->biorq_lock);
@@ -1434,10 +1435,14 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 	rc = msl_flush_int_locked(mfh);
 	psc_assert(pll_empty(&mfh->mfh_biorqs));
 #endif
+	while (!pll_empty(&mfh->mfh_ra_bmpces) ||
+	       (mfh->mfh_flags & MSL_FHENT_RASCHED)) {
+		psc_waitq_wait(&c->fcmh_waitq, &mfh->mfh_lock);
+		spinlock(&mfh->mfh_lock);
+	}
+
 	freelock(&mfh->mfh_lock);
-
 	fcmh_op_done_type(c, FCMH_OPCNT_OPEN);
-
 	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "freeing mfh(%p)", mfh);
 	PSCFREE(mfh);
 	pscfs_reply_close(pfr, rc);

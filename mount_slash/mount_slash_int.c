@@ -306,7 +306,21 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 				bmpce->bmpce_owner = b;
 				bmpce_handle_lru_locked(bmpce, bmpc, op, 1);
 				bmap_op_start_type(b, BMAP_OPCNT_READA);
-				lc_addtail(&bmapReadAheadQ, bmpce);
+				/* Place the bmpce into our private pll.  This is 
+				 *    done so that the ra thread may coalesce
+				 *    bmpces without sorting overhead.  In addition, 
+				 *    the ra thread may now use the fh's ra 
+				 *    factor for weighing bw (large requests) vs.
+				 *    latency (smaller requests).
+				 */
+				spinlock(&mfh->mfh_lock);
+				pll_addtail(&mfh->mfh_ra_bmpces, bmpce);
+				if (!(mfh->mfh_flags & MSL_FHENT_RASCHED)) {
+					mfh->mfh_flags |= MSL_FHENT_RASCHED;
+					freelock(&mfh->mfh_lock);
+					lc_addtail(&bmapReadAheadQ, mfh);
+				} else
+					freelock(&mfh->mfh_lock);
 
 			} else if (bmpce->bmpce_flags & BMPCE_LRU) {
 				/* There's no official read op pending for this
@@ -596,6 +610,9 @@ msl_fhent_new(struct fidc_membh *f)
 	INIT_SPINLOCK(&mfh->mfh_lock);
 	pll_init(&mfh->mfh_biorqs, struct bmpc_ioreq, biorq_mfh_lentry,
 	    &mfh->mfh_lock);
+	pll_init(&mfh->mfh_ra_bmpces, struct bmap_pagecache_entry, 
+	    bmpce_ralentry, &mfh->mfh_lock);
+	INIT_PSC_LISTENTRY(&mfh->mfh_lentry);
 	MSL_RA_RESET(&mfh->mfh_ra);
 	return (mfh);
 }
@@ -933,44 +950,56 @@ int
 msl_readahead_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
-	struct bmap_pagecache_entry *bmpce;
+	struct bmap_pagecache_entry *bmpce, **bmpces;
 	struct slashrpc_cservice *csvc;
 	struct psc_waitq *wq = NULL;
 	struct bmap_pagecache *bmpc;
 	struct bmapc_memb *b;
-	int rc;
+	int rc, i;
 
-	bmpce = args->pointer_arg[MSL_CBARG_BMPCE];
+	bmpces = args->pointer_arg[MSL_CBARG_BMPCE];
 	csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	bmpc = args->pointer_arg[MSL_CBARG_RA];
-	b = bmpce->bmpce_owner;
-	bmpce->bmpce_owner = NULL;
-	psc_assert(bmpce && csvc && bmpc && b);
+	//b = bmpce->bmpce_owner;
+	//bmpce->bmpce_owner = NULL;
+	psc_assert(bmpce && csvc && bmpc);
 
 	rc = msl_getrqstatus(csvc, rq);
 
-	DEBUG_REQ(PLL_INFO, rq, "bmap=%p bmpce=%p", b, bmpce);
+	DEBUG_REQ(PLL_INFO, rq, "bmap=%p bmpces=%p", b, bmpces);
 
 	BMPC_LOCK(bmpc);
-	DEBUG_BMPCE(PLL_INFO, bmpce, "ra cb rc=%d", rc);
+	for (i=0 ;; i++) {
+		bmpce = bmpces[i];
+		if (!bmpce)
+			break;
 
-	pll_remove(&bmpc->bmpc_pndg_ra, bmpce);
+		if (!i)
+			b = bmpce->bmpce_owner; 
+		else 
+			psc_assert(b == bmpce->bmpce_owner);
 
-	BMPCE_LOCK(bmpce);
-	if (rc)
-		bmpce->bmpce_flags |= BMPCE_EIO;
-	else {
-		bmpce->bmpce_flags |= BMPCE_DATARDY;
-		DEBUG_BMPCE(PLL_INFO, bmpce, "datardy via readahead_cb");
-		wq = bmpce->bmpce_waitq;
-		bmpce->bmpce_waitq = NULL;
+		bmpce->bmpce_owner = NULL;
+
+		DEBUG_BMPCE(PLL_INFO, bmpce, "ra cb rc=%d", rc);
+		pll_remove(&bmpc->bmpc_pndg_ra, bmpce);		
+		BMPCE_LOCK(bmpce);
+		if (rc)
+			bmpce->bmpce_flags |= BMPCE_EIO;
+		else {
+			bmpce->bmpce_flags |= BMPCE_DATARDY;
+			DEBUG_BMPCE(PLL_INFO, bmpce, 
+				    "datardy via readahead_cb");
+			wq = bmpce->bmpce_waitq;
+			bmpce->bmpce_waitq = NULL;
+		}
+		bmpce_handle_lru_locked(bmpce, bmpc, BIORQ_READ, 0);
+		if (!rc)
+			/* EIO's are always unlocked inside 
+			 *   bmpce_handle_lru_locked()
+			 */
+			BMPCE_ULOCK(bmpce);
 	}
-	bmpce_handle_lru_locked(bmpce, bmpc, BIORQ_READ, 0);
-	if (!rc)
-		/* EIO's are always unlocked inside bmpce_handle_lru_locked()
-		 */
-		BMPCE_ULOCK(bmpce);
-
 	BMPC_ULOCK(bmpc);
 
 	if (wq)
@@ -986,6 +1015,7 @@ msl_readahead_cb(struct pscrpc_request *rq,
 	}
 	bmap_op_done_type(b, BMAP_OPCNT_READA);
 
+	PSCFREE(bmpces);
 	return (rc);
 }
 
@@ -1234,21 +1264,39 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 }
 
 void
-msl_reada_rpc_launch(struct bmap_pagecache_entry *bmpce)
+msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 {
+	struct bmap_pagecache_entry *bmpce, **bmpces_cbarg;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
-	struct bmapc_memb *b = bmpce->bmpce_owner;
+	struct bmapc_memb *b;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
-	struct iovec iov;
-	int rc, added = 0;
+	struct iovec *iovs;
+	uint32_t off;
+	int rc, i, added = 0;
 
-	psc_assert(!(bmpce->bmpce_flags & BMPCE_EIO));
+	psc_assert(nbmpce <= BMPC_MAXBUFSRPC);
 
-	iov.iov_base = bmpce->bmpce_base;
-	iov.iov_len  = BMPC_BUFSZ;
+	bmpces_cbarg = PSCALLOC((nbmpce + 1) * sizeof(void *));
+	iovs = PSCALLOC(nbmpce * sizeof(*iovs));
 
+	for (i=0; i < nbmpce; i++) {		
+		bmpce = bmpces_cbarg[i] = bmpces[i];
+		psc_assert(!(bmpce->bmpce_flags & BMPCE_EIO));	
+		if (!i) {
+			off = bmpce->bmpce_off;
+			b = bmpce->bmpce_owner;
+		} else
+			psc_assert(b == bmpce->bmpce_owner);
+
+		iovs[i].iov_base = bmpce->bmpce_base;
+		iovs[i].iov_len  = BMPC_BUFSZ;
+	}
+	/* Terminate the array.
+	 */
+	bmpces_cbarg[i] = NULL;
+	
 	csvc = msl_bmap_to_csvc(b, 0);
 	if (csvc == NULL) {
 		rc = ENOTCONN;
@@ -1260,29 +1308,34 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry *bmpce)
 		goto error;
 	//XXX adjust rpc timeout according to bci_xtime
 
-	rc = rsx_bulkclient(rq, BULK_PUT_SINK, SRIC_BULK_PORTAL, &iov, 1);
+	rc = rsx_bulkclient(rq, BULK_PUT_SINK, SRIC_BULK_PORTAL, iovs, nbmpce);
 	if (rc)
 		goto error;
 
-	mq->size = BMPC_BUFSZ;
+	PSCFREE(iovs);
+
+	mq->size = BMPC_BUFSZ * nbmpce;
 	mq->op = SRMIOP_RD;
-	mq->offset = bmpce->bmpce_off;
+	mq->offset = off;
 	memcpy(&mq->sbd, bmap_2_sbd(b), sizeof(mq->sbd));
 
-	DEBUG_BMPCE(PLL_INFO, bmpce, "launching read ahead req");
+	DEBUG_BMAP(PLL_NOTIFY, b, "launching read ahead req off=%u, npages=%d",
+		   off, nbmpce);
 
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 
-	rq->rq_async_args.pointer_arg[MSL_CBARG_BMPCE] = bmpce;
+	rq->rq_async_args.pointer_arg[MSL_CBARG_BMPCE] = bmpces_cbarg;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_RA] = bmap_2_bmpc(b);
 	rq->rq_interpret_reply = msl_readahead_cb;
 	rq->rq_comp = &rpcComp;
 
-	/* bmpce_ralentry is available at this point, add
-	 *   the ra to the pndg list before pushing it out the door.
-	 */
-	pll_addtail(&bmap_2_bmpc(b)->bmpc_pndg_ra, bmpce);
+	for (i=0; i < nbmpce; i++)
+		/* bmpce_ralentry is available at this point, add
+		 *   the ra to the pndg list before pushing it out the door.
+		 */
+		pll_addtail(&bmap_2_bmpc(b)->bmpc_pndg_ra, bmpces[i]);
+
 	added = 1;
 
 	rc = pscrpc_nbreqset_add(ra_nbreqset, rq);
@@ -1290,17 +1343,21 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry *bmpce)
 		return;
 
  error:
+	PSCFREE(iovs);
+	PSCFREE(bmpces_cbarg);
+
 	/* Deal with errored read ahead bmpce's.
 	 */
-	if (added)
-		pll_remove(&bmap_2_bmpc(b)->bmpc_pndg_ra, bmpce);
-
 	BMPC_LOCK(bmap_2_bmpc(b));
-	BMPCE_LOCK(bmpce);
-	bmpce->bmpce_flags |= BMPCE_EIO;
-	bmpce_handle_lru_locked(bmpce, bmap_2_bmpc(b), BIORQ_READ, 0);
-	BMPC_ULOCK(bmap_2_bmpc(b));
+	for (i=0; i < nbmpce; i++) {
+		if (added)
+			pll_remove(&bmap_2_bmpc(b)->bmpc_pndg_ra, bmpces[i]);
 
+		BMPCE_LOCK(bmpce);
+		bmpce->bmpce_flags |= BMPCE_EIO;
+		bmpce_handle_lru_locked(bmpce, bmap_2_bmpc(b), BIORQ_READ, 0);
+	}
+	BMPC_ULOCK(bmap_2_bmpc(b));
 	bmap_op_done_type(b, BMAP_OPCNT_READA);
 
 	if (rq) {
