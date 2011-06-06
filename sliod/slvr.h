@@ -56,8 +56,6 @@ struct slvr_ref {
 	SPLAY_ENTRY(slvr_ref)	 slvr_tentry;	/* bmap tree entry */
 };
 
-#define SLVR_CRCLEN(s) ((s)->slvr_crc_eoff - (s)->slvr_crc_soff)
-
 #define	SLVR_NEW		(1 <<  0)	/* newly initialized */
 #define	SLVR_SPLAYTREE		(1 <<  1)	/* registered in the splay tree */
 #define	SLVR_FAULTING		(1 <<  2)	/* contents loading from disk or net */
@@ -72,6 +70,8 @@ struct slvr_ref {
 #define	SLVR_SLBFREEING		(1 << 11)	/* slvr's slab is being reaped */
 #define	SLVR_REPLSRC		(1 << 12)	/* slvr is replication source */
 #define	SLVR_REPLDST		(1 << 13)	/* slvr is replication destination */
+
+#define SLVR_CRCLEN(s)		((s)->slvr_crc_eoff - (s)->slvr_crc_soff)
 
 #define SLVR_2_BLK(s)		((s)->slvr_num *			\
 				 (SLASH_BMAP_SIZE / SLASH_SLVR_BLKSZ))
