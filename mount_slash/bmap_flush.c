@@ -1308,11 +1308,15 @@ msbmaprathr_main(__unusedx struct psc_thread *thr)
 		spinlock(&mfh->mfh_lock);
 		psc_assert(mfh->mfh_flags & MSL_FHENT_RASCHED);
 		PLL_FOREACH_SAFE(bmpce, tmp, &mfh->mfh_ra_bmpces) {
-			/* Check for sequentiality
+			/* Check for sequentiality.  Note that since bmpce
+			 *   offsets are intra-bmap, we must check that the 
+			 *   bmap (bmpce_owner) is the same too.
 			 */
 			if (nbmpces && 
-			    (bmpce->bmpce_off != 
-			     bmpces[nbmpces-1]->bmpce_off + BMPC_BUFSZ))
+			    ((bmpce->bmpce_owner != 
+			      bmpces[nbmpces-1]->bmpce_owner) || 
+			     (bmpce->bmpce_off != 
+			      bmpces[nbmpces-1]->bmpce_off + BMPC_BUFSZ)))
 				break;
 			
 			pll_remove(&mfh->mfh_ra_bmpces, bmpce);
