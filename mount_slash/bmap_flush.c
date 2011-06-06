@@ -375,7 +375,6 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 		    soff, niovs, biorqs);
 		if (rq == NULL)
 			goto error;
-		nrpcs++;
 	} else {
 		/* Deal with a multiple RPC operation */
 		struct iovec *tiov;
@@ -394,7 +393,6 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 		if (rq == NULL)						\
 			goto error;					\
 		soff += size;						\
-		nrpcs++;						\
 	} while (0)
 
 		for (j=0, n=0, size=0, tiov=iovs; j < niovs; j++) {
@@ -860,7 +858,7 @@ bmap_flush(void)
 	struct bmpc_ioreq *r, *tmp;
 	struct bmapc_memb *b, *tmpb;
 	struct iovec *iovs = NULL;
-	int i, j, niovs, nrpcs;
+	int i, j, niovs;
 
 	i = 0;
 	LIST_CACHE_LOCK(&bmapFlushQ);
