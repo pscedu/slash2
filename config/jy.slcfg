@@ -35,7 +35,7 @@ site @PSC {
 		desc	= "test archiver storage node";
 		type	= standalone_fs;
 		id	= 104;
-		fsroot	= /slio-jy;
+		fsroot	= /usr/slio-jy;
 		nodes	= cyclops.psc.edu;
 	}
 }
