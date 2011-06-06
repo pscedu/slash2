@@ -155,8 +155,8 @@ mds_bmap_write(struct bmapc_memb *b, int update_mtime, void *logf,
 {
 	struct iovec iovs[2];
 	uint64_t crc;
+	int rc, new;
 	size_t nb;
-	int rc;
 
 	BMAPOD_REQRDLOCK(bmap_2_bmi(b));
 	mds_bmap_ensure_valid(b);
@@ -184,6 +184,14 @@ mds_bmap_write(struct bmapc_memb *b, int update_mtime, void *logf,
 	else
 		DEBUG_BMAP(PLL_INFO, b, "written successfully");
 	BMAPOD_READ_DONE(b, 0);
+
+	BMAP_LOCK(b);
+	new = b->bcm_flags & BMAP_NEW;
+	b->bcm_flags &= ~BMAP_NEW;
+	BMAP_ULOCK(b);
+
+	if (new)
+		mdsio_fcmh_refreshattr(b->bcm_fcmh, NULL);
 	return (rc);
 }
 
