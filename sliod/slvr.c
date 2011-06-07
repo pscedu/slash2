@@ -957,8 +957,8 @@ dump_sliver_flags(int fl)
 	PFL_PRFLAG(SLVR_SLBFREEING, &fl, &seq);
 	PFL_PRFLAG(SLVR_REPLSRC, &fl, &seq);
 	PFL_PRFLAG(SLVR_REPLDST, &fl, &seq);
-	if (flags)
-		printf(" unknown: %x", flags);
+	if (fl)
+		printf(" unknown: %x", fl);
 	printf("\n");
 }
 #endif
