@@ -227,7 +227,7 @@ main(int argc, char *argv[])
 	 * Initialize the mdsio layer.  There is where ZFS threads
 	 * are started and the given ZFS pool is imported.
 	 */
-	mdsio_init(argc, argv);
+	mdsio_init();
 	import_zpool(zpname, zpcachefn);
 
 	rc = mdsio_lookup(MDSIO_FID_ROOT, SL_RPATH_META_DIR,
