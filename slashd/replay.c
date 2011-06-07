@@ -113,7 +113,7 @@ mds_replay_bmap(void *jent, int op)
 	    }
 	}
 
-	DEBUG_BMAPOD(PLL_DEBUG, b, "replayed bmap op=%d", op);
+	DEBUG_BMAPOD(PLL_NOTIFY, b, "replayed bmap op=%d", op);
 
 	rc = mds_bmap_write(b, 0, NULL, NULL);
 
