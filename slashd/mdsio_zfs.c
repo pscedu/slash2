@@ -92,7 +92,7 @@ slm_unmount_kstat(void)
 }
 
 int
-zfsslash2_init(void)
+zfsslash2_init(int ac, char **av)
 {
 	struct pscfs_args args = PSCFS_ARGS_INIT(0, NULL);
 	extern struct fuse_lowlevel_ops pscfs_fuse_ops;
@@ -128,6 +128,10 @@ zfsslash2_init(void)
 	rc = libzfs_init_fusesocket();
 	if (rc == 0)
 		rc = libzfs_init();
+
+	extern void dprintf_setup(int *, char **);
+	dprintf_setup(&ac, av);
+
 	atexit(slm_unmount_kstat);
 	return (rc);
 }

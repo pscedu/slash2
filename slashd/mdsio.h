@@ -69,7 +69,7 @@ int	mdsio_write_cursor(void *, size_t, void *, sl_log_write_t);
 
 struct mdsio_ops {
 	/* control interface */
-	int	(*mio_init)(void);
+	int	(*mio_init)(int, char **);
 	void	(*mio_exit)(void);
 
 	/* utility interface */
