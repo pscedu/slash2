@@ -44,8 +44,6 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
-static int forward_not_ready = 1;
-
 int
 slm_rmm_apply_update(struct srt_update_entry *entryp)
 {
@@ -321,10 +319,6 @@ slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
 
 	siteid = FID_GET_SITEID(fg->fg_fid);
 
-#if 1
-	if (forward_not_ready)
-		return (ENOSYS);
-#endif
 	if (op != SLM_FORWARD_MKDIR && op != SLM_FORWARD_RMDIR &&
 	    op != SLM_FORWARD_CREATE && op != SLM_FORWARD_UNLINK &&
 	    op != SLM_FORWARD_RENAME && op != SLM_FORWARD_SETATTR)
