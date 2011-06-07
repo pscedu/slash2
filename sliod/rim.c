@@ -146,7 +146,7 @@ sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
 		goto out;
 	if (ftruncate(fcmh_2_fd(fcmh),
 	    mq->bmapno * SLASH_BMAP_SIZE + mq->offset) == -1) {
-		DEBUG_FCMH(PLL_ERROR, fcmh, "truncate %zu",
+		DEBUG_FCMH(PLL_ERROR, fcmh, "truncate %"PSCPRIdOFFT,
 		    mq->bmapno * SLASH_BMAP_SIZE + mq->offset);
 		mp->rc = errno;
 	}
