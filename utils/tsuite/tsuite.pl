@@ -86,7 +86,7 @@ my $testname = $ARGV[0];
 $testname =~ s!.*/!!;
 
 our ($rootdir, $svnroot, @cli, $src, $intvtimeout, $runtimeout,
-    $logbase, $global_env, $tmp_base);
+    $logbase, $global_env);
 
 # Sanity check variables
 fatalx "rootdir not defined"	unless defined $rootdir;
@@ -97,7 +97,6 @@ fatalx "runtimeout not defined"	unless defined $runtimeout;
 fatalx "svnroot not defined"	unless defined $svnroot;
 fatalx "logbase not defined"	unless defined $logbase;
 fatalx "global_env not defined"	unless defined $global_env;
-fatalx "tmp_base not defined"	unless defined $tmp_base;
 
 local $SIG{ALRM} = sub { fatal "interval timeout exceeded" };
 
@@ -150,11 +149,10 @@ do {
 debug_msg "base dir = $base";
 
 my $mp = "$base/mp";
-my $tmpdir = "$tmp_base/slsuite.$tsid";
-my $datadir = "$tmpdir/data";
+my $datadir = "$base/data";
 
 mkdirs $base		or fatal "mkdirs $base";
-mkdirs $tmpdir		or fatal "mkdirs $tmpdir";
+mkdir $datadir		or fatal "mkdir $datadir";
 mkdir "$base/ctl"	or fatal "mkdir $base/ctl";
 mkdir "$base/fs"	or fatal "mkdir $base/fs";
 mkdir $mp		or fatal "mkdir $mp";
