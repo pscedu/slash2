@@ -34,7 +34,7 @@ sub fatal {
 }
 
 sub usage {
-	fatalx "usage: $0 [-mNqr] test-file\n";
+	fatalx "usage: $0 [-mNqr] test-file";
 }
 
 sub init_env {
@@ -135,7 +135,7 @@ sub mkdirs {
 	return 1;
 }
 
-fatal "$rootdir" unless -d $rootdir;
+fatal $rootdir unless -d $rootdir;
 
 my $base;
 my $tsid;
@@ -564,5 +564,5 @@ if ($opts{m}) {
 	}
 }
 
-print "error: $emsg\n" if $emsg;
+warn "error: $emsg" if $emsg;
 exit 1 if $emsg;
