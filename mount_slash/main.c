@@ -43,6 +43,7 @@
 #include "pfl/str.h"
 #include "pfl/sys.h"
 #include "pfl/time.h"
+#include "psc_ds/dynarray.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
@@ -58,6 +59,7 @@
 #include "ctl_cli.h"
 #include "fidc_cli.h"
 #include "fidcache.h"
+#include "mkfn.h"
 #include "mount_slash.h"
 #include "pathnames.h"
 #include "rpc_cli.h"
@@ -68,10 +70,11 @@
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
-/* XXX Big writes aren't supported on all versions of fuse.
- */
-//#define STD_MOUNT_OPTIONS	"allow_other,max_write=134217728,big_writes"
-#define STD_MOUNT_OPTIONS	"allow_other,max_write=134217728"
+#ifdef HAVE_FUSE_BIG_WRITES
+# define STD_MOUNT_OPTIONS	"allow_other,max_write=134217728,big_writes"
+#else
+# define STD_MOUNT_OPTIONS	"allow_other,max_write=134217728"
+#endif
 
 #define MSL_FS_BLKSIZ		(256 * 1024)
 
@@ -109,6 +112,7 @@ const char			*progname;
 char				 ctlsockfn[PATH_MAX] = SL_PATH_MSCTLSOCK;
 char				 mountpoint[PATH_MAX];
 int				 allow_root_uid = 1;
+struct psc_dynarray		 mslprogs = DYNARRAY_INIT;
 
 struct psc_vbitmap		 msfsthr_uniqidmap = VBITMAP_INIT_AUTO;
 psc_spinlock_t			 msfsthr_uniqidmap_lock = SPINLOCK_INIT;
@@ -290,6 +294,28 @@ mslfsop_access(struct pscfs_req *pfr, pscfs_inum_t inum, int mask)
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 }
 
+#define msl_progallowed(r)						\
+	(psc_dynarray_len(&mslprogs) == 0 || _msl_progallowed(r))
+
+int
+_msl_progallowed(struct pscfs_req *pfr)
+{
+	char pidfn[PATH_MAX], exe[PATH_MAX];
+	const char *p;
+	int n;
+
+	n = snprintf(pidfn, sizeof(pidfn), "/proc/%d/exe",
+	    pscfs_getclientctx(pfr)->pfcc_pid);
+	if (readlink(pidfn, exe, sizeof(exe)) == -1) {
+		psclog_warn("unable to check access on %s", pidfn);
+		return (1);
+	}
+	DYNARRAY_FOREACH(p, n, &mslprogs)
+		if (strcmp(exe, p) == 0)
+			return (1);
+	return (0);
+}
+
 __static void
 mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name, int oflags, mode_t mode)
@@ -309,6 +335,10 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	psc_assert(oflags & O_CREAT);
 
+	if (!msl_progallowed(pfr)) {
+		rc = EPERM;
+		goto out;
+	}
 	if (strlen(name) == 0) {
 		rc = ENOENT;
 		goto out;
@@ -400,8 +430,8 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	msl_bmap_reap_init(bcm, &mp->sbd);
 
-	DEBUG_BMAP(PLL_INFO, bcm, "nid=%"PRIx64" sbd_seq=%"PRId64
-	   " bmapnid=%"PRIx64, mp->sbd.sbd_ion_nid, mp->sbd.sbd_seq, 
+	DEBUG_BMAP(PLL_INFO, bcm, "nid=%"PRIx64" sbd_seq=%"PRId64" "
+	    "bmapnid=%"PRIx64, mp->sbd.sbd_ion_nid, mp->sbd.sbd_seq,
 	   bmap_2_ion(bcm));
 
 	SL_REPL_SET_BMAP_IOS_STAT(bcm->bcm_repls, 0, BREPLST_VALID);
@@ -435,8 +465,8 @@ __static int
 msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
     struct msl_fhent **mfhp, int *rflags)
 {
+	struct fidc_membh *c = NULL;
 	struct slash_creds creds;
-	struct fidc_membh *c;
 	int rc = 0;
 
 	msfsthr_ensure();
@@ -444,6 +474,11 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	mslfs_getcreds(pfr, &creds);
 
 	*mfhp = NULL;
+
+	if (!msl_progallowed(pfr)) {
+		rc = EPERM;
+		goto out;
+	}
 
 	rc = msl_load_fcmh(pfr, inum, &c);
 	if (rc)
@@ -468,9 +503,10 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 			rc = EISDIR;
 			goto out;
 		}
-		/* sfop_ctor() can be called prior to having attrs.  This
-		 *   means that dir fcmh's can't be initialized fully until
-		 *   here.
+		/*
+		 * sfop_ctor() can be called prior to having attrs.
+		 * This means that dir fcmh's can't be initialized fully
+		 * until here.
 		 */
 		slc_fcmh_initdci(c);
 	} else {
@@ -509,11 +545,11 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	}
 
  out:
-	DEBUG_FCMH(PLL_INFO, c, "new mfh=%p dir=%s rc=%d oflags=%#o",
-	    *mfhp, (oflags & O_DIRECTORY) ? "yes" : "no", rc, oflags);
-
-	if (c)
+	if (c) {
+		DEBUG_FCMH(PLL_INFO, c, "new mfh=%p dir=%s rc=%d oflags=%#o",
+		    *mfhp, (oflags & O_DIRECTORY) ? "yes" : "no", rc, oflags);
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+	}
 	return (rc);
 }
 
@@ -2255,6 +2291,31 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
 		vsnprintf(buf + n, PSC_THRNAME_MAX - n, namefmt, ap);
 }
 
+void
+read_mslprogs(void)
+{
+	char buf[LINE_MAX], fn[PATH_MAX];
+	struct stat stb;
+	FILE *fp;
+
+	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_MSLPROGS);
+	fp = fopen(fn, "r");
+	if (fp == NULL)
+		return;
+	while (fgets(buf, sizeof(buf), fp)) {
+		buf[strcspn(buf, "\n")] = '\0';
+		if (stat(buf, &stb) == -1) {
+			warn("%s", buf);
+			continue;
+		}
+		psc_dynarray_add(&mslprogs, pfl_strdup(buf));
+		psclog_notice("restricting open(2) access to %s", buf);
+	}
+	if (ferror(fp))
+		warn("%s", fn);
+	fclose(fp);
+}
+
 __dead void
 usage(void)
 {
@@ -2336,6 +2397,8 @@ main(int argc, char *argv[])
 		usage();
 
 	pscthr_init(MSTHRT_FSMGR, 0, NULL, NULL, 0, "msfsmgrthr");
+
+	read_mslprogs();
 
 	noncanon_mp = argv[0];
 	if (unmount_first)

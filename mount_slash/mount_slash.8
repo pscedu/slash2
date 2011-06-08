@@ -15,7 +15,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES lnet %
-.Dd May 31, 2011
+.Dd June 8, 2011
 .Dt MOUNT_SLASH 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -348,6 +348,10 @@ default
 network configuration
 .It Pa /var/lib/slash/authbuf.key
 inter-daemon communication key
+.It Pa /var/lib/slash/mslprogs
+optional executable
+.Xr open 2
+access list
 .It Xo
 .Pa /var/run/mount_slash. Ns Ic %h Ns Pa .sock
 .Xc
