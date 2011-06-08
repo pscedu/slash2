@@ -1303,7 +1303,7 @@ msbmaprathr_main(__unusedx struct psc_thread *thr)
 		nbmpces = 0;
 		mfh = lc_getwait(&bmapReadAheadQ);
 		if (mfh == lmfh)
-			usleep(100);
+			usleep(400);
 
 		spinlock(&mfh->mfh_lock);
 		psc_assert(mfh->mfh_flags & MSL_FHENT_RASCHED);
@@ -1334,13 +1334,15 @@ msbmaprathr_main(__unusedx struct psc_thread *thr)
 		} else
 			lc_addtail(&bmapReadAheadQ, mfh);
 		freelock(&mfh->mfh_lock);
-
 		
 		for (i=0; i < nbmpces; i++) {
 			/* XXX If read / wr refs are 0 then msl_bmpce_getbuf()
 			 *    should be called in a non-blocking fashion.
 			 */
 			bmpce = bmpces[i];
+			if (i)
+				psc_assert(bmpce->bmpce_owner == 
+				   bmpces[i]->bmpce_owner);
 
 			BMPCE_LOCK(bmpce);
 			msl_bmpce_getbuf(bmpce);
@@ -1350,6 +1352,7 @@ msbmaprathr_main(__unusedx struct psc_thread *thr)
 			bmpce->bmpce_flags |= BMPCE_READPNDG;
 			BMPCE_ULOCK(bmpce);
 		}
+		msl_bmap_lease_tryext(struct bmapc_memb *)bmpce->bmpce_owner);
 		msl_reada_rpc_launch(bmpces, nbmpces);
 		lmfh = mfh;
 	}
