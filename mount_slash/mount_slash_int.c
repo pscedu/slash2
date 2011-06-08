@@ -932,7 +932,7 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 		DYNARRAY_FOREACH(bmpce, i, a) {
 			BMPCE_LOCK(bmpce);
 			bmpce->bmpce_flags |= BMPCE_EIO;
-			DEBUG_BMPCE(PLL_WARN, bmpce, "set eio");
+			DEBUG_BMPCE(PLL_WARN, bmpce, "set EIO");
 			BMPCE_WAKE(bmpce);
 			BMPCE_ULOCK(bmpce);
 		}
