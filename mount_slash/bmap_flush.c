@@ -1352,7 +1352,7 @@ msbmaprathr_main(__unusedx struct psc_thread *thr)
 			bmpce->bmpce_flags |= BMPCE_READPNDG;
 			BMPCE_ULOCK(bmpce);
 		}
-		msl_bmap_lease_tryext(struct bmapc_memb *)bmpce->bmpce_owner);
+		msl_bmap_lease_tryext((struct bmapc_memb *)bmpce->bmpce_owner);
 		msl_reada_rpc_launch(bmpces, nbmpces);
 		lmfh = mfh;
 	}
