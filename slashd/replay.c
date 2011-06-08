@@ -48,7 +48,7 @@ mds_replay_bmap(void *jent, int op)
 	struct bmapc_memb *b = NULL;
 	struct slash_fidgen fg;
 	int i, rc;
-	union {
+	struct {
 		slfid_t		fid;
 		sl_bmapno_t	bno;
 	} *cp = jent;
