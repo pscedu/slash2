@@ -719,3 +719,21 @@ total 21
 3377699720527874 drwxr-xr-x 1 root root 2 May 23 10:21 dir1
 3377699720527875 -rw-r--r-- 1 root root 0 May 23 10:21 file1
 
+06/07/2011
+----------
+
+Namespace operation still have some minor issues (I guess it is related
+to error handling or cleanup):
+
+zhihui@lemon: ~$ cd /zzh-slash2
+zhihui@lemon: /zzh-slash2$ ls
+zhihui@lemon: /zzh-slash2$ sudo mkdir zhihui
+mkdir: cannot create directory `zhihui': Device or resource busy
+zhihui@lemon: /zzh-slash2$ sudo mkdir zhihui
+mkdir: cannot create directory `zhihui': File exists
+zhihui@lemon: /zzh-slash2$ ls -ali
+total 15
+               1 drwxr-xr-x   3 root root    4 Jun  7 11:35 .
+               2 dr-xr-xr-x. 39 root root 4096 May 25 11:32 ..
+4503599627370498 drwxr-xr-x   2 root root    2 Jun  7 11:35 zhihui
+

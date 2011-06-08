@@ -943,11 +943,14 @@ mds_update_cursor(void *buf, uint64_t txg, int flag)
 	struct psc_journal_cursor *cursor = buf;
 	uint64_t hwm, lwm;
 	int rc;
+	static uint64_t start_txg = 0;
 
 	if (flag == 1) {
+		start_txg = txg;
 		pjournal_update_txg(mdsJournal, txg);
 		return;
 	}
+	psc_assert(start_txg == txg);
 
 	/*
 	 * During the replay, actually as soon as ZFS starts, its group
