@@ -140,8 +140,6 @@ slmrcmthr_walk_brepls(struct slm_replst_workreq *rsw,
 		mq->boff = n;
 		mq->fg = *USWI_FG(wk);
 
-		memset(srcm->srcm_page, 0,
-		    howmany(srcm->srcm_page_bitpos, NBBY));
 		srcm->srcm_page_bitpos = 0;
 	}
 	memset(&bhdr, 0, sizeof(bhdr));
