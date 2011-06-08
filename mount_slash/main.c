@@ -1478,8 +1478,8 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 	}
 
 	freelock(&mfh->mfh_lock);
+	DEBUG_FCMH(PLL_INFO, c, "file closed", mfh);
 	fcmh_op_done_type(c, FCMH_OPCNT_OPEN);
-	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "freeing mfh(%p)", mfh);
 	PSCFREE(mfh);
 	pscfs_reply_close(pfr, rc);
 }
