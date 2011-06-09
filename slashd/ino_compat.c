@@ -260,7 +260,7 @@ mds_ino_read_v1(struct slash_inode_handle *ih)
 	psc_crc64_calc(&crc, &ino, sizeof(ino));
 	if (crc != od_crc)
 		return (SLERR_BADCRC);
-	ih->inoh_ino.ino_version = ino.version;
+	ih->inoh_ino.ino_version = INO_VERSION;
 	ih->inoh_ino.ino_bsz = ino.bsz;
 	ih->inoh_ino.ino_nrepls = ino.nrepls;
 	ih->inoh_ino.ino_replpol = ino.replpol;
