@@ -54,8 +54,10 @@ mds_inode_dump(struct sl_ino_compat *sic, struct slash_inode_handle *ih,
 		rc = bmap_getf(f, i, SL_WRITE, fl, &b);
 		inoh_2_mdsio_data(ih) = th;
 
-		if (rc == SLERR_BMAP_INVALID)
+		if (rc == SLERR_BMAP_INVALID) {
+			INOH_RLOCK(ih);
 			break;
+		}
 
 		if (rc)
 			return (rc);
