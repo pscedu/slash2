@@ -61,7 +61,7 @@ void doit(const int *values, const int size)
 
 	file_count++;
 	if (verbose)
-		printf("%6d: ", file_count);
+		printf("%7d: ", file_count);
 
 	switch (action) {
 	    case 0:
