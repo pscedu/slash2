@@ -1295,7 +1295,7 @@ void
 msbmaprathr_main(__unusedx struct psc_thread *thr)
 {
 #define MAX_BMPCES_PER_RPC 32
-	struct msl_fhent *mfh, *lmfh;
+	struct msl_fhent *mfh, *lmfh = NULL;
 	struct bmap_pagecache_entry *bmpces[MAX_BMPCES_PER_RPC], *tmp, *bmpce;
 	int nbmpces, i;
 
