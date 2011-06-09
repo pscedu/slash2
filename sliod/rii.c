@@ -139,7 +139,9 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w,
 		/* XXX check this return code */
 //		if (!rc)
 		if (1) {
-			s->slvr_flags |= SLVR_DATARDY;
+			/* SLVR_DATARDY is set in wio_done
+			 *    when the slvr lock is taken again.
+			 */
 			rc = slvr_fsbytes_wio(s, slvrsiz, 0);
 		}
 	}
