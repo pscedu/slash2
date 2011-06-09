@@ -1,8 +1,8 @@
 # $Id$
 
 # NCAST configuration
-global port=1301;
-global net=sdp11;
+set port=1301;
+set net=sdp11;
 
 # Pull in all config files
 # include "/etc/slash/conf.d/*"
@@ -26,4 +26,3 @@ site @PSCARCH {
 		fsroot  = /local/s2io;
 	}
 }
-
