@@ -227,6 +227,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			else
 				slvr_ref[i]->slvr_pndgwrts--;
 
+			slvr_clear_inuse(slvr_ref[i], 0, SLASH_SLVR_SIZE);
 			slvr_lru_tryunpin_locked(slvr_ref[i]);
 			SLVR_ULOCK(slvr_ref[i]);
 
