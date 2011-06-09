@@ -881,6 +881,8 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	rc = msl_getrqstatus(csvc, rq);
 	if (rc) {
 		DEBUG_REQ(PLL_ERROR, rq, "non-zero status %d", rc);
+		DEBUG_BMAP(PLL_ERROR, b, "non-zero status %d", rc);
+		DEBUG_BIORQ(PLL_ERROR, r, "non-zero status %d", rc);
 		goto out;
 	}
 
@@ -980,7 +982,9 @@ msl_readahead_cb(struct pscrpc_request *rq,
 
 		bmpce->bmpce_owner = NULL;
 
-		DEBUG_BMPCE(PLL_INFO, bmpce, "ra cb rc=%d", rc);
+		DEBUG_BMPCE(rc ? PLL_ERROR : PLL_INFO, bmpce, "rc=%d", rc);
+		DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b, "rc=%d", rc);
+
 		pll_remove(&bmpc->bmpc_pndg_ra, bmpce);		
 		BMPCE_LOCK(bmpce);
 		if (rc)
