@@ -306,8 +306,8 @@ slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
     uint32_t mode, const struct slash_creds *creds,
     struct srt_stat *sstb, int32_t to_set)
 {
-	int rc, len, _siter;
-	struct sl_resm *resm;
+	int rc, len, i;
+	struct sl_resm *resm = NULL;
 	struct sl_site *site;
 	struct sl_resource *res;
 	struct slashrpc_cservice *csvc;
@@ -328,7 +328,7 @@ slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
 	if (site == NULL)
 		return (EBADF);
 
-	SITE_FOREACH_RES(site, res, _siter) {
+	SITE_FOREACH_RES(site, res, i) {
 		if (res->res_type != SLREST_MDS)
 			continue;
 		resm = psc_dynarray_getpos(&res->res_members, 0);

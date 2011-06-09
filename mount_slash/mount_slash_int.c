@@ -957,7 +957,7 @@ msl_readahead_cb(struct pscrpc_request *rq,
 	struct slashrpc_cservice *csvc;
 	struct psc_waitq *wq = NULL;
 	struct bmap_pagecache *bmpc;
-	struct bmapc_memb *b;
+	struct bmapc_memb *b = NULL;
 	int rc, i;
 
 	bmpces = args->pointer_arg[MSL_CBARG_BMPCE];
@@ -1271,13 +1271,14 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 	struct bmap_pagecache_entry *bmpce, **bmpces_cbarg;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
-	struct bmapc_memb *b;
+	struct bmapc_memb *b = NULL;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct iovec *iovs;
-	uint32_t off;
+	uint32_t off = 0;
 	int rc, i, added = 0;
 
+	psc_assert(nbmpce > 0);
 	psc_assert(nbmpce <= BMPC_MAXBUFSRPC);
 
 	bmpces_cbarg = PSCALLOC((nbmpce + 1) * sizeof(void *));
