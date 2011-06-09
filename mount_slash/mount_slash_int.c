@@ -306,6 +306,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 				bmpce->bmpce_owner = b;
 				bmpce_handle_lru_locked(bmpce, bmpc, op, 1);
 				bmap_op_start_type(b, BMAP_OPCNT_READA);
+
 				/* Place the bmpce into our private pll.  This is 
 				 *    done so that the ra thread may coalesce
 				 *    bmpces without sorting overhead.  In addition, 
@@ -1011,8 +1012,7 @@ msl_readahead_cb(struct pscrpc_request *rq,
 		b->bcm_flags |= BMAP_TIMEOQ;
 		lc_addtail(&bmapTimeoutQ, b);
 	}
-	bmap_op_done_type(b, BMAP_OPCNT_READA);
-
+	BMAP_ULOCK(b);
 	PSCFREE(bmpces);
 	return (rc);
 }
@@ -1328,11 +1328,17 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 	rq->rq_interpret_reply = msl_readahead_cb;
 	rq->rq_comp = &rpcComp;
 
-	for (i=0; i < nbmpce; i++)
+	for (i=0; i < nbmpce; i++) {
 		/* bmpce_ralentry is available at this point, add
 		 *   the ra to the pndg list before pushing it out the door.
 		 */
 		pll_addtail(&bmap_2_bmpc(b)->bmpc_pndg_ra, bmpces[i]);
+		/* Once the bmpce's are on the bmpc_pndg_ra list they're
+		 *   counted as pending I/O's.  Therefore the bmap won't 
+		 *   be freed prematurely if we drop ref here.
+		 */
+		bmap_op_done_type(b, BMAP_OPCNT_READA);
+	}
 
 	added = 1;
 
@@ -1356,7 +1362,6 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 		bmpce_handle_lru_locked(bmpce, bmap_2_bmpc(b), BIORQ_READ, 0);
 	}
 	BMPC_ULOCK(bmap_2_bmpc(b));
-	bmap_op_done_type(b, BMAP_OPCNT_READA);
 
 	if (rq) {
 		DEBUG_REQ(PLL_ERROR, rq, "req failed");

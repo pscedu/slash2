@@ -870,8 +870,8 @@ bmap_flush(void)
 		psc_assert(b->bcm_flags & BMAP_CLI_FLUSHPROC);
 
 		bmpc = bmap_2_bmpc(b);
-		BMPC_LOCK(bmpc);
 		if (!(b->bcm_flags & BMAP_DIRTY)) {
+			BMPC_LOCK(bmpc);
 			psc_assert(!bmpc_queued_writes(bmpc));
 
 			if (!bmpc_queued_ios(bmpc)) {
@@ -892,7 +892,7 @@ bmap_flush(void)
 			BMAP_ULOCK(b);
 			continue;
 		}
-		BMPC_ULOCK(bmpc);
+
 		if (bmap_flushable(b)) {
 			i++;
 			psc_dynarray_add(&bmaps, b);
