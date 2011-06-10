@@ -427,20 +427,18 @@ msctlparam_mountpoint_get(char buf[PCP_VALUE_MAX])
 
 struct psc_ctlop msctlops[] = {
 	PSC_CTLDEFOPS,
-	{ msctlrep_replrq,		sizeof(struct msctlmsg_replrq) },
-	{ msctlrep_replrq,		sizeof(struct msctlmsg_replrq) },
-	{ slctlrep_getconns,		sizeof(struct slctlmsg_conn) },
-	{ slctlrep_getfcmhs,		sizeof(struct slctlmsg_fcmh) },
-	{ msctlrep_getreplst,		sizeof(struct msctlmsg_replst) },
-	{ NULL,				0 },
-	{ NULL,				0 },
-	{ NULL,				0 },
-	{ NULL,				0 },
-	{ NULL,				0 },
-	{ NULL,				0 },
-	{ NULL,				0 },
-	{ msctlhnd_set_bmapreplpol,	sizeof(struct msctlmsg_bmapreplpol) },
-	{ msctlhnd_set_newreplpol,	sizeof(struct msctlmsg_newreplpol) }
+/* ADDREPLRQ		*/ { msctlrep_replrq,		sizeof(struct msctlmsg_replrq) },
+/* DELREPLRQ		*/ { msctlrep_replrq,		sizeof(struct msctlmsg_replrq) },
+/* GETCONNS		*/ { slctlrep_getconns,		sizeof(struct slctlmsg_conn) },
+/* GETFCMH		*/ { slctlrep_getfcmhs,		sizeof(struct slctlmsg_fcmh) },
+/* GETREPLST		*/ { msctlrep_getreplst,	sizeof(struct msctlmsg_replst) },
+/* GETREPLST_SLAVE	*/ { NULL,			0 },
+/* GET_BMAPREPLPOL	*/ { NULL,			0 },
+/* GET_NEWREPLPOL	*/ { NULL,			0 },
+/* IMPORT		*/ { NULL,			0 },
+/* REV_LOOKUP		*/ { NULL,			0 },
+/* SET_BMAPREPLPOL	*/ { msctlhnd_set_bmapreplpol,	sizeof(struct msctlmsg_bmapreplpol) },
+/* SET_NEWREPLPOL	*/ { msctlhnd_set_newreplpol,	sizeof(struct msctlmsg_newreplpol) }
 };
 
 psc_ctl_thrget_t psc_ctl_thrgets[] = {
