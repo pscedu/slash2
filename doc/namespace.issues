@@ -737,3 +737,51 @@ total 15
                2 dr-xr-xr-x. 39 root root 4096 May 25 11:32 ..
 4503599627370498 drwxr-xr-x   2 root root    2 Jun  7 11:35 zhihui
 
+
+06/10/2011
+----------
+
+MDS on orange, log level 4; client on lemon, log level 2.  File system is freshly formatted
+and populated with one-million-file.c written yesterday.  I restart them between tests.
+
+No one seems to be using orange and lemon at the moment, grapefruit is the I/O server, but
+this is metadata only test.
+
+zhihui@lemon: ~/projects-lemon/slash_nara/tests/namespace$ time ls -al /zzh-slash2-lemon/test1/ 
+
+.....
+
+-rwx------ 1 zhihui staff       0 Jun  9 16:25 9817652403
+-rwx------ 1 zhihui staff       0 Jun  9 16:25 9817652430
+-rwx------ 1 zhihui staff       0 Jun  9 16:29 9817653204
+-rwx------ 1 zhihui staff       0 Jun  9 16:29 9817653240
+
+real	158m11.899s
+user	0m9.357s
+sys	0m19.760s
+
+
+zhihui@lemon: ~/projects-lemon/slash_nara/tests/namespace$ time ls -al -U /zzh-slash2-lemon/test1/ 
+
+.....
+
+-rwx------ 1 zhihui staff       0 Jun  9 16:12 8712495360
+-rwx------ 1 zhihui staff       0 Jun  9 15:29 1630958274
+-rwx------ 1 zhihui staff       0 Jun  9 15:24 1592607438
+-rwx------ 1 zhihui staff       0 Jun  9 15:28 1758602439
+-rwx------ 1 zhihui staff       0 Jun  9 15:27 1890425763
+-rwx------ 1 zhihui staff       0 Jun  9 15:40 0182943675
+-rwx------ 1 zhihui staff       0 Jun  9 16:04 2315984067
+-rwx------ 1 zhihui staff       0 Jun  9 16:29 6710853249
+-rwx------ 1 zhihui staff       0 Jun  9 16:17 3816024759
+-rwx------ 1 zhihui staff       0 Jun  9 15:26 1537028496
+-rwx------ 1 zhihui staff       0 Jun  9 16:10 7216849305
+-rwx------ 1 zhihui staff       0 Jun  9 16:07 2816054379
+-rwx------ 1 zhihui staff       0 Jun  9 15:40 9162853704
+-rwx------ 1 zhihui staff       0 Jun  9 16:10 4215076893
+
+real	163m21.320s
+user	0m5.495s
+sys	0m21.260s
+
+So -U does not help?
