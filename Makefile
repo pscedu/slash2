@@ -7,7 +7,7 @@ MAN+=		doc/sladm.7
 MAN+=		doc/slash.conf.5
 
 # this is a workaround to SRC_PATH better
-MODULES+=	pfl lnet-hdrs
+MODULES+=	pfl lnet-hdrs zfs
 
 include ${SLASHMK}
 
