@@ -79,25 +79,6 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 #define MSL_FS_BLKSIZ		(256 * 1024)
 
-#define MSL_RMC_NEWREQ(pfr, csvc, op, rq, mq, mp, rc)			\
-	do {								\
-		do {							\
-			if (rq) {					\
-				pscrpc_req_finished(rq);		\
-				(rq) = NULL;				\
-			}						\
-			if (csvc) {					\
-				sl_csvc_decref(csvc);			\
-				(csvc) = NULL;				\
-			}						\
-			(rc) = slc_rmc_getimp((pfr), &(csvc));		\
-			if (rc)						\
-				break;					\
-			(rc) = SL_RSX_NEWREQ((csvc), (op), (rq), (mq),	\
-			    (mp));					\
-		} while ((rc) && slc_rmc_retry((pfr), &(rc)));		\
-	} while (0)
-
 #define msl_load_fcmh(pfr, inum, fp)					\
 	fidc_lookup_load_inode((inum), (fp), pscfs_getclientctx(pfr))
 
@@ -580,8 +561,8 @@ int
 msl_stat(struct fidc_membh *fcmh, void *arg)
 {
 	struct slashrpc_cservice *csvc = NULL;
+	struct pscfs_clientctx *pfcc = arg;
 	struct pscrpc_request *rq = NULL;
-	struct pscfs_req *pfr = arg;
 	struct srm_getattr_req *mq;
 	struct srm_getattr_rep *mp;
 	struct timeval now;
@@ -610,7 +591,7 @@ msl_stat(struct fidc_membh *fcmh, void *arg)
 	FCMH_ULOCK(fcmh);
 
  retry:
-	MSL_RMC_NEWREQ(pfr, csvc, SRMT_GETATTR, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ_PFCC(pfcc, csvc, SRMT_GETATTR, rq, mq, mp, rc);
 	if (rc)
 		goto out;
 
@@ -618,7 +599,7 @@ msl_stat(struct fidc_membh *fcmh, void *arg)
 	mq->iosid = prefIOS;
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc && slc_rmc_retry(pfr, &rc))
+	if (rc && slc_rmc_retry_pfcc(pfcc, &rc))
 		goto retry;
 	if (rc == 0)
 		rc = mp->rc;

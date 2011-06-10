@@ -18,6 +18,7 @@
  */
 
 #include "pfl/cdefs.h"
+#include "pfl/fs.h"
 #include "pfl/str.h"
 #include "psc_ds/list.h"
 #include "psc_rpc/rpc.h"
@@ -90,12 +91,11 @@ slc_rmc_setmds(const char *name)
  *	maximum allowed timeout has been reached for MDS communication.
  */
 int
-slc_rmc_retry(__unusedx struct pscfs_req *pfr, int *rc)
+slc_rmc_retry_pfcc(__unusedx struct pscfs_clientctx *pfcc, int *rc)
 {
 	int retry = 1;
 
 #if 0
-	ctx = fuse_get_context(rq);
 	retry = global setting
 	retry = read_proc_env(ctx->pid, "");
 	retry = hard timeout
@@ -105,7 +105,7 @@ slc_rmc_retry(__unusedx struct pscfs_req *pfr, int *rc)
 }
 
 int
-slc_rmc_getimp(__unusedx struct pscfs_req *pfr,
+slc_rmc_getimp(struct pscfs_clientctx *pfcc,
     struct slashrpc_cservice **csvcp)
 {
 	int rc = 0;
@@ -114,7 +114,7 @@ slc_rmc_getimp(__unusedx struct pscfs_req *pfr,
 		*csvcp = slc_getmcsvc(slc_rmc_resm);
 		if (*csvcp == NULL) {
 			rc = slc_rmc_resm->resm_csvc->csvc_lasterrno;
-			if (slc_rmc_retry(pfr, &rc))
+			if (slc_rmc_retry_pfcc(pfcc, &rc))
 				continue;
 		}
 	} while (*csvcp == NULL && rc == 0);

@@ -419,6 +419,45 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
+int
+msctlhnd_rev_lookup(int fd, struct psc_ctlmsghdr *mh, void *m)
+{
+	struct msctlmsg_rvlk *mrvlk = m;
+	struct pscfs_clientctx pfcc;
+	struct slash_creds cr;
+	struct fidc_membh *f;
+	slfid_t fid;
+	int rc;
+
+	fid = mrvlk->mrvlk_fid;
+
+	rc = msctl_getcreds(fd, &cr);
+	if (rc)
+		return (psc_ctlsenderr(fd, mh,
+		    SLPRI_FID": unable to obtain credentials: %s",
+		    fid, slstrerror(rc)));
+	rc = msctl_getclientctx(fd, &pfcc);
+	if (rc)
+		return (psc_ctlsenderr(fd, mh,
+		    SLPRI_FID": unable to obtain client context: %s",
+		    fid, slstrerror(rc)));
+
+	rc = fidc_lookup_load_inode(fid, &f, &pfcc);
+	if (rc)
+		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
+		    fid, slstrerror(rc)));
+
+	FCMH_LOCK(f);
+	rc = checkcreds(&f->fcmh_sstb, &cr, R_OK | X_OK);
+	fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
+
+	if (rc)
+		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
+		    fid, slstrerror(rc)));
+
+	return (psc_ctlmsg_sendv(fd, mh, mrvlk));
+}
+
 void
 msctlparam_mountpoint_get(char buf[PCP_VALUE_MAX])
 {
@@ -436,7 +475,7 @@ struct psc_ctlop msctlops[] = {
 /* GET_BMAPREPLPOL	*/ { NULL,			0 },
 /* GET_NEWREPLPOL	*/ { NULL,			0 },
 /* IMPORT		*/ { NULL,			0 },
-/* REV_LOOKUP		*/ { NULL,			0 },
+/* REV_LOOKUP		*/ { msctlhnd_rev_lookup,	sizeof(struct msctlmsg_rvlk) },
 /* SET_BMAPREPLPOL	*/ { msctlhnd_set_bmapreplpol,	sizeof(struct msctlmsg_bmapreplpol) },
 /* SET_NEWREPLPOL	*/ { msctlhnd_set_newreplpol,	sizeof(struct msctlmsg_newreplpol) }
 };

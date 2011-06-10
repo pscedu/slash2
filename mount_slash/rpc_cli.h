@@ -23,7 +23,7 @@
 #include "mount_slash.h"
 #include "slconn.h"
 
-struct pscfs_req;
+struct pscfs_clientctx;
 struct pscrpc_completion;
 struct pscrpc_import;
 struct pscrpc_request;
@@ -45,16 +45,37 @@ extern struct pscrpc_completion rpcComp;
 #define SRCM_REPSZ			512
 #define SRCM_SVCNAME			"msrcm"
 
-#define slc_geticsvcxf(resm, fl, exp)						\
-	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT | (fl), (exp),	\
-	    (resm)->resm_nid, SRIC_REQ_PORTAL, SRIC_REP_PORTAL,			\
-	    SRIC_MAGIC, SRIC_VERSION, &resm2rmci(resm)->rmci_mutex,		\
+#define MSL_RMC_NEWREQ_PFCC(pfcc, csvc, op, rq, mq, mp, rc)		\
+	do {								\
+		if (rq) {						\
+			pscrpc_req_finished(rq);			\
+			(rq) = NULL;					\
+		}							\
+		if (csvc) {						\
+			sl_csvc_decref(csvc);				\
+			(csvc) = NULL;					\
+		}							\
+		(rc) = slc_rmc_getimp((pfcc), &(csvc));			\
+		if (rc)							\
+			break;						\
+		(rc) = SL_RSX_NEWREQ((csvc), (op), (rq), (mq),		\
+		    (mp));						\
+	} while ((rc) && slc_rmc_retry_pfcc((pfcc), &(rc)))
+
+#define MSL_RMC_NEWREQ(pfr, csvc, op, rq, mq, mp, rc)			\
+	MSL_RMC_NEWREQ_PFCC(pscfs_getclientctx(pfr), (csvc), (op),	\
+	    (rq), (mq), (mp), (rc))
+
+#define slc_geticsvcxf(resm, fl, exp)					\
+	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT | (fl),	\
+	    (exp), (resm)->resm_nid, SRIC_REQ_PORTAL, SRIC_REP_PORTAL,	\
+	    SRIC_MAGIC, SRIC_VERSION, &resm2rmci(resm)->rmci_mutex,	\
 	    &resm2rmci(resm)->rmci_mwc,	SLCONNT_IOD, msl_getmw())
 
-#define slc_getmcsvcx(resm, fl, exp)						\
-	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT | (fl), (exp),	\
-	    (resm)->resm_nid, SRMC_REQ_PORTAL, SRMC_REP_PORTAL,			\
-	    SRMC_MAGIC, SRMC_VERSION, &resm2rmci(resm)->rmci_mutex,		\
+#define slc_getmcsvcx(resm, fl, exp)					\
+	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT | (fl),	\
+	    (exp), (resm)->resm_nid, SRMC_REQ_PORTAL, SRMC_REP_PORTAL,	\
+	    SRMC_MAGIC, SRMC_VERSION, &resm2rmci(resm)->rmci_mutex,	\
 	    &resm2rmci(resm)->rmci_mwc, SLCONNT_MDS, msl_getmw())
 
 #define slc_geticsvc(resm)		slc_geticsvcxf((resm), 0, NULL)
@@ -65,10 +86,12 @@ extern struct pscrpc_completion rpcComp;
 
 void	slc_rpc_initsvc(void);
 
-int	slc_rmc_getimp(struct pscfs_req *, struct slashrpc_cservice **);
+int	slc_rmc_getimp(struct pscfs_clientctx *, struct slashrpc_cservice **);
 int	slc_rmc_getimp1(struct slashrpc_cservice **, struct sl_resm *);
-int	slc_rmc_retry(struct pscfs_req *, int *);
+int	slc_rmc_retry_pfcc(struct pscfs_clientctx *, int *);
 int	slc_rmc_setmds(const char *);
+
+#define slc_rmc_retry(pfr, rcp)	slc_rmc_retry_pfcc(pscfs_getclientctx(pfr), (rcp))
 
 int	slc_rcm_handler(struct pscrpc_request *);
 
