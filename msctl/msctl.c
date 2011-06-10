@@ -606,7 +606,7 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 			rsb_accul_replica_stats(rsb, iosidx, &bact, &both);
 
 		psc_fmt_ratio(rbuf, bact, bact + both);
-		printf("     %-54s %6d %6d %6s",
+		printf("  %-54s %6d %6d %6s",
 		    current_mrs.mrs_iosv[iosidx],
 		    bact, bact + both, rbuf);
 		psclist_for_each_entry(rsb, &current_mrs_bdata, rsb_lentry) {
@@ -615,10 +615,10 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 			for (nb = 0; nb < rsb->rsb_nbmaps; nb++, nbw++,
 			    off += SL_BITS_PER_REPLICA *
 			    current_mrs.mrs_nios + SL_NBITS_REPLST_BHDR) {
-				if (nbw > 76)
+				if (nbw >= 76)
 					nbw = 0;
 				if (nbw == 0)
-					printf("\n\t");
+					printf("\n    ");
 
 				memset(&bhdr, 0, sizeof(bhdr));
 				pfl_bitstr_copy(&bhdr, 0, rsb->rsb_data, nb *
