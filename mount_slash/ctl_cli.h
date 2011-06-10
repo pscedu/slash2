@@ -70,10 +70,15 @@ struct msctlmsg_fncmd {
 	slfid_t			mfc_fid;
 };
 
+struct msctlmsg_rvlk {
+	slfid_t			mrvlk_fid;
+	char			mrvlk_fn[SL_PATH_MAX];
+};
+
 #define REPLRQ_BMAPNO_ALL	(-1)
 
 /* mount_slash message types */
-#define MSCMT_ADDREPLRQ		NPCMT
+#define MSCMT_ADDREPLRQ		(NPCMT +  0)
 #define MSCMT_DELREPLRQ		(NPCMT +  1)
 #define MSCMT_GETCONNS		(NPCMT +  2)
 #define MSCMT_GETFCMH		(NPCMT +  3)
@@ -82,11 +87,9 @@ struct msctlmsg_fncmd {
 #define MSCMT_GET_BMAPREPLPOL	(NPCMT +  6)
 #define MSCMT_GET_NEWREPLPOL	(NPCMT +  7)
 #define MSCMT_IMPORT		(NPCMT +  8)
-#define MSCMT_LCACHE_ADD	(NPCMT +  9)
-#define MSCMT_LCACHE_REMOVE	(NPCMT + 10)
-#define MSCMT_LCACHE_STATUS	(NPCMT + 11)
-#define MSCMT_SET_BMAPREPLPOL	(NPCMT + 12)
-#define MSCMT_SET_NEWREPLPOL	(NPCMT + 13)
+#define MSCMT_REV_LOOKUP	(NPCMT +  9)
+#define MSCMT_SET_BMAPREPLPOL	(NPCMT + 10)
+#define MSCMT_SET_NEWREPLPOL	(NPCMT + 11)
 
 #define SLASH_FSID		0x51a54
 
