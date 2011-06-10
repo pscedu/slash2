@@ -14,7 +14,7 @@ site \@tsuite {
 
 	resource mds0 {
 		desc	= "first MDS";
-		# \@zfspool=adam_zpool /adam.s2zcf hdb
+		# \@zfspool=adam_zpool hdb
 		type	= mds;
 		id	= 101;
 		ifs	= adamantium;

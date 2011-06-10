@@ -146,7 +146,7 @@ do {
 	$base = "$rootdir/slsuite.$tsid";
 } while -d $base;
 
-debug_msg "base dir = $base";
+debug_msg "base dir: $base";
 
 my $mp = "$base/mp";
 my $datadir = "$base/data";
@@ -159,21 +159,13 @@ mkdir $mp		or fatal "mkdir $mp";
 
 # Checkout the source and build it
 chdir $base		or fatal "chdir $base";
-if (defined($src)) {
-	symlink $src, "$base/src" or fatal "symlink $src, $base/src";
-} else {
+my $build = 0;
+unless (defined($src)) {
 	$src = "$base/src";
-	debug_msg "svn checkout -q $svnroot $src";
 	execute "svn checkout -q $svnroot $src";
 	fatalx "svn failed" if $?;
 
-	debug_msg "make build";
-	execute "cd $src/distrib/fuse && ./configure >/dev/null && make >/dev/null";
-	fatalx "make failed" if $?;
-	execute "cd $src/zfs && make build >/dev/null";
-	fatalx "make failed" if $?;
-	execute "cd $src/slash_nara && make build >/dev/null";
-	fatalx "make failed" if $?;
+	$build = 1;
 }
 
 my $slbase = "$src/slash_nara";
@@ -259,9 +251,9 @@ sub parse_conf {
 					$r->{type} = $1;
 				} elsif ($line =~ /^\s*id\s*=\s*(\d+)\s*;\s*$/) {
 					$r->{id} = $1;
-				} elsif ($line =~ /^\s*#\s*\@zfspool\s*=\s*(\w+)\s+(\w+)\s+(.*)\s*$/) {
+				} elsif ($line =~ m{^\s*#\s*\@zfspool\s*=\s*(\w+)\s+(.*)\s*$}) {
 					$r->{zpool_name} = $1;
-					$r->{zpool_cachefile} = $2;
+					$r->{zpool_cachefile} = "$base/$1.zcf";
 					$r->{zpool_args} = $3;
 				} elsif ($line =~ /^\s*#\s*\@prefmds\s*=\s*(\w+\@\w+)\s*$/) {
 					$r->{prefmds} = $1;
@@ -308,6 +300,15 @@ print CLICMD cli_cmd(
 close CLICMD;
 
 parse_conf();
+
+if ($build) {
+	execute "cd $src/distrib/fuse && ./configure >/dev/null && make >/dev/null";
+	fatalx "make failed" if $?;
+	execute "cd $src/zfs && make build >/dev/null";
+	fatalx "make failed" if $?;
+	execute "cd $src/slash_nara && make build >/dev/null";
+	fatalx "make failed" if $?;
+}
 
 my ($i);
 my $make_authbuf_key = 1;
