@@ -15,7 +15,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES rpc fuse %
-.Dd May 31, 2011
+.Dd June 10, 2011
 .Dt MSCTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -187,6 +187,11 @@ behavior.
 .\"			.Cm bmap-repl-policy
 .\"			for details on modifying a bmap's replication policy.
 .\"			EOF
+.\"		"rev-lookup Ar fid ..." => <<'EOF',
+.\"			Perform a reverse path name lookup for the given
+.\"			.Ar fid
+.\"			arguments.
+.\"			EOF
 .\"	}
 The supported commands are as follows:
 .Bl -tag -width 3n
@@ -333,6 +338,10 @@ The following legend lists the states a bmap may be in:
 See
 .Cm bmap-repl-policy
 for details on modifying a bmap's replication policy.
+.It Cm rev-lookup Ar fid ...
+Perform a reverse path name lookup for the given
+.Ar fid
+arguments.
 .El
 .\" }%
 .Pp

@@ -508,6 +508,46 @@ cmd_replst(int ac, char **av)
 		walk(av[i], cmd_replst_one, &arg);
 }
 
+void
+cmd_rev_lookup(int ac, char **av)
+{
+	struct msctlmsg_rvlk *mrvlk;
+	const char *p;
+	slfid_t fid;
+	char *endp;
+	int i;
+
+	if (ac < 2)
+		errx(1, "%s: no file(s) specified", av[0]);
+	for (i = 1; i < ac; i++) {
+		p = av[i];
+
+		if (p[0] == '0' && p[1] == 'x')
+			p += 2;
+		fid = strtoll(p, &endp, 16);
+		if (endp == p || *endp != '\0') {
+			warnx("invalid FID: %s", av[i]);
+			continue;
+		}
+		mrvlk = psc_ctlmsg_push(MSCMT_REV_LOOKUP, sizeof(*mrvlk));
+		mrvlk->mrvlk_fid = fid;
+	}
+}
+
+void
+rvlk_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
+{
+	printf("%-16s %s\n", "fid", "pathname");
+}
+
+void
+rvlk_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
+{
+	const struct msctlmsg_rvlk *mrvlk = m;
+
+	printf("%016"SLPRIxFID" %s\n", mrvlk->mrvlk_fid, mrvlk->mrvlk_fn);
+}
+
 int
 replst_slave_check(struct psc_ctlmsghdr *mh, const void *m)
 {
@@ -713,7 +753,6 @@ ms_ctlmsg_error_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	warnx("%s", pce->pce_errmsg);
 }
 
-
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 	PSC_CTLSHOW_DEFS,
 	{ "connections",	packshow_conns },
@@ -729,20 +768,18 @@ struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 
 struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 	PSC_CTLMSG_PRFMT_DEFS,
-	{ NULL,			NULL,			0,					NULL },
-	{ NULL,			NULL,			0,					NULL },
-	{ sl_conn_prhdr,	sl_conn_prdat,		sizeof(struct slctlmsg_conn),		NULL },
-	{ sl_fcmh_prhdr,	sl_fcmh_prdat,		sizeof(struct slctlmsg_fcmh),		NULL },
-	{ NULL,			NULL,			0,					replst_savdat },
-	{ fnstat_prhdr,		fnstat_prdat,		0,					replst_slave_check },
-	{ fnstat_prhdr,		fnstat_prdat,		0,					NULL },
-	{ fnstat_prhdr,		fnstat_prdat,		0,					NULL },
-	{ NULL,			NULL,			0,					NULL },
-	{ NULL,			NULL,			0,					NULL },
-	{ NULL,			NULL,			0,					NULL },
-	{ fnstat_prhdr,		fnstat_prdat,		0,					NULL },
-	{ NULL,			NULL,			0,					NULL },
-	{ NULL,			NULL,			0,					NULL }
+/* ADDREPLRQ		*/ { NULL,		NULL,		0,				NULL },
+/* DELREPLRQ		*/ { NULL,		NULL,		0,				NULL },
+/* GETCONNS		*/ { sl_conn_prhdr,	sl_conn_prdat,	sizeof(struct slctlmsg_conn),	NULL },
+/* GETFCMH		*/ { sl_fcmh_prhdr,	sl_fcmh_prdat,	sizeof(struct slctlmsg_fcmh),	NULL },
+/* GETREPLST		*/ { NULL,		NULL,		0,				replst_savdat },
+/* GETREPLST_SLAVE	*/ { fnstat_prhdr,	fnstat_prdat,	0,				replst_slave_check },
+/* GET_BMAPREPLPOL	*/ { fnstat_prhdr,	fnstat_prdat,	0,				NULL },
+/* GET_NEWREPLPOL	*/ { fnstat_prhdr,	fnstat_prdat,	0,				NULL },
+/* IMPORT		*/ { NULL,		NULL,		0,				NULL },
+/* REV_LOOKUP		*/ { rvlk_prhdr,	rvlk_prdat,	sizeof(struct msctlmsg_rvlk),	NULL },
+/* SET_BMAPREPLPOL	*/ { NULL,		NULL,		0,				NULL },
+/* SET_NEWREPLPOL	*/ { NULL,		NULL,		0,				NULL }
 };
 
 psc_ctl_prthr_t psc_ctl_prthrs[] = {
@@ -770,7 +807,8 @@ struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {
 //	{ "reconfig",			cmd_reconfig },
 	{ "repl-add:",			cmd_replrq },
 	{ "repl-remove:",		cmd_replrq },
-	{ "repl-status",		cmd_replst }
+	{ "repl-status",		cmd_replst },
+	{ "rev-lookup",			cmd_rev_lookup }
 };
 
 PFLCTL_CLI_DEFS;
