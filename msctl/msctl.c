@@ -21,10 +21,13 @@
 #include <sys/statvfs.h>
 
 #include <ctype.h>
+#include <curses.h>
 #include <err.h>
+#include <paths.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <term.h>
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
@@ -46,6 +49,8 @@
 #include "slconfig.h"
 #include "slerr.h"
 
+FILE				*ttyfp;
+char				*Sf_seq;
 int				 verbose;
 
 struct msctlmsg_replst		 current_mrs;
@@ -813,6 +818,20 @@ main(int argc, char *argv[])
 	progname = argv[0];
 	psc_hashtbl_init(&fnfidpairs, 0, struct fnfidpair, ffp_fid,
 	    ffp_hentry, 1024, NULL, "fnfidpairs");
+
+	ttyfp = fopen(_PATH_TTY, "r+");
+	if (ttyfp) {
+		if (tgetent(NULL, NULL) != 1)
+			goto ttyerr;
+		Sf_seq = tgetstr("Sf", &Sf_seq);	/* set foreground color */
+		if (Sf_seq == NULL)
+			goto ttyerr;
+
+		if (0)
+ ttyerr:
+			fclose(ttyfp);
+	}
+
 	psc_ctlcli_main(SL_PATH_MSCTLSOCK, argc, argv, opts,
 	    nitems(opts));
 	if (!pfl_memchk(&current_mrs, 0, sizeof(current_mrs)))

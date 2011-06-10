@@ -22,6 +22,6 @@ SRCS+=		${PFL_BASE}/psc_util/subsys.c
 SRCS+=		${PFL_BASE}/psc_util/thread.c
 SRCS+=		${PFL_BASE}/psc_util/waitq.c
 
-MODULES+=	lnet-hdrs pthread pscfs-hdrs
+MODULES+=	lnet-hdrs pthread pscfs-hdrs curses
 
 include ${SLASHMK}
