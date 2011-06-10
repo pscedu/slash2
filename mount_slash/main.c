@@ -1053,7 +1053,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 {
 	int nstbpref, rc = 0, niov = 0;
 	struct slashrpc_cservice *csvc = NULL;
-	struct fidc_membh *dtmp, *d = NULL;
+	struct fidc_membh *d = NULL;
 	struct srm_readdir_rep *mp = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct dircache_ents *e = NULL;
@@ -1070,19 +1070,6 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	d = mfh->mfh_fcmh;
 	psc_assert(d);
 
-	/*
-	 * Ensure that the fcmh is still valid: we can't rely
-	 *  only on the inode number; the generation # number
-	 *  must be taken into account.
-	 */
-	dtmp = fidc_lookup_fg(&d->fcmh_fg);
-	if (dtmp != d)
-		rc = EBADF;
-	if (dtmp)
-		fcmh_op_done_type(dtmp, FCMH_OPCNT_LOOKUP_FIDC);
-	if (rc)
-		goto out;
-
 	if (!fcmh_isdir(d)) {
 		rc = ENOTDIR;
 		goto out;
@@ -1093,6 +1080,11 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	rc = fcmh_checkcreds(d, &cr, R_OK);
 	if (rc)
 		goto out;
+
+	FCMH_LOCK(d);
+	if (!DIRCACHE_INITIALIZED(d))
+		slc_fcmh_initdci(d);
+	FCMH_ULOCK(d);
 
 	e = dircache_new_ents(fcmh_2_dci(d), size);
 
@@ -1128,11 +1120,6 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		rc = mp->rc;
 	if (rc)
 		goto out;
-
-	FCMH_LOCK(d);
-	if (!DIRCACHE_INITIALIZED(d))
-		slc_fcmh_initdci(d);
-	FCMH_ULOCK(d);
 
 	if (SRM_READDIR_BUFSZ(mp->size, mp->num, mq->nstbpref) <=
 	    sizeof(mp->ents)) {
