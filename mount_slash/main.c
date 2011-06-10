@@ -49,6 +49,7 @@
 #include "psc_rpc/rsx.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/eqpollthr.h"
+#include "psc_util/iostats.h"
 #include "psc_util/log.h"
 #include "psc_util/thread.h"
 #include "psc_util/usklndthr.h"
