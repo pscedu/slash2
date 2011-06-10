@@ -50,6 +50,7 @@
 #include "slerr.h"
 
 int				 verbose;
+int				 has_col;
 
 struct msctlmsg_replst		 current_mrs;
 int				 current_mrs_eof;
@@ -637,7 +638,7 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 				    (SL_NBITS_REPLST_BHDR + SL_BITS_PER_REPLICA *
 				     current_mrs.mrs_nios), SL_NBITS_REPLST_BHDR);
 				val = SL_REPL_GET_BMAP_IOS_STAT(rsb->rsb_data, off);
-				col = has_colors() && cmap[val] != -1;
+				col = has_col && cmap[val] != -1;
 				if (col)
 					putp(tparm(set_foreground, cmap[val]));
 				putchar((bhdr.srsb_replpol == BRPOL_PERSIST ?
@@ -833,6 +834,7 @@ main(int argc, char *argv[])
 	    ffp_hentry, 1024, NULL, "fnfidpairs");
 
 	setupterm(NULL, STDOUT_FILENO, NULL);
+	has_col = has_colors() && isatty(STDOUT_FILENO);
 
 	psc_ctlcli_main(SL_PATH_MSCTLSOCK, argc, argv, opts,
 	    nitems(opts));
