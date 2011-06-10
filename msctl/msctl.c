@@ -49,8 +49,6 @@
 #include "slconfig.h"
 #include "slerr.h"
 
-FILE				*ttyfp;
-char				*Sf_seq;
 int				 verbose;
 
 struct msctlmsg_replst		 current_mrs;
@@ -560,12 +558,12 @@ void
 fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
+	sl_bmapno_t bact, both, nb;
+	int val, col, n, nbw, off, dlen, cmap[NBREPLST];
 	char *label, map[NBREPLST], pmap[NBREPLST], rbuf[PSCFMT_RATIO_BUFSIZ];
 	struct replst_slave_bdata *rsb, *nrsb;
 	struct srsm_replst_bhdr bhdr;
 	struct stat stb;
-	sl_bmapno_t bact, both, nb;
-	int n, nbw, off, dlen;
 	uint32_t iosidx;
 
 	map[BREPLST_INVALID] = '-';
@@ -585,6 +583,15 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	pmap[BREPLST_TRUNCPNDG_SCHED] = 'P';
 	pmap[BREPLST_GARBAGE] = 'G';
 	pmap[BREPLST_GARBAGE_SCHED] = 'X';
+
+	cmap[BREPLST_INVALID] = COLOR_RED;
+	cmap[BREPLST_REPL_SCHED] = COLOR_YELLOW;
+	cmap[BREPLST_REPL_QUEUED] = -1;
+	cmap[BREPLST_VALID] = COLOR_GREEN;
+	cmap[BREPLST_TRUNCPNDG] = -1;
+	cmap[BREPLST_TRUNCPNDG_SCHED] = COLOR_BLUE;
+	cmap[BREPLST_GARBAGE] = -1;
+	cmap[BREPLST_GARBAGE_SCHED] = COLOR_BLUE;
 
 	n = printf("%s", fid2fn(current_mrs.mrs_fid, &stb));
 	if (S_ISDIR(stb.st_mode)) {
@@ -629,9 +636,15 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 				pfl_bitstr_copy(&bhdr, 0, rsb->rsb_data, nb *
 				    (SL_NBITS_REPLST_BHDR + SL_BITS_PER_REPLICA *
 				     current_mrs.mrs_nios), SL_NBITS_REPLST_BHDR);
+				val = SL_REPL_GET_BMAP_IOS_STAT(rsb->rsb_data, off);
+				col = has_colors() && cmap[val] != -1;
+				if (col)
+					putp(tparm(set_foreground, cmap[val]));
 				putchar((bhdr.srsb_replpol == BRPOL_PERSIST ?
 				    pmap : map)[SL_REPL_GET_BMAP_IOS_STAT(
 				    rsb->rsb_data, off)]);
+				if (col)
+					putp(tparm(orig_pair));
 			}
 		}
 		putchar('\n');
@@ -819,18 +832,7 @@ main(int argc, char *argv[])
 	psc_hashtbl_init(&fnfidpairs, 0, struct fnfidpair, ffp_fid,
 	    ffp_hentry, 1024, NULL, "fnfidpairs");
 
-	ttyfp = fopen(_PATH_TTY, "r+");
-	if (ttyfp) {
-		if (tgetent(NULL, NULL) != 1)
-			goto ttyerr;
-		Sf_seq = tgetstr("Sf", &Sf_seq);	/* set foreground color */
-		if (Sf_seq == NULL)
-			goto ttyerr;
-
-		if (0)
- ttyerr:
-			fclose(ttyfp);
-	}
+	setupterm(NULL, STDOUT_FILENO, NULL);
 
 	psc_ctlcli_main(SL_PATH_MSCTLSOCK, argc, argv, opts,
 	    nitems(opts));
