@@ -1251,6 +1251,10 @@ msbmapflushthr_main(__unusedx struct psc_thread *thr)
 
 	while (pscthr_run()) {
 		msbmflthr(pscthr_get())->mbft_failcnt = 1;
+
+		psc_waitq_waitrel(&bmapflushwaitq, NULL, 
+		  &bmapFlushWaitTime);
+
 		PFL_GETTIMESPEC(&ts0);
 		bmap_flush();
 		PFL_GETTIMESPEC(&ts1);
