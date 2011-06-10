@@ -547,8 +547,8 @@ void
 fnstat_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	/* XXX add #repls, #bmaps */
-	printf("%4s %54s %6s %6s %6s\n",
-	    "file", "bmap-replication-status:", "#valid", "#bmap", "%res");
+	printf("%-59s %6s %6s %6s\n",
+	    "file-replication-status", "#valid", "#bmap", "%prog");
 }
 
 void
@@ -606,7 +606,7 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 			rsb_accul_replica_stats(rsb, iosidx, &bact, &both);
 
 		psc_fmt_ratio(rbuf, bact, bact + both);
-		printf("  %-54s %6d %6d %6s",
+		printf("  %-57s %6d %6d %6s",
 		    current_mrs.mrs_iosv[iosidx],
 		    bact, bact + both, rbuf);
 		psclist_for_each_entry(rsb, &current_mrs_bdata, rsb_lentry) {
