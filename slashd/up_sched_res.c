@@ -717,6 +717,7 @@ slmupschedthr_main(struct psc_thread *thr)
 							if (mds_bmap_load(f,
 							    bno, &b))
 								continue;
+							BMAPOD_MODIFY_START(b);
 							val = SL_REPL_GET_BMAP_IOS_STAT(
 							    b->bcm_repls, off);
 							if (val != BREPLST_GARBAGE ||
@@ -734,6 +735,9 @@ slmupschedthr_main(struct psc_thread *thr)
 						if (bno == fcmh_nallbmaps(f) - 1)
 							break;
 						has_work = 1;
+
+						if (val == BREPLST_GARBAGE_SCHED)
+							break;
 
 						FOREACH_RND(&dst_resm_i,
 						    psc_dynarray_len(&dst_res->res_members))

@@ -569,7 +569,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_QUEUED] = BREPLST_INVALID;
-	tract[BREPLST_REPL_SCHED] = BREPLST_INVALID;
+	tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE;
 	tract[BREPLST_VALID] = BREPLST_GARBAGE;
 
 	if (bmapno == (sl_bmapno_t)-1) {
