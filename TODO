@@ -413,3 +413,4 @@ API rename
 - repl pairs are totally borked in MDS
 - keep testing replication
 - fsuuid is broken on recv in sliod
+- slmctl stop should completely all ops to prevent relying on journal
