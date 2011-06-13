@@ -1591,12 +1591,21 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 		if ((r->biorq_flags & (BIORQ_RBWFP|BIORQ_RBWLP)) ==
 		    (BIORQ_RBWFP|BIORQ_RBWLP)) {
 			for (i = 0; i < 2; i++) {
-				bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
+				if (!i)
+					bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
+				else
+					bmpce = psc_dynarray_getpos(&r->biorq_pages,
+					    npages - 1);
+
 				psc_assert(biorq_is_my_bmpce(r, bmpce));
 				psc_assert(bmpce->bmpce_flags & BMPCE_RBWPAGE);
 				psc_assert(!(bmpce->bmpce_flags & BMPCE_DATARDY));
+
+				if (!i)
+					rc = msl_read_rpc_launch(r, 0, 1);
+				else
+					rc |= msl_read_rpc_launch(r, npages - 1, 1);
 			}
-			rc = msl_read_rpc_launch(r, 0, 2);
 			sched = 1;
 
 		} else {
