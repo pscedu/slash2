@@ -15,7 +15,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES rpc fuse %
-.Dd June 10, 2011
+.Dd June 13, 2011
 .Dt MSCTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -87,14 +87,6 @@ behavior.
 .\"			See
 .\"			.Cm repl-status
 .\"			for inspecting the replication policy of bmaps.
-.\"			EOF
-.\"		"import Ar src ... dst" => <<'EOF',
-.\"			Import the local file hierarchy denoted by
-.\"			.Ar src
-.\"			into the
-.\"			.Tn SLASH
-.\"			file system at the root specified by
-.\"			.Ar dst .
 .\"			EOF
 .\"		"new-bmap-repl-policy Ns Oo = Ns Ar repl-policy Oc Ar fn ..." => <<'EOF',
 .\"			Set the default replication policy for new bmaps
@@ -244,13 +236,6 @@ will affect all bmaps currently residing in the file.
 See
 .Cm repl-status
 for inspecting the replication policy of bmaps.
-.It Cm import Ar src ... dst
-Import the local file hierarchy denoted by
-.Ar src
-into the
-.Tn SLASH
-file system at the root specified by
-.Ar dst .
 .It Cm new-bmap-repl-policy Ns Oo = Ns Ar repl-policy Oc Ar fn ...
 Set the default replication policy for new bmaps
 .Po

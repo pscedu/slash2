@@ -438,27 +438,6 @@ cmd_bmap_repl_policy(int ac, char **av)
 }
 
 void
-cmd_import_one(const char *fn, __unusedx const struct stat *stb,
-    __unusedx void *arg)
-{
-	struct msctlmsg_fncmd *mfc;
-
-	mfc = psc_ctlmsg_push(MSCMT_IMPORT, sizeof(*mfc));
-	mfc->mfc_fid = fn2fid(fn);
-}
-
-void
-cmd_import(int ac, char **av)
-{
-	int i;
-
-	if (ac < 3)
-		errx(1, "import: no file(s) specified");
-	for (i = 1; i < ac - 1; i++)
-		walk(av[i], cmd_import_one, NULL);
-}
-
-void
 cmd_replrq_one(const char *fn, __unusedx const struct stat *stb,
     void *arg)
 {
@@ -802,7 +781,6 @@ psc_ctl_prthr_t psc_ctl_prthrs[] = {
 
 struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {
 	{ "bmap-repl-policy:",		cmd_bmap_repl_policy },
-	{ "import",			cmd_import },
 	{ "new-bmap-repl-policy:",	cmd_new_bmap_repl_policy },
 //	{ "reconfig",			cmd_reconfig },
 	{ "repl-add:",			cmd_replrq },
