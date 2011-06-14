@@ -114,68 +114,6 @@ fcmh_checkcreds(struct fidc_membh *f, const struct slash_creds *crp,
 	return (rc);
 }
 
-/**
- * translate_pathname - Convert an absolute file system path name into
- *	the relative location from the root of the mount point.
- * @fn: absolute file path.
- * @buf: value-result of the translated pathname.
- * Returns Boolean true on success or errno code on failure.
- *
- * XXX this should be rewritten to solely use msl_lookup_fidcache().
- */
-int
-translate_pathname(const char *fn, char buf[PATH_MAX])
-{
-	size_t len;
-
-	if (fn[0] != '/')
-		return (EINVAL);	/* require absolute paths */
-	if (realpath(fn, buf) == NULL)
-		return (errno);
-	len = strlen(mountpoint);
-	if (strncmp(buf, mountpoint, len))
-		return (EINVAL);	/* outside residual slashfs root */
-	if (buf[len] != '/' && buf[len] != '\0')
-		return (EINVAL);
-	memmove(buf, buf + len, strlen(buf) - len);
-	buf[strlen(buf) - len] = '\0';
-	return (0);
-}
-
-/**
- * lookup_pathname_fg - Get the fid+gen pair for a full pathname.  This
- *	routine is only really invoked via the control subsystem as the
- *	usual determinent for discovering this information is done by
- *	each file name component via LOOKUP.
- * @ofn: file path to lookup.
- * @crp: credentials of lookup.
- * @fgp: value-result fid+gen pair.
- * @sstb: optional value-result srt_stat buffer for file.
- */
-int
-lookup_pathname_fg(struct pscfs_req *pfr, const char *ofn,
-    struct slash_creds *crp, struct slash_fidgen *fgp,
-    struct srt_stat *sstb)
-{
-	char *cpn, *next, fn[PATH_MAX];
-	int rc;
-
-	rc = translate_pathname(ofn, fn);
-	if (rc)
-		return (rc);
-
-	fgp->fg_fid = SLFID_ROOT;
-	for (cpn = fn + 1; cpn; cpn = next) {
-		if ((next = strchr(cpn, '/')) != NULL)
-			*next++ = '\0';
-		rc = msl_lookup_fidcache(pfr, crp, fgp->fg_fid,
-		    cpn, fgp, next ? NULL : sstb);
-		if (rc)
-			return (rc);
-	}
-	return (0);
-}
-
 __static void
 msfsthr_teardown(void *arg)
 {
@@ -567,6 +505,23 @@ msl_stat(struct fidc_membh *fcmh, void *arg)
 	struct srm_getattr_rep *mp;
 	struct timeval now;
 	int rc = 0;
+
+	if (fcmh_2_fid(fcmh) == SLFID_NS) {
+		fcmh->fcmh_sstb.sst_fid = SLFID_NS;
+		fcmh->fcmh_sstb.sst_gen = 0;
+		fcmh->fcmh_sstb.sst_mode = S_IFDIR | 0111;
+		fcmh->fcmh_sstb.sst_nlink = 2;
+		fcmh->fcmh_sstb.sst_uid = 0;
+		fcmh->fcmh_sstb.sst_gid = 0;
+		fcmh->fcmh_sstb.sst_dev = 0;
+		fcmh->fcmh_sstb.sst_rdev = 0;
+		fcmh->fcmh_sstb.sstd_freplpol = 0;
+		fcmh->fcmh_sstb.sst_utimgen = 0;
+		fcmh->fcmh_sstb.sst_size = 2;
+		fcmh->fcmh_sstb.sst_blksize = MSL_FS_BLKSIZ;
+		fcmh->fcmh_sstb.sst_blocks = 4;
+		return (0);
+	}
 
  restart:
 	FCMH_LOCK(fcmh);
@@ -1034,11 +989,11 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 {
 	int nstbpref, rc = 0, niov = 0;
 	struct slashrpc_cservice *csvc = NULL;
-	struct fidc_membh *d = NULL;
 	struct srm_readdir_rep *mp = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct dircache_ents *e = NULL;
 	struct msl_fhent *mfh = data;
+	struct fidc_membh *d = NULL;
 	struct srm_readdir_req *mq;
 	struct slash_creds cr;
 	struct iovec iov[2];
@@ -1052,6 +1007,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	psc_assert(d);
 
 	if (!fcmh_isdir(d)) {
+		DEBUG_FCMH(PLL_ERROR, d, "inconsistency: readdir on a non-dir");
 		rc = ENOTDIR;
 		goto out;
 	}
@@ -1061,6 +1017,10 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	rc = fcmh_checkcreds(d, &cr, R_OK);
 	if (rc)
 		goto out;
+	if (fcmh_2_fid(d) == SLFID_NS) {
+		rc = EPERM;
+		goto out;
+	}
 
 	FCMH_LOCK(d);
 	if (!DIRCACHE_INITIALIZED(d))
@@ -1276,7 +1236,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	rc = msl_stat(c, pfr);
 	if (!rc) {
 		if (fgp)
-			*fgp = c->fcmh_fg;
+			*fgp = c->fcmh_fg; /* XXX lock */
 		if (sstb) {
 			FCMH_LOCK(c);
 			*sstb = c->fcmh_sstb;
@@ -1286,6 +1246,40 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	return (rc);
  out:
+#define MSL_FIDNS_RPATH	".slfidns"
+	if (pinum == SLFID_ROOT && strcmp(name, MSL_FIDNS_RPATH) == 0) {
+		struct fidc_membh f;
+
+		fcmh_2_fid(&f) = SLFID_NS;
+		msl_stat(&f, NULL);
+		if (fgp) {
+			fgp->fg_fid = SLFID_NS;
+			fgp->fg_gen = 0;
+		}
+		if (sstb)
+			*sstb = f.fcmh_sstb;
+		return (0);
+	}
+	if (pinum == SLFID_NS) {
+		slfid_t fid;
+		char *endp;
+
+		fid = strtoll(name, &endp, 16);
+		if (endp == name || *endp != '\0')
+			return (ENOENT);
+		rc = msl_load_fcmh(pfr, fid, &c);
+		if (rc)
+			return (rc);
+		if (fgp)
+			*fgp = c->fcmh_fg;
+		if (sstb) {
+			FCMH_LOCK(c);
+			*sstb = c->fcmh_sstb;
+			FCMH_ULOCK(c);
+		}
+		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+		return (0);
+	}
 	return (slash_lookuprpc(pfr, pinum, name, fgp, sstb));
 }
 
