@@ -66,16 +66,11 @@ struct msctlmsg_bmapreplpol {
 	int32_t			mfbrp_pol;
 };
 
+#define REPLRQ_BMAPNO_ALL	(-1)
+
 struct msctlmsg_fncmd {
 	slfid_t			mfc_fid;
 };
-
-struct msctlmsg_rvlk {
-	slfid_t			mrvlk_fid;
-	char			mrvlk_fn[SL_PATH_MAX];
-};
-
-#define REPLRQ_BMAPNO_ALL	(-1)
 
 /* mount_slash message types */
 #define MSCMT_ADDREPLRQ		(NPCMT +  0)
@@ -87,9 +82,8 @@ struct msctlmsg_rvlk {
 #define MSCMT_GET_BMAPREPLPOL	(NPCMT +  6)
 #define MSCMT_GET_NEWREPLPOL	(NPCMT +  7)
 #define MSCMT_IMPORT		(NPCMT +  8)
-#define MSCMT_REV_LOOKUP	(NPCMT +  9)
-#define MSCMT_SET_BMAPREPLPOL	(NPCMT + 10)
-#define MSCMT_SET_NEWREPLPOL	(NPCMT + 11)
+#define MSCMT_SET_BMAPREPLPOL	(NPCMT +  9)
+#define MSCMT_SET_NEWREPLPOL	(NPCMT + 10)
 
 #define SLASH_FSID		0x51a54
 
