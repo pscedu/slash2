@@ -364,7 +364,7 @@ slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
 	if (op == SLM_FORWARD_MKDIR || op == SLM_FORWARD_CREATE) {
 		mq->mode = mode;
 		mq->creds = *creds;
-		mq->fid = slm_get_next_slashid();
+		mq->fid = slm_get_next_slashfid();
 	} else {
 		mq->mode = 0;
 		mq->creds.scr_uid = 0;		/* XXX */

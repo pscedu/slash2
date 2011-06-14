@@ -502,7 +502,7 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 		    sjnm->sjnm_op == NS_OP_MKDIR ||
 		    sjnm->sjnm_op == NS_OP_LINK ||
 		    sjnm->sjnm_op == NS_OP_SYMLINK)
-			slm_get_next_slashid();
+			slm_get_next_slashfid();
 		break;
 	    default:
 		psc_fatalx("invalid log entry type %d", pje->pje_type);
