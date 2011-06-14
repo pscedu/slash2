@@ -73,9 +73,11 @@ struct slash_fidgen {
  * The following SLASHIDs are reserved:
  *	0	not used
  *	1	-> /
+ *	2	-> /.slfidns
  */
 #define SLFID_ROOT		1
-#define SLFID_MIN		2
+#define SLFID_NS		2
+#define SLFID_MIN		3
 
 #define SLPRI_FSID		"%#018"PRIx64
 #define FSID_LEN		16

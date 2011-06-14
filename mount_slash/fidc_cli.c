@@ -108,7 +108,7 @@ slc_fcmh_ctor(struct fidc_membh *fcmh)
 	fci = fcmh_get_pri(fcmh);
 	slc_fcmh_refresh_age(fcmh);
 	siteid = FID_GET_SITEID(fcmh_2_fid(fcmh));
-	if (fcmh_2_fid(fcmh) != SLFID_ROOT &&
+	if (fcmh_2_fid(fcmh) >= SLFID_MIN &&
 	    siteid != slc_rmc_resm->resm_siteid) {
 		s = libsl_siteid2site(siteid);
 		if (s == NULL) {
