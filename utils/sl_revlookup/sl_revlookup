@@ -1,0 +1,15 @@
+#!/bin/sh
+# $Id$
+
+fid=$1
+
+fn=$base/.slfidns/$fid/..
+while ; do
+	for i in $(ls $fn); do
+	done
+	ino=$(ls -id $fn | awk '{print $1}')
+	if [ $ino -eq 1 ]; then
+		break
+	fi
+	fn=$fn/..
+done
