@@ -26,11 +26,11 @@ use warnings;
 my %opts;
 
 sub fatalx {
-	die "$0: @_\n";
+	die "$0: @_";
 }
 
 sub fatal {
-	die "$0: @_: $!\n";
+	die "$0: @_: $!";
 }
 
 sub usage {
@@ -253,7 +253,7 @@ sub parse_conf {
 					$r->{id} = $1;
 				} elsif ($line =~ m{^\s*#\s*\@zfspool\s*=\s*(\w+)\s+(.*)\s*$}) {
 					$r->{zpool_name} = $1;
-					$r->{zpool_cachefile} = "$base/$1.zcf";
+					$r->{zpool_cache} = "$base/$1.zcf";
 					$r->{zpool_args} = $2;
 				} elsif ($line =~ /^\s*#\s*\@prefmds\s*=\s*(\w+\@\w+)\s*$/) {
 					$r->{prefmds} = $1;
@@ -328,7 +328,7 @@ foreach $i (@mds) {
 		sleep 2
 		$zpool destroy $i->{zpool_name} || true
 		$zpool create -f $i->{zpool_name} $i->{zpool_args}
-		$zpool set cachefile=$i->{zpool_cachefile} $i->{zpool_name}
+		$zpool set cachefile=$i->{zpool_cache} $i->{zpool_name}
 		$slimmns_format /$i->{zpool_name}
 		sync; sync
 		umount /$i->{zpool_name}
@@ -353,11 +353,17 @@ my $slmgdb = slurp "$tsbase/slashd.gdbcmd";
 foreach $i (@mds) {
 	debug_msg "launching slashd: $i->{rname} : $i->{host}";
 
-	my $dat = $slmgdb;
-	$dat =~ s/%zpool_name%/$i->{zpool_name}/g;
-	$dat =~ s/%datadir%/$datadir/g;
+	my %tr_vars = (
+		datadir		=> $datadir,
+		zpool_cache	=> $i->{zpool_cache},
+		zpool_name	=> $i->{zpool_name},
+	);
 
-	open G, ">", "$base/slashd.$i->{id}.gdbcmd" or fatal "write slashd.gdbcmd";
+	my $dat = $slmgdb;
+	$dat =~ s/%(\w+)%/echo $1; $tr_vars{$1}/eg;
+
+	my $gdbfn = "$base/slashd.$i->{id}.gdbcmd";
+	open G, ">", $gdbfn or fatal "write $gdbfn";
 	print G $dat;
 	close G;
 
@@ -366,7 +372,7 @@ foreach $i (@mds) {
 		@{[init_env(%$global_env)]}
 		cp -p $base/authbuf.key $datadir
 		runscreen SLMDS \\
-		    gdb -f -x $base/slashd.$i->{id}.gdbcmd $slbase/slashd/slashd
+		    gdb -f -x $gdbfn $slbase/slashd/slashd
 EOF
 }
 
@@ -397,9 +403,13 @@ my $sligdb = slurp "$tsbase/sliod.gdbcmd";
 foreach $i (@ion) {
 	debug_msg "launching sliod: $i->{rname} : $i->{host}";
 
+	my %tr_vars = (
+		datadir		=> $datadir,
+		prefmds		=> $i->{prefmds},
+	);
+
 	my $dat = $sligdb;
-	$dat =~ s/%datadir%/$datadir/g;
-	$dat =~ s/%prefmds%/$i->{prefmds}/g;
+	$dat =~ s/%(\w+)%/$tr_vars{$1}/g;
 
 	open G, ">", "$base/sliod.$i->{id}.gdbcmd"
 	    or fatal "write sliod.gdbcmd";
