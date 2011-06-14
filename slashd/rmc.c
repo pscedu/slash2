@@ -61,49 +61,50 @@
 #define IS_REMOTE_FID(fid)						\
 	((fid) != SLFID_ROOT && nodeSite->site_id != FID_GET_SITEID(fid))
 
-uint64_t		next_slash_id;
-static psc_spinlock_t	slash_id_lock = SPINLOCK_INIT;
+uint64_t		next_slash_fid = UINT64_MAX;
+static psc_spinlock_t	slash_fid_lock = SPINLOCK_INIT;
 
-uint64_t
-slm_get_curr_slashid(void)
+slfid_t
+slm_get_curr_slashfid(void)
 {
-	uint64_t slid;
+	slfid_t fid;
 
-	spinlock(&slash_id_lock);
-	slid = next_slash_id;
-	freelock(&slash_id_lock);
-	return (slid);
+	spinlock(&slash_fid_lock);
+	fid = next_slash_fid;
+	freelock(&slash_fid_lock);
+	return (fid);
 }
 
 void
-slm_set_curr_slashid(uint64_t slfid)
+slm_set_curr_slashfid(slfid_t slfid)
 {
-	spinlock(&slash_id_lock);
-	next_slash_id = slfid;
-	freelock(&slash_id_lock);
+	spinlock(&slash_fid_lock);
+	next_slash_fid = slfid;
+	freelock(&slash_fid_lock);
 }
 
-/*
- * slm_get_next_slashid - Return the next SLASH FID to use.  Note that from ZFS
- *     point of view, it is perfectly okay that we use the same SLASH FID to
- *     refer to different files/directories.  However, doing so can confuse
- *     our clients (think identity theft).  So we must make sure that we never
- *     reuse a SLASH FID, even after a crash.
+/**
+ * slm_get_next_slashfid - Return the next SLASH FID to use.  Note that
+ *	from ZFS point of view, it is perfectly okay that we use the
+ *	same SLASH FID to refer to different files/directories.
+ *	However, doing so can confuse our clients (think identity
+ *	theft).  So we must make sure that we never reuse a SLASH FID,
+ *	even after a crash.
  */
-uint64_t
-slm_get_next_slashid(void)
+slfid_t
+slm_get_next_slashfid(void)
 {
-	uint64_t slid;
+	uint64_t fid;
 
-	spinlock(&slash_id_lock);
-	if (next_slash_id >= (UINT64_C(1) << SLASH_ID_FID_BITS))
-		next_slash_id = SLFID_MIN;
-	slid = next_slash_id++;
-	freelock(&slash_id_lock);
+	spinlock(&slash_fid_lock);
+	if (next_slash_fid >= (UINT64_C(1) << SLASH_ID_FID_BITS))
+		next_slash_fid = SLFID_MIN;
+	fid = next_slash_fid++;
+	freelock(&slash_fid_lock);
 
-	slid |= ((uint64_t)nodeResm->resm_site->site_id << SLASH_ID_FID_BITS);
-	psclog_info("next slash ID "SLPRI_FID, slid);
-	return slid;
+	fid |= ((uint64_t)nodeResm->resm_site->site_id << SLASH_ID_FID_BITS);
+	psclog_info("next slash ID "SLPRI_FID, fid);
+	return (fid);
 }
 
 int
@@ -384,7 +385,7 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	mds_reserve_slot();
 	mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(p), mq->name, mq->mode,
 	    &mq->creds, &mp->cattr, NULL, mdslog_namespace,
-	    slm_get_next_slashid, 0);
+	    slm_get_next_slashfid, 0);
 	mds_unreserve_slot();
 
 	mdsio_fcmh_refreshattr(p, &mp->pattr);
@@ -429,7 +430,7 @@ slm_rmc_handle_mknod(struct pscrpc_request *rq)
 	mds_reserve_slot();
 	mp->rc = mdsio_mknod(fcmh_2_mdsio_fid(p), mq->name, mq->mode,
 	    &mq->creds, &mp->cattr, NULL, mdslog_namespace,
-	    slm_get_next_slashid);
+	    slm_get_next_slashfid);
 	mds_unreserve_slot();
 
 	mdsio_fcmh_refreshattr(p, &mp->pattr);
@@ -486,7 +487,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &mq->creds,
 	    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->name, NULL,
 	    &mp->cattr, &mdsio_data, mdslog_namespace,
-	    slm_get_next_slashid, 0);
+	    slm_get_next_slashfid, 0);
 	mds_unreserve_slot();
 
 	if (mp->rc)
@@ -972,7 +973,7 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 
 	mds_reserve_slot();
 	mp->rc = mdsio_symlink(linkname, fcmh_2_mdsio_fid(p), mq->name,
-	    &mq->creds, &mp->cattr, NULL, slm_get_next_slashid,
+	    &mq->creds, &mp->cattr, NULL, slm_get_next_slashfid,
 	    mdslog_namespace);
 	mds_unreserve_slot();
 

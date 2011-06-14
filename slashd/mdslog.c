@@ -983,7 +983,7 @@ mds_update_cursor(void *buf, uint64_t txg, int flag)
 		cursor->pjc_distill_xid = sync_reclaim_xid;
 	freelock(&mds_distill_lock);
 
-	cursor->pjc_fid = slm_get_curr_slashid();
+	cursor->pjc_fid = slm_get_curr_slashfid();
 
 	rc = mds_bmap_getcurseq(&hwm, &lwm);
 	if (rc)
@@ -1046,7 +1046,7 @@ mds_open_cursor(void)
 	psc_assert(mds_cursor.pjc_version == PJRNL_CURSOR_VERSION);
 	psc_assert(mds_cursor.pjc_fid >= SLFID_MIN);
 
-	slm_set_curr_slashid(mds_cursor.pjc_fid);
+	slm_set_curr_slashfid(mds_cursor.pjc_fid);
 	psclog_notice("File system was formatted on %"PRIu64" seconds "
 	    "since the Epoch", mds_cursor.pjc_timestamp);
 	psclog_notice("SLFID prior to replay="SLPRI_FID, mds_cursor.pjc_fid);

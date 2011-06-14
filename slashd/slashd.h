@@ -210,7 +210,7 @@ struct slm_workrq {
 };
 
 int		 mds_handle_rls_bmap(struct pscrpc_request *, int);
-int              mds_lease_renew(struct fidc_membh *, struct srt_bmapdesc *, 
+int		 mds_lease_renew(struct fidc_membh *, struct srt_bmapdesc *,
 			 struct srt_bmapdesc *, struct pscrpc_export *);
 
 __dead void	 slmctlthr_main(const char *);
@@ -219,9 +219,9 @@ void		 slmrcmthr_main(struct psc_thread *);
 void		 slmupschedthr_spawnall(void);
 void		 slmtimerthr_spawn(void);
 
-uint64_t	 slm_get_curr_slashid(void);
-uint64_t	 slm_get_next_slashid(void);
-void		 slm_set_curr_slashid(uint64_t);
+slfid_t		 slm_get_curr_slashfid(void);
+slfid_t		 slm_get_next_slashfid(void);
+void		 slm_set_curr_slashfid(slfid_t);
 
 int		 slm_ptrunc_prepare(struct slm_workrq *);
 void		 slm_ptrunc_apply(struct slm_workrq *);
