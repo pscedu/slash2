@@ -432,7 +432,7 @@ sleep 1 until scalar @{[ glob "$base/ctl/sliod.*.sock" ]} == @ion;
 alarm 0;
 
 # Launch the client mountpoints
-my $slcgdb = slurp "$tsbase/sliod.gdbcmd";
+my $slcgdb = slurp "$tsbase/msl.gdbcmd";
 my $mslid = 0;
 foreach $i (@cli) {
 	debug_msg "launching mount_slash: $i->{host}";
