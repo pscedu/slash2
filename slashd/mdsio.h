@@ -112,8 +112,8 @@ struct mdsio_ops {
 	int	(*mio_redo_unlink)(slfid_t, slfid_t, char *);
 };
 
-#define mdsio_init		mdsio_ops.mio_init			/* zfs_init() */
-#define mdsio_exit		mdsio_ops.mio_exit			/* zfs_exit() */
+#define mdsio_init		mdsio_ops.mio_init			/* zfsslash2_init() */
+#define mdsio_exit		mdsio_ops.mio_exit			/* libzfs_exit() */
 
 #define mdsio_setattrmask_2_slflags mdsio_ops.mio_setattrmask_2_slflags	/* zfsslash2_setattrmask_2_slflags() */
 #define mdsio_slflags_2_setattrmask mdsio_ops.mio_slflags_2_setattrmask	/* zfsslash2_slflags_2_setattrmask() */
