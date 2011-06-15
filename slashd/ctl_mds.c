@@ -202,10 +202,10 @@ slmctlparam_namespace_stats(int fd, struct psc_ctlmsghdr *mh,
 }
 
 /**
- * slmctlcmd_exit - Handle an EXIT command to terminate execution.
+ * slmctlcmd_stop - Handle a STOP command to terminate execution.
  */
 __dead int
-slmctlcmd_exit(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
+slmctlcmd_stop(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
     __unusedx void *m)
 {
 	mdsio_exit();
@@ -289,7 +289,8 @@ struct psc_ctlop slmctlops[] = {
 	PSC_CTLDEFOPS,
 	{ slctlrep_getconns,		sizeof(struct slctlmsg_conn ) },
 	{ slctlrep_getfcmhs,		sizeof(struct slctlmsg_fcmh ) },
-	{ slmctlrep_getreplpairs,	sizeof(struct slmctlmsg_replpair ) }
+	{ slmctlrep_getreplpairs,	sizeof(struct slmctlmsg_replpair ) },
+	{ slmctlcmd_stop,		0 }
 };
 
 psc_ctl_thrget_t psc_ctl_thrgets[] = {
