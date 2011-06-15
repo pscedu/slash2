@@ -535,17 +535,32 @@ fnstat_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 }
 
 void
+setcolor(int col)
+{
+	if (!has_col || col == -1)
+		return;
+	putp(tparm(enter_bold_mode));
+	putp(tparm(set_a_foreground, col));
+}
+
+void
+uncolor(void)
+{
+	if (!has_col)
+		putp(tparm(orig_pair));
+}
+
+void
 fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	sl_bmapno_t bact, both, nb;
-	int val, col, n, nbw, off, dlen, cmap[NBREPLST];
+	int val, n, nbw, off, dlen, cmap[NBREPLST], maxwidth;
 	char *label, map[NBREPLST], pmap[NBREPLST], rbuf[PSCFMT_RATIO_BUFSIZ];
 	struct replst_slave_bdata *rsb, *nrsb;
 	struct srsm_replst_bhdr bhdr;
 	struct stat stb;
 	uint32_t iosidx;
-	int maxwidth;
 
 	maxwidth = psc_ctl_get_display_maxwidth();
 
@@ -600,10 +615,13 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 		psclist_for_each_entry(rsb, &current_mrs_bdata, rsb_lentry)
 			rsb_accul_replica_stats(rsb, iosidx, &bact, &both);
 
+		setcolor(COLOR_CYAN);
+		printf("  %-57s", current_mrs.mrs_iosv[iosidx]);
+		uncolor();
+
 		psc_fmt_ratio(rbuf, bact, bact + both);
-		printf("  %-57s %6d %6d %6s",
-		    current_mrs.mrs_iosv[iosidx],
-		    bact, bact + both, rbuf);
+		printf(" %6d %6d %6s ", bact, bact + both, rbuf);
+
 		psclist_for_each_entry(rsb, &current_mrs_bdata, rsb_lentry) {
 			off = SL_BITS_PER_REPLICA * iosidx +
 			    SL_NBITS_REPLST_BHDR;
@@ -620,14 +638,11 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 				    (SL_NBITS_REPLST_BHDR + SL_BITS_PER_REPLICA *
 				     current_mrs.mrs_nios), SL_NBITS_REPLST_BHDR);
 				val = SL_REPL_GET_BMAP_IOS_STAT(rsb->rsb_data, off);
-				col = has_col && cmap[val] != -1;
-				if (col)
-					putp(tparm(set_foreground, cmap[val]));
+				setcolor(cmap[val]);
 				putchar((bhdr.srsb_replpol == BRPOL_PERSIST ?
 				    pmap : map)[SL_REPL_GET_BMAP_IOS_STAT(
 				    rsb->rsb_data, off)]);
-				if (col)
-					putp(tparm(orig_pair));
+				uncolor();
 			}
 		}
 		putchar('\n');
