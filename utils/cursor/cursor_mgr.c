@@ -1,8 +1,8 @@
-/* $Id: cursor_mgr.c $ */
+/* $Id$ */
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2007-2011, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2011, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -36,19 +36,20 @@ const char *progname;
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-dv] -f cursor_file \n", progname);
+	fprintf(stderr, "usage: %s [-dv] [-x txg] -f cursor_file\n", progname);
 	exit(1);
 }
 
-int 
-main(int argc, char *argv[]) {
+int
+main(int argc, char *argv[])
+{
 	char *cursor_file = NULL, c;
 	int dump = 0, verbose = 0, fd, rc;
 	uint64_t newtxg;
 	struct psc_journal_cursor cursor;
 
 	progname = argv[0];
-	
+
 	while ((c = getopt(argc, argv, "dvf:x:")) != -1)
 		switch (c) {
 		case 'd':
@@ -68,26 +69,20 @@ main(int argc, char *argv[]) {
 		}
 
 	argc -= optind;
-        argv += optind;
-        if (argc || !cursor_file)
-                usage();
-	
-	
+	argv += optind;
+	if (argc || !cursor_file)
+		usage();
+
 	fd = open(cursor_file, O_RDWR);
-	if (fd < 0) {
-		fprintf(stderr, "failed to open %s (errno=%d)\n", 
-			cursor_file, errno);
-		exit(1);
-	}
-	
+	if (fd < 0)
+		err(1, "failed to open %s", cursor_file);
+
 	rc = pread(fd, &cursor, sizeof(struct psc_journal_cursor), 0);
-	if (rc != sizeof(struct psc_journal_cursor)) {
-		fprintf(stderr, "cursor file pread() failed errno=%d", errno);
-		exit(1);
-	}
-		
+	if (rc != sizeof(struct psc_journal_cursor))
+		err(1, "cursor file pread() failed");
+
 	if (dump || verbose) {
-		fprintf(stdout, "Cursor Contents:\n"
+		printf("Cursor Contents:\n"
 			"\tpjc_magic = %"PRIx64"\n"
 			"\tpjc_version = %"PRIx64"\n"
 			"\tpjc_timestamp = %"PRId64"\n"
@@ -100,11 +95,11 @@ main(int argc, char *argv[]) {
 			"\tpjc_tail = %"PRIx64"\n"
 			"\tpjc_update_seqno = %"PRIx64"\n"
 			"\tpjc_reclaim_seqno = %"PRIx64"\n"
-			"\tpjc_replay_xid = %"PRIx64"\n", 
-			cursor.pjc_magic, cursor.pjc_version, cursor.pjc_timestamp, 
-			cursor.pjc_uuid, cursor.pjc_commit_txg, cursor.pjc_distill_xid, 
-			cursor.pjc_fid, cursor.pjc_seqno_lwm, cursor.pjc_seqno_hwm, 
-			cursor.pjc_tail, cursor.pjc_update_seqno, 
+			"\tpjc_replay_xid = %"PRIx64"\n",
+			cursor.pjc_magic, cursor.pjc_version, cursor.pjc_timestamp,
+			cursor.pjc_uuid, cursor.pjc_commit_txg, cursor.pjc_distill_xid,
+			cursor.pjc_fid, cursor.pjc_seqno_lwm, cursor.pjc_seqno_hwm,
+			cursor.pjc_tail, cursor.pjc_update_seqno,
 			cursor.pjc_reclaim_seqno, cursor.pjc_replay_xid);
 
 		if (dump)
@@ -113,10 +108,8 @@ main(int argc, char *argv[]) {
 
 	cursor.pjc_commit_txg = newtxg;
 	rc = pwrite(fd, &cursor, sizeof(struct psc_journal_cursor), 0);
-	if (rc != sizeof(struct psc_journal_cursor)) {
-                fprintf(stderr, "cursor file pwrite() failed errno=%d", errno);
-		exit(1);
-	}
-	
+	if (rc != sizeof(struct psc_journal_cursor))
+		err(1, "cursor file pwrite() failed");
+
 	exit(0);
 }

@@ -1,4 +1,4 @@
-# $Id: Makefile 14239 2010-10-21 06:48:31Z yanovich $
+# $Id$
 
 ROOTDIR=../../..
 include ${ROOTDIR}/Makefile.path
