@@ -1018,17 +1018,12 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	mds_unreserve_slot();
 
  out:
-	if (mp->rc == 0) {
-		FCMH_LOCK(p);
-		fcmh_wait_locked(p, p->fcmh_flags & FCMH_IN_SETATTR);
-		SL_GETTIMESPEC(&p->fcmh_sstb.sst_ctim);
-		mds_fcmh_setattr(p, PSCFS_SETATTRF_CTIME);
-		memcpy(&mp->attr, &p->fcmh_sstb, sizeof(mp->attr));
-	}
-	psclog_info("unlink parent="SLPRI_FID" name=%s rc=%d",
-	    mq->pfid, mq->name, mp->rc);
+	if (mp->rc == 0)
+		mdsio_fcmh_refreshattr(p, &mp->attr);
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+	psclog_info("unlink parent="SLPRI_FID" name=%s rc=%d",
+	    mq->pfid, mq->name, mp->rc);
 	return (0);
 }
 
