@@ -185,7 +185,7 @@ my $ssh_init = <<EOF;
 
 	runscreen()
 	{
-		scrname=\$1
+		scrname=TS.\$1
 		shift
 		screen -S \$scrname -X quit || true
 		screen -d -m -S \$scrname.$tsid "\$\@"
@@ -318,7 +318,7 @@ foreach $i (@mds) {
 		$ssh_init
 		@{[init_env(%$global_env)]}
 
-		screen -S SLMDS -X quit || true
+		screen -S TS.SLMDS -X quit || true
 
 		# run pickle probe tests
 		(cd $src && make printvar-CC >/dev/null)
@@ -411,8 +411,8 @@ foreach $i (@ion) {
 	my $dat = $sligdb;
 	$dat =~ s/%(\w+)%/$tr_vars{$1}/g;
 
-	open G, ">", "$base/sliod.$i->{id}.gdbcmd"
-	    or fatal "write sliod.gdbcmd";
+	my $gdbfn = "$base/sliod.$i->{id}.gdbcmd";
+	open G, ">", $gdbfn or fatal "write $gdbfn";
 	print G $dat;
 	close G;
 
@@ -420,7 +420,7 @@ foreach $i (@ion) {
 		$ssh_init
 		@{[init_env(%$global_env)]}
 		runscreen SLIOD \\
-		    gdb -f -x $base/sliod.$i->{id}.gdbcmd $slbase/sliod/sliod
+		    gdb -f -x $gdbfn $slbase/sliod/sliod
 EOF
 }
 
@@ -432,6 +432,8 @@ sleep 1 until scalar @{[ glob "$base/ctl/sliod.*.sock" ]} == @ion;
 alarm 0;
 
 # Launch the client mountpoints
+my $slcgdb = slurp "$tsbase/sliod.gdbcmd";
+my $mslid = 0;
 foreach $i (@cli) {
 	debug_msg "launching mount_slash: $i->{host}";
 
@@ -439,15 +441,21 @@ foreach $i (@cli) {
 		datadir		=> $datadir,
 	);
 
-	my $dat = $slmgdb;
+	my $dat = $slcgdb;
 	$dat =~ s/%(\w+)%/$tr_vars{$1}/g;
+
+	my $gdbfn = "$base/msl.$mslid.gdbcmd";
+	open G, ">", $gdbfn or fatal "write $gdbfn";
+	print G $dat;
+	close G;
 
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
 		@{[init_env(%$global_env, %{$i->{env}})]}
-		runscreen MSL sh -c "gdb -f -x $tsbase/msl.gdbcmd \\
+		runscreen MSL sh -c "gdb -f -x $gdbfn \\
 		    $slbase/mount_slash/mount_slash; umount $mp"
 EOF
+	$mslid++;
 }
 
 waitjobs $intvtimeout;
@@ -538,20 +546,20 @@ waitjobs $intvtimeout;
 
 foreach $i (@cli) {
 	debug_msg "force quitting mount_slash screens: $i->{host}";
-	execute "ssh $i->{host} screen -S MSL.$tsid -X quit";
-	execute "ssh $i->{host} screen -S MSCTL.$tsid -X quit";
+	execute "ssh $i->{host} screen -S TS.MSL.$tsid -X quit";
+	execute "ssh $i->{host} screen -S TS.MSCTL.$tsid -X quit";
 }
 
 foreach $i (@ion) {
 	debug_msg "force quitting sliod screens: $i->{rname} : $i->{host}";
-	execute "ssh $i->{host} screen -S SLIOD.$tsid -X quit";
-	execute "ssh $i->{host} screen -S SLICTL.$tsid -X quit";
+	execute "ssh $i->{host} screen -S TS.SLIOD.$tsid -X quit";
+	execute "ssh $i->{host} screen -S TS.SLICTL.$tsid -X quit";
 }
 
 foreach $i (@mds) {
 	debug_msg "force quitting slashd screens: $i->{rname} : $i->{host}";
-	execute "ssh $i->{host} screen -S SLMDS.$tsid -X quit";
-	execute "ssh $i->{host} screen -S SLMCTL.$tsid -X quit";
+	execute "ssh $i->{host} screen -S TS.SLMDS.$tsid -X quit";
+	execute "ssh $i->{host} screen -S TS.SLMCTL.$tsid -X quit";
 }
 
 # Clean up files
