@@ -14,7 +14,7 @@
 .\" without express or implied warranty.
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
-.Dd May 27, 2011
+.Dd June 15, 2011
 .Dt SLASH.CONF 5
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -191,6 +191,13 @@ or
 .Ic parallel_fs ,
 required to be set for all resources.
 .El
+.Sh FILES
+.Bl -tag -width Pa -compact
+.It Pa /etc/slash.conf
+default
+.Tn SLASH
+resource configuration
+.El
 .Sh EXAMPLES
 The following is an example
 .Nm :
@@ -250,13 +257,6 @@ site @sitename {
 	}
 }
 .Ed
-.Sh FILES
-.Bl -tag -width Pa -compact
-.It Pa /etc/slash.conf
-default
-.Tn SLASH
-resource configuration
-.El
 .Sh SEE ALSO
 .Xr sladm 7 ,
 .Xr slashd 8 ,

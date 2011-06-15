@@ -14,8 +14,8 @@
 .\" without express or implied warranty.
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
-.\" %PFL_MODULES rpc fuse %
-.Dd June 14, 2011
+.\" %PFL_MODULES ctl fuse rpc %
+.Dd June 15, 2011
 .Dt MSCTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -771,13 +771,13 @@ All threads
 .Pq default, where applicable
 .El
 .\" }%
-.Sh EXAMPLES
-Recursively enqueue replication of all content for all files below the
-current directory to a destination
-.Tn I/O
-server:
-.Pp
-.D1 $ msctl -R repl-add:dst-io@SITE:* .
+.\" %PFL_INCLUDE $PFL_BASE/doc/env.mdoc {
+.Sh ENVIRONMENT
+.Bl -tag -width 3n
+.It Ev CTL_SOCK_FILE
+Override the default control socket file path.
+.El
+.\" }%
 .Sh FILES
 .Bl -tag -width Pa
 .It Pa /var/run/mount_slash. Ns Ic %h Ns Pa .sock
@@ -785,6 +785,13 @@ default
 .Xr mount_slash 8
 control socket
 .El
+.Sh EXAMPLES
+Recursively enqueue replication of all content for all files below the
+current directory to a destination
+.Tn I/O
+server:
+.Pp
+.D1 $ msctl -R repl-add:dst-io@SITE:* .
 .Sh SEE ALSO
 .Xr sladm 7 ,
 .Xr mount_slash 8
