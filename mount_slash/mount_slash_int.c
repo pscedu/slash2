@@ -846,7 +846,7 @@ msl_getrqstatus(struct slashrpc_cservice *csvc,
 		rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
 	if (rc == 0)
 		rc = mp ? mp->rc : ENOMSG;
-	if (rc == SLERR_NOTCONN)
+	if (csvc && rc == SLERR_NOTCONN)
 		sl_csvc_disconnect(csvc);
 	return (rc);
 }
