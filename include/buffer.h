@@ -187,12 +187,12 @@ enum {
 
 #define slb_set_alloctimer(t)						\
 	do {								\
-		struct _ts;						\
+		struct timespec _ts;					\
 									\
 		_ts.tv_sec = SLB_TIMEOUT_SECS;				\
 		_ts.tv_nsec = SLB_TIMEOUT_NSECS;			\
 		PFL_GETTIMESPEC(t);					\
-		timespecadd((t), &_tv, (t));				\
+		timespecadd((t), &_ts, (t));				\
 	} while (0)
 
 #define slb_inflight_cb(iov, op)					\
@@ -207,8 +207,8 @@ void sl_buffer_cache_init(void);
 void sl_buffer_fresh_assertions(struct sl_buffer *);
 void sl_buffer_clear(struct sl_buffer *, size_t);
 
-typedef int (*sl_iov_try_memrls_t)(void *);
-typedef void (*sl_iov_memrls_ulock_t)(void *);
+typedef int	(*sl_iov_try_memrls_t)(void *);
+typedef void	(*sl_iov_memrls_ulock_t)(void *);
 
 extern sl_iov_try_memrls_t	 slMemRlsTrylock;
 extern sl_iov_memrls_ulock_t	 slMemRlsUlock;
