@@ -547,7 +547,9 @@ void
 uncolor(void)
 {
 	if (!has_col)
-		putp(tparm(orig_pair));
+		return;
+	putp(tparm(orig_pair));
+	putp(tparm(exit_attribute_mode));
 }
 
 void
