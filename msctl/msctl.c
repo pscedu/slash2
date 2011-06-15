@@ -545,6 +545,9 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	struct srsm_replst_bhdr bhdr;
 	struct stat stb;
 	uint32_t iosidx;
+	int maxwidth;
+
+	maxwidth = psc_ctl_get_display_maxwidth();
 
 	map[BREPLST_INVALID] = '-';
 	map[BREPLST_REPL_SCHED] = 's';
@@ -607,7 +610,7 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 			for (nb = 0; nb < rsb->rsb_nbmaps; nb++, nbw++,
 			    off += SL_BITS_PER_REPLICA *
 			    current_mrs.mrs_nios + SL_NBITS_REPLST_BHDR) {
-				if (nbw >= 76)
+				if (nbw >= maxwidth - 4)
 					nbw = 0;
 				if (nbw == 0)
 					printf("\n    ");
