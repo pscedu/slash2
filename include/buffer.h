@@ -122,28 +122,28 @@ struct sl_buffer {
 
 #define DUMP_SLB(level, slb, fmt, ...)					\
 	do {								\
-		struct sl_buffer_iovref *__r;				\
-		int __l;						\
+		struct sl_buffer_iovref *_r;				\
+		int _locked;						\
 									\
 		DEBUG_SLB((level), (slb), fmt, ## __VA_ARGS__);		\
-		__l = reqlock(&(slb)->slb_lock);			\
-		psclist_for_each_entry(__r, &(slb)->slb_iov_list,	\
+		_locked = reqlock(&(slb)->slb_lock);			\
+		psclist_for_each_entry(_r, &(slb)->slb_iov_list,	\
 		    slbir_lentry) {					\
-			if (__r->slbir_pri) {				\
-				struct offtree_memb *__m;		\
+			if (_r->slbir_pri) {				\
+				struct offtree_memb *_m;		\
 									\
-				__m = __r->slbir_pri;			\
-				DEBUG_OFT((level), __m,			\
-				    "SLB ref %p memb", __r);		\
+				_m = _r->slbir_pri;			\
+				DEBUG_OFT((level), _m,			\
+				    "SLB ref %p memb", _r);		\
 				DEBUG_OFFTIOV((level),			\
-				    __m->oft_norl.oft_iov,		\
-				    "iov of memb %p", __m);		\
+				    _m->oft_norl.oft_iov,		\
+				    "iov of memb %p", _m);		\
 			} else						\
-				psc_logs((level), PSS_DEF,		\
+				psclogs((level), PSS_DEF,		\
 				    "--> Unmapped SLB ref %p memb "	\
-				    fmt, __r, ## __VA_ARGS__);		\
+				    fmt, _r, ## __VA_ARGS__);		\
 		}							\
-		ureqlock(&(slb)->slb_lock, __l);			\
+		ureqlock(&(slb)->slb_lock, _locked);			\
 	} while (0)
 
 struct sl_buffer_iovref {
@@ -185,23 +185,21 @@ enum {
 #define SLB_TIMEOUT_SECS	5
 #define SLB_TIMEOUT_NSECS	0
 
-#define slb_set_alloctimer(t) do {					\
+#define slb_set_alloctimer(t)						\
+	do {								\
+		struct _ts;						\
+									\
+		_ts.tv_sec = SLB_TIMEOUT_SECS;				\
+		_ts.tv_nsec = SLB_TIMEOUT_NSECS;			\
 		PFL_GETTIMESPEC(t);					\
-		(t)->tv_sec  += SLB_TIMEOUT_SECS;			\
-		(t)->tv_nsec += SLB_TIMEOUT_NSECS;			\
+		timespecadd((t), &_tv, (t));				\
 	} while (0)
-
-#define SLB_RP_TIMEOUT_SECS	0
-#define SLB_RP_TIMEOUT_NSECS	200000
 
 #define slb_inflight_cb(iov, op)					\
 	do {								\
 		if (slInflightCb)					\
-			(*slInflightCb)((iov), (op));			\
+			slInflightCb((iov), (op));			\
 	} while (0)
-
-#define SL_INFLIGHT_INC		0
-#define SL_INFLIGHT_DEC		1
 
 int  sl_buffer_init(struct psc_poolmgr *, void *);
 void sl_buffer_destroy(void *);
