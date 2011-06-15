@@ -197,15 +197,16 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 {
 	int tract[NBREPLST], retifset[NBREPLST], amt = 0, rc = 0;
 	struct resm_mds_info *src_rmmi, *dst_rmmi;
+	struct pscrpc_request *rq = NULL;
 	struct srm_repl_schedwk_req *mq;
 	struct srm_repl_schedwk_rep *mp;
 	struct slashrpc_cservice *csvc;
 	struct slmupsched_thread *smut;
-	struct pscrpc_request *rq;
 	struct site_mds_info *smi;
 	struct sl_resm *dst_resm;
 	struct psc_thread *thr;
 	struct sl_site *site;
+	sl_bmapno_t lastbno;
 
 	thr = pscthr_get();
 	smut = slmupschedthr(thr);
@@ -235,7 +236,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 
 	csvc = slm_geticsvc_nb(dst_resm, NULL);
 	if (csvc == NULL)
-		goto fail;
+		PFL_GOTOERR(fail, rc = SLERR_ION_OFFLINE);
 
 	amt = mds_repl_nodes_adjbusy(src_rmmi, dst_rmmi,
 	    slm_bmap_calc_repltraffic(b));
@@ -245,17 +246,25 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 		    &src_rmmi->rmmi_mwcond))
 			psc_multiwait_addcond(&smi->smi_mw,
 			    &src_rmmi->rmmi_mwcond);
-		goto fail;
+		PFL_GOTOERR(fail, rc);
 	}
 
 	/* Issue replication work request */
 	rc = SL_RSX_NEWREQ(csvc, SRMT_REPL_SCHEDWK, rq, mq, mp);
 	if (rc)
-		goto fail;
+		PFL_GOTOERR(fail, rc);
 	mq->nid = src_resm->resm_nid;
 	mq->len = SLASH_BMAP_SIZE;
-	if (b->bcm_bmapno == fcmh_nvalidbmaps(wk->uswi_fcmh) - 1)
-		mq->len = fcmh_2_fsz(wk->uswi_fcmh) % SLASH_BMAP_SIZE;
+	lastbno = fcmh_nvalidbmaps(wk->uswi_fcmh);
+	if (lastbno > 0)
+		lastbno--;
+	if (b->bcm_bmapno == lastbno) {
+		mq->len = fcmh_2_fsz(wk->uswi_fcmh);
+		if (mq->len > b->bcm_bmapno * SLASH_BMAP_SIZE)
+			mq->len -= b->bcm_bmapno * SLASH_BMAP_SIZE;
+		if (mq->len == 0)
+			PFL_GOTOERR(fail, rc = ENODATA);
+	}
 	mq->fg = *USWI_FG(wk);
 	mq->bmapno = b->bcm_bmapno;
 	BHGEN_GET(b, &mq->bgen);
@@ -282,12 +291,13 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc == 0)
 			rc = mp->rc;
-	}
-	pscrpc_req_finished(rq);
+	} else
+		rc = ENODEV;
 	if (rc == 0) {
+		pscrpc_req_finished(rq);
+		sl_csvc_decref(csvc);
 		mds_bmap_write_repls_rel(b);
 		uswi_unref(wk);
-		sl_csvc_decref(csvc);
 		return (1);
 	}
 
@@ -299,6 +309,8 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
  fail:
 	if (amt)
 		mds_repl_nodes_adjbusy(src_rmmi, dst_rmmi, -amt);
+	if (rq)
+		pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
 	if (rc)
@@ -861,6 +873,7 @@ uswi_unref(struct up_sched_work_item *wk)
 	psc_mutex_reqlock(&wk->uswi_mutex);
 	wk->uswi_flags &= ~USWIF_BUSY;
 	USWI_DECREF(wk, USWI_REFT_LOOKUP);
+	/* XXX conditional */
 	psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
 	psc_mutex_unlock(&wk->uswi_mutex);
 }
