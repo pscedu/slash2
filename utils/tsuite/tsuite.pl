@@ -360,7 +360,7 @@ foreach $i (@mds) {
 	);
 
 	my $dat = $slmgdb;
-	$dat =~ s/%(\w+)%/echo $1; $tr_vars{$1}/eg;
+	$dat =~ s/%(\w+)%/$tr_vars{$1}/g;
 
 	my $gdbfn = "$base/slashd.$i->{id}.gdbcmd";
 	open G, ">", $gdbfn or fatal "write $gdbfn";
@@ -434,6 +434,14 @@ alarm 0;
 # Launch the client mountpoints
 foreach $i (@cli) {
 	debug_msg "launching mount_slash: $i->{host}";
+
+	my %tr_vars = (
+		datadir		=> $datadir,
+	);
+
+	my $dat = $slmgdb;
+	$dat =~ s/%(\w+)%/$tr_vars{$1}/g;
+
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
 		@{[init_env(%$global_env, %{$i->{env}})]}

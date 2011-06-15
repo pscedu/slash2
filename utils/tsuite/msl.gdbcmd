@@ -2,4 +2,4 @@
 
 set confirm off
 set height 0
-run -f slash.conf -S ctl/msl.%h.sock mp
+run -f slash.conf -S ctl/msl.%h.sock -D %datadir% mp
