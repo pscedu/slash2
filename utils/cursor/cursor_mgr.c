@@ -36,7 +36,7 @@ const char *progname;
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-dv] [-x txg] -f cursor_file\n", progname);
+	fprintf(stderr, "usage: %s [-dv] [-x txg] [-f fid] -c cursor_file\n", progname);
 	exit(1);
 }
 
@@ -45,17 +45,17 @@ main(int argc, char *argv[])
 {
 	char *cursor_file = NULL, c;
 	int dump = 0, verbose = 0, fd, rc;
-	uint64_t newtxg;
+	uint64_t newtxg = 0, newfid = 0;
 	struct psc_journal_cursor cursor;
 
 	progname = argv[0];
 
-	while ((c = getopt(argc, argv, "dvf:x:")) != -1)
+	while ((c = getopt(argc, argv, "dvc:x:f:")) != -1)
 		switch (c) {
 		case 'd':
 			dump = 1;
 			break;
-		case 'f':
+		case 'c':
 			cursor_file = optarg;
 			break;
 		case 'v':
@@ -63,6 +63,9 @@ main(int argc, char *argv[])
 			break;
 		case 'x':
 			newtxg = strtol(optarg, NULL, 10);
+			break;
+		case 'f':
+			newfid = strtol(optarg, NULL, 10);
 			break;
 		default:
 			usage();
@@ -106,7 +109,17 @@ main(int argc, char *argv[])
 			exit(0);
 	}
 
-	cursor.pjc_commit_txg = newtxg;
+	if (!(newtxg || newfid)) {
+		fprintf(stderr, "Neither fid or txg was specified\n");
+		usage();
+	}
+
+	if (newtxg)
+		cursor.pjc_commit_txg = newtxg;
+
+	if (newfid)
+		cursor.pjc_fid = newfid;
+	
 	rc = pwrite(fd, &cursor, sizeof(struct psc_journal_cursor), 0);
 	if (rc != sizeof(struct psc_journal_cursor))
 		err(1, "cursor file pwrite() failed");
