@@ -735,7 +735,6 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 /* GETREPLST_SLAVE	*/ { fnstat_prhdr,	fnstat_prdat,	0,				replst_slave_check },
 /* GET_BMAPREPLPOL	*/ { fnstat_prhdr,	fnstat_prdat,	0,				NULL },
 /* GET_NEWREPLPOL	*/ { fnstat_prhdr,	fnstat_prdat,	0,				NULL },
-/* IMPORT		*/ { NULL,		NULL,		0,				NULL },
 /* SET_BMAPREPLPOL	*/ { NULL,		NULL,		0,				NULL },
 /* SET_NEWREPLPOL	*/ { NULL,		NULL,		0,				NULL }
 };

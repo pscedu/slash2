@@ -435,7 +435,6 @@ struct psc_ctlop msctlops[] = {
 /* GETREPLST_SLAVE	*/ { NULL,			0 },
 /* GET_BMAPREPLPOL	*/ { NULL,			0 },
 /* GET_NEWREPLPOL	*/ { NULL,			0 },
-/* IMPORT		*/ { NULL,			0 },
 /* SET_BMAPREPLPOL	*/ { msctlhnd_set_bmapreplpol,	sizeof(struct msctlmsg_bmapreplpol) },
 /* SET_NEWREPLPOL	*/ { msctlhnd_set_newreplpol,	sizeof(struct msctlmsg_newreplpol) }
 };
