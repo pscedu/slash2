@@ -90,6 +90,10 @@ sli_fcmh_getattr(struct fidc_membh *fcmh)
 	return (0);
 }
 
+/*
+ * sli_fcmh_reopen(): if the generation number changes, we assume a full truncation has
+ *     happened.  We need to open a new backing file and attach it to the fcmh.  
+ */
 int
 sli_fcmh_reopen(struct fidc_membh *fcmh, const struct slash_fidgen *fg)
 {

@@ -249,7 +249,7 @@ struct srt_stat {
 #define sst_ctime_ns	sst_ctim.tv_nsec
 
 /* reappropriated fields specific to directories */
-#define sstd_freplpol	sst_ptruncgen		/* new file repl pol for dirs */
+#define sstd_freplpol	sst_ptruncgen		/* new file replication policy for dirs */
 } __packed;
 
 #define DEBUG_SSTB(level, sstb, fmt, ...)				\
