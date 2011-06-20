@@ -377,7 +377,7 @@ mds_repl_inv_except(struct bmapc_memb *b, sl_ios_id_t ios, int iosidx)
 	    &iosidx, 1))
 		BHGEN_INCREMENT(b);
 
-	rc = mds_bmap_write(b, 0, NULL, NULL);
+	rc = mds_bmap_write(b, 0, NULL, b);
 
 	/*
 	 * If this bmap is marked for persistent replication, the repl
@@ -394,7 +394,6 @@ mds_repl_inv_except(struct bmapc_memb *b, sl_ios_id_t ios, int iosidx)
 		uswi_enqueue_sites(wk, &repl, 1);
 		uswi_unref(wk);
 	}
-
 	return (rc);
 }
 
@@ -443,8 +442,8 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		return (rc);
 
 	/* Find/add our replica's IOS ID */
-	rc = mds_repl_iosv_lookup_add(USWI_INOH(wk),
-	    iosv, iosidx, nios);
+	rc = mds_repl_iosv_lookup_add(USWI_INOH(wk), iosv, iosidx,
+	    nios);
 	if (rc) {
 		uswi_unref(wk);
 		return (rc);
@@ -456,8 +455,9 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	 */
 	brepls_init(tract, -1);
 	tract[BREPLST_INVALID] = BREPLST_REPL_QUEUED;
-	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED; /* XXX check gen */
 	tract[BREPLST_GARBAGE] = BREPLST_REPL_QUEUED;
+	tract[BREPLST_GARBAGE_SCHED] = BREPLST_REPL_QUEUED;
 
 	brepls_init(retifzero, 0);
 	retifzero[BREPLST_VALID] = 1;
@@ -505,8 +505,8 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 			rc = SLERR_REPL_ALREADY_ACT;
 	} else if (mds_bmap_exists(wk->uswi_fcmh, bmapno)) {
 		/*
-		 * If this bmap is already being
-		 * replicated, return EALREADY.
+		 * If this bmap is already being replicated, return
+		 * EALREADY.
 		 */
 		brepls_init(retifset, SLERR_REPL_NOT_ACT);
 		retifset[BREPLST_INVALID] = 0;
@@ -568,7 +568,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	}
 
 	brepls_init(tract, -1);
-	tract[BREPLST_REPL_QUEUED] = BREPLST_INVALID;
+	tract[BREPLST_REPL_QUEUED] = BREPLST_GARBAGE;
 	tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE;
 	tract[BREPLST_VALID] = BREPLST_GARBAGE;
 
@@ -592,7 +592,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	} else if (mds_bmap_exists(wk->uswi_fcmh, bmapno)) {
 		brepls_init(retifset, 0);
 		retifset[BREPLST_INVALID] = SLERR_REPL_ALREADY_INACT;
-		/* XXX BREPLST_TRUNCPNDG] = EINVAL? */
+		/* XXX BREPLST_TRUNCPNDG -> EINVAL? */
 		retifset[BREPLST_GARBAGE] = EINVAL;
 		retifset[BREPLST_GARBAGE_SCHED] = EINVAL;
 
