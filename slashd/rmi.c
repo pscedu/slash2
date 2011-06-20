@@ -185,7 +185,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 int
 slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 {
-	int tract[NBREPLST], retifset[NBREPLST], iosidx, src_iosidx, rc;
+	int tract[NBREPLST], retifset[NBREPLST], iosidx, src_iosidx;
 	struct sl_resm *dst_resm = NULL, *src_resm;
 	struct srm_repl_schedwk_req *mq;
 	struct srm_repl_schedwk_rep *mp;
@@ -242,14 +242,11 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 			brepls_init(retifset, 0);
 			retifset[BREPLST_VALID] = 1;
 
-			rc = mds_repl_bmap_walk(bcm, NULL, retifset,
-			    REPL_WALKF_MODOTH, &src_iosidx, 1);
-
-			if (rc) {
+			if (mds_repl_bmap_walk(bcm, NULL, retifset,
+			    REPL_WALKF_MODOTH, &src_iosidx, 1)) {
 				/*
-				 * Other replicas exist.
-				 * Mark this failed source replica as
-				 * garbage.
+				 * Other replicas exist.  Mark this
+				 * failed source replica as garbage.
 				 */
 				tract[BREPLST_VALID] = BREPLST_GARBAGE;
 				mds_repl_bmap_walk(bcm, tract, NULL, 0,
@@ -269,9 +266,9 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 			tract[BREPLST_REPL_SCHED] = BREPLST_INVALID;
 	} else {
 		/*
-		 * If the MDS crashed and came back up, the state
-		 * will have changed from SCHED->OLD, so change
-		 * OLD->ACTIVE here for that case as well.
+		 * If the MDS crashed and came back up, the state will
+		 * have changed from SCHED->OLD, so change OLD->ACTIVE
+		 * here for that case as well.
 		 */
 		tract[BREPLST_REPL_QUEUED] = BREPLST_VALID;
 		tract[BREPLST_REPL_SCHED] = BREPLST_VALID;
