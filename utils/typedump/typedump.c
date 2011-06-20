@@ -221,6 +221,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct sli_cli_csvc_cpart);
 	PRTYPE(struct sli_exp_cli);
 	PRTYPE(struct sli_repl_workrq);
+	PRTYPE(struct slictlmsg_fileop);
 	PRTYPE(struct slictlmsg_replwkst);
 	PRTYPE(struct sliric_thread);
 	PRTYPE(struct slirii_thread);
@@ -372,7 +373,6 @@ main(int argc, char *argv[])
 	PRVAL(MSCMT_GETREPLST_SLAVE);
 	PRVAL(MSCMT_GET_BMAPREPLPOL);
 	PRVAL(MSCMT_GET_NEWREPLPOL);
-	PRVAL(MSCMT_IMPORT);
 	PRVAL(MSCMT_SET_BMAPREPLPOL);
 	PRVAL(MSCMT_SET_NEWREPLPOL);
 	PRVAL(MSL_CBARG_BIORQ);
@@ -592,6 +592,8 @@ main(int argc, char *argv[])
 	PRVAL(SLITHRT_STATFS);
 	PRVAL(SLITHRT_TIOS);
 	PRVAL(SLITHRT_USKLNDPL);
+	PRVAL(SLI_CTL_FOP_EXPORT);
+	PRVAL(SLI_CTL_FOP_IMPORT);
 	PRVAL(SLMTHRT_BMAPTIMEO);
 	PRVAL(SLMTHRT_COH);
 	PRVAL(SLMTHRT_CTL);
