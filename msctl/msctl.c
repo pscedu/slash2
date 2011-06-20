@@ -599,7 +599,7 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 		label = " repl-policy: ";
 	} else
 		label = " new-bmap-repl-policy: ";
-	dlen = PSC_CTL_DISPLAY_WIDTH - strlen(label) -
+	dlen = maxwidth - strlen(label) -
 	    strlen(repl_policies[BRPOL_ONETIME]);
 	if (n > dlen)
 		printf("\n%*s", dlen, "");
@@ -622,7 +622,7 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 		uncolor();
 
 		psc_fmt_ratio(rbuf, bact, bact + both);
-		printf(" %6d %6d %6s ", bact, bact + both, rbuf);
+		printf(" %6d %6d %6s", bact, bact + both, rbuf);
 
 		psclist_for_each_entry(rsb, &current_mrs_bdata, rsb_lentry) {
 			off = SL_BITS_PER_REPLICA * iosidx +
