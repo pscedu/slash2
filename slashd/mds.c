@@ -78,16 +78,28 @@ slm_bmap_calc_repltraffic(struct bmapc_memb *b)
 {
 	struct fidc_membh *f;
 	int i, amt = 0;
+	off_t bsiz, sz;
 
 	f = b->bcm_fcmh;
 	FCMH_LOCK(f);
 	BMAP_LOCK(b);
 	for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++) {
 		if (b->bcm_crcstates[i] & BMAP_SLVR_DATA) {
-			if (b->bcm_bmapno == fcmh_nvalidbmaps(f) &&
-			    i == (int)((fcmh_2_fsz(f) % SLASH_BMAP_SIZE) /
-			    SLASH_SLVR_SIZE)) {
-				amt += fcmh_2_fsz(f) % SLASH_SLVR_SIZE;
+			/*
+			 * If this is the last bmap, tally only the
+			 * portion of data that exists.  This is needed
+			 * to fill big network pipes when dealing with
+			 * lots of small files.
+			 */
+			bsiz = fcmh_2_fsz(f) % SLASH_BMAP_SIZE;
+			if (bsiz == 0 && fcmh_2_fsz(f))
+				bsiz = SLASH_BMAP_SIZE;
+			if (b->bcm_bmapno == fcmh_nvalidbmaps(f) - 1 &&
+			    i == bsiz / SLASH_SLVR_SIZE) {
+				sz = bsiz % SLASH_SLVR_SIZE;
+				if (sz == 0 && bsiz)
+					sz = SLASH_SLVR_SIZE;
+				amt += sz;
 				break;
 			}
 			amt += SLASH_SLVR_SIZE;
