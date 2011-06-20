@@ -752,6 +752,7 @@ slmupschedthr_main(struct psc_thread *thr)
 						if (val == BREPLST_GARBAGE_SCHED)
 							break;
 
+						BMAPOD_MODIFY_DONE(b);
 						FOREACH_RND(&dst_resm_i,
 						    psc_dynarray_len(&dst_res->res_members))
 							/*
@@ -764,6 +765,7 @@ slmupschedthr_main(struct psc_thread *thr)
 							    b, off, dst_res,
 							    dst_resm_i.ri_rnd_idx))
 								goto restart;
+						BMAPOD_MODIFY_START(b);
 						break;
 					}
 					BMAPOD_MODIFY_DONE(b);
