@@ -632,11 +632,11 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 
 	psclog_notice("namespace op: optype=%d distill=%d "
 	    "fid="SLPRI_FID" name='%s%s%s' mask=%#x size=%"PRId64" "
-	    "pfid="SLPRI_FID" npfid="SLPRI_FID" txg=%"PRId64,
+	    "link=%"PRId64" pfid="SLPRI_FID" npfid="SLPRI_FID" txg=%"PRId64,
 	    op, distill,
 	    sjnm->sjnm_target_fid, name,
 	    newname ? "' newname='" : "", newname ? newname : "",
-	    mask, sstb->sst_size, pfid, npfid, txg);
+	    mask, sstb->sst_size, sstb->sst_nlink, pfid, npfid, txg);
 }
 
 /**
