@@ -584,13 +584,13 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	pmap[BREPLST_GARBAGE] = 'G';
 	pmap[BREPLST_GARBAGE_SCHED] = 'X';
 
-	cmap[BREPLST_INVALID] = COLOR_RED;
+	brepls_init(cmap, -1);
+	cmap[BREPLST_INVALID] = COLOR_BLACK;
 	cmap[BREPLST_REPL_SCHED] = COLOR_YELLOW;
 	cmap[BREPLST_REPL_QUEUED] = -1;
 	cmap[BREPLST_VALID] = COLOR_GREEN;
-	cmap[BREPLST_TRUNCPNDG] = -1;
 	cmap[BREPLST_TRUNCPNDG_SCHED] = COLOR_BLUE;
-	cmap[BREPLST_GARBAGE] = -1;
+	cmap[BREPLST_GARBAGE] = COLOR_BLACK;
 	cmap[BREPLST_GARBAGE_SCHED] = COLOR_BLUE;
 
 	n = printf("%s", fid2fn(current_mrs.mrs_fid, &stb));
