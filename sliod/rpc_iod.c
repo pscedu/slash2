@@ -172,26 +172,31 @@ sli_rpc_mds_unpack_fsuuid(struct pscrpc_request *rq, int msgtype)
 		xmkfn(fn, "%s/%s/%s", globalConfig.gconf_fsroot,
 		    SL_RPATH_META_DIR, SL_FN_FSUUID);
 		fp = fopen(fn, "r");
-		if (fp == NULL)
-			psc_fatal("open %s", fn);
-		if (fgets(buf, sizeof(buf), fp) == NULL)
-			psclog_errorx("%s", fn);
-		fclose(fp);
+		if (fp) {
+			if (fgets(buf, sizeof(buf), fp) == NULL)
+				psclog_errorx("%s", fn);
+			fclose(fp);
 
-		sli_fsuuid = strtol(buf, &endp, 10);
-		if (endp == buf || *endp != '\n')
-			return;
+			sli_fsuuid = strtol(buf, &endp, 10);
+			if (endp == buf || *endp != '\n') {
+				psclog_errorx("invalid fsuuid in %s: "
+				    "%s", fn, buf);
+				return;
+			}
+		}
 
 		if (!sli_fsuuid) {
-			fp = fopen(fn, "r");
+			fp = fopen(fn, "w");
 			if (fp == NULL)
 				psc_fatal("open %s", fn);
 			fprintf(fp, "%"PRIx64"\n", sli_fsuuid);
 			fclose(fp);
+			sli_fsuuid = fsuuid;
 		}
 	}
 	if (sli_fsuuid != fsuuid)
-		psclog_errorx("fsuuid don't match");
+		psclog_errorx("fsuuid don't match: %"PRIx64" vs "
+		    "%"PRIx64, sli_fsuuid, fsuuid);
 	return;
 
  error:
@@ -253,7 +258,7 @@ slrpc_waitrep(struct slashrpc_cservice *csvc,
 	if (csvc->csvc_ctype == SLCONNT_MDS) {
 		sli_rpc_mds_unpack_bminseq(rq, PSCRPC_MSG_REPLY);
 		if (rq->rq_reqmsg->opc == SRMT_CONNECT)
-			sli_rpc_mds_unpack_fsuuid(rq, PSCRPC_MSG_REQUEST);
+			sli_rpc_mds_unpack_fsuuid(rq, PSCRPC_MSG_REPLY);
 	}
 	return (rc);
 }
@@ -274,7 +279,7 @@ slrpc_allocrep(struct pscrpc_request *rq, void *mqp, int qlen,
 		sli_rpc_mds_unpack_bminseq(rq, PSCRPC_MSG_REQUEST);
 		sli_rpc_mds_pack_statfs(rq->rq_repmsg);
 		if (rc == 0 && rq->rq_reqmsg->opc == SRMT_CONNECT)
-			sli_rpc_mds_unpack_fsuuid(rq, PSCRPC_MSG_REPLY);
+			sli_rpc_mds_unpack_fsuuid(rq, PSCRPC_MSG_REQUEST);
 		return (rc);
 	}
 	return (slrpc_allocgenrep(rq, mqp, qlen, mpp, plen, rcoff));
