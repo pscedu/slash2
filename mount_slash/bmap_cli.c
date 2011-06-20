@@ -167,7 +167,8 @@ msl_bmap_lease_tryext(struct bmapc_memb *b)
 
 	BMAP_LOCK(b);
 
-	if (b->bcm_flags & (BMAP_CLI_LEASEEXTREQ | BMAP_TIMEOQ) ||
+	//	if (b->bcm_flags & (BMAP_CLI_LEASEEXTREQ | BMAP_TIMEOQ) ||
+	if (b->bcm_flags & (BMAP_CLI_LEASEEXTREQ) ||
 	    (secs = bmap_2_bci(b)->bci_xtime.tv_sec - CURRENT_SECONDS) >
 	    BMAP_CLI_EXTREQSECS) {
 		BMAP_ULOCK(b);
