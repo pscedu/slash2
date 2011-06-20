@@ -37,6 +37,22 @@ struct psc_lockedlist psc_mlists;
 struct psc_lockedlist psc_odtables;
 
 int
+slictlcmd_export(int fd, struct psc_ctlmsghdr *mh, void *m)
+{
+	int rc = 1;
+
+	return (rc);
+}
+
+int
+slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
+{
+	int rc = 1;
+
+	return (rc);
+}
+
+int
 slictlrep_getreplwkst(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct slictlmsg_replwkst *srws = m;
@@ -79,6 +95,8 @@ struct psc_ctlop slictlops[] = {
 	{ slictlrep_getreplwkst,	sizeof(struct slictlmsg_replwkst ) },
 	{ slctlrep_getconns,		sizeof(struct slctlmsg_conn ) },
 	{ slctlrep_getfcmhs,		sizeof(struct slctlmsg_fcmh ) },
+	{ slictlcmd_export,		sizeof(struct slictlmsg_fileop) },
+	{ slictlcmd_import,		sizeof(struct slictlmsg_fileop) },
 	{ slictlcmd_stop,		0 }
 };
 

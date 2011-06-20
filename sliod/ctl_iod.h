@@ -36,6 +36,16 @@ struct slictlmsg_replwkst {
 	/* XXX #inflight slivers? */
 };
 
+struct slictlmsg_fileop {
+	char			sfop_fn[PATH_MAX];
+	int			sfop_code;
+};
+
+enum {
+	SLI_CTL_FOP_EXPORT,
+	SLI_CTL_FOP_IMPORT
+};
+
 /* sliricthr thread stat aliases */
 #define pcst_nwrite		pcst_u32_1
 
@@ -43,4 +53,6 @@ struct slictlmsg_replwkst {
 #define SLICMT_GET_REPLWKST	NPCMT
 #define SLICMT_GETCONNS		(NPCMT + 1)
 #define SLICMT_GETFCMH		(NPCMT + 2)
-#define SLICMT_STOP		(NPCMT + 3)
+#define SLICMT_EXPORT		(NPCMT + 3)
+#define SLICMT_IMPORT		(NPCMT + 4)
+#define SLICMT_STOP		(NPCMT + 5)

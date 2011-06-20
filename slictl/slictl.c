@@ -91,6 +91,26 @@ replwkst_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 }
 
 void
+slictlcmd_export(int ac, char *av[])
+{
+	struct slictlmsg_fileop *sfop;
+
+	if (ac < 2)
+		errx(1, "export: no arguments specified");
+	sfop = psc_ctlmsg_push(SLICMT_EXPORT, sizeof(*sfop));
+}
+
+void
+slictlcmd_import(int ac, char *av[])
+{
+	struct slictlmsg_fileop *sfop;
+
+	if (ac < 2)
+		errx(1, "import: no arguments specified");
+	sfop = psc_ctlmsg_push(SLICMT_IMPORT, sizeof(*sfop));
+}
+
+void
 slictlcmd_stop(int ac, char *av[])
 {
 	if (ac > 1)
@@ -137,13 +157,17 @@ psc_ctl_prthr_t psc_ctl_prthrs[] = {
 };
 
 struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {
+	{ "export",	slictlcmd_export },
+	{ "import",	slictlcmd_import },
 	{ "stop",	slictlcmd_stop }
 };
 
 PFLCTL_CLI_DEFS;
 
-const char *progname;
-const char *daemon_name = "sliod";
+int		 verbose;
+int		 recursive;
+const char	*progname;
+const char	*daemon_name = "sliod";
 
 __dead void
 usage(void)

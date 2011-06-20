@@ -15,7 +15,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES ctl rpc %
-.Dd June 16, 2011
+.Dd June 20, 2011
 .Dt SLICTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -27,7 +27,7 @@
 runtime control
 .Sh SYNOPSIS
 .Nm slictl
-.Op Fl HIn
+.Op Fl HInRv
 .Op Fl p Ar paramspec
 .Op Fl S Ar socket
 .Op Fl s Ar showspec
@@ -41,7 +41,32 @@ behavior.
 .Pp
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/cmd.mdoc {
 .\"	cmds => {
-.\"		stop => <<'EOF'
+.\"		"export Ar file ... dst" => <<'EOF',
+.\"			Eject the specified files from the
+.\"			.Tn SLASH2
+.\"			file system to the destination specified at
+.\"			.Ar dst .
+.\"			The
+.\"			.Ar file
+.\"			arguments are relative to the
+.\"			.Tn SLASH2
+.\"			name space.
+.\"			The files must be resident on this node's backing file system.
+.\"			EOF
+.\"		"import Ar file ... dst" => <<'EOF',
+.\"			Import the specified files into the
+.\"			.Tn SLASH2
+.\"			file system into the
+.\"			.Tn SLASH2
+.\"			name space rooted at
+.\"			.Ar dst .
+.\"			Importing publishes a read-only copy of the data to the local metadata server.
+.\"			.Pp
+.\"			When importing recursively
+.\"			.Pq see Fl R ,
+.\"			relative file paths are preserved.
+.\"			EOF
+.\"		stop => <<'EOF',
 .\"			Instruct
 .\"			.Xr sliod 8
 .\"			to completely terminate daemon execution.
@@ -49,6 +74,29 @@ behavior.
 .\"	}
 The supported commands are as follows:
 .Bl -tag -width 3n
+.It Cm export Ar file ... dst
+Eject the specified files from the
+.Tn SLASH2
+file system to the destination specified at
+.Ar dst .
+The
+.Ar file
+arguments are relative to the
+.Tn SLASH2
+name space.
+The files must be resident on this node's backing file system.
+.It Cm import Ar file ... dst
+Import the specified files into the
+.Tn SLASH2
+file system into the
+.Tn SLASH2
+name space rooted at
+.Ar dst .
+Importing publishes a read-only copy of the data to the local metadata server.
+.Pp
+When importing recursively
+.Pq see Fl R ,
+relative file paths are preserved.
 .It Cm stop
 Instruct
 .Xr sliod 8
