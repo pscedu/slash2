@@ -115,6 +115,7 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 	brepls_init(retifset, 1);
 	retifset[BREPLST_INVALID] = 0;
 	retifset[BREPLST_VALID] = 0;
+	retifset[BREPLST_GARBAGE] = 0;
 
 	/* Scan bmaps to see if the inode should disappear. */
 	for (n = 0;; n++) {
@@ -744,7 +745,7 @@ slmupschedthr_main(struct psc_thread *thr)
 							goto skipfile;
 						}
 
-						if (bno == fcmh_nallbmaps(f) - 1)
+						if (bno && bno == fcmh_nallbmaps(f) - 1)
 							break;
 						has_work = 1;
 
@@ -788,8 +789,8 @@ slmupschedthr_main(struct psc_thread *thr)
 				uswi_unref(wk);
 
 				/*
-				 * This should be safe since the wk
-				 * is refcounted in our dynarray.
+				 * This should be safe since the wk is
+				 * refcounted in our dynarray.
 				 */
 				psc_multiwait_setcondwakeable(&smi->smi_mw,
 				    &wk->uswi_mwcond, 1);
