@@ -1148,6 +1148,7 @@ mds_bml_new(struct bmapc_memb *b, struct pscrpc_export *e, int flags,
 	bml->bml_bmdsi = bmap_2_bmi(b);
 	bml->bml_flags = flags;
 	bml->bml_cli_nidpid = *cnp;
+	bml->bml_start = time(NULL);
 
 	return (bml);
 }
@@ -1216,6 +1217,10 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 
 	bml->bml_seq = bia->bia_seq;
 	bml->bml_ion_nid = bia->bia_ion_nid;
+	/* Taking the lease origination time in this manner leaves
+	 *    us suscpetible to gross changes in the system time.
+	 */
+	bml->bml_start = bia->bia_start;
 
 	if (bia->bia_flags & BIAF_DIO) {
 		bml->bml_flags |= BML_CDIO;

@@ -36,31 +36,14 @@ struct bmap_timeo_table	 mdsBmapTimeoTbl;
 struct psc_poolmaster	 bmapMdsLeasePoolMaster;
 struct psc_poolmgr	*bmapMdsLeasePool;
 
-#define mds_bmap_timeotbl_curslot					\
-	((time(NULL) % BMAP_TIMEO_MAX) / BMAP_TIMEO_TBL_QUANT)
-
-#define mds_bmap_timeotbl_nextwakeup					\
-	(BMAP_TIMEO_TBL_QUANT - ((time(NULL) % BMAP_TIMEO_MAX) %	\
-				 BMAP_TIMEO_TBL_QUANT))
-
 void
 mds_bmap_timeotbl_init(void)
 {
-	int i;
-	struct bmap_timeo_entry *e;
-
 	INIT_SPINLOCK(&mdsBmapTimeoTbl.btt_lock);
 
-	mdsBmapTimeoTbl.btt_nentries = BMAP_TIMEO_TBL_SZ;
-	mdsBmapTimeoTbl.btt_entries =
-		PSCALLOC(sizeof(struct bmap_timeo_entry) * BMAP_TIMEO_TBL_SZ);
+	pll_init(&mdsBmapTimeoTbl.btt_leases, struct bmap_mds_lease, 
+	    bml_timeo_lentry, &mdsBmapTimeoTbl.btt_lock);
 
-	for (i=0; i < BMAP_TIMEO_TBL_SZ; i++) {
-		e = &mdsBmapTimeoTbl.btt_entries[i];
-		e->bte_maxseq = BMAPSEQ_ANY;
-		INIT_PSCLIST_HEAD(&e->bte_bmaps);
-		//mdsBmapTimeoTbl[i].bte_maxseq = BMAPSEQ_ANY;
-	}
 	mdsBmapTimeoTbl.btt_ready = 1;
 }
 
@@ -140,115 +123,111 @@ uint64_t
 mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 {
 	uint64_t seq=0;
-	struct bmap_timeo_entry *e;
-
-	spinlock(&mdsBmapTimeoTbl.btt_lock);
 
 	if (flags & BTE_DEL) {
-		psclist_del(&bml->bml_timeo_lentry,
-		    psc_lentry_hd(&bml->bml_timeo_lentry));
 		bml->bml_flags &= ~BML_TIMEOQ;
-		freelock(&mdsBmapTimeoTbl.btt_lock);
+		pll_remove(&mdsBmapTimeoTbl.btt_leases, bml);
 		return (BMAPSEQ_ANY);
 	}
-
-	/* Currently all leases are placed in the last slot regardless
-	 *   of their start time.  This is the case for BTE_REATTACH.
-	 */
-	psclog_dbg("timeoslot=%"PSCPRI_TIMET, mds_bmap_timeotbl_curslot);
-	e = &mdsBmapTimeoTbl.btt_entries[mds_bmap_timeotbl_curslot];
 
 	if (flags & BTE_REATTACH) {
 		/* BTE_REATTACH is only called from startup context.
 		 */
 		//		psc_assert(mdsBmapTimeoTbl.btt_minseq ==
 		//		   mdsBmapTimeoTbl.btt_maxseq);
-
+		spinlock(&mdsBmapTimeoTbl.btt_lock);
 		if (mdsBmapTimeoTbl.btt_maxseq < bml->bml_seq)
 			mdsBmapTimeoTbl.btt_minseq =
 				mdsBmapTimeoTbl.btt_maxseq = bml->bml_seq;
+		freelock(&mdsBmapTimeoTbl.btt_lock);
 
-		if (bml->bml_seq > e->bte_maxseq ||
-		    e->bte_maxseq == BMAPSEQ_ANY)
-			seq = e->bte_maxseq = bml->bml_seq;
+		seq = bml->bml_seq;
 
+		//XXX after odtable has been processed the lease
+		//  list should be sorted.
 	} else {
-		seq = e->bte_maxseq = mds_bmap_timeotbl_getnextseq();
+		seq = mds_bmap_timeotbl_getnextseq();
 	}
 
 	if (bml->bml_flags & BML_UPGRADE)
-		psclist_del(&bml->bml_timeo_lentry,
-		    psc_lentry_hd(&bml->bml_timeo_lentry));
+		pll_remove(&mdsBmapTimeoTbl.btt_leases, bml);
 
 	bml->bml_flags |= BML_TIMEOQ;
-	psclist_add_tail(&bml->bml_timeo_lentry, &e->bte_bmaps);
+	pll_addtail(&mdsBmapTimeoTbl.btt_leases, bml);
 
-	freelock(&mdsBmapTimeoTbl.btt_lock);
 	return (seq);
 }
 
 void
 slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 {
-	int timeoslot, i;
-	struct bmap_timeo_entry *e;
+	int nsecs;
 	struct bmap_mds_lease *bml;
-	struct psc_dynarray a = DYNARRAY_INIT;
 	struct slmds_jent_bmapseq sjbsq;
 
 	while (pscthr_run()) {
-		spinlock(&mdsBmapTimeoTbl.btt_lock);
-		/* The oldest slot is always curslot + 1.
-		 */
-		timeoslot = mds_bmap_timeotbl_curslot + 1;
-		if (timeoslot == BMAP_TIMEO_TBL_SZ)
-			timeoslot = 0;
-
-		e = &mdsBmapTimeoTbl.btt_entries[timeoslot];
-		/* Skip empty slot to avoid journaling for nothing */
-		if (e->bte_maxseq == BMAPSEQ_ANY || psc_listhd_empty(&e->bte_bmaps)) {
-			freelock(&mdsBmapTimeoTbl.btt_lock);
+		bml = pll_peekhead(&mdsBmapTimeoTbl.btt_leases);
+		if (!bml) {
+			nsecs = BMAP_TIMEO_MAX;
+			goto sleep;
+		}
+		
+		BML_LOCK(bml);
+		nsecs = time(NULL) - bml->bml_start;
+		if (nsecs < BMAP_TIMEO_MAX) {
+			BML_ULOCK(bml);
 			goto sleep;
 		}
 
-		psclist_for_each_entry(bml, &e->bte_bmaps, bml_timeo_lentry) {
+		DEBUG_BMAP(PLL_INFO, bml_2_bmap(bml), 
+		   "nsecs=%d bml=%p fl=%d seq=%"
+		   PRId64, nsecs, bml, bml->bml_flags, bml->bml_seq);
+
+		if (!(bml->bml_flags & BML_FREEING)) {
 			/* Don't race with slrmi threads who may be freeing
-			 * the lease from an rpc context.
-			 * mdsBmapTimeoTbl.btt_lock must be acquired before
-			 * pulling the bml from this list.
+			 *    the lease from an rpc context 
+			 *    mdsBmapTimeoTbl.btt_lock must be acquired 
+			 *    before pulling the bml from this list.
+			 */			
+			bml->bml_flags |= BML_FREEING;
+			BML_ULOCK(bml);
+
+			spinlock(&mdsBmapTimeoTbl.btt_lock);
+			sjbsq.sjbsq_high_wm = mdsBmapTimeoTbl.btt_maxseq;
+			if (bml->bml_seq < mdsBmapTimeoTbl.btt_minseq) {
+				psc_warnx("bml->bml_seq (%"PRIx64") is < "
+				    "mdsBmapTimeoTbl.btt_minseq (%"PRIx64,
+				    bml->bml_seq, mdsBmapTimeoTbl.btt_minseq);
+
+				sjbsq.sjbsq_low_wm = 
+					mdsBmapTimeoTbl.btt_minseq;
+			} else 
+				sjbsq.sjbsq_low_wm = 
+					mdsBmapTimeoTbl.btt_minseq =
+					bml->bml_seq;
+
+			freelock(&mdsBmapTimeoTbl.btt_lock);		
+			/* Journal the new low watermark.
 			 */
-			spinlock(&bml->bml_lock);
-			if (!(bml->bml_flags & BML_FREEING)) {
-				bml->bml_flags |= BML_FREEING;
-				psc_dynarray_add(&a, bml);
-			}
-			freelock(&bml->bml_lock);
-		}
-
-		memset(&sjbsq, 0, sizeof(sjbsq));
-		sjbsq.sjbsq_high_wm = mdsBmapTimeoTbl.btt_maxseq;
-		sjbsq.sjbsq_low_wm = mdsBmapTimeoTbl.btt_minseq =
-			e->bte_maxseq;
-
-		freelock(&mdsBmapTimeoTbl.btt_lock);
-		/* Journal the new low watermark.
-		 */
-		mds_bmap_journal_bmapseq(&sjbsq);
-
-		for (i = 0; i < psc_dynarray_len(&a); i++) {
-			bml = psc_dynarray_getpos(&a, i);
-			psc_assert(bml->bml_seq <= e->bte_maxseq);
+			mds_bmap_journal_bmapseq(&sjbsq);
+			
 			if (mds_bmap_bml_release(bml))
 				abort();
-		}
-		psc_dynarray_reset(&a);
- sleep:
-		psclog_dbg("timeoslot=%d sleeptime=%"PSCPRI_TIMET,
-			timeoslot, mds_bmap_timeotbl_nextwakeup);
 
-		sleep(mds_bmap_timeotbl_nextwakeup);
+			continue;					
+		} else {
+			/* Avoid spinning on this BML while it's being
+			 *    freed.
+			 */
+			BML_ULOCK(bml);
+			nsecs = 1;
+		}
+ sleep:
+		psclog_info("nsecs=%d", nsecs);
+		
+		if (nsecs > 0)			
+			sleep((uint32_t)nsecs);
 	}
-	psc_dynarray_free(&a);
 }
 
 void

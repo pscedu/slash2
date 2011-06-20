@@ -150,11 +150,6 @@ bmap_2_bmi(struct bmapc_memb *b)
 		BMAPOD_READ_DONE((b), _lk);				\
 	} while (0)
 
-struct bmap_timeo_entry {
-	uint64_t		 bte_maxseq;
-	struct psclist_head	 bte_bmaps;
-};
-
 struct bmap_timeo_table {
 	psc_spinlock_t		 btt_lock;
 	/*
@@ -164,8 +159,7 @@ struct bmap_timeo_table {
 	 */
 	uint64_t		 btt_maxseq;
 	uint64_t		 btt_minseq;
-	struct bmap_timeo_entry	*btt_entries;
-	int			 btt_nentries;
+	struct psc_lockedlist    btt_leases;
 	int			 btt_ready;
 };
 
@@ -175,8 +169,6 @@ struct bmap_timeo_table {
 #define BTE_REATTACH		(1 << 2)
 
 #define BMAP_TIMEO_MAX		120	/* Max bmap lease timeout */
-#define BMAP_TIMEO_TBL_QUANT	5
-#define BMAP_TIMEO_TBL_SZ	(BMAP_TIMEO_MAX / BMAP_TIMEO_TBL_QUANT)
 #define BMAP_SEQLOG_FACTOR	100
 
 struct bmap_mds_lease {
@@ -184,6 +176,7 @@ struct bmap_mds_lease {
 	lnet_nid_t		  bml_ion_nid;
 	lnet_process_id_t	  bml_cli_nidpid;
 	uint32_t		  bml_flags;
+	time_t                    bml_start;
 	psc_spinlock_t		  bml_lock;
 	struct bmap_mds_info	 *bml_bmdsi;
 	struct pscrpc_export	 *bml_exp;
@@ -210,6 +203,7 @@ struct bmap_mds_lease {
 #define	BML_EXPFAIL		(1 << 12)
 #define BML_FREEING		(1 << 13)
 #define BML_ASSFAIL		(1 << 14)
+#define BML_RECOVERPNDG         (1 << 15)
 
 #define bml_2_bmap(bml)		bmi_2_bmap((bml)->bml_bmdsi)
 
