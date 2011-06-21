@@ -128,8 +128,7 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
 	 * It does not exist; add the replica to the inode if 'add' was
 	 *   specified, else return.
 	 */
-	if (rc == -ENOENT && add) {
-		psc_assert(ih->inoh_ino.ino_nrepls == j);
+	if (add) {
 
 		if (ih->inoh_ino.ino_nrepls >= SL_MAX_REPLICAS) {
 			DEBUG_INOH(PLL_WARN, ih, "too many replicas");
