@@ -316,14 +316,11 @@ slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 {
 	struct srm_bmap_ptrunc_req *mq;
 	struct srm_bmap_ptrunc_rep *mp;
-	struct bmapc_memb *bcm;
+	struct bmapc_memb *bcm = NULL;
 	int tract[NBREPLST];
 	int iosidx;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-
-	brepls_init(tract, -1);
-	tract[BREPLST_GARBAGE_SCHED] = BREPLST_INVALID;
 
 	mp->rc = mds_bmap_load_ion(&mq->fg, mq->bmapno, &bcm);
 	if (mp->rc)
@@ -332,14 +329,17 @@ slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 	iosidx = mds_repl_ios_lookup(fcmh_2_inoh(bcm->bcm_fcmh),
 	    libsl_nid2resm(rq->rq_export->exp_connection->
 	    c_peer.nid)->resm_iosid);
+
+	brepls_init(tract, -1);
+	tract[BREPLST_GARBAGE_SCHED] = BREPLST_INVALID;
 	mds_repl_bmap_walk(bcm, tract, NULL, 0, &iosidx, 1);
-	bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
+	mds_bmap_write_repls_rel(bcm);
+
 #if 0
 	brepls_init(retifset, 1);
 	tract[BREPLST_INVALID] = 0;
 
-	for (i = fcmh_nallbmaps(fcmh), bmapno);
-	    i > 0; i--) {
+	for (i = fcmh_nallbmaps(fcmh), bmapno); i > 0; i--) {
 		load bmap
 		if ()
 			break;
