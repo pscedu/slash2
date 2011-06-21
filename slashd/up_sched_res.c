@@ -767,6 +767,11 @@ slmupschedthr_main(struct psc_thread *thr)
 								goto restart;
 						BMAPOD_MODIFY_START(b);
 						break;
+					case BREPLST_REPL_SCHED:
+					case BREPLST_TRUNCPNDG_SCHED:
+					case BREPLST_GARBAGE_SCHED:
+						has_work = 1;
+						break;
 					}
 					BMAPOD_MODIFY_DONE(b);
 					mds_bmap_write_repls_rel(b);

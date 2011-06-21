@@ -362,8 +362,8 @@ mds_repl_inv_except(struct bmapc_memb *b, sl_ios_id_t ios, int iosidx)
 	/*
 	 * Invalidate all other replicas.
 	 * Note: if the status is SCHED here, don't do anything; once
-	 * the replication status update comes from the ION, we will know
-	 * he copied an old bmap and mark it OLD then.
+	 * the replication status update comes from the ION, we will
+	 * know he copied an old bmap and mark it OLD then.
 	 */
 	brepls_init(tract, -1);
 	tract[BREPLST_VALID] = policy == BRPOL_PERSIST ?
@@ -493,8 +493,8 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 
 			repl_some_act |= mds_repl_bmap_walk(bcm,
 			    tract, retifset, 0, iosidx, nios);
-			if (repl_all_act && mds_repl_bmap_walk_all(bcm, NULL,
-			    ret_if_inact, REPL_WALKF_SCIRCUIT))
+			if (repl_all_act && mds_repl_bmap_walk_all(bcm,
+			    NULL, ret_if_inact, REPL_WALKF_SCIRCUIT))
 				repl_all_act = 0;
 			mds_bmap_write_repls_rel(bcm);
 		}
@@ -758,6 +758,8 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 
 		brepls_init(tract, -1);
 		tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+		tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
+		tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_TRUNCPNDG;
 
 		for (n = 0; n < fcmh_nvalidbmaps(wk->uswi_fcmh); n++) {
 			if (mds_bmap_load(wk->uswi_fcmh, n, &bcm))
