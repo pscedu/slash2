@@ -1447,6 +1447,7 @@ mds_journal_init(int disable_propagation)
 	char fn[PATH_MAX];
 	void *handle;
 	size_t size;
+	char *jrnldev;
 
 	psc_assert(_MDS_LOG_LAST_TYPE <= (1 << 15));
 	psc_assert(sizeof(struct srt_update_entry) == 512);
@@ -1478,6 +1479,7 @@ mds_journal_init(int disable_propagation)
 	if (mdsJournal == NULL)
 		psc_fatal("Failed to open log file %s", res->res_jrnldev);
 
+	jrnldev = res->res_jrnldev;
 	mds_open_cursor();
 
 	/*
@@ -1643,7 +1645,7 @@ mds_journal_init(int disable_propagation)
 	mdsJournal->pj_commit_txg = mds_cursor.pjc_commit_txg;
 	mdsJournal->pj_replay_xid = mds_cursor.pjc_replay_xid;
 
-	psclog_notice("Journal device is %s", res->res_jrnldev);
+	psclog_notice("Journal device is %s", jrnldev);
 	psclog_notice("Last SLASH FID is "SLPRI_FID, mds_cursor.pjc_fid);
 	psclog_notice("Last synced ZFS transaction group number is %"PRId64,
 	    mdsJournal->pj_commit_txg);
