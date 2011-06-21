@@ -164,13 +164,14 @@ struct mdsio_ops mdsio_ops = {
 	zfsslash2_write,
 
 	zfsslash2_replay_create,
+	zfsslash2_replay_fidlink,
 	zfsslash2_replay_link,
 	zfsslash2_replay_mkdir,
 	zfsslash2_replay_rename,
 	zfsslash2_replay_rmdir,
 	zfsslash2_replay_setattr,
 	zfsslash2_replay_symlink,
-	zfsslash2_replay_unlink,
+	zfsslash2_replay_unlink
 };
 
 int
