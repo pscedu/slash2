@@ -42,6 +42,7 @@ struct slvr_ref;
 
 struct sli_repl_workrq {
 	struct slash_fidgen	 srw_fg;
+	int			 srw_op;
 	sl_bmapno_t		 srw_bmapno;
 	sl_bmapgen_t		 srw_bgen;		/* bmap generation */
 	uint64_t		 srw_nid;		/* repl source network address */
@@ -62,7 +63,12 @@ struct sli_repl_workrq {
 	struct slvr_ref		*srw_slvr_refs[REPL_MAX_INFLIGHT_SLVRS];
 };
 
-int	sli_repl_addwk(uint64_t, const struct slash_fidgen *,
+enum {
+	SLI_REPLWKOP_PTRUNC,
+	SLI_REPLWKOP_REPL,
+};
+
+int	sli_repl_addwk(int, uint64_t, const struct slash_fidgen *,
 		sl_bmapno_t, sl_bmapgen_t, int);
 void	sli_repl_init(void);
 

@@ -86,6 +86,8 @@ sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *w)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
+	struct srm_bmap_ptrunc_req *p_mq;
+	struct srm_bmap_ptrunc_rep *p_mp;
 	struct srm_repl_schedwk_req *mq;
 	struct srm_repl_schedwk_rep *mp;
 	int rc;
@@ -93,20 +95,34 @@ sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *w)
 	rc = sli_rmi_getimp(&csvc);
 	if (rc)
 		goto out;
-	rc = SL_RSX_NEWREQ(csvc, SRMT_REPL_SCHEDWK, rq, mq, mp);
-	if (rc)
-		goto out;
-	mq->nid = w->srw_nid;
-	mq->fg = w->srw_fg;
-	mq->bmapno = w->srw_bmapno;
-	mq->bgen = w->srw_bgen;
-	mq->rc = w->srw_status;
-	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc == 0)
-		rc = mp->rc;
 
-	if (mq->rc)
-		psclog_errorx("sent error rc=%d", mq->rc);
+	if (w->srw_op == SLI_REPLWKOP_PTRUNC) {
+		rc = SL_RSX_NEWREQ(csvc, SRMT_BMAP_PTRUNC, rq, p_mq,
+		    p_mp);
+		if (rc)
+			goto out;
+		p_mq->fg = w->srw_fg;
+		p_mq->bmapno = w->srw_bmapno;
+		p_mq->bgen = w->srw_bgen;
+		p_mq->rc = w->srw_status;
+		rc = SL_RSX_WAITREP(csvc, rq, p_mp);
+		if (rc == 0)
+			rc = p_mp->rc;
+	} else {
+		rc = SL_RSX_NEWREQ(csvc, SRMT_REPL_SCHEDWK, rq, mq, mp);
+		if (rc)
+			goto out;
+		mq->nid = w->srw_nid;
+		mq->fg = w->srw_fg;
+		mq->bmapno = w->srw_bmapno;
+		mq->bgen = w->srw_bgen;
+		mq->rc = w->srw_status;
+		rc = SL_RSX_WAITREP(csvc, rq, mp);
+		if (rc == 0)
+			rc = mp->rc;
+	}
+	if (w->srw_status)
+		psclog_errorx("sent error rc=%d", w->srw_status);
 
  out:
 	if (rq)

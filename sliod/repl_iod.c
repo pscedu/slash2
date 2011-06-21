@@ -53,7 +53,7 @@ struct psc_lockedlist	 sli_replwkq_active =
 	    srw_active_lentry);
 
 int
-sli_repl_addwk(uint64_t nid, const struct slash_fidgen *fgp,
+sli_repl_addwk(int op, uint64_t nid, const struct slash_fidgen *fgp,
     sl_bmapno_t bmapno, sl_bmapgen_t bgen, int len)
 {
 	struct sli_repl_workrq *w;
@@ -84,6 +84,7 @@ sli_repl_addwk(uint64_t nid, const struct slash_fidgen *fgp,
 	w->srw_bmapno = bmapno;
 	w->srw_bgen = bgen;
 	w->srw_len = len;
+	w->srw_op = op;
 
 	/* lookup replication source peer */
 	w->srw_resm = libsl_nid2resm(w->srw_nid);
@@ -105,13 +106,17 @@ sli_repl_addwk(uint64_t nid, const struct slash_fidgen *fgp,
 
 		/* mark slivers for replication */
 		BMAP_LOCK(w->srw_bcm);
-		for (i = len = 0;
-		    i < SLASH_SLVRS_PER_BMAP && len < (int)w->srw_len;
-		    i++, len += SLASH_SLVR_SIZE)
-			if (w->srw_bcm->bcm_crcstates[i] & BMAP_SLVR_DATA) {
-				w->srw_bcm->bcm_crcstates[i] |= BMAP_SLVR_WANTREPL;
-				w->srw_nslvr_tot++;
-			}
+		if (op == SLI_REPLWKOP_REPL)
+			for (i = len = 0;
+			    i < SLASH_SLVRS_PER_BMAP &&
+			    len < (int)w->srw_len;
+			    i++, len += SLASH_SLVR_SIZE)
+				if (w->srw_bcm->bcm_crcstates[i] &
+				    BMAP_SLVR_DATA) {
+					w->srw_bcm->bcm_crcstates[i] |=
+					    BMAP_SLVR_WANTREPL;
+					w->srw_nslvr_tot++;
+				}
 		BMAP_ULOCK(w->srw_bcm);
 	}
 
@@ -170,6 +175,17 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 		spinlock(&w->srw_lock);
 		if (w->srw_status)
 			goto end;
+
+		if (w->srw_op == SLI_REPLWKOP_PTRUNC) {
+			/*
+			 * XXX this needs to truncate data in the slvr
+			 * cache.
+			 *
+			 * XXX if there is srw_offset, we must send a
+			 * CRC update for the sliver.
+			 */
+			goto end;
+		}
 
 		/* find a sliver to transmit */
 		BMAP_LOCK(w->srw_bcm);

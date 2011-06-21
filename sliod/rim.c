@@ -119,8 +119,8 @@ sli_rim_handle_repl_schedwk(struct pscrpc_request *rq)
 	else if (mq->len < 1 || mq->len > SLASH_BMAP_SIZE)
 		mp->rc = EINVAL;
 	else
-		mp->rc = sli_repl_addwk(mq->nid, &mq->fg,
-		    mq->bmapno, mq->bgen, mq->len);
+		mp->rc = sli_repl_addwk(SLI_REPLWKOP_REPL, mq->nid,
+		    &mq->fg, mq->bmapno, mq->bgen, mq->len);
 	return (0);
 }
 
@@ -129,39 +129,14 @@ sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
 {
 	const struct srm_bmap_ptrunc_req *mq;
 	struct srm_bmap_ptrunc_rep *mp;
-	struct fidc_membh *fcmh = NULL;
-	struct bmapc_memb *b = NULL;
-	int n;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->offset < 0 || mq->offset >= SLASH_BMAP_SIZE) {
 		mp->rc = EINVAL;
 		return (0);
 	}
-	mp->rc = sli_fcmh_get(&mq->fg, &fcmh);
-	if (mp->rc)
-		goto out;
-	mp->rc = bmap_get(fcmh, mq->bmapno, SL_WRITE, &b);
-	if (mp->rc)
-		goto out;
-	if (ftruncate(fcmh_2_fd(fcmh),
-	    mq->bmapno * SLASH_BMAP_SIZE + mq->offset) == -1) {
-		DEBUG_FCMH(PLL_ERROR, fcmh, "truncate %"PSCPRIdOFFT,
-		    mq->bmapno * SLASH_BMAP_SIZE + mq->offset);
-		mp->rc = errno;
-	}
-	n = howmany(mq->offset, SLASH_SLVR_SIZE);
-	BMAP_LOCK(b);
-	for (; n < SLASH_SLVRS_PER_BMAP; n++)
-		b->bcm_crcstates[n] &= ~(BMAP_SLVR_DATA | BMAP_SLVR_CRC);
-	BMAP_ULOCK(b);
-	if (mq->offset % SLASH_SLVR_SIZE) {
-		/* XXX do a CRC recomputation after applying */
-	}
- out:
-	if (b)
-		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
-	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+	mp->rc = sli_repl_addwk(SLI_REPLWKOP_PTRUNC, 0, &mq->fg,
+	    mq->bmapno, mq->bgen, mq->offset);
 	return (0);
 }
 
