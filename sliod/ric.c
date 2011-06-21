@@ -136,7 +136,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	seqno = bim_getcurseq();
 	if (mq->sbd.sbd_seq < seqno) {
 		/* Reject old bmapdesc. */
-		psclog_warnx("seq %"PRId64" < bim_getcurseq(%"PRId64")", 
+		psclog_warnx("seq %"PRId64" < bim_getcurseq(%"PRId64")",
 		     mq->sbd.sbd_seq, seqno);
 		mp->rc = EKEYEXPIRED;
 		return (mp->rc);
@@ -231,7 +231,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			slvr_lru_tryunpin_locked(slvr_ref[i]);
 			SLVR_ULOCK(slvr_ref[i]);
 
-			DEBUG_SLVR(PLL_WARN, slvr_ref[i], 
+			DEBUG_SLVR(PLL_WARN, slvr_ref[i],
 			   "unwind ref due to bulk error (rw=%d)", rw);
 		}
 		goto out;
@@ -310,10 +310,10 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		rc = sli_fcmh_get(&fg, &f);
 		psc_assert(rc == 0);
 
-		/* Fsync here to guarantee that buffers are flushed to 
-		 *   disk before the MDS releases its odtable entry for 
+		/* Fsync here to guarantee that buffers are flushed to
+		 *   disk before the MDS releases its odtable entry for
 		 *   this bmap.
-		 */		
+		 */
 		FCMH_LOCK(f);
 		if (!(f->fcmh_flags & FCMH_CTOR_DELAYED))
 			sync = 1;
@@ -321,7 +321,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		if (sync)
 			rc = fsync(fcmh_2_fd(f));
 		if (rc)
-			DEBUG_FCMH(PLL_ERROR, f, "fsync failure rc=%d fd=%d errno=%d", 
+			DEBUG_FCMH(PLL_ERROR, f, "fsync failure rc=%d fd=%d errno=%d",
 				   rc, fcmh_2_fd(f), errno);
 
 		rc = bmap_get(f, bid->bmapno, SL_WRITE, &b);
