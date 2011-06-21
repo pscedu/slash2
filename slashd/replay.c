@@ -248,7 +248,9 @@ mds_replay_ino_repls(struct psc_journal_enthdr *pje)
 	int rc;
 
 	sjir = PJE_DATA(pje);
-	rc = mds_replay_ino(sjir, I_REPLAY_OP_REPLS);
+	rc = mdsio_redo_fidlink(sjir->sjir_fid, &rootcreds);
+	if (!rc)
+	    rc = mds_replay_ino(sjir, I_REPLAY_OP_REPLS);
 	return (rc);
 }
 

@@ -110,6 +110,7 @@ struct mdsio_ops {
 	int	(*mio_redo_setattr)(slfid_t, uint, struct srt_stat *);
 	int	(*mio_redo_symlink)(slfid_t, slfid_t, char *, char *, struct srt_stat *);
 	int	(*mio_redo_unlink)(slfid_t, slfid_t, char *);
+	int	(*mio_redo_fidlink)(slfid_t, const struct slash_creds *);
 };
 
 #define mdsio_init		mdsio_ops.mio_init			/* zfsslash2_init() */
@@ -150,6 +151,7 @@ struct mdsio_ops {
 #define mdsio_redo_setattr	mdsio_ops.mio_redo_setattr		/* zfsslash2_replay_setattr() */
 #define mdsio_redo_symlink	mdsio_ops.mio_redo_symlink		/* zfsslash2_replay_symlink() */
 #define mdsio_redo_unlink	mdsio_ops.mio_redo_unlink		/* zfsslash2_replay_unlink() */
+#define mdsio_redo_fidlink	mdsio_ops.mio_redo_fidlink		/* zfsslash2_replay_fidlink() */
 
 extern struct mdsio_ops	mdsio_ops;
 extern mdsio_fid_t	mds_upschdir_inum;

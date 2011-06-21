@@ -527,8 +527,17 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 	f->fcmh_refcnt--;
 	if (f->fcmh_refcnt == 0) {
 		/*
-		 * XXX Should we also free it if FCMH_CAC_TOFREE?
-		 */
+ 		 * If we fail to initialize a fcmh, free it now.
+ 		 * Note that the reaper won't run if there is no
+ 		 * memory pressure, and a deprecated fcmh will
+ 		 * cause us to spin on it.
+ 		 */
+		if (f->fcmh_flags & FCMH_CTOR_FAILED) {
+			lc_remove(&fidcIdleList, f);
+			psc_hashent_remove(&fidcHtable, f);
+			fcmh_destroy(f);
+			return;
+		}
 		if (f->fcmh_flags & FCMH_CAC_BUSY) {
 			f->fcmh_flags &= ~FCMH_CAC_BUSY;
 			f->fcmh_flags |= FCMH_CAC_IDLE;

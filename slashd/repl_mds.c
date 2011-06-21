@@ -147,7 +147,7 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
 		repl[k].bs_id = ios;
 		ih->inoh_ino.ino_nrepls++;
 
-		DEBUG_INOH(PLL_INFO, ih, "add IOS(%u) to repls, replica %d",
+		DEBUG_INOH(PLL_INFO, ih, "add IOS(%u) to repls, index %d",
 		    ios, j);
 
 		mds_inode_repls_update(ih->inoh_fcmh, log);
