@@ -60,8 +60,9 @@ sli_repl_addwk(uint64_t nid, const struct slash_fidgen *fgp,
 	int rc, i;
 
 	/*
-	 * Check if this work is already queued, e.g. from before the MDS
-	 * crashes, comes back online, and assigns gratitious requeue work.
+	 * Check if this work is already queued, e.g. from before the
+	 * MDS crashes, comes back online, and assigns gratitious
+	 * requeue work.
 	 */
 	PLL_LOCK(&sli_replwkq_active);
 	PLL_FOREACH(w, &sli_replwkq_active)
@@ -104,7 +105,8 @@ sli_repl_addwk(uint64_t nid, const struct slash_fidgen *fgp,
 
 		/* mark slivers for replication */
 		BMAP_LOCK(w->srw_bcm);
-		for (i = len = 0; i < SLASH_SLVRS_PER_BMAP && len < (int)w->srw_len;
+		for (i = len = 0;
+		    i < SLASH_SLVRS_PER_BMAP && len < (int)w->srw_len;
 		    i++, len += SLASH_SLVR_SIZE)
 			if (w->srw_bcm->bcm_crcstates[i] & BMAP_SLVR_DATA) {
 				w->srw_bcm->bcm_crcstates[i] |= BMAP_SLVR_WANTREPL;
@@ -116,7 +118,8 @@ sli_repl_addwk(uint64_t nid, const struct slash_fidgen *fgp,
  out:
 	if (rc) {
 		if (w->srw_fcmh)
-			fcmh_op_done_type(w->srw_fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+			fcmh_op_done_type(w->srw_fcmh,
+			    FCMH_OPCNT_LOOKUP_FIDC);
 
 		psc_pool_return(sli_replwkrq_pool, w);
 	} else {
@@ -209,8 +212,9 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 
 		spinlock(&w->srw_lock);
 		/*
-		 * Place back on queue to process again on next iteration.
-		 * If it's full, we'll wait for a slot to open up then.
+		 * Place back on queue to process again on next
+		 * iteration.  If it's full, we'll wait for a slot to
+		 * open up then.
 		 */
 		if (psclist_disjoint(&w->srw_state_lentry)) {
 			lc_addhead(&sli_replwkq_pending, w);
@@ -227,15 +231,17 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 void
 sli_repl_init(void)
 {
-	psc_poolmaster_init(&sli_replwkrq_poolmaster, struct sli_repl_workrq,
-	    srw_state_lentry, PPMF_AUTO, 256, 256, 0, NULL, NULL, NULL, "replwkrq");
+	psc_poolmaster_init(&sli_replwkrq_poolmaster,
+	    struct sli_repl_workrq, srw_state_lentry, PPMF_AUTO, 256,
+	    256, 0, NULL, NULL, NULL, "replwkrq");
 	sli_replwkrq_pool = psc_poolmaster_getmgr(&sli_replwkrq_poolmaster);
 
 	lc_reginit(&sli_replwkq_pending, struct sli_repl_workrq,
 	    srw_state_lentry, "replwkpnd");
 
-	pscthr_init(SLITHRT_REPLPND, 0, slireplpndthr_main,
-	    NULL, 0, "slireplpndthr");
+	pscthr_init(SLITHRT_REPLPND, 0, slireplpndthr_main, NULL, 0,
+	    "slireplpndthr");
 
-	pscrpc_nbreapthr_spawn(&sli_replwk_nbset, SLITHRT_REPLREAP, "slireplreapthr");
+	pscrpc_nbreapthr_spawn(&sli_replwk_nbset, SLITHRT_REPLREAP,
+	    "slireplreapthr");
 }
