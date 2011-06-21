@@ -87,7 +87,8 @@ sli_repl_addwk(int op, uint64_t nid, const struct slash_fidgen *fgp,
 	w->srw_op = op;
 
 	/* lookup replication source peer */
-	w->srw_resm = libsl_nid2resm(w->srw_nid);
+	if (nid)
+		w->srw_resm = libsl_nid2resm(w->srw_nid);
 
 	/* get an fcmh for the file */
 	rc = sli_fcmh_get(&w->srw_fg, &w->srw_fcmh);
