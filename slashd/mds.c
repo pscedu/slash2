@@ -237,8 +237,8 @@ mds_bmap_ion_restart(struct bmap_mds_lease *bml)
 
 	bml->bml_bmdsi->bmdsi_seq = bml->bml_seq;
 
-	DEBUG_BMAP(PLL_INFO, bml_2_bmap(bml), "res(%s) ion(%s)",
-	    resm->resm_res->res_name, resm->resm_addrbuf);
+	DEBUG_BMAP(PLL_INFO, bml_2_bmap(bml), "res(%s) ion(%s) seq=%"PRIx64,
+	   resm->resm_res->res_name, resm->resm_addrbuf, bml->bml_seq);
 
 	return (0);
 }
