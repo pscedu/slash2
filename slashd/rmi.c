@@ -70,7 +70,7 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 		return (mp->rc);
 #endif
 
-	mp->rc = mds_bmap_load_ion(&mq->fg, mq->bmapno, &b);
+	mp->rc = mds_bmap_load_fg(&mq->fg, mq->bmapno, &b);
 	if (mp->rc)
 		return (mp->rc);
 
@@ -316,37 +316,50 @@ slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 {
 	struct srm_bmap_ptrunc_req *mq;
 	struct srm_bmap_ptrunc_rep *mp;
-	struct bmapc_memb *bcm = NULL;
-	int tract[NBREPLST];
-	int iosidx;
+	struct bmapc_memb *b = NULL;
+	int iosidx, tract[NBREPLST];
+	struct fidc_membh *f;
+	sl_bmapno_t bno;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	mp->rc = mds_bmap_load_ion(&mq->fg, mq->bmapno, &bcm);
+	f = fidc_lookup_fg(&mq->fg);
+	if (f == NULL) {
+		mp->rc = ENOENT;
+		return (0);
+	}
+
+	mp->rc = mds_bmap_load(f, mq->bmapno, &b);
 	if (mp->rc)
 		return (0);
 
-	iosidx = mds_repl_ios_lookup(fcmh_2_inoh(bcm->bcm_fcmh),
+	iosidx = mds_repl_ios_lookup(fcmh_2_inoh(b->bcm_fcmh),
 	    libsl_nid2resm(rq->rq_export->exp_connection->
 	    c_peer.nid)->resm_iosid);
 
 	brepls_init(tract, -1);
 	tract[BREPLST_GARBAGE_SCHED] = BREPLST_INVALID;
-	mds_repl_bmap_walk(bcm, tract, NULL, 0, &iosidx, 1);
-	mds_bmap_write_repls_rel(bcm);
+	mds_repl_bmap_walk(b, tract, NULL, 0, &iosidx, 1);
+	mds_bmap_write_repls_rel(b);
 
-#if 0
-	brepls_init(retifset, 1);
-	tract[BREPLST_INVALID] = 0;
+//	brepls_init(retifset, 1);
+	tract[BREPLST_GARBAGE] = BREPLST_INVALID;
 
-	for (i = fcmh_nallbmaps(fcmh), bmapno); i > 0; i--) {
-		load bmap
-		if ()
+	bno = fcmh_nallbmaps(f);
+	if (bno)
+		bno--;
+	for (;; bno--) {
+		if (mds_bmap_load(f, bno, &b))
+			continue;
+		mds_repl_bmap_walk(b, tract, NULL, 0, &iosidx, 1);
+		mds_bmap_write_repls_rel(b);
+
+		if (bno == 0)
 			break;
-		/* truncate metafile to remove garbage collected bmap */
-		mdsio_setattr(METASIZE)
 	}
-#endif
+	/* truncate metafile to remove garbage collected bmap */
+//	mdsio_setattr(METASIZE)
+	fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 	return (0);
 }
 
