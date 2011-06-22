@@ -133,16 +133,19 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 	if (flags & BTE_REATTACH) {
 		/* BTE_REATTACH is only called from startup context.
 		 */
-		//		psc_assert(mdsBmapTimeoTbl.btt_minseq ==
-		//		   mdsBmapTimeoTbl.btt_maxseq);
 		spinlock(&mdsBmapTimeoTbl.btt_lock);
 		if (mdsBmapTimeoTbl.btt_maxseq < bml->bml_seq)
-			mdsBmapTimeoTbl.btt_minseq =
-				mdsBmapTimeoTbl.btt_maxseq = bml->bml_seq;
+			/* A lease has been found in odtable whose
+			 *   issuance was after that of the last
+			 *   HWM journal entry.  (HWM's are journaled
+			 *   every BMAP_SEQLOG_FACTOR times).
+			 */
+			mdsBmapTimeoTbl.btt_maxseq = bml->bml_seq;
 		freelock(&mdsBmapTimeoTbl.btt_lock);
 
 		seq = bml->bml_seq;
-
+		bml->bml_start += BMAP_RECOVERY_TIMEO_EXT;
+		
 		//XXX after odtable has been processed the lease
 		//  list should be sorted.
 	} else {

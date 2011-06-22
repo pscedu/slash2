@@ -170,6 +170,9 @@ struct bmap_timeo_table {
 
 #define BMAP_TIMEO_MAX		120	/* Max bmap lease timeout */
 #define BMAP_SEQLOG_FACTOR	100
+#define BMAP_RECOVERY_TIMEO_EXT BMAP_TIMEO_MAX /* Extend recovered leases 
+						* after an MDS failure.
+						*/
 
 struct bmap_mds_lease {
 	uint64_t		  bml_seq;
