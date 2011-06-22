@@ -498,8 +498,8 @@ slmupschedthr_main(struct psc_thread *thr)
 	struct slashrpc_cservice *csvc;
 	struct up_sched_work_item *wk;
 	struct site_mds_info *smi;
+	struct bmapc_memb *b, *bn;
 	struct sl_resm *src_resm;
-	struct bmapc_memb *b;
 	struct sl_site *site;
 	struct fidc_membh *f;
 	sl_bmapno_t bno;
@@ -537,7 +537,8 @@ slmupschedthr_main(struct psc_thread *thr)
 				goto restart;
 			}
 
-			wk = psc_dynarray_getpos(&smi->smi_upq, wk_i.ri_rnd_idx);
+			wk = psc_dynarray_getpos(&smi->smi_upq,
+			    wk_i.ri_rnd_idx);
 			USWI_INCREF(wk, USWI_REFT_LOOKUP);
 			freelock(&smi->smi_lock);
 
@@ -582,6 +583,7 @@ slmupschedthr_main(struct psc_thread *thr)
 
 				FCMH_LOCK(f);
 				if (f->fcmh_flags & FCMH_IN_PTRUNC) {
+ try_ptrunc:
 					has_work = 1;
 
 					/*
@@ -603,7 +605,7 @@ slmupschedthr_main(struct psc_thread *thr)
 					 * can't schedule it.
 					 */
 					rc = 1;
-					goto handle_bmap;
+					PFL_GOTOERR(handle_bmap, 1);
 				}
 				FCMH_ULOCK(f);
 
@@ -614,7 +616,7 @@ slmupschedthr_main(struct psc_thread *thr)
 				FOREACH_RND(&bmap_i,
 				    fcmh_nvalidbmaps(f)) {
 					if (uswi_gen != wk->uswi_gen)
-						goto skipfile;
+						PFL_GOTOERR(skipfile, 1);
 					rc = 0;
  handle_bmap:
 					if (mds_bmap_load(f,
@@ -644,7 +646,7 @@ slmupschedthr_main(struct psc_thread *thr)
 							if (uswi_gen != wk->uswi_gen) {
 								BMAPOD_MODIFY_DONE(b);
 								mds_bmap_write_repls_rel(b);
-								goto skipfile;
+								PFL_GOTOERR(skipfile, 1);
 							}
 							src_res = libsl_id2res(
 							    USWI_GETREPL(wk,
@@ -685,7 +687,7 @@ slmupschedthr_main(struct psc_thread *thr)
 									if (slmupschedthr_tryrepldst(wk,
 									    b, off, src_resm, dst_res,
 									    dst_resm_i.ri_rnd_idx))
-										goto restart;
+										PFL_GOTOERR(restart, 1);
 							}
 							BMAPOD_MODIFY_START(b);
 						}
@@ -701,19 +703,11 @@ slmupschedthr_main(struct psc_thread *thr)
 							if (rc < 0)
 								break;
 							if (rc > 0)
-								goto restart;
+								PFL_GOTOERR(restart, 1);
 						}
 						BMAPOD_MODIFY_START(b);
 						break;
 					case BREPLST_GARBAGE:
-						if (f->fcmh_flags & FCMH_IN_PTRUNC) {
-							has_work = 1;
-							break;
-						}
-
-						BMAPOD_MODIFY_DONE(b);
-						mds_bmap_write_repls_rel(b);
-
 						/*
 						 * We found garbage.  We
 						 * must scan from EOF
@@ -723,34 +717,69 @@ slmupschedthr_main(struct psc_thread *thr)
 						 * in the middle of a
 						 * file.
 						 */
-						for (bno = fcmh_nallbmaps(f) - 1;;
-						    bno--) {
+						bno = fcmh_nallbmaps(f);
+						if (bno)
+							bno--;
+						if (b->bcm_bmapno != bno) {
+							mds_bmap_write_repls_rel(b);
+
+							if (f->fcmh_flags & FCMH_IN_PTRUNC)
+								PFL_GOTOERR(try_ptrunc, 1);
 							if (uswi_gen != wk->uswi_gen)
-								goto skipfile;
+								PFL_GOTOERR(skipfile, 1);
 							if (mds_bmap_load(f,
 							    bno, &b))
 								continue;
 							BMAPOD_MODIFY_START(b);
+						}
+						if (bno)
+							bno--;
+						val = BREPLST_INVALID;
+						for (bn = b, b = NULL;; bno--) {
 							val = SL_REPL_GET_BMAP_IOS_STAT(
-							    b->bcm_repls, off);
+							    bn->bcm_repls, off);
 							if (val != BREPLST_GARBAGE ||
 							    bno == 0)
 								break;
-							mds_bmap_write_repls_rel(b);
+
+							if (b)
+								mds_bmap_write_repls_rel(b);
+							b = bn;
+							bn = NULL;
+
+							if (f->fcmh_flags & FCMH_IN_PTRUNC)
+								PFL_GOTOERR(try_ptrunc, 1);
+
+							if (uswi_gen != wk->uswi_gen)
+								PFL_GOTOERR(skipfile, 1);
+							if (mds_bmap_load(f,
+							    bno, &bn))
+								continue;
+							BMAPOD_MODIFY_START(bn);
 						}
 
-						if (uswi_gen != wk->uswi_gen) {
-							BMAPOD_MODIFY_DONE(b);
-							mds_bmap_write_repls_rel(b);
-							goto skipfile;
-						}
-
-						if (bno && bno == fcmh_nallbmaps(f) - 1)
+						if (val == BREPLST_GARBAGE_SCHED) {
+							if ((int)bno + 1 < bmap_i.ri_n)
+								bmap_i.ri_n = bno + 1;
+							if (b)
+								mds_bmap_write_repls_rel(b);
+							b = bn;
 							break;
+						}
+						if (b == NULL && val != BREPLST_GARBAGE) {
+							b = bn;
+							break;
+						}
 						has_work = 1;
 
-						if (val == BREPLST_GARBAGE_SCHED)
-							break;
+						if (val == BREPLST_GARBAGE) {
+							psc_assert(bno == 0);
+							if (b)
+								mds_bmap_write_repls_rel(b);
+							b = bn;
+						} else {
+							mds_bmap_write_repls_rel(bn);
+						}
 
 						BMAPOD_MODIFY_DONE(b);
 						FOREACH_RND(&dst_resm_i,
@@ -764,16 +793,20 @@ slmupschedthr_main(struct psc_thread *thr)
 							if (slmupschedthr_trygarbage(wk,
 							    b, off, dst_res,
 							    dst_resm_i.ri_rnd_idx))
-								goto restart;
-						BMAPOD_MODIFY_START(b);
+								PFL_GOTOERR(restart, 1);
 						break;
 					case BREPLST_REPL_SCHED:
 					case BREPLST_TRUNCPNDG_SCHED:
 					case BREPLST_GARBAGE_SCHED:
+						/*
+						 * We must keep the wkrq
+						 * in mem so
+						 * repl_reset_scheduled()
+						 * can revert the state.
+						 */
 						has_work = 1;
 						break;
 					}
-					BMAPOD_MODIFY_DONE(b);
 					mds_bmap_write_repls_rel(b);
 					if (rc)
 						RESET_RND_ITER(&bmap_i);
