@@ -1484,7 +1484,7 @@ mds_bmap_loadvalid(struct fidc_membh *f, sl_bmapno_t bmapno,
 }
 
 int
-mds_bmap_load_ion(const struct slash_fidgen *fg, sl_bmapno_t bmapno,
+mds_bmap_load_fg(const struct slash_fidgen *fg, sl_bmapno_t bmapno,
     struct bmapc_memb **bp)
 {
 	struct fidc_membh *f;
