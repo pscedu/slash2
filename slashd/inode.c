@@ -263,7 +263,7 @@ int
 mds_inode_repls_update(struct fidc_membh *f, int log)
 {
 	struct slash_inode_handle *ih = fcmh_2_inoh(f);
-	int locked, rc = 0;
+	int locked, rc;
 	void *logf;
 
 	logf = log ? mdslog_ino_repls : NULL;
