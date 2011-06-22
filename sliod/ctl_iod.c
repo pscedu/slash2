@@ -63,6 +63,9 @@ slictlrep_getreplwkst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	rc = 1;
 	PLL_LOCK(&sli_replwkq_active);
 	PLL_FOREACH(w, &sli_replwkq_active) {
+		if (w->srw_op != SLI_REPLWKOP_REPL)
+			continue;
+
 		resm = libsl_nid2resm(w->srw_nid);
 
 		srws->srws_fg = w->srw_fg;
