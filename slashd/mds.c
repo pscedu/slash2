@@ -1210,6 +1210,10 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 	fg.fg_fid = bia->bia_fid;
 	fg.fg_gen = FGEN_ANY;
 
+	/*
+ 	 * Because we don't revoke leases when an unlink comes in, ENOENT
+ 	 * is actually legitimate after a crash.
+ 	 */
 	rc = slm_fcmh_get(&fg, &f);
 	if (rc) {
 		psclog_errorx("failed to load: item=%zd, fid="SLPRI_FID,
