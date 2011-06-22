@@ -89,15 +89,17 @@ enum {
 #define uswi_access(wk)		_uswi_access((wk), 0)
 #define uswi_access_lock(wk)	_uswi_access((wk), 1)
 
+#define uswi_unref(wk)		_uswi_unref(PFL_CALLERINFO(), (wk))
+
 struct up_sched_work_item *
 	 uswi_find(const struct slash_fidgen *, int *);
-int	 _uswi_access(struct up_sched_work_item *, int);
+int	_uswi_access(struct up_sched_work_item *, int);
 int	 uswi_cmp(const void *, const void *);
 void	 uswi_enqueue_sites(struct up_sched_work_item *, const sl_replica_t *, int);
 int	 uswi_findoradd(const struct slash_fidgen *, struct up_sched_work_item **);
 void	 uswi_init(struct up_sched_work_item *, slfid_t);
 void	 uswi_kill(struct up_sched_work_item *);
-void	 uswi_unref(struct up_sched_work_item *);
+void	_uswi_unref(const struct pfl_callerinfo *, struct up_sched_work_item *);
 
 void	 upsched_scandir(void);
 

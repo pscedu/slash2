@@ -450,6 +450,7 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 
 	brepls_init(tract, -1);
 	tract[BREPLST_GARBAGE] = BREPLST_GARBAGE_SCHED;
+	tract[BREPLST_INVALID] = BREPLST_GARBAGE_SCHED;
 
 	brepls_init_idx(retifset);
 
@@ -460,7 +461,8 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	    rc == BREPLST_REPL_SCHED)
 		psc_fatalx("invalid bmap replica state: %d", rc);
 
-	if (rc == BREPLST_GARBAGE) {
+	if (rc == BREPLST_GARBAGE ||
+	    rc == BREPLST_INVALID) {
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc == 0)
 			rc = mp->rc;
@@ -490,7 +492,7 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 void
 slmupschedthr_main(struct psc_thread *thr)
 {
-	int uswi_gen, iosidx, off, rc, has_work, val;
+	int ngar, uswi_gen, iosidx, off, rc, has_work, val;
 	struct rnd_iterator src_resm_i, dst_resm_i, bmap_i;
 	struct rnd_iterator wk_i, src_res_i, dst_res_i;
 	struct sl_resource *src_res, *dst_res;
@@ -708,6 +710,7 @@ slmupschedthr_main(struct psc_thread *thr)
 						BMAPOD_MODIFY_START(b);
 						break;
 					case BREPLST_GARBAGE:
+						ngar = 0;
 						/*
 						 * We found garbage.  We
 						 * must scan from EOF
@@ -732,13 +735,14 @@ slmupschedthr_main(struct psc_thread *thr)
 								continue;
 							BMAPOD_MODIFY_START(b);
 						}
-						if (bno)
-							bno--;
 						val = BREPLST_INVALID;
-						for (bn = b, b = NULL;; bno--) {
+						for (bn = b, b = NULL;; ) {
 							val = SL_REPL_GET_BMAP_IOS_STAT(
 							    bn->bcm_repls, off);
-							if (val != BREPLST_GARBAGE ||
+							if (val == BREPLST_GARBAGE)
+								ngar++;
+							if ((val != BREPLST_GARBAGE &&
+							    val != BREPLST_INVALID) ||
 							    bno == 0)
 								break;
 
@@ -752,15 +756,17 @@ slmupschedthr_main(struct psc_thread *thr)
 
 							if (uswi_gen != wk->uswi_gen)
 								PFL_GOTOERR(skipfile, 1);
+							bno--;
 							if (mds_bmap_load(f,
 							    bno, &bn))
 								continue;
 							BMAPOD_MODIFY_START(bn);
 						}
 
-						if (val == BREPLST_GARBAGE_SCHED) {
-							if ((int)bno + 1 < bmap_i.ri_n)
-								bmap_i.ri_n = bno + 1;
+						if (val == BREPLST_GARBAGE_SCHED ||
+						    ngar == 0) {
+							if ((int)bno < bmap_i.ri_n)
+								bmap_i.ri_n = bno;
 							if (b)
 								mds_bmap_write_repls_rel(b);
 							b = bn;
@@ -772,7 +778,8 @@ slmupschedthr_main(struct psc_thread *thr)
 						}
 						has_work = 1;
 
-						if (val == BREPLST_GARBAGE) {
+						if (val == BREPLST_GARBAGE ||
+						    val == BREPLST_INVALID) {
 							psc_assert(bno == 0);
 							if (b)
 								mds_bmap_write_repls_rel(b);
@@ -909,14 +916,17 @@ _uswi_access(struct up_sched_work_item *wk, int keep_locked)
 }
 
 void
-uswi_unref(struct up_sched_work_item *wk)
+_uswi_unref(const struct pfl_callerinfo *pci,
+    struct up_sched_work_item *wk)
 {
+	PFL_START_TRACE(pci);
 	psc_mutex_reqlock(&wk->uswi_mutex);
 	wk->uswi_flags &= ~USWIF_BUSY;
 	USWI_DECREF(wk, USWI_REFT_LOOKUP);
 	/* XXX conditional */
 	psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
 	psc_mutex_unlock(&wk->uswi_mutex);
+	PFL_END_TRACE();
 }
 
 struct up_sched_work_item *
