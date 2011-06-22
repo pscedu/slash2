@@ -144,7 +144,7 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 		freelock(&mdsBmapTimeoTbl.btt_lock);
 
 		seq = bml->bml_seq;
-		bml->bml_start += BMAP_RECOVERY_TIMEO_EXT;
+		bml->bml_start = time(NULL) + BMAP_RECOVERY_TIMEO_EXT;
 		
 		//XXX after odtable has been processed the lease
 		//  list should be sorted.
