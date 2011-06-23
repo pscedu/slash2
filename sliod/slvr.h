@@ -72,6 +72,7 @@ struct slvr_ref {
 #define	SLVR_SLBFREEING		(1 << 11)	/* slvr's slab is being reaped */
 #define	SLVR_REPLSRC		(1 << 12)	/* slvr is replication source */
 #define	SLVR_REPLDST		(1 << 13)	/* slvr is replication destination */
+#define SLVR_REPLFAIL           (1 << 14)       /* replication op failed */
 
 #define SLVR_CRCLEN(s)		((s)->slvr_crc_eoff - (s)->slvr_crc_soff)
 
@@ -127,7 +128,7 @@ struct slvr_ref {
 #define slvr_io_done(s, off, len, rw)					\
 	((rw) == SL_WRITE ? slvr_wio_done((s), (off), (len)) : slvr_rio_done(s))
 
-#define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
+#define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
 #define DEBUG_SLVR_FLAGS(s)						\
 	(s)->slvr_flags & SLVR_NEW		? "n" : "-",		\
 	(s)->slvr_flags & SLVR_SPLAYTREE	? "t" : "-",		\
@@ -140,9 +141,10 @@ struct slvr_ref {
 	(s)->slvr_flags & SLVR_CRCDIRTY		? "D" : "-",		\
 	(s)->slvr_flags & SLVR_CRCING		? "c" : "-",		\
 	(s)->slvr_flags & SLVR_FREEING		? "F" : "-",		\
-	(s)->slvr_flags & SLVR_SLBFREEING	? "b" : "-",		\
+	(s)->slvr_flags & SLVR_SLBFREEING	? "b" : "-", \
 	(s)->slvr_flags & SLVR_REPLSRC		? "S" : "-",		\
-	(s)->slvr_flags & SLVR_REPLDST		? "T" : "-"
+	(s)->slvr_flags & SLVR_REPLDST		? "T" : "-", \
+	(s)->slvr_flags & SLVR_REPLFAIL         ? "f" : "-"
 
 #define DEBUG_SLVR(level, s, fmt, ...)					\
 	psclogs((level), SLISS_SLVR, "slvr@%p num=%hu pw=%hu "		\

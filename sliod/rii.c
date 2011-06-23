@@ -145,8 +145,12 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w,
 			rc = slvr_fsbytes_wio(s, slvrsiz, 0);
 		}
 	}
-	if (rc)
+	if (rc) {
+		SLVR_LOCK(s);
 		slvr_clear_inuse(s, 0, slvrsiz);
+		s->slvr_flags |= SLVR_REPLFAIL;
+		SLVR_ULOCK(s);
+	}
 
 	DEBUG_SLVR(PLL_INFO, s, "replread complete rc=%d", rc);
 

@@ -697,7 +697,10 @@ slvr_wio_done(struct slvr_ref *s, uint32_t off, uint32_t len)
 		/* This was a replication dest slvr.  Adjust the slvr flags
 		 *    so that the slvr may be freed on demand.
 		 */
-		DEBUG_SLVR(PLL_INFO, s, "replication complete");
+		if (s->slvr_flags & SLVR_REPLFAIL)		
+			DEBUG_SLVR(PLL_ERROR, s, "replication failure");
+		else
+			DEBUG_SLVR(PLL_INFO, s, "replication complete");
 		
 		psc_assert(s->slvr_pndgwrts == 1);
 		psc_assert(s->slvr_flags & SLVR_PINNED);
@@ -706,8 +709,13 @@ slvr_wio_done(struct slvr_ref *s, uint32_t off, uint32_t len)
 		psc_assert(!(s->slvr_flags & SLVR_CRCDIRTY));
 		s->slvr_pndgwrts--;
 		s->slvr_flags &= ~(SLVR_PINNED|SLVR_FAULTING|SLVR_REPLDST);
-		s->slvr_flags |= SLVR_DATARDY;
-
+		if (s->slvr_flags & SLVR_REPLFAIL) {
+			s->slvr_flags &= ~SLVR_REPLFAIL;
+			s->slvr_flags |= SLVR_DATAERR;
+		}
+		else
+			s->slvr_flags |= SLVR_DATARDY;
+		SLVR_WAKEUP(s);
 		SLVR_ULOCK(s);
 
 		slvr_lru_requeue(s, 0);
