@@ -224,6 +224,8 @@ slvr_lru_slab_freeable(struct slvr_ref *s)
 		freeable = 0;
 
 	DEBUG_SLVR(PLL_INFO, s, "freeable=%d", freeable);
+	if (freeable)
+		psc_assert(psc_vbitmap_nfree(b->slb_inuse) == b->slb_nblks);
 
 	return (freeable);
 }
