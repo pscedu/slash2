@@ -23,8 +23,10 @@
 #include "psc_ds/dynarray.h"
 #include "psc_ds/listcache.h"
 #include "psc_ds/tree.h"
+#include "psc_ds/vbitmap.h"
 #include "psc_util/atomic.h"
 #include "psc_util/log.h"
+
 
 #include "bmap.h"
 #include "bmap_iod.h"
@@ -225,7 +227,8 @@ slvr_lru_slab_freeable(struct slvr_ref *s)
 
 	DEBUG_SLVR(PLL_INFO, s, "freeable=%d", freeable);
 	if (freeable)
-		psc_assert(psc_vbitmap_nfree(b->slb_inuse) == b->slb_nblks);
+		psc_assert(psc_vbitmap_nfree(s->slvr_slab->slb_inuse) == 
+		    s->slvr_slab->slb_nblks);
 
 	return (freeable);
 }

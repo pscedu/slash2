@@ -147,6 +147,9 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w,
 	}
 	if (rc)
 		slvr_clear_inuse(s, 0, slvrsiz);
+
+	DEBUG_SLVR(PLL_INFO, s, "replread complete rc=%d", rc);
+
 	slvr_io_done(s, 0, w->srw_len, SL_WRITE);
 	w->srw_slvr_refs[slvridx] = NULL;
 	return (rc);
