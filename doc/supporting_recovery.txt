@@ -8,7 +8,7 @@ its achival system, I was very encouraged by this.
 As one can imagine the procedure did shed light on some shortcomings of the 
 system.  For instance, SLASH2 relies on monotonic numbering for its FID and 
 lease sequencing.  When recovering from a snapshot, it is assumed that the 
-recovered FS will resume from a old state.  Therefore, it's possible and 
+recovered FS will resume from an old state.  Therefore, it's possible and 
 likely that clients and sliod's will contain state (caches, backing objects, 
 etc.) which resulted from activity after the MDS snapshot was taken. Neededless
 to say, the recovered MDS knows nothing about these items since they were 
@@ -34,7 +34,7 @@ avoided.
 
 The current FID design uses 10 bits for server ID while the remaining 54 bits 
 are for enumerating files and directories.  Each MDS in the SLASH2 fs is 
-assigned a single bit allowing the system to support 1024 metadata servers.
+assigned a unique site ID allowing the system to support 1024 metadata servers.
 
 The FID is monotonic which allows for features such as asynchronous garbage 
 collection.  Since backing objects
@@ -60,7 +60,7 @@ after allocating 2^(64-16) FIDs.  The caveat of this design is that a given
 MDS can't use more cycles than it's assigned without some legwork.
 
 With cycling, we're trying to create a scenario where MDS recoveries due to 
-retoration from backup or caused by corrupt or missing journals does not force
+restoration from backup or caused by corrupt or missing journals does not force
 the system to undergo horrendous amounts of backtracking in order to guarantee
 that progress may be made safely.  Should the system encounter this sort of 
 error, or if it exhausts the cycle's range through normal FID allocation, 
@@ -79,3 +79,12 @@ Technical details:
 		- Each MDS defined in the config is given an ID which 
 		defines which cycle range it will use.
 		
+
+Another solution:
+
+Each SLIOD maintains a file that remembers the highest FID it has seen.
+The MDS, upon restart, should contact all sliods, and perhaps clients 
+as well before it can proceed.
+
+During the reconnection, information such as fid and leases can be 
+exchanged.
