@@ -104,19 +104,29 @@ struct msl_ra {
 };
 
 struct msl_fhent {			 /* XXX rename */
-	int				 mfh_oflags;	/* open(2) flags */
-	int				 mfh_flush_rc;	/* fsync(2) status */
-	int                              mfh_flags;
 	psc_spinlock_t			 mfh_lock;
 	struct fidc_membh		*mfh_fcmh;
+	struct psclist_head              mfh_lentry;
+	int                              mfh_flags;
+
+	int				 mfh_oflags;	/* open(2) flags */
+	int				 mfh_flush_rc;	/* fsync(2) status */
 	struct psc_lockedlist		 mfh_biorqs;	/* track biorqs (flush) */
 	struct psc_lockedlist            mfh_ra_bmpces; /* read ahead bmpce's */
-	struct psclist_head              mfh_lentry;
-	struct msl_ra			 mfh_ra;
+	struct msl_ra			 mfh_ra;	/* readahead tracking */
+
+	/* stats */
+	struct timespec			 mfh_open_time;	/* clock_gettime(2) at open(2) time */
+	struct sl_timespec		 mfh_open_atime;/* st_atime at open(2) time */
+	off_t				 mfh_nbytes_rd;
+	off_t				 mfh_nbytes_wr;
 };
 
-#define MSL_FHENT_RASCHED (1 << 0)
-#define MSL_FHENT_CLOSING (1 << 1)
+#define MSL_FHENT_RASCHED		(1 << 0)
+#define MSL_FHENT_CLOSING		(1 << 1)
+
+#define MFH_LOCK(m)			spinlock(&(m)->mfh_lock)
+#define MFH_ULOCK(m)			freelock(&(m)->mfh_lock)
 
 struct resprof_cli_info {
 	struct psc_dynarray		 rpci_pinned_bmaps;

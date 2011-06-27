@@ -109,6 +109,9 @@ struct sl_timespec {
 	uint64_t		tv_nsec;
 };
 
+#define SLPRI_TIMESPEC		"%"PRId64":%06"PRId64
+#define SLPRI_TIMESPEC_ARGS(ts)	(ts)->tv_sec, (ts)->tv_nsec
+
 #define SL_GETTIMESPEC(ts)						\
 	do {								\
 		struct timespec _ts;					\

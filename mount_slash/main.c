@@ -330,6 +330,9 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	mfh = msl_fhent_new(c);
 	mfh->mfh_oflags = oflags;
+	PFL_GETTIMESPEC(&mfh->mfh_open_time);
+	memcpy(&mfh->mfh_open_atime, &c->fcmh_sstb.sst_atime,
+	    sizeof(mfh->mfh_open_atime));
 
 	FCMH_LOCK(c);
 	sl_internalize_stat(&c->fcmh_sstb, &stb);
@@ -438,6 +441,9 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 
 	*mfhp = msl_fhent_new(c);
 	(*mfhp)->mfh_oflags = oflags;
+	PFL_GETTIMESPEC(&(*mfhp)->mfh_open_time);
+	memcpy(&(*mfhp)->mfh_open_atime, &c->fcmh_sstb.sst_atime,
+	    sizeof((*mfhp)->mfh_open_atime));
 
 	if (oflags & O_DIRECTORY)
 		*rflags |= PSCFS_OPENF_KEEPCACHE;
@@ -1415,6 +1421,7 @@ __static void
 mslfsop_close(struct pscfs_req *pfr, void *data)
 {
 	struct msl_fhent *mfh = data;
+	struct pscfs_cred pfc;
 	struct fidc_membh *c;
 	int rc;
 
@@ -1440,8 +1447,18 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 		spinlock(&mfh->mfh_lock);
 	}
 
-	freelock(&mfh->mfh_lock);
-	DEBUG_FCMH(PLL_INFO, c, "file closed");
+	pscfs_getcreds(pfr, &pfc);
+	DEBUG_FCMH(PLL_INFO, c, "file closed uid=%u gid=%u "
+	    "fsize=%"PRId64" oatime="SLPRI_TIMESPEC" "
+	    "mtime="SLPRI_TIMESPEC" sessid=%d otime="PSCPRI_TIMESPEC" "
+	    "rd=%"PSCPRIdOFFT" wr=%"PSCPRIdOFFT,
+	    pfc.pfc_uid, pfc.pfc_gid,
+	    c->fcmh_sstb.sst_size,
+	    SLPRI_TIMESPEC_ARGS(&mfh->mfh_open_atime),
+	    SLPRI_TIMESPEC_ARGS(&c->fcmh_sstb.sst_mtim),
+	    getsid(pscfs_getclientctx(pfr)->pfcc_pid),
+	    PSCPRI_TIMESPEC_ARGS(&mfh->mfh_open_time),
+	    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr);
 	fcmh_op_done_type(c, FCMH_OPCNT_OPEN);
 	PSCFREE(mfh);
 	pscfs_reply_close(pfr, rc);
@@ -2034,17 +2051,6 @@ mslfsop_umount(void)
 //	exit();
 }
 
-#if PFL_DEBUG > 0
-#  define CHECK_FCMH(f)
-#else
-#  define CHECK_FCMH(f)							\
-	do {								\
-		if (fidc_lookup_fg(&(f)->fcmh_fg) != (f))		\
-			psc_assert("shouldn't happen");			\
-		fcmh_op_done_type((f), FCMH_OPCNT_LOOKUP_FIDC);		\
-	} while (0)
-#endif
-
 void
 mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
     off_t off, void *data)
@@ -2085,9 +2091,13 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 	f->fcmh_sstb.sst_mtime_ns = ts.tv_nsec;
 	FCMH_ULOCK(f);
 
+	MFH_LOCK(mfh);
+	mfh->mfh_nbytes_wr += size;
+	MFH_ULOCK(mfh);
+
  out:
-	DEBUG_FCMH(PLL_INFO, f, "write: buf=%p rc=%d sz=%zu off=%"PSCPRIdOFFT,
-	    buf, rc, size, off);
+	DEBUG_FCMH(PLL_INFO, f, "write: buf=%p rc=%d sz=%zu "
+	    "off=%"PSCPRIdOFFT, buf, rc, size, off);
 	pscfs_reply_write(pfr, size, rc);
 }
 
@@ -2111,8 +2121,8 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	if (rc)
 		goto out;
 
-	DEBUG_FCMH(PLL_INFO, f, "read (start): buf=%p rc=%d sz=%zu len=%zd "
-		   "off=%"PSCPRIdOFFT, buf, rc, size, len, off);
+	DEBUG_FCMH(PLL_INFO, f, "read (start): buf=%p rc=%d sz=%zu "
+	    "len=%zd off=%"PSCPRIdOFFT, buf, rc, size, len, off);
 
 	if (fcmh_isdir(f)) {
 //		psc_fatalx("pscfs gave us a directory");
@@ -2123,16 +2133,21 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	msfsthr(pscthr_get())->mft_failcnt = 1;
 	buf = PSCALLOC(size);
 	rc = msl_read(mfh, buf, size, off);
-	if (rc < 0)
+	if (rc < 0) {
 		rc = -rc;
-	else {
-		len = rc;
-		rc = 0;
+		goto out;
 	}
+	len = rc;
+	rc = 0;
+
+	MFH_LOCK(mfh);
+	mfh->mfh_nbytes_wr += size;
+	MFH_ULOCK(mfh);
+
  out:
 	pscfs_reply_read(pfr, buf, len, rc);
-	DEBUG_FCMH(PLL_INFO, f, "read (end): buf=%p rc=%d sz=%zu len=%zd "
-		   "off=%"PSCPRIdOFFT, buf, rc, size, len, off);
+	DEBUG_FCMH(PLL_INFO, f, "read (end): buf=%p rc=%d sz=%zu "
+	    "len=%zd off=%"PSCPRIdOFFT, buf, rc, size, len, off);
 	PSCFREE(buf);
 }
 
