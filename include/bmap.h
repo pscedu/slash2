@@ -212,9 +212,11 @@ struct bmapc_memb {
 #define bmap_op_done_type(b, type)					\
 	do {								\
 		BMAP_RLOCK(b);						\
+		psc_assert(psc_atomic32_read(&(b)->bcm_opcnt) > 0);	\
+		psc_atomic32_dec(&(b)->bcm_opcnt);			\
 		_bmap_op_done(PFL_CALLERINFOSS(SLSS_BMAP), (b),		\
-		_DEBUG_BMAP_FMT "removing reference (type=%d)",		\
-		_DEBUG_BMAP_FMTARGS(b), (type));			\
+		    _DEBUG_BMAP_FMT "removing reference (type=%d)",	\
+		    _DEBUG_BMAP_FMTARGS(b), (type));			\
 	} while (0)
 
 #define bmap_foff(b)		((b)->bcm_bmapno * SLASH_BMAP_SIZE)

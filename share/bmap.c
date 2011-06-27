@@ -99,12 +99,13 @@ _bmap_op_done(const struct pfl_callerinfo *pci, struct bmapc_memb *b,
 {
 	va_list ap;
 
-	b->bcm_flags &= ~BMAP_BUSY;
-	psc_atomic32_dec(&b->bcm_opcnt);
-	psc_assert(psc_atomic32_read(&b->bcm_opcnt) >= 0);
+	PFL_START_TRACE(pci);
+
+	BMAP_LOCK_ENSURE(b);
+	(b)->bcm_flags &= ~BMAP_BUSY;
 
 	va_start(ap, fmt);
-	_psclogv_pci(pci, PLL_DEBUG, 0, fmt, ap);
+	psclogsv(PLL_DEBUG, SLSS_BMAP, fmt, ap);
 	va_end(ap);
 
 	if (!psc_atomic32_read(&b->bcm_opcnt)) {
@@ -115,10 +116,11 @@ _bmap_op_done(const struct pfl_callerinfo *pci, struct bmapc_memb *b,
 			bmap_ops.bmo_final_cleanupf(b);
 
 		bmap_remove(b);
-		return;
+	} else {
+		bcm_wake_locked(b);
+		BMAP_ULOCK(b);
 	}
-	bcm_wake_locked(b);
-	BMAP_ULOCK(b);
+	PFL_END_TRACE();
 }
 
 __static struct bmapc_memb *
