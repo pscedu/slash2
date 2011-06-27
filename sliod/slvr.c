@@ -697,11 +697,11 @@ slvr_wio_done(struct slvr_ref *s, uint32_t off, uint32_t len)
 		/* This was a replication dest slvr.  Adjust the slvr flags
 		 *    so that the slvr may be freed on demand.
 		 */
-		if (s->slvr_flags & SLVR_REPLFAIL)		
+		if (s->slvr_flags & SLVR_REPLFAIL)
 			DEBUG_SLVR(PLL_ERROR, s, "replication failure");
 		else
 			DEBUG_SLVR(PLL_INFO, s, "replication complete");
-		
+
 		psc_assert(s->slvr_pndgwrts == 1);
 		psc_assert(s->slvr_flags & SLVR_PINNED);
 		psc_assert(s->slvr_flags & SLVR_FAULTING);
@@ -966,6 +966,7 @@ dump_sliver_flags(int fl)
 	PFL_PRFLAG(SLVR_SLBFREEING, &fl, &seq);
 	PFL_PRFLAG(SLVR_REPLSRC, &fl, &seq);
 	PFL_PRFLAG(SLVR_REPLDST, &fl, &seq);
+	PFL_PRFLAG(SLVR_REPLFAIL, &fl, &seq);
 	if (fl)
 		printf(" unknown: %x", fl);
 	printf("\n");
