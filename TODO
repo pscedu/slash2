@@ -13,9 +13,9 @@ reminders:
 
 -----------------------------------------------------------------------
 * Restore Issues:
-1) need to split 64-bit inode space into upper and lower segments.  Each mds in the system will be given a start # and range for use in the upper segment.  The upper value will be incremented on restore (when the journal does not agree with the cursor) or when all id's in the lower segment have been exhausted 
+1) need to split 64-bit inode space into upper and lower segments.  Each mds in the system will be given a start # and range for use in the upper segment.  The upper value will be incremented on restore (when the journal does not agree with the cursor) or when all id's in the lower segment have been exhausted
 
-2) How does sliod and mds deal with the LWM in post restore scenarios?  Atm, the sliod doesn't like when the LWM decreases.  
+2) How does sliod and mds deal with the LWM in post restore scenarios?  Atm, the sliod doesn't like when the LWM decreases.
 3) How do we deal with CRC's and size updates which were lost on mds restore
 4) distillation XID - how do we cope with this when the journal has been reformatted
 
@@ -424,3 +424,4 @@ API rename
 - keep testing replication
 - fsuuid is broken on recv in sliod
 - slmctl stop should completely all ops to prevent relying on journal
+- ascribe same remote FID delegation to msctl path
