@@ -158,7 +158,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct bmap_ops);
 	PRTYPE(struct bmap_pagecache);
 	PRTYPE(struct bmap_pagecache_entry);
-	PRTYPE(struct bmap_timeo_entry);
 	PRTYPE(struct bmap_timeo_table);
 	PRTYPE(struct bmapc_memb);
 	PRTYPE(struct bmpc_ioreq);
@@ -330,7 +329,6 @@ main(int argc, char *argv[])
 	PRVAL(BMAP_CLI_TIMEO_INC);
 	PRVAL(BMAP_SEQLOG_FACTOR);
 	PRVAL(BMAP_TIMEO_MAX);
-	PRVAL(BMAP_TIMEO_TBL_QUANT);
 	PRVAL(BMPC_DEFSLBS);
 	PRVAL(BMPC_IOMAXBLKS);
 	PRVAL(BMPC_MAXSLBS);
@@ -594,6 +592,8 @@ main(int argc, char *argv[])
 	PRVAL(SLITHRT_USKLNDPL);
 	PRVAL(SLI_CTL_FOP_EXPORT);
 	PRVAL(SLI_CTL_FOP_IMPORT);
+	PRVAL(SLI_REPLWKOP_PTRUNC);
+	PRVAL(SLI_REPLWKOP_REPL);
 	PRVAL(SLMTHRT_BMAPTIMEO);
 	PRVAL(SLMTHRT_COH);
 	PRVAL(SLMTHRT_CTL);
