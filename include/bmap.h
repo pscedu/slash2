@@ -210,9 +210,12 @@ struct bmapc_memb {
 	} while (0)
 
 #define bmap_op_done_type(b, type)					\
-	_bmap_op_done(PFL_CALLERINFOSS(SLSS_BMAP), (b),			\
-	    _DEBUG_BMAP_FMT "removing reference (type=%d)",		\
-	    _DEBUG_BMAP_FMTARGS(b), (type))
+	do {								\
+		BMAP_RLOCK(b);						\
+		_bmap_op_done(PFL_CALLERINFOSS(SLSS_BMAP), (b),		\
+		_DEBUG_BMAP_FMT "removing reference (type=%d)",		\
+		_DEBUG_BMAP_FMTARGS(b), (type));			\
+	} while (0)
 
 #define bmap_foff(b)		((b)->bcm_bmapno * SLASH_BMAP_SIZE)
 
