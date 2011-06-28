@@ -419,9 +419,8 @@ API rename
 - msl with sst_size local caching should still take higher values from MDS
   in cases of direct I/O
 - use uint32_t for nanosecond atime/mtime/ctime in znode_phys to save space
+- remote separate sl2 mtime/atime in slashd
 - eradicate getrqstatus()
-- repl pairs are totally borked in MDS
 - keep testing replication
-- fsuuid is broken on recv in sliod
-- slmctl stop should completely all ops to prevent relying on journal
+- 'slmctl stop' should completely wait for all ops to prevent relying on journal
 - ascribe same remote FID delegation to msctl path
