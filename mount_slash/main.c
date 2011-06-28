@@ -284,7 +284,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 #endif
 
  retry:
-	MSL_RMC_NEWREQ(pfr, csvc, SRMT_CREATE, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_CREATE, rq, mq, mp, rc);
 	if (rc)
 		goto out;
 
@@ -552,7 +552,8 @@ msl_stat(struct fidc_membh *fcmh, void *arg)
 	FCMH_ULOCK(fcmh);
 
  retry:
-	MSL_RMC_NEWREQ_PFCC(pfcc, csvc, SRMT_GETATTR, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ_PFCC(pfcc, fcmh, csvc, SRMT_GETATTR, rq, mq, mp,
+	    rc);
 	if (rc)
 		goto out;
 
@@ -678,7 +679,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	}
 
  retry:
-	MSL_RMC_NEWREQ(pfr, csvc, SRMT_LINK, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_LINK, rq, mq, mp, rc);
 	if (rc)
 		goto out;
 
@@ -752,7 +753,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mslfs_getcreds(pfr, &creds);
 
  retry:
-	MSL_RMC_NEWREQ(pfr, csvc, SRMT_MKDIR, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_MKDIR, rq, mq, mp, rc);
 	if (rc)
 		goto out;
 
@@ -850,8 +851,8 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		goto out;
 
  retry:
-	MSL_RMC_NEWREQ(pfr, csvc, isfile ? SRMT_UNLINK : SRMT_RMDIR, rq,
-	    mq, mp, rc);
+	MSL_RMC_NEWREQ(pfr, p, csvc, isfile ? SRMT_UNLINK : SRMT_RMDIR,
+	    rq, mq, mp, rc);
 	if (rc)
 		goto out;
 
@@ -946,7 +947,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		goto out;
 
  retry:
-	MSL_RMC_NEWREQ(pfr, csvc, SRMT_MKNOD, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_MKNOD, rq, mq, mp, rc);
 	if (rc)
 		goto out;
 
@@ -1049,7 +1050,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	}
 
  retry:
-	MSL_RMC_NEWREQ(pfr, csvc, SRMT_READDIR, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(pfr, d, csvc, SRMT_READDIR, rq, mq, mp, rc);
 	if (rc)
 		goto out;
 
@@ -1150,7 +1151,7 @@ slash_lookuprpc(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		return (ENAMETOOLONG);
 
  retry:
-	MSL_RMC_NEWREQ(pfr, csvc, SRMT_LOOKUP, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(pfr, NULL, csvc, SRMT_LOOKUP, rq, mq, mp, rc);
 	if (rc)
 		goto out;
 
@@ -1338,7 +1339,7 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 		goto out;
 
  retry:
-	MSL_RMC_NEWREQ(pfr, csvc, SRMT_READLINK, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(pfr, c, csvc, SRMT_READLINK, rq, mq, mp, rc);
 	if (rc)
 		goto out;
 
@@ -1576,7 +1577,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	}
 
  retry:
-	MSL_RMC_NEWREQ(pfr, csvc, SRMT_RENAME, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(pfr, np, csvc, SRMT_RENAME, rq, mq, mp, rc);
 	if (rc)
 		goto out;
 
@@ -1646,7 +1647,7 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 //	checkcreds
 
  retry:
-	MSL_RMC_NEWREQ(pfr, csvc, SRMT_STATFS, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(pfr, NULL, csvc, SRMT_STATFS, rq, mq, mp, rc);
 	mq->fid = inum;
 	mq->iosid = prefIOS;
 	if (rc)
@@ -1713,7 +1714,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	}
 
  retry:
-	MSL_RMC_NEWREQ(pfr, csvc, SRMT_SYMLINK, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_SYMLINK, rq, mq, mp, rc);
 	if (rc)
 		goto out;
 
@@ -1934,7 +1935,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	FCMH_ULOCK(c);
 
  retry:
-	MSL_RMC_NEWREQ(pfr, csvc, SRMT_SETATTR, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(pfr, c, csvc, SRMT_SETATTR, rq, mq, mp, rc);
 	if (rc)
 		goto out;
 

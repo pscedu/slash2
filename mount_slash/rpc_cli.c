@@ -105,15 +105,15 @@ slc_rmc_retry_pfcc(__unusedx struct pscfs_clientctx *pfcc, int *rc)
 }
 
 int
-slc_rmc_getimp(struct pscfs_clientctx *pfcc,
+slc_rmc_getimp(struct pscfs_clientctx *pfcc, struct sl_resm *resm,
     struct slashrpc_cservice **csvcp)
 {
 	int rc = 0;
 
 	do {
-		*csvcp = slc_getmcsvc(slc_rmc_resm);
+		*csvcp = slc_getmcsvc(resm);
 		if (*csvcp == NULL) {
-			rc = slc_rmc_resm->resm_csvc->csvc_lasterrno;
+			rc = resm->resm_csvc->csvc_lasterrno;
 			if (slc_rmc_retry_pfcc(pfcc, &rc))
 				continue;
 		}

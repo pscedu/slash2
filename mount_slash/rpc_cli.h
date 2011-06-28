@@ -45,8 +45,11 @@ extern struct pscrpc_completion rpcComp;
 #define SRCM_REPSZ			512
 #define SRCM_SVCNAME			"msrcm"
 
-#define MSL_RMC_NEWREQ_PFCC(pfcc, csvc, op, rq, mq, mp, rc)		\
+#define MSL_RMC_NEWREQ_PFCC(pfcc, f, csvc, op, rq, mq, mp, rc)		\
 	do {								\
+		struct sl_resm *_resm;					\
+									\
+		_resm = (f) ? fcmh_2_fci(f)->fci_resm : slc_rmc_resm;	\
 		if (rq) {						\
 			pscrpc_req_finished(rq);			\
 			(rq) = NULL;					\
@@ -55,15 +58,15 @@ extern struct pscrpc_completion rpcComp;
 			sl_csvc_decref(csvc);				\
 			(csvc) = NULL;					\
 		}							\
-		(rc) = slc_rmc_getimp((pfcc), &(csvc));			\
+		(rc) = slc_rmc_getimp((pfcc), _resm, &(csvc));		\
 		if (rc)							\
 			break;						\
 		(rc) = SL_RSX_NEWREQ((csvc), (op), (rq), (mq),		\
 		    (mp));						\
 	} while ((rc) && slc_rmc_retry_pfcc((pfcc), &(rc)))
 
-#define MSL_RMC_NEWREQ(pfr, csvc, op, rq, mq, mp, rc)			\
-	MSL_RMC_NEWREQ_PFCC(pscfs_getclientctx(pfr), (csvc), (op),	\
+#define MSL_RMC_NEWREQ(pfr, f, csvc, op, rq, mq, mp, rc)		\
+	MSL_RMC_NEWREQ_PFCC(pscfs_getclientctx(pfr), (f), (csvc), (op),	\
 	    (rq), (mq), (mp), (rc))
 
 #define slc_geticsvcxf(resm, fl, exp)					\
@@ -86,7 +89,7 @@ extern struct pscrpc_completion rpcComp;
 
 void	slc_rpc_initsvc(void);
 
-int	slc_rmc_getimp(struct pscfs_clientctx *, struct slashrpc_cservice **);
+int	slc_rmc_getimp(struct pscfs_clientctx *, struct sl_resm *, struct slashrpc_cservice **);
 int	slc_rmc_getimp1(struct slashrpc_cservice **, struct sl_resm *);
 int	slc_rmc_retry_pfcc(struct pscfs_clientctx *, int *);
 int	slc_rmc_setmds(const char *);
