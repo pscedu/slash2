@@ -184,14 +184,13 @@ msl_bmap_lease_tryext(struct bmapc_memb *b)
 		BMAP_SETATTR(b, BMAP_CLI_LEASEEXTREQ);
 		BMAP_ULOCK(b);
 
-		rc = slc_rmc_getimp1(&csvc, fcmh_2_fci(b->bcm_fcmh)->fci_resm);
-		if (!rc)
-			rc = SL_RSX_NEWREQ(csvc, SRMT_EXTENDBMAPLS, rq, mq, mp);
-
-		DEBUG_BMAP(rc ? PLL_ERROR : PLL_WARN, b,
-		   "requesting lease extension (rc=%d) (secs=%d)", rc, secs);
+		rc = slc_rmc_getimp1(&csvc,
+		    fcmh_2_fci(b->bcm_fcmh)->fci_resm);
 		if (rc)
-			return;
+			goto error;
+		rc = SL_RSX_NEWREQ(csvc, SRMT_EXTENDBMAPLS, rq, mq, mp);
+		if (rc)
+			goto error;
 
 		rq->rq_interpret_reply = msl_bmap_lease_tryext_cb;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
@@ -199,10 +198,20 @@ msl_bmap_lease_tryext(struct bmapc_memb *b)
 		rq->rq_comp = &rpcComp;
 
 		memcpy(&mq->sbd, &bmap_2_bci(b)->bci_sbd,
-		       sizeof(struct srt_bmapdesc));
+		    sizeof(struct srt_bmapdesc));
 		authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 
-		(int)pscrpc_nbreqset_add(pndgBmaplsReqs, rq);
+		rc = pscrpc_nbreqset_add(pndgBmaplsReqs, rq);
+		if (rc) {
+ error:
+			if (rq)
+				pscrpc_req_finished(rq);
+			if (csvc)
+				sl_csvc_decref(csvc);
+		}
+		DEBUG_BMAP(rc ? PLL_ERROR : PLL_WARN, b,
+		    "requesting lease extension (rc=%d) (secs=%d)", rc,
+		    secs);
 	}
 }
 
