@@ -1698,7 +1698,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	} else
 		BML_ULOCK(obml);
 
-	DEBUG_BMAP(PLL_WARN, b,
+	DEBUG_BMAP(PLL_INFO, b,
 		   "renew seq=%"PRId64" nid=%"PRId64" pid=%u",
 		   bml->bml_seq, exp->exp_connection->c_peer.nid,
 		   exp->exp_connection->c_peer.pid);
