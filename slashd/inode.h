@@ -166,8 +166,9 @@ _dump_ino(char *buf, size_t siz, const struct slash_inode_od *ino)
 }
 
 static __inline void
-_log_debug_inoh(const struct pfl_callerinfo *pfl_callerinfo, int level,
+_log_debug_inoh(const struct pfl_callerinfo *pci, int level,
     const struct slash_inode_handle *ih, const char *fmt, ...)
+#define _pfl_callerinfo pci
 {
 	char buf[LINE_MAX], mbuf[LINE_MAX];
 	va_list ap;
@@ -176,12 +177,13 @@ _log_debug_inoh(const struct pfl_callerinfo *pfl_callerinfo, int level,
 	vsnprintf(mbuf, sizeof(mbuf), fmt, ap);
 	va_end(ap);
 
-	_psclog_pci(pfl_callerinfo, level, 0,
+	psclog(level,
 	    "inoh@%p fcmh=%p f+g="SLPRI_FG" fl:%#x:"INOH_FLAGS_FMT" %s :: %s",
 	    ih, ih->inoh_fcmh, SLPRI_FG_ARGS(&ih->inoh_fcmh->fcmh_fg),
 	    ih->inoh_flags, DEBUG_INOH_FLAGS(ih),
 	    _dump_ino(buf, sizeof(buf), &ih->inoh_ino), mbuf);
 }
+#undef _pfl_callerinfo
 
 static __inline void
 dump_ino(const struct slash_inode_od *ino)

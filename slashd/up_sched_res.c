@@ -919,14 +919,12 @@ void
 _uswi_unref(const struct pfl_callerinfo *pci,
     struct up_sched_work_item *wk)
 {
-	PFL_START_TRACE(pci);
 	psc_mutex_reqlock(&wk->uswi_mutex);
 	wk->uswi_flags &= ~USWIF_BUSY;
 	USWI_DECREF(wk, USWI_REFT_LOOKUP);
 	/* XXX conditional */
 	psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
 	psc_mutex_unlock(&wk->uswi_mutex);
-	PFL_END_TRACE();
 }
 
 struct up_sched_work_item *

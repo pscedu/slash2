@@ -324,7 +324,7 @@ sl_csvc_markfree(struct slashrpc_cservice *csvc)
  * @csvc: client service.
  */
 void
-sl_csvc_decref_pci(const struct pfl_callerinfo *pfl_callerinfo,
+sl_csvc_decref_pci(const struct pfl_callerinfo *pci,
     struct slashrpc_cservice *csvc)
 {
 	int rc;
@@ -370,7 +370,7 @@ sl_csvc_incref(struct slashrpc_cservice *csvc)
  * @csvc: client service.
  */
 void
-sl_csvc_disconnect_pci(const struct pfl_callerinfo *pfl_callerinfo,
+sl_csvc_disconnect_pci(const struct pfl_callerinfo *pci,
     struct slashrpc_cservice *csvc)
 {
 	int locked;
@@ -405,7 +405,7 @@ sl_imp_hldrop_resm(void *arg)
  * @csvc: client service.
  */
 void
-sl_csvc_disable_pci(const struct pfl_callerinfo *pfl_callerinfo,
+sl_csvc_disable_pci(const struct pfl_callerinfo *pci,
     struct slashrpc_cservice *csvc)
 {
 	int locked;
@@ -470,7 +470,7 @@ sl_csvc_create(uint32_t rqptl, uint32_t rpptl)
  * is left in the location referred to by csvcp for retry.
  */
 struct slashrpc_cservice *
-sl_csvc_get_pci(const struct pfl_callerinfo *pfl_callerinfo,
+sl_csvc_get_pci(const struct pfl_callerinfo *pci,
     struct slashrpc_cservice **csvcp, int flags,
     struct pscrpc_export *exp, lnet_nid_t peernid, uint32_t rqptl,
     uint32_t rpptl, uint64_t magic, uint32_t version, void *lockp,

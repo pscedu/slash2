@@ -201,9 +201,7 @@ _fidc_lookup_fg(const struct pfl_callerinfo *pci,
 	struct fidc_membh *fcmhp;
 	int rc;
 
-	PFL_START_TRACE(pci);
 	rc = fidc_lookup(fg, 0, NULL, 0, &fcmhp);
-	PFL_END_TRACE();
 	return (rc == 0 ? fcmhp : NULL);
 }
 
@@ -218,9 +216,7 @@ _fidc_lookup_fid(const struct pfl_callerinfo *pci, slfid_t f)
 	struct fidc_membh *fcmhp;
 	int rc;
 
-	PFL_START_TRACE(pci);
 	rc = fidc_lookup(&t, 0, NULL, 0, &fcmhp);
-	PFL_END_TRACE();
 	return (rc == 0 ? fcmhp : NULL);
 }
 
@@ -238,8 +234,6 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	struct fidc_membh *tmp, *fcmh, *fcmh_new;
 	struct psc_hashbkt *b;
 	int rc = 0, try_create = 0;
-
-	PFL_START_TRACE(pci);
 
 	psclog_dbg("fidc_lookup called for fid "SLPRI_FID, fgp->fg_fid);
 
@@ -423,7 +417,6 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
 	}
  out:
-	PFL_END_TRACE();
 	return (rc);
 }
 
@@ -473,8 +466,6 @@ _fcmh_op_start_type(const struct pfl_callerinfo *pci,
 {
 	int locked;
 
-	PFL_START_TRACE(pci);
-
 	locked = FCMH_RLOCK(f);
 	psc_assert(f->fcmh_refcnt >= 0);
 	f->fcmh_refcnt++;
@@ -494,7 +485,6 @@ _fcmh_op_start_type(const struct pfl_callerinfo *pci,
 		}
 	}
 	FCMH_URLOCK(f, locked);
-	PFL_END_TRACE();
 }
 
 void
@@ -516,8 +506,6 @@ void
 _fcmh_op_done_type(const struct pfl_callerinfo *pci,
     struct fidc_membh *f, enum fcmh_opcnt_types type)
 {
-	PFL_START_TRACE(pci);
-
 	FCMH_RLOCK(f);
 
 	psc_assert(f->fcmh_refcnt > 0);
@@ -527,11 +515,11 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 	f->fcmh_refcnt--;
 	if (f->fcmh_refcnt == 0) {
 		/*
- 		 * If we fail to initialize a fcmh, free it now.
- 		 * Note that the reaper won't run if there is no
- 		 * memory pressure, and a deprecated fcmh will
- 		 * cause us to spin on it.
- 		 */
+		 * If we fail to initialize a fcmh, free it now.
+		 * Note that the reaper won't run if there is no
+		 * memory pressure, and a deprecated fcmh will
+		 * cause us to spin on it.
+		 */
 		if (f->fcmh_flags & FCMH_CTOR_FAILED) {
 			lc_remove(&fidcIdleList, f);
 			psc_hashent_remove(&fidcHtable, f);
@@ -547,7 +535,6 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 	}
 	fcmh_wake_locked(f);
 	FCMH_ULOCK(f);
-	PFL_END_TRACE();
 }
 
 #if PFL_DEBUG > 0

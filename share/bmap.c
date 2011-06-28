@@ -99,8 +99,6 @@ _bmap_op_done(const struct pfl_callerinfo *pci, struct bmapc_memb *b,
 {
 	va_list ap;
 
-	PFL_START_TRACE(pci);
-
 	BMAP_LOCK_ENSURE(b);
 	(b)->bcm_flags &= ~BMAP_BUSY;
 
@@ -120,7 +118,6 @@ _bmap_op_done(const struct pfl_callerinfo *pci, struct bmapc_memb *b,
 		bcm_wake_locked(b);
 		BMAP_ULOCK(b);
 	}
-	PFL_END_TRACE();
 }
 
 __static struct bmapc_memb *
@@ -162,8 +159,6 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 {
 	int rc = 0, do_load = 0, locked, bmaprw = 0;
 	struct bmapc_memb *b;
-
-	PFL_START_TRACE(pci);
 
 	*bp = NULL;
 
@@ -268,7 +263,6 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 			*bp = b;
 		}
 	}
-	PFL_END_TRACE();
 	return (rc);
 }
 
