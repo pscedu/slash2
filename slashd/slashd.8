@@ -15,7 +15,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES lnet pflenv %
-.Dd May 31, 2011
+.Dd June 29, 2011
 .Dt SLASHD 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -154,7 +154,7 @@ overridden if set specifically in
 or in the environment.
 .Pp
 Examples:
-.Bd -literal -offset indent
+.Bd -literal -offset 3n
 tcp0(eth0),tcp1(eth1)
 sdp4(ib0)
 .Ed
@@ -162,7 +162,7 @@ sdp4(ib0)
 The list of Lustre routes for interconnecting networks.
 .Pp
 Examples:
-.Bd -literal -offset indent
+.Bd -literal -offset 3n
 tcp1 3@ptl1
 tcp1 [2560,2563,2568,2571,2572,2575]@ptl0
 .Ed
@@ -171,13 +171,23 @@ When segmentation violations or fatal error conditions occur, try to
 print a stack trace if this variable is defined.
 .It Ev PSC_LOG_FILE
 This path specifies the file name where log messages are written.
+The following tokens are replaced in the file name specified:
+.Pp
+.Bl -tag -offset 3n -width 6n -compact
+.It Cm %c
+a unique counter to avoid clobbering
+.It Cm %%
+a literal
+.Sq %
+character
+.El
 .It Ev PSC_LOG_FORMAT
 This
 .Xr printf 3 Ns -like
 value is prepended to each log message reported.
 The following specifiers are recognized:
 .Pp
-.Bl -tag -offset 5n -compact -width 6n
+.Bl -tag -offset 3n -compact -width 6n
 .It Ic B
 source code file base name
 .It Ic D Ns Aq Ar fmt
@@ -225,7 +235,7 @@ microseconds into current second when generated
 .El
 .Pp
 Examples:
-.Bd -literal -offset indent
+.Bd -literal -offset 3n
 [%D<%s>:%06u %n %F %l]
 .Ed
 .It Ev PSC_LOG_LEVEL
@@ -281,7 +291,7 @@ activity
 .El
 .Pp
 Examples:
-.Bd -literal -offset indent
+.Bd -literal -offset 3n
 PSC_LOG_LEVEL_mem=debug
 .Ed
 .It Ev PSC_MAX_NMEMMAPS
