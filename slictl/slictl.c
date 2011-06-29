@@ -173,7 +173,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-HIn] [-p paramspec] [-S socket] [-s value] [cmd arg ...]\n",
+	    "usage: %s [-HInRv] [-p paramspec] [-S socket] [-s value] [cmd arg ...]\n",
 	    progname);
 	exit(1);
 }
@@ -184,9 +184,11 @@ struct psc_ctlopt opts[] = {
 	{ 'i', PCOF_FUNC, psc_ctlparse_iostats },
 	{ 'L', PCOF_FUNC, psc_ctlparse_lc },
 	{ 'n', PCOF_FLAG, &psc_ctl_nodns },
-	{ 'P', PCOF_FUNC, psc_ctlparse_pool },
 	{ 'p', PCOF_FUNC, psc_ctlparse_param },
-	{ 's', PCOF_FUNC, psc_ctlparse_show }
+	{ 'P', PCOF_FUNC, psc_ctlparse_pool },
+	{ 'R', PCOF_FLAG, &recursive },
+	{ 's', PCOF_FUNC, psc_ctlparse_show },
+	{ 'v', PCOF_FLAG, &verbose }
 };
 
 int
