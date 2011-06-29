@@ -64,7 +64,9 @@ walk(const char *fn, void (*cbf)(const char *, const struct stat *,
 					warn("%s", f->fts_path);
 				else {
 					if (verbose)
-						warnx("processing %s", buf);
+						warnx("processing %s%s",
+						    buf, f->fts_info ==
+						    FTS_D ? "/" : "");
 					cbf(buf, f->fts_statp, arg);
 				}
 				break;
