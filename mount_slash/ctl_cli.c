@@ -114,14 +114,9 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mrq->mrq_fid, slstrerror(rc)));
 
-	rc = slc_rmc_getimp1(&csvc, slc_rmc_resm);
-	if (rc) {
-		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
-		    mrq->mrq_fid, slstrerror(rc));
-		goto out;
-	}
-	rc = SL_RSX_NEWREQ(csvc, mh->mh_type == MSCMT_ADDREPLRQ ?
-	    SRMT_REPL_ADDRQ : SRMT_REPL_DELRQ, rq, mq, mp);
+	MSL_RMC_NEWREQ_PFCC(&pfcc, fcmh, csvc,
+	    mh->mh_type == MSCMT_ADDREPLRQ ?
+	    SRMT_REPL_ADDRQ : SRMT_REPL_DELRQ, rq, mq, mp, rc);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mrq->mrq_fid, slstrerror(rc));
@@ -207,13 +202,8 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    mrq->mrq_fid, slstrerror(rc)));
 
  issue:
-	rc = slc_rmc_getimp1(&csvc, slc_rmc_resm);
-	if (rc) {
-		rc = psc_ctlsenderr(fd, mh, "%s: %s",
-		    fg.fg_fid, slstrerror(rc));
-		goto out;
-	}
-	rc = SL_RSX_NEWREQ(csvc, SRMT_REPL_GETST, rq, mq, mp);
+	MSL_RMC_NEWREQ_PFCC(&pfcc, fcmh, csvc, SRMT_REPL_GETST, rq, mq,
+	    mp, rc);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, "%s: %s",
 		    fg.fg_fid, slstrerror(rc));
@@ -317,13 +307,8 @@ msctlhnd_set_newreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfnrp->mfnrp_fid, slstrerror(rc)));
 
-	rc = slc_rmc_getimp1(&csvc, slc_rmc_resm);
-	if (rc) {
-		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
-		    mfnrp->mfnrp_fid, slstrerror(rc));
-		goto out;
-	}
-	rc = SL_RSX_NEWREQ(csvc, SRMT_SET_NEWREPLPOL, rq, mq, mp);
+	MSL_RMC_NEWREQ_PFCC(&pfcc, fcmh, csvc, SRMT_SET_NEWREPLPOL, rq,
+	    mq, mp, rc);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfnrp->mfnrp_fid, slstrerror(rc));
@@ -388,13 +373,8 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfbrp->mfbrp_fid, slstrerror(rc)));
 
-	rc = slc_rmc_getimp1(&csvc, slc_rmc_resm);
-	if (rc) {
-		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
-		    mfbrp->mfbrp_fid, slstrerror(rc));
-		goto out;
-	}
-	rc = SL_RSX_NEWREQ(csvc, SRMT_SET_BMAPREPLPOL, rq, mq, mp);
+	MSL_RMC_NEWREQ_PFCC(&pfcc, fcmh, csvc, SRMT_SET_BMAPREPLPOL, rq,
+	    mq, mp, rc);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfbrp->mfbrp_fid, slstrerror(rc));
