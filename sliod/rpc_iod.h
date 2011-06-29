@@ -30,8 +30,8 @@ struct sli_repl_workrq;
 
 #define SLI_RIM_NTHREADS	8
 #define SLI_RIM_NBUFS		1024
-#define SLI_RIM_BUFSZ		384
-#define SLI_RIM_REPSZ		384
+#define SLI_RIM_BUFSZ		512
+#define SLI_RIM_REPSZ		512
 #define SLI_RIM_SVCNAME		"slirim"
 
 #define SLI_RIC_NTHREADS	32

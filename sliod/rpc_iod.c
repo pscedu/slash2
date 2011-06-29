@@ -185,7 +185,7 @@ sli_rpc_mds_unpack_fsuuid(struct pscrpc_request *rq, int msgtype)
 			}
 		}
 
-		if (!sli_fsuuid) {
+		if (sli_fsuuid) {
 			fp = fopen(fn, "w");
 			if (fp == NULL)
 				psc_fatal("open %s", fn);
