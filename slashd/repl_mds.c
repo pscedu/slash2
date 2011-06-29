@@ -469,6 +469,8 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		brepls_init(retifset, 0);
 		retifset[BREPLST_INVALID] = 1;
 		retifset[BREPLST_VALID] = 1;
+		retifset[BREPLST_GARBAGE] = 1;
+		retifset[BREPLST_GARBAGE_SCHED] = 1;
 
 		/* check if all bmaps are already valid */
 		brepls_init(ret_if_inact, 1);
