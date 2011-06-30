@@ -87,7 +87,7 @@ slc_rmc_setmds(const char *name)
 }
 
 /**
- * slc_rmc_retry - Determine if process doesn't want to wait or if
+ * slc_rmc_retry_pfcc - Determine if process doesn't want to wait or if
  *	maximum allowed timeout has been reached for MDS communication.
  */
 int
@@ -96,6 +96,24 @@ slc_rmc_retry_pfcc(__unusedx struct pscfs_clientctx *pfcc, int *rc)
 	int retry = 1;
 
 #if 0
+	switch (*rc) {
+	case ECONNABORTED:
+	case ECONNREFUSED:
+	case ECONNRESET:
+	case EHOSTDOWN:
+	case EHOSTUNREACH:
+	case EIO:
+	case ENETDOWN:
+	case ENETRESET:
+	case ENETUNREACH:
+	case ENONET:
+	case ENOTCONN:
+	case ETIMEDOUT:
+		break;
+	default:
+		return (0);
+	}
+
 	retry = global setting
 	retry = read_proc_env(ctx->pid, "");
 	retry = hard timeout
