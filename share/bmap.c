@@ -27,6 +27,7 @@
 #include "psc_ds/treeutil.h"
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
+#include "psc_util/log.h"
 
 #include "lnet/types.h"
 
@@ -169,7 +170,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 	b = bmap_lookup_cache_locked(f, n);
 	if (b == NULL) {
 		if ((flags & BMAPGETF_LOAD) == 0) {
-			ureqlock(&f->fcmh_lock, locked);
+			FCMH_URLOCK(f, locked);
 			rc = ENOENT;
 			goto out;
 		}
