@@ -185,13 +185,14 @@ sli_rpc_mds_unpack_fsuuid(struct pscrpc_request *rq, int msgtype)
 			}
 		}
 
-		if (sli_fsuuid) {
+		if (!sli_fsuuid) {
+			sli_fsuuid = fsuuid;
+
 			fp = fopen(fn, "w");
 			if (fp == NULL)
 				psc_fatal("open %s", fn);
 			fprintf(fp, "%"PRIx64"\n", sli_fsuuid);
 			fclose(fp);
-			sli_fsuuid = fsuuid;
 		}
 	}
 	if (sli_fsuuid != fsuuid)
