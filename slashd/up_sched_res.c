@@ -751,16 +751,25 @@ slmupschedthr_main(struct psc_thread *thr)
 							b = bn;
 							bn = NULL;
 
-							if (f->fcmh_flags & FCMH_IN_PTRUNC)
+							if (f->fcmh_flags & FCMH_IN_PTRUNC) {
+								mds_bmap_write_repls_rel(b);
 								PFL_GOTOERR(try_ptrunc, 1);
-
-							if (uswi_gen != wk->uswi_gen)
+							}
+							if (uswi_gen != wk->uswi_gen) {
+								mds_bmap_write_repls_rel(b);
 								PFL_GOTOERR(skipfile, 1);
+							}
+
 							bno--;
 							if (mds_bmap_load(f,
 							    bno, &bn))
 								continue;
 							BMAPOD_MODIFY_START(bn);
+						}
+
+						if (bn == NULL) {
+							bn = b;
+							b = NULL;
 						}
 
 						if (val == BREPLST_GARBAGE_SCHED ||
