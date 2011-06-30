@@ -139,6 +139,7 @@ struct bmapc_memb {
 #define _BMAP_FLSHFT		(1 << 16)
 
 #define BMAP_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bcm_lock)
+#define BMAP_HASLOCK(b)		psc_spin_haslock(&(b)->bcm_lock)
 #define BMAP_LOCK(b)		spinlock(&(b)->bcm_lock)
 #define BMAP_ULOCK(b)		freelock(&(b)->bcm_lock)
 #define BMAP_RLOCK(b)		reqlock(&(b)->bcm_lock)

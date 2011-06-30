@@ -159,6 +159,8 @@ mds_bmap_write(struct bmapc_memb *b, int update_mtime, void *logf,
 	size_t nb;
 
 	BMAPOD_REQRDLOCK(bmap_2_bmi(b));
+	if (BMAP_HASLOCK(b))
+		BMAP_ULOCK(b);
 	mds_bmap_ensure_valid(b);
 
 	psc_crc64_calc(&crc, bmap_2_ondisk(b), BMAP_OD_CRCSZ);
@@ -294,7 +296,8 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
  * mds_bmap_write_rel - Release a bmap after use.
  */
 int
-mds_bmap_write_rel(struct bmapc_memb *b, void *logf)
+_mds_bmap_write_rel(const struct pfl_callerinfo *pci,
+    struct bmapc_memb *b, void *logf)
 {
 	int rc;
 
