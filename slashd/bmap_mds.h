@@ -84,7 +84,7 @@ struct bmap_mds_info {
 #define bmap_2_crcs(b, n)	bmap_2_xstate(b)->bes_crcs[n]
 #define bmap_2_ondisk(b)	((struct bmap_ondisk *)&(b)->bcm_corestate)
 
-#define BMAPOD_CALLERINFO	PFL_CALLERINFO()
+#define BMAPOD_CALLERINFO	PFL_CALLERINFOSS(SLSS_BMAP)
 #define BMAPOD_RDLOCK(bmi)	psc_rwlock_rdlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmdsi_rwlock)
 #define BMAPOD_REQRDLOCK(bmi)	psc_rwlock_reqrdlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmdsi_rwlock)
 #define BMAPOD_REQWRLOCK(bmi)	psc_rwlock_reqwrlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmdsi_rwlock)
@@ -101,22 +101,8 @@ bmap_2_bmi(struct bmapc_memb *b)
 #define BMAPOD_MODIFY_START(b)	BMAPOD_WRLOCK(bmap_2_bmi(b))
 #define BMAPOD_MODIFY_DONE(b)	BMAPOD_ULOCK(bmap_2_bmi(b))
 
-#define BMAPOD_READ_START(b)						\
-	_PFL_RVSTART {							\
-		int _waslocked = 0;					\
-									\
-		if (psc_rwlock_haswrlock(&bmap_2_bmi(b)->bmdsi_rwlock))	\
-			_waslocked = 1;					\
-		else							\
-			_waslocked = BMAPOD_REQRDLOCK(bmap_2_bmi(b));	\
-		_waslocked;						\
-	} _PFL_RVEND
-
-#define BMAPOD_READ_DONE(b, lk)						\
-	do {								\
-		if (!(lk))						\
-			BMAPOD_ULOCK(bmap_2_bmi(b));			\
-	} while (0)
+#define BMAPOD_READ_START(b)	BMAPOD_REQRDLOCK(bmap_2_bmi(b))
+#define BMAPOD_READ_DONE(b, lk)	BMAPOD_UREQLOCK(bmap_2_bmi(b), (lk))
 
 #define BHREPL_POLICY_SET(b, pol)					\
 	do {								\
@@ -170,7 +156,7 @@ struct bmap_timeo_table {
 
 #define BMAP_TIMEO_MAX		120	/* Max bmap lease timeout */
 #define BMAP_SEQLOG_FACTOR	100
-#define BMAP_RECOVERY_TIMEO_EXT BMAP_TIMEO_MAX /* Extend recovered leases 
+#define BMAP_RECOVERY_TIMEO_EXT BMAP_TIMEO_MAX /* Extend recovered leases
 						* after an MDS failure.
 						*/
 
@@ -179,7 +165,7 @@ struct bmap_mds_lease {
 	lnet_nid_t		  bml_ion_nid;
 	lnet_process_id_t	  bml_cli_nidpid;
 	uint32_t		  bml_flags;
-	time_t                    bml_start;
+	time_t			  bml_start;
 	psc_spinlock_t		  bml_lock;
 	struct bmap_mds_info	 *bml_bmdsi;
 	struct pscrpc_export	 *bml_exp;
@@ -206,7 +192,7 @@ struct bmap_mds_lease {
 #define	BML_EXPFAIL		(1 << 12)
 #define BML_FREEING		(1 << 13)
 #define BML_ASSFAIL		(1 << 14)
-#define BML_RECOVERPNDG         (1 << 15)
+#define BML_RECOVERPNDG		(1 << 15)
 
 #define bml_2_bmap(bml)		bmi_2_bmap((bml)->bml_bmdsi)
 
@@ -242,7 +228,9 @@ struct bmap_ion_assign {
 
 int	 mds_bmap_read(struct bmapc_memb *, enum rw, int);
 int	 mds_bmap_write(struct bmapc_memb *, int, void *, void *);
-int	 mds_bmap_write_rel(struct bmapc_memb *, void *);
+int	_mds_bmap_write_rel(const struct pfl_callerinfo *, struct bmapc_memb *, void *);
+
+#define mds_bmap_write_rel(b, logf)	_mds_bmap_write_rel(PFL_CALLERINFOSS(SLSS_BMAP), (b), (logf))
 
 #define mds_bmap_write_repls_rel(b)	mds_bmap_write_rel((b), mdslog_bmap_repls)
 
