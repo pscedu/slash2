@@ -21,16 +21,16 @@
 #define _SLASH_PATHNAMES_H_
 
 /* configuration/control socket paths */
-#if 0
-#define SL_PATH_CONF		"/etc/slcfg.conf"
-#define SL_PATH_SLMCTLSOCK	"/var/run/slash/slashd.%h.sock"
-#define SL_PATH_SLICTLSOCK	"/var/run/slash/sliod.%h.sock"
-#define SL_PATH_MSCTLSOCK	"/var/run/slash/mount_slash.%h.sock"
+#if DEVELPATHS
+# define SL_PATH_CONF		"../config/example.conf"
+# define SL_PATH_SLMCTLSOCK	"../slashd.%h.sock"
+# define SL_PATH_SLICTLSOCK	"../sliod.%h.sock"
+# define SL_PATH_MSCTLSOCK	"../mount_slash.%h.sock"
 #else
-#define SL_PATH_CONF		"../config/example.conf"
-#define SL_PATH_SLMCTLSOCK	"../slashd.%h.sock"
-#define SL_PATH_SLICTLSOCK	"../sliod.%h.sock"
-#define SL_PATH_MSCTLSOCK	"../mount_slash.%h.sock"
+# define SL_PATH_CONF		"/etc/slcfg.slcfg"
+# define SL_PATH_SLMCTLSOCK	"/var/run/slash/slashd.%h.sock"
+# define SL_PATH_SLICTLSOCK	"/var/run/slash/sliod.%h.sock"
+# define SL_PATH_MSCTLSOCK	"/var/run/slash/mount_slash.%h.sock"
 #endif
 
 /* runtime/data paths */
