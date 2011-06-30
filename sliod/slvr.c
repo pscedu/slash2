@@ -486,7 +486,7 @@ slvr_slab_prep(struct slvr_ref *s, enum rw rw)
 int
 slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw)
 {
-	int i, rc, blks, unaligned[2] = { -1, -1 };
+	int i, rc = 0, blks, unaligned[2] = { -1, -1 };
 
 	SLVR_LOCK(s);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
@@ -511,7 +511,6 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw)
 
 	if (s->slvr_flags & SLVR_DATAERR) {
 		rc = -1;
-		psclog_warnx("error not handled");
 		goto out;
 
 	} else if (s->slvr_flags & SLVR_DATARDY) {
@@ -629,16 +628,18 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw)
 			psc_vbitmap_set(s->slvr_slab->slb_inuse, unaligned[1]);
 		//psc_vbitmap_printbin1(s->slvr_slab->slb_inuse);
  out:
-		if (s->slvr_flags & SLVR_FAULTING) {
-			s->slvr_flags |= SLVR_DATARDY;
-			s->slvr_flags &= ~SLVR_FAULTING;
-			DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
-			SLVR_WAKEUP(s);
+		if (!rc) {
+			if (s->slvr_flags & SLVR_FAULTING) {
+				s->slvr_flags |= SLVR_DATARDY;
+				s->slvr_flags &= ~SLVR_FAULTING;
+				DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
+				SLVR_WAKEUP(s);
+			}
+			SLVR_ULOCK(s);
 		}
-		SLVR_ULOCK(s);
 	}
 
-	return (0);
+	return (rc);
 }
 
 void
@@ -679,6 +680,8 @@ slvr_schedule_crc_locked(struct slvr_ref *s)
 	lc_addqueue(&crcqSlvrs, s);
 }
 
+void slvr_slb_free_locked(struct slvr_ref *, struct psc_poolmgr *);
+
 /**
  * slvr_wio_done - Called after a write RPC has completed.  The sliver may
  *    be FAULTING which is handled separately from DATARDY.  If FAULTING,
@@ -709,13 +712,20 @@ slvr_wio_done(struct slvr_ref *s, uint32_t off, uint32_t len)
 		psc_assert(!(s->slvr_flags & SLVR_CRCDIRTY));
 		s->slvr_pndgwrts--;
 		s->slvr_flags &= ~(SLVR_PINNED|SLVR_FAULTING|SLVR_REPLDST);
+
 		if (s->slvr_flags & SLVR_REPLFAIL) {
+			/* Perhaps this should block for any readers? 
+			 *   Technically it should be impossible since this 
+			 *   replica has yet to be registered with the mds.
+			 */
+			s->slvr_flags |= SLVR_SLBFREEING;
+			slvr_slb_free_locked(s, slBufsPool);
 			s->slvr_flags &= ~SLVR_REPLFAIL;
-			s->slvr_flags |= SLVR_DATAERR;
-		}
-		else
+
+		} else {
 			s->slvr_flags |= SLVR_DATARDY;
-		SLVR_WAKEUP(s);
+			SLVR_WAKEUP(s);
+		}
 		SLVR_ULOCK(s);
 
 		slvr_lru_requeue(s, 0);
@@ -835,6 +845,25 @@ slvr_remove(struct slvr_ref *s)
 	PSCFREE(s);
 }
 
+void
+slvr_slb_free_locked(struct slvr_ref *s, struct psc_poolmgr *m)
+{
+	struct sl_buffer *tmp=s->slvr_slab;
+	
+	SLVR_LOCK_ENSURE(s);
+	psc_assert(s->slvr_flags & SLVR_SLBFREEING);
+	psc_assert(!(s->slvr_flags & SLVR_FREEING));
+	psc_assert(s->slvr_slab);
+	
+	s->slvr_flags &= ~(SLVR_SLBFREEING | SLVR_DATARDY);
+	
+	DEBUG_SLVR(PLL_INFO, s, "freeing slvr slab=%p", s->slvr_slab);
+	s->slvr_slab = NULL;
+	SLVR_WAKEUP(s);
+	
+	psc_pool_return(m, tmp);
+}
+
 /*
  * slvr_buffer_reap - The reclaim function for slBufsPool.  Note that
  *	our caller psc_pool_get() ensures that we are called
@@ -895,24 +924,11 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 
 		locked = SLVR_RLOCK(s);
 
-		if (s->slvr_flags & SLVR_SLBFREEING) {
-			struct sl_buffer *tmp=s->slvr_slab;
+		if (s->slvr_flags & SLVR_SLBFREEING)
+			slvr_slb_free_locked(s, m);
 
-			psc_assert(!(s->slvr_flags & SLVR_FREEING));
-			psc_assert(s->slvr_slab);
-
-			s->slvr_flags &= ~(SLVR_SLBFREEING | SLVR_DATARDY);
-
-			DEBUG_SLVR(PLL_DEBUG, s, "freeing slvr slab=%p",
-				   s->slvr_slab);
-			s->slvr_slab = NULL;
-			SLVR_WAKEUP(s);
-			SLVR_URLOCK(s, locked);
-
-			psc_pool_return(m, tmp);
-
-		} else if (s->slvr_flags & SLVR_FREEING) {
-
+		else if (s->slvr_flags & SLVR_FREEING) {
+			
 			psc_assert(!(s->slvr_flags & SLVR_SLBFREEING));
 			psc_assert(!(s->slvr_flags & SLVR_PINNED));
 			psc_assert(!s->slvr_slab);
@@ -925,7 +941,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 		}
 	}
 	psc_dynarray_free(&a);
-
+	
 	return (n);
 }
 

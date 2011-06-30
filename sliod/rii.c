@@ -241,7 +241,9 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 
 	slvr_repl_prep(s, SLVR_REPLDST);
 
-	slvr_io_prep(s, 0, mq->len, SL_WRITE);
+	rc = slvr_io_prep(s, 0, mq->len, SL_WRITE);
+	if (rc)
+		goto out;
 
 	iov.iov_base = s->slvr_slab->slb_base;
 	iov.iov_len = mq->len;
