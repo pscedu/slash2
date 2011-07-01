@@ -924,8 +924,10 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 
 		locked = SLVR_RLOCK(s);
 
-		if (s->slvr_flags & SLVR_SLBFREEING)
+		if (s->slvr_flags & SLVR_SLBFREEING) {
 			slvr_slb_free_locked(s, m);
+			SLVR_URLOCK(s, locked);
+		}
 
 		else if (s->slvr_flags & SLVR_FREEING) {
 			
