@@ -101,9 +101,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	pjh.pjh_readsize = rs;
 	pjh.pjh_iolen = PSC_ALIGN(sizeof(pjh), stb.st_blksize);
 	pjh.pjh_magic = PJH_MAGIC;
-#if 0
 	pjh.pjh_timestamp = time(NULL);
-#endif
 
 	PSC_CRC64_INIT(&pjh.pjh_chksum);
 	psc_crc64_add(&pjh.pjh_chksum, &pjh,
@@ -331,18 +329,16 @@ pjournal_dump(const char *fn, int verbose)
 		    "readsize %d", pjh->pjh_nents, pjh->pjh_readsize);
 
 	printf("Journal header info for %s:\n"
-	    "  Version %u\n"
-	    "  Entry size %u\n"
-	    "  Number of entries %u\n"
-	    "  Batch read size %u\n"
-	    "  Entry start offset %"PRId64"\n\n",
+	    "  Version: %u\n"
+	    "  Entry size: %u\n"
+	    "  Number of entries: %u\n"
+	    "  Batch read size: %u\n"
+	    "  Entry start offset: %"PRId64"\n"
+	    "  Format time: %s\n\n",
 	    fn, pjh->pjh_version, PJ_PJESZ(pj), pjh->pjh_nents,
-	    pjh->pjh_readsize, pjh->pjh_start_off);
-
-#if 0
-	printf("This journal was created on %s",
+	    pjh->pjh_readsize, pjh->pjh_start_off,
 	    ctime((time_t *)&pjh->pjh_timestamp));
-#endif
+
 
 	jbuf = psc_alloc(PJ_PJESZ(pj) * pj->pj_hdr->pjh_readsize,
 			 PAF_PAGEALIGN | PAF_LOCK);
