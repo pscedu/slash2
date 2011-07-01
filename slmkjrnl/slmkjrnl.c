@@ -263,6 +263,10 @@ pjournal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
  * pjournal_dump - Dump the contents of a journal file.
  * @fn: journal filename to query.
  * @verbose: whether to report stats summary or full dump.
+ *
+ * Each time mds restarts, it writes log entries starting from the very first slot of the log.
+ * Anyway, the function dumps all log entries, some of them may be from previous incarnations
+ * of the mds.
  */
 void
 pjournal_dump(const char *fn, int verbose)
