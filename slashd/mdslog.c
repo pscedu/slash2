@@ -1649,11 +1649,14 @@ mds_journal_init(int disable_propagation)
 	psclog_notice("Last SLASH FID is "SLPRI_FID, mds_cursor.pjc_fid);
 	psclog_notice("Last synced ZFS transaction group number is %"PRId64,
 	    mdsJournal->pj_commit_txg);
-	psclog_notice("Last replayed SLASH2 transaction number is %"PRId64,
+	psclog_notice("Last replayed SLASH2 transaction ID is %"PRId64,
 	    mdsJournal->pj_replay_xid);
 
 	pjournal_replay(mdsJournal, SLMTHRT_JRNL, "slmjthr",
 	    mds_replay_handler, mds_distill_handler);
+
+	psclog_notice("Last used SLASH2 transaction ID is %#"PRIx64, 
+	   mdsJournal->pj_lastxid);
 
 	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm, mds_cursor.pjc_seqno_lwm);
 	psclog_notice("Last bmap sequence number low water mark is %"PRId64,
