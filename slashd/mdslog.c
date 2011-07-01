@@ -1655,7 +1655,7 @@ mds_journal_init(int disable_propagation)
 	pjournal_replay(mdsJournal, SLMTHRT_JRNL, "slmjthr",
 	    mds_replay_handler, mds_distill_handler);
 
-	psclog_notice("Last used SLASH2 transaction ID is %#"PRIx64, 
+	psclog_notice("Last used SLASH2 transaction ID is %"PRId64, 
 	   mdsJournal->pj_lastxid);
 
 	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm, mds_cursor.pjc_seqno_lwm);
