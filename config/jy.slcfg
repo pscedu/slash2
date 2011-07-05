@@ -1,7 +1,13 @@
 # $Id$
 
+# See slash.conf(5) for more information.
+
+# Global network config
 set port=1300;
 set net=tcp10;
+
+# Pull in other/local config files
+# include "/etc/slcfg.d/*"
 
 site @PSC {
 	site_desc	= "PSC";

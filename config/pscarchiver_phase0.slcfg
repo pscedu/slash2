@@ -1,28 +1,30 @@
 # $Id$
 
-# NCAST configuration
+# See slash.conf(5) for more information.
+
+# Archiver configuration
 set port=1301;
 set net=sdp11;
 
-# Pull in all config files
-# include "/etc/slash/conf.d/*"
+# Pull in other/local config files
+# include "/etc/slcfg.d/*"
 
 site @PSCARCH {
-	site_desc       = "PSC Phase0 Archiver";
-	site_id         = 0;
-	resource archmds  {
-		desc    = "PSC Arch MDS";
-		type    = mds;
-		id      = 1;
-		ifs     = 10.10.101.60;
-		jrnldev = /dev/sdah;
+	site_desc	= "PSC Phase0 Archiver";
+	site_id		= 0;
+	resource archmds {
+		desc	= "PSC Arch MDS";
+		type	= mds;
+		id	= 1;
+		nodes	= 10.10.101.60;
+		jrnldev	= /dev/sdah;
 	}
 
 	resource archsliod {
-		desc    = "PSC Phase0 I/O Server";
-		type    = standalone_fs;
-		id      = 2;
-		ifs     = 10.10.101.155;
-		fsroot  = /local/s2io;
+		desc	= "PSC Phase0 I/O Server";
+		type	= standalone_fs;
+		id	= 2;
+		nodes	= 10.10.101.155;
+		fsroot	= /local/s2io;
 	}
 }

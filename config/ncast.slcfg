@@ -1,29 +1,30 @@
 # $Id$
 
-# NCAST configuration
-global port=1300;
-global net=tcp10;
+# See slash.conf(5) for more information.
 
-# Pull in all config files
-# include "/etc/slash/conf.d/*"
+# NCAST configuration
+set port=1300;
+set net=tcp10;
+
+# Pull in other/local config files
+# include "/etc/slcfg.d/*"
 
 site @NCAST {
-	site_desc       = "NCAST Slash2";
-	site_id         = 10;
-	resource ncastmds  {
-		desc    = "NCAST/PSC MDS";
-		type    = mds;
-		id      = 1;
-		ifs     = 207.245.160.119;
-		jrnldev = /dev/sdc;
+	site_desc	= "NCAST Slash2";
+	site_id		= 10;
+	resource ncastmds {
+		desc	= "NCAST/PSC MDS";
+		type	= mds;
+		id	= 1;
+		nodes	= 207.245.160.119;
+		jrnldev	= /dev/sdc;
 	}
 
 	resource ncastsliod {
-		desc    = "NCAST/PSC Test Server";
-		type    = standalone_fs;
-		id      = 0;
-		ifs     = 207.245.160.118;
-		fsroot  = /s2io/;
+		desc	= "NCAST/PSC Test Server";
+		type	= standalone_fs;
+		id	= 0;
+		nodes	= 207.245.160.118;
+		fsroot	= /s2io/;
 	}
 }
-
