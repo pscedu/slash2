@@ -423,3 +423,4 @@ API rename
 - eradicate getrqstatus()
 - keep testing replication
 - 'slmctl stop' should completely wait for all ops to prevent relying on journal
+- ensure user mounting works
