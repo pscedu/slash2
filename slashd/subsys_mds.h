@@ -7,5 +7,6 @@
 
 #define SLMSS_ZFS	(_SLSS_LAST + 0)
 #define SLMSS_JOURNAL	(_SLSS_LAST + 1)
+#define SLMSS_UPSCH	(_SLSS_LAST + 2)
 
 #endif /* _SUBSYS_MDS_H_ */

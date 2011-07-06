@@ -17,6 +17,10 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * Definitions for the yacc parsing the SLASH2 configuration file.
+ */
+
 %{
 #define YYSTYPE char *
 

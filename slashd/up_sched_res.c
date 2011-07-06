@@ -23,6 +23,9 @@
  * collection and replication activity to peer resources.
  */
 
+#define PSC_SUBSYS SLMSS_UPSCH
+#include "subsys_mds.h"
+
 #include <sys/param.h>
 
 #include <dirent.h>
@@ -196,7 +199,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
     struct bmapc_memb *b, int off, struct sl_resm *src_resm,
     struct sl_resource *dst_res, int j)
 {
-	int tract[NBREPLST], retifset[NBREPLST], amt = 0, rc = 0;
+	int tract[NBREPLST], retifset[NBREPLST], rc = 0;
 	struct resm_mds_info *src_rmmi, *dst_rmmi;
 	struct pscrpc_request *rq = NULL;
 	struct srm_repl_schedwk_req *mq;
@@ -208,6 +211,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	struct psc_thread *thr;
 	struct sl_site *site;
 	sl_bmapno_t lastbno;
+	int64_t amt = 0;
 
 	thr = pscthr_get();
 	smut = slmupschedthr(thr);

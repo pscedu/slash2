@@ -129,7 +129,6 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
 	 *   specified, else return.
 	 */
 	if (add) {
-
 		if (ih->inoh_ino.ino_nrepls >= SL_MAX_REPLICAS) {
 			DEBUG_INOH(PLL_WARN, ih, "too many replicas");
 			rc = -ENOSPC;
@@ -246,10 +245,9 @@ _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int *tract,
 	}
 
 	/* Apply any translations */
-	if (tract && tract[val] != -1) {
+	if (tract && tract[val] != -1)
 		SL_REPL_SET_BMAP_IOS_STAT(bcm->bcm_repls,
 		    off, tract[val]);
-	}
 
  out:
 	BMAPOD_UREQLOCK(bmdsi, locked);
@@ -620,9 +618,9 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
  * Returns: if @amt is positive, return value is the amount that has
  *	been reserved or zero if none could be allocated.
  */
-int
+int64_t
 mds_repl_nodes_adjbusy(struct resm_mds_info *ma,
-    struct resm_mds_info *mb, int amt)
+    struct resm_mds_info *mb, int64_t amt)
 {
 	int wake = 0, minid, maxid, locked;
 	struct slm_resmlink *srl;
@@ -731,7 +729,7 @@ mds_repl_buildbusytable(void)
 	for (n = 0; n < repl_busytable_nents; n++)
 		for (j = n + 1; j < repl_busytable_nents; j++) {
 			srl = repl_busytable + MDS_REPL_BUSYNODES(n, j);
-			srl->srl_avail = SLM_RESMLINK_DEF_NUNITS;
+			srl->srl_avail = SLM_RESMLINK_DEF_BANDWIDTH;
 		}
 	freelock(&repl_busytable_lock);
 }
