@@ -43,13 +43,13 @@ struct slm_resmpair_bandwidth {
 
 #endif
 
-#define SLM_RESMLINK_UNITSZ		 1024			/* 1KB */
-#define SLM_RESMLINK_DEF_NUNITS		 (1024 * 1024 / 8)	/* 1Mb * UNITSZ = 1Gb */
+/* XXX hack: hardcode 1Gbps */
+#define SLM_RESMLINK_DEF_BANDWIDTH	 (1024 * 1024 * INT64_C(1024) / 8)
 
 struct slm_resmlink {
 //	struct psc_listentry		 srl_lentry;
-	int				 srl_avail;		/* units of RESMLINK_UNITSZ bytes/sec */
-	int				 srl_used;
+	int64_t				 srl_avail;		/* units of RESMLINK_UNITSZ bytes/sec */
+	int64_t				 srl_used;
 };
 
 typedef void (*brepl_walkcb_t)(struct bmapc_memb *, int, int, void *);
@@ -63,7 +63,7 @@ int	 mds_repl_inv_except(struct bmapc_memb *, sl_ios_id_t, int);
 int	_mds_repl_ios_lookup(struct slash_inode_handle *, sl_ios_id_t, int, int);
 int	 mds_repl_loadino(const struct slash_fidgen *, struct fidc_membh **);
 void	 mds_repl_node_clearallbusy(struct resm_mds_info *);
-int	 mds_repl_nodes_adjbusy(struct resm_mds_info *, struct resm_mds_info *, int);
+int64_t mds_repl_nodes_adjbusy(struct resm_mds_info *, struct resm_mds_info *, int64_t);
 void	 mds_repl_reset_scheduled(sl_ios_id_t);
 
 void	 mds_brepls_check(uint8_t *, int);
@@ -115,7 +115,7 @@ void	 mds_brepls_check(uint8_t *, int);
 #define mds_repl_bmap_apply(bcm, tract, retifset, off)			\
 	_mds_repl_bmap_apply((bcm), (tract), (retifset), 0, (off), NULL, NULL, NULL)
 
-#define mds_repl_nodes_clearbusy(a, b)		 mds_repl_nodes_adjbusy((a), (b), INT_MIN)
+#define mds_repl_nodes_clearbusy(a, b)		 mds_repl_nodes_adjbusy((a), (b), INT64_MIN)
 
 #define mds_repl_ios_lookup_add(ih, iosid, log)	_mds_repl_ios_lookup((ih), (iosid), 1, log)
 #define mds_repl_ios_lookup(ih, iosid)		_mds_repl_ios_lookup((ih), (iosid), 0, 0)

@@ -258,7 +258,7 @@ void	 mds_bmap_timeotbl_init(void);
 uint64_t mds_bmap_timeotbl_getnextseq(void);
 uint64_t mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *, int);
 
-int	 slm_bmap_calc_repltraffic(struct bmapc_memb *);
+ int64_t slm_bmap_calc_repltraffic(struct bmapc_memb *);
 
 void	 mds_bia_odtable_startup_cb(void *, struct odtable_receipt *);
 

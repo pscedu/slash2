@@ -73,12 +73,13 @@ mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
 	return (n < nb);
 }
 
-int
+int64_t
 slm_bmap_calc_repltraffic(struct bmapc_memb *b)
 {
 	struct fidc_membh *f;
-	int i, amt = 0;
+	int64_t amt = 0;
 	off_t bsiz, sz;
+	int i;
 
 	f = b->bcm_fcmh;
 	FCMH_LOCK(f);
@@ -107,7 +108,7 @@ slm_bmap_calc_repltraffic(struct bmapc_memb *b)
 	}
 	BMAP_ULOCK(b);
 	FCMH_ULOCK(f);
-	return (amt / SLM_RESMLINK_UNITSZ);
+	return (amt);
 }
 
 /**
@@ -1214,9 +1215,9 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 	fg.fg_gen = FGEN_ANY;
 
 	/*
- 	 * Because we don't revoke leases when an unlink comes in, ENOENT
- 	 * is actually legitimate after a crash.
- 	 */
+	 * Because we don't revoke leases when an unlink comes in, ENOENT
+	 * is actually legitimate after a crash.
+	 */
 	rc = slm_fcmh_get(&fg, &f);
 	if (rc) {
 		psclog_errorx("failed to load: item=%zd, fid="SLPRI_FID,
