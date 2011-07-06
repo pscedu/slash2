@@ -140,14 +140,16 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 			 *   HWM journal entry.  (HWM's are journaled
 			 *   every BMAP_SEQLOG_FACTOR times).
 			 */
-			mdsBmapTimeoTbl.btt_maxseq = bml->bml_seq;
+			seq = mdsBmapTimeoTbl.btt_maxseq = bml->bml_seq;
+		
+		else if (mdsBmapTimeoTbl.btt_minseq > bml->bml_seq)
+			/* This lease has already expired.
+			 */
+			seq = BMAPSEQ_ANY;
+		else
+			seq = bml->bml_seq;
 		freelock(&mdsBmapTimeoTbl.btt_lock);
 
-		seq = bml->bml_seq;
-		bml->bml_start = time(NULL) + BMAP_RECOVERY_TIMEO_EXT;
-		
-		//XXX after odtable has been processed the lease
-		//  list should be sorted.
 	} else {
 		seq = mds_bmap_timeotbl_getnextseq();
 	}
@@ -176,8 +178,8 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 		}
 		
 		BML_LOCK(bml);
-		nsecs = time(NULL) - bml->bml_start;
-		if (nsecs < BMAP_TIMEO_MAX) {
+		nsecs = bml->bml_expire - time(NULL);
+		if (nsecs > 0) {
 			BML_ULOCK(bml);
 			goto sleep;
 		}

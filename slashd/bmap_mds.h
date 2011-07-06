@@ -166,6 +166,7 @@ struct bmap_mds_lease {
 	lnet_process_id_t	  bml_cli_nidpid;
 	uint32_t		  bml_flags;
 	time_t			  bml_start;
+	time_t                    bml_expire;
 	psc_spinlock_t		  bml_lock;
 	struct bmap_mds_info	 *bml_bmdsi;
 	struct pscrpc_export	 *bml_exp;

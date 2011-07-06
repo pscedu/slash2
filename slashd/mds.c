@@ -207,6 +207,7 @@ mds_bmap_ion_restart(struct bmap_mds_lease *bml)
 	struct sl_resm *resm = libsl_nid2resm(bml->bml_ion_nid);
 	struct slashrpc_cservice *csvc;
 	struct resm_mds_info *rmmi;
+	int rc = 0;
 
 	csvc = slm_geticsvc_nb(resm, NULL);
 	if (csvc == NULL) {
@@ -233,14 +234,15 @@ mds_bmap_ion_restart(struct bmap_mds_lease *bml)
 	bml->bml_bmdsi->bmdsi_wr_ion = rmmi;
 	bmap_op_start_type(bml_2_bmap(bml), BMAP_OPCNT_IONASSIGN);
 
-	mds_bmap_timeotbl_mdsi(bml, BTE_ADD | BTE_REATTACH);
+	if (mds_bmap_timeotbl_mdsi(bml, BTE_ADD | BTE_REATTACH) == BMAPSEQ_ANY)
+		rc = 1;
 
 	bml->bml_bmdsi->bmdsi_seq = bml->bml_seq;
 
 	DEBUG_BMAP(PLL_INFO, bml_2_bmap(bml), "res(%s) ion(%s) seq=%"PRIx64,
 	   resm->resm_res->res_name, resm->resm_addrbuf, bml->bml_seq);
 
-	return (0);
+	return (rc);
 }
 
 /**
@@ -1161,6 +1163,7 @@ mds_bml_new(struct bmapc_memb *b, struct pscrpc_export *e, int flags,
 	bml->bml_flags = flags;
 	bml->bml_cli_nidpid = *cnp;
 	bml->bml_start = time(NULL);
+	bml->bml_expire = bml->bml_start + BMAP_TIMEO_MAX;
 
 	return (bml);
 }
@@ -1237,6 +1240,9 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 	 *    us suscpetible to gross changes in the system time.
 	 */
 	bml->bml_start = bia->bia_start;
+	/* Grant recovered leases some additional time.
+	 */
+	bml->bml_expire = time(NULL) + BMAP_RECOVERY_TIMEO_EXT;
 
 	if (bia->bia_flags & BIAF_DIO) {
 		bml->bml_flags |= BML_CDIO;
