@@ -12,6 +12,17 @@ reminders:
 * Spend some time dealing with sliod crash / restart
 
 -----------------------------------------------------------------------
+* Bmpce Write 
+There may be some advantage to maintaining a seq or numeric window id for
+each bmpce being processed for write.  Right before the bmpce is put on the 
+wire, the current window is closed and proceeding biorq's using that bmpce
+must wait for the next window (and completion of the pending RPC).  This
+is to prevent the same bmpce from being on the wire twice.  It should also
+augment the coalescer by allowing for later writes to be included.  The 
+main change here is that biorq's could have their bmpces complete in totally
+different rpc's or even rpcsets.  Essentially the biorq doesn't complete 
+until the window id for each bmpce is <= than the last processed bmpce window.
+-----------------------------------------------------------------------
 * Restore Issues:
 1) need to split 64-bit inode space into upper and lower segments.  Each mds in the system will be given a start # and range for use in the upper segment.  The upper value will be incremented on restore (when the journal does not agree with the cursor) or when all id's in the lower segment have been exhausted
 
