@@ -129,11 +129,13 @@ __static int
 msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 			 struct pscrpc_async_args *args)
 {
-	struct bmapc_memb *b = rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP];
+	struct bmapc_memb *b = args->pointer_arg[MSL_CBARG_BMAP];
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct srm_leasebmapext_rep *mp =
 		pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 	int rc;
+
+	psc_assert(&rq->rq_async_args == args);
 
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_flags & BMAP_CLI_LEASEEXTREQ);
@@ -160,26 +162,24 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 	return (rc);
 }
 
-void
+int
 msl_bmap_lease_tryext(struct bmapc_memb *b)
 {
-	int secs;
+	int secs, rc = 0;
 
 	BMAP_LOCK(b);
 
 	//	if (b->bcm_flags & (BMAP_CLI_LEASEEXTREQ | BMAP_TIMEOQ) ||
 	if (b->bcm_flags & (BMAP_CLI_LEASEEXTREQ) ||
 	    (secs = bmap_2_bci(b)->bci_xtime.tv_sec - CURRENT_SECONDS) >
-	    BMAP_CLI_EXTREQSECS) {
+	    BMAP_CLI_EXTREQSECS) 
 		BMAP_ULOCK(b);
-		return;
 
-	} else {
+	else {
 		struct slashrpc_cservice *csvc = NULL;
 		struct pscrpc_request *rq = NULL;
 		struct srm_leasebmapext_req *mq;
 		struct srm_leasebmapext_rep *mp;
-		int rc;
 
 		BMAP_SETATTR(b, BMAP_CLI_LEASEEXTREQ);
 		BMAP_ULOCK(b);
@@ -192,27 +192,44 @@ msl_bmap_lease_tryext(struct bmapc_memb *b)
 		if (rc)
 			goto error;
 
-		rq->rq_interpret_reply = msl_bmap_lease_tryext_cb;
-		rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
-		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
-		rq->rq_comp = &rpcComp;
-
 		memcpy(&mq->sbd, &bmap_2_bci(b)->bci_sbd,
 		    sizeof(struct srt_bmapdesc));
 		authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 
-		rc = pscrpc_nbreqset_add(pndgBmaplsReqs, rq);
-		if (rc) {
- error:
-			if (rq)
-				pscrpc_req_finished(rq);
-			if (csvc)
-				sl_csvc_decref(csvc);
+		rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
+		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
+
+		if (secs <= 0) {			
+			/* The lease is old - issue a blocking request.
+                         */
+			rc = SL_RSX_WAITREP(csvc, rq, mp);			
+			if (!rc)
+				rc = msl_bmap_lease_tryext_cb(rq, &rq->rq_async_args);
+
+                        pscrpc_req_finished(rq);
+                        sl_csvc_decref(csvc);
+
+		} else {	
+			/* Otherwise, let the async handler do the dirty work.
+			 */
+			rq->rq_interpret_reply = msl_bmap_lease_tryext_cb;
+			rq->rq_comp = &rpcComp;
+			
+			rc = pscrpc_nbreqset_add(pndgBmaplsReqs, rq);
+			if (rc) {
+error:
+				if (rq)
+					pscrpc_req_finished(rq);
+				if (csvc)
+					sl_csvc_decref(csvc);
+			}
 		}
+		
 		DEBUG_BMAP(rc ? PLL_ERROR : PLL_WARN, b,
-		    "requesting lease extension (rc=%d) (secs=%d)", rc,
-		    secs);
+			   "requesting lease extension (rc=%d) (secs=%d)", rc,
+			   secs);		
 	}
+	return (rc);		
 }
 
 /**

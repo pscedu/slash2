@@ -68,7 +68,7 @@ struct psc_iostats	msl_diowr_stat;
 struct psc_iostats	msl_rdcache_stat;
 struct psc_iostats	msl_racache_stat;
 
-void bmap_flush_inflight_unset(struct bmpc_ioreq *);
+void bmap_flush_resched(struct bmpc_ioreq *);
 
 int
 msl_biorq_cmp(const void *x, const void *y)
@@ -508,14 +508,15 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 			 */
 			psc_assert(!psc_atomic16_read(&bmpce->bmpce_wrref) &&
 			    psc_atomic16_read(&bmpce->bmpce_rdref) == 1);
-
 		}
+		bmpce->bmpce_flags &= ~BMPCE_INFLIGHT;
+		DEBUG_BMPCE(PLL_INFO, bmpce, "unset inflight");
 		BMPCE_ULOCK(bmpce);
 	}
 
 	BMPC_LOCK(bmpc);
 	DYNARRAY_FOREACH(bmpce, i, &r->biorq_pages) {
-		/* bmapce with no reference will be freed by the reaper */
+		/* bmpce with no reference will be freed by the reaper */
 		BMPCE_LOCK(bmpce);
 		eio = (bmpce->bmpce_flags & BMPCE_EIO) ? 1 : 0;
 		bmpce_handle_lru_locked(bmpce, bmpc,
@@ -543,13 +544,20 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 	 */
 	if (!(r->biorq_flags & BIORQ_DIO)) {
 		if (r->biorq_flags & BIORQ_WRITE) {
-			psc_assert(r->biorq_flags & BIORQ_INFL);
-			psc_assert(r->biorq_flags & BIORQ_SCHED);
-			r->biorq_flags &= ~(BIORQ_INFL|BIORQ_SCHED);
-		} else {
-			psc_assert(!(r->biorq_flags & BIORQ_INFL));
-			psc_assert(!(r->biorq_flags & BIORQ_SCHED));
-		}
+			if (r->biorq_flags & BIORQ_RBWFAIL)
+				/* Ensure this biorq never got off of the 
+				 *    ground.
+				 */
+				psc_assert(!(r->biorq_flags &
+				     (BIORQ_INFL|BIORQ_SCHED)));
+			else {
+				psc_assert(r->biorq_flags & BIORQ_INFL);
+				psc_assert(r->biorq_flags & BIORQ_SCHED);
+				r->biorq_flags &= ~(BIORQ_INFL|BIORQ_SCHED);
+			}
+		} else 
+			psc_assert(!(r->biorq_flags & 
+			     (BIORQ_INFL|BIORQ_SCHED)));
 	}
 
 	r->biorq_flags |= BIORQ_DESTROY;
@@ -1033,7 +1041,7 @@ msl_write_rpcset_cb(__unusedx struct pscrpc_request_set *set, void *arg,
 
 	if (rc) {
 		DYNARRAY_FOREACH(r, i, biorqs)
-			bmap_flush_inflight_unset(r);
+			bmap_flush_resched(r);
 		return (rc);
 	}
 
@@ -1057,7 +1065,7 @@ msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	rc = msl_getrqstatus(csvc, rq);
 	if (rc) {
 		DYNARRAY_FOREACH(r, i, biorqs)
-			bmap_flush_inflight_unset(r);
+			bmap_flush_resched(r);
 		return (rc);
 	}
 
@@ -1287,6 +1295,8 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 	for (i=0; i < nbmpce; i++) {		
 		bmpce = bmpces_cbarg[i] = bmpces[i];
 		psc_assert(!(bmpce->bmpce_flags & BMPCE_EIO));	
+		psc_assert(bmpce->bmpce_base);
+
 		if (!i) {
 			off = bmpce->bmpce_off;
 			b = bmpce->bmpce_owner;
@@ -2112,6 +2122,7 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 			rc = msl_pages_prefetch(r[i]);
 			if (rc) {
 				rc = msl_offline_retry_ignexpire(r[i]);
+				r[i]->biorq_flags |= BIORQ_RBWFAIL;
 				msl_biorq_destroy(r[i]);
 				r[i] = NULL;
 				if (rc)

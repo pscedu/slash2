@@ -59,7 +59,7 @@ __static atomic_t		 outstandingRpcCnt;
 struct psc_waitq		bmapflushwaitq = PSC_WAITQ_INIT;
 psc_spinlock_t			bmapflushwaitqlock = SPINLOCK_INIT;
 
-void bmap_flush_inflight_unset(struct bmpc_ioreq *);
+void bmap_flush_resched(struct bmpc_ioreq *);
 
 __static void
 bmap_flush_reap_rpcs(void)
@@ -69,7 +69,8 @@ bmap_flush_reap_rpcs(void)
 		PLL_INIT(&hold, struct pscrpc_request_set, set_lentry);
 
 	psclog_debug("outstandingRpcCnt=%d (before) rpcComp.rqcomp_compcnt=%d",
-	    atomic_read(&outstandingRpcCnt), atomic_read(&rpcComp.rqcomp_compcnt));
+	    atomic_read(&outstandingRpcCnt), 
+	    atomic_read(&rpcComp.rqcomp_compcnt));
 
 	/* Only this thread may pull from pndgWrtReqSets listcache
 	 *   therefore it can never shrink except by way of this
@@ -247,6 +248,7 @@ bmap_flush_create_rpc(void *set, struct bmpc_ioreq *r,
 	mq->offset = soff;
 	mq->size = size;
 	mq->op = SRMIOP_WR;
+	//XXX mq->wseqno = GETSEQNO;
 
 	DEBUG_REQ(PLL_INFO, rq, "off=%u sz=%u op=%u set=%p",
 	    mq->offset, mq->size, mq->op, set);
@@ -307,10 +309,11 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r)
 	BMPC_ULOCK(bmpc);
 }
 
-void
-bmap_flush_inflight_unset(struct bmpc_ioreq *r)
+__static void
+bmap_flush_inflight_unset(struct bmpc_ioreq *r) 
 {
-	struct bmap_pagecache *bmpc;
+	struct bmap_pagecache_entry *bmpce;
+	int i;
 
 	spinlock(&r->biorq_lock);
 	psc_assert(r->biorq_flags & BIORQ_SCHED);
@@ -318,6 +321,25 @@ bmap_flush_inflight_unset(struct bmpc_ioreq *r)
 	r->biorq_flags &= ~(BIORQ_INFL|BIORQ_SCHED);
 	DEBUG_BIORQ(PLL_WARN, r, "unset inflight XXX is my lease still valid?");
 	freelock(&r->biorq_lock);
+	
+	DYNARRAY_FOREACH(bmpce, i, &r->biorq_pages) {
+		BMPCE_LOCK(bmpce);
+		bmpce->bmpce_flags &= ~BMPCE_INFLIGHT;
+		BMPCE_ULOCK(bmpce);
+	}
+}
+
+
+/**
+ * bmap_flush_resched - called in error contexts where
+ *    the biorq must be rescheduled.
+ */
+void
+bmap_flush_resched(struct bmpc_ioreq *r)
+{
+	struct bmap_pagecache *bmpc;
+
+	bmap_flush_inflight_unset(r);
 
 	bmpc = bmap_2_bmpc(r->biorq_bmap);
 	BMPC_LOCK(bmpc);
@@ -440,7 +462,7 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 
 	DYNARRAY_FOREACH(r, i, biorqs) {
 		if (csvc)
-			bmap_flush_inflight_unset(r);
+			bmap_flush_resched(r);
 		else {
 			BIORQ_LOCK(r);
 			r->biorq_flags &= ~BIORQ_SCHED;
@@ -525,8 +547,10 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs,
 			 *   accounted for but first ensure that all of the
 			 *   pages have been scheduled for IO.
 			 */
-			for (j=0; j < psc_dynarray_len(&r->biorq_pages); j++) {
-				bmpce = psc_dynarray_getpos(&r->biorq_pages, j);
+			//for (j=0; j < psc_dynarray_len(&r->biorq_pages); j++) {		
+			DYNARRAY_FOREACH(bmpce, j, &r->biorq_pages) {
+				//bmpce = psc_dynarray_getpos(&r->biorq_pages, j);
+				//psc_assert(bmpce->bmpce_flags & BMPCE_INFLIGHT);
 				psc_assert(psc_atomic16_read(&bmpce->bmpce_wrref) > 0);
 			}
 			DEBUG_BIORQ(PLL_INFO, r, "t pos=%d (skip)", i);
@@ -563,6 +587,7 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs,
 				 */
 				DEBUG_BMPCE(PLL_INFO, bmpce, "skip");
 				psc_assert(psc_atomic16_read(&bmpce->bmpce_wrref) > 0);
+				psc_assert(bmpce->bmpce_flags & BMPCE_INFLIGHT);
 				BMPCE_ULOCK(bmpce);
 				psc_assert(first_iov == 1);
 
@@ -572,7 +597,9 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs,
 				else
 					reqsz -= BMPC_BUFSZ;
 				continue;
-			}
+			} else
+				bmpce->bmpce_flags |= BMPCE_INFLIGHT;
+
 			DEBUG_BMPCE(PLL_INFO, bmpce,
 			    "scheduling, first_iov=%d", first_iov);
 
@@ -666,7 +693,7 @@ bmap_flushable(struct bmapc_memb *b)
 	flush = 0;
 	start = end = NULL;
 	bmpc = bmap_2_bmpc(b);
-	PLL_LOCK(&bmpc->bmpc_new_biorqs);
+	BMPC_LOCK(bmpc);
 	PLL_FOREACH_SAFE(r, tmp, &bmpc->bmpc_new_biorqs) {
 
 		spinlock(&r->biorq_lock);
@@ -720,9 +747,11 @@ bmap_flushable(struct bmapc_memb *b)
 			}
 		}
 		/*
-		 * XXX if the current request is contained completely
+		 * If the current request is contained completely
 		 * within a previous request, should we count them
-		 * separately?
+		 * separately? -- No, because the bmpce pages are 
+		 * mapped in the rpc bulk, not anything in the
+		 * biorq.
 		 */
 		if (count == PSCRPC_MAX_BRW_PAGES) {
 			flush = 1;
@@ -741,7 +770,7 @@ bmap_flushable(struct bmapc_memb *b)
 			start = end = r;
 		}
 	}
-	PLL_ULOCK(&bmpc->bmpc_new_biorqs);
+	BMPC_ULOCK(bmpc);
 	return (flush);
 }
 
@@ -858,7 +887,8 @@ bmap_flush(void)
 	struct bmpc_ioreq *r, *tmp;
 	struct bmapc_memb *b, *tmpb;
 	struct iovec *iovs = NULL;
-	int i, j, niovs;
+	struct bmap_pagecache_entry *bmpce;
+	int i, j, niovs, postpone;
 
 	i = 0;
 	LIST_CACHE_LOCK(&bmapFlushQ);
@@ -905,7 +935,6 @@ bmap_flush(void)
 		BMAP_ULOCK(b);
 	}
 	LIST_CACHE_ULOCK(&bmapFlushQ);
-
 	/*
 	 * Note that new requests can sneak in between the two loops.
 	 */
@@ -917,18 +946,18 @@ bmap_flush(void)
 		DEBUG_BMAP(PLL_INFO, b, "try flush (outstandingRpcCnt=%d)",
 			   atomic_read(&outstandingRpcCnt));
 
-		PLL_LOCK(&bmpc->bmpc_new_biorqs);
+		BMPC_LOCK(bmpc);
 		PLL_FOREACH_SAFE(r, tmp, &bmpc->bmpc_new_biorqs) {
-			spinlock(&r->biorq_lock);
+			BIORQ_LOCK(r);
 
 			if (!(r->biorq_flags & BIORQ_FLUSHRDY)) {
 				DEBUG_BIORQ(PLL_INFO, r, "data not ready");
-				freelock(&r->biorq_lock);
+				BIORQ_ULOCK(r);
 				continue;
 
 			} else if (r->biorq_flags & BIORQ_SCHED) {
 				DEBUG_BIORQ(PLL_WARN, r, "already sched");
-				freelock(&r->biorq_lock);
+				BIORQ_ULOCK(r);
 				continue;
 
 			} else if ((r->biorq_flags & BIORQ_RBWFP) ||
@@ -937,7 +966,39 @@ bmap_flush(void)
 				 *  pushing out any pages.
 				 */
 				if (!bmap_flush_biorq_rbwdone(r)) {
-					freelock(&r->biorq_lock);
+					BIORQ_ULOCK(r);
+					continue;
+				}
+			} else {
+				/* Check for the BMPCE_INFLIGHT bit which is 
+				 *  used to prevent out-of-order writes 
+				 *  from being sent to the I/O server.  
+				 *  That situation is possible since large
+				 *  RPCs could take 32x longer to ship.
+				 * 
+				 *  BMPCE_INFLIGHT is not set until the bulk
+				 *  is created.
+				 *
+				 * XXX Write me for directio situations also.			   
+				 */ 
+				postpone = 0;
+				
+				DYNARRAY_FOREACH(bmpce, j, &r->biorq_pages) {
+					//for (j=0; j < psc_dynarray_len(&r->biorq_pages); j++) {
+					//bmpce = psc_dynarray_getpos(&r->biorq_pages, j);
+					
+					BMPCE_LOCK(bmpce);
+					if (bmpce->bmpce_flags & BMPCE_INFLIGHT) {
+						DEBUG_BMPCE(PLL_NOTIFY, bmpce, 
+						    "postpone for inflight to clear");
+						postpone = 1;
+					}
+					BMPCE_ULOCK(bmpce);
+					if (postpone)
+						break;
+				}
+				if (postpone) {
+					BIORQ_ULOCK(r);
 					continue;
 				}
 			}
@@ -948,12 +1009,12 @@ bmap_flush(void)
 			 */
 			psc_assert(!(r->biorq_flags & BIORQ_INFL));
 			r->biorq_flags |= BIORQ_SCHED;
-			freelock(&r->biorq_lock);
+			BIORQ_ULOCK(r);
 
 			DEBUG_BIORQ(PLL_NOTICE, r, "try flush");
 			psc_dynarray_add(&reqs, r);
 		}
-		PLL_ULOCK(&bmpc->bmpc_new_biorqs);
+		BMPC_ULOCK(bmpc);
 
 		j = 0;
 		while (j < psc_dynarray_len(&reqs) &&
@@ -1219,7 +1280,10 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				psc_assert(!(b->bcm_flags & BMAP_DIRTY));
 				psc_assert(b->bcm_flags & BMAP_TIMEOQ);
 				if (!lc_conjoint(&bmapTimeoutQ, b))
-					lc_addstack(&bmapTimeoutQ, b);
+                                       /* Put these at the back so we can 
+                                        *   make better progress.
+                                        */
+					lc_addtail(&bmapTimeoutQ, b);
 			}
 			BMAP_ULOCK(b);
 		}
@@ -1346,7 +1410,7 @@ msbmaprathr_main(__unusedx struct psc_thread *thr)
 			bmpce = bmpces[i];
 			if (i)
 				psc_assert(bmpce->bmpce_owner == 
-				   bmpces[i]->bmpce_owner);
+				   bmpces[i-1]->bmpce_owner);
 
 			BMPCE_LOCK(bmpce);
 			msl_bmpce_getbuf(bmpce);
