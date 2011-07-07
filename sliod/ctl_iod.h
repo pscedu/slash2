@@ -38,13 +38,11 @@ struct slictlmsg_replwkst {
 
 struct slictlmsg_fileop {
 	char			sfop_fn[PATH_MAX];
-	int			sfop_code;
+	char			sfop_fn2[PATH_MAX];
+	int			sfop_flags;
 };
 
-enum {
-	SLI_CTL_FOP_EXPORT,
-	SLI_CTL_FOP_IMPORT
-};
+#define SLI_CTL_FOPF_RECURSIVE	(1 << 0)
 
 /* sliricthr thread stat aliases */
 #define pcst_nwrite		pcst_u32_1

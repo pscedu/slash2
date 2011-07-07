@@ -34,6 +34,11 @@
 #include "ctlcli.h"
 #include "pathnames.h"
 
+int		 verbose;
+int		 recursive;
+const char	*progname;
+const char	*daemon_name = "sliod";
+
 void
 packshow_conns(__unusedx char *conn)
 {
@@ -94,20 +99,34 @@ void
 slictlcmd_export(int ac, char *av[])
 {
 	struct slictlmsg_fileop *sfop;
+	int i;
 
 	if (ac < 2)
 		errx(1, "export: no arguments specified");
-	sfop = psc_ctlmsg_push(SLICMT_EXPORT, sizeof(*sfop));
+	for (i = 0; i < ac - 1; i++) {
+		sfop = psc_ctlmsg_push(SLICMT_EXPORT, sizeof(*sfop));
+		if (recursive)
+			sfop->sfop_flags |= SLI_CTL_FOPF_RECURSIVE;
+		strlcpy(sfop->sfop_fn, av[i], sizeof(sfop->sfop_fn));
+		strlcpy(sfop->sfop_fn2, av[ac - 1], sizeof(sfop->sfop_fn));
+	}
 }
 
 void
 slictlcmd_import(int ac, char *av[])
 {
 	struct slictlmsg_fileop *sfop;
+	int i;
 
 	if (ac < 2)
 		errx(1, "import: no arguments specified");
-	sfop = psc_ctlmsg_push(SLICMT_IMPORT, sizeof(*sfop));
+	for (i = 0; i < ac - 1; i++) {
+		sfop = psc_ctlmsg_push(SLICMT_IMPORT, sizeof(*sfop));
+		if (recursive)
+			sfop->sfop_flags |= SLI_CTL_FOPF_RECURSIVE;
+		strlcpy(sfop->sfop_fn, av[i], sizeof(sfop->sfop_fn));
+		strlcpy(sfop->sfop_fn2, av[ac - 1], sizeof(sfop->sfop_fn));
+	}
 }
 
 void
@@ -135,6 +154,8 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 	{ replwkst_prhdr,	replwkst_prdat,		sizeof(struct slictlmsg_replwkst),	NULL },
 	{ sl_conn_prhdr,	sl_conn_prdat,		sizeof(struct slctlmsg_conn),		NULL },
 	{ sl_fcmh_prhdr,	sl_fcmh_prdat,		sizeof(struct slctlmsg_fcmh),		NULL },
+	{ NULL,			NULL,			sizeof(struct slictlmsg_fileop),	NULL },
+	{ NULL,			NULL,			sizeof(struct slictlmsg_fileop),	NULL },
 	{ NULL,			NULL,			0,					NULL }
 };
 
@@ -163,11 +184,6 @@ struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {
 };
 
 PFLCTL_CLI_DEFS;
-
-int		 verbose;
-int		 recursive;
-const char	*progname;
-const char	*daemon_name = "sliod";
 
 __dead void
 usage(void)
