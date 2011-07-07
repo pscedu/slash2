@@ -2142,7 +2142,7 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	rc = 0;
 
 	MFH_LOCK(mfh);
-	mfh->mfh_nbytes_wr += size;
+	mfh->mfh_nbytes_rd += size;
 	MFH_ULOCK(mfh);
 
  out:

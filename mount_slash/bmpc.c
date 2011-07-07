@@ -350,6 +350,8 @@ bmpce_release_locked(struct bmap_pagecache_entry *bmpce,
 	psc_assert(!psc_atomic16_read(&bmpce->bmpce_wrref));
 	psc_assert(bmpce->bmpce_flags == BMPCE_FREEING);
 
+	DEBUG_BMPCE(PLL_INFO, bmpce, "freeing");
+
 	psc_assert(SPLAY_REMOVE(bmap_pagecachetree, &bmpc->bmpc_tree, bmpce));
 	if (pll_conjoint(&bmpc->bmpc_lru, bmpce))
 		pll_remove(&bmpc->bmpc_lru, bmpce);
@@ -379,10 +381,9 @@ bmpc_freeall_locked(struct bmap_pagecache *bmpc)
 	for (a = SPLAY_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); a; a = b) {
 		b = SPLAY_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree, a);
 
-		spinlock(&a->bmpce_lock);
-		DEBUG_BMPCE(PLL_INFO, a, "freeing");
+		BMPCE_LOCK(a);
 		bmpce_freeprep(a);
-		freelock(&a->bmpce_lock);
+		BMPCE_ULOCK(a);
 
 		bmpce_release_locked(a, bmpc);
 	}
@@ -480,7 +481,7 @@ bmpc_reap_locked(void)
 
 	waiters += atomic_read(&bmpcSlabs.bmms_waiters);
 
-	psclog_dbg("ENTRY waiters=%d", waiters);
+	psclog_info("ENTRY waiters=%d", waiters);
 
 	if (bmpcSlabs.bmms_reap) {
 		/* Wait and return, the thread holding the reap lock
@@ -514,13 +515,13 @@ bmpc_reap_locked(void)
 		/* First check for LRU items.
 		 */
 		if (!pll_nitems(&bmpc->bmpc_lru)) {
-			psclog_trace("skip bmpc=%p, nothing on lru", bmpc);
+			psclog_debug("skip bmpc=%p, nothing on lru", bmpc);
 			continue;
 		}
 		/* Second, check for age.
 		 */
 		if (timespeccmp(&ts, &bmpc->bmpc_oldest, <)) {
-			psclog_trace("skip bmpc=%p, too recent", bmpc);
+			psclog_info("skip bmpc=%p, too recent", bmpc);
 			continue;
 		}
 
