@@ -127,7 +127,8 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	uint64_t fsz = fcmh_getsize(mfh->mfh_fcmh);
 
 	DEBUG_BMAP(PLL_INFO, b,
-	    "adding req for (off=%u) (size=%u)", roff, len);
+		   "adding req for (off=%u) (size=%u) (nbmpce=%d)", roff, len, 
+		   pll_nitems(&(bmap_2_bmpc(b)->bmpc_lru)));
 
 	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh,
 	    "adding req for (off=%u) (size=%u)", roff, len);
