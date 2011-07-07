@@ -380,7 +380,7 @@ bmpc_freeall_locked(struct bmap_pagecache *bmpc)
 		b = SPLAY_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree, a);
 
 		spinlock(&a->bmpce_lock);
-		DEBUG_BMPCE(PLL_TRACE, a, "freeing");
+		DEBUG_BMPCE(PLL_INFO, a, "freeing");
 		bmpce_freeprep(a);
 		freelock(&a->bmpce_lock);
 
