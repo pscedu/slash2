@@ -314,7 +314,7 @@ bmpc_grow(int nslbs)
 	nalloced = pll_nitems(&bmpcSlabs.bmms_slbs);
 	psc_assert(nalloced <= BMPC_MAXSLBS);
 
-	psclog_dbg("nalloced (%d/%d)", nalloced, BMPC_MAXSLBS);
+	psclog_info("nalloced (%d/%d)", nalloced, BMPC_MAXSLBS);
 
 	if (nalloced == BMPC_MAXSLBS) {
 		rc = -ENOMEM;
@@ -538,7 +538,7 @@ bmpc_reap_locked(void)
 			atomic_set(&bmpcSlabs.bmms_waiters, 0);
 	}
 
-	psclog_dbg("nfreed=%d, waiters=%d", nfreed, waiters);
+	psclog_info("nfreed=%d, waiters=%d", nfreed, waiters);
 
 	if (waiters > nfreed) {
 		int nslbs = (waiters - nfreed) / BMPC_SLB_NBLKS;
