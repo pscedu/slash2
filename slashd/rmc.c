@@ -717,8 +717,10 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 
 
 	/* if we get here, op and np must be owned by the current MDS */
+	mds_reserve_slot();
 	mp->rc = mdsio_rename(fcmh_2_mdsio_fid(op), from,
 	    fcmh_2_mdsio_fid(np), to, &rootcreds, mdslog_namespace);
+	mds_unreserve_slot();
 
 	/* update target ctime */
 	if (mp->rc == 0) {
