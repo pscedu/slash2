@@ -35,7 +35,6 @@ SRCS+=		${SLASH_BASE}/share/rpc_common.c
 SRCS+=		${SLASH_BASE}/share/slerr.c
 SRCS+=		${SLASH_BASE}/share/slutil.c
 SRCS+=		${SLASH_BASE}/share/yconf.y
-
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
 SRCS+=		${PFL_BASE}/psc_ds/hashtbl.c
 SRCS+=		${PFL_BASE}/psc_ds/listcache.c
@@ -60,6 +59,7 @@ SRCS+=		${PFL_BASE}/psc_util/thread.c
 SRCS+=		${PFL_BASE}/psc_util/timerthr.c
 SRCS+=		${PFL_BASE}/psc_util/usklndthr.c
 SRCS+=		${PFL_BASE}/psc_util/waitq.c
+SRCS+=		${PFL_BASE}/psc_util/walk.c
 
 SRCS+=		${SETRESUID_SRC}
 

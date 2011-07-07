@@ -43,6 +43,7 @@ struct slictlmsg_fileop {
 };
 
 #define SLI_CTL_FOPF_RECURSIVE	(1 << 0)
+#define SLI_CTL_FOPF_SYMBOLIC	(1 << 1)
 
 /* sliricthr thread stat aliases */
 #define pcst_nwrite		pcst_u32_1

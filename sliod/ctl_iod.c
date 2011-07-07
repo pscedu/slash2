@@ -36,20 +36,39 @@
 struct psc_lockedlist psc_mlists;
 struct psc_lockedlist psc_odtables;
 
+void
+sli_export(const char *fn, const struct stat *stb, void *arg)
+{
+	if (sfop->sfop_flags & SLI_CTL_FOPF_RECURSIVE) {
+	}
+	return (rc);
+}
+
 int
 slictlcmd_export(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
+	struct slictlmsg_fileop *sfop = m;
 	int rc = 1;
 
+	return (walk(sfop->sfop_fn, sli_import, sfop));
+}
+
+void
+sli_import(const char *fn, const struct stat *stb, void *arg)
+{
+	int rc = 1;
+
+	if (sfop->sfop_flags & SLI_CTL_FOPF_RECURSIVE) {
+	}
 	return (rc);
 }
 
 int
 slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
-	int rc = 1;
+	struct slictlmsg_fileop *sfop = m;
 
-	return (rc);
+	return (walk(sfop->sfop_fn, sli_import, sfop));
 }
 
 int

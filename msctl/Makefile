@@ -6,7 +6,6 @@ include ${ROOTDIR}/Makefile.path
 PROG=		msctl
 MAN+=		msctl.8
 SRCS+=		msctl.c
-SRCS+=		walk.c
 SRCS+=		${SLASH_BASE}/share/ctlcli_common.c
 SRCS+=		${SLASH_BASE}/share/slerr.c
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
@@ -21,6 +20,7 @@ SRCS+=		${PFL_BASE}/psc_util/pthrutil.c
 SRCS+=		${PFL_BASE}/psc_util/subsys.c
 SRCS+=		${PFL_BASE}/psc_util/thread.c
 SRCS+=		${PFL_BASE}/psc_util/waitq.c
+SRCS+=		${PFL_BASE}/psc_util/walk.c
 
 MODULES+=	lnet-hdrs pthread pscfs-hdrs curses
 

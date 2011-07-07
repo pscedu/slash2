@@ -8,7 +8,6 @@ MAN+=		slictl.8
 SRCS+=		slictl.c
 SRCS+=		${SLASH_BASE}/share/ctlcli_common.c
 SRCS+=		${SLASH_BASE}/share/slerr.c
-SRCS+=		${SLASH_BASE}/msctl/walk.c
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
 SRCS+=		${PFL_BASE}/psc_util/ctlcli.c
