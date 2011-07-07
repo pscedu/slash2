@@ -12,15 +12,15 @@ reminders:
 * Spend some time dealing with sliod crash / restart
 
 -----------------------------------------------------------------------
-* Bmpce Write 
+* Bmpce Write
 There may be some advantage to maintaining a seq or numeric window id for
-each bmpce being processed for write.  Right before the bmpce is put on the 
+each bmpce being processed for write.  Right before the bmpce is put on the
 wire, the current window is closed and proceeding biorq's using that bmpce
 must wait for the next window (and completion of the pending RPC).  This
 is to prevent the same bmpce from being on the wire twice.  It should also
-augment the coalescer by allowing for later writes to be included.  The 
+augment the coalescer by allowing for later writes to be included.  The
 main change here is that biorq's could have their bmpces complete in totally
-different rpc's or even rpcsets.  Essentially the biorq doesn't complete 
+different rpc's or even rpcsets.  Essentially the biorq doesn't complete
 until the window id for each bmpce is <= than the last processed bmpce window.
 -----------------------------------------------------------------------
 * Restore Issues:
@@ -434,4 +434,5 @@ API rename
 - eradicate getrqstatus()
 - keep testing replication
 - 'slmctl stop' should completely wait for all ops to prevent relying on journal
+- upsch will not scale without multiwait waker arg
 - ensure user mounting works
