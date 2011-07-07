@@ -436,3 +436,4 @@ API rename
 - 'slmctl stop' should completely wait for all ops to prevent relying on journal
 - upsch will not scale without multiwait waker arg
 - ensure user mounting works
+- add provisions to ensure journal disk doesnt overwrite something special
