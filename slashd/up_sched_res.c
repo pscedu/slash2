@@ -78,7 +78,6 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 	struct psc_thread *thr;
 	struct bmapc_memb *b;
 	struct sl_site *site;
-	char fn[FID_MAX_PATH];
 	sl_bmapno_t n;
 
 	thr = pscthr_get();
@@ -106,6 +105,7 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 		psc_mutex_lock(&wk->uswi_mutex);
 	}
 
+ rescan:
 	/*
 	 * If someone bumps the generation while we're processing, we'll
 	 * know there is work to do and that the uswi shouldn't go away.
@@ -129,23 +129,58 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 		rc = mds_repl_bmap_walk_all(b, NULL,
 		    retifset, REPL_WALKF_SCIRCUIT);
 		mds_bmap_write_repls_rel(b);
-		if (rc)
-			goto keep;
-	}
+		if (rc) {
+			struct sl_resource *r;
+			sl_replica_t ios;
 
-	UPSCHED_MGR_LOCK();
-	psc_mutex_lock(&wk->uswi_mutex);
-	if (wk->uswi_gen != uswi_gen) {
-		UPSCHED_MGR_ULOCK();
- keep:
-		uswi_unref(wk);
-		return;
+			/* requeue */
+			r = psc_dynarray_getpos(
+			    &smut->smut_site->site_resources, 0);
+			ios.bs_id = r->res_id;
+			uswi_enqueue_sites(wk, &ios, 1);
+			uswi_unref(wk);
+			return;
+		}
 	}
 
 	/*
 	 * All states are INACTIVE/ACTIVE;
 	 * remove it and its persistent link.
 	 */
+	UPSCHED_MGR_LOCK();
+	psc_mutex_lock(&wk->uswi_mutex);
+	if (wk->uswi_gen != uswi_gen) {
+		UPSCHED_MGR_ULOCK();
+		goto rescan;
+	}
+	uswi_unref(wk);
+}
+
+__static int
+uswi_trykill(struct up_sched_work_item *wk)
+{
+	char fn[FID_MAX_PATH];
+	int rc;
+
+	psc_mutex_ensure_locked(&wk->uswi_mutex);
+
+	if (wk->uswi_flags & USWIF_DIE)
+		return (0);
+	wk->uswi_flags |= USWIF_DIE;
+	wk->uswi_flags &= ~USWIF_BUSY;		/* XXX ensure we set this */
+
+	USWI_ULOCK(wk);
+	UPSCHED_MGR_RLOCK();
+	USWI_LOCK(wk);
+	if (psc_atomic32_read(&wk->uswi_refcnt) != 2) {
+		UPSCHED_MGR_ULOCK();
+		wk->uswi_flags &= USWIF_DIE;
+		return (0);
+	}
+	USWI_DECREF(wk, USWI_REFT_LOOKUP);
+	USWI_ULOCK(wk);
+	UPSCHED_MGR_ULOCK();
+
 	rc = snprintf(fn, sizeof(fn), SLPRI_FID, USWI_FID(wk));
 	if (rc == -1)
 		rc = errno;
@@ -157,20 +192,9 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 	if (rc)
 		psclog_error("trying to remove upsch link: %s",
 		    slstrerror(rc));
-	uswi_kill(wk);
-}
 
-__static void
-uswi_kill(struct up_sched_work_item *wk)
-{
-	psc_mutex_ensure_locked(&wk->uswi_mutex);
-
-	UPSCHED_MGR_ENSURE_LOCKED();
-
-	wk->uswi_flags |= USWIF_DIE;
-	wk->uswi_flags &= ~USWIF_BUSY;
-
-	USWI_DECREF(wk, USWI_REFT_LOOKUP);
+	UPSCHED_MGR_LOCK();
+	USWI_LOCK(wk);
 
 	while (psc_atomic32_read(&wk->uswi_refcnt) > 1) {
 		psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
@@ -192,6 +216,7 @@ uswi_kill(struct up_sched_work_item *wk)
 		    FCMH_OPCNT_LOOKUP_FIDC);
 
 	psc_pool_return(upsched_pool, wk);
+	return (1);
 }
 
 int
@@ -934,10 +959,15 @@ _uswi_unref(const struct pfl_callerinfo *pci,
 {
 	psc_mutex_reqlock(&wk->uswi_mutex);
 	wk->uswi_flags &= ~USWIF_BUSY;
-	USWI_DECREF(wk, USWI_REFT_LOOKUP);
-	/* XXX conditional */
-	psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
-	psc_mutex_unlock(&wk->uswi_mutex);
+	if (psc_atomic32_read(&wk->uswi_refcnt) != 2 ||
+	    !uswi_trykill(wk)) {
+		USWI_DECREF(wk, USWI_REFT_LOOKUP);
+
+		/* XXX this wakeup should be conditional */
+		psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
+
+		psc_mutex_unlock(&wk->uswi_mutex);
+	}
 }
 
 struct up_sched_work_item *

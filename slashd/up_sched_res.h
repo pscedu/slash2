@@ -55,8 +55,10 @@ struct up_sched_work_item {
 				    USWI_INO(wk)->ino_repls[n] :	\
 				    USWI_INOX(wk)->inox_repls[(n) - 1])
 
-#define USWI_RLOCK(wk)		psc_pthread_mutex_reqlock(&(wk)->uswi_mutex)
-#define USWI_URLOCK(wk, lk)	psc_pthread_mutex_ureqlock(&(wk)->uswi_mutex, (lk))
+#define USWI_LOCK(wk)		psc_mutex_lock(&(wk)->uswi_mutex)
+#define USWI_ULOCK(wk)		psc_mutex_unlock(&(wk)->uswi_mutex)
+#define USWI_RLOCK(wk)		psc_mutex_reqlock(&(wk)->uswi_mutex)
+#define USWI_URLOCK(wk, lk)	psc_mutex_ureqlock(&(wk)->uswi_mutex, (lk))
 
 enum {
 /* 0 */	USWI_REFT_LOOKUP,	/* uswi_find() temporary */
@@ -83,7 +85,7 @@ enum {
 	do {								\
 		psc_assert(psc_atomic32_read(&(wk)->uswi_refcnt) > 0);	\
 		psc_atomic32_dec(&(wk)->uswi_refcnt);			\
-		DEBUG_USWI(PLL_ERROR, (wk),				\
+		DEBUG_USWI(PLL_DEBUG, (wk),				\
 		    "dropped reference [type=%d]", (reftype));		\
 	} while (0)
 
@@ -99,7 +101,6 @@ int	 uswi_cmp(const void *, const void *);
 void	 uswi_enqueue_sites(struct up_sched_work_item *, const sl_replica_t *, int);
 int	 uswi_findoradd(const struct slash_fidgen *, struct up_sched_work_item **);
 void	 uswi_init(struct up_sched_work_item *, slfid_t);
-void	 uswi_kill(struct up_sched_work_item *);
 void	_uswi_unref(const struct pfl_callerinfo *, struct up_sched_work_item *);
 
 void	 upsched_scandir(void);
