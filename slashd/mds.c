@@ -1569,10 +1569,10 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	if (rc)
 		return (rc);
 
-	bml = mds_bml_new(b, exp, ((rw == SL_WRITE ? BML_WRITE : BML_READ) |
-				   (flags & SRM_LEASEBMAPF_DIRECTIO ?
-				    BML_CDIO : 0)),
-	   &exp->exp_connection->c_peer);
+	bml = mds_bml_new(b, exp,
+	    ((rw == SL_WRITE ? BML_WRITE : BML_READ) |
+	     (flags & SRM_LEASEBMAPF_DIRECTIO ? BML_CDIO : 0)),
+	    &exp->exp_connection->c_peer);
 
 	EXPORT_LOCK(exp);
 	mexpc = sl_exp_getpri_cli(exp);
@@ -1581,7 +1581,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	EXPORT_ULOCK(exp);
 
 	rc = mds_bmap_bml_add(bml, rw, prefios);
-	  if (rc) {
+	if (rc) {
 		if (rc == -SLERR_BMAP_DIOWAIT) {
 			EXPORT_LOCK(exp);
 			psclist_del(&bml->bml_exp_lentry,
