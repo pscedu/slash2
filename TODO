@@ -437,3 +437,6 @@ API rename
 - upsch will not scale without multiwait waker arg
 - ensure user mounting works
 - add provisions to ensure journal disk doesnt overwrite something special
+- import
+  - sliod links/symlinks
+  - MDS immutable/readonly
