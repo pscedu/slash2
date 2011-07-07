@@ -23,6 +23,7 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/str.h"
+#include "pfl/walk.h"
 #include "psc_ds/lockedlist.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlsvr.h"
@@ -36,11 +37,12 @@
 struct psc_lockedlist psc_mlists;
 struct psc_lockedlist psc_odtables;
 
-void
+int
 sli_export(const char *fn, const struct stat *stb, void *arg)
 {
-	if (sfop->sfop_flags & SLI_CTL_FOPF_RECURSIVE) {
-	}
+	struct slictlmsg_fileop *sfop = arg;
+	int rc = 0;
+
 	return (rc);
 }
 
@@ -48,18 +50,19 @@ int
 slictlcmd_export(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct slictlmsg_fileop *sfop = m;
-	int rc = 1;
+	int fl = 0;
 
-	return (walk(sfop->sfop_fn, sli_import, sfop));
+	if (sfop->sfop_flags & SLI_CTL_FOPF_RECURSIVE)
+		fl |= PFL_FILEWALKF_RECURSIVE;
+	return (pfl_filewalk(sfop->sfop_fn, fl, sli_export, sfop));
 }
 
-void
+int
 sli_import(const char *fn, const struct stat *stb, void *arg)
 {
-	int rc = 1;
+	struct slictlmsg_fileop *sfop = arg;
+	int rc = 0;
 
-	if (sfop->sfop_flags & SLI_CTL_FOPF_RECURSIVE) {
-	}
 	return (rc);
 }
 
@@ -67,8 +70,11 @@ int
 slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct slictlmsg_fileop *sfop = m;
+	int fl = 0;
 
-	return (walk(sfop->sfop_fn, sli_import, sfop));
+	if (sfop->sfop_flags & SLI_CTL_FOPF_RECURSIVE)
+		fl |= PFL_FILEWALKF_RECURSIVE;
+	return (pfl_filewalk(sfop->sfop_fn, fl, sli_import, sfop));
 }
 
 int
