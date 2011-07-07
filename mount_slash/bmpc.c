@@ -466,8 +466,8 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 }
 
 /**
- * bmpc_reap_locked - Reap bmapce from the LRU list.  Sometimes we free
- *	bmapce directly into the pool, so we can't wait here forever.
+ * bmpc_reap_locked - Reap bmpce from the LRU list.  Sometimes we free
+ *	bmpce directly into the pool, so we can't wait here forever.
  */
 __static int
 bmpc_reap_locked(void)
