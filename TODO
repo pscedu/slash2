@@ -11,6 +11,40 @@ reminders:
 * Kernel build causes bmap flushq to grow considerably (in the thousands..)
 * Spend some time dealing with sliod crash / restart
 
+***********************
+S2 PSC Archival FS TODO
+***********************
+7/7/2011 - pauln
+Listed here are pending items required for the PSC archiver project.  These
+items should be viewed as high priority.
+
+1)  File import.  This is needed for the migration procedure from tahini
+to the new S2 I/O servers.  Items required for support:
+	a) Metadata structure support for bmap with no checksums.  Checksums
+	are computed and stored on replication.
+
+	b) Import RPC.  This will look something like a create call where
+	the MDS creates the file and returns the FID.  On success, the 
+	import utility will use the FID as a hardlink target into the 
+	local immutable namespace.
+
+	c) If we plan to support user read procedures from tahini, we'll 
+	need to modify the timeout structure for read RPCs to the sliod.
+	In addition, we'll need to ensure that sliod and ms threads aren't
+	blocked in a manner which prevents other applications from doing
+	work.
+	
+2) Cluster No Share I/O Service type.  Cluster_no_share has been on the 
+roadmap for some time but it's requirements are problematic given the 
+nature of S2's metadata structures.  Bmap-ondisk and S2 inode only allow
+specify the ID of the IOS - not any single member.  The alternative to 
+cluster_no_share is to have the client present a list of preferred I/O 
+servers which the MDS uses in bmap assignment.
+
+3) FID modifications details in docs/supporting_recovery.txt.  Without these
+changes we'll be forced to modify internal MDS structures manually and 
+will be forced to restart all clients and sliods.
+
 -----------------------------------------------------------------------
 * Bmpce Write
 There may be some advantage to maintaining a seq or numeric window id for
