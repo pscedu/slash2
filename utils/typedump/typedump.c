@@ -54,7 +54,6 @@
 #include "mount_slash/fidc_cli.h"
 #include "mount_slash/mount_slash.h"
 #include "mount_slash/rpc_cli.h"
-#include "msctl/msctl.h"
 #include "slashd/bmap_mds.h"
 #include "slashd/ctl_mds.h"
 #include "slashd/fidc_mds.h"
@@ -589,8 +588,6 @@ main(int argc, char *argv[])
 	PRVAL(SLITHRT_STATFS);
 	PRVAL(SLITHRT_TIOS);
 	PRVAL(SLITHRT_USKLNDPL);
-	PRVAL(SLI_CTL_FOP_EXPORT);
-	PRVAL(SLI_CTL_FOP_IMPORT);
 	PRVAL(SLI_REPLWKOP_PTRUNC);
 	PRVAL(SLI_REPLWKOP_REPL);
 	PRVAL(SLMTHRT_BMAPTIMEO);
