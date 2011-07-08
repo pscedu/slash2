@@ -33,6 +33,7 @@
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 #include "pfl/str.h"
+#include "pfl/walk.h"
 #include "psc_util/bitflag.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlcli.h"
@@ -43,14 +44,22 @@
 #include "bmap.h"
 #include "ctl.h"
 #include "ctlcli.h"
-#include "msctl.h"
 #include "pathnames.h"
 #include "slashrpc.h"
 #include "slconfig.h"
 #include "slerr.h"
 
+#define walk(f, func, arg)						\
+	pfl_filewalk((f),						\
+	    (verbose   ? PFL_FILEWALKF_VERBOSE : 0) |			\
+	    (recursive ? PFL_FILEWALKF_RECURSIVE : 0) , (func), (arg))
+
 int				 verbose;
 int				 has_col;
+int				 recursive;
+
+const char			*progname;
+const char			*daemon_name = "mount_slash";
 
 struct msctlmsg_replst		 current_mrs;
 int				 current_mrs_eof;
@@ -211,7 +220,7 @@ packshow_fcmhs(__unusedx char *fid)
 	scf->scf_fg.fg_fid = FID_ANY;
 }
 
-void
+int
 pack_replst(const char *fn, __unusedx const struct stat *stb,
     __unusedx void *arg)
 {
@@ -220,9 +229,10 @@ pack_replst(const char *fn, __unusedx const struct stat *stb,
 	mrs = psc_ctlmsg_push(MSCMT_GETREPLST,
 	    sizeof(struct msctlmsg_replst));
 	mrs->mrs_fid = fn2fid(fn);
+	return (0);
 }
 
-void
+int
 pack_replrq(const char *fn, const struct stat *stb, void *arg)
 {
 	struct msctlmsg_replrq *mrq;
@@ -234,7 +244,7 @@ pack_replrq(const char *fn, const struct stat *stb, void *arg)
 			errno = EISDIR;
 			warn("%s", fn);
 		}
-		return;
+		return (0);
 	}
 
 	mrq = psc_ctlmsg_push(ra->opcode,
@@ -245,11 +255,12 @@ pack_replrq(const char *fn, const struct stat *stb, void *arg)
 		strlcpy(mrq->mrq_iosv[n], ra->iosv[n],
 		    sizeof(mrq->mrq_iosv[0]));
 	mrq->mrq_fid = fn2fid(fn);
+	return (0);
 }
 
 void
 parse_replrq(int opcode, char *replrqspec,
-    void (*packf)(const char *, const struct stat *, void *))
+    int (*packf)(const char *, const struct stat *, void *))
 {
 	char *files, *endp, *bmapnos, *bmapno, *next, *bend, *iosv, *ios;
 	struct replrq_arg ra;
@@ -334,7 +345,7 @@ lookup_repl_policy(const char *name)
 	errx(1, "%s: invalid replication policy", name);
 }
 
-void
+int
 cmd_new_bmap_repl_policy_one(const char *fn,
     __unusedx const struct stat *stb, void *arg)
 {
@@ -344,6 +355,7 @@ cmd_new_bmap_repl_policy_one(const char *fn,
 	mfnrp = psc_ctlmsg_push(a->opcode, sizeof(*mfnrp));
 	mfnrp->mfnrp_pol = a->replpol;
 	mfnrp->mfnrp_fid = fn2fid(fn);
+	return (0);
 }
 
 void
@@ -366,7 +378,7 @@ cmd_new_bmap_repl_policy(int ac, char **av)
 		walk(av[i], cmd_new_bmap_repl_policy_one, &arg);
 }
 
-void
+int
 cmd_bmap_repl_policy_one(const char *fn,
     __unusedx const struct stat *stb, void *arg)
 {
@@ -381,6 +393,7 @@ cmd_bmap_repl_policy_one(const char *fn,
 		mfbrp->mfbrp_nbmaps = br->bmax - br->bmin + 1;
 		mfbrp->mfbrp_fid = fn2fid(fn);
 	}
+	return (0);
 }
 
 void
@@ -437,7 +450,7 @@ cmd_bmap_repl_policy(int ac, char **av)
 		PSCFREE(br);
 }
 
-void
+int
 cmd_replrq_one(const char *fn, __unusedx const struct stat *stb,
     void *arg)
 {
@@ -446,6 +459,7 @@ cmd_replrq_one(const char *fn, __unusedx const struct stat *stb,
 
 	mrq = psc_ctlmsg_push(a->opcode, sizeof(*mrq));
 	mrq->mrq_fid = fn2fid(fn);
+	return (0);
 }
 
 void
@@ -464,7 +478,7 @@ cmd_replrq(int ac, char **av)
 		walk(av[i], cmd_replrq_one, &arg);
 }
 
-void
+int
 cmd_replst_one(const char *fn, __unusedx const struct stat *stb,
     __unusedx void *arg)
 {
@@ -472,6 +486,7 @@ cmd_replst_one(const char *fn, __unusedx const struct stat *stb,
 
 	mrs = psc_ctlmsg_push(MSCMT_GETREPLST, sizeof(*mrs));
 	mrs->mrs_fid = fn2fid(fn);
+	return (0);
 }
 
 void
@@ -767,10 +782,6 @@ struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {
 };
 
 PFLCTL_CLI_DEFS;
-
-const char *progname;
-const char *daemon_name = "mount_slash";
-int recursive;
 
 void
 parse_enqueue(char *arg)
