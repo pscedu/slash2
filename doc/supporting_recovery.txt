@@ -88,3 +88,15 @@ as well before it can proceed.
 
 During the reconnection, information such as fid and leases can be 
 exchanged.
+
+07/08/2011  
+----------
+
+The above is a non-starter because we create backing files on demand.  
+
+The cycle number will increment when (1) lower space bits wrap around
+and (2) missing journal.   In the latter case, the lower bits can be
+reset to all zeros.
+
+We also need a way to remove the backing files of those fids a MDS
+has skipped.  But that can be done in the background.
