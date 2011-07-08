@@ -1666,13 +1666,13 @@ mds_journal_init(int disable_propagation)
 }
 
 void
-mds_reserve_slot(void)
+mds_reserve_slot(int count)
 {
-	pjournal_reserve_slot(mdsJournal);
+	pjournal_reserve_slot(mdsJournal, count);
 }
 
 void
-mds_unreserve_slot(void)
+mds_unreserve_slot(int count)
 {
-	pjournal_unreserve_slot(mdsJournal);
+	pjournal_unreserve_slot(mdsJournal, count);
 }

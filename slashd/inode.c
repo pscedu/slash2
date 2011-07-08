@@ -127,11 +127,11 @@ mds_inode_write(struct slash_inode_handle *ih, void *logf, void *arg)
 	INOH_ULOCK(ih);
 
 	if (logf)
-		mds_reserve_slot();
+		mds_reserve_slot(1);
 	rc = mdsio_pwritev(&rootcreds, iovs, nitems(iovs), &nb, 0, 0,
 	    inoh_2_mdsio_data(ih), logf, arg);
 	if (logf)
-		mds_unreserve_slot();
+		mds_unreserve_slot(1);
 
 	INOH_LOCK(ih);
 	ih->inoh_flags &= ~INOH_IN_IO;
@@ -178,11 +178,11 @@ mds_inox_write(struct slash_inode_handle *ih, void *logf, void *arg)
 	INOH_ULOCK(ih);
 
 	if (logf)
-		mds_reserve_slot();
+		mds_reserve_slot(1);
 	rc = mdsio_pwritev(&rootcreds, iovs, nitems(iovs), &nb,
 	    SL_EXTRAS_START_OFF, 0, inoh_2_mdsio_data(ih), logf, arg);
 	if (logf)
-		mds_unreserve_slot();
+		mds_unreserve_slot(1);
 
 	INOH_LOCK(ih);
 	ih->inoh_flags &= ~INOH_IN_IO;

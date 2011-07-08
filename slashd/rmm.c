@@ -192,7 +192,7 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 
 	psclog_info("op=%d, fid="SLPRI_FID", name=%s", mq->op, mq->fid, mq->req.name);
 
-	mds_reserve_slot();
+	mds_reserve_slot(1);
 	switch (mq->op) {
 	    case SLM_FORWARD_MKDIR:
 		mp->rc = slm_fcmh_get(&mq->fg, &p);
@@ -253,7 +253,7 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		    fcmh_2_mdsio_data(p), mdslog_namespace);
 		break;
 	}
-	mds_unreserve_slot();
+	mds_unreserve_slot(1);
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 	if (op)

@@ -318,10 +318,10 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 		goto out;
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
-	mds_reserve_slot();
+	mds_reserve_slot(1);
 	mp->rc = mdsio_link(fcmh_2_mdsio_fid(c), fcmh_2_mdsio_fid(p),
 	    mq->name, &rootcreds, &mp->cattr, mdslog_namespace);
-	mds_unreserve_slot();
+	mds_unreserve_slot(1);
 
 	mdsio_fcmh_refreshattr(p, &mp->pattr);
 
@@ -382,11 +382,11 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 		mdsio_fcmh_refreshattr(p, &mp->pattr);
 		goto out;
 	}
-	mds_reserve_slot();
+	mds_reserve_slot(1);
 	mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(p), mq->name, mq->mode,
 	    &mq->creds, &mp->cattr, NULL, mdslog_namespace,
 	    slm_get_next_slashfid, 0);
-	mds_unreserve_slot();
+	mds_unreserve_slot(1);
 
 	mdsio_fcmh_refreshattr(p, &mp->pattr);
 
@@ -427,11 +427,11 @@ slm_rmc_handle_mknod(struct pscrpc_request *rq)
 		goto out;
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
-	mds_reserve_slot();
+	mds_reserve_slot(1);
 	mp->rc = mdsio_mknod(fcmh_2_mdsio_fid(p), mq->name, mq->mode,
 	    &mq->creds, &mp->cattr, NULL, mdslog_namespace,
 	    slm_get_next_slashfid);
-	mds_unreserve_slot();
+	mds_unreserve_slot(1);
 
 	mdsio_fcmh_refreshattr(p, &mp->pattr);
  out:
@@ -483,12 +483,12 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 	DEBUG_FCMH(PLL_DEBUG, p, "create op start for %s", mq->name);
 
-	mds_reserve_slot();
+	mds_reserve_slot(1);
 	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &mq->creds,
 	    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->name, NULL,
 	    &mp->cattr, &mdsio_data, mdslog_namespace,
 	    slm_get_next_slashfid, 0);
-	mds_unreserve_slot();
+	mds_unreserve_slot(1);
 
 	if (mp->rc)
 		goto out;
@@ -717,10 +717,10 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 
 
 	/* if we get here, op and np must be owned by the current MDS */
-	mds_reserve_slot();
+	mds_reserve_slot(2);
 	mp->rc = mdsio_rename(fcmh_2_mdsio_fid(op), from,
 	    fcmh_2_mdsio_fid(np), to, &rootcreds, mdslog_namespace);
-	mds_unreserve_slot();
+	mds_unreserve_slot(2);
 
 	/* update target ctime */
 	if (mp->rc == 0) {
@@ -811,11 +811,11 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			 * used.  Otherwise, it will be NULL, and we'll use the
 			 * mdsio_fid.
 			 */
-			mds_reserve_slot();
+			mds_reserve_slot(1);
 			mp->rc = mdsio_setattr(fcmh_2_mdsio_fid(fcmh),
 			    &mq->attr, to_set, &rootcreds, &mp->attr,
 			    fcmh_2_mdsio_data(fcmh), mdslog_namespace);
-			mds_unreserve_slot();
+			mds_unreserve_slot(1);
 		}
 	}
 
@@ -973,11 +973,11 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 
 	linkname[mq->linklen] = '\0';
 
-	mds_reserve_slot();
+	mds_reserve_slot(1);
 	mp->rc = mdsio_symlink(linkname, fcmh_2_mdsio_fid(p), mq->name,
 	    &mq->creds, &mp->cattr, NULL, slm_get_next_slashfid,
 	    mdslog_namespace);
-	mds_unreserve_slot();
+	mds_unreserve_slot(1);
 
 	mdsio_fcmh_refreshattr(p, &mp->pattr);
  out:
@@ -1010,14 +1010,14 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 		goto out;
 	}
 
-	mds_reserve_slot();
+	mds_reserve_slot(1);
 	if (isfile)
 		mp->rc = mdsio_unlink(fcmh_2_mdsio_fid(p), NULL,
 		    mq->name, &rootcreds, mdslog_namespace);
 	else
 		mp->rc = mdsio_rmdir(fcmh_2_mdsio_fid(p), NULL,
 		    mq->name, &rootcreds, mdslog_namespace);
-	mds_unreserve_slot();
+	mds_unreserve_slot(1);
 
  out:
 	if (mp->rc == 0)

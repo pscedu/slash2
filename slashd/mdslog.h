@@ -75,8 +75,8 @@ void	mds_journal_init(int);
 int	mds_bmap_crc_update(struct bmapc_memb *, struct srm_bmap_crcup *);
 int	mds_inode_repls_update(struct fidc_membh *, int);
 
-void	mds_reserve_slot(void);
-void	mds_unreserve_slot(void);
+void	mds_reserve_slot(int);
+void	mds_unreserve_slot(int);
 
 int	mds_replay_namespace(struct slmds_jent_namespace *, int);
 int	mds_replay_handler(struct psc_journal_enthdr *);

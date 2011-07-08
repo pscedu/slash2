@@ -171,12 +171,12 @@ mds_bmap_write(struct bmapc_memb *b, int update_mtime, void *logf,
 	iovs[1].iov_len = sizeof(crc);
 
 	if (logf)
-		mds_reserve_slot();
+		mds_reserve_slot(1);
 	rc = mdsio_pwritev(&rootcreds, iovs, nitems(iovs), &nb,
 	    (off_t)BMAP_OD_SZ * b->bcm_bmapno + SL_BMAP_START_OFF,
 	    update_mtime, bmap_2_mdsio_data(b), logf, logarg);
 	if (logf)
-		mds_unreserve_slot();
+		mds_unreserve_slot(1);
 
 	if (rc == 0 && nb != BMAP_OD_SZ)
 		rc = SLERR_SHORTIO;

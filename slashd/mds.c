@@ -324,7 +324,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	return (-SLERR_ION_OFFLINE);
 
  online:
-	mds_reserve_slot();
+	mds_reserve_slot(1);
 	logentry = pjournal_get_buf(mdsJournal, sizeof(*logentry));
 
 	bmi->bmdsi_wr_ion = rmmi = resm2rmmi(resm);
@@ -404,7 +404,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	pjournal_add_entry(mdsJournal, 0, MDS_LOG_BMAP_ASSIGN, 0,
 	    logentry, sizeof(*logentry));
 	pjournal_put_buf(mdsJournal, logentry);
-	mds_unreserve_slot();
+	mds_unreserve_slot(1);
 
 	bml->bml_seq = bia.bia_seq;
 
@@ -478,7 +478,7 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 		DEBUG_BMAP(PLL_ERROR, b, "mds_repl_inv_except() failed");
 		return (-1);
 	}
-	mds_reserve_slot();
+	mds_reserve_slot(1);
 	logentry = pjournal_get_buf(mdsJournal, sizeof(*logentry));
 
 	logentry->sjar_flags = SLJ_ASSIGN_REP_NONE;
@@ -506,7 +506,7 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 	pjournal_add_entry(mdsJournal, 0, MDS_LOG_BMAP_ASSIGN, 0,
 	    logentry, sizeof(*logentry));
 	pjournal_put_buf(mdsJournal, logentry);
-	mds_unreserve_slot();
+	mds_unreserve_slot(1);
 
 	DEBUG_FCMH(PLL_INFO, b->bcm_fcmh, "bmap update, elem=%zd",
 	    bmi->bmdsi_assign->odtr_elem);
@@ -1055,7 +1055,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		    "key=%#"PRIx64" rc=%d", bml->bml_seq, key, rc);
 		bmap_op_done_type(b, BMAP_OPCNT_IONASSIGN);
 
-		mds_reserve_slot();
+		mds_reserve_slot(1);
 		logentry = pjournal_get_buf(mdsJournal,
 		    sizeof(*logentry));
 		logentry->sjar_elem = elem;
@@ -1063,7 +1063,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		pjournal_add_entry(mdsJournal, 0, MDS_LOG_BMAP_ASSIGN,
 		    0, logentry, sizeof(*logentry));
 		pjournal_put_buf(mdsJournal, logentry);
-		mds_unreserve_slot();
+		mds_unreserve_slot(1);
 	}
 
 	psc_pool_return(bmapMdsLeasePool, bml);
@@ -1869,11 +1869,11 @@ slm_ptrunc_prepare(struct slm_workrq *wkrq)
 	fcmh_2_ptruncgen(fcmh)++;
 	fcmh->fcmh_sstb.sst_size = fmi->fmi_ptrunc_size;
 
-	mds_reserve_slot();
+	mds_reserve_slot(1);
 	rc = mdsio_setattr(fcmh_2_mdsio_fid(fcmh), &fcmh->fcmh_sstb,
 	    PSCFS_SETATTRF_DATASIZE, &rootcreds, &fcmh->fcmh_sstb,
 	    fcmh_2_mdsio_data(fcmh), mdslog_namespace);
-	mds_unreserve_slot();
+	mds_unreserve_slot(1);
 
 	FCMH_ULOCK(fcmh);
 	slm_ptrunc_apply(wkrq);

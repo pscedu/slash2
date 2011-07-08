@@ -57,10 +57,10 @@ mds_bmap_journal_bmapseq(struct slmds_jent_bmapseq *sjbsq)
 
 	*buf = *sjbsq;
 
-	mds_reserve_slot();
+	mds_reserve_slot(1);
 	pjournal_add_entry(mdsJournal, 0, MDS_LOG_BMAP_SEQ,
 		0, buf, sizeof(struct slmds_jent_bmapseq));
-	mds_unreserve_slot();
+	mds_unreserve_slot(1);
 
 	pjournal_put_buf(mdsJournal, buf);
 }
