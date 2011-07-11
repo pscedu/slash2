@@ -508,8 +508,8 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	DEBUG_FCMH(PLL_DEBUG, p, "mdsio_release() done for %s",
 	    mq->name);
 
-	mp->rc2 = slm_fcmh_get(&mp->cattr.sst_fg, &c);
-	if (mp->rc2)
+	mp->rc = slm_fcmh_get(&mp->cattr.sst_fg, &c);
+	if (mp->rc)
 		goto out;
 
 	FCMH_LOCK(p);
