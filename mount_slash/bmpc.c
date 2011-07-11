@@ -17,6 +17,9 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#define PSC_SUBSYS SLSS_BMAP
+#include "slsubsys.h"
+
 #include <time.h>
 
 #include "psc_ds/lockedlist.h"
@@ -50,10 +53,10 @@ bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *p)
 }
 
 struct bmap_pagecache_entry *
-bmpce_lookup_locked(struct bmap_pagecache *bmpc, struct bmpc_ioreq *biorq, 
+bmpce_lookup_locked(struct bmap_pagecache *bmpc, struct bmpc_ioreq *biorq,
 		    uint32_t off, struct psc_waitq *wq)
 {
-	struct bmap_pagecache_entry bmpce_search, *bmpce = NULL, 
+	struct bmap_pagecache_entry bmpce_search, *bmpce = NULL,
 		*bmpce_new = NULL;
 
 	LOCK_ENSURE(&bmpc->bmpc_lock);
@@ -71,12 +74,12 @@ bmpce_lookup_locked(struct bmap_pagecache *bmpc, struct bmpc_ioreq *biorq,
 			bmpce_new = psc_pool_get(bmpcePoolMgr);
 			BMPC_LOCK(bmpc);
 			continue;
-		} else { 
+		} else {
 			bmpce = bmpce_new;
 			bmpce_new = NULL;
 			bmpce->bmpce_off = bmpce_search.bmpce_off;
 			bmpce_useprep(bmpce, biorq, wq);
-			
+
 			SPLAY_INSERT(bmap_pagecachetree,
 			     &bmpc->bmpc_tree, bmpce);
 		}
@@ -88,20 +91,20 @@ __static void
 bmpce_release_locked(struct bmap_pagecache_entry *, struct bmap_pagecache *);
 
 /**
- * bmpce_eio_remove - Extract an errored page from the page cache.  
+ * bmpce_eio_remove - Extract an errored page from the page cache.
  * @bmpc:  the page cache holding the respective page.
  * @bmpce:  the page to be removed.
  * Notes:  block until all waiters on the bmpce have given up.
  */
 #if 0
 void
-bmpce_eio_remove(struct bmap_pagecache *bmpc, 
+bmpce_eio_remove(struct bmap_pagecache *bmpc,
 		 struct bmap_pagecache_entry *bmpce)
 {
 	/* Leave the entry in the cache so that a duplicate page is not
 	 *   allocated.
 	 * Note: that the locking order.
-	 *     msl_pages_blocking_load() is where other threads block for 
+	 *     msl_pages_blocking_load() is where other threads block for
 	 *     BMPCE_EIO.
 	 */
 	psc_assert(bmpce->bmpce_flags & BMPCE_EIO);
@@ -118,13 +121,13 @@ bmpce_eio_remove(struct bmap_pagecache *bmpc,
 		psc_waitq_wakeall(bmpce->bmpce_waitq);
 		usleep(10);
 	}
-		
-	BMPC_LOCK(bmpc);
-	BMPCE_LOCK(bmpce);	
 
-	if (bmpce->bmpce_flags & BMPCE_READA) 
+	BMPC_LOCK(bmpc);
+	BMPCE_LOCK(bmpce);
+
+	if (bmpce->bmpce_flags & BMPCE_READA)
 		pll_remove(&bmpc->bmpc_pndg_ra, bmpce);
-	
+
 	bmpce_freeprep(bmpce);
 	bmpce->bmpce_flags = BMPCE_FREEING;
 	bmpce_release_locked(bmpce, bmpc);
@@ -141,7 +144,7 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 	LOCK_ENSURE(&bmpc->bmpc_lock);
 	LOCK_ENSURE(&bmpce->bmpce_lock);
 
-	DEBUG_BMPCE((bmpce->bmpce_flags & BMPCE_EIO) ? PLL_WARN : PLL_INFO, 
+	DEBUG_BMPCE((bmpce->bmpce_flags & BMPCE_EIO) ? PLL_WARN : PLL_INFO,
 	    bmpce, "op=%d incref=%d", op, incref);
 
 	psc_assert(psc_atomic16_read(&bmpce->bmpce_wrref) >= 0);
@@ -232,9 +235,9 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 			}
 
 		} else if (bmpce->bmpce_flags & BMPCE_EIO) {
-			/* In cases where EIO is present the lock must be 
+			/* In cases where EIO is present the lock must be
 			 *   freed no matter what.  This is because we
-			 *   try to free the bmpce above, which when 
+			 *   try to free the bmpce above, which when
 			 *   successful, replaces the bmpce to the pool.
 			 */
 			BMPCE_WAKE(bmpce);
@@ -429,7 +432,7 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 			 */
 			DEBUG_BMPCE(PLL_WARN, bmpce, "BMPCE_EIO, skip");
 			BMPCE_ULOCK(bmpce);
-                        continue;
+			continue;
 		}
 
 		timespecsub(&bmpce->bmpce_laccess, &ts, &expire);

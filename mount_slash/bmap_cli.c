@@ -17,6 +17,9 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#define PSC_SUBSYS SLSS_BMAP
+#include "slsubsys.h"
+
 #include <stddef.h>
 
 #include "psc_rpc/rpc.h"
@@ -172,7 +175,7 @@ msl_bmap_lease_tryext(struct bmapc_memb *b)
 	//	if (b->bcm_flags & (BMAP_CLI_LEASEEXTREQ | BMAP_TIMEOQ) ||
 	if (b->bcm_flags & (BMAP_CLI_LEASEEXTREQ) ||
 	    (secs = bmap_2_bci(b)->bci_xtime.tv_sec - CURRENT_SECONDS) >
-	    BMAP_CLI_EXTREQSECS) 
+	    BMAP_CLI_EXTREQSECS)
 		BMAP_ULOCK(b);
 
 	else {
@@ -199,22 +202,22 @@ msl_bmap_lease_tryext(struct bmapc_memb *b)
 		rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 
-		if (secs <= 0) {			
+		if (secs <= 0) {
 			/* The lease is old - issue a blocking request.
-                         */
-			rc = SL_RSX_WAITREP(csvc, rq, mp);			
+			 */
+			rc = SL_RSX_WAITREP(csvc, rq, mp);
 			if (!rc)
 				rc = msl_bmap_lease_tryext_cb(rq, &rq->rq_async_args);
 
-                        pscrpc_req_finished(rq);
-                        sl_csvc_decref(csvc);
+			pscrpc_req_finished(rq);
+			sl_csvc_decref(csvc);
 
-		} else {	
+		} else {
 			/* Otherwise, let the async handler do the dirty work.
 			 */
 			rq->rq_interpret_reply = msl_bmap_lease_tryext_cb;
 			rq->rq_comp = &rpcComp;
-			
+
 			rc = pscrpc_nbreqset_add(pndgBmaplsReqs, rq);
 			if (rc) {
 error:
@@ -224,12 +227,12 @@ error:
 					sl_csvc_decref(csvc);
 			}
 		}
-		
+
 		DEBUG_BMAP(rc ? PLL_ERROR : PLL_WARN, b,
 			   "requesting lease extension (rc=%d) (secs=%d)", rc,
-			   secs);		
+			   secs);
 	}
-	return (rc);		
+	return (rc);
 }
 
 /**
