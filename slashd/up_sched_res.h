@@ -30,7 +30,7 @@
 #include "subsys_mds.h"
 
 struct up_sched_work_item {
-	struct fidc_membh		*uswi_fcmh;		/* key is fg_fid. See uswi_cmp() */
+	struct fidc_membh		*uswi_fcmh;	/* key is fg_fid; see uswi_cmp() */
 	psc_atomic32_t			 uswi_refcnt;
 	int				 uswi_gen;
 	int				 uswi_flags;
@@ -69,7 +69,7 @@ enum {
 #define DEBUG_USWI(lvl, wk, fmt, ...)					\
 	psclogs((lvl), SLMSS_UPSCH, "uswi@%p f+g:"SLPRI_FG" "		\
 	    "fl:%#x:%s%s ref:%d gen:%d : " fmt,				\
-	    (wk), SLPRI_FG_ARGS(USWI_FG(wk)),				\
+	    (wk), SLPRI_FG_ARGS(USWI_FG(wk)), (wk)->uswi_flags,		\
 	    (wk)->uswi_flags & USWIF_BUSY	? "b" : "",		\
 	    (wk)->uswi_flags & USWIF_DIE	? "d" : "",		\
 	    psc_atomic32_read(&(wk)->uswi_refcnt), (wk)->uswi_gen, ## __VA_ARGS__)

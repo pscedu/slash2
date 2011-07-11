@@ -97,7 +97,7 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 		goto out;
 
 	memcpy(&mq->sbd, bmap_2_sbd(b), sizeof(struct srt_bmapdesc));
-	mq->prefios = prefIOS;
+	mq->prefios[0] = prefIOS;
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
@@ -277,7 +277,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw,
 		goto out;
 
 	mq->fg = f->fcmh_fg;
-	mq->prefios = prefIOS; /* Tell MDS of our preferred ION */
+	mq->prefios[0] = prefIOS; /* Tell MDS of our preferred ION */
 	mq->bmapno = bmap->bcm_bmapno;
 	mq->rw = rw;
 	if (getreptbl)

@@ -291,7 +291,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mq->mode = !(mode & 0777) ? (0666 & ~pscfs_getumask(pfr)) : mode;
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = FGEN_ANY;
-	mq->prefios = prefIOS;
+	mq->prefios[0] = prefIOS;
 	mslfs_getcreds(pfr, &mq->creds);
 	strlcpy(mq->name, name, sizeof(mq->name));
 

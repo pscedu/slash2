@@ -208,7 +208,7 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 		goto out;
 	}
 
-	mp->rc = mds_bmap_bml_chwrmode(bml, mq->prefios);
+	mp->rc = mds_bmap_bml_chwrmode(bml, mq->prefios[0]);
 	if (mp->rc == EALREADY)
 		mp->rc = 0;
 	else if (mp->rc)
@@ -269,7 +269,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	mp->flags = mq->flags;
 
 	mp->rc = mds_bmap_load_cli(fcmh, mq->bmapno, mq->flags, mq->rw,
-	    mq->prefios, &mp->sbd, rq->rq_export, &bmap);
+	    mq->prefios[0], &mp->sbd, rq->rq_export, &bmap);
 	if (mp->rc)
 		goto out;
 
@@ -524,7 +524,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 	bmap = NULL;
 	mp->rc2 = mds_bmap_load_cli(c, 0, mp->flags, SL_WRITE,
-	    mq->prefios, &mp->sbd, rq->rq_export, &bmap);
+	    mq->prefios[0], &mp->sbd, rq->rq_export, &bmap);
 
 	fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 
@@ -532,6 +532,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 		goto out;
 
 	slm_rmc_bmapdesc_setup(bmap, &mp->sbd, SL_WRITE);
+
  out:
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
