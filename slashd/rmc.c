@@ -377,8 +377,8 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 
 	if (IS_REMOTE_FID(mq->pfg.fg_fid)) {
 		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_MKDIR,
-		    &mq->pfg, NULL, mq->name, NULL, mq->mode, &mq->creds,
-		    &mp->cattr, 0);
+		    &mq->pfg, NULL, mq->name, NULL, mq->mode,
+		    &mq->creds, &mp->cattr, 0);
 		mdsio_fcmh_refreshattr(p, &mp->pattr);
 		goto out;
 	}
@@ -472,8 +472,8 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 	if (IS_REMOTE_FID(mq->pfg.fg_fid)) {
 		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_CREATE,
-		    &mq->pfg, NULL, mq->name, NULL, mq->mode, &mq->creds,
-		    &mp->cattr, 0);
+		    &mq->pfg, NULL, mq->name, NULL, mq->mode,
+		    &mq->creds, &mp->cattr, 0);
 		if (!mp->rc) {
 			mp->rc2 = ENOENT;
 			mdsio_fcmh_refreshattr(p, &mp->pattr);
@@ -505,7 +505,8 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	 */
 	mdsio_release(&rootcreds, mdsio_data);
 
-	DEBUG_FCMH(PLL_DEBUG, p, "mdsio_release() done for %s", mq->name);
+	DEBUG_FCMH(PLL_DEBUG, p, "mdsio_release() done for %s",
+	    mq->name);
 
 	mp->rc2 = slm_fcmh_get(&mp->cattr.sst_fg, &c);
 	if (mp->rc2)
@@ -615,8 +616,8 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 		memcpy(mp->ents + sz, iov[0].iov_base, mp->size);
 		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
 	} else {
-		mp->rc = rsx_bulkserver(rq, BULK_PUT_SOURCE, SRMC_BULK_PORTAL,
-		    iov, niov);
+		mp->rc = rsx_bulkserver(rq, BULK_PUT_SOURCE,
+		    SRMC_BULK_PORTAL, iov, niov);
 	}
 
  out:
@@ -641,7 +642,8 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
-	mp->rc = mdsio_readlink(fcmh_2_mdsio_fid(fcmh), buf, &rootcreds);
+	mp->rc = mdsio_readlink(fcmh_2_mdsio_fid(fcmh), buf,
+	    &rootcreds);
 	if (mp->rc)
 		goto out;
 
@@ -802,15 +804,15 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 
 	if (to_set) {
 		if (IS_REMOTE_FID(mq->attr.sst_fg.fg_fid)) {
-			mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_SETATTR,
-			    &mq->attr.sst_fg, NULL, NULL, NULL, 0, NULL, &mq->attr,
-			    to_set);
+			mp->rc = slm_rmm_forward_namespace(
+			    SLM_FORWARD_SETATTR, &mq->attr.sst_fg, NULL,
+			    NULL, NULL, 0, NULL, &mq->attr, to_set);
 			mp->attr = mq->attr;
 		} else {
 			/*
-			 * If the file is open, mdsio_data will be valid and
-			 * used.  Otherwise, it will be NULL, and we'll use the
-			 * mdsio_fid.
+			 * If the file is open, mdsio_data will be valid
+			 * and used.  Otherwise, it will be NULL, and
+			 * we'll use the mdsio_fid.
 			 */
 			mds_reserve_slot(1);
 			mp->rc = mdsio_setattr(fcmh_2_mdsio_fid(fcmh),
