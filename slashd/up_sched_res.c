@@ -833,6 +833,7 @@ slmupschedthr_main(struct psc_thread *thr)
 							 * We succeed as long as one member
 							 * can do the work because all
 							 * members share the same backend.
+							 * XXX cluster_noshare.
 							 */
 							if (slmupschedthr_trygarbage(wk,
 							    b, off, dst_res,

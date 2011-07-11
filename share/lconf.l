@@ -72,7 +72,7 @@ yes|no {
 	return (BOOL);
 }
 
-parallel_fs|standalone_fs|archival_fs|mds|compute {
+parallel_fs|standalone_fs|archival_fs|mds|cluster_noshare_fs|compute {
 	psclog_trace("Resource type string %s", yytext);
 	yylval = pfl_strdup(yytext);
 	return (RESOURCE_TYPE);

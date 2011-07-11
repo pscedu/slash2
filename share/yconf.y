@@ -514,6 +514,8 @@ slcfg_str2restype(const char *res_type)
 		return (SLREST_STANDALONE_FS);
 	if (!strcmp(res_type, "archival_fs"))
 		return (SLREST_ARCHIVAL_FS);
+	if (!strcmp(res_type, "cluster_noshare_fs"))
+		return (SLREST_CLUSTER_NOSHARE_FS);
 	if (!strcmp(res_type, "compute"))
 		return (SLREST_COMPUTE);
 	if (!strcmp(res_type, "mds"))
