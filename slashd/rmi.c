@@ -395,6 +395,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	struct fidc_membh *p = NULL, *c;
 	struct srm_import_req *mq;
 	struct srm_import_rep *mp;
+	struct slash_creds cr;
 	void *mdsio_data;
 	uint32_t pol;
 
@@ -408,37 +409,40 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
-	mq->name[sizeof(mq->name) - 1] = '\0';
+	mq->cpn[sizeof(mq->cpn) - 1] = '\0';
 
-	DEBUG_FCMH(PLL_DEBUG, p, "create op start for %s", mq->name);
+	DEBUG_FCMH(PLL_DEBUG, p, "create op start for %s", mq->cpn);
+
+	cr.scr_uid = mq->sstb.sst_uid;
+	cr.scr_gid = mq->sstb.sst_gid;
 
 	mds_reserve_slot(1);
-	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &mq->creds,
-	    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->name, NULL,
-	    &mp->cattr, &mdsio_data, mdslog_namespace,
-	    slm_get_next_slashfid, 0);
+	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &cr,
+	    O_CREAT | O_EXCL | O_RDWR, mq->sstb.sst_mode, mq->cpn, NULL,
+	    NULL, &mdsio_data, mdslog_namespace, slm_get_next_slashfid,
+	    0);
 	mds_unreserve_slot(1);
 
 	if (mp->rc)
 		goto out;
 
-	DEBUG_FCMH(PLL_DEBUG, p, "create op done for %s", mq->name);
+	DEBUG_FCMH(PLL_DEBUG, p, "create op done for %s", mq->cpn);
 
-	mdsio_release(&rootcreds, mdsio_data);
+	mdsio_release(&cr, mdsio_data);
 
-	DEBUG_FCMH(PLL_DEBUG, p, "mdsio_release() done for %s", mq->name);
+	DEBUG_FCMH(PLL_DEBUG, p, "mdsio_release() done for %s", mq->cpn);
 
-	mp->rc2 = slm_fcmh_get(&mp->cattr.sst_fg, &c);
-	if (mp->rc2)
+	mp->rc = slm_fcmh_get(NULL, &c);
+	if (mp->rc)
 		goto out;
 
 	FCMH_LOCK(p);
 	pol = p->fcmh_sstb.sstd_freplpol;
-	fcmh_2_ino(c)->ino_replpol = pol;
-	FCMH_ULOCK(fcmh_2_inoh(c));
+	FCMH_ULOCK(p);
 
-	/* obtain lease for first bmap as optimization */
-	mp->flags = mq->flags;
+	FCMH_LOCK(c);
+	fcmh_2_ino(c)->ino_replpol = pol;
+	FCMH_ULOCK(c);
 
 	fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 
