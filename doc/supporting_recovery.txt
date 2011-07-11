@@ -94,6 +94,13 @@ exchanged.
 
 The above is a non-starter because we create backing files on demand.  
 
+	<-- On the other hand, if an IOS hasn't seen a FID and the MDS
+	    hasn't seen the FID either, we should be able to conclude
+	    that FID is not needed anymore, right?
+
+	<-- I am more concerned about the a stuck IOS will prevent a
+	    crashed MDS from restarting.
+
 The cycle number will increment when (1) lower space bits wrap around
 and (2) missing journal.   In the latter case, the lower bits can be
 reset to all zeros.
