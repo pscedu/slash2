@@ -157,6 +157,7 @@ static struct sl_resm	  *currentResm;
 
 %token IPADDR
 %token PEERTAG
+%token IOSTAG
 %token NODESTAG
 %token QUOTEDS
 %token LNETNAME
@@ -310,6 +311,9 @@ resource_start	: RESOURCE_PROFILE NAME '{' {
 resource_def	: statements
 		;
 
+ioslist         : IOSTAG '=' peers ';'
+                ;
+
 peerlist	: PEERTAG '=' peers ';'
 		;
 
@@ -354,6 +358,7 @@ statement	: restype_stmt
 		| float_stmt
 		| lnetname_stmt
 		| peerlist
+                | ioslist
 		| nodeslist
 		| quoteds_stmt
 		;
@@ -515,7 +520,7 @@ slcfg_str2restype(const char *res_type)
 	if (!strcmp(res_type, "archival_fs"))
 		return (SLREST_ARCHIVAL_FS);
 	if (!strcmp(res_type, "cluster_noshare_fs"))
-		return (SLREST_CLUSTER_NOSHARE_FS);
+		return (SLREST_CLUSTER_NOSHARE_LFS);
 	if (!strcmp(res_type, "compute"))
 		return (SLREST_COMPUTE);
 	if (!strcmp(res_type, "mds"))

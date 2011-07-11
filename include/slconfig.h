@@ -49,16 +49,16 @@ struct slashrpc_cservice;
 enum sl_res_type {
 	SLREST_NONE,
 	SLREST_ARCHIVAL_FS,
-	SLREST_CLUSTER_NOSHARE_FS,
+	SLREST_CLUSTER_NOSHARE_LFS,   /* Logical set of stand-alone servers */
 	SLREST_COMPUTE,
 	SLREST_MDS,
 	SLREST_PARALLEL_FS,
-	SLREST_STANDALONE_FS
+	SLREST_STANDALONE_FS,
 };
 
 #define RES_ISFS(res)							\
 	((res)->res_type == SLREST_ARCHIVAL_FS	||			\
-	 (res)->res_type == SLREST_CLUSTER_NOSHARE_FS ||		\
+	 (res)->res_type == SLREST_CLUSTER_NOSHARE_LFS ||		\
 	 (res)->res_type == SLREST_PARALLEL_FS	||			\
 	 (res)->res_type == SLREST_STANDALONE_FS)
 

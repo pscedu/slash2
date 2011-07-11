@@ -65,6 +65,7 @@ resource	{ return (RESOURCE_PROFILE); }
 peers		{ return (PEERTAG); }
 ifs		{ yywarn("`ifs' deprecated by `nodes'"); return (NODESTAG); }
 nodes		{ return (NODESTAG); }
+ios             { return (IOSTAG); }
 
 yes|no {
 	psclog_trace("BOOL %s", yytext);
