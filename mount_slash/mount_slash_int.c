@@ -127,7 +127,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	uint64_t fsz = fcmh_getsize(mfh->mfh_fcmh);
 
 	DEBUG_BMAP(PLL_INFO, b,
-		   "adding req for (off=%u) (size=%u) (nbmpce=%d)", roff, len, 
+		   "adding req for (off=%u) (size=%u) (nbmpce=%d)", roff, len,
 		   pll_nitems(&(bmap_2_bmpc(b)->bmpc_lru)));
 
 	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh,
@@ -308,10 +308,10 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 				bmpce_handle_lru_locked(bmpce, bmpc, op, 1);
 				bmap_op_start_type(b, BMAP_OPCNT_READA);
 
-				/* Place the bmpce into our private pll.  This is 
+				/* Place the bmpce into our private pll.  This is
 				 *    done so that the ra thread may coalesce
-				 *    bmpces without sorting overhead.  In addition, 
-				 *    the ra thread may now use the fh's ra 
+				 *    bmpces without sorting overhead.  In addition,
+				 *    the ra thread may now use the fh's ra
 				 *    factor for weighing bw (large requests) vs.
 				 *    latency (smaller requests).
 				 */
@@ -546,7 +546,7 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 	if (!(r->biorq_flags & BIORQ_DIO)) {
 		if (r->biorq_flags & BIORQ_WRITE) {
 			if (r->biorq_flags & BIORQ_RBWFAIL)
-				/* Ensure this biorq never got off of the 
+				/* Ensure this biorq never got off of the
 				 *    ground.
 				 */
 				psc_assert(!(r->biorq_flags &
@@ -556,8 +556,8 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 				psc_assert(r->biorq_flags & BIORQ_SCHED);
 				r->biorq_flags &= ~(BIORQ_INFL|BIORQ_SCHED);
 			}
-		} else 
-			psc_assert(!(r->biorq_flags & 
+		} else
+			psc_assert(!(r->biorq_flags &
 			     (BIORQ_INFL|BIORQ_SCHED)));
 	}
 
@@ -620,7 +620,7 @@ msl_fhent_new(struct fidc_membh *f)
 	INIT_SPINLOCK(&mfh->mfh_lock);
 	pll_init(&mfh->mfh_biorqs, struct bmpc_ioreq, biorq_mfh_lentry,
 	    &mfh->mfh_lock);
-	pll_init(&mfh->mfh_ra_bmpces, struct bmap_pagecache_entry, 
+	pll_init(&mfh->mfh_ra_bmpces, struct bmap_pagecache_entry,
 	    bmpce_ralentry, &mfh->mfh_lock);
 	INIT_PSC_LISTENTRY(&mfh->mfh_lentry);
 	MSL_RA_RESET(&mfh->mfh_ra);
@@ -985,8 +985,8 @@ msl_readahead_cb(struct pscrpc_request *rq,
 			break;
 
 		if (!i)
-			b = bmpce->bmpce_owner; 
-		else 
+			b = bmpce->bmpce_owner;
+		else
 			psc_assert(b == bmpce->bmpce_owner);
 
 		bmpce->bmpce_owner = NULL;
@@ -994,20 +994,20 @@ msl_readahead_cb(struct pscrpc_request *rq,
 		DEBUG_BMPCE(rc ? PLL_ERROR : PLL_INFO, bmpce, "rc=%d", rc);
 		DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b, "rc=%d", rc);
 
-		pll_remove(&bmpc->bmpc_pndg_ra, bmpce);		
+		pll_remove(&bmpc->bmpc_pndg_ra, bmpce);
 		BMPCE_LOCK(bmpce);
 		if (rc)
 			bmpce->bmpce_flags |= BMPCE_EIO;
 		else {
 			bmpce->bmpce_flags |= BMPCE_DATARDY;
-			DEBUG_BMPCE(PLL_INFO, bmpce, 
+			DEBUG_BMPCE(PLL_INFO, bmpce,
 				    "datardy via readahead_cb");
 			wq = bmpce->bmpce_waitq;
 			bmpce->bmpce_waitq = NULL;
 		}
 		bmpce_handle_lru_locked(bmpce, bmpc, BIORQ_READ, 0);
 		if (!rc)
-			/* EIO's are always unlocked inside 
+			/* EIO's are always unlocked inside
 			 *   bmpce_handle_lru_locked()
 			 */
 			BMPCE_ULOCK(bmpce);
@@ -1293,9 +1293,9 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 	bmpces_cbarg = PSCALLOC((nbmpce + 1) * sizeof(void *));
 	iovs = PSCALLOC(nbmpce * sizeof(*iovs));
 
-	for (i=0; i < nbmpce; i++) {		
+	for (i=0; i < nbmpce; i++) {
 		bmpce = bmpces_cbarg[i] = bmpces[i];
-		psc_assert(!(bmpce->bmpce_flags & BMPCE_EIO));	
+		psc_assert(!(bmpce->bmpce_flags & BMPCE_EIO));
 		psc_assert(bmpce->bmpce_base);
 
 		if (!i) {
@@ -1310,7 +1310,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 	/* Terminate the array.
 	 */
 	bmpces_cbarg[i] = NULL;
-	
+
 	csvc = msl_bmap_to_csvc(b, 0);
 	if (csvc == NULL) {
 		rc = ENOTCONN;
@@ -1350,7 +1350,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 		 */
 		pll_addtail(&bmap_2_bmpc(b)->bmpc_pndg_ra, bmpces[i]);
 		/* Once the bmpce's are on the bmpc_pndg_ra list they're
-		 *   counted as pending I/O's.  Therefore the bmap won't 
+		 *   counted as pending I/O's.  Therefore the bmap won't
 		 *   be freed prematurely if we drop ref here.
 		 */
 		bmap_op_done_type(b, BMAP_OPCNT_READA);
@@ -2093,12 +2093,12 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 			    s + i, tsize, tlen, off, roff, rw, rc);
 			if (msl_fd_offline_retry(mfh))
 				goto retry_bmap;
-			switch (rc) {
+			switch (abs(rc)) {
 //			case SLERR_BADCRC:
 //				rc = EIO;
 //				break;
 			case SLERR_ION_OFFLINE:
-				rc = EHOSTUNREACH;
+				rc = -EHOSTUNREACH;
 				break;
 			}
 			goto out;
