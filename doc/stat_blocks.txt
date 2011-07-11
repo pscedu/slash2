@@ -3,9 +3,6 @@ $Id$
 This document describes the implementation of 'struct stat' st_blocks
 support in the SLASH2 file system.
 
-This design does not support the 'cluster_noshared' I/O server resource
-type.
-
 When CRC updates are sent from the I/O server, sliod tacks the value of
 stat(2) st_blocks for the file into the RPC.
 

@@ -49,7 +49,6 @@ struct slashrpc_cservice;
 enum sl_res_type {
 	SLREST_NONE,
 	SLREST_ARCHIVAL_FS,
-	SLREST_CLUSTER_NOSHARE_FS,
 	SLREST_COMPUTE,
 	SLREST_MDS,
 	SLREST_PARALLEL_FS,
@@ -58,7 +57,6 @@ enum sl_res_type {
 
 #define RES_ISFS(res)							\
 	((res)->res_type == SLREST_ARCHIVAL_FS	||			\
-	 (res)->res_type == SLREST_CLUSTER_NOSHARE_FS ||		\
 	 (res)->res_type == SLREST_PARALLEL_FS	||			\
 	 (res)->res_type == SLREST_STANDALONE_FS)
 

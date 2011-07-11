@@ -41,16 +41,15 @@
 __static const char *slconn_restypes[] = {
 	"client",
 	"archiver",
-	"serialfs",
 	"compute",
 	"mds",
 	"parallelfs",
 	"standalone",
-	"?"
 };
 
 void
-sl_conn_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
+sl_conn_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
 {
 	printf("%-16s %35s %-10s %5s %5s %4s\n",
 	    "network-resource", "host", "type", "flags", "txcr", "#ref");
