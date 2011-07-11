@@ -165,11 +165,15 @@ int
 slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct slictlmsg_fileop *sfop = m;
+	struct sli_import_arg a;
 	int fl = 0;
 
+	a.mh = mh;
+	a.fd = fd;
+	a.sfop = sfop;
 	if (sfop->sfop_flags & SLI_CTL_FOPF_RECURSIVE)
 		fl |= PFL_FILEWALKF_RECURSIVE;
-	return (pfl_filewalk(sfop->sfop_fn, fl, sli_import, sfop));
+	return (pfl_filewalk(sfop->sfop_fn, fl, sli_import, &a));
 }
 
 int
