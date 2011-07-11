@@ -45,6 +45,14 @@ servers which the MDS uses in bmap assignment.
 changes we'll be forced to modify internal MDS structures manually and 
 will be forced to restart all clients and sliods.
 
+4) To support archiver reads, we'll need to place fuse requests onto a 
+list such that we do not tie up fuse fsthreads.  Once the reads are satisfied
+the request will be replied.  
+
+A similar mechanism may be needed on the sliod so that io threads aren't 
+needlessly blocked on tape accesses.
+
+Question:  are non-blocking reads or aio supported by XFS / DMAPI / DMF?
 -----------------------------------------------------------------------
 * Bmpce Write
 There may be some advantage to maintaining a seq or numeric window id for
