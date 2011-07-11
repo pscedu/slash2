@@ -167,7 +167,10 @@ enum {
 	SRMT_SYMLINK,				/* symlink(2) */
 	SRMT_UNLINK,				/* unlink(2) */
 	SRMT_WRITE,				/* write(2) */
-	SRMT_XCTL				/* ancillary operation */
+	SRMT_XCTL,				/* ancillary operation */
+
+	/* import/export */
+	SRMT_IMPORT				/* trash storage space for a given FID+GEN */
 };
 
 /* ----------------------------- BEGIN MESSAGES ----------------------------- */
@@ -359,16 +362,18 @@ struct srm_forward_rep {
 
 /* -------------------------- BEGIN BMAP MESSAGES --------------------------- */
 
+#define NPREFIOS		1
+
 struct srm_leasebmap_req {
 	struct slash_fidgen	fg;
-	sl_ios_id_t		prefios;	/* client's preferred IOS ID */
+	sl_ios_id_t		prefios[NPREFIOS];/* client's preferred IOS ID */
 	sl_bmapno_t		bmapno;		/* Starting bmap index number */
 	 int32_t		rw;		/* 'enum rw' value for access */
 	uint32_t		flags;		/* see SRM_LEASEBMAPF_* below */
 } __packed;
 
-#define SRM_LEASEBMAPF_DIRECTIO	  (1 << 0)	/* client wants direct I/O */
-#define SRM_LEASEBMAPF_GETREPLTBL (1 << 1)	/* fetch inode replica table */
+#define SRM_LEASEBMAPF_DIRECTIO		(1 << 0)	/* client wants direct I/O */
+#define SRM_LEASEBMAPF_GETREPLTBL	(1 << 1)	/* fetch inode replica table */
 
 struct srm_leasebmap_rep {
 	struct srt_bmapdesc	sbd;		/* descriptor for bmap */
@@ -412,7 +417,7 @@ struct srm_getbmap_full_rep {
 
 struct srm_bmap_chwrmode_req {
 	struct srt_bmapdesc	sbd;
-	sl_ios_id_t		prefios;	/* preferred I/O system ID (if WRITE) */
+	sl_ios_id_t		prefios[NPREFIOS];	/* preferred I/O system ID (if WRITE) */
 	 int32_t		_pad;
 } __packed;
 
@@ -656,7 +661,7 @@ struct srm_create_req {
 	uint32_t		mode;		/* mode_t permission for new file */
 
 	/* parameters for fetching first bmap */
-	sl_ios_id_t		prefios;	/* preferred I/O system ID */
+	sl_ios_id_t		prefios[NPREFIOS];/* preferred I/O system ID */
 	uint32_t		flags;		/* see SRM_BMAPF_* flags */
 	 int32_t		_pad;
 } __packed;
@@ -850,5 +855,15 @@ struct srm_unlink_req {
 } __packed;
 
 #define srm_unlink_rep		srm_getattr_rep
+
+/* ---------------------- BEGIN IMPORT/EXPORT MESSAGES ---------------------- */
+
+struct srm_import_req {
+	struct slash_fidgen	pfg;		/* destination parent dir */
+	char			cpn[SL_NAME_MAX + 1];
+	struct srt_stat		sstb;
+} __packed;
+
+#define srm_import_rep		srm_generic_rep
 
 #endif /* _SLASHRPC_H_ */

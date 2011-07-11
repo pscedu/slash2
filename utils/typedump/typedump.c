@@ -270,6 +270,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_getbmap_full_req);
 	PRTYPE(struct srm_getbmapminseq_rep);
 	PRTYPE(struct srm_getbmapminseq_req);
+	PRTYPE(struct srm_import_req);
 	PRTYPE(struct srm_io_rep);
 	PRTYPE(struct srm_io_req);
 	PRTYPE(struct srm_leasebmap_rep);
@@ -382,6 +383,7 @@ main(int argc, char *argv[])
 	PRVAL(MS_READAHEAD_MINSEQ);
 	PRVAL(NBREPLST);
 	PRVAL(NBRPOL);
+	PRVAL(NPREFIOS);
 	PRVAL(NSLVRCRC_THRS);
 	PRVAL(NUM_BMAP_FLUSH_THREADS);
 	PRVAL(REPL_MAX_INFLIGHT_SLVRS);
@@ -640,6 +642,7 @@ main(int argc, char *argv[])
 	PRVAL(SRMT_GETBMAP);
 	PRVAL(SRMT_GETBMAPCRCS);
 	PRVAL(SRMT_GETBMAPMINSEQ);
+	PRVAL(SRMT_IMPORT);
 	PRVAL(SRMT_LINK);
 	PRVAL(SRMT_LOOKUP);
 	PRVAL(SRMT_MKDIR);

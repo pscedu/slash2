@@ -32,7 +32,9 @@
 #include "ctl_iod.h"
 #include "ctlsvr.h"
 #include "repl_iod.h"
+#include "rpc_iod.h"
 #include "sliod.h"
+#include "slutil.h"
 
 struct psc_lockedlist psc_mlists;
 struct psc_lockedlist psc_odtables;
@@ -58,11 +60,104 @@ slictlcmd_export(int fd, struct psc_ctlmsghdr *mh, void *m)
 }
 
 int
-sli_import(const char *fn, const struct stat *stb, void *arg)
+sli_fcmh_lookup_fid(const struct slash_fidgen *pfg, const char *cpn,
+    struct slash_fidgen *cfg)
 {
-	struct slictlmsg_fileop *sfop = arg;
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
+	struct srm_lookup_req *mq;
+	struct srm_lookup_rep *mp;
 	int rc = 0;
 
+	rc = SL_RSX_NEWREQ(csvc, SRMT_LOOKUP, rq, mq, mp);
+	if (rc)
+		goto out;
+	mq->pfg = *pfg;
+	strlcpy(mq->name, cpn, sizeof(mq->name));
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	if (rc == 0)
+		rc = mp->rc;
+	if (rc)
+		goto out;
+
+	*cfg = mp->attr.sst_fg;
+
+ out:
+	if (rq)
+		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
+	return (rc);
+}
+
+struct sli_import_arg {
+	struct psc_ctlmsghdr	*mh;
+	struct slictlmsg_fileop	*sfop;
+	int			 fd;
+};
+
+int
+sli_import(const char *fn, const struct stat *stb, void *arg)
+{
+	char cpn[SL_NAME_MAX + 1];
+	struct sli_import_arg *a = arg;
+	struct slictlmsg_fileop *sfop = a->sfop;
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
+	struct psc_ctlmsghdr *mh = a->mh;
+	struct srm_import_req *mq;
+	struct srm_import_rep *mp;
+	struct slash_fidgen fg;
+	char *p, *np;
+	int rc;
+
+	fg.fg_fid = FID_ANY;
+
+	for (p = sfop->sfop_fn2; p; p = np) {
+		np = strchr(p + 1, '/');
+		if (np && np - p == 1)
+			continue;
+		if (np - p > SL_PATH_MAX) {
+			rc = psc_ctlsenderr(a->fd, mh, "%s: %s",
+			    fn, slstrerror(ENAMETOOLONG));
+			goto out;
+		}
+		strlcpy(cpn, p, np - p);
+		rc = sli_fcmh_lookup_fid(&fg, cpn, &fg);
+		if (rc || fg.fg_fid == FID_ANY) {
+			rc = psc_ctlsenderr(a->fd, mh, "%s: %s",
+			    fn, slstrerror(rc));
+			goto out;
+		}
+	}
+
+	if (fg.fg_fid == FID_ANY) {
+		rc = psc_ctlsenderr(a->fd, mh, "%s: %s",
+		    fn, slstrerror(ENOENT));
+		goto out;
+	}
+
+	rc = SL_RSX_NEWREQ(csvc, SRMT_IMPORT, rq, mq, mp);
+	if (rc) {
+		rc = psc_ctlsenderr(a->fd, mh, "%s: %s",
+		    fn, slstrerror(rc));
+		goto out;
+	}
+	mq->pfg = fg;
+	strlcpy(mq->cpn, pfl_basename(fn), sizeof(mq->cpn));
+	sl_externalize_stat(stb, &mq->sstb);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	if (rc == 0)
+		rc = mp->rc;
+	if (rc)
+		rc = psc_ctlsenderr(a->fd, mh, "%s: %s",
+		    fn, slstrerror(rc));
+
+ out:
+	if (rq)
+		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
 	return (rc);
 }
 
