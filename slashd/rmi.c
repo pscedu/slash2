@@ -389,6 +389,65 @@ slm_rmi_handle_bmap_getminseq(struct pscrpc_request *rq)
 	return (mds_bmap_getcurseq(NULL, &mp->seqno));
 }
 
+int
+slm_rmi_handle_import(struct pscrpc_request *rq)
+{
+	struct fidc_membh *p = NULL, *c;
+	struct srm_import_req *mq;
+	struct srm_import_rep *mp;
+	void *mdsio_data;
+	uint32_t pol;
+
+	SL_RSX_ALLOCREP(rq, mq, mp);
+
+	/* Lookup the parent directory in the cache so that the
+	 *   slash2 ino can be translated into the inode for the
+	 *   underlying fs.
+	 */
+	mp->rc = slm_fcmh_get(&mq->pfg, &p);
+	if (mp->rc)
+		goto out;
+
+	mq->name[sizeof(mq->name) - 1] = '\0';
+
+	DEBUG_FCMH(PLL_DEBUG, p, "create op start for %s", mq->name);
+
+	mds_reserve_slot(1);
+	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &mq->creds,
+	    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->name, NULL,
+	    &mp->cattr, &mdsio_data, mdslog_namespace,
+	    slm_get_next_slashfid, 0);
+	mds_unreserve_slot(1);
+
+	if (mp->rc)
+		goto out;
+
+	DEBUG_FCMH(PLL_DEBUG, p, "create op done for %s", mq->name);
+
+	mdsio_release(&rootcreds, mdsio_data);
+
+	DEBUG_FCMH(PLL_DEBUG, p, "mdsio_release() done for %s", mq->name);
+
+	mp->rc2 = slm_fcmh_get(&mp->cattr.sst_fg, &c);
+	if (mp->rc2)
+		goto out;
+
+	FCMH_LOCK(p);
+	pol = p->fcmh_sstb.sstd_freplpol;
+	fcmh_2_ino(c)->ino_replpol = pol;
+	FCMH_ULOCK(fcmh_2_inoh(c));
+
+	/* obtain lease for first bmap as optimization */
+	mp->flags = mq->flags;
+
+	fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+
+ out:
+	if (p)
+		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+	return (0);
+}
+
 /**
  * slm_rmi_handle_ping - Handle a PING request from ION.
  * @rq: request.
@@ -449,6 +508,14 @@ slm_rmi_handler(struct pscrpc_request *rq)
 	/* replication messages */
 	case SRMT_REPL_SCHEDWK:
 		rc = slm_rmi_handle_repl_schedwk(rq);
+		break;
+
+	/* import/export messages */
+	case SRMT_LOOKUP:
+		rc = slm_rmc_handle_lookup(rq);
+		break;
+	case SRMT_IMPORT:
+		rc = slm_rmi_handle_import(rq);
 		break;
 
 	default:
