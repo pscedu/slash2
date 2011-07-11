@@ -1291,6 +1291,10 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 	psc_assert(nbmpce <= BMPC_MAXBUFSRPC);
 
 	bmpces_cbarg = PSCALLOC((nbmpce + 1) * sizeof(void *));
+	/* Terminate the array.
+	 */
+	bmpces_cbarg[nbmpce] = NULL;
+
 	iovs = PSCALLOC(nbmpce * sizeof(*iovs));
 
 	for (i=0; i < nbmpce; i++) {
@@ -1307,9 +1311,6 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 		iovs[i].iov_base = bmpce->bmpce_base;
 		iovs[i].iov_len  = BMPC_BUFSZ;
 	}
-	/* Terminate the array.
-	 */
-	bmpces_cbarg[i] = NULL;
 
 	csvc = msl_bmap_to_csvc(b, 0);
 	if (csvc == NULL) {
@@ -1370,8 +1371,10 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 	 */
 	BMPC_LOCK(bmap_2_bmpc(b));
 	for (i=0; i < nbmpce; i++) {
+		bmpce = bmpces[i];
+
 		if (added)
-			pll_remove(&bmap_2_bmpc(b)->bmpc_pndg_ra, bmpces[i]);
+			pll_remove(&bmap_2_bmpc(b)->bmpc_pndg_ra, bmpces);
 
 		BMPCE_LOCK(bmpce);
 		bmpce->bmpce_flags |= BMPCE_EIO;
