@@ -66,10 +66,10 @@ bmpce_lookup_locked(struct bmap_pagecache *bmpc, struct bmpc_ioreq *biorq,
 	while (!bmpce) {
 		bmpce = SPLAY_FIND(bmap_pagecachetree, &bmpc->bmpc_tree,
 			   &bmpce_search);
-		if (bmpce) {
+		if (bmpce)
 			break;
 
-		} else if (bmpce_new == NULL) {
+		else if (bmpce_new == NULL) {
 			BMPC_ULOCK(bmpc);
 			bmpce_new = psc_pool_get(bmpcePoolMgr);
 			BMPC_LOCK(bmpc);
