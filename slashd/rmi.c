@@ -25,6 +25,7 @@
 
 #include <stdio.h>
 
+#include "pfl/fs.h"
 #include "pfl/str.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
@@ -392,14 +393,23 @@ slm_rmi_handle_bmap_getminseq(struct pscrpc_request *rq)
 int
 slm_rmi_handle_import(struct pscrpc_request *rq)
 {
-	struct fidc_membh *p = NULL, *c;
+	struct fidc_membh *p = NULL, *c = NULL;
 	struct srm_import_req *mq;
 	struct srm_import_rep *mp;
 	struct slash_creds cr;
+	struct bmapc_memb *b;
+	struct sl_resm *r;
 	void *mdsio_data;
+	sl_bmapno_t bno;
 	uint32_t pol;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
+
+	r = libsl_try_nid2resm(rq->rq_export->exp_connection->c_peer.nid);
+	if (r == NULL) {
+		mp->rc = SLERR_IOS_UNKNOWN;
+		goto out;
+	}
 
 	/* Lookup the parent directory in the cache so that the
 	 *   slash2 ino can be translated into the inode for the
@@ -411,13 +421,8 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 
 	mq->cpn[sizeof(mq->cpn) - 1] = '\0';
 
-	DEBUG_FCMH(PLL_DEBUG, p, "create op start for %s", mq->cpn);
-
-	cr.scr_uid = mq->sstb.sst_uid;
-	cr.scr_gid = mq->sstb.sst_gid;
-
 	mds_reserve_slot(1);
-	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &cr,
+	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &rootcreds,
 	    O_CREAT | O_EXCL | O_RDWR, mq->sstb.sst_mode, mq->cpn, NULL,
 	    NULL, &mdsio_data, mdslog_namespace, slm_get_next_slashfid,
 	    0);
@@ -426,11 +431,18 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
-	DEBUG_FCMH(PLL_DEBUG, p, "create op done for %s", mq->cpn);
+	mds_reserve_slot(1);
+	mp->rc = mdsio_setattr(0, &mq->sstb, PSCFS_SETATTRF_DATASIZE |
+	    PSCFS_SETATTRF_UID | PSCFS_SETATTRF_GID |
+	    PSCFS_SETATTRF_ATIME | PSCFS_SETATTRF_MTIME |
+	    SL_SETATTRF_NBLKS, &rootcreds, NULL, mdsio_data,
+	    mdslog_namespace);
+	mds_unreserve_slot(1);
 
 	mdsio_release(&cr, mdsio_data);
 
-	DEBUG_FCMH(PLL_DEBUG, p, "mdsio_release() done for %s", mq->cpn);
+	if (mp->rc)
+		goto out;
 
 	mp->rc = slm_fcmh_get(NULL, &c);
 	if (mp->rc)
@@ -442,11 +454,30 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 
 	FCMH_LOCK(c);
 	fcmh_2_ino(c)->ino_replpol = pol;
-	FCMH_ULOCK(c);
+	fcmh_2_ino(c)->ino_nrepls = 1;
+	fcmh_2_ino(c)->ino_repls[0].bs_id = r->resm_iosid;
+	fcmh_2_ino(c)->ino_repl_nblks[0] = mq->sstb.sst_blocks;
+	mp->rc = mds_inode_write(fcmh_2_inoh(c), mdslog_ino_repls, c);
 
-	fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+	if (mp->rc)
+		goto out;
+
+	for (bno = 0; bno < mq->sstb.sst_size / SLASH_BMAP_SIZE; bno++) {
+		mp->rc = mds_bmap_load(c, bno, &b);
+		if (mp->rc)
+			goto out;
+		mp->rc = mds_repl_inv_except(b, r->resm_iosid, 0);
+		if (mp->rc)
+			goto out;
+		// XXX write crc table
+		mp->rc = mds_bmap_write_repls_rel(b);
+		if (mp->rc)
+			goto out;
+	}
 
  out:
+	if (c)
+		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 	return (0);
