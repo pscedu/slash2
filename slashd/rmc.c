@@ -519,6 +519,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	INOH_LOCK(fcmh_2_inoh(c));
 	fcmh_2_ino(c)->ino_replpol = pol;
 	INOH_ULOCK(fcmh_2_inoh(c));
+//	mp->rc = mds_inode_write(fcmh_2_inoh(c), mdslog_ino_repls, c);
 
 	/* obtain lease for first bmap as optimization */
 	mp->flags = mq->flags;
