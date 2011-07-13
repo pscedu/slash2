@@ -1,0 +1,54 @@
+# $Id$
+
+# See slash.conf(5) for more information.
+
+# Archiver configuration
+set port=1307;
+set net=tcp4;
+
+# Pull in other/local config files
+# include "/etc/slcfg.d/*"
+
+site @PSC {
+	site_desc	= "PSC archiver";
+	site_id		= 0;
+	resource md {
+		desc	= "PSC archiver MDS";
+		type	= mds;
+		id	= 1;
+		nodes	= illusion1;
+#		jrnldev	= /dev/sdah;
+	}
+
+	resource tahini-e {
+		desc	= "Old tape archiver";
+		type	= archival_fs;
+		id	= 2;
+		nodes	= tahini-o;
+		fsroot	= /usr/ue;
+	}
+
+	resource tahini-o {
+		desc	= "Old tape archiver";
+		type	= archival_fs;
+		id	= 3;
+		nodes	= tahini-e;
+		fsroot	= /usr/uo;
+	}
+
+	resource sense0 {
+		desc	= "PSC disk-based archiver";
+		type	= standalone_fs;
+		id	= 4;
+		nodes	= sense0;
+		fsroot	= /arc-slio;
+	}
+
+	resource sense1 {
+		desc	= "PSC disk-based archiver";
+		type	= standalone_fs;
+		id	= 5;
+		nodes	= sense1;
+		fsroot	= /arc-slio;
+	}
+}
