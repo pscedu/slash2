@@ -45,8 +45,7 @@ __static const char *slconn_restypes[] = {
 	"compute",
 	"mds",
 	"parallelfs",
-	"standalone",
-	"?"
+	"standalone"
 };
 
 void
