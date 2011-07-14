@@ -17,6 +17,11 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * The FID cache is an in-memory representation of file objects normally
+ * accessed by FID (global SLASH2 file identifier).
+ */
+
 #include <pthread.h>
 #include <stdio.h>
 
@@ -67,8 +72,8 @@ fcmh_destroy(struct fidc_membh *f)
 }
 
 /**
- * fcmh_setattr - Update the high-level app stat(2)-like attribute buffer
- *	for a FID cache member.
+ * fcmh_setattr - Update the high-level app stat(2)-like attribute
+ *	buffer for a FID cache member.
  * @fcmh: FID cache member to update.
  * @sstb: incoming stat attributes.
  * @flags: behavioral flags.
@@ -223,8 +228,8 @@ _fidc_lookup_fid(const struct pfl_callerinfo *pci, slfid_t f)
 /**
  * _fidc_lookup - Search the FID cache for a member by its FID,
  *	optionally creating it.
- * Notes:  Newly acquired fcmh's are ref'd with FCMH_OPCNT_NEW, reused ones
- *	are ref'd with FCMH_OPCNT_LOOKUP_FIDC.
+ * Notes:  Newly acquired fcmh's are ref'd with FCMH_OPCNT_NEW, reused
+ *	ones are ref'd with FCMH_OPCNT_LOOKUP_FIDC.
  */
 int
 _fidc_lookup(const struct pfl_callerinfo *pci,
@@ -380,10 +385,11 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	} else {
 		/*
 		 * Call service specific constructor slc_fcmh_ctor(),
-		 * slm_fcmh_ctor(), and sli_fcmh_ctor() to initialize their
-		 * private fields that follow the main fcmh structure. It is
-		 * safe to not lock because we don't touch the state, and
-		 * other thread should be waiting for us.
+		 * slm_fcmh_ctor(), and sli_fcmh_ctor() to initialize
+		 * their private fields that follow the main fcmh
+		 * structure.  It is safe to not lock because we don't
+		 * touch the state, and other thread should be waiting
+		 * for us.
 		 */
 		rc = sl_fcmh_ops.sfop_ctor(fcmh);
 		if (rc) {
@@ -455,10 +461,11 @@ fcmh_getsize(struct fidc_membh *h)
 }
 
 /**
- * fcmh_op_start_type: We only move a cache item to the busy list if we
- * know that the reference being taken is a long one. For short-lived references,
- * we avoid moving the cache item around.  Also, we only move a cache item back
- * to the idle list when the _last_ reference is dropped.
+ * _fcmh_op_start_type: We only move a cache item to the busy list if we
+ *	know that the reference being taken is a long one. For
+ *	short-lived references, we avoid moving the cache item around.
+ *	Also, we only move a cache item back to the idle list when the
+ *	_last_ reference is dropped.
  */
 void
 _fcmh_op_start_type(const struct pfl_callerinfo *pci,
@@ -472,9 +479,10 @@ _fcmh_op_start_type(const struct pfl_callerinfo *pci,
 
 	DEBUG_FCMH(PLL_DEBUG, f, "took ref (type=%d)", type);
 
-	/* Only 2 types of references may be long standing, FCMH_OPCNT_OPEN
-	 *   and FCMH_OPCNT_BMAP.  Other ref types should not move the fcmh
-	 *   to the busy list.
+	/*
+	 * Only 2 types of references may be long standing,
+	 * FCMH_OPCNT_OPEN and FCMH_OPCNT_BMAP.  Other ref types should
+	 * not move the fcmh to the busy list.
 	 */
 	if (type == FCMH_OPCNT_OPEN || type == FCMH_OPCNT_BMAP) {
 		if (f->fcmh_flags & FCMH_CAC_IDLE) {

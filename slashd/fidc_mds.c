@@ -28,7 +28,6 @@
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
-#include "psc_util/rlimit.h"
 
 #include "cache_params.h"
 #include "fid.h"
