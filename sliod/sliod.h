@@ -30,6 +30,7 @@
 
 /* sliod thread types */
 enum {
+	SLITHRT_ASYNC_IO,	/* asynchronous I/O handlers */
 	SLITHRT_BMAPRLS,	/* notify MDS of completed write bmaps */
 	SLITHRT_CONN,		/* connection monitor */
 	SLITHRT_CTL,		/* control processor */

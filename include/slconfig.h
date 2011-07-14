@@ -53,7 +53,7 @@ enum sl_res_type {
 	SLREST_COMPUTE,
 	SLREST_MDS,
 	SLREST_PARALLEL_FS,
-	SLREST_STANDALONE_FS,
+	SLREST_STANDALONE_FS
 };
 
 #define RES_ISFS(res)							\
@@ -131,6 +131,7 @@ struct sl_gconf {
 	char			 gconf_journal[PATH_MAX];
 	char			 gconf_zpcachefn[PATH_MAX];
 	char			 gconf_zpname[NAME_MAX];
+	int			 gconf_async_io;
 
 	struct psc_lockedlist	 gconf_sites;
 	struct psc_hashtbl	 gconf_nid_hashtbl;

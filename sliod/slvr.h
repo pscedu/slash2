@@ -20,13 +20,15 @@
 #ifndef _SLIOD_SLVR_H_
 #define _SLIOD_SLVR_H_
 
+#include <aio.h>
+
 #include "psc_ds/dynarray.h"
 #include "psc_ds/listcache.h"
 #include "psc_ds/tree.h"
 #include "psc_ds/vbitmap.h"
+#include "psc_rpc/rpc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/log.h"
-
 
 #include "bmap.h"
 #include "bmap_iod.h"
@@ -144,7 +146,7 @@ struct slvr_ref {
 	(s)->slvr_flags & SLVR_SLBFREEING	? "b" : "-",		\
 	(s)->slvr_flags & SLVR_REPLSRC		? "S" : "-",		\
 	(s)->slvr_flags & SLVR_REPLDST		? "T" : "-",		\
-	(s)->slvr_flags & SLVR_REPLFAIL		? "f" : "-"
+	(s)->slvr_flags & SLVR_REPLFAIL		? "x" : "-"
 
 #define DEBUG_SLVR(level, s, fmt, ...)					\
 	psclogs((level), SLISS_SLVR, "slvr@%p num=%hu pw=%hu "		\
@@ -158,13 +160,25 @@ struct slvr_ref {
 	    (s)->slvr_pri, (s)->slvr_slab, DEBUG_SLVR_FLAGS(s),		\
 	    ## __VA_ARGS__)
 
+#define RIC_MAX_SLVRS_PER_IO 2
+
+struct sli_iocb {
+	struct psc_listentry	  iocb_lentry;
+	struct slvr_ref		 *iocb_slvr;
+	struct pscrpc_export	 *iocb_peer;
+	struct aiocb		  iocb_aiocb;
+	ssize_t			  iocb_rc;
+	enum rw			  iocb_rw;
+	void			(*iocb_cbf)(struct sli_iocb *);
+};
+
 struct slvr_ref *
 	slvr_lookup(uint32_t, struct bmap_iod_info *, enum rw);
 void	slvr_cache_init(void);
 void	slvr_clear_inuse(struct slvr_ref *, int, uint32_t);
 int	slvr_do_crc(struct slvr_ref *);
 int	slvr_fsbytes_wio(struct slvr_ref *, uint32_t, uint32_t);
-int	slvr_io_prep(struct slvr_ref *, uint32_t, uint32_t, enum rw);
+int	slvr_io_prep(struct pscrpc_export *, struct slvr_ref *, uint32_t, uint32_t, enum rw);
 void	slvr_repl_prep(struct slvr_ref *, int);
 void	slvr_rio_done(struct slvr_ref *);
 void	slvr_schedule_crc(struct slvr_ref *);
