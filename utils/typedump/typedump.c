@@ -185,6 +185,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct msfs_thread);
 	PRTYPE(struct msl_fhent);
 	PRTYPE(struct msl_ra);
+	PRTYPE(struct msrci_thread);
 	PRTYPE(struct msrcm_thread);
 	PRTYPE(struct resm_cli_info);
 	PRTYPE(struct resm_iod_info);
@@ -213,11 +214,13 @@ main(int argc, char *argv[])
 	PRTYPE(struct slash_inode_handle);
 	PRTYPE(struct slash_inode_od);
 	PRTYPE(struct slashrpc_cservice);
+	PRTYPE(struct slc_async_req);
 	PRTYPE(struct slconn_thread);
 	PRTYPE(struct slctlmsg_conn);
 	PRTYPE(struct slctlmsg_fcmh);
 	PRTYPE(struct sli_cli_csvc_cpart);
 	PRTYPE(struct sli_exp_cli);
+	PRTYPE(struct sli_iocb);
 	PRTYPE(struct sli_repl_workrq);
 	PRTYPE(struct slictlmsg_fileop);
 	PRTYPE(struct slictlmsg_replwkst);
@@ -387,6 +390,7 @@ main(int argc, char *argv[])
 	PRVAL(NSLVRCRC_THRS);
 	PRVAL(NUM_BMAP_FLUSH_THREADS);
 	PRVAL(REPL_MAX_INFLIGHT_SLVRS);
+	PRVAL(RIC_MAX_SLVRS_PER_IO);
 	PRVAL(SITE_NAME_MAX);
 	PRVAL(SLASH_BLKS_PER_SLVR);
 	PRVAL(SLASH_BMAP_CRCSIZE);
@@ -455,8 +459,12 @@ main(int argc, char *argv[])
 	PRVAL(SL_RES_BITS);
 	PRVAL(SL_SITE_BITS);
 	PRVAL(SL_TWO_NAME_MAX);
+	PRVAL(SRCI_BUFSZ);
 	PRVAL(SRCI_BULK_PORTAL);
 	PRVAL(SRCI_CTL_PORTAL);
+	PRVAL(SRCI_NBUFS);
+	PRVAL(SRCI_NTHREADS);
+	PRVAL(SRCI_REPSZ);
 	PRVAL(SRCI_REP_PORTAL);
 	PRVAL(SRCI_REQ_PORTAL);
 	PRVAL(SRCI_VERSION);
@@ -541,6 +549,7 @@ main(int argc, char *argv[])
 	PRVAL(MSTHRT_FSMGR);
 	PRVAL(MSTHRT_LNETAC);
 	PRVAL(MSTHRT_NBRQ);
+	PRVAL(MSTHRT_RCI);
 	PRVAL(MSTHRT_RCM);
 	PRVAL(MSTHRT_TIOS);
 	PRVAL(MSTHRT_USKLNDPL);
@@ -575,6 +584,7 @@ main(int argc, char *argv[])
 	PRVAL(SLCONNT_CLI);
 	PRVAL(SLCONNT_IOD);
 	PRVAL(SLCONNT_MDS);
+	PRVAL(SLITHRT_ASYNC_IO);
 	PRVAL(SLITHRT_BMAPRLS);
 	PRVAL(SLITHRT_CONN);
 	PRVAL(SLITHRT_CTL);
