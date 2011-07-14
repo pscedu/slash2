@@ -220,7 +220,7 @@ slvr_fsio_done(struct sli_iocb *iocb)
 {
 	struct aiocb *aio = &iocb->iocb_aiocb;
 	struct slvr_ref *s;
-	int rc, nblks;
+	int rc = iocb->iocb_rc, nblks;
 
 	s = iocb->iocb_slvr;
 	if (iocb->iocb_rc) {
