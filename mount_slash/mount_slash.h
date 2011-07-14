@@ -49,13 +49,18 @@ enum {
 	MSTHRT_FSMGR,			/* pscfs manager */
 	MSTHRT_LNETAC,			/* lustre net accept thr */
 	MSTHRT_NBRQ,			/* non-blocking RPC reply handler */
-	MSTHRT_RCM,			/* service RPC reqs for client from MDS */
+	MSTHRT_RCI,			/* service RPC reqs for CLI from ION */
+	MSTHRT_RCM,			/* service RPC reqs for CLI from MDS */
 	MSTHRT_TIOS,			/* timer iostat updater */
 	MSTHRT_USKLNDPL			/* userland socket lustre net dev poll thr */
 };
 
 struct msrcm_thread {
 	struct pscrpc_thread		 mrcm_prt;
+};
+
+struct msrci_thread {
+	struct pscrpc_thread		 mrci_prt;
 };
 
 struct msfs_thread {
@@ -103,6 +108,12 @@ struct msl_ra {
 	int				 mra_bkwd;	/* reverse access io */
 };
 
+struct slc_async_req {
+	struct psc_listentry		 car_lentry;
+	struct bmpc_ioreq		*car_ioreq;
+	struct psc_dynarray		*car_bmpce;
+};
+
 struct msl_fhent {			 /* XXX rename */
 	psc_spinlock_t			 mfh_lock;
 	struct fidc_membh		*mfh_fcmh;
@@ -143,6 +154,7 @@ struct resm_cli_info {
 	struct pfl_mutex		 rmci_mutex;
 	struct psc_multiwaitcond	 rmci_mwc;
 	struct srm_bmap_release_req	 rmci_bmaprls;
+	struct psc_lockedlist		 rmci_async_reqs;
 };
 
 static __inline struct resm_cli_info *
@@ -195,5 +207,8 @@ extern struct psc_waitq		 bmapflushwaitq;
 extern struct psc_listcache	 bmapReadAheadQ;
 extern struct pscrpc_nbreqset	*ra_nbreqset;
 extern struct pscrpc_nbreqset	*pndgBmaplsReqs;
+
+extern struct psc_poolmaster	 slc_async_req_poolmaster;
+extern struct psc_poolmgr	*slc_async_req_pool;
 
 #endif /* _MOUNT_SLASH_H_ */

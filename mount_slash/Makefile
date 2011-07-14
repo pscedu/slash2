@@ -14,6 +14,7 @@ SRCS+=		dircache.c
 SRCS+=		fidc_cli.c
 SRCS+=		main.c
 SRCS+=		mount_slash_int.c
+SRCS+=		rci.c
 SRCS+=		rcm.c
 SRCS+=		rpc_cli.c
 SRCS+=		timer_cli.c

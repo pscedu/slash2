@@ -2186,7 +2186,12 @@ msl_init(void)
 	fidc_init(sizeof(struct fcmh_cli_info), FIDC_CLI_DEFSZ);
 	bmpc_global_init();
 	bmap_cache_init(sizeof(struct bmap_cli_info));
-	dircache_init(&dircacheMgr, "dircache", 262144);
+	dircache_init(&dircacheMgr, "dircache", 256 * 1024);
+
+	psc_poolmaster_init(&slc_async_req_poolmaster,
+	    struct slc_async_req, car_lentry, PPMF_AUTO, 64, 64, 0,
+	    NULL, NULL, NULL, "asyncrq");
+	slc_async_req_pool = psc_poolmaster_getmgr(&slc_async_req_poolmaster);
 
 	ra_nbreqset = pscrpc_nbreqset_init(NULL, NULL);
 

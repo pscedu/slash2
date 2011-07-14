@@ -42,7 +42,7 @@ slc_rpc_initsvc(void)
 {
 	struct pscrpc_svc_handle *svh;
 
-	/* Setup request service for client from MDS. */
+	/* Setup request service for CLI from MDS. */
 	svh = PSCALLOC(sizeof(*svh));
 	svh->svh_nbufs = SRCM_NBUFS;
 	svh->svh_bufsz = SRCM_BUFSZ;
@@ -55,6 +55,20 @@ slc_rpc_initsvc(void)
 	svh->svh_handler = slc_rcm_handler;
 	strlcpy(svh->svh_svc_name, SRCM_SVCNAME, sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct msrcm_thread);
+
+	/* Setup request service for CLI from ION. */
+	svh = PSCALLOC(sizeof(*svh));
+	svh->svh_nbufs = SRCI_NBUFS;
+	svh->svh_bufsz = SRCI_BUFSZ;
+	svh->svh_reqsz = SRCI_BUFSZ;
+	svh->svh_repsz = SRCI_REPSZ;
+	svh->svh_req_portal = SRCI_REQ_PORTAL;
+	svh->svh_rep_portal = SRCI_REP_PORTAL;
+	svh->svh_type = MSTHRT_RCI;
+	svh->svh_nthreads = SRCI_NTHREADS;
+	svh->svh_handler = slc_rci_handler;
+	strlcpy(svh->svh_svc_name, SRCI_SVCNAME, sizeof(svh->svh_svc_name));
+	pscrpc_thread_spawn(svh, struct msrci_thread);
 }
 
 int

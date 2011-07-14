@@ -68,6 +68,9 @@ struct psc_iostats	msl_diowr_stat;
 struct psc_iostats	msl_rdcache_stat;
 struct psc_iostats	msl_racache_stat;
 
+struct psc_poolmaster	 slc_async_req_poolmaster;
+struct psc_poolmgr	*slc_async_req_pool;
+
 void bmap_flush_resched(struct bmpc_ioreq *);
 
 int
@@ -888,7 +891,19 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	DEBUG_BIORQ(PLL_INFO, r, "callback bmap=%p", b);
 
 	rc = msl_getrqstatus(csvc, rq);
-	if (rc) {
+	if (rc == EWOULDBLOCK) {
+		struct slc_async_req *car;
+		struct sl_resm *resm;
+
+		resm = libsl_nid2resm(rq->rq_export->exp_connection->c_peer.nid);
+
+		car = psc_pool_get(slc_async_req_pool);
+		car->car_bmpce = a;
+		car->car_ioreq = r;
+		pll_add(&resm2rmci(resm)->rmci_async_reqs, car);
+		sl_csvc_decref(csvc);
+		goto out;
+	} else if (rc) {
 		DEBUG_REQ(PLL_ERROR, rq, "non-zero status %d", rc);
 		DEBUG_BMAP(PLL_ERROR, b, "non-zero status %d", rc);
 		DEBUG_BIORQ(PLL_ERROR, r, "non-zero status %d", rc);
@@ -1868,7 +1883,7 @@ msl_pages_copyout(struct bmpc_ioreq *r, char *buf)
 
 	psc_assert(npages);
 
-	/* Due to page prefecthing, the pages contained in
+	/* Due to page prefetching, the pages contained in
 	 *   biorq_pages may exceed the requested len.
 	 */
 	for (i = 0; i < npages && tsize; i++) {
@@ -2189,10 +2204,10 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 					 */
 					if (bref)
 						bmap_op_done_type(bref,
-							  BMAP_OPCNT_BIORQ);
+						    BMAP_OPCNT_BIORQ);
 					bref = r[i]->biorq_bmap;
 					bmap_op_start_type(bref,
-							   BMAP_OPCNT_BIORQ);
+					    BMAP_OPCNT_BIORQ);
 				} else
 					rc = msl_offline_retry_ignexpire(r[i]);
 				if (rc) {

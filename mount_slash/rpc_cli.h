@@ -38,12 +38,19 @@ extern struct pscrpc_completion rpcComp;
 #define MSL_CBARG_RA			4
 #define MSL_CBARG_BMAP			4 /* don't mix with RA! */
 
-/* SLASH RPC channel for client from MDS. */
+/* SLASH RPC channel for CLI from MDS. */
 #define SRCM_NTHREADS			8
 #define SRCM_NBUFS			64
 #define SRCM_BUFSZ			512
 #define SRCM_REPSZ			512
 #define SRCM_SVCNAME			"msrcm"
+
+/* SLASH RPC channel for CLI from ION. */
+#define SRCI_NTHREADS			8
+#define SRCI_NBUFS			64
+#define SRCI_BUFSZ			512
+#define SRCI_REPSZ			512
+#define SRCI_SVCNAME			"msrci"
 
 #define MSL_RMC_NEWREQ_PFCC(pfcc, f, csvc, op, rq, mq, mp, rc)		\
 	do {								\
@@ -96,6 +103,7 @@ int	slc_rmc_setmds(const char *);
 
 #define slc_rmc_retry(pfr, rcp)	slc_rmc_retry_pfcc(pscfs_getclientctx(pfr), (rcp))
 
+int	slc_rci_handler(struct pscrpc_request *);
 int	slc_rcm_handler(struct pscrpc_request *);
 
 static __inline struct psc_multiwait *
