@@ -363,8 +363,13 @@ libsl_init(int pscnet_mode, int ismds)
 			    nodeResm->resm_res->res_jrnldev,
 			    sizeof(globalConfig.gconf_journal));
 
-		if (nodeResm->resm_type == SLREST_ARCHIVAL_FS)
+		if (nodeResm->resm_type == SLREST_ARCHIVAL_FS) {
+#ifndef HAVE_AIO
+			psc_fatalx("asynchronous I/O not supported on "
+			    "this platform");
+#endif
 			globalConfig.gconf_async_io = 1;
+		}
 
 		psclog_info("node is a member of resource '%s'",
 		    nodeResm->resm_res->res_name);

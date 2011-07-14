@@ -20,8 +20,6 @@
 #define PSC_SUBSYS SLISS_SLVR
 #include "subsys_iod.h"
 
-#include <aio.h>
-
 #include "psc_ds/listcache.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_rpc/rpc.h"

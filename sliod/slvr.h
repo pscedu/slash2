@@ -20,8 +20,7 @@
 #ifndef _SLIOD_SLVR_H_
 #define _SLIOD_SLVR_H_
 
-#include <aio.h>
-
+#include "pfl/aio.h"
 #include "psc_ds/dynarray.h"
 #include "psc_ds/listcache.h"
 #include "psc_ds/tree.h"
