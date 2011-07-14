@@ -379,8 +379,8 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
 	ureqlock(&bmpce->bmpce_lock, locked);
 }
 
-/*
- ** biorq_is_my_bmpce - Informs the caller that biorq, r, owns the
+/**
+ * biorq_is_my_bmpce - Informs the caller that biorq, r, owns the
  *    the page cache entry, b.  This state implies that the thread
  *    processing 'r' is responsible for allocating a memory page
  *    and possible faulting in that page from the ION.
@@ -405,10 +405,11 @@ void *bmpc_alloc(void);
 void  bmpc_free(void *);
 void  bmpc_freeall_locked(struct bmap_pagecache *);
 void  bmpce_eio_remove(struct bmap_pagecache *, struct bmap_pagecache_entry *);
-struct bmap_pagecache_entry * bmpce_lookup_locked(struct bmap_pagecache *,
-	  struct bmpc_ioreq *, uint32_t, struct psc_waitq *);
+struct bmap_pagecache_entry *
+	bmpce_lookup_locked(struct bmap_pagecache *, struct bmpc_ioreq *,
+	    uint32_t, struct psc_waitq *);
 void  bmpce_handle_lru_locked(struct bmap_pagecache_entry *,
-			      struct bmap_pagecache *, int, int);
+	    struct bmap_pagecache *, int, int);
 
 extern struct psc_poolmgr	*bmpcePoolMgr;
 extern struct bmpc_mem_slbs	 bmpcSlabs;
@@ -454,7 +455,8 @@ bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len,
 	INIT_SPINLOCK(&ioreq->biorq_lock);
 
 	PFL_GETTIMESPEC(&ioreq->biorq_issue);
-	timespecadd(&ioreq->biorq_issue, &bmapFlushDefMaxAge, &ioreq->biorq_issue);
+	timespecadd(&ioreq->biorq_issue, &bmapFlushDefMaxAge,
+	    &ioreq->biorq_issue);
 
 	ioreq->biorq_off  = off;
 	ioreq->biorq_len  = len;
