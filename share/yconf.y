@@ -138,29 +138,29 @@ static struct sl_resm	  *currentResm;
 
 %start config
 
-%token NUM
+%token BOOL
+%token FLOATVAL
+%token GLOBPATH
 %token HEXNUM
 %token NAME
+%token NUM
 %token PATHNAME
-%token GLOBPATH
-%token BOOL
 %token SIZEVAL
-%token FLOATVAL
 
-%token SET
 %token INCLUDE
-%token RESOURCE_PROFILE
 %token RESOURCE_NAME
+%token RESOURCE_PROFILE
 %token RESOURCE_TYPE
-%token SITE_PROFILE
+%token SET
 %token SITE_NAME
+%token SITE_PROFILE
 
-%token IPADDR
-%token PEERTAG
 %token IOSTAG
-%token NODESTAG
-%token QUOTEDS
+%token IPADDR
 %token LNETNAME
+%token NODESTAG
+%token PEERTAG
+%token QUOTEDS
 
 %%
 
@@ -311,8 +311,8 @@ resource_start	: RESOURCE_PROFILE NAME '{' {
 resource_def	: statements
 		;
 
-ioslist         : IOSTAG '=' peers ';'
-                ;
+ioslist		: IOSTAG '=' peers ';'
+		;
 
 peerlist	: PEERTAG '=' peers ';'
 		;
@@ -349,18 +349,18 @@ statements	: /* nothing */
 		;
 
 statement	: restype_stmt
-		| path_stmt
-		| num_stmt
 		| bool_stmt
-		| size_stmt
+		| float_stmt
 		| glob_stmt
 		| hexnum_stmt
-		| float_stmt
+		| ioslist
 		| lnetname_stmt
-		| peerlist
-                | ioslist
 		| nodeslist
+		| num_stmt
+		| path_stmt
+		| peerlist
 		| quoteds_stmt
+		| size_stmt
 		;
 
 restype_stmt	: NAME '=' RESOURCE_TYPE ';' {
