@@ -171,6 +171,7 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 		csvc->csvc_lasterrno = rc;
 	} else
 		sl_csvc_online(csvc);
+	sl_csvc_wake(csvc);
 	sl_csvc_unlock(csvc);
 	return (0);
 }
