@@ -69,7 +69,7 @@ bmap_flush_reap_rpcs(void)
 		PLL_INIT(&hold, struct pscrpc_request_set, set_lentry);
 
 	psclog_debug("outstandingRpcCnt=%d (before) rpcComp.rqcomp_compcnt=%d",
-	    atomic_read(&outstandingRpcCnt), 
+	    atomic_read(&outstandingRpcCnt),
 	    atomic_read(&rpcComp.rqcomp_compcnt));
 
 	/* Only this thread may pull from pndgWrtReqSets listcache
@@ -310,7 +310,7 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r)
 }
 
 __static void
-bmap_flush_inflight_unset(struct bmpc_ioreq *r) 
+bmap_flush_inflight_unset(struct bmpc_ioreq *r)
 {
 	struct bmap_pagecache_entry *bmpce;
 	int i;
@@ -321,7 +321,7 @@ bmap_flush_inflight_unset(struct bmpc_ioreq *r)
 	r->biorq_flags &= ~(BIORQ_INFL|BIORQ_SCHED);
 	DEBUG_BIORQ(PLL_WARN, r, "unset inflight XXX is my lease still valid?");
 	freelock(&r->biorq_lock);
-	
+
 	DYNARRAY_FOREACH(bmpce, i, &r->biorq_pages) {
 		BMPCE_LOCK(bmpce);
 		bmpce->bmpce_flags &= ~BMPCE_INFLIGHT;
@@ -547,7 +547,7 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs,
 			 *   accounted for but first ensure that all of the
 			 *   pages have been scheduled for IO.
 			 */
-			//for (j=0; j < psc_dynarray_len(&r->biorq_pages); j++) {		
+			//for (j=0; j < psc_dynarray_len(&r->biorq_pages); j++) {
 			DYNARRAY_FOREACH(bmpce, j, &r->biorq_pages) {
 				//bmpce = psc_dynarray_getpos(&r->biorq_pages, j);
 				//psc_assert(bmpce->bmpce_flags & BMPCE_INFLIGHT);
@@ -749,7 +749,7 @@ bmap_flushable(struct bmapc_memb *b)
 		/*
 		 * If the current request is contained completely
 		 * within a previous request, should we count them
-		 * separately? -- No, because the bmpce pages are 
+		 * separately? -- No, because the bmpce pages are
 		 * mapped in the rpc bulk, not anything in the
 		 * biorq.
 		 */
@@ -970,26 +970,26 @@ bmap_flush(void)
 					continue;
 				}
 			} else {
-				/* Check for the BMPCE_INFLIGHT bit which is 
-				 *  used to prevent out-of-order writes 
-				 *  from being sent to the I/O server.  
+				/* Check for the BMPCE_INFLIGHT bit which is
+				 *  used to prevent out-of-order writes
+				 *  from being sent to the I/O server.
 				 *  That situation is possible since large
 				 *  RPCs could take 32x longer to ship.
-				 * 
+				 *
 				 *  BMPCE_INFLIGHT is not set until the bulk
 				 *  is created.
 				 *
-				 * XXX Write me for directio situations also.			   
-				 */ 
+				 * XXX Write me for directio situations also.
+				 */
 				postpone = 0;
-				
+
 				DYNARRAY_FOREACH(bmpce, j, &r->biorq_pages) {
 					//for (j=0; j < psc_dynarray_len(&r->biorq_pages); j++) {
 					//bmpce = psc_dynarray_getpos(&r->biorq_pages, j);
-					
+
 					BMPCE_LOCK(bmpce);
 					if (bmpce->bmpce_flags & BMPCE_INFLIGHT) {
-						DEBUG_BMPCE(PLL_NOTIFY, bmpce, 
+						DEBUG_BMPCE(PLL_NOTIFY, bmpce,
 						    "postpone for inflight to clear");
 						postpone = 1;
 					}
@@ -1029,10 +1029,10 @@ bmap_flush(void)
 			 */
 			bmap_flush_send_rpcs(biorqs, iovs, niovs);
 			PSCFREE(iovs);
-		
-			while ((MAX_OUTSTANDING_RPCS - 
+
+			while ((MAX_OUTSTANDING_RPCS -
 				atomic_read(&outstandingRpcCnt)) <= 0) {
-				psc_waitq_waitrel(&bmapflushwaitq, NULL, 
+				psc_waitq_waitrel(&bmapflushwaitq, NULL,
 						  &bmapFlushWaitTime);
 			}
 		}
@@ -1280,9 +1280,9 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				psc_assert(!(b->bcm_flags & BMAP_DIRTY));
 				psc_assert(b->bcm_flags & BMAP_TIMEOQ);
 				if (!lc_conjoint(&bmapTimeoutQ, b))
-                                       /* Put these at the back so we can 
-                                        *   make better progress.
-                                        */
+				       /* Put these at the back so we can
+					*   make better progress.
+					*/
 					lc_addtail(&bmapTimeoutQ, b);
 			}
 			BMAP_ULOCK(b);
@@ -1316,7 +1316,7 @@ msbmapflushthr_main(__unusedx struct psc_thread *thr)
 	while (pscthr_run()) {
 		msbmflthr(pscthr_get())->mbft_failcnt = 1;
 
-		psc_waitq_waitrel(&bmapflushwaitq, NULL, 
+		psc_waitq_waitrel(&bmapflushwaitq, NULL,
 		  &bmapFlushWaitTime);
 
 		PFL_GETTIMESPEC(&ts0);
@@ -1327,11 +1327,11 @@ msbmapflushthr_main(__unusedx struct psc_thread *thr)
 		    PSCPRI_TIMESPEC_ARGS(&ts1));
 
 		PFL_GETTIMESPEC(&ts0);
-		while ((MAX_OUTSTANDING_RPCS - 
+		while ((MAX_OUTSTANDING_RPCS -
 			atomic_read(&outstandingRpcCnt)) <= 0) {
-			psc_waitq_waitrel(&bmapflushwaitq, NULL, 
+			psc_waitq_waitrel(&bmapflushwaitq, NULL,
 					  &bmapFlushWaitTime);
-                        psclog_warnx("stall flush (outstandingRpcCnt=%d)",
+			psclog_warnx("stall flush (outstandingRpcCnt=%d)",
 			     atomic_read(&outstandingRpcCnt));
 		}
 
@@ -1377,24 +1377,24 @@ msbmaprathr_main(__unusedx struct psc_thread *thr)
 		psc_assert(mfh->mfh_flags & MSL_FHENT_RASCHED);
 		PLL_FOREACH_SAFE(bmpce, tmp, &mfh->mfh_ra_bmpces) {
 			/* Check for sequentiality.  Note that since bmpce
-			 *   offsets are intra-bmap, we must check that the 
+			 *   offsets are intra-bmap, we must check that the
 			 *   bmap (bmpce_owner) is the same too.
 			 */
-			if (nbmpces && 
-			    ((bmpce->bmpce_owner != 
-			      bmpces[nbmpces-1]->bmpce_owner) || 
-			     (bmpce->bmpce_off != 
+			if (nbmpces &&
+			    ((bmpce->bmpce_owner !=
+			      bmpces[nbmpces-1]->bmpce_owner) ||
+			     (bmpce->bmpce_off !=
 			      bmpces[nbmpces-1]->bmpce_off + BMPC_BUFSZ)))
 				break;
-			
+
 			pll_remove(&mfh->mfh_ra_bmpces, bmpce);
 			bmpces[nbmpces++] = bmpce;
-			
+
 			if (nbmpces == mfh->mfh_ra.mra_nseq ||
-                            nbmpces == MAX_BMPCES_PER_RPC)
+			    nbmpces == MAX_BMPCES_PER_RPC)
 				break;
 		}
-		
+
 		if (pll_empty(&mfh->mfh_ra_bmpces)) {
 			mfh->mfh_flags &= ~MSL_FHENT_RASCHED;
 			if (mfh->mfh_flags & MSL_FHENT_CLOSING)
@@ -1402,14 +1402,14 @@ msbmaprathr_main(__unusedx struct psc_thread *thr)
 		} else
 			lc_addtail(&bmapReadAheadQ, mfh);
 		freelock(&mfh->mfh_lock);
-		
+
 		for (i=0; i < nbmpces; i++) {
 			/* XXX If read / wr refs are 0 then msl_bmpce_getbuf()
 			 *    should be called in a non-blocking fashion.
 			 */
 			bmpce = bmpces[i];
 			if (i)
-				psc_assert(bmpce->bmpce_owner == 
+				psc_assert(bmpce->bmpce_owner ==
 				   bmpces[i-1]->bmpce_owner);
 
 			BMPCE_LOCK(bmpce);
