@@ -127,7 +127,6 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 	return (rc);
 }
 
-
 __static int
 msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 			 struct pscrpc_async_args *args)
@@ -155,6 +154,7 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 	    &bmap_2_bci(b)->bci_etime);
 	timespecadd(&bmap_2_bci(b)->bci_xtime, &msl_bmap_max_lease,
 	    &bmap_2_bci(b)->bci_xtime);
+
  out:
 	BMAP_CLEARATTR(b, BMAP_CLI_LEASEEXTREQ);
 	BMAP_ULOCK(b);

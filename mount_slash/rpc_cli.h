@@ -17,8 +17,8 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#ifndef _SLC_RPC_H_
-#define _SLC_RPC_H_
+#ifndef _RPC_CLI_H_
+#define _RPC_CLI_H_
 
 #include "mount_slash.h"
 #include "slconn.h"
@@ -128,16 +128,16 @@ msl_getmw(void)
 	psc_fatalx("unknown thread type");
 }
 
-#define MSL_GET_RQ_STATUS(csvc, rq, mp, rc)				\
+#define MSL_GET_RQ_STATUS(csvc, rq, mp, error)				\
 	do {								\
-		(rc) = (rq)->rq_repmsg->status;				\
-		if ((rc) == 0)						\
-			(rc) = (rq)->rq_status;				\
-		if ((rc) == 0)						\
-			(rc) = authbuf_check((rq), PSCRPC_MSG_REPLY);	\
-		if ((rc) == 0)						\
-			(rc) = (mp) ? (mp)->rc : ENOMSG;		\
-		if ((rc) == SLERR_NOTCONN)				\
+		(error) = (rq)->rq_repmsg->status;			\
+		if ((error) == 0)					\
+			(error) = (rq)->rq_status;			\
+		if ((error) == 0)					\
+			(error) = authbuf_check((rq), PSCRPC_MSG_REPLY);\
+		if ((error) == 0)					\
+			(error) = (mp) ? (mp)->rc : ENOMSG;		\
+		if ((error) == SLERR_NOTCONN)				\
 			sl_csvc_disconnect(csvc);			\
 	} while (0)
 
@@ -146,7 +146,7 @@ msl_getmw(void)
 		struct type *_mp;					\
 									\
 		_mp = pscrpc_msg_buf((rq)->rq_repmsg, 0, sizeof(*_mp));	\
-		GET_RQ_STATUS((csvc), (rq), _mp, (rc));			\
+		MSL_GET_RQ_STATUS((csvc), (rq), _mp, (rc));		\
 	} while (0)
 
-#endif /* _SLC_RPC_H_ */
+#endif /* _RPC_CLI_H_ */

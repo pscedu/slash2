@@ -843,26 +843,6 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 	return (NULL);
 }
 
-int
-msl_getrqstatus(struct slashrpc_cservice *csvc,
-    struct pscrpc_request *rq)
-{
-	struct srm_io_rep *mp;
-	int rc;
-
-	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
-	rc = rq->rq_repmsg->status;
-	if (rc == 0)
-		rc = rq->rq_status;
-	if (rc == 0)
-		rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
-	if (rc == 0)
-		rc = mp ? mp->rc : ENOMSG;
-	if (csvc && rc == SLERR_NOTCONN)
-		sl_csvc_disconnect(csvc);
-	return (rc);
-}
-
 /**
  * msl_read_cb - RPC callback used only for read or RBW operations.
  *	The primary purpose is to set the bmpce's to DATARDY so that
@@ -890,7 +870,7 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	DEBUG_BMAP(PLL_INFO, b, "callback");
 	DEBUG_BIORQ(PLL_INFO, r, "callback bmap=%p", b);
 
-	rc = msl_getrqstatus(csvc, rq);
+	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
 	if (rc == EWOULDBLOCK) {
 		struct slc_async_req *car;
 		struct sl_resm *resm;
@@ -980,8 +960,8 @@ msl_readahead_cb(struct pscrpc_request *rq,
 	struct bmap_pagecache_entry *bmpce, **bmpces;
 	struct slashrpc_cservice *csvc;
 	struct psc_waitq *wq = NULL;
-	struct bmap_pagecache *bmpc;
 	struct bmapc_memb *b = NULL;
+	struct bmap_pagecache *bmpc;
 	int rc, i;
 
 	bmpces = args->pointer_arg[MSL_CBARG_BMPCE];
@@ -989,12 +969,12 @@ msl_readahead_cb(struct pscrpc_request *rq,
 	bmpc = args->pointer_arg[MSL_CBARG_RA];
 	psc_assert(bmpces && csvc && bmpc);
 
-	rc = msl_getrqstatus(csvc, rq);
+	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
 
 	DEBUG_REQ(PLL_INFO, rq, "bmpces=%p", bmpces);
 
 	BMPC_LOCK(bmpc);
-	for (i=0 ;; i++) {
+	for (i = 0;; i++) {
 		bmpce = bmpces[i];
 		if (!bmpce)
 			break;
@@ -1078,7 +1058,7 @@ msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 	DEBUG_REQ(PLL_INFO, rq, "cb");
 
-	rc = msl_getrqstatus(csvc, rq);
+	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
 	if (rc) {
 		DYNARRAY_FOREACH(r, i, biorqs)
 			bmap_flush_resched(r);
@@ -1105,7 +1085,7 @@ msl_dio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 
-	rc = msl_getrqstatus(csvc, rq);
+	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
 
 	psc_assert(mq);
 

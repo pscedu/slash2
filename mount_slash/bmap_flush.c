@@ -198,7 +198,7 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	int rc;
 
-	rc = msl_getrqstatus(csvc, rq);
+	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
 
 	atomic_dec(&outstandingRpcCnt);
 	DEBUG_REQ(rq->rq_err ? PLL_ERROR : PLL_INFO, rq,
