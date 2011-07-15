@@ -67,12 +67,13 @@ sl_conn_gethostname(const char *p, char *buf)
 	if (psc_ctl_nodns)
 		goto cancel;
 
+	memset(&sun, 0, sizeof(sun));
 	if (inet_pton(AF_INET, p, &sun.sin.sin_addr) != 1)
 		goto cancel;
 
 	sun.sa.sa_family = AF_INET;
-	if (getnameinfo(&sun.sa, sizeof(sun), buf, NI_MAXHOST, NULL, 0,
-	    0))
+	if (getnameinfo(&sun.sa, sizeof(struct sockaddr_in), buf, NI_MAXHOST, NULL, 0,
+	    NI_NAMEREQD))
 		goto cancel;
 
 	return;
