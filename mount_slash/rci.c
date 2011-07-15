@@ -21,6 +21,7 @@
 
 #include "psc_rpc/rpc.h"
 
+#include "bmpc.h"
 #include "rpc_cli.h"
 #include "slashrpc.h"
 
@@ -35,11 +36,42 @@
 int
 slc_rci_handle_read(struct pscrpc_request *rq)
 {
+	struct psc_lockedlist *pll;
+	struct slc_async_req *car;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
+	struct bmpc_ioreq *r;
+	struct sl_resm *m;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	return (0);
+	m = libsl_try_nid2resm(rq->rq_export->exp_connection->c_peer.nid);
+	if (m == NULL) {
+		mp->rc = SLERR_ION_UNKNOWN;
+		goto error;
+	}
+	pll = &resm2rmci(m)->rmci_async_reqs;
+
+	PLL_LOCK(pll);
+	PLL_FOREACH(car, pll) {
+		r = car->car_ioreq;
+		if (SAMEFG(&mq->sbd.sbd_fg,
+		    &r->biorq_bmap->bcm_fcmh->fcmh_fg) &&
+		    r->biorq_off == mq->offset &&
+		    r->biorq_len == mq->size)
+			break;
+	}
+	PLL_ULOCK(pll);
+	if (car == NULL) {
+		mp->rc = EINVAL;
+		goto error;
+	}
+//	car->car_bmpce
+//	car->car_ioreq
+
+ error:
+	if (mp->rc)
+		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
+	return (mp->rc);
 }
 
 /**
