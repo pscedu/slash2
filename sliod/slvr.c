@@ -216,7 +216,7 @@ slvr_clear_inuse(struct slvr_ref *s, int sblk, uint32_t size)
 }
 
 void
-slvr_fsio_done(struct sli_iocb *iocb)
+slvr_fsaio_done(struct sli_iocb *iocb)
 {
 	struct aiocb *aio = &iocb->iocb_aiocb;
 	struct slvr_ref *s;
@@ -291,7 +291,7 @@ sli_aio_register(struct slvr_ref *s, uint32_t size, int sblk,
 	memset(iocb, 0, sizeof(*iocb));
 	iocb->iocb_slvr = s;
 	iocb->iocb_peer = exp;
-	iocb->iocb_cbf = slvr_fsio_done;
+	iocb->iocb_cbf = slvr_fsaio_done;
 	iocb->iocb_rw = rw;
 
 	aio = &iocb->iocb_aiocb;
@@ -320,11 +320,9 @@ __static int
 slvr_fsio(struct pscrpc_export *exp, struct slvr_ref *s, int sblk,
     uint32_t size, enum rw rw)
 {
-	int	i;
-	ssize_t	rc;
-	int	nblks;
-	int	save_errno = 0;
+	int i, nblks, save_errno = 0;
 	uint64_t *v8;
+	ssize_t	rc;
 
 	nblks = (size + SLASH_SLVR_BLKSZ - 1) / SLASH_SLVR_BLKSZ;
 
