@@ -398,15 +398,15 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	struct srm_import_rep *mp;
 	struct slash_creds cr;
 	struct bmapc_memb *b;
-	struct sl_resm *r;
+	struct sl_resm *m;
 	void *mdsio_data;
 	sl_bmapno_t bno;
 	uint32_t pol;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	r = libsl_try_nid2resm(rq->rq_export->exp_connection->c_peer.nid);
-	if (r == NULL) {
+	m = libsl_try_nid2resm(rq->rq_export->exp_connection->c_peer.nid);
+	if (m == NULL) {
 		mp->rc = SLERR_IOS_UNKNOWN;
 		goto out;
 	}
@@ -455,7 +455,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	FCMH_LOCK(c);
 	fcmh_2_ino(c)->ino_replpol = pol;
 	fcmh_2_ino(c)->ino_nrepls = 1;
-	fcmh_2_ino(c)->ino_repls[0].bs_id = r->resm_iosid;
+	fcmh_2_ino(c)->ino_repls[0].bs_id = m->resm_iosid;
 	fcmh_2_ino(c)->ino_repl_nblks[0] = mq->sstb.sst_blocks;
 	mp->rc = mds_inode_write(fcmh_2_inoh(c), mdslog_ino_repls, c);
 

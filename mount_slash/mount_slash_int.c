@@ -873,14 +873,14 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
 	if (rc == EWOULDBLOCK) {
 		struct slc_async_req *car;
-		struct sl_resm *resm;
+		struct sl_resm *m;
 
-		resm = libsl_nid2resm(rq->rq_export->exp_connection->c_peer.nid);
+		m = libsl_nid2resm(rq->rq_export->exp_connection->c_peer.nid);
 
 		car = psc_pool_get(slc_async_req_pool);
 		car->car_bmpce = a;
 		car->car_ioreq = r;
-		pll_add(&resm2rmci(resm)->rmci_async_reqs, car);
+		pll_add(&resm2rmci(m)->rmci_async_reqs, car);
 		sl_csvc_decref(csvc);
 		goto out;
 	} else if (rc) {
@@ -1318,7 +1318,8 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 		goto error;
 	//XXX adjust rpc timeout according to bci_xtime
 
-	rc = rsx_bulkclient(rq, BULK_PUT_SINK, SRIC_BULK_PORTAL, iovs, nbmpce);
+	rc = rsx_bulkclient(rq, BULK_PUT_SINK, SRIC_BULK_PORTAL, iovs,
+	    nbmpce);
 	if (rc)
 		goto error;
 
