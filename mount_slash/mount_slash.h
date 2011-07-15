@@ -109,9 +109,11 @@ struct msl_ra {
 };
 
 struct slc_async_req {
-	struct psc_listentry		 car_lentry;
-	struct bmpc_ioreq		*car_ioreq;
-	struct psc_dynarray		*car_bmpce;
+	struct psc_listentry		  car_lentry;
+	struct pscrpc_async_args	  car_argv;
+	int				(*car_cbf)(struct pscrpc_request *, int,
+						struct pscrpc_async_args *);
+	uint64_t			  car_id;
 };
 
 struct msl_fhent {			 /* XXX rename */
@@ -172,7 +174,7 @@ void     msl_reada_rpc_launch(struct bmap_pagecache_entry **, int);
 struct slashrpc_cservice *
 	 msl_bmap_to_csvc(struct bmapc_memb *, int);
 void	 msl_bmap_reap_init(struct bmapc_memb *, const struct srt_bmapdesc *);
-int	 msl_dio_cb(struct pscrpc_request *, struct pscrpc_async_args *);
+int	 msl_dio_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 int	 msl_io(struct msl_fhent *, char *, size_t, off_t, enum rw);
 int	 msl_write_rpc_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int	 msl_write_rpcset_cb(struct pscrpc_request_set *, void *, int);
@@ -180,7 +182,7 @@ int	 msl_stat(struct fidc_membh *, void *);
 
 struct msl_fhent * msl_fhent_new(struct fidc_membh *);
 
-int	 msl_readahead_cb(struct pscrpc_request *, struct pscrpc_async_args *);
+int	 msl_readahead_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 
 void	 msctlthr_spawn(void);
 void	 mstimerthr_spawn(void);

@@ -174,6 +174,15 @@ sl_resm_hldrop(struct sl_resm *resm)
 		PLL_FOREACH(mrsq, &msctl_replsts)
 			mrsq_release(mrsq, ECONNRESET);
 		PLL_ULOCK(&msctl_replsts);
+	} else if (resm->resm_csvc->csvc_ctype == SLREST_ARCHIVAL_FS) {
+		struct psc_lockedlist *pll;
+		struct slc_async_req *car;
+
+		pll = &resm2rmci(resm)->rmci_async_reqs;
+		while ((car = pll_get(pll)) != NULL) {
+			car->car_cbf(NULL, ECONNRESET, &car->car_argv);
+			psc_pool_return(slc_async_req_pool, car);
+		}
 	}
 }
 

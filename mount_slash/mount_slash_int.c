@@ -113,7 +113,8 @@ msl_bmpce_getbuf(struct bmap_pagecache_entry *bmpce)
 	ureqlock(&bmpce->bmpce_lock, locked);
 }
 
-/* msl_biorq_build -
+/**
+ * msl_biorq_build -
  * Notes: roff is bmap aligned.
  */
 __static void
@@ -661,7 +662,6 @@ bmap_biorq_expire(struct bmapc_memb *b)
 	psc_waitq_wakeall(&bmapflushwaitq);
 }
 
-
 void
 bmap_biorq_waitempty(struct bmapc_memb *b)
 {
@@ -843,6 +843,27 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 	return (NULL);
 }
 
+int
+msl_add_async_req(struct pscrpc_request *rq,
+    int (*cbf)(struct pscrpc_request *, int, struct pscrpc_async_args *),
+    const struct pscrpc_async_args *av)
+{
+	struct slc_async_req *car;
+	struct srm_io_rep *mp;
+	struct sl_resm *m;
+
+	mp = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mp));
+
+	m = libsl_nid2resm(rq->rq_export->exp_connection->c_peer.nid);
+
+	car = psc_pool_get(slc_async_req_pool);
+	car->car_cbf = cbf;
+	car->car_id = mp->id;
+	memcpy(&car->car_argv, av, sizeof(*av));
+	pll_add(&resm2rmci(m)->rmci_async_reqs, car);
+	return (0);
+}
+
 /**
  * msl_read_cb - RPC callback used only for read or RBW operations.
  *	The primary purpose is to set the bmpce's to DATARDY so that
@@ -851,40 +872,29 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
  *     copied out to the applicaton buffers.
  */
 int
-msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
+msl_read_cb(struct pscrpc_request *rq, int rc,
+    struct pscrpc_async_args *args)
 {
-	int clearpages = 0, op = rq->rq_reqmsg->opc, i, rc;
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct psc_dynarray *a = args->pointer_arg[MSL_CBARG_BMPCE];
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
 	struct bmap_pagecache_entry *bmpce;
 	struct bmapc_memb *b;
+	int clearpages = 0, i;
 
 	b = r->biorq_bmap;
 
 	psc_assert(a);
 	psc_assert(b);
-	psc_assert(op == SRMT_READ);
 
-	DEBUG_REQ(PLL_INFO, rq, "bmap=%p biorq=%p", b, r);
+	if (rq)
+		DEBUG_REQ(PLL_INFO, rq, "bmap=%p biorq=%p", b, r);
 	DEBUG_BMAP(PLL_INFO, b, "callback");
 	DEBUG_BIORQ(PLL_INFO, r, "callback bmap=%p", b);
 
-	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
-	if (rc == EWOULDBLOCK) {
-		struct slc_async_req *car;
-		struct sl_resm *m;
-
-		m = libsl_nid2resm(rq->rq_export->exp_connection->c_peer.nid);
-
-		car = psc_pool_get(slc_async_req_pool);
-		car->car_bmpce = a;
-		car->car_ioreq = r;
-		pll_add(&resm2rmci(m)->rmci_async_reqs, car);
-		sl_csvc_decref(csvc);
-		goto out;
-	} else if (rc) {
-		DEBUG_REQ(PLL_ERROR, rq, "non-zero status %d", rc);
+	if (rc) {
+		if (rq)
+			DEBUG_REQ(PLL_ERROR, rq, "non-zero status %d", rc);
 		DEBUG_BMAP(PLL_ERROR, b, "non-zero status %d", rc);
 		DEBUG_BIORQ(PLL_ERROR, r, "non-zero status %d", rc);
 		goto out;
@@ -954,24 +964,32 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 }
 
 int
-msl_readahead_cb(struct pscrpc_request *rq,
-    struct pscrpc_async_args *args)
+msl_read_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
-	struct bmap_pagecache_entry *bmpce, **bmpces;
-	struct slashrpc_cservice *csvc;
-	struct psc_waitq *wq = NULL;
-	struct bmapc_memb *b = NULL;
-	struct bmap_pagecache *bmpc;
-	int rc, i;
+	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
+	int rc;
 
-	bmpces = args->pointer_arg[MSL_CBARG_BMPCE];
-	csvc = args->pointer_arg[MSL_CBARG_CSVC];
-	bmpc = args->pointer_arg[MSL_CBARG_RA];
-	psc_assert(bmpces && csvc && bmpc);
+	psc_assert(rq->rq_reqmsg->opc == SRMT_READ);
 
 	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
+	if (rc == EWOULDBLOCK)
+		return (msl_add_async_req(rq, msl_read_cb, args));
+	return (msl_read_cb(rq, rc, args));
+}
 
-	DEBUG_REQ(PLL_INFO, rq, "bmpces=%p", bmpces);
+int
+msl_readahead_cb(struct pscrpc_request *rq, int rc,
+    struct pscrpc_async_args *args)
+{
+	struct bmap_pagecache_entry *bmpce, **bmpces = args->pointer_arg[MSL_CBARG_BMPCE];
+	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
+	struct bmap_pagecache *bmpc = args->pointer_arg[MSL_CBARG_RA];
+	struct psc_waitq *wq = NULL;
+	struct bmapc_memb *b;
+	int i;
+
+	if (rq)
+		DEBUG_REQ(PLL_INFO, rq, "bmpces=%p", bmpces);
 
 	BMPC_LOCK(bmpc);
 	for (i = 0;; i++) {
@@ -1026,6 +1044,19 @@ msl_readahead_cb(struct pscrpc_request *rq,
 }
 
 int
+msl_readahead_cb0(struct pscrpc_request *rq,
+    struct pscrpc_async_args *args)
+{
+	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
+	int rc;
+
+	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
+	if (rc == EWOULDBLOCK)
+		return (msl_add_async_req(rq, msl_readahead_cb, args));
+	return (msl_readahead_cb(rq, rc, args));
+}
+
+int
 msl_write_rpcset_cb(__unusedx struct pscrpc_request_set *set, void *arg,
     int rc)
 {
@@ -1073,20 +1104,21 @@ msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 }
 
 int
-msl_dio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
+msl_dio_cb(struct pscrpc_request *rq, int rc, struct pscrpc_async_args *args)
 {
-	struct slashrpc_cservice *csvc = rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC];
-	int rc, op = rq->rq_reqmsg->opc;
+	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct srm_io_req *mq;
+	int op;
 
 	DEBUG_REQ(PLL_INFO, rq, "cb");
 
+	if (rq == NULL)
+		return (rc);
+
+	op = rq->rq_reqmsg->opc;
 	psc_assert(op == SRMT_READ || op == SRMT_WRITE);
 
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
-
-	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
-
 	psc_assert(mq);
 
 	DEBUG_REQ(PLL_DEBUG, rq,
@@ -1094,6 +1126,19 @@ msl_dio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	    op, mq->offset, mq->size, rc);
 
 	return (rc);
+}
+
+int
+msl_dio_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
+{
+	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
+	int rc;
+
+	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
+	if (rc == EWOULDBLOCK)
+		// sl_csvc_decref(csvc);
+		return (msl_add_async_req(rq, msl_dio_cb, args));
+	return (msl_dio_cb(rq, rc, args));
 }
 
 __static int
@@ -1133,7 +1178,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 		r->biorq_rqset = pscrpc_prep_set();
 
 	/*
-	 * This buffer hasn't been segmented into LNET sized
+	 * This buffer hasn't been segmented into LNET MTU sized
 	 *  chunks.  Set up buffers into 1MB chunks or smaller.
 	 */
 	for (i = 0, nbytes = 0; i < n; i++, nbytes += len) {
@@ -1143,7 +1188,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 		if (rc)
 			goto error;
 
-		rq->rq_interpret_reply = msl_dio_cb;
+		rq->rq_interpret_reply = msl_dio_cb0;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 
 		iovs[i].iov_base = b + nbytes;
@@ -1338,7 +1383,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMPCE] = bmpces_cbarg;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_RA] = bmap_2_bmpc(b);
-	rq->rq_interpret_reply = msl_readahead_cb;
+	rq->rq_interpret_reply = msl_readahead_cb0;
 	rq->rq_comp = &rpcComp;
 
 	for (i=0; i < nbmpce; i++) {
@@ -1471,7 +1516,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 		 *   overkill.
 		 */
 		r->biorq_rqset = pscrpc_prep_set();
-	rq->rq_interpret_reply = msl_read_cb;
+	rq->rq_interpret_reply = msl_read_cb0;
 	pscrpc_set_add_new_req(r->biorq_rqset, rq);
 
 	rc = pscrpc_push_req(rq);

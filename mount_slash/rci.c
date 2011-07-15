@@ -40,7 +40,6 @@ slc_rci_handle_read(struct pscrpc_request *rq)
 	struct slc_async_req *car;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
-	struct bmpc_ioreq *r;
 	struct sl_resm *m;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -53,11 +52,7 @@ slc_rci_handle_read(struct pscrpc_request *rq)
 
 	PLL_LOCK(pll);
 	PLL_FOREACH(car, pll) {
-		r = car->car_ioreq;
-		if (SAMEFG(&mq->sbd.sbd_fg,
-		    &r->biorq_bmap->bcm_fcmh->fcmh_fg) &&
-		    r->biorq_off == mq->offset &&
-		    r->biorq_len == mq->size)
+		if (mq->id == car->car_id)
 			break;
 	}
 	PLL_ULOCK(pll);
@@ -65,8 +60,8 @@ slc_rci_handle_read(struct pscrpc_request *rq)
 		mp->rc = EINVAL;
 		goto error;
 	}
-//	car->car_bmpce
-//	car->car_ioreq
+	car->car_cbf(rq, mq->rc, &car->car_argv);
+	psc_pool_return(slc_async_req_pool, car);
 
  error:
 	if (mp->rc)

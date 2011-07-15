@@ -701,14 +701,15 @@ struct srm_getattr2_rep {
 } __packed;
 
 struct srm_io_req {
-	struct srt_bmapdesc	sbd;
-	uint32_t		ptruncgen;
-	uint32_t		utimgen;
-	uint32_t		flags:31;
+	struct srt_bmapdesc	sbd;		/* bmap descriptor */
+	uint32_t		ptruncgen;	/* partial trunc gen # */
+	uint32_t		utimgen;	/* utimes(2) generation # */
+	uint32_t		flags:31;	/* see SRM_IOF_* */
 	uint32_t		op:1;		/* read/write */
-	uint32_t		size;
+	uint32_t		size;		/* I/O length, always <1MB */
 	uint32_t		offset;		/* relative within bmap */
-	 int32_t		_pad;
+	 int32_t		rc;		/* async I/O return code */
+	uint64_t		id;		/* async I/O identifier */
 /* WRITE data is bulk request. */
 } __packed;
 
@@ -717,10 +718,11 @@ struct srm_io_req {
 #define SRMIOP_WR		1
 
 /* I/O flags */
-#define SRM_IOF_APPEND		(1 << 0)
-#define SRM_IOF_DIO		(1 << 1)
+#define SRM_IOF_APPEND		(1 << 0)	/* ignore offset, send WRITE to EOF */
+#define SRM_IOF_DIO		(1 << 1)	/* direct I/O; no caching */
 
 struct srm_io_rep {
+	uint64_t		id;		/* async I/O identifier */
 	 int32_t		rc;
 	uint32_t		size;
 /* READ data is in bulk reply. */
