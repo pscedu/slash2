@@ -330,7 +330,8 @@ mds_repl_inv_requeue(struct bmapc_memb *b, int idx, int val, void *arg)
 {
 	struct iosidv *qv = arg;
 
-	qv->iosv[qv->nios++].bs_id = fcmh_2_repl(b->bcm_fcmh, idx);
+	if (val == BREPLST_VALID)
+		qv->iosv[qv->nios++].bs_id = fcmh_2_repl(b->bcm_fcmh, idx);
 }
 
 /**
