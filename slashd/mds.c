@@ -248,8 +248,9 @@ mds_bmap_ion_restart(struct bmap_mds_lease *bml)
 
 /**
  * mds_bmap_ion_assign - Bind a bmap to an ION for writing.  The process
- *    involves a round-robin'ing of an I/O system's nodes and attaching a
- *    a resm_mds_info to the bmap, used for establishing connection to the ION.
+ *	involves a round-robin'ing of an I/O system's nodes and
+ *	attaching a resm_mds_info to the bmap, used for establishing
+ *	connection to the ION.
  * @bml: the bmap lease
  * @pios: the preferred I/O system
  */
@@ -283,8 +284,8 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 
 		psclog_warnx("Failed to find pios %d", pios);
 		return (-SLERR_ION_UNKNOWN);
-	} else
-		BMAP_ULOCK(bmap);
+	}
+	BMAP_ULOCK(bmap);
 
 	rpmi = res2rpmi(res);
 	len = psc_dynarray_len(&res->res_members);
@@ -358,9 +359,8 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 		DEBUG_BMAP(PLL_ERROR, bmap, "failed odtable_putitem()");
 		// XXX fix me - dont leak the journal buf!
 		return (-SLERR_XACT_FAIL);
-	} else {
-		BMAP_CLEARATTR(bmap, BMAP_MDS_NOION);
 	}
+	BMAP_CLEARATTR(bmap, BMAP_MDS_NOION);
 
 	/*
 	 * Signify that a ION has been assigned to this bmap.  This
@@ -376,7 +376,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	if (iosidx < 0)
 		psc_fatalx("ios_lookup_add %d: %s", bia.bia_ios,
 		    slstrerror(iosidx));
-	mds_repl_inv_except(bmap, bia.bia_ios, iosidx);
+	mds_repl_inv_except(bmap, iosidx);
 
 	logentry->sjar_flags = SLJ_ASSIGN_REP_NONE;
 	if (nrepls != ih->inoh_ino.ino_nrepls) {
@@ -473,7 +473,7 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 		psc_fatalx("ios_lookup_add %d: %s", bia.bia_ios,
 		   slstrerror(iosidx));
 
-	rc = mds_repl_inv_except(b, bia.bia_ios, iosidx);
+	rc = mds_repl_inv_except(b, iosidx);
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, b, "mds_repl_inv_except() failed");
 		return (-1);

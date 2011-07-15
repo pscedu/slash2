@@ -466,7 +466,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 		mp->rc = mds_bmap_load(c, bno, &b);
 		if (mp->rc)
 			goto out;
-		mp->rc = mds_repl_inv_except(b, r->resm_iosid, 0);
+		mp->rc = mds_repl_inv_except(b, 0);
 		if (mp->rc)
 			goto out;
 		// XXX write crc table

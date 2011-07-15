@@ -320,6 +320,19 @@ _mds_repl_bmap_walk(struct bmapc_memb *bcm, const int *tract,
 	return (rc);
 }
 
+struct iosidv {
+	sl_replica_t	iosv[SL_MAX_REPLICAS];
+	int		nios;
+};
+
+void
+mds_repl_inv_requeue(struct bmapc_memb *b, int idx, int val, void *arg)
+{
+	struct iosidv *qv = arg;
+
+	qv->iosv[qv->nios++].bs_id = fcmh_2_repl(b->bcm_fcmh, idx);
+}
+
 /**
  * mds_repl_inv_except - For the given bmap, change the status of
  *	all its replicas marked "valid" to "invalid" except for the
@@ -329,16 +342,15 @@ _mds_repl_bmap_walk(struct bmapc_memb *bcm, const int *tract,
  *	status after an ION has received some new I/O, which would make
  *	all other existing copies of the bmap on any other replicas old.
  * @b: the bmap.
- * @ios: the ION resource that should stay marked "valid".
- *
- * XXX this should mark others as GARBAGE instead of INVALID to avoid
- *	garbage leaks.
+ * @iosidx: the index of the only ION resource in the inode replica
+ *	table that should be marked "valid".
  */
 int
-mds_repl_inv_except(struct bmapc_memb *b, sl_ios_id_t ios, int iosidx)
+mds_repl_inv_except(struct bmapc_memb *b, int iosidx)
 {
 	int rc, tract[NBREPLST], retifset[NBREPLST];
 	struct up_sched_work_item *wk;
+	struct iosidv qv;
 	uint32_t policy;
 
 	BHREPL_POLICY_GET(b, &policy);
@@ -346,6 +358,7 @@ mds_repl_inv_except(struct bmapc_memb *b, sl_ios_id_t ios, int iosidx)
 	/* Ensure replica on active IOS is marked valid. */
 	brepls_init(tract, -1);
 	tract[BREPLST_INVALID] = BREPLST_VALID;
+	tract[BREPLST_GARBAGE] = BREPLST_VALID;
 
 	brepls_init(retifset, EINVAL);
 	retifset[BREPLST_INVALID] = 0;
@@ -365,16 +378,20 @@ mds_repl_inv_except(struct bmapc_memb *b, sl_ios_id_t ios, int iosidx)
 	 */
 	brepls_init(tract, -1);
 	tract[BREPLST_VALID] = policy == BRPOL_PERSIST ?
-	    BREPLST_REPL_QUEUED : BREPLST_INVALID; // XXX GARBAGE ?
+	    BREPLST_REPL_QUEUED : BREPLST_GARBAGE;
+	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 
 	brepls_init(retifset, 0);
 	retifset[BREPLST_VALID] = 1;
 
-	if (mds_repl_bmap_walk(b, tract, retifset, REPL_WALKF_MODOTH,
-	    &iosidx, 1))
+	qv.nios = 0;
+	if (_mds_repl_bmap_walk(b, tract, retifset, REPL_WALKF_MODOTH,
+	    &iosidx, 1, mds_repl_inv_requeue, &qv))
 		BHGEN_INCREMENT(b);
 
-	rc = mds_bmap_write(b, 0, NULL, b);
+	rc = mds_bmap_write(b, 0,
+	    fcmh_2_inoh(b->bcm_fcmh)->inoh_flags & INOH_INO_NEW ?
+	    NULL : mdslog_bmap_repls, b);
 
 	/*
 	 * If this bmap is marked for persistent replication, the repl
@@ -384,11 +401,8 @@ mds_repl_inv_except(struct bmapc_memb *b, sl_ios_id_t ios, int iosidx)
 	 * do.
 	 */
 	if (policy == BRPOL_PERSIST) {
-		sl_replica_t repl;
-
 		wk = uswi_find(&b->bcm_fcmh->fcmh_fg, NULL);
-		repl.bs_id = ios;
-		uswi_enqueue_sites(wk, &repl, 1);
+		uswi_enqueue_sites(wk, qv.iosv, qv.nios);
 		uswi_unref(wk);
 	}
 	return (rc);
