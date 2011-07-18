@@ -220,7 +220,7 @@ msl_bmap_lease_tryext(struct bmapc_memb *b)
 
 			rc = pscrpc_nbreqset_add(pndgBmaplsReqs, rq);
 			if (rc) {
-error:
+ error:
 				if (rq)
 					pscrpc_req_finished(rq);
 				if (csvc)
