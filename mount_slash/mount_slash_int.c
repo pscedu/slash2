@@ -1125,6 +1125,7 @@ msl_dio_cb(struct pscrpc_request *rq, int rc, struct pscrpc_async_args *args)
 	    "completed dio req (op=%d) off=%u sz=%u rc=%d",
 	    op, mq->offset, mq->size, rc);
 
+	sl_csvc_decref(csvc);
 	return (rc);
 }
 
@@ -1136,7 +1137,6 @@ msl_dio_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
 	if (rc == EWOULDBLOCK)
-		// sl_csvc_decref(csvc);
 		return (msl_add_async_req(rq, msl_dio_cb, args));
 	return (msl_dio_cb(rq, rc, args));
 }
@@ -1213,15 +1213,25 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 			pscrpc_set_remove_req(r->biorq_rqset, rq);
 			goto error;
 		}
+		sl_csvc_incref(csvc);
 	}
 	/* Should be no need for a callback since this call is fully
 	 *   blocking.
 	 */
 	psc_assert(nbytes == size);
-	pscrpc_set_wait(r->biorq_rqset);
+	rc = pscrpc_set_wait(r->biorq_rqset);
 	pscrpc_set_destroy(r->biorq_rqset);
 	r->biorq_rqset = NULL;
+
 	PSCFREE(iovs);
+
+	if (rc == EWOULDBLOCK) {
+		/*
+		 * async I/O registered by sliod; we must wait for a
+		 * notification from him when it is ready.
+		 */
+		return (rc);
+	}
 
 	psc_iostats_intv_add((op == SRMT_WRITE ?
 	    &msl_diowr_stat : &msl_diord_stat), size);
@@ -1229,7 +1239,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 	msl_biorq_destroy(r);
 
 	sl_csvc_decref(csvc);
-	return (0);
+	return (rc);
 
  error:
 	if (rq) {
@@ -2185,8 +2195,9 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 		tlen  = MIN(SLASH_BMAP_SIZE, tsize);
 	}
 
-	/* Note that the offsets used here are file-wise offsets not
-	 *   offsets into the buffer.
+	/*
+	 * Note that the offsets used here are file-wise offsets not
+	 * offsets into the buffer.
 	 */
 	for (i = 0, tlen = 0, tsize = 0, p = buf; i < nr; i++, p += tlen) {
 		if (r[i] == MSL_BIORQ_COMPLETE)
@@ -2199,6 +2210,8 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 
 		if (r[i]->biorq_flags & BIORQ_DIO) {
 			rc = msl_pages_dio_getput(r[i], p);
+			if (rc == EWOULDBLOCK)
+				goto next_ioreq;
 			if (rc) {
 				pll_remove(&mfh->mfh_biorqs, r[i]);
 				rc = msl_offline_retry_ignexpire(r[i]);
@@ -2216,6 +2229,8 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 			 *   which we need.
 			 */
 			rc = msl_pages_blocking_load(r[i]);
+			if (rc == EWOULDBLOCK)
+				goto next_ioreq;
 			if (rc) {
 				rc = msl_offline_retry(r[i]);
 				if (rc) {
@@ -2252,6 +2267,7 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 
 			tsize += tlen;
 		}
+ next_ioreq:
 		r[i] = MSL_BIORQ_COMPLETE;
 	}
 
