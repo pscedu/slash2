@@ -68,9 +68,6 @@ struct psc_iostats	msl_diowr_stat;
 struct psc_iostats	msl_rdcache_stat;
 struct psc_iostats	msl_racache_stat;
 
-struct psc_poolmaster	 slc_async_req_poolmaster;
-struct psc_poolmgr	*slc_async_req_pool;
-
 void bmap_flush_resched(struct bmpc_ioreq *);
 
 int
@@ -140,7 +137,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	psc_assert(len);
 	psc_assert((roff + len) <= SLASH_BMAP_SIZE);
 	psc_assert(op == BIORQ_WRITE || op == BIORQ_READ);
-	*newreq = r = PSCALLOC(sizeof(struct bmpc_ioreq));
+	*newreq = r = psc_pool_get(slc_biorq_pool);
 
 	bmpc_ioreq_init(r, roff, len, op, b, mfh);
 
@@ -609,7 +606,7 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 		sched_yield();
 	//psc_assert(!atomic_read(&r->biorq_waitq.wq_nwaiters));
 
-	PSCFREE(r);
+	psc_pool_return(slc_biorq_pool, r);
 }
 
 struct msl_fhent *
@@ -1190,6 +1187,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 
 		rq->rq_interpret_reply = msl_dio_cb0;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
+		rq->rq_async_args.pointer_arg[MSL_CBARG_BUF] = b + nbytes;
 
 		iovs[i].iov_base = b + nbytes;
 		iovs[i].iov_len  = len;
@@ -1396,7 +1394,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 	rq->rq_interpret_reply = msl_readahead_cb0;
 	rq->rq_comp = &rpcComp;
 
-	for (i=0; i < nbmpce; i++) {
+	for (i = 0; i < nbmpce; i++) {
 		/* bmpce_ralentry is available at this point, add
 		 *   the ra to the pndg list before pushing it out the door.
 		 */
@@ -1736,8 +1734,10 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 		r->biorq_rqset = NULL;
 
 		if (rc) {
-			/* By this point, the bmpce's in biorq_pages have
-			 *   been released.  Don't try to access them here.
+			/*
+			 * By this point, the bmpce's in biorq_pages
+			 * have been released.  Don't try to access them
+			 * here.
 			 */
 			return (rc);
 		}
@@ -2051,7 +2051,6 @@ int
 msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
     const off_t off, enum rw rw)
 {
-#define MAX_BMAPS_REQ 4
 	struct bmpc_ioreq *r[MAX_BMAPS_REQ];
 	struct bmapc_memb *b, *bref = NULL;
 	size_t s, e, tlen, tsize;
@@ -2102,7 +2101,8 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 
 	/*
 	 * All I/O's block here for pending truncate requests.
-	 * XXX there is a race here.  we should set CLI_TRUNC ourselves
+	 *
+	 * XXX there is a race here.  We should set CLI_TRUNC ourselves
 	 * until we are done setting up the I/O to block intervening
 	 * truncates.
 	 */
@@ -2235,13 +2235,14 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 				rc = msl_offline_retry(r[i]);
 				if (rc) {
 					/*
-					 * The app wants to retry the failed
-					 * I/O. What we must do in this logic
-					 * is tricky since we don't want to
-					 * re-lease the bmap.  We hold a fake
-					 * ref to the bmap so it doesn't get
-					 * reclaimed until bmap_get() gets
-					 * its own ref.
+					 * The app wants to retry the
+					 * failed I/O.  What we must do
+					 * in this logic is tricky since
+					 * we don't want to re-lease the
+					 * bmap.  We hold a fake ref to
+					 * the bmap so it doesn't get
+					 * reclaimed until bmap_get()
+					 * gets its own ref.
 					 */
 					if (bref)
 						bmap_op_done_type(bref,

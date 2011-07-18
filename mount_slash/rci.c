@@ -20,6 +20,7 @@
 #include <errno.h>
 
 #include "psc_rpc/rpc.h"
+#include "psc_rpc/rsx.h"
 
 #include "bmpc.h"
 #include "rpc_cli.h"
@@ -41,6 +42,7 @@ slc_rci_handle_read(struct pscrpc_request *rq)
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct sl_resm *m;
+	struct iovec iov;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	m = libsl_try_nid2resm(rq->rq_export->exp_connection->c_peer.nid);
@@ -51,16 +53,53 @@ slc_rci_handle_read(struct pscrpc_request *rq)
 	pll = &resm2rmci(m)->rmci_async_reqs;
 
 	PLL_LOCK(pll);
-	PLL_FOREACH(car, pll) {
+	PLL_FOREACH(car, pll)
 		if (mq->id == car->car_id)
 			break;
-	}
 	PLL_ULOCK(pll);
 	if (car == NULL) {
 		mp->rc = EINVAL;
 		goto error;
 	}
-	car->car_cbf(rq, mq->rc, &car->car_argv);
+	if (mq->rc)
+		;
+	else if (car->car_cbf == msl_readahead_cb) {
+		struct bmap_pagecache_entry *bmpce, **bv;
+		struct iovec iovs[MAX_BMAPS_REQ];
+		int i;
+
+		bv = car->car_argv.pointer_arg[MSL_CBARG_BMPCE];
+		for (i = 0; *bv; i++, bv++) {
+			bmpce = *bv;
+			iovs[i].iov_base = bmpce->bmpce_base;
+			iovs[i].iov_len = BMPC_BUFSZ;
+		}
+
+		mq->rc = rsx_bulkclient(rq, BULK_PUT_SINK, SRIC_BULK_PORTAL,
+		    iovs, i);
+	} else if (car->car_cbf == msl_read_cb) {
+		struct bmap_pagecache_entry *bmpce;
+		struct iovec iovs[MAX_BMAPS_REQ];
+		struct psc_dynarray *a;
+		int i;
+
+		a = car->car_argv.pointer_arg[MSL_CBARG_BMPCE];
+		DYNARRAY_FOREACH(bmpce, i, a) {
+			iovs[i].iov_base = bmpce->bmpce_base;
+			iovs[i].iov_len = BMPC_BUFSZ;
+		}
+
+		mq->rc = rsx_bulkclient(rq, BULK_PUT_SINK, SRIC_BULK_PORTAL,
+		    iovs, psc_dynarray_len(a));
+	} else if (car->car_cbf == msl_dio_cb) {
+		iov.iov_base = car->car_argv.pointer_arg[MSL_CBARG_BUF];
+		iov.iov_len = mq->size;
+
+		mq->rc = rsx_bulkclient(rq, BULK_PUT_SINK,
+		    SRCI_BULK_PORTAL, &iov, 1);
+	} else
+		psc_fatalx("unknown callback");
+	mp->rc = car->car_cbf(rq, mq->rc, &car->car_argv);
 	psc_pool_return(slc_async_req_pool, car);
 
  error:

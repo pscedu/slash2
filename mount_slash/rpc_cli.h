@@ -33,10 +33,11 @@ extern struct pscrpc_completion rpcComp;
 /* async RPC pointers */
 #define MSL_CBARG_BMPCE			0
 #define MSL_CBARG_CSVC			1
+#define MSL_CBARG_BUF			2	/* DIO only! */
 #define MSL_CBARG_BIORQ			2
 #define MSL_CBARG_BIORQS		3
 #define MSL_CBARG_RA			4
-#define MSL_CBARG_BMAP			4 /* don't mix with RA! */
+#define MSL_CBARG_BMAP			4	/* don't mix with RA! */
 
 /* SLASH RPC channel for CLI from MDS. */
 #define SRCM_NTHREADS			8

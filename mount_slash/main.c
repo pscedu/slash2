@@ -102,6 +102,12 @@ psc_spinlock_t			 msfsthr_uniqidmap_lock = SPINLOCK_INIT;
 /* number of attribute prefetch in readdir() */
 int				 nstb_prefetch = DEF_READDIR_NENTS;
 
+struct psc_poolmaster		 slc_async_req_poolmaster;
+struct psc_poolmgr		*slc_async_req_pool;
+
+struct psc_poolmaster		 slc_biorq_poolmaster;
+struct psc_poolmgr		*slc_biorq_pool;
+
 __inline int
 fcmh_checkcreds(struct fidc_membh *f, const struct slash_creds *crp,
     int accmode)
@@ -2195,6 +2201,11 @@ msl_init(void)
 	    struct slc_async_req, car_lentry, PPMF_AUTO, 64, 64, 0,
 	    NULL, NULL, NULL, "asyncrq");
 	slc_async_req_pool = psc_poolmaster_getmgr(&slc_async_req_poolmaster);
+
+	psc_poolmaster_init(&slc_biorq_poolmaster,
+	    struct bmpc_ioreq, biorq_lentry, PPMF_AUTO, 64, 64, 0, NULL,
+	    NULL, NULL, "biorq");
+	slc_biorq_pool = psc_poolmaster_getmgr(&slc_biorq_poolmaster);
 
 	ra_nbreqset = pscrpc_nbreqset_init(NULL, NULL);
 
