@@ -873,8 +873,10 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 
 	FCMH_LOCK(fcmh);
 	fcmh_2_replpol(fcmh) = mq->pol;
+	mds_reserve_slot(1);
 	mp->rc = mds_inode_write(fcmh_2_inoh(fcmh), mdslog_ino_repls,
 	    fcmh);
+	mds_unreserve_slot(1);
 
  out:
 	if (fcmh)
@@ -916,7 +918,10 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 		goto out;
 
 	BHREPL_POLICY_SET(bcm, mq->pol);
+
+	mds_reserve_slot(1);
 	mds_bmap_write_repls_rel(bcm);
+	mds_unreserve_slot(1);
 
  out:
 	if (fcmh)
