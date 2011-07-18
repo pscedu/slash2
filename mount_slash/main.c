@@ -2159,7 +2159,9 @@ unmount(const char *mp)
 	int rc;
 
 	/* XXX do not let this hang */
-	rc = snprintf(buf, sizeof(buf), "umount %s || umount -f %s || umount -l %s", mp);
+	rc = snprintf(buf, sizeof(buf),
+	    "umount '%s' || umount -f '%s' || umount -l '%s'",
+	    mp, mp, mp);
 	if (rc == -1)
 		psc_fatal("snprintf: umount %s", mp);
 	if (rc >= (int)sizeof(buf))
