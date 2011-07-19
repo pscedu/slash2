@@ -70,7 +70,7 @@ struct slash_inode_od {
 	uint16_t		 ino_version;
 	uint16_t		 ino_flags;			/* immutable, etc. */
 	uint32_t		 ino_bsz;			/* bmap size */
-	uint32_t		 ino_nrepls;			/* if 0, use ino_prepl */
+	uint32_t		 ino_nrepls;			/* number of replicas */
 	uint32_t		 ino_replpol;			/* BRPOL_* policies */
 	sl_replica_t		 ino_repls[SL_DEF_REPLICAS];	/* embed a few replicas	*/
 	uint64_t		 ino_repl_nblks[SL_DEF_REPLICAS];/* embed a few replicas */
