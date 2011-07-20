@@ -41,6 +41,8 @@ struct psc_poolmaster	 sli_iocb_poolmaster;
 struct psc_poolmgr	*sli_iocb_pool;
 struct psc_listcache	 sli_iocb_pndg;
 
+psc_atomic64_t		 sli_aio_id = PSC_ATOMIC64_INIT(0);
+
 struct psc_listcache lruSlvrs;   /* LRU list of clean slivers which may be reaped */
 struct psc_listcache crcqSlvrs;  /* Slivers ready to be crc'd and have their
 				    crc's shipped to the mds. */
@@ -235,7 +237,8 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 		 */
 		SLVR_LOCK(s);
 		s->slvr_flags |= SLVR_DATAERR;
-		DEBUG_SLVR(PLL_ERROR, s, "slvr_fsio() error, rc=%zd", iocb->iocb_rc);
+		DEBUG_SLVR(PLL_ERROR, s, "slvr_fsio() error, rc=%zd",
+		    iocb->iocb_rc);
 		SLVR_WAKEUP(s);
 		SLVR_ULOCK(s);
 	}
@@ -261,7 +264,7 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 	SLVR_WAKEUP(s);
 	SLVR_ULOCK(s);
 
-	/* XXX: perform PUT RPC to client */
+	/* now perform PUT RPC to client */
 	csvc = sli_getclcsvc(iocb->iocb_peer);
 	if (csvc == NULL)
 		goto out;
@@ -286,24 +289,26 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 		pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
+	pscrpc_export_put(iocb->iocb_peer);
 
 	slvr_io_done(s, aio->aio_offset, aio->aio_nbytes, iocb->iocb_rw);
 }
 
 int
-sli_aio_register(struct slvr_ref *s, uint32_t size, int sblk,
-    enum rw rw, struct pscrpc_export *exp, int issue)
+sli_aio_register(struct pscrpc_request *rq, struct slvr_ref *s, uint32_t
+    size, int sblk, enum rw rw, int issue)
 {
 	struct sli_iocb *iocb;
+	struct srm_io_rep *mp;
 	struct aiocb *aio;
 	int error = 0;
 
 	iocb = psc_pool_get(sli_iocb_pool);
 	memset(iocb, 0, sizeof(*iocb));
 	iocb->iocb_slvr = s;
-	iocb->iocb_peer = exp;
 	iocb->iocb_cbf = slvr_fsaio_done;
 	iocb->iocb_rw = rw;
+	iocb->iocb_peer = pscrpc_export_get(rq->rq_export);
 //	memcpy(&iocb->iocb_sbd, &mq->sbd, sizeof(mq->sbd));
 
 	aio = &iocb->iocb_aiocb;
@@ -322,14 +327,17 @@ sli_aio_register(struct slvr_ref *s, uint32_t size, int sblk,
 	LIST_CACHE_ULOCK(&sli_iocb_pndg);
 
 	if (error) {
+		pscrpc_export_put(iocb->iocb_peer);
 		psc_pool_return(sli_iocb_pool, iocb);
 		return (-error);
 	}
+	pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
+	mp->id = iocb->iocb_id = psc_atomic64_inc_getnew(&sli_aio_id);
 	return (-EWOULDBLOCK);
 }
 
 __static int
-slvr_fsio(struct pscrpc_export *exp, struct slvr_ref *s, int sblk,
+slvr_fsio(struct pscrpc_request *rq, struct slvr_ref *s, int sblk,
     uint32_t size, enum rw rw, int aio, ssize_t aiorc)
 {
 	int i, nblks, save_errno = 0;
@@ -348,7 +356,7 @@ slvr_fsio(struct pscrpc_export *exp, struct slvr_ref *s, int sblk,
 		if (aio)
 			rc = aiorc;
 		else if (globalConfig.gconf_async_io)
-			return (sli_aio_register(s, size, sblk, rw, exp,
+			return (sli_aio_register(rq, s, size, sblk, rw,
 			    1));
 		else
 			rc = pread(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
@@ -432,7 +440,7 @@ slvr_fsio(struct pscrpc_export *exp, struct slvr_ref *s, int sblk,
  * @s: the sliver.
  */
 int
-slvr_fsbytes_rio(struct pscrpc_export *exp, struct slvr_ref *s)
+slvr_fsbytes_rio(struct pscrpc_request *rq, struct slvr_ref *s)
 {
 	int i, rc, blk, nblks;
 
@@ -455,7 +463,7 @@ slvr_fsbytes_rio(struct pscrpc_export *exp, struct slvr_ref *s)
 			continue;
 		}
 		if (nblks) {
-			rc = slvr_fsio(exp, s, blk, nblks *
+			rc = slvr_fsio(rq, s, blk, nblks *
 			    SLASH_SLVR_BLKSZ, SL_READ, 0, 0);
 			if (rc)
 				goto out;
@@ -466,7 +474,7 @@ slvr_fsbytes_rio(struct pscrpc_export *exp, struct slvr_ref *s)
 	}
 
 	if (nblks)
-		rc = slvr_fsio(exp, s, blk, nblks * SLASH_SLVR_BLKSZ,
+		rc = slvr_fsio(rq, s, blk, nblks * SLASH_SLVR_BLKSZ,
 		    SL_READ, 0, 0);
 
  out:
@@ -609,7 +617,7 @@ slvr_slab_prep(struct slvr_ref *s, enum rw rw)
  * @rw: read or write op
  */
 int
-slvr_io_prep(struct pscrpc_export *exp, struct slvr_ref *s,
+slvr_io_prep(struct pscrpc_request *rq, struct slvr_ref *s,
     uint32_t off, uint32_t len, enum rw rw)
 {
 	int i, rc = 0, blks, unaligned[2] = { -1, -1 };
@@ -628,8 +636,7 @@ slvr_io_prep(struct pscrpc_export *exp, struct slvr_ref *s,
 		 */
 		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
 		if (globalConfig.gconf_async_io)
-			return (sli_aio_register(s, len, 0, rw, exp,
-			    0));
+			return (sli_aio_register(rq, s, len, 0, rw, 0));
 		SLVR_WAIT(s, !(s->slvr_flags & (SLVR_DATARDY|SLVR_DATAERR)));
 		psc_assert((s->slvr_flags & (SLVR_DATARDY|SLVR_DATAERR)));
 	}
@@ -723,7 +730,7 @@ slvr_io_prep(struct pscrpc_export *exp, struct slvr_ref *s,
 	/* Execute read to fault in needed blocks after dropping
 	 *   the lock.  All should be protected by the FAULTING bit.
 	 */
-	if ((rc = slvr_fsbytes_rio(exp, s)))
+	if ((rc = slvr_fsbytes_rio(rq, s)))
 		return (rc);
 
 	if (rw == SL_READ) {

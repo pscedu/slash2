@@ -197,7 +197,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		/* Fault in pages either for read or RBW.
 		 */
 		len[i] = MIN(tsize, SLASH_SLVR_SIZE - roff[i]);
-		slvr_io_prep(rq->rq_export, slvr_ref[i], roff[i], len[i], rw);
+		slvr_io_prep(rq, slvr_ref[i], roff[i], len[i], rw);
 
 		DEBUG_SLVR(PLL_INFO, slvr_ref[i], "post io_prep rw=%d", rw);
 		/* mq->offset is the offset into the bmap, here we must
