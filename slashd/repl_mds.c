@@ -390,9 +390,10 @@ mds_repl_inv_except(struct bmapc_memb *b, int iosidx)
 	    &iosidx, 1, mds_repl_inv_requeue, &qv))
 		BHGEN_INCREMENT(b);
 
-	rc = mds_bmap_write(b, 0,
-	    fcmh_2_inoh(b->bcm_fcmh)->inoh_flags & INOH_INO_NEW ?
-	    NULL : mdslog_bmap_repls, b);
+	/*
+ 	 * All our caller must log the changes of this bmap.
+ 	 */
+	rc = mds_bmap_write(b, 0, NULL, NULL);
 
 	/*
 	 * If this bmap is marked for persistent replication, the repl
