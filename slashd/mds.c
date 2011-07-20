@@ -270,6 +270,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	struct sl_resm *resm;
 	int nb, j, len, iosidx;
 	uint32_t nrepls;
+	int rc;
 
 	psc_assert(!bmi->bmdsi_wr_ion);
 	psc_assert(!bmi->bmdsi_assign);
@@ -325,8 +326,6 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	return (-SLERR_ION_OFFLINE);
 
  online:
-	mds_reserve_slot(1);
-	logentry = pjournal_get_buf(mdsJournal, sizeof(*logentry));
 
 	bmi->bmdsi_wr_ion = rmmi = resm2rmmi(resm);
 	atomic_inc(&rmmi->rmmi_refcnt);
@@ -376,7 +375,13 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	if (iosidx < 0)
 		psc_fatalx("ios_lookup_add %d: %s", bia.bia_ios,
 		    slstrerror(iosidx));
-	mds_repl_inv_except(bmap, iosidx);
+	rc = mds_repl_inv_except(bmap, iosidx);
+	if (rc) {
+		DEBUG_BMAP(PLL_ERROR, bmap, "mds_repl_inv_except() failed");
+		return (-1);
+	}
+	mds_reserve_slot(1);
+	logentry = pjournal_get_buf(mdsJournal, sizeof(*logentry));
 
 	logentry->sjar_flags = SLJ_ASSIGN_REP_NONE;
 	if (nrepls != ih->inoh_ino.ino_nrepls) {
