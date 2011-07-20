@@ -257,8 +257,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 	for (i=0; i < nslvrs; i++) {
 		if (rw == SL_WRITE) {
-			uint32_t tsz = MIN((SLASH_BLKS_PER_SLVR-sblk)
-					   * SLASH_SLVR_BLKSZ, tsize);
+			uint32_t tsz = MIN((SLASH_BLKS_PER_SLVR - sblk) *
+			    SLASH_SLVR_BLKSZ, tsize);
 			tsize -= tsz;
 			if ((rc = slvr_fsbytes_wio(slvr_ref[i], tsz,
 			    sblk)))
