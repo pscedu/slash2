@@ -31,6 +31,7 @@
 #include "bmap_iod.h"
 #include "buffer.h"
 #include "fidc_iod.h"
+#include "rpc_iod.h"
 #include "slerr.h"
 #include "slvr.h"
 
@@ -219,10 +220,25 @@ void
 slvr_fsaio_done(struct sli_iocb *iocb)
 {
 	struct aiocb *aio = &iocb->iocb_aiocb;
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
+	struct srm_io_req *mq;
+	struct srm_io_rep *mp;
 	struct slvr_ref *s;
-	int rc = iocb->iocb_rc, nblks;
+	int rc;
 
 	s = iocb->iocb_slvr;
+	if (iocb->iocb_rc) {
+		/*
+		 * There was a problem; unblock any waiters and
+		 * tell them the bad news.
+		 */
+		SLVR_LOCK(s);
+		s->slvr_flags |= SLVR_DATAERR;
+		DEBUG_SLVR(PLL_ERROR, s, "slvr_fsio() error, rc=%zd", iocb->iocb_rc);
+		SLVR_WAKEUP(s);
+		SLVR_ULOCK(s);
+	}
 	if (iocb->iocb_rc) {
 		SLVR_LOCK(s);
 		s->slvr_pndgreads--;
@@ -231,51 +247,46 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 		DEBUG_SLVR(PLL_WARN, s,
 		    "unwind ref due to async I/O bulk error");
 		SLVR_ULOCK(s);
-		return;
 	}
 
-	nblks = (aio->aio_nbytes + SLASH_SLVR_BLKSZ - 1) / SLASH_SLVR_BLKSZ;
+	SLVR_LOCK(s);
+	psc_assert(!(s->slvr_flags & SLVR_DATARDY));
 
-	if (nblks == SLASH_BLKS_PER_SLVR) {
-		int crc_rc;
+	s->slvr_flags |= SLVR_DATARDY;
+	s->slvr_flags &= ~SLVR_FAULTING;
 
-		s->slvr_crc_soff = 0;
-		s->slvr_crc_eoff = rc;
-
-		crc_rc = slvr_do_crc(s);
-		if (crc_rc == SLERR_BADCRC)
-			DEBUG_SLVR(PLL_ERROR, s,
-			    "bad crc blks=%d off=%#"PRIx64,
-			    nblks, aio->aio_offset);
-
-		if (rc) {
-			/*
-			 * There was a problem; unblock any waiters and
-			 * tell them the bad news.
-			 */
-			SLVR_LOCK(s);
-			s->slvr_flags |= SLVR_DATAERR;
-			DEBUG_SLVR(PLL_ERROR, s, "slvr_fsio() error, rc=%d", rc);
-			SLVR_WAKEUP(s);
-			SLVR_ULOCK(s);
-		}
-
-		SLVR_LOCK(s);
-		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
-
-		s->slvr_flags |= SLVR_DATARDY;
-		s->slvr_flags &= ~SLVR_FAULTING;
-
-		psc_vbitmap_invert(s->slvr_slab->slb_inuse);
-		//psc_vbitmap_printbin1(s->slvr_slab->slb_inuse);
-		DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
-		SLVR_WAKEUP(s);
-		SLVR_ULOCK(s);
-	}
+	psc_vbitmap_invert(s->slvr_slab->slb_inuse);
+	//psc_vbitmap_printbin1(s->slvr_slab->slb_inuse);
+	DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
+	SLVR_WAKEUP(s);
+	SLVR_ULOCK(s);
 
 	/* XXX: perform PUT RPC to client */
+	csvc = sli_getclcsvc(iocb->iocb_peer);
+	if (csvc == NULL)
+		goto out;
 
-	/* issue RPC to peer */
+	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
+	if (rc)
+		goto out;
+
+	memcpy(&mq->sbd, &iocb->iocb_sbd, sizeof(mq->sbd));
+//	mq->id = ;
+//	mq->size =
+//	mq->offset =
+//	mq->utimgen =
+//	mq->ptruncgen =
+//	mq->op = SRMIOP_RD;
+	mq->rc = iocb->iocb_rc;
+
+//	rc = rsx_bulkserver();
+
+ out:
+	if (rq)
+		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
+
 	slvr_io_done(s, aio->aio_offset, aio->aio_nbytes, iocb->iocb_rw);
 }
 
@@ -293,6 +304,7 @@ sli_aio_register(struct slvr_ref *s, uint32_t size, int sblk,
 	iocb->iocb_peer = exp;
 	iocb->iocb_cbf = slvr_fsaio_done;
 	iocb->iocb_rw = rw;
+//	memcpy(&iocb->iocb_sbd, &mq->sbd, sizeof(mq->sbd));
 
 	aio = &iocb->iocb_aiocb;
 	aio->aio_fildes = slvr_2_fd(s);
@@ -318,7 +330,7 @@ sli_aio_register(struct slvr_ref *s, uint32_t size, int sblk,
 
 __static int
 slvr_fsio(struct pscrpc_export *exp, struct slvr_ref *s, int sblk,
-    uint32_t size, enum rw rw)
+    uint32_t size, enum rw rw, int aio, ssize_t aiorc)
 {
 	int i, nblks, save_errno = 0;
 	uint64_t *v8;
@@ -333,12 +345,14 @@ slvr_fsio(struct pscrpc_export *exp, struct slvr_ref *s, int sblk,
 		psc_assert(s->slvr_flags & SLVR_FAULTING);
 		errno = 0;
 
-		if (globalConfig.gconf_async_io)
+		if (aio)
+			rc = aiorc;
+		else if (globalConfig.gconf_async_io)
 			return (sli_aio_register(s, size, sblk, rw, exp,
 			    1));
-
-		rc = pread(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
-			   slvr_2_fileoff(s, sblk));
+		else
+			rc = pread(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
+			    slvr_2_fileoff(s, sblk));
 		if (rc == -1)
 			save_errno = errno;
 
@@ -442,7 +456,7 @@ slvr_fsbytes_rio(struct pscrpc_export *exp, struct slvr_ref *s)
 		}
 		if (nblks) {
 			rc = slvr_fsio(exp, s, blk, nblks *
-			    SLASH_SLVR_BLKSZ, SL_READ);
+			    SLASH_SLVR_BLKSZ, SL_READ, 0, 0);
 			if (rc)
 				goto out;
 
@@ -453,7 +467,7 @@ slvr_fsbytes_rio(struct pscrpc_export *exp, struct slvr_ref *s)
 
 	if (nblks)
 		rc = slvr_fsio(exp, s, blk, nblks * SLASH_SLVR_BLKSZ,
-		    SL_READ);
+		    SL_READ, 0, 0);
 
  out:
 	if (rc) {
@@ -478,7 +492,7 @@ slvr_fsbytes_wio(struct slvr_ref *s, uint32_t size, uint32_t sblk)
 {
 	DEBUG_SLVR(PLL_INFO, s, "sblk=%u size=%u", sblk, size);
 
-	return (slvr_fsio(NULL, s, sblk, size, SL_WRITE));
+	return (slvr_fsio(NULL, s, sblk, size, SL_WRITE, 0, 0));
 }
 
 void

@@ -168,6 +168,7 @@ struct sli_iocb {
 	struct aiocb		  iocb_aiocb;
 	ssize_t			  iocb_rc;
 	enum rw			  iocb_rw;
+	struct srt_bmapdesc	  iocb_sbd;
 	void			(*iocb_cbf)(struct sli_iocb *);
 };
 
