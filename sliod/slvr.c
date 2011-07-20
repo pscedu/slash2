@@ -274,15 +274,16 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 		goto out;
 
 	memcpy(&mq->sbd, &iocb->iocb_sbd, sizeof(mq->sbd));
-//	mq->id = ;
-//	mq->size =
-//	mq->offset =
-//	mq->utimgen =
-//	mq->ptruncgen =
-//	mq->op = SRMIOP_RD;
+	mq->id = iocb->iocb_id;
+	mq->size = iocb->iocb_aiocb.aio_nbytes;
+	mq->offset = aio->aio_offset;
+	mq->op = SRMIOP_RD;
 	mq->rc = iocb->iocb_rc;
 
-//	rc = rsx_bulkserver();
+//	iov.iov_base = s->slvr_slab->slb_base + roff[i];
+
+//	mq->rc = rsx_bulkserver(rq, BULK_PUT_SOURCE, SRCI_BULK_PORTAL,
+//	    iovs, nslvrs);
 
  out:
 	if (rq)
@@ -299,6 +300,7 @@ sli_aio_register(struct pscrpc_request *rq, struct slvr_ref *s, uint32_t
     size, int sblk, enum rw rw, int issue)
 {
 	struct sli_iocb *iocb;
+	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct aiocb *aio;
 	int error = 0;
@@ -309,7 +311,6 @@ sli_aio_register(struct pscrpc_request *rq, struct slvr_ref *s, uint32_t
 	iocb->iocb_cbf = slvr_fsaio_done;
 	iocb->iocb_rw = rw;
 	iocb->iocb_peer = pscrpc_export_get(rq->rq_export);
-//	memcpy(&iocb->iocb_sbd, &mq->sbd, sizeof(mq->sbd));
 
 	aio = &iocb->iocb_aiocb;
 	aio->aio_fildes = slvr_2_fd(s);
@@ -331,8 +332,15 @@ sli_aio_register(struct pscrpc_request *rq, struct slvr_ref *s, uint32_t
 		psc_pool_return(sli_iocb_pool, iocb);
 		return (-error);
 	}
+
+	/* XXX what about REPL_READ?? */
+
+	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
+	memcpy(&iocb->iocb_sbd, &mq->sbd, sizeof(mq->sbd));
+
 	pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 	mp->id = iocb->iocb_id = psc_atomic64_inc_getnew(&sli_aio_id);
+
 	return (-EWOULDBLOCK);
 }
 
