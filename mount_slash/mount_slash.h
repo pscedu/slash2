@@ -34,6 +34,7 @@ struct pscfs_req;
 struct pscrpc_request;
 
 struct bmap_pagecache_entry;
+struct bmpc_ioreq;
 
 /* mount_slash thread types */
 enum {
@@ -110,13 +111,30 @@ struct msl_ra {
 
 #define MAX_BMAPS_REQ			4
 
+struct msl_aiorqcol {
+	struct psc_listentry		 marc_lentry;
+	psc_spinlock_t			 marc_lock;
+	int				 marc_refcnt;
+	int				 marc_flags;
+	void				*marc_buf;
+	ssize_t				 marc_rc;
+	size_t				 marc_len;
+};
+
 struct slc_async_req {
 	struct psc_listentry		  car_lentry;
+	struct pscfs_req		 *car_pfr;
+	struct msl_aiorqcol		 *car_marc;
 	struct pscrpc_async_args	  car_argv;
 	int				(*car_cbf)(struct pscrpc_request *, int,
 						struct pscrpc_async_args *);
 	uint64_t			  car_id;
+	void				 *car_buf;
+	size_t				  car_len;
 };
+
+#define MARCF_DONE			(1 << 0)
+#define MARCF_REPLY			(1 << 1)
 
 struct msl_fhent {			 /* XXX rename */
 	psc_spinlock_t			 mfh_lock;
@@ -184,6 +202,10 @@ int	 msl_stat(struct fidc_membh *, void *);
 int	 msl_write_rpc_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int	 msl_write_rpcset_cb(struct pscrpc_request_set *, void *, int);
 
+size_t	 msl_pages_copyout(struct bmpc_ioreq *, char *);
+
+void	 msl_aiorqcol_finish(struct slc_async_req *, ssize_t, size_t);
+
 struct msl_fhent * msl_fhent_new(struct fidc_membh *);
 
 void	 msctlthr_spawn(void);
@@ -213,5 +235,6 @@ extern struct pscrpc_nbreqset	*pndgBmaplsReqs;
 
 extern struct psc_poolmgr	*slc_async_req_pool;
 extern struct psc_poolmgr	*slc_biorq_pool;
+extern struct psc_poolmgr	*slc_aiorqcol_pool;
 
 #endif /* _MOUNT_SLASH_H_ */

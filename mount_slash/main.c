@@ -108,6 +108,9 @@ struct psc_poolmgr		*slc_async_req_pool;
 struct psc_poolmaster		 slc_biorq_poolmaster;
 struct psc_poolmgr		*slc_biorq_pool;
 
+struct psc_poolmaster		 slc_aiorqcol_poolmaster;
+struct psc_poolmgr		*slc_aiorqcol_pool;
+
 __inline int
 fcmh_checkcreds(struct fidc_membh *f, const struct slash_creds *crp,
     int accmode)
@@ -2140,6 +2143,8 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	msfsthr(pscthr_get())->mft_failcnt = 1;
 	buf = PSCALLOC(size);
 	rc = msl_read(mfh, buf, size, off);
+	if (rc == -EWOULDBLOCK)
+		return;
 	if (rc < 0) {
 		rc = -rc;
 		goto out;
@@ -2206,6 +2211,11 @@ msl_init(void)
 	    struct bmpc_ioreq, biorq_lentry, PPMF_AUTO, 64, 64, 0, NULL,
 	    NULL, NULL, "biorq");
 	slc_biorq_pool = psc_poolmaster_getmgr(&slc_biorq_poolmaster);
+
+	psc_poolmaster_init(&slc_aiorqcol_poolmaster,
+	    struct msl_aiorqcol, marc_lentry, PPMF_AUTO, 64, 64, 0,
+	    NULL, NULL, NULL, "aiorqcol");
+	slc_aiorqcol_pool = psc_poolmaster_getmgr(&slc_aiorqcol_poolmaster);
 
 	ra_nbreqset = pscrpc_nbreqset_init(NULL, NULL);
 

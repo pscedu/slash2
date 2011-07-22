@@ -1139,7 +1139,8 @@ msl_dio_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 }
 
 __static int
-msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
+msl_pages_dio_getput(struct bmpc_ioreq *r, char *b,
+    struct msl_aiorqcol **marc)
 {
 	struct slashrpc_cservice  *csvc = NULL;
 	struct pscrpc_request	  *rq = NULL;
@@ -1423,11 +1424,13 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 		bmpce = bmpces[i];
 
 		if (added)
-			pll_remove(&bmap_2_bmpc(b)->bmpc_pndg_ra, bmpces);
+			pll_remove(&bmap_2_bmpc(b)->bmpc_pndg_ra,
+			    bmpces);
 
 		BMPCE_LOCK(bmpce);
 		bmpce->bmpce_flags |= BMPCE_EIO;
-		bmpce_handle_lru_locked(bmpce, bmap_2_bmpc(b), BIORQ_READ, 0);
+		bmpce_handle_lru_locked(bmpce, bmap_2_bmpc(b),
+		    BIORQ_READ, 0);
 	}
 	BMPC_ULOCK(bmap_2_bmpc(b));
 
@@ -1441,7 +1444,8 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 }
 
 __static int
-msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
+msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages,
+    struct msl_aiorqcol **marc)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct bmap_pagecache_entry *bmpce;
@@ -1568,7 +1572,8 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 }
 
 __static int
-msl_launch_read_rpcs(struct bmpc_ioreq *r, int *psched)
+msl_launch_read_rpcs(struct bmpc_ioreq *r, int *psched,
+    struct msl_aiorqcol **marc)
 {
 	struct bmap_pagecache_entry *bmpce;
 	int rc = 0, i, j = -1;
@@ -1596,12 +1601,12 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r, int *psched)
 				j = i;
 		} else {
 			if (!biorq_is_my_bmpce(r, bmpce)) {
-				rc = msl_read_rpc_launch(r, j, i-j);
+				rc = msl_read_rpc_launch(r, j, i-j, marc);
 				j = -1;
 				*psched = 1;
 
 			} else if ((i-j) == BMPC_MAXBUFSRPC) {
-				rc = msl_read_rpc_launch(r, j, i-j);
+				rc = msl_read_rpc_launch(r, j, i-j, marc);
 				j = i;
 				*psched = 1;
 			}
@@ -1610,7 +1615,7 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r, int *psched)
 	if (j >= 0) {
 		/* Catch any unsent frags at the end of the array.
 		 */
-		rc = msl_read_rpc_launch(r, j, i-j);
+		rc = msl_read_rpc_launch(r, j, i-j, marc);
 		*psched = 1;
 	}
 
@@ -1623,7 +1628,8 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r, int *psched)
  *	read request or a read-before-write for a write request.
  */
 __static int
-msl_pages_prefetch(struct bmpc_ioreq *r)
+msl_pages_prefetch(struct bmpc_ioreq *r,
+    struct msl_aiorqcol **marc)
 {
 	int sched = 0, rc = 0, npages;
 	struct bmap_pagecache_entry *bmpce;
@@ -1646,7 +1652,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 	 *   by biorq_is_my_bmpce().
 	 */
 	if (r->biorq_flags & BIORQ_READ) {
-		rc = msl_launch_read_rpcs(r, &sched);
+		rc = msl_launch_read_rpcs(r, &sched, marc);
 
 	} else { /* BIORQ_WRITE */
 		int i;
@@ -1665,9 +1671,9 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 				psc_assert(!(bmpce->bmpce_flags & BMPCE_DATARDY));
 
 				if (!i)
-					rc = msl_read_rpc_launch(r, 0, 1);
+					rc = msl_read_rpc_launch(r, 0, 1, marc);
 				else
-					rc |= msl_read_rpc_launch(r, npages - 1, 1);
+					rc |= msl_read_rpc_launch(r, npages - 1, 1, marc);
 			}
 			sched = 1;
 
@@ -1677,7 +1683,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 				psc_assert(biorq_is_my_bmpce(r, bmpce));
 				psc_assert(!(bmpce->bmpce_flags & BMPCE_DATARDY));
 				psc_assert(bmpce->bmpce_flags & BMPCE_RBWPAGE);
-				rc = msl_read_rpc_launch(r, 0, 1);
+				rc = msl_read_rpc_launch(r, 0, 1, marc);
 				sched = 1;
 			}
 			if (r->biorq_flags & BIORQ_RBWLP) {
@@ -1686,7 +1692,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 				psc_assert(biorq_is_my_bmpce(r, bmpce));
 				psc_assert(!(bmpce->bmpce_flags & BMPCE_DATARDY));
 				psc_assert(bmpce->bmpce_flags & BMPCE_RBWPAGE);
-				rc = msl_read_rpc_launch(r, npages - 1, 1);
+				rc = msl_read_rpc_launch(r, npages - 1, 1, marc);
 				sched = 1;
 			}
 		}
@@ -1887,7 +1893,7 @@ msl_pages_copyin(struct bmpc_ioreq *r, char *buf)
 /**
  * msl_pages_copyout - Copy pages to the user application buffer.
  */
-__static size_t
+size_t
 msl_pages_copyout(struct bmpc_ioreq *r, char *buf)
 {
 	struct bmap_pagecache_entry *bmpce;
@@ -2031,13 +2037,43 @@ msl_setra(struct msl_fhent *mfh, size_t size, off_t off)
 	freelock(&mfh->mfh_lock);
 }
 
+void
+msl_aiorqcol_finish(struct slc_async_req *car, ssize_t rc, size_t len)
+{
+	struct msl_aiorqcol *marc;
+	int reply = 0;
+	void *buf;
+
+	marc = car->car_marc;
+	spinlock(&marc->marc_lock);
+	if (marc->marc_rc == 0)
+		marc->marc_len = rc;
+	marc->marc_len += len;
+	if (--marc->marc_refcnt ||
+	    (marc->marc_flags & MARCF_DONE) == 0) {
+		freelock(&marc->marc_lock);
+		return;
+	}
+	if (marc->marc_flags & MARCF_REPLY)
+		reply = 1;
+	rc = marc->marc_rc;
+	buf = marc->marc_buf;
+	len = marc->marc_len;
+	psc_pool_return(slc_aiorqcol_pool, marc);
+
+	if (!reply)
+		return;
+
+	pscfs_reply_read(car->car_pfr, buf, len, -abs(rc));
+}
+
 #define MSL_BIORQ_COMPLETE	((void *)0x1)
 
 /**
- * msl_io - I/O gateway routine which bridges pscfs and the SLASH2 client
- *	cache and backend.  msl_io() handles the creation of biorq's
- *	and the loading of bmaps (which are attached to the file's
- *	fcache_memb_handle and is ultimately responsible for data being
+ * msl_io - I/O gateway routine which bridges pscfs and the SLASH2
+ *	client cache and backend.  msl_io() handles the creation of
+ *	biorq's and the loading of bmaps (which are attached to the
+ *	file's fcmh and is ultimately responsible for data being *
  *	prefetched (as needed), copied into or from the cache, and (on
  *	write) being pushed to the correct I/O server.
  * @mfh: file handle structure passed to us by pscfs which contains the
@@ -2053,6 +2089,7 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 {
 	struct bmpc_ioreq *r[MAX_BMAPS_REQ];
 	struct bmapc_memb *b, *bref = NULL;
+	struct msl_aiorqcol *marc = NULL;
 	size_t s, e, tlen, tsize;
 	int nr, i, rc;
 	uint64_t fsz;
@@ -2072,8 +2109,8 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 		msl_setra(mfh, size, off);
 
 	/*
-	 *  Get the start and end block regions from the input
-	 *  parameters.
+	 * Get the start and end block regions from the input
+	 * parameters.
 	 */
 	s = off / SLASH_BMAP_SIZE;
 	e = ((off + size) - 1) / SLASH_BMAP_SIZE;
@@ -2172,9 +2209,10 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 		 * If we are not doing direct I/O, launch read for read
 		 * requests and pre-read for unaligned write requests.
 		 */
-		if (!(r[i]->biorq_flags & BIORQ_DIO) && ((r[i]->biorq_flags & BIORQ_READ) ||
-		     (r[i]->biorq_flags & BIORQ_RBWFP) || (r[i]->biorq_flags & BIORQ_RBWLP))) {
-			rc = msl_pages_prefetch(r[i]);
+		if (!(r[i]->biorq_flags & BIORQ_DIO) &&
+		    (r[i]->biorq_flags &
+		      (BIORQ_READ | BIORQ_RBWFP | BIORQ_RBWLP))) {
+			rc = msl_pages_prefetch(r[i], &marc);
 			if (rc) {
 				rc = msl_offline_retry_ignexpire(r[i]);
 				r[i]->biorq_flags |= BIORQ_RBWFAIL;
@@ -2199,7 +2237,8 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 	 * Note that the offsets used here are file-wise offsets not
 	 * offsets into the buffer.
 	 */
-	for (i = 0, tlen = 0, tsize = 0, p = buf; i < nr; i++, p += tlen) {
+	for (i = 0, tlen = 0, tsize = 0, p = buf;
+	    i < nr; i++, p += tlen) {
 		if (r[i] == MSL_BIORQ_COMPLETE)
 			continue;
 
@@ -2209,7 +2248,7 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 		tlen = r[i]->biorq_len;
 
 		if (r[i]->biorq_flags & BIORQ_DIO) {
-			rc = msl_pages_dio_getput(r[i], p);
+			rc = msl_pages_dio_getput(r[i], p, &marc);
 			if (rc == EWOULDBLOCK)
 				goto next_ioreq;
 			if (rc) {
@@ -2265,9 +2304,9 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 				tlen = msl_pages_copyout(r[i], p);
 			else
 				tlen = msl_pages_copyin(r[i], p);
-
-			tsize += tlen;
 		}
+		tsize += tlen;
+
  next_ioreq:
 		r[i] = MSL_BIORQ_COMPLETE;
 	}

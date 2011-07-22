@@ -19,6 +19,7 @@
 
 #include <errno.h>
 
+#include "pfl/fs.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 
@@ -37,12 +38,15 @@
 int
 slc_rci_handle_read(struct pscrpc_request *rq)
 {
+	struct pscfs_req *pfr = NULL;
 	struct psc_lockedlist *pll;
 	struct slc_async_req *car;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct sl_resm *m;
 	struct iovec iov;
+	size_t len = 0;
+	ssize_t rc;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	m = libsl_try_nid2resm(rq->rq_export->exp_connection->c_peer.nid);
@@ -61,9 +65,11 @@ slc_rci_handle_read(struct pscrpc_request *rq)
 		mp->rc = EINVAL;
 		goto error;
 	}
+	pfr = car->car_pfr;
 	if (mq->rc)
 		;
 	else if (car->car_cbf == msl_readahead_cb) {
+
 		struct bmap_pagecache_entry *bmpce, **bv;
 		struct iovec iovs[MAX_BMAPS_REQ];
 		int i;
@@ -75,23 +81,31 @@ slc_rci_handle_read(struct pscrpc_request *rq)
 			iovs[i].iov_len = BMPC_BUFSZ;
 		}
 
-		mq->rc = rsx_bulkclient(rq, BULK_PUT_SINK, SRIC_BULK_PORTAL,
-		    iovs, i);
+		mq->rc = rsx_bulkclient(rq, BULK_PUT_SINK,
+		    SRIC_BULK_PORTAL, iovs, i);
+
 	} else if (car->car_cbf == msl_read_cb) {
+
 		struct bmap_pagecache_entry *bmpce;
 		struct iovec iovs[MAX_BMAPS_REQ];
 		struct psc_dynarray *a;
+		struct bmpc_ioreq *r;
 		int i;
 
 		a = car->car_argv.pointer_arg[MSL_CBARG_BMPCE];
+		r = car->car_argv.pointer_arg[MSL_CBARG_BIORQ];
 		DYNARRAY_FOREACH(bmpce, i, a) {
 			iovs[i].iov_base = bmpce->bmpce_base;
 			iovs[i].iov_len = BMPC_BUFSZ;
 		}
 
-		mq->rc = rsx_bulkclient(rq, BULK_PUT_SINK, SRIC_BULK_PORTAL,
-		    iovs, psc_dynarray_len(a));
+		mq->rc = rsx_bulkclient(rq, BULK_PUT_SINK,
+		    SRIC_BULK_PORTAL, iovs, psc_dynarray_len(a));
+
+//		rc = msl_pages_copyout(r, p);
+
 	} else if (car->car_cbf == msl_dio_cb) {
+
 		iov.iov_base = car->car_argv.pointer_arg[MSL_CBARG_BUF];
 		iov.iov_len = mq->size;
 
@@ -99,7 +113,8 @@ slc_rci_handle_read(struct pscrpc_request *rq)
 		    SRCI_BULK_PORTAL, &iov, 1);
 	} else
 		psc_fatalx("unknown callback");
-	mp->rc = car->car_cbf(rq, mq->rc, &car->car_argv);
+	rc = car->car_cbf(rq, mq->rc, &car->car_argv);
+	msl_aiorqcol_finish(car, rc, len);
 	psc_pool_return(slc_async_req_pool, car);
 
  error:
