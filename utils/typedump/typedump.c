@@ -183,6 +183,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct msctlmsg_replst);
 	PRTYPE(struct msctlmsg_replst_slave);
 	PRTYPE(struct msfs_thread);
+	PRTYPE(struct msl_aiorqcol);
 	PRTYPE(struct msl_fhent);
 	PRTYPE(struct msl_ra);
 	PRTYPE(struct msrci_thread);
@@ -358,6 +359,7 @@ main(int argc, char *argv[])
 	PRVAL(GCONF_HASHTBL_SZ);
 	PRVAL(INTRES_NAME_MAX);
 	PRVAL(LNET_NAME_MAX);
+	PRVAL(MAX_BMAPS_REQ);
 	PRVAL(MAX_BMAP_INODE_PAIRS);
 	PRVAL(MAX_BMAP_NCRC_UPDATES);
 	PRVAL(MAX_BMAP_RELEASE);
@@ -380,6 +382,7 @@ main(int argc, char *argv[])
 	PRVAL(MSL_CBARG_BIORQS);
 	PRVAL(MSL_CBARG_BMAP);
 	PRVAL(MSL_CBARG_BMPCE);
+	PRVAL(MSL_CBARG_BUF);
 	PRVAL(MSL_CBARG_CSVC);
 	PRVAL(MSL_CBARG_RA);
 	PRVAL(MS_READAHEAD_MAXPGS);
