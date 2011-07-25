@@ -69,6 +69,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	uint32_t tsize, sblk, roff[RIC_MAX_SLVRS_PER_IO], len[RIC_MAX_SLVRS_PER_IO];
 	struct slvr_ref *slvr_ref[RIC_MAX_SLVRS_PER_IO];
 	struct iovec iovs[RIC_MAX_SLVRS_PER_IO];
+	struct sli_iocb_set *iocbs = NULL;
 	struct bmap_iod_info *biodi;
 	struct slash_fidgen *fgp;
 	struct fidc_membh *fcmh;
@@ -197,7 +198,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		/* Fault in pages either for read or RBW.
 		 */
 		len[i] = MIN(tsize, SLASH_SLVR_SIZE - roff[i]);
-		slvr_io_prep(rq, slvr_ref[i], roff[i], len[i], rw);
+		slvr_io_prep(rq, &iocbs, slvr_ref[i], roff[i], len[i], rw);
 
 		DEBUG_SLVR(PLL_INFO, slvr_ref[i], "post io_prep rw=%d", rw);
 		/* mq->offset is the offset into the bmap, here we must
@@ -214,6 +215,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	psc_assert(!tsize);
 
 	if (rw == SL_READ && globalConfig.gconf_async_io) {
+		spinlock(&iocbs->iocbs_lock);
+		iocbs->iocbs_flags |= SLI_IOCBSF_DONE;
+		freelock(&iocbs->iocbs_lock);
+
 		mp->rc = rc = EWOULDBLOCK;
 		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
 		goto out;
@@ -224,7 +229,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	    SRIC_BULK_PORTAL, iovs, nslvrs);
 	if (mp->rc) {
 		rc = mp->rc;
-		for (i=0; i < nslvrs; i++) {
+		for (i = 0; i < nslvrs; i++) {
 			SLVR_LOCK(slvr_ref[i]);
 			if (rw == SL_READ)
 				slvr_ref[i]->slvr_pndgreads--;
@@ -241,9 +246,12 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		goto out;
 	}
 
-	/* Write the sliver back to the filesystem, but only the blocks
-	 *   which are marked '0' in the bitmap.   Here we don't care about
-	 *   buffer offsets since we're block aligned now
+	iocbs = NULL;
+
+	/*
+	 * Write the sliver back to the filesystem, but only the blocks
+	 * which are marked '0' in the bitmap.   Here we don't care
+	 * about buffer offsets since we're block aligned now
 	 */
 	if (rw == SL_WRITE) {
 		roff[0] = mq->offset - (slvrno * SLASH_SLVR_SIZE);
@@ -260,8 +268,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			uint32_t tsz = MIN((SLASH_BLKS_PER_SLVR - sblk) *
 			    SLASH_SLVR_BLKSZ, tsize);
 			tsize -= tsz;
-			if ((rc = slvr_fsbytes_wio(slvr_ref[i], tsz,
-			    sblk)))
+			if ((rc = slvr_fsbytes_wio(&iocbs, slvr_ref[i],
+			    tsz, sblk)))
 				goto out;
 			/* Only the first sliver may use a blk offset.
 			 */

@@ -190,8 +190,10 @@ struct slvr_ref *
 void	slvr_cache_init(void);
 void	slvr_clear_inuse(struct slvr_ref *, int, uint32_t);
 int	slvr_do_crc(struct slvr_ref *);
-int	slvr_fsbytes_wio(struct slvr_ref *, uint32_t, uint32_t);
-int	slvr_io_prep(struct pscrpc_request *, struct slvr_ref *, uint32_t, uint32_t, enum rw);
+int	slvr_fsbytes_wio(struct sli_iocb_set **, struct slvr_ref *,
+	    uint32_t, uint32_t);
+int	slvr_io_prep(struct pscrpc_request *, struct sli_iocb_set **,
+	    struct slvr_ref *, uint32_t, uint32_t, enum rw);
 void	slvr_repl_prep(struct slvr_ref *, int);
 void	slvr_rio_done(struct slvr_ref *);
 void	slvr_schedule_crc(struct slvr_ref *);
