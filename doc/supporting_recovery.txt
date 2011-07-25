@@ -107,3 +107,43 @@ reset to all zeros.
 
 We also need a way to remove the backing files of those fids a MDS
 has skipped.  But that can be done in the background.
+
+07/25/2011
+----------
+
+Date: Fri, 22 Jul 2011 17:06:07 -0400
+From: Paul Nowoczynski <pauln@psc.edu>
+To: Zhihui Zhang <zhihui@psc.edu>
+Cc: Jared Yanovich <yanovich@psc.edu>
+Subject: Re: cycle id issue
+
+Zhihui,
+I see the issue - what if we increment +2 on recovery?
+paul
+
+On 07/22/2011 04:59 PM, Zhihui Zhang wrote:
+> Hi Paul,
+> 
+> Something to think about ...
+> 
+> We can't allow normal fid allocation to eat into the cycle id space.
+> 
+> Suppose the last snapshot contains:
+> 
+>     cycle x, fid y
+> 
+> and y is very very close to overflow.  After that we advance to
+> 
+>     cycle x+1, fid z
+> 
+> If we lose journal, we only see (x,y) in recovery and we are going to reuse (x+1, z).
+> 
+> If this is right, then reserving space bits will cut down the
+> number of available fid significantly, which is not what I have in mind.
+> 
+> 
+> thanks,
+> 
+> -Zhihui
+
+
