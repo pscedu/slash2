@@ -26,11 +26,12 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "fid.h"
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 
 #include "psc_util/journal.h"
+
+#include "fid.h"
 
 const char *progname;
 
@@ -107,13 +108,13 @@ main(int argc, char *argv[])
 			"\tpjc_reclaim_seqno = %"PRIx64"\n"
 			"\tpjc_replay_xid = %"PRIx64"\n",
 
-			cursor.pjc_magic, cursor.pjc_version, 
+			cursor.pjc_magic, cursor.pjc_version,
 
 			cursor.pjc_timestamp, tmbuf,
 
 			cursor.pjc_uuid, cursor.pjc_commit_txg, cursor.pjc_distill_xid,
 
-			cursor.pjc_fid, 
+			cursor.pjc_fid,
 			FID_GET_FLAGS(cursor.pjc_fid),
 			FID_GET_SITEID(cursor.pjc_fid),
 			FID_GET_CYCLE(cursor.pjc_fid),
@@ -137,7 +138,7 @@ main(int argc, char *argv[])
 
 	if (newfid)
 		cursor.pjc_fid = newfid;
-	
+
 	rc = pwrite(fd, &cursor, sizeof(struct psc_journal_cursor), 0);
 	if (rc != sizeof(struct psc_journal_cursor))
 		err(1, "cursor file pwrite() failed");
