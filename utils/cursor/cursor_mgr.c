@@ -31,8 +31,6 @@
 
 #include "psc_util/journal.h"
 
-#include "fid.h"
-
 const char *progname;
 
 __dead void
@@ -45,7 +43,6 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	char *p, tmbuf[26];
 	char *cursor_file = NULL, c;
 	int dump = 0, verbose = 0, fd, rc;
 	uint64_t newtxg = 0, newfid = 0;
@@ -87,40 +84,24 @@ main(int argc, char *argv[])
 	if (rc != sizeof(struct psc_journal_cursor))
 		err(1, "cursor file pread() failed");
 
-	ctime_r((time_t *)&cursor.pjc_timestamp, tmbuf);
-	p = strchr(tmbuf, '\n');
-	if (p)
-		*p = '\0';
-
 	if (dump || verbose) {
 		printf("Cursor Contents:\n"
 			"\tpjc_magic = %"PRIx64"\n"
 			"\tpjc_version = %"PRIx64"\n"
-			"\tpjc_timestamp = %"PRId64" (%s) \n"
+			"\tpjc_timestamp = %"PRId64"\n"
 			"\tpjc_uuid = %s\n"
 			"\tpjc_commit_txg =  %"PRId64"\n"
 			"\tpjc_distill_xid =  %"PRId64"\n"
-			"\tpjc_fid = 0x%"PRIx64" (flag = %"PRIx64", site id = %"PRIx64", cycle = %"PRIx64", fid = %"PRIx64") \n"
+			"\tpjc_fid = %"PRIx64"\n"
 			"\tpjc_seqno_lwm = %"PRIx64"\n"
 			"\tpjc_seqno_hwm = %"PRIx64"\n"
 			"\tpjc_tail = %"PRIx64"\n"
 			"\tpjc_update_seqno = %"PRIx64"\n"
 			"\tpjc_reclaim_seqno = %"PRIx64"\n"
 			"\tpjc_replay_xid = %"PRIx64"\n",
-
-			cursor.pjc_magic, cursor.pjc_version,
-
-			cursor.pjc_timestamp, tmbuf,
-
+			cursor.pjc_magic, cursor.pjc_version, cursor.pjc_timestamp,
 			cursor.pjc_uuid, cursor.pjc_commit_txg, cursor.pjc_distill_xid,
-
-			cursor.pjc_fid,
-			FID_GET_FLAGS(cursor.pjc_fid),
-			FID_GET_SITEID(cursor.pjc_fid),
-			FID_GET_CYCLE(cursor.pjc_fid),
-			FID_GET_INUM(cursor.pjc_fid),
-
-			cursor.pjc_seqno_lwm, cursor.pjc_seqno_hwm,
+			cursor.pjc_fid, cursor.pjc_seqno_lwm, cursor.pjc_seqno_hwm,
 			cursor.pjc_tail, cursor.pjc_update_seqno,
 			cursor.pjc_reclaim_seqno, cursor.pjc_replay_xid);
 
@@ -138,7 +119,7 @@ main(int argc, char *argv[])
 
 	if (newfid)
 		cursor.pjc_fid = newfid;
-
+	
 	rc = pwrite(fd, &cursor, sizeof(struct psc_journal_cursor), 0);
 	if (rc != sizeof(struct psc_journal_cursor))
 		err(1, "cursor file pwrite() failed");
