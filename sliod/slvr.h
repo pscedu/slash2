@@ -161,9 +161,21 @@ struct slvr_ref {
 
 #define RIC_MAX_SLVRS_PER_IO 2
 
+struct sli_iocb_set {
+	struct psc_listentry	  iocbs_lentry;
+	psc_spinlock_t		  iocbs_lock;
+	int			  iocbs_refcnt;
+	int			  iocbs_flags;
+	struct iovec		  iocbs_iovs[RIC_MAX_SLVRS_PER_IO];
+	int			  iocbs_niov;
+};
+
+#define SLI_IOCBSF_DONE		(1 << 0)
+
 struct sli_iocb {
 	struct psc_listentry	  iocb_lentry;
 	struct slvr_ref		 *iocb_slvr;
+	struct sli_iocb_set	 *iocb_set;
 	struct pscrpc_export	 *iocb_peer;
 	struct aiocb		  iocb_aiocb;
 	ssize_t			  iocb_rc;
