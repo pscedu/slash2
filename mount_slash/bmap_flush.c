@@ -327,8 +327,7 @@ bmap_flush_inflight_unset(struct bmpc_ioreq *r)
 		bmpce->bmpce_flags &= ~BMPCE_INFLIGHT;
 		BMPCE_ULOCK(bmpce);
 	}
-}
-
+} 
 
 /**
  * bmap_flush_resched - called in error contexts where
@@ -1357,7 +1356,6 @@ msbmapflushthrrpc_main(__unusedx struct psc_thread *thr)
 		pscrpc_nbreqset_reap(ra_nbreqset);
 	}
 }
-
 
 void
 msbmaprathr_main(__unusedx struct psc_thread *thr)
