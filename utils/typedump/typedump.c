@@ -222,6 +222,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct sli_cli_csvc_cpart);
 	PRTYPE(struct sli_exp_cli);
 	PRTYPE(struct sli_iocb);
+	PRTYPE(struct sli_iocb_set);
 	PRTYPE(struct sli_repl_workrq);
 	PRTYPE(struct slictlmsg_fileop);
 	PRTYPE(struct slictlmsg_replwkst);
@@ -378,13 +379,14 @@ main(int argc, char *argv[])
 	PRVAL(MSCMT_GET_NEWREPLPOL);
 	PRVAL(MSCMT_SET_BMAPREPLPOL);
 	PRVAL(MSCMT_SET_NEWREPLPOL);
+	PRVAL(MSL_CBARG_AIORQCOL);
 	PRVAL(MSL_CBARG_BIORQ);
 	PRVAL(MSL_CBARG_BIORQS);
 	PRVAL(MSL_CBARG_BMAP);
+	PRVAL(MSL_CBARG_BMPC);
 	PRVAL(MSL_CBARG_BMPCE);
 	PRVAL(MSL_CBARG_BUF);
 	PRVAL(MSL_CBARG_CSVC);
-	PRVAL(MSL_CBARG_RA);
 	PRVAL(MS_READAHEAD_MAXPGS);
 	PRVAL(MS_READAHEAD_MINSEQ);
 	PRVAL(NBREPLST);
