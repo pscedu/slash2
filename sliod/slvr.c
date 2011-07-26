@@ -337,6 +337,8 @@ sli_aio_register(struct pscrpc_request *rq, struct sli_iocb_set **iocbsp,
 	iocbs = *iocbsp;
 	if (iocbs == NULL) {
 		iocbs = *iocbsp = psc_pool_get(sli_iocbset_pool);
+		memset(iocbs, 0, sizeof(*iocbs));
+		INIT_LISTENTRY(&iocbs->iocbs_lentry);
 		INIT_SPINLOCK(&iocbs->iocbs_lock);
 		iocbs->iocbs_refcnt = 1;
 	} else {
@@ -347,6 +349,7 @@ sli_aio_register(struct pscrpc_request *rq, struct sli_iocb_set **iocbsp,
 
 	iocb = psc_pool_get(sli_iocb_pool);
 	memset(iocb, 0, sizeof(*iocb));
+	INIT_LISTENTRY(&iocb->iocb_lentry);
 	iocb->iocb_slvr = s;
 	iocb->iocb_cbf = slvr_fsaio_done;
 	iocb->iocb_rw = rw;
@@ -379,7 +382,7 @@ sli_aio_register(struct pscrpc_request *rq, struct sli_iocb_set **iocbsp,
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 	memcpy(&iocb->iocb_sbd, &mq->sbd, sizeof(mq->sbd));
 
-	pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
+	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 	mp->id = iocb->iocb_id = psc_atomic64_inc_getnew(&sli_aio_id);
 
 	return (-EWOULDBLOCK);
@@ -528,6 +531,9 @@ slvr_fsbytes_rio(struct pscrpc_request *rq, struct sli_iocb_set **iocbs,
 		rc = slvr_fsio(rq, iocbs, s, blk, nblks *
 		    SLASH_SLVR_BLKSZ, SL_READ, 0, 0);
 
+	if (rc == -EWOULDBLOCK)
+		return (rc);
+
  out:
 	if (rc) {
 		/* There was a problem, unblock any waiters and tell them
@@ -675,26 +681,29 @@ slvr_io_prep(struct pscrpc_request *rq, struct sli_iocb_set **iocbs,
 	SLVR_LOCK(s);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	/*
-	 * Note we have taken our read or write references, so the sliver
-	 *   won't be freed from under us.
+	 * Note we have taken our read or write references, so the
+	 * sliver won't be freed from under us.
 	 */
 	if (s->slvr_flags & SLVR_FAULTING && !(s->slvr_flags & SLVR_REPLDST)) {
-		/* Common courtesy requires us to wait for another threads'
-		 *   work FIRST. Otherwise, we could bail out prematurely
-		 *   when the data is ready without considering the range
-		 *   we want to write.
+		/*
+		 * Common courtesy requires us to wait for another
+		 * threads' work FIRST.  Otherwise, we could bail out
+		 * prematurely when the data is ready without
+		 * considering the range we want to write.
 		 */
 		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
-		if (globalConfig.gconf_async_io)
+		if (globalConfig.gconf_async_io) {
+			SLVR_ULOCK(s);
 			return (sli_aio_register(rq, iocbs, s, len, 0,
 			    rw, 0));
-		SLVR_WAIT(s, !(s->slvr_flags & (SLVR_DATARDY|SLVR_DATAERR)));
-		psc_assert((s->slvr_flags & (SLVR_DATARDY|SLVR_DATAERR)));
+		}
+		SLVR_WAIT(s, !(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR)));
+		psc_assert((s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR)));
 	}
 
 	DEBUG_SLVR(((s->slvr_flags & SLVR_DATAERR) ? PLL_ERROR : PLL_INFO), s,
-		   "slvrno=%hu off=%u len=%u rw=%d",
-		   s->slvr_num, off, len, rw);
+	    "slvrno=%hu off=%u len=%u rw=%d",
+	    s->slvr_num, off, len, rw);
 
 	if (s->slvr_flags & SLVR_DATAERR) {
 		rc = -1;
@@ -705,9 +714,10 @@ slvr_io_prep(struct pscrpc_request *rq, struct sli_iocb_set **iocbs,
 			goto out;
 
 	} else if (!(s->slvr_flags & SLVR_REPLDST)) {
-		/* Importing data into the sliver is now our responsibility,
-		 *  other IO into this region will block until SLVR_FAULTING
-		 *  is released.
+		/*
+		 * Importing data into the sliver is now our
+		 * responsibility, other I/O into this region will block
+		 * until SLVR_FAULTING is released.
 		 */
 		s->slvr_flags |= SLVR_FAULTING;
 		if (rw == SL_READ) {
@@ -716,8 +726,9 @@ slvr_io_prep(struct pscrpc_request *rq, struct sli_iocb_set **iocbs,
 		}
 
 	} else if (s->slvr_flags & SLVR_REPLDST) {
-		/* The sliver is going to be used for replication.  Ensure
-		 *   proper setup has occurred.
+		/*
+		 * The sliver is going to be used for replication.
+		 * Ensure proper setup has occurred.
 		 */
 		psc_assert(!off);
 		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
@@ -742,6 +753,7 @@ slvr_io_prep(struct pscrpc_request *rq, struct sli_iocb_set **iocbs,
 		psc_vbitmap_setall(s->slvr_slab->slb_inuse);
 		goto out;
 	}
+
 	/*
 	 * Prepare the sliver for a read-modify-write.  Mark the blocks
 	 * that need to be read as 1 so that they can be faulted in by
@@ -1185,7 +1197,7 @@ slvr_cache_init(void)
 		psc_poolmaster_init(&sli_iocbset_poolmaster,
 		    struct sli_iocb_set, iocbs_lentry, PPMF_AUTO, 64,
 		    64, 1024, NULL, NULL, NULL, "iocbset");
-		sli_iocb_pool = psc_poolmaster_getmgr(&sli_iocbset_poolmaster);
+		sli_iocbset_pool = psc_poolmaster_getmgr(&sli_iocbset_poolmaster);
 
 		lc_reginit(&sli_iocb_pndg, struct sli_iocb, iocb_lentry,
 		    "iocbpndg");
