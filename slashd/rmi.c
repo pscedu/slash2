@@ -196,7 +196,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	sl_bmapgen_t gen;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	wk = uswi_find(&mq->fg, NULL);
+	wk = uswi_find(&mq->fg);
 	if (wk == NULL)
 		goto out;
 

@@ -54,7 +54,6 @@
 #include "up_sched_res.h"
 
 struct upschedtree	 upsched_tree = SPLAY_INITIALIZER(&upsched_tree);
-int			 upsched_gen;
 struct psc_poolmgr	*upsched_pool;
 struct psc_lockedlist	 upsched_listhd =
     PLL_INIT(&upsched_listhd, struct up_sched_work_item,
@@ -859,13 +858,14 @@ slmupschedthr_main(struct psc_thread *thr)
 			}
  skipfile:
 			/*
-			 * XXX - when BREPLST_GARBAGE/SCHED all get fully
-			 * reclaimed, delete metadata.
+			 * XXX - when BREPLST_GARBAGE/SCHED all get
+			 * fully reclaimed, delete metadata.
 			 */
 
 			/*
-			 * At this point, we did not find a block/src/dst
-			 * resource involving our site needed by this uswi.
+			 * At this point, we did not find a
+			 * block/src/dst resource involving our site
+			 * needed by this uswi.
 			 */
 			psc_mutex_lock(&wk->uswi_mutex);
 			if (has_work || wk->uswi_gen != uswi_gen) {
@@ -914,8 +914,9 @@ slmupschedthr_spawnall(void)
 }
 
 /**
- * _uswi_access - Obtain processing access to a update_scheduler request.
- *	This routine assumes the refcnt has already been bumped.
+ * _uswi_access - Obtain processing access to a update_scheduler
+ *	request.  This routine assumes the refcnt has already been
+ *	bumped.
  * @wk: update_scheduler request to access, locked on return.
  * Returns Boolean true on success or false if the request is going away.
  */
@@ -971,28 +972,24 @@ _uswi_unref(const struct pfl_callerinfo *pci,
 }
 
 struct up_sched_work_item *
-uswi_find(const struct slash_fidgen *fgp, int *locked)
+uswi_find(const struct slash_fidgen *fgp)
 {
 	struct up_sched_work_item q, *wk;
 	struct fidc_membh fcmh;
-	int dummy;
-
-	if (locked == NULL)
-		locked = &dummy;
+	int locked;
 
 	fcmh.fcmh_fg = *fgp;
 	q.uswi_fcmh = &fcmh;
 
-	*locked = UPSCHED_MGR_RLOCK();
+	locked = UPSCHED_MGR_RLOCK();
 	wk = SPLAY_FIND(upschedtree, &upsched_tree, &q);
 	if (wk == NULL) {
-		UPSCHED_MGR_URLOCK(*locked);
+		UPSCHED_MGR_URLOCK(locked);
 		return (NULL);
 	}
 	psc_mutex_lock(&wk->uswi_mutex);
 	USWI_INCREF(wk, USWI_REFT_LOOKUP);
-	UPSCHED_MGR_ULOCK();
-	*locked = 0;
+	UPSCHED_MGR_URLOCK(locked);
 
 	/* uswi_access() drops the refcnt on failure */
 	if (uswi_access(wk))
@@ -1060,7 +1057,8 @@ upsched_scandir(void)
 			d = (void *)(buf + toff);
 			off = d->pfd_off;
 
-			if (strlcpy(fn, d->pfd_name, sizeof(fn)) > sizeof(fn))
+			if (strlcpy(fn, d->pfd_name, sizeof(fn)) >
+			    sizeof(fn))
 				psc_assert("impossible");
 			if (d->pfd_namelen < sizeof(fn))
 				fn[d->pfd_namelen] = '\0';
@@ -1102,8 +1100,9 @@ upsched_scandir(void)
 			 * bmaps so they get resent.
 			 */
 			for (j = 0;; j++) {
-				if (bmap_getf(wk->uswi_fcmh, j, SL_WRITE,
-				    BMAPGETF_LOAD | BMAPGETF_NOAUTOINST, &b))
+				if (bmap_getf(wk->uswi_fcmh, j,
+				    SL_WRITE, BMAPGETF_LOAD |
+				    BMAPGETF_NOAUTOINST, &b))
 					break;
 
 				mds_repl_bmap_walk(b, tract,
@@ -1112,9 +1111,9 @@ upsched_scandir(void)
 			}
 
 			/*
-			 * Requeue pending updates on all registered sites.
-			 * If there is no work to do, it will be promptly
-			 * removed by the slmupschedthr.
+			 * Requeue pending updates on all registered
+			 * sites.  If there is no work to do, it will be
+			 * promptly removed by the slmupschedthr.
 			 */
 			for (j = 0; j < USWI_NREPLS(wk); j++)
 				iosv[j].bs_id = USWI_GETREPL(wk, j).bs_id;
@@ -1136,26 +1135,13 @@ uswi_findoradd(const struct slash_fidgen *fgp,
     struct up_sched_work_item **wkp)
 {
 	struct up_sched_work_item *newrq = NULL;
-	int rc, gen, locked;
 	char fn[PATH_MAX];
 	void *mdsio_data;
+	int rc = 0;
 
-	rc = 0;
-	do {
-		UPSCHED_MGR_LOCK();
-		*wkp = uswi_find(fgp, &locked);
-		if (*wkp)
-			goto out;
-
-		/*
-		 * If the tree stayed locked, the request exists but we
-		 * can't use it e.g. because it is going away.
-		 */
-	} while (!locked);
-
-	gen = upsched_gen;
-	UPSCHED_MGR_ULOCK();
-	locked = 0;
+	*wkp = uswi_find(fgp);
+	if (*wkp)
+		goto out;
 
 	newrq = psc_pool_get(upsched_pool);
 	uswi_init(newrq, fgp->fg_fid);
@@ -1182,17 +1168,11 @@ uswi_findoradd(const struct slash_fidgen *fgp,
 	mdsio_release(&rootcreds, mdsio_data);
 
 	UPSCHED_MGR_LOCK();
-	locked = 1;
-	if (gen != upsched_gen) {
-		do {
-			*wkp = uswi_find(fgp, &locked);
-			if (*wkp) {
-				fcmh_op_done_type(newrq->uswi_fcmh,
-				    FCMH_OPCNT_LOOKUP_FIDC);
-				goto out;
-			}
-			UPSCHED_MGR_RLOCK();
-		} while (!locked);
+	*wkp = uswi_find(fgp);
+	if (*wkp) {
+		fcmh_op_done_type(newrq->uswi_fcmh,
+		    FCMH_OPCNT_LOOKUP_FIDC);
+		goto out;
 	}
 
 	psc_mutex_lock(&newrq->uswi_mutex);
@@ -1201,7 +1181,7 @@ uswi_findoradd(const struct slash_fidgen *fgp,
 
 	SPLAY_INSERT(upschedtree, &upsched_tree, newrq);
 	pll_addtail(&upsched_listhd, newrq);
-	upsched_gen++;
+	UPSCHED_MGR_ULOCK();
 
 	psc_mutex_unlock(&newrq->uswi_mutex);
 
@@ -1209,8 +1189,6 @@ uswi_findoradd(const struct slash_fidgen *fgp,
 	newrq = NULL;
 
  out:
-	if (locked)
-		UPSCHED_MGR_ULOCK();
 
 	if (rc && newrq && newrq->uswi_fcmh)
 		fcmh_op_done_type(newrq->uswi_fcmh,

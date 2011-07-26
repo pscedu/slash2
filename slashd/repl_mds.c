@@ -406,7 +406,7 @@ mds_repl_inv_except(struct bmapc_memb *b, int iosidx)
 	 * do.
 	 */
 	if (policy == BRPOL_PERSIST) {
-		wk = uswi_find(&b->bcm_fcmh->fcmh_fg, NULL);
+		wk = uswi_find(&b->bcm_fcmh->fcmh_fg);
 		uswi_enqueue_sites(wk, qv.iosv, qv.nios);
 		uswi_unref(wk);
 	}
@@ -579,8 +579,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		return (rc);
 
 	/* Find replica IOS indexes */
-	rc = mds_repl_iosv_lookup(USWI_INOH(wk),
-	    iosv, iosidx, nios);
+	rc = mds_repl_iosv_lookup(USWI_INOH(wk), iosv, iosidx, nios);
 	if (rc) {
 		uswi_unref(wk);
 		return (rc);

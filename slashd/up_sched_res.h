@@ -95,7 +95,7 @@ enum {
 #define uswi_unref(wk)		_uswi_unref(PFL_CALLERINFO(), (wk))
 
 struct up_sched_work_item *
-	 uswi_find(const struct slash_fidgen *, int *);
+	 uswi_find(const struct slash_fidgen *);
 int	_uswi_access(struct up_sched_work_item *, int);
 int	 uswi_cmp(const void *, const void *);
 void	 uswi_enqueue_sites(struct up_sched_work_item *, const sl_replica_t *, int);

@@ -247,7 +247,7 @@ slmrcmthr_main(struct psc_thread *thr)
 					break;
 			}
 			PLL_ULOCK(&upsched_listhd);
-		} else if ((wk = uswi_find(&rsw->rsw_fg, NULL)) != NULL) {
+		} else if ((wk = uswi_find(&rsw->rsw_fg)) != NULL) {
 			slmrcmthr_walk_bmaps(rsw, wk);
 			uswi_unref(wk);
 		} else if (mds_repl_loadino(&rsw->rsw_fg, &fcmh) == 0) {
