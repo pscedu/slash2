@@ -846,15 +846,15 @@ msl_add_async_req(struct pscrpc_request *rq,
     int (*cbf)(struct pscrpc_request *, int, struct pscrpc_async_args *),
     struct pscrpc_async_args *av)
 {
-	struct msl_aiorqcol *marc, **marcp = av->pointer_arg[MSL_CBARG_AIORQCOL];
+	struct msl_aiorqcol *marc, 
+		**marcp = av->pointer_arg[MSL_CBARG_AIORQCOL];
 	struct slc_async_req *car;
 	struct srm_io_rep *mp;
 	struct sl_resm *m;
-
-	mp = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mp));
-
+	
+	mp = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mp));	
 	m = libsl_nid2resm(rq->rq_peer.nid);
-
+	
 	if (marcp) {
 		marc = *marcp;
 		if (marc == NULL) {
@@ -947,6 +947,9 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 			bmpce->bmpce_waitq = NULL;
 			bmpce->bmpce_owner = NULL;
 		}
+		
+		if (bmpce->bmpce_flags)
+			bmpce->bmpce_flags &= ~BMPCE_AIOWAIT;
 
 		if (clearpages) {
 			DEBUG_BMPCE(PLL_WARN, bmpce, "clearing page");
@@ -964,6 +967,8 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 		 */
 		DYNARRAY_FOREACH(bmpce, i, a) {
 			BMPCE_LOCK(bmpce);
+			if (bmpce->bmpce_flags)
+				bmpce->bmpce_flags &= ~BMPCE_AIOWAIT;
 			bmpce->bmpce_flags |= BMPCE_EIO;
 			DEBUG_BMPCE(PLL_WARN, bmpce, "set EIO");
 			BMPCE_WAKE(bmpce);
@@ -979,6 +984,25 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 	return (rc);
 }
 
+static inline void
+msl_bmpce_setaio(struct bmap_pagecache_entry **bmpces)
+{
+	struct bmap_pagecache_entry *bmpce; 
+	int i;
+	
+	for (i = 0;; i++) {
+		bmpce = bmpces[i];
+		if (!bmpce)
+			break;
+		
+		BMPCE_LOCK(bmpce);
+		bmpce->bmpce_flags |= BMPCE_AIOWAIT;
+		BMPCE_ULOCK(bmpce);
+		
+		DEBUG_BMPCE(PLL_NOTIFY, bmpce, "aio read");
+	}
+}
+
 int
 msl_read_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
@@ -988,8 +1012,14 @@ msl_read_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	psc_assert(rq->rq_reqmsg->opc == SRMT_READ);
 
 	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
-	if (rc == EWOULDBLOCK)
+	if (rc == EWOULDBLOCK) {
+
+		msl_bmpce_setaio((struct bmap_pagecache_entry **)
+				 args->pointer_arg[MSL_CBARG_BMPCE]);
+
 		return (msl_add_async_req(rq, msl_read_cb, args));
+	}
+	
 	return (msl_read_cb(rq, rc, args));
 }
 
@@ -997,7 +1027,8 @@ int
 msl_readahead_cb(struct pscrpc_request *rq, int rc,
     struct pscrpc_async_args *args)
 {
-	struct bmap_pagecache_entry *bmpce, **bmpces = args->pointer_arg[MSL_CBARG_BMPCE];
+	struct bmap_pagecache_entry *bmpce, 
+		**bmpces = args->pointer_arg[MSL_CBARG_BMPCE];
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct bmap_pagecache *bmpc = args->pointer_arg[MSL_CBARG_BMPC];
 	struct psc_waitq *wq = NULL;
@@ -1028,6 +1059,9 @@ msl_readahead_cb(struct pscrpc_request *rq, int rc,
 		if (rc)
 			bmpce->bmpce_flags |= BMPCE_EIO;
 		else {
+			if (bmpce->bmpce_flags)
+				bmpce->bmpce_flags &= ~BMPCE_AIOWAIT;
+
 			bmpce->bmpce_flags |= BMPCE_DATARDY;
 			DEBUG_BMPCE(PLL_INFO, bmpce,
 				    "datardy via readahead_cb");
@@ -1067,8 +1101,13 @@ msl_readahead_cb0(struct pscrpc_request *rq,
 	int rc;
 
 	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
-	if (rc == EWOULDBLOCK)
+	if (rc == EWOULDBLOCK) {
+
+		msl_bmpce_setaio((struct bmap_pagecache_entry **)
+				 args->pointer_arg[MSL_CBARG_BMPCE]);
+
 		return (msl_add_async_req(rq, msl_readahead_cb, args));
+	}
 	return (msl_readahead_cb(rq, rc, args));
 }
 
@@ -1778,10 +1817,15 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 		BMPCE_LOCK(bmpce);
 		DEBUG_BMPCE(PLL_INFO, bmpce, " ");
 
-		if (!biorq_is_my_bmpce(r, bmpce)) {
+		if (bmpce->bmpce_flags & BMPCE_AIOWAIT) {
+			BMPCE_ULOCK(bmpce);
+			return (EWOULDBLOCK);
+		}
+
+		if (!biorq_is_my_bmpce(r, bmpce)) {			
 			/* For pages not owned by this request,
 			 *    wait for them to become DATARDY
-			 *    or to have failed.
+			 *    or to have failed.  
 			 */
 			while (!(bmpce->bmpce_flags &
 			    (BMPCE_DATARDY | BMPCE_EIO))) {
