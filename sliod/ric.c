@@ -216,6 +216,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 	if (rw == SL_READ && globalConfig.gconf_async_io) {
 		spinlock(&iocbs->iocbs_lock);
+		memcpy(iocbs->iocbs_iovs, iovs, sizeof(iovs));
+		iocbs->iocbs_niov = nslvrs;
 		iocbs->iocbs_flags |= SLI_IOCBSF_DONE;
 		freelock(&iocbs->iocbs_lock);
 
