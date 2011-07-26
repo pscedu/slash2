@@ -121,7 +121,7 @@ struct bmap_pagecache_entry {
 	((b)->bmpce_waitq ? (char *)(b)->bmpce_waitq -			\
 	 offsetof(struct bmpc_ioreq, biorq_waitq) : NULL)
 
-#define BMPCE_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
+#define BMPCE_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
 #define DEBUG_BMPCE_FLAGS(b)						\
 	(b)->bmpce_flags & BMPCE_NEW			? "n" : "",	\
 	(b)->bmpce_flags & BMPCE_GETBUF			? "g" : "",	\
@@ -136,7 +136,8 @@ struct bmap_pagecache_entry {
 	(b)->bmpce_flags & BMPCE_RBWRDY			? "R" : "",	\
 	(b)->bmpce_flags & BMPCE_INFLIGHT		? "L" : "",	\
 	(b)->bmpce_flags & BMPCE_EIO			? "E" : "",	\
-	(b)->bmpce_flags & BMPCE_READA			? "a" : ""
+	(b)->bmpce_flags & BMPCE_READA			? "a" : "",     \
+	(b)->bmpce_flags & BMPCE_AIOWAIT		? "w" : ""
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP,					\
