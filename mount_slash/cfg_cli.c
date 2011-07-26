@@ -18,6 +18,7 @@
  */
 
 #include "pfl/cdefs.h"
+#include "psc_ds/listcache.h"
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
 
@@ -43,8 +44,8 @@ slcfg_init_resm(struct sl_resm *resm)
 	psc_mutex_init(&rmci->rmci_mutex);
 	psc_multiwaitcond_init(&rmci->rmci_mwc, resm, PMWCF_WAKEALL,
 	    "csvc-%s", resm->resm_addrbuf);
-	pll_init(&rmci->rmci_async_reqs, struct slc_async_req,
-	    car_lentry, NULL);
+	lc_reginit(&rmci->rmci_async_reqs, struct slc_async_req,
+	    car_lentry, "aiorq-%s", resm->resm_addrbuf);
 }
 
 void

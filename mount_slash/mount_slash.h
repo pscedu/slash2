@@ -176,7 +176,7 @@ struct resm_cli_info {
 	struct pfl_mutex		 rmci_mutex;
 	struct psc_multiwaitcond	 rmci_mwc;
 	struct srm_bmap_release_req	 rmci_bmaprls;
-	struct psc_lockedlist		 rmci_async_reqs;
+	struct psc_listcache		 rmci_async_reqs;
 };
 
 static __inline struct resm_cli_info *

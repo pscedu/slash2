@@ -39,8 +39,8 @@ int
 slc_rci_handle_read(struct pscrpc_request *rq)
 {
 	struct pscfs_req *pfr = NULL;
-	struct psc_lockedlist *pll;
 	struct slc_async_req *car;
+	struct psc_listcache *lc;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct sl_resm *m;
@@ -54,18 +54,22 @@ slc_rci_handle_read(struct pscrpc_request *rq)
 		mp->rc = SLERR_ION_UNKNOWN;
 		goto error;
 	}
-	pll = &resm2rmci(m)->rmci_async_reqs;
 
-	PLL_LOCK(pll);
-	PLL_FOREACH(car, pll)
+	lc = &resm2rmci(m)->rmci_async_reqs;
+
+	LIST_CACHE_LOCK(lc);
+	LIST_CACHE_FOREACH(car, lc)
 		if (mq->id == car->car_id)
 			break;
-	PLL_ULOCK(pll);
+	LIST_CACHE_ULOCK(lc);
+
 	if (car == NULL) {
 		mp->rc = EINVAL;
 		goto error;
 	}
+
 	pfr = car->car_pfr;
+
 	if (mq->rc)
 		;
 	else if (car->car_cbf == msl_readahead_cb) {

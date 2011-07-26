@@ -31,6 +31,7 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/fs.h"
 #include "pfl/pfl.h"
 #include "psc_ds/dynarray.h"
 #include "psc_ds/listcache.h"
@@ -857,7 +858,7 @@ msl_add_async_req(struct pscrpc_request *rq,
 	car->car_cbf = cbf;
 	car->car_id = mp->id;
 	memcpy(&car->car_argv, av, sizeof(*av));
-	pll_add(&resm2rmci(m)->rmci_async_reqs, car);
+	lc_add(&resm2rmci(m)->rmci_async_reqs, car);
 	return (0);
 }
 
