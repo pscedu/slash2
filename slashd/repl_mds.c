@@ -512,8 +512,9 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 
 			repl_some_act |= mds_repl_bmap_walk(bcm,
 			    tract, retifset, 0, iosidx, nios);
-			if (repl_all_act && mds_repl_bmap_walk_all(bcm,
-			    NULL, ret_if_inact, REPL_WALKF_SCIRCUIT))
+			if (repl_all_act && mds_repl_bmap_walk(bcm,
+			    NULL, ret_if_inact, REPL_WALKF_SCIRCUIT,
+			    iosidx, nios))
 				repl_all_act = 0;
 			mds_bmap_write_repls_rel(bcm);
 		}
