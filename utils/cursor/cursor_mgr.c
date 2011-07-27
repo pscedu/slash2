@@ -45,8 +45,8 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
+	char *p, tmbuf[PFL_CTIME_BUFSIZ], *cursor_file = NULL, c;
 	uint64_t newtxg = 0, newfid = 0, fid, cycle, newcycle;
-	char *p, tmbuf[26], *cursor_file = NULL, c;
 	int dump = 0, verbose = 0, fd, rc;
 	struct psc_journal_cursor cursor;
 
