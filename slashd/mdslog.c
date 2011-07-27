@@ -244,7 +244,8 @@ mds_remove_logfile(uint64_t batchno, int update)
 }
 
 int
-mds_open_logfile(uint64_t batchno, int update, int readonly, void **handle)
+mds_open_logfile(uint64_t batchno, int update, int readonly,
+    void **handle)
 {
 	char log_fn[PATH_MAX];
 	int rc;
@@ -301,8 +302,8 @@ mds_open_logfile(uint64_t batchno, int update, int readonly, void **handle)
  *	format changes.
  */
 int
-mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
-    int action)
+mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
+    int npeers, int action)
 {
 	struct srt_reclaim_entry reclaim_entry, *reclaim_entryp;
 	struct srt_update_entry update_entry, *update_entryp;
@@ -313,8 +314,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 	size_t size;
 
 	/*
-	 * Make sure that the distill log hits the disk now. This action
-	 * can be called by any process that needs log space.
+	 * Make sure that the distill log hits the disk now.  This
+	 * action can be called by any process that needs log space.
 	 */
 	if (action == 2) {
 
@@ -340,7 +341,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 	}
 
 	/*
-	 * The following can only be executed by the singleton distill thread.
+	 * The following can only be executed by the singleton distill
+	 * thread.
 	 */
 
 	psc_assert(pje->pje_magic == PJE_MAGIC);
@@ -397,12 +399,14 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid, int npeers,
 			reclaim_entryp = reclaimbuf;
 			while (count < total) {
 				if (reclaim_entryp->xid == pje->pje_xid) {
-					psclog_warnx("Reclaim distill %"PRId64, pje->pje_xid);
+					psclog_warnx("Reclaim distill %"PRId64,
+					    pje->pje_xid);
 					break;
 				}
 				reclaim_entryp++;
 				count++;
-				reclaim_logfile_offset += sizeof(struct srt_reclaim_entry);
+				reclaim_logfile_offset +=
+				    sizeof(struct srt_reclaim_entry);
 			}
 		}
 	}
@@ -1047,9 +1051,11 @@ mds_open_cursor(void)
 	psc_assert(mds_cursor.pjc_fid >= SLFID_MIN);
 
 	if (FID_GET_SITEID(mds_cursor.pjc_fid) == 0)
-		mds_cursor.pjc_fid |= (uint64_t)nodeSite->site_id << (SLASH_ID_FID_BITS + SLASH_ID_CYCLE_BITS);
+		mds_cursor.pjc_fid |= (uint64_t)nodeSite->site_id <<
+		    (SLASH_ID_FID_BITS + SLASH_ID_CYCLE_BITS);
 	if (FID_GET_SITEID(mds_cursor.pjc_fid) != nodeSite->site_id)
-		psc_fatal("Mismatched site ID in the FID, expect %d", nodeSite->site_id);
+		psc_fatal("Mismatched site ID in the FID, expected %d",
+		    nodeSite->site_id);
 
 	slm_set_curr_slashfid(mds_cursor.pjc_fid);
 	psclog_notice("File system was formatted on %"PRIu64" seconds "
@@ -1211,11 +1217,14 @@ mds_send_batch_reclaim(uint64_t batchno)
 			}
 		}
 	}
+
 	/*
-	 * Record the progress first before potentially removing old log file.
+	 * Record the progress first before potentially removing old log
+	 * file.
 	 */
 	if (record)
 		mds_record_reclaim_prog();
+
 	/*
 	 * If this log file is full and all I/O servers have applied its
 	 * contents, remove an old log file (keep the previous one so that
@@ -1449,10 +1458,9 @@ mds_journal_init(int disable_propagation)
 	struct sl_mds_iosinfo *iosinfo;
 	struct sl_resource *res;
 	struct sl_resm *resm;
-	char fn[PATH_MAX];
+	char *jrnldev, fn[PATH_MAX];
 	void *handle;
 	size_t size;
-	char *jrnldev;
 
 	psc_assert(_MDS_LOG_LAST_TYPE <= (1 << 15));
 	psc_assert(sizeof(struct srt_update_entry) == 512);
@@ -1660,7 +1668,7 @@ mds_journal_init(int disable_propagation)
 	pjournal_replay(mdsJournal, SLMTHRT_JRNL, "slmjthr",
 	    mds_replay_handler, mds_distill_handler);
 
-	psclog_notice("Last used SLASH2 transaction ID is %"PRId64, 
+	psclog_notice("Last used SLASH2 transaction ID is %"PRId64,
 	   mdsJournal->pj_lastxid);
 
 	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm, mds_cursor.pjc_seqno_lwm);

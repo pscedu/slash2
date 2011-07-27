@@ -471,8 +471,7 @@ int
 mds_replay_handler(struct psc_journal_enthdr *pje)
 {
 	struct slmds_jent_namespace *sjnm;
-	int rc = 0;
-	int type;
+	int rc = 0, type;
 	uint64_t fid;
 
 	type = pje->pje_type & ~(_PJE_FLSHFT - 1);
@@ -505,7 +504,7 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 		    sjnm->sjnm_op == NS_OP_MKDIR ||
 		    sjnm->sjnm_op == NS_OP_LINK ||
 		    sjnm->sjnm_op == NS_OP_SYMLINK)
-			(void)slm_get_next_slashfid(&fid);
+			slm_get_next_slashfid(&fid);
 		break;
 	    default:
 		psc_fatalx("invalid log entry type %d", pje->pje_type);
