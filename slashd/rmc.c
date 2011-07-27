@@ -91,20 +91,32 @@ slm_set_curr_slashfid(slfid_t slfid)
  *	theft).  So we must make sure that we never reuse a SLASH FID,
  *	even after a crash.
  */
-slfid_t
-slm_get_next_slashfid(void)
+int
+slm_get_next_slashfid(slfid_t *fidp)
 {
 	uint64_t fid;
 
 	spinlock(&slash_fid_lock);
-	if (next_slash_fid >= (UINT64_C(1) << SLASH_ID_FID_BITS))
-		next_slash_fid = SLFID_MIN;
+	/*
+ 	 * This should never happen.  If it does, we crash to let the sys admin
+ 	 * know.  He could fix this if there are still room in the cycle bits.
+ 	 * We have to let sys admin know, otherwise, he/she does not know how
+ 	 * to bump the cycle bits.
+ 	 */
+	if (FID_GET_INUM(next_slash_fid) >= FID_MAX) {
+		psc_warnx("Max FID "SLPRI_FID" reached, manual intervention needed", 
+			next_slash_fid);
+		freelock(&slash_fid_lock);
+		return (ENOSPC);
+	}
 	fid = next_slash_fid++;
 	freelock(&slash_fid_lock);
 
-	fid |= ((uint64_t)nodeResm->resm_site->site_id << SLASH_ID_FID_BITS);
+	fid |= ((uint64_t)nodeResm->resm_site->site_id << 
+			(SLASH_ID_CYCLE_BITS + SLASH_ID_FID_BITS));
 	psclog_info("next slash ID "SLPRI_FID, fid);
-	return (fid);
+	* fidp = fid;
+	return (0);
 }
 
 int

@@ -364,13 +364,15 @@ slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
 	if (op == SLM_FORWARD_MKDIR || op == SLM_FORWARD_CREATE) {
 		mq->mode = mode;
 		mq->creds = *creds;
-		mq->fid = slm_get_next_slashfid();
+		rc = slm_get_next_slashfid(&mq->fid);
 	} else {
 		mq->mode = 0;
 		mq->creds.scr_uid = 0;		/* XXX */
 		mq->creds.scr_gid = 0;
 		mq->fid = 0;
 	}
+	if (rc)
+		goto out;
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc)

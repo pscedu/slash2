@@ -997,10 +997,11 @@ uswi_find(const struct slash_fidgen *fgp)
 	return (NULL);
 }
 
-slfid_t
-uswi_getslfid(void)
+int
+uswi_getslfid(__unusedx slfid_t *fidp)
 {
 	/* XXX should I be FID_ANY? */
+	*fidp = 0;
 	return (0);
 }
 

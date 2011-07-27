@@ -220,8 +220,8 @@ void		 slmupschedthr_spawnall(void);
 void		 slmtimerthr_spawn(void);
 
 slfid_t		 slm_get_curr_slashfid(void);
-slfid_t		 slm_get_next_slashfid(void);
 void		 slm_set_curr_slashfid(slfid_t);
+int		 slm_get_next_slashfid(slfid_t *);
 
 int		 slm_ptrunc_prepare(struct slm_workrq *);
 void		 slm_ptrunc_apply(struct slm_workrq *);

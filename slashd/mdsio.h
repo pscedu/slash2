@@ -43,7 +43,7 @@ struct mdsio_fh {
 };
 
 /* callback to get a SLASH2 FID */
-typedef slfid_t (*sl_getslfid_cb_t)(void);
+typedef int (*sl_getslfid_cb_t)(slfid_t *);
 
 /* callback to log writes to bmap */
 typedef void (*sl_log_write_t)(void *, uint64_t, int);

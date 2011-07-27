@@ -1046,6 +1046,11 @@ mds_open_cursor(void)
 	psc_assert(mds_cursor.pjc_version == PJRNL_CURSOR_VERSION);
 	psc_assert(mds_cursor.pjc_fid >= SLFID_MIN);
 
+	if (FID_GET_SITEID(mds_cursor.pjc_fid) == 0)
+		mds_cursor.pjc_fid |= (uint64_t)nodeSite->site_id << (SLASH_ID_FID_BITS + SLASH_ID_CYCLE_BITS);
+	if (FID_GET_SITEID(mds_cursor.pjc_fid) != nodeSite->site_id)
+		psc_fatal("Mismatched site ID in the FID, expect %d", nodeSite->site_id);
+
 	slm_set_curr_slashfid(mds_cursor.pjc_fid);
 	psclog_notice("File system was formatted on %"PRIu64" seconds "
 	    "since the Epoch", mds_cursor.pjc_timestamp);
