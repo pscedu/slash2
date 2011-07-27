@@ -846,15 +846,15 @@ msl_add_async_req(struct pscrpc_request *rq,
     int (*cbf)(struct pscrpc_request *, int, struct pscrpc_async_args *),
     struct pscrpc_async_args *av)
 {
-	struct msl_aiorqcol *marc, 
+	struct msl_aiorqcol *marc,
 		**marcp = av->pointer_arg[MSL_CBARG_AIORQCOL];
 	struct slc_async_req *car;
 	struct srm_io_rep *mp;
 	struct sl_resm *m;
-	
-	mp = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mp));	
+
+	mp = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mp));
 	m = libsl_nid2resm(rq->rq_peer.nid);
-	
+
 	if (marcp) {
 		marc = *marcp;
 		if (marc == NULL) {
@@ -947,7 +947,7 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 			bmpce->bmpce_waitq = NULL;
 			bmpce->bmpce_owner = NULL;
 		}
-		
+
 		if (bmpce->bmpce_flags)
 			bmpce->bmpce_flags &= ~BMPCE_AIOWAIT;
 
@@ -987,18 +987,18 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 static inline void
 msl_bmpce_setaio(struct bmap_pagecache_entry **bmpces)
 {
-	struct bmap_pagecache_entry *bmpce; 
+	struct bmap_pagecache_entry *bmpce;
 	int i;
-	
+
 	for (i = 0;; i++) {
 		bmpce = bmpces[i];
 		if (!bmpce)
 			break;
-		
+
 		BMPCE_LOCK(bmpce);
 		bmpce->bmpce_flags |= BMPCE_AIOWAIT;
 		BMPCE_ULOCK(bmpce);
-		
+
 		DEBUG_BMPCE(PLL_NOTIFY, bmpce, "aio read");
 	}
 }
@@ -1019,7 +1019,7 @@ msl_read_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 		return (msl_add_async_req(rq, msl_read_cb, args));
 	}
-	
+
 	return (msl_read_cb(rq, rc, args));
 }
 
@@ -1027,7 +1027,7 @@ int
 msl_readahead_cb(struct pscrpc_request *rq, int rc,
     struct pscrpc_async_args *args)
 {
-	struct bmap_pagecache_entry *bmpce, 
+	struct bmap_pagecache_entry *bmpce,
 		**bmpces = args->pointer_arg[MSL_CBARG_BMPCE];
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct bmap_pagecache *bmpc = args->pointer_arg[MSL_CBARG_BMPC];
@@ -1822,10 +1822,10 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 			return (EWOULDBLOCK);
 		}
 
-		if (!biorq_is_my_bmpce(r, bmpce)) {			
+		if (!biorq_is_my_bmpce(r, bmpce)) {
 			/* For pages not owned by this request,
 			 *    wait for them to become DATARDY
-			 *    or to have failed.  
+			 *    or to have failed.
 			 */
 			while (!(bmpce->bmpce_flags &
 			    (BMPCE_DATARDY | BMPCE_EIO))) {

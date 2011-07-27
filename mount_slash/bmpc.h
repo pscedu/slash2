@@ -103,7 +103,7 @@ struct bmap_pagecache_entry {
 #define	BMPCE_INFLIGHT		(1 << 11)	/* 0x0800: I/O in progress */
 #define	BMPCE_EIO		(1 << 12)	/* 0x1000: I/O error */
 #define BMPCE_READA		(1 << 13)	/* 0x2000: read-ahead */
-#define BMPCE_AIOWAIT           (1 << 14)       /* 0x4000: wait on async read */
+#define BMPCE_AIOWAIT		(1 << 14)	/* 0x4000: wait on async read */
 
 #define BMPCE_LOCK(b)		spinlock(&(b)->bmpce_lock)
 #define BMPCE_ULOCK(b)		freelock(&(b)->bmpce_lock)
@@ -136,7 +136,7 @@ struct bmap_pagecache_entry {
 	(b)->bmpce_flags & BMPCE_RBWRDY			? "R" : "",	\
 	(b)->bmpce_flags & BMPCE_INFLIGHT		? "L" : "",	\
 	(b)->bmpce_flags & BMPCE_EIO			? "E" : "",	\
-	(b)->bmpce_flags & BMPCE_READA			? "a" : "",     \
+	(b)->bmpce_flags & BMPCE_READA			? "a" : "",	\
 	(b)->bmpce_flags & BMPCE_AIOWAIT		? "w" : ""
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
@@ -145,7 +145,7 @@ struct bmap_pagecache_entry {
 	    "o=%#x b=%p "						\
 	    "ts="PSCPRI_TIMESPEC" "					\
 	    "wr=%hu rd=%hu "						\
-	    "owner=%p "fmt,						\
+	    "owner=%p : " fmt,						\
 	    (b), (b)->bmpce_flags, DEBUG_BMPCE_FLAGS(b),		\
 	    (b)->bmpce_off, (b)->bmpce_base,				\
 	    PSCPRI_TIMESPEC_ARGS(&(b)->bmpce_laccess),			\
@@ -276,7 +276,7 @@ struct bmpc_ioreq {
 #define	BIORQ_NOFHENT			(1 << 10)	/* release a file handle before flush is complete */
 #define BIORQ_APPEND			(1 << 11)
 #define BIORQ_READAHEAD			(1 << 12)
-#define BIORQ_RBWFAIL                   (1 << 13)
+#define BIORQ_RBWFAIL			(1 << 13)
 
 #define BIORQ_LOCK(r)			spinlock(&(r)->biorq_lock)
 #define BIORQ_ULOCK(r)			freelock(&(r)->biorq_lock)

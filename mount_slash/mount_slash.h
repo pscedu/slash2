@@ -139,13 +139,13 @@ struct slc_async_req {
 struct msl_fhent {			 /* XXX rename */
 	psc_spinlock_t			 mfh_lock;
 	struct fidc_membh		*mfh_fcmh;
-	struct psclist_head              mfh_lentry;
-	int                              mfh_flags;
+	struct psclist_head		 mfh_lentry;
+	int				 mfh_flags;
 
 	int				 mfh_oflags;	/* open(2) flags */
 	int				 mfh_flush_rc;	/* fsync(2) status */
 	struct psc_lockedlist		 mfh_biorqs;	/* track biorqs (flush) */
-	struct psc_lockedlist            mfh_ra_bmpces; /* read ahead bmpce's */
+	struct psc_lockedlist		 mfh_ra_bmpces; /* read ahead bmpce's */
 	struct msl_ra			 mfh_ra;	/* readahead tracking */
 
 	/* stats */
@@ -196,7 +196,7 @@ void	 msl_bmap_reap_init(struct bmapc_memb *, const struct srt_bmapdesc *);
 int	 msl_dio_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 int	 msl_io(struct msl_fhent *, char *, size_t, off_t, enum rw);
 int	 msl_read_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
-void     msl_reada_rpc_launch(struct bmap_pagecache_entry **, int);
+void	 msl_reada_rpc_launch(struct bmap_pagecache_entry **, int);
 int	 msl_readahead_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 int	 msl_stat(struct fidc_membh *, void *);
 int	 msl_write_rpc_cb(struct pscrpc_request *, struct pscrpc_async_args *);

@@ -47,7 +47,7 @@ struct bmap_cli_info {
 #define BMAP_CLI_FLUSHPROC	(_BMAP_FLSHFT << 0)	/* proc'd by flush thr */
 #define BMAP_CLI_BIORQEXPIRE	(_BMAP_FLSHFT << 1)
 #define BMAP_CLI_LEASEEXTREQ	(_BMAP_FLSHFT << 2)	/* requesting a lease ext */
-#define BMAP_CLI_DIOWR          (_BMAP_FLSHFT << 3)     /* dio for archiver write */
+#define BMAP_CLI_DIOWR		(_BMAP_FLSHFT << 3)	/* dio for archiver write */
 
 #define BMAP_CLI_MAX_LEASE	60 /* seconds */
 #define BMAP_CLI_EXTREQSECS	20

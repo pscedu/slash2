@@ -327,7 +327,7 @@ bmap_flush_inflight_unset(struct bmpc_ioreq *r)
 		bmpce->bmpce_flags &= ~BMPCE_INFLIGHT;
 		BMPCE_ULOCK(bmpce);
 	}
-} 
+}
 
 /**
  * bmap_flush_resched - called in error contexts where
@@ -663,7 +663,7 @@ bmap_flush_biorq_rbwdone(const struct bmpc_ioreq *r)
 static inline int
 bmap_flushready(const struct psc_dynarray *biorqs)
 {
-	int ready=0;
+	int ready = 0;
 
 	psc_assert(psc_dynarray_len(biorqs) <= PSCRPC_MAX_BRW_PAGES);
 
@@ -1279,9 +1279,9 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				psc_assert(!(b->bcm_flags & BMAP_DIRTY));
 				psc_assert(b->bcm_flags & BMAP_TIMEOQ);
 				if (!lc_conjoint(&bmapTimeoutQ, b))
-				       /* Put these at the back so we can
-					*   make better progress.
-					*/
+					/* Put these at the back so we can
+					 *   make better progress.
+					 */
 					lc_addtail(&bmapTimeoutQ, b);
 			}
 			BMAP_ULOCK(b);
