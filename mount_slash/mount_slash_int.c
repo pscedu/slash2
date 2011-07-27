@@ -965,8 +965,7 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 			bmpce->bmpce_owner = NULL;
 		}
 
-		if (bmpce->bmpce_flags)
-			bmpce->bmpce_flags &= ~BMPCE_AIOWAIT;
+		bmpce->bmpce_flags &= ~BMPCE_AIOWAIT;
 
 		if (clearpages) {
 			DEBUG_BMPCE(PLL_WARN, bmpce, "clearing page");
@@ -1051,12 +1050,10 @@ msl_readahead_cb(struct pscrpc_request *rq, int rc,
 		if (rc)
 			bmpce->bmpce_flags |= BMPCE_EIO;
 		else {
-			if (bmpce->bmpce_flags)
-				bmpce->bmpce_flags &= ~BMPCE_AIOWAIT;
-
+			bmpce->bmpce_flags &= ~BMPCE_AIOWAIT;
 			bmpce->bmpce_flags |= BMPCE_DATARDY;
 			DEBUG_BMPCE(PLL_INFO, bmpce,
-				    "datardy via readahead_cb");
+			    "datardy via readahead_cb");
 			wq = bmpce->bmpce_waitq;
 			bmpce->bmpce_waitq = NULL;
 		}
@@ -1804,23 +1801,23 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 		BMPCE_LOCK(bmpce);
 		DEBUG_BMPCE(PLL_INFO, bmpce, " ");
 
-		if (bmpce->bmpce_flags & BMPCE_AIOWAIT) {
-			BMPCE_ULOCK(bmpce);
-			return (SLERR_AIOWAIT);
-		}
-
 		if (!biorq_is_my_bmpce(r, bmpce)) {
 			/* For pages not owned by this request,
 			 *    wait for them to become DATARDY
 			 *    or to have failed.
 			 */
 			while (!(bmpce->bmpce_flags &
-			    (BMPCE_DATARDY | BMPCE_EIO))) {
+			    (BMPCE_DATARDY | BMPCE_EIO | BMPCE_AIOWAIT))) {
 				/*
 				 * If the owner gave up, we will contend
 				 * to retry after reacquiring the bmap
 				 * lease.
 				 */
+				if (bmpce->bmpce_flags & BMPCE_AIOWAIT) {
+					if (rc == 0)
+						rc = SLERR_AIOWAIT;
+					break;
+				}
 				if (bmpce->bmpce_flags & BMPCE_EIO) {
 					rc = EAGAIN;
 					break;
@@ -1845,13 +1842,16 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 				rc = EAGAIN;
 			}
 
+			if (rc == 0 && (bmpce->bmpce_flags & BMPCE_AIOWAIT))
+				rc = SLERR_AIOWAIT;
+
 			/* Read requests must have had their bmpce's
 			 *   put into DATARDY by now (i.e. all RPCs
 			 *   must have already been completed).
 			 *   Same goes for pages owned by other requests.
 			 */
 			psc_assert(bmpce->bmpce_flags &
-			    (BMPCE_DATARDY | BMPCE_EIO));
+			    (BMPCE_DATARDY | BMPCE_EIO | BMPCE_AIOWAIT));
 		}
 
 		BMPCE_ULOCK(bmpce);
@@ -2011,8 +2011,8 @@ msl_pages_copyout(struct bmpc_ioreq *r, char *buf)
 
 		if (!biorq_is_my_bmpce(r, bmpce))
 			psc_iostats_intv_add(&msl_rdcache_stat, nbytes);
-		//		else
-		//			bmpce->bmpce_owner = NULL;
+//		else
+//			bmpce->bmpce_owner = NULL;
 
 		BMPCE_ULOCK(bmpce);
 
