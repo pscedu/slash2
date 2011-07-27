@@ -436,7 +436,7 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 			goto out;
 		}
 		/*
-		 * sfop_ctor() can be called prior to having attrs.
+		 * sfop_ctor() is called prior to having attrs.
 		 * This means that dir fcmh's can't be initialized fully
 		 * until here.
 		 */
@@ -2143,7 +2143,7 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	msfsthr(pscthr_get())->mft_failcnt = 1;
 	buf = PSCALLOC(size);
 	rc = msl_read(mfh, buf, size, off);
-	if (rc == -EWOULDBLOCK)
+	if (rc == -SLERR_AIOWAIT)
 		return;
 	if (rc < 0) {
 		rc = -rc;

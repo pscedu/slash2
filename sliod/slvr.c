@@ -385,7 +385,7 @@ sli_aio_register(struct pscrpc_request *rq, struct sli_iocb_set **iocbsp,
 	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 	mp->id = iocb->iocb_id = psc_atomic64_inc_getnew(&sli_aio_id);
 
-	return (-EWOULDBLOCK);
+	return (-SLERR_AIOWAIT);
 }
 
 __static int

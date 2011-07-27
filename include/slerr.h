@@ -48,5 +48,6 @@ char *slstrerror(int);
 #define SLERR_NOTCONN			(_SLERR_START + 22)
 #define SLERR_BMAP_IN_PTRUNC		(_SLERR_START + 23)
 #define SLERR_BMAP_PTRUNC_STARTED	(_SLERR_START + 24)
+#define SLERR_AIOWAIT			(_SLERR_START + 25)
 
 #endif /* _SLERR_H_ */

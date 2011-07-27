@@ -1010,7 +1010,7 @@ msl_read_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	psc_assert(rq->rq_reqmsg->opc == SRMT_READ);
 
 	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
-	if (rc == EWOULDBLOCK)
+	if (rc == SLERR_AIOWAIT)
 		return (msl_add_async_req(rq, msl_read_cb, args));
 	return (msl_read_cb(rq, rc, args));
 }
@@ -1093,7 +1093,7 @@ msl_readahead_cb0(struct pscrpc_request *rq,
 	int rc;
 
 	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
-	if (rc == EWOULDBLOCK)
+	if (rc == SLERR_AIOWAIT)
 		return (msl_add_async_req(rq, msl_readahead_cb, args));
 	return (msl_readahead_cb(rq, rc, args));
 }
@@ -1178,7 +1178,7 @@ msl_dio_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	int rc;
 
 	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
-	if (rc == EWOULDBLOCK)
+	if (rc == SLERR_AIOWAIT)
 		return (msl_add_async_req(rq, msl_dio_cb, args));
 	return (msl_dio_cb(rq, rc, args));
 }
@@ -1270,7 +1270,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b,
 
 	PSCFREE(iovs);
 
-	if (rc == EWOULDBLOCK) {
+	if (rc == SLERR_AIOWAIT) {
 		/*
 		 * async I/O registered by sliod; we must wait for a
 		 * notification from him when it is ready.
@@ -1806,7 +1806,7 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 
 		if (bmpce->bmpce_flags & BMPCE_AIOWAIT) {
 			BMPCE_ULOCK(bmpce);
-			return (EWOULDBLOCK);
+			return (SLERR_AIOWAIT);
 		}
 
 		if (!biorq_is_my_bmpce(r, bmpce)) {
@@ -2309,7 +2309,7 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 
 		if (r[i]->biorq_flags & BIORQ_DIO) {
 			rc = msl_pages_dio_getput(r[i], p, &aiorqcol);
-			if (rc == EWOULDBLOCK)
+			if (rc == SLERR_AIOWAIT)
 				goto next_ioreq;
 			if (rc) {
 				pll_remove(&mfh->mfh_biorqs, r[i]);
@@ -2328,7 +2328,7 @@ msl_io(struct msl_fhent *mfh, char *buf, const size_t size,
 			 *   which we need.
 			 */
 			rc = msl_pages_blocking_load(r[i]);
-			if (rc == EWOULDBLOCK)
+			if (rc == SLERR_AIOWAIT)
 				goto next_ioreq;
 			if (rc) {
 				rc = msl_offline_retry(r[i]);

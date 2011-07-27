@@ -221,7 +221,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		iocbs->iocbs_flags |= SLI_IOCBSF_DONE;
 		freelock(&iocbs->iocbs_lock);
 
-		mp->rc = rc = EWOULDBLOCK;
+		mp->rc = rc = SLERR_AIOWAIT;
 		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
 		goto out;
 	}
