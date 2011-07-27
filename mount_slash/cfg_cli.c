@@ -45,7 +45,7 @@ slcfg_init_resm(struct sl_resm *resm)
 	psc_multiwaitcond_init(&rmci->rmci_mwc, resm, PMWCF_WAKEALL,
 	    "csvc-%s", resm->resm_addrbuf);
 	lc_reginit(&rmci->rmci_async_reqs, struct slc_async_req,
-	    car_lentry, "aiorq-%s", resm->resm_addrbuf);
+	    car_lentry, "aiorq-%s:%d", resm->resm_res->res_name, 0);
 }
 
 void
