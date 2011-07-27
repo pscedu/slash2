@@ -306,16 +306,15 @@ slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
     uint32_t mode, const struct slash_creds *creds,
     struct srt_stat *sstb, int32_t to_set)
 {
-	int rc, len, i;
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
 	struct sl_resm *resm = NULL;
-	struct sl_site *site;
-	struct sl_resource *res;
-	struct slashrpc_cservice *csvc;
-
 	struct srm_forward_req *mq;
 	struct srm_forward_rep *mp;
-	struct pscrpc_request *rq;
+	struct sl_resource *res;
+	struct sl_site *site;
 	sl_siteid_t siteid;
+	int rc, len, i;
 
 	siteid = FID_GET_SITEID(fg->fg_fid);
 
@@ -335,30 +334,29 @@ slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
 		break;
 	}
 	csvc = slm_getmcsvc(resm);
-	if (csvc == NULL)  {
+	if (csvc == NULL) {
 		psclog_info("unable to connect to site %d", siteid);
 		return (EIO);
 	}
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_NAMESPACE_FORWARD, rq, mq, mp);
-	if (rc) {
-		sl_csvc_decref(csvc);
-		return (EIO);
-	}
+	if (rc)
+		goto out;
 
 	mq->op = op;
-	mq->fg	= *fg;
+	mq->fg = *fg;
 
 	if (op == SLM_FORWARD_SETATTR) {
 		mq->to_set = to_set;
 		mq->req.sstb = *sstb;
 	} else
-		strncpy(mq->req.name, name, sizeof(mq->req.name));
+		strlcpy(mq->req.name, name, sizeof(mq->req.name));
 
 	if (op == SLM_FORWARD_RENAME) {
 		mq->nfg	= *nfg;
 		len = strlen(name) + 1;
-		strncpy(mq->req.name + len, newname, sizeof(mq->req.name) - len);
+		strlcpy(mq->req.name + len, newname,
+		    sizeof(mq->req.name) - len);
 	}
 
 	if (op == SLM_FORWARD_MKDIR || op == SLM_FORWARD_CREATE) {
@@ -415,7 +413,9 @@ slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
 	    op, mq->fg.fg_fid, name, rc);
 
  out:
-	pscrpc_req_finished(rq);
-	sl_csvc_decref(csvc);
+	if (rq)
+		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
 	return (rc);
 }
