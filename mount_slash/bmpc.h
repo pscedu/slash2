@@ -107,6 +107,8 @@ struct bmap_pagecache_entry {
 
 #define BMPCE_LOCK(b)		spinlock(&(b)->bmpce_lock)
 #define BMPCE_ULOCK(b)		freelock(&(b)->bmpce_lock)
+#define BMPCE_RLOCK(b)		reqlock(&(b)->bmpce_lock)
+#define BMPCE_URLOCK(b, lk)	ureqlock(&(b)->bmpce_lock, (lk))
 
 #define BMPCE_WAIT(b)		psc_waitq_wait((b)->bmpce_waitq, &(b)->bmpce_lock)
 #define BMPCE_WAKE(b)							\
@@ -120,6 +122,16 @@ struct bmap_pagecache_entry {
 #define BMPCE_2_BIORQ(b)						\
 	((b)->bmpce_waitq ? (char *)(b)->bmpce_waitq -			\
 	 offsetof(struct bmpc_ioreq, biorq_waitq) : NULL)
+
+#define BMPCE_SETATTR(bmpce, fl, ...)					\
+	do {								\
+		int _locked;						\
+									\
+		_locked = BMPCE_RLOCK(bmpce);				\
+		(bmpce)->bmpce_flags |= (fl);				\
+		DEBUG_BMPCE(PLL_INFO, (bmpce), ##__VA_ARGS__);		\
+		BMPCE_URLOCK((bmpce), _locked);				\
+	} while (0)
 
 #define BMPCE_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
 #define DEBUG_BMPCE_FLAGS(b)						\
