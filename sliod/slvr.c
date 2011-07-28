@@ -244,33 +244,27 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 
 	iocbs = iocb->iocb_set;
 	s = iocb->iocb_slvr;
+	SLVR_LOCK(s);
+	psc_assert(!(s->slvr_flags & SLVR_DATARDY));
 	if (iocb->iocb_rc) {
 		/*
 		 * There was a problem; unblock any waiters and
 		 * tell them the bad news.
 		 */
-		SLVR_LOCK(s);
 		s->slvr_flags |= SLVR_DATAERR;
-		DEBUG_SLVR(PLL_ERROR, s, "slvr_fsio() error, rc=%zd",
+		DEBUG_SLVR(PLL_ERROR, s, "slvr_fsio() error, rc=%d",
 		    iocb->iocb_rc);
 		SLVR_WAKEUP(s);
-		SLVR_ULOCK(s);
-	}
-	if (iocb->iocb_rc) {
-		SLVR_LOCK(s);
+
 		s->slvr_pndgreads--;
 		slvr_clear_inuse(s, 0, SLASH_SLVR_SIZE);
 		slvr_lru_tryunpin_locked(s);
 		DEBUG_SLVR(PLL_WARN, s,
 		    "unwind ref due to async I/O bulk error");
-		SLVR_ULOCK(s);
+	} else {
+		s->slvr_flags |= SLVR_DATARDY;
+		s->slvr_flags &= ~SLVR_FAULTING;
 	}
-
-	SLVR_LOCK(s);
-	psc_assert(!(s->slvr_flags & SLVR_DATARDY));
-
-	s->slvr_flags |= SLVR_DATARDY;
-	s->slvr_flags &= ~SLVR_FAULTING;
 
 	psc_vbitmap_invert(s->slvr_slab->slb_inuse);
 	//psc_vbitmap_printbin1(s->slvr_slab->slb_inuse);
@@ -298,14 +292,14 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 
 	memcpy(&mq->sbd, &iocb->iocb_sbd, sizeof(mq->sbd));
 	mq->id = iocb->iocb_id;
-	mq->size = iocb->iocb_aiocb.aio_nbytes;
+	mq->size = iocb->iocb_len;
 	mq->offset = aio->aio_offset;
 	mq->op = SRMIOP_RD;
 	mq->rc = iocb->iocb_rc;
 	if (mq->rc)
 		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
 	else
-		mq->rc = rsx_bulkserver(rq, BULK_PUT_SOURCE,
+		mq->rc = rsx_bulkclient(rq, BULK_PUT_SOURCE,
 		    SRCI_BULK_PORTAL, iocbs->iocbs_iovs,
 		    iocbs->iocbs_niov);
 
@@ -1162,6 +1156,7 @@ void
 sliaiothr_main(__unusedx struct psc_thread *thr)
 {
 	struct sli_iocb *iocb, *next;
+	int rc;
 
 	for (;;) {
 		usleep(500);
@@ -1176,7 +1171,12 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 				continue;
 			psc_assert(iocb->iocb_rc != ECANCELED);
 			if (iocb->iocb_rc == 0)
-				iocb->iocb_rc = aio_return(&iocb->iocb_aiocb);
+				iocb->iocb_len = aio_return(&iocb->iocb_aiocb);
+			else {
+				rc = aio_return(&iocb->iocb_aiocb);
+//				if (rc)
+//					iocb->iocb_rc = rc;
+			}
 			iocb->iocb_cbf(iocb);
 			psc_pool_return(sli_iocb_pool, iocb);
 		}
