@@ -71,6 +71,7 @@ main(int argc, char *argv[])
 	printf("%4d [SLERR_NOTCONN]: %s\n", SLERR_NOTCONN, slstrerror(SLERR_NOTCONN));
 	printf("%4d [SLERR_BMAP_IN_PTRUNC]: %s\n", SLERR_BMAP_IN_PTRUNC, slstrerror(SLERR_BMAP_IN_PTRUNC));
 	printf("%4d [SLERR_BMAP_PTRUNC_STARTED]: %s\n", SLERR_BMAP_PTRUNC_STARTED, slstrerror(SLERR_BMAP_PTRUNC_STARTED));
+	printf("%4d [SLERR_AIOWAIT]: %s\n", SLERR_AIOWAIT, slstrerror(SLERR_AIOWAIT));
 	/* end custom errnos */
 	exit(0);
 }
