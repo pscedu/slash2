@@ -38,7 +38,6 @@
 int
 slc_rci_handle_read(struct pscrpc_request *rq)
 {
-	struct pscfs_req *pfr = NULL;
 	struct slc_async_req *car;
 	struct psc_listcache *lc;
 	struct srm_io_req *mq;
@@ -59,16 +58,16 @@ slc_rci_handle_read(struct pscrpc_request *rq)
 
 	LIST_CACHE_LOCK(lc);
 	LIST_CACHE_FOREACH(car, lc)
-		if (mq->id == car->car_id)
+		if (mq->id == car->car_id) {
+			lc_remove(lc, car);
 			break;
+		}
 	LIST_CACHE_ULOCK(lc);
 
 	if (car == NULL) {
 		mp->rc = EINVAL;
 		goto error;
 	}
-
-	pfr = car->car_pfr;
 
 	if (mq->rc)
 		;
@@ -85,8 +84,8 @@ slc_rci_handle_read(struct pscrpc_request *rq)
 			iovs[i].iov_len = BMPC_BUFSZ;
 		}
 
-		mq->rc = rsx_bulkserver(rq, BULK_PUT_SINK,
-		    SRIC_BULK_PORTAL, iovs, i);
+		mq->rc = rsx_bulkserver(rq, BULK_GET_SINK,
+		    SRCI_BULK_PORTAL, iovs, i);
 
 	} else if (car->car_cbf == msl_read_cb) {
 
@@ -103,17 +102,21 @@ slc_rci_handle_read(struct pscrpc_request *rq)
 			iovs[i].iov_len = BMPC_BUFSZ;
 		}
 
-		mq->rc = rsx_bulkserver(rq, BULK_PUT_SINK,
-		    SRIC_BULK_PORTAL, iovs, psc_dynarray_len(a));
+		mq->rc = rsx_bulkserver(rq, BULK_GET_SINK,
+		    SRCI_BULK_PORTAL, iovs, psc_dynarray_len(a));
 
-//		rc = msl_pages_copyout(r, p);
+		rc = msl_pages_copyout(r, car->car_buf);
+		if (mq->rc == 0)
+			mq->rc = rc;
+
+		len = r->biorq_len;
 
 	} else if (car->car_cbf == msl_dio_cb) {
 
 		iov.iov_base = car->car_argv.pointer_arg[MSL_CBARG_BUF];
-		iov.iov_len = mq->size;
+		len = iov.iov_len = mq->size;
 
-		mq->rc = rsx_bulkserver(rq, BULK_PUT_SINK,
+		mq->rc = rsx_bulkserver(rq, BULK_GET_SINK,
 		    SRCI_BULK_PORTAL, &iov, 1);
 	} else
 		psc_fatalx("unknown callback");

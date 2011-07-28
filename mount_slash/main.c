@@ -2088,7 +2088,7 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 	}
 
 	msfsthr(pscthr_get())->mft_failcnt = 1;
-	rc = msl_write(mfh, buf, size, off);
+	rc = msl_write(pfr, mfh, buf, size, off);
 	if (rc < 0) {
 		rc = -rc;
 		goto out;
@@ -2142,7 +2142,7 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 
 	msfsthr(pscthr_get())->mft_failcnt = 1;
 	buf = PSCALLOC(size);
-	rc = msl_read(mfh, buf, size, off);
+	rc = msl_read(pfr, mfh, buf, size, off);
 	if (rc == -SLERR_AIOWAIT)
 		return;
 	if (rc < 0) {

@@ -119,18 +119,19 @@ struct msl_aiorqcol {
 	void				*marc_buf;
 	ssize_t				 marc_rc;
 	size_t				 marc_len;
+	struct psc_waitq		 marc_waitq;
+	struct pscfs_req		*marc_pfr;
 };
 
 struct slc_async_req {
 	struct psc_listentry		  car_lentry;
-	struct pscfs_req		 *car_pfr;
 	struct msl_aiorqcol		 *car_marc;
 	struct pscrpc_async_args	  car_argv;
 	int				(*car_cbf)(struct pscrpc_request *, int,
 						struct pscrpc_async_args *);
 	uint64_t			  car_id;
-	void				 *car_buf;
 	size_t				  car_len;
+	void				 *car_buf;
 };
 
 #define MARCF_DONE			(1 << 0)
@@ -185,8 +186,8 @@ resm2rmci(struct sl_resm *resm)
 	return (resm_get_pri(resm));
 }
 
-#define msl_read(fh, buf, size, off)	msl_io((fh), (buf), (size), (off), SL_READ)
-#define msl_write(fh, buf, size, off)	msl_io((fh), (char *)(buf), (size), (off), SL_WRITE)
+#define msl_read(pfr, fh, buf, size, off)	msl_io((pfr), (fh), (buf), (size), (off), SL_READ)
+#define msl_write(pfr, fh, buf, size, off)	msl_io((pfr), (fh), (char *)(buf), (size), (off), SL_WRITE)
 
 void	 msl_bmpce_getbuf(struct bmap_pagecache_entry *);
 
@@ -194,7 +195,7 @@ struct slashrpc_cservice *
 	 msl_bmap_to_csvc(struct bmapc_memb *, int);
 void	 msl_bmap_reap_init(struct bmapc_memb *, const struct srt_bmapdesc *);
 int	 msl_dio_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
-int	 msl_io(struct msl_fhent *, char *, size_t, off_t, enum rw);
+int	 msl_io(struct pscfs_req *, struct msl_fhent *, char *, size_t, off_t, enum rw);
 int	 msl_read_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 void	 msl_reada_rpc_launch(struct bmap_pagecache_entry **, int);
 int	 msl_readahead_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);

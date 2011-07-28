@@ -39,6 +39,7 @@ extern struct pscrpc_completion rpcComp;
 #define MSL_CBARG_BMPC			5
 #define MSL_CBARG_BMAP			6	/* don't mix with RA! */
 #define MSL_CBARG_AIORQCOL		7
+#define MSL_CBARG_PFR			8
 
 /* SLASH RPC channel for CLI from MDS. */
 #define SRCM_NTHREADS			8
