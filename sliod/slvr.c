@@ -362,6 +362,18 @@ sli_aio_register(struct pscrpc_request *rq, struct sli_iocb_set **iocbsp,
 	aio->aio_buf = slvr_2_buf(s, sblk);
 	aio->aio_nbytes = size;
 
+	aio->aio_sigevent.sigev_notify = SIGEV_SIGNAL;
+	aio->aio_sigevent.sigev_signo = SIGIO;
+	aio->aio_sigevent.sigev_value.sival_ptr = &aio;
+
+	/* XXX what about REPL_READ?? */
+
+	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
+	memcpy(&iocb->iocb_sbd, &mq->sbd, sizeof(mq->sbd));
+
+	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
+	mp->id = iocb->iocb_id = psc_atomic64_inc_getnew(&sli_aio_id);
+
 	LIST_CACHE_LOCK(&sli_iocb_pndg);
 	SLVR_LOCK(s);
 	if (issue)
@@ -376,14 +388,6 @@ sli_aio_register(struct pscrpc_request *rq, struct sli_iocb_set **iocbsp,
 		psc_pool_return(sli_iocb_pool, iocb);
 		return (-error);
 	}
-
-	/* XXX what about REPL_READ?? */
-
-	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
-	memcpy(&iocb->iocb_sbd, &mq->sbd, sizeof(mq->sbd));
-
-	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
-	mp->id = iocb->iocb_id = psc_atomic64_inc_getnew(&sli_aio_id);
 
 	return (-SLERR_AIOWAIT);
 }
