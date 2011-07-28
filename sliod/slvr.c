@@ -276,9 +276,12 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 	    iocb->iocb_rw);
 
 	spinlock(&iocbs->iocbs_lock);
-	if ((iocbs->iocbs_flags & SLI_IOCBSF_DONE) == 0 ||
-	    iocbs->iocbs_refcnt != 1)
+	if (iocbs->iocbs_refcnt != 1)
 		goto out;
+	while ((iocbs->iocbs_flags & SLI_IOCBSF_DONE) == 0) {
+		psc_waitq_wait(&iocbs->iocbs_waitq, &iocbs->iocbs_lock);
+		spinlock(&iocbs->iocbs_lock);
+	}
 	freelock(&iocbs->iocbs_lock);
 
 	/* now perform PUT RPC to client */
@@ -299,9 +302,11 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 	if (mq->rc)
 		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
 	else
-		mq->rc = rsx_bulkclient(rq, BULK_PUT_SOURCE,
+		mq->rc = rsx_bulkclient(rq, BULK_GET_SOURCE,
 		    SRCI_BULK_PORTAL, iocbs->iocbs_iovs,
 		    iocbs->iocbs_niov);
+
+	SL_RSX_WAITREP(csvc, rq, mp);
 
  out:
 	if (rq)
@@ -334,6 +339,7 @@ sli_aio_register(struct pscrpc_request *rq, struct sli_iocb_set **iocbsp,
 		memset(iocbs, 0, sizeof(*iocbs));
 		INIT_LISTENTRY(&iocbs->iocbs_lentry);
 		INIT_SPINLOCK(&iocbs->iocbs_lock);
+		psc_waitq_init(&iocbs->iocbs_waitq);
 		iocbs->iocbs_refcnt = 1;
 	} else {
 		spinlock(&iocbs->iocbs_lock);
@@ -1156,7 +1162,6 @@ void
 sliaiothr_main(__unusedx struct psc_thread *thr)
 {
 	struct sli_iocb *iocb, *next;
-	int rc;
 
 	for (;;) {
 		usleep(500);
@@ -1173,12 +1178,15 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 			if (iocb->iocb_rc == 0)
 				iocb->iocb_len = aio_return(&iocb->iocb_aiocb);
 			else {
-				rc = aio_return(&iocb->iocb_aiocb);
+//				rc = aio_return(&iocb->iocb_aiocb);
 //				if (rc)
 //					iocb->iocb_rc = rc;
 			}
+			lc_remove(&sli_iocb_pndg, iocb);
+			LIST_CACHE_ULOCK(&sli_iocb_pndg);
 			iocb->iocb_cbf(iocb);
 			psc_pool_return(sli_iocb_pool, iocb);
+			LIST_CACHE_LOCK(&sli_iocb_pndg);
 		}
 		LIST_CACHE_ULOCK(&sli_iocb_pndg);
 	}

@@ -168,6 +168,7 @@ struct sli_iocb_set {
 	int			  iocbs_flags;
 	struct iovec		  iocbs_iovs[RIC_MAX_SLVRS_PER_IO];
 	int			  iocbs_niov;
+	struct psc_waitq	  iocbs_waitq;
 };
 
 #define SLI_IOCBSF_DONE		(1 << 0)

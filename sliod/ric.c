@@ -219,6 +219,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		memcpy(iocbs->iocbs_iovs, iovs, sizeof(iovs));
 		iocbs->iocbs_niov = nslvrs;
 		iocbs->iocbs_flags |= SLI_IOCBSF_DONE;
+		psc_waitq_wakeall(&iocbs->iocbs_waitq);
 		freelock(&iocbs->iocbs_lock);
 
 		mp->rc = rc = SLERR_AIOWAIT;
