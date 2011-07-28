@@ -85,7 +85,7 @@ slc_rci_handle_read(struct pscrpc_request *rq)
 			iovs[i].iov_len = BMPC_BUFSZ;
 		}
 
-		mq->rc = rsx_bulkclient(rq, BULK_PUT_SINK,
+		mq->rc = rsx_bulkserver(rq, BULK_PUT_SINK,
 		    SRIC_BULK_PORTAL, iovs, i);
 
 	} else if (car->car_cbf == msl_read_cb) {
@@ -103,7 +103,7 @@ slc_rci_handle_read(struct pscrpc_request *rq)
 			iovs[i].iov_len = BMPC_BUFSZ;
 		}
 
-		mq->rc = rsx_bulkclient(rq, BULK_PUT_SINK,
+		mq->rc = rsx_bulkserver(rq, BULK_PUT_SINK,
 		    SRIC_BULK_PORTAL, iovs, psc_dynarray_len(a));
 
 //		rc = msl_pages_copyout(r, p);
@@ -113,7 +113,7 @@ slc_rci_handle_read(struct pscrpc_request *rq)
 		iov.iov_base = car->car_argv.pointer_arg[MSL_CBARG_BUF];
 		iov.iov_len = mq->size;
 
-		mq->rc = rsx_bulkclient(rq, BULK_PUT_SINK,
+		mq->rc = rsx_bulkserver(rq, BULK_PUT_SINK,
 		    SRCI_BULK_PORTAL, &iov, 1);
 	} else
 		psc_fatalx("unknown callback");
