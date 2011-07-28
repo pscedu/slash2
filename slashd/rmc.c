@@ -112,8 +112,6 @@ slm_get_next_slashfid(slfid_t *fidp)
 	fid = next_slash_fid++;
 	freelock(&slash_fid_lock);
 
-	fid |= ((uint64_t)nodeResm->resm_site->site_id << 
-			(SLASH_ID_CYCLE_BITS + SLASH_ID_FID_BITS));
 	psclog_info("next slash ID "SLPRI_FID, fid);
 	* fidp = fid;
 	return (0);
