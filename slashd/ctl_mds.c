@@ -303,8 +303,8 @@ slmctlparam_nextfid_set(const char *val)
 	l = strtol(val, &endp, 0);
 	spinlock(&slm_fid_lock);
 	if (endp == val || *endp ||
-	    l > FID_MAX || l <= slm_next_fid)
-		rc = 1;
+	    l > FID_MAX || l <= FID_GET_INUM(slm_next_fid))
+		rc = -1;
 	else
 		slm_next_fid = l;
 	freelock(&slm_fid_lock);
