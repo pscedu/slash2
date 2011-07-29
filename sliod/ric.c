@@ -214,7 +214,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 	psc_assert(!tsize);
 
-	if (rw == SL_READ && globalConfig.gconf_async_io) {
+	if (iocbs) {
 		spinlock(&iocbs->iocbs_lock);
 		memcpy(iocbs->iocbs_iovs, iovs, sizeof(iovs));
 		iocbs->iocbs_niov = nslvrs;
