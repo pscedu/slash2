@@ -306,7 +306,8 @@ slmctlparam_nextfid_set(const char *val)
 	    l > FID_MAX || l <= FID_GET_INUM(slm_next_fid))
 		rc = -1;
 	else
-		slm_next_fid = l;
+		slm_next_fid = l | ((uint64_t)nodeSite->site_id <<
+		    SLASH_FID_SITE_SHFT);
 	freelock(&slm_fid_lock);
 	return (rc);
 }

@@ -1052,7 +1052,7 @@ mds_open_cursor(void)
 
 	if (FID_GET_SITEID(mds_cursor.pjc_fid) == 0)
 		mds_cursor.pjc_fid |= (uint64_t)nodeSite->site_id <<
-		    (SLASH_ID_FID_BITS + SLASH_ID_CYCLE_BITS);
+		    SLASH_FID_SITE_SHFT;
 	if (FID_GET_SITEID(mds_cursor.pjc_fid) != nodeSite->site_id)
 		psc_fatal("Mismatched site ID in the FID, expected %d",
 		    nodeSite->site_id);

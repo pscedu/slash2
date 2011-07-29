@@ -126,7 +126,7 @@ main(int argc, char *argv[])
 
 		printf("The max FID for this cycle is %#"PRIx64"\n", fid);
 
-		if (cycle < ((UINT64_C(1) << SLASH_ID_CYCLE_BITS) - 1)) {
+		if (cycle < ((UINT64_C(1) << SLASH_FID_CYCLE_BITS) - 1)) {
 			fid++;
 			printf("The first FID for the next cycle is %#"PRIx64"\n", fid);
 		}

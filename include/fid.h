@@ -38,26 +38,33 @@
 struct slash_fidgen;
 
 /*
- * SLASH file IDs consist of four parts: flag bits, site ID, cycle bits, 
- * and a file sequence number.  FIDs are used always used for external 
- * communication among other clients, I/O servers, and MDS to identify files.
+ * SLASH file IDs (FID) consist of four parts: flag bits, site ID, cycle
+ * bits, and a file sequence number.  FIDs are used always used for
+ * external communication among other clients, I/O servers, and MDS to
+ * identify files.
  *
- * Underlying backend MDS file system inode tracking is contained within the
- * mdsio layer and is only used internally.
+ * Underlying backend MDS file system inode tracking is contained within
+ * the mdsio layer and is only used internally.
  *
- * Cycle bits are used when we fail to recover a MDS to a previous state.
- * The system adminstrator should decide the value to increase to make sure
- * that there is no outstanding duplicate fid.  For example, if you hit two
- * disasters in a row, we should bump the number by two.
+ * Cycle bits are used when we fail to recover a MDS to a previous
+ * state.  The system adminstrator should decide the value to increase
+ * to make sure that there is no outstanding duplicate fid.  For
+ * example, if you hit two disasters in a row, we should bump the number
+ * by two.
  *
- * Normally, we allow 42-bit worth of FIDs to be allocated.  When that limit
- * is reached, we could let system administrator to bump the cycle number 
- * and zero the FID bits.
+ * Normally, we allow 42-bit worth of FIDs to be allocated.  When that
+ * limit is reached, we could let system administrator to bump the cycle
+ * number and zero the FID bits.
  */
-#define	SLASH_ID_FLAG_BITS	4
-#define	SLASH_ID_SITE_BITS	10
-#define	SLASH_ID_CYCLE_BITS	8
-#define	SLASH_ID_FID_BITS	42
+#define	SLASH_FID_FLAG_BITS	4
+#define	SLASH_FID_SITE_BITS	10
+#define	SLASH_FID_CYCLE_BITS	8
+#define	SLASH_FID_INUM_BITS	42
+
+#define	SLASH_FID_FLAG_SHFT	(SLASH_FID_SITE_BITS + SLASH_FID_SITE_SHFT)
+#define	SLASH_FID_SITE_SHFT	(SLASH_FID_CYCLE_BITS + SLASH_FID_CYCLE_SHFT)
+#define	SLASH_FID_CYCLE_SHFT	(SLASH_FID_INUM_BITS)
+#define	SLASH_FID_INUM_SHFT	0
 
 #define SLFIDF_HIDE_DENTRY	(UINT64_C(1) << 0)	/* keep but hide an entry until its log arrives */
 #define SLFIDF_LOCAL_DENTRY	(UINT64_C(1) << 1)	/* don't expose to external nodes */
@@ -76,7 +83,7 @@ struct slash_fidgen {
 
 #define FID_ANY			UINT64_C(0xffffffffffffffff)
 
-#define FID_MAX			((UINT64_C(1) << SLASH_ID_FID_BITS) - 1)
+#define FID_MAX			((UINT64_C(1) << SLASH_FID_INUM_BITS) - 1)
 
 /* temporary placeholder for the not-yet-known generation number */
 #define FGEN_ANY		UINT64_C(0xffffffffffffffff)
@@ -106,21 +113,16 @@ struct slash_fidgen {
 #define SLPRI_FG		SLPRI_FID":%"SLPRI_FGEN
 #define SLPRI_FG_ARGS(fg)	(fg)->fg_fid, (fg)->fg_gen
 
-#define FID_GET_FLAGS(fid)	((fid) >> (SLASH_ID_SITE_BITS + \
-				    SLASH_ID_CYCLE_BITS + SLASH_ID_FID_BITS))
+#define FID_GET_FLAGS(fid)	(((fid) >> (SLASH_FID_FLAG_SHFT) &	\
+				    ~(UINT64_MAX << SLASH_FID_FLAG_BITS))
+#define FID_GET_SITEID(fid)	(((fid) >> (SLASH_FID_SITE_SHFT)) &	\
+				    ~(UINT64_MAX << SLASH_FID_SITE_BITS))
+#define FID_GET_CYCLE(fid)	(((fid) >> SLASH_FID_CYCLE_SHFT) &	\
+				    ~(UINT64_MAX << SLASH_FID_CYCLE_BITS))
+#define FID_GET_INUM(fid)	((fid) & ~(UINT64_MAX << (SLASH_FID_INUM_BITS)))
 
-#define FID_GET_SITEID(fid)	(((fid) >> (SLASH_ID_FID_BITS + SLASH_ID_CYCLE_BITS)) &	\
-				    ~(~UINT64_C(0) << SLASH_ID_SITE_BITS))
-
-#define FID_GET_CYCLE(fid)	(((fid) >> SLASH_ID_FID_BITS) &		\
-				    ~(~UINT64_C(0) << SLASH_ID_CYCLE_BITS))
-
-#define FID_GET_INUM(fid)	((fid) & ~(~UINT64_C(0) << (SLASH_ID_FID_BITS)))
-
-#define FID_SET_FLAGS(fid, fl)	((fid) |= ((fl) << (SLASH_ID_SITE_BITS + SLASH_ID_CYCLE_BITS + \
-				    SLASH_ID_FID_BITS)))
-
-#define FID_SET_CYCLE(fid, fl)	((fid) |= ((cycle) << SLASH_ID_FID_BITS))
+#define FID_SET_FLAGS(fid, fl)	((fid) |= ((fl) << SLASH_FID_FLAG_SHFT))
+#define FID_SET_CYCLE(fid, cy)	((fid) |= ((cy) << SLASH_FID_CYCLE_SHFT))
 
 #define SAMEFG(a, b)							\
 	((a)->fg_fid == (b)->fg_fid && (a)->fg_gen == (b)->fg_gen)

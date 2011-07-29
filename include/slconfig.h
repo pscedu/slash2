@@ -76,7 +76,7 @@ struct sl_resource {
 };
 
 #define RES_MAXID		((UINT64_C(1) << (sizeof(sl_ios_id_t) * \
-				    NBBY - SLASH_ID_SITE_BITS)) - 1)
+				    NBBY - SLASH_FID_SITE_BITS)) - 1)
 
 static __inline void *
 resprof_get_pri(struct sl_resource *res)
@@ -114,7 +114,7 @@ struct sl_site {
 };
 
 /* highest allowed site ID */
-#define SITE_MAXID		((1 << SLASH_ID_SITE_BITS) - 1)
+#define SITE_MAXID		((1 << SLASH_FID_SITE_BITS) - 1)
 
 static __inline void *
 site_get_pri(struct sl_site *site)
