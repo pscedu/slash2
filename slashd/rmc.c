@@ -61,26 +61,26 @@
 #define IS_REMOTE_FID(fid)						\
 	((fid) != SLFID_ROOT && nodeSite->site_id != FID_GET_SITEID(fid))
 
-uint64_t		next_slash_fid = UINT64_MAX;
-static psc_spinlock_t	slash_fid_lock = SPINLOCK_INIT;
+uint64_t		slm_next_fid = UINT64_MAX;
+psc_spinlock_t		slm_fid_lock = SPINLOCK_INIT;
 
 slfid_t
 slm_get_curr_slashfid(void)
 {
 	slfid_t fid;
 
-	spinlock(&slash_fid_lock);
-	fid = next_slash_fid;
-	freelock(&slash_fid_lock);
+	spinlock(&slm_fid_lock);
+	fid = slm_next_fid;
+	freelock(&slm_fid_lock);
 	return (fid);
 }
 
 void
 slm_set_curr_slashfid(slfid_t slfid)
 {
-	spinlock(&slash_fid_lock);
-	next_slash_fid = slfid;
-	freelock(&slash_fid_lock);
+	spinlock(&slm_fid_lock);
+	slm_next_fid = slfid;
+	freelock(&slm_fid_lock);
 }
 
 /**
@@ -96,21 +96,21 @@ slm_get_next_slashfid(slfid_t *fidp)
 {
 	uint64_t fid;
 
-	spinlock(&slash_fid_lock);
+	spinlock(&slm_fid_lock);
 	/*
- 	 * This should never happen.  If it does, we crash to let the sys admin
- 	 * know.  He could fix this if there are still room in the cycle bits.
- 	 * We have to let sys admin know, otherwise, he/she does not know how
- 	 * to bump the cycle bits.
- 	 */
-	if (FID_GET_INUM(next_slash_fid) >= FID_MAX) {
-		psc_warnx("Max FID "SLPRI_FID" reached, manual intervention needed", 
-			next_slash_fid);
-		freelock(&slash_fid_lock);
+	 * This should never happen.  If it does, we crash to let the sys admin
+	 * know.  He could fix this if there are still room in the cycle bits.
+	 * We have to let sys admin know, otherwise, he/she does not know how
+	 * to bump the cycle bits.
+	 */
+	if (FID_GET_INUM(slm_next_fid) >= FID_MAX) {
+		psc_warnx("Max FID "SLPRI_FID" reached, manual intervention needed",
+			slm_next_fid);
+		freelock(&slm_fid_lock);
 		return (ENOSPC);
 	}
-	fid = next_slash_fid++;
-	freelock(&slash_fid_lock);
+	fid = slm_next_fid++;
+	freelock(&slm_fid_lock);
 
 	psclog_info("next slash ID "SLPRI_FID, fid);
 	* fidp = fid;

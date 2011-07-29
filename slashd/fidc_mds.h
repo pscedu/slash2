@@ -61,6 +61,9 @@ struct fcmh_mds_info {
 
 int	mds_fcmh_setattr(struct fidc_membh *, int);
 
+extern uint64_t		slm_next_fid;
+extern psc_spinlock_t	slm_fid_lock;
+
 static __inline struct fcmh_mds_info *
 fcmh_2_fmi(struct fidc_membh *f)
 {

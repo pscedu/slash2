@@ -285,6 +285,32 @@ slmctlrep_getreplpairs(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
+void
+slmctlparam_nextfid_get(char *val)
+{
+	spinlock(&slm_fid_lock);
+	snprintf(val, PCP_VALUE_MAX, SLPRI_FID, slm_next_fid);
+	freelock(&slm_fid_lock);
+}
+
+int
+slmctlparam_nextfid_set(const char *val)
+{
+	unsigned long l;
+	char *endp;
+	int rc = 0;
+
+	l = strtol(val, &endp, 0);
+	spinlock(&slm_fid_lock);
+	if (endp == val || *endp ||
+	    l > FID_MAX || l <= slm_next_fid)
+		rc = 1;
+	else
+		slm_next_fid = l;
+	freelock(&slm_fid_lock);
+	return (rc);
+}
+
 struct psc_ctlop slmctlops[] = {
 	PSC_CTLDEFOPS,
 	{ slctlrep_getconns,		sizeof(struct slctlmsg_conn ) },
@@ -329,6 +355,8 @@ slmctlthr_main(const char *fn)
 	psc_ctlparam_register("rlim.nofile", psc_ctlparam_rlim_nofile);
 	psc_ctlparam_register("namespace.stats", slmctlparam_namespace_stats);
 	psc_ctlparam_register("run", psc_ctlparam_run);
+	psc_ctlparam_register_simple("nextfid", slmctlparam_nextfid_get,
+	    slmctlparam_nextfid_set);
 
 	psc_ctlthr_main(fn, slmctlops, nitems(slmctlops), SLMTHRT_CTLAC);
 }
