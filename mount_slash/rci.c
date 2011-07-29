@@ -42,6 +42,7 @@ slc_rci_handle_read(struct pscrpc_request *rq)
 	struct psc_listcache *lc;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
+	struct bmpc_ioreq *r;
 	struct sl_resm *m;
 	struct iovec iov;
 	size_t len = 0;
@@ -92,7 +93,6 @@ slc_rci_handle_read(struct pscrpc_request *rq)
 		struct bmap_pagecache_entry *bmpce;
 		struct iovec iovs[MAX_BMAPS_REQ];
 		struct psc_dynarray *a;
-		struct bmpc_ioreq *r;
 		int i;
 
 		a = car->car_argv.pointer_arg[MSL_CBARG_BMPCE];
@@ -104,10 +104,6 @@ slc_rci_handle_read(struct pscrpc_request *rq)
 
 		mq->rc = rsx_bulkserver(rq, BULK_GET_SINK,
 		    SRCI_BULK_PORTAL, iovs, psc_dynarray_len(a));
-
-		rc = msl_pages_copyout(r, car->car_buf);
-		if (mq->rc == 0)
-			mq->rc = rc;
 
 		len = r->biorq_len;
 
@@ -122,6 +118,13 @@ slc_rci_handle_read(struct pscrpc_request *rq)
 		psc_fatalx("unknown callback");
 	rc = car->car_cbf(rq, mq->rc, &car->car_argv);
 	msl_aiorqcol_finish(car, rc, len);
+
+	if (car->car_cbf == msl_read_cb) {
+		rc = msl_pages_copyout(r, car->car_buf);
+		if (mp->rc == 0)
+			mp->rc = rc;
+	}
+
 	psc_pool_return(slc_async_req_pool, car);
 
  error:
