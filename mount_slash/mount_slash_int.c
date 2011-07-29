@@ -858,25 +858,17 @@ msl_add_async_req(struct pscrpc_request *rq,
 	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 	m = libsl_nid2resm(rq->rq_peer.nid);
 
-	/*
-	 * Readahead is always a single RPC and doesn't use aio req
-	 * collections.
-	 */
-	if (aiorqcolp) {
-		aiorqcol = *aiorqcolp;
-		if (aiorqcol == NULL) {
-			aiorqcol = *aiorqcolp = psc_pool_get(slc_aiorqcol_pool);
-			INIT_SPINLOCK(&aiorqcol->marc_lock);
-			aiorqcol->marc_refcnt = 1;
-			aiorqcol->marc_pfr = av->pointer_arg[MSL_CBARG_PFR];
-			aiorqcol->marc_buf = av->pointer_arg[MSL_CBARG_BUF];
-			if (cbf != msl_readahead_cb)
-				aiorqcol->marc_flags |= MARCF_REPLY;
-		} else {
-			spinlock(&aiorqcol->marc_lock);
-			aiorqcol->marc_refcnt++;
-			freelock(&aiorqcol->marc_lock);
-		}
+	aiorqcol = *aiorqcolp;
+	if (aiorqcol == NULL) {
+		aiorqcol = *aiorqcolp = psc_pool_get(slc_aiorqcol_pool);
+		INIT_SPINLOCK(&aiorqcol->marc_lock);
+		aiorqcol->marc_refcnt = 1;
+		aiorqcol->marc_pfr = av->pointer_arg[MSL_CBARG_PFR];
+		aiorqcol->marc_buf = av->pointer_arg[MSL_CBARG_BUF];
+	} else {
+		spinlock(&aiorqcol->marc_lock);
+		aiorqcol->marc_refcnt++;
+		freelock(&aiorqcol->marc_lock);
 	}
 
 	car = psc_pool_get(slc_async_req_pool);
@@ -887,11 +879,7 @@ msl_add_async_req(struct pscrpc_request *rq,
 	memcpy(&car->car_argv, av, sizeof(*av));
 	lc_add(&resm2rmci(m)->rmci_async_reqs, car);
 
-	if (cbf == msl_readahead_cb) {
-		bmpces = av->pointer_arg[MSL_CBARG_BMPCE];
-		for (i = 0; bmpces[i]; i++)
-			BMPCE_SETATTR(bmpces[i], BMPCE_AIOWAIT, "set aio");
-	} else if (cbf == msl_read_cb) {
+	if (cbf == msl_read_cb) {
 		a = av->pointer_arg[MSL_CBARG_BMPCE];
 		DYNARRAY_FOREACH(bmpce, i, a)
 			BMPCE_SETATTR(bmpce, BMPCE_AIOWAIT, "set aio");
@@ -1017,16 +1005,16 @@ msl_read_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 }
 
 int
-msl_readahead_cb(struct pscrpc_request *rq, int rc,
-    struct pscrpc_async_args *args)
+msl_readahead_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
-	struct bmap_pagecache_entry *bmpce,
-		**bmpces = args->pointer_arg[MSL_CBARG_BMPCE];
+	struct bmap_pagecache_entry *bmpce, **bmpces = args->pointer_arg[MSL_CBARG_BMPCE];
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct bmap_pagecache *bmpc = args->pointer_arg[MSL_CBARG_BMPC];
 	struct psc_waitq *wq = NULL;
 	struct bmapc_memb *b;
-	int i;
+	int rc, i;
+
+	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
 
 	if (rq)
 		DEBUG_REQ(PLL_INFO, rq, "bmpces=%p", bmpces);
@@ -1082,19 +1070,6 @@ msl_readahead_cb(struct pscrpc_request *rq, int rc,
 	BMAP_ULOCK(b);
 	PSCFREE(bmpces);
 	return (rc);
-}
-
-int
-msl_readahead_cb0(struct pscrpc_request *rq,
-    struct pscrpc_async_args *args)
-{
-	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
-	int rc;
-
-	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
-	if (rc == SLERR_AIOWAIT)
-		return (msl_add_async_req(rq, msl_readahead_cb, args));
-	return (msl_readahead_cb(rq, rc, args));
 }
 
 int
@@ -1441,7 +1416,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMPCE] = bmpces_cbarg;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMPC] = bmap_2_bmpc(b);
-	rq->rq_interpret_reply = msl_readahead_cb0;
+	rq->rq_interpret_reply = msl_readahead_cb;
 	rq->rq_comp = &rpcComp;
 
 	for (i = 0; i < nbmpce; i++) {
@@ -2118,13 +2093,9 @@ msl_aiorqcol_finish(struct slc_async_req *car, ssize_t rc, size_t len)
 {
 	struct msl_aiorqcol *aiorqcol;
 	struct pscfs_req *pfr;
-	int reply = 0;
 	void *buf;
 
 	aiorqcol = car->car_marc;
-	if (aiorqcol == NULL)
-		return;
-
 	spinlock(&aiorqcol->marc_lock);
 	if (aiorqcol->marc_rc == 0)
 		aiorqcol->marc_rc = rc;
@@ -2140,17 +2111,12 @@ msl_aiorqcol_finish(struct slc_async_req *car, ssize_t rc, size_t len)
 		spinlock(&aiorqcol->marc_lock);
 	}
 
-	if (aiorqcol->marc_flags & MARCF_REPLY)
-		reply = 1;
 	rc = aiorqcol->marc_rc;
 	buf = aiorqcol->marc_buf;
 	len = aiorqcol->marc_len;
 	pfr = aiorqcol->marc_pfr;
 	psc_pool_return(slc_aiorqcol_pool, aiorqcol);
 	PSCFREE(aiorqcol);
-
-	if (!reply)
-		return;
 
 	pscfs_reply_read(pfr, buf, len, -abs(rc));
 	PSCFREE(buf);

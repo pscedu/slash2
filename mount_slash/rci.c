@@ -72,23 +72,7 @@ slc_rci_handle_read(struct pscrpc_request *rq)
 
 	if (mq->rc)
 		;
-	else if (car->car_cbf == msl_readahead_cb) {
-
-		struct bmap_pagecache_entry *bmpce, **bv;
-		struct iovec iovs[MAX_BMAPS_REQ];
-		int i;
-
-		bv = car->car_argv.pointer_arg[MSL_CBARG_BMPCE];
-		for (i = 0; *bv; i++, bv++) {
-			bmpce = *bv;
-			iovs[i].iov_base = bmpce->bmpce_base;
-			iovs[i].iov_len = BMPC_BUFSZ;
-		}
-
-		mq->rc = rsx_bulkserver(rq, BULK_GET_SINK,
-		    SRCI_BULK_PORTAL, iovs, i);
-
-	} else if (car->car_cbf == msl_read_cb) {
+	else if (car->car_cbf == msl_read_cb) {
 
 		struct bmap_pagecache_entry *bmpce;
 		struct iovec iovs[MAX_BMAPS_REQ];

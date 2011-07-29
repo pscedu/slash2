@@ -135,7 +135,6 @@ struct slc_async_req {
 };
 
 #define MARCF_DONE			(1 << 0)
-#define MARCF_REPLY			(1 << 1)
 
 struct msl_fhent {			 /* XXX rename */
 	psc_spinlock_t			 mfh_lock;
@@ -198,7 +197,7 @@ int	 msl_dio_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 int	 msl_io(struct pscfs_req *, struct msl_fhent *, char *, size_t, off_t, enum rw);
 int	 msl_read_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 void	 msl_reada_rpc_launch(struct bmap_pagecache_entry **, int);
-int	 msl_readahead_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
+int	 msl_readahead_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int	 msl_stat(struct fidc_membh *, void *);
 int	 msl_write_rpc_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int	 msl_write_rpcset_cb(struct pscrpc_request_set *, void *, int);
