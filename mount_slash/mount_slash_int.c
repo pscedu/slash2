@@ -848,7 +848,7 @@ msl_add_async_req(struct pscrpc_request *rq,
 {
 	struct msl_aiorqcol *aiorqcol,
 	    **aiorqcolp = av->pointer_arg[MSL_CBARG_AIORQCOL];
-	struct bmap_pagecache_entry *bmpce, **bmpces;
+	struct bmap_pagecache_entry *bmpce;
 	struct slc_async_req *car;
 	struct psc_dynarray *a;
 	struct srm_io_rep *mp;
@@ -862,6 +862,7 @@ msl_add_async_req(struct pscrpc_request *rq,
 	if (aiorqcol == NULL) {
 		aiorqcol = *aiorqcolp = psc_pool_get(slc_aiorqcol_pool);
 		INIT_SPINLOCK(&aiorqcol->marc_lock);
+		psc_waitq_init(&aiorqcol->marc_waitq);
 		aiorqcol->marc_refcnt = 1;
 		aiorqcol->marc_pfr = av->pointer_arg[MSL_CBARG_PFR];
 		aiorqcol->marc_buf = av->pointer_arg[MSL_CBARG_BUF];
@@ -884,7 +885,7 @@ msl_add_async_req(struct pscrpc_request *rq,
 		DYNARRAY_FOREACH(bmpce, i, a)
 			BMPCE_SETATTR(bmpce, BMPCE_AIOWAIT, "set aio");
 	}
-	return (0);
+	return (SLERR_AIOWAIT);
 }
 
 /**
@@ -1159,7 +1160,7 @@ msl_dio_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 __static int
 msl_pages_dio_getput(struct pscfs_req *pfr, struct bmpc_ioreq *r,
-    char *b, struct msl_aiorqcol ***aiorqcol)
+    char *b, struct msl_aiorqcol **aiorqcol)
 {
 	struct slashrpc_cservice  *csvc = NULL;
 	struct pscrpc_request	  *rq = NULL;
@@ -1205,13 +1206,10 @@ msl_pages_dio_getput(struct pscfs_req *pfr, struct bmpc_ioreq *r,
 		if (rc)
 			goto error;
 
-		if (*aiorqcol == NULL)
-			*aiorqcol = PSCALLOC(sizeof(void *));
-
 		rq->rq_interpret_reply = msl_dio_cb0;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_BUF] = b + nbytes;
-		rq->rq_async_args.pointer_arg[MSL_CBARG_AIORQCOL] = *aiorqcol;
+		rq->rq_async_args.pointer_arg[MSL_CBARG_AIORQCOL] = aiorqcol;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_PFR] = pfr;
 
 		iovs[i].iov_base = b + nbytes;
@@ -1470,7 +1468,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 __static int
 msl_read_rpc_launch(struct pscfs_req *pfr, void *bufp,
     struct bmpc_ioreq *r, int startpage, int npages,
-    struct msl_aiorqcol ***aiorqcol)
+    struct msl_aiorqcol **aiorqcol)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct bmap_pagecache_entry *bmpce;
@@ -1543,15 +1541,12 @@ msl_read_rpc_launch(struct pscfs_req *pfr, void *bufp,
 
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 
-	if (*aiorqcol == NULL)
-		*aiorqcol = PSCALLOC(sizeof(void *));
-
 	/* Setup the callback, supplying the dynarray as an argument.
 	 */
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMPCE] = a;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQ] = r;
-	rq->rq_async_args.pointer_arg[MSL_CBARG_AIORQCOL] = *aiorqcol;
+	rq->rq_async_args.pointer_arg[MSL_CBARG_AIORQCOL] = aiorqcol;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BUF] = bufp;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_PFR] = pfr;
 
@@ -1605,7 +1600,7 @@ msl_read_rpc_launch(struct pscfs_req *pfr, void *bufp,
 
 __static int
 msl_launch_read_rpcs(struct pscfs_req *pfr, void *bufp,
-    struct bmpc_ioreq *r, int *psched, struct msl_aiorqcol ***aiorqcol)
+    struct bmpc_ioreq *r, int *psched, struct msl_aiorqcol **aiorqcol)
 {
 	struct bmap_pagecache_entry *bmpce;
 	int rc = 0, i, j = -1;
@@ -1664,7 +1659,7 @@ msl_launch_read_rpcs(struct pscfs_req *pfr, void *bufp,
  */
 __static int
 msl_pages_prefetch(struct pscfs_req *pfr, void *bufp,
-    struct bmpc_ioreq *r, struct msl_aiorqcol ***aiorqcol)
+    struct bmpc_ioreq *r, struct msl_aiorqcol **aiorqcol)
 {
 	int sched = 0, rc = 0, npages;
 	struct bmap_pagecache_entry *bmpce;
@@ -1782,14 +1777,12 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 		pscrpc_set_destroy(r->biorq_rqset);
 		r->biorq_rqset = NULL;
 
-		if (rc) {
-			/*
-			 * By this point, the bmpce's in biorq_pages
-			 * have been released.  Don't try to access them
-			 * here.
-			 */
+		/*
+		 * By this point, the bmpce's in biorq_pages have been
+		 * released.  Don't try to access them here.
+		 */
+		if (rc && rc != SLERR_AIOWAIT)
 			return (rc);
-		}
 	}
 
 	DYNARRAY_FOREACH(bmpce, i, &r->biorq_pages) {
@@ -2092,7 +2085,6 @@ void
 msl_aiorqcol_finish(struct slc_async_req *car, ssize_t rc, size_t len)
 {
 	struct msl_aiorqcol *aiorqcol;
-	struct pscfs_req *pfr;
 	void *buf;
 
 	aiorqcol = car->car_marc;
@@ -2113,12 +2105,9 @@ msl_aiorqcol_finish(struct slc_async_req *car, ssize_t rc, size_t len)
 
 	rc = aiorqcol->marc_rc;
 	buf = aiorqcol->marc_buf;
-	len = aiorqcol->marc_len;
-	pfr = aiorqcol->marc_pfr;
+	pscfs_reply_read(aiorqcol->marc_pfr, buf, aiorqcol->marc_len,
+	    -abs(rc));
 	psc_pool_return(slc_aiorqcol_pool, aiorqcol);
-	PSCFREE(aiorqcol);
-
-	pscfs_reply_read(pfr, buf, len, -abs(rc));
 	PSCFREE(buf);
 }
 
@@ -2128,7 +2117,7 @@ msl_aiorqcol_finish(struct slc_async_req *car, ssize_t rc, size_t len)
  * msl_io - I/O gateway routine which bridges pscfs and the SLASH2
  *	client cache and backend.  msl_io() handles the creation of
  *	biorq's and the loading of bmaps (which are attached to the
- *	file's fcmh and is ultimately responsible for data being *
+ *	file's fcmh and is ultimately responsible for data being
  *	prefetched (as needed), copied into or from the cache, and (on
  *	write) being pushed to the correct I/O server.
  * @mfh: file handle structure passed to us by pscfs which contains the
@@ -2142,7 +2131,7 @@ int
 msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
     const size_t size, const off_t off, enum rw rw)
 {
-	struct msl_aiorqcol **aiorqcol = NULL;
+	struct msl_aiorqcol *aiorqcol = NULL;
 	struct bmpc_ioreq *r[MAX_BMAPS_REQ];
 	struct bmapc_memb *b, *bref = NULL;
 	size_t s, e, tlen, tsize;
@@ -2367,15 +2356,17 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	}
 
 	if (aiorqcol) {
-		spinlock(&(*aiorqcol)->marc_lock);
-		(*aiorqcol)->marc_flags |= MARCF_DONE;
-		freelock(&(*aiorqcol)->marc_lock);
-	}
+		spinlock(&aiorqcol->marc_lock);
+		aiorqcol->marc_flags |= MARCF_DONE;
+		psc_waitq_wakeall(&aiorqcol->marc_waitq);
+		freelock(&aiorqcol->marc_lock);
+		rc = -SLERR_AIOWAIT;
+	} else
+		rc = tsize;
 
 	if (rw == SL_WRITE)
 		fcmh_setlocalsize(mfh->mfh_fcmh, off + size);
 
-	rc = tsize;
  out:
 	if (bref)
 		bmap_op_done_type(bref, BMAP_OPCNT_BIORQ);
