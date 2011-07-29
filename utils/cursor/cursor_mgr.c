@@ -122,7 +122,7 @@ main(int argc, char *argv[])
 		    cursor.pjc_reclaim_seqno, cursor.pjc_replay_xid);
 
 		fid = cursor.pjc_fid;
-		fid = fid | FID_MAX;
+		fid = fid | FID_MAX_INUM;
 
 		printf("The max FID for this cycle is %#"PRIx64"\n", fid);
 
