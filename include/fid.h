@@ -70,9 +70,10 @@ struct slash_fidgen;
 #define SLFIDF_LOCAL_DENTRY	(UINT64_C(1) << 1)	/* don't expose to external nodes */
 
 /*
- * Looks like the links in our by-id namespace are all created as regular files.
- * But some of them are really links to directories. We need a way to only
- * allow them to be used as directories for remote clients.
+ * Looks like the links in our by-id namespace are all created as
+ * regular files.  But some of them are really links to directories.  We
+ * need a way to only allow them to be used as directories for remote
+ * clients.
  */
 #define SLFIDF_DIR_DENTRY	(UINT64_C(1) << 2)	/* a directory link */
 
@@ -83,7 +84,7 @@ struct slash_fidgen {
 
 #define FID_ANY			UINT64_C(0xffffffffffffffff)
 
-#define FID_MAX			((UINT64_C(1) << SLASH_FID_INUM_BITS) - 1)
+#define FID_MAX_INUM		MAXVALMASK(SLASH_FID_INUM_BITS)
 
 /* temporary placeholder for the not-yet-known generation number */
 #define FGEN_ANY		UINT64_C(0xffffffffffffffff)
@@ -113,16 +114,21 @@ struct slash_fidgen {
 #define SLPRI_FG		SLPRI_FID":%"SLPRI_FGEN
 #define SLPRI_FG_ARGS(fg)	(fg)->fg_fid, (fg)->fg_gen
 
-#define FID_GET_FLAGS(fid)	(((fid) >> (SLASH_FID_FLAG_SHFT) &	\
-				    ~(UINT64_MAX << SLASH_FID_FLAG_BITS))
-#define FID_GET_SITEID(fid)	(((fid) >> (SLASH_FID_SITE_SHFT)) &	\
-				    ~(UINT64_MAX << SLASH_FID_SITE_BITS))
-#define FID_GET_CYCLE(fid)	(((fid) >> SLASH_FID_CYCLE_SHFT) &	\
-				    ~(UINT64_MAX << SLASH_FID_CYCLE_BITS))
-#define FID_GET_INUM(fid)	((fid) & ~(UINT64_MAX << (SLASH_FID_INUM_BITS)))
+#define _FID_SET_FIELD(fid, val, shft, nb)				\
+	((fid) = ((fid) & ~(MAXVALMASK(nb) << (shft))) |		\
+	 ((val) & MAXVALMASK(nb)) << (shft))
 
-#define FID_SET_FLAGS(fid, fl)	((fid) |= ((fl) << SLASH_FID_FLAG_SHFT))
-#define FID_SET_CYCLE(fid, cy)	((fid) |= ((cy) << SLASH_FID_CYCLE_SHFT))
+#define _FID_GET_FIELD(fid, shft, nb)					\
+	(((fid) >> (shft)) & MAXVALMASK(nb))
+
+#define FID_GET_FLAGS(fid)	_FID_GET_FIELD((fid), SLASH_FID_FLAG_SHFT, SLASH_FID_FLAG_BITS)
+#define FID_GET_SITEID(fid)	_FID_GET_FIELD((fid), SLASH_FID_SITE_SHFT, SLASH_FID_SITE_BITS)
+#define FID_GET_CYCLE(fid)	_FID_GET_FIELD((fid), SLASH_FID_CYCLE_SHFT, SLASH_FID_CYCLE_BITS)
+#define FID_GET_INUM(fid)	_FID_GET_FIELD((fid), SLASH_FID_INUM_SHFT, SLASH_FID_INUM_BITS)
+
+#define FID_SET_FLAGS(fid, fl)	_FID_SET_FIELD((fid), (fl), SLASH_FID_FLAG_SHFT, SLASH_FID_FLAG_BITS)
+#define FID_SET_SITEID(fid, id)	_FID_SET_FIELD((fid), (id), SLASH_FID_SITE_SHFT, SLASH_FID_SITE_BITS)
+#define FID_SET_CYCLE(fid, cy)	_FID_SET_FIELD((fid), (cy), SLASH_FID_CYCLE_SHFT, SLASH_FID_CYCLE_BITS)
 
 #define SAMEFG(a, b)							\
 	((a)->fg_fid == (b)->fg_fid && (a)->fg_gen == (b)->fg_gen)

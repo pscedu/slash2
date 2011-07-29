@@ -103,7 +103,7 @@ slm_get_next_slashfid(slfid_t *fidp)
 	 * We have to let sys admin know, otherwise, he/she does not know how
 	 * to bump the cycle bits.
 	 */
-	if (FID_GET_INUM(slm_next_fid) >= FID_MAX) {
+	if (FID_GET_INUM(slm_next_fid) >= FID_MAX_INUM) {
 		psc_warnx("Max FID "SLPRI_FID" reached, manual intervention needed",
 			slm_next_fid);
 		freelock(&slm_fid_lock);

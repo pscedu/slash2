@@ -302,12 +302,17 @@ slmctlparam_nextfid_set(const char *val)
 
 	l = strtol(val, &endp, 0);
 	spinlock(&slm_fid_lock);
-	if (endp == val || *endp ||
-	    l > FID_MAX || l <= FID_GET_INUM(slm_next_fid))
+	if (endp == val || *endp)
 		rc = -1;
-	else
-		slm_next_fid = l | ((uint64_t)nodeSite->site_id <<
-		    SLASH_FID_SITE_SHFT);
+	else {
+		if (FID_GET_SITEID(l) == FID_GET_SITEID(slm_next_fid))
+			FID_SET_SITEID(l, 0);
+		if (l > FID_MAX_INUM || l <= FID_GET_INUM(slm_next_fid))
+			rc = -1;
+		else
+			slm_next_fid = l | ((uint64_t)nodeSite->site_id <<
+			    SLASH_FID_SITE_SHFT);
+	}
 	freelock(&slm_fid_lock);
 	return (rc);
 }
