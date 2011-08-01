@@ -155,4 +155,5 @@ administrator's back.  Instead, we print out warning and return ENOSPC.
 
 It is up to the administrator to count how many crashes have happen since
 the last available snapshot and bump the cycle number with our cursor_mgr
-utility accordingly.
+utility accordingly.  The goal is to skip any fids that might have been
+issued by the MDS out there.
