@@ -568,6 +568,12 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 	struct slmds_jent_namespace *sjnm;
 	int distill = 0;
 
+	if (op == NS_OP_SETATTR)
+		psc_assert(mask);
+
+	if (op == NS_OP_CREATE || op == NS_OP_MKDIR)
+		psc_assert(sstb->sst_fid);
+
 	sjnm = pjournal_get_buf(mdsJournal, sizeof(*sjnm));
 	memset(sjnm, 0, sizeof(*sjnm));
 	sjnm->sjnm_magic = SJ_NAMESPACE_MAGIC;
@@ -587,9 +593,6 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 	sjnm->sjnm_ctime = sstb->sst_ctime;
 	sjnm->sjnm_ctime_ns = sstb->sst_ctime_ns;
 	sjnm->sjnm_size = sstb->sst_size;
-
-	if (sjnm->sjnm_op == NS_OP_SETATTR)
-		psc_assert(mask);
 
 	/*
 	 * We need distill if we have a peer MDS or we need to do
