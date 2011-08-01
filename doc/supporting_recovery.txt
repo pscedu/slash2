@@ -147,3 +147,12 @@ On 07/22/2011 04:59 PM, Zhihui Zhang wrote:
 > -Zhihui
 
 
+08/01/2011
+----------
+
+In light of the above issue, we never increment the cycle number behind the
+administrator's back.  Instead, we print out warning and return ENOSPC.
+
+It is up to the administrator to count how many crashes have happen since
+the last available snapshot and bump the cycle number with our cursor_mgr
+utility accordingly.
