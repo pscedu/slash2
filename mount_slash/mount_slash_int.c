@@ -2208,7 +2208,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 * Foreach block range, get its bmap and make a request into its
 	 *  page cache.  This first loop retrieves all the pages.
 	 */
-	for (i = 0, p = buf; i < nr; i++) {
+	for (i = 0, bufp = buf; i < nr; i++) {
 		if (r[i])
 			goto load_next;
 
@@ -2281,7 +2281,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
  load_next:
 		roff += tlen;
 		tsize -= tlen;
-		p += tlen;
+		bufp += tlen;
 		tlen  = MIN(SLASH_BMAP_SIZE, tsize);
 	}
 
