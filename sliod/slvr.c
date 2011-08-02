@@ -354,6 +354,7 @@ sli_aio_register(struct pscrpc_request *rq, struct sli_iocb_set **iocbsp,
 	iocb->iocb_cbf = slvr_fsaio_done;
 	iocb->iocb_rw = rw;
 	iocb->iocb_peer = pscrpc_export_get(rq->rq_export);
+	INIT_PSC_LISTENTRY(&iocb->iocb_lentry);
 	iocb->iocb_set = iocbs;
 
 	aio = &iocb->iocb_aiocb;
@@ -838,8 +839,8 @@ slvr_io_prep(struct pscrpc_request *rq, struct sli_iocb_set **iocbs,
 				DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
 				SLVR_WAKEUP(s);
 			}
-			SLVR_ULOCK(s);
 		}
+		SLVR_ULOCK(s);
 	}
 
 	return (rc);
