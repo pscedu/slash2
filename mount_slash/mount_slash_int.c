@@ -545,7 +545,7 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 	int fhent = 1;
 #endif
 
-	spinlock(&r->biorq_lock);
+	BIORQ_LOCK(r);
 
 	/* Reads req's have their BIORQ_SCHED and BIORQ_INFL flags
 	 *    cleared in msl_read_cb to unblock waiting
@@ -577,7 +577,7 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 		fhent = 0;
 #endif
 
-	freelock(&r->biorq_lock);
+	BIORQ_ULOCK(r);
 
 	DEBUG_BIORQ(PLL_INFO, r, "destroying (nwaiters=%d)",
 		    atomic_read(&r->biorq_waitq.wq_nwaiters));
@@ -647,16 +647,16 @@ bmap_biorq_expire(struct bmapc_memb *b)
 	 */
 	BMPC_LOCK(bmap_2_bmpc(b));
 	PLL_FOREACH(biorq, &bmap_2_bmpc(b)->bmpc_new_biorqs) {
-		spinlock(&biorq->biorq_lock);
+		BIORQ_LOCK(biorq);
 		biorq->biorq_flags |= BIORQ_FORCE_EXPIRE;
 		DEBUG_BIORQ(PLL_INFO, biorq, "FORCE_EXPIRE");
-		freelock(&biorq->biorq_lock);
+		BIORQ_ULOCK(biorq);
 	}
 	PLL_FOREACH(biorq, &bmap_2_bmpc(b)->bmpc_pndg_biorqs) {
-		spinlock(&biorq->biorq_lock);
+		BIORQ_LOCK(biorq);
 		biorq->biorq_flags |= BIORQ_FORCE_EXPIRE;
 		DEBUG_BIORQ(PLL_INFO, biorq, "FORCE_EXPIRE");
-		freelock(&biorq->biorq_lock);
+		BIORQ_ULOCK(biorq);
 	}
 	BMPC_ULOCK(bmap_2_bmpc(b));
 
@@ -932,7 +932,7 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 		goto out;
 	}
 
-	spinlock(&r->biorq_lock);
+	BIORQ_LOCK(r);
 	psc_assert(r->biorq_flags & BIORQ_SCHED);
 	psc_assert(r->biorq_flags & BIORQ_INFL);
 
@@ -972,7 +972,7 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 		}
 		BMPCE_ULOCK(bmpce);
 	}
-	freelock(&r->biorq_lock);
+	BIORQ_ULOCK(r);
 
  out:
 	if (rc) {
@@ -1306,13 +1306,13 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	 *   The BIORQ_FLUSHRDY bit prevents the request
 	 *   from being processed prematurely.
 	 */
-	spinlock(&r->biorq_lock);
+	BIORQ_LOCK(r);
 	r->biorq_flags |= BIORQ_FLUSHRDY;
 	DEBUG_BIORQ(PLL_INFO, r, "BIORQ_FLUSHRDY");
 	psc_assert(psclist_conjoint(&r->biorq_lentry,
 	    psc_lentry_hd(&r->biorq_lentry)));
 	atomic_inc(&bmpc->bmpc_pndgwr);
-	freelock(&r->biorq_lock);
+	BIORQ_ULOCK(r);
 
 	if (b->bcm_flags & BMAP_DIRTY) {
 		/* If the bmap is already dirty then at least
@@ -1769,7 +1769,7 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 		 *   fashion.  For now, the following lines will be moved
 		 *   here.
 		 */
-		spinlock(&r->biorq_lock);
+		BIORQ_LOCK(r);
 		if (rc != -SLERR_AIOWAIT)
 			r->biorq_flags &= ~(BIORQ_INFL | BIORQ_SCHED);
 		if (!rc) {
@@ -1777,7 +1777,8 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 			DEBUG_BIORQ(PLL_INFO, r, "read cb complete");
 			psc_waitq_wakeall(&r->biorq_waitq);
 		}
-		freelock(&r->biorq_lock);
+		BIORQ_ULOCK(r);
+
 		/* Destroy and cleanup the set now.
 		 */
 		pscrpc_set_destroy(r->biorq_rqset);
@@ -2091,7 +2092,6 @@ void
 msl_aiorqcol_finish(struct slc_async_req *car, ssize_t rc, size_t len)
 {
 	struct msl_aiorqcol *aiorqcol;
-	void *buf;
 
 	aiorqcol = car->car_marc;
 	spinlock(&aiorqcol->marc_lock);
@@ -2109,12 +2109,10 @@ msl_aiorqcol_finish(struct slc_async_req *car, ssize_t rc, size_t len)
 		spinlock(&aiorqcol->marc_lock);
 	}
 
-	rc = aiorqcol->marc_rc;
-	buf = aiorqcol->marc_buf;
-	pscfs_reply_read(aiorqcol->marc_pfr, buf, aiorqcol->marc_len,
-	    -abs(rc));
+	pscfs_reply_read(aiorqcol->marc_pfr, aiorqcol->marc_buf,
+	    aiorqcol->marc_len, -abs(aiorqcol->marc_rc));
+	PSCFREE(aiorqcol->marc_buf);
 	psc_pool_return(slc_aiorqcol_pool, aiorqcol);
-	PSCFREE(buf);
 }
 
 #define MSL_BIORQ_COMPLETE	((void *)0x1)
@@ -2210,7 +2208,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 * Foreach block range, get its bmap and make a request into its
 	 *  page cache.  This first loop retrieves all the pages.
 	 */
-	for (i = 0; i < nr; i++) {
+	for (i = 0, p = buf; i < nr; i++) {
 		if (r[i])
 			goto load_next;
 
@@ -2264,7 +2262,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		if (!(r[i]->biorq_flags & BIORQ_DIO) &&
 		    (r[i]->biorq_flags &
 		      (BIORQ_READ | BIORQ_RBWFP | BIORQ_RBWLP))) {
-			rc = msl_pages_prefetch(pfr, bufp, r[i], &aiorqcol);
+			rc = msl_pages_prefetch(pfr, bufp, r[i],
+			    &aiorqcol);
 			if (rc) {
 				rc = msl_offline_retry_ignexpire(r[i]);
 				r[i]->biorq_flags |= BIORQ_RBWFAIL;
@@ -2282,6 +2281,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
  load_next:
 		roff += tlen;
 		tsize -= tlen;
+		p += tlen;
 		tlen  = MIN(SLASH_BMAP_SIZE, tsize);
 	}
 
