@@ -2344,6 +2344,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 				} else
 					rc = msl_offline_retry_ignexpire(r[i]);
 				if (rc) {
+					r[i]->biorq_flags |= BIORQ_RBWFAIL;
 					msl_biorq_destroy(r[i]);
 					r[i] = NULL;
 					goto restart;
