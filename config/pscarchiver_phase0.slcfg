@@ -5,6 +5,8 @@
 # Archiver configuration
 set port=1301;
 set net=sdp11;
+set pref_mds="archmds@PSCARCH";
+set pref_ios="archsliod@PSCARCH";
 
 # Pull in other/local config files
 # include "/etc/slcfg.d/*"
