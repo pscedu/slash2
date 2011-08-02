@@ -1168,7 +1168,7 @@ msl_dio_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 __static int
 msl_pages_dio_getput(struct pscfs_req *pfr, struct bmpc_ioreq *r,
-    char *b, struct msl_aiorqcol **aiorqcol)
+    char *bufp, struct msl_aiorqcol **aiorqcol)
 {
 	struct slashrpc_cservice  *csvc = NULL;
 	struct pscrpc_request	  *rq = NULL;
@@ -1216,11 +1216,11 @@ msl_pages_dio_getput(struct pscfs_req *pfr, struct bmpc_ioreq *r,
 
 		rq->rq_interpret_reply = msl_dio_cb0;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
-		rq->rq_async_args.pointer_arg[MSL_CBARG_BUF] = b + nbytes;
+		rq->rq_async_args.pointer_arg[MSL_CBARG_BUF] = bufp + nbytes;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_AIORQCOL] = aiorqcol;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_PFR] = pfr;
 
-		iovs[i].iov_base = b + nbytes;
+		iovs[i].iov_base = bufp + nbytes;
 		iovs[i].iov_len  = len;
 
 		rc = rsx_bulkclient(rq, (op == SRMT_WRITE ?
@@ -2146,7 +2146,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	int nr, i, rc;
 	uint64_t fsz;
 	off_t roff;
-	char *p;
+	char *bufp;
 
 	memset(r, 0, sizeof(r));
 
@@ -2264,7 +2264,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		if (!(r[i]->biorq_flags & BIORQ_DIO) &&
 		    (r[i]->biorq_flags &
 		      (BIORQ_READ | BIORQ_RBWFP | BIORQ_RBWLP))) {
-			rc = msl_pages_prefetch(pfr, p, r[i], &aiorqcol);
+			rc = msl_pages_prefetch(pfr, bufp, r[i], &aiorqcol);
 			if (rc) {
 				rc = msl_offline_retry_ignexpire(r[i]);
 				r[i]->biorq_flags |= BIORQ_RBWFAIL;
@@ -2289,8 +2289,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 * Note that the offsets used here are file-wise offsets not
 	 * offsets into the buffer.
 	 */
-	for (i = 0, tlen = 0, tsize = 0, p = buf;
-	    i < nr; i++, p += tlen) {
+	for (i = 0, tlen = 0, tsize = 0, bufp = buf;
+	    i < nr; i++, bufp += tlen) {
 		if (r[i] == MSL_BIORQ_COMPLETE)
 			continue;
 
@@ -2300,7 +2300,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		tlen = r[i]->biorq_len;
 
 		if (r[i]->biorq_flags & BIORQ_DIO) {
-			rc = msl_pages_dio_getput(pfr, r[i], p, &aiorqcol);
+			rc = msl_pages_dio_getput(pfr, r[i], bufp, &aiorqcol);
 			if (rc == SLERR_AIOWAIT)
 				goto next_ioreq;
 			if (rc) {
@@ -2354,9 +2354,9 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			}
 
 			if (rw == SL_READ)
-				tlen = msl_pages_copyout(r[i], p);
+				tlen = msl_pages_copyout(r[i], bufp);
 			else
-				tlen = msl_pages_copyin(r[i], p);
+				tlen = msl_pages_copyin(r[i], bufp);
 		}
 		tsize += tlen;
 
