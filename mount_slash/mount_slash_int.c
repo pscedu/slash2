@@ -78,8 +78,9 @@ msl_biorq_cmp(const void *x, const void *y)
 	const struct bmpc_ioreq * b = y;
 
 	if (a->biorq_off == b->biorq_off)
-		/* Larger requests with the same start offset should have
-		 *   ordering priority.
+		/*
+		 * Larger requests with the same start offset should
+		 * have ordering priority.
 		 */
 		return (CMP(b->biorq_len, a->biorq_len));
 	return (CMP(a->biorq_off, b->biorq_off));
@@ -112,7 +113,8 @@ msl_bmpce_getbuf(struct bmap_pagecache_entry *bmpce)
 }
 
 /**
- * msl_biorq_build -
+ * msl_biorq_build - Construct a request structure for an I/O issued on
+ *	a bmap.
  * Notes: roff is bmap aligned.
  */
 __static void
@@ -129,8 +131,8 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	uint64_t fsz = fcmh_getsize(mfh->mfh_fcmh);
 
 	DEBUG_BMAP(PLL_INFO, b,
-		   "adding req for (off=%u) (size=%u) (nbmpce=%d)", roff, len,
-		   pll_nitems(&(bmap_2_bmpc(b)->bmpc_lru)));
+	    "adding req for (off=%u) (size=%u) (nbmpce=%d)", roff, len,
+	    pll_nitems(&(bmap_2_bmpc(b)->bmpc_lru)));
 
 	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh,
 	    "adding req for (off=%u) (size=%u)", roff, len);
@@ -144,8 +146,8 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 
 	/* O_APPEND must be sent be sent via directio
 	 */
-	//if (mfh->mfh_oflags & O_APPEND)
-	//	r->biorq_flags |= BIORQ_APPEND | BIORQ_DIO;
+//	if (mfh->mfh_oflags & O_APPEND)
+//		r->biorq_flags |= BIORQ_APPEND | BIORQ_DIO;
 
 	/* Take a ref on the bmap now so that it won't go away before
 	 *   pndg IO's complete.
@@ -310,12 +312,14 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 				bmpce_handle_lru_locked(bmpce, bmpc, op, 1);
 				bmap_op_start_type(b, BMAP_OPCNT_READA);
 
-				/* Place the bmpce into our private pll.  This is
-				 *    done so that the ra thread may coalesce
-				 *    bmpces without sorting overhead.  In addition,
-				 *    the ra thread may now use the fh's ra
-				 *    factor for weighing bw (large requests) vs.
-				 *    latency (smaller requests).
+				/*
+				 * Place the bmpce into our private pll.
+				 * This is done so that the ra thread
+				 * may coalesce bmpces without sorting
+				 * overhead.  In addition, the ra thread
+				 * may now use the fh's ra factor for
+				 * weighing bw (large requests) vs.
+				 * latency (smaller requests).
 				 */
 				spinlock(&mfh->mfh_lock);
 				pll_addtail(&mfh->mfh_ra_bmpces, bmpce);
@@ -327,10 +331,11 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 					freelock(&mfh->mfh_lock);
 
 			} else if (bmpce->bmpce_flags & BMPCE_LRU) {
-				/* There's no official read op pending for this
-				 *   ra page so no read ref is taken.  The
-				 *   lru is adjusted in preparation for its
-				 *   possible use.
+				/*
+				 * There's no official read op pending
+				 * for this ra page so no read ref is
+				 * taken.  The lru is adjusted in
+				 * preparation for its possible use.
 				 */
 				psc_assert(bmpce->bmpce_flags & BMPCE_DATARDY);
 				PFL_GETTIMESPEC(&bmpce->bmpce_laccess);
@@ -360,8 +365,9 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	if (bkwdra)
 		psc_dynarray_reverse(&r->biorq_pages);
 
-	/* Pass1: Retrieve memory pages from the cache on behalf of our pages
-	 *   stuck in GETBUF.
+	/*
+	 * Pass1: Retrieve memory pages from the cache on behalf of our
+	 * pages stuck in GETBUF.
 	 */
 	for (i=0; i < npages; i++) {
 		bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
@@ -548,8 +554,9 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 	if (!(r->biorq_flags & BIORQ_DIO)) {
 		if (r->biorq_flags & BIORQ_WRITE) {
 			if (r->biorq_flags & BIORQ_RBWFAIL)
-				/* Ensure this biorq never got off of the
-				 *    ground.
+				/*
+				 * Ensure this biorq never got off of
+				 * the ground.
 				 */
 				psc_assert(!(r->biorq_flags &
 				     (BIORQ_INFL|BIORQ_SCHED)));
@@ -708,8 +715,8 @@ msl_bmap_reap_init(struct bmapc_memb *bmap, const struct srt_bmapdesc *sbd)
 
 	bci->bci_sbd = *sbd;
 	/* Record the start time,
-	 *  XXX the directio status of the bmap needs to be returned by the
-	 *     mds so we can set the proper expiration time.
+	 *  XXX the directio status of the bmap needs to be returned by
+	 *	the MDS so we can set the proper expiration time.
 	 */
 	PFL_GETTIMESPEC(&bci->bci_xtime);
 
@@ -718,8 +725,9 @@ msl_bmap_reap_init(struct bmapc_memb *bmap, const struct srt_bmapdesc *sbd)
 	timespecadd(&bci->bci_xtime, &msl_bmap_max_lease,
 	    &bci->bci_xtime);
 
-	/* Take the reaper ref cnt early and place the bmap
-	 *    onto the reap list
+	/*
+	 * Take the reaper ref cnt early and place the bmap onto the
+	 * reap list
 	 */
 	bmap->bcm_flags |= BMAP_TIMEOQ;
 	bmap_op_start_type(bmap, BMAP_OPCNT_REAPER);
@@ -1762,7 +1770,8 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 		 *   here.
 		 */
 		spinlock(&r->biorq_lock);
-		r->biorq_flags &= ~(BIORQ_INFL | BIORQ_SCHED);
+		if (rc != -SLERR_AIOWAIT)
+			r->biorq_flags &= ~(BIORQ_INFL | BIORQ_SCHED);
 		if (!rc) {
 			r->biorq_flags &= ~(BIORQ_RBWLP | BIORQ_RBWFP);
 			DEBUG_BIORQ(PLL_INFO, r, "read cb complete");
@@ -1778,7 +1787,7 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 		 * By this point, the bmpce's in biorq_pages have been
 		 * released.  Don't try to access them here.
 		 */
-		if (rc && rc != SLERR_AIOWAIT)
+		if (rc && rc != -SLERR_AIOWAIT)
 			return (rc);
 	}
 
@@ -1800,11 +1809,11 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 				 */
 				if (bmpce->bmpce_flags & BMPCE_AIOWAIT) {
 					if (rc == 0)
-						rc = SLERR_AIOWAIT;
+						rc = -SLERR_AIOWAIT;
 					break;
 				}
 				if (bmpce->bmpce_flags & BMPCE_EIO) {
-					rc = EAGAIN;
+					rc = -EAGAIN;
 					break;
 				}
 
@@ -1824,11 +1833,11 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 			if (bmpce->bmpce_flags & BMPCE_EIO) {
 				r->biorq_flags &= ~BIORQ_SCHED;
 				// XXX may be redundant because of above
-				rc = EAGAIN;
+				rc = -EAGAIN;
 			}
 
 			if (rc == 0 && (bmpce->bmpce_flags & BMPCE_AIOWAIT))
-				rc = SLERR_AIOWAIT;
+				rc = -SLERR_AIOWAIT;
 
 			/* Read requests must have had their bmpce's
 			 *   put into DATARDY by now (i.e. all RPCs
@@ -2117,6 +2126,8 @@ msl_aiorqcol_finish(struct slc_async_req *car, ssize_t rc, size_t len)
  *	file's fcmh and is ultimately responsible for data being
  *	prefetched (as needed), copied into or from the cache, and (on
  *	write) being pushed to the correct I/O server.
+ * @pfr: file system request, used for tracking potentially asynchronous
+ *	activity.
  * @mfh: file handle structure passed to us by pscfs which contains the
  *	pointer to our fcmh.
  * @buf: the application source/dest buffer.
@@ -2309,7 +2320,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			 *   which we need.
 			 */
 			rc = msl_pages_blocking_load(r[i]);
-			if (rc == SLERR_AIOWAIT)
+			if (rc == -SLERR_AIOWAIT)
 				goto next_ioreq;
 			if (rc) {
 				rc = msl_offline_retry(r[i]);
