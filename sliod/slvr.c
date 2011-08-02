@@ -354,7 +354,6 @@ sli_aio_register(struct pscrpc_request *rq, struct sli_iocb_set **iocbsp,
 	iocb->iocb_cbf = slvr_fsaio_done;
 	iocb->iocb_rw = rw;
 	iocb->iocb_peer = pscrpc_export_get(rq->rq_export);
-	INIT_PSC_LISTENTRY(&iocb->iocb_lentry);
 	iocb->iocb_set = iocbs;
 
 	aio = &iocb->iocb_aiocb;
@@ -815,34 +814,33 @@ slvr_io_prep(struct pscrpc_request *rq, struct sli_iocb_set **iocbs,
 		SLVR_ULOCK(s);
 
 		return (0);
-
-	} else {
-		/* Above, the bits were set for the RMW blocks, now
-		 *  that they have been read, invert the bitmap so that
-		 *  it properly represents the blocks to be dirtied by
-		 *  the rpc.
-		 */
-		SLVR_LOCK(s);
- invert:
-		psc_vbitmap_invert(s->slvr_slab->slb_inuse);
-		if (unaligned[0] >= 0)
-			psc_vbitmap_set(s->slvr_slab->slb_inuse, unaligned[0]);
-
-		if (unaligned[1] >= 0)
-			psc_vbitmap_set(s->slvr_slab->slb_inuse, unaligned[1]);
-		//psc_vbitmap_printbin1(s->slvr_slab->slb_inuse);
- out:
-		if (!rc) {
-			if (s->slvr_flags & SLVR_FAULTING) {
-				s->slvr_flags |= SLVR_DATARDY;
-				s->slvr_flags &= ~SLVR_FAULTING;
-				DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
-				SLVR_WAKEUP(s);
-			}
-		}
-		SLVR_ULOCK(s);
 	}
 
+	/* Above, the bits were set for the RMW blocks, now
+	 *  that they have been read, invert the bitmap so that
+	 *  it properly represents the blocks to be dirtied by
+	 *  the rpc.
+	 */
+	SLVR_LOCK(s);
+
+ invert:
+	psc_vbitmap_invert(s->slvr_slab->slb_inuse);
+	if (unaligned[0] >= 0)
+		psc_vbitmap_set(s->slvr_slab->slb_inuse, unaligned[0]);
+
+	if (unaligned[1] >= 0)
+		psc_vbitmap_set(s->slvr_slab->slb_inuse, unaligned[1]);
+//		psc_vbitmap_printbin1(s->slvr_slab->slb_inuse);
+ out:
+	if (!rc) {
+		if (s->slvr_flags & SLVR_FAULTING) {
+			s->slvr_flags |= SLVR_DATARDY;
+			s->slvr_flags &= ~SLVR_FAULTING;
+			DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
+			SLVR_WAKEUP(s);
+		}
+	}
+	SLVR_ULOCK(s);
 	return (rc);
 }
 
