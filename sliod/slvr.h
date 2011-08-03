@@ -179,6 +179,7 @@ struct sli_iocb {
 	struct sli_iocb_set	 *iocb_set;
 	struct pscrpc_export	 *iocb_peer;
 	struct aiocb		  iocb_aiocb;
+	struct pscrpc_completion  iocb_compl;
 	int			  iocb_rc;
 	ssize_t			  iocb_len;
 	enum rw			  iocb_rw;

@@ -374,6 +374,9 @@ sli_aio_register(struct pscrpc_request *rq, struct sli_iocb_set **iocbsp,
 	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 	mp->id = iocb->iocb_id = psc_atomic64_inc_getnew(&sli_aio_id);
 
+	pscrpc_completion_init(&iocb->iocb_compl);
+	rq->rq_reply_state->rs_compl = &iocb->iocb_compl;
+
 	LIST_CACHE_LOCK(&sli_iocb_pndg);
 	SLVR_LOCK(s);
 	if (issue)
@@ -384,6 +387,7 @@ sli_aio_register(struct pscrpc_request *rq, struct sli_iocb_set **iocbsp,
 	LIST_CACHE_ULOCK(&sli_iocb_pndg);
 
 	if (error) {
+		rq->rq_reply_state->rs_compl = NULL;
 		pscrpc_export_put(iocb->iocb_peer);
 		psc_pool_return(sli_iocb_pool, iocb);
 		return (-error);
@@ -1170,6 +1174,14 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 
 		LIST_CACHE_LOCK(&sli_iocb_pndg);
 		LIST_CACHE_FOREACH_SAFE(iocb, next, &sli_iocb_pndg) {
+			/*
+			 * XXX ensure that failed RPC replies still
+			 * trigger this.
+			 */
+			if (!pscrpc_completion_ready(&iocb->iocb_compl,
+			    0, 0))
+				continue;
+
 			iocb->iocb_rc = aio_error(&iocb->iocb_aiocb);
 			if (iocb->iocb_rc == EINPROGRESS)
 				continue;
