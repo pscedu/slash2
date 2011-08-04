@@ -318,27 +318,22 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r)
 	BMPC_ULOCK(bmpc);
 }
 
-/**
- * bmap_flush_resched - called in error contexts where
- *    the biorq must be rescheduled.
- */
-void
-bmap_flush_resched(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
+__static void
+bmap_flush_desched(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r) 
 {
-	struct bmap_pagecache *bmpc;
+	int secs, rc, i;
 	struct bmap_pagecache_entry *bmpce;
-	int i, rc, secs;
 
-	spinlock(&r->biorq_lock);
+	BIORQ_LOCK(r);
 	psc_assert(r->biorq_flags & BIORQ_SCHED);
-	psc_assert(r->biorq_flags & BIORQ_INFL);
-	r->biorq_flags &= ~(BIORQ_INFL|BIORQ_SCHED);
-	freelock(&r->biorq_lock);
+	r->biorq_flags &= ~BIORQ_SCHED;
+	BIORQ_ULOCK(r);
+
 	/* Try hard to renew the lease.
 	 */
 	rc = msl_bmap_lease_tryext(r->biorq_bmap, &secs, 1);
 
-	DEBUG_BIORQ(PLL_WARN, r, "unset inflight XXX is my lease still valid, "
+	DEBUG_BIORQ(PLL_WARN, r, "unset sched XXX is my lease still valid, "
 		    "rc=%d secs_rem=%d", rc, secs);
 	if (rc)
 		abort();
@@ -347,7 +342,24 @@ bmap_flush_resched(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
 		BMPCE_LOCK(bmpce);
 		bmpce->bmpce_flags &= ~BMPCE_INFLIGHT;
 		BMPCE_ULOCK(bmpce);
-	}
+	}	
+}
+/**
+ * bmap_flush_resched - called in error contexts where
+ *    the biorq must be rescheduled.
+ */
+void
+bmap_flush_resched(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
+{
+	struct bmap_pagecache *bmpc;
+
+	BIORQ_LOCK(r);
+	psc_assert(r->biorq_flags & BIORQ_SCHED);
+	psc_assert(r->biorq_flags & BIORQ_INFL);
+	r->biorq_flags &= ~BIORQ_INFL;
+	BIORQ_ULOCK(r);
+
+	bmap_flush_desched(pci, r);
 
 	bmpc = bmap_2_bmpc(r->biorq_bmap);
 	BMPC_LOCK(bmpc);
@@ -471,11 +483,8 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 	DYNARRAY_FOREACH(r, i, biorqs) {
 		if (csvc)
 			bmap_flush_resched(PFL_CALLERINFOSS(SLSS_BMAP), r);
-		else {
-			BIORQ_LOCK(r);
-			r->biorq_flags &= ~BIORQ_SCHED;
-			BIORQ_ULOCK(r);
-		}
+		else 
+			bmap_flush_desched(PFL_CALLERINFOSS(SLSS_BMAP), r);
 	}
 	r = psc_dynarray_getpos(biorqs, 0);
 
@@ -555,9 +564,7 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs,
 			 *   accounted for but first ensure that all of the
 			 *   pages have been scheduled for IO.
 			 */
-			//for (j=0; j < psc_dynarray_len(&r->biorq_pages); j++) {
 			DYNARRAY_FOREACH(bmpce, j, &r->biorq_pages) {
-				//bmpce = psc_dynarray_getpos(&r->biorq_pages, j);
 				//psc_assert(bmpce->bmpce_flags & BMPCE_INFLIGHT);
 				psc_assert(psc_atomic16_read(&bmpce->bmpce_wrref) > 0);
 			}
