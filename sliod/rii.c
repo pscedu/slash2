@@ -101,6 +101,19 @@ sli_rii_handle_replread(struct pscrpc_request *rq)
 
 	slvr_ref = slvr_lookup(mq->slvrno, bmap_2_biodi(bcm), SL_READ);
 
+	SLVR_LOCK(slvr_ref);
+	if (slvr_ref->slvr_flags & SLVR_REPLSRC) {
+		DEBUG_SLVR(PLL_WARN, slvr_ref, "SLVR_REPLSRC already set");
+		slvr_ref->slvr_pndgreads--;
+
+		psc_assert(slvr_ref->slvr_pndgreads > 0);
+
+		mp->rc = EALREADY;
+		SLVR_ULOCK(slvr_ref);
+		goto out;
+	} else		
+		SLVR_ULOCK(slvr_ref);
+
 	slvr_slab_prep(slvr_ref, SL_READ);
 	slvr_repl_prep(slvr_ref, SLVR_REPLSRC);
 	slvr_io_prep(NULL, NULL, slvr_ref, 0, mq->len, SL_READ);
