@@ -195,19 +195,22 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 		slvr_ref[i] = slvr_lookup(slvrno + i, bmap_2_biodi(bmap), rw);
 		slvr_slab_prep(slvr_ref[i], rw);
+
 		/* Fault in pages either for read or RBW.
 		 */
 		len[i] = MIN(tsize, SLASH_SLVR_SIZE - roff[i]);
 		rc = slvr_io_prep(rq, &iocbs, slvr_ref[i], roff[i], len[i], rw);
-		DEBUG_SLVR((rc ? PLL_WARN : PLL_INFO), slvr_ref[i], 
+		DEBUG_SLVR((rc ? PLL_WARN : PLL_INFO), slvr_ref[i],
 			   "post io_prep rw=%d rc=%d", rw, rc);
-		if (rc && rc == -EWOULDBLOCK)
+		if (rc && abs(rc) == SLERR_AIOWAIT)
 			goto do_aio;
+
 		/* mq->offset is the offset into the bmap, here we must
 		 *  translate it into the offset of the sliver.
 		 */
 		iovs[i].iov_base = slvr_ref[i]->slvr_slab->slb_base + roff[i];
 		tsize -= iovs[i].iov_len = len[i];
+
 		/* Avoid more complicated errors within lnet by ensuring
 		 *   that len is non-zero.
 		 */
@@ -217,7 +220,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	psc_assert(!tsize);
 
 	if (iocbs) {
-	do_aio:
+ do_aio:
 		spinlock(&iocbs->iocbs_lock);
 		memcpy(iocbs->iocbs_iovs, iovs, sizeof(iovs));
 		iocbs->iocbs_niov = nslvrs;
@@ -340,8 +343,8 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		if (sync) {
 			fsync_time = CURRENT_SECONDS;
 			rc = fsync(fcmh_2_fd(f));
-			fsync_time = CURRENT_SECONDS - fsync_time;		
-			
+			fsync_time = CURRENT_SECONDS - fsync_time;
+
 			if (fsync_time > 10)
 				DEBUG_FCMH(PLL_WARN, f, "long fsync %d", fsync_time);
 		}

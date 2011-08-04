@@ -478,7 +478,7 @@ slvr_fsio(struct pscrpc_request *rq, struct sli_iocb_set **iocbs,
 		    nblks, slvr_2_fileoff(s, sblk), save_errno);
 
 	else if ((uint32_t)rc != size)
-		DEBUG_SLVR(PLL_NOTICE, s, "short io (rc=%zd, size=%u) "
+		DEBUG_SLVR(PLL_NOTICE, s, "short I/O (rc=%zd, size=%u) "
 		    "%s blks=%d off=%"PRIu64" errno=%d",
 		    rc, size, (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
 		    nblks, slvr_2_fileoff(s, sblk), save_errno);
@@ -492,7 +492,7 @@ slvr_fsio(struct pscrpc_request *rq, struct sli_iocb_set **iocbs,
 
 	//psc_vbitmap_printbin1(s->slvr_slab->slb_inuse);
 
-	return ((rc < 0) ? (int)-save_errno : (int)0);
+	return (rc < 0 ? -save_errno : 0);
 }
 
 /**
@@ -539,7 +539,7 @@ slvr_fsbytes_rio(struct pscrpc_request *rq, struct sli_iocb_set **iocbs,
 		rc = slvr_fsio(rq, iocbs, s, blk, nblks *
 		    SLASH_SLVR_BLKSZ, SL_READ, 0, 0);
 
-	if (rc == -EWOULDBLOCK)
+	if (abs(rc) == SLERR_AIOWAIT)
 		return (rc);
 
  out:
