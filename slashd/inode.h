@@ -76,6 +76,10 @@ struct slash_inode_od {
 	uint64_t		 ino_repl_nblks[SL_DEF_REPLICAS];/* embed a few replicas */
 };
 
+enum ino_flags {
+	INO_BMAP_AFFINITY = (1 << 0) /* Try to assign new bmaps to existing backing objects */
+};
+
 struct slash_inode_extras_od {
 	sl_snap_t		 inox_snaps[SL_DEF_SNAPSHOTS];	/* snapshot pointers */
 	sl_replica_t		 inox_repls[SL_INOX_NREPLICAS];
