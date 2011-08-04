@@ -2144,19 +2144,23 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 
 	msfsthr(pscthr_get())->mft_failcnt = 1;
 	buf = PSCALLOC(size);
-	rc = msl_read(pfr, mfh, buf, size, off);
-	if (rc == -SLERR_AIOWAIT)
-		return;
-	if (rc < 0) {
-		rc = -rc;
-		goto out;
-	}
-	len = rc;
-	rc = 0;
+	len = msl_read(pfr, mfh, buf, size, off);
 
-	MFH_LOCK(mfh);
-	mfh->mfh_nbytes_rd += size;
-	MFH_ULOCK(mfh);
+	/*
+	 * If this request will be finished asynchronously, e.g. in the
+	 * case of a archival storage system, do not tie up this fs
+	 * worker thread.
+	 */
+	if (labs(len) == SLERR_AIOWAIT)
+		return;
+
+	if (len < 0)
+		rc = -len;
+	else {
+		MFH_LOCK(mfh);
+		mfh->mfh_nbytes_rd += len;
+		MFH_ULOCK(mfh);
+	}
 
  out:
 	pscfs_reply_read(pfr, buf, len, rc);
