@@ -78,7 +78,7 @@ struct bmap_cli_info {
 
 int	 msl_biorq_cmp(const void *, const void *);
 void	 msl_bmap_cache_rls(struct bmapc_memb *);
-int	 msl_bmap_lease_tryext(struct bmapc_memb *);
+int	 msl_bmap_lease_tryext(struct bmapc_memb *, int *, int);
 void	 bmap_biorq_expire(struct bmapc_memb *);
 
 extern struct timespec msl_bmap_max_lease;

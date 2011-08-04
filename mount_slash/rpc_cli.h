@@ -125,6 +125,8 @@ msl_getmw(void)
 		return (&msbmflthr(thr)->mbft_mw);
 	case MSTHRT_BMAPREADAHEAD:
 		return (&msbmfrathr(thr)->mbfra_mw);
+	case MSTHRT_BMAPFLSHRPC:
+		return (&msbmflrpc(thr)->mbflrpc_mw);
 	case MSTHRT_CTL:
 		return (NULL);
 	}

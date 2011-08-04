@@ -48,7 +48,8 @@ struct psc_listcache		 bmapReadAheadQ;
 struct psc_listcache		 bmapTimeoutQ;
 struct pscrpc_completion	 rpcComp;
 
-struct pscrpc_nbreqset		*pndgBmaplsReqs;
+struct pscrpc_nbreqset		*pndgBmaplsReqs;    /* bmap lease */
+__static struct pscrpc_nbreqset	*pndgBmapRlsReqs;   /* bmap release */
 __static struct pscrpc_nbreqset	*pndgWrtReqs;
 __static struct psc_listcache	 pndgWrtReqSets;
 __static atomic_t		 outstandingRpcCnt;
@@ -59,7 +60,7 @@ __static atomic_t		 outstandingRpcCnt;
 struct psc_waitq		bmapflushwaitq = PSC_WAITQ_INIT;
 psc_spinlock_t			bmapflushwaitqlock = SPINLOCK_INIT;
 
-void bmap_flush_resched(struct bmpc_ioreq *);
+void bmap_flush_resched(const struct pfl_callerinfo *pci, struct bmpc_ioreq *);
 
 __static void
 bmap_flush_reap_rpcs(void)
@@ -223,9 +224,15 @@ bmap_flush_create_rpc(void *set, struct bmpc_ioreq *r,
 	struct pscrpc_request *rq = NULL;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
-	int rc;
+	int rc, secs = 0;
 
  retry:
+	rc = msl_bmap_lease_tryext(r->biorq_bmap, &secs, 0);
+	if (rc)
+		goto error;
+
+	psc_assert(secs > 0);
+
 	csvc = msl_bmap_to_csvc(b, 1);
 	if (csvc == NULL)
 		goto error;
@@ -240,6 +247,8 @@ bmap_flush_create_rpc(void *set, struct bmpc_ioreq *r,
 		goto error;
 
 	atomic_inc(&outstandingRpcCnt);
+
+	rq->rq_timeout = secs / 2;
 
 	rq->rq_interpret_reply = bmap_flush_rpc_cb;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
@@ -309,36 +318,36 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r)
 	BMPC_ULOCK(bmpc);
 }
 
-__static void
-bmap_flush_inflight_unset(struct bmpc_ioreq *r)
+/**
+ * bmap_flush_resched - called in error contexts where
+ *    the biorq must be rescheduled.
+ */
+void
+bmap_flush_resched(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
 {
+	struct bmap_pagecache *bmpc;
 	struct bmap_pagecache_entry *bmpce;
-	int i;
+	int i, rc, secs;
 
 	spinlock(&r->biorq_lock);
 	psc_assert(r->biorq_flags & BIORQ_SCHED);
 	psc_assert(r->biorq_flags & BIORQ_INFL);
 	r->biorq_flags &= ~(BIORQ_INFL|BIORQ_SCHED);
-	DEBUG_BIORQ(PLL_WARN, r, "unset inflight XXX is my lease still valid?");
 	freelock(&r->biorq_lock);
+	/* Try hard to renew the lease.
+	 */
+	rc = msl_bmap_lease_tryext(r->biorq_bmap, &secs, 1);
+
+	DEBUG_BIORQ(PLL_WARN, r, "unset inflight XXX is my lease still valid, "
+		    "rc=%d secs_rem=%d", rc, secs);
+	if (rc)
+		abort();
 
 	DYNARRAY_FOREACH(bmpce, i, &r->biorq_pages) {
 		BMPCE_LOCK(bmpce);
 		bmpce->bmpce_flags &= ~BMPCE_INFLIGHT;
 		BMPCE_ULOCK(bmpce);
 	}
-}
-
-/**
- * bmap_flush_resched - called in error contexts where
- *    the biorq must be rescheduled.
- */
-void
-bmap_flush_resched(struct bmpc_ioreq *r)
-{
-	struct bmap_pagecache *bmpc;
-
-	bmap_flush_inflight_unset(r);
 
 	bmpc = bmap_2_bmpc(r->biorq_bmap);
 	BMPC_LOCK(bmpc);
@@ -461,7 +470,7 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 
 	DYNARRAY_FOREACH(r, i, biorqs) {
 		if (csvc)
-			bmap_flush_resched(r);
+			bmap_flush_resched(PFL_CALLERINFOSS(SLSS_BMAP), r);
 		else {
 			BIORQ_LOCK(r);
 			r->biorq_flags &= ~BIORQ_SCHED;
@@ -920,7 +929,8 @@ bmap_flush(void)
 			bcm_wake_locked(b);
 			BMAP_ULOCK(b);
 			continue;
-		}
+		} else
+			msl_bmap_lease_tryext(b, NULL, 0);
 
 		if (bmap_flushable(b)) {
 			i++;
@@ -1053,6 +1063,31 @@ bmap_2_bid(const struct bmapc_memb *b, struct srm_bmap_id *bid)
 	bid->bmapno = b->bcm_bmapno;
 }
 
+int
+msl_bmap_release_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
+{
+	struct srm_bmap_release_req *mq;
+	struct srm_bmap_release_rep *mp;
+	uint32_t i;
+	int rc = 0;
+
+	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
+	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
+
+	if (!mp)
+		rc = -1;
+
+	for (i = 0; i < mq->nbmaps; i++)
+		psclog((rc || mp->rc || mp->bidrc[i]) ? PLL_ERROR : PLL_INFO,
+		       "fid="SLPRI_FID" bmap=%u key=%"PRId64" seq=%"PRId64
+		       " rc=%d bidrc=%d",
+		       mq->bmaps[i].fid, mq->bmaps[i].bmapno, mq->bmaps[i].key,
+		       mq->bmaps[i].seq, (mp) ? mp->rc : rc,
+		       mp ? mp->bidrc[i] : rc);	
+
+	return (rc | ((mp) ? mp->rc : 0));
+}
+
 static void
 msl_bmap_release(struct sl_resm *resm)
 {
@@ -1061,7 +1096,6 @@ msl_bmap_release(struct sl_resm *resm)
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
 	struct resm_cli_info *rmci;
-	uint32_t i;
 	int rc;
 
 	rmci = resm2rmci(resm);
@@ -1089,19 +1123,9 @@ msl_bmap_release(struct sl_resm *resm)
 		goto out;
 
 	memcpy(mq, &rmci->rmci_bmaprls, sizeof(*mq));
+	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
+	rc = pscrpc_nbreqset_add(pndgBmapRlsReqs, rq);
 
-	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc == 0)
-		rc = mp->rc;
-
-	for (i = 0; i < rmci->rmci_bmaprls.nbmaps; i++)
-		psclog_notice("fid="SLPRI_FID" bmap=%u key=%"PRId64
-		    " seq=%"PRId64" rc=%d",
-		    rmci->rmci_bmaprls.bmaps[i].fid,
-		    rmci->rmci_bmaprls.bmaps[i].bmapno,
-		    rmci->rmci_bmaprls.bmaps[i].key,
-		    rmci->rmci_bmaprls.bmaps[i].seq,
-		    mp ? mp->bidrc[i] : rc); /* mp could be NULL if !rc */
 	rmci->rmci_bmaprls.nbmaps = 0;
  out:
 	if (rc) {
@@ -1114,11 +1138,12 @@ msl_bmap_release(struct sl_resm *resm)
 		psclog_errorx("bmap_release failed res=%s:nid=%s (rc=%d)",
 		    resm->resm_res->res_name, libcfs_nid2str(resm->resm_nid),
 		    rc);
+
+		if (rq)
+			pscrpc_req_finished(rq);
+		if (csvc)
+			sl_csvc_decref(csvc);
 	}
-	if (rq)
-		pscrpc_req_finished(rq);
-	if (csvc)
-		sl_csvc_decref(csvc);
 }
 
 void
@@ -1176,7 +1201,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				BMAP_ULOCK(b);
 				/* Try to extend here also.
 				 */
-				msl_bmap_lease_tryext(b);
+				msl_bmap_lease_tryext(b, NULL, 0);
 				continue;
 			}
 
@@ -1348,6 +1373,7 @@ msbmapflushthrrpc_main(__unusedx struct psc_thread *thr)
 	while (pscthr_run()) {
 		pscrpc_completion_waitrel_s(&rpcComp, 1);
 		pscrpc_nbreqset_reap(pndgBmaplsReqs);
+		pscrpc_nbreqset_reap(pndgBmapRlsReqs);
 		bmap_flush_reap_rpcs();
 		/* At the moment, RA requests share the same
 		 *    completion as bmap reaps.  Therefore,
@@ -1418,7 +1444,7 @@ msbmaprathr_main(__unusedx struct psc_thread *thr)
 			bmpce->bmpce_flags |= BMPCE_READPNDG;
 			BMPCE_ULOCK(bmpce);
 		}
-		msl_bmap_lease_tryext((struct bmapc_memb *)bmpce->bmpce_owner);
+
 		msl_reada_rpc_launch(bmpces, nbmpces);
 		lmfh = mfh;
 	}
@@ -1432,7 +1458,9 @@ msbmapflushthr_spawn(void)
 	int i;
 
 	pndgWrtReqs = pscrpc_nbreqset_init(NULL, msl_write_rpc_cb);
+	pndgBmapRlsReqs = pscrpc_nbreqset_init(NULL, msl_bmap_release_cb);
 	pndgBmaplsReqs = pscrpc_nbreqset_init(NULL, NULL);
+
 	pscrpc_completion_init(&rpcComp);
 	atomic_set(&outstandingRpcCnt, 0);
 	//psc_atomic32_set(&bmapflushforceexpired, 0);
@@ -1460,8 +1488,11 @@ msbmapflushthr_spawn(void)
 		pscthr_setready(thr);
 	}
 
-	pscthr_init(MSTHRT_BMAPFLSHRPC, 0, msbmapflushthrrpc_main,
-	    NULL, 0, "msbflushrpcthr");
+	thr = pscthr_init(MSTHRT_BMAPFLSHRPC, 0, msbmapflushthrrpc_main,
+	  NULL, sizeof(struct msbmflrpc_thread), "msbflushrpcthr");
+	psc_multiwait_init(&msbmflrpc(thr)->mbflrpc_mw, "%s", 
+			   thr->pscthr_name);
+	pscthr_setready(thr);
 
 	thr = pscthr_init(MSTHRT_BMAPFLSHRLS, 0, msbmaprlsthr_main,
 	    NULL, sizeof(struct msbmflrls_thread), "msbrlsthr");

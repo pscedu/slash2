@@ -80,6 +80,11 @@ struct msbmflrls_thread {
 	struct psc_multiwait		 mbfrlst_mw;
 };
 
+struct msbmflrpc_thread {
+	int                              mbflrpc_failcnt;
+	struct psc_multiwait             mbflrpc_mw;
+};
+
 struct msbmflra_thread {
 	int				 mbfra_failcnt;
 	struct psc_multiwait		 mbfra_mw;
@@ -87,6 +92,7 @@ struct msbmflra_thread {
 
 PSCTHR_MKCAST(msbmflrlsthr, msbmflrls_thread, MSTHRT_BMAPFLSHRLS);
 PSCTHR_MKCAST(msbmflthr, msbmfl_thread, MSTHRT_BMAPFLSH);
+PSCTHR_MKCAST(msbmflrpc, msbmflrpc_thread, MSTHRT_BMAPFLSHRPC);
 PSCTHR_MKCAST(msbmfrathr, msbmflra_thread, MSTHRT_BMAPREADAHEAD);
 PSCTHR_MKCAST(msfsthr, msfs_thread, MSTHRT_FS);
 

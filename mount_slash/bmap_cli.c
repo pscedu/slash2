@@ -166,17 +166,17 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 }
 
 int
-msl_bmap_lease_tryext(struct bmapc_memb *b)
+msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int force)
 {
-	int secs, rc = 0;
+	int secs = 0, rc = 0, waslocked, extended = 0;
 
-	BMAP_LOCK(b);
+	waslocked = BMAP_RLOCK(b);
 
-	//	if (b->bcm_flags & (BMAP_CLI_LEASEEXTREQ | BMAP_TIMEOQ) ||
-	if (b->bcm_flags & (BMAP_CLI_LEASEEXTREQ) ||
-	    (secs = bmap_2_bci(b)->bci_xtime.tv_sec - CURRENT_SECONDS) >
-	    BMAP_CLI_EXTREQSECS)
-		BMAP_ULOCK(b);
+	if (!force && 
+	    (b->bcm_flags & (BMAP_CLI_LEASEEXTREQ) ||
+	     (secs = bmap_2_bci(b)->bci_xtime.tv_sec - CURRENT_SECONDS) >
+	     BMAP_CLI_EXTREQSECS))
+		BMAP_URLOCK(b, waslocked);
 
 	else {
 		struct slashrpc_cservice *csvc = NULL;
@@ -185,6 +185,8 @@ msl_bmap_lease_tryext(struct bmapc_memb *b)
 		struct srm_leasebmapext_rep *mp;
 
 		BMAP_SETATTR(b, BMAP_CLI_LEASEEXTREQ);
+		/* Unlock no matter what.
+		 */
 		BMAP_ULOCK(b);
 
 		rc = slc_rmc_getimp1(&csvc,
@@ -202,15 +204,19 @@ msl_bmap_lease_tryext(struct bmapc_memb *b)
 		rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 
-		if (secs <= 0) {
+		if (secs <= 10 || force) {
 			/* The lease is old - issue a blocking request.
 			 */
 			rc = SL_RSX_WAITREP(csvc, rq, mp);
 			if (!rc)
-				rc = msl_bmap_lease_tryext_cb(rq, &rq->rq_async_args);
+				rc = msl_bmap_lease_tryext_cb(rq, 
+				      &rq->rq_async_args);
 
+			if (!rc)
+				extended = 1;
 			pscrpc_req_finished(rq);
 			sl_csvc_decref(csvc);
+			
 
 		} else {
 			/* Otherwise, let the async handler do the dirty work.
@@ -231,7 +237,17 @@ msl_bmap_lease_tryext(struct bmapc_memb *b)
 		DEBUG_BMAP(rc ? PLL_ERROR : PLL_WARN, b,
 			   "requesting lease extension (rc=%d) (secs=%d)", rc,
 			   secs);
+		if (waslocked == PSLRV_WASLOCKED)
+			BMAP_LOCK(b);
 	}
+	
+	if (secs_rem) {
+		if (!secs || extended)
+			secs = bmap_2_bci(b)->bci_xtime.tv_sec - 
+				CURRENT_SECONDS;
+		*secs_rem = secs;
+	}
+
 	return (rc);
 }
 

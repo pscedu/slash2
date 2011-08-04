@@ -69,7 +69,7 @@ struct psc_iostats	msl_diowr_stat;
 struct psc_iostats	msl_rdcache_stat;
 struct psc_iostats	msl_racache_stat;
 
-void bmap_flush_resched(struct bmpc_ioreq *);
+void bmap_flush_resched(const struct pfl_callerinfo *pci, struct bmpc_ioreq *);
 
 int
 msl_biorq_cmp(const void *x, const void *y)
@@ -927,7 +927,7 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 	if (rc) {
 		if (rq)
 			DEBUG_REQ(PLL_ERROR, rq, "non-zero status %d", rc);
-		DEBUG_BMAP(PLL_ERROR, b, "non-zero status %d", rc);
+		DEBUG_BMAP(PLL_ERROR, b, "sbd_seq=%"PRId64, bmap_2_sbd(b)->sbd_seq);
 		DEBUG_BIORQ(PLL_ERROR, r, "non-zero status %d", rc);
 		goto out;
 	}
@@ -1042,7 +1042,8 @@ msl_readahead_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 		bmpce->bmpce_owner = NULL;
 
 		DEBUG_BMPCE(rc ? PLL_ERROR : PLL_INFO, bmpce, "rc=%d", rc);
-		DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b, "rc=%d", rc);
+		DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b, "sbd_seq=%"PRId64, 
+		   bmap_2_sbd(b)->sbd_seq);
 
 		pll_remove(&bmpc->bmpc_pndg_ra, bmpce);
 		BMPCE_LOCK(bmpce);
@@ -1093,7 +1094,7 @@ msl_write_rpcset_cb(__unusedx struct pscrpc_request_set *set, void *arg,
 
 	if (rc) {
 		DYNARRAY_FOREACH(r, i, biorqs)
-			bmap_flush_resched(r);
+			bmap_flush_resched(PFL_CALLERINFOSS(SLSS_BMAP), r);
 		return (rc);
 	}
 
@@ -1117,7 +1118,8 @@ msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
 	if (rc) {
 		DYNARRAY_FOREACH(r, i, biorqs)
-			bmap_flush_resched(r);
+			bmap_flush_resched(PFL_CALLERINFOSS(SLSS_BMAP), r);
+
 		return (rc);
 	}
 
@@ -1364,8 +1366,8 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 	struct srm_io_rep *mp;
 	struct iovec *iovs;
 	uint32_t off = 0;
-	int rc, i, added = 0;
-
+	int rc, i, secs, added = 0;
+	
 	psc_assert(nbmpce > 0);
 	psc_assert(nbmpce <= BMPC_MAXBUFSRPC);
 
@@ -1397,10 +1399,18 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 		goto error;
 	}
 
+	rc = msl_bmap_lease_tryext((struct bmapc_memb *)bmpce->bmpce_owner, 
+		   &secs, 0);
+	if (rc)
+		goto error;
+
+	psc_assert(secs > 0);
+
 	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
 	if (rc)
 		goto error;
-	//XXX adjust rpc timeout according to bci_xtime
+
+	rq->rq_timeout = secs / 2;
 
 	rc = rsx_bulkclient(rq, BULK_PUT_SINK, SRIC_BULK_PORTAL, iovs,
 	    nbmpce);
@@ -2245,7 +2255,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			goto out;
 		}
 
-		msl_bmap_lease_tryext(b);
+		msl_bmap_lease_tryext(b, NULL, 0);
 		/*
 		 * Re-relativize the offset if this request spans more
 		 * than 1 bmap.
@@ -2307,6 +2317,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 				pll_remove(&mfh->mfh_biorqs, r[i]);
 				rc = msl_offline_retry_ignexpire(r[i]);
 				if (rc) {
+					r[i]->biorq_flags |= BIORQ_RBWFAIL;
 					msl_biorq_destroy(r[i]);
 					r[i] = NULL;
 					goto restart;
@@ -2320,8 +2331,10 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			 *   which we need.
 			 */
 			rc = msl_pages_blocking_load(r[i]);
-			if (rc == -SLERR_AIOWAIT)
+			if (rc == SLERR_AIOWAIT) {
+				DEBUG_BIORQ(PLL_WARN, r[i], "SLERR_AIOWAIT");
 				goto next_ioreq;
+			}
 			if (rc) {
 				rc = msl_offline_retry(r[i]);
 				if (rc) {
