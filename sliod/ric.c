@@ -198,9 +198,13 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		/* Fault in pages either for read or RBW.
 		 */
 		len[i] = MIN(tsize, SLASH_SLVR_SIZE - roff[i]);
+		rc = slvr_io_prep(rq, &iocbs, slvr_ref[i], roff[i], len[i], rw);
 		slvr_io_prep(rq, &iocbs, slvr_ref[i], roff[i], len[i], rw);
 
-		DEBUG_SLVR(PLL_INFO, slvr_ref[i], "post io_prep rw=%d", rw);
+		DEBUG_SLVR((rc ? PLL_WARN : PLL_INFO), slvr_ref[i], 
+			   "post io_prep rw=%d rc=%d", rw, rc);
+		if (rc && rc == -EWOULDBLOCK)
+			goto do_aio;
 		/* mq->offset is the offset into the bmap, here we must
 		 *  translate it into the offset of the sliver.
 		 */
@@ -215,6 +219,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	psc_assert(!tsize);
 
 	if (iocbs) {
+	do_aio:
 		spinlock(&iocbs->iocbs_lock);
 		memcpy(iocbs->iocbs_iovs, iovs, sizeof(iovs));
 		iocbs->iocbs_niov = nslvrs;
@@ -308,7 +313,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 	struct bmapc_memb *b;
 	struct slash_fidgen fg;
 	uint32_t i;
-	int rc, sync;
+	int rc, sync, fsync_time = 0;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -334,8 +339,15 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		if (!(f->fcmh_flags & FCMH_CTOR_DELAYED))
 			sync = 1;
 		FCMH_ULOCK(f);
-		if (sync)
+		if (sync) {
+			fsync_time = CURRENT_SECONDS;
 			rc = fsync(fcmh_2_fd(f));
+			fsync_time = CURRENT_SECONDS - fsync_time;		
+			
+			if (fsync_time > 10)
+				DEBUG_FCMH(PLL_WARN, f, "long fsync %d", fsync_time);
+		}
+
 		if (rc)
 			DEBUG_FCMH(PLL_ERROR, f, "fsync failure rc=%d fd=%d errno=%d",
 				   rc, fcmh_2_fd(f), errno);
