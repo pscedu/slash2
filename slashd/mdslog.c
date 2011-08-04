@@ -1661,23 +1661,23 @@ mds_journal_init(int disable_propagation)
 	mdsJournal->pj_commit_txg = mds_cursor.pjc_commit_txg;
 	mdsJournal->pj_replay_xid = mds_cursor.pjc_replay_xid;
 
-	psclog_notice("Journal device is %s", jrnldev);
-	psclog_notice("Last SLASH FID is "SLPRI_FID, mds_cursor.pjc_fid);
-	psclog_notice("Last synced ZFS transaction group number is %"PRId64,
+	psclog_warnx("Journal device is %s", jrnldev);
+	psclog_warnx("Last SLASH FID is "SLPRI_FID, mds_cursor.pjc_fid);
+	psclog_warnx("Last synced ZFS transaction group number is %"PRId64,
 	    mdsJournal->pj_commit_txg);
-	psclog_notice("Last replayed SLASH2 transaction ID is %"PRId64,
+	psclog_warnx("Last replayed SLASH2 transaction ID is %"PRId64,
 	    mdsJournal->pj_replay_xid);
 
 	pjournal_replay(mdsJournal, SLMTHRT_JRNL, "slmjthr",
 	    mds_replay_handler, mds_distill_handler);
 
-	psclog_notice("Last used SLASH2 transaction ID is %"PRId64,
+	psclog_warnx("Last used SLASH2 transaction ID is %"PRId64,
 	   mdsJournal->pj_lastxid);
 
 	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm, mds_cursor.pjc_seqno_lwm);
-	psclog_notice("Last bmap sequence number low water mark is %"PRId64,
+	psclog_warnx("Last bmap sequence number low water mark is %"PRIx64,
 	    mds_cursor.pjc_seqno_lwm);
-	psclog_notice("Last bmap sequence number high water mark is %"PRId64,
+	psclog_warnx("Last bmap sequence number high water mark is %"PRIx64,
 	    mds_cursor.pjc_seqno_hwm);
 }
 
