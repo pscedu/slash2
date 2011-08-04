@@ -200,7 +200,7 @@ struct slashrpc_cservice *
 	 msl_bmap_to_csvc(struct bmapc_memb *, int);
 void	 msl_bmap_reap_init(struct bmapc_memb *, const struct srt_bmapdesc *);
 int	 msl_dio_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
-int	 msl_io(struct pscfs_req *, struct msl_fhent *, char *, size_t, off_t, enum rw);
+ssize_t	 msl_io(struct pscfs_req *, struct msl_fhent *, char *, size_t, off_t, enum rw);
 int	 msl_read_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 void	 msl_reada_rpc_launch(struct bmap_pagecache_entry **, int);
 int	 msl_readahead_cb(struct pscrpc_request *, struct pscrpc_async_args *);

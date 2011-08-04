@@ -1042,7 +1042,7 @@ msl_readahead_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 		bmpce->bmpce_owner = NULL;
 
 		DEBUG_BMPCE(rc ? PLL_ERROR : PLL_INFO, bmpce, "rc=%d", rc);
-		DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b, "sbd_seq=%"PRId64, 
+		DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b, "sbd_seq=%"PRId64,
 		   bmap_2_sbd(b)->sbd_seq);
 
 		pll_remove(&bmpc->bmpc_pndg_ra, bmpce);
@@ -1256,7 +1256,7 @@ msl_pages_dio_getput(struct pscfs_req *pfr, struct bmpc_ioreq *r,
 
 	PSCFREE(iovs);
 
-	if (rc == SLERR_AIOWAIT) {
+	if (abs(rc) == SLERR_AIOWAIT) {
 		/*
 		 * async I/O registered by sliod; we must wait for a
 		 * notification from him when it is ready.
@@ -1367,7 +1367,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 	struct iovec *iovs;
 	uint32_t off = 0;
 	int rc, i, secs, added = 0;
-	
+
 	psc_assert(nbmpce > 0);
 	psc_assert(nbmpce <= BMPC_MAXBUFSRPC);
 
@@ -1399,8 +1399,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 		goto error;
 	}
 
-	rc = msl_bmap_lease_tryext((struct bmapc_memb *)bmpce->bmpce_owner, 
-		   &secs, 0);
+	rc = msl_bmap_lease_tryext(bmpce->bmpce_owner, &secs, 0);
 	if (rc)
 		goto error;
 
@@ -2143,7 +2142,7 @@ msl_aiorqcol_finish(struct slc_async_req *car, ssize_t rc, size_t len)
  * @off: file logical offset similar to pwrite().
  * @rw: the operation type (SL_READ or SL_WRITE).
  */
-int
+ssize_t
 msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
     const size_t size, const off_t off, enum rw rw)
 {
@@ -2151,10 +2150,11 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	struct bmpc_ioreq *r[MAX_BMAPS_REQ];
 	struct bmapc_memb *b, *bref = NULL;
 	size_t s, e, tlen, tsize;
-	int nr, i, rc;
 	uint64_t fsz;
+	ssize_t rc;
 	off_t roff;
 	char *bufp;
+	int nr, i;
 
 	memset(r, 0, sizeof(r));
 
@@ -2240,7 +2240,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			DEBUG_FCMH(PLL_ERROR, mfh->mfh_fcmh,
 			    "bno=%zd sz=%zu tlen=%zu "
 			    "off=%"PSCPRIdOFFT" roff=%"PSCPRIdOFFT" "
-			    "rw=%d rc=%d",
+			    "rw=%d rc=%zd",
 			    s + i, tsize, tlen, off, roff, rw, rc);
 			if (msl_fd_offline_retry(mfh))
 				goto retry_bmap;
@@ -2331,7 +2331,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			 *   which we need.
 			 */
 			rc = msl_pages_blocking_load(r[i]);
-			if (rc == SLERR_AIOWAIT) {
+			if (abs(rc) == SLERR_AIOWAIT) {
 				DEBUG_BIORQ(PLL_WARN, r[i], "SLERR_AIOWAIT");
 				goto next_ioreq;
 			}
