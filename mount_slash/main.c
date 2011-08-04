@@ -1458,6 +1458,9 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 	}
 
 	pscfs_getcreds(pfr, &pfc);
+
+	pscfs_reply_close(pfr, rc);
+
 	DEBUG_FCMH(PLL_INFO, c, "file closed uid=%u gid=%u "
 	    "fsize=%"PRId64" oatime="SLPRI_TIMESPEC" "
 	    "mtime="SLPRI_TIMESPEC" sessid=%d otime="PSCPRI_TIMESPEC" "
@@ -1471,7 +1474,6 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 	    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr);
 	fcmh_op_done_type(c, FCMH_OPCNT_OPEN);
 	PSCFREE(mfh);
-	pscfs_reply_close(pfr, rc);
 }
 
 __static void
