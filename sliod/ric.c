@@ -199,8 +199,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		 */
 		len[i] = MIN(tsize, SLASH_SLVR_SIZE - roff[i]);
 		rc = slvr_io_prep(rq, &iocbs, slvr_ref[i], roff[i], len[i], rw);
-		slvr_io_prep(rq, &iocbs, slvr_ref[i], roff[i], len[i], rw);
-
 		DEBUG_SLVR((rc ? PLL_WARN : PLL_INFO), slvr_ref[i], 
 			   "post io_prep rw=%d rc=%d", rw, rc);
 		if (rc && rc == -EWOULDBLOCK)
