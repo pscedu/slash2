@@ -73,6 +73,7 @@ struct bmpc_mem_slbs {
 struct bmap_pagecache_entry {
 	psc_atomic16_t		 bmpce_wrref;	/* pending write ops		*/
 	psc_atomic16_t		 bmpce_rdref;	/* pending read ops		*/
+	uint64_t                 bmpce_syncxid; /* xid associated with sync op  */
 	uint32_t		 bmpce_flags;	/* BMPCE_* flag bits		*/
 	uint32_t		 bmpce_off;	/* filewise, bmap relative	*/
 	psc_spinlock_t		 bmpce_lock;	/* serialize			*/
@@ -104,6 +105,7 @@ struct bmap_pagecache_entry {
 #define	BMPCE_EIO		(1 << 12)	/* 0x1000: I/O error */
 #define BMPCE_READA		(1 << 13)	/* 0x2000: read-ahead */
 #define BMPCE_AIOWAIT		(1 << 14)	/* 0x4000: wait on async read */
+#define BMPCE_SYNCWAIT          (1 << 15)       /* 0x10000: wait on sliod sync */
 
 #define BMPCE_LOCK(b)		spinlock(&(b)->bmpce_lock)
 #define BMPCE_ULOCK(b)		freelock(&(b)->bmpce_lock)
@@ -133,7 +135,7 @@ struct bmap_pagecache_entry {
 		BMPCE_URLOCK((bmpce), _locked);				\
 	} while (0)
 
-#define BMPCE_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
+#define BMPCE_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
 #define DEBUG_BMPCE_FLAGS(b)						\
 	(b)->bmpce_flags & BMPCE_NEW			? "n" : "",	\
 	(b)->bmpce_flags & BMPCE_GETBUF			? "g" : "",	\
@@ -149,7 +151,8 @@ struct bmap_pagecache_entry {
 	(b)->bmpce_flags & BMPCE_INFLIGHT		? "L" : "",	\
 	(b)->bmpce_flags & BMPCE_EIO			? "E" : "",	\
 	(b)->bmpce_flags & BMPCE_READA			? "a" : "",	\
-	(b)->bmpce_flags & BMPCE_AIOWAIT		? "w" : ""
+	(b)->bmpce_flags & BMPCE_AIOWAIT		? "w" : "",     \
+	(b)->bmpce_flags & BMPCE_SYNCWAIT		? "S" : ""
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP,					\
@@ -477,7 +480,8 @@ bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len,
 	ioreq->biorq_bmap = bmap;
 	ioreq->biorq_flags = op;
 	ioreq->biorq_fhent = fhent;
-	if (bmap->bcm_flags & BMAP_DIO)
+	if (bmap->bcm_flags & BMAP_DIO || 
+	    (op == BIORQ_WRITE && bmap->bcm_flags & BMAP_DIOWR))
 		ioreq->biorq_flags |= BIORQ_DIO;
 }
 
