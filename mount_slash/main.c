@@ -2151,7 +2151,7 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	 * case of a archival storage system, do not tie up this fs
 	 * worker thread.
 	 */
-	if (labs(len) == SLERR_AIOWAIT)
+	if (len == -SLERR_AIOWAIT)
 		return;
 
 	if (len < 0)

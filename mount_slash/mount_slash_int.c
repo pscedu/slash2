@@ -1261,7 +1261,7 @@ msl_pages_dio_getput(struct pscfs_req *pfr, struct bmpc_ioreq *r,
 		 * async I/O registered by sliod; we must wait for a
 		 * notification from him when it is ready.
 		 */
-		return (rc);
+		return (-SLERR_AIOWAIT);
 	}
 
 	psc_iostats_intv_add((op == SRMT_WRITE ?
