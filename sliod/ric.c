@@ -203,8 +203,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		rv = slvr_io_prep(rq, &iocbs, slvr_ref[i], roff[i], len[i], rw);
 		DEBUG_SLVR((rv ? PLL_WARN : PLL_INFO), slvr_ref[i],
 			   "post io_prep rw=%d rv=%zd", rw, rv);
-		if (rv && rv == -SLERR_AIOWAIT)
-			goto do_aio;
 
 		/* mq->offset is the offset into the bmap, here we must
 		 *  translate it into the offset of the sliver.
@@ -221,7 +219,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	psc_assert(!tsize);
 
 	if (iocbs) {
- do_aio:
 		spinlock(&iocbs->iocbs_lock);
 		memcpy(iocbs->iocbs_iovs, iovs, sizeof(iovs));
 		iocbs->iocbs_niov = nslvrs;
