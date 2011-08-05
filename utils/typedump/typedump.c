@@ -175,6 +175,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct msbmfl_thread);
 	PRTYPE(struct msbmflra_thread);
 	PRTYPE(struct msbmflrls_thread);
+	PRTYPE(struct msbmflrpc_thread);
 	PRTYPE(struct msctl_replstq);
 	PRTYPE(struct msctlmsg_bmapreplpol);
 	PRTYPE(struct msctlmsg_fncmd);
@@ -549,6 +550,7 @@ main(int argc, char *argv[])
 	PRVAL(FCMH_OPCNT_UPSCHED);
 	PRVAL(FCMH_OPCNT_WAIT);
 	PRVAL(FCMH_OPCNT_WORKER);
+	PRVAL(INO_BMAP_AFFINITY);
 	PRVAL(MSTHRT_BMAPFLSH);
 	PRVAL(MSTHRT_BMAPFLSHRLS);
 	PRVAL(MSTHRT_BMAPFLSHRPC);
