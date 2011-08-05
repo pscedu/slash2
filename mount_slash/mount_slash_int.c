@@ -441,7 +441,8 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	if (op == BIORQ_READ || (r->biorq_flags & BIORQ_DIO))
 		pll_add(&bmap_2_bmpc(b)->bmpc_pndg_biorqs, r);
 	else
-		pll_add_sorted(&bmap_2_bmpc(b)->bmpc_new_biorqs, r, msl_biorq_cmp);
+		pll_add_sorted(&bmap_2_bmpc(b)->bmpc_new_biorqs, r,
+		    msl_biorq_cmp);
 }
 
 __static void
