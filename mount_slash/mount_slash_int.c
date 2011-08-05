@@ -1256,7 +1256,7 @@ msl_pages_dio_getput(struct pscfs_req *pfr, struct bmpc_ioreq *r,
 
 	PSCFREE(iovs);
 
-	if (abs(rc) == SLERR_AIOWAIT) {
+	if (rc == -SLERR_AIOWAIT) {
 		/*
 		 * async I/O registered by sliod; we must wait for a
 		 * notification from him when it is ready.
@@ -2311,7 +2311,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 		if (r[i]->biorq_flags & BIORQ_DIO) {
 			rc = msl_pages_dio_getput(pfr, r[i], bufp, &aiorqcol);
-			if (rc == SLERR_AIOWAIT)
+			if (rc == -SLERR_AIOWAIT)
 				goto next_ioreq;
 			if (rc) {
 				pll_remove(&mfh->mfh_biorqs, r[i]);
@@ -2331,7 +2331,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			 *   which we need.
 			 */
 			rc = msl_pages_blocking_load(r[i]);
-			if (abs(rc) == SLERR_AIOWAIT) {
+			if (rc == -SLERR_AIOWAIT) {
 				DEBUG_BIORQ(PLL_WARN, r[i], "SLERR_AIOWAIT");
 				goto next_ioreq;
 			}
