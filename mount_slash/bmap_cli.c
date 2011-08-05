@@ -155,13 +155,15 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 	timespecadd(&bmap_2_bci(b)->bci_xtime, &msl_bmap_max_lease,
 	    &bmap_2_bci(b)->bci_xtime);
 
+	if ((b->bcm_flags & BMAP_TIMEOQ) && lc_conjoint(&bmapTimeoutQ, b))
+		lc_move2tail(&bmapTimeoutQ, b);
  out:
 	BMAP_CLEARATTR(b, BMAP_CLI_LEASEEXTREQ);
-	BMAP_ULOCK(b);
 
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_NOTIFY, b,
 	   "lease extension (rc=%d)", rc);
 
+	bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
 	return (rc);
 }
 
@@ -185,6 +187,7 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int force)
 		struct srm_leasebmapext_rep *mp;
 
 		BMAP_SETATTR(b, BMAP_CLI_LEASEEXTREQ);
+		bmap_op_start_type(b, BMAP_OPCNT_LEASEEXT);
 		/* Unlock no matter what.
 		 */
 		BMAP_ULOCK(b);
