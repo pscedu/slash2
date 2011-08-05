@@ -31,6 +31,7 @@
 #include "ctl.h"
 #include "ctl_iod.h"
 #include "ctlsvr.h"
+#include "fidc_iod.h"
 #include "repl_iod.h"
 #include "rpc_iod.h"
 #include "sliod.h"
@@ -40,7 +41,8 @@ struct psc_lockedlist psc_mlists;
 struct psc_lockedlist psc_odtables;
 
 int
-sli_export(const char *fn, const struct stat *stb, void *arg)
+sli_export(__unusedx const char *fn, __unusedx const struct stat *stb,
+    void *arg)
 {
 	struct slictlmsg_fileop *sfop = arg;
 	int rc = 0;
@@ -49,7 +51,8 @@ sli_export(const char *fn, const struct stat *stb, void *arg)
 }
 
 int
-slictlcmd_export(int fd, struct psc_ctlmsghdr *mh, void *m)
+slictlcmd_export(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
+    void *m)
 {
 	struct slictlmsg_fileop *sfop = m;
 	int fl = 0;
@@ -99,7 +102,7 @@ struct sli_import_arg {
 int
 sli_import(const char *fn, const struct stat *stb, void *arg)
 {
-	char cpn[SL_NAME_MAX + 1];
+	char fidfn[PATH_MAX], cpn[SL_NAME_MAX + 1];
 	struct sli_import_arg *a = arg;
 	struct slictlmsg_fileop *sfop = a->sfop;
 	struct slashrpc_cservice *csvc = NULL;
@@ -147,8 +150,14 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	strlcpy(mq->cpn, pfl_basename(fn), sizeof(mq->cpn));
 	sl_externalize_stat(stb, &mq->sstb);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc == 0)
+	if (rc == 0) {
 		rc = mp->rc;
+		if (rc == 0) {
+			sli_fg_makepath(&mp->fg, fidfn);
+			if (link(fn, fidfn) == -1)
+				rc = errno;
+		}
+	}
 	if (rc)
 		rc = psc_ctlsenderr(a->fd, mh, "%s: %s",
 		    fn, slstrerror(rc));
