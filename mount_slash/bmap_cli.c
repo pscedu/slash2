@@ -159,7 +159,7 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 	BMAP_CLEARATTR(b, BMAP_CLI_LEASEEXTREQ);
 	BMAP_ULOCK(b);
 
-	DEBUG_BMAP(rc ? PLL_ERROR : PLL_WARN, b,
+	DEBUG_BMAP(rc ? PLL_ERROR : PLL_NOTIFY, b,
 	   "lease extension (rc=%d)", rc);
 
 	return (rc);
@@ -217,7 +217,10 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int force)
 			pscrpc_req_finished(rq);
 			sl_csvc_decref(csvc);
 			
-
+			DEBUG_BMAP(rc ? PLL_ERROR : PLL_WARN, b,
+			   "blocking lease extension req (rc=%d) (secs=%d)", 
+			   rc, secs);
+		
 		} else {
 			/* Otherwise, let the async handler do the dirty work.
 			 */
@@ -232,11 +235,11 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int force)
 				if (csvc)
 					sl_csvc_decref(csvc);
 			}
+			DEBUG_BMAP(rc ? PLL_ERROR : PLL_NOTIFY, b,
+			   "non-blocking lease extension req (rc=%d) "
+			   " (secs=%d)", rc, secs);
 		}
 
-		DEBUG_BMAP(rc ? PLL_ERROR : PLL_WARN, b,
-			   "requesting lease extension (rc=%d) (secs=%d)", rc,
-			   secs);
 		if (waslocked == PSLRV_WASLOCKED)
 			BMAP_LOCK(b);
 	}
