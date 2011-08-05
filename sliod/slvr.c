@@ -252,7 +252,7 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 		 * tell them the bad news.
 		 */
 		s->slvr_flags |= SLVR_DATAERR;
-		DEBUG_SLVR(PLL_ERROR, s, "slvr_fsio() error, rc=%d",
+		DEBUG_SLVR(PLL_ERROR, s, "error, rc=%d",
 		    iocb->iocb_rc);
 		SLVR_WAKEUP(s);
 
@@ -396,7 +396,7 @@ sli_aio_register(struct pscrpc_request *rq, struct sli_iocb_set **iocbsp,
 	return (-SLERR_AIOWAIT);
 }
 
-__static int
+__static ssize_t
 slvr_fsio(struct pscrpc_request *rq, struct sli_iocb_set **iocbs,
     struct slvr_ref *s, int sblk, uint32_t size, enum rw rw, int aio,
     ssize_t aiorc)
@@ -500,11 +500,12 @@ slvr_fsio(struct pscrpc_request *rq, struct sli_iocb_set **iocbs,
  *	bits set in slab bitmap, trying to coalesce where possible.
  * @s: the sliver.
  */
-int
+ssize_t
 slvr_fsbytes_rio(struct pscrpc_request *rq, struct sli_iocb_set **iocbs,
     struct slvr_ref *s)
 {
-	int i, rc, blk, nblks;
+	int i, blk, nblks;
+	ssize_t rc;
 
 	psclog_trace("psc_vbitmap_nfree() = %d",
 	    psc_vbitmap_nfree(s->slvr_slab->slb_inuse));
@@ -539,17 +540,18 @@ slvr_fsbytes_rio(struct pscrpc_request *rq, struct sli_iocb_set **iocbs,
 		rc = slvr_fsio(rq, iocbs, s, blk, nblks *
 		    SLASH_SLVR_BLKSZ, SL_READ, 0, 0);
 
-	if (abs(rc) == SLERR_AIOWAIT)
+	if (rc == -SLERR_AIOWAIT)
 		return (rc);
 
  out:
 	if (rc) {
-		/* There was a problem, unblock any waiters and tell them
-		 *   the bad news.
+		/*
+		 * There was a problem; unblock any waiters and tell
+		 * them the bad news.
 		 */
 		SLVR_LOCK(s);
 		s->slvr_flags |= SLVR_DATAERR;
-		DEBUG_SLVR(PLL_ERROR, s, "slvr_fsio() error, rc=%d", rc);
+		DEBUG_SLVR(PLL_ERROR, s, "slvr_fsio() error, rc=%zd", rc);
 		SLVR_WAKEUP(s);
 		SLVR_ULOCK(s);
 	}
@@ -557,7 +559,7 @@ slvr_fsbytes_rio(struct pscrpc_request *rq, struct sli_iocb_set **iocbs,
 	return (rc);
 }
 
-int
+ssize_t
 slvr_fsbytes_wio(struct sli_iocb_set **iocbs, struct slvr_ref *s,
     uint32_t size, uint32_t sblk)
 {
@@ -680,11 +682,12 @@ slvr_slab_prep(struct slvr_ref *s, enum rw rw)
  * @len: len relative to the slvr
  * @rw: read or write op
  */
-int
+ssize_t
 slvr_io_prep(struct pscrpc_request *rq, struct sli_iocb_set **iocbs,
     struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw)
 {
-	int i, rc = 0, blks, unaligned[2] = { -1, -1 };
+	int i, blks, unaligned[2] = { -1, -1 };
+	ssize_t rc = 0;
 
 	SLVR_LOCK(s);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
@@ -836,13 +839,11 @@ slvr_io_prep(struct pscrpc_request *rq, struct sli_iocb_set **iocbs,
 		psc_vbitmap_set(s->slvr_slab->slb_inuse, unaligned[1]);
 //		psc_vbitmap_printbin1(s->slvr_slab->slb_inuse);
  out:
-	if (!rc) {
-		if (s->slvr_flags & SLVR_FAULTING) {
-			s->slvr_flags |= SLVR_DATARDY;
-			s->slvr_flags &= ~SLVR_FAULTING;
-			DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
-			SLVR_WAKEUP(s);
-		}
+	if (!rc && s->slvr_flags & SLVR_FAULTING) {
+		s->slvr_flags |= SLVR_DATARDY;
+		s->slvr_flags &= ~SLVR_FAULTING;
+		DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
+		SLVR_WAKEUP(s);
 	}
 	SLVR_ULOCK(s);
 	return (rc);

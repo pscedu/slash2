@@ -80,6 +80,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	int rc = 0, nslvrs, i;
 	lnet_process_id_t *pp;
 	uint64_t seqno;
+	ssize_t rv = 0;
 
 	sblk = 0; /* gcc */
 
@@ -189,9 +190,9 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	/* This loop assumes that nslvrs is always <= 2.  Note that
 	 *   once i > 0, roff is always 0.
 	 */
-	for (i=0, roff[i]=(mq->offset - (slvrno * SLASH_SLVR_SIZE)),
+	for (i = 0, roff[i] = (mq->offset - (slvrno * SLASH_SLVR_SIZE)),
 		     tsize=mq->size;
-	     i < nslvrs; i++, roff[i]=0) {
+	     i < nslvrs; i++, roff[i] = 0) {
 
 		slvr_ref[i] = slvr_lookup(slvrno + i, bmap_2_biodi(bmap), rw);
 		slvr_slab_prep(slvr_ref[i], rw);
@@ -199,10 +200,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		/* Fault in pages either for read or RBW.
 		 */
 		len[i] = MIN(tsize, SLASH_SLVR_SIZE - roff[i]);
-		rc = slvr_io_prep(rq, &iocbs, slvr_ref[i], roff[i], len[i], rw);
-		DEBUG_SLVR((rc ? PLL_WARN : PLL_INFO), slvr_ref[i],
-			   "post io_prep rw=%d rc=%d", rw, rc);
-		if (rc && abs(rc) == SLERR_AIOWAIT)
+		rv = slvr_io_prep(rq, &iocbs, slvr_ref[i], roff[i], len[i], rw);
+		DEBUG_SLVR((rv ? PLL_WARN : PLL_INFO), slvr_ref[i],
+			   "post io_prep rw=%d rv=%zd", rw, rv);
+		if (rv && rv == -SLERR_AIOWAIT)
 			goto do_aio;
 
 		/* mq->offset is the offset into the bmap, here we must
@@ -259,8 +260,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 	/*
 	 * Write the sliver back to the filesystem, but only the blocks
-	 * which are marked '0' in the bitmap.   Here we don't care
-	 * about buffer offsets since we're block aligned now
+	 * which are marked '0' in the bitmap.  Here we don't care about
+	 * buffer offsets since we're block aligned now
 	 */
 	if (rw == SL_WRITE) {
 		roff[0] = mq->offset - (slvrno * SLASH_SLVR_SIZE);
@@ -272,14 +273,17 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			tsize += roff[0] & SLASH_SLVR_BLKMASK;
 	}
 
-	for (i=0; i < nslvrs; i++) {
+	for (i = 0; i < nslvrs; i++) {
 		if (rw == SL_WRITE) {
 			uint32_t tsz = MIN((SLASH_BLKS_PER_SLVR - sblk) *
 			    SLASH_SLVR_BLKSZ, tsize);
+
 			tsize -= tsz;
-			if ((rc = slvr_fsbytes_wio(&iocbs, slvr_ref[i],
-			    tsz, sblk)))
+			rv = slvr_fsbytes_wio(&iocbs, slvr_ref[i], tsz,
+			    sblk);
+			if (rv)
 				goto out;
+
 			/* Only the first sliver may use a blk offset.
 			 */
 			sblk = 0;
