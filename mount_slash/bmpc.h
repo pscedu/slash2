@@ -480,7 +480,7 @@ bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len,
 	ioreq->biorq_bmap = bmap;
 	ioreq->biorq_flags = op;
 	ioreq->biorq_fhent = fhent;
-	if (bmap->bcm_flags & BMAP_DIO || 
+	if (bmap->bcm_flags & BMAP_DIO ||
 	    (op == BIORQ_WRITE && bmap->bcm_flags & BMAP_DIOWR))
 		ioreq->biorq_flags |= BIORQ_DIO;
 }

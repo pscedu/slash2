@@ -692,6 +692,8 @@ dump_bmpce_flags(uint32_t flags)
 	PFL_PRFLAG(BMPCE_INFLIGHT, &flags, &seq);
 	PFL_PRFLAG(BMPCE_EIO, &flags, &seq);
 	PFL_PRFLAG(BMPCE_READA, &flags, &seq);
+	PFL_PRFLAG(BMPCE_AIOWAIT, &flags, &seq);
+	PFL_PRFLAG(BMPCE_SYNCWAIT, &flags, &seq);
 	if (flags)
 		printf(" unknown: %#x", flags);
 	printf("\n");
@@ -715,6 +717,7 @@ dump_biorq_flags(uint32_t flags)
 	PFL_PRFLAG(BIORQ_NOFHENT, &flags, &seq);
 	PFL_PRFLAG(BIORQ_APPEND, &flags, &seq);
 	PFL_PRFLAG(BIORQ_READAHEAD, &flags, &seq);
+	PFL_PRFLAG(BIORQ_RBWFAIL, &flags, &seq);
 	if (flags)
 		printf(" unknown: %#x", flags);
 	printf("\n");

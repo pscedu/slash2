@@ -80,7 +80,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	int rc = 0, nslvrs, i;
 	lnet_process_id_t *pp;
 	uint64_t seqno;
-	ssize_t rv = 0;
+	ssize_t rv;
 
 	sblk = 0; /* gcc */
 
