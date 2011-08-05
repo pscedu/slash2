@@ -97,12 +97,16 @@ bci_2_bmap(struct bmap_cli_info *bci)
 static __inline int
 bmap_cli_timeo_cmp(const void *x, const void *y)
 {
-	if (timespeccmp(&(bmap_2_bci_const((const struct bmapc_memb *)x))->bci_etime, 
-			&(bmap_2_bci_const((const struct bmapc_memb *)y))->bci_etime, <))
+	const struct bmapc_memb *bx = x, *by = y;
+	const struct bmap_cli_info *a, *b;
+
+	a = bmap_2_bci_const(bx);
+	b = bmap_2_bci_const(by);
+
+	if (timespeccmp(&a->bci_etime, &b->bci_etime, <))
 		return (-1);
 
-	else if (timespeccmp(&(bmap_2_bci_const((const struct bmapc_memb *)x))->bci_etime, 
-			&(bmap_2_bci_const((const struct bmapc_memb *)y))->bci_etime, >))
+	else if (timespeccmp(&a->bci_etime, &b->bci_etime, >))
 		return (1);
 
 	return (0);
