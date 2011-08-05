@@ -866,6 +866,9 @@ struct srm_import_req {
 	struct srt_stat		sstb;
 } __packed;
 
-#define srm_import_rep		srm_generic_rep
+struct srm_import_rep {
+	struct slash_fidgen	fg;
+	 int32_t		rc;
+} __packed;
 
 #endif /* _SLASHRPC_H_ */
