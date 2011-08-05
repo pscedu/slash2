@@ -47,7 +47,7 @@ sub cli_cmd {
 	return <<ENDCMD;
 set -x
 
-for i in \$(seq 10); do
+for i in \$(seq 2); do
 	cp -RL $h{src} $h{fspath}/srctest || true
 done
 diff -rqu $h{fspath}/srctest $h{src}

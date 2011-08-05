@@ -1257,13 +1257,12 @@ msl_pages_dio_getput(struct pscfs_req *pfr, struct bmpc_ioreq *r,
 
 	PSCFREE(iovs);
 
-	if (rc == -SLERR_AIOWAIT) {
-		/*
-		 * async I/O registered by sliod; we must wait for a
-		 * notification from him when it is ready.
-		 */
-		return (-SLERR_AIOWAIT);
-	}
+	/*
+	 * async I/O registered by sliod; we must wait for a
+	 * notification from him when it is ready.
+	 */
+	if (rc == -SLERR_AIOWAIT)
+		return (rc);
 
 	psc_iostats_intv_add((op == SRMT_WRITE ?
 	    &msl_diowr_stat : &msl_diord_stat), size);

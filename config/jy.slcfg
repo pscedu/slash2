@@ -23,6 +23,7 @@ site @PSC {
 	resource io {
 		desc	= "xmen I/O";
 		type	= archival_fs;
+		#type	= parallel_fs;
 		id	= 102;
 		fsroot	= /home/slio-jy;
 		nodes	= stryker.psc.edu,
