@@ -219,6 +219,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	psc_assert(!tsize);
 
 	if (iocbs) {
+		psc_assert(rv == -SLERR_AIOWAIT);
+
 		spinlock(&iocbs->iocbs_lock);
 		memcpy(iocbs->iocbs_iovs, iovs, sizeof(iovs));
 		iocbs->iocbs_niov = nslvrs;
