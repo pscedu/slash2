@@ -548,6 +548,8 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 
 	BIORQ_LOCK(r);
 
+	psc_assert(!(r->biorq_flags & BIORQ_DESTROY));
+
 	/* Reads req's have their BIORQ_SCHED and BIORQ_INFL flags
 	 *    cleared in msl_read_cb to unblock waiting
 	 *    threads at the earliest possible moment.
@@ -608,7 +610,7 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 
 	psc_dynarray_free(&r->biorq_pages);
 
-	if (r->biorq_rqset)
+	if (r->biorq_rqset && !(r->biorq_flags & BIORQ_AIOWAIT))
 		pscrpc_set_destroy(r->biorq_rqset); /* XXX assert(#elem == 1) */
 
 	while (atomic_read(&r->biorq_waitq.wq_nwaiters))
@@ -857,6 +859,7 @@ msl_add_async_req(struct pscrpc_request *rq,
 {
 	struct msl_aiorqcol *aiorqcol,
 	    **aiorqcolp = av->pointer_arg[MSL_CBARG_AIORQCOL];
+	struct bmpc_ioreq *r = av->pointer_arg[MSL_CBARG_BIORQ];
 	struct bmap_pagecache_entry *bmpce;
 	struct slc_async_req *car;
 	struct psc_dynarray *a;
@@ -867,12 +870,17 @@ msl_add_async_req(struct pscrpc_request *rq,
 	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 	m = libsl_nid2resm(rq->rq_peer.nid);
 
+	BIORQ_LOCK(r);
+	r->biorq_flags |= BIORQ_AIOWAIT;
+	BIORQ_ULOCK(r);
+
 	aiorqcol = *aiorqcolp;
 	if (aiorqcol == NULL) {
 		aiorqcol = *aiorqcolp = psc_pool_get(slc_aiorqcol_pool);
+		memset(aiorqcol, 0, sizeof(*aiorqcol));
 		INIT_SPINLOCK(&aiorqcol->marc_lock);
+		INIT_PSC_LISTENTRY(&aiorqcol->marc_lentry);
 		psc_waitq_init(&aiorqcol->marc_waitq);
-		aiorqcol->marc_refcnt = 1;
 		aiorqcol->marc_pfr = av->pointer_arg[MSL_CBARG_PFR];
 		aiorqcol->marc_buf = av->pointer_arg[MSL_CBARG_BUF];
 	} else {
@@ -880,6 +888,8 @@ msl_add_async_req(struct pscrpc_request *rq,
 		aiorqcol->marc_refcnt++;
 		freelock(&aiorqcol->marc_lock);
 	}
+
+	DEBUG_BIORQ(PLL_NOTIFY, r, "aio (aiorqcol=%p)", aiorqcol);
 
 	car = psc_pool_get(slc_async_req_pool);
 	car->car_cbf = cbf;
@@ -1788,16 +1798,16 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 		}
 		BIORQ_ULOCK(r);
 
-		/* Destroy and cleanup the set now.
-		 */
-		pscrpc_set_destroy(r->biorq_rqset);
-		r->biorq_rqset = NULL;
-
-		/*
-		 * By this point, the bmpce's in biorq_pages have been
-		 * released.  Don't try to access them here.
-		 */
-		if (rc && rc != -SLERR_AIOWAIT)
+		if (rc != -SLERR_AIOWAIT) {
+			/* Destroy and cleanup the set now.
+			 */
+			pscrpc_set_destroy(r->biorq_rqset);
+			r->biorq_rqset = NULL;
+		} else if (rc)
+			/*
+			 * By this point, the bmpce's in biorq_pages have been
+			 * released.  Don't try to access them here.
+			 */			
 			return (rc);
 	}
 
