@@ -881,6 +881,7 @@ msl_add_async_req(struct pscrpc_request *rq,
 		INIT_SPINLOCK(&aiorqcol->marc_lock);
 		INIT_PSC_LISTENTRY(&aiorqcol->marc_lentry);
 		psc_waitq_init(&aiorqcol->marc_waitq);
+		aiorqcol->marc_refcnt = 1;
 		aiorqcol->marc_pfr = av->pointer_arg[MSL_CBARG_PFR];
 		aiorqcol->marc_buf = av->pointer_arg[MSL_CBARG_BUF];
 	} else {
@@ -1798,17 +1799,16 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 		}
 		BIORQ_ULOCK(r);
 
-		if (rc != -SLERR_AIOWAIT) {
-			/* Destroy and cleanup the set now.
-			 */
-			pscrpc_set_destroy(r->biorq_rqset);
-			r->biorq_rqset = NULL;
-		} else if (rc)
-			/*
-			 * By this point, the bmpce's in biorq_pages have been
-			 * released.  Don't try to access them here.
-			 */			
-			return (rc);
+		/* Destroy and cleanup the set now.
+                 */
+                pscrpc_set_destroy(r->biorq_rqset);
+                r->biorq_rqset = NULL;
+                /*                                  
+                 * By this point, the bmpce's in biorq_pages have been
+                 * released.  Don't try to access them here.
+                 */
+                if (rc && rc != -SLERR_AIOWAIT)
+                        return (rc);
 	}
 
 	DYNARRAY_FOREACH(bmpce, i, &r->biorq_pages) {
@@ -2114,9 +2114,11 @@ msl_aiorqcol_finish(struct slc_async_req *car, ssize_t rc, size_t len)
 
 	aiorqcol = car->car_marc;
 	spinlock(&aiorqcol->marc_lock);
+	psc_assert(aiorqcol->marc_refcnt > 0);
 	if (aiorqcol->marc_rc == 0)
 		aiorqcol->marc_rc = rc;
 	aiorqcol->marc_len += len;
+
 	if (--aiorqcol->marc_refcnt) {
 		freelock(&aiorqcol->marc_lock);
 		return;
