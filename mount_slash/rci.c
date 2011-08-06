@@ -27,6 +27,8 @@
 #include "rpc_cli.h"
 #include "slashrpc.h"
 
+#define RCI_AIO_READ_WAIT 5
+
 /*
  * Routines for handling RPC requests for CLI from ION.
  */
@@ -66,8 +68,19 @@ slc_rci_handle_read(struct pscrpc_request *rq)
 	LIST_CACHE_ULOCK(lc);
 
 	if (car == NULL) {
-		mp->rc = EINVAL;
-		goto error;
+		struct timespec now;
+
+		PFL_GETTIMESPEC(&now);
+		/* The AIO rpc from the sliod beat our fs thread.  
+		 *   Give our thread a chance to put the 'car' onto
+		 *   the list.
+		 */
+		now.tv_sec += RCI_AIO_READ_WAIT;
+		car = lc_gettimed(lc, &now);
+		if (car == NULL) {
+			mp->rc = EINVAL;
+			goto error;
+		}
 	}
 
 	if (car->car_cbf == msl_read_cb) {
