@@ -476,11 +476,8 @@ bmap_biorq_del(struct bmpc_ioreq *r)
 	}
 
 	if (!(b->bcm_flags & (BMAP_CLI_FLUSHPROC|BMAP_TIMEOQ)) &&
-	    (!bmpc_queued_ios(bmpc))) {
+	    (!bmpc_queued_ios(bmpc)))
 		psc_assert(!atomic_read(&bmpc->bmpc_pndgwr));
-		b->bcm_flags |= BMAP_TIMEOQ;
-		lc_addtail(&bmapTimeoutQ, b);
-	}
 
 	BMPC_ULOCK(bmpc);
 	DEBUG_BMAP(PLL_INFO, b, "remove biorq=%p nitems_pndg(%d)",
@@ -739,7 +736,7 @@ msl_bmap_reap_init(struct bmapc_memb *bmap, const struct srt_bmapdesc *sbd)
 	/* Add ourselves here, otherwise zero length files
 	 *   will not be removed.
 	 */
-	lc_addtail(&bmapTimeoutQ, bmap);
+	lc_addtail(&bmapTimeoutQ, bci);
 }
 
 struct slashrpc_cservice *
@@ -1083,13 +1080,6 @@ msl_readahead_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 	sl_csvc_decref(csvc);
 
-	BMAP_LOCK(b);
-	if (!(b->bcm_flags & (BMAP_CLI_FLUSHPROC|BMAP_TIMEOQ)) &&
-	    (!bmpc_queued_ios(bmpc))) {
-		b->bcm_flags |= BMAP_TIMEOQ;
-		lc_addtail(&bmapTimeoutQ, b);
-	}
-	BMAP_ULOCK(b);
 	PSCFREE(bmpces);
 	return (rc);
 }
@@ -1336,17 +1326,6 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 			    pll_nitems(&bmpc->bmpc_new_biorqs)) > 1);
 
 	} else {
-		if (b->bcm_flags & BMAP_TIMEOQ) {
-			LIST_CACHE_LOCK(&bmapTimeoutQ);
-			b->bcm_flags &= ~BMAP_TIMEOQ;
-			psc_assert(!(b->bcm_flags & BMAP_DIRTY));
-
-			if (psclist_conjoint(&b->bcm_lentry,
-			    &bmapTimeoutQ.plc_listhd))
-				lc_remove(&bmapTimeoutQ, b);
-			LIST_CACHE_ULOCK(&bmapTimeoutQ);
-		}
-
 		b->bcm_flags |= BMAP_DIRTY;
 
 		if (!(b->bcm_flags & BMAP_CLI_FLUSHPROC)) {

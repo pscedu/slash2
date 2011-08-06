@@ -43,6 +43,8 @@ msl_bmap_init(struct bmapc_memb *b)
 
 	bci = bmap_2_bci(b);
 	bmpc_init(&bci->bci_bmpc);
+
+	INIT_PSC_LISTENTRY(&bci->bci_lentry);
 }
 
 /**
@@ -154,9 +156,6 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 	    &bmap_2_bci(b)->bci_etime);
 	timespecadd(&bmap_2_bci(b)->bci_xtime, &msl_bmap_max_lease,
 	    &bmap_2_bci(b)->bci_xtime);
-
-	if ((b->bcm_flags & BMAP_TIMEOQ) && lc_conjoint(&bmapTimeoutQ, b))
-		lc_move2tail(&bmapTimeoutQ, b);
  out:
 	BMAP_CLEARATTR(b, BMAP_CLI_LEASEEXTREQ);
 

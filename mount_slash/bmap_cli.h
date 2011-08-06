@@ -41,6 +41,7 @@ struct bmap_cli_info {
 	struct srt_bmapdesc	 bci_sbd;		/* open bmap descriptor */
 	struct timespec		 bci_xtime;		/* max time */
 	struct timespec		 bci_etime;		/* current expire time */
+	struct psc_listentry     bci_lentry;            /* bmap flushq */
 };
 
 /* mount_slash specific bcm_flags */
@@ -97,16 +98,12 @@ bci_2_bmap(struct bmap_cli_info *bci)
 static __inline int
 bmap_cli_timeo_cmp(const void *x, const void *y)
 {
-	const struct bmapc_memb *bx = x, *by = y;
-	const struct bmap_cli_info *a, *b;
-
-	a = bmap_2_bci_const(bx);
-	b = bmap_2_bci_const(by);
-
-	if (timespeccmp(&a->bci_etime, &b->bci_etime, <))
+	if (timespeccmp(&((const struct bmap_cli_info *)x)->bci_etime, 
+			&((const struct bmap_cli_info *)y)->bci_etime, <))
 		return (-1);
 
-	else if (timespeccmp(&a->bci_etime, &b->bci_etime, >))
+	if (timespeccmp(&((const struct bmap_cli_info *)x)->bci_etime, 
+			&((const struct bmap_cli_info *)y)->bci_etime, >))
 		return (1);
 
 	return (0);

@@ -565,7 +565,6 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs,
 			 *   pages have been scheduled for IO.
 			 */
 			DYNARRAY_FOREACH(bmpce, j, &r->biorq_pages) {
-				//psc_assert(bmpce->bmpce_flags & BMPCE_INFLIGHT);
 				psc_assert(psc_atomic16_read(&bmpce->bmpce_wrref) > 0);
 			}
 			DEBUG_BIORQ(PLL_INFO, r, "t pos=%d (skip)", i);
@@ -918,19 +917,9 @@ bmap_flush(void)
 		if (!(b->bcm_flags & BMAP_DIRTY)) {
 			BMPC_LOCK(bmpc);
 			psc_assert(!bmpc_queued_writes(bmpc));
-
 			if (!bmpc_queued_ios(bmpc)) {
-				/* No remaining reads or writes.  BMAP_TIMEOQ
-				 *   and BMAP_CLI_FLUSHPROC are mutually
-				 *   exclusive.
-				 */
-				psc_assert(!(b->bcm_flags & BMAP_TIMEOQ));
 				lc_remove(&bmapFlushQ, b);
-				b->bcm_flags |= BMAP_TIMEOQ;
 				b->bcm_flags &= ~BMAP_CLI_FLUSHPROC;
-				lc_addtail(&bmapTimeoutQ, b);
-				DEBUG_BMAP(PLL_INFO, b,
-				   "added to bmapTimeoutQ");
 			}
 			BMPC_ULOCK(bmpc);
 			bcm_wake_locked(b);
@@ -1156,14 +1145,14 @@ msl_bmap_release(struct sl_resm *resm)
 void
 msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 {
-	struct timespec crtime, wtime = { 0, 0 };
+	struct timespec crtime, wtime = { 0, 0 }, nexttimeo = { 0, 0 };
 	struct psc_waitq waitq = PSC_WAITQ_INIT;
-	struct psc_dynarray rels = DYNARRAY_INIT, skips = DYNARRAY_INIT;
+	struct psc_dynarray rels = DYNARRAY_INIT;
 	struct resm_cli_info *rmci;
-	struct bmap_cli_info *bci;
+	struct bmap_cli_info *bci, *wrapdetect;
 	struct bmapc_memb *b;
 	struct sl_resm *resm;
-	int i, sortbypass = 0, sawnew=0;
+	int i, sortbypass = 0, sawnew;
 
 #define SORT_BYPASS_ITERS		32
 #define ITEMS_TRY_AFTER_UNEXPIRED	MAX_BMAP_RELEASE
@@ -1171,9 +1160,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 	// just put the resm's in the dynarray. when pushing out the bid's
 	//   assume an ion unless resm == slc_rmc_resm
 
-	for (;;) {
-		psclog_trace("msbmaprlsthr_main() top of loop");
-
+	for (sawnew = 0;; sawnew = 0) {
 		if (!sortbypass) {
 			lc_sort(&bmapTimeoutQ, qsort, bmap_cli_timeo_cmp);
 			sortbypass = SORT_BYPASS_ITERS;
@@ -1184,159 +1171,128 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 		wtime.tv_sec = BMAP_CLI_TIMEO_INC;
 
-		while ((b = lc_getnb(&bmapTimeoutQ))) {
-			bci = bmap_2_bci(b);
-			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
+		wrapdetect = NULL;
+		while ((bci = lc_getnb(&bmapTimeoutQ))) {
+			b = bci_2_bmap(bci);
+
+			if (!wrapdetect) {
+				wrapdetect = bci;
+				nexttimeo = bci->bci_etime;
+			} else if (bci == wrapdetect) {
+				lc_addstack(&bmapTimeoutQ, bci);
+				break;
+			}
 
 			BMAP_LOCK(b);
+
 			DEBUG_BMAP(PLL_INFO, b, "timeoq try reap "
 			    "(nbmaps=%zd) etime("PSCPRI_TIMESPEC")",
 			    lc_sz(&bmapTimeoutQ),
 			    PSCPRI_TIMESPEC_ARGS(&bci->bci_etime));
 
-			if (!(b->bcm_flags & BMAP_TIMEOQ)) {
-				DEBUG_BMAP(PLL_WARN, b,
-				    "race detect, skip");
-				BMAP_ULOCK(b);
-				continue;
-			}
+			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
+			psc_assert(b->bcm_flags & BMAP_TIMEOQ);
+
+			if (timespeccmp(&nexttimeo, &bci->bci_etime, >))
+				nexttimeo = bci->bci_etime;
 
 			if (bmpc_queued_ios(&bci->bci_bmpc)) {
-				b->bcm_flags &= ~BMAP_TIMEOQ;
-				DEBUG_BMAP(PLL_NOTICE, b,
-				    "descheduling from timeoq");
 				BMAP_ULOCK(b);
-				/* Try to extend here also.
-				 */
+
 				msl_bmap_lease_tryext(b, NULL, 0);
+				lc_addtail(&bmapTimeoutQ, bci);
 				continue;
-			}
 
-			if (timespeccmp(&crtime, &bci->bci_etime, <)) {
-				if (!sawnew)
-					/*
-					 * Set the wait time to
-					 * (etime - crtime)
-					 */
-					timespecsub(&bci->bci_etime,
-					    &crtime, &wtime);
-
-				DEBUG_BMAP(PLL_DEBUG, b, "sawnew=%d", sawnew);
-				psc_dynarray_add(&skips, b);
+			} else if (timespeccmp(&crtime, &bci->bci_etime, <)) {
 				BMAP_ULOCK(b);
+
+				DEBUG_BMAP(PLL_INFO, b, "sawnew=%d", sawnew);
+				lc_addtail(&bmapTimeoutQ, bci);
 
 				sawnew++;
 				if (sawnew == ITEMS_TRY_AFTER_UNEXPIRED)
 					break;
 				else
 					continue;
-			}
 
-			/* Maintain the lock, bmap_op_done_type() will take
-			 *   it anyway.
-			 */
-			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
+			} else if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
 				/* Put me back on the end of the queue.
 				 */
-				DEBUG_BMAP(PLL_NOTICE, b, "skip due to ref");
-				psc_dynarray_add(&skips, b);
 				BMAP_ULOCK(b);
-
-			} else {
-				psc_assert(psc_atomic32_read(
-				    &b->bcm_opcnt) == 1);
-				/* Note that only this thread calls
-				 *   msl_bmap_release() so no reentrancy
-				 *   exist unless another rls thr is
-				 *   introduced.
-				 */
-				psc_assert(!bmpc_queued_ios(&bci->bci_bmpc));
-
-				if (b->bcm_flags & BMAP_WR) {
-					/* Setup a msg to an ION.
-					 */
-					psc_assert(bmap_2_ion(b) !=
-					    LNET_NID_ANY);
-
-					resm = libsl_nid2resm(bmap_2_ion(b));
-					rmci = resm2rmci(resm);
-
-					psc_assert(bmap_2_ion(b) == resm->resm_nid);
-
-					DEBUG_BMAP(PLL_INFO, b, "nid=%"PRIx64,
-					   bmap_2_ion(b));
-				} else {
-					resm = slc_rmc_resm;
-					rmci = resm2rmci(slc_rmc_resm);
-				}
-
-				psc_assert(rmci->rmci_bmaprls.nbmaps <
-				    MAX_BMAP_RELEASE);
-
-				bmap_2_bid(b, &rmci->rmci_bmaprls.bmaps[
-				    rmci->rmci_bmaprls.nbmaps]);
-				rmci->rmci_bmaprls.nbmaps++;
-
-				/* The bmap should be going away now, this
-				 *    will call BMAP_URLOCK().
-				 */
-				DEBUG_BMAP(PLL_NOTICE, b, "release");
-
-				bmap_op_done_type(b, BMAP_OPCNT_REAPER);
-
-				if (rmci->rmci_bmaprls.nbmaps ==
-				    MAX_BMAP_RELEASE) {
-					msl_bmap_release(resm);
-					if (psc_dynarray_exists(&rels, resm))
-						psc_dynarray_remove(&rels, resm);
-				} else
-					psc_dynarray_add_ifdne(&rels, resm);
+				DEBUG_BMAP(PLL_NOTICE, b, "skip due to ref");
+				lc_addtail(&bmapTimeoutQ, bci);
+				continue;
 			}
-		}
-		psclog_trace("out of find work loop (arraysz=%d) "
-		    "wtime="PSCPRI_TIMESPEC,
-		    psc_dynarray_len(&rels),
-		    PSCPRI_TIMESPEC_ARGS(&wtime));
 
+			psc_assert(psc_atomic32_read(&b->bcm_opcnt) == 1);
+			/* Note that only this thread calls
+			 *   msl_bmap_release() so no reentrancy
+			 *   exist unless another rls thr is
+			 *   introduced.
+			 */
+			psc_assert(!bmpc_queued_ios(&bci->bci_bmpc));
+			
+			if (b->bcm_flags & BMAP_WR) {
+				/* Setup a msg to an ION.
+				 */
+				psc_assert(bmap_2_ion(b) !=
+					   LNET_NID_ANY);
+				
+				resm = libsl_nid2resm(bmap_2_ion(b));
+				rmci = resm2rmci(resm);
+		
+				psc_assert(bmap_2_ion(b) == resm->resm_nid);
+				
+				DEBUG_BMAP(PLL_INFO, b, "nid=%"PRIx64,
+					   bmap_2_ion(b));
+			} else {
+				resm = slc_rmc_resm;
+				rmci = resm2rmci(slc_rmc_resm);
+			}
+			
+			psc_assert(rmci->rmci_bmaprls.nbmaps <
+				   MAX_BMAP_RELEASE);
+			
+			bmap_2_bid(b, &rmci->rmci_bmaprls.bmaps[
+				rmci->rmci_bmaprls.nbmaps]);
+			rmci->rmci_bmaprls.nbmaps++;
+			
+			/* The bmap should be going away now, this
+			 *    will call BMAP_URLOCK().
+			 */
+			DEBUG_BMAP(PLL_NOTICE, b, "release");
+			
+			bmap_op_done_type(b, BMAP_OPCNT_REAPER);
+			
+			if (rmci->rmci_bmaprls.nbmaps ==
+			    MAX_BMAP_RELEASE) {
+				msl_bmap_release(resm);
+				if (psc_dynarray_exists(&rels, resm))
+					psc_dynarray_remove(&rels, resm);
+			} else
+				psc_dynarray_add_ifdne(&rels, resm);
+		}
 		/* Send out partially filled release request.
 		 */
 		DYNARRAY_FOREACH(resm, i, &rels)
 			msl_bmap_release(resm);
 
 		psc_dynarray_reset(&rels);
-
-		DYNARRAY_FOREACH_REVERSE(b, i, &skips) {
-			BMAP_LOCK(b);
-			if (!(b->bcm_flags & BMAP_CLI_FLUSHPROC)) {
-				psc_assert(!(b->bcm_flags & BMAP_DIRTY));
-				psc_assert(b->bcm_flags & BMAP_TIMEOQ);
-				if (!lc_conjoint(&bmapTimeoutQ, b))
-					/* Put these at the back so we can
-					 *   make better progress.
-					 */
-					lc_addtail(&bmapTimeoutQ, b);
-			}
-			BMAP_ULOCK(b);
-		}
-
-		psc_dynarray_reset(&skips);
-
-		if (!pscthr_run())
+	
+		if (!pscthr_run())			
 			break;
-
-		if (!wtime.tv_sec && !wtime.tv_nsec)
-			wtime.tv_sec = 1;
-
-		if (!wtime.tv_sec)
-			wtime.tv_nsec = MAX(wtime.tv_nsec, 100000000);
-
-		psc_waitq_waitrel(&waitq, NULL, &wtime);
-
-		wtime.tv_sec = wtime.tv_nsec = 0;
-		sawnew = 0;
+				
+		PFL_GETTIMESPEC(&crtime);
+		if (timespeccmp(&crtime, &nexttimeo, <)) {
+			timespecsub(&nexttimeo, &crtime, &wtime);
+			psc_waitq_waitrel(&waitq, NULL, &wtime);
+		}
+		
+		psclogs_notify(SLSS_BMAP, "waited for ("PSCPRI_TIMESPEC")"
+		       " lc_sz=%zd", PSCPRI_TIMESPEC_ARGS(&wtime), 
+		       lc_sz(&bmapTimeoutQ));
 	}
 	psc_dynarray_free(&rels);
-	psc_dynarray_free(&skips);
 }
 
 void
@@ -1365,8 +1321,6 @@ msbmapflushthr_main(__unusedx struct psc_thread *thr)
 			psclog_warnx("stall flush (outstandingRpcCnt=%d)",
 			     atomic_read(&outstandingRpcCnt));
 		}
-
-		//psc_waitq_waitrel(&bmapflushwaitq, NULL, &bmapFlushWaitTime);
 		PFL_GETTIMESPEC(&ts1);
 		timespecsub(&ts1, &ts0, &ts1);
 		psclog_debug("post wakeup "PSCPRI_TIMESPEC,
@@ -1476,8 +1430,8 @@ msbmapflushthr_spawn(void)
 	lc_reginit(&bmapFlushQ, struct bmapc_memb,
 	    bcm_lentry, "bmapflush");
 
-	lc_reginit(&bmapTimeoutQ, struct bmapc_memb,
-	    bcm_lentry, "bmaptimeout");
+	lc_reginit(&bmapTimeoutQ, struct bmap_cli_info,
+	    bci_lentry, "bmaptimeout");
 
 	lc_reginit(&bmapReadAheadQ, struct msl_fhent,
 	    mfh_lentry, "bmapreadahead");
