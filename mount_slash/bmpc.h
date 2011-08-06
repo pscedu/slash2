@@ -292,13 +292,15 @@ struct bmpc_ioreq {
 #define BIORQ_APPEND			(1 << 11)
 #define BIORQ_READAHEAD			(1 << 12)
 #define BIORQ_RBWFAIL			(1 << 13)
+#define BIORQ_AIOWAIT			(1 << 14)
+
 
 #define BIORQ_LOCK(r)			spinlock(&(r)->biorq_lock)
 #define BIORQ_ULOCK(r)			freelock(&(r)->biorq_lock)
 
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP,					\
-	    "biorq@%p fl=%#x:%s%s%s%s%s%s%s%s%s%s%s%s%s "		\
+	    "biorq@%p fl=%#x:%s%s%s%s%s%s%s%s%s%s%s%s%s%s "		\
 	    "o=%u l=%u "						\
 	    "np=%d b=%p "						\
 	    "ts="PSCPRI_TIMESPEC" : "fmt,				\
@@ -316,6 +318,7 @@ struct bmpc_ioreq {
 	    (b)->biorq_flags & BIORQ_NOFHENT		? "n" : "",	\
 	    (b)->biorq_flags & BIORQ_APPEND		? "A" : "",	\
 	    (b)->biorq_flags & BIORQ_READAHEAD		? "a" : "",	\
+	    (b)->biorq_flags & BIORQ_AIOWAIT		? "W" : "",	\
 	    (b)->biorq_off, (b)->biorq_len,				\
 	    psc_dynarray_len(&(b)->biorq_pages), (b)->biorq_bmap,	\
 	    PSCPRI_TIMESPEC_ARGS(&(b)->biorq_issue), ## __VA_ARGS__)
