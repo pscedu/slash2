@@ -607,8 +607,10 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 
 	psc_dynarray_free(&r->biorq_pages);
 
-	if (r->biorq_rqset && !(r->biorq_flags & BIORQ_AIOWAIT))
+	if (r->biorq_rqset && !(r->biorq_flags & BIORQ_AIOWAIT)) {
 		pscrpc_set_destroy(r->biorq_rqset); /* XXX assert(#elem == 1) */
+		r->biorq_rqset = NULL;
+	}
 
 	while (atomic_read(&r->biorq_waitq.wq_nwaiters))
 		sched_yield();
@@ -1218,6 +1220,7 @@ msl_pages_dio_getput(struct pscfs_req *pfr, struct bmpc_ioreq *r,
 		if (rc)
 			goto error;
 
+		rq->rq_bulk_abortable = 1;
 		rq->rq_interpret_reply = msl_dio_cb0;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_BUF] = bufp + nbytes;
@@ -1526,6 +1529,7 @@ msl_read_rpc_launch(struct pscfs_req *pfr, void *bufp,
 	if (rc)
 		goto error;
 
+	rq->rq_bulk_abortable = 1;
 	rc = rsx_bulkclient(rq, BULK_PUT_SINK, SRIC_BULK_PORTAL, iovs,
 	    npages);
 	if (rc)
@@ -1782,6 +1786,7 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 		 */
 		pscrpc_set_destroy(r->biorq_rqset);
 		r->biorq_rqset = NULL;
+
 		/*
 		 * By this point, the bmpce's in biorq_pages have been
 		 * released.  Don't try to access them here.
