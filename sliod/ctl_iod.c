@@ -115,21 +115,45 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	struct srm_import_req *mq;
 	struct srm_import_rep *mp;
 	struct slash_fidgen fg;
+	const char *str;
 	int rc;
 
-	fg.fg_fid = FID_ANY;
-
-	for (p = sfop->sfop_fn2; p; p = np) {
+	fg.fg_fid = SLFID_ROOT;
+	for (p = sfop->sfop_fn2; *p == '/'; p++)
+		;
+	for (; p; p = np) {
 		np = strchr(p + 1, '/');
 		if (np && np - p == 1)
 			continue;
-		if (np - p > SL_PATH_MAX) {
+		if (np - p >= SL_NAME_MAX) {
 			rc = psc_ctlsenderr(a->fd, mh, "%s: %s",
 			    fn, slstrerror(ENAMETOOLONG));
 			goto out;
 		}
 		strlcpy(cpn, p, np - p);
+
+		/*
+		 * No name specified -- preserve last component from
+		 * src.
+		 */
+		if (cpn[0] == '\0') {
+			str = strrchr(fn, '/');
+			if (str)
+				str++;
+			else
+				str = fn;
+			strlcpy(cpn, str, sizeof(cpn));
+			break;
+		}
+
 		rc = sli_fcmh_lookup_fid(&fg, cpn, &fg);
+
+		/*
+		 * Last component is intended destination; use directly.
+		 */
+		if (rc == ENOENT && np == NULL)
+			break;
+
 		if (rc || fg.fg_fid == FID_ANY) {
 			rc = psc_ctlsenderr(a->fd, mh, "%s: %s",
 			    fn, slstrerror(rc));
