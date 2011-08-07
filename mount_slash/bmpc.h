@@ -73,7 +73,7 @@ struct bmpc_mem_slbs {
 struct bmap_pagecache_entry {
 	psc_atomic16_t		 bmpce_wrref;	/* pending write ops		*/
 	psc_atomic16_t		 bmpce_rdref;	/* pending read ops		*/
-	uint64_t                 bmpce_syncxid; /* xid associated with sync op  */
+	uint64_t		 bmpce_syncxid; /* xid associated with sync op  */
 	uint32_t		 bmpce_flags;	/* BMPCE_* flag bits		*/
 	uint32_t		 bmpce_off;	/* filewise, bmap relative	*/
 	psc_spinlock_t		 bmpce_lock;	/* serialize			*/
@@ -90,22 +90,22 @@ struct bmap_pagecache_entry {
 #endif
 };
 
-#define	BMPCE_NEW		(1 << 0)	/* 0x0001 */
-#define	BMPCE_GETBUF		(1 << 1)	/* 0x0002 */
-#define	BMPCE_DATARDY		(1 << 2)	/* 0x0004 */
-#define	BMPCE_DIRTY2LRU		(1 << 3)	/* 0x0008 */
-#define	BMPCE_LRU		(1 << 4)	/* 0x0010 */
-#define	BMPCE_FREE		(1 << 5)	/* 0x0020 */
-#define	BMPCE_FREEING		(1 << 6)	/* 0x0040 */
-#define	BMPCE_INIT		(1 << 7)	/* 0x0080 */
-#define	BMPCE_READPNDG		(1 << 8)	/* 0x0100: Pending read */
-#define	BMPCE_RBWPAGE		(1 << 9)	/* 0x0200 */
-#define	BMPCE_RBWRDY		(1 << 10)	/* 0x0400 */
-#define	BMPCE_INFLIGHT		(1 << 11)	/* 0x0800: I/O in progress */
-#define	BMPCE_EIO		(1 << 12)	/* 0x1000: I/O error */
-#define BMPCE_READA		(1 << 13)	/* 0x2000: read-ahead */
-#define BMPCE_AIOWAIT		(1 << 14)	/* 0x4000: wait on async read */
-#define BMPCE_SYNCWAIT          (1 << 15)       /* 0x10000: wait on sliod sync */
+#define	BMPCE_NEW		(1 << 0)	/* 0x00001 */
+#define	BMPCE_GETBUF		(1 << 1)	/* 0x00002 */
+#define	BMPCE_DATARDY		(1 << 2)	/* 0x00004 */
+#define	BMPCE_DIRTY2LRU		(1 << 3)	/* 0x00008 */
+#define	BMPCE_LRU		(1 << 4)	/* 0x00010 */
+#define	BMPCE_FREE		(1 << 5)	/* 0x00020 */
+#define	BMPCE_FREEING		(1 << 6)	/* 0x00040 */
+#define	BMPCE_INIT		(1 << 7)	/* 0x00080 */
+#define	BMPCE_READPNDG		(1 << 8)	/* 0x00100: Pending read */
+#define	BMPCE_RBWPAGE		(1 << 9)	/* 0x00200 */
+#define	BMPCE_RBWRDY		(1 << 10)	/* 0x00400 */
+#define	BMPCE_INFLIGHT		(1 << 11)	/* 0x00800: I/O in progress */
+#define	BMPCE_EIO		(1 << 12)	/* 0x01000: I/O error */
+#define BMPCE_READA		(1 << 13)	/* 0x02000: read-ahead */
+#define BMPCE_AIOWAIT		(1 << 14)	/* 0x04000: wait on async read */
+#define BMPCE_SYNCWAIT		(1 << 15)	/* 0x10000: wait on sliod sync */
 
 #define BMPCE_LOCK(b)		spinlock(&(b)->bmpce_lock)
 #define BMPCE_ULOCK(b)		freelock(&(b)->bmpce_lock)
@@ -151,7 +151,7 @@ struct bmap_pagecache_entry {
 	(b)->bmpce_flags & BMPCE_INFLIGHT		? "L" : "",	\
 	(b)->bmpce_flags & BMPCE_EIO			? "E" : "",	\
 	(b)->bmpce_flags & BMPCE_READA			? "a" : "",	\
-	(b)->bmpce_flags & BMPCE_AIOWAIT		? "w" : "",     \
+	(b)->bmpce_flags & BMPCE_AIOWAIT		? "w" : "",	\
 	(b)->bmpce_flags & BMPCE_SYNCWAIT		? "S" : ""
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
@@ -294,7 +294,6 @@ struct bmpc_ioreq {
 #define BIORQ_RBWFAIL			(1 << 13)
 #define BIORQ_AIOWAIT			(1 << 14)
 
-
 #define BIORQ_LOCK(r)			spinlock(&(r)->biorq_lock)
 #define BIORQ_ULOCK(r)			freelock(&(r)->biorq_lock)
 
@@ -345,8 +344,8 @@ bmpce_freeprep(struct bmap_pagecache_entry *bmpce)
 }
 
 static __inline void
-bmpce_useprep(struct bmap_pagecache_entry *bmpce, struct bmpc_ioreq *biorq,
-      struct psc_waitq *wq)
+bmpce_useprep(struct bmap_pagecache_entry *bmpce,
+    struct bmpc_ioreq *biorq, struct psc_waitq *wq)
 {
 	psc_assert(!bmpce->bmpce_base);
 	psc_assert(!bmpce->bmpce_waitq);

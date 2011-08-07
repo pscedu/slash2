@@ -41,7 +41,7 @@ struct bmap_cli_info {
 	struct srt_bmapdesc	 bci_sbd;		/* open bmap descriptor */
 	struct timespec		 bci_xtime;		/* max time */
 	struct timespec		 bci_etime;		/* current expire time */
-	struct psc_listentry     bci_lentry;            /* bmap flushq */
+	struct psc_listentry	 bci_lentry;		/* bmap flushq */
 };
 
 /* mount_slash specific bcm_flags */

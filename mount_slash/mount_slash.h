@@ -81,8 +81,8 @@ struct msbmflrls_thread {
 };
 
 struct msbmflrpc_thread {
-	int                              mbflrpc_failcnt;
-	struct psc_multiwait             mbflrpc_mw;
+	int				 mbflrpc_failcnt;
+	struct psc_multiwait		 mbflrpc_mw;
 };
 
 struct msbmflra_thread {
