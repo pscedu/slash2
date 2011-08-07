@@ -72,6 +72,10 @@ sli_fcmh_lookup_fid(const struct slash_fidgen *pfg, const char *cpn,
 	struct srm_lookup_rep *mp;
 	int rc = 0;
 
+	rc = sli_rmi_getimp(&csvc);
+	if (rc)
+		goto out;
+
 	rc = SL_RSX_NEWREQ(csvc, SRMT_LOOKUP, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -102,7 +106,7 @@ struct sli_import_arg {
 int
 sli_import(const char *fn, const struct stat *stb, void *arg)
 {
-	char fidfn[PATH_MAX], cpn[SL_NAME_MAX + 1];
+	char *p, *np, fidfn[PATH_MAX], cpn[SL_NAME_MAX + 1];
 	struct sli_import_arg *a = arg;
 	struct slictlmsg_fileop *sfop = a->sfop;
 	struct slashrpc_cservice *csvc = NULL;
@@ -111,7 +115,6 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	struct srm_import_req *mq;
 	struct srm_import_rep *mp;
 	struct slash_fidgen fg;
-	char *p, *np;
 	int rc;
 
 	fg.fg_fid = FID_ANY;
@@ -139,6 +142,10 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		    fn, slstrerror(ENOENT));
 		goto out;
 	}
+
+	rc = sli_rmi_getimp(&csvc);
+	if (rc)
+		goto out;
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_IMPORT, rq, mq, mp);
 	if (rc) {
