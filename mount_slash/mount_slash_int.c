@@ -1779,15 +1779,15 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 		BIORQ_ULOCK(r);
 
 		/* Destroy and cleanup the set now.
-                 */
-                pscrpc_set_destroy(r->biorq_rqset);
-                r->biorq_rqset = NULL;
-                /*                                  
-                 * By this point, the bmpce's in biorq_pages have been
-                 * released.  Don't try to access them here.
-                 */
-                if (rc && rc != -SLERR_AIOWAIT)
-                        return (rc);
+		 */
+		pscrpc_set_destroy(r->biorq_rqset);
+		r->biorq_rqset = NULL;
+		/*
+		 * By this point, the bmpce's in biorq_pages have been
+		 * released.  Don't try to access them here.
+		 */
+		if (rc && rc != -SLERR_AIOWAIT)
+			return (rc);
 	}
 
 	DYNARRAY_FOREACH(bmpce, i, &r->biorq_pages) {
@@ -2323,7 +2323,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			 */
 			rc = msl_pages_blocking_load(r[i]);
 			if (rc == -SLERR_AIOWAIT) {
-				DEBUG_BIORQ(PLL_WARN, r[i], "SLERR_AIOWAIT");
+				DEBUG_BIORQ(PLL_INFO, r[i],
+				    "SLERR_AIOWAIT");
 				goto next_ioreq;
 			}
 			if (rc) {
