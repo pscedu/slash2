@@ -276,6 +276,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_getbmap_full_req);
 	PRTYPE(struct srm_getbmapminseq_rep);
 	PRTYPE(struct srm_getbmapminseq_req);
+	PRTYPE(struct srm_import_rep);
 	PRTYPE(struct srm_import_req);
 	PRTYPE(struct srm_io_rep);
 	PRTYPE(struct srm_io_req);
