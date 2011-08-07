@@ -201,7 +201,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		 */
 		len[i] = MIN(tsize, SLASH_SLVR_SIZE - roff[i]);
 		rv = slvr_io_prep(rq, &iocbs, slvr_ref[i], roff[i], len[i], rw);
-		DEBUG_SLVR(((rv && rv != SLERR_AIOWAIT) ?
+		DEBUG_SLVR(((rv && rv != -SLERR_AIOWAIT) ?
 			    PLL_WARN : PLL_INFO), slvr_ref[i],
 			   "post io_prep rw=%d rv=%zd", rw, rv);
 
