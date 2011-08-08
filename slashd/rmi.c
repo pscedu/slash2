@@ -444,7 +444,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
-	mp->rc = slm_fcmh_get(NULL, &c);
+	mp->rc = slm_fcmh_get(&mq->sstb.sst_fg, &c);
 	if (mp->rc)
 		goto out;
 
