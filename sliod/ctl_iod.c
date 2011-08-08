@@ -213,6 +213,9 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	if (rc)
 		rc = psc_ctlsenderr(a->fd, mh, "%s: %s",
 		    fn, slstrerror(rc));
+	else if (sfop->sfop_flags & SLI_CTL_FOPF_VERBOSE)
+		rc = psc_ctlsenderr(a->fd, mh, "importing %s%s", fn,
+		    S_ISDIR(stb->st_mode) ? "/" : "");
 
  out:
 	if (rq)
