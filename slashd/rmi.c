@@ -398,10 +398,13 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	struct srm_import_rep *mp;
 	struct slash_creds cr;
 	struct bmapc_memb *b;
+	struct srt_stat sstb;
 	struct sl_resm *m;
 	void *mdsio_data;
 	sl_bmapno_t bno;
 	uint32_t pol;
+	int64_t fsiz;
+	int i;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -411,9 +414,9 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 		goto out;
 	}
 
-	/* Lookup the parent directory in the cache so that the
-	 *   slash2 ino can be translated into the inode for the
-	 *   underlying fs.
+	/*
+	 * Lookup the parent directory in the cache so that the slash2
+	 * inode can be translated into the inode for the underlying fs.
 	 */
 	mp->rc = slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
@@ -424,7 +427,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	mds_reserve_slot(1);
 	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &rootcreds,
 	    O_CREAT | O_EXCL | O_RDWR, mq->sstb.sst_mode, mq->cpn, NULL,
-	    NULL, &mdsio_data, mdslog_namespace, slm_get_next_slashfid,
+	    &sstb, &mdsio_data, mdslog_namespace, slm_get_next_slashfid,
 	    0);
 	mds_unreserve_slot(1);
 
@@ -444,7 +447,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
-	mp->rc = slm_fcmh_get(&mq->sstb.sst_fg, &c);
+	mp->rc = slm_fcmh_get(&sstb.sst_fg, &c);
 	if (mp->rc)
 		goto out;
 
@@ -458,14 +461,19 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	fcmh_2_ino(c)->ino_repls[0].bs_id = m->resm_iosid;
 	fcmh_2_ino(c)->ino_repl_nblks[0] = mq->sstb.sst_blocks;
 	mp->rc = mds_inode_write(fcmh_2_inoh(c), mdslog_ino_repls, c);
-
+	FCMH_ULOCK(c);
 	if (mp->rc)
 		goto out;
 
-	for (bno = 0; bno < mq->sstb.sst_size / SLASH_BMAP_SIZE; bno++) {
+	fsiz = mq->sstb.sst_size;
+	for (bno = 0; bno < howmany(mq->sstb.sst_size, SLASH_BMAP_SIZE);
+	    bno++) {
 		mp->rc = mds_bmap_load(c, bno, &b);
 		if (mp->rc)
 			goto out;
+		for (i = 0; i < SLASH_SLVRS_PER_BMAP &&
+		    fsiz > 0; fsiz -= SLASH_SLVR_SIZE, i++)
+			b->bcm_crcstates[i] |= BMAP_SLVR_DATA;
 		mp->rc = mds_repl_inv_except(b, 0);
 		if (mp->rc)
 			goto out;
@@ -474,8 +482,13 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 		if (mp->rc)
 			goto out;
 	}
+	mp->fg = sstb.sst_fg;
 
  out:
+	/*
+	 * XXX if we created the file but left it in a bad state (e.g.
+	 * no repl table), then we should unlink it...
+	 */
 	if (c)
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	if (p)
