@@ -112,8 +112,6 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct psc_ctlmsghdr *mh = a->mh;
-	struct srm_import_req *mq;
-	struct srm_import_rep *mp;
 	struct slash_fidgen fg;
 	const char *str;
 	int rc;
@@ -171,22 +169,45 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	if (rc)
 		goto out;
 
-	rc = SL_RSX_NEWREQ(csvc, SRMT_IMPORT, rq, mq, mp);
-	if (rc) {
-		rc = psc_ctlsenderr(a->fd, mh, "%s: %s",
-		    fn, slstrerror(rc));
-		goto out;
-	}
-	mq->pfg = fg;
-	strlcpy(mq->cpn, pfl_basename(fn), sizeof(mq->cpn));
-	sl_externalize_stat(stb, &mq->sstb);
-	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc == 0) {
-		rc = mp->rc;
+	if (S_ISDIR(stb->st_mode)) {
+		struct srm_mkdir_req *mq;
+		struct srm_mkdir_rep *mp;
+
+		rc = SL_RSX_NEWREQ(csvc, SRMT_MKDIR, rq, mq, mp);
+		if (rc) {
+			rc = psc_ctlsenderr(a->fd, mh, "%s: %s",
+			    fn, slstrerror(rc));
+			goto out;
+		}
+		mq->creds.scr_uid = stb->st_uid;
+		mq->creds.scr_gid = stb->st_gid;
+		mq->pfg = fg;
+		mq->mode = stb->st_mode;
+		strlcpy(mq->name, pfl_basename(fn), sizeof(mq->name));
+		rc = SL_RSX_WAITREP(csvc, rq, mp);
+		if (rc == 0)
+			rc = mp->rc;
+	} else {
+		struct srm_import_req *mq;
+		struct srm_import_rep *mp;
+
+		rc = SL_RSX_NEWREQ(csvc, SRMT_IMPORT, rq, mq, mp);
+		if (rc) {
+			rc = psc_ctlsenderr(a->fd, mh, "%s: %s",
+			    fn, slstrerror(rc));
+			goto out;
+		}
+		mq->pfg = fg;
+		strlcpy(mq->cpn, pfl_basename(fn), sizeof(mq->cpn));
+		sl_externalize_stat(stb, &mq->sstb);
+		rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc == 0) {
-			sli_fg_makepath(&mp->fg, fidfn);
-			if (link(fn, fidfn) == -1)
-				rc = errno;
+			rc = mp->rc;
+			if (rc == 0) {
+				sli_fg_makepath(&mp->fg, fidfn);
+				if (link(fn, fidfn) == -1)
+					rc = errno;
+			}
 		}
 	}
 	if (rc)
