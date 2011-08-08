@@ -23,6 +23,7 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/getopt.h"
 #include "pfl/pfl.h"
 #include "pfl/str.h"
 #include "psc_util/ctl.h"
@@ -100,10 +101,26 @@ void
 slictlcmd_export(int ac, char *av[])
 {
 	struct slictlmsg_fileop *sfop;
-	int i;
+	int i, c;
+
+	PFL_OPT_RESET();
+	while ((c = getopt(ac, av, "Rv")) != -1)
+		switch (c) {
+		case 'R':
+			recursive = 1;
+			break;
+		case 'v':
+			verbose = 1;
+			break;
+		default:
+			goto usage;
+		}
+	ac -= optind;
+	av += optind;
 
 	if (ac < 2)
-		errx(1, "export: no arguments specified");
+ usage:
+		errx(1, "usage: export [-Rv] file ... dst");
 	for (i = 0; i < ac - 1; i++) {
 		sfop = psc_ctlmsg_push(SLICMT_EXPORT, sizeof(*sfop));
 		if (recursive)
@@ -117,10 +134,26 @@ void
 slictlcmd_import(int ac, char *av[])
 {
 	struct slictlmsg_fileop *sfop;
-	int i;
+	int i, c;
+
+	PFL_OPT_RESET();
+	while ((c = getopt(ac, av, "Rv")) != -1)
+		switch (c) {
+		case 'R':
+			recursive = 1;
+			break;
+		case 'v':
+			verbose = 1;
+			break;
+		default:
+			goto usage;
+		}
+	ac -= optind;
+	av += optind;
 
 	if (ac < 2)
-		errx(1, "import: no arguments specified");
+ usage:
+		errx(1, "usage: import [-Rv] file ... dst");
 	for (i = 0; i < ac - 1; i++) {
 		sfop = psc_ctlmsg_push(SLICMT_IMPORT, sizeof(*sfop));
 		if (recursive)
