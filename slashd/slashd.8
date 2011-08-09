@@ -53,9 +53,9 @@ Defaults to
 .It Fl f Ar conf
 Specify an alternative configuration file.
 Defaults to
-.Pa /etc/slash.conf .
+.Pa /etc/slash/slcfg .
 See
-.Xr slash.conf 5
+.Xr slcfg 5
 for more details.
 .It Fl p Ar zfspoolcache
 Specify the path to the
@@ -87,10 +87,10 @@ The default is
 .\"	lnets_note => <<'EOF',
 .\"		.Pp
 .\"		This is determined by default automatically from
-.\"		.Pa slash.conf
+.\"		.Xr slcfg 5
 .\"		and the machine's networking configuration but can be
 .\"		overridden if set specifically in
-.\"		.Pa slash.conf
+.\"		.Xr slcfg 5
 .\"		or in the environment.
 .\"		EOF
 .\"	subsys => {
@@ -147,10 +147,10 @@ The list of networks and interfaces known to the Lustre networking
 stack.
 .Pp
 This is determined by default automatically from
-.Pa slash.conf
+.Xr slcfg 5
 and the machine's networking configuration but can be
 overridden if set specifically in
-.Pa slash.conf
+.Xr slcfg 5
 or in the environment.
 .Pp
 Examples:
@@ -363,7 +363,7 @@ Defaults to
 .\" }%
 .Sh FILES
 .Bl -tag -width Pa -compact
-.It Pa /etc/slash.conf
+.It Pa /etc/slash/slcfg
 default
 .Tn SLASH
 network configuration
@@ -381,7 +381,7 @@ default
 named socket
 .El
 .Sh SEE ALSO
-.Xr slash.conf 5 ,
+.Xr slcfg 5 ,
 .Xr sladm 7 ,
 .Xr mount_slash 8 ,
 .Xr slmctl 8 ,

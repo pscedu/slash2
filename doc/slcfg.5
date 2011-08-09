@@ -15,17 +15,17 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .Dd July 11, 2011
-.Dt SLASH.CONF 5
+.Dt SLCFG 5
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
 .Sh NAME
-.Nm slash.conf
+.Nm /etc/slash/slcfg
 .Nd
 .Tn SLASH
 file system configuration
 .Sh DESCRIPTION
 The
-.Nm
+.Nm slcfg
 configuration file specifies storage resources and networks for use on a
 .Tn SLASH
 network.
@@ -134,11 +134,11 @@ The
 argument may be a filename or
 .Xr glob 7
 pattern.
-.Ss Site Configuration
+.Ss Site configuration
 Each site resident on a
 .Tn SLASH
 network requires its own section in
-.Nm
+.Nm slcfg
 and has the following format:
 .Bd -unfilled -offset 3n
 .Ic site @ Ns Ar site-name Li {
@@ -182,78 +182,89 @@ List of peers separated by commas of communication resource partners in
 the form
 .Ar resource-name Ns Li @ Ns Ar site-name .
 .It Ic type
-Type of resource, one of
-.Ic archival_fs ,
-.Ic compute ,
-.Ic cluster_noshare_fs ,
-.Ic mds ,
-or
-.Ic parallel_fs ,
-required to be set for all resources.
+A required resource type mostly used to distinguish behavioral
+characteristics:
+.Pp
+.Bl -tag -width cluster_noshare_fsX -offset 3n -compact
+.It Ic archival_fs
+Potentially long delay storage e.g. tape archiver systems.
+.It Ic cluster_noshare_fs
+Non-coherent shared file systems.
+.It Ic compute
+Computational resources.
+.It Ic mds
+.Tn SLASH2
+metadata servers.
+.It Ic parallel_fs
+Shared parallel file systems.
+.It Ic standalone_fs
+Independent file systems.
+.El
 .El
 .Sh FILES
 .Bl -tag -width Pa -compact
-.It Pa /etc/slash.conf
+.It Pa /etc/slash/main.slcfg
 default
 .Tn SLASH
 resource configuration
 .El
 .Sh EXAMPLES
 The following is an example
-.Nm :
+.Nm slcfg :
 .Bd -literal
 set port=1000;
 set net=tcp10;
 
-site @sitename {
-	site_desc	= "Site Name";
-	site_id		= 40;
+site @MYSITE {
+	site_desc	= "my site name";
+	site_id		= 1;
 
 	resource parfs {
-		desc	= "parallel file system";
+		desc	= "my parallel file system";
 		type	= parallel_fs;
-		id	= 0;
+		id	= 1;
 		nodes	= 128.182.112.110,
 			  128.182.112.111,
 			  128.182.112.112,
 			  128.182.112.113;
-		peers	= supercomputer@sitename,
-			  bigstore@sitename;
+		peers	= supercomputer@MYSITE,
+			  bigstore@MYSITE;
 	}
 
 	resource bigstore {
-		desc	= "archival storage system";
+		desc	= "my archival storage system";
 		type	= archival_fs;
-		id	= 1;
+		id	= 2;
 		nodes	= 128.182.112.242,
 			  128.182.112.240,
 			  128.182.112.105,
 			  128.182.112.226;
-		peers	= parfs@sitename;
+		peers	= parfs@MYSITE;
 	}
 
 	resource supercomputer {
-		desc	= "computation resource";
+		desc	= "my computation resource";
 		type	= compute;
-		id	= 2;
-		peers	= parfs@sitename;
+		id	= 3;
+		nodes	= login0, login1;
+		peers	= parfs@MYSITE;
 	}
 
 	resource user_pc {
 		desc	= "user home network";
 		type	= archival_fs;
-		id	= 3;
-		ifs	= 67.171.74.150;
-		peers	= parfs@sitename;
+		id	= 4;
+		nodes	= 67.171.74.150;
+		peers	= parfs@MYSITE;
 	}
 
 	resource test {
 		desc	= "test network";
 		type	= mds;
-		id	= 4;
+		id	= 5;
 		fsroot	= /tmp/slashfs;
-		ifs	= 10.32.5.82;
-		peers	= parfs@sitename;
+		nodes	= 10.32.5.82;
+		peers	= parfs@MYSITE;
 	}
 }
 .Ed

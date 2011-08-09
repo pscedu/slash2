@@ -1,6 +1,6 @@
 # $Id$
 
-# See slash.conf(5) for more information.
+# See slcfg(5) for more information.
 
 # Archiver configuration
 set port=1307;

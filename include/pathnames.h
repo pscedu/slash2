@@ -27,7 +27,7 @@
 # define SL_PATH_SLICTLSOCK	"../sliod.%h.sock"
 # define SL_PATH_MSCTLSOCK	"../mount_slash.%h.sock"
 #else
-# define SL_PATH_CONF		"/etc/slcfg.slcfg"
+# define SL_PATH_CONF		"/etc/slash/slcfg"
 # define SL_PATH_SLMCTLSOCK	"/var/run/slash/slashd.%h.sock"
 # define SL_PATH_SLICTLSOCK	"/var/run/slash/sliod.%h.sock"
 # define SL_PATH_MSCTLSOCK	"/var/run/slash/mount_slash.%h.sock"
