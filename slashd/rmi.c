@@ -565,6 +565,9 @@ slm_rmi_handler(struct pscrpc_request *rq)
 	case SRMT_IMPORT:
 		rc = slm_rmi_handle_import(rq);
 		break;
+	case SRMT_MKDIR:
+		rc = slm_rmc_handle_mkdir(rq);
+		break;
 
 	default:
 		psclog_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
