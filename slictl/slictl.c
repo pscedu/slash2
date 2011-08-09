@@ -125,6 +125,8 @@ slictlcmd_export(int ac, char *av[])
 		sfop = psc_ctlmsg_push(SLICMT_EXPORT, sizeof(*sfop));
 		if (recursive)
 			sfop->sfop_flags |= SLI_CTL_FOPF_RECURSIVE;
+		if (verbose)
+			sfop->sfop_flags |= SLI_CTL_FOPF_VERBOSE;
 		strlcpy(sfop->sfop_fn, av[i], sizeof(sfop->sfop_fn));
 		strlcpy(sfop->sfop_fn2, av[ac - 1], sizeof(sfop->sfop_fn));
 	}
@@ -158,6 +160,8 @@ slictlcmd_import(int ac, char *av[])
 		sfop = psc_ctlmsg_push(SLICMT_IMPORT, sizeof(*sfop));
 		if (recursive)
 			sfop->sfop_flags |= SLI_CTL_FOPF_RECURSIVE;
+		if (verbose)
+			sfop->sfop_flags |= SLI_CTL_FOPF_VERBOSE;
 		strlcpy(sfop->sfop_fn, av[i], sizeof(sfop->sfop_fn));
 		strlcpy(sfop->sfop_fn2, av[ac - 1], sizeof(sfop->sfop_fn));
 	}

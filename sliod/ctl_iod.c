@@ -101,6 +101,7 @@ struct sli_import_arg {
 	struct psc_ctlmsghdr	*mh;
 	struct slictlmsg_fileop	*sfop;
 	int			 fd;
+	int			 rc;
 };
 
 int
@@ -112,23 +113,52 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct psc_ctlmsghdr *mh = a->mh;
-	struct slash_fidgen fg;
-	const char *str;
-	int rc;
+	struct slash_fidgen tfg, fg;
+	const char *str, *newname;
+	size_t len;
+	int rc = 0;
 
+	newname = pfl_basename(fn);
 	fg.fg_fid = SLFID_ROOT;
-	for (p = sfop->sfop_fn2; *p == '/'; p++)
-		;
-	for (; p; p = np) {
-		np = strchr(p + 1, '/');
-		if (np && np - p == 1)
-			continue;
-		if (np - p >= SL_NAME_MAX) {
-			rc = psc_ctlsenderr(a->fd, mh, "%s: %s",
-			    fn, slstrerror(ENAMETOOLONG));
-			goto out;
+	fg.fg_gen = FGEN_ANY;
+
+	len = strlen(sfop->sfop_fn);
+	while (len > 0 && sfop->sfop_fn[len - 1] == '/')
+		len--;
+	/* preserve hierarchy in src via copying */
+	snprintf(fidfn, sizeof(fidfn), "%s%s%s", sfop->sfop_fn2,
+	    S_ISDIR(stb->st_mode) ? "/" : "",
+	    fn + strlen(sfop->sfop_fn));
+	len = strlen(fidfn);
+	if (len)
+		len--;
+	/* trim trailing '/' chars */
+	for (p = fidfn + len; *p == '/' && p > fidfn; p--)
+		*p = '\0';
+	for (p = fidfn; *p; p = np) {
+		/* skip first '/' chars */
+		while (*p == '/')
+			p++;
+		np = strchr(p, '/');
+		if (np) {
+			np++;
+			if (np - p == 1)
+				continue;
+			if (np - p >= SL_NAME_MAX) {
+				a->rc = psc_ctlsenderr(a->fd, mh,
+				    "%s: %s", fn, slstrerror(ENAMETOOLONG));
+				goto out;
+			}
+			strlcpy(cpn, p, np - p);
+		} else {
+			if (strlen(p) > SL_NAME_MAX) {
+				a->rc = psc_ctlsenderr(a->fd, mh,
+				    "%s: %s", fn,
+				    slstrerror(ENAMETOOLONG));
+				goto out;
+			}
+			strlcpy(cpn, p, sizeof(cpn));
 		}
-		strlcpy(cpn, p, np - p);
 
 		/*
 		 * No name specified -- preserve last component from
@@ -144,46 +174,53 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 			break;
 		}
 
-		rc = sli_fcmh_lookup_fid(&fg, cpn, &fg);
+		rc = sli_fcmh_lookup_fid(&fg, cpn, &tfg);
 
 		/*
 		 * Last component is intended destination; use directly.
 		 */
-		if (rc == ENOENT && np == NULL)
+		if (rc == ENOENT && np == NULL) {
+			newname = cpn;
 			break;
+		}
+		fg = tfg;
 
 		if (rc || fg.fg_fid == FID_ANY) {
-			rc = psc_ctlsenderr(a->fd, mh, "%s: %s",
-			    fn, slstrerror(rc));
+			a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
+			    slstrerror(rc));
 			goto out;
 		}
 	}
 
 	if (fg.fg_fid == FID_ANY) {
-		rc = psc_ctlsenderr(a->fd, mh, "%s: %s",
-		    fn, slstrerror(ENOENT));
+		a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
+		    slstrerror(ENOENT));
 		goto out;
 	}
 
 	rc = sli_rmi_getimp(&csvc);
-	if (rc)
+	if (rc) {
+		a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
+		    slstrerror(rc));
 		goto out;
+	}
 
 	if (S_ISDIR(stb->st_mode)) {
 		struct srm_mkdir_req *mq;
 		struct srm_mkdir_rep *mp;
 
-		rc = SL_RSX_NEWREQ(csvc, SRMT_MKDIR, rq, mq, mp);
+		rc = SL_RSX_NEWREQ(csvc, SRMT_MKDIR, rq, mq,
+		    mp);
 		if (rc) {
-			rc = psc_ctlsenderr(a->fd, mh, "%s: %s",
-			    fn, slstrerror(rc));
+			a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
+			    slstrerror(rc));
 			goto out;
 		}
 		mq->creds.scr_uid = stb->st_uid;
 		mq->creds.scr_gid = stb->st_gid;
 		mq->pfg = fg;
 		mq->mode = stb->st_mode;
-		strlcpy(mq->name, pfl_basename(fn), sizeof(mq->name));
+		strlcpy(mq->name, newname, sizeof(mq->name));
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc == 0)
 			rc = mp->rc;
@@ -193,12 +230,12 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 
 		rc = SL_RSX_NEWREQ(csvc, SRMT_IMPORT, rq, mq, mp);
 		if (rc) {
-			rc = psc_ctlsenderr(a->fd, mh, "%s: %s",
-			    fn, slstrerror(rc));
+			a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
+			    slstrerror(rc));
 			goto out;
 		}
 		mq->pfg = fg;
-		strlcpy(mq->cpn, pfl_basename(fn), sizeof(mq->cpn));
+		strlcpy(mq->cpn, newname, sizeof(mq->cpn));
 		sl_externalize_stat(stb, &mq->sstb);
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc == 0) {
@@ -211,10 +248,10 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		}
 	}
 	if (rc)
-		rc = psc_ctlsenderr(a->fd, mh, "%s: %s",
-		    fn, slstrerror(rc));
+		a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
+		    slstrerror(rc));
 	else if (sfop->sfop_flags & SLI_CTL_FOPF_VERBOSE)
-		rc = psc_ctlsenderr(a->fd, mh, "importing %s%s", fn,
+		a->rc = psc_ctlsenderr(a->fd, mh, "importing %s%s", fn,
 		    S_ISDIR(stb->st_mode) ? "/" : "");
 
  out:
@@ -222,7 +259,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
-	return (rc);
+	return (rc || a->rc == 0);
 }
 
 int
@@ -232,12 +269,24 @@ slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct sli_import_arg a;
 	int fl = 0;
 
+	/* XXX check that src and dst are on the same mount point. */
+
+	if (sfop->sfop_fn[0] == '\0')
+		return (psc_ctlsenderr(fd, mh, "%s: %s",
+		    sfop->sfop_fn, slstrerror(ENOENT)));
+	if (strlen(sfop->sfop_fn) >= SL_PATH_MAX)
+		return (psc_ctlsenderr(fd, mh, "%s: %s",
+		    sfop->sfop_fn, slstrerror(ENAMETOOLONG)));
+
+	memset(&a, 0, sizeof(a));
 	a.mh = mh;
 	a.fd = fd;
 	a.sfop = sfop;
+	a.rc = 1;
 	if (sfop->sfop_flags & SLI_CTL_FOPF_RECURSIVE)
 		fl |= PFL_FILEWALKF_RECURSIVE;
-	return (pfl_filewalk(sfop->sfop_fn, fl, sli_import, &a));
+	pfl_filewalk(sfop->sfop_fn, fl, sli_import, &a);
+	return (a.rc);
 }
 
 int
