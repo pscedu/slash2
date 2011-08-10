@@ -40,11 +40,11 @@
 int
 slc_rci_handle_read(struct pscrpc_request *rq)
 {
+	struct bmpc_ioreq *r = NULL;
 	struct slc_async_req *car;
 	struct psc_listcache *lc;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
-	struct bmpc_ioreq *r;
 	struct sl_resm *m;
 	struct iovec iov;
 	size_t len = 0;
@@ -71,7 +71,8 @@ slc_rci_handle_read(struct pscrpc_request *rq)
 		struct timespec now;
 
 		PFL_GETTIMESPEC(&now);
-		/* The AIO rpc from the sliod beat our fs thread.  
+		/*
+		 * The AIO RPC from the sliod beat our fs thread.
 		 *   Give our thread a chance to put the 'car' onto
 		 *   the list.
 		 */
