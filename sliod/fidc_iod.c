@@ -171,7 +171,6 @@ sli_fcmh_reopen(struct fidc_membh *fcmh, const struct slash_fidgen *fg)
 int
 sli_fcmh_ctor(struct fidc_membh *fcmh)
 {
-	struct fcmh_iod_info *fii;
 	int rc = 0;
 
 	if (fcmh->fcmh_fg.fg_gen == FGEN_ANY) {
@@ -183,8 +182,6 @@ sli_fcmh_ctor(struct fidc_membh *fcmh)
 		 */
 		return (0);
 	}
-
-	fii = fcmh_2_fii(fcmh);
 
 	/* try to get a file descriptor for this backing obj */
 	rc = sli_open_backing_file(fcmh);

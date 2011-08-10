@@ -745,14 +745,12 @@ struct slashrpc_cservice *
 msl_try_get_replica_res(struct bmapc_memb *bcm, int iosidx)
 {
 	struct slashrpc_cservice *csvc;
-	struct bmap_cli_info *bci;
 	struct fcmh_cli_info *fci;
 	struct sl_resource *res;
 	struct rnd_iterator it;
 	struct sl_resm *resm;
 
 	fci = fcmh_2_fci(bcm->bcm_fcmh);
-	bci = bmap_2_bci(bcm);
 
 	DEBUG_BMAPOD(PLL_INFO, bcm, "iosidx=%d", iosidx);
 
@@ -1674,9 +1672,7 @@ msl_pages_prefetch(struct pscfs_req *pfr, void *bufp,
 {
 	int sched = 0, rc = 0, npages;
 	struct bmap_pagecache_entry *bmpce;
-	struct bmapc_memb *bcm;
 
-	bcm    = r->biorq_bmap;
 	npages = psc_dynarray_len(&r->biorq_pages);
 
 	DEBUG_BIORQ(PLL_NOTIFY, r, "check prefetch");

@@ -184,11 +184,10 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 	struct sli_repl_workrq *w;
 	struct srm_io_rep *mp;
 	struct slvr_ref *s;
-	int rc, slvridx, slvrno;
+	int rc, slvridx;
 
 	w = args->pointer_arg[SRII_REPLREAD_CBARG_WKRQ];
 	s = args->pointer_arg[SRII_REPLREAD_CBARG_SLVR];
-	slvrno = s->slvr_num;
 
 	rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
 	if (rc)

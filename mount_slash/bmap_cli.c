@@ -272,7 +272,6 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw,
 	struct srm_leasebmap_req *mq;
 	struct srm_leasebmap_rep *mp;
 	struct fcmh_cli_info *fci;
-	struct bmap_cli_info *bci;
 	struct fidc_membh *f;
 
 	psc_assert(bmap->bcm_flags & BMAP_INIT);
@@ -303,8 +302,6 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw,
 	mq->rw = rw;
 	if (getreptbl)
 		mq->flags |= SRM_LEASEBMAPF_GETREPLTBL;
-
-	bci = bmap_2_bci(bmap);
 
 	DEBUG_FCMH(PLL_INFO, f, "retrieving bmap (bmapno=%u) (rw=%d)",
 	    bmap->bcm_bmapno, rw);
