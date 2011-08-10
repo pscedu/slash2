@@ -110,13 +110,12 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 	struct sl_resource *res;
 	struct sl_site *site;
 	struct iovec iov;
-	uint64_t crc, seqno;
 	int i, len, count;
+	uint64_t crc;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	count = mq->count;
-	seqno = mq->seqno;
 	if (count <= 0 || mq->size > LNET_MTU)
 		return (EINVAL);
 

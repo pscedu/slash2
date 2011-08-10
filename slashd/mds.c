@@ -1876,7 +1876,7 @@ slm_ptrunc_prepare(struct slm_workrq *wkrq)
 
 	mds_reserve_slot(1);
 	rc = mdsio_setattr(fcmh_2_mdsio_fid(fcmh), &fcmh->fcmh_sstb,
-	    PSCFS_SETATTRF_DATASIZE, &rootcreds, &fcmh->fcmh_sstb,
+	    to_set, &rootcreds, &fcmh->fcmh_sstb,
 	    fcmh_2_mdsio_data(fcmh), mdslog_namespace);
 	mds_unreserve_slot(1);
 

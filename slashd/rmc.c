@@ -898,11 +898,8 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 {
 	struct srm_set_bmapreplpol_req *mq;
 	struct srm_set_bmapreplpol_rep *mp;
-	struct fcmh_mds_info *fmi;
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bcm;
-
-	fmi = NULL;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -914,8 +911,6 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	mp->rc = slm_fcmh_get(&mq->fg, &fcmh);
 	if (mp->rc)
 		goto out;
-
-	fmi = fcmh_2_fmi(fcmh);
 
 	if (!mds_bmap_exists(fcmh, mq->bmapno)) {
 		mp->rc = SLERR_BMAP_INVALID;

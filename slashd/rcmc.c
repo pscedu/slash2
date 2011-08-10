@@ -111,15 +111,12 @@ slmrcmthr_walk_brepls(struct slm_replst_workreq *rsw,
 	struct srm_replst_slave_req *mq;
 	struct srm_replst_slave_rep *mp;
 	struct srsm_replst_bhdr bhdr;
-	struct bmap_mds_info *bmdsi;
 	struct slmrcm_thread *srcm;
 	struct psc_thread *thr;
 	int nbits, rc;
 
 	thr = pscthr_get();
 	srcm = slmrcmthr(thr);
-	bmdsi = bmap_2_bmi(bcm);
-
 	nbits = USWI_INOH(wk)->inoh_ino.ino_nrepls *
 	    SL_BITS_PER_REPLICA + SL_NBITS_REPLST_BHDR;
 	if (howmany(srcm->srcm_page_bitpos + nbits,
