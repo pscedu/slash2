@@ -54,7 +54,7 @@ sli_ric_handle_connect(struct pscrpc_request *rq)
 
 	if (e->exp_private)
 		/* No additional state is maintained in the export
-		 *   so this is a not a fatal condition but should
+		 *   so this is not a fatal condition but should
 		 *   be noted.
 		 */
 		psclog_warnx("duplicate connect msg detected");
