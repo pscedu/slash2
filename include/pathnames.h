@@ -42,7 +42,6 @@
 
 /* configuration files */
 #define SL_PATH_CONF		SL_PATH_ETC_DIR"/slcfg"
-#define SL_PATH_CLIENTALLOW	SL_PATH_ETC_DIR"/clientallow"
 
 /*
  * SLASH2 internal files and directories that enable us to

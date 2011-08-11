@@ -22,6 +22,7 @@
 #include <sys/statvfs.h>
 #include <sys/time.h>
 
+#include <ctype.h>
 #include <dirent.h>
 #include <err.h>
 #include <errno.h>
@@ -94,7 +95,7 @@ const char			*progname;
 char				 ctlsockfn[PATH_MAX] = SL_PATH_MSCTLSOCK;
 char				 mountpoint[PATH_MAX];
 int				 allow_root_uid = 1;
-struct psc_dynarray		 clientallowprogs = DYNARRAY_INIT;
+struct psc_dynarray		 allow_exe = DYNARRAY_INIT;
 
 struct psc_vbitmap		 msfsthr_uniqidmap = VBITMAP_INIT_AUTO;
 psc_spinlock_t			 msfsthr_uniqidmap_lock = SPINLOCK_INIT;
@@ -224,7 +225,7 @@ mslfsop_access(struct pscfs_req *pfr, pscfs_inum_t inum, int mask)
 }
 
 #define msl_progallowed(r)						\
-	(psc_dynarray_len(&clientallowprogs) == 0 || _msl_progallowed(r))
+	(psc_dynarray_len(&allow_exe) == 0 || _msl_progallowed(r))
 
 int
 _msl_progallowed(struct pscfs_req *pfr)
@@ -244,7 +245,7 @@ _msl_progallowed(struct pscfs_req *pfr)
 			psclog_warn("unable to check access on %s", fn);
 			return (1);
 		}
-		DYNARRAY_FOREACH(p, n, &clientallowprogs)
+		DYNARRAY_FOREACH(p, n, &allow_exe)
 		    if (strcmp(exe, p) == 0)
 			    return (1);
 
@@ -2325,27 +2326,38 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
 }
 
 void
-read_clientallowprogs(void)
+parse_allowexe(void)
 {
-	char buf[LINE_MAX];
+	char *p, *s, *t;
 	struct stat stb;
-	FILE *fp;
 
-	fp = fopen(SL_PATH_CLIENTALLOW, "r");
-	if (fp == NULL)
-		return;
-	while (fgets(buf, sizeof(buf), fp)) {
-		buf[strcspn(buf, "\n")] = '\0';
-		if (stat(buf, &stb) == -1) {
-			warn("%s", buf);
+	s = globalConfig.gconf_allowexe;
+	while (s) {
+		p = s;
+		while (isspace(*p))
+			p++;
+		s = strchr(p, ':');
+		if (s)
+			*s++ = '\0';
+		if (strlen(p)) {
+			t = p + strlen(p) - 1;
+			if (isspace(*t)) {
+				while (isspace(*t))
+					t--;
+				t[1] = '\0';
+			}
+		}
+		if (*p == '\0')
+			continue;
+		if (stat(p, &stb) == -1) {
+			warn("%s", p);
 			continue;
 		}
-		psc_dynarray_add(&clientallowprogs, pfl_strdup(buf));
-		psclog_notice("restricting open(2) access to %s", buf);
+
+		psc_dynarray_add(&allow_exe, p);
+		psclog_notice("restricting open(2) access to %s", p);
 	}
-	if (ferror(fp))
-		warn("%s", SL_PATH_CLIENTALLOW);
-	fclose(fp);
+	exit(0);
 }
 
 __dead void
@@ -2430,8 +2442,6 @@ main(int argc, char *argv[])
 
 	pscthr_init(MSTHRT_FSMGR, 0, NULL, NULL, 0, "msfsmgrthr");
 
-	read_clientallowprogs();
-
 	noncanon_mp = argv[0];
 	if (unmount_first)
 		unmount(noncanon_mp);
@@ -2446,6 +2456,7 @@ main(int argc, char *argv[])
 	sl_drop_privs(allow_root_uid);
 
 	slcfg_parse(cfg);
+	parse_allowexe();
 	msl_init();
 
 	pscfs_entry_timeout = 8.;
