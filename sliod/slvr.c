@@ -264,11 +264,11 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 	} else {
 		s->slvr_flags |= SLVR_DATARDY;
 		s->slvr_flags &= ~SLVR_FAULTING;
+		DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
 	}
 
 	psc_vbitmap_invert(s->slvr_slab->slb_inuse);
 	//psc_vbitmap_printbin1(s->slvr_slab->slb_inuse);
-	DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
 	SLVR_WAKEUP(s);
 	SLVR_ULOCK(s);
 
