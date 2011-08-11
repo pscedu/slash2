@@ -159,12 +159,12 @@ struct slvr_ref {
 	    (s)->slvr_pri, (s)->slvr_slab, DEBUG_SLVR_FLAGS(s),		\
 	    ## __VA_ARGS__)
 
-#define RIC_MAX_SLVRS_PER_IO 2
+#define RIC_MAX_SLVRS_PER_IO	2
 
 struct sli_iocb_set {
 	struct psc_listentry	  iocbs_lentry;
 	psc_spinlock_t		  iocbs_lock;
-	int			  iocbs_refcnt;			/* number of AIO requests in the set */
+	int			  iocbs_refcnt;			/* # of AIO reqs in the set */
 	int			  iocbs_flags;
 	struct iovec		  iocbs_iovs[RIC_MAX_SLVRS_PER_IO];
 	int			  iocbs_niov;

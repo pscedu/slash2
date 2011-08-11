@@ -333,14 +333,6 @@ sli_aio_register(struct pscrpc_request *rq, struct sli_iocb_set **iocbsp,
 	struct aiocb *aio;
 	int error = 0;
 
-	iocb = psc_pool_get(sli_iocb_pool);
-	memset(iocb, 0, sizeof(*iocb));
-	INIT_LISTENTRY(&iocb->iocb_lentry);
-	iocb->iocb_slvr = s;
-	iocb->iocb_cbf = slvr_fsaio_done;
-	iocb->iocb_rw = rw;
-	iocb->iocb_peer = pscrpc_export_get(rq->rq_export);
-
 	iocbs = *iocbsp;
 	if (iocbs == NULL) {
 		iocbs = *iocbsp = psc_pool_get(sli_iocbset_pool);
@@ -348,14 +340,21 @@ sli_aio_register(struct pscrpc_request *rq, struct sli_iocb_set **iocbsp,
 		INIT_LISTENTRY(&iocbs->iocbs_lentry);
 		INIT_SPINLOCK(&iocbs->iocbs_lock);
 		psc_waitq_init(&iocbs->iocbs_waitq);
-		iocb->iocb_set = iocbs;
 		iocbs->iocbs_refcnt = 1;
 	} else {
 		spinlock(&iocbs->iocbs_lock);
-		iocb->iocb_set = iocbs;
 		iocbs->iocbs_refcnt++;
 		freelock(&iocbs->iocbs_lock);
 	}
+
+	iocb = psc_pool_get(sli_iocb_pool);
+	memset(iocb, 0, sizeof(*iocb));
+	INIT_LISTENTRY(&iocb->iocb_lentry);
+	iocb->iocb_slvr = s;
+	iocb->iocb_cbf = slvr_fsaio_done;
+	iocb->iocb_rw = rw;
+	iocb->iocb_peer = pscrpc_export_get(rq->rq_export);
+	iocb->iocb_set = iocbs;
 
 	aio = &iocb->iocb_aiocb;
 	aio->aio_fildes = slvr_2_fd(s);
