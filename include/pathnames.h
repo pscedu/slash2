@@ -22,23 +22,27 @@
 
 /* configuration/control socket paths */
 #if DEVELPATHS
-# define SL_PATH_CONF		"../config/example.conf"
-# define SL_PATH_SLMCTLSOCK	"../slashd.%h.sock"
-# define SL_PATH_SLICTLSOCK	"../sliod.%h.sock"
-# define SL_PATH_MSCTLSOCK	"../mount_slash.%h.sock"
+# define SL_PATH_RUNTIME_DIR	".."
+# define SL_PATH_ETC_DIR	"../config/"
 #else
-# define SL_PATH_CONF		"/etc/slash/slcfg"
-# define SL_PATH_SLMCTLSOCK	"/var/run/slash/slashd.%h.sock"
-# define SL_PATH_SLICTLSOCK	"/var/run/slash/sliod.%h.sock"
-# define SL_PATH_MSCTLSOCK	"/var/run/slash/mount_slash.%h.sock"
+# define SL_PATH_RUNTIME_DIR	"/var/run"
+# define SL_PATH_ETC_DIR	"/etc/slash"
 #endif
+
+#define SL_PATH_SLMCTLSOCK	"/slashd.%h.sock"
+#define SL_PATH_SLICTLSOCK	"/sliod.%h.sock"
+#define SL_PATH_MSCTLSOCK	"/mount_slash.%h.sock"
 
 /* runtime/data paths */
 #define SL_PATH_DATA_DIR	"/var/lib/slash"
 
+/* runtime files */
 #define SL_FN_AUTHBUFKEY	"authbuf.key"
 #define SL_FN_OPJOURNAL		"op-journal"
-#define SL_FN_MSLPROGS		"mslprogs"
+
+/* configuration files */
+#define SL_PATH_CONF		SL_PATH_ETC_DIR"/slcfg"
+#define SL_PATH_CLIENTALLOW	SL_PATH_ETC_DIR"/clientallow"
 
 /*
  * SLASH2 internal files and directories that enable us to
