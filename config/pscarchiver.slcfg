@@ -5,6 +5,15 @@
 # Archiver configuration
 set port=1307;
 set net=tcp4;
+set clientallow="
+	/usr/psc/bin/far:
+	/usr/psc/bin/scp:
+	/usr/bin/scp:
+	/usr/psc/bin/sftp:
+	/usr/bin/sftp:
+	/usr/bin/rsync:
+	/usr/psc/globus/default/bin/globus-url-copy
+";
 
 # Pull in other/local config files
 # include "/etc/slcfg.d/*"
