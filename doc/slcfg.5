@@ -52,6 +52,14 @@ to the given value
 .Ar val .
 The following variables may be set:
 .Bl -tag -offset 3n -width 1n
+.It Ic allow_exec
+Optional executable
+.Xr open 2
+access list
+.Pq .
+This setting applies to
+.Xr mount_slash 8
+only.
 .It Ic fs_root
 For
 .Xr sliod 8 ,

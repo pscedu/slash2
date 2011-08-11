@@ -94,7 +94,7 @@ const char			*progname;
 char				 ctlsockfn[PATH_MAX] = SL_PATH_MSCTLSOCK;
 char				 mountpoint[PATH_MAX];
 int				 allow_root_uid = 1;
-struct psc_dynarray		 mslprogs = DYNARRAY_INIT;
+struct psc_dynarray		 clientallowprogs = DYNARRAY_INIT;
 
 struct psc_vbitmap		 msfsthr_uniqidmap = VBITMAP_INIT_AUTO;
 psc_spinlock_t			 msfsthr_uniqidmap_lock = SPINLOCK_INIT;
@@ -224,24 +224,43 @@ mslfsop_access(struct pscfs_req *pfr, pscfs_inum_t inum, int mask)
 }
 
 #define msl_progallowed(r)						\
-	(psc_dynarray_len(&mslprogs) == 0 || _msl_progallowed(r))
+	(psc_dynarray_len(&clientallowprogs) == 0 || _msl_progallowed(r))
 
 int
 _msl_progallowed(struct pscfs_req *pfr)
 {
-	char pidfn[PATH_MAX], exe[PATH_MAX];
+	char fn[PATH_MAX], exe[PATH_MAX];
 	const char *p;
+	pid_t pid, ppid;
+	FILE *fp;
 	int n;
 
-	n = snprintf(pidfn, sizeof(pidfn), "/proc/%d/exe",
-	    pscfs_getclientctx(pfr)->pfcc_pid);
-	if (readlink(pidfn, exe, sizeof(exe)) == -1) {
-		psclog_warn("unable to check access on %s", pidfn);
-		return (1);
-	}
-	DYNARRAY_FOREACH(p, n, &mslprogs)
-		if (strcmp(exe, p) == 0)
+	ppid = pscfs_getclientctx(pfr)->pfcc_pid;
+	do {
+		pid = ppid;
+
+		snprintf(fn, sizeof(fn), "/proc/%d/exe", pid);
+		if (readlink(fn, exe, sizeof(exe)) == -1) {
+			psclog_warn("unable to check access on %s", fn);
 			return (1);
+		}
+		DYNARRAY_FOREACH(p, n, &clientallowprogs)
+		    if (strcmp(exe, p) == 0)
+			    return (1);
+
+		snprintf(fn, sizeof(fn), "/proc/%d/stat", pid);
+		fp = fopen(fn, "r");
+		if (fp == NULL) {
+			psclog_warn("unable to read parent PID from %s", fn);
+			return (1);
+		}
+		n = fscanf(fp, "%*d %*s %*c %d ", &ppid);
+		fclose(fp);
+		if (n != 1) {
+			psclog_warn("unable to read parent PID from %s", fn);
+			return (1);
+		}
+	} while (pid != ppid);
 	return (0);
 }
 
@@ -2306,14 +2325,13 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
 }
 
 void
-read_mslprogs(void)
+read_clientallowprogs(void)
 {
-	char buf[LINE_MAX], fn[PATH_MAX];
+	char buf[LINE_MAX];
 	struct stat stb;
 	FILE *fp;
 
-	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_MSLPROGS);
-	fp = fopen(fn, "r");
+	fp = fopen(SL_PATH_CLIENTALLOW, "r");
 	if (fp == NULL)
 		return;
 	while (fgets(buf, sizeof(buf), fp)) {
@@ -2322,11 +2340,11 @@ read_mslprogs(void)
 			warn("%s", buf);
 			continue;
 		}
-		psc_dynarray_add(&mslprogs, pfl_strdup(buf));
+		psc_dynarray_add(&clientallowprogs, pfl_strdup(buf));
 		psclog_notice("restricting open(2) access to %s", buf);
 	}
 	if (ferror(fp))
-		warn("%s", fn);
+		warn("%s", SL_PATH_CLIENTALLOW);
 	fclose(fp);
 }
 
@@ -2412,7 +2430,7 @@ main(int argc, char *argv[])
 
 	pscthr_init(MSTHRT_FSMGR, 0, NULL, NULL, 0, "msfsmgrthr");
 
-	read_mslprogs();
+	read_clientallowprogs();
 
 	noncanon_mp = argv[0];
 	if (unmount_first)

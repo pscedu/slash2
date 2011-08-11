@@ -5,7 +5,7 @@
 # Archiver configuration
 set port=1307;
 set net=tcp4;
-set clientallow="
+set allow_exec="
 	/usr/psc/bin/far:
 	/usr/psc/bin/scp:
 	/usr/bin/scp:

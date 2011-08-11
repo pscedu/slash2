@@ -123,6 +123,7 @@ site_get_pri(struct sl_site *site)
 }
 
 struct sl_gconf {
+	char			 gconf_allowexe[BUFSIZ];
 	char			 gconf_net[LNET_NAME_MAX];
 	char			 gconf_fsroot[PATH_MAX];
 	int			 gconf_port;

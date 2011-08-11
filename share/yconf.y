@@ -100,6 +100,7 @@ void		 yywarn(const char *, ...);
 	{ name, SL_STRUCT_RES, type, max, offsetof(struct sl_resource, field), handler }
 
 struct slconf_symbol sym_table[] = {
+	TABENT_VAR("allow_exec",	SL_TYPE_STR,	BUFSIZ,		gconf_allowexe,	NULL),
 	TABENT_VAR("fs_root",		SL_TYPE_STR,	PATH_MAX,	gconf_fsroot,	NULL),
 	TABENT_VAR("journal",		SL_TYPE_STR,	PATH_MAX,	gconf_journal,	NULL),
 	TABENT_VAR("net",		SL_TYPE_STR,	LNET_NAME_MAX,	gconf_net,	NULL),
