@@ -149,18 +149,15 @@ static struct sl_resm	  *currentResm;
 %token SIZEVAL
 
 %token INCLUDE
-%token RESOURCE_NAME
 %token RESOURCE_PROFILE
 %token RESOURCE_TYPE
 %token SET
-%token SITE_NAME
 %token SITE_PROFILE
 
-%token IOSTAG
 %token IPADDR
 %token LNETNAME
-%token NODESTAG
-%token PEERTAG
+%token NODES
+%token PEERS
 %token QUOTEDS
 
 %%
@@ -210,23 +207,23 @@ site_profile	: site_prof_start site_defs '}' {
 		}
 		;
 
-site_prof_start	: SITE_PROFILE SITE_NAME '{' {
+site_prof_start	: SITE_PROFILE '@' NAME '{' {
 			struct sl_site *s;
 
 			PLL_FOREACH(s, &globalConfig.gconf_sites)
-				if (strcasecmp(s->site_name, $2) == 0)
-					yyerror("duplicate site name: %s", $2);
+				if (strcasecmp(s->site_name, $3) == 0)
+					yyerror("duplicate site name: %s", $3);
 
 			currentSite = PSCALLOC(sizeof(*currentSite) +
 			    cfg_site_pri_sz);
 			psc_dynarray_init(&currentSite->site_resources);
 			INIT_PSC_LISTENTRY(&currentSite->site_lentry);
-			if (strlcpy(currentSite->site_name, $2,
+			if (strlcpy(currentSite->site_name, $3,
 			    sizeof(currentSite->site_name)) >=
 			    sizeof(currentSite->site_name))
-				psc_fatalx("site %s: name too long", $2);
+				psc_fatalx("site %s: name too long", $3);
 			slcfg_init_site(currentSite);
-			PSCFREE($2);
+			PSCFREE($3);
 		}
 		;
 
@@ -312,20 +309,25 @@ resource_start	: RESOURCE_PROFILE NAME '{' {
 resource_def	: statements
 		;
 
-ioslist		: IOSTAG '=' peers ';'
-		;
-
-peerlist	: PEERTAG '=' peers ';'
+peerlist	: PEERS '=' peers ';'
 		;
 
 peers		: peer
 		| peer ',' peers
 		;
 
-peer		: RESOURCE_NAME		{ psc_dynarray_add(&currentRes->res_peers, $1); }
+peer		: NAME '@' NAME {
+			char *p;
+
+			if (asprintf(&p, "%s@%s", $1, $3) == -1)
+				psc_fatal("asprintf");
+			psc_dynarray_add(&currentRes->res_peers, p);
+			PSCFREE($1);
+			PSCFREE($3);
+		}
 		;
 
-nodeslist	: NODESTAG '=' nodes ';'
+nodeslist	: NODES '=' nodes ';'
 		;
 
 nodes		: node			{ cfg_nid_counter++; }
@@ -354,7 +356,6 @@ statement	: restype_stmt
 		| float_stmt
 		| glob_stmt
 		| hexnum_stmt
-		| ioslist
 		| lnetname_stmt
 		| nodeslist
 		| num_stmt

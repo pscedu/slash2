@@ -45,14 +45,12 @@ char		[A-Za-z]
 floatv		[0-9]*\.?[0-9]+
 globpath	[/][a-zA-Z0-9|/.,_\[\]+?-]+
 hexnum		0[Xx][0-9A-Fa-f]+
-ipquad		[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}
+ipquad		[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*
 lnetname	tcp[0-9]+|sdp[0-9]+
 name		[A-Za-z][0-9A-Za-z_.-]+
 num		[0-9]+
 pathname	[/][a-zA-Z0-9/._-]+
 quotedstr	\"[^"]*\"
-resname		[A-Za-z][0-9A-Za-z]+@[A-Z]+
-sitename	@[A-Za-z]+
 sizeval		[0-9]+[KMGTBkmgtb]?
 
 %%
@@ -62,10 +60,9 @@ global		{ yywarn("`global' deprecated by `set'"); return (SET); }
 set		{ return (SET); }
 site		{ return (SITE_PROFILE); }
 resource	{ return (RESOURCE_PROFILE); }
-peers		{ return (PEERTAG); }
-ifs		{ yywarn("`ifs' deprecated by `nodes'"); return (NODESTAG); }
-nodes		{ return (NODESTAG); }
-ios             { return (IOSTAG); }
+peers|ios	{ return (PEERS); }
+ifs		{ yywarn("`ifs' deprecated by `nodes'"); return (NODES); }
+nodes		{ return (NODES); }
 
 yes|no {
 	psclog_trace("BOOL %s", yytext);
@@ -77,6 +74,12 @@ parallel_fs|standalone_fs|archival_fs|mds|cluster_noshare_fs|compute {
 	psclog_trace("Resource type string %s", yytext);
 	yylval = pfl_strdup(yytext);
 	return (RESOURCE_TYPE);
+}
+
+{ipquad} {
+	psclog_trace("IPADRRESS %s", yytext);
+	yylval = pfl_strdup(yytext);
+	return (IPADDR);
 }
 
 {num} {
@@ -125,24 +128,6 @@ parallel_fs|standalone_fs|archival_fs|mds|cluster_noshare_fs|compute {
 	psclog_trace("SIZEVAL %s", yytext);
 	yylval = pfl_strdup(yytext);
 	return (SIZEVAL);
-}
-
-{sitename} {
-	psclog_trace("SITE_NAME %s", yytext);
-	yylval = pfl_strdup(yytext);
-	return (SITE_NAME);
-}
-
-{resname} {
-	psclog_trace("RESOURCE_NAME %s", yytext);
-	yylval = pfl_strdup(yytext);
-	return (RESOURCE_NAME);
-}
-
-{ipquad} {
-	psclog_trace("IPADRRESS %s", yytext);
-	yylval = pfl_strdup(yytext);
-	return (IPADDR);
 }
 
 {quotedstr} {
