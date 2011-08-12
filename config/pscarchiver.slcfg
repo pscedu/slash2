@@ -16,7 +16,7 @@ set allow_exec="
 ";
 
 # Pull in other/local config files
-# include "/etc/slcfg.d/*"
+# include "/etc/slash/*.slcfg"
 
 site @PSC {
 	site_desc	= "PSC archiver";

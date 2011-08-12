@@ -9,7 +9,7 @@ set pref_mds="archmds@PSCARCH";
 set pref_ios="archsliod@PSCARCH";
 
 # Pull in other/local config files
-# include "/etc/slcfg.d/*"
+# include "/etc/slash/*.slcfg"
 
 site @PSCARCH {
 	site_desc	= "PSC Phase0 Archiver";
