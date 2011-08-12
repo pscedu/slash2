@@ -18,7 +18,7 @@ site @PSCARCH {
 		desc	= "PSC Arch MDS";
 		type	= mds;
 		id	= 1;
-		nodes	= 10.10.101.60;
+		nodes	= 10.10.101.60|128.182.100.55@tcp12;
 		jrnldev	= /dev/sdah;
 	}
 
@@ -28,5 +28,21 @@ site @PSCARCH {
 		id	= 2;
 		nodes	= 10.10.101.155;
 		fsroot	= /local/s2io;
+	}
+
+	resource archlime {
+		desc	= "PSC Replication Target";
+		type	= standalone_fs;
+		id	= 3;
+		nodes	= 10.10.101.82;
+		fsroot	= /local/p0_archive_backfs;
+	}
+
+	resource uo {
+		desc	= "uo tape";
+		type	= archival_fs;
+		id	= 4;
+		nodes	= 128.182.99.122@tcp12;
+		fsroot	= /usr/uo/s2io;
 	}
 }
