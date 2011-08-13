@@ -287,7 +287,7 @@ resource_start	: RESOURCE_PROFILE NAME '{' {
 			psc_dynarray_init(&currentRes->res_peers);
 			psc_dynarray_init(&currentRes->res_members);
 			rc = snprintf(currentRes->res_name,
-			    sizeof(currentRes->res_name), "%s%s",
+			    sizeof(currentRes->res_name), "%s@%s",
 			    $2, currentSite->site_name);
 			if (rc == -1)
 				psc_fatal("resource %s@%s",

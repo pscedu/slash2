@@ -145,6 +145,7 @@ libsl_str2res(const char *res_name)
 	site_name = strchr(res_name, '@');
 	if (site_name == NULL)
 		return (NULL);
+	site_name++;
 	locked = PLL_RLOCK(&globalConfig.gconf_sites);
 	PLL_FOREACH(s, &globalConfig.gconf_sites)
 		if (strcasecmp(s->site_name, site_name) == 0)
