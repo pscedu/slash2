@@ -2357,7 +2357,6 @@ parse_allowexe(void)
 		psc_dynarray_add(&allow_exe, p);
 		psclog_notice("restricting open(2) access to %s", p);
 	}
-	exit(0);
 }
 
 __dead void
