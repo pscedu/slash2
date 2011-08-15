@@ -105,7 +105,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		mp->rc = bmapdesc_access_check(&mq->sbd, rw,
 		    nodeResm->resm_res->res_id, pp->nid);
 		if (mp->rc == 0) {
-			psclog_notify("bmapdesc check okay");
+			psclog_info("bmapdesc check okay");
 			break;
 		}
 		psclog_notify("bmapdesc mismatch - mine:"
