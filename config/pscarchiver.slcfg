@@ -33,17 +33,18 @@ site @PSC {
 		desc	= "Old tape archiver";
 		type	= archival_fs;
 		id	= 2;
-		nodes	= tahini-o;
-		fsroot	= /usr/ue;
+		nodes	= tahini;
+		fsroot	= /slio-test;
+#		fsroot	= /usr/ue/.slio;
 	}
 
-	resource tahini-o {
-		desc	= "Old tape archiver";
-		type	= archival_fs;
-		id	= 3;
-		nodes	= tahini-e;
-		fsroot	= /usr/uo;
-	}
+#	resource tahini-o {
+#		desc	= "Old tape archiver";
+#		type	= archival_fs;
+#		id	= 3;
+#		nodes	= tahini-e;
+#		fsroot	= /usr/uo/.slio;
+#	}
 
 	resource sense0 {
 		desc	= "PSC disk-based archiver";
