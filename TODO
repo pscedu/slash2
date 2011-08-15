@@ -489,3 +489,9 @@ API rename
 - import
   - sliod links/symlinks
   - MDS immutable/readonly
+
+- Add the ability to remove an I/O server.  Right now struct reclaim_prog_entry
+  has a field "pad".  Should be easy to turn it into a flag to mark obsolete
+  entries.  But we need a tool or edit the disk file manually to be compatible.
+
+  We might want to do the same thing for metadata server.
