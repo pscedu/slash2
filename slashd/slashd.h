@@ -132,7 +132,11 @@ struct sl_mds_nsstats {
  * This structure tracks the progress of namespace log application on a MDS.
  * We allow one pending request per MDS until it responds or timeouts.
  */
+
+#define	MDS_PEER_NEED_INIT		1
+
 struct sl_mds_peerinfo {
+	int			  sp_flags;
 	uint64_t		  sp_xid;
 	uint64_t		  sp_batchno;
 
@@ -151,6 +155,9 @@ struct sl_mds_peerinfo {
  * This structure tracks the progress of garbage collection on each I/O
  * server.
  */
+
+#define	MDS_IOS_NEED_INIT		1
+
 struct sl_mds_iosinfo {
 	int			  si_flags;
 	uint64_t		  si_xid;

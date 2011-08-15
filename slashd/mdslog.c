@@ -1464,6 +1464,7 @@ mds_journal_init(int disable_propagation)
 	char *jrnldev, fn[PATH_MAX];
 	void *handle;
 	size_t size;
+	struct resprof_mds_info *rpmi;
 
 	psc_assert(_MDS_LOG_LAST_TYPE <= (1 << 15));
 	psc_assert(sizeof(struct srt_update_entry) == 512);
@@ -1524,6 +1525,9 @@ mds_journal_init(int disable_propagation)
 	    &size, 0);
 	psc_assert(rc == 0);
 
+	/* Find out the highest reclaim batchno and xid */
+
+	batchno = UINT64_MAX;
 	count = size / sizeof(struct reclaim_prog_entry);
 	for (i = 0; i < count; i++) {
 		res = libsl_id2res(reclaim_prog_buf[i].res_id);
@@ -1533,16 +1537,15 @@ mds_journal_init(int disable_propagation)
 			continue;
 		}
 		iosinfo = res2rpmi(res)->rpmi_info;
-		if (iosinfo->si_xid < reclaim_prog_buf[i].res_xid)
-			iosinfo->si_xid = reclaim_prog_buf[i].res_xid;
-		if (iosinfo->si_batchno < reclaim_prog_buf[i].res_batchno)
-			iosinfo->si_batchno = reclaim_prog_buf[i].res_batchno;
+		iosinfo->si_xid = reclaim_prog_buf[i].res_xid;
+		iosinfo->si_batchno = reclaim_prog_buf[i].res_batchno;
+		iosinfo->si_flags &= ~MDS_IOS_NEED_INIT;
+		if (iosinfo->si_batchno < batchno)
+			batchno = iosinfo->si_batchno;
 	}
 	PSCFREE(reclaim_prog_buf);
 	reclaim_prog_buf = PSCALLOC(nios * sizeof(struct reclaim_prog_entry));
 
-	/* Find out the highest reclaim batchno and xid */
-	batchno = mds_reclaim_lwm(1);
 	rc = mds_open_logfile(batchno, 0, 1, &handle);
 	if (rc) {
 		if (batchno) {
@@ -1578,6 +1581,21 @@ mds_journal_init(int disable_propagation)
 		current_reclaim_batchno++;
 
 	last_distill_xid = last_reclaim_xid;
+
+	/* search for newly-added I/O servers */
+	SITE_FOREACH_RES(nodeSite, res, ri) {
+		if (!RES_ISFS(res))
+			continue;
+		rpmi = res2rpmi(res);
+		iosinfo = rpmi->rpmi_info;
+
+		if (!(iosinfo->si_flags & MDS_IOS_NEED_INIT))
+			continue;
+
+		iosinfo->si_xid = current_reclaim_xid;
+		iosinfo->si_batchno = current_reclaim_batchno;
+		iosinfo->si_flags &= ~MDS_IOS_NEED_INIT;
+	}
 
 	/* Always start a thread to send reclaim updates. */
 	pscthr_init(SLMTHRT_JRECLAIM, 0, slmjreclaimthr_main, NULL, 0,

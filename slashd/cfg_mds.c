@@ -39,9 +39,11 @@ slcfg_init_res(struct sl_resource *res)
 	if (res->res_type == SLREST_MDS) {
 		peerinfo = PSCALLOC(sizeof(*peerinfo));
 		rpmi->rpmi_info = peerinfo;
+		peerinfo->sp_flags = MDS_PEER_NEED_INIT;
 	} else {
 		iosinfo = PSCALLOC(sizeof(*iosinfo));
 		rpmi->rpmi_info = iosinfo;
+		iosinfo->si_flags = MDS_IOS_NEED_INIT;
 	}
 }
 
