@@ -93,7 +93,7 @@ static off_t			 reclaim_logfile_offset;
 static void			*update_progfile_handle;
 static void			*reclaim_progfile_handle;
 
-#define	MAX_UPDATE_PROG_ENTRY	32
+#define	MAX_UPDATE_PROG_ENTRY	1024
 
 /* namespace update progress tracker to peer MDSes */
 struct update_prog_entry {
@@ -103,7 +103,7 @@ struct update_prog_entry {
 	int32_t			 _pad;
 };
 
-#define	MAX_RECLAIM_PROG_ENTRY	32
+#define	MAX_RECLAIM_PROG_ENTRY	1024
 
 /* garbage reclaim progress tracker to IOSes */
 struct reclaim_prog_entry {
