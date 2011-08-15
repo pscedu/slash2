@@ -719,7 +719,7 @@ mds_update_lwm(int batchno)
 	struct resprof_mds_info *rpmi;
 	struct sl_resm *resm;
 
-	SL_MDS_WALK(resm,
+	SL_MDS_WALK(resm, 
 		if (resm == nodeResm)
 			continue;
 		rpmi = resm2rpmi(resm);
@@ -1616,6 +1616,8 @@ mds_journal_init(int disable_propagation)
 	    &size, 0);
 	psc_assert(rc == 0);
 
+	/* Find out the highest update batchno and xid */
+	batchno = UINT64_MAX;
 	count = size / sizeof(struct update_prog_entry);
 	for (i = 0; i < count; i++) {
 		res = libsl_id2res(update_prog_buf[i].res_id);
@@ -1625,16 +1627,16 @@ mds_journal_init(int disable_propagation)
 			continue;
 		}
 		peerinfo = res2rpmi(res)->rpmi_info;
-		if (peerinfo->sp_xid < update_prog_buf[i].res_xid)
-			peerinfo->sp_xid = update_prog_buf[i].res_xid;
-		if (peerinfo->sp_batchno < update_prog_buf[i].res_batchno)
-			peerinfo->sp_batchno = update_prog_buf[i].res_batchno;
+
+		peerinfo->sp_flags &= ~MDS_PEER_NEED_INIT;
+		peerinfo->sp_xid = update_prog_buf[i].res_xid;
+		peerinfo->sp_batchno = update_prog_buf[i].res_batchno;
+		if (peerinfo->sp_batchno < batchno)
+			batchno = peerinfo->sp_batchno;
 	}
 	PSCFREE(update_prog_buf);
 	update_prog_buf = PSCALLOC(npeers * sizeof(struct update_prog_entry));
 
-	/* Find out the highest update batchno and xid */
-	batchno = mds_update_lwm(1);
 	rc = mds_open_logfile(batchno, 1, 1, &handle);
 	if (rc) {
 		if (batchno) {
@@ -1671,6 +1673,20 @@ mds_journal_init(int disable_propagation)
 
 	if (last_distill_xid < last_update_xid)
 		last_distill_xid = last_update_xid;
+
+	/* search for newly-added metadata servers */
+	SL_MDS_WALK(resm,
+		if (resm == nodeResm)
+			continue;
+		rpmi = resm2rpmi(resm);
+		peerinfo = rpmi->rpmi_info;
+		if (!(peerinfo->sp_flags & MDS_PEER_NEED_INIT))
+			continue;
+
+		peerinfo->sp_xid = current_update_xid;
+		peerinfo->sp_batchno = current_update_batchno;
+		peerinfo->sp_flags &= ~MDS_PEER_NEED_INIT;
+	);
 
 	/*
 	 * Start a thread to propagate local namespace updates to peers
