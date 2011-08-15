@@ -29,9 +29,9 @@
 # define SL_PATH_ETC_DIR	"/etc/slash"
 #endif
 
-#define SL_PATH_SLMCTLSOCK	"/slashd.%h.sock"
-#define SL_PATH_SLICTLSOCK	"/sliod.%h.sock"
-#define SL_PATH_MSCTLSOCK	"/mount_slash.%h.sock"
+#define SL_PATH_SLMCTLSOCK	SL_PATH_RUNTIME_DIR"/slashd.%h.sock"
+#define SL_PATH_SLICTLSOCK	SL_PATH_RUNTIME_DIR"/sliod.%h.sock"
+#define SL_PATH_MSCTLSOCK	SL_PATH_RUNTIME_DIR"/mount_slash.%h.sock"
 
 /* runtime/data paths */
 #define SL_PATH_DATA_DIR	"/var/lib/slash"
