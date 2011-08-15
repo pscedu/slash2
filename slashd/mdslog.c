@@ -1478,10 +1478,17 @@ mds_journal_init(int disable_propagation)
 		psc_fatalx("Missing I/O servers at site %s",
 		    nodeSite->site_name);
 
+	if (nios > MAX_RECLAIM_PROG_ENTRY)
+		psc_fatalx("Number of I/O servers exceed %d\n", 
+		    MAX_RECLAIM_PROG_ENTRY);
+
 	/* Count the number of peer MDSes we have */
 	npeers = 0;
 	SL_MDS_WALK(resm, npeers++);
 	npeers--;
+	if (npeers > MAX_UPDATE_PROG_ENTRY)
+		psc_fatalx("Number of metadata servers exceed %d\n", 
+		    MAX_UPDATE_PROG_ENTRY);
 
 	if (disable_propagation)
 		npeers = 0;
