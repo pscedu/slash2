@@ -237,7 +237,7 @@ slcfg_add_lnet(struct psclist_head *hd, struct ifaddrs *ifa,
 	psclist_for_each_entry(i, hd, lentry) {
 		netcmp = i->net != lent->net;
 
-		if (netcmp ^ slcfg_ifcmp(lent->ifn, i->ifn)) {
+		if (netcmp ^ (slcfg_ifcmp(lent->ifn, i->ifn) != 0)) {
 			pscrpc_net2str(i->net, ibuf);
 			psc_fatalx("network/interface pair %s:%s "
 			    "conflicts with %s:%s",
