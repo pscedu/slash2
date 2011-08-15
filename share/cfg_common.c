@@ -218,10 +218,10 @@ struct lnetif_pair {
 
 void
 slcfg_add_lnet(struct psclist_head *hd, struct ifaddrs *ifa,
-    void *sa, uint32_t net, struct lnetif_pair **lentp)
+    const void *sa, uint32_t net, struct lnetif_pair **lentp)
 {
-	struct lnetif_pair *i, *lent = *lentp;
 	char buf[PSCRPC_NIDSTR_SIZE], ibuf[PSCRPC_NIDSTR_SIZE];
+	struct lnetif_pair *i, *lent = *lentp;
 	int netcmp = 1;
 
 	/* get destination routing interface */
@@ -235,7 +235,7 @@ slcfg_add_lnet(struct psclist_head *hd, struct ifaddrs *ifa,
 	 * ignoring any interface aliases.
 	 */
 	psclist_for_each_entry(i, hd, lentry) {
-		netcmp = i->net == lent->net;
+		netcmp = i->net != lent->net;
 
 		if (netcmp ^ slcfg_ifcmp(lent->ifn, i->ifn)) {
 			pscrpc_net2str(i->net, ibuf);
@@ -268,7 +268,7 @@ libsl_init(int pscnet_mode, int ismds)
 	struct sl_resm *m;
 	struct sl_site *s;
 	PSCLIST_HEAD(lnets_hd);
-	int error, rc, j, k;
+	int error, rc, j, k, l;
 	lnet_nid_t *nidp;
 	uint32_t net;
 
@@ -312,14 +312,13 @@ libsl_init(int pscnet_mode, int ismds)
 				psc_assert(p);
 				strlcpy(addrbuf, p + 1, sizeof(addrbuf));
 				p = strrchr(addrbuf, '@');
-				psc_assert(p);
 				*p++ = '\0';
 
 				net = libcfs_str2net(p);
 
 				/* get numerical addresses */
 				memset(&hints, 0, sizeof(hints));
-				hints.ai_family = PF_INET;
+				hints.ai_family = AF_INET;
 				hints.ai_socktype = SOCK_STREAM;
 				error = getaddrinfo(addrbuf, NULL,
 				    &hints, &res0);
@@ -332,7 +331,7 @@ libsl_init(int pscnet_mode, int ismds)
 					    res->ai_addr, net, &lent);
 				freeaddrinfo(res0);
 
-				DYNARRAY_FOREACH(nidp, k, &m->resm_nids) {
+				DYNARRAY_FOREACH(nidp, l, &m->resm_nids) {
 					memset(&sin, 0, sizeof(sin));
 #ifdef HAVE_SALEN
 					sin.sin_len = sizeof(sin);
@@ -344,7 +343,6 @@ libsl_init(int pscnet_mode, int ismds)
 					    &sin, LNET_NIDNET(*nidp),
 					    &lent);
 				}
-
 			}
 	PLL_ULOCK(&globalConfig.gconf_sites);
 
