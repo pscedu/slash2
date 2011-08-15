@@ -116,7 +116,8 @@ sli_rii_handle_replread(struct pscrpc_request *rq)
 
 	slvr_slab_prep(slvr_ref, SL_READ);
 	slvr_repl_prep(slvr_ref, SLVR_REPLSRC);
-	slvr_io_prep(NULL, NULL, slvr_ref, 0, mq->len, SL_READ);
+	//XXX write me for AIO
+	slvr_io_prep(slvr_ref, 0, mq->len, SL_READ, NULL);
 	iov.iov_base = slvr_ref->slvr_slab->slb_base;
 	iov.iov_len = mq->len;
 
@@ -156,7 +157,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w,
 			/* SLVR_DATARDY is set in wio_done
 			 *    when the slvr lock is taken again.
 			 */
-			rc = slvr_fsbytes_wio(NULL, s, slvrsiz, 0);
+			rc = slvr_fsbytes_wio(s, slvrsiz, 0);
 		}
 	}
 	if (rc) {
@@ -254,7 +255,7 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 
 	slvr_repl_prep(s, SLVR_REPLDST);
 
-	rc = slvr_io_prep(NULL, NULL, s, 0, mq->len, SL_WRITE);
+	rc = slvr_io_prep(s, 0, mq->len, SL_WRITE, NULL);
 	if (rc)
 		goto out;
 

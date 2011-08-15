@@ -66,10 +66,11 @@ sli_ric_handle_connect(struct pscrpc_request *rq)
 __static int
 sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 {
-	uint32_t tsize, sblk, roff[RIC_MAX_SLVRS_PER_IO], len[RIC_MAX_SLVRS_PER_IO];
+	uint32_t tsize, sblk, roff[RIC_MAX_SLVRS_PER_IO], 
+		len[RIC_MAX_SLVRS_PER_IO];
 	struct slvr_ref *slvr_ref[RIC_MAX_SLVRS_PER_IO];
 	struct iovec iovs[RIC_MAX_SLVRS_PER_IO];
-	struct sli_iocb_set *iocbs = NULL;
+	struct sli_aiocb_reply *aiocbr = NULL;
 	struct bmap_iod_info *biodi;
 	struct slash_fidgen *fgp;
 	struct fidc_membh *fcmh;
@@ -124,7 +125,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 *   XXX this check assumes that mq->offset has not been made
 	 *     bmap relative (ie it's filewise).
 	 */
-	//if ((mq->offset + mq->size) >= ((bmapno + 1) * SLASH_BMAP_SIZE)) {
 	if ((mq->offset + mq->size) > SLASH_BMAP_SIZE) {
 		psclog_errorx("req offset / size outside of the bmap's "
 		    "address range off=%u len=%u",
@@ -200,10 +200,12 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		/* Fault in pages either for read or RBW.
 		 */
 		len[i] = MIN(tsize, SLASH_SLVR_SIZE - roff[i]);
-		rv = slvr_io_prep(rq, &iocbs, slvr_ref[i], roff[i], len[i], rw);
-		DEBUG_SLVR(((rv && rv != -SLERR_AIOWAIT) ?
-			    PLL_WARN : PLL_INFO), slvr_ref[i],
-			   "post io_prep rw=%d rv=%zd", rw, rv);
+		rv = slvr_io_prep(slvr_ref[i], roff[i], len[i], rw, 
+			  &aiocbr);
+
+		DEBUG_SLVR(((rv && rv != -SLERR_AIOWAIT) ? 
+		    PLL_WARN : PLL_INFO), slvr_ref[i], 
+		   "post io_prep rw=%d rv=%zd", rw, rv);
 
 		/* mq->offset is the offset into the bmap, here we must
 		 *  translate it into the offset of the sliver.
@@ -219,19 +221,49 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 	psc_assert(!tsize);
 
-	if (iocbs) {
+	if (aiocbr) {
+		struct slvr_ref *s;
+
 		psc_assert(rv == -SLERR_AIOWAIT);
+		/* Setup first since this aiocb needs to be attached
+		 *   to an aio'd sliver ASAP.
+		 */
+		sli_aio_reply_setup(aiocbr, rq, mq->size, mq->offset, iovs,
+			    nslvrs, rw);
 
-		spinlock(&iocbs->iocbs_lock);
-		memcpy(iocbs->iocbs_iovs, iovs, sizeof(iovs));
-		iocbs->iocbs_niov = nslvrs;
-		iocbs->iocbs_flags |= SLI_IOCBSF_DONE;
-		psc_waitq_wakeall(&iocbs->iocbs_waitq);
-		freelock(&iocbs->iocbs_lock);
+		/* Now check for early completion.   If all slvrs are ready, 
+		 *   then we must reply with the data now.  Otherwise, we'll
+		 *   never be woken since the aio cb(s) have been run.
+		 */
+		spinlock(&aiocbr->aiocbr_lock);
 
-		mp->rc = SLERR_AIOWAIT;
-		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
-		goto out;
+		for (i = 0; i < nslvrs; i++) {
+			s = slvr_ref[i];
+
+			SLVR_LOCK(s);
+			if (s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR)) {
+				DEBUG_SLVR(PLL_NOTIFY, s, "aio early ready");
+				SLVR_ULOCK(s);
+
+			} else {
+				pll_add(&s->slvr_pndgaios, aiocbr);
+				aiocbr->aiocbr_slvratt = s;
+				psc_assert(s->slvr_flags & SLVR_AIOWAIT);
+				SLVR_ULOCK(s);
+
+				DEBUG_SLVR(PLL_NOTIFY, s, "aio wait");
+				break;
+			}				
+		}
+		freelock(&aiocbr->aiocbr_lock);
+
+		if (i != nslvrs) {
+			mp->rc = SLERR_AIOWAIT;
+
+			pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
+			goto out;
+		} else
+			sli_aio_aiocbr_release(aiocbr);
 	}
 
 	mp->rc = rsx_bulkserver(rq,
@@ -256,8 +288,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		goto out;
 	}
 
-	iocbs = NULL;
-
 	/*
 	 * Write the sliver back to the filesystem, but only the blocks
 	 * which are marked '0' in the bitmap.  Here we don't care about
@@ -279,8 +309,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			    SLASH_SLVR_BLKSZ, tsize);
 
 			tsize -= tsz;
-			rv = slvr_fsbytes_wio(&iocbs, slvr_ref[i], tsz,
-			    sblk);
+			rv = slvr_fsbytes_wio(slvr_ref[i], tsz, sblk);
 			if (rv)
 				goto out;
 
