@@ -210,23 +210,67 @@ slcfg_ifcmp(const char *a, const char *b)
 	return (strcmp(ia, ib));
 }
 
+struct lnetif_pair {
+	uint32_t		 net;
+	char			 ifn[IFNAMSIZ];
+	struct psclist_head	 lentry;
+};
+
+void
+slcfg_add_lnet(struct psclist_head *hd, struct ifaddrs *ifa,
+    void *sa, uint32_t net, struct lnetif_pair **lentp)
+{
+	struct lnetif_pair *i, *lent = *lentp;
+	char buf[PSCRPC_NIDSTR_SIZE], ibuf[PSCRPC_NIDSTR_SIZE];
+	int netcmp = 1;
+
+	/* get destination routing interface */
+	pflnet_getifnfordst(ifa, sa, lent->ifn);
+	lent->net = net;
+
+	pscrpc_net2str(lent->net, buf);
+
+	/*
+	 * Ensure mutual exclusion of this interface and Lustre network,
+	 * ignoring any interface aliases.
+	 */
+	psclist_for_each_entry(i, hd, lentry) {
+		netcmp = i->net == lent->net;
+
+		if (netcmp ^ slcfg_ifcmp(lent->ifn, i->ifn)) {
+			pscrpc_net2str(i->net, ibuf);
+			psc_fatalx("network/interface pair %s:%s "
+			    "conflicts with %s:%s",
+			    buf, lent->ifn,
+			    ibuf, i->ifn);
+		}
+
+		/* if the same, don't process more */
+		if (!netcmp)
+			return;
+	}
+
+	psclist_add(&lent->lentry, hd);
+	*lentp = lent = PSCALLOC(sizeof(*lent));
+	INIT_PSC_LISTENTRY(&lent->lentry);
+}
+
 void
 libsl_init(int pscnet_mode, int ismds)
 {
-	struct {
-		char			*net;
-		char			 ifn[IFNAMSIZ];
-		struct psclist_head	 lentry;
-	} *lent, *lnext;
-	char ltmp[LNETS_MAX], lnetstr[LNETS_MAX];
-	char pbuf[6], *p, addrbuf[HOST_NAME_MAX];
+	char lnetstr[LNETS_MAX], pbuf[6], *p, addrbuf[HOST_NAME_MAX];
+	char netbuf[PSCRPC_NIDSTR_SIZE], ltmp[LNETS_MAX];
 	struct addrinfo hints, *res, *res0;
-	int netcmp, error, rc, j, k;
-	PSCLIST_HEAD(lnets_hd);
+	struct lnetif_pair *lent, *lnext;
+	struct sockaddr_in sin;
 	struct sl_resource *r;
 	struct ifaddrs *ifa;
 	struct sl_resm *m;
 	struct sl_site *s;
+	PSCLIST_HEAD(lnets_hd);
+	int error, rc, j, k;
+	lnet_nid_t *nidp;
+	uint32_t net;
 
 	psc_assert(pscnet_mode == PSCNET_CLIENT ||
 	    pscnet_mode == PSCNET_SERVER);
@@ -269,7 +313,9 @@ libsl_init(int pscnet_mode, int ismds)
 				strlcpy(addrbuf, p + 1, sizeof(addrbuf));
 				p = strrchr(addrbuf, '@');
 				psc_assert(p);
-				*p = '\0';
+				*p++ = '\0';
+
+				net = libcfs_str2net(p);
 
 				/* get numerical addresses */
 				memset(&hints, 0, sizeof(hints));
@@ -281,43 +327,24 @@ libsl_init(int pscnet_mode, int ismds)
 					psc_fatalx("%s: %s", addrbuf,
 					    gai_strerror(error));
 
-				for (res = res0; res; res = res->ai_next) {
-					/* get destination routing interface */
-					pflnet_getifnfordst(ifa,
-					    res->ai_addr, lent->ifn);
-					lent->net = strrchr(m->resm_addrbuf, '@') + 1;
-
-					/*
-					 * Ensure mutual exclusion of this
-					 * interface and Lustre network,
-					 * ignoring any interface aliases.
-					 */
-					netcmp = 1;
-					psclist_for_each_entry(lnext,
-					    &lnets_hd, lentry) {
-						netcmp = strcmp(lnext->net,
-						    lent->net);
-
-						if (netcmp ^
-						    slcfg_ifcmp(lent->ifn, lnext->ifn))
-							psc_fatalx("network/interface "
-							    "pair %s:%s conflicts with "
-							    "%s:%s",
-							    lent->net, lent->ifn,
-							    lnext->net, lnext->ifn);
-						/* if the same, don't process more */
-						if (!netcmp)
-							break;
-					}
-
-					if (netcmp) {
-						psclist_add(&lent->lentry, &lnets_hd);
-
-						lent = PSCALLOC(sizeof(*lent));
-						INIT_PSC_LISTENTRY(&lent->lentry);
-					}
-				}
+				for (res = res0; res; res = res->ai_next)
+					slcfg_add_lnet(&lnets_hd, ifa,
+					    res->ai_addr, net, &lent);
 				freeaddrinfo(res0);
+
+				DYNARRAY_FOREACH(nidp, k, &m->resm_nids) {
+					memset(&sin, 0, sizeof(sin));
+#ifdef HAVE_SALEN
+					sin.sin_len = sizeof(sin);
+#endif
+					sin.sin_family = AF_INET;
+					sin.sin_addr.s_addr =
+					    LNET_NIDADDR(*nidp);
+					slcfg_add_lnet(&lnets_hd, ifa,
+					    &sin, LNET_NIDNET(*nidp),
+					    &lent);
+				}
+
 			}
 	PLL_ULOCK(&globalConfig.gconf_sites);
 
@@ -326,8 +353,9 @@ libsl_init(int pscnet_mode, int ismds)
 
 	lnetstr[0] = '\0';
 	psclist_for_each_entry_safe(lent, lnext, &lnets_hd, lentry) {
+		pscrpc_net2str(lent->net, netbuf);
 		k = snprintf(ltmp, sizeof(ltmp), "%s%s(%s)",
-		    lnetstr[0] == '\0' ? "" : ",", lent->net, lent->ifn);
+		    lnetstr[0] == '\0' ? "" : ",", netbuf, lent->ifn);
 		if (k >= (int)sizeof(ltmp)) {
 			k = -1;
 			errno = ENAMETOOLONG;
