@@ -46,9 +46,9 @@ struct psc_dynarray	lnet_prids = DYNARRAY_INIT;
 struct sl_resm *
 libsl_resm_lookup(int ismds)
 {
-	char nidbuf[PSCRPC_NIDSTR_SIZE];
+	struct sl_resm *m, *resm = NULL;
 	struct sl_resource *res = NULL;
-	struct sl_resm *resm = NULL;
+	char nidbuf[PSCRPC_NIDSTR_SIZE];
 	lnet_process_id_t *pp;
 	int i;
 
@@ -56,21 +56,23 @@ libsl_resm_lookup(int ismds)
 		if (LNET_NETTYP(LNET_NIDNET(pp->nid)) == LOLND)
 			continue;
 
-		resm = psc_hashtbl_search(&globalConfig.gconf_nid_hashtbl,
+		m = psc_hashtbl_search(&globalConfig.gconf_nid_hashtbl,
 		    NULL, NULL, &pp->nid);
 		/* Every nid found by lnet must be a resource member. */
+		if (m == NULL)
+			continue;
 		if (resm == NULL)
-			continue;
+			resm = m;
 
-		if (ismds && resm->resm_type != SLREST_MDS)
+		if (ismds && m->resm_type != SLREST_MDS)
 			continue;
-		if (!ismds && resm->resm_type == SLREST_MDS)
+		if (!ismds && m->resm_type == SLREST_MDS)
 			continue;
 
 		if (res == NULL)
-			res = resm->resm_res;
+			res = m->resm_res;
 		/* All nids must belong to the same resource */
-		else if (res != resm->resm_res)
+		else if (res != m->resm_res)
 			psc_fatalx("nids must be members of same resource (%s)",
 			    pscrpc_nid2str(pp->nid, nidbuf));
 	}
