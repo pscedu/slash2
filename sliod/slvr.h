@@ -52,10 +52,10 @@ struct slvr_ref {
 	uint32_t		 slvr_crc_eoff;	/* crc region length */
 	uint32_t		 slvr_crc_loff;	/* last crc end */
 	uint64_t		 slvr_crc;	/* accumulator  */
-	int32_t                  slvr_err;
+	int32_t			 slvr_err;
 	psc_spinlock_t		 slvr_lock;
 	void			*slvr_pri;	/* backptr (bmap_iod_info) */
-	struct sli_iocb         *slvr_iocb;
+	struct sli_iocb		*slvr_iocb;
 	struct sl_buffer	*slvr_slab;
 	struct psc_lockedlist    slvr_pndgaios;
 	struct psclist_head	 slvr_lentry;	/* dirty queue */
@@ -77,7 +77,7 @@ struct slvr_ref {
 #define	SLVR_REPLSRC		(1 << 12)	/* slvr is replication source */
 #define	SLVR_REPLDST		(1 << 13)	/* slvr is replication destination */
 #define SLVR_REPLFAIL		(1 << 14)	/* replication op failed */
-#define SLVR_AIOWAIT            (1 << 15)       /* early return for AIO */
+#define SLVR_AIOWAIT		(1 << 15)	/* early return for AIO */
 
 #define SLVR_CRCLEN(s)		((s)->slvr_crc_eoff - (s)->slvr_crc_soff)
 
@@ -149,7 +149,7 @@ struct slvr_ref {
 	(s)->slvr_flags & SLVR_SLBFREEING	? "b" : "-",		\
 	(s)->slvr_flags & SLVR_REPLSRC		? "S" : "-",		\
 	(s)->slvr_flags & SLVR_REPLDST		? "T" : "-",		\
-	(s)->slvr_flags & SLVR_REPLFAIL		? "x" : "-",            \
+	(s)->slvr_flags & SLVR_REPLFAIL		? "x" : "-",		\
 	(s)->slvr_flags & SLVR_AIOWAIT		? "a" : "-"
 
 #define DEBUG_SLVR(level, s, fmt, ...)					\
@@ -167,32 +167,32 @@ struct slvr_ref {
 #define RIC_MAX_SLVRS_PER_IO	2
 
 struct sli_aiocb_reply {
-	struct psc_listentry      aiocbr_lentry;
+	struct psc_listentry	  aiocbr_lentry;
 	struct iovec		  aiocbr_iovs[RIC_MAX_SLVRS_PER_IO];
-	struct slvr_ref		 *aiocbr_slvrs[RIC_MAX_SLVRS_PER_IO];	
-	struct slvr_ref          *aiocbr_slvratt;
+	struct slvr_ref		 *aiocbr_slvrs[RIC_MAX_SLVRS_PER_IO];
+	struct slvr_ref		 *aiocbr_slvratt;
 	psc_spinlock_t		  aiocbr_lock;
 	int			  aiocbr_flags;
-	int                       aiocbr_nslvrs;	
+	int			  aiocbr_nslvrs;
 	int			  aiocbr_niov;
 	int			  aiocbr_rc;
 	struct pscrpc_export	 *aiocbr_peer;
 	struct srt_bmapdesc	  aiocbr_sbd;
 	uint64_t		  aiocbr_id;
 	enum rw			  aiocbr_rw;
-	uint32_t                  aiocbr_len;
-	uint32_t                  aiocbr_off;
+	uint32_t		  aiocbr_len;
+	uint32_t		  aiocbr_off;
 };
 
 #define SLI_AIOCBSF_READY		(1 << 0)
 
 struct sli_iocb {
 	struct psc_listentry	  iocb_lentry;
-	struct slvr_ref          *iocb_slvr;
+	struct slvr_ref		 *iocb_slvr;
 	struct aiocb		  iocb_aiocb;
-	ssize_t                   iocb_len;
-	void                    (*iocb_cbf)(struct sli_iocb *);
-	int                       iocb_rc;
+	ssize_t			  iocb_len;
+	void			(*iocb_cbf)(struct sli_iocb *);
+	int			  iocb_rc;
 };
 
 struct slvr_ref *
@@ -201,7 +201,7 @@ void	slvr_cache_init(void);
 void	slvr_clear_inuse(struct slvr_ref *, int, uint32_t);
 int	slvr_do_crc(struct slvr_ref *);
 ssize_t	slvr_fsbytes_wio(struct slvr_ref *, uint32_t, uint32_t);
-ssize_t	slvr_io_prep(struct slvr_ref *, uint32_t, uint32_t, enum rw, 
+ssize_t	slvr_io_prep(struct slvr_ref *, uint32_t, uint32_t, enum rw,
 	     struct sli_aiocb_reply **);
 void	slvr_repl_prep(struct slvr_ref *, int);
 void	slvr_rio_done(struct slvr_ref *);
