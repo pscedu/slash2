@@ -508,10 +508,7 @@ sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp,
 		error = SLERR_AIOWAIT;
 	} else
 		slvr_iocb_release(iocb);
-
  out:
-	if (error)
-		sli_aio_aiocbr_release(*aiocbrp);
 	return (-error);
 }
 
