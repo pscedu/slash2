@@ -441,3 +441,4 @@ API rename
   entries.  But we need a tool or edit the disk file manually to be compatible.
 
   We might want to do the same thing for metadata server.
+- add msctl -X to cancel a replication
