@@ -135,7 +135,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	/* trim trailing '/' chars */
 	for (p = fidfn + len; *p == '/' && p > fidfn; p--)
 		*p = '\0';
-	for (p = fidfn; *p; p = np) {
+	for (p = fidfn; p; p = np) {
 		/* skip first '/' chars */
 		while (*p == '/')
 			p++;
