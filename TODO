@@ -18,21 +18,7 @@ S2 PSC Archival FS TODO
 Listed here are pending items required for the PSC archiver project.  These
 items should be viewed as high priority.
 
-1)  File import.  This is needed for the migration procedure from tahini
-to the new S2 I/O servers.  Items required for support:
-	a) Metadata structure support for bmap with no checksums.  Checksums
-	are computed and stored on replication.
-
-	b) Import RPC.  This will look something like a create call where
-	the MDS creates the file and returns the FID.  On success, the
-	import utility will use the FID as a hardlink target into the
-	local immutable namespace.
-
-	c) If we plan to support user read procedures from tahini, we'll
-	need to modify the timeout structure for read RPCs to the sliod.
-	In addition, we'll need to ensure that sliod and ms threads aren't
-	blocked in a manner which prevents other applications from doing
-	work.
+1) replication of imported files should create CRCs
 
 2) Cluster No Share I/O Service type.  Cluster_no_share has been on the
 roadmap for some time but it's requirements are problematic given the
@@ -45,14 +31,6 @@ servers which the MDS uses in bmap assignment.
 changes we'll be forced to modify internal MDS structures manually and
 will be forced to restart all clients and sliods.
 
-4) To support archiver reads, we'll need to place fuse requests onto a
-list such that we do not tie up fuse fsthreads.  Once the reads are satisfied
-the request will be replied.
-
-A similar mechanism may be needed on the sliod so that io threads aren't
-needlessly blocked on tape accesses.
-
-Question:  are non-blocking reads or aio supported by XFS / DMAPI / DMF?
 -----------------------------------------------------------------------
 * I/O Stats for client and sliod
   - read and write sizes from the app (or for sliod - from the client).
@@ -73,9 +51,14 @@ different rpc's or even rpcsets.  Essentially the biorq doesn't complete
 until the window id for each bmpce is <= than the last processed bmpce window.
 -----------------------------------------------------------------------
 * Restore Issues:
-1) need to split 64-bit inode space into upper and lower segments.  Each mds in the system will be given a start # and range for use in the upper segment.  The upper value will be incremented on restore (when the journal does not agree with the cursor) or when all id's in the lower segment have been exhausted
+1) need to split 64-bit inode space into upper and lower segments.  Each
+   MDS in the system will be given a start # and range for use in the upper
+   segment.  The upper value will be incremented on restore (when the
+   journal does not agree with the cursor) or when all IDs in the lower
+   segment have been exhausted.
 
-2) How does sliod and mds deal with the LWM in post restore scenarios?  Atm, the sliod doesn't like when the LWM decreases.
+2) How does sliod and mds deal with the LWM in post restore scenarios?
+   Atm, the sliod doesn't like when the LWM decreases.
 3) How do we deal with CRC's and size updates which were lost on mds restore
 4) distillation XID - how do we cope with this when the journal has been reformatted
 
@@ -88,10 +71,6 @@ until the window id for each bmpce is <= than the last processed bmpce window.
 	Worse yet, the leases for the blocked clients may expire causing
 	more problems.  Unfortunately, all of this is exacerbated by the
 	lack of flow control and aggressive read ahead.
-
------------------------------------------------------------------------
-* Revisit readdir.  Make sure we're not making unnecessary round trips for
-bulks when the directories are small.
 
 -----------------------------------------------------------------------
 
@@ -161,20 +140,10 @@ invoking the GC routines for that fid+gen and then create a new inode.  Of cours
 this may break semantics for some apps which assume the same inode # to be used.
 
 * Truncate Implementation
-  Non O_TRUNC but otherwise aligned trunc operations should be fairly simple to implement.
-  Here two things are required:
-	 1. Record the reclaimable regions as BREPL_GARBAGE so the the
-	    IONs may reclaim the space.
-	 2. When all IONs are known to be clear, zero out the bmap
-	    descriptors within the metafile: when an notification update
-	    from an ION is received, if all states are INVALID, ptrunc
-	    the metafile.
-
-  The question is, how do we deal with unaligned truncates?  We need
-  some way to denote that the bmap crc for the affected sliver is no
-  longer valid.  Actually such a construct is probably needed in other
-  places as well.  On truncate, the value of ino_lblk needs to be reset
-  as does ino_lblk_sz.
+  - holdup:
+     (o) sliod needs to perform the actual truncate via the slvr API
+     (o) sliod then needs to send a CRC update
+     (o) MDS needs to account for ptrunc/trunc changes in st_blocks
 
 -----------------------------------------------------------------------
 1/26/11
@@ -302,15 +271,11 @@ in release but I don't see good performance for 'ls -al'.
 
 sliod import
 - slictl import path
-    lookup path
-
-    approaches:
+    other approaches:
     (o) link into slfidns, calculate and transmit CRCS,
 	delete link from user path.
     (o) link into slfidns, calculate and transmit CRCs,
 	wait for CRC failure and auto deject.
-    (o) link into slfidns, flag slivers to ignore CRCs,
-	always allow access.
 
 sliod export
 - slictl export path
@@ -353,13 +318,10 @@ MDS must do this for scheduling traffic between sliods
   consequence: kill authbuf
 - sprinkle some iostats on zfs, namespace changelog
 - add journal I/O test mode to slashd
-- tie zfslog to psclog
 
 ---------------
 
 - failure of connections
-    (o) have mount_slash provide the option of waiting or immediately
-	returning EIO
     (o) write messages to stderr of the process trying to do I/O when
 	the connections are down
 
@@ -381,7 +343,6 @@ API rename
 - mdsio_fid_t -> mdsio_inum_t
 - mdsio_data -> mdsio_fh_t
 
-- upsch items are not getting removed on completion
 - ensure PINGs only happen every 30 seconds
 - GETATTR should never return nlinks=0
 - replace FCMH_CTOR_FAILED with fmi_ctor_rc
@@ -401,18 +362,11 @@ API rename
     (o) mark the CRC for this bmap as unknown (we don't do this)
 
 - use pfl_memchk instead of null inode structures for memcmp
-- SRMT_GETBMAPMINSEQ is not handled by slashd
 - CRCs are currently ignored in the I/O path
-- need a way to view a directory's newbmap_repl_policy
-    (o) maybe in msctl -r view, so we can see which MDS a dir is
-	centralized with
 - need a general mechanism to pass data between msctl/slictl/slmctl
   so we get all the functionality everywhere and don't have to copy huge
   chunks of code
 - slmctl -s peertraffic -s replrqs -s diskusage
-- initialize new file repl table from parent dir to help with
-  persistence policies
-	- or just tell users to msctl -R everytime...
 - ensure all system errno values in rpc msgs are standardized
 - convert CONF_LOCK to a rwlock
 - we can't hold fcmh in memory at all times just because PTRUNC has to
@@ -420,8 +374,6 @@ API rename
   fid to the ptrunc worker and when it processes it loads the fcmh.
 - have slashd umount /zfs-kstat on teardown
 - allow override of /zfs-kstat for running multiple instances of slashd/zfs-fuse
-- disable RENAME and other ops are files in SL_RPATH_META_DIR (e.g. mv .slfidns .blah)
-- clean up metadata (and replica garbage) for any files clobbered by RENAME, LINK
 - add a generic SRMT_BMAPCTL that bunches up ops such as WAKE, RELEASE,
   DIO, etc.
 - do full truncate and unlink do the right things while ptrunc is resolving?
@@ -433,7 +385,6 @@ API rename
 - patch fuse.ko since fuse_notify_entry_inval() causes segfault
 - add zfs SPA version to slashd ctlparam
    - is this needed?  /zfs-kstat
-- use umount -l if it is supported at teardown
 - client needs to track when MDS goes down and recheck pinned ptrunc
   bmaps for resolvement
 - on MDS resm failure inside msl, clear a bit on all fcmh's pinned by ptrunc
@@ -471,7 +422,6 @@ API rename
 - make sure replrq over garbage does the right thing in sliod backfs (zeroing)
 - mds: do not allow repl changes while IN_PTRUNC
 - should replay crcupdate set ion to VALID ?
-- support multi addresses for resms
 - for long running I/O patterns by processes that issue no other syscalls,
   do fcmh's timeout and reload from MDS sst_size/gen values?
     - need fcmh_get() in mslfsop_read()
@@ -479,19 +429,14 @@ API rename
 - msl with sst_size local caching should still take higher values from MDS
   in cases of direct I/O
 - use uint32_t for nanosecond atime/mtime/ctime in znode_phys to save space
-- remote separate sl2 mtime/atime in slashd
-- eradicate getrqstatus()
-- keep testing replication
+- remove separate sl2 mtime/atime in slashd
 - 'slmctl stop' should completely wait for all ops to prevent relying on journal
 - upsch will not scale without multiwait waker arg
 - ensure user mounting works
 - add provisions to ensure journal disk doesnt overwrite something special
-- import
-  - sliod links/symlinks
-  - MDS immutable/readonly
 - eradicate resm_addrbuf
 
-- Add the ability to remove an I/O server.  Right now struct reclaim_prog_entry
+- Add the ability to remove an I/O server from slcfg.  Right now struct reclaim_prog_entry
   has a field "pad".  Should be easy to turn it into a flag to mark obsolete
   entries.  But we need a tool or edit the disk file manually to be compatible.
 
