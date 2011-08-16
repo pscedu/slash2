@@ -237,7 +237,7 @@ sli_aio_aiocbr_new(void)
 
 	a = psc_pool_get(sli_aiocbr_pool);
 	memset(a, 0, sizeof(*a));
-	
+
 	INIT_SPINLOCK(&a->aiocbr_lock);
 	INIT_PSC_LISTENTRY(&a->aiocbr_lentry);
 
@@ -273,7 +273,7 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 			mq->rc = s->slvr_err;
 		SLVR_ULOCK(s);
 	}
-	
+
 	csvc = sli_getclcsvc(a->aiocbr_peer);
 	if (csvc == NULL)
 		goto out;
@@ -294,12 +294,12 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 			a->aiocbr_iovs, a->aiocbr_niov);
 
 	SL_RSX_WAITREP(csvc, rq, mp);
-	
+
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
-	
+
 	pscrpc_export_put(a->aiocbr_peer);
 
  out:
@@ -314,9 +314,9 @@ slvr_aio_tryreply(struct sli_aiocb_reply *a)
 {
 	struct slvr_ref *s;
 	int i, ready;
-		
+
 	spinlock(&a->aiocbr_lock);
-	
+
 	for (ready = 0, i = 0; i < a->aiocbr_nslvrs; i++) {
 		s = a->aiocbr_slvrs[i];
 		SLVR_LOCK(s);
@@ -324,9 +324,9 @@ slvr_aio_tryreply(struct sli_aiocb_reply *a)
 			ready++;
 
 		else if (s->slvr_flags & SLVR_AIOWAIT) {
-			/* One of our slvrs is still waiting on aio 
+			/* One of our slvrs is still waiting on aio
 			 *    completion.  Add this reply to that slvr.
-			 */			
+			 */
 			a->aiocbr_slvratt = s;
 			pll_add(&s->slvr_pndgaios, a);
 			SLVR_ULOCK(s);
@@ -387,7 +387,7 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 	} else {
 		s->slvr_flags |= SLVR_DATARDY;
 		DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
-		
+
 		psc_vbitmap_invert(s->slvr_slab->slb_inuse);
 	}
 	SLVR_WAKEUP(s);
@@ -413,7 +413,7 @@ sli_aio_iocb_new(struct slvr_ref *s)
 __static void
 slvr_iocb_release(struct sli_iocb *iocb)
 {
-        struct slvr_ref *s = iocb->iocb_slvr;
+	struct slvr_ref *s = iocb->iocb_slvr;
 
 	SLVR_LOCK(s);
 	psc_assert(s->slvr_iocb == iocb);
@@ -421,14 +421,14 @@ slvr_iocb_release(struct sli_iocb *iocb)
 	s->slvr_iocb = NULL;
 	SLVR_ULOCK(s);
 	psc_pool_return(sli_iocb_pool, iocb);
-}	
+}
 
 void
 sli_aio_reply_setup(struct sli_aiocb_reply *a, struct pscrpc_request *rq,
     uint32_t len, uint32_t off, struct iovec *iovs, int niovs, enum rw rw)
 {
 	struct srm_io_req *mq;
-        struct srm_io_rep *mp;
+	struct srm_io_rep *mp;
 	int i;
 
 	for (i = 0; i < a->aiocbr_nslvrs; i++) {
@@ -436,11 +436,11 @@ sli_aio_reply_setup(struct sli_aiocb_reply *a, struct pscrpc_request *rq,
 		psc_assert(a->aiocbr_slvrs[i]->slvr_pndgreads > 0);
 	}
 
-	psc_assert(niovs == a->aiocbr_nslvrs);	
-	
+	psc_assert(niovs == a->aiocbr_nslvrs);
+
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 	memcpy(&a->aiocbr_sbd, &mq->sbd, sizeof(mq->sbd));
-	
+
 	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 	mp->id = a->aiocbr_id = psc_atomic64_inc_getnew(&sli_aio_id);
 
@@ -455,7 +455,7 @@ sli_aio_reply_setup(struct sli_aiocb_reply *a, struct pscrpc_request *rq,
 
 
 int
-sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp, 
+sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp,
 	 int issue)
 {
 	struct sli_iocb *iocb;
@@ -487,10 +487,10 @@ sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp,
 	psc_assert(!(s->slvr_flags & SLVR_DATARDY));
 	psc_assert(s->slvr_flags & SLVR_AIOWAIT);
 	psc_assert(!s->slvr_iocb);
-	
+
 	s->slvr_iocb = iocb;
 	SLVR_ULOCK(s);
-	
+
 	aio = &iocb->iocb_aiocb;
 	aio->aio_fildes = slvr_2_fd(s);
 	/* Read the entire sliver.
@@ -498,7 +498,7 @@ sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp,
 	aio->aio_offset = slvr_2_fileoff(s, 0);
 	aio->aio_buf = slvr_2_buf(s, 0);
 	aio->aio_nbytes = SLASH_SLVR_SIZE;
-	
+
 	aio->aio_sigevent.sigev_notify = SIGEV_SIGNAL;
 	aio->aio_sigevent.sigev_signo = SIGIO;
 	aio->aio_sigevent.sigev_value.sival_ptr = &aio;
@@ -514,7 +514,7 @@ sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp,
 
 
 __static ssize_t
-slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw, 
+slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
   struct sli_aiocb_reply **aiocbr)
 {
 	int i, nblks, save_errno = 0;
@@ -604,8 +604,8 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 	else {
 		v8 = slvr_2_buf(s, sblk);
 		DEBUG_SLVR(PLL_INFO, s, "ok %s size=%u off=%"PRIu64
-		    " rc=%zd nblks=%d v8(%"PRIx64")", 
-		    (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"), 
+		    " rc=%zd nblks=%d v8(%"PRIx64")",
+		    (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
 		    size, slvr_2_fileoff(s, sblk), rc, nblks, *v8);
 		rc = 0;
 	}
@@ -645,7 +645,7 @@ slvr_fsbytes_rio(struct slvr_ref *s, struct sli_aiocb_reply **aiocbr)
 			continue;
 		}
 		if (nblks) {
-			rc = slvr_fsio(s, blk, nblks * SLASH_SLVR_BLKSZ, 
+			rc = slvr_fsio(s, blk, nblks * SLASH_SLVR_BLKSZ,
 			       SL_READ, aiocbr);
 			if (rc)
 				goto out;
@@ -656,7 +656,7 @@ slvr_fsbytes_rio(struct slvr_ref *s, struct sli_aiocb_reply **aiocbr)
 	}
 
 	if (nblks)
-		rc = slvr_fsio(s, blk, nblks * SLASH_SLVR_BLKSZ, SL_READ, 
+		rc = slvr_fsio(s, blk, nblks * SLASH_SLVR_BLKSZ, SL_READ,
 		       aiocbr);
  out:
 	if (rc == -SLERR_AIOWAIT)
@@ -800,7 +800,7 @@ slvr_slab_prep(struct slvr_ref *s, enum rw rw)
  * @rw: read or write op
  */
 ssize_t
-slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw, 
+slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
      struct sli_aiocb_reply **aiocbr)
 {
 	int i, blks, unaligned[2] = { -1, -1 };
@@ -821,10 +821,10 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 		 */
 		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
 
-		SLVR_WAIT(s, !(s->slvr_flags & 
+		SLVR_WAIT(s, !(s->slvr_flags &
 		       (SLVR_DATARDY | SLVR_DATAERR | SLVR_AIOWAIT)));
 
-		psc_assert((s->slvr_flags & 
+		psc_assert((s->slvr_flags &
 		    (SLVR_DATARDY | SLVR_DATAERR | SLVR_AIOWAIT)));
 
 		if (s->slvr_flags & SLVR_AIOWAIT) {
@@ -1136,7 +1136,7 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *b, enum rw rw)
 		s->slvr_slab = NULL;
 		INIT_PSC_LISTENTRY(&s->slvr_lentry);
 		INIT_SPINLOCK(&s->slvr_lock);
-		pll_init(&s->slvr_pndgaios, struct sli_aiocb_reply, 
+		pll_init(&s->slvr_pndgaios, struct sli_aiocb_reply,
 			 aiocbr_lentry, &s->slvr_lock);
 
 		SPLAY_INSERT(biod_slvrtree, &b->biod_slvrs, s);
@@ -1375,6 +1375,7 @@ dump_sliver_flags(int fl)
 	PFL_PRFLAG(SLVR_REPLSRC, &fl, &seq);
 	PFL_PRFLAG(SLVR_REPLDST, &fl, &seq);
 	PFL_PRFLAG(SLVR_REPLFAIL, &fl, &seq);
+	PFL_PRFLAG(SLVR_AIOWAIT, &fl, &seq);
 	if (fl)
 		printf(" unknown: %x", fl);
 	printf("\n");
