@@ -453,7 +453,6 @@ sli_aio_reply_setup(struct sli_aiocb_reply *a, struct pscrpc_request *rq,
 	a->aiocbr_rw = rw;
 }
 
-
 int
 sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp,
 	 int issue)
@@ -507,11 +506,14 @@ sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp,
 	if (error == 0) {
 		lc_add(&sli_iocb_pndg, iocb);
 		error = SLERR_AIOWAIT;
-	}
- out:
-	return (-error);
-}
+	} else
+		slvr_iocb_release(iocb);
 
+ out:
+	if (error)
+		sli_aio_aiocbr_release(*aiocbrp);
+	return (-error);
+} 
 
 __static ssize_t
 slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
