@@ -255,11 +255,11 @@ sli_aio_aiocbr_release(struct sli_aiocb_reply *a)
 __static void
 slvr_aio_reply(struct sli_aiocb_reply *a)
 {
-	struct slvr_ref *s;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
+	struct slvr_ref *s;
 	int rc, i;
 
 	/* Verify that our slivers are ready for reading.
@@ -297,12 +297,12 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 
 	if (rq)
 		pscrpc_req_finished(rq);
-	if (csvc)
-		sl_csvc_decref(csvc);
 
 	pscrpc_export_put(a->aiocbr_peer);
 
  out:
+	if (csvc)
+		sl_csvc_decref(csvc);
 	for (i = 0; i < a->aiocbr_nslvrs; i++)
 		slvr_rio_done(a->aiocbr_slvrs[i]);
 
@@ -513,7 +513,7 @@ sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp,
 	if (error)
 		sli_aio_aiocbr_release(*aiocbrp);
 	return (-error);
-} 
+}
 
 __static ssize_t
 slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
