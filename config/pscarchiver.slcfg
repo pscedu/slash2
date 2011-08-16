@@ -13,7 +13,7 @@ set allow_exec="
 	/usr/bin/sftp:
 	/usr/bin/rsync:
 	/usr/psc/globus/default/bin/globus-url-copy:
-	/bin/csh.far
+	/usr/psc/shells/csh.far
 ";
 
 # Pull in other/local config files
