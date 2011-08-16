@@ -220,10 +220,10 @@ main(int argc, char *argv[])
 	PRTYPE(struct slconn_thread);
 	PRTYPE(struct slctlmsg_conn);
 	PRTYPE(struct slctlmsg_fcmh);
+	PRTYPE(struct sli_aiocb_reply);
 	PRTYPE(struct sli_cli_csvc_cpart);
 	PRTYPE(struct sli_exp_cli);
 	PRTYPE(struct sli_iocb);
-	PRTYPE(struct sli_iocb_set);
 	PRTYPE(struct sli_repl_workrq);
 	PRTYPE(struct slictlmsg_fileop);
 	PRTYPE(struct slictlmsg_replwkst);
@@ -370,6 +370,8 @@ main(int argc, char *argv[])
 	PRVAL(MDSCOH_BLOCK);
 	PRVAL(MDSCOH_NONBLOCK);
 	PRVAL(MDSIO_FID_ROOT);
+	PRVAL(MDS_IOS_NEED_INIT);
+	PRVAL(MDS_PEER_NEED_INIT);
 	PRVAL(MRSLF_EOF);
 	PRVAL(MSCMT_ADDREPLRQ);
 	PRVAL(MSCMT_DELREPLRQ);
