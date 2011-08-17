@@ -6,14 +6,13 @@
 set port=1307;
 set net=tcp4;
 set allow_exec="
-	/usr/psc/bin/far:
+	/usr/psc/bin/far.bin:
 	/usr/psc/bin/scp:
 	/usr/bin/scp:
 	/usr/psc/bin/sftp:
 	/usr/bin/sftp:
 	/usr/bin/rsync:
-	/usr/psc/globus/default/bin/globus-url-copy:
-	/usr/psc/shells/csh.far
+	/usr/psc/globus/default/bin/globus-url-copy
 ";
 
 # Pull in other/local config files
