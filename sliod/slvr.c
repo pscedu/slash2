@@ -436,7 +436,8 @@ sli_aio_reply_setup(struct sli_aiocb_reply *a, struct pscrpc_request *rq,
 		psc_assert(a->aiocbr_slvrs[i]->slvr_pndgreads > 0);
 	}
 
-	psc_assert(niovs == a->aiocbr_nslvrs);
+	/* some of the slivers may have already been faulted in */ 
+	psc_assert(niovs >= a->aiocbr_nslvrs);
 
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 	memcpy(&a->aiocbr_sbd, &mq->sbd, sizeof(mq->sbd));
@@ -814,7 +815,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 	if (s->slvr_flags & SLVR_FAULTING && !(s->slvr_flags & SLVR_REPLDST)) {
 		/*
 		 * Common courtesy requires us to wait for another
-		 * threads' work FIRST.  Otherwise, we could bail out
+		 * thread's work FIRST.  Otherwise, we could bail out
 		 * prematurely when the data is ready without
 		 * considering the range we want to write.
 		 */
