@@ -442,3 +442,4 @@ API rename
 
   We might want to do the same thing for metadata server.
 - add msctl -X to cancel a replication
+- msctl is broken on 32-bit because of ino # compression
