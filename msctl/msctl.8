@@ -15,7 +15,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES ctl fuse rpc %
-.Dd June 15, 2011
+.Dd August 18, 2011
 .Dt MSCTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -344,7 +344,11 @@ Suppress
 lookups for network addresses.
 .\" }%
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/p.mdoc {
-.\"	log_xr => "in\n.Xr mount_slash 8\n"
+.\"	log_xr => "in\n.Xr mount_slash 8\n",
+.\"	params => {
+.\"		mountpoint	=> "File hierarchy node where SLASH file system is mounted.",
+.\"		pref_ios	=> "Preferred I/O system.",
+.\"	},
 .It Fl p Ar paramspec
 Query/manipulate operational parameters.
 .Ar paramspec
@@ -417,6 +421,8 @@ See the description of
 in
 .Xr mount_slash 8
 for recognized log level values.
+.It Cm mountpoint
+File hierarchy node where SLASH file system is mounted.
 .It Cm pool. Ns Ar name
 Access the memory pool specified by
 .Ar name .
@@ -432,6 +438,8 @@ Threshold for unused items for auto-sized pools before items are freed.
 .It Cm total
 Current number of entries contained in pool.
 .El
+.It Cm pref_ios
+Preferred I/O system.
 .It Cm pscfs.attr_timeout
 Amount of time to cache
 .Xr stat 2
