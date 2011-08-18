@@ -246,6 +246,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 				SLVR_ULOCK(s);
 
 			} else {
+				/* 
+				 * Attach the reply to the first sliver waiting for aio 
+				 * and return AIOWAIT to client later.
+				 */
 				pll_add(&s->slvr_pndgaios, aiocbr);
 				aiocbr->aiocbr_slvratt = s;
 				psc_assert(s->slvr_flags & SLVR_AIOWAIT);
