@@ -405,6 +405,27 @@ msctlparam_mountpoint_get(char buf[PCP_VALUE_MAX])
 	strlcpy(buf, mountpoint, PCP_VALUE_MAX);
 }
 
+void
+msctlparam_prefios_get(char buf[PCP_VALUE_MAX])
+{
+	struct sl_resource *r;
+
+	r = libsl_id2res(prefIOS);
+	strlcpy(buf, r->res_name, PCP_VALUE_MAX);
+}
+
+int
+msctlparam_prefios_set(const char *val)
+{
+	struct sl_resource *r;
+
+	r = libsl_str2res(val);
+	if (r == NULL)
+		return (-1);
+	prefIOS = r->res_id;
+	return (0);
+}
+
 struct psc_ctlop msctlops[] = {
 	PSC_CTLDEFOPS,
 /* ADDREPLRQ		*/ { msctlrep_replrq,		sizeof(struct msctlmsg_replrq) },
@@ -462,6 +483,9 @@ msctlthr_spawn(void)
 	/* XXX: add max_fs_iosz */
 	psc_ctlparam_register_simple("mountpoint",
 	    msctlparam_mountpoint_get, NULL);
+
+	psc_ctlparam_register_simple("pref_ios",
+	    msctlparam_prefios_get, msctlparam_prefios_set);
 
 	thr = pscthr_init(MSTHRT_CTL, 0, msctlthr_begin, NULL,
 	    sizeof(struct psc_ctlthr), "msctlthr");
