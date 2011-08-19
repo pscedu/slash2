@@ -31,7 +31,7 @@ servers which the MDS uses in bmap assignment.
 changes we'll be forced to modify internal MDS structures manually and
 will be forced to restart all clients and sliods.
 
-4) DIO needs to be completed for AIO 
+4) DIO needs to be completed for AIO
 
 -----------------------------------------------------------------------
 * I/O Stats for client and sliod
@@ -445,3 +445,4 @@ API rename
   We might want to do the same thing for metadata server.
 - add msctl -X to cancel a replication
 - msctl is broken on 32-bit because of ino # compression
+- build LNET_ROUTES from slcfg
