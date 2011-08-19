@@ -31,6 +31,8 @@ servers which the MDS uses in bmap assignment.
 changes we'll be forced to modify internal MDS structures manually and
 will be forced to restart all clients and sliods.
 
+4) DIO needs to be completed for AIO 
+
 -----------------------------------------------------------------------
 * I/O Stats for client and sliod
   - read and write sizes from the app (or for sliod - from the client).
