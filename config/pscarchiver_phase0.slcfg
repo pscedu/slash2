@@ -4,7 +4,6 @@
 
 # Archiver configuration
 set port=1301;
-set net=sdp11;
 set pref_mds="archmds@PSCARCH";
 set pref_ios="archsliod@PSCARCH";
 
@@ -18,7 +17,7 @@ site @PSCARCH {
 		desc	= "PSC Arch MDS";
 		type	= mds;
 		id	= 1;
-		nodes	= 10.10.101.60|128.182.100.55@tcp12;
+		nodes	= 10.10.101.60@sdp11|128.182.100.55@tcp12;
 		jrnldev	= /dev/sdah;
 	}
 
@@ -26,7 +25,7 @@ site @PSCARCH {
 		desc	= "PSC Phase0 I/O Server";
 		type	= standalone_fs;
 		id	= 2;
-		nodes	= 10.10.101.155;
+		nodes	= 10.10.101.155@sdp11;
 		fsroot	= /local/s2io;
 	}
 
@@ -34,7 +33,7 @@ site @PSCARCH {
 		desc	= "PSC Replication Target";
 		type	= standalone_fs;
 		id	= 3;
-		nodes	= 10.10.101.82;
+		nodes	= 10.10.101.82@sdp11;
 		fsroot	= /local/p0_archive_backfs;
 	}
 
@@ -43,6 +42,14 @@ site @PSCARCH {
 		type	= archival_fs;
 		id	= 4;
 		nodes	= 128.182.99.122@tcp12;
-		fsroot	= /usr/uo/s2io;
+		fsroot	= /usr/uo;
+	}
+
+	resource uo {
+		desc	= "ue tape";
+		type	= archival_fs;
+		id	= 4;
+		nodes	= 192.70.221.50@tcp13;
+		fsroot	= /usr/uo;
 	}
 }
