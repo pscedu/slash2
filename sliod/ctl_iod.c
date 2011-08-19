@@ -104,6 +104,25 @@ struct sli_import_arg {
 	int			 rc;
 };
 
+/**
+ * sli_import - Import files resident on a sliod backfs into the SLASH2
+ *	namespace.
+ * @fn: target file
+ * @stb: file's attributes.
+ * @arg: arg containing destination info, etc.
+ *
+ * Note: the difference between:
+ *
+ *	# slictl import -R src-dir dst-dir
+ *	# slictl import -R src-dir/ dst-dir
+ *
+ *	# slictl import -R src-dir dst-dir/
+ *	# slictl import -R src-dir/ dst-dir/
+ *
+ * In the first group, the contents under 'src-dir' will be attached
+ * directly inside 'dst-dir' whereas in the second group, a subdir
+ * named 'src-dir' will be created under 'dst-dir'.
+ */
 int
 sli_import(const char *fn, const struct stat *stb, void *arg)
 {
