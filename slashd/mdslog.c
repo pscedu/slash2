@@ -1527,8 +1527,8 @@ mds_journal_init(int disable_propagation)
 
 	/* Find out the highest reclaim batchno and xid */
 
-	batchno = UINT64_MAX;
 	count = size / sizeof(struct reclaim_prog_entry);
+	batchno = count ? UINT64_MAX : 0;
 	for (i = 0; i < count; i++) {
 		res = libsl_id2res(reclaim_prog_buf[i].res_id);
 		if (!RES_ISFS(res)) {
@@ -1617,8 +1617,9 @@ mds_journal_init(int disable_propagation)
 	psc_assert(rc == 0);
 
 	/* Find out the highest update batchno and xid */
-	batchno = UINT64_MAX;
+
 	count = size / sizeof(struct update_prog_entry);
+	batchno = count ? UINT64_MAX : 0;
 	for (i = 0; i < count; i++) {
 		res = libsl_id2res(update_prog_buf[i].res_id);
 		if (res->res_type != SLREST_MDS) {
