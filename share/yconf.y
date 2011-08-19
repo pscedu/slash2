@@ -252,7 +252,7 @@ site_resource	: resource_start resource_def '}' {
 			/* resource name & ID must be unique within a site */
 			DYNARRAY_FOREACH(r, j, &currentSite->site_resources) {
 				if (currentRes->res_id == r->res_id)
-					yyerror("resource %s@%s ID "
+					yyerror("resource %s ID %d "
 					    "already assigned to %s",
 					    currentRes->res_name,
 					    currentRes->res_id,
