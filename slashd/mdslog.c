@@ -1527,8 +1527,8 @@ mds_journal_init(int disable_propagation)
 
 	/* Find out the highest reclaim batchno and xid */
 
+	batchno = UINT64_MAX;
 	count = size / sizeof(struct reclaim_prog_entry);
-	batchno = count ? UINT64_MAX : 0;
 	for (i = 0; i < count; i++) {
 		res = libsl_id2res(reclaim_prog_buf[i].res_id);
 		if (!RES_ISFS(res)) {
@@ -1545,6 +1545,9 @@ mds_journal_init(int disable_propagation)
 	}
 	PSCFREE(reclaim_prog_buf);
 	reclaim_prog_buf = PSCALLOC(nios * sizeof(struct reclaim_prog_entry));
+
+	if (batchno == UINT64_MAX)
+		batchno = 0;
 
 	rc = mds_open_logfile(batchno, 0, 1, &handle);
 	if (rc) {
@@ -1618,8 +1621,8 @@ mds_journal_init(int disable_propagation)
 
 	/* Find out the highest update batchno and xid */
 
+	batchno = UINT64_MAX;
 	count = size / sizeof(struct update_prog_entry);
-	batchno = count ? UINT64_MAX : 0;
 	for (i = 0; i < count; i++) {
 		res = libsl_id2res(update_prog_buf[i].res_id);
 		if (res->res_type != SLREST_MDS) {
@@ -1637,6 +1640,9 @@ mds_journal_init(int disable_propagation)
 	}
 	PSCFREE(update_prog_buf);
 	update_prog_buf = PSCALLOC(npeers * sizeof(struct update_prog_entry));
+
+	if (batchno == UINT64_MAX)
+		batchno = 0;
 
 	rc = mds_open_logfile(batchno, 1, 1, &handle);
 	if (rc) {
