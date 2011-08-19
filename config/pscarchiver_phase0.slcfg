@@ -45,10 +45,10 @@ site @PSCARCH {
 		fsroot	= /usr/uo;
 	}
 
-	resource uo {
+	resource ue {
 		desc	= "ue tape";
 		type	= archival_fs;
-		id	= 4;
+		id	= 5;
 		nodes	= 192.70.221.50@tcp13;
 		fsroot	= /usr/uo;
 	}
