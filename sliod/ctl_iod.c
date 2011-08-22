@@ -149,8 +149,6 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	    S_ISDIR(stb->st_mode) ? "/" : "",
 	    fn + strlen(sfop->sfop_fn));
 
-	psclog_info("import: parent="SLPRI_FG" src=%s, dst=%s", 
-		SLPRI_FG_ARGS(&fg), fn, fidfn);
 	len = strlen(fidfn);
 	if (len)
 		len--;
