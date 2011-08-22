@@ -47,6 +47,8 @@ sli_export(__unusedx const char *fn, __unusedx const struct stat *stb,
 	struct slictlmsg_fileop *sfop = arg;
 	int rc = 0;
 
+	psclog_info("export: src=%s, dst=%s, flags=%d", 
+		sfop->sfop_fn, sfop->sfop_fn2, sfop->sfop_flags);
 	return (rc);
 }
 
@@ -144,7 +146,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	len = strlen(sfop->sfop_fn);
 	while (len > 0 && sfop->sfop_fn[len - 1] == '/')
 		len--;
-	/* preserve hierarchy in src via copying */
+	/* preserve hierarchy in the src tree via copying */
 	snprintf(fidfn, sizeof(fidfn), "%s%s%s", sfop->sfop_fn2,
 	    S_ISDIR(stb->st_mode) ? "/" : "",
 	    fn + strlen(sfop->sfop_fn));
