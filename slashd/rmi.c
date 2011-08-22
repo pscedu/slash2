@@ -423,6 +423,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 		goto out;
 
 	mq->cpn[sizeof(mq->cpn) - 1] = '\0';
+	psclog_info("import: parent="SLPRI_FG" name=%s", SLPRI_FG_ARGS(&p->fcmh_fg), mq->cpn);
 
 	mds_reserve_slot(1);
 	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &rootcreds,
