@@ -148,6 +148,9 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	snprintf(fidfn, sizeof(fidfn), "%s%s%s", sfop->sfop_fn2,
 	    S_ISDIR(stb->st_mode) ? "/" : "",
 	    fn + strlen(sfop->sfop_fn));
+
+	psclog_info("import: parent="SLPRI_FG" src=%s, dst=%s", 
+		SLPRI_FG_ARGS(&fg), fn, fidfn);
 	len = strlen(fidfn);
 	if (len)
 		len--;
@@ -287,6 +290,7 @@ slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct slictlmsg_fileop *sfop = m;
 	struct sli_import_arg a;
 	int fl = 0;
+	char *p;
 
 	/* XXX check that src and dst are on the same mount point. */
 
@@ -304,6 +308,13 @@ slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 	a.rc = 1;
 	if (sfop->sfop_flags & SLI_CTL_FOPF_RECURSIVE)
 		fl |= PFL_FILEWALKF_RECURSIVE;
+
+	p = sfop->sfop_fn + strlen(sfop->sfop_fn) - 1; 
+	while ((*p == '/') && (p > sfop->sfop_fn)) {
+		*p = '\0';
+		p--;
+	}
+
 	pfl_filewalk(sfop->sfop_fn, fl, sli_import, &a);
 	return (a.rc);
 }
