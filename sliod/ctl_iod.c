@@ -149,7 +149,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 
 	srcname = pfl_basename(fn);
 
-	/* preserve hierarchy in the src tree via copying */
+	/* preserve hierarchy in the src tree via concatenation */
 	snprintf(fidfn, sizeof(fidfn), "%s%s%s", sfop->sfop_fn2,
 	    S_ISDIR(stb->st_mode) ? "/" : "",
 	    fn + strlen(sfop->sfop_fn));
