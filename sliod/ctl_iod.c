@@ -137,7 +137,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	struct slash_fidgen tfg, fg;
 	const char *str, *srcname;
 	size_t len;
-	int rc = 0;
+	int rc = 0, noname = 0;
 
 	/* 
 	 * Start from the root of slash2 namespace.  This means
@@ -190,6 +190,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		 * preserve last component from src.
 		 */
 		if (cpn[0] == '\0') {
+			noname = 1;
 			str = strrchr(fn, '/');
 			if (str)
 				str++;
@@ -254,6 +255,8 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc == 0)
 			rc = mp->rc;
+		if (!rc && noname)
+			strlcpy(sfop->sfop_fn2, srcname, PATH_MAX);
 	} else {
 		struct srm_import_req *mq;
 		struct srm_import_rep *mp;
@@ -285,6 +288,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		    S_ISDIR(stb->st_mode) ? "/" : "");
 
  out:
+
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
