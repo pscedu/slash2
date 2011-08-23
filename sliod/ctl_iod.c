@@ -139,9 +139,15 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	size_t len;
 	int rc = 0;
 
-	srcname = pfl_basename(fn);
+	/* 
+	 * Start from the root of slash2 namespace.  This means
+	 * that if just a name is given as the destination, it will
+	 * be treated as a child of the root.
+	*/
 	fg.fg_fid = SLFID_ROOT;
 	fg.fg_gen = FGEN_ANY;
+
+	srcname = pfl_basename(fn);
 
 	/* preserve hierarchy in the src tree via copying */
 	snprintf(fidfn, sizeof(fidfn), "%s%s%s", sfop->sfop_fn2,
@@ -155,7 +161,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	for (p = fidfn + len; *p == '/' && p > fidfn; p--)
 		*p = '\0';
 	for (p = fidfn; p; p = np) {
-		/* skip first '/' chars */
+		/* skip leading '/' chars */
 		while (*p == '/')
 			p++;
 		np = strchr(p, '/');
