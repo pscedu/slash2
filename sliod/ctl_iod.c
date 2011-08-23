@@ -255,6 +255,12 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc == 0)
 			rc = mp->rc;
+		/*
+		 * The tree walk visits the top level directory first
+		 * before any of its children. This makes sure children
+		 * will live under the top level directory in the slash2 
+		 * namespace as well.  This is hackish.
+		 */
 		if (!rc && noname)
 			strlcpy(sfop->sfop_fn2, srcname, PATH_MAX);
 	} else {
