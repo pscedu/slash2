@@ -208,13 +208,17 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 			srcname = cpn;
 			break;
 		}
-		fg = tfg;
-
+		if (!rc && np == NULL) {
+			a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
+			    slstrerror(EEXIST));
+			goto out;
+		}
 		if (rc || fg.fg_fid == FID_ANY) {
 			a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
 			    slstrerror(rc));
 			goto out;
 		}
+		fg = tfg;
 	}
 
 	if (fg.fg_fid == FID_ANY) {
