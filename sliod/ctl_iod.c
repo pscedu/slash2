@@ -143,9 +143,6 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	fg.fg_fid = SLFID_ROOT;
 	fg.fg_gen = FGEN_ANY;
 
-	len = strlen(sfop->sfop_fn);
-	while (len > 0 && sfop->sfop_fn[len - 1] == '/')
-		len--;
 	/* preserve hierarchy in the src tree via copying */
 	snprintf(fidfn, sizeof(fidfn), "%s%s%s", sfop->sfop_fn2,
 	    S_ISDIR(stb->st_mode) ? "/" : "",
