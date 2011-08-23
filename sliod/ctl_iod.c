@@ -135,11 +135,11 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	struct pscrpc_request *rq = NULL;
 	struct psc_ctlmsghdr *mh = a->mh;
 	struct slash_fidgen tfg, fg;
-	const char *str, *newname;
+	const char *str, *srcname;
 	size_t len;
 	int rc = 0;
 
-	newname = pfl_basename(fn);
+	srcname = pfl_basename(fn);
 	fg.fg_fid = SLFID_ROOT;
 	fg.fg_gen = FGEN_ANY;
 
@@ -199,7 +199,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		 * Last component is intended destination; use directly.
 		 */
 		if (rc == ENOENT && np == NULL) {
-			newname = cpn;
+			srcname = cpn;
 			break;
 		}
 		fg = tfg;
@@ -239,7 +239,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		mq->creds.scr_gid = stb->st_gid;
 		mq->pfg = fg;
 		mq->mode = stb->st_mode;
-		strlcpy(mq->name, newname, sizeof(mq->name));
+		strlcpy(mq->name, srcname, sizeof(mq->name));
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc == 0)
 			rc = mp->rc;
@@ -254,7 +254,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 			goto out;
 		}
 		mq->pfg = fg;
-		strlcpy(mq->cpn, newname, sizeof(mq->cpn));
+		strlcpy(mq->cpn, srcname, sizeof(mq->cpn));
 		sl_externalize_stat(stb, &mq->sstb);
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc == 0) {
