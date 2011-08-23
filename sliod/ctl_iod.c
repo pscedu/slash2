@@ -186,8 +186,8 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		}
 
 		/*
-		 * No name specified -- preserve last component from
-		 * src.
+		 * No destination name specified (only slash(es) are given) -- 
+		 * preserve last component from src.
 		 */
 		if (cpn[0] == '\0') {
 			str = strrchr(fn, '/');
@@ -209,8 +209,9 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 			break;
 		}
 		if (!rc && np == NULL) {
+			rc = EEXIST;
 			a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
-			    slstrerror(EEXIST));
+			    slstrerror(rc));
 			goto out;
 		}
 		if (rc || fg.fg_fid == FID_ANY) {
