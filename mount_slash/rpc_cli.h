@@ -36,8 +36,6 @@ struct pscrpc_request;
 #define MSL_CBARG_BIORQS		4
 #define MSL_CBARG_BMPC			5
 #define MSL_CBARG_BMAP			6
-#define MSL_CBARG_AIORQCOL		7
-#define MSL_CBARG_PFR			8
 
 /* SLASH RPC channel for CLI from MDS. */
 #define SRCM_NTHREADS			8
@@ -148,6 +146,8 @@ msl_getmw(void)
 		return (&msbmfrathr(thr)->mbfra_mw);
 	case MSTHRT_BMAPFLSHRPC:
 		return (&msbmflrpc(thr)->mbflrpc_mw);
+	case MSTHRT_RCI:
+		return (&msrcithr(thr)->mrci_mw);
 	case MSTHRT_CTL:
 		return (NULL);
 	}

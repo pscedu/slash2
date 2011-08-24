@@ -364,7 +364,7 @@ bmap_flush_resched(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
 	bmpc = bmap_2_bmpc(r->biorq_bmap);
 	BMPC_LOCK(bmpc);
 	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
-	pll_add_sorted(&bmpc->bmpc_new_biorqs, r, msl_biorq_cmp);
+	pll_add_sorted(&bmpc->bmpc_new_biorqs, r, bmpc_biorq_cmp);
 	BMPC_ULOCK(bmpc);
 }
 
@@ -1389,7 +1389,7 @@ msbmaprathr_main(__unusedx struct psc_thread *thr)
 		freelock(&mfh->mfh_lock);
 
 		for (i=0; i < nbmpces; i++) {
-			/* XXX If read / wr refs are 0 then msl_bmpce_getbuf()
+			/* XXX If read / wr refs are 0 then bmpce_getbuf()
 			 *    should be called in a non-blocking fashion.
 			 */
 			bmpce = bmpces[i];
@@ -1398,7 +1398,7 @@ msbmaprathr_main(__unusedx struct psc_thread *thr)
 				   bmpces[i-1]->bmpce_owner);
 
 			BMPCE_LOCK(bmpce);
-			msl_bmpce_getbuf(bmpce);
+			bmpce_getbuf(bmpce);
 			psc_assert(bmpce->bmpce_base);
 			psc_assert(bmpce->bmpce_flags & BMPCE_INIT);
 			bmpce->bmpce_flags &= ~BMPCE_INIT;

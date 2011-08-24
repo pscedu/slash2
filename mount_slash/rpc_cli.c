@@ -34,6 +34,16 @@
 
 struct sl_resm			*slc_rmc_resm;
 
+__static void
+slc_rci_init(void)
+{
+	struct psc_thread *thr;
+	
+	thr = pscthr_get();
+	
+	psc_multiwait_init(&msrcithr(thr)->mrci_mw, "%s", thr->pscthr_name);
+}
+
 /**
  * slc_rpc_initsvc: Initialize CLI RPC services.
  */
@@ -67,6 +77,7 @@ slc_rpc_initsvc(void)
 	svh->svh_type = MSTHRT_RCI;
 	svh->svh_nthreads = SRCI_NTHREADS;
 	svh->svh_handler = slc_rci_handler;
+	svh->svh_initf = slc_rci_init;
 	strlcpy(svh->svh_svc_name, SRCI_SVCNAME, sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct msrci_thread);
 }

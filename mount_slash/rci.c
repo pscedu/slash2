@@ -27,7 +27,7 @@
 #include "rpc_cli.h"
 #include "slashrpc.h"
 
-#define RCI_AIO_READ_WAIT 5
+#define RCI_AIO_READ_WAIT 2
 
 /*
  * Routines for handling RPC requests for CLI from ION.
@@ -38,7 +38,7 @@
  * @rq: request.
  */
 int
-slc_rci_handle_read(struct pscrpc_request *rq)
+slc_rci_handle_io(struct pscrpc_request *rq)
 {
 	struct bmpc_ioreq *r = NULL;
 	struct slc_async_req *car;
@@ -74,7 +74,8 @@ slc_rci_handle_read(struct pscrpc_request *rq)
 		/*
 		 * The AIO RPC from the sliod beat our fs thread.
 		 *   Give our thread a chance to put the 'car' onto
-		 *   the list.
+		 *   the list.  No RPC is involved, this wait should
+		 *   only require a few ms at the most.
 		 */
 		now.tv_sec += RCI_AIO_READ_WAIT;
 		car = lc_gettimed(lc, &now);
@@ -84,58 +85,71 @@ slc_rci_handle_read(struct pscrpc_request *rq)
 		}
 	}
 
-	if (car->car_cbf == msl_read_cb) {
+	msl_fsrqinfo_readywait(car->car_fsrqinfo);
 
-		struct bmap_pagecache_entry *bmpce;
+	if (car->car_cbf == msl_read_cb) {
+		struct bmap_pagecache_entry *e;
 		struct iovec iovs[MAX_BMAPS_REQ];
 		struct psc_dynarray *a;
 		int i;
 
 		a = car->car_argv.pointer_arg[MSL_CBARG_BMPCE];
 		r = car->car_argv.pointer_arg[MSL_CBARG_BIORQ];
-		DYNARRAY_FOREACH(bmpce, i, a) {
-			iovs[i].iov_base = bmpce->bmpce_base;
+
+
+		DYNARRAY_FOREACH(e, i, a) {
+			iovs[i].iov_base = e->bmpce_base;
 			iovs[i].iov_len = BMPC_BUFSZ;
 			if (mq->rc)
-				bmpce->bmpce_flags |= BMPCE_EIO;
+				e->bmpce_flags |= BMPCE_EIO;
 		}
 
 		if (mq->rc == 0)
 			mq->rc = rsx_bulkserver(rq, BULK_GET_SINK,
-			    SRCI_BULK_PORTAL, iovs,
-			    psc_dynarray_len(a));
+			    SRCI_BULK_PORTAL, iovs, psc_dynarray_len(a));
 
 		len = r->biorq_len;
 
-	} else if (car->car_cbf == msl_dio_cb) {
-
-		iov.iov_base = car->car_argv.pointer_arg[MSL_CBARG_BUF];
-		len = iov.iov_len = mq->size;
-
+	} else if (car->car_cbf == msl_readahead_cb) {
+		struct bmap_pagecache_entry *e, **bmpces = 
+			car->car_argv.pointer_arg[MSL_CBARG_BMPCE];
+		struct iovec iovs[MAX_BMAPS_REQ];
+		int i;
+		
+		for (i = 0;; i++) {
+			e = bmpces[i];
+			if (!e)
+				break;
+			iovs[i].iov_base = e->bmpce_base;
+                        iovs[i].iov_len = BMPC_BUFSZ;
+                        if (mq->rc)
+                               e->bmpce_flags |= BMPCE_EIO;
+		}
 		if (mq->rc == 0)
 			mq->rc = rsx_bulkserver(rq, BULK_GET_SINK,
-			    SRCI_BULK_PORTAL, &iov, 1);
+				SRCI_BULK_PORTAL, iovs, i);
+
+	} else if (car->car_cbf == msl_dio_cb) {
+		if (mq->rc)
+			goto error;
+		
+		if (mq->op == SRMIOP_RD) {			
+			iov.iov_base = car->car_argv.pointer_arg[MSL_CBARG_BUF];
+			len = iov.iov_len = mq->size;
+			
+			mq->rc = rsx_bulkserver(rq, BULK_GET_SINK, 
+						SRCI_BULK_PORTAL, &iov, 1);
+		} else {
+			msl_fsrqinfo_write(car->car_fsrqinfo);
+			return (0);
+		}
 	} else
 		psc_fatalx("unknown callback");
-
 	/*
 	 * The callback needs to be run even if the RPC failed so
 	 * cleanup can happen.
 	 */
 	rc = car->car_cbf(rq, mq->rc, &car->car_argv);
-	if (car->car_cbf == msl_read_cb) {
-		BIORQ_LOCK(r);
-		r->biorq_flags &= ~(BIORQ_INFL | BIORQ_SCHED);
-		if (mq->rc == 0) {
-			r->biorq_flags &= ~(BIORQ_RBWLP | BIORQ_RBWFP);
-			psc_waitq_wakeall(&r->biorq_waitq);
-		}
-		BIORQ_ULOCK(r);
-		if (rc == 0)
-			msl_pages_copyout(r, car->car_buf);
-	}
-
-	msl_aiorqcol_finish(car, rc, len);
 	psc_pool_return(slc_async_req_pool, car);
 
  error:
@@ -179,7 +193,8 @@ slc_rci_handler(struct pscrpc_request *rq)
 		rc = slc_rci_handle_connect(rq);
 		break;
 	case SRMT_READ:
-		rc = slc_rci_handle_read(rq);
+	case SRMT_WRITE:
+		rc = slc_rci_handle_io(rq);
 		break;
 	default:
 		psclog_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
@@ -190,3 +205,4 @@ slc_rci_handler(struct pscrpc_request *rq)
 	pscrpc_target_send_reply_msg(rq, rc, 0);
 	return (rc);
 }
+ 

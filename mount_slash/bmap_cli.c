@@ -22,8 +22,10 @@
 
 #include <stddef.h>
 
+#include "psc_util/random.h"
 #include "psc_rpc/rpc.h"
 
+#include "slconfig.h"
 #include "bmap_cli.h"
 #include "bmpc.h"
 #include "fidc_cli.h"
@@ -52,14 +54,6 @@ msl_bmap_init(struct bmapc_memb *b)
  *	block map.
  * @b: bmap.
  * @rw: access mode to set the bmap to.
- *
- * XXX have this take a bmapc_memb.
- *
- * Notes:  XXX I think this logic can be simplified when setting mode
- *	from WRONLY to RDWR.  In WRONLY this client already knows the
- *	address of the only ION from which this bmap can be read.
- *	Therefore, it should be able to interface with that ION without
- *	intervention from the MDS.
  */
 __static int
 msl_bmap_modeset(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
@@ -68,10 +62,10 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 	struct pscrpc_request *rq = NULL;
 	struct srm_bmap_chwrmode_req *mq;
 	struct srm_bmap_chwrmode_rep *mp;
-	int rc, nretries = 0;
-
 	struct fcmh_cli_info *fci;
 	struct fidc_membh *f;
+	struct sl_resource *r;
+	int rc, nretries = 0;
 
 	f = b->bcm_fcmh;
 	fci = fcmh_2_fci(f);
@@ -85,7 +79,7 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 		 *   further action being taken.
 		 */
 		return (0);
-
+	
 	/* Add write mode to this bmap.
 	 */
 	psc_assert(rw == SL_WRITE && (b->bcm_flags & BMAP_RD));
@@ -103,11 +97,24 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
-
+	
 	if (rc == 0)
 		memcpy(bmap_2_sbd(b), &mp->sbd,
 		    sizeof(struct srt_bmapdesc));
 
+	r = libsl_id2res(bmap_2_sbd(b)->sbd_ios_id);
+	psc_assert(r);
+	if (r->res_type == SLREST_ARCHIVAL_FS) {
+		/* Prepare for archival write by ensuring that all subsequent
+		 *    IO's are direct.
+		 */
+		BMAP_LOCK(b);
+		b->bcm_flags |= BMAP_DIO;
+		BMAP_ULOCK(b);
+
+		msl_bmap_cache_rls(b);
+	}
+	
  out:
 	if (rq) {
 		pscrpc_req_finished(rq);
@@ -248,7 +255,7 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int force)
 	
 	if (secs_rem) {
 		if (!secs || extended)
-			secs = bmap_2_bci(b)->bci_xtime.tv_sec - 
+			secs = bmap_2_bci(b)->bci_xtime.tv_sec -
 				CURRENT_SECONDS;
 		*secs_rem = secs;
 	}
@@ -327,7 +334,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw,
 		 */
 		fci->fci_nrepls = mp->nrepls;
 		memcpy(&fci->fci_reptbl, &mp->reptbl,
-		    sizeof(sl_replica_t) * SL_MAX_REPLICAS);
+		       sizeof(sl_replica_t) * SL_MAX_REPLICAS);
 		f->fcmh_flags |= FCMH_CLI_HAVEREPLTBL;
 		psc_waitq_wakeall(&f->fcmh_waitq);
 	}
@@ -359,6 +366,197 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw,
 	}
 
 	return (rc);
+}
+
+/**
+ * msl_bmap_cache_rls - called from rcm.c (SRMT_BMAPDIO).
+ * @b:  the bmap whose cached pages should be released.
+ */
+void
+msl_bmap_cache_rls(struct bmapc_memb *b)
+{
+	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
+
+	bmap_biorq_expire(b);
+	bmap_biorq_waitempty(b);
+
+	bmpc_lru_del(bmpc);
+
+	BMPC_LOCK(bmpc);
+	bmpc_freeall_locked(bmpc);
+	BMPC_ULOCK(bmpc);
+}
+
+void
+msl_bmap_reap_init(struct bmapc_memb *b, const struct srt_bmapdesc *sbd)
+{
+	struct bmap_cli_info *bci = bmap_2_bci(b);
+	int locked;
+
+	psc_assert(!pfl_memchk(sbd, 0, sizeof(*sbd)));
+
+	locked = BMAP_RLOCK(b);
+
+	bci->bci_sbd = *sbd;
+	/* Record the start time,
+	 *  XXX the directio status of the bmap needs to be returned by
+	 *	the MDS so we can set the proper expiration time.
+	 */
+	PFL_GETTIMESPEC(&bci->bci_xtime);
+
+	timespecadd(&bci->bci_xtime, &msl_bmap_timeo_inc,
+	    &bci->bci_etime);
+	timespecadd(&bci->bci_xtime, &msl_bmap_max_lease,
+	    &bci->bci_xtime);
+	/*
+	 * Take the reaper ref cnt early and place the bmap onto the
+	 * reap list
+	 */
+	b->bcm_flags |= BMAP_TIMEOQ;
+
+	/* Is this a write for a archival fs?  If so, set the bmap for DIO.
+	 */
+	if (sbd->sbd_ios_id != IOS_ID_ANY) {
+		struct sl_resource *r = libsl_id2res(sbd->sbd_ios_id);
+				
+		psc_assert(r);		
+		psc_assert(b->bcm_flags & BMAP_WR);
+
+		if (r->res_type == SLREST_ARCHIVAL_FS)
+			b->bcm_flags |= BMAP_DIO;
+	}	
+	bmap_op_start_type(b, BMAP_OPCNT_REAPER);
+
+	BMAP_URLOCK(b, locked);
+	/* Add ourselves here, otherwise zero length files
+	 *   will not be removed.
+	 */
+	lc_addtail(&bmapTimeoutQ, bci);
+}
+
+/**
+ * msl_bmap_to_csvc - Given a bmap, perform a series of lookups to
+ *	locate the ION csvc.  The ION was chosen by the MDS and
+ *	returned in the msl_bmap_retrieve routine.
+ * @b: the bmap
+ * @exclusive: whether to return connections to the specific ION the MDS
+ *	told us to use instead of any ION in any IOS whose state is
+ *	marked VALID for this bmap.
+ * XXX: If the bmap is a read-only then any replica may be accessed (so
+ *	long as it is recent).
+ */
+struct slashrpc_cservice *
+msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
+{
+	struct slashrpc_cservice *csvc;
+	struct fcmh_cli_info *fci;
+	struct psc_multiwait *mw;
+	struct rnd_iterator it;
+	struct sl_resm *resm;
+	int i, locked;
+	void *p;
+
+	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
+
+	if (exclusive) {
+		locked = BMAP_RLOCK(b);
+		resm = libsl_nid2resm(bmap_2_ion(b));
+		psc_assert(resm->resm_nid == bmap_2_ion(b));
+		BMAP_URLOCK(b, locked);
+
+		csvc = slc_geticsvc(resm);
+		if (csvc)
+			psc_assert(csvc->csvc_import->imp_connection->
+			    c_peer.nid == bmap_2_ion(b));
+		return (csvc);
+	}
+
+	fci = fcmh_get_pri(b->bcm_fcmh);
+	mw = msl_getmw();
+	for (i = 0; i < 2; i++) {
+		psc_multiwait_reset(mw);
+		psc_multiwait_entercritsect(mw);
+
+		/* first, try preferred IOS */
+		FOREACH_RND(&it, fci->fci_nrepls) {
+			if (fci->fci_reptbl[it.ri_rnd_idx].bs_id != prefIOS)
+				continue;
+			csvc = msl_try_get_replica_res(b, it.ri_rnd_idx);
+			if (csvc) {
+				psc_multiwait_leavecritsect(mw);
+				return (csvc);
+			}
+		}
+
+		/* rats, not available; try anyone available now */
+		FOREACH_RND(&it, fci->fci_nrepls) {
+			if (fci->fci_reptbl[it.ri_rnd_idx].bs_id == prefIOS)
+				continue;
+			csvc = msl_try_get_replica_res(b,
+			    it.ri_rnd_idx);
+			if (csvc) {
+				psc_multiwait_leavecritsect(mw);
+				return (csvc);
+			}
+		}
+
+		if (i)
+			break;
+
+		/*
+		 * No connection was immediately available; wait a small
+		 * amount of time to wait for any to come online.
+		 */
+		psc_multiwait_secs(mw, &p, 5);
+	}
+	psc_multiwait_leavecritsect(mw);
+	return (NULL);
+}
+
+void
+bmap_biorq_waitempty(struct bmapc_memb *b)
+{
+	BMAP_LOCK(b);
+	bcm_wait_locked(b, (!pll_empty(&bmap_2_bmpc(b)->bmpc_pndg_biorqs) ||
+			    !pll_empty(&bmap_2_bmpc(b)->bmpc_new_biorqs)  ||
+			    !pll_empty(&bmap_2_bmpc(b)->bmpc_pndg_ra)     ||
+			    (b->bcm_flags & BMAP_CLI_FLUSHPROC)));
+
+	psc_assert(pll_empty(&bmap_2_bmpc(b)->bmpc_pndg_biorqs));
+	psc_assert(pll_empty(&bmap_2_bmpc(b)->bmpc_new_biorqs));
+	psc_assert(pll_empty(&bmap_2_bmpc(b)->bmpc_pndg_ra));
+	BMAP_ULOCK(b);
+}
+
+void
+bmap_biorq_expire(struct bmapc_memb *b)
+{
+	struct bmpc_ioreq *biorq;
+
+	/*
+	 * Note that the following two lists and the bmapc_memb
+	 * structure itself all share the same lock.
+	 */
+	BMPC_LOCK(bmap_2_bmpc(b));
+	PLL_FOREACH(biorq, &bmap_2_bmpc(b)->bmpc_new_biorqs) {
+		BIORQ_LOCK(biorq);
+		biorq->biorq_flags |= BIORQ_FORCE_EXPIRE;
+		DEBUG_BIORQ(PLL_INFO, biorq, "FORCE_EXPIRE");
+		BIORQ_ULOCK(biorq);
+	}
+	PLL_FOREACH(biorq, &bmap_2_bmpc(b)->bmpc_pndg_biorqs) {
+		BIORQ_LOCK(biorq);
+		biorq->biorq_flags |= BIORQ_FORCE_EXPIRE;
+		DEBUG_BIORQ(PLL_INFO, biorq, "FORCE_EXPIRE");
+		BIORQ_ULOCK(biorq);
+	}
+	BMPC_ULOCK(bmap_2_bmpc(b));
+
+	/* Minimize biorq scanning via this hint.
+	 */
+	BMAP_SETATTR(b, BMAP_CLI_BIORQEXPIRE);
+
+	psc_waitq_wakeall(&bmapflushwaitq);
 }
 
 void

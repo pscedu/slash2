@@ -28,6 +28,7 @@
 #include <time.h>
 
 #include "pfl/time.h"
+#include "pfl/fsmod.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
 #include "psc_ds/lockedlist.h"
@@ -43,6 +44,7 @@
 #include "buffer.h"
 
 struct msl_fhent;
+struct msl_fsrqinfo;
 
 #define BMPC_BUFSZ		SLASH_SLVR_BLKSZ
 #define BMPC_BLKSZ		BMPC_BUFSZ
@@ -82,12 +84,9 @@ struct bmap_pagecache_entry {
 	struct psc_waitq	*bmpce_waitq;	/* others block here on I/O	*/
 	struct timespec		 bmpce_laccess;	/* last page access		*/
 	struct psc_listentry	 bmpce_ralentry; /* queue read ahead		*/
+	struct psc_lockedlist    bmpce_pndgaios;
 	SPLAY_ENTRY(bmap_pagecache_entry) bmpce_tentry;
-#ifdef BMPC_RBTREE
-	SPLAY_ENTRY(bmap_pagecache_entry) bmpce_lru_tentry;
-#else
 	struct psc_listentry	 bmpce_lentry;	/* chain on bmap lru		*/
-#endif
 };
 
 #define	BMPCE_NEW		(1 << 0)	/* 0x00001 */
@@ -111,6 +110,7 @@ struct bmap_pagecache_entry {
 #define BMPCE_ULOCK(b)		freelock(&(b)->bmpce_lock)
 #define BMPCE_RLOCK(b)		reqlock(&(b)->bmpce_lock)
 #define BMPCE_URLOCK(b, lk)	ureqlock(&(b)->bmpce_lock, (lk))
+#define BMPCE_LOCK_ENSURE(b)    LOCK_ENSURE(&(b)->bmpce_lock)
 
 #define BMPCE_WAIT(b)		psc_waitq_wait((b)->bmpce_waitq, &(b)->bmpce_lock)
 #define BMPCE_WAKE(b)							\
@@ -210,20 +210,10 @@ SPLAY_HEAD(bmap_pagecachetree, bmap_pagecache_entry);
 SPLAY_PROTOTYPE(bmap_pagecachetree, bmap_pagecache_entry, bmpce_tentry,
 		bmpce_cmp);
 
-#ifdef BMPC_RBTREE
-SPLAY_HEAD(bmap_lrutree, bmap_pagecache_entry);
-SPLAY_PROTOTYPE(bmap_lrutree, bmap_pagecache_entry, bmpce_lru_tentry,
-		bmpce_lrusort_cmp1);
-#endif
-
 struct bmap_pagecache {
 	struct bmap_pagecachetree	 bmpc_tree;		/* tree of cbuf_handle */
 	struct timespec			 bmpc_oldest;		/* LRU's oldest item */
-#ifdef BMPC_RBTREE
-	struct bmap_lrutree		 bmpc_lrutree;
-#else
 	struct psc_lockedlist		 bmpc_lru;		/* cleancnt can be kept here  */
-#endif
 	struct psc_lockedlist		 bmpc_new_biorqs;
 	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* chain pending I/O requests */
 	struct psc_lockedlist		 bmpc_pndg_ra;		/* RA bmpce's pending comp */
@@ -276,6 +266,7 @@ struct bmpc_ioreq {
 	struct pscrpc_request_set	*biorq_rqset;
 	struct psc_waitq		 biorq_waitq;
 	struct msl_fhent		*biorq_fhent;	/* back pointer to msl_fhent */
+	struct msl_fsrqinfo             *biorq_fsrqi;
 };
 
 #define	BIORQ_READ			(1 <<  0)
@@ -417,16 +408,18 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
 	  (((pos) == (psc_dynarray_len(&(r)->biorq_pages) - 1) &&	\
 	    ((r)->biorq_flags & BIORQ_RBWLP)))))
 
-int   bmpce_init(struct psc_poolmgr *, void *);
 void  bmpc_global_init(void);
 int   bmpc_grow(int);
 void *bmpc_alloc(void);
 void  bmpc_free(void *);
 void  bmpc_freeall_locked(struct bmap_pagecache *);
-void  bmpce_eio_remove(struct bmap_pagecache *, struct bmap_pagecache_entry *);
+int   bmpc_biorq_cmp(const void *, const void *);
+
+int   bmpce_init(struct psc_poolmgr *, void *);
+void  bmpce_getbuf(struct bmap_pagecache_entry *);
 struct bmap_pagecache_entry *
-	bmpce_lookup_locked(struct bmap_pagecache *, struct bmpc_ioreq *,
-	    uint32_t, struct psc_waitq *);
+      bmpce_lookup_locked(struct bmap_pagecache *, struct bmpc_ioreq *,
+	  uint32_t, struct psc_waitq *);
 void  bmpce_handle_lru_locked(struct bmap_pagecache_entry *,
 	    struct bmap_pagecache *, int, int);
 
@@ -465,7 +458,8 @@ bmpc_init(struct bmap_pagecache *bmpc)
 
 static __inline void
 bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len,
-    int op, struct bmapc_memb *bmap, struct msl_fhent *fhent)
+	int op, struct bmapc_memb *bmap, struct msl_fhent *fhent, 
+	struct msl_fsrqinfo *q)
 {
 	memset(ioreq, 0, sizeof(*ioreq));
 	psc_waitq_init(&ioreq->biorq_waitq);
@@ -482,6 +476,8 @@ bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len,
 	ioreq->biorq_bmap = bmap;
 	ioreq->biorq_flags = op;
 	ioreq->biorq_fhent = fhent;
+	ioreq->biorq_fsrqi = q;
+
 	if (bmap->bcm_flags & BMAP_DIO ||
 	    (op == BIORQ_WRITE && bmap->bcm_flags & BMAP_DIOWR))
 		ioreq->biorq_flags |= BIORQ_DIO;

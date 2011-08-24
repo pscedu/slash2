@@ -109,9 +109,6 @@ struct psc_poolmgr		*slc_async_req_pool;
 struct psc_poolmaster		 slc_biorq_poolmaster;
 struct psc_poolmgr		*slc_biorq_pool;
 
-struct psc_poolmaster		 slc_aiorqcol_poolmaster;
-struct psc_poolmgr		*slc_aiorqcol_pool;
-
 __inline int
 fcmh_checkcreds(struct fidc_membh *f, const struct slash_creds *crp,
     int accmode)
@@ -2112,6 +2109,8 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 	msfsthr(pscthr_get())->mft_failcnt = 1;
 	rc = msl_write(pfr, mfh, buf, size, off);
 	if (rc < 0) {
+		if (rc == -SLERR_AIOWAIT)
+			return;
 		rc = -rc;
 		goto out;
 	}
@@ -2129,6 +2128,7 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 
  out:
 	DEBUG_FCMH(PLL_INFO, f, "write: buf=%p rc=%d sz=%zu "
+
 	    "off=%"PSCPRIdOFFT, buf, rc, size, off);
 	pscfs_reply_write(pfr, size, rc);
 }
@@ -2138,7 +2138,7 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 {
 	struct msl_fhent *mfh = data;
 	struct fidc_membh *f, *ftmp;
-	void *buf = NULL;
+	void *buf = pfr->pfr_buf;
 	ssize_t len = 0;
 	int rc = 0;
 
@@ -2163,7 +2163,7 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	}
 
 	msfsthr(pscthr_get())->mft_failcnt = 1;
-	buf = PSCALLOC(size);
+
 	len = msl_read(pfr, mfh, buf, size, off);
 
 	/*
@@ -2186,7 +2186,6 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	pscfs_reply_read(pfr, buf, len, rc);
 	DEBUG_FCMH(PLL_INFO, f, "read (end): buf=%p rc=%d sz=%zu "
 	    "len=%zd off=%"PSCPRIdOFFT, buf, rc, size, len, off);
-	PSCFREE(buf);
 }
 
 void
@@ -2237,11 +2236,6 @@ msl_init(void)
 	    struct bmpc_ioreq, biorq_lentry, PPMF_AUTO, 64, 64, 0, NULL,
 	    NULL, NULL, "biorq");
 	slc_biorq_pool = psc_poolmaster_getmgr(&slc_biorq_poolmaster);
-
-	psc_poolmaster_init(&slc_aiorqcol_poolmaster,
-	    struct msl_aiorqcol, marc_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, NULL, NULL, "aiorqcol");
-	slc_aiorqcol_pool = psc_poolmaster_getmgr(&slc_aiorqcol_poolmaster);
 
 	ra_nbreqset = pscrpc_nbreqset_init(NULL, NULL);
 
