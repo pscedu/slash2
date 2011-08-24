@@ -78,6 +78,7 @@ struct slvr_ref {
 #define	SLVR_REPLDST		(1 << 13)	/* slvr is replication destination */
 #define SLVR_REPLFAIL		(1 << 14)	/* replication op failed */
 #define SLVR_AIOWAIT		(1 << 15)	/* early return for AIO */
+#define SLVR_RDMODWR		(1 << 16)	/* read modify write */
 
 #define SLVR_CRCLEN(s)		((s)->slvr_crc_eoff - (s)->slvr_crc_soff)
 
@@ -133,7 +134,7 @@ struct slvr_ref {
 #define slvr_io_done(s, off, len, rw)					\
 	((rw) == SL_WRITE ? slvr_wio_done((s), (off), (len)) : slvr_rio_done(s))
 
-#define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
+#define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
 #define DEBUG_SLVR_FLAGS(s)						\
 	(s)->slvr_flags & SLVR_NEW		? "n" : "-",		\
 	(s)->slvr_flags & SLVR_SPLAYTREE	? "t" : "-",		\
@@ -150,7 +151,8 @@ struct slvr_ref {
 	(s)->slvr_flags & SLVR_REPLSRC		? "S" : "-",		\
 	(s)->slvr_flags & SLVR_REPLDST		? "T" : "-",		\
 	(s)->slvr_flags & SLVR_REPLFAIL		? "x" : "-",		\
-	(s)->slvr_flags & SLVR_AIOWAIT		? "a" : "-"
+	(s)->slvr_flags & SLVR_AIOWAIT		? "a" : "-",            \
+	(s)->slvr_flags & SLVR_RDMODWR		? "m" : "-"
 
 #define DEBUG_SLVR(level, s, fmt, ...)					\
 	psclogs((level), SLISS_SLVR, "slvr@%p num=%hu pw=%hu "		\

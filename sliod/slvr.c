@@ -268,7 +268,6 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 		s = a->aiocbr_slvrs[i];
 		SLVR_LOCK(s);
 		psc_assert(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR));
-		psc_assert(s->slvr_pndgreads > 0);
 		if (s->slvr_flags & SLVR_DATAERR)
 			mq->rc = s->slvr_err;
 		SLVR_ULOCK(s);
@@ -278,7 +277,8 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 	if (csvc == NULL)
 		goto out;
 
-	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, a->aiocbr_rw == SL_WRITE ? SRMT_WRITE : SRMT_READ, 
+		   rq, mq, mp);
 	if (rc)
 		goto out;
 
@@ -286,12 +286,18 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 	mq->id = a->aiocbr_id;
 	mq->size = a->aiocbr_len;
 	mq->offset = a->aiocbr_off;
-	mq->op = SRMIOP_RD;
-	if (mq->rc)
-		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
-	else
-		mq->rc = rsx_bulkclient(rq, BULK_GET_SOURCE, SRCI_BULK_PORTAL,
-			a->aiocbr_iovs, a->aiocbr_niov);
+	if (a->aiocbr_rw == SL_WRITE)
+		/* Notify the client that he may resubmit the write.
+		 */
+		mq->op = SRMIOP_WR;
+	else {
+		mq->op = SRMIOP_RD;
+		if (mq->rc)
+			pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
+		else
+			mq->rc = rsx_bulkclient(rq, BULK_GET_SOURCE, SRCI_BULK_PORTAL,
+					a->aiocbr_iovs, a->aiocbr_niov);
+	}
 
 	SL_RSX_WAITREP(csvc, rq, mp);
 
@@ -303,8 +309,11 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
  out:
 	if (csvc)
 		sl_csvc_decref(csvc);
-	for (i = 0; i < a->aiocbr_nslvrs; i++)
-		slvr_rio_done(a->aiocbr_slvrs[i]);
+
+	if (a->aiocbr_rw == SL_READ) {
+		for (i = 0; i < a->aiocbr_nslvrs; i++)
+			slvr_rio_done(a->aiocbr_slvrs[i]);
+	}
 
 	sli_aio_aiocbr_release(a);
 }
@@ -370,7 +379,11 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 	psc_assert(s->slvr_flags & SLVR_FAULTING);
 	psc_assert(s->slvr_flags & SLVR_AIOWAIT);
 	psc_assert(!(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR)));
-	psc_assert(s->slvr_pndgreads > 0);
+	if (s->slvr_flags & SLVR_RDMODWR) {
+		psc_assert(s->slvr_pndgwrts > 0);
+		s->slvr_pndgwrts--
+	} else
+		psc_assert(s->slvr_pndgreads > 0);
 
 	/* Prevent additions from new requests.
 	 */
@@ -433,7 +446,10 @@ sli_aio_reply_setup(struct sli_aiocb_reply *a, struct pscrpc_request *rq,
 
 	for (i = 0; i < a->aiocbr_nslvrs; i++) {
 		psc_assert(a->aiocbr_slvrs[i]);
-		psc_assert(a->aiocbr_slvrs[i]->slvr_pndgreads > 0);
+		if (rw == SL_WRITE)
+			psc_assert(a->aiocbr_slvrs[i]->slvr_pndgwrts > 0);
+		else
+			psc_assert(a->aiocbr_slvrs[i]->slvr_pndgreads > 0);
 	}
 
 	/* some of the slivers may have already been faulted in */ 
@@ -921,6 +937,8 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 
 	if (s->slvr_flags & SLVR_DATARDY)
 		goto invert;
+	else
+		s->slvr_flags |= SLVR_RDMODWR;
 
  do_read:
 	SLVR_ULOCK(s);
