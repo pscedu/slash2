@@ -333,7 +333,7 @@ sl_csvc_decref_pci(const struct pfl_callerinfo *pci,
 	sl_csvc_reqlock(csvc);
 	rc = psc_atomic32_dec_getnew(&csvc->csvc_refcnt);
 	psc_assert(rc >= 0);
-	DEBUG_CSVC(PLL_DEBUG, csvc, "decref");
+	DEBUG_CSVC(PLL_INFO, csvc, "decref");
 	if (rc == 0) {
 		if (psc_atomic32_read(&csvc->csvc_flags) & CSVCF_WANTFREE) {
 			/*
@@ -343,7 +343,7 @@ sl_csvc_decref_pci(const struct pfl_callerinfo *pci,
 			pscrpc_import_put(csvc->csvc_import);
 			if (csvc->csvc_ctype == SLCONNT_CLI)
 				pll_remove(&client_csvcs, csvc);
-			DEBUG_CSVC(PLL_DEBUG, csvc, "freed");
+			DEBUG_CSVC(PLL_INFO, csvc, "freed");
 			PSCFREE(csvc->csvc_lockinfo.lm_ptr);
 			PSCFREE(csvc);
 			return;
