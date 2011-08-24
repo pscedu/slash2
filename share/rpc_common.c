@@ -362,7 +362,7 @@ sl_csvc_incref(struct slashrpc_cservice *csvc)
 {
 	sl_csvc_lock_ensure(csvc);
 	psc_atomic32_inc(&csvc->csvc_refcnt);
-	DEBUG_CSVC(PLL_DEBUG, csvc, "incref");
+	DEBUG_CSVC(PLL_INFO, csvc, "incref");
 }
 
 /**
