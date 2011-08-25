@@ -20,6 +20,7 @@
 #include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
@@ -135,6 +136,7 @@ slictlcmd_export(int ac, char *av[])
 void
 slictlcmd_import(int ac, char *av[])
 {
+	struct stat sb; 
 	struct slictlmsg_fileop *sfop;
 	int i, c;
 
@@ -157,6 +159,9 @@ slictlcmd_import(int ac, char *av[])
  usage:
 		errx(1, "usage: import [-Rv] file ... dst");
 	for (i = 0; i < ac - 1; i++) {
+		if (stat(av[i], &sb)) {
+			errx(1, "%s: %s", av[i], strerror(errno));
+		}
 		sfop = psc_ctlmsg_push(SLICMT_IMPORT, sizeof(*sfop));
 		if (recursive)
 			sfop->sfop_flags |= SLI_CTL_FOPF_RECURSIVE;
