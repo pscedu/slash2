@@ -96,10 +96,7 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
 	sl_replica_t *repl;
 	uint32_t j, k;
 
-	psc_assert(!log);
-
 	locked = INOH_RLOCK(ih);
-
 	/*
 	 * Search the existing replicas to see if the given IOS is
 	 * already there.
