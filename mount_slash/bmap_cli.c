@@ -556,7 +556,7 @@ bmap_biorq_expire(struct bmapc_memb *b)
 	 */
 	BMAP_SETATTR(b, BMAP_CLI_BIORQEXPIRE);
 
-	psc_waitq_wakeall(&bmapflushwaitq);
+	bmap_flushq_wake(PFL_CALLERINFOSS(SLSS_BMAP), BMAPFLSH_RPCWAIT, NULL);
 }
 
 void

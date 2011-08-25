@@ -259,6 +259,7 @@ struct bmpc_ioreq {
 	uint32_t			 biorq_flags;	/* state and op type bits	*/
 	psc_spinlock_t			 biorq_lock;
 	struct timespec			 biorq_issue;	/* time to initiate I/O		*/
+	struct timespec			 biorq_resched;	/* reschedule timer		*/
 	struct psc_dynarray		 biorq_pages;	/* array of bmpce		*/
 	struct psclist_head		 biorq_lentry;	/* chain on bmpc_pndg_biorqs	*/
 	struct psclist_head		 biorq_mfh_lentry; /* chain on file handle	*/
@@ -284,13 +285,14 @@ struct bmpc_ioreq {
 #define BIORQ_READAHEAD			(1 << 12)
 #define BIORQ_RBWFAIL			(1 << 13)
 #define BIORQ_AIOWAIT			(1 << 14)
+#define BIORQ_RESCHED                   (1 << 15)
 
 #define BIORQ_LOCK(r)			spinlock(&(r)->biorq_lock)
 #define BIORQ_ULOCK(r)			freelock(&(r)->biorq_lock)
 
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP,					\
-	    "biorq@%p fl=%#x:%s%s%s%s%s%s%s%s%s%s%s%s%s%s "		\
+	    "biorq@%p fl=%#x:%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "		\
 	    "o=%u l=%u "						\
 	    "np=%d b=%p "						\
 	    "ts="PSCPRI_TIMESPEC" : "fmt,				\
@@ -304,11 +306,12 @@ struct bmpc_ioreq {
 	    (b)->biorq_flags & BIORQ_DIO		? "d" : "",	\
 	    (b)->biorq_flags & BIORQ_FORCE_EXPIRE	? "x" : "",	\
 	    (b)->biorq_flags & BIORQ_DESTROY		? "D" : "",	\
-	    (b)->biorq_flags & BIORQ_FLUSHRDY		? "R" : "",	\
+	    (b)->biorq_flags & BIORQ_FLUSHRDY		? "r" : "",	\
 	    (b)->biorq_flags & BIORQ_NOFHENT		? "n" : "",	\
 	    (b)->biorq_flags & BIORQ_APPEND		? "A" : "",	\
 	    (b)->biorq_flags & BIORQ_READAHEAD		? "a" : "",	\
 	    (b)->biorq_flags & BIORQ_AIOWAIT		? "W" : "",	\
+	    (b)->biorq_flags & BIORQ_RESCHED		? "R" : "",	\
 	    (b)->biorq_off, (b)->biorq_len,				\
 	    psc_dynarray_len(&(b)->biorq_pages), (b)->biorq_bmap,	\
 	    PSCPRI_TIMESPEC_ARGS(&(b)->biorq_issue), ## __VA_ARGS__)

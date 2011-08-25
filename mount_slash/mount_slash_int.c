@@ -62,14 +62,15 @@ struct psc_waitq	msl_fhent_flush_waitq = PSC_WAITQ_INIT;
 struct timespec		msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
 struct timespec		msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
 
-struct pscrpc_nbreqset *ra_nbreqset; /* non-blocking set for RA's */
+struct pscrpc_nbreqset *pndgReadaReqs; /* non-blocking set for RA's */
 
 struct psc_iostats	msl_diord_stat;
 struct psc_iostats	msl_diowr_stat;
 struct psc_iostats	msl_rdcache_stat;
 struct psc_iostats	msl_racache_stat;
 
-void bmap_flush_resched(const struct pfl_callerinfo *pci, struct bmpc_ioreq *);
+void bmap_flush_resched(const struct pfl_callerinfo *, struct bmpc_ioreq *);
+void bmap_flushq_wake(const struct pfl_callerinfo *, int, struct timespec *);
 
 
 static int msl_getra(struct msl_fhent *, int, int *);
@@ -497,7 +498,7 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 	BMPC_ULOCK(bmpc);
 }
 
-__static void
+void
 msl_biorq_destroy(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
 {
 	struct msl_fhent *f = r->biorq_fhent;
@@ -748,7 +749,7 @@ __static void
 msl_fsrq_complete(struct msl_fsrqinfo *q)
 {
 	struct bmpc_ioreq *r;
-	ssize_t len, rc;
+	size_t len, rc;
 	char *buf = q->mfsrq_buf;
 	int i;
 
@@ -1072,7 +1073,7 @@ msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 int
 msl_dio_cb(struct pscrpc_request *rq, int rc, struct pscrpc_async_args *args)
 {
-	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
+	//struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
 	struct srm_io_req *mq;
 	int op;
@@ -1276,7 +1277,9 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 			lc_addtail(&bmapFlushQ, b);
 		}
 	}
-
+	bmap_flushq_wake(PFL_CALLERINFOSS(SLSS_BMAP), BMAPFLSH_TIMEOA, 
+		 &r->biorq_issue);
+			
 	DEBUG_BMAP(PLL_INFO, b, "biorq=%p list_empty(%d)",
 		   r, pll_empty(&bmpc->bmpc_pndg_biorqs));
 	BMPC_ULOCK(bmpc);
@@ -1337,8 +1340,6 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 	if (rc)
 		goto error;
 
-	rq->rq_timeout = secs / 2;
-
 	rc = rsx_bulkclient(rq, BULK_PUT_SINK, SRIC_BULK_PORTAL, iovs,
 	    nbmpce);
 	if (rc)
@@ -1377,7 +1378,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 
 	added = 1;
 
-	rc = pscrpc_nbreqset_add(ra_nbreqset, rq);
+	rc = pscrpc_nbreqset_add(pndgReadaReqs, rq);
 	if (!rc)
 		return;
 
@@ -2092,7 +2093,6 @@ msl_fsrqinfo_write(struct msl_fsrqinfo *q)
 	DEBUG_FCMH(PLL_INFO, f, "write: buf=%p rc=%d sz=%zu "
 	    "off=%"PSCPRIdOFFT, q->mfsrq_buf, rc, q->mfsrq_size, q->mfsrq_off);
 	pscfs_reply_write(q->mfsrq_pfr, q->mfsrq_size, rc);
-
 }
 
 __static void

@@ -166,7 +166,7 @@ struct msl_fsrqinfo {
 	int                mfsrq_flags;
 	int                mfsrq_err;
 	int                mfsrq_ref;  /* # car's needed to satisfy this req */
-	int                mfsrq_rw;
+	enum rw            mfsrq_rw;
 	struct pscfs_req  *mfsrq_pfr;
 	struct psclist_head mfsrq_lentry;
 };
@@ -176,8 +176,9 @@ struct msl_fsrqinfo {
 #define MFSRQ_BMPCEATT  (1 << 2)
 #define MFSRQ_DIO       (1 << 3)
 
-int
-msl_fsrqinfo_state(struct msl_fsrqinfo *, int, int, int);
+
+void msl_fsrqinfo_write(struct msl_fsrqinfo *);
+int  msl_fsrqinfo_state(struct msl_fsrqinfo *, int, int, int);
 
 #define msl_fsrqinfo_isset(q, f) msl_fsrqinfo_state(q, f, 0, 0)
 #define msl_fsrqinfo_aioisset(q)  msl_fsrqinfo_state(q, MFSRQ_AIOWAIT, 0, 0)
@@ -223,6 +224,7 @@ int	 msl_readahead_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 int	 msl_stat(struct fidc_membh *, void *);
 int	 msl_write_rpc_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int	 msl_write_rpcset_cb(struct pscrpc_request_set *, void *, int);
+void     msl_biorq_destroy(const struct pfl_callerinfo *, struct bmpc_ioreq *);
 
 size_t	 msl_pages_copyout(struct bmpc_ioreq *, char *);
 
@@ -233,6 +235,8 @@ void	 msctlthr_spawn(void);
 void	 mstimerthr_spawn(void);
 void	 msbmapflushthr_spawn(void);
 void	 msctlthr_begin(struct psc_thread *);
+
+void     bmap_flushq_wake(const struct pfl_callerinfo *, int, struct timespec *);
 
 extern char			 ctlsockfn[];
 extern sl_ios_id_t		 prefIOS;
@@ -248,13 +252,18 @@ extern struct psc_iostats	 msl_rdcache_stat;
 extern struct psc_iostats	 msl_racache_stat;
 
 extern struct psc_listcache	 bmapTimeoutQ;
-extern struct psc_waitq		 bmapflushwaitq;
+extern struct psc_waitq		 bmapFlushWaitq;
 
 extern struct psc_listcache	 bmapReadAheadQ;
-extern struct pscrpc_nbreqset	*ra_nbreqset;
+extern struct pscrpc_nbreqset	*pndgReadaReqs;
 extern struct pscrpc_nbreqset	*pndgBmaplsReqs;
 
 extern struct psc_poolmgr	*slc_async_req_pool;
 extern struct psc_poolmgr	*slc_biorq_pool;
+
+#define BMAPFLSH_TIMEOA  (1 << 0)
+#define BMAPFLSH_WAKE    (1 << 1)
+#define BMAPFLSH_RPCWAIT (1 << 2)
+#define BMAPFLSH_EXPIRE  (1 << 3)
 
 #endif /* _MOUNT_SLASH_H_ */
