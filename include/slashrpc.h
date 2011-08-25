@@ -170,7 +170,8 @@ enum {
 	SRMT_XCTL,				/* ancillary operation */
 
 	/* import/export */
-	SRMT_IMPORT				/* trash storage space for a given FID+GEN */
+	SRMT_IMPORT,      /* trash storage space for a given FID+GEN */
+	SRMT_REPL_READAIO
 };
 
 /* ----------------------------- BEGIN MESSAGES ----------------------------- */
