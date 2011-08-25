@@ -154,9 +154,8 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	    S_ISDIR(stb->st_mode) ? "/" : "",
 	    fn + strlen(sfop->sfop_fn));
 
-	len = strlen(fidfn);
-	if (len)
-		len--;
+	len = strlen(fidfn) - 1;
+
 	/* trim trailing '/' chars */
 	for (p = fidfn + len; *p == '/' && p > fidfn; p--)
 		*p = '\0';
@@ -319,7 +318,12 @@ slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (sfop->sfop_fn[0] == '\0')
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    sfop->sfop_fn, slstrerror(ENOENT)));
-	if (strlen(sfop->sfop_fn) >= SL_PATH_MAX)
+	if (sfop->sfop_fn2[0] == '\0')
+		return (psc_ctlsenderr(fd, mh, "%s: %s",
+		    sfop->sfop_fn, slstrerror(ENOENT)));
+
+	/* more strict than needed, but I will do concatenation later */
+	if (strlen(sfop->sfop_fn) + strlen(sfop->sfop_fn2) >= SL_PATH_MAX)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    sfop->sfop_fn, slstrerror(ENAMETOOLONG)));
 
