@@ -66,7 +66,7 @@ slictlcmd_export(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 
 int
 sli_fcmh_lookup_fid(const struct slash_fidgen *pfg, const char *cpn,
-    struct slash_fidgen *cfg)
+    struct slash_fidgen *cfg, int *isdir)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -90,7 +90,7 @@ sli_fcmh_lookup_fid(const struct slash_fidgen *pfg, const char *cpn,
 		goto out;
 
 	*cfg = mp->attr.sst_fg;
-
+	*isdir = S_ISDIR(mp->attr.sst_mode);
  out:
 	if (rq)
 		pscrpc_req_finished(rq);
@@ -137,7 +137,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	struct slash_fidgen tfg, fg;
 	const char *str, *srcname;
 	size_t len;
-	int rc = 0, noname = 0;
+	int rc = 0, isdir, noname = 0;
 
 	/* 
 	 * Start from the root of slash2 namespace.  This means
@@ -200,7 +200,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 			break;
 		}
 
-		rc = sli_fcmh_lookup_fid(&fg, cpn, &tfg);
+		rc = sli_fcmh_lookup_fid(&fg, cpn, &tfg, &isdir);
 
 		/*
 		 * Last component is intended destination; use directly.
@@ -210,10 +210,14 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 			break;
 		}
 		if (!rc && np == NULL) {
-			rc = EEXIST;
-			a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
-			    slstrerror(rc));
-			goto out;
+			if (!isdir) {
+				rc = EEXIST;
+				a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
+				    slstrerror(rc));
+				goto out;
+			}
+			strcat(sfop->sfop_fn2, "/");
+			strcat(sfop->sfop_fn2, srcname);
 		}
 		if (rc || fg.fg_fid == FID_ANY) {
 			a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
