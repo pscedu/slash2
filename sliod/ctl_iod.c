@@ -115,15 +115,14 @@ struct sli_import_arg {
  *
  * Note: the difference between:
  *
- *	# slictl import -R src-dir dst-dir
- *	# slictl import -R src-dir/ dst-dir
+ *	# slictl import -R src-dir non-exist-dst-dir
+ *	# slictl import -R src-dir exist-dst-dir
  *
- *	# slictl import -R src-dir dst-dir/
- *	# slictl import -R src-dir/ dst-dir/
- *
- * In the first group, the contents under 'src-dir' will be attached
- * directly inside 'dst-dir' whereas in the second group, a subdir
- * named 'src-dir' will be created under 'dst-dir'.
+ * In the first case, the contents under 'src-dir' will be attached
+ * directly inside 'non-exist-dst-dir' after it is mkdir'ed.  In the 
+ * second case, a subdir named 'src-dir' will be created under 
+ * 'exist-dst-dir'.  This is the same behavior when you mv directories
+ * around.
  */
 int
 sli_import(const char *fn, const struct stat *stb, void *arg)
@@ -262,7 +261,8 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		 * The tree walk visits the top level directory first
 		 * before any of its children. This makes sure children
 		 * will live under the top level directory in the slash2 
-		 * namespace as well.  This is hackish.
+		 * namespace as well.  This is hackish to modify given
+		 * argument.
 		 */
 		if (!rc && noname)
 			strlcpy(sfop->sfop_fn2, srcname, PATH_MAX);
