@@ -274,14 +274,6 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		struct srm_import_req *mq;
 		struct srm_import_rep *mp;
 
-		/* check my fid namespace first */
-		sli_fg_makepath(&mp->fg, fidfn);
-		if (link(fn, fidfn) == -1) {
-			a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
-			    slstrerror(errno));
-			goto out;
-		}
-
 		rc = SL_RSX_NEWREQ(csvc, SRMT_IMPORT, rq, mq, mp);
 		if (rc) {
 			a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
@@ -292,12 +284,12 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		strlcpy(mq->cpn, srcname, sizeof(mq->cpn));
 		sl_externalize_stat(stb, &mq->sstb);
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
-		if (rc == 0)
+		if (rc == 0) {
 			rc = mp->rc;
-		if (rc) {
-			if (unlink(fidfn) == -1) {
-				a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fidfn,
-					slstrerror(errno));
+			if (rc == 0) {
+				sli_fg_makepath(&mp->fg, fidfn);
+				if (link(fn, fidfn) == -1)
+					rc = errno;
 			}
 		}
 	}
