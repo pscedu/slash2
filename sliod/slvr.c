@@ -381,7 +381,7 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 	psc_assert(!(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR)));
 	if (s->slvr_flags & SLVR_RDMODWR) {
 		psc_assert(s->slvr_pndgwrts > 0);
-		s->slvr_pndgwrts--
+		s->slvr_pndgwrts--;
 	} else
 		psc_assert(s->slvr_pndgreads > 0);
 
