@@ -287,6 +287,13 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		if (rc == 0) {
 			rc = mp->rc;
 			if (rc == 0) {
+				/*
+				 * XXX
+				 * If we fail here, we should undo import
+				 * above. However, with checks earlier,
+				 * we will probably won't fail for EXDEV
+				 * here.
+				 */
 				sli_fg_makepath(&mp->fg, fidfn);
 				if (link(fn, fidfn) == -1)
 					rc = errno;
