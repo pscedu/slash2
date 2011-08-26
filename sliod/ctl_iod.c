@@ -17,6 +17,9 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#include <sys/types.h>
+#include <sys/statvfs.h>
+
 /*
  * Interface for controlling live operation of a sliod instance.
  */
@@ -36,6 +39,7 @@
 #include "rpc_iod.h"
 #include "sliod.h"
 #include "slutil.h"
+
 
 struct psc_lockedlist psc_mlists;
 struct psc_lockedlist psc_odtables;
@@ -312,8 +316,8 @@ slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct sli_import_arg a;
 	int fl = 0;
 	char *p;
-
-	/* XXX check that src and dst are on the same mount point. */
+	struct stat sb1, sb2;
+	struct statvfs vfssb1, vfssb2;
 
 	if (sfop->sfop_fn[0] == '\0')
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
@@ -326,6 +330,34 @@ slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (strlen(sfop->sfop_fn) + strlen(sfop->sfop_fn2) >= SL_PATH_MAX)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    sfop->sfop_fn, slstrerror(ENAMETOOLONG)));
+
+	/*
+	 * The following checks are done to avoid EXDEV down the road. 
+	 * It is not bullet-proof, but it should not create false negatives.
+	 */
+	if (statvfs(globalConfig.gconf_fsroot, &vfssb1))
+		return (psc_ctlsenderr(fd, mh, "%s: %s",
+		    sfop->sfop_fn, slstrerror(errno)));
+
+	if (statvfs(sfop->sfop_fn, &vfssb2))
+		return (psc_ctlsenderr(fd, mh, "%s: %s",
+		    sfop->sfop_fn, slstrerror(errno)));
+
+	if (vfssb1.f_fsid != vfssb2.f_fsid)
+		return (psc_ctlsenderr(fd, mh, "%s: %s",
+		    sfop->sfop_fn, slstrerror(EXDEV)));
+
+	if (stat(globalConfig.gconf_fsroot, &sb1))
+		return (psc_ctlsenderr(fd, mh, "%s: %s",
+		    sfop->sfop_fn, slstrerror(errno)));
+
+	if (stat(sfop->sfop_fn, &sb2))
+		return (psc_ctlsenderr(fd, mh, "%s: %s",
+		    sfop->sfop_fn, slstrerror(errno)));
+
+	if (sb1.st_dev != sb2.st_dev)
+		return (psc_ctlsenderr(fd, mh, "%s: %s",
+		    sfop->sfop_fn, slstrerror(EXDEV)));
 
 	memset(&a, 0, sizeof(a));
 	a.mh = mh;
