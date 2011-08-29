@@ -185,8 +185,8 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		}
 
 		/*
-		 * No destination name specified (only slash(es) are given) --
-		 * preserve last component from src.
+		 * No destination name specified (only slash chars are
+		 * given) -- preserve last component from src.
 		 */
 		if (cpn[0] == '\0') {
 			noname = 1;
@@ -260,10 +260,10 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 			rc = mp->rc;
 		/*
 		 * The tree walk visits the top level directory first
-		 * before any of its children. This makes sure children
-		 * will live under the top level directory in the slash2
-		 * namespace as well.  This is hackish to modify given
-		 * argument.
+		 * before any of its children.  This makes sure children
+		 * will live under the top level directory in the SLASH2
+		 * namespace as well.  This is a hack to modify the
+		 * given argument.
 		 */
 		if (!rc && noname)
 			strlcpy(sfop->sfop_fn2, srcname, PATH_MAX);
