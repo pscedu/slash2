@@ -1062,7 +1062,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 	struct bmap_cli_info *bci, *wrapdetect;
 	struct bmapc_memb *b;
 	struct sl_resm *resm;
-	int i, sortbypass = 0, sawnew;
+	int i, sortbypass = 0, sawnew, rc;
 
 #define SORT_BYPASS_ITERS		32
 #define ITEMS_TRY_AFTER_UNEXPIRED	MAX_BMAP_RELEASE
@@ -1095,10 +1095,10 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 			BMAP_LOCK(b);
 
-			DEBUG_BMAP(PLL_DEBUG, b, "timeoq try reap "
-			    "(nbmaps=%zd) etime("PSCPRI_TIMESPEC")",
-			    lc_sz(&bmapTimeoutQ),
-			    PSCPRI_TIMESPEC_ARGS(&bci->bci_etime));
+			DEBUG_BMAP(PLL_DEBUG, b, "timeoq try reap"
+			   " (nbmaps=%zd) etime("PSCPRI_TIMESPEC")", 
+			   lc_sz(&bmapTimeoutQ),
+			   PSCPRI_TIMESPEC_ARGS(&bci->bci_etime));
 
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 			psc_assert(b->bcm_flags & BMAP_TIMEOQ);
@@ -1109,7 +1109,12 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			if (bmpc_queued_ios(&bci->bci_bmpc)) {
 				BMAP_ULOCK(b);
 
-				msl_bmap_lease_tryext(b, NULL, 0);
+				rc = msl_bmap_lease_tryext(b, NULL, 0);
+				/* msl_bmap_lease_tryext() adjusted etime.
+				 */
+				if (timespeccmp(&nexttimeo, &bci->bci_etime, >))
+					nexttimeo = bci->bci_etime;
+
 				lc_addtail(&bmapTimeoutQ, bci);
 				continue;
 
@@ -1190,15 +1195,12 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			msl_bmap_release(resm);
 
 		psc_dynarray_reset(&rels);
-
-		if (timespeccmp(&crtime, &nexttimeo, <)) {
-			timespecsub(&nexttimeo, &crtime, &nexttimeo);
-			psc_waitq_waitrel(&waitq, NULL, &nexttimeo);
-		}
+		psc_waitq_waitabs(&waitq, NULL, &nexttimeo);
 
 		if (!pscthr_run())
 			break;
 
+		timespecsub(&nexttimeo, &crtime, &nexttimeo);
 		psclogs_debug(SLSS_BMAP, "waited for ("PSCPRI_TIMESPEC")"
 		       " lc_sz=%zd", PSCPRI_TIMESPEC_ARGS(&nexttimeo),
 		       lc_sz(&bmapTimeoutQ));
@@ -1258,7 +1260,7 @@ bmap_flush(struct timespec *nexttimeo)
 	struct bmpc_ioreq *r, *tmp;
 	struct bmapc_memb *b, *tmpb;
 	struct iovec *iovs = NULL;
-	int i, j, niovs;
+	int i, j, niovs, rc;
 	struct timespec t;
 
 	PFL_GETTIMESPEC(nexttimeo);
@@ -1284,7 +1286,7 @@ bmap_flush(struct timespec *nexttimeo)
 			BMPC_ULOCK(bmpc);
 			bcm_wake_locked(b);
 		} else {
-			msl_bmap_lease_tryext(b, NULL, 0);
+			rc = msl_bmap_lease_tryext(b, NULL, 0);
 
 			if (bmap_flushable(b, &t))
 				psc_dynarray_add(&bmaps, b);
