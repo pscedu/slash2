@@ -62,7 +62,7 @@ struct msrcm_thread {
 
 struct msrci_thread {
 	struct pscrpc_thread		 mrci_prt;
-	struct psc_multiwait             mrci_mw;
+	struct psc_multiwait		 mrci_mw;
 };
 
 struct msfs_thread {
@@ -126,7 +126,7 @@ struct slc_async_req {
 						struct pscrpc_async_args *);
 	uint64_t			  car_id;
 	size_t				  car_len;
-	struct msl_fsrqinfo              *car_fsrqinfo;
+	struct msl_fsrqinfo		 *car_fsrqinfo;
 };
 
 struct msl_fhent {			 /* XXX rename */
@@ -154,37 +154,36 @@ struct msl_fhent {			 /* XXX rename */
 #define MFH_LOCK(m)			spinlock(&(m)->mfh_lock)
 #define MFH_ULOCK(m)			freelock(&(m)->mfh_lock)
 #define MFH_RLOCK(m)			reqlock(&(m)->mfh_lock)
-#define MFH_URLOCK(m, locked)           ureqlock(&(m)->mfh_lock, locked)
+#define MFH_URLOCK(m, locked)		ureqlock(&(m)->mfh_lock, locked)
 
 struct msl_fsrqinfo {
-	struct bmpc_ioreq *mfsrq_biorq[MAX_BMAPS_REQ];
-	struct bmap_pagecache_entry *mfsrq_bmpceatt;
-	struct msl_fhent  *mfsrq_fh;
-	char              *mfsrq_buf;
-	size_t             mfsrq_size;
-	off_t              mfsrq_off; 
-	int                mfsrq_flags;
-	int                mfsrq_err;
-	int                mfsrq_ref;  /* # car's needed to satisfy this req */
-	enum rw            mfsrq_rw;
-	struct pscfs_req  *mfsrq_pfr;
-	struct psclist_head mfsrq_lentry;
+	struct bmpc_ioreq		*mfsrq_biorq[MAX_BMAPS_REQ];
+	struct bmap_pagecache_entry	*mfsrq_bmpceatt;
+	struct msl_fhent		*mfsrq_fh;
+	char				*mfsrq_buf;
+	size_t				 mfsrq_size;
+	off_t				 mfsrq_off;
+	int				 mfsrq_flags;
+	int				 mfsrq_err;
+	int				 mfsrq_ref;  /* # car's needed to satisfy this req */
+	enum rw				 mfsrq_rw;
+	struct pscfs_req		*mfsrq_pfr;
+	struct psclist_head		 mfsrq_lentry;
 };
 
-#define MFSRQ_AIOWAIT   (1 << 0)
-#define MFSRQ_READY     (1 << 1)
-#define MFSRQ_BMPCEATT  (1 << 2)
-#define MFSRQ_DIO       (1 << 3)
+#define MFSRQ_AIOWAIT			(1 << 0)
+#define MFSRQ_READY			(1 << 1)
+#define MFSRQ_BMPCEATT			(1 << 2)
+#define MFSRQ_DIO			(1 << 3)
 
+void	msl_fsrqinfo_write(struct msl_fsrqinfo *);
+int	msl_fsrqinfo_state(struct msl_fsrqinfo *, int, int, int);
 
-void msl_fsrqinfo_write(struct msl_fsrqinfo *);
-int  msl_fsrqinfo_state(struct msl_fsrqinfo *, int, int, int);
-
-#define msl_fsrqinfo_isset(q, f) msl_fsrqinfo_state(q, f, 0, 0)
-#define msl_fsrqinfo_aioisset(q)  msl_fsrqinfo_state(q, MFSRQ_AIOWAIT, 0, 0)
-#define msl_fsrqinfo_aioset(q)    msl_fsrqinfo_state(q, MFSRQ_AIOWAIT, 1, 0)
-#define msl_fsrqinfo_readywait(q) msl_fsrqinfo_state(q, MFSRQ_READY, 0, 1)
-#define msl_fsrqinfo_readyset(q)  msl_fsrqinfo_state(q, MFSRQ_READY, 1, 1)
+#define msl_fsrqinfo_isset(q, f)	msl_fsrqinfo_state((q), (f), 0, 0)
+#define msl_fsrqinfo_aioisset(q)	msl_fsrqinfo_state((q), MFSRQ_AIOWAIT, 0, 0)
+#define msl_fsrqinfo_aioset(q)		msl_fsrqinfo_state((q), MFSRQ_AIOWAIT, 1, 0)
+#define msl_fsrqinfo_readywait(q)	msl_fsrqinfo_state((q), MFSRQ_READY, 0, 1)
+#define msl_fsrqinfo_readyset(q)	msl_fsrqinfo_state((q), MFSRQ_READY, 1, 1)
 
 struct resprof_cli_info {
 	struct psc_dynarray		 rpci_pinned_bmaps;
@@ -224,19 +223,21 @@ int	 msl_readahead_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 int	 msl_stat(struct fidc_membh *, void *);
 int	 msl_write_rpc_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int	 msl_write_rpcset_cb(struct pscrpc_request_set *, void *, int);
-void     msl_biorq_destroy(const struct pfl_callerinfo *, struct bmpc_ioreq *);
+void	 msl_biorq_destroy(const struct pfl_callerinfo *, struct bmpc_ioreq *);
 
 size_t	 msl_pages_copyout(struct bmpc_ioreq *, char *);
 
-struct slashrpc_cservice * msl_try_get_replica_res(struct bmapc_memb *, int);
-struct msl_fhent * msl_fhent_new(struct fidc_membh *);
+struct slashrpc_cservice *
+	 msl_try_get_replica_res(struct bmapc_memb *, int);
+struct msl_fhent *
+	 msl_fhent_new(struct fidc_membh *);
 
 void	 msctlthr_spawn(void);
 void	 mstimerthr_spawn(void);
 void	 msbmapflushthr_spawn(void);
 void	 msctlthr_begin(struct psc_thread *);
 
-void     bmap_flushq_wake(const struct pfl_callerinfo *, int, struct timespec *);
+void	 bmap_flushq_wake(const struct pfl_callerinfo *, int, struct timespec *);
 
 extern char			 ctlsockfn[];
 extern sl_ios_id_t		 prefIOS;
@@ -261,9 +262,9 @@ extern struct pscrpc_nbreqset	*pndgBmaplsReqs;
 extern struct psc_poolmgr	*slc_async_req_pool;
 extern struct psc_poolmgr	*slc_biorq_pool;
 
-#define BMAPFLSH_TIMEOA  (1 << 0)
-#define BMAPFLSH_WAKE    (1 << 1)
-#define BMAPFLSH_RPCWAIT (1 << 2)
-#define BMAPFLSH_EXPIRE  (1 << 3)
+#define BMAPFLSH_TIMEOA		(1 << 0)
+#define BMAPFLSH_WAKE		(1 << 1)
+#define BMAPFLSH_RPCWAIT	(1 << 2)
+#define BMAPFLSH_EXPIRE		(1 << 3)
 
 #endif /* _MOUNT_SLASH_H_ */
