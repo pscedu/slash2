@@ -40,14 +40,12 @@
 int
 slc_rci_handle_io(struct pscrpc_request *rq)
 {
-	struct bmpc_ioreq *r = NULL;
 	struct slc_async_req *car;
 	struct psc_listcache *lc;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct sl_resm *m;
 	struct iovec iov;
-	ssize_t rc;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	m = libsl_try_nid2resm(rq->rq_export->exp_connection->c_peer.nid);
@@ -93,8 +91,6 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		int i;
 
 		a = car->car_argv.pointer_arg[MSL_CBARG_BMPCE];
-		r = car->car_argv.pointer_arg[MSL_CBARG_BIORQ];
-
 
 		DYNARRAY_FOREACH(e, i, a) {
 			iovs[i].iov_base = e->bmpce_base;
@@ -145,7 +141,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 	 * The callback needs to be run even if the RPC failed so
 	 * cleanup can happen.
 	 */
-	rc = car->car_cbf(rq, mq->rc, &car->car_argv);
+	car->car_cbf(rq, mq->rc, &car->car_argv);
 	psc_pool_return(slc_async_req_pool, car);
 
  error:
