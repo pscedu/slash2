@@ -154,7 +154,7 @@ struct msl_fhent {			 /* XXX rename */
 #define MFH_LOCK(m)			spinlock(&(m)->mfh_lock)
 #define MFH_ULOCK(m)			freelock(&(m)->mfh_lock)
 #define MFH_RLOCK(m)			reqlock(&(m)->mfh_lock)
-#define MFH_URLOCK(m, locked)		ureqlock(&(m)->mfh_lock, locked)
+#define MFH_URLOCK(m, locked)		ureqlock(&(m)->mfh_lock, (locked))
 
 struct msl_fsrqinfo {
 	struct bmpc_ioreq		*mfsrq_biorq[MAX_BMAPS_REQ];
