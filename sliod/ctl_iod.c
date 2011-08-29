@@ -236,8 +236,8 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	}
 
 	if (strlen(sfop->sfop_fn) + strlen(srcname) >= SL_PATH_MAX) {
-		a->rc = psc_ctlsenderr(fd, mh, "%s: %s", sfop->sfop_fn,
-		    slstrerror(ENAMETOOLONG));
+		a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s",
+		    sfop->sfop_fn, slstrerror(ENAMETOOLONG));
 		goto out;
 	}
 
