@@ -51,7 +51,7 @@ sli_export(__unusedx const char *fn, __unusedx const struct stat *stb,
 	struct slictlmsg_fileop *sfop = arg;
 	int rc = 0;
 
-	psclog_info("export: src=%s, dst=%s, flags=%d", 
+	psclog_info("export: src=%s, dst=%s, flags=%d",
 		sfop->sfop_fn, sfop->sfop_fn2, sfop->sfop_flags);
 	return (rc);
 }
@@ -123,8 +123,8 @@ struct sli_import_arg {
  *	# slictl import -R src-dir exist-dst-dir
  *
  * In the first case, the contents under 'src-dir' will be attached
- * directly inside 'non-exist-dst-dir' after it is mkdir'ed.  In the 
- * second case, a subdir named 'src-dir' will be created under 
+ * directly inside 'non-exist-dst-dir' after it is mkdir'ed.  In the
+ * second case, a subdir named 'src-dir' will be created under
  * 'exist-dst-dir'.  This is the same behavior when you mv directories
  * around.
  */
@@ -142,7 +142,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	size_t len;
 	int rc = 0, isdir, noname = 0;
 
-	/* 
+	/*
 	 * Start from the root of slash2 namespace.  This means
 	 * that if just a name is given as the destination, it will
 	 * be treated as a child of the root.
@@ -188,7 +188,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		}
 
 		/*
-		 * No destination name specified (only slash(es) are given) -- 
+		 * No destination name specified (only slash(es) are given) --
 		 * preserve last component from src.
 		 */
 		if (cpn[0] == '\0') {
@@ -264,7 +264,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		/*
 		 * The tree walk visits the top level directory first
 		 * before any of its children. This makes sure children
-		 * will live under the top level directory in the slash2 
+		 * will live under the top level directory in the slash2
 		 * namespace as well.  This is hackish to modify given
 		 * argument.
 		 */
@@ -319,11 +319,11 @@ int
 slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct slictlmsg_fileop *sfop = m;
+	struct statvfs vfssb1, vfssb2;
 	struct sli_import_arg a;
+	struct stat sb1, sb2;
 	int fl = 0;
 	char *p;
-	struct stat sb1, sb2;
-	struct statvfs vfssb1, vfssb2;
 
 	if (sfop->sfop_fn[0] == '\0')
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
@@ -332,14 +332,15 @@ slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    sfop->sfop_fn, slstrerror(ENOENT)));
 
-	/* more strict than needed, but I will do concatenation later */
+	/* more strict than needed, but concatenation will happen later */
 	if (strlen(sfop->sfop_fn) + strlen(sfop->sfop_fn2) >= SL_PATH_MAX)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    sfop->sfop_fn, slstrerror(ENAMETOOLONG)));
 
 	/*
-	 * The following checks are done to avoid EXDEV down the road. 
-	 * It is not bullet-proof, but it should not create false negatives.
+	 * The following checks are done to avoid EXDEV down the road.
+	 * It is not bullet-proof, but it should not create false
+	 * negatives.
 	 */
 	if (statvfs(globalConfig.gconf_fsroot, &vfssb1))
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
@@ -373,11 +374,10 @@ slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (sfop->sfop_flags & SLI_CTL_FOPF_RECURSIVE)
 		fl |= PFL_FILEWALKF_RECURSIVE;
 
-	p = sfop->sfop_fn + strlen(sfop->sfop_fn) - 1; 
-	while ((*p == '/') && (p > sfop->sfop_fn)) {
-		*p = '\0';
-		p--;
-	}
+	/* trim trailing '/' chars */
+	p = sfop->sfop_fn + strlen(sfop->sfop_fn) - 1;
+	while (p > sfop->sfop_fn && *p == '/')
+		*p-- = '\0';
 
 	pfl_filewalk(sfop->sfop_fn, fl, sli_import, &a);
 	return (a.rc);
