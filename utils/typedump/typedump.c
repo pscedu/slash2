@@ -184,7 +184,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct msctlmsg_replst);
 	PRTYPE(struct msctlmsg_replst_slave);
 	PRTYPE(struct msfs_thread);
-	PRTYPE(struct msl_aiorqcol);
 	PRTYPE(struct msl_fhent);
 	PRTYPE(struct msl_ra);
 	PRTYPE(struct msrci_thread);
@@ -383,7 +382,6 @@ main(int argc, char *argv[])
 	PRVAL(MSCMT_GET_NEWREPLPOL);
 	PRVAL(MSCMT_SET_BMAPREPLPOL);
 	PRVAL(MSCMT_SET_NEWREPLPOL);
-	PRVAL(MSL_CBARG_AIORQCOL);
 	PRVAL(MSL_CBARG_BIORQ);
 	PRVAL(MSL_CBARG_BIORQS);
 	PRVAL(MSL_CBARG_BMAP);
@@ -391,7 +389,6 @@ main(int argc, char *argv[])
 	PRVAL(MSL_CBARG_BMPCE);
 	PRVAL(MSL_CBARG_BUF);
 	PRVAL(MSL_CBARG_CSVC);
-	PRVAL(MSL_CBARG_PFR);
 	PRVAL(MS_READAHEAD_MAXPGS);
 	PRVAL(MS_READAHEAD_MINSEQ);
 	PRVAL(NBREPLST);
