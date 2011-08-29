@@ -187,7 +187,8 @@ struct sli_aiocb_reply {
 	uint32_t		  aiocbr_off;
 };
 
-#define SLI_AIOCBSF_READY	(1 << 0)
+#define SLI_AIOCBSF_REPL		(1 << 0)
+#define SLI_AIOCBSF_READY		(1 << 1)
 
 struct sli_iocb {
 	struct psc_listentry	  iocb_lentry;
@@ -216,6 +217,7 @@ void	slvr_worker_init(void);
 void	sli_aio_reply_setup(struct sli_aiocb_reply *, struct pscrpc_request *,
 	    uint32_t, uint32_t, struct iovec *, int, enum rw);
 void	sli_aio_aiocbr_release(struct sli_aiocb_reply *);
+void    sli_aio_replreply_setup(struct sli_aiocb_reply *, struct pscrpc_request *, struct iovec *);
 
 extern struct psc_listcache lruSlvrs;
 extern struct psc_listcache crcqSlvrs;

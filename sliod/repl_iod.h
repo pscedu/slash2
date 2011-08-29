@@ -68,6 +68,8 @@ enum {
 	SLI_REPLWKOP_REPL,
 };
 
+struct sli_repl_workrq * sli_repl_findwq(const struct slash_fidgen *, sl_bmapno_t);
+
 int	sli_repl_addwk(int, uint64_t, const struct slash_fidgen *,
 		sl_bmapno_t, sl_bmapgen_t, int);
 void	sli_repl_init(void);

@@ -266,6 +266,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
 			goto out;
 		} else
+			/* All slvrs are ready.
+			 */
 			sli_aio_aiocbr_release(aiocbr);
 	}
 
