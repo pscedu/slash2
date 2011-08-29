@@ -84,7 +84,7 @@ struct bmap_pagecache_entry {
 	struct psc_waitq	*bmpce_waitq;	/* others block here on I/O	*/
 	struct timespec		 bmpce_laccess;	/* last page access		*/
 	struct psc_listentry	 bmpce_ralentry; /* queue read ahead		*/
-	struct psc_lockedlist    bmpce_pndgaios;
+	struct psc_lockedlist	 bmpce_pndgaios;
 	SPLAY_ENTRY(bmap_pagecache_entry) bmpce_tentry;
 	struct psc_listentry	 bmpce_lentry;	/* chain on bmap lru		*/
 };
@@ -110,7 +110,7 @@ struct bmap_pagecache_entry {
 #define BMPCE_ULOCK(b)		freelock(&(b)->bmpce_lock)
 #define BMPCE_RLOCK(b)		reqlock(&(b)->bmpce_lock)
 #define BMPCE_URLOCK(b, lk)	ureqlock(&(b)->bmpce_lock, (lk))
-#define BMPCE_LOCK_ENSURE(b)    LOCK_ENSURE(&(b)->bmpce_lock)
+#define BMPCE_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bmpce_lock)
 
 #define BMPCE_WAIT(b)		psc_waitq_wait((b)->bmpce_waitq, &(b)->bmpce_lock)
 #define BMPCE_WAKE(b)							\
@@ -267,7 +267,7 @@ struct bmpc_ioreq {
 	struct pscrpc_request_set	*biorq_rqset;
 	struct psc_waitq		 biorq_waitq;
 	struct msl_fhent		*biorq_fhent;	/* back pointer to msl_fhent */
-	struct msl_fsrqinfo             *biorq_fsrqi;
+	struct msl_fsrqinfo		*biorq_fsrqi;
 };
 
 #define	BIORQ_READ			(1 <<  0)
@@ -285,14 +285,14 @@ struct bmpc_ioreq {
 #define BIORQ_READAHEAD			(1 << 12)
 #define BIORQ_RBWFAIL			(1 << 13)
 #define BIORQ_AIOWAIT			(1 << 14)
-#define BIORQ_RESCHED                   (1 << 15)
+#define BIORQ_RESCHED			(1 << 15)
 
 #define BIORQ_LOCK(r)			spinlock(&(r)->biorq_lock)
 #define BIORQ_ULOCK(r)			freelock(&(r)->biorq_lock)
 
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP,					\
-	    "biorq@%p fl=%#x:%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "		\
+	    "biorq@%p fl=%#x:%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "		\
 	    "o=%u l=%u "						\
 	    "np=%d b=%p "						\
 	    "ts="PSCPRI_TIMESPEC" : "fmt,				\
@@ -310,6 +310,7 @@ struct bmpc_ioreq {
 	    (b)->biorq_flags & BIORQ_NOFHENT		? "n" : "",	\
 	    (b)->biorq_flags & BIORQ_APPEND		? "A" : "",	\
 	    (b)->biorq_flags & BIORQ_READAHEAD		? "a" : "",	\
+	    (b)->biorq_flags & BIORQ_RBWFAIL		? "F" : "",	\
 	    (b)->biorq_flags & BIORQ_AIOWAIT		? "W" : "",	\
 	    (b)->biorq_flags & BIORQ_RESCHED		? "R" : "",	\
 	    (b)->biorq_off, (b)->biorq_len,				\
@@ -454,14 +455,16 @@ bmpc_init(struct bmap_pagecache *bmpc)
 
 	pll_init(&bmpc->bmpc_new_biorqs, struct bmpc_ioreq,
 		 biorq_lentry, &bmpc->bmpc_lock);
-	/* Add the bmpc to the tail of LRU where it will stay until it's freed.
+	/*
+	 * Add the bmpc to the tail of LRU where it will stay until it's
+	 * freed.
 	 */
 	lc_add(&bmpcLru, bmpc);
 }
 
 static __inline void
 bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len,
-	int op, struct bmapc_memb *bmap, struct msl_fhent *fhent, 
+	int op, struct bmapc_memb *bmap, struct msl_fhent *fhent,
 	struct msl_fsrqinfo *q)
 {
 	memset(ioreq, 0, sizeof(*ioreq));

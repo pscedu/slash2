@@ -23,7 +23,6 @@
 #include <time.h>
 
 #include "pfl/fsmod.h"
-
 #include "psc_ds/lockedlist.h"
 #include "psc_util/atomic.h"
 #include "psc_util/pool.h"
@@ -99,8 +98,8 @@ bmpce_lookup_locked(struct bmap_pagecache *bmpc, struct bmpc_ioreq *biorq,
 void
 bmpce_getbuf(struct bmap_pagecache_entry *e)
 {
-	void *tmp;
 	int locked;
+	void *tmp;
 
 	locked = BMPCE_RLOCK(e);
 	psc_assert(e->bmpce_flags & BMPCE_GETBUF);
@@ -120,7 +119,6 @@ bmpce_getbuf(struct bmap_pagecache_entry *e)
 
 __static void
 bmpce_release_locked(struct bmap_pagecache_entry *, struct bmap_pagecache *);
-
 
 void
 bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
@@ -235,8 +233,7 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 int
 bmpc_biorq_cmp(const void *x, const void *y)
 {
-	const struct bmpc_ioreq * a = x;
-	const struct bmpc_ioreq * b = y;
+	const struct bmpc_ioreq *a = x, *b = y;
 
 	if (a->biorq_off == b->biorq_off)
 		/*
@@ -704,6 +701,7 @@ dump_biorq_flags(uint32_t flags)
 	PFL_PRFLAG(BIORQ_READAHEAD, &flags, &seq);
 	PFL_PRFLAG(BIORQ_RBWFAIL, &flags, &seq);
 	PFL_PRFLAG(BIORQ_AIOWAIT, &flags, &seq);
+	PFL_PRFLAG(BIORQ_RESCHED, &flags, &seq);
 	if (flags)
 		printf(" unknown: %#x", flags);
 	printf("\n");
