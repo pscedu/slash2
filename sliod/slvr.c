@@ -277,7 +277,7 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 	if (csvc == NULL)
 		goto out;
 
-	rc = SL_RSX_NEWREQ(csvc, a->aiocbr_rw == SL_WRITE ? SRMT_WRITE : SRMT_READ, 
+	rc = SL_RSX_NEWREQ(csvc, a->aiocbr_rw == SL_WRITE ? SRMT_WRITE : SRMT_READ,
 		   rq, mq, mp);
 	if (rc)
 		goto out;
@@ -452,7 +452,7 @@ sli_aio_reply_setup(struct sli_aiocb_reply *a, struct pscrpc_request *rq,
 			psc_assert(a->aiocbr_slvrs[i]->slvr_pndgreads > 0);
 	}
 
-	/* some of the slivers may have already been faulted in */ 
+	/* some of the slivers may have already been faulted in */
 	psc_assert(niovs >= a->aiocbr_nslvrs);
 
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
@@ -1394,6 +1394,7 @@ dump_sliver_flags(int fl)
 	PFL_PRFLAG(SLVR_REPLDST, &fl, &seq);
 	PFL_PRFLAG(SLVR_REPLFAIL, &fl, &seq);
 	PFL_PRFLAG(SLVR_AIOWAIT, &fl, &seq);
+	PFL_PRFLAG(SLVR_RDMODWR, &fl, &seq);
 	if (fl)
 		printf(" unknown: %x", fl);
 	printf("\n");

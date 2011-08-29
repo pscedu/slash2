@@ -47,7 +47,7 @@ struct slvr_ref {
 	uint32_t		 slvr_pndgwrts;	/* # writes in progess */
 	uint32_t		 slvr_pndgreads;/* # reads in progress */
 	uint32_t		 slvr_compwrts;	/* # compltd wrts when !LRU */
-	uint32_t		 slvr_flags;
+	uint32_t		 slvr_flags;	/* see SLVR_* flags */
 	uint32_t		 slvr_crc_soff;	/* crc start region */
 	uint32_t		 slvr_crc_eoff;	/* crc region length */
 	uint32_t		 slvr_crc_loff;	/* last crc end */
@@ -57,11 +57,12 @@ struct slvr_ref {
 	void			*slvr_pri;	/* backptr (bmap_iod_info) */
 	struct sli_iocb		*slvr_iocb;
 	struct sl_buffer	*slvr_slab;
-	struct psc_lockedlist    slvr_pndgaios;
+	struct psc_lockedlist	 slvr_pndgaios;
 	struct psclist_head	 slvr_lentry;	/* dirty queue */
 	SPLAY_ENTRY(slvr_ref)	 slvr_tentry;	/* bmap tree entry */
 };
 
+/* slvr_flags */
 #define	SLVR_NEW		(1 <<  0)	/* newly initialized */
 #define	SLVR_SPLAYTREE		(1 <<  1)	/* registered in the splay tree */
 #define	SLVR_FAULTING		(1 <<  2)	/* contents loading from disk or net */
@@ -151,7 +152,7 @@ struct slvr_ref {
 	(s)->slvr_flags & SLVR_REPLSRC		? "S" : "-",		\
 	(s)->slvr_flags & SLVR_REPLDST		? "T" : "-",		\
 	(s)->slvr_flags & SLVR_REPLFAIL		? "x" : "-",		\
-	(s)->slvr_flags & SLVR_AIOWAIT		? "a" : "-",            \
+	(s)->slvr_flags & SLVR_AIOWAIT		? "a" : "-",		\
 	(s)->slvr_flags & SLVR_RDMODWR		? "m" : "-"
 
 #define DEBUG_SLVR(level, s, fmt, ...)					\
@@ -162,7 +163,7 @@ struct slvr_ref {
 	    SLVR_FLAGS_FMT" :: "fmt,					\
 	    (s), (s)->slvr_num, (s)->slvr_pndgwrts,			\
 	    (s)->slvr_pndgreads, (s)->slvr_compwrts,			\
-	    (s)->slvr_crc_soff, (s)->slvr_crc_eoff, (s)->slvr_crc_loff, \
+	    (s)->slvr_crc_soff, (s)->slvr_crc_eoff, (s)->slvr_crc_loff,	\
 	    (s)->slvr_pri, (s)->slvr_slab, DEBUG_SLVR_FLAGS(s),		\
 	    ## __VA_ARGS__)
 
@@ -186,7 +187,7 @@ struct sli_aiocb_reply {
 	uint32_t		  aiocbr_off;
 };
 
-#define SLI_AIOCBSF_READY		(1 << 0)
+#define SLI_AIOCBSF_READY	(1 << 0)
 
 struct sli_iocb {
 	struct psc_listentry	  iocb_lentry;
@@ -212,9 +213,9 @@ void	slvr_slab_prep(struct slvr_ref *, enum rw);
 void	slvr_wio_done(struct slvr_ref *, uint32_t, uint32_t);
 void	slvr_worker_init(void);
 
-void    sli_aio_reply_setup(struct sli_aiocb_reply *, struct pscrpc_request *,
+void	sli_aio_reply_setup(struct sli_aiocb_reply *, struct pscrpc_request *,
 	    uint32_t, uint32_t, struct iovec *, int, enum rw);
-void    sli_aio_aiocbr_release(struct sli_aiocb_reply *);
+void	sli_aio_aiocbr_release(struct sli_aiocb_reply *);
 
 extern struct psc_listcache lruSlvrs;
 extern struct psc_listcache crcqSlvrs;
