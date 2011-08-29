@@ -95,6 +95,7 @@ sli_fcmh_lookup_fid(const struct slash_fidgen *pfg, const char *cpn,
 
 	*cfg = mp->attr.sst_fg;
 	*isdir = S_ISDIR(mp->attr.sst_mode);
+
  out:
 	if (rq)
 		pscrpc_req_finished(rq);
@@ -211,12 +212,14 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		if (!rc && np == NULL) {
 			if (!isdir) {
 				rc = EEXIST;
-				a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
-				    slstrerror(rc));
+				a->rc = psc_ctlsenderr(a->fd, mh,
+				    "%s: %s", fn, slstrerror(rc));
 				goto out;
 			}
-			strcat(sfop->sfop_fn2, "/");
-			strcat(sfop->sfop_fn2, srcname);
+			strlcat(sfop->sfop_fn2, "/",
+			    sizeof(sfop->sfop_fn2));
+			strlcat(sfop->sfop_fn2, srcname,
+			    sizeof(sfop->sfop_fn2));
 		}
 		if (rc || fg.fg_fid == FID_ANY) {
 			a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
@@ -432,6 +435,7 @@ struct psc_ctlop slictlops[] = {
 };
 
 psc_ctl_thrget_t psc_ctl_thrgets[] = {
+/* ASYNC_IO	*/ NULL,
 /* BMAPRLS	*/ NULL,
 /* CONN		*/ NULL,
 /* CTL		*/ psc_ctlthr_get,
@@ -444,6 +448,7 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* RII		*/ NULL,
 /* RIM		*/ NULL,
 /* SLVR_CRC	*/ NULL,
+/* STATFS	*/ NULL,
 /* TIOS		*/ NULL,
 /* USKLNDPL	*/ NULL
 };
