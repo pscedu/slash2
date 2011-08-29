@@ -146,7 +146,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	 * Start from the root of the SLASH2 namespace.  This means
 	 * that if just a name is given as the destination, it will
 	 * be treated as a child of the root.
-	*/
+	 */
 	fg.fg_fid = SLFID_ROOT;
 	fg.fg_gen = FGEN_ANY;
 
@@ -232,6 +232,12 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	if (fg.fg_fid == FID_ANY) {
 		a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
 		    slstrerror(ENOENT));
+		goto out;
+	}
+
+	if (strlen(sfop->sfop_fn) + strlen(srcname) >= SL_PATH_MAX) {
+		a->rc = psc_ctlsenderr(fd, mh, "%s: %s", sfop->sfop_fn,
+		    slstrerror(ENAMETOOLONG));
 		goto out;
 	}
 
@@ -331,11 +337,6 @@ slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (sfop->sfop_fn2[0] == '\0')
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    sfop->sfop_fn, slstrerror(ENOENT)));
-
-	/* more strict than needed, but concatenation will happen later */
-	if (strlen(sfop->sfop_fn) + strlen(sfop->sfop_fn2) >= SL_PATH_MAX)
-		return (psc_ctlsenderr(fd, mh, "%s: %s",
-		    sfop->sfop_fn, slstrerror(ENAMETOOLONG)));
 
 	/*
 	 * The following checks are done to avoid EXDEV down the road.
