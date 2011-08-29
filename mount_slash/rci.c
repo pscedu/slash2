@@ -34,7 +34,7 @@
  */
 
 /**
- * slc_rci_handle_read - Handle a READ completion for CLI from ION.
+ * slc_rci_handle_io - Handle a READ or WRITE completion for CLI from ION.
  * @rq: request.
  */
 int
