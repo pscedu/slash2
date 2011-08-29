@@ -50,12 +50,11 @@ bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *p)
 	INIT_PSC_LISTENTRY(&bmpce->bmpce_lentry);
 	INIT_PSC_LISTENTRY(&bmpce->bmpce_ralentry);
 	INIT_SPINLOCK(&bmpce->bmpce_lock);
-	pll_init(&bmpce->bmpce_pndgaios, struct msl_fsrqinfo, mfsrq_lentry,
-		 &bmpce->bmpce_lock);
+	pll_init(&bmpce->bmpce_pndgaios, struct msl_fsrqinfo,
+	    mfsrq_lentry, &bmpce->bmpce_lock);
 	bmpce->bmpce_flags = BMPCE_NEW;
 	return (0);
 }
-
 
 struct bmap_pagecache_entry *
 bmpce_lookup_locked(struct bmap_pagecache *bmpc, struct bmpc_ioreq *biorq,
@@ -70,7 +69,7 @@ bmpce_lookup_locked(struct bmap_pagecache *bmpc, struct bmpc_ioreq *biorq,
 
 	while (!bmpce) {
 		bmpce = SPLAY_FIND(bmap_pagecachetree, &bmpc->bmpc_tree,
-			   &bmpce_search);
+		    &bmpce_search);
 		if (bmpce)
 			break;
 
@@ -353,8 +352,9 @@ bmpce_release_locked(struct bmap_pagecache_entry *bmpce,
 
 /**
  * bmpc_freeall_locked - Called when a bmap is being released.  Iterate
- *    across the tree freeing each bmpce.  Prior to being invoked, all
- *    bmpce's must be idle (ie have zero refcnts) and be present on bmpc_lru.
+ *	across the tree freeing each bmpce.  Prior to being invoked, all
+ *	bmpce's must be idle (ie have zero refcnts) and be present on
+ *	bmpc_lru.
  */
 void
 bmpc_freeall_locked(struct bmap_pagecache *bmpc)
@@ -616,7 +616,8 @@ bmpc_alloc(void)
 		 */
 		nfree = bmpc_reap_locked();
 		if (!nfree)
-			psc_waitq_waitrel(&bmpcSlabs.bmms_waitq, NULL, &ts);
+			psc_waitq_waitrel(&bmpcSlabs.bmms_waitq, NULL,
+			    &ts);
 		goto retry;
 
 	} else {
@@ -643,13 +644,15 @@ bmpc_global_init(void)
 	pll_init(&bmpcSlabs.bmms_slbs, struct sl_buffer,
 	    slb_mgmt_lentry, &bmpcSlabs.bmms_lock);
 
-	psc_poolmaster_init(&bmpcePoolMaster, struct bmap_pagecache_entry,
-	    bmpce_lentry, PPMF_AUTO, 512, 512, 16384,
+	psc_poolmaster_init(&bmpcePoolMaster, struct
+	    bmap_pagecache_entry, bmpce_lentry,
+	    PPMF_AUTO, 512, 512, 16384,
 	    bmpce_init, NULL, NULL, "bmpce");
 
 	bmpcePoolMgr = psc_poolmaster_getmgr(&bmpcePoolMaster);
 
-	lc_reginit(&bmpcLru, struct bmap_pagecache, bmpc_lentry, "bmpclru");
+	lc_reginit(&bmpcLru, struct bmap_pagecache, bmpc_lentry,
+	    "bmpclru");
 
 	psc_assert(!bmpc_grow(BMPC_DEFSLBS));
 }
