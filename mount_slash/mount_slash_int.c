@@ -664,17 +664,19 @@ msl_biorq_aio_prep(struct bmpc_ioreq *r)
 __static void
 msl_fsrq_aiowait_tryadd_locked(struct bmap_pagecache_entry *e, struct bmpc_ioreq *r)
 {
+	int locked;
+
 	LOCK_ENSURE(&e->bmpce_lock);
 
 	psc_assert(e->bmpce_flags & BMPCE_AIOWAIT);
 
-	MFH_LOCK(r->biorq_fhent);
+	locked = MFH_RLOCK(r->biorq_fhent);
 	if (!msl_fsrqinfo_isset(r->biorq_fsrqi, MFSRQ_BMPCEATT)) {
 		r->biorq_fsrqi->mfsrq_flags |= MFSRQ_BMPCEATT;
 		r->biorq_fsrqi->mfsrq_bmpceatt = e;
 		pll_add(&e->bmpce_pndgaios, r->biorq_fsrqi);
 	}
-	MFH_ULOCK(r->biorq_fhent);
+	MFH_URLOCK(r->biorq_fhent, locked);
 }
 
 __static int
@@ -763,6 +765,7 @@ msl_fsrq_complete(struct msl_fsrqinfo *q)
 		psc_waitq_wakeall(&r->biorq_waitq);
 		BIORQ_ULOCK(r);
 
+		DEBUG_BIORQ(PLL_INFO, r, "fsrq_complete");
 		if (q->mfsrq_err)
 			msl_biorq_destroy(r);
 
@@ -820,7 +823,13 @@ msl_fsrq_completion_try(struct msl_fsrqinfo *q)
 				goto out;
 
 			} else if (e->bmpce_flags & BMPCE_AIOWAIT) {
+				MFH_LOCK(r->biorq_fhent);
+				psc_assert(msl_fsrqinfo_isset(r->biorq_fsrqi, 
+						      MFSRQ_BMPCEATT));
+				r->biorq_fsrqi->mfsrq_flags &= ~MFSRQ_BMPCEATT;
+				r->biorq_fsrqi->mfsrq_bmpceatt = NULL;
 				msl_fsrq_aiowait_tryadd_locked(e, r);
+				MFH_ULOCK(r->biorq_fhent);
 				BMPCE_ULOCK(e);
 				DEBUG_BIORQ(PLL_NOTIFY, r,
 				    "still blocked on aio (bmpce@%p)", e);
@@ -2125,6 +2134,8 @@ msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
 	} else {
 		int i;
 
+		/* The fs request was reissued.  Clear out any old state.
+		 */
 		psc_assert(q->mfsrq_fh == mfh &&
 			   q->mfsrq_buf == buf &&
 			   q->mfsrq_size == size &&
@@ -2392,12 +2403,18 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
  next_ioreq:
 		r[i] = MSL_BIORQ_COMPLETE;
 	}
-
-	msl_fsrqinfo_readyset(q);
+	/* Check for AIO in the fsrq prior to opening the fsrq for async
+	 *    operation.  Otherwise a race condition is possible where the 
+	 *    async handler will unset the 'aio' flag, making this ioreq 
+	 *    look like a success.  The 'rc' is not used since more than
+	 *    one BIORQ may be involved in this operation.
+	 */
 	if (msl_fsrqinfo_aioisset(q))
 		rc = -SLERR_AIOWAIT;
 	else
 		rc = tsize;
+
+	msl_fsrqinfo_readyset(q);
 
 	if (rw == SL_WRITE)
 		fcmh_setlocalsize(f, off + size);
