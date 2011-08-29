@@ -177,16 +177,21 @@ int
 msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int force)
 {
 	int secs = 0, rc = 0, waslocked, extended = 0;
+	struct timespec ts;
+
+	PFL_GETTIMESPEC(&ts);
 
 	waslocked = BMAP_RLOCK(b);
 
 	if (!force &&
 	    (b->bcm_flags & (BMAP_CLI_LEASEEXTREQ) ||
-	     (secs = bmap_2_bci(b)->bci_xtime.tv_sec - CURRENT_SECONDS) >
-	     BMAP_CLI_EXTREQSECS))
+	     (secs = bmap_2_bci(b)->bci_xtime.tv_sec - ts.tv_sec) >
+	     BMAP_CLI_EXTREQSECS)) {
+		timespecadd(&ts, &msl_bmap_timeo_inc, 
+			    &bmap_2_bci(b)->bci_etime);
 		BMAP_URLOCK(b, waslocked);
-
-	else {
+	
+	} else {
 		struct slashrpc_cservice *csvc = NULL;
 		struct pscrpc_request *rq = NULL;
 		struct srm_leasebmapext_req *mq;
