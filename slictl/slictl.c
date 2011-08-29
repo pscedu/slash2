@@ -136,8 +136,8 @@ slictlcmd_export(int ac, char *av[])
 void
 slictlcmd_import(int ac, char *av[])
 {
-	struct stat sb; 
 	struct slictlmsg_fileop *sfop;
+	struct stat sb;
 	int i, c;
 
 	PFL_OPT_RESET();
@@ -159,9 +159,8 @@ slictlcmd_import(int ac, char *av[])
  usage:
 		errx(1, "usage: import [-Rv] file ... dst");
 	for (i = 0; i < ac - 1; i++) {
-		if (stat(av[i], &sb)) {
-			errx(1, "%s: %s", av[i], strerror(errno));
-		}
+		if (stat(av[i], &sb) == -1)
+			err(1, "%s", av[i]);
 		sfop = psc_ctlmsg_push(SLICMT_IMPORT, sizeof(*sfop));
 		if (recursive)
 			sfop->sfop_flags |= SLI_CTL_FOPF_RECURSIVE;
@@ -203,6 +202,7 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 };
 
 psc_ctl_prthr_t psc_ctl_prthrs[] = {
+/* ASYNC_IO	*/ NULL,
 /* BMAPRLS	*/ NULL,
 /* CONN		*/ NULL,
 /* CTL		*/ psc_ctlthr_pr,
