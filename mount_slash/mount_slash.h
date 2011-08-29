@@ -212,9 +212,12 @@ resm2rmci(struct sl_resm *resm)
 #define msl_read(pfr, fh, buf, size, off)	msl_io((pfr), (fh), (buf), (size), (off), SL_READ)
 #define msl_write(pfr, fh, buf, size, off)	msl_io((pfr), (fh), (char *)(buf), (size), (off), SL_WRITE)
 
+#define msl_biorq_destroy(r) _msl_biorq_destroy(PFL_CALLERINFOSS(SLSS_BMAP), (r))
+
 struct slashrpc_cservice *
 	 msl_bmap_to_csvc(struct bmapc_memb *, int);
 void	 msl_bmap_reap_init(struct bmapc_memb *, const struct srt_bmapdesc *);
+void	_msl_biorq_destroy(const struct pfl_callerinfo *, struct bmpc_ioreq *);
 int	 msl_dio_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 ssize_t	 msl_io(struct pscfs_req *, struct msl_fhent *, char *, size_t, off_t, enum rw);
 int	 msl_read_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
@@ -223,7 +226,6 @@ int	 msl_readahead_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 int	 msl_stat(struct fidc_membh *, void *);
 int	 msl_write_rpc_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int	 msl_write_rpcset_cb(struct pscrpc_request_set *, void *, int);
-void	 msl_biorq_destroy(const struct pfl_callerinfo *, struct bmpc_ioreq *);
 
 size_t	 msl_pages_copyout(struct bmpc_ioreq *, char *);
 
@@ -232,12 +234,19 @@ struct slashrpc_cservice *
 struct msl_fhent *
 	 msl_fhent_new(struct fidc_membh *);
 
-void	 msctlthr_spawn(void);
-void	 mstimerthr_spawn(void);
 void	 msbmapflushthr_spawn(void);
 void	 msctlthr_begin(struct psc_thread *);
+void	 msctlthr_spawn(void);
+void	 mstimerthr_spawn(void);
 
-void	 bmap_flushq_wake(const struct pfl_callerinfo *, int, struct timespec *);
+#define bmap_flushq_wake(mode, t)					\
+	_bmap_flushq_wake(PFL_CALLERINFOSS(SLSS_BMAP), (mode), (t))
+
+#define bmap_flush_resched(biorq)					\
+	_bmap_flush_resched(PFL_CALLERINFOSS(SLSS_BMAP), (biorq))
+
+void	 _bmap_flushq_wake(const struct pfl_callerinfo *, int, struct timespec *);
+int	 _bmap_flush_resched(const struct pfl_callerinfo *, struct bmpc_ioreq *);
 
 extern char			 ctlsockfn[];
 extern sl_ios_id_t		 prefIOS;

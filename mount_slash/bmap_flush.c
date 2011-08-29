@@ -40,7 +40,7 @@
 #include "slashrpc.h"
 #include "slconfig.h"
 
-struct timespec                  bmapFlushWaitSecs = { 1, 0L };
+struct timespec			 bmapFlushWaitSecs = { 1, 0L };
 struct timespec			 bmapFlushDefMaxAge = { 0, 10000000L };	/* 10 milliseconds */
 struct timespec			 bmapFlushWaitTime;
 struct psc_listcache		 bmapFlushQ;
@@ -48,8 +48,8 @@ struct psc_listcache		 bmapReadAheadQ;
 struct psc_listcache		 bmapTimeoutQ;
 struct pscrpc_completion	 rpcComp;
 
-struct pscrpc_nbreqset		*pndgBmaplsReqs;    /* bmap lease */
-__static struct pscrpc_nbreqset	*pndgBmapRlsReqs;   /* bmap release */
+struct pscrpc_nbreqset		*pndgBmaplsReqs;	/* bmap lease */
+__static struct pscrpc_nbreqset	*pndgBmapRlsReqs;	/* bmap release */
 __static struct pscrpc_nbreqset	*pndgWrtReqs;
 __static struct psc_listcache	 pndgWrtReqSets;
 __static atomic_t		 outstandingRpcCnt;
@@ -59,9 +59,7 @@ __static atomic_t		 outstandingRpcCnt;
 
 struct psc_waitq		bmapFlushWaitq = PSC_WAITQ_INIT;
 psc_spinlock_t			bmapFlushLock = SPINLOCK_INIT;
-int                             bmapFlushTimeoFlags = 0;
-
-int bmap_flush_resched(const struct pfl_callerinfo *pci, struct bmpc_ioreq *);
+int				bmapFlushTimeoFlags = 0;
 
 __static void
 bmap_flush_reap_rpcs(void)
@@ -81,21 +79,21 @@ bmap_flush_reap_rpcs(void)
 	 *
 	 * XXX this looks problematic.. I think that pscrpc_set_finalize()
 	 *   should not block here at all, and hence, the 'set' should
-	 *   not be removed from the LC.   A pscrpc_completion could be
-	 *   put in place here.  Note that pscrpc_nbreqset_reap() also sleeps
-	 *   for a second.
+	 *   not be removed from the LC.  A pscrpc_completion could be
+	 *   put in place here.  Note that pscrpc_nbreqset_reap() also
+	 *   sleeps for a second.
 	 */
-	while ((set = lc_getnb(&pndgWrtReqSets))) {
+	while ((set = lc_getnb(&pndgWrtReqSets)))
 		if (pscrpc_set_finalize(set, 0, 1))
 			pll_add(&hold, set);
-	}
+
 	pscrpc_nbreqset_reap(pndgWrtReqs);
 
 	while ((set = pll_get(&hold)))
 		lc_add(&pndgWrtReqSets, set);
 
 	psclog_debug("outstandingRpcCnt=%d (after)",
-		 atomic_read(&outstandingRpcCnt));
+	    atomic_read(&outstandingRpcCnt));
 }
 
 __static int
@@ -194,7 +192,7 @@ bmap_flush_coalesce_size(const struct psc_dynarray *biorqs)
 }
 
 void
-bmap_flushq_wake(const struct pfl_callerinfo *pci, int mode,
+_bmap_flushq_wake(const struct pfl_callerinfo *pci, int mode,
 	 struct timespec *t)
 {
 	int wake = 0, tmp;
@@ -241,15 +239,17 @@ bmap_flushq_wake(const struct pfl_callerinfo *pci, int mode,
 
 	freelock(&bmapFlushLock);
 
-	psclogs_info(SLSS_BMAP, "mode=%x wake=%d flags=%x outstandingRpcCnt=%d",
+	psclog_info("mode=%x wake=%d flags=%x outstandingRpcCnt=%d",
 	     mode, wake, tmp, atomic_read(&outstandingRpcCnt));
 }
 
+#define bmap_flush_rpccnt_dec() _bmap_flush_rpccnt_dec(PFL_CALLERINFOSS(SLSS_BMAP))
+
 __static void
-bmap_flush_rpccnt_dec(const struct pfl_callerinfo *pci)
+_bmap_flush_rpccnt_dec(const struct pfl_callerinfo *pci)
 {
 	if (atomic_dec_return(&outstandingRpcCnt) < MAX_OUTSTANDING_RPCS)
-		bmap_flushq_wake(pci, BMAPFLSH_RPCWAIT, NULL);
+		_bmap_flushq_wake(pci, BMAPFLSH_RPCWAIT, NULL);
 
 	psc_assert(atomic_read(&outstandingRpcCnt) >= 0);
 }
@@ -263,7 +263,7 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 
 	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
 
-	bmap_flush_rpccnt_dec(PFL_CALLERINFOSS(SLSS_BMAP));
+	bmap_flush_rpccnt_dec();
 
 	DEBUG_REQ(rq->rq_err ? PLL_ERROR : PLL_INFO, rq, "done rc=%d", rc);
 
@@ -358,13 +358,11 @@ bmap_flush_create_rpc(void *set, struct bmpc_ioreq *r,
 __static void
 bmap_flush_inflight_set(struct bmpc_ioreq *r)
 {
-	struct bmap_pagecache *bmpc;
 	struct timespec t, s = { 0, 10000000L };
-	int old=0;
+	struct bmap_pagecache *bmpc;
+	int old = 0;
 
 	PFL_GETTIMESPEC(&t);
-
-
 
 	BIORQ_LOCK(r);
 	psc_assert(r->biorq_flags & BIORQ_SCHED);
@@ -393,11 +391,15 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r)
 	BMPC_ULOCK(bmpc);
 }
 
+#define bmap_flush_desched(r)						\
+	_bmap_flush_desched(PFL_CALLERINFOSS(SLSS_BMAP), (r))
+
 __static int
-bmap_flush_desched(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
+_bmap_flush_desched(const struct pfl_callerinfo *pci,
+    struct bmpc_ioreq *r)
 {
-	int secs, rc, i;
 	struct bmap_pagecache_entry *bmpce;
+	int secs, rc, i;
 
 	BIORQ_LOCK(r);
 	psc_assert(r->biorq_flags & BIORQ_SCHED);
@@ -422,12 +424,14 @@ bmap_flush_desched(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
 	}
 	return (rc);
 }
+
 /**
  * bmap_flush_resched - called in error contexts where
  *    the biorq must be rescheduled.
  */
 int
-bmap_flush_resched(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
+_bmap_flush_resched(const struct pfl_callerinfo *pci,
+    struct bmpc_ioreq *r)
 {
 	struct bmap_pagecache *bmpc;
 	int rc;
@@ -438,7 +442,7 @@ bmap_flush_resched(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
 	r->biorq_flags &= ~BIORQ_INFL;
 	BIORQ_ULOCK(r);
 
-	rc = bmap_flush_desched(pci, r);
+	rc = _bmap_flush_desched(pci, r);
 
 	bmpc = bmap_2_bmpc(r->biorq_bmap);
 	BMPC_LOCK(bmpc);
@@ -562,17 +566,14 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 			freelock(&set->set_lock);
 	}
 
-	DYNARRAY_FOREACH(r, i, biorqs) {
-		rc = csvc ? bmap_flush_resched(PFL_CALLERINFOSS(SLSS_BMAP), r)
-			: bmap_flush_desched(PFL_CALLERINFOSS(SLSS_BMAP), r);
-	}
+	DYNARRAY_FOREACH(r, i, biorqs)
+		rc = csvc ? bmap_flush_resched(r) : bmap_flush_desched(r);
 
 	if (rc) {
 		/* Failed to flush this bmap's dirty pages.
 		 */
-		DYNARRAY_FOREACH(r, i, biorqs) {
+		DYNARRAY_FOREACH(r, i, biorqs)
 			DEBUG_BIORQ(PLL_ERROR, r, "could not flush");
-		}
 		DEBUG_BMAP(PLL_ERROR, r->biorq_bmap, "could not flush");
 
 		spinlock(&r->biorq_fhent->mfh_lock);
@@ -635,9 +636,8 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs,
 			 *   accounted for but first ensure that all of the
 			 *   pages have been scheduled for IO.
 			 */
-			DYNARRAY_FOREACH(bmpce, j, &r->biorq_pages) {
+			DYNARRAY_FOREACH(bmpce, j, &r->biorq_pages)
 				psc_assert(psc_atomic16_read(&bmpce->bmpce_wrref) > 0);
-			}
 			DEBUG_BIORQ(PLL_INFO, r, "t pos=%d (skip)", i);
 			continue;
 		}
@@ -655,8 +655,9 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs,
 			bmpce = psc_dynarray_getpos(&r->biorq_pages, j);
 			BMPCE_LOCK(bmpce);
 			/*
-			 * We might round down the offset of an I/O request
-			 * to the start offset of the previous page.
+			 * We might round down the offset of an I/O
+			 * request to the start offset of the previous
+			 * page.
 			 */
 			if ((bmpce->bmpce_off <= r->biorq_off) && j)
 				abort();
@@ -856,7 +857,7 @@ bmap_flushable(struct bmapc_memb *b, struct timespec *t)
 }
 
 /**
- * bmap_flush_trycoalesce - Scan the given array of i/o requests for
+ * bmap_flush_trycoalesce - Scan the given array of I/O requests for
  *	candidates to flush.  We *only* flush when (1) a request has
  *	aged out or (2) we can construct a large enough I/O.
  */
@@ -902,10 +903,12 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 				 */
 				r = t;
 		} else {
-			/* This biorq is not contiguous with the previous.
-			 *    If the current set is expired send it out now.
-			 *    Otherwise, deschedule the current set and
-			 *    resume activity with 't' as the base.
+			/*
+			 * This biorq is not contiguous with the
+			 * previous.  If the current set is expired send
+			 * it out now.  Otherwise, deschedule the
+			 * current set and resume activity with 't' as
+			 * the base.
 			 */
 			if (expired)
 				break;
@@ -954,7 +957,6 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 	return (a);
 }
 
-
 static __inline void
 bmap_2_bid(const struct bmapc_memb *b, struct srm_bmap_id *bid)
 {
@@ -967,7 +969,8 @@ bmap_2_bid(const struct bmapc_memb *b, struct srm_bmap_id *bid)
 }
 
 int
-msl_bmap_release_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
+msl_bmap_release_cb(struct pscrpc_request *rq,
+    struct pscrpc_async_args *args)
 {
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
@@ -984,9 +987,9 @@ msl_bmap_release_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 		psclog((rc || mp->rc || mp->bidrc[i]) ? PLL_ERROR : PLL_INFO,
 		       "fid="SLPRI_FID" bmap=%u key=%"PRId64" seq=%"PRId64
 		       " rc=%d bidrc=%d",
-		       mq->bmaps[i].fid, mq->bmaps[i].bmapno, mq->bmaps[i].key,
-		       mq->bmaps[i].seq, (mp) ? mp->rc : rc,
-		       mp ? mp->bidrc[i] : rc);
+		       mq->bmaps[i].fid, mq->bmaps[i].bmapno,
+		       mq->bmaps[i].key, mq->bmaps[i].seq,
+		       (mp) ? mp->rc : rc, mp ? mp->bidrc[i] : rc);
 
 	return (rc | ((mp) ? mp->rc : 0));
 }
@@ -1522,7 +1525,8 @@ msbmapflushthr_spawn(void)
 	struct psc_thread *thr;
 	int i;
 
-	pndgBmapRlsReqs = pscrpc_nbreqset_init(NULL, msl_bmap_release_cb);
+	pndgBmapRlsReqs = pscrpc_nbreqset_init(NULL,
+	    msl_bmap_release_cb);
 	pndgBmaplsReqs = pscrpc_nbreqset_init(NULL, NULL);
 	pndgWrtReqs = pscrpc_nbreqset_init(NULL, msl_write_rpc_cb);
 
@@ -1561,14 +1565,15 @@ msbmapflushthr_spawn(void)
 	thr = pscthr_init(MSTHRT_BMAPFLSHRLS, 0, msbmaprlsthr_main,
 	    NULL, sizeof(struct msbmflrls_thread), "msbrlsthr");
 	psc_multiwait_init(&msbmflrlsthr(thr)->mbfrlst_mw, "%s",
-		   thr->pscthr_name);
+	    thr->pscthr_name);
 	pscthr_setready(thr);
 
 	for (i=0; i < 4; i++) {
-		thr = pscthr_init(MSTHRT_BMAPREADAHEAD, 0, msbmaprathr_main,
-			  NULL, sizeof(struct msbmflra_thread), "msbrathr%d", i);
+		thr = pscthr_init(MSTHRT_BMAPREADAHEAD, 0,
+		    msbmaprathr_main, NULL, sizeof(struct
+		    msbmflra_thread), "msbrathr%d", i);
 		psc_multiwait_init(&msbmfrathr(thr)->mbfra_mw, "%s",
-			   thr->pscthr_name);
+		    thr->pscthr_name);
 		pscthr_setready(thr);
 	}
 }
