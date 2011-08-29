@@ -185,6 +185,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct msctlmsg_replst_slave);
 	PRTYPE(struct msfs_thread);
 	PRTYPE(struct msl_fhent);
+	PRTYPE(struct msl_fsrqinfo);
 	PRTYPE(struct msl_ra);
 	PRTYPE(struct msrci_thread);
 	PRTYPE(struct msrcm_thread);
@@ -686,6 +687,7 @@ main(int argc, char *argv[])
 	PRVAL(SRMT_REPL_GETST);
 	PRVAL(SRMT_REPL_GETST_SLAVE);
 	PRVAL(SRMT_REPL_READ);
+	PRVAL(SRMT_REPL_READAIO);
 	PRVAL(SRMT_REPL_SCHEDWK);
 	PRVAL(SRMT_RMDIR);
 	PRVAL(SRMT_SETATTR);
