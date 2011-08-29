@@ -79,7 +79,7 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 		 *   further action being taken.
 		 */
 		return (0);
-	
+
 	/* Add write mode to this bmap.
 	 */
 	psc_assert(rw == SL_WRITE && (b->bcm_flags & BMAP_RD));
@@ -97,7 +97,7 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
-	
+
 	if (rc == 0)
 		memcpy(bmap_2_sbd(b), &mp->sbd,
 		    sizeof(struct srt_bmapdesc));
@@ -114,7 +114,7 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 
 		msl_bmap_cache_rls(b);
 	}
-	
+
  out:
 	if (rq) {
 		pscrpc_req_finished(rq);
@@ -180,7 +180,7 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int force)
 
 	waslocked = BMAP_RLOCK(b);
 
-	if (!force && 
+	if (!force &&
 	    (b->bcm_flags & (BMAP_CLI_LEASEEXTREQ) ||
 	     (secs = bmap_2_bci(b)->bci_xtime.tv_sec - CURRENT_SECONDS) >
 	     BMAP_CLI_EXTREQSECS))
@@ -218,18 +218,18 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int force)
 			 */
 			rc = SL_RSX_WAITREP(csvc, rq, mp);
 			if (!rc)
-				rc = msl_bmap_lease_tryext_cb(rq, 
+				rc = msl_bmap_lease_tryext_cb(rq,
 				      &rq->rq_async_args);
 
 			if (!rc)
 				extended = 1;
 			pscrpc_req_finished(rq);
 			sl_csvc_decref(csvc);
-			
+
 			DEBUG_BMAP(rc ? PLL_ERROR : PLL_WARN, b,
-			   "blocking lease extension req (rc=%d) (secs=%d)", 
+			   "blocking lease extension req (rc=%d) (secs=%d)",
 			   rc, secs);
-		
+
 		} else {
 			/* Otherwise, let the async handler do the dirty work.
 			 */
@@ -252,7 +252,7 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int force)
 		if (waslocked == PSLRV_WASLOCKED)
 			BMAP_LOCK(b);
 	}
-	
+
 	if (secs_rem) {
 		if (!secs || extended)
 			secs = bmap_2_bci(b)->bci_xtime.tv_sec -
@@ -418,13 +418,13 @@ msl_bmap_reap_init(struct bmapc_memb *b, const struct srt_bmapdesc *sbd)
 	 */
 	if (sbd->sbd_ios_id != IOS_ID_ANY) {
 		struct sl_resource *r = libsl_id2res(sbd->sbd_ios_id);
-				
-		psc_assert(r);		
+
+		psc_assert(r);
 		psc_assert(b->bcm_flags & BMAP_WR);
 
 		if (r->res_type == SLREST_ARCHIVAL_FS)
 			b->bcm_flags |= BMAP_DIO;
-	}	
+	}
 	bmap_op_start_type(b, BMAP_OPCNT_REAPER);
 
 	BMAP_URLOCK(b, locked);

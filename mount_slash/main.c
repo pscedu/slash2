@@ -1410,29 +1410,29 @@ msl_flush_int_locked(struct msl_fhent *mfh)
 		mfh->mfh_flush_rc = 0;
 		return (0);
 	}
-	
+
 	PLL_FOREACH(r, &mfh->mfh_biorqs) {
 		BIORQ_LOCK(r);
 		r->biorq_flags |= BIORQ_FORCE_EXPIRE;
 		DEBUG_BIORQ(PLL_INFO, r, "force expire");
 		BIORQ_ULOCK(r);
-	}		
+	}
 	bmap_flushq_wake(PFL_CALLERINFOSS(SLSS_BMAP), BMAPFLSH_EXPIRE, NULL);
-	
+
 	while (!pll_empty(&mfh->mfh_biorqs) && !mfh->mfh_flush_rc) {
 		psc_waitq_wait(&msl_fhent_flush_waitq, &mfh->mfh_lock);
 		spinlock(&mfh->mfh_lock);
 	}
-	
+
 	if (mfh->mfh_flush_rc) {
 		PLL_FOREACH(r, &mfh->mfh_biorqs) {
 			DEBUG_BIORQ(PLL_ERROR, r, "mfh_flush_rc=%d",
 				    mfh->mfh_flush_rc);
-			
+
 			msl_biorq_destroy(PFL_CALLERINFOSS(SLSS_BMAP), r);
 		}
 	}
-	
+
 	rc = mfh->mfh_flush_rc;
 	mfh->mfh_flush_rc = 0;
 	return (rc);
