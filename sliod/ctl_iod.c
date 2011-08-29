@@ -139,11 +139,10 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	struct psc_ctlmsghdr *mh = a->mh;
 	struct slash_fidgen tfg, fg;
 	const char *str, *srcname;
-	size_t len;
 	int rc = 0, isdir, noname = 0;
 
 	/*
-	 * Start from the root of slash2 namespace.  This means
+	 * Start from the root of the SLASH2 namespace.  This means
 	 * that if just a name is given as the destination, it will
 	 * be treated as a child of the root.
 	*/
@@ -157,10 +156,8 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	    S_ISDIR(stb->st_mode) ? "/" : "",
 	    fn + strlen(sfop->sfop_fn));
 
-	len = strlen(fidfn) - 1;
-
 	/* trim trailing '/' chars */
-	for (p = fidfn + len; *p == '/' && p > fidfn; p--)
+	for (p = fidfn + strlen(fidfn) - 1; p > fidfn && *p == '/'; p--)
 		*p = '\0';
 	for (p = fidfn; p; p = np) {
 		/* skip leading '/' chars */
