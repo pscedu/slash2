@@ -210,7 +210,7 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 	rv = slvr_io_prep(s, 0, mq->len, aio ? SL_WRITE : SL_READ, &aiocbr);
 
 	if (aiocbr) {
-		/* Ran into a async I/O.  It's possible that this sliod
+		/* Ran into an async I/O.  It's possible that this sliod
 		 *   is an archival_fs.
 		 */
 		if (s->slvr_flags & SLVR_REPLDST)
