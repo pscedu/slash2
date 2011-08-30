@@ -634,6 +634,7 @@ struct srm_repl_read_req {
 	sl_bmapno_t		bmapno;
 	 int32_t		slvrno;
 	 int32_t		rc;
+	int32_t               _pad;
 } __packed;
 
 #define srm_repl_read_rep	srm_io_rep
