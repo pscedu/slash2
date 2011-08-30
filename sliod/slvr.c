@@ -372,8 +372,9 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 			s = a->aiocbr_slvrs[i];
 
 			SLVR_LOCK(s);
-			psc_assert(s->slvr_flags & SLVR_RDMODWR);
 			psc_assert(s->slvr_pndgwrts > 0);
+			psc_assert(s->slvr_flags & SLVR_RDMODWR);	
+			s->slvr_flags &= ~SLVR_RDMODWR;
 			slvr_try_crcsched_locked(s);
 			SLVR_ULOCK(s);
 		}
