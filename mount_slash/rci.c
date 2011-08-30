@@ -82,13 +82,13 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		}
 	}
 
-	msl_fsrqinfo_readywait(car->car_fsrqinfo);
-
 	if (car->car_cbf == msl_read_cb) {
 		struct bmap_pagecache_entry *e;
 		struct iovec iovs[MAX_BMAPS_REQ];
 		struct psc_dynarray *a;
 		int i;
+
+		msl_fsrqinfo_readywait(car->car_fsrqinfo);
 
 		a = car->car_argv.pointer_arg[MSL_CBARG_BMPCE];
 
@@ -123,6 +123,8 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 				SRCI_BULK_PORTAL, iovs, i);
 
 	} else if (car->car_cbf == msl_dio_cb) {
+		msl_fsrqinfo_readywait(car->car_fsrqinfo);
+
 		if (mq->rc)
 			goto error;
 
