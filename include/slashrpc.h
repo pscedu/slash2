@@ -633,6 +633,7 @@ struct srm_repl_read_req {
 	uint64_t		len;		/* #bytes in this message, to find #slivers */
 	sl_bmapno_t		bmapno;
 	 int32_t		slvrno;
+	 int32_t		rc;
 } __packed;
 
 #define srm_repl_read_rep	srm_io_rep
