@@ -573,7 +573,12 @@ msl_bmap_final_cleanup(struct bmapc_memb *b)
 
 	/* Mind lock ordering, remove from LRU first.
 	 */
-	bmpc_lru_del(bmpc);
+	if (b->bcm_flags & BMAP_DIO && 
+	    psclist_disjoint(&bmpc->bmpc_lentry)) {
+		psc_assert(SPLAY_EMPTY(&bmpc->bmpc_tree));
+		psc_assert(pll_empty(&bmpc->bmpc_lru));
+	} else
+		bmpc_lru_del(bmpc);
 
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_flags & BMAP_CLOSING);
