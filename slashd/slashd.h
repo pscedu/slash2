@@ -255,7 +255,10 @@ slm_get_rpmi_idx(struct sl_resource *res)
 
 	rpmi = res2rpmi(res);
 	locked = reqlock(&rpmi->rpmi_lock);
-	if (rpmi->rpmi_cnt >= psc_dynarray_len(&res->res_members))
+	if (rpmi->rpmi_cnt >= 
+	    ((res->res_type == SLREST_CLUSTER_NOSHARE_LFS) ?
+	     psc_dynarray_len(&res->res_peers) : 
+	     psc_dynarray_len(&res->res_members)))
 		rpmi->rpmi_cnt = 0;
 	n = rpmi->rpmi_cnt++;
 	ureqlock(&rpmi->rpmi_lock, locked);

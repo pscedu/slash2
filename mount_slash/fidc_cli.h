@@ -56,6 +56,7 @@ struct fcmh_cli_info {
 #define FCMH_CLI_FETCHREPLTBL	(_FCMH_FLGSHFT << 1)	/* file replica table loading */
 #define FCMH_CLI_INITDCI	(_FCMH_FLGSHFT << 2)	/* dircache initialized */
 #define FCMH_CLI_TRUNC		(_FCMH_FLGSHFT << 3)	/* truncate in progress */
+#define FCMH_CLI_UNLINKREADDIR  (_FCMH_FLGSHFT << 4)
 
 void	fcmh_setlocalsize(struct fidc_membh *, uint64_t);
 void	slc_fcmh_initdci(struct fidc_membh *);

@@ -319,7 +319,7 @@ pjournal_dump(const char *fn, int verbose)
 	PSC_CRC64_FIN(&chksum);
 
 	if (pjh->pjh_chksum != chksum)
-		psc_fatalx("journal header has an invalid checksum "
+		psc_errorx("journal header has an invalid checksum "
 		    "value %"PSCPRIxCRC64" vs %"PSCPRIxCRC64,
 		    pjh->pjh_chksum, chksum);
 

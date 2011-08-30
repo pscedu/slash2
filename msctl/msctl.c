@@ -121,7 +121,8 @@ fn2fid(const char *fn)
 	if (statvfs(fn, &sfb) == -1)
 		err(1, "statvfs %s", fn);
 
-#ifndef HAVE_NO_FUSE_FSID
+	//#ifndef HAVE_NO_FUSE_FSID
+#if 0
 	if (sfb.f_fsid != SLASH_FSID)
 		errx(1, "%s: file is not in a SLASH file system %lx",
 		    fn, sfb.f_fsid);

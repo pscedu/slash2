@@ -194,6 +194,7 @@ struct bmap_mds_lease {
 #define BML_FREEING		(1 << 13)
 #define BML_ASSFAIL		(1 << 14)
 #define BML_RECOVERPNDG		(1 << 15)
+#define BML_RENEW               (1 << 16)
 
 #define bml_2_bmap(bml)		bmi_2_bmap((bml)->bml_bmdsi)
 
