@@ -694,6 +694,13 @@ msl_req_aio_add(struct pscrpc_request *rq,
 	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 	m = libsl_nid2resm(rq->rq_peer.nid);
 
+	car = psc_pool_get(slc_async_req_pool);
+	car->car_id = mp->id;
+	car->car_cbf = cbf;
+	/* pscfs_req has the pointers to each biorq needed for completion.
+	 */
+	memcpy(&car->car_argv, av, sizeof(*av));
+
 	if (cbf == msl_readahead_cb) {
 		/* readahead's are not associated with any biorq.
 		 */
@@ -718,6 +725,7 @@ msl_req_aio_add(struct pscrpc_request *rq,
 				BMPCE_SETATTR(e, BMPCE_AIOWAIT, "set aio");
 		}
 		msl_biorq_aio_prep(r);
+		car->car_fsrqinfo = r->biorq_fsrqi;
 
 	} else if (cbf == msl_dio_cb) {
 		msl_biorq_aio_prep(r);
@@ -725,17 +733,12 @@ msl_req_aio_add(struct pscrpc_request *rq,
 			/* The biorq is will be destroyed.
 			 */
 			av->pointer_arg[MSL_CBARG_BIORQ] = NULL;
+
+		car->car_fsrqinfo = r->biorq_fsrqi;
+		car->car_len = r->biorq_len;
 	} else
 		abort();
 
-	car = psc_pool_get(slc_async_req_pool);
-	car->car_id = mp->id;
-	car->car_cbf = cbf;
-	car->car_fsrqinfo = r->biorq_fsrqi;
-
-	/* pscfs_req has the pointers to each biorq needed for completion.
-	 */
-	memcpy(&car->car_argv, av, sizeof(*av));
 
 	lc_add(&resm2rmci(m)->rmci_async_reqs, car);
 
@@ -758,11 +761,14 @@ msl_fsrq_complete(struct msl_fsrqinfo *q)
 			break;
 
 		BIORQ_LOCK(r);
-		psc_assert(r->biorq_flags & BIORQ_INFL);
-		psc_assert(r->biorq_flags & BIORQ_SCHED);
-		r->biorq_flags &= ~(BIORQ_INFL | BIORQ_SCHED);
-		r->biorq_flags &= ~(BIORQ_RBWLP | BIORQ_RBWFP);
-		psc_waitq_wakeall(&r->biorq_waitq);
+		if (!q->mfsrq_err && !(r->biorq_flags & BIORQ_DIO)) {
+			psc_assert(r->biorq_flags & BIORQ_INFL);
+			psc_assert(r->biorq_flags & BIORQ_SCHED);
+			r->biorq_flags &= ~(BIORQ_INFL | BIORQ_SCHED);
+			r->biorq_flags &= ~(BIORQ_RBWLP | BIORQ_RBWFP);
+		}
+		//if (!(r->biorq_flags & BIORQ_DIO))
+		//	psc_waitq_wakeall(&r->biorq_waitq);
 		BIORQ_ULOCK(r);
 
 		DEBUG_BIORQ(PLL_INFO, r, "fsrq_complete");
@@ -1099,6 +1105,9 @@ msl_dio_cb(struct pscrpc_request *rq, int rc, struct pscrpc_async_args *args)
 
 	DEBUG_BIORQ(PLL_INFO, r, "completed dio (op=%d) off=%u sz=%u rc=%d",
 	    op, mq->offset, mq->size, rc);
+
+	if (rc && !r->biorq_fsrqi->mfsrq_err)
+		r->biorq_fsrqi->mfsrq_err = rc;
 
 	if ((r->biorq_flags & BIORQ_AIOWAIT) && !msl_biorq_aio_decref(r))
 		msl_fsrq_complete(r->biorq_fsrqi);

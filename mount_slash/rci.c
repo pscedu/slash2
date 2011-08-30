@@ -128,7 +128,8 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 
 		if (mq->op == SRMIOP_RD) {
 			iov.iov_base = car->car_argv.pointer_arg[MSL_CBARG_BUF];
-
+			iov.iov_len = car->car_len;
+			
 			mq->rc = rsx_bulkserver(rq, BULK_GET_SINK,
 						SRCI_BULK_PORTAL, &iov, 1);
 		} else {
