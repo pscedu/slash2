@@ -34,6 +34,10 @@ will be forced to restart all clients and sliods.
 4) DIO needs to be completed for AIO
 
 -----------------------------------------------------------------------
+* MS should employ a list cache to track all pfl (fuse) requests.  This 
+should prevent any issues surrounding the loss of a request due to AIO.
+
+-----------------------------------------------------------------------
 * I/O Stats for client and sliod
   - read and write sizes from the app (or for sliod - from the client).
     - including 'real' read and write stats to backfs for sliod
