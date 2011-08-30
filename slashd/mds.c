@@ -729,8 +729,9 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 	    &rlease);
 
 	DEBUG_BMAP(PLL_INFO, b, "bml=%p obml=%p (wlease=%d rlease=%d) "
-	   "(nwtrs=%d nrdrs=%d)", bml, obml, wlease, rlease,
-	   bmi->bmdsi_writers, bmi->bmdsi_readers);
+	    "(nwtrs=%d nrdrs=%d)",
+	    bml, obml, wlease, rlease,
+	    bmi->bmdsi_writers, bmi->bmdsi_readers);
 
 	if (obml) {
 		struct bmap_mds_lease *tmp = obml;
@@ -747,14 +748,8 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 	} else {
 		/* First on the list.
 		 */
-		if (bml->bml_flags & BML_RENEW) {
-			rc = ENOENT;
-			goto out;
-		} else {
-			
-			bml->bml_chain = bml;
-			pll_addtail(&bmi->bmdsi_leases, bml);
-		}
+		bml->bml_chain = bml;
+		pll_addtail(&bmi->bmdsi_leases, bml);
 	}
 	bml->bml_flags |= BML_BMDSI;
 
@@ -1636,7 +1631,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	       exp->exp_connection->c_peer.pid, sbd_in->sbd_seq);
 	BMAP_ULOCK(b);
 
-	if (!obml) {		
+	if (!obml) {
 		rc = ENOENT;
 		goto out;
 	}
@@ -1652,7 +1647,6 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 		rw = BML_WRITE;
 
 	bml = mds_bml_new(b, exp, rw, &exp->exp_connection->c_peer);
-	bml->bml_flags |= BML_RENEW;
 
 	EXPORT_LOCK(exp);
 	mexpc = sl_exp_getpri_cli(exp);
@@ -1716,13 +1710,11 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	} else
 		BML_ULOCK(obml);
 
+	DEBUG_BMAP(PLL_INFO, b,
+		   "renew seq=%"PRId64" nid=%"PRId64" pid=%u",
+		   bml->bml_seq, exp->exp_connection->c_peer.nid,
+		   exp->exp_connection->c_peer.pid);
  out:
-	DEBUG_BMAP(rc ? PLL_WARN : PLL_INFO, b, "renew: new_seq=%"PRIx64
-	   " old_seq=%"PRIx64" nid=%"PRId64" pid=%u rc=%d",
-	   rc ? BMAPSEQ_ANY : bml->bml_seq, sbd_in->sbd_seq, 
-	   exp->exp_connection->c_peer.nid, exp->exp_connection->c_peer.pid, 
-	   rc);
-
 	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 	return (rc);
 }
