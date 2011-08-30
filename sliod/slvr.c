@@ -58,6 +58,7 @@ struct psc_listcache	crcqSlvrs;  /* Slivers ready to be CRC'd and have their
 				     * CRCs shipped to the MDS. */
 
 __static SPLAY_GENERATE(biod_slvrtree, slvr_ref, slvr_tentry, slvr_cmp);
+__static void slvr_try_crcsched_locked(struct slvr_ref *);
 
 __static void
 slvr_lru_requeue(struct slvr_ref *s, int tail)
@@ -322,7 +323,7 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	int rc, i;
-
+       
 	csvc = sli_getclcsvc(a->aiocbr_peer);
 	if (csvc == NULL)
 		goto out;
@@ -332,7 +333,7 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 	if (rc)
 		goto out;
 
-	mp->rc = slvr_aio_chkslvrs(a);
+	mq->rc = slvr_aio_chkslvrs(a);
 
 	memcpy(&mq->sbd, &a->aiocbr_sbd, sizeof(mq->sbd));
 	mq->id = a->aiocbr_id;
@@ -357,7 +358,7 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 		pscrpc_req_finished(rq);
 
 	pscrpc_export_put(a->aiocbr_peer);
-
+	
  out:
 	if (csvc)
 		sl_csvc_decref(csvc);
@@ -367,14 +368,13 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 			slvr_rio_done(a->aiocbr_slvrs[i]);
 	} else {
 		struct slvr_ref *s;
-		for (i = 0; i < a->aiocbr_nslvrs; i++) {			
+		for (i = 0; i < a->aiocbr_nslvrs; i++) {
 			s = a->aiocbr_slvrs[i];
 
 			SLVR_LOCK(s);
 			psc_assert(s->slvr_flags & SLVR_RDMODWR);
 			psc_assert(s->slvr_pndgwrts > 0);
-			s->slvr_pndgwrts--;
-			slvr_lru_tryunpin_locked(s);
+			slvr_try_crcsched_locked(s);
 			SLVR_ULOCK(s);
 		}
 	}
@@ -1132,6 +1132,28 @@ slvr_schedule_crc_locked(struct slvr_ref *s)
 
 void slvr_slb_free_locked(struct slvr_ref *, struct psc_poolmgr *);
 
+__static void
+slvr_try_crcsched_locked(struct slvr_ref *s)
+{
+	if ((s->slvr_flags & SLVR_LRU) && s->slvr_pndgwrts > 1)
+		slvr_lru_requeue(s, 1);
+
+	/* If there are no more pending writes, schedule a CRC op.
+	 *   Increment slvr_compwrts to prevent a crc op from being skipped
+	 *   which can happen due to the release of the slvr lock being
+	 *   released prior to the crc of the buffer.
+	 */
+	s->slvr_pndgwrts--;
+	s->slvr_compwrts++;
+
+	if (!s->slvr_pndgwrts && (s->slvr_flags & SLVR_LRU)) {
+		if (s->slvr_flags & SLVR_CRCDIRTY)
+			slvr_schedule_crc_locked(s);
+		else
+			slvr_lru_tryunpin_locked(s);
+	}
+}
+
 /**
  * slvr_wio_done - Called after a write RPC has completed.  The sliver
  *	may be FAULTING which is handled separately from DATARDY.  If
@@ -1202,22 +1224,7 @@ slvr_wio_done(struct slvr_ref *s, uint32_t off, uint32_t len)
 	if (!(s->slvr_flags & SLVR_DATARDY))
 		DEBUG_SLVR(PLL_FATAL, s, "invalid state");
 
-	DEBUG_SLVR(PLL_INFO, s, "%s", "datardy");
-
-	if ((s->slvr_flags & SLVR_LRU) && s->slvr_pndgwrts > 1)
-		slvr_lru_requeue(s, 1);
-
-	/* If there are no more pending writes, schedule a CRC op.
-	 *   Increment slvr_compwrts to prevent a crc op from being skipped
-	 *   which can happen due to the release of the slvr lock being
-	 *   released prior to the crc of the buffer.
-	 */
-	s->slvr_pndgwrts--;
-	s->slvr_compwrts++;
-
-	if (!s->slvr_pndgwrts && (s->slvr_flags & SLVR_LRU))
-		slvr_schedule_crc_locked(s);
-
+	slvr_try_crcsched_locked(s);
 	SLVR_ULOCK(s);
 }
 
