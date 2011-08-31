@@ -34,7 +34,7 @@ will be forced to restart all clients and sliods.
 4) DIO needs to be completed for AIO
 
 -----------------------------------------------------------------------
-* MS should employ a list cache to track all pfl (fuse) requests.  This 
+* MS should employ a list cache to track all pfl (fuse) requests.  This
 should prevent any issues surrounding the loss of a request due to AIO.
 
 -----------------------------------------------------------------------
@@ -450,3 +450,4 @@ API rename
 - add msctl -X to cancel a replication
 - msctl is broken on 32-bit because of ino # compression
 - build LNET_ROUTES from slcfg
+- move msctl sock to $MOUNTPOINT/.slmd/ctlsock and have msctl ascend to that on arguments
