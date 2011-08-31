@@ -761,14 +761,8 @@ msl_fsrq_complete(struct msl_fsrqinfo *q)
 			break;
 
 		BIORQ_LOCK(r);
-		if (!q->mfsrq_err && !(r->biorq_flags & BIORQ_DIO)) {
-			psc_assert(r->biorq_flags & BIORQ_INFL);
-			psc_assert(r->biorq_flags & BIORQ_SCHED);
-			r->biorq_flags &= ~(BIORQ_INFL | BIORQ_SCHED);
-			r->biorq_flags &= ~(BIORQ_RBWLP | BIORQ_RBWFP);
-		}
-		//if (!(r->biorq_flags & BIORQ_DIO))
-		//	psc_waitq_wakeall(&r->biorq_waitq);
+		r->biorq_flags &= ~(BIORQ_INFL | BIORQ_SCHED);
+		r->biorq_flags &= ~(BIORQ_RBWLP | BIORQ_RBWFP);
 		BIORQ_ULOCK(r);
 
 		DEBUG_BIORQ(PLL_INFO, r, "fsrq_complete");
@@ -989,7 +983,6 @@ msl_readahead_cb(struct pscrpc_request *rq, int rc,
 	if (rq)
 		DEBUG_REQ(PLL_INFO, rq, "bmpces=%p", bmpces);
 
-	BMPC_LOCK(bmpc);
 	for (i = 0, e = bmpces[0], b = e->bmpce_owner; e; i++, e = bmpces[i]) {
 		psc_assert(b == e->bmpce_owner);
 
@@ -999,6 +992,7 @@ msl_readahead_cb(struct pscrpc_request *rq, int rc,
 
 		msl_bmpce_rpc_done(e, rc);
 
+		BMPC_LOCK(bmpc);
 		BMPCE_LOCK(e);
 		pll_remove(&bmpc->bmpc_pndg_ra, e);
 		bmpce_handle_lru_locked(e, bmpc, BIORQ_READ, 0);
@@ -1007,8 +1001,8 @@ msl_readahead_cb(struct pscrpc_request *rq, int rc,
 			 *   bmpce_handle_lru_locked()
 			 */
 			BMPCE_ULOCK(e);
+		BMPC_ULOCK(bmpc);
 	}
-	BMPC_ULOCK(bmpc);
 
 	if (wq)
 		psc_waitq_wakeall(wq);
@@ -1765,7 +1759,10 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 			if (rc == 0 && (e->bmpce_flags & BMPCE_AIOWAIT)) {
 				rc = -SLERR_AIOWAIT;
 				if (!aio_placed) {
-					msl_biorq_aio_prep(r);
+					BIORQ_LOCK(r);
+					r->biorq_flags |= BIORQ_AIOWAIT;
+					BIORQ_ULOCK(r);
+
 					msl_fsrq_aiowait_tryadd_locked(e, r);
 					aio_placed = 1;
 				}
