@@ -44,7 +44,7 @@
 #define SRII_REPLREAD_CBARG_SLVR	1
 
 __static int
-sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx, 
+sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 	int rc)
 {
 	struct slvr_ref *s;
@@ -82,7 +82,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		SLVR_ULOCK(s);
 	}
 
-	DEBUG_SLVR(PLL_INFO, s, "replread %s rc=%d", aio ? 
+	DEBUG_SLVR(PLL_INFO, s, "replread %s rc=%d", aio ?
 		   "aiowait" : "complete", rc);
 
 	if (!aio) {
@@ -90,11 +90,11 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 
 		spinlock(&w->srw_lock);
 		w->srw_nslvr_cur++;
-		w->srw_slvr_refs[slvridx] = NULL;		
+		w->srw_slvr_refs[slvridx] = NULL;
 	} else
 		spinlock(&w->srw_lock);
-	/* place back on pending queue until the last sliver finishes or 
-	 *  error 
+	/* place back on pending queue until the last sliver finishes or
+	 *  error
 	 */
 	if (psclist_disjoint(&w->srw_state_lentry)) {
 		lc_add(&sli_replwkq_pending, w);
@@ -107,7 +107,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 }
 
 /**
- * sli_rii_handle_replread - rii.c handler for sliver replication.
+ * sli_rii_handle_replread - Handler for sliver replication read request.
  * @aio:  this argument signifies that the peer has completed an async io
  *    of a previously requested sliver and that sliver has been posted for
  *    GET.  In essense, this flag causes the internals of the rpc handler
@@ -117,14 +117,14 @@ __static int
 sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 {
 	const struct srm_repl_read_req *mq;
+	struct sli_aiocb_reply *aiocbr = NULL;
+	struct sli_repl_workrq *w = NULL;
 	struct srm_repl_read_rep *mp;
-	struct slvr_ref *s;
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bcm;
+	struct slvr_ref *s;
 	struct iovec iov;
-	struct sli_aiocb_reply *aiocbr = NULL;
-	struct sli_repl_workrq *w;
-	int rv, slvridx;
+	int rv, slvridx = 0;
 
 	bcm = NULL;
 
@@ -153,7 +153,7 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 		goto out;
 	}
 
-	s = slvr_lookup(mq->slvrno, bmap_2_biodi(bcm), aio ? 
+	s = slvr_lookup(mq->slvrno, bmap_2_biodi(bcm), aio ?
 		SL_WRITE : SL_READ);
 
 	if (aio) {
@@ -171,31 +171,31 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 		w = sli_repl_findwq(&mq->fg, mq->bmapno);
 		if (!w) {
 			mp->rc = ENOENT;
-			DEBUG_SLVR(PLL_ERROR, s, 
+			DEBUG_SLVR(PLL_ERROR, s,
 			   "sli_repl_findwq() failed to find wq");
 			//XXX cleanup the sliver ref
 			goto out;
 		}
 		/* Ensure the sliver is found in the wrk item's array.
 		 */
-		for (slvridx = 0; slvridx < (int)nitems(w->srw_slvr_refs); 
+		for (slvridx = 0; slvridx < (int)nitems(w->srw_slvr_refs);
 		     slvridx++)
 			if (w->srw_slvr_refs[slvridx] == s)
 				break;
 
 		if (slvridx == (int)nitems(w->srw_slvr_refs)) {
 			mp->rc = ENOENT;
-			DEBUG_SLVR(PLL_ERROR, s, 
+			DEBUG_SLVR(PLL_ERROR, s,
 			   "failed to find slvr in wq=%p", w);
 			goto out;
 		}
 
-	}  else {
+	} else {
 		SLVR_LOCK(s);
 		if (s->slvr_flags & SLVR_REPLSRC) {
 			DEBUG_SLVR(PLL_WARN, s, "SLVR_REPLSRC already set");
 			s->slvr_pndgreads--;
-			
+
 			psc_assert(s->slvr_pndgreads > 0);
 			SLVR_ULOCK(s);
 
@@ -203,7 +203,7 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 			goto out;
 		} else
 			SLVR_ULOCK(s);
-	} 	
+	}
 
 	slvr_slab_prep(s, aio ? SL_WRITE : SL_READ);
 	slvr_repl_prep(s, aio ? SLVR_REPLDST : SLVR_REPLSRC);
@@ -232,10 +232,10 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 
 	iov.iov_base = s->slvr_slab->slb_base;
 	iov.iov_len = mq->len;
-	
-	mp->rc = rsx_bulkserver(rq, aio ? BULK_PUT_SINK : BULK_PUT_SOURCE, 
+
+	mp->rc = rsx_bulkserver(rq, aio ? BULK_PUT_SINK : BULK_PUT_SOURCE,
 		SRII_BULK_PORTAL, &iov, 1);
-		
+
 	if (aio)
 		sli_rii_replread_release_sliver(w, slvridx, mp->rc);
 	else
