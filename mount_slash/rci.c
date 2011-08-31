@@ -51,6 +51,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 	int tries = 0;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
+
 	m = libsl_try_nid2resm(rq->rq_export->exp_connection->c_peer.nid);
 	if (m == NULL) {
 		mp->rc = SLERR_ION_UNKNOWN;
@@ -125,13 +126,17 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 	} else if (car->car_cbf == msl_readahead_cb) {
 		struct bmap_pagecache_entry *e, **bmpces =
 			car->car_argv.pointer_arg[MSL_CBARG_BMPCE];
-		struct iovec iovs[MAX_BMAPS_REQ];
+		struct iovec *iovs = NULL;
 		int i;
 
 		for (i = 0;; i++) {
 			e = bmpces[i];
 			if (!e)
 				break;
+			
+			iovs = PSC_REALLOC(iovs, 
+				   sizeof(struct iovec) * (i + 1));
+
 			iovs[i].iov_base = e->bmpce_base;
 			iovs[i].iov_len = BMPC_BUFSZ;
 			if (mq->rc)
@@ -140,6 +145,8 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		if (mq->rc == 0)
 			mq->rc = rsx_bulkserver(rq, BULK_GET_SINK,
 				SRCI_BULK_PORTAL, iovs, i);
+
+		PSCFREE(iovs);
 
 	} else if (car->car_cbf == msl_dio_cb) {
 		msl_fsrqinfo_readywait(car->car_fsrqinfo);
