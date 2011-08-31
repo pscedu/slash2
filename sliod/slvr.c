@@ -373,7 +373,6 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 
 			SLVR_LOCK(s);
 			psc_assert(s->slvr_pndgwrts > 0);
-			psc_assert(s->slvr_flags & SLVR_RDMODWR);	
 			s->slvr_flags &= ~SLVR_RDMODWR;
 			slvr_try_crcsched_locked(s);
 			SLVR_ULOCK(s);
@@ -536,22 +535,26 @@ sli_aio_replreply_setup(struct sli_aiocb_reply *a,
 
 void
 sli_aio_reply_setup(struct sli_aiocb_reply *a, struct pscrpc_request *rq,
-    uint32_t len, uint32_t off, struct iovec *iovs, int niovs, enum rw rw)
+	    uint32_t len, uint32_t off, struct slvr_ref **slvrs, int nslvrs, 
+	    struct iovec *iovs, int niovs, enum rw rw)
 {
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	int i;
 
-	for (i = 0; i < a->aiocbr_nslvrs; i++) {
-		psc_assert(a->aiocbr_slvrs[i]);
+	spinlock(&a->aiocbr_lock);
+	a->aiocbr_nslvrs = nslvrs;
+	for (i = 0; i < nslvrs; i++) {
+		a->aiocbr_slvrs[i] = slvrs[i];
+
 		if (rw == SL_WRITE)
 			psc_assert(a->aiocbr_slvrs[i]->slvr_pndgwrts > 0);
 		else
 			psc_assert(a->aiocbr_slvrs[i]->slvr_pndgreads > 0);
 	}
+	freelock(&a->aiocbr_lock);
 
-	/* some of the slivers may have already been faulted in */
-	psc_assert(niovs >= a->aiocbr_nslvrs);
+	psc_assert(niovs == a->aiocbr_nslvrs);
 
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 	memcpy(&a->aiocbr_sbd, &mq->sbd, sizeof(mq->sbd));
@@ -561,7 +564,6 @@ sli_aio_reply_setup(struct sli_aiocb_reply *a, struct pscrpc_request *rq,
 
 	memcpy(a->aiocbr_iovs, iovs, niovs * sizeof(*iovs));
 	
-
 	a->aiocbr_niov = niovs;
 	a->aiocbr_peer = pscrpc_export_get(rq->rq_export);
 	a->aiocbr_len = len;
@@ -588,12 +590,6 @@ sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp,
 		a = *aiocbrp = sli_aio_aiocbr_new();
 
 	DEBUG_SLVR(PLL_NOTIFY, s, "issue=%d *aiocbrp=%p", issue, *aiocbrp);
-
-	spinlock(&a->aiocbr_lock);
-	/* Stash the slvr pointer here since it's part of this aio.
-	 */
-	a->aiocbr_slvrs[a->aiocbr_nslvrs++] = s;
-	freelock(&a->aiocbr_lock);
 
 	if (!issue)
 		/* Not called from slvr_fsio().

@@ -228,8 +228,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		/* Setup first since this aiocb needs to be attached
 		 *   to an aio'd sliver ASAP.
 		 */
-		sli_aio_reply_setup(aiocbr, rq, mq->size, mq->offset, iovs,
-			    nslvrs, rw);
+		sli_aio_reply_setup(aiocbr, rq, mq->size, mq->offset, slvr_ref, 
+				    nslvrs, iovs, nslvrs, rw);
 
 		/* Now check for early completion.   If all slvrs are ready, 
 		 *   then we must reply with the data now.  Otherwise, we'll

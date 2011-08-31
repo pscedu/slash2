@@ -214,8 +214,10 @@ void	slvr_slab_prep(struct slvr_ref *, enum rw);
 void	slvr_wio_done(struct slvr_ref *, uint32_t, uint32_t);
 void	slvr_worker_init(void);
 
-void	sli_aio_reply_setup(struct sli_aiocb_reply *, struct pscrpc_request *,
-	    uint32_t, uint32_t, struct iovec *, int, enum rw);
+void    sli_aio_reply_setup(struct sli_aiocb_reply *, struct pscrpc_request *,
+	    uint32_t, uint32_t, struct slvr_ref **, int, 
+	    struct iovec *, int, enum rw);
+
 void	sli_aio_aiocbr_release(struct sli_aiocb_reply *);
 void    sli_aio_replreply_setup(struct sli_aiocb_reply *, struct pscrpc_request *, struct iovec *);
 
