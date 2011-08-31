@@ -224,7 +224,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (aiocbr) {
 		struct slvr_ref *s;
 
-		psc_assert(rv == -SLERR_AIOWAIT);
 		/* Setup first since this aiocb needs to be attached
 		 *   to an aio'd sliver ASAP.
 		 */
