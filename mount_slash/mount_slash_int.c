@@ -1699,7 +1699,7 @@ __static int
 msl_pages_blocking_load(struct bmpc_ioreq *r)
 {
 	struct bmap_pagecache_entry *e;
-	int rc = 0, i;
+	int rc = 0, i, aio_placed = 0;
 
 	if (r->biorq_rqset) {
 		rc = pscrpc_set_wait(r->biorq_rqset);
@@ -1745,22 +1745,6 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 			 */
 			while (!(e->bmpce_flags &
 			    (BMPCE_DATARDY | BMPCE_EIO | BMPCE_AIOWAIT))) {
-				/*
-				 * If the owner gave up, we will contend
-				 * to retry after reacquiring the bmap
-				 * lease.
-				 */
-				if (e->bmpce_flags & BMPCE_AIOWAIT) {
-					if (rc == 0) {
-						msl_fsrq_aiowait_tryadd_locked(e, r);
-						rc = -SLERR_AIOWAIT;
-					}
-					break;
-
-				} else if (e->bmpce_flags & BMPCE_EIO) {
-					rc = -EAGAIN;
-					break;
-				}
 				DEBUG_BMPCE(PLL_NOTIFY, e, "waiting");
 				BMPCE_WAIT(e);
 				BMPCE_LOCK(e);
@@ -1775,12 +1759,16 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 			/* If there was an error, retry or give up. */
 			if (e->bmpce_flags & BMPCE_EIO) {
 				r->biorq_flags &= ~BIORQ_SCHED;
-				// XXX may be redundant because of above
 				rc = -EAGAIN;
 			}
 
-			if (rc == 0 && (e->bmpce_flags & BMPCE_AIOWAIT))
+			if (rc == 0 && (e->bmpce_flags & BMPCE_AIOWAIT)) {
 				rc = -SLERR_AIOWAIT;
+				if (!aio_placed) {
+					msl_fsrq_aiowait_tryadd_locked(e, r);
+					aio_placed = 1;
+				}
+			}
 
 			/* Read requests must have had their bmpce's
 			 *   put into DATARDY by now (i.e. all RPCs

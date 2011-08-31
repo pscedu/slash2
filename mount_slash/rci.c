@@ -33,6 +33,8 @@
  * Routines for handling RPC requests for CLI from ION.
  */
 
+#define CAR_LOOKUP_MAX 30
+
 /**
  * slc_rci_handle_io - Handle a READ or WRITE completion for CLI from ION.
  * @rq: request.
@@ -46,6 +48,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 	struct srm_io_rep *mp;
 	struct sl_resm *m;
 	struct iovec iov;
+	int tries = 0;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	m = libsl_try_nid2resm(rq->rq_export->exp_connection->c_peer.nid);
@@ -55,7 +58,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 	}
 
 	lc = &resm2rmci(m)->rmci_async_reqs;
-
+ retry:
 	LIST_CACHE_LOCK(lc);
 	LIST_CACHE_FOREACH(car, lc)
 		if (mq->id == car->car_id) {
@@ -77,9 +80,25 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		now.tv_sec += RCI_AIO_READ_WAIT;
 		car = lc_gettimed(lc, &now);
 		if (car == NULL) {
-			mp->rc = EINVAL;
-			goto error;
-		}
+			if (tries++ < CAR_LOOKUP_MAX)
+				goto retry;			
+			else {
+				mp->rc = EINVAL;
+				goto error;
+			}
+
+		} else if (mq->id != car->car_id) {
+			lc_add(lc, car);
+			if (tries++ < CAR_LOOKUP_MAX) {
+				sleep(RCI_AIO_READ_WAIT);
+				goto retry;
+
+			} else {
+				mp->rc = EINVAL;
+				goto error;			
+			}
+		} else
+			psc_assert(mq->id == car->car_id);
 	}
 
 	if (car->car_cbf == msl_read_cb) {
