@@ -1765,6 +1765,7 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 			if (rc == 0 && (e->bmpce_flags & BMPCE_AIOWAIT)) {
 				rc = -SLERR_AIOWAIT;
 				if (!aio_placed) {
+					msl_biorq_aio_prep(r);
 					msl_fsrq_aiowait_tryadd_locked(e, r);
 					aio_placed = 1;
 				}
