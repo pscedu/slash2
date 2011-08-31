@@ -35,7 +35,7 @@ site @PSC {
 		id	= 2;
 		nodes	= tahini;
 		fsroot	= /slio-test;
-#		fsroot	= /usr/ue/.slio;
+#		fsroot	= /usr/ue;
 	}
 
 #	resource tahini-o {
@@ -43,7 +43,7 @@ site @PSC {
 #		type	= archival_fs;
 #		id	= 3;
 #		nodes	= tahini-e;
-#		fsroot	= /usr/uo/.slio;
+#		fsroot	= /usr/uo;
 #	}
 
 	resource sense0 {
