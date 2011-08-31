@@ -40,7 +40,6 @@
 #include "sliod.h"
 #include "slutil.h"
 
-
 struct psc_lockedlist psc_mlists;
 struct psc_lockedlist psc_odtables;
 
@@ -118,9 +117,23 @@ struct sli_import_arg {
  * @stb: file's attributes.
  * @arg: arg containing destination info, etc.
  *
- * Note: the difference between:
+ * Note the behavior of the each of the following:
  *
- *	# slictl import -R src-dir non-exist-dst-dir
+ *	# slictl import -R src-dir  non-exist-dst-dir/
+ *
+ *		Obviously, non-exist-dst-dir doesn't exist in the SLASH2
+ *		namespace, so this will flag an error.
+ *
+ *	# slictl import -R src-dir  non-exist-dst-dir
+ *	# slictl import -R src-dir/ non-exist-dst-dir
+ *
+ *		The contents of `src-dir' will be created directly under
+ *		the newly created directory `non-exist-dst-dir' in the
+ *		SLASH2 namespace.
+ *
+ *	# slictl import -R src-dir  exist-dst-dir
+ *	# slictl import -R src-dir/ exist-dst-dir
+ *
  *	# slictl import -R src-dir exist-dst-dir
  *
  * In the first case, the contents under 'src-dir' will be attached
@@ -296,7 +309,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 				/*
 				 * XXX
 				 * If we fail here, we should undo import
-				 * above. However, with checks earlier,
+				 * above.  However, with checks earlier,
 				 * we probably won't fail for EXDEV here.
 				 */
 				sli_fg_makepath(&mp->fg, fidfn);
@@ -343,11 +356,11 @@ slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 	 * It is not bullet-proof, but it should not create false
 	 * negatives.
 	 */
-	if (statvfs(globalConfig.gconf_fsroot, &vfssb1))
+	if (statvfs(globalConfig.gconf_fsroot, &vfssb1) == -1)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    sfop->sfop_fn, slstrerror(errno)));
 
-	if (statvfs(sfop->sfop_fn, &vfssb2))
+	if (statvfs(sfop->sfop_fn, &vfssb2) == -1)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    sfop->sfop_fn, slstrerror(errno)));
 
@@ -355,11 +368,11 @@ slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    sfop->sfop_fn, slstrerror(EXDEV)));
 
-	if (stat(globalConfig.gconf_fsroot, &sb1))
+	if (stat(globalConfig.gconf_fsroot, &sb1) == -1)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    sfop->sfop_fn, slstrerror(errno)));
 
-	if (stat(sfop->sfop_fn, &sb2))
+	if (stat(sfop->sfop_fn, &sb2) == -1)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    sfop->sfop_fn, slstrerror(errno)));
 
