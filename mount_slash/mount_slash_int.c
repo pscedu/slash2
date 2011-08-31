@@ -1214,6 +1214,9 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *bufp)
 	if (rc == -SLERR_AIOWAIT)
 		goto out;
 
+	else if (rc)
+		goto error;
+
 	psc_iostats_intv_add((op == SRMT_WRITE ?
 	    &msl_diowr_stat : &msl_diord_stat), size);
 
