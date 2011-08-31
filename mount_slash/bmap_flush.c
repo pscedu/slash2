@@ -462,7 +462,7 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 	struct pscrpc_request *rq;
 	struct bmpc_ioreq *r;
 	struct bmapc_memb *b;
-	int rc, i;
+	int rc = 0, i;
 	size_t size;
 	off_t soff;
 
