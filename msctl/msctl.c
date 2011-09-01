@@ -221,10 +221,10 @@ packshow_fcmhs(__unusedx char *fid)
 }
 
 void
-parse_replrq(int opcode, char *replrqspec,
+parse_replrq(int opcode, const char *fn, char *replrqspec,
     int (*packf)(const char *, const struct stat *, void *))
 {
-	char *files, *endp, *bmapnos, *bmapno, *next, *bend, *iosv, *ios;
+	char *endp, *bmapnos, *bmapno, *next, *bend, *iosv, *ios;
 	struct replrq_arg ra;
 	int bmax;
 	long l;
@@ -239,14 +239,6 @@ parse_replrq(int opcode, char *replrqspec,
 		return;
 	}
 	*bmapnos++ = '\0';
-
-	files = strchr(bmapnos, ':');
-	if (files == NULL) {
-		warnx("%s: no files specified in replication "
-		    "request specification", replrqspec);
-		return;
-	}
-	*files++ = '\0';
 
 	/* parse I/O systems */
 	ra.nios = 0;
@@ -266,7 +258,7 @@ parse_replrq(int opcode, char *replrqspec,
 	/* handle special all-bmap case */
 	if (strcmp(bmapnos, "*") == 0) {
 		ra.bmapno = REPLRQ_BMAPNO_ALL;
-		walk(files, packf, &ra);
+		walk(fn, packf, &ra);
 		return;
 	}
 
@@ -292,7 +284,7 @@ parse_replrq(int opcode, char *replrqspec,
 			errx(1, "%s: invalid replication request",
 			    replrqspec);
 		for (; ra.bmapno <= bmax; ra.bmapno++)
-			walk(files, packf, &ra);
+			walk(fn, packf, &ra);
 	}
 }
 
@@ -762,7 +754,22 @@ PFLCTL_CLI_DEFS;
 void
 parse_enqueue(char *arg)
 {
-	parse_replrq(MSCMT_ADDREPLRQ, arg, cmd_replrq_one);
+	char *fn;
+
+	fn = strchr(arg, ':');
+	if (fn == NULL) {
+		warnx("%s: no bmaps specified in replication "
+		    "request specification", arg);
+		return;
+	}
+	fn = strchr(fn + 1, ':');
+	if (fn == NULL) {
+		warnx("%s: no file specified in replication "
+		    "request specification", arg);
+		return;
+	}
+	*fn++ = '\0';
+	parse_replrq(MSCMT_ADDREPLRQ, fn, arg, cmd_replrq_one);
 }
 
 void
@@ -777,7 +784,22 @@ parse_replst(char *arg)
 void
 parse_dequeue(char *arg)
 {
-	parse_replrq(MSCMT_DELREPLRQ, arg, cmd_replrq_one);
+	char *fn;
+
+	fn = strchr(arg, ':');
+	if (fn == NULL) {
+		warnx("%s: no bmaps specified in replication "
+		    "request specification", arg);
+		return;
+	}
+	fn = strchr(fn + 1, ':');
+	if (fn == NULL) {
+		warnx("%s: no file specified in replication "
+		    "request specification", arg);
+		return;
+	}
+	*fn++ = '\0';
+	parse_replrq(MSCMT_DELREPLRQ, fn, arg, cmd_replrq_one);
 }
 
 __dead void
