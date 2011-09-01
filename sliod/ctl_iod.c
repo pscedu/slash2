@@ -154,6 +154,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	struct slash_fidgen tfg, fg;
 	const char *str, *srcname;
 	int rc = 0, isdir, noname = 0;
+	struct stat tstb;
 
 	/*
 	 * Start from the root of the SLASH2 namespace.  This means
@@ -274,12 +275,14 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		}
 		mq->creds.scr_uid = stb->st_uid;
 		mq->creds.scr_gid = stb->st_gid;
-		mq->pfg = fg;
 		mq->mode = stb->st_mode;
+		mq->pfg = fg;
 		strlcpy(mq->name, srcname, sizeof(mq->name));
+		sl_externalize_stat(stb, &mq->sstb);
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc == 0)
 			rc = mp->rc;
+
 		/*
 		 * The tree walk visits the top level directory first
 		 * before any of its children.  This makes sure children
@@ -292,6 +295,20 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	} else {
 		struct srm_import_req *mq;
 		struct srm_import_rep *mp;
+
+		/*
+		 * XXX should we check that st_nlink == 1 and refuse if
+		 * this is not the case to protect against multiple
+		 * imports?
+		 */
+#if 0
+		if (stb->st_nlink > 1) {
+			rc = EEXIST;
+			a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
+			    slstrerror(rc));
+			goto out;
+		}
+#endif
 
 		rc = SL_RSX_NEWREQ(csvc, SRMT_IMPORT, rq, mq, mp);
 		if (rc) {
@@ -308,17 +325,40 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 			if (rc == 0) {
 				/*
 				 * XXX
-				 * If we fail here, we should undo import
-				 * above.  However, with checks earlier,
-				 * we probably won't fail for EXDEV here.
+				 * If we fail here, we should undo
+				 * import above.  However, with checks
+				 * earlier, we probably won't fail for
+				 * EXDEV here.
 				 */
 				sli_fg_makepath(&mp->fg, fidfn);
-				if (link(fn, fidfn) == -1)
+				if (link(fn, fidfn) == -1) {
 					rc = errno;
+					a->rc = psc_ctlsenderr(a->fd,
+					    mh, "%s: %s", fn,
+					    slstrerror(rc));
+				}
 			}
 		}
 	}
-	if (rc)
+	if (abs(rc) == EEXIST) {
+		sli_fg_makepath(&mp->fg, fidfn);
+		if (stat(fidfn, &tstb) == -1) {
+			rc = errno;
+			a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
+			    slstrerror(rc));
+		} else {
+			if (tstb.st_ino == stb->st_ino)
+				a->rc = psc_ctlsenderr(a->fd, mh,
+				    "%s: file already imported", fn);
+			else {
+				rc = errno;
+				a->rc = psc_ctlsenderr(a->fd, mh,
+				    "%s: another file has already been "
+				    "imported at this namespace node",
+				    fn);
+			}
+		}
+	} else if (rc)
 		a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
 		    slstrerror(rc));
 	else if (sfop->sfop_flags & SLI_CTL_FOPF_VERBOSE)
@@ -326,7 +366,6 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		    S_ISDIR(stb->st_mode) ? "/" : "");
 
  out:
-
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
