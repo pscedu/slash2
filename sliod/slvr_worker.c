@@ -274,8 +274,6 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 	psc_dynarray_free(a);
 	PSCFREE(a);
 
-	pscrpc_req_finished(rq);
-	sl_csvc_decref(csvc);
 	return (1);
 }
 
