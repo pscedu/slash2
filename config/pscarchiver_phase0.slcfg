@@ -3,53 +3,146 @@
 # See slcfg(5) for more information.
 
 # Archiver configuration
+set net="10.10.101@sdp11, 0@tcp12";
 set port=1301;
 set pref_mds="archmds@PSCARCH";
-set pref_ios="archsliod@PSCARCH";
+set pref_ios="peel0@PSCARCH";
+#set pref_ios="
+#	sense0@PSCARCH,
+#	sense1@PSCARCH,
+#	sense2@PSCARCH,
+#	sense3@PSCARCH,
+#	sense4@PSCARCH,
+#	sense5@PSCARCH,
+#	sense6@PSCARCH,
+#	sense7@PSCARCH
+#";
+#set allow_exec="
+#	/usr/psc/bin/far:
+#	/usr/psc/bin/scp:
+#	/usr/bin/scp:
+#	/usr/psc/bin/sftp:
+#	/usr/bin/sftp:
+#	/usr/bin/rsync:
+#	/usr/psc/globus/default/bin/globus-url-copy
+#";
 
 # Pull in other/local config files
 # include "/etc/slash/*.slcfg"
 
 site @PSCARCH {
-	site_desc	= "PSC Phase0 Archiver";
+	site_desc	= "PSC archiver";
 	site_id		= 0;
 	resource archmds {
-		desc	= "PSC Arch MDS";
+		desc	= "PSC archiver MDS";
 		type	= mds;
 		id	= 1;
-		nodes	= 10.10.101.60@sdp11|128.182.100.55@tcp12;
+		nodes	= peel0-ib.pvt|peel0;
+#		nodes	= illusion1|illusion1-ib;
 		jrnldev	= /dev/sdah;
 	}
 
-	resource archsliod {
-		desc	= "PSC Phase0 I/O Server";
+	resource peel0 {
+		desc	= "PSC test I/O node";
 		type	= standalone_fs;
 		id	= 2;
-		nodes	= 10.10.101.155@sdp11;
+		nodes	= peel0-ib2.pvt;
 		fsroot	= /local/s2io;
 	}
 
-	resource archlime {
-		desc	= "PSC Replication Target";
+	resource lime {
+		desc	= "PSC test I/O node";
 		type	= standalone_fs;
 		id	= 3;
-		nodes	= 10.10.101.82@sdp11;
+		nodes	= lime|lime-ib;
 		fsroot	= /local/p0_archive_backfs;
 	}
 
+	resource onager {
+		desc	= "PSC test I/O node";
+		type	= standalone_fs;
+		id	= 10;
+		nodes	= sense0;
+		fsroot	= /store;
+	}
+
 	resource uo {
-		desc	= "uo tape";
+		desc	= "tape archiver";
 		type	= archival_fs;
 		id	= 4;
-		nodes	= 128.182.99.122@tcp12;
+		nodes	= tahini;
 		fsroot	= /usr/uo;
 	}
 
 	resource ue {
-		desc	= "ue tape";
+		desc	= "tape archiver";
 		type	= archival_fs;
 		id	= 5;
-		nodes	= 192.70.221.50@tcp13;
+		nodes	= tahini-hsm;
 		fsroot	= /usr/uo;
+	}
+
+	resource sense0 {
+		desc	= "disk-based archiver";
+		type	= standalone_fs;
+		id	= 10;
+		nodes	= sense0; # |sense0-ib
+		fsroot	= /store;
+	}
+
+	resource sense1 {
+		desc	= "disk-based archiver";
+		type	= standalone_fs;
+		id	= 11;
+		nodes	= sense1; # |sense0-ib
+		fsroot	= /store;
+	}
+
+	resource sense2 {
+		desc	= "disk-based archiver";
+		type	= standalone_fs;
+		id	= 12;
+#		nodes	= sense2|sense2-ib;
+		fsroot	= /store;
+	}
+
+	resource sense3 {
+		desc	= "disk-based archiver";
+		type	= standalone_fs;
+		id	= 13;
+#		nodes	= sense3|sense3-ib;
+		fsroot	= /store;
+	}
+
+	resource sense4 {
+		desc	= "disk-based archiver";
+		type	= standalone_fs;
+		id	= 14;
+#		nodes	= sense4|sense4-ib;
+		fsroot	= /store;
+	}
+
+	resource sense5 {
+		desc	= "disk-based archiver";
+		type	= standalone_fs;
+		id	= 15;
+#		nodes	= sense5|sense5-ib;
+		fsroot	= /store;
+	}
+
+	resource sense6 {
+		desc	= "disk-based archiver";
+		type	= standalone_fs;
+		id	= 16;
+#		nodes	= sense6|sense6-ib;
+		fsroot	= /store;
+	}
+
+	resource sense7 {
+		desc	= "disk-based archiver";
+		type	= standalone_fs;
+		id	= 17;
+#		nodes	= sense7|sense7-ib;
+		fsroot	= /store;
 	}
 }
