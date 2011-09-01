@@ -404,7 +404,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	sl_bmapno_t bno;
 	uint32_t pol;
 	int64_t fsiz;
-	int i;
+	int rc, i;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -423,7 +423,8 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 		goto out;
 
 	mq->cpn[sizeof(mq->cpn) - 1] = '\0';
-	psclog_info("import: parent="SLPRI_FG" name=%s", SLPRI_FG_ARGS(&p->fcmh_fg), mq->cpn);
+	psclog_info("import: parent="SLPRI_FG" name=%s",
+	    SLPRI_FG_ARGS(&p->fcmh_fg), mq->cpn);
 
 	mds_reserve_slot(1);
 	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &rootcreds,
@@ -432,7 +433,22 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	    0);
 	mds_unreserve_slot(1);
 
-	if (mp->rc)
+	if (mp->rc == EEXIST) {
+		rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &rootcreds,
+		    O_RDWR, 0, mq->cpn, NULL, &sstb, &mdsio_data, NULL,
+		    NULL, 0);
+		if (rc) {
+			mp->rc = rc;
+			goto out;
+		}
+		mp->fg = sstb.sst_fg;
+
+		/* if mtime is newer, apply updates */
+		if (timespeccmp(&mq->sstb.sst_mtim, &sstb.sst_mtim, <=)) {
+			mdsio_release(&cr, mdsio_data);
+			goto out;
+		}
+	} else if (mp->rc)
 		goto out;
 
 	mds_reserve_slot(1);
@@ -474,9 +490,9 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 			goto out;
 		for (i = 0; i < SLASH_SLVRS_PER_BMAP &&
 		    fsiz > 0; fsiz -= SLASH_SLVR_SIZE, i++)
-			/* Mark that data exists but no crc's are available.
+			/* Mark that data exists but no CRCs are available.
 			 */
-			b->bcm_crcstates[i] |= 
+			b->bcm_crcstates[i] |=
 				(BMAP_SLVR_DATA|BMAP_SLVR_CRCABSENT);
 		mp->rc = mds_repl_inv_except(b, 0);
 		if (mp->rc)
@@ -574,7 +590,8 @@ slm_rmi_handler(struct pscrpc_request *rq)
 		break;
 
 	default:
-		psclog_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
+		psclog_errorx("Unexpected opcode %d",
+		    rq->rq_reqmsg->opc);
 		rq->rq_status = -ENOSYS;
 		return (pscrpc_error(rq));
 	}
