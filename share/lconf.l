@@ -41,7 +41,6 @@ void	yywarn(const char *, ...);
 
 %option nounput
 
-char		[A-Za-z]
 floatv		[0-9]*\.?[0-9]+
 globpath	[/][a-zA-Z0-9|/.,_\[\]+?-]+
 hexnum		0[Xx][0-9A-Fa-f]+
