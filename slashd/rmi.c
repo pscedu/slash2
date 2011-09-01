@@ -474,7 +474,10 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 			goto out;
 		for (i = 0; i < SLASH_SLVRS_PER_BMAP &&
 		    fsiz > 0; fsiz -= SLASH_SLVR_SIZE, i++)
-			b->bcm_crcstates[i] |= BMAP_SLVR_DATA;
+			/* Mark that data exists but no crc's are available.
+			 */
+			b->bcm_crcstates[i] |= 
+				(BMAP_SLVR_DATA|BMAP_SLVR_CRCABSENT);
 		mp->rc = mds_repl_inv_except(b, 0);
 		if (mp->rc)
 			goto out;
