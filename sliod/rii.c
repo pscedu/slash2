@@ -80,6 +80,10 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		} else {
 			s->slvr_flags |= SLVR_AIOWAIT;
 			aio = 1;
+			psc_assert(s->slvr_pndgwrts == 1);
+			psc_assert(s->slvr_flags & SLVR_REPLDST);
+			s->slvr_pndgwrts = 0;
+			s->slvr_flags &= ~SLVR_REPLDST;
 		}
 		SLVR_ULOCK(s);
 	}
