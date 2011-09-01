@@ -220,44 +220,6 @@ packshow_fcmhs(__unusedx char *fid)
 	scf->scf_fg.fg_fid = FID_ANY;
 }
 
-int
-pack_replst(const char *fn, __unusedx const struct stat *stb,
-    __unusedx void *arg)
-{
-	struct msctlmsg_replst *mrs;
-
-	mrs = psc_ctlmsg_push(MSCMT_GETREPLST,
-	    sizeof(struct msctlmsg_replst));
-	mrs->mrs_fid = fn2fid(fn);
-	return (0);
-}
-
-int
-pack_replrq(const char *fn, const struct stat *stb, void *arg)
-{
-	struct msctlmsg_replrq *mrq;
-	struct replrq_arg *ra = arg;
-	int n;
-
-	if (S_ISDIR(stb->st_mode)) {
-		if (!recursive) {
-			errno = EISDIR;
-			warn("%s", fn);
-		}
-		return (0);
-	}
-
-	mrq = psc_ctlmsg_push(ra->opcode,
-	    sizeof(struct msctlmsg_replrq));
-	mrq->mrq_bmapno = ra->bmapno;
-	mrq->mrq_nios = ra->nios;
-	for (n = 0; n < ra->nios; n++)
-		strlcpy(mrq->mrq_iosv[n], ra->iosv[n],
-		    sizeof(mrq->mrq_iosv[0]));
-	mrq->mrq_fid = fn2fid(fn);
-	return (0);
-}
-
 void
 parse_replrq(int opcode, char *replrqspec,
     int (*packf)(const char *, const struct stat *, void *))
@@ -455,9 +417,23 @@ cmd_replrq_one(const char *fn, __unusedx const struct stat *stb,
     void *arg)
 {
 	struct msctlmsg_replrq *mrq;
-	struct replrq_arg *a = arg;
+	struct replrq_arg *ra = arg;
+	int n;
 
-	mrq = psc_ctlmsg_push(a->opcode, sizeof(*mrq));
+	if (S_ISDIR(stb->st_mode)) {
+		if (!recursive) {
+			errno = EISDIR;
+			warn("%s", fn);
+		}
+		return (0);
+	}
+
+	mrq = psc_ctlmsg_push(ra->opcode, sizeof(*mrq));
+	mrq->mrq_bmapno = ra->bmapno;
+	mrq->mrq_nios = ra->nios;
+	for (n = 0; n < ra->nios; n++)
+		strlcpy(mrq->mrq_iosv[n], ra->iosv[n],
+		    sizeof(mrq->mrq_iosv[0]));
 	mrq->mrq_fid = fn2fid(fn);
 	return (0);
 }
@@ -786,22 +762,22 @@ PFLCTL_CLI_DEFS;
 void
 parse_enqueue(char *arg)
 {
-	parse_replrq(MSCMT_ADDREPLRQ, arg, pack_replrq);
+	parse_replrq(MSCMT_ADDREPLRQ, arg, cmd_replrq_one);
 }
 
 void
 parse_replst(char *arg)
 {
 	if (arg[0] == ':')
-		pack_replst("", NULL, NULL);
+		cmd_replst_one("", NULL, NULL);
 	else
-		walk(arg, pack_replst, NULL);
+		walk(arg, cmd_replst_one, NULL);
 }
 
 void
 parse_dequeue(char *arg)
 {
-	parse_replrq(MSCMT_DELREPLRQ, arg, pack_replrq);
+	parse_replrq(MSCMT_DELREPLRQ, arg, cmd_replrq_one);
 }
 
 __dead void
