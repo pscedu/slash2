@@ -514,23 +514,25 @@ slvr_iocb_release(struct sli_iocb *iocb)
 
 void
 sli_aio_replreply_setup(struct sli_aiocb_reply *a, 
-	struct pscrpc_request *rq, struct iovec *iov)
+	struct pscrpc_request *rq, struct slvr_ref *s, struct iovec *iov)
 {
 	//const struct srm_repl_read_req *mq;
 	struct srm_repl_read_rep *mp;
-
-	spinlock(&a->aiocbr_lock);
-	a->aiocbr_flags |= SLI_AIOCBSF_REPL;
-	freelock(&a->aiocbr_lock);
 
 	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 	mp->id = a->aiocbr_id = psc_atomic64_inc_getnew(&sli_aio_id);
 
 	memcpy(a->aiocbr_iovs, iov, sizeof(*iov));
+	a->aiocbr_slvrs[0] = s;
 	a->aiocbr_nslvrs = a->aiocbr_niov = 1;
 	a->aiocbr_peer = pscrpc_export_get(rq->rq_export);
         a->aiocbr_len = iov->iov_len;
         a->aiocbr_off = 0;
+
+	spinlock(&a->aiocbr_lock);
+	a->aiocbr_flags |= SLI_AIOCBSF_REPL|SLI_AIOCBSF_READY;
+	freelock(&a->aiocbr_lock);
+
 }
 
 void

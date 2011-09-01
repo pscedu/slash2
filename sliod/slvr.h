@@ -219,7 +219,8 @@ void    sli_aio_reply_setup(struct sli_aiocb_reply *, struct pscrpc_request *,
 	    struct iovec *, int, enum rw);
 
 void	sli_aio_aiocbr_release(struct sli_aiocb_reply *);
-void    sli_aio_replreply_setup(struct sli_aiocb_reply *, struct pscrpc_request *, struct iovec *);
+void    sli_aio_replreply_setup(struct sli_aiocb_reply *, struct pscrpc_request *, 
+	    struct slvr_ref *, struct iovec *);
 
 extern struct psc_listcache lruSlvrs;
 extern struct psc_listcache crcqSlvrs;

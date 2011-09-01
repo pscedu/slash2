@@ -224,7 +224,7 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 
 		psc_assert(rv == -SLERR_AIOWAIT);
 
-		sli_aio_replreply_setup(aiocbr, rq, &iov);
+		sli_aio_replreply_setup(aiocbr, rq, s, &iov);
 		pll_add(&s->slvr_pndgaios, aiocbr);
 		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
 		mp->rc = rv;
