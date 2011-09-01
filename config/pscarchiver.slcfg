@@ -3,7 +3,6 @@
 # See slcfg(5) for more information.
 
 # Archiver configuration
-set net="10.10.101@sdp11, 0@tcp12";
 set port=1301;
 set pref_mds="archmds@PSCARCH";
 set pref_ios="peel0@PSCARCH";
@@ -37,7 +36,7 @@ site @PSCARCH {
 		desc	= "PSC archiver MDS";
 		type	= mds;
 		id	= 1;
-		nodes	= peel0-ib.pvt|peel0;
+		nodes	= peel0-ib.pvt@sdp11|peel0@tcp12;
 #		nodes	= illusion1|illusion1-ib;
 		jrnldev	= /dev/sdah;
 	}
@@ -46,7 +45,7 @@ site @PSCARCH {
 		desc	= "PSC test I/O node";
 		type	= standalone_fs;
 		id	= 2;
-		nodes	= peel0-ib2.pvt;
+		nodes	= peel0-ib2.pvt@sdp11;
 		fsroot	= /local/s2io;
 	}
 
@@ -54,23 +53,15 @@ site @PSCARCH {
 		desc	= "PSC test I/O node";
 		type	= standalone_fs;
 		id	= 3;
-		nodes	= lime|lime-ib;
+		nodes	= lime-ib1-0.pvt@sdp11|lime@tcp12;
 		fsroot	= /local/p0_archive_backfs;
-	}
-
-	resource onager {
-		desc	= "PSC test I/O node";
-		type	= standalone_fs;
-		id	= 10;
-		nodes	= sense0;
-		fsroot	= /store;
 	}
 
 	resource uo {
 		desc	= "tape archiver";
 		type	= archival_fs;
 		id	= 4;
-		nodes	= tahini;
+		nodes	= tahini@tcp12;
 		fsroot	= /usr/uo;
 	}
 
@@ -78,15 +69,23 @@ site @PSCARCH {
 		desc	= "tape archiver";
 		type	= archival_fs;
 		id	= 5;
-		nodes	= tahini-hsm;
+		nodes	= tahini-hsm@tcp13;
 		fsroot	= /usr/uo;
+	}
+
+	resource onager {
+		desc	= "PSC test I/O node";
+		type	= standalone_fs;
+		id	= 6;
+		nodes	= onager-ib.pvt@sdp11|onager@tcp12;
+		fsroot	= /store;
 	}
 
 	resource sense0 {
 		desc	= "disk-based archiver";
 		type	= standalone_fs;
 		id	= 10;
-		nodes	= sense0; # |sense0-ib
+		nodes	= sense0@tcp12; # |sense0-ib@sdp11
 		fsroot	= /store;
 	}
 
@@ -94,7 +93,7 @@ site @PSCARCH {
 		desc	= "disk-based archiver";
 		type	= standalone_fs;
 		id	= 11;
-		nodes	= sense1; # |sense0-ib
+		nodes	= sense1@tcp12; # |sense0-ib@sdp11
 		fsroot	= /store;
 	}
 
@@ -102,7 +101,7 @@ site @PSCARCH {
 		desc	= "disk-based archiver";
 		type	= standalone_fs;
 		id	= 12;
-#		nodes	= sense2|sense2-ib;
+#		nodes	= sense2@tcp12|sense2-ib@sdp11;
 		fsroot	= /store;
 	}
 
@@ -110,7 +109,7 @@ site @PSCARCH {
 		desc	= "disk-based archiver";
 		type	= standalone_fs;
 		id	= 13;
-#		nodes	= sense3|sense3-ib;
+#		nodes	= sense3@tcp12|sense3-ib@sdp11;
 		fsroot	= /store;
 	}
 
@@ -118,7 +117,7 @@ site @PSCARCH {
 		desc	= "disk-based archiver";
 		type	= standalone_fs;
 		id	= 14;
-#		nodes	= sense4|sense4-ib;
+#		nodes	= sense4@tcp12|sense4-ib@sdp11;
 		fsroot	= /store;
 	}
 
@@ -126,7 +125,7 @@ site @PSCARCH {
 		desc	= "disk-based archiver";
 		type	= standalone_fs;
 		id	= 15;
-#		nodes	= sense5|sense5-ib;
+#		nodes	= sense5@tcp12|sense5-ib@sdp11;
 		fsroot	= /store;
 	}
 
@@ -134,7 +133,7 @@ site @PSCARCH {
 		desc	= "disk-based archiver";
 		type	= standalone_fs;
 		id	= 16;
-#		nodes	= sense6|sense6-ib;
+#		nodes	= sense6@tcp12|sense6-ib@sdp11;
 		fsroot	= /store;
 	}
 
@@ -142,7 +141,7 @@ site @PSCARCH {
 		desc	= "disk-based archiver";
 		type	= standalone_fs;
 		id	= 17;
-#		nodes	= sense7|sense7-ib;
+#		nodes	= sense7@tcp12|sense7-ib@sdp11;
 		fsroot	= /store;
 	}
 }
