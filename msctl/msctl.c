@@ -433,17 +433,21 @@ cmd_replrq_one(const char *fn, __unusedx const struct stat *stb,
 void
 cmd_replrq(int ac, char **av)
 {
-	struct replrq_arg arg;
-	int i;
+	int i, opc;
+	char *p;
 
 	if (ac < 2)
 		errx(1, "%s: no file(s) specified", av[0]);
 	if (strncmp(av[0], "repl-add", strlen("repl-add")) == 0)
-		arg.opcode = MSCMT_ADDREPLRQ;
+		opc = MSCMT_ADDREPLRQ;
 	else
-		arg.opcode = MSCMT_DELREPLRQ;
+		opc = MSCMT_DELREPLRQ;
+	p = strchr(av[0], ':');
+	if (p == NULL)
+		errx(1, "%s: no replrqspec specified", av[0]);
+	p++;
 	for (i = 1; i < ac; i++)
-		walk(av[i], cmd_replrq_one, &arg);
+		parse_replrq(opc, av[i], p, cmd_replrq_one);
 }
 
 int
