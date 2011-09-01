@@ -278,10 +278,12 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		mq->mode = stb->st_mode;
 		mq->pfg = fg;
 		strlcpy(mq->name, srcname, sizeof(mq->name));
-		sl_externalize_stat(stb, &mq->sstb);
+//		sl_externalize_stat(stb, &mq->sstb);
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
-		if (rc == 0)
+		if (rc == 0) {
 			rc = mp->rc;
+			sli_fg_makepath(&mp->cattr.sst_fg, fidfn);
+		}
 
 		/*
 		 * The tree walk visits the top level directory first
@@ -322,6 +324,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc == 0) {
 			rc = mp->rc;
+			sli_fg_makepath(&mp->fg, fidfn);
 			if (rc == 0) {
 				/*
 				 * XXX
@@ -330,7 +333,6 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 				 * earlier, we probably won't fail for
 				 * EXDEV here.
 				 */
-				sli_fg_makepath(&mp->fg, fidfn);
 				if (link(fn, fidfn) == -1) {
 					rc = errno;
 					a->rc = psc_ctlsenderr(a->fd,
@@ -341,7 +343,6 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		}
 	}
 	if (abs(rc) == EEXIST) {
-		sli_fg_makepath(&mp->fg, fidfn);
 		if (stat(fidfn, &tstb) == -1) {
 			rc = errno;
 			a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
