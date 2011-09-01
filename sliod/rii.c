@@ -74,7 +74,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 	}
 	if (rc) {
 		SLVR_LOCK(s);
-		if (rc != SLERR_AIOWAIT) {
+		if (rc != -SLERR_AIOWAIT) {
 			slvr_clear_inuse(s, 0, slvrsiz);
 			s->slvr_flags |= SLVR_REPLFAIL;
 		} else {
@@ -223,7 +223,7 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 		sli_aio_replreply_setup(aiocbr, rq, &iov);
 
 		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
-		mp->rc = SLERR_AIOWAIT;
+		mp->rc = rv;
 		goto out;
 	}
 
