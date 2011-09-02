@@ -524,6 +524,12 @@ sli_aio_replreply_setup(struct sli_aiocb_reply *a,
 	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 	mp->id = a->aiocbr_id = psc_atomic64_inc_getnew(&sli_aio_id);
 
+	/*
+	 * BUG: we use the value of iov without retrieving it
+	 * from the peer IOS.  The len is set to a random number
+	 * and causes our peer to return EINVAL.  Why do we care 
+	 * about the len? It should always be the sliver size.
+	 */
 	memcpy(a->aiocbr_iovs, iov, sizeof(*iov));
 	a->aiocbr_slvrs[0] = s;
 	a->aiocbr_nslvrs = a->aiocbr_niov = 1;
