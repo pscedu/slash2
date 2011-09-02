@@ -280,12 +280,14 @@ slvr_aio_replreply(struct sli_aiocb_reply *a)
 	struct srm_repl_read_req *mq;
 	struct srm_repl_read_rep *mp;
 	struct slvr_ref *s;
+	struct sl_resm *resm;
 
 	psc_assert(a->aiocbr_nslvrs = 1);
 	
 	s = a->aiocbr_slvrs[0];
 
-	csvc = sli_getclcsvc(a->aiocbr_peer);
+	resm = libsl_try_nid2resm(a->aiocbr_peer->exp_connection->c_peer.nid);
+	csvc = sli_geticsvc(resm);
 	if (csvc == NULL)
 		goto out;
 
