@@ -307,8 +307,8 @@ slvr_aio_replreply(struct sli_aiocb_reply *a)
 	if (rq)
 		pscrpc_req_finished(rq);
 
-	pscrpc_export_put(a->aiocbr_peer);
  out:
+	pscrpc_export_put(a->aiocbr_peer);
 	if (csvc)
 		sl_csvc_decref(csvc);
 
@@ -357,9 +357,9 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 	if (rq)
 		pscrpc_req_finished(rq);
 
-	pscrpc_export_put(a->aiocbr_peer);
 	
  out:
+	pscrpc_export_put(a->aiocbr_peer);
 	if (csvc)
 		sl_csvc_decref(csvc);
 
