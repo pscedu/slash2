@@ -32,6 +32,7 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/fs.h"
+#include "pfl/fsmod.h"
 #include "pfl/pfl.h"
 #include "psc_ds/dynarray.h"
 #include "psc_ds/listcache.h"
