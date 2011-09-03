@@ -170,6 +170,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct fcmh_iod_info);
 	PRTYPE(struct fcmh_mds_info);
 	PRTYPE(struct fidc_membh);
+	PRTYPE(struct lnetif_pair);
 	PRTYPE(struct mdsio_fh);
 	PRTYPE(struct mdsio_ops);
 	PRTYPE(struct msbmfl_thread);
@@ -202,6 +203,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct sl_fcmh_ops);
 	PRTYPE(struct sl_gconf);
 	PRTYPE(struct sl_ino_compat);
+	PRTYPE(struct sl_lnetrt);
 	PRTYPE(struct sl_mds_crc_log);
 	PRTYPE(struct sl_mds_iosinfo);
 	PRTYPE(struct sl_mds_nsstats);
