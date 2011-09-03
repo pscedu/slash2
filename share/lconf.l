@@ -28,15 +28,13 @@
 #include "psc_util/alloc.h"
 #include "psc_util/log.h"
 
+#include "slconfig.h"
 #include "yconf.h"
 
 extern char	 cfg_filename[];
 extern int	 cfg_lineno;
 
-extern char *yylval;
-
-void	yyerror(const char *, ...);
-void	yywarn(const char *, ...);
+extern char	*yylval;
 %}
 
 %option nounput

@@ -24,11 +24,16 @@
 %{
 #define YYSTYPE char *
 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+
 #include <ctype.h>
 #include <err.h>
 #include <fcntl.h>
 #include <glob.h>
 #include <limits.h>
+#include <netdb.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -38,7 +43,9 @@
 #include "libcfs/kp30.h"
 
 #include "pfl/str.h"
+#include "psc_rpc/rpc.h"
 #include "psc_util/alloc.h"
+#include "psc_util/bitflag.h"
 #include "psc_util/log.h"
 
 #include "fid.h"
@@ -78,14 +85,11 @@ struct cfg_file {
 };
 
 void		 slcfg_add_include(const char *);
-uint32_t	 slcfg_str2lnet(const char *);
 uint32_t	 slcfg_str2restype(const char *);
-void		 slcfg_resm_addnid(char *, const char *);
+void		 slcfg_store_tok_val(const char *, char *);
 
-void		 yyerror(const char *, ...);
 int		 yylex(void);
 int		 yyparse(void);
-void		 yywarn(const char *, ...);
 
 /*
  * Define a table macro for each structure type filled in by the config
@@ -103,8 +107,8 @@ struct slconf_symbol sym_table[] = {
 	TABENT_VAR("allow_exec",	SL_TYPE_STR,	BUFSIZ,		gconf_allowexe,	NULL),
 	TABENT_VAR("fs_root",		SL_TYPE_STR,	PATH_MAX,	gconf_fsroot,	NULL),
 	TABENT_VAR("journal",		SL_TYPE_STR,	PATH_MAX,	gconf_journal,	NULL),
-	TABENT_VAR("net",		SL_TYPE_STR,	LNET_NAME_MAX,	gconf_net,	NULL),
-	TABENT_VAR("nets",		SL_TYPE_STR,	LNET_NAME_MAX,	gconf_net,	NULL),
+	TABENT_VAR("net",		SL_TYPE_STR,	NAME_MAX,	gconf_net,	NULL),
+	TABENT_VAR("nets",		SL_TYPE_STR,	NAME_MAX,	gconf_net,	NULL),
 	TABENT_VAR("port",		SL_TYPE_INT,	0,		gconf_port,	NULL),
 	TABENT_VAR("pref_ios",		SL_TYPE_STR,	RES_NAME_MAX,	gconf_prefios,	NULL),
 	TABENT_VAR("pref_mds",		SL_TYPE_STR,	RES_NAME_MAX,	gconf_prefmds,	NULL),
@@ -125,12 +129,13 @@ struct slconf_symbol sym_table[] = {
 struct sl_gconf		   globalConfig;
 struct sl_resm		  *nodeResm;
 
-static int		   cfg_nid_counter = -1;
-
+int			   cfg_nid_counter = -1;
 int			   cfg_errors;
 int			   cfg_lineno;
 char			   cfg_filename[PATH_MAX];
 struct psclist_head	   cfg_files = PSCLIST_HEAD_INIT(cfg_files);
+struct ifaddrs		  *cfg_ifaddrs;
+PSCLIST_HEAD(cfg_lnetif_pairs);
 
 static struct sl_site	  *currentSite;
 static struct sl_resource *currentRes;
@@ -240,11 +245,15 @@ site_resource	: resource_start resource_def '}' {
 
 			if (strcmp(currentRes->res_name, "") == 0)
 				yyerror("resource ID %d @%s has no name",
-				    currentRes->res_id, currentSite->site_name);
+				    currentSite->site_name);
 
 			if (currentRes->res_type == SLREST_NONE)
-				yyerror("resource %s@%s has no type specified",
-				    currentRes->res_name, currentSite->site_name);
+				yyerror("resource %s has no type specified",
+				    currentRes->res_name);
+
+			if (psc_dynarray_len(&currentRes->res_members) == 0)
+				yywarn("resource %s has no members",
+				    currentRes->res_name);
 
 			currentRes->res_id = sl_global_id_build(
 			    currentSite->site_id, currentRes->res_id);
@@ -341,10 +350,10 @@ node		: nodeaddr
 		| nodeaddr '|' node
 		;
 
-nodeaddr	: IPADDR '@' LNETNAME	{ slcfg_resm_addnid($1, $3); PSCFREE($3); }
-		| IPADDR		{ slcfg_resm_addnid($1, globalConfig.gconf_net); }
-		| NAME '@' LNETNAME	{ slcfg_resm_addnid($1, $3); PSCFREE($3); }
-		| NAME			{ slcfg_resm_addnid($1, globalConfig.gconf_net); }
+nodeaddr	: IPADDR '@' LNETNAME	{ slcfg_resm_addaddr($1, $3); PSCFREE($3); }
+		| IPADDR		{ slcfg_resm_addaddr($1, NULL); }
+		| NAME '@' LNETNAME	{ slcfg_resm_addaddr($1, $3); PSCFREE($3); }
+		| NAME			{ slcfg_resm_addaddr($1, NULL); }
 		;
 
 statements	: /* nothing */
@@ -458,58 +467,243 @@ lnetname_stmt	: NAME '=' LNETNAME ';' {
 
 %%
 
+int
+slcfg_ifcmp(const char *a, const char *b)
+{
+	char *p, ia[IFNAMSIZ], ib[IFNAMSIZ];
+
+	strlcpy(ia, a, IFNAMSIZ);
+	strlcpy(ib, b, IFNAMSIZ);
+
+	p = strchr(ia, ':');
+	if (p)
+		*p = '\0';
+
+	p = strchr(ib, ':');
+	if (p)
+		*p = '\0';
+
+	return (strcmp(ia, ib));
+}
+
 void
-slcfg_resm_addnid(char *addr, const char *lnet)
+slcfg_add_lnet(struct psclist_head *hd, const void *sa, uint32_t net)
+{
+	char buf[PSCRPC_NIDSTR_SIZE], ibuf[PSCRPC_NIDSTR_SIZE];
+	struct lnetif_pair *i, lp;
+	int netcmp = 1;
+
+	memset(&lp, 0, sizeof(lp));
+	INIT_PSC_LISTENTRY(&lp.lentry);
+
+	/* get destination routing interface */
+	pflnet_getifnfordst(cfg_ifaddrs, sa, lp.ifn);
+	lp.net = net;
+
+	pscrpc_net2str(lp.net, buf);
+
+	/*
+	 * Ensure mutual exclusion of this interface and Lustre network,
+	 * ignoring any interface aliases.
+	 */
+	psclist_for_each_entry(i, hd, lentry) {
+		netcmp = i->net != lp.net;
+
+		if (netcmp ^ (slcfg_ifcmp(lp.ifn, i->ifn) != 0)) {
+			pscrpc_net2str(i->net, ibuf);
+			psc_fatalx("network/interface pair %s:%s "
+			    "conflicts with %s:%s",
+			    buf, lp.ifn,
+			    ibuf, i->ifn);
+		}
+
+		/* if the same, don't process more */
+		if (!netcmp)
+			return;
+	}
+
+	i = PSCALLOC(sizeof(*i));
+	memcpy(i, &lp, sizeof(*i));
+	psclist_add(&i->lentry, hd);
+}
+
+int
+slcfg_lrt_hasaddr(const struct sl_lnetrt *lrt, const struct sockaddr *sa)
+{
+	const struct sockaddr_in *sin = (void *)sa;
+	in_addr_t zero = 0, a = sin->sin_addr.s_addr;
+
+	pfl_bitstr_copy(&a, lrt->lrt_mask, &zero, 0, 32 - lrt->lrt_mask);
+	return (a == lrt->lrt_addr.sin.sin_addr.s_addr);
+}
+
+int
+slcfg_parse_net(char *rt, union pfl_sockaddr *s, int *m)
+{
+	char buf[256], *p, *sep;
+	unsigned char *n;
+	int cpn = 0;
+
+	strlcpy(buf, rt, sizeof(buf));
+	for (p = rt, n = (void *)&s->sin.sin_addr.s_addr;
+	    cpn < 4 && p; p = sep, cpn++) {
+		sep = strchr(p, '.');
+		if (sep)
+			*sep++ = '\0';
+		*n++ = atoi(p);
+	}
+
+	if (cpn == 4)
+		return (-1);
+
+	sep = strchr(rt, '/');
+	if (sep) {
+		psc_fatalx("not implemented");
+	} else {
+		if (cpn < 4)
+			*m = 32 - NBBY * (4 - cpn);
+	}
+//	s->sin.sin_addr.s_addr = htonl(s->sin.sin_addr.s_addr);
+	return (0);
+}
+
+/**
+ * slcfg_parse_routes - Parse LNET network routes.
+ * Note: this is different from LNET_ROUTES.  This is used to determine
+ *	which resources are directly routable, which is used to prune
+ *	additional resource NIDs.
+ */
+void
+slcfg_parse_routes(char *addr)
+{
+	struct sl_lnetrt *lrt;
+	char *sep, *net;
+
+	for (; addr; addr = sep) {
+		while (isspace(*addr))
+			addr++;
+		sep = strchr(addr, ',');
+		if (sep)
+			*sep++ = '\0';
+		net = strchr(addr, '@');
+		if (net == NULL) {
+			net = addr;
+			addr = NULL;
+		} else
+			*net++ = '\0';
+
+		lrt = PSCALLOC(sizeof(*lrt));
+		INIT_LISTENTRY(&lrt->lrt_lentry);
+		lrt->lrt_net = libcfs_str2net(net);
+		if (lrt->lrt_net == LNET_NIDNET(LNET_NID_ANY))
+			psc_fatalx("%s: unable to parse LNET network",
+			    net);
+		if (addr) {
+			if (slcfg_parse_net(addr,
+			    &lrt->lrt_addr, &lrt->lrt_mask) == -1)
+				psc_fatalx("%s: unable to parse "
+				 "network", addr);
+
+			if (lrt->lrt_addr.sin.sin_addr.s_addr ==
+			    INADDR_NONE)
+				psc_fatalx("%s: unable to parse "
+				    "address", addr);
+		}
+		psclist_add(&lrt->lrt_lentry, &globalConfig.gconf_routehd);
+	}
+}
+
+void
+slcfg_resm_addaddr(char *addr, const char *lnet)
 {
 	static int nidcnt;
-	char nidstr[PSCRPC_NIDSTR_SIZE];
-	struct sl_resm *resm;
+	char netbuf[PSCRPC_NIDSTR_SIZE];
+	struct addrinfo hints, *res, *res0;
+	struct sl_lnetrt *lrt;
+	struct sl_resm *m;
+	uint32_t net;
 	int rc;
 
-	if (strcmp(lnet, "") == 0)
-		yyerror("no Lustre network specified");
+	if (lnet) {
+		net = libcfs_str2net(lnet);
+		if (net == LNET_NIDNET(LNET_NID_ANY)) {
+			yyerror("%s: invalid LNET network", lnet);
+			return;
+		}
+	} else
+		net = LNET_NIDNET(LNET_NID_ANY);
 
-	rc = snprintf(nidstr, sizeof(nidstr), "%s@%s", addr, lnet);
-	if (rc >= (int)sizeof(nidstr)) {
-		errno = ENAMETOOLONG;
-		rc = -1;
+	/* get numerical addresses */
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	rc = getaddrinfo(addr, NULL, &hints, &res0);
+	if (rc)
+		psc_fatalx("%s: %s", addr, gai_strerror(rc));
+
+	for (res = res0; res; res = res->ai_next) {
+		if (lnet == NULL) {
+			if (globalConfig.gconf_net[0] &&
+			    psc_listhd_empty(&globalConfig.gconf_routehd))
+				slcfg_parse_routes(globalConfig.gconf_net);
+
+			psclist_for_each_entry(lrt,
+			    &globalConfig.gconf_routehd, lrt_lentry)
+				if (slcfg_lrt_hasaddr(lrt, res->ai_addr))
+					break;
+
+			if (lrt == NULL ||
+			    !pflnet_rtexists(&lrt->lrt_addr.sa)) {
+				yywarn("no route to NID %s", addr);
+				goto out;
+			}
+			pscrpc_net2str(lrt->lrt_net, netbuf);
+			lnet = netbuf;
+			net = lrt->lrt_net;
+		}
+
+		if (strcmp(lnet, "") == 0)
+			yyerror("no Lustre network specified");
+
+		if (nidcnt == cfg_nid_counter) {
+			lnet_nid_t *nidp;
+
+			nidp = PSCALLOC(sizeof(*nidp));
+			*nidp = LNET_MKNID(net,
+			    ((struct sockaddr_in *)res->ai_addr)->
+			    sin_addr.s_addr);
+			psc_dynarray_add(&currentResm->resm_nids, nidp);
+			continue;
+		}
+
+		currentResm = m = PSCALLOC(sizeof(*m) + cfg_resm_pri_sz);
+		psc_hashent_init(&globalConfig.gconf_nid_hashtbl, m);
+
+		rc = snprintf(m->resm_addrbuf, sizeof(m->resm_addrbuf),
+		    "%s:%s", currentRes->res_name, addr);
+		if (rc >= (int)sizeof(m->resm_addrbuf)) {
+			errno = ENAMETOOLONG;
+			rc = -1;
+		}
+		if (rc == -1)
+			yyerror("resource member %s address %s: %s",
+			    currentRes->res_name, addr, slstrerror(errno));
+
+		m->resm_nid = LNET_MKNID(net,
+		    htonl(((struct sockaddr_in *)res->ai_addr)->sin_addr.s_addr));
+		m->resm_res = currentRes;
+		slcfg_init_resm(m);
+
+		psc_hashtbl_add_item(&globalConfig.gconf_nid_hashtbl, m);
+
+		psc_dynarray_add(&currentRes->res_members, m);
+
+		nidcnt = cfg_nid_counter;
+
+		slcfg_add_lnet(&cfg_lnetif_pairs, res->ai_addr, net);
 	}
-	if (rc == -1)
-		yyerror("resource member %s address %s: %s",
-		    currentRes->res_name, addr, slstrerror(errno));
-	PSCFREE(addr);
-
-	if (nidcnt == cfg_nid_counter) {
-		lnet_nid_t *nidp;
-
-		nidp = PSCALLOC(sizeof(*nidp));
-		*nidp = libcfs_str2nid(nidstr);
-		psc_dynarray_add(&currentResm->resm_nids, nidp);
-		return;
-	}
-
-	currentResm = resm = PSCALLOC(sizeof(*resm) + cfg_resm_pri_sz);
-	psc_hashent_init(&globalConfig.gconf_nid_hashtbl, resm);
-
-	rc = snprintf(resm->resm_addrbuf, sizeof(resm->resm_addrbuf),
-	    "%s:%s", currentRes->res_name, nidstr);
-	if (rc >= (int)sizeof(resm->resm_addrbuf)) {
-		errno = ENAMETOOLONG;
-		rc = -1;
-	}
-	if (rc == -1)
-		yyerror("resource member %s address %s: %s",
-		    currentRes->res_name, nidstr, slstrerror(errno));
-
-	resm->resm_nid = libcfs_str2nid(nidstr);
-	resm->resm_res = currentRes;
-	slcfg_init_resm(resm);
-
-	psc_hashtbl_add_item(&globalConfig.gconf_nid_hashtbl, resm);
-
-	psc_dynarray_add(&currentRes->res_members, resm);
-
-	nidcnt = cfg_nid_counter;
+ out:
+	freeaddrinfo(res0);
 }
 
 uint32_t
@@ -721,6 +915,9 @@ slcfg_parse(const char *config_file)
 
 	INIT_GCONF(&globalConfig);
 
+	/* interface addresses are used */
+	pflnet_getifaddrs(&cfg_ifaddrs);
+
 	slcfg_add_include(config_file);
 	psclist_for_each_entry_safe(cf, ncf, &cfg_files, cf_lentry) {
 		if (realpath(cf->cf_fn, cfg_filename) == NULL)
@@ -740,6 +937,8 @@ slcfg_parse(const char *config_file)
 	}
 	if (cfg_errors)
 		errx(1, "%d error(s) encountered", cfg_errors);
+
+	pflnet_freeifaddrs(cfg_ifaddrs);
 
 	PLL_LOCK(&globalConfig.gconf_sites);
 	pll_sort(&globalConfig.gconf_sites, qsort, slcfg_site_cmp);

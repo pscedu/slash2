@@ -34,6 +34,7 @@
 #include "psc_rpc/rpc.h"
 #include "psc_util/alloc.h"
 #include "psc_util/log.h"
+#include "psc_util/net.h"
 
 #include "sltypes.h"
 
@@ -122,9 +123,22 @@ site_get_pri(struct sl_site *site)
 	return (site + 1);
 }
 
+struct sl_lnetrt {
+	union pfl_sockaddr	 lrt_addr;
+	int			 lrt_mask;	/* # bits in network */
+	uint32_t		 lrt_net;
+	struct psclist_head	 lrt_lentry;
+};
+
+struct lnetif_pair {
+	uint32_t		 net;
+	char			 ifn[IFNAMSIZ];
+	struct psclist_head	 lentry;
+};
+
 struct sl_gconf {
 	char			 gconf_allowexe[BUFSIZ];
-	char			 gconf_net[LNET_NAME_MAX];
+	char			 gconf_net[NAME_MAX];
 	char			 gconf_fsroot[PATH_MAX];
 	int			 gconf_port;
 	char			 gconf_prefmds[RES_NAME_MAX];
@@ -134,19 +148,21 @@ struct sl_gconf {
 	char			 gconf_zpname[NAME_MAX];
 	int			 gconf_async_io;
 
+	struct psclist_head	 gconf_routehd;
 	struct psc_lockedlist	 gconf_sites;
 	struct psc_hashtbl	 gconf_nid_hashtbl;
 	psc_spinlock_t		 gconf_lock;
 };
 
 #define GCONF_HASHTBL_SZ	63
-#define INIT_GCONF(g)							\
+#define INIT_GCONF(cf)							\
 	do {								\
-		memset((g), 0, sizeof(*(g)));				\
-		INIT_SPINLOCK(&(g)->gconf_lock);			\
-		pll_init(&(g)->gconf_sites, struct sl_site,		\
-		    site_lentry, &(g)->gconf_lock);			\
-		psc_hashtbl_init(&(g)->gconf_nid_hashtbl, 0,		\
+		memset((cf), 0, sizeof(*(cf)));				\
+		INIT_LISTHEAD(&(cf)->gconf_routehd);			\
+		INIT_SPINLOCK(&(cf)->gconf_lock);			\
+		pll_init(&(cf)->gconf_sites, struct sl_site,		\
+		    site_lentry, &(cf)->gconf_lock);			\
+		psc_hashtbl_init(&(cf)->gconf_nid_hashtbl, 0,		\
 		    struct sl_resm, resm_nid, resm_hentry,		\
 		    GCONF_HASHTBL_SZ, NULL, "resnid");			\
 	} while (0)
@@ -203,7 +219,7 @@ int			 slcfg_resm_cmp(const void *, const void *);
 int			 slcfg_site_cmp(const void *, const void *);
 
 void			 slcfg_parse(const char *);
-void			 slcfg_store_tok_val(const char *, char *);
+void			 slcfg_resm_addaddr(char *, const char *);
 
 struct sl_resource	*libsl_id2res(sl_ios_id_t);
 void			 libsl_init(int, int);
@@ -214,6 +230,9 @@ struct sl_site		*libsl_siteid2site(sl_siteid_t);
 sl_ios_id_t		 libsl_str2id(const char *);
 struct sl_resource	*libsl_str2res(const char *);
 struct sl_resm		*libsl_try_nid2resm(lnet_nid_t);
+
+void			yyerror(const char *, ...);
+void			yywarn(const char *, ...);
 
 /* this instance's resource member */
 extern struct sl_resm	*nodeResm;
@@ -226,6 +245,11 @@ extern struct sl_gconf	 globalConfig;
 extern int		 cfg_site_pri_sz;
 extern int		 cfg_res_pri_sz;
 extern int		 cfg_resm_pri_sz;
+
+extern char		 cfg_filename[];
+extern int		 cfg_lineno;
+extern int		 cfg_nid_counter;
+extern struct psclist_head cfg_lnetif_pairs;
 
 /**
  * sl_global_id_build - Produce a global, unique identifier for a resource
