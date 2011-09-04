@@ -18,7 +18,7 @@
  */
 
 /*
- * Definitions for the yacc parsing the SLASH2 configuration file.
+ * Definitions for the yacc parsing of the SLASH2 configuration file.
  */
 
 %{
