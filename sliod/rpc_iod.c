@@ -177,6 +177,8 @@ sli_rpc_mds_unpack_fsuuid(struct pscrpc_request *rq, int msgtype)
 				psclog_errorx("%s", fn);
 			fclose(fp);
 
+			buf[strcspn(buf, "\n")] = '\0';
+
 			sli_fsuuid = strtoll(buf, &endp, 16);
 			if (endp == buf || *endp) {
 				psclog_errorx("invalid fsuuid in %s: "
