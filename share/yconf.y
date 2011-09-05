@@ -467,27 +467,24 @@ lnetname_stmt	: NAME '=' LNETNAME ';' {
 
 %%
 
+/*
+ * XXX this check is seriously wrong; we should look at the route.
+ */
 int
-slcfg_ifcmp(const char *a, const char *b)
+slcfg_ifcmp(const struct lnetif_pair *a, const struct lnetif_pair *b)
 {
-	char *p, ia[IFNAMSIZ], ib[IFNAMSIZ];
+	char ia[IFNAMSIZ], ib[IFNAMSIZ];
 
-	strlcpy(ia, a, IFNAMSIZ);
-	strlcpy(ib, b, IFNAMSIZ);
+	strlcpy(ia, a->ifn, sizeof(ia));
+	strlcpy(ib, b->ifn, sizeof(ib));
 
-	p = strchr(ia, ':');
-	if (p)
-		*p = '\0';
-
-	p = strchr(ib, ':');
-	if (p)
-		*p = '\0';
-
+	ia[strcspn(ia, ":.")] = '\0';
+	ib[strcspn(ib, ":.")] = '\0';
 	return (strcmp(ia, ib));
 }
 
 void
-slcfg_add_lnet(struct psclist_head *hd, const void *sa, uint32_t net)
+slcfg_add_lnet(const void *sa, uint32_t net)
 {
 	char buf[PSCRPC_NIDSTR_SIZE], ibuf[PSCRPC_NIDSTR_SIZE];
 	struct lnetif_pair *i, lp;
@@ -506,10 +503,10 @@ slcfg_add_lnet(struct psclist_head *hd, const void *sa, uint32_t net)
 	 * Ensure mutual exclusion of this interface and Lustre network,
 	 * ignoring any interface aliases.
 	 */
-	psclist_for_each_entry(i, hd, lentry) {
+	psclist_for_each_entry(i, &cfg_lnetif_pairs, lentry) {
 		netcmp = i->net != lp.net;
 
-		if (netcmp ^ (slcfg_ifcmp(lp.ifn, i->ifn) != 0)) {
+		if (netcmp ^ (slcfg_ifcmp(&lp, i) != 0)) {
 			pscrpc_net2str(i->net, ibuf);
 			psc_fatalx("network/interface pair %s:%s "
 			    "conflicts with %s:%s",
@@ -518,13 +515,24 @@ slcfg_add_lnet(struct psclist_head *hd, const void *sa, uint32_t net)
 		}
 
 		/* if the same, don't process more */
-		if (!netcmp)
-			return;
+		if (!netcmp) {
+			if (i->flags & LPF_NOACCEPTOR)
+				i->flags |= LPF_SKIP;
+			else
+				return;
+		}
 	}
 
 	i = PSCALLOC(sizeof(*i));
 	memcpy(i, &lp, sizeof(*i));
-	psclist_add(&i->lentry, hd);
+	psclist_add(&i->lentry, &cfg_lnetif_pairs);
+#ifdef _SLASH_MDS
+	if (currentRes->res_type != SLREST_MDS)
+		i->flags |= LPF_NOACCEPTOR;
+#else
+	if (currentRes->res_type == SLREST_MDS)
+		i->flags |= LPF_NOACCEPTOR;
+#endif
 }
 
 int
@@ -700,7 +708,7 @@ slcfg_resm_addaddr(char *addr, const char *lnet)
 
 		nidcnt = cfg_nid_counter;
 
-		slcfg_add_lnet(&cfg_lnetif_pairs, res->ai_addr, net);
+		slcfg_add_lnet(res->ai_addr, net);
 	}
  out:
 	freeaddrinfo(res0);

@@ -134,7 +134,11 @@ struct lnetif_pair {
 	uint32_t		 net;
 	char			 ifn[IFNAMSIZ];
 	struct psclist_head	 lentry;
+	int			 flags;
 };
+
+#define LPF_NOACCEPTOR		(1 << 0)
+#define LPF_SKIP		(1 << 1)
 
 struct sl_gconf {
 	char			 gconf_allowexe[BUFSIZ];

@@ -231,9 +231,14 @@ libsl_init(int pscnet_mode, int ismds)
 
 	lnetstr[0] = '\0';
 	psclist_for_each_entry_safe(lp, lpnext, &cfg_lnetif_pairs, lentry) {
+		if (lp->flags & LPF_SKIP)
+			goto next;
+
 		pscrpc_net2str(lp->net, netbuf);
-		k = snprintf(ltmp, sizeof(ltmp), "%s%s(%s)",
-		    lnetstr[0] == '\0' ? "" : ",", netbuf, lp->ifn);
+		k = snprintf(ltmp, sizeof(ltmp), "%s%s-%s(%s)",
+		    lnetstr[0] == '\0' ? "" : ",", netbuf,
+		    lp->flags & LPF_NOACCEPTOR ? "a" : "",
+		    lp->ifn);
 		if (k >= (int)sizeof(ltmp)) {
 			k = -1;
 			errno = ENAMETOOLONG;
@@ -245,6 +250,7 @@ libsl_init(int pscnet_mode, int ismds)
 		    sizeof(lnetstr)) >= sizeof(lnetstr))
 			psc_fatalx("too many Lustre networks");
 
+ next:
 		psclist_del(&lp->lentry, &cfg_lnetif_pairs);
 		PSCFREE(lp);
 	}
