@@ -65,6 +65,6 @@ SRCS+=		${SETRESUID_SRC}
 
 DEFINES+=	-D_SLASH_CLIENT
 
-MODULES+=	lnet pthread gcrypt pscfs ctl rpc
+MODULES+=	lnet pthread gcrypt pscfs ctl rpc clock
 
 include ${SLASHMK}
