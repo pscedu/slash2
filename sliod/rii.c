@@ -106,7 +106,6 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		lc_add(&sli_replwkq_pending, w);
 		psc_atomic32_inc(&w->srw_refcnt);
 	}
-	//XXX is this right for AIO?
 	sli_replwkrq_decref(w, rc);
 
 	return (rc);

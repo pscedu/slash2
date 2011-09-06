@@ -146,12 +146,17 @@ sli_repl_addwk(int op, uint64_t nid, const struct slash_fidgen *fgp,
 }
 
 void
-sli_replwkrq_decref(struct sli_repl_workrq *w, int rc)
-{
+sli_replwkrq_decref(struct sli_repl_workrq *w, int rc) {
 	reqlock(&w->srw_lock);
 
-	if (rc && w->srw_status == 0)
+	if (rc && w->srw_status == 0) {
+		/* keep the request around until the request
+		 * returns.
+		 */
 		w->srw_status = rc;
+		if (rc == -SLERR_AIOWAIT)
+			return;
+	}
 
 	if (!psc_atomic32_dec_and_test0(&w->srw_refcnt)) {
 		freelock(&w->srw_lock);
