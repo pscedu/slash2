@@ -302,7 +302,7 @@ slvr_aio_replreply(struct sli_aiocb_reply *a)
 	if (mq->rc)
 		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
 	else
-		mq->rc = rsx_bulkclient(rq, BULK_GET_SOURCE, SRCI_BULK_PORTAL,
+		mq->rc = rsx_bulkclient(rq, BULK_GET_SOURCE, SRII_BULK_PORTAL,
 				a->aiocbr_iovs, a->aiocbr_niov);
 
 	SL_RSX_WAITREP(csvc, rq, mp);
