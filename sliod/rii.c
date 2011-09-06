@@ -215,6 +215,9 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 	slvr_repl_prep(s, aio ? SLVR_REPLDST : SLVR_REPLSRC);
 	rv = slvr_io_prep(s, 0, mq->len, aio ? SL_WRITE : SL_READ, &aiocbr);
 
+	iov.iov_base = s->slvr_slab->slb_base;
+	iov.iov_len = mq->len;
+
 	if (aiocbr) {
 		/* Ran into an async I/O.  It's possible that this sliod
 		 *   is an archival_fs.
@@ -235,9 +238,6 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 		mp->rc = rv;
 		goto out;
 	}
-
-	iov.iov_base = s->slvr_slab->slb_base;
-	iov.iov_len = mq->len;
 
 	mp->rc = rsx_bulkserver(rq, aio ? BULK_PUT_SINK : BULK_PUT_SOURCE,
 		SRII_BULK_PORTAL, &iov, 1);
