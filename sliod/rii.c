@@ -238,7 +238,7 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 		goto out;
 	}
 
-	mp->rc = rsx_bulkserver(rq, aio ? BULK_PUT_SINK : BULK_PUT_SOURCE,
+	mp->rc = rsx_bulkserver(rq, aio ? BULK_GET_SINK : BULK_PUT_SOURCE,
 		SRII_BULK_PORTAL, &iov, 1);
 
 	if (aio)
