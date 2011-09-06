@@ -136,13 +136,16 @@ slictlcmd_export(int ac, char *av[])
 void
 slictlcmd_import(int ac, char *av[])
 {
+	int i, c, preserve_path = 0;
 	struct slictlmsg_fileop *sfop;
 	struct stat sb;
-	int i, c;
 
 	PFL_OPT_RESET();
-	while ((c = getopt(ac, av, "Rv")) != -1)
+	while ((c = getopt(ac, av, "PRv")) != -1)
 		switch (c) {
+		case 'P':
+			preserve_path = 1;
+			break;
 		case 'R':
 			recursive = 1;
 			break;
@@ -157,11 +160,13 @@ slictlcmd_import(int ac, char *av[])
 
 	if (ac < 2)
  usage:
-		errx(1, "usage: import [-Rv] file ... dst");
+		errx(1, "usage: import [-PRv] file ... dst");
 	for (i = 0; i < ac - 1; i++) {
 		if (stat(av[i], &sb) == -1)
 			err(1, "%s", av[i]);
 		sfop = psc_ctlmsg_push(SLICMT_IMPORT, sizeof(*sfop));
+		if (preserve_path)
+			sfop->sfop_flags |= SLI_CTL_FOPF_PRESERVE;
 		if (recursive)
 			sfop->sfop_flags |= SLI_CTL_FOPF_RECURSIVE;
 		if (verbose)

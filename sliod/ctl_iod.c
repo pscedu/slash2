@@ -103,6 +103,38 @@ sli_fcmh_lookup_fid(const struct slash_fidgen *pfg, const char *cpn,
 	return (rc);
 }
 
+void
+sli_rmi_issue_mkdir(const struct slash_fidgen *fg, const char *name,
+    uid_t uid, gid_t gid, mode_t mode, struct slash_fidgen *cfg,
+    char *fidfn[PATH_MAX])
+{
+	struct srm_mkdir_req *mq;
+	struct srm_mkdir_rep *mp;
+	int rc;
+
+	rc = SL_RSX_NEWREQ(csvc, SRMT_MKDIR, rq, mq, mp);
+	if (rc) {
+		a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
+		    slstrerror(rc));
+		goto out;
+	}
+	mq->creds.scr_uid = uid;
+	mq->creds.scr_gid = gid;
+	mq->mode = mode;
+	mq->pfg = *pfg;
+	strlcpy(mq->name, name, sizeof(mq->name));
+//	sl_externalize_stat(stb, &mq->sstb);
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	if (rc == 0) {
+		rc = mp->rc;
+		if (cfg)
+			*cfg = mp->cattr.sstb_fg;
+		if (fidfn)
+			sli_fg_makepath(&mp->cattr.sst_fg, fidfn);
+	}
+	return (rc);
+}
+
 struct sli_import_arg {
 	struct psc_ctlmsghdr	*mh;
 	struct slictlmsg_fileop	*sfop;
@@ -223,6 +255,20 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 			srcname = cpn;
 			break;
 		}
+		if (rc == ENOENT && np &&
+		    sfop->sfop_flags & SLI_CTL_FOPF_PRESERVE) {
+			char pfn[PATH_MAX];
+			struct stat tstb;
+
+			strlcpy(pfn, fn, np - fn);
+
+			if (stat(pfn, &tstb) == -1)
+				rc = errno;
+			else
+				rc = sli_rmi_issue_mkdir(&fg, cpn,
+				    tstb->st_uid, tstb->st_gid,
+				    tstb->st_mode, &tfg, NULL);
+		}
 		if (!rc && np == NULL) {
 			if (!isdir) {
 				rc = EEXIST;
@@ -263,27 +309,8 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	}
 
 	if (S_ISDIR(stb->st_mode)) {
-		struct srm_mkdir_req *mq;
-		struct srm_mkdir_rep *mp;
-
-		rc = SL_RSX_NEWREQ(csvc, SRMT_MKDIR, rq, mq,
-		    mp);
-		if (rc) {
-			a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
-			    slstrerror(rc));
-			goto out;
-		}
-		mq->creds.scr_uid = stb->st_uid;
-		mq->creds.scr_gid = stb->st_gid;
-		mq->mode = stb->st_mode;
-		mq->pfg = fg;
-		strlcpy(mq->name, srcname, sizeof(mq->name));
-//		sl_externalize_stat(stb, &mq->sstb);
-		rc = SL_RSX_WAITREP(csvc, rq, mp);
-		if (rc == 0) {
-			rc = mp->rc;
-			sli_fg_makepath(&mp->cattr.sst_fg, fidfn);
-		}
+		rc = sli_rmi_issue_mkdir(&fg, srcname, stb->st_uid,
+		    stb->st_gid, stb->st_mode, NULL, fidfn);
 
 		/*
 		 * The tree walk visits the top level directory first
