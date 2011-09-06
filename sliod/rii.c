@@ -313,6 +313,7 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 		return (rc);
 
 	mq->len = SLASH_SLVR_SIZE;
+	/* adjust the request size for the last sliver */
 	if ((unsigned)slvrno == w->srw_len / SLASH_SLVR_SIZE)
 		mq->len = w->srw_len % SLASH_SLVR_SIZE;
 	mq->fg = w->srw_fg;
