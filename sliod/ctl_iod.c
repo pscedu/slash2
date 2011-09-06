@@ -103,21 +103,27 @@ sli_fcmh_lookup_fid(const struct slash_fidgen *pfg, const char *cpn,
 	return (rc);
 }
 
-void
-sli_rmi_issue_mkdir(const struct slash_fidgen *fg, const char *name,
-    uid_t uid, gid_t gid, mode_t mode, struct slash_fidgen *cfg,
-    char *fidfn[PATH_MAX])
+struct sli_import_arg {
+	struct psc_ctlmsghdr	*mh;
+	struct slictlmsg_fileop	*sfop;
+	int			 fd;
+	int			 rc;
+};
+
+int
+sli_rmi_issue_mkdir(struct slashrpc_cservice *csvc,
+    const struct slash_fidgen *pfg, const char *name, uid_t uid,
+    gid_t gid, mode_t mode, struct slash_fidgen *cfg,
+    char fidfn[PATH_MAX])
 {
+	struct pscrpc_request *rq;
 	struct srm_mkdir_req *mq;
 	struct srm_mkdir_rep *mp;
 	int rc;
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_MKDIR, rq, mq, mp);
-	if (rc) {
-		a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
-		    slstrerror(rc));
-		goto out;
-	}
+	if (rc) 
+		return (rc);
 	mq->creds.scr_uid = uid;
 	mq->creds.scr_gid = gid;
 	mq->mode = mode;
@@ -128,19 +134,13 @@ sli_rmi_issue_mkdir(const struct slash_fidgen *fg, const char *name,
 	if (rc == 0) {
 		rc = mp->rc;
 		if (cfg)
-			*cfg = mp->cattr.sstb_fg;
+			*cfg = mp->cattr.sst_fg;
 		if (fidfn)
 			sli_fg_makepath(&mp->cattr.sst_fg, fidfn);
 	}
+	pscrpc_req_finished(rq);
 	return (rc);
 }
-
-struct sli_import_arg {
-	struct psc_ctlmsghdr	*mh;
-	struct slictlmsg_fileop	*sfop;
-	int			 fd;
-	int			 rc;
-};
 
 /**
  * sli_import - Import files resident on a sliod backfs into the SLASH2
@@ -195,6 +195,13 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	 */
 	fg.fg_fid = SLFID_ROOT;
 	fg.fg_gen = FGEN_ANY;
+
+	rc = sli_rmi_getimp(&csvc);
+	if (rc) {
+		a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
+		    slstrerror(rc));
+		goto out;
+	}
 
 	srcname = pfl_basename(fn);
 
@@ -265,9 +272,9 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 			if (stat(pfn, &tstb) == -1)
 				rc = errno;
 			else
-				rc = sli_rmi_issue_mkdir(&fg, cpn,
-				    tstb->st_uid, tstb->st_gid,
-				    tstb->st_mode, &tfg, NULL);
+				rc = sli_rmi_issue_mkdir(csvc, &fg, cpn,
+				    tstb.st_uid, tstb.st_gid,
+				    tstb.st_mode, &tfg, NULL);
 		}
 		if (!rc && np == NULL) {
 			if (!isdir) {
@@ -301,16 +308,10 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		goto out;
 	}
 
-	rc = sli_rmi_getimp(&csvc);
-	if (rc) {
-		a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
-		    slstrerror(rc));
-		goto out;
-	}
-
 	if (S_ISDIR(stb->st_mode)) {
-		rc = sli_rmi_issue_mkdir(&fg, srcname, stb->st_uid,
-		    stb->st_gid, stb->st_mode, NULL, fidfn);
+		rc = sli_rmi_issue_mkdir(csvc, &fg, srcname,
+		    stb->st_uid, stb->st_gid, stb->st_mode, NULL,
+		    fidfn);
 
 		/*
 		 * The tree walk visits the top level directory first
