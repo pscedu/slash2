@@ -673,6 +673,8 @@ slcfg_resm_addaddr(char *addr, const char *lnet)
 		if (strcmp(lnet, "") == 0)
 			yyerror("no Lustre network specified");
 
+		slcfg_add_lnet(res->ai_addr, net);
+
 		if (nidcnt == cfg_nid_counter) {
 			lnet_nid_t *nidp;
 
@@ -707,8 +709,6 @@ slcfg_resm_addaddr(char *addr, const char *lnet)
 		psc_dynarray_add(&currentRes->res_members, m);
 
 		nidcnt = cfg_nid_counter;
-
-		slcfg_add_lnet(res->ai_addr, net);
 	}
  out:
 	freeaddrinfo(res0);
