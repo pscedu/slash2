@@ -440,7 +440,6 @@ API rename
 - upsch will not scale without multiwait waker arg
 - ensure user mounting works
 - add provisions to ensure journal disk doesnt overwrite something special
-- eradicate resm_addrbuf
 
 - Add the ability to remove an I/O server from slcfg.  Right now struct reclaim_prog_entry
   has a field "pad".  Should be easy to turn it into a flag to mark obsolete
@@ -451,6 +450,8 @@ API rename
 - msctl is broken on 32-bit because of ino # compression
 - build LNET_ROUTES from slcfg
 - move msctl sock to $MOUNTPOINT/.slmd/ctlsock and have msctl ascend to that on arguments
+- only purge additional NIDs if unroutable in slcfg, leave one (LNET_ROUTES)
+   - better yet, if in LNET_ROUTES, leave in tact
 
 reimport
 - if mtime is newer, update file attrs in MDS
