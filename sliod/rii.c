@@ -257,7 +257,7 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 }
 
 /**
- * sli_rii_replread_cb - Callback triggered when an REPL_READ request
+ * sli_rii_replread_cb - Callback triggered when an SRMT_REPL_READ request
  *	issued finishes.
  */
 __static int
