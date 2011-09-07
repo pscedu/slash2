@@ -343,7 +343,6 @@ pjournal_dump(const char *fn, int verbose)
 	    pjh->pjh_readsize, pjh->pjh_start_off,
 	    ctime((time_t *)&pjh->pjh_timestamp));
 
-
 	jbuf = psc_alloc(PJ_PJESZ(pj) * pj->pj_hdr->pjh_readsize,
 			 PAF_PAGEALIGN | PAF_LOCK);
 	for (slot = 0; slot < pjh->pjh_nents; slot += pjh->pjh_readsize) {
