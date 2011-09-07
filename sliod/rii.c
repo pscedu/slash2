@@ -44,7 +44,7 @@
 #define SRII_REPLREAD_CBARG_SLVR	1
 
 
-/*
+/**
  * sli_rii_replread_release_sliver: we call this function in three cases:
  *
  *    (1) When we fail to issue a request for a replication of a sliver;
@@ -53,7 +53,7 @@
  */
 __static int
 sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
-	int rc)
+    int rc)
 {
 	struct slvr_ref *s;
 	int slvrsiz, aio = 0;
@@ -113,9 +113,10 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 
 /**
  * sli_rii_handle_replread - Handler for sliver replication read request.
- * @aio:  this argument signifies that the peer has completed an async io
+ * @rq: request.
+ * @aio:  this argument signifies that the peer has completed an async I/O
  *    of a previously requested sliver and that sliver has been posted for
- *    GET.  In essense, this flag causes the internals of the rpc handler
+ *    GET.  In essense, this flag causes the internals of the RPC handler
  *    to be reversed.
  */
 __static int
