@@ -99,13 +99,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		w->srw_slvr_refs[slvridx] = NULL;
 	} else
 		spinlock(&w->srw_lock);
-	/* place back on pending queue until the last sliver finishes or
-	 *  error
-	 */
-	if (psclist_disjoint(&w->srw_pending_lentry)) {
-		lc_add(&sli_replwkq_pending, w);
-		psc_atomic32_inc(&w->srw_refcnt);
-	}
+
 	sli_replwkrq_decref(w, rc);
 
 	return (rc);
