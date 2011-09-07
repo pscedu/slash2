@@ -108,7 +108,7 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	const char *cfn, *sfn;
+	const char *cfn, *sfn, *p;
 	int rc, c;
 
 	/* gcrypt must be initialized very early on */
@@ -123,6 +123,11 @@ main(int argc, char *argv[])
 	progname = argv[0];
 	cfn = SL_PATH_CONF;
 	sfn = SL_PATH_SLICTLSOCK;
+
+	p = getenv("CTL_SOCK_FILE");
+	if (p)
+		sfn = p;
+
 	while ((c = getopt(argc, argv, "D:f:S:X")) != -1)
 		switch (c) {
 		case 'D':
