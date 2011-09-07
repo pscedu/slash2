@@ -84,8 +84,8 @@ sli_repl_addwk(int op, uint64_t nid, const struct slash_fidgen *fgp,
 
 	w = psc_pool_get(sli_replwkrq_pool);
 	memset(w, 0, sizeof(*w));
-	INIT_PSC_LISTENTRY(&w->srw_state_lentry);
 	INIT_PSC_LISTENTRY(&w->srw_active_lentry);
+	INIT_PSC_LISTENTRY(&w->srw_pending_lentry);
 	INIT_SPINLOCK(&w->srw_lock);
 	psc_atomic32_set(&w->srw_refcnt, 1);
 	w->srw_nid = nid;
@@ -248,7 +248,7 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 		 * iteration.  If it's full, we'll wait for a slot to
 		 * open up then.
 		 */
-		if (psclist_disjoint(&w->srw_state_lentry)) {
+		if (psclist_disjoint(&w->srw_pending_lentry)) {
 			lc_addhead(&sli_replwkq_pending, w);
 			psc_atomic32_inc(&w->srw_refcnt);
 		}
@@ -272,12 +272,12 @@ void
 sli_repl_init(void)
 {
 	psc_poolmaster_init(&sli_replwkrq_poolmaster,
-	    struct sli_repl_workrq, srw_state_lentry, PPMF_AUTO, 256,
+	    struct sli_repl_workrq, srw_pending_lentry, PPMF_AUTO, 256,
 	    256, 0, NULL, NULL, NULL, "replwkrq");
 	sli_replwkrq_pool = psc_poolmaster_getmgr(&sli_replwkrq_poolmaster);
 
 	lc_reginit(&sli_replwkq_pending, struct sli_repl_workrq,
-	    srw_state_lentry, "replwkpnd");
+	    srw_pending_lentry, "replwkpnd");
 
 	pscthr_init(SLITHRT_REPLPND, 0, slireplpndthr_main, NULL, 0,
 	    "slireplpndthr");

@@ -57,8 +57,8 @@ struct sli_repl_workrq {
 	struct sl_resm		*srw_resm;		/* source peer info */
 	struct bmapc_memb	*srw_bcm;
 	struct fidc_membh	*srw_fcmh;
-	struct psclist_head	 srw_state_lentry;	/* entry for which state list */
-	struct psclist_head	 srw_active_lentry;	/* entry in global active list */
+	struct psclist_head	 srw_active_lentry;	/* entry in the active list */
+	struct psclist_head	 srw_pending_lentry;	/* entry in the pending list */
 
 	struct slvr_ref		*srw_slvr_refs[REPL_MAX_INFLIGHT_SLVRS];
 };
