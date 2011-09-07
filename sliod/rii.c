@@ -43,6 +43,14 @@
 #define SRII_REPLREAD_CBARG_WKRQ	0
 #define SRII_REPLREAD_CBARG_SLVR	1
 
+
+/*
+ * sli_rii_replread_release_sliver: we call this function in three cases:
+ *
+ *    (1) When we fail to issue a request for a replication of a sliver;
+ *    (2) When the request for a replication of a sliver has completed;
+ *    (3) When the asynchronous I/O for a replication of a sliver has completed.
+ */
 __static int
 sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 	int rc)
