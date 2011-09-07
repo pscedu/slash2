@@ -211,6 +211,11 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 			SLVR_ULOCK(s);
 	}
 
+	/*
+	 * Do we really need the following three lines in the case of AIO? It causes an assert
+	 * on the sliver flag right now.  I think we can just copy the data into the
+	 * sliver and mark it as data ready.
+	 */
 	slvr_slab_prep(s, aio ? SL_WRITE : SL_READ);
 	slvr_repl_prep(s, aio ? SLVR_REPLDST : SLVR_REPLSRC);
 	rv = slvr_io_prep(s, 0, mq->len, aio ? SL_WRITE : SL_READ, &aiocbr);
