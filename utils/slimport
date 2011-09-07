@@ -1,0 +1,28 @@
+#!/usr/bin/perl -W
+# $Id$
+
+use warnings;
+use strict;
+
+$ENV{PSC_TIMEOUT} = 1;
+
+sub cpnwalk {
+	my ($fn, $f) = @_;
+	my @cpn = split m[/];
+	for (my $i = 0; $i < @cpn; $i++) {
+		$f->(join "/", @cpn[0 .. $i]);
+	}
+}
+
+while (<>) {
+	# example pathname: /usr/users/2/username/file/path/etc
+	cpnwalk $_, sub {
+		my $fn = shift;
+		my $s2fn = $fn;
+		if ($s2fn =~ s!^/usr/users/!!) {
+			system "echo slictl import -v \Q$fn\E \Q$s2fn\E";
+		} else {
+			warn "skipping import of file outside archiver root: $fn\n";
+		}
+	};
+}
