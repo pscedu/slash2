@@ -50,7 +50,7 @@ struct sli_repl_workrq {
 
 	uint32_t		 srw_status;		/* return code to pass back to MDS */
 	psc_spinlock_t		 srw_lock;
-	psc_atomic32_t		 srw_refcnt;
+	psc_atomic32_t		 srw_refcnt;		/* one ref for pending list, one for each sliver */
 	int			 srw_nslvr_tot;
 	int			 srw_nslvr_cur;
 
