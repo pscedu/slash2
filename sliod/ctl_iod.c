@@ -40,6 +40,15 @@
 #include "sliod.h"
 #include "slutil.h"
 
+#define TRIMCHARS(str, ch)						\
+	do {								\
+		char *_p;						\
+									\
+		for (_p = (str) + strlen(str) - 1;			\
+		    _p > (str) && *_p == (ch); _p--)			\
+			*_p = '\0';					\
+	} while (0)
+
 struct psc_lockedlist psc_mlists;
 struct psc_lockedlist psc_odtables;
 
@@ -211,8 +220,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	    fn + strlen(sfop->sfop_fn));
 
 	/* trim trailing '/' chars */
-	for (p = fidfn + strlen(fidfn) - 1; p > fidfn && *p == '/'; p--)
-		*p = '\0';
+	TRIMCHARS(fidfn, '/');
 	for (p = fidfn; p; p = np) {
 		/* skip leading '/' chars */
 		while (*p == '/')
@@ -396,7 +404,6 @@ slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct sli_import_arg a;
 	struct stat sb1, sb2;
 	int fl = 0;
-	char *p;
 
 	if (sfop->sfop_fn[0] == '\0')
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
@@ -442,10 +449,7 @@ slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (sfop->sfop_flags & SLI_CTL_FOPF_RECURSIVE)
 		fl |= PFL_FILEWALKF_RECURSIVE;
 
-	/* trim trailing '/' chars */
-	p = sfop->sfop_fn + strlen(sfop->sfop_fn) - 1;
-	while (p > sfop->sfop_fn && *p == '/')
-		*p-- = '\0';
+	TRIMCHARS(sfop->sfop_fn, '/');
 
 	pfl_filewalk(sfop->sfop_fn, fl, sli_import, &a);
 	return (a.rc);
