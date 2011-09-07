@@ -136,9 +136,9 @@ slictlcmd_export(int ac, char *av[])
 void
 slictlcmd_import(int ac, char *av[])
 {
-	int i, c, preserve_path = 0;
 	struct slictlmsg_fileop *sfop;
 	struct stat sb;
+	int i, c;
 
 	PFL_OPT_RESET();
 	while ((c = getopt(ac, av, "Rv")) != -1)

@@ -77,18 +77,14 @@ slictlcmd_export(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 }
 
 int
-sli_fcmh_lookup_fid(const struct slash_fidgen *pfg, const char *cpn,
+sli_fcmh_lookup_fid(struct slashrpc_cservice *csvc,
+    const struct slash_fidgen *pfg, const char *cpn,
     struct slash_fidgen *cfg, int *isdir)
 {
-	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_lookup_req *mq;
 	struct srm_lookup_rep *mp;
 	int rc = 0;
-
-	rc = sli_rmi_getimp(&csvc);
-	if (rc)
-		goto out;
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_LOOKUP, rq, mq, mp);
 	if (rc)
@@ -97,7 +93,7 @@ sli_fcmh_lookup_fid(const struct slash_fidgen *pfg, const char *cpn,
 	strlcpy(mq->name, cpn, sizeof(mq->name));
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
-		rc = mp->rc;
+		rc = abs(mp->rc);
 	if (rc)
 		goto out;
 
@@ -107,8 +103,6 @@ sli_fcmh_lookup_fid(const struct slash_fidgen *pfg, const char *cpn,
  out:
 	if (rq)
 		pscrpc_req_finished(rq);
-	if (csvc)
-		sl_csvc_decref(csvc);
 	return (rc);
 }
 
@@ -193,9 +187,9 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	struct pscrpc_request *rq = NULL;
 	struct psc_ctlmsghdr *mh = a->mh;
 	struct slash_fidgen tfg, fg;
-	const char *str, *srcname;
-	int rc = 0, isdir, noname = 0;
 	struct stat tstb;
+	int rc = 0, isdir;
+	const char *str;
 
 	/*
 	 * Start from the root of the SLASH2 namespace.  This means
@@ -205,117 +199,69 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	fg.fg_fid = SLFID_ROOT;
 	fg.fg_gen = FGEN_ANY;
 
-	rc = sli_rmi_getimp(&csvc);
-	if (rc) {
-		a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
-		    slstrerror(rc));
-		goto out;
-	}
-
-	srcname = pfl_basename(fn);
+	psc_assert(strncmp(fn, sfop->sfop_fn,
+	    strlen(sfop->sfop_fn)) == 0);
 
 	/* preserve hierarchy in the src tree via concatenation */
 	snprintf(fidfn, sizeof(fidfn), "%s%s%s", sfop->sfop_fn2,
 	    S_ISDIR(stb->st_mode) ? "/" : "",
 	    fn + strlen(sfop->sfop_fn));
 
+	rc = sli_rmi_getimp(&csvc);
+	if (rc)
+		PFL_GOTOERR(error, rc);
+
 	/* trim trailing '/' chars */
 	TRIMCHARS(fidfn, '/');
-	for (p = fidfn; p; p = np) {
+	for (p = fidfn; *p; p = np, cpn[0] = '\0') {
 		/* skip leading '/' chars */
 		while (*p == '/')
 			p++;
-		np = strchr(p, '/');
-		if (np) {
-			np++;
-			if (np - p == 1)
-				continue;
-			if (np - p >= SL_NAME_MAX) {
-				a->rc = psc_ctlsenderr(a->fd, mh,
-				    "%s: %s", fn, slstrerror(ENAMETOOLONG));
-				goto out;
-			}
-			strlcpy(cpn, p, np - p);
-		} else {
-			if (strlen(p) > SL_NAME_MAX) {
-				a->rc = psc_ctlsenderr(a->fd, mh,
-				    "%s: %s", fn,
-				    slstrerror(ENAMETOOLONG));
-				goto out;
-			}
-			strlcpy(cpn, p, sizeof(cpn));
-		}
+		np = p + strcspn(p, "/");
+		if (np == p)
+			continue;
+		if (np - p > (int)sizeof(cpn))
+			PFL_GOTOERR(error, rc = ENAMETOOLONG);
+		strlcpy(cpn, p, np - p + 1);
 
-		/*
-		 * No destination name specified (only slash chars are
-		 * given) -- preserve last component from src.
-		 */
-		if (cpn[0] == '\0') {
-			noname = 1;
-			str = strrchr(fn, '/');
-			if (str)
-				str++;
-			else
-				str = fn;
-			strlcpy(cpn, str, sizeof(cpn));
+		rc = sli_fcmh_lookup_fid(csvc, &fg, cpn, &tfg, &isdir);
+
+		if (!isdir) {
+			if (*np)
+				PFL_GOTOERR(error, rc = ENOTDIR);
 			break;
 		}
 
-		rc = sli_fcmh_lookup_fid(&fg, cpn, &tfg, &isdir);
-
-		/*
-		 * Last component is intended destination; use directly.
-		 */
-		if (rc == ENOENT && np == NULL) {
-			srcname = cpn;
+		/* Last component is intended destination; use directly. */
+		if (rc == ENOENT && *np == '\0')
 			break;
-		}
-		if (!rc && np == NULL) {
-			if (!isdir) {
-				rc = EEXIST;
-				a->rc = psc_ctlsenderr(a->fd, mh,
-				    "%s: %s", fn, slstrerror(rc));
-				goto out;
-			}
-			strlcat(sfop->sfop_fn2, "/",
-			    sizeof(sfop->sfop_fn2));
-			strlcat(sfop->sfop_fn2, srcname,
-			    sizeof(sfop->sfop_fn2));
-		}
-		if (rc || fg.fg_fid == FID_ANY) {
-			a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
-			    slstrerror(rc));
-			goto out;
-		}
+
+		if (rc)
+			PFL_GOTOERR(error, rc);
 		fg = tfg;
 	}
 
-	if (fg.fg_fid == FID_ANY) {
-		a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
-		    slstrerror(ENOENT));
-		goto out;
-	}
-
-	if (strlen(sfop->sfop_fn) + strlen(srcname) >= SL_PATH_MAX) {
-		a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s",
-		    sfop->sfop_fn, slstrerror(ENAMETOOLONG));
-		goto out;
+	/* No destination name specified; preserve last component from src. */
+	if (cpn[0] == '\0') {
+		if (S_ISREG(stb->st_mode)) {
+			str = pfl_basename(fn);
+			if (strlen(str) >= sizeof(cpn))
+				PFL_GOTOERR(error, rc = ENAMETOOLONG);
+			strlcpy(cpn, str, sizeof(cpn));
+		} else {
+			/*
+			 * Directory is ambiguous: "should we reimport
+			 * attrs or create a subdir with the same
+			 * name?".  Instead, flag error.
+			 */
+			PFL_GOTOERR(error, rc = EEXIST);
+		}
 	}
 
 	if (S_ISDIR(stb->st_mode)) {
-		rc = sli_rmi_issue_mkdir(csvc, &fg, srcname,
+		rc = sli_rmi_issue_mkdir(csvc, &fg, cpn,
 		    stb->st_uid, stb->st_gid, stb->st_mode, NULL,
 		    fidfn);
-
-		/*
-		 * The tree walk visits the top level directory first
-		 * before any of its children.  This makes sure children
-		 * will live under the top level directory in the SLASH2
-		 * namespace as well.  This is a hack to modify the
-		 * given argument.
-		 */
-		if (!rc && noname)
-			strlcpy(sfop->sfop_fn2, srcname, PATH_MAX);
 	} else {
 		struct srm_import_req *mq;
 		struct srm_import_rep *mp;
@@ -326,22 +272,15 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		 * imports?
 		 */
 #if 0
-		if (stb->st_nlink > 1) {
-			rc = EEXIST;
-			a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
-			    slstrerror(rc));
-			goto out;
-		}
+		if (stb->st_nlink > 1) 
+			PFL_GOTOERR(error, rc = EEXIST);
 #endif
 
 		rc = SL_RSX_NEWREQ(csvc, SRMT_IMPORT, rq, mq, mp);
-		if (rc) {
-			a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
-			    slstrerror(rc));
-			goto out;
-		}
+		if (rc)
+			PFL_GOTOERR(error, rc);
 		mq->pfg = fg;
-		strlcpy(mq->cpn, srcname, sizeof(mq->cpn));
+		strlcpy(mq->cpn, cpn, sizeof(mq->cpn));
 		sl_externalize_stat(stb, &mq->sstb);
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc == 0) {
@@ -355,17 +294,14 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 				 * earlier, we probably won't fail for
 				 * EXDEV here.
 				 */
-				if (link(fn, fidfn) == -1) {
+				if (link(fn, fidfn) == -1)
 					rc = errno;
-					a->rc = psc_ctlsenderr(a->fd,
-					    mh, "%s: %s", fn,
-					    slstrerror(rc));
-				}
 			}
 		}
 	}
+ error:
 	if (abs(rc) == EEXIST) {
-		if (stat(fidfn, &tstb) == -1) {
+		if (stat(fn, &tstb) == -1) {
 			rc = errno;
 			a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
 			    slstrerror(rc));
@@ -388,7 +324,6 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		a->rc = psc_ctlsenderr(a->fd, mh, "importing %s%s", fn,
 		    S_ISDIR(stb->st_mode) ? "/" : "");
 
- out:
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
@@ -403,14 +338,23 @@ slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct statvfs vfssb1, vfssb2;
 	struct sli_import_arg a;
 	struct stat sb1, sb2;
+	char buf[SL_PATH_MAX];
 	int fl = 0;
 
+	sfop->sfop_fn[sizeof(sfop->sfop_fn) - 1] = '\0';
+	sfop->sfop_fn2[sizeof(sfop->sfop_fn2) - 1] = '\0';
 	if (sfop->sfop_fn[0] == '\0')
-		return (psc_ctlsenderr(fd, mh, "%s: %s",
-		    sfop->sfop_fn, slstrerror(ENOENT)));
+		return (psc_ctlsenderr(fd, mh, "import source: %s",
+		    slstrerror(ENOENT)));
 	if (sfop->sfop_fn2[0] == '\0')
-		return (psc_ctlsenderr(fd, mh, "%s: %s",
-		    sfop->sfop_fn, slstrerror(ENOENT)));
+		return (psc_ctlsenderr(fd, mh, "import destination: %s",
+		    slstrerror(ENOENT)));
+
+	/*
+	 * XXX: we should disallow recursive import of a parent directory
+	 * to where the SLASH2 objdir resides, which would cause an
+	 * infinite loop.
+	 */
 
 	/*
 	 * The following checks are done to avoid EXDEV down the road.
@@ -449,8 +393,10 @@ slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (sfop->sfop_flags & SLI_CTL_FOPF_RECURSIVE)
 		fl |= PFL_FILEWALKF_RECURSIVE;
 
-	TRIMCHARS(sfop->sfop_fn, '/');
-
+	if (realpath(sfop->sfop_fn, buf) == NULL)
+		return (psc_ctlsenderr(fd, mh, "%s: %s",
+		    sfop->sfop_fn, slstrerror(errno)));
+	strlcpy(sfop->sfop_fn, buf, sizeof(sfop->sfop_fn));
 	pfl_filewalk(sfop->sfop_fn, fl, sli_import, &a);
 	return (a.rc);
 }
