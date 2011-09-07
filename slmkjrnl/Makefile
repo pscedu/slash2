@@ -9,6 +9,7 @@ SRCS+=		slmkjrnl.c
 SRCS+=		${SLASH_BASE}/share/mkfn.c
 SRCS+=		${SLASH_BASE}/share/slerr.c
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
+SRCS+=		${PFL_BASE}/psc_ds/hashtbl.c
 SRCS+=		${PFL_BASE}/psc_ds/listcache.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
 SRCS+=		${PFL_BASE}/psc_util/crc.c
