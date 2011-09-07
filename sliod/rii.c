@@ -105,10 +105,8 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		spinlock(&w->srw_lock);
 		w->srw_nslvr_cur++;
 		w->srw_slvr_refs[slvridx] = NULL;
-	} else
-		spinlock(&w->srw_lock);
-
-	sli_replwkrq_decref(w, rc);
+		sli_replwkrq_decref(w, rc);
+	}
 
 	return (rc);
 }
