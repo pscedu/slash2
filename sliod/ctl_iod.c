@@ -122,7 +122,7 @@ sli_rmi_issue_mkdir(struct slashrpc_cservice *csvc,
 	int rc;
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_MKDIR, rq, mq, mp);
-	if (rc) 
+	if (rc)
 		return (rc);
 	mq->creds.scr_uid = uid;
 	mq->creds.scr_gid = gid;
@@ -261,20 +261,6 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		if (rc == ENOENT && np == NULL) {
 			srcname = cpn;
 			break;
-		}
-		if (rc == ENOENT && np &&
-		    sfop->sfop_flags & SLI_CTL_FOPF_PRESERVE) {
-			char pfn[PATH_MAX];
-			struct stat tstb;
-
-			strlcpy(pfn, fn, np - fn);
-
-			if (stat(pfn, &tstb) == -1)
-				rc = errno;
-			else
-				rc = sli_rmi_issue_mkdir(csvc, &fg, cpn,
-				    tstb.st_uid, tstb.st_gid,
-				    tstb.st_mode, &tfg, NULL);
 		}
 		if (!rc && np == NULL) {
 			if (!isdir) {
