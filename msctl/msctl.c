@@ -123,7 +123,7 @@ fn2fid(const char *fn)
 
 #ifndef HAVE_NO_FUSE_FSID
 	if (sfb.f_fsid != SLASH_FSID)
-		errx(1, "%s: file is not in a SLASH file system %lx",
+		errx(1, "%s: file is not in a SLASH file system (fsid=%lx)",
 		    fn, sfb.f_fsid);
 #endif
 
