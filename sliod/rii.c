@@ -88,7 +88,11 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		} else {
 			s->slvr_flags |= SLVR_AIOWAIT;
 			aio = 1;
-			psc_assert(s->slvr_pndgwrts == 1);
+			/* 
+			 * It should be either 1 or 2 (when aio replies early), 
+			 * but just be panaroid in case peer will resend.
+			 */
+			psc_assert(s->slvr_pndgwrts > 0);
 			psc_assert(s->slvr_flags & SLVR_REPLDST);
 			s->slvr_pndgwrts--;
 			s->slvr_flags &= ~(SLVR_REPLDST|SLVR_REPLWIRE);
