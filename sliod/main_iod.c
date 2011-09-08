@@ -171,14 +171,16 @@ main(int argc, char *argv[])
 	pscthr_init(SLITHRT_STATFS, 0, slistatfsthr_main, NULL, 0,
 	    "slistatfsthr");
 	sliod_bmaprlsthr_spawn();
-	lc_reginit(&bmapReapQ, struct bmapc_memb, bcm_lentry, "bmapReapQ");
+	lc_reginit(&bmapReapQ, struct bmapc_memb, bcm_lentry,
+	    "bmapReapQ");
 
-	prefmds = globalConfig.gconf_prefios;
+	prefmds = globalConfig.gconf_prefmds;
 	if (argc)
 		prefmds = argv[0];
 	rc = sli_rmi_setmds(prefmds);
 	if (rc)
-		psc_fatalx("invalid MDS %s: %s", argv[0], slstrerror(rc));
+		psc_fatalx("invalid MDS %s: %s", argv[0],
+		    slstrerror(rc));
 
 	slictlthr_main(sfn);
 	/* NOTREACHED */
