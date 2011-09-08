@@ -987,8 +987,10 @@ msl_readahead_cb(struct pscrpc_request *rq, int rc,
 	for (i = 0, e = bmpces[0], b = e->bmpce_owner; e; i++, e = bmpces[i]) {
 		psc_assert(b == e->bmpce_owner);
 
-		DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b, "sbd_seq=%"PRId64,
-		   bmap_2_sbd(b)->sbd_seq);
+		if (!i)
+			DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b, "sbd_seq=%"
+			   PRId64, bmap_2_sbd(b)->sbd_seq);
+
 		DEBUG_BMPCE(rc ? PLL_ERROR : PLL_INFO, e, "rc=%d", rc);
 
 		msl_bmpce_rpc_done(e, rc);
