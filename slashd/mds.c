@@ -246,74 +246,6 @@ mds_bmap_ion_restart(struct bmap_mds_lease *bml)
 	return (rc);
 }
 
-__static struct sl_resm *
-mds_resm_select(struct sl_resource *res)
-{
-	struct sl_resm *resm;
-	struct resprof_mds_info *rpmi;
-	struct psc_dynarray *a;
-	struct slashrpc_cservice *csvc;
-	int len, nb, j;
-
-	a = (res->res_type == SLREST_CLUSTER_NOSHARE_LFS) ?
-                &res->res_peers : &res->res_members;
-		
-	len = psc_dynarray_len(a);
-
-	rpmi = res2rpmi(res);
-
-	/*
-	 * Try a connection to each member in the resource.  If none
-	 * are immediately available, try again in a blocking manner
-	 * before returning offline status.
-	 */
-	for (nb = 1; nb > 0; nb--)
-		for (j = 0; j < len; j++) {
-			spinlock(&rpmi->rpmi_lock);
-			resm = psc_dynarray_getpos(a, slm_get_rpmi_idx(res));
-			freelock(&rpmi->rpmi_lock);
-
-			if (res->res_type == SLREST_CLUSTER_NOSHARE_LFS) {
-				/* Sanity checks.
-				 */
-				psc_assert(resm->resm_res->res_type == 
-					   SLREST_STANDALONE_FS);
-				psc_assert(resm->resm_lios == res->res_id);
-			}
-			psclog_info("trying res(%s) ion(%s)",
-				    res->res_name, resm->resm_addrbuf);			
-			if (nb)
-				csvc = slm_geticsvc_nb(resm, NULL);
-			else
-				csvc = slm_geticsvc(resm);
-	}
-			
-		for (nb = 1; nb > 0; nb--)
-			for (j = 0; j < len; j++) {
-				spinlock(&rpmi->rpmi_lock);
-				resm = psc_dynarray_getpos(&res->res_members,
-							   slm_get_rpmi_idx(res));
-				freelock(&rpmi->rpmi_lock);
-				
-				
-				if (csvc)
-					goto online;
-			}
-		
-		BMAP_LOCK(bmap);
-		bmap->bcm_flags |= BMAP_MDS_NOION;
-		BMAP_ULOCK(bmap);
-		
-		bml->bml_flags |= BML_ASSFAIL;
-		
-		psclog_warnx("unable to establish a connection to ION for lease");
-		
-		return (-SLERR_ION_OFFLINE);
-
-	
-	
-}
-
 /**
  * mds_bmap_ion_assign - Bind a bmap to an ION for writing.  The process
  *	involves a round-robin'ing of an I/O system's nodes and
@@ -327,7 +259,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 {
 	struct bmapc_memb *bmap = bml_2_bmap(bml);
 	struct bmap_mds_info *bmi = bmap_2_bmi(bmap);
-	struct sl_resource *res, *piores = libsl_id2res(pios);
+	struct sl_resource *res = libsl_id2res(pios);
 	struct slmds_jent_assign_rep *logentry;
 	struct slmds_jent_bmap_assign *sjba;
 	struct slashrpc_cservice *csvc;
@@ -337,7 +269,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	struct bmap_ion_assign bia;
 	struct sl_resm *resm;
 	int nb, j, len, iosidx;
-	uint32_t nrepls, i;
+	uint32_t nrepls;
 	int rc;
 
 	psc_assert(!bmi->bmdsi_wr_ion);
@@ -347,9 +279,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	BMAP_LOCK(bmap);
 	psc_assert(bmap->bcm_flags & BMAP_IONASSIGN);
 
-	//XXX Account for an overwrite of an existing bmap
-
-	if (!piores) {
+	if (!res) {
 		bmap->bcm_flags |= BMAP_MDS_NOION;
 		BMAP_ULOCK(bmap);
 
@@ -358,74 +288,42 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	}
 	BMAP_ULOCK(bmap);
 
-	ih = fcmh_2_inoh(bmap->bcm_fcmh);
-	nrepls = ih->inoh_ino.ino_nrepls;
+	rpmi = res2rpmi(res);
+	len = psc_dynarray_len(&res->res_members);
 
-	if (!nrepls) {
+	/*
+	 * Try a connection to each member in the resource.  If none
+	 * are immediately available, try again in a blocking manner
+	 * before returning offline status.
+	 */
+	for (nb = 1; nb > 0; nb--)
+		for (j = 0; j < len; j++) {
+			spinlock(&rpmi->rpmi_lock);
+			resm = psc_dynarray_getpos(&res->res_members,
+			    slm_get_rpmi_idx(res));
+			freelock(&rpmi->rpmi_lock);
 
-		len = psc_dynarray_len(&res->res_members);
+			psclog_debug("trying res(%s) ion(%s)",
+			    res->res_name, resm->resm_addrbuf);
 
-		/*
-		 * Try a connection to each member in the resource.  If none
-		 * are immediately available, try again in a blocking manner
-		 * before returning offline status.
-		 */
-		for (nb = 1; nb > 0; nb--)
-			for (j = 0; j < len; j++) {
-				spinlock(&rpmi->rpmi_lock);
-				resm = psc_dynarray_getpos(&res->res_members,
-							   slm_get_rpmi_idx(res));
-				freelock(&rpmi->rpmi_lock);
-				
-				psclog_debug("trying res(%s) ion(%s)",
-					     res->res_name, resm->resm_addrbuf);
-				
-				if (nb)
-					csvc = slm_geticsvc_nb(resm, NULL);
-				else
-					csvc = slm_geticsvc(resm);
-				
-				if (csvc)
-					goto online;
-			}
-		
-		BMAP_LOCK(bmap);
-		bmap->bcm_flags |= BMAP_MDS_NOION;
-		BMAP_ULOCK(bmap);
-		
-		bml->bml_flags |= BML_ASSFAIL;
-		
-		psclog_warnx("unable to establish a connection to ION for lease");
-		
-		return (-SLERR_ION_OFFLINE);
+			if (nb)
+				csvc = slm_geticsvc_nb(resm, NULL);
+			else
+				csvc = slm_geticsvc(resm);
 
-	} else {
-		int val;
-		sl_ios_id_t ios;
-
-		/* This bmap has been previously established.
-		 */
-		for (i = 0, iosidx = -1; i < nrepls; i++) {			
-			switch (SL_REPL_GET_BMAP_IOS_STAT(bmap->bcm_repls, i)) {
-			case BREPLST_TRUNCPNDG:
-			case BREPLST_TRUNCPNDG_SCHED:
-				DEBUG_FCMH(PLL_WARN, bmap->bcm_fcmh, "trunc in progress");
-				DEBUG_BMAP(PLL_WARN, bmap, "trunc in progress");
-				return (-SLERR_BMAP_IN_PTRUNC);
-
-			case BREPLST_VALID:
-				iosidx = i;
-				//  XXX what if pios is virtualized?
-				
-				
-				if (piosres->res_type == SLREST_CLUSTER_NOSHARE_LFS) {
-					
-				}
-				if (fcmh_2_repl(bmap->bcm_fcmh, i) == pios)
-					break;
-			}		       
+			if (csvc)
+				goto online;
 		}
-	}
+
+	BMAP_LOCK(bmap);
+	bmap->bcm_flags |= BMAP_MDS_NOION;
+	BMAP_ULOCK(bmap);
+
+	bml->bml_flags |= BML_ASSFAIL;
+
+	psclog_warnx("unable to establish a connection to ION for lease");
+
+	return (-SLERR_ION_OFFLINE);
 
  online:
 
@@ -863,7 +761,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 		/* For any given chain of leases, the bmdsi_[readers|writers]
 		 *    value may only be 1rd or 1wr.  In the case where 2
 		 *    wtrs are present, the value is 1wr.  Mixed readers and
-		 *    wtrs == 1wtr.  1 -> N rdrs == 1rd.
+		 *    wtrs == 1wtr.  1-N rdrs, 1rd.
 		 * Only increment writers if this is the first
 		 *    write lease from the respective client.
 		 */
@@ -895,9 +793,6 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 			psc_assert(!bmi->bmdsi_wr_ion);
 			BMAP_ULOCK(b);
 			rc = mds_bmap_ion_assign(bml, prefios);
-			// if rc == SLERR_ION_OFFLINE or UNKNOWN
-			//  then retry with another IOS.
-			// XXX account for existing data!
 
 		} else {
 			psc_assert(wlease && bmi->bmdsi_wr_ion);
@@ -1981,7 +1876,7 @@ slm_ptrunc_prepare(struct slm_workrq *wkrq)
 
 	mds_reserve_slot(1);
 	rc = mdsio_setattr(fcmh_2_mdsio_fid(fcmh), &fcmh->fcmh_sstb,
-	    PSCFS_SETATTRF_DATASIZE, &rootcreds, &fcmh->fcmh_sstb,
+	    to_set, &rootcreds, &fcmh->fcmh_sstb,
 	    fcmh_2_mdsio_data(fcmh), mdslog_namespace);
 	mds_unreserve_slot(1);
 
