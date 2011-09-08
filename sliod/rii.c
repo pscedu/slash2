@@ -90,15 +90,16 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 			aio = 1;
 			psc_assert(s->slvr_pndgwrts == 1);
 			psc_assert(s->slvr_flags & SLVR_REPLDST);
-			s->slvr_pndgwrts = 0;
-			s->slvr_flags &= ~SLVR_REPLDST;
+			s->slvr_pndgwrts--;
+			s->slvr_flags &= ~(SLVR_REPLDST|SLVR_REPLWIRE);
+			SLVR_WAKEUP(s);
 		}
 		SLVR_ULOCK(s);
 	}
 
 	DEBUG_SLVR(PLL_INFO, s, "replread %s rc=%d", aio ?
 		   "aiowait" : "complete", rc);
-
+	
 	if (!aio) {
 		slvr_io_done(s, 0, w->srw_len, SL_WRITE);
 
@@ -171,6 +172,9 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 			DEBUG_SLVR(PLL_ERROR, s, "SLVR_REPLSRC set ?");
 			abort();
 		}
+		/* Block until the callback handler has finished.
+		 */
+		SLVR_WAIT(s, (s->slvr_flags & SLVR_REPLWIRE));
 		SLVR_ULOCK(s);
 		/* Lookup the workrq.  It should have already been created.
 		 */
@@ -211,11 +215,6 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 			SLVR_ULOCK(s);
 	}
 
-	/*
-	 * Do we really need the following three lines in the case of AIO? It causes an assert
-	 * on the sliver flag right now.  I think we can just copy the data into the
-	 * sliver and mark it as data ready.
-	 */
 	slvr_slab_prep(s, aio ? SL_WRITE : SL_READ);
 	slvr_repl_prep(s, aio ? SLVR_REPLDST : SLVR_REPLSRC);
 	rv = slvr_io_prep(s, 0, mq->len, aio ? SL_WRITE : SL_READ, &aiocbr);

@@ -827,7 +827,7 @@ slvr_repl_prep(struct slvr_ref *s, int src_or_dst)
 				      s->slvr_pndgreads));
 			s->slvr_flags &= ~SLVR_DATARDY;
 		}
-		s->slvr_flags |= SLVR_FAULTING;
+		s->slvr_flags |= SLVR_FAULTING|SLVR_REPLWIRE;
 		DEBUG_SLVR(PLL_INFO, s, "slvr dest ready");
 	}
 

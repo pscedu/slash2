@@ -80,6 +80,7 @@ struct slvr_ref {
 #define SLVR_REPLFAIL		(1 << 14)	/* replication op failed */
 #define SLVR_AIOWAIT		(1 << 15)	/* early return for AIO */
 #define SLVR_RDMODWR		(1 << 16)	/* read modify write */
+#define SLVR_REPLWIRE           (1 << 17)       /* prevent aio race */
 
 #define SLVR_CRCLEN(s)		((s)->slvr_crc_eoff - (s)->slvr_crc_soff)
 
