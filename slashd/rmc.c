@@ -371,11 +371,12 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 }
 
 int
-slm_rmc_handle_mkdir(struct pscrpc_request *rq, int atflag)
+slm_rmc_handle_mkdir(struct pscrpc_request *rq, uid_t uid, gid_t gid)
 {
 	struct fidc_membh *p = NULL, *c = NULL;
 	struct srm_mkdir_req *mq;
 	struct srm_mkdir_rep *mp;
+	int atflag = 0;
 	uint32_t pol;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -392,6 +393,16 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq, int atflag)
 		mdsio_fcmh_refreshattr(p, &mp->pattr);
 		goto out;
 	}
+
+	if (uid != (uid_t)-1) {
+		mp->cattr.sst_uid = uid;
+		mp->cattr.sst_gid = gid;
+		mq->creds.scr_uid = 0;
+		mq->creds.scr_gid = 0;
+		atflag = mdsio_slflags_2_setattrmask(
+		    PSCFS_SETATTRF_UID | PSCFS_SETATTRF_GID);
+	}
+
 	mds_reserve_slot(1);
 	mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(p), mq->name, mq->mode,
 	    &mq->creds, atflag, &mp->cattr, NULL, mdslog_namespace,
@@ -1145,7 +1156,7 @@ slm_rmc_handler(struct pscrpc_request *rq)
 		rc = slm_rmc_handle_link(rq);
 		break;
 	case SRMT_MKDIR:
-		rc = slm_rmc_handle_mkdir(rq, 0);
+		rc = slm_rmc_handle_mkdir(rq, -1, -1);
 		break;
 	case SRMT_MKNOD:
 		rc = slm_rmc_handle_mknod(rq);
