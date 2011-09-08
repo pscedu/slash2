@@ -1,6 +1,7 @@
 #!/usr/bin/perl -W
 # $Id$
 
+use Cwd;
 use warnings;
 use strict;
 
@@ -9,7 +10,7 @@ $ENV{PSC_TIMEOUT} = 1;
 sub cpnwalk {
 	my ($fn, $f) = @_;
 	my @cpn = split m[/];
-	for (my $i = 0; $i < @cpn; $i++) {
+	for (my $i = 1; $i < @cpn; $i++) {
 		$f->(join "/", @cpn[0 .. $i]);
 	}
 }
@@ -17,10 +18,10 @@ sub cpnwalk {
 while (<>) {
 	# example pathname: /usr/users/2/username/file/path/etc
 	cpnwalk $_, sub {
-		my $fn = shift;
+		my $fn = Cwd::realpath(shift);
 		my $s2fn = $fn;
-		if ($s2fn =~ s!^/usr/users/!!) {
-			system "echo slictl import -v \Q$fn\E \Q$s2fn\E";
+		if ($s2fn =~ s!^/usr/(u[eo])/!!) {
+			system "slictl-$1 import -v \Q$fn\E \Q$s2fn\E";
 		} else {
 			warn "skipping import of file outside archiver root: $fn\n";
 		}
