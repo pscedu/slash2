@@ -136,7 +136,7 @@ struct slvr_ref {
 #define slvr_io_done(s, off, len, rw)					\
 	((rw) == SL_WRITE ? slvr_wio_done((s), (off), (len)) : slvr_rio_done(s))
 
-#define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
+#define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
 #define DEBUG_SLVR_FLAGS(s)						\
 	(s)->slvr_flags & SLVR_NEW		? "n" : "-",		\
 	(s)->slvr_flags & SLVR_SPLAYTREE	? "t" : "-",		\
@@ -153,6 +153,7 @@ struct slvr_ref {
 	(s)->slvr_flags & SLVR_REPLSRC		? "S" : "-",		\
 	(s)->slvr_flags & SLVR_REPLDST		? "T" : "-",		\
 	(s)->slvr_flags & SLVR_REPLFAIL		? "x" : "-",		\
+	(s)->slvr_flags & SLVR_REPLWIRE		? "w" : "-",		\
 	(s)->slvr_flags & SLVR_AIOWAIT		? "a" : "-",		\
 	(s)->slvr_flags & SLVR_RDMODWR		? "m" : "-"
 
