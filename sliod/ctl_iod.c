@@ -272,7 +272,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		 * imports?
 		 */
 #if 0
-		if (stb->st_nlink > 1) 
+		if (stb->st_nlink > 1)
 			PFL_GOTOERR(error, rc = EEXIST);
 #endif
 
@@ -308,7 +308,9 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		} else {
 			if (tstb.st_ino == stb->st_ino)
 				a->rc = psc_ctlsenderr(a->fd, mh,
-				    "%s: file already imported", fn);
+				    "%s: %s already imported", fn,
+				    S_ISDIR(stb->st_mode) ?
+				    "directory" : "file");
 			else {
 				rc = errno;
 				a->rc = psc_ctlsenderr(a->fd, mh,
