@@ -526,7 +526,7 @@ slm_rmi_handle_mkdir(struct pscrpc_request *rq)
 	mp->cattr.sst_uid = mq->creds.scr_uid;
 	mp->cattr.sst_gid = mq->creds.scr_gid;
 	mq->creds.scr_uid = 0;
-	mq->creds.scr_uid = 0;
+	mq->creds.scr_gid = 0;
 	return (slm_rmc_handle_mkdir(rq,
 	    mdsio_slflags_2_setattrmask(PSCFS_SETATTRF_UID |
 	    PSCFS_SETATTRF_GID)));
