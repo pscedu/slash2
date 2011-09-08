@@ -516,6 +516,22 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	return (0);
 }
 
+int
+slm_rmi_handle_mkdir(struct pscrpc_request *rq)
+{
+	struct srm_mkdir_req *mq;
+	struct srm_mkdir_rep *mp;
+
+	SL_RSX_ALLOCREP(rq, mq, mp);
+	mp->cattr.sst_uid = mq->creds.scr_uid;
+	mp->cattr.sst_gid = mq->creds.scr_gid;
+	mq->creds.scr_uid = 0;
+	mq->creds.scr_uid = 0;
+	return (slm_rmc_handle_mkdir(rq,
+	    mdsio_slflags_2_setattrmask(PSCFS_SETATTRF_UID |
+	    PSCFS_SETATTRF_GID)));
+}
+
 /**
  * slm_rmi_handle_ping - Handle a PING request from ION.
  * @rq: request.
@@ -586,7 +602,7 @@ slm_rmi_handler(struct pscrpc_request *rq)
 		rc = slm_rmi_handle_import(rq);
 		break;
 	case SRMT_MKDIR:
-		rc = slm_rmc_handle_mkdir(rq);
+		rc = slm_rmi_handle_mkdir(rq);
 		break;
 
 	default:

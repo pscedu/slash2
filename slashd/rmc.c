@@ -371,7 +371,7 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 }
 
 int
-slm_rmc_handle_mkdir(struct pscrpc_request *rq)
+slm_rmc_handle_mkdir(struct pscrpc_request *rq, int atflag)
 {
 	struct fidc_membh *p = NULL, *c = NULL;
 	struct srm_mkdir_req *mq;
@@ -394,7 +394,7 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	}
 	mds_reserve_slot(1);
 	mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(p), mq->name, mq->mode,
-	    &mq->creds, &mp->cattr, NULL, mdslog_namespace,
+	    &mq->creds, atflag, &mp->cattr, NULL, mdslog_namespace,
 	    slm_get_next_slashfid, 0);
 	mds_unreserve_slot(1);
 
@@ -1145,7 +1145,7 @@ slm_rmc_handler(struct pscrpc_request *rq)
 		rc = slm_rmc_handle_link(rq);
 		break;
 	case SRMT_MKDIR:
-		rc = slm_rmc_handle_mkdir(rq);
+		rc = slm_rmc_handle_mkdir(rq, 0);
 		break;
 	case SRMT_MKNOD:
 		rc = slm_rmc_handle_mknod(rq);
