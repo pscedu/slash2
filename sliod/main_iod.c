@@ -100,7 +100,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-D datadir] [-f cfgfile] [-S socket] mds-resource\n",
+	    "usage: %s [-D datadir] [-f cfgfile] [-S socket] [mds-resource]\n",
 	    progname);
 	exit(1);
 }
@@ -108,7 +108,7 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	const char *cfn, *sfn, *p;
+	const char *cfn, *sfn, *p, *prefmds;
 	int rc, c;
 
 	/* gcrypt must be initialized very early on */
@@ -147,7 +147,7 @@ main(int argc, char *argv[])
 		}
 	argc -= optind;
 	argv += optind;
-	if (argc != 1)
+	if (argc > 1)
 		usage();
 
 	pscthr_init(SLITHRT_CTL, 0, NULL, NULL,
@@ -173,7 +173,10 @@ main(int argc, char *argv[])
 	sliod_bmaprlsthr_spawn();
 	lc_reginit(&bmapReapQ, struct bmapc_memb, bcm_lentry, "bmapReapQ");
 
-	rc = sli_rmi_setmds(argv[0]);
+	prefmds = globalConfig.gconf_prefios;
+	if (argc)
+		prefmds = argv[0];
+	rc = sli_rmi_setmds(prefmds);
 	if (rc)
 		psc_fatalx("invalid MDS %s: %s", argv[0], slstrerror(rc));
 
