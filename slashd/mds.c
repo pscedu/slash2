@@ -246,6 +246,45 @@ mds_bmap_ion_restart(struct bmap_mds_lease *bml)
 	return (rc);
 }
 
+__static struct sl_resm *
+mds_resm_select(struct sl_resource *res)
+{
+	struct sl_resm *resm;
+	struct resprof_mds_info *rpmi = res2rpmi(res);
+	struct slashrpc_cservice *csvc = NULL;
+	int nb, j;
+
+	/*
+	 * Try a connection to each member in the resource.  If none
+	 * are immediately available, try again in a blocking manner
+	 * before returning offline status.
+	 */
+	for (nb = 1; nb > 0; nb--)
+		for (j = 0; j < psc_dynarray_len(&res->res_members); j++) {
+			spinlock(&rpmi->rpmi_lock);
+			resm = psc_dynarray_getpos(&res->res_members, 
+					   slm_get_rpmi_idx(res));
+			freelock(&rpmi->rpmi_lock);
+			
+			psclog_info("trying res(%s) ion(%s)", res->res_name, 
+				    resm->resm_addrbuf);
+			if (nb)
+				csvc = slm_geticsvc_nb(resm, NULL);
+			else
+				csvc = slm_geticsvc(resm);
+
+			if (csvc)
+				goto out;
+		}
+ out:
+	if (!csvc)
+		return (NULL);
+	else
+		sl_csvc_decref(csvc); /* XXX this is really dumb */
+	
+	return (resm);
+}
+
 /**
  * mds_bmap_ion_assign - Bind a bmap to an ION for writing.  The process
  *	involves a round-robin'ing of an I/O system's nodes and
@@ -262,13 +301,11 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	struct sl_resource *res = libsl_id2res(pios);
 	struct slmds_jent_assign_rep *logentry;
 	struct slmds_jent_bmap_assign *sjba;
-	struct slashrpc_cservice *csvc;
-	struct resprof_mds_info *rpmi;
 	struct slash_inode_handle *ih;
 	struct resm_mds_info *rmmi;
 	struct bmap_ion_assign bia;
 	struct sl_resm *resm;
-	int nb, j, len, iosidx;
+	int iosidx;
 	uint32_t nrepls;
 	int rc;
 
@@ -288,52 +325,24 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	}
 	BMAP_ULOCK(bmap);
 
-	rpmi = res2rpmi(res);
-	len = psc_dynarray_len(&res->res_members);
-
-	/*
-	 * Try a connection to each member in the resource.  If none
-	 * are immediately available, try again in a blocking manner
-	 * before returning offline status.
-	 */
-	for (nb = 1; nb > 0; nb--)
-		for (j = 0; j < len; j++) {
-			spinlock(&rpmi->rpmi_lock);
-			resm = psc_dynarray_getpos(&res->res_members,
-			    slm_get_rpmi_idx(res));
-			freelock(&rpmi->rpmi_lock);
-
-			psclog_debug("trying res(%s) ion(%s)",
-			    res->res_name, resm->resm_addrbuf);
-
-			if (nb)
-				csvc = slm_geticsvc_nb(resm, NULL);
-			else
-				csvc = slm_geticsvc(resm);
-
-			if (csvc)
-				goto online;
-		}
-
-	BMAP_LOCK(bmap);
-	bmap->bcm_flags |= BMAP_MDS_NOION;
-	BMAP_ULOCK(bmap);
-
-	bml->bml_flags |= BML_ASSFAIL;
-
-	psclog_warnx("unable to establish a connection to ION for lease");
-
-	return (-SLERR_ION_OFFLINE);
-
- online:
+	resm = mds_resm_select(res);
+	if (!resm) {		
+		BMAP_LOCK(bmap);
+		bmap->bcm_flags |= BMAP_MDS_NOION;
+		BMAP_ULOCK(bmap);
+		
+		bml->bml_flags |= BML_ASSFAIL;
+		
+		psclog_warnx("unable to contact ION for lease");
+		
+		return (-SLERR_ION_OFFLINE);
+	}
 
 	bmi->bmdsi_wr_ion = rmmi = resm2rmmi(resm);
 	atomic_inc(&rmmi->rmmi_refcnt);
-	sl_csvc_decref(csvc); /* XXX this is really dumb */
 
 	DEBUG_BMAP(PLL_INFO, bmap, "online res(%s) ion(%s)",
 	    res->res_name, resm->resm_addrbuf);
-
 	/*
 	 * An ION has been assigned to the bmap, mark it in the odtable
 	 *   so that the assignment may be restored on reboot.
@@ -360,7 +369,6 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 		return (-SLERR_XACT_FAIL);
 	}
 	BMAP_CLEARATTR(bmap, BMAP_MDS_NOION);
-
 	/*
 	 * Signify that a ION has been assigned to this bmap.  This
 	 * opcnt ref will stay in place until the bmap has been released
