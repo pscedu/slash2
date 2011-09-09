@@ -2,12 +2,21 @@
 # $Id$
 
 use Cwd;
+use Getopt::Std;
 use warnings;
 use strict;
 
 $ENV{PSC_TIMEOUT} = 1;
 
 my $mp = "/arc";
+
+sub usage {
+	warn "usage: $0 [-v] [file]\n";
+	exit 1;
+}
+
+my %opts;
+getopts("v", \%opts) or usage;
 
 sub cpnwalk {
 	my ($fn, $f) = @_;
@@ -26,8 +35,8 @@ sub makeinumpath {
 }
 
 sub sysexec {
-	print join (' ', @_), "\n";
-	#system(@_);
+	print join (' ', @_), "\n" if $opts{v};
+	system(@_);
 }
 
 while (<>) {
@@ -40,13 +49,15 @@ while (<>) {
 	}
 	my $eo = $1;
 	my $ifn = makeinumpath $fn, $eo;
-	sysexec "slictl-$eo", "import", "-v", $fn, $ifn;
+	my @op;
+	push @op, "-v" if $opts{v};
+	sysexec "slictl-$eo", "import", @op, $fn, $ifn;
 	cpnwalk $fn, sub {
 		my $fn = shift;
 		my $s2fn = $fn;
 		$s2fn =~ s!^/usr/(u[eo])/!!;
 		if (-d $fn) {
-			sysexec "slictl-$eo", "import", "-v", $fn, $s2fn;
+			sysexec "slictl-$eo", "import", @op, $fn, $s2fn;
 		} else {
 			sysexec "ln", "-f", "$mp$ifn", "$mp/$s2fn";
 		}
