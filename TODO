@@ -458,3 +458,4 @@ reimport
 - add a scanner to DELETE things in .slmd/fidns with st_nlink==1 in sliod
 
 - kill share/nbrqthr.c and replace with code in nb.c
+- slictl reimport should mark GARBAGE for repls instead of INVALID
