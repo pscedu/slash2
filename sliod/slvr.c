@@ -807,16 +807,14 @@ slvr_fsbytes_wio(struct slvr_ref *s, uint32_t size, uint32_t sblk)
 }
 
 void
-slvr_repl_prep(struct slvr_ref *s, int src_or_dst)
+slvr_repl_prep(struct slvr_ref *s, int flag) 
 {
-	psc_assert((src_or_dst == SLVR_REPLDST) ||
-		   (src_or_dst == SLVR_REPLSRC));
+	psc_assert(((flag & SLVR_REPLSRC) && !(flag & SLVR_REPLDST)) || 
+		   ((flag & SLVR_REPLDST) && !(flag & SLVR_REPLSRC)));
 
 	SLVR_LOCK(s);
 
-	psc_assert(!(s->slvr_flags & (SLVR_REPLDST | SLVR_REPLSRC)));
-
-	if (src_or_dst == SLVR_REPLSRC)
+	if (flag & SLVR_REPLSRC)
 		psc_assert(s->slvr_pndgreads > 0);
 	else {
 		psc_assert(s->slvr_pndgwrts > 0);
@@ -829,13 +827,13 @@ slvr_repl_prep(struct slvr_ref *s, int src_or_dst)
 				      s->slvr_pndgreads));
 			s->slvr_flags &= ~SLVR_DATARDY;
 		}
-		s->slvr_flags |= SLVR_FAULTING|SLVR_REPLWIRE;
+		s->slvr_flags |= SLVR_FAULTING;
 		DEBUG_SLVR(PLL_INFO, s, "slvr dest ready");
 	}
 
-	s->slvr_flags |= src_or_dst;
+	s->slvr_flags |= flag;
 
-	DEBUG_SLVR(PLL_INFO, s, "replica_%s", (src_or_dst == SLVR_REPLSRC) ?
+	DEBUG_SLVR(PLL_INFO, s, "replica_%s", (flag & SLVR_REPLSRC) ?
 		   "src" : "dst");
 
 	SLVR_ULOCK(s);

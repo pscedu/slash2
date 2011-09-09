@@ -335,7 +335,7 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 		slvr_lookup(slvrno, bmap_2_biodi(w->srw_bcm), SL_WRITE);
 
 	slvr_slab_prep(s, SL_WRITE);
-	slvr_repl_prep(s, SLVR_REPLDST);
+	slvr_repl_prep(s, SLVR_REPLDST|SLVR_REPLWIRE);
 	rc = slvr_io_prep(s, 0, mq->len, SL_WRITE, NULL);
 	if (rc)
 		goto out;
