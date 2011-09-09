@@ -603,22 +603,28 @@ msl_try_get_replica_res(struct bmapc_memb *b, int iosidx)
 	struct fcmh_cli_info *fci;
 	struct sl_resource *res;
 	struct rnd_iterator it;
-	struct sl_resm *resm;
+	struct sl_resm *m;
+	int n;
 
 	fci = fcmh_2_fci(b->bcm_fcmh);
 
 	DEBUG_BMAPOD(PLL_INFO, b, "iosidx=%d", iosidx);
 
-	if (SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls,
+	if (res->res_type != SLREST_CLUSTER_NOSHARE_LFS &&
+	    SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls,
 	    iosidx * SL_BITS_PER_REPLICA) != BREPLST_VALID)
 		return (NULL);
 
 	res = libsl_id2res(fci->fci_reptbl[iosidx].bs_id);
-
 	FOREACH_RND(&it, psc_dynarray_len(&res->res_members)) {
-		resm = psc_dynarray_getpos(&res->res_members,
+		if (res->res_type != SLREST_CLUSTER_NOSHARE_LFS &&
+		    SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls,
+		    (iosidx + it.ri_rnd_idx) * SL_BITS_PER_REPLICA) !=
+		    BREPLST_VALID)
+			return (NULL);
+		m = psc_dynarray_getpos(&res->res_members,
 		    it.ri_rnd_idx);
-		csvc = slc_geticsvc_nb(resm);
+		csvc = slc_geticsvc_nb(m);
 		if (csvc)
 			return (csvc);
 	}
