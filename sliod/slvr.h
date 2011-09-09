@@ -161,13 +161,13 @@ struct slvr_ref {
 	psclogs((level), SLISS_SLVR, "slvr@%p num=%hu pw=%hu "		\
 	    "pr=%hu cw=%hu "						\
 	    "soff=%u eoff=%u loff=%u "					\
-	    "pri@%p slab@%p flgs:"					\
+		"pri@%p slab@%p iocb@%p flgs:"				\
 	    SLVR_FLAGS_FMT" :: "fmt,					\
 	    (s), (s)->slvr_num, (s)->slvr_pndgwrts,			\
 	    (s)->slvr_pndgreads, (s)->slvr_compwrts,			\
 	    (s)->slvr_crc_soff, (s)->slvr_crc_eoff, (s)->slvr_crc_loff,	\
-	    (s)->slvr_pri, (s)->slvr_slab, DEBUG_SLVR_FLAGS(s),		\
-	    ## __VA_ARGS__)
+ 	    (s)->slvr_pri, (s)->slvr_slab, (s)->slvr_iocb,		\
+	    DEBUG_SLVR_FLAGS(s), ## __VA_ARGS__)
 
 #define RIC_MAX_SLVRS_PER_IO	2
 
@@ -275,6 +275,9 @@ slvr_lru_slab_freeable(struct slvr_ref *s)
 			      SLVR_GETSLAB|SLVR_DATARDY)));
 
 	if (s->slvr_flags & SLVR_PINNED)
+		freeable = 0;
+
+	if (s->slvr_iocb)
 		freeable = 0;
 
 	DEBUG_SLVR(PLL_INFO, s, "freeable=%d", freeable);
