@@ -625,7 +625,6 @@ msl_try_get_replica_res(struct bmapc_memb *b, int iosidx)
 	return (NULL);
 }
 
-
 __static int
 msl_biorq_aio_decref(struct bmpc_ioreq *r)
 {
@@ -740,7 +739,6 @@ msl_req_aio_add(struct pscrpc_request *rq,
 	} else
 		abort();
 
-
 	lc_add(&resm2rmci(m)->rmci_async_reqs, car);
 
 	return (SLERR_AIOWAIT);
@@ -825,7 +823,7 @@ msl_fsrq_completion_try(struct msl_fsrqinfo *q)
 
 			} else if (e->bmpce_flags & BMPCE_AIOWAIT) {
 				MFH_LOCK(r->biorq_fhent);
-				psc_assert(msl_fsrqinfo_isset(r->biorq_fsrqi, 
+				psc_assert(msl_fsrqinfo_isset(r->biorq_fsrqi,
 						      MFSRQ_BMPCEATT));
 				r->biorq_fsrqi->mfsrq_flags &= ~MFSRQ_BMPCEATT;
 				r->biorq_fsrqi->mfsrq_bmpceatt = NULL;
@@ -1031,7 +1029,6 @@ msl_readahead_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 	return (msl_readahead_cb(rq, rc, args));
 }
-
 
 int
 msl_write_rpcset_cb(__unusedx struct pscrpc_request_set *set, void *arg,
@@ -1688,7 +1685,6 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 	}
 	return (rc);
 }
-
 
 /**
  * msl_pages_blocking_load - Manage data prefetching activities.  This
@@ -2405,8 +2401,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		r[i] = MSL_BIORQ_COMPLETE;
 	}
 	/* Check for AIO in the fsrq prior to opening the fsrq for async
-	 *    operation.  Otherwise a race condition is possible where the 
-	 *    async handler will unset the 'aio' flag, making this ioreq 
+	 *    operation.  Otherwise a race condition is possible where the
+	 *    async handler will unset the 'aio' flag, making this ioreq
 	 *    look like a success.  The 'rc' is not used since more than
 	 *    one BIORQ may be involved in this operation.
 	 */

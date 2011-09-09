@@ -187,10 +187,10 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int force)
 	    (b->bcm_flags & (BMAP_CLI_LEASEEXTREQ) ||
 	     (secs = bmap_2_bci(b)->bci_xtime.tv_sec - ts.tv_sec) >
 	     BMAP_CLI_EXTREQSECS)) {
-		timespecadd(&ts, &msl_bmap_timeo_inc, 
+		timespecadd(&ts, &msl_bmap_timeo_inc,
 			    &bmap_2_bci(b)->bci_etime);
 		BMAP_URLOCK(b, waslocked);
-	
+
 	} else {
 		struct slashrpc_cservice *csvc = NULL;
 		struct pscrpc_request *rq = NULL;
@@ -573,7 +573,7 @@ msl_bmap_final_cleanup(struct bmapc_memb *b)
 
 	/* Mind lock ordering, remove from LRU first.
 	 */
-	if (b->bcm_flags & BMAP_DIO && 
+	if (b->bcm_flags & BMAP_DIO &&
 	    psclist_disjoint(&bmpc->bmpc_lentry)) {
 		psc_assert(SPLAY_EMPTY(&bmpc->bmpc_tree));
 		psc_assert(pll_empty(&bmpc->bmpc_lru));
