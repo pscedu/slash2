@@ -1199,9 +1199,9 @@ slvr_wio_done(struct slvr_ref *s, uint32_t off, uint32_t len)
 			s->slvr_flags |= SLVR_DATARDY;
 			SLVR_WAKEUP(s);
 		}
+		slvr_lru_requeue(s, 0);
 		SLVR_ULOCK(s);
 
-		slvr_lru_requeue(s, 0);
 		return;
 	}
 
