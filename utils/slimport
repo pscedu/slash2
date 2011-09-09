@@ -7,23 +7,48 @@ use strict;
 
 $ENV{PSC_TIMEOUT} = 1;
 
+my $mp = "/arc";
+
 sub cpnwalk {
 	my ($fn, $f) = @_;
-	my @cpn = split m[/];
-	for (my $i = 1; $i < @cpn; $i++) {
-		$f->(join "/", @cpn[0 .. $i]);
-	}
+	my @cpn = split m[/], $fn;
+	$f->(join "/", @cpn[0 .. $_]) for (3 .. $#cpn);
+}
+
+sub makeinumpath {
+	my ($fn, $eo) = @_;
+	my $inum = sprintf "%08lx", (stat $fn)[1];
+	return "/.inum-$eo/" .
+	    substr($inum, -1, 1) . "/" .
+	    substr($inum, -2, 1) . "/" .
+	    substr($inum, -3, 1) . "/" .
+	    $inum;
+}
+
+sub sysexec {
+	print join (' ', @_), "\n";
+	#system(@_);
 }
 
 while (<>) {
 	# example pathname: /usr/users/2/username/file/path/etc
-	cpnwalk $_, sub {
-		my $fn = Cwd::realpath(shift);
+	chomp;
+	my $fn = Cwd::realpath($_);
+	unless ($fn =~ m!^/usr/(u[eo])/!) {
+		warn "skipping import of file outside archiver root: $fn\n";
+		next;
+	}
+	my $eo = $1;
+	my $ifn = makeinumpath $fn, $eo;
+	sysexec "slictl-$eo", "import", "-v", $fn, $ifn;
+	cpnwalk $fn, sub {
+		my $fn = shift;
 		my $s2fn = $fn;
-		if ($s2fn =~ s!^/usr/(u[eo])/!!) {
-			system "slictl-$1 import -v \Q$fn\E \Q$s2fn\E";
+		$s2fn =~ s!^/usr/(u[eo])/!!;
+		if (-d $fn) {
+			sysexec "slictl-$eo", "import", "-v", $fn, $s2fn;
 		} else {
-			warn "skipping import of file outside archiver root: $fn\n";
+			sysexec "ln", "-f", "$mp$ifn", "$mp/$s2fn";
 		}
 	};
 }
