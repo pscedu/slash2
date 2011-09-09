@@ -604,7 +604,6 @@ msl_try_get_replica_res(struct bmapc_memb *b, int iosidx)
 	struct sl_resource *res;
 	struct rnd_iterator it;
 	struct sl_resm *m;
-	int n;
 
 	fci = fcmh_2_fci(b->bcm_fcmh);
 
