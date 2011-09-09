@@ -278,13 +278,13 @@ int
 msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw,
     __unusedx int flags)
 {
-	int rc, nretries = 0, getreptbl = 0;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_leasebmap_req *mq;
 	struct srm_leasebmap_rep *mp;
 	struct fcmh_cli_info *fci;
 	struct fidc_membh *f;
+	int rc, nretries = 0;
 
 	psc_assert(bmap->bcm_flags & BMAP_INIT);
 	psc_assert(bmap->bcm_fcmh);
