@@ -293,14 +293,6 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw,
 	fci = fcmh_2_fci(f);
 
  retry:
-	FCMH_LOCK(f);
-	if ((f->fcmh_flags & (FCMH_CLI_HAVEREPLTBL |
-	    FCMH_CLI_FETCHREPLTBL)) == 0) {
-		f->fcmh_flags |= FCMH_CLI_FETCHREPLTBL;
-		getreptbl = 1;
-	}
-	FCMH_ULOCK(f);
-
 	rc = slc_rmc_getimp1(&csvc, fci->fci_resm);
 	if (rc)
 		goto out;
@@ -312,8 +304,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw,
 	mq->prefios[0] = prefIOS; /* Tell MDS of our preferred ION */
 	mq->bmapno = bmap->bcm_bmapno;
 	mq->rw = rw;
-	if (getreptbl)
-		mq->flags |= SRM_LEASEBMAPF_GETREPLTBL;
+	mq->flags |= SRM_LEASEBMAPF_GETREPLTBL;
 
 	DEBUG_FCMH(PLL_INFO, f, "retrieving bmap (bmapno=%u) (rw=%d)",
 	    bmap->bcm_bmapno, rw);
@@ -333,22 +324,17 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw,
 	    "sbd_seq=%"PRId64" bmapnid=%"PRIx64, rw,
 	    mp->sbd.sbd_ion_nid, mp->sbd.sbd_seq, bmap_2_ion(bmap));
 
-	if (getreptbl) {
-		/* XXX don't forget that on write we need to invalidate
-		 *   the local replication table..
-		 */
-		fci->fci_nrepls = mp->nrepls;
-		memcpy(&fci->fci_reptbl, &mp->reptbl,
-		       sizeof(sl_replica_t) * SL_MAX_REPLICAS);
-		f->fcmh_flags |= FCMH_CLI_HAVEREPLTBL;
-		psc_waitq_wakeall(&f->fcmh_waitq);
-	}
+	fci->fci_nrepls = mp->nrepls;
+	memcpy(&fci->fci_reptbl, &mp->reptbl,
+	       sizeof(sl_replica_t) * SL_MAX_REPLICAS);
+	f->fcmh_flags |= FCMH_CLI_HAVEREPLTBL;
 
- out:
-	FCMH_RLOCK(f);
-	if (getreptbl)
-		f->fcmh_flags &= ~FCMH_CLI_FETCHREPLTBL;
+	/* XXX not sure if this is really needed since nothing blocks on
+	 *     FCMH_CLI_HAVEREPLTBL
+	 */
+	psc_waitq_wakeall(&f->fcmh_waitq);
 	FCMH_ULOCK(f);
+ out:
 	if (rq) {
 		pscrpc_req_finished(rq);
 		rq = NULL;
