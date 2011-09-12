@@ -80,7 +80,7 @@ struct slvr_ref {
 #define SLVR_REPLFAIL		(1 << 14)	/* replication op failed */
 #define SLVR_AIOWAIT		(1 << 15)	/* early return for AIO */
 #define SLVR_RDMODWR		(1 << 16)	/* read modify write */
-#define SLVR_REPLWIRE           (1 << 17)       /* prevent aio race */
+#define SLVR_REPLWIRE		(1 << 17)	/* prevent aio race */
 
 #define SLVR_CRCLEN(s)		((s)->slvr_crc_eoff - (s)->slvr_crc_soff)
 
@@ -161,7 +161,7 @@ struct slvr_ref {
 	psclogs((level), SLISS_SLVR, "slvr@%p num=%hu pw=%hu "		\
 	    "pr=%hu cw=%hu "						\
 	    "soff=%u eoff=%u loff=%u "					\
-		"pri@%p slab@%p iocb@%p flgs:"				\
+	    "pri@%p slab@%p iocb@%p flgs:"				\
 	    SLVR_FLAGS_FMT" :: "fmt,					\
 	    (s), (s)->slvr_num, (s)->slvr_pndgwrts,			\
 	    (s)->slvr_pndgreads, (s)->slvr_compwrts,			\
@@ -189,8 +189,8 @@ struct sli_aiocb_reply {
 	uint32_t		  aiocbr_off;
 };
 
-#define SLI_AIOCBSF_REPL		(1 << 0)
-#define SLI_AIOCBSF_READY		(1 << 1)
+#define SLI_AIOCBSF_REPL	(1 << 0)
+#define SLI_AIOCBSF_READY	(1 << 1)
 
 struct sli_iocb {
 	struct psc_listentry	  iocb_lentry;
@@ -216,12 +216,12 @@ void	slvr_slab_prep(struct slvr_ref *, enum rw);
 void	slvr_wio_done(struct slvr_ref *, uint32_t, uint32_t);
 void	slvr_worker_init(void);
 
-void    sli_aio_reply_setup(struct sli_aiocb_reply *, struct pscrpc_request *,
+void	sli_aio_reply_setup(struct sli_aiocb_reply *, struct pscrpc_request *,
 	    uint32_t, uint32_t, struct slvr_ref **, int,
 	    struct iovec *, int, enum rw);
 
 void	sli_aio_aiocbr_release(struct sli_aiocb_reply *);
-void    sli_aio_replreply_setup(struct sli_aiocb_reply *, struct pscrpc_request *,
+void	sli_aio_replreply_setup(struct sli_aiocb_reply *, struct pscrpc_request *,
 	    struct slvr_ref *, struct iovec *);
 
 extern struct psc_listcache lruSlvrs;

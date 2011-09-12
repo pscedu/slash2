@@ -43,9 +43,11 @@
 
 struct psc_waitq	 sli_aio_waitq;
 
+struct psc_poolmaster	 slvr_poolmaster;
 struct psc_poolmaster	 sli_aiocbr_poolmaster;
 struct psc_poolmaster	 sli_iocb_poolmaster;
 
+struct psc_poolmgr	*slvr_pool;
 struct psc_poolmgr	*sli_aiocbr_pool;
 struct psc_poolmgr	*sli_iocb_pool;
 
@@ -53,9 +55,9 @@ struct psc_listcache	 sli_iocb_pndg;
 
 psc_atomic64_t		 sli_aio_id = PSC_ATOMIC64_INIT(0);
 
-struct psc_listcache	lruSlvrs;   /* LRU list of clean slivers which may be reaped */
-struct psc_listcache	crcqSlvrs;  /* Slivers ready to be CRC'd and have their
-				     * CRCs shipped to the MDS. */
+struct psc_listcache	 lruSlvrs;   /* LRU list of clean slivers which may be reaped */
+struct psc_listcache	 crcqSlvrs;  /* Slivers ready to be CRC'd and have their
+				      * CRCs shipped to the MDS. */
 
 __static SPLAY_GENERATE(biod_slvrtree, slvr_ref, slvr_tentry, slvr_cmp);
 __static void slvr_try_crcsched_locked(struct slvr_ref *);
@@ -534,8 +536,8 @@ sli_aio_replreply_setup(struct sli_aiocb_reply *a,
 	a->aiocbr_off = 0;
 
 	spinlock(&a->aiocbr_lock);
-	a->aiocbr_flags |= SLI_AIOCBSF_REPL|SLI_AIOCBSF_READY;
-	freelock(&a->aiocbr_lock); 
+	a->aiocbr_flags |= SLI_AIOCBSF_REPL | SLI_AIOCBSF_READY;
+	freelock(&a->aiocbr_lock);
 }
 
 void
@@ -582,7 +584,7 @@ sli_aio_reply_setup(struct sli_aiocb_reply *a, struct pscrpc_request *rq,
 
 int
 sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp,
-	 int issue)
+    int issue)
 {
 	struct sli_iocb *iocb;
 	struct sli_aiocb_reply *a;
@@ -1255,7 +1257,7 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *b, enum rw rw)
 		}
 
 	} else {
-		s = PSCALLOC(sizeof(*s));
+		s = psc_pool_get(slvr_pool);
 
 		s->slvr_num = num;
 		s->slvr_flags = SLVR_NEW | SLVR_SPLAYTREE;
@@ -1303,7 +1305,7 @@ slvr_remove(struct slvr_ref *s)
 	SPLAY_REMOVE(biod_slvrtree, &b->biod_slvrs, s);
 	bmap_op_done_type(bii_2_bmap(b), BMAP_OPCNT_SLVR);
 
-	PSCFREE(s);
+	psc_pool_return(slvr_pool, s);
 }
 
 void
@@ -1447,6 +1449,11 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 void
 slvr_cache_init(void)
 {
+	psc_poolmaster_init(&slvr_poolmaster,
+	    struct slvr_ref, slvr_lentry, PPMF_AUTO, 64, 64, 0,
+	    NULL, NULL, NULL, "slvr");
+	slvr_pool = psc_poolmaster_getmgr(&slvr_poolmaster);
+
 	lc_reginit(&lruSlvrs, struct slvr_ref, slvr_lentry, "lruslvrs");
 	lc_reginit(&crcqSlvrs, struct slvr_ref, slvr_lentry, "crcqslvrs");
 
