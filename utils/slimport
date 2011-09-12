@@ -52,6 +52,8 @@ while (<>) {
 	my @op;
 	push @op, "-v" if $opts{v};
 	sysexec "slictl-$eo", "import", @op, $fn, $ifn;
+
+	# create hard link(2) into user's namespace
 	cpnwalk $fn, sub {
 		my $fn = shift;
 		my $s2fn = $fn;
@@ -62,4 +64,7 @@ while (<>) {
 			sysexec "ln", "-f", "$mp$ifn", "$mp/$s2fn";
 		}
 	};
+
+#	phase 1b
+#	sysexec "msctl", "repl-add:sense@PSCARCH:*", @op, "$mp$ifn";
 }
