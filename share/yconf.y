@@ -966,16 +966,16 @@ slcfg_parse(const char *config_file)
 				PSCFREE(p);
 				psc_dynarray_setpos(&r->res_peers, i, peer);
 
-				/* If cluster no share resource, stick the 
+				/* If cluster no share resource, stick the
 				 *   resm's in our res_members array.
 				 */
-				if (r->res_type == 
+				if (r->res_type ==
 				    SLREST_CLUSTER_NOSHARE_LFS) {
 					psc_assert(psc_dynarray_len(
 					    &peer->res_members) == 1);
-					psc_assert(peer->res_type == 
+					psc_assert(peer->res_type ==
 					   SLREST_STANDALONE_FS);
-					psc_dynarray_add(&r->res_members, 
+					psc_dynarray_add(&r->res_members,
 					    psc_dynarray_getpos(
 						   &peer->res_members, 0));
 				}
