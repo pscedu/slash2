@@ -157,6 +157,7 @@ _slm_fcmh_endow(struct fidc_membh *p, struct fidc_membh *c, int log)
 			rc = mds_inode_write(fcmh_2_inoh(c), mdslog_ino_repls, c);
 //		if (log)
 //			rc = mds_inox_write(fcmh_2_inoh(c), mdslog_ino_repls, c);
+		FCMH_ULOCK(c);
 	}
 	return (rc);
 }
