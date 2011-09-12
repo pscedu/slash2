@@ -305,19 +305,18 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 			rc = errno;
 			a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
 			    slstrerror(rc));
-		} else {
-			if (tstb.st_ino == stb->st_ino)
+		} else if (tstb.st_ino == stb->st_ino) {
+			rc = 0;
+			if (sfop->sfop_flags & SLI_CTL_FOPF_VERBOSE)
 				a->rc = psc_ctlsenderr(a->fd, mh,
 				    "%s: %s already imported", fn,
 				    S_ISDIR(stb->st_mode) ?
 				    "directory" : "file");
-			else {
-				rc = errno;
-				a->rc = psc_ctlsenderr(a->fd, mh,
-				    "%s: another file has already been "
-				    "imported at this namespace node",
-				    fn);
-			}
+		} else {
+			a->rc = psc_ctlsenderr(a->fd, mh,
+			    "%s: another file has already been "
+			    "imported at this namespace node",
+			    fn);
 		}
 	} else if (rc)
 		a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
