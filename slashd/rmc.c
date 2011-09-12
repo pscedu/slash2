@@ -377,7 +377,6 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq, uid_t uid, gid_t gid)
 	struct srm_mkdir_req *mq;
 	struct srm_mkdir_rep *mp;
 	int atflag = 0;
-	uint32_t pol;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
@@ -464,7 +463,6 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	struct srm_create_req *mq;
 	struct bmapc_memb *bmap;
 	void *mdsio_data;
-	uint32_t pol;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->flags & SRM_LEASEBMAPF_GETREPLTBL) {
