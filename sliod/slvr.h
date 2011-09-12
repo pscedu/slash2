@@ -166,7 +166,7 @@ struct slvr_ref {
 	    (s), (s)->slvr_num, (s)->slvr_pndgwrts,			\
 	    (s)->slvr_pndgreads, (s)->slvr_compwrts,			\
 	    (s)->slvr_crc_soff, (s)->slvr_crc_eoff, (s)->slvr_crc_loff,	\
- 	    (s)->slvr_pri, (s)->slvr_slab, (s)->slvr_iocb,		\
+	    (s)->slvr_pri, (s)->slvr_slab, (s)->slvr_iocb,		\
 	    DEBUG_SLVR_FLAGS(s), ## __VA_ARGS__)
 
 #define RIC_MAX_SLVRS_PER_IO	2
@@ -217,11 +217,11 @@ void	slvr_wio_done(struct slvr_ref *, uint32_t, uint32_t);
 void	slvr_worker_init(void);
 
 void    sli_aio_reply_setup(struct sli_aiocb_reply *, struct pscrpc_request *,
-	    uint32_t, uint32_t, struct slvr_ref **, int, 
+	    uint32_t, uint32_t, struct slvr_ref **, int,
 	    struct iovec *, int, enum rw);
 
 void	sli_aio_aiocbr_release(struct sli_aiocb_reply *);
-void    sli_aio_replreply_setup(struct sli_aiocb_reply *, struct pscrpc_request *, 
+void    sli_aio_replreply_setup(struct sli_aiocb_reply *, struct pscrpc_request *,
 	    struct slvr_ref *, struct iovec *);
 
 extern struct psc_listcache lruSlvrs;

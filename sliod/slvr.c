@@ -283,7 +283,7 @@ slvr_aio_replreply(struct sli_aiocb_reply *a)
 	struct sl_resm *resm;
 
 	psc_assert(a->aiocbr_nslvrs = 1);
-	
+
 	s = a->aiocbr_slvrs[0];
 
 	resm = libsl_try_nid2resm(a->aiocbr_peer->exp_connection->c_peer.nid);
@@ -327,7 +327,7 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	int rc, i;
-       
+
 	csvc = sli_getclcsvc(a->aiocbr_peer);
 	if (csvc == NULL)
 		goto out;
@@ -361,7 +361,7 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 	if (rq)
 		pscrpc_req_finished(rq);
 
-	
+
  out:
 	pscrpc_export_put(a->aiocbr_peer);
 	if (csvc)
@@ -393,7 +393,7 @@ slvr_aio_tryreply(struct sli_aiocb_reply *a)
 	int i, ready, replsrc = 0;
 
  retry:
-	spinlock(&a->aiocbr_lock);	
+	spinlock(&a->aiocbr_lock);
 	while (!(a->aiocbr_flags & SLI_AIOCBSF_READY)) {
 		freelock(&a->aiocbr_lock);
 		sched_yield();
@@ -517,7 +517,7 @@ slvr_iocb_release(struct sli_iocb *iocb)
 }
 
 void
-sli_aio_replreply_setup(struct sli_aiocb_reply *a, 
+sli_aio_replreply_setup(struct sli_aiocb_reply *a,
 	struct pscrpc_request *rq, struct slvr_ref *s, struct iovec *iov)
 {
 	//const struct srm_repl_read_req *mq;
@@ -530,19 +530,18 @@ sli_aio_replreply_setup(struct sli_aiocb_reply *a,
 	a->aiocbr_slvrs[0] = s;
 	a->aiocbr_nslvrs = a->aiocbr_niov = 1;
 	a->aiocbr_peer = pscrpc_export_get(rq->rq_export);
-        a->aiocbr_len = iov->iov_len;
-        a->aiocbr_off = 0;
+	a->aiocbr_len = iov->iov_len;
+	a->aiocbr_off = 0;
 
 	spinlock(&a->aiocbr_lock);
 	a->aiocbr_flags |= SLI_AIOCBSF_REPL|SLI_AIOCBSF_READY;
-	freelock(&a->aiocbr_lock);
-
+	freelock(&a->aiocbr_lock); 
 }
 
 void
 sli_aio_reply_setup(struct sli_aiocb_reply *a, struct pscrpc_request *rq,
-	    uint32_t len, uint32_t off, struct slvr_ref **slvrs, int nslvrs, 
-	    struct iovec *iovs, int niovs, enum rw rw)
+    uint32_t len, uint32_t off, struct slvr_ref **slvrs, int nslvrs,
+    struct iovec *iovs, int niovs, enum rw rw)
 {
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
@@ -569,7 +568,7 @@ sli_aio_reply_setup(struct sli_aiocb_reply *a, struct pscrpc_request *rq,
 	mp->id = a->aiocbr_id = psc_atomic64_inc_getnew(&sli_aio_id);
 
 	memcpy(a->aiocbr_iovs, iovs, niovs * sizeof(*iovs));
-	
+
 	a->aiocbr_niov = niovs;
 	a->aiocbr_peer = pscrpc_export_get(rq->rq_export);
 	a->aiocbr_len = len;
@@ -591,7 +590,7 @@ sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp,
 	int error = SLERR_AIOWAIT;
 
 	a = *aiocbrp;
-	
+
 	if (!a)
 		a = *aiocbrp = sli_aio_aiocbr_new();
 
@@ -807,9 +806,9 @@ slvr_fsbytes_wio(struct slvr_ref *s, uint32_t size, uint32_t sblk)
 }
 
 void
-slvr_repl_prep(struct slvr_ref *s, int flag) 
+slvr_repl_prep(struct slvr_ref *s, int flag)
 {
-	psc_assert(((flag & SLVR_REPLSRC) && !(flag & SLVR_REPLDST)) || 
+	psc_assert(((flag & SLVR_REPLSRC) && !(flag & SLVR_REPLDST)) ||
 		   ((flag & SLVR_REPLDST) && !(flag & SLVR_REPLSRC)));
 
 	SLVR_LOCK(s);
