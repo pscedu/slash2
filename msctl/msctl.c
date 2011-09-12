@@ -586,8 +586,12 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 		label = " repl-policy: ";
 	} else
 		label = " new-bmap-repl-policy: ";
-	dlen = maxwidth - strlen(label) -
+	dlen = PSC_CTL_DISPLAY_WIDTH - strlen(label) -
 	    strlen(repl_policies[BRPOL_ONETIME]);
+	if (n + strlen(label) + strlen(repl_policies[BRPOL_ONETIME]) >
+	    PSC_CTL_DISPLAY_WIDTH)
+		dlen = maxwidth - strlen(label) -
+		    strlen(repl_policies[BRPOL_ONETIME]);
 	if (n > dlen)
 		printf("\n%*s", dlen, "");
 	else
