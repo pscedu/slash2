@@ -61,6 +61,11 @@ struct fcmh_mds_info {
 
 int	mds_fcmh_setattr(struct fidc_membh *, int);
 
+#define slm_fcmh_endow(p, c)	_slm_fcmh_endow((p), (c), 1)
+#define slm_fcmh_endow_nolog(p, c) _slm_fcmh_endow((p), (c), 0)
+
+int	_slm_fcmh_endow(struct fidc_membh *, struct fidc_membh *, int);
+
 extern uint64_t		slm_next_fid;
 extern psc_spinlock_t	slm_fid_lock;
 
@@ -77,6 +82,17 @@ fcmh_2_repl(struct fidc_membh *f, int idx)
 		return (fcmh_2_ino(f)->ino_repls[idx].bs_id);
 	mds_inox_ensure_loaded(fcmh_2_inoh(f));
 	return (fcmh_2_inox(f)->inox_repls[idx - SL_DEF_REPLICAS].bs_id);
+}
+
+static __inline void
+fcmh_set_repl(struct fidc_membh *f, int idx, sl_ios_id_t iosid)
+{
+	if (idx < SL_DEF_REPLICAS)
+		fcmh_2_ino(f)->ino_repls[idx].bs_id = iosid;
+	else {
+		mds_inox_ensure_loaded(fcmh_2_inoh(f));
+		fcmh_2_inox(f)->inox_repls[idx - SL_DEF_REPLICAS].bs_id = iosid;
+	}
 }
 
 static __inline uint64_t

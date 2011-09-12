@@ -36,6 +36,7 @@
 #include "authbuf.h"
 #include "bmap_mds.h"
 #include "fid.h"
+#include "fidc_mds.h"
 #include "repl_mds.h"
 #include "rpc_mds.h"
 #include "slashd.h"
@@ -402,7 +403,6 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	struct sl_resm *m;
 	void *mdsio_data;
 	sl_bmapno_t bno;
-	uint32_t pol;
 	int64_t fsiz;
 	int rc, i;
 
@@ -468,15 +468,11 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
-	FCMH_LOCK(p);
-	pol = p->fcmh_sstb.sstd_freplpol;
-	FCMH_ULOCK(p);
-
+	slm_fcmh_endow_nolog(p, c);
 	FCMH_LOCK(c);
-	fcmh_2_ino(c)->ino_replpol = pol;
-	fcmh_2_ino(c)->ino_nrepls = 1;
-	fcmh_2_ino(c)->ino_repls[0].bs_id = m->resm_iosid;
-	fcmh_2_ino(c)->ino_repl_nblks[0] = mq->sstb.sst_blocks;
+	i = fcmh_2_ino(c)->ino_nrepls++;
+	fcmh_set_repl(c, i, m->resm_iosid);
+	fcmh_set_repl_nblks(c, i, mq->sstb.sst_blocks);
 	mp->rc = mds_inode_write(fcmh_2_inoh(c), mdslog_ino_repls, c);
 	FCMH_ULOCK(c);
 	if (mp->rc)
@@ -492,8 +488,8 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 		    fsiz > 0; fsiz -= SLASH_SLVR_SIZE, i++)
 			/* Mark that data exists but no CRCs are available.
 			 */
-			b->bcm_crcstates[i] |=
-				(BMAP_SLVR_DATA|BMAP_SLVR_CRCABSENT);
+			b->bcm_crcstates[i] |= BMAP_SLVR_DATA |
+			    BMAP_SLVR_CRCABSENT;
 		mp->rc = mds_repl_inv_except(b, 0);
 		if (mp->rc)
 			goto out;

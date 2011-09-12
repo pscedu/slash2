@@ -415,17 +415,8 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq, uid_t uid, gid_t gid)
 	 * Set new subdir's new files' default replication policy from
 	 * parent dir.
 	 */
-	if (slm_fcmh_get(&mp->cattr.sst_fg, &c) == 0) {
-		FCMH_LOCK(p);
-		pol = p->fcmh_sstb.sstd_freplpol;
-		FCMH_ULOCK(p);
-
-		FCMH_LOCK(c);
-		fcmh_wait_locked(c, c->fcmh_flags & FCMH_IN_SETATTR);
-		c->fcmh_sstb.sstd_freplpol = pol;
-		mds_fcmh_setattr(c, SL_SETATTRF_FREPLPOL);
-		FCMH_ULOCK(c);
-	}
+	if (slm_fcmh_get(&mp->cattr.sst_fg, &c) == 0)
+		slm_fcmh_endow_nolog(p, c);
 
  out:
 	if (p)
@@ -533,13 +524,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
-	FCMH_LOCK(p);
-	pol = p->fcmh_sstb.sstd_freplpol;
-	FCMH_ULOCK(p);
-
-	INOH_LOCK(fcmh_2_inoh(c));
-	fcmh_2_ino(c)->ino_replpol = pol;
-	INOH_ULOCK(fcmh_2_inoh(c));
+	slm_fcmh_endow(p, c);
 //	mp->rc = mds_inode_write(fcmh_2_inoh(c), mdslog_ino_repls, c);
 
 	/* obtain lease for first bmap as optimization */

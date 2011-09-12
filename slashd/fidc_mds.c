@@ -127,6 +127,40 @@ slm_fcmh_dtor(struct fidc_membh *fcmh)
 		PSCFREE(fmi->fmi_inodeh.inoh_extras);
 }
 
+int
+_slm_fcmh_endow(struct fidc_membh *p, struct fidc_membh *c, int log)
+{
+//	sl_replica_t repls[SL_MAX_REPLICAS];
+	uint32_t pol;
+//	int nrepls;
+	int rc = 0;
+
+	FCMH_LOCK(p);
+	pol = p->fcmh_sstb.sstd_freplpol;
+//	nrepls =
+//	memcpy();
+	FCMH_ULOCK(p);
+
+	FCMH_LOCK(c);
+	if (fcmh_isdir(c)) {
+		c->fcmh_sstb.sstd_freplpol = pol;
+//		c->nrepls =
+//		c->memcpy();
+		mds_fcmh_setattr(c, SL_SETATTRF_FREPLPOL);
+		FCMH_ULOCK(c);
+	} else {
+		fcmh_wait_locked(c, c->fcmh_flags & FCMH_IN_SETATTR);
+		fcmh_2_ino(c)->ino_replpol = pol;
+//		fcmh_2_ino(c)->ino_nrepls = 1;
+//		memcpy(fcmh_2_ino(c)->ino_repls, repls, sizeof());
+		if (log)
+			rc = mds_inode_write(fcmh_2_inoh(c), mdslog_ino_repls, c);
+//		if (log)
+//			rc = mds_inox_write(fcmh_2_inoh(c), mdslog_ino_repls, c);
+	}
+	return (rc);
+}
+
 #if PFL_DEBUG > 0
 void
 dump_fcmh_flags(int flags)
