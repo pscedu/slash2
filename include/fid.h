@@ -111,8 +111,8 @@ struct slash_fidgen {
 #define SLPRIxFID		PRIx64
 #define SLPRI_FGEN		PRIu64
 
-#define SLPRI_FG		"%s"
-#define SLPRI_FG_ARGS(fg)	sl_sprintfa_fg(fg)
+#define SLPRI_FG		SLPRI_FID":%"SLPRI_FGEN
+#define SLPRI_FG_ARGS(fg)	(fg)->fg_fid, (fg)->fg_gen
 
 #define _FID_SET_FIELD(fid, val, shft, nb)				\
 	((fid) = ((fid) & ~(MAXVALMASK(nb) << (shft))) |		\
