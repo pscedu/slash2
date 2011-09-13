@@ -783,12 +783,12 @@ sl_exp_hldrop_cli(struct pscrpc_export *exp)
 	if (csvcp == NULL)
 		return;
 
-	if (sl_expcli_ops.secop_destroy)
-		sl_expcli_ops.secop_destroy(exp->exp_private);
 	sl_csvc_reqlock(*csvcp);
 	sl_csvc_markfree(*csvcp);
 	sl_csvc_disconnect(*csvcp);
 	sl_csvc_decref(*csvcp);
+	if (sl_expcli_ops.secop_destroy)
+		sl_expcli_ops.secop_destroy(exp->exp_private);
 	PSCFREE(exp->exp_private);
 }
 
