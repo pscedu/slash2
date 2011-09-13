@@ -668,8 +668,6 @@ msl_fsrq_aiowait_tryadd_locked(struct bmap_pagecache_entry *e, struct bmpc_ioreq
 
 	LOCK_ENSURE(&e->bmpce_lock);
 
-	psc_assert(e->bmpce_flags & BMPCE_AIOWAIT);
-
 	locked = MFH_RLOCK(r->biorq_fhent);
 	if (!msl_fsrqinfo_isset(r->biorq_fsrqi, MFSRQ_BMPCEATT)) {
 		r->biorq_fsrqi->mfsrq_flags |= MFSRQ_BMPCEATT;
@@ -821,17 +819,17 @@ msl_fsrq_completion_try(struct msl_fsrqinfo *q)
 
 				goto out;
 
-			} else if (e->bmpce_flags & BMPCE_AIOWAIT) {
+			} else if (!(e->bmpce_flags & BMPCE_DATARDY)) {
 				MFH_LOCK(r->biorq_fhent);
 				psc_assert(msl_fsrqinfo_isset(r->biorq_fsrqi,
-						      MFSRQ_BMPCEATT));
+					      MFSRQ_BMPCEATT));
 				r->biorq_fsrqi->mfsrq_flags &= ~MFSRQ_BMPCEATT;
 				r->biorq_fsrqi->mfsrq_bmpceatt = NULL;
 				msl_fsrq_aiowait_tryadd_locked(e, r);
 				MFH_ULOCK(r->biorq_fhent);
 				BMPCE_ULOCK(e);
 				DEBUG_BIORQ(PLL_NOTIFY, r,
-				    "still blocked on aio (bmpce@%p)", e);
+				    "still blocked on (bmpce@%p)", e);
 				return;
 			}
 			BMPCE_ULOCK(e);
@@ -859,16 +857,13 @@ __static void
 _msl_bmpce_rpc_done(const struct pfl_callerinfo *pci,
     struct bmap_pagecache_entry *e, int rc)
 {
-	int aio_completion_try;
+	int aio_completion_try = 0;
 
 	BMPCE_LOCK(e);
 	psc_assert(e->bmpce_waitq);
 
-	if (pll_nitems(&e->bmpce_pndgaios)) {
-		psc_assert(e->bmpce_flags & BMPCE_AIOWAIT);
+	if (pll_nitems(&e->bmpce_pndgaios))
 		aio_completion_try = 1;
-	} else
-		aio_completion_try = 0;
 
 	if (rc) {
 		e->bmpce_flags |= BMPCE_EIO;

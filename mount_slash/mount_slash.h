@@ -168,7 +168,7 @@ struct msl_fsrqinfo {
 	int				 mfsrq_ref;  /* # car's needed to satisfy this req */
 	enum rw				 mfsrq_rw;
 	struct pscfs_req		*mfsrq_pfr;
-	struct psclist_head		 mfsrq_lentry;
+	struct psclist_head		 mfsrq_lentry;	/* pending AIOs in struct bmap_pagecache_entry  */
 };
 
 #define MFSRQ_AIOWAIT			(1 << 0)
