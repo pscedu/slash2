@@ -344,7 +344,6 @@ sl_csvc_decref_pci(const struct pfl_callerinfo *pci,
 			if (csvc->csvc_ctype == SLCONNT_CLI)
 				pll_remove(&client_csvcs, csvc);
 			DEBUG_CSVC(PLL_INFO, csvc, "freed");
-			PSCFREE(csvc->csvc_lockinfo.lm_ptr);
 			PSCFREE(csvc);
 			return;
 		}

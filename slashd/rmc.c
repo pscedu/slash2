@@ -1197,6 +1197,7 @@ mexpc_destroy(void *arg)
 		BML_ULOCK(bml);
 		psclist_del(&bml->bml_exp_lentry, &mexpc->mexpc_bmlhd);
 	}
+	PSCFREE(mexpc->mexpc_cccp);
 }
 
 void
