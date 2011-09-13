@@ -1197,7 +1197,6 @@ mexpc_destroy(void *arg)
 		BML_ULOCK(bml);
 		psclist_del(&bml->bml_exp_lentry, &mexpc->mexpc_bmlhd);
 	}
-	PSCFREE(mexpc->mexpc_cccp);
 }
 
 void
@@ -1207,7 +1206,14 @@ mexpc_allocpri(struct pscrpc_export *exp)
 	struct slm_exp_cli *mexpc;
 
 	mexpc = exp->exp_private = PSCALLOC(sizeof(*mexpc));
+
+	/*
+	 * This is freed in sl_csvc_decref() since the csvc lock is
+	 * operated on until the end compliance with APIs used in
+	 * teardown.
+	 */
 	mcccp = mexpc->mexpc_cccp = PSCALLOC(sizeof(*mcccp));
+
 	INIT_PSCLIST_HEAD(&mexpc->mexpc_bmlhd);
 	INIT_SPINLOCK(&mcccp->mcccp_lock);
 	psc_waitq_init(&mcccp->mcccp_waitq);
@@ -1216,5 +1222,5 @@ mexpc_allocpri(struct pscrpc_export *exp)
 
 struct sl_expcli_ops sl_expcli_ops = {
 	mexpc_allocpri,
-	mexpc_destroy
+	NULL
 };

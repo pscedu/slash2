@@ -227,8 +227,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		/* Setup first since this aiocb needs to be attached
 		 *   to an aio'd sliver ASAP.
 		 */
-		sli_aio_reply_setup(aiocbr, rq, mq->size, mq->offset, slvr_ref,
-				    nslvrs, iovs, nslvrs, rw);
+		sli_aio_reply_setup(aiocbr, rq, mq->size, mq->offset,
+		    slvr_ref, nslvrs, iovs, nslvrs, rw);
 
 		/* Now check for early completion.   If all slvrs are ready,
 		 *   then we must reply with the data now.  Otherwise, we'll
@@ -475,21 +475,20 @@ iexpc_allocpri(struct pscrpc_export *exp)
 	struct sli_exp_cli *iexpc;
 
 	iexpc = exp->exp_private = PSCALLOC(sizeof(*iexpc));
+
+	/*
+	 * This is freed in sl_csvc_decref() since the csvc lock is
+	 * operated on until the end compliance with APIs used in
+	 * teardown.
+	 */
 	icccp = iexpc->iexpc_cccp = PSCALLOC(sizeof(*icccp));
+
 	INIT_SPINLOCK(&icccp->icccp_lock);
 	psc_waitq_init(&icccp->icccp_waitq);
 	sli_getclcsvc(exp);
 }
 
-void
-iexpc_destroy(void *arg)
-{
-	struct sli_exp_cli *iexpc = arg;
-
-	PSCFREE(iexpc->iexpc_cccp);
-}
-
 struct sl_expcli_ops sl_expcli_ops = {
 	iexpc_allocpri,
-	iexpc_destroy
+	NULL
 };
