@@ -665,8 +665,9 @@ slconnthr_main(struct psc_thread *thr)
 
 		/* Now just PING for connection lifetime. */
 		for (;;) {
-			csvc = sl_csvc_get(&resm->resm_csvc, sct->sct_flags,
-			    NULL, resm->resm_nid, sct->sct_rqptl, sct->sct_rpptl,
+			csvc = sl_csvc_get(&resm->resm_csvc,
+			    sct->sct_flags, NULL, resm->resm_nid,
+			    sct->sct_rqptl, sct->sct_rpptl,
 			    sct->sct_magic, sct->sct_version,
 			    sct->sct_lockinfo.lm_ptr, sct->sct_waitinfo,
 			    sct->sct_peertype, NULL);
@@ -688,9 +689,10 @@ slconnthr_main(struct psc_thread *thr)
 				csvc->csvc_mtime = 0;
 				/*
 				 * Subtract the amount of time someone
-				 * manually retried (and failed) instead of
-				 * waiting an entire interval after we woke
-				 * after our last failed attempt.
+				 * manually retried (and failed) instead
+				 * of waiting an entire interval after
+				 * we woke after our last failed
+				 * attempt.
 				 */
 				sl_csvc_waitrel_s(csvc,
 				    CSVC_RECONNECT_INTV - (time(NULL) -
@@ -781,7 +783,8 @@ sl_exp_hldrop_resm(struct pscrpc_export *exp)
 }
 
 /**
- * sl_exp_hldrop_cli - Callback triggered when an export to a CLIENT fails.
+ * sl_exp_hldrop_cli - Callback triggered when an export to a CLIENT
+ *	fails.
  * @exp: export to RPC CLI peer.
  */
 void
