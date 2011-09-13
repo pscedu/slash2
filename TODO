@@ -459,4 +459,24 @@ reimport
 
 - kill share/nbrqthr.c and replace with code in nb.c
 - slictl reimport should mark GARBAGE for repls instead of INVALID
-- msl missed refcnt 
+- msl missed refcnt on connection errors
+- wolverine/single cpu missed wakeup
+- cluster_noshare replication changes
+- debug lnrtd
+- research holdup in fbsd zio_write_intr
+- remote syslog
+
+archiver
+- install SLASH2 on sense/illusion
+- tool to recover softdel files
+- phase 2 migration
+   (o) reconstruct hard links in dmf space from sl2 objects
+- zfs stats for OpenTSDB, disk failure notification
+- /arc on firehose 3
+- explain to jasons@ about tahini network requirements
+- wiki updates
+- logistics for where MDS zsnap backups go
+- file system-level replication controls, e.g.
+
+    $ cp myfile .sl/foo@BAR
+    $ cat .slrpl/myfile
