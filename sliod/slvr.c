@@ -1408,14 +1408,6 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 	return (n);
 }
 
-#if 0
-void
-sigio_handler(__unusedx int sig, __unusedx siginfo_t *siginfo, __unusedx void *arg)
-{
-	return;
-}
-#endif
-
 void
 sliaiothr_main(__unusedx struct psc_thread *thr)
 {
@@ -1430,6 +1422,8 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 
 		sigemptyset(&signal_set);
 		sigaddset(&signal_set, SIGIO);
+
+		/* use timedwait, in case we can miss signals (not sure) */
 		sigtimedwait(&signal_set, &si, &ts);
 
 		LIST_CACHE_LOCK(&sli_iocb_pndg);

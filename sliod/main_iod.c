@@ -59,6 +59,10 @@ psc_spinlock_t		 sli_ssfb_lock = SPINLOCK_INIT;
 int			 allow_root_uid = 1;
 const char		*progname;
 
+/*
+ * The default action for SIGIO is to terminate the process.  So I need one even if
+ * after sigwait() we won't call this handler.
+ */
 void
 sigio_handler(__unusedx int sig, __unusedx siginfo_t *siginfo, __unusedx void *arg)
 {
