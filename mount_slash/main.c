@@ -32,6 +32,7 @@
 #include <pwd.h>
 #include <stdio.h>
 #include <string.h>
+#include <syslog.h>
 #include <unistd.h>
 
 #include <gcrypt.h>
@@ -69,6 +70,7 @@
 #include "slerr.h"
 #include "slsubsys.h"
 #include "slutil.h"
+#include "subsys_cli.h"
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
@@ -1489,11 +1491,12 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 
 	pscfs_reply_close(pfr, rc);
 
-	DEBUG_FCMH(PLL_INFO, c, "file closed uid=%u gid=%u "
+	psclogs(PLL_INFO, SLCSS_INFO,
+	    "file closed fid="SLPRI_FID" uid=%u gid=%u "
 	    "fsize=%"PRId64" oatime="SLPRI_TIMESPEC" "
 	    "mtime="SLPRI_TIMESPEC" sessid=%d otime="PSCPRI_TIMESPEC" "
 	    "rd=%"PSCPRIdOFFT" wr=%"PSCPRIdOFFT,
-	    pfc.pfc_uid, pfc.pfc_gid,
+	    fcmh_2_fid(c), pfc.pfc_uid, pfc.pfc_gid,
 	    c->fcmh_sstb.sst_size,
 	    SLPRI_TIMESPEC_ARGS(&mfh->mfh_open_atime),
 	    SLPRI_TIMESPEC_ARGS(&c->fcmh_sstb.sst_mtim),
@@ -2389,6 +2392,7 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	sl_subsys_register();
+	psc_subsys_register(SLCSS_INFO, "info");
 
 	pscfs_addarg(&args, "");		/* progname/argv[0] */
 	pscfs_addarg(&args, "-o");
