@@ -465,6 +465,8 @@ reimport
 - debug lnrtd
 - research holdup in fbsd zio_write_intr
 - remote syslog
+- fix fabrication of .. inum in zfsslash2_readdir to fix mount_slash
+  .slfidns lookups
 - file system-level replication controls, e.g.
 
     $ cp myfile .sl/foo@BAR
