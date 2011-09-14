@@ -62,17 +62,17 @@ site @PSCARCH {
 		desc	= "tape archiver";
 		type	= archival_fs;
 		id	= 4;
-		nodes	= tahini;
+		nodes	= tahini-100o;
 		fsroot	= /usr/uo;
 	}
 
-#	resource ue {
-#		desc	= "tape archiver";
-#		type	= archival_fs;
-#		id	= 5;
-#		nodes	= tahini-hsm;
-#		fsroot	= /usr/uo;
-#	}
+	resource ue {
+		desc	= "tape archiver";
+		type	= archival_fs;
+		id	= 5;
+		nodes	= tahini-100e;
+		fsroot	= /usr/ue;
+	}
 
 	resource onager {
 		desc	= "PSC test I/O node";
