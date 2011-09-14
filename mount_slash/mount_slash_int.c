@@ -668,6 +668,7 @@ msl_fsrq_aiowait_tryadd_locked(struct bmap_pagecache_entry *e, struct bmpc_ioreq
 
 	LOCK_ENSURE(&e->bmpce_lock);
 
+	psc_assert(!(e->bmpce_flags & BMPCE_DATARDY));
 	locked = MFH_RLOCK(r->biorq_fhent);
 	if (!msl_fsrqinfo_isset(r->biorq_fsrqi, MFSRQ_BMPCEATT)) {
 		r->biorq_fsrqi->mfsrq_flags |= MFSRQ_BMPCEATT;
