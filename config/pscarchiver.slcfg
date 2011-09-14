@@ -7,16 +7,7 @@ set port=1301;
 set nets="10.10.101@sdp11,192.70.221@tcp13,tcp12";
 set pref_mds="archmds@PSCARCH";
 set pref_ios="peel0@PSCARCH";
-#set pref_ios="
-#	sense0@PSCARCH,
-#	sense1@PSCARCH,
-#	sense2@PSCARCH,
-#	sense3@PSCARCH,
-#	sense4@PSCARCH,
-#	sense5@PSCARCH,
-#	sense6@PSCARCH,
-#	sense7@PSCARCH
-#";
+#set pref_ios="sense@PSCARCH";
 #set allow_exec="
 #	/usr/psc/bin/far:
 #	/usr/psc/bin/scp:
@@ -91,7 +82,7 @@ site @PSCARCH {
 	}
 
 	resource sense1 {
-		desc	= "disk-based archiver";
+		desc	= "disk-based archiver unit 1/8";
 		type	= standalone_fs;
 		id	= 11;
 		nodes	= sense1; # |sense0-ib
@@ -99,7 +90,7 @@ site @PSCARCH {
 	}
 
 #	resource sense2 {
-#		desc	= "disk-based archiver";
+#		desc	= "disk-based archiver unit 2/8";
 #		type	= standalone_fs;
 #		id	= 12;
 #		nodes	= sense2|sense2-ib;
@@ -107,7 +98,7 @@ site @PSCARCH {
 #	}
 
 #	resource sense3 {
-#		desc	= "disk-based archiver";
+#		desc	= "disk-based archiver unit 3/8";
 #		type	= standalone_fs;
 #		id	= 13;
 #		nodes	= sense3|sense3-ib;
@@ -115,7 +106,7 @@ site @PSCARCH {
 #	}
 
 #	resource sense4 {
-#		desc	= "disk-based archiver";
+#		desc	= "disk-based archiver unit 4/8";
 #		type	= standalone_fs;
 #		id	= 14;
 #		nodes	= sense4|sense4-ib;
@@ -123,7 +114,7 @@ site @PSCARCH {
 #	}
 
 #	resource sense5 {
-#		desc	= "disk-based archiver";
+#		desc	= "disk-based archiver unit 5/8";
 #		type	= standalone_fs;
 #		id	= 15;
 #		nodes	= sense5|sense5-ib;
@@ -131,7 +122,7 @@ site @PSCARCH {
 #	}
 
 #	resource sense6 {
-#		desc	= "disk-based archiver";
+#		desc	= "disk-based archiver unit 6/8";
 #		type	= standalone_fs;
 #		id	= 16;
 #		nodes	= sense6|sense6-ib;
@@ -139,10 +130,24 @@ site @PSCARCH {
 #	}
 
 #	resource sense7 {
-#		desc	= "disk-based archiver";
+#		desc	= "disk-based archiver unit 7/8";
 #		type	= standalone_fs;
 #		id	= 17;
 #		nodes	= sense7|sense7-ib;
 #		fsroot	= /store;
+#	}
+
+#	resource sense {
+#		desc	= "disk-based archiver unit 8/8";
+#		type	= cluster_noshare_fs;
+#		id	= 20;
+#		nodes	= sense0@PSCARCH,
+#			  sense1@PSCARCH,
+#			  sense2@PSCARCH,
+#			  sense3@PSCARCH,
+#			  sense4@PSCARCH,
+#			  sense5@PSCARCH,
+#			  sense6@PSCARCH,
+#			  sense7@PSCARCH;
 #	}
 }
