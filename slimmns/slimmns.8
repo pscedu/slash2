@@ -14,13 +14,13 @@
 .\" without express or implied warranty.
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
-.Dd May 27, 2011
+.Dd September 14, 2011
 .Dt SLMKFS 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
 .Sh NAME
 .Nm slmkfs
-.Nd create a
+.Nd format a
 .Tn SLASH
 backing store file system
 .Sh SYNOPSIS
@@ -45,7 +45,7 @@ which is responsible for providing persistent access to file data regardless of
 file pathname renames and unlinks, and the replication queue.
 .Pp
 The following options are available:
-.Bl -tag -indent Ds
+.Bl -tag -offset 3n -width 3n
 .It Fl D Ar datadir
 Specify an alternative directory where operation data is stored.
 Defaults to
