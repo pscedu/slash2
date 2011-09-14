@@ -1418,10 +1418,10 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
  
 	ts.tv_sec = 0;
 	ts.tv_nsec = 100000;
-	for (;;) {
+	sigemptyset(&signal_set);
+	sigaddset(&signal_set, SIGIO);
 
-		sigemptyset(&signal_set);
-		sigaddset(&signal_set, SIGIO);
+	for (;;) {
 
 		/* use timedwait, in case we can miss signals (not sure) */
 		sigtimedwait(&signal_set, &si, &ts);
