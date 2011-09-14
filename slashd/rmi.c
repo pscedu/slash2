@@ -415,7 +415,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	}
 
 	/*
-	 * Lookup the parent directory in the cache so that the slash2
+	 * Lookup the parent directory in the cache so that the SLASH2
 	 * inode can be translated into the inode for the underlying fs.
 	 */
 	mp->rc = slm_fcmh_get(&mq->pfg, &p);
@@ -452,9 +452,10 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 		goto out;
 
 	mds_reserve_slot(1);
-	mp->rc = mdsio_setattr(0, &mq->sstb, PSCFS_SETATTRF_DATASIZE |
-	    PSCFS_SETATTRF_UID | PSCFS_SETATTRF_GID |
-	    PSCFS_SETATTRF_ATIME | PSCFS_SETATTRF_MTIME |
+	mp->rc = mdsio_setattr(0, &mq->sstb,
+	    PSCFS_SETATTRF_DATASIZE | PSCFS_SETATTRF_UID |
+	    PSCFS_SETATTRF_GID | PSCFS_SETATTRF_ATIME |
+	    PSCFS_SETATTRF_MTIME | PSCFS_SETATTRF_CTIME,
 	    SL_SETATTRF_NBLKS, &rootcreds, NULL, mdsio_data,
 	    mdslog_namespace);
 	mds_unreserve_slot(1);
