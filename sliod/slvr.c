@@ -41,7 +41,7 @@
 #include "sltypes.h"
 #include "slvr.h"
 
-struct psc_waitq	 sli_aio_waitq;
+volatile sig_atomic_t	 sli_aio_has_work;
 
 struct psc_poolmaster	 slvr_poolmaster;
 struct psc_poolmaster	 sli_aiocbr_poolmaster;
@@ -1413,7 +1413,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 void
 sigio_handler(__unusedx int sig)
 {
-	psc_waitq_wakeall(&sli_aio_waitq);
+	sli_aio_has_work = 1;
 }
 
 void
@@ -1422,7 +1422,11 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 	struct sli_iocb *iocb, *next;
 
 	for (;;) {
-		psc_waitq_waitrel_s(&sli_aio_waitq, NULL, 1);
+		if (!sli_aio_has_work) {
+			usleep(100);
+			continue;
+		}
+		sli_aio_has_work = 0;
 		LIST_CACHE_LOCK(&sli_iocb_pndg);
 		LIST_CACHE_FOREACH_SAFE(iocb, next, &sli_iocb_pndg) {
 			iocb->iocb_rc = aio_error(&iocb->iocb_aiocb);
