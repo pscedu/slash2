@@ -465,6 +465,10 @@ reimport
 - debug lnrtd
 - research holdup in fbsd zio_write_intr
 - remote syslog
+- file system-level replication controls, e.g.
+
+    $ cp myfile .sl/foo@BAR
+    $ cat .slrpl/myfile
 
 archiver
 - install SLASH2 on sense/illusion
@@ -473,10 +477,4 @@ archiver
    (o) reconstruct hard links in dmf space from sl2 objects
 - zfs stats for OpenTSDB, disk failure notification
 - /arc on firehose 3
-- explain to jasons@ about tahini network requirements
-- wiki updates
-- logistics for where MDS zsnap backups go
-- file system-level replication controls, e.g.
-
-    $ cp myfile .sl/foo@BAR
-    $ cat .slrpl/myfile
+- work out logistics for where MDS zsnap backups go
