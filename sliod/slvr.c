@@ -41,8 +41,6 @@
 #include "sltypes.h"
 #include "slvr.h"
 
-volatile sig_atomic_t	 sli_aio_has_work;
-
 struct psc_poolmaster	 slvr_poolmaster;
 struct psc_poolmaster	 sli_aiocbr_poolmaster;
 struct psc_poolmaster	 sli_iocb_poolmaster;
@@ -1410,23 +1408,30 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 	return (n);
 }
 
+#if 0
 void
-sigio_handler(__unusedx int sig)
+sigio_handler(__unusedx int sig, __unusedx siginfo_t *siginfo, __unusedx void *arg)
 {
-	sli_aio_has_work = 1;
+	return;
 }
+#endif
 
 void
 sliaiothr_main(__unusedx struct psc_thread *thr)
 {
+	sigset_t signal_set;
 	struct sli_iocb *iocb, *next;
-
+	struct timespec ts;
+	siginfo_t si;
+ 
+	ts.tv_sec = 0;
+	ts.tv_nsec = 100000;
 	for (;;) {
-		if (!sli_aio_has_work) {
-			usleep(100);
-			continue;
-		}
-		sli_aio_has_work = 0;
+
+		sigemptyset(&signal_set);
+		sigaddset(&signal_set, SIGIO);
+		sigtimedwait(&signal_set, &si, &ts);
+
 		LIST_CACHE_LOCK(&sli_iocb_pndg);
 		LIST_CACHE_FOREACH_SAFE(iocb, next, &sli_iocb_pndg) {
 			iocb->iocb_rc = aio_error(&iocb->iocb_aiocb);
@@ -1462,7 +1467,6 @@ slvr_cache_init(void)
 	lc_reginit(&crcqSlvrs, struct slvr_ref, slvr_lentry, "crcqslvrs");
 
 	if (globalConfig.gconf_async_io) {
-		signal(SIGIO, sigio_handler);
 
 		psc_poolmaster_init(&sli_iocb_poolmaster,
 		    struct sli_iocb, iocb_lentry, PPMF_AUTO, 64, 64,
