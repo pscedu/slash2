@@ -231,7 +231,7 @@ struct srt_stat {
 	struct slash_fidgen	sst_fg;		/* file ID + truncate generation */
 	uint64_t		sst_dev;	/* ID of device containing file */
 	uint32_t		sst_ptruncgen;	/* partial truncate generation */
-	uint32_t		sst_utimgen;    /* utimes generation number */
+	uint32_t		sst_utimgen;	/* utimes generation number */
 	uint32_t		sst__pad;
 	uint32_t		sst_mode;	/* file type & permissions (e.g., S_IFREG, S_IRWXU) */
 	uint64_t		sst_nlink;	/* number of hard links */
@@ -316,7 +316,7 @@ struct srt_update_entry {
 	uint64_t		target_fid;
 
 	uint64_t		target_gen;	/* reclaim only */
-	uint64_t		new_parent_fid;	/* rename only  */
+	uint64_t		new_parent_fid;	/* rename only */
 
 	uint32_t		mask;		/* attribute mask */
 
@@ -340,17 +340,17 @@ struct srt_update_entry {
 
 /* namespace forward */
 struct srm_forward_req {
-	 int16_t		op;		/* create, mkdir, unlink, rmdir, setattr */
-	 int16_t		_pad;
-	uint32_t		mode;
-	 int32_t		to_set;
+	 int32_t		op;		/* create, mkdir, unlink, rmdir, setattr */
+	uint32_t		mode;		/* mkdir/creat mode */
+	 int32_t		to_set;		/* SETATTR field flags */
+	 int32_t		_pad;
 	struct slash_creds	creds;		/* st_uid owner for new dir/file */
 	struct slash_fidgen	fg;		/* parent dir or target */
 	struct slash_fidgen	nfg;		/* new parent dir or target */
 	slfid_t			fid;		/* new fid provided by the peer MDS */
 	union {
 		struct srt_stat	sstb;
-		char		name[SL_TWO_NAME_MAX+2];
+		char		name[SL_TWO_NAME_MAX + 2];
 	} req;
 } __packed;
 
@@ -390,13 +390,13 @@ struct srm_leasebmap_rep {
 } __packed;
 
 struct srm_leasebmapext_req {
-	struct srt_bmapdesc     sbd;
+	struct srt_bmapdesc	sbd;
 } __packed;
 
 struct srm_leasebmapext_rep {
-	struct srt_bmapdesc     sbd;
-	int32_t                 rc;
-	int32_t                 _pad;
+	struct srt_bmapdesc	sbd;
+	int32_t			rc;
+	int32_t			_pad;
 } __packed;
 
 #define srm_leasebmapext_rep srm_leasebmap_rep
@@ -634,7 +634,7 @@ struct srm_repl_read_req {
 	sl_bmapno_t		bmapno;
 	 int32_t		slvrno;
 	 int32_t		rc;
-	int32_t               _pad;
+	int32_t			_pad;
 } __packed;
 
 #define srm_repl_read_rep	srm_io_rep
