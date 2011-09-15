@@ -451,19 +451,9 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	} else if (mp->rc)
 		goto out;
 
-	mds_reserve_slot(1);
-	mp->rc = mdsio_setattr(0, &mq->sstb,
-	    PSCFS_SETATTRF_DATASIZE | PSCFS_SETATTRF_UID |
-	    PSCFS_SETATTRF_GID | PSCFS_SETATTRF_ATIME |
-	    PSCFS_SETATTRF_MTIME | PSCFS_SETATTRF_CTIME,
-	    SL_SETATTRF_NBLKS, &rootcreds, NULL, mdsio_data,
-	    mdslog_namespace);
-	mds_unreserve_slot(1);
-
 	mdsio_release(&cr, mdsio_data);
 
-	if (mp->rc)
-		goto out;
+	mp->fg = sstb.sst_fg;
 
 	mp->rc = slm_fcmh_get(&sstb.sst_fg, &c);
 	if (mp->rc)
@@ -499,7 +489,15 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 		if (mp->rc)
 			goto out;
 	}
-	mp->fg = sstb.sst_fg;
+
+	mds_reserve_slot(1);
+	mp->rc = mdsio_setattr(0, &mq->sstb,
+	    PSCFS_SETATTRF_DATASIZE | PSCFS_SETATTRF_UID |
+	    PSCFS_SETATTRF_GID | PSCFS_SETATTRF_ATIME |
+	    PSCFS_SETATTRF_MTIME | PSCFS_SETATTRF_CTIME,
+	    SL_SETATTRF_NBLKS, &rootcreds, NULL,
+	    fcmh_2_mdsio_data(fcmh), mdslog_namespace);
+	mds_unreserve_slot(1);
 
  out:
 	/*
