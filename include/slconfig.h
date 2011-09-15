@@ -142,7 +142,8 @@ struct lnetif_pair {
 
 struct sl_gconf {
 	char			 gconf_allowexe[BUFSIZ];
-	char			 gconf_net[NAME_MAX];
+	char			 gconf_routes[NAME_MAX];
+	char			 gconf_lnets[LNETS_MAX];
 	char			 gconf_fsroot[PATH_MAX];
 	int			 gconf_port;
 	char			 gconf_prefmds[RES_NAME_MAX];

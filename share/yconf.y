@@ -107,11 +107,13 @@ struct slconf_symbol sym_table[] = {
 	TABENT_VAR("allow_exec",	SL_TYPE_STR,	BUFSIZ,		gconf_allowexe,	NULL),
 	TABENT_VAR("fs_root",		SL_TYPE_STR,	PATH_MAX,	gconf_fsroot,	NULL),
 	TABENT_VAR("journal",		SL_TYPE_STR,	PATH_MAX,	gconf_journal,	NULL),
-	TABENT_VAR("net",		SL_TYPE_STR,	NAME_MAX,	gconf_net,	NULL),
-	TABENT_VAR("nets",		SL_TYPE_STR,	NAME_MAX,	gconf_net,	NULL),
+	TABENT_VAR("lnets",		SL_TYPE_STR,	LNETS_MAX,	gconf_lnets,	NULL),
+	TABENT_VAR("net",		SL_TYPE_STR,	NAME_MAX,	gconf_routes,	NULL),
+	TABENT_VAR("nets",		SL_TYPE_STR,	NAME_MAX,	gconf_routes,	NULL),
 	TABENT_VAR("port",		SL_TYPE_INT,	0,		gconf_port,	NULL),
 	TABENT_VAR("pref_ios",		SL_TYPE_STR,	RES_NAME_MAX,	gconf_prefios,	NULL),
 	TABENT_VAR("pref_mds",		SL_TYPE_STR,	RES_NAME_MAX,	gconf_prefmds,	NULL),
+	TABENT_VAR("routes",		SL_TYPE_STR,	NAME_MAX,	gconf_routes,	NULL),
 	TABENT_VAR("zpool_cache",	SL_TYPE_STR,	PATH_MAX,	gconf_zpcachefn,NULL),
 	TABENT_VAR("zpool_name",	SL_TYPE_STR,	NAME_MAX,	gconf_zpname,	NULL),
 
@@ -651,9 +653,9 @@ slcfg_resm_addaddr(char *addr, const char *lnet)
 
 	for (res = res0; res; res = res->ai_next) {
 		if (lnet == NULL) {
-			if (globalConfig.gconf_net[0] &&
+			if (globalConfig.gconf_routes[0] &&
 			    psc_listhd_empty(&globalConfig.gconf_routehd))
-				slcfg_parse_routes(globalConfig.gconf_net);
+				slcfg_parse_routes(globalConfig.gconf_routes);
 
 			psclist_for_each_entry(lrt,
 			    &globalConfig.gconf_routehd, lrt_lentry)
