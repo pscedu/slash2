@@ -340,7 +340,6 @@ utime
 
 tree
 - rename include/buffer.h and share/buffer.c as sliod/slab.h sliod/slab.c
-- move inode.h into slashd
 - rename the zfs_init() alias, it is already a routine in ZFS
 - rename slconfig.h to slcfg.h to disambiguate slco prefix
 
@@ -385,7 +384,7 @@ API rename
 - do full truncate and unlink do the right things while ptrunc is resolving?
 - add SSL transport which uses keys and can therefore disable authbuf
 
-- write a ptrunc tester: truncate(1)
+- write a ptrunc tester: or just use truncate(1) or a dd(1) that does truncate(2)
 - for -s connections, we arguably do not need to show members of the
   same resource we are part of since we will never connect to them
 - patch fuse.ko since fuse_notify_entry_inval() causes segfault
@@ -422,9 +421,6 @@ API rename
 - move namespace in zfs into a subdir so we dont have to do any
   strcmp(fn, ".slmd") -> EPERM tricks
 
-- parse LNET_NETWORKS format for `lnets' variable and assign lnetname to
-  addresses that resolve from the interface in the pair
-
 - make sure replrq over garbage does the right thing in sliod backfs (zeroing)
 - mds: do not allow repl changes while IN_PTRUNC
 - should replay crcupdate set ion to VALID ?
@@ -433,13 +429,14 @@ API rename
     - need fcmh_get() in mslfsop_read()
 - try locally caching st_blocks in msl
 - msl with sst_size local caching should still take higher values from MDS
-  in cases of direct I/O
+  in cases of direct I/O (or maybe sliod)
 - use uint32_t for nanosecond atime/mtime/ctime in znode_phys to save space
 - remove separate sl2 mtime/atime in slashd
 - 'slmctl stop' should completely wait for all ops to prevent relying on journal
 - upsch will not scale without multiwait waker arg
 - ensure user mounting works
 - add provisions to ensure journal disk doesnt overwrite something special
+ (superblock check)
 
 - Add the ability to remove an I/O server from slcfg.  Right now struct reclaim_prog_entry
   has a field "pad".  Should be easy to turn it into a flag to mark obsolete
@@ -459,6 +456,7 @@ reimport
 
 - kill share/nbrqthr.c and replace with code in nb.c
 - slictl reimport should mark GARBAGE for repls instead of INVALID
+- watch out for EMFILE on freebsd
 - msl missed refcnt on connection errors
 - wolverine/single cpu missed wakeup
 - cluster_noshare replication changes
