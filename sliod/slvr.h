@@ -78,7 +78,7 @@ struct slvr_ref {
 #define	SLVR_REPLSRC		(1 << 12)	/* slvr is replication source */
 #define	SLVR_REPLDST		(1 << 13)	/* slvr is replication destination */
 #define SLVR_REPLFAIL		(1 << 14)	/* replication op failed */
-#define SLVR_AIOWAIT		(1 << 15)	/* early return for AIO */
+#define SLVR_AIOWAIT		(1 << 15)	/* early return for AIO (for both local and remote) */
 #define SLVR_RDMODWR		(1 << 16)	/* read modify write */
 #define SLVR_REPLWIRE		(1 << 17)	/* prevent aio race */
 
