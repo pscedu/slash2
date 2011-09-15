@@ -11,12 +11,12 @@ $ENV{PSC_TIMEOUT} = 1;
 my $mp = "/arc";
 
 sub usage {
-	warn "usage: $0 [-v] [file]\n";
+	warn "usage: $0 [-Vv] [file]\n";
 	exit 1;
 }
 
 my %opts;
-getopts("v", \%opts) or usage;
+getopts("Vv", \%opts) or usage;
 
 sub cpnwalk {
 	my ($fn, $f) = @_;
@@ -35,7 +35,7 @@ sub makeinumpath {
 }
 
 sub sysexec {
-	print join (' ', @_), "\n" if $opts{v};
+	print join (' ', @_), "\n" if $opts{V};
 	system(@_);
 }
 
@@ -47,10 +47,11 @@ while (<>) {
 		warn "skipping import of file outside archiver root: $fn\n";
 		next;
 	}
+	print $fn, "\n" if $opts{v};
 	my $eo = $1;
 	my $ifn = makeinumpath $fn, $eo;
 	my @op;
-	push @op, "-v" if $opts{v};
+	push @op, "-v" if $opts{V};
 	sysexec "slictl-$eo", "import", @op, $fn, $ifn;
 
 	# create hard link(2) into user's namespace
