@@ -127,7 +127,6 @@ sli_rmi_issue_mkdir(struct slashrpc_cservice *csvc,
 	rc = SL_RSX_NEWREQ(csvc, SRMT_MKDIR, rq, mq, mp);
 	if (rc)
 		return (rc);
-	memcpy(mq->creds, &rootcreds, sizeof(rootcreds));
 	mq->pfg = *pfg;
 	strlcpy(mq->name, name, sizeof(mq->name));
 	sl_externalize_stat(stb, &mq->sstb);
