@@ -445,10 +445,10 @@ API rename
   We might want to do the same thing for metadata server.
 - add msctl -X to cancel a replication
 - msctl is broken on 32-bit because of ino # compression
-- build LNET_ROUTES from slcfg
 - move msctl sock to $MOUNTPOINT/.slmd/ctlsock and have msctl ascend to that on arguments
 - only purge additional NIDs if unroutable in slcfg, leave one (LNET_ROUTES)
    - better yet, if in LNET_ROUTES, leave in tact
+   - if no LNET_ROUTES, construct
 - add lnet_networks to slcfg
 
 reimport
