@@ -115,8 +115,8 @@ struct sli_import_arg {
 
 int
 sli_rmi_issue_mkdir(struct slashrpc_cservice *csvc,
-    const struct slash_fidgen *pfg, const char *name, uid_t uid,
-    gid_t gid, mode_t mode, struct slash_fidgen *cfg,
+    const struct slash_fidgen *pfg, const char *name,
+    const struct stat *stb, struct slash_fidgen *cfg,
     char fidfn[PATH_MAX])
 {
 	struct pscrpc_request *rq;
@@ -127,12 +127,10 @@ sli_rmi_issue_mkdir(struct slashrpc_cservice *csvc,
 	rc = SL_RSX_NEWREQ(csvc, SRMT_MKDIR, rq, mq, mp);
 	if (rc)
 		return (rc);
-	mq->creds.scr_uid = uid;
-	mq->creds.scr_gid = gid;
-	mq->mode = mode;
+	memcpy(mq->creds, &rootcreds, sizeof(rootcreds));
 	mq->pfg = *pfg;
 	strlcpy(mq->name, name, sizeof(mq->name));
-//	sl_externalize_stat(stb, &mq->sstb);
+	sl_externalize_stat(stb, &mq->sstb);
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0) {
 		rc = mp->rc;
@@ -258,9 +256,10 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		}
 	}
 
+	/* XXX perform user permission checks */
+
 	if (S_ISDIR(stb->st_mode)) {
-		rc = sli_rmi_issue_mkdir(csvc, &fg, cpn,
-		    stb->st_uid, stb->st_gid, stb->st_mode, NULL,
+		rc = sli_rmi_issue_mkdir(csvc, &fg, cpn, stb, NULL,
 		    fidfn);
 	} else {
 		struct srm_import_req *mq;

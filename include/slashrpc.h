@@ -748,10 +748,10 @@ struct srm_lookup_req {
 #define srm_lookup_rep		srm_getattr_rep
 
 struct srm_mkdir_req {
-	struct slash_creds	creds;		/* st_uid owner for new file */
 	struct slash_fidgen	pfg;		/* parent dir */
 	char			name[SL_NAME_MAX + 1];
-	uint32_t		mode;
+	struct srt_stat		sstb;
+	uint32_t		to_set;
 	 int32_t		_pad;
 } __packed;
 

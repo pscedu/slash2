@@ -785,10 +785,12 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		goto out;
 
-	mq->creds = creds;
+	mq->sstb.sst_uid = creds.scr_uid;
+	mq->sstb.sst_gid = creds.scr_gid;
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = FGEN_ANY;
-	mq->mode = mode;
+	mq->sstb.sst_mode = mode;
+	mq->to_set = PSCFS_SETATTRF_MODE;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
@@ -800,7 +802,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		goto out;
 
 	psclog_info("pfid="SLPRI_FID" mode=%#o name='%s' rc=%d mp->rc=%d",
-	    mq->pfg.fg_fid, mq->mode, mq->name, rc, mp->rc);
+	    mq->pfg.fg_fid, mode, name, rc, mp->rc);
 
 	fcmh_setattr(p, &mp->pattr, FCMH_SETATTRF_NONE);
 
