@@ -176,6 +176,7 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 	struct fidc_membh *p, *op, *np;
 	struct srm_forward_req *mq;
 	struct srm_forward_rep *mp;
+	struct srt_stat sstb;
 	void *mdsio_data;
 	char *from, *to;
 
@@ -201,9 +202,12 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		mp->rc = slm_fcmh_get(&mq->fg, &p);
 		if (mp->rc)
 			break;
+		sstb.sst_mode = mq->mode;
+		sstb.sst_uid = mq->creds.scr_uid;
+		sstb.sst_gid = mq->creds.scr_gid;
 		mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(p), mq->req.name,
-		    mq->mode, &mq->creds, 0, &mp->cattr, NULL,
-		    mdslog_namespace, NULL, mq->fid);
+		    &sstb, 0, &mp->cattr, NULL, mdslog_namespace, NULL,
+		    mq->fid);
 		break;
 	    case SLM_FORWARD_CREATE:
 		mp->rc = slm_fcmh_get(&mq->fg, &p);
@@ -322,7 +326,7 @@ slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
 
 	siteid = FID_GET_SITEID(fg->fg_fid);
 
-	if (op != SLM_FORWARD_MKDIR && op != SLM_FORWARD_RMDIR &&
+	if (op != SLM_FORWARD_MKDIR  && op != SLM_FORWARD_RMDIR &&
 	    op != SLM_FORWARD_CREATE && op != SLM_FORWARD_UNLINK &&
 	    op != SLM_FORWARD_RENAME && op != SLM_FORWARD_SETATTR)
 		return (ENOSYS);
@@ -367,11 +371,6 @@ slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
 		mq->mode = mode;
 		mq->creds = *creds;
 		rc = slm_get_next_slashfid(&mq->fid);
-	} else {
-		mq->mode = 0;
-		mq->creds.scr_uid = 0;		/* XXX */
-		mq->creds.scr_gid = 0;
-		mq->fid = 0;
 	}
 	if (rc)
 		goto out;

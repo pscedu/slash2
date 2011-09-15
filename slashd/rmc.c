@@ -371,7 +371,7 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 }
 
 int
-slm_rmc_handle_mkdir(struct pscrpc_request *rq, uid_t uid, gid_t gid)
+slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 {
 	struct fidc_membh *p = NULL, *c = NULL;
 	struct srm_mkdir_req *mq;
@@ -385,9 +385,13 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq, uid_t uid, gid_t gid)
 		goto out;
 
 	if (IS_REMOTE_FID(mq->pfg.fg_fid)) {
+		struct slash_creds cr;
+
+		cr.scr_uid = mq->sstb.sst_uid;
+		cr.scr_gid = mq->sstb.sst_gid;
 		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_MKDIR,
 		    &mq->pfg, NULL, mq->name, NULL, mq->sstb.sst_mode,
-		    &mq->creds, &mp->cattr, 0);
+		    &cr, &mp->cattr, 0);
 		mdsio_fcmh_refreshattr(p, &mp->pattr);
 		goto out;
 	}
@@ -464,7 +468,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	}
 
 	/* Lookup the parent directory in the cache so that the
-	 *   slash2 ino can be translated into the inode for the
+	 *   SLASH2 ino can be translated into the inode for the
 	 *   underlying fs.
 	 */
 	mp->rc = slm_fcmh_get(&mq->pfg, &p);
