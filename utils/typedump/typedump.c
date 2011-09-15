@@ -54,6 +54,7 @@
 #include "mount_slash/fidc_cli.h"
 #include "mount_slash/mount_slash.h"
 #include "mount_slash/rpc_cli.h"
+#include "mount_slash/subsys_cli.h"
 #include "slashd/bmap_mds.h"
 #include "slashd/ctl_mds.h"
 #include "slashd/fidc_mds.h"
