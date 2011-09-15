@@ -198,6 +198,7 @@ main(int argc, char *argv[])
 	sigprocmask(SIG_BLOCK, &signal_set, NULL);
 
 	memset (&act, 0, sizeof(act));
+	act.sa_flags = SA_SIGINFO;
 	act.sa_sigaction = &sigio_handler;
 	sigaction(SIGIO, &act, NULL);
 
