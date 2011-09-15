@@ -1183,7 +1183,7 @@ slvr_wio_done(struct slvr_ref *s, uint32_t off, uint32_t len)
 		psc_assert(!(s->slvr_flags & SLVR_REPLSRC));
 		psc_assert(!(s->slvr_flags & SLVR_CRCDIRTY));
 		s->slvr_pndgwrts--;
-		s->slvr_flags &= ~(SLVR_PINNED|SLVR_FAULTING|SLVR_REPLDST);
+		s->slvr_flags &= ~(SLVR_PINNED|SLVR_AIOWAIT|SLVR_FAULTING|SLVR_REPLDST);
 
 		if (s->slvr_flags & SLVR_REPLFAIL) {
 			/* Perhaps this should block for any readers?
