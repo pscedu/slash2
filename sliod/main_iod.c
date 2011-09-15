@@ -59,16 +59,6 @@ psc_spinlock_t		 sli_ssfb_lock = SPINLOCK_INIT;
 int			 allow_root_uid = 1;
 const char		*progname;
 
-/*
- * The default action for SIGIO is to terminate the process.  So I need one even if
- * after sigwait() we won't call this handler.
- */
-void
-sigio_handler(__unusedx int sig, __unusedx siginfo_t *siginfo, __unusedx void *arg)
-{
-	return;
-}
-
 int
 psc_usklndthr_get_type(const char *namefmt)
 {
@@ -121,7 +111,6 @@ main(int argc, char *argv[])
 	const char *cfn, *sfn, *p, *prefmds;
 	int rc, c;
 	sigset_t signal_set;
-	struct sigaction act;
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -162,6 +151,10 @@ main(int argc, char *argv[])
 	if (argc > 1)
 		usage();
 
+ 	sigemptyset(&signal_set);
+ 	sigaddset(&signal_set, SIGIO);
+	sigprocmask(SIG_BLOCK, &signal_set, NULL);
+
 	pscthr_init(SLITHRT_CTL, 0, NULL, NULL,
 	    sizeof(struct psc_ctlthr), "slictlthr");
 
@@ -193,14 +186,6 @@ main(int argc, char *argv[])
 	if (rc)
 		psc_fatalx("invalid MDS %s: %s", argv[0],
 		    slstrerror(rc));
-
-	sigfillset(&signal_set);
-	sigprocmask(SIG_BLOCK, &signal_set, NULL);
-
-	memset (&act, 0, sizeof(act));
-	act.sa_flags = SA_SIGINFO;
-	act.sa_sigaction = &sigio_handler;
-	sigaction(SIGIO, &act, NULL);
 
 	slictlthr_main(sfn);
 	/* NOTREACHED */

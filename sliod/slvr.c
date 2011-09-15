@@ -1413,18 +1413,15 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 {
 	sigset_t signal_set;
 	struct sli_iocb *iocb, *next;
-	struct timespec ts;
-	siginfo_t si;
- 
-	ts.tv_sec = 0;
-	ts.tv_nsec = 100000;
+	int signo;
+
 	sigemptyset(&signal_set);
 	sigaddset(&signal_set, SIGIO);
 
 	for (;;) {
 
-		/* use timedwait, in case we can miss signals (not sure) */
-		sigtimedwait(&signal_set, &si, &ts);
+		sigwait(&signal_set, &signo);
+		psc_assert(signo == SIGIO);
 
 		LIST_CACHE_LOCK(&sli_iocb_pndg);
 		LIST_CACHE_FOREACH_SAFE(iocb, next, &sli_iocb_pndg) {
