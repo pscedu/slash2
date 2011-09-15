@@ -494,9 +494,9 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	mp->rc = mdsio_setattr(0, &mq->sstb,
 	    PSCFS_SETATTRF_DATASIZE | PSCFS_SETATTRF_UID |
 	    PSCFS_SETATTRF_GID | PSCFS_SETATTRF_ATIME |
-	    PSCFS_SETATTRF_MTIME | PSCFS_SETATTRF_CTIME,
+	    PSCFS_SETATTRF_MTIME | PSCFS_SETATTRF_CTIME |
 	    SL_SETATTRF_NBLKS, &rootcreds, NULL,
-	    fcmh_2_mdsio_data(fcmh), mdslog_namespace);
+	    fcmh_2_mdsio_data(c), mdslog_namespace);
 	mds_unreserve_slot(1);
 
  out:
