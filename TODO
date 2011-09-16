@@ -33,6 +33,11 @@ will be forced to restart all clients and sliods.
 
 4) DIO needs to be completed for AIO
 
+* slm_ptrunc_wake_clients() may need to use rpcsets or nbreqsets to deal 
+with large numbers of blocking clients.  Or, the algorithm should be modified
+so that the clients retry after some brief sleep period.  (I believe this is 
+how DIO works).
+
 -----------------------------------------------------------------------
 * MS should employ a list cache to track all pfl (fuse) requests.  This
 should prevent any issues surrounding the loss of a request due to AIO.
