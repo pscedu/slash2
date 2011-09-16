@@ -137,6 +137,8 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 	struct iovec iov;
 	int rv, slvridx = 0;
 
+	sliriithr(pscthr_get())->sirit_st_nread++;
+
 	bcm = NULL;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
