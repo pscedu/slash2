@@ -147,7 +147,8 @@ sli_repl_addwk(int op, uint64_t nid, const struct slash_fidgen *fgp,
 }
 
 void
-sli_replwkrq_decref(struct sli_repl_workrq *w, int rc) {
+sli_replwkrq_decref(struct sli_repl_workrq *w, int rc)
+{
 	reqlock(&w->srw_lock);
 
 	/*
@@ -210,6 +211,7 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 
 		if (slvrno == SLASH_SLVRS_PER_BMAP) {
 			BMAP_ULOCK(w->srw_bcm);
+			/* no work to do; we are done with this bmap */
 			goto end;
 		}
 
@@ -244,13 +246,11 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 		spinlock(&w->srw_lock);
 		/*
 		 * Place back on queue to process again on next
-		 * iteration.  If it's full, we'll wait for a slot to
-		 * open up then.
+		 * iteration.  If the max in-transit capacity is full,
+		 * we'll wait for a slot to open up then.
 		 */
-		if (psclist_disjoint(&w->srw_pending_lentry)) {
-			lc_addhead(&sli_replwkq_pending, w);
-			psc_atomic32_inc(&w->srw_refcnt);
-		}
+		sli_replwkrq_addpending(w);
+
  end:
 		if (rc && slvridx != REPL_MAX_INFLIGHT_SLVRS) {
 			reqlock(&w->srw_lock);
@@ -259,7 +259,7 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 			 */
 			BMAP_LOCK(w->srw_bcm);
 			w->srw_bcm->bcm_crcstates[slvrno] |=
-				BMAP_SLVR_WANTREPL;
+			    BMAP_SLVR_WANTREPL;
 			BMAP_ULOCK(w->srw_bcm);
 		}
 		sli_replwkrq_decref(w, rc);

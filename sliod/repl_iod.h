@@ -29,8 +29,6 @@
 #include "fid.h"
 #include "sltypes.h"
 
-struct psc_vbitmap;
-
 struct bmapc_memb;
 struct fidc_membh;
 struct sl_resm;
@@ -68,11 +66,20 @@ enum {
 	SLI_REPLWKOP_REPL,
 };
 
-struct sli_repl_workrq * sli_repl_findwq(const struct slash_fidgen *, sl_bmapno_t);
+struct sli_repl_workrq *
+	sli_repl_findwq(const struct slash_fidgen *, sl_bmapno_t);
 
 int	sli_repl_addwk(int, uint64_t, const struct slash_fidgen *,
 		sl_bmapno_t, sl_bmapgen_t, int);
 void	sli_repl_init(void);
+
+#define sli_replwkrq_addpending(w)					\
+	do {								\
+		if (psclist_disjoint(&(w)->srw_pending_lentry)) {	\
+			lc_addhead(&sli_replwkq_pending, (w));		\
+			psc_atomic32_inc(&(w)->srw_refcnt);		\
+		}							\
+	} while (0)
 
 void	sli_replwkrq_decref(struct sli_repl_workrq *, int);
 

@@ -43,13 +43,13 @@
 #define SRII_REPLREAD_CBARG_WKRQ	0
 #define SRII_REPLREAD_CBARG_SLVR	1
 
-
 /**
- * sli_rii_replread_release_sliver: we call this function in three cases:
- *
- *    (1) When we fail to issue a request for a replication of a sliver;
- *    (2) When the request for a replication of a sliver has completed;
- *    (3) When the asynchronous I/O for a replication of a sliver has completed.
+ * sli_rii_replread_release_sliver: we call this function in three
+ * cases:
+ *  (1) When we fail to issue a request for a replication of a sliver;
+ *  (2) When the request for a replication of a sliver has completed;
+ *  (3) When the asynchronous I/O for a replication of a sliver has
+ *	completed.
  */
 __static int
 sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
@@ -73,7 +73,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 			rc = slvr_do_crc(s);
 		}
 		/* XXX check this return code */
-		//		if (!rc)
+//		if (!rc)
 		if (1)
 			/* SLVR_DATARDY is set in wio_done
 			 *    when the slvr lock is taken again.
@@ -89,8 +89,9 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 			s->slvr_flags |= SLVR_AIOWAIT;
 			aio = 1;
 			/*
-			 * It should be either 1 or 2 (when aio replies early),
-			 * but just be panaroid in case peer will resend.
+			 * It should be either 1 or 2 (when aio replies
+			 * early), but just be panaroid in case peer
+			 * will resend.
 			 */
 			psc_assert(s->slvr_pndgwrts > 0);
 			psc_assert(s->slvr_flags & SLVR_REPLDST);
@@ -102,9 +103,11 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 	}
 
 	DEBUG_SLVR(PLL_INFO, s, "replread %s rc=%d", aio ?
-		   "aiowait" : "complete", rc);
+	    "aiowait" : "complete", rc);
 
-	if (!aio) {
+	if (aio) {
+		sli_replwkrq_addpending(w);
+	} else {
 		slvr_io_done(s, 0, w->srw_len, SL_WRITE);
 
 		spinlock(&w->srw_lock);
@@ -192,7 +195,7 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 			//XXX cleanup the sliver ref
 			goto out;
 		}
-		/* Ensure the sliver is found in the wrk item's array.
+		/* Ensure the sliver is found in the work item's array.
 		 */
 		for (slvridx = 0; slvridx < (int)nitems(w->srw_slvr_refs);
 		     slvridx++)
@@ -299,6 +302,9 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 		if (w->srw_slvr_refs[slvridx] == s)
 			break;
 	psc_assert(slvridx < (int)nitems(w->srw_slvr_refs));
+
+	if (rc != -SLERR_AIOWAIT)
+		sli_replwkrq_addpending(w);
 
 	return (sli_rii_replread_release_sliver(w, slvridx, rc));
 }
