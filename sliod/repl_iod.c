@@ -129,7 +129,8 @@ sli_repl_addwk(int op, uint64_t nid, const struct slash_fidgen *fgp,
 				}
 		BMAP_ULOCK(w->srw_bcm);
 	}
-
+	psclog_info("fid="SLPRI_FG", bmap=%d, # of slivers = %d\n", 
+		SLPRI_FG_ARGS(fgp), bmapno, w->srw_nslvr_tot);
  out:
 	if (rc) {
 		if (w->srw_fcmh)
