@@ -63,6 +63,7 @@ struct slirim_thread {
 
 struct slirii_thread {
 	struct pscrpc_thread	 sirit_prt;
+	int			 sirit_st_nread;
 };
 
 PSCTHR_MKCAST(sliricthr, sliric_thread, SLITHRT_RIC)

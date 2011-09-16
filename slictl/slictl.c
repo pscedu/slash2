@@ -70,6 +70,12 @@ sliricthr_pr(const struct psc_ctlmsg_thread *pcst)
 }
 
 void
+sliriithr_pr(const struct psc_ctlmsg_thread *pcst)
+{
+	printf(" #read %8u", pcst->pcst_nread);
+}
+
+void
 replwkst_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	printf("%-16s %6s %33s %7s %7s %6s\n",
@@ -212,7 +218,7 @@ psc_ctl_prthr_t psc_ctl_prthrs[] = {
 /* REPLPND	*/ NULL,
 /* REPLREAP	*/ NULL,
 /* RIC		*/ sliricthr_pr,
-/* RII		*/ NULL,
+/* RII		*/ sliriithr_pr,
 /* RIM		*/ NULL,
 /* SLVR_CRC	*/ NULL,
 /* STATFS	*/ NULL,

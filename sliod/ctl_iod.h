@@ -48,6 +48,7 @@ struct slictlmsg_fileop {
 
 /* sliricthr thread stat aliases */
 #define pcst_nwrite		pcst_u32_1
+#define pcst_nread		pcst_u32_2
 
 /* sliod message types */
 #define SLICMT_GET_REPLWKST	NPCMT

@@ -441,6 +441,12 @@ slictlcmd_stop(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 	exit(0);
 }
 
+void
+sliriithr_get(struct psc_thread *thr, struct psc_ctlmsg_thread *pcst)
+{
+	pcst->pcst_nread = sliriithr(thr)->sirit_st_nread;
+}
+
 struct psc_ctlop slictlops[] = {
 	PSC_CTLDEFOPS,
 	{ slictlrep_getreplwkst,	sizeof(struct slictlmsg_replwkst ) },
@@ -462,7 +468,7 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* REPLPND	*/ NULL,
 /* REPLREAP	*/ NULL,
 /* RIC		*/ NULL,
-/* RII		*/ NULL,
+/* RII		*/ sliriithr_get,
 /* RIM		*/ NULL,
 /* SLVR_CRC	*/ NULL,
 /* STATFS	*/ NULL,
