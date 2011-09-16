@@ -189,6 +189,7 @@ mds_odtable_replaceitem(struct odtable *odt,
 	    odt->odt_hdr->odth_slotsz, 0, odt->odt_handle, NULL, NULL);
 	psc_assert(!rc && nb == odt->odt_hdr->odth_slotsz);
 
+	PSCFREE(p);
 	return (odtr);
 }
 
