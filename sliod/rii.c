@@ -88,8 +88,8 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		} else {
 			s->slvr_flags |= SLVR_AIOWAIT;
 			aio = 1;
-			/* 
-			 * It should be either 1 or 2 (when aio replies early), 
+			/*
+			 * It should be either 1 or 2 (when aio replies early),
 			 * but just be panaroid in case peer will resend.
 			 */
 			psc_assert(s->slvr_pndgwrts > 0);
@@ -103,7 +103,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 
 	DEBUG_SLVR(PLL_INFO, s, "replread %s rc=%d", aio ?
 		   "aiowait" : "complete", rc);
-	
+
 	if (!aio) {
 		slvr_io_done(s, 0, w->srw_len, SL_WRITE);
 

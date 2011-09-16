@@ -52,16 +52,16 @@ struct psc_lockedlist	 sli_replwkq_active =
     PLL_INIT(&sli_replwkq_active, struct sli_repl_workrq,
 	    srw_active_lentry);
 
-struct sli_repl_workrq * 
+struct sli_repl_workrq *
 sli_repl_findwq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno)
 {
 	struct sli_repl_workrq *w = NULL;
 
 	PLL_LOCK(&sli_replwkq_active);
-        PLL_FOREACH(w, &sli_replwkq_active)
-                if (SAMEFG(&w->srw_fg, fgp) && w->srw_bmapno == bmapno)
-                        break;
-        PLL_ULOCK(&sli_replwkq_active);
+	PLL_FOREACH(w, &sli_replwkq_active)
+		if (SAMEFG(&w->srw_fg, fgp) && w->srw_bmapno == bmapno)
+			break;
+	PLL_ULOCK(&sli_replwkq_active);
 
 	return (w);
 }
@@ -129,7 +129,7 @@ sli_repl_addwk(int op, uint64_t nid, const struct slash_fidgen *fgp,
 				}
 		BMAP_ULOCK(w->srw_bcm);
 	}
-	psclog_info("fid="SLPRI_FG", bmap=%d, # of slivers = %d\n", 
+	psclog_info("fid="SLPRI_FG", bmap=%d, # of slivers = %d\n",
 		SLPRI_FG_ARGS(fgp), bmapno, w->srw_nslvr_tot);
  out:
 	if (rc) {
@@ -204,7 +204,7 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 		/* find a sliver to transmit */
 		BMAP_LOCK(w->srw_bcm);
 		for (slvrno = 0; slvrno < SLASH_SLVRS_PER_BMAP; slvrno++)
-			if (w->srw_bcm->bcm_crcstates[slvrno] & 
+			if (w->srw_bcm->bcm_crcstates[slvrno] &
 			    BMAP_SLVR_WANTREPL)
 				break;
 
@@ -252,13 +252,13 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 			psc_atomic32_inc(&w->srw_refcnt);
 		}
  end:
-		if (rc && slvridx != REPL_MAX_INFLIGHT_SLVRS) {	
+		if (rc && slvridx != REPL_MAX_INFLIGHT_SLVRS) {
 			reqlock(&w->srw_lock);
 			w->srw_slvr_refs[slvridx] = NULL;
-			/* Reinstate WANTREPL 
+			/* Reinstate WANTREPL
 			 */
 			BMAP_LOCK(w->srw_bcm);
-			w->srw_bcm->bcm_crcstates[slvrno] |= 
+			w->srw_bcm->bcm_crcstates[slvrno] |=
 				BMAP_SLVR_WANTREPL;
 			BMAP_ULOCK(w->srw_bcm);
 		}
