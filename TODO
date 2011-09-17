@@ -474,6 +474,7 @@ reimport
 
     $ cp myfile .sl/foo@BAR
     $ cat .slrpl/myfile
+- preserve mtim/atim during import
 
 archiver
 - install SLASH2 on sense/illusion
