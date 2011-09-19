@@ -144,7 +144,7 @@ main(int argc, char *argv[])
 		cursor.pjc_commit_txg = newtxg;
 
 	if (newfid) {
-		newcycle = FID_GET_CYCLE(cursor.pjc_fid);
+		newcycle = FID_GET_CYCLE(newfid);
 		if (newcycle <= cycle)
 			errx(1, "cycle must be increased when setting a new FID");
 		cursor.pjc_fid = newfid;
