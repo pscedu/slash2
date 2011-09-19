@@ -152,7 +152,8 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 		UPSCHED_MGR_ULOCK();
 		goto rescan;
 	}
-	uswi_unref(wk);
+	if (!uswi_unref(wk))
+		UPSCHED_MGR_ULOCK();
 }
 
 __static int
@@ -954,21 +955,22 @@ _uswi_access(struct up_sched_work_item *wk, int keep_locked)
 	return (rc);
 }
 
-void
+int
 _uswi_unref(const struct pfl_callerinfo *pci,
     struct up_sched_work_item *wk)
 {
 	psc_mutex_reqlock(&wk->uswi_mutex);
 	wk->uswi_flags &= ~USWIF_BUSY;
-	if (psc_atomic32_read(&wk->uswi_refcnt) != 2 ||
-	    !uswi_trykill(wk)) {
-		USWI_DECREF(wk, USWI_REFT_LOOKUP);
 
-		/* XXX this wakeup should be conditional */
-		psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
+	if (psc_atomic32_read(&wk->uswi_refcnt) == 2 &&
+	    uswi_trykill(wk))
+		return (1);
 
-		psc_mutex_unlock(&wk->uswi_mutex);
-	}
+	USWI_DECREF(wk, USWI_REFT_LOOKUP);
+	/* XXX this wakeup should be conditional */
+	psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
+	psc_mutex_unlock(&wk->uswi_mutex);
+	return (0);
 }
 
 struct up_sched_work_item *

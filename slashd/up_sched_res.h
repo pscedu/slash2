@@ -101,7 +101,7 @@ int	 uswi_cmp(const void *, const void *);
 void	 uswi_enqueue_sites(struct up_sched_work_item *, const sl_replica_t *, int);
 int	 uswi_findoradd(const struct slash_fidgen *, struct up_sched_work_item **);
 void	 uswi_init(struct up_sched_work_item *, slfid_t);
-void	_uswi_unref(const struct pfl_callerinfo *, struct up_sched_work_item *);
+int	_uswi_unref(const struct pfl_callerinfo *, struct up_sched_work_item *);
 
 void	 upsched_scandir(void);
 
