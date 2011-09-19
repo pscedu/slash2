@@ -1479,6 +1479,8 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	if (rc)
 		goto error;
 
+	PSCFREE(iovs);
+
 	mq->offset = off;
 	mq->size = npages * BMPC_BUFSZ;
 	mq->op = SRMIOP_RD;
