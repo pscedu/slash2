@@ -249,7 +249,8 @@ bmpc_slb_init(struct sl_buffer *slb)
 	slb->slb_inuse = psc_vbitmap_new(BMPC_SLB_NBLKS);
 	slb->slb_blksz = BMPC_BUFSZ;
 	slb->slb_nblks = BMPC_SLB_NBLKS;
-	slb->slb_base  = PSCALLOC(BMPC_SLB_NBLKS * BMPC_BUFSZ);
+	slb->slb_base  = psc_alloc((BMPC_SLB_NBLKS * BMPC_BUFSZ), 
+			   PAF_PAGEALIGN);
 	atomic_set(&slb->slb_ref, 0);
 	atomic_set(&slb->slb_unmapd_ref, 0);
 	atomic_set(&slb->slb_inflight, 0);
