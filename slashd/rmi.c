@@ -378,6 +378,7 @@ slm_rmi_handle_connect(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRMI_MAGIC || mq->version != SRMI_VERSION)
 		mp->rc = EINVAL;
+	/* XXX check src address to find slcfg validity */
 	return (0);
 }
 
@@ -516,14 +517,18 @@ slm_rmi_handle_mkdir(struct pscrpc_request *rq)
 {
 	struct srm_mkdir_req *mq;
 	struct srm_mkdir_rep *mp;
+	struct srt_stat sstb;
+	mdsio_fid_t inum;
 
-	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
-	mp->rc = slm_rmc_handle_mkdir(rq);
+	SL_RSX_ALLOCREP(rq, mq, mp);
+	sstb = mq->sstb;
+	mq->sstb.sst_uid = 0;
+	mq->sstb.sst_gid = 0;
+	mp->rc = slm_mkdir(mq, mp, &inum);
 	if (mp->rc)
 		return (0);
-	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 	mds_reserve_slot(1);
-	mp->rc = mdsio_setattr(mp->cattr.sst_fid, &mq->sstb,
+	mp->rc = mdsio_setattr(inum, &sstb,
 	    PSCFS_SETATTRF_DATASIZE | PSCFS_SETATTRF_UID |
 	    PSCFS_SETATTRF_GID | PSCFS_SETATTRF_ATIME |
 	    PSCFS_SETATTRF_MTIME | PSCFS_SETATTRF_CTIME |

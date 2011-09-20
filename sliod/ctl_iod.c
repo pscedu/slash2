@@ -116,8 +116,7 @@ struct sli_import_arg {
 int
 sli_rmi_issue_mkdir(struct slashrpc_cservice *csvc,
     const struct slash_fidgen *pfg, const char *name,
-    const struct stat *stb, struct slash_fidgen *cfg,
-    char fidfn[PATH_MAX])
+    const struct stat *stb, char fidfn[PATH_MAX])
 {
 	struct pscrpc_request *rq;
 	struct srm_mkdir_req *mq;
@@ -133,8 +132,6 @@ sli_rmi_issue_mkdir(struct slashrpc_cservice *csvc,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0) {
 		rc = mp->rc;
-		if (cfg)
-			*cfg = mp->cattr.sst_fg;
 		if (fidfn)
 			sli_fg_makepath(&mp->cattr.sst_fg, fidfn);
 	}
@@ -258,8 +255,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	/* XXX perform user permission checks */
 
 	if (S_ISDIR(stb->st_mode)) {
-		rc = sli_rmi_issue_mkdir(csvc, &fg, cpn, stb, NULL,
-		    fidfn);
+		rc = sli_rmi_issue_mkdir(csvc, &fg, cpn, stb, fidfn);
 	} else {
 		struct srm_import_req *mq;
 		struct srm_import_rep *mp;

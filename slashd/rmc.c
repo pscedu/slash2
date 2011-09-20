@@ -371,13 +371,11 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 }
 
 int
-slm_rmc_handle_mkdir(struct pscrpc_request *rq)
+slm_mkdir(struct srm_mkdir_req *mq, struct srm_mkdir_rep *mp,
+    mdsio_fid_t *mfp)
 {
 	struct fidc_membh *p = NULL, *c = NULL;
-	struct srm_mkdir_req *mq;
-	struct srm_mkdir_rep *mp;
 
-	SL_RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
 
 	mp->rc = slm_fcmh_get(&mq->pfg, &p);
@@ -398,7 +396,7 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 
 	mds_reserve_slot(1);
 	mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(p), mq->name, &mq->sstb,
-	    0, &mp->cattr, NULL, mdslog_namespace,
+	    0, &mp->cattr, mfp, mdslog_namespace,
 	    slm_get_next_slashfid, 0);
 	mds_unreserve_slot(1);
 
@@ -420,6 +418,16 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	if (c)
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	return (0);
+}
+
+int
+slm_rmc_handle_mkdir(struct pscrpc_request *rq)
+{
+	struct srm_mkdir_req *mq;
+	struct srm_mkdir_rep *mp;
+
+	SL_RSX_ALLOCREP(rq, mq, mp);
+	return (slm_mkdir(mq, mp, NULL));
 }
 
 int
