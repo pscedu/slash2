@@ -785,10 +785,10 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		goto out;
 
-	mq->sstb.sst_uid = creds.scr_uid;
-	mq->sstb.sst_gid = creds.scr_gid;
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = FGEN_ANY;
+	mq->sstb.sst_uid = creds.scr_uid;
+	mq->sstb.sst_gid = creds.scr_gid;
 	mq->sstb.sst_mode = mode;
 	mq->to_set = PSCFS_SETATTRF_MODE;
 	strlcpy(mq->name, name, sizeof(mq->name));
