@@ -68,9 +68,9 @@ bmap_flush_reap_rpcs(void)
 	struct psc_lockedlist hold =
 		PLL_INIT(&hold, struct pscrpc_request_set, set_lentry);
 
-	psclog_info("outstandingRpcCnt=%d (before) rpcComp.rqcomp_compcnt=%d",
-	    atomic_read(&outstandingRpcCnt),
-	    atomic_read(&rpcComp.rqcomp_compcnt));
+	psclogs_debug(SLSS_BMAP, "outstandingRpcCnt=%d (before) "
+	       "rpcComp.rqcomp_compcnt=%d", atomic_read(&outstandingRpcCnt),
+	       atomic_read(&rpcComp.rqcomp_compcnt));
 
 	/* Only this thread may pull from pndgWrtReqSets listcache
 	 *   therefore it can never shrink except by way of this
@@ -91,9 +91,10 @@ bmap_flush_reap_rpcs(void)
 
 	while ((set = pll_get(&hold)))
 		lc_add(&pndgWrtReqSets, set);
-
-	psclog_debug("outstandingRpcCnt=%d (after)",
-	    atomic_read(&outstandingRpcCnt));
+	
+	psclogs_debug(SLSS_BMAP, "outstandingRpcCnt=%d (after) "
+	       "rpcComp.rqcomp_compcnt=%d", atomic_read(&outstandingRpcCnt), 
+	       atomic_read(&rpcComp.rqcomp_compcnt));
 }
 
 __static int
@@ -377,7 +378,7 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r)
 			timespecsub(&r->biorq_issue, &t, &t);
 	}
 	BIORQ_ULOCK(r);
-	DEBUG_BIORQ(old ? PLL_NOTIFY : PLL_INFO, r, "set inflight %s("
+	DEBUG_BIORQ(old ? PLL_INFO : PLL_DEBUG, r, "set inflight %s("
 	    PSCPRI_TIMESPEC")", old ? "expired: -" : "",
 	    PSCPRI_TIMESPEC_ARGS(&t));
 
@@ -1084,18 +1085,17 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 		wrapdetect = NULL;
 		while ((bci = lc_getnb(&bmapTimeoutQ))) {
 			b = bci_2_bmap(bci);
-
-			if (!wrapdetect) {
-				wrapdetect = bci;
-				nexttimeo = bci->bci_etime;
-			} else if (bci == wrapdetect) {
+			if (bci == wrapdetect) {
 				lc_addstack(&bmapTimeoutQ, bci);
 				break;
+
+			} else if (!wrapdetect) {
+				wrapdetect = bci;
+				nexttimeo = bci->bci_etime;
 			}
 
 			BMAP_LOCK(b);
-
-			DEBUG_BMAP(PLL_DEBUG, b, "timeoq try reap"
+			DEBUG_BMAP(PLL_INFO, b, "timeoq try reap"
 			   " (nbmaps=%zd) etime("PSCPRI_TIMESPEC")", 
 			   lc_sz(&bmapTimeoutQ),
 			   PSCPRI_TIMESPEC_ARGS(&bci->bci_etime));
@@ -1138,7 +1138,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				lc_addtail(&bmapTimeoutQ, bci);
 				continue;
 			}
-
+			
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) == 1);
 			/* Note that only this thread calls
 			 *   msl_bmap_release() so no reentrancy
@@ -1187,6 +1187,9 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			} else
 				psc_dynarray_add_ifdne(&rels, resm);
 
+			if (bci == wrapdetect)
+				wrapdetect = NULL;
+
 			PFL_GETTIMESPEC(&crtime);
 		}
 		/* Send out partially filled release request.
@@ -1201,7 +1204,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			break;
 
 		timespecsub(&nexttimeo, &crtime, &nexttimeo);
-		psclogs_debug(SLSS_BMAP, "waited for ("PSCPRI_TIMESPEC")"
+		psclogs_info(SLSS_BMAP, "waited for ("PSCPRI_TIMESPEC")"
 		       " lc_sz=%zd", PSCPRI_TIMESPEC_ARGS(&nexttimeo),
 		       lc_sz(&bmapTimeoutQ));
 	}
@@ -1356,7 +1359,7 @@ bmap_flush(struct timespec *nexttimeo)
 			r->biorq_flags |= BIORQ_SCHED;
 			BIORQ_ULOCK(r);
 
-			DEBUG_BIORQ(PLL_NOTICE, r, "flushable");
+			DEBUG_BIORQ(PLL_DEBUG, r, "flushable");
 			psc_dynarray_add(&reqs, r);
 		}
 		BMPC_ULOCK(bmpc);
@@ -1427,7 +1430,7 @@ msbmapflushthr_main(__unusedx struct psc_thread *thr)
 			neg = 1;
 		}
 
-		psclog_info("flush ("PSCPRI_TIMESPEC"), "
+		psclogs_info(SLSS_BMAP, "flush ("PSCPRI_TIMESPEC"), "
 		    "rpcwait ("PSCPRI_TIMESPEC"), "
 		    "waitq ("PSCPRI_TIMESPEC"), bmapFlushTimeoFlags=%d "
 		    "bmapFlushWaitTime(%s"PSCPRI_TIMESPEC") rc=%d",
