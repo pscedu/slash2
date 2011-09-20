@@ -177,7 +177,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 			if (maxpages < npages)
 				maxpages = npages;
 
-			DEBUG_BMAP(PLL_NOTIFY, b, "maxpages=%d npages=%d "
+			DEBUG_BMAP(PLL_INFO, b, "maxpages=%d npages=%d "
 			   "bkwdra=%d", maxpages, npages, bkwdra);
 		} else {
 			maxpages = npages;
@@ -1616,7 +1616,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 
 	npages = psc_dynarray_len(&r->biorq_pages);
 
-	DEBUG_BIORQ(PLL_NOTIFY, r, "check prefetch");
+	DEBUG_BIORQ(PLL_INFO, r, "check prefetch");
 
 	psc_assert(!r->biorq_rqset);
 
@@ -1833,7 +1833,7 @@ msl_pages_copyin(struct bmpc_ioreq *r, char *buf)
 			nbytes = MIN(BMPC_BUFSZ, tsize);
 		}
 
-		DEBUG_BMPCE(PLL_NOTIFY, e, "tsize=%u nbytes=%u toff=%u",
+		DEBUG_BMPCE(PLL_DEBUG, e, "tsize=%u nbytes=%u toff=%u",
 			    tsize, nbytes, toff);
 		BMPCE_ULOCK(e);
 		/* Do the deed.
@@ -1963,7 +1963,7 @@ msl_getra(struct msl_fhent *mfh, int npages, int *bkwd)
 
 	*bkwd = mfh->mfh_ra.mra_bkwd;
 
-	DEBUG_FCMH(PLL_NOTIFY, mfh->mfh_fcmh, "rapages=%d bkwd=%d",
+	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "rapages=%d bkwd=%d",
 		   rapages, *bkwd);
 
 	freelock(&mfh->mfh_lock);
