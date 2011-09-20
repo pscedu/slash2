@@ -110,6 +110,7 @@ SPLAY_PROTOTYPE(upschedtree, up_sched_work_item, uswi_tentry, uswi_cmp);
 
 #define UPSCHED_MGR_LOCK()		PLL_LOCK(&upsched_listhd)
 #define UPSCHED_MGR_ULOCK()		PLL_ULOCK(&upsched_listhd)
+#define UPSCHED_MGR_HASLOCK()		PLL_HASLOCK(&upsched_listhd)
 #define UPSCHED_MGR_RLOCK()		PLL_RLOCK(&upsched_listhd)
 #define UPSCHED_MGR_URLOCK(lk)		PLL_URLOCK(&upsched_listhd, (lk))
 #define UPSCHED_MGR_ENSURE_LOCKED()	PLL_ENSURE_LOCKED(&upsched_listhd)

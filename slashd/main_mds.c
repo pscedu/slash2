@@ -335,10 +335,8 @@ main(int argc, char *argv[])
 	slm_workers_spawn();
 	slmcohthr_spawn();
 	slmbmaptimeothr_spawn();
-	slm_rpc_initsvc();
-
-	/* start an update scheduler thread for each site */
 	slmupschedthr_spawnall();
+	slm_rpc_initsvc();
 
 	mds_repl_init();
 	slmtimerthr_spawn();

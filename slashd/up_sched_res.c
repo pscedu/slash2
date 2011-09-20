@@ -156,8 +156,14 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 		UPSCHED_MGR_ULOCK();
 }
 
-/*
- * uswi_trykill - try to free the work item if its reference count is 2.
+/**
+ * uswi_trykill - Try to release a resource update scheduler work item.
+ * This should be invoked by uswi_unref() only when there are no
+ * remaining references to the structure (i.e. one for LOOKUP and one
+ * for TREE membership of the structure) when it has been decided that
+ * the uswi no longer needs to stay in memory (i.e. there is no more
+ * work to be done by the update scheduler engine).
+ * @wk: the little guy to try to release.
  */
 __static int
 uswi_trykill(struct up_sched_work_item *wk)
@@ -176,9 +182,9 @@ uswi_trykill(struct up_sched_work_item *wk)
 	UPSCHED_MGR_RLOCK();
 	USWI_LOCK(wk);
 	if (psc_atomic32_read(&wk->uswi_refcnt) != 2) {
-		wk->uswi_flags &= ~USWIF_DIE;
-		USWI_ULOCK(wk);
 		UPSCHED_MGR_ULOCK();
+		wk->uswi_flags &= ~USWIF_DIE;
+		DEBUG_USWI(PLL_DEBUG, wk, "abort trykill");
 		return (0);
 	}
 	USWI_DECREF(wk, USWI_REFT_LOOKUP);
@@ -577,9 +583,7 @@ slmupschedthr_main(struct psc_thread *thr)
 			USWI_INCREF(wk, USWI_REFT_LOOKUP);
 			freelock(&smi->smi_lock);
 
-			DEBUG_USWI(PLL_DEBUG, (wk), "attempt to grab lock");
 			rc = uswi_access_lock(wk);
-			DEBUG_USWI(PLL_DEBUG, (wk), "grabbed lock [rc=%d]", (rc));
 			if (rc == 0) {
 				/* repl must be going away, drop it */
 				slmupschedthr_removeq(wk);
@@ -925,7 +929,8 @@ slmupschedthr_spawnall(void)
  *	request.  This routine assumes the refcnt has already been
  *	bumped.
  * @wk: update_scheduler request to access, locked on return.
- * Returns Boolean true on success or false if the request is going away.
+ * Returns Boolean true on success or false if the request is going
+ * away.
  */
 int
 _uswi_access(struct up_sched_work_item *wk, int keep_locked)
@@ -965,9 +970,7 @@ int
 _uswi_unref(const struct pfl_callerinfo *pci,
     struct up_sched_work_item *wk)
 {
-	int locked;
-
-	locked = psc_mutex_reqlock(&wk->uswi_mutex);
+	psc_mutex_reqlock(&wk->uswi_mutex);
 	wk->uswi_flags &= ~USWIF_BUSY;
 
 	if (psc_atomic32_read(&wk->uswi_refcnt) == 2 &&
@@ -977,7 +980,7 @@ _uswi_unref(const struct pfl_callerinfo *pci,
 	USWI_DECREF(wk, USWI_REFT_LOOKUP);
 	/* XXX this wakeup should be conditional */
 	psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
-	psc_mutex_ureqlock(&wk->uswi_mutex, locked);
+	psc_mutex_unlock(&wk->uswi_mutex);
 	return (0);
 }
 
@@ -1181,6 +1184,8 @@ uswi_findoradd(const struct slash_fidgen *fgp,
 	UPSCHED_MGR_LOCK();
 	*wkp = uswi_find(fgp);
 	if (*wkp) {
+		if (UPSCHED_MGR_HASLOCK())
+			UPSCHED_MGR_ULOCK();
 		fcmh_op_done_type(newrq->uswi_fcmh,
 		    FCMH_OPCNT_LOOKUP_FIDC);
 		goto out;
@@ -1200,7 +1205,6 @@ uswi_findoradd(const struct slash_fidgen *fgp,
 	newrq = NULL;
 
  out:
-
 	if (rc && newrq && newrq->uswi_fcmh)
 		fcmh_op_done_type(newrq->uswi_fcmh,
 		    FCMH_OPCNT_LOOKUP_FIDC);
