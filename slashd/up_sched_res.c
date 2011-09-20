@@ -176,9 +176,9 @@ uswi_trykill(struct up_sched_work_item *wk)
 	UPSCHED_MGR_RLOCK();
 	USWI_LOCK(wk);
 	if (psc_atomic32_read(&wk->uswi_refcnt) != 2) {
+		wk->uswi_flags &= ~USWIF_DIE;
 		USWI_ULOCK(wk);
 		UPSCHED_MGR_ULOCK();
-		wk->uswi_flags &= ~USWIF_DIE;
 		return (0);
 	}
 	USWI_DECREF(wk, USWI_REFT_LOOKUP);
@@ -965,7 +965,9 @@ int
 _uswi_unref(const struct pfl_callerinfo *pci,
     struct up_sched_work_item *wk)
 {
-	psc_mutex_reqlock(&wk->uswi_mutex);
+	int locked;
+
+	locked = psc_mutex_reqlock(&wk->uswi_mutex);
 	wk->uswi_flags &= ~USWIF_BUSY;
 
 	if (psc_atomic32_read(&wk->uswi_refcnt) == 2 &&
@@ -975,7 +977,7 @@ _uswi_unref(const struct pfl_callerinfo *pci,
 	USWI_DECREF(wk, USWI_REFT_LOOKUP);
 	/* XXX this wakeup should be conditional */
 	psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
-	psc_mutex_unlock(&wk->uswi_mutex);
+	psc_mutex_ureqlock(&wk->uswi_mutex, locked);
 	return (0);
 }
 
