@@ -156,6 +156,9 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 		UPSCHED_MGR_ULOCK();
 }
 
+/*
+ * uswi_trykill - try to free the work item if its reference count is 2.
+ */
 __static int
 uswi_trykill(struct up_sched_work_item *wk)
 {
@@ -174,7 +177,7 @@ uswi_trykill(struct up_sched_work_item *wk)
 	USWI_LOCK(wk);
 	if (psc_atomic32_read(&wk->uswi_refcnt) != 2) {
 		UPSCHED_MGR_ULOCK();
-		wk->uswi_flags &= USWIF_DIE;
+		wk->uswi_flags &= ~USWIF_DIE;
 		return (0);
 	}
 	USWI_DECREF(wk, USWI_REFT_LOOKUP);
@@ -573,7 +576,9 @@ slmupschedthr_main(struct psc_thread *thr)
 			USWI_INCREF(wk, USWI_REFT_LOOKUP);
 			freelock(&smi->smi_lock);
 
+			DEBUG_USWI(PLL_DEBUG, (wk), "attemp to grab lock");
 			rc = uswi_access_lock(wk);
+			DEBUG_USWI(PLL_DEBUG, (wk), "grabbed lock [rc=%d]", (rc));
 			if (rc == 0) {
 				/* repl must be going away, drop it */
 				slmupschedthr_removeq(wk);
