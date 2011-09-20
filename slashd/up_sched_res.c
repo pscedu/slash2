@@ -176,6 +176,7 @@ uswi_trykill(struct up_sched_work_item *wk)
 	UPSCHED_MGR_RLOCK();
 	USWI_LOCK(wk);
 	if (psc_atomic32_read(&wk->uswi_refcnt) != 2) {
+		USWI_ULOCK(wk);
 		UPSCHED_MGR_ULOCK();
 		wk->uswi_flags &= ~USWIF_DIE;
 		return (0);
