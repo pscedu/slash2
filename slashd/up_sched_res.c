@@ -577,7 +577,7 @@ slmupschedthr_main(struct psc_thread *thr)
 			USWI_INCREF(wk, USWI_REFT_LOOKUP);
 			freelock(&smi->smi_lock);
 
-			DEBUG_USWI(PLL_DEBUG, (wk), "attemp to grab lock");
+			DEBUG_USWI(PLL_DEBUG, (wk), "attempt to grab lock");
 			rc = uswi_access_lock(wk);
 			DEBUG_USWI(PLL_DEBUG, (wk), "grabbed lock [rc=%d]", (rc));
 			if (rc == 0) {
