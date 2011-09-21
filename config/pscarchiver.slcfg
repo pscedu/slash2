@@ -37,7 +37,7 @@ site @PSCARCH {
 		desc	= "PSC test I/O node";
 		type	= standalone_fs;
 		id	= 2;
-		nodes	= peel0-ib2.pvt;
+		nodes	= peel0-ib2.pvt|peelb0;
 		fsroot	= /local/s2io;
 	}
 
