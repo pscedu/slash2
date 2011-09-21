@@ -33,9 +33,9 @@ will be forced to restart all clients and sliods.
 
 4) DIO needs to be completed for AIO
 
-* slm_ptrunc_wake_clients() may need to use rpcsets or nbreqsets to deal 
+* slm_ptrunc_wake_clients() may need to use rpcsets or nbreqsets to deal
 with large numbers of blocking clients.  Or, the algorithm should be modified
-so that the clients retry after some brief sleep period.  (I believe this is 
+so that the clients retry after some brief sleep period.  (I believe this is
 how DIO works).
 
 -----------------------------------------------------------------------
@@ -474,6 +474,7 @@ reimport
 
     $ cp myfile .sl/foo@BAR
     $ cat .slrpl/myfile
+
 - preserve mtim/atim during import
 
 archiver
@@ -484,4 +485,3 @@ archiver
 - zfs stats for OpenTSDB, disk failure notification
 - /arc on firehose 3
 - work out logistics for where MDS zsnap backups go
-- remote far support
