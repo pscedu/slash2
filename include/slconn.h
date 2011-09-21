@@ -292,5 +292,6 @@ int	 slrpc_allocrep(struct pscrpc_request *, void *, int, void *,
 extern struct psc_dynarray	 lnet_prids;
 extern struct psc_lockedlist	 client_csvcs;
 extern struct sl_expcli_ops	 sl_expcli_ops;
+extern struct pscrpc_nbreqset	*sl_nbrqset;
 
 #endif /* _SLCONN_H_ */

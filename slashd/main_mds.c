@@ -63,8 +63,6 @@ const char		*progname;
 
 struct psc_poolmaster	 upsched_poolmaster;
 
-struct pscrpc_nbreqset	*slmnbrqset;
-
 struct slash_creds	 rootcreds = { 0, 0 };
 struct pscfs		 pscfs;
 uint64_t		 fsuuid;
@@ -323,8 +321,8 @@ main(int argc, char *argv[])
 	lc_reginit(&inflBmapCbs, struct bmap_mds_lease, bml_coh_lentry,
 	    "inflightbml");
 
-	slmnbrqset = pscrpc_nbreqset_init(NULL, NULL);
-	pscrpc_nbreapthr_spawn(slmnbrqset, SLMTHRT_NBRQ, "slmnbrqthr");
+	sl_nbrqset = pscrpc_nbreqset_init(NULL, NULL);
+	pscrpc_nbreapthr_spawn(sl_nbrqset, SLMTHRT_NBRQ, "slmnbrqthr");
 
 	mds_journal_init(disable_propagation);
 	mds_odtable_load(&mdsBmapAssignTable, SL_FN_BMAP_ODTAB, "bmapassign");

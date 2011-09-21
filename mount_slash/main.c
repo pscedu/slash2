@@ -2267,8 +2267,8 @@ msl_init(void)
 	psc_iostats_init(&msl_rdcache_stat, "rd-cache-hit");
 	psc_iostats_init(&msl_racache_stat, "ra-cache-hit");
 
-	slcnbrqset = pscrpc_nbreqset_init(NULL, NULL);
-	pscrpc_nbreapthr_spawn(slcnbrqset, MSTHRT_NBRQ, "msnbrqthr");
+	sl_nbrqset = pscrpc_nbreqset_init(NULL, NULL);
+	pscrpc_nbreapthr_spawn(sl_nbrqset, MSTHRT_NBRQ, "msnbrqthr");
 
 	msbmapflushthr_spawn();
 
