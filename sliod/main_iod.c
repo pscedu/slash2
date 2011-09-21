@@ -109,8 +109,8 @@ int
 main(int argc, char *argv[])
 {
 	const char *cfn, *sfn, *p, *prefmds;
-	int rc, c;
 	sigset_t signal_set;
+	int rc, c;
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -151,8 +151,8 @@ main(int argc, char *argv[])
 	if (argc > 1)
 		usage();
 
- 	sigemptyset(&signal_set);
- 	sigaddset(&signal_set, SIGIO);
+	sigemptyset(&signal_set);
+	sigaddset(&signal_set, SIGIO);
 	sigprocmask(SIG_BLOCK, &signal_set, NULL);
 
 	pscthr_init(SLITHRT_CTL, 0, NULL, NULL,
