@@ -372,7 +372,7 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 
 int
 slm_mkdir(struct srm_mkdir_req *mq, struct srm_mkdir_rep *mp,
-    mdsio_fid_t *mfp)
+    struct fidc_membh **dp)
 {
 	struct fidc_membh *p = NULL, *c = NULL;
 
@@ -396,7 +396,7 @@ slm_mkdir(struct srm_mkdir_req *mq, struct srm_mkdir_rep *mp,
 
 	mds_reserve_slot(1);
 	mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(p), mq->name, &mq->sstb,
-	    0, &mp->cattr, mfp, mdslog_namespace,
+	    0, &mp->cattr, NULL, mdslog_namespace,
 	    slm_get_next_slashfid, 0);
 	mds_unreserve_slot(1);
 
@@ -411,6 +411,11 @@ slm_mkdir(struct srm_mkdir_req *mq, struct srm_mkdir_rep *mp,
 	 */
 	if (slm_fcmh_get(&mp->cattr.sst_fg, &c) == 0)
 		slm_fcmh_endow_nolog(p, c);
+
+	if (dp) {
+		*dp = c;
+		c = NULL;
+	}
 
  out:
 	if (p)
@@ -728,7 +733,6 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 		goto out;
 	}
 
-
 	/* if we get here, op and np must be owned by the current MDS */
 	mds_reserve_slot(2);
 	mp->rc = mdsio_rename(fcmh_2_mdsio_fid(op), from,
@@ -744,10 +748,14 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 		if (mdsio_lookup(fcmh_2_mdsio_fid(np), to, NULL,
 		    &rootcreds, &c_sstb) == 0 &&
 		    slm_fcmh_get(&c_sstb.sst_fg, &c) == 0) {
+			struct srt_stat sstb;
+
 			FCMH_LOCK(c);
-			fcmh_wait_locked(c, c->fcmh_flags & FCMH_IN_SETATTR);
-			SL_GETTIMESPEC(&c->fcmh_sstb.sst_ctim);
-			mds_fcmh_setattr(c, PSCFS_SETATTRF_CTIME);
+			fcmh_wait_locked(c, c->fcmh_flags &
+			    FCMH_IN_SETATTR);
+			SL_GETTIMESPEC(&sstb.sst_ctim);
+			mds_fcmh_setattr_nolog(c, PSCFS_SETATTRF_CTIME,
+			    &sstb);
 			fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 		}
 	}
@@ -798,7 +806,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			 * updates from the sliod may be pending for
 			 * this generation.
 			 */
-			fcmh_2_gen(fcmh)++;
+			mq->attr.sst_fg.fg_gen = fcmh_2_gen(fcmh) + 1;
 			to_set |= SL_SETATTRF_GEN;
 			unbump = 1;
 		} else {
@@ -824,11 +832,8 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			 * and used.  Otherwise, it will be NULL, and
 			 * we'll use the mdsio_fid.
 			 */
-			mds_reserve_slot(1);
-			mp->rc = mdsio_setattr(fcmh_2_mdsio_fid(fcmh),
-			    &mq->attr, to_set, &rootcreds, &mp->attr,
-			    fcmh_2_mdsio_data(fcmh), mdslog_namespace);
-			mds_unreserve_slot(1);
+			mp->rc = mds_fcmh_setattr(fcmh, to_set,
+			    &mq->attr);
 		}
 	}
 
@@ -847,9 +852,6 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 		}
 
 		slm_setattr_core(fcmh, &mq->attr, to_set | tadj);
-
-		/* refresh to latest from mdsio layer */
-		fcmh->fcmh_sstb = mp->attr;
 	}
 
  out:

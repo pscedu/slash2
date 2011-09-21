@@ -300,8 +300,8 @@ mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios)
 	struct slash_inode_od *ino = fcmh_2_ino(b->bcm_fcmh);
 	struct slash_inode_extras_od *inox = NULL;
 	struct psc_dynarray a = DYNARRAY_INIT;
-	sl_ios_id_t ios;
 	int i, off, val, nr, repls = 0, nb;
+	sl_ios_id_t ios;
 
 	FCMH_LOCK(b->bcm_fcmh);
 	nr = fcmh_2_nrepls(b->bcm_fcmh);
@@ -1530,10 +1530,15 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
 	}
 
 	if (fcmh->fcmh_sstb.sst_mode & (S_ISGID | S_ISUID)) {
+		struct srt_stat sstb;
+
 		FCMH_LOCK(fcmh);
-		fcmh_wait_locked(fcmh, fcmh->fcmh_flags & FCMH_IN_SETATTR);
-		fcmh->fcmh_sstb.sst_mode &= ~(S_ISGID | S_ISUID);
-		mds_fcmh_setattr(fcmh, PSCFS_SETATTRF_MODE);
+		fcmh_wait_locked(fcmh, fcmh->fcmh_flags &
+		    FCMH_IN_SETATTR);
+		sstb.sst_mode = fcmh->fcmh_sstb.sst_mode &
+		    ~(S_ISGID | S_ISUID);
+		mds_fcmh_setattr_nolog(fcmh, PSCFS_SETATTRF_MODE,
+		    &sstb);
 		FCMH_ULOCK(fcmh);
 	}
 
@@ -1918,8 +1923,11 @@ slm_ptrunc_prepare(struct slm_workrq *wkrq)
 	if (fmi->fmi_ptrunc_size >= fcmh_2_fsz(fcmh)) {
 		fcmh_wait_locked(fcmh, fcmh->fcmh_flags & FCMH_IN_SETATTR);
 		if (fmi->fmi_ptrunc_size > fcmh_2_fsz(fcmh)) {
-			fcmh_2_fsz(fcmh) = fmi->fmi_ptrunc_size;
-			mds_fcmh_setattr(fcmh, PSCFS_SETATTRF_DATASIZE);
+			struct srt_stat sstb;
+
+			sstb.sst_size = fmi->fmi_ptrunc_size;
+			mds_fcmh_setattr_nolog(fcmh,
+			    PSCFS_SETATTRF_DATASIZE, &sstb);
 		}
 		fcmh->fcmh_flags &= ~FCMH_IN_PTRUNC;
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_WORKER);

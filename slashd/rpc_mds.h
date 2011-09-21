@@ -91,7 +91,7 @@ int	slm_rmm_forward_namespace(int, struct slash_fidgen *,
 	   struct slash_fidgen *, char *, char *, uint32_t,
 	   const struct slash_creds *, struct srt_stat *, int32_t);
 
-int	slm_mkdir(struct srm_mkdir_req *, struct srm_mkdir_rep *, mdsio_fid_t *);
+int	slm_mkdir(struct srm_mkdir_req *, struct srm_mkdir_rep *, struct fidc_membh **);
 
 /* aliases for connection management */
 #define slm_getmcsvcx(resm, exp)					\

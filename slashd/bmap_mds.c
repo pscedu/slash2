@@ -150,7 +150,7 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 }
 
 /**
- * mds_bmap_write - update a bmap of an inode. Note we must reserve log
+ * mds_bmap_write - Update a bmap of an inode.  Note we must reserve log
  *     space if logf is given.
  */
 int
@@ -237,6 +237,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 	struct slash_inode_handle *ih;
 	struct sl_mds_crc_log crclog;
 	struct fidc_membh *f;
+	struct srt_stat sstb;
 	uint32_t utimgen, i;
 	sl_ios_id_t iosid;
 	int rc, fl, idx;
@@ -253,15 +254,16 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 	idx = mds_repl_ios_lookup(ih, iosid);
 	if (idx < 0)
 		psc_fatal("not found");
-	fcmh_2_nblks(f) += crcup->nblks - fcmh_2_repl_nblks(f, idx);
+	sstb.sst_blocks = fcmh_2_nblks(f) + crcup->nblks -
+	    fcmh_2_repl_nblks(f, idx);
 	fl = SL_SETATTRF_NBLKS;
 
 	if (crcup->fsize > fcmh_2_fsz(f)) {
-		fcmh_2_fsz(f) = crcup->fsize;
+		sstb.sst_size = crcup->fsize;
 		fl |= PSCFS_SETATTRF_DATASIZE;
 		crcup->extend = 1;
 	}
-	mds_fcmh_setattr(f, fl);
+	mds_fcmh_setattr_nolog(f, fl, &sstb);
 	utimgen = f->fcmh_sstb.sst_utimgen;
 
 	if (utimgen < crcup->utimgen)

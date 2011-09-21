@@ -59,10 +59,13 @@ struct fcmh_mds_info {
 #define slm_fcmh_get(fgp, fp)	fidc_lookup((fgp), FIDC_LOOKUP_CREATE, NULL, 0, (fp))
 #define slm_fcmh_peek(fgp, fp)	fidc_lookup((fgp), FIDC_LOOKUP_NONE, NULL, 0, (fp))
 
-int	mds_fcmh_setattr(struct fidc_membh *, int);
+#define	mds_fcmh_setattr(f, to_set, sstb)	_mds_fcmh_setattr((f), (to_set), (sstb), 1)
+#define	mds_fcmh_setattr_nolog(f, to_set, sstb)	_mds_fcmh_setattr((f), (to_set), (sstb), 0)
 
-#define slm_fcmh_endow(p, c)	_slm_fcmh_endow((p), (c), 1)
-#define slm_fcmh_endow_nolog(p, c) _slm_fcmh_endow((p), (c), 0)
+int	_mds_fcmh_setattr(struct fidc_membh *, int, const struct srt_stat *, int);
+
+#define slm_fcmh_endow(p, c)			_slm_fcmh_endow((p), (c), 1)
+#define slm_fcmh_endow_nolog(p, c)		_slm_fcmh_endow((p), (c), 0)
 
 int	_slm_fcmh_endow(struct fidc_membh *, struct fidc_membh *, int);
 

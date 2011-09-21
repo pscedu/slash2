@@ -460,6 +460,24 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
+	FCMH_LOCK(c);
+	fcmh_wait_locked(c, c->fcmh_flags & FCMH_IN_SETATTR);
+	sstb.sst_fg.fg_gen++;
+	c->fcmh_sstb.sst_size = 0;
+	c->fcmh_sstb.sst_blocks = 0;
+	c->fcmh_sstb.sst_atim = mq->sstb.sst_atim;
+	c->fcmh_sstb.sst_mtim = mq->sstb.sst_mtim;
+	c->fcmh_sstb.sst_ctim = mq->sstb.sst_ctim;
+	c->fcmh_sstb.sst_uid = mq->sstb.sst_uid;
+	c->fcmh_sstb.sst_gid = mq->sstb.sst_gid;
+	mp->rc = mds_fcmh_setattr(c, PSCFS_SETATTRF_UID |
+	    PSCFS_SETATTRF_GID | PSCFS_SETATTRF_DATASIZE |
+	    SL_SETATTRF_GEN | PSCFS_SETATTRF_MTIME |
+	    PSCFS_SETATTRF_CTIME | PSCFS_SETATTRF_ATIME, &sstb);
+	FCMH_ULOCK(c);
+
+	/* XXX if setattr failed, revert gen++ */
+
 	slm_fcmh_endow_nolog(p, c);
 	FCMH_LOCK(c);
 	i = fcmh_2_ino(c)->ino_nrepls++;
@@ -478,7 +496,9 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 			goto out;
 		for (i = 0; i < SLASH_SLVRS_PER_BMAP &&
 		    fsiz > 0; fsiz -= SLASH_SLVR_SIZE, i++)
-			/* Mark that data exists but no CRCs are available.
+			/*
+			 * Mark that data exists but no CRCs are
+			 * available.
 			 */
 			b->bcm_crcstates[i] |= BMAP_SLVR_DATA |
 			    BMAP_SLVR_CRCABSENT;
@@ -489,16 +509,13 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 		mp->rc = mds_bmap_write_repls_rel(b);
 		if (mp->rc)
 			goto out;
+		/* XXX bump bgen */
 	}
 
-	mds_reserve_slot(1);
-	mp->rc = mdsio_setattr(0, &mq->sstb,
-	    PSCFS_SETATTRF_DATASIZE | PSCFS_SETATTRF_UID |
-	    PSCFS_SETATTRF_GID | PSCFS_SETATTRF_ATIME |
-	    PSCFS_SETATTRF_MTIME | PSCFS_SETATTRF_CTIME |
-	    SL_SETATTRF_NBLKS, &rootcreds, NULL,
-	    fcmh_2_mdsio_data(c), mdslog_namespace);
-	mds_unreserve_slot(1);
+	FCMH_LOCK(c);
+	fcmh_wait_locked(c, c->fcmh_flags & FCMH_IN_SETATTR);
+	mp->rc = mds_fcmh_setattr(c, PSCFS_SETATTRF_DATASIZE |
+	    SL_SETATTRF_NBLKS, &mq->sstb);
 
  out:
 	/*
@@ -517,24 +534,23 @@ slm_rmi_handle_mkdir(struct pscrpc_request *rq)
 {
 	struct srm_mkdir_req *mq;
 	struct srm_mkdir_rep *mp;
+	struct fidc_membh *d;
 	struct srt_stat sstb;
-	mdsio_fid_t inum;
+	int rc;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	sstb = mq->sstb;
 	mq->sstb.sst_uid = 0;
 	mq->sstb.sst_gid = 0;
-	mp->rc = slm_mkdir(mq, mp, &inum);
-	if (mp->rc)
-		return (0);
-	mds_reserve_slot(1);
-	mp->rc = mdsio_setattr(inum, &sstb,
-	    PSCFS_SETATTRF_DATASIZE | PSCFS_SETATTRF_UID |
-	    PSCFS_SETATTRF_GID | PSCFS_SETATTRF_ATIME |
-	    PSCFS_SETATTRF_MTIME | PSCFS_SETATTRF_CTIME |
-	    SL_SETATTRF_NBLKS, &rootcreds, NULL, NULL,
-	    mdslog_namespace);
-	mds_unreserve_slot(1);
+	rc = slm_mkdir(mq, mp, &d);
+	if (rc || mp->rc)
+		return (rc);
+	FCMH_LOCK(d);
+	mp->rc = mds_fcmh_setattr(d,
+	    PSCFS_SETATTRF_UID | PSCFS_SETATTRF_GID |
+	    PSCFS_SETATTRF_ATIME | PSCFS_SETATTRF_MTIME |
+	    PSCFS_SETATTRF_CTIME, &sstb);
+	fcmh_op_done_type(d, FCMH_OPCNT_LOOKUP_FIDC);
 	return (0);
 }
 

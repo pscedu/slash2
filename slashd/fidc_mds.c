@@ -37,7 +37,8 @@
 #include "slashd.h"
 
 int
-mds_fcmh_setattr(struct fidc_membh *f, int flags)
+_mds_fcmh_setattr(struct fidc_membh *f, int to_set,
+    const struct srt_stat *sstb, int log)
 {
 	int rc = 0;
 
@@ -49,8 +50,13 @@ mds_fcmh_setattr(struct fidc_membh *f, int flags)
 	DEBUG_FCMH(PLL_INFO, f, "attributes updated, writing");
 
 	FCMH_ULOCK(f);
-	rc = mdsio_setattr(fcmh_2_mdsio_fid(f), &f->fcmh_sstb, flags,
-	    &rootcreds, NULL, fcmh_2_fmi(f)->fmi_mdsio_data, NULL);
+	if (log)
+		mds_reserve_slot(1);
+	rc = mdsio_setattr(fcmh_2_mdsio_fid(f), sstb, to_set,
+	    &rootcreds, &f->fcmh_sstb, fcmh_2_mdsio_data(f),
+	    log ? mdslog_namespace : NULL);
+	if (log)
+		mds_unreserve_slot(1);
 	FCMH_LOCK(f);
 	psc_assert(f->fcmh_flags & FCMH_IN_SETATTR);
 
@@ -143,10 +149,12 @@ _slm_fcmh_endow(struct fidc_membh *p, struct fidc_membh *c, int log)
 
 	FCMH_LOCK(c);
 	if (fcmh_isdir(c)) {
-		c->fcmh_sstb.sstd_freplpol = pol;
+		struct srt_stat sstb;
+
+		sstb.sstd_freplpol = pol;
 //		c->nrepls =
 //		c->memcpy();
-		mds_fcmh_setattr(c, SL_SETATTRF_FREPLPOL);
+		mds_fcmh_setattr(c, SL_SETATTRF_FREPLPOL, &sstb);
 		FCMH_ULOCK(c);
 	} else {
 		fcmh_wait_locked(c, c->fcmh_flags & FCMH_IN_SETATTR);

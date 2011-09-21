@@ -72,6 +72,7 @@ mds_replay_bmap(void *jent, int op)
 		break;
 	case B_REPLAY_OP_CRC: {
 		struct slash_inode_handle *ih;
+		struct srt_stat sstb;
 		int fl, idx;
 
 		FCMH_LOCK(f);
@@ -82,7 +83,7 @@ mds_replay_bmap(void *jent, int op)
 			    "table", sjbc->sjbc_iosid);
 			goto out;
 		}
-		f->fcmh_sstb.sst_blocks = sjbc->sjbc_aggr_nblks;
+		sstb.sst_blocks = sjbc->sjbc_aggr_nblks;
 		fcmh_set_repl_nblks(f, idx, sjbc->sjbc_repl_nblks);
 		if (idx >= SL_DEF_REPLICAS)
 			rc = mds_inox_write(ih, NULL, NULL);
@@ -96,10 +97,10 @@ mds_replay_bmap(void *jent, int op)
 		/* Apply the filesize from the journal entry.
 		 */
 		if (sjbc->sjbc_extend) {
-			f->fcmh_sstb.sst_size = sjbc->sjbc_fsize;
+			sstb.sst_size = sjbc->sjbc_fsize;
 			fl |= PSCFS_SETATTRF_DATASIZE;
 		}
-		rc = mds_fcmh_setattr(f, fl);
+		rc = mds_fcmh_setattr_nolog(f, fl, &sstb);
 		if (rc)
 			goto out;
 
