@@ -149,8 +149,8 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 	return (0);
 }
 
-/*
- * mds_bmap_write - update a bmap of an inode. Note we must reserve log 
+/**
+ * mds_bmap_write - update a bmap of an inode. Note we must reserve log
  *     space if logf is given.
  */
 int

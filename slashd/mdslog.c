@@ -719,7 +719,7 @@ mds_update_lwm(int batchno)
 	struct resprof_mds_info *rpmi;
 	struct sl_resm *resm;
 
-	SL_MDS_WALK(resm, 
+	SL_MDS_WALK(resm,
 		if (resm == nodeResm)
 			continue;
 		rpmi = resm2rpmi(resm);

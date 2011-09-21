@@ -247,10 +247,10 @@ mds_bmap_ion_restart(struct bmap_mds_lease *bml)
 }
 
 /**
- * mds_resm_tryconnect - Try to connect to a member of the given I/O 
+ * mds_resm_tryconnect - Try to connect to a member of the given I/O
  *   resource presumably in preparation for issuance of a write bmap.
  * @res: the I/O resource to connect
- * @nb: block (or not) when calling slm_geticsvc(). 
+ * @nb: block (or not) when calling slm_geticsvc().
  * Notes:  mds_resm_tryconnect() assumes that SLREST_CLUSTER_NOSHARE_LFS I/O
  *   systems have a single resource member.
  */
@@ -264,13 +264,13 @@ mds_resm_tryconnect(struct sl_resource *res, int nb)
 
 	for (i = 0; i < psc_dynarray_len(&res->res_members); i++) {
 		spinlock(&rpmi->rpmi_lock);
-		resm = psc_dynarray_getpos(&res->res_members, 
+		resm = psc_dynarray_getpos(&res->res_members,
 					   slm_get_rpmi_idx(res));
 		freelock(&rpmi->rpmi_lock);
-		
-		psclog_info("trying res(%s) ion(%s)", res->res_name, 
+
+		psclog_info("trying res(%s) ion(%s)", res->res_name,
 			    resm->resm_addrbuf);
-		
+
 		csvc = nb ? slm_geticsvc_nb(resm, NULL) : slm_geticsvc(resm);
 		if (csvc)
 			break;
@@ -313,36 +313,36 @@ mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios)
 	}
 
 	for (i = 0, off = 0; i < nr; i++, off += SL_BITS_PER_REPLICA) {
-                val = SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls, off);
+		val = SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls, off);
 		if (val != BREPLST_INVALID)
 			/* Determine if there are any active replicas.
 			 */
 			repls++;
-		
+
 		if (val != BREPLST_VALID)
 			continue;
-		
+
 		ios = (i < SL_DEF_REPLICAS) ? ino->ino_repls[i].bs_id :
 			inox->inox_repls[i - SL_DEF_REPLICAS].bs_id;
 
 		psc_dynarray_add(&a, libsl_id2res(ios));
 	}
-	
+
 	if (repls) {
 		struct sl_resource *tres;
 
 		if (!psc_dynarray_len(&a)) {
 			/* No replicas were marked BREPLST_VALID
 			 */
-			DEBUG_BMAP(PLL_ERROR, b, 
+			DEBUG_BMAP(PLL_ERROR, b,
 			   "no replicas marked BREPLST_VALID");
 			return (NULL);
 		}
-		/* XXX Here we should employ a function which sorts the 
-		 *   array to place the more appropriate IOS's towards 
+		/* XXX Here we should employ a function which sorts the
+		 *   array to place the more appropriate IOS's towards
 		 *   the front of array.
 		 *
-		 * For now just try to locate the PIOS and move it to the 
+		 * For now just try to locate the PIOS and move it to the
 		 *   front.
 		 */
 		DYNARRAY_FOREACH(res, i, &a) {
@@ -358,7 +358,7 @@ mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios)
 		/* There are no valid replicas.  Populate the resource
 		 *   array with the pios followed by any other IOS which
 		 *   are listed as replicas.
-		 * 
+		 *
 		 * XXX In the future it may be wise to rank all available
 		 *   IOS's and place them into the array.
 		 */
@@ -417,15 +417,15 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	BMAP_ULOCK(bmap);
 
 	resm = mds_resm_select(bmap, pios);
-	if (!resm) {		
+	if (!resm) {
 		BMAP_LOCK(bmap);
 		bmap->bcm_flags |= BMAP_MDS_NOION;
 		BMAP_ULOCK(bmap);
-		
+
 		bml->bml_flags |= BML_ASSFAIL;
-		
+
 		psclog_warnx("unable to contact ION for lease");
-		
+
 		return (-SLERR_ION_OFFLINE);
 	}
 
