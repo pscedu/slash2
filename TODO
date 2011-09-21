@@ -454,28 +454,31 @@ API rename
 - only purge additional NIDs if unroutable in slcfg, leave one (LNET_ROUTES)
    - better yet, if in LNET_ROUTES, leave in tact
    - if no LNET_ROUTES, construct
-- add lnet_networks to slcfg
+- add authbuf to slcfg
 
 reimport
 - add a scanner to DELETE things in .slmd/fidns with st_nlink==1 in sliod
 
-- kill share/nbrqthr.c and replace with code in nb.c
+- debug lnrtd
 - slictl reimport should mark GARBAGE for repls instead of INVALID
+- cluster_noshare replication changes
+- fix fabrication of .. inum in zfsslash2_readdir to fix mount_slash
+  .slfidns lookups
+- preserve mtim/atim during import
+
 - watch out for EMFILE on freebsd
 - msl missed refcnt on connection errors
 - wolverine/single cpu missed wakeup
-- cluster_noshare replication changes
-- debug lnrtd
 - research holdup in fbsd zio_write_intr
 - remote syslog
-- fix fabrication of .. inum in zfsslash2_readdir to fix mount_slash
-  .slfidns lookups
 - file system-level replication controls, e.g.
 
     $ cp myfile .sl/foo@BAR
     $ cat .slrpl/myfile
 
-- preserve mtim/atim during import
+- kill -D argument; provide arg/slcfg var for authbuf key
+- add -D arg to daemons for to stop daemonization and make that behavior
+  default in developer builds
 
 archiver
 - install SLASH2 on sense/illusion
@@ -483,5 +486,4 @@ archiver
 - phase 2 migration
    (o) reconstruct hard links in dmf space from sl2 objects
 - zfs stats for OpenTSDB, disk failure notification
-- /arc on firehose 3
 - work out logistics for where MDS zsnap backups go
