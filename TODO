@@ -464,7 +464,6 @@ reimport
 - cluster_noshare replication changes
 - fix fabrication of .. inum in zfsslash2_readdir to fix mount_slash
   .slfidns lookups
-- preserve mtim/atim during import
 
 - replay setattr (not result of SETATTR, but result of another action
   which indirectly issues setattr code) bugs:
