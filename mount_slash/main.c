@@ -2267,7 +2267,9 @@ msl_init(void)
 	psc_iostats_init(&msl_rdcache_stat, "rd-cache-hit");
 	psc_iostats_init(&msl_racache_stat, "ra-cache-hit");
 
-	sl_nbrqthr_spawn(MSTHRT_NBRQ, "msnbrqthr");
+	slcnbrqset = pscrpc_nbreqset_init(NULL, NULL);
+	pscrpc_nbreapthr_spawn(slcnbrqset, MSTHRT_NBRQ, "msnbrqthr");
+
 	msbmapflushthr_spawn();
 
 	if ((name = getenv("SLASH_MDS_NID")) == NULL)

@@ -63,6 +63,8 @@ const char		*progname;
 
 struct psc_poolmaster	 upsched_poolmaster;
 
+struct pscrpc_nbreqset	*slmnbrqset;
+
 struct slash_creds	 rootcreds = { 0, 0 };
 struct pscfs		 pscfs;
 uint64_t		 fsuuid;
@@ -316,20 +318,17 @@ main(int argc, char *argv[])
 
 	lc_reginit(&slm_replst_workq, struct slm_replst_workreq,
 	    rsw_lentry, "replstwkq");
-
 	lc_reginit(&pndgBmapCbs, struct bmap_mds_lease, bml_coh_lentry,
 	    "pendingbml");
-
 	lc_reginit(&inflBmapCbs, struct bmap_mds_lease, bml_coh_lentry,
 	    "inflightbml");
 
-	sl_nbrqthr_spawn(SLMTHRT_NBRQ, "slmnbrqthr");
+	slmnbrqset = pscrpc_nbreqset_init(NULL, NULL);
+	pscrpc_nbreapthr_spawn(slmnbrqset, SLMTHRT_NBRQ, "slmnbrqthr");
+
 	mds_journal_init(disable_propagation);
-
 	mds_odtable_load(&mdsBmapAssignTable, SL_FN_BMAP_ODTAB, "bmapassign");
-
 	mds_bmap_timeotbl_init();
-
 	mds_odtable_scan(mdsBmapAssignTable, mds_bia_odtable_startup_cb);
 
 	slm_workers_spawn();
