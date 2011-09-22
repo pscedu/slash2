@@ -230,7 +230,8 @@ libsl_init(int pscnet_mode, int ismds)
 	}
 
 	lnetstr[0] = '\0';
-	psclist_for_each_entry_safe(lp, lpnext, &cfg_lnetif_pairs, lentry) {
+	psclist_for_each_entry_safe(lp, lpnext, &cfg_lnetif_pairs,
+	    lentry) {
 		if (lp->flags & LPF_SKIP)
 			goto next;
 

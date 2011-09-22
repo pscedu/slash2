@@ -469,35 +469,18 @@ lnetname_stmt	: NAME '=' LNETNAME ';' {
 
 %%
 
-/*
- * XXX this check is seriously wrong; we should look at the route.
- */
-int
-slcfg_ifcmp(const struct lnetif_pair *a, const struct lnetif_pair *b)
-{
-	char ia[IFNAMSIZ], ib[IFNAMSIZ];
-
-	strlcpy(ia, a->ifn, sizeof(ia));
-	strlcpy(ib, b->ifn, sizeof(ib));
-
-	ia[strcspn(ia, ":.")] = '\0';
-	ib[strcspn(ib, ":.")] = '\0';
-	return (strcmp(ia, ib));
-}
-
 void
-slcfg_add_lnet(const void *sa, uint32_t net)
+slcfg_add_lnet(const void *sa, uint32_t lnet)
 {
 	char buf[PSCRPC_NIDSTR_SIZE], ibuf[PSCRPC_NIDSTR_SIZE];
 	struct lnetif_pair *i, lp;
-	int netcmp = 1;
 
 	memset(&lp, 0, sizeof(lp));
 	INIT_PSC_LISTENTRY(&lp.lentry);
 
 	/* get destination routing interface */
 	pflnet_getifnfordst(cfg_ifaddrs, sa, lp.ifn);
-	lp.net = net;
+	lp.net = lnet;
 
 	pscrpc_net2str(lp.net, buf);
 
@@ -506,17 +489,20 @@ slcfg_add_lnet(const void *sa, uint32_t net)
 	 * ignoring any interface aliases.
 	 */
 	psclist_for_each_entry(i, &cfg_lnetif_pairs, lentry) {
-		netcmp = i->net != lp.net;
-
-		if (slcfg_ifcmp(&lp, i) == 0 && netcmp) {
+		/*
+		 * XXX we should check the route instead of interface
+		 * name.
+		 */
+		if (strcmp(lp.ifn, i->ifn) == 0 &&
+		    i->net != lp.net) {
 			pscrpc_net2str(i->net, ibuf);
-			psc_fatalx("network/interface pair"
-			    " %s:%s conflicts with %s:%s",
+			psc_fatalx("network/interface pair "
+			    "%s:%s conflicts with %s:%s",
 			    buf, lp.ifn, ibuf, i->ifn);
 		}
 
 		/* if the same, don't process more */
-		if (!netcmp) {
+		if (i->net == lp.net) {
 			if (i->flags & LPF_NOACCEPTOR)
 				i->flags |= LPF_SKIP;
 			else
@@ -662,10 +648,8 @@ slcfg_resm_addaddr(char *addr, const char *lnet)
 					break;
 
 			if (lrt == NULL ||
-			    !pflnet_rtexists(&lrt->lrt_addr.sa)) {
-				yywarn("no route to NID %s", addr);
-				goto out;
-			}
+			    !pflnet_rtexists(&lrt->lrt_addr.sa))
+				goto xaddr;
 			pscrpc_net2str(lrt->lrt_net, netbuf);
 			lnet = netbuf;
 			net = lrt->lrt_net;
@@ -679,6 +663,7 @@ slcfg_resm_addaddr(char *addr, const char *lnet)
 		if (nidcnt == cfg_nid_counter) {
 			lnet_nid_t *nidp;
 
+ xaddr:
 			nidp = PSCALLOC(sizeof(*nidp));
 			*nidp = LNET_MKNID(net,
 			    ((struct sockaddr_in *)res->ai_addr)->
@@ -711,7 +696,6 @@ slcfg_resm_addaddr(char *addr, const char *lnet)
 
 		nidcnt = cfg_nid_counter;
 	}
- out:
 	freeaddrinfo(res0);
 }
 
