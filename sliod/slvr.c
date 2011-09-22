@@ -1447,7 +1447,7 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 			}
 			lc_remove(&sli_iocb_pndg, iocb);
 			LIST_CACHE_ULOCK(&sli_iocb_pndg);
-			iocb->iocb_cbf(iocb);
+			iocb->iocb_cbf(iocb);			/* slvr_fsaio_done() */
 			slvr_iocb_release(iocb);
 			LIST_CACHE_LOCK(&sli_iocb_pndg);
 		}
