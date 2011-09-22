@@ -508,12 +508,11 @@ slcfg_add_lnet(const void *sa, uint32_t net)
 	psclist_for_each_entry(i, &cfg_lnetif_pairs, lentry) {
 		netcmp = i->net != lp.net;
 
-		if (netcmp ^ (slcfg_ifcmp(&lp, i) != 0)) {
+		if (slcfg_ifcmp(&lp, i) == 0 && netcmp) {
 			pscrpc_net2str(i->net, ibuf);
-			psc_fatalx("network/interface pair %s:%s "
-			    "conflicts with %s:%s",
-			    buf, lp.ifn,
-			    ibuf, i->ifn);
+			psc_fatalx("network/interface pair"
+			    " %s:%s conflicts with %s:%s",
+			    buf, lp.ifn, ibuf, i->ifn);
 		}
 
 		/* if the same, don't process more */
