@@ -31,7 +31,12 @@ struct fcmh_iod_info {
 	int			fii_fd;		/* open file descriptor */
 };
 
-#define fcmh_2_fii(fcmh)	((struct fcmh_iod_info *)fcmh_get_pri(fcmh))
+static __inline struct fcmh_iod_info *
+fcmh_2_fii(struct fidc_membh *f)
+{
+	return (fcmh_get_pri(f));
+}
+
 #define fcmh_2_fd(fcmh)		fcmh_2_fii(fcmh)->fii_fd
 
 int sli_fcmh_getattr(struct fidc_membh *);
