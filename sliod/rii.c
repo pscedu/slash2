@@ -105,9 +105,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 	DEBUG_SLVR(PLL_INFO, s, "replread %s rc=%d", aio ?
 	    "aiowait" : "complete", rc);
 
-	if (aio) {
-		sli_replwkrq_addpending(w);
-	} else {
+	if (!aio) {
 		slvr_io_done(s, 0, w->srw_len, SL_WRITE);
 
 		spinlock(&w->srw_lock);
@@ -303,9 +301,6 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 			break;
 	psc_assert(slvridx < (int)nitems(w->srw_slvr_refs));
 
-	if (rc != -SLERR_AIOWAIT)
-		sli_replwkrq_addpending(w);
-
 	return (sli_rii_replread_release_sliver(w, slvridx, rc));
 }
 
@@ -335,8 +330,6 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	mq->fg = w->srw_fg;
 	mq->bmapno = w->srw_bmapno;
 	mq->slvrno = slvrno;
-
-	psc_atomic32_inc(&w->srw_refcnt);
 
 	psc_assert(w->srw_slvr_refs[slvridx] == SLI_REPL_SLVR_SCHED);
 	w->srw_slvr_refs[slvridx] = s =

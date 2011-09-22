@@ -84,10 +84,10 @@ sli_repl_addwk(int op, uint64_t nid, const struct slash_fidgen *fgp,
 
 	w = psc_pool_get(sli_replwkrq_pool);
 	memset(w, 0, sizeof(*w));
+	psc_atomic32_set(&w->srw_refcnt, 1);
 	INIT_PSC_LISTENTRY(&w->srw_active_lentry);
 	INIT_PSC_LISTENTRY(&w->srw_pending_lentry);
 	INIT_SPINLOCK(&w->srw_lock);
-	psc_atomic32_set(&w->srw_refcnt, 1);
 	w->srw_nid = nid;
 	w->srw_fg = *fgp;
 	w->srw_bmapno = bmapno;
@@ -126,6 +126,7 @@ sli_repl_addwk(int op, uint64_t nid, const struct slash_fidgen *fgp,
 					w->srw_bcm->bcm_crcstates[i] |=
 					    BMAP_SLVR_WANTREPL;
 					w->srw_nslvr_tot++;
+					psc_atomic32_inc(&w->srw_refcnt);
 				}
 		BMAP_ULOCK(w->srw_bcm);
 	}
@@ -183,13 +184,14 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 	int rc, slvridx, slvrno;
 
 	while (pscthr_run()) {
-		rc = 0;
-		slvridx = REPL_MAX_INFLIGHT_SLVRS;
-		w = lc_getwait(&sli_replwkq_pending);
 
+		w = lc_getwait(&sli_replwkq_pending);
+ next:
 		spinlock(&w->srw_lock);
-		if (w->srw_status)
-			goto end;
+		if (w->srw_status) {
+			freelock(&w->srw_lock);
+			goto done;
+		}
 
 		if (w->srw_op == SLI_REPLWKOP_PTRUNC) {
 			/*
@@ -199,7 +201,8 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 			 * XXX if there is srw_offset, we must send a
 			 * CRC update for the sliver.
 			 */
-			goto end;
+			freelock(&w->srw_lock);
+			goto done; 
 		}
 
 		/* find a sliver to transmit */
@@ -211,8 +214,9 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 
 		if (slvrno == SLASH_SLVRS_PER_BMAP) {
 			BMAP_ULOCK(w->srw_bcm);
+			freelock(&w->srw_lock);
 			/* no work to do; we are done with this bmap */
-			goto end;
+			goto done;
 		}
 
 		/* find a pointer slot we can use to transmit the sliver */
@@ -222,7 +226,9 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 
 		if (slvridx == REPL_MAX_INFLIGHT_SLVRS) {
 			BMAP_ULOCK(w->srw_bcm);
-			goto end;
+			freelock(&w->srw_lock);
+			sched_yield();
+			goto next;
 		}
 
 		w->srw_bcm->bcm_crcstates[slvrno] &= ~BMAP_SLVR_WANTREPL;
@@ -234,35 +240,27 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 
 		/* acquire connection to replication source & issue READ */
 		csvc = sli_geticsvc(w->srw_resm);
-		if (csvc == NULL) {
+		if (csvc == NULL)
 			rc = SLERR_ION_OFFLINE;
-			goto end;
+		else {
+			rc = sli_rii_issue_repl_read(csvc, slvrno, slvridx, w);
+			sl_csvc_decref(csvc);
 		}
-		rc = sli_rii_issue_repl_read(csvc, slvrno, slvridx, w);
-		sl_csvc_decref(csvc);
-		if (rc)
-			goto end;
+		if (rc) {
+			spinlock(&w->srw_lock);
 
-		spinlock(&w->srw_lock);
-		/*
-		 * Place back on queue to process again on next
-		 * iteration.  If the max in-transit capacity is full,
-		 * we'll wait for a slot to open up then.
-		 */
-		sli_replwkrq_addpending(w);
-
- end:
-		if (rc && slvridx != REPL_MAX_INFLIGHT_SLVRS) {
-			reqlock(&w->srw_lock);
 			w->srw_slvr_refs[slvridx] = NULL;
-			/* Reinstate WANTREPL
-			 */
 			BMAP_LOCK(w->srw_bcm);
-			w->srw_bcm->bcm_crcstates[slvrno] |=
-			    BMAP_SLVR_WANTREPL;
+			w->srw_bcm->bcm_crcstates[slvrno] |= BMAP_SLVR_WANTREPL;
 			BMAP_ULOCK(w->srw_bcm);
+
+			freelock(&w->srw_lock);
 		}
-		sli_replwkrq_decref(w, rc);
+		sched_yield();
+		goto next;
+
+ done:
+		sli_replwkrq_decref(w, 0);
 		sched_yield();
 	}
 }
