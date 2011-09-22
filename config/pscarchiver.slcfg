@@ -4,7 +4,7 @@
 
 # Archiver configuration
 set port=1301;
-set routes="10.10.101@sdp11,128.182.99@tcp13,10.32.5@tcp14,tcp12";
+set routes="10.10.101@sdp11,10.32.5@tcp13,tcp12";
 set pref_mds="archmds@PSCARCH";
 set pref_ios="peel0@PSCARCH";
 #set pref_ios="sense@PSCARCH";
