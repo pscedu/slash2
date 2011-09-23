@@ -5,6 +5,8 @@
 # Global network config
 set port=1300;
 set net=tcp10;
+set pref_ios="citron@PSC";
+set pref_mds="md@PSC";
 
 # Pull in other/local config files
 # include "/etc/slash/*.slcfg"
@@ -44,11 +46,19 @@ site @PSC {
 		nodes	= cyclops;
 	}
 
-	resource lime {
+	resource citron {
 		desc	= "fruit storage";
 		type	= standalone_fs;
 		id	= 105;
 		fsroot	= /local/jy.s2/io;
 		nodes	= citron;
+	}
+
+	resource orange {
+		desc	= "fruit storage";
+		type	= standalone_fs;
+		id	= 106;
+		fsroot	= /local/jy.s2/io;
+		nodes	= orange;
 	}
 }
