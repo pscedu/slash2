@@ -1417,29 +1417,20 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 	sigset_t signal_set;
 	struct sli_iocb *iocb, *next;
 	int signo;
-	int do_yield = 0;
 
 	sigemptyset(&signal_set);
 	sigaddset(&signal_set, SIGIO);
 
 	for (;;) {
 
-		if (do_yield) {
-			do_yield = 0;
-			sched_yield();
-		} else {
-			sigwait(&signal_set, &signo);
-			psc_assert(signo == SIGIO);
-		}
+		sigwait(&signal_set, &signo);
+		psc_assert(signo == SIGIO);
 
 		LIST_CACHE_LOCK(&sli_iocb_pndg);
 		LIST_CACHE_FOREACH_SAFE(iocb, next, &sli_iocb_pndg) {
 			iocb->iocb_rc = aio_error(&iocb->iocb_aiocb);
 			if (iocb->iocb_rc == EINPROGRESS)
 				continue;
-			/* we put iocb on the list after aio_read(), so there is a window */
-			if (iocb->iocb_rc == EINVAL)
-				do_yield = 1;
 			psc_assert(iocb->iocb_rc != ECANCELED);
 			if (iocb->iocb_rc == 0)
 				iocb->iocb_len = aio_return(&iocb->iocb_aiocb);
@@ -1448,6 +1439,7 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 //				if (rc)
 //					iocb->iocb_rc = rc;
 			}
+			psclog_info("got signal: iocb=%p", iocb);
 			lc_remove(&sli_iocb_pndg, iocb);
 			LIST_CACHE_ULOCK(&sli_iocb_pndg);
 			iocb->iocb_cbf(iocb);			/* slvr_fsaio_done() */
