@@ -175,7 +175,7 @@ main(int argc, char *argv[])
 	psc_tiosthr_spawn(SLITHRT_TIOS, "slitiosthr");
 	pscthr_init(SLITHRT_STATFS, 0, slistatfsthr_main, NULL, 0,
 	    "slistatfsthr");
-	sliod_bmaprlsthr_spawn();
+	slibmaprlsthr_spawn();
 	lc_reginit(&bmapReapQ, struct bmapc_memb, bcm_lentry,
 	    "bmapReapQ");
 

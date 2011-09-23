@@ -163,7 +163,7 @@ void bcr_xid_check(struct biod_crcup_ref *);
 
 void biod_rlssched_locked(struct bmap_iod_info *);
 
-void sliod_bmaprlsthr_spawn(void);
+void slibmaprlsthr_spawn(void);
 
 extern struct psc_listcache bmapRlsQ;
 extern struct psc_listcache bmapReapQ;
