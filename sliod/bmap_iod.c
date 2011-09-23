@@ -332,7 +332,7 @@ biod_rlssched_locked(struct bmap_iod_info *biod)
 }
 
 void
-sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
+slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 {
 	struct psc_dynarray a = DYNARRAY_INIT;
 	struct srm_bmap_release_req *brr, *mq;
@@ -433,13 +433,13 @@ sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 }
 
 void
-sliod_bmaprlsthr_spawn(void)
+slibmaprlsthr_spawn(void)
 {
-	lc_reginit(&bmapRlsQ, struct bmap_iod_info,
-		   biod_lentry, "bmapRlsQ");
+	lc_reginit(&bmapRlsQ, struct bmap_iod_info, biod_lentry,
+	    "bmapRlsQ");
 
-	pscthr_init(SLITHRT_BMAPRLS, 0, sliod_bmaprlsthr_main,
-		    NULL, 0, "slibmaprlsthr");
+	pscthr_init(SLITHRT_BMAPRLS, 0, slibmaprlsthr_main, NULL, 0,
+	    "slibmaprlsthr");
 }
 
 void
