@@ -72,6 +72,8 @@ sli_open_backing_file(struct fidc_membh *fcmh)
 		if (incr)
 			psc_rlim_adj(RLIMIT_NOFILE, -1);
 	}
+	psclog_info("open backing file:  path=%s, fd = %d, rc = %d", 
+	    fidfn, fcmh_2_fd(fcmh), rc);
 	return (rc);
 }
 
