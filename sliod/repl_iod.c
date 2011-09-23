@@ -185,6 +185,7 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 
 	while (pscthr_run()) {
 
+		slvrno = 0;
 		w = lc_getwait(&sli_replwkq_pending);
  next:
 		spinlock(&w->srw_lock);
@@ -207,10 +208,12 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 
 		/* find a sliver to transmit */
 		BMAP_LOCK(w->srw_bcm);
-		for (slvrno = 0; slvrno < SLASH_SLVRS_PER_BMAP; slvrno++)
+		while (slvrno < SLASH_SLVRS_PER_BMAP) {
 			if (w->srw_bcm->bcm_crcstates[slvrno] &
 			    BMAP_SLVR_WANTREPL)
 				break;
+			slvrno++;
+		}
 
 		if (slvrno == SLASH_SLVRS_PER_BMAP) {
 			BMAP_ULOCK(w->srw_bcm);
