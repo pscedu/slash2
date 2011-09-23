@@ -623,6 +623,9 @@ sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp,
 	aio->aio_sigevent.sigev_signo = SIGIO;
 	aio->aio_sigevent.sigev_value.sival_ptr = &aio;
 
+	psclog_info("aio_read: fd=%d, iocb=%p, sliver=%p", 
+	    aio->aio_fildes, iocb, s);
+
 	error = aio_read(aio);
 	if (error == 0) {
 		lc_add(&sli_iocb_pndg, iocb);
