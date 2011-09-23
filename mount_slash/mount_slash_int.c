@@ -714,15 +714,24 @@ msl_req_aio_add(struct pscrpc_request *rq,
 		}
 
 	} else if (cbf == msl_read_cb) {
+		int naio = 0;
+
 		DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
-			if (!i) {
-				BMPCE_LOCK(e);
-				BMPCE_SETATTR(e, BMPCE_AIOWAIT, "set aio");
-				msl_fsrq_aiowait_tryadd_locked(e, r);
+			BMPCE_LOCK(e);
+			if (e->bmpce_flags & BMPCE_DATARDY) {
 				BMPCE_ULOCK(e);
-			} else
-				BMPCE_SETATTR(e, BMPCE_AIOWAIT, "set aio");
+				continue;
+
+			} else if (!naio)
+				msl_fsrq_aiowait_tryadd_locked(e, r);
+
+			BMPCE_SETATTR(e, BMPCE_AIOWAIT, "set aio");
+			BMPCE_ULOCK(e);
+			naio++;
 		}
+		/* Should have found at least one aio'd page.
+		 */
+		psc_assert(naio);
 		msl_biorq_aio_prep(r);
 		car->car_fsrqinfo = r->biorq_fsrqi;
 
