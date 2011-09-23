@@ -1416,15 +1416,13 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 {
 	sigset_t signal_set;
 	struct sli_iocb *iocb, *next;
-	int signo;
-
-	sigemptyset(&signal_set);
-	sigaddset(&signal_set, SIGIO);
+	struct timespec ts = { 0, 100000000L };
+	siginfo_t si;
 
 	for (;;) {
-
-		sigwait(&signal_set, &signo);
-		psc_assert(signo == SIGIO);
+		sigemptyset(&signal_set);
+		sigaddset(&signal_set, SIGIO);
+		sigtimedwait(&signal_set, &si, &ts);
 
 		LIST_CACHE_LOCK(&sli_iocb_pndg);
 		LIST_CACHE_FOREACH_SAFE(iocb, next, &sli_iocb_pndg) {
@@ -1434,11 +1432,7 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 			psc_assert(iocb->iocb_rc != ECANCELED);
 			if (iocb->iocb_rc == 0)
 				iocb->iocb_len = aio_return(&iocb->iocb_aiocb);
-			else {
-//				rc = aio_return(&iocb->iocb_aiocb);
-//				if (rc)
-//					iocb->iocb_rc = rc;
-			}
+
 			psclog_info("got signal: iocb=%p", iocb);
 			lc_remove(&sli_iocb_pndg, iocb);
 			LIST_CACHE_ULOCK(&sli_iocb_pndg);
