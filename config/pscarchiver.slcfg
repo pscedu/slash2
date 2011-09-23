@@ -4,7 +4,8 @@
 
 # Archiver configuration
 set port=1301;
-set routes="10.10.101@sdp11,10.32.5@tcp13,tcp12";
+set routes="sdp11 128.182.100.126@tcp12; tcp12 10.10.101.54@sdp11";
+set nets="sdp11 10.10.101.*; tcp12 *.*.*.*";
 set pref_mds="archmds@PSCARCH";
 set pref_ios="peel0@PSCARCH";
 #set pref_ios="sense@PSCARCH";
@@ -73,14 +74,14 @@ site @PSCARCH {
 		fsroot	= /store;
 	}
 
-	resource sense0 { desc = "disk-based archiver";		 type = standalone_fs; id = 10; nodes = sense0|sense0.pvt; fsroot = /store; }
-	resource sense1 { desc = "disk-based archiver unit 1/8"; type = standalone_fs; id = 11; nodes = sense1|sense1.pvt; fsroot = /store; }
-#	resource sense2 { desc = "disk-based archiver unit 2/8"; type = standalone_fs; id = 12; nodes = sense2|sense2.pvt; fsroot = /store; }
-#	resource sense3 { desc = "disk-based archiver unit 3/8"; type = standalone_fs; id = 13; nodes = sense3|sense3.pvt; fsroot = /store; }
-#	resource sense4 { desc = "disk-based archiver unit 4/8"; type = standalone_fs; id = 14; nodes = sense4|sense4.pvt; fsroot = /store; }
-#	resource sense5 { desc = "disk-based archiver unit 5/8"; type = standalone_fs; id = 15; nodes = sense5|sense5.pvt; fsroot = /store; }
-#	resource sense6 { desc = "disk-based archiver unit 6/8"; type = standalone_fs; id = 16; nodes = sense6|sense6.pvt; fsroot = /store; }
-#	resource sense7 { desc = "disk-based archiver unit 7/8"; type = standalone_fs; id = 17; nodes = sense7|sense7.pvt; fsroot = /store; }
+	resource sense0 { desc = "disk-based archiver";		 type = standalone_fs; id = 10; nodes = sense0; fsroot = /store; }
+	resource sense1 { desc = "disk-based archiver unit 1/8"; type = standalone_fs; id = 11; nodes = sense1; fsroot = /store; }
+#	resource sense2 { desc = "disk-based archiver unit 2/8"; type = standalone_fs; id = 12; nodes = sense2; fsroot = /store; }
+#	resource sense3 { desc = "disk-based archiver unit 3/8"; type = standalone_fs; id = 13; nodes = sense3; fsroot = /store; }
+#	resource sense4 { desc = "disk-based archiver unit 4/8"; type = standalone_fs; id = 14; nodes = sense4; fsroot = /store; }
+#	resource sense5 { desc = "disk-based archiver unit 5/8"; type = standalone_fs; id = 15; nodes = sense5; fsroot = /store; }
+#	resource sense6 { desc = "disk-based archiver unit 6/8"; type = standalone_fs; id = 16; nodes = sense6; fsroot = /store; }
+#	resource sense7 { desc = "disk-based archiver unit 7/8"; type = standalone_fs; id = 17; nodes = sense7; fsroot = /store; }
 
 #	resource sense {
 #		desc	= "disk-based archiver unit 8/8";
