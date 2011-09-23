@@ -120,11 +120,11 @@ struct sl_expcli_ops {
 
 #define sl_csvc_get(csvcp, flg, exp, nid,				\
 	    pq, pp, mag, vers, lockp, waitinfo, ctype, arg)		\
-	sl_csvc_get_pci(CSVC_CALLERINFO, (csvcp), (flg), (exp), (nid),	\
+	_sl_csvc_get(CSVC_CALLERINFO, (csvcp), (flg), (exp), (nid),	\
 	    (pq), (pp), (mag), (vers), (lockp), (waitinfo), (ctype), (arg))
 
-#define sl_csvc_decref(csvc)		sl_csvc_decref_pci(CSVC_CALLERINFO, (csvc))
-#define sl_csvc_disconnect(csvc)        sl_csvc_disconnect_pci(CSVC_CALLERINFO, (csvc))
+#define sl_csvc_decref(csvc)		_sl_csvc_decref(CSVC_CALLERINFO, (csvc))
+#define sl_csvc_disconnect(csvc)        _sl_csvc_disconnect(CSVC_CALLERINFO, (csvc))
 
 #define SL_EXP_REGISTER_RESM(exp, getcsvc)				\
 	_PFL_RVSTART {							\
@@ -251,12 +251,12 @@ struct sl_expcli_ops {
 	} while (0)
 
 struct slashrpc_cservice *
-	 sl_csvc_get_pci(const struct pfl_callerinfo *,
+	 _sl_csvc_get(const struct pfl_callerinfo *,
 	     struct slashrpc_cservice **, int, struct pscrpc_export *,
 	     lnet_nid_t, uint32_t, uint32_t, uint64_t, uint32_t,
 	     void *, void *, enum slconn_type, void *);
-void	 sl_csvc_decref_pci(const struct pfl_callerinfo *, struct slashrpc_cservice *);
-void	 sl_csvc_disconnect_pci(const struct pfl_callerinfo *, struct slashrpc_cservice *);
+void	_sl_csvc_decref(const struct pfl_callerinfo *, struct slashrpc_cservice *);
+void	_sl_csvc_disconnect(const struct pfl_callerinfo *, struct slashrpc_cservice *);
 void	 sl_csvc_incref(struct slashrpc_cservice *);
 void	 sl_csvc_markfree(struct slashrpc_cservice *);
 int	 sl_csvc_useable(struct slashrpc_cservice *);
