@@ -300,7 +300,7 @@ main(int argc, char *argv[])
 
 	sl_drop_privs(allow_root_uid);
 
-	libsl_init(PSCNET_SERVER, 1);
+	libsl_init();
 
 	slm_workq_init();
 
