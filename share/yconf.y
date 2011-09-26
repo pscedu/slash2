@@ -489,10 +489,6 @@ slcfg_add_lnet(const union pfl_sockaddr_ptr *sa, uint32_t lnet)
 	 * ignoring any interface aliases.
 	 */
 	psclist_for_each_entry(i, &cfg_lnetif_pairs, lentry) {
-		/*
-		 * XXX we should check the route instead of interface
-		 * name.
-		 */
 		if (strcmp(lp.ifn, i->ifn) == 0 && i->net != lp.net) {
 			pscrpc_net2str(i->net, ibuf);
 			psc_fatalx("network/interface pair "
@@ -568,8 +564,13 @@ slcfg_resm_addaddr(char *addr, const char *lnetname)
 			rc = lnet_match_networks(&tnam,
 			    globalConfig.gconf_lnets, &ip, ifv, 1);
 			if (rc == 0) {
-				psclog_warnx("address does not match any "
-				    "LNET networks");
+				char addrbuf[256];
+
+				psclog_warnx("address %s does not match "
+				    "any LNET networks",
+				    inet_ntop(sa.s->sa.sa_family,
+				    &sa.s->sin.sin_addr.s_addr, addrbuf,
+				    sizeof(addrbuf)));
 				continue;
 			}
 			sp = strchr(tnam, '(');
@@ -585,7 +586,7 @@ slcfg_resm_addaddr(char *addr, const char *lnetname)
 
 		ifv[0] = ifn;
 		if (lnet_match_networks(&tnam,
-		    globalConfig.gconf_lnets, &ip, ifv, 1) == 1)
+		    globalConfig.gconf_lnets, &ip, ifv, 1))
 			slcfg_add_lnet(&sa, lnet);
 
 		if (nidcnt == cfg_nid_counter) {
