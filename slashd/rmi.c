@@ -428,55 +428,50 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	    SLPRI_FG_ARGS(&p->fcmh_fg), mq->cpn);
 
 	mds_reserve_slot(1);
-	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &rootcreds,
+	rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &rootcreds,
 	    O_CREAT | O_EXCL | O_RDWR, mq->sstb.sst_mode, mq->cpn, NULL,
 	    &sstb, &mdsio_data, mdslog_namespace, slm_get_next_slashfid,
 	    0);
 	mds_unreserve_slot(1);
 
-	if (mp->rc == EEXIST) {
-		rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &rootcreds,
+	if (rc && rc != EEXIST)
+		PFL_GOTOERR(out, mp->rc = -rc);
+
+	if (rc == EEXIST) {
+		int rc2;
+
+		rc2 = mdsio_opencreate(fcmh_2_mdsio_fid(p), &rootcreds,
 		    O_RDWR, 0, mq->cpn, NULL, &sstb, &mdsio_data, NULL,
 		    NULL, 0);
-		if (rc) {
-			mp->rc = rc;
-			goto out;
-		}
+		if (rc2)
+			PFL_GOTOERR(out, mp->rc = -rc2);
 		mp->fg = sstb.sst_fg;
-
-		/* if mtime is newer, apply updates */
-		if (timespeccmp(&mq->sstb.sst_mtim, &sstb.sst_mtim, <=)) {
-			mdsio_release(&cr, mdsio_data);
-			goto out;
-		}
-	} else if (mp->rc)
-		goto out;
+	}
 
 	mdsio_release(&cr, mdsio_data);
-
 	mp->fg = sstb.sst_fg;
-
 	mp->rc = slm_fcmh_get(&sstb.sst_fg, &c);
 	if (mp->rc)
 		goto out;
 
-	FCMH_LOCK(c);
-	fcmh_wait_locked(c, c->fcmh_flags & FCMH_IN_SETATTR);
-	sstb.sst_fg.fg_gen++;
-	c->fcmh_sstb.sst_size = 0;
-	c->fcmh_sstb.sst_blocks = 0;
-	c->fcmh_sstb.sst_atim = mq->sstb.sst_atim;
-	c->fcmh_sstb.sst_mtim = mq->sstb.sst_mtim;
-	c->fcmh_sstb.sst_ctim = mq->sstb.sst_ctim;
-	c->fcmh_sstb.sst_uid = mq->sstb.sst_uid;
-	c->fcmh_sstb.sst_gid = mq->sstb.sst_gid;
-	mp->rc = mds_fcmh_setattr(c, PSCFS_SETATTRF_UID |
-	    PSCFS_SETATTRF_GID | PSCFS_SETATTRF_DATASIZE |
-	    SL_SETATTRF_GEN | PSCFS_SETATTRF_MTIME |
-	    PSCFS_SETATTRF_CTIME | PSCFS_SETATTRF_ATIME, &sstb);
-	FCMH_ULOCK(c);
+	if (rc == EEXIST) {
+		/* if mtime is newer, apply updates */
+		if (timespeccmp(&mq->sstb.sst_mtim,
+		    &sstb.sst_mtim, <=)) {
+			mdsio_release(&cr, mdsio_data);
+			goto out;
+		}
 
-	/* XXX if setattr failed, revert gen++ */
+		FCMH_LOCK(c);
+		fcmh_wait_locked(c, c->fcmh_flags & FCMH_IN_SETATTR);
+		sstb.sst_fg.fg_gen++;
+		sstb.sst_size = 0;
+		sstb.sst_blocks = 0;
+		mp->rc = mds_fcmh_setattr(c, PSCFS_SETATTRF_DATASIZE |
+		    SL_SETATTRF_GEN | SL_SETATTRF_NBLKS, &sstb);
+		FCMH_ULOCK(c);
+		/* XXX if setattr failed, revert gen++ */
+	}
 
 	slm_fcmh_endow_nolog(p, c);
 	FCMH_LOCK(c);
@@ -515,7 +510,9 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	FCMH_LOCK(c);
 	fcmh_wait_locked(c, c->fcmh_flags & FCMH_IN_SETATTR);
 	mp->rc = mds_fcmh_setattr(c, PSCFS_SETATTRF_DATASIZE |
-	    SL_SETATTRF_NBLKS, &mq->sstb);
+	    PSCFS_SETATTRF_MTIME | PSCFS_SETATTRF_CTIME |
+	    PSCFS_SETATTRF_ATIME | PSCFS_SETATTRF_UID |
+	    PSCFS_SETATTRF_GID | SL_SETATTRF_NBLKS, &mq->sstb);
 
  out:
 	/*
