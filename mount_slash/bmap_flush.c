@@ -91,9 +91,9 @@ bmap_flush_reap_rpcs(void)
 
 	while ((set = pll_get(&hold)))
 		lc_add(&pndgWrtReqSets, set);
-	
+
 	psclogs_debug(SLSS_BMAP, "outstandingRpcCnt=%d (after) "
-	       "rpcComp.rqcomp_compcnt=%d", atomic_read(&outstandingRpcCnt), 
+	       "rpcComp.rqcomp_compcnt=%d", atomic_read(&outstandingRpcCnt),
 	       atomic_read(&rpcComp.rqcomp_compcnt));
 }
 
@@ -1096,7 +1096,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 			BMAP_LOCK(b);
 			DEBUG_BMAP(PLL_INFO, b, "timeoq try reap"
-			   " (nbmaps=%zd) etime("PSCPRI_TIMESPEC")", 
+			   " (nbmaps=%zd) etime("PSCPRI_TIMESPEC")",
 			   lc_sz(&bmapTimeoutQ),
 			   PSCPRI_TIMESPEC_ARGS(&bci->bci_etime));
 
@@ -1138,7 +1138,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				lc_addtail(&bmapTimeoutQ, bci);
 				continue;
 			}
-			
+
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) == 1);
 			/* Note that only this thread calls
 			 *   msl_bmap_release() so no reentrancy
@@ -1443,7 +1443,7 @@ msbmapflushthr_main(__unusedx struct psc_thread *thr)
 }
 
 void
-msbmapflushthrrpc_main(__unusedx struct psc_thread *thr)
+msbmapflushrpcthr_main(__unusedx struct psc_thread *thr)
 {
 	while (pscthr_run()) {
 		//XXX this completion wait is blocking too long when we
@@ -1561,7 +1561,7 @@ msbmapflushthr_spawn(void)
 		pscthr_setready(thr);
 	}
 
-	thr = pscthr_init(MSTHRT_BMAPFLSHRPC, 0, msbmapflushthrrpc_main,
+	thr = pscthr_init(MSTHRT_BMAPFLSHRPC, 0, msbmapflushrpcthr_main,
 	  NULL, sizeof(struct msbmflrpc_thread), "msbflushrpcthr");
 	psc_multiwait_init(&msbmflrpc(thr)->mbflrpc_mw, "%s",
 			   thr->pscthr_name);
