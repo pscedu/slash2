@@ -106,6 +106,6 @@ main(int argc, char *argv[])
 		usage();
 
 	slcfg_parse(fn);
-	libsl_init(PSCNET_CLIENT, 0);
+	libsl_init();
 	exit(0);
 }
