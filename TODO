@@ -450,7 +450,8 @@ API rename
   We might want to do the same thing for metadata server.
 - add msctl -X to cancel a replication
 - msctl is broken on 32-bit because of ino # compression
-- move msctl sock to $MOUNTPOINT/.slmd/ctlsock and have msctl ascend to that on arguments
+- move msctl sock to $MOUNTPOINT/.slmd/ctlsock and have msctl ascend to
+  that on arguments
 - only purge additional NIDs if unroutable in slcfg, leave one (LNET_ROUTES)
    - better yet, if in LNET_ROUTES, leave in tact
    - if no LNET_ROUTES, construct
@@ -461,8 +462,7 @@ reimport
 
 - debug lnrtd
 - cluster_noshare replication changes
-- fix fabrication of .. inum in zfsslash2_readdir to fix mount_slash
-  .slfidns lookups
+- provide facility to recover FID of files from snapshots
 
 - replay setattr (not result of SETATTR, but result of another action
   which indirectly issues setattr code) bugs:
@@ -473,7 +473,7 @@ reimport
 - msl missed refcnt on connection errors
 - wolverine/single cpu missed wakeup
 - research holdup in fbsd zio_write_intr
-- remote syslog
+- test remote syslog
 - file system-level replication controls, e.g.
 
     $ cp myfile .sl/foo@BAR
