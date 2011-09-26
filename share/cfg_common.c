@@ -42,7 +42,7 @@ struct psc_dynarray	lnet_prids = DYNARRAY_INIT;
  * Notes: must be called after LNET has been initialized.
  */
 struct sl_resm *
-libsl_resm_lookup(int ismds)
+libsl_resm_lookup(void)
 {
 	struct sl_resm *m, *resm = NULL;
 	struct sl_resource *res = NULL;
@@ -62,10 +62,13 @@ libsl_resm_lookup(int ismds)
 		if (resm == NULL)
 			resm = m;
 
-		if (ismds && m->resm_type != SLREST_MDS)
+#ifdef _SLASH_MDS
+		if (m->resm_type != SLREST_MDS)
 			continue;
-		if (!ismds && m->resm_type == SLREST_MDS)
+#else
+		if (m->resm_type == SLREST_MDS)
 			continue;
+#endif
 
 		if (res == NULL)
 			res = m->resm_res;
@@ -198,15 +201,12 @@ libsl_profile_dump(void)
 }
 
 void
-libsl_init(int pscnet_mode, int ismds)
+libsl_init(void)
 {
 	char lnetstr[LNETS_MAX], pbuf[6];
 	char netbuf[PSCRPC_NIDSTR_SIZE], ltmp[LNETS_MAX];
 	struct lnetif_pair *lp, *lpnext;
-	int rc, k;
-
-	psc_assert(pscnet_mode == PSCNET_CLIENT ||
-	    pscnet_mode == PSCNET_SERVER);
+	int mode = PSCNET_SERVER, rc, k;
 
 	rc = snprintf(pbuf, sizeof(pbuf), "%d",
 	    globalConfig.gconf_port);
@@ -216,6 +216,9 @@ libsl_init(int pscnet_mode, int ismds)
 	}
 	if (rc == -1)
 		psc_fatal("LNET port %d", globalConfig.gconf_port);
+
+	if (globalConfig.gconf_routes[0])
+		setenv("LNET_ROUTES", globalConfig.gconf_routes, 0);
 
 	setenv("USOCK_CPORT", pbuf, 0);
 	setenv("LNET_ACCEPT_PORT", pbuf, 0);
@@ -236,9 +239,8 @@ libsl_init(int pscnet_mode, int ismds)
 			goto next;
 
 		pscrpc_net2str(lp->net, netbuf);
-		k = snprintf(ltmp, sizeof(ltmp), "%s%s-%s(%s)",
+		k = snprintf(ltmp, sizeof(ltmp), "%s%s(%s)",
 		    lnetstr[0] == '\0' ? "" : ",", netbuf,
-		    lp->flags & LPF_NOACCEPTOR ? "a" : "",
 		    lp->ifn);
 		if (k >= (int)sizeof(ltmp)) {
 			k = -1;
@@ -259,39 +261,44 @@ libsl_init(int pscnet_mode, int ismds)
 	setenv("LNET_NETWORKS", lnetstr, 0);
 
  skiplnet:
-	pscrpc_init_portals(pscnet_mode);
+
+#ifdef _SLASH_CLIENT
+	mode = PSCNET_CLIENT;
+#endif
+	pscrpc_init_portals(mode);
 	pscrpc_getlocalprids(&lnet_prids);
 
-	if (pscnet_mode == PSCNET_SERVER) {
-		nodeResm = libsl_resm_lookup(ismds);
-		if (nodeResm == NULL)
-			psc_fatalx("no resource member found for this node");
-
-		if (nodeResm->resm_res->res_fsroot[0] != '\0')
-			strlcpy(globalConfig.gconf_fsroot,
-			    nodeResm->resm_res->res_fsroot,
-			    sizeof(globalConfig.gconf_fsroot));
-
-		if (nodeResm->resm_res->res_jrnldev[0] != '\0')
-			strlcpy(globalConfig.gconf_journal,
-			    nodeResm->resm_res->res_jrnldev,
-			    sizeof(globalConfig.gconf_journal));
-
-		if (nodeResm->resm_type == SLREST_ARCHIVAL_FS) {
-#ifndef HAVE_AIO
-			psc_fatalx("asynchronous I/O not supported on "
-			    "this platform");
+#ifdef _SLASH_CLIENT
+	setenv("SLASH2_PIOS_ID", globalConfig.gconf_prefios, 0);
+	setenv("SLASH_MDS_NID", globalConfig.gconf_prefmds, 0);
+	return;
 #endif
-			globalConfig.gconf_async_io = 1;
-		}
 
-		psclog_info("node is a member of resource '%s'",
-		    nodeResm->resm_res->res_name);
-		libsl_profile_dump();
-	} else {
-		setenv("SLASH2_PIOS_ID", globalConfig.gconf_prefios, 0);
-		setenv("SLASH_MDS_NID", globalConfig.gconf_prefmds, 0);
+	nodeResm = libsl_resm_lookup();
+	if (nodeResm == NULL)
+		psc_fatalx("no resource member found for this node");
+
+	if (nodeResm->resm_res->res_fsroot[0] != '\0')
+		strlcpy(globalConfig.gconf_fsroot,
+		    nodeResm->resm_res->res_fsroot,
+		    sizeof(globalConfig.gconf_fsroot));
+
+	if (nodeResm->resm_res->res_jrnldev[0] != '\0')
+		strlcpy(globalConfig.gconf_journal,
+		    nodeResm->resm_res->res_jrnldev,
+		    sizeof(globalConfig.gconf_journal));
+
+	if (nodeResm->resm_type == SLREST_ARCHIVAL_FS) {
+#ifndef HAVE_AIO
+		psc_fatalx("asynchronous I/O not supported on "
+		    "this platform");
+#endif
+		globalConfig.gconf_async_io = 1;
 	}
+
+	psclog_info("node is a member of resource '%s'",
+	    nodeResm->resm_res->res_name);
+	libsl_profile_dump();
 }
 
 int

@@ -162,7 +162,7 @@ main(int argc, char *argv[])
 	authbuf_checkkeyfile();
 	authbuf_readkeyfile();
 
-	libsl_init(PSCNET_SERVER, 0);
+	libsl_init();
 
 	sl_drop_privs(allow_root_uid);
 
