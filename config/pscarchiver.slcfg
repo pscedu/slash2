@@ -19,12 +19,10 @@ set pref_ios="peel0@PSCARCH";
 #	/usr/psc/globus/default/bin/globus-url-copy
 #";
 
-# Pull in other/local config files
-# include "/etc/slash/*.slcfg"
-
 site @PSCARCH {
 	site_desc	= "PSC archiver";
 	site_id		= 0;
+
 	resource archmds {
 		desc	= "PSC archiver MDS";
 		type	= mds;
