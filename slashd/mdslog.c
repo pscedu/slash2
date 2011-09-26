@@ -1019,7 +1019,7 @@ mds_cursor_thread(__unusedx struct psc_thread *thr)
 		if (rc)
 			psclog_warnx("failed to update cursor, rc=%d", rc);
 		else
-			psclog_notice("Cursor updated: txg=%"PRId64", xid=%"PRId64
+			psclog_notice("cursor updated: txg=%"PRId64", xid=%"PRId64
 			    ", fid="SLPRI_FID", seqno=(%"PRIx64", %"PRIx64")",
 			    mds_cursor.pjc_commit_txg,
 			    mds_cursor.pjc_distill_xid,
