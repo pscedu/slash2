@@ -1204,7 +1204,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			break;
 
 		timespecsub(&nexttimeo, &crtime, &nexttimeo);
-		psclogs_info(SLSS_BMAP, "waited for ("PSCPRI_TIMESPEC")"
+		psclogs_debug(SLSS_BMAP, "waited for ("PSCPRI_TIMESPEC")"
 		       " lc_sz=%zd", PSCPRI_TIMESPEC_ARGS(&nexttimeo),
 		       lc_sz(&bmapTimeoutQ));
 	}
@@ -1430,7 +1430,7 @@ msbmapflushthr_main(__unusedx struct psc_thread *thr)
 			neg = 1;
 		}
 
-		psclogs_info(SLSS_BMAP, "flush ("PSCPRI_TIMESPEC"), "
+		psclogs_debug(SLSS_BMAP, "flush ("PSCPRI_TIMESPEC"), "
 		    "rpcwait ("PSCPRI_TIMESPEC"), "
 		    "waitq ("PSCPRI_TIMESPEC"), bmapFlushTimeoFlags=%d "
 		    "bmapFlushWaitTime(%s"PSCPRI_TIMESPEC") rc=%d",
