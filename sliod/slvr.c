@@ -623,15 +623,16 @@ sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp,
 	aio->aio_sigevent.sigev_signo = SIGIO;
 	aio->aio_sigevent.sigev_value.sival_ptr = (void *)aio;
 
-	psclog_info("aio_read: fd=%d, iocb=%p, sliver=%p", 
-	    aio->aio_fildes, iocb, s);
-
+	lc_add(&sli_iocb_pndg, iocb);
 	error = aio_read(aio);
 	if (error == 0) {
-		lc_add(&sli_iocb_pndg, iocb);
 		error = SLERR_AIOWAIT;
-	} else
+		psclog_info("aio_read: fd=%d, iocb=%p, sliver=%p", 
+		    aio->aio_fildes, iocb, s);
+	} else {
 		slvr_iocb_release(iocb);
+		lc_remove(&sli_iocb_pndg, iocb);
+	}
  out:
 	return (-error);
 }
@@ -1427,6 +1428,8 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 		LIST_CACHE_LOCK(&sli_iocb_pndg);
 		LIST_CACHE_FOREACH_SAFE(iocb, next, &sli_iocb_pndg) {
 			iocb->iocb_rc = aio_error(&iocb->iocb_aiocb);
+			if (iocb->iocb_rc == EINVAL)
+				continue;
 			if (iocb->iocb_rc == EINPROGRESS)
 				continue;
 			psc_assert(iocb->iocb_rc != ECANCELED);
