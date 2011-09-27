@@ -99,7 +99,7 @@ site @PSCARCH {
 		desc	= "PSC archiver migration assistant";
 		type	= standalone_fs;
 		id	= 50;
-		nodes	= zs4.psc.teragrid.org;
+		nodes	= zs6.psc.teragrid.org;
 		fsroot	= /store;
 	}
 }
