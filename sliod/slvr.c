@@ -1209,6 +1209,7 @@ slvr_wio_done(struct slvr_ref *s, uint32_t off, uint32_t len)
 	}
 
 	s->slvr_flags |= SLVR_CRCDIRTY;
+	s->slvr_flags &= ~SLVR_RDMODWR;
 	/*
 	 * Manage the description of the dirty crc area.  If the slvr's
 	 * checksum is not being processed then soff and len may be
