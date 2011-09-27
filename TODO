@@ -482,11 +482,24 @@ reimport
 - kill -D argument; provide arg/slcfg var for authbuf key
 - add -D arg to daemons for to stop daemonization and make that behavior
   default in developer builds
+- directory replica table inheritance
+- add svn revision # to CONNECT and track for "*ctl -s conns"
 
 archiver
 - install SLASH2 on sense/illusion
 - tool to recover softdel files
-- phase 2 migration
-   (o) reconstruct hard links in dmf space from sl2 objects
+   (o) provide ability to access zfs snapshots via MSL .zfs/snapshots
+- migration
+   (o) use inums file naming convention on zs6 intermediary
+   (o) phase2 reconstruct hard links in dmf space from sl2 objects
 - zfs stats for OpenTSDB, disk failure notification
 - work out logistics for where MDS zsnap backups go
+- autostart sliods/msl on tahini with screens
+- get msl logs to rlight@
+- monitor service for /arc hangs (blacklight, tahini)
+- add firehose1 and firehose2 to lnet routers
+- have toofar support dmf; mostly config
+   - set rhost=gollum
+   - set rsh=rsh
+   - set rcp=rcp
+- test sense1 full migration workload
