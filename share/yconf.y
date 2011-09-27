@@ -476,6 +476,7 @@ slcfg_add_lnet(const union pfl_sockaddr_ptr *sa, uint32_t lnet)
 {
 	char buf[PSCRPC_NIDSTR_SIZE], ibuf[PSCRPC_NIDSTR_SIZE], *p, *ifv[1], *tnam;
 	struct lnetif_pair *i, lp;
+	in_addr_t ip;
 
 	memset(&lp, 0, sizeof(lp));
 	INIT_PSC_LISTENTRY(&lp.lentry);
@@ -487,8 +488,9 @@ slcfg_add_lnet(const union pfl_sockaddr_ptr *sa, uint32_t lnet)
 	pscrpc_net2str(lp.net, buf);
 
 	ifv[0] = lp.ifn;
+	ip = ntohl(sa->s->sin.sin_addr.s_addr);
 	if (lnet_match_networks(&tnam, globalConfig.gconf_lnets,
-	    &sa->s->sin.sin_addr.s_addr, ifv, 1) == 0)
+	    &ip, ifv, 1) == 0)
 		return;
 	p = strchr(tnam, '(');
 	if (p)
