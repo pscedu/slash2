@@ -94,4 +94,12 @@ site @PSCARCH {
 #			  sense6@PSCARCH,
 #			  sense7@PSCARCH;
 #	}
+
+	resource zs {
+		desc	= "PSC archiver migration assistant";
+		type	= standalone_fs;
+		id	= 50;
+		nodes	= zs4.psc.teragrid.org;
+		fsroot	= /store;
+	}
 }
