@@ -85,6 +85,8 @@ struct cfg_file {
 	struct psclist_head	 cf_lentry;
 };
 
+int		 lnet_match_networks(char **, char *, uint32_t *, char **, int);
+
 void		 slcfg_add_include(const char *);
 uint32_t	 slcfg_str2restype(const char *);
 void		 slcfg_store_tok_val(const char *, char *);
@@ -472,7 +474,7 @@ lnetname_stmt	: NAME '=' LNETNAME ';' {
 void
 slcfg_add_lnet(const union pfl_sockaddr_ptr *sa, uint32_t lnet)
 {
-	char buf[PSCRPC_NIDSTR_SIZE], ibuf[PSCRPC_NIDSTR_SIZE];
+	char buf[PSCRPC_NIDSTR_SIZE], ibuf[PSCRPC_NIDSTR_SIZE], *p, *ifv[1], *tnam;
 	struct lnetif_pair *i, lp;
 
 	memset(&lp, 0, sizeof(lp));
@@ -483,6 +485,16 @@ slcfg_add_lnet(const union pfl_sockaddr_ptr *sa, uint32_t lnet)
 	lp.net = lnet;
 
 	pscrpc_net2str(lp.net, buf);
+
+	ifv[0] = lp.ifn;
+	if (lnet_match_networks(&tnam, globalConfig.gconf_lnets,
+	    &sa->s->sin.sin_addr.s_addr, ifv, 1) == 0)
+		return;
+	p = strchr(tnam, '(');
+	if (p)
+		*p = '\0';
+	if (strcmp(tnam, buf))
+		return;
 
 	/*
 	 * Ensure mutual exclusion of this interface and Lustre network,
@@ -516,8 +528,6 @@ slcfg_add_lnet(const union pfl_sockaddr_ptr *sa, uint32_t lnet)
 		i->flags |= LPF_NOACCEPTOR;
 #endif
 }
-
-int lnet_match_networks(char **, char *, uint32_t *, char **, int);
 
 void
 slcfg_resm_addaddr(char *addr, const char *lnetname)
@@ -559,10 +569,10 @@ slcfg_resm_addaddr(char *addr, const char *lnetname)
 		sa.p = res->ai_addr;
 		ip = ntohl(sa.s->sin.sin_addr.s_addr);
 		pflnet_getifnfordst(cfg_ifaddrs, res->ai_addr, ifn);
+		ifv[0] = ifn;
+		rc = lnet_match_networks(&tnam,
+		    globalConfig.gconf_lnets, &ip, ifv, 1);
 		if (lnetname == NULL) {
-			ifv[0] = ifn;
-			rc = lnet_match_networks(&tnam,
-			    globalConfig.gconf_lnets, &ip, ifv, 1);
 			if (rc == 0) {
 				char addrbuf[256];
 
@@ -583,10 +593,8 @@ slcfg_resm_addaddr(char *addr, const char *lnetname)
 				continue;
 			}
 		}
-
-		ifv[0] = ifn;
-		if (lnet_match_networks(&tnam,
-		    globalConfig.gconf_lnets, &ip, ifv, 1))
+		/* XXX else: check letname */
+		if (rc)
 			slcfg_add_lnet(&sa, lnet);
 
 		if (nidcnt == cfg_nid_counter) {
