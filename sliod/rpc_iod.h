@@ -59,13 +59,13 @@ struct sli_exp_cli {
 
 /* aliases for connection management */
 #define sli_geticsvcx(resm, exp)					\
-	sl_csvc_get(&(resm)->resm_csvc, 0, (exp), (resm)->resm_nid,	\
+	sl_csvc_get(&(resm)->resm_csvc, 0, (exp), &(resm)->resm_nids,	\
 	    SRII_REQ_PORTAL, SRII_REP_PORTAL, SRII_MAGIC, SRII_VERSION,	\
 	    &resm2rmii(resm)->rmii_lock, &resm2rmii(resm)->rmii_waitq,	\
 	    SLCONNT_IOD, NULL)
 
 #define sli_getmcsvcx(resm, exp)					\
-	sl_csvc_get(&(resm)->resm_csvc, 0, (exp), (resm)->resm_nid,	\
+	sl_csvc_get(&(resm)->resm_csvc, 0, (exp), &(resm)->resm_nids,	\
 	    SRMI_REQ_PORTAL, SRMI_REP_PORTAL, SRMI_MAGIC, SRMI_VERSION,	\
 	    &resm2rmii(resm)->rmii_lock, &resm2rmii(resm)->rmii_waitq,	\
 	    SLCONNT_MDS, NULL)
@@ -89,7 +89,8 @@ int	sli_rmi_setmds(const char *);
 
 int	sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *);
 
-int	sli_rii_issue_repl_read(struct slashrpc_cservice *, int, int, struct sli_repl_workrq *);
+int	sli_rii_issue_repl_read(struct slashrpc_cservice *, int, int,
+	    struct sli_repl_workrq *);
 
 extern struct pscrpc_svc_handle sli_ric_svc;
 extern struct pscrpc_svc_handle sli_rii_svc;
@@ -101,7 +102,7 @@ sli_getclcsvc(struct pscrpc_export *exp)
 	struct sli_exp_cli *iexpc;
 
 	iexpc = sl_exp_getpri_cli(exp);
-	return (sl_csvc_get(&iexpc->iexpc_csvc, 0, exp, LNET_NID_ANY,
+	return (sl_csvc_get(&iexpc->iexpc_csvc, 0, exp, NULL,
 	    SRCI_REQ_PORTAL, SRCI_REP_PORTAL, SRCI_MAGIC, SRCI_VERSION,
 	    &iexpc->iexpc_cccp->icccp_lock,
 	    &iexpc->iexpc_cccp->icccp_waitq, SLCONNT_CLI, NULL));

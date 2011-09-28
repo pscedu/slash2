@@ -452,7 +452,7 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 	if (exclusive) {
 		locked = BMAP_RLOCK(b);
 		resm = libsl_nid2resm(bmap_2_ion(b));
-		psc_assert(resm->resm_nid == bmap_2_ion(b));
+//		psc_assert(resm->resm_nid == bmap_2_ion(b));
 		BMAP_URLOCK(b, locked);
 
 		csvc = slc_geticsvc(resm);

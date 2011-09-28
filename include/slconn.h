@@ -253,8 +253,8 @@ struct sl_expcli_ops {
 struct slashrpc_cservice *
 	 _sl_csvc_get(const struct pfl_callerinfo *,
 	     struct slashrpc_cservice **, int, struct pscrpc_export *,
-	     lnet_nid_t, uint32_t, uint32_t, uint64_t, uint32_t,
-	     void *, void *, enum slconn_type, void *);
+	     const struct psc_dynarray *, uint32_t, uint32_t, uint64_t,
+	     uint32_t, void *, void *, enum slconn_type, void *);
 void	_sl_csvc_decref(const struct pfl_callerinfo *, struct slashrpc_cservice *);
 void	_sl_csvc_disconnect(const struct pfl_callerinfo *, struct slashrpc_cservice *);
 void	 sl_csvc_incref(struct slashrpc_cservice *);

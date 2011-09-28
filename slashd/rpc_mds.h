@@ -96,13 +96,13 @@ int	slm_mkdir(struct srm_mkdir_req *, struct srm_mkdir_rep *, struct fidc_membh 
 /* aliases for connection management */
 #define slm_getmcsvcx(resm, exp)					\
 	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT, (exp),	\
-	    (resm)->resm_nid, SRMM_REQ_PORTAL, SRMM_REP_PORTAL,		\
+	    &(resm)->resm_nids, SRMM_REQ_PORTAL, SRMM_REP_PORTAL,	\
 	    SRMM_MAGIC, SRMM_VERSION, &resm2rmmi(resm)->rmmi_mutex,	\
 	    &resm2rmmi(resm)->rmmi_mwcond, SLCONNT_MDS, NULL)
 
 #define slm_geticsvcxf(resm, exp, fl, arg)				\
 	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT | (fl),	\
-	    (exp), (resm)->resm_nid, SRIM_REQ_PORTAL, SRIM_REP_PORTAL,	\
+	    (exp), &(resm)->resm_nids, SRIM_REQ_PORTAL, SRIM_REP_PORTAL,\
 	    SRIM_MAGIC,	SRIM_VERSION, &resm2rmmi(resm)->rmmi_mutex,	\
 	    &resm2rmmi(resm)->rmmi_mwcond, SLCONNT_IOD, (arg))
 
@@ -117,7 +117,7 @@ slm_getclcsvc(struct pscrpc_export *exp)
 	struct slm_exp_cli *mexpc;
 
 	mexpc = sl_exp_getpri_cli(exp);
-	return (sl_csvc_get(&mexpc->mexpc_csvc, 0, exp, LNET_NID_ANY,
+	return (sl_csvc_get(&mexpc->mexpc_csvc, 0, exp, NULL,
 	    SRCM_REQ_PORTAL, SRCM_REP_PORTAL, SRCM_MAGIC, SRCM_VERSION,
 	    &mexpc->mexpc_cccp->mcccp_lock,
 	    &mexpc->mexpc_cccp->mcccp_waitq, SLCONNT_CLI, NULL));

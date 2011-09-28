@@ -88,7 +88,6 @@ resprof_get_pri(struct sl_resource *res)
 /* Resource member (a machine in an I/O system) */
 struct sl_resm {
 	char			 resm_addrbuf[RESM_ADDRBUF_SZ];
-	lnet_nid_t		 resm_nid;
 	struct psc_dynarray	 resm_nids;
 	struct sl_resource	*resm_res;
 	struct psc_hashent	 resm_hentry;
@@ -96,7 +95,8 @@ struct sl_resm {
 #define resm_site		 resm_res->res_site
 #define resm_siteid		 resm_site->site_id
 #define resm_type		 resm_res->res_type
-#define resm_iosid		 resm_res->res_id
+#define resm_res_id		 resm_res->res_id
+#define resm_name		 resm_res->res_name
 };
 
 static __inline void *
@@ -155,7 +155,6 @@ struct sl_gconf {
 
 	struct psclist_head	 gconf_routehd;
 	struct psc_lockedlist	 gconf_sites;
-	struct psc_hashtbl	 gconf_nid_hashtbl;
 	psc_spinlock_t		 gconf_lock;
 };
 
@@ -167,9 +166,6 @@ struct sl_gconf {
 		INIT_SPINLOCK(&(cf)->gconf_lock);			\
 		pll_init(&(cf)->gconf_sites, struct sl_site,		\
 		    site_lentry, &(cf)->gconf_lock);			\
-		psc_hashtbl_init(&(cf)->gconf_nid_hashtbl, 0,		\
-		    struct sl_resm, resm_nid, resm_hentry,		\
-		    GCONF_HASHTBL_SZ, NULL, "resnid");			\
 	} while (0)
 
 #define CONF_LOCK()			spinlock(&globalConfig.gconf_lock)
@@ -253,12 +249,11 @@ extern int		 cfg_resm_pri_sz;
 
 extern char		 cfg_filename[];
 extern int		 cfg_lineno;
-extern int		 cfg_nid_counter;
 extern struct psclist_head cfg_lnetif_pairs;
 
 /**
- * sl_global_id_build - Produce a global, unique identifier for a resource
- *	from its internal identifier.
+ * sl_global_id_build - Produce a global, unique identifier for a
+ *	resource from its internal identifier.
  * @site_id: site identifier.
  * @intres_id: resource identifier, internal to site.
  */

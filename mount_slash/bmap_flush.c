@@ -1042,9 +1042,8 @@ msl_bmap_release(struct sl_resm *resm)
 		 *   the client must reacquire leases to perform further
 		 *   I/O on any bmap in this set.
 		 */
-		psclog_errorx("bmap_release failed res=%s:nid=%s (rc=%d)",
-		    resm->resm_res->res_name, libcfs_nid2str(resm->resm_nid),
-		    rc);
+		psclog_errorx("bmap_release failed res=%s (rc=%d)",
+		    resm->resm_name, rc);
 
 		if (rq)
 			pscrpc_req_finished(rq);
@@ -1156,7 +1155,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				resm = libsl_nid2resm(bmap_2_ion(b));
 				rmci = resm2rmci(resm);
 
-				psc_assert(bmap_2_ion(b) == resm->resm_nid);
+//				psc_assert(bmap_2_ion(b) == resm->resm_nid);
 
 				DEBUG_BMAP(PLL_INFO, b, "nid=%"PRIx64,
 					   bmap_2_ion(b));

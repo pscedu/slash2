@@ -54,9 +54,7 @@ libsl_resm_lookup(void)
 		if (LNET_NETTYP(LNET_NIDNET(pp->nid)) == LOLND)
 			continue;
 
-		m = psc_hashtbl_search(&globalConfig.gconf_nid_hashtbl,
-		    NULL, NULL, &pp->nid);
-		/* Every nid found by lnet must be a resource member. */
+		m = libsl_try_nid2resm(pp->nid);
 		if (m == NULL)
 			continue;
 		if (resm == NULL)
@@ -119,8 +117,17 @@ libsl_id2res(sl_ios_id_t id)
 struct sl_resm *
 libsl_try_nid2resm(lnet_nid_t nid)
 {
-	return (psc_hashtbl_search(&globalConfig.gconf_nid_hashtbl,
-	    NULL, NULL, &nid));
+	struct sl_resource *r;
+	struct sl_resm *m;
+	struct sl_site *s;
+	lnet_nid_t *nidp;
+	int i, j, k;
+
+	CONF_FOREACH_RESM(s, r, i, m, j)
+		DYNARRAY_FOREACH(nidp, k, &m->resm_nids)
+			if (*nidp == nid)
+				return (m);
+	return (NULL);
 }
 
 struct sl_resm *
@@ -190,12 +197,9 @@ libsl_profile_dump(void)
 	DYNARRAY_FOREACH(p, n, &r->res_peers)
 		psclog_info("\tpeer %d: %s\t%s",
 		    n, p->res_name, p->res_desc);
-	DYNARRAY_FOREACH(resm, n, &r->res_members) {
-		psclog_info("\tnid %d:\t%s", n,
-		    pscrpc_nid2str(resm->resm_nid, buf));
+	DYNARRAY_FOREACH(resm, n, &r->res_members)
 		DYNARRAY_FOREACH(np, j, &resm->resm_nids)
-			psclog_info("\t\t%s", pscrpc_nid2str(*np, buf));
-	}
+			psclog_info("\tnid %s", pscrpc_nid2str(*np, buf));
 
 	PSCLOG_UNLOCK();
 }
@@ -317,13 +321,4 @@ slcfg_res_cmp(const void *a, const void *b)
 	const struct sl_resource * const *py = b, *y = *py;
 
 	return (CMP(x->res_id, y->res_id));
-}
-
-int
-slcfg_resm_cmp(const void *a, const void *b)
-{
-	const struct sl_resm * const *px = a, *x = *px;
-	const struct sl_resm * const *py = b, *y = *py;
-
-	return (CMP(x->resm_nid, y->resm_nid));
 }
