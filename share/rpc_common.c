@@ -34,9 +34,11 @@
 #include "slconfig.h"
 #include "slconn.h"
 
+const char		 sl_version[] = "$Rev$";
+
 struct pscrpc_nbreqset	*sl_nbrqset;
 
-struct psc_lockedlist	client_csvcs = PLL_INIT(&client_csvcs,
+struct psc_lockedlist	 client_csvcs = PLL_INIT(&client_csvcs,
     struct slashrpc_cservice, csvc_lentry);
 
 __weak void
@@ -213,6 +215,7 @@ slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
 	rq->rq_timeoutable = 1;
 	mq->magic = csvc->csvc_magic;
 	mq->version = csvc->csvc_version;
+	mq->stkvers = strtol(sl_version + 6, NULL, 10);
 
 	if (flags & CSVCF_NONBLOCK) {
 		if (flags & CSVCF_USE_MULTIWAIT) {
