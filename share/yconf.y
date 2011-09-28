@@ -472,31 +472,33 @@ lnetname_stmt	: NAME '=' LNETNAME ';' {
 %%
 
 void
-slcfg_add_lnet(const union pfl_sockaddr_ptr *sa, uint32_t lnet)
+slcfg_add_lnet(uint32_t lnet, char *ifn)
 {
-	char buf[PSCRPC_NIDSTR_SIZE], ibuf[PSCRPC_NIDSTR_SIZE], *p, *ifv[1], *tnam;
+	char buf[PSCRPC_NIDSTR_SIZE], ibuf[PSCRPC_NIDSTR_SIZE], *p, *tnam, *ifv[1];
 	struct lnetif_pair *i, lp;
+	union pfl_sockaddr sa;
 	in_addr_t ip;
 
-	memset(&lp, 0, sizeof(lp));
-	INIT_PSC_LISTENTRY(&lp.lentry);
+	if (!pflnet_getifaddr(cfg_ifaddrs, ifn, &sa))
+		return;
 
-	/* get destination routing interface */
-	pflnet_getifnfordst(cfg_ifaddrs, &sa->s->sa, lp.ifn);
-	lp.net = lnet;
-
-	pscrpc_net2str(lp.net, buf);
-
-	ifv[0] = lp.ifn;
-	ip = ntohl(sa->s->sin.sin_addr.s_addr);
+	ifv[0] = ifn;
+	ip = ntohl(sa.sin.sin_addr.s_addr);
 	if (lnet_match_networks(&tnam, globalConfig.gconf_lnets,
 	    &ip, ifv, 1) == 0)
 		return;
+
 	p = strchr(tnam, '(');
 	if (p)
 		*p = '\0';
+	pscrpc_net2str(lnet, buf);
 	if (strcmp(tnam, buf))
 		return;
+
+	memset(&lp, 0, sizeof(lp));
+	INIT_PSC_LISTENTRY(&lp.lentry);
+	strlcpy(lp.ifn, ifn, sizeof(lp.ifn));
+	lp.net = lnet;
 
 	/*
 	 * Ensure mutual exclusion of this interface and Lustre network,
@@ -597,19 +599,21 @@ slcfg_resm_addaddr(char *addr, const char *lnetname)
 		}
 		/* XXX else: check letname */
 		if (rc)
-			slcfg_add_lnet(&sa, lnet);
+			slcfg_add_lnet(lnet, ifn);
 
 		if (nidcnt == cfg_nid_counter) {
 			lnet_nid_t *nidp;
 
+ addnid:
 			nidp = PSCALLOC(sizeof(*nidp));
 			*nidp = LNET_MKNID(lnet, ip);
+			if (libsl_try_nid2resm(*nidp))
+				yyerror("NID already registered");
 			psc_dynarray_add(&currentResm->resm_nids, nidp);
 			continue;
 		}
 
 		currentResm = m = PSCALLOC(sizeof(*m) + cfg_resm_pri_sz);
-		psc_hashent_init(&globalConfig.gconf_nid_hashtbl, m);
 
 		rc = snprintf(m->resm_addrbuf, sizeof(m->resm_addrbuf),
 		    "%s:%s", currentRes->res_name, addr);
@@ -621,15 +625,14 @@ slcfg_resm_addaddr(char *addr, const char *lnetname)
 			yyerror("resource member %s address %s: %s",
 			    currentRes->res_name, addr, slstrerror(errno));
 
-		m->resm_nid = LNET_MKNID(lnet, ip);
+		psc_dynarray_init(&m->resm_nids);
 		m->resm_res = currentRes;
 		slcfg_init_resm(m);
-
-		psc_hashtbl_add_item(&globalConfig.gconf_nid_hashtbl, m);
 
 		psc_dynarray_add(&currentRes->res_members, m);
 
 		nidcnt = cfg_nid_counter;
+		goto addnid;
 	}
 	freeaddrinfo(res0);
 }
@@ -874,9 +877,6 @@ slcfg_parse(const char *config_file)
 		psc_dynarray_sort(&s->site_resources, qsort,
 		    slcfg_res_cmp);
 		DYNARRAY_FOREACH(r, j, &s->site_resources) {
-			psc_dynarray_sort(&r->res_members, qsort,
-			    slcfg_resm_cmp);
-
 			/* Resolve peer names */
 			DYNARRAY_FOREACH(p, i, &r->res_peers) {
 				peer = libsl_str2res(p);

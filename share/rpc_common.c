@@ -483,14 +483,16 @@ sl_csvc_create(uint32_t rqptl, uint32_t rpptl)
 struct slashrpc_cservice *
 _sl_csvc_get(const struct pfl_callerinfo *pci,
     struct slashrpc_cservice **csvcp, int flags,
-    struct pscrpc_export *exp, lnet_nid_t peernid, uint32_t rqptl,
-    uint32_t rpptl, uint64_t magic, uint32_t version, void *lockp,
-    void *waitinfo, enum slconn_type ctype, void *arg)
+    struct pscrpc_export *exp, const struct psc_dynarray *peernids,
+    uint32_t rqptl, uint32_t rpptl, uint64_t magic, uint32_t version,
+    void *lockp, void *waitinfo, enum slconn_type ctype, void *arg)
 {
+	int i, j, rc = 0, locked;
 	struct slashrpc_cservice *csvc;
 	struct sl_resm *resm;
+	lnet_nid_t peernid, *nidp;
+	lnet_process_id_t *pp;
 	union lockmutex lm;
-	int rc = 0, locked;
 
 	lm.lm_ptr = lockp;
 
@@ -500,6 +502,23 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		locked = reqlock(lm.lm_lock);
 	if (exp)
 		peernid = exp->exp_connection->c_peer.nid;
+	else {
+		peernid = LNET_NID_ANY;
+		/* prefer directly connected NIDs */
+		DYNARRAY_FOREACH(nidp, i, peernids) {
+			DYNARRAY_FOREACH(pp, j, &lnet_prids) {
+				if (LNET_NIDNET(*nidp) ==
+				    LNET_NIDNET(pp->nid)) {
+					peernid = *nidp;
+					goto foundnid;
+				}
+			}
+		}
+ foundnid:
+		if (peernid == LNET_NID_ANY)
+			peernid = *(lnet_nid_t *)
+			    psc_dynarray_getpos(peernids, 0);
+	}
 	psc_assert(peernid != LNET_NID_ANY);
 
 	csvc = *csvcp;
@@ -668,7 +687,7 @@ slconnthr_main(struct psc_thread *thr)
 		/* Now just PING for connection lifetime. */
 		for (;;) {
 			csvc = sl_csvc_get(&resm->resm_csvc,
-			    sct->sct_flags, NULL, resm->resm_nid,
+			    sct->sct_flags, NULL, &resm->resm_nids,
 			    sct->sct_rqptl, sct->sct_rpptl,
 			    sct->sct_magic, sct->sct_version,
 			    sct->sct_lockinfo.lm_ptr, sct->sct_waitinfo,
@@ -748,8 +767,8 @@ slconnthr_spawn(struct sl_resm *resm, uint32_t rqptl, uint32_t rpptl,
 	struct psc_thread *thr;
 
 	thr = pscthr_init(thrtype, 0, slconnthr_main, NULL,
-	    sizeof(*sct), "%sconnthr-%s", thrnamepre,
-	    resm->resm_res->res_name);
+	    sizeof(*sct), "%sconnthr%d", thrnamepre,
+	    resm->resm_res_id);
 	sct = thr->pscthr_private;
 	sct->sct_resm = resm;
 	sct->sct_rqptl = rqptl;
