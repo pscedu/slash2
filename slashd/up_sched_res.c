@@ -293,7 +293,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	rc = SL_RSX_NEWREQ(csvc, SRMT_REPL_SCHEDWK, rq, mq, mp);
 	if (rc)
 		PFL_GOTOERR(fail, rc);
-	mq->nid = src_resm->resm_nid;
+	mq->nid = resm_2_nid(src_resm);
 	mq->len = SLASH_BMAP_SIZE;
 	lastbno = fcmh_nvalidbmaps(wk->uswi_fcmh);
 	if (lastbno > 0)

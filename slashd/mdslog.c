@@ -188,7 +188,7 @@ mds_record_update_prog(void)
 		if (resm == nodeResm)
 			continue;
 		peerinfo = res2rpmi(resm->resm_res)->rpmi_info;
-		update_prog_buf[i].res_id = resm->resm_iosid;
+		update_prog_buf[i].res_id = resm->resm_res_id;
 		update_prog_buf[i].res_xid = peerinfo->sp_xid;
 		update_prog_buf[i].res_batchno = peerinfo->sp_batchno;
 		i++;
@@ -1421,7 +1421,7 @@ mdslog_bmap_crc(void *datap, uint64_t txg, __unusedx int flag)
 
 		sjbc = pjournal_get_buf(mdsJournal, sizeof(*sjbc));
 		sjbc->sjbc_fid = fcmh_2_fid(bmap->bcm_fcmh);
-		sjbc->sjbc_iosid = bmi->bmdsi_wr_ion->rmmi_resm->resm_iosid;
+		sjbc->sjbc_iosid = bmi->bmdsi_wr_ion->rmmi_resm->resm_res_id;
 		sjbc->sjbc_bmapno = bmap->bcm_bmapno;
 		sjbc->sjbc_ncrcs = n;
 		sjbc->sjbc_fsize = crcup->fsize;		/* largest known size */

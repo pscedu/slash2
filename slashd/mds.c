@@ -404,9 +404,8 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	struct resm_mds_info *rmmi;
 	struct bmap_ion_assign bia;
 	struct sl_resm *resm;
-	int iosidx;
 	uint32_t nrepls;
-	int rc;
+	int iosidx, rc;
 
 	psc_assert(!bmi->bmdsi_wr_ion);
 	psc_assert(!bmi->bmdsi_assign);
@@ -439,7 +438,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	 *   so that the assignment may be restored on reboot.
 	 */
 	memset(&bia, 0, sizeof(bia));
-	bia.bia_ion_nid = bml->bml_ion_nid = rmmi->rmmi_resm->resm_nid;
+	bia.bia_ion_nid = bml->bml_ion_nid = resm_2_nid(rmmi->rmmi_resm);
 	bia.bia_lastcli = bml->bml_cli_nidpid;
 	bia.bia_ios = rmmi->rmmi_resm->resm_res->res_id;
 	bia.bia_fid = fcmh_2_fid(bmap->bcm_fcmh);
@@ -1440,7 +1439,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
 	psc_assert(bmi);
 
 	if (!bmi->bmdsi_wr_ion ||
-	    ion_nid != bmi->bmdsi_wr_ion->rmmi_resm->resm_nid) {
+	    ion_nid != resm_2_nid(bmi->bmdsi_wr_ion->rmmi_resm)) {
 		/* Whoops, we recv'd a request from an unexpected NID.
 		 */
 		rc = -EINVAL;
@@ -1484,7 +1483,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
 
 		ih = fcmh_2_inoh(fcmh);
 		iosidx = mds_repl_ios_lookup(ih,
-		    bmi->bmdsi_wr_ion->rmmi_resm->resm_iosid);
+		    bmi->bmdsi_wr_ion->rmmi_resm->resm_res_id);
 		if (iosidx < 0)
 			psclog_errorx("ios not found");
 		else {
@@ -1788,7 +1787,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 		psc_assert(bmi->bmdsi_wr_ion);
 
 		sbd_out->sbd_key = bml->bml_bmdsi->bmdsi_assign->odtr_key;
-		sbd_out->sbd_ion_nid = bmi->bmdsi_wr_ion->rmmi_resm->resm_nid;
+		sbd_out->sbd_ion_nid = resm_2_nid(bmi->bmdsi_wr_ion->rmmi_resm);
 		sbd_out->sbd_ios_id =
 			bmi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id;
 	} else {

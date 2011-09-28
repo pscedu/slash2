@@ -99,6 +99,8 @@ struct sl_resm {
 #define resm_name		 resm_res->res_name
 };
 
+#define resm_2_nid(m)		(*(lnet_nid_t *)psc_dynarray_getpos(&(m)->resm_nids, 0))
+
 static __inline void *
 resm_get_pri(struct sl_resm *resm)
 {

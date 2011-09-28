@@ -177,7 +177,7 @@ slm_rmc_bmapdesc_setup(struct bmapc_memb *bmap,
 		struct bmap_mds_info *bmi = bmap_2_bmi(bmap);
 
 		psc_assert(bmi->bmdsi_wr_ion);
-		sbd->sbd_ion_nid = bmi->bmdsi_wr_ion->rmmi_resm->resm_nid;
+		sbd->sbd_ion_nid = resm_2_nid(bmi->bmdsi_wr_ion->rmmi_resm);
 		sbd->sbd_ios_id = bmi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id;
 	} else {
 		sbd->sbd_ion_nid = LNET_NID_ANY;
@@ -229,7 +229,7 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	mp->sbd.sbd_key = bmi->bmdsi_assign->odtr_key;
 
 	psc_assert(bmi->bmdsi_wr_ion);
-	mp->sbd.sbd_ion_nid = bmi->bmdsi_wr_ion->rmmi_resm->resm_nid;
+	mp->sbd.sbd_ion_nid = resm_2_nid(bmi->bmdsi_wr_ion->rmmi_resm);
 	mp->sbd.sbd_ios_id = bmi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id;
 
  out:

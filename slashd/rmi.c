@@ -337,7 +337,7 @@ slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 
 	iosidx = mds_repl_ios_lookup(fcmh_2_inoh(b->bcm_fcmh),
 	    libsl_nid2resm(rq->rq_export->exp_connection->
-	    c_peer.nid)->resm_iosid);
+	    c_peer.nid)->resm_res_id);
 
 	brepls_init(tract, -1);
 	tract[BREPLST_GARBAGE_SCHED] = BREPLST_INVALID;
@@ -476,7 +476,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	slm_fcmh_endow_nolog(p, c);
 	FCMH_LOCK(c);
 	i = fcmh_2_ino(c)->ino_nrepls++;
-	fcmh_set_repl(c, i, m->resm_iosid);
+	fcmh_set_repl(c, i, m->resm_res_id);
 	fcmh_set_repl_nblks(c, i, mq->sstb.sst_blocks);
 	mp->rc = mds_inode_write(fcmh_2_inoh(c), mdslog_ino_repls, c);
 	FCMH_ULOCK(c);

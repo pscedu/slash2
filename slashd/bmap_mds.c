@@ -250,7 +250,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 	FCMH_LOCK(f);
 	fcmh_wait_locked(f, f->fcmh_flags & FCMH_IN_SETATTR);
 
-	iosid = bmi->bmdsi_wr_ion->rmmi_resm->resm_iosid;
+	iosid = bmi->bmdsi_wr_ion->rmmi_resm->resm_res_id;
 	idx = mds_repl_ios_lookup(ih, iosid);
 	if (idx < 0)
 		psc_fatal("not found");
