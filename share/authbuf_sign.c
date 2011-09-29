@@ -42,27 +42,6 @@
 
 extern gcry_md_hd_t	authbuf_hd;
 
-void
-pscrpc_req_getprids(struct pscrpc_request *rq,
-    lnet_process_id_t *self_prid, lnet_process_id_t *peer_prid)
-{
-	if (rq->rq_import) {
-		*peer_prid = rq->rq_import->imp_connection->c_peer;
-		pscrpc_getpridforpeer(self_prid, &lnet_prids,
-		    rq->rq_import->imp_connection->c_peer.nid);
-		if (self_prid->nid == LNET_NID_ANY) {
-			errno = ENETUNREACH;
-			psc_fatal("nid %"PSCPRIxLNID,
-			    rq->rq_import->imp_connection->c_peer.nid);
-		}
-	} else {
-		/* there is no import, we must be a server padawan! */
-		*peer_prid = rq->rq_peer;
-		self_prid->nid = rq->rq_self;
-		self_prid->pid = the_lnet.ln_pid;
-	}
-}
-
 /**
  * authbuf_sign - Sign a message with the secret key.
  * @rq: request structure to sign.
@@ -99,7 +78,7 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 	saf->saf_secret.sas_nonce =
 	    psc_atomic64_inc_getnew(&authbuf_nonce);
 
-	pscrpc_req_getprids(rq, &self_prid, &peer_prid);
+	pscrpc_req_getprids(&lnet_prids, rq, &self_prid, &peer_prid);
 	saf->saf_secret.sas_src_nid = self_prid.nid;
 	saf->saf_secret.sas_src_pid = self_prid.pid;
 	saf->saf_secret.sas_dst_nid = peer_prid.nid;
@@ -159,7 +138,7 @@ authbuf_check(struct pscrpc_request *rq, int msgtype)
 		return (SLERR_AUTHBUF_BADMAGIC);
 	}
 
-	pscrpc_req_getprids(rq, &self_prid, &peer_prid);
+	pscrpc_req_getprids(&lnet_prids, rq, &self_prid, &peer_prid);
 	if (saf->saf_secret.sas_src_nid != peer_prid.nid ||
 	    saf->saf_secret.sas_src_pid != peer_prid.pid ||
 	    saf->saf_secret.sas_dst_nid != self_prid.nid ||
