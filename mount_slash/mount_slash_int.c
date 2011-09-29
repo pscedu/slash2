@@ -796,7 +796,14 @@ msl_fsrq_complete(struct msl_fsrqinfo *q)
 			abort();
 	}
 
-	pscfs_reply_read(q->mfsrq_pfr, q->mfsrq_buf, len, -abs(q->mfsrq_err));
+	if (!q->mfsrq_err) {
+		MFH_LOCK(q->mfsrq_fh);
+		q->mfsrq_fh->mfh_nbytes_rd += len;
+		MFH_ULOCK(q->mfsrq_fh);
+	}
+
+	pscfs_reply_read(q->mfsrq_pfr, q->mfsrq_buf, len,
+	    -abs(q->mfsrq_err));
 }
 
 __static void
