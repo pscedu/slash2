@@ -4,7 +4,7 @@
 08/04/2010 - Fail to re-create the same directory after rename - open
 08/17/2010 - Redundant readdir RPC call when ls -al under root
 
-07/30/2010  
+07/30/2010
 ----------
 
 BUG: client side should handle bmap flush return code in its callback.
@@ -13,7 +13,7 @@ Here is how I mount slash2 on grapefruit:
 
 root@grapefruit: ~/projects-grapefruit/slash_nara/mount_slash$ PSC_LOG_LEVEL=3
 SLASH_MDS_NID="orange@PSCB" SLASH2_PIOS_ID="bessemer@PSC" gdb ./mount_slash
-                                            ------------
+					    ------------
 
 I can extract a file just fine. But the file size will become zero after a
 short while.
@@ -31,19 +31,12 @@ Note that 10000 is for bessemer and 10042 is for grapefruit.
 
 Right now, the bmap flush code at the client side does NOT check return code (EBADF) properly.
 
-Paul found out that the following config I use has a problem, it has two items with the same ifs 
+Paul found out that the following config I use has a problem, it has two items with the same ifs
 "128.182.99.123".
 
-# $Id: example.conf 12159 2010-06-26 01:38:05Z pauln $
-
-# See slash.conf(5) for more information.
-
 # Global network config
-global port=1000;
-global net=tcp10;
-
-# Pull in other/local config files
-# include "/etc/slash/conf.d/*"
+set port=1000;
+set net=tcp10;
 
 site @PSC {
 	site_desc	= "Pittsburgh Supercomputing Center";
@@ -53,7 +46,7 @@ site @PSC {
 		type	= parallel_fs;
 		id	= 0;
 		ifs	= 128.182.99.123;
- 		peers	= golem@PSC;
+		peers	= golem@PSC;
 		fsroot	= /bessemer/pauln/slash2io/;
 	}
 	resource golem {
@@ -126,7 +119,7 @@ site @PSCB {
 	}
 }
 
-07/30/2010  
+07/30/2010
 ----------
 
 BUG - Cannot build grub 1.98 under slash2  - fixed by newer version of FUSE
@@ -158,13 +151,13 @@ It tries to compile the following program:
 
 #define VERSION "1.98"
 RT "bug-grub@gnu.org"
-/* end confdefs.h.  */  
- 
+/* end confdefs.h.  */
+
 int
 main (void)
 {
- 
-   ;  
+
+   ;
    return 0;
 }
 
@@ -203,11 +196,11 @@ zhihui@grapefruit: /slash2/grub-1.98$ cat >> bugfile.txt
 line1
 zhihui@grapefruit: /slash2/grub-1.98$ cat >> bugfile.txt
 line2
-zhihui@grapefruit: /slash2/grub-1.98$ cat bugfile.txt 
+zhihui@grapefruit: /slash2/grub-1.98$ cat bugfile.txt
 line2
 zhihui@grapefruit: /slash2/grub-1.98$ cat >> bugfile.txt
 line3
-zhihui@grapefruit: /slash2/grub-1.98$ cat bugfile.txt 
+zhihui@grapefruit: /slash2/grub-1.98$ cat bugfile.txt
 line3
 
 I tried the same thing on wolerine, and it works fine.  This explains why Paul
@@ -230,8 +223,8 @@ I did the following on lemon:
 	mv grub-1.98 grub-1.98-1
 	tar xvf ~/grub-1.98.tar.gz
 	cd grub-1.98			<-- no such file or directory.
-	
-	
+
+
 08/17/2010
 ----------
 
@@ -241,7 +234,7 @@ entries. Then the client will call readdir PRC again with offset of 2.
 10/21/2010
 ----------
 
-There seems to be a race between read and write : build slash2 under slash2, read 
+There seems to be a race between read and write : build slash2 under slash2, read
 mk/gen-localdefs-lemon-pickle.mk returns NULL bytes at the first line. Later when
 I check the file, it seems fine.  After I tweak logs (-r14248), the bug disappears.
 
