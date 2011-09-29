@@ -480,6 +480,7 @@ reimport
   default in developer builds
 - directory replica table inheritance
 - add svn revision # to CONNECT and track for "*ctl -s conns"
+- zero-length files currently fail slictl import
 
 archiver
 - install SLASH2 on illusion
