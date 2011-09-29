@@ -214,7 +214,6 @@ psc_ctl_prthr_t psc_ctl_prthrs[] = {
 /* CTL		*/ psc_ctlthr_pr,
 /* CTLAC	*/ psc_ctlacthr_pr,
 /* LNETAC	*/ NULL,
-/* REPLFIN	*/ NULL,
 /* REPLPND	*/ NULL,
 /* REPLREAP	*/ NULL,
 /* RIC		*/ sliricthr_pr,
