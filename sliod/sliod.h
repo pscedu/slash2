@@ -36,7 +36,6 @@ enum {
 	SLITHRT_CTL,		/* control processor */
 	SLITHRT_CTLAC,		/* control acceptor */
 	SLITHRT_LNETAC,		/* Lustre net accept thr */
-	SLITHRT_REPLFIN,	/* process finished replication work */
 	SLITHRT_REPLPND,	/* process enqueued replication work */
 	SLITHRT_REPLREAP,	/* reap in-flight replication work */
 	SLITHRT_RIC,		/* service RPC requests from CLI */
