@@ -164,42 +164,27 @@ sli_rpc_mds_unpack_fsuuid(struct pscrpc_request *rq, int msgtype)
 		psclog_warnx("invalid zero fsuuid");
 		return;
 	}
+
 	if (!sli_fsuuid) {
-		char *endp, buf[17], fn[PATH_MAX];
-		FILE *fp;
+		char fn[PATH_MAX];
+		struct stat stb;
 
-		buf[0] = '\0';
-		xmkfn(fn, "%s/%s/%s", globalConfig.gconf_fsroot,
-		    SL_RPATH_META_DIR, SL_FN_FSUUID);
-		fp = fopen(fn, "r");
-		if (fp) {
-			if (fgets(buf, sizeof(buf), fp) == NULL)
-				psclog_errorx("%s", fn);
-			fclose(fp);
+		xmkfn(fn, "%s/%s/%"PRIx64"/%s",
+		      globalConfig.gconf_fsroot, SL_RPATH_META_DIR,
+		      fsuuid, SL_RPATH_FIDNS_DIR);
+		
+		if (stat(fn, &stb) || !S_ISDIR(stb.st_mode))
+			psc_fatalx("sliod directories have not been created "
+			   "(uuid=%"PRIx64")", fsuuid);
 
-			buf[strcspn(buf, "\n")] = '\0';
-
-			sli_fsuuid = strtoll(buf, &endp, 16);
-			if (endp == buf || *endp) {
-				psclog_errorx("invalid fsuuid in %s: "
-				    "%s", fn, buf);
-				return;
-			}
-		}
-
-		if (!sli_fsuuid) {
-			sli_fsuuid = fsuuid;
-
-			fp = fopen(fn, "w");
-			if (fp == NULL)
-				psc_fatal("open %s", fn);
-			fprintf(fp, "%"PRIx64"\n", sli_fsuuid);
-			fclose(fp);
-		}
+		globalConfig.gconf_fsuuid = sli_fsuuid = fsuuid;
 	}
-	if (sli_fsuuid != fsuuid)
-		psc_fatalx("fsuuid don't match: %"PRIx64" vs "
-		    "%"PRIx64, sli_fsuuid, fsuuid);
+	
+	if (globalConfig.gconf_fsuuid != fsuuid)
+		psc_fatalx("Mismatching UUIDs detected!  "
+		   "gconf_fsuuid=%"PRIx64" mds_fsuuid=%"PRIx64, 
+		   globalConfig.gconf_fsuuid, fsuuid);
+
 	return;
 
  error:
