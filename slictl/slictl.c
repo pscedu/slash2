@@ -143,7 +143,7 @@ void
 slictlcmd_import(int ac, char *av[])
 {
 	struct slictlmsg_fileop *sfop;
-	struct stat sb;
+	char fn[PATH_MAX];
 	int i, c;
 
 	PFL_OPT_RESET();
@@ -165,15 +165,17 @@ slictlcmd_import(int ac, char *av[])
  usage:
 		errx(1, "usage: import [-PRv] file ... dst");
 	for (i = 0; i < ac - 1; i++) {
-		if (stat(av[i], &sb) == -1)
-			err(1, "%s", av[i]);
+		if (realpath(av[i], fn) == NULL) {
+			warn("%s", av[i]);
+			continue;
+		}
 		sfop = psc_ctlmsg_push(SLICMT_IMPORT, sizeof(*sfop));
 		if (recursive)
 			sfop->sfop_flags |= SLI_CTL_FOPF_RECURSIVE;
 		if (verbose)
 			sfop->sfop_flags |= SLI_CTL_FOPF_VERBOSE;
-		strlcpy(sfop->sfop_fn, av[i], sizeof(sfop->sfop_fn));
-		strlcpy(sfop->sfop_fn2, av[ac - 1], sizeof(sfop->sfop_fn));
+		strlcpy(sfop->sfop_fn, fn, sizeof(sfop->sfop_fn));
+		strlcpy(sfop->sfop_fn2, av[ac - 1], sizeof(sfop->sfop_fn2));
 	}
 }
 
