@@ -39,20 +39,28 @@
 void
 sli_fg_makepath(const struct slash_fidgen *fg, char *fid_path)
 {
-	char a[FID_PATH_DEPTH];
+	char str[(FID_PATH_DEPTH * 2) + 1];
+	char *p;
 	int i;
 
-	a[0] = (fg->fg_fid & UINT64_C(0x0000000000f00000)) >> (BPHXC * 5);
-	a[1] = (fg->fg_fid & UINT64_C(0x00000000000f0000)) >> (BPHXC * 4);
-	a[2] = (fg->fg_fid & UINT64_C(0x000000000000f000)) >> (BPHXC * 3);
-
-	for (i = 0; i < FID_PATH_DEPTH; i++)
-		a[i] += a[i] < 10 ? 0x30 : 0x57;
-
-	xmkfn(fid_path, "%s/%s/%s/%c/%c/%c/%016"PRIx64"_%"PRIx64,
-	    globalConfig.gconf_fsroot,
-	    SL_RPATH_META_DIR, SL_RPATH_FIDNS_DIR,
-	    a[0], a[1], a[2], fg->fg_fid, fg->fg_gen);
+	for (p = str, i = 0; i < FID_PATH_DEPTH; i++) {
+		/*
+		str[i * 2] = (fg->fg_fid & UINT64_C(0x0000000000f00000)) >> (BPHXC * (5 - i));
+		str[i * 2] += a[i] < 10 ? 0x30 : 0x57;
+		str[(i * 2) + 1] = '/';
+		*/
+		*p = (fg->fg_fid & UINT64_C(0x0000000000f00000)) >> 
+			(BPHXC * (5 - i));
+		*p += *p < 10 ? 0x30 : 0x57;
+		p++;
+		*(p++) = '/';
+	}
+	*p = '\0';
+			
+	xmkfn(fid_path, "%s/%s/%s/%s/%s/%016"PRIx64"_%"PRIx64,
+	      globalConfig.gconf_fsroot, SL_RPATH_META_DIR, 
+	      globalConfig.gconf_fsuuid, SL_RPATH_FIDNS_DIR,
+	      str, fg->fg_fid, fg->fg_gen);
 
 	psclog_dbg("fid="SLPRI_FID" fidpath=%s", fg->fg_fid, fid_path);
 }
