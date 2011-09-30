@@ -771,7 +771,7 @@ slconnthr_spawn(struct sl_resm *resm, uint32_t rqptl, uint32_t rpptl,
 
 	thr = pscthr_init(thrtype, 0, slconnthr_main, NULL,
 	    sizeof(*sct), "%sconnthr%d:%d", thrnamepre,
-	    resm->resm_siteid, resm->resm_res_id);
+	    resm->resm_siteid, sl_resid_to_int(resm->resm_res_id));
 	sct = thr->pscthr_private;
 	sct->sct_resm = resm;
 	sct->sct_rqptl = rqptl;

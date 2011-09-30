@@ -274,4 +274,10 @@ sl_resid_to_siteid(sl_ios_id_t id)
 	return ((id & SL_SITE_MASK) >> SL_SITE_BITS);
 }
 
+static __inline sl_ios_id_t
+sl_resid_to_int(sl_ios_id_t id)
+{
+	return (id & ~SL_SITE_MASK);
+}
+
 #endif /* _SLCONFIG_H_ */
