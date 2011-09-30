@@ -111,6 +111,8 @@ main(int argc, char *argv[])
 	const char *cfn, *sfn, *p, *prefmds;
 	sigset_t signal_set;
 	int rc, c;
+	char fn[PATH_MAX];
+	struct stat stb;
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -162,6 +164,15 @@ main(int argc, char *argv[])
 	authbuf_checkkeyfile();
 	authbuf_readkeyfile();
 
+	xmkfn(fn, "%s/%s/%s/%s",
+              globalConfig.gconf_fsroot, SL_RPATH_META_DIR,
+              globalConfig.gconf_fsuuid, SL_RPATH_FIDNS_DIR);
+
+	rc = stat(fn, &stb);
+	if (rc || !S_ISDIR(stb.st_mode))
+		psc_fatalx("sliod directories have not been created (uuid=%"
+			   PRIx64")", globalConfig.gconf_fsuuid);
+
 	libsl_init();
 
 	sl_drop_privs(allow_root_uid);
@@ -189,4 +200,6 @@ main(int argc, char *argv[])
 
 	slictlthr_main(sfn);
 	/* NOTREACHED */
+}
+
 }
