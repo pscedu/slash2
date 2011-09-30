@@ -158,6 +158,7 @@ struct sl_gconf {
 	struct psclist_head	 gconf_routehd;
 	struct psc_lockedlist	 gconf_sites;
 	psc_spinlock_t		 gconf_lock;
+	uint64_t                 gconf_fsuuid;
 };
 
 #define GCONF_HASHTBL_SZ	63
