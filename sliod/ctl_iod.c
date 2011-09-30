@@ -28,6 +28,7 @@
 #include "pfl/str.h"
 #include "pfl/walk.h"
 #include "psc_ds/lockedlist.h"
+#include "psc_rpc/rsx.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlsvr.h"
 
@@ -256,7 +257,66 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 
 	if (S_ISDIR(stb->st_mode)) {
 		rc = sli_rmi_issue_mkdir(csvc, &fg, cpn, stb, fidfn);
-	} else {
+	} else if (S_ISBLK(stb->st_mode) || S_ISCHR(stb->st_mode) ||
+	    S_ISFIFO(stb->st_mode) || S_ISSOCK(stb->st_mode)) {
+		/* XXX: use mknod */
+		rc = ENOTSUP;
+	} else if (S_ISLNK(stb->st_mode)) {
+		struct srm_symlink_req *mq;
+		struct srm_symlink_rep *mp;
+		char target[PATH_MAX];
+		struct iovec iov;
+
+		/*
+		 * XXX should we check that st_nlink == 1 and refuse if
+		 * this is not the case to protect against multiple
+		 * imports?
+		 *
+		 * XXX we do not handle hardlinks correctly!  Need to be
+		 * able to reference the same backing file as some other
+		 * original already imported so a second hardlink
+		 * doesn't get a separate SLASH2 FID.
+		 */
+#if 0
+		if (stb->st_nlink > 1)
+			PFL_GOTOERR(error, rc = EEXIST);
+#endif
+
+		if (readlink(fn, target, sizeof(target)) == -1)
+			PFL_GOTOERR(error, rc = errno);
+
+		rc = SL_RSX_NEWREQ(csvc, SRMT_SYMLINK, rq, mq, mp);
+		if (rc)
+			PFL_GOTOERR(error, rc);
+		mq->pfg = fg;
+		mq->linklen = strlen(target);
+		strlcpy(mq->name, cpn, sizeof(mq->name));
+		sl_externalize_stat(stb, &mq->sstb);
+
+		iov.iov_base = target;
+		iov.iov_len = mq->linklen;
+
+		rsx_bulkclient(rq, BULK_GET_SOURCE, SRMI_BULK_PORTAL,
+		    &iov, 1);
+
+		rc = SL_RSX_WAITREP(csvc, rq, mp);
+		if (rc == 0) {
+			rc = mp->rc;
+			sli_fg_makepath(&mp->cattr.sst_fg, fidfn);
+			if (rc == 0) {
+				/*
+				 * XXX
+				 * If we fail here, we should undo
+				 * import above.  However, with checks
+				 * earlier, we probably won't fail for
+				 * EXDEV here.
+				 */
+				if (link(fn, fidfn) == -1)
+					rc = errno;
+			}
+		}
+
+	} else if (S_ISREG(stb->st_mode)) {
 		struct srm_import_req *mq;
 		struct srm_import_rep *mp;
 
@@ -264,6 +324,11 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		 * XXX should we check that st_nlink == 1 and refuse if
 		 * this is not the case to protect against multiple
 		 * imports?
+		 *
+		 * XXX we do not handle hardlinks correctly!  Need to be
+		 * able to reference the same backing file as some other
+		 * original already imported so a second hardlink
+		 * doesn't get a separate SLASH2 FID.
 		 */
 #if 0
 		if (stb->st_nlink > 1)
@@ -292,7 +357,10 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 					rc = errno;
 			}
 		}
+	} else if (S_ISREG(stb->st_mode)) {
+		rc = ENOTSUP;
 	}
+
  error:
 	if (abs(rc) == EEXIST) {
 		if (stat(fn, &tstb) == -1) {
