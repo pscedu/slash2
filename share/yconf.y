@@ -118,6 +118,7 @@ struct slconf_symbol sym_table[] = {
 	TABENT_VAR("routes",		SL_TYPE_STR,	NAME_MAX,	gconf_routes,	NULL),
 	TABENT_VAR("zpool_cache",	SL_TYPE_STR,	PATH_MAX,	gconf_zpcachefn,NULL),
 	TABENT_VAR("zpool_name",	SL_TYPE_STR,	NAME_MAX,	gconf_zpname,	NULL),
+	TABENT_VAR("fsuuid",	        SL_TYPE_HEXU64,	0,	        gconf_fsuuid,	NULL),
 
 	TABENT_SITE("site_desc",	SL_TYPE_STRP,	0,		site_desc,	NULL),
 	TABENT_SITE("site_id",		SL_TYPE_INT,	SITE_MAXID,	site_id,	NULL),
@@ -870,6 +871,9 @@ slcfg_parse(const char *config_file)
 		errx(1, "%d error(s) encountered", cfg_errors);
 
 	pflnet_freeifaddrs(cfg_ifaddrs);
+
+	if (!globalConfig.gconf_fsuuid)
+		psc_errorx("no fsuuid specified");
 
 	PLL_LOCK(&globalConfig.gconf_sites);
 	pll_sort(&globalConfig.gconf_sites, qsort, slcfg_site_cmp);
