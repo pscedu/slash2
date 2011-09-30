@@ -48,7 +48,12 @@ struct fcmh_cli_info {
 #define fci_dci		ford.d
 };
 
-#define fcmh_2_fci(f)		((struct fcmh_cli_info *)fcmh_get_pri(f))
+static __inline struct fcmh_cli_info *
+fcmh_2_fci(struct fidc_membh *f)
+{
+	return (fcmh_get_pri(f));
+}
+
 #define fcmh_2_dci(f)		(&fcmh_2_fci(f)->fci_dci)
 
 /* Client-specific fcmh_flags */
