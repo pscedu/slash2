@@ -250,11 +250,19 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 
 		psc_assert(rv == -SLERR_AIOWAIT);
 
-		pll_add(&s->slvr_pndgaios, aiocbr);
-		sli_aio_replreply_setup(aiocbr, rq, s, &iov);
-		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
-		mp->rc = rv;
-		goto out;
+		SLVR_LOCK(s);
+		if (!(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR))) {
+			pll_add(&s->slvr_pndgaios, aiocbr);
+			SLVR_ULOCK(s);
+			sli_aio_replreply_setup(aiocbr, rq, s, &iov);
+			pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
+			mp->rc = rv;
+			goto out;
+		}
+		SLVR_ULOCK(s);
+		sli_aio_aiocbr_release(aiocbr);
+		/* XXX: SLVR_DATAERR */
+		rv = 0;
 	}
 
 	if (rv) {
