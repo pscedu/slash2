@@ -1762,7 +1762,8 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	if (rc)
 		goto out;
 
-	mq->creds = creds;
+	mq->sstb.sst_uid = creds.scr_uid;
+	mq->sstb.sst_gid = creds.scr_gid;
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = FGEN_ANY;
 	mq->linklen = strlen(buf);

@@ -969,8 +969,7 @@ slm_symlink(struct pscrpc_request *rq, struct srm_symlink_req *mq,
 {
 	char linkname[SL_PATH_MAX];
 	struct fidc_membh *p = NULL;
-	struct srm_symlink_req *mq;
-	struct srm_symlink_rep *mp;
+	struct slash_creds cr;
 	struct iovec iov;
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
@@ -989,9 +988,12 @@ slm_symlink(struct pscrpc_request *rq, struct srm_symlink_req *mq,
 
 	linkname[mq->linklen] = '\0';
 
+	cr.scr_uid = mq->sstb.sst_uid;
+	cr.scr_gid = mq->sstb.sst_gid;
+
 	mds_reserve_slot(1);
 	mp->rc = mdsio_symlink(linkname, fcmh_2_mdsio_fid(p), mq->name,
-	    &mq->creds, &mp->cattr, NULL, slm_get_next_slashfid,
+	    &cr, &mp->cattr, NULL, slm_get_next_slashfid,
 	    mdslog_namespace);
 	mds_unreserve_slot(1);
 
