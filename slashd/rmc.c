@@ -762,6 +762,12 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 
  out:
 	if (mp->rc == 0) {
+//		FCMH_LOCK(p);
+//		fcmh_wait_locked(p, p->fcmh_flags & FCMH_IN_SETATTR);
+//		SL_GETTIMESPEC(&p->fcmh_sstb.sst_ctim);
+//		mds_fcmh_setattr(p, PSCFS_SETATTRF_CTIME);
+//		memcpy(&mp->attr, &p->fcmh_sstb, sizeof(mp->attr));
+
 		mdsio_fcmh_refreshattr(op, &mp->srr_opattr);
 		if (op != np)
 			mdsio_fcmh_refreshattr(np, &mp->srr_npattr);
