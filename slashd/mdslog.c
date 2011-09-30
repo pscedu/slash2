@@ -1451,7 +1451,7 @@ mdslog_bmap_crc(void *datap, uint64_t txg, __unusedx int flag)
 }
 
 void
-mds_journal_init(int disable_propagation)
+mds_journal_init(int disable_propagation, uint64_t fsuuid)
 {
 	uint64_t batchno, last_reclaim_xid = 0, last_update_xid = 0, last_distill_xid = 0;
 	int i, ri, rc, nios, count, total, npeers;
@@ -1502,6 +1502,11 @@ mds_journal_init(int disable_propagation)
 	mdsJournal = pjournal_open(res->res_jrnldev);
 	if (mdsJournal == NULL)
 		psc_fatal("Failed to open log file %s", res->res_jrnldev);
+	
+	if (fsuuid && (mdsJournal->pj_hdr->pjh_fsuuid != fsuuid))
+		psc_fatal("UUID mismatch MDS=%"PRIx64" JRNL=%"PRIx64
+		  ".  Reinitialize your journal.", 
+		  fsuuid, mdsJournal->pj_hdr->pjh_fsuuid);
 
 	jrnldev = res->res_jrnldev;
 	mds_open_cursor();
@@ -1727,6 +1732,9 @@ mds_journal_init(int disable_propagation)
 	    mds_cursor.pjc_seqno_lwm);
 	psclog_warnx("Last bmap sequence number high water mark is %"PRIx64,
 	    mds_cursor.pjc_seqno_hwm);
+
+	psclog_warnx("Journal UUID=%"PRIx64" MDS UUID=%"PRIx64,
+	     mdsJournal->pj_hdr->pjh_fsuuid, fsuuid);
 }
 
 void
