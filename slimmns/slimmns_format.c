@@ -169,7 +169,7 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 	if (ion) {
 		xmkfn(fn, "%s/%"PRIx64, metadir, fsUuid);
 		slnewfs_mkdir(fn);
-		strncpy(metadir, fn, PATH_MAX);
+		strlcpy(metadir, fn, sizeof(metadir));
 		xmkfn(fn, "%s/%s", metadir, SL_RPATH_FIDNS_DIR);
 		slnewfs_mkdir(fn);
 	} else {
@@ -239,7 +239,7 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-iW] fsroot\n", progname);
+	fprintf(stderr, "usage: %s [-iW] [-D datadir] [-u fsuuid] fsroot\n", progname);
 	exit(1);
 }
 
@@ -259,12 +259,14 @@ main(int argc, char *argv[])
 		case 'i':
 			ion = 1;
 			break;
+		case 'u':
+			endp = NULL;
+			fsUuid = (uint64_t)strtoull(optarg, &endp, 16);
+			if (endp == optarg || *endp)
+				errx(1, "%s: invalid FSUUID", optarg);
+			break;
 		case 'W':
 			wipe = 1;
-			break;
-		case 'u':
-                        endp = NULL;
-			fsUuid = (uint64_t)strtoull(optarg, &endp, 16);
 			break;
 		default:
 			usage();
