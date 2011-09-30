@@ -159,9 +159,9 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct srm_replst_master_req *mq;
 	struct srm_replst_master_rep *mp;
 	struct msctlmsg_replrq *mrq = m;
+	struct fidc_membh *fcmh = NULL;
 	struct pscfs_clientctx pfcc;
 	struct msctl_replstq mrsq;
-	struct fidc_membh *fcmh;
 	struct slash_fidgen fg;
 	struct slash_creds cr;
 	int added = 0, rc;
