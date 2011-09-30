@@ -70,7 +70,7 @@ void	mdslog_namespace(int, uint64_t, uint64_t, uint64_t,
 void	mdslogfill_bmap_repls(struct bmapc_memb *, struct slmds_jent_bmap_repls *);
 void	mdslogfill_ino_repls(struct fidc_membh *, struct slmds_jent_ino_repls *);
 
-void	mds_journal_init(int);
+void	mds_journal_init(int, uint64_t);
 
 int	mds_bmap_crc_update(struct bmapc_memb *, struct srm_bmap_crcup *);
 int	mds_inode_repls_update(struct fidc_membh *, int);

@@ -157,7 +157,7 @@ main(int argc, char *argv[])
 	char *zpcachefn = NULL, *zpname;
 	const char *cfn, *sfn;
 	mdsio_fid_t mf;
-	int rc, c;
+	int rc, c, nofsuuid;
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -177,7 +177,7 @@ main(int argc, char *argv[])
 	progname = argv[0];
 	cfn = SL_PATH_CONF;
 	sfn = SL_PATH_SLMCTLSOCK;
-	while ((c = getopt(argc, argv, "D:f:p:S:X:Y")) != -1)
+	while ((c = getopt(argc, argv, "D:f:p:S:X:YU")) != -1)
 		switch (c) {
 		case 'D':
 			sl_datadir = optarg;
@@ -196,6 +196,9 @@ main(int argc, char *argv[])
 			break;
 		case 'Y': /* undocumented, developer only */
 			disable_propagation = 1;
+			break;
+		case 'U':
+			nofsuuid = 1;
 			break;
 		default:
 			usage();
@@ -324,7 +327,15 @@ main(int argc, char *argv[])
 	sl_nbrqset = pscrpc_nbreqset_init(NULL, NULL);
 	pscrpc_nbreapthr_spawn(sl_nbrqset, SLMTHRT_NBRQ, "slmnbrqthr");
 
-	mds_journal_init(disable_propagation);
+	if (!nofsuuid) {
+		if (globalConfig.gconf_fsuuid != fsuuid)	
+			psc_fatal("Config UUID=%"PRIx64" MDS UUID=%"PRIx64,
+				  globalConfig.gconf_fsuuid, fsuuid);
+	} else
+		psc_warnx("Config UUID=%"PRIx64" MDS UUID=%"PRIx64,
+			  globalConfig.gconf_fsuuid, fsuuid);
+
+	mds_journal_init(disable_propagation, (nofsuuid ? 0 : fsuuid));
 	mds_odtable_load(&mdsBmapAssignTable, SL_FN_BMAP_ODTAB, "bmapassign");
 	mds_bmap_timeotbl_init();
 	mds_odtable_scan(mdsBmapAssignTable, mds_bia_odtable_startup_cb);
