@@ -633,6 +633,8 @@ sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp,
 		psclog_info("aio_read: fd=%d, iocb=%p, sliver=%p", 
 		    aio->aio_fildes, iocb, s);
 	} else {
+		psclog_warn("aio_read: fd=%d, iocb=%p, sliver=%p, error=%d", 
+		    aio->aio_fildes, iocb, s, error);
 		lc_remove(&sli_iocb_pndg, iocb);
 		slvr_iocb_release(iocb);
 	}
