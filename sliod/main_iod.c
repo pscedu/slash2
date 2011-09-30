@@ -201,5 +201,3 @@ main(int argc, char *argv[])
 	slictlthr_main(sfn);
 	/* NOTREACHED */
 }
-
-}
