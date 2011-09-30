@@ -457,7 +457,10 @@ cmd_replst_one(const char *fn, __unusedx const struct stat *stb,
 	struct msctlmsg_replst *mrs;
 
 	mrs = psc_ctlmsg_push(MSCMT_GETREPLST, sizeof(*mrs));
-	mrs->mrs_fid = fn2fid(fn);
+	if (fn[0])
+		mrs->mrs_fid = fn2fid(fn);
+	else
+		mrs->mrs_fid = FID_ANY;
 	return (0);
 }
 
@@ -467,11 +470,11 @@ cmd_replst(int ac, char **av)
 	struct replrq_arg arg;
 	int i;
 
-	if (ac < 2)
-		errx(1, "%s: no file(s) specified", av[0]);
 	arg.opcode = MSCMT_GETREPLST;
 	for (i = 1; i < ac; i++)
 		walk(av[i], cmd_replst_one, &arg);
+	if (ac == 1)
+		cmd_replst_one("", NULL, NULL);
 }
 
 int
