@@ -41,6 +41,7 @@
 #include "buffer.h"
 #include "fidc_iod.h"
 #include "fidcache.h"
+#include "mkfn.h"
 #include "pathnames.h"
 #include "repl_iod.h"
 #include "rpc_iod.h"
@@ -165,8 +166,8 @@ main(int argc, char *argv[])
 	authbuf_readkeyfile();
 
 	xmkfn(fn, "%s/%s/%s/%s",
-              globalConfig.gconf_fsroot, SL_RPATH_META_DIR,
-              globalConfig.gconf_fsuuid, SL_RPATH_FIDNS_DIR);
+	      globalConfig.gconf_fsroot, SL_RPATH_META_DIR,
+	      globalConfig.gconf_fsuuid, SL_RPATH_FIDNS_DIR);
 
 	rc = stat(fn, &stb);
 	if (rc || !S_ISDIR(stb.st_mode))
