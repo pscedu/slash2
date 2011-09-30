@@ -551,6 +551,16 @@ slm_rmi_handle_mkdir(struct pscrpc_request *rq)
 	return (0);
 }
 
+int
+slm_rmi_handle_symlink(struct pscrpc_request *rq)
+{
+	struct srm_symlink_req *mq;
+	struct srm_symlink_rep *mp;
+
+	SL_RSX_ALLOCREP(rq, mq, mp);
+	return (slm_symlink(rq, mq, mp, SRMI_BULK_PORTAL));
+}
+
 /**
  * slm_rmi_handle_ping - Handle a PING request from ION.
  * @rq: request.
@@ -622,6 +632,9 @@ slm_rmi_handler(struct pscrpc_request *rq)
 		break;
 	case SRMT_MKDIR:
 		rc = slm_rmi_handle_mkdir(rq);
+		break;
+	case SRMT_SYMLINK:
+		rc = slm_rmi_handle_symlink(rq);
 		break;
 
 	default:

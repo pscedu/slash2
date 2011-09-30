@@ -964,7 +964,8 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 }
 
 int
-slm_rmc_handle_symlink(struct pscrpc_request *rq)
+slm_symlink(struct pscrpc_request *rq, struct srm_symlink_req *mq,
+    struct srm_symlink_rep *mp, int ptl)
 {
 	char linkname[SL_PATH_MAX];
 	struct fidc_membh *p = NULL;
@@ -972,15 +973,13 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 	struct srm_symlink_rep *mp;
 	struct iovec iov;
 
-	SL_RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	if (mq->linklen == 0 || mq->linklen >= SL_PATH_MAX)
 		return (EINVAL);
 
 	iov.iov_base = linkname;
 	iov.iov_len = mq->linklen;
-	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, SRMC_BULK_PORTAL,
-	    &iov, 1);
+	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, ptl, &iov, 1);
 	if (mp->rc)
 		return (mp->rc);
 
@@ -997,10 +996,21 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 	mds_unreserve_slot(1);
 
 	mdsio_fcmh_refreshattr(p, &mp->pattr);
+
  out:
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 	return (0);
+}
+
+int
+slm_rmc_handle_symlink(struct pscrpc_request *rq)
+{
+	struct srm_symlink_req *mq;
+	struct srm_symlink_rep *mp;
+
+	SL_RSX_ALLOCREP(rq, mq, mp);
+	return (slm_symlink(rq, mq, mp, SRMC_BULK_PORTAL));
 }
 
 int

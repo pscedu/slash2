@@ -88,10 +88,12 @@ int	slm_rmc_handler(struct pscrpc_request *);
 int	slm_rmi_handler(struct pscrpc_request *);
 int	slm_rmm_handler(struct pscrpc_request *);
 int	slm_rmm_forward_namespace(int, struct slash_fidgen *,
-	   struct slash_fidgen *, char *, char *, uint32_t,
-	   const struct slash_creds *, struct srt_stat *, int32_t);
+	    struct slash_fidgen *, char *, char *, uint32_t,
+	    const struct slash_creds *, struct srt_stat *, int32_t);
 
 int	slm_mkdir(struct srm_mkdir_req *, struct srm_mkdir_rep *, struct fidc_membh **);
+int	slm_symlink(struct pscrpc_request *, struct srm_symlink_req *,
+	    struct srm_symlink_rep *, int);
 
 /* aliases for connection management */
 #define slm_getmcsvcx(resm, exp)					\

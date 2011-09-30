@@ -146,6 +146,7 @@ enum {
 	SRMT_REPL_GETST,			/* get replication request status */
 	SRMT_REPL_GETST_SLAVE,			/* all bmap repl info for a file */
 	SRMT_REPL_READ,				/* ION to ION replicate */
+	SRMT_REPL_READAIO,			/* ION aio response */
 	SRMT_REPL_SCHEDWK,			/* MDS to ION replication staging */
 	SRMT_SET_BMAPREPLPOL,			/* bmap replication policy */
 	SRMT_SET_NEWREPLPOL,			/* file new bmap repl policy */
@@ -170,9 +171,7 @@ enum {
 	SRMT_XCTL,				/* ancillary operation */
 
 	/* import/export */
-	SRMT_IMPORT,
-
-	SRMT_REPL_READAIO
+	SRMT_IMPORT
 };
 
 /* ----------------------------- BEGIN MESSAGES ----------------------------- */
@@ -295,7 +294,7 @@ struct srm_update_req {
 	uint64_t		crc;		/* CRC of the bulk data */
 	 int32_t		size;		/* size of the bulk data to follow */
 	 int16_t		count;		/* # of entries to follow */
-	 int16_t		siteid;		/* Site ID for tracking purpose */
+	 int16_t		siteid;		/* site ID for tracking purpose */
 /* followed by bulk data of srt_update_entry structures */
 } __packed;
 
@@ -308,8 +307,8 @@ struct srm_update_rep {
 struct srt_update_entry {
 	uint64_t		xid;
 	uint8_t			op;		/* operation type (i.e. enum namespace_operation) */
-	uint8_t			namelen;	/* NUL not counted */
-	uint8_t			namelen2;	/* NUL not counted */
+	uint8_t			namelen;	/* NUL not transmitted */
+	uint8_t			namelen2;	/* NUL not transmitted */
 	 int8_t			_pad;
 
 	uint64_t		parent_fid;	/* parent dir FID */
@@ -545,7 +544,7 @@ struct srm_reclaim_req {
 struct srm_reclaim_rep {
 	 int32_t		rc;		/* return code, 0 for success or slerrno */
 	 int32_t		_pad;
-	uint64_t		seqno;		/* the last seqno I have received from you */
+	uint64_t		seqno;		/* last seqno received from peer */
 } __packed;
 
 struct srt_reclaim_entry {
@@ -752,7 +751,7 @@ struct srm_lookup_req {
 struct srm_mkdir_req {
 	struct slash_fidgen	pfg;		/* parent dir */
 	char			name[SL_NAME_MAX + 1];
-	struct srt_stat		sstb;
+	struct srt_stat		sstb;		/* owner/etc. */
 	uint32_t		to_set;
 	 int32_t		_pad;
 } __packed;
@@ -808,8 +807,8 @@ struct srm_readlink_rep {
 struct srm_rename_req {
 	struct slash_fidgen	npfg;		/* new parent dir */
 	struct slash_fidgen	opfg;		/* old parent dir */
-	uint32_t		fromlen;	/* NUL not counted */
-	uint32_t		tolen;		/* NUL not counted */
+	uint32_t		fromlen;	/* NUL not transmitted */
+	uint32_t		tolen;		/* NUL not transmitted */
 /* 'from' and 'to' component names are in bulk data without terminating NULs */
 } __packed;
 
@@ -847,10 +846,10 @@ struct srm_statfs_rep {
 } __packed;
 
 struct srm_symlink_req {
-	struct slash_creds	creds;		/* st_uid owner for new file */
+	struct srt_stat		sstb;		/* owner/etc. */
 	struct slash_fidgen	pfg;		/* parent dir */
 	char			name[SL_NAME_MAX + 1];
-	uint32_t		linklen;	/* NUL not counted */
+	uint32_t		linklen;	/* NUL not transmitted */
 	 int32_t		_pad;
 /* link path name is in bulk */
 } __packed;
