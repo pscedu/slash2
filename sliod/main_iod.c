@@ -111,9 +111,8 @@ main(int argc, char *argv[])
 {
 	const char *cfn, *sfn, *p, *prefmds;
 	sigset_t signal_set;
+	struct slashrpc_cservice *mds_csvc;
 	int rc, c;
-	char fn[PATH_MAX];
-	struct stat stb;
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -165,15 +164,6 @@ main(int argc, char *argv[])
 	authbuf_checkkeyfile();
 	authbuf_readkeyfile();
 
-	xmkfn(fn, "%s/%s/%s/%s",
-	      globalConfig.gconf_fsroot, SL_RPATH_META_DIR,
-	      globalConfig.gconf_fsuuid, SL_RPATH_FIDNS_DIR);
-
-	rc = stat(fn, &stb);
-	if (rc || !S_ISDIR(stb.st_mode))
-		psc_fatalx("sliod directories have not been created (uuid=%"
-			   PRIx64")", globalConfig.gconf_fsuuid);
-
 	libsl_init();
 
 	sl_drop_privs(allow_root_uid);
@@ -183,13 +173,6 @@ main(int argc, char *argv[])
 	bim_init();
 	slvr_cache_init();
 	sli_repl_init();
-	sli_rpc_initsvc();
-	psc_tiosthr_spawn(SLITHRT_TIOS, "slitiosthr");
-	pscthr_init(SLITHRT_STATFS, 0, slistatfsthr_main, NULL, 0,
-	    "slistatfsthr");
-	slibmaprlsthr_spawn();
-	lc_reginit(&bmapReapQ, struct bmapc_memb, bcm_lentry,
-	    "bmapReapQ");
 
 	prefmds = globalConfig.gconf_prefmds;
 	if (argc)
@@ -198,6 +181,20 @@ main(int argc, char *argv[])
 	if (rc)
 		psc_fatalx("invalid MDS %s: %s", argv[0],
 		    slstrerror(rc));
+
+	if (sli_rmi_getimp(&mds_csvc))
+		psc_fatalx("error connecting to MDS");
+	
+	psc_assert(globalConfig.gconf_fsuuid);
+	psc_warnx("gconf_fsuuid=(%"PRIx64")", globalConfig.gconf_fsuuid);
+
+	sli_rpc_initsvc();
+	psc_tiosthr_spawn(SLITHRT_TIOS, "slitiosthr");
+	pscthr_init(SLITHRT_STATFS, 0, slistatfsthr_main, NULL, 0,
+	    "slistatfsthr");
+	slibmaprlsthr_spawn();
+	lc_reginit(&bmapReapQ, struct bmapc_memb, bcm_lentry,
+	    "bmapReapQ");
 
 	slictlthr_main(sfn);
 	/* NOTREACHED */
