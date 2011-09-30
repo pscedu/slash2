@@ -82,7 +82,7 @@ site @PSCARCH {
 #	resource sense7 { desc = "disk-based archiver unit 7/8"; type = standalone_fs; id = 17; nodes = sense7; fsroot = /store; }
 
 #	resource sense {
-#		desc	= "disk-based archiver unit 8/8";
+#		desc	= "disk-based archiver cluster";
 #		type	= cluster_noshare_fs;
 #		id	= 20;
 #		nodes	= sense0@PSCARCH,
@@ -95,11 +95,26 @@ site @PSCARCH {
 #			  sense7@PSCARCH;
 #	}
 
-	resource zs {
+	resource zs6 {
 		desc	= "PSC archiver migration assistant";
 		type	= standalone_fs;
 		id	= 50;
 		nodes	= zs6.psc.teragrid.org;
 		fsroot	= /store;
 	}
+
+	resource zs7 {
+		desc	= "PSC archiver migration assistant";
+		type	= standalone_fs;
+		id	= 51;
+		nodes	= zs7.psc.teragrid.org;
+		fsroot	= /store;
+	}
+
+#	resource zs {
+#		desc	= "PSC archiver migration assistant cluster";
+#		type	= cluster_noshare_fs;
+#		id	= 52;
+#		nodes	= zs6@PSCARCH, zs7@PSCARCH;
+#	}
 }
