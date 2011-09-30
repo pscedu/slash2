@@ -53,7 +53,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-fqv] [-b block-device] [-D dir] [-n nentries]\n",
+	    "usage: %s [-fqv] [-b block-device] [-D dir] [-n nentries] -u uuid\n",
 	    progname);
 	exit(1);
 }
@@ -67,7 +67,7 @@ usage(void)
  */
 void
 pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
-    uint32_t rs)
+	uint32_t rs, uint64_t uuid)
 {
 	struct psc_journal_enthdr *pje;
 	struct psc_journal_hdr pjh;
@@ -102,6 +102,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	pjh.pjh_iolen = PSC_ALIGN(sizeof(pjh), stb.st_blksize);
 	pjh.pjh_magic = PJH_MAGIC;
 	pjh.pjh_timestamp = time(NULL);
+	pjh.pjh_fsuuid = uuid;
 
 	PSC_CRC64_INIT(&pjh.pjh_chksum);
 	psc_crc64_add(&pjh.pjh_chksum, &pjh,
@@ -338,10 +339,12 @@ pjournal_dump(const char *fn, int verbose)
 	    "  Number of entries: %u\n"
 	    "  Batch read size: %u\n"
 	    "  Entry start offset: %"PRId64"\n"
-	    "  Format time: %s\n\n",
+	    "  Format time: %s\n"
+	    "  UUID: %"PRIx64"\n\n",
+
 	    fn, pjh->pjh_version, PJ_PJESZ(pj), pjh->pjh_nents,
 	    pjh->pjh_readsize, pjh->pjh_start_off,
-	    ctime((time_t *)&pjh->pjh_timestamp));
+	    ctime((time_t *)&pjh->pjh_timestamp), pjh->pjh_fsuuid);
 
 	jbuf = psc_alloc(PJ_PJESZ(pj) * pj->pj_hdr->pjh_readsize,
 			 PAF_PAGEALIGN | PAF_LOCK);
@@ -421,6 +424,7 @@ main(int argc, char *argv[])
 	ssize_t nents = SLJ_MDS_JNENTS;
 	char *endp, c, fn[PATH_MAX];
 	long l;
+	uint64_t uuid = 0;
 
 	pfl_init();
 	sl_subsys_register();
@@ -429,7 +433,7 @@ main(int argc, char *argv[])
 
 	fn[0] = '\0';
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "b:D:fn:qv")) != -1)
+	while ((c = getopt(argc, argv, "b:D:fn:qvu:")) != -1)
 		switch (c) {
 		case 'b':
 			strlcpy(fn, optarg, sizeof(fn));
@@ -449,6 +453,10 @@ main(int argc, char *argv[])
 				    optarg);
 			nents = (ssize_t)l;
 			break;
+		case 'u':
+			endp = NULL;
+			uuid = (uint64_t)strtoull(optarg, &endp, 16);
+			break;			
 		case 'q':
 			query = 1;
 			break;
@@ -463,7 +471,7 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
-	if (!format && !query)
+	if ((!format && !query) || !uuid)
 		usage();
 
 	if (fn[0] == '\0') {
@@ -475,10 +483,12 @@ main(int argc, char *argv[])
 	}
 
 	if (format) {
-		pjournal_format(fn, nents, SLJ_MDS_ENTSIZE, SLJ_MDS_READSZ);
+		pjournal_format(fn, nents, SLJ_MDS_ENTSIZE, SLJ_MDS_READSZ, 
+				uuid);
 		if (verbose)
-			warnx("created log file %s with %d %d-byte entries",
-			    fn, SLJ_MDS_JNENTS, SLJ_MDS_ENTSIZE);
+			warnx("created log file %s with %zu %d-byte entries "
+			      "(uuid=%"PRIx64")",
+			      fn, nents, SLJ_MDS_ENTSIZE, uuid);
 	}
 	if (query)
 		pjournal_dump(fn, verbose);
