@@ -102,7 +102,7 @@ struct slash_fidgen {
 #define SLPRI_FSID		"%#018"PRIx64
 #define FSID_LEN		16
 
-#define FID_PATH_DEPTH		3
+#define FID_PATH_DEPTH		4
 
 /* bits per hex char e.g. 0xffff=16 */
 #define BPHXC			4
