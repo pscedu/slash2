@@ -8,6 +8,7 @@ set routes="sdp11 128.182.100.126@tcp12; tcp12 10.10.101.54@sdp11";
 set nets="sdp11 10.10.101.*; tcp12 *.*.*.*";
 set pref_mds="archmds@PSCARCH";
 set pref_ios="peel0@PSCARCH";
+set fsuuid="4c0fa37db6e31719";
 #set pref_ios="sense@PSCARCH";
 #set allow_exec="
 #	/usr/psc/bin/far:
