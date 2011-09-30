@@ -52,6 +52,7 @@ struct psc_poolmgr	*sli_iocb_pool;
 struct psc_listcache	 sli_iocb_pndg;
 
 psc_atomic64_t		 sli_aio_id = PSC_ATOMIC64_INIT(0);
+psc_atomic64_t		 sli_rpc_repl_readaio = PSC_ATOMIC64_INIT(0);
 
 struct psc_listcache	 lruSlvrs;   /* LRU list of clean slivers which may be reaped */
 struct psc_listcache	 crcqSlvrs;  /* Slivers ready to be CRC'd and have their
@@ -293,6 +294,8 @@ slvr_aio_replreply(struct sli_aiocb_reply *a)
 
 	if (SL_RSX_NEWREQ(csvc, SRMT_REPL_READAIO, rq, mq, mp))
 		goto out;
+
+	psc_atomic64_inc(&sli_rpc_repl_readaio);
 
 	mq->rc = slvr_aio_chkslvrs(a);
 	mq->fg = slvr_2_fcmh(s)->fcmh_fg;

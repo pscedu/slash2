@@ -43,6 +43,13 @@
 #define SRII_REPLREAD_CBARG_WKRQ	0
 #define SRII_REPLREAD_CBARG_SLVR	1
 
+psc_atomic64_t		 sli_rpc_replread = PSC_ATOMIC64_INIT(0);
+psc_atomic64_t		 sli_rpc_replread_aio = PSC_ATOMIC64_INIT(0);
+
+psc_atomic64_t		 sli_rpc_repl_read = PSC_ATOMIC64_INIT(0);
+psc_atomic64_t		 sli_rpc_repl_read_cb = PSC_ATOMIC64_INIT(0);
+psc_atomic64_t		 sli_rpc_repl_read_cb_aio = PSC_ATOMIC64_INIT(0);
+
 /**
  * sli_rii_replread_release_sliver: we call this function in three
  * cases:
@@ -141,6 +148,11 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 	sliriithr(pscthr_get())->sirit_st_nread++;
 
 	bcm = NULL;
+
+	if (aio)
+		psc_atomic64_inc(&sli_rpc_replread_aio);
+	else
+		psc_atomic64_inc(&sli_rpc_replread);
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fg.fg_fid == FID_ANY) {
@@ -301,6 +313,10 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 			break;
 	psc_assert(slvridx < (int)nitems(w->srw_slvr_refs));
 
+	if (rc == -SLERR_AIOWAIT)
+		psc_atomic64_inc(&sli_rpc_repl_read_cb_aio);
+	else
+		psc_atomic64_inc(&sli_rpc_repl_read_cb);
 	return (sli_rii_replread_release_sliver(w, slvridx, rc));
 }
 
@@ -322,6 +338,8 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	rc = SL_RSX_NEWREQ(csvc, SRMT_REPL_READ, rq, mq, mp);
 	if (rc)
 		return (rc);
+
+	psc_atomic64_inc(&sli_rpc_repl_read);
 
 	mq->len = SLASH_SLVR_SIZE;
 	/* adjust the request size for the last sliver */
