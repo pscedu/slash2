@@ -895,7 +895,6 @@ slmupschedthr_main(struct psc_thread *thr)
 				goto restart;
 			}
 		}
-		psc_multiwait(&smi->smi_mw, &dummy);
 		/*
 		 * XXX look at the event and process it directly
 		 * instead of doing all this work again.
