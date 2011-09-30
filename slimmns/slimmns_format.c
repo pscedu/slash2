@@ -50,7 +50,7 @@ const char	*progname;
 int		 wipe;
 int		 ion;
 struct passwd	*pw;
-
+uint64_t         fsUuid = 0;
 const char      *datadir = SL_PATH_DATA_DIR;
 
 struct psc_journal_cursor cursor;
@@ -166,8 +166,16 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 	slnewfs_mkdir(metadir);
 
 	/* create immutable namespace top directory */
-	xmkfn(fn, "%s/%s", metadir, SL_RPATH_FIDNS_DIR);
-	slnewfs_mkdir(fn);
+	if (ion) {
+		xmkfn(fn, "%s/%"PRIx64, metadir, fsUuid);
+		slnewfs_mkdir(fn);
+		strncpy(metadir, fn, PATH_MAX);
+		xmkfn(fn, "%s/%s", metadir, SL_RPATH_FIDNS_DIR);
+		slnewfs_mkdir(fn);
+	} else {
+		xmkfn(fn, "%s/%s", metadir, SL_RPATH_FIDNS_DIR);
+		slnewfs_mkdir(fn);
+	}
 
 	/* create immutable namespace subdirectories */
 	slnewfs_create_int(fn, 1, depth);
@@ -239,10 +247,11 @@ int
 main(int argc, char *argv[])
 {
 	int c;
+	char *endp;
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "D:iW")) != -1)
+	while ((c = getopt(argc, argv, "D:iWu:")) != -1)
 		switch (c) {
 		case 'D':
 			datadir = optarg;
@@ -253,12 +262,19 @@ main(int argc, char *argv[])
 		case 'W':
 			wipe = 1;
 			break;
+		case 'u':
+                        endp = NULL;
+			fsUuid = (uint64_t)strtoull(optarg, &endp, 16);
+			break;
 		default:
 			usage();
 		}
 	argc -= optind;
 	argv += optind;
 	if (argc != 1)
+		usage();
+
+	if (ion && !fsUuid)
 		usage();
 
 	sl_getuserpwent(&pw);
