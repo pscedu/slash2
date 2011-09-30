@@ -30,6 +30,7 @@ metadata server daemon
 .Op Fl f Ar conf
 .Op Fl p Ar zfspoolcache
 .Op Fl S Ar socket
+.Op Fl U Ar nofsuuid
 .Ar zfspoolname
 .Sh DESCRIPTION
 The
@@ -82,6 +83,8 @@ character
 .Pp
 The default is
 .Pa /var/run/slash. Ns Ic %h Ns Pa .sock .
+.It Fl U Ar nouuid
+Instruct the MDS to bypass journal affinity check (not recommended).
 .El
 .\" %PFL_INCLUDE $PFL_BASE/doc/env.mdoc {
 .\"	lnets_note => <<'EOF',
