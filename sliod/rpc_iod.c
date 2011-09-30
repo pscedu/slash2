@@ -198,7 +198,7 @@ sli_rpc_mds_unpack_fsuuid(struct pscrpc_request *rq, int msgtype)
 		}
 	}
 	if (sli_fsuuid != fsuuid)
-		psclog_errorx("fsuuid don't match: %"PRIx64" vs "
+		psc_fatalx("fsuuid don't match: %"PRIx64" vs "
 		    "%"PRIx64, sli_fsuuid, fsuuid);
 	return;
 
