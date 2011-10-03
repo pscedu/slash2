@@ -1232,9 +1232,9 @@ uswi_enqueue_sites(struct up_sched_work_item *wk,
 		spinlock(&smi->smi_lock);
 		if (!psc_dynarray_exists(&smi->smi_upq, wk)) {
 			psc_dynarray_add(&smi->smi_upq, wk);
-			smi->smi_flags |= SMIF_DIRTYQ;
 			USWI_INCREF(wk, USWI_REFT_SITEUPQ);
 		}
+		smi->smi_flags |= SMIF_DIRTYQ;
 		psc_multiwaitcond_wakeup(&smi->smi_mwcond);
 		freelock(&smi->smi_lock);
 	}
