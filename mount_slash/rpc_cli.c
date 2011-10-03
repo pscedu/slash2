@@ -38,9 +38,9 @@ __static void
 slc_rci_init(void)
 {
 	struct psc_thread *thr;
-	
+
 	thr = pscthr_get();
-	
+
 	psc_multiwait_init(&msrcithr(thr)->mrci_mw, "%s", thr->pscthr_name);
 }
 
@@ -151,16 +151,21 @@ int
 slc_rmc_getimp(struct pscfs_clientctx *pfcc, struct sl_resm *resm,
     struct slashrpc_cservice **csvcp)
 {
-	int rc = 0;
+	int rc;
 
-	do {
+	for (;;) {
+		rc = 0;
+		sl_csvc_lock(&resm->resm_csvc);
 		*csvcp = slc_getmcsvc(resm);
-		if (*csvcp == NULL) {
-			rc = resm->resm_csvc->csvc_lasterrno;
-			if (slc_rmc_retry_pfcc(pfcc, &rc))
-				continue;
-		}
-	} while (*csvcp == NULL && rc == 0);
+		if (*csvcp)
+			break;
+
+		rc = resm->resm_csvc->csvc_lasterrno;
+		if (!slc_rmc_retry_pfcc(pfcc, &rc))
+			break;
+		sl_csvc_waitrel_s(resm->resm_csvc, CSVC_RECONNECT_INTV);
+	}
+	sl_csvc_unlock(resm->resm_csvc);
 	return (rc);
 }
 
