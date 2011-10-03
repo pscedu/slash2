@@ -3,7 +3,7 @@
 # See slcfg(5) for more information.
 
 # Archiver configuration
-set port=1301;
+set port=1302;
 set routes="sdp11 128.182.100.126@tcp12; tcp12 10.10.101.54@sdp11";
 set nets="sdp11 10.10.101.*; tcp12 *.*.*.*";
 set pref_mds="archmds@PSCARCH";
@@ -28,8 +28,7 @@ site @PSCARCH {
 		desc	= "PSC archiver MDS";
 		type	= mds;
 		id	= 1;
-		nodes	= peel0-ib.pvt|peel0;
-#		nodes	= illusion1|illusion1.pvt|illusion2|illusion2.pvt;
+		nodes	= illusion1|illusion1.pvt;
 		jrnldev	= /dev/sdah;
 	}
 
