@@ -95,7 +95,7 @@ dumpfid(const char *fn)
 	if (nr < SL_DEF_REPLICAS)
 		nr = 0;
 	else if (nr > SL_MAX_REPLICAS) {
-		psc_errorx("ino_nrepls out of range (%d)", nr);
+		psclog_errorx("ino_nrepls out of range (%d)", nr);
 		nr = SL_MAX_REPLICAS;
 	}
 	for (j = 0; j + SL_DEF_REPLICAS < nr; j++)

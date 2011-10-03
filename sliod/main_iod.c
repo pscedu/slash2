@@ -184,9 +184,9 @@ main(int argc, char *argv[])
 
 	if (sli_rmi_getcsvc(&mds_csvc))
 		psc_fatalx("error connecting to MDS");
-	
+
 	psc_assert(globalConfig.gconf_fsuuid);
-	psc_warnx("gconf_fsuuid=(%"PRIx64")", globalConfig.gconf_fsuuid);
+	psclog_warnx("gconf_fsuuid=(%"PRIx64")", globalConfig.gconf_fsuuid);
 
 	sli_rpc_initsvc();
 	psc_tiosthr_spawn(SLITHRT_TIOS, "slitiosthr");
