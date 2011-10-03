@@ -184,7 +184,7 @@ slrpc_newreq(struct slashrpc_cservice *csvc, int op,
 	if (rc == 0 && op == SRMT_CONNECT) {
 		struct srm_connect_req *mq = *(void **)mqp;
 
-		mq->fsuuid = fsuuid;
+		mq->fsuuid = slm_fsuuid;
 	}
 	return (rc);
 }
@@ -225,7 +225,7 @@ slrpc_allocrep(struct pscrpc_request *rq, void *mqp, int qlen,
 	if (rc == 0 && rq->rq_reqmsg->opc == SRMT_CONNECT) {
 		struct srm_connect_rep *mp = *(void **)mpp;
 
-		mp->fsuuid = fsuuid;
+		mp->fsuuid = slm_fsuuid;
 	}
 	return (rc);
 }

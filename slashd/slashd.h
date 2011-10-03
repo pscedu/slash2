@@ -242,8 +242,8 @@ extern struct slash_creds	 rootcreds;
 extern struct odtable		*mdsBmapAssignTable;
 extern struct sl_mds_nsstats	 slm_nsstats_aggr;	/* aggregate namespace stats */
 extern struct sl_mds_peerinfo	*localinfo;
-extern uint64_t			 fsuuid;
 
+extern uint64_t			 slm_fsuuid;
 extern struct psc_poolmgr	*slm_workrq_pool;
 extern struct psc_listcache	 slm_workq;
 

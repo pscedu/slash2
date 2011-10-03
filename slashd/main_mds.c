@@ -65,7 +65,7 @@ struct psc_poolmaster	 upsched_poolmaster;
 
 struct slash_creds	 rootcreds = { 0, 0 };
 struct pscfs		 pscfs;
-uint64_t		 fsuuid;
+uint64_t		 slm_fsuuid;
 
 int
 psc_usklndthr_get_type(const char *namefmt)
@@ -156,8 +156,8 @@ main(int argc, char *argv[])
 {
 	char *zpcachefn = NULL, *zpname;
 	const char *cfn, *sfn;
-	mdsio_fid_t mf;
 	int rc, c, nofsuuid;
+	mdsio_fid_t mf;
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -263,36 +263,33 @@ main(int argc, char *argv[])
 		psclog_errorx("lookup %s/%s: %s", SL_RPATH_META_DIR,
 		    SL_FN_FSUUID, slstrerror(rc));
 	else {
-		char *endp, buf[17];
+		char *endp, buf[17] = "";
 		size_t nb;
 		void *h;
 
 		rc = mdsio_opencreate(mf, &rootcreds, O_RDONLY, 0, NULL,
 		    NULL, NULL, &h, NULL, NULL, 0);
 		if (rc)
-			goto skipfsuuid;
+			PFL_GOTOERR(skipfsuuid, rc);
 		rc = mdsio_read(&rootcreds, buf, sizeof(buf), &nb, 0,
 		    h);
 		mdsio_release(&rootcreds, h);
 
 		if (rc)
 			goto skipfsuuid;
-		if (nb != sizeof(buf)) {
-			rc = SLERR_SHORTIO;
-			goto skipfsuuid;
-		}
-		fsuuid = strtoll(buf, &endp, 16);
-		if (*endp != '\n' || endp == buf) {
-			rc = EINVAL;
-			goto skipfsuuid;
-		}
+		if (nb != sizeof(buf))
+			PFL_GOTOERR(skipfsuuid, rc = SLERR_SHORTIO);
+		buf[sizeof(buf) - 1] = '\0';
+		slm_fsuuid = strtoll(buf, &endp, 16);
+		if (*endp || endp == buf)
+			PFL_GOTOERR(skipfsuuid, rc = EINVAL);
 
 		if (0) {
  skipfsuuid:
-			psclog_errorx("%s/%s: %s",
+			psclog_errorx("%s/%s: %s %s",
 			    SL_RPATH_META_DIR, SL_FN_FSUUID,
-			    slstrerror(rc));
-			fsuuid = 0;
+			    buf, slstrerror(rc));
+			slm_fsuuid = 0;
 		}
 	}
 
@@ -328,15 +325,15 @@ main(int argc, char *argv[])
 	pscrpc_nbreapthr_spawn(sl_nbrqset, SLMTHRT_NBRQ, "slmnbrqthr");
 
 	if (!nofsuuid) {
-		if (globalConfig.gconf_fsuuid != fsuuid)
+		if (globalConfig.gconf_fsuuid != slm_fsuuid)
 			psc_fatalx("config UUID=%"PRIx64" doesn't match "
 			    "FS UUID=%"PRIx64,
-			    globalConfig.gconf_fsuuid, fsuuid);
+			    globalConfig.gconf_fsuuid, slm_fsuuid);
 	} else
 		psclog_warnx("config UUID=%"PRIx64" doesn't match FS "
-		    "UUID=%"PRIx64, globalConfig.gconf_fsuuid, fsuuid);
+		    "UUID=%"PRIx64, globalConfig.gconf_fsuuid, slm_fsuuid);
 
-	mds_journal_init(disable_propagation, (nofsuuid ? 0 : fsuuid));
+	mds_journal_init(disable_propagation, (nofsuuid ? 0 : slm_fsuuid));
 	mds_odtable_load(&mdsBmapAssignTable, SL_FN_BMAP_ODTAB, "bmapassign");
 	mds_bmap_timeotbl_init();
 	mds_odtable_scan(mdsBmapAssignTable, mds_bia_odtable_startup_cb);
