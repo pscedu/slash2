@@ -532,9 +532,6 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
-	slm_fcmh_endow(p, c);
-//	mp->rc = mds_inode_write(fcmh_2_inoh(c), mdslog_ino_repls, c);
-
 	/* obtain lease for first bmap as optimization */
 	mp->flags = mq->flags;
 
