@@ -153,6 +153,10 @@ slc_rmc_getcsvc(struct pscfs_clientctx *pfcc, struct sl_resm *resm,
 {
 	int rc;
 
+	*csvcp = slc_getmcsvc(resm);
+	if (*csvcp)
+		return (0);
+
 	for (;;) {
 		rc = 0;
 		sl_csvc_lock(resm->resm_csvc);

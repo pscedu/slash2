@@ -42,6 +42,10 @@ sli_rmi_getcsvc(struct slashrpc_cservice **csvcp)
 {
 	int rc;
 
+	*csvcp = sli_getmcsvc(rmi_resm);
+	if (*csvcp)
+		return (0);
+
 	for (;;) {
 		rc = 0;
 		sl_csvc_lock(rmi_resm->resm_csvc);
