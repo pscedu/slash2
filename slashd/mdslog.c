@@ -1318,6 +1318,10 @@ mdslogfill_ino_repls(struct fidc_membh *f,
 
 	locked = FCMH_RLOCK(f);
 	ih = fcmh_2_inoh(f);
+
+	if (!fcmh_2_nrepls(f))
+		abort();
+
 	sjir->sjir_fid = fcmh_2_fid(f);
 	sjir->sjir_nrepls = fcmh_2_nrepls(f);
 	sjir->sjir_replpol = fcmh_2_replpol(f);
