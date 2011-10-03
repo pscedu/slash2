@@ -41,7 +41,7 @@ mds_bmap_timeotbl_init(void)
 {
 	INIT_SPINLOCK(&mdsBmapTimeoTbl.btt_lock);
 
-	pll_init(&mdsBmapTimeoTbl.btt_leases, struct bmap_mds_lease, 
+	pll_init(&mdsBmapTimeoTbl.btt_leases, struct bmap_mds_lease,
 	    bml_timeo_lentry, &mdsBmapTimeoTbl.btt_lock);
 
 	mdsBmapTimeoTbl.btt_ready = 1;
@@ -141,7 +141,7 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 			 *   every BMAP_SEQLOG_FACTOR times).
 			 */
 			seq = mdsBmapTimeoTbl.btt_maxseq = bml->bml_seq;
-		
+
 		else if (mdsBmapTimeoTbl.btt_minseq > bml->bml_seq)
 			/* This lease has already expired.
 			 */
@@ -176,7 +176,7 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 			nsecs = BMAP_TIMEO_MAX;
 			goto sleep;
 		}
-		
+
 		BML_LOCK(bml);
 		nsecs = bml->bml_expire - time(NULL);
 		if (nsecs > 0) {
@@ -184,42 +184,42 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 			goto sleep;
 		}
 
-		DEBUG_BMAP(PLL_INFO, bml_2_bmap(bml), 
+		DEBUG_BMAP(PLL_INFO, bml_2_bmap(bml),
 		   "nsecs=%d bml=%p fl=%d seq=%"
 		   PRId64, nsecs, bml, bml->bml_flags, bml->bml_seq);
 
 		if (!(bml->bml_flags & BML_FREEING)) {
 			/* Don't race with slrmi threads who may be freeing
-			 *    the lease from an rpc context 
-			 *    mdsBmapTimeoTbl.btt_lock must be acquired 
+			 *    the lease from an rpc context
+			 *    mdsBmapTimeoTbl.btt_lock must be acquired
 			 *    before pulling the bml from this list.
-			 */			
+			 */
 			bml->bml_flags |= BML_FREEING;
 			BML_ULOCK(bml);
 
 			spinlock(&mdsBmapTimeoTbl.btt_lock);
 			sjbsq.sjbsq_high_wm = mdsBmapTimeoTbl.btt_maxseq;
 			if (bml->bml_seq < mdsBmapTimeoTbl.btt_minseq) {
-				psc_warnx("bml->bml_seq (%"PRIx64") is < "
+				psclog_warnx("bml->bml_seq (%"PRIx64") is < "
 				    "mdsBmapTimeoTbl.btt_minseq (%"PRIx64")",
 				    bml->bml_seq, mdsBmapTimeoTbl.btt_minseq);
 
-				sjbsq.sjbsq_low_wm = 
+				sjbsq.sjbsq_low_wm =
 					mdsBmapTimeoTbl.btt_minseq;
-			} else 
-				sjbsq.sjbsq_low_wm = 
+			} else
+				sjbsq.sjbsq_low_wm =
 					mdsBmapTimeoTbl.btt_minseq =
 					bml->bml_seq;
 
-			freelock(&mdsBmapTimeoTbl.btt_lock);		
+			freelock(&mdsBmapTimeoTbl.btt_lock);
 			/* Journal the new low watermark.
 			 */
 			mds_bmap_journal_bmapseq(&sjbsq);
-			
+
 			if (mds_bmap_bml_release(bml))
 				abort();
 
-			continue;					
+			continue;
 		} else {
 			/* Avoid spinning on this BML while it's being
 			 *    freed.
@@ -229,8 +229,8 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 		}
  sleep:
 		psclog_info("nsecs=%d", nsecs);
-		
-		if (nsecs > 0)			
+
+		if (nsecs > 0)
 			sleep((uint32_t)nsecs);
 	}
 }

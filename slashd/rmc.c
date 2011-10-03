@@ -98,21 +98,21 @@ slm_get_next_slashfid(slfid_t *fidp)
 
 	spinlock(&slm_fid_lock);
 	/*
-	 * This should never happen.  If it does, we crash to let the sys admin
-	 * know.  He could fix this if there are still room in the cycle bits.
-	 * We have to let sys admin know, otherwise, he/she does not know how
-	 * to bump the cycle bits.
+	 * This should never happen.  If it does, we crash to let the
+	 * sys admin know.  He could fix this if there are still room in
+	 * the cycle bits.  We have to let sys admin know, otherwise,
+	 * he/she does not know how to bump the cycle bits.
 	 */
 	if (FID_GET_INUM(slm_next_fid) >= FID_MAX_INUM) {
-		psc_warnx("Max FID "SLPRI_FID" reached, manual intervention needed",
-			slm_next_fid);
+		psclog_warnx("Max FID "SLPRI_FID" reached, manual "
+		    "intervention needed", slm_next_fid);
 		freelock(&slm_fid_lock);
 		return (ENOSPC);
 	}
 	fid = slm_next_fid++;
 	freelock(&slm_fid_lock);
 
-	psclog_info("next slash ID "SLPRI_FID, fid);
+	psclog_info("next FID "SLPRI_FID, fid);
 	* fidp = fid;
 	return (0);
 }

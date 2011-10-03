@@ -328,12 +328,12 @@ main(int argc, char *argv[])
 	pscrpc_nbreapthr_spawn(sl_nbrqset, SLMTHRT_NBRQ, "slmnbrqthr");
 
 	if (!nofsuuid) {
-		if (globalConfig.gconf_fsuuid != fsuuid)	
+		if (globalConfig.gconf_fsuuid != fsuuid)
 			psc_fatal("Config UUID=%"PRIx64" MDS UUID=%"PRIx64,
 				  globalConfig.gconf_fsuuid, fsuuid);
 	} else
-		psc_warnx("Config UUID=%"PRIx64" MDS UUID=%"PRIx64,
-			  globalConfig.gconf_fsuuid, fsuuid);
+		psclog_warnx("Config UUID=%"PRIx64" MDS UUID=%"PRIx64,
+		    globalConfig.gconf_fsuuid, fsuuid);
 
 	mds_journal_init(disable_propagation, (nofsuuid ? 0 : fsuuid));
 	mds_odtable_load(&mdsBmapAssignTable, SL_FN_BMAP_ODTAB, "bmapassign");

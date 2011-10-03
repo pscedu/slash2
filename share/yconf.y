@@ -873,7 +873,7 @@ slcfg_parse(const char *config_file)
 	pflnet_freeifaddrs(cfg_ifaddrs);
 
 	if (!globalConfig.gconf_fsuuid)
-		psc_errorx("no fsuuid specified");
+		psclog_errorx("no fsuuid specified");
 
 	PLL_LOCK(&globalConfig.gconf_sites);
 	pll_sort(&globalConfig.gconf_sites, qsort, slcfg_site_cmp);
