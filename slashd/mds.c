@@ -206,30 +206,11 @@ __static int
 mds_bmap_ion_restart(struct bmap_mds_lease *bml)
 {
 	struct sl_resm *resm = libsl_nid2resm(bml->bml_ion_nid);
-	struct slashrpc_cservice *csvc;
 	struct resm_mds_info *rmmi;
 	int rc = 0;
 
-	csvc = slm_geticsvc_nb(resm, NULL);
-	if (csvc == NULL) {
-		sl_csvc_waitevent_rel_s(resm->resm_csvc,
-		    sl_csvc_useable(resm->resm_csvc), 3);
-		csvc = slm_geticsvc_nb(resm, NULL);
-	}
-	if (csvc == NULL) {
-		/*
-		 * This can happen if the MDS finds bmap leases in
-		 * the odtable without a live I/O server connection.
-		 */
-		bml->bml_flags |= BML_ASSFAIL;
-		BMAP_SETATTR(bml_2_bmap(bml), BMAP_MDS_NOION);
-		return (-SLERR_ION_OFFLINE);
-	}
-
 	rmmi = resm2rmmi(resm);
-
 	atomic_inc(&rmmi->rmmi_refcnt);
-	sl_csvc_decref(csvc);
 
 	psc_assert(bml->bml_bmdsi->bmdsi_assign);
 	bml->bml_bmdsi->bmdsi_wr_ion = rmmi;
@@ -240,7 +221,7 @@ mds_bmap_ion_restart(struct bmap_mds_lease *bml)
 
 	bml->bml_bmdsi->bmdsi_seq = bml->bml_seq;
 
-	DEBUG_BMAP(PLL_INFO, bml_2_bmap(bml), "res(%s) ion(%s) seq=%"PRIx64,
+	DEBUG_BMAP(PLL_INFO, bml_2_bmap(bml), "res(%s) ion(%s) seq=%"PRIx64, 
 	   resm->resm_res->res_name, resm->resm_addrbuf, bml->bml_seq);
 
 	return (rc);
@@ -1296,23 +1277,6 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 		rc = -EINVAL;
 		goto out;
 	}
-
-#if 0
-	/* For the time being replay all bmap leases so that any ION's
-	 *   with dirty crc's and size updates may send us those requests
-	 *   while the lease is valid.
-	 */
-	if ((time() - bia->bia_start) >= BMAP_TIMEO_MAX) {
-		/* Don't bother with ancient leases.
-		 */
-		psclog_warnx("bia timed out, ignoring: fid="SLPRI_FID" seq=%"PRId64
-			  " res=(%s) ion=(%s) bmapno=%u",
-			  bia->bia_fid, bia->bia_seq, resm->resm_res->res_name,
-			  libcfs_nid2str(bia->bia_ion_nid), bia->bia_bmapno);
-		rc = -ETIMEDOUT;
-		goto out;
-	}
-#endif
 
 	fg.fg_fid = bia->bia_fid;
 	fg.fg_gen = FGEN_ANY;
