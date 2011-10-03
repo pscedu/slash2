@@ -193,7 +193,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	struct srm_repl_schedwk_rep *mp;
 	struct up_sched_work_item *wk;
 	struct bmapc_memb *bcm = NULL;
-	struct site_mds_info *smi;
+	sl_replica_t iosv[2];
 	sl_bmapgen_t gen;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -283,10 +283,9 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	mds_repl_bmap_walk(bcm, tract, retifset, 0, &iosidx, 1);
 	mds_bmap_write_repls_rel(bcm);
 
-	smi = site2smi(dst_resm->resm_res->res_site);
-	spinlock(&smi->smi_lock);
-	psc_multiwaitcond_wakeup(&smi->smi_mwcond);
-	freelock(&smi->smi_lock);
+	iosv[0].bs_id = src_resm->resm_res_id;
+	iosv[1].bs_id = dst_resm->resm_res_id;
+	uswi_enqueue_sites(wk, iosv, 2);
 
  out:
 	if (dst_resm && bcm)
@@ -359,6 +358,7 @@ slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 		if (bno == 0)
 			break;
 	}
+	/* XXX upsch_wakeup */
 	/* truncate metafile to remove garbage collected bmap */
 //	mdsio_setattr(METASIZE)
 	fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
