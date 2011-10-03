@@ -138,7 +138,7 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	    strcmp(site, lastsite))
 		printf("%s\n", site);
 
-	printf("  %-14s %35s %-10s %c%c%c%c%c %5d %4d\n", res, nid, stype,
+	printf("  %-12s %37s %-10s %c%c%c%c%c %5d %4d\n", res, nid, stype,
 	    scc->scc_flags & CSVCF_CONNECTING		? 'C' : '-',
 	    scc->scc_flags & CSVCF_CONNECTED		? 'O' : '-',
 	    scc->scc_flags & CSVCF_USE_MULTIWAIT	? 'M' : '-',
