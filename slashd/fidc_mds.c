@@ -71,6 +71,8 @@ slm_fcmh_ctor(struct fidc_membh *fcmh)
 	struct fcmh_mds_info *fmi;
 	int rc;
 
+	DEBUG_FCMH(PLL_INFO, fcmh, "ctor");
+
 	fmi = fcmh_2_fmi(fcmh);
 	memset(fmi, 0, sizeof(*fmi));
 	psc_dynarray_init(&fmi->fmi_ptrunc_clients);
