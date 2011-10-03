@@ -64,7 +64,7 @@ struct pscrpc_request;
 			sl_csvc_decref(csvc);				\
 			(csvc) = NULL;					\
 		}							\
-		(rc) = slc_rmc_getimp((pfcc), _resm, &(csvc));		\
+		(rc) = slc_rmc_getcsvc((pfcc), _resm, &(csvc));		\
 		if (rc)							\
 			break;						\
 		(rc) = SL_RSX_NEWREQ((csvc), (op), (rq), (mq),		\
@@ -118,8 +118,8 @@ struct pscrpc_request;
 
 void	slc_rpc_initsvc(void);
 
-int	slc_rmc_getimp(struct pscfs_clientctx *, struct sl_resm *, struct slashrpc_cservice **);
-int	slc_rmc_getimp1(struct slashrpc_cservice **, struct sl_resm *);
+int	slc_rmc_getcsvc(struct pscfs_clientctx *, struct sl_resm *, struct slashrpc_cservice **);
+int	slc_rmc_getcsvc1(struct slashrpc_cservice **, struct sl_resm *);
 int	slc_rmc_retry_pfcc(struct pscfs_clientctx *, int *);
 int	slc_rmc_setmds(const char *);
 

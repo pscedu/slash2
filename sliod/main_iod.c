@@ -182,7 +182,7 @@ main(int argc, char *argv[])
 		psc_fatalx("invalid MDS %s: %s", argv[0],
 		    slstrerror(rc));
 
-	if (sli_rmi_getimp(&mds_csvc))
+	if (sli_rmi_getcsvc(&mds_csvc))
 		psc_fatalx("error connecting to MDS");
 	
 	psc_assert(globalConfig.gconf_fsuuid);

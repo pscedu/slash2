@@ -38,7 +38,7 @@
 struct sl_resm *rmi_resm;
 
 int
-sli_rmi_getimp(struct slashrpc_cservice **csvcp)
+sli_rmi_getcsvc(struct slashrpc_cservice **csvcp)
 {
 	int wait = 1;
 
@@ -92,7 +92,7 @@ sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *w)
 	struct srm_repl_schedwk_rep *mp;
 	int rc;
 
-	rc = sli_rmi_getimp(&csvc);
+	rc = sli_rmi_getcsvc(&csvc);
 	if (rc)
 		goto out;
 

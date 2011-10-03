@@ -148,7 +148,7 @@ slc_rmc_retry_pfcc(__unusedx struct pscfs_clientctx *pfcc, int *rc)
 }
 
 int
-slc_rmc_getimp(struct pscfs_clientctx *pfcc, struct sl_resm *resm,
+slc_rmc_getcsvc(struct pscfs_clientctx *pfcc, struct sl_resm *resm,
     struct slashrpc_cservice **csvcp)
 {
 	int rc;
@@ -170,7 +170,7 @@ slc_rmc_getimp(struct pscfs_clientctx *pfcc, struct sl_resm *resm,
 }
 
 int
-slc_rmc_getimp1(struct slashrpc_cservice **csvcp, struct sl_resm *resm)
+slc_rmc_getcsvc1(struct slashrpc_cservice **csvcp, struct sl_resm *resm)
 {
 	int rc = 0;
 

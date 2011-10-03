@@ -84,7 +84,7 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 	 */
 	psc_assert(rw == SL_WRITE && (b->bcm_flags & BMAP_RD));
 
-	rc = slc_rmc_getimp1(&csvc, fci->fci_resm);
+	rc = slc_rmc_getcsvc1(&csvc, fci->fci_resm);
 	if (rc)
 		goto out;
 
@@ -203,7 +203,7 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int force)
 		 */
 		BMAP_ULOCK(b);
 
-		rc = slc_rmc_getimp1(&csvc,
+		rc = slc_rmc_getcsvc1(&csvc,
 		    fcmh_2_fci(b->bcm_fcmh)->fci_resm);
 		if (rc)
 			goto error;
@@ -293,7 +293,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw,
 	fci = fcmh_2_fci(f);
 
  retry:
-	rc = slc_rmc_getimp1(&csvc, fci->fci_resm);
+	rc = slc_rmc_getcsvc1(&csvc, fci->fci_resm);
 	if (rc)
 		goto out;
 	rc = SL_RSX_NEWREQ(csvc, SRMT_GETBMAP, rq, mq, mp);

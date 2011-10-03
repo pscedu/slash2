@@ -202,7 +202,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	    S_ISDIR(stb->st_mode) ? "/" : "",
 	    fn + strlen(sfop->sfop_fn));
 
-	rc = sli_rmi_getimp(&csvc);
+	rc = sli_rmi_getcsvc(&csvc);
 	if (rc)
 		PFL_GOTOERR(error, rc);
 

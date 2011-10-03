@@ -95,7 +95,7 @@ bim_getcurseq(void)
 		bimSeq.bim_flags |= BIM_RETRIEVE_SEQ;
 		freelock(&bimSeq.bim_lock);
 
-		rc = sli_rmi_getimp(&csvc);
+		rc = sli_rmi_getcsvc(&csvc);
 		if (rc)
 			goto out;
 
@@ -400,7 +400,7 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 		 * The system can tolerate the loss of these messages so
 		 *   errors here should not be considered fatal.
 		 */
-		rc = sli_rmi_getimp(&csvc);
+		rc = sli_rmi_getcsvc(&csvc);
 		if (rc) {
 			psclog_errorx("Failed to get MDS import rc=%d", rc);
 			continue;
@@ -494,7 +494,7 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 	if (rw != SL_READ)
 		return (0);
 
-	rc = sli_rmi_getimp(&csvc);
+	rc = sli_rmi_getcsvc(&csvc);
 	if (rc)
 		goto out;
 

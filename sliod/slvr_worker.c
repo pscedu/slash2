@@ -62,7 +62,7 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 	uint32_t i;
 	int rc;
 
-	rc = sli_rmi_getimp(&csvc);
+	rc = sli_rmi_getcsvc(&csvc);
 	if (rc)
 		return (rc);
 	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAPCRCWRT, rq, mq, mp);
