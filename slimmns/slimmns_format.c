@@ -197,7 +197,13 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 	fp = fopen(fn, "w");
 	if (fp == NULL)
 		psc_fatal("open %s", fn);
-	fprintf(fp, "%16"PRIx64"\n", psc_random64());
+
+	if (!fsUuid)
+		fsUuid = psc_random64();
+	fprintf(fp, "%16"PRIx64"\n", fsUuid);
+	if (!ion)
+		printf("The UUID of the pool is 0x%16"PRIx64"\n", fsUuid);
+
 	fclose(fp);
 
 	/* create the journal cursor file */
@@ -275,9 +281,6 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 	if (argc != 1)
-		usage();
-
-	if (ion && !fsUuid)
 		usage();
 
 	sl_getuserpwent(&pw);
