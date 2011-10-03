@@ -40,17 +40,18 @@ struct sl_resm *rmi_resm;
 int
 sli_rmi_getcsvc(struct slashrpc_cservice **csvcp)
 {
-	int wait = 1;
+	int rc;
 
-	do {
+	for (;;) {
+		rc = 0;
+		sl_csvc_lock(rmi_resm->resm_csvc);
 		*csvcp = sli_getmcsvc(rmi_resm);
-#if 0
-		ctx = fuse_get_context(rq);
-		// if process doesn't want to wait
-			wait = 0
-#endif
-	} while (*csvcp == NULL && wait);
-	return (0);
+		if (*csvcp)
+			break;
+		sl_csvc_waitrel_s(rmi_resm->resm_csvc, CSVC_RECONNECT_INTV);
+	}
+	sl_csvc_unlock(rmi_resm->resm_csvc);
+	return (rc);
 }
 
 int
