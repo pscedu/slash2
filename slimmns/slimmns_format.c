@@ -283,6 +283,10 @@ main(int argc, char *argv[])
 	if (argc != 1)
 		usage();
 
+	/* on ION, we must specify a uuid */
+	if (ion && !fsUuid)
+		usage();
+
 	sl_getuserpwent(&pw);
 	if (pw == NULL)
 		psclog_warn("getpwnam %s", SLASH_UID);
