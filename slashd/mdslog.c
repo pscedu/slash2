@@ -1319,8 +1319,7 @@ mdslogfill_ino_repls(struct fidc_membh *f,
 	locked = FCMH_RLOCK(f);
 	ih = fcmh_2_inoh(f);
 
-	if (!fcmh_2_nrepls(f))
-		abort();
+	psc_assert(fcmh_2_nrepls(f));
 
 	sjir->sjir_fid = fcmh_2_fid(f);
 	sjir->sjir_nrepls = fcmh_2_nrepls(f);
@@ -1506,10 +1505,10 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	mdsJournal = pjournal_open(res->res_jrnldev);
 	if (mdsJournal == NULL)
 		psc_fatal("Failed to open log file %s", res->res_jrnldev);
-	
+
 	if (fsuuid && (mdsJournal->pj_hdr->pjh_fsuuid != fsuuid))
-		psc_fatal("UUID mismatch MDS=%"PRIx64" JRNL=%"PRIx64
-		  ".  Reinitialize your journal.", 
+		psc_fatal("UUID mismatch FS=%"PRIx64" JRNL=%"PRIx64".  "
+		    "The journal needs to be reinitialized.",
 		  fsuuid, mdsJournal->pj_hdr->pjh_fsuuid);
 
 	jrnldev = res->res_jrnldev;
