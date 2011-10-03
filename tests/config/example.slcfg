@@ -2,6 +2,7 @@
 
 set port=6667;
 set net=tcp10;
+set fsuuid=0x1;
 
 site @SITEA {
 	site_desc	= "mysite";
