@@ -532,6 +532,8 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
+	slm_fcmh_endow_nolog(p, c);
+
 	/* obtain lease for first bmap as optimization */
 	mp->flags = mq->flags;
 
@@ -813,6 +815,9 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			to_set |= SL_SETATTRF_GEN;
 			unbump = 1;
 		} else {
+mp->rc = ENOTSUP;
+goto out;
+
 			/* partial truncate */
 			if (fcmh->fcmh_flags & FCMH_IN_PTRUNC) {
 				mp->rc = SLERR_BMAP_IN_PTRUNC;
