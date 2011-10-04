@@ -85,7 +85,6 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 	smi = site2smi(site);
 
 	locked = reqlock(&smi->smi_lock);
-	smi->smi_flags |= SMIF_DIRTYQ;
 	psc_dynarray_remove(&smi->smi_upq, wk);
 	ureqlock(&smi->smi_lock, locked);
 
@@ -555,7 +554,7 @@ slmupschedthr_main(struct psc_thread *thr)
 			sched_yield();
 
 		/* select or wait for a repl rq */
-		spinlock(&smi->smi_lock);
+		reqlock(&smi->smi_lock);
 
 		psc_multiwait_reset(&smi->smi_mw);
 		if (psc_multiwait_addcond(&smi->smi_mw,
@@ -569,14 +568,11 @@ slmupschedthr_main(struct psc_thread *thr)
 			continue;
 		}
 
-		smi->smi_flags &= ~SMIF_DIRTYQ;
-
 		FOREACH_RND(&wk_i, psc_dynarray_len(&smi->smi_upq)) {
 			reqlock(&smi->smi_lock);
-			if (smi->smi_flags & SMIF_DIRTYQ) {
-				freelock(&smi->smi_lock);
+			if (wk_i.ri_rnd_idx >=
+			    psc_dynarray_len(&smi->smi_upq))
 				goto restart;
-			}
 
 			wk = psc_dynarray_getpos(&smi->smi_upq,
 			    wk_i.ri_rnd_idx);
@@ -882,14 +878,10 @@ slmupschedthr_main(struct psc_thread *thr)
 			if (has_work || wk->uswi_gen != uswi_gen) {
 				psc_multiwait_addcond_masked(&smi->smi_mw,
 				    &wk->uswi_mwcond, 0);
-				uswi_unref(wk);
-
-				/*
-				 * This should be safe since the wk is
-				 * refcounted in our dynarray.
-				 */
+				psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
 				psc_multiwait_setcondwakeable(&smi->smi_mw,
 				    &wk->uswi_mwcond, 1);
+				uswi_unref_nowake(wk);
 			} else {
 				slmupschedthr_removeq(wk);
 				goto restart;
@@ -968,7 +960,7 @@ _uswi_access(struct up_sched_work_item *wk, int keep_locked)
 
 int
 _uswi_unref(const struct pfl_callerinfo *pci,
-    struct up_sched_work_item *wk)
+    struct up_sched_work_item *wk, int wake)
 {
 	psc_mutex_reqlock(&wk->uswi_mutex);
 	wk->uswi_flags &= ~USWIF_BUSY;
@@ -978,8 +970,8 @@ _uswi_unref(const struct pfl_callerinfo *pci,
 		return (1);
 
 	USWI_DECREF(wk, USWI_REFT_LOOKUP);
-	/* XXX this wakeup should be conditional */
-	psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
+	if (wake)
+		psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
 	psc_mutex_unlock(&wk->uswi_mutex);
 	return (0);
 }
@@ -1234,7 +1226,6 @@ uswi_enqueue_sites(struct up_sched_work_item *wk,
 			psc_dynarray_add(&smi->smi_upq, wk);
 			USWI_INCREF(wk, USWI_REFT_SITEUPQ);
 		}
-		smi->smi_flags |= SMIF_DIRTYQ;
 		psc_multiwaitcond_wakeup(&smi->smi_mwcond);
 		freelock(&smi->smi_lock);
 	}

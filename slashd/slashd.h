@@ -97,8 +97,6 @@ struct site_mds_info {
 	int			  smi_flags;
 };
 
-#define SMIF_DIRTYQ		  (1 << 0)		/* queue has changed */
-
 static __inline struct site_mds_info *
 site2smi(struct sl_site *site)
 {
