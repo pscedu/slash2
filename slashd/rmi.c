@@ -523,6 +523,9 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+
+	psclog_info("import: rc=%d", mp->rc);
+
 	return (0);
 }
 
