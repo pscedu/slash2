@@ -633,7 +633,7 @@ slmupschedthr_main(struct psc_thread *thr)
 					bmap_i.ri_rnd_idx = howmany(
 					    fcmh_2_fsz(f),
 					    SLASH_BMAP_SIZE) - 1;
-					uswi_gen = wk->uswi_gen;
+//					uswi_gen = wk->uswi_gen;
 					FCMH_ULOCK(f);
 
 					/*
@@ -863,21 +863,17 @@ slmupschedthr_main(struct psc_thread *thr)
 						RESET_RND_ITER(&bmap_i);
 				}
 			}
+
  skipfile:
 			/*
-			 * XXX - when BREPLST_GARBAGE/SCHED all get
-			 * fully reclaimed, delete metadata.
-			 */
-
-			/*
 			 * At this point, we did not find a
-			 * block/src/dst resource involving our site
-			 * needed by this uswi.
+			 * bmap, src/dst resource, etc. involving our
+			 * site needed by this uswi.
 			 */
 			psc_mutex_lock(&wk->uswi_mutex);
 			if (has_work || wk->uswi_gen != uswi_gen) {
 				psc_multiwait_addcond_masked(&smi->smi_mw,
-				    &wk->uswi_mwcond, 0);
+				    &wk->uswi_mwcond, wk->uswi_gen != uswi_gen);
 				psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
 				psc_multiwait_setcondwakeable(&smi->smi_mw,
 				    &wk->uswi_mwcond, 1);
