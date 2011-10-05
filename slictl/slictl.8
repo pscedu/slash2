@@ -41,30 +41,65 @@ behavior.
 .Pp
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/cmd.mdoc {
 .\"	cmds => {
-.\"		"export Oo Fl Rv\\& Oc Ar file ... dst" => <<'EOF',
-.\"			Eject a copy of the specified files from the
+.\"		"export Oo Fl Rv\\& Oc Ar src ... dst" => <<'EOF',
+.\"			Copy the specified files from the
 .\"			.Tn SLASH2
 .\"			file system to the destination specified at
-.\"			.Ar dst .
+.\"			.Ar dst
+.\"			on this machine's local file system.
 .\"			The
-.\"			.Ar file
+.\"			.Ar src
 .\"			arguments are relative to the
 .\"			.Tn SLASH2
-.\"			name space.
-.\"			The files must be resident on this node's backing file system.
+.\"			name space and must have residency on this
+.\"			.Tn I/O
+.\"			node's backing file system.
+.\"			.Pp
+.\"			The options are as follows:
+.\"			.Bl -tag -offset 3n -width 3n
+.\"			.It Fl R
+.\"			Recursively traverse all file hierarchies rooted at the specified
+.\"			.Ar src
+.\"			nodes.
+.\"			.It Fl v
+.\"			Display verbose information about processing.
+.\"			.El
 .\"			EOF
-.\"		"import Oo Fl Rv\\& Oc Ar file ... dst" => <<'EOF',
+.\"		"import Oo Fl Rvx\\& Oc Ar file ... dst" => <<'EOF',
 .\"			Import the specified files into the
 .\"			.Tn SLASH2
-.\"			file system into the
-.\"			.Tn SLASH2
-.\"			name space rooted at
+.\"			file system name space rooted at
 .\"			.Ar dst .
-.\"			Importing publishes a read-only copy of the data to the local metadata server.
+.\"			Importing publishes a read-only copy of the data
+.\"			to the local metadata server.
+.\"			Reimporting an existing file refreshes its file
+.\"			attributes on the metadata server.
 .\"			.Pp
-.\"			When importing recursively
-.\"			.Pq Fl R ,
-.\"			relative file paths are preserved.
+.\"			The options are as follows:
+.\"			.Bl -tag -offset 3n -width 3n
+.\"			.It Fl R
+.\"			Recursively traverse all file hierarchies rooted at the specified
+.\"			.Ar file
+.\"			nodes.
+.\"			.It Fl v
+.\"			Display verbose information about processing.
+.\"			.It Fl x
+.\"			When
+.\"			.Ar dst
+.\"			already exists, instead of refreshing
+.\"			attributes, register a residency state
+.\"			for this
+.\"			.Tn I/O
+.\"			node in the replica table for the specified files.
+.\"			.El
+.\"			.Pp
+.\"			Note: usage for directories is not similar to
+.\"			.Xr cp 1
+.\"			due to ambiguities regarding
+.\"			.Ar dst
+.\"			existence;
+.\"			rather, intended destination paths must be
+.\"			supplied in full.
 .\"			EOF
 .\"		stop => <<'EOF',
 .\"			Instruct
@@ -74,29 +109,64 @@ behavior.
 .\"	}
 The supported commands are as follows:
 .Bl -tag -width 3n
-.It Cm export Oo Fl Rv\& Oc Ar file ... dst
-Eject a copy of the specified files from the
+.It Cm export Oo Fl Rv\& Oc Ar src ... dst
+Copy the specified files from the
 .Tn SLASH2
 file system to the destination specified at
-.Ar dst .
+.Ar dst
+on this machine's local file system.
 The
-.Ar file
+.Ar src
 arguments are relative to the
 .Tn SLASH2
-name space.
-The files must be resident on this node's backing file system.
-.It Cm import Oo Fl Rv\& Oc Ar file ... dst
+name space and must have residency on this
+.Tn I/O
+node's backing file system.
+.Pp
+The options are as follows:
+.Bl -tag -offset 3n -width 3n
+.It Fl R
+Recursively traverse all file hierarchies rooted at the specified
+.Ar src
+nodes.
+.It Fl v
+Display verbose information about processing.
+.El
+.It Cm import Oo Fl Rvx\& Oc Ar file ... dst
 Import the specified files into the
 .Tn SLASH2
-file system into the
-.Tn SLASH2
-name space rooted at
+file system name space rooted at
 .Ar dst .
-Importing publishes a read-only copy of the data to the local metadata server.
+Importing publishes a read-only copy of the data
+to the local metadata server.
+Reimporting an existing file refreshes its file
+attributes on the metadata server.
 .Pp
-When importing recursively
-.Pq Fl R ,
-relative file paths are preserved.
+The options are as follows:
+.Bl -tag -offset 3n -width 3n
+.It Fl R
+Recursively traverse all file hierarchies rooted at the specified
+.Ar file
+nodes.
+.It Fl v
+Display verbose information about processing.
+.It Fl x
+When
+.Ar dst
+already exists, instead of refreshing
+attributes, register a residency state
+for this
+.Tn I/O
+node in the replica table for the specified files.
+.El
+.Pp
+Note: usage for directories is not similar to
+.Xr cp 1
+due to ambiguities regarding
+.Ar dst
+existence;
+rather, intended destination paths must be
+supplied in full.
 .It Cm stop
 Instruct
 .Xr sliod 8
