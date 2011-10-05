@@ -163,7 +163,7 @@ slictlcmd_import(int ac, char *av[])
 
 	if (ac < 2)
  usage:
-		errx(1, "usage: import [-PRv] file ... dst");
+		errx(1, "usage: import [-Rv] file ... dst");
 	for (i = 0; i < ac - 1; i++) {
 		if (realpath(av[i], fn) == NULL) {
 			warn("%s", av[i]);
