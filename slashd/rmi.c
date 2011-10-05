@@ -541,8 +541,10 @@ slm_rmi_handle_mkdir(struct pscrpc_request *rq)
 	mq->sstb.sst_uid = 0;
 	mq->sstb.sst_gid = 0;
 	rc = slm_mkdir(mq, mp, &d);
-	if (rc || mp->rc)
+	if (rc)
 		return (rc);
+	if (mp->rc && abs(mp->rc) != EEXIST)
+		return (0);
 	FCMH_LOCK(d);
 	mp->rc = mds_fcmh_setattr(d,
 	    PSCFS_SETATTRF_UID | PSCFS_SETATTRF_GID |
