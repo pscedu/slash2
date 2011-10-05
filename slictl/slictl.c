@@ -37,8 +37,6 @@
 #include "ctlcli.h"
 #include "pathnames.h"
 
-int		 verbose;
-int		 recursive;
 const char	*progname;
 const char	*daemon_name = "sliod";
 
@@ -107,11 +105,11 @@ replwkst_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 void
 slictlcmd_export(int ac, char *av[])
 {
+	int i, c, recursive = 0, verbose = 0;
 	struct slictlmsg_fileop *sfop;
-	int i, c;
 
 	PFL_OPT_RESET();
-	while ((c = getopt(ac, av, "Rv")) != -1)
+	while ((c = getopt(ac, av, "+Rv")) != -1)
 		switch (c) {
 		case 'R':
 			recursive = 1;
@@ -142,12 +140,12 @@ slictlcmd_export(int ac, char *av[])
 void
 slictlcmd_import(int ac, char *av[])
 {
+	int i, c, recursive = 0, verbose = 0;
 	struct slictlmsg_fileop *sfop;
 	char fn[PATH_MAX];
-	int i, c;
 
 	PFL_OPT_RESET();
-	while ((c = getopt(ac, av, "Rv")) != -1)
+	while ((c = getopt(ac, av, "+Rv")) != -1)
 		switch (c) {
 		case 'R':
 			recursive = 1;
@@ -239,7 +237,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-HInRv] [-p paramspec] [-S socket] [-s value] [cmd arg ...]\n",
+	    "usage: %s [-HIn] [-p paramspec] [-S socket] [-s value] [cmd arg ...]\n",
 	    progname);
 	exit(1);
 }
@@ -252,9 +250,7 @@ struct psc_ctlopt opts[] = {
 	{ 'n', PCOF_FLAG, &psc_ctl_nodns },
 	{ 'p', PCOF_FUNC, psc_ctlparse_param },
 	{ 'P', PCOF_FUNC, psc_ctlparse_pool },
-	{ 'R', PCOF_FLAG, &recursive },
 	{ 's', PCOF_FUNC, psc_ctlparse_show },
-	{ 'v', PCOF_FLAG, &verbose }
 };
 
 int
