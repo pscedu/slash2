@@ -441,14 +441,13 @@ API rename
 - upsch will not scale without multiwait waker arg
 - ensure user mounting works
 - add provisions to ensure journal disk doesnt overwrite something special
- (superblock check)
+  (superblock check)
 
 - Add the ability to remove an I/O server from slcfg.  Right now struct reclaim_prog_entry
   has a field "pad".  Should be easy to turn it into a flag to mark obsolete
   entries.  But we need a tool or edit the disk file manually to be compatible.
 
   We might want to do the same thing for metadata server.
-- add msctl -X to cancel a replication
 - msctl is broken on 32-bit because of ino # compression
 - move msctl sock to $MOUNTPOINT/.slmd/ctlsock and have msctl ascend to
   that on arguments
@@ -481,9 +480,9 @@ reimport
 - directory replica table inheritance
 - add svn revision # to CONNECT and track for "*ctl -s conns"
 - zero-length files currently fail slictl import
+- test msctl -Q <symlink>
 
 archiver
-- install SLASH2 on illusion
 - tool to recover softdel files
    (o) provide ability to access zfs snapshots via MSL .zfs/snapshots
 - migration
