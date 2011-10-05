@@ -140,18 +140,21 @@ slictlcmd_export(int ac, char *av[])
 void
 slictlcmd_import(int ac, char *av[])
 {
-	int i, c, recursive = 0, verbose = 0;
+	int i, c, recursive = 0, verbose = 0, xrepl = 0;
 	struct slictlmsg_fileop *sfop;
 	char fn[PATH_MAX];
 
 	PFL_OPT_RESET();
-	while ((c = getopt(ac, av, "+Rv")) != -1)
+	while ((c = getopt(ac, av, "+Rvx")) != -1)
 		switch (c) {
 		case 'R':
 			recursive = 1;
 			break;
 		case 'v':
 			verbose = 1;
+			break;
+		case 'x':
+			xrepl = 1;
 			break;
 		default:
 			goto usage;
@@ -161,7 +164,7 @@ slictlcmd_import(int ac, char *av[])
 
 	if (ac < 2)
  usage:
-		errx(1, "usage: import [-Rv] file ... dst");
+		errx(1, "usage: import [-Rvx] file ... dst");
 	for (i = 0; i < ac - 1; i++) {
 		if (realpath(av[i], fn) == NULL) {
 			warn("%s", av[i]);
@@ -172,6 +175,8 @@ slictlcmd_import(int ac, char *av[])
 			sfop->sfop_flags |= SLI_CTL_FOPF_RECURSIVE;
 		if (verbose)
 			sfop->sfop_flags |= SLI_CTL_FOPF_VERBOSE;
+		if (xrepl)
+			sfop->sfop_flags |= SLI_CTL_FOPF_XREPL;
 		strlcpy(sfop->sfop_fn, fn, sizeof(sfop->sfop_fn));
 		strlcpy(sfop->sfop_fn2, av[ac - 1], sizeof(sfop->sfop_fn2));
 	}
