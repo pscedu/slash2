@@ -42,7 +42,7 @@ behavior.
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/cmd.mdoc {
 .\"	cmds => {
 .\"		"export Oo Fl Rv\\& Oc Ar file ... dst" => <<'EOF',
-.\"			Eject the specified files from the
+.\"			Eject a copy of the specified files from the
 .\"			.Tn SLASH2
 .\"			file system to the destination specified at
 .\"			.Ar dst .
@@ -63,7 +63,7 @@ behavior.
 .\"			Importing publishes a read-only copy of the data to the local metadata server.
 .\"			.Pp
 .\"			When importing recursively
-.\"			.Pq see Fl R ,
+.\"			.Pq Fl R ,
 .\"			relative file paths are preserved.
 .\"			EOF
 .\"		stop => <<'EOF',
@@ -75,7 +75,7 @@ behavior.
 The supported commands are as follows:
 .Bl -tag -width 3n
 .It Cm export Oo Fl Rv\& Oc Ar file ... dst
-Eject the specified files from the
+Eject a copy of the specified files from the
 .Tn SLASH2
 file system to the destination specified at
 .Ar dst .
@@ -95,7 +95,7 @@ name space rooted at
 Importing publishes a read-only copy of the data to the local metadata server.
 .Pp
 When importing recursively
-.Pq see Fl R ,
+.Pq Fl R ,
 relative file paths are preserved.
 .It Cm stop
 Instruct
