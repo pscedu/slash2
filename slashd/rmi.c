@@ -457,10 +457,8 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	if (rc == EEXIST) {
 		/* if mtime is newer, apply updates */
 		if (timespeccmp(&mq->sstb.sst_mtim,
-		    &sstb.sst_mtim, <=)) {
-			mdsio_release(&cr, mdsio_data);
+		    &sstb.sst_mtim, <=))
 			goto out;
-		}
 
 		FCMH_LOCK(c);
 		fcmh_wait_locked(c, c->fcmh_flags & FCMH_IN_SETATTR);
