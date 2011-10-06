@@ -357,7 +357,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 					rc = errno;
 			}
 		}
-	} else if (S_ISREG(stb->st_mode)) {
+	} else {
 		rc = ENOTSUP;
 	}
 
@@ -371,9 +371,9 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 			rc = 0;
 			if (sfop->sfop_flags & SLI_CTL_FOPF_VERBOSE)
 				a->rc = psc_ctlsenderr(a->fd, mh,
-				    "%s: %s already imported", fn,
+				    "reimporting %s%s", fn,
 				    S_ISDIR(stb->st_mode) ?
-				    "directory" : "file");
+				    "/" : "");
 		} else {
 			a->rc = psc_ctlsenderr(a->fd, mh,
 			    "%s: another file has already been "
