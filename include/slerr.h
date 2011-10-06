@@ -49,5 +49,7 @@ char *slstrerror(int);
 #define SLERR_BMAP_IN_PTRUNC		(_SLERR_START + 23)
 #define SLERR_BMAP_PTRUNC_STARTED	(_SLERR_START + 24)
 #define SLERR_AIOWAIT			(_SLERR_START + 25)
+#define SLERR_REIMPORT_OLD		(_SLERR_START + 26)
+#define SLERR_IMPORT_XREPL_DIFF		(_SLERR_START + 27)
 
 #endif /* _SLERR_H_ */

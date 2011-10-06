@@ -51,6 +51,8 @@ char *slash_errstrs[] = {
 /* 23 */ "Bmap is awaiting partial truncation resolution",
 /* 24 */ "Bmap has started partial truncation resolution",
 /* 25 */ "Asynchronous I/O would block",
+/* 26 */ "Reimport failed because target is newer",
+/* 27 */ "Import additional replica registration failed because source and target differ",
 	NULL
 };
 
