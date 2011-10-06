@@ -37,6 +37,7 @@
 #include "bmap_mds.h"
 #include "fid.h"
 #include "fidc_mds.h"
+#include "mdsio.h"
 #include "repl_mds.h"
 #include "rpc_mds.h"
 #include "slashd.h"
@@ -428,10 +429,10 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	    SLPRI_FG_ARGS(&p->fcmh_fg), mq->cpn);
 
 	mds_reserve_slot(1);
-	rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &rootcreds,
-	    O_CREAT | O_EXCL | O_RDWR, mq->sstb.sst_mode, mq->cpn, NULL,
-	    &sstb, &mdsio_data, mdslog_namespace, slm_get_next_slashfid,
-	    0);
+	rc = mdsio_opencreatef(fcmh_2_mdsio_fid(p), &rootcreds,
+	    O_CREAT | O_EXCL | O_RDWR, MDSIO_OPENCRF_NOMTIM,
+	    mq->sstb.sst_mode, mq->cpn, NULL, &sstb, &mdsio_data,
+	    mdslog_namespace, slm_get_next_slashfid, 0);
 	mds_unreserve_slot(1);
 
 	if (rc && rc != EEXIST)
@@ -540,7 +541,7 @@ slm_rmi_handle_mkdir(struct pscrpc_request *rq)
 	sstb = mq->sstb;
 	mq->sstb.sst_uid = 0;
 	mq->sstb.sst_gid = 0;
-	rc = slm_mkdir(mq, mp, &d);
+	rc = slm_mkdir(mq, mp, MDSIO_OPENCRF_NOMTIM, &d);
 	if (rc)
 		return (rc);
 	if (mp->rc && abs(mp->rc) != EEXIST)

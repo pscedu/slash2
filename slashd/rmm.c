@@ -206,8 +206,8 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		sstb.sst_uid = mq->creds.scr_uid;
 		sstb.sst_gid = mq->creds.scr_gid;
 		mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(p), mq->req.name,
-		    &sstb, 0, &mp->cattr, NULL, mdslog_namespace, NULL,
-		    mq->fid);
+		    &sstb, 0, 0, &mp->cattr, NULL, mdslog_namespace,
+		    NULL, mq->fid);
 		break;
 	    case SLM_FORWARD_CREATE:
 		mp->rc = slm_fcmh_get(&mq->fg, &p);

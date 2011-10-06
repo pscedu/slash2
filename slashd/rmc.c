@@ -372,7 +372,7 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 
 int
 slm_mkdir(struct srm_mkdir_req *mq, struct srm_mkdir_rep *mp,
-    struct fidc_membh **dp)
+    int opflags, struct fidc_membh **dp)
 {
 	struct fidc_membh *p = NULL, *c = NULL;
 
@@ -387,6 +387,7 @@ slm_mkdir(struct srm_mkdir_req *mq, struct srm_mkdir_rep *mp,
 
 		cr.scr_uid = mq->sstb.sst_uid;
 		cr.scr_gid = mq->sstb.sst_gid;
+		/* XXX pass opflags */
 		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_MKDIR,
 		    &mq->pfg, NULL, mq->name, NULL, mq->sstb.sst_mode,
 		    &cr, &mp->cattr, 0);
@@ -396,7 +397,7 @@ slm_mkdir(struct srm_mkdir_req *mq, struct srm_mkdir_rep *mp,
 
 	mds_reserve_slot(1);
 	mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(p), mq->name, &mq->sstb,
-	    0, &mp->cattr, NULL, mdslog_namespace,
+	    0, opflags, &mp->cattr, NULL, mdslog_namespace,
 	    slm_get_next_slashfid, 0);
 	mds_unreserve_slot(1);
 
@@ -432,7 +433,7 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	struct srm_mkdir_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	return (slm_mkdir(mq, mp, NULL));
+	return (slm_mkdir(mq, mp, 0, NULL));
 }
 
 int
