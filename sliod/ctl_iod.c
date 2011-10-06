@@ -391,6 +391,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
+	psclog_info("Import %s, rc = %d, a->rc = %d", fn, rc, a->rc);
 	return (rc || a->rc == 0);
 }
 
