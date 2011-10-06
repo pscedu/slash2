@@ -117,7 +117,7 @@ void	 mds_brepls_check(uint8_t *, int);
 
 #define mds_repl_nodes_clearbusy(a, b)		 mds_repl_nodes_adjbusy((a), (b), INT64_MIN)
 
-#define mds_repl_ios_lookup_add(ih, iosid, log)	_mds_repl_ios_lookup((ih), (iosid), 1, log)
+#define mds_repl_ios_lookup_add(ih, iosid, log)	_mds_repl_ios_lookup((ih), (iosid), 1, (log))
 #define mds_repl_ios_lookup(ih, iosid)		_mds_repl_ios_lookup((ih), (iosid), 0, 0)
 
 extern struct psc_listcache	 slm_replst_workq;

@@ -403,18 +403,16 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	struct bmapc_memb *b;
 	struct srt_stat sstb;
 	struct sl_resm *m;
+	int rc, rc2, i, idx;
 	void *mdsio_data;
 	sl_bmapno_t bno;
 	int64_t fsiz;
-	int rc, i;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	m = libsl_try_nid2resm(rq->rq_export->exp_connection->c_peer.nid);
-	if (m == NULL) {
-		mp->rc = SLERR_IOS_UNKNOWN;
-		goto out;
-	}
+	if (m == NULL)
+		PFL_GOTOERR(out, mp->rc = -SLERR_IOS_UNKNOWN);
 
 	/*
 	 * Lookup the parent directory in the cache so that the SLASH2
@@ -422,7 +420,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	 */
 	mp->rc = slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
 	mq->cpn[sizeof(mq->cpn) - 1] = '\0';
 	psclog_info("import: parent="SLPRI_FG" name=%s",
@@ -434,88 +432,107 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	    mq->sstb.sst_mode, mq->cpn, NULL, &sstb, &mdsio_data,
 	    mdslog_namespace, slm_get_next_slashfid, 0);
 	mds_unreserve_slot(1);
+	mp->rc = -rc;
 
 	if (rc && rc != EEXIST)
-		PFL_GOTOERR(out, mp->rc = -rc);
+		PFL_GOTOERR(out, mp->rc);
 
 	if (rc == EEXIST) {
-		int rc2;
-
-		rc2 = mdsio_opencreate(fcmh_2_mdsio_fid(p), &rootcreds,
-		    O_RDWR, 0, mq->cpn, NULL, &sstb, &mdsio_data, NULL,
-		    NULL, 0);
+		rc2 = mdsio_lookup(fcmh_2_mdsio_fid(p), mq->cpn,
+		    NULL, &rootcreds, &sstb);
 		if (rc2)
 			PFL_GOTOERR(out, mp->rc = -rc2);
-		mp->fg = sstb.sst_fg;
-	}
+	} else
+		mdsio_release(&cr, mdsio_data);
 
-	mdsio_release(&cr, mdsio_data);
 	mp->fg = sstb.sst_fg;
-
 	if (S_ISDIR(sstb.sst_mode))
-		PFL_GOTOERR(out, mp->rc = -EISDIR); 
+		PFL_GOTOERR(out, mp->rc = -EISDIR);
 
-	mp->rc = slm_fcmh_get(&sstb.sst_fg, &c);
-	if (mp->rc)
-		goto out;
+	rc2 = slm_fcmh_get(&sstb.sst_fg, &c);
+	if (rc2)
+		PFL_GOTOERR(out, mp->rc = rc2);
 
 	if (rc == EEXIST) {
 		/* if mtime is newer, apply updates */
 		if (timespeccmp(&mq->sstb.sst_mtim,
-		    &sstb.sst_mtim, <=))
-			goto out;
+		    &sstb.sst_mtim, <))
+			PFL_GOTOERR(out, mp->rc = -SLERR_REIMPORT_OLD);
 
-		FCMH_LOCK(c);
-		fcmh_wait_locked(c, c->fcmh_flags & FCMH_IN_SETATTR);
-		sstb.sst_fg.fg_gen++;
-		sstb.sst_size = 0;
-		sstb.sst_blocks = 0;
-		mp->rc = mds_fcmh_setattr(c, PSCFS_SETATTRF_DATASIZE |
-		    SL_SETATTRF_GEN | SL_SETATTRF_NBLKS, &sstb);
-		FCMH_ULOCK(c);
-		/* XXX if setattr failed, revert gen++ */
-	}
+		if (mq->flags & SRM_IMPORTF_XREPL) {
+			if (memcmp(&sstb, &mq->sstb, sizeof(sstb)))
+				PFL_GOTOERR(out, mp->rc =
+				    -SLERR_IMPORT_XREPL_DIFF);
+		} else {
+			/* reclaim old data */
+			FCMH_LOCK(c);
+			fcmh_wait_locked(c, c->fcmh_flags &
+			    FCMH_IN_SETATTR);
+			sstb.sst_fg.fg_gen++;
+			sstb.sst_size = 0;
+			sstb.sst_blocks = 0;
+			rc = mds_fcmh_setattr(c,
+			    PSCFS_SETATTRF_DATASIZE | SL_SETATTRF_GEN |
+			    SL_SETATTRF_NBLKS, &sstb);
+			FCMH_ULOCK(c);
 
-	slm_fcmh_endow_nolog(p, c);
-	FCMH_LOCK(c);
-	i = fcmh_2_ino(c)->ino_nrepls++;
-	fcmh_set_repl(c, i, m->resm_res_id);
-	fcmh_set_repl_nblks(c, i, mq->sstb.sst_blocks);
-	mp->rc = mds_inode_write(fcmh_2_inoh(c), mdslog_ino_repls, c);
-	FCMH_ULOCK(c);
-	if (mp->rc)
-		goto out;
+			if (rc)
+				PFL_GOTOERR(out, mp->rc = -rc);
+		}
+	} else
+		slm_fcmh_endow_nolog(p, c);
 
+	idx = mds_repl_ios_lookup_add(fcmh_2_inoh(c), m->resm_res_id,
+	    1);
+	if (idx < 0)
+		PFL_GOTOERR(out, mp->rc = rc);
 	fsiz = mq->sstb.sst_size;
 	for (bno = 0; bno < howmany(mq->sstb.sst_size, SLASH_BMAP_SIZE);
 	    bno++) {
-		mp->rc = mds_bmap_load(c, bno, &b);
-		if (mp->rc)
-			goto out;
+		rc = mds_bmap_load(c, bno, &b);
+		if (rc)
+			PFL_GOTOERR(out, mp->rc = rc);
 		for (i = 0; i < SLASH_SLVRS_PER_BMAP &&
 		    fsiz > 0; fsiz -= SLASH_SLVR_SIZE, i++)
 			/*
 			 * Mark that data exists but no CRCs are
 			 * available.
 			 */
-			b->bcm_crcstates[i] |= BMAP_SLVR_DATA |
-			    BMAP_SLVR_CRCABSENT;
-		mp->rc = mds_repl_inv_except(b, 0);
-		if (mp->rc)
-			goto out;
-		// XXX write crc table
-		mp->rc = mds_bmap_write_repls_rel(b);
-		if (mp->rc)
-			goto out;
-		/* XXX bump bgen */
+			if ((b->bcm_crcstates[i] & BMAP_SLVR_DATA) == 0)
+				b->bcm_crcstates[i] |= BMAP_SLVR_DATA |
+				    BMAP_SLVR_CRCABSENT;
+
+		if (mq->flags & SRM_IMPORTF_XREPL) {
+			int tract[NBREPLST];
+
+			brepls_init(tract, -1);
+			tract[BREPLST_INVALID] = BREPLST_VALID;
+			tract[BREPLST_GARBAGE] = BREPLST_VALID;
+			rc = mds_repl_bmap_walk(b, tract, NULL, 0, &idx,
+			    1);
+		} else
+			rc = mds_repl_inv_except(b, idx);
+		if (rc)
+			PFL_GOTOERR(out, mp->rc = rc);
+		rc = mds_bmap_write_repls_rel(b);
+		if (rc)
+			PFL_GOTOERR(out, mp->rc = rc);
 	}
+
+	/* XXX fire off any persistent replications */
 
 	FCMH_LOCK(c);
 	fcmh_wait_locked(c, c->fcmh_flags & FCMH_IN_SETATTR);
-	mp->rc = mds_fcmh_setattr(c, PSCFS_SETATTRF_DATASIZE |
+	if ((mq->flags & SRM_IMPORTF_XREPL) == 0)
+		for (i = 0; i < (int)fcmh_2_ino(c)->ino_nrepls; i++)
+			fcmh_set_repl_nblks(c, i, 0);
+	fcmh_set_repl_nblks(c, idx, mq->sstb.sst_blocks);
+	rc = mds_fcmh_setattr(c, PSCFS_SETATTRF_DATASIZE |
 	    PSCFS_SETATTRF_MTIME | PSCFS_SETATTRF_CTIME |
 	    PSCFS_SETATTRF_ATIME | PSCFS_SETATTRF_UID |
 	    PSCFS_SETATTRF_GID | SL_SETATTRF_NBLKS, &mq->sstb);
+	if (rc)
+		mp->rc = -rc;
 
  out:
 	/*

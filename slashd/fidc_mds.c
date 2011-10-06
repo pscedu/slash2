@@ -157,9 +157,8 @@ _slm_fcmh_endow(struct fidc_membh *p, struct fidc_membh *c, int log)
 //		c->nrepls =
 //		c->memcpy();
 		mds_fcmh_setattr(c, SL_SETATTRF_FREPLPOL, &sstb);
-		FCMH_ULOCK(c);
 	} else {
-		fcmh_wait_locked(c, c->fcmh_flags & FCMH_IN_SETATTR);
+//		fcmh_wait_locked(c, c->fcmh_flags & FCMH_IN_SETATTR);
 		fcmh_2_ino(c)->ino_replpol = pol;
 //		fcmh_2_ino(c)->ino_nrepls = 1;
 //		memcpy(fcmh_2_ino(c)->ino_repls, repls, sizeof());
@@ -167,8 +166,8 @@ _slm_fcmh_endow(struct fidc_membh *p, struct fidc_membh *c, int log)
 			rc = mds_inode_write(fcmh_2_inoh(c), mdslog_ino_repls, c);
 //		if (log)
 //			rc = mds_inox_write(fcmh_2_inoh(c), mdslog_ino_repls, c);
-		FCMH_ULOCK(c);
 	}
+	FCMH_ULOCK(c);
 	return (rc);
 }
 
