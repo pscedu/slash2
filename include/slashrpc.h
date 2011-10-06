@@ -869,7 +869,11 @@ struct srm_import_req {
 	struct slash_fidgen	pfg;		/* destination parent dir */
 	char			cpn[SL_NAME_MAX + 1];
 	struct srt_stat		sstb;
+	 int32_t		flags;
+	 int32_t		_pad;
 } __packed;
+
+#define SRM_IMPORTF_XREPL	(1 << 0)	/* register additional replica */
 
 struct srm_import_rep {
 	struct slash_fidgen	fg;
