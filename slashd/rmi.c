@@ -441,6 +441,9 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	if (rc == EEXIST) {
 		int rc2;
 
+		if (S_ISDIR(sstb.sst_mode))
+			PFL_GOTOERR(out, mp->rc = -EISDIR);
+
 		rc2 = mdsio_opencreate(fcmh_2_mdsio_fid(p), &rootcreds,
 		    O_RDWR, 0, mq->cpn, NULL, &sstb, &mdsio_data, NULL,
 		    NULL, 0);
