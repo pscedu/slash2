@@ -188,8 +188,8 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 
 	/*
 	 * Start from the root of the SLASH2 namespace.  This means
-	 * that if just a name is given as the destination, it will
-	 * be treated as a child of the root.
+	 * that if just a name is given as the destination, it will be
+	 * treated as a child of the root.
 	 */
 	fg.fg_fid = SLFID_ROOT;
 	fg.fg_gen = FGEN_ANY;
@@ -221,18 +221,17 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 
 		rc = sli_fcmh_lookup_fid(csvc, &fg, cpn, &tfg, &isdir);
 
-		if (!isdir) {
-			if (*np)
-				PFL_GOTOERR(error, rc = ENOTDIR);
-			break;
-		}
-
 		/* Last component is intended destination; use directly. */
 		if (rc == ENOENT && *np == '\0')
 			break;
 
 		if (rc)
 			PFL_GOTOERR(error, rc);
+		if (!isdir) {
+			if (*np)
+				PFL_GOTOERR(error, rc = ENOTDIR);
+			break;
+		}
 		fg = tfg;
 	}
 
