@@ -352,7 +352,6 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 				 * earlier, we probably won't fail for
 				 * EXDEV here.
 				 */
-				rc = 0;
 				if (link(fn, fidfn) == -1)
 					rc = errno;
 			}
