@@ -442,6 +442,9 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 		    NULL, &rootcreds, &sstb);
 		if (rc2)
 			PFL_GOTOERR(out, mp->rc = -rc2);
+
+		if (IS_REMOTE_FID(sstb.sst_fid))
+			PFL_GOTOERR(out, mp->rc = -ENOTSUP);
 	} else
 		mdsio_release(&cr, mdsio_data);
 
