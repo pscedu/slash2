@@ -98,7 +98,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 		if (rc == -1)
 			rc = errno;
 
-		psclog_debug("fid="SLPRI_FG", xid=%"PRId64 "rc=%d",
+		psclog_info("fid="SLPRI_FG", xid=%"PRId64 "rc=%d",
 		    SLPRI_FG_ARGS(&entryp->fg), entryp->xid, rc);
 		entryp = PSC_AGP(entryp, len);
 	}

@@ -152,7 +152,7 @@ sli_fcmh_reopen(struct fidc_membh *fcmh, const struct slash_fidgen *fg)
 		 */
 		sli_fg_makepath(&oldfg, fidfn);
 		if (unlink(fidfn) == -1)
-			DEBUG_FCMH(PLL_ERROR, fcmh, "unlink() failed errno=%d",
+			DEBUG_FCMH(PLL_INFO, fcmh, "unlink() failed errno=%d",
 				   errno);
 
 	} else if (fg->fg_gen == fcmh_2_gen(fcmh) &&
