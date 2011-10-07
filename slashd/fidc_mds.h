@@ -56,6 +56,9 @@ struct fcmh_mds_info {
 
 #define FCMH_HAS_GARBAGE(f)	(fcmh_nallbmaps(f) > fcmh_nvalidbmaps(f))
 
+#define IS_REMOTE_FID(fid)						\
+	((fid) != SLFID_ROOT && nodeSite->site_id != FID_GET_SITEID(fid))
+
 #define slm_fcmh_get(fgp, fp)	fidc_lookup((fgp), FIDC_LOOKUP_CREATE, NULL, 0, (fp))
 #define slm_fcmh_peek(fgp, fp)	fidc_lookup((fgp), FIDC_LOOKUP_NONE, NULL, 0, (fp))
 

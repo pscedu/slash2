@@ -58,9 +58,6 @@
 #include "slutil.h"
 #include "up_sched_res.h"
 
-#define IS_REMOTE_FID(fid)						\
-	((fid) != SLFID_ROOT && nodeSite->site_id != FID_GET_SITEID(fid))
-
 uint64_t		slm_next_fid = UINT64_MAX;
 psc_spinlock_t		slm_fid_lock = SPINLOCK_INIT;
 

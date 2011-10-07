@@ -538,7 +538,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 		mp->rc = -rc;
 	else {
 		FCMH_LOCK(c);
-		mp->fg = fcmh_2_fg(c);
+		mp->fg = c->fcmh_sstb.sst_fg;
 		FCMH_ULOCK(c);
 	}
 
