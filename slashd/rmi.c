@@ -537,6 +537,9 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 		mp->rc = -rc;
 
  out:
+	psclog_info("import: parent="SLPRI_FG" name=%s rc=%d",
+	    SLPRI_FG_ARGS(&p->fcmh_fg), mq->cpn, mp->rc);
+
 	/*
 	 * XXX if we created the file but left it in a bad state (e.g.
 	 * no repl table), then we should unlink it...
@@ -545,9 +548,6 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
-
-	psclog_info("import: parent="SLPRI_FG" name=%s, rc = %d",
-	    SLPRI_FG_ARGS(&p->fcmh_fg), mq->cpn, mp->rc);
 
 	return (0);
 }
