@@ -471,7 +471,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 			FCMH_LOCK(c);
 			fcmh_wait_locked(c, c->fcmh_flags &
 			    FCMH_IN_SETATTR);
-			sstb.sst_fg.fg_gen++;
+			sstb.sst_fg.fg_gen = fcmh_2_gen(c) + 1;
 			sstb.sst_size = 0;
 			sstb.sst_blocks = 0;
 			rc = mds_fcmh_setattr(c,
@@ -536,6 +536,11 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	    PSCFS_SETATTRF_GID | SL_SETATTRF_NBLKS, &mq->sstb);
 	if (rc)
 		mp->rc = -rc;
+	else {
+		FCMH_LOCK(c);
+		mp->fg = fcmh_2_fg(c);
+		FCMH_ULOCK(c);
+	}
 
  out:
 	/*

@@ -344,7 +344,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		if (rc == 0) {
 			rc = mp->rc;
 			sli_fg_makepath(&mp->fg, fidfn);
-			if (rc == 0) {
+			if (rc == 0 || abs(rc) == EEXIST) {
 				/*
 				 * XXX
 				 * If we fail here, we should undo
