@@ -423,8 +423,6 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, mp->rc);
 
 	mq->cpn[sizeof(mq->cpn) - 1] = '\0';
-	psclog_info("import: parent="SLPRI_FG" name=%s",
-	    SLPRI_FG_ARGS(&p->fcmh_fg), mq->cpn);
 
 	mds_reserve_slot(1);
 	rc = mdsio_opencreatef(fcmh_2_mdsio_fid(p), &rootcreds,
@@ -525,6 +523,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	/* XXX fire off any persistent replications */
 
 	FCMH_LOCK(c);
+	mp->fg = c->fcmh_sstb.sst_fg;
 	fcmh_wait_locked(c, c->fcmh_flags & FCMH_IN_SETATTR);
 	if ((mq->flags & SRM_IMPORTF_XREPL) == 0)
 		for (i = 0; i < (int)fcmh_2_ino(c)->ino_nrepls; i++)
@@ -536,11 +535,6 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	    PSCFS_SETATTRF_GID | SL_SETATTRF_NBLKS, &mq->sstb);
 	if (rc)
 		mp->rc = -rc;
-	else {
-		FCMH_LOCK(c);
-		mp->fg = c->fcmh_sstb.sst_fg;
-		FCMH_ULOCK(c);
-	}
 
  out:
 	/*
@@ -552,7 +546,8 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 
-	psclog_info("import: rc=%d", mp->rc);
+	psclog_info("import: parent="SLPRI_FG" name=%s, rc = %d",
+	    SLPRI_FG_ARGS(&p->fcmh_fg), mq->cpn, mp->rc);
 
 	return (0);
 }
