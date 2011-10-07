@@ -352,6 +352,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 				 * earlier, we probably won't fail for
 				 * EXDEV here.
 				 */
+				rc = 0;
 				if (link(fn, fidfn) == -1)
 					rc = errno;
 			}
@@ -390,7 +391,8 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
-	psclog_info("Import %s, rc = %d, a->rc = %d", fn, rc, a->rc);
+	psclog_info("Import file %s: fidfn = %s, rc = %d, a->rc = %d", 
+	    fn, fidfn, rc, a->rc);
 	return (rc || a->rc == 0);
 }
 
