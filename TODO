@@ -436,16 +436,16 @@ API rename
 - msl with sst_size local caching should still take higher values from MDS
   in cases of direct I/O (or maybe sliod)
 - use uint32_t for nanosecond atime/mtime/ctime in znode_phys to save space
-- remove separate sl2 mtime/atime in slashd
 - 'slmctl stop' should completely wait for all ops to prevent relying on journal
 - upsch will not scale without multiwait waker arg
 - ensure user mounting works
 - add provisions to ensure journal disk doesnt overwrite something special
   (superblock check)
 
-- Add the ability to remove an I/O server from slcfg.  Right now struct reclaim_prog_entry
-  has a field "pad".  Should be easy to turn it into a flag to mark obsolete
-  entries.  But we need a tool or edit the disk file manually to be compatible.
+- Add the ability to remove an I/O server from slcfg.  Right now struct
+  reclaim_prog_entry has a field "pad".  Should be easy to turn it into
+  a flag to mark obsolete entries.  But we need a tool or edit the disk
+  file manually to be compatible.
 
   We might want to do the same thing for metadata server.
 - msctl is broken on 32-bit because of ino # compression
