@@ -392,7 +392,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	if (csvc)
 		sl_csvc_decref(csvc);
 	psclog_info("Import file %s: fidfn = %s, rc = %d, a->rc = %d", 
-	    fn, fidfn, rc, a->rc);
+	    fn, basename(fidfn), rc, a->rc);
 	return (rc || a->rc == 0);
 }
 
