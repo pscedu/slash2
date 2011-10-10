@@ -17,7 +17,6 @@ SRCS+=		mds_bmap_timeo.c
 SRCS+=		mdscoh.c
 SRCS+=		mdsio_zfs.c
 SRCS+=		mdslog.c
-SRCS+=		metadir.c
 SRCS+=		odtable_mds.c
 SRCS+=		rcmc.c
 SRCS+=		repl_mds.c
