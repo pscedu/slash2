@@ -340,6 +340,8 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		mq->pfg = fg;
 		strlcpy(mq->cpn, cpn, sizeof(mq->cpn));
 		sl_externalize_stat(stb, &mq->sstb);
+		if (sfop->sfop_flags & SLI_CTL_FOPF_XREPL)
+			mq->flags = SRM_IMPORTF_XREPL;
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc == 0) {
 			rc = mp->rc;
@@ -362,7 +364,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 
  error:
 	if (abs(rc) == EEXIST) {
-		if (stat(fn, &tstb) == -1) {
+		if (lstat(fn, &tstb) == -1) {
 			rc = errno;
 			a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
 			    slstrerror(rc));
@@ -390,7 +392,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
-	psclog_info("Import file %s: fidfn = %s, rc = %d, a->rc = %d", 
+	psclog_info("Import file %s: fidfn = %s, rc = %d, a->rc = %d",
 	    fn, basename(fidfn), rc, a->rc);
 	return (rc || a->rc == 0);
 }
@@ -415,39 +417,40 @@ slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    slstrerror(ENOENT)));
 
 	/*
-	 * XXX: we should disallow recursive import of a parent directory
-	 * to where the SLASH2 objdir resides, which would cause an
-	 * infinite loop.
+	 * XXX: we should disallow recursive import of a parent
+	 * directory to where the SLASH2 objdir resides, which would
+	 * cause an infinite loop.
 	 */
-
-	/*
-	 * The following checks are done to avoid EXDEV down the road.
-	 * It is not bullet-proof, but it should not create false
-	 * negatives.
-	 */
-	if (statvfs(globalConfig.gconf_fsroot, &vfssb1) == -1)
-		return (psc_ctlsenderr(fd, mh, "%s: %s",
-		    sfop->sfop_fn, slstrerror(errno)));
-
-	if (statvfs(sfop->sfop_fn, &vfssb2) == -1)
-		return (psc_ctlsenderr(fd, mh, "%s: %s",
-		    sfop->sfop_fn, slstrerror(errno)));
-
-	if (vfssb1.f_fsid != vfssb2.f_fsid)
-		return (psc_ctlsenderr(fd, mh, "%s: %s",
-		    sfop->sfop_fn, slstrerror(EXDEV)));
 
 	if (stat(globalConfig.gconf_fsroot, &sb1) == -1)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    sfop->sfop_fn, slstrerror(errno)));
 
-	if (stat(sfop->sfop_fn, &sb2) == -1)
+	if (lstat(sfop->sfop_fn, &sb2) == -1)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    sfop->sfop_fn, slstrerror(errno)));
 
 	if (sb1.st_dev != sb2.st_dev)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    sfop->sfop_fn, slstrerror(EXDEV)));
+
+	/*
+	 * The following checks are done to avoid EXDEV down the road.
+	 * This is not bullet-proof but avoid false negatives.
+	 */
+	if (S_ISREG(sb2.st_mode)) {
+		if (statvfs(globalConfig.gconf_fsroot, &vfssb1) == -1)
+			return (psc_ctlsenderr(fd, mh, "%s: %s",
+			    sfop->sfop_fn, slstrerror(errno)));
+
+		if (statvfs(sfop->sfop_fn, &vfssb2) == -1)
+			return (psc_ctlsenderr(fd, mh, "%s: %s",
+			    sfop->sfop_fn, slstrerror(errno)));
+
+		if (vfssb1.f_fsid != vfssb2.f_fsid)
+			return (psc_ctlsenderr(fd, mh, "%s: %s",
+			    sfop->sfop_fn, slstrerror(EXDEV)));
+	}
 
 	memset(&a, 0, sizeof(a));
 	a.mh = mh;
