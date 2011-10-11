@@ -932,7 +932,7 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
 	struct bmap_pagecache_entry *e;
 	struct bmapc_memb *b;
-	int i;
+	int i, decrefd = 0;
 
 	b = r->biorq_bmap;
 
@@ -948,11 +948,17 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 
 	DEBUG_BIORQ(rc ? PLL_ERROR : PLL_INFO, r, "rc=%d", rc);
 
-	if (r->biorq_flags & BIORQ_AIOWAIT)
-		msl_biorq_aio_decref(r);
-
-	DYNARRAY_FOREACH(e, i, a)
+	DYNARRAY_FOREACH(e, i, a) {
+		if ((r->biorq_flags & BIORQ_AIOWAIT) && 
+		    (e->bmpce_flags & BMPCE_AIOWAIT) && !decrefd) {
+			/* Call aio decref one time per-RPC but only
+			 *   if a page in the RPC is marked AIO.
+			 */
+			msl_biorq_aio_decref(r);
+			decrefd = 1;
+		}
 		msl_bmpce_rpc_done(e, rc);
+	}
 
 	/* Free the dynarray which was allocated in msl_read_rpc_launch().
 	 */
