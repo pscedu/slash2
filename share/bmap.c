@@ -247,8 +247,6 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 				if (!rc)
 					b->bcm_flags |= bmaprw;
 				bcm_wake_locked(b);
-				if (rc)
-					goto out;
 			}
 		}
 	}
