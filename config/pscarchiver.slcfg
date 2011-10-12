@@ -7,9 +7,9 @@ set port=1302;
 set routes="sdp11 128.182.100.126@tcp12; tcp12 10.10.101.54@sdp11";
 set nets="sdp11 10.10.101.*; tcp12 *.*.*.*";
 set pref_mds="archmds@PSCARCH";
-set pref_ios="peel0@PSCARCH";
 set fsuuid="75b8352b9bbeaba7";
-#set pref_ios="sense@PSCARCH";
+set pref_ios="sense@PSCARCH";
+#set pref_ios="peel0@PSCARCH";
 #set allow_exec="
 #	/usr/psc/bin/far:
 #	/usr/psc/bin/scp:
@@ -28,7 +28,7 @@ site @PSCARCH {
 		desc	= "PSC archiver MDS";
 		type	= mds;
 		id	= 1;
-		nodes	= illusion1|illusion1.pvt;
+		nids	= illusion1;
 		jrnldev	= /dev/sdah;
 	}
 
@@ -36,7 +36,7 @@ site @PSCARCH {
 		desc	= "tape archiver";
 		type	= archival_fs;
 		id	= 100;
-		nodes	= tahini-100o;
+		nids	= tahini-100o;
 		fsroot	= /usr/uo;
 	}
 
@@ -44,16 +44,16 @@ site @PSCARCH {
 		desc	= "tape archiver";
 		type	= archival_fs;
 		id	= 101;
-		nodes	= tahini-100e;
+		nids	= tahini-100e;
 		fsroot	= /usr/ue;
 	}
 
-	# temporary/test nodes
+	# temporary/test nids
 	resource peel0 {
 		desc	= "PSC test I/O node";
 		type	= standalone_fs;
 		id	= 200;
-		nodes	= peel0-ib2.pvt|peelb0;
+		nids	= peel0-ib2.pvt, peelb0;
 		fsroot	= /local/s2io;
 	}
 
@@ -61,41 +61,61 @@ site @PSCARCH {
 		desc	= "PSC test I/O node";
 		type	= standalone_fs;
 		id	= 201;
-		nodes	= lime-ib1-0.pvt|lime;
+		nids	= lime-ib1-0.pvt, lime;
 		fsroot	= /local/p0_archive_backfs;
 	}
 
-	resource sense0s1 { desc = "disk-based archiver unit 0/8 system 1";	type = standalone_fs; id = 1000; nodes = sense0-sliod1; fsroot = /store1; }
-	resource sense0s2 { desc = "disk-based archiver unit 0/8 system 2";	type = standalone_fs; id = 1001; nodes = sense0-sliod2; fsroot = /store2; }
-	resource sense0s3 { desc = "disk-based archiver unit 0/8 system 3";	type = standalone_fs; id = 1002; nodes = sense0-sliod3; fsroot = /store3; }
-	resource sense0s4 { desc = "disk-based archiver unit 0/8 system 4";	type = standalone_fs; id = 1003; nodes = sense0-sliod4; fsroot = /store4; }
-	resource sense0s5 { desc = "disk-based archiver unit 0/8 system 5";	type = standalone_fs; id = 1004; nodes = sense0-sliod5; fsroot = /store5; }
-	resource sense0s6 { desc = "disk-based archiver unit 0/8 system 6";	type = standalone_fs; id = 1005; nodes = sense0-sliod6; fsroot = /store6; }
-	resource sense0s7 { desc = "disk-based archiver unit 0/8 system 7";	type = standalone_fs; id = 1006; nodes = sense0-sliod7; fsroot = /store7; }
+	resource sense0s0 { desc = "disk-based archiver unit 1/8 system 0";	type = standalone_fs; id = 1024; nids = sense0-sliod0; fsroot = /arc_sliod/0; }
+	resource sense0s1 { desc = "disk-based archiver unit 2/8 system 1";	type = standalone_fs; id = 1025; nids = sense0-sliod1; fsroot = /arc_sliod/1; }
+	resource sense0s2 { desc = "disk-based archiver unit 3/8 system 2";	type = standalone_fs; id = 1026; nids = sense0-sliod2; fsroot = /arc_sliod/2; }
+	resource sense0s3 { desc = "disk-based archiver unit 4/8 system 3";	type = standalone_fs; id = 1027; nids = sense0-sliod3; fsroot = /arc_sliod/3; }
+	resource sense0s4 { desc = "disk-based archiver unit 5/8 system 4";	type = standalone_fs; id = 1028; nids = sense0-sliod4; fsroot = /arc_sliod/4; }
+	resource sense0s5 { desc = "disk-based archiver unit 6/8 system 5";	type = standalone_fs; id = 1029; nids = sense0-sliod5; fsroot = /arc_sliod/5; }
+	resource sense0s6 { desc = "disk-based archiver unit 7/8 system 6";	type = standalone_fs; id = 1030; nids = sense0-sliod6; fsroot = /arc_sliod/6; }
+	#resource sense0s7 { desc = "disk-based archiver unit 8/8 system 7";	type = standalone_fs; id = 1031; nids = sense0-sliod7; fsroot = /arc_sliod/7; }
 
-	resource sense1s1 { desc = "disk-based archiver unit 1/8 system 1";	type = standalone_fs; id = 1100; nodes = sense1-sliod1; fsroot = /store1; }
-	resource sense1s2 { desc = "disk-based archiver unit 1/8 system 2";	type = standalone_fs; id = 1101; nodes = sense1-sliod2; fsroot = /store2; }
-	resource sense1s3 { desc = "disk-based archiver unit 1/8 system 3";	type = standalone_fs; id = 1102; nodes = sense1-sliod3; fsroot = /store3; }
-	resource sense1s4 { desc = "disk-based archiver unit 1/8 system 4";	type = standalone_fs; id = 1103; nodes = sense1-sliod4; fsroot = /store4; }
-	resource sense1s5 { desc = "disk-based archiver unit 1/8 system 5";	type = standalone_fs; id = 1104; nodes = sense1-sliod5; fsroot = /store5; }
-	resource sense1s6 { desc = "disk-based archiver unit 1/8 system 6";	type = standalone_fs; id = 1105; nodes = sense1-sliod6; fsroot = /store6; }
+	# 1024 + 32
+	resource sense1s0 { desc = "disk-based archiver unit 1/7 system 0";	type = standalone_fs; id = 1056; nids = sense1-sliod0; fsroot = /arc_sliod/0; }
+	resource sense1s1 { desc = "disk-based archiver unit 2/7 system 1";	type = standalone_fs; id = 1057; nids = sense1-sliod1; fsroot = /arc_sliod/1; }
+	resource sense1s2 { desc = "disk-based archiver unit 3/7 system 2";	type = standalone_fs; id = 1058; nids = sense1-sliod2; fsroot = /arc_sliod/2; }
+	resource sense1s3 { desc = "disk-based archiver unit 4/7 system 3";	type = standalone_fs; id = 1059; nids = sense1-sliod3; fsroot = /arc_sliod/3; }
+	resource sense1s4 { desc = "disk-based archiver unit 5/7 system 4";	type = standalone_fs; id = 1060; nids = sense1-sliod4; fsroot = /arc_sliod/4; }
+	resource sense1s5 { desc = "disk-based archiver unit 6/7 system 5";	type = standalone_fs; id = 1061; nids = sense1-sliod5; fsroot = /arc_sliod/5; }
+	#resource sense1s6 { desc = "disk-based archiver unit 7/7 system 6";	type = standalone_fs; id = 1062; nids = sense1-sliod6; fsroot = /arc_sliod/6; }
+
+	#resource sense2s0 { desc = "disk-based archiver unit 1/7 system 0";	type = standalone_fs; id = 1088; nids = sense2-sliod0; fsroot = /arc_sliod/0; }
+	#resource sense2s1 { desc = "disk-based archiver unit 2/7 system 1";	type = standalone_fs; id = 1089; nids = sense2-sliod1; fsroot = /arc_sliod/1; }
+	#resource sense2s2 { desc = "disk-based archiver unit 3/7 system 2";	type = standalone_fs; id = 1090; nids = sense2-sliod2; fsroot = /arc_sliod/2; }
+	#resource sense2s3 { desc = "disk-based archiver unit 4/7 system 3";	type = standalone_fs; id = 1091; nids = sense2-sliod3; fsroot = /arc_sliod/3; }
+	#resource sense2s4 { desc = "disk-based archiver unit 5/7 system 4";	type = standalone_fs; id = 1092; nids = sense2-sliod4; fsroot = /arc_sliod/4; }
+	#resource sense2s5 { desc = "disk-based archiver unit 6/7 system 5";	type = standalone_fs; id = 1093; nids = sense2-sliod5; fsroot = /arc_sliod/5; }
+	#resource sense2s6 { desc = "disk-based archiver unit 7/7 system 6";	type = standalone_fs; id = 1094; nids = sense2-sliod6; fsroot = /arc_sliod/6; }
+	#resource sense2s7 { desc = "disk-based archiver unit 8/8 system 7";	type = standalone_fs; id = 1095; nids = sense2-sliod7; fsroot = /arc_sliod/7; }
+
+	#resource sense3s0 { desc = "disk-based archiver unit 1/7 system 0";	type = standalone_fs; id = 1120; nids = sense3-sliod0; fsroot = /arc_sliod/0; }
+	#resource sense3s1 { desc = "disk-based archiver unit 2/7 system 1";	type = standalone_fs; id = 1121; nids = sense3-sliod1; fsroot = /arc_sliod/1; }
+	#resource sense3s2 { desc = "disk-based archiver unit 3/7 system 2";	type = standalone_fs; id = 1122; nids = sense3-sliod2; fsroot = /arc_sliod/2; }
+	#resource sense3s3 { desc = "disk-based archiver unit 4/7 system 3";	type = standalone_fs; id = 1123; nids = sense3-sliod3; fsroot = /arc_sliod/3; }
+	#resource sense3s4 { desc = "disk-based archiver unit 5/7 system 4";	type = standalone_fs; id = 1124; nids = sense3-sliod4; fsroot = /arc_sliod/4; }
+	#resource sense3s5 { desc = "disk-based archiver unit 6/7 system 5";	type = standalone_fs; id = 1125; nids = sense3-sliod5; fsroot = /arc_sliod/5; }
+	#resource sense3s6 { desc = "disk-based archiver unit 7/7 system 6";	type = standalone_fs; id = 1126; nids = sense3-sliod6; fsroot = /arc_sliod/6; }
 
 	resource sense {
 		desc	= "disk-based archiver cluster";
 		type	= cluster_noshare_fs;
-		id	= 9999;
-		nodes	= sense0s1@PSCARCH,
+		id	= 32768;
+		ios	= sense0s0@PSCARCH,
+			  sense0s1@PSCARCH,
 			  sense0s2@PSCARCH,
 			  sense0s3@PSCARCH,
 			  sense0s4@PSCARCH,
 			  sense0s5@PSCARCH,
 			  sense0s6@PSCARCH,
-			  sense0s7@PSCARCH,
+			  sense1s0@PSCARCH,
 			  sense1s1@PSCARCH,
 			  sense1s2@PSCARCH,
 			  sense1s3@PSCARCH,
 			  sense1s4@PSCARCH,
-			  sense1s5@PSCARCH,
-			  sense1s6@PSCARCH;
+			  sense1s5@PSCARCH;
 	}
 }
