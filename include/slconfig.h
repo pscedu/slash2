@@ -243,7 +243,8 @@ struct sl_resource	*libsl_str2res(const char *);
 struct sl_resm		*libsl_try_nid2resm(lnet_nid_t);
 struct sl_resm		*libsl_ios2resm(sl_ios_id_t);
 char *			 libsl_ios2name(sl_ios_id_t);
-sl_ios_id_t		libsl_nid2ios(lnet_nid_t);
+
+#define libsl_nid2iosid(nid)	libsl_nid2resm(nid)->resm_res_id
 
 void			yyerror(const char *, ...);
 void			yywarn(const char *, ...);

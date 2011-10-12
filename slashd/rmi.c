@@ -165,7 +165,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 		/* Look up the bmap in the cache and write the CRCs.
 		 */
 		mp->crcup_rc[i] = mds_bmap_crc_write(c,
-		    rq->rq_conn->c_peer.nid, mq);
+		    libsl_nid2iosid(rq->rq_conn->c_peer.nid), mq);
 		if (mp->crcup_rc[i])
 			psclog_errorx("mds_bmap_crc_write() failed: "
 			    "fid="SLPRI_FID", rc=%d",
