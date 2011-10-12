@@ -151,7 +151,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct bmap_extra_state);
 	PRTYPE(struct bmap_iod_info);
 	PRTYPE(struct bmap_iod_minseq);
-	PRTYPE(struct bmap_ion_assign);
+	PRTYPE(struct bmap_iod_rls);
+	PRTYPE(struct bmap_ios_assign);
 	PRTYPE(struct bmap_mds_info);
 	PRTYPE(struct bmap_mds_lease);
 	PRTYPE(struct bmap_ondisk);
@@ -210,6 +211,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct sl_mds_nsstats);
 	PRTYPE(struct sl_mds_peerinfo);
 	PRTYPE(struct sl_resm);
+	PRTYPE(struct sl_resm_nid);
 	PRTYPE(struct sl_resource);
 	PRTYPE(struct sl_site);
 	PRTYPE(struct sl_timespec);
@@ -258,7 +260,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_bmap_crcwrt_rep);
 	PRTYPE(struct srm_bmap_crcwrt_req);
 	PRTYPE(struct srm_bmap_dio_req);
-	PRTYPE(struct srm_bmap_id);
 	PRTYPE(struct srm_bmap_iod_get);
 	PRTYPE(struct srm_bmap_ptrunc_req);
 	PRTYPE(struct srm_bmap_release_rep);
@@ -298,6 +299,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_readlink_req);
 	PRTYPE(struct srm_reclaim_rep);
 	PRTYPE(struct srm_reclaim_req);
+	PRTYPE(struct srm_rename_rep);
 	PRTYPE(struct srm_rename_req);
 	PRTYPE(struct srm_repl_read_req);
 	PRTYPE(struct srm_repl_schedwk_req);
@@ -358,6 +360,7 @@ main(int argc, char *argv[])
 	PRVAL(DEF_READDIR_NENTS);
 	PRVAL(FCMH_ATTR_TIMEO);
 	PRVAL(FCMH_SETATTRF_NONE);
+	PRVAL(FIDC_CLI_DEFSZ);
 	PRVAL(FIDC_LOOKUP_NONE);
 	PRVAL(FID_MAX_PATH);
 	PRVAL(FID_PATH_DEPTH);
@@ -526,7 +529,6 @@ main(int argc, char *argv[])
 	PRVAL(SRMM_REP_PORTAL);
 	PRVAL(SRMM_REQ_PORTAL);
 	PRVAL(SRMM_VERSION);
-	PRVAL(SRM_NIDS_MAX);
 	PRVAL(_SLERR_START);
 	PRVAL(dirent_timeo);
 	/* end constants */
@@ -651,7 +653,9 @@ main(int argc, char *argv[])
 	PRVAL(SLREST_COMPUTE);
 	PRVAL(SLREST_MDS);
 	PRVAL(SLREST_NONE);
-	PRVAL(SLREST_PARALLEL_FS);
+	PRVAL(SLREST_PARALLEL_COMPNT);
+	PRVAL(SLREST_PARALLEL_LFS);
+	PRVAL(SLREST_STANDALONE_COMPNT);
 	PRVAL(SLREST_STANDALONE_FS);
 	PRVAL(SLXCTLOP_SET_BMAP_REPLPOL);
 	PRVAL(SLXCTLOP_SET_FILE_NEWBMAP_REPLPOL);
