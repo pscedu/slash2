@@ -211,7 +211,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	if (iosidx < 0) {
 		DEBUG_USWI(PLL_ERROR, wk,
 		    "res %s not found found in file",
-		    dst_resm->resm_addrbuf);
+		    dst_resm->resm_name);
 		goto out;
 	}
 
@@ -461,7 +461,9 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 			PFL_GOTOERR(out, mp->rc = -SLERR_REIMPORT_OLD);
 
 		if (mq->flags & SRM_IMPORTF_XREPL) {
-			if (memcmp(&sstb, &mq->sstb, sizeof(sstb)))
+			if (mq->sstb.sst_mtime != sstb.sst_mtime ||
+			    mq->sstb.sst_atime != sstb.sst_atime ||
+			    mq->sstb.sst_size != sstb.sst_size)
 				PFL_GOTOERR(out, mp->rc =
 				    -SLERR_IMPORT_XREPL_DIFF);
 		} else {
@@ -509,8 +511,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 			brepls_init(tract, -1);
 			tract[BREPLST_INVALID] = BREPLST_VALID;
 			tract[BREPLST_GARBAGE] = BREPLST_VALID;
-			rc = mds_repl_bmap_walk(b, tract, NULL, 0, &idx,
-			    1);
+			mds_repl_bmap_walk(b, tract, NULL, 0, &idx, 1);
 		} else
 			rc = mds_repl_inv_except(b, idx);
 		if (rc)
