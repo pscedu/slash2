@@ -171,7 +171,7 @@ enum {
 	SRMT_XCTL,				/* ancillary operation */
 
 	/* import/export */
-	SRMT_IMPORT
+	SRMT_IMPORT				/* 43 */
 };
 
 /* ----------------------------- BEGIN MESSAGES ----------------------------- */
