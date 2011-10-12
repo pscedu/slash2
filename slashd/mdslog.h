@@ -65,7 +65,7 @@ void	mdslog_bmap_crc(void *, uint64_t, int);
 void	mdslog_bmap_repls(void *, uint64_t, int);
 void	mdslog_ino_repls(void *, uint64_t, int);
 void	mdslog_namespace(int, uint64_t, uint64_t, uint64_t,
-	    const struct srt_stat *, int, const char *, const char *);
+	    const struct srt_stat *, int, const char *, const char *, void *);
 
 void	mdslogfill_bmap_repls(struct bmapc_memb *, struct slmds_jent_bmap_repls *);
 void	mdslogfill_ino_repls(struct fidc_membh *, struct slmds_jent_ino_repls *);

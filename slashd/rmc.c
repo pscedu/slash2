@@ -153,7 +153,6 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 
 	FCMH_LOCK(fcmh);
 	mp->attr = fcmh->fcmh_sstb;
-	FCMH_ULOCK(fcmh);
 
  out:
 	if (fcmh)
@@ -675,12 +674,11 @@ int
 slm_rmc_handle_rename(struct pscrpc_request *rq)
 {
 	char from[SL_NAME_MAX + 1], to[SL_NAME_MAX + 1];
-	struct fidc_membh *op, *np;
+	struct fidc_membh *op = NULL, *np = NULL;
 	struct srm_rename_req *mq;
 	struct srm_rename_rep *mp;
 	struct iovec iov[2];
 
-	op = np = NULL;
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fromlen == 0 || mq->tolen == 0 ||
 	    mq->fromlen > SL_NAME_MAX || mq->tolen > SL_NAME_MAX)
@@ -720,45 +718,19 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	if (IS_REMOTE_FID(mq->opfg.fg_fid)) {
 		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_RENAME,
 		    &mq->opfg, &mq->npfg, from, to, 0, &rootcreds,
-		    &mp->cattr, 0);
+		    &mp->srr_npattr, 0);
 		goto out;
 	}
 
 	/* if we get here, op and np must be owned by the current MDS */
 	mds_reserve_slot(2);
 	mp->rc = mdsio_rename(fcmh_2_mdsio_fid(op), from,
-	    fcmh_2_mdsio_fid(np), to, &rootcreds, mdslog_namespace);
+	    fcmh_2_mdsio_fid(np), to, &rootcreds, mdslog_namespace,
+	    &mp->srr_cattr);
 	mds_unreserve_slot(2);
-
-	/* update target ctime */
-	if (mp->rc == 0) {
-		struct srt_stat c_sstb;
-		struct fidc_membh *c;
-
-		/* XXX race between RENAME just before and LOOKUP here!! */
-		if (mdsio_lookup(fcmh_2_mdsio_fid(np), to, NULL,
-		    &rootcreds, &c_sstb) == 0 &&
-		    slm_fcmh_get(&c_sstb.sst_fg, &c) == 0) {
-			struct srt_stat sstb;
-
-			FCMH_LOCK(c);
-			fcmh_wait_locked(c, c->fcmh_flags &
-			    FCMH_IN_SETATTR);
-			SL_GETTIMESPEC(&sstb.sst_ctim);
-			mds_fcmh_setattr_nolog(c, PSCFS_SETATTRF_CTIME,
-			    &sstb);
-			fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
-		}
-	}
 
  out:
 	if (mp->rc == 0) {
-//		FCMH_LOCK(p);
-//		fcmh_wait_locked(p, p->fcmh_flags & FCMH_IN_SETATTR);
-//		SL_GETTIMESPEC(&p->fcmh_sstb.sst_ctim);
-//		mds_fcmh_setattr(p, PSCFS_SETATTRF_CTIME);
-//		memcpy(&mp->attr, &p->fcmh_sstb, sizeof(mp->attr));
-
 		mdsio_fcmh_refreshattr(op, &mp->srr_opattr);
 		if (op != np)
 			mdsio_fcmh_refreshattr(np, &mp->srr_npattr);

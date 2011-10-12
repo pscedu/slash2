@@ -50,7 +50,7 @@ typedef void (*sl_log_write_t)(void *, uint64_t, int);
 
 /* callback to log updates to namespace */
 typedef void (*sl_log_update_t)(int, uint64_t, uint64_t, uint64_t,
-    const struct srt_stat *, int, const char *, const char *);
+    const struct srt_stat *, int, const char *, const char *, void *);
 
 /* predefined mdsio layer "fids" */
 #define MDSIO_FID_ROOT		3		/* XXX FUSE_ROOT_ID? */
@@ -94,7 +94,7 @@ struct mdsio_ops {
 	int	(*mio_readdir)(const struct slash_creds *, size_t, off_t, void *, size_t *, size_t *, void *, int, void *);
 	int	(*mio_readlink)(mdsio_fid_t, char *, const struct slash_creds *);
 	int	(*mio_release)(const struct slash_creds *, void *);
-	int	(*mio_rename)(mdsio_fid_t, const char *, mdsio_fid_t, const char *, const struct slash_creds *, sl_log_update_t);
+	int	(*mio_rename)(mdsio_fid_t, const char *, mdsio_fid_t, const char *, const struct slash_creds *, sl_log_update_t, void *);
 	int	(*mio_rmdir)(mdsio_fid_t, slfid_t *, const char *, const struct slash_creds *, sl_log_update_t);
 	int	(*mio_setattr)(mdsio_fid_t, const struct srt_stat *, int, const struct slash_creds *, struct srt_stat *, void *, sl_log_update_t);
 	int	(*mio_statfs)(struct statvfs *);

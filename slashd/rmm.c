@@ -245,7 +245,7 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		to = mq->req.name + strlen(mq->req.name) + 1;
 		mp->rc = mdsio_rename(fcmh_2_mdsio_fid(op), from,
 		    fcmh_2_mdsio_fid(np), to, &rootcreds,
-		    mdslog_namespace);
+		    mdslog_namespace, &mp->cattr);
 		break;
 	    case SLM_FORWARD_SETATTR:
 		/*

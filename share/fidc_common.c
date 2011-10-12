@@ -72,7 +72,7 @@ fcmh_destroy(struct fidc_membh *f)
 }
 
 /**
- * fcmh_setattr - Update the high-level app stat(2)-like attribute
+ * fcmh_setattrf - Update the high-level app stat(2)-like attribute
  *	buffer for a FID cache member.
  * @fcmh: FID cache member to update.
  * @sstb: incoming stat attributes.
@@ -84,9 +84,11 @@ fcmh_destroy(struct fidc_membh *f)
  *     (2) This function should only be used by a client.
  */
 void
-fcmh_setattr(struct fidc_membh *fcmh, struct srt_stat *sstb, int flags)
+fcmh_setattrf(struct fidc_membh *fcmh, struct srt_stat *sstb, int flags)
 {
-	if (!(flags & FCMH_SETATTRF_HAVELOCK))
+	if (flags & FCMH_SETATTRF_HAVELOCK)
+		FCMH_LOCK_ENSURE(fcmh);
+	else
 		FCMH_LOCK(fcmh);
 
 	if (fcmh_2_gen(fcmh) == FGEN_ANY)
@@ -313,7 +315,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 		psc_assert(fgp->fg_fid == fcmh_2_fid(fcmh));
 		/* apply provided attributes to the cache */
 		if (sstb)
-			fcmh_setattr(fcmh, sstb, setattrflags |
+			fcmh_setattrf(fcmh, sstb, setattrflags |
 			    FCMH_SETATTRF_HAVELOCK);
 
 		/* keep me around after unlocking later */
@@ -376,7 +378,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 
 	if (sstb) {
 		FCMH_LOCK(fcmh);
-		fcmh_setattr(fcmh, sstb, setattrflags |
+		fcmh_setattrf(fcmh, sstb, setattrflags |
 		    FCMH_SETATTRF_HAVELOCK);
 		rc = sl_fcmh_ops.sfop_ctor(fcmh);
 		if (rc)

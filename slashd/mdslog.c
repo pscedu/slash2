@@ -555,6 +555,19 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 	return (0);
 }
 
+const char *slm_ns_opnames[] = {
+	"create",
+	"link",
+	"mkdir",
+	"rename",
+	"rmdir",
+	"setsize",
+	"setattr",
+	"symlink",
+	"unlink",
+	"reclaim"
+};
+
 /**
  * mdslog_namespace - Log namespace operation before we attempt an
  *	it.  This makes sure that it will be propagated towards
@@ -563,7 +576,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 void
 mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
     uint64_t npfid, const struct srt_stat *sstb, int mask,
-    const char *name, const char *newname)
+    const char *name, const char *newname, void *arg)
 {
 	struct slmds_jent_namespace *sjnm;
 	int distill = 0;
@@ -637,13 +650,21 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 	if (!distill)
 		pjournal_put_buf(mdsJournal, sjnm);
 
-	psclog_notice("namespace op: optype=%d distill=%d "
+	psclog_notice("namespace op %s (%d): distill=%d "
 	    "fid="SLPRI_FID" name='%s%s%s' mask=%#x size=%"PRId64" "
 	    "link=%"PRId64" pfid="SLPRI_FID" npfid="SLPRI_FID" txg=%"PRId64,
-	    op, distill,
-	    sjnm->sjnm_target_fid, name,
+	    slm_ns_opnames[op], op, distill, sjnm->sjnm_target_fid, name,
 	    newname ? "' newname='" : "", newname ? newname : "",
 	    mask, sstb->sst_size, sstb->sst_nlink, pfid, npfid, txg);
+
+	if (op == NS_OP_RENAME) {
+		struct fidc_membh *c;
+
+		if (slm_fcmh_get(&sstb->sst_fg, &c) == 0) {
+			mdsio_fcmh_refreshattr(c, arg);
+			fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+		}
+	}
 }
 
 /**

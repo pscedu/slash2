@@ -176,8 +176,11 @@ enum fcmh_opcnt_types {
 #define FCMH_SETATTRF_HAVELOCK		(1 << 1)
 
 void	fidc_init(int, int);
-void	fcmh_setattr(struct fidc_membh *, struct srt_stat *, int);
+void	fcmh_setattrf(struct fidc_membh *, struct srt_stat *, int);
 void	fcmh_decref(struct fidc_membh *, enum fcmh_opcnt_types);
+
+#define fcmh_setattr(f, sstb)		fcmh_setattrf((f), (sstb), 0)
+#define fcmh_setattr_locked(f, sstb)	fcmh_setattrf((f), (sstb), FCMH_SETATTRF_HAVELOCK)
 
 /* fidc_lookup() flags */
 #define FIDC_LOOKUP_NONE		0
