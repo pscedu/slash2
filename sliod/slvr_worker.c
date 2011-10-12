@@ -221,7 +221,6 @@ slvr_worker_push_crcups(void)
 	atomic_set(&busy, 0);
 }
 
-
 int
 slvr_nbreqset_cb(struct pscrpc_request *rq,
 		 struct pscrpc_async_args *args)

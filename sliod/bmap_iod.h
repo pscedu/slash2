@@ -32,8 +32,6 @@
 #include "bmap.h"
 #include "slashrpc.h"
 
-
-
 struct bmap_iod_info;
 struct slvr_ref;
 
@@ -72,8 +70,8 @@ struct bmap_iod_minseq {
 };
 
 struct bmap_iod_rls {
-	struct srt_bmapdesc      bir_sbd;
-	struct psclist_head      bir_lentry;
+	struct srt_bmapdesc	 bir_sbd;
+	struct psclist_head	 bir_lentry;
 };
 
 #define BIM_RETRIEVE_SEQ	1
@@ -99,7 +97,7 @@ struct bmap_iod_rls {
 
 SPLAY_HEAD(biod_slvrtree, slvr_ref);
 
-/*
+/**
  * bmap_iod_info - the bmap_get_pri() data structure for the I/O server.
  */
 struct bmap_iod_info {
@@ -170,10 +168,10 @@ void biod_rlssched_locked(struct bmap_iod_info *);
 
 void slibmaprlsthr_spawn(void);
 
-extern struct psc_listcache bmapRlsQ;
-extern struct psc_listcache bmapReapQ;
-extern struct psc_poolmaster bmap_rls_poolmaster;
-extern struct psc_poolmgr *bmap_rls_pool;
+extern struct psc_listcache	 bmapRlsQ;
+extern struct psc_listcache	 bmapReapQ;
+extern struct psc_poolmaster	 bmap_rls_poolmaster;
+extern struct psc_poolmgr	*bmap_rls_pool;
 
 static __inline struct bmapc_memb *
 bii_2_bmap(struct bmap_iod_info *bii)

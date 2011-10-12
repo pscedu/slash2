@@ -101,7 +101,7 @@ slvr_do_crc(struct slvr_ref *s)
 	 */
 	psc_assert(s->slvr_flags & SLVR_PINNED &&
 	   (s->slvr_flags & SLVR_FAULTING || s->slvr_flags & SLVR_CRCDIRTY));
- 
+
 	if (s->slvr_flags & SLVR_FAULTING) {
 		if (!s->slvr_pndgreads && !(s->slvr_flags & SLVR_REPLDST)) {
 			/*
@@ -253,7 +253,6 @@ sli_aio_aiocbr_release(struct sli_aiocb_reply *a)
 	psc_pool_return(sli_aiocbr_pool, a);
 }
 
-
 __static int
 slvr_aio_chkslvrs(const struct sli_aiocb_reply *a)
 {
@@ -354,15 +353,15 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 		if (mq->rc)
 			pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
 		else
-			mq->rc = rsx_bulkclient(rq, BULK_GET_SOURCE, SRCI_BULK_PORTAL,
-					a->aiocbr_iovs, a->aiocbr_niov);
+			mq->rc = rsx_bulkclient(rq, BULK_GET_SOURCE,
+			    SRCI_BULK_PORTAL, a->aiocbr_iovs,
+			    a->aiocbr_niov);
 	}
 
 	SL_RSX_WAITREP(csvc, rq, mp);
 
 	if (rq)
 		pscrpc_req_finished(rq);
-
 
  out:
 	pscrpc_export_put(a->aiocbr_peer);
@@ -629,10 +628,10 @@ sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp,
 	error = aio_read(aio);
 	if (error == 0) {
 		error = SLERR_AIOWAIT;
-		psclog_info("aio_read: fd=%d, iocb=%p, sliver=%p", 
+		psclog_info("aio_read: fd=%d, iocb=%p, sliver=%p",
 		    aio->aio_fildes, iocb, s);
 	} else {
-		psclog_warn("aio_read: fd=%d, iocb=%p, sliver=%p, error=%d", 
+		psclog_warn("aio_read: fd=%d, iocb=%p, sliver=%p, error=%d",
 		    aio->aio_fildes, iocb, s, error);
 		lc_remove(&sli_iocb_pndg, iocb);
 		slvr_iocb_release(iocb);

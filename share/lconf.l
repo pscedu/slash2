@@ -77,11 +77,11 @@ parallel_lfs|cluster_noshare_lfs|compute {
 }
 
 parallell_lfs_compnt|standalone_fs|archival_fs|mds {
-        psc_assert(!currentResm);
-        currentResm = PSCALLOC(sizeof(struct sl_resm) + cfg_resm_pri_sz); 
+	psc_assert(!currentResm);
+	currentResm = PSCALLOC(sizeof(struct sl_resm) + cfg_resm_pri_sz);
 	slcfg_init_resm(currentResm);
 	psc_dynarray_add(&currentRes->res_members, currentResm);
-        currentResm->resm_res = currentRes;
+	currentResm->resm_res = currentRes;
 	psclog_trace("Resource type string %s", yytext);
 	yylval = pfl_strdup(yytext);
 	return (RESOURCE_TYPE);

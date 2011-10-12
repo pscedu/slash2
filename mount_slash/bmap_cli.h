@@ -65,7 +65,6 @@ bmap_2_bci(struct bmapc_memb *b)
 
 #define bmap_2_bmpc(b)		(&bmap_2_bci(b)->bci_bmpc)
 
-
 #define bmap_2_sbd(b)		(&bmap_2_bci(b)->bci_sbd)
 #define bmap_2_ios(b)		bmap_2_sbd(b)->sbd_ios
 

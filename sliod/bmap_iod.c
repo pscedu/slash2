@@ -154,7 +154,6 @@ bcr_hold_2_ready(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 	bcr->bcr_biodi->biod_bcr = NULL;
 }
 
-
 void
 bcr_hold_add(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 {
@@ -354,7 +353,7 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 			psc_assert(pll_nitems(&biod->biod_rls));
 
 			DEBUG_BMAP(PLL_INFO, b, "ndrty=%u xid=%"PRIu64
-			   " xid_last=%"PRIu64, biod->biod_crcdrty_slvrs, 
+			   " xid_last=%"PRIu64, biod->biod_crcdrty_slvrs,
 			   biod->biod_bcr_xid, biod->biod_bcr_xid_last);
 
 			BIOD_LOCK(biod);
@@ -372,18 +371,18 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 			BMAP_CLEARATTR(bii_2_bmap(biod),
 			       BMAP_IOD_RLSSEQ | BMAP_IOD_RLSSCHED);
-			
-			while (nrls < MAX_BMAP_RELEASE && 
-			       (brls = pll_get(&biod->biod_rls)))
-				memcpy(&brr->sbd[nrls++], &brls->bir_sbd, 
-				       sizeof(struct srt_bmapdesc));
+
+			while (nrls < MAX_BMAP_RELEASE &&
+			    (brls = pll_get(&biod->biod_rls)))
+				memcpy(&brr->sbd[nrls++], &brls->bir_sbd,
+				    sizeof(struct srt_bmapdesc));
 
 			BIOD_ULOCK(biod);
 
 			bmap_op_done_type(b, BMAP_OPCNT_RLSSCHED);
 
 		} while ((nrls < MAX_BMAP_RELEASE) &&
-			 (biod = lc_getnb(&bmapRlsQ)));
+		    (biod = lc_getnb(&bmapRlsQ)));
 
 		if (!nrls)
 			goto end;

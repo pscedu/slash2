@@ -109,8 +109,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			psclog_info("bmapdesc check okay");
 			break;
 		}
-		psclog_notice("bmapdesc mismatch - mine:"
-		    "(%"PRIx32"), peer: (%"PRIx32")",
+		psclog_notice("bmapdesc mismatch - mine:(%x), peer: (%x)",
 		    nodeResm->resm_res->res_id, mq->sbd.sbd_ios);
 
 	}
@@ -383,12 +382,12 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		biod = bmap_2_biodi(b);
 		DEBUG_FCMH(PLL_INFO, f, "bmapno=%d seq=%"PRId64" key=%"PRId64,
 			   b->bcm_bmapno, sbd->sbd_seq, sbd->sbd_key);
-		
+
 		newsbd = psc_pool_get(bmap_rls_pool);
 		memcpy(newsbd, sbd, sizeof(*sbd));
 
 		pll_add(&biod->biod_rls, newsbd);
-		
+
 		/* Bmap is attached, safe to unref.
 		 */
 		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);

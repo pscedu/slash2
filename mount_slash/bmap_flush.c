@@ -958,7 +958,6 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 	return (a);
 }
 
-
 int
 msl_bmap_release_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
@@ -980,7 +979,7 @@ msl_bmap_release_cb(struct pscrpc_request *rq,
 		       " rc=%d", mq->sbd[i].sbd_fg.fg_fid, mq->sbd[i].sbd_bmapno,
 		       mq->sbd[i].sbd_key, mq->sbd[i].sbd_seq, (mp) ? mp->rc : rc);
 	}
-	
+
 	return (rc | ((mp) ? mp->rc : 0));
 }
 
@@ -1144,7 +1143,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				resm = libsl_ios2resm(bmap_2_ios(b));
 				rmci = resm2rmci(resm);
 
-				DEBUG_BMAP(PLL_INFO, b, "res(%s)", 
+				DEBUG_BMAP(PLL_INFO, b, "res(%s)",
 				   resm->resm_res->res_name);
 			} else {
 				resm = slc_rmc_resm;
@@ -1155,7 +1154,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				   MAX_BMAP_RELEASE);
 
 			memcpy(&rmci->rmci_bmaprls.sbd[
-				 rmci->rmci_bmaprls.nbmaps], 
+				 rmci->rmci_bmaprls.nbmaps],
 			       &bci->bci_sbd, sizeof(bci->bci_sbd));
 			rmci->rmci_bmaprls.nbmaps++;
 

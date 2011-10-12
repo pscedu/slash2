@@ -322,8 +322,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw,
 
 	msl_bmap_reap_init(bmap, &mp->sbd);
 
-	DEBUG_BMAP(PLL_INFO, bmap, "rw=%d ios=%#"PRIx32" "
-	    "sbd_seq=%"PRId64, rw,
+	DEBUG_BMAP(PLL_INFO, bmap, "rw=%d ios=%#x sbd_seq=%"PRId64, rw,
 	    mp->sbd.sbd_ios, mp->sbd.sbd_seq);
 
 	fci->fci_nrepls = mp->nrepls;

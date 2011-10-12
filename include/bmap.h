@@ -136,7 +136,7 @@ struct bmapc_memb {
 #define BMAP_ORPHAN		(1 << 13)	/* removed from fcmh_bmaptree */
 #define BMAP_BUSY		(1 << 14)	/* temporary processing lock */
 #define BMAP_NEW		(1 << 15)	/* just created */
-#define BMAP_DIOWR              (1 << 16)       /* archiver_fs dio - write only */
+#define BMAP_DIOWR		(1 << 16)	/* archiver_fs dio - write only */
 #define _BMAP_FLSHFT		(1 << 17)
 
 #define BMAP_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bcm_lock)
@@ -245,7 +245,7 @@ struct bmapc_memb {
 #define BMAP_SLVR_DATA		(1 << 0)	/* Data present, otherwise slvr is hole */
 #define BMAP_SLVR_CRC		(1 << 1)	/* Has valid CRC */
 #define BMAP_SLVR_CRCDIRTY	(1 << 2)
-#define BMAP_SLVR_CRCABSENT     (1 << 3)
+#define BMAP_SLVR_CRCABSENT	(1 << 3)
 #define _BMAP_SLVR_FLSHFT	(1 << 4)
 
 /*

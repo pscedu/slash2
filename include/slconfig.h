@@ -50,11 +50,11 @@ struct slashrpc_cservice;
 enum sl_res_type {
 	SLREST_NONE,
 	SLREST_ARCHIVAL_FS,
-	SLREST_CLUSTER_NOSHARE_LFS,   /* Logical set of stand-alone servers */
+	SLREST_CLUSTER_NOSHARE_LFS,	/* Logical set of stand-alone servers */
 	SLREST_COMPUTE,
 	SLREST_MDS,
-	SLREST_PARALLEL_LFS,          /* Logical parallel fs */  
-	SLREST_PARALLEL_COMPNT,       /* A member of a parallel fs */
+	SLREST_PARALLEL_LFS,		/* Logical parallel fs */
+	SLREST_PARALLEL_COMPNT,		/* A member of a parallel fs */
 	SLREST_STANDALONE_FS,
 	SLREST_STANDALONE_COMPNT = SLREST_STANDALONE_FS
 };
@@ -89,8 +89,8 @@ resprof_get_pri(struct sl_resource *res)
 }
 
 struct sl_resm_nid {
-	char                     resmnid_addrbuf[RESM_ADDRBUF_SZ];
-	lnet_nid_t               resmnid_nid;
+	char			 resmnid_addrbuf[RESM_ADDRBUF_SZ];
+	lnet_nid_t		 resmnid_nid;
 };
 
 /* Resource member (a machine in an I/O system) */
@@ -165,7 +165,7 @@ struct sl_gconf {
 	struct psclist_head	 gconf_routehd;
 	struct psc_lockedlist	 gconf_sites;
 	psc_spinlock_t		 gconf_lock;
-	uint64_t                 gconf_fsuuid;
+	uint64_t		 gconf_fsuuid;
 };
 
 #define GCONF_HASHTBL_SZ	63
@@ -241,9 +241,9 @@ struct sl_site		*libsl_siteid2site(sl_siteid_t);
 sl_ios_id_t		 libsl_str2id(const char *);
 struct sl_resource	*libsl_str2res(const char *);
 struct sl_resm		*libsl_try_nid2resm(lnet_nid_t);
-struct sl_resm          *libsl_ios2resm(sl_ios_id_t);
-char *                   libsl_ios2name(sl_ios_id_t);
-sl_ios_id_t             libsl_nid2ios(lnet_nid_t);
+struct sl_resm		*libsl_ios2resm(sl_ios_id_t);
+char *			 libsl_ios2name(sl_ios_id_t);
+sl_ios_id_t		libsl_nid2ios(lnet_nid_t);
 
 void			yyerror(const char *, ...);
 void			yywarn(const char *, ...);

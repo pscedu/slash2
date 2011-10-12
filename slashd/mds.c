@@ -156,7 +156,7 @@ mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw,
 
 			if (!bml || bml->bml_seq < tmp->bml_seq)
 				bml = tmp;
-			
+
 			tmp = tmp->bml_chain;
 		} while (tmp != tmp1);
 
@@ -233,7 +233,7 @@ mds_bmap_ios_restart(struct bmap_mds_lease *bml)
 
 	bml->bml_bmdsi->bmdsi_seq = bml->bml_seq;
 
-	DEBUG_BMAP(PLL_INFO, bml_2_bmap(bml), "res(%s) seq=%"PRIx64, 
+	DEBUG_BMAP(PLL_INFO, bml_2_bmap(bml), "res(%s) seq=%"PRIx64,
 	   resm->resm_res->res_name, bml->bml_seq);
 
 	return (rc);
@@ -457,7 +457,6 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	 * by the last client or has been timed out.
 	 */
 	bmap_op_start_type(bmap, BMAP_OPCNT_IONASSIGN);
-
 
 	ih = fcmh_2_inoh(bmap->bcm_fcmh);
 	nrepls = ih->inoh_ino.ino_nrepls;

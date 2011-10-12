@@ -162,11 +162,11 @@ struct bmap_timeo_table {
 
 struct bmap_mds_lease {
 	uint64_t		  bml_seq;
-	sl_ios_id_t               bml_ios;
+	sl_ios_id_t		  bml_ios;
 	lnet_process_id_t	  bml_cli_nidpid;
 	uint32_t		  bml_flags;
 	time_t			  bml_start;
-	time_t                    bml_expire;
+	time_t			  bml_expire;
 	psc_spinlock_t		  bml_lock;
 	struct bmap_mds_info	 *bml_bmdsi;
 	struct pscrpc_export	 *bml_exp;
@@ -211,7 +211,7 @@ struct bmap_mds_lease {
  * XXX is the generation number needed here? - pauln
  */
 struct bmap_ios_assign {
-	sl_ios_id_t             bia_ios;
+	sl_ios_id_t		bia_ios;
 	lnet_process_id_t	bia_lastcli;
 	slfid_t			bia_fid;
 	uint64_t		bia_seq;

@@ -114,13 +114,12 @@ libsl_id2res(sl_ios_id_t id)
 	return (NULL);
 }
 
-
-struct sl_resm * 
+struct sl_resm *
 libsl_ios2resm(sl_ios_id_t id)
 {
 	struct sl_resource *res = libsl_id2res(id);
 
-	/* May only be called on behalf the following types 
+	/* May only be called on behalf the following types
 	 *   of resources.
 	 */
 	psc_assert((res->res_type == SLREST_STANDALONE_FS     ||
@@ -128,8 +127,8 @@ libsl_ios2resm(sl_ios_id_t id)
 		    res->res_type == SLREST_ARCHIVAL_FS       ||
 		    res->res_type == SLREST_PARALLEL_COMPNT) &&
 		   (psc_dynarray_len(&res->res_members) == 1));
-	
-	return ((struct sl_resm *)psc_dynarray_getpos(&res->res_members, 0));
+
+	return (psc_dynarray_getpos(&res->res_members, 0));
 }
 
 char *
@@ -144,8 +143,8 @@ struct sl_resm *
 libsl_try_nid2resm(lnet_nid_t nid)
 {
 	struct sl_resource *r;
-	struct sl_resm *m;
 	struct sl_resm_nid *n;
+	struct sl_resm *m;
 	struct sl_site *s;
 	int i, j, k;
 
@@ -174,7 +173,7 @@ sl_ios_id_t
 libsl_nid2ios(lnet_nid_t nid)
 {
 	struct sl_resm *resm = libsl_nid2resm(nid);
-	
+
 	return (resm->resm_res->res_id);
 }
 
