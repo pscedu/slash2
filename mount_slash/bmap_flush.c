@@ -958,16 +958,6 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 	return (a);
 }
 
-static __inline void
-bmap_2_bid(const struct bmapc_memb *b, struct srm_bmap_id *bid)
-{
-	const struct bmap_cli_info *bci = bmap_2_bci_const(b);
-
-	bid->fid = fcmh_2_fid(b->bcm_fcmh);
-	bid->seq = bci->bci_sbd.sbd_seq;
-	bid->key = bci->bci_sbd.sbd_key;
-	bid->bmapno = b->bcm_bmapno;
-}
 
 int
 msl_bmap_release_cb(struct pscrpc_request *rq,
@@ -984,14 +974,13 @@ msl_bmap_release_cb(struct pscrpc_request *rq,
 	if (!mp)
 		rc = -1;
 
-	for (i = 0; i < mq->nbmaps; i++)
-		psclog((rc || mp->rc || mp->bidrc[i]) ? PLL_ERROR : PLL_INFO,
+	for (i = 0; i < mq->nbmaps; i++) {
+		psclog((rc || mp->rc) ? PLL_ERROR : PLL_INFO,
 		       "fid="SLPRI_FID" bmap=%u key=%"PRId64" seq=%"PRId64
-		       " rc=%d bidrc=%d",
-		       mq->bmaps[i].fid, mq->bmaps[i].bmapno,
-		       mq->bmaps[i].key, mq->bmaps[i].seq,
-		       (mp) ? mp->rc : rc, mp ? mp->bidrc[i] : rc);
-
+		       " rc=%d", mq->sbd[i].sbd_fg.fg_fid, mq->sbd[i].sbd_bmapno,
+		       mq->sbd[i].sbd_key, mq->sbd[i].sbd_seq, (mp) ? mp->rc : rc);
+	}
+	
 	return (rc | ((mp) ? mp->rc : 0));
 }
 
@@ -1149,16 +1138,14 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			if (b->bcm_flags & BMAP_WR) {
 				/* Setup a msg to an ION.
 				 */
-				psc_assert(bmap_2_ion(b) !=
-					   LNET_NID_ANY);
+				psc_assert(bmap_2_ios(b) !=
+					   IOS_ID_ANY);
 
-				resm = libsl_nid2resm(bmap_2_ion(b));
+				resm = libsl_ios2resm(bmap_2_ios(b));
 				rmci = resm2rmci(resm);
 
-//				psc_assert(bmap_2_ion(b) == resm->resm_nid);
-
-				DEBUG_BMAP(PLL_INFO, b, "nid=%"PRIx64,
-					   bmap_2_ion(b));
+				DEBUG_BMAP(PLL_INFO, b, "res(%s)", 
+				   resm->resm_res->res_name);
 			} else {
 				resm = slc_rmc_resm;
 				rmci = resm2rmci(slc_rmc_resm);
@@ -1167,8 +1154,9 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			psc_assert(rmci->rmci_bmaprls.nbmaps <
 				   MAX_BMAP_RELEASE);
 
-			bmap_2_bid(b, &rmci->rmci_bmaprls.bmaps[
-				rmci->rmci_bmaprls.nbmaps]);
+			memcpy(&rmci->rmci_bmaprls.sbd[
+				 rmci->rmci_bmaprls.nbmaps], 
+			       &bci->bci_sbd, sizeof(bci->bci_sbd));
 			rmci->rmci_bmaprls.nbmaps++;
 
 			/* The bmap should be going away now, this
@@ -1529,8 +1517,7 @@ msbmapflushthr_spawn(void)
 	struct psc_thread *thr;
 	int i;
 
-	pndgBmapRlsReqs = pscrpc_nbreqset_init(NULL,
-	    msl_bmap_release_cb);
+	pndgBmapRlsReqs = pscrpc_nbreqset_init(NULL, msl_bmap_release_cb);
 	pndgBmaplsReqs = pscrpc_nbreqset_init(NULL, NULL);
 	pndgWrtReqs = pscrpc_nbreqset_init(NULL, msl_write_rpc_cb);
 

@@ -142,9 +142,9 @@ struct psclist_head	   cfg_files = PSCLIST_HEAD_INIT(cfg_files);
 struct ifaddrs		  *cfg_ifaddrs;
 PSCLIST_HEAD(cfg_lnetif_pairs);
 
-static struct sl_site	  *currentSite;
-static struct sl_resource *currentRes;
-static struct sl_resm	  *currentResm;
+struct sl_site	  *currentSite;
+struct sl_resource *currentRes;
+struct sl_resm	  *currentResm;
 %}
 
 %start config
@@ -166,7 +166,7 @@ static struct sl_resm	  *currentResm;
 
 %token IPADDR
 %token LNETNAME
-%token NODES
+%token NIDS
 %token PEERS
 %token QUOTEDS
 
@@ -256,8 +256,9 @@ site_resource	: resource_start resource_def '}' {
 				yyerror("resource %s has no type specified",
 				    currentRes->res_name);
 
-			if (psc_dynarray_len(&currentRes->res_members) == 0)
-				yywarn("resource %s has no members",
+			if ((psc_dynarray_len(&currentRes->res_members) == 0) &&
+			    (psc_dynarray_len(&currentRes->res_peers) == 0))
+				yywarn("resource %s has no members or peers",
 				    currentRes->res_name);
 
 			currentRes->res_id = sl_global_id_build(
@@ -298,6 +299,7 @@ resource_start	: RESOURCE_PROFILE NAME '{' {
 			currentRes = PSCALLOC(sizeof(*currentRes) +
 			    cfg_res_pri_sz);
 			currentRes->res_site = currentSite;
+			currentResm = NULL;
 			psc_dynarray_init(&currentRes->res_peers);
 			psc_dynarray_init(&currentRes->res_members);
 			rc = snprintf(currentRes->res_name,
@@ -341,21 +343,17 @@ peer		: NAME '@' NAME {
 		}
 		;
 
-nodeslist	: NODES '=' nodes ';'
+nidslist	: NIDS '=' nids ';'
 		;
 
-nodes		: node			{ cfg_nid_counter++; }
-		| node nodesep nodes
+nids		: nid			{ cfg_nid_counter++; }
+		| nid nidsep nids
 		;
 
-nodesep		: ','			{ cfg_nid_counter++; }
+nidsep		: ','			{ cfg_nid_counter++; }
 		;
 
-node		: nodeaddr
-		| nodeaddr '|' node
-		;
-
-nodeaddr	: IPADDR '@' LNETNAME	{ slcfg_resm_addaddr($1, $3); PSCFREE($3); }
+nid	        : IPADDR '@' LNETNAME	{ slcfg_resm_addaddr($1, $3); PSCFREE($3); }
 		| IPADDR		{ slcfg_resm_addaddr($1, NULL); }
 		| NAME '@' LNETNAME	{ slcfg_resm_addaddr($1, $3); PSCFREE($3); }
 		| NAME			{ slcfg_resm_addaddr($1, NULL); }
@@ -371,7 +369,7 @@ statement	: restype_stmt
 		| glob_stmt
 		| hexnum_stmt
 		| lnetname_stmt
-		| nodeslist
+		| nidslist
 		| num_stmt
 		| path_stmt
 		| peerlist
@@ -541,10 +539,12 @@ slcfg_resm_addaddr(char *addr, const char *lnetname)
 	char ifn[IFNAMSIZ], *ifv[1], *sp, *tnam;
 	struct addrinfo hints, *res, *res0;
 	union pfl_sockaddr_ptr sa;
-	struct sl_resm *m;
+	struct sl_resm *m = currentResm;
 	uint32_t lnet;
 	in_addr_t ip;
 	int rc;
+
+	psc_assert(m);
 
 	if (init == 0) {
 		init = 1;
@@ -603,34 +603,29 @@ slcfg_resm_addaddr(char *addr, const char *lnetname)
 			slcfg_add_lnet(lnet, ifn);
 
 		if (nidcnt == cfg_nid_counter) {
-			lnet_nid_t *nidp;
+			struct sl_resm_nid *resm_nidp;
 
  addnid:
-			nidp = PSCALLOC(sizeof(*nidp));
-			*nidp = LNET_MKNID(lnet, ip);
-			if (libsl_try_nid2resm(*nidp))
+			resm_nidp = PSCALLOC(sizeof(*resm_nidp));
+			resm_nidp->resmnid_nid = LNET_MKNID(lnet, ip);
+			if (libsl_try_nid2resm(resm_nidp->resmnid_nid))
 				yyerror("NID already registered");
-			psc_dynarray_add(&currentResm->resm_nids, nidp);
+
+			rc = snprintf(resm_nidp->resmnid_addrbuf, 
+			      sizeof(resm_nidp->resmnid_addrbuf),
+			      "%s:%s", currentRes->res_name, addr);
+			if (rc >= (int)sizeof(resm_nidp->resmnid_addrbuf)) {
+				errno = ENAMETOOLONG;
+				rc = -1;
+			}
+			if (rc == -1)
+				yyerror("resource member %s address %s: %s",
+					currentRes->res_name, addr, slstrerror(errno));
+			
+			psc_dynarray_add(&m->resm_nids, resm_nidp);
 			continue;
 		}
 
-		currentResm = m = PSCALLOC(sizeof(*m) + cfg_resm_pri_sz);
-
-		rc = snprintf(m->resm_addrbuf, sizeof(m->resm_addrbuf),
-		    "%s:%s", currentRes->res_name, addr);
-		if (rc >= (int)sizeof(m->resm_addrbuf)) {
-			errno = ENAMETOOLONG;
-			rc = -1;
-		}
-		if (rc == -1)
-			yyerror("resource member %s address %s: %s",
-			    currentRes->res_name, addr, slstrerror(errno));
-
-		psc_dynarray_init(&m->resm_nids);
-		m->resm_res = currentRes;
-		slcfg_init_resm(m);
-
-		psc_dynarray_add(&currentRes->res_members, m);
 
 		nidcnt = cfg_nid_counter;
 		goto addnid;
@@ -641,13 +636,15 @@ slcfg_resm_addaddr(char *addr, const char *lnetname)
 uint32_t
 slcfg_str2restype(const char *res_type)
 {
-	if (!strcmp(res_type, "parallel_fs"))
-		return (SLREST_PARALLEL_FS);
+	if (!strcmp(res_type, "parallel_lfs"))
+		return (SLREST_PARALLEL_LFS);
+	if (!strcmp(res_type, "parallel_compnt"))
+		return (SLREST_PARALLEL_COMPNT);
 	if (!strcmp(res_type, "standalone_fs"))
 		return (SLREST_STANDALONE_FS);
 	if (!strcmp(res_type, "archival_fs"))
 		return (SLREST_ARCHIVAL_FS);
-	if (!strcmp(res_type, "cluster_noshare_fs"))
+	if (!strcmp(res_type, "cluster_noshare_lfs"))
 		return (SLREST_CLUSTER_NOSHARE_LFS);
 	if (!strcmp(res_type, "compute"))
 		return (SLREST_COMPUTE);
@@ -834,6 +831,25 @@ slcfg_add_include(const char *fn)
 }
 
 void
+slcfg_peer2resm(struct sl_resource *r, struct sl_resource *peer)
+{
+	if (r->res_type ==
+	    SLREST_CLUSTER_NOSHARE_LFS)
+		psc_assert(peer->res_type == SLREST_STANDALONE_FS);
+
+	else if (r->res_type == SLREST_PARALLEL_LFS)
+		psc_assert(peer->res_type == SLREST_PARALLEL_COMPNT);
+
+	else
+		psc_fatalx("Invalid resource type");
+
+	psc_assert(psc_dynarray_len(&peer->res_members) == 1);
+
+	psc_dynarray_add(&r->res_members,
+		 psc_dynarray_getpos(&peer->res_members, 0));
+}
+
+void
 slcfg_parse(const char *config_file)
 {
 	extern FILE *yyin;
@@ -890,20 +906,11 @@ slcfg_parse(const char *config_file)
 				PSCFREE(p);
 				psc_dynarray_setpos(&r->res_peers, i, peer);
 
-				/*
-				 * If cluster no share resource, stick
-				 * the resm's in our res_members array.
-				 */
-				if (r->res_type ==
-				    SLREST_CLUSTER_NOSHARE_LFS) {
-					psc_assert(psc_dynarray_len(
-					    &peer->res_members) == 1);
-					psc_assert(peer->res_type ==
-					   SLREST_STANDALONE_FS);
-					psc_dynarray_add(&r->res_members,
-					    psc_dynarray_getpos(
-						   &peer->res_members, 0));
-				}
+				if ((r->res_type ==
+				     SLREST_CLUSTER_NOSHARE_LFS) ||
+				    (r->res_type ==
+				     SLREST_PARALLEL_LFS))
+					slcfg_peer2resm(r, peer);
 			}
 		}
 	}

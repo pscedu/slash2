@@ -104,15 +104,14 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 */
 	DYNARRAY_FOREACH(pp, i, &lnet_prids) {
 		mp->rc = bmapdesc_access_check(&mq->sbd, rw,
-		    nodeResm->resm_res->res_id, pp->nid);
+		    nodeResm->resm_res->res_id);
 		if (mp->rc == 0) {
 			psclog_info("bmapdesc check okay");
 			break;
 		}
 		psclog_notice("bmapdesc mismatch - mine:"
-		    "(%"PRIx64", %"PRIx32"), peer: (%"PRIx64", %"PRIx32")",
-		    pp->nid, nodeResm->resm_res->res_id,
-		    mq->sbd.sbd_ion_nid, mq->sbd.sbd_ios_id);
+		    "(%"PRIx32"), peer: (%"PRIx32")",
+		    nodeResm->resm_res->res_id, mq->sbd.sbd_ios);
 
 	}
 	if (mp->rc) {
@@ -165,18 +164,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	biodi = bmap_2_biodi(bmap);
 
 	DEBUG_FCMH(PLL_INFO, fcmh, "bmapno=%u size=%u off=%u rw=%d "
-	    "sbd_seq=%"PRId64" biod_cur_seqkey[0]=%"PRId64,
-	    bmap->bcm_bmapno, mq->size, mq->offset, rw,
-	    mq->sbd.sbd_seq, biodi->biod_cur_seqkey[0]);
-
-	/* If warranted, bump the sequence number.
-	 */
-	BIOD_LOCK(biodi);
-	if (mq->sbd.sbd_seq > biodi->biod_cur_seqkey[0]) {
-		biodi->biod_cur_seqkey[0] = mq->sbd.sbd_seq;
-		biodi->biod_cur_seqkey[1] = mq->sbd.sbd_key;
-	}
-	BIOD_ULOCK(biodi);
+	    "sbd_seq=%"PRId64, bmap->bcm_bmapno, mq->size, mq->offset, rw,
+	   mq->sbd.sbd_seq);
 
 	/*
 	 * Currently we have LNET_MTU = SLASH_SLVR_SIZE = 1MB, therefore
@@ -345,11 +334,10 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 {
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
-	struct srm_bmap_id *bid;
+	struct srt_bmapdesc *sbd, *newsbd;
 	struct bmap_iod_info *biod;
 	struct fidc_membh *f;
 	struct bmapc_memb *b;
-	struct slash_fidgen fg;
 	uint32_t i;
 	int rc, sync, fsync_time = 0;
 
@@ -361,12 +349,8 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 	}
 
 	for (i = 0, sync = 0; i < mq->nbmaps; i++, sync = 0) {
-		bid = &mq->bmaps[i];
-
-		fg.fg_fid = bid->fid;
-		fg.fg_gen = FGEN_ANY;
-
-		rc = sli_fcmh_get(&fg, &f);
+		sbd = &mq->sbd[i];
+		rc = sli_fcmh_get(&sbd->sbd_fg, &f);
 		psc_assert(rc == 0);
 
 		/* Fsync here to guarantee that buffers are flushed to
@@ -390,32 +374,26 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 			DEBUG_FCMH(PLL_ERROR, f, "fsync failure rc=%d fd=%d errno=%d",
 				   rc, fcmh_2_fd(f), errno);
 
-		rc = bmap_get(f, bid->bmapno, SL_WRITE, &b);
+		rc = bmap_get(f, sbd->sbd_bmapno, SL_WRITE, &b);
 		if (rc) {
-			mp->bidrc[i] = rc;
-			psclog_errorx("failed to load bmap %u", bid->bmapno);
+			psclog_errorx("failed to load bmap %u", sbd->sbd_bmapno);
 			continue;
 		}
 
 		biod = bmap_2_biodi(b);
-		DEBUG_FCMH(PLL_INFO, f, "bmapno=%d seq=%"PRId64" key=%"PRId64
-			   " biod_seq=%"PRId64" biod_key=%"PRId64,
-			   b->bcm_bmapno, bid->seq, bid->key,
-			   biod->biod_cur_seqkey[0],
-			   biod->biod_cur_seqkey[1]);
+		DEBUG_FCMH(PLL_INFO, f, "bmapno=%d seq=%"PRId64" key=%"PRId64,
+			   b->bcm_bmapno, sbd->sbd_seq, sbd->sbd_key);
+		
+		newsbd = psc_pool_get(bmap_rls_pool);
+		memcpy(newsbd, sbd, sizeof(*sbd));
 
+		pll_add(&biod->biod_rls, newsbd);
+		
 		/* Bmap is attached, safe to unref.
 		 */
 		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 
 		BIOD_LOCK(biod);
-
-		/* For the time being, old keys are overwritten and forgotten.
-		 * XXX this should really be fixed.
-		 */
-		biod->biod_rls_seqkey[0] = bid->seq;
-		biod->biod_rls_seqkey[1] = bid->key;
-		biod->biod_rls_cnp = rq->rq_conn->c_peer;
 
 		BMAP_SETATTR(b, BMAP_IOD_RLSSEQ);
 		biod_rlssched_locked(biod);

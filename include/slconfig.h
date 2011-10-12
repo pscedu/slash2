@@ -53,14 +53,17 @@ enum sl_res_type {
 	SLREST_CLUSTER_NOSHARE_LFS,   /* Logical set of stand-alone servers */
 	SLREST_COMPUTE,
 	SLREST_MDS,
-	SLREST_PARALLEL_FS,
-	SLREST_STANDALONE_FS
+	SLREST_PARALLEL_LFS,          /* Logical parallel fs */  
+	SLREST_PARALLEL_COMPNT,       /* A member of a parallel fs */
+	SLREST_STANDALONE_FS,
+	SLREST_STANDALONE_COMPNT = SLREST_STANDALONE_FS
 };
 
 #define RES_ISFS(res)							\
 	((res)->res_type == SLREST_ARCHIVAL_FS	||			\
 	 (res)->res_type == SLREST_CLUSTER_NOSHARE_LFS ||		\
-	 (res)->res_type == SLREST_PARALLEL_FS	||			\
+	 (res)->res_type == SLREST_PARALLEL_LFS	||			\
+	 (res)->res_type == SLREST_PARALLEL_COMPNT	||		\
 	 (res)->res_type == SLREST_STANDALONE_FS)
 
 /* Resource (I/O system, MDS) */
@@ -85,9 +88,13 @@ resprof_get_pri(struct sl_resource *res)
 	return (res + 1);
 }
 
+struct sl_resm_nid {
+	char                     resmnid_addrbuf[RESM_ADDRBUF_SZ];
+	lnet_nid_t               resmnid_nid;
+};
+
 /* Resource member (a machine in an I/O system) */
 struct sl_resm {
-	char			 resm_addrbuf[RESM_ADDRBUF_SZ];
 	struct psc_dynarray	 resm_nids;
 	struct sl_resource	*resm_res;
 	struct psc_hashent	 resm_hentry;
@@ -226,7 +233,7 @@ void			 slcfg_parse(const char *);
 void			 slcfg_resm_addaddr(char *, const char *);
 
 struct sl_resource	*libsl_id2res(sl_ios_id_t);
-void			 libsl_init(void);
+void			 libsl_init(int);
 struct sl_resm		*libsl_nid2resm(lnet_nid_t);
 void			 libsl_profile_dump(void);
 struct sl_site		*libsl_resid2site(sl_ios_id_t);
@@ -234,6 +241,9 @@ struct sl_site		*libsl_siteid2site(sl_siteid_t);
 sl_ios_id_t		 libsl_str2id(const char *);
 struct sl_resource	*libsl_str2res(const char *);
 struct sl_resm		*libsl_try_nid2resm(lnet_nid_t);
+struct sl_resm          *libsl_ios2resm(sl_ios_id_t);
+char *                   libsl_ios2name(sl_ios_id_t);
+sl_ios_id_t             libsl_nid2ios(lnet_nid_t);
 
 void			yyerror(const char *, ...);
 void			yywarn(const char *, ...);

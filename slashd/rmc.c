@@ -174,12 +174,9 @@ slm_rmc_bmapdesc_setup(struct bmapc_memb *bmap,
 		struct bmap_mds_info *bmi = bmap_2_bmi(bmap);
 
 		psc_assert(bmi->bmdsi_wr_ion);
-		sbd->sbd_ion_nid = resm_2_nid(bmi->bmdsi_wr_ion->rmmi_resm);
-		sbd->sbd_ios_id = bmi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id;
-	} else {
-		sbd->sbd_ion_nid = LNET_NID_ANY;
-		sbd->sbd_ios_id = IOS_ID_ANY;
-	}
+		sbd->sbd_ios = bmi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id;
+	} else
+		sbd->sbd_ios = IOS_ID_ANY;
 }
 
 /**
@@ -190,7 +187,7 @@ slm_rmc_bmapdesc_setup(struct bmapc_memb *bmap,
 int
 slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 {
-	const struct srm_bmap_chwrmode_req *mq;
+	struct srm_bmap_chwrmode_req *mq;
 	struct srm_bmap_chwrmode_rep *mp;
 	struct fidc_membh *f = NULL;
 	struct bmapc_memb *b = NULL;
@@ -208,8 +205,7 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	bmi = bmap_2_bmi(b);
 
 	BMAP_LOCK(b);
-	bml = mds_bmap_getbml(b, rq->rq_conn->c_peer.nid,
-	    rq->rq_conn->c_peer.pid, mq->sbd.sbd_seq);
+	bml = mds_bmap_getbml(b, &mq->sbd);
 	if (bml == NULL) {
 		mp->rc = EINVAL;
 		goto out;
@@ -226,9 +222,7 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	mp->sbd.sbd_key = bmi->bmdsi_assign->odtr_key;
 
 	psc_assert(bmi->bmdsi_wr_ion);
-	mp->sbd.sbd_ion_nid = resm_2_nid(bmi->bmdsi_wr_ion->rmmi_resm);
-	mp->sbd.sbd_ios_id = bmi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id;
-
+	mp->sbd.sbd_ios = bmi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id;
  out:
 	if (b)
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);

@@ -369,7 +369,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		goto out;
 
 	fci = fcmh_2_fci(c);
-	fci->fci_reptbl[0].bs_id = mp->sbd.sbd_ios_id;
+	fci->fci_reptbl[0].bs_id = mp->sbd.sbd_ios;
 	fci->fci_nrepls = 1;
 	c->fcmh_flags |= FCMH_CLI_HAVEREPLTBL;
 	FCMH_ULOCK(c);
@@ -381,9 +381,8 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	msl_bmap_reap_init(bcm, &mp->sbd);
 
-	DEBUG_BMAP(PLL_INFO, bcm, "nid=%"PRIx64" sbd_seq=%"PRId64" "
-	    "bmapnid=%"PRIx64, mp->sbd.sbd_ion_nid, mp->sbd.sbd_seq,
-	   bmap_2_ion(bcm));
+	DEBUG_BMAP(PLL_INFO, bcm, "ios(%s) sbd_seq=%"PRId64,
+	   libsl_ios2name(mp->sbd.sbd_ios), mp->sbd.sbd_seq);
 
 	SL_REPL_SET_BMAP_IOS_STAT(bcm->bcm_repls, 0, BREPLST_VALID);
 
@@ -2238,7 +2237,7 @@ msl_init(void)
 	authbuf_checkkeyfile();
 	authbuf_readkeyfile();
 
-	libsl_init();
+	libsl_init(SRCI_NBUFS + SRCM_NBUFS + 1024);
 	fidc_init(sizeof(struct fcmh_cli_info), FIDC_CLI_DEFSZ);
 	bmpc_global_init();
 	bmap_cache_init(sizeof(struct bmap_cli_info));

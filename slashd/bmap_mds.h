@@ -154,7 +154,7 @@ struct bmap_timeo_table {
 #define BTE_DEL			(1 << 1)
 #define BTE_REATTACH		(1 << 2)
 
-#define BMAP_TIMEO_MAX		120	/* Max bmap lease timeout */
+#define BMAP_TIMEO_MAX		240	/* Max bmap lease timeout */
 #define BMAP_SEQLOG_FACTOR	100
 #define BMAP_RECOVERY_TIMEO_EXT BMAP_TIMEO_MAX /* Extend recovered leases
 						* after an MDS failure.
@@ -162,7 +162,7 @@ struct bmap_timeo_table {
 
 struct bmap_mds_lease {
 	uint64_t		  bml_seq;
-	lnet_nid_t		  bml_ion_nid;
+	sl_ios_id_t               bml_ios;
 	lnet_process_id_t	  bml_cli_nidpid;
 	uint32_t		  bml_flags;
 	time_t			  bml_start;
@@ -205,14 +205,14 @@ struct bmap_mds_lease {
 	PLL_FOREACH((bml), &bmap_2_bmi(bcm)->bmdsi_leases)
 
 /**
- * bmap_ion_assign - The structure used for tracking the MDS's bmap/ion
+ * bmap_ios_assign - The structure used for tracking the MDS's bmap/ion
  *   assignments.  These structures are stored in a odtable.
  * Note: default odtable entry size is 128 bytes.
+ * XXX is the generation number needed here? - pauln
  */
-struct bmap_ion_assign {
-	lnet_nid_t		bia_ion_nid;
+struct bmap_ios_assign {
+	sl_ios_id_t             bia_ios;
 	lnet_process_id_t	bia_lastcli;
-	sl_ios_id_t		bia_ios;
 	slfid_t			bia_fid;
 	uint64_t		bia_seq;
 	sl_bmapno_t		bia_bmapno;
@@ -235,7 +235,7 @@ int	_mds_bmap_write_rel(const struct pfl_callerinfo *, struct bmapc_memb *, void
 
 #define mds_bmap_write_repls_rel(b)	mds_bmap_write_rel((b), mdslog_bmap_repls)
 
-int	 mds_bmap_crc_write(struct srm_bmap_crcup *, lnet_nid_t,
+int	 mds_bmap_crc_write(struct srm_bmap_crcup *, sl_ios_id_t,
 	    const struct srm_bmap_crcwrt_req *);
 int	 mds_bmap_exists(struct fidc_membh *, sl_bmapno_t);
 int	 mds_bmap_load_cli(struct fidc_membh *, sl_bmapno_t, int, enum rw,
@@ -248,8 +248,7 @@ int	 mds_bmap_loadvalid(struct fidc_membh *, sl_bmapno_t,
 int	 mds_bmap_bml_chwrmode(struct bmap_mds_lease *, sl_ios_id_t);
 int	 mds_bmap_bml_release(struct bmap_mds_lease *);
 void	 mds_bmap_ensure_valid(struct bmapc_memb *);
-struct bmap_mds_lease *
-	mds_bmap_getbml(struct bmapc_memb *, lnet_nid_t, lnet_pid_t, uint64_t);
+struct bmap_mds_lease * mds_bmap_getbml(struct bmapc_memb *, struct srt_bmapdesc *);
 
 void	 mds_bmap_setcurseq(uint64_t, uint64_t);
 int	 mds_bmap_getcurseq(uint64_t *, uint64_t *);

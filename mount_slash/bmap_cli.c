@@ -101,8 +101,10 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 	if (rc == 0)
 		memcpy(bmap_2_sbd(b), &mp->sbd,
 		    sizeof(struct srt_bmapdesc));
+	else
+		goto out;
 
-	r = libsl_id2res(bmap_2_sbd(b)->sbd_ios_id);
+	r = libsl_id2res(bmap_2_sbd(b)->sbd_ios);
 	psc_assert(r);
 	if (r->res_type == SLREST_ARCHIVAL_FS) {
 		/* Prepare for archival write by ensuring that all subsequent
@@ -320,9 +322,9 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw,
 
 	msl_bmap_reap_init(bmap, &mp->sbd);
 
-	DEBUG_BMAP(PLL_INFO, bmap, "rw=%d nid=%#"PRIx64" "
-	    "sbd_seq=%"PRId64" bmapnid=%"PRIx64, rw,
-	    mp->sbd.sbd_ion_nid, mp->sbd.sbd_seq, bmap_2_ion(bmap));
+	DEBUG_BMAP(PLL_INFO, bmap, "rw=%d ios=%#"PRIx32" "
+	    "sbd_seq=%"PRId64, rw,
+	    mp->sbd.sbd_ios, mp->sbd.sbd_seq);
 
 	fci->fci_nrepls = mp->nrepls;
 	memcpy(&fci->fci_reptbl, &mp->reptbl,
@@ -407,8 +409,8 @@ msl_bmap_reap_init(struct bmapc_memb *b, const struct srt_bmapdesc *sbd)
 
 	/* Is this a write for a archival fs?  If so, set the bmap for DIO.
 	 */
-	if (sbd->sbd_ios_id != IOS_ID_ANY) {
-		struct sl_resource *r = libsl_id2res(sbd->sbd_ios_id);
+	if (sbd->sbd_ios != IOS_ID_ANY) {
+		struct sl_resource *r = libsl_id2res(sbd->sbd_ios);
 
 		psc_assert(r);
 		psc_assert(b->bcm_flags & BMAP_WR);
@@ -451,15 +453,12 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 
 	if (exclusive) {
 		locked = BMAP_RLOCK(b);
-		resm = libsl_nid2resm(bmap_2_ion(b));
-//		psc_assert(resm->resm_nid == bmap_2_ion(b));
+
+		resm = libsl_ios2resm(bmap_2_ios(b));
+		psc_assert(resm->resm_res->res_id == bmap_2_ios(b));
 		BMAP_URLOCK(b, locked);
 
-		csvc = slc_geticsvc(resm);
-		if (csvc)
-			psc_assert(csvc->csvc_import->imp_connection->
-			    c_peer.nid == bmap_2_ion(b));
-		return (csvc);
+		return (slc_geticsvc(resm));
 	}
 
 	fci = fcmh_get_pri(b->bcm_fcmh);

@@ -100,9 +100,8 @@ slvr_do_crc(struct slvr_ref *s)
 	 *   a write dirtied the buffer and invalidated the CRC.
 	 */
 	psc_assert(s->slvr_flags & SLVR_PINNED &&
-		   (s->slvr_flags & SLVR_FAULTING ||
-		    s->slvr_flags & SLVR_CRCDIRTY));
-
+	   (s->slvr_flags & SLVR_FAULTING || s->slvr_flags & SLVR_CRCDIRTY));
+ 
 	if (s->slvr_flags & SLVR_FAULTING) {
 		if (!s->slvr_pndgreads && !(s->slvr_flags & SLVR_REPLDST)) {
 			/*
@@ -854,7 +853,6 @@ slvr_slab_prep(struct slvr_ref *s, enum rw rw)
 
 	//XXX may have to lock bmap instead..
 	SLVR_LOCK(s);
-
  restart:
 	/* slvr_lookup() must pin all slvrs to avoid racing with
 	 *   the reaper.

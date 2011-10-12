@@ -91,7 +91,6 @@ struct slmds_jent_ino_repls {
 
 /**
  * slmds_jent_ino_repls - Log for a bmap -> ION assignment.
- * @sjir_ion_nid: ION address.
  * @sjir_lastcli: client's NID+PID.
  * @sjir_ios: I/O system ID.
  * @sjir_fid: file.
@@ -101,7 +100,6 @@ struct slmds_jent_ino_repls {
  * @sjir_start: issue timestamp.
  */
 struct slmds_jent_bmap_assign {
-	lnet_nid_t			sjba_ion_nid;
 	lnet_process_id_t		sjba_lastcli;
 	sl_ios_id_t			sjba_ios;
 	slfid_t				sjba_fid;

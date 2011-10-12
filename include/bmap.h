@@ -302,8 +302,7 @@ void	_bmap_op_done(const struct pfl_callerinfo *,
 int	_bmap_get(const struct pfl_callerinfo *, struct fidc_membh *,
 	    sl_bmapno_t, enum rw, int, struct bmapc_memb **);
 
-int	 bmapdesc_access_check(struct srt_bmapdesc *, enum rw,
-	    sl_ios_id_t, uint64_t);
+int	 bmapdesc_access_check(struct srt_bmapdesc *, enum rw, sl_ios_id_t);
 
 void	_dump_bmap_flags_common(uint32_t *, int *);
 

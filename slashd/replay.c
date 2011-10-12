@@ -263,7 +263,7 @@ mds_replay_bmap_assign(struct psc_journal_enthdr *pje)
 {
 	struct slmds_jent_assign_rep *logentry;
 	struct slmds_jent_bmap_assign *sjba;
-	struct bmap_ion_assign *bia;
+	struct bmap_ios_assign *bia;
 	struct odtable_entftr *odtf;
 	struct odtable_hdr odth;
 	size_t nb, len, elem;
@@ -309,7 +309,6 @@ mds_replay_bmap_assign(struct psc_journal_enthdr *pje)
 	if (logentry->sjar_flags & SLJ_ASSIGN_REP_BMAP) {
 		bia = p;
 		sjba = &logentry->sjar_bmap;
-		bia->bia_ion_nid = sjba->sjba_ion_nid;
 		bia->bia_lastcli.pid = sjba->sjba_lastcli.pid;
 		bia->bia_lastcli.nid = sjba->sjba_lastcli.nid;
 		bia->bia_ios = sjba->sjba_ios;
@@ -320,7 +319,7 @@ mds_replay_bmap_assign(struct psc_journal_enthdr *pje)
 		bia->bia_flags = sjba->sjba_flags;
 
 		/* I don't think memset() does any good, anyway... */
-		len = sizeof(struct bmap_ion_assign);
+		len = sizeof(struct bmap_ios_assign);
 		if (len < odth.odth_elemsz)
 			memset(p + len, 0, odth.odth_elemsz - len);
 		psc_crc64_calc(&crc, p, odth.odth_elemsz);

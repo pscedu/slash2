@@ -114,18 +114,44 @@ libsl_id2res(sl_ios_id_t id)
 	return (NULL);
 }
 
+
+struct sl_resm * 
+libsl_ios2resm(sl_ios_id_t id)
+{
+	struct sl_resource *res = libsl_id2res(id);
+
+	/* May only be called on behalf the following types 
+	 *   of resources.
+	 */
+	psc_assert((res->res_type == SLREST_STANDALONE_FS     ||
+		    res->res_type == SLREST_STANDALONE_COMPNT ||
+		    res->res_type == SLREST_ARCHIVAL_FS       ||
+		    res->res_type == SLREST_PARALLEL_COMPNT) &&
+		   (psc_dynarray_len(&res->res_members) == 1));
+	
+	return ((struct sl_resm *)psc_dynarray_getpos(&res->res_members, 0));
+}
+
+char *
+libsl_ios2name(sl_ios_id_t id)
+{
+	struct sl_resource *res = libsl_id2res(id);
+
+	return (&res->res_name[0]);
+}
+
 struct sl_resm *
 libsl_try_nid2resm(lnet_nid_t nid)
 {
 	struct sl_resource *r;
 	struct sl_resm *m;
+	struct sl_resm_nid *n;
 	struct sl_site *s;
-	lnet_nid_t *nidp;
 	int i, j, k;
 
 	CONF_FOREACH_RESM(s, r, i, m, j)
-		DYNARRAY_FOREACH(nidp, k, &m->resm_nids)
-			if (*nidp == nid)
+		DYNARRAY_FOREACH(n, k, &m->resm_nids)
+			if (n->resmnid_nid == nid)
 				return (m);
 	return (NULL);
 }
@@ -142,6 +168,14 @@ libsl_nid2resm(lnet_nid_t nid)
 	psc_fatalx("IOS %s not found in SLASH configuration, "
 	    "verify uniformity across all servers",
 	    pscrpc_nid2str(nid, nidbuf));
+}
+
+sl_ios_id_t
+libsl_nid2ios(lnet_nid_t nid)
+{
+	struct sl_resm *resm = libsl_nid2resm(nid);
+	
+	return (resm->resm_res->res_id);
 }
 
 struct sl_resource *
@@ -205,7 +239,7 @@ libsl_profile_dump(void)
 }
 
 void
-libsl_init(void)
+libsl_init(int nmsgs)
 {
 	char lnetstr[LNETS_MAX], pbuf[6];
 	char netbuf[PSCRPC_NIDSTR_SIZE], ltmp[LNETS_MAX];
@@ -265,11 +299,10 @@ libsl_init(void)
 	setenv("LNET_NETWORKS", lnetstr, 0);
 
  skiplnet:
-
 #ifdef _SLASH_CLIENT
 	mode = PSCNET_CLIENT;
 #endif
-	pscrpc_init_portals(mode);
+	pscrpc_init_portals(mode, nmsgs);
 	pscrpc_getlocalprids(&lnet_prids);
 
 #ifdef _SLASH_CLIENT

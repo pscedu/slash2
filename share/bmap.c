@@ -286,21 +286,18 @@ _dump_bmapod(struct bmapc_memb *bmap, const char *fmt, ...)
 
 int
 bmapdesc_access_check(struct srt_bmapdesc *sbd, enum rw rw,
-    sl_ios_id_t ios_id, uint64_t ion_nid)
+    sl_ios_id_t ios_id)
 {
 	if (rw == SL_READ) {
 		/* Read requests can get by with looser authentication. */
-		if (sbd->sbd_ion_nid != ion_nid &&
-		    sbd->sbd_ion_nid != LNET_NID_ANY)
+		if (sbd->sbd_ios != ios_id &&
+		    sbd->sbd_ios != IOS_ID_ANY)
 			return (EBADF);
-		if (sbd->sbd_ios_id != ios_id &&
-		    sbd->sbd_ios_id != IOS_ID_ANY)
-			return (EBADF);
+
 	} else if (rw == SL_WRITE) {
-		if (sbd->sbd_ion_nid != ion_nid)
+		if (sbd->sbd_ios != ios_id)
 			return (EBADF);
-		if (sbd->sbd_ios_id != ios_id)
-			return (EBADF);
+
 	} else {
 		psclog_errorx("invalid rw mode: %d", rw);
 		return (EBADF);

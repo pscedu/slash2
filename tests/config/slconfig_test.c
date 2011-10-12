@@ -106,6 +106,6 @@ main(int argc, char *argv[])
 		usage();
 
 	slcfg_parse(fn);
-	libsl_init();
+	libsl_init(4096);
 	exit(0);
 }

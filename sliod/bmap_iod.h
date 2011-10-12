@@ -32,6 +32,8 @@
 #include "bmap.h"
 #include "slashrpc.h"
 
+
+
 struct bmap_iod_info;
 struct slvr_ref;
 
@@ -69,11 +71,16 @@ struct bmap_iod_minseq {
 	int			 bim_flags;
 };
 
+struct bmap_iod_rls {
+	struct srt_bmapdesc      bir_sbd;
+	struct psclist_head      bir_lentry;
+};
+
 #define BIM_RETRIEVE_SEQ	1
 
 #define BIM_MINAGE		5	/* Seconds */
 
-#define SLIOD_BMAP_RLS_WAIT_SECS 2 /* Number of seconds to wait for more
+#define SLIOD_BMAP_RLS_WAIT_SECS 1 /* Number of seconds to wait for more
 				    *  bmap releases from the client
 				    */
 
@@ -115,11 +122,9 @@ struct bmap_iod_info {
 	struct psclist_head	 biod_lentry;
 	struct timespec		 biod_age;
 	struct psc_lockedlist	 biod_bklog_bcrs;
-	lnet_process_id_t	 biod_rls_cnp;
+	struct psc_lockedlist	 biod_rls;
 	uint64_t		 biod_bcr_xid;
 	uint64_t		 biod_bcr_xid_last;
-	uint64_t		 biod_cur_seqkey[2];
-	uint64_t		 biod_rls_seqkey[2];
 	uint32_t		 biod_crcdrty_slvrs;
 };
 
@@ -167,6 +172,8 @@ void slibmaprlsthr_spawn(void);
 
 extern struct psc_listcache bmapRlsQ;
 extern struct psc_listcache bmapReapQ;
+extern struct psc_poolmaster bmap_rls_poolmaster;
+extern struct psc_poolmgr *bmap_rls_pool;
 
 static __inline struct bmapc_memb *
 bii_2_bmap(struct bmap_iod_info *bii)

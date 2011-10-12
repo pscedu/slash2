@@ -38,6 +38,9 @@ static struct timespec	 bim_timeo = { BIM_MINAGE, 0 };
 struct psc_listcache	 bmapReapQ;
 struct psc_listcache	 bmapRlsQ;
 
+struct psc_poolmaster    bmap_rls_poolmaster;
+struct psc_poolmgr      *bmap_rls_pool;
+
 void
 bim_init(void)
 {
@@ -292,19 +295,6 @@ bcr_cmp(const void *x, const void *y)
 }
 #endif
 
-static __inline void
-bmap_2_bid_sliod(const struct bmapc_memb *b, struct srm_bmap_id *bid)
-{
-	const struct bmap_iod_info *bmdsi = (const void *)(b + 1);
-
-	bid->fid = fcmh_2_fid(b->bcm_fcmh);
-	bid->bmapno = b->bcm_bmapno;
-	bid->seq = bmdsi->biod_rls_seqkey[0];
-	bid->key = bmdsi->biod_rls_seqkey[1];
-	bid->cli_nid = bmdsi->biod_rls_cnp.nid;
-	bid->cli_pid = bmdsi->biod_rls_cnp.pid;
-}
-
 void
 biod_rlssched_locked(struct bmap_iod_info *biod)
 {
@@ -341,12 +331,13 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 	struct slashrpc_cservice *csvc;
 	struct bmap_iod_info *biod;
 	struct bmapc_memb *b;
-	int i, rc;
+	struct bmap_iod_rls *brls;
+	int nrls, rc;
 
 	brr = PSCALLOC(sizeof(struct srm_bmap_release_req));
 
 	while (pscthr_run()) {
-		i = 0;
+		nrls = 0;
 
 		biod = lc_getwait(&bmapRlsQ);
 		if (lc_sz(&bmapRlsQ) < MAX_BMAP_RELEASE)
@@ -360,12 +351,11 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 			/* Account for the rls ref.
 			 */
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
+			psc_assert(pll_nitems(&biod->biod_rls));
 
-			DEBUG_BMAP(PLL_INFO, b, "ndrty=%u rlsseq=%"PRId64
-			    " rlskey=%"PRId64" xid=%"PRIu64" xid_last=%"PRIu64,
-			    biod->biod_crcdrty_slvrs, biod->biod_rls_seqkey[0],
-			    biod->biod_rls_seqkey[1], biod->biod_bcr_xid,
-			    biod->biod_bcr_xid_last);
+			DEBUG_BMAP(PLL_INFO, b, "ndrty=%u xid=%"PRIu64
+			   " xid_last=%"PRIu64, biod->biod_crcdrty_slvrs, 
+			   biod->biod_bcr_xid, biod->biod_bcr_xid_last);
 
 			BIOD_LOCK(biod);
 			psc_assert(bii_2_flags(biod) & BMAP_IOD_RLSSEQ);
@@ -382,19 +372,23 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 			BMAP_CLEARATTR(bii_2_bmap(biod),
 			       BMAP_IOD_RLSSEQ | BMAP_IOD_RLSSCHED);
+			
+			while (nrls < MAX_BMAP_RELEASE && 
+			       (brls = pll_get(&biod->biod_rls)))
+				memcpy(&brr->sbd[nrls++], &brls->bir_sbd, 
+				       sizeof(struct srt_bmapdesc));
 
-			bmap_2_bid_sliod(b, &brr->bmaps[i++]);
 			BIOD_ULOCK(biod);
 
 			bmap_op_done_type(b, BMAP_OPCNT_RLSSCHED);
 
-		} while ((i < MAX_BMAP_RELEASE) &&
+		} while ((nrls < MAX_BMAP_RELEASE) &&
 			 (biod = lc_getnb(&bmapRlsQ)));
 
-		if (!i)
+		if (!nrls)
 			goto end;
 
-		brr->nbmaps = i;
+		brr->nbmaps = nrls;
 
 		/*
 		 * The system can tolerate the loss of these messages so
@@ -408,7 +402,7 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 		rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq, mq, mp);
 		if (rc) {
-			psclog_errorx("Failed to generate new RPC req rc=%d", rc);
+			psclog_errorx("Failed to generate new req rc=%d", rc);
 			sl_csvc_decref(csvc);
 			continue;
 		}
@@ -422,7 +416,7 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 		sl_csvc_decref(csvc);
  end:
 		/* put any unreapable biods back to the list */
-		DYNARRAY_FOREACH(biod, i, &a)
+		DYNARRAY_FOREACH(biod, nrls, &a)
 			lc_addtail(&bmapRlsQ, biod);
 
 		if (psc_dynarray_len(&a))
@@ -453,6 +447,9 @@ iod_bmap_init(struct bmapc_memb *b)
 	SPLAY_INIT(&biod->biod_slvrs);
 	pll_init(&biod->biod_bklog_bcrs, struct biod_crcup_ref,
 	    bcr_lentry, NULL);
+
+	pll_init(&biod->biod_rls, struct bmap_iod_rls,
+	    bir_lentry, NULL);
 
 	PFL_GETTIMESPEC(&biod->biod_age);
 	/* XXX At some point we'll want to let bmaps hang around in the

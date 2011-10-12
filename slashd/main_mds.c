@@ -300,7 +300,7 @@ main(int argc, char *argv[])
 
 	sl_drop_privs(allow_root_uid);
 
-	libsl_init();
+	libsl_init(SLM_RMM_NBUFS + SLM_RMI_NBUFS + SLM_RMC_NBUFS);
 
 	slm_workq_init();
 

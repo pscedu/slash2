@@ -125,7 +125,7 @@ mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw,
     lnet_process_id_t *np)
 {
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
-	struct bmap_mds_lease *bml;
+	struct bmap_mds_lease *bml = NULL, *tmp;
 	int rc = 0;
 
 	BMAP_LOCK_ENSURE(b);
@@ -144,11 +144,24 @@ mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw,
 	}
 
 	if (bmi->bmdsi_writers) {
+		int wtrs;
+		struct bmap_mds_lease *tmp1;
 		/* A second writer or a reader wants access.  Ensure only
 		 *    one lease is present.
 		 */
-		bml = pll_peektail(&bmi->bmdsi_leases);
-		psc_assert(bml->bml_flags & BML_WRITE);
+		tmp = tmp1 = pll_peektail(&bmi->bmdsi_leases);
+		do {
+			if (tmp->bml_flags & BML_WRITE)
+				wtrs++;
+
+			if (!bml || bml->bml_seq < tmp->bml_seq)
+				bml = tmp;
+			
+			tmp = tmp->bml_chain;
+		} while (tmp != tmp1);
+
+		psc_assert(bml && wtrs);
+
 		psc_assert(!(b->bcm_flags & BMAP_DIORQ));
 		if (bml->bml_flags & BML_CDIO) {
 			b->bcm_flags |= BMAP_DIO;
@@ -174,7 +187,6 @@ mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw,
 		}
 
 	} else if (rw == SL_WRITE && bmi->bmdsi_readers) {
-		struct bmap_mds_lease *tmp;
 		int set_dio = 0;
 
 		/* Writer being added amidst one or more readers.  Issue
@@ -203,9 +215,9 @@ mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw,
 }
 
 __static int
-mds_bmap_ion_restart(struct bmap_mds_lease *bml)
+mds_bmap_ios_restart(struct bmap_mds_lease *bml)
 {
-	struct sl_resm *resm = libsl_nid2resm(bml->bml_ion_nid);
+	struct sl_resm *resm = libsl_ios2resm(bml->bml_ios);
 	struct resm_mds_info *rmmi;
 	int rc = 0;
 
@@ -221,8 +233,8 @@ mds_bmap_ion_restart(struct bmap_mds_lease *bml)
 
 	bml->bml_bmdsi->bmdsi_seq = bml->bml_seq;
 
-	DEBUG_BMAP(PLL_INFO, bml_2_bmap(bml), "res(%s) ion(%s) seq=%"PRIx64, 
-	   resm->resm_res->res_name, resm->resm_addrbuf, bml->bml_seq);
+	DEBUG_BMAP(PLL_INFO, bml_2_bmap(bml), "res(%s) seq=%"PRIx64, 
+	   resm->resm_res->res_name, bml->bml_seq);
 
 	return (rc);
 }
@@ -249,8 +261,7 @@ mds_resm_tryconnect(struct sl_resource *res, int nb)
 					   slm_get_rpmi_idx(res));
 		freelock(&rpmi->rpmi_lock);
 
-		psclog_info("trying res(%s) ion(%s)", res->res_name,
-			    resm->resm_addrbuf);
+		psclog_info("trying res(%s)", res->res_name);
 
 		csvc = nb ? slm_geticsvc_nb(resm, NULL) : slm_geticsvc(resm);
 		if (csvc)
@@ -367,7 +378,7 @@ mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios)
 }
 
 /**
- * mds_bmap_ion_assign - Bind a bmap to an ION for writing.  The process
+ * mds_bmap_ios_assign - Bind a bmap to an ION for writing.  The process
  *	involves a round-robin'ing of an I/O system's nodes and
  *	attaching a resm_mds_info to the bmap, used for establishing
  *	connection to the ION.
@@ -375,7 +386,7 @@ mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios)
  * @pios: the preferred I/O system
  */
 __static int
-mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
+mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 {
 	struct bmapc_memb *bmap = bml_2_bmap(bml);
 	struct bmap_mds_info *bmi = bmap_2_bmi(bmap);
@@ -383,7 +394,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	struct slmds_jent_bmap_assign *sjba;
 	struct slash_inode_handle *ih;
 	struct resm_mds_info *rmmi;
-	struct bmap_ion_assign bia;
+	struct bmap_ios_assign bia;
 	struct sl_resm *resm;
 	uint32_t nrepls;
 	int iosidx, rc;
@@ -412,16 +423,16 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	bmi->bmdsi_wr_ion = rmmi = resm2rmmi(resm);
 	atomic_inc(&rmmi->rmmi_refcnt);
 
-	DEBUG_BMAP(PLL_INFO, bmap, "online res(%s) ion(%s)",
-	    resm->resm_res->res_name, resm->resm_addrbuf);
+	DEBUG_BMAP(PLL_INFO, bmap, "online res(%s)",
+	    resm->resm_res->res_name);
 	/*
 	 * An ION has been assigned to the bmap, mark it in the odtable
 	 *   so that the assignment may be restored on reboot.
 	 */
 	memset(&bia, 0, sizeof(bia));
-	bia.bia_ion_nid = bml->bml_ion_nid = resm_2_nid(rmmi->rmmi_resm);
+
 	bia.bia_lastcli = bml->bml_cli_nidpid;
-	bia.bia_ios = rmmi->rmmi_resm->resm_res->res_id;
+	bia.bia_ios = bml->bml_ios = rmmi->rmmi_resm->resm_res->res_id;
 	bia.bia_fid = fcmh_2_fid(bmap->bcm_fcmh);
 	bia.bia_bmapno = bmap->bcm_bmapno;
 	bia.bia_start = time(NULL);
@@ -446,6 +457,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	 * by the last client or has been timed out.
 	 */
 	bmap_op_start_type(bmap, BMAP_OPCNT_IONASSIGN);
+
 
 	ih = fcmh_2_inoh(bmap->bcm_fcmh);
 	nrepls = ih->inoh_ino.ino_nrepls;
@@ -473,7 +485,6 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	logentry->sjar_flags |= SLJ_ASSIGN_REP_REP;
 
 	sjba = &logentry->sjar_bmap;
-	sjba->sjba_ion_nid = bia.bia_ion_nid;
 	sjba->sjba_lastcli.nid = bia.bia_lastcli.nid;
 	sjba->sjba_lastcli.pid = bia.bia_lastcli.pid;
 	sjba->sjba_ios = bia.bia_ios;
@@ -494,22 +505,22 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 
 	DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh, "bmap assign, elem=%zd",
 	    bmi->bmdsi_assign->odtr_elem);
-	DEBUG_BMAP(PLL_INFO, bmap, "using res(%s) ion(%s) "
-	    "rmmi(%p) bia(%p)", resm->resm_res->res_name, resm->resm_addrbuf,
+	DEBUG_BMAP(PLL_INFO, bmap, "using res(%s) "
+	    "rmmi(%p) bia(%p)", resm->resm_res->res_name,
 	    bmi->bmdsi_wr_ion, bmi->bmdsi_assign);
 
 	return (0);
 }
 
 __static int
-mds_bmap_ion_update(struct bmap_mds_lease *bml)
+mds_bmap_ios_update(struct bmap_mds_lease *bml)
 {
 	struct bmapc_memb *b = bml_2_bmap(bml);
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct slmds_jent_assign_rep *logentry;
 	struct slmds_jent_bmap_assign *sjba;
 	struct slash_inode_handle *ih;
-	struct bmap_ion_assign bia;
+	struct bmap_ios_assign bia;
 	int rc, iosidx, dio;
 	uint32_t nrepls;
 
@@ -546,7 +557,7 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 
 	psc_assert(bmi->bmdsi_assign);
 
-	bml->bml_ion_nid = bia.bia_ion_nid;
+	bml->bml_ios = bia.bia_ios;
 	bml->bml_seq = bia.bia_seq;
 
 	ih = fcmh_2_inoh(b->bcm_fcmh);
@@ -575,7 +586,6 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 	logentry->sjar_flags |= SLJ_ASSIGN_REP_REP;
 
 	sjba = &logentry->sjar_bmap;
-	sjba->sjba_ion_nid = bia.bia_ion_nid;
 	sjba->sjba_lastcli.nid = bia.bia_lastcli.nid;
 	sjba->sjba_lastcli.pid = bia.bia_lastcli.pid;
 	sjba->sjba_ios = bia.bia_ios;
@@ -702,10 +712,10 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 
 	if (bmi->bmdsi_wr_ion) {
 		BMAP_ULOCK(b);
-		rc = mds_bmap_ion_update(bml);
+		rc = mds_bmap_ios_update(bml);
 	} else {
 		BMAP_ULOCK(b);
-		rc = mds_bmap_ion_assign(bml, prefios);
+		rc = mds_bmap_ios_assign(bml, prefios);
 	}
 	psc_assert(bmi->bmdsi_wr_ion);
 
@@ -742,8 +752,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
  * @seq: lease sequence.
  */
 struct bmap_mds_lease *
-mds_bmap_getbml(struct bmapc_memb *b, lnet_nid_t cli_nid,
-    lnet_pid_t cli_pid, uint64_t seq)
+mds_bmap_getbml(struct bmapc_memb *b, struct srt_bmapdesc *sbd)
 {
 	struct bmap_mds_info *bmi;
 	struct bmap_mds_lease *bml;
@@ -752,12 +761,12 @@ mds_bmap_getbml(struct bmapc_memb *b, lnet_nid_t cli_nid,
 
 	bmi = bmap_2_bmi(b);
 	PLL_FOREACH(bml, &bmi->bmdsi_leases) {
-		if (bml->bml_cli_nidpid.nid == cli_nid &&
-		    bml->bml_cli_nidpid.pid == cli_pid) {
+		if (bml->bml_cli_nidpid.nid == sbd->sbd_nid &&
+		    bml->bml_cli_nidpid.pid == sbd->sbd_pid) {
 			struct bmap_mds_lease *tmp = bml;
 
 			do {
-				if (tmp->bml_seq == seq)
+				if (tmp->bml_seq == sbd->sbd_seq)
 					return (tmp);
 
 				tmp = tmp->bml_chain;
@@ -863,20 +872,20 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 			psc_assert(bmi->bmdsi_writers == 1);
 			psc_assert(!bmi->bmdsi_readers);
 			psc_assert(!bmi->bmdsi_wr_ion);
-			psc_assert(bml->bml_ion_nid &&
-			   bml->bml_ion_nid != LNET_NID_ANY);
+			psc_assert(bml->bml_ios &&
+			   bml->bml_ios != IOS_ID_ANY);
 			BMAP_ULOCK(b);
-			rc = mds_bmap_ion_restart(bml);
+			rc = mds_bmap_ios_restart(bml);
 
 		} else if (!wlease && bmi->bmdsi_writers == 1) {
 			psc_assert(!bmi->bmdsi_wr_ion);
 			BMAP_ULOCK(b);
-			rc = mds_bmap_ion_assign(bml, prefios);
+			rc = mds_bmap_ios_assign(bml, prefios);
 
 		} else {
 			psc_assert(wlease && bmi->bmdsi_wr_ion);
 			BMAP_ULOCK(b);
-			rc = mds_bmap_ion_update(bml);
+			rc = mds_bmap_ios_update(bml);
 		}
 
 		BMAP_LOCK(b);
@@ -1106,7 +1115,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 			if (!(bml->bml_flags & BML_ASSFAIL)) {
 				/* odtable sanity checks:
 				 */
-				struct bmap_ion_assign bia;
+				struct bmap_ios_assign bia;
 
 				rc = mds_odtable_getitem(mdsBmapAssignTable,
 				    bmi->bmdsi_assign, &bia, sizeof(bia));
@@ -1165,7 +1174,7 @@ mds_handle_rls_bmap(struct pscrpc_request *rq, int sliod)
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
 	struct bmap_mds_lease *bml;
-	struct srm_bmap_id *bid;
+	struct srt_bmapdesc *sbd;
 	struct slash_fidgen fg;
 	struct fidc_membh *f;
 	struct bmapc_memb *b;
@@ -1178,46 +1187,34 @@ mds_handle_rls_bmap(struct pscrpc_request *rq, int sliod)
 	}
 
 	for (i = 0; i < mq->nbmaps; i++) {
-		bid = &mq->bmaps[i];
-		if (!sliod) {
-			bid->cli_nid = rq->rq_conn->c_peer.nid;
-			bid->cli_pid = rq->rq_conn->c_peer.pid;
-		}
+		sbd = &mq->sbd[i];
 
-		fg.fg_fid = bid->fid;
+		fg.fg_fid = sbd->sbd_fg.fg_fid;
 		fg.fg_gen = 0;
 
-		mp->bidrc[i] = slm_fcmh_get(&fg, &f);
-		if (mp->bidrc[i]) {
-			//XXX
+		if (slm_fcmh_get(&fg, &f))
 			continue;
-		}
 
-		DEBUG_FCMH(PLL_INFO, f, "rls bmap=%u", bid->bmapno);
+		DEBUG_FCMH(PLL_INFO, f, "rls bmap=%u", sbd->sbd_bmapno);
 
-		mp->bidrc[i] = bmap_lookup(f, bid->bmapno, &b);
-		if (mp->bidrc[i])
+		if (bmap_lookup(f, sbd->sbd_bmapno, &b))
 			goto next;
 
 		BMAP_LOCK(b);
-
-		bml = mds_bmap_getbml(b, bid->cli_nid, bid->cli_pid, bid->seq);
+		bml = mds_bmap_getbml(b, sbd);
 
 		DEBUG_BMAP((bml ? PLL_INFO : PLL_WARN), b,
-			   "release %"PRId64" nid=%"PRId64" pid=%u bml=%p",
-			   bid->seq, bid->cli_nid, bid->cli_pid, bml);
-
+		   "release %"PRId64" nid=%"PRId64" pid=%u bml=%p",
+		   sbd->sbd_seq, sbd->sbd_nid, sbd->sbd_pid, bml);
 		if (bml) {
-			psc_assert(bid->seq == bml->bml_seq);
+			psc_assert(sbd->sbd_seq == bml->bml_seq);
 			BML_LOCK(bml);
 			if (!(bml->bml_flags & BML_FREEING)) {
 				bml->bml_flags |= BML_FREEING;
 				BML_ULOCK(bml);
-				mp->bidrc[i] = mds_bmap_bml_release(bml);
-			} else {
+				(int)mds_bmap_bml_release(bml);
+			} else
 				BML_ULOCK(bml);
-				mp->bidrc[i] = 0;
-			}
 		}
 		/* bmap_op_done_type will drop the lock.
 		 */
@@ -1258,7 +1255,7 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 {
 	struct fidc_membh *f = NULL;
 	struct bmapc_memb *b = NULL;
-	struct bmap_ion_assign *bia;
+	struct bmap_ios_assign *bia;
 	struct bmap_mds_lease *bml;
 	struct slash_fidgen fg;
 	struct sl_resm *resm;
@@ -1266,11 +1263,11 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 
 	bia = data;
 
-	resm = libsl_nid2resm(bia->bia_ion_nid);
+	resm = libsl_ios2resm(bia->bia_ios);
 
-	psclog_debug("fid="SLPRI_FID" seq=%"PRId64" res=(%s) ion=(%s) bmapno=%u",
+	psclog_debug("fid="SLPRI_FID" seq=%"PRId64" res=(%s) bmapno=%u",
 	    bia->bia_fid, bia->bia_seq, resm->resm_res->res_name,
-	    libcfs_nid2str(bia->bia_ion_nid), bia->bia_bmapno);
+	    bia->bia_bmapno);
 
 	if (!bia->bia_fid) {
 		psclog_warnx("found fid #0 in odtable");
@@ -1303,7 +1300,7 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 		  &bia->bia_lastcli);
 
 	bml->bml_seq = bia->bia_seq;
-	bml->bml_ion_nid = bia->bia_ion_nid;
+	bml->bml_ios = bia->bia_ios;
 	/* Taking the lease origination time in this manner leaves
 	 *    us suscpetible to gross changes in the system time.
 	 */
@@ -1338,16 +1335,17 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 /**
  * mds_bmap_crc_write - Process a CRC update request from an ION.
  * @c: the RPC request containing the FID, bmapno, and chunk ID (cid).
- * @ion_nid:  the network ID of the I/O node which sent the request.  It is
- *	compared against the ID stored in the bmi.
+ * @ios:  the IOS ID of the I/O node which sent the request.  It is
+ *	compared against the ID stored in the bml
  */
 int
-mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
+mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
     const struct srm_bmap_crcwrt_req *mq)
 {
 	struct bmapc_memb *bmap = NULL;
 	struct bmap_mds_info *bmi;
 	struct fidc_membh *fcmh;
+	struct sl_resource *res = libsl_id2res(ios);
 	int rc;
 
 	rc = slm_fcmh_get(&c->fg, &fcmh);
@@ -1391,8 +1389,8 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
 	}
 	BMAP_LOCK(bmap);
 
-	DEBUG_BMAP(PLL_INFO, bmap, "blkno=%u sz=%"PRId64" ion=%s",
-	    c->blkno, c->fsize, libcfs_nid2str(ion_nid));
+	DEBUG_BMAP(PLL_INFO, bmap, "blkno=%u sz=%"PRId64" ios(%s)",
+	    c->blkno, c->fsize, res->res_name);
 
 	psc_assert(psc_atomic32_read(&bmap->bcm_opcnt) > 1);
 
@@ -1403,7 +1401,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
 	psc_assert(bmi);
 
 	if (!bmi->bmdsi_wr_ion ||
-	    ion_nid != resm_2_nid(bmi->bmdsi_wr_ion->rmmi_resm)) {
+	    ios != bmi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id) {
 		/* Whoops, we recv'd a request from an unexpected NID.
 		 */
 		rc = -EINVAL;
@@ -1418,12 +1416,12 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
 		BMAP_ULOCK(bmap);
 
 		DEBUG_BMAP(PLL_ERROR, bmap,
-		    "EALREADY blkno=%u sz=%"PRId64" ion=%s",
-		    c->blkno, c->fsize, libcfs_nid2str(ion_nid));
+		    "EALREADY blkno=%u sz=%"PRId64" ios(%s)",
+		    c->blkno, c->fsize, res->res_name);
 
 		DEBUG_FCMH(PLL_ERROR, fcmh,
-		    "EALREADY blkno=%u sz=%"PRId64" ion=%s",
-		    c->blkno, c->fsize, libcfs_nid2str(ion_nid));
+		    "EALREADY blkno=%u sz=%"PRId64" ios(%s)",
+		    c->blkno, c->fsize, res->res_name);
 		goto out;
 
 	} else {
@@ -1670,9 +1668,18 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	}
 	*bmap = b;
 
+	/* SLASH2 monotonic coherency sequence number assigned to this lease.
+	 */
 	sbd->sbd_seq = bml->bml_seq;
+	/* Stash the odtable key if this is a write lease.
+	 */
 	sbd->sbd_key = (rw == SL_WRITE) ?
 	    bml->bml_bmdsi->bmdsi_assign->odtr_key : BMAPSEQ_ANY;
+	/* Store the nid/pid of the client interface in the bmapdesc
+	 *   to deal properly deal with IONs on other LNETs.
+	 */
+	sbd->sbd_nid = exp->exp_connection->c_peer.nid;
+	sbd->sbd_pid = exp->exp_connection->c_peer.pid;
  out:
 	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 	return (rc);
@@ -1694,8 +1701,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	/* Lookup the original lease to ensure it actually exists.
 	 */
 	BMAP_LOCK(b);
-	obml = mds_bmap_getbml(b, exp->exp_connection->c_peer.nid,
-	       exp->exp_connection->c_peer.pid, sbd_in->sbd_seq);
+	obml = mds_bmap_getbml(b, sbd_in);
 	BMAP_ULOCK(b);
 
 	if (!obml) {
@@ -1703,16 +1709,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 		goto out;
 	}
 
-	if (sbd_in->sbd_ion_nid == LNET_NID_ANY) {
-		if (sbd_in->sbd_ios_id == IOS_ID_ANY)
-			rw = BML_READ;
-		else {
-			rc = EINVAL;
-			goto out;
-		}
-	} else
-		rw = BML_WRITE;
-
+	rw = (sbd_in->sbd_ios == IOS_ID_ANY) ? BML_READ : BML_WRITE;
 	bml = mds_bml_new(b, exp, rw, &exp->exp_connection->c_peer);
 
 	EXPORT_LOCK(exp);
@@ -1722,7 +1719,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	EXPORT_ULOCK(exp);
 
 	rc = mds_bmap_bml_add(bml, (rw == BML_READ ? SL_READ : SL_WRITE),
-	      sbd_in->sbd_ios_id);
+	      sbd_in->sbd_ios);
 	if (rc) {
 		if (rc == -SLERR_BMAP_DIOWAIT) {
 			EXPORT_LOCK(exp);
@@ -1751,13 +1748,11 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 		psc_assert(bmi->bmdsi_wr_ion);
 
 		sbd_out->sbd_key = bml->bml_bmdsi->bmdsi_assign->odtr_key;
-		sbd_out->sbd_ion_nid = resm_2_nid(bmi->bmdsi_wr_ion->rmmi_resm);
-		sbd_out->sbd_ios_id =
+		sbd_out->sbd_ios =
 			bmi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id;
 	} else {
 		sbd_out->sbd_key = BMAPSEQ_ANY;
-		sbd_out->sbd_ion_nid = LNET_NID_ANY;
-		sbd_out->sbd_ios_id = IOS_ID_ANY;
+		sbd_out->sbd_ios = IOS_ID_ANY;
 	}
 
 	BMAP_LOCK(b);
@@ -1915,8 +1910,8 @@ slm_ptrunc_prepare(struct slm_workrq *wkrq)
 			if (!psc_dynarray_exists(da, csvc) &&
 			    SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq,
 			    mq, mp) == 0) {
-				mq->bmaps[0].fid = fcmh_2_fid(fcmh);
-				mq->bmaps[0].bmapno = i;
+				mq->sbd[0].sbd_fg.fg_fid = fcmh_2_fid(fcmh);
+				mq->sbd[0].sbd_bmapno = i;
 				mq->nbmaps = 1;
 				SL_RSX_WAITREP(csvc, rq, mp);
 				pscrpc_req_finished(rq);

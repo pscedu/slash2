@@ -41,9 +41,10 @@ slcfg_init_resm(struct sl_resm *resm)
 	struct resm_cli_info *rmci;
 
 	rmci = resm2rmci(resm);
+	psc_dynarray_init(&resm->resm_nids);
 	psc_mutex_init(&rmci->rmci_mutex);
 	psc_multiwaitcond_init(&rmci->rmci_mwc, resm, PMWCF_WAKEALL,
-	    "csvc-%s", resm->resm_addrbuf);
+	    "csvc-%s", resm->resm_res->res_name);
 	lc_reginit(&rmci->rmci_async_reqs, struct slc_async_req,
 	    car_lentry, "aiorq-%s:%d", resm->resm_res->res_name, 0);
 }

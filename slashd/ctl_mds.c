@@ -227,9 +227,9 @@ slmctlrep_replpair_send(int fd, struct psc_ctlmsghdr *mh,
 	    MAX(rmmi0->rmmi_busyid, rmmi1->rmmi_busyid));
 
 	memset(scrp, 0, sizeof(*scrp));
-	strlcpy(scrp->scrp_addrbuf[0], m0->resm_addrbuf,
+	strlcpy(scrp->scrp_addrbuf[0], m0->resm_res->res_name,
 	    sizeof(scrp->scrp_addrbuf[0]));
-	strlcpy(scrp->scrp_addrbuf[1], m1->resm_addrbuf,
+	strlcpy(scrp->scrp_addrbuf[1], m1->resm_res->res_name,
 	    sizeof(scrp->scrp_addrbuf[1]));
 	scrp->scrp_avail = srl->srl_avail;
 	scrp->scrp_used = srl->srl_used;

@@ -164,7 +164,7 @@ main(int argc, char *argv[])
 	authbuf_checkkeyfile();
 	authbuf_readkeyfile();
 
-	libsl_init();
+	libsl_init((SLI_RIM_NBUFS + SLI_RIC_NBUFS + SLI_RII_NBUFS) * 2);
 
 	sl_drop_privs(allow_root_uid);
 
@@ -172,6 +172,12 @@ main(int argc, char *argv[])
 	fidc_init(sizeof(struct fcmh_iod_info), FIDC_ION_DEFSZ);
 	bim_init();
 	slvr_cache_init();
+
+	psc_poolmaster_init(&bmap_rls_poolmaster,
+	    struct bmap_iod_rls, bir_lentry, PPMF_AUTO, 64, 64, 0,
+	    NULL, NULL, NULL, "bmap_rls");
+	bmap_rls_pool = psc_poolmaster_getmgr(&bmap_rls_poolmaster);
+
 	sli_repl_init();
 
 	prefmds = globalConfig.gconf_prefmds;

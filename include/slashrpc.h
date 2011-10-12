@@ -218,8 +218,9 @@ struct srt_bmapdesc {
 	struct slash_fidgen	sbd_fg;
 	uint64_t		sbd_seq;
 	uint64_t		sbd_key;
-	uint64_t		sbd_ion_nid;	/* owning I/O node if write */
-	sl_ios_id_t		sbd_ios_id;
+	uint64_t                sbd_nid;
+	uint32_t                sbd_pid;
+	sl_ios_id_t		sbd_ios;
 	sl_bmapno_t		sbd_bmapno;
 	uint32_t		sbd_flags;
 	 int32_t		sbd__pad;
@@ -481,24 +482,14 @@ struct srm_bmap_iod_get {
 	 int32_t		_pad;
 } __packed;
 
-struct srm_bmap_id {
-	slfid_t			fid;
-	uint64_t		key;
-	uint64_t		seq;
-	uint64_t		cli_nid;
-	uint32_t		cli_pid;
-	sl_bmapno_t		bmapno;
-} __packed;
-
 #define MAX_BMAP_RELEASE	8
 struct srm_bmap_release_req {
-	struct srm_bmap_id	bmaps[MAX_BMAP_RELEASE];
+	struct srt_bmapdesc     sbd[MAX_BMAP_RELEASE];
 	uint32_t		nbmaps;
 	 int32_t		_pad;
 } __packed;
 
 struct srm_bmap_release_rep {
-	 int32_t		bidrc[MAX_BMAP_RELEASE];
 	 int32_t		rc;
 	 int32_t		_pad;
 } __packed;

@@ -493,7 +493,8 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	int i, j, rc = 0, locked;
 	struct slashrpc_cservice *csvc;
 	struct sl_resm *resm;
-	lnet_nid_t peernid, *nidp;
+	struct sl_resm_nid *resmnid;
+	lnet_nid_t peernid;
 	lnet_process_id_t *pp;
 	union lockmutex lm;
 
@@ -508,19 +509,20 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	else {
 		peernid = LNET_NID_ANY;
 		/* prefer directly connected NIDs */
-		DYNARRAY_FOREACH(nidp, i, peernids) {
+		DYNARRAY_FOREACH(resmnid, i, peernids) {
 			DYNARRAY_FOREACH(pp, j, &lnet_prids) {
-				if (LNET_NIDNET(*nidp) ==
+				if (LNET_NIDNET(resmnid->resmnid_nid) ==
 				    LNET_NIDNET(pp->nid)) {
-					peernid = *nidp;
+					peernid = resmnid->resmnid_nid;
 					goto foundnid;
 				}
 			}
 		}
  foundnid:
-		if (peernid == LNET_NID_ANY)
-			peernid = *(lnet_nid_t *)
-			    psc_dynarray_getpos(peernids, 0);
+		if (peernid == LNET_NID_ANY) {
+			resmnid = psc_dynarray_getpos(peernids, 0);
+			peernid = resmnid->resmnid_nid;
+		}
 	}
 	psc_assert(peernid != LNET_NID_ANY);
 

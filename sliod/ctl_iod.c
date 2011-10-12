@@ -488,7 +488,7 @@ slictlrep_getreplwkst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		srws->srws_bmapno = w->srw_bmapno;
 		srws->srws_data_tot = SLASH_SLVR_SIZE * w->srw_nslvr_tot;
 		srws->srws_data_cur = SLASH_SLVR_SIZE * w->srw_nslvr_cur;
-		strlcpy(srws->srws_peer_addr, resm->resm_addrbuf,
+		strlcpy(srws->srws_peer_addr, resm->resm_res->res_name,
 		    sizeof(srws->srws_peer_addr));
 
 		rc = psc_ctlmsg_sendv(fd, mh, srws);

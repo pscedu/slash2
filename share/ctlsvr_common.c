@@ -83,7 +83,7 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 			continue;
 
 		slctl_fillconn(scc, resm->resm_csvc);
-		strlcpy(scc->scc_addrbuf, resm->resm_addrbuf,
+		strlcpy(scc->scc_addrbuf, resm->resm_res->res_name,
 		    sizeof(scc->scc_addrbuf));
 		scc->scc_type = r->res_type;
 

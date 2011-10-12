@@ -35,6 +35,10 @@ extern char	 cfg_filename[];
 extern int	 cfg_lineno;
 
 extern char	*yylval;
+
+extern struct sl_site	  *currentSite;
+extern struct sl_resource *currentRes;
+extern struct sl_resm	  *currentResm;
 %}
 
 %option nounput
@@ -58,8 +62,7 @@ set		{ return (SET); }
 site		{ return (SITE_PROFILE); }
 resource	{ return (RESOURCE_PROFILE); }
 peers|ios	{ return (PEERS); }
-ifs		{ yywarn("`ifs' deprecated by `nodes'"); return (NODES); }
-nodes		{ return (NODES); }
+nids		{ return (NIDS); }
 
 yes|no {
 	psclog_trace("BOOL %s", yytext);
@@ -67,7 +70,18 @@ yes|no {
 	return (BOOL);
 }
 
-parallel_fs|standalone_fs|archival_fs|mds|cluster_noshare_fs|compute {
+parallel_lfs|cluster_noshare_lfs|compute {
+	psclog_trace("Resource type string %s", yytext);
+	yylval = pfl_strdup(yytext);
+	return (RESOURCE_TYPE);
+}
+
+parallell_lfs_compnt|standalone_fs|archival_fs|mds {
+        psc_assert(!currentResm);
+        currentResm = PSCALLOC(sizeof(struct sl_resm) + cfg_resm_pri_sz); 
+	slcfg_init_resm(currentResm);
+	psc_dynarray_add(&currentRes->res_members, currentResm);
+        currentResm->resm_res = currentRes;
 	psclog_trace("Resource type string %s", yytext);
 	yylval = pfl_strdup(yytext);
 	return (RESOURCE_TYPE);
