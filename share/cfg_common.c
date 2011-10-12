@@ -169,14 +169,6 @@ libsl_nid2resm(lnet_nid_t nid)
 	    pscrpc_nid2str(nid, nidbuf));
 }
 
-sl_ios_id_t
-libsl_nid2ios(lnet_nid_t nid)
-{
-	struct sl_resm *resm = libsl_nid2resm(nid);
-
-	return (resm->resm_res->res_id);
-}
-
 struct sl_resource *
 libsl_str2res(const char *res_name)
 {
