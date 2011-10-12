@@ -209,21 +209,18 @@ struct srt_authbuf_secret {
 struct srt_authbuf_footer {
 	struct srt_authbuf_secret saf_secret;
 	char			saf_hash[AUTHBUF_REPRLEN];
-	char			saf__pad[3];
+	char			saf__pad[PSC_ALIGN(AUTHBUF_REPRLEN, 8) - AUTHBUF_REPRLEN];
 } __packed;
-
-#define SRM_NIDS_MAX		8
 
 struct srt_bmapdesc {
 	struct slash_fidgen	sbd_fg;
 	uint64_t		sbd_seq;
 	uint64_t		sbd_key;
-	uint64_t                sbd_nid;
-	uint32_t                sbd_pid;
+	uint64_t		sbd_nid;
+	uint32_t		sbd_pid;
 	sl_ios_id_t		sbd_ios;
 	sl_bmapno_t		sbd_bmapno;
 	uint32_t		sbd_flags;
-	 int32_t		sbd__pad;
 } __packed;
 
 /* SLASH RPC transportably safe structures. */
@@ -262,12 +259,16 @@ struct srt_stat {
 	    "nlink:%"PRIu64" uid:%u gid:%u "				\
 	    "rdev:%"PRIu64" sz:%"PRIu64" "				\
 	    "blksz:%"PRIu64" blkcnt:%"PRIu64" "				\
-	    "atime:%"PRIu64" mtime:%"PRIu64" ctime:%"PRIu64" " fmt,	\
+	    "atime:%"PRIu64":%"PRIu64" "				\
+	    "mtime:%"PRIu64":%"PRIu64" "				\
+	    "ctime:%"PRIu64":%"PRIu64" " fmt,				\
 	    (sstb), (sstb)->sst_dev, (sstb)->sst_mode,			\
 	    (sstb)->sst_nlink, (sstb)->sst_uid, (sstb)->sst_gid,	\
 	    (sstb)->sst_rdev, (sstb)->sst_size,				\
 	    (sstb)->sst_blksize, (sstb)->sst_blocks,			\
-	    (sstb)->sst_atime, (sstb)->sst_mtime, (sstb)->sst_ctime, ## __VA_ARGS__)
+	    (sstb)->sst_atime, (sstb)->sst_atime_ns,			\
+	    (sstb)->sst_mtime, (sstb)->sst_mtime_ns,			\
+	    (sstb)->sst_ctime, (sstb)->sst_ctime_ns, ## __VA_ARGS__)
 
 struct srt_statfs {
 	uint64_t		sf_bsize;	/* file system block size */
@@ -350,15 +351,16 @@ struct srm_forward_req {
 	slfid_t			fid;		/* new fid provided by the peer MDS */
 	union {
 		struct srt_stat	sstb;
-		char		name[SL_TWO_NAME_MAX + 2];
+		char		name[PSC_ALIGN(SL_TWO_NAME_MAX + 2, 8)];
 	} req;
 } __packed;
 
 struct srm_forward_rep {
 	struct srt_stat		cattr;		/* child node */
 	struct srt_stat		pattr;		/* parent dir */
-	 int32_t		rc;		/* return code, 0 for success or slerrno */
+	struct srt_stat		opattr;		/* old parent dir */
 	slfid_t			fid;		/* provided by the peer MDS */
+	 int32_t		rc;		/* return code, 0 for success or slerrno */
 	 int32_t		_pad;
 } __packed;
 
@@ -484,7 +486,7 @@ struct srm_bmap_iod_get {
 
 #define MAX_BMAP_RELEASE	8
 struct srm_bmap_release_req {
-	struct srt_bmapdesc     sbd[MAX_BMAP_RELEASE];
+	struct srt_bmapdesc	sbd[MAX_BMAP_RELEASE];
 	uint32_t		nbmaps;
 	 int32_t		_pad;
 } __packed;
@@ -550,7 +552,7 @@ struct srm_connect_req {
 	uint64_t		magic;
 	uint32_t		version;
 	 int32_t		nnids;
-	uint64_t		nids[SRM_NIDS_MAX];
+	uint64_t		nids[8];
 	uint64_t		fsuuid;
 	 int32_t		stkvers;
 	 int32_t		_pad;
@@ -803,9 +805,13 @@ struct srm_rename_req {
 /* 'from' and 'to' component names are in bulk data without terminating NULs */
 } __packed;
 
-#define srm_rename_rep		srm_getattr2_rep
-#define srr_npattr		cattr
-#define srr_opattr		pattr
+struct srm_rename_rep {
+	struct srt_stat		srr_npattr;	/* new parent */
+	struct srt_stat		srr_opattr;	/* old parent */
+	struct srt_stat		srr_cattr;	/* child node */
+	 int32_t		rc;
+	 int32_t		_pad;
+} __packed;
 
 struct srm_replrq_req {
 	struct slash_fidgen	fg;
