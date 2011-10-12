@@ -23,7 +23,7 @@
 /* Begin hand computed */
 
 #define FIDC_MDS_DEFSZ		(32 * 1024)
-#define FIDC_CLI_DEFSZ		( 2 * 1024)
+#define FIDC_CLI_DEFSZ		64
 #define FIDC_ION_DEFSZ		(32 * 1024)
 
 #define SLASH_SLVRS_PER_BMAP	128
