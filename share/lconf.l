@@ -76,7 +76,7 @@ parallel_lfs|cluster_noshare_lfs|compute {
 	return (RESOURCE_TYPE);
 }
 
-parallell_lfs_compnt|standalone_fs|archival_fs|mds {
+parallel_lfs_compnt|standalone_fs|archival_fs|mds {
 	psc_assert(!currentResm);
 	currentResm = PSCALLOC(sizeof(struct sl_resm) + cfg_resm_pri_sz);
 	slcfg_init_resm(currentResm);

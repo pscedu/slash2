@@ -629,7 +629,7 @@ slcfg_str2restype(const char *res_type)
 {
 	if (!strcmp(res_type, "parallel_lfs"))
 		return (SLREST_PARALLEL_LFS);
-	if (!strcmp(res_type, "parallel_compnt"))
+	if (!strcmp(res_type, "parallel_lfs_compnt"))
 		return (SLREST_PARALLEL_COMPNT);
 	if (!strcmp(res_type, "standalone_fs"))
 		return (SLREST_STANDALONE_FS);
