@@ -1400,7 +1400,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 	psc_assert(bmi);
 
 	if (!bmi->bmdsi_wr_ion ||
-	    ios != bmi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id) {
+	    ios != bmi->bmdsi_wr_ion->rmmi_resm->resm_res_id) {
 		/* Whoops, we recv'd a request from an unexpected NID.
 		 */
 		rc = -EINVAL;
