@@ -39,14 +39,14 @@ struct pscrpc_request;
 
 /* SLASH RPC channel for CLI from MDS. */
 #define SRCM_NTHREADS			8
-#define SRCM_NBUFS			64
+#define SRCM_NBUFS			256
 #define SRCM_BUFSZ			512
 #define SRCM_REPSZ			512
 #define SRCM_SVCNAME			"msrcm"
 
 /* SLASH RPC channel for CLI from ION. */
 #define SRCI_NTHREADS			8
-#define SRCI_NBUFS			64
+#define SRCI_NBUFS			256
 #define SRCI_BUFSZ			512
 #define SRCI_REPSZ			512
 #define SRCI_SVCNAME			"msrci"
