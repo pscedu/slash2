@@ -118,7 +118,7 @@ struct slconf_symbol sym_table[] = {
 	TABENT_VAR("routes",		SL_TYPE_STR,	NAME_MAX,	gconf_routes,	NULL),
 	TABENT_VAR("zpool_cache",	SL_TYPE_STR,	PATH_MAX,	gconf_zpcachefn,NULL),
 	TABENT_VAR("zpool_name",	SL_TYPE_STR,	NAME_MAX,	gconf_zpname,	NULL),
-	TABENT_VAR("fsuuid",	        SL_TYPE_HEXU64,	0,	        gconf_fsuuid,	NULL),
+	TABENT_VAR("fsuuid",		SL_TYPE_HEXU64,	0,		gconf_fsuuid,	NULL),
 
 	TABENT_SITE("site_desc",	SL_TYPE_STRP,	0,		site_desc,	NULL),
 	TABENT_SITE("site_id",		SL_TYPE_INT,	SITE_MAXID,	site_id,	NULL),
@@ -134,7 +134,6 @@ struct slconf_symbol sym_table[] = {
 struct sl_gconf		   globalConfig;
 struct sl_resm		  *nodeResm;
 
-int			   cfg_nid_counter = -1;
 int			   cfg_errors;
 int			   cfg_lineno;
 char			   cfg_filename[PATH_MAX];
@@ -142,9 +141,9 @@ struct psclist_head	   cfg_files = PSCLIST_HEAD_INIT(cfg_files);
 struct ifaddrs		  *cfg_ifaddrs;
 PSCLIST_HEAD(cfg_lnetif_pairs);
 
-struct sl_site	  *currentSite;
-struct sl_resource *currentRes;
-struct sl_resm	  *currentResm;
+struct sl_site		  *currentSite;
+struct sl_resource	  *currentRes;
+struct sl_resm		  *currentResm;
 %}
 
 %start config
@@ -346,14 +345,14 @@ peer		: NAME '@' NAME {
 nidslist	: NIDS '=' nids ';'
 		;
 
-nids		: nid			{ cfg_nid_counter++; }
+nids		: nid
 		| nid nidsep nids
 		;
 
-nidsep		: ','			{ cfg_nid_counter++; }
+nidsep		: ','
 		;
 
-nid	        : IPADDR '@' LNETNAME	{ slcfg_resm_addaddr($1, $3); PSCFREE($3); }
+nid		: IPADDR '@' LNETNAME	{ slcfg_resm_addaddr($1, $3); PSCFREE($3); }
 		| IPADDR		{ slcfg_resm_addaddr($1, NULL); }
 		| NAME '@' LNETNAME	{ slcfg_resm_addaddr($1, $3); PSCFREE($3); }
 		| NAME			{ slcfg_resm_addaddr($1, NULL); }
@@ -535,11 +534,12 @@ slcfg_add_lnet(uint32_t lnet, char *ifn)
 void
 slcfg_resm_addaddr(char *addr, const char *lnetname)
 {
-	static int nidcnt, init;
+	static int init;
 	char ifn[IFNAMSIZ], *ifv[1], *sp, *tnam;
 	struct addrinfo hints, *res, *res0;
-	union pfl_sockaddr_ptr sa;
 	struct sl_resm *m = currentResm;
+	struct sl_resm_nid *resm_nidp;
+	union pfl_sockaddr_ptr sa;
 	uint32_t lnet;
 	in_addr_t ip;
 	int rc;
@@ -602,33 +602,24 @@ slcfg_resm_addaddr(char *addr, const char *lnetname)
 		if (rc)
 			slcfg_add_lnet(lnet, ifn);
 
-		if (nidcnt == cfg_nid_counter) {
-			struct sl_resm_nid *resm_nidp;
+		resm_nidp = PSCALLOC(sizeof(*resm_nidp));
+		resm_nidp->resmnid_nid = LNET_MKNID(lnet, ip);
+		if (libsl_try_nid2resm(resm_nidp->resmnid_nid))
+			yyerror("NID already registered");
 
- addnid:
-			resm_nidp = PSCALLOC(sizeof(*resm_nidp));
-			resm_nidp->resmnid_nid = LNET_MKNID(lnet, ip);
-			if (libsl_try_nid2resm(resm_nidp->resmnid_nid))
-				yyerror("NID already registered");
-
-			rc = snprintf(resm_nidp->resmnid_addrbuf, 
-			      sizeof(resm_nidp->resmnid_addrbuf),
-			      "%s:%s", currentRes->res_name, addr);
-			if (rc >= (int)sizeof(resm_nidp->resmnid_addrbuf)) {
-				errno = ENAMETOOLONG;
-				rc = -1;
-			}
-			if (rc == -1)
-				yyerror("resource member %s address %s: %s",
-					currentRes->res_name, addr, slstrerror(errno));
-			
-			psc_dynarray_add(&m->resm_nids, resm_nidp);
-			continue;
+		rc = snprintf(resm_nidp->resmnid_addrbuf,
+		      sizeof(resm_nidp->resmnid_addrbuf),
+		      "%s:%s", currentRes->res_name, addr);
+		if (rc >= (int)sizeof(resm_nidp->resmnid_addrbuf)) {
+			errno = ENAMETOOLONG;
+			rc = -1;
 		}
+		if (rc == -1)
+			yyerror("resource member %s address %s: %s",
+			    currentRes->res_name, addr,
+			    slstrerror(errno));
 
-
-		nidcnt = cfg_nid_counter;
-		goto addnid;
+		psc_dynarray_add(&m->resm_nids, resm_nidp);
 	}
 	freeaddrinfo(res0);
 }

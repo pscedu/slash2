@@ -716,8 +716,6 @@ main(int argc, char *argv[])
 
 	PRVALX(FID_ANY);
 
-	PRVAL(sizeof(((struct sl_resm *)NULL)->resm_addrbuf));
-
 	psc_crc64_calc(&crc, buf, sizeof(buf));
 	printf("NULL 1MB buf CRC is %"PSCPRIxCRC64"\n", crc);
 
