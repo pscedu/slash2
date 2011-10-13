@@ -908,7 +908,8 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc == 0 && mp->cattr.sst_fid) {
 		rc = msl_load_fcmh(pfr, mp->cattr.sst_fid, &c);
 		if (!rc)
-			fcmh_setattr(c, &mp->cattr);
+			fcmh_setattrf(c, &mp->cattr,
+			    FCMH_SETATTRF_SAVELOCAL);
 	}
 
  out:
@@ -1687,7 +1688,8 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 			goto out;
 	}
 	if (mp->srr_cattr.sst_fid)
-		fcmh_setattr(c, &mp->srr_cattr);
+		fcmh_setattrf(c, &mp->srr_cattr,
+		    FCMH_SETATTRF_SAVELOCAL);
 
  out:
 	if (c)
