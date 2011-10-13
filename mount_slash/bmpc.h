@@ -285,6 +285,7 @@ struct bmpc_ioreq {
 #define BIORQ_RBWFAIL			(1 << 13)
 #define BIORQ_AIOWAIT			(1 << 14)
 #define BIORQ_RESCHED			(1 << 15)
+#define BIORQ_ARCHIVER			(1 << 16)
 
 #define BIORQ_LOCK(r)			spinlock(&(r)->biorq_lock)
 #define BIORQ_ULOCK(r)			freelock(&(r)->biorq_lock)
@@ -485,6 +486,8 @@ bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len,
 
 	if (bmap->bcm_flags & BMAP_DIO)
 		ioreq->biorq_flags |= BIORQ_DIO;
+	if (bmap->bcm_flags & BMAP_ARCHIVER)
+		ioreq->biorq_flags |= BIORQ_ARCHIVER;
 }
 
 static __inline int

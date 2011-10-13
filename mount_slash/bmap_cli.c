@@ -111,7 +111,7 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 		 *    IO's are direct.
 		 */
 		BMAP_LOCK(b);
-		b->bcm_flags |= BMAP_DIO;
+		b->bcm_flags |= BMAP_DIO | BMAP_ARCHIVER;
 		BMAP_ULOCK(b);
 
 		msl_bmap_cache_rls(b);

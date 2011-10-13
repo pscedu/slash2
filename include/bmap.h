@@ -136,7 +136,7 @@ struct bmapc_memb {
 #define BMAP_ORPHAN		(1 << 13)	/* removed from fcmh_bmaptree */
 #define BMAP_BUSY		(1 << 14)	/* temporary processing lock */
 #define BMAP_NEW		(1 << 15)	/* just created */
-#define BMAP_AVAILABLE		(1 << 16)	/* available */
+#define BMAP_ARCHIVER		(1 << 16)	/* archiver */
 #define _BMAP_FLSHFT		(1 << 17)
 
 #define BMAP_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bcm_lock)
