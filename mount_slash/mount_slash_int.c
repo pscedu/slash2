@@ -1210,7 +1210,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *bufp)
 
 		authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 		pscrpc_set_add_new_req(r->biorq_rqset, rq);
-		if (pscrpc_push_req(rq)) {
+		rc = pscrpc_push_req(rq);
+		if (rc) {
 			pscrpc_set_remove_req(r->biorq_rqset, rq);
 			goto error;
 		}
