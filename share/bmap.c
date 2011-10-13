@@ -376,7 +376,6 @@ _dump_bmap_flags_common(uint32_t *flags, int *seq)
 	PFL_PRFLAG(BMAP_ORPHAN, flags, seq);
 	PFL_PRFLAG(BMAP_BUSY, flags, seq);
 	PFL_PRFLAG(BMAP_NEW, flags, seq);
-	PFL_PRFLAG(BMAP_DIOWR, flags, seq);
 }
 
 __weak void
