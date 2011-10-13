@@ -295,17 +295,16 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	}
 
 	/*
-	 * If the above lookup is a success, we hold the lock, but
-	 * we haven't take a reference yet.  Also, we need to keep
-	 * the bucket lock in case we need to insert a new item.
+	 * If the above lookup is a success, we hold the lock, but we
+	 * haven't take a reference yet.  Also, we need to keep the
+	 * bucket lock in case we need to insert a new item.
 	 */
 	if (fcmh) {
 		psc_hashbkt_unlock(b);
 		/*
 		 * Test to see if we jumped here from fidcFreeList.
-		 * Note an unlucky thread could find that the fid
-		 * does not exist before allocation and exist after
-		 * that.
+		 * Note an unlucky thread could find that the fid does
+		 * not exist before allocation and exist after that.
 		 */
 		if (try_create) {
 			fcmh_put(fcmh_new);
@@ -326,8 +325,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 
 		FCMH_ULOCK(fcmh);
 		*fcmhp = fcmh;
-		rc = 0;
-		goto out;
+		return (0);
 	}
 
 	/* We have failed to find a match in the cache */
@@ -340,17 +338,16 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 		}
 	 } else {
 		/*
-		 * FIDC_LOOKUP_CREATE was not specified and the fcmh
-		 *  is not present.
+		 * FIDC_LOOKUP_CREATE was not specified and the fcmh is
+		 * not present.
 		 */
 		psc_hashbkt_unlock(b);
-		rc = ENOENT;
-		goto out;
+		return (ENOENT);
 	}
 
 	/*
-	 * OK, we've got a new fcmh.  No need to lock it since
-	 *  it's not yet visible to other threads.
+	 * OK, we've got a new fcmh.  No need to lock it since it's not
+	 * yet visible to other threads.
 	 */
 	fcmh = fcmh_new;
 
@@ -368,9 +365,9 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 
 	/*
 	 * Add the new item to the hash list, but mark it as INITING.
-	 * If we fail to initialize it, we should mark it as TOFREE
-	 * and leave it around for the reaper to free it.  Note that
-	 * the item is not on any list yet.
+	 * If we fail to initialize it, we should mark it as TOFREE and
+	 * leave it around for the reaper to free it.  Note that the
+	 * item is not on any list yet.
 	 */
 	fcmh->fcmh_flags |= FCMH_CAC_INITING;
 	psc_hashbkt_add_item(&fidcHtable, b, fcmh);
@@ -424,7 +421,6 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 		fcmh_op_start_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
 	}
- out:
 	return (rc);
 }
 
