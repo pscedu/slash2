@@ -14,7 +14,7 @@
 .\" without express or implied warranty.
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
-.Dd July 11, 2011
+.Dd October 13, 2011
 .Dt SLCFG 5
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -55,8 +55,7 @@ The following variables may be set:
 .It Ic allow_exec
 Optional executable
 .Xr open 2
-access list
-.Pq .
+access list.
 This setting applies to
 .Xr mount_slash 8
 only.
@@ -81,18 +80,15 @@ This setting applies to
 .Xr slashd 8
 only.
 .It Ic nets
-Lustre network name(s), separated by commas.
-This may alternatively be the value of
-.Ev LNET_NETWORKS
-in its entirety.
-See
-.Ev LNET_NETWORKS
-in
+This value is used to specify environment variable
+.Ev LNET_IP2NETS
+.Po see
 .Xr slashd 8 ,
 .Xr mount_slash 8 ,
 or
 .Xr sliod 8
-for more information.
+for more information
+.Pc .
 .It Ic port
 .Tn TCP
 port used to establish connections to
@@ -114,6 +110,16 @@ This setting applies to
 and
 .Xr mount_slash 8
 only.
+.It Ic routes
+This value, if specified, is used to specify the environment variable
+.Ev LNET_ROUTES
+.Po see
+.Xr slashd 8 ,
+.Xr mount_slash 8 ,
+or
+.Xr sliod 8
+for more information
+.Pc .
 .It Ic zpool_name
 The
 .Tn ZFS
@@ -180,10 +186,26 @@ following variables:
 .Bl -tag -offset 3n -width Ds -compact
 .It Ic desc
 Short description of this resource.
+.It Ic fsroot
+Analogous to the
+.Ic fs_root
+variable setting.
 .It Ic id
 Numerical identifier for resource, required to be unique for all
 resources.
-.It Ic nodes
+.It Ic ios
+One or more resource names comprising the cluster
+.Po only applies to
+.Ic cluster_noshare_lfs
+and
+.Ic parallel_lfs
+types
+.Pc .
+.It Ic jrnldev
+Analogous to the
+.Ic journal
+variable setting.
+.It Ic nids
 One or more addresses denoting machines belonging to this resource.
 .It Ic peers
 List of peers separated by commas of communication resource partners in
@@ -195,23 +217,29 @@ characteristics:
 .Pp
 .Bl -tag -width cluster_noshare_fsX -offset 3n -compact
 .It Ic archival_fs
-Potentially long delay storage e.g. tape archiver systems.
-.It Ic cluster_noshare_fs
-Non-coherent shared file systems.
-.It Ic compute
-Computational resources.
+Potentially long delay storage e.g. tape archiver systems
 .It Ic mds
 .Tn SLASH2
-metadata servers.
-.It Ic parallel_fs
-Shared parallel file systems.
+metadata servers
+.It Ic parallel_lfs_compnt
+Node in shared parallel file system
 .It Ic standalone_fs
-Independent file systems.
+Independent file systems
+.El
+.Pp
+Resource clusters can also be specified which are composed of other
+resources:
+.Pp
+.Bl -tag -width cluster_noshare_fsX -offset 3n -compact
+.It Ic cluster_noshare_lfs
+Non-coherent shared file systems
+.It Ic parallel_fs
+Shared parallel file systems
 .El
 .El
 .Sh FILES
 .Bl -tag -width Pa -compact
-.It Pa /etc/slash/main.slcfg
+.It Pa /etc/slash/slcfg
 default
 .Tn SLASH
 resource configuration
@@ -221,57 +249,58 @@ The following is an example
 .Nm slcfg :
 .Bd -literal
 set port=1000;
-set net=tcp10;
+set nets=tcp10;
 
 site @MYSITE {
 	site_desc	= "my site name";
 	site_id		= 1;
 
+	resource parfs0 { type = parallel_lfs_compnt; id = 100; nids = 128.182.112.110; }
+	resource parfs1 { type = parallel_lfs_compnt; id = 101; nids = 128.182.112.111; }
+	resource parfs2 { type = parallel_lfs_compnt; id = 102; nids = 128.182.112.112; }
+	resource parfs3 { type = parallel_lfs_compnt; id = 103; nids = 128.182.112.113; }
+
 	resource parfs {
 		desc	= "my parallel file system";
-		type	= parallel_fs;
-		id	= 1;
-		nodes	= 128.182.112.110,
-			  128.182.112.111,
-			  128.182.112.112,
-			  128.182.112.113;
-		peers	= supercomputer@MYSITE,
-			  bigstore@MYSITE;
+		type	= parallel_lfs;
+		id	= 199;
+		ios	= parfs0,
+			  parfs1,
+			  parfs2,
+			  parfs3;
+		peers	= bigstore@MYSITE;
 	}
+
+	resource bigstore0 { type = archival_fs; id = 200; nids = 128.182.112.242; }
+	resource bigstore1 { type = archival_fs; id = 201; nids = 128.182.112.240; }
+	resource bigstore2 { type = archival_fs; id = 202; nids = 128.182.112.105; }
+	resource bigstore3 { type = archival_fs; id = 203; nids = 128.182.112.226; }
 
 	resource bigstore {
 		desc	= "my archival storage system";
-		type	= archival_fs;
-		id	= 2;
-		nodes	= 128.182.112.242,
-			  128.182.112.240,
-			  128.182.112.105,
-			  128.182.112.226;
-		peers	= parfs@MYSITE;
-	}
-
-	resource supercomputer {
-		desc	= "my computation resource";
-		type	= compute;
-		id	= 3;
-		nodes	= login0, login1;
+		type	= cluster_noshare_lfs;
+		id	= 299;
+		ios	= bigstore0@MYSITE,
+			  bigstore1@MYSITE,
+			  bigstore2@MYSITE,
+			  bigstore3@MYSITE;
 		peers	= parfs@MYSITE;
 	}
 
 	resource user_pc {
 		desc	= "user home network";
-		type	= archival_fs;
-		id	= 4;
-		nodes	= 67.171.74.150;
+		type	= standalone_fs;
+		id	= 400;
+		nid	= 67.171.74.150;
 		peers	= parfs@MYSITE;
 	}
 
 	resource test {
 		desc	= "test network";
 		type	= mds;
-		id	= 5;
+		id	= 500;
 		fsroot	= /tmp/slashfs;
-		nodes	= 10.32.5.82;
+		nid	= 10.32.5.82;
 		peers	= parfs@MYSITE;
 	}
 }
