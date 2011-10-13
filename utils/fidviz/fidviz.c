@@ -38,7 +38,7 @@ main(int argc, char *argv[])
 		usage();
 
 	memset(&fg, 0, sizeof(fg));
-	fg.fg_fid = strtoll(argv[0], &endp, 16);
+	fg.fg_fid = strtoull(argv[0], &endp, 16);
 	if (endp == argv[0] || *endp)
 		errx(1, "%s: invalid FID", argv[0]);
 
