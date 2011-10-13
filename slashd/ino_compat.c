@@ -144,13 +144,14 @@ mds_inode_update(struct slash_inode_handle *ih, int old_version)
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	mdsio_unlink(mds_tmpdir_inum, NULL, fn, &rootcreds, NULL);
+	mdsio_unlink(mds_tmpdir_inum, NULL, fn, &rootcreds, NULL, NULL);
 
  out:
 	if (h)
 		mdsio_release(&rootcreds, h);
 	if (rc) {
-		mdsio_unlink(mds_tmpdir_inum, NULL, fn, &rootcreds, NULL);
+		mdsio_unlink(mds_tmpdir_inum, NULL, fn, &rootcreds,
+		    NULL, NULL);
 		DEBUG_INOH(PLL_ERROR, ih, "error updating old inode "
 		    "rc=%d", rc);
 	}
@@ -221,12 +222,12 @@ mds_inode_update_interrupted(struct slash_inode_handle *ih, int *rc)
 	if (*rc)
 		PFL_GOTOERR(out, *rc);
 
-	mdsio_unlink(mds_tmpdir_inum, NULL, fn, &rootcreds, NULL);
+	mdsio_unlink(mds_tmpdir_inum, NULL, fn, &rootcreds, NULL, NULL);
 
  out:
 	if (h)
 		mdsio_release(&rootcreds, h);
-	mdsio_unlink(mds_tmpdir_inum, NULL, fn, &rootcreds, NULL);
+	mdsio_unlink(mds_tmpdir_inum, NULL, fn, &rootcreds, NULL, NULL);
 	inoh_2_mdsio_data(ih) = th;
 	return (exists);
 }

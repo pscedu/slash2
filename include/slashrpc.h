@@ -858,7 +858,7 @@ struct srm_unlink_req {
 	char			name[SL_NAME_MAX + 1];
 } __packed;
 
-#define srm_unlink_rep		srm_getattr_rep
+#define srm_unlink_rep		srm_getattr2_rep
 
 /* ---------------------- BEGIN IMPORT/EXPORT MESSAGES ---------------------- */
 

@@ -1000,15 +1000,15 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 
 	if (IS_REMOTE_FID(mq->pfid)) {
 		mp->rc = slm_rmm_forward_namespace(isfile ?
-		    SLM_FORWARD_UNLINK : SLM_FORWARD_RMDIR, &fg,
-		    NULL, mq->name, NULL, 0, NULL, NULL, 0);
+		    SLM_FORWARD_UNLINK : SLM_FORWARD_RMDIR, &fg, NULL,
+		    mq->name, NULL, 0, NULL, NULL, 0);
 		goto out;
 	}
 
 	mds_reserve_slot(1);
 	if (isfile)
 		mp->rc = mdsio_unlink(fcmh_2_mdsio_fid(p), NULL,
-		    mq->name, &rootcreds, mdslog_namespace);
+		    mq->name, &rootcreds, mdslog_namespace, &mp->cattr);
 	else
 		mp->rc = mdsio_rmdir(fcmh_2_mdsio_fid(p), NULL,
 		    mq->name, &rootcreds, mdslog_namespace);
@@ -1016,7 +1016,7 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 
  out:
 	if (mp->rc == 0)
-		mdsio_fcmh_refreshattr(p, &mp->attr);
+		mdsio_fcmh_refreshattr(p, &mp->pattr);
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 	psclog_info("unlink parent="SLPRI_FID" name=%s rc=%d",

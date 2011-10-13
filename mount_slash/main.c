@@ -179,8 +179,8 @@ _msl_create_fcmh(const struct pfl_callerinfo *pci,
     int setattrflags, struct fidc_membh **fcmhp)
 {
 	// XXX FIDC_LOOKUP_EXCL ?
-	return (_fidc_lookup(pci, &sstb->sst_fg, FIDC_LOOKUP_CREATE, sstb,
-	    setattrflags, fcmhp, pscfs_getclientctx(pfr)));
+	return (_fidc_lookup(pci, &sstb->sst_fg, FIDC_LOOKUP_CREATE,
+	    sstb, setattrflags, fcmhp, pscfs_getclientctx(pfr)));
 }
 
 void
@@ -831,9 +831,9 @@ __static int
 msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name, int isfile)
 {
+	struct fidc_membh *c = NULL, *p = NULL;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
-	struct fidc_membh *p = NULL;
 	struct srm_unlink_req *mq;
 	struct srm_unlink_rep *mp;
 	struct slash_creds cr;
@@ -896,20 +896,24 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc == 0)
 		rc = mp->rc;
 
-	/* Lock to be released in fcmh_op_done_type()
-	 */
 	FCMH_LOCK(p);
 	if (!rc)
-		fcmh_setattr_locked(p, &mp->attr);
+		fcmh_setattr_locked(p, &mp->pattr);
 	if (DIRCACHE_INITIALIZED(p)) {
 		if (rc == 0 || rc == ENOENT)
 			dircache_lookup(fcmh_2_dci(p), name, DC_STALE);
 	} else
 		slc_fcmh_initdci(p);
 
-	/* XXX if fcmh being unlinked now has refcnt 0, purge it from fidcache? */
+	if (rc == 0 && mp->cattr.sst_fid) {
+		rc = msl_load_fcmh(pfr, mp->cattr.sst_fid, &c);
+		if (!rc)
+			fcmh_setattr(c, &mp->cattr);
+	}
 
  out:
+	if (c)
+		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 	if (rq)
@@ -1682,7 +1686,8 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		if (rc)
 			goto out;
 	}
-	fcmh_setattr(c, &mp->srr_cattr);
+	if (mp->srr_cattr.sst_fid)
+		fcmh_setattr(c, &mp->srr_cattr);
 
  out:
 	if (c)

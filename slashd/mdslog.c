@@ -240,7 +240,8 @@ mds_remove_logfile(uint64_t batchno, int update)
 		xmkfn(logfn, "%s.%d", SL_FN_UPDATELOG, batchno);
 	else
 		xmkfn(logfn, "%s.%d", SL_FN_RECLAIMLOG, batchno);
-	mdsio_unlink(mds_metadir_inum, NULL, logfn, &rootcreds, NULL);
+	mdsio_unlink(mds_metadir_inum, NULL, logfn, &rootcreds, NULL,
+	    NULL);
 }
 
 int
@@ -579,6 +580,7 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
     const char *name, const char *newname, void *arg)
 {
 	struct slmds_jent_namespace *sjnm;
+	struct fidc_membh *c;
 	int distill = 0;
 
 	if (op == NS_OP_SETATTR)
@@ -657,13 +659,20 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 	    newname ? "' newname='" : "", newname ? newname : "",
 	    mask, sstb->sst_size, sstb->sst_nlink, pfid, npfid, txg);
 
-	if (op == NS_OP_RENAME) {
-		struct fidc_membh *c;
-
+	switch (op) {
+	case NS_OP_UNLINK:
+		if (sstb->sst_nlink > 1 &&
+		    slm_fcmh_get(&sstb->sst_fg, &c) == 0) {
+			mdsio_fcmh_refreshattr(c, arg);
+			fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+		}
+		break;
+	case NS_OP_RENAME:
 		if (slm_fcmh_get(&sstb->sst_fg, &c) == 0) {
 			mdsio_fcmh_refreshattr(c, arg);
 			fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 		}
+		break;
 	}
 }
 

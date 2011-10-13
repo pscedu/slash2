@@ -197,7 +197,7 @@ uswi_trykill(struct up_sched_work_item *wk)
 		rc = ENAMETOOLONG;
 	else
 		rc = mdsio_unlink(mds_upschdir_inum, NULL, fn,
-		    &rootcreds, NULL);
+		    &rootcreds, NULL, NULL);
 	if (rc)
 		psclog_error("trying to remove upsch link: %s",
 		    slstrerror(rc));
@@ -1078,7 +1078,7 @@ upsched_scandir(void)
 				psclog_errorx("mds_repl_loadino: %s",
 				    slstrerror(rc));
 				mdsio_unlink(mds_upschdir_inum, NULL, fn,
-				    &rootcreds, NULL);
+				    &rootcreds, NULL, NULL);
 				continue;
 			}
 
