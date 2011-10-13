@@ -460,7 +460,7 @@ sl_csvc_create(uint32_t rqptl, uint32_t rpptl)
 }
 
 /**
- * sl_csvc_get - Acquire or create a client RPC service.
+ * _sl_csvc_get - Acquire or create a client RPC service.
  * @csvcp: value-result permanent storage for connection structures.
  * @flags: CSVCF_* flags the connection should take on, only used for
  *	csvc initialization.
