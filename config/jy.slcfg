@@ -20,15 +20,15 @@ site @PSC {
 		desc	= "lime metadata server";
 		type	= mds;
 		id	= 101;
-		nodes	= lime;
+		nids	= lime;
 	}
 
 	resource io {
 		desc	= "xmen I/O";
-		type	= parallel_fs;
+		type	= parallel_lfs_compnt;
 		id	= 102;
 		fsroot	= /home/slio-jy;
-		nodes	= wolverine;
+		nids	= wolverine;
 	}
 
 	resource kam {
@@ -36,7 +36,7 @@ site @PSC {
 		type	= standalone_fs;
 		id	= 103;
 		fsroot	= /slio-jy;
-		nodes	= kaminari;
+		nids	= kaminari;
 	}
 
 	resource cyclops {
@@ -44,15 +44,15 @@ site @PSC {
 		type	= standalone_fs;
 		id	= 104;
 		fsroot	= /usr/slio-jy;
-		nodes	= cyclops;
+		nids	= cyclops;
 	}
 
 	resource citron {
 		desc	= "fruit storage";
-		type	= standalone_fs;
+		type	= archival_fs;
 		id	= 105;
 		fsroot	= /local/jy.s2/io;
-		nodes	= citron;
+		nids	= citron;
 	}
 
 	resource orange {
@@ -60,6 +60,6 @@ site @PSC {
 		type	= standalone_fs;
 		id	= 106;
 		fsroot	= /local/jy.s2/io;
-		nodes	= orange;
+		nids	= orange;
 	}
 }
