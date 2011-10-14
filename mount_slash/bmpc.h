@@ -484,10 +484,12 @@ bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len,
 	ioreq->biorq_fhent = fhent;
 	ioreq->biorq_fsrqi = q;
 
+	BMAP_LOCK(bmap);
 	if (bmap->bcm_flags & BMAP_DIO)
 		ioreq->biorq_flags |= BIORQ_DIO;
 	if (bmap->bcm_flags & BMAP_ARCHIVER)
 		ioreq->biorq_flags |= BIORQ_ARCHIVER;
+	BMAP_ULOCK(bmap);
 }
 
 static __inline int
