@@ -17,6 +17,9 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#define PSC_SUBSYS SLSS_BMAP
+#include "slsubsys.h"
+
 #include <sys/time.h>
 #include <sys/types.h>
 
@@ -1044,10 +1047,10 @@ void
 msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 {
 	struct timespec crtime, nexttimeo = { 0, 0 };
-	struct psc_waitq waitq = PSC_WAITQ_INIT;
 	struct psc_dynarray rels = DYNARRAY_INIT;
-	struct resm_cli_info *rmci;
+	struct psc_waitq waitq = PSC_WAITQ_INIT;
 	struct bmap_cli_info *bci, *wrapdetect;
+	struct resm_cli_info *rmci;
 	struct bmapc_memb *b;
 	struct sl_resm *resm;
 	int i, sortbypass = 0, sawnew, rc;
@@ -1055,10 +1058,12 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 #define SORT_BYPASS_ITERS		32
 #define ITEMS_TRY_AFTER_UNEXPIRED	MAX_BMAP_RELEASE
 
-	// just put the resm's in the dynarray. when pushing out the bid's
-	//   assume an ion unless resm == slc_rmc_resm
-
-	for (sawnew = 0;; sawnew = 0) {
+	/*
+	 * XXX: just put the resm's in the dynarray.  When pushing out
+	 * the bid's, assume an ion unless resm == slc_rmc_resm.
+	 */
+	for (;;) {
+		sawnew = 0;
 		if (!sortbypass) {
 			lc_sort(&bmapTimeoutQ, qsort, bmap_cli_timeo_cmp);
 			sortbypass = SORT_BYPASS_ITERS;
@@ -1129,7 +1134,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) == 1);
 			/* Note that only this thread calls
 			 *   msl_bmap_release() so no reentrancy
-			 *   exist unless another rls thr is
+			 *   issues can exist unless another rls thr is
 			 *   introduced.
 			 */
 			psc_assert(!bmpc_queued_ios(&bci->bci_bmpc));
@@ -1138,7 +1143,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				/* Setup a msg to an ION.
 				 */
 				psc_assert(bmap_2_ios(b) !=
-					   IOS_ID_ANY);
+				    IOS_ID_ANY);
 
 				resm = libsl_ios2resm(bmap_2_ios(b));
 				rmci = resm2rmci(resm);
@@ -1151,11 +1156,11 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			}
 
 			psc_assert(rmci->rmci_bmaprls.nbmaps <
-				   MAX_BMAP_RELEASE);
+			    MAX_BMAP_RELEASE);
 
 			memcpy(&rmci->rmci_bmaprls.sbd[
-				 rmci->rmci_bmaprls.nbmaps],
-			       &bci->bci_sbd, sizeof(bci->bci_sbd));
+			    rmci->rmci_bmaprls.nbmaps],
+			    &bci->bci_sbd, sizeof(bci->bci_sbd));
 			rmci->rmci_bmaprls.nbmaps++;
 
 			/* The bmap should be going away now, this
@@ -1191,8 +1196,8 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 		timespecsub(&nexttimeo, &crtime, &nexttimeo);
 		psclogs_debug(SLSS_BMAP, "waited for ("PSCPRI_TIMESPEC")"
-		       " lc_sz=%zd", PSCPRI_TIMESPEC_ARGS(&nexttimeo),
-		       lc_sz(&bmapTimeoutQ));
+		    " lc_sz=%zd", PSCPRI_TIMESPEC_ARGS(&nexttimeo),
+		    lc_sz(&bmapTimeoutQ));
 	}
 	psc_dynarray_free(&rels);
 }
