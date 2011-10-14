@@ -464,6 +464,7 @@ iod_bmap_finalcleanup(struct bmapc_memb *b)
 	struct bmap_iod_info *biod;
 
 	biod = bmap_2_bii(b);
+	psc_assert(pll_empty(&biod->biod_rls));
 	psc_assert(SPLAY_EMPTY(&biod->biod_slvrs));
 	psc_assert(psclist_disjoint(&biod->biod_lentry));
 }
