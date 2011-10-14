@@ -44,23 +44,18 @@ sli_fg_makepath(const struct slash_fidgen *fg, char *fid_path)
 	int i;
 
 	for (p = str, i = 0; i < FID_PATH_DEPTH; i++) {
-		/*
-		str[i * 2] = (fg->fg_fid & UINT64_C(0x0000000000f00000)) >> (BPHXC * (5 - i));
-		str[i * 2] += a[i] < 10 ? 0x30 : 0x57;
-		str[(i * 2) + 1] = '/';
-		*/
-		*p = (fg->fg_fid & UINT64_C(0x0000000000f00000)) >> 
-			(BPHXC * (5 - i));
-		*p += *p < 10 ? 0x30 : 0x57;
+		*p = (fg->fg_fid & UINT64_C(0x0000000000f00000)) >>
+		    (BPHXC * (5 - i));
+		*p += *p < 10 ? '0' : 'a' - 10;
 		p++;
-		*(p++) = '/';
+		*p++ = '/';
 	}
 	*p = '\0';
-			
+
 	xmkfn(fid_path, "%s/%s/%"PRIx64"/%s/%s/%016"PRIx64"_%"PRIx64,
-	      globalConfig.gconf_fsroot, SL_RPATH_META_DIR, 
-	      globalConfig.gconf_fsuuid, SL_RPATH_FIDNS_DIR,
-	      str, fg->fg_fid, fg->fg_gen);
+	    globalConfig.gconf_fsroot, SL_RPATH_META_DIR,
+	    globalConfig.gconf_fsuuid, SL_RPATH_FIDNS_DIR,
+	    str, fg->fg_fid, fg->fg_gen);
 
 	psclog_dbg("fid="SLPRI_FID" fidpath=%s", fg->fg_fid, fid_path);
 }
@@ -80,8 +75,7 @@ sli_open_backing_file(struct fidc_membh *fcmh)
 		if (incr)
 			psc_rlim_adj(RLIMIT_NOFILE, -1);
 	}
-	psclog_info("open backing file:  path=%s, fd = %d, rc = %d", 
-	    fidfn, fcmh_2_fd(fcmh), rc);
+	psclog_info("path=%s fd=%d rc=%d", fidfn, fcmh_2_fd(fcmh), rc);
 	return (rc);
 }
 
@@ -167,10 +161,12 @@ sli_fcmh_reopen(struct fidc_membh *fcmh, const struct slash_fidgen *fg)
 		   rc);
 
 	} else if (fg->fg_gen < fcmh_2_gen(fcmh)) {
-		/* For now, requests from old generations (i.e. old bdbufs)
-		 *   will be honored.  Clients which issue full truncates will
-		 *   release their bmaps, and associated cache pages, prior to
-		 *   issuing a truncate request to the MDS.
+		/*
+		 * For now, requests from old generations (i.e. old
+		 * bdbufs) will be honored.  Clients which issue full
+		 * truncates will release their bmaps, and associated
+		 * cache pages, prior to issuing a truncate request to
+		 * the MDS.
 		 */
 		DEBUG_FCMH(PLL_WARN, fcmh, "request from old gen "
 		    "(%"SLPRI_FGEN")", fg->fg_gen);
