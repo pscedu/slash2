@@ -373,9 +373,11 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 			       BMAP_IOD_RLSSEQ | BMAP_IOD_RLSSCHED);
 
 			while (nrls < MAX_BMAP_RELEASE &&
-			    (brls = pll_get(&biod->biod_rls)))
+			    (brls = pll_get(&biod->biod_rls))) {
 				memcpy(&brr->sbd[nrls++], &brls->bir_sbd,
 				    sizeof(struct srt_bmapdesc));
+				psc_pool_return(bmap_rls_pool, brls);
+			}
 
 			BIOD_ULOCK(biod);
 
