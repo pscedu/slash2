@@ -5,9 +5,11 @@ use threads;
 use strict;
 use warnings;
 
+my $dir = "/local/tmp";
+
 sub thrmain {
 	my ($i) = @_;
-	open F, ">", "out.$i" or die "$!\n";
+	open F, ">", "$dir/out.$i" or die "$!\n";
 	for (; $i < 2**32; $i += 16) {
 		my $hex = sprintf("%lx", $i);
 		my $fn = `./fidviz $hex`;
