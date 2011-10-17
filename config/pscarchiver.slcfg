@@ -102,7 +102,7 @@ site @PSCARCH {
 
 	resource sense {
 		desc	= "disk-based archiver cluster";
-		type	= cluster_noshare_fs;
+		type	= cluster_noshare_lfs;
 		id	= 32768;
 		ios	= sense0s0@PSCARCH,
 			  sense0s1@PSCARCH,
