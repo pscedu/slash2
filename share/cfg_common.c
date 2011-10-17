@@ -119,24 +119,15 @@ libsl_ios2resm(sl_ios_id_t id)
 {
 	struct sl_resource *res = libsl_id2res(id);
 
-	/* May only be called on behalf the following types
+	/* May only be called on behalf of the following types
 	 *   of resources.
 	 */
 	psc_assert((res->res_type == SLREST_STANDALONE_FS     ||
-		    res->res_type == SLREST_STANDALONE_COMPNT ||
 		    res->res_type == SLREST_ARCHIVAL_FS       ||
 		    res->res_type == SLREST_PARALLEL_COMPNT) &&
 		   (psc_dynarray_len(&res->res_members) == 1));
 
 	return (psc_dynarray_getpos(&res->res_members, 0));
-}
-
-char *
-libsl_ios2name(sl_ios_id_t id)
-{
-	struct sl_resource *res = libsl_id2res(id);
-
-	return (&res->res_name[0]);
 }
 
 struct sl_resm *

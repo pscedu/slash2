@@ -637,8 +637,6 @@ slcfg_str2restype(const char *res_type)
 		return (SLREST_ARCHIVAL_FS);
 	if (!strcmp(res_type, "cluster_noshare_lfs"))
 		return (SLREST_CLUSTER_NOSHARE_LFS);
-	if (!strcmp(res_type, "compute"))
-		return (SLREST_COMPUTE);
 	if (!strcmp(res_type, "mds"))
 		return (SLREST_MDS);
 	psc_fatalx("%s: invalid resource type", res_type);

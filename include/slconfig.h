@@ -51,12 +51,10 @@ enum sl_res_type {
 	SLREST_NONE,
 	SLREST_ARCHIVAL_FS,
 	SLREST_CLUSTER_NOSHARE_LFS,	/* Logical set of stand-alone servers */
-	SLREST_COMPUTE,
 	SLREST_MDS,
-	SLREST_PARALLEL_LFS,		/* Logical parallel fs */
 	SLREST_PARALLEL_COMPNT,		/* A member of a parallel fs */
-	SLREST_STANDALONE_FS,
-	SLREST_STANDALONE_COMPNT = SLREST_STANDALONE_FS
+	SLREST_PARALLEL_LFS,		/* Logical parallel fs */
+	SLREST_STANDALONE_FS
 };
 
 #define RES_ISFS(res)							\
@@ -234,6 +232,8 @@ void			 slcfg_resm_addaddr(char *, const char *);
 
 struct sl_resource	*libsl_id2res(sl_ios_id_t);
 void			 libsl_init(int);
+char			*libsl_ios2name(sl_ios_id_t);
+struct sl_resm		*libsl_ios2resm(sl_ios_id_t);
 struct sl_resm		*libsl_nid2resm(lnet_nid_t);
 void			 libsl_profile_dump(void);
 struct sl_site		*libsl_resid2site(sl_ios_id_t);
@@ -241,9 +241,8 @@ struct sl_site		*libsl_siteid2site(sl_siteid_t);
 sl_ios_id_t		 libsl_str2id(const char *);
 struct sl_resource	*libsl_str2res(const char *);
 struct sl_resm		*libsl_try_nid2resm(lnet_nid_t);
-struct sl_resm		*libsl_ios2resm(sl_ios_id_t);
-char *			 libsl_ios2name(sl_ios_id_t);
 
+#define libsl_ios2name(iosid)	libsl_id2res(iosid)->res_name
 #define libsl_nid2iosid(nid)	libsl_nid2resm(nid)->resm_res_id
 
 void			yyerror(const char *, ...);
