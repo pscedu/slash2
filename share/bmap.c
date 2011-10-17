@@ -219,6 +219,9 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		/* Not all lookups are done with the intent of
 		 *   changing the bmap mode.  bmap_lookup() does not
 		 *   specify a rw value.
+		 *
+		 * bmap_ops.bmo_mode_chngf is either iod_bmap_retrieve()
+		 * or msl_bmap_modeset().
 		 */
 		if (bmaprw && !(bmaprw & b->bcm_flags) &&
 		    bmap_ops.bmo_mode_chngf) {
