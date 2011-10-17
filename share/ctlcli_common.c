@@ -40,11 +40,11 @@
 
 __static const char *slconn_restypes[] = {
 	"client",
-	"archiver",
-	"serialfs",
-	"compute",
+	"archival",
+	"cluster (s)",
 	"mds",
-	"parallelfs",
+	"parallel",
+	"cluster (p)",
 	"standalone"
 };
 
@@ -72,8 +72,8 @@ sl_conn_gethostname(const char *p, char *buf)
 		goto cancel;
 
 	sun.sa.sa_family = AF_INET;
-	if (getnameinfo(&sun.sa, sizeof(struct sockaddr_in), buf, NI_MAXHOST, NULL, 0,
-	    NI_NAMEREQD))
+	if (getnameinfo(&sun.sa, sizeof(struct sockaddr_in), buf,
+	    NI_MAXHOST, NULL, 0, NI_NAMEREQD))
 		goto cancel;
 
 	return;
@@ -98,6 +98,7 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 
 	strlcpy(addrbuf, scc->scc_addrbuf, sizeof(addrbuf));
 	if (scc->scc_type == SLCTL_REST_CLI) {
+		/* 'U' pid '-' ip '@' lnet */
 		site = "clients";
 		prid = addrbuf;
 		addr = prid;
@@ -113,7 +114,7 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 		stype = "";
 		res = "";
 	} else {
-		/* res@site:1.1.1.1@tcp0 */
+		/* res '@' site */
 		res = addrbuf;
 		site = res + strcspn(res, "@");
 		if (*site != '\0')
