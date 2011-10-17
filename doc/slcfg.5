@@ -180,40 +180,35 @@ A resource specification has the following form:
 .Li }
 .Ed
 .Pp
-Resource specifications may contain variable definition for the
-following variables:
+Resources can specify individual systems or clusters of systems.
+Each member node of a cluster must also have its own resource profile.
+Resource specifications recognize the following variables:
 .Pp
-.Bl -tag -offset 3n -width Ds -compact
+.Bl -tag -offset 3n -width jnrldevX -compact
 .It Ic desc
-Short description of this resource.
+Short description of the resource.
 .It Ic fsroot
 Analogous to the
 .Ic fs_root
-variable setting.
+variable.
 .It Ic id
-Numerical identifier for resource, required to be unique for all
-resources.
+Numerical identifier for the resource, required to be unique for all
+resources in a site.
 .It Ic ios
-One or more resource names comprising the cluster
-.Po only applies to
-.Ic cluster_noshare_lfs
-and
-.Ic parallel_lfs
-types
-.Pc .
+One or more resource names comprising the cluster, separated by comma
+delimiters
+.Pq applies only to clusters .
 .It Ic jrnldev
 Analogous to the
 .Ic journal
-variable setting.
+variable.
 .It Ic nids
-One or more addresses denoting machines belonging to this resource.
-.It Ic peers
-List of peers separated by commas of communication resource partners in
-the form
-.Ar resource-name Ns Li @ Ns Ar site-name .
+One or more host addresses this resource identifies through.
+Domain name services are accessed as necessary and the
+.Tn LNET
+network may be specified if it cannot be unambiguously determined.
 .It Ic type
-A required resource type mostly used to distinguish behavioral
-characteristics:
+A required resource type used to distinguish behavioral characteristics:
 .Pp
 .Bl -tag -width cluster_noshare_fsX -offset 3n -compact
 .It Ic archival_fs
@@ -225,16 +220,13 @@ metadata servers
 Node in shared parallel file system
 .It Ic standalone_fs
 Independent file systems
-.El
 .Pp
-Resource clusters can also be specified which are composed of other
-resources:
-.Pp
-.Bl -tag -width cluster_noshare_fsX -offset 3n -compact
+.It Ic parallel_lfs
+Cluster composed of one or more nodes sharing a parallel file system
 .It Ic cluster_noshare_lfs
-Non-coherent shared file systems
-.It Ic parallel_fs
-Shared parallel file systems
+Cluster composed of one or more nodes with independent
+.Pq non-shared
+file systems
 .El
 .El
 .Sh FILES
@@ -255,6 +247,14 @@ site @MYSITE {
 	site_desc	= "my site name";
 	site_id		= 1;
 
+	resource test {
+		desc	= "test network";
+		type	= mds;
+		id	= 1;
+		fsroot	= /tmp/slashfs;
+		nid	= 10.32.5.82;
+	}
+
 	resource parfs0 { type = parallel_lfs_compnt; id = 100; nids = 128.182.112.110; }
 	resource parfs1 { type = parallel_lfs_compnt; id = 101; nids = 128.182.112.111; }
 	resource parfs2 { type = parallel_lfs_compnt; id = 102; nids = 128.182.112.112; }
@@ -268,7 +268,6 @@ site @MYSITE {
 			  parfs1,
 			  parfs2,
 			  parfs3;
-		peers	= bigstore@MYSITE;
 	}
 
 	resource bigstore0 { type = archival_fs; id = 200; nids = 128.182.112.242; }
@@ -284,7 +283,6 @@ site @MYSITE {
 			  bigstore1@MYSITE,
 			  bigstore2@MYSITE,
 			  bigstore3@MYSITE;
-		peers	= parfs@MYSITE;
 	}
 
 	resource user_pc {
@@ -292,16 +290,6 @@ site @MYSITE {
 		type	= standalone_fs;
 		id	= 400;
 		nid	= 67.171.74.150;
-		peers	= parfs@MYSITE;
-	}
-
-	resource test {
-		desc	= "test network";
-		type	= mds;
-		id	= 500;
-		fsroot	= /tmp/slashfs;
-		nid	= 10.32.5.82;
-		peers	= parfs@MYSITE;
 	}
 }
 .Ed
