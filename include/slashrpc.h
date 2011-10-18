@@ -255,14 +255,16 @@ struct srt_stat {
 } __packed;
 
 #define DEBUG_SSTB(level, sstb, fmt, ...)				\
-	psclog((level), "sstb (%p) dev:%"PRIu64" mode:%#o "		\
+	psclog((level), "sstb (%p) fg:"SLPRI_FG" " 			\
+	    "dev:%"PRIu64" mode:%#o "					\
 	    "nlink:%"PRIu64" uid:%u gid:%u "				\
 	    "rdev:%"PRIu64" sz:%"PRIu64" "				\
 	    "blksz:%"PRIu64" blkcnt:%"PRIu64" "				\
 	    "atime:%"PRIu64":%"PRIu64" "				\
 	    "mtime:%"PRIu64":%"PRIu64" "				\
 	    "ctime:%"PRIu64":%"PRIu64" " fmt,				\
-	    (sstb), (sstb)->sst_dev, (sstb)->sst_mode,			\
+	    (sstb), &(sstb)->sst_fg,					\
+	    (sstb)->sst_dev, (sstb)->sst_mode,				\
 	    (sstb)->sst_nlink, (sstb)->sst_uid, (sstb)->sst_gid,	\
 	    (sstb)->sst_rdev, (sstb)->sst_size,				\
 	    (sstb)->sst_blksize, (sstb)->sst_blocks,			\
