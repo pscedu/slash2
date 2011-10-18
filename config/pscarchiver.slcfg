@@ -29,7 +29,7 @@ site @PSCARCH {
 		type	= mds;
 		id	= 1;
 		nids	= illusion1;
-		jrnldev	= /dev/sdah;
+		jrnldev	= /dev/disk/by-id/scsi-35000c50033f6faa7;
 	}
 
 	resource uo {
