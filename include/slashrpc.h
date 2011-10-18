@@ -263,7 +263,7 @@ struct srt_stat {
 	    "atime:%"PRIu64":%"PRIu64" "				\
 	    "mtime:%"PRIu64":%"PRIu64" "				\
 	    "ctime:%"PRIu64":%"PRIu64" " fmt,				\
-	    (sstb), &(sstb)->sst_fg,					\
+	    (sstb), SLPRI_FG_ARGS(&(sstb)->sst_fg),			\
 	    (sstb)->sst_dev, (sstb)->sst_mode,				\
 	    (sstb)->sst_nlink, (sstb)->sst_uid, (sstb)->sst_gid,	\
 	    (sstb)->sst_rdev, (sstb)->sst_size,				\
