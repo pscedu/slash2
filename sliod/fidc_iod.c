@@ -39,20 +39,20 @@
 void
 sli_fg_makepath(const struct slash_fidgen *fg, char *fid_path)
 {
-	char str[(FID_PATH_DEPTH * 2) + 1];
-	char *p;
+	char *p, str[(FID_PATH_DEPTH * 2) + 1];
+	uint64_t mask, shift;
 	int i;
 
-	for (p = str, i = 0; i < FID_PATH_DEPTH; i++) {
-		*p = (fg->fg_fid & UINT64_C(0x0000000000f00000)) >>
-		    (BPHXC * (5 - i));
+	shift = BPHXC * (FID_PATH_START + FID_PATH_DEPTH - 1);
+	for (p = str, i = 0; i < FID_PATH_DEPTH; i++, shift -= BPHXC) {
+		*p = (fg->fg_fid & (0xf << shift)) >> shift;
 		*p += *p < 10 ? '0' : 'a' - 10;
 		p++;
 		*p++ = '/';
 	}
 	*p = '\0';
 
-	xmkfn(fid_path, "%s/%s/%"PRIx64"/%s/%s/%016"PRIx64"_%"PRIx64,
+	xmkfn(fid_path, "%s/%s/%"PRIx64"/%s/%s%016"PRIx64"_%"PRIx64,
 	    globalConfig.gconf_fsroot, SL_RPATH_META_DIR,
 	    globalConfig.gconf_fsuuid, SL_RPATH_FIDNS_DIR,
 	    str, fg->fg_fid, fg->fg_gen);
