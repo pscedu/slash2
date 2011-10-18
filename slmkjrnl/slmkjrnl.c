@@ -53,7 +53,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-fqv] [-b block-device] [-D dir] [-n nentries] -u uuid\n",
+	    "usage: %s [-fqv] [-b block-device] [-D dir] [-n nentries] [-u uuid]\n",
 	    progname);
 	exit(1);
 }
@@ -456,7 +456,7 @@ main(int argc, char *argv[])
 		case 'u':
 			endp = NULL;
 			uuid = (uint64_t)strtoull(optarg, &endp, 16);
-			break;			
+			break;
 		case 'q':
 			query = 1;
 			break;
@@ -471,9 +471,6 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
-	if ((!format && !query) || !uuid)
-		usage();
-
 	if (fn[0] == '\0') {
 		if (mkdir(datadir, 0700) == -1)
 			if (errno != EEXIST)
@@ -483,14 +480,17 @@ main(int argc, char *argv[])
 	}
 
 	if (format) {
-		pjournal_format(fn, nents, SLJ_MDS_ENTSIZE, SLJ_MDS_READSZ, 
-				uuid);
+		if (!uuid)
+			psc_fatalx("no fsuuid specified");
+		pjournal_format(fn, nents, SLJ_MDS_ENTSIZE,
+		    SLJ_MDS_READSZ, uuid);
 		if (verbose)
 			warnx("created log file %s with %zu %d-byte entries "
 			      "(uuid=%"PRIx64")",
 			      fn, nents, SLJ_MDS_ENTSIZE, uuid);
-	}
-	if (query)
+	} else if (query)
 		pjournal_dump(fn, verbose);
+	else
+		usage();
 	exit(0);
 }
