@@ -65,45 +65,40 @@ site @PSCARCH {
 		fsroot	= /local/p0_archive_backfs;
 	}
 
-	resource sense0s0 { desc = "disk-based archiver unit 1/8 system 0";	type = standalone_fs; id = 1024; nids = sense0-sliod0; fsroot = /arc_sliod/0; }
-	resource sense0s1 { desc = "disk-based archiver unit 2/8 system 1";	type = standalone_fs; id = 1025; nids = sense0-sliod1; fsroot = /arc_sliod/1; }
-	resource sense0s2 { desc = "disk-based archiver unit 3/8 system 2";	type = standalone_fs; id = 1026; nids = sense0-sliod2; fsroot = /arc_sliod/2; }
-	resource sense0s3 { desc = "disk-based archiver unit 4/8 system 3";	type = standalone_fs; id = 1027; nids = sense0-sliod3; fsroot = /arc_sliod/3; }
-	resource sense0s4 { desc = "disk-based archiver unit 5/8 system 4";	type = standalone_fs; id = 1028; nids = sense0-sliod4; fsroot = /arc_sliod/4; }
-	resource sense0s5 { desc = "disk-based archiver unit 6/8 system 5";	type = standalone_fs; id = 1029; nids = sense0-sliod5; fsroot = /arc_sliod/5; }
-	resource sense0s6 { desc = "disk-based archiver unit 7/8 system 6";	type = standalone_fs; id = 1030; nids = sense0-sliod6; fsroot = /arc_sliod/6; }
-	#resource sense0s7 { desc = "disk-based archiver unit 8/8 system 7";	type = standalone_fs; id = 1031; nids = sense0-sliod7; fsroot = /arc_sliod/7; }
+	resource sense0s0 { desc = "disk-based archiver unit 0 sliod 0";	type = standalone_fs; id = 1000; nids = sense0-sliod0; fsroot = /arc_sliod/0; }
+	resource sense0s1 { desc = "disk-based archiver unit 0 sliod 1";	type = standalone_fs; id = 1001; nids = sense0-sliod1; fsroot = /arc_sliod/1; }
+	resource sense0s2 { desc = "disk-based archiver unit 0 sliod 2";	type = standalone_fs; id = 1002; nids = sense0-sliod2; fsroot = /arc_sliod/2; }
+	resource sense0s3 { desc = "disk-based archiver unit 0 sliod 3";	type = standalone_fs; id = 1003; nids = sense0-sliod3; fsroot = /arc_sliod/3; }
+	resource sense0s4 { desc = "disk-based archiver unit 0 sliod 4";	type = standalone_fs; id = 1004; nids = sense0-sliod4; fsroot = /arc_sliod/4; }
+	resource sense0s5 { desc = "disk-based archiver unit 0 sliod 5";	type = standalone_fs; id = 1005; nids = sense0-sliod5; fsroot = /arc_sliod/5; }
+	resource sense0s6 { desc = "disk-based archiver unit 0 sliod 6";	type = standalone_fs; id = 1006; nids = sense0-sliod6; fsroot = /arc_sliod/6; }
 
-	# 1024 + 32
-	resource sense1s0 { desc = "disk-based archiver unit 1/7 system 0";	type = standalone_fs; id = 1056; nids = sense1-sliod0; fsroot = /arc_sliod/0; }
-	resource sense1s1 { desc = "disk-based archiver unit 2/7 system 1";	type = standalone_fs; id = 1057; nids = sense1-sliod1; fsroot = /arc_sliod/1; }
-	resource sense1s2 { desc = "disk-based archiver unit 3/7 system 2";	type = standalone_fs; id = 1058; nids = sense1-sliod2; fsroot = /arc_sliod/2; }
-	resource sense1s3 { desc = "disk-based archiver unit 4/7 system 3";	type = standalone_fs; id = 1059; nids = sense1-sliod3; fsroot = /arc_sliod/3; }
-	resource sense1s4 { desc = "disk-based archiver unit 5/7 system 4";	type = standalone_fs; id = 1060; nids = sense1-sliod4; fsroot = /arc_sliod/4; }
-	resource sense1s5 { desc = "disk-based archiver unit 6/7 system 5";	type = standalone_fs; id = 1061; nids = sense1-sliod5; fsroot = /arc_sliod/5; }
-	#resource sense1s6 { desc = "disk-based archiver unit 7/7 system 6";	type = standalone_fs; id = 1062; nids = sense1-sliod6; fsroot = /arc_sliod/6; }
+	resource sense1s0 { desc = "disk-based archiver unit 1 sliod 0";	type = standalone_fs; id = 1100; nids = sense1-sliod0; fsroot = /arc_sliod/0; }
+	resource sense1s1 { desc = "disk-based archiver unit 1 sliod 1";	type = standalone_fs; id = 1101; nids = sense1-sliod1; fsroot = /arc_sliod/1; }
+	resource sense1s2 { desc = "disk-based archiver unit 1 sliod 2";	type = standalone_fs; id = 1102; nids = sense1-sliod2; fsroot = /arc_sliod/2; }
+	resource sense1s3 { desc = "disk-based archiver unit 1 sliod 3";	type = standalone_fs; id = 1103; nids = sense1-sliod3; fsroot = /arc_sliod/3; }
+	resource sense1s4 { desc = "disk-based archiver unit 1 sliod 4";	type = standalone_fs; id = 1104; nids = sense1-sliod4; fsroot = /arc_sliod/4; }
+	resource sense1s5 { desc = "disk-based archiver unit 1 sliod 5";	type = standalone_fs; id = 1105; nids = sense1-sliod5; fsroot = /arc_sliod/5; }
 
-	#resource sense2s0 { desc = "disk-based archiver unit 1/7 system 0";	type = standalone_fs; id = 1088; nids = sense2-sliod0; fsroot = /arc_sliod/0; }
-	#resource sense2s1 { desc = "disk-based archiver unit 2/7 system 1";	type = standalone_fs; id = 1089; nids = sense2-sliod1; fsroot = /arc_sliod/1; }
-	#resource sense2s2 { desc = "disk-based archiver unit 3/7 system 2";	type = standalone_fs; id = 1090; nids = sense2-sliod2; fsroot = /arc_sliod/2; }
-	#resource sense2s3 { desc = "disk-based archiver unit 4/7 system 3";	type = standalone_fs; id = 1091; nids = sense2-sliod3; fsroot = /arc_sliod/3; }
-	#resource sense2s4 { desc = "disk-based archiver unit 5/7 system 4";	type = standalone_fs; id = 1092; nids = sense2-sliod4; fsroot = /arc_sliod/4; }
-	#resource sense2s5 { desc = "disk-based archiver unit 6/7 system 5";	type = standalone_fs; id = 1093; nids = sense2-sliod5; fsroot = /arc_sliod/5; }
-	#resource sense2s6 { desc = "disk-based archiver unit 7/7 system 6";	type = standalone_fs; id = 1094; nids = sense2-sliod6; fsroot = /arc_sliod/6; }
-	#resource sense2s7 { desc = "disk-based archiver unit 8/8 system 7";	type = standalone_fs; id = 1095; nids = sense2-sliod7; fsroot = /arc_sliod/7; }
+#	resource sense2s0 { desc = "disk-based archiver unit 2 sliod 0";	type = standalone_fs; id = 1200; nids = sense2-sliod1; fsroot = /arc_sliod/0; }
+#	resource sense2s1 { desc = "disk-based archiver unit 2 sliod 1";	type = standalone_fs; id = 1201; nids = sense2-sliod2; fsroot = /arc_sliod/1; }
+#	resource sense2s2 { desc = "disk-based archiver unit 2 sliod 2";	type = standalone_fs; id = 1202; nids = sense2-sliod3; fsroot = /arc_sliod/2; }
+#	resource sense2s3 { desc = "disk-based archiver unit 2 sliod 3";	type = standalone_fs; id = 1203; nids = sense2-sliod4; fsroot = /arc_sliod/3; }
+#	resource sense2s4 { desc = "disk-based archiver unit 2 sliod 4";	type = standalone_fs; id = 1204; nids = sense2-sliod5; fsroot = /arc_sliod/4; }
+#	resource sense2s5 { desc = "disk-based archiver unit 2 sliod 5";	type = standalone_fs; id = 1205; nids = sense2-sliod6; fsroot = /arc_sliod/5; }
+#	resource sense2s6 { desc = "disk-based archiver unit 2 sliod 6";	type = standalone_fs; id = 1206; nids = sense2-sliod7; fsroot = /arc_sliod/6; }
 
-	#resource sense3s0 { desc = "disk-based archiver unit 1/7 system 0";	type = standalone_fs; id = 1120; nids = sense3-sliod0; fsroot = /arc_sliod/0; }
-	#resource sense3s1 { desc = "disk-based archiver unit 2/7 system 1";	type = standalone_fs; id = 1121; nids = sense3-sliod1; fsroot = /arc_sliod/1; }
-	#resource sense3s2 { desc = "disk-based archiver unit 3/7 system 2";	type = standalone_fs; id = 1122; nids = sense3-sliod2; fsroot = /arc_sliod/2; }
-	#resource sense3s3 { desc = "disk-based archiver unit 4/7 system 3";	type = standalone_fs; id = 1123; nids = sense3-sliod3; fsroot = /arc_sliod/3; }
-	#resource sense3s4 { desc = "disk-based archiver unit 5/7 system 4";	type = standalone_fs; id = 1124; nids = sense3-sliod4; fsroot = /arc_sliod/4; }
-	#resource sense3s5 { desc = "disk-based archiver unit 6/7 system 5";	type = standalone_fs; id = 1125; nids = sense3-sliod5; fsroot = /arc_sliod/5; }
-	#resource sense3s6 { desc = "disk-based archiver unit 7/7 system 6";	type = standalone_fs; id = 1126; nids = sense3-sliod6; fsroot = /arc_sliod/6; }
+#	resource sense3s0 { desc = "disk-based archiver unit 3 sliod 0";	type = standalone_fs; id = 1300; nids = sense3-sliod1; fsroot = /arc_sliod/0; }
+#	resource sense3s1 { desc = "disk-based archiver unit 3 sliod 1";	type = standalone_fs; id = 1301; nids = sense3-sliod2; fsroot = /arc_sliod/1; }
+#	resource sense3s2 { desc = "disk-based archiver unit 3 sliod 2";	type = standalone_fs; id = 1302; nids = sense3-sliod3; fsroot = /arc_sliod/2; }
+#	resource sense3s3 { desc = "disk-based archiver unit 3 sliod 3";	type = standalone_fs; id = 1303; nids = sense3-sliod4; fsroot = /arc_sliod/3; }
+#	resource sense3s4 { desc = "disk-based archiver unit 3 sliod 4";	type = standalone_fs; id = 1304; nids = sense3-sliod5; fsroot = /arc_sliod/4; }
+#	resource sense3s5 { desc = "disk-based archiver unit 3 sliod 5";	type = standalone_fs; id = 1305; nids = sense3-sliod6; fsroot = /arc_sliod/5; }
 
 	resource sense {
 		desc	= "disk-based archiver cluster";
 		type	= cluster_noshare_lfs;
-		id	= 32768;
+		id	= 9999;
 		ios	= sense0s0@PSCARCH,
 			  sense0s1@PSCARCH,
 			  sense0s2@PSCARCH,
