@@ -874,6 +874,8 @@ slcfg_parse(const char *config_file)
 	}
 	if (cfg_errors)
 		errx(1, "%d error(s) encountered", cfg_errors);
+	if (pll_empty(&globalConfig.gconf_sites))
+		errx(1, "no configuration could be loaded");
 
 	pflnet_freeifaddrs(cfg_ifaddrs);
 
