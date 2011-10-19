@@ -43,7 +43,7 @@ _mds_fcmh_setattr(struct fidc_membh *f, int to_set,
 	int rc = 0;
 
 	FCMH_LOCK_ENSURE(f);
-	fcmh_wait_locked(f, f->fcmh_flags & FCMH_IN_SETATTR);
+	psc_assert((f->fcmh_flags & FCMH_IN_SETATTR) == 0);
 
 	f->fcmh_flags |= FCMH_IN_SETATTR;
 

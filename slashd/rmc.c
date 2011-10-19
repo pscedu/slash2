@@ -759,6 +759,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 		goto out;
 
 	FCMH_LOCK(fcmh);
+	fcmh_wait_locked(fcmh, fcmh->fcmh_flags & FCMH_IN_SETATTR);
 
 	to_set = mq->to_set & SL_SETATTRF_CLI_ALL;
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
