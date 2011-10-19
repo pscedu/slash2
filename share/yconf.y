@@ -723,7 +723,7 @@ slcfg_store_tok_val(const char *tok, char *val)
 		else {
 			long l;
 
-			l = strtol(val, &endp, 10);
+			l = strtol(val, &endp, 0);
 			if (l >= INT_MAX || l <= INT_MIN ||
 			    endp == val || *endp != '\0')
 				yyerror("%s: invalid integer", val);
@@ -835,7 +835,7 @@ slcfg_peer2resm(struct sl_resource *r, struct sl_resource *peer)
 	psc_assert(psc_dynarray_len(&peer->res_members) == 1);
 
 	psc_dynarray_add(&r->res_members,
-		 psc_dynarray_getpos(&peer->res_members, 0));
+	    psc_dynarray_getpos(&peer->res_members, 0));
 }
 
 void
