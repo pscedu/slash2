@@ -40,7 +40,7 @@ void
 sli_fg_makepath(const struct slash_fidgen *fg, char *fid_path)
 {
 	char *p, str[(FID_PATH_DEPTH * 2) + 1];
-	uint64_t mask, shift;
+	uint64_t shift;
 	int i;
 
 	shift = BPHXC * (FID_PATH_START + FID_PATH_DEPTH - 1);
