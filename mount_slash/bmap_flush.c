@@ -576,14 +576,13 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 	if (rc) {
 		/* Failed to flush this bmap's dirty pages.
 		 */
-		DYNARRAY_FOREACH(r, i, biorqs)
-			DEBUG_BIORQ(PLL_ERROR, r, "could not flush");
-		DEBUG_BMAP(PLL_ERROR, r->biorq_bmap, "could not flush");
-
-		spinlock(&r->biorq_fhent->mfh_lock);
-		r->biorq_fhent->mfh_flush_rc = EIO;
-		psc_waitq_wakeall(&msl_fhent_flush_waitq);
-		freelock(&r->biorq_fhent->mfh_lock);
+		DYNARRAY_FOREACH(r, i, biorqs) {
+			DEBUG_BIORQ(PLL_ERROR, r, "could not flush, rc=%d", rc);
+			spinlock(&r->biorq_fhent->mfh_lock);
+			r->biorq_fhent->mfh_flush_rc = EIO;
+			psc_waitq_wakeall(&msl_fhent_flush_waitq);
+			freelock(&r->biorq_fhent->mfh_lock);
+		}
 	}
 }
 
