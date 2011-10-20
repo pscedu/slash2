@@ -8,7 +8,7 @@ SRCS+=			${SLASH_BASE}/share/slerr.c
 
 SRC_PATH+=		$(filter-out %/tests/,$(shell ls -d ${SLASH_BASE}/*/))
 
-SLASH_MODULES+=		cli ion mds
+SLASH_MODULES?=		cli ion mds
 
 -include ${SLASH_BASE}/mk/local.mk
 
