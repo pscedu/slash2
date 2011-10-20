@@ -64,6 +64,10 @@ enum sl_res_type {
 	 (res)->res_type == SLREST_PARALLEL_COMPNT	||		\
 	 (res)->res_type == SLREST_STANDALONE_FS)
 
+#define RES_ISCLUSTER(res)						\
+	((res)->res_type == SLREST_CLUSTER_NOSHARE_LFS	||		\
+	 (res)->res_type == SLREST_PARALLEL_LFS)
+
 /* Resource (I/O system, MDS) */
 struct sl_resource {
 	char			 res_name[RES_NAME_MAX];

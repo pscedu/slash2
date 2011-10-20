@@ -79,7 +79,8 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 	CONF_LOCK();
 	CONF_FOREACH_RESM(s, r, i, resm, j) {
-		if (resm == nodeResm)
+		if (resm == nodeResm ||
+		    (RES_ISCLUSTER(r)))
 			continue;
 
 		slctl_fillconn(scc, resm->resm_csvc);
