@@ -7,7 +7,7 @@ set port=1302;
 set routes="sdp11 128.182.100.126@tcp12; tcp12 10.10.101.54@sdp11";
 set nets="sdp11 10.10.101.*; tcp12 *.*.*.*";
 set pref_mds="archmds@PSCARCH";
-set fsuuid="75b8352b9bbeaba7";
+set fsuuid="3a8cea38614e8122";
 set pref_ios="sense@PSCARCH";
 #set pref_ios="peel0@PSCARCH";
 #set allow_exec="
@@ -28,7 +28,7 @@ site @PSCARCH {
 		desc	= "PSC archiver MDS";
 		type	= mds;
 		id	= 1;
-		nids	= illusion1;
+		nids	= illusion-mds.psc.edu;
 		jrnldev	= /dev/disk/by-id/scsi-35000c50033f6faa7;
 	}
 
