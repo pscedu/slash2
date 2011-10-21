@@ -339,9 +339,8 @@ pjournal_dump(const char *fn, int verbose)
 	    "  Number of entries: %u\n"
 	    "  Batch read size: %u\n"
 	    "  Entry start offset: %"PRId64"\n"
-	    "  Format time: %s\n"
-	    "  UUID: %"PRIx64"\n\n",
-
+	    "  Format time: %s"
+	    "  UUID: %"PRIx64"\n",
 	    fn, pjh->pjh_version, PJ_PJESZ(pj), pjh->pjh_nents,
 	    pjh->pjh_readsize, pjh->pjh_start_off,
 	    ctime((time_t *)&pjh->pjh_timestamp), pjh->pjh_fsuuid);
@@ -433,7 +432,7 @@ main(int argc, char *argv[])
 
 	fn[0] = '\0';
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "b:D:fn:qvu:")) != -1)
+	while ((c = getopt(argc, argv, "b:D:fn:qu:v")) != -1)
 		switch (c) {
 		case 'b':
 			strlcpy(fn, optarg, sizeof(fn));
@@ -448,7 +447,7 @@ main(int argc, char *argv[])
 			endp = NULL;
 			l = strtol(optarg, &endp, 10);
 			if (l <= 0 || l > INT_MAX ||
-			    endp == optarg || *endp != '\0')
+			    endp == optarg || *endp)
 				errx(1, "invalid -n nentries: %s",
 				    optarg);
 			nents = (ssize_t)l;
@@ -456,6 +455,9 @@ main(int argc, char *argv[])
 		case 'u':
 			endp = NULL;
 			uuid = (uint64_t)strtoull(optarg, &endp, 16);
+			if (endp == optarg || *endp)
+				errx(1, "invalid -u fsuuid: %s",
+				    optarg);
 			break;
 		case 'q':
 			query = 1;
