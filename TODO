@@ -479,7 +479,6 @@ reimport
   default in developer builds
 - directory replica table inheritance
 - add svn revision # to CONNECT and track for "*ctl -s conns"
-- zero-length files currently fail slictl import
 - test msctl -Q <symlink>
 
 archiver
@@ -491,5 +490,3 @@ archiver
 - work out logistics for where MDS zsnap backups go
 - autostart sliods/msl on tahini with screens
 - monitor service for /arc hangs (blacklight, tahini)
-- add firehose1 and firehose2 to lnet routers
-- test sense1 full migration workload
