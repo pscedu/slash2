@@ -11,7 +11,7 @@ site @SITEA {
 		desc	= "desc";
 		type	= mds;
 		id	= 2;
-		nodes	= 127.0.0.1|127.0.0.2;
+		nids	= 127.0.0.1, 127.0.0.2;
 	}
 }
 
@@ -22,7 +22,7 @@ site @SITEB {
 		desc	= "desc";
 		type	= archival_fs;
 		id	= 2;
-		nodes	= 127.0.0.3;
+		nids	= 127.0.0.3;
 	}
 }
 
@@ -33,6 +33,6 @@ site @SITEC {
 		desc	= "desc";
 		type	= archival_fs;
 		id	= 2;
-		nodes	= 127.0.0.4;
+		nids	= 127.0.0.4;
 	}
 }
