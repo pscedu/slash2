@@ -92,20 +92,23 @@ main(int argc, char *argv[])
 
 	cycle = FID_GET_CYCLE(cursor.pjc_fid);
 	if (dump || verbose) {
-		printf("Cursor contents:\n"
-		    "\tmagic = %"PRIx64"\n"
-		    "\tversion = %"PRIx64"\n"
-		    "\ttimestamp = %"PRId64" (%s)\n"
-		    "\tuuid = %s\n"
-		    "\tcommit_txg = %"PRId64"\n"
-		    "\tdistill_xid = %"PRId64"\n"
-		    "\tfid = 0x%"PRIx64" (flag = %"PRIx64", site id = %"PRIx64", cycle = %"PRIx64", fid = %"PRIx64")\n"
-		    "\tseqno_lwm = %"PRIx64"\n"
-		    "\tseqno_hwm = %"PRIx64"\n"
-		    "\ttail = %"PRIx64"\n"
-		    "\tupdate_seqno = %"PRIx64"\n"
-		    "\treclaim_seqno = %"PRIx64"\n"
-		    "\treplay_xid = %"PRIx64"\n\n",
+		printf("Cursor contents of %s:\n"
+		    "\tmagic		%"PRIx64"\n"
+		    "\tversion		%"PRIx64"\n"
+		    "\ttimestamp	%"PRId64" (%s)\n"
+		    "\tuuid		%s\n"
+		    "\tcommit_txg	%"PRId64"\n"
+		    "\tdistill_xid	%"PRId64"\n"
+		    "\tfid		%#"PRIx64" "
+		      "(flag=%"PRIx64", siteid=%"PRIx64", "
+		      "cycle=%"PRIx64", inum=%"PRIx64")\n"
+		    "\tseqno_lwm	%"PRIx64"\n"
+		    "\tseqno_hwm	%"PRIx64"\n"
+		    "\ttail		%"PRIx64"\n"
+		    "\tupdate_seqno	%"PRIx64"\n"
+		    "\treclaim_seqno	%"PRIx64"\n"
+		    "\treplay_xid	%"PRIx64"\n\n",
+		    cursor_file,
 		    cursor.pjc_magic,
 		    cursor.pjc_version,
 		    cursor.pjc_timestamp, tmbuf,
@@ -135,10 +138,8 @@ main(int argc, char *argv[])
 			exit(0);
 	}
 
-	if (!newtxg && !newfid) {
-		fprintf(stderr, "Neither fid or txg was specified\n");
-		usage();
-	}
+	if (!newtxg && !newfid)
+		errx(1, "neither fid nor txg was specified");
 
 	if (newtxg)
 		cursor.pjc_commit_txg = newtxg;

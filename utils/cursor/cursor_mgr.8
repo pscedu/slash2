@@ -1,0 +1,71 @@
+.\" $Id$
+.\" %PSC_START_COPYRIGHT%
+.\" -----------------------------------------------------------------------------
+.\" Copyright (c) 2011, Pittsburgh Supercomputing Center (PSC).
+.\"
+.\" Permission to use, copy, and modify this software and its documentation
+.\" without fee for personal use or non-commercial use within your organization
+.\" is hereby granted, provided that the above copyright notice is preserved in
+.\" all copies and that the copyright and this permission notice appear in
+.\" supporting documentation.  Permission to redistribute this software to other
+.\" organizations or individuals is not permitted without the written permission
+.\" of the Pittsburgh Supercomputing Center.  PSC makes no representations about
+.\" the suitability of this software for any purpose.  It is provided "as is"
+.\" without express or implied warranty.
+.\" -----------------------------------------------------------------------------
+.\" %PSC_END_COPYRIGHT%
+.Dd October 21, 2011
+.Dt CURSOR_MGR 8
+.ds volume PSC \- SLASH2 Administrator's Manual
+.Os http://www.psc.edu/
+.Sh NAME
+.Nm cursor_mgr
+.Nd manipulate
+.Tn SLASH2
+metadata cursor file
+.Sh SYNOPSIS
+.Nm cursor_mgr
+.Op Fl dv
+.Op Fl f Ar fid
+.Op Fl x Ar txg
+.Fl c cursorfile
+.Sh DESCRIPTION
+The
+.Nm
+utility manipulates the
+.Tn SLASH2
+metadata cursor file.
+The cursor file tracks operations written to the
+.Tn SLASH2 MDS
+journal.
+The file must be accessible via the system's native file system
+interface, meaning the
+.Tn MDS
+backing file system must be directly mounted via
+.Xr zfs-fuse 8 .
+.Pp
+The following options are available:
+.Bl -tag -width Ds
+.It Fl c Ar cursor_file
+Cursor file to access.
+.It Fl d
+Display the contents of the cursor file.
+No modifications are made.
+.It Fl f Ar fid
+Set the last allocated
+.Tn FID
+.Pq file identifier
+.It Fl x Ar txg
+Set the last transaction group used.
+.It Fl v
+Display the previous contents of the cursor file while modifying.
+.El
+.Sh EXAMPLES
+Set the cursor to
+.Tn FID
+1 and transaction group 1:
+.Pp
+.D1 $ cursor_mgr -c /slmdfs/.slmd/cursor -f 1 -x 1
+.Sh SEE ALSO
+.Xr sladm 7 ,
+.Xr slashd 8
