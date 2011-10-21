@@ -29,8 +29,9 @@ endif
 
 ifneq ($(filter ion,${SLASH_MODULES})$(filter mds,${SLASH_MODULES}),)
   SUBDIRS+=	slimmns
-  SUBDIRS+=	slkeymgt
 endif
+
+SUBDIRS+=	slkeymgt
 
 SUBDIRS+=	tests
 SUBDIRS+=	utils
