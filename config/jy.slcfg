@@ -21,6 +21,7 @@ site @PSC {
 		type	= mds;
 		id	= 101;
 		nids	= lime;
+		jrnldev	= /dev/sdl;
 	}
 
 	resource io {
@@ -49,7 +50,7 @@ site @PSC {
 
 	resource citron {
 		desc	= "fruit storage";
-		type	= archival_fs;
+		type	= standalone_fs;
 		id	= 105;
 		fsroot	= /local/jy.s2/io;
 		nids	= citron;
