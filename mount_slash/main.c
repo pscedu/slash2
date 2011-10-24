@@ -1528,7 +1528,7 @@ __static void
 mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
     const char *oldname, pscfs_inum_t npinum, const char *newname)
 {
-	struct fidc_membh *c = NULL, *np = NULL, *op = NULL;
+	struct fidc_membh *child = NULL, *np = NULL, *op = NULL;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srt_stat srcsstb, dstsstb;
@@ -1537,7 +1537,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	struct srm_rename_rep *mp;
 	struct slash_creds cr;
 	struct iovec iov[2];
-	int sticky, rc;
+	int sticky, setattr = 0, rc;
 
 	srcfg.fg_fid = FID_ANY;
 	dstfg.fg_fid = FID_ANY;
@@ -1581,7 +1581,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		if (sticky) {
 			/* XXX race */
 			rc = msl_lookup_fidcache(pfr, &cr, opinum,
-			    oldname, &srcfg, &srcsstb, &c);
+			    oldname, &srcfg, &srcsstb, &child);
 			if (rc)
 				goto out;
 			if (srcsstb.sst_uid != cr.scr_uid)
@@ -1629,7 +1629,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		if (srcfg.fg_fid == FID_ANY) {
 			/* XXX race */
 			rc = msl_lookup_fidcache(pfr, &cr, opinum,
-			    oldname, &srcfg, &srcsstb, &c);
+			    oldname, &srcfg, &srcsstb, &child);
 			if (rc)
 				goto out;
 		}
@@ -1684,17 +1684,21 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	if (srcfg.fg_fid == FID_ANY) {
 		/* XXX race */
 		rc = msl_lookup_fidcache(pfr, &cr, npinum,
-		    newname, &srcfg, &srcsstb, &c);
+		    newname, &srcfg, &srcsstb, &child);
 		if (rc)
 			goto out;
 	}
-	if (mp->srr_cattr.sst_fid)
-		fcmh_setattrf(c, &mp->srr_cattr,
+	if (mp->srr_cattr.sst_fid) {
+		setattr = 1;
+		fcmh_setattrf(child, &mp->srr_cattr,
 		    FCMH_SETATTRF_SAVELOCAL);
+	}
+	psclog_info(SLPRI_FG ", size=%lu, setattr=%s\n", 
+	    SLPRI_FG_ARGS(&child->fcmh_fg), fcmh_2_fsz(child), setattr ? "yes": "no");
 
  out:
-	if (c)
-		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+	if (child)
+		fcmh_op_done_type(child, FCMH_OPCNT_LOOKUP_FIDC);
 	if (op)
 		fcmh_op_done_type(op, FCMH_OPCNT_LOOKUP_FIDC);
 	if (np && np != op)
