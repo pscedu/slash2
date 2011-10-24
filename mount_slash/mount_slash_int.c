@@ -2274,7 +2274,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			goto load_next;
 
 		DEBUG_FCMH(PLL_INFO, f, "sz=%zu tlen=%zu off=%"PSCPRIdOFFT" "
-		    "roff=%"PSCPRIdOFFT" rw=%d", tsize, tlen, off, roff, rw);
+		    "roff=%"PSCPRIdOFFT" rw=%s", tsize, tlen, off, roff, 
+		    (rw == SL_READ) ? "read" : "write");
 
 		psc_assert(tsize);
  retry_bmap:
