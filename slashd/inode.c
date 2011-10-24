@@ -145,8 +145,8 @@ mds_inode_write(struct slash_inode_handle *ih, void *logf, void *arg)
 		    "mdsio_pwritev: error (resid=%d nb=%d rc=%d)",
 		    sizeof(ih->inoh_ino) + sizeof(crc), nb, rc);
 	else {
-		DEBUG_INOH(PLL_INFO, ih, "wrote inode (rc=%d) data=%p",
-		    rc, inoh_2_mdsio_data(ih));
+		DEBUG_INOH(PLL_INFO, ih, "wrote inode, flags=%x, size=%d, data=%p",
+			ih->inoh_flags,  inoh_2_fsz(ih), inoh_2_mdsio_data(ih));
 		if (ih->inoh_flags & INOH_INO_NEW)
 			ih->inoh_flags &= ~INOH_INO_NEW;
 	}
