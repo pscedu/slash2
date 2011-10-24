@@ -1243,6 +1243,9 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	slfid_t cfid;
 	int rc;
 
+	if (fp)
+		*fp = NULL;
+
 	rc = msl_load_fcmh(pfr, pinum, &p);
 	if (rc)
 		goto out;
@@ -1272,9 +1275,9 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 
 	/*
 	 * We should do a lookup based on name here because a rename
-	 * does not change the file ID and we would get a success
-	 * in a stat RPC.  Note the app is looking based on a name
-	 * here, not based on ID.
+	 * does not change the file ID and we would get a success in a
+	 * stat RPC.  Note the app is looking based on a name here, not
+	 * based on ID.
 	 */
 	rc = msl_stat(c, pfr);
 	if (!rc) {
@@ -1693,8 +1696,9 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		fcmh_setattrf(child, &mp->srr_cattr,
 		    FCMH_SETATTRF_SAVELOCAL);
 	}
-	psclog_info(SLPRI_FG ", size=%lu, setattr=%s\n", 
-	    SLPRI_FG_ARGS(&child->fcmh_fg), fcmh_2_fsz(child), setattr ? "yes": "no");
+	psclog_info(SLPRI_FG ", size=%lu, setattr=%s",
+	    SLPRI_FG_ARGS(&child->fcmh_fg), fcmh_2_fsz(child),
+	    setattr ?  "yes": "no");
 
  out:
 	if (child)
