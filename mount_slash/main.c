@@ -1239,22 +1239,19 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
     struct slash_fidgen *fgp, struct srt_stat *sstb,
     struct fidc_membh **fp)
 {
-	struct fidc_membh *p, *c;
+	struct fidc_membh *p, *c = NULL;
 	slfid_t cfid;
 	int rc;
 
-	psclog_info("looking for file: %s under inode: "SLPRI_FID,
-	    name, pinum);
-
 	rc = msl_load_fcmh(pfr, pinum, &p);
 	if (rc)
-		return (rc);
+		goto out;
 
 	FCMH_LOCK(p);
 	rc = checkcreds(&p->fcmh_sstb, crp, X_OK);
 	if (rc) {
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
-		return (rc);
+		goto out;
 	}
 
 	if (!DIRCACHE_INITIALIZED(p))
@@ -1330,6 +1327,10 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 		*fp = c;
 	else if (c)
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+
+	psclog_info("look for file: %s under inode: "SLPRI_FID ", rc=%d",
+	    name, pinum, rc);
+
 	return (rc);
 }
 
