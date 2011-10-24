@@ -2176,7 +2176,6 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 
  out:
 	DEBUG_FCMH(PLL_INFO, f, "write: buf=%p rc=%d sz=%zu "
-
 	    "off=%"PSCPRIdOFFT, buf, rc, size, off);
 	pscfs_reply_write(pfr, size, rc);
 }

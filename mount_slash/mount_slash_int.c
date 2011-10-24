@@ -2211,8 +2211,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 	f = mfh->mfh_fcmh;
 
-	DEBUG_FCMH(PLL_INFO, f, "buf=%p size=%zu off=%"PRId64" rw=%d",
-	   buf, size, off, rw);
+	DEBUG_FCMH(PLL_INFO, f, "buf=%p size=%zu off=%"PRId64" rw=%s",
+	   buf, size, off, (rw == SL_READ) ? "read" : "write");
 
 	if (rw == SL_READ)
 		msl_setra(mfh, size, off);
