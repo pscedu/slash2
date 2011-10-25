@@ -52,14 +52,14 @@ struct dircache_mgr dircacheMgr;
  *	handle.
  */
 void
-fcmh_setlocalsize(struct fidc_membh *h, uint64_t size)
+fcmh_setlocalsize(struct fidc_membh *fcmh, uint64_t size)
 {
 	int locked;
 
-	locked = reqlock(&h->fcmh_lock);
-	if (size > fcmh_2_fsz(h))
-		fcmh_2_fsz(h) = size;
-	ureqlock(&h->fcmh_lock, locked);
+	locked = reqlock(&fcmh->fcmh_lock);
+	if (size > fcmh_2_fsz(fcmh))
+		fcmh_2_fsz(fcmh) = size;
+	ureqlock(&fcmh->fcmh_lock, locked);
 }
 
 void
