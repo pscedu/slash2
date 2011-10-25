@@ -95,8 +95,18 @@ The default is
 .\"		fcmh	=> ".Tn FID\ncache members",
 .\"		slvr	=> "Sliver\n.Pq Tn I/O No slab\nhandling",
 .\"	},
+.\"	env => {
+.\"		CONFIG_FILE =>		"Path to configuration file\n.Pq see Fl f .",
+.\"		CTL_SOCK_FILE =>	"Path to control socket file\n.Pq see Fl S .",
+.\"	},
 .Sh ENVIRONMENT
 .Bl -tag -width 3n
+.It Ev CONFIG_FILE
+Path to configuration file
+.Pq see Fl f .
+.It Ev CTL_SOCK_FILE
+Path to control socket file
+.Pq see Fl S .
 .It Ev LNET_ACCEPT
 Specify constraints on which connections are accepted.
 May be

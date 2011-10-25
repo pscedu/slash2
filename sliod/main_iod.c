@@ -124,12 +124,15 @@ main(int argc, char *argv[])
 	psc_subsys_register(SLISS_SLVR, "slvr");
 
 	progname = argv[0];
-	cfn = SL_PATH_CONF;
 	sfn = SL_PATH_SLICTLSOCK;
-
 	p = getenv("CTL_SOCK_FILE");
 	if (p)
 		sfn = p;
+
+	cfn = SL_PATH_CONF;
+	p = getenv("CONFIG_FILE");
+	if (p)
+		cfn = p;
 
 	while ((c = getopt(argc, argv, "D:f:S:X")) != -1)
 		switch (c) {
@@ -173,9 +176,9 @@ main(int argc, char *argv[])
 	bim_init();
 	slvr_cache_init();
 
-	psc_poolmaster_init(&bmap_rls_poolmaster,
-	    struct bmap_iod_rls, bir_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, NULL, NULL, "bmap_rls");
+	psc_poolmaster_init(&bmap_rls_poolmaster, struct bmap_iod_rls,
+	    bir_lentry, PPMF_AUTO, 64, 64, 0, NULL, NULL, NULL,
+	    "bmap_rls");
 	bmap_rls_pool = psc_poolmaster_getmgr(&bmap_rls_poolmaster);
 
 	sli_repl_init();
