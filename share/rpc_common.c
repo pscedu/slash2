@@ -157,12 +157,17 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 	struct srm_connect_rep *mp;
 	int rc;
 
-	rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
-	if (rc == 0)
-		rc = rq->rq_status;
-	if (rc == 0) {
-		mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
-		rc = mp->rc;
+	/* Check for ETIMEDOUT and friends before delving into closer
+	 *   inspection of the rq.
+	 */
+	if (!rq->rq_status) {
+		rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
+		if (rc == 0)
+			rc = rq->rq_status;
+		if (rc == 0) {
+			mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
+			rc = mp->rc;
+		}
 	}
 
 	csvc = args->pointer_arg[0];
