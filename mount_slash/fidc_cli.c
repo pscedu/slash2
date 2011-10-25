@@ -57,8 +57,12 @@ fcmh_setlocalsize(struct fidc_membh *fcmh, uint64_t size)
 	int locked;
 
 	locked = reqlock(&fcmh->fcmh_lock);
-	if (size > fcmh_2_fsz(fcmh))
+	if (size > fcmh_2_fsz(fcmh)) {
+		psclog_info("fid: "SLPRI_FID
+		    ", size from %"PRId64" to %"PRId64"\n", 
+		    fcmh_2_fid(fcmh), fcmh_2_fsz(fcmh), size);
 		fcmh_2_fsz(fcmh) = size;
+	}
 	ureqlock(&fcmh->fcmh_lock, locked);
 }
 
@@ -138,7 +142,6 @@ slc_fcmh_dtor(struct fidc_membh *fcmh)
 		struct fcmh_cli_info *fci;
 
 		fci = fcmh_get_pri(fcmh);
-
 		psc_assert(pll_empty(&fci->fci_dci.di_list));
 	}
 }
