@@ -113,6 +113,7 @@ int	slm_symlink(struct pscrpc_request *, struct srm_symlink_req *,
 #define slm_geticsvcx(resm, exp)	slm_geticsvcxf((resm), (exp), 0, NULL)
 #define slm_geticsvc_nb(resm, ml)	slm_geticsvcxf((resm), NULL, CSVCF_NONBLOCK, (ml))
 #define slm_geticsvc(resm)		slm_geticsvcxf((resm), NULL, 0, NULL)
+#define slm_geticsvcf(resm, fl)		slm_geticsvcxf((resm), NULL, (fl), NULL)
 
 static __inline struct slashrpc_cservice *
 slm_getclcsvc(struct pscrpc_export *exp)

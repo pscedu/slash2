@@ -1214,7 +1214,8 @@ mds_send_batch_reclaim(uint64_t batchno)
 		 * XXX use random
 		 */
 		DYNARRAY_FOREACH(dst_resm, i, &res->res_members) {
-			csvc = slm_geticsvc_nb(dst_resm, NULL);
+			csvc = slm_geticsvcf(dst_resm, CSVCF_NONBLOCK |
+			    CSVCF_NORECON);
 			if (csvc == NULL)
 				continue;
 			rc = SL_RSX_NEWREQ(csvc, SRMT_RECLAIM, rq, mq,
@@ -1227,7 +1228,8 @@ mds_send_batch_reclaim(uint64_t batchno)
 			mq->xid = xid;
 			mq->size = iov.iov_len;
 			mq->count = nentry;
-			psc_crc64_calc(&mq->crc, iov.iov_base, iov.iov_len);
+			psc_crc64_calc(&mq->crc, iov.iov_base,
+			    iov.iov_len);
 
 			rsx_bulkclient(rq, BULK_GET_SOURCE,
 			    SRMM_BULK_PORTAL, &iov, 1);
@@ -1492,12 +1494,12 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	struct srt_update_entry *update_entryp;
 	struct sl_mds_peerinfo *peerinfo;
 	struct sl_mds_iosinfo *iosinfo;
+	struct resprof_mds_info *rpmi;
 	struct sl_resource *res;
 	struct sl_resm *resm;
 	char *jrnldev, fn[PATH_MAX];
 	void *handle;
 	size_t size;
-	struct resprof_mds_info *rpmi;
 
 	psc_assert(_MDS_LOG_LAST_TYPE <= (1 << 15));
 	psc_assert(sizeof(struct srt_update_entry) == 512);
