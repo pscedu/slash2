@@ -406,18 +406,20 @@ _bmap_flush_desched(const struct pfl_callerinfo *pci,
 	int secs, rc, i;
 
 	BIORQ_LOCK(r);
-	psc_assert(r->biorq_flags & BIORQ_SCHED);
-	r->biorq_flags &= ~BIORQ_SCHED;
-	/* Don't spin in bmap_flush()
-	 */
-	r->biorq_flags |= BIORQ_RESCHED;
+	if (!(r->biorq_flags & BIORQ_RESCHED)) {
+		psc_assert(r->biorq_flags & BIORQ_SCHED);
+		r->biorq_flags &= ~BIORQ_SCHED;
+		/* Don't spin in bmap_flush()
+		 */
+		r->biorq_flags |= BIORQ_RESCHED;
+	}
 	PFL_GETTIMESPEC(&r->biorq_resched);
 	r->biorq_resched.tv_sec += 1;
 	BIORQ_ULOCK(r);
 
 	rc = msl_bmap_lease_tryext(r->biorq_bmap, &secs, 0);
 
-	DEBUG_BIORQ(rc ? PLL_ERROR : PLL_NOTIFY, r,
+	DEBUG_BIORQ(rc ? PLL_ERROR : PLL_WARN, r,
 	    "unset sched lease is %s (rc=%d) (secs_rem=%d)",
 	    rc ? "OK" : "INVALID", rc, secs);
 
@@ -438,21 +440,28 @@ _bmap_flush_resched(const struct pfl_callerinfo *pci,
     struct bmpc_ioreq *r)
 {
 	struct bmap_pagecache *bmpc;
-	int rc;
+	int rc, first_resched = 1;
 
 	BIORQ_LOCK(r);
-	psc_assert(r->biorq_flags & BIORQ_SCHED);
-	psc_assert(r->biorq_flags & BIORQ_INFL);
-	r->biorq_flags &= ~BIORQ_INFL;
+	if (r->biorq_flags & BIORQ_RESCHED)
+		first_resched = 0;
+	else {
+		psc_assert(r->biorq_flags & BIORQ_SCHED);
+		psc_assert(r->biorq_flags & BIORQ_INFL);
+		r->biorq_flags &= ~BIORQ_INFL;
+	}
 	BIORQ_ULOCK(r);
 
 	rc = _bmap_flush_desched(pci, r);
-
-	bmpc = bmap_2_bmpc(r->biorq_bmap);
-	BMPC_LOCK(bmpc);
-	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
-	pll_add_sorted(&bmpc->bmpc_new_biorqs, r, bmpc_biorq_cmp);
-	BMPC_ULOCK(bmpc);
+	
+	if (first_resched) {
+		bmpc = bmap_2_bmpc(r->biorq_bmap);
+		BMPC_LOCK(bmpc);
+		pll_remove(&bmpc->bmpc_pndg_biorqs, r);
+		pll_add_sorted(&bmpc->bmpc_new_biorqs, r, bmpc_biorq_cmp);
+		BMPC_ULOCK(bmpc);
+	} else
+		psc_assert(pll_conjoint(&bmpc->bmpc_new_biorqs, r));
 
 	return (rc);
 }
