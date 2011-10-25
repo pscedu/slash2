@@ -1696,10 +1696,9 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		fcmh_setattrf(child, &mp->srr_cattr,
 		    FCMH_SETATTRF_SAVELOCAL);
 	}
-	psclog_info(SLPRI_FG ", size=%lu, setattr=%s",
-	    SLPRI_FG_ARGS(&child->fcmh_fg), fcmh_2_fsz(child),
-	    setattr ?  "yes": "no");
-
+	psclog_info(SLPRI_FG ", size=%lu, mode=%#o, setattr=%s",
+	    SLPRI_FG_ARGS(&child->fcmh_fg), fcmh_2_fsz(child), 
+	    fcmh_2_mode(child), setattr ?  "yes": "no");
  out:
 	if (child)
 		fcmh_op_done_type(child, FCMH_OPCNT_LOOKUP_FIDC);
