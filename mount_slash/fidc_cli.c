@@ -41,7 +41,8 @@
 #include "mount_slash.h"
 #include "rpc_cli.h"
 
-/* XXX check client attributes when generation number changes
+/*
+ * XXX check client attributes when generation number changes
  *
  */
 
@@ -58,8 +59,8 @@ fcmh_setlocalsize(struct fidc_membh *fcmh, uint64_t size)
 
 	locked = reqlock(&fcmh->fcmh_lock);
 	if (size > fcmh_2_fsz(fcmh)) {
-		psclog_info("fid: "SLPRI_FID
-		    ", size from %"PRId64" to %"PRId64"\n", 
+		psclog_info("fid: "SLPRI_FID", "
+		    "size from %"PRId64" to %"PRId64,
 		    fcmh_2_fid(fcmh), fcmh_2_fsz(fcmh), size);
 		fcmh_2_fsz(fcmh) = size;
 	}
