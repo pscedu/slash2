@@ -1540,7 +1540,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	struct srm_rename_rep *mp;
 	struct slash_creds cr;
 	struct iovec iov[2];
-	int sticky, setattr = 0, rc;
+	int sticky, rc;
 
 	srcfg.fg_fid = FID_ANY;
 	dstfg.fg_fid = FID_ANY;
@@ -1691,14 +1691,12 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		if (rc)
 			goto out;
 	}
-	if (mp->srr_cattr.sst_fid) {
-		setattr = 1;
+	if (mp->srr_cattr.sst_fid)
 		fcmh_setattrf(child, &mp->srr_cattr,
 		    FCMH_SETATTRF_SAVELOCAL);
-	}
-	psclog_info(SLPRI_FG ", size=%lu, mode=%#o, setattr=%s",
-	    SLPRI_FG_ARGS(&child->fcmh_fg), fcmh_2_fsz(child), 
-	    fcmh_2_mode(child), setattr ?  "yes": "no");
+	DEBUG_FCMH(PLL_INFO, child, "setattr=%s",
+	    mp->srr_cattr.sst_fid ? "yes" : "no");
+
  out:
 	if (child)
 		fcmh_op_done_type(child, FCMH_OPCNT_LOOKUP_FIDC);
