@@ -280,7 +280,7 @@ main(int argc, char *argv[])
 		if (nb != sizeof(buf))
 			PFL_GOTOERR(skipfsuuid, rc = SLERR_SHORTIO);
 		buf[sizeof(buf) - 1] = '\0';
-		slm_fsuuid = strtoll(buf, &endp, 16);
+		slm_fsuuid = strtoull(buf, &endp, 16);
 		if (*endp || endp == buf)
 			PFL_GOTOERR(skipfsuuid, rc = EINVAL);
 
