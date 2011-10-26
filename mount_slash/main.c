@@ -1694,8 +1694,8 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	if (mp->srr_cattr.sst_fid)
 		fcmh_setattrf(child, &mp->srr_cattr,
 		    FCMH_SETATTRF_SAVELOCAL);
-	DEBUG_FCMH(PLL_INFO, child, "setattr=%s",
-	    mp->srr_cattr.sst_fid ? "yes" : "no");
+	DEBUG_FCMH(PLL_INFO, child, "newname=%s, setattr=%s",
+	    newname, mp->srr_cattr.sst_fid ? "yes" : "no");
 
  out:
 	if (child)
