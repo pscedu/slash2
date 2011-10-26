@@ -35,3 +35,8 @@ SUBDIRS+=	slkeymgt
 
 SUBDIRS+=	tests
 SUBDIRS+=	utils
+
+ifdef SLCFG
+install-hook:
+	cp -f ${SLCFG} ${SLCFG_DST}
+endif
