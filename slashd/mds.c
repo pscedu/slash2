@@ -1686,11 +1686,11 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 
 int
 mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
-		struct srt_bmapdesc *sbd_out, struct pscrpc_export *exp)
+    struct srt_bmapdesc *sbd_out, struct pscrpc_export *exp)
 {
-	struct bmap_mds_lease *bml, *obml;
-	struct bmapc_memb *b;
+	struct bmap_mds_lease *bml = NULL, *obml;
 	struct slm_exp_cli *mexpc;
+	struct bmapc_memb *b;
 	int rc, rw;
 
 	rc = mds_bmap_load(f, sbd_in->sbd_bmapno, &b);
@@ -1718,7 +1718,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	EXPORT_ULOCK(exp);
 
 	rc = mds_bmap_bml_add(bml, (rw == BML_READ ? SL_READ : SL_WRITE),
-	      sbd_in->sbd_ios);
+	    sbd_in->sbd_ios);
 	if (rc) {
 		if (rc == -SLERR_BMAP_DIOWAIT) {
 			EXPORT_LOCK(exp);
@@ -1748,7 +1748,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 
 		sbd_out->sbd_key = bml->bml_bmdsi->bmdsi_assign->odtr_key;
 		sbd_out->sbd_ios =
-			bmi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id;
+		    bmi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id;
 	} else {
 		sbd_out->sbd_key = BMAPSEQ_ANY;
 		sbd_out->sbd_ios = IOS_ID_ANY;
@@ -1767,14 +1767,15 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	if (!(bml->bml_flags & BML_FREEING)) {
 		obml->bml_flags |= BML_FREEING;
 		BML_ULOCK(obml);
-		(int)mds_bmap_bml_release(obml);
+		mds_bmap_bml_release(obml);
 	} else
 		BML_ULOCK(obml);
 
  out:
 	DEBUG_BMAP(rc ? PLL_WARN : PLL_INFO, b,
 	   "renew oseq=%"PRId64" nseq=%"PRId64" nid=%"PRId64" pid=%u",
-	   sbd_in->sbd_seq, bml->bml_seq, exp->exp_connection->c_peer.nid,
+	   sbd_in->sbd_seq, bml ? bml->bml_seq : -1,
+	   exp->exp_connection->c_peer.nid,
 	   exp->exp_connection->c_peer.pid);
 
 	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
@@ -1786,8 +1787,8 @@ slm_setattr_core(struct fidc_membh *fcmh, struct srt_stat *sstb,
     int to_set)
 {
 	int locked, deref = 0, rc = 0;
-	struct slm_workrq *wkrq;
 	struct fcmh_mds_info *fmi;
+	struct slm_workrq *wkrq;
 
 	if ((to_set & PSCFS_SETATTRF_DATASIZE) && sstb->sst_size) {
 		if (fcmh == NULL) {
