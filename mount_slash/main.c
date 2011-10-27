@@ -1210,8 +1210,7 @@ msl_lookuprpc(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	 *  come to us with another request for the inode since it won't
 	 *  yet be visible in the cache.
 	 */
-	rc = msl_create_fcmh(pfr, &mp->attr, FCMH_SETATTRF_SAVELOCAL,
-	    &m);
+	rc = msl_create_fcmh(pfr, &mp->attr, FCMH_SETATTRF_SAVELOCAL, &m);
 	if (rc)
 		goto out;
 
@@ -1225,6 +1224,7 @@ msl_lookuprpc(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	}
 
  out:
+	psclog_info("pfid="SLPRI_FID" name='%s', rc=%d", pinum, name, rc);
 	if (rc == 0 && fp)
 		*fp = m;
 	else if (m)
