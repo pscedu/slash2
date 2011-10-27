@@ -202,7 +202,7 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 		fsUuid = psc_random64();
 	fprintf(fp, "%16"PRIx64"\n", fsUuid);
 	if (!ion)
-		printf("The UUID of the pool is 0x%16"PRIx64"\n", fsUuid);
+		printf("The UUID of the pool is %#16"PRIx64"\n", fsUuid);
 
 	fclose(fp);
 
