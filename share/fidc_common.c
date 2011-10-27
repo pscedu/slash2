@@ -516,10 +516,10 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 
 	psc_assert(f->fcmh_refcnt > 0);
 
-	DEBUG_FCMH(PLL_DEBUG, (f), "release ref (type=%d)", type);
 
 	f->fcmh_refcnt--;
 	if (f->fcmh_refcnt == 0) {
+		DEBUG_FCMH(PLL_INFO, (f), "flags=%x, type=%d", f->fcmh_flags, type);
 		/*
 		 * If we fail to initialize a fcmh, free it now.
 		 * Note that the reaper won't run if there is no
