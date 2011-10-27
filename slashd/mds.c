@@ -1773,8 +1773,8 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 
  out:
 	DEBUG_BMAP(rc ? PLL_WARN : PLL_INFO, b,
-	   "renew oseq=%"PRId64" nseq=%"PRId64" nid=%"PRId64" pid=%u",
-	   sbd_in->sbd_seq, bml ? bml->bml_seq : -1,
+	   "renew oseq=%"PRIu64" nseq=%"PRIu64" nid=%"PRIu64" pid=%u",
+	   sbd_in->sbd_seq, bml ? bml->bml_seq : 0,
 	   exp->exp_connection->c_peer.nid,
 	   exp->exp_connection->c_peer.pid);
 
