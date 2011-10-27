@@ -913,7 +913,8 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	}
 
  out:
-	psclog_info("pfid="SLPRI_FID" name='%s' rc=%d", pinum, name, rc);
+	psclog_info("pfid="SLPRI_FID" name='%s', isfile=%d rc=%d", 
+	    pinum, name, isfile, rc);
 
 	if (c)
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
