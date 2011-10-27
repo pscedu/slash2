@@ -307,8 +307,8 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw,
 	mq->rw = rw;
 	mq->flags |= SRM_LEASEBMAPF_GETREPLTBL;
 
-	DEBUG_FCMH(PLL_INFO, f, "retrieving bmap (bmapno=%u) (rw=%d)",
-	    bmap->bcm_bmapno, rw);
+	DEBUG_FCMH(PLL_INFO, f, "retrieving bmap (bmapno=%u) (rw=%s)",
+	    bmap->bcm_bmapno, (rw == SL_READ) ? "read" : "write");
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)

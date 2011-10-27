@@ -2287,8 +2287,9 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		rc = bmap_get(f, s + i, rw, &b);
 		if (rc) {
 			DEBUG_FCMH(PLL_ERROR, f, "bno=%zd sz=%zu tlen=%zu "
-			   "off=%"PSCPRIdOFFT" roff=%"PSCPRIdOFFT" rw=%d "
-			   "rc=%zd", s + i, tsize, tlen, off, roff, rw, rc);
+			   "off=%"PSCPRIdOFFT" roff=%"PSCPRIdOFFT" rw=%s "
+			   "rc=%zd", s + i, tsize, tlen, off, roff, 
+			   (rw == SL_READ) ? "read" : "write", rc);
 			if (msl_fd_offline_retry(mfh))
 				goto retry_bmap;
 			switch (abs(rc)) {
