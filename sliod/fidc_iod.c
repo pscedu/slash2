@@ -146,9 +146,10 @@ sli_fcmh_reopen(struct fidc_membh *fcmh, const struct slash_fidgen *fg)
 		/* Do some upfront garbage collection.
 		 */
 		sli_fg_makepath(&oldfg, fidfn);
-		if (unlink(fidfn) == -1)
-			DEBUG_FCMH(PLL_INFO, fcmh, "unlink() failed errno=%d",
-				   errno);
+
+		errno = 0;
+		unlink(fidfn);
+		DEBUG_FCMH(PLL_INFO, fcmh, "upfront unlink(), errno=%d", errno);
 
 	} else if (fg->fg_gen == fcmh_2_gen(fcmh) &&
 		   (fcmh->fcmh_flags & FCMH_CTOR_DELAYED)) {
