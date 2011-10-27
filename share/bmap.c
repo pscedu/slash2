@@ -201,6 +201,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 	FCMH_URLOCK(f, locked);
 
 	if (do_load) {
+		/* call either msl_bmap_retrieve() or iod_bmap_retrieve() */
 		if ((flags & BMAPGETF_NORETRIEVE) == 0)
 			rc = bmap_ops.bmo_retrievef(b, rw, flags);
 
