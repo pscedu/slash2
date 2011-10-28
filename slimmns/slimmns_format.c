@@ -44,6 +44,7 @@
 #include "fid.h"
 #include "mkfn.h"
 #include "pathnames.h"
+#include "slconfig.h"
 
 void wipefs(const char *);
 
@@ -243,23 +244,60 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 	slnewfs_create_odtable(metadir);
 }
 
+void
+slcfg_init_res(__unusedx struct sl_resource *res)
+{
+}
+
+void
+slcfg_init_resm(__unusedx struct sl_resm *resm)
+{
+}
+
+void
+slcfg_init_site(__unusedx struct sl_site *site)
+{
+}
+
+int	 cfg_site_pri_sz;
+int	 cfg_res_pri_sz;
+int	 cfg_resm_pri_sz;
+
+int
+psc_usklndthr_get_type(__unusedx const char *namefmt)
+{
+	return (0);
+}
+
+void
+psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX],
+    __unusedx const char *namefmt, __unusedx va_list ap)
+{
+	strlcpy(buf, "cfg", PSC_THRNAME_MAX);
+}
+
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-iW] [-D datadir] [-u fsuuid] fsroot\n", progname);
+	fprintf(stderr,
+	    "usage: %s [-iW] [-c conf] [-D datadir] [-u fsuuid] fsroot\n",
+	    progname);
 	exit(1);
 }
 
 int
 main(int argc, char *argv[])
 {
+	char *cfgfn = NULL, *endp;
 	int c;
-	char *endp;
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "D:iWu:")) != -1)
+	while ((c = getopt(argc, argv, "c:D:iWu:")) != -1)
 		switch (c) {
+		case 'c':
+			cfgfn = optarg;
+			break;
 		case 'D':
 			datadir = optarg;
 			break;
@@ -268,7 +306,7 @@ main(int argc, char *argv[])
 			break;
 		case 'u':
 			endp = NULL;
-			fsUuid = (uint64_t)strtoull(optarg, &endp, 16);
+			fsUuid = strtoull(optarg, &endp, 16);
 			if (endp == optarg || *endp)
 				errx(1, "%s: invalid FSUUID", optarg);
 			break;
@@ -282,6 +320,9 @@ main(int argc, char *argv[])
 	argv += optind;
 	if (argc != 1)
 		usage();
+
+	if (cfgfn)
+		slcfg_parse(cfgfn);
 
 	/* on ION, we must specify a uuid */
 	if (ion && !fsUuid)

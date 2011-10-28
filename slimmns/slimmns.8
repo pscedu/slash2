@@ -14,7 +14,7 @@
 .\" without express or implied warranty.
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
-.Dd September 30, 2011
+.Dd October 28, 2011
 .Dt SLMKFS 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -26,6 +26,7 @@ backing store file system
 .Sh SYNOPSIS
 .Nm slmkfs
 .Op Fl iW
+.Op Fl c Ar conf
 .Op Fl D Ar datadir
 .Op Fl u Ar fsuuid
 .Pa fsroot
@@ -47,6 +48,9 @@ file pathname renames and unlinks, and the replication queue.
 .Pp
 The following options are available:
 .Bl -tag -offset 3n -width 3n
+.It Fl c Ar conf
+Specify configuration file from which to extract other parameters
+.Pq such as Fl u .
 .It Fl D Ar datadir
 Specify an alternative directory where operation data is stored.
 Defaults to
