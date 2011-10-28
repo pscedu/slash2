@@ -163,6 +163,7 @@ struct sl_gconf {
 	char			 gconf_zpcachefn[PATH_MAX];
 	char			 gconf_zpname[NAME_MAX];
 	int			 gconf_async_io;
+	int			 gconf_fidnsdepth;
 
 	struct psclist_head	 gconf_routehd;
 	struct psc_lockedlist	 gconf_sites;

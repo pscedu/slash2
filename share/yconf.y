@@ -108,6 +108,7 @@ int		 yyparse(void);
 
 struct slconf_symbol sym_table[] = {
 	TABENT_VAR("allow_exec",	SL_TYPE_STR,	BUFSIZ,		gconf_allowexe,	NULL),
+	TABENT_VAR("fidns_depth",	SL_TYPE_INT,	32,		gconf_fidnsdepth,NULL),
 	TABENT_VAR("fs_root",		SL_TYPE_STR,	PATH_MAX,	gconf_fsroot,	NULL),
 	TABENT_VAR("fsuuid",		SL_TYPE_HEXU64,	0,		gconf_fsuuid,	NULL),
 	TABENT_VAR("journal",		SL_TYPE_STR,	PATH_MAX,	gconf_journal,	NULL),
