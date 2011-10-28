@@ -71,7 +71,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	struct slvr_ref *slvr_ref[RIC_MAX_SLVRS_PER_IO];
 	struct iovec iovs[RIC_MAX_SLVRS_PER_IO];
 	struct sli_aiocb_reply *aiocbr = NULL;
-	struct bmap_iod_info *biodi;
 	struct slash_fidgen *fgp;
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bmap;
@@ -160,11 +159,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		psclog_errorx("failed to load bmap %u", bmapno);
 		goto out;
 	}
-	biodi = bmap_2_biodi(bmap);
 
 	DEBUG_FCMH(PLL_INFO, fcmh, "bmapno=%u size=%u off=%u rw=%d "
 	    "sbd_seq=%"PRId64, bmap->bcm_bmapno, mq->size, mq->offset, rw,
-	   mq->sbd.sbd_seq);
+	    mq->sbd.sbd_seq);
 
 	/*
 	 * Currently we have LNET_MTU = SLASH_SLVR_SIZE = 1MB, therefore
