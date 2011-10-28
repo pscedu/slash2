@@ -453,9 +453,10 @@ _bmap_flush_resched(const struct pfl_callerinfo *pci,
 	BIORQ_ULOCK(r);
 
 	rc = _bmap_flush_desched(pci, r);
+
+	bmpc = bmap_2_bmpc(r->biorq_bmap);
 	
 	if (first_resched) {
-		bmpc = bmap_2_bmpc(r->biorq_bmap);
 		BMPC_LOCK(bmpc);
 		pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 		pll_add_sorted(&bmpc->bmpc_new_biorqs, r, bmpc_biorq_cmp);
