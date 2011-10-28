@@ -86,10 +86,10 @@ int
 slc_rmc_setmds(const char *name)
 {
 	struct sl_resource *res;
-	struct sl_resm *old;
+//	struct sl_resm *old;
 	lnet_nid_t nid;
 
-	old = slc_rmc_resm;
+//	old = slc_rmc_resm;
 	nid = libcfs_str2nid(name);
 	if (nid == LNET_NID_ANY) {
 		res = libsl_str2res(name);
