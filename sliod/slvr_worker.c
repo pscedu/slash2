@@ -225,15 +225,15 @@ int
 slvr_nbreqset_cb(struct pscrpc_request *rq,
 		 struct pscrpc_async_args *args)
 {
-	int			 i;
-	struct psc_dynarray	*a;
 	struct srm_bmap_crcwrt_rep *mp;
-	struct biod_crcup_ref	*bcr;
-	struct slashrpc_cservice *csvc;
-	struct bmap_iod_info    *biod;
+//	struct slashrpc_cservice *csvc;
+	struct biod_crcup_ref *bcr;
+	struct bmap_iod_info *biod;
+	struct psc_dynarray *a;
+	int i;
 
 	a = args->pointer_arg[0];
-	csvc = args->pointer_arg[1];
+//	csvc = args->pointer_arg[1];
 	psc_assert(a);
 
 	sli_rpc_mds_unpack_bminseq(rq, PSCRPC_MSG_REPLY);
