@@ -455,7 +455,7 @@ _bmap_flush_resched(const struct pfl_callerinfo *pci,
 	rc = _bmap_flush_desched(pci, r);
 
 	bmpc = bmap_2_bmpc(r->biorq_bmap);
-	
+
 	if (first_resched) {
 		BMPC_LOCK(bmpc);
 		pll_remove(&bmpc->bmpc_pndg_biorqs, r);
@@ -1062,7 +1062,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 	struct resm_cli_info *rmci;
 	struct bmapc_memb *b;
 	struct sl_resm *resm;
-	int i, sortbypass = 0, sawnew, rc;
+	int i, sortbypass = 0, sawnew;
 
 #define SORT_BYPASS_ITERS		32
 #define ITEMS_TRY_AFTER_UNEXPIRED	MAX_BMAP_RELEASE
@@ -1110,7 +1110,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			if (bmpc_queued_ios(&bci->bci_bmpc)) {
 				BMAP_ULOCK(b);
 
-				rc = msl_bmap_lease_tryext(b, NULL, 0);
+				msl_bmap_lease_tryext(b, NULL, 0);
 				/* msl_bmap_lease_tryext() adjusted etime.
 				 */
 				if (timespeccmp(&nexttimeo, &bci->bci_etime, >))
@@ -1258,13 +1258,13 @@ __static void
 bmap_flush(struct timespec *nexttimeo)
 {
 	struct psc_dynarray *biorqs, reqs = DYNARRAY_INIT_NOLOG,
-		bmaps = DYNARRAY_INIT_NOLOG;
+	    bmaps = DYNARRAY_INIT_NOLOG;
 	struct bmap_pagecache *bmpc;
 	struct bmpc_ioreq *r, *tmp;
 	struct bmapc_memb *b, *tmpb;
 	struct iovec *iovs = NULL;
-	int i, j, niovs, rc;
 	struct timespec t;
+	int i, j, niovs;
 
 	PFL_GETTIMESPEC(nexttimeo);
 	timespecadd(nexttimeo, &bmapFlushWaitSecs, nexttimeo);
@@ -1289,7 +1289,7 @@ bmap_flush(struct timespec *nexttimeo)
 			BMPC_ULOCK(bmpc);
 			bcm_wake_locked(b);
 		} else {
-			rc = msl_bmap_lease_tryext(b, NULL, 0);
+			msl_bmap_lease_tryext(b, NULL, 0);
 
 			if (bmap_flushable(b, &t))
 				psc_dynarray_add(&bmaps, b);
