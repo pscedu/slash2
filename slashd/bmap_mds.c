@@ -240,7 +240,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 	struct srt_stat sstb;
 	uint32_t utimgen, i;
 	sl_ios_id_t iosid;
-	int rc, fl, idx;
+	int fl, idx;
 
 	psc_assert(bmap->bcm_flags & BMAP_MDS_CRC_UP);
 
@@ -273,9 +273,9 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 
 	fcmh_set_repl_nblks(f, idx, crcup->nblks);
 	if (idx >= SL_DEF_REPLICAS)
-		rc = mds_inox_write(ih, NULL, NULL);
+		mds_inox_write(ih, NULL, NULL);
 	else
-		rc = mds_inode_write(ih, NULL, NULL);
+		mds_inode_write(ih, NULL, NULL);
 //	if (rc)
 //		goto out;
 
