@@ -270,7 +270,7 @@ mds_inode_repls_update(struct fidc_membh *f, int log)
 
 	locked = INOH_RLOCK(ih);
 	rc = mds_inode_write(ih, logf, f);
-	if (rc == 0 && ih->inoh_ino.ino_nrepls >= SL_DEF_REPLICAS)
+	if (rc == 0 && ih->inoh_ino.ino_nrepls > SL_DEF_REPLICAS)
 		rc = mds_inox_write(ih, logf, f);
 	DEBUG_FCMH(PLL_DEBUG, f, "wrote updated ino_repls log=%d", log);
 	INOH_URLOCK(ih, locked);
