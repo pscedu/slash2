@@ -209,7 +209,7 @@ mds_replay_ino(void *jent, int op)
 
 		psc_assert(sjir->sjir_nrepls <= SL_MAX_REPLICAS);
 
-		if (sjir->sjir_nrepls >= SL_DEF_REPLICAS) {
+		if (sjir->sjir_nrepls > SL_DEF_REPLICAS) {
 			mds_inox_ensure_loaded(ih);
 			memcpy(ih->inoh_extras->inox_repls,
 			    &sjir->sjir_repls[SL_DEF_REPLICAS],
