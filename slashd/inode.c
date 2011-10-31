@@ -220,13 +220,14 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 	rc = mdsio_preadv(&rootcreds, iovs, nitems(iovs), &nb,
 	    SL_EXTRAS_START_OFF, inoh_2_mdsio_data(ih));
 	if (rc == 0 && od_crc == 0 &&
-	    pfl_memchk(&ih->inoh_extras, 0, sizeof(*ih->inoh_extras))) {
+	    pfl_memchk(ih->inoh_extras, 0, sizeof(*ih->inoh_extras))) {
 		ih->inoh_flags |= INOH_HAVE_EXTRAS;
 		rc = 0;
 	} else if (rc) {
+		rc = -abs(rc);
 		DEBUG_INOH(PLL_ERROR, ih, "read inox: %d", rc);
 	} else if (nb != sizeof(*ih->inoh_extras) + sizeof(od_crc)) {
-		rc = SLERR_SHORTIO;
+		rc = -SLERR_SHORTIO;
 		DEBUG_INOH(PLL_ERROR, ih, "read inox: %d nb=%zu", rc, nb);
 	} else {
 		psc_crc64_calc(&crc, ih->inoh_extras,
@@ -234,10 +235,10 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 		if (crc == od_crc)
 			ih->inoh_flags |= INOH_HAVE_EXTRAS;
 		else {
-			psclog_errorx("inox CRC fail; "
+			psclog_errorx("inox CRC fail (rc=%d) "
 			    "disk=%"PSCPRIxCRC64" mem=%"PSCPRIxCRC64,
-			    od_crc, crc);
-			rc = SLERR_BADCRC;
+			    rc, od_crc, crc);
+			rc = -SLERR_BADCRC;
 		}
 	}
 	if (rc) {
