@@ -1946,6 +1946,9 @@ slm_ptrunc_prepare(struct slm_workrq *wkrq)
 	    fcmh_2_mdsio_data(fcmh), mdslog_namespace);
 	mds_unreserve_slot(1);
 
+	if (rc)
+		psclog_error("setattr rc=%d", rc);
+
 	FCMH_ULOCK(fcmh);
 	slm_ptrunc_apply(wkrq);
 	return (0);
