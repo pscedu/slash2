@@ -103,14 +103,13 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
 	 */
 	for (j = 0, k = 0, repl = ih->inoh_ino.ino_repls;
 	    j < ih->inoh_ino.ino_nrepls; j++, k++) {
-		if (j >= SL_DEF_REPLICAS) {
+		if (j == SL_DEF_REPLICAS) {
 			/*
 			 * The first few replicas are in the inode
 			 * itself, the rest are in the extras block.
 			 */
-			if (!(ih->inoh_flags & INOH_HAVE_EXTRAS))
-				if (!(rc = mds_inox_load_locked(ih)))
-					goto out;
+			if ((rc = mds_inox_ensure_loaded(ih)))
+				goto out;
 
 			repl = ih->inoh_extras->inox_repls;
 			k = 0;
@@ -118,6 +117,7 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
 
 		DEBUG_INOH(PLL_INFO, ih, "rep%u[%u] == %u",
 			   k, repl[k].bs_id, ios);
+
 		if (repl[k].bs_id == ios) {
 			rc = j;
 			goto out;
@@ -128,15 +128,19 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
 	 *   specified, else return.
 	 */
 	if (add) {
-		if (ih->inoh_ino.ino_nrepls >= SL_MAX_REPLICAS) {
+		psc_assert(ih->inoh_ino.ino_nrepls <= SL_MAX_REPLICAS);
+		if (ih->inoh_ino.ino_nrepls == SL_MAX_REPLICAS) {
 			DEBUG_INOH(PLL_WARN, ih, "too many replicas");
 			rc = -ENOSPC;
 			goto out;
-		}
 
-		if (j >= SL_DEF_REPLICAS) {
+		} else if (ih->inoh_ino.ino_nrepls >= SL_DEF_REPLICAS) {
+			if ((rc = mds_inox_ensure_loaded(ih)))
+				goto out;
+
 			repl = ih->inoh_extras->inox_repls;
 			k = j - SL_DEF_REPLICAS;
+
 		} else {
 			repl = ih->inoh_ino.ino_repls;
 			k = j;
