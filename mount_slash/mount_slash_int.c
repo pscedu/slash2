@@ -949,7 +949,7 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 	DEBUG_BIORQ(rc ? PLL_ERROR : PLL_INFO, r, "rc=%d", rc);
 
 	DYNARRAY_FOREACH(e, i, a) {
-		if ((r->biorq_flags & BIORQ_AIOWAIT) && 
+		if ((r->biorq_flags & BIORQ_AIOWAIT) &&
 		    (e->bmpce_flags & BMPCE_AIOWAIT) && !decrefd) {
 			/* Call aio decref one time per-RPC but only
 			 *   if a page in the RPC is marked AIO.
@@ -2117,12 +2117,14 @@ msl_fsrqinfo_write(struct msl_fsrqinfo *q)
 
  out:
 	DEBUG_FCMH(PLL_INFO, f, "write: buf=%p rc=%d sz=%zu "
-	    "off=%"PSCPRIdOFFT, q->mfsrq_buf, rc, q->mfsrq_size, q->mfsrq_off);
+	    "off=%"PSCPRIdOFFT, q->mfsrq_buf, rc, q->mfsrq_size,
+	    q->mfsrq_off);
 	pscfs_reply_write(q->mfsrq_pfr, q->mfsrq_size, rc);
 }
 
 __static void
-msl_fsrqinfo_biorq_add(struct msl_fsrqinfo *q, struct bmpc_ioreq *r, int pos)
+msl_fsrqinfo_biorq_add(struct msl_fsrqinfo *q, struct bmpc_ioreq *r,
+    int pos)
 {
 	MFH_LOCK(r->biorq_fhent);
 	DEBUG_BIORQ(PLL_INFO, r, "q=%p pos=%d", q, pos);
@@ -2242,10 +2244,12 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		FCMH_ULOCK(f);
 		goto out;
 	}
+
 	/* Catch read ops which extend beyond EOF.
 	 */
 	if ((rw == SL_READ) && ((tsize + off) > fsz))
 		tsize = fsz - off;
+
 	/*
 	 * All I/O's block here for pending truncate requests.
 	 *
@@ -2274,7 +2278,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			goto load_next;
 
 		DEBUG_FCMH(PLL_INFO, f, "sz=%zu tlen=%zu off=%"PSCPRIdOFFT" "
-		    "roff=%"PSCPRIdOFFT" rw=%s", tsize, tlen, off, roff, 
+		    "roff=%"PSCPRIdOFFT" rw=%s", tsize, tlen, off, roff,
 		    (rw == SL_READ) ? "read" : "write");
 
 		psc_assert(tsize);
@@ -2288,7 +2292,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		if (rc) {
 			DEBUG_FCMH(PLL_ERROR, f, "bno=%zd sz=%zu tlen=%zu "
 			   "off=%"PSCPRIdOFFT" roff=%"PSCPRIdOFFT" rw=%s "
-			   "rc=%zd", s + i, tsize, tlen, off, roff, 
+			   "rc=%zd", s + i, tsize, tlen, off, roff,
 			   (rw == SL_READ) ? "read" : "write", rc);
 			if (msl_fd_offline_retry(mfh))
 				goto retry_bmap;
