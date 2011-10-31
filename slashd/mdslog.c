@@ -1358,7 +1358,7 @@ mdslogfill_ino_repls(struct fidc_membh *f,
 	sjir->sjir_replpol = fcmh_2_replpol(f);
 	memcpy(sjir->sjir_repls, ih->inoh_ino.ino_repls,
 	    sizeof(ih->inoh_ino.ino_repls));
-	if (fcmh_2_nrepls(f) >= SL_DEF_REPLICAS)
+	if (fcmh_2_nrepls(f) > SL_DEF_REPLICAS)
 		memcpy(&sjir->sjir_repls[SL_DEF_REPLICAS],
 		    ih->inoh_extras->inox_repls,
 		    sizeof(ih->inoh_extras->inox_repls));
