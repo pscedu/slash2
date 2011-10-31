@@ -210,7 +210,8 @@ sl_buffer_cache_init(void)
 
 	psc_poolmaster_init(&slBufsPoolMaster, struct sl_buffer,
 	    slb_mgmt_lentry, PPMF_AUTO, SLB_NDEF, SLB_MIN, SLB_MAX,
-	    sl_buffer_init, sl_buffer_destroy, slvr_buffer_reap, "slab", NULL);
+	    sl_buffer_init, sl_buffer_destroy, slvr_buffer_reap, "slab",
+	    NULL);
 	slBufsPool = psc_poolmaster_getmgr(&slBufsPoolMaster);
 
 //	lc_reginit(&slBufsLru,  struct sl_buffer, slb_mgmt_lentry, "slabBufLru");

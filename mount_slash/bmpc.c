@@ -644,9 +644,9 @@ bmpc_global_init(void)
 	pll_init(&bmpcSlabs.bmms_slbs, struct sl_buffer,
 	    slb_mgmt_lentry, &bmpcSlabs.bmms_lock);
 
-	psc_poolmaster_init(&bmpcePoolMaster, struct bmap_pagecache_entry, 
-	    bmpce_lentry, PPMF_AUTO, 512, 512, 16384, bmpce_init, NULL, 
-	    NULL, "bmpce");
+	psc_poolmaster_init(&bmpcePoolMaster,
+	    struct bmap_pagecache_entry, bmpce_lentry, PPMF_AUTO, 512,
+	    512, 16384, bmpce_init, NULL, NULL, "bmpce");
 
 	bmpcePoolMgr = psc_poolmaster_getmgr(&bmpcePoolMaster);
 
