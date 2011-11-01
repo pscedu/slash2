@@ -1151,8 +1151,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			if (b->bcm_flags & BMAP_WR) {
 				/* Setup a msg to an ION.
 				 */
-				psc_assert(bmap_2_ios(b) !=
-				    IOS_ID_ANY);
+				psc_assert(bmap_2_ios(b) != IOS_ID_ANY);
 
 				resm = libsl_ios2resm(bmap_2_ios(b));
 				rmci = resm2rmci(resm);
@@ -1179,8 +1178,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 			bmap_op_done_type(b, BMAP_OPCNT_REAPER);
 
-			if (rmci->rmci_bmaprls.nbmaps ==
-			    MAX_BMAP_RELEASE) {
+			if (rmci->rmci_bmaprls.nbmaps == MAX_BMAP_RELEASE) {
 				msl_bmap_release(resm);
 				if (psc_dynarray_exists(&rels, resm))
 					psc_dynarray_remove(&rels, resm);
