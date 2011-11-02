@@ -47,7 +47,7 @@ _mds_fcmh_setattr(struct fidc_membh *f, int to_set,
 
 	f->fcmh_flags |= FCMH_IN_SETATTR;
 
-	DEBUG_FCMH(PLL_INFO, f, "attributes updated, writing");
+	DEBUG_FCMH(PLL_INFO, f, "updating attributes, to_set=%x", to_set);
 
 	FCMH_ULOCK(f);
 	if (log)
