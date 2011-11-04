@@ -77,36 +77,6 @@ slictlcmd_export(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 	return (pfl_filewalk(sfop->sfop_fn, fl, sli_export, sfop));
 }
 
-int
-sli_fcmh_lookup_fid(struct slashrpc_cservice *csvc,
-    const struct slash_fidgen *pfg, const char *cpn,
-    struct slash_fidgen *cfg, int *isdir)
-{
-	struct pscrpc_request *rq = NULL;
-	struct srm_lookup_req *mq;
-	struct srm_lookup_rep *mp;
-	int rc = 0;
-
-	rc = SL_RSX_NEWREQ(csvc, SRMT_LOOKUP, rq, mq, mp);
-	if (rc)
-		goto out;
-	mq->pfg = *pfg;
-	strlcpy(mq->name, cpn, sizeof(mq->name));
-	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc == 0)
-		rc = abs(mp->rc);
-	if (rc)
-		goto out;
-
-	*cfg = mp->attr.sst_fg;
-	*isdir = S_ISDIR(mp->attr.sst_mode);
-
- out:
-	if (rq)
-		pscrpc_req_finished(rq);
-	return (rc);
-}
-
 struct sli_import_arg {
 	struct psc_ctlmsghdr	*mh;
 	struct slictlmsg_fileop	*sfop;
@@ -217,6 +187,14 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 			continue;
 		if (np - p > (int)sizeof(cpn))
 			PFL_GOTOERR(error, rc = ENAMETOOLONG);
+
+		/*
+		 * Do not LOOKUP the last pathname component; we'll just
+		 * blindly try to import there.
+		 */
+		if (*np == '\0')
+			break;
+
 		strlcpy(cpn, p, np - p + 1);
 
 		rc = sli_fcmh_lookup_fid(csvc, &fg, cpn, &tfg, &isdir);

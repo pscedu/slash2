@@ -39,10 +39,12 @@ fcmh_2_fii(struct fidc_membh *f)
 
 #define fcmh_2_fd(fcmh)		fcmh_2_fii(fcmh)->fii_fd
 
-int sli_fcmh_getattr(struct fidc_membh *);
-
 #define sli_fcmh_get(fgp, fp)	fidc_lookup((fgp), FIDC_LOOKUP_CREATE, NULL, 0, (fp))
 
-void sli_fg_makepath(const struct slash_fidgen *, char *);
+void	sli_fg_makepath(const struct slash_fidgen *, char *);
+int	sli_fcmh_getattr(struct fidc_membh *);
+int	sli_fcmh_lookup_fid(struct slashrpc_cservice *,
+	    const struct slash_fidgen *, const char *,
+	    struct slash_fidgen *, int *);
 
 #endif /* _FIDC_IOD_H_ */

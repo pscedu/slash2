@@ -27,7 +27,9 @@
 #include "fidcache.h"
 #include "mkfn.h"
 #include "pathnames.h"
+#include "slashrpc.h"
 #include "slconfig.h"
+#include "slconn.h"
 #include "sltypes.h"
 #include "slutil.h"
 
@@ -75,7 +77,7 @@ sli_open_backing_file(struct fidc_membh *fcmh)
 		if (incr)
 			psc_rlim_adj(RLIMIT_NOFILE, -1);
 	}
-	psclog_info("path=%s fd=%d rc=%d", 
+	psclog_info("path=%s fd=%d rc=%d",
 	    strstr(fidfn, "fidns"), fcmh_2_fd(fcmh), rc);
 	return (rc);
 }
@@ -96,8 +98,38 @@ sli_fcmh_getattr(struct fidc_membh *fcmh)
 	return (0);
 }
 
+int
+sli_fcmh_lookup_fid(struct slashrpc_cservice *csvc,
+    const struct slash_fidgen *pfg, const char *cpn,
+    struct slash_fidgen *cfg, int *isdir)
+{
+	struct pscrpc_request *rq = NULL;
+	struct srm_lookup_req *mq;
+	struct srm_lookup_rep *mp;
+	int rc = 0;
+
+	rc = SL_RSX_NEWREQ(csvc, SRMT_LOOKUP, rq, mq, mp);
+	if (rc)
+		goto out;
+	mq->pfg = *pfg;
+	strlcpy(mq->name, cpn, sizeof(mq->name));
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	if (rc == 0)
+		rc = abs(mp->rc);
+	if (rc)
+		goto out;
+
+	*cfg = mp->attr.sst_fg;
+	*isdir = S_ISDIR(mp->attr.sst_mode);
+
+ out:
+	if (rq)
+		pscrpc_req_finished(rq);
+	return (rc);
+}
+
 /**
- * sli_fcmh_reopen(): if the generation number changes, we assume a full
+ * sli_fcmh_reopen - If the generation number changes, we assume a full
  *	truncation has happened.  We need to open a new backing file and
  *	attach it to the fcmh.
  */
