@@ -39,6 +39,7 @@ struct slictlmsg_replwkst {
 struct slictlmsg_fileop {
 	char			sfop_fn[PATH_MAX];
 	char			sfop_fn2[PATH_MAX];
+	slfid_t			sfop_pfid;
 	int			sfop_flags;
 };
 

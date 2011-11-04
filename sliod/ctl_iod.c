@@ -167,14 +167,20 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	psc_assert(strncmp(fn, sfop->sfop_fn,
 	    strlen(sfop->sfop_fn)) == 0);
 
+	rc = sli_rmi_getcsvc(&csvc);
+	if (rc)
+		PFL_GOTOERR(error, rc);
+
+	if (sfop->sfop_pfid) {
+		strlcpy(cpn, sfop->sfop_fn2, sizeof(cpn));
+		fg.fg_fid = sfop->sfop_pfid;
+		goto gotpfid;
+	}
+
 	/* preserve hierarchy in the src tree via concatenation */
 	snprintf(fidfn, sizeof(fidfn), "%s%s%s", sfop->sfop_fn2,
 	    S_ISDIR(stb->st_mode) ? "/" : "",
 	    fn + strlen(sfop->sfop_fn));
-
-	rc = sli_rmi_getcsvc(&csvc);
-	if (rc)
-		PFL_GOTOERR(error, rc);
 
 	/* trim trailing '/' chars */
 	TRIMCHARS(fidfn, '/');
@@ -213,6 +219,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		fg = tfg;
 	}
 
+ gotpfid:
 	/* No destination name specified; preserve last component from src. */
 	if (cpn[0] == '\0') {
 		if (S_ISREG(stb->st_mode)) {
@@ -224,7 +231,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 			/*
 			 * Directory is ambiguous: "should we reimport
 			 * attrs or create a subdir with the same
-			 * name?".  Instead, flag error.
+			 * name?"  Instead, flag error.
 			 */
 			PFL_GOTOERR(error, rc = EEXIST);
 		}
@@ -393,6 +400,9 @@ slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (sfop->sfop_fn2[0] == '\0')
 		return (psc_ctlsenderr(fd, mh, "import destination: %s",
 		    slstrerror(ENOENT)));
+
+	if (sfop->sfop_pfid && sfop->sfop_pfid == FID_ANY)
+		return (psc_ctlsenderr(fd, mh, "invalid parent FID"));
 
 	/*
 	 * XXX: we should disallow recursive import of a parent
