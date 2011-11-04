@@ -142,11 +142,17 @@ slictlcmd_import(int ac, char *av[])
 {
 	int i, c, recursive = 0, verbose = 0, xrepl = 0;
 	struct slictlmsg_fileop *sfop;
-	char fn[PATH_MAX];
+	char fn[PATH_MAX], *endp;
+	slfid_t pfid = FID_ANY;
 
 	PFL_OPT_RESET();
-	while ((c = getopt(ac, av, "+Rvx")) != -1)
+	while ((c = getopt(ac, av, "+F:Rvx")) != -1)
 		switch (c) {
+		case 'F':
+			pfid = strtoull(optarg, &endp, 0);
+			if (endp == optarg || *endp)
+				errx(1, "%s: invalid parent FID", optarg);
+			break;
 		case 'R':
 			recursive = 1;
 			break;
@@ -164,7 +170,7 @@ slictlcmd_import(int ac, char *av[])
 
 	if (ac < 2)
  usage:
-		errx(1, "usage: import [-Rvx] file ... dst");
+		errx(1, "usage: import [-Rvx] [-F pfid] file ... dst");
 	for (i = 0; i < ac - 1; i++) {
 		if (realpath(av[i], fn) == NULL) {
 			warn("%s", av[i]);
@@ -178,7 +184,9 @@ slictlcmd_import(int ac, char *av[])
 		if (xrepl)
 			sfop->sfop_flags |= SLI_CTL_FOPF_XREPL;
 		strlcpy(sfop->sfop_fn, fn, sizeof(sfop->sfop_fn));
-		strlcpy(sfop->sfop_fn2, av[ac - 1], sizeof(sfop->sfop_fn2));
+		strlcpy(sfop->sfop_fn2, av[ac - 1],
+		    sizeof(sfop->sfop_fn2));
+		sfop->sfop_pfid = pfid;
 	}
 }
 

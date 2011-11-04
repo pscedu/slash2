@@ -15,7 +15,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES ctl rpc %
-.Dd October 5, 2011
+.Dd November 4, 2011
 .Dt SLICTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -65,7 +65,7 @@ behavior.
 .\"			Display verbose information about processing.
 .\"			.El
 .\"			EOF
-.\"		"import Oo Fl Rvx\\& Oc Ar file ... dst" => <<'EOF',
+.\"		"import Oo Fl Rvx\\& Oc Oo Fl F Ar pfid Oc Ar file ... dst" => <<'EOF',
 .\"			Import the specified files into the
 .\"			.Tn SLASH2
 .\"			file system name space rooted at
@@ -77,6 +77,15 @@ behavior.
 .\"			.Pp
 .\"			The options are as follows:
 .\"			.Bl -tag -offset 3n -width 3n
+.\"			.It Fl F Ar pfid
+.\"			If specified,
+.\"			.Ar dst
+.\"			is used as the basename to import the given source file into the
+.\"			directory in the
+.\"			.Tn SLASH2
+.\"			namespace with the given
+.\"			.Tn FID
+.\"			.Ar pfid .
 .\"			.It Fl R
 .\"			Recursively traverse all file hierarchies rooted at the specified
 .\"			.Ar file
@@ -132,7 +141,7 @@ nodes.
 .It Fl v
 Display verbose information about processing.
 .El
-.It Cm import Oo Fl Rvx\& Oc Ar file ... dst
+.It Cm import Oo Fl Rvx\& Oc Oo Fl F Ar pfid Oc Ar file ... dst
 Import the specified files into the
 .Tn SLASH2
 file system name space rooted at
@@ -144,6 +153,15 @@ attributes on the metadata server.
 .Pp
 The options are as follows:
 .Bl -tag -offset 3n -width 3n
+.It Fl F Ar pfid
+If specified,
+.Ar dst
+is used as the basename to import the given source file into the
+directory in the
+.Tn SLASH2
+namespace with the given
+.Tn FID
+.Ar pfid .
 .It Fl R
 Recursively traverse all file hierarchies rooted at the specified
 .Ar file
