@@ -168,10 +168,10 @@ mds_inox_write(struct slash_inode_handle *ih, void *logf, void *arg)
 	fcmh_wait_locked(ih->inoh_fcmh, ih->inoh_flags & INOH_IN_IO);
 	ih->inoh_flags |= INOH_IN_IO;
 
-	psc_crc64_calc(&crc, ih->inoh_extras, sizeof(*ih->inoh_extras));
+	psc_crc64_calc(&crc, ih->inoh_extras, INOX_SZ);
 
 	iovs[0].iov_base = ih->inoh_extras;
-	iovs[0].iov_len = sizeof(*ih->inoh_extras);
+	iovs[0].iov_len = INOX_SZ;
 	iovs[1].iov_base = &crc;
 	iovs[1].iov_len = sizeof(crc);
 
@@ -188,7 +188,7 @@ mds_inox_write(struct slash_inode_handle *ih, void *logf, void *arg)
 	ih->inoh_flags &= ~INOH_IN_IO;
 	fcmh_wake_locked(ih->inoh_fcmh);
 
-	if (rc == 0 && nb != sizeof(*ih->inoh_extras) + sizeof(crc))
+	if (rc == 0 && nb != INOX_SZ + sizeof(crc))
 		rc = SLERR_SHORTIO;
 
 	if (rc)
@@ -211,27 +211,26 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 	psc_assert(!(ih->inoh_flags & INOH_HAVE_EXTRAS));
 
 	psc_assert(ih->inoh_extras == NULL);
-	ih->inoh_extras = PSCALLOC(sizeof(*ih->inoh_extras));
+	ih->inoh_extras = PSCALLOC(INOX_SZ);
 
 	iovs[0].iov_base = ih->inoh_extras;
-	iovs[0].iov_len = sizeof(*ih->inoh_extras);
+	iovs[0].iov_len = INOX_SZ;
 	iovs[1].iov_base = &od_crc;
 	iovs[1].iov_len = sizeof(od_crc);
 	rc = mdsio_preadv(&rootcreds, iovs, nitems(iovs), &nb,
 	    SL_EXTRAS_START_OFF, inoh_2_mdsio_data(ih));
 	if (rc == 0 && od_crc == 0 &&
-	    pfl_memchk(ih->inoh_extras, 0, sizeof(*ih->inoh_extras))) {
+	    pfl_memchk(ih->inoh_extras, 0, INOX_SZ)) {
 		ih->inoh_flags |= INOH_HAVE_EXTRAS;
 		rc = 0;
 	} else if (rc) {
 		rc = -abs(rc);
 		DEBUG_INOH(PLL_ERROR, ih, "read inox: %d", rc);
-	} else if (nb != sizeof(*ih->inoh_extras) + sizeof(od_crc)) {
+	} else if (nb != INOX_SZ + sizeof(od_crc)) {
 		rc = -SLERR_SHORTIO;
 		DEBUG_INOH(PLL_ERROR, ih, "read inox: %d nb=%zu", rc, nb);
 	} else {
-		psc_crc64_calc(&crc, ih->inoh_extras,
-		    sizeof(*ih->inoh_extras));
+		psc_crc64_calc(&crc, ih->inoh_extras, INOX_SZ);
 		if (crc == od_crc)
 			ih->inoh_flags |= INOH_HAVE_EXTRAS;
 		else {
@@ -261,19 +260,18 @@ mds_inox_ensure_loaded(struct slash_inode_handle *ih)
 }
 
 int
-mds_inode_repls_update(struct fidc_membh *f, int log)
+mds_inodes_odsync(struct fidc_membh *f,
+    void (*logf)(void *, uint64_t, int))
 {
 	struct slash_inode_handle *ih = fcmh_2_inoh(f);
 	int locked, rc;
-	void *logf;
-
-	logf = log ? mdslog_ino_repls : NULL;
 
 	locked = INOH_RLOCK(ih);
 	rc = mds_inode_write(ih, logf, f);
 	if (rc == 0 && ih->inoh_ino.ino_nrepls > SL_DEF_REPLICAS)
-		rc = mds_inox_write(ih, logf, f);
-	DEBUG_FCMH(PLL_DEBUG, f, "wrote updated ino_repls log=%d", log);
+		rc = mds_inox_write(ih, NULL, NULL);
+	DEBUG_FCMH(PLL_DEBUG, f, "wrote updated ino_repls logf=%p",
+	    logf);
 	INOH_URLOCK(ih, locked);
 	return (rc);
 }

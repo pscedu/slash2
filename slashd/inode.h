@@ -86,6 +86,8 @@ struct slash_inode_extras_od {
 	uint64_t		 inox_repl_nblks[SL_INOX_NREPLICAS];
 };
 
+#define INOX_SZ			sizeof(struct slash_inode_extras_od)
+
 struct slash_inode_handle {
 	struct slash_inode_od	 inoh_ino;
 	struct slash_inode_extras_od *inoh_extras;

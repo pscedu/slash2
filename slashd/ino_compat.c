@@ -117,7 +117,7 @@ mds_inode_update(struct slash_inode_handle *ih, int old_version)
 		PFL_GOTOERR(out, rc);
 
 	psc_assert(ih->inoh_extras == NULL);
-	ih->inoh_extras = PSCALLOC(sizeof(*ih->inoh_extras));
+	ih->inoh_extras = PSCALLOC(INOX_SZ);
 	ih->inoh_flags |= INOH_HAVE_EXTRAS;
 
 	/* convert old structures into new into temp file */
@@ -202,7 +202,7 @@ mds_inode_update_interrupted(struct slash_inode_handle *ih, int *rc)
 	exists = 1;
 
 	psc_assert(ih->inoh_extras == NULL);
-	ih->inoh_extras = PSCALLOC(sizeof(*ih->inoh_extras));
+	ih->inoh_extras = PSCALLOC(INOX_SZ);
 	ih->inoh_flags |= INOH_HAVE_EXTRAS;
 
 	inoh_2_mdsio_data(ih) = h;
