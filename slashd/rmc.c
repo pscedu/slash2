@@ -677,7 +677,10 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	struct fidc_membh *op = NULL, *np = NULL;
 	struct srm_rename_req *mq;
 	struct srm_rename_rep *mp;
+	struct slash_fidgen chfg;
 	struct iovec iov[2];
+
+	chfg.fg_fid = FID_ANY;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fromlen == 0 || mq->tolen == 0 ||
@@ -726,7 +729,7 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	mds_reserve_slot(2);
 	mp->rc = mdsio_rename(fcmh_2_mdsio_fid(op), from,
 	    fcmh_2_mdsio_fid(np), to, &rootcreds, mdslog_namespace,
-	    &mp->srr_cattr);
+	    &chfg);
 	mds_unreserve_slot(2);
 
  out:
@@ -734,6 +737,17 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 		mdsio_fcmh_refreshattr(op, &mp->srr_opattr);
 		if (op != np)
 			mdsio_fcmh_refreshattr(np, &mp->srr_npattr);
+
+		if (chfg.fg_fid != FID_ANY) {
+			struct fidc_membh *c;
+
+			if (slm_fcmh_get(&chfg, &c) == 0) {
+				mdsio_fcmh_refreshattr(c,
+				    &mp->srr_cattr);
+				fcmh_op_done_type(c,
+				    FCMH_OPCNT_LOOKUP_FIDC);
+			}
+		}
 	}
 
 	if (np)
@@ -985,10 +999,12 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 int
 slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 {
+	struct slash_fidgen fg, chfg;
 	struct fidc_membh *p = NULL;
 	struct srm_unlink_req *mq;
 	struct srm_unlink_rep *mp;
-	struct slash_fidgen fg;
+
+	chfg.fg_fid = FID_ANY;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -1009,7 +1025,7 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	mds_reserve_slot(1);
 	if (isfile)
 		mp->rc = mdsio_unlink(fcmh_2_mdsio_fid(p), NULL,
-		    mq->name, &rootcreds, mdslog_namespace, &mp->cattr);
+		    mq->name, &rootcreds, mdslog_namespace, &chfg);
 	else
 		mp->rc = mdsio_rmdir(fcmh_2_mdsio_fid(p), NULL,
 		    mq->name, &rootcreds, mdslog_namespace);
@@ -1020,6 +1036,16 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 		mdsio_fcmh_refreshattr(p, &mp->pattr);
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+
+	if (chfg.fg_fid != FID_ANY) {
+		struct fidc_membh *c;
+
+		if (slm_fcmh_get(&chfg, &c) == 0) {
+			mdsio_fcmh_refreshattr(c, &mp->cattr);
+			fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+		}
+	}
+
 	psclog_info("unlink parent="SLPRI_FID" name=%s rc=%d",
 	    mq->pfid, mq->name, mp->rc);
 	return (0);
