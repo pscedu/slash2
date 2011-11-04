@@ -20,6 +20,7 @@
 #include <fcntl.h>
 #include <stddef.h>
 
+#include "pfl/str.h"
 #include "psc_util/log.h"
 #include "psc_util/rlimit.h"
 
