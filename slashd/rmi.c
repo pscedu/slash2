@@ -364,6 +364,7 @@ slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 	/* XXX upsch_wakeup */
 	/* truncate metafile to remove garbage collected bmap */
 //	mdsio_setattr(METASIZE)
+//	fcmh_set_repl_nblks(f, idx, sjbc->sjbc_repl_nblks);
 	fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 	return (0);
 }
@@ -476,9 +477,12 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 			sstb.sst_fg.fg_gen = fcmh_2_gen(c) + 1;
 			sstb.sst_size = 0;
 			sstb.sst_blocks = 0;
+			for (i = 0; i < fcmh_2_nrepls(f); i++)
+				fcmh_set_repl_nblks(c, i, 0);
 			rc = mds_fcmh_setattr(c,
 			    PSCFS_SETATTRF_DATASIZE | SL_SETATTRF_GEN |
 			    SL_SETATTRF_NBLKS, &sstb);
+			mds_inodes_odsync(f, NULL); /* journal repl_nblks */
 			FCMH_ULOCK(c);
 
 			if (rc)
@@ -537,7 +541,10 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	    PSCFS_SETATTRF_ATIME | PSCFS_SETATTRF_UID |
 	    PSCFS_SETATTRF_GID | SL_SETATTRF_NBLKS, &mq->sstb);
 	if (rc)
-		mp->rc = -rc;
+		PFL_GOTOERR(out, mp->rc = -rc);
+	rc = mds_inodes_odsync(c, NULL); /* journal repl_nblks */
+	if (rc)
+		mp->rc = rc;
 
  out:
 	psclog_info("import: parent="SLPRI_FG" name=%s rc=%d",
