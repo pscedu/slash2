@@ -661,10 +661,10 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 	switch (op) {
 	case NS_OP_UNLINK:
 		if (sstb->sst_nlink > 1)
-			COPYFG(arg, &sstb->sst_fg);
+			memcpy(arg, &sstb->sst_fg, sizeof(sstb->sst_fg));
 		break;
 	case NS_OP_RENAME:
-		COPYFG(arg, &sstb->sst_fg);
+		memcpy(arg, &sstb->sst_fg, sizeof(sstb->sst_fg));
 		break;
 	}
 }
