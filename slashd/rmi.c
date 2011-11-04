@@ -406,10 +406,11 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	struct bmapc_memb *b;
 	struct srt_stat sstb;
 	struct sl_resm *m;
-	int rc, rc2, i, idx;
+	int rc, rc2, idx;
 	void *mdsio_data;
 	sl_bmapno_t bno;
 	int64_t fsiz;
+	uint32_t i;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -477,12 +478,12 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 			sstb.sst_fg.fg_gen = fcmh_2_gen(c) + 1;
 			sstb.sst_size = 0;
 			sstb.sst_blocks = 0;
-			for (i = 0; i < fcmh_2_nrepls(f); i++)
+			for (i = 0; i < fcmh_2_nrepls(c); i++)
 				fcmh_set_repl_nblks(c, i, 0);
 			rc = mds_fcmh_setattr(c,
 			    PSCFS_SETATTRF_DATASIZE | SL_SETATTRF_GEN |
 			    SL_SETATTRF_NBLKS, &sstb);
-			mds_inodes_odsync(f, NULL); /* journal repl_nblks */
+			mds_inodes_odsync(c, NULL); /* journal repl_nblks */
 			FCMH_ULOCK(c);
 
 			if (rc)
@@ -533,7 +534,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	mp->fg = c->fcmh_sstb.sst_fg;
 	fcmh_wait_locked(c, c->fcmh_flags & FCMH_IN_SETATTR);
 	if ((mq->flags & SRM_IMPORTF_XREPL) == 0)
-		for (i = 0; i < (int)fcmh_2_ino(c)->ino_nrepls; i++)
+		for (i = 0; i < fcmh_2_ino(c)->ino_nrepls; i++)
 			fcmh_set_repl_nblks(c, i, 0);
 	fcmh_set_repl_nblks(c, idx, mq->sstb.sst_blocks);
 	rc = mds_fcmh_setattr(c, PSCFS_SETATTRF_DATASIZE |
