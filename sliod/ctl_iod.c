@@ -171,7 +171,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	if (rc)
 		PFL_GOTOERR(error, rc);
 
-	if (sfop->sfop_pfid) {
+	if (sfop->sfop_pfid != FID_ANY) {
 		strlcpy(cpn, sfop->sfop_fn2, sizeof(cpn));
 		fg.fg_fid = sfop->sfop_pfid;
 		goto gotpfid;
@@ -400,9 +400,6 @@ slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (sfop->sfop_fn2[0] == '\0')
 		return (psc_ctlsenderr(fd, mh, "import destination: %s",
 		    slstrerror(ENOENT)));
-
-	if (sfop->sfop_pfid && sfop->sfop_pfid == FID_ANY)
-		return (psc_ctlsenderr(fd, mh, "invalid parent FID"));
 
 	/*
 	 * XXX: we should disallow recursive import of a parent
