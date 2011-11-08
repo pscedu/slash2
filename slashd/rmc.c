@@ -398,11 +398,14 @@ slm_mkdir(struct srm_mkdir_req *mq, struct srm_mkdir_rep *mp,
 	 * Set new subdir's new files' default replication policy from
 	 * parent dir.
 	 */
-	if (mp->rc == 0 || mp->rc == -EEXIST)
-		if (slm_fcmh_get(&mp->cattr.sst_fg, &c) == 0)
-			if (mp->rc == 0)
-				slm_fcmh_endow_nolog(p, c);
+	if (mp->rc == 0 && slm_fcmh_get(&mp->cattr.sst_fg, &c) == 0)
+		slm_fcmh_endow_nolog(p, c);
+
 	if (dp) {
+		if (mp->rc == -EEXIST &&
+		    mdsio_lookup(fcmh_2_mdsio_fid(p), mq->name, NULL,
+		    &rootcreds, &mp->cattr) == 0)
+			slm_fcmh_get(&mp->cattr.sst_fg, &c);
 		*dp = c;
 		c = NULL;
 	}
