@@ -194,14 +194,14 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		if (np - p > (int)sizeof(cpn))
 			PFL_GOTOERR(error, rc = ENAMETOOLONG);
 
+		strlcpy(cpn, p, np - p + 1);
+
 		/*
 		 * Do not LOOKUP the last pathname component; we'll just
 		 * blindly try to import there.
 		 */
 		if (*np == '\0')
 			break;
-
-		strlcpy(cpn, p, np - p + 1);
 
 		rc = sli_fcmh_lookup_fid(csvc, &fg, cpn, &tfg, &isdir);
 
