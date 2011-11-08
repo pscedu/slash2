@@ -381,24 +381,24 @@ slm_mkdir(struct srm_mkdir_req *mq, struct srm_mkdir_rep *mp,
 		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_MKDIR,
 		    &mq->pfg, NULL, mq->name, NULL, mq->sstb.sst_mode,
 		    &cr, &mp->cattr, 0);
-		mdsio_fcmh_refreshattr(p, &mp->pattr);
 		goto out;
 	}
 
 	mds_reserve_slot(1);
-	mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(p), mq->name, &mq->sstb,
+	mp->rc = -mdsio_mkdir(fcmh_2_mdsio_fid(p), mq->name, &mq->sstb,
 	    0, opflags, &mp->cattr, NULL, mdslog_namespace,
 	    slm_get_next_slashfid, 0);
 	mds_unreserve_slot(1);
 
-	mdsio_fcmh_refreshattr(p, &mp->pattr);
-
  out:
+	if (p)
+		mdsio_fcmh_refreshattr(p, &mp->pattr);
+
 	/*
 	 * Set new subdir's new files' default replication policy from
 	 * parent dir.
 	 */
-	if (mp->rc == 0 || mp->rc == EEXIST)
+	if (mp->rc == 0 || mp->rc == -EEXIST)
 		if (slm_fcmh_get(&mp->cattr.sst_fg, &c) == 0)
 			if (mp->rc == 0)
 				slm_fcmh_endow_nolog(p, c);

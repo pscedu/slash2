@@ -579,10 +579,10 @@ slm_rmi_handle_mkdir(struct pscrpc_request *rq)
 	rc = slm_mkdir(mq, mp, MDSIO_OPENCRF_NOMTIM, &d);
 	if (rc)
 		return (rc);
-	if (mp->rc && abs(mp->rc) != EEXIST)
+	if (mp->rc && mp->rc != -EEXIST)
 		return (0);
 	FCMH_LOCK(d);
-	mp->rc = mds_fcmh_setattr(d,
+	mp->rc = -mds_fcmh_setattr(d,
 	    PSCFS_SETATTRF_UID | PSCFS_SETATTRF_GID |
 	    PSCFS_SETATTRF_ATIME | PSCFS_SETATTRF_MTIME |
 	    PSCFS_SETATTRF_CTIME, &sstb);
