@@ -1512,8 +1512,6 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 
 	pscfs_getcreds(pfr, &pfc);
 
-	pscfs_reply_close(pfr, rc);
-
 	psclogs(PLL_INFO, SLCSS_INFO,
 	    "file closed fid="SLPRI_FID" uid=%u gid=%u "
 	    "fsize=%"PRId64" oatime="SLPRI_TIMESPEC" "
@@ -1528,6 +1526,8 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 	    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr);
 	fcmh_op_done_type(c, FCMH_OPCNT_OPEN);
 	PSCFREE(mfh);
+
+	pscfs_reply_close(pfr, rc);
 }
 
 __static void
