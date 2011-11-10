@@ -65,6 +65,8 @@ typedef struct {
 /*
  * The inode structure lives at the beginning of the metafile and holds
  * the block store array along with snapshot pointers.
+ *
+ * A 64-bit checksum follows this structure on disk.
  */
 struct slash_inode_od {
 	uint16_t		 ino_version;
@@ -80,6 +82,9 @@ enum ino_flags {
 	INO_BMAP_AFFINITY = (1 << 0) /* Try to assign new bmaps to existing backing objects */
 };
 
+/*
+ * A 64-bit checksum follows this structure on disk.
+ */
 struct slash_inode_extras_od {
 	sl_snap_t		 inox_snaps[SL_DEF_SNAPSHOTS];	/* snapshot pointers */
 	sl_replica_t		 inox_repls[SL_INOX_NREPLICAS];
