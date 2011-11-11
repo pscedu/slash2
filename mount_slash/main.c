@@ -2444,6 +2444,11 @@ main(int argc, char *argv[])
 	pscfs_addarg(&args, "-o");
 	pscfs_addarg(&args, STD_MOUNT_OPTIONS);
 
+	cfg = SL_PATH_CONF;
+	p = getenv("CONFIG_FILE");
+	if (p)
+		cfg = p;
+
 	progname = argv[0];
 	while ((c = getopt(argc, argv, "D:df:I:M:o:p:S:UX")) != -1)
 		switch (c) {
