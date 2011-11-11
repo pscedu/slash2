@@ -480,6 +480,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 			sstb.sst_blocks = 0;
 			for (i = 0; i < fcmh_2_nrepls(c); i++)
 				fcmh_set_repl_nblks(c, i, 0);
+			/* XXX does this update mtim? */
 			rc = mds_fcmh_setattr(c,
 			    PSCFS_SETATTRF_DATASIZE | SL_SETATTRF_GEN |
 			    SL_SETATTRF_NBLKS, &sstb);
