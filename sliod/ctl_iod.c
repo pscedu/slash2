@@ -146,6 +146,7 @@ int
 sli_import(const char *fn, const struct stat *stb, void *arg)
 {
 	char *p, *np, fidfn[PATH_MAX], cpn[SL_NAME_MAX + 1];
+	int rc = 0, isdir, dolink = 0;
 	struct sli_import_arg *a = arg;
 	struct slictlmsg_fileop *sfop = a->sfop;
 	struct slashrpc_cservice *csvc = NULL;
@@ -153,7 +154,6 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 	struct psc_ctlmsghdr *mh = a->mh;
 	struct slash_fidgen tfg, fg;
 	struct stat tstb;
-	int rc = 0, isdir;
 	const char *str;
 
 	/*
@@ -284,22 +284,12 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		    &iov, 1);
 
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
-		if (rc == 0) {
+		if (rc == 0)
 			rc = mp->rc;
+		if (rc == 0 || rc == -EEXIST) {
 			sli_fg_makepath(&mp->cattr.sst_fg, fidfn);
-			if (rc == 0) {
-				/*
-				 * XXX
-				 * If we fail here, we should undo
-				 * import above.  However, with checks
-				 * earlier, we probably won't fail for
-				 * EXDEV here.
-				 */
-				if (link(fn, fidfn) == -1)
-					rc = errno;
-			}
+			dolink = 1;
 		}
-
 	} else if (S_ISREG(stb->st_mode)) {
 		struct srm_import_req *mq;
 		struct srm_import_rep *mp;
@@ -328,23 +318,66 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		if (sfop->sfop_flags & SLI_CTL_FOPF_XREPL)
 			mq->flags = SRM_IMPORTF_XREPL;
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
-		if (rc == 0) {
+		if (rc == 0)
 			rc = mp->rc;
+		if (rc == 0 || rc == -EEXIST) {
 			sli_fg_makepath(&mp->fg, fidfn);
-			if (rc == 0 || abs(rc) == EEXIST) {
-				/*
-				 * XXX
-				 * If we fail here, we should undo
-				 * import above.  However, with checks
-				 * earlier, we probably won't fail for
-				 * EXDEV here.
-				 */
-				if (link(fn, fidfn) == -1)
-					rc = errno;
-			}
+			dolink = 1;
 		}
 	} else {
 		rc = ENOTSUP;
+	}
+
+	if (dolink) {
+		struct stat stb, dstb;
+		struct timespec tv[2];
+		char dir[PATH_MAX];
+		int fd, dfd = -1;
+
+		rc = pfl_dirname(fidfn, dir);
+		if (rc)
+			psclog_errorx("dirname %s: %s", fidfn,
+			    strerror(rc));
+		else
+			dfd = open(dir, O_RDONLY | O_DIRECTORY);
+		if (dfd == -1)
+			psclog_error("open %s", dir);
+		else if (fstat(dfd, &dstb) == -1)
+			psclog_errorx("stat %s", dir);
+
+		fd = open(fn, O_RDONLY);
+		if (fd == -1)
+			psclog_errorx("open %s", fn);
+		else if (fstat(fd, &stb) == -1)
+			psclog_errorx("stat %s", fn);
+
+		/*
+		 * XXX If we fail here, we should undo import above.
+		 * However, with checks earlier, we probably won't fail
+		 * for EXDEV here.
+		 */
+		if (link(fn, fidfn) == -1)
+			rc = errno;
+
+		if (dfd != -1 && rc == 0) {
+			/* Preserve mtime on target parent dir. */
+			PFL_STB_ATIME_GET(&dstb, &ts[0].tv_sec, &ts[0].tv_nsec);
+			PFL_STB_MTIME_GET(&dstb, &ts[1].tv_sec, &ts[1].tv_nsec);
+			if (futimens(dfd, ts) == -1)
+				psclog_error("futimes %s", );
+		}
+
+		if (fd != -1 && rc == 0) {
+			/* Preserve mtime on source file. */
+			PFL_STB_ATIME_GET(&stb, &ts[0].tv_sec, &ts[0].tv_nsec);
+			PFL_STB_MTIME_GET(&stb, &ts[1].tv_sec, &ts[1].tv_nsec);
+			if (futimens(fd, ts) == -1)
+				psclog_error("futimes %s", );
+		}
+		if (dfd != -1)
+			close(dfd);
+		if (fd != -1)
+			close(fd);
 	}
 
  error:
