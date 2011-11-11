@@ -25,6 +25,7 @@
  */
 
 #include "pfl/cdefs.h"
+#include "pfl/stat.h"
 #include "pfl/str.h"
 #include "pfl/walk.h"
 #include "psc_ds/lockedlist.h"
@@ -330,7 +331,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 
 	if (dolink) {
 		struct stat stb, dstb;
-		struct timespec tv[2];
+		struct timespec ts[2];
 		char dir[PATH_MAX];
 		int fd, dfd = -1;
 
@@ -364,7 +365,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 			PFL_STB_ATIME_GET(&dstb, &ts[0].tv_sec, &ts[0].tv_nsec);
 			PFL_STB_MTIME_GET(&dstb, &ts[1].tv_sec, &ts[1].tv_nsec);
 			if (futimens(dfd, ts) == -1)
-				psclog_error("futimes %s", );
+				psclog_error("futimes %s", dir);
 		}
 
 		if (fd != -1 && rc == 0) {
@@ -372,7 +373,7 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 			PFL_STB_ATIME_GET(&stb, &ts[0].tv_sec, &ts[0].tv_nsec);
 			PFL_STB_MTIME_GET(&stb, &ts[1].tv_sec, &ts[1].tv_nsec);
 			if (futimens(fd, ts) == -1)
-				psclog_error("futimes %s", );
+				psclog_error("futimes %s", fn);
 		}
 		if (dfd != -1)
 			close(dfd);
