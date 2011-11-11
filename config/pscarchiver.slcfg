@@ -9,7 +9,7 @@ set nets="sdp11 10.10.101.*; tcp12 *.*.*.*";
 set pref_mds="archmds@PSCARCH";
 set fsuuid="3a8cea38614e8122";
 set pref_ios="sense@PSCARCH";
-#set pref_ios="peel0@PSCARCH";
+set zpool_name="arc_s2mds";
 #set allow_exec="
 #	/usr/psc/bin/far:
 #	/usr/psc/bin/scp:
