@@ -357,6 +357,8 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 #endif
 
 	mfh = msl_fhent_new(c);
+	mfh->mfh_pfc.pfc_uid = mq->creds.scr_uid;
+	mfh->mfh_pfc.pfc_gid = mq->creds.scr_gid;
 	mfh->mfh_oflags = oflags;
 	PFL_GETTIMESPEC(&mfh->mfh_open_time);
 	memcpy(&mfh->mfh_open_atime, &c->fcmh_sstb.sst_atime,
@@ -467,6 +469,8 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	}
 
 	*mfhp = msl_fhent_new(c);
+	(*mfhp)->mfh_pfc.pfc_uid = creds.scr_uid;
+	(*mfhp)->mfh_pfc.pfc_gid = creds.scr_gid;
 	(*mfhp)->mfh_oflags = oflags;
 	PFL_GETTIMESPEC(&(*mfhp)->mfh_open_time);
 	memcpy(&(*mfhp)->mfh_open_atime, &c->fcmh_sstb.sst_atime,
@@ -1484,8 +1488,8 @@ __static void
 mslfsop_close(struct pscfs_req *pfr, void *data)
 {
 	struct msl_fhent *mfh = data;
-	struct pscfs_cred pfc;
 	struct fidc_membh *c;
+	pid_t sid;
 	int rc;
 
 	msfsthr_ensure();
@@ -1510,24 +1514,27 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 		spinlock(&mfh->mfh_lock);
 	}
 
-	pscfs_getcreds(pfr, &pfc);
+	sid = getsid(pscfs_getclientctx(pfr)->pfcc_pid);
+	pscfs_reply_close(pfr, rc);
 
-	psclogs(PLL_INFO, SLCSS_INFO,
-	    "file closed fid="SLPRI_FID" uid=%u gid=%u "
-	    "fsize=%"PRId64" oatime="SLPRI_TIMESPEC" "
-	    "mtime="SLPRI_TIMESPEC" sessid=%d otime="PSCPRI_TIMESPEC" "
-	    "rd=%"PSCPRIdOFFT" wr=%"PSCPRIdOFFT,
-	    fcmh_2_fid(c), pfc.pfc_uid, pfc.pfc_gid,
-	    c->fcmh_sstb.sst_size,
-	    SLPRI_TIMESPEC_ARGS(&mfh->mfh_open_atime),
-	    SLPRI_TIMESPEC_ARGS(&c->fcmh_sstb.sst_mtim),
-	    getsid(pscfs_getclientctx(pfr)->pfcc_pid),
-	    PSCPRI_TIMESPEC_ARGS(&mfh->mfh_open_time),
-	    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr);
+	if (!fcmh_isdir(c))
+		psclogs(PLL_INFO, SLCSS_INFO,
+		    "file closed fid="SLPRI_FID" "
+		    "uid=%u gid=%u "
+		    "fsize=%"PRId64" "
+		    "oatime="SLPRI_TIMESPEC" "
+		    "mtime="SLPRI_TIMESPEC" sessid=%d "
+		    "otime="PSCPRI_TIMESPEC" "
+		    "rd=%"PSCPRIdOFFT" wr=%"PSCPRIdOFFT,
+		    fcmh_2_fid(c),
+		    mfh->mfh_pfc.pfc_uid, mfh->mfh_pfc.pfc_gid,
+		    c->fcmh_sstb.sst_size,
+		    SLPRI_TIMESPEC_ARGS(&mfh->mfh_open_atime),
+		    SLPRI_TIMESPEC_ARGS(&c->fcmh_sstb.sst_mtim), sid,
+		    PSCPRI_TIMESPEC_ARGS(&mfh->mfh_open_time),
+		    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr);
 	fcmh_op_done_type(c, FCMH_OPCNT_OPEN);
 	PSCFREE(mfh);
-
-	pscfs_reply_close(pfr, rc);
 }
 
 __static void

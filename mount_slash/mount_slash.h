@@ -22,6 +22,7 @@
 
 #include <sys/types.h>
 
+#include "pfl/fs.h"
 #include "psc_rpc/service.h"
 #include "psc_util/multiwait.h"
 
@@ -134,6 +135,7 @@ struct msl_fhent {			 /* XXX rename */
 	struct fidc_membh		*mfh_fcmh;
 	struct psclist_head		 mfh_lentry;
 	int				 mfh_flags;
+	struct pscfs_cred		 mfh_pfc;
 
 	int				 mfh_oflags;	/* open(2) flags */
 	int				 mfh_flush_rc;	/* fsync(2) status */
