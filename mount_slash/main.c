@@ -357,8 +357,6 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 #endif
 
 	mfh = msl_fhent_new(c);
-	mfh->mfh_pfc.pfc_uid = mq->creds.scr_uid;
-	mfh->mfh_pfc.pfc_gid = mq->creds.scr_gid;
 	mfh->mfh_oflags = oflags;
 	PFL_GETTIMESPEC(&mfh->mfh_open_time);
 	memcpy(&mfh->mfh_open_atime, &c->fcmh_sstb.sst_atime,
@@ -469,8 +467,6 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	}
 
 	*mfhp = msl_fhent_new(c);
-	(*mfhp)->mfh_pfc.pfc_uid = creds.scr_uid;
-	(*mfhp)->mfh_pfc.pfc_gid = creds.scr_gid;
 	(*mfhp)->mfh_oflags = oflags;
 	PFL_GETTIMESPEC(&(*mfhp)->mfh_open_time);
 	memcpy(&(*mfhp)->mfh_open_atime, &c->fcmh_sstb.sst_atime,
@@ -1527,7 +1523,7 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 		    "otime="PSCPRI_TIMESPEC" "
 		    "rd=%"PSCPRIdOFFT" wr=%"PSCPRIdOFFT,
 		    fcmh_2_fid(c),
-		    mfh->mfh_pfc.pfc_uid, mfh->mfh_pfc.pfc_gid,
+		    c->fcmh_sstb.sst_uid, c->fcmh_sstb.sst_gid,
 		    c->fcmh_sstb.sst_size,
 		    SLPRI_TIMESPEC_ARGS(&mfh->mfh_open_atime),
 		    SLPRI_TIMESPEC_ARGS(&c->fcmh_sstb.sst_mtim), sid,
