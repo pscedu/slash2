@@ -4,12 +4,19 @@
 
 # Archiver configuration
 set port=1302;
-set routes="sdp11 128.182.100.126@tcp12; tcp12 10.10.101.54@sdp11";
+
+# firehose1, firehose2, firehose3, firehose4
+set routes="
+  sdp11 [128.182.100.128,128.182.100.127,128.182.100.126,128.182.100.159]@tcp12;
+  tcp12 [10.10.101.128,10.10.101.129,10.10.101.54,10.10.101.62]@sdp11
+";
 set nets="sdp11 10.10.101.*; tcp12 *.*.*.*";
+
 set pref_mds="archmds@PSCARCH";
 set fsuuid="3a8cea38614e8122";
 set pref_ios="peel0@PSCARCH";
 set zpool_name="arc_s2mds";
+
 #set allow_exec="
 #	/usr/psc/bin/far:
 #	/usr/psc/bin/scp:
