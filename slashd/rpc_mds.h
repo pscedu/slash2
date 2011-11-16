@@ -109,6 +109,8 @@ int	slm_symlink(struct pscrpc_request *, struct srm_symlink_req *,
 	    SRIM_MAGIC,	SRIM_VERSION, &resm2rmmi(resm)->rmmi_mutex,	\
 	    &resm2rmmi(resm)->rmmi_mwcond, SLCONNT_IOD, (arg))
 
+#define slm_getclcsvc(exp)		_slm_getclcsvc(PFL_CALLERINFO(), (exp))
+
 #define slm_getmcsvc(resm)		slm_getmcsvcx((resm), NULL)
 #define slm_geticsvcx(resm, exp)	slm_geticsvcxf((resm), (exp), 0, NULL)
 #define slm_geticsvc_nb(resm, ml)	slm_geticsvcxf((resm), NULL, CSVCF_NONBLOCK, (ml))
@@ -116,7 +118,7 @@ int	slm_symlink(struct pscrpc_request *, struct srm_symlink_req *,
 #define slm_geticsvcf(resm, fl)		slm_geticsvcxf((resm), NULL, (fl), NULL)
 
 static __inline struct slashrpc_cservice *
-slm_getclcsvc(struct pscrpc_export *exp)
+_slm_getclcsvc(const struct pfl_callerinfo *pci, struct pscrpc_export *exp)
 {
 	struct slm_exp_cli *mexpc;
 
