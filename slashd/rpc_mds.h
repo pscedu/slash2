@@ -117,6 +117,7 @@ int	slm_symlink(struct pscrpc_request *, struct srm_symlink_req *,
 #define slm_geticsvc(resm)		slm_geticsvcxf((resm), NULL, 0, NULL)
 #define slm_geticsvcf(resm, fl)		slm_geticsvcxf((resm), NULL, (fl), NULL)
 
+#define _pfl_callerinfo pci
 static __inline struct slashrpc_cservice *
 _slm_getclcsvc(const struct pfl_callerinfo *pci, struct pscrpc_export *exp)
 {
@@ -128,5 +129,6 @@ _slm_getclcsvc(const struct pfl_callerinfo *pci, struct pscrpc_export *exp)
 	    &mexpc->mexpc_cccp->mcccp_lock,
 	    &mexpc->mexpc_cccp->mcccp_waitq, SLCONNT_CLI, NULL));
 }
+#undef _pfl_callerinfo
 
 #endif /* _RPC_MDS_H_ */
