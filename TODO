@@ -480,6 +480,7 @@ reimport
 - directory replica table inheritance
 - add svn revision # to CONNECT and track for "*ctl -s conns"
 - test msctl -Q <symlink>
+- journal log ino_repl_nblks modifications
 
 archiver
 - tool to recover softdel files
