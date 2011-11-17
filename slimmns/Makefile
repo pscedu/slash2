@@ -14,6 +14,7 @@ SRCS+=		${SLASH_BASE}/share/priv.c
 SRCS+=		${SLASH_BASE}/share/slerr.c
 SRCS+=		${SLASH_BASE}/share/yconf.y
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
+SRCS+=		${PFL_BASE}/psc_ds/hashtbl.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
 SRCS+=		${PFL_BASE}/psc_util/hostname.c
 SRCS+=		${PFL_BASE}/psc_util/init.c
