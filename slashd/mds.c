@@ -144,8 +144,9 @@ mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw,
 	}
 
 	if (bmi->bmdsi_writers) {
-		int wtrs;
 		struct bmap_mds_lease *tmp1;
+		int wtrs = 0;
+
 		/* A second writer or a reader wants access.  Ensure only
 		 *    one lease is present.
 		 */

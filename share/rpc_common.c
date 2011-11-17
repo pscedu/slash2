@@ -155,7 +155,7 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 {
 	struct slashrpc_cservice *csvc;
 	struct srm_connect_rep *mp;
-	int rc;
+	int rc = 0;
 
 	/* Check for ETIMEDOUT and friends before delving into closer
 	 *   inspection of the rq.
