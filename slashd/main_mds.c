@@ -155,8 +155,8 @@ int
 main(int argc, char *argv[])
 {
 	char *zpcachefn = NULL, *zpname;
+	int rc, c, nofsuuid = 0;
 	const char *cfn, *sfn;
-	int rc, c, nofsuuid;
 	mdsio_fid_t mf;
 
 	/* gcrypt must be initialized very early on */
