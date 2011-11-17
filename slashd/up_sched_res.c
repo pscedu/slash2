@@ -273,7 +273,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 		psc_multiwait_addcond(&smi->smi_mw,
 		    &dst_rmmi->rmmi_mwcond);
 
-	csvc = slm_geticsvc_nb(dst_resm, NULL);
+	csvc = slm_geticsvcf(dst_resm, CSVCF_NONBLOCK | CSVCF_NORECON);
 	if (csvc == NULL)
 		PFL_GOTOERR(fail, rc = SLERR_ION_OFFLINE);
 
@@ -353,7 +353,8 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	if (csvc)
 		sl_csvc_decref(csvc);
 	if (rc)
-		psclog_warnx("replication arrangement failed rc=%d", rc);
+		DEBUG_USWI(rc == SLERR_ION_OFFLINE ? PLL_INFO : PLL_WARN,
+		    wk, "replication arrangement failed rc=%d", rc);
 	return (0);
 }
 
@@ -393,7 +394,7 @@ slmupschedthr_tryptrunc(struct up_sched_work_item *wk,
 	    REPL_WALKF_SCIRCUIT))
 		return (-1);
 
-	csvc = slm_geticsvc_nb(dst_resm, NULL);
+	csvc = slm_geticsvcf(dst_resm, CSVCF_NONBLOCK | CSVCF_NORECON);
 	if (csvc == NULL) {
 		if (!psc_multiwait_hascond(&smi->smi_mw,
 		    &dst_rmmi->rmmi_mwcond))
@@ -474,7 +475,7 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 		psc_multiwait_addcond(&smi->smi_mw,
 		    &dst_rmmi->rmmi_mwcond);
 
-	csvc = slm_geticsvc_nb(dst_resm, NULL);
+	csvc = slm_geticsvcf(dst_resm, CSVCF_NONBLOCK | CSVCF_NORECON);
 	if (csvc == NULL)
 		goto fail;
 
