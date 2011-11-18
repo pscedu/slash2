@@ -264,7 +264,7 @@ dircache_new_ents(struct dircache_info *i, size_t size)
 	/* Clear more space if needed.
 	 */
 	while (m->dcm_alloc > m->dcm_maxsz && !lc_empty(&m->dcm_lc)) {
-		e = lc_peektail(&m->dcm_lc);
+		e = lc_peekhead(&m->dcm_lc);
 		if (!e)
 			break;
 
