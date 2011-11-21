@@ -74,6 +74,7 @@ main(int argc, char *argv[])
 	printf("%4d [SLERR_AIOWAIT]: %s\n", SLERR_AIOWAIT, slstrerror(SLERR_AIOWAIT));
 	printf("%4d [SLERR_REIMPORT_OLD]: %s\n", SLERR_REIMPORT_OLD, slstrerror(SLERR_REIMPORT_OLD));
 	printf("%4d [SLERR_IMPORT_XREPL_DIFF]: %s\n", SLERR_IMPORT_XREPL_DIFF, slstrerror(SLERR_IMPORT_XREPL_DIFF));
+	printf("%4d [SLERR_BMAP_LEASEEXT_FAILED]: %s\n", SLERR_BMAP_LEASEEXT_FAILED, slstrerror(SLERR_BMAP_LEASEEXT_FAILED));
 	/* end custom errnos */
 	exit(0);
 }
