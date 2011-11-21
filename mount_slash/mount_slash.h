@@ -43,6 +43,7 @@ enum {
 	MSTHRT_BMAPFLSHRLS,		/* bmap lease releaser */
 	MSTHRT_BMAPFLSHRPC,		/* async buffer thread for RPC reaping */
 	MSTHRT_BMAPREADAHEAD,		/* async thread for read ahead */
+	MSTHRT_BMAPLSWATCHER,           /* bmap lease watcher */
 	MSTHRT_CONN,			/* connection monitor */
 	MSTHRT_CTL,			/* control processor */
 	MSTHRT_CTLAC,			/* control acceptor */
@@ -92,7 +93,13 @@ struct msbmflra_thread {
 	struct psc_multiwait		 mbfra_mw;
 };
 
+struct msbmflwatcher_thread {
+	int				 mbfwa_failcnt;
+	struct psc_multiwait		 mbfwa_mw;
+};
+
 PSCTHR_MKCAST(msbmflrlsthr, msbmflrls_thread, MSTHRT_BMAPFLSHRLS);
+PSCTHR_MKCAST(msbmfwatchthr, msbmflwatcher_thread, MSTHRT_BMAPLSWATCHER);
 PSCTHR_MKCAST(msbmflthr, msbmfl_thread, MSTHRT_BMAPFLSH);
 PSCTHR_MKCAST(msbmflrpc, msbmflrpc_thread, MSTHRT_BMAPFLSHRPC);
 PSCTHR_MKCAST(msbmfrathr, msbmflra_thread, MSTHRT_BMAPREADAHEAD);
@@ -218,7 +225,9 @@ resm2rmci(struct sl_resm *resm)
 struct slashrpc_cservice *
 	 msl_bmap_to_csvc(struct bmapc_memb *, int);
 void	 msl_bmap_reap_init(struct bmapc_memb *, const struct srt_bmapdesc *);
+void     msl_bmpces_fail(struct bmpc_ioreq *);
 void	_msl_biorq_destroy(const struct pfl_callerinfo *, struct bmpc_ioreq *);
+void     msl_mfh_seterr(struct msl_fhent *);
 int	 msl_dio_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 ssize_t	 msl_io(struct pscfs_req *, struct msl_fhent *, char *, size_t, off_t, enum rw);
 int	 msl_read_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
@@ -247,7 +256,7 @@ void	 mstimerthr_spawn(void);
 	_bmap_flush_resched(PFL_CALLERINFOSS(SLSS_BMAP), (biorq))
 
 void	 _bmap_flushq_wake(const struct pfl_callerinfo *, int, struct timespec *);
-int	 _bmap_flush_resched(const struct pfl_callerinfo *, struct bmpc_ioreq *);
+void	 _bmap_flush_resched(const struct pfl_callerinfo *, struct bmpc_ioreq *);
 
 extern char			 ctlsockfn[];
 extern sl_ios_id_t		 prefIOS;
