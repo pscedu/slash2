@@ -286,18 +286,18 @@ struct bmpc_ioreq {
 #define BIORQ_AIOWAIT			(1 << 14)
 #define BIORQ_RESCHED			(1 << 15)
 #define BIORQ_ARCHIVER			(1 << 16)
-#define BIORQ_FLUSHABORT                (1 << 17)
-#define BIORQ_EXPIREDLEASE              (1 << 18)
+#define BIORQ_FLUSHABORT		(1 << 17)
+#define BIORQ_EXPIREDLEASE		(1 << 18)
 
 #define BIORQ_LOCK(r)			spinlock(&(r)->biorq_lock)
 #define BIORQ_ULOCK(r)			freelock(&(r)->biorq_lock)
-#define BIORQ_RLOCK(r)                  reqlock(&(r)->biorq_lock)
-#define BIORQ_URLOCK(r)                 ureqlock(&(r)->biorq_lock)
-#define BIORQ_LOCK_ENSURE(r)            LOCK_ENSURE(&(r)->biorq_lock)
+#define BIORQ_RLOCK(r)			reqlock(&(r)->biorq_lock)
+#define BIORQ_URLOCK(r)			ureqlock(&(r)->biorq_lock)
+#define BIORQ_LOCK_ENSURE(r)		LOCK_ENSURE(&(r)->biorq_lock)
 
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP,					\
-		"biorq@%p fl=%#x:%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "	\
+	    "biorq@%p fl=%#x:%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "	\
 	    "o=%u l=%u "						\
 	    "np=%d b=%p "						\
 	    "ts="PSCPRI_TIMESPEC" : "fmt,				\
