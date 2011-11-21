@@ -58,19 +58,18 @@ void
 bmap_orphan(struct bmapc_memb *b)
 {
 	struct fidc_membh *f = b->bcm_fcmh;
-	int locked;
 
-	locked = BMAP_RLOCK(b);
+	BMAP_LOCK(b);
 
 	DEBUG_BMAP(PLL_INFO, b, "orphan");
 	psc_assert(!(b->bcm_flags & (BMAP_ORPHAN|BMAP_CLOSING)));
 	b->bcm_flags |= BMAP_ORPHAN;
-	BMAP_URLOCK(b, locked);
+	BMAP_ULOCK(b);
 
 	FCMH_LOCK(f);
 	psc_assert(f->fcmh_refcnt > 0);
 	PSC_SPLAY_XREMOVE(bmap_cache, &f->fcmh_bmaptree, b);
-
+	fcmh_wake_locked(f);
 	FCMH_ULOCK(f);
 }
 
@@ -131,7 +130,7 @@ bmap_lookup_cache_locked(struct fidc_membh *f, sl_bmapno_t n)
 	b = SPLAY_FIND(bmap_cache, &f->fcmh_bmaptree, &lb);
 	if (b) {
 		BMAP_LOCK(b);
-		if (b->bcm_flags & BMAP_CLOSING) {
+		if (b->bcm_flags & (BMAP_CLOSING | BMAP_ORPHAN)) {
 			/*
 			 * This bmap is going away; wait for
 			 * it so we can reload it back.
