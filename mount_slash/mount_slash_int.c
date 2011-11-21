@@ -1,4 +1,3 @@
-
 /* $Id$ */
 /*
  * %PSC_START_COPYRIGHT%
@@ -538,7 +537,7 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
 	 */
 	if (!(r->biorq_flags & BIORQ_DIO)) {
 		if (r->biorq_flags & BIORQ_WRITE) {
-			if (r->biorq_flags & 
+			if (r->biorq_flags &
 			    ((BIORQ_RBWFAIL|BIORQ_EXPIREDLEASE|BIORQ_RESCHED)))
 				/*
 				 * Ensure this biorq never got off of
@@ -1079,7 +1078,7 @@ msl_write_cb_gen_handler(struct psc_dynarray *biorqs, int rc)
 {
 	struct bmpc_ioreq *r;
 	int i, expired_lease = 0;
-	
+
 	r = psc_dynarray_getpos(biorqs, 0);
 	BMAP_LOCK(r->biorq_bmap);
 	if (r->biorq_bmap->bcm_flags & BMAP_CLI_LEASEEXPIRED) {
@@ -1094,7 +1093,7 @@ msl_write_cb_gen_handler(struct psc_dynarray *biorqs, int rc)
 
 	if (rc && !expired_lease) {
 		/* Try to reschedule these write RPC's.  The bmap flush
-		 *   layer will handle lease renewal (and it's possible 
+		 *   layer will handle lease renewal (and it's possible
 		 *   failure).
 		 */
 		DYNARRAY_FOREACH(r, i, biorqs)
@@ -1110,13 +1109,12 @@ msl_write_cb_gen_handler(struct psc_dynarray *biorqs, int rc)
 	PSCFREE(biorqs);
 }
 
-
 int
 msl_write_rpcset_cb(__unusedx struct pscrpc_request_set *set, void *arg,
     int rc)
 {
 	//struct psc_dynarray *biorqs = arg;
-	
+
 	psclog_info("set=%p rc=%d", set, rc);
 	msl_write_cb_gen_handler((struct psc_dynarray *)arg, rc);
 
