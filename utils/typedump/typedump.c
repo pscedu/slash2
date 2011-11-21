@@ -179,6 +179,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct msbmflra_thread);
 	PRTYPE(struct msbmflrls_thread);
 	PRTYPE(struct msbmflrpc_thread);
+	PRTYPE(struct msbmflwatcher_thread);
 	PRTYPE(struct msctl_replstq);
 	PRTYPE(struct msctlmsg_bmapreplpol);
 	PRTYPE(struct msctlmsg_fncmd);
@@ -339,6 +340,7 @@ main(int argc, char *argv[])
 	PRVAL(BMAP_CLI_EXTREQSECS);
 	PRVAL(BMAP_CLI_MAX_LEASE);
 	PRVAL(BMAP_CLI_TIMEO_INC);
+	PRVAL(BMAP_LEASE_AGE_RETRY);
 	PRVAL(BMAP_SEQLOG_FACTOR);
 	PRVAL(BMAP_TIMEO_MAX);
 	PRVAL(BMPC_DEFSLBS);
@@ -562,6 +564,7 @@ main(int argc, char *argv[])
 	PRVAL(MSTHRT_BMAPFLSH);
 	PRVAL(MSTHRT_BMAPFLSHRLS);
 	PRVAL(MSTHRT_BMAPFLSHRPC);
+	PRVAL(MSTHRT_BMAPLSWATCHER);
 	PRVAL(MSTHRT_BMAPREADAHEAD);
 	PRVAL(MSTHRT_CONN);
 	PRVAL(MSTHRT_CTL);
