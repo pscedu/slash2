@@ -62,10 +62,10 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 	bml = req->rq_async_args.pointer_arg[SLM_CBARG_SLOT_BML];
 	csvc = req->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC];
 
-	DEBUG_BMAP(mp->rc ? PLL_ERROR : PLL_NOTIFY, bml_2_bmap(bml),
-	   "cli=%s bml=%p seq=%"PRId64" rc=%d",
+	DEBUG_BMAP(req->rq_err ? PLL_ERROR : PLL_NOTIFY, bml_2_bmap(bml),
+	   "cli=%s bml=%p seq=%"PRId64" rq_status=%d mp->rc=%d",
 	   libcfs_id2str(req->rq_import->imp_connection->c_peer),
-	   bml, bml->bml_seq, mp->rc);
+	   bml, bml->bml_seq, req->rq_status, mp ? mp->rc : -1);
 
 	lc_remove(&inflBmapCbs, bml);
 
