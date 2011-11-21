@@ -168,10 +168,10 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
  out:
 	BMAP_CLEARATTR(b, BMAP_CLI_LEASEEXTREQ);
 	if (rc) {
-		/* Unflushed data in this bmap is now invalid.  Move the 
+		/* Unflushed data in this bmap is now invalid.  Move the
 		 *   bmap out of the fid cache so that others don't stumble
 		 *   across it while it's active I/O's are failed.
-		 */		
+		 */
 		if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED)
 			psc_assert(b->bcm_flags & BMAP_ORPHAN);
 		else {
@@ -187,13 +187,12 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 	}
 
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_NOTIFY, b,
-		   "lease extension (rc=%d) nseq=%"PRId64, rc, 
+		   "lease extension (rc=%d) nseq=%"PRId64, rc,
 		   rc ? BMAPSEQ_ANY : mp->sbd.sbd_seq);
 	bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
 
 	return (rc);
 }
-
 
 int
 msl_bmap_lease_secs_remaining(struct bmapc_memb *b)
@@ -201,25 +200,26 @@ msl_bmap_lease_secs_remaining(struct bmapc_memb *b)
 	struct timespec ts;
 	int secs;
 
-        PFL_GETTIMESPEC(&ts);
+	PFL_GETTIMESPEC(&ts);
 
 	BMAP_LOCK(b);
 	secs = bmap_2_bci(b)->bci_xtime.tv_sec - ts.tv_sec;
 	BMAP_ULOCK(b);
-	
+
 	return (secs);
 }
 
-/* msl_bmap_lease_tryext - attempt to extend the lease time on a bmap.  If 
- *    successful, this will result i the creation and assignment of a new 
+/*
+ * msl_bmap_lease_tryext - Attempt to extend the lease time on a bmap.  If
+ *    successful, this will result i the creation and assignment of a new
  *    lease sequence number from the MDS.
  * @secs_rem:  return the number of seconds remaining on the lease.
  * @blockable:  means the caller will not block if a renew rpc is outstanding.
- *    Currently, only fsthreads which try lease extension prior to initiating 
- *    I/O are 'blockable'.  This is so the system doesn't take more work on 
+ *    Currently, only fsthreads which try lease extension prior to initiating
+ *    I/O are 'blockable'.  This is so the system doesn't take more work on
  *    on bmaps whose leases are about to expire.
  * Notes:  Should the lease extension fail, all dirty write buffers must be
- *    expelled and the the flush error code should be set to notify the 
+ *    expelled and the the flush error code should be set to notify the
  *    holders of open file descriptors.
  */
 int
@@ -243,19 +243,19 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 
 	} else if (b->bcm_flags & BMAP_CLI_LEASEEXTREQ) {
 		if (secs < BMAP_CLI_EXTREQSECSBLOCK) {
-			if (!blockable) 
+			if (!blockable)
 				rc = -EAGAIN;
-			else {				
+			else {
 				rc = 0;
-				DEBUG_BMAP(PLL_WARN, b, 
+				DEBUG_BMAP(PLL_WARN, b,
 					   "blocking on lease renewal");
 				bmap_op_start_type(b, BMAP_OPCNT_LEASEEXT);
-				bcm_wait_locked(b, (b->bcm_flags & 
+				bcm_wait_locked(b, (b->bcm_flags &
 					    BMAP_CLI_LEASEEXTREQ));
-				
+
 				if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED)
 					rc = -SLERR_BMAP_LEASEEXT_FAILED;
-				
+
 				bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
 				/* Note: bmap_op_done_type() always drops
 				 *   the lock.
@@ -265,7 +265,7 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 		} // else NOOP
 
 	} else if (secs > BMAP_CLI_EXTREQSECS)
-		timespecadd(&ts, &msl_bmap_timeo_inc, 
+		timespecadd(&ts, &msl_bmap_timeo_inc,
 		    &bmap_2_bci(b)->bci_etime);
 
 	else {
@@ -324,13 +324,13 @@ error:
 	}
 
 	if (waslocked == PSLRV_WASNOTLOCKED)
-		BMAP_ULOCK(b);              
+		BMAP_ULOCK(b);
 
 	return (rc);
 }
 
 /**
- * msl_bmap_retrieve - Perform a blocking 'LEASEBMAP' operation t 
+ * msl_bmap_retrieve - Perform a blocking 'LEASEBMAP' operation t
  *	retrieve one or more bmaps from the MDS.
  * @b: the bmap ID to retrieve.
  * @rw: read or write access
@@ -653,6 +653,8 @@ dump_bmap_flags(uint32_t flags)
 	PFL_PRFLAG(BMAP_CLI_FLUSHPROC, &flags, &seq);
 	PFL_PRFLAG(BMAP_CLI_BIORQEXPIRE, &flags, &seq);
 	PFL_PRFLAG(BMAP_CLI_LEASEEXTREQ, &flags, &seq);
+	PFL_PRFLAG(BMAP_CLI_DIOWR, &flags, &seq);
+	PFL_PRFLAG(BMAP_CLI_LEASEEXPIRED, &flags, &seq);
 	if (flags)
 		printf(" unknown: %#x\n", flags);
 	printf("\n");

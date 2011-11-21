@@ -35,7 +35,8 @@
 
 /* Less than this value, lease retries are blocking
  */
-#define BMAP_LEASE_AGE_RETRY            10
+#define BMAP_LEASE_AGE_RETRY		10
+
 /*
  * bmap_cli_data - private data associated with a bmap used by a SLASH2 client
  */
@@ -52,7 +53,7 @@ struct bmap_cli_info {
 #define BMAP_CLI_BIORQEXPIRE	(_BMAP_FLSHFT << 1)
 #define BMAP_CLI_LEASEEXTREQ	(_BMAP_FLSHFT << 2)	/* requesting a lease ext */
 #define BMAP_CLI_DIOWR		(_BMAP_FLSHFT << 3)	/* dio for archiver write */
-#define BMAP_CLI_LEASEEXPIRED   (_BMAP_FLSHFT << 4)     /* lease has expired, bmap must be released */
+#define BMAP_CLI_LEASEEXPIRED	(_BMAP_FLSHFT << 4)	/* lease has expired, bmap must be released */
 
 #define BMAP_CLI_MAX_LEASE	60 /* seconds */
 #define BMAP_CLI_EXTREQSECS	20
