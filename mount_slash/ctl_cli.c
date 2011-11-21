@@ -444,6 +444,7 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* BMAPFLSH	*/ NULL,
 /* BMAPFLSHRLS	*/ NULL,
 /* BMAPFLSHRPC	*/ NULL,
+/* BMAPLSWATCHER*/ NULL,
 /* BMAPREADAHEAD*/ NULL,
 /* CONN		*/ NULL,
 /* CTL		*/ psc_ctlthr_get,
@@ -453,6 +454,7 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* FSMGR	*/ NULL,
 /* LNETAC	*/ NULL,
 /* NBRQ		*/ NULL,
+/* RCI		*/ NULL,
 /* RCM		*/ NULL,
 /* TIOS		*/ NULL,
 /* USKLNDPL	*/ NULL

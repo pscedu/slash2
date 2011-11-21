@@ -737,6 +737,7 @@ psc_ctl_prthr_t psc_ctl_prthrs[] = {
 /* BMAPFLSH	*/ NULL,
 /* BMAPFLSHRLS	*/ NULL,
 /* BMAPFLSHRPC	*/ NULL,
+/* BMAPLSWATCHER*/ NULL,
 /* BMAPREADAHEAD*/ NULL,
 /* CONN		*/ NULL,
 /* CTL		*/ psc_ctlthr_pr,
@@ -746,6 +747,7 @@ psc_ctl_prthr_t psc_ctl_prthrs[] = {
 /* FSMGR	*/ NULL,
 /* LNETAC	*/ NULL,
 /* NBRQ		*/ NULL,
+/* RCI		*/ NULL,
 /* RCM		*/ NULL,
 /* TIOS		*/ NULL,
 /* USKLNDPL	*/ NULL

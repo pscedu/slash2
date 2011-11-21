@@ -42,8 +42,8 @@ enum {
 	MSTHRT_BMAPFLSH,		/* bmap write data flush thread */
 	MSTHRT_BMAPFLSHRLS,		/* bmap lease releaser */
 	MSTHRT_BMAPFLSHRPC,		/* async buffer thread for RPC reaping */
+	MSTHRT_BMAPLSWATCHER,		/* bmap lease watcher */
 	MSTHRT_BMAPREADAHEAD,		/* async thread for read ahead */
-	MSTHRT_BMAPLSWATCHER,           /* bmap lease watcher */
 	MSTHRT_CONN,			/* connection monitor */
 	MSTHRT_CTL,			/* control processor */
 	MSTHRT_CTLAC,			/* control acceptor */
@@ -146,7 +146,7 @@ struct msl_fhent {			 /* XXX rename */
 	int				 mfh_oflags;	/* open(2) flags */
 	int				 mfh_flush_rc;	/* fsync(2) status */
 	struct psc_lockedlist		 mfh_biorqs;	/* track biorqs (flush) */
-	struct psc_lockedlist		 mfh_ra_bmpces; /* read ahead bmpce's */
+	struct psc_lockedlist		 mfh_ra_bmpces;	/* read ahead bmpce's */
 	struct msl_ra			 mfh_ra;	/* readahead tracking */
 
 	/* stats */
@@ -173,7 +173,7 @@ struct msl_fsrqinfo {
 	off_t				 mfsrq_off;
 	int				 mfsrq_flags;
 	int				 mfsrq_err;
-	int				 mfsrq_ref;  /* # car's needed to satisfy this req */
+	int				 mfsrq_ref;	/* # car's needed to satisfy this req */
 	enum rw				 mfsrq_rw;
 	struct pscfs_req		*mfsrq_pfr;
 	struct psclist_head		 mfsrq_lentry;	/* pending AIOs in struct bmap_pagecache_entry  */
