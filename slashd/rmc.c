@@ -1212,8 +1212,8 @@ mexpc_destroy(void *arg)
 		psc_assert(bml->bml_flags & BML_EXP);
 		bml->bml_flags &= ~BML_EXP;
 		bml->bml_flags |= BML_EXPFAIL;
-		BML_ULOCK(bml);
 		psclist_del(&bml->bml_exp_lentry, &mexpc->mexpc_bmlhd);
+		BML_ULOCK(bml);
 	}
 }
 
