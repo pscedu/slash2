@@ -1429,9 +1429,15 @@ __static int
 msl_flush_int_locked(struct msl_fhent *mfh)
 {
 	struct bmpc_ioreq *r;
-	int rc = 0;
 
-	if (pll_empty(&mfh->mfh_biorqs)) {
+	if (mfh->mfh_flush_rc) {
+		int rc;
+
+		rc = mfh->mfh_flush_rc;
+		mfh->mfh_flush_rc = 0;
+		return (rc);
+
+	} else if (pll_empty(&mfh->mfh_biorqs)) {
 		mfh->mfh_flush_rc = 0;
 		return (0);
 	}
@@ -1444,23 +1450,12 @@ msl_flush_int_locked(struct msl_fhent *mfh)
 	}
 	bmap_flushq_wake(BMAPFLSH_EXPIRE, NULL);
 
-	while (!pll_empty(&mfh->mfh_biorqs) && !mfh->mfh_flush_rc) {
+	while (!pll_empty(&mfh->mfh_biorqs)) {
 		psc_waitq_wait(&msl_fhent_flush_waitq, &mfh->mfh_lock);
 		spinlock(&mfh->mfh_lock);
 	}
 
-	if (mfh->mfh_flush_rc) {
-		PLL_FOREACH(r, &mfh->mfh_biorqs) {
-			DEBUG_BIORQ(PLL_ERROR, r, "mfh_flush_rc=%d",
-				    mfh->mfh_flush_rc);
-
-			msl_biorq_destroy(r);
-		}
-	}
-
-	rc = mfh->mfh_flush_rc;
-	mfh->mfh_flush_rc = 0;
-	return (rc);
+	return (0);
 }
 
 __static void
@@ -2282,7 +2277,7 @@ msl_init(void)
 	authbuf_checkkeyfile();
 	authbuf_readkeyfile();
 
-	libsl_init(SRCI_NBUFS + SRCM_NBUFS + 1024);
+	libsl_init(4096);
 	fidc_init(sizeof(struct fcmh_cli_info), FIDC_CLI_DEFSZ);
 	bmpc_global_init();
 	bmap_cache_init(sizeof(struct bmap_cli_info));

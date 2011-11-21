@@ -1,3 +1,4 @@
+
 /* $Id$ */
 /*
  * %PSC_START_COPYRIGHT%
@@ -405,6 +406,17 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 		    bmpc_biorq_cmp);
 }
 
+/* msl_mfh_seterr - apply error to the mfh_flush_rc so that threads blocked
+ *   in flush may error out.
+ */
+void
+msl_mfh_seterr(struct msl_fhent *mfh)
+{
+	MFH_LOCK(mfh);
+	mfh->mfh_flush_rc = -EIO;
+	MFH_ULOCK(mfh);
+}
+
 __static void
 msl_biorq_del(struct bmpc_ioreq *r)
 {
@@ -414,9 +426,10 @@ msl_biorq_del(struct bmpc_ioreq *r)
 	BMAP_LOCK(b);
 	BMPC_LOCK(bmpc);
 
-	/* The request must be attached to the bmpc.
-	 */
-	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
+	if (r->biorq_flags & BIORQ_FLUSHABORT)
+		psc_assert(psclist_disjoint(&r->biorq_lentry));
+	else
+		pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 
 	if (r->biorq_flags & BIORQ_WRITE && !(r->biorq_flags & BIORQ_DIO)) {
 		atomic_dec(&bmpc->bmpc_pndgwr);
@@ -446,6 +459,19 @@ msl_biorq_del(struct bmpc_ioreq *r)
 	bmap_op_done_type(b, BMAP_OPCNT_BIORQ);
 }
 
+void
+msl_bmpces_fail(struct bmpc_ioreq *r)
+{
+	struct bmap_pagecache_entry *e;
+	int i;
+
+	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
+		BMPCE_LOCK(e);
+		e->bmpce_flags |= BMPCE_EIO;
+		BMPCE_ULOCK(e);
+	}
+}
+
 __static void
 msl_biorq_unref(struct bmpc_ioreq *r)
 {
@@ -454,7 +480,7 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 	int i, eio;
 
 	psc_assert(r->biorq_flags & BIORQ_DESTROY);
-	psc_assert(!(r->biorq_flags & BIORQ_INFL));
+	psc_assert(!(r->biorq_flags & (BIORQ_INFL | BIORQ_SCHED)));
 
 	/* Block here on an of our EIO'd pages waiting for other threads
 	 *   to release their references.
@@ -512,7 +538,8 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
 	 */
 	if (!(r->biorq_flags & BIORQ_DIO)) {
 		if (r->biorq_flags & BIORQ_WRITE) {
-			if (r->biorq_flags & BIORQ_RBWFAIL)
+			if (r->biorq_flags & 
+			    ((BIORQ_RBWFAIL|BIORQ_EXPIREDLEASE|BIORQ_RESCHED)))
 				/*
 				 * Ensure this biorq never got off of
 				 * the ground.
@@ -535,7 +562,6 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
 	if (r->biorq_flags & BIORQ_NOFHENT)
 		fhent = 0;
 #endif
-
 	BIORQ_ULOCK(r);
 
 	DEBUG_BIORQ(PLL_INFO, r, "destroying (nwaiters=%d)",
@@ -1048,26 +1074,52 @@ msl_readahead_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	return (msl_readahead_cb(rq, rc, args));
 }
 
-int
-msl_write_rpcset_cb(__unusedx struct pscrpc_request_set *set, void *arg,
-    int rc)
+__static void
+msl_write_cb_gen_handler(struct psc_dynarray *biorqs, int rc)
 {
-	struct psc_dynarray *biorqs = arg;
 	struct bmpc_ioreq *r;
-	int i;
+	int i, expired_lease = 0;
+	
+	r = psc_dynarray_getpos(biorqs, 0);
+	BMAP_LOCK(r->biorq_bmap);
+	if (r->biorq_bmap->bcm_flags & BMAP_CLI_LEASEEXPIRED) {
+		expired_lease = 1;
+		DYNARRAY_FOREACH(r, i, biorqs) {
+			BIORQ_LOCK(r);
+			psc_assert(r->biorq_flags & BIORQ_EXPIREDLEASE);
+			BIORQ_ULOCK(r);
+		}
+	}
+	BMAP_ULOCK(r->biorq_bmap);
 
-	psclog_info("set=%p rc=%d", set, rc);
-
-	if (rc) {
+	if (rc && !expired_lease) {
+		/* Try to reschedule these write RPC's.  The bmap flush
+		 *   layer will handle lease renewal (and it's possible 
+		 *   failure).
+		 */
 		DYNARRAY_FOREACH(r, i, biorqs)
 			bmap_flush_resched(r);
-		return (rc);
+
+		return;
 	}
 
 	DYNARRAY_FOREACH(r, i, biorqs)
 		msl_biorq_destroy(r);
+
 	psc_dynarray_free(biorqs);
 	PSCFREE(biorqs);
+}
+
+
+int
+msl_write_rpcset_cb(__unusedx struct pscrpc_request_set *set, void *arg,
+    int rc)
+{
+	//struct psc_dynarray *biorqs = arg;
+	
+	psclog_info("set=%p rc=%d", set, rc);
+	msl_write_cb_gen_handler((struct psc_dynarray *)arg, rc);
+
 	return (rc);
 }
 
@@ -1075,24 +1127,15 @@ int
 msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
-	struct psc_dynarray *biorqs = args->pointer_arg[MSL_CBARG_BIORQS];
-	struct bmpc_ioreq *r;
-	int rc = 0, i;
+	//struct psc_dynarray *biorqs = args->pointer_arg[MSL_CBARG_BIORQS];
+	int rc = 0;
 
 	DEBUG_REQ(PLL_INFO, rq, "cb");
 
 	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
-	if (rc) {
-		DYNARRAY_FOREACH(r, i, biorqs)
-			bmap_flush_resched(r);
 
-		return (rc);
-	}
-
-	DYNARRAY_FOREACH(r, i, biorqs)
-		msl_biorq_destroy(r);
-	psc_dynarray_free(biorqs);
-	PSCFREE(biorqs);
+	msl_write_cb_gen_handler((struct psc_dynarray *)
+		 args->pointer_arg[MSL_CBARG_BIORQS], rc);
 	return (0);
 }
 
@@ -1329,7 +1372,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 	struct srm_io_rep *mp;
 	struct iovec *iovs;
 	uint32_t off = 0;
-	int rc, i, secs, added = 0;
+	int rc, i, added = 0;
 
 	psc_assert(nbmpce > 0);
 	psc_assert(nbmpce <= BMPC_MAXBUFSRPC);
@@ -1362,12 +1405,6 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 		goto error;
 	}
 
-	rc = msl_bmap_lease_tryext(e->bmpce_owner, &secs, 0);
-	if (rc)
-		goto error;
-
-	psc_assert(secs > 0);
-
 	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
 	if (rc)
 		goto error;
@@ -1388,13 +1425,13 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 
-	rq->rq_timeout = secs / 2;
+	rq->rq_timeout = 15;
 	rq->rq_bulk_abortable = 1;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMPCE] = bmpces_cbarg;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMPC] = bmap_2_bmpc(b);
 	rq->rq_interpret_reply = msl_readahead_cb0;
-	rq->rq_comp = &rpcComp;
+	pscrpc_completion_set(rq,  &rpcComp);
 
 	for (i = 0; i < nbmpce; i++) {
 		/* bmpce_ralentry is available at this point, add
@@ -1424,11 +1461,10 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 	for (i=0; i < nbmpce; i++) {
 		e = bmpces[i];
 
-		if (added)
-			pll_remove(&bmap_2_bmpc(b)->bmpc_pndg_ra,
-			    bmpces);
-
 		BMPCE_LOCK(e);
+		if (added)
+			pll_remove(&bmap_2_bmpc(b)->bmpc_pndg_ra, e);
+
 		e->bmpce_flags |= BMPCE_EIO;
 		bmpce_handle_lru_locked(e, bmap_2_bmpc(b),
 		    BIORQ_READ, 0);
@@ -1802,6 +1838,7 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 
 		BMPCE_ULOCK(e);
 	}
+
 	return (rc);
 }
 
@@ -2297,9 +2334,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			if (msl_fd_offline_retry(mfh))
 				goto retry_bmap;
 			switch (abs(rc)) {
-//			case SLERR_BADCRC:
-//				rc = EIO;
-//				break;
 			case SLERR_ION_OFFLINE:
 				rc = -EHOSTUNREACH;
 				break;
@@ -2307,7 +2341,11 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			goto out;
 		}
 
-		msl_bmap_lease_tryext(b, NULL, 0);
+		rc = msl_bmap_lease_tryext(b, NULL, 1);
+		if (rc) {
+			bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+			goto retry_bmap;
+		}
 		/*
 		 * Re-relativize the offset if this request spans more
 		 * than 1 bmap.

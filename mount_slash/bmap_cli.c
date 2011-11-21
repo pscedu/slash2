@@ -167,16 +167,63 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 	    &bmap_2_bci(b)->bci_xtime);
  out:
 	BMAP_CLEARATTR(b, BMAP_CLI_LEASEEXTREQ);
+	if (rc) {
+		/* Unflushed data in this bmap is now invalid.  Move the 
+		 *   bmap out of the fid cache so that others don't stumble
+		 *   across it while it's active I/O's are failed.
+		 */		
+		if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED)
+			psc_assert(b->bcm_flags & BMAP_ORPHAN);
+		else {
+			BMAP_SETATTR(b, BMAP_CLI_LEASEEXPIRED);
+			/* bmap_orphan() takes the fcmh lock so this lock two-step
+			 *   is needed to ensure ordering.
+			 */
+			BMAP_ULOCK(b);
+			bmap_orphan(b);
+			BMAP_LOCK(b);
+			bmpc_biorqs_fail(bmap_2_bmpc(b));
+		}
+	}
 
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_NOTIFY, b,
-	   "lease extension (rc=%d)", rc);
-
+		   "lease extension (rc=%d) nseq=%"PRId64, rc, 
+		   rc ? BMAPSEQ_ANY : mp->sbd.sbd_seq);
 	bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
+
 	return (rc);
 }
 
+
 int
-msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int force)
+msl_bmap_lease_secs_remaining(struct bmapc_memb *b)
+{
+	struct timespec ts;
+	int secs;
+
+        PFL_GETTIMESPEC(&ts);
+
+	BMAP_LOCK(b);
+	secs = bmap_2_bci(b)->bci_xtime.tv_sec - ts.tv_sec;
+	BMAP_ULOCK(b);
+	
+	return (secs);
+}
+
+/* msl_bmap_lease_tryext - attempt to extend the lease time on a bmap.  If 
+ *    successful, this will result i the creation and assignment of a new 
+ *    lease sequence number from the MDS.
+ * @secs_rem:  return the number of seconds remaining on the lease.
+ * @blockable:  means the caller will not block if a renew rpc is outstanding.
+ *    Currently, only fsthreads which try lease extension prior to initiating 
+ *    I/O are 'blockable'.  This is so the system doesn't take more work on 
+ *    on bmaps whose leases are about to expire.
+ * Notes:  Should the lease extension fail, all dirty write buffers must be
+ *    expelled and the the flush error code should be set to notify the 
+ *    holders of open file descriptors.
+ */
+int
+msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 {
 	int secs = 0, rc = 0, waslocked, extended = 0;
 	struct timespec ts;
@@ -185,14 +232,43 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int force)
 
 	waslocked = BMAP_RLOCK(b);
 
-	if (!force &&
-	    (b->bcm_flags & (BMAP_CLI_LEASEEXTREQ) ||
-	     (secs = bmap_2_bci(b)->bci_xtime.tv_sec - ts.tv_sec) >
-	     BMAP_CLI_EXTREQSECS)) {
-		timespecadd(&ts, &msl_bmap_timeo_inc,
+	secs = (int)(bmap_2_bci(b)->bci_xtime.tv_sec - ts.tv_sec);
+
+	if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED) {
+		/* Catch the case where another thread has already marked
+		 *    this bmap as expired.
+		 */
+		psc_assert(b->bcm_flags & BMAP_ORPHAN);
+		rc = -SLERR_BMAP_LEASEEXT_FAILED;
+
+	} else if (b->bcm_flags & BMAP_CLI_LEASEEXTREQ) {
+		if (secs < BMAP_CLI_EXTREQSECSBLOCK) {
+			if (!blockable) 
+				rc = -EAGAIN;
+			else {				
+				rc = 0;
+				DEBUG_BMAP(PLL_WARN, b, 
+					   "blocking on lease renewal");
+				bmap_op_start_type(b, BMAP_OPCNT_LEASEEXT);
+				bcm_wait_locked(b, (b->bcm_flags & 
+					    BMAP_CLI_LEASEEXTREQ));
+				
+				if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED)
+					rc = -SLERR_BMAP_LEASEEXT_FAILED;
+				
+				bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
+				/* Note: bmap_op_done_type() always drops
+				 *   the lock.
+				 */
+				BMAP_LOCK(b);
+			}
+		} // else NOOP
+
+	} else if (secs > BMAP_CLI_EXTREQSECS)
+		timespecadd(&ts, &msl_bmap_timeo_inc, 
 		    &bmap_2_bci(b)->bci_etime);
-		BMAP_URLOCK(b, waslocked);
-	} else {
+
+	else {
 		struct slashrpc_cservice *csvc = NULL;
 		struct pscrpc_request *rq = NULL;
 		struct srm_leasebmapext_req *mq;
@@ -200,6 +276,9 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int force)
 
 		BMAP_SETATTR(b, BMAP_CLI_LEASEEXTREQ);
 		bmap_op_start_type(b, BMAP_OPCNT_LEASEEXT);
+		/* Yield the remaining time.
+		 */
+		bmap_2_bci(b)->bci_etime = bmap_2_bci(b)->bci_xtime;
 		/* Unlock no matter what.
 		 */
 		BMAP_ULOCK(b);
@@ -218,45 +297,23 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int force)
 
 		rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
+		rq->rq_interpret_reply = msl_bmap_lease_tryext_cb;
+		pscrpc_completion_set(rq,  &rpcComp);
 
-		if (secs <= 10 || force) {
-			/* The lease is old - issue a blocking request.
-			 */
-			rc = SL_RSX_WAITREP(csvc, rq, mp);
-			if (!rc)
-				rc = msl_bmap_lease_tryext_cb(rq,
-				      &rq->rq_async_args);
-
-			if (!rc)
-				extended = 1;
-			pscrpc_req_finished(rq);
-			sl_csvc_decref(csvc);
-
-			DEBUG_BMAP(rc ? PLL_ERROR : PLL_WARN, b,
-			   "blocking lease extension req (rc=%d) (secs=%d)",
-			   rc, secs);
-
-		} else {
-			/* Otherwise, let the async handler do the dirty work.
-			 */
-			rq->rq_interpret_reply = msl_bmap_lease_tryext_cb;
-			rq->rq_comp = &rpcComp;
-
-			rc = pscrpc_nbreqset_add(pndgBmaplsReqs, rq);
-			if (rc) {
- error:
-				if (rq)
-					pscrpc_req_finished(rq);
-				if (csvc)
-					sl_csvc_decref(csvc);
-			}
-			DEBUG_BMAP(rc ? PLL_ERROR : PLL_NOTIFY, b,
-			   "non-blocking lease extension req (rc=%d) "
-			   " (secs=%d)", rc, secs);
+		rc = pscrpc_nbreqset_add(pndgBmaplsReqs, rq);
+		if (rc) {
+error:
+			if (rq)
+				pscrpc_req_finished(rq);
+			if (csvc)
+				sl_csvc_decref(csvc);
 		}
+		DEBUG_BMAP(rc ? PLL_ERROR : PLL_NOTIFY, b,
+			   "lease extension req (rc=%d) (secs=%d)", rc, secs);
+		if (rc)
+			rc = -SLERR_BMAP_LEASEEXT_FAILED;
 
-		if (waslocked == PSLRV_WASLOCKED)
-			BMAP_LOCK(b);
+		BMAP_LOCK(b);
 	}
 
 	if (secs_rem) {
@@ -266,11 +323,14 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int force)
 		*secs_rem = secs;
 	}
 
+	if (waslocked == PSLRV_WASNOTLOCKED)
+		BMAP_ULOCK(b);              
+
 	return (rc);
 }
 
 /**
- * msl_bmap_retrieve - Perform a blocking 'LEASEBMAP' operation to
+ * msl_bmap_retrieve - Perform a blocking 'LEASEBMAP' operation t 
  *	retrieve one or more bmaps from the MDS.
  * @b: the bmap ID to retrieve.
  * @rw: read or write access

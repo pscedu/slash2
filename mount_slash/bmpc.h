@@ -48,7 +48,7 @@ struct msl_fsrqinfo;
 #define BMPC_BUFSZ		SLASH_SLVR_BLKSZ
 #define BMPC_BLKSZ		BMPC_BUFSZ
 #define BMPC_SLB_NBLKS		256		/* 8MB slab */
-#define BMPC_DEFSLBS		8
+#define BMPC_DEFSLBS		1
 #define BMPC_MAXSLBS		32
 #define BMPC_BUFMASK		(BMPC_BLKSZ - 1)
 #define BMPC_IOMAXBLKS		64
@@ -286,13 +286,18 @@ struct bmpc_ioreq {
 #define BIORQ_AIOWAIT			(1 << 14)
 #define BIORQ_RESCHED			(1 << 15)
 #define BIORQ_ARCHIVER			(1 << 16)
+#define BIORQ_FLUSHABORT                (1 << 17)
+#define BIORQ_EXPIREDLEASE              (1 << 18)
 
 #define BIORQ_LOCK(r)			spinlock(&(r)->biorq_lock)
 #define BIORQ_ULOCK(r)			freelock(&(r)->biorq_lock)
+#define BIORQ_RLOCK(r)                  reqlock(&(r)->biorq_lock)
+#define BIORQ_URLOCK(r)                 ureqlock(&(r)->biorq_lock)
+#define BIORQ_LOCK_ENSURE(r)            LOCK_ENSURE(&(r)->biorq_lock)
 
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP,					\
-	    "biorq@%p fl=%#x:%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "		\
+		"biorq@%p fl=%#x:%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "	\
 	    "o=%u l=%u "						\
 	    "np=%d b=%p "						\
 	    "ts="PSCPRI_TIMESPEC" : "fmt,				\
@@ -313,9 +318,22 @@ struct bmpc_ioreq {
 	    (b)->biorq_flags & BIORQ_RBWFAIL		? "F" : "",	\
 	    (b)->biorq_flags & BIORQ_AIOWAIT		? "W" : "",	\
 	    (b)->biorq_flags & BIORQ_RESCHED		? "R" : "",	\
+	    (b)->biorq_flags & BIORQ_FLUSHABORT		? "B" : "",	\
+	    (b)->biorq_flags & BIORQ_EXPIREDLEASE	? "X" : "",	\
 	    (b)->biorq_off, (b)->biorq_len,				\
 	    psc_dynarray_len(&(b)->biorq_pages), (b)->biorq_bmap,	\
 	    PSCPRI_TIMESPEC_ARGS(&(b)->biorq_issue), ## __VA_ARGS__)
+
+#define biorq_wait_locked(r, cond)					\
+	do {								\
+		BIORQ_LOCK_ENSURE(r);					\
+		while (cond) {						\
+			psc_waitq_wait(&(r)->biorq_waitq, &(r)->biorq_lock); \
+			BIORQ_LOCK(r);					\
+		}							\
+	} while (0)
+
+#define biorq_wake_locked(r) psc_waitq_wakeall(&(r)->biorq_waitq))
 
 int	_msl_offline_retry(struct bmpc_ioreq *, int);
 int	msl_fd_offline_retry(struct msl_fhent *);
@@ -372,7 +390,7 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
 
 	locked = reqlock(&bmpce->bmpce_lock);
 
-	DEBUG_BMPCE(PLL_NOTIFY, bmpce, "op=%d off=%u", op, off);
+	DEBUG_BMPCE(PLL_DEBUG, bmpce, "op=%d off=%u", op, off);
 
 	while (bmpce->bmpce_flags & BMPCE_GETBUF) {
 		psc_assert(!bmpce->bmpce_base);
@@ -418,7 +436,7 @@ void *bmpc_alloc(void);
 void  bmpc_free(void *);
 void  bmpc_freeall_locked(struct bmap_pagecache *);
 int   bmpc_biorq_cmp(const void *, const void *);
-
+void  bmpc_biorqs_fail(struct bmap_pagecache *);
 int   bmpce_init(struct psc_poolmgr *, void *);
 void  bmpce_getbuf(struct bmap_pagecache_entry *);
 struct bmap_pagecache_entry *

@@ -198,13 +198,19 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 			 */
 			if (bmpce->bmpce_flags & BMPCE_EIO) {
 				DEBUG_BMPCE(PLL_WARN, bmpce, "freeing EIO");
-				psc_assert(bmpce->bmpce_waitq);
-				BMPCE_WAKE(bmpce);
+
+				if (bmpce->bmpce_flags & BMPCE_READPNDG) {
+					bmpce->bmpce_flags &= ~BMPCE_READPNDG;
+					psc_assert(bmpce->bmpce_waitq);
+					BMPCE_WAKE(bmpce);
+				}
+
 				bmpce_freeprep(bmpce);
 				bmpce_release_locked(bmpce, bmpc);
 				return;
 
 			} else if (!(bmpce->bmpce_flags & BMPCE_LRU)) {
+				bmpce->bmpce_flags &= ~BMPCE_READPNDG;
 				bmpce->bmpce_flags |= BMPCE_LRU;
 				pll_add_sorted(&bmpc->bmpc_lru, bmpce,
 					       bmpce_lrusort_cmp1);
@@ -378,6 +384,38 @@ bmpc_freeall_locked(struct bmap_pagecache *bmpc)
 	}
 	psc_assert(SPLAY_EMPTY(&bmpc->bmpc_tree));
 	psc_assert(pll_empty(&bmpc->bmpc_lru));
+}
+
+__static void
+bmpc_biorq_seterr(struct bmpc_ioreq *r, int err)
+{
+	BIORQ_LOCK(r);
+	r->biorq_flags |= err;
+	BIORQ_ULOCK(r);
+
+	DEBUG_BIORQ(PLL_ERROR, r, "expired lease");
+
+	msl_mfh_seterr(r->biorq_fhent);
+}
+
+/* bmpc_biorqs_fail - set the flushrc so that fuse calls blocked in flush()
+ *    will awake.
+ * Notes: Pending RA pages should fail on their own via RPC callback.
+ */
+void
+bmpc_biorqs_fail(struct bmap_pagecache *bmpc)
+{
+	struct bmpc_ioreq *r;
+
+	BMPC_LOCK(bmpc);
+	PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs) {
+		bmpc_biorq_seterr(r, BIORQ_EXPIREDLEASE);
+	}
+
+	PLL_FOREACH(r, &bmpc->bmpc_new_biorqs) {
+		bmpc_biorq_seterr(r, (BIORQ_EXPIREDLEASE | BIORQ_FLUSHABORT));
+	}
+	BMPC_ULOCK(bmpc);
 }
 
 /**
@@ -704,6 +742,8 @@ dump_biorq_flags(uint32_t flags)
 	PFL_PRFLAG(BIORQ_RBWFAIL, &flags, &seq);
 	PFL_PRFLAG(BIORQ_AIOWAIT, &flags, &seq);
 	PFL_PRFLAG(BIORQ_RESCHED, &flags, &seq);
+	PFL_PRFLAG(BIORQ_FLUSHABORT, &flags, &seq);
+	PFL_PRFLAG(BIORQ_EXPIREDLEASE, &flags, &seq);
 	if (flags)
 		printf(" unknown: %#x", flags);
 	printf("\n");
