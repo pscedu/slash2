@@ -205,7 +205,7 @@ bcr_xid_last_bump(struct biod_crcup_ref *bcr)
 	bcr_2_bmap(bcr)->bcm_flags &= ~BMAP_IOD_INFLIGHT;
 }
 
-void
+__static void
 bcr_ready_remove(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 {
 	spinlock(&inf->binfcrcs_lock);
@@ -398,14 +398,14 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 		rc = sli_rmi_getcsvc(&csvc);
 		if (rc) {
 			psclog_errorx("Failed to get MDS import rc=%d", rc);
-			continue;
+			goto end;
 		}
 
 		rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq, mq, mp);
 		if (rc) {
 			psclog_errorx("Failed to generate new req rc=%d", rc);
 			sl_csvc_decref(csvc);
-			continue;
+			goto end;
 		}
 
 		memcpy(mq, brr, sizeof(*mq));
