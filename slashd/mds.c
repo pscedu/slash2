@@ -54,7 +54,6 @@ mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
 {
 	sl_bmapno_t nb;
 	int locked;
-	//int rc;
 
 	locked = FCMH_RLOCK(f);
 #if 0
@@ -1741,6 +1740,8 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	sbd_out->sbd_seq = bml->bml_seq;
 	sbd_out->sbd_bmapno = b->bcm_bmapno;
 	sbd_out->sbd_fg = b->bcm_fcmh->fcmh_fg;
+	sbd_out->sbd_nid = exp->exp_connection->c_peer.nid;
+	sbd_out->sbd_pid = exp->exp_connection->c_peer.pid;
 
 	if (rw == BML_WRITE) {
 		struct bmap_mds_info *bmi = bmap_2_bmi(b);
