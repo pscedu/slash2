@@ -90,10 +90,11 @@ bmap_2_bci(struct bmapc_memb *b)
 		BMAP_ULOCK(b);						\
 	} while (0)
 
+void	 bmap_biorq_expire(struct bmapc_memb *);
 int	 msl_biorq_cmp(const void *, const void *);
 void	 msl_bmap_cache_rls(struct bmapc_memb *);
+int	 msl_bmap_lease_secs_remaining(struct bmapc_memb *);
 int	 msl_bmap_lease_tryext(struct bmapc_memb *, int *, int);
-void	 bmap_biorq_expire(struct bmapc_memb *);
 
 extern struct timespec msl_bmap_max_lease;
 extern struct timespec msl_bmap_timeo_inc;
