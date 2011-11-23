@@ -172,7 +172,6 @@ struct bmap_mds_lease {
 	struct pscrpc_export	 *bml_exp;
 	struct psclist_head	  bml_bmdsi_lentry;
 	struct psclist_head	  bml_timeo_lentry;
-	struct psclist_head	  bml_exp_lentry;
 	struct psclist_head	  bml_coh_lentry;
 	struct bmap_mds_lease	 *bml_chain;		/* chain of duplicate leases */
 };

@@ -77,7 +77,6 @@ struct slm_cli_csvc_cpart {
 struct slm_exp_cli {
 	struct slashrpc_cservice	*mexpc_csvc;
 	struct slm_cli_csvc_cpart	*mexpc_cccp;
-	struct psclist_head		 mexpc_bmlhd;		/* bmap leases */
 };
 
 void	slm_rpc_initsvc(void);

@@ -1037,7 +1037,6 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		 */
 		psc_assert(!(bml->bml_flags & (BML_COH|BML_EXP|BML_TIMEOQ)));
 		psc_assert(psclist_disjoint(&bml->bml_coh_lentry));
-		psc_assert(psclist_disjoint(&bml->bml_exp_lentry));
 		psc_assert(psclist_disjoint(&bml->bml_timeo_lentry));
 		bml->bml_flags &= ~BML_COHRLS;
 	}
@@ -1048,21 +1047,6 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		 *   will call this function upon rpc completion.
 		 */
 		bml->bml_flags |= BML_COHRLS;
-
-	if (bml->bml_flags & BML_EXP) {
-		/* Take the locks in the correct order. */
-		BML_ULOCK(bml);
-		EXPORT_LOCK(bml->bml_exp);
-		sl_exp_getpri_cli(bml->bml_exp);
-		BML_LOCK(bml);
-		if (bml->bml_flags & BML_EXP) {
-			psclist_del(&bml->bml_exp_lentry,
-			    psc_lentry_hd(&bml->bml_exp_lentry));
-			bml->bml_flags &= ~BML_EXP;
-		} else
-			psc_assert(psclist_disjoint(&bml->bml_exp_lentry));
-		EXPORT_ULOCK(bml->bml_exp);
-	}
 
 	if (bml->bml_flags & BML_TIMEOQ) {
 		BML_ULOCK(bml);
@@ -1235,7 +1219,6 @@ mds_bml_new(struct bmapc_memb *b, struct pscrpc_export *e, int flags,
 
 	INIT_PSC_LISTENTRY(&bml->bml_bmdsi_lentry);
 	INIT_PSC_LISTENTRY(&bml->bml_timeo_lentry);
-	INIT_PSC_LISTENTRY(&bml->bml_exp_lentry);
 	INIT_PSC_LISTENTRY(&bml->bml_coh_lentry);
 	INIT_SPINLOCK(&bml->bml_lock);
 
@@ -1643,21 +1626,11 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	     (flags & SRM_LEASEBMAPF_DIRECTIO ? BML_CDIO : 0)),
 	    &exp->exp_connection->c_peer);
 
-	EXPORT_LOCK(exp);
-	mexpc = sl_exp_getpri_cli(exp);
-	bml->bml_flags |= BML_EXP;
-	psclist_add_tail(&bml->bml_exp_lentry, &mexpc->mexpc_bmlhd);
-	EXPORT_ULOCK(exp);
-
 	rc = mds_bmap_bml_add(bml, rw, prefios);
 	if (rc) {
-		if (rc == -SLERR_BMAP_DIOWAIT) {
-			EXPORT_LOCK(exp);
-			psclist_del(&bml->bml_exp_lentry,
-			    &mexpc->mexpc_bmlhd);
-			EXPORT_ULOCK(exp);
+		if (rc == -SLERR_BMAP_DIOWAIT)
 			mds_bml_free(bml);
-		} else {
+		else {
 			if (rc == -SLERR_ION_OFFLINE)
 				bml->bml_flags |= BML_ASSFAIL;
 			bml->bml_flags |= BML_FREEING;
@@ -1711,22 +1684,12 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	rw = (sbd_in->sbd_ios == IOS_ID_ANY) ? BML_READ : BML_WRITE;
 	bml = mds_bml_new(b, exp, rw, &exp->exp_connection->c_peer);
 
-	EXPORT_LOCK(exp);
-	mexpc = sl_exp_getpri_cli(exp);
-	bml->bml_flags |= BML_EXP;
-	psclist_add_tail(&bml->bml_exp_lentry, &mexpc->mexpc_bmlhd);
-	EXPORT_ULOCK(exp);
-
 	rc = mds_bmap_bml_add(bml, (rw == BML_READ ? SL_READ : SL_WRITE),
 	    sbd_in->sbd_ios);
 	if (rc) {
-		if (rc == -SLERR_BMAP_DIOWAIT) {
-			EXPORT_LOCK(exp);
-			psclist_del(&bml->bml_exp_lentry,
-			    &mexpc->mexpc_bmlhd);
-			EXPORT_ULOCK(exp);
+		if (rc == -SLERR_BMAP_DIOWAIT)
 			mds_bml_free(bml);
-		} else {
+		else {
 			if (rc == -SLERR_ION_OFFLINE)
 				bml->bml_flags |= BML_ASSFAIL;
 			bml->bml_flags |= BML_FREEING;

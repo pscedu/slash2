@@ -1201,23 +1201,6 @@ slm_rmc_handler(struct pscrpc_request *rq)
 }
 
 void
-mexpc_destroy(void *arg)
-{
-	struct bmap_mds_lease *bml, *tmp;
-	struct slm_exp_cli *mexpc = arg;
-
-	psclist_for_each_entry_safe(bml, tmp, &mexpc->mexpc_bmlhd,
-	    bml_exp_lentry) {
-		BML_LOCK(bml);
-		psc_assert(bml->bml_flags & BML_EXP);
-		bml->bml_flags &= ~BML_EXP;
-		bml->bml_flags |= BML_EXPFAIL;
-		psclist_del(&bml->bml_exp_lentry, &mexpc->mexpc_bmlhd);
-		BML_ULOCK(bml);
-	}
-}
-
-void
 mexpc_allocpri(struct pscrpc_export *exp)
 {
 	struct slm_cli_csvc_cpart *mcccp;
@@ -1232,7 +1215,6 @@ mexpc_allocpri(struct pscrpc_export *exp)
 	 */
 	mcccp = mexpc->mexpc_cccp = PSCALLOC(sizeof(*mcccp));
 
-	INIT_PSCLIST_HEAD(&mexpc->mexpc_bmlhd);
 	INIT_SPINLOCK(&mcccp->mcccp_lock);
 	psc_waitq_init(&mcccp->mcccp_waitq);
 	slm_getclcsvc(exp);
