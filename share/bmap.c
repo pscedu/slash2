@@ -58,8 +58,9 @@ void
 bmap_orphan(struct bmapc_memb *b)
 {
 	struct fidc_membh *f = b->bcm_fcmh;
-
-	BMAP_LOCK(b);
+	int waslocked;
+	
+	waslocked = BMAP_RLOCK(b);
 
 	DEBUG_BMAP(PLL_INFO, b, "orphan");
 	psc_assert(!(b->bcm_flags & (BMAP_ORPHAN|BMAP_CLOSING)));
@@ -71,6 +72,9 @@ bmap_orphan(struct bmapc_memb *b)
 	PSC_SPLAY_XREMOVE(bmap_cache, &f->fcmh_bmaptree, b);
 	fcmh_wake_locked(f);
 	FCMH_ULOCK(f);
+
+	if (waslocked == PSLRV_WASLOCKED)
+		BMAP_LOCK(b);
 }
 
 void

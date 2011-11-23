@@ -176,12 +176,7 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 			psc_assert(b->bcm_flags & BMAP_ORPHAN);
 		else {
 			BMAP_SETATTR(b, BMAP_CLI_LEASEEXPIRED);
-			/* bmap_orphan() takes the fcmh lock so this lock two-step
-			 *   is needed to ensure ordering.
-			 */
-			BMAP_ULOCK(b);
 			bmap_orphan(b);
-			BMAP_LOCK(b);
 			bmpc_biorqs_fail(bmap_2_bmpc(b));
 		}
 	}
