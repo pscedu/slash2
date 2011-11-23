@@ -42,6 +42,9 @@
 #include "slerr.h"
 #include "sliod.h"
 
+static uint64_t	current_reclaim_xid;
+static uint64_t	current_reclaim_batchno;
+
 /**
  * sli_rim_handle_reclaim - Handle RECLAIM RPC from the MDS as a result
  *	of unlink or truncate to zero.  The MDS won't send us a new RPC
@@ -56,7 +59,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	struct iovec iov;
 	char fidfn[PATH_MAX];
 	int i, rc, len;
-	uint64_t crc;
+	uint64_t crc, xid, batchno;
 
 	len = offsetof(struct srt_reclaim_entry, _pad);
 
@@ -67,6 +70,16 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 
 	if (mq->count != mq->size / len)
 		return (EINVAL);
+
+	xid = mq->xid;
+	batchno = mq->batchno;
+	if (xid > current_reclaim_xid)
+		current_reclaim_xid = xid;
+	if (batchno > current_reclaim_batchno) {
+		psclog_info("Reclaim batchno advances from %"PRId64" to %"PRId64, 
+			current_reclaim_batchno, batchno);
+		current_reclaim_batchno = batchno;
+	}
 
 	iov.iov_len = mq->size;
 	iov.iov_base = PSCALLOC(mq->size);
