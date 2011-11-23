@@ -334,7 +334,6 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* JNAMESPACE	*/ NULL,
 /* JRECLAIM	*/ NULL,
 /* JRNL		*/ NULL,
-/* ZFS_KSTAT	*/ NULL,
 /* LNETAC	*/ NULL,
 /* NBRQ		*/ NULL,
 /* RCM		*/ NULL,
@@ -344,7 +343,8 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* TIOS		*/ NULL,
 /* UPSCHED	*/ NULL,
 /* USKLNDPL	*/ NULL,
-/* WORKER	*/ NULL
+/* WORKER	*/ NULL,
+/* ZFS_KSTAT	*/ NULL
 };
 
 PFLCTL_SVR_DEFS;

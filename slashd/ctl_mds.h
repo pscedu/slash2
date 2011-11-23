@@ -32,8 +32,8 @@ struct slmctlmsg_replpair {
 #define pcst_nstat		pcst_u32_2
 #define pcst_nclose		pcst_u32_3
 
-/* sliod message types */
-#define SLMCMT_GETCONNS		NPCMT
+/* slashd message types */
+#define SLMCMT_GETCONNS		(NPCMT + 0)
 #define SLMCMT_GETFCMHS		(NPCMT + 1)
 #define SLMCMT_GETREPLPAIRS	(NPCMT + 2)
 #define SLMCMT_STOP		(NPCMT + 3)
