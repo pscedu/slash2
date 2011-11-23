@@ -325,7 +325,7 @@ error:
 }
 
 /**
- * msl_bmap_retrieve - Perform a blocking 'LEASEBMAP' operation t
+ * msl_bmap_retrieve - Perform a blocking 'LEASEBMAP' operation to
  *	retrieve one or more bmaps from the MDS.
  * @b: the bmap ID to retrieve.
  * @rw: read or write access
