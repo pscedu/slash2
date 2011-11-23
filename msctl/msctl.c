@@ -827,10 +827,7 @@ usage(void)
 struct psc_ctlopt opts[] = {
 	{ 'H', PCOF_FLAG, &psc_ctl_noheader },
 	{ 'I', PCOF_FLAG, &psc_ctl_inhuman },
-	{ 'i', PCOF_FUNC, psc_ctlparse_iostats },
-	{ 'L', PCOF_FUNC, psc_ctlparse_lc },
 	{ 'n', PCOF_FLAG, &psc_ctl_nodns },
-	{ 'P', PCOF_FUNC, psc_ctlparse_pool },
 	{ 'p', PCOF_FUNC, psc_ctlparse_param },
 	{ 'Q', PCOF_FUNC, parse_enqueue },
 	{ 'R', PCOF_FLAG, &recursive },
