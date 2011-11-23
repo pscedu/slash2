@@ -83,4 +83,7 @@ int	mds_replay_handler(struct psc_journal_enthdr *);
 extern struct psc_journal		*mdsJournal;
 extern struct psc_journal_cursor	 mds_cursor;
 
+extern uint64_t				 current_update_batchno;
+extern uint64_t				 current_reclaim_batchno;
+
 #endif /* _SLASHD_MDSLOG_H_ */

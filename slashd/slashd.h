@@ -24,6 +24,7 @@
 #include "psc_ds/vbitmap.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/service.h"
+#include "psc_util/meter.h"
 #include "psc_util/multiwait.h"
 
 #include "inode.h"
@@ -33,9 +34,7 @@
 #include "sltypes.h"
 
 struct odtable;
-struct odtable_receipt;
 
-struct bmapc_memb;
 struct fidc_membh;
 struct srt_stat;
 
@@ -127,16 +126,15 @@ struct sl_mds_nsstats {
 	_SLM_NSSTATS_ADJ(dec, (peerinfo), (dir), (op), (sum))
 
 /*
- * This structure tracks the progress of namespace log application on a MDS.
- * We allow one pending request per MDS until it responds or timeouts.
+ * This structure tracks the progress of namespace log application on a
+ * MDS.  We allow one pending request per MDS until it responds or
+ * timeouts.
  */
-
-#define	MDS_PEER_NEED_INIT		1
-
 struct sl_mds_peerinfo {
 	int			  sp_flags;
+	struct psc_meter	  sp_batchmeter;
+#define sp_batchno sp_batchmeter.pm_cur
 	uint64_t		  sp_xid;
-	uint64_t		  sp_batchno;
 
 	int			  sp_fails;		/* the number of successive RPC failures */
 	int			  sp_skips;		/* the number of times to skip */
@@ -149,19 +147,21 @@ struct sl_mds_peerinfo {
 	struct sl_mds_nsstats	  sp_stats;
 };
 
+#define	MDS_PEER_NEED_INIT	1
+
 /*
  * This structure tracks the progress of garbage collection on each I/O
  * server.
  */
-
-#define	MDS_IOS_NEED_INIT		1
-
 struct sl_mds_iosinfo {
 	int			  si_flags;
 	uint64_t		  si_xid;
-	uint64_t		  si_batchno;
+	struct psc_meter	  si_batchmeter;
+#define si_batchno si_batchmeter.pm_cur
 	struct srt_statfs	  si_ssfb;
 };
+
+#define	MDS_IOS_NEED_INIT	1
 
 /* MDS-specific data for struct sl_resource */
 struct resprof_mds_info {
