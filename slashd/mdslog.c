@@ -66,11 +66,13 @@ struct prog_tracker {
 	struct prog_entry	*pt_prog_buf;
 	void			*pt_progfile_handle;
 
+	void			*pt_logfile_handle;
+	off_t			 pt_logfile_offset;
+
 	uint64_t		 pt_current_batchno;
 	uint64_t		 pt_current_xid;
 	uint64_t		 pt_sync_xid;
-	void			*pt_logfile_handle;
-	off_t			 pt_logfile_offset;
+
 	struct psc_waitq	 pt_waitq;
 	psc_spinlock_t		 pt_lock;
 	struct psclist_head	 pt_buflist;
@@ -79,7 +81,7 @@ struct prog_tracker {
 
 #define PT_INIT(hd)							\
 	{ "", NULL, NULL, 0, 0, 0, NULL, 0, PSC_WAITQ_INIT,		\
-	  SPINLOCK_INIT, PSCLIST_HEAD_INIT(hd.pt_buflist), NULL } 
+	  SPINLOCK_INIT, PSCLIST_HEAD_INIT(hd.pt_buflist), NULL }
 
 struct psc_journal		*mdsJournal;
 
@@ -275,8 +277,6 @@ mds_open_logfile(uint64_t batchno, int update, int readonly,
 
 	/*
 	 * Note we use different file descriptors for read and write.
-	 * Luckily, Linux maintains the file offset independently for
-	 * each open.
 	 *
 	 * During replay, we need to read the file first to find out
 	 * the right position, so we can't use O_WRONLY.
@@ -351,12 +351,12 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 		return (0);
 	}
 
+	psc_assert(pje->pje_magic == PJE_MAGIC);
+
 	/*
 	 * The following can only be executed by the singleton distill
 	 * thread.
 	 */
-
-	psc_assert(pje->pje_magic == PJE_MAGIC);
 
 	type = pje->pje_type & ~(_PJE_FLSHFT - 1);
 	if (type == MDS_LOG_BMAP_CRC) {
@@ -373,9 +373,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 	/*
 	 * Note that we distill reclaim before update.  This is the same
 	 * order we use in recovery.
-	 */
-
-	/*
+	 *
 	 * If the namespace operation needs to reclaim disk space on I/O
 	 * servers, write the information into the reclaim log.
 	 */
