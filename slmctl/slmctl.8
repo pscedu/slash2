@@ -15,7 +15,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES ctl rpc %
-.Dd June 7, 2011
+.Dd November 23, 2011
 .Dt SLMCTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -214,6 +214,10 @@ The default is
 .\"		qq{jrnlwr- Ns Ar fn} =>
 .\"		    qq{Data read/written to journal disk file\n.Ar fn .\n.Pp},
 .\"	},
+.\"	meters => {
+.\"		qq{nsupd- Ns Ar peer}	=> qq{Namespace updates to\n.Tn MDS\npeers.},
+.\"		qq{reclaim- Ns Ar peer}	=> qq{Garbage collection updates to\n.Tn IO\nsystems.},
+.\"	},
 .\"	journals => {
 .\"		qq{op-journal}	=> qq{Pending operation journal},
 .\"	},
@@ -394,6 +398,31 @@ for details on specifying
 If
 .Ar subspec
 is left unspecified, all threads will be accessed.
+.It Cm meters
+Report on ongoing operations in progress meters.
+.Ar subspec
+has the following format:
+.Bd -unfilled -offset 3n
+.Ar meter Ns Op , Ns Ar ...
+.Ed
+.Pp
+.Ar meter
+may be one of the following:
+.Pp
+.Bl -tag -compact -offset 3n -width 13n
+.It Cm nsupd- Ns Ar peer
+Namespace updates to
+.Tn MDS
+peers.
+.It Cm reclaim- Ns Ar peer
+Garbage collection updates to
+.Tn IO
+systems.
+.El
+.Pp
+If
+.Ar subspec
+is left unspecified, all ongoing operations will be reported.
 .It Cm odtables
 Disk-backed data files.
 .It Cm pools
