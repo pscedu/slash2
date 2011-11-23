@@ -138,7 +138,7 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 			/* A lease has been found in odtable whose
 			 *   issuance was after that of the last
 			 *   HWM journal entry.  (HWM's are journaled
-			 *   every BMAP_SEQLOG_FACTOR times).
+			 *   every BMAP_SEQLOG_FACTOR times.)
 			 */
 			seq = mdsBmapTimeoTbl.btt_maxseq = bml->bml_seq;
 
@@ -217,7 +217,7 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 			mds_bmap_journal_bmapseq(&sjbsq);
 
 			if (mds_bmap_bml_release(bml))
-				abort();
+				psc_fatalx("bml_release");
 
 			continue;
 		} else {
