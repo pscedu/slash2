@@ -1228,6 +1228,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 				continue;
 			}
 
+			mq->batchno = iosinfo->si_batchno;
 			mq->xid = xid;
 			mq->size = iov.iov_len;
 			mq->count = nentry;

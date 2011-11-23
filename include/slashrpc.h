@@ -528,6 +528,7 @@ struct srm_bmap_wake_req {
 /* ------------------------- BEGIN GARBAGE MESSAGES ------------------------- */
 
 struct srm_reclaim_req {
+	uint64_t		batchno;
 	uint64_t		xid;
 	uint64_t		crc;		/* CRC of the bulk data */
 	 int32_t		size;		/* size of the bulk data to follow */
