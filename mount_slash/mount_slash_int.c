@@ -1076,20 +1076,22 @@ msl_readahead_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 __static void
 msl_write_cb_gen_handler(struct psc_dynarray *biorqs, int rc)
 {
-	struct bmpc_ioreq *r;
+	struct bmpc_ioreq *r, *tmp;
+	struct bmapc_memb *b;
 	int i, expired_lease = 0;
 
 	r = psc_dynarray_getpos(biorqs, 0);
-	BMAP_LOCK(r->biorq_bmap);
+	b = r->biorq_bmap;
+	BMAP_LOCK(b);
 	if (r->biorq_bmap->bcm_flags & BMAP_CLI_LEASEEXPIRED) {
 		expired_lease = 1;
-		DYNARRAY_FOREACH(r, i, biorqs) {
+		DYNARRAY_FOREACH(tmp, i, biorqs) {
 			BIORQ_LOCK(r);
 			psc_assert(r->biorq_flags & BIORQ_EXPIREDLEASE);
 			BIORQ_ULOCK(r);
 		}
 	}
-	BMAP_ULOCK(r->biorq_bmap);
+	BMAP_ULOCK(b);
 
 	if (rc && !expired_lease) {
 		/* Try to reschedule these write RPC's.  The bmap flush
