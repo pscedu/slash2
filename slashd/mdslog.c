@@ -53,10 +53,18 @@
 #define SLM_CBARG_SLOT_CSVC	0
 #define SLM_CBARG_SLOT_RESPROF	1
 
+/* progress tracker to peers */
+struct prog_entry {
+	uint64_t		 res_xid;
+	uint64_t		 res_batchno;
+	sl_ios_id_t		 res_id;
+	int32_t			 _pad;
+};
+
 struct prog_tracker {
 	char			 pt_prog_fn[PATH_MAX];
-	void			*pt_prog_buf;
-	void			*pt_prog_handle;
+	struct prog_entry	*pt_prog_buf;
+	void			*pt_progfile_handle;
 
 	uint64_t		 pt_current_batchno;
 	uint64_t		 pt_current_xid;
@@ -69,14 +77,16 @@ struct prog_tracker {
 	void			*pt_buf;
 };
 
+#define PT_INIT(hd)							\
+	{ "", NULL, NULL, 0, 0, 0, NULL, 0, PSC_WAITQ_INIT,		\
+	  SPINLOCK_INIT, PSCLIST_HEAD_INIT(hd.pt_buflist), NULL } 
+
 struct psc_journal		*mdsJournal;
 
-extern struct bmap_timeo_table	 mdsBmapTimeoTbl;
+static psc_spinlock_t		 mds_distill_lock = SPINLOCK_INIT;
 
 uint64_t			 current_update_batchno;
 uint64_t			 current_reclaim_batchno;
-
-static psc_spinlock_t		 mds_distill_lock = SPINLOCK_INIT;
 
 uint64_t			 current_update_xid;
 uint64_t			 current_reclaim_xid;
