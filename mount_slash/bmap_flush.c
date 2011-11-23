@@ -290,7 +290,7 @@ bmap_flush_create_rpc(void *set, struct slashrpc_cservice *csvc,
 	sl_csvc_lock(csvc);
 	sl_csvc_incref(csvc);
 	sl_csvc_unlock(csvc);
-	
+
 	rc = SL_RSX_NEWREQ(csvc, SRMT_WRITE, rq, mq, mp);
 	if (rc)
 		goto error;
@@ -312,7 +312,7 @@ bmap_flush_create_rpc(void *set, struct slashrpc_cservice *csvc,
 	pscrpc_completion_set(rq,  &rpcComp);
 
 	atomic_inc(&outstandingRpcCnt);
-      	
+
 	mq->offset = soff;
 	mq->size = size;
 	mq->op = SRMIOP_WR;
@@ -392,7 +392,7 @@ biorq_destroy_expired(struct bmpc_ioreq *r)
 {
 	int destroy = 0;
 
-	BIORQ_LOCK(r);	
+	BIORQ_LOCK(r);
 	if (r->biorq_flags & BIORQ_EXPIREDLEASE)
 		destroy = 1;
 	BIORQ_ULOCK(r);
@@ -402,7 +402,7 @@ biorq_destroy_expired(struct bmpc_ioreq *r)
 		msl_bmpces_fail(r);
 		msl_biorq_destroy(r);
 	}
-	
+
 	return (destroy);
 }
 
@@ -410,7 +410,7 @@ biorq_destroy_expired(struct bmpc_ioreq *r)
 	_bmap_flush_desched(PFL_CALLERINFOSS(SLSS_BMAP), (r))
 
 /**
- * _bmap_flush_desched - unschedules a biorq, sets the RESCHED bit, 
+ * _bmap_flush_desched - unschedules a biorq, sets the RESCHED bit,
  *    and bumps the resched timer.  Called when a writeback RPC failed
  *    to get off of the ground OR via RPC cb context on failure.
  * Notes:  _bmap_flush_desched strictly asserts the biorq is not on the 'wire'.
@@ -443,14 +443,14 @@ _bmap_flush_desched(const struct pfl_callerinfo *pci,
 	DEBUG_BIORQ(PLL_WARN, r, "unset sched lease");
 
 	DYNARRAY_FOREACH(bmpce, i, &r->biorq_pages) {
-		BMPCE_LOCK(bmpce);		
+		BMPCE_LOCK(bmpce);
 		bmpce->bmpce_flags &= ~BMPCE_INFLIGHT;
 		BMPCE_ULOCK(bmpce);
 	}
 }
 
 /**
- * bmap_flush_resched - called in error contexts where the biorq must be 
+ * bmap_flush_resched - called in error contexts where the biorq must be
  *    rescheduled.  Typically this is from a write RPC cb.
  */
 void
@@ -458,7 +458,7 @@ _bmap_flush_resched(const struct pfl_callerinfo *pci,
     struct bmpc_ioreq *r)
 {
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(r->biorq_bmap);
-		
+
 	BMPC_LOCK(bmpc);
 	BIORQ_LOCK(r);
 	if (r->biorq_flags & BIORQ_RESCHED) {
@@ -476,7 +476,7 @@ _bmap_flush_resched(const struct pfl_callerinfo *pci,
 
 	/* _bmap_flush_desched drops BIORQ_LOCK and BMPC_LOCK
 	 */
-	_bmap_flush_desched(pci, r);	
+	_bmap_flush_desched(pci, r);
 }
 
 __static void
@@ -1108,23 +1108,23 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 			psc_assert(b->bcm_flags & BMAP_TIMEOQ);
-			
+
 			if (!(b->bcm_flags & BMAP_CLI_LEASEEXPIRED) &&
 			    timespeccmp(&nexttimeo, &bci->bci_etime, >))
 				/* Don't spin on expired bmaps while they 'unwind'
 				 *    timedout biorqs.
 				 */
 				nexttimeo = bci->bci_etime;
-			
+
 			if (bmpc_queued_ios(&bci->bci_bmpc)) {
 				int rc;
 
-				BMAP_ULOCK(b);				 
+				BMAP_ULOCK(b);
 				rc = msl_bmap_lease_tryext(b, NULL, 0);
 				/* msl_bmap_lease_tryext() adjusted etime.
 				 */
 				if ((!rc || rc == -EAGAIN) &&
-				    timespeccmp(&nexttimeo, 
+				    timespeccmp(&nexttimeo,
 						&bci->bci_etime, >))
 					nexttimeo = bci->bci_etime;
 
@@ -1275,29 +1275,30 @@ bmap_lease_watcher(__unusedx struct psc_thread *thr)
 	while (pscthr_run()) {
 		PFL_GETTIMESPEC(&ts);
 		LIST_CACHE_LOCK(&bmapFlushQ);
-		LIST_CACHE_FOREACH_SAFE(b, tmpb, &bmapFlushQ) {		
+		LIST_CACHE_FOREACH_SAFE(b, tmpb, &bmapFlushQ) {
 			BMAP_LOCK(b);
 			DEBUG_BMAP(PLL_INFO, b, "");
 			if ((!(b->bcm_flags & BMAP_CLI_LEASEEXPIRED) &&
-			     (((bmap_2_bci(b)->bci_xtime.tv_sec - ts.tv_sec) < 
-			       BMAP_CLI_EXTREQSECS))) || 
+			     (((bmap_2_bci(b)->bci_xtime.tv_sec - ts.tv_sec) <
+			       BMAP_CLI_EXTREQSECS))) ||
 			    timespeccmp(&ts, &bmap_2_bci(b)->bci_etime, >=)) {
 				psc_dynarray_add(&bmaps, b);
 			}
 			BMAP_ULOCK(b);
 		}
 		LIST_CACHE_ULOCK(&bmapFlushQ);
-		
+
 		DYNARRAY_FOREACH(b, i, &bmaps) {
 			rc = msl_bmap_lease_tryext(b, &secs, 0);
-			DEBUG_BMAP((rc && rc != -EAGAIN) ? 
-			   PLL_ERROR : PLL_WARN, b, 
+			DEBUG_BMAP((rc && rc != -EAGAIN) ?
+			   PLL_ERROR : PLL_WARN, b,
 			   "rc=%d secs=%d",  rc, secs);
 		}
 		psc_dynarray_reset(&bmaps);
 		usleep(200000);
 	}
 }
+
 /**
  * bmap_flush - Send out SRMT_WRITE RPCs to the I/O server.
  */
@@ -1336,18 +1337,18 @@ bmap_flush(struct timespec *nexttimeo)
 			BMPC_ULOCK(bmpc);
 			bcm_wake_locked(b);
 			BMAP_ULOCK(b);
-				
+
 		} else if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED) {
 			bmpc = bmap_2_bmpc(b);
 			BMAP_ULOCK(b);
 
 			while ((r = pll_get(&bmpc->bmpc_new_biorqs)))
 				psc_assert(biorq_destroy_expired(r));
-				
+
 		} else {
 			if (bmap_flushable(b, &t))
 				psc_dynarray_add(&bmaps, b);
-			else 
+			else
 				if (timespeccmp(nexttimeo, &t, >))
 					*nexttimeo = t;
 			BMAP_ULOCK(b);
@@ -1362,7 +1363,7 @@ bmap_flush(struct timespec *nexttimeo)
 	for (i = 0; i < psc_dynarray_len(&bmaps); i++) {
 		b = psc_dynarray_getpos(&bmaps, i);
 		bmpc = bmap_2_bmpc(b);
-		
+
 		/* Try to catch recently expired bmaps before they are
 		 *   processed by the write back flush mechanism.
 		 */
@@ -1372,9 +1373,9 @@ bmap_flush(struct timespec *nexttimeo)
 			while ((r = pll_get(&bmpc->bmpc_new_biorqs)))
 				psc_assert(biorq_destroy_expired(r));
 			continue;
-		} 
+		}
 		BMAP_ULOCK(b);
-						
+
 		DEBUG_BMAP(PLL_INFO, b, "try flush (outstandingRpcCnt=%d)",
 			   atomic_read(&outstandingRpcCnt));
 
@@ -1625,7 +1626,7 @@ msbmapflushthr_spawn(void)
 		pscthr_setready(thr);
 	}
 
-	thr = pscthr_init(MSTHRT_BMAPLSWATCHER, 0, bmap_lease_watcher, 
+	thr = pscthr_init(MSTHRT_BMAPLSWATCHER, 0, bmap_lease_watcher,
 	  NULL, sizeof(struct msbmflwatcher_thread), "msbflushlswatchthr");
 	psc_multiwait_init(&msbmfwatchthr(thr)->mbfwa_mw, "%s",
 			   thr->pscthr_name);
