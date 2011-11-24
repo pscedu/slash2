@@ -485,9 +485,6 @@ reimport
 archiver
 - tool to recover softdel files
    (o) provide ability to access zfs snapshots via MSL .zfs/snapshots
-- migration
-   (o) use inums file naming convention on zs6 intermediary
-   (o) phase2 reconstruct hard links in dmf space from sl2 objects
 - work out logistics for where MDS zsnap backups go
 - autostart sliods/msl on tahini with screens
 - monitor service for /arc hangs (blacklight, tahini)
