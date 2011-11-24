@@ -46,11 +46,10 @@ mds_odtable_putitem(struct odtable *odt, void *data, size_t len)
 {
 	struct odtable_receipt *odtr;
 	struct odtable_entftr *odtf;
-	size_t elem;
+	size_t elem, nb;
 	uint64_t crc;
 	void *p;
 	int rc;
-	size_t nb;
 
 	psc_assert(len <= odt->odt_hdr->odth_elemsz);
 
@@ -121,9 +120,9 @@ mds_odtable_getitem(struct odtable *odt, const struct odtable_receipt *odtr,
 	psc_assert(odtr->odtr_elem <= odt->odt_hdr->odth_nelems - 1);
 
 	p = PSCALLOC(odt->odt_hdr->odth_slotsz);
-	rc = mdsio_read(&rootcreds, p, odt->odt_hdr->odth_slotsz,
-	    &nb, odt->odt_hdr->odth_start + odtr->odtr_elem * odt->odt_hdr->odth_slotsz,
-	    odt->odt_handle);
+	rc = mdsio_read(&rootcreds, p, odt->odt_hdr->odth_slotsz, &nb,
+	    odt->odt_hdr->odth_start + odtr->odtr_elem *
+	    odt->odt_hdr->odth_slotsz, odt->odt_handle);
 	if (nb != odt->odt_hdr->odth_slotsz) {
 		if (!rc)
 			rc = EIO;
@@ -257,10 +256,10 @@ mds_odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 	    NULL, &odt->odt_handle, NULL, NULL, 0);
 	psc_assert(!rc && odt->odt_handle);
 
-	odth = odt->odt_hdr = PSCALLOC(sizeof(*odth));
-
+	odth = PSCALLOC(sizeof(*odth));
 	rc = mdsio_read(&rootcreds, odth, sizeof(*odth), &nb, 0,
 	    odt->odt_handle);
+	odt->odt_hdr = odth;
 	psc_assert(rc == 0 && nb == sizeof(*odth));
 
 	psc_assert((odth->odth_magic == ODTBL_MAGIC) &&
@@ -271,19 +270,19 @@ mds_odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 	 * support auto growth of the bitmap.  Plus, ZFS fuse does NOT
 	 * like mmap() either.
 	 */
-	odt->odt_bitmap = psc_vbitmap_newf(odt->odt_hdr->odth_nelems,
+	odt->odt_bitmap = psc_vbitmap_newf(odth->odth_nelems,
 	    PVBF_AUTO);
 	psc_assert(odt->odt_bitmap);
 
-	p = PSCALLOC(odt->odt_hdr->odth_slotsz);
-	for (i = 0; i < odt->odt_hdr->odth_nelems; i++) {
+	p = PSCALLOC(odth->odth_slotsz);
+	for (i = 0; i < odth->odth_nelems; i++) {
 		rc = mdsio_read(&rootcreds, p,
-		    odt->odt_hdr->odth_slotsz, &nb,
-		    odt->odt_hdr->odth_start + i *
-		    odt->odt_hdr->odth_slotsz, odt->odt_handle);
+		    odth->odth_slotsz, &nb,
+		    odth->odth_start + i *
+		    odth->odth_slotsz, odt->odt_handle);
 
 		odtr.odtr_elem = i;
-		odtf = p + odt->odt_hdr->odth_elemsz;
+		odtf = p + odth->odth_elemsz;
 		frc = odtable_footercheck(odtf, &odtr, -1);
 
 		/* Sanity checks for debugging.
@@ -300,7 +299,7 @@ mds_odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 			if (odth->odth_options & ODTBL_OPT_CRC) {
 				uint64_t crc;
 
-				psc_crc64_calc(&crc, p, odt->odt_hdr->odth_elemsz);
+				psc_crc64_calc(&crc, p, odth->odth_elemsz);
 				if (crc != odtf->odtf_crc) {
 					odtf->odtf_inuse = ODTBL_BAD;
 					psclog_warnx("slot=%zd CRC fail "
