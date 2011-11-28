@@ -156,7 +156,7 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	}
 
 	if (mq->len < 0 || mq->len > SRM_REPLST_PAGESIZ) {
-		mp->rc = EINVAL;
+		mp->rc = -EINVAL;
 
 		rc = psc_ctlsenderr(mrsq->mrsq_fd, &mh, "%s",
 		    slstrerror(mq->rc));
@@ -264,7 +264,7 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 
 	f = fidc_lookup_fid(mq->fid);
 	if (!f) {
-		mp->rc = ENOENT;
+		mp->rc = -ENOENT;
 		goto out;
 	}
 
@@ -287,7 +287,7 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 	bci = bmap_2_bci(b);
 	if (bci->bci_sbd.sbd_seq != mq->seq) {
 		BMAP_ULOCK(b);
-		mp->rc = ESTALE;
+		mp->rc = -ESTALE;
 		goto out;
 	}
 	/* All new read and write I/O's will get BIORQ_DIO.
