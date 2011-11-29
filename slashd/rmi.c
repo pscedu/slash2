@@ -196,17 +196,23 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	struct srm_repl_schedwk_rep *mp;
 	struct up_sched_work_item *wk;
 	struct bmapc_memb *bcm = NULL;
+	struct sl_resource *src_res;
 	sl_replica_t iosv[2];
 	sl_bmapgen_t gen;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	wk = uswi_find(&mq->fg);
 	if (wk == NULL)
-		goto out;
+		PFL_GOTOERR(out, mp->rc = -ENOENT);
 
 	/* XXX should we trust them to tell us who the src was? */
-	src_resm = libsl_nid2resm(mq->nid);
-	dst_resm = libsl_nid2resm(rq->rq_export->exp_connection->c_peer.nid);
+	src_res = libsl_id2res(mq->src_resid);
+	if (src_res == NULL)
+		PFL_GOTOERR(out, mp->rc = -SLERR_ION_UNKNOWN);
+	src_resm = psc_dynarray_getpos(&src_res->res_members, 0);
+	dst_resm = libsl_try_nid2resm(rq->rq_export->exp_connection->c_peer.nid);
+	if (dst_resm == NULL)
+		PFL_GOTOERR(out, mp->rc = -SLERR_ION_UNKNOWN);
 
 	iosidx = mds_repl_ios_lookup(USWI_INOH(wk),
 	    dst_resm->resm_res->res_id);
@@ -240,7 +246,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 			 * Check if other replicas exist.
 			 */
 			src_iosidx = mds_repl_ios_lookup(USWI_INOH(wk),
-			    src_resm->resm_res->res_id);
+			    src_res->res_id);
 			if (src_iosidx < 0)
 				goto out;
 
@@ -286,7 +292,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	mds_repl_bmap_walk(bcm, tract, retifset, 0, &iosidx, 1);
 	mds_bmap_write_repls_rel(bcm);
 
-	iosv[0].bs_id = src_resm->resm_res_id;
+	iosv[0].bs_id = src_res->res_id;
 	iosv[1].bs_id = dst_resm->resm_res_id;
 	uswi_enqueue_sites(wk, iosv, 2);
 

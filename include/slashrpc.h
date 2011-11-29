@@ -255,7 +255,7 @@ struct srt_stat {
 } __packed;
 
 #define DEBUG_SSTB(level, sstb, fmt, ...)				\
-	psclog((level), "sstb (%p) fg:"SLPRI_FG" " 			\
+	psclog((level), "sstb (%p) fg:"SLPRI_FG" "			\
 	    "dev:%"PRIu64" mode:%#o "					\
 	    "nlink:%"PRIu64" uid:%u gid:%u "				\
 	    "rdev:%"PRIu64" sz:%"PRIu64" "				\
@@ -615,8 +615,9 @@ struct srsm_replst_bhdr {
 #define srm_replst_slave_rep	srm_replst_slave_req
 
 struct srm_repl_schedwk_req {
-	uint64_t		nid;		/* XXX gross, use iosid */
 	struct slash_fidgen	fg;
+	sl_ios_id_t		src_resid;
+	 int32_t		_pad;
 	sl_bmapno_t		bmapno;
 	sl_bmapgen_t		bgen;
 	uint32_t		len;
