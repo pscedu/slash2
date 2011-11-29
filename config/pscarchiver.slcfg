@@ -132,10 +132,17 @@ site @PSCARCH {
 	resource sense7s4 { desc = "disk-based archiver unit 7 sliod 4"; type = standalone_fs; id = 0x1704; nids = sense7-sliod5; fsroot = /arc_sliod/4; }
 	resource sense7s5 { desc = "disk-based archiver unit 7 sliod 5"; type = standalone_fs; id = 0x1705; nids = sense7-sliod6; fsroot = /arc_sliod/5; }
 
-	resource sense {
-		desc	= "disk-based archiver cluster";
+	resource sense3 {
+		desc	= "sense3 sliods";
 		type	= cluster_noshare_lfs;
-		id	= 0x1fff;
+		id	= 0x1ffe;
+	
+		ios     = sense3s0@PSCARCH, sense3s1@PSCARCH,
+			  sense3s2@PSCARCH, sense3s3@PSCARCH,
+			  sense3s4@PSCARCH, sense3s5@PSCARCH;
+        }
+
+	resource sense {
 		ios	= sense0s0@PSCARCH, sense0s1@PSCARCH,
 			  sense0s2@PSCARCH, sense0s3@PSCARCH,
 			  sense0s4@PSCARCH, sense0s5@PSCARCH,
