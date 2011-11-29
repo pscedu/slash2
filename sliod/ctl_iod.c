@@ -492,7 +492,6 @@ slictlrep_getreplwkst(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct slictlmsg_replwkst *srws = m;
 	struct sli_repl_workrq *w;
-	struct sl_resm *resm;
 	int rc;
 
 	rc = 1;
@@ -501,13 +500,11 @@ slictlrep_getreplwkst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		if (w->srw_op != SLI_REPLWKOP_REPL)
 			continue;
 
-		resm = libsl_nid2resm(w->srw_nid);
-
 		srws->srws_fg = w->srw_fg;
 		srws->srws_bmapno = w->srw_bmapno;
 		srws->srws_data_tot = SLASH_SLVR_SIZE * w->srw_nslvr_tot;
 		srws->srws_data_cur = SLASH_SLVR_SIZE * w->srw_nslvr_cur;
-		strlcpy(srws->srws_peer_addr, resm->resm_res->res_name,
+		strlcpy(srws->srws_peer_addr, w->srw_src_res->res_name,
 		    sizeof(srws->srws_peer_addr));
 
 		rc = psc_ctlmsg_sendv(fd, mh, srws);

@@ -67,8 +67,9 @@ sli_repl_findwq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno)
 }
 
 int
-sli_repl_addwk(int op, uint64_t nid, const struct slash_fidgen *fgp,
-    sl_bmapno_t bmapno, sl_bmapgen_t bgen, int len)
+sli_repl_addwk(int op, struct sl_resource *res,
+    const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
+    sl_bmapgen_t bgen, int len)
 {
 	struct sli_repl_workrq *w;
 	int rc, i;
@@ -88,16 +89,12 @@ sli_repl_addwk(int op, uint64_t nid, const struct slash_fidgen *fgp,
 	INIT_PSC_LISTENTRY(&w->srw_active_lentry);
 	INIT_PSC_LISTENTRY(&w->srw_pending_lentry);
 	INIT_SPINLOCK(&w->srw_lock);
-	w->srw_nid = nid;
+	w->srw_src_res = res;
 	w->srw_fg = *fgp;
 	w->srw_bmapno = bmapno;
 	w->srw_bgen = bgen;
 	w->srw_len = len;
 	w->srw_op = op;
-
-	/* lookup replication source peer */
-	if (nid)
-		w->srw_resm = libsl_nid2resm(w->srw_nid);
 
 	/* get an fcmh for the file */
 	rc = sli_fcmh_get(&w->srw_fg, &w->srw_fcmh);
@@ -203,7 +200,7 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 			 * CRC update for the sliver.
 			 */
 			freelock(&w->srw_lock);
-			goto done; 
+			goto done;
 		}
 
 		/* find a sliver to transmit */

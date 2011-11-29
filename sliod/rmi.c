@@ -117,7 +117,7 @@ sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *w)
 		rc = SL_RSX_NEWREQ(csvc, SRMT_REPL_SCHEDWK, rq, mq, mp);
 		if (rc)
 			goto out;
-		mq->nid = w->srw_nid;
+		mq->src_resid = w->srw_src_res->res_id;
 		mq->fg = w->srw_fg;
 		mq->bmapno = w->srw_bmapno;
 		mq->bgen = w->srw_bgen;

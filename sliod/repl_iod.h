@@ -43,7 +43,7 @@ struct sli_repl_workrq {
 	int			 srw_op;
 	sl_bmapno_t		 srw_bmapno;
 	sl_bmapgen_t		 srw_bgen;		/* bmap generation */
-	uint64_t		 srw_nid;		/* repl source network address */
+	struct sl_resource	*srw_src_res;		/* repl source */
 	uint32_t		 srw_len;		/* bmap size */
 
 	uint32_t		 srw_status;		/* return code to pass back to MDS */
@@ -69,8 +69,8 @@ enum {
 struct sli_repl_workrq *
 	sli_repl_findwq(const struct slash_fidgen *, sl_bmapno_t);
 
-int	sli_repl_addwk(int, uint64_t, const struct slash_fidgen *,
-		sl_bmapno_t, sl_bmapgen_t, int);
+int	sli_repl_addwk(int, struct sl_resource *,
+	    const struct slash_fidgen *, sl_bmapno_t, sl_bmapgen_t, int);
 void	sli_repl_init(void);
 
 void	sli_replwkrq_decref(struct sli_repl_workrq *, int);

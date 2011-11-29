@@ -76,8 +76,8 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	if (xid > current_reclaim_xid)
 		current_reclaim_xid = xid;
 	if (batchno > current_reclaim_batchno) {
-		psclog_info("Reclaim batchno advances from %"PRId64" to %"PRId64, 
-			current_reclaim_batchno, batchno);
+		psclog_info("reclaim batchno advances from %"PRId64" to "
+		    "%"PRId64, current_reclaim_batchno, batchno);
 		current_reclaim_batchno = batchno;
 	}
 
@@ -91,7 +91,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 
 	psc_crc64_calc(&crc, iov.iov_base, iov.iov_len);
 	if (crc != mq->crc) {
-		mp->rc = EINVAL;
+		mp->rc = -EINVAL;
 		goto out;
 	}
 
@@ -125,15 +125,21 @@ sli_rim_handle_repl_schedwk(struct pscrpc_request *rq)
 {
 	const struct srm_repl_schedwk_req *mq;
 	struct srm_repl_schedwk_rep *mp;
+	struct sl_resource *res;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fg.fg_fid == FID_ANY)
-		mp->rc = EINVAL;
+		mp->rc = -EINVAL;
 	else if (mq->len < 1 || mq->len > SLASH_BMAP_SIZE)
-		mp->rc = EINVAL;
-	else
-		mp->rc = sli_repl_addwk(SLI_REPLWKOP_REPL, mq->nid,
-		    &mq->fg, mq->bmapno, mq->bgen, mq->len);
+		mp->rc = -EINVAL;
+	else {
+		res = libsl_id2res(mq->src_resid);
+		if (res == NULL)
+			mp->rc = -SLERR_ION_UNKNOWN;
+		else
+			mp->rc = sli_repl_addwk(SLI_REPLWKOP_REPL, res,
+			    &mq->fg, mq->bmapno, mq->bgen, mq->len);
+	}
 	return (0);
 }
 
@@ -145,10 +151,10 @@ sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->offset < 0 || mq->offset >= SLASH_BMAP_SIZE) {
-		mp->rc = EINVAL;
+		mp->rc = -EINVAL;
 		return (0);
 	}
-	mp->rc = sli_repl_addwk(SLI_REPLWKOP_PTRUNC, 0, &mq->fg,
+	mp->rc = sli_repl_addwk(SLI_REPLWKOP_PTRUNC, NULL, &mq->fg,
 	    mq->bmapno, mq->bgen, mq->offset);
 	return (0);
 }
