@@ -276,8 +276,6 @@ in release but I don't see good performance for 'ls -al'.
 - hold a maximum # entries in mem from .slmd/upsch at any given time?
 - merge uswk into fmi and kill uswi struct
 
-- add msctl -s bmpc
-
 -------------------------------------------------------------------------
 
 sliod import
