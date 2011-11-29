@@ -481,6 +481,8 @@ reimport
 - add svn revision # to CONNECT and track for "*ctl -s conns"
 - test msctl -Q <symlink>
 - journal log ino_repl_nblks modifications
+- upsch inquiries shouldn't wakeup the uswi to retry unnecessary
+  processing
 
 archiver
 - tool to recover softdel files
