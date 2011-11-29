@@ -254,6 +254,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	pll_remove(&msctl_replsts, &mrsq);
 	PLL_ULOCK(&msctl_replsts);
 	added = 0;
+
  out:
 	if (added)
 		pll_remove(&msctl_replsts, &mrsq);

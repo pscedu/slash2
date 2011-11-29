@@ -62,7 +62,8 @@ void
 mrsq_release(struct msctl_replstq *mrsq, int ctlrc)
 {
 	reqlock(&mrsq->mrsq_lock);
-	mrsq->mrsq_ctlrc = ctlrc;
+	if (mrsq->mrsq_ctlrc)
+		mrsq->mrsq_ctlrc = ctlrc;
 	if (--mrsq->mrsq_refcnt == 0)
 		psc_waitq_wakeall(&mrsq->mrsq_waitq);
 	freelock(&mrsq->mrsq_lock);
@@ -92,7 +93,7 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 
 	mh = *mrsq->mrsq_mh;
 
-	mrs.mrs_fid = mrsq->mrsq_fid;
+	mrs.mrs_fid = mq->fg.fg_fid;
 
 	if (mq->rc) {
 		rc = 1;
@@ -116,7 +117,6 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 			    RES_NAME_MAX);
 	}
 	rc = psc_ctlmsg_sendv(mrsq->mrsq_fd, &mh, &mrs);
-	mrsq_release(mrsq, rc);
 	return (0);
 }
 
@@ -129,13 +129,13 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 int
 msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 {
-	struct msctlmsg_replst_slave *mrsl;
+	struct msctlmsg_replst_slave *mrsl = NULL;
 	struct srm_replst_slave_req *mq;
 	struct srm_replst_slave_rep *mp;
 	struct msctl_replstq *mrsq;
 	struct psc_ctlmsghdr mh;
 	struct iovec iov;
-	int rc;
+	int rc, eof = 0;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -146,25 +146,20 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	mh = *mrsq->mrsq_mh;
 
 	if (mq->rc && mq->rc != EOF) {
-		rc = 1;
 		rc = psc_ctlsenderr(mrsq->mrsq_fd, &mh, "%s",
 		    slstrerror(mq->rc));
 		spinlock(&mrsq->mrsq_lock);
-		mrsq->mrsq_eof = 1;
-		mrsq_release(mrsq, rc);
-		return (0);
+		eof = 1;
+		goto out;
 	}
 
 	if (mq->len < 0 || mq->len > SRM_REPLST_PAGESIZ) {
 		mp->rc = -EINVAL;
-
 		rc = psc_ctlsenderr(mrsq->mrsq_fd, &mh, "%s",
 		    slstrerror(mq->rc));
-
 		spinlock(&mrsq->mrsq_lock);
-		mrsq->mrsq_eof = 1;
-		mrsq_release(mrsq, rc);
-		return (-mp->rc);
+		eof = 1;
+		goto out;
 	}
 
 	mrsl = PSCALLOC(sizeof(*mrsl) + mq->len);
@@ -188,15 +183,19 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 
 		if (mq->rc == EOF) {
 			spinlock(&mrsq->mrsq_lock);
-			mrsq->mrsq_eof = 1;
+			eof = 1;
 		}
 	} else {
 		rc = psc_ctlsenderr(mrsq->mrsq_fd, &mh, "%s",
 		    slstrerror(mq->rc));
 
 		spinlock(&mrsq->mrsq_lock);
-		mrsq->mrsq_eof = 1;
+		eof = 1;
 	}
+ out:
+	reqlock(&mrsq->mrsq_lock);
+	if (eof)
+		mrsq_release(mrsq, 0);
 	mrsq_release(mrsq, rc);
 	PSCFREE(mrsl);
 	return (mp->rc);

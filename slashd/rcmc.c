@@ -192,7 +192,7 @@ slmrcmthr_walk_bmaps(struct slm_replst_workreq *rsw,
 	struct pscrpc_request *rq = NULL;
 	struct bmapc_memb *bcm;
 	sl_bmapno_t n;
-	int rc;
+	int rc, rc2;
 
 	rc = slm_rcm_issue_getreplst(rsw, wk, 0);
 	if (fcmh_isreg(wk->uswi_fcmh)) {
@@ -206,11 +206,16 @@ slmrcmthr_walk_bmaps(struct slm_replst_workreq *rsw,
 			    &rq);
 			bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
 		}
-		if (rq)
-			slmrmcthr_replst_slave_waitrep(rsw->rsw_csvc,
-			    rq, wk);
+		if (rq) {
+			rc2 = slmrmcthr_replst_slave_waitrep(
+			    rsw->rsw_csvc, rq, wk);
+			if (rc == 0)
+				rc = rc2;
+		}
 	}
-	slmrmcthr_replst_slave_eof(rsw, wk);
+	rc2 = slmrmcthr_replst_slave_eof(rsw, wk);
+	if (rc == 0)
+		rc = rc2;
 	return (rc);
 }
 
