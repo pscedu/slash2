@@ -428,6 +428,7 @@ _bmap_flush_desched(const struct pfl_callerinfo *pci,
 	/* biorq [rd]esched semantics must be strictly enforced.
 	 */
 	psc_assert(r->biorq_flags & BIORQ_SCHED);
+
 	psc_assert(!(r->biorq_flags & (BIORQ_INFL | BIORQ_RESCHED)));
 	psc_assert(pll_conjoint(&bmpc->bmpc_new_biorqs, r));
 	BMPC_ULOCK(bmpc);
@@ -1278,11 +1279,12 @@ bmap_lease_watcher(__unusedx struct psc_thread *thr)
 		LIST_CACHE_FOREACH_SAFE(b, tmpb, &bmapFlushQ) {
 			BMAP_LOCK(b);
 			DEBUG_BMAP(PLL_INFO, b, "");
-			if ((!(b->bcm_flags & BMAP_CLI_LEASEEXPIRED) &&
-			     (((bmap_2_bci(b)->bci_xtime.tv_sec - ts.tv_sec) <
-			       BMAP_CLI_EXTREQSECS))) ||
-			    timespeccmp(&ts, &bmap_2_bci(b)->bci_etime, >=)) {
-				psc_dynarray_add(&bmaps, b);
+			if (!(b->bcm_flags & BMAP_CLOSING) &&
+			    ((!(b->bcm_flags & BMAP_CLI_LEASEEXPIRED) &&
+			      (((bmap_2_bci(b)->bci_xtime.tv_sec - ts.tv_sec) <
+				BMAP_CLI_EXTREQSECS))) ||
+			     timespeccmp(&ts, &bmap_2_bci(b)->bci_etime, >=))) {
+				    psc_dynarray_add(&bmaps, b);
 			}
 			BMAP_ULOCK(b);
 		}
@@ -1291,7 +1293,7 @@ bmap_lease_watcher(__unusedx struct psc_thread *thr)
 		DYNARRAY_FOREACH(b, i, &bmaps) {
 			rc = msl_bmap_lease_tryext(b, &secs, 0);
 			DEBUG_BMAP((rc && rc != -EAGAIN) ?
-			   PLL_ERROR : PLL_WARN, b,
+			   PLL_ERROR : PLL_INFO, b,
 			   "rc=%d secs=%d",  rc, secs);
 		}
 		psc_dynarray_reset(&bmaps);
@@ -1576,8 +1578,6 @@ msbmaprathr_main(__unusedx struct psc_thread *thr)
 				   bmpces[i-1]->bmpce_owner);
 
 			BMPCE_LOCK(bmpce);
-			bmpce_getbuf(bmpce);
-			psc_assert(bmpce->bmpce_base);
 			psc_assert(bmpce->bmpce_flags & BMPCE_INIT);
 			bmpce->bmpce_flags &= ~BMPCE_INIT;
 			bmpce->bmpce_flags |= BMPCE_READPNDG;

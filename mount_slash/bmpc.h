@@ -47,7 +47,6 @@ struct msl_fsrqinfo;
 
 #define BMPC_BUFSZ		SLASH_SLVR_BLKSZ
 #define BMPC_BLKSZ		BMPC_BUFSZ
-#define BMPC_SLB_NBLKS		256		/* 8MB slab */
 #define BMPC_DEFSLBS		1
 #define BMPC_MAXSLBS		32
 #define BMPC_BUFMASK		(BMPC_BLKSZ - 1)
@@ -58,18 +57,7 @@ struct msl_fsrqinfo;
 #define BMPC_INTERVAL		{ 0, 200000000 }
 
 struct timespec			bmapFlushDefMaxAge;
-
-struct bmpc_mem_slbs {
-	atomic_t		bmms_waiters;
-	uint16_t		bmms_reap;
-	struct timespec		bmms_minage;
-	psc_spinlock_t		bmms_lock;
-	struct psc_lockedlist	bmms_slbs;
-	struct psc_waitq	bmms_waitq;
-};
-
-#define BMPCSLABS_LOCK()	spinlock(&bmpcSlabs.bmms_lock)
-#define BMPCSLABS_ULOCK()	freelock(&bmpcSlabs.bmms_lock)
+struct timespec			bmapFlushMaxAge;
 
 struct bmap_pagecache_entry {
 	psc_atomic16_t		 bmpce_wrref;	/* pending write ops		*/
@@ -134,10 +122,9 @@ struct bmap_pagecache_entry {
 		BMPCE_URLOCK((bmpce), _locked);				\
 	} while (0)
 
-#define BMPCE_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
+#define BMPCE_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
 #define DEBUG_BMPCE_FLAGS(b)						\
 	(b)->bmpce_flags & BMPCE_NEW			? "n" : "",	\
-	(b)->bmpce_flags & BMPCE_GETBUF			? "g" : "",	\
 	(b)->bmpce_flags & BMPCE_DATARDY		? "d" : "",	\
 	(b)->bmpce_flags & BMPCE_DIRTY2LRU		? "D" : "",	\
 	(b)->bmpce_flags & BMPCE_LRU			? "l" : "",	\
@@ -346,8 +333,7 @@ bmpce_freeprep(struct bmap_pagecache_entry *bmpce)
 {
 	LOCK_ENSURE(&bmpce->bmpce_lock);
 
-	psc_assert(!(bmpce->bmpce_flags &
-	    (BMPCE_FREEING | BMPCE_GETBUF | BMPCE_NEW)));
+	psc_assert(!(bmpce->bmpce_flags & (BMPCE_FREEING | BMPCE_NEW)));
 	psc_assert(bmpce->bmpce_flags & (BMPCE_DATARDY | BMPCE_EIO));
 
 	psc_assert(!psc_atomic16_read(&bmpce->bmpce_rdref));
@@ -360,7 +346,6 @@ static __inline void
 bmpce_useprep(struct bmap_pagecache_entry *bmpce,
     struct bmpc_ioreq *biorq, struct psc_waitq *wq)
 {
-	psc_assert(!bmpce->bmpce_base);
 	psc_assert(!bmpce->bmpce_waitq);
 	psc_assert(psclist_disjoint(&bmpce->bmpce_lentry));
 	psc_assert(psclist_disjoint(&bmpce->bmpce_ralentry));
@@ -368,7 +353,7 @@ bmpce_useprep(struct bmap_pagecache_entry *bmpce,
 	psc_assert(!psc_atomic16_read(&bmpce->bmpce_wrref));
 	psc_assert(!psc_atomic16_read(&bmpce->bmpce_rdref));
 
-	bmpce->bmpce_flags = (BMPCE_GETBUF | BMPCE_INIT);
+	bmpce->bmpce_flags = BMPCE_INIT;
 	bmpce->bmpce_owner = biorq;
 	/*
 	 * We put the entry back to the splay tree before it
@@ -391,16 +376,6 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
 	locked = reqlock(&bmpce->bmpce_lock);
 
 	DEBUG_BMPCE(PLL_DEBUG, bmpce, "op=%d off=%u", op, off);
-
-	while (bmpce->bmpce_flags & BMPCE_GETBUF) {
-		psc_assert(!bmpce->bmpce_base);
-		psc_assert(bmpce->bmpce_waitq);
-		psc_waitq_wait(bmpce->bmpce_waitq, &bmpce->bmpce_lock);
-		spinlock(&bmpce->bmpce_lock);
-	}
-
-	psc_assert(bmpce->bmpce_base);
-	psc_assert(!(bmpce->bmpce_flags & BMPCE_GETBUF));
 
 	if (op == BIORQ_READ)
 		psc_assert(psc_atomic16_read(&bmpce->bmpce_rdref) > 0);
@@ -446,7 +421,6 @@ void  bmpce_handle_lru_locked(struct bmap_pagecache_entry *,
 	    struct bmap_pagecache *, int, int);
 
 extern struct psc_poolmgr	*bmpcePoolMgr;
-extern struct bmpc_mem_slbs	 bmpcSlabs;
 extern struct psc_listcache	 bmpcLru;
 
 static __inline void
@@ -525,6 +499,7 @@ bmpc_lru_cmp(const void *x, const void *y)
 	return (0);
 }
 
+#if 0
 static __inline void
 bmpc_decrease_minage(void)
 {
@@ -553,5 +528,6 @@ bmpc_increase_minage(void)
 
 	BMPCSLABS_ULOCK();
 }
+#endif
 
 #endif /* _SL_BMPC_H_ */

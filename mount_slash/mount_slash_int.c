@@ -268,7 +268,6 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 				 */
 				psc_assert(e->bmpce_flags & BMPCE_INIT);
 				psc_assert(!(e->bmpce_flags & BMPCE_EIO));
-				psc_assert(!e->bmpce_base);
 				/* Stash the bmap pointer in 'owner'.
 				 */
 				e->bmpce_owner = b;
@@ -328,15 +327,13 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 		psc_dynarray_reverse(&r->biorq_pages);
 
 	/*
-	 * Pass1: Retrieve memory pages from the cache on behalf of our
-	 * pages stuck in GETBUF.
+	 * Pass1: Deal with RBW pages
 	 */
 	for (i=0; i < npages; i++) {
 		e = psc_dynarray_getpos(&r->biorq_pages, i);
 		BMPCE_LOCK(e);
 
-		if (biorq_is_my_bmpce(r, e) &&
-		    (e->bmpce_flags & BMPCE_GETBUF)) {
+		if (biorq_is_my_bmpce(r, e)) {
 			uint32_t rfsz = fsz - bmap_foff(b);
 
 			/* Increase the rdref cnt in preparation for any
@@ -362,7 +359,6 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 				psc_atomic16_inc(&e->bmpce_rdref);
 				r->biorq_flags |= BIORQ_RBWLP;
 			}
-			bmpce_getbuf(e);
 		}
 		BMPCE_ULOCK(e);
 	}
