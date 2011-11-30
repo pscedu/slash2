@@ -44,7 +44,7 @@ int
 bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *p)
 {
 	struct bmap_pagecache_entry *bmpce = p;
-	
+
 	INIT_PSC_LISTENTRY(&bmpce->bmpce_lentry);
 	INIT_PSC_LISTENTRY(&bmpce->bmpce_ralentry);
 	INIT_SPINLOCK(&bmpce->bmpce_lock);
@@ -319,10 +319,10 @@ __static int
 bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 {
 	struct bmap_pagecache_entry *bmpce, *tmp;
-	struct timespec ts, expire;
+//	struct timespec ts, expire;
 	int freed = 0;
 
-	PFL_GETTIMESPEC(&ts);
+//	PFL_GETTIMESPEC(&ts);
 
 	PLL_LOCK(&bmpc->bmpc_lru);
 	PLL_FOREACH_SAFE(bmpce, tmp, &bmpc->bmpc_lru) {
@@ -365,12 +365,12 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 #else
 		DEBUG_BMPCE(PLL_NOTICE, bmpce, "freeing last_access=("
 			    PSCPRI_TIMESPEC")",
-                            PSCPRI_TIMESPEC_ARGS(&bmpce->bmpce_laccess));
+			    PSCPRI_TIMESPEC_ARGS(&bmpce->bmpce_laccess));
 		bmpce_freeprep(bmpce);
 		bmpce_release_locked(bmpce, bmpc);
 		if (++freed >= nfree)
 			break;
-#endif			
+#endif
 	}
 
 	/* Save CPU, assume that the head of the list is the oldest entry.
@@ -393,7 +393,6 @@ __static int
 bmpce_reap(struct psc_poolmgr *m)
 {
 	struct bmap_pagecache *bmpc;
-	struct timespec ts;
 	int nfreed = 0, waiters = atomic_read(&m->ppm_nwaiters);
 
 	LIST_CACHE_LOCK(&bmpcLru);
@@ -402,8 +401,8 @@ bmpce_reap(struct psc_poolmgr *m)
 	/* Should be sorted from oldest bmpc to newest.
 	 */
 	LIST_CACHE_FOREACH(bmpc, &bmpcLru) {
-		psclog_dbg("bmpc=%p npages=%d age(%ld:%ld) waiters=%d", bmpc, 
-		   pll_nitems(&bmpc->bmpc_lru), bmpc->bmpc_oldest.tv_sec, 
+		psclog_dbg("bmpc=%p npages=%d age(%ld:%ld) waiters=%d", bmpc,
+		   pll_nitems(&bmpc->bmpc_lru), bmpc->bmpc_oldest.tv_sec,
 		   bmpc->bmpc_oldest.tv_nsec, waiters);
 
 		/* First check for LRU items.
@@ -428,8 +427,6 @@ bmpce_reap(struct psc_poolmgr *m)
 void
 bmpc_global_init(void)
 {
-	struct timespec ts = BMPC_DEF_MINAGE;
-
 	psc_poolmaster_init(&bmpcePoolMaster,
 	    struct bmap_pagecache_entry, bmpce_lentry, PPMF_AUTO, 512,
 	    512, 16384, bmpce_init, bmpce_destroy, bmpce_reap, "bmpce");
