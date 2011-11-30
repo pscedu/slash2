@@ -194,6 +194,10 @@ struct sl_gconf {
 #define RES_FOREACH_MEMB_CONT(r, m, j)	DYNARRAY_FOREACH_CONT((m), (j), &(r)->res_members)
 #define RESM_FOREACH_NID_CONT(m, n, k)	DYNARRAY_FOREACH_CONT((n), (k), &(m)->resm_nids)
 
+#define CONF_FOREACH_RES(s, r, i)					\
+	CONF_FOREACH_SITE(s)						\
+		SITE_FOREACH_RES((s), (r), (i))
+
 #define CONF_FOREACH_RESM(s, r, i, m, j)				\
 	CONF_FOREACH_SITE(s)						\
 		SITE_FOREACH_RES((s), (r), (i))				\
