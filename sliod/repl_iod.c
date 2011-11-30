@@ -127,8 +127,9 @@ sli_repl_addwk(int op, struct sl_resource *res,
 				}
 		BMAP_ULOCK(w->srw_bcm);
 	}
-	psclog_info("fid="SLPRI_FG", bmap=%d, # of slivers = %d\n",
-		SLPRI_FG_ARGS(fgp), bmapno, w->srw_nslvr_tot);
+	psclog_info("fid="SLPRI_FG" bmap=%d #slivers=%d",
+	    SLPRI_FG_ARGS(fgp), bmapno, w->srw_nslvr_tot);
+
  out:
 	if (rc) {
 		if (w->srw_fcmh)
@@ -150,8 +151,8 @@ sli_replwkrq_decref(struct sli_repl_workrq *w, int rc)
 	reqlock(&w->srw_lock);
 
 	/*
-	 * This keeps the very first error and cause our
-	 * thread to drop its reference to us.
+	 * This keeps the very first error and cause our thread to drop
+	 * its reference to us.
 	 */
 	if (rc && w->srw_status == 0)
 		w->srw_status = rc;
@@ -178,10 +179,10 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 {
 	struct slashrpc_cservice *csvc;
 	struct sli_repl_workrq *w;
+	struct sl_resm *src_resm;
 	int rc, slvridx, slvrno;
 
 	while (pscthr_run()) {
-
 		slvrno = 0;
 		w = lc_getwait(&sli_replwkq_pending);
  next:
@@ -220,7 +221,8 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 		}
 
 		/* find a pointer slot we can use to transmit the sliver */
-		for (slvridx = 0; slvridx < REPL_MAX_INFLIGHT_SLVRS; slvridx++)
+		for (slvridx = 0; slvridx < REPL_MAX_INFLIGHT_SLVRS;
+		    slvridx++)
 			if (w->srw_slvr_refs[slvridx] == NULL)
 				break;
 
@@ -239,21 +241,23 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 		freelock(&w->srw_lock);
 
 		/* acquire connection to replication source & issue READ */
-		csvc = sli_geticsvc(w->srw_resm);
+		src_resm = psc_dynarray_getpos(
+		    &w->srw_src_res->res_members, 0);
+		csvc = sli_geticsvc(src_resm);
 		if (csvc == NULL)
 			rc = SLERR_ION_OFFLINE;
 		else {
-			rc = sli_rii_issue_repl_read(csvc, slvrno, slvridx, w);
+			rc = sli_rii_issue_repl_read(csvc, slvrno,
+			    slvridx, w);
 			sl_csvc_decref(csvc);
 		}
 		if (rc) {
 			spinlock(&w->srw_lock);
-
 			w->srw_slvr_refs[slvridx] = NULL;
 			BMAP_LOCK(w->srw_bcm);
-			w->srw_bcm->bcm_crcstates[slvrno] |= BMAP_SLVR_WANTREPL;
+			w->srw_bcm->bcm_crcstates[slvrno] |=
+			    BMAP_SLVR_WANTREPL;
 			BMAP_ULOCK(w->srw_bcm);
-
 			freelock(&w->srw_lock);
 		}
 		sched_yield();

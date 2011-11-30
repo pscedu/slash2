@@ -52,7 +52,6 @@ struct sli_repl_workrq {
 	int			 srw_nslvr_tot;
 	int			 srw_nslvr_cur;
 
-	struct sl_resm		*srw_resm;		/* source peer info */
 	struct bmapc_memb	*srw_bcm;
 	struct fidc_membh	*srw_fcmh;
 	struct psclist_head	 srw_active_lentry;	/* entry in the active list */
