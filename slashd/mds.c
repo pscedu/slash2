@@ -1990,6 +1990,8 @@ slm_ptrunc_apply(struct slm_workrq *wkrq)
 		slm_ptrunc_wake_clients(wkrq);
 	}
 
+	/* XXX adjust nblks */
+
 	fcmh_op_done_type(fcmh, FCMH_OPCNT_WORKER);
 }
 
