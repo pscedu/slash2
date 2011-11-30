@@ -486,6 +486,7 @@ reimport
 - uptime instance nonce variable that allows msl to dump data if it
   changes while communicating with sliod
 - xopctl bugs
+- slmctl administratively disable sliods from write lease assignment
 
 archiver
 - tool to recover softdel files
