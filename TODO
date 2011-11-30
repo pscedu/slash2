@@ -481,6 +481,11 @@ reimport
 - journal log ino_repl_nblks modifications
 - upsch inquiries shouldn't wakeup the uswi to retry unnecessary
   processing
+- fix sliod connection bug visible from slmctl
+- check resid on connect so sliod backfs doesnt get corrupt
+- uptime instance nonce variable that allows msl to dump data if it
+  changes while communicating with sliod
+- xopctl bugs
 
 archiver
 - tool to recover softdel files
