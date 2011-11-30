@@ -162,7 +162,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct bmap_timeo_table);
 	PRTYPE(struct bmapc_memb);
 	PRTYPE(struct bmpc_ioreq);
-	PRTYPE(struct bmpc_mem_slbs);
 	PRTYPE(struct cli_finfo);
 	PRTYPE(struct dircache_desc);
 	PRTYPE(struct dircache_ents);
@@ -346,7 +345,6 @@ main(int argc, char *argv[])
 	PRVAL(BMPC_DEFSLBS);
 	PRVAL(BMPC_IOMAXBLKS);
 	PRVAL(BMPC_MAXSLBS);
-	PRVAL(BMPC_SLB_NBLKS);
 	PRVAL(BPHXC);
 	PRVAL(BREPLST_GARBAGE);
 	PRVAL(BREPLST_GARBAGE_SCHED);
@@ -379,8 +377,6 @@ main(int argc, char *argv[])
 	PRVAL(MDSCOH_BLOCK);
 	PRVAL(MDSCOH_NONBLOCK);
 	PRVAL(MDSIO_FID_ROOT);
-	PRVAL(MDS_IOS_NEED_INIT);
-	PRVAL(MDS_PEER_NEED_INIT);
 	PRVAL(MRSLF_EOF);
 	PRVAL(MSCMT_ADDREPLRQ);
 	PRVAL(MSCMT_DELREPLRQ);
