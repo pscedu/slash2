@@ -40,7 +40,7 @@ slcfg_init_res(struct sl_resource *res)
 	if (res->res_type == SLREST_MDS) {
 		peerinfo = PSCALLOC(sizeof(*peerinfo));
 		rpmi->rpmi_info = peerinfo;
-		peerinfo->sp_flags = MDS_PEER_NEED_INIT;
+		peerinfo->sp_flags = SPF_NEED_JRNL_INIT;
 		psc_meter_init(&peerinfo->sp_batchmeter, 0, "nsupd-%s",
 		    res->res_name);
 		peerinfo->sp_batchmeter.pm_maxp =
@@ -48,7 +48,7 @@ slcfg_init_res(struct sl_resource *res)
 	} else {
 		iosinfo = PSCALLOC(sizeof(*iosinfo));
 		rpmi->rpmi_info = iosinfo;
-		iosinfo->si_flags = MDS_IOS_NEED_INIT;
+		iosinfo->si_flags = SIF_NEED_JRNL_INIT;
 		psc_meter_init(&iosinfo->si_batchmeter, 0, "reclaim-%s",
 		    res->res_name);
 		iosinfo->si_batchmeter.pm_maxp =

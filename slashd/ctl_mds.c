@@ -61,12 +61,12 @@ const char *slm_nslogst_fields[] = {
 };
 
 int
-lookup(const char **p, int n, const char *key)
+lookup(const char **tab, int n, const char *key)
 {
 	int j;
 
 	for (j = 0; j < n; j++)
-		if (strcasecmp(key, p[j]) == 0)
+		if (strcasecmp(key, tab[j]) == 0)
 			return (j);
 	return (-1);
 }
@@ -123,7 +123,7 @@ slmctlparam_namespace_stats(int fd, struct psc_ctlmsghdr *mh,
 {
 	const char *p_site, *p_act, *p_op, *p_field;
 	int rc, d_val, o_val, s_val, val;
-	struct sl_resm *r;
+	struct sl_resm *m;
 	char *str;
 	long l;
 
@@ -131,7 +131,7 @@ slmctlparam_namespace_stats(int fd, struct psc_ctlmsghdr *mh,
 		return (psc_ctlsenderr(fd, mh, "invalid field"));
 
 	/* namespace.stats.<site|#AGGR>.<activity>.<op>.<field> */
-	/* namespace.stats.#aggr.replay.mkdir.successes */
+	/* ex: namespace.stats.#aggr.replay.mkdir.successes */
 
 	levels[0] = "namespace";
 	levels[1] = "stats";
@@ -181,23 +181,148 @@ slmctlparam_namespace_stats(int fd, struct psc_ctlmsghdr *mh,
 	}
 
 	rc = 1;
-	SL_MDS_WALK(r,
+	SL_MDS_WALK(m,
 		struct sl_mds_peerinfo *peerinfo;
 
-		peerinfo = res2rpmi(r->resm_res)->rpmi_info;
+		peerinfo = res2rpmi(m->resm_res)->rpmi_info;
 		if (peerinfo == NULL)
 			continue;
-		if (strcasecmp(p_site, r->resm_site->site_name) &&
+		if (strcasecmp(p_site, m->resm_site->site_name) &&
 		    strcmp(p_site, "*"))
 			continue;
 
-		levels[2] = r->resm_site->site_name;
+		levels[2] = m->resm_site->site_name;
 		rc = slmctlparam_namespace_stats_process(fd, mh, pcp,
 		    levels, &peerinfo->sp_stats, d_val, o_val, s_val,
 		    val);
-		if (!rc || strcmp(p_site, r->resm_site->site_name) == 0)
+		if (!rc || strcmp(p_site, m->resm_site->site_name) == 0)
 			SL_MDS_WALK_SETLAST();
 	);
+	return (rc);
+}
+
+const char *slm_resmds_fields[] = {
+	"xid"
+};
+
+const char *slm_resios_fields[] = {
+	"disable_bia",
+	"xid"
+};
+
+int
+slmctlparam_resources(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
+    __unusedx struct psc_ctlparam_node *pcn)
+{
+	char *str, nbuf[20];
+	const char *p_site, *p_res, *p_field;
+	int set, i, rc = 1, f_val, val = 0;
+	struct sl_mds_peerinfo *sp;
+	struct sl_mds_iosinfo *si;
+	struct sl_resource *r;
+	struct sl_site *s;
+	long l;
+
+	if (nlevels > 4)
+		return (psc_ctlsenderr(fd, mh, "invalid field"));
+
+	set = mh->mh_type == PCMT_SETPARAM;
+
+	if (set && nlevels != 4)
+		return (psc_ctlsenderr(fd, mh, "invalid field"));
+
+	/* resources.<site>.<res>.<field> */
+	/* ex: namespace.stats.foo.myres.xid */
+	/* ex: namespace.stats.foo.myres.disable_bia */
+
+	levels[0] = "resources";
+
+	p_site	= nlevels > 1 ? levels[1] : "*";
+	p_res	= nlevels > 2 ? levels[2] : "*";
+	p_field	= nlevels > 3 ? levels[3] : "*";
+
+	if (set) {
+		str = NULL;
+		l = strtol(pcp->pcp_value, &str, 10);
+		if (l == LONG_MAX || l == LONG_MIN || *str != '\0' ||
+		    str == pcp->pcp_value || l > 1 || l < 0)
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid resources value: %s",
+			    pcp->pcp_field));
+		val = (int)l;
+	}
+
+	CONF_FOREACH_RES(s, r, i) {
+		if (strcmp(p_site, "*") && strcmp(p_site, s->site_name))
+			continue;
+		if (strcmp(p_res, "*") && strcmp(p_res, r->res_name))
+			continue;
+
+		if (RES_ISCLUSTER(r))
+			continue;
+
+		levels[1] = s->site_name;
+		levels[2] = r->res_name;
+
+		if (r->res_type == SLREST_MDS) {
+			sp = res2mdsinfo(r);
+			f_val = lookup(slm_resmds_fields,
+			    nitems(slm_resmds_fields), p_field);
+			if (f_val == -1 && strcmp(p_field, "*"))
+				return (psc_ctlsenderr(fd, mh,
+				    "invalid resources field: %s", p_field));
+			if (strcmp(p_field, "*") == 0 ||
+			    strcmp(p_field, "xid") == 0) {
+				if (set)
+					return (psc_ctlsenderr(fd, mh,
+					    "xid: field is read-only"));
+				levels[3] = "xid";
+				snprintf(nbuf, sizeof(nbuf), "%"PRIu64,
+				    sp->sp_xid);
+				if (!psc_ctlmsg_param_send(fd, mh, pcp,
+				    PCTHRNAME_EVERYONE, levels, 4, nbuf))
+					return (0);
+			}
+		} else {
+			si = res2iosinfo(r);
+			f_val = lookup(slm_resios_fields,
+			    nitems(slm_resios_fields), p_field);
+			if (f_val == -1 && strcmp(p_field, "*"))
+				return (psc_ctlsenderr(fd, mh,
+				    "invalid resources field: %s", p_field));
+			if (strcmp(p_field, "*") == 0 ||
+			    strcmp(p_field, "xid") == 0) {
+				if (set)
+					return (psc_ctlsenderr(fd, mh,
+					    "xid: field is read-only"));
+				levels[3] = "xid";
+				snprintf(nbuf, sizeof(nbuf), "%"PRIu64,
+				    sp->sp_xid);
+				if (!psc_ctlmsg_param_send(fd, mh, pcp,
+				    PCTHRNAME_EVERYONE, levels, 4, nbuf))
+					return (0);
+			}
+			if (strcmp(p_field, "*") == 0 ||
+			    strcmp(p_field, "disable_bia") == 0) {
+				if (set) {
+					if (val)
+						si->si_flags |= SIF_DISABLE_BIA;
+					else
+						si->si_flags &= ~SIF_DISABLE_BIA;
+				} else {
+					levels[3] = "disable_bia";
+					snprintf(nbuf, sizeof(nbuf),
+					    "%d", si->si_flags &
+					    SIF_DISABLE_BIA);
+					if (!psc_ctlmsg_param_send(fd,
+					    mh, pcp, PCTHRNAME_EVERYONE,
+					    levels, 4, nbuf))
+						return (0);
+				}
+			}
+		}
+	}
 	return (rc);
 }
 
@@ -209,6 +334,7 @@ slmctlcmd_stop(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
     __unusedx void *m)
 {
 	mdsio_exit();
+	/* XXX journal_close */
 	exit(0);
 }
 
@@ -359,8 +485,10 @@ slmctlthr_main(const char *fn)
 	psc_ctlparam_register("pause", psc_ctlparam_pause);
 	psc_ctlparam_register("pool", psc_ctlparam_pool);
 	psc_ctlparam_register("rlim.nofile", psc_ctlparam_rlim_nofile);
-	psc_ctlparam_register("namespace.stats", slmctlparam_namespace_stats);
 	psc_ctlparam_register("run", psc_ctlparam_run);
+
+	psc_ctlparam_register("resources", slmctlparam_resources);
+	psc_ctlparam_register("namespace.stats", slmctlparam_namespace_stats);
 	psc_ctlparam_register_simple("nextfid", slmctlparam_nextfid_get,
 	    slmctlparam_nextfid_set);
 

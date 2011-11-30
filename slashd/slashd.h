@@ -147,7 +147,9 @@ struct sl_mds_peerinfo {
 	struct sl_mds_nsstats	  sp_stats;
 };
 
-#define	MDS_PEER_NEED_INIT	1
+#define	SPF_NEED_JRNL_INIT	(1 << 0)		/* journal fields need initialized */
+
+#define res2mdsinfo(res)	((struct sl_mds_peerinfo *)res2rpmi(res)->rpmi_info)
 
 /*
  * This structure tracks the progress of garbage collection on each I/O
@@ -161,7 +163,10 @@ struct sl_mds_iosinfo {
 	struct srt_statfs	  si_ssfb;
 };
 
-#define	MDS_IOS_NEED_INIT	1
+#define	SIF_NEED_JRNL_INIT	(1 << 0)		/* journal fields need initialized */
+#define SIF_DISABLE_BIA		(1 << 1)		/* disable bmap lease assignments */
+
+#define res2iosinfo(res)	((struct sl_mds_iosinfo *)res2rpmi(res)->rpmi_info)
 
 /* MDS-specific data for struct sl_resource */
 struct resprof_mds_info {
@@ -180,8 +185,6 @@ res2rpmi(struct sl_resource *res)
 {
 	return (resprof_get_pri(res));
 }
-
-#define res2iosinfo(res)	res2rpmi(res)->rpmi_info
 
 /* MDS-specific data for struct sl_resm */
 struct resm_mds_info {

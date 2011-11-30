@@ -263,7 +263,8 @@ mds_resm_tryconnect(struct sl_resource *res, int nb)
 
 		psclog_info("trying res(%s)", res->res_name);
 
-		csvc = nb ? slm_geticsvc_nb(resm, NULL) : slm_geticsvc(resm);
+		csvc = nb ? slm_geticsvc_nb(resm, NULL) :
+		    slm_geticsvc(resm);
 		if (csvc)
 			break;
 	}
@@ -277,7 +278,8 @@ mds_resm_tryconnect(struct sl_resource *res, int nb)
 }
 
 /**
- * mds_resm_select - Choose an I/O resource and one of its members.
+ * mds_resm_select - Choose an I/O resource member for write bmap lease
+ *	assignment.
  * @b:  The bmap which is being leased.
  * @pios:  The preferred I/O resource specified by the client.
  * Notes:  This call accounts for the existence of existing replicas.  When
@@ -287,12 +289,12 @@ mds_resm_tryconnect(struct sl_resource *res, int nb)
 __static struct sl_resm *
 mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios)
 {
-	struct sl_resource *res;
-	struct sl_resm *resm = NULL;
+	int i, off, val, nr, repls = 0, nb;
 	struct slash_inode_od *ino = fcmh_2_ino(b->bcm_fcmh);
 	struct slash_inode_extras_od *inox = NULL;
 	struct psc_dynarray a = DYNARRAY_INIT;
-	int i, off, val, nr, repls = 0, nb;
+	struct sl_resm *resm = NULL;
+	struct sl_resource *res;
 	sl_ios_id_t ios;
 
 	FCMH_LOCK(b->bcm_fcmh);
@@ -315,7 +317,7 @@ mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios)
 			continue;
 
 		ios = (i < SL_DEF_REPLICAS) ? ino->ino_repls[i].bs_id :
-			inox->inox_repls[i - SL_DEF_REPLICAS].bs_id;
+		    inox->inox_repls[i - SL_DEF_REPLICAS].bs_id;
 
 		psc_dynarray_add(&a, libsl_id2res(ios));
 	}
@@ -330,7 +332,9 @@ mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios)
 			   "no replicas marked BREPLST_VALID");
 			return (NULL);
 		}
-		/* XXX Here we should employ a function which sorts the
+
+		/*
+		 * XXX Here we should employ a function which sorts the
 		 *   array to place the more appropriate IOS's towards
 		 *   the front of array.
 		 *
@@ -357,7 +361,7 @@ mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios)
 		psc_dynarray_add(&a, libsl_id2res(pios));
 		for (i = 0; i < nr; i++) {
 			ios = (i < SL_DEF_REPLICAS) ? ino->ino_repls[i].bs_id :
-				inox->inox_repls[i - SL_DEF_REPLICAS].bs_id;
+			    inox->inox_repls[i - SL_DEF_REPLICAS].bs_id;
 
 			psc_dynarray_add_ifdne(&a, libsl_id2res(ios));
 		}
@@ -367,6 +371,8 @@ mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios)
 	 */
 	for (nb = 1; nb > 0; nb--) {
 		DYNARRAY_FOREACH(res, i, &a) {
+			if (res2iosinfo(res)->si_flags & SIF_DISABLE_BIA)
+				continue;
 			resm = mds_resm_tryconnect(res, nb);
 			if (resm)
 				break;
@@ -1630,9 +1636,11 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 		if (rc == -SLERR_BMAP_DIOWAIT)
 			mds_bml_free(bml);
 		else {
+			BML_LOCK(bml);
 			if (rc == -SLERR_ION_OFFLINE)
 				bml->bml_flags |= BML_ASSFAIL;
 			bml->bml_flags |= BML_FREEING;
+			BML_ULOCK(bml);
 			mds_bmap_bml_release(bml);
 		}
 		goto out;
@@ -1688,9 +1696,11 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 		if (rc == -SLERR_BMAP_DIOWAIT)
 			mds_bml_free(bml);
 		else {
+			BML_LOCK(bml);
 			if (rc == -SLERR_ION_OFFLINE)
 				bml->bml_flags |= BML_ASSFAIL;
 			bml->bml_flags |= BML_FREEING;
+			BML_ULOCK(bml);
 			mds_bmap_bml_release(bml);
 		}
 		goto out;

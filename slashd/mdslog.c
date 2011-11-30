@@ -804,22 +804,20 @@ mds_update_hwm(int batchno)
 int
 mds_send_batch_update(uint64_t batchno)
 {
-	int i, rc, npeers, count, total, didwork = 0, record = 0;
+	int siter, i, rc, npeers, count, total, didwork = 0, record = 0;
 	struct srt_update_entry *entryp, *next_entryp;
 	struct sl_mds_peerinfo *peerinfo;
 	struct slashrpc_cservice *csvc;
 	struct srm_update_rep *mp;
 	struct srm_update_req *mq;
 	struct pscrpc_request *rq;
+	struct sl_resource *res;
 	struct sl_resm *resm;
+	struct sl_site *site;
 	struct iovec iov;
 	uint64_t xid;
 	size_t size;
 	void *handle;
-
-	struct sl_resource *_res;
-	struct sl_site *_site;
-	int _siter;
 
 	rc = mds_open_logfile(batchno, 1, 1, &handle);
 	if (rc) {
@@ -828,7 +826,7 @@ mds_send_batch_update(uint64_t batchno)
 		 * the next log file after closing the old one.
 		 */
 		if (rc != ENOENT)
-			psc_fatalx("Failed to open update log file, "
+			psc_fatalx("failed to open update log file, "
 			    "batchno=%"PRId64": %s",
 			    batchno, slstrerror(rc));
 		return (didwork);
@@ -864,12 +862,12 @@ mds_send_batch_update(uint64_t batchno)
 	npeers = 0;
 
 	CONF_LOCK();
-	CONF_FOREACH_SITE(_site)
-	    SITE_FOREACH_RES(_site, _res, _siter) {
-		if (_res->res_type != SLREST_MDS)
+	CONF_FOREACH_SITE(site)
+	    SITE_FOREACH_RES(site, res, siter) {
+		if (res->res_type != SLREST_MDS)
 			continue;
 		resm = psc_dynarray_getpos(
-		    &_res->res_members, 0);
+		    &res->res_members, 0);
 		if (resm == nodeResm)
 			continue;
 		npeers++;
@@ -966,7 +964,7 @@ mds_send_batch_update(uint64_t batchno)
 		mds_record_update_prog();
 	if (didwork == npeers && count == SLM_UPDATE_BATCH) {
 		if (batchno >= 1)
-			mds_remove_logfile(batchno-1, 1);
+			mds_remove_logfile(batchno - 1, 1);
 	}
 	return (didwork);
 }
@@ -978,10 +976,10 @@ mds_send_batch_update(uint64_t batchno)
 void
 mds_update_cursor(void *buf, uint64_t txg, int flag)
 {
+	static uint64_t start_txg = 0;
 	struct psc_journal_cursor *cursor = buf;
 	uint64_t hwm, lwm;
 	int rc;
-	static uint64_t start_txg = 0;
 
 	if (flag == 1) {
 		start_txg = txg;
@@ -1264,8 +1262,8 @@ mds_send_batch_reclaim(uint64_t batchno)
 
 	/*
 	 * If this log file is full and all I/O servers have applied its
-	 * contents, remove an old log file (keep the previous one so that
-	 * we can figure out the last distill xid upon recovery).
+	 * contents, remove an old log file (keep the previous one so
+	 * that we can figure out the last distill xid upon recovery).
 	 */
 	if (didwork == nios && count == SLM_RECLAIM_BATCH) {
 		if (batchno >= 1)
@@ -1513,19 +1511,19 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		if (RES_ISFS(res))
 			nios++;
 	if (!nios)
-		psc_fatalx("Missing I/O servers at site %s",
+		psc_fatalx("missing I/O servers at site %s",
 		    nodeSite->site_name);
 
 	if (nios > MAX_RECLAIM_PROG_ENTRY)
-		psc_fatalx("Number of I/O servers exceed %d",
-		    MAX_RECLAIM_PROG_ENTRY);
+		psc_fatalx("number of I/O servers (%d) exceeds %d",
+		    nios, MAX_RECLAIM_PROG_ENTRY);
 
 	/* Count the number of peer MDSes we have */
 	npeers = 0;
 	SL_MDS_WALK(resm, npeers++);
 	npeers--;
 	if (npeers > MAX_UPDATE_PROG_ENTRY)
-		psc_fatalx("Number of metadata servers exceed %d",
+		psc_fatalx("number of metadata servers exceed %d",
 		    MAX_UPDATE_PROG_ENTRY);
 
 	if (disable_propagation)
@@ -1538,10 +1536,10 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 
 	mdsJournal = pjournal_open(res->res_jrnldev);
 	if (mdsJournal == NULL)
-		psc_fatal("Failed to open log file %s", res->res_jrnldev);
+		psc_fatal("failed to open log file %s", res->res_jrnldev);
 
 	if (fsuuid && (mdsJournal->pj_hdr->pjh_fsuuid != fsuuid))
-		psc_fatal("UUID mismatch FS=%"PRIx64" JRNL=%"PRIx64".  "
+		psc_fatalx("UUID mismatch FS=%"PRIx64" JRNL=%"PRIx64".  "
 		    "The journal needs to be reinitialized.",
 		  fsuuid, mdsJournal->pj_hdr->pjh_fsuuid);
 
@@ -1574,14 +1572,14 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	for (i = 0; i < count; i++) {
 		res = libsl_id2res(reclaim_prog_buf[i].res_id);
 		if (!RES_ISFS(res)) {
-			psclog_warn("Non-FS resource ID %u "
+			psclog_warn("non-FS resource ID %u "
 			    "in reclaim file", res->res_id);
 			continue;
 		}
 		iosinfo = res2rpmi(res)->rpmi_info;
 		iosinfo->si_xid = reclaim_prog_buf[i].res_xid;
 		iosinfo->si_batchno = reclaim_prog_buf[i].res_batchno;
-		iosinfo->si_flags &= ~MDS_IOS_NEED_INIT;
+		iosinfo->si_flags &= ~SIF_NEED_JRNL_INIT;
 		if (iosinfo->si_batchno < batchno)
 			batchno = iosinfo->si_batchno;
 	}
@@ -1599,7 +1597,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		}
 	}
 	if (rc)
-		psc_fatalx("Failed to open reclaim log file, "
+		psc_fatalx("failed to open reclaim log file, "
 		    "batchno=%"PRId64": %s", batchno, slstrerror(rc));
 
 	current_reclaim_batchno = batchno;
@@ -1634,12 +1632,12 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		rpmi = res2rpmi(res);
 		iosinfo = rpmi->rpmi_info;
 
-		if (!(iosinfo->si_flags & MDS_IOS_NEED_INIT))
+		if (!(iosinfo->si_flags & SIF_NEED_JRNL_INIT))
 			continue;
 
 		iosinfo->si_xid = current_reclaim_xid;
 		iosinfo->si_batchno = current_reclaim_batchno;
-		iosinfo->si_flags &= ~MDS_IOS_NEED_INIT;
+		iosinfo->si_flags &= ~SIF_NEED_JRNL_INIT;
 	}
 
 	/* Always start a thread to send reclaim updates. */
@@ -1674,7 +1672,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		}
 		peerinfo = res2rpmi(res)->rpmi_info;
 
-		peerinfo->sp_flags &= ~MDS_PEER_NEED_INIT;
+		peerinfo->sp_flags &= ~SPF_NEED_JRNL_INIT;
 		peerinfo->sp_xid = update_prog_buf[i].res_xid;
 		peerinfo->sp_batchno = update_prog_buf[i].res_batchno;
 		if (peerinfo->sp_batchno < batchno)
@@ -1729,12 +1727,12 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 			continue;
 		rpmi = resm2rpmi(resm);
 		peerinfo = rpmi->rpmi_info;
-		if (!(peerinfo->sp_flags & MDS_PEER_NEED_INIT))
+		if (!(peerinfo->sp_flags & SPF_NEED_JRNL_INIT))
 			continue;
 
 		peerinfo->sp_xid = current_update_xid;
 		peerinfo->sp_batchno = current_update_batchno;
-		peerinfo->sp_flags &= ~MDS_PEER_NEED_INIT;
+		peerinfo->sp_flags &= ~SPF_NEED_JRNL_INIT;
 	);
 
 	/*
