@@ -339,18 +339,21 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		if (rc)
 			psclog_errorx("dirname %s: %s", fidfn,
 			    strerror(rc));
-		else
+		else {
 			dfd = open(dir, O_RDONLY | O_DIRECTORY);
+			rc = errno;
+		}
 		if (dfd == -1)
-			psclog_error("open %s", dir);
+			psclog_errorx("open %s: %s", dir,
+			    slstrerror(rc));
 		else if (fstat(dfd, &dstb) == -1)
-			psclog_errorx("stat %s", dir);
+			psclog_error("stat %s", dir);
 
 		fd = open(fn, O_RDONLY);
 		if (fd == -1)
-			psclog_errorx("open %s", fn);
+			psclog_error("open %s", fn);
 		else if (fstat(fd, &stb) == -1)
-			psclog_errorx("stat %s", fn);
+			psclog_error("stat %s", fn);
 
 		/*
 		 * XXX If we fail here, we should undo import above.
