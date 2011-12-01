@@ -325,37 +325,10 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 			sli_fg_makepath(&mp->fg, fidfn);
 			dolink = 1;
 		}
-	} else {
+	} else
 		rc = ENOTSUP;
-	}
 
 	if (dolink) {
-		struct stat stb, dstb;
-		struct timespec ts[2];
-		char dir[PATH_MAX];
-		int fd, dfd = -1;
-
-		rc = pfl_dirname(fidfn, dir);
-		if (rc)
-			psclog_errorx("dirname %s: %s", fidfn,
-			    strerror(rc));
-		else {
-			dfd = open(dir, O_RDONLY | O_DIRECTORY);
-			if (dfd == -1)
-				rc = errno;
-		}
-		if (dfd == -1)
-			psclog_errorx("open %s: %s", dir,
-			    slstrerror(rc));
-		else if (fstat(dfd, &dstb) == -1)
-			psclog_error("stat %s", dir);
-
-		fd = open(fn, O_RDONLY);
-		if (fd == -1)
-			psclog_error("open %s", fn);
-		else if (fstat(fd, &stb) == -1)
-			psclog_error("stat %s", fn);
-
 		/*
 		 * XXX If we fail here, we should undo import above.
 		 * However, with checks earlier, we probably won't fail
@@ -363,26 +336,6 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		 */
 		if (link(fn, fidfn) == -1)
 			rc = errno;
-
-		if (dfd != -1 && rc == 0) {
-			/* Preserve mtime on target parent dir. */
-			PFL_STB_ATIME_GET(&dstb, &ts[0].tv_sec, &ts[0].tv_nsec);
-			PFL_STB_MTIME_GET(&dstb, &ts[1].tv_sec, &ts[1].tv_nsec);
-			if (futimens(dfd, ts) == -1)
-				psclog_error("futimes %s", dir);
-		}
-
-		if (fd != -1 && rc == 0) {
-			/* Preserve mtime on source file. */
-			PFL_STB_ATIME_GET(&stb, &ts[0].tv_sec, &ts[0].tv_nsec);
-			PFL_STB_MTIME_GET(&stb, &ts[1].tv_sec, &ts[1].tv_nsec);
-			if (futimens(fd, ts) == -1)
-				psclog_error("futimes %s", fn);
-		}
-		if (dfd != -1)
-			close(dfd);
-		if (fd != -1)
-			close(fd);
 	}
 
  error:
@@ -415,8 +368,8 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 		pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
-	psclog_info("Import file %s: fidfn=%s rc=%d a->rc=%d",
-	    fn, pfl_basename(fidfn), rc, a->rc);
+	psclog_info("import file %s: fidfn=%s rc=%d",
+	    fn, pfl_basename(fidfn), a->rc);
 	return (rc || a->rc == 0);
 }
 
