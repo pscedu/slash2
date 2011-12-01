@@ -110,7 +110,7 @@ slmctlparam_namespace_stats_process(int fd, struct psc_ctlmsghdr *mh,
 			}
 		}
 	}
-	return (rc);
+	return (0);
 }
 
 int
