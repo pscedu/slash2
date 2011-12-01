@@ -341,7 +341,8 @@ sli_import(const char *fn, const struct stat *stb, void *arg)
 			    strerror(rc));
 		else {
 			dfd = open(dir, O_RDONLY | O_DIRECTORY);
-			rc = errno;
+			if (dfd == -1)
+				rc = errno;
 		}
 		if (dfd == -1)
 			psclog_errorx("open %s: %s", dir,
