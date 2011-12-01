@@ -76,7 +76,7 @@ slmctlparam_namespace_stats_process(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, struct sl_mds_nsstats *st,
     int d_val, int o_val, int s_val, int val)
 {
-	int d_start, o_start, s_start, rc, set, i_d, i_o, i_s;
+	int d_start, o_start, s_start, set, i_d, i_o, i_s;
 	char nbuf[15];
 
 	set = (mh->mh_type == PCMT_SETPARAM);
@@ -85,7 +85,6 @@ slmctlparam_namespace_stats_process(int fd, struct psc_ctlmsghdr *mh,
 	o_start = o_val == -1 ? 0 : o_val;
 	s_start = s_val == -1 ? 0 : s_val;
 
-	rc = 1;
 	for (i_d = d_start; i_d < NS_NDIRS &&
 	    (i_d == d_val || d_val == -1); i_d++) {
 		levels[3] = (char *)slm_nslogst_acts[i_d];
@@ -104,15 +103,13 @@ slmctlparam_namespace_stats_process(int fd, struct psc_ctlmsghdr *mh,
 					snprintf(nbuf, sizeof(nbuf), "%d",
 					    psc_atomic32_read(
 					    &st->ns_stats[i_d][i_o][i_s]));
-					rc = psc_ctlmsg_param_send(fd, mh, pcp,
-					    PCTHRNAME_EVERYONE, levels, 6, nbuf);
-					if (!rc)
-						goto out;
+					if (!psc_ctlmsg_param_send(fd, mh, pcp,
+					    PCTHRNAME_EVERYONE, levels, 6, nbuf))
+						return (0);
 				}
 			}
 		}
 	}
- out:
 	return (rc);
 }
 
@@ -122,7 +119,7 @@ slmctlparam_namespace_stats(int fd, struct psc_ctlmsghdr *mh,
     __unusedx struct psc_ctlparam_node *pcn)
 {
 	const char *p_site, *p_act, *p_op, *p_field;
-	int rc, d_val, o_val, s_val, val;
+	int rc, a_val, o_val, f_val, val;
 	struct sl_resm *m;
 	char *str;
 	long l;
@@ -141,17 +138,17 @@ slmctlparam_namespace_stats(int fd, struct psc_ctlmsghdr *mh,
 	p_op	= nlevels > 4 ? levels[4] : "*";
 	p_field	= nlevels > 5 ? levels[5] : "*";
 
-	d_val = lookup(slm_nslogst_acts, nitems(slm_nslogst_acts), p_act);
+	a_val = lookup(slm_nslogst_acts, nitems(slm_nslogst_acts), p_act);
 	o_val = lookup(slm_nslogst_ops, nitems(slm_nslogst_ops), p_op);
-	s_val = lookup(slm_nslogst_fields, nitems(slm_nslogst_fields), p_field);
+	f_val = lookup(slm_nslogst_fields, nitems(slm_nslogst_fields), p_field);
 
-	if (d_val == -1 && strcmp(p_act, "*"))
+	if (a_val == -1 && strcmp(p_act, "*"))
 		return (psc_ctlsenderr(fd, mh,
 		    "invalid namespace.stats activity: %s", p_act));
 	if (o_val == -1 && strcmp(p_op, "*"))
 		return (psc_ctlsenderr(fd, mh,
 		    "invalid namespace.stats operation: %s", p_op));
-	if (s_val == -1 && strcmp(p_act, "*"))
+	if (f_val == -1 && strcmp(p_field, "*"))
 		return (psc_ctlsenderr(fd, mh,
 		    "invalid namespace.stats field: %s", p_field));
 
@@ -175,7 +172,7 @@ slmctlparam_namespace_stats(int fd, struct psc_ctlmsghdr *mh,
 	    strcmp(p_site, "*") == 0) {
 		levels[2] = "#aggr";
 		rc = slmctlparam_namespace_stats_process(fd, mh, pcp,
-		    levels, &slm_nsstats_aggr, d_val, o_val, s_val, val);
+		    levels, &slm_nsstats_aggr, a_val, o_val, f_val, val);
 		if (!rc || strcmp(p_site, "#aggr"))
 			return (rc);
 	}
@@ -193,7 +190,7 @@ slmctlparam_namespace_stats(int fd, struct psc_ctlmsghdr *mh,
 
 		levels[2] = m->resm_site->site_name;
 		rc = slmctlparam_namespace_stats_process(fd, mh, pcp,
-		    levels, &peerinfo->sp_stats, d_val, o_val, s_val,
+		    levels, &peerinfo->sp_stats, a_val, o_val, f_val,
 		    val);
 		if (!rc || strcmp(p_site, m->resm_site->site_name) == 0)
 			SL_MDS_WALK_SETLAST();
@@ -215,9 +212,9 @@ slmctlparam_resources(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
     __unusedx struct psc_ctlparam_node *pcn)
 {
-	char *str, nbuf[20];
+	char *p, *str, nbuf[20], resname[RES_NAME_MAX];
 	const char *p_site, *p_res, *p_field;
-	int set, i, rc = 1, f_val, val = 0;
+	int set, i, f_val, val = 0;
 	struct sl_mds_peerinfo *sp;
 	struct sl_mds_iosinfo *si;
 	struct sl_resource *r;
@@ -254,16 +251,21 @@ slmctlparam_resources(int fd, struct psc_ctlmsghdr *mh,
 	}
 
 	CONF_FOREACH_RES(s, r, i) {
+		strlcpy(resname, r->res_name, sizeof(resname));
+		p = strchr(resname, '@');
+		if (p)
+			*p = '\0';
+printf("%s %s : %s %s\n", p_site, s->site_name, p_res, resname);
 		if (strcmp(p_site, "*") && strcmp(p_site, s->site_name))
 			continue;
-		if (strcmp(p_res, "*") && strcmp(p_res, r->res_name))
+		if (strcmp(p_res, "*") && strcmp(p_res, resname))
 			continue;
 
 		if (RES_ISCLUSTER(r))
 			continue;
 
 		levels[1] = s->site_name;
-		levels[2] = r->res_name;
+		levels[2] = resname;
 
 		if (r->res_type == SLREST_MDS) {
 			sp = res2mdsinfo(r);
@@ -298,7 +300,7 @@ slmctlparam_resources(int fd, struct psc_ctlmsghdr *mh,
 					    "xid: field is read-only"));
 				levels[3] = "xid";
 				snprintf(nbuf, sizeof(nbuf), "%"PRIu64,
-				    sp->sp_xid);
+				    si->si_xid);
 				if (!psc_ctlmsg_param_send(fd, mh, pcp,
 				    PCTHRNAME_EVERYONE, levels, 4, nbuf))
 					return (0);
@@ -323,7 +325,7 @@ slmctlparam_resources(int fd, struct psc_ctlmsghdr *mh,
 			}
 		}
 	}
-	return (rc);
+	return (1);
 }
 
 /**
