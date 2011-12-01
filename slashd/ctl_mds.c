@@ -74,7 +74,7 @@ lookup(const char **tab, int n, const char *key)
 int
 slmctlparam_namespace_stats_process(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, struct sl_mds_nsstats *st,
-    int d_val, int o_val, int s_val, int val)
+    int d_val, int o_val, int s_val)
 {
 	int d_start, o_start, s_start, set, i_d, i_o, i_s;
 	char nbuf[15];
@@ -89,28 +89,27 @@ slmctlparam_namespace_stats_process(int fd, struct psc_ctlmsghdr *mh,
 	    (i_d == d_val || d_val == -1); i_d++) {
 		levels[3] = (char *)slm_nslogst_acts[i_d];
 		for (i_o = o_start; i_o < NS_NOPS + 1 &&
-		    (i_o == o_val || d_val == -1); i_o++) {
+		    (i_o == o_val || o_val == -1); i_o++) {
 			levels[4] = (char *)slm_nslogst_ops[i_o];
 			for (i_s = s_start; i_s < NS_NSUMS &&
 			    (i_s == s_val || s_val == -1); i_s++) {
-				if (set)
-					psc_atomic32_set(
-					    &st->ns_stats[i_d][i_o][i_s],
-					    val);
-				else {
-					levels[5] = (char *)
-					    slm_nslogst_fields[i_s];
-					snprintf(nbuf, sizeof(nbuf), "%d",
-					    psc_atomic32_read(
-					    &st->ns_stats[i_d][i_o][i_s]));
-					if (!psc_ctlmsg_param_send(fd, mh, pcp,
-					    PCTHRNAME_EVERYONE, levels, 6, nbuf))
-						return (0);
-				}
+				if (mh->mh_type == PCMT_SETPARAM)
+					return (psc_ctlsenderr(fd, mh,
+					    "field is read-only: %s",
+					    slm_nslogst_fields[i_s]));
+
+				levels[5] = (char *)
+				    slm_nslogst_fields[i_s];
+				snprintf(nbuf, sizeof(nbuf), "%d",
+				    psc_atomic32_read(
+				    &st->ns_stats[i_d][i_o][i_s]));
+				if (!psc_ctlmsg_param_send(fd, mh, pcp,
+				    PCTHRNAME_EVERYONE, levels, 6, nbuf))
+					return (0);
 			}
 		}
 	}
-	return (0);
+	return (1);
 }
 
 int
@@ -118,11 +117,9 @@ slmctlparam_namespace_stats(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
     __unusedx struct psc_ctlparam_node *pcn)
 {
-	const char *p_site, *p_act, *p_op, *p_field;
-	int rc, a_val, o_val, f_val, val;
+	char p_site[SITE_NAME_MAX], p_act[32], p_op[32], p_field[32];
+	int site_found = 0, rc = 1, a_val, o_val, f_val;
 	struct sl_resm *m;
-	char *str;
-	long l;
 
 	if (nlevels > 6)
 		return (psc_ctlsenderr(fd, mh, "invalid field"));
@@ -133,10 +130,18 @@ slmctlparam_namespace_stats(int fd, struct psc_ctlmsghdr *mh,
 	levels[0] = "namespace";
 	levels[1] = "stats";
 
-	p_site	= nlevels > 2 ? levels[2] : "*";
-	p_act	= nlevels > 3 ? levels[3] : "*";
-	p_op	= nlevels > 4 ? levels[4] : "*";
-	p_field	= nlevels > 5 ? levels[5] : "*";
+	if (strlcpy(p_site, nlevels > 2 ? levels[2] : "*",
+	    sizeof(p_site)) >= sizeof(p_site))
+		return (psc_ctlsenderr(fd, mh, "invalid site"));
+	if (strlcpy(p_act, nlevels > 3 ? levels[3] : "*",
+	    sizeof(p_act)) >= sizeof(p_act))
+		return (psc_ctlsenderr(fd, mh, "invalid activity"));
+	if (strlcpy(p_op, nlevels > 4 ? levels[4] : "*",
+	    sizeof(p_op)) >= sizeof(p_op))
+		return (psc_ctlsenderr(fd, mh, "invalid op"));
+	if (strlcpy(p_field, nlevels > 5 ? levels[5] : "*",
+	    sizeof(p_field)) >= sizeof(p_field))
+		return (psc_ctlsenderr(fd, mh, "invalid site"));
 
 	a_val = lookup(slm_nslogst_acts, nitems(slm_nslogst_acts), p_act);
 	o_val = lookup(slm_nslogst_ops, nitems(slm_nslogst_ops), p_op);
@@ -152,49 +157,37 @@ slmctlparam_namespace_stats(int fd, struct psc_ctlmsghdr *mh,
 		return (psc_ctlsenderr(fd, mh,
 		    "invalid namespace.stats field: %s", p_field));
 
-	val = 0; /* gcc */
-
-	if (mh->mh_type == PCMT_SETPARAM) {
-		if (nlevels != 6)
-			return (psc_ctlsenderr(fd, mh, "invalid field"));
-
-		str = NULL;
-		l = strtol(pcp->pcp_value, &str, 10);
-		if (l == LONG_MAX || l == LONG_MIN || *str != '\0' ||
-		    str == pcp->pcp_value || l > 1 || l < 0)
-			return (psc_ctlsenderr(fd, mh,
-			    "invalid namespace.stats value: %s",
-			    pcp->pcp_field));
-		val = (int)l;
-	}
-
 	if (strcasecmp(p_site, "#aggr") == 0 ||
 	    strcmp(p_site, "*") == 0) {
 		levels[2] = "#aggr";
 		rc = slmctlparam_namespace_stats_process(fd, mh, pcp,
-		    levels, &slm_nsstats_aggr, a_val, o_val, f_val, val);
-		if (!rc || strcmp(p_site, "#aggr"))
+		    levels, &slm_nsstats_aggr, a_val, o_val, f_val);
+		if (!rc || strcmp(p_site, "#aggr") == 0)
 			return (rc);
+		site_found = 1;
 	}
 
-	rc = 1;
 	SL_MDS_WALK(m,
 		struct sl_mds_peerinfo *peerinfo;
+
+		if (strcasecmp(p_site, m->resm_site->site_name) &&
+		    strcmp(p_site, "*"))
+			continue;
+		site_found = 1;
 
 		peerinfo = res2rpmi(m->resm_res)->rpmi_info;
 		if (peerinfo == NULL)
 			continue;
-		if (strcasecmp(p_site, m->resm_site->site_name) &&
-		    strcmp(p_site, "*"))
-			continue;
 
 		levels[2] = m->resm_site->site_name;
 		rc = slmctlparam_namespace_stats_process(fd, mh, pcp,
-		    levels, &peerinfo->sp_stats, a_val, o_val, f_val,
-		    val);
+		    levels, &peerinfo->sp_stats, a_val, o_val, f_val);
 		if (!rc || strcmp(p_site, m->resm_site->site_name) == 0)
 			SL_MDS_WALK_SETLAST();
 	);
+	if (!site_found)
+		return (psc_ctlsenderr(fd, mh, "invalid site: %s",
+		    p_site));
 	return (rc);
 }
 
@@ -212,8 +205,9 @@ slmctlparam_resources(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
     __unusedx struct psc_ctlparam_node *pcn)
 {
+	char p_site[SITE_NAME_MAX], p_res[RES_NAME_MAX], p_field[32];
 	char *p, *str, nbuf[20], resname[RES_NAME_MAX];
-	const char *p_site, *p_res, *p_field;
+	int site_found = 0, res_found = 0, field_found = 0;
 	int set, i, f_val, val = 0;
 	struct sl_mds_peerinfo *sp;
 	struct sl_mds_iosinfo *si;
@@ -235,9 +229,15 @@ slmctlparam_resources(int fd, struct psc_ctlmsghdr *mh,
 
 	levels[0] = "resources";
 
-	p_site	= nlevels > 1 ? levels[1] : "*";
-	p_res	= nlevels > 2 ? levels[2] : "*";
-	p_field	= nlevels > 3 ? levels[3] : "*";
+	if (strlcpy(p_site, nlevels > 1 ? levels[1] : "*",
+	    sizeof(p_site)) >= sizeof(p_site))
+		return (psc_ctlsenderr(fd, mh, "invalid site"));
+	if (strlcpy(p_res, nlevels > 2 ? levels[2] : "*",
+	    sizeof(p_res)) >= sizeof(p_res))
+		return (psc_ctlsenderr(fd, mh, "invalid resource"));
+	if (strlcpy(p_field, nlevels > 3 ? levels[3] : "*",
+	    sizeof(p_field)) >= sizeof(p_field))
+		return (psc_ctlsenderr(fd, mh, "invalid field"));
 
 	if (set) {
 		str = NULL;
@@ -255,14 +255,20 @@ slmctlparam_resources(int fd, struct psc_ctlmsghdr *mh,
 		p = strchr(resname, '@');
 		if (p)
 			*p = '\0';
-printf("%s %s : %s %s\n", p_site, s->site_name, p_res, resname);
+
 		if (strcmp(p_site, "*") && strcmp(p_site, s->site_name))
 			continue;
+		site_found = 1;
 		if (strcmp(p_res, "*") && strcmp(p_res, resname))
 			continue;
+		res_found = 1;
 
-		if (RES_ISCLUSTER(r))
+		if (RES_ISCLUSTER(r)) {
+			if (strcmp(p_res, "*"))
+				return (psc_ctlsenderr(fd, mh,
+				    "invalid resource"));
 			continue;
+		}
 
 		levels[1] = s->site_name;
 		levels[2] = resname;
@@ -285,6 +291,7 @@ printf("%s %s : %s %s\n", p_site, s->site_name, p_res, resname);
 				if (!psc_ctlmsg_param_send(fd, mh, pcp,
 				    PCTHRNAME_EVERYONE, levels, 4, nbuf))
 					return (0);
+				field_found = 1;
 			}
 		} else {
 			si = res2iosinfo(r);
@@ -304,6 +311,7 @@ printf("%s %s : %s %s\n", p_site, s->site_name, p_res, resname);
 				if (!psc_ctlmsg_param_send(fd, mh, pcp,
 				    PCTHRNAME_EVERYONE, levels, 4, nbuf))
 					return (0);
+				field_found = 1;
 			}
 			if (strcmp(p_field, "*") == 0 ||
 			    strcmp(p_field, "disable_bia") == 0) {
@@ -316,15 +324,25 @@ printf("%s %s : %s %s\n", p_site, s->site_name, p_res, resname);
 					levels[3] = "disable_bia";
 					snprintf(nbuf, sizeof(nbuf),
 					    "%d", si->si_flags &
-					    SIF_DISABLE_BIA);
+					    SIF_DISABLE_BIA ? 1 : 0);
 					if (!psc_ctlmsg_param_send(fd,
 					    mh, pcp, PCTHRNAME_EVERYONE,
 					    levels, 4, nbuf))
 						return (0);
 				}
+				field_found = 1;
 			}
 		}
 	}
+	if (!site_found)
+		return (psc_ctlsenderr(fd, mh, "invalid site: %s",
+		    p_site));
+	if (!res_found)
+		return (psc_ctlsenderr(fd, mh, "invalid resource: %s",
+		    p_res));
+	if (!field_found)
+		return (psc_ctlsenderr(fd, mh, "invalid field: %s",
+		    p_field));
 	return (1);
 }
 
