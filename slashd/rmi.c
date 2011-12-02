@@ -589,11 +589,14 @@ slm_rmi_handle_mkdir(struct pscrpc_request *rq)
 	if (mp->rc && mp->rc != -EEXIST)
 		return (0);
 	FCMH_LOCK(d);
-	mp->rc = -mds_fcmh_setattr(d,
+	/* XXX if mp-rc == -EEXIST, only update attrs if target isn't newer */
+	rc = -mds_fcmh_setattr(d,
 	    PSCFS_SETATTRF_UID | PSCFS_SETATTRF_GID |
 	    PSCFS_SETATTRF_ATIME | PSCFS_SETATTRF_MTIME |
 	    PSCFS_SETATTRF_CTIME, &sstb);
 	fcmh_op_done_type(d, FCMH_OPCNT_LOOKUP_FIDC);
+	if (rc)
+		mp->rc = rc;
 	return (0);
 }
 
