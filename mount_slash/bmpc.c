@@ -44,13 +44,17 @@ int
 bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *p)
 {
 	struct bmap_pagecache_entry *bmpce = p;
-
+	void *base;
+	
+	base = bmpce->bmpce_base;
+	memset(bmpce, 0, sizeof(*bmpce));
 	INIT_PSC_LISTENTRY(&bmpce->bmpce_lentry);
 	INIT_PSC_LISTENTRY(&bmpce->bmpce_ralentry);
 	INIT_SPINLOCK(&bmpce->bmpce_lock);
 	pll_init(&bmpce->bmpce_pndgaios, struct msl_fsrqinfo,
 	    mfsrq_lentry, &bmpce->bmpce_lock);
 	bmpce->bmpce_flags = BMPCE_NEW;
+	bmpce->bmpce_base = base;
 	if (!bmpce->bmpce_base)
 		bmpce->bmpce_base  = psc_alloc(BMPC_BUFSZ, PAF_PAGEALIGN);
 	return (0);
