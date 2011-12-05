@@ -485,7 +485,8 @@ reimport
 - check resid on connect so sliod backfs doesnt get corrupt
 - uptime instance nonce variable that allows msl to dump data if it
   changes while communicating with sliod
-- xopctl bugs
+- do a blocking operation in PING reply in sliod 
+- if MDS does not receive a PING from sliod, issue hldrop
 
 archiver
 - tool to recover softdel files
@@ -493,3 +494,4 @@ archiver
 - work out logistics for where MDS zsnap backups go
 - autostart sliods/msl on tahini with screens
 - monitor service for /arc hangs (blacklight, tahini)
+- /etc/rc startup scripts
