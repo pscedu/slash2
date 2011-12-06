@@ -52,5 +52,6 @@ char *slstrerror(int);
 #define SLERR_REIMPORT_OLD		(_SLERR_START + 26)
 #define SLERR_IMPORT_XREPL_DIFF		(_SLERR_START + 27)
 #define SLERR_BMAP_LEASEEXT_FAILED	(_SLERR_START + 28)
+#define SLERR_RES_BADTYPE		(_SLERR_START + 29)
 
 #endif /* _SLERR_H_ */

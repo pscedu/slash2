@@ -54,6 +54,7 @@ char *slash_errstrs[] = {
 /* 26 */ "Reimport failed because target is newer",
 /* 27 */ "Import additional replica registration failed because source and target differ",
 /* 28 */ "Bmap Lease extension failed",
+/* 29 */ "Resource is of wrong type",
 	NULL
 };
 
