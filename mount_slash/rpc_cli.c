@@ -140,7 +140,8 @@ slc_rmc_retry_pfcc(__unusedx struct pscfs_clientctx *pfcc, int *rc)
 	}
 
 	retry = global setting
-	retry = read_proc_env(ctx->pid, "");
+	if (pfcc)
+		    retry = read_proc_env(ctx->pid, "");
 	retry = hard timeout
 #endif
 	*rc = retry ? 0 : ENOTCONN;
