@@ -743,6 +743,9 @@ slconnthr_main(struct psc_thread *thr)
 
 		/* Now just PING for connection lifetime. */
 		for (;;) {
+			if (sct->sct_cb)
+				sct->sct_cb(sct->sct_cbarg);
+
 			csvc = sl_csvc_get(&resm->resm_csvc,
 			    sct->sct_flags, NULL, &resm->resm_nids,
 			    sct->sct_rqptl, sct->sct_rpptl,
@@ -760,11 +763,13 @@ slconnthr_main(struct psc_thread *thr)
 					goto online;
 				}
 				mtime = csvc->csvc_mtime;
+
 				/*
 				 * Allow manual activity to try to
 				 * reconnect while we wait.
 				 */
 				csvc->csvc_mtime = 0;
+
 				/*
 				 * Subtract the amount of time someone
 				 * manually retried (and failed) instead
@@ -818,7 +823,7 @@ void
 slconnthr_spawn(struct sl_resm *resm, uint32_t rqptl, uint32_t rpptl,
     uint64_t magic, uint32_t version, void *lockp, int flags,
     void *waitinfo, enum slconn_type peertype, int thrtype,
-    const char *thrnamepre)
+    const char *thrnamepre, void (*cb)(void *), void *cbarg)
 {
 	struct slconn_thread *sct;
 	struct psc_thread *thr;
@@ -836,6 +841,8 @@ slconnthr_spawn(struct sl_resm *resm, uint32_t rqptl, uint32_t rpptl,
 	sct->sct_flags = flags;
 	sct->sct_waitinfo = waitinfo;
 	sct->sct_peertype = peertype;
+	sct->sct_cb = cb;
+	sct->sct_cbarg = cbarg;
 	pscthr_setready(thr);
 }
 

@@ -58,6 +58,11 @@ sli_rmi_getcsvc(struct slashrpc_cservice **csvcp)
 	return (rc);
 }
 
+void
+slirmiconnthr_upcall(__unusedx void *arg)
+{
+}
+
 int
 sli_rmi_setmds(const char *name)
 {
@@ -81,7 +86,7 @@ sli_rmi_setmds(const char *name)
 	slconnthr_spawn(rmi_resm, SRMI_REQ_PORTAL, SRMI_REP_PORTAL,
 	    SRMI_MAGIC, SRMI_VERSION, &resm2rmii(rmi_resm)->rmii_lock, 0,
 	    &resm2rmii(rmi_resm)->rmii_waitq, SLCONNT_MDS, SLITHRT_CONN,
-	    "sli");
+	    "sli", slirmiconnthr_upcall, NULL);
 
 	return (0);
 }

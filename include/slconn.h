@@ -64,6 +64,8 @@ struct slconn_thread {
 	void			*sct_waitinfo;
 	enum slconn_type	 sct_peertype;
 	int			 sct_flags;
+	void			(*sct_cb)(void *);
+	void			*sct_cbarg;
 };
 
 struct slashrpc_cservice {
@@ -271,7 +273,7 @@ void	 sl_resm_hldrop(struct sl_resm *);
 
 void	 slconnthr_spawn(struct sl_resm *, uint32_t, uint32_t, uint64_t,
 		uint32_t, void *, int, void *, enum slconn_type, int,
-		const char *);
+		const char *, void (*)(void *), void *);
 
 int	 slrpc_handle_connect(struct pscrpc_request *, uint64_t, uint32_t, enum slconn_type);
 
