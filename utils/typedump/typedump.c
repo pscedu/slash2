@@ -162,6 +162,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct bmap_timeo_table);
 	PRTYPE(struct bmapc_memb);
 	PRTYPE(struct bmpc_ioreq);
+	PRTYPE(struct bmpc_write_coalescer);
 	PRTYPE(struct cli_finfo);
 	PRTYPE(struct dircache_desc);
 	PRTYPE(struct dircache_ents);
