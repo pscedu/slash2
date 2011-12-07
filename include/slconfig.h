@@ -78,6 +78,7 @@ struct sl_resource {
 	struct psc_dynarray	 res_members;
 	char			 res_fsroot[PATH_MAX];
 	char			 res_jrnldev[PATH_MAX];
+	char			 res_selftest[BUFSIZ];
 	struct sl_site		*res_site;
 };
 

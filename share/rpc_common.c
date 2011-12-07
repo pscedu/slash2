@@ -242,16 +242,16 @@ slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
 }
 
 int
-slrpc_issue_ping(struct slashrpc_cservice *csvc)
+slrpc_issue_ping(struct slashrpc_cservice *csvc, int rc)
 {
 	struct srm_ping_req *mq;
 	struct pscrpc_request *rq;
 	struct srm_ping_rep *mp;
-	int rc;
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_PING, rq, mq, mp);
 	if (rc)
 		return (rc);
+	mq->rc = rc;
 	mq->upnonce = sys_upnonce;
 	rq->rq_timeoutable = 1;
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
@@ -743,8 +743,9 @@ slconnthr_main(struct psc_thread *thr)
 
 		/* Now just PING for connection lifetime. */
 		for (;;) {
+			rc = 0;
 			if (sct->sct_cb)
-				sct->sct_cb(sct->sct_cbarg);
+				rc = sct->sct_cb(sct->sct_cbarg);
 
 			csvc = sl_csvc_get(&resm->resm_csvc,
 			    sct->sct_flags, NULL, &resm->resm_nids,
@@ -791,7 +792,7 @@ slconnthr_main(struct psc_thread *thr)
 
  online:
 			sl_csvc_unlock(csvc);
-			rc = slrpc_issue_ping(csvc);
+			rc = slrpc_issue_ping(csvc, rc);
 			/* XXX race */
 			if (rc) {
 				sl_csvc_lock(csvc);
@@ -823,7 +824,7 @@ void
 slconnthr_spawn(struct sl_resm *resm, uint32_t rqptl, uint32_t rpptl,
     uint64_t magic, uint32_t version, void *lockp, int flags,
     void *waitinfo, enum slconn_type peertype, int thrtype,
-    const char *thrnamepre, void (*cb)(void *), void *cbarg)
+    const char *thrnamepre, int (*cb)(void *), void *cbarg)
 {
 	struct slconn_thread *sct;
 	struct psc_thread *thr;

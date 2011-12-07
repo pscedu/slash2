@@ -58,9 +58,12 @@ sli_rmi_getcsvc(struct slashrpc_cservice **csvcp)
 	return (rc);
 }
 
-void
+int
 slirmiconnthr_upcall(__unusedx void *arg)
 {
+	if (nodeResm->resm_res->res_selftest[0] == '\0')
+		return (0);
+	return (WEXITSTATUS(system(nodeResm->resm_res->res_selftest)));
 }
 
 int

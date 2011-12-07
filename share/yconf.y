@@ -129,6 +129,7 @@ struct slconf_symbol sym_table[] = {
 	TABENT_RES("id",		SL_TYPE_INT,	RES_MAXID,	res_id,		NULL),
 	TABENT_RES("jrnldev",		SL_TYPE_STR,	PATH_MAX,	res_jrnldev,	NULL),
 	TABENT_RES("type",		SL_TYPE_INT,	0,		res_type,	slcfg_str2restype),
+	TABENT_RES("selftest",		SL_TYPE_STR,	BUFSIZ,		res_selftest,	NULL),
 	{ NULL, 0, 0, 0, 0, NULL }
 };
 
