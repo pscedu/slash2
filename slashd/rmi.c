@@ -608,9 +608,18 @@ slm_rmi_handle_ping(struct pscrpc_request *rq)
 	m = libsl_try_nid2resm(rq->rq_peer.nid);
 	if (m == NULL)
 		mp->rc = -SLERR_ION_UNKNOWN;
-	else if (clock_gettime(CLOCK_MONOTONIC,
-	    &res2iosinfo(m->resm_res)->si_lastcomm) == -1)
-		psc_fatal("clock_gettime");
+	else {
+		if (clock_gettime(CLOCK_MONOTONIC,
+		    &res2iosinfo(m->resm_res)->si_lastcomm) == -1)
+			psc_fatal("clock_gettime");
+		if (mq->rc) {
+			psclog_warnx("self-test from %s failed, "
+			    "disabling write lease assignment",
+			    m->resm_name);
+			res2iosinfo(m->resm_res)->si_flags |=
+			    SIF_DISABLE_BIA;
+		}
+	}
 	return (0);
 }
 
