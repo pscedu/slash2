@@ -86,7 +86,8 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 		slctl_fillconn(scc, resm->resm_csvc);
 		strlcpy(scc->scc_addrbuf, resm->resm_res->res_name,
 		    sizeof(scc->scc_addrbuf));
-		scc->scc_type = r->res_type;
+		scc->scc_stkvers = resm->resm_stkvers;
+		scc->scc_type = resm->resm_type;
 
 		rc = psc_ctlmsg_sendv(fd, mh, scc);
 		if (!rc)
@@ -109,6 +110,7 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 		else
 			strlcpy(scc->scc_addrbuf, "?",
 			    sizeof(scc->scc_addrbuf));
+//		scc->scc_stkvers = m->resm_stkvers;
 		scc->scc_type = SLCTL_REST_CLI;
 
 		rc = psc_ctlmsg_sendv(fd, mh, scc);

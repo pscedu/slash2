@@ -160,18 +160,6 @@ sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
 }
 
 int
-sli_rim_handle_connect(struct pscrpc_request *rq)
-{
-	const struct srm_connect_req *mq;
-	struct srm_connect_rep *mp;
-
-	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mq->magic != SRIM_MAGIC || mq->version != SRIM_VERSION)
-		mp->rc = -EINVAL;
-	return (0);
-}
-
-int
 sli_rim_handler(struct pscrpc_request *rq)
 {
 	int rc;
@@ -192,7 +180,8 @@ sli_rim_handler(struct pscrpc_request *rq)
 		rc = sli_rim_handle_reclaim(rq);
 		break;
 	case SRMT_CONNECT:
-		rc = sli_rim_handle_connect(rq);
+		rc = slrpc_handle_connect(rq, SRIM_MAGIC, SRIM_VERSION,
+		    SLCONNT_MDS);
 		break;
 	default:
 		psclog_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);

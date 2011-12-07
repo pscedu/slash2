@@ -31,6 +31,7 @@
 #include "psc_util/ctlsvr.h"
 #include "psc_util/log.h"
 #include "psc_util/odtable.h"
+#include "psc_util/random.h"
 #include "psc_util/thread.h"
 #include "psc_util/usklndthr.h"
 
@@ -66,6 +67,7 @@ struct psc_poolmaster	 upsched_poolmaster;
 struct slash_creds	 rootcreds = { 0, 0 };
 struct pscfs		 pscfs;
 uint64_t		 slm_fsuuid;
+uint32_t		 sys_upnonce;
 
 int
 psc_usklndthr_get_type(const char *namefmt)
@@ -210,6 +212,8 @@ main(int argc, char *argv[])
 
 	pscthr_init(SLMTHRT_CTL, 0, NULL, NULL,
 	    sizeof(struct psc_ctlthr), "slmctlthr");
+
+	sys_upnonce = psc_random32();
 
 	slcfg_parse(cfn);
 

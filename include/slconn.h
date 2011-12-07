@@ -273,6 +273,8 @@ void	 slconnthr_spawn(struct sl_resm *, uint32_t, uint32_t, uint64_t,
 		uint32_t, void *, int, void *, enum slconn_type, int,
 		const char *);
 
+int	 slrpc_handle_connect(struct pscrpc_request *, uint64_t, uint32_t, enum slconn_type);
+
 int	 slrpc_newgenreq(struct slashrpc_cservice *, int,
 		struct pscrpc_request **, int, int, void *);
 int	 slrpc_newreq(struct slashrpc_cservice *, int,
@@ -293,5 +295,6 @@ extern struct psc_dynarray	 lnet_prids;
 extern struct psc_lockedlist	 client_csvcs;
 extern struct sl_expcli_ops	 sl_expcli_ops;
 extern struct pscrpc_nbreqset	*sl_nbrqset;
+extern uint32_t			 sys_upnonce;
 
 #endif /* _SLCONN_H_ */

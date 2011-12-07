@@ -82,7 +82,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		car = lc_gettimed(lc, &now);
 		if (car == NULL) {
 			if (tries++ < CAR_LOOKUP_MAX)
-				goto retry;			
+				goto retry;
 			else {
 				mp->rc = EINVAL;
 				goto error;
@@ -96,7 +96,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 
 			} else {
 				mp->rc = EINVAL;
-				goto error;			
+				goto error;
 			}
 		} else
 			psc_assert(mq->id == car->car_id);
@@ -133,8 +133,8 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 			e = bmpces[i];
 			if (!e)
 				break;
-			
-			iovs = PSC_REALLOC(iovs, 
+
+			iovs = PSC_REALLOC(iovs,
 				   sizeof(struct iovec) * (i + 1));
 
 			iovs[i].iov_base = e->bmpce_base;
@@ -157,7 +157,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		if (mq->op == SRMIOP_RD) {
 			iov.iov_base = car->car_argv.pointer_arg[MSL_CBARG_BUF];
 			iov.iov_len = car->car_len;
-			
+
 			mq->rc = rsx_bulkserver(rq, BULK_GET_SINK,
 						SRCI_BULK_PORTAL, &iov, 1);
 		} else {
@@ -180,22 +180,6 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 }
 
 /**
- * slc_rci_handle_connect - Handle a CONNECT request for CLI from ION.
- * @rq: request.
- */
-int
-slc_rci_handle_connect(struct pscrpc_request *rq)
-{
-	struct srm_connect_req *mq;
-	struct srm_connect_rep *mp;
-
-	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mq->magic != SRCI_MAGIC || mq->version != SRCI_VERSION)
-		mp->rc = -EINVAL;
-	return (0);
-}
-
-/**
  * slc_rci_handler - Handle a request for CLI from ION.
  * @rq: request.
  */
@@ -211,7 +195,8 @@ slc_rci_handler(struct pscrpc_request *rq)
 
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_CONNECT:
-		rc = slc_rci_handle_connect(rq);
+		rc = slrpc_handle_connect(rq, SRCI_MAGIC, SRCI_VERSION,
+		    SLCONNT_IOD);
 		break;
 	case SRMT_READ:
 	case SRMT_WRITE:

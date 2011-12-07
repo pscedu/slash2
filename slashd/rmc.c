@@ -115,21 +115,6 @@ slm_get_next_slashfid(slfid_t *fidp)
 }
 
 int
-slm_rmc_handle_connect(struct pscrpc_request *rq)
-{
-	struct pscrpc_export *e = rq->rq_export;
-	const struct srm_connect_req *mq;
-	struct srm_connect_rep *mp;
-
-	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mq->magic != SRMC_MAGIC || mq->version != SRMC_VERSION)
-		mp->rc = EINVAL;
-	//psc_assert(e->exp_private == NULL);
-	sl_exp_getpri_cli(e);
-	return (0);
-}
-
-int
 slm_rmc_handle_ping(struct pscrpc_request *rq)
 {
 	const struct srm_ping_req *mq;
@@ -1140,7 +1125,8 @@ slm_rmc_handler(struct pscrpc_request *rq)
 
 	/* control messages */
 	case SRMT_CONNECT:
-		rc = slm_rmc_handle_connect(rq);
+		rc = slrpc_handle_connect(rq, SRMC_MAGIC, SRMC_VERSION,
+		    SLCONNT_CLI);
 		break;
 	case SRMT_PING:
 		rc = slm_rmc_handle_ping(rq);

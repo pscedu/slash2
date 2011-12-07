@@ -42,28 +42,6 @@
 #include "slvr.h"
 
 __static int
-sli_ric_handle_connect(struct pscrpc_request *rq)
-{
-	struct pscrpc_export *e = rq->rq_export;
-	struct srm_connect_req *mq;
-	struct srm_connect_rep *mp;
-
-	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mq->magic != SRIC_MAGIC || mq->version != SRIC_VERSION)
-		mp->rc = -EINVAL;
-
-	if (e->exp_private)
-		/* No additional state is maintained in the export
-		 *   so this is not a fatal condition but should
-		 *   be noted.
-		 */
-		psclog_warnx("duplicate connect msg detected");
-
-	sl_exp_getpri_cli(e);
-	return (0);
-}
-
-__static int
 sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 {
 	uint32_t tsize, sblk, roff[RIC_MAX_SLVRS_PER_IO],
@@ -421,7 +399,8 @@ sli_ric_handler(struct pscrpc_request *rq)
 
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_CONNECT:
-		rc = sli_ric_handle_connect(rq);
+		rc = slrpc_handle_connect(rq, SRIC_MAGIC, SRIC_VERSION,
+		    SLCONNT_CLI);
 		break;
 	case SRMT_READ:
 		rc = sli_ric_handle_read(rq);

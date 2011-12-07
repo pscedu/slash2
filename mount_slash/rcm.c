@@ -304,22 +304,6 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 }
 
 /**
- * msrcm_handle_connect - Handle a CONNECT request for CLI from MDS.
- * @rq: request.
- */
-int
-msrcm_handle_connect(struct pscrpc_request *rq)
-{
-	struct srm_connect_req *mq;
-	struct srm_connect_rep *mp;
-
-	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mq->magic != SRCM_MAGIC || mq->version != SRCM_VERSION)
-		mp->rc = -EINVAL;
-	return (0);
-}
-
-/**
  * slc_rcm_handler - Handle a request for CLI from MDS.
  * @rq: request.
  */
@@ -335,7 +319,8 @@ slc_rcm_handler(struct pscrpc_request *rq)
 
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_CONNECT:
-		rc = msrcm_handle_connect(rq);
+		rc = slrpc_handle_connect(rq, SRCM_MAGIC, SRCM_VERSION,
+		    SLCONNT_MDS);
 		break;
 
 	case SRMT_REPL_GETST:

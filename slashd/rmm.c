@@ -82,21 +82,6 @@ slm_rmm_apply_update(struct srt_update_entry *entryp)
 }
 
 /**
- * slm_rmm_handle_connect - Handle a CONNECT request from another MDS.
- */
-int
-slm_rmm_handle_connect(struct pscrpc_request *rq)
-{
-	struct srm_connect_req *mq;
-	struct srm_connect_rep *mp;
-
-	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mq->magic != SRMM_MAGIC || mq->version != SRMM_VERSION)
-		mp->rc = EINVAL;
-	return (0);
-}
-
-/**
  * slm_rmm_handle_namespace_update - Handle a NAMESPACE_UPDATE request
  *	from another MDS.
  */
@@ -287,7 +272,8 @@ slm_rmm_handler(struct pscrpc_request *rq)
 
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_CONNECT:
-		rc = slm_rmm_handle_connect(rq);
+		rc = slrpc_handle_connect(rq, SRMM_MAGIC, SRMM_VERSION,
+		    SLCONNT_MDS);
 		break;
 	case SRMT_NAMESPACE_UPDATE:
 		rc = slm_rmm_handle_namespace_update(rq);

@@ -34,8 +34,6 @@
 #include "slconfig.h"
 #include "slconn.h"
 
-const char		 sl_version[] = "$Rev$";
-
 struct pscrpc_nbreqset	*sl_nbrqset;
 
 struct psc_lockedlist	 client_csvcs = PLL_INIT(&client_csvcs,
@@ -220,7 +218,7 @@ slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
 	rq->rq_timeoutable = 1;
 	mq->magic = csvc->csvc_magic;
 	mq->version = csvc->csvc_version;
-	mq->stkvers = strtol(sl_version + 6, NULL, 10);
+	mq->stkvers = SL_STK_VERSION;
 
 	if (flags & CSVCF_NONBLOCK) {
 		if (flags & CSVCF_USE_MULTIWAIT) {
@@ -246,7 +244,7 @@ slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
 int
 slrpc_issue_ping(struct slashrpc_cservice *csvc)
 {
-	const struct srm_ping_req *mq;
+	struct srm_ping_req *mq;
 	struct pscrpc_request *rq;
 	struct srm_ping_rep *mp;
 	int rc;
@@ -254,10 +252,59 @@ slrpc_issue_ping(struct slashrpc_cservice *csvc)
 	rc = SL_RSX_NEWREQ(csvc, SRMT_PING, rq, mq, mp);
 	if (rc)
 		return (rc);
+	mq->upnonce = sys_upnonce;
 	rq->rq_timeoutable = 1;
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	pscrpc_req_finished(rq);
 	return (rc);
+}
+
+int
+slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
+    uint32_t version, enum slconn_type peertype)
+{
+	struct pscrpc_export *e = rq->rq_export;
+	const struct srm_connect_req *mq;
+	struct srm_connect_rep *mp;
+	struct sl_resm *m;
+	uint32_t *stkvers;
+
+	SL_RSX_ALLOCREP(rq, mq, mp);
+	if (mq->magic != magic || mq->version != version)
+		mp->rc = -EINVAL;
+	switch (peertype) {
+	case SLCONNT_CLI:
+		if (e->exp_private)
+			/*
+			 * No additional state is maintained in the export
+			 *   so this is not a fatal condition but should
+			 *   be noted.
+			 */
+			psclog_warnx("duplicate connect msg detected");
+		stkvers = sl_exp_getpri_cli(e);
+		*stkvers = mq->stkvers;
+		break;
+	case SLCONNT_IOD:
+		m = libsl_try_nid2resm(rq->rq_peer.nid);
+		if (m == NULL)
+			mp->rc = -SLERR_ION_UNKNOWN;
+		if (!RES_ISFS(m->resm_res))
+			mp->rc = -SLERR_RES_BADTYPE;
+		m->resm_stkvers = mq->stkvers;
+		break;
+	case SLCONNT_MDS:
+		m = libsl_try_nid2resm(rq->rq_peer.nid);
+		if (m == NULL)
+			mp->rc = -SLERR_ION_UNKNOWN;
+		if (!RES_ISFS(m->resm_res))
+			mp->rc = -SLERR_RES_BADTYPE;
+		m->resm_stkvers = mq->stkvers;
+		break;
+	default:
+		psc_fatal("choke");
+	}
+	mp->stkvers = SL_STK_VERSION;
+	return (0);
 }
 
 void

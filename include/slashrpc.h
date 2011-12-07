@@ -568,9 +568,12 @@ struct srm_connect_rep {
 } __packed;
 
 struct srm_ping_req {
+	uint64_t		upnonce;	/* system uptime nonce to detect reboots */
+	 int32_t		rc;
+	 int32_t		_pad;
 } __packed;
 
-#define srm_ping_rep		srm_generic_rep
+#define srm_ping_rep		srm_ping_req
 
 /* ----------------------- BEGIN REPLICATION MESSAGES ----------------------- */
 

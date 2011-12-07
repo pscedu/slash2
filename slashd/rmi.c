@@ -375,23 +375,6 @@ slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 	return (0);
 }
 
-/**
- * slm_rmi_handle_connect - Handle a CONNECT request from ION.
- * @rq: request.
- */
-int
-slm_rmi_handle_connect(struct pscrpc_request *rq)
-{
-	const struct srm_connect_req *mq;
-	struct srm_connect_rep *mp;
-
-	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mq->magic != SRMI_MAGIC || mq->version != SRMI_VERSION)
-		mp->rc = EINVAL;
-	/* XXX check src address to find slcfg validity */
-	return (0);
-}
-
 int
 slm_rmi_handle_bmap_getminseq(struct pscrpc_request *rq)
 {
@@ -619,8 +602,15 @@ slm_rmi_handle_ping(struct pscrpc_request *rq)
 {
 	const struct srm_ping_req *mq;
 	struct srm_ping_rep *mp;
+	struct sl_resm *m;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
+	m = libsl_try_nid2resm(rq->rq_peer.nid);
+	if (m == NULL)
+		mp->rc = -SLERR_ION_UNKNOWN;
+	else if (clock_gettime(CLOCK_MONOTONIC,
+	    &res2iosinfo(m->resm_res)->si_lastcomm) == -1)
+		psc_fatal("clock_gettime");
 	return (0);
 }
 
@@ -661,7 +651,8 @@ slm_rmi_handler(struct pscrpc_request *rq)
 
 	/* control messages */
 	case SRMT_CONNECT:
-		rc = slm_rmi_handle_connect(rq);
+		rc = slrpc_handle_connect(rq, SRMI_MAGIC, SRMI_VERSION,
+		    SLCONNT_IOD);
 		break;
 	case SRMT_PING:
 		rc = slm_rmi_handle_ping(rq);

@@ -388,18 +388,6 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	return (rc);
 }
 
-__static int
-sli_rii_handle_connect(struct pscrpc_request *rq)
-{
-	struct srm_connect_req *mq;
-	struct srm_connect_rep *mp;
-
-	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mq->magic != SRII_MAGIC || mq->version != SRII_VERSION)
-		mp->rc = -EINVAL;
-	return (0);
-}
-
 int
 sli_rii_handler(struct pscrpc_request *rq)
 {
@@ -412,7 +400,8 @@ sli_rii_handler(struct pscrpc_request *rq)
 
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_CONNECT:
-		rc = sli_rii_handle_connect(rq);
+		rc = slrpc_handle_connect(rq, SRII_MAGIC, SRII_VERSION,
+		    SLCONNT_IOD);
 		break;
 	case SRMT_REPL_READ:
 		rc = sli_rii_handle_replread(rq, 0);

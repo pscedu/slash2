@@ -90,6 +90,7 @@ resprof_get_pri(struct sl_resource *res)
 	return (res + 1);
 }
 
+/* Resource members can have multiple network interfaces. */
 struct sl_resm_nid {
 	char			 resmnid_addrbuf[RESM_ADDRBUF_SZ];
 	lnet_nid_t		 resmnid_nid;
@@ -97,10 +98,11 @@ struct sl_resm_nid {
 
 /* Resource member (a machine in an I/O system) */
 struct sl_resm {
-	struct psc_dynarray	 resm_nids;
+	struct psc_dynarray	 resm_nids;	/* network interfaces */
 	struct sl_resource	*resm_res;
-	struct psc_hashent	 resm_hentry;
-	struct slashrpc_cservice*resm_csvc;
+	struct slashrpc_cservice*resm_csvc;	/* client RPC service */
+	uint32_t		 resm_stkvers;	/* peer SLASH2 stack version */
+	uint32_t		 resm_upnonce;	/* tracked peer's system uptime nonce */
 #define resm_site		 resm_res->res_site
 #define resm_siteid		 resm_site->site_id
 #define resm_type		 resm_res->res_type

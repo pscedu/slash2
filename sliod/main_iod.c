@@ -32,6 +32,7 @@
 #include "psc_ds/listcache.h"
 #include "psc_util/alloc.h"
 #include "psc_util/ctlsvr.h"
+#include "psc_util/random.h"
 #include "psc_util/thread.h"
 #include "psc_util/timerthr.h"
 #include "psc_util/usklndthr.h"
@@ -57,6 +58,7 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 struct srt_statfs	 sli_ssfb;
 psc_spinlock_t		 sli_ssfb_lock = SPINLOCK_INIT;
 
+uint32_t		 sys_upnonce;
 int			 allow_root_uid = 1;
 const char		*progname;
 
@@ -162,6 +164,8 @@ main(int argc, char *argv[])
 
 	pscthr_init(SLITHRT_CTL, 0, NULL, NULL,
 	    sizeof(struct psc_ctlthr), "slictlthr");
+
+	sys_upnonce = psc_random32();
 
 	slcfg_parse(cfn);
 	authbuf_checkkeyfile();

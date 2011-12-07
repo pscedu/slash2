@@ -53,6 +53,7 @@
 #include "psc_util/eqpollthr.h"
 #include "psc_util/iostats.h"
 #include "psc_util/log.h"
+#include "psc_util/random.h"
 #include "psc_util/thread.h"
 #include "psc_util/usklndthr.h"
 
@@ -110,6 +111,8 @@ struct psc_poolmgr		*slc_async_req_pool;
 
 struct psc_poolmaster		 slc_biorq_poolmaster;
 struct psc_poolmgr		*slc_biorq_pool;
+
+uint32_t			 sys_upnonce;
 
 __inline int
 fcmh_checkcreds(struct fidc_membh *f, const struct slash_creds *crp,
@@ -2498,6 +2501,8 @@ main(int argc, char *argv[])
 		usage();
 
 	pscthr_init(MSTHRT_FSMGR, 0, NULL, NULL, 0, "msfsmgrthr");
+
+	sys_upnonce = psc_random32();
 
 	noncanon_mp = argv[0];
 	if (unmount_first)
