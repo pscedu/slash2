@@ -245,10 +245,11 @@ struct bmpc_ioreq {
 	uint32_t			 biorq_flags;	/* state and op type bits	*/
 	psc_spinlock_t			 biorq_lock;
 	struct timespec			 biorq_issue;	/* time to initiate I/O		*/
-	struct timespec			 biorq_resched;	/* reschedule timer		*/
+	struct timespec			 biorq_expire;
 	struct psc_dynarray		 biorq_pages;	/* array of bmpce		*/
 	struct psclist_head		 biorq_lentry;	/* chain on bmpc_pndg_biorqs	*/
 	struct psclist_head		 biorq_mfh_lentry; /* chain on file handle	*/
+	struct psclist_head              biorq_bwc_lentry;
 	struct bmapc_memb		*biorq_bmap;	/* backpointer to our bmap	*/
 	struct pscrpc_request_set	*biorq_rqset;
 	struct psc_waitq		 biorq_waitq;
@@ -287,7 +288,7 @@ struct bmpc_ioreq {
 	    "biorq@%p fl=%#x:%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "	\
 	    "o=%u l=%u "						\
 	    "np=%d b=%p "						\
-	    "ts="PSCPRI_TIMESPEC" : "fmt,				\
+	    "ex="PSCPRI_TIMESPEC" : "fmt,				\
 	    (b), (b)->biorq_flags,					\
 	    (b)->biorq_flags & BIORQ_READ		? "r" : "",	\
 	    (b)->biorq_flags & BIORQ_WRITE		? "w" : "",	\
@@ -309,7 +310,7 @@ struct bmpc_ioreq {
 	    (b)->biorq_flags & BIORQ_EXPIREDLEASE	? "X" : "",	\
 	    (b)->biorq_off, (b)->biorq_len,				\
 	    psc_dynarray_len(&(b)->biorq_pages), (b)->biorq_bmap,	\
-	    PSCPRI_TIMESPEC_ARGS(&(b)->biorq_issue), ## __VA_ARGS__)
+	    PSCPRI_TIMESPEC_ARGS(&(b)->biorq_expire), ## __VA_ARGS__)
 
 #define biorq_wait_locked(r, cond)					\
 	do {								\
@@ -327,6 +328,15 @@ int	msl_fd_offline_retry(struct msl_fhent *);
 
 #define msl_offline_retry(r)		_msl_offline_retry((r), 0)
 #define msl_offline_retry_ignexpire(r)	_msl_offline_retry((r), 1)
+
+struct bmpc_write_coalescer {
+	struct psc_lockedlist bwc_pll;
+	size_t                bwc_size;
+	off_t                 bwc_soff;
+	struct iovec         *bwc_iovs;	
+	int                   bwc_niovs;
+	struct psclist_head   bwc_lentry;
+};
 
 static __inline void
 bmpce_freeprep(struct bmap_pagecache_entry *bmpce)
@@ -419,8 +429,10 @@ struct bmap_pagecache_entry *
 	  uint32_t, struct psc_waitq *);
 void  bmpce_handle_lru_locked(struct bmap_pagecache_entry *,
 	    struct bmap_pagecache *, int, int);
+void  bwc_release(struct bmpc_write_coalescer *);
 
 extern struct psc_poolmgr	*bmpcePoolMgr;
+extern struct psc_poolmgr	*bwcPoolMgr;
 extern struct psc_listcache	 bmpcLru;
 
 static __inline void
@@ -463,11 +475,12 @@ bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len,
 	psc_waitq_init(&ioreq->biorq_waitq);
 	INIT_PSC_LISTENTRY(&ioreq->biorq_lentry);
 	INIT_PSC_LISTENTRY(&ioreq->biorq_mfh_lentry);
+	INIT_PSC_LISTENTRY(&ioreq->biorq_bwc_lentry);
 	INIT_SPINLOCK(&ioreq->biorq_lock);
 
 	PFL_GETTIMESPEC(&ioreq->biorq_issue);
 	timespecadd(&ioreq->biorq_issue, &bmapFlushDefMaxAge,
-	    &ioreq->biorq_issue);
+	    &ioreq->biorq_expire);
 
 	ioreq->biorq_off  = off;
 	ioreq->biorq_len  = len;

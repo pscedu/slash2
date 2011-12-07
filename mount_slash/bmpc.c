@@ -32,10 +32,37 @@
 
 struct psc_poolmaster	 bmpcePoolMaster;
 struct psc_poolmgr	*bmpcePoolMgr;
+struct psc_poolmaster    bwcPoolMaster;
+struct psc_poolmgr      *bwcPoolMgr;
+
 struct psc_listcache	 bmpcLru;
 
 __static SPLAY_GENERATE(bmap_pagecachetree, bmap_pagecache_entry,
 			bmpce_tentry, bmpce_cmp);
+
+/* bwc_init - Initialize write coalescer pool entry.
+ */
+int
+bwc_init(__unusedx struct psc_poolmgr *poolmgr, void *p)
+{
+	struct bmpc_write_coalescer *bwc = p;
+
+	memset(bwc, 0, sizeof(*bwc));
+	INIT_PSC_LISTENTRY(&bwc->bwc_lentry);
+	pll_init(&bwc->bwc_pll, struct bmpc_ioreq,
+		 biorq_bwc_lentry, NULL);
+
+	return (0);
+}
+
+void
+bwc_release(struct bmpc_write_coalescer *bwc)
+{
+	psc_assert(pll_empty(&bwc->bwc_pll));
+	PSCFREE(bwc->bwc_iovs);
+	bwc_init(bwcPoolMgr, bwc);
+	psc_pool_return(bwcPoolMgr, bwc);
+}
 
 /**
  * bmpce_init - Initialize a bmap page cache entry.
@@ -436,6 +463,12 @@ bmpc_global_init(void)
 	    512, 16384, bmpce_init, bmpce_destroy, bmpce_reap, "bmpce");
 
 	bmpcePoolMgr = psc_poolmaster_getmgr(&bmpcePoolMaster);
+
+	psc_poolmaster_init(&bwcPoolMaster,
+	    struct bmpc_write_coalescer, bwc_lentry, PPMF_AUTO, 64,
+	    64, 0, bwc_init, NULL, NULL, "bwc");
+
+	bwcPoolMgr = psc_poolmaster_getmgr(&bwcPoolMaster);
 
 	lc_reginit(&bmpcLru, struct bmap_pagecache, bmpc_lentry,
 	    "bmpclru");

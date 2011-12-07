@@ -1069,69 +1069,35 @@ msl_readahead_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	return (msl_readahead_cb(rq, rc, args));
 }
 
-__static void
-msl_write_cb_gen_handler(struct psc_dynarray *biorqs, int rc)
+int
+msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
-	struct bmpc_ioreq *r, *tmp;
-	struct bmapc_memb *b;
-	int i, expired_lease = 0;
+	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
+	struct bmpc_write_coalescer *bwc = args->pointer_arg[MSL_CBARG_BIORQS];
+	struct bmpc_ioreq *r;
+	int rc = 0, expired_lease = 0;
 
-	r = psc_dynarray_getpos(biorqs, 0);
-	b = r->biorq_bmap;
-	BMAP_LOCK(b);
+	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
+
+	DEBUG_REQ(rc ? PLL_ERROR : PLL_INFO, rq, "cb");
+
+	r = pll_peekhead(&bwc->bwc_pll);
+	BMAP_LOCK(r->biorq_bmap);
 	if (r->biorq_bmap->bcm_flags & BMAP_CLI_LEASEEXPIRED) {
 		expired_lease = 1;
-		DYNARRAY_FOREACH(tmp, i, biorqs) {
+		PLL_FOREACH(r, &bwc->bwc_pll) {
 			BIORQ_LOCK(r);
 			psc_assert(r->biorq_flags & BIORQ_EXPIREDLEASE);
 			BIORQ_ULOCK(r);
 		}
 	}
-	BMAP_ULOCK(b);
+	BMAP_ULOCK(r->biorq_bmap);
 
-	if (rc && !expired_lease) {
-		/* Try to reschedule these write RPC's.  The bmap flush
-		 *   layer will handle lease renewal (and it's possible
-		 *   failure).
-		 */
-		DYNARRAY_FOREACH(r, i, biorqs)
-			bmap_flush_resched(r);
+	while ((r = pll_get(&bwc->bwc_pll))) 
+		(rc && !expired_lease) ? bmap_flush_resched(r) : 
+			msl_biorq_destroy(r);
 
-		return;
-	}
-
-	DYNARRAY_FOREACH(r, i, biorqs)
-		msl_biorq_destroy(r);
-
-	psc_dynarray_free(biorqs);
-	PSCFREE(biorqs);
-}
-
-int
-msl_write_rpcset_cb(__unusedx struct pscrpc_request_set *set, void *arg,
-    int rc)
-{
-	//struct psc_dynarray *biorqs = arg;
-
-	psclog_info("set=%p rc=%d", set, rc);
-	msl_write_cb_gen_handler((struct psc_dynarray *)arg, rc);
-
-	return (rc);
-}
-
-int
-msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
-{
-	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
-	//struct psc_dynarray *biorqs = args->pointer_arg[MSL_CBARG_BIORQS];
-	int rc = 0;
-
-	DEBUG_REQ(PLL_INFO, rq, "cb");
-
-	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
-
-	msl_write_cb_gen_handler((struct psc_dynarray *)
-		 args->pointer_arg[MSL_CBARG_BIORQS], rc);
+	bwc_release(bwc);		
 	return (0);
 }
 
@@ -1349,7 +1315,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 			lc_addtail(&bmapFlushQ, b);
 		}
 	}
-	bmap_flushq_wake(BMAPFLSH_TIMEOA, &r->biorq_issue);
+	bmap_flushq_wake(BMAPFLSH_TIMEOA, &r->biorq_expire);
 
 	DEBUG_BMAP(PLL_INFO, b, "biorq=%p list_empty(%d)",
 		   r, pll_empty(&bmpc->bmpc_pndg_biorqs));
