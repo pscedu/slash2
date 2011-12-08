@@ -267,7 +267,10 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 	const struct srm_connect_req *mq;
 	struct srm_connect_rep *mp;
 	struct sl_resm *m;
-	uint32_t *stkvers;
+	struct {
+		struct slashrpc_cservice *csvc;
+		uint32_t stkvers;
+	} *expc;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != magic || mq->version != version)
@@ -281,8 +284,8 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 			 *   be noted.
 			 */
 			psclog_warnx("duplicate connect msg detected");
-		stkvers = sl_exp_getpri_cli(e);
-		*stkvers = mq->stkvers;
+		expc = sl_exp_getpri_cli(e);
+		expc->stkvers = mq->stkvers;
 		break;
 	case SLCONNT_IOD:
 		m = libsl_try_nid2resm(rq->rq_peer.nid);

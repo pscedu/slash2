@@ -75,8 +75,8 @@ struct slm_cli_csvc_cpart {
 };
 
 struct slm_exp_cli {
-	uint32_t			 mexpc_stkvers;		/* must be first field */
-	struct slashrpc_cservice	*mexpc_csvc;
+	struct slashrpc_cservice	*mexpc_csvc;		/* must be first field */
+	uint32_t			 mexpc_stkvers;		/* must be second field */
 	struct slm_cli_csvc_cpart	*mexpc_cccp;
 };
 

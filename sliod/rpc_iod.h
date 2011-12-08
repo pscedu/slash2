@@ -53,8 +53,8 @@ struct sli_cli_csvc_cpart {
 };
 
 struct sli_exp_cli {
-	uint32_t			 iexpc_stkvers;		/* must be first field */
-	struct slashrpc_cservice	*iexpc_csvc;
+	struct slashrpc_cservice	*iexpc_csvc;		/* must be first field */
+	uint32_t			 iexpc_stkvers;		/* must be second field */
 	struct sli_cli_csvc_cpart	*iexpc_cccp;
 };
 
