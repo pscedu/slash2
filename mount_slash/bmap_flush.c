@@ -111,47 +111,6 @@ _msl_offline_retry(struct bmpc_ioreq *r, int ignore_expire)
 	return (msl_fd_offline_retry(r->biorq_fhent));
 }
 
-/**
- * bmap_flush_coalesce_size - This function determines the size of the
- *	region covered by an array of requests.  Note that these
- *	requests can overlap in various ways.  But they have already
- *	been ordered based on their offsets.
- */
-__static size_t
-bmap_flush_coalesce_size(struct bmpc_write_coalescer *bwc)
-{
-	struct bmpc_ioreq *r, *e = NULL;
-	size_t size;
-	off_t off = 0;
-
-	PLL_FOREACH(r, &bwc->bwc_pll) {
-		if (!e) {
-			e = r;
-			off = e->biorq_off;
-			continue;
-		}
-		/* Biorq offsets may not decrease.
-		 */
-		psc_assert(r->biorq_off >= off);
-		/* Holes are not allowed.
-		 */
-		psc_assert(r->biorq_off <= biorq_voff_get(e));
-		
-		if (biorq_voff_get(r) > biorq_voff_get(e))
-			e = r;
-
-		off = r->biorq_off;
-	}
-	r = pll_peekhead(&bwc->bwc_pll);
-	size = (e->biorq_off - r->biorq_off) + e->biorq_len;
-	
-	DEBUG_BIORQ(PLL_INFO, r, "coalescer size=%zu", size);
-
-	psc_assert(size == bwc->bwc_size);
-	
-	return (size);
-}
-
 void
 _bmap_flushq_wake(const struct pfl_callerinfo *pci, int mode,
 	 struct timespec *t)
@@ -489,6 +448,78 @@ bmap_flush_biorq_cmp(const void *x, const void *y)
 }
 
 /**
+ * bmap_flush_coalesce_size - This function determines the size of the
+ *	region covered by an array of requests.  Note that these
+ *	requests can overlap in various ways.  But they have already
+ *	been ordered based on their offsets.
+ */
+__static void
+bmap_flush_coalesce_prep(struct bmpc_write_coalescer *bwc)
+{
+	struct bmpc_ioreq *r, *e = NULL;
+	struct bmap_pagecache_entry *bmpce;
+	off_t off, loff;
+	int i;
+	uint32_t reqsz, tlen;
+
+	psc_assert(!bwc->bwc_nbmpces);
+
+	PLL_FOREACH(r, &bwc->bwc_pll) {
+		if (!e)
+			e = r;
+		else {
+			/* Biorq offsets may not decrease and holes are not allowed.
+			 */
+			psc_assert(r->biorq_off >= loff);
+			psc_assert(r->biorq_off <= biorq_voff_get(e));
+			if (biorq_voff_get(r) > biorq_voff_get(e))
+				e = r;
+			
+		}		
+
+		loff = off = r->biorq_off;
+		reqsz = r->biorq_len;
+
+		DYNARRAY_FOREACH(bmpce, i, &r->biorq_pages) {
+			DEBUG_BMPCE(PLL_INFO, bmpce, 
+			    "adding if DNE nbmpces=%d (i=%d) (off=%zu)", 
+			    bwc->bwc_nbmpces, i, off);
+
+			bmpce_usecheck(bmpce, BIORQ_WRITE, !i ? 
+			       (r->biorq_off & ~BMPC_BUFMASK) : off);
+			
+			tlen = MIN(reqsz, !i ? BMPC_BUFSZ - 
+				    (off - bmpce->bmpce_off) : BMPC_BUFSZ);
+
+			off += tlen; 
+			reqsz -= tlen;
+			
+			if (!bwc->bwc_nbmpces) {
+				bwc->bwc_bmpces[bwc->bwc_nbmpces++] = bmpce;
+				DEBUG_BMPCE(PLL_INFO, bmpce, "added");
+			} else {
+				if (bwc->bwc_bmpces[bwc->bwc_nbmpces-1]->bmpce_off 
+				    >= bmpce->bmpce_off)
+					continue;
+				else {
+					psc_assert((bmpce->bmpce_off - 
+					    BMPC_BUFSZ) == bwc->bwc_bmpces[
+					   bwc->bwc_nbmpces-1]->bmpce_off);
+					bwc->bwc_bmpces[bwc->bwc_nbmpces++] = 
+						bmpce;
+					DEBUG_BMPCE(PLL_INFO, bmpce, "added");
+				}
+			}
+		}
+		psc_assert(!reqsz);
+	}
+	r = pll_peekhead(&bwc->bwc_pll);
+
+	psc_assert(bwc->bwc_size == 
+	   (e->biorq_off - r->biorq_off) + e->biorq_len);
+}
+
+/**
  * bmap_flush_coalesce_map - Scan the given list of bio requests and
  *	construct I/O vectors out of them.  One I/O vector is limited to
  *	one page.
@@ -497,122 +528,45 @@ __static void
 bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
 {
 	struct bmpc_ioreq *r;
-	struct bmap_pagecache_entry *bmpce;
-	int i=0, j, first_iov;
-	uint32_t tot_reqsz = bmap_flush_coalesce_size(bwc), reqsz;
-	off_t off = bwc->bwc_soff; /* gcc */
+	struct bmap_pagecache_entry *bmpce; 
+	uint32_t tot_reqsz;
+	int i;
+	off_t off = 0;
 
-	psclog_info("tot_reqsz=%u", tot_reqsz);
+	tot_reqsz = bwc->bwc_size;
 
-	psc_assert(!bwc->bwc_iovs);
+	bmap_flush_coalesce_prep(bwc);
+
+	psclog_info("tot_reqsz=%u nitems=%d nbmpces=%d", tot_reqsz, 
+		     pll_nitems(&bwc->bwc_pll), bwc->bwc_nbmpces);
+
+	psc_assert(!bwc->bwc_niovs);
+	off = bwc->bwc_soff;
 	
 	r = pll_peekhead(&bwc->bwc_pll);
 	psc_assert(bwc->bwc_soff == r->biorq_off);
+	
+	for (i = 0, bmpce = bwc->bwc_bmpces[0]; i < bwc->bwc_nbmpces;
+	     i++, bmpce = bwc->bwc_bmpces[i]) {
+		BMPCE_LOCK(bmpce);
+		bmpce->bmpce_flags |= BMPCE_INFLIGHT;
+		DEBUG_BMPCE(PLL_INFO, bmpce, "inflight set (niovs=%d)", 
+			    bwc->bwc_niovs);
+		BMPCE_ULOCK(bmpce);
 
-	PLL_FOREACH(r, &bwc->bwc_pll) {
-		DEBUG_BIORQ(PLL_INFO, r, "r tot_reqsz=%u off=%"PSCPRIdOFFT,
-		    tot_reqsz, off);
-		psc_assert(psc_dynarray_len(&r->biorq_pages));
+		bwc->bwc_iovs[i].iov_base = bmpce->bmpce_base +
+			(!i ? (r->biorq_off - bmpce->bmpce_off) : 0);
 
-		if (biorq_voff_get(r) <= off) {
-			/* No need to map this one, its data has been
-			 *   accounted for but first ensure that all of the
-			 *   pages have been scheduled for IO.
-			 */
-			DYNARRAY_FOREACH(bmpce, j, &r->biorq_pages)
-				psc_assert(psc_atomic16_read(&bmpce->bmpce_wrref) > 0);
-			DEBUG_BIORQ(PLL_INFO, r, "t pos=%d (skip)", i);
-			continue;
-		}
-		DEBUG_BIORQ(PLL_INFO, r, "t pos=%d (use)", i);
-		reqsz = r->biorq_len;
-		psc_assert(tot_reqsz);
-		/* Now iterate through the biorq's iov set, where the
-		 *   actual buffers are stored.  Note that this dynarray
-		 *   is sorted.
-		 */
-		for (j = 0, first_iov = 1;
-		    j < psc_dynarray_len(&r->biorq_pages); j++) {
-			psc_assert(reqsz);
+		bwc->bwc_iovs[i].iov_len = MIN(tot_reqsz,
+		    (!i ? BMPC_BUFSZ - (r->biorq_off - bmpce->bmpce_off) :
+		     BMPC_BUFSZ));
 
-			bmpce = psc_dynarray_getpos(&r->biorq_pages, j);
-			BMPCE_LOCK(bmpce);
-			/*
-			 * We might round down the offset of an I/O
-			 * request to the start offset of the previous
-			 * page.
-			 */
-			if ((bmpce->bmpce_off <= r->biorq_off) && j)
-				abort();
-
-			/*
-			 * We might straddle the end offset of the
-			 * previously scheduled I/O request.
-			 */
-			if (off - bmpce->bmpce_off >= BMPC_BUFSZ) {
-				/* Similar case to the 'continue' stmt above,
-				 *   this bmpce overlaps a previously
-				 *   scheduled biorq.
-				 */
-				DEBUG_BMPCE(PLL_INFO, bmpce, "skip");
-				psc_assert(psc_atomic16_read(&bmpce->bmpce_wrref) > 0);
-				psc_assert(bmpce->bmpce_flags & BMPCE_INFLIGHT);
-				BMPCE_ULOCK(bmpce);
-				psc_assert(first_iov == 1);
-
-				if (j == 0)
-					reqsz -= BMPC_BUFSZ -
-					    (r->biorq_off - bmpce->bmpce_off);
-				else
-					reqsz -= BMPC_BUFSZ;
-				continue;
-			} else
-				bmpce->bmpce_flags |= BMPCE_INFLIGHT;
-
-			DEBUG_BMPCE(PLL_INFO, bmpce,
-			    "scheduling, first_iov=%d", first_iov);
-
-			/* Issue sanity checks on the bmpce.
-			 */
-			bmpce_usecheck(bmpce, BIORQ_WRITE,
-			    (first_iov ? (r->biorq_off & ~BMPC_BUFMASK) : off));
-
-			BMPCE_ULOCK(bmpce);
-			/* Add a new iov!
-			 */
-			bwc->bwc_iovs = PSC_REALLOC(bwc->bwc_iovs,
-			    sizeof(struct iovec) * (bwc->bwc_niovs + 1));
-
-			/* Set the base pointer past the overlapping
-			 *   area if this is the first mapping.
-			 */
-			bwc->bwc_iovs[bwc->bwc_niovs].iov_base = 
-				bmpce->bmpce_base +
-				(first_iov ? (off - bmpce->bmpce_off) : 0);
-
-			bwc->bwc_iovs[bwc->bwc_niovs].iov_len = MIN(reqsz,
-			    (first_iov ? BMPC_BUFSZ - (off - bmpce->bmpce_off) :
-			     BMPC_BUFSZ));
-
-			off += bwc->bwc_iovs[bwc->bwc_niovs].iov_len;
-			reqsz -= bwc->bwc_iovs[bwc->bwc_niovs].iov_len;
-			tot_reqsz -= bwc->bwc_iovs[bwc->bwc_niovs].iov_len;
-
-			if (first_iov)
-				first_iov = 0;
-
-			psclog_info("biorq=%p bmpce=%p base=%p "
-			    "len=%zu niov=%d reqsz=%u tot_reqsz=%u(new)",
-			    r, bmpce, bwc->bwc_iovs[bwc->bwc_niovs].iov_base,
-			    bwc->bwc_iovs[bwc->bwc_niovs].iov_len, 
-			    bwc->bwc_niovs, 
-			    reqsz, tot_reqsz);
-			bwc->bwc_niovs++;
-		}
-		i++;
+		tot_reqsz -= bwc->bwc_iovs[i].iov_len;
+		bwc->bwc_niovs++;
 	}
-	psc_assert(!tot_reqsz);
+	
 	psc_assert(bwc->bwc_niovs <= 256);
+	psc_assert(!tot_reqsz);		
 }
 
 __static int

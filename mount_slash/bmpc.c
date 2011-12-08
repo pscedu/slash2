@@ -59,7 +59,6 @@ void
 bwc_release(struct bmpc_write_coalescer *bwc)
 {
 	psc_assert(pll_empty(&bwc->bwc_pll));
-	PSCFREE(bwc->bwc_iovs);
 	bwc_init(bwcPoolMgr, bwc);
 	psc_pool_return(bwcPoolMgr, bwc);
 }

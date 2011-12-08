@@ -333,8 +333,10 @@ struct bmpc_write_coalescer {
 	struct psc_lockedlist bwc_pll;
 	size_t                bwc_size;
 	off_t                 bwc_soff;
-	struct iovec         *bwc_iovs;	
+	struct iovec          bwc_iovs[34];  //XXX need define for this: (MIN_COALESCE_RPC_SZ/BMPC_BUFSZ)+2
+	struct bmap_pagecache_entry *bwc_bmpces[34];
 	int                   bwc_niovs;
+	int                   bwc_nbmpces;
 	struct psclist_head   bwc_lentry;
 };
 
