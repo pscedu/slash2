@@ -41,18 +41,18 @@
 __static const char *slconn_restypes[] = {
 	"client",
 	"archival",
-	"cluster (s)",
+	NULL,
 	"mds",
 	"parallel",
-	"cluster (p)",
-	"standalone"
+	NULL,
+	"serial"
 };
 
 void
 sl_conn_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	printf("%-16s %35s %-10s %5s %5s %4s\n",
-	    "network-resource", "host", "type", "flags", "txcr", "#ref");
+	printf("%-14s %34s %-8s %5s %5s %4s %4s\n",
+	    "resource", "host", "type", "flags", "stvrs", "txcr", "#ref");
 }
 
 void
@@ -139,13 +139,14 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	    strcmp(site, lastsite))
 		printf("%s\n", site);
 
-	printf("  %-12s %37s %-10s %c%c%c%c%c %5d %4d\n", res, nid, stype,
+	printf("  %-12s %34s %-8s %c%c%c%c%c %5d %4d %4d\n",
+	    res, nid, stype,
 	    scc->scc_flags & CSVCF_CONNECTING		? 'C' : '-',
 	    scc->scc_flags & CSVCF_CONNECTED		? 'O' : '-',
 	    scc->scc_flags & CSVCF_USE_MULTIWAIT	? 'M' : '-',
 	    scc->scc_flags & CSVCF_ABANDON		? 'A' : '-',
 	    scc->scc_flags & CSVCF_WANTFREE		? 'F' : '-',
-	    scc->scc_txcr, scc->scc_refcnt);
+	    scc->scc_stkvers, scc->scc_txcr, scc->scc_refcnt);
 
 	strlcpy(lastsite, site, sizeof(lastsite));
 	strlcpy(lastres, res, sizeof(lastres));

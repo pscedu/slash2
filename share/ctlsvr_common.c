@@ -72,6 +72,7 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct slashrpc_cservice *csvc;
 	struct slctlmsg_conn *scc = m;
 	struct pscrpc_import *imp;
+	struct sl_resm_nid *mn;
 	struct sl_resource *r;
 	struct sl_resm *resm;
 	struct sl_site *s;
@@ -84,7 +85,8 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 			continue;
 
 		slctl_fillconn(scc, resm->resm_csvc);
-		strlcpy(scc->scc_addrbuf, resm->resm_res->res_name,
+		mn = psc_dynarray_getpos(&resm->resm_nids, 0);
+		strlcpy(scc->scc_addrbuf, mn->resmnid_addrbuf,
 		    sizeof(scc->scc_addrbuf));
 		scc->scc_stkvers = resm->resm_stkvers;
 		scc->scc_type = resm->resm_type;
