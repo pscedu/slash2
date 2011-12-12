@@ -140,7 +140,7 @@ site @PSCARCH {
 
 		ios	= sense3s0@PSCARCH, sense3s1@PSCARCH,
 			  sense3s2@PSCARCH, sense3s3@PSCARCH,
-			  sense3s4@PSCARCH, sense3s5@PSCARCH, 
+			  sense3s4@PSCARCH, sense3s5@PSCARCH,
 			  sense3s6@PSCARCH;
 	}
 
@@ -166,6 +166,7 @@ site @PSCARCH {
 			  sense3s0@PSCARCH, sense3s1@PSCARCH,
 			  sense3s2@PSCARCH, sense3s3@PSCARCH,
 			  sense3s4@PSCARCH, sense3s5@PSCARCH,
+			  sense3s6@PSCARCH,
 
 			  sense4s0@PSCARCH, sense4s1@PSCARCH,
 			  sense4s2@PSCARCH, sense4s3@PSCARCH,
