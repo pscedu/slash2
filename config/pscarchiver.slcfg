@@ -101,6 +101,7 @@ site @PSCARCH {
 	resource sense3s3 { desc = "disk-based archiver unit 3 sliod 3"; type = standalone_fs; id = 0x1303; nids = sense3-sliod3; fsroot = /arc_sliod/3; }
 	resource sense3s4 { desc = "disk-based archiver unit 3 sliod 4"; type = standalone_fs; id = 0x1304; nids = sense3-sliod4; fsroot = /arc_sliod/4; }
 	resource sense3s5 { desc = "disk-based archiver unit 3 sliod 5"; type = standalone_fs; id = 0x1305; nids = sense3-sliod5; fsroot = /arc_sliod/5; }
+	resource sense3s6 { desc = "disk-based archiver unit 3 sliod 6"; type = standalone_fs; id = 0x1306; nids = sense3-sliod6; fsroot = /arc_sliod/6; }
 
 	resource sense4s0 { desc = "disk-based archiver unit 4 sliod 0"; type = standalone_fs; id = 0x1400; nids = sense4-sliod7; fsroot = /arc_sliod/0; }
 	resource sense4s1 { desc = "disk-based archiver unit 4 sliod 1"; type = standalone_fs; id = 0x1401; nids = sense4-sliod1; fsroot = /arc_sliod/1; }
@@ -139,7 +140,8 @@ site @PSCARCH {
 
 		ios	= sense3s0@PSCARCH, sense3s1@PSCARCH,
 			  sense3s2@PSCARCH, sense3s3@PSCARCH,
-			  sense3s4@PSCARCH, sense3s5@PSCARCH;
+			  sense3s4@PSCARCH, sense3s5@PSCARCH, 
+			  sense3s6@PSCARCH;
 	}
 
 	resource sense {
