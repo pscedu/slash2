@@ -186,6 +186,8 @@ main(int argc, char *argv[])
 	bmap_rls_pool = psc_poolmaster_getmgr(&bmap_rls_poolmaster);
 
 	sli_repl_init();
+	pscthr_init(SLITHRT_STATFS, 0, slistatfsthr_main, NULL, 0,
+	    "slistatfsthr");
 
 	prefmds = globalConfig.gconf_prefmds;
 	if (argc)
@@ -203,8 +205,6 @@ main(int argc, char *argv[])
 
 	sli_rpc_initsvc();
 	psc_tiosthr_spawn(SLITHRT_TIOS, "slitiosthr");
-	pscthr_init(SLITHRT_STATFS, 0, slistatfsthr_main, NULL, 0,
-	    "slistatfsthr");
 	slibmaprlsthr_spawn();
 	lc_reginit(&bmapReapQ, struct bmapc_memb, bcm_lentry,
 	    "bmapReapQ");
