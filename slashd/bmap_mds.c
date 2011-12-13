@@ -263,13 +263,18 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 		fl |= PSCFS_SETATTRF_DATASIZE;
 		crcup->extend = 1;
 	}
-	mds_fcmh_setattr_nolog(f, fl, &sstb);
+	/*
+	 * Don't update mtime automatically.  After all, data
+	 * goes to IOS, not MDS.
+	 */
 	utimgen = f->fcmh_sstb.sst_utimgen;
-
-	if (utimgen < crcup->utimgen)
+	if (utimgen < crcup->utimgen) {
 		DEBUG_FCMH(PLL_ERROR, f,
 		   "utimgen %d < crcup->utimgen %d",
 		   utimgen, crcup->utimgen);
+		fl |= PSCFS_SETATTRF_MTIME;
+	}
+	mds_fcmh_setattr_nolog(f, fl, &sstb);
 
 	fcmh_set_repl_nblks(f, idx, crcup->nblks);
 	if (idx >= SL_DEF_REPLICAS)
