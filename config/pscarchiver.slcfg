@@ -60,7 +60,7 @@ site @PSCARCH {
 		desc	= "PSC test I/O node";
 		type	= standalone_fs;
 		id	= 0x200;
-		nids	= peel0;
+		nids	= peel0.psc.edu;
 		fsroot	= /arc_sliod/0;
 	}
 
