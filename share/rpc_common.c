@@ -244,8 +244,8 @@ slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
 int
 slrpc_issue_ping(struct slashrpc_cservice *csvc, int rc)
 {
-	struct srm_ping_req *mq;
 	struct pscrpc_request *rq;
+	struct srm_ping_req *mq;
 	struct srm_ping_rep *mp;
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_PING, rq, mq, mp);
