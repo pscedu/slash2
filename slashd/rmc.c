@@ -191,7 +191,7 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	BMAP_LOCK(b);
 	bml = mds_bmap_getbml(b, &mq->sbd);
 	if (bml == NULL) {
-		mp->rc = EINVAL;
+		mp->rc = -EINVAL;
 		goto out;
 	}
 
@@ -244,7 +244,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->rw != SL_READ && mq->rw != SL_WRITE) {
-		mp->rc = EINVAL;
+		mp->rc = -EINVAL;
 		return (0);
 	}
 
@@ -333,7 +333,7 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	if (fcmh_2_mdsio_fid(p) == SLFID_ROOT &&
 	    strcmp(mq->name, SL_RPATH_META_DIR) == 0) {
-		mp->rc = EINVAL;
+		mp->rc = -EINVAL;
 		goto out;
 	}
 	mp->rc = mdsio_lookup(fcmh_2_mdsio_fid(p),
@@ -452,7 +452,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->flags & SRM_LEASEBMAPF_GETREPLTBL) {
-		mp->rc = EINVAL;
+		mp->rc = -EINVAL;
 		goto out;
 	}
 
@@ -551,7 +551,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 
 	if (mq->size > MAX_READDIR_BUFSIZ ||
 	    mq->nstbpref > MAX_READDIR_NENTS) {
-		mp->rc = EINVAL;
+		mp->rc = -EINVAL;
 		goto out;
 	}
 
@@ -699,7 +699,7 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 
 	if (FID_GET_SITEID(mq->opfg.fg_fid) !=
 	    FID_GET_SITEID(mq->npfg.fg_fid)) {
-		mp->rc = EXDEV;
+		mp->rc = -EXDEV;
 		goto out;
 	}
 
@@ -763,7 +763,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	to_set = mq->to_set & SL_SETATTRF_CLI_ALL;
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
 		if (IS_REMOTE_FID(mq->attr.sst_fg.fg_fid)) {
-			mp->rc = ENOSYS;
+			mp->rc = -ENOSYS;
 			goto out;
 		}
 		to_set |= PSCFS_SETATTRF_MTIME;
@@ -779,12 +779,12 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			to_set |= SL_SETATTRF_GEN;
 			unbump = 1;
 		} else {
-mp->rc = ENOTSUP;
+mp->rc = -ENOTSUP;
 goto out;
 
 			/* partial truncate */
 			if (fcmh->fcmh_flags & FCMH_IN_PTRUNC) {
-				mp->rc = SLERR_BMAP_IN_PTRUNC;
+				mp->rc = -SLERR_BMAP_IN_PTRUNC;
 				goto out;
 			}
 			to_set &= ~PSCFS_SETATTRF_DATASIZE;
@@ -820,7 +820,7 @@ goto out;
 			psc_dynarray_add(&fcmh_2_fmi(fcmh)->
 			    fmi_ptrunc_clients, csvc);
 
-			mp->rc = SLERR_BMAP_PTRUNC_STARTED;
+			mp->rc = -SLERR_BMAP_PTRUNC_STARTED;
 		}
 
 		slm_setattr_core(fcmh, &mq->attr, to_set | tadj);
@@ -846,7 +846,7 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	if (mq->pol < 0 || mq->pol >= NBRPOL) {
-		mp->rc = EINVAL;
+		mp->rc = -EINVAL;
 		return (0);
 	}
 
@@ -877,7 +877,7 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	if (mq->pol < 0 || mq->pol >= NBRPOL) {
-		mp->rc = EINVAL;
+		mp->rc = -EINVAL;
 		return (0);
 	}
 
@@ -886,7 +886,7 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 		goto out;
 
 	if (!mds_bmap_exists(fcmh, mq->bmapno)) {
-		mp->rc = SLERR_BMAP_INVALID;
+		mp->rc = -SLERR_BMAP_INVALID;
 		goto out;
 	}
 	mp->rc = mds_bmap_load(fcmh, mq->bmapno, &bcm);
@@ -909,23 +909,36 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 	struct srm_statfs_req *mq;
 	struct srm_statfs_rep *mp;
 	struct sl_mds_iosinfo *si;
-	struct sl_resource *res;
+	struct sl_resource *r;
+	struct sl_resm *m;
 	struct statvfs sfb;
+	double adj;
+	int j;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = mdsio_statfs(&sfb);
-	res = libsl_id2res(mq->iosid);
-	if (res == NULL) {
-		mp->rc = SLERR_RES_UNKNOWN;
+	sl_externalize_statfs(&sfb, &mp->ssfb);
+	r = libsl_id2res(mq->iosid);
+	if (r == NULL) {
+		mp->rc = -SLERR_RES_UNKNOWN;
 		return (0);
 	}
-	si = res2iosinfo(res);
-	sl_externalize_statfs(&sfb, &mp->ssfb);
-	mp->ssfb.sf_bsize	= si->si_ssfb.sf_bsize;
-	mp->ssfb.sf_frsize	= si->si_ssfb.sf_frsize;
-	mp->ssfb.sf_blocks	= si->si_ssfb.sf_blocks;
-	mp->ssfb.sf_bfree	= si->si_ssfb.sf_bfree;
-	mp->ssfb.sf_bavail	= si->si_ssfb.sf_bavail;
+	si = res2iosinfo(r);
+	mp->ssfb.sf_bsize = 0;
+	mp->ssfb.sf_frsize = 0;
+	mp->ssfb.sf_blocks = 0;
+	mp->ssfb.sf_bfree = 0;
+	mp->ssfb.sf_bavail = 0;
+	RES_FOREACH_MEMB(r, m, j) {
+		if (mp->ssfb.sf_bsize == 0)
+			mp->ssfb.sf_bsize = si->si_ssfb.sf_bsize;
+		if (mp->ssfb.sf_frsize == 0)
+			mp->ssfb.sf_frsize = si->si_ssfb.sf_frsize;
+		adj = mp->ssfb.sf_bsize * 1. / si->si_ssfb.sf_bsize;
+		mp->ssfb.sf_blocks	+= adj * si->si_ssfb.sf_blocks;
+		mp->ssfb.sf_bfree	+= adj * si->si_ssfb.sf_bfree;
+		mp->ssfb.sf_bavail	+= adj * si->si_ssfb.sf_bavail;
+	}
 	return (0);
 }
 
