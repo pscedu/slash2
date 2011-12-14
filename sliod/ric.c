@@ -86,12 +86,11 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			psclog_info("bmapdesc check okay");
 			break;
 		}
-		psclog_notice("bmapdesc mismatch - mine:(%x), peer: (%x)",
+		psclog_notice("bmapdesc resid mismatch - mine %x, peer %x",
 		    nodeResm->resm_res->res_id, mq->sbd.sbd_ios);
-
 	}
 	if (mp->rc) {
-		psclog_warnx("bmapdesc_access_check failed for fid:"SLPRI_FG,
+		psclog_warnx("bmapdesc_access_check failed for fid "SLPRI_FG,
 		    SLPRI_FG_ARGS(fgp));
 		return (mp->rc);
 	}
