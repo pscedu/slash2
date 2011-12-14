@@ -18,7 +18,7 @@ S2 PSC Archival FS TODO
 Listed here are pending items required for the PSC archiver project.  These
 items should be viewed as high priority.
 
-1) replication of imported files should create CRCs
+1) imported files should create CRCs
 
 2) Cluster No Share I/O Service type.  Cluster_no_share has been on the
 roadmap for some time but it's requirements are problematic given the
@@ -158,7 +158,7 @@ this may break semantics for some apps which assume the same inode # to be used.
 
 -----------------------------------------------------------------------
 1/26/11
-* ./fio.pthreads  -i MTWT_SZV.ves -- This test is causing unnecessary RBW requests.
+* ./fio.pthreads -i MTWT_SZV.ves -- This test is causing unnecessary RBW requests.
 
 1/14/10
 * Deal with problems surrounding full odtable. ATM odtable put errors are not dealt with properly
@@ -181,6 +181,7 @@ be short circuited on EOF.
 * While running a small file / create intensive fio test, I find that most of the threads
 are blocking here waiting for rpc completion.  This makes things like 'ls -al' very slow
 because no threads are left to process incoming operations.
+
 Thread 4 (Thread 0x50fa7940 (LWP 31008)):
 #0  0x000000331c20a899 in pthread_cond_wait@@GLIBC_2.3.2 ()
 #1  0x00000000004748a9 in psc_waitq_waitrel ()
@@ -476,22 +477,17 @@ reimport
 - add -D arg to daemons for to stop daemonization and make that behavior
   default in developer builds
 - directory replica table inheritance
-- add svn revision # to CONNECT and track for "*ctl -s conns"
 - test msctl -Q <symlink>
 - journal log ino_repl_nblks modifications
 - upsch inquiries shouldn't wakeup the uswi to retry unnecessary
   processing
 - fix sliod connection bug visible from slmctl
-- check resid on connect so sliod backfs doesnt get corrupt
 - uptime instance nonce variable that allows msl to dump data if it
   changes while communicating with sliod
-- do a blocking operation in PING reply in sliod 
-- if MDS does not receive a PING from sliod, issue hldrop
 
 archiver
 - tool to recover softdel files
    (o) provide ability to access zfs snapshots via MSL .zfs/snapshots
 - work out logistics for where MDS zsnap backups go
-- autostart sliods/msl on tahini with screens
 - monitor service for /arc hangs (blacklight, tahini)
 - /etc/rc startup scripts
