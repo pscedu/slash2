@@ -86,7 +86,7 @@ site @PSCARCH {
 	resource sense1s3 { desc = "disk-based archiver unit 1 sliod 3"; type = standalone_fs; id = 0x1103; nids = sense1-sliod3; fsroot = /arc_sliod/3; }
 	resource sense1s4 { desc = "disk-based archiver unit 1 sliod 4"; type = standalone_fs; id = 0x1104; nids = sense1-sliod4; fsroot = /arc_sliod/4; }
 	resource sense1s5 { desc = "disk-based archiver unit 1 sliod 5"; type = standalone_fs; id = 0x1105; nids = sense1-sliod5; fsroot = /arc_sliod/5; }
-	resource sense1s6 { desc = "disk-based archiver unit 1 sliod 6"; type = standalone_fs; id = 0x1105; nids = sense1-sliod6; fsroot = /arc_sliod/6; }
+	resource sense1s6 { desc = "disk-based archiver unit 1 sliod 6"; type = standalone_fs; id = 0x1106; nids = sense1-sliod6; fsroot = /arc_sliod/6; }
 
 	resource sense2s0 { desc = "disk-based archiver unit 2 sliod 0"; type = standalone_fs; id = 0x1200; nids = sense2-sliod0; fsroot = /arc_sliod/0; }
 	resource sense2s1 { desc = "disk-based archiver unit 2 sliod 1"; type = standalone_fs; id = 0x1201; nids = sense2-sliod1; fsroot = /arc_sliod/1; }
