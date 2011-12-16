@@ -33,8 +33,8 @@ things robust, we need a simpler way.  We will let client be the only one that c
 update the attributes.  It should work regardless of network delays and service
 outage.
 
-Implementation:
----------------
+Solution 1
+----------
 
 So the idea is that we will treat attribute we do with data.
 
@@ -49,7 +49,8 @@ So we will make some changes to existing RPCs, and perhaps add some new ones.
 	* SRMT_SETATTR: We should also send this RPC if we find dirty attributes when 
                         we close a file.
 
-	* SRMT_RELASEBMAP: can piggyback dirty attributes.
+	* SRMT_RELASEBMAP: can piggyback dirty attributes.  No, this RPC goes to the
+			   IOS, not mds.
 
         * SRMT_BMAPDIO: We may be able to extend its meaning to revoke the right of
                         a client to cache attributes exclusively.
@@ -65,3 +66,21 @@ We maybe able to combine bmap and attribute leases in a RPC:
 	* SRMT_RELEASE_LEASE: use type to distinguish whether it is a lease for
                               attributes or bmap.
 	* SRMT_REVOKE_LEASE
+
+Solution 2
+----------
+
+Instead of going for perfect coherency, we still uses the NFS way of caching attributes 
+for a short period of time.  The would save a lot of code complexity and should work well 
+in practice.  In addition, perfect coherency is costly to achieve in a wide area network.
+
+Potential Issues:
+
+	* Right now, there is only sliod updating the file size.  In this new scheme, two 
+	  clients can do so.
+
+	* The peformance of close() could take a hit, because we want to make sure that 
+	  dirty attributes are flushed to mds.
+
+
+We will go for the second solution.
