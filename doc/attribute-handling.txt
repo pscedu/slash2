@@ -91,3 +91,9 @@ Extra Notes:
 	  advise clients to reduce attributes caching time.
 
 We will go for the second solution.
+
+12/19/2011
+----------
+
+We cache all the dirty attribute updates at the client side, including new uid/gid.  The MDS 
+just accepts these changes without checking for credentials.
