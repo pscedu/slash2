@@ -82,5 +82,12 @@ Potential Issues:
 	* The peformance of close() could take a hit, because we want to make sure that 
 	  dirty attributes are flushed to mds.
 
+Extra Notes:
+
+	* If the mds knows that more than one client is writing the same file, it should
+	  disallow any size decreases.
+
+	* If the mds knows that more than one client is writing the same file, it should
+	  advise clients to reduce attributes caching time.
 
 We will go for the second solution.
