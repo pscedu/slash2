@@ -120,7 +120,7 @@ slc_rmc_retry_pfcc(__unusedx struct pscfs_clientctx *pfcc, int *rc)
 {
 	int retry = 1;
 
-	switch (*rc) {
+	switch (abs(*rc)) {
 	case ECONNABORTED:
 	case ECONNREFUSED:
 	case ECONNRESET:
@@ -135,7 +135,7 @@ slc_rmc_retry_pfcc(__unusedx struct pscfs_clientctx *pfcc, int *rc)
 	case ETIMEDOUT:
 		break;
 	default:
-		return (0);
+		return (*rc);
 	}
 
 //	retry = global setting
