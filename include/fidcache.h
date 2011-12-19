@@ -66,7 +66,7 @@ struct fidc_membh {
 	psc_spinlock_t		 fcmh_lock;
 	int			 fcmh_refcnt;	/* threads referencing us */
 	struct psc_hashent	 fcmh_hentry;	/* hash table membership for lookups */
-	struct psclist_head	 fcmh_lentry;
+	struct psclist_head	 fcmh_lentry;	/* busy or idle list */
 	struct psc_waitq	 fcmh_waitq;	/* wait here for operations */
 	struct bmap_cache	 fcmh_bmaptree;	/* bmap cache splay */
 };
@@ -80,10 +80,11 @@ struct fidc_membh {
 #define	FCMH_CAC_TOFREE		(1 <<  5)	/* been deprecated */
 #define	FCMH_CAC_REAPED		(1 <<  6)	/* has been reaped */
 #define	FCMH_HAVE_ATTRS		(1 <<  7)	/* has valid stat info */
-#define	FCMH_GETTING_ATTRS	(1 <<  8)	/* fetching stat info */
-#define	FCMH_CTOR_FAILED	(1 <<  9)	/* constructor func failed */
-#define FCMH_CTOR_DELAYED	(1 << 10)	/* constructor was not issued */
-#define	_FCMH_FLGSHFT		(1 << 11)
+#define	FCMH_DIRTY_ATTRS	(1 <<  8)	/* attributes dirty */
+#define	FCMH_GETTING_ATTRS	(1 <<  9)	/* fetching stat info */
+#define	FCMH_CTOR_FAILED	(1 << 10)	/* constructor func failed */
+#define FCMH_CTOR_DELAYED	(1 << 11)	/* constructor was not issued */
+#define	_FCMH_FLGSHFT		(1 << 12)
 
 /* number of seconds in which attribute times out */
 #define FCMH_ATTR_TIMEO		8
