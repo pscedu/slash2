@@ -1732,7 +1732,8 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 //	checkcreds
 
  retry:
-	MSL_RMC_NEWREQ(pfr, NULL, csvc, SRMT_STATFS, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ_PFCC(NULL, NULL, csvc, SRMT_STATFS, rq, mq, mp,
+	    rc);
 	mq->fid = inum;
 	mq->iosid = prefIOS;
 	if (rc)

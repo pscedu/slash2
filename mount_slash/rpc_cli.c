@@ -120,7 +120,6 @@ slc_rmc_retry_pfcc(__unusedx struct pscfs_clientctx *pfcc, int *rc)
 {
 	int retry = 1;
 
-#if 0
 	switch (*rc) {
 	case ECONNABORTED:
 	case ECONNREFUSED:
@@ -139,11 +138,13 @@ slc_rmc_retry_pfcc(__unusedx struct pscfs_clientctx *pfcc, int *rc)
 		return (0);
 	}
 
-	retry = global setting
+//	retry = global setting
 	if (pfcc)
-		    retry = read_proc_env(ctx->pid, "");
-	retry = hard timeout
-#endif
+//		retry = read_proc_env(ctx->pid, "");
+		;
+	else
+		retry = 0;
+//	retry = hard timeout
 	*rc = retry ? 0 : ENOTCONN;
 	return (retry);
 }
