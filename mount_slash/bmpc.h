@@ -57,12 +57,11 @@ struct msl_fsrqinfo;
 #define BMPC_INTERVAL		{ 0, 200000000 }
 
 struct timespec			bmapFlushDefMaxAge;
-struct timespec			bmapFlushMaxAge;
 
 struct bmap_pagecache_entry {
 	psc_atomic16_t		 bmpce_wrref;	/* pending write ops		*/
 	psc_atomic16_t		 bmpce_rdref;	/* pending read ops		*/
-	uint64_t		 bmpce_syncxid; /* xid associated with sync op  */
+	uint64_t		 bmpce_syncxid;	/* xid associated with sync op  */
 	uint32_t		 bmpce_flags;	/* BMPCE_* flag bits		*/
 	uint32_t		 bmpce_off;	/* filewise, bmap relative	*/
 	psc_spinlock_t		 bmpce_lock;	/* serialize			*/
@@ -249,7 +248,7 @@ struct bmpc_ioreq {
 	struct psc_dynarray		 biorq_pages;	/* array of bmpce		*/
 	struct psclist_head		 biorq_lentry;	/* chain on bmpc_pndg_biorqs	*/
 	struct psclist_head		 biorq_mfh_lentry; /* chain on file handle	*/
-	struct psclist_head              biorq_bwc_lentry;
+	struct psclist_head		 biorq_bwc_lentry;
 	struct bmapc_memb		*biorq_bmap;	/* backpointer to our bmap	*/
 	struct pscrpc_request_set	*biorq_rqset;
 	struct psc_waitq		 biorq_waitq;
@@ -330,14 +329,14 @@ int	msl_fd_offline_retry(struct msl_fhent *);
 #define msl_offline_retry_ignexpire(r)	_msl_offline_retry((r), 1)
 
 struct bmpc_write_coalescer {
-	struct psc_lockedlist bwc_pll;
-	size_t                bwc_size;
-	off_t                 bwc_soff;
-	struct iovec          bwc_iovs[34];  //XXX need define for this: (MIN_COALESCE_RPC_SZ/BMPC_BUFSZ)+2
-	struct bmap_pagecache_entry *bwc_bmpces[34];
-	int                   bwc_niovs;
-	int                   bwc_nbmpces;
-	struct psclist_head   bwc_lentry;
+	struct psc_lockedlist		 bwc_pll;
+	size_t				 bwc_size;
+	off_t				 bwc_soff;
+	struct iovec			 bwc_iovs[34];  //XXX need define for this: (MIN_COALESCE_RPC_SZ/BMPC_BUFSZ)+2
+	struct bmap_pagecache_entry	*bwc_bmpces[34];
+	int				 bwc_niovs;
+	int				 bwc_nbmpces;
+	struct psclist_head		 bwc_lentry;
 };
 
 static __inline void
@@ -470,8 +469,8 @@ bmpc_init(struct bmap_pagecache *bmpc)
 
 static __inline void
 bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len,
-	int op, struct bmapc_memb *bmap, struct msl_fhent *fhent,
-	struct msl_fsrqinfo *q)
+    int op, struct bmapc_memb *bmap, struct msl_fhent *fhent,
+    struct msl_fsrqinfo *q)
 {
 	memset(ioreq, 0, sizeof(*ioreq));
 	psc_waitq_init(&ioreq->biorq_waitq);
