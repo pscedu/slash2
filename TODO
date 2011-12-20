@@ -487,3 +487,8 @@ archiver
 - work out logistics for where MDS zsnap backups go
 - monitor service for /arc hangs (blacklight, tahini)
 - /etc/rc startup scripts
+
+Soft Delete:
+-----------
+
+Find a way to exploit .zfs directory of mds to support soft-delete.
