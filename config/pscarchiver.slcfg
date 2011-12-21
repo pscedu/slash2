@@ -130,7 +130,7 @@ site @PSCARCH {
 	resource sense6s4 { desc = "disk-based archiver unit 6 sliod 4"; type = standalone_fs; id = 0x1604; nids = sense6-sliod4; fsroot = /arc_sliod/4; }
 	resource sense6s5 { desc = "disk-based archiver unit 6 sliod 5"; type = standalone_fs; id = 0x1605; nids = sense6-sliod5; fsroot = /arc_sliod/5; }
 	resource sense6s6 { desc = "disk-based archiver unit 6 sliod 6"; type = standalone_fs; id = 0x1606; nids = sense6-sliod6; fsroot = /arc_sliod/6; }
-	resource sense6s0 { desc = "disk-based archiver unit 6 sliod 7"; type = standalone_fs; id = 0x1607; nids = sense6-sliod7; fsroot = /arc_sliod/0; }
+	resource sense6s7 { desc = "disk-based archiver unit 6 sliod 7"; type = standalone_fs; id = 0x1607; nids = sense6-sliod7; fsroot = /arc_sliod/7; }
 
 	resource sense7s0 { desc = "disk-based archiver unit 7 sliod 0"; type = standalone_fs; id = 0x1700; nids = sense7-sliod0; fsroot = /arc_sliod/0; }
 	resource sense7s1 { desc = "disk-based archiver unit 7 sliod 1"; type = standalone_fs; id = 0x1701; nids = sense7-sliod1; fsroot = /arc_sliod/1; }
@@ -138,7 +138,7 @@ site @PSCARCH {
 	resource sense7s3 { desc = "disk-based archiver unit 7 sliod 3"; type = standalone_fs; id = 0x1703; nids = sense7-sliod3; fsroot = /arc_sliod/3; }
 	resource sense7s4 { desc = "disk-based archiver unit 7 sliod 4"; type = standalone_fs; id = 0x1704; nids = sense7-sliod4; fsroot = /arc_sliod/4; }
 	resource sense7s5 { desc = "disk-based archiver unit 7 sliod 5"; type = standalone_fs; id = 0x1705; nids = sense7-sliod5; fsroot = /arc_sliod/5; }
-	resource sense7s0 { desc = "disk-based archiver unit 7 sliod 6"; type = standalone_fs; id = 0x1706; nids = sense7-sliod6; fsroot = /arc_sliod/6; }
+	resource sense7s6 { desc = "disk-based archiver unit 7 sliod 6"; type = standalone_fs; id = 0x1706; nids = sense7-sliod6; fsroot = /arc_sliod/6; }
 
 	resource sense345 {
 		desc	= "sense3, 4 and 5 sliods";
@@ -149,10 +149,10 @@ site @PSCARCH {
 			  sense3s1@PSCARCH, sense4s1@PSCARCH, sense5s1@PSCARCH,
 			  sense3s2@PSCARCH, sense4s2@PSCARCH, sense5s2@PSCARCH,
 			  sense3s3@PSCARCH, sense4s3@PSCARCH, sense5s3@PSCARCH,
-			  sense3s4@PSCARCH, sense4s4@PSCARCH, sense5s4@PSCARCH,		
+			  sense3s4@PSCARCH, sense4s4@PSCARCH, sense5s4@PSCARCH,
 			  sense3s5@PSCARCH, sense4s5@PSCARCH, sense5s5@PSCARCH,
 			  sense3s6@PSCARCH, sense4s6@PSCARCH, sense5s6@PSCARCH,
- 			  	            sense4s7@PSCARCH;
+					    sense4s7@PSCARCH;
 	}
 
 	resource sense4 {
@@ -229,16 +229,17 @@ site @PSCARCH {
 		ios	= sense0s0@PSCARCH, sense0s1@PSCARCH,
 			  sense0s2@PSCARCH, sense0s3@PSCARCH,
 			  sense0s4@PSCARCH, sense0s5@PSCARCH,
-			  sense0s6@PSCARCH,
+			  sense0s6@PSCARCH, sense0s7@PSCARCH,
 
 			  sense1s0@PSCARCH, sense1s1@PSCARCH,
 			  sense1s2@PSCARCH, sense1s3@PSCARCH,
 			  sense1s4@PSCARCH, sense1s5@PSCARCH,
+			  sense1s6@PSCARCH,
 
 			  sense2s0@PSCARCH, sense2s1@PSCARCH,
 			  sense2s2@PSCARCH, sense2s3@PSCARCH,
 			  sense2s4@PSCARCH, sense2s5@PSCARCH,
-			  sense2s6@PSCARCH,
+			  sense2s6@PSCARCH, sense2s7@PSCARCH,
 
 			  sense3s0@PSCARCH, sense3s1@PSCARCH,
 			  sense3s2@PSCARCH, sense3s3@PSCARCH,
@@ -248,19 +249,21 @@ site @PSCARCH {
 			  sense4s0@PSCARCH, sense4s1@PSCARCH,
 			  sense4s2@PSCARCH, sense4s3@PSCARCH,
 			  sense4s4@PSCARCH, sense4s5@PSCARCH,
-			  sense4s6@PSCARCH,
+			  sense4s6@PSCARCH, sense4s7@PSCARCH,
 
 			  sense5s0@PSCARCH, sense5s1@PSCARCH,
 			  sense5s2@PSCARCH, sense5s3@PSCARCH,
 			  sense5s4@PSCARCH, sense5s5@PSCARCH,
+			  sense5s6@PSCARCH,
 
 			  sense6s0@PSCARCH, sense6s1@PSCARCH,
 			  sense6s2@PSCARCH, sense6s3@PSCARCH,
 			  sense6s4@PSCARCH, sense6s5@PSCARCH,
-			  sense6s6@PSCARCH,
+			  sense6s6@PSCARCH, sense6s7@PSCARCH,
 
 			  sense7s0@PSCARCH, sense7s1@PSCARCH,
 			  sense7s2@PSCARCH, sense7s3@PSCARCH,
-			  sense7s4@PSCARCH, sense7s5@PSCARCH;
+			  sense7s4@PSCARCH, sense7s5@PSCARCH,
+			  sense7s6@PSCARCH;
 	}
 }
