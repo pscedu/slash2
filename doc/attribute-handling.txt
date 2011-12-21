@@ -97,3 +97,13 @@ We will go for the second solution.
 
 We cache all the dirty attribute updates at the client side, including new uid/gid.  The MDS 
 just accepts these changes without checking for credentials.
+
+12/21/2011
+----------
+
+1. We still allow nblks to be directly reported from IOS to MDS. This is a bit odd because
+   size and disk usage won't be in sync for a while.  But at least this attribute won't be
+   updated by two guys at the same time.
+
+2. Use setattr to update dirty attributes seem to have problem with ENOTSUP.  The partial
+   truncate code is disabled for the moment.  Need to figure out why.
