@@ -484,6 +484,4 @@ reimport
 archiver
 - tool to recover softdel files
    (o) provide ability to access zfs snapshots via MSL .zfs/snapshots
-- work out logistics for where MDS zsnap backups go
-- monitor service for /arc hangs (blacklight, tahini)
-- /etc/rc startup scripts
+- work out logistics for where MDS zsnap backups go (off-site)
