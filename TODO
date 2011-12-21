@@ -297,11 +297,12 @@ network scheduling
 	to next one, files in the same class have same fairness
 - add network topology descriptions to slash.conf
 
-netsched/libnetsch - universal interface
-- LD_PRELOAD?
-- intercept for recompiling
-- API
-- needs to communicate with other nodes about traffic situation
+netsched/libnetsch - universal interface, kinda like Grand Central
+  Dispatch for net
+   (o) LD_PRELOAD?
+   (o) intercept for recompiling
+   (o) API
+   (o) needs to communicate with other nodes about traffic situation
 
 tracks endpoint connections
 - if new ones are made that utilize the same link, manage and
