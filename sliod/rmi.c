@@ -21,6 +21,9 @@
  * Routines for issuing RPC requests to MDS from ION.
  */
 
+#include <sys/types.h>
+#include <sys/wait.h>
+
 #include <stdint.h>
 
 #include "psc_rpc/rpc.h"
