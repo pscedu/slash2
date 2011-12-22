@@ -273,17 +273,15 @@ struct srt_stat {
 	    (sstb)->sst_ctime, (sstb)->sst_ctime_ns, ## __VA_ARGS__)
 
 struct srt_statfs {
-	uint64_t		sf_bsize;	/* file system block size */
-	uint64_t		sf_frsize;	/* fragment size */
-	uint64_t		sf_blocks;	/* size of fs in f_frsize units */
+	char			sf_type[16];
+	uint32_t		sf_bsize;	/* file system block size */
+	uint32_t		sf_iosize;	/* ideal I/O transfer size */
+	uint64_t		sf_blocks;	/* size of fs in f_bsize units */
 	uint64_t		sf_bfree;	/* # free blocks */
 	uint64_t		sf_bavail;	/* # free blocks for non-root */
 	uint64_t		sf_files;	/* # inodes */
 	uint64_t		sf_ffree;	/* # free inodes */
 	uint64_t		sf_favail;	/* # free inodes for non-root */
-	uint64_t		sf_fsid;	/* file system ID */
-	uint64_t		sf_flag;	/* mount flags */
-	uint64_t		sf_namemax;	/* maximum filename length */
 } __packed;
 
 struct srt_bmapminseq {
