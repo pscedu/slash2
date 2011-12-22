@@ -482,6 +482,8 @@ reimport
 - uptime instance nonce variable that allows msl to dump data if it
   changes while communicating with sliod
 
+- xopctl background startup
+
 archiver
 - tool to recover softdel files
    (o) provide ability to access zfs snapshots via MSL .zfs/snapshots
