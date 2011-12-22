@@ -242,6 +242,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slm_resmlink);
 	PRTYPE(struct slm_workrq);
 	PRTYPE(struct slmctlmsg_replpair);
+	PRTYPE(struct slmctlmsg_statfs);
 	PRTYPE(struct slmds_jent_assign_rep);
 	PRTYPE(struct slmds_jent_bmap_assign);
 	PRTYPE(struct slmds_jent_bmap_crc);
