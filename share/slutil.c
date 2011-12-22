@@ -104,33 +104,27 @@ sl_internalize_stat(const struct srt_stat *sstb, struct stat *stb)
 void
 sl_externalize_statfs(const struct statvfs *sfb, struct srt_statfs *ssfb)
 {
+	memset(ssfb, 0, sizeof(*ssfb));
 	ssfb->sf_bsize		= sfb->f_bsize;
-	ssfb->sf_frsize		= sfb->f_frsize;
 	ssfb->sf_blocks		= sfb->f_blocks;
 	ssfb->sf_bfree		= sfb->f_bfree;
 	ssfb->sf_bavail		= sfb->f_bavail;
 	ssfb->sf_files		= sfb->f_files;
 	ssfb->sf_ffree		= sfb->f_ffree;
 	ssfb->sf_favail		= sfb->f_favail;
-	ssfb->sf_fsid		= sfb->f_fsid;
-	ssfb->sf_flag		= sfb->f_flag;
-	ssfb->sf_namemax	= sfb->f_namemax;
 }
 
 void
 sl_internalize_statfs(const struct srt_statfs *ssfb, struct statvfs *sfb)
 {
+	memset(sfb, 0, sizeof(*sfb));
 	sfb->f_bsize		= ssfb->sf_bsize;
-	sfb->f_frsize		= ssfb->sf_frsize;
 	sfb->f_blocks		= ssfb->sf_blocks;
 	sfb->f_bfree		= ssfb->sf_bfree;
 	sfb->f_bavail		= ssfb->sf_bavail;
 	sfb->f_files		= ssfb->sf_files;
 	sfb->f_ffree		= ssfb->sf_ffree;
 	sfb->f_favail		= ssfb->sf_favail;
-	sfb->f_fsid		= ssfb->sf_fsid;
-	sfb->f_flag		= ssfb->sf_flag;
-	sfb->f_namemax		= ssfb->sf_namemax;
 }
 
 /**
