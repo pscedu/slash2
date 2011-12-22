@@ -126,9 +126,11 @@ slm_statfs_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 
 	if (b->sf_blocks) {
 		psc_fmt_human(sbuf, b->sf_blocks * b->sf_bsize);
-		psc_fmt_human(ubuf, (b->sf_blocks - b->sf_bfree) * b->sf_bsize);
+		psc_fmt_human(ubuf, (b->sf_blocks - b->sf_bfree) *
+		    b->sf_bsize);
 		psc_fmt_human(abuf, b->sf_bavail * b->sf_bsize);
-		psc_fmt_ratio(cbuf, (b->sf_blocks - (int64_t)b->sf_bavail), b->sf_blocks);
+		psc_fmt_ratio(cbuf, (b->sf_blocks -
+		    (int64_t)b->sf_bavail), b->sf_blocks);
 	} else {
 		strlcpy(sbuf, "-", sizeof(sbuf));
 		strlcpy(ubuf, "-", sizeof(ubuf));
