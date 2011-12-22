@@ -298,8 +298,8 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 	case SLCONNT_MDS:
 		m = libsl_try_nid2resm(rq->rq_peer.nid);
 		if (m == NULL)
-			mp->rc = -SLERR_ION_UNKNOWN;
-		if (!RES_ISFS(m->resm_res))
+			mp->rc = -SLERR_RES_UNKNOWN;
+		if (m->resm_type != SLREST_MDS)
 			mp->rc = -SLERR_RES_BADTYPE;
 		m->resm_stkvers = mq->stkvers;
 		break;
