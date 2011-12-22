@@ -226,14 +226,14 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 		 struct pscrpc_async_args *args)
 {
 	struct srm_bmap_crcwrt_rep *mp;
-//	struct slashrpc_cservice *csvc;
+	struct slashrpc_cservice *csvc;
 	struct biod_crcup_ref *bcr;
 	struct bmap_iod_info *biod;
 	struct psc_dynarray *a;
 	int i;
 
 	a = args->pointer_arg[0];
-//	csvc = args->pointer_arg[1];
+	csvc = args->pointer_arg[1];
 	psc_assert(a);
 
 	sli_rpc_mds_unpack_bminseq(rq, PSCRPC_MSG_REPLY);
@@ -265,13 +265,13 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 			BIOD_ULOCK(biod);
 
 			DEBUG_BCR(PLL_ERROR, bcr, "rescheduling");
-
 		} else
 			bcr_finalize(&binflCrcs, bcr);
-
 	}
 	psc_dynarray_free(a);
 	PSCFREE(a);
+
+	sl_csvc_decref(csvc);
 
 	return (1);
 }
