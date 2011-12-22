@@ -15,7 +15,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES ctl rpc %
-.Dd December 2, 2011
+.Dd December 22, 2011
 .Dt SLMCTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -240,10 +240,11 @@ The default is
 .\" }%
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/show.mdoc {
 .\"	show => {
-.\"		connections	=> qq{Status of\n.Tn SLASH\npeers on network},
-.\"		fidcache	=> qq{.Tn FID\n.Pq file- Ns Tn ID\ncache members},
+.\"		connections	=> qq{Status of\n.Tn SLASH\npeers on network.},
+.\"		fidcache	=> qq{.Tn FID\n.Pq file- Ns Tn ID\ncache members.},
 .\"		odtables	=> qq{Disk-backed data files.},
 .\"		replpairs	=> qq{Replica endpoint traffic.},
+.\"		statfs		=> qq{.Tn I/O\nnode backing file system statistics.},
 .\"	},
 .\"	hashtables => {
 .\"		fidc		=> qq{files\n.Po file\n.Tn ID\ncache\n.Pc},
@@ -290,11 +291,11 @@ following:
 .It Cm connections
 Status of
 .Tn SLASH
-peers on network
+peers on network.
 .It Cm fidcache
 .Tn FID
 .Pq file- Ns Tn ID
-cache members
+cache members.
 .It Cm hashtables
 Hash table statistics.
 .Ar subspec
@@ -489,6 +490,9 @@ Replica endpoint traffic.
 .It Cm rpcsvcs
 .Tn RPC
 services.
+.It Cm statfs
+.Tn I/O
+node backing file system statistics.
 .It Cm threads
 Daemon thread activity and statistics.
 .Ar subspec

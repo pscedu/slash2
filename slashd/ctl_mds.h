@@ -21,10 +21,17 @@
  * Interface for controlling live operation of slashd.
  */
 
+#include "slashrpc.h"
+
 struct slmctlmsg_replpair {
-	char			scrp_addrbuf[2][PSC_ALIGN(RESM_ADDRBUF_SZ, 8)];
+	char			scrp_addrbuf[2][RESM_ADDRBUF_SZ];
 	uint32_t		scrp_avail;
 	uint32_t		scrp_used;
+};
+
+struct slmctlmsg_statfs {
+	char			scsf_resname[RES_NAME_MAX];
+	struct srt_statfs	scsf_ssfb;
 };
 
 /* slrmcthr stats */
@@ -36,4 +43,5 @@ struct slmctlmsg_replpair {
 #define SLMCMT_GETCONNS		(NPCMT + 0)
 #define SLMCMT_GETFCMHS		(NPCMT + 1)
 #define SLMCMT_GETREPLPAIRS	(NPCMT + 2)
-#define SLMCMT_STOP		(NPCMT + 3)
+#define SLMCMT_GETSTATFS	(NPCMT + 3)
+#define SLMCMT_STOP		(NPCMT + 4)

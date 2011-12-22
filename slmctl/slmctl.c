@@ -32,6 +32,7 @@
 #include "ctl.h"
 #include "ctlcli.h"
 #include "pathnames.h"
+#include "slashrpc.h"
 
 #include "slashd/ctl_mds.h"
 #include "slashd/repl_mds.h"
@@ -72,14 +73,21 @@ packshow_replpairs(__unusedx char *pair)
 }
 
 void
-sl_replpair_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
+packshow_statfs(__unusedx char *pair)
+{
+	psc_ctlmsg_push(SLMCMT_GETSTATFS,
+	    sizeof(struct slmctlmsg_statfs));
+}
+
+void
+slm_replpair_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	printf("%-28s %-28s  %10s %10s\n",
 	    "repl-resm-A", "repl-resm-B", "used", "avail");
 }
 
 void
-sl_replpair_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
+slm_replpair_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 {
 	const struct slmctlmsg_replpair *scrp = m;
 	char abuf[PSCFMT_HUMAN_BUFSIZ], ubuf[PSCFMT_HUMAN_BUFSIZ];
@@ -97,7 +105,42 @@ sl_replpair_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 
 	psc_fmt_human(ubuf, scrp->scrp_used);
 	psc_fmt_human(abuf, scrp->scrp_avail);
-	printf("%-28s %-28s  %8s/s %8s/s\n", addr[0], addr[1], ubuf, abuf);
+	printf("%-32s %-28s  %8s/s %8s/s\n", addr[0], addr[1], ubuf, abuf);
+}
+
+void
+slm_statfs_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
+{
+	printf("%-30s %7s %7s %7s %8s %-16s\n",
+	    "resource", "size", "used", "avail", "capacity", "type");
+}
+
+void
+slm_statfs_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
+{
+	const struct slmctlmsg_statfs *scsf = m;
+	char sbuf[PSCFMT_HUMAN_BUFSIZ], ubuf[PSCFMT_HUMAN_BUFSIZ];
+	char abuf[PSCFMT_HUMAN_BUFSIZ], cbuf[PSCFMT_RATIO_BUFSIZ];
+	const struct srt_statfs *b = &scsf->scsf_ssfb;
+	char *p, name[RES_NAME_MAX];
+
+	if (b->sf_blocks) {
+		psc_fmt_human(sbuf, b->sf_blocks * b->sf_bsize);
+		psc_fmt_human(ubuf, (b->sf_blocks - b->sf_bfree) * b->sf_bsize);
+		psc_fmt_human(abuf, b->sf_bavail * b->sf_bsize);
+		psc_fmt_ratio(cbuf, (b->sf_blocks - (int64_t)b->sf_bavail), b->sf_blocks);
+	} else {
+		strlcpy(sbuf, "-", sizeof(sbuf));
+		strlcpy(ubuf, "-", sizeof(ubuf));
+		strlcpy(abuf, "-", sizeof(abuf));
+		strlcpy(cbuf, "-", sizeof(cbuf));
+	}
+	strlcpy(name, scsf->scsf_resname, sizeof(name));
+	p = strchr(name, '@');
+	if (p)
+		*p = '\0';
+	printf("  %-28s %7s %7s %7s %8s %-16s\n",
+	    name, sbuf, ubuf, abuf, cbuf, b->sf_type);
 }
 
 void
@@ -113,6 +156,7 @@ struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 	{ "connections",	packshow_conns },
 	{ "fcmhs",		packshow_fcmhs },
 	{ "replpairs",		packshow_replpairs },
+	{ "statfs",		packshow_statfs },
 
 	/* aliases */
 	{ "conns",		packshow_conns },
@@ -124,7 +168,8 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 	PSC_CTLMSG_PRFMT_DEFS,
 	{ sl_conn_prhdr,	sl_conn_prdat,		sizeof(struct slctlmsg_conn),		NULL },
 	{ sl_fcmh_prhdr,	sl_fcmh_prdat,		sizeof(struct slctlmsg_fcmh),		NULL },
-	{ sl_replpair_prhdr,	sl_replpair_prdat,	sizeof(struct slmctlmsg_replpair),	NULL },
+	{ slm_replpair_prhdr,	slm_replpair_prdat,	sizeof(struct slmctlmsg_replpair),	NULL },
+	{ slm_statfs_prhdr,	slm_statfs_prdat,	sizeof(struct slmctlmsg_statfs),	NULL },
 	{ NULL,			NULL,			0,					NULL }
 };
 

@@ -49,8 +49,11 @@ const char *slm_nslogst_ops[] = {
 	"mkdir",
 	"rename",
 	"rmdir",
+	"setsize",
+	"setattr",
 	"symlink",
 	"unlink",
+	"reclaim",
 	"#aggr"
 };
 
@@ -73,8 +76,8 @@ lookup(const char **tab, int n, const char *key)
 
 int
 slmctlparam_namespace_stats_process(int fd, struct psc_ctlmsghdr *mh,
-    struct psc_ctlmsg_param *pcp, char **levels, struct sl_mds_nsstats *st,
-    int d_val, int o_val, int s_val)
+    struct psc_ctlmsg_param *pcp, char **levels,
+    struct sl_mds_nsstats *st, int d_val, int o_val, int s_val)
 {
 	int d_start, o_start, s_start, set, i_d, i_o, i_s;
 	char nbuf[15];
@@ -397,7 +400,7 @@ slmctlrep_getreplpairs(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct sl_site *s, *s0;
 	int i, j, i0, j0, rc = 1;
 
-	PLL_LOCK(&globalConfig.gconf_sites);
+	CONF_LOCK();
 	spinlock(&repl_busytable_lock);
 	CONF_FOREACH_RESM(s, r, i, resm, j) {
 		j0 = j + 1;
@@ -427,7 +430,39 @@ slmctlrep_getreplpairs(int fd, struct psc_ctlmsghdr *mh, void *m)
 	}
  done:
 	freelock(&repl_busytable_lock);
-	PLL_ULOCK(&globalConfig.gconf_sites);
+	CONF_ULOCK();
+	return (rc);
+}
+
+/**
+ * slmctlrep_getstatfs - Send a response to a "GETSTATFS" inquiry.
+ * @fd: client socket descriptor.
+ * @mh: already filled-in control message header.
+ * @m: control message to examine and reuse.
+ */
+int
+slmctlrep_getstatfs(int fd, struct psc_ctlmsghdr *mh, void *m)
+{
+	struct slmctlmsg_statfs *scsf = m;
+	struct sl_resource *r;
+	int i, rc = 1;
+
+	CONF_LOCK();
+	SITE_FOREACH_RES(nodeSite, r, i) {
+		if (!RES_ISFS(r))
+			continue;
+
+		strlcpy(scsf->scsf_resname, r->res_name,
+		    sizeof(scsf->scsf_resname));
+		memcpy(&scsf->scsf_ssfb, &res2iosinfo(r)->si_ssfb,
+		    sizeof(scsf->scsf_ssfb));
+
+		rc = psc_ctlmsg_sendv(fd, mh, scsf);
+		if (!rc)
+			goto done;
+	}
+ done:
+	CONF_ULOCK();
 	return (rc);
 }
 
@@ -468,6 +503,7 @@ struct psc_ctlop slmctlops[] = {
 	{ slctlrep_getconns,		sizeof(struct slctlmsg_conn ) },
 	{ slctlrep_getfcmhs,		sizeof(struct slctlmsg_fcmh ) },
 	{ slmctlrep_getreplpairs,	sizeof(struct slmctlmsg_replpair ) },
+	{ slmctlrep_getstatfs,		sizeof(struct slmctlmsg_statfs ) },
 	{ slmctlcmd_stop,		0 }
 };
 
