@@ -42,3 +42,27 @@ will be overwritten or do not exist at all.
 Bmap sequence numbers are used to time out old bmaps on the I/O servers.
 We don't do time syncronization amoung clients and servers.  So it is 
 entirely up to the MDS to decide when to time out bmaps it has issued.
+
+01/05/2011
+----------
+
+Today Paul found a problem in which the mds have 30MB/s I/O every 1 minute.
+This slows down the readdir performance a lot.
+
+It turns out that one of the IOS (likely tahini) is down, and the MDS still
+tries to send reclaim log to it.  It does so by reading the log file first,
+only to find out that the IOS can not be contacted.
+
+In the short time, there are two ways to attack this:
+
+(1) Make sure that an IOS is alive before reading a reclaim log file
+    for it.
+
+(2) Print out the down IOS in the log, so that sys admin can take action
+    to correct it.
+
+In the long term, we may need to sort out the residency of a deleted
+file first before sending down the garbage reclamation RPCs to the IOS.
+
+Right now, partial truncate is handled differently by creating special
+files to represent the work to do.  Maybe that is the way to go.
