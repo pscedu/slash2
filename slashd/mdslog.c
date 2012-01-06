@@ -1103,7 +1103,7 @@ mds_open_cursor(void)
 int
 mds_send_batch_reclaim(uint64_t batchno)
 {
-	int i, ri, rc, len, count, nentry, total, nios, didwork = 0, record = 0;
+	int i, j, ri, rc, len, count, nentry, total, nios, didwork = 0, record = 0;
 	struct srt_reclaim_entry *entryp, *next_entryp;
 	struct slashrpc_cservice *csvc;
 	struct sl_mds_iosinfo *iosinfo;
@@ -1117,6 +1117,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 	uint64_t xid;
 	size_t size;
 	void *handle;
+	struct sl_resm_nid *mn;
 
 	rc = mds_open_logfile(batchno, 0, 1, &handle);
 	if (rc) {
@@ -1215,8 +1216,16 @@ mds_send_batch_reclaim(uint64_t batchno)
 		DYNARRAY_FOREACH(dst_resm, i, &res->res_members) {
 			csvc = slm_geticsvcf(dst_resm, CSVCF_NONBLOCK |
 			    CSVCF_NORECON);
-			if (csvc == NULL)
+			if (csvc == NULL) {
+				for (j = 0; 
+				     j < psc_dynarray_len(&dst_resm->resm_nids); 
+				     j++) {
+					mn = psc_dynarray_getpos(&dst_resm->resm_nids, j);
+					psclog_warn("GC: fail to contact: %s\n", 
+						     mn->resmnid_addrbuf);
+				}
 				continue;
+			}
 			rc = SL_RSX_NEWREQ(csvc, SRMT_RECLAIM, rq, mq,
 			    mp);
 			if (rc) {
