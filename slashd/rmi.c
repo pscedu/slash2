@@ -454,9 +454,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 			PFL_GOTOERR(out, mp->rc = -SLERR_REIMPORT_OLD);
 
 		if (mq->flags & SRM_IMPORTF_XREPL) {
-			if (mq->sstb.sst_mtime != sstb.sst_mtime ||
-			    mq->sstb.sst_atime != sstb.sst_atime ||
-			    mq->sstb.sst_size != sstb.sst_size)
+			if (mq->sstb.sst_size != sstb.sst_size)
 				PFL_GOTOERR(out, mp->rc =
 				    -SLERR_IMPORT_XREPL_DIFF);
 		} else {
