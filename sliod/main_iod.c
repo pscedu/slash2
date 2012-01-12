@@ -36,6 +36,7 @@
 #include "psc_util/thread.h"
 #include "psc_util/timerthr.h"
 #include "psc_util/usklndthr.h"
+#include "psc_util/iostats.h"
 
 #include "authbuf.h"
 #include "bmap_iod.h"
@@ -61,6 +62,24 @@ psc_spinlock_t		 sli_ssfb_lock = SPINLOCK_INIT;
 uint32_t		 sys_upnonce;
 int			 allow_root_uid = 1;
 const char		*progname;
+
+struct psc_iostats      sliod_wr_1b_stat;
+struct psc_iostats      sliod_wr_1k_stat;
+struct psc_iostats      sliod_wr_4k_stat;
+struct psc_iostats      sliod_wr_16k_stat;
+struct psc_iostats      sliod_wr_64k_stat;
+struct psc_iostats      sliod_wr_128k_stat;
+struct psc_iostats      sliod_wr_512k_stat;
+struct psc_iostats      sliod_wr_1m_stat;
+
+struct psc_iostats      sliod_rd_1b_stat;
+struct psc_iostats      sliod_rd_1k_stat;
+struct psc_iostats      sliod_rd_4k_stat;
+struct psc_iostats      sliod_rd_16k_stat;
+struct psc_iostats      sliod_rd_64k_stat;
+struct psc_iostats      sliod_rd_128k_stat;
+struct psc_iostats      sliod_rd_512k_stat;
+struct psc_iostats      sliod_rd_1m_stat;
 
 int
 psc_usklndthr_get_type(const char *namefmt)
@@ -179,6 +198,23 @@ main(int argc, char *argv[])
 	fidc_init(sizeof(struct fcmh_iod_info), FIDC_ION_DEFSZ);
 	bim_init();
 	slvr_cache_init();
+
+        psc_iostats_init(&sliod_wr_1b_stat,   "wr: < 1k");
+        psc_iostats_init(&sliod_rd_1b_stat,   "rd: < 1k");
+	psc_iostats_init(&sliod_wr_1k_stat,   "wr: 1k-4k");
+	psc_iostats_init(&sliod_rd_1k_stat,   "rd: 1k-4k");
+	psc_iostats_init(&sliod_wr_4k_stat,   "wr: 4k-16k");
+	psc_iostats_init(&sliod_rd_4k_stat,   "rd: 4k-16k");
+	psc_iostats_init(&sliod_wr_16k_stat,  "wr: 16k-64k");
+	psc_iostats_init(&sliod_rd_16k_stat,  "rd: 16k-64k");
+	psc_iostats_init(&sliod_wr_64k_stat,  "wr: 64k-128k");
+	psc_iostats_init(&sliod_rd_64k_stat,  "rd: 64k-128k");
+	psc_iostats_init(&sliod_wr_128k_stat, "wr: 128k-512k");
+	psc_iostats_init(&sliod_rd_128k_stat, "rd: 128k-512k");
+	psc_iostats_init(&sliod_wr_512k_stat, "wr: 512k-1m");
+	psc_iostats_init(&sliod_rd_512k_stat, "rd: 512k-1m");
+	psc_iostats_init(&sliod_wr_1m_stat,   "wr: >= 1m");
+	psc_iostats_init(&sliod_rd_1m_stat,   "rd: >= 1m");
 
 	psc_poolmaster_init(&bmap_rls_poolmaster, struct bmap_iod_rls,
 	    bir_lentry, PPMF_AUTO, 64, 64, 0, NULL, NULL, NULL,

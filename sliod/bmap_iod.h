@@ -123,7 +123,7 @@ struct bmap_iod_info {
 	struct psc_lockedlist	 biod_rls;
 	uint64_t		 biod_bcr_xid;
 	uint64_t		 biod_bcr_xid_last;
-	uint32_t		 biod_crcdrty_slvrs;
+	psc_atomic32_t		 biod_crcdrty_slvrs;
 };
 
 /* sliod-specific bcm_flags */
@@ -150,7 +150,7 @@ struct bmap_iod_info {
 #define BIOD_TRYLOCK(bii)	BMAP_TRYLOCK(bii_2_bmap(bii))
 #define BIOD_LOCK_ENSURE(bii)	BMAP_LOCK_ENSURE(bii_2_bmap(bii))
 
-#define BIOD_CRCUP_MAX_AGE	2			/* in seconds */
+#define BIOD_CRCUP_MAX_AGE	1			/* in seconds */
 
 uint64_t	bim_getcurseq(void);
 void		bim_init(void);

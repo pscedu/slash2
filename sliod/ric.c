@@ -28,6 +28,7 @@
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/service.h"
+#include "psc_util/iostats.h"
 
 #include "authbuf.h"
 #include "bmap_iod.h"
@@ -40,6 +41,24 @@
 #include "slerr.h"
 #include "sliod.h"
 #include "slvr.h"
+
+extern struct psc_iostats sliod_wr_1b_stat;
+extern struct psc_iostats sliod_wr_1k_stat;
+extern struct psc_iostats sliod_wr_4k_stat;
+extern struct psc_iostats sliod_wr_16k_stat;
+extern struct psc_iostats sliod_wr_64k_stat;
+extern struct psc_iostats sliod_wr_128k_stat;
+extern struct psc_iostats sliod_wr_512k_stat;
+extern struct psc_iostats sliod_wr_1m_stat;
+extern struct psc_iostats sliod_rd_1m_stat;
+extern struct psc_iostats sliod_rd_1b_stat;
+extern struct psc_iostats sliod_rd_1k_stat;
+extern struct psc_iostats sliod_rd_4k_stat;
+extern struct psc_iostats sliod_rd_16k_stat;
+extern struct psc_iostats sliod_rd_64k_stat;
+extern struct psc_iostats sliod_rd_128k_stat;
+extern struct psc_iostats sliod_rd_512k_stat;
+extern struct psc_iostats sliod_rd_1m_stat;
 
 __static int
 sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
@@ -75,6 +94,36 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		return (mp->rc);
 	}
 
+	if (mq->size < 1024)
+		psc_iostats_intv_add((rw == SL_WRITE) ? 
+		     &sliod_wr_1b_stat : &sliod_rd_1b_stat, 1);
+	
+	else if (mq->size < 4096)
+		psc_iostats_intv_add((rw == SL_WRITE) ? 
+		     &sliod_wr_1k_stat : &sliod_rd_1k_stat, 1);
+
+	else if (mq->size < 16386)
+		psc_iostats_intv_add((rw == SL_WRITE) ? 
+		     &sliod_wr_4k_stat : &sliod_rd_4k_stat, 1);
+
+	else if (mq->size < 65536)
+		psc_iostats_intv_add((rw == SL_WRITE) ? 
+		     &sliod_wr_16k_stat : &sliod_rd_16k_stat, 1);
+
+	else if (mq->size < 131072)
+		psc_iostats_intv_add((rw == SL_WRITE) ? 
+		     &sliod_wr_64k_stat : &sliod_rd_64k_stat, 1);
+
+	else if (mq->size < 524288)
+		psc_iostats_intv_add((rw == SL_WRITE) ? 
+		     &sliod_wr_128k_stat : &sliod_rd_128k_stat, 1);
+
+	else if (mq->size < 1048576)
+		psc_iostats_intv_add((rw == SL_WRITE) ? 
+		     &sliod_wr_512k_stat : &sliod_rd_512k_stat, 1);
+	else
+		psc_iostats_intv_add((rw == SL_WRITE) ? 
+		     &sliod_wr_1m_stat : &sliod_rd_1m_stat, 1);	
 	/*
 	 * A RBW (read-before-write) request from the client may have a
 	 *   write enabled bmapdesc which he uses to fault in his page.
@@ -204,12 +253,14 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 			SLVR_LOCK(s);
 			if (s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR)) {
-				DEBUG_SLVR(PLL_NOTIFY, s, "aio early ready, rw=%d", rw);
+				DEBUG_SLVR(PLL_NOTIFY, s, 
+				   "aio early ready, rw=%d", rw);
 				SLVR_ULOCK(s);
 
 			} else {
-				/* Attach the reply to the first sliver waiting for
-				 *    aio and return AIOWAIT to client later.
+				/* Attach the reply to the first sliver 
+				 *    waiting for aio and return AIOWAIT 
+				 *    to client later.
 				 */
 				pll_add(&s->slvr_pndgaios, aiocbr);
 				aiocbr->aiocbr_slvratt = s;
@@ -283,8 +334,9 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			/* Only the first sliver may use a blk offset.
 			 */
 			sblk = 0;
-		}
-		slvr_io_done(slvr_ref[i], roff[i], len[i], rw);
+			slvr_wio_done(slvr_ref[i]);
+		} else
+			slvr_rio_done(slvr_ref[i]);
 	}
 
 	if (rw == SL_WRITE)
@@ -308,7 +360,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 {
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
-	struct srt_bmapdesc *sbd, *newsbd;
+	struct srt_bmapdesc *sbd, *newsbd, *p;
 	struct bmap_iod_info *biod;
 	struct fidc_membh *f;
 	struct bmapc_memb *b;
@@ -341,39 +393,49 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 			fsync_time = CURRENT_SECONDS - fsync_time;
 
 			if (fsync_time > 10)
-				DEBUG_FCMH(PLL_WARN, f, "long fsync %d", fsync_time);
+				DEBUG_FCMH(PLL_WARN, f, "long fsync %d", 
+				   fsync_time);
 		}
 
 		if (rc)
-			DEBUG_FCMH(PLL_ERROR, f, "fsync failure rc=%d fd=%d errno=%d",
-				   rc, fcmh_2_fd(f), errno);
+			DEBUG_FCMH(PLL_ERROR, f, "fsync failure rc=%d fd=%d"
+			   " errno=%d", rc, fcmh_2_fd(f), errno);
 
 		rc = bmap_get(f, sbd->sbd_bmapno, SL_WRITE, &b);
 		if (rc) {
-			psclog_errorx("failed to load bmap %u", sbd->sbd_bmapno);
+			psclog_errorx("failed to load bmap %u", 
+			      sbd->sbd_bmapno);
+			fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 			continue;
-		}
-
-		biod = bmap_2_biodi(b);
-		DEBUG_FCMH(PLL_INFO, f, "bmapno=%d seq=%"PRId64" key=%"PRId64,
-			   b->bcm_bmapno, sbd->sbd_seq, sbd->sbd_key);
+		} else
+			fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 
 		newsbd = psc_pool_get(bmap_rls_pool);
 		memcpy(newsbd, sbd, sizeof(*sbd));
 
-		pll_add(&biod->biod_rls, newsbd);
-
-		/* Bmap is attached, safe to unref.
-		 */
-		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
-
+		biod = bmap_2_biodi(b);
 		BIOD_LOCK(biod);
+		PLL_FOREACH(p, &biod->biod_rls) {
+			if (!memcmp(p, sbd, sizeof(*p))) {
+				BIOD_ULOCK(biod);
+				bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+				psc_pool_return(bmap_rls_pool, newsbd);
+				continue;
+			}
+		}
+		
+		DEBUG_FCMH(PLL_INFO, f, "bmapno=%d seq=%"PRId64" key=%"PRId64
+		   " (brls=%p)", b->bcm_bmapno, sbd->sbd_seq, sbd->sbd_key, 
+		   newsbd);
+		
+		bmap_op_start_type(bii_2_bmap(biod), BMAP_OPCNT_RLSSCHED);
 
-		BMAP_SETATTR(b, BMAP_IOD_RLSSEQ);
+		pll_add(&biod->biod_rls, newsbd);		
+		BMAP_SETATTR(b, BMAP_IOD_RLSSEQ);		
 		biod_rlssched_locked(biod);
-
 		BIOD_ULOCK(biod);
-		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+
+		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);		
 	}
  out:
 	return (0);

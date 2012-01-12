@@ -48,13 +48,13 @@ struct slvr_ref {
 	uint32_t		 slvr_pndgreads;/* # reads in progress */
 	uint32_t		 slvr_compwrts;	/* # compltd wrts when !LRU */
 	uint32_t		 slvr_flags;	/* see SLVR_* flags */
-	uint32_t		 slvr_crc_soff;	/* crc start region */
-	uint32_t		 slvr_crc_eoff;	/* crc region length */
-	uint32_t		 slvr_crc_loff;	/* last crc end */
 	uint64_t		 slvr_crc;	/* accumulator  */
+	uint32_t                 slvr_ncrc;     /* n times slvr was crc'd */
 	int32_t			 slvr_err;
+	int32_t                  slvr_dirty_cnt;
 	psc_spinlock_t		 slvr_lock;
 	void			*slvr_pri;	/* backptr (bmap_iod_info) */
+	struct timespec          slvr_ts;
 	struct sli_iocb		*slvr_iocb;
 	struct sl_buffer	*slvr_slab;
 	struct psc_lockedlist	 slvr_pndgaios;
@@ -81,8 +81,6 @@ struct slvr_ref {
 #define SLVR_AIOWAIT		(1 << 15)	/* early return for AIO (for both local and remote) */
 #define SLVR_RDMODWR		(1 << 16)	/* read modify write */
 #define SLVR_REPLWIRE		(1 << 17)	/* prevent aio race */
-
-#define SLVR_CRCLEN(s)		((s)->slvr_crc_eoff - (s)->slvr_crc_soff)
 
 #define SLVR_2_BLK(s)		((s)->slvr_num *			\
 				 (SLASH_BMAP_SIZE / SLASH_SLVR_BLKSZ))
@@ -133,9 +131,6 @@ struct slvr_ref {
 #define slvr_2_crc(s)							\
 	slvr_2_bmap_ondisk(s)->bod_crcs[(s)->slvr_num]
 
-#define slvr_io_done(s, off, len, rw)					\
-	((rw) == SL_WRITE ? slvr_wio_done((s), (off), (len)) : slvr_rio_done(s))
-
 #define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
 #define DEBUG_SLVR_FLAGS(s)						\
 	(s)->slvr_flags & SLVR_NEW		? "n" : "-",		\
@@ -159,15 +154,17 @@ struct slvr_ref {
 
 #define DEBUG_SLVR(level, s, fmt, ...)					\
 	psclogs((level), SLISS_SLVR, "slvr@%p num=%hu pw=%hu "		\
-	    "pr=%hu cw=%hu "						\
-	    "soff=%u eoff=%u loff=%u "					\
-	    "pri@%p slab@%p iocb@%p flgs:"				\
-	    SLVR_FLAGS_FMT" :: "fmt,					\
-	    (s), (s)->slvr_num, (s)->slvr_pndgwrts,			\
-	    (s)->slvr_pndgreads, (s)->slvr_compwrts,			\
-	    (s)->slvr_crc_soff, (s)->slvr_crc_eoff, (s)->slvr_crc_loff,	\
-	    (s)->slvr_pri, (s)->slvr_slab, (s)->slvr_iocb,		\
-	    DEBUG_SLVR_FLAGS(s), ## __VA_ARGS__)
+		"pr=%hu cw=%hu ncrc=%u dc=%d ts="PSCPRI_TIMESPEC	\
+		" pri@%p slab@%p bmap@%p fid:"SLPRI_FID "iocb@%p flgs:"	\
+		SLVR_FLAGS_FMT" :: "fmt,				\
+		(s), (s)->slvr_num, (s)->slvr_pndgwrts,			\
+		(s)->slvr_pndgreads, (s)->slvr_compwrts,		\
+		(s)->slvr_ncrc, (s)->slvr_dirty_cnt, PSCPRI_TIMESPEC_ARGS(&(s)->slvr_ts), \
+		(s)->slvr_pri, (s)->slvr_slab,				\
+		((s)->slvr_pri) ? slvr_2_bmap((s)) : NULL,		\
+		((s)->slvr_pri) ? fcmh_2_fid(slvr_2_bmap((s))->bcm_fcmh) : FID_ANY, \
+		(s)->slvr_iocb,						\
+		DEBUG_SLVR_FLAGS(s), ## __VA_ARGS__)
 
 #define RIC_MAX_SLVRS_PER_IO	2
 
@@ -213,7 +210,7 @@ void	slvr_repl_prep(struct slvr_ref *, int);
 void	slvr_rio_done(struct slvr_ref *);
 void	slvr_schedule_crc(struct slvr_ref *);
 void	slvr_slab_prep(struct slvr_ref *, enum rw);
-void	slvr_wio_done(struct slvr_ref *, uint32_t, uint32_t);
+void	slvr_wio_done(struct slvr_ref *);
 void	slvr_worker_init(void);
 
 void	sli_aio_reply_setup(struct sli_aiocb_reply *, struct pscrpc_request *,

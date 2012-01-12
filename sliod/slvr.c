@@ -133,55 +133,27 @@ slvr_do_crc(struct slvr_ref *s)
 
 		if ((slvr_2_crcbits(s) & BMAP_SLVR_DATA) &&
 		    (slvr_2_crcbits(s) & BMAP_SLVR_CRC)) {
-			psc_assert(!s->slvr_crc_soff);
 
-			psc_crc64_calc(&crc, slvr_2_buf(s, 0),
-			    SLVR_CRCLEN(s));
+			psc_crc64_calc(&crc, slvr_2_buf(s, 0), 
+			       SLASH_SLVR_SIZE);
 
 			if (crc != slvr_2_crc(s)) {
 				DEBUG_SLVR(PLL_ERROR, s, "CRC failed "
 				    "want=%"PSCPRIxCRC64" "
-				    "got=%"PSCPRIxCRC64" len=%u",
-				    slvr_2_crc(s), crc, SLVR_CRCLEN(s));
+				    "got=%"PSCPRIxCRC64, slvr_2_crc(s), crc);
 
 				DEBUG_BMAP(PLL_ERROR, slvr_2_bmap(s),
 				   "CRC failed slvrnum=%hu", s->slvr_num);
 
-				/* Shouldn't need a lock, !SLVR_DATADY
-				 */
-				s->slvr_crc_eoff = 0;
-
 				return (SLERR_BADCRC);
 			}
-			s->slvr_crc_eoff = 0;
 		} else
 			return (0);
 
 	} else if (s->slvr_flags & SLVR_CRCDIRTY) {
-
-		uint32_t soff, eoff;
-
 		SLVR_LOCK(s);
-		DEBUG_SLVR(PLL_NOTIFY, s, "len=%u soff=%u loff=%u",
-		   SLVR_CRCLEN(s), s->slvr_crc_soff, s->slvr_crc_loff);
-
-		psc_assert(s->slvr_crc_eoff &&
-		    (s->slvr_crc_eoff <= SLASH_BMAP_CRCSIZE));
-
-		if (!s->slvr_crc_loff ||
-		    s->slvr_crc_soff != s->slvr_crc_loff) {
-			/* Detect non-sequential write pattern into the
-			 *   slvr.
-			 */
-			PSC_CRC64_INIT(&s->slvr_crc);
-			s->slvr_crc_soff = 0;
-			s->slvr_crc_loff = 0;
-		}
-		/* Copy values in preparation for lock release.
-		 */
-		soff = s->slvr_crc_soff;
-		eoff = s->slvr_crc_eoff;
-
+		DEBUG_SLVR(PLL_NOTIFY, s, "crc");
+		PSC_CRC64_INIT(&s->slvr_crc);
 		SLVR_ULOCK(s);
 
 #ifdef ADLERCRC32
@@ -190,26 +162,17 @@ slvr_do_crc(struct slvr_ref *s)
 		    (int)(eoff - soff));
 		crc = s->slvr_crc;
 #else
-		psc_crc64_add(&s->slvr_crc, slvr_2_buf(s, 0) + soff,
-		    (int)(eoff - soff));
+		psc_crc64_add(&s->slvr_crc, slvr_2_buf(s, 0), 
+		      SLASH_SLVR_SIZE);
+
 		crc = s->slvr_crc;
-		PSC_CRC32_FIN(&crc);
+		PSC_CRC64_FIN(&crc);
 #endif
-
-		DEBUG_SLVR(PLL_NOTIFY, s, "crc=%"PSCPRIxCRC64" len=%u soff=%u",
-		    crc, SLVR_CRCLEN(s), s->slvr_crc_soff);
-
-		DEBUG_BMAP(PLL_NOTIFY, slvr_2_bmap(s),
-		    "slvrnum=%hu", s->slvr_num);
+		DEBUG_SLVR(PLL_NOTIFY, s, "crc=%"PSCPRIxCRC64, crc);
 
 		SLVR_LOCK(s);
-		/* loff is only set here.
-		 */
-		s->slvr_crc_loff = eoff;
-
 		if (!s->slvr_pndgwrts && !s->slvr_compwrts)
 			s->slvr_flags &= ~SLVR_CRCDIRTY;
-		//XXX needs a bmap lock here, not a biodi lock
 		slvr_2_crc(s) = crc;
 		slvr_2_crcbits(s) |= BMAP_SLVR_DATA | BMAP_SLVR_CRC;
 		SLVR_ULOCK(s);
@@ -316,7 +279,7 @@ slvr_aio_replreply(struct sli_aiocb_reply *a)
 	pscrpc_export_put(a->aiocbr_peer);
 	if (csvc)
 		sl_csvc_decref(csvc);
-
+	
 	sli_aio_aiocbr_release(a);
 }
 
@@ -333,8 +296,8 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 	if (csvc == NULL)
 		goto out;
 
-	rc = SL_RSX_NEWREQ(csvc, a->aiocbr_rw == SL_WRITE ? SRMT_WRITE : SRMT_READ,
-		   rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, a->aiocbr_rw == SL_WRITE ? 
+		   SRMT_WRITE : SRMT_READ, rq, mq, mp);
 	if (rc)
 		goto out;
 
@@ -669,7 +632,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 		rc = pread(slvr_2_fd(s), slvr_2_buf(s, sblk),
 			   size, slvr_2_fileoff(s, sblk));
 
-		if (rc == -1)
+		if (rc < 0)
 			save_errno = errno;
 
 		/* XXX this is a bit of a hack.  Here we'll check crc's
@@ -685,9 +648,6 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 		if (rc > 0 && nblks == SLASH_BLKS_PER_SLVR) {
 			int crc_rc;
 
-			s->slvr_crc_soff = 0;
-			s->slvr_crc_eoff = rc;
-
 			crc_rc = slvr_do_crc(s);
 			if (crc_rc == SLERR_BADCRC)
 				DEBUG_SLVR(PLL_ERROR, s,
@@ -695,19 +655,9 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 				    nblks, slvr_2_fileoff(s, sblk));
 		}
 	} else {
-		/* Denote that this block(s) have been synced to the
-		 *  filesystem.
-		 * Should this check and set of the block bits be
-		 *  done for read also?  Probably not because the fs
-		 *  is only read once and that's protected by the
-		 *  FAULT bit.  Also, we need to know which blocks
-		 *  to mark as dirty after an RPC.
-		 */
-		for (i = 0; i < nblks; i++) {
-			//psc_assert(psc_vbitmap_get(s->slvr_slab->slb_inuse,
-			//	       sblk + i));
+		for (i = 0; i < nblks; i++)
 			psc_vbitmap_unset(s->slvr_slab->slb_inuse, sblk + i);
-		}
+
 		errno = 0;
 		SLVR_ULOCK(s);
 
@@ -753,7 +703,7 @@ slvr_fsbytes_rio(struct slvr_ref *s, struct sli_aiocb_reply **aiocbr)
 	int i, blk, nblks;
 	ssize_t rc;
 
-	psclog_trace("psc_vbitmap_nfree() = %d",
+	psclog_debug("psc_vbitmap_nfree() = %d",
 	    psc_vbitmap_nfree(s->slvr_slab->slb_inuse));
 
 	if (!(s->slvr_flags & SLVR_DATARDY))
@@ -789,7 +739,7 @@ slvr_fsbytes_rio(struct slvr_ref *s, struct sli_aiocb_reply **aiocbr)
 	if (rc == -SLERR_AIOWAIT)
 		return (rc);
 
-	if (rc) {
+	else if (rc) {
 		/*
 		 * There was a problem; unblock any waiters and tell
 		 * them the bad news.
@@ -1086,7 +1036,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 
 	if (unaligned[1] >= 0)
 		psc_vbitmap_set(s->slvr_slab->slb_inuse, unaligned[1]);
-//		psc_vbitmap_printbin1(s->slvr_slab->slb_inuse);
+		//psc_vbitmap_printbin1(s->slvr_slab->slb_inuse);
  out:
 	if (!rc && s->slvr_flags & SLVR_FAULTING) {
 		s->slvr_flags |= SLVR_DATARDY;
@@ -1125,10 +1075,13 @@ slvr_schedule_crc_locked(struct slvr_ref *s)
 	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
 	psc_assert(s->slvr_flags & SLVR_LRU);
 
-	slvr_2_biod(s)->biod_crcdrty_slvrs++;
+	if (!s->slvr_dirty_cnt) {
+		psc_atomic32_inc(&slvr_2_biod(s)->biod_crcdrty_slvrs);
+		s->slvr_dirty_cnt++;
+	}
 
 	DEBUG_SLVR(PLL_INFO, s, "crc sched (ndirty slvrs=%u)",
-		   slvr_2_biod(s)->biod_crcdrty_slvrs);
+	   psc_atomic32_read(&slvr_2_biod(s)->biod_crcdrty_slvrs));
 
 	s->slvr_flags &= ~SLVR_LRU;
 
@@ -1168,7 +1121,7 @@ slvr_try_crcsched_locked(struct slvr_ref *s)
  *    the sliver lock prior to performing list operations.
  */
 void
-slvr_wio_done(struct slvr_ref *s, uint32_t off, uint32_t len)
+slvr_wio_done(struct slvr_ref *s)
 {
 	SLVR_LOCK(s);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
@@ -1210,23 +1163,10 @@ slvr_wio_done(struct slvr_ref *s, uint32_t off, uint32_t len)
 		return;
 	}
 
+	PFL_GETTIMESPEC(&s->slvr_ts);
+
 	s->slvr_flags |= SLVR_CRCDIRTY;
 	s->slvr_flags &= ~SLVR_RDMODWR;
-	/*
-	 * Manage the description of the dirty crc area.  If the slvr's
-	 * checksum is not being processed then soff and len may be
-	 * adjusted.  If soff doesn't align with loff then the slvr will
-	 * be CRC'd from offset 0.
-	 */
-	s->slvr_crc_soff = off;
-
-	if ((off + len) > s->slvr_crc_eoff)
-		s->slvr_crc_eoff =  off + len;
-
-	psc_assert(s->slvr_crc_eoff <= SLASH_BMAP_CRCSIZE);
-
-	if (off != s->slvr_crc_loff)
-		s->slvr_crc_loff = 0;
 
 	if (!(s->slvr_flags & SLVR_DATARDY))
 		DEBUG_SLVR(PLL_FATAL, s, "invalid state");
@@ -1242,53 +1182,63 @@ slvr_wio_done(struct slvr_ref *s, uint32_t off, uint32_t len)
 struct slvr_ref *
 slvr_lookup(uint32_t num, struct bmap_iod_info *b, enum rw rw)
 {
-	struct slvr_ref *s, ts;
+	struct slvr_ref *s, *tmp = NULL, ts;
+
+	psc_assert(rw == SL_WRITE || rw == SL_READ);
 
 	ts.slvr_num = num;
 
  retry:
-	/* Lock order:  BIOD then SLVR.
-	 */
 	BIOD_LOCK(b);
-
 	s = SPLAY_FIND(biod_slvrtree, &b->biod_slvrs, &ts);
-
 	if (s) {
+		BIOD_ULOCK(b);
+
 		SLVR_LOCK(s);
 		if (s->slvr_flags & SLVR_FREEING) {
 			SLVR_ULOCK(s);
-			BIOD_ULOCK(b);
 			goto retry;
+
+		} else {
+			s->slvr_flags |= SLVR_PINNED;
+
+			if (rw == SL_WRITE)
+				s->slvr_pndgwrts++;
+			else
+				s->slvr_pndgreads++;
 		}
+		SLVR_ULOCK(s);
+
+		if (tmp)
+			psc_pool_return(slvr_pool, tmp);
 
 	} else {
-		s = psc_pool_get(slvr_pool);
+		if (!tmp) {
+			BIOD_ULOCK(b);	       
+			tmp = psc_pool_get(slvr_pool);
+			goto retry;
+		} else
+			s = tmp;
 
+		memset(s, 0, sizeof(*s));
 		s->slvr_num = num;
-		s->slvr_flags = SLVR_NEW | SLVR_SPLAYTREE;
+		s->slvr_flags = SLVR_NEW | SLVR_SPLAYTREE | SLVR_PINNED;
 		s->slvr_pri = b;
 		s->slvr_slab = NULL;
-		INIT_PSC_LISTENTRY(&s->slvr_lentry);
-		INIT_SPINLOCK(&s->slvr_lock);
-		pll_init(&s->slvr_pndgaios, struct sli_aiocb_reply,
-			 aiocbr_lentry, &s->slvr_lock);
+		INIT_PSC_LISTENTRY(&tmp->slvr_lentry);
+		INIT_SPINLOCK(&tmp->slvr_lock);
+		pll_init(&tmp->slvr_pndgaios, struct sli_aiocb_reply,
+			 aiocbr_lentry, &tmp->slvr_lock);
 
-		SPLAY_INSERT(biod_slvrtree, &b->biod_slvrs, s);
+		if (rw == SL_WRITE)
+			s->slvr_pndgwrts = 1;
+		else
+			s->slvr_pndgreads = 1;
+
+		SPLAY_INSERT(biod_slvrtree, &b->biod_slvrs, tmp);
 		bmap_op_start_type(bii_2_bmap(b), BMAP_OPCNT_SLVR);
-
-		SLVR_LOCK(s);
+		BIOD_ULOCK(b);
 	}
-	BIOD_ULOCK(b);
-
-	s->slvr_flags |= SLVR_PINNED;
-
-	if (rw == SL_WRITE)
-		s->slvr_pndgwrts++;
-	else if (rw == SL_READ)
-		s->slvr_pndgreads++;
-	else
-		abort();
-	SLVR_ULOCK(s);
 	return (s);
 }
 
@@ -1340,17 +1290,19 @@ slvr_slb_free_locked(struct slvr_ref *s, struct psc_poolmgr *m)
 int
 slvr_buffer_reap(struct psc_poolmgr *m)
 {
-	struct psc_dynarray a;
+	static struct psc_dynarray a;
 	struct slvr_ref *s, *dummy;
 	int i, n, locked;
+	extern struct psc_waitq slvrWaitq;
 
 	n = 0;
 	psc_dynarray_init(&a);
+
 	LIST_CACHE_LOCK(&lruSlvrs);
 	LIST_CACHE_FOREACH_SAFE(s, dummy, &lruSlvrs) {
 		DEBUG_SLVR(PLL_INFO, s, "considering for reap, nwaiters=%d",
 			   atomic_read(&m->ppm_nwaiters));
-
+		
 		/* We are reaping, so it is fine to back off on some
 		 *   slivers.  We have to use a reqlock here because
 		 *   slivers do not have private spinlocks, instead
@@ -1395,13 +1347,12 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 		if (s->slvr_flags & SLVR_SLBFREEING) {
 			slvr_slb_free_locked(s, m);
 			SLVR_URLOCK(s, locked);
-		}
 
-		else if (s->slvr_flags & SLVR_FREEING) {
-
+		} else if (s->slvr_flags & SLVR_FREEING) {
 			psc_assert(!(s->slvr_flags & SLVR_SLBFREEING));
 			psc_assert(!(s->slvr_flags & SLVR_PINNED));
 			psc_assert(!s->slvr_slab);
+
 			if (s->slvr_flags & SLVR_SPLAYTREE) {
 				s->slvr_flags &= ~SLVR_SPLAYTREE;
 				SLVR_ULOCK(s);
@@ -1411,6 +1362,9 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 		}
 	}
 	psc_dynarray_free(&a);
+
+	if (!n || n < atomic_read(&m->ppm_nwaiters))
+		psc_waitq_wakeone(&slvrWaitq);
 
 	return (n);
 }

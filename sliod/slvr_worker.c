@@ -41,6 +41,8 @@
 
 static struct biod_infl_crcs	 binflCrcs;
 struct pscrpc_nbreqset		*slvrNbReqSet;
+struct timespec                  slvrCrcDelay = {0, 50000000L}; /* 50 milliseconds */
+struct psc_waitq                 slvrWaitq = PSC_WAITQ_INIT;
 
 /*
  * Send an RPC containing CRC updates for slivers to the metadata server.
@@ -244,11 +246,11 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 		bcr = psc_dynarray_getpos(a, i);
 		biod = bcr->bcr_biodi;
 
-		DEBUG_BCR(((rq->rq_status || !mp || mp->rc) ?
-			   PLL_ERROR : PLL_INFO),
-			  bcr, "rq_status=%d rc=%d%s", rq->rq_status,
-			  mp ? mp->rc : -4096, mp ? "" : " (unknown, no buf)");
-
+		DEBUG_BCR(((rq->rq_status || !mp || mp->rc) ? 
+		   PLL_ERROR : PLL_INFO),  bcr, "rq_status=%d rc=%d%s", 
+		  rq->rq_status, mp ? mp->rc : -4096, 
+		  mp ? "" : " (unknown, no buf)");
+		
 		psc_assert(bii_2_bmap(biod)->bcm_flags &
 		    (BMAP_IOD_INFLIGHT|BMAP_IOD_BCRSCHED));
 
@@ -279,20 +281,77 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 __static void
 slvr_worker_int(void)
 {
-	struct slvr_ref		*s;
-	struct timespec		 now;
-	struct biod_crcup_ref	*bcr=NULL;
-	uint64_t		 crc;
+	struct slvr_ref	*s;
+	struct timespec ts, slvr_ts;
+	struct biod_crcup_ref *bcr = NULL;
+	struct bmap_iod_info *biod;
+	uint64_t crc;
+	uint16_t slvr_num; 
+       
+#define SLVR_MIN_FREE 8
 
- start:
-	PFL_GETTIMESPEC(&now);
-	now.tv_sec += BIOD_CRCUP_MAX_AGE;
-	if (!(s = lc_gettimed(&crcqSlvrs, &now))) {
-		/* Nothing available, try to push any existing
-		 *  crc updates.
-		 */
-		slvr_worker_push_crcups();
-		return;
+ start:	
+	PFL_GETTIMESPEC(&ts);
+	s = NULL;
+	if ((psc_pool_nfree(slBufsPool) > SLVR_MIN_FREE) ||
+	    lc_sz(&lruSlvrs) > SLVR_MIN_FREE) {	    
+		LIST_CACHE_LOCK(&crcqSlvrs);
+
+		if ((s = lc_peekhead(&crcqSlvrs))) {
+			DEBUG_SLVR(PLL_INFO, s, "peek");
+			slvr_ts = s->slvr_ts;
+			timespecadd(&slvr_ts, &slvrCrcDelay, &slvr_ts);
+			
+			if (timespeccmp(&ts, &slvr_ts, >))
+				lc_remove(&crcqSlvrs, s);
+			else {				
+				ts = slvr_ts;
+				s = NULL;
+			}
+		} else
+			ts.tv_sec += BIOD_CRCUP_MAX_AGE;
+
+		LIST_CACHE_ULOCK(&crcqSlvrs);
+
+		if (!s) {
+			int n;
+
+			if ((n = atomic_read(&slvrWaitq.wq_nwaiters))) {
+				struct timespec tmp = {0, 200000L};
+				
+				tmp.tv_nsec *= n;
+				timespecadd(&ts, &tmp, &ts);
+			}
+			
+			psc_waitq_timedwait(&slvrWaitq, NULL, &ts);
+			slvr_worker_push_crcups();
+			goto start;
+			
+		} else { 
+			slvr_ts = s->slvr_ts;
+			timespecadd(&slvr_ts, &slvrCrcDelay, &slvr_ts);
+
+			if (timespeccmp(&ts, &slvr_ts, <)) {
+				/* The case where a new write updated the ts 
+				 *   between list removal and now.
+				 */
+				lc_addtail(&crcqSlvrs, s);
+				goto start;
+			}
+		}
+
+		DEBUG_SLVR(PLL_INFO, s, "crc0");
+
+	} else {
+		ts.tv_sec += BIOD_CRCUP_MAX_AGE;
+		s = lc_gettimed(&crcqSlvrs, &ts);
+
+		if (!s) {
+			slvr_worker_push_crcups();
+			return;
+		}
+
+		DEBUG_SLVR(PLL_INFO, s, "crc1");
 	}
 
 	SLVR_LOCK(s);
@@ -304,14 +363,13 @@ slvr_worker_int(void)
 	 *  PINNED - slab must not move from beneath us because the
 	 *           contents must be crc'd.
 	 */
-	psc_assert(!(s->slvr_flags & SLVR_CRCING));
-	psc_assert(!(s->slvr_flags & SLVR_LRU));
+	psc_assert(!(s->slvr_flags & (SLVR_CRCING | SLVR_LRU)));
 	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	psc_assert(s->slvr_flags & SLVR_DATARDY);
 
 	/* Try our best to determine whether or we should hold off
-	 *   the crc operation, strive to only crc slivers which have
+	 *   the crc operation strivonly crc slivers which have
 	 *   no pending writes.  This section directly below may race
 	 *   with slvr_wio_done().
 	 */
@@ -333,68 +391,75 @@ slvr_worker_int(void)
 	 *    instantiation of slvr_do_crc() will cover those writes.
 	 */
 	s->slvr_compwrts = 0;
+	s->slvr_ncrc++;
 	SLVR_ULOCK(s);
-	//XXX perhaps when we go to a lighter checksum we can hold the
-	// the lock for the duration?
+
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
 	psc_assert(slvr_do_crc(s));
 
-	/* Lock the biodi first so we don't deadlock with slvr_lookup.
-	 */
-	BIOD_LOCK(slvr_2_biod(s));
-	SLVR_LOCK(s);
 	/* Be paraniod, ensure the sliver is not queued anywhere.
 	 */
+	SLVR_LOCK(s);
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
 	psc_assert(s->slvr_flags & SLVR_CRCING);
 	s->slvr_flags &= ~SLVR_CRCING;
+	
+	if ((s->slvr_flags & SLVR_CRCDIRTY || s->slvr_compwrts) &&
+	    !s->slvr_pndgwrts) {
+		/* The slvr will be crc'd again due to pending write.
+		 */
+		SLVR_ULOCK(s);
+		DEBUG_SLVR(PLL_INFO, s, "replace onto crcSlvrs");
+		lc_addtail(&crcqSlvrs, s);
+		goto start;
+	}
 	/* Copy the accumulator to the tmp variable.
 	 */
 	crc = s->slvr_crc;
-	PSC_CRC64_FIN(&crc);
-
-	if ((s->slvr_flags & SLVR_CRCDIRTY || s->slvr_compwrts) &&
-	    !s->slvr_pndgwrts) {
-		DEBUG_SLVR(PLL_INFO, s, "replace onto crcSlvrs");
-		lc_addqueue(&crcqSlvrs, s);
-
-	} else {
-		/* Put the slvr back to the LRU so it may have its slab
-		 *   reaped.
-		 */
-		//XXX lock sliver
-		slvr_2_biod(s)->biod_crcdrty_slvrs--;
-		DEBUG_SLVR(PLL_INFO, s, "prep for move to LRU (ndirty=%u)",
-			   slvr_2_biod(s)->biod_crcdrty_slvrs);
-		s->slvr_flags |= SLVR_LRU;
-		(int)slvr_lru_tryunpin_locked(s);
-		lc_addqueue(&lruSlvrs, s);
-	}
-	/* Note that we're covered by the slvr_lock, which is actually
-	 *   a lock on the whole biodi.
+	PSC_CRC64_FIN(&crc);	
+	/* Put the slvr back to the LRU so it may have its slab
+	 *   reaped.
 	 */
-	bcr = slvr_2_biod(s)->biod_bcr;
+	biod = slvr_2_biod(s);
+	psc_atomic32_dec(&biod->biod_crcdrty_slvrs);
+	s->slvr_dirty_cnt--;
+	DEBUG_SLVR(PLL_INFO, s, "prep for move to LRU (ndirty=%u)",
+	   psc_atomic32_read(&slvr_2_biod(s)->biod_crcdrty_slvrs));
+
+	s->slvr_flags |= SLVR_LRU;
+	(int)slvr_lru_tryunpin_locked(s);
+
+	lc_addqueue(&lruSlvrs, s);
+
+	slvr_num = s->slvr_num;
+
+	SLVR_ULOCK(s);
+	
+	BIOD_LOCK(biod);
+	bcr = biod->biod_bcr;
+
 	if (bcr) {
 		uint32_t i, found;
 
-		psc_assert(bcr->bcr_crcup.blkno == slvr_2_bmap(s)->bcm_bmapno);
+		psc_assert(bcr->bcr_crcup.blkno == 
+			   bii_2_bmap(biod)->bcm_bmapno);
 		psc_assert(bcr->bcr_crcup.fg.fg_fid ==
-			   slvr_2_bmap(s)->bcm_fcmh->fcmh_fg.fg_fid);
+			   bii_2_bmap(biod)->bcm_fcmh->fcmh_fg.fg_fid);
 		psc_assert(bcr->bcr_crcup.nups < MAX_BMAP_INODE_PAIRS);
-		psc_assert(slvr_2_bmap(s)->bcm_flags & BMAP_IOD_BCRSCHED);
+		psc_assert(bii_2_bmap(biod)->bcm_flags & BMAP_IOD_BCRSCHED);
 
 		/* If we already have a slot for our slvr_num then
 		 *   reuse it.
 		 */
 		for (i=0, found=0; i < bcr->bcr_crcup.nups; i++) {
-			if (bcr->bcr_crcup.crcs[i].slot == s->slvr_num) {
+			if (bcr->bcr_crcup.crcs[i].slot == slvr_num) {
 				found = 1;
 				break;
 			}
 		}
 
 		bcr->bcr_crcup.crcs[i].crc = crc;
-		bcr->bcr_crcup.crcs[i].slot = s->slvr_num;
+		bcr->bcr_crcup.crcs[i].slot = slvr_num;
 		if (!found)
 			bcr->bcr_crcup.nups++;
 
@@ -402,7 +467,7 @@ slvr_worker_int(void)
 			  "nups=%d", i, bcr->bcr_crcup.nups);
 
 		if (bcr->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS) {
-			if (pll_nitems(&slvr_2_biod(s)->biod_bklog_bcrs))
+			if (pll_nitems(&biod->biod_bklog_bcrs))
 				/* This is a backlogged bcr, cap it and
 				 *   move on.
 				 */
@@ -412,53 +477,47 @@ slvr_worker_int(void)
 				 */
 				bcr_hold_2_ready(&binflCrcs, bcr);
 		}
-	} else {
-		bmap_op_start_type(slvr_2_bmap(s), BMAP_OPCNT_BCRSCHED);
 
-		/* Freed by bcr_ready_remove() */
-		slvr_2_biod(s)->biod_bcr = bcr =
+	} else {
+		bmap_op_start_type(bii_2_bmap(biod), BMAP_OPCNT_BCRSCHED);
+
+		/* Freed by bcr_ready_remove() 
+		 */
+		biod->biod_bcr = bcr =
 			PSCALLOC(sizeof(struct biod_crcup_ref) +
 				 (sizeof(struct srt_bmap_crcwire) *
 				  MAX_BMAP_INODE_PAIRS));
 
 		INIT_PSC_LISTENTRY(&bcr->bcr_lentry);
-
-		bcr->bcr_biodi = slvr_2_biod(s);
-		bcr->bcr_xid = slvr_2_biod(s)->biod_bcr_xid;
-		slvr_2_biod(s)->biod_bcr_xid++;
-
 		COPYFG(&bcr->bcr_crcup.fg,
-		    &slvr_2_bmap(s)->bcm_fcmh->fcmh_fg);
+		    &bii_2_bmap(biod)->bcm_fcmh->fcmh_fg);
 
-		bcr->bcr_crcup.blkno = slvr_2_bmap(s)->bcm_bmapno;
+		bcr->bcr_biodi = biod;
+		bcr->bcr_xid = biod->biod_bcr_xid++;
+		bcr->bcr_crcup.blkno = bii_2_bmap(biod)->bcm_bmapno;
 		bcr->bcr_crcup.crcs[0].crc = crc;
-		bcr->bcr_crcup.crcs[0].slot = s->slvr_num;
+		bcr->bcr_crcup.crcs[0].slot = slvr_num;
 		bcr->bcr_crcup.nups = 1;
 
 		DEBUG_BCR(PLL_NOTIFY, bcr,
-			  "newly added (bcr_bklog=%d) (sched=%d)",
-			  pll_nitems(&slvr_2_biod(s)->biod_bklog_bcrs),
-			  (slvr_2_bmap(s)->bcm_flags & BMAP_IOD_BCRSCHED));
+		  "newly added (bcr_bklog=%d) (sched=%d)",
+		  pll_nitems(&slvr_2_biod(s)->biod_bklog_bcrs),
+		  !!(bii_2_bmap(biod)->bcm_flags & BMAP_IOD_BCRSCHED));
 
-		if (slvr_2_bmap(s)->bcm_flags & BMAP_IOD_BCRSCHED)
+		if (bii_2_bmap(biod)->bcm_flags & BMAP_IOD_BCRSCHED)
 			/* The bklog may be empty but a pending bcr may be
 			 *    present on the ready list.
 			 */
-			pll_addtail(&slvr_2_biod(s)->biod_bklog_bcrs, bcr);
+			pll_addtail(&biod->biod_bklog_bcrs, bcr);
 		else {
-			BMAP_SETATTR(slvr_2_bmap(s), BMAP_IOD_BCRSCHED);
+			BMAP_SETATTR(bii_2_bmap(biod), BMAP_IOD_BCRSCHED);
 			bcr_hold_add(&binflCrcs, bcr);
 		}
 	}
-	/* Either set the initial age of a new sliver or extend the age
-	 *   of an existing one. Note that if it gets full, it will be
-	 *   sent out immediately regardless of its age.
-	 */
+
 	PFL_GETTIMESPEC(&bcr->bcr_age);
-	/* The sliver may go away now.
-	 */
-	BIOD_ULOCK(slvr_2_biod(s));
-	SLVR_ULOCK(s);
+	BIOD_ULOCK(biod);
+
 	slvr_worker_push_crcups();
 }
 
