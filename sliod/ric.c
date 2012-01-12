@@ -419,10 +419,14 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 			if (!memcmp(p, sbd, sizeof(*p))) {
 				BIOD_ULOCK(biod);
 				bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+				/* psc_pool_return() nulls our pointer.
+				 */
 				psc_pool_return(bmap_rls_pool, newsbd);
-				continue;
+				break;
 			}
 		}
+		if (!newsbd)
+			continue;
 		
 		DEBUG_FCMH(PLL_INFO, f, "bmapno=%d seq=%"PRId64" key=%"PRId64
 		   " (brls=%p)", b->bcm_bmapno, sbd->sbd_seq, sbd->sbd_key, 
