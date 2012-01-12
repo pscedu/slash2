@@ -770,7 +770,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 		}
 		/* our client should really do this on its own */
 		if (!(to_set & PSCFS_SETATTRF_MTIME)) {
-			psclog_warn("setattr: missing MTIME flag in RPC request\n");
+			psclog_warn("setattr: missing MTIME flag in RPC request");
 			to_set |= PSCFS_SETATTRF_MTIME;
 			SL_GETTIMESPEC(&mq->attr.sst_mtim);
 		}
