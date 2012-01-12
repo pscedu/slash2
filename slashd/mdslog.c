@@ -1217,13 +1217,9 @@ mds_send_batch_reclaim(uint64_t batchno)
 			csvc = slm_geticsvcf(dst_resm, CSVCF_NONBLOCK |
 			    CSVCF_NORECON);
 			if (csvc == NULL) {
-				for (j = 0; 
-				     j < psc_dynarray_len(&dst_resm->resm_nids); 
-				     j++) {
-					mn = psc_dynarray_getpos(&dst_resm->resm_nids, j);
-					psclog_warn("GC: fail to contact: %s\n", 
-						     mn->resmnid_addrbuf);
-				}
+				DYNARRAY_FOREACH(mn, j, &dst_resm->resm_nids)
+					psclog_warn("GC: fail to contact: %s",
+					    mn->resmnid_addrbuf);
 				continue;
 			}
 			rc = SL_RSX_NEWREQ(csvc, SRMT_RECLAIM, rq, mq,
