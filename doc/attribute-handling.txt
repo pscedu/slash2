@@ -107,3 +107,48 @@ just accepts these changes without checking for credentials.
 
 2. Use setattr to update dirty attributes seem to have problem with ENOTSUP.  The partial
    truncate code is disabled for the moment.  Need to figure out why.
+
+01/12/2011
+----------
+
+At change 18602, the following tests have been done and largely passed:
+
+	* rsync -vrlthHD /local/linux-3.0/ lemon://zzh-slash2/zhihui
+	* s2build inside slash2
+	* kernel build (except fail on mmap)
+	* posix test, except the following failures (some are known, some are caused by partial truncate)
+
+Test Summary Report
+-------------------
+/zzh-slash2/zhihui/projects/distrib/pjd-fstest-20080816/tests/chmod/05.t   (Wstat: 0 Tests: 14 Failed: 1)
+  Failed test:  8
+/zzh-slash2/zhihui/projects/distrib/pjd-fstest-20080816/tests/chown/05.t   (Wstat: 0 Tests: 15 Failed: 2)
+  Failed tests:  8, 10
+/zzh-slash2/zhihui/projects/distrib/pjd-fstest-20080816/tests/link/06.t    (Wstat: 0 Tests: 18 Failed: 4)
+  Failed tests:  11, 14, 17-18
+/zzh-slash2/zhihui/projects/distrib/pjd-fstest-20080816/tests/mkdir/06.t   (Wstat: 0 Tests: 12 Failed: 1)
+  Failed test:  7
+/zzh-slash2/zhihui/projects/distrib/pjd-fstest-20080816/tests/open/05.t    (Wstat: 0 Tests: 12 Failed: 1)
+  Failed test:  7
+/zzh-slash2/zhihui/projects/distrib/pjd-fstest-20080816/tests/open/06.t    (Wstat: 0 Tests: 72 Failed: 1)
+  Failed test:  69
+/zzh-slash2/zhihui/projects/distrib/pjd-fstest-20080816/tests/rmdir/07.t   (Wstat: 0 Tests: 10 Failed: 2)
+  Failed tests:  6, 8
+/zzh-slash2/zhihui/projects/distrib/pjd-fstest-20080816/tests/symlink/03.t (Wstat: 0 Tests: 14 Failed: 2)
+  Failed tests:  1-2
+/zzh-slash2/zhihui/projects/distrib/pjd-fstest-20080816/tests/truncate/00.t (Wstat: 0 Tests: 21 Failed: 10)
+  Failed tests:  3-6, 8-11, 14-15
+/zzh-slash2/zhihui/projects/distrib/pjd-fstest-20080816/tests/truncate/02.t (Wstat: 0 Tests: 5 Failed: 2)
+  Failed tests:  2-3
+/zzh-slash2/zhihui/projects/distrib/pjd-fstest-20080816/tests/truncate/03.t (Wstat: 0 Tests: 12 Failed: 1)
+  Failed test:  6
+/zzh-slash2/zhihui/projects/distrib/pjd-fstest-20080816/tests/truncate/05.t (Wstat: 0 Tests: 15 Failed: 6)
+  Failed tests:  5-6, 8, 10-12
+/zzh-slash2/zhihui/projects/distrib/pjd-fstest-20080816/tests/truncate/12.t (Wstat: 0 Tests: 3 Failed: 1)
+  Failed test:  2
+/zzh-slash2/zhihui/projects/distrib/pjd-fstest-20080816/tests/unlink/05.t  (Wstat: 0 Tests: 10 Failed: 2)
+  Failed tests:  6, 8
+Files=184, Tests=1957, 1124 wallclock secs ( 0.87 usr  0.34 sys + 477.52 cusr  8.13 csys = 486.86 CPU)
+Result: FAIL
+[root@lemon dodo]# prove -r /zzh-slash2/zhihui/projects/distrib/pjd-fstest-20080816/
+
