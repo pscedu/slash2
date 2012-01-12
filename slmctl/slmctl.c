@@ -141,7 +141,7 @@ slm_statfs_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	p = strchr(name, '@');
 	if (p)
 		*p = '\0';
-	printf("  %-28s %7s %7s %7s %8s %-16s\n",
+	printf("%-30s %7s %7s %7s %8s %-16s\n",
 	    name, sbuf, ubuf, abuf, cbuf, b->sf_type);
 }
 
