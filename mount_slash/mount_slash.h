@@ -39,6 +39,7 @@ struct bmpc_ioreq;
 
 /* mount_slash thread types */
 enum {
+	MSTHRT_ATTRFLSH,		/* attr write data flush thread */
 	MSTHRT_BMAPFLSH,		/* bmap write data flush thread */
 	MSTHRT_BMAPFLSHRLS,		/* bmap lease releaser */
 	MSTHRT_BMAPFLSHRPC,		/* async buffer thread for RPC reaping */
@@ -88,6 +89,11 @@ struct msbmflrpc_thread {
 	struct psc_multiwait		 mbflrpc_mw;
 };
 
+struct msattrfl_thread {
+	int				 maft_failcnt;
+	struct psc_multiwait		 maft_mw;
+};
+
 struct msbmflra_thread {
 	int				 mbfra_failcnt;
 	struct psc_multiwait		 mbfra_mw;
@@ -103,6 +109,7 @@ PSCTHR_MKCAST(msbmfwatchthr, msbmflwatcher_thread, MSTHRT_BMAPLSWATCHER);
 PSCTHR_MKCAST(msbmflthr, msbmfl_thread, MSTHRT_BMAPFLSH);
 PSCTHR_MKCAST(msbmflrpc, msbmflrpc_thread, MSTHRT_BMAPFLSHRPC);
 PSCTHR_MKCAST(msbmfrathr, msbmflra_thread, MSTHRT_BMAPREADAHEAD);
+PSCTHR_MKCAST(msattrflthr, msattrfl_thread, MSTHRT_ATTRFLSH);
 PSCTHR_MKCAST(msfsthr, msfs_thread, MSTHRT_FS);
 PSCTHR_MKCAST(msrcithr, msrci_thread, MSTHRT_RCI);
 

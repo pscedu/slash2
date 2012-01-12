@@ -46,12 +46,24 @@ struct fcmh_cli_info {
 #define fci_nrepls	ford.f.nrepls
 #define fci_reptbl	ford.f.reptbl
 #define fci_dci		ford.d
+	struct psclist_head	 fci_lentry;	/* all fcmhs with dirty attributes */
+	struct timespec		 fci_etime;	/* attr expire time */
 };
 
 static __inline struct fcmh_cli_info *
 fcmh_2_fci(struct fidc_membh *f)
 {
 	return (fcmh_get_pri(f));
+}
+
+static __inline struct fidc_membh *
+fci_2_fcmh(struct fcmh_cli_info *fci)
+{
+	struct fidc_membh *fcmh;
+
+	psc_assert(fci);
+	fcmh = (void *)fci;
+	return (fcmh - 1);
 }
 
 #define fcmh_2_dci(f)		(&fcmh_2_fci(f)->fci_dci)
@@ -61,6 +73,8 @@ fcmh_2_fci(struct fidc_membh *f)
 #define FCMH_CLI_FETCHREPLTBL	(_FCMH_FLGSHFT << 1)	/* file replica table loading */
 #define FCMH_CLI_INITDCI	(_FCMH_FLGSHFT << 2)	/* dircache initialized */
 #define FCMH_CLI_TRUNC		(_FCMH_FLGSHFT << 3)	/* truncate in progress */
+#define FCMH_CLI_DIRTY_ATTRS	(_FCMH_FLGSHFT << 4)	/* has dirty attributes */
+#define FCMH_CLI_DIRTY_QUEUE	(_FCMH_FLGSHFT << 5)	/* on dirty queue */
 
 void	fcmh_setlocalsize(struct fidc_membh *, uint64_t);
 void	slc_fcmh_initdci(struct fidc_membh *);

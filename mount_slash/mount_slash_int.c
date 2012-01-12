@@ -2440,8 +2440,11 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 	msl_fsrqinfo_readyset(q);
 
+#if 0
 	if (rw == SL_WRITE)
 		fcmh_setlocalsize(f, off + size);
+#endif
+
  out:
 	if (bref)
 		bmap_op_done_type(bref, BMAP_OPCNT_BIORQ);

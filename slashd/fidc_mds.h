@@ -41,7 +41,6 @@ struct fcmh_mds_info {
 };
 
 #define FCMH_IN_PTRUNC		(_FCMH_FLGSHFT << 0)
-#define FCMH_IN_SETATTR		(_FCMH_FLGSHFT << 1)
 
 #define fcmh_2_inoh(f)		(&fcmh_2_fmi(f)->fmi_inodeh)
 #define fcmh_2_ino(f)		(&fcmh_2_inoh(f)->inoh_ino)

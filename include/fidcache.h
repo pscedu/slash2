@@ -82,11 +82,13 @@ struct fidc_membh {
 #define	FCMH_HAVE_ATTRS		(1 <<  7)	/* has valid stat info */
 #define	FCMH_GETTING_ATTRS	(1 <<  8)	/* fetching stat info */
 #define	FCMH_CTOR_FAILED	(1 <<  9)	/* constructor func failed */
-#define FCMH_CTOR_DELAYED	(1 << 10)	/* constructor was not issued */
-#define	_FCMH_FLGSHFT		(1 << 11)
+#define	FCMH_CTOR_DELAYED	(1 << 10)	/* constructor was not issued */
+#define FCMH_IN_SETATTR		(1 << 11)	/* setattr in progress */
+#define	_FCMH_FLGSHFT		(1 << 12)
 
 /* number of seconds in which attribute times out */
 #define FCMH_ATTR_TIMEO		8
+#define FCMH_ATTR_TIMEO_SHORT	4
 
 #define FCMH_LOCK(f)		spinlock_pci(PFL_CALLERINFOSS(SLSS_FCMH), &(f)->fcmh_lock)
 #define FCMH_ULOCK(f)		freelock_pci(PFL_CALLERINFOSS(SLSS_FCMH), &(f)->fcmh_lock)
@@ -168,7 +170,8 @@ enum fcmh_opcnt_types {
 /* 4 */	FCMH_OPCNT_OPEN,		/* mount_slash pscfs file info */
 /* 5 */	FCMH_OPCNT_UPSCHED,		/* MDS uswi_fcmh */
 /* 6 */	FCMH_OPCNT_WAIT,
-/* 7 */	FCMH_OPCNT_WORKER		/* MDS worker */
+/* 7 */	FCMH_OPCNT_WORKER,		/* MDS worker */
+/* 8 */	FCMH_OPCNT_DIRTY_QUEUE
 };
 
 /* fcmh_setattr() flags */

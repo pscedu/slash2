@@ -89,9 +89,19 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #define mfh_getfid(mfh)		fcmh_2_fid((mfh)->mfh_fcmh)
 #define mfh_getfg(mfh)		(mfh)->mfh_fcmh->fcmh_fg
 
+#define MSL_FLUSH_ATTR_TIMEOUT	8
+
+struct psc_waitq		msl_flush_attrq = PSC_WAITQ_INIT;
+psc_spinlock_t			msl_flush_attrqlock = SPINLOCK_INIT;
+
+struct psc_listcache		attrTimeoutQ;
+psc_spinlock_t			attrTimeoutQLock = SPINLOCK_INIT;
+
 static int msl_lookup_fidcache(struct pscfs_req *,
     const struct slash_creds *, pscfs_inum_t, const char *,
     struct slash_fidgen *, struct srt_stat *, struct fidc_membh **);
+
+static int mslfsop_flush_attr(struct fidc_membh *);
 
 sl_ios_id_t			 prefIOS = IOS_ID_ANY;
 const char			*progname;
@@ -1484,7 +1494,8 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 	struct msl_fhent *mfh = data;
 	struct fidc_membh *c;
 	pid_t sid;
-	int rc;
+	int rc, flush_attrs = 0;
+	struct fcmh_cli_info *fci;
 
 	msfsthr_ensure();
 
@@ -1506,6 +1517,39 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 	       (mfh->mfh_flags & MSL_FHENT_RASCHED)) {
 		psc_waitq_wait(&c->fcmh_waitq, &mfh->mfh_lock);
 		spinlock(&mfh->mfh_lock);
+	}
+
+	/* 
+	 * Perhaps this checking should only be done on the mfh, with which
+	 * we have modified the attributes.
+	 */
+	FCMH_LOCK(c);
+	fcmh_wait_locked(c, c->fcmh_flags & FCMH_IN_SETATTR);
+	if (c->fcmh_flags & FCMH_CLI_DIRTY_ATTRS) {
+		flush_attrs = 1;
+		c->fcmh_flags |= FCMH_IN_SETATTR;
+		c->fcmh_flags &= ~FCMH_CLI_DIRTY_ATTRS;
+	}
+	FCMH_ULOCK(c);
+
+	fci = fcmh_2_fci(c);
+	if (flush_attrs) {
+		rc = mslfsop_flush_attr(c);
+		FCMH_LOCK(c);
+		c->fcmh_flags &= ~FCMH_IN_SETATTR;
+		fcmh_wake_locked(c);
+		if (rc) {
+			c->fcmh_flags |= FCMH_CLI_DIRTY_ATTRS;
+			FCMH_ULOCK(c);
+		} else if (!(c->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
+			psc_assert(c->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
+			c->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
+			spinlock(&attrTimeoutQLock);
+			lc_remove(&attrTimeoutQ, fci);
+			freelock(&attrTimeoutQLock);
+			fcmh_op_done_type(c, FCMH_OPCNT_DIRTY_QUEUE);
+		} else
+			FCMH_ULOCK(c);
 	}
 
 	sid = getsid(pscfs_getclientctx(pfr)->pfcc_pid);
@@ -1872,6 +1916,9 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
 	struct slash_creds cr;
+	int flush_attrs = 0;
+	struct fcmh_cli_info *fci;
+	struct timespec ts;
 
 	msfsthr_ensure();
 
@@ -1893,6 +1940,9 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	mslfs_getcreds(pfr, &cr);
 
 	FCMH_LOCK(c);
+	fcmh_wait_locked(c, c->fcmh_flags & FCMH_IN_SETATTR);
+	c->fcmh_flags |= FCMH_IN_SETATTR;
+
 	if ((to_set & PSCFS_SETATTRF_MODE) && cr.scr_uid) {
 #if 0
 		if ((stb->st_mode & ALLPERMS) !=
@@ -2020,6 +2070,16 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		c->fcmh_flags |= FCMH_GETTING_ATTRS;
 	}
 	FCMH_ULOCK(c);
+	/*
+	 * Turn on mtime explicitly if we are going to change the size. We want
+	 * our local time to be saved, not the time when the RPC arrives at the
+	 * mds.
+	 */
+	if ((to_set & PSCFS_SETATTRF_DATASIZE) && !(to_set & PSCFS_SETATTRF_MTIME)) { 
+		to_set |= PSCFS_SETATTRF_MTIME;
+		PFL_GETTIMESPEC(&ts);
+		PFL_STB_MTIME_SET(ts.tv_sec, ts.tv_nsec, stb);
+	}
 
  retry:
 	MSL_RMC_NEWREQ(pfr, c, csvc, SRMT_SETATTR, rq, mq, mp, rc);
@@ -2027,6 +2087,26 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		goto out;
 
 	FCMH_LOCK(c);
+	/* 
+	 * No need to do this on retry.  To do: set PSCFS_SETATTRF_TRUNCATE if
+	 * setattr truncates a cached size so that the MDS can act accordingly.
+	 */
+	if (c->fcmh_flags & FCMH_CLI_DIRTY_ATTRS) {
+		flush_attrs = 1;
+		to_set |= PSCFS_SETATTRF_FLUSH;
+		if (!(to_set & PSCFS_SETATTRF_MTIME)) { 
+			to_set |= PSCFS_SETATTRF_MTIME;
+			PFL_STB_MTIME_SET(c->fcmh_sstb.sst_mtime,
+			                  c->fcmh_sstb.sst_mtime_ns,
+					  stb);
+		}
+		if (!(to_set & PSCFS_SETATTRF_DATASIZE)) { 
+			to_set |= PSCFS_SETATTRF_DATASIZE;
+			stb->st_size = c->fcmh_sstb.sst_size;
+		}
+		c->fcmh_flags &= ~FCMH_CLI_DIRTY_ATTRS;
+	}
+
 	mq->attr.sst_fg = c->fcmh_fg;
 	mq->to_set = to_set;
 	sl_externalize_stat(stb, &mq->attr);
@@ -2103,11 +2183,23 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			c->fcmh_flags &= ~FCMH_CLI_TRUNC;
 			fcmh_wake_locked(c);
 		}
-		if (rc && getting_attrs) {
+		c->fcmh_flags &= ~FCMH_IN_SETATTR;
+		if (rc && getting_attrs)
 			c->fcmh_flags &= ~FCMH_GETTING_ATTRS;
-			fcmh_wake_locked(c);
-		}
+		fcmh_wake_locked(c);
 		sl_internalize_stat(&c->fcmh_sstb, stb);
+
+		if (rc && flush_attrs) 
+			c->fcmh_flags |= FCMH_CLI_DIRTY_ATTRS;
+		if (!rc && flush_attrs && !(c->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
+			psc_assert(c->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
+			c->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
+			spinlock(&attrTimeoutQLock);
+			fci = fcmh_2_fci(c);
+			lc_remove(&attrTimeoutQ, fci);
+			freelock(&attrTimeoutQLock);
+			fcmh_op_done_type(c, FCMH_OPCNT_DIRTY_QUEUE);
+		} 
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	}
 	/* XXX if there is no fcmh, what do we do?? */
@@ -2149,6 +2241,7 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 	struct fidc_membh *f, *ftmp;
 	struct timespec ts;
 	int rc = 0;
+	struct fcmh_cli_info *fci;
 
 	msfsthr_ensure();
 
@@ -2181,6 +2274,25 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 	PFL_GETTIMESPEC(&ts);
 	f->fcmh_sstb.sst_mtime = ts.tv_sec;
 	f->fcmh_sstb.sst_mtime_ns = ts.tv_nsec;
+	if (off + size > fcmh_2_fsz(f)) {
+		psclog_info("fid: "SLPRI_FID", "
+		    "size from %"PRId64" to %"PRId64,
+		    fcmh_2_fid(f), fcmh_2_fsz(f), off+size);
+		fcmh_2_fsz(f) = off + size;
+	}
+	if (!(f->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
+		f->fcmh_flags |= FCMH_CLI_DIRTY_ATTRS;
+		fci = fcmh_2_fci(f);
+		fci->fci_etime.tv_sec = ts.tv_sec;
+		fci->fci_etime.tv_nsec = ts.tv_nsec;
+		if (!(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE)) {
+			f->fcmh_flags |= FCMH_CLI_DIRTY_QUEUE;
+			spinlock(&attrTimeoutQLock);
+			lc_addtail(&attrTimeoutQ, fci);
+			freelock(&attrTimeoutQLock);
+			fcmh_op_start_type(f, FCMH_OPCNT_DIRTY_QUEUE);
+		}
+	} 
 	FCMH_ULOCK(f);
 
 	MFH_LOCK(mfh);
@@ -2246,6 +2358,140 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	pscfs_reply_read(pfr, buf, len, rc);
 	DEBUG_FCMH(PLL_INFO, f, "read (end): buf=%p rc=%d sz=%zu "
 	    "len=%zd off=%"PSCPRIdOFFT, buf, rc, size, len, off);
+}
+
+static int
+mslfsop_flush_attr(struct fidc_membh *fcmh)
+{
+	int rc;
+	struct srm_setattr_req *mq;
+	struct srm_setattr_rep *mp;
+	struct pscrpc_request *rq;
+	struct slashrpc_cservice *csvc;
+
+	rq = NULL;
+	csvc = NULL;
+	MSL_RMC_NEWREQ_PFCC(NULL, fcmh, csvc, SRMT_SETATTR, rq, mq, mp, rc);
+	if (rc)
+		return (rc);
+
+	FCMH_LOCK(fcmh);
+	mq->attr.sst_fg = fcmh->fcmh_fg;
+	mq->to_set = PSCFS_SETATTRF_FLUSH;
+	mq->to_set |= PSCFS_SETATTRF_MTIME | PSCFS_SETATTRF_DATASIZE;
+	mq->attr.sst_size = fcmh->fcmh_sstb.sst_size;
+	mq->attr.sst_mtim = fcmh->fcmh_sstb.sst_mtim;
+
+	psclog_info("fcmh %p setattr%s%s%s%s%s%s%s", fcmh,
+	    mq->to_set & PSCFS_SETATTRF_MODE ? " mode" : "",
+	    mq->to_set & PSCFS_SETATTRF_UID ? " uid" : "",
+	    mq->to_set & PSCFS_SETATTRF_GID ? " gid" : "",
+	    mq->to_set & PSCFS_SETATTRF_ATIME ? " atime" : "",
+	    mq->to_set & PSCFS_SETATTRF_MTIME ? " mtime" : "",
+	    mq->to_set & PSCFS_SETATTRF_CTIME ? " ctime" : "",
+	    mq->to_set & PSCFS_SETATTRF_DATASIZE ? " datasize" : "");
+
+	FCMH_ULOCK(fcmh);
+
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
+
+	if (rc == 0) 
+		rc = mp->rc;
+	if (rq)
+		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
+
+	/* ENOTSUP = -95 */
+	return (rc);
+}
+
+void
+msattrflushthr_main(__unusedx struct psc_thread *thr)
+{
+	int rc, did_work;
+	struct fidc_membh *fcmh;
+	struct timespec ts, nexttimeo;
+	struct fcmh_cli_info *fci, *tmp_fci;
+
+	while (pscthr_run()) {
+
+		did_work = 0;
+		PFL_GETTIMESPEC(&ts);
+		nexttimeo = ts;
+		nexttimeo.tv_sec += FCMH_ATTR_TIMEO;
+
+		spinlock(&attrTimeoutQLock);
+		LIST_CACHE_FOREACH_SAFE(fci, tmp_fci, &attrTimeoutQ) {
+
+			fcmh = fci_2_fcmh(fci);
+			if (!FCMH_TRYLOCK(fcmh))
+				continue;
+			if (fcmh->fcmh_flags & FCMH_IN_SETATTR) {
+				FCMH_ULOCK(fcmh);
+				continue;
+			}
+			psc_assert(fcmh->fcmh_flags & FCMH_CLI_DIRTY_ATTRS);
+
+			if (fci->fci_etime.tv_sec < ts.tv_sec ||
+			   (fci->fci_etime.tv_sec == ts.tv_sec &&
+			    fci->fci_etime.tv_nsec < ts.tv_nsec)) {
+				nexttimeo.tv_sec = fci->fci_etime.tv_sec;
+				nexttimeo.tv_nsec = fci->fci_etime.tv_nsec;
+				FCMH_ULOCK(fcmh);
+				break;
+			}
+			fcmh->fcmh_flags |= FCMH_IN_SETATTR;
+			fcmh->fcmh_flags &= ~FCMH_CLI_DIRTY_ATTRS;
+			FCMH_ULOCK(fcmh);
+
+			freelock(&attrTimeoutQLock);
+
+			rc = mslfsop_flush_attr(fcmh);
+
+			FCMH_LOCK(fcmh);
+			fcmh->fcmh_flags &= ~FCMH_IN_SETATTR;
+			fcmh_wake_locked(fcmh);
+			if (rc) {
+				fcmh->fcmh_flags |= FCMH_CLI_DIRTY_ATTRS;
+				FCMH_ULOCK(fcmh);
+			} else if (!(fcmh->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
+				psc_assert(fcmh->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
+				fcmh->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
+				lc_remove(&attrTimeoutQ, fci);
+				fcmh_op_done_type(fcmh, FCMH_OPCNT_DIRTY_QUEUE);
+			} else
+				FCMH_ULOCK(fcmh);
+
+			did_work = 1;
+			break;
+		}
+		if (did_work)
+			continue;
+		else
+			freelock(&attrTimeoutQLock);
+
+		spinlock(&msl_flush_attrqlock);
+		psc_waitq_waitabs(&msl_flush_attrq, &msl_flush_attrqlock, &nexttimeo);
+	}
+}
+
+void
+msattrflushthr_spawn(void)
+{
+	struct msattrfl_thread *mattrft;
+	struct psc_thread *thr;
+
+	lc_reginit(&attrTimeoutQ, struct fcmh_cli_info,
+	    fci_lentry, "attrTimeout");
+
+	thr = pscthr_init(MSTHRT_ATTRFLSH, 0,
+	    msattrflushthr_main, NULL,
+	    sizeof(struct msattrfl_thread), "msattrflushthr");
+	mattrft = msattrflthr(thr);
+	psc_multiwait_init(&mattrft->maft_mw, "%s",
+	    thr->pscthr_name);
+	pscthr_setready(thr);
 }
 
 void
@@ -2314,6 +2560,7 @@ msl_init(void)
 	sl_nbrqset = pscrpc_nbreqset_init(NULL, NULL);
 	pscrpc_nbreapthr_spawn(sl_nbrqset, MSTHRT_NBRQ, "msnbrqthr");
 
+	msattrflushthr_spawn();
 	msbmapflushthr_spawn();
 
 	if ((name = getenv("SLASH_MDS_NID")) == NULL)

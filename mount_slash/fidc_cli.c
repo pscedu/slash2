@@ -133,6 +133,7 @@ slc_fcmh_ctor(struct fidc_membh *fcmh)
 		return (ESTALE);
 	}
 	fci->fci_resm = slc_rmc_resm;
+	INIT_PSC_LISTENTRY(&fci->fci_lentry);
 	return (0);
 }
 

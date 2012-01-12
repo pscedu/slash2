@@ -175,6 +175,7 @@ fidc_reap(struct psc_poolmgr *m)
 		/* already victimized */
 		if (f->fcmh_flags & FCMH_CAC_REAPED)
 			goto end;
+		DEBUG_FCMH(PLL_INFO, f, "reaped");
 
 		/*
 		 * Consult the context-specific callback handler before
