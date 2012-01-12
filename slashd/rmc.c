@@ -745,7 +745,7 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 int
 slm_rmc_handle_setattr(struct pscrpc_request *rq)
 {
-	int to_set, tadj = 0, unbump = 0;
+	int to_set, flush, tadj = 0, unbump = 0;
 	struct slashrpc_cservice *csvc;
 	struct fidc_membh *fcmh = NULL;
 	struct srm_setattr_req *mq;
@@ -760,14 +760,20 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	FCMH_LOCK(fcmh);
 	fcmh_wait_locked(fcmh, fcmh->fcmh_flags & FCMH_IN_SETATTR);
 
+	flush = mq->to_set & PSCFS_SETATTRF_FLUSH;
 	to_set = mq->to_set & SL_SETATTRF_CLI_ALL;
+
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
 		if (IS_REMOTE_FID(mq->attr.sst_fg.fg_fid)) {
 			mp->rc = -ENOSYS;
 			goto out;
 		}
-		to_set |= PSCFS_SETATTRF_MTIME;
-		SL_GETTIMESPEC(&mq->attr.sst_mtim);
+		/* our client should really do this on its own */
+		if (!(to_set & PSCFS_SETATTRF_MTIME)) {
+			psclog_warn("setattr: missing MTIME flag in RPC request\n");
+			to_set |= PSCFS_SETATTRF_MTIME;
+			SL_GETTIMESPEC(&mq->attr.sst_mtim);
+		}
 		if (mq->attr.sst_size == 0) {
 			/*
 			 * Full truncate.  If file size is already zero,
@@ -778,7 +784,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			mq->attr.sst_fg.fg_gen = fcmh_2_gen(fcmh) + 1;
 			to_set |= SL_SETATTRF_GEN;
 			unbump = 1;
-		} else {
+		} else if (!flush) {
 mp->rc = -ENOTSUP;
 goto out;
 
@@ -812,7 +818,7 @@ goto out;
 	if (mp->rc) {
 		if (unbump)
 			fcmh_2_gen(fcmh)--;
-	} else {
+	} else if (!flush) {
 		if (tadj & PSCFS_SETATTRF_DATASIZE) {
 			fcmh->fcmh_flags |= FCMH_IN_PTRUNC;
 

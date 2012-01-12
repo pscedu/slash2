@@ -258,6 +258,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 	    fcmh_2_repl_nblks(f, idx);
 	fl = SL_SETATTRF_NBLKS;
 
+#if 0
 	if (crcup->fsize > fcmh_2_fsz(f)) {
 		sstb.sst_size = crcup->fsize;
 		fl |= PSCFS_SETATTRF_DATASIZE;
@@ -272,6 +273,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 	/* Only update mtime if the gen matches */
 	if (utimgen == crcup->utimgen)
 		fl |= PSCFS_SETATTRF_MTIME;
+#endif
 	mds_fcmh_setattr_nolog(f, fl, &sstb);
 
 	fcmh_set_repl_nblks(f, idx, crcup->nblks);
