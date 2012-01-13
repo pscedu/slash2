@@ -1519,7 +1519,7 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 		spinlock(&mfh->mfh_lock);
 	}
 
-	/* 
+	/*
 	 * Perhaps this checking should only be done on the mfh, with which
 	 * we have modified the attributes.
 	 */
@@ -2075,7 +2075,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	 * our local time to be saved, not the time when the RPC arrives at the
 	 * mds.
 	 */
-	if ((to_set & PSCFS_SETATTRF_DATASIZE) && !(to_set & PSCFS_SETATTRF_MTIME)) { 
+	if ((to_set & PSCFS_SETATTRF_DATASIZE) && !(to_set & PSCFS_SETATTRF_MTIME)) {
 		to_set |= PSCFS_SETATTRF_MTIME;
 		PFL_GETTIMESPEC(&ts);
 		PFL_STB_MTIME_SET(ts.tv_sec, ts.tv_nsec, stb);
@@ -2087,20 +2087,20 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		goto out;
 
 	FCMH_LOCK(c);
-	/* 
+	/*
 	 * No need to do this on retry.  To do: set PSCFS_SETATTRF_TRUNCATE if
 	 * setattr truncates a cached size so that the MDS can act accordingly.
 	 */
 	if (c->fcmh_flags & FCMH_CLI_DIRTY_ATTRS) {
 		flush_attrs = 1;
 		to_set |= PSCFS_SETATTRF_FLUSH;
-		if (!(to_set & PSCFS_SETATTRF_MTIME)) { 
+		if (!(to_set & PSCFS_SETATTRF_MTIME)) {
 			to_set |= PSCFS_SETATTRF_MTIME;
 			PFL_STB_MTIME_SET(c->fcmh_sstb.sst_mtime,
-			                  c->fcmh_sstb.sst_mtime_ns,
+					  c->fcmh_sstb.sst_mtime_ns,
 					  stb);
 		}
-		if (!(to_set & PSCFS_SETATTRF_DATASIZE)) { 
+		if (!(to_set & PSCFS_SETATTRF_DATASIZE)) {
 			to_set |= PSCFS_SETATTRF_DATASIZE;
 			stb->st_size = c->fcmh_sstb.sst_size;
 		}
@@ -2189,7 +2189,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		fcmh_wake_locked(c);
 		sl_internalize_stat(&c->fcmh_sstb, stb);
 
-		if (rc && flush_attrs) 
+		if (rc && flush_attrs)
 			c->fcmh_flags |= FCMH_CLI_DIRTY_ATTRS;
 		if (!rc && flush_attrs && !(c->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
 			psc_assert(c->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
@@ -2199,7 +2199,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			lc_remove(&attrTimeoutQ, fci);
 			freelock(&attrTimeoutQLock);
 			fcmh_op_done_type(c, FCMH_OPCNT_DIRTY_QUEUE);
-		} 
+		}
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	}
 	/* XXX if there is no fcmh, what do we do?? */
@@ -2292,7 +2292,7 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 			freelock(&attrTimeoutQLock);
 			fcmh_op_start_type(f, FCMH_OPCNT_DIRTY_QUEUE);
 		}
-	} 
+	}
 	FCMH_ULOCK(f);
 
 	MFH_LOCK(mfh);
@@ -2395,7 +2395,7 @@ mslfsop_flush_attr(struct fidc_membh *fcmh)
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 
-	if (rc == 0) 
+	if (rc == 0)
 		rc = mp->rc;
 	if (rq)
 		pscrpc_req_finished(rq);
@@ -2558,7 +2558,7 @@ msl_init(void)
 	psc_iostats_init(&msl_racache_stat, "ra-cache-hit");
 
 	psc_iostats_init(&msl_io_1b_stat,   "I/O sz: < 1k");
-	psc_iostats_init(&msl_io_1k_stat, "I/O sz: 1k-4k");
+	psc_iostats_init(&msl_io_1k_stat,   "I/O sz: 1k-4k");
 	psc_iostats_init(&msl_io_4k_stat,   "I/O sz: 4k-16k");
 	psc_iostats_init(&msl_io_16k_stat,  "I/O sz: 16k-64k");
 	psc_iostats_init(&msl_io_64k_stat,  "I/O sz: 64k-128k");
