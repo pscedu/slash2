@@ -243,7 +243,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 	struct sl_mds_crc_log crclog;
 	struct fidc_membh *f;
 	struct srt_stat sstb;
-	uint32_t utimgen, i;
+	uint32_t i;
 	sl_ios_id_t iosid;
 	int fl, idx;
 
