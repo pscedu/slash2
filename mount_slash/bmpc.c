@@ -70,7 +70,7 @@ bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *p)
 {
 	struct bmap_pagecache_entry *bmpce = p;
 	void *base;
-	
+
 	base = bmpce->bmpce_base;
 	memset(bmpce, 0, sizeof(*bmpce));
 	INIT_PSC_LISTENTRY(&bmpce->bmpce_lentry);
@@ -131,9 +131,8 @@ bmpce_lookup_locked(struct bmap_pagecache *bmpc, struct bmpc_ioreq *biorq,
 	return (bmpce);
 }
 
-
 __static void
-bmpce_release_locked(struct bmap_pagecache_entry *, 
+bmpce_release_locked(struct bmap_pagecache_entry *,
 		     struct bmap_pagecache *);
 
 void
@@ -523,6 +522,9 @@ dump_biorq_flags(uint32_t flags)
 	PFL_PRFLAG(BIORQ_ARCHIVER, &flags, &seq);
 	PFL_PRFLAG(BIORQ_FLUSHABORT, &flags, &seq);
 	PFL_PRFLAG(BIORQ_EXPIREDLEASE, &flags, &seq);
+	PFL_PRFLAG(BIORQ_MAXRETRIES, &flags, &seq);
+	PFL_PRFLAG(BIORQ_BMAPFAIL, &flags, &seq);
+	PFL_PRFLAG(BIORQ_READFAIL, &flags, &seq);
 	if (flags)
 		printf(" unknown: %#x", flags);
 	printf("\n");

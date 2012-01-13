@@ -278,9 +278,9 @@ struct bmpc_ioreq {
 #define BIORQ_ARCHIVER			(1 << 16)
 #define BIORQ_FLUSHABORT		(1 << 17)
 #define BIORQ_EXPIREDLEASE		(1 << 18)
-#define BIORQ_MAXRETRIES		(1 << 19)       /* too many retries.. */
-#define BIORQ_BMAPFAIL                  (1 << 20)
-#define BIORQ_READFAIL                  (1 << 21)
+#define BIORQ_MAXRETRIES		(1 << 19)	/* too many retries.. */
+#define BIORQ_BMAPFAIL			(1 << 20)
+#define BIORQ_READFAIL			(1 << 21)
 
 #define BIORQ_LOCK(r)			spinlock(&(r)->biorq_lock)
 #define BIORQ_ULOCK(r)			freelock(&(r)->biorq_lock)
@@ -289,8 +289,8 @@ struct bmpc_ioreq {
 #define BIORQ_LOCK_ENSURE(r)		LOCK_ENSURE(&(r)->biorq_lock)
 
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
-	psclogs((level), SLSS_BMAP,					\
-	    "biorq@%p fl=%#x:%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "	\
+	psclogs((level), SLSS_BMAP, "biorq@%p "				\
+	    "fl=%#x:%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "	\
 	    "o=%u l=%u r=%u sliod=%x "					\
 	    "np=%d b=%p "						\
 	    "ex="PSCPRI_TIMESPEC" : "fmt,				\
@@ -311,12 +311,13 @@ struct bmpc_ioreq {
 	    (b)->biorq_flags & BIORQ_RBWFAIL		? "F" : "",	\
 	    (b)->biorq_flags & BIORQ_AIOWAIT		? "W" : "",	\
 	    (b)->biorq_flags & BIORQ_RESCHED		? "R" : "",	\
+	    (b)->biorq_flags & BIORQ_ARCHIVER		? "c" : "",	\
 	    (b)->biorq_flags & BIORQ_FLUSHABORT		? "B" : "",	\
 	    (b)->biorq_flags & BIORQ_EXPIREDLEASE	? "X" : "",	\
-	    (b)->biorq_flags & BIORQ_MAXRETRIES	        ? "x" : "",	\
-	    (b)->biorq_flags & BIORQ_BMAPFAIL	        ? "b" : "",	\
-	    (b)->biorq_flags & BIORQ_READFAIL	        ? "E" : "",	\
-	    (b)->biorq_off, (b)->biorq_len, (b)->biorq_retries,	        \
+	    (b)->biorq_flags & BIORQ_MAXRETRIES		? "x" : "",	\
+	    (b)->biorq_flags & BIORQ_BMAPFAIL		? "b" : "",	\
+	    (b)->biorq_flags & BIORQ_READFAIL		? "E" : "",	\
+	    (b)->biorq_off, (b)->biorq_len, (b)->biorq_retries,		\
 	    (b)->biorq_last_sliod,					\
 	    psc_dynarray_len(&(b)->biorq_pages), (b)->biorq_bmap,	\
 	    PSCPRI_TIMESPEC_ARGS(&(b)->biorq_expire), ## __VA_ARGS__)
