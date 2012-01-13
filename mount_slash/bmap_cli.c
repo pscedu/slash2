@@ -163,7 +163,7 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 		goto out;
 	}
 
-	memcpy(&bmap_2_bci(b)->bci_sbd, &mp->sbd, 
+	memcpy(&bmap_2_bci(b)->bci_sbd, &mp->sbd,
 	       sizeof(struct srt_bmapdesc));
 
 	PFL_GETTIMESPEC(&bmap_2_bci(b)->bci_xtime);
@@ -202,7 +202,7 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 	if (rc)
 		goto out;
 
-	memcpy(&bmap_2_bci(b)->bci_sbd, &mp->sbd, 
+	memcpy(&bmap_2_bci(b)->bci_sbd, &mp->sbd,
 	       sizeof(struct srt_bmapdesc));
 
 	PFL_GETTIMESPEC(&bmap_2_bci(b)->bci_xtime);
@@ -228,7 +228,7 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 			 */
 			bmap_orphan(b);
 			BMAP_SETATTR(b, BMAP_CLI_LEASEEXPIRED);
-			bmpc_biorqs_fail(bmap_2_bmpc(b), 
+			bmpc_biorqs_fail(bmap_2_bmpc(b),
 				 BIORQ_EXPIREDLEASE);
 		}
 	}
@@ -260,17 +260,17 @@ void
 msl_bmap_lease_tryreassign(struct bmapc_memb *b)
 {
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
-        struct bmap_cli_info  *bci  = bmap_2_bci(b);
+	struct bmap_cli_info  *bci  = bmap_2_bci(b);
 
-        BMAP_LOCK(b);
-        BMPC_LOCK(bmpc);
+	BMAP_LOCK(b);
+	BMPC_LOCK(bmpc);
 
-        /* For lease reassignment to take place we must have the
-         *   the full complement of biorq's still in the cache.
-         *   Additionally, no biorqs may be on the wire since those
-         *   could be committed by the sliod.
-         */
-	if ((b->bcm_flags & BMAP_CLI_REASSIGNREQ) ||	    
+	/* For lease reassignment to take place we must have the
+	 *   the full complement of biorq's still in the cache.
+	 *   Additionally, no biorqs may be on the wire since those
+	 *   could be committed by the sliod.
+	 */
+	if ((b->bcm_flags & BMAP_CLI_REASSIGNREQ) ||
 	    pll_empty(&bmpc->bmpc_new_biorqs)     ||
 	    !pll_empty(&bmpc->bmpc_pndg_biorqs)   ||
 	    bmpc->bmpc_compwr                     ||
@@ -278,7 +278,7 @@ msl_bmap_lease_tryreassign(struct bmapc_memb *b)
 		BMPC_ULOCK(bmpc);
 		BMAP_ULOCK(b);
 		return;
-		
+
 	} else {
 		struct slashrpc_cservice *csvc = NULL;
 		struct pscrpc_request *rq = NULL;
@@ -289,15 +289,15 @@ msl_bmap_lease_tryreassign(struct bmapc_memb *b)
 		bci->bci_prev_sliods[bci->bci_nreassigns] =
 			bci->bci_sbd.sbd_ios;
 		bci->bci_nreassigns++;
-		
+
 		BMAP_SETATTR(b, BMAP_CLI_REASSIGNREQ);
-	
+
 		DEBUG_BMAP(PLL_WARN, b, "reassign from ios=%u "
 		   "(nreassigns=%d compwr=%u)", bci->bci_sbd.sbd_ios,
 		   bci->bci_nreassigns, bmpc->bmpc_compwr);
 
 		bmap_op_start_type(b, BMAP_OPCNT_REASSIGN);
-		
+
 		BMPC_ULOCK(bmpc);
 		BMAP_ULOCK(b);
 
@@ -310,9 +310,9 @@ msl_bmap_lease_tryreassign(struct bmapc_memb *b)
 		if (rc)
 			goto error;
 
-		memcpy(&mq->sbd, &bci->bci_sbd, 
+		memcpy(&mq->sbd, &bci->bci_sbd,
 		       sizeof(struct srt_bmapdesc));
-		memcpy(&mq->prev_sliods, &bci->bci_prev_sliods, 
+		memcpy(&mq->prev_sliods, &bci->bci_prev_sliods,
 		       sizeof(sl_ios_id_t) * (bci->bci_nreassigns + 1));
 		mq->nreassigns = bci->bci_nreassigns;
 		mq->pios = prefIOS;
@@ -326,21 +326,21 @@ msl_bmap_lease_tryreassign(struct bmapc_memb *b)
 
 		rc = pscrpc_nbreqset_add(pndgBmaplsReqs, rq);
 		if (rc) {
-		error:
-			BMAP_CLEARATTR(b, BMAP_CLI_REASSIGNREQ);     
+ error:
+			BMAP_CLEARATTR(b, BMAP_CLI_REASSIGNREQ);
 			bmap_op_done_type(b, BMAP_OPCNT_REASSIGN);
-			
+
 			if (rq)
 				pscrpc_req_finished(rq);
 			if (csvc)
 				sl_csvc_decref(csvc);
 		}
-		DEBUG_BMAP(rc ? PLL_ERROR : PLL_NOTIFY, b, 
+		DEBUG_BMAP(rc ? PLL_ERROR : PLL_NOTIFY, b,
 		   "lease reassign req (rc=%d)", rc);
 	}
 }
 
-/*
+/**
  * msl_bmap_lease_tryext - Attempt to extend the lease time on a bmap.  If
  *    successful, this will result i the creation and assignment of a new
  *    lease sequence number from the MDS.
@@ -433,7 +433,7 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 
 		rc = pscrpc_nbreqset_add(pndgBmaplsReqs, rq);
 		if (rc) {
-error:
+ error:
 			if (rq)
 				pscrpc_req_finished(rq);
 			if (csvc)
@@ -551,7 +551,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw,
 }
 
 /**
- * msl_bmap_cache_rls - called from rcm.c (SRMT_BMAPDIO).
+ * msl_bmap_cache_rls - Called from rcm.c (SRMT_BMAPDIO).
  * @b:  the bmap whose cached pages should be released.
  */
 void
