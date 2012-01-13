@@ -145,7 +145,7 @@ struct bmap_timeo_table {
 	 */
 	uint64_t		 btt_maxseq;
 	uint64_t		 btt_minseq;
-	struct psc_lockedlist    btt_leases;
+	struct psc_lockedlist	 btt_leases;
 	int			 btt_ready;
 };
 
@@ -177,23 +177,23 @@ struct bmap_mds_lease {
 };
 
 /* bml_flags */
-#define	BML_READ		(1 <<  0)
-#define	BML_WRITE		(1 <<  1)
-#define	BML_CDIO		(1 <<  2)
-#define	BML_COHRLS		(1 <<  3)
-#define	BML_COHDIO		(1 <<  4)
-#define	BML_EXP			(1 <<  5)
-#define	BML_TIMEOQ		(1 <<  6)
-#define	BML_BMDSI		(1 <<  7)
-#define	BML_COH			(1 <<  8)
-#define	BML_RECOVER		(1 <<  9)
-#define	BML_CHAIN		(1 << 10)
-#define	BML_UPGRADE		(1 << 11)
-#define	BML_EXPFAIL		(1 << 12)
+#define BML_READ		(1 <<  0)
+#define BML_WRITE		(1 <<  1)
+#define BML_CDIO		(1 <<  2)
+#define BML_COHRLS		(1 <<  3)
+#define BML_COHDIO		(1 <<  4)
+#define BML_EXP			(1 <<  5)
+#define BML_TIMEOQ		(1 <<  6)
+#define BML_BMDSI		(1 <<  7)
+#define BML_COH			(1 <<  8)
+#define BML_RECOVER		(1 <<  9)
+#define BML_CHAIN		(1 << 10)
+#define BML_UPGRADE		(1 << 11)
+#define BML_EXPFAIL		(1 << 12)
 #define BML_FREEING		(1 << 13)
 #define BML_ASSFAIL		(1 << 14)
 #define BML_RECOVERPNDG		(1 << 15)
-#define BML_REASSIGN            (1 << 16)
+#define BML_REASSIGN		(1 << 16)
 
 #define bml_2_bmap(bml)		bmi_2_bmap((bml)->bml_bmdsi)
 
@@ -248,7 +248,8 @@ int	 mds_bmap_loadvalid(struct fidc_membh *, sl_bmapno_t,
 int	 mds_bmap_bml_chwrmode(struct bmap_mds_lease *, sl_ios_id_t);
 int	 mds_bmap_bml_release(struct bmap_mds_lease *);
 void	 mds_bmap_ensure_valid(struct bmapc_memb *);
-struct bmap_mds_lease * mds_bmap_getbml(struct bmapc_memb *, struct srt_bmapdesc *);
+struct bmap_mds_lease *
+	 mds_bmap_getbml(struct bmapc_memb *, struct srt_bmapdesc *);
 
 void	 mds_bmap_setcurseq(uint64_t, uint64_t);
 int	 mds_bmap_getcurseq(uint64_t *, uint64_t *);
