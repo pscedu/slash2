@@ -263,6 +263,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 	    fcmh_2_repl_nblks(f, idx);
 	fl = SL_SETATTRF_NBLKS;
 
+	/* use nolog because mdslog_bmap_crc will cover this */
 	mds_fcmh_setattr_nolog(f, fl, &sstb);
 
 	fcmh_set_repl_nblks(f, idx, crcup->nblks);
