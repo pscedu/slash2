@@ -175,6 +175,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct lnetif_pair);
 	PRTYPE(struct mdsio_fh);
 	PRTYPE(struct mdsio_ops);
+	PRTYPE(struct msattrfl_thread);
 	PRTYPE(struct msbmfl_thread);
 	PRTYPE(struct msbmflra_thread);
 	PRTYPE(struct msbmflrls_thread);
@@ -363,6 +364,7 @@ main(int argc, char *argv[])
 	PRVAL(CSVC_RECONNECT_INTV);
 	PRVAL(DEF_READDIR_NENTS);
 	PRVAL(FCMH_ATTR_TIMEO);
+	PRVAL(FCMH_ATTR_TIMEO_SHORT);
 	PRVAL(FCMH_SETATTRF_NONE);
 	PRVAL(FIDC_CLI_DEFSZ);
 	PRVAL(FIDC_LOOKUP_NONE);
@@ -556,6 +558,7 @@ main(int argc, char *argv[])
 	PRVAL(BMAP_OPCNT_TRUNCWAIT);
 	PRVAL(FCMH_OPCNT_BMAP);
 	PRVAL(FCMH_OPCNT_DIRENTBUF);
+	PRVAL(FCMH_OPCNT_DIRTY_QUEUE);
 	PRVAL(FCMH_OPCNT_LOOKUP_FIDC);
 	PRVAL(FCMH_OPCNT_NEW);
 	PRVAL(FCMH_OPCNT_OPEN);
@@ -563,6 +566,7 @@ main(int argc, char *argv[])
 	PRVAL(FCMH_OPCNT_WAIT);
 	PRVAL(FCMH_OPCNT_WORKER);
 	PRVAL(INO_BMAP_AFFINITY);
+	PRVAL(MSTHRT_ATTRFLSH);
 	PRVAL(MSTHRT_BMAPFLSH);
 	PRVAL(MSTHRT_BMAPFLSHRLS);
 	PRVAL(MSTHRT_BMAPFLSHRPC);

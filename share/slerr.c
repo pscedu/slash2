@@ -53,8 +53,9 @@ char *slash_errstrs[] = {
 /* 25 */ "Asynchronous I/O would block",
 /* 26 */ "Reimport failed because target is newer",
 /* 27 */ "Import additional replica registration failed because source and target differ",
-/* 28 */ "Bmap Lease extension failed",
-/* 29 */ "Resource is of wrong type",
+/* 28 */ "Bmap lease extension failed",
+/* 29 */ "Bmap lease reassignment failed",
+/* 30 */ "Resource is of wrong type",
 	NULL
 };
 
