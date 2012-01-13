@@ -200,6 +200,7 @@ const char *slm_resmds_fields[] = {
 
 const char *slm_resios_fields[] = {
 	"disable_bia",
+	"disable_gc",
 	"xid"
 };
 
@@ -328,6 +329,25 @@ slmctlparam_resources(int fd, struct psc_ctlmsghdr *mh,
 					snprintf(nbuf, sizeof(nbuf),
 					    "%d", si->si_flags &
 					    SIF_DISABLE_BIA ? 1 : 0);
+					if (!psc_ctlmsg_param_send(fd,
+					    mh, pcp, PCTHRNAME_EVERYONE,
+					    levels, 4, nbuf))
+						return (0);
+				}
+				field_found = 1;
+			}
+			if (strcmp(p_field, "*") == 0 ||
+			    strcmp(p_field, "disable_gc") == 0) {
+				if (set) {
+					if (val)
+						si->si_flags |= SIF_DISABLE_GC;
+					else
+						si->si_flags &= ~SIF_DISABLE_GC;
+				} else {
+					levels[3] = "disable_gc";
+					snprintf(nbuf, sizeof(nbuf),
+					    "%d", si->si_flags &
+					    SIF_DISABLE_GC ? 1 : 0);
 					if (!psc_ctlmsg_param_send(fd,
 					    mh, pcp, PCTHRNAME_EVERYONE,
 					    levels, 4, nbuf))

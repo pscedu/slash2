@@ -15,7 +15,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES ctl rpc %
-.Dd December 22, 2011
+.Dd January 13, 2012
 .Dt SLMCTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -94,6 +94,11 @@ lookups for network addresses.
 .\"				EOF
 .\"				disable_bia => <<EOF,
 .\"					Whether bmap write lease assignments are administratively
+.\"					disabled
+.\"					.Pq ION only .
+.\"					EOF
+.\"				disable_gc => <<EOF,
+.\"					Whether garbage collection and reclamation is administratively
 .\"					disabled
 .\"					.Pq ION only .
 .\"					EOF
@@ -193,6 +198,10 @@ Settings and fields specific to network peers.
 .Bl -tag -width 13n -offset 3n
 .It Cm disable_bia
 Whether bmap write lease assignments are administratively
+disabled
+.Pq ION only .
+.It Cm disable_gc
+Whether garbage collection and reclamation is administratively
 disabled
 .Pq ION only .
 .It Cm xid
