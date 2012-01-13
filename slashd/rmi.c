@@ -619,8 +619,8 @@ slm_rmi_handle_ping(struct pscrpc_request *rq)
 			psclog_warnx("self-test from %s failed, "
 			    "disabling write lease assignment",
 			    m->resm_name);
-			res2iosinfo(m->resm_res)->si_flags |=
-			    SIF_DISABLE_BIA;
+			res2iosinfo(m->resm_res)->si_flags |= 
+				SIF_DISABLE_BIA;
 		}
 	}
 	return (0);
@@ -665,6 +665,15 @@ slm_rmi_handler(struct pscrpc_request *rq)
 	case SRMT_CONNECT:
 		rc = slrpc_handle_connect(rq, SRMI_MAGIC, SRMI_VERSION,
 		    SLCONNT_IOD);
+		if (!rc) {
+			struct sl_resm *m;
+
+			m = libsl_try_nid2resm(rq->rq_peer.nid);
+			psc_assert(m);
+			clock_gettime(CLOCK_MONOTONIC, 
+			      &res2iosinfo(m->resm_res)->si_lastcomm);
+		}
+
 		break;
 	case SRMT_PING:
 		rc = slm_rmi_handle_ping(rq);

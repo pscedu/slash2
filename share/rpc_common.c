@@ -294,6 +294,7 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 		if (!RES_ISFS(m->resm_res))
 			mp->rc = -SLERR_RES_BADTYPE;
 		m->resm_stkvers = mq->stkvers;
+
 		break;
 	case SLCONNT_MDS:
 		m = libsl_try_nid2resm(rq->rq_peer.nid);
@@ -807,7 +808,7 @@ slconnthr_main(struct psc_thread *thr)
 				break;
 
 			now = time(NULL);
-			dst = now + 60;
+			dst = now + CSVC_PING_INTV;
 			do {
 				sl_csvc_lock(csvc);
 				if (!sl_csvc_useable(csvc))

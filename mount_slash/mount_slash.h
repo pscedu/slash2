@@ -259,11 +259,8 @@ void	 mstimerthr_spawn(void);
 #define bmap_flushq_wake(mode, t)					\
 	_bmap_flushq_wake(PFL_CALLERINFOSS(SLSS_BMAP), (mode), (t))
 
-#define bmap_flush_resched(biorq)					\
-	_bmap_flush_resched(PFL_CALLERINFOSS(SLSS_BMAP), (biorq))
-
 void	 _bmap_flushq_wake(const struct pfl_callerinfo *, int, struct timespec *);
-void	 _bmap_flush_resched(const struct pfl_callerinfo *, struct bmpc_ioreq *);
+void	 bmap_flush_resched(struct bmpc_ioreq *);
 
 extern char			 ctlsockfn[];
 extern sl_ios_id_t		 prefIOS;
@@ -277,6 +274,15 @@ extern struct psc_iostats	 msl_diord_stat;
 extern struct psc_iostats	 msl_diowr_stat;
 extern struct psc_iostats	 msl_rdcache_stat;
 extern struct psc_iostats	 msl_racache_stat;
+
+extern struct psc_iostats	 msl_io_1b_stat;
+extern struct psc_iostats	 msl_io_1k_stat;
+extern struct psc_iostats	 msl_io_4k_stat;
+extern struct psc_iostats	 msl_io_16k_stat;
+extern struct psc_iostats	 msl_io_64k_stat;
+extern struct psc_iostats	 msl_io_128k_stat;
+extern struct psc_iostats	 msl_io_512k_stat;
+extern struct psc_iostats	 msl_io_1m_stat;
 
 extern struct psc_listcache	 bmapTimeoutQ;
 extern struct psc_waitq		 bmapFlushWaitq;

@@ -69,6 +69,56 @@ slcfg_init_resm(struct sl_resm *resm)
 	rmmi->rmmi_resm = resm;
 }
 
+__static void
+slcfg_resm_roundrobin(struct sl_resource *res, struct psc_dynarray *a)
+{
+	int i, idx;
+	struct resprof_mds_info *rpmi = res2rpmi(res);
+	struct sl_resm *resm;
+	
+	spinlock(&rpmi->rpmi_lock);
+	idx = slm_get_rpmi_idx(res);
+	freelock(&rpmi->rpmi_lock);
+	
+	for (i = 0; i < psc_dynarray_len(&res->res_members); i++, idx++) {
+		if (idx >= psc_dynarray_len(&res->res_members))
+		    idx = 0;
+
+		resm = psc_dynarray_getpos(&res->res_members, idx);
+		psc_dynarray_add_ifdne(a, resm);
+	}
+}
+
+int
+slcfg_get_ioslist(sl_ios_id_t piosid, struct psc_dynarray *a, 
+	  int use_archival)
+{
+	struct sl_resource *pios, *res;
+	int i;
+
+	pios = libsl_id2res(piosid);
+	if (!pios || !RES_ISFS(pios))
+		return (0);
+
+	/* Add the preferred IOS member(s) first.  Note that PIOS may
+	 *   be a CNOS, parallel IOS, or stand-alone.
+	 */
+	slcfg_resm_roundrobin(pios, a);
+
+	DYNARRAY_FOREACH(res, i, &pios->res_site->site_resources) {
+		if (!RES_ISFS(res) || (res == pios) ||
+		    ((res->res_type == SLREST_ARCHIVAL_FS) && 
+		     !use_archival))
+			continue;
+
+		slcfg_resm_roundrobin(res, a);
+	}
+	
+	return (psc_dynarray_len(a));
+}
+
+
+
 void
 slcfg_init_site(struct sl_site *site)
 {

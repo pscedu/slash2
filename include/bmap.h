@@ -139,6 +139,8 @@ struct bmapc_memb {
 #define BMAP_ARCHIVER		(1 << 16)	/* archiver */
 #define _BMAP_FLSHFT		(1 << 17)
 
+#define SL_MAX_IOSREASSIGN              16
+
 #define BMAP_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bcm_lock)
 #define BMAP_HASLOCK(b)		psc_spin_haslock(&(b)->bcm_lock)
 #define BMAP_LOCK(b)		spinlock(&(b)->bcm_lock)
@@ -335,7 +337,8 @@ enum bmap_opcnt_types {
 /* 10 */ BMAP_OPCNT_RLSSCHED,
 /* 11 */ BMAP_OPCNT_TRUNCWAIT,
 /* 12 */ BMAP_OPCNT_READA,
-/* 13 */ BMAP_OPCNT_LEASEEXT
+/* 13 */ BMAP_OPCNT_LEASEEXT,
+/* 14 */ BMAP_OPCNT_REASSIGN
 };
 
 SPLAY_HEAD(bmap_cache, bmapc_memb);

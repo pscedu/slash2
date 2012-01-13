@@ -203,6 +203,7 @@ struct bmap_pagecache {
 	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* chain pending I/O requests */
 	struct psc_lockedlist		 bmpc_pndg_ra;		/* RA bmpce's pending comp */
 	atomic_t			 bmpc_pndgwr;		/* # pending wr req */
+	int                              bmpc_compwr;           /* # of completed writes */
 	psc_spinlock_t			 bmpc_lock;		/* serialize access to splay tree and locked lists  */
 	struct psclist_head		 bmpc_lentry;		/* chain to global LRU lc */
 };
@@ -242,6 +243,8 @@ struct bmpc_ioreq {
 	uint32_t			 biorq_off;	/* filewise, bmap relative	*/
 	uint32_t			 biorq_len;	/* non-aligned, real length	*/
 	uint32_t			 biorq_flags;	/* state and op type bits	*/
+	uint32_t                         biorq_retries;
+	sl_ios_id_t                      biorq_last_sliod;
 	psc_spinlock_t			 biorq_lock;
 	struct timespec			 biorq_issue;	/* time to initiate I/O		*/
 	struct timespec			 biorq_expire;
@@ -275,6 +278,9 @@ struct bmpc_ioreq {
 #define BIORQ_ARCHIVER			(1 << 16)
 #define BIORQ_FLUSHABORT		(1 << 17)
 #define BIORQ_EXPIREDLEASE		(1 << 18)
+#define BIORQ_MAXRETRIES		(1 << 19)       /* too many retries.. */
+#define BIORQ_BMAPFAIL                  (1 << 20)
+#define BIORQ_READFAIL                  (1 << 21)
 
 #define BIORQ_LOCK(r)			spinlock(&(r)->biorq_lock)
 #define BIORQ_ULOCK(r)			freelock(&(r)->biorq_lock)
@@ -284,8 +290,8 @@ struct bmpc_ioreq {
 
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP,					\
-	    "biorq@%p fl=%#x:%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "	\
-	    "o=%u l=%u "						\
+	    "biorq@%p fl=%#x:%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "	\
+	    "o=%u l=%u r=%u sliod=%x "					\
 	    "np=%d b=%p "						\
 	    "ex="PSCPRI_TIMESPEC" : "fmt,				\
 	    (b), (b)->biorq_flags,					\
@@ -307,7 +313,11 @@ struct bmpc_ioreq {
 	    (b)->biorq_flags & BIORQ_RESCHED		? "R" : "",	\
 	    (b)->biorq_flags & BIORQ_FLUSHABORT		? "B" : "",	\
 	    (b)->biorq_flags & BIORQ_EXPIREDLEASE	? "X" : "",	\
-	    (b)->biorq_off, (b)->biorq_len,				\
+	    (b)->biorq_flags & BIORQ_MAXRETRIES	        ? "x" : "",	\
+	    (b)->biorq_flags & BIORQ_BMAPFAIL	        ? "b" : "",	\
+	    (b)->biorq_flags & BIORQ_READFAIL	        ? "E" : "",	\
+	    (b)->biorq_off, (b)->biorq_len, (b)->biorq_retries,	        \
+	    (b)->biorq_last_sliod,					\
 	    psc_dynarray_len(&(b)->biorq_pages), (b)->biorq_bmap,	\
 	    PSCPRI_TIMESPEC_ARGS(&(b)->biorq_expire), ## __VA_ARGS__)
 
@@ -422,7 +432,7 @@ void *bmpc_alloc(void);
 void  bmpc_free(void *);
 void  bmpc_freeall_locked(struct bmap_pagecache *);
 int   bmpc_biorq_cmp(const void *, const void *);
-void  bmpc_biorqs_fail(struct bmap_pagecache *);
+void  bmpc_biorqs_fail(struct bmap_pagecache *, int);
 int   bmpce_init(struct psc_poolmgr *, void *);
 void  bmpce_getbuf(struct bmap_pagecache_entry *);
 struct bmap_pagecache_entry *
@@ -489,6 +499,7 @@ bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len,
 	ioreq->biorq_flags = op;
 	ioreq->biorq_fhent = fhent;
 	ioreq->biorq_fsrqi = q;
+	ioreq->biorq_last_sliod = IOS_ID_ANY;
 
 	BMAP_LOCK(bmap);
 	if (bmap->bcm_flags & BMAP_DIO)

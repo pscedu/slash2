@@ -166,6 +166,7 @@ struct sl_mds_iosinfo {
 
 #define	SIF_NEED_JRNL_INIT	(1 << 0)		/* journal fields need initialized */
 #define SIF_DISABLE_BIA		(1 << 1)		/* disable bmap lease assignments */
+#define SIF_DISABLE_GC		(1 << 2)		/* disable garbage collection temporarily */
 
 #define res2iosinfo(res)	((struct sl_mds_iosinfo *)res2rpmi(res)->rpmi_info)
 
@@ -221,6 +222,12 @@ struct slm_workrq {
 int		 mds_handle_rls_bmap(struct pscrpc_request *, int);
 int		 mds_lease_renew(struct fidc_membh *, struct srt_bmapdesc *,
 			 struct srt_bmapdesc *, struct pscrpc_export *);
+int              mds_lease_reassign(struct fidc_membh *, 
+			 struct srt_bmapdesc *, sl_ios_id_t, sl_ios_id_t *,
+			 int, struct srt_bmapdesc *, 
+			 struct pscrpc_export *);
+
+int              mds_sliod_alive(struct sl_mds_iosinfo *);
 
 __dead void	 slmctlthr_main(const char *);
 void		 slmbmaptimeothr_spawn(void);

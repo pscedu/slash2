@@ -697,6 +697,10 @@ mds_reclaim_lwm(int batchno)
 		iosinfo = rpmi->rpmi_info;
 
 		RPMI_LOCK(rpmi);
+		if (iosinfo->si_flags & SIF_DISABLE_GC) {
+			RPMI_ULOCK(rpmi);
+			continue;
+		}
 		if (batchno) {
 			if (iosinfo->si_batchno < value)
 				value = iosinfo->si_batchno;

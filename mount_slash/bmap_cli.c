@@ -139,6 +139,51 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 }
 
 __static int
+msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
+			   struct pscrpc_async_args *args)
+{
+	struct bmapc_memb *b = args->pointer_arg[MSL_CBARG_BMAP];
+	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
+	struct srm_reassignbmap_rep *mp =
+		pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
+	int rc;
+
+	psc_assert(&rq->rq_async_args == args);
+
+	BMAP_LOCK(b);
+	psc_assert(b->bcm_flags & BMAP_CLI_REASSIGNREQ);
+
+	MSL_GET_RQ_STATUS(csvc, rq, mp, rc);
+	if (rc) {
+		/* If the MDS replies with SLERR_ION_OFFLINE then don't bother
+		 *    with further retry attempts.
+		 */
+		if (rc == -SLERR_ION_OFFLINE)
+			bmap_2_bci(b)->bci_nreassigns = SLERR_ION_OFFLINE;
+		goto out;
+	}
+
+	memcpy(&bmap_2_bci(b)->bci_sbd, &mp->sbd, 
+	       sizeof(struct srt_bmapdesc));
+
+	PFL_GETTIMESPEC(&bmap_2_bci(b)->bci_xtime);
+
+	timespecadd(&bmap_2_bci(b)->bci_xtime, &msl_bmap_timeo_inc,
+	    &bmap_2_bci(b)->bci_etime);
+	timespecadd(&bmap_2_bci(b)->bci_xtime, &msl_bmap_max_lease,
+	    &bmap_2_bci(b)->bci_xtime);
+ out:
+	BMAP_CLEARATTR(b, BMAP_CLI_REASSIGNREQ);
+
+	DEBUG_BMAP(rc ? PLL_ERROR : PLL_NOTIFY, b,
+		   "lease reassign (rc=%d) nseq=%"PRId64, rc,
+		   rc ? BMAPSEQ_ANY : mp->sbd.sbd_seq);
+	bmap_op_done_type(b, BMAP_OPCNT_REASSIGN);
+
+	return (rc);
+}
+
+__static int
 msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 			 struct pscrpc_async_args *args)
 {
@@ -157,7 +202,8 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 	if (rc)
 		goto out;
 
-	memcpy(&bmap_2_bci(b)->bci_sbd, &mp->sbd, sizeof(struct srt_bmapdesc));
+	memcpy(&bmap_2_bci(b)->bci_sbd, &mp->sbd, 
+	       sizeof(struct srt_bmapdesc));
 
 	PFL_GETTIMESPEC(&bmap_2_bci(b)->bci_xtime);
 
@@ -175,9 +221,15 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 		if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED)
 			psc_assert(b->bcm_flags & BMAP_ORPHAN);
 		else {
-			BMAP_SETATTR(b, BMAP_CLI_LEASEEXPIRED);
+			/* Note:  bmap_orphan() will drop the bmap lock
+			 *   so it's important that BMAP_CLI_LEASEEXPIRED
+			 *   is set afterwards so that it is atomic with
+			 *   bmpc_biorqs_fail().
+			 */
 			bmap_orphan(b);
-			bmpc_biorqs_fail(bmap_2_bmpc(b));
+			BMAP_SETATTR(b, BMAP_CLI_LEASEEXPIRED);
+			bmpc_biorqs_fail(bmap_2_bmpc(b), 
+				 BIORQ_EXPIREDLEASE);
 		}
 	}
 
@@ -202,6 +254,90 @@ msl_bmap_lease_secs_remaining(struct bmapc_memb *b)
 	BMAP_ULOCK(b);
 
 	return (secs);
+}
+
+void
+msl_bmap_lease_tryreassign(struct bmapc_memb *b)
+{
+	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
+        struct bmap_cli_info  *bci  = bmap_2_bci(b);
+
+        BMAP_LOCK(b);
+        BMPC_LOCK(bmpc);
+
+        /* For lease reassignment to take place we must have the
+         *   the full complement of biorq's still in the cache.
+         *   Additionally, no biorqs may be on the wire since those
+         *   could be committed by the sliod.
+         */
+	if ((b->bcm_flags & BMAP_CLI_REASSIGNREQ) ||	    
+	    pll_empty(&bmpc->bmpc_new_biorqs)     ||
+	    !pll_empty(&bmpc->bmpc_pndg_biorqs)   ||
+	    bmpc->bmpc_compwr                     ||
+	    bci->bci_nreassigns >= SL_MAX_IOSREASSIGN) {
+		BMPC_ULOCK(bmpc);
+		BMAP_ULOCK(b);
+		return;
+		
+	} else {
+		struct slashrpc_cservice *csvc = NULL;
+		struct pscrpc_request *rq = NULL;
+		struct srm_reassignbmap_req *mq;
+		struct srm_reassignbmap_rep *mp;
+		int rc;
+
+		bci->bci_prev_sliods[bci->bci_nreassigns] =
+			bci->bci_sbd.sbd_ios;
+		bci->bci_nreassigns++;
+		
+		BMAP_SETATTR(b, BMAP_CLI_REASSIGNREQ);
+	
+		DEBUG_BMAP(PLL_WARN, b, "reassign from ios=%u "
+		   "(nreassigns=%d compwr=%u)", bci->bci_sbd.sbd_ios,
+		   bci->bci_nreassigns, bmpc->bmpc_compwr);
+
+		bmap_op_start_type(b, BMAP_OPCNT_REASSIGN);
+		
+		BMPC_ULOCK(bmpc);
+		BMAP_ULOCK(b);
+
+		rc = slc_rmc_getcsvc1(&csvc,
+		      fcmh_2_fci(b->bcm_fcmh)->fci_resm);
+		if (rc)
+			goto error;
+
+		rc = SL_RSX_NEWREQ(csvc, SRMT_REASSIGNBMAPLS, rq, mq, mp);
+		if (rc)
+			goto error;
+
+		memcpy(&mq->sbd, &bci->bci_sbd, 
+		       sizeof(struct srt_bmapdesc));
+		memcpy(&mq->prev_sliods, &bci->bci_prev_sliods, 
+		       sizeof(sl_ios_id_t) * (bci->bci_nreassigns + 1));
+		mq->nreassigns = bci->bci_nreassigns;
+		mq->pios = prefIOS;
+
+		authbuf_sign(rq, PSCRPC_MSG_REQUEST);
+
+		rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
+		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
+		rq->rq_interpret_reply = msl_bmap_lease_reassign_cb;
+		pscrpc_completion_set(rq, &rpcComp);
+
+		rc = pscrpc_nbreqset_add(pndgBmaplsReqs, rq);
+		if (rc) {
+		error:
+			BMAP_CLEARATTR(b, BMAP_CLI_REASSIGNREQ);     
+			bmap_op_done_type(b, BMAP_OPCNT_REASSIGN);
+			
+			if (rq)
+				pscrpc_req_finished(rq);
+			if (csvc)
+				sl_csvc_decref(csvc);
+		}
+		DEBUG_BMAP(rc ? PLL_ERROR : PLL_NOTIFY, b, 
+		   "lease reassign req (rc=%d)", rc);
+	}
 }
 
 /*

@@ -49,8 +49,7 @@ bwc_init(__unusedx struct psc_poolmgr *poolmgr, void *p)
 
 	memset(bwc, 0, sizeof(*bwc));
 	INIT_PSC_LISTENTRY(&bwc->bwc_lentry);
-	pll_init(&bwc->bwc_pll, struct bmpc_ioreq,
-		 biorq_bwc_lentry, NULL);
+	pll_init(&bwc->bwc_pll, struct bmpc_ioreq, biorq_bwc_lentry, NULL);
 
 	return (0);
 }
@@ -134,7 +133,8 @@ bmpce_lookup_locked(struct bmap_pagecache *bmpc, struct bmpc_ioreq *biorq,
 
 
 __static void
-bmpce_release_locked(struct bmap_pagecache_entry *, struct bmap_pagecache *);
+bmpce_release_locked(struct bmap_pagecache_entry *, 
+		     struct bmap_pagecache *);
 
 void
 bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
@@ -313,7 +313,7 @@ bmpc_biorq_seterr(struct bmpc_ioreq *r, int err)
 	r->biorq_flags |= err;
 	BIORQ_ULOCK(r);
 
-	DEBUG_BIORQ(PLL_ERROR, r, "expired lease");
+	DEBUG_BIORQ(PLL_ERROR, r, "write-back flush failure (err=%d)", err);
 
 	msl_mfh_seterr(r->biorq_fhent);
 }
@@ -324,17 +324,17 @@ bmpc_biorq_seterr(struct bmpc_ioreq *r, int err)
  * Notes: Pending RA pages should fail on their own via RPC callback.
  */
 void
-bmpc_biorqs_fail(struct bmap_pagecache *bmpc)
+bmpc_biorqs_fail(struct bmap_pagecache *bmpc, int err)
 {
 	struct bmpc_ioreq *r;
 
 	BMPC_LOCK(bmpc);
 	PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs) {
-		bmpc_biorq_seterr(r, BIORQ_EXPIREDLEASE);
+		bmpc_biorq_seterr(r, err);
 	}
 
 	PLL_FOREACH(r, &bmpc->bmpc_new_biorqs) {
-		bmpc_biorq_seterr(r, (BIORQ_EXPIREDLEASE | BIORQ_FLUSHABORT));
+		bmpc_biorq_seterr(r, (err | BIORQ_FLUSHABORT));
 	}
 	BMPC_ULOCK(bmpc);
 }

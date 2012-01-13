@@ -196,7 +196,7 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	}
 
 	mp->rc = mds_bmap_bml_chwrmode(bml, mq->prefios[0]);
-	if (mp->rc == EALREADY)
+	if (mp->rc == -EALREADY)
 		mp->rc = 0;
 	else if (mp->rc)
 		goto out;
@@ -229,6 +229,26 @@ slm_rmc_handle_extendbmapls(struct pscrpc_request *rq)
 		return (0);
 
 	mp->rc = mds_lease_renew(f, &mq->sbd, &mp->sbd, rq->rq_export);
+	fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
+	return (0);
+}
+
+int
+slm_rmc_handle_reassignbmapls(struct pscrpc_request *rq)
+{
+	struct srm_reassignbmap_req *mq;
+	struct srm_reassignbmap_rep *mp;
+	struct fidc_membh *f;
+
+	SL_RSX_ALLOCREP(rq, mq, mp);
+
+	mp->rc = slm_fcmh_get(&mq->sbd.sbd_fg, &f);
+	if (mp->rc)
+		return (0);
+
+	mp->rc = mds_lease_reassign(f, &mq->sbd, mq->pios, mq->prev_sliods,
+		    mq->nreassigns, &mp->sbd, rq->rq_export);
+
 	fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 	return (0);
 }
@@ -1115,6 +1135,9 @@ slm_rmc_handler(struct pscrpc_request *rq)
 	case SRMT_EXTENDBMAPLS:
 		rc = slm_rmc_handle_extendbmapls(rq);
 		break;
+	case SRMT_REASSIGNBMAPLS:
+		rc = slm_rmc_handle_reassignbmapls(rq);
+		break;		
 	case SRMT_GETBMAP:
 		rc = slm_rmc_handle_getbmap(rq);
 		break;

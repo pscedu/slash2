@@ -2557,6 +2557,15 @@ msl_init(void)
 	psc_iostats_init(&msl_rdcache_stat, "rd-cache-hit");
 	psc_iostats_init(&msl_racache_stat, "ra-cache-hit");
 
+	psc_iostats_init(&msl_io_1b_stat,   "I/O sz: < 1k");
+	psc_iostats_init(&msl_io_1k_stat, "I/O sz: 1k-4k");
+	psc_iostats_init(&msl_io_4k_stat,   "I/O sz: 4k-16k");
+	psc_iostats_init(&msl_io_16k_stat,  "I/O sz: 16k-64k");
+	psc_iostats_init(&msl_io_64k_stat,  "I/O sz: 64k-128k");
+	psc_iostats_init(&msl_io_128k_stat, "I/O sz: 128k-512k");
+	psc_iostats_init(&msl_io_512k_stat, "I/O sz: 512k-1m");
+	psc_iostats_init(&msl_io_1m_stat,   "I/O sz: > 1m");
+
 	sl_nbrqset = pscrpc_nbreqset_init(NULL, NULL);
 	pscrpc_nbreapthr_spawn(sl_nbrqset, MSTHRT_NBRQ, "msnbrqthr");
 

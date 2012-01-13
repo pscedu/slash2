@@ -154,7 +154,7 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 		seq = mds_bmap_timeotbl_getnextseq();
 	}
 
-	if (bml->bml_flags & BML_UPGRADE)
+	if (bml->bml_flags & (BML_UPGRADE | BML_REASSIGN))
 		pll_remove(&mdsBmapTimeoTbl.btt_leases, bml);
 
 	bml->bml_flags |= BML_TIMEOQ;

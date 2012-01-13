@@ -70,6 +70,15 @@ struct psc_iostats	msl_diowr_stat;
 struct psc_iostats	msl_rdcache_stat;
 struct psc_iostats	msl_racache_stat;
 
+struct psc_iostats	msl_io_1b_stat;
+struct psc_iostats	msl_io_1k_stat;
+struct psc_iostats	msl_io_4k_stat;
+struct psc_iostats	msl_io_16k_stat;
+struct psc_iostats	msl_io_64k_stat;
+struct psc_iostats	msl_io_128k_stat;
+struct psc_iostats	msl_io_512k_stat;
+struct psc_iostats	msl_io_1m_stat;
+
 static int msl_getra(struct msl_fhent *, int, int *);
 
 #define MS_DEF_READAHEAD_PAGES 8
@@ -103,6 +112,24 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	psc_assert(len);
 	psc_assert((roff + len) <= SLASH_BMAP_SIZE);
 	psc_assert(op == BIORQ_WRITE || op == BIORQ_READ);
+
+	if (len < 1024)
+		psc_iostats_intv_add(&msl_io_1b_stat, 1);
+	else if (len < 4096)
+		psc_iostats_intv_add(&msl_io_1k_stat, 1);
+	else if (len < 16386)
+		psc_iostats_intv_add(&msl_io_4k_stat, 1);
+	else if (len < 65536)
+		psc_iostats_intv_add(&msl_io_16k_stat, 1);
+	else if (len < 131072)
+		psc_iostats_intv_add(&msl_io_64k_stat, 1);
+	else if (len < 524288)
+		psc_iostats_intv_add(&msl_io_128k_stat, 1);
+	else if (len < 1048576)
+		psc_iostats_intv_add(&msl_io_512k_stat, 1);
+	else
+		psc_iostats_intv_add(&msl_io_1m_stat, 1);
+		
 	*newreq = r = psc_pool_get(slc_biorq_pool);
 
 	bmpc_ioreq_init(r, roff, len, op, b, mfh, q);
@@ -421,14 +448,20 @@ msl_biorq_del(struct bmpc_ioreq *r)
 	BMAP_LOCK(b);
 	BMPC_LOCK(bmpc);
 
-	if (r->biorq_flags & BIORQ_FLUSHABORT)
-		psc_assert(psclist_disjoint(&r->biorq_lentry));
+	if (r->biorq_flags & (BIORQ_RESCHED | BIORQ_RBWFAIL | BIORQ_FLUSHABORT))
+		pll_remove(&bmpc->bmpc_new_biorqs, r);
 	else
 		pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 
 	if (r->biorq_flags & BIORQ_WRITE && !(r->biorq_flags & BIORQ_DIO)) {
-		atomic_dec(&bmpc->bmpc_pndgwr);
+		if (!(r->biorq_flags & BIORQ_RBWFAIL))
+			atomic_dec(&bmpc->bmpc_pndgwr);
+		
 		psc_assert(atomic_read(&bmpc->bmpc_pndgwr) >= 0);
+		/* Signify that a WB operation occurred.
+		 */		
+		if (!(r->biorq_flags & (BIORQ_FLUSHABORT | BIORQ_RBWFAIL)))
+			bmpc->bmpc_compwr++;
 
 		if (atomic_read(&bmpc->bmpc_pndgwr))
 			psc_assert(b->bcm_flags & BMAP_DIRTY);
@@ -485,16 +518,28 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 		BMPCE_LOCK(e);
 		if (biorq_is_my_bmpce(r, e) && (e->bmpce_flags & BMPCE_EIO)) {
-			while (psc_atomic16_read(&e->bmpce_wrref) ||
-			    psc_atomic16_read(&e->bmpce_rdref) > 1) {
+			if (r->biorq_flags & BIORQ_RBWFAIL) {
+				psc_assert(r->biorq_flags & BIORQ_WRITE);
+				psc_assert(psc_atomic16_read(&e->bmpce_wrref) >= 1);
+				psc_assert(psc_atomic16_read(&e->bmpce_rdref) >= 1);
+			}				
+			
+			while (((r->biorq_flags & BIORQ_RBWFAIL) ? 
+				psc_atomic16_read(&e->bmpce_wrref) > 1 : 
+				psc_atomic16_read(&e->bmpce_wrref)) ||
+			       psc_atomic16_read(&e->bmpce_rdref) > 1) {
 				BMPCE_WAIT(e);
 				BMPCE_LOCK(e);
-			}
-			/* Only my rd ref should remain.
-			 */
-			psc_assert(!psc_atomic16_read(&e->bmpce_wrref) &&
-			    psc_atomic16_read(&e->bmpce_rdref) == 1);
-		}
+			}			
+			/* Unless this is an RBWFAIL, only my rd ref should remain.
+			 */			
+			psc_assert((psc_atomic16_read(&e->bmpce_wrref) ==  
+				    !!(r->biorq_flags & BIORQ_RBWFAIL)) &&
+				   psc_atomic16_read(&e->bmpce_rdref) == 1);
+
+			if (r->biorq_flags & BIORQ_RBWFAIL)
+				psc_atomic16_dec(&e->bmpce_rdref);
+		}	
 		e->bmpce_flags &= ~BMPCE_INFLIGHT;
 		DEBUG_BMPCE(PLL_INFO, e, "unset inflight");
 		BMPCE_ULOCK(e);
@@ -506,8 +551,7 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 		BMPCE_LOCK(e);
 		eio = (e->bmpce_flags & BMPCE_EIO) ? 1 : 0;
 		bmpce_handle_lru_locked(e, bmpc,
-			(r->biorq_flags & BIORQ_WRITE) ?
-			BIORQ_WRITE : BIORQ_READ, 0);
+			(r->biorq_flags & BIORQ_WRITE) ? BIORQ_WRITE : BIORQ_READ, 0);
 
 		if (!eio)
 		    BMPCE_ULOCK(e);
@@ -534,7 +578,8 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
 	if (!(r->biorq_flags & BIORQ_DIO)) {
 		if (r->biorq_flags & BIORQ_WRITE) {
 			if (r->biorq_flags &
-			    ((BIORQ_RBWFAIL|BIORQ_EXPIREDLEASE|BIORQ_RESCHED)))
+			    ((BIORQ_RBWFAIL | BIORQ_EXPIREDLEASE | 
+			      BIORQ_RESCHED | BIORQ_BMAPFAIL | BIORQ_READFAIL)))
 				/*
 				 * Ensure this biorq never got off of
 				 * the ground.
@@ -1073,9 +1118,10 @@ int
 msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
-	struct bmpc_write_coalescer *bwc = args->pointer_arg[MSL_CBARG_BIORQS];
+	struct bmpc_write_coalescer *bwc = 
+		args->pointer_arg[MSL_CBARG_BIORQS];
 	struct bmpc_ioreq *r;
-	int rc = 0, expired_lease = 0;
+	int rc = 0, expired_lease = 0, maxretries = 0;
 
 	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
 
@@ -1086,6 +1132,9 @@ msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	if (r->biorq_bmap->bcm_flags & BMAP_CLI_LEASEEXPIRED) {
 		expired_lease = 1;
 		PLL_FOREACH(r, &bwc->bwc_pll) {
+			/* Lease extension cb must have already marked
+			 *   the biorqs with BIORQ_EXPIREDLEASE.
+			 */
 			BIORQ_LOCK(r);
 			psc_assert(r->biorq_flags & BIORQ_EXPIREDLEASE);
 			BIORQ_ULOCK(r);
@@ -1093,11 +1142,38 @@ msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	}
 	BMAP_ULOCK(r->biorq_bmap);
 
-	while ((r = pll_get(&bwc->bwc_pll))) 
-		(rc && !expired_lease) ? bmap_flush_resched(r) : 
-			msl_biorq_destroy(r);
+	/* Check for max retries on each biorq.
+	 */
+	if (rc && !expired_lease) {
+		PLL_FOREACH(r, &bwc->bwc_pll)
+			if (r->biorq_retries >= SL_MAX_IOSREASSIGN) {
+				maxretries = 1;
+				break;
+			}
 
-	bwc_release(bwc);		
+		if (maxretries)
+			bmpc_biorqs_fail(bmap_2_bmpc(r->biorq_bmap), 
+				 BIORQ_MAXRETRIES);
+	}
+
+	while ((r = pll_get(&bwc->bwc_pll))) {
+		if (rc) {
+			if (expired_lease || maxretries) {
+				/* Cleanup errored I/O requests.
+				 */
+				msl_bmpces_fail(r);
+				msl_biorq_destroy(r);
+			} else
+				/* Ok to retry this one.
+				 */ 
+				bmap_flush_resched(r);
+		} else
+			/* Success.
+			 */
+			msl_biorq_destroy(r);
+	}
+
+	bwc_release(bwc);
 	return (0);
 }
 
@@ -2329,7 +2405,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			rc = msl_pages_prefetch(r[i]);
 			if (rc) {
 				rc = msl_offline_retry_ignexpire(r[i]);
-				r[i]->biorq_flags |= BIORQ_RBWFAIL;
+				r[i]->biorq_flags |= (r[i]->biorq_flags & BIORQ_READ) ?
+					BIORQ_READFAIL : BIORQ_RBWFAIL;
 				msl_biorq_destroy(r[i]);
 				r[i] = NULL;
 				if (rc)
@@ -2409,7 +2486,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 				} else
 					rc = msl_offline_retry_ignexpire(r[i]);
 				if (rc) {
-					r[i]->biorq_flags |= BIORQ_RBWFAIL;
+					r[i]->biorq_flags |= (r[i]->biorq_flags & BIORQ_READ) ?
+						BIORQ_READFAIL : BIORQ_RBWFAIL;
 					msl_biorq_destroy(r[i]);
 					r[i] = NULL;
 					goto restart;
@@ -2449,8 +2527,13 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	if (bref)
 		bmap_op_done_type(bref, BMAP_OPCNT_BIORQ);
 
+	/* Note:  this is 'error' case.  For successful ops, 
+	 *   msl_biorq_destroy called from msl_pages_copy[in|out]. 
+	 */
 	for (i = 0; i < nr; i++)
-		if (r[i] && r[i] != MSL_BIORQ_COMPLETE)
+		if (r[i] && r[i] != MSL_BIORQ_COMPLETE) {
+			r[i]->biorq_flags |= BIORQ_BMAPFAIL;
 			msl_biorq_destroy(r[i]);
+		}
 	return (rc);
 }
