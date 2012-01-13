@@ -521,16 +521,17 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	FCMH_LOCK(c);
 	mp->fg = c->fcmh_sstb.sst_fg;
 	fcmh_wait_locked(c, c->fcmh_flags & FCMH_IN_SETATTR);
-	if ((mq->flags & SRM_IMPORTF_XREPL) == 0)
+	fcmh_set_repl_nblks(c, idx, mq->sstb.sst_blocks);
+	if ((mq->flags & SRM_IMPORTF_XREPL) == 0) {
 		for (i = 0; i < fcmh_2_ino(c)->ino_nrepls; i++)
 			fcmh_set_repl_nblks(c, i, 0);
-	fcmh_set_repl_nblks(c, idx, mq->sstb.sst_blocks);
-	rc = mds_fcmh_setattr(c, PSCFS_SETATTRF_DATASIZE |
-	    PSCFS_SETATTRF_MTIME | PSCFS_SETATTRF_CTIME |
-	    PSCFS_SETATTRF_ATIME | PSCFS_SETATTRF_UID |
-	    PSCFS_SETATTRF_GID | SL_SETATTRF_NBLKS, &mq->sstb);
-	if (rc)
-		PFL_GOTOERR(out, mp->rc = -rc);
+		rc = mds_fcmh_setattr(c, PSCFS_SETATTRF_DATASIZE |
+		    PSCFS_SETATTRF_MTIME | PSCFS_SETATTRF_CTIME |
+		    PSCFS_SETATTRF_ATIME | PSCFS_SETATTRF_UID |
+		    PSCFS_SETATTRF_GID | SL_SETATTRF_NBLKS, &mq->sstb);
+		if (rc)
+			PFL_GOTOERR(out, mp->rc = -rc);
+	}
 	rc = mds_inodes_odsync(c, NULL); /* journal repl_nblks */
 	if (rc)
 		mp->rc = rc;
