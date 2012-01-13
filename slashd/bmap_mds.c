@@ -152,6 +152,11 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 /**
  * mds_bmap_write - Update a bmap of an inode.  Note we must reserve log
  *     space if logf is given.
+ *
+ * update_mtime: we used to allow CRC update code path to update mtime if
+ * the generation number it carries matches what we have.  This is no
+ * long used.  Now, only the client can update the mtime.  The code will
+ * be removed after things are proven to be stablized.
  */
 int
 mds_bmap_write(struct bmapc_memb *b, int update_mtime, void *logf,
@@ -258,22 +263,6 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 	    fcmh_2_repl_nblks(f, idx);
 	fl = SL_SETATTRF_NBLKS;
 
-#if 0
-	if (crcup->fsize > fcmh_2_fsz(f)) {
-		sstb.sst_size = crcup->fsize;
-		fl |= PSCFS_SETATTRF_DATASIZE;
-		crcup->extend = 1;
-	}
-	utimgen = f->fcmh_sstb.sst_utimgen;
-	if (utimgen < crcup->utimgen)
-		DEBUG_FCMH(PLL_ERROR, f,
-		   "utimgen %d < crcup->utimgen %d",
-		   utimgen, crcup->utimgen);
-
-	/* Only update mtime if the gen matches */
-	if (utimgen == crcup->utimgen)
-		fl |= PSCFS_SETATTRF_MTIME;
-#endif
 	mds_fcmh_setattr_nolog(f, fl, &sstb);
 
 	fcmh_set_repl_nblks(f, idx, crcup->nblks);
@@ -281,8 +270,6 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 		mds_inox_write(ih, NULL, NULL);
 	else
 		mds_inode_write(ih, NULL, NULL);
-//	if (rc)
-//		goto out;
 
 	FCMH_ULOCK(f);
 
@@ -299,8 +286,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 		DEBUG_BMAP(PLL_INFO, bmap, "slot(%d) crc(%"PSCPRIxCRC64")",
 		    crcup->crcs[i].slot, crcup->crcs[i].crc);
 	}
-	return (mds_bmap_write(bmap, utimgen == crcup->utimgen,
-	    mdslog_bmap_crc, &crclog));
+	return (mds_bmap_write(bmap, 0, mdslog_bmap_crc, &crclog));
 }
 
 /**
