@@ -250,7 +250,7 @@ mds_sliod_alive(struct sl_mds_iosinfo *si)
 		clock_gettime(CLOCK_MONOTONIC, &a);
 		b = si->si_lastcomm;
 		b.tv_sec += (CSVC_PING_INTV * 2);
-				
+
 		if (timespeccmp(&a, &b, <))
 			ok = 1;
 	}
@@ -262,9 +262,12 @@ mds_sliod_alive(struct sl_mds_iosinfo *si)
  * mds_try_sliodresm - given an I/O resource, iterate through its members
  *   looking for one which is suitable for assignment.
  * @res: the resource
- * @prev_ios:  list of previously assigned resources (used for reassigment requests by the client).
+ * @prev_ios:  list of previously assigned resources (used for
+ *	reassigment requests by the client).
  * @nprev_ios: size of the list.
- * Notes:  Because of logical I/O systems like CNOS, we use 'resm->resm_res->res_id' versus 'res->res_id', since the former points at the real resm's identifier not the logical identifier.
+ * Notes:  Because of logical I/O systems like CNOS, we use
+ *	'resm->resm_res->res_id' versus 'res->res_id', since the former
+ *	points at the real resm's identifier not the logical identifier.
  */
 __static int
 mds_try_sliodresm(struct sl_resm *resm)
@@ -276,35 +279,35 @@ mds_try_sliodresm(struct sl_resm *resm)
 	psclog_info("trying res(%s)", resm->resm_res->res_name);
 
 	/* Access the resm's res pointer to get around resources
-	 *   which are marked RES_ISCLUSTER().  resm_res always 
-	 *   points back to the member's native resource and not 
+	 *   which are marked RES_ISCLUSTER().  resm_res always
+	 *   points back to the member's native resource and not
 	 *   to a logical resource like a CNOS.
 	 */
 	si = res2iosinfo(resm->resm_res);
 	if (si->si_flags & SIF_DISABLE_BIA) {
-		psclog_notify("res=%s skipped due to SIF_DISABLE_BIA", 
+		psclog_notify("res=%s skipped due to SIF_DISABLE_BIA",
 		      resm->resm_res->res_name);
 		return (0);
 	}
-		
+
 	csvc = slm_geticsvc_nb(resm, NULL);
 	if (!csvc) {
-		/* This sliod has not established a connection to 
+		/* This sliod has not established a connection to
 		 *   us.
 		 */
-		psclog_notify("res=%s skipped due to NULL csvc", 
+		psclog_notify("res=%s skipped due to NULL csvc",
 		      resm->resm_res->res_name);
 		return (0);
 	}
-	
+
 	ok = mds_sliod_alive(si);
 	if (!ok)
-		psclog_notify("res=%s skipped due to lastcomm", 
+		psclog_notify("res=%s skipped due to lastcomm",
 		      resm->resm_res->res_name);
 
 	if (csvc)
 		sl_csvc_decref(csvc);
-	
+
 	return (ok);
 }
 
@@ -318,7 +321,7 @@ mds_try_sliodresm(struct sl_resm *resm)
  *    BREPLST_VALID.
  */
 __static struct sl_resm *
-mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios, 
+mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios,
 	sl_ios_id_t *to_skip, int nskip)
 {
 	int i, j, skip, found = 0, off, val, nr, repls = 0;
@@ -356,12 +359,12 @@ mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios,
 
 	if (nskip) {
 		if (repls != 1) {
-			DEBUG_FCMH(PLL_WARN, b->bcm_fcmh, 
+			DEBUG_FCMH(PLL_WARN, b->bcm_fcmh,
 				   "invalid reassign req");
 			DEBUG_BMAP(PLL_WARN, b, "invalid reassign req");
 			goto out;
 		}
-		/* Make sure the client had the resource id which 
+		/* Make sure the client had the resource id which
 		 *   corresponds to that in the fcmh + bmap.
 		 */
 		res = psc_dynarray_getpos(&a, 0);
@@ -372,7 +375,7 @@ mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios,
 			}
 
 		if (!ios) {
-			DEBUG_FCMH(PLL_WARN, b->bcm_fcmh, 
+			DEBUG_FCMH(PLL_WARN, b->bcm_fcmh,
 			   "invalid reassign req (res=%x)", res->res_id);
 			DEBUG_BMAP(PLL_WARN, b, "invalid reassign req "
 			   "(res=%x)", res->res_id);
@@ -393,9 +396,9 @@ mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios,
 	DYNARRAY_FOREACH(resm, i, &a) {
 		for (j = 0, skip = 0; j < nskip; j++)
 			if (resm->resm_res->res_id == to_skip[j]) {
-				skip = 1;				
+				skip = 1;
 				psclog_notify("res=%s skipped due being a "
-				      "prev_ios", 
+				      "prev_ios",
 				      resm->resm_res->res_name);
 				break;
 			}
@@ -417,11 +420,11 @@ mds_bmap_add_repl(struct bmapc_memb *b, struct bmap_ios_assign *bia)
 	struct slmds_jent_assign_rep *logentry;
 	struct slmds_jent_bmap_assign *sjba;
 	struct slash_inode_handle *ih = fcmh_2_inoh(b->bcm_fcmh);
-	int iosidx; 
+	int iosidx;
 	uint32_t nrepls = ih->inoh_ino.ino_nrepls;
 
 	psc_assert(b->bcm_flags & BMAP_IONASSIGN);
-	
+
 	iosidx = mds_repl_ios_lookup_add(ih, bia->bia_ios, 0);
 	if (iosidx < 0)
 		psc_fatalx("ios_lookup_add %d: %s", bia->bia_ios,
@@ -460,7 +463,7 @@ mds_bmap_add_repl(struct bmapc_memb *b, struct bmap_ios_assign *bia)
 	pjournal_put_buf(mdsJournal, logentry);
 	mds_unreserve_slot(1);
 
-        return (0);
+	return (0);
 }
 
 /**
@@ -1656,7 +1659,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 
 int
 mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
-	   sl_ios_id_t pios, sl_ios_id_t *prev_ios, int nprev_ios, 
+	   sl_ios_id_t pios, sl_ios_id_t *prev_ios, int nprev_ios,
 	   struct srt_bmapdesc *sbd_out, struct pscrpc_export *exp)
 {
 	struct bmapc_memb *b;
@@ -1685,7 +1688,7 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 
 	bcm_wait_locked(b, b->bcm_flags & BMAP_IONASSIGN);
 	/* Set BMAP_IONASSIGN before checking the lease counts since
-	 *   BMAP_IONASSIGN will block further lease additions and removals 
+	 *   BMAP_IONASSIGN will block further lease additions and removals
 	 *   - including the removal this lease's odtable entry.
 	 */
 	BMAP_SETATTR(b, BMAP_IONASSIGN);
@@ -1702,15 +1705,15 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	psc_assert(bmi->bmdsi_wr_ion);
 	psc_assert(!(b->bcm_flags & BMAP_DIO));
 	BMAP_ULOCK(b);
-	
+
 	rc = mds_odtable_getitem(mdsBmapAssignTable,
-		 bmi->bmdsi_assign, &bia, sizeof(bia));
+	    bmi->bmdsi_assign, &bia, sizeof(bia));
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, b, "odtable_getitem() failed");
 		goto out1;
-        }	
+	}
 	psc_assert(bia.bia_seq == bmi->bmdsi_seq);
-	
+
 	resm = mds_resm_select(b, pios, prev_ios, nprev_ios);
 	if (!resm) {
 		rc = -SLERR_ION_OFFLINE;
@@ -1733,11 +1736,11 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	bmi->bmdsi_seq = obml->bml_seq = bia.bia_seq;
 	obml->bml_ios = resm->resm_res->res_id;
 
-	bmi->bmdsi_assign = mds_odtable_replaceitem(mdsBmapAssignTable, 
+	bmi->bmdsi_assign = mds_odtable_replaceitem(mdsBmapAssignTable,
 	    bmi->bmdsi_assign, &bia, sizeof(bia));
-	
+
 	psc_assert(bmi->bmdsi_assign);
-			
+
 	/* Do some post setup on the modified lease.
 	 */
 	sbd_out->sbd_seq = obml->bml_seq;
@@ -1756,7 +1759,7 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
  out2:
 	DEBUG_BMAP(rc ? PLL_WARN : PLL_INFO, b, "rc=%d renew oseq=%"
 	   PRIu64" nseq=%"PRIu64" nid=%"PRIu64" pid=%u",
-	   rc, sbd_in->sbd_seq, obml->bml_seq, 
+	   rc, sbd_in->sbd_seq, obml->bml_seq,
 	   exp->exp_connection->c_peer.nid,
 	   exp->exp_connection->c_peer.pid);
 	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
