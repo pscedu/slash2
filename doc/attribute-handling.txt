@@ -113,10 +113,24 @@ just accepts these changes without checking for credentials.
 
 At change 18602, the following tests have been done and largely passed:
 
-	* rsync -vrlthHD /local/linux-3.0/ lemon://zzh-slash2/zhihui
-	* s2build inside slash2
-	* kernel build (except fail on mmap)
-	* posix test, except the following failures (some are known, some are caused by partial truncate)
+(1) rsync -vrlthHD /local/linux-3.0/ lemon://zzh-slash2/zhihui
+
+Repeat the same command should produce no new work.
+
+(2) s2build inside slash2
+
+Work like a charm.
+
+(3) kernel build, except fail on mmap like the following:
+
+  IHEX    firmware/3com/typhoon.bin
+  IHEX2FW firmware/emi26/loader.fw
+mmap: No such device
+make[1]: *** [firmware/emi26/loader.fw] Error 1
+make[1]: *** Waiting for unfinished jobs....
+make: *** [modules] Error 2
+
+(4) posix test, except the following failures (some are known, some are caused by partial truncate)
 
 Test Summary Report
 -------------------
