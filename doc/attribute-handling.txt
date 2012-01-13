@@ -166,3 +166,23 @@ Files=184, Tests=1957, 1124 wallclock secs ( 0.87 usr  0.34 sys + 477.52 cusr  8
 Result: FAIL
 [root@lemon dodo]# prove -r /zzh-slash2/zhihui/projects/distrib/pjd-fstest-20080816/
 
+01/14/2011
+----------
+
+There is a bug in the current code, which fails to propagate nblocks used by a file to its peer MDS. This
+needs to be fixed by tweaking the following code in mds_distill_handler(), perhaps add a new op type:
+
+ 494         /*
+ 495          * Fabricate a setattr update entry to change the size.
+ 496          */
+ 497         if (type == MDS_LOG_BMAP_CRC) {
+ 498                 update_entry.op = NS_OP_SETSIZE;
+ 499                 update_entry.mask = mdsio_slflags_2_setattrmask(
+ 500                     PSCFS_SETATTRF_DATASIZE);
+ 501                 update_entry.size = sjbc->sjbc_fsize;
+ 502                 update_entry.target_fid = sjbc->sjbc_fid;
+ 503                 goto write_update;
+ 504         }
+
+The problem is that do we want to propagate nblocks on each IOS to our peer, or a sum of them, or even
+all crcs to our peer?
