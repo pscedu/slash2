@@ -96,6 +96,7 @@ struct slashrpc_cservice {
 #define CSVCF_NORECON		(1 << 6)		/* do not attempt reconnection if down */
 
 #define CSVC_RECONNECT_INTV	10			/* seconds */
+#define CSVC_PING_INTV          10			/* seconds */
 
 #define DEBUG_CSVC(lvl, csvc, fmt, ...)					\
 	do {								\
