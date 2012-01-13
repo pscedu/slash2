@@ -405,11 +405,10 @@ struct srm_leasebmapext_rep {
 #define srm_leasebmapext_rep srm_leasebmap_rep
 
 struct srm_reassignbmap_req {
-	struct srt_bmapdesc sbd;
-	sl_ios_id_t prev_sliods[SL_MAX_IOSREASSIGN];
-	sl_ios_id_t pios;
-	int32_t nreassigns;
-	int32_t _pad;
+	struct srt_bmapdesc	sbd;
+	sl_ios_id_t		prev_sliods[SL_MAX_IOSREASSIGN];
+	sl_ios_id_t		pios;
+	int32_t			nreassigns;
 } __packed;
 
 #define srm_reassignbmap_rep srm_leasebmap_rep
@@ -567,7 +566,7 @@ struct srm_connect_req {
 	uint64_t		nids[8];
 	uint64_t		fsuuid;
 	 int32_t		stkvers;
-	 int32_t		_pad;
+	uint32_t		upnonce;
 } __packed;
 
 struct srm_connect_rep {
@@ -577,9 +576,8 @@ struct srm_connect_rep {
 } __packed;
 
 struct srm_ping_req {
-	uint64_t		upnonce;	/* system uptime nonce to detect reboots */
 	 int32_t		rc;
-	 int32_t		_pad;
+	uint32_t		upnonce;	/* system uptime nonce to detect reboots */
 } __packed;
 
 #define srm_ping_rep		srm_ping_req

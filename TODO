@@ -481,6 +481,7 @@ reimport
 - fix sliod connection bug visible from slmctl
 - uptime instance nonce variable that allows msl to dump data if it
   changes while communicating with sliod
+   (o) mark new flag on msl csvc when upnonce changes in CONNECT
 
 - xopctl background startup
 
