@@ -186,3 +186,5 @@ needs to be fixed by tweaking the following code in mds_distill_handler(), perha
 
 The problem is that do we want to propagate nblocks on each IOS to our peer, or a sum of them, or even
 all crcs to our peer?
+
+By the way, the above code was introduced by  http://frodo/svnweb/main/revision/?rev=15343.
