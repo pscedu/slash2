@@ -442,6 +442,7 @@ struct psc_ctlop msctlops[] = {
 };
 
 psc_ctl_thrget_t psc_ctl_thrgets[] = {
+/* ATTRFLSH	*/ NULL,
 /* BMAPFLSH	*/ NULL,
 /* BMAPFLSHRLS	*/ NULL,
 /* BMAPFLSHRPC	*/ NULL,
