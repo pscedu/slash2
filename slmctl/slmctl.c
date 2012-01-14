@@ -187,6 +187,7 @@ psc_ctl_prthr_t psc_ctl_prthrs[] = {
 /* LNETAC	*/ NULL,
 /* NBRQ		*/ NULL,
 /* RCM		*/ NULL,
+/* RESMON	*/ NULL,
 /* RMC		*/ slmrmcthr_pr,
 /* RMI		*/ NULL,
 /* RMM		*/ slmrmmthr_pr,

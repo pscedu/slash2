@@ -539,6 +539,7 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* LNETAC	*/ NULL,
 /* NBRQ		*/ NULL,
 /* RCM		*/ NULL,
+/* RESMON	*/ NULL,
 /* RMC		*/ NULL,
 /* RMI		*/ NULL,
 /* RMM		*/ NULL,

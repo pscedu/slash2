@@ -38,6 +38,43 @@ struct pscrpc_svc_handle slm_rmm_svc;
 struct pscrpc_svc_handle slm_rmc_svc;
 
 void
+slmresmonthr_main(__unusedx struct psc_thread *thr)
+{
+	struct slashrpc_cservice *csvc;
+	struct sl_resource *r;
+	struct sl_resm *m;
+	int i;
+
+	while (pscthr_run()) {
+		sleep(30);
+
+		SITE_FOREACH_RES(nodeSite, r, i)
+			if (RES_ISFS(r)) {
+				m = psc_dynarray_getpos(&r->res_members,
+				    0);
+				csvc = slm_geticsvcf(m, CSVCF_NONBLOCK |
+				    CSVCF_NORECON);
+				if (!csvc)
+					continue;
+				if (!mds_sliod_alive(res2iosinfo(r)))
+					sl_csvc_disconnect(csvc);
+				sl_csvc_decref(csvc);
+			}
+#if 0
+		SL_MDS_WALK(m,
+			csvc = slm_getmcsvcf(m, CSVCF_NONBLOCK |
+			    CSVCF_NORECON);
+			if (!csvc)
+				continue;
+			if (!slmm_peer_alive(res2mdsinfo(r)))
+				sl_csvc_disconnect(csvc);
+			sl_csvc_decref(csvc);
+		);
+#endif
+	}
+}
+
+void
 slm_rpc_initsvc(void)
 {
 	struct pscrpc_svc_handle *svh;
@@ -94,6 +131,9 @@ slm_rpc_initsvc(void)
 	srcm = thr->pscthr_private;
 	srcm->srcm_page = PSCALLOC(SRM_REPLST_PAGESIZ);
 	pscthr_setready(thr);
+
+	pscthr_init(SLMTHRT_RESMON, 0, slmresmonthr_main, NULL, 0,
+	    "slmresmonthr");
 }
 
 void

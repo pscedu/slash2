@@ -51,6 +51,7 @@ enum {
 	SLMTHRT_LNETAC,		/* lustre net accept thr */
 	SLMTHRT_NBRQ,		/* non-blocking RPC reply handler */
 	SLMTHRT_RCM,		/* CLI <- MDS msg issuer */
+	SLMTHRT_RESMON,		/* peer resource connection monitor */
 	SLMTHRT_RMC,		/* MDS <- CLI msg svc handler */
 	SLMTHRT_RMI,		/* MDS <- I/O msg svc handler */
 	SLMTHRT_RMM,		/* MDS <- MDS msg svc handler */
@@ -222,9 +223,9 @@ struct slm_workrq {
 int		 mds_handle_rls_bmap(struct pscrpc_request *, int);
 int		 mds_lease_renew(struct fidc_membh *, struct srt_bmapdesc *,
 			 struct srt_bmapdesc *, struct pscrpc_export *);
-int              mds_lease_reassign(struct fidc_membh *, 
+int              mds_lease_reassign(struct fidc_membh *,
 			 struct srt_bmapdesc *, sl_ios_id_t, sl_ios_id_t *,
-			 int, struct srt_bmapdesc *, 
+			 int, struct srt_bmapdesc *,
 			 struct pscrpc_export *);
 
 int              mds_sliod_alive(struct sl_mds_iosinfo *);

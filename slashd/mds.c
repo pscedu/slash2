@@ -259,7 +259,7 @@ mds_sliod_alive(struct sl_mds_iosinfo *si)
 }
 
 /**
- * mds_try_sliodresm - given an I/O resource, iterate through its members
+ * mds_try_sliodresm - Given an I/O resource, iterate through its members
  *   looking for one which is suitable for assignment.
  * @res: the resource
  * @prev_ios:  list of previously assigned resources (used for
