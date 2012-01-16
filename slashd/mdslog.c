@@ -1250,7 +1250,6 @@ mds_send_batch_reclaim(uint64_t batchno)
 			pscrpc_req_finished(rq);
 			rq = NULL;
 			sl_csvc_decref(csvc);
-
 			if (rc == 0) {
 				record++;
 				didwork++;
@@ -1259,6 +1258,8 @@ mds_send_batch_reclaim(uint64_t batchno)
 					iosinfo->si_batchno++;
 				break;
 			}
+			psclog_warn("Reclaim RPC failed: dst = %s, rc = %d\n", 
+				dst_resm->resm_name, rc);
 		}
 	}
 
