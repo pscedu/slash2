@@ -697,6 +697,10 @@ mds_reclaim_lwm(int batchno)
 		iosinfo = rpmi->rpmi_info;
 
 		RPMI_LOCK(rpmi);
+		/*
+ 		 * Prevents reading old log file repeatedly only to
+ 		 * find out that an IOS is down.
+ 		 */
 		if (iosinfo->si_flags & SIF_DISABLE_GC) {
 			RPMI_ULOCK(rpmi);
 			continue;
@@ -1175,7 +1179,14 @@ mds_send_batch_reclaim(uint64_t batchno)
 		iosinfo = rpmi->rpmi_info;
 
 		RPMI_LOCK(rpmi);
-
+		/*
+ 		 * We won't need this if the IOS is actually down.
+ 		 * But we need to short cut it or testing purpose.
+ 		 */ 
+		if (iosinfo->si_flags & SIF_DISABLE_GC) {
+			RPMI_ULOCK(rpmi);
+			continue;
+		}
 		if (iosinfo->si_batchno < batchno) {
 			RPMI_ULOCK(rpmi);
 			continue;
