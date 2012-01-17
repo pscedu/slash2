@@ -1197,7 +1197,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 		 * necessarily contiguous.
 		 */
 		if (iosinfo->si_batchno > batchno ||
-		    iosinfo->si_xid >= xid) {
+		    iosinfo->si_xid > xid) {
 			RPMI_ULOCK(rpmi);
 			didwork++;
 			continue;
