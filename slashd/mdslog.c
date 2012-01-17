@@ -698,9 +698,9 @@ mds_reclaim_lwm(int batchno)
 
 		RPMI_LOCK(rpmi);
 		/*
- 		 * Prevents reading old log file repeatedly only to
- 		 * find out that an IOS is down.
- 		 */
+		 * Prevents reading old log file repeatedly only to
+		 * find out that an IOS is down.
+		 */
 		if (iosinfo->si_flags & SIF_DISABLE_GC) {
 			RPMI_ULOCK(rpmi);
 			continue;
@@ -1180,9 +1180,9 @@ mds_send_batch_reclaim(uint64_t batchno)
 
 		RPMI_LOCK(rpmi);
 		/*
- 		 * We won't need this if the IOS is actually down.
- 		 * But we need to short cut it or testing purpose.
- 		 */ 
+		 * We won't need this if the IOS is actually down.
+		 * But we need to short cut it or testing purpose.
+		 */
 		if (iosinfo->si_flags & SIF_DISABLE_GC) {
 			RPMI_ULOCK(rpmi);
 			continue;
@@ -1269,8 +1269,8 @@ mds_send_batch_reclaim(uint64_t batchno)
 					iosinfo->si_batchno++;
 				break;
 			}
-			psclog_warn("Reclaim RPC failed: dst = %s, rc = %d\n", 
-				dst_resm->resm_name, rc);
+			psclog_warn("Reclaim RPC failed: dst=%s rc=%d",
+			    dst_resm->resm_name, rc);
 		}
 	}
 
