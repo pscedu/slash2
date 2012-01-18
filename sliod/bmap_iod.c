@@ -508,9 +508,9 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 		return (0);
 
 	BMAP_LOCK(b);
-	for (i = 0, n = 0; i < SLASH_SLVRS_PER_BMAP; i++) {
+	for (i = 0, n = BMAP_SLVR_DATA; i < SLASH_SLVRS_PER_BMAP; i++) {
 		if (b->bcm_crcstates[i] & BMAP_SLVR_DATA)
-			n++;
+			n--;
 	}	
 	
 	if (!n) {
