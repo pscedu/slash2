@@ -1165,8 +1165,9 @@ mds_send_batch_reclaim(uint64_t batchno)
 	len = size = offsetof(struct srt_reclaim_entry, _pad);
 	for (i = 1; i < count; i++) {
 		if (i < count - 1 && entryp->xid >= xid)
-			psclog_warnx("Out of order log entries: %d, %d, %"PRIx64", %"PRIx64"\n",
-				i, count, xid, entryp->xid);
+			psclog_warnx("Out of order log entries: %d, %d, "
+			    "%"PRIx64", %"PRIx64, i, count, xid,
+			    entryp->xid);
 		entryp++;
 		next_entryp = PSC_AGP(next_entryp, len);
 		memmove(next_entryp, entryp, len);
