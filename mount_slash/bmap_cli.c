@@ -632,12 +632,14 @@ msl_bmap_reap_init(struct bmapc_memb *b, const struct srt_bmapdesc *sbd)
 struct slashrpc_cservice *
 msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 {
+	struct sl_resource *res;
+	struct sl_resm *resm;
 	struct slashrpc_cservice *csvc;
 	struct fcmh_cli_info *fci;
 	struct psc_multiwait *mw;
 	struct rnd_iterator it;
-	struct sl_resm *resm;
-	int i, locked;
+	uint64_t repls = 0; // XXX 1 bit per repl, SL_MAX_REPLICAS
+	int i, j, found, locked;
 	void *p;
 
 	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
@@ -652,16 +654,73 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 		return (slc_geticsvc(resm));
 	}
 
+	res = libsl_id2res(prefIOS);
+	psc_assert(res);
+	
 	fci = fcmh_get_pri(b->bcm_fcmh);
 	mw = msl_getmw();
 	for (i = 0; i < 2; i++) {
+		found = 0;
+		repls = 0;
 		psc_multiwait_reset(mw);
 		psc_multiwait_entercritsect(mw);
 
+		if (fci->fci_nrepls == 1) {
+			csvc = msl_try_get_replica_res(b, 0);
+			if (csvc) {
+				psc_multiwait_leavecritsect(mw);
+				return (csvc);
+			} else 
+				goto block;			
+		}
+
 		/* first, try preferred IOS */
 		FOREACH_RND(&it, fci->fci_nrepls) {
-			if (fci->fci_reptbl[it.ri_rnd_idx].bs_id != prefIOS)
+			/* Scan through the members
+			 */
+			DYNARRAY_FOREACH(resm, j, &res->res_members) {
+				if (fci->fci_reptbl[it.ri_rnd_idx].bs_id != 
+				    resm->resm_res_id)
+					continue;
+				else
+					found = 1;
+			}
+
+			if (found) {
+				csvc = msl_try_get_replica_res(b, 
+							       it.ri_rnd_idx);
+				if (csvc) {
+					psc_multiwait_leavecritsect(mw);
+					return (csvc);
+				}
+			}
+			repls |= (1 << it.ri_rnd_idx);
+		}
+
+		/* rats, not available; try anyone available now */
+		FOREACH_RND(&it, fci->fci_nrepls) {
+			if (repls & (1 << it.ri_rnd_idx))
 				continue;
+
+			resm = libsl_ios2resm(fci->fci_reptbl[it.ri_rnd_idx].bs_id);
+			if (resm->resm_type == SLREST_ARCHIVAL_FS)
+				continue;
+
+			csvc = msl_try_get_replica_res(b, it.ri_rnd_idx);
+			if (csvc) {
+				psc_multiwait_leavecritsect(mw);
+				return (csvc);
+			}
+				
+			repls |= (1 << it.ri_rnd_idx);
+		}
+		/* Could more use the bitmap in a more clever fashion but
+		 *   this code is due to change shortly anyway..
+		 */
+		FOREACH_RND(&it, fci->fci_nrepls) {
+			if (repls & (1 << it.ri_rnd_idx))
+                                continue;
+
 			csvc = msl_try_get_replica_res(b, it.ri_rnd_idx);
 			if (csvc) {
 				psc_multiwait_leavecritsect(mw);
@@ -669,21 +728,9 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 			}
 		}
 
-		/* rats, not available; try anyone available now */
-		FOREACH_RND(&it, fci->fci_nrepls) {
-			if (fci->fci_reptbl[it.ri_rnd_idx].bs_id == prefIOS)
-				continue;
-			csvc = msl_try_get_replica_res(b,
-			    it.ri_rnd_idx);
-			if (csvc) {
-				psc_multiwait_leavecritsect(mw);
-				return (csvc);
-			}
-		}
-
+	block:			
 		if (i)
 			break;
-
 		/*
 		 * No connection was immediately available; wait a small
 		 * amount of time to wait for any to come online.
