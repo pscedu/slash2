@@ -639,7 +639,7 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 	struct psc_multiwait *mw;
 	struct rnd_iterator it;
 	uint64_t repls = 0; // XXX 1 bit per repl, SL_MAX_REPLICAS
-	int i, j, found, locked;
+	int i, j, locked;
 	void *p;
 
 	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
@@ -660,7 +660,6 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 	fci = fcmh_get_pri(b->bcm_fcmh);
 	mw = msl_getmw();
 	for (i = 0; i < 2; i++) {
-		found = 0;
 		repls = 0;
 		psc_multiwait_reset(mw);
 		psc_multiwait_entercritsect(mw);
@@ -682,19 +681,16 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 				if (fci->fci_reptbl[it.ri_rnd_idx].bs_id != 
 				    resm->resm_res_id)
 					continue;
-				else
-					found = 1;
-			}
-
-			if (found) {
+				
 				csvc = msl_try_get_replica_res(b, 
-							       it.ri_rnd_idx);
+					       it.ri_rnd_idx);
 				if (csvc) {
 					psc_multiwait_leavecritsect(mw);
 					return (csvc);
 				}
+
+				repls |= (1 << it.ri_rnd_idx);
 			}
-			repls |= (1 << it.ri_rnd_idx);
 		}
 
 		/* rats, not available; try anyone available now */
