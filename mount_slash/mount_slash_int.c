@@ -958,7 +958,7 @@ _msl_bmpce_rpc_done(const struct pfl_callerinfo *pci,
 		 *   the LRU; this is not the best place but should
 		 *   suffice for now.
 		 */
-		psc_assert(psc_atomic16_read(&e->bmpce_rdref) == 1);
+		psc_assert(psc_atomic16_read(&e->bmpce_rdref) >= 1);
 		psc_atomic16_dec(&e->bmpce_rdref);
 		e->bmpce_flags |= BMPCE_RBWRDY;
 		DEBUG_BMPCE(PLL_INFO, e, "rdref dec for RBW, !DATARDY");
