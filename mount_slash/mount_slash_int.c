@@ -1817,10 +1817,7 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 		 */
 		pscrpc_set_destroy(r->biorq_rqset);
 		r->biorq_rqset = NULL;
-		/*
-		 * By this point, the bmpce's in biorq_pages have been
-		 * released.  Don't try to access them here.
-		 */
+
 		if (rc && rc != -SLERR_AIOWAIT)
 			return (rc);
 	}
