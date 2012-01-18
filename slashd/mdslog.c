@@ -1235,10 +1235,9 @@ mds_send_batch_reclaim(uint64_t batchno)
 			csvc = slm_geticsvcf(dst_resm, CSVCF_NONBLOCK |
 			    CSVCF_NORECON);
 			if (csvc == NULL) {
-				int error = dst_resm->resm_csvc->csvc_lasterror;
 				DYNARRAY_FOREACH(mn, j, &dst_resm->resm_nids)
-					psclog_warnx("GC: fail to contact: %s; rc=%d",
-					    mn->resmnid_addrbuf, error);
+					psclog_warnx("GC: fail to contact: %s",
+					    mn->resmnid_addrbuf);
 				continue;
 			}
 			rc = SL_RSX_NEWREQ(csvc, SRMT_RECLAIM, rq, mq,
