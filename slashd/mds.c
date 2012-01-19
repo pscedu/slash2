@@ -329,7 +329,6 @@ mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios,
 	struct slash_inode_extras_od *inox = NULL;
 	struct psc_dynarray a = DYNARRAY_INIT;
 	struct sl_resm *resm = NULL;
-	struct sl_resource *res;
 	sl_ios_id_t ios;
 
 	FCMH_LOCK(b->bcm_fcmh);
@@ -367,18 +366,18 @@ mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios,
 		/* Make sure the client had the resource id which
 		 *   corresponds to that in the fcmh + bmap.
 		 */
-		res = psc_dynarray_getpos(&a, 0);
-		for (i = 0, ios = 0; i < nskip; i++)
-			if (res->res_id == to_skip[i]) {
-				ios = res->res_id;
+		resm = psc_dynarray_getpos(&a, 0);
+		for (i = 0, ios = IOS_ID_ANY; i < nskip; i++)
+			if (resm->resm_res_id == to_skip[i]) {
+				ios = resm->resm_res_id;
 				break;
 			}
 
-		if (!ios) {
+		if (ios == IOS_ID_ANY) {
 			DEBUG_FCMH(PLL_WARN, b->bcm_fcmh,
-			   "invalid reassign req (res=%x)", res->res_id);
+			   "invalid reassign req (res=%x)", resm->resm_res_id);
 			DEBUG_BMAP(PLL_WARN, b, "invalid reassign req "
-			   "(res=%x)", res->res_id);
+			   "(res=%x)", resm->resm_res_id);
 			goto out;
 		}
 		psc_dynarray_reset(&a);
