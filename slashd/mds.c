@@ -322,7 +322,7 @@ mds_try_sliodresm(struct sl_resm *resm)
  */
 __static struct sl_resm *
 mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios,
-	sl_ios_id_t *to_skip, int nskip)
+    sl_ios_id_t *to_skip, int nskip)
 {
 	int i, j, skip, found = 0, off, val, nr, repls = 0;
 	struct slash_inode_od *ino = fcmh_2_ino(b->bcm_fcmh);
