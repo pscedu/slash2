@@ -1778,6 +1778,8 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
  retry:
 	MSL_RMC_NEWREQ_PFCC(NULL, NULL, csvc, SRMT_STATFS, rq, mq, mp,
 	    rc);
+	if (rc)
+		goto out;
 	mq->fid = inum;
 	mq->iosid = prefIOS;
 	if (rc)
