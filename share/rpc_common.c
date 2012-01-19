@@ -751,6 +751,9 @@ slconnthr_main(struct psc_thread *thr)
 			if (sct->sct_cb)
 				rc = sct->sct_cb(sct->sct_cbarg);
 
+			if (rc)
+				psclog_errorx("sct_cb failed (rc=%d)", rc);
+
 			csvc = sl_csvc_get(&resm->resm_csvc,
 			    sct->sct_flags, NULL, &resm->resm_nids,
 			    sct->sct_rqptl, sct->sct_rpptl,
