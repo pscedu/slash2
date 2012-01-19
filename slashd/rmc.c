@@ -955,6 +955,8 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 	mp->ssfb.sf_bfree = 0;
 	mp->ssfb.sf_bavail = 0;
 	RES_FOREACH_MEMB(r, m, j) {
+		if (si->si_ssfb.sf_bsize == 0)
+			continue;
 		if (mp->ssfb.sf_bsize == 0)
 			mp->ssfb.sf_bsize = si->si_ssfb.sf_bsize;
 		adj = mp->ssfb.sf_bsize * 1. / si->si_ssfb.sf_bsize;
@@ -1137,7 +1139,7 @@ slm_rmc_handler(struct pscrpc_request *rq)
 		break;
 	case SRMT_REASSIGNBMAPLS:
 		rc = slm_rmc_handle_reassignbmapls(rq);
-		break;		
+		break;
 	case SRMT_GETBMAP:
 		rc = slm_rmc_handle_getbmap(rq);
 		break;
