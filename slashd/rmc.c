@@ -1069,8 +1069,8 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 		}
 	}
 
-	psclog_info("unlink parent="SLPRI_FID" name=%s rc=%d",
-	    mq->pfid, mq->name, mp->rc);
+	psclog_info("%s parent="SLPRI_FID" name=%s rc=%d",
+	    isfile ? "unlink" : "rmdir", mq->pfid, mq->name, mp->rc);
 	return (0);
 }
 
