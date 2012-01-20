@@ -935,11 +935,10 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 	struct srm_statfs_req *mq;
 	struct srm_statfs_rep *mp;
 	struct sl_mds_iosinfo *si;
-	struct sl_resource *r;
-	struct sl_resm *m;
+	struct sl_resource *r, *ri;
 	struct statvfs sfb;
+	int j, single = 0;
 	double adj;
-	int j;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = mdsio_statfs(&sfb);
@@ -949,12 +948,18 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 		mp->rc = -SLERR_RES_UNKNOWN;
 		return (0);
 	}
-	si = res2iosinfo(r);
 	mp->ssfb.sf_bsize = 0;
 	mp->ssfb.sf_blocks = 0;
 	mp->ssfb.sf_bfree = 0;
 	mp->ssfb.sf_bavail = 0;
-	RES_FOREACH_MEMB(r, m, j) {
+	if (!RES_ISCLUSTER(r)) {
+		ri = r;
+		single = 1;
+		goto single;
+	}
+	DYNARRAY_FOREACH(ri, j, &r->res_peers) {
+ single:
+		si = res2iosinfo(ri);
 		if (si->si_ssfb.sf_bsize == 0)
 			continue;
 		if (mp->ssfb.sf_bsize == 0)
@@ -963,6 +968,9 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 		mp->ssfb.sf_blocks	+= adj * si->si_ssfb.sf_blocks;
 		mp->ssfb.sf_bfree	+= adj * si->si_ssfb.sf_bfree;
 		mp->ssfb.sf_bavail	+= adj * si->si_ssfb.sf_bavail;
+
+		if (single)
+			break;
 	}
 	return (0);
 }
