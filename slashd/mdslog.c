@@ -538,7 +538,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 		    current_update_batchno);
 
 	/* see if we need to close the current update log file */
-	update_logfile_offset += sizeof(struct srt_reclaim_entry);
+	update_logfile_offset += sizeof(struct srt_update_entry);
 	if (update_logfile_offset ==
 	    SLM_UPDATE_BATCH * sizeof(struct srt_update_entry)) {
 
