@@ -153,6 +153,9 @@ __static PSCLIST_HEAD(mds_reclaim_buflist);
 #define SL_RECLAIM_MAX_AGE	 30
 
 /* a buffer used to read on-disk update log file */
+
+/* this buffer is used for read for RPC and read during distill, need 
+ * synchronize or use different buffers */
 static void			*updatebuf;
 
 /* a buffer used to read on-disk reclaim log file */
