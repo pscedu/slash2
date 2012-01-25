@@ -2370,7 +2370,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 				goto retry_bmap;
 			switch (abs(rc)) {
 			case SLERR_ION_OFFLINE:
-				rc = -EHOSTUNREACH;
+				rc = -EIO;
 				break;
 			}
 			goto out;
