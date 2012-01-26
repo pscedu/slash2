@@ -331,35 +331,6 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 	void *reclaimbuf = NULL;
 	struct srt_stat sstb;
 
-	/*
-	 * Make sure that the distill log hits the disk now.  This
-	 * action can be called by any process that needs log space.
-	 */
-	if (action == 2) {
-
-		psc_assert(0);
-
-		spinlock(&mds_distill_lock);
-		if (xid < sync_update_xid) {
-			sync_update_xid = current_update_xid;
-			freelock(&mds_distill_lock);
-
-			psc_assert(update_logfile_handle);
-			mdsio_fsync(&rootcreds, 0, update_logfile_handle);
-			spinlock(&mds_distill_lock);
-		}
-		if (xid < sync_reclaim_xid)  {
-			sync_reclaim_xid = current_reclaim_xid;
-			freelock(&mds_distill_lock);
-
-			psc_assert(reclaim_logfile_handle);
-			mdsio_fsync(&rootcreds, 0, reclaim_logfile_handle);
-		} else
-			freelock(&mds_distill_lock);
-
-		return (0);
-	}
-
 	psc_assert(pje->pje_magic == PJE_MAGIC);
 
 	/*
