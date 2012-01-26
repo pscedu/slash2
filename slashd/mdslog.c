@@ -92,6 +92,8 @@ uint64_t			 current_reclaim_batchno;
 
 /*
  * The entry size must be the same for the same batch of log entries.
+ * In version 0, the size is RECLAIM_ENTRY_SIZE (512). The next version 
+ * will be the size of the reclaim log entry.
  */
 size_t				 current_reclaim_entrysize;
 
