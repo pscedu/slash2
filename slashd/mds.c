@@ -1758,7 +1758,7 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
  out2:
 	DEBUG_BMAP(rc ? PLL_WARN : PLL_INFO, b, "rc=%d renew oseq=%"
 	   PRIu64" nseq=%"PRIu64" nid=%"PRIu64" pid=%u",
-	   rc, sbd_in->sbd_seq, obml->bml_seq,
+	   rc, sbd_in->sbd_seq, (obml ? obml->bml_seq : 0),
 	   exp->exp_connection->c_peer.nid,
 	   exp->exp_connection->c_peer.pid);
 	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
