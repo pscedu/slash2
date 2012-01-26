@@ -90,6 +90,11 @@ static psc_spinlock_t		 mds_distill_lock = SPINLOCK_INIT;
 uint64_t			 current_update_batchno;
 uint64_t			 current_reclaim_batchno;
 
+/*
+ * The entry size must be the same for the same batch of log entries.
+ */
+size_t			 	 current_reclaim_entrysize;
+
 uint64_t			 current_update_xid;
 uint64_t			 current_reclaim_xid;
 
@@ -157,9 +162,6 @@ __static PSCLIST_HEAD(mds_reclaim_buflist);
 /* this buffer is used for read for RPC and read during distill, need 
  * synchronize or use different buffers */
 static void			*updatebuf;
-
-/* a buffer used to read on-disk reclaim log file */
-static void			*reclaimbuf;
 
 static void			*mds_cursor_handle;
 struct psc_journal_cursor	 mds_cursor;
@@ -326,12 +328,16 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 	int rc, count, total;
 	uint16_t type;
 	size_t size;
+	void *reclaimbuf = NULL;
+	struct srt_stat sstb;
 
 	/*
 	 * Make sure that the distill log hits the disk now.  This
 	 * action can be called by any process that needs log space.
 	 */
 	if (action == 2) {
+
+		psc_assert(0);
 
 		spinlock(&mds_distill_lock);
 		if (xid < sync_update_xid) {
@@ -391,35 +397,65 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 
 	if (reclaim_logfile_handle == NULL) {
 
-		reclaim_logfile_offset = 0;
-		mds_open_logfile(current_reclaim_batchno, 0, 0,
-		    &reclaim_logfile_handle);
+		rc = mds_open_logfile(current_reclaim_batchno, 0, 0, &reclaim_logfile_handle);
+		psc_assert(rc == 0);
 
-		if (action == 1) {
-			rc = mds_read_file(reclaim_logfile_handle,
-			    reclaimbuf, SLM_RECLAIM_BATCH *
-			    sizeof(struct srt_reclaim_entry), &size, 0);
-			if (rc)
+		rc = mdsio_getattr(0, reclaim_logfile_handle, &rootcreds, &sstb);
+		psc_assert(rc == 0);
+
+		reclaim_logfile_offset = 0;
+		/*
+		 * Even if there is no need to replay after a startup,
+		 * we should still skip existing entries.
+		 */
+		if (sstb.sst_size) {
+			reclaimbuf = PSCALLOC(sstb.sst_size);
+			rc = mds_read_file(reclaim_logfile_handle, reclaimbuf, sstb.sst_size, &size, 0);
+			if (rc || size != sstb.sst_size)
 				psc_fatalx("Failed to read reclaim log "
 				    "file, batchno=%"PRId64": %s",
 				    current_reclaim_batchno,
 				    slstrerror(rc));
 
-			total = size / sizeof(struct srt_reclaim_entry);
-
+			current_reclaim_entrysize = RECLAIM_ENTRY_SIZE;
+			reclaim_entryp = (struct srt_reclaim_entry *) reclaimbuf;
+			if (reclaim_entryp->fg.fg_fid == RECLAIM_MAGIC_FID &&
+			    reclaim_entryp->fg.fg_gen == RECLAIM_MAGIC_GEN) {
+				current_reclaim_entrysize = sizeof(struct srt_reclaim_entry);
+				size -= current_reclaim_entrysize;
+				reclaim_entryp = PSC_AGP(reclaim_entryp, current_reclaim_entrysize);
+				reclaim_logfile_offset += current_reclaim_entrysize;
+			}
+			psc_assert((size % current_reclaim_entrysize) == 0);
 			count = 0;
-			reclaim_entryp = reclaimbuf;
+			total = size / current_reclaim_entrysize;
 			while (count < total) {
 				if (reclaim_entryp->xid == pje->pje_xid) {
-					psclog_warnx("Reclaim distill %"PRId64,
+					psclog_warnx("Reclaim xid %"PRId64" already in use!\n",
 					    pje->pje_xid);
-					break;
 				}
-				reclaim_entryp++;
+				reclaim_entryp = PSC_AGP(reclaim_entryp, current_reclaim_entrysize);
 				count++;
-				reclaim_logfile_offset +=
-				    sizeof(struct srt_reclaim_entry);
+				reclaim_logfile_offset += current_reclaim_entrysize;
 			}
+			PSCFREE(reclaimbuf);
+			reclaimbuf = NULL;
+		} else {
+			reclaim_entry.xid = RECLAIM_MAGIC_VER;
+			reclaim_entry.fg.fg_fid = RECLAIM_MAGIC_FID;
+			reclaim_entry.fg.fg_gen = RECLAIM_MAGIC_GEN;
+			if (current_reclaim_entrysize == RECLAIM_ENTRY_SIZE) {
+				current_reclaim_entrysize = sizeof(struct srt_reclaim_entry);
+				psclog_warnx("Switch to new log format, batchno = %"PRId64"\n", 
+					      current_reclaim_batchno); 
+			}
+
+			rc = mds_write_file(reclaim_logfile_handle, &reclaim_entry,
+			    current_reclaim_entrysize, &size, reclaim_logfile_offset);
+			if (rc || size != current_reclaim_entrysize)
+				psc_fatal("Failed to write reclaim log file, batchno=%"PRId64,
+				    current_reclaim_batchno);
+			reclaim_logfile_offset += current_reclaim_entrysize;
 		}
 	}
 
@@ -428,17 +464,16 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 	reclaim_entry.fg.fg_gen = sjnm->sjnm_target_gen;
 
 	rc = mds_write_file(reclaim_logfile_handle, &reclaim_entry,
-	    sizeof(struct srt_reclaim_entry), &size,
-	    reclaim_logfile_offset);
-	if (size != sizeof(struct srt_reclaim_entry))
+	    current_reclaim_entrysize, &size, reclaim_logfile_offset);
+	if (size != current_reclaim_entrysize)
 		psc_fatal("Failed to write reclaim log file, batchno=%"PRId64,
 		    current_reclaim_batchno);
 
-	reclaim_logfile_offset += sizeof(struct srt_reclaim_entry);
+	reclaim_logfile_offset += current_reclaim_entrysize;
 	if (reclaim_logfile_offset ==
-	    SLM_RECLAIM_BATCH * sizeof(struct srt_reclaim_entry)) {
+	    SLM_RECLAIM_BATCH * (off_t)current_reclaim_entrysize) {
 
-		mdsio_fsync(&rootcreds, 0, reclaim_logfile_handle);
+		//mdsio_fsync(&rootcreds, 0, reclaim_logfile_handle);
 		mdsio_release(&rootcreds, reclaim_logfile_handle);
 
 		reclaim_logfile_handle = NULL;
@@ -456,6 +491,12 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 	spinlock(&mds_distill_lock);
 	current_reclaim_xid = pje->pje_xid;
 	freelock(&mds_distill_lock);
+
+	psclog_warnx("current_reclaim_xid = %llu, batchno = %llu, fid = %llx, gen = %llx\n", 
+		(unsigned long long)current_reclaim_xid, 
+		(unsigned long long)current_reclaim_batchno,
+		(unsigned long long)reclaim_entry.fg.fg_fid,
+		(unsigned long long)reclaim_entry.fg.fg_gen);
 
  check_update:
 
@@ -1126,9 +1167,12 @@ mds_send_batch_reclaim(uint64_t batchno)
 	struct sl_resource *res;
 	struct iovec iov;
 	uint64_t xid;
-	size_t size;
+	size_t size, entrysize;
 	void *handle;
 	struct sl_resm_nid *mn;
+	int version;
+	void *reclaimbuf;
+	struct srt_stat sstb;
 
 	rc = mds_open_logfile(batchno, 0, 1, &handle);
 	if (rc) {
@@ -1142,39 +1186,57 @@ mds_send_batch_reclaim(uint64_t batchno)
 			    batchno, slstrerror(rc));
 		return (didwork);
 	}
-	rc = mds_read_file(handle, reclaimbuf,
-	    SLM_RECLAIM_BATCH * sizeof(struct srt_reclaim_entry), &size, 0);
+	rc = mdsio_getattr(0, handle, &rootcreds, &sstb);
+	psc_assert(rc == 0);
+
+	if (sstb.sst_size == 0) {
+		mdsio_release(&rootcreds, handle);
+		return (didwork);
+	}
+	reclaimbuf = PSCALLOC(sstb.sst_size);
+
+	rc = mds_read_file(handle, reclaimbuf, sstb.sst_size, &size, 0);
+	psc_assert(rc == 0 && sstb.sst_size == size);
 	mdsio_release(&rootcreds, handle);
 
-	if (size == 0)
-		return (didwork);
+	version = 0;
+	entrysize = RECLAIM_ENTRY_SIZE;
+	entryp = (struct srt_reclaim_entry *) reclaimbuf;
+	if (entryp->fg.fg_fid == RECLAIM_MAGIC_FID &&
+	    entryp->fg.fg_gen == RECLAIM_MAGIC_GEN) {
+		version = RECLAIM_MAGIC_VER;
+		entrysize = sizeof(struct srt_reclaim_entry);
+	}
 
-	/*
-	 * Short read is Okay, as long as it is a multiple of the basic
-	 * data structure.
-	 */
-	psc_assert((size % sizeof(struct srt_reclaim_entry)) == 0);
-	count = (int)size / (int)sizeof(struct srt_reclaim_entry);
+	if (version > 0 && size == entrysize) {
+		PSCFREE(reclaimbuf);
+		return (didwork);
+	}
+	psc_assert((size % entrysize) == 0);
+	count = (int)size / entrysize;
 
 	/* find the xid associated with the last log entry */
-	entryp = PSC_AGP(reclaimbuf, (count - 1) *
-	    sizeof(struct srt_reclaim_entry));
+	entryp = PSC_AGP(reclaimbuf, (count - 1) * entrysize);
 	xid = entryp->xid;
 
-	/*
-	 * Trim padding from buffer to reduce RPC traffic.
-	 */
-	entryp = next_entryp = reclaimbuf;
-	len = size = offsetof(struct srt_reclaim_entry, _pad);
-	for (i = 1; i < count; i++) {
-		if (i < count - 1 && entryp->xid >= xid)
-			psclog_warnx("Out of order log entries: %d, %d, "
-			    "%"PRIx64", %"PRIx64, i, count, xid,
-			    entryp->xid);
-		entryp++;
-		next_entryp = PSC_AGP(next_entryp, len);
-		memmove(next_entryp, entryp, len);
-		size += len;
+	if (version == 0) {
+		/*
+		 * Trim padding from buffer to reduce RPC traffic.
+		 */
+		entryp = next_entryp = reclaimbuf;
+		len = size = offsetof(struct srt_reclaim_entry, _pad);
+		for (i = 1; i < count; i++) {
+			if (i < count - 1 && entryp->xid >= xid)
+				psclog_warnx("Out of order log entries: %d, %d, %"PRIx64", %"PRIx64"\n",
+					i, count, xid, entryp->xid);
+			entryp = PSC_AGP(entryp, entrysize);
+			next_entryp = PSC_AGP(next_entryp, len);
+			memmove(next_entryp, entryp, len);
+			size += len;
+		}
+	} else {
+		len = sizeof(struct srt_reclaim_entry);
+		size -= sizeof(struct srt_reclaim_entry);
 	}
 
 	nios = 0;
@@ -1193,8 +1255,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 		if (iosinfo->si_flags & SIF_DISABLE_GC) {
 			RPMI_ULOCK(rpmi);
 			continue;
-		}
-		if (iosinfo->si_batchno < batchno) {
+		} if (iosinfo->si_batchno < batchno) {
 			RPMI_ULOCK(rpmi);
 			continue;
 		}
@@ -1216,6 +1277,10 @@ mds_send_batch_reclaim(uint64_t batchno)
 		i = count;
 		total = size;
 		entryp = reclaimbuf;
+		if (version > 0) {
+			i--;
+			entryp = PSC_AGP(entryp, len);
+		}
 		do {
 			if (entryp->xid >= iosinfo->si_xid)
 				break;
@@ -1298,6 +1363,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 		if (batchno >= 1)
 			mds_remove_logfile(batchno - 1, 0);
 	}
+	PSCFREE(reclaimbuf);
 	return (didwork);
 }
 
@@ -1517,7 +1583,7 @@ mdslog_bmap_crc(void *datap, uint64_t txg, __unusedx int flag)
 void
 mds_journal_init(int disable_propagation, uint64_t fsuuid)
 {
-	uint64_t batchno, last_reclaim_xid = 0, last_update_xid = 0, last_distill_xid = 0;
+	uint64_t lwm, batchno, last_reclaim_xid = 0, last_update_xid = 0, last_distill_xid = 0;
 	int i, ri, rc, nios, count, total, npeers;
 	struct srt_reclaim_entry *reclaim_entryp;
 	struct srt_update_entry *update_entryp;
@@ -1528,11 +1594,13 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	struct sl_resm *resm;
 	char *jrnldev, fn[PATH_MAX];
 	void *handle;
-	size_t size;
+	size_t size, entrysize;
+	struct srt_stat	sstb;
+	void *reclaimbuf = NULL;
 
 	psc_assert(_MDS_LOG_LAST_TYPE <= (1 << 15));
 	psc_assert(sizeof(struct srt_update_entry) == 512);
-	psc_assert(sizeof(struct srt_reclaim_entry) == 512);
+	psc_assert(sizeof(struct srt_reclaim_entry) <= RECLAIM_ENTRY_SIZE);
 
 	/* Make sure we have some I/O servers to work with */
 	nios = 0;
@@ -1618,41 +1686,62 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	if (batchno == UINT64_MAX)
 		batchno = 0;
 
-	rc = mds_open_logfile(batchno, 0, 1, &handle);
-	if (rc) {
-		if (batchno) {
-			batchno--;
-			rc = mds_open_logfile(batchno, 0, 1, &handle);
+	lwm = batchno;
+	while (batchno < UINT64_MAX) {
+		rc = mds_open_logfile(batchno, 0, 1, &handle);
+		if (rc) {
+			if (batchno > lwm) {
+				batchno--;
+				rc = mds_open_logfile(batchno, 0, 1, &handle);
+			}
+			break;
 		}
+		mdsio_release(&rootcreds, handle);
+		batchno++;
 	}
 	if (rc)
 		psc_fatalx("failed to open reclaim log file, "
 		    "batchno=%"PRId64": %s", batchno, slstrerror(rc));
 
-	current_reclaim_batchno = batchno;
-	reclaimbuf = PSCALLOC(SLM_RECLAIM_BATCH *
-	    sizeof(struct srt_reclaim_entry));
-
-	rc = mds_read_file(handle, reclaimbuf, SLM_RECLAIM_BATCH *
-	    sizeof(struct srt_reclaim_entry), &size, 0);
-	mdsio_release(&rootcreds, handle);
-
+	rc = mdsio_getattr(0, handle, &rootcreds, &sstb);
 	psc_assert(rc == 0);
-	psc_assert((size % sizeof(struct srt_reclaim_entry)) == 0);
 
-	total = size / sizeof(struct srt_reclaim_entry);
-	count = 0;
-	reclaim_entryp = reclaimbuf;
-	while (count < total) {
-		last_reclaim_xid = reclaim_entryp->xid;
-		reclaim_entryp++;
-		count++;
+	current_reclaim_batchno = batchno;
+
+	entrysize = RECLAIM_ENTRY_SIZE;
+	if (sstb.sst_size) {
+		reclaimbuf = PSCALLOC(sstb.sst_size);
+
+		rc = mds_read_file(handle, reclaimbuf, sstb.sst_size, &size, 0);
+		psc_assert(rc == 0 && size == sstb.sst_size);
+
+		reclaim_entryp = reclaimbuf;
+		if (reclaim_entryp->fg.fg_fid == RECLAIM_MAGIC_FID &&
+		    reclaim_entryp->fg.fg_gen == RECLAIM_MAGIC_GEN) {
+			entrysize = sizeof(struct srt_reclaim_entry);
+			size -= entrysize;
+			reclaim_entryp = PSC_AGP(reclaim_entryp, entrysize);
+		}
+
+		psc_assert((size % entrysize) == 0);
+
+		total = size / entrysize;
+		count = 0;
+		while (count < total) {
+			last_reclaim_xid = reclaim_entryp->xid;
+			reclaim_entryp = PSC_AGP(reclaim_entryp, entrysize);
+			count++;
+		}
+		if (total == SLM_RECLAIM_BATCH)
+			current_reclaim_batchno++;
+		PSCFREE(reclaimbuf);
 	}
+	current_reclaim_entrysize = entrysize;
 	current_reclaim_xid = last_reclaim_xid;
-	if (total == SLM_RECLAIM_BATCH)
-		current_reclaim_batchno++;
 
 	last_distill_xid = last_reclaim_xid;
+
+	mdsio_release(&rootcreds, handle);
 
 	/* search for newly-added I/O servers */
 	SITE_FOREACH_RES(nodeSite, res, ri) {

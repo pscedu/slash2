@@ -551,10 +551,20 @@ struct srm_reclaim_rep {
 	uint64_t		seqno;		/* last seqno received from peer */
 } __packed;
 
+/*
+ * The following are defined to deal with old log format on disk.
+ */
+#define	RECLAIM_ENTRY_SIZE	512
+
+#define RECLAIM_MAGIC_VER	0x0000000000000001
+#define RECLAIM_MAGIC_FID	0xffffffffffffffff
+#define RECLAIM_MAGIC_GEN	0xabcdefabcdef5678
+
+
 struct srt_reclaim_entry {
 	uint64_t		xid;
 	struct slash_fidgen	fg;
-	char			_pad[488];
+	char			_pad[0];	/* 0 for compatibility */
 } __packed;
 
 /* ------------------------- BEGIN CONTROL MESSAGES ------------------------- */
