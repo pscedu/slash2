@@ -93,6 +93,7 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
     int add, int log)
 {
 	int locked, rc = -ENOENT;
+	struct sl_resource *res;
 	sl_replica_t *repl;
 	uint32_t j, k;
 
@@ -116,13 +117,18 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
 		}
 
 		DEBUG_INOH(PLL_INFO, ih, "rep%u[%u] == %u",
-			   k, repl[k].bs_id, ios);
+		    k, repl[k].bs_id, ios);
 
 		if (repl[k].bs_id == ios) {
 			rc = j;
 			goto out;
 		}
 	}
+
+	res = libsl_id2res(ios);
+	if (res == NULL || !RES_ISFS(res))
+		return (-SLERR_RES_BADTYPE);
+
 	/*
 	 * It does not exist; add the replica to the inode if 'add' was
 	 *   specified, else return.
