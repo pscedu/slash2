@@ -444,7 +444,6 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 	if (reclaim_logfile_offset ==
 	    SLM_RECLAIM_BATCH * (off_t)current_reclaim_entrysize) {
 
-		//mdsio_fsync(&rootcreds, 0, reclaim_logfile_handle);
 		mdsio_release(&rootcreds, reclaim_logfile_handle);
 
 		reclaim_logfile_handle = NULL;
@@ -557,7 +556,6 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 	if (update_logfile_offset ==
 	    SLM_UPDATE_BATCH * sizeof(struct srt_update_entry)) {
 
-		mdsio_fsync(&rootcreds, 0, update_logfile_handle);
 		mdsio_release(&rootcreds, update_logfile_handle);
 
 		update_logfile_handle = NULL;
