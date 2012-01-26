@@ -97,7 +97,7 @@ slcfg_get_ioslist(sl_ios_id_t piosid, struct psc_dynarray *a,
 	int i;
 
 	pios = libsl_id2res(piosid);
-	if (!pios || !RES_ISFS(pios))
+	if (!pios || (!RES_ISFS(pios) && !RES_ISCLUSTER(pios)))
 		return (0);
 
 	/* Add the preferred IOS member(s) first.  Note that PIOS may

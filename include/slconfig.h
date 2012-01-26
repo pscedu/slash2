@@ -59,8 +59,6 @@ enum sl_res_type {
 
 #define RES_ISFS(res)							\
 	((res)->res_type == SLREST_ARCHIVAL_FS	||			\
-	 (res)->res_type == SLREST_CLUSTER_NOSHARE_LFS ||		\
-	 (res)->res_type == SLREST_PARALLEL_LFS	||			\
 	 (res)->res_type == SLREST_PARALLEL_COMPNT	||		\
 	 (res)->res_type == SLREST_STANDALONE_FS)
 
