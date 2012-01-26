@@ -53,7 +53,7 @@ struct up_sched_work_item {
 
 #define USWI_GETREPL(wk, n)	((n) < SL_DEF_REPLICAS ?		\
 				    USWI_INO(wk)->ino_repls[n] :	\
-				    USWI_INOX(wk)->inox_repls[(n) - 1])
+				    USWI_INOX(wk)->inox_repls[(n) - SL_DEF_REPLICAS])
 
 #define USWI_LOCK(wk)		psc_mutex_lock(&(wk)->uswi_mutex)
 #define USWI_ULOCK(wk)		psc_mutex_unlock(&(wk)->uswi_mutex)
