@@ -93,7 +93,7 @@ uint64_t			 current_reclaim_batchno;
 /*
  * The entry size must be the same for the same batch of log entries.
  */
-size_t			 	 current_reclaim_entrysize;
+size_t				 current_reclaim_entrysize;
 
 uint64_t			 current_update_xid;
 uint64_t			 current_reclaim_xid;
@@ -159,7 +159,7 @@ __static PSCLIST_HEAD(mds_reclaim_buflist);
 
 /* a buffer used to read on-disk update log file */
 
-/* this buffer is used for read for RPC and read during distill, need 
+/* this buffer is used for read for RPC and read during distill, need
  * synchronize or use different buffers */
 static void			*updatebuf;
 
@@ -402,7 +402,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 			total = size / current_reclaim_entrysize;
 			while (count < total) {
 				if (reclaim_entryp->xid == pje->pje_xid) {
-					psclog_warnx("Reclaim xid %"PRId64" already in use!\n",
+					psclog_warnx("Reclaim xid %"PRId64" already in use!",
 					    pje->pje_xid);
 				}
 				reclaim_entryp = PSC_AGP(reclaim_entryp, current_reclaim_entrysize);
@@ -417,8 +417,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 			reclaim_entry.fg.fg_gen = RECLAIM_MAGIC_GEN;
 			if (current_reclaim_entrysize == RECLAIM_ENTRY_SIZE) {
 				current_reclaim_entrysize = sizeof(struct srt_reclaim_entry);
-				psclog_warnx("Switch to new log format, batchno = %"PRId64"\n", 
-					      current_reclaim_batchno); 
+				psclog_warnx("Switch to new log format, batchno=%"PRId64,
+					      current_reclaim_batchno);
 			}
 
 			rc = mds_write_file(reclaim_logfile_handle, &reclaim_entry,
@@ -462,11 +462,9 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 	current_reclaim_xid = pje->pje_xid;
 	freelock(&mds_distill_lock);
 
-	psclog_warnx("current_reclaim_xid = %llu, batchno = %llu, fid = %llx, gen = %llx\n", 
-		(unsigned long long)current_reclaim_xid, 
-		(unsigned long long)current_reclaim_batchno,
-		(unsigned long long)reclaim_entry.fg.fg_fid,
-		(unsigned long long)reclaim_entry.fg.fg_gen);
+	psclog_warnx("current_reclaim_xid=%"PRIu64" batchno=%"PRIu64" fg="SLPRI_FG,
+	    current_reclaim_xid, current_reclaim_batchno,
+	    SLPRI_FG_ARGS(&reclaim_entry.fg));
 
  check_update:
 
@@ -1196,8 +1194,9 @@ mds_send_batch_reclaim(uint64_t batchno)
 		len = size = offsetof(struct srt_reclaim_entry, _pad);
 		for (i = 1; i < count; i++) {
 			if (i < count - 1 && entryp->xid >= xid)
-				psclog_warnx("Out of order log entries: %d, %d, %"PRIx64", %"PRIx64"\n",
-					i, count, xid, entryp->xid);
+				psclog_warnx("Out of order log entries: "
+				    "%d, %d, %"PRIx64", %"PRIx64,
+				    i, count, xid, entryp->xid);
 			entryp = PSC_AGP(entryp, entrysize);
 			next_entryp = PSC_AGP(next_entryp, len);
 			memmove(next_entryp, entryp, len);
