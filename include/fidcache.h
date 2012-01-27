@@ -79,12 +79,13 @@ struct fidc_membh {
 #define	FCMH_CAC_WAITING	(1 <<  4)	/* being waited on */
 #define	FCMH_CAC_TOFREE		(1 <<  5)	/* been deprecated */
 #define	FCMH_CAC_REAPED		(1 <<  6)	/* has been reaped */
-#define	FCMH_HAVE_ATTRS		(1 <<  7)	/* has valid stat info */
-#define	FCMH_GETTING_ATTRS	(1 <<  8)	/* fetching stat info */
-#define	FCMH_CTOR_FAILED	(1 <<  9)	/* constructor func failed */
-#define	FCMH_CTOR_DELAYED	(1 << 10)	/* constructor was not issued */
-#define FCMH_IN_SETATTR		(1 << 11)	/* setattr in progress */
-#define	_FCMH_FLGSHFT		(1 << 12)
+#define	FCMH_CAC_RLSBMAP	(1 <<  7)	/* lookup due to releasing bmap */
+#define	FCMH_HAVE_ATTRS		(1 <<  8)	/* has valid stat info */
+#define	FCMH_GETTING_ATTRS	(1 <<  9)	/* fetching stat info */
+#define	FCMH_CTOR_FAILED	(1 << 10)	/* constructor func failed */
+#define	FCMH_CTOR_DELAYED	(1 << 11)	/* constructor was not issued */
+#define FCMH_IN_SETATTR		(1 << 12)	/* setattr in progress */
+#define	_FCMH_FLGSHFT		(1 << 13)
 
 /* number of seconds in which attribute times out */
 #define FCMH_ATTR_TIMEO		8
@@ -191,6 +192,7 @@ void	fcmh_decref(struct fidc_membh *, enum fcmh_opcnt_types);
 #define FIDC_LOOKUP_CREATE		(1 << 0)	/* Create if not present		*/
 #define FIDC_LOOKUP_EXCL		(1 << 1)	/* Fail if fcmh is present		*/
 #define FIDC_LOOKUP_LOAD		(1 << 2)	/* Use external fetching mechanism	*/
+#define FIDC_LOOKUP_RLSBMAP		(1 << 3)	/* Release bmap on sliod          	*/
 
 #define fidc_lookup(fgp, lkfl, sstb, safl, fcmhp)			\
 	_fidc_lookup(PFL_CALLERINFOSS(SLSS_FCMH), (fgp), (lkfl),	\

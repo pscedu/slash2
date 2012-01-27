@@ -61,7 +61,7 @@ fcmh_destroy(struct fidc_membh *f)
 
 	/* slc_fcmh_dtor(), slm_fcmh_dtor(), sli_fcmh_dtor() */
 	if (sl_fcmh_ops.sfop_dtor) {
-		if (f->fcmh_flags & FCMH_CTOR_FAILED)
+		if (f->fcmh_flags & (FCMH_CTOR_FAILED | FCMH_CTOR_DELAYED))
 			DEBUG_FCMH(PLL_WARN, f, "bypassing dtor() call");
 		else
 			sl_fcmh_ops.sfop_dtor(f);
@@ -371,6 +371,8 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	 * item is not on any list yet.
 	 */
 	fcmh->fcmh_flags |= FCMH_CAC_INITING;
+	if (flags & FIDC_LOOKUP_RLSBMAP)
+		fcmh->fcmh_flags |= FCMH_CAC_RLSBMAP;
 	psc_hashbkt_add_item(&fidcHtable, b, fcmh);
 	psc_hashbkt_unlock(b);
 
@@ -406,6 +408,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
  finish:
 	FCMH_RLOCK(fcmh);
 	fcmh->fcmh_flags &= ~FCMH_CAC_INITING;
+	fcmh->fcmh_flags &= ~FCMH_CAC_RLSBMAP;
 	if (fcmh->fcmh_flags & FCMH_CAC_WAITING) {
 		fcmh->fcmh_flags &= ~FCMH_CAC_WAITING;
 		psc_waitq_wakeall(&fcmh->fcmh_waitq);

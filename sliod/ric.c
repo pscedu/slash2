@@ -376,7 +376,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 
 	for (i = 0, sync = 0; i < mq->nbmaps; i++, sync = 0) {
 		sbd = &mq->sbd[i];
-		rc = sli_fcmh_get(&sbd->sbd_fg, &f);
+		rc = sli_fcmh_get_rlsbmap(&sbd->sbd_fg, &f);
 		psc_assert(rc == 0);
 
 		/* Fsync here to guarantee that buffers are flushed to

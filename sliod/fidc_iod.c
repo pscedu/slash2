@@ -67,12 +67,15 @@ static int
 sli_open_backing_file(struct fidc_membh *fcmh)
 {
 	char fidfn[PATH_MAX];
-	int incr, rc = 0;
+	int flags, incr, rc = 0;
 
+	flags = O_CREAT | O_RDWR;
+	if (fcmh->fcmh_flags & FCMH_CAC_RLSBMAP)
+		flags &= ~O_CREAT;
 	incr = psc_rlim_adj(RLIMIT_NOFILE, 1);
 	sli_fg_makepath(&fcmh->fcmh_fg, fidfn);
 	DEBUG_FCMH(PLL_INFO, fcmh, "before opening new backing file");
-	fcmh_2_fd(fcmh) = open(fidfn, O_CREAT | O_RDWR, 0600);
+	fcmh_2_fd(fcmh) = open(fidfn, flags, 0600);
 	if (fcmh_2_fd(fcmh) == -1) {
 		rc = errno;
 		if (incr)
@@ -80,6 +83,7 @@ sli_open_backing_file(struct fidc_membh *fcmh)
 	}
 	psclog_info("path=%s fd=%d rc=%d",
 	    strstr(fidfn, "fidns"), fcmh_2_fd(fcmh), rc);
+	
 	return (rc);
 }
 
@@ -184,8 +188,7 @@ sli_fcmh_reopen(struct fidc_membh *fcmh, const struct slash_fidgen *fg)
 		unlink(fidfn);
 		DEBUG_FCMH(PLL_INFO, fcmh, "upfront unlink(), errno=%d", errno);
 
-	} else if (fg->fg_gen == fcmh_2_gen(fcmh) &&
-		   (fcmh->fcmh_flags & FCMH_CTOR_DELAYED)) {
+	} else if (fcmh->fcmh_flags & FCMH_CTOR_DELAYED) {
 
 		rc = sli_open_backing_file(fcmh);
 		if (!rc)
@@ -229,6 +232,11 @@ sli_fcmh_ctor(struct fidc_membh *fcmh)
 	if (rc == 0)
 		rc = sli_fcmh_getattr(fcmh);
 	DEBUG_FCMH(PLL_INFO, fcmh, "after opening new backing file rc=%d", rc);
+	if (rc == ENOENT && (fcmh->fcmh_flags & FCMH_CAC_RLSBMAP)) {
+		fcmh->fcmh_flags |= FCMH_CTOR_DELAYED;
+		psclog_warnx("RLSBMAP: Fail to open backing file - this is Okay");
+		rc = 0;
+	}
 
 	return (rc);
 }
