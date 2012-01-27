@@ -75,11 +75,11 @@ slcfg_resm_roundrobin(struct sl_resource *res, struct psc_dynarray *a)
 	int i, idx;
 	struct resprof_mds_info *rpmi = res2rpmi(res);
 	struct sl_resm *resm;
-	
+
 	spinlock(&rpmi->rpmi_lock);
 	idx = slm_get_rpmi_idx(res);
 	freelock(&rpmi->rpmi_lock);
-	
+
 	for (i = 0; i < psc_dynarray_len(&res->res_members); i++, idx++) {
 		if (idx >= psc_dynarray_len(&res->res_members))
 		    idx = 0;
@@ -90,8 +90,8 @@ slcfg_resm_roundrobin(struct sl_resource *res, struct psc_dynarray *a)
 }
 
 int
-slcfg_get_ioslist(sl_ios_id_t piosid, struct psc_dynarray *a, 
-	  int use_archival)
+slcfg_get_ioslist(sl_ios_id_t piosid, struct psc_dynarray *a,
+    int use_archival)
 {
 	struct sl_resource *pios, *res;
 	int i;
@@ -107,17 +107,15 @@ slcfg_get_ioslist(sl_ios_id_t piosid, struct psc_dynarray *a,
 
 	DYNARRAY_FOREACH(res, i, &pios->res_site->site_resources) {
 		if (!RES_ISFS(res) || (res == pios) ||
-		    ((res->res_type == SLREST_ARCHIVAL_FS) && 
+		    ((res->res_type == SLREST_ARCHIVAL_FS) &&
 		     !use_archival))
 			continue;
 
 		slcfg_resm_roundrobin(res, a);
 	}
-	
+
 	return (psc_dynarray_len(a));
 }
-
-
 
 void
 slcfg_init_site(struct sl_site *site)
