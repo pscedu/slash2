@@ -42,7 +42,8 @@ fcmh_2_fii(struct fidc_membh *f)
 #define sli_fcmh_get(fgp, fp)	fidc_lookup((fgp), FIDC_LOOKUP_CREATE, NULL, 0, (fp))
 
 #define sli_fcmh_get_rlsbmap(fgp, fp)	\
-				fidc_lookup((fgp), FIDC_LOOKUP_CREATE|FIDC_LOOKUP_RLSBMAP, NULL, 0, (fp))
+				fidc_lookup((fgp), FIDC_LOOKUP_CREATE |		\
+				    FIDC_LOOKUP_RLSBMAP, NULL, 0, (fp))
 
 void	sli_fg_makepath(const struct slash_fidgen *, char *);
 int	sli_fcmh_getattr(struct fidc_membh *);

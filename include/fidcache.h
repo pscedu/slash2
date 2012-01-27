@@ -192,7 +192,7 @@ void	fcmh_decref(struct fidc_membh *, enum fcmh_opcnt_types);
 #define FIDC_LOOKUP_CREATE		(1 << 0)	/* Create if not present		*/
 #define FIDC_LOOKUP_EXCL		(1 << 1)	/* Fail if fcmh is present		*/
 #define FIDC_LOOKUP_LOAD		(1 << 2)	/* Use external fetching mechanism	*/
-#define FIDC_LOOKUP_RLSBMAP		(1 << 3)	/* Release bmap on sliod          	*/
+#define FIDC_LOOKUP_RLSBMAP		(1 << 3)	/* Release bmap on sliod		*/
 
 #define fidc_lookup(fgp, lkfl, sstb, safl, fcmhp)			\
 	_fidc_lookup(PFL_CALLERINFOSS(SLSS_FCMH), (fgp), (lkfl),	\
