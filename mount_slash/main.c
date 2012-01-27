@@ -2553,19 +2553,19 @@ msl_init(void)
 	msctlthr_spawn();
 	mstimerthr_spawn();
 
-	psc_iostats_init(&msl_diord_stat, "dio-rd");
-	psc_iostats_init(&msl_diowr_stat, "dio-wr");
+	psc_iostats_init(&msl_diord_stat,   "dio-rd");
+	psc_iostats_init(&msl_diowr_stat,   "dio-wr");
 	psc_iostats_init(&msl_rdcache_stat, "rd-cache-hit");
 	psc_iostats_init(&msl_racache_stat, "ra-cache-hit");
 
-	psc_iostats_init(&msl_io_1b_stat,   "I/O sz: < 1k");
-	psc_iostats_init(&msl_io_1k_stat,   "I/O sz: 1k-4k");
-	psc_iostats_init(&msl_io_4k_stat,   "I/O sz: 4k-16k");
-	psc_iostats_init(&msl_io_16k_stat,  "I/O sz: 16k-64k");
-	psc_iostats_init(&msl_io_64k_stat,  "I/O sz: 64k-128k");
-	psc_iostats_init(&msl_io_128k_stat, "I/O sz: 128k-512k");
-	psc_iostats_init(&msl_io_512k_stat, "I/O sz: 512k-1m");
-	psc_iostats_init(&msl_io_1m_stat,   "I/O sz: > 1m");
+	psc_iostats_init(&msl_io_1b_stat,   "iosz:0-1k");
+	psc_iostats_init(&msl_io_1k_stat,   "iosz:1k-3k");
+	psc_iostats_init(&msl_io_4k_stat,   "iosz:4k-15k");
+	psc_iostats_init(&msl_io_16k_stat,  "iosz:16k-63k");
+	psc_iostats_init(&msl_io_64k_stat,  "iosz:64k-127k");
+	psc_iostats_init(&msl_io_128k_stat, "iosz:128k-511k");
+	psc_iostats_init(&msl_io_512k_stat, "iosz:512k-1m");
+	psc_iostats_init(&msl_io_1m_stat,   "iosz:1m-");
 
 	sl_nbrqset = pscrpc_nbreqset_init(NULL, NULL);
 	pscrpc_nbreapthr_spawn(sl_nbrqset, MSTHRT_NBRQ, "msnbrqthr");
