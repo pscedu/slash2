@@ -157,8 +157,8 @@ int
 main(int argc, char *argv[])
 {
 	char *zpcachefn = NULL, *zpname;
+	const char *cfn, *sfn, *p;
 	int rc, c, nofsuuid = 0;
-	const char *cfn, *sfn;
 	mdsio_fid_t mf;
 
 	/* gcrypt must be initialized very early on */
@@ -176,8 +176,12 @@ main(int argc, char *argv[])
 	append_path(ZPOOL_PATH);
 #endif
 
-	progname = argv[0];
 	cfn = SL_PATH_CONF;
+	p = getenv("CONFIG_FILE");
+	if (p)
+		cfn = p;
+
+	progname = argv[0];
 	sfn = SL_PATH_SLMCTLSOCK;
 	while ((c = getopt(argc, argv, "D:f:p:S:X:YU")) != -1)
 		switch (c) {
