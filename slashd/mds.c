@@ -1675,14 +1675,10 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	BMAP_LOCK(b);
 	obml = mds_bmap_getbml(b, sbd_in);
 	if (!obml) {
-		rc = -ENOENT;
-		BMAP_ULOCK(b);
-		goto out2;
+		PFL_GOTOERR(out2, rc = -ENOENT);
 
 	} else if (!(obml->bml_flags & BML_WRITE)) {
-		rc = -EINVAL;
-		BMAP_ULOCK(b);
-		goto out2;
+		PFL_GOTOERR(out2, rc = -EINVAL);
 	}
 
 	bcm_wait_locked(b, b->bcm_flags & BMAP_IONASSIGN);
@@ -1697,9 +1693,7 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 		/* Other clients have been assigned this sliod.  Therefore
 		 *   the sliod may not be reassigned.
 		 */
-		rc = -EAGAIN;
-		BMAP_ULOCK(b);
-		goto out1;
+		PFL_GOTOERR(out1, rc = -EAGAIN);
 	}
 	psc_assert(bmi->bmdsi_wr_ion);
 	psc_assert(!(b->bcm_flags & BMAP_DIO));
@@ -1714,10 +1708,8 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	psc_assert(bia.bia_seq == bmi->bmdsi_seq);
 
 	resm = mds_resm_select(b, pios, prev_ios, nprev_ios);
-	if (!resm) {
-		rc = -SLERR_ION_OFFLINE;
-		goto out1;
-	}
+	if (!resm)
+		PFL_GOTOERR(out1, rc = -SLERR_ION_OFFLINE);
 
 	/* Deal with the lease renewal and repl_add before modifying
 	 *    the ios part of the lease or bmi so that mds_bmap_add_repl()
@@ -1750,17 +1742,17 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	sbd_out->sbd_key = obml->bml_bmdsi->bmdsi_assign->odtr_key;
 	sbd_out->sbd_ios = obml->bml_ios;
  out1:
-	BMAP_LOCK(b);
+	BMAP_RLOCK(b);
 	psc_assert(b->bcm_flags & BMAP_IONASSIGN);
 	BMAP_CLEARATTR(b, BMAP_IONASSIGN);
 	bcm_wake_locked(b);
-	BMAP_ULOCK(b);
  out2:
-	DEBUG_BMAP(rc ? PLL_WARN : PLL_INFO, b, "rc=%d renew oseq=%"
-	   PRIu64" nseq=%"PRIu64" nid=%"PRIu64" pid=%u",
-	   rc, sbd_in->sbd_seq, (obml ? obml->bml_seq : 0),
-	   exp->exp_connection->c_peer.nid,
-	   exp->exp_connection->c_peer.pid);
+	DEBUG_BMAP(rc ? PLL_WARN : PLL_INFO, b,
+	    "rc=%d renew oseq=%"PRIu64" nseq=%"PRIu64" "
+	    "nid=%"PRIu64" pid=%u",
+	    rc, sbd_in->sbd_seq, (obml ? obml->bml_seq : 0),
+	    exp->exp_connection->c_peer.nid,
+	    exp->exp_connection->c_peer.pid);
 	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 	return (rc);
 }
