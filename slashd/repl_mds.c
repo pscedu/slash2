@@ -127,7 +127,7 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
 
 	res = libsl_id2res(ios);
 	if (res == NULL || !RES_ISFS(res))
-		return (-SLERR_RES_BADTYPE);
+		PFL_GOTOERR(out, rc = -SLERR_RES_BADTYPE);
 
 	/*
 	 * It does not exist; add the replica to the inode if 'add' was
@@ -137,8 +137,7 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
 		psc_assert(ih->inoh_ino.ino_nrepls <= SL_MAX_REPLICAS);
 		if (ih->inoh_ino.ino_nrepls == SL_MAX_REPLICAS) {
 			DEBUG_INOH(PLL_WARN, ih, "too many replicas");
-			rc = -ENOSPC;
-			goto out;
+			PFL_GOTOERR(out, rc = -ENOSPC);
 
 		} else if (ih->inoh_ino.ino_nrepls >= SL_DEF_REPLICAS) {
 			if ((rc = mds_inox_ensure_loaded(ih)))
