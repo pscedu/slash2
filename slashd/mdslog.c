@@ -464,7 +464,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 	current_reclaim_xid = pje->pje_xid;
 	freelock(&mds_distill_lock);
 
-	psclog_warnx("current_reclaim_xid=%"PRIu64" batchno=%"PRIu64" fg="SLPRI_FG,
+	psclog_notice("current_reclaim_xid=%"PRIu64" batchno=%"PRIu64" fg="SLPRI_FG,
 	    current_reclaim_xid, current_reclaim_batchno,
 	    SLPRI_FG_ARGS(&reclaim_entry.fg));
 
