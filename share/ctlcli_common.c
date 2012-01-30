@@ -196,7 +196,7 @@ sl_fcmh_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    scf->scf_flags & FCMH_HAVE_ATTRS	? 'A' : '-',
 	    scf->scf_flags & FCMH_GETTING_ATTRS	? 'G' : '-',
 	    scf->scf_flags & FCMH_CTOR_FAILED	? 'f' : '-',
-	    scf->scf_flags & FCMH_CTOR_DELAYED	? 'D' : '-',
+	    scf->scf_flags & FCMH_NO_BACKFILE	? 'N' : '-',
 	    scf->scf_st_mode, scf->scf_uid, scf->scf_gid, buf,
 	    scf->scf_refcnt, sl_sprinta_fgen(scf->scf_fg.fg_gen),
 	    scf->scf_ptruncgen, scf->scf_utimgen);
