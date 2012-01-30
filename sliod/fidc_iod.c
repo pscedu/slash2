@@ -188,14 +188,14 @@ sli_fcmh_reopen(struct fidc_membh *fcmh, const struct slash_fidgen *fg)
 		unlink(fidfn);
 		DEBUG_FCMH(PLL_INFO, fcmh, "upfront unlink(), errno=%d", errno);
 
-	} else if (fcmh->fcmh_flags & FCMH_CTOR_DELAYED) {
+	} else if (fcmh->fcmh_flags & FCMH_NO_BACKFILE) {
 
 		rc = sli_open_backing_file(fcmh);
 		if (!rc)
 			fcmh->fcmh_flags &=
-				~(FCMH_CTOR_FAILED | FCMH_CTOR_DELAYED);
+				~(FCMH_CTOR_FAILED | FCMH_NO_BACKFILE);
 
-		DEBUG_FCMH(PLL_NOTIFY, fcmh, "open FCMH_CTOR_DELAYED (rc=%d)",
+		DEBUG_FCMH(PLL_NOTIFY, fcmh, "open FCMH_NO_BACKFILE (rc=%d)",
 		   rc);
 
 	} else if (fg->fg_gen < fcmh_2_gen(fcmh)) {
@@ -218,7 +218,7 @@ sli_fcmh_ctor(struct fidc_membh *fcmh)
 	int rc = 0;
 
 	if (fcmh->fcmh_fg.fg_gen == FGEN_ANY) {
-		fcmh->fcmh_flags |= FCMH_CTOR_DELAYED;
+		fcmh->fcmh_flags |= FCMH_NO_BACKFILE;
 		DEBUG_FCMH(PLL_NOTIFY, fcmh, "refusing to open backing file "
 		   "with FGEN_ANY");
 		/* This is not an error, we just don't have enough info
@@ -233,7 +233,7 @@ sli_fcmh_ctor(struct fidc_membh *fcmh)
 		rc = sli_fcmh_getattr(fcmh);
 	DEBUG_FCMH(PLL_INFO, fcmh, "after opening new backing file rc=%d", rc);
 	if (rc == ENOENT && (fcmh->fcmh_flags & FCMH_CAC_RLSBMAP)) {
-		fcmh->fcmh_flags |= FCMH_CTOR_DELAYED;
+		fcmh->fcmh_flags |= FCMH_NO_BACKFILE;
 		psclog_warnx("RLSBMAP: Fail to open backing file - this is Okay");
 		rc = 0;
 	}
@@ -244,7 +244,7 @@ sli_fcmh_ctor(struct fidc_membh *fcmh)
 void
 sli_fcmh_dtor(__unusedx struct fidc_membh *f)
 {
-	if (!(f->fcmh_flags & FCMH_CTOR_DELAYED)) {
+	if (!(f->fcmh_flags & FCMH_NO_BACKFILE)) {
 		close(fcmh_2_fd(f));
 		psc_rlim_adj(RLIMIT_NOFILE, -1);
 	}

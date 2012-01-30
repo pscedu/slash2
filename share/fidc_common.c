@@ -61,7 +61,7 @@ fcmh_destroy(struct fidc_membh *f)
 
 	/* slc_fcmh_dtor(), slm_fcmh_dtor(), sli_fcmh_dtor() */
 	if (sl_fcmh_ops.sfop_dtor) {
-		if (f->fcmh_flags & (FCMH_CTOR_FAILED | FCMH_CTOR_DELAYED))
+		if (f->fcmh_flags & (FCMH_CTOR_FAILED | FCMH_NO_BACKFILE))
 			DEBUG_FCMH(PLL_WARN, f, "bypassing dtor() call");
 		else
 			sl_fcmh_ops.sfop_dtor(f);
@@ -586,7 +586,7 @@ _dump_fcmh_flags_common(int *flags, int *seq)
 	PFL_PRFLAG(FCMH_HAVE_ATTRS, flags, seq);
 	PFL_PRFLAG(FCMH_GETTING_ATTRS, flags, seq);
 	PFL_PRFLAG(FCMH_CTOR_FAILED, flags, seq);
-	PFL_PRFLAG(FCMH_CTOR_DELAYED, flags, seq);
+	PFL_PRFLAG(FCMH_NO_BACKFILE, flags, seq);
 	PFL_PRFLAG(FCMH_IN_SETATTR, flags, seq);
 }
 

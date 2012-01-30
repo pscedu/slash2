@@ -83,7 +83,7 @@ struct fidc_membh {
 #define	FCMH_HAVE_ATTRS		(1 <<  8)	/* has valid stat info */
 #define	FCMH_GETTING_ATTRS	(1 <<  9)	/* fetching stat info */
 #define	FCMH_CTOR_FAILED	(1 << 10)	/* constructor func failed */
-#define	FCMH_CTOR_DELAYED	(1 << 11)	/* constructor was not issued */
+#define	FCMH_NO_BACKFILE	(1 << 11)	/* fcmh does not have a backing file */
 #define FCMH_IN_SETATTR		(1 << 12)	/* setattr in progress */
 #define	_FCMH_FLGSHFT		(1 << 13)
 
@@ -157,7 +157,7 @@ struct fidc_membh {
 	    (f)->fcmh_flags & FCMH_HAVE_ATTRS		? "A" : "",	\
 	    (f)->fcmh_flags & FCMH_GETTING_ATTRS	? "G" : "",	\
 	    (f)->fcmh_flags & FCMH_CTOR_FAILED		? "f" : "",	\
-	    (f)->fcmh_flags & FCMH_CTOR_DELAYED		? "D" : "",	\
+	    (f)->fcmh_flags & FCMH_NO_BACKFILE		? "N" : "",	\
 	    (f)->fcmh_flags & ~(_FCMH_FLGSHFT - 1)	? "+" : "",	\
 	    (f)->fcmh_refcnt, fcmh_2_fsz(f), (f)->fcmh_sstb.sst_blksize,\
 	    (f)->fcmh_sstb.sst_mode, ## __VA_ARGS__)

@@ -384,7 +384,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		 *   this bmap.
 		 */
 		FCMH_LOCK(f);
-		if (!(f->fcmh_flags & FCMH_CTOR_DELAYED))
+		if (!(f->fcmh_flags & FCMH_NO_BACKFILE))
 			sync = 1;
 		FCMH_ULOCK(f);
 		if (sync) {
