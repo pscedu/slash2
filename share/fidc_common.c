@@ -376,6 +376,14 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	psc_hashbkt_add_item(&fidcHtable, b, fcmh);
 	psc_hashbkt_unlock(b);
 
+	/*
+	 * Call service specific constructor slc_fcmh_ctor(),
+	 * slm_fcmh_ctor(), and sli_fcmh_ctor() to initialize
+	 * their private fields that follow the main fcmh
+	 * structure.  It is safe to not lock because we don't
+	 * touch the state, and other thread should be waiting
+	 * for us.
+	 */
 	if (sstb) {
 		FCMH_LOCK(fcmh);
 		fcmh_setattrf(fcmh, sstb, setattrflags |
@@ -385,14 +393,6 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 			fcmh->fcmh_flags |= FCMH_CTOR_FAILED;
 		goto finish;
 	} else {
-		/*
-		 * Call service specific constructor slc_fcmh_ctor(),
-		 * slm_fcmh_ctor(), and sli_fcmh_ctor() to initialize
-		 * their private fields that follow the main fcmh
-		 * structure.  It is safe to not lock because we don't
-		 * touch the state, and other thread should be waiting
-		 * for us.
-		 */
 		rc = sl_fcmh_ops.sfop_ctor(fcmh);
 		if (rc) {
 			fcmh->fcmh_flags |= FCMH_CTOR_FAILED;
