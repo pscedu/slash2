@@ -223,6 +223,8 @@ struct bmapc_memb {
 		    _DEBUG_BMAP_FMTARGS(b), (type));			\
 	} while (0)
 
+#define bmap_op_done(b)		bmap_op_done_type((b), BMAP_OPCNT_LOOKUP)
+
 #define bmap_foff(b)		((b)->bcm_bmapno * SLASH_BMAP_SIZE)
 
 /* bmap per-replica states */
