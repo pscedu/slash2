@@ -234,7 +234,7 @@ sli_fcmh_ctor(struct fidc_membh *fcmh)
 	DEBUG_FCMH(PLL_INFO, fcmh, "after opening new backing file rc=%d", rc);
 	if (rc == ENOENT && (fcmh->fcmh_flags & FCMH_CAC_RLSBMAP)) {
 		fcmh->fcmh_flags |= FCMH_NO_BACKFILE;
-		psclog_warnx("RLSBMAP: Fail to open backing file - this is Okay");
+		psclog_notice("RLSBMAP: Fail to open backing file - this is Okay");
 		rc = 0;
 	}
 
