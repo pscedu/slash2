@@ -77,7 +77,7 @@ struct fidc_membh {
 #define	FCMH_CAC_BUSY		(1 <<  2)	/* being used, not reapable */
 #define	FCMH_CAC_INITING	(1 <<  3)	/* initializing */
 #define	FCMH_CAC_WAITING	(1 <<  4)	/* being waited on */
-#define	FCMH_CAC_TOFREE		(1 <<  5)	/* been deprecated */
+#define	FCMH_CAC_TOFREE		(1 <<  5)	/* ctor failure or memory pressure */
 #define	FCMH_CAC_REAPED		(1 <<  6)	/* has been reaped */
 #define	FCMH_CAC_RLSBMAP	(1 <<  7)	/* lookup due to releasing bmap */
 #define	FCMH_HAVE_ATTRS		(1 <<  8)	/* has valid stat info */

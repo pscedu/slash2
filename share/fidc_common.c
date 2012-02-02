@@ -278,7 +278,6 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 
 		/* if the item is being freed, ingore it */
 		if (tmp->fcmh_flags & FCMH_CAC_TOFREE) {
-			DEBUG_FCMH(PLL_WARN, tmp, "tmp fcmh is deprecated");
 			FCMH_ULOCK(tmp);
 			continue;
 		}
