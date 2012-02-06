@@ -285,6 +285,14 @@ struct srt_statfs {
 	uint64_t		sf_favail;	/* # free inodes for non-root */
 } __packed;
 
+#define DEBUG_SSTATFS(level, s, fmt, ...)				\
+	psclog((level), "sstatfs (%p) type=%s "				\
+	       "bsz=%u iosz=%u nblks=%"PRIu64" bfree=%"PRIu64" "	\
+	       "bavail=%"PRIu64" " fmt,					\
+	       (s), (s)->sf_type, (s)->sf_bsize, (s)->sf_iosize,	\
+	       (s)->sf_blocks, (s)->sf_bfree, (s)->sf_bavail,		\
+	       ## __VA_ARGS__)
+
 struct srt_bmapminseq {
 	uint64_t		bminseq;
 };
@@ -785,7 +793,7 @@ struct srm_mknod_req {
 
 #define srm_mknod_rep		srm_getattr2_rep
 
-#define DEF_READDIR_NENTS	100
+#define DEF_READDIR_NENTS	128
 #define MAX_READDIR_NENTS	1000
 #define MAX_READDIR_BUFSIZ	(sizeof(struct srt_stat) * MAX_READDIR_NENTS)
 
