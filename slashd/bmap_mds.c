@@ -197,6 +197,7 @@ mds_bmap_write(struct bmapc_memb *b, int update_mtime, void *logf,
 	BMAPOD_READ_DONE(b, 0);
 
 	locked = BMAP_RLOCK(b);
+//	psc_assert(b->bcm_flags & BMAP_BUSY);
 	new = b->bcm_flags & BMAP_NEW;
 	b->bcm_flags &= ~BMAP_NEW;
 	BMAP_URLOCK(b, locked);
@@ -298,9 +299,6 @@ _mds_bmap_write_rel(const struct pfl_callerinfo *pci,
     struct bmapc_memb *b, void *logf)
 {
 	int rc;
-
-	/* XXX check that we set this */
-//	psc_assert(b->bcm_flags & BMAP_BUSY);
 
 	rc = mds_bmap_write(b, 0, logf, b);
 	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
