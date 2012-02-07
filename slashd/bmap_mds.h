@@ -235,6 +235,8 @@ int	_mds_bmap_write_rel(const struct pfl_callerinfo *, struct bmapc_memb *, void
 
 #define mds_bmap_write_repls_rel(b)	mds_bmap_write_rel((b), mdslog_bmap_repls)
 
+#define mds_bmap_write_logrepls(b)	mds_bmap_write((b), 0, mdslog_bmap_repls, (b))
+
 int	 mds_bmap_crc_write(struct srm_bmap_crcup *, sl_ios_id_t,
 	    const struct srm_bmap_crcwrt_req *);
 int	 mds_bmap_exists(struct fidc_membh *, sl_bmapno_t);
