@@ -41,6 +41,7 @@
 #include "slutil.h"
 
 const char *sl_datadir = SL_PATH_DATA_DIR;
+const int   sl_stkvers = SL_STK_VERSION;
 
 enum rw
 fflags_2_rw(int fflags)
