@@ -418,6 +418,10 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 			reclaim_entry.fg.fg_fid = RECLAIM_MAGIC_FID;
 			reclaim_entry.fg.fg_gen = RECLAIM_MAGIC_GEN;
 			if (current_reclaim_entrysize == RECLAIM_ENTRY_SIZE) {
+				/*
+				 * This might not give us the correct batchno if the machine
+				 * crashed after writing a full log and just came back.
+				 */
 				current_reclaim_entrysize = sizeof(struct srt_reclaim_entry);
 				psclog_warnx("Switch to new log format, batchno=%"PRId64,
 					      current_reclaim_batchno);
@@ -442,6 +446,10 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 		psc_fatal("Failed to write reclaim log file, batchno=%"PRId64,
 		    current_reclaim_batchno);
 
+	spinlock(&mds_distill_lock);
+	current_reclaim_xid = pje->pje_xid;
+	freelock(&mds_distill_lock);
+
 	reclaim_logfile_offset += current_reclaim_entrysize;
 	if (reclaim_logfile_offset ==
 	    SLM_RECLAIM_BATCH * (off_t)current_reclaim_entrysize) {
@@ -458,13 +466,11 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 		spinlock(&mds_reclaim_waitqlock);
 		psc_waitq_wakeall(&mds_reclaim_waitq);
 		freelock(&mds_reclaim_waitqlock);
+		psclog_warnx("Next batchno = %"PRId64", current reclaim XID = %"PRId64,
+	    	    current_reclaim_batchno, current_reclaim_xid);
 	}
 	psc_assert(reclaim_logfile_offset <= 
 		   SLM_RECLAIM_BATCH * (off_t)current_reclaim_entrysize);
-
-	spinlock(&mds_distill_lock);
-	current_reclaim_xid = pje->pje_xid;
-	freelock(&mds_distill_lock);
 
 	psclog_notice("current_reclaim_xid=%"PRIu64" batchno=%"PRIu64" fg="SLPRI_FG,
 	    current_reclaim_xid, current_reclaim_batchno,
