@@ -459,6 +459,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 		psc_waitq_wakeall(&mds_reclaim_waitq);
 		freelock(&mds_reclaim_waitqlock);
 	}
+	psc_assert(reclaim_logfile_offset <= 
+		   SLM_RECLAIM_BATCH * (off_t)current_reclaim_entrysize);
 
 	spinlock(&mds_distill_lock);
 	current_reclaim_xid = pje->pje_xid;
