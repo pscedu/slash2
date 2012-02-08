@@ -118,6 +118,7 @@ dump_reclaim_prog_log(char *buf, int size, uint64_t batchno, unsigned int id)
 			prog_entryp->res_id);
 		prog_entryp = PSC_AGP(prog_entryp, entrysize);
 	}
+	return (1);
 }
 
 int
