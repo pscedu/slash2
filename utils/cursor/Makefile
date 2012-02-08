@@ -3,8 +3,8 @@
 ROOTDIR=../../..
 include ${ROOTDIR}/Makefile.path
 
-PROG=		reclaim
-SRCS+=		reclaim.c
+PROG=		cursor_mgr
+SRCS+=		cursor_mgr.c
 MODULES+=	pfl
 
 include ${SLASHMK}
