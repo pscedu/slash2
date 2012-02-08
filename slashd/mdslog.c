@@ -1284,7 +1284,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 			if (csvc == NULL) {
 				int error = dst_resm->resm_csvc->csvc_lasterrno;
 				DYNARRAY_FOREACH(mn, j, &dst_resm->resm_nids)
-					psclog_warnx("GC: fail to contact: %s; rc=%d",
+					psclog_notice("GC: failed to contact: %s; rc=%d",
 					    mn->resmnid_addrbuf, error);
 				continue;
 			}
