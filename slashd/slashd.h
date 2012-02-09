@@ -223,12 +223,12 @@ struct slm_workrq {
 int		 mds_handle_rls_bmap(struct pscrpc_request *, int);
 int		 mds_lease_renew(struct fidc_membh *, struct srt_bmapdesc *,
 			 struct srt_bmapdesc *, struct pscrpc_export *);
-int              mds_lease_reassign(struct fidc_membh *,
+int		 mds_lease_reassign(struct fidc_membh *,
 			 struct srt_bmapdesc *, sl_ios_id_t, sl_ios_id_t *,
 			 int, struct srt_bmapdesc *,
 			 struct pscrpc_export *);
 
-int              mds_sliod_alive(struct sl_mds_iosinfo *);
+int		 mds_sliod_alive(struct sl_mds_iosinfo *);
 
 __dead void	 slmctlthr_main(const char *);
 void		 slmbmaptimeothr_spawn(void);

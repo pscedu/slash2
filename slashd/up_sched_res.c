@@ -233,7 +233,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
     struct bmapc_memb *b, int off, struct sl_resm *src_resm,
     struct sl_resource *dst_res, int j)
 {
-	int tract[NBREPLST], retifset[NBREPLST], rc = 0;
+	int undo_write = 0, tract[NBREPLST], retifset[NBREPLST], rc = 0;
 	struct resm_mds_info *src_rmmi, *dst_rmmi;
 	struct pscrpc_request *rq = NULL;
 	struct srm_repl_schedwk_req *mq;
@@ -327,6 +327,12 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	 * replication request or something.
 	 */
 	if (rc == BREPLST_REPL_QUEUED) {
+		rc = mds_bmap_write_logrepls(b);
+		undo_write = 1;
+		/*
+		 * It is OK if repl sched is resent across reboots
+		 * idempotently.
+		 */
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc == 0)
 			rc = mp->rc;
@@ -335,15 +341,16 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	if (rc == 0) {
 		pscrpc_req_finished(rq);
 		sl_csvc_decref(csvc);
-		mds_bmap_write_repls_rel(b);
 		uswi_unref(wk);
 		return (1);
 	}
 
-	/* handle error return failure */
+	/* handle error return failure & undo */
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 	mds_repl_bmap_apply(b, tract, NULL, off);
+	if (undo_write)
+		mds_bmap_write_repls_rel(b);
 
  fail:
 	if (amt)
@@ -363,7 +370,7 @@ slmupschedthr_tryptrunc(struct up_sched_work_item *wk,
     struct bmapc_memb *b, int off, struct sl_resource *dst_res,
     int idx)
 {
-	int tract[NBREPLST], retifset[NBREPLST], rc;
+	int undo_write = 0, tract[NBREPLST], retifset[NBREPLST], rc;
 	struct slmupsched_thread *smut;
 	struct slashrpc_cservice *csvc;
 	struct resm_mds_info *dst_rmmi;
@@ -413,6 +420,8 @@ slmupschedthr_tryptrunc(struct up_sched_work_item *wk,
 	brepls_init(tract, -1);
 	tract[BREPLST_TRUNCPNDG] = BREPLST_TRUNCPNDG;
 	mds_repl_bmap_apply(b, tract, NULL, off);
+	rc = mds_bmap_write_logrepls(b);
+	undo_write = 1;
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
@@ -420,16 +429,17 @@ slmupschedthr_tryptrunc(struct up_sched_work_item *wk,
 	pscrpc_req_finished(rq);
 
 	if (rc == 0) {
-		mds_bmap_write_repls_rel(b);
 		uswi_unref(wk);
 		sl_csvc_decref(csvc);
 		return (1);
 	}
 
-	/* handle error return failure */
+	/* handle error return failure & undo */
 	brepls_init(tract, -1);
 	tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_TRUNCPNDG;
 	mds_repl_bmap_apply(b, tract, NULL, off);
+	if (undo_write)
+		mds_bmap_write_repls_rel(b);
 
  fail:
 	if (csvc)
@@ -443,7 +453,7 @@ int
 slmupschedthr_trygarbage(struct up_sched_work_item *wk,
     struct bmapc_memb *b, int off, struct sl_resource *dst_res, int j)
 {
-	int tract[NBREPLST], retifset[NBREPLST], rc = 0;
+	int undo_write = 0, tract[NBREPLST], retifset[NBREPLST], rc = 0;
 	struct slashrpc_cservice *csvc;
 	struct slmupsched_thread *smut;
 	struct resm_mds_info *dst_rmmi;
@@ -493,7 +503,10 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 
 	brepls_init_idx(retifset);
 
-	/* mark it as SCHED here in case the RPC finishes really quickly... */
+	/*
+	 * Mark it as SCHED here in case the RPC finishes really
+	 * quickly...
+	 */
 	rc = mds_repl_bmap_apply(b, tract, retifset, off);
 
 	if (rc == BREPLST_VALID ||
@@ -502,23 +515,26 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 
 	if (rc == BREPLST_GARBAGE ||
 	    rc == BREPLST_INVALID) {
+		rc = mds_bmap_write_logrepls(b);
+		undo_write = 1;
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc == 0)
 			rc = mp->rc;
 	}
 	pscrpc_req_finished(rq);
 	if (rc == 0) {
-		mds_bmap_write_repls_rel(b);
 		uswi_unref(wk);
 		sl_csvc_decref(csvc);
 		return (1);
 	}
 
-	/* handle error return failure */
+	/* handle error return failure & undo */
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
 	mds_repl_bmap_apply(b, tract, NULL, off);
+	if (undo_write)
+		mds_bmap_write_repls_rel(b);
 
  fail:
 	if (csvc)
@@ -683,7 +699,7 @@ slmupschedthr_main(struct psc_thread *thr)
 						FOREACH_RND(&src_res_i, USWI_NREPLS(wk)) {
 							if (uswi_gen != wk->uswi_gen) {
 								BMAPOD_MODIFY_DONE(b);
-								mds_bmap_write_repls_rel(b);
+								bmap_op_done(b);
 								PFL_GOTOERR(skipfile, 1);
 							}
 							src_res = libsl_id2res(
@@ -760,7 +776,7 @@ slmupschedthr_main(struct psc_thread *thr)
 						if (bno)
 							bno--;
 						if (b->bcm_bmapno != bno) {
-							mds_bmap_write_repls_rel(b);
+							bmap_op_done(b);
 
 							if (f->fcmh_flags & FCMH_IN_PTRUNC)
 								PFL_GOTOERR(try_ptrunc, 1);
@@ -783,16 +799,16 @@ slmupschedthr_main(struct psc_thread *thr)
 								break;
 
 							if (b)
-								mds_bmap_write_repls_rel(b);
+								bmap_op_done(b);
 							b = bn;
 							bn = NULL;
 
 							if (f->fcmh_flags & FCMH_IN_PTRUNC) {
-								mds_bmap_write_repls_rel(b);
+								bmap_op_done(b);
 								PFL_GOTOERR(try_ptrunc, 1);
 							}
 							if (uswi_gen != wk->uswi_gen) {
-								mds_bmap_write_repls_rel(b);
+								bmap_op_done(b);
 								PFL_GOTOERR(skipfile, 1);
 							}
 
@@ -813,7 +829,7 @@ slmupschedthr_main(struct psc_thread *thr)
 							if ((int)bno < bmap_i.ri_n)
 								bmap_i.ri_n = bno;
 							if (b)
-								mds_bmap_write_repls_rel(b);
+								bmap_op_done(b);
 							b = bn;
 							break;
 						}
@@ -827,10 +843,10 @@ slmupschedthr_main(struct psc_thread *thr)
 						    val == BREPLST_INVALID) {
 							psc_assert(bno == 0);
 							if (b)
-								mds_bmap_write_repls_rel(b);
+								bmap_op_done(b);
 							b = bn;
 						} else {
-							mds_bmap_write_repls_rel(bn);
+							bmap_op_done(bn);
 						}
 
 						BMAPOD_MODIFY_DONE(b);
@@ -859,7 +875,7 @@ slmupschedthr_main(struct psc_thread *thr)
 						has_work = 1;
 						break;
 					}
-					mds_bmap_write_repls_rel(b);
+					bmap_op_done(b);
 					if (rc)
 						RESET_RND_ITER(&bmap_i);
 				}
