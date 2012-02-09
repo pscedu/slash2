@@ -523,8 +523,6 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	fcmh_wait_locked(c, c->fcmh_flags & FCMH_IN_SETATTR);
 	fcmh_set_repl_nblks(c, idx, mq->sstb.sst_blocks);
 	if ((mq->flags & SRM_IMPORTF_XREPL) == 0) {
-		for (i = 0; i < fcmh_2_ino(c)->ino_nrepls; i++)
-			fcmh_set_repl_nblks(c, i, 0);
 		rc = mds_fcmh_setattr(c, PSCFS_SETATTRF_DATASIZE |
 		    PSCFS_SETATTRF_MTIME | PSCFS_SETATTRF_CTIME |
 		    PSCFS_SETATTRF_ATIME | PSCFS_SETATTRF_UID |
@@ -619,7 +617,7 @@ slm_rmi_handle_ping(struct pscrpc_request *rq)
 			psclog_warnx("self-test from %s failed, "
 			    "disabling write lease assignment",
 			    m->resm_name);
-			res2iosinfo(m->resm_res)->si_flags |= 
+			res2iosinfo(m->resm_res)->si_flags |=
 				SIF_DISABLE_BIA;
 		}
 	}
@@ -670,7 +668,7 @@ slm_rmi_handler(struct pscrpc_request *rq)
 
 			m = libsl_try_nid2resm(rq->rq_peer.nid);
 			psc_assert(m);
-			clock_gettime(CLOCK_MONOTONIC, 
+			clock_gettime(CLOCK_MONOTONIC,
 			      &res2iosinfo(m->resm_res)->si_lastcomm);
 		}
 
