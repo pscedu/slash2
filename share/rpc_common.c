@@ -242,16 +242,17 @@ slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
 }
 
 int
-slrpc_issue_ping(struct slashrpc_cservice *csvc, int rc)
+slrpc_issue_ping(struct slashrpc_cservice *csvc, int st_rc)
 {
 	struct pscrpc_request *rq;
 	struct srm_ping_req *mq;
 	struct srm_ping_rep *mp;
+	int rc;
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_PING, rq, mq, mp);
 	if (rc)
 		return (rc);
-	mq->rc = rc;
+	mq->rc = st_rc;
 	mq->upnonce = sys_upnonce;
 	rq->rq_timeoutable = 1;
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
