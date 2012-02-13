@@ -8,43 +8,6 @@ reminders:
 - do sl_csvc_wantfree() in all to-CLI csvcs
 - ensure reentrancy of 'static' variables in functions
 
-* Kernel build causes bmap flushq to grow considerably (in the thousands..)
-* Spend some time dealing with sliod crash / restart
-
-***********************
-S2 PSC Archival FS TODO
-***********************
-7/7/2011 - pauln
-Listed here are pending items required for the PSC archiver project.  These
-items should be viewed as high priority.
-
-1) imported files should create CRCs
-
-2) Cluster No Share I/O Service type.  Cluster_no_share has been on the
-roadmap for some time but it's requirements are problematic given the
-nature of S2's metadata structures.  Bmap-ondisk and S2 inode only allow
-specify the ID of the IOS - not any single member.  The alternative to
-cluster_no_share is to have the client present a list of preferred I/O
-servers which the MDS uses in bmap assignment.
-
-3) FID modifications details in docs/supporting_recovery.txt.  Without these
-changes we'll be forced to modify internal MDS structures manually and
-will be forced to restart all clients and sliods.
-
-4) DIO needs to be completed for AIO
-
-* slm_ptrunc_wake_clients() may need to use rpcsets or nbreqsets to deal
-with large numbers of blocking clients.  Or, the algorithm should be modified
-so that the clients retry after some brief sleep period.  (I believe this is
-how DIO works).
-
------------------------------------------------------------------------
-* I/O Stats for client and sliod
-  - read and write sizes from the app (or for sliod - from the client).
-    - including 'real' read and write stats to backfs for sliod
-  - post-aggregation stats
-  - cache read stats for sliod
-
 -----------------------------------------------------------------------
 * Bmpce Write
 There may be some advantage to maintaining a seq or numeric window id for
@@ -78,54 +41,6 @@ until the window id for each bmpce is <= than the last processed bmpce window.
 	Worse yet, the leases for the blocked clients may expire causing
 	more problems.  Unfortunately, all of this is exacerbated by the
 	lack of flow control and aggressive read ahead.
-
------------------------------------------------------------------------
-
-* Read-ahead work is needed.. Better detection for large I/O's and fast
-connections vs. small file and latency sensitive workloads.  The current
-approach favors lower latency at the cost of issuing more requests.  (ie
-every RA request is 32k).  For 2 large files, this causes ~500 requests
-to be queued to a sliod - which is a lot.
-
-* Need to look into increasing the number of ric threads and slabs on the
-sliod.
-
-pauln (04/29/11)
------------------------------------------------------------------------
-
-* rpc timeouts should correspond to bmap lease timeouts.  In addition,
-	threads blocked on RA bmpces, or another thread's bmpce fetch
-	should timeout and not block indefinitely.  This does not
-	completely address the issue from bug 132 but may be a useful
-	asset.
-
-	expired_request() should take lease timeout into account somehow
-pauln (04/22/11)
-
------------------------------------------------------------------------
-
-
-* bmap flush needs to be reworked so that several threads can be
-	assigned to flushing bmaps.  The current model is relatively
-	slow because the bmap flush thread undertakes too much work.
-	This means that subsequent requests tend to wait before being
-	pushed out.  When dealing with force-expired requests a
-	slow down results
-
-pauln (04/19/2011)
-
------------------------------------------------------------------------
-
-* In bmap_flush_reap_rpcs() some work should be done to prove that
-  time is not being needlessly wasted in pscrpc_set_finalize().  The
-  speed in which pscrpc_nbreqset_reap(pndgReqs) is called determines
-  how fast we can unblock flush-on-close calls.
-
-* Bmap flush should have a call which checks the lease validity of a
-       bmap.  If the lease has expired, then the I/O must be dropped and
-       EIO returned to the caller.
-
-pauln (03/31/2011)
 
 -----------------------------------------------------------------------
 - account metadata overhead in st_blocks
@@ -198,18 +113,6 @@ asynchronously then performance would be greatly improved.
 
 Well, after increasing the number of fuse threads to 48 I don't see the entire set blocked
 in release but I don't see good performance for 'ls -al'.
-
-* Namespace Disconnection Problem
-  The namespace must be protected from a rename operation where a parent directory
-  is renamed into one of its children.  Supposedly a global rename lock is used in
-  today's filesystems which locks the entire namespace and analyzes the paths to ensure
-  that a rename source is not a parent of the target.  I think this is not a problem
-  using directory hardlinks since the source's children may be determined via the immns
-  dir hardlink.  EEB seems to think otherwise..  I think the issue is where the ".." directory
-  of the destination points.  If it points to the immns then we're in trouble.
-
-  rule: when looking up the destination name, if any component FIDs match the source parent,
-    return EINVAL.  this should be handled under the hood by FUSE.
 
 * Fidcache Generation Numbering
 	Fidcache must support generation numbers.
@@ -483,7 +386,11 @@ reimport
   changes while communicating with sliod
    (o) mark new flag on msl csvc when upnonce changes in CONNECT
 
-- xopctl background startup
+- readdir optimizations
+   (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
+   (o) attr buf size needs be dynamically sized
+   (o) small directories should be encoded into the reply struct to spare the extra
+       rtt of using a bulk.
 
 archiver
 - tool to recover softdel files
@@ -491,13 +398,11 @@ archiver
 - work out logistics for where MDS zsnap backups go (off-site)
 - update nblks when using sense "slictl -x"
 - fix repl unnecessary processing
-
-
-
-
-
-
-
- 3:29PM <pauln> so it looks like the fidc idle lru isn't being used properly
-  3:29PM <pauln> which is why the name lookups aren't being served from the cache
-
+- imported files should create CRCs
+- FID modifications details in docs/supporting_recovery.txt.  Without these
+changes we'll be forced to modify internal MDS structures manually and
+will be forced to restart all clients and sliods.
+- slm_ptrunc_wake_clients() may need to use rpcsets or nbreqsets to deal
+with large numbers of blocking clients.  Or, the algorithm should be modified
+so that the clients retry after some brief sleep period.  (I believe this is
+how DIO works).
