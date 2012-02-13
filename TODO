@@ -489,3 +489,15 @@ archiver
 - tool to recover softdel files
    (o) provide ability to access zfs snapshots via MSL .zfs/snapshots
 - work out logistics for where MDS zsnap backups go (off-site)
+- update nblks when using sense "slictl -x"
+- fix repl unnecessary processing
+
+
+
+
+
+
+
+ 3:29PM <pauln> so it looks like the fidc idle lru isn't being used properly
+  3:29PM <pauln> which is why the name lookups aren't being served from the cache
+
