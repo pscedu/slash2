@@ -2434,9 +2434,9 @@ msattrflushthr_main(__unusedx struct psc_thread *thr)
 			}
 			psc_assert(fcmh->fcmh_flags & FCMH_CLI_DIRTY_ATTRS);
 
-			if (fci->fci_etime.tv_sec < ts.tv_sec ||
+			if (fci->fci_etime.tv_sec > ts.tv_sec ||
 			   (fci->fci_etime.tv_sec == ts.tv_sec &&
-			    fci->fci_etime.tv_nsec < ts.tv_nsec)) {
+			    fci->fci_etime.tv_nsec > ts.tv_nsec)) {
 				nexttimeo.tv_sec = fci->fci_etime.tv_sec;
 				nexttimeo.tv_nsec = fci->fci_etime.tv_nsec;
 				FCMH_ULOCK(fcmh);
