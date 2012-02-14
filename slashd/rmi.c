@@ -395,7 +395,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	struct bmapc_memb *b;
 	struct srt_stat sstb;
 	struct sl_resm *m;
-	int rc, rc2, idx;
+	int fl, rc, rc2, idx;
 	void *mdsio_data;
 	sl_bmapno_t bno;
 	int64_t fsiz;
@@ -521,15 +521,20 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	FCMH_LOCK(c);
 	mp->fg = c->fcmh_sstb.sst_fg;
 	fcmh_wait_locked(c, c->fcmh_flags & FCMH_IN_SETATTR);
+	/* set nblks regardless of XREPL.
+	 */
 	fcmh_set_repl_nblks(c, idx, mq->sstb.sst_blocks);
+	fl = SL_SETATTRF_NBLKS;
 	if ((mq->flags & SRM_IMPORTF_XREPL) == 0) {
-		rc = mds_fcmh_setattr(c, PSCFS_SETATTRF_DATASIZE |
-		    PSCFS_SETATTRF_MTIME | PSCFS_SETATTRF_CTIME |
-		    PSCFS_SETATTRF_ATIME | PSCFS_SETATTRF_UID |
-		    PSCFS_SETATTRF_GID | SL_SETATTRF_NBLKS, &mq->sstb);
-		if (rc)
-			PFL_GOTOERR(out, mp->rc = -rc);
+		fl |= PSCFS_SETATTRF_DATASIZE | PSCFS_SETATTRF_MTIME |
+			PSCFS_SETATTRF_CTIME | PSCFS_SETATTRF_ATIME |
+			PSCFS_SETATTRF_UID | PSCFS_SETATTRF_GID;
 	}
+
+	rc = mds_fcmh_setattr(c, fl, &mq->sstb);
+	if (rc)
+		PFL_GOTOERR(out, mp->rc = -rc);
+	
 	rc = mds_inodes_odsync(c, NULL); /* journal repl_nblks */
 	if (rc)
 		mp->rc = rc;
