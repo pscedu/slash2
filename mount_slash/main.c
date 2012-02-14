@@ -2419,8 +2419,8 @@ msattrflushthr_main(__unusedx struct psc_thread *thr)
 
 		did_work = 0;
 		PFL_GETTIMESPEC(&ts);
-		nexttimeo = ts;
-		nexttimeo.tv_sec += FCMH_ATTR_TIMEO;
+		nexttimeo.tv_sec = FCMH_ATTR_TIMEO;
+		nexttimeo.tv_nsec = 0;
 
 		spinlock(&attrTimeoutQLock);
 		LIST_CACHE_FOREACH_SAFE(fci, tmp_fci, &attrTimeoutQ) {
@@ -2437,8 +2437,7 @@ msattrflushthr_main(__unusedx struct psc_thread *thr)
 			if (fci->fci_etime.tv_sec > ts.tv_sec ||
 			   (fci->fci_etime.tv_sec == ts.tv_sec &&
 			    fci->fci_etime.tv_nsec > ts.tv_nsec)) {
-				nexttimeo.tv_sec = fci->fci_etime.tv_sec;
-				nexttimeo.tv_nsec = fci->fci_etime.tv_nsec;
+				timespecsub(&fci->fci_etime, &ts, &nexttimeo);
 				FCMH_ULOCK(fcmh);
 				break;
 			}
@@ -2473,7 +2472,7 @@ msattrflushthr_main(__unusedx struct psc_thread *thr)
 			freelock(&attrTimeoutQLock);
 
 		spinlock(&msl_flush_attrqlock);
-		psc_waitq_waitabs(&msl_flush_attrq, &msl_flush_attrqlock, &nexttimeo);
+		psc_waitq_waitrel(&msl_flush_attrq, &msl_flush_attrqlock, &nexttimeo);
 	}
 }
 
