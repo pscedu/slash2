@@ -49,16 +49,16 @@ backing file system must be directly mounted via
 The following options are available:
 .Bl -tag -width Ds
 .It Fl b Ar batchno
-The batch number will be updated to in the reclaim progress log file.
+The value the batch number will be updated to in the reclaim progress log file.
 Default is 0.
 .It Fl i Ar id
 The ID of the IOS whose progress entry in the progress log file will be updated.
 .It Fl p Ar reclaim-prog-log
 Reclaim progress log file to dump and optionally update if
-.It Fl r Ar reclaim-log
-Reclaim log file to dump.
 .Fl i
 is also specified.
+.It Fl r Ar reclaim-log
+Reclaim log file to dump.
 .Sh EXAMPLES
 Dump the contents of a reclaim log file:
 .Pp
