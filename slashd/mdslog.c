@@ -1189,7 +1189,17 @@ mds_send_batch_reclaim(uint64_t batchno)
 		PSCFREE(reclaimbuf);
 		return (didwork);
 	}
-	psc_assert((size % entrysize) == 0);
+	/*
+ 	 * We have seen odd file size (> 600MB) without any clue.
+ 	 * To avoid confusing other code on mds and sliod, pretend
+ 	 * we have done the job and move on.
+ 	 */
+	if ((sstb.sst_size > entrysize * SLM_RECLAIM_BATCH) ||
+	    ((size % entrysize) != 0)) {
+		psclog_warnx("Reclaim log corrupted! batch = %"PRIx64", size = %"PRId64,
+			batchno, sstb.sst_size);
+		return (1);
+	}
 	count = (int)size / entrysize;
 
 	/* find the xid associated with the last log entry */
