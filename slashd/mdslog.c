@@ -1129,6 +1129,42 @@ mds_open_cursor(void)
 	psclog_notice("File system was formatted on %s", tmbuf);
 }
 
+void
+mds_skip_reclaim_batch(uint batchno)
+{
+	int ri;
+	int nios = 0, record = 0, didwork = 0;
+	struct resprof_mds_info *rpmi;
+	struct sl_resource *res;
+	struct sl_mds_iosinfo *iosinfo;
+
+	if (batchno >= current_reclaim_batchno)
+		return;
+
+	SITE_FOREACH_RES(nodeSite, res, ri) {
+		if (!RES_ISFS(res))
+			continue;
+		nios++;
+		rpmi = res2rpmi(res);
+		iosinfo = rpmi->rpmi_info;
+		if (iosinfo->si_batchno < batchno)
+			continue;
+		if (iosinfo->si_batchno > batchno) {
+			didwork++;
+			continue;
+		}
+		record = 1;
+		didwork++;
+		iosinfo->si_batchno++;
+	}
+	if (record)
+		mds_record_reclaim_prog();
+	if (didwork == nios) {
+		if (batchno >= 1)
+			mds_remove_logfile(batchno - 1, 0);
+	}
+}
+
 int
 mds_send_batch_reclaim(uint64_t batchno)
 {
@@ -1198,6 +1234,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 	    ((size % entrysize) != 0)) {
 		psclog_warnx("Reclaim log corrupted! batch = %"PRIx64", size = %"PRId64,
 			batchno, sstb.sst_size);
+		mds_skip_reclaim_batch(batchno);
 		return (1);
 	}
 	count = (int)size / entrysize;
