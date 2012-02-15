@@ -527,14 +527,13 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	fl = SL_SETATTRF_NBLKS;
 	if ((mq->flags & SRM_IMPORTF_XREPL) == 0) {
 		fl |= PSCFS_SETATTRF_DATASIZE | PSCFS_SETATTRF_MTIME |
-			PSCFS_SETATTRF_CTIME | PSCFS_SETATTRF_ATIME |
-			PSCFS_SETATTRF_UID | PSCFS_SETATTRF_GID;
+		    PSCFS_SETATTRF_CTIME | PSCFS_SETATTRF_ATIME |
+		    PSCFS_SETATTRF_UID | PSCFS_SETATTRF_GID;
 	}
-
 	rc = mds_fcmh_setattr(c, fl, &mq->sstb);
 	if (rc)
 		PFL_GOTOERR(out, mp->rc = -rc);
-	
+
 	rc = mds_inodes_odsync(c, NULL); /* journal repl_nblks */
 	if (rc)
 		mp->rc = rc;
@@ -625,7 +624,7 @@ slm_rmi_handle_ping(struct pscrpc_request *rq)
 				psclog_warnx("self-test from %s failed, "
 				     "disabling write lease assignment",
 				     m->resm_name);
-				res2iosinfo(m->resm_res)->si_flags |= 
+				res2iosinfo(m->resm_res)->si_flags |=
 					SIF_DISABLE_BIA;
 			}
 		}
