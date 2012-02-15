@@ -300,12 +300,12 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	if (b->bcm_bmapno == lastbno) {
 		uint64_t sz;
 
-		sz = fcmh_2_fsz(wk->uswi_fcmh);
-		if (sz > b->bcm_bmapno * SLASH_BMAP_SIZE)
+		sz = fcmh_getsize(wk->uswi_fcmh);
+		if (sz > b->bcm_bmapno * (uint64_t)SLASH_BMAP_SIZE)
 			sz -= b->bcm_bmapno * SLASH_BMAP_SIZE;
 		if (sz == 0)
 			PFL_GOTOERR(fail, rc = ENODATA);
-		mq->len = sz;
+		mq->len = MIN(sz, SLASH_BMAP_SIZE);
 	}
 	mq->fg = *USWI_FG(wk);
 	mq->bmapno = b->bcm_bmapno;
