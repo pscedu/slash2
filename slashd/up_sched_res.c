@@ -298,11 +298,14 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	if (lastbno > 0)
 		lastbno--;
 	if (b->bcm_bmapno == lastbno) {
-		mq->len = fcmh_2_fsz(wk->uswi_fcmh);
-		if (mq->len > b->bcm_bmapno * SLASH_BMAP_SIZE)
-			mq->len -= b->bcm_bmapno * SLASH_BMAP_SIZE;
-		if (mq->len == 0)
+		uint64_t sz;
+
+		sz = fcmh_2_fsz(wk->uswi_fcmh);
+		if (sz > b->bcm_bmapno * SLASH_BMAP_SIZE)
+			sz -= b->bcm_bmapno * SLASH_BMAP_SIZE;
+		if (sz == 0)
 			PFL_GOTOERR(fail, rc = ENODATA);
+		mq->len = sz;
 	}
 	mq->fg = *USWI_FG(wk);
 	mq->bmapno = b->bcm_bmapno;
