@@ -1233,7 +1233,8 @@ mds_send_batch_reclaim(uint64_t batchno)
 		if (iosinfo->si_flags & SIF_DISABLE_GC) {
 			RPMI_ULOCK(rpmi);
 			continue;
-		} if (iosinfo->si_batchno < batchno) {
+		}
+		if (iosinfo->si_batchno < batchno) {
 			RPMI_ULOCK(rpmi);
 			continue;
 		}
