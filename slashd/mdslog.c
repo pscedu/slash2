@@ -1648,7 +1648,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	for (i = 0; i < count; i++) {
 		res = libsl_id2res(reclaim_prog_buf[i].res_id);
 		if (!RES_ISFS(res)) {
-			psclog_warn("non-FS resource ID %u "
+			psclog_warnx("non-FS resource ID %u "
 			    "in reclaim file", res->res_id);
 			continue;
 		}
