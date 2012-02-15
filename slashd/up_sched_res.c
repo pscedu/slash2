@@ -361,8 +361,10 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	if (csvc)
 		sl_csvc_decref(csvc);
 	if (rc)
-		DEBUG_USWI(rc == SLERR_ION_OFFLINE ? PLL_INFO : PLL_WARN,
-		    wk, "replication arrangement failed rc=%d", rc);
+		DEBUG_USWI(rc == SLERR_ION_OFFLINE ?
+		    PLL_INFO : PLL_WARN, wk,
+		    "replication arrangement failed; src=%s dst=%s rc=%d",
+		    src_resm->resm_name, dst_resm->resm_name, rc);
 	return (0);
 }
 
