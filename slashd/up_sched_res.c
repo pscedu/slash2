@@ -776,6 +776,7 @@ slmupschedthr_main(struct psc_thread *thr)
 						if (bno)
 							bno--;
 						if (b->bcm_bmapno != bno) {
+							BMAPOD_MODIFY_DONE(b);
 							bmap_op_done(b);
 
 							if (f->fcmh_flags & FCMH_IN_PTRUNC)
@@ -798,16 +799,20 @@ slmupschedthr_main(struct psc_thread *thr)
 							    bno == 0)
 								break;
 
-							if (b)
+							if (b) {
+								BMAPOD_MODIFY_DONE(b);
 								bmap_op_done(b);
+							}
 							b = bn;
 							bn = NULL;
 
 							if (f->fcmh_flags & FCMH_IN_PTRUNC) {
+								BMAPOD_MODIFY_DONE(b);
 								bmap_op_done(b);
 								PFL_GOTOERR(try_ptrunc, 1);
 							}
 							if (uswi_gen != wk->uswi_gen) {
+								BMAPOD_MODIFY_DONE(b);
 								bmap_op_done(b);
 								PFL_GOTOERR(skipfile, 1);
 							}
@@ -828,12 +833,15 @@ slmupschedthr_main(struct psc_thread *thr)
 						    ngar == 0) {
 							if ((int)bno < bmap_i.ri_n)
 								bmap_i.ri_n = bno;
-							if (b)
+							if (b) {
+								BMAPOD_MODIFY_DONE(b);
 								bmap_op_done(b);
+							}
 							b = bn;
 							break;
 						}
-						if (b == NULL && val != BREPLST_GARBAGE) {
+						if (b == NULL &&
+						    val != BREPLST_GARBAGE) {
 							b = bn;
 							break;
 						}
@@ -842,10 +850,13 @@ slmupschedthr_main(struct psc_thread *thr)
 						if (val == BREPLST_GARBAGE ||
 						    val == BREPLST_INVALID) {
 							psc_assert(bno == 0);
-							if (b)
+							if (b) {
+								BMAPOD_MODIFY_DONE(b);
 								bmap_op_done(b);
+							}
 							b = bn;
 						} else {
+							BMAPOD_MODIFY_DONE(bn);
 							bmap_op_done(bn);
 						}
 
@@ -862,6 +873,7 @@ slmupschedthr_main(struct psc_thread *thr)
 							    b, off, dst_res,
 							    dst_resm_i.ri_rnd_idx))
 								PFL_GOTOERR(restart, 1);
+						BMAPOD_MODIFY_START(b);
 						break;
 					case BREPLST_REPL_SCHED:
 					case BREPLST_TRUNCPNDG_SCHED:
@@ -875,6 +887,7 @@ slmupschedthr_main(struct psc_thread *thr)
 						has_work = 1;
 						break;
 					}
+					BMAPOD_MODIFY_DONE(b);
 					bmap_op_done(b);
 					if (rc)
 						RESET_RND_ITER(&bmap_i);
