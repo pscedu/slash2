@@ -1,4 +1,4 @@
-.\" $Id: cursor_mgr.8 18492 2011-12-05 09:13:33Z yanovich $
+.\" $Id$
 .\" %PSC_START_COPYRIGHT%
 .\" -----------------------------------------------------------------------------
 .\" Copyright (c) 2011, Pittsburgh Supercomputing Center (PSC).
@@ -14,58 +14,62 @@
 .\" without express or implied warranty.
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
-.Dd February 08, 2012
+.Dd February 15, 2012
 .Dt RECLAIM 8
 .ds volume PSC \- SLASH2 Administrator's Manual
 .Os http://www.psc.edu/
 .Sh NAME
-.Nm reclaim 
-.Nd manipulate a
+.Nm reclaim
+.Nd display or manipulate a
 .Tn SLASH2
-metadata reclaim log or the 
-.Tn SLASH2
-reclaim progress log file.
+metadata reclaim log or progress log
 .Sh SYNOPSIS
 .Nm reclaim
-.Op Fl r Ar reclaim log
-.Op Fl p Ar reclaim prog log
 .Op Fl b Ar batchno
 .Op Fl i Ar id
+.Op Fl p Ar reclaim-prog-log
+.Op Fl r Ar reclaim-log
 .Sh DESCRIPTION
 The
 .Nm
-utility can be used for two purposes: (1) it dumps a
-.Tn SLASH2
-metadata reclaim log file; (2) it dumps and optionally updates the 
-.Tn SLASH2
-metadata reclaim progress log file.
-Only one log file can be given. The file must be accessible via the 
-system's native file system interface, meaning the
+utility can be used for two purposes regarding SLASH2 metadata log files:
+.Pp
+.Bl -enum -compact -offset 3n
+.It
+display the contents of a reclaim log file
+.It
+modify a reclaim progress log file
+.El
+.Pp
+The log file must be accessible via the system's native file system interface, meaning the
 .Tn MDS
 backing file system must be directly mounted via
 .Xr zfs-fuse 8 .
 .Pp
 The following options are available:
 .Bl -tag -width Ds
-.It Fl r Ar reclaim log
-Reclaim log file to dump.
-.It Fl p Ar reclaim progress log
-Reclaim progress log file to dump and optionally update if -i is also given.
-.It Fl i Ar ID of a IOS
-The ID of the IOS whose progress entry in the progress log file will be updated.
 .It Fl b Ar batchno
-The batch number will be updated to in the reclaim progress log file. Default is 0.
+The batch number will be updated to in the reclaim progress log file.
+Default is 0.
+.It Fl i Ar id
+The ID of the IOS whose progress entry in the progress log file will be updated.
+.It Fl p Ar reclaim-prog-log
+Reclaim progress log file to dump and optionally update if
+.It Fl r Ar reclaim-log
+Reclaim log file to dump.
+.Fl i
+is also specified.
 .Sh EXAMPLES
-Dump the contents of a reclaim log file
+Dump the contents of a reclaim log file:
 .Pp
 .D1 $ reclaim -r /slmdfs/slmd/op-reclaim.43
 .Pp
-Dump the contents of the reclaim progress log file
+Dump the contents of the reclaim progress log file:
 .Pp
 .D1 $ reclaim -p /slmdfs/slmd/op-reclaim-prog
 .Pp
 Dump the contents of the reclaim progress log file and update the batchno
-of the IOS of a given ID.
+of the IOS with ID 802345:
 .Pp
 .D1 $ reclaim -p /slmdfs/slmd/op-reclaim-prog -i 802345 -b 3478
 .Sh SEE ALSO

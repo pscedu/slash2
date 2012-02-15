@@ -1,9 +1,10 @@
-# $Id: Makefile 18220 2011-10-21 18:59:27Z yanovich $
+# $Id$
 
 ROOTDIR=../../..
 include ${ROOTDIR}/Makefile.path
 
 PROG=		reclaim
+MAN=		reclaim.8
 SRCS+=		reclaim.c
 MODULES+=	pfl
 
