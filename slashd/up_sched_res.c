@@ -342,6 +342,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 		pscrpc_req_finished(rq);
 		sl_csvc_decref(csvc);
 		uswi_unref(wk);
+		bmap_op_done(b);
 		return (1);
 	}
 
@@ -350,7 +351,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 	mds_repl_bmap_apply(b, tract, NULL, off);
 	if (undo_write)
-		mds_bmap_write_repls_rel(b);
+		mds_bmap_write_logrepls(b);
 
  fail:
 	if (amt)
@@ -431,6 +432,7 @@ slmupschedthr_tryptrunc(struct up_sched_work_item *wk,
 	if (rc == 0) {
 		uswi_unref(wk);
 		sl_csvc_decref(csvc);
+		bmap_op_done(b);
 		return (1);
 	}
 
@@ -439,7 +441,7 @@ slmupschedthr_tryptrunc(struct up_sched_work_item *wk,
 	tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_TRUNCPNDG;
 	mds_repl_bmap_apply(b, tract, NULL, off);
 	if (undo_write)
-		mds_bmap_write_repls_rel(b);
+		mds_bmap_write_logrepls(b);
 
  fail:
 	if (csvc)
@@ -525,6 +527,7 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	if (rc == 0) {
 		uswi_unref(wk);
 		sl_csvc_decref(csvc);
+		bmap_op_done(b);
 		return (1);
 	}
 
@@ -534,7 +537,7 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
 	mds_repl_bmap_apply(b, tract, NULL, off);
 	if (undo_write)
-		mds_bmap_write_repls_rel(b);
+		mds_bmap_write_logrepls(b);
 
  fail:
 	if (csvc)
