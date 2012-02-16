@@ -423,6 +423,10 @@ slmctlrep_getreplpairs(int fd, struct psc_ctlmsghdr *mh, void *m)
 	CONF_LOCK();
 	spinlock(&repl_busytable_lock);
 	CONF_FOREACH_RESM(s, r, i, resm, j) {
+		if (!RES_ISFS(r))
+			continue;
+
+		/* stats between members within this resource */
 		j0 = j + 1;
 		RES_FOREACH_MEMB_CONT(r, resm0, j0) {
 			rc = slmctlrep_replpair_send(fd, mh, scrp, resm,
@@ -430,23 +434,33 @@ slmctlrep_getreplpairs(int fd, struct psc_ctlmsghdr *mh, void *m)
 			if (!rc)
 				goto done;
 		}
+
+		/* stats between resources within this site */
 		i0 = i + 1;
-		SITE_FOREACH_RES_CONT(s, r0, i0)
+		SITE_FOREACH_RES_CONT(s, r0, i0) {
+			if (!RES_ISFS(r0))
+				continue;
 			RES_FOREACH_MEMB(r0, resm0, j0) {
 				rc = slmctlrep_replpair_send(fd, mh,
 				    scrp, resm, resm0);
 				if (!rc)
 					goto done;
 			}
+		}
+
+		/* stats between resources of other sites */
 		s0 = pll_next_item(&globalConfig.gconf_sites, s);
 		CONF_FOREACH_SITE_CONT(s0)
-			SITE_FOREACH_RES(s0, r0, i0)
+			SITE_FOREACH_RES(s0, r0, i0) {
+				if (!RES_ISFS(r0))
+					continue;
 				RES_FOREACH_MEMB(r0, resm0, j0) {
 					rc = slmctlrep_replpair_send(fd,
 					    mh, scrp, resm, resm0);
 					if (!rc)
 						goto done;
 				}
+			}
 	}
  done:
 	freelock(&repl_busytable_lock);
