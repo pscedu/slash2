@@ -65,6 +65,9 @@ enum {
 	SLI_REPLWKOP_REPL,
 };
 
+#define DEBUG_SRW(srw, level, msg)					\
+	psclog((level), "srw@%p " msg, (srw))
+
 struct sli_repl_workrq *
 	sli_repl_findwq(const struct slash_fidgen *, sl_bmapno_t);
 
