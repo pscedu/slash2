@@ -51,7 +51,7 @@ psc_atomic64_t		 sli_rpc_repl_read_cb = PSC_ATOMIC64_INIT(0);
 psc_atomic64_t		 sli_rpc_repl_read_cb_aio = PSC_ATOMIC64_INIT(0);
 
 /**
- * sli_rii_replread_release_sliver: we call this function in three
+ * sli_rii_replread_release_sliver: We call this function in three
  * cases:
  *  (1) When we fail to issue a request for a replication of a sliver;
  *  (2) When the request for a replication of a sliver has completed;
@@ -266,8 +266,8 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 		goto out;
 	}
 
-	mp->rc = rsx_bulkserver(rq, aio ? BULK_GET_SINK : BULK_PUT_SOURCE,
-		SRII_BULK_PORTAL, &iov, 1);
+	mp->rc = rsx_bulkserver(rq, aio ? BULK_GET_SINK :
+	    BULK_PUT_SOURCE, SRII_BULK_PORTAL, &iov, 1);
 
 	if (aio)
 		sli_rii_replread_release_sliver(w, slvridx, mp->rc);
@@ -312,7 +312,8 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 		rc = EBADMSG;
 
  out:
-	for (slvridx = 0; slvridx < (int)nitems(w->srw_slvr_refs); slvridx++)
+	for (slvridx = 0; slvridx < (int)nitems(w->srw_slvr_refs);
+	    slvridx++)
 		if (w->srw_slvr_refs[slvridx] == s)
 			break;
 	psc_assert(slvridx < (int)nitems(w->srw_slvr_refs));
@@ -377,6 +378,7 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 	psc_assert(pscrpc_nbreqset_add(&sli_replwk_nbset, rq) == 0);
+	psc_atomic32_inc(&w->srw_refcnt);
 
  out:
 	if (rc)

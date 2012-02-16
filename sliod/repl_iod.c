@@ -62,7 +62,6 @@ sli_repl_findwq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno)
 		if (SAMEFG(&w->srw_fg, fgp) && w->srw_bmapno == bmapno)
 			break;
 	PLL_ULOCK(&sli_replwkq_active);
-
 	return (w);
 }
 
@@ -123,7 +122,6 @@ sli_repl_addwk(int op, struct sl_resource *res,
 					w->srw_bcm->bcm_crcstates[i] |=
 					    BMAP_SLVR_WANTREPL;
 					w->srw_nslvr_tot++;
-					psc_atomic32_inc(&w->srw_refcnt);
 				}
 		BMAP_ULOCK(w->srw_bcm);
 	}
