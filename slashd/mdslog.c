@@ -1381,6 +1381,13 @@ mds_send_batch_reclaim(uint64_t batchno)
 		mds_record_reclaim_prog();
 
 	/*
+ 	 * XXX if the log file is never filled to its capacity for some reason, 
+ 	 * then we are stuck! Perhaps We should check for the existence of the 
+ 	 * next log file and skip it.  But we must make sure all IOS have seen
+ 	 * this log file.
+ 	 */
+
+	/*
 	 * If this log file is full and all I/O servers have applied its
 	 * contents, remove an old log file (keep the previous one so
 	 * that we can figure out the last distill xid upon recovery).
