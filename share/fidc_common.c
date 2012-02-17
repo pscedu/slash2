@@ -376,8 +376,8 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	psc_hashbkt_unlock(b);
 
 	/*
-	 * Call service specific constructor slc_fcmh_ctor(),
-	 * slm_fcmh_ctor(), and sli_fcmh_ctor() to initialize
+	 * Call service specific constructor slm_fcmh_ctor(),
+	 * sli_fcmh_ctor(), and slc_fcmh_ctor() to initialize
 	 * their private fields that follow the main fcmh
 	 * structure.  It is safe to not lock because we don't
 	 * touch the state, and other thread should be waiting
