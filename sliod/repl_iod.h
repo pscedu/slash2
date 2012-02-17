@@ -62,11 +62,12 @@ struct sli_repl_workrq {
 
 enum {
 	SLI_REPLWKOP_PTRUNC,
-	SLI_REPLWKOP_REPL,
+	SLI_REPLWKOP_REPL
 };
 
 #define DEBUG_SRW(srw, level, msg)					\
-	psclog((level), "srw@%p " msg, (srw))
+	psclog((level), "srw@%p refcnt=%d " msg,			\
+	    (srw), psc_atomic32_read(&(srw)->srw_refcnt))
 
 struct sli_repl_workrq *
 	sli_repl_findwq(const struct slash_fidgen *, sl_bmapno_t);
