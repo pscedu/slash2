@@ -367,7 +367,8 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	iov.iov_base = s->slvr_slab->slb_base;
 	iov.iov_len = mq->len;
 
-	rc = rsx_bulkclient(rq, BULK_PUT_SINK, SRII_BULK_PORTAL, &iov, 1);
+	rc = rsx_bulkclient(rq, BULK_PUT_SINK, SRII_BULK_PORTAL, &iov,
+	    1);
 	if (rc)
 		goto out;
 
@@ -377,8 +378,8 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_SLVR] = s;
 
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
-	psc_assert(pscrpc_nbreqset_add(&sli_replwk_nbset, rq) == 0);
 	psc_atomic32_inc(&w->srw_refcnt);
+	psc_assert(pscrpc_nbreqset_add(&sli_replwk_nbset, rq) == 0);
 
  out:
 	if (rc)
