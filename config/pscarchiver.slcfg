@@ -141,6 +141,28 @@ site @PSCARCH {
 	resource sense7s5 { desc = "disk-based archiver unit 7 sliod 5"; type = standalone_fs; id = 0x1705; nids = sense7-sliod5; selftest = "/usr/local/psc/sbin/st /arc_sliod/5"; fsroot = /arc_sliod/5; }
 	resource sense7s6 { desc = "disk-based archiver unit 7 sliod 6"; type = standalone_fs; id = 0x1706; nids = sense7-sliod6; selftest = "/usr/local/psc/sbin/st /arc_sliod/6"; fsroot = /arc_sliod/6; }
 
+	resource sense6 {
+		desc	= "sense6 sliods";
+		type	= cluster_noshare_lfs;
+		id	= 0x1ff6;
+
+		ios	= sense6s0@PSCARCH, sense6s1@PSCARCH,
+			  sense6s2@PSCARCH, sense6s3@PSCARCH,
+			  sense6s4@PSCARCH, sense6s5@PSCARCH,
+			  sense6s6@PSCARCH, sense6s7@PSCARCH;
+	}
+
+	resource sense7 {
+		desc	= "sense7 sliods";
+		type	= cluster_noshare_lfs;
+		id	= 0x1ff7;
+
+		ios	= sense7s0@PSCARCH, sense7s1@PSCARCH,
+			  sense7s2@PSCARCH, sense7s3@PSCARCH,
+			  sense7s4@PSCARCH, sense7s5@PSCARCH,
+			  sense7s6@PSCARCH;
+	}
+
 	resource sense345 {
 		desc	= "sense3, 4 and 5 sliods";
 		type	= cluster_noshare_lfs;
