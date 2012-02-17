@@ -156,6 +156,7 @@ sli_replwkrq_decref(struct sli_repl_workrq *w, int rc)
 		w->srw_status = rc;
 
 	if (!psc_atomic32_dec_and_test0(&w->srw_refcnt)) {
+		DEBUG_SRW(w, PLL_DEBUG, "");
 		freelock(&w->srw_lock);
 		return;
 	}
@@ -175,20 +176,18 @@ sli_replwkrq_decref(struct sli_repl_workrq *w, int rc)
 void
 slireplpndthr_main(__unusedx struct psc_thread *thr)
 {
+	struct sli_repl_workrq *w, *wrap;
 	struct slashrpc_cservice *csvc;
-	struct sli_repl_workrq *w;
 	struct sl_resm *src_resm;
 	int rc, slvridx, slvrno;
 
+	wrap = NULL;
 	while (pscthr_run()) {
 		slvrno = 0;
 		w = lc_getwait(&sli_replwkq_pending);
- next:
 		spinlock(&w->srw_lock);
-		if (w->srw_status) {
-			freelock(&w->srw_lock);
-			goto done;
-		}
+		if (w->srw_status)
+			goto release;
 
 		if (w->srw_op == SLI_REPLWKOP_PTRUNC) {
 			/*
@@ -198,8 +197,7 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 			 * XXX if there is srw_offset, we must send a
 			 * CRC update for the sliver.
 			 */
-			freelock(&w->srw_lock);
-			goto done;
+			goto release;
 		}
 
 		/* find a sliver to transmit */
@@ -213,9 +211,8 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 
 		if (slvrno == SLASH_SLVRS_PER_BMAP) {
 			BMAP_ULOCK(w->srw_bcm);
-			freelock(&w->srw_lock);
 			/* no work to do; we are done with this bmap */
-			goto done;
+			goto release;
 		}
 
 		/* find a pointer slot we can use to transmit the sliver */
@@ -227,9 +224,20 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 		if (slvridx == REPL_MAX_INFLIGHT_SLVRS) {
 			BMAP_ULOCK(w->srw_bcm);
 			freelock(&w->srw_lock);
-			sched_yield();
-			goto next;
+			LIST_CACHE_LOCK(&sli_replwkq_pending);
+			lc_add(&sli_replwkq_pending, w);
+			if (w == wrap)
+				psc_waitq_waitrel_us(
+				    &sli_replwkq_pending.plc_wq_empty,
+				    &sli_replwkq_pending.plc_lock, 10);
+			else {
+				if (wrap == NULL)
+					wrap = w;
+				LIST_CACHE_ULOCK(&sli_replwkq_pending);
+			}
+			continue;
 		}
+		wrap = NULL;
 
 		w->srw_bcm->bcm_crcstates[slvrno] &= ~BMAP_SLVR_WANTREPL;
 		BMAP_ULOCK(w->srw_bcm);
@@ -258,12 +266,11 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 			BMAP_ULOCK(w->srw_bcm);
 			freelock(&w->srw_lock);
 		}
-		sched_yield();
-		goto next;
+		lc_add(&sli_replwkq_pending, w);
+		continue;
 
- done:
+ release:
 		sli_replwkrq_decref(w, 0);
-		sched_yield();
 	}
 }
 
