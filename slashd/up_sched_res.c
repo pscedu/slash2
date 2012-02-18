@@ -1189,6 +1189,10 @@ uswi_findoradd(const struct slash_fidgen *fgp,
 	rc = mds_repl_loadino(fgp, &newrq->uswi_fcmh);
 	if (rc)
 		goto out;
+	if (fcmh_isdir(newrq->uswi_fcmh)) {
+		rc = EISDIR;
+		goto out;
+	}
 
 	rc = snprintf(fn, sizeof(fn), SLPRI_FID, fgp->fg_fid);
 	if (rc == -1) {
