@@ -105,7 +105,7 @@ slm_replpair_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 
 	psc_fmt_human(ubuf, scrp->scrp_used);
 	psc_fmt_human(abuf, scrp->scrp_avail);
-	printf("%-32s %-28s  %8s/s %8s/s\n", addr[0], addr[1], ubuf, abuf);
+	printf("%-28s %-28s  %8s/s %8s/s\n", addr[0], addr[1], ubuf, abuf);
 }
 
 void
