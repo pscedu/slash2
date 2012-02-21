@@ -90,7 +90,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (mq->size <= 0 || mq->size > LNET_MTU) {
 		psclog_errorx("invalid size %u, fid:"SLPRI_FG,
 		    mq->size, SLPRI_FG_ARGS(fgp));
-		mp->rc = EINVAL;
+		mp->rc = SLERR_INVAL;
 		return (mp->rc);
 	}
 
@@ -203,7 +203,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 *   once i > 0, roff is always 0.
 	 */
 	for (i = 0, roff[i] = (mq->offset - (slvrno * SLASH_SLVR_SIZE)),
-		     tsize=mq->size;
+		     tsize = mq->size;
 	     i < nslvrs; i++, roff[i] = 0) {
 
 		slvr_ref[i] = slvr_lookup(slvrno + i, bmap_2_biodi(bmap), rw);
@@ -224,6 +224,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		 */
 		iovs[i].iov_base = slvr_ref[i]->slvr_slab->slb_base + roff[i];
 		tsize -= iovs[i].iov_len = len[i];
+
+		/* Ensure that I/O map doesn't extend past the end of the buf.
+		 */
+		psc_assert((roff[i] + len[i]) <= SLASH_SLVR_SIZE);
 
 		/* Avoid more complicated errors within lnet by ensuring
 		 *   that len is non-zero.
@@ -370,7 +374,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	if (mq->nbmaps > MAX_BMAP_RELEASE) {
-		mp->rc = E2BIG;
+		mp->rc = SLERR_2BIG;
 		goto out;
 	}
 
@@ -505,6 +509,14 @@ iexpc_allocpri(struct pscrpc_export *exp)
 	INIT_SPINLOCK(&icccp->icccp_lock);
 	psc_waitq_init(&icccp->icccp_waitq);
 	sli_getclcsvc(exp);
+}
+
+void
+iexpc_destroy(void *p) 
+{
+	struct sli_exp_cli *iexpc = p;
+
+	PSCFREE(iexpc->iexpc_cccp);       
 }
 
 struct sl_expcli_ops sl_expcli_ops = {
