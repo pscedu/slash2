@@ -1235,6 +1235,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 		psclog_warnx("Reclaim log corrupted! batch = %"PRIx64", size = %"PRId64,
 			batchno, sstb.sst_size);
 		mds_skip_reclaim_batch(batchno);
+		PSCFREE(reclaimbuf);
 		return (1);
 	}
 	count = (int)size / entrysize;
