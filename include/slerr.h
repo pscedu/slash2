@@ -54,5 +54,7 @@ char *slstrerror(int);
 #define SLERR_BMAP_LEASEEXT_FAILED	(_SLERR_START + 28)
 #define SLERR_BMAP_LEASEREASSIGN_FAILED	(_SLERR_START + 29)
 #define SLERR_RES_BADTYPE		(_SLERR_START + 30)
-
+#define SLERR_ALREADY                   (_SLERR_START + 31)
+#define SLERR_INVAL                     (_SLERR_START + 32)
+#define SLERR_2BIG                      (_SLERR_START + 33)
 #endif /* _SLERR_H_ */
