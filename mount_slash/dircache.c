@@ -176,15 +176,6 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 			/* Map the dirent from the desc's offset. */
 			dirent = PSC_AGP(e->de_base, d->dd_offset);
 
-			psclog_dbg("fid="SLPRI_FID" off=%"PRId64" "
-			    "nlen=%u type=%#o "
-			    "dname=%.*s lookupname=%s "
-			    "off=%d d=%p",
-			    dirent->pfd_ino, dirent->pfd_off,
-			    dirent->pfd_namelen, dirent->pfd_type,
-			    dirent->pfd_namelen, dirent->pfd_name, name,
-			    d->dd_offset, d);
-
 			if (d->dd_hash == desc.dd_hash &&
 			    d->dd_namelen == desc.dd_namelen &&
 			    strncmp(d->dd_name, desc.dd_name,
@@ -201,8 +192,18 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 					d->dd_flags |= DC_STALE;
 
 				found = 1;
-				break;
 			}
+			
+			psclog_dbg("fid="SLPRI_FID" off=%"PRId64" nlen=%u "
+			   "type=%#o dname=%.*s lookupname=%s off=%d d=%p "
+			   "found=%d",
+			   dirent->pfd_ino, dirent->pfd_off,
+			   dirent->pfd_namelen, dirent->pfd_type,
+			   dirent->pfd_namelen, dirent->pfd_name, name,
+			   d->dd_offset, d, found);
+
+			if (found)
+				break;
 		}
 
 		if (!e->de_remlookup && (e->de_flags &
@@ -332,7 +333,8 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 		    dirent->pfd_namelen, dirent->pfd_name, dirent, off);
 
 		c->dd_namelen	= dirent->pfd_namelen;
-		c->dd_hash	= psc_strn_hashify(dirent->pfd_name, dirent->pfd_namelen);
+		c->dd_hash	= psc_strn_hashify(dirent->pfd_name, 
+					   dirent->pfd_namelen);
 		c->dd_flags	= 0;
 		c->dd_offset	= off;
 		c->dd_name	= dirent->pfd_name;
