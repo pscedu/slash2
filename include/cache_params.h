@@ -22,7 +22,7 @@
 
 /* Begin hand computed */
 
-#define FIDC_MDS_DEFSZ		(32 * 1024)
+#define FIDC_MDS_DEFSZ		(128 * 1024)
 #define FIDC_CLI_DEFSZ		1024
 #define FIDC_ION_DEFSZ		(8 * 1024)
 
