@@ -92,7 +92,7 @@ int
 _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
     int add, int log)
 {
-	int locked, rc = -ENOENT;
+	int locked, rc = -ENOENT, inox_rc = 0;
 	struct sl_resource *res;
 	sl_replica_t *repl;
 	uint32_t j, k;
@@ -109,10 +109,8 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
 			 * The first few replicas are in the inode
 			 * itself, the rest are in the extras block.
 			 */
-			if ((rc = mds_inox_ensure_loaded(ih)))
+			if ((inox_rc = mds_inox_ensure_loaded(ih)))
 				goto out; 
-			else
-				rc = -ENOENT;
 
 			repl = ih->inoh_extras->inox_repls;
 			k = 0;
@@ -165,7 +163,7 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
 	}
  out:
 	INOH_URLOCK(ih, locked);
-	return (rc);
+	return (inox_rc ? inox_rc : rc);
 }
 
 #define mds_repl_iosv_lookup(ih, ios, iosidx, nios)			\
