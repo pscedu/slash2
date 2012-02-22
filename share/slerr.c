@@ -60,6 +60,7 @@ char *slash_errstrs[] = {
 /* 32 */ "Invalid argument",
 /* 33 */ "Argument list too long",
 /* 34 */ "CRC absent",
+/* 35 */ "Bad message",
 	NULL
 };
 
