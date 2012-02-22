@@ -99,6 +99,9 @@ slmrmcthr_replst_slave_waitrep(struct slashrpc_cservice *csvc,
 		if (rc == 0)
 			rc = mp->rc;
 	}
+
+	memset(srcm->srcm_page, 0, nb);
+
 	pscrpc_req_finished(rq);
 	return (rc);
 }
@@ -231,7 +234,6 @@ slmrcmthr_main(struct psc_thread *thr)
 	srcm = slmrcmthr(thr);
 	while (pscthr_run()) {
 		rsw = lc_getwait(&slm_replst_workq);
-
 		srcm->srcm_page_bitpos = SRM_REPLST_PAGESIZ * NBBY;
 
 		if (rsw->rsw_fg.fg_fid == FID_ANY) {
