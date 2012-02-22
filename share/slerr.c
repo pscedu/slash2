@@ -55,7 +55,11 @@ char *slash_errstrs[] = {
 /* 27 */ "Import additional replica registration failed because source and target differ",
 /* 28 */ "Bmap lease extension failed",
 /* 29 */ "Bmap lease reassignment failed",
-/* 30 */ "Resource is of wrong type",
+/* 30 */ "Peer resource is of wrong type",
+/* 31 */ "Activity already in progress",
+/* 32 */ "Invalid argument",
+/* 33 */ "Argument list too long",
+/* 34 */ "CRC absent",
 	NULL
 };
 
