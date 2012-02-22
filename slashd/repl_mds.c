@@ -110,7 +110,9 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
 			 * itself, the rest are in the extras block.
 			 */
 			if ((rc = mds_inox_ensure_loaded(ih)))
-				goto out;
+				goto out; 
+			else
+				rc = -ENOENT;
 
 			repl = ih->inoh_extras->inox_repls;
 			k = 0;
