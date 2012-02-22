@@ -72,8 +72,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		slvrsiz = w->srw_len % SLASH_SLVR_SIZE;
 
 	if (rc == 0) {
-		if (!(slvr_2_crcbits(s) & BMAP_SLVR_CRCABSENT))
-			rc = slvr_do_crc(s);
+		rc = slvr_do_crc(s);
 
 		/* XXX check this return code */
 //		if (!rc)
@@ -83,6 +82,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 			 */
 			rc = slvr_fsbytes_wio(s, slvrsiz, 0);
 	}
+
 	if (rc) {
 		SLVR_LOCK(s);
 		if (rc != -SLERR_AIOWAIT) {
@@ -106,7 +106,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		SLVR_ULOCK(s);
 	}
 
-	DEBUG_SLVR(PLL_INFO, s, "replread %s rc=%d", aio ?
+	DEBUG_SLVR(rc ? PLL_ERROR : PLL_INFO, s, "replread %s rc=%d", aio ?
 	    "aiowait" : "complete", rc);
 
 	if (!aio) {
@@ -153,15 +153,15 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fg.fg_fid == FID_ANY) {
-		mp->rc = EINVAL;
+		mp->rc = SLERR_INVAL;
 		return (mp->rc);
 	}
 	if (mq->len <= 0 || mq->len > SLASH_SLVR_SIZE) {
-		mp->rc = EINVAL;
+		mp->rc = SLERR_INVAL;
 		return (mp->rc);
 	}
 	if (mq->slvrno < 0 || mq->slvrno >= SLASH_SLVRS_PER_BMAP) {
-		mp->rc = EINVAL;
+		mp->rc = SLERR_INVAL;
 		return (mp->rc);
 	}
 
@@ -181,13 +181,6 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 
 	if (aio) {
 		SLVR_LOCK(s);
-		/* Aio bit should only be set for slivers which are
-		 *    replica destination buffers.
-		 */
-		if (s->slvr_flags & SLVR_REPLSRC) {
-			DEBUG_SLVR(PLL_ERROR, s, "SLVR_REPLSRC set ?");
-			abort();
-		}
 		/* Block until the callback handler has finished.
 		 */
 		SLVR_WAIT(s, (s->slvr_flags & SLVR_REPLWIRE));
@@ -215,24 +208,10 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 			   "failed to find slvr in wq=%p", w);
 			goto out;
 		}
-
-	} else {
-		SLVR_LOCK(s);
-		if (s->slvr_flags & SLVR_REPLSRC) {
-			DEBUG_SLVR(PLL_WARN, s, "SLVR_REPLSRC already set");
-			s->slvr_pndgreads--;
-
-			psc_assert(s->slvr_pndgreads > 0);
-			SLVR_ULOCK(s);
-
-			mp->rc = EALREADY;
-			goto out;
-		} else
-			SLVR_ULOCK(s);
 	}
 
 	slvr_slab_prep(s, aio ? SL_WRITE : SL_READ);
-	slvr_repl_prep(s, aio ? SLVR_REPLDST : SLVR_REPLSRC);
+	slvr_repl_prep(s, aio ? SLVR_REPLDST : 0);
 	rv = slvr_io_prep(s, 0, mq->len, aio ? SL_WRITE : SL_READ, &aiocbr);
 
 	iov.iov_base = s->slvr_slab->slb_base;

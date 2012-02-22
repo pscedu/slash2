@@ -75,7 +75,6 @@ struct slvr_ref {
 #define	SLVR_CRCING		(1 <<  9)	/* unfinalized crc accumulator */
 #define	SLVR_FREEING		(1 << 10)	/* sliver is being reaped */
 #define	SLVR_SLBFREEING		(1 << 11)	/* slvr's slab is being reaped */
-#define	SLVR_REPLSRC		(1 << 12)	/* slvr is replication source */
 #define	SLVR_REPLDST		(1 << 13)	/* slvr is replication destination */
 #define SLVR_REPLFAIL		(1 << 14)	/* replication op failed */
 #define SLVR_AIOWAIT		(1 << 15)	/* early return for AIO (for both local and remote) */
@@ -131,7 +130,7 @@ struct slvr_ref {
 #define slvr_2_crc(s)							\
 	slvr_2_bmap_ondisk(s)->bod_crcs[(s)->slvr_num]
 
-#define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
+#define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
 #define DEBUG_SLVR_FLAGS(s)						\
 	(s)->slvr_flags & SLVR_NEW		? "n" : "-",		\
 	(s)->slvr_flags & SLVR_SPLAYTREE	? "t" : "-",		\
@@ -145,7 +144,6 @@ struct slvr_ref {
 	(s)->slvr_flags & SLVR_CRCING		? "c" : "-",		\
 	(s)->slvr_flags & SLVR_FREEING		? "F" : "-",		\
 	(s)->slvr_flags & SLVR_SLBFREEING	? "b" : "-",		\
-	(s)->slvr_flags & SLVR_REPLSRC		? "S" : "-",		\
 	(s)->slvr_flags & SLVR_REPLDST		? "T" : "-",		\
 	(s)->slvr_flags & SLVR_REPLFAIL		? "x" : "-",		\
 	(s)->slvr_flags & SLVR_REPLWIRE		? "w" : "-",		\
@@ -155,7 +153,7 @@ struct slvr_ref {
 #define DEBUG_SLVR(level, s, fmt, ...)					\
 	psclogs((level), SLISS_SLVR, "slvr@%p num=%hu pw=%hu "		\
 		"pr=%hu cw=%hu ncrc=%u dc=%d ts="PSCPRI_TIMESPEC	\
-		" pri@%p slab@%p bmap@%p fid:"SLPRI_FID "iocb@%p flgs:"	\
+		" pri@%p slab@%p bmap@%p fid:"SLPRI_FID " iocb@%p flgs:" \
 		SLVR_FLAGS_FMT" :: "fmt,				\
 		(s), (s)->slvr_num, (s)->slvr_pndgwrts,			\
 		(s)->slvr_pndgreads, (s)->slvr_compwrts,		\

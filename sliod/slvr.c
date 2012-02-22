@@ -92,17 +92,22 @@ slvr_do_crc(struct slvr_ref *s)
 {
 	uint64_t crc;
 
-	/*
-	 * SLVR_FAULTING implies that we're bringing this data buffer
-	 *   in from the filesystem.
-	 *
-	 * SLVR_CRCDIRTY means that DATARDY has been set and that
-	 *   a write dirtied the buffer and invalidated the CRC.
-	 */
+	SLVR_LOCK(s);
+	if (slvr_2_crcbits(s) & BMAP_SLVR_CRCABSENT) {
+		SLVR_ULOCK(s);
+		return SLERR_CRCABSENT;
+	}
+
 	psc_assert(s->slvr_flags & SLVR_PINNED &&
 	   (s->slvr_flags & SLVR_FAULTING || s->slvr_flags & SLVR_CRCDIRTY));
 
+	SLVR_ULOCK(s);
+
 	if (s->slvr_flags & SLVR_FAULTING) {
+		/*
+		 * SLVR_FAULTING implies that we're bringing this data buffer
+		 *   in from the filesystem.
+		 */
 		if (!s->slvr_pndgreads && !(s->slvr_flags & SLVR_REPLDST)) {
 			/*
 			 * Small RMW workaround.
@@ -151,6 +156,9 @@ slvr_do_crc(struct slvr_ref *s)
 			return (0);
 
 	} else if (s->slvr_flags & SLVR_CRCDIRTY) {
+		/* SLVR_CRCDIRTY means that DATARDY has been set and that
+		 *   a write dirtied the buffer and invalidated the CRC.
+		 */
 		SLVR_LOCK(s);
 		DEBUG_SLVR(PLL_NOTIFY, s, "crc");
 		PSC_CRC64_INIT(&s->slvr_crc);
@@ -370,7 +378,6 @@ slvr_aio_tryreply(struct sli_aiocb_reply *a)
 
 		if (a->aiocbr_flags & SLI_AIOCBSF_REPL) {
 			psc_assert(a->aiocbr_nslvrs == 1);
-			psc_assert(s->slvr_flags & SLVR_REPLSRC);
 			replsrc = 1;
 		}
 
@@ -611,11 +618,13 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 	uint64_t *v8;
 	ssize_t	rc;
 
+	psc_assert(rw == SL_READ || rw == SL_WRITE);
+
 	nblks = (size + SLASH_SLVR_BLKSZ - 1) / SLASH_SLVR_BLKSZ;
+	psc_assert(sblk + nblks <= SLASH_BLKS_PER_SLVR);
 
 	SLVR_LOCK(s);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
-	psc_assert(rw == SL_READ || rw == SL_WRITE);
 
 	if (rw == SL_READ) {
 		psc_assert(s->slvr_flags & SLVR_FAULTING);
@@ -763,34 +772,34 @@ slvr_fsbytes_wio(struct slvr_ref *s, uint32_t size, uint32_t sblk)
 }
 
 void
-slvr_repl_prep(struct slvr_ref *s, int flag)
+slvr_repl_prep(struct slvr_ref *s, int src_or_dst)
 {
-	psc_assert(((flag & SLVR_REPLSRC) && !(flag & SLVR_REPLDST)) ||
-		   ((flag & SLVR_REPLDST) && !(flag & SLVR_REPLSRC)));
-
 	SLVR_LOCK(s);
 
-	if (flag & SLVR_REPLSRC)
-		psc_assert(s->slvr_pndgreads > 0);
-	else {
+	if (src_or_dst & SLVR_REPLDST) {
 		psc_assert(s->slvr_pndgwrts > 0);
-		/* The slvr is about to be overwritten by this replication
-		 *   request.   For sanity's sake, wait for pending io
-		 *   competion and set 'faulting' before proceeding.
-		 */
+
 		if (s->slvr_flags & SLVR_DATARDY) {
+			/* The slvr is about to be overwritten by this 
+			 *    replication request. For sanity's sake, wait 
+			 *    for pending io competion and set 'faulting' 
+			 *    before proceeding.
+			 */
+			DEBUG_SLVR(PLL_WARN, s, 
+				   "mds requested repldst of active slvr");
 			SLVR_WAIT(s, ((s->slvr_pndgwrts > 1) ||
 				      s->slvr_pndgreads));
 			s->slvr_flags &= ~SLVR_DATARDY;
 		}
-		s->slvr_flags |= SLVR_FAULTING;
-		DEBUG_SLVR(PLL_INFO, s, "slvr dest ready");
+		
+		s->slvr_flags |= (SLVR_FAULTING | src_or_dst);
+		
+	} else {
+		psc_assert(s->slvr_pndgreads > 0);
 	}
-
-	s->slvr_flags |= flag;
-
-	DEBUG_SLVR(PLL_INFO, s, "replica_%s", (flag & SLVR_REPLSRC) ?
-		   "src" : "dst");
+	
+	DEBUG_SLVR(PLL_INFO, s, "replica_%s", 
+	   (src_or_dst & SLVR_REPLDST) ? "dst" : "src");
 
 	SLVR_ULOCK(s);
 }
@@ -1060,11 +1069,6 @@ slvr_rio_done(struct slvr_ref *s)
 	} else
 		DEBUG_SLVR(PLL_INFO, s, "ops still pending or dirty");
 
-	if (s->slvr_flags & SLVR_REPLSRC) {
-		psc_assert((s->slvr_flags & SLVR_REPLDST) == 0);
-		s->slvr_flags &= ~SLVR_REPLSRC;
-	}
-
 	SLVR_ULOCK(s);
 }
 
@@ -1139,7 +1143,6 @@ slvr_wio_done(struct slvr_ref *s)
 		psc_assert(s->slvr_pndgwrts == 1);
 		psc_assert(s->slvr_flags & SLVR_PINNED);
 		psc_assert(s->slvr_flags & SLVR_FAULTING);
-		psc_assert(!(s->slvr_flags & SLVR_REPLSRC));
 		psc_assert(!(s->slvr_flags & SLVR_CRCDIRTY));
 		s->slvr_pndgwrts--;
 		s->slvr_flags &= ~(SLVR_PINNED|SLVR_AIOWAIT|SLVR_FAULTING|SLVR_REPLDST);
@@ -1465,7 +1468,6 @@ dump_sliver_flags(int fl)
 	PFL_PRFLAG(SLVR_CRCING, &fl, &seq);
 	PFL_PRFLAG(SLVR_FREEING, &fl, &seq);
 	PFL_PRFLAG(SLVR_SLBFREEING, &fl, &seq);
-	PFL_PRFLAG(SLVR_REPLSRC, &fl, &seq);
 	PFL_PRFLAG(SLVR_REPLDST, &fl, &seq);
 	PFL_PRFLAG(SLVR_REPLFAIL, &fl, &seq);
 	PFL_PRFLAG(SLVR_AIOWAIT, &fl, &seq);
