@@ -110,7 +110,7 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
 			 * itself, the rest are in the extras block.
 			 */
 			if ((inox_rc = mds_inox_ensure_loaded(ih)))
-				goto out; 
+				goto out;
 
 			repl = ih->inoh_extras->inox_repls;
 			k = 0;
@@ -355,10 +355,10 @@ mds_repl_inv_requeue(struct bmapc_memb *b, int idx, int val, void *arg)
  *	table that should be marked "valid".
  *
  * Note: All callers must journal log these bmap replica changes
- *	themselves. In addition, they must log any changes to the
- *	inode _before_ the bmap changes.   Otherwise, we could end
- *	up actually having bmap replicas that are not recognized by
- *	the information	stored in the inode during log replay.
+ *	themselves. In addition, they must log any changes to the inode
+ *	_before_ the bmap changes.  Otherwise, we could end up actually
+ *	having bmap replicas that are not recognized by the information
+ *	stored in the inode during log replay.
  */
 int
 mds_repl_inv_except(struct bmapc_memb *b, int iosidx)
@@ -714,10 +714,6 @@ mds_repl_node_clearallbusy(struct resm_mds_info *rmmi)
 	if (!RMMI_TRYRLOCK(rmmi, &dummy))
 		goto retry;
 
-	/*
-	 * XXX optimize by skipping the 2nd of the same (ionA, ionB),
-	 * (ionB, ionA) pair.
-	 */
 	CONF_FOREACH_RESM(s, r, n, resm, j) {
 		if (!RES_ISFS(r))
 			continue;
@@ -770,13 +766,23 @@ mds_repl_buildbusytable(void)
 void
 mds_repl_reset_scheduled(sl_ios_id_t resid)
 {
-	int tract[NBREPLST], iosidx;
+	int tract[NBREPLST], retifset[NBREPLST], iosidx;
 	struct up_sched_work_item *wk;
 	struct bmapc_memb *bcm;
 	sl_replica_t repl;
 	sl_bmapno_t n;
 
 	repl.bs_id = resid;
+
+	brepls_init(tract, -1);
+	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
+	tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_TRUNCPNDG;
+
+	brepls_init(retifset, 0);
+	tract[BREPLST_REPL_SCHED] = 1;
+	tract[BREPLST_GARBAGE_SCHED] = 1;
+	tract[BREPLST_TRUNCPNDG_SCHED] = 1;
 
 	PLL_LOCK(&upsched_listhd);
 	PLL_FOREACH(wk, &upsched_listhd) {
@@ -789,18 +795,15 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 		if (iosidx < 0)
 			goto end;
 
-		brepls_init(tract, -1);
-		tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
-		tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
-		tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_TRUNCPNDG;
-
 		for (n = 0; n < fcmh_nvalidbmaps(wk->uswi_fcmh); n++) {
 			if (mds_bmap_load(wk->uswi_fcmh, n, &bcm))
 				continue;
 
-			mds_repl_bmap_walk(bcm, tract,
-			    NULL, 0, &iosidx, 1);
-			mds_bmap_write_repls_rel(bcm);
+			if (mds_repl_bmap_walk(bcm, tract, retifset, 0,
+			    &iosidx, 1))
+				mds_bmap_write_repls_rel(bcm);
+			else
+				bmap_op_done(bcm);
 		}
  end:
 		uswi_enqueue_sites(wk, &repl, 1);
