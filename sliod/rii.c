@@ -289,7 +289,7 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 	if (mp)
 		rc = mp->rc;
 	else
-		rc = EBADMSG;
+		rc = SLERR_BADMSG;
 
  out:
 	for (slvridx = 0; slvridx < (int)nitems(w->srw_slvr_refs);

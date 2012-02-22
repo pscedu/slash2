@@ -58,5 +58,6 @@ char *slstrerror(int);
 #define SLERR_INVAL			(_SLERR_START + 32)
 #define SLERR_2BIG			(_SLERR_START + 33)
 #define SLERR_CRCABSENT			(_SLERR_START + 34)
+#define SLERR_BADMSG			(_SLERR_START + 35)
 
 #endif /* _SLERR_H_ */
