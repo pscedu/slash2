@@ -399,10 +399,13 @@ archiver
 - update nblks when using sense "slictl -x"
 - fix repl unnecessary processing
 - imported files should create CRCs
-- FID modifications details in docs/supporting_recovery.txt.  Without these
-changes we'll be forced to modify internal MDS structures manually and
-will be forced to restart all clients and sliods.
+- FID modifications details in docs/supporting_recovery.txt.  Without
+  these changes we'll be forced to modify internal MDS structures
+  manually and will be forced to restart all clients and sliods.
 - slm_ptrunc_wake_clients() may need to use rpcsets or nbreqsets to deal
-with large numbers of blocking clients.  Or, the algorithm should be modified
-so that the clients retry after some brief sleep period.  (I believe this is
-how DIO works).
+  with large numbers of blocking clients.  Or, the algorithm should be
+  modified so that the clients retry after some brief sleep period.  (I
+  believe this is how DIO works).
+- do not schedule repl from archiver if possible
+- split .slupsch scan dir into ptrunc, repldst, etc
+- postpone full upsch startup scan for some activity (repldst)
