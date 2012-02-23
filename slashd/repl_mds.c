@@ -140,7 +140,7 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
 			PFL_GOTOERR(out, rc = -ENOSPC);
 
 		} else if (ih->inoh_ino.ino_nrepls >= SL_DEF_REPLICAS) {
-			if ((rc = mds_inox_ensure_loaded(ih)))
+			if ((inox_rc = mds_inox_ensure_loaded(ih)))
 				goto out;
 
 			repl = ih->inoh_extras->inox_repls;
