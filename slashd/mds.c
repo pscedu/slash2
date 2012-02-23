@@ -1098,16 +1098,20 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 				 */
 				struct bmap_ios_assign bia;
 
-				rc = mds_odtable_getitem(mdsBmapAssignTable,
-				    bmi->bmdsi_assign, &bia, sizeof(bia));
-				psc_assert(!rc &&
-				   bia.bia_seq == bmi->bmdsi_seq);
-				psc_assert(bia.bia_bmapno == b->bcm_bmapno);
-				/* End sanity checks.
-				 */
+				if (!(bml->bml_flags & BML_RECOVERFAIL)) {
+					rc = mds_odtable_getitem(mdsBmapAssignTable,
+						 bmi->bmdsi_assign, &bia, sizeof(bia));
+					psc_assert(!rc &&
+					   bia.bia_seq == bmi->bmdsi_seq);
+					psc_assert(bia.bia_bmapno == b->bcm_bmapno);
+					/* End sanity checks.
+					 */
+					odtr = bmi->bmdsi_assign;
+					bmi->bmdsi_assign = NULL;
+				} else {
+					psc_assert(!bmi->bmdsi_assign);
+				}
 				atomic_dec(&bmi->bmdsi_wr_ion->rmmi_refcnt);
-				odtr = bmi->bmdsi_assign;
-				bmi->bmdsi_assign = NULL;
 				bmi->bmdsi_wr_ion = NULL;
 			}
 		}
@@ -1298,8 +1302,8 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 
 	rc = mds_bmap_bml_add(bml, SL_WRITE, IOS_ID_ANY);
 	if (rc) {
-		bmap_2_bmi(b)->bmdsi_assign = NULL;
-		bml->bml_flags |= BML_FREEING;
+		bmap_2_bmi(b)->bmdsi_assign = NULL;		
+		bml->bml_flags |= (BML_FREEING | BML_RECOVERFAIL);
 		mds_bmap_bml_release(bml);
 	}
 
