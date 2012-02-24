@@ -34,7 +34,7 @@ struct fidc_membh;
 struct sl_resm;
 struct slvr_ref;
 
-#define REPL_MAX_INFLIGHT_SLVRS	64			/* maximum # inflight slivers between IONs */
+#define REPL_MAX_INFLIGHT_SLVRS	4			/* maximum # inflight slivers between IONs */
 
 #define SLI_REPL_SLVR_SCHED	((void *)0x1)
 
