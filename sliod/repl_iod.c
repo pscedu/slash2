@@ -113,16 +113,13 @@ sli_repl_addwk(int op, struct sl_resource *res,
 		/* mark slivers for replication */
 		BMAP_LOCK(w->srw_bcm);
 		if (op == SLI_REPLWKOP_REPL)
-			for (i = len = 0;
-			    i < SLASH_SLVRS_PER_BMAP &&
-			    len < (int)w->srw_len;
-			    i++, len += SLASH_SLVR_SIZE)
-				if (w->srw_bcm->bcm_crcstates[i] &
-				    BMAP_SLVR_DATA) {
-					w->srw_bcm->bcm_crcstates[i] |=
+			for (i = len = 0; i < SLASH_SLVRS_PER_BMAP &&
+				     len < (int)w->srw_len;
+			     i++, len += SLASH_SLVR_SIZE) {
+				w->srw_bcm->bcm_crcstates[i] |=
 					    BMAP_SLVR_WANTREPL;
-					w->srw_nslvr_tot++;
-				}
+				w->srw_nslvr_tot++;
+			}
 		BMAP_ULOCK(w->srw_bcm);
 	}
 	psclog_info("fid="SLPRI_FG" bmap=%d #slivers=%d",
