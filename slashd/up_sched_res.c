@@ -1062,14 +1062,14 @@ uswi_init(struct up_sched_work_item *wk, slfid_t fid)
 void
 upsched_scandir(void)
 {
+	int rc, tract[NBREPLST], retifset[NBREPLST];
 	sl_replica_t iosv[SL_MAX_REPLICAS];
 	struct up_sched_work_item *wk;
-	int rc, tract[NBREPLST];
-	char *buf, fn[NAME_MAX];
 	struct fidc_membh *fcmh;
 	struct slash_fidgen fg;
 	struct pscfs_dirent *d;
 	struct bmapc_memb *b;
+	char *buf, fn[NAME_MAX];
 	off64_t off, toff;
 	size_t siz, tsiz;
 	uint32_t j;
@@ -1135,6 +1135,11 @@ upsched_scandir(void)
 			tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_TRUNCPNDG;
 			tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
 
+			brepls_init(retifset, 0);
+			retifset[BREPLST_REPL_SCHED] = 1;
+			retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
+			retifset[BREPLST_GARBAGE_SCHED] = 1;
+
 			/*
 			 * If we crashed, revert all inflight SCHED'ed
 			 * bmaps so they get resent.
@@ -1145,9 +1150,11 @@ upsched_scandir(void)
 				    BMAPGETF_NOAUTOINST, &b))
 					break;
 
-				mds_repl_bmap_walk(b, tract,
-				    NULL, 0, NULL, 0);
-				mds_bmap_write_repls_rel(b);
+				if (mds_repl_bmap_walk(b, tract,
+				    retifset, 0, NULL, 0))
+					mds_bmap_write_repls_rel(b);
+				else
+					bmap_op_done(b);
 			}
 
 			/*
