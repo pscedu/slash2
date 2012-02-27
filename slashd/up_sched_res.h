@@ -60,6 +60,17 @@ struct up_sched_work_item {
 #define USWI_RLOCK(wk)		psc_mutex_reqlock(&(wk)->uswi_mutex)
 #define USWI_URLOCK(wk, lk)	psc_mutex_ureqlock(&(wk)->uswi_mutex, (lk))
 
+#define USWI_WAIT(wk, lk)						\
+	while ((wk)->uswi_flags & USWIF_BUSY) {				\
+		if (lk)							\
+			UPSCHED_MGR_ULOCK();				\
+		psc_multiwaitcond_wait(&(wk)->uswi_mwcond,		\
+		    &(wk)->uswi_mutex);					\
+		if (lk)							\
+			UPSCHED_MGR_LOCK();				\
+		psc_mutex_lock(&(wk)->uswi_mutex);			\
+	}
+
 enum {
 /* 0 */	USWI_REFT_LOOKUP,	/* uswi_find() temporary */
 /* 1 */	USWI_REFT_SITEUPQ,	/* in scheduler queue for a site */

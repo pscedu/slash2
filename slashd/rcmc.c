@@ -183,8 +183,19 @@ slm_rcm_issue_getreplst(struct slm_replst_workreq *rsw,
 	}
 	if (is_eof)
 		mq->rc = EOF;
+
+	USWI_LOCK(wk);
+	wk->uswi_flags &= ~USWIF_BUSY;
+	USWI_ULOCK(wk);
+
 	rc = SL_RSX_WAITREP(rsw->rsw_csvc, rq, mp);
 	pscrpc_req_finished(rq);
+
+	USWI_LOCK(wk);
+	USWI_WAIT(wk, 0);
+	wk->uswi_flags |= USWIF_BUSY;
+	USWI_ULOCK(wk);
+
 	return (rc);
 }
 
