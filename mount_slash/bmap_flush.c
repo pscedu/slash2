@@ -297,6 +297,12 @@ biorq_destroy_failed(struct bmpc_ioreq *r)
 	int destroy = 0;
 
 	BIORQ_LOCK(r);
+	if (!(r->biorq_flags & BIORQ_FLUSHRDY)) {
+		BIORQ_ULOCK(r);
+		
+		return (-EBUSY);
+	}
+	
 	if (r->biorq_flags & (BIORQ_EXPIREDLEASE | BIORQ_MAXRETRIES))
 		destroy = 1;
 	BIORQ_ULOCK(r);
