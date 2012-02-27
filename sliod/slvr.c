@@ -98,18 +98,11 @@ slvr_do_crc(struct slvr_ref *s)
 		return SLERR_CRCABSENT;
 	}
 
-	psc_assert(s->slvr_flags & SLVR_PINNED &&
-	   (s->slvr_flags & SLVR_FAULTING || s->slvr_flags & SLVR_CRCDIRTY));
-
-	SLVR_ULOCK(s);
+	psc_assert((s->slvr_flags & SLVR_PINNED) &&
+		   (s->slvr_flags & SLVR_FAULTING || 
+		    s->slvr_flags & SLVR_CRCDIRTY));
 
 	if (s->slvr_flags & SLVR_FAULTING) {
-
-		if (!(slvr_2_crcbits(s) & BMAP_SLVR_DATA)) {
-			SLVR_ULOCK(s);
-			return SLERR_CRCABSENT;
-		}
-			
 		/*
 		 * SLVR_FAULTING implies that we're bringing this data buffer
 		 *   in from the filesystem.
@@ -121,29 +114,28 @@ slvr_do_crc(struct slvr_ref *s)
 			 *    be taken here.
 			 */
 			psc_assert(s->slvr_pndgwrts);
+			SLVR_ULOCK(s);
 			return (-1);
 		}
-
-		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
 
 		/*
 		 * This thread holds faulting status so all others are
 		 *  waiting on us which means that exclusive access to
 		 *  slvr contents is ours until we set SLVR_DATARDY.
-		 *
-		 * XXX For now we assume that all blocks are being
-		 *  processed, otherwise there's no guarantee that the
-		 *  entire slvr was read.
 		 */
-		if (!(s->slvr_flags & SLVR_REPLDST))
-			psc_assert(!psc_vbitmap_nfree(s->slvr_slab->slb_inuse));
+		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
 
-		else
-			psc_assert((slvr_2_crcbits(s) & BMAP_SLVR_DATA) &&
-				   (slvr_2_crcbits(s) & BMAP_SLVR_CRC));
+		if (!(s->slvr_flags & SLVR_REPLDST))
+			/*
+			 *  For now we assume that all blocks are being
+			 *  processed, otherwise there's no guarantee that the
+			 *  entire slvr was read.
+			 */
+			psc_assert(!psc_vbitmap_nfree(s->slvr_slab->slb_inuse));
 
 		if ((slvr_2_crcbits(s) & BMAP_SLVR_DATA) &&
 		    (slvr_2_crcbits(s) & BMAP_SLVR_CRC)) {
+			SLVR_ULOCK(s);
 
 			psc_crc64_calc(&crc, slvr_2_buf(s, 0), 
 			       SLASH_SLVR_SIZE);
@@ -158,14 +150,16 @@ slvr_do_crc(struct slvr_ref *s)
 
 				return (SLERR_BADCRC);
 			}
-		} else
+
+		} else {
+			SLVR_ULOCK(s);
 			return (0);
+		}
 
 	} else if (s->slvr_flags & SLVR_CRCDIRTY) {
 		/* SLVR_CRCDIRTY means that DATARDY has been set and that
 		 *   a write dirtied the buffer and invalidated the CRC.
 		 */
-		SLVR_LOCK(s);
 		DEBUG_SLVR(PLL_NOTIFY, s, "crc");
 		PSC_CRC64_INIT(&s->slvr_crc);
 		SLVR_ULOCK(s);
@@ -190,8 +184,9 @@ slvr_do_crc(struct slvr_ref *s)
 		slvr_2_crc(s) = crc;
 		slvr_2_crcbits(s) |= BMAP_SLVR_DATA | BMAP_SLVR_CRC;
 		SLVR_ULOCK(s);
-	} else
+	} else {
 		psc_fatal("FAULTING or CRCDIRTY is not set");
+	}
 
 	return (-1);
 }
