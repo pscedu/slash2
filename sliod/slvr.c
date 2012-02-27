@@ -93,7 +93,8 @@ slvr_do_crc(struct slvr_ref *s)
 	uint64_t crc;
 
 	SLVR_LOCK(s);
-	if (slvr_2_crcbits(s) & BMAP_SLVR_CRCABSENT) {
+	if (!(slvr_2_crcbits(s) & BMAP_SLVR_CRC) ||
+	    (slvr_2_crcbits(s) & BMAP_SLVR_CRCABSENT)) {
 		SLVR_ULOCK(s);
 		return SLERR_CRCABSENT;
 	}
