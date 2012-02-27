@@ -93,8 +93,7 @@ slvr_do_crc(struct slvr_ref *s)
 	uint64_t crc;
 
 	SLVR_LOCK(s);
-	if (!(slvr_2_crcbits(s) & BMAP_SLVR_CRC) ||
-	    (slvr_2_crcbits(s) & BMAP_SLVR_CRCABSENT)) {
+	if (slvr_2_crcbits(s) & BMAP_SLVR_CRCABSENT) {
 		SLVR_ULOCK(s);
 		return SLERR_CRCABSENT;
 	}
@@ -105,6 +104,12 @@ slvr_do_crc(struct slvr_ref *s)
 	SLVR_ULOCK(s);
 
 	if (s->slvr_flags & SLVR_FAULTING) {
+
+		if (!(slvr_2_crcbits(s) & BMAP_SLVR_DATA)) {
+			SLVR_ULOCK(s);
+			return SLERR_CRCABSENT;
+		}
+			
 		/*
 		 * SLVR_FAULTING implies that we're bringing this data buffer
 		 *   in from the filesystem.
