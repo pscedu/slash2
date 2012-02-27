@@ -55,8 +55,8 @@ struct sl_fcmh_ops {
  * fidc_membh tracks cached bmaps (bmap_cache) and clients (via their
  * exports) which hold cached bmaps.
  *
- * Service specific private structures (i.e. fcmh_mds_info,
- * fcmh_cli_info, and fcmh_iod_info) are allocated along with the
+ * Service specific private structures (i.e., fcmh_mds_info,
+ * fcmh_iod_info, and fcmh_cli_info) are allocated along with the
  * fidc_membh structure.  They can be accessed by calling
  * fcmh_get_pri() defined below.
  */
