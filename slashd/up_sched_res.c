@@ -224,6 +224,7 @@ uswi_trykill(struct up_sched_work_item *wk)
 		fcmh_op_done_type(wk->uswi_fcmh,
 		    FCMH_OPCNT_LOOKUP_FIDC);
 
+	psc_mutex_destroy(&wk->uswi_mutex);
 	psc_pool_return(upsched_pool, wk);
 	return (1);
 }
