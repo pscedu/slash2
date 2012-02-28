@@ -299,10 +299,10 @@ biorq_destroy_failed(struct bmpc_ioreq *r)
 	BIORQ_LOCK(r);
 	if (!(r->biorq_flags & BIORQ_FLUSHRDY)) {
 		BIORQ_ULOCK(r);
-		
+
 		return (-EBUSY);
 	}
-	
+
 	if (r->biorq_flags & (BIORQ_EXPIREDLEASE | BIORQ_MAXRETRIES))
 		destroy = 1;
 	BIORQ_ULOCK(r);
@@ -531,9 +531,9 @@ bmap_flush_coalesce_prep(struct bmpc_write_coalescer *bwc)
 {
 	struct bmpc_ioreq *r, *e = NULL;
 	struct bmap_pagecache_entry *bmpce;
+	uint32_t reqsz, tlen;
 	off_t off, loff;
 	int i;
-	uint32_t reqsz, tlen;
 
 	psc_assert(!bwc->bwc_nbmpces);
 
@@ -555,7 +555,7 @@ bmap_flush_coalesce_prep(struct bmpc_write_coalescer *bwc)
 
 		DYNARRAY_FOREACH(bmpce, i, &r->biorq_pages) {
 			DEBUG_BMPCE(PLL_INFO, bmpce,
-			    "adding if DNE nbmpces=%d (i=%d) (off=%zu)",
+			    "adding if DNE nbmpces=%d (i=%d) (off=%"PSCPRIdOFFT")",
 			    bwc->bwc_nbmpces, i, off);
 
 			bmpce_usecheck(bmpce, BIORQ_WRITE, !i ?
@@ -600,11 +600,11 @@ bmap_flush_coalesce_prep(struct bmpc_write_coalescer *bwc)
 __static void
 bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
 {
-	struct bmpc_ioreq *r;
 	struct bmap_pagecache_entry *bmpce;
+	struct bmpc_ioreq *r;
 	uint32_t tot_reqsz;
+	off_t off;
 	int i;
-	off_t off = 0;
 
 	tot_reqsz = bwc->bwc_size;
 
