@@ -603,7 +603,6 @@ bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
 	struct bmap_pagecache_entry *bmpce;
 	struct bmpc_ioreq *r;
 	uint32_t tot_reqsz;
-	off_t off;
 	int i;
 
 	tot_reqsz = bwc->bwc_size;
@@ -614,7 +613,6 @@ bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
 		     pll_nitems(&bwc->bwc_pll), bwc->bwc_nbmpces);
 
 	psc_assert(!bwc->bwc_niovs);
-	off = bwc->bwc_soff;
 
 	r = pll_peekhead(&bwc->bwc_pll);
 	psc_assert(bwc->bwc_soff == r->biorq_off);
