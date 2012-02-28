@@ -640,6 +640,8 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
 	while (atomic_read(&r->biorq_waitq.wq_nwaiters))
 		sched_yield();
 
+	psc_waitq_destroy(&r->biorq_waitq);
+
 	psc_pool_return(slc_biorq_pool, r);
 }
 

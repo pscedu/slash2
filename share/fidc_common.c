@@ -55,10 +55,12 @@ void
 fcmh_destroy(struct fidc_membh *f)
 {
 	psc_assert(SPLAY_EMPTY(&f->fcmh_bmaptree));
-	psc_assert(!psc_waitq_nwaiters(&f->fcmh_waitq));
 	psc_assert(f->fcmh_refcnt == 0);
 	psc_assert(psc_hashent_disjoint(&fidcHtable, f));
+	psc_assert(!psc_waitq_nwaiters(&f->fcmh_waitq));
 
+	psc_waitq_destroy(&f->fcmh_waitq);
+	
 	/* slc_fcmh_dtor(), slm_fcmh_dtor(), sli_fcmh_dtor() */
 	if (sl_fcmh_ops.sfop_dtor) {
 		if (f->fcmh_flags & (FCMH_CTOR_FAILED | FCMH_NO_BACKFILE))
