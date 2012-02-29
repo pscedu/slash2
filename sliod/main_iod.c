@@ -133,7 +133,7 @@ main(int argc, char *argv[])
 	const char *cfn, *sfn, *p, *prefmds;
 	sigset_t signal_set;
 	struct slashrpc_cservice *mds_csvc;
-	int rc, c;
+	int rc, c, args = argc, show_revision = 0;
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -155,7 +155,7 @@ main(int argc, char *argv[])
 	if (p)
 		cfn = p;
 
-	while ((c = getopt(argc, argv, "D:f:S:X")) != -1)
+	while ((c = getopt(argc, argv, "D:f:S:XV")) != -1)
 		switch (c) {
 		case 'D':
 			sl_datadir = optarg;
@@ -169,6 +169,9 @@ main(int argc, char *argv[])
 		case 'X':
 			allow_root_uid = 1;
 			break;
+		case 'V':
+			show_revision = 1;
+			break;
 		default:
 			usage();
 		}
@@ -177,6 +180,10 @@ main(int argc, char *argv[])
 	if (argc > 1)
 		usage();
 
+	if (show_revision && args == 2) {
+		printf("sliod revision is %d\n", SL_STK_VERSION);
+		exit (0);
+	}
 	sigemptyset(&signal_set);
 	sigaddset(&signal_set, SIGIO);
 	sigprocmask(SIG_BLOCK, &signal_set, NULL);
