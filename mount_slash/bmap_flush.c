@@ -1162,10 +1162,10 @@ bmpces_inflight_locked(struct bmpc_ioreq *r)
 }
 
 /**
- * bmap_flush - Send out SRMT_WRITE RPCs to the I/O server.
+ * msbmflwthr_main -
  */
 __static void
-bmap_lease_watcher(__unusedx struct psc_thread *thr)
+msbmflwthr_main(__unusedx struct psc_thread *thr)
 {
 	struct psc_dynarray bmaps = DYNARRAY_INIT_NOLOG;
 	struct bmapc_memb *b, *tmpb;
@@ -1525,16 +1525,16 @@ msbmapflushthr_spawn(void)
 		pscthr_setready(thr);
 	}
 
-	thr = pscthr_init(MSTHRT_BMAPLSWATCHER, 0, bmap_lease_watcher,
-	  NULL, sizeof(struct msbmflwatcher_thread), "msbflushlswatchthr");
-	psc_multiwait_init(&msbmfwatchthr(thr)->mbfwa_mw, "%s",
-			   thr->pscthr_name);
+	thr = pscthr_init(MSTHRT_BMAPLSWATCHER, 0, msbmflwthr_main,
+	  NULL, sizeof(struct msbmflwatcher_thread), "msbmflwthr");
+	psc_multiwait_init(&msbmflwthr(thr)->mbfwa_mw, "%s",
+	    thr->pscthr_name);
 	pscthr_setready(thr);
 
 	thr = pscthr_init(MSTHRT_BMAPFLSHRPC, 0, msbmapflushrpcthr_main,
 	  NULL, sizeof(struct msbmflrpc_thread), "msbflushrpcthr");
 	psc_multiwait_init(&msbmflrpc(thr)->mbflrpc_mw, "%s",
-			   thr->pscthr_name);
+	    thr->pscthr_name);
 	pscthr_setready(thr);
 
 	thr = pscthr_init(MSTHRT_BMAPFLSHRLS, 0, msbmaprlsthr_main,

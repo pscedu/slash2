@@ -151,7 +151,7 @@ msl_getmw(void)
 	case MSTHRT_BMAPFLSHRPC:
 		return (&msbmflrpc(thr)->mbflrpc_mw);
 	case MSTHRT_BMAPLSWATCHER:
-		return (&msbmfwatchthr(thr)->mbfwa_mw);
+		return (&msbmflwthr(thr)->mbfwa_mw);
 	case MSTHRT_RCI:
 		return (&msrcithr(thr)->mrci_mw);
 	case MSTHRT_CTL:
