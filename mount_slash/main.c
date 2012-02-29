@@ -2686,7 +2686,7 @@ main(int argc, char *argv[])
 {
 	struct pscfs_args args = PSCFS_ARGS_INIT(0, NULL);
 	char c, *p, *noncanon_mp, *cfg = SL_PATH_CONF;
-	int unmount_first = 0;
+	int unmount_first = 0, nargs = argc, show_revision = 0;
 	long l;
 
 	/* gcrypt must be initialized very early on */
@@ -2708,7 +2708,7 @@ main(int argc, char *argv[])
 		cfg = p;
 
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "D:df:I:M:o:p:S:UX")) != -1)
+	while ((c = getopt(argc, argv, "D:df:I:M:o:p:S:UXV")) != -1)
 		switch (c) {
 		case 'D':
 			sl_datadir = optarg;
@@ -2749,13 +2749,21 @@ main(int argc, char *argv[])
 		case 'X':
 			allow_root_uid = 1;
 			break;
+		case 'V':
+			show_revision = 1;
+			break;
 		default:
 			usage();
 		}
 	argc -= optind;
 	argv += optind;
-	if (argc != 1)
+	if (argc > 1)
 		usage();
+
+	if (show_revision && nargs == 2) {
+		printf("mount_slash revision is %d\n", SL_STK_VERSION);
+		exit (0);
+	}
 
 	pscthr_init(MSTHRT_FSMGR, 0, NULL, NULL, 0, "msfsmgrthr");
 
