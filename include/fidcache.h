@@ -55,7 +55,7 @@ struct sl_fcmh_ops {
  * fidc_membh tracks cached bmaps (bmap_cache) and clients (via their
  * exports) which hold cached bmaps.
  *
- * Service specific private structures (i.e., fcmh_mds_info,
+ * Service specific private structures (i.e. fcmh_mds_info,
  * fcmh_iod_info, and fcmh_cli_info) are allocated along with the
  * fidc_membh structure.  They can be accessed by calling
  * fcmh_get_pri() defined below.
@@ -71,7 +71,7 @@ struct fidc_membh {
 	struct bmap_cache	 fcmh_bmaptree;	/* bmap cache splay */
 };
 
-/* fcmh_flags */
+/* fcmh_flags (cache) */
 #define	FCMH_CAC_FREE		(1 <<  0)	/* totally free item */
 #define	FCMH_CAC_IDLE		(1 <<  1)	/* not being used, in clean cache */
 #define	FCMH_CAC_BUSY		(1 <<  2)	/* being used, not reapable */
@@ -80,8 +80,8 @@ struct fidc_membh {
 #define	FCMH_CAC_TOFREE		(1 <<  5)	/* ctor failure or memory pressure */
 #define	FCMH_CAC_REAPED		(1 <<  6)	/* has been reaped */
 #define	FCMH_CAC_RLSBMAP	(1 <<  7)	/* lookup due to releasing bmap */
-#define	FCMH_HAVE_ATTRS		(1 <<  8)	/* has valid stat info */
-#define	FCMH_GETTING_ATTRS	(1 <<  9)	/* fetching stat info */
+#define	FCMH_HAVE_ATTRS		(1 <<  8)	/* has valid stat(2) info */
+#define	FCMH_GETTING_ATTRS	(1 <<  9)	/* fetching stat(2) info */
 #define	FCMH_CTOR_FAILED	(1 << 10)	/* constructor func failed */
 #define	FCMH_NO_BACKFILE	(1 << 11)	/* fcmh does not have a backing file */
 #define FCMH_IN_SETATTR		(1 << 12)	/* setattr in progress */
