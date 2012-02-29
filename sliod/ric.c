@@ -95,35 +95,35 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	}
 
 	if (mq->size < 1024)
-		psc_iostats_intv_add((rw == SL_WRITE) ? 
+		psc_iostats_intv_add((rw == SL_WRITE) ?
 		     &sliod_wr_1b_stat : &sliod_rd_1b_stat, 1);
-	
+
 	else if (mq->size < 4096)
-		psc_iostats_intv_add((rw == SL_WRITE) ? 
+		psc_iostats_intv_add((rw == SL_WRITE) ?
 		     &sliod_wr_1k_stat : &sliod_rd_1k_stat, 1);
 
 	else if (mq->size < 16386)
-		psc_iostats_intv_add((rw == SL_WRITE) ? 
+		psc_iostats_intv_add((rw == SL_WRITE) ?
 		     &sliod_wr_4k_stat : &sliod_rd_4k_stat, 1);
 
 	else if (mq->size < 65536)
-		psc_iostats_intv_add((rw == SL_WRITE) ? 
+		psc_iostats_intv_add((rw == SL_WRITE) ?
 		     &sliod_wr_16k_stat : &sliod_rd_16k_stat, 1);
 
 	else if (mq->size < 131072)
-		psc_iostats_intv_add((rw == SL_WRITE) ? 
+		psc_iostats_intv_add((rw == SL_WRITE) ?
 		     &sliod_wr_64k_stat : &sliod_rd_64k_stat, 1);
 
 	else if (mq->size < 524288)
-		psc_iostats_intv_add((rw == SL_WRITE) ? 
+		psc_iostats_intv_add((rw == SL_WRITE) ?
 		     &sliod_wr_128k_stat : &sliod_rd_128k_stat, 1);
 
 	else if (mq->size < 1048576)
-		psc_iostats_intv_add((rw == SL_WRITE) ? 
+		psc_iostats_intv_add((rw == SL_WRITE) ?
 		     &sliod_wr_512k_stat : &sliod_rd_512k_stat, 1);
 	else
-		psc_iostats_intv_add((rw == SL_WRITE) ? 
-		     &sliod_wr_1m_stat : &sliod_rd_1m_stat, 1);	
+		psc_iostats_intv_add((rw == SL_WRITE) ?
+		     &sliod_wr_1m_stat : &sliod_rd_1m_stat, 1);
 	/*
 	 * A RBW (read-before-write) request from the client may have a
 	 *   write enabled bmapdesc which he uses to fault in his page.
@@ -257,13 +257,13 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 			SLVR_LOCK(s);
 			if (s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR)) {
-				DEBUG_SLVR(PLL_NOTIFY, s, 
+				DEBUG_SLVR(PLL_NOTIFY, s,
 				   "aio early ready, rw=%d", rw);
 				SLVR_ULOCK(s);
 
 			} else {
-				/* Attach the reply to the first sliver 
-				 *    waiting for aio and return AIOWAIT 
+				/* Attach the reply to the first sliver
+				 *    waiting for aio and return AIOWAIT
 				 *    to client later.
 				 */
 				pll_add(&s->slvr_pndgaios, aiocbr);
@@ -397,7 +397,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 			fsync_time = CURRENT_SECONDS - fsync_time;
 
 			if (fsync_time > 10)
-				DEBUG_FCMH(PLL_WARN, f, "long fsync %d", 
+				DEBUG_FCMH(PLL_WARN, f, "long fsync %d",
 				   fsync_time);
 		}
 
@@ -407,7 +407,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 
 		rc = bmap_get(f, sbd->sbd_bmapno, SL_WRITE, &b);
 		if (rc) {
-			psclog_errorx("failed to load bmap %u", 
+			psclog_errorx("failed to load bmap %u",
 			      sbd->sbd_bmapno);
 			fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 			continue;
@@ -431,19 +431,19 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		}
 		if (!newsbd)
 			continue;
-		
+
 		DEBUG_FCMH(PLL_INFO, f, "bmapno=%d seq=%"PRId64" key=%"PRId64
-		   " (brls=%p)", b->bcm_bmapno, sbd->sbd_seq, sbd->sbd_key, 
+		   " (brls=%p)", b->bcm_bmapno, sbd->sbd_seq, sbd->sbd_key,
 		   newsbd);
-		
+
 		bmap_op_start_type(bii_2_bmap(biod), BMAP_OPCNT_RLSSCHED);
 
-		pll_add(&biod->biod_rls, newsbd);		
-		BMAP_SETATTR(b, BMAP_IOD_RLSSEQ);		
+		pll_add(&biod->biod_rls, newsbd);
+		BMAP_SETATTR(b, BMAP_IOD_RLSSEQ);
 		biod_rlssched_locked(biod);
 		BIOD_ULOCK(biod);
 
-		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);		
+		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 	}
  out:
 	return (0);
@@ -501,7 +501,7 @@ iexpc_allocpri(struct pscrpc_export *exp)
 
 	/*
 	 * This is freed in sl_csvc_decref() since the csvc lock is
-	 * operated on until the end compliance with APIs used in
+	 * operated on until the end compliant with APIs used in
 	 * teardown.
 	 */
 	icccp = iexpc->iexpc_cccp = PSCALLOC(sizeof(*icccp));
@@ -509,14 +509,6 @@ iexpc_allocpri(struct pscrpc_export *exp)
 	INIT_SPINLOCK(&icccp->icccp_lock);
 	psc_waitq_init(&icccp->icccp_waitq);
 	sli_getclcsvc(exp);
-}
-
-void
-iexpc_destroy(void *p) 
-{
-	struct sli_exp_cli *iexpc = p;
-
-	PSCFREE(iexpc->iexpc_cccp);       
 }
 
 struct sl_expcli_ops sl_expcli_ops = {

@@ -1245,7 +1245,7 @@ mexpc_allocpri(struct pscrpc_export *exp)
 
 	/*
 	 * This is freed in sl_csvc_decref() since the csvc lock is
-	 * operated on until the end compliance with APIs used in
+	 * operated on until the end compliant with APIs used in
 	 * teardown.
 	 */
 	mcccp = mexpc->mexpc_cccp = PSCALLOC(sizeof(*mcccp));
