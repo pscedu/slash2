@@ -57,14 +57,14 @@ fcmh_setlocalsize(struct fidc_membh *fcmh, uint64_t size)
 {
 	int locked;
 
-	locked = reqlock(&fcmh->fcmh_lock);
+	locked = FCMH_RLOCK(fcmh);
 	if (size > fcmh_2_fsz(fcmh)) {
 		psclog_info("fid: "SLPRI_FID", "
 		    "size from %"PRId64" to %"PRId64,
 		    fcmh_2_fid(fcmh), fcmh_2_fsz(fcmh), size);
 		fcmh_2_fsz(fcmh) = size;
 	}
-	ureqlock(&fcmh->fcmh_lock, locked);
+	FCMH_URLOCK(fcmh, locked);
 }
 
 void
