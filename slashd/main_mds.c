@@ -156,9 +156,9 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	int rc, c, nofsuuid = 0, args = argc;
 	char *zpcachefn = NULL, *zpname;
 	const char *cfn, *sfn, *p;
+	int rc, c, nofsuuid = 0;
 	mdsio_fid_t mf;
 
 	/* gcrypt must be initialized very early on */
@@ -207,7 +207,7 @@ main(int argc, char *argv[])
 			nofsuuid = 1;
 			break;
 		case 'V':
-			err(0, "revision is %d", SL_STK_VERSION);
+			errx(0, "revision is %d", SL_STK_VERSION);
 		default:
 			usage();
 		}

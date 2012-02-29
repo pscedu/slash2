@@ -63,23 +63,24 @@ uint32_t		 sys_upnonce;
 int			 allow_root_uid = 1;
 const char		*progname;
 
-struct psc_iostats      sliod_wr_1b_stat;
-struct psc_iostats      sliod_wr_1k_stat;
-struct psc_iostats      sliod_wr_4k_stat;
-struct psc_iostats      sliod_wr_16k_stat;
-struct psc_iostats      sliod_wr_64k_stat;
-struct psc_iostats      sliod_wr_128k_stat;
-struct psc_iostats      sliod_wr_512k_stat;
-struct psc_iostats      sliod_wr_1m_stat;
+/* XXX put these in an array */
+struct psc_iostats	sliod_wr_1b_stat;
+struct psc_iostats	sliod_wr_1k_stat;
+struct psc_iostats	sliod_wr_4k_stat;
+struct psc_iostats	sliod_wr_16k_stat;
+struct psc_iostats	sliod_wr_64k_stat;
+struct psc_iostats	sliod_wr_128k_stat;
+struct psc_iostats	sliod_wr_512k_stat;
+struct psc_iostats	sliod_wr_1m_stat;
 
-struct psc_iostats      sliod_rd_1b_stat;
-struct psc_iostats      sliod_rd_1k_stat;
-struct psc_iostats      sliod_rd_4k_stat;
-struct psc_iostats      sliod_rd_16k_stat;
-struct psc_iostats      sliod_rd_64k_stat;
-struct psc_iostats      sliod_rd_128k_stat;
-struct psc_iostats      sliod_rd_512k_stat;
-struct psc_iostats      sliod_rd_1m_stat;
+struct psc_iostats	sliod_rd_1b_stat;
+struct psc_iostats	sliod_rd_1k_stat;
+struct psc_iostats	sliod_rd_4k_stat;
+struct psc_iostats	sliod_rd_16k_stat;
+struct psc_iostats	sliod_rd_64k_stat;
+struct psc_iostats	sliod_rd_128k_stat;
+struct psc_iostats	sliod_rd_512k_stat;
+struct psc_iostats	sliod_rd_1m_stat;
 
 int
 psc_usklndthr_get_type(const char *namefmt)
@@ -122,7 +123,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-D datadir] [-f cfgfile] [-S socket] [mds-resource]\n",
+	    "usage: %s [-V] [-D datadir] [-f cfgfile] [-S socket] [mds-resource]\n",
 	    progname);
 	exit(1);
 }
@@ -131,9 +132,9 @@ int
 main(int argc, char *argv[])
 {
 	const char *cfn, *sfn, *p, *prefmds;
-	sigset_t signal_set;
 	struct slashrpc_cservice *mds_csvc;
-	int rc, c, args = argc, show_revision = 0;
+	sigset_t signal_set;
+	int rc, c;
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -170,7 +171,7 @@ main(int argc, char *argv[])
 			allow_root_uid = 1;
 			break;
 		case 'V':
-			show_revision = 1;
+			errx(0, "revision is %d", SL_STK_VERSION);
 			break;
 		default:
 			usage();
@@ -180,10 +181,6 @@ main(int argc, char *argv[])
 	if (argc > 1)
 		usage();
 
-	if (show_revision && args == 2) {
-		printf("sliod revision is %d\n", SL_STK_VERSION);
-		exit (0);
-	}
 	sigemptyset(&signal_set);
 	sigaddset(&signal_set, SIGIO);
 	sigprocmask(SIG_BLOCK, &signal_set, NULL);
@@ -206,8 +203,8 @@ main(int argc, char *argv[])
 	bim_init();
 	slvr_cache_init();
 
-        psc_iostats_init(&sliod_wr_1b_stat,   "wr: < 1k");
-        psc_iostats_init(&sliod_rd_1b_stat,   "rd: < 1k");
+	psc_iostats_init(&sliod_wr_1b_stat,   "wr: < 1k");
+	psc_iostats_init(&sliod_rd_1b_stat,   "rd: < 1k");
 	psc_iostats_init(&sliod_wr_1k_stat,   "wr: 1k-4k");
 	psc_iostats_init(&sliod_rd_1k_stat,   "rd: 1k-4k");
 	psc_iostats_init(&sliod_wr_4k_stat,   "wr: 4k-16k");

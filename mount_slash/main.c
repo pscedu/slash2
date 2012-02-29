@@ -2675,7 +2675,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-dUX] [-D datadir] [-f conf] [-I iosystem] [-M mds]\n"
+	    "usage: %s [-dUVX] [-D datadir] [-f conf] [-I iosystem] [-M mds]\n"
 	    "\t[-o mountopt] [-p #prefetch] [-S socket] node\n",
 	    progname);
 	exit(1);
@@ -2686,7 +2686,7 @@ main(int argc, char *argv[])
 {
 	struct pscfs_args args = PSCFS_ARGS_INIT(0, NULL);
 	char c, *p, *noncanon_mp, *cfg = SL_PATH_CONF;
-	int unmount_first = 0, nargs = argc, show_revision = 0;
+	int unmount_first = 0;
 	long l;
 
 	/* gcrypt must be initialized very early on */
@@ -2750,20 +2750,15 @@ main(int argc, char *argv[])
 			allow_root_uid = 1;
 			break;
 		case 'V':
-			show_revision = 1;
+			errx(0, "revision is %d", SL_STK_VERSION);
 			break;
 		default:
 			usage();
 		}
 	argc -= optind;
 	argv += optind;
-	if (argc > 1)
+	if (argc != 1)
 		usage();
-
-	if (show_revision && nargs == 2) {
-		printf("mount_slash revision is %d\n", SL_STK_VERSION);
-		exit (0);
-	}
 
 	pscthr_init(MSTHRT_FSMGR, 0, NULL, NULL, 0, "msfsmgrthr");
 
