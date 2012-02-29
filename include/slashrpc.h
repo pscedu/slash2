@@ -582,9 +582,9 @@ struct srm_connect_req {
 	uint32_t		version;
 	 int32_t		nnids;
 	uint64_t		nids[8];
-	uint64_t		fsuuid;
-	 int32_t		stkvers;
-	uint32_t		upnonce;
+	uint64_t		fsuuid;		/* file system unique ID */
+	 int32_t		stkvers;	/* software stack version */
+	uint32_t		upnonce;	/* uptime instance */
 } __packed;
 
 struct srm_connect_rep {
