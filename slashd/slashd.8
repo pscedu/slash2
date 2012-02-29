@@ -26,7 +26,7 @@
 metadata server daemon
 .Sh SYNOPSIS
 .Nm slashd
-.Op Fl U
+.Op Fl UV
 .Op Fl D Ar datadir
 .Op Fl f Ar conf
 .Op Fl p Ar zfspoolcache
@@ -85,6 +85,8 @@ The default is
 .Pa /var/run/slash. Ns Ic %h Ns Pa .sock .
 .It Fl U
 Instruct the MDS to bypass journal affinity check (not recommended).
+.It Fl V
+Print version and exit.
 .El
 .\" %PFL_INCLUDE $PFL_BASE/doc/env.mdoc {
 .\"	lnets_note => <<'EOF',

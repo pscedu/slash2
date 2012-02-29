@@ -147,7 +147,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-D datadir] [-f slashconf] [-p zpoolcache] [-S socket]\n"
+	    "usage: %s [-V] [-D datadir] [-f slashconf] [-p zpoolcache] [-S socket]\n"
 	    "\t[zpoolname]\n",
 	    progname);
 	exit(1);
@@ -156,9 +156,9 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
+	int rc, c, nofsuuid = 0, args = argc;
 	char *zpcachefn = NULL, *zpname;
 	const char *cfn, *sfn, *p;
-	int rc, c, nofsuuid = 0, args = argc, show_revision = 0;
 	mdsio_fid_t mf;
 
 	/* gcrypt must be initialized very early on */
@@ -183,7 +183,7 @@ main(int argc, char *argv[])
 
 	progname = argv[0];
 	sfn = SL_PATH_SLMCTLSOCK;
-	while ((c = getopt(argc, argv, "D:f:p:R:S:X:YUV")) != -1)
+	while ((c = getopt(argc, argv, "D:f:p:S:X:YUV")) != -1)
 		switch (c) {
 		case 'D':
 			sl_datadir = optarg;
@@ -207,8 +207,7 @@ main(int argc, char *argv[])
 			nofsuuid = 1;
 			break;
 		case 'V':
-			show_revision = 1;
-			break;
+			err(0, "revision is %d", SL_STK_VERSION);
 		default:
 			usage();
 		}
@@ -217,11 +216,6 @@ main(int argc, char *argv[])
 	argv += optind;
 	if (argc != 1 && argc != 0)
 		usage();
-
-	if (show_revision && args == 2) {
-		printf("slashd revision is %d\n", SL_STK_VERSION);
-		exit (0);
-	}
 
 	pscthr_init(SLMTHRT_CTL, 0, NULL, NULL,
 	    sizeof(struct psc_ctlthr), "slmctlthr");
