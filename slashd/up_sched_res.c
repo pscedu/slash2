@@ -37,6 +37,7 @@
 #include "psc_ds/list.h"
 #include "psc_ds/treeutil.h"
 #include "psc_rpc/rsx.h"
+#include "psc_rpc/rpclog.h"
 #include "psc_util/multiwait.h"
 #include "psc_util/pthrutil.h"
 #include "psc_util/random.h"
@@ -223,7 +224,7 @@ uswi_trykill(struct up_sched_work_item *wk)
 	if (wk->uswi_fcmh)
 		fcmh_op_done_type(wk->uswi_fcmh,
 		    FCMH_OPCNT_LOOKUP_FIDC);
-
+	USWI_ULOCK(wk);
 	psc_mutex_destroy(&wk->uswi_mutex);
 	psc_pool_return(upsched_pool, wk);
 	return (1);
@@ -306,6 +307,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 			sz -= b->bcm_bmapno * SLASH_BMAP_SIZE;
 		if (sz == 0)
 			PFL_GOTOERR(fail, rc = ENODATA);
+
 		mq->len = MIN(sz, SLASH_BMAP_SIZE);
 	}
 	mq->fg = *USWI_FG(wk);
@@ -338,10 +340,24 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 		 * idempotently.
 		 */
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
-		if (rc == 0)
-			rc = mp->rc;
-	} else
+		if (rc || (mp && mp->rc)) {
+			DEBUG_REQ(PLL_ERROR, rq, "dst_resm=%s src_resm=%s rc=%d mp->rc=%d (RPC)",
+				  dst_resm->resm_name, src_resm->resm_name, rc, mp ? mp->rc : 0);
+
+			DEBUG_BMAP(PLL_ERROR, b, 
+				   "dst_resm=%s src_resm=%s rc=%d mp->rc=%d (RPC)", 
+				   dst_resm->resm_name, src_resm->resm_name, rc, mp ? mp->rc : 0);
+
+			if (rc == 0 && mp)
+				rc = mp->rc;
+		}
+
+	} else {
+		DEBUG_BMAP(PLL_ERROR, b, 
+			   "dst_resm=%s src_resm=%s rc=%d (mds_repl_bmap_apply)", 
+			   dst_resm->resm_name, src_resm->resm_name, rc); 		
 		rc = ENODEV;
+	}
 	if (rc == 0) {
 		pscrpc_req_finished(rq);
 		sl_csvc_decref(csvc);
@@ -364,11 +380,14 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 		pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
-	if (rc)
-		DEBUG_USWI(rc == SLERR_ION_OFFLINE ?
-		    PLL_INFO : PLL_WARN, wk,
-		    "replication arrangement failed; src=%s dst=%s rc=%d",
-		    src_resm->resm_name, dst_resm->resm_name, rc);
+	if (rc) {
+		DEBUG_USWI(rc == SLERR_ION_OFFLINE ? PLL_INFO : PLL_WARN,
+			   wk, "replication arrangement failed (dst=%s, src=%s) rc=%d", 
+			   dst_resm->resm_name, src_resm->resm_name, rc);
+		DEBUG_BMAP(rc == SLERR_ION_OFFLINE ? PLL_INFO : PLL_WARN,
+                           b, "replication arrangement failed (dst=%s, src=%s) rc=%d",
+                           dst_resm->resm_name, src_resm->resm_name, rc);
+	}
 	return (0);
 }
 
