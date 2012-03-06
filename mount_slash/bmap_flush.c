@@ -395,8 +395,8 @@ bmap_flush_desched(struct bmpc_ioreq *r)
 	r->biorq_expire.tv_sec += 10;
 	BIORQ_ULOCK(r);
 
-	DEBUG_BIORQ(PLL_WARN, r, "unset sched lease bmap_2_ios(%u)",
-		    bmap_2_ios(r->biorq_bmap));
+	DEBUG_BIORQ(PLL_WARN, r, "unset sched lease bmap_2_ios(%u), retries (%u)",
+		    bmap_2_ios(r->biorq_bmap), r->biorq_retries);
 
 	DYNARRAY_FOREACH(bmpce, i, &r->biorq_pages) {
 		BMPCE_LOCK(bmpce);
