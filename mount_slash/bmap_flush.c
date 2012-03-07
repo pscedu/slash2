@@ -318,45 +318,6 @@ biorq_destroy_failed(struct bmpc_ioreq *r)
 }
 
 /**
- */
-__static void
-bmap_flush_tryreassign(struct bmapc_memb *b)
-{
-	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
-	struct bmap_cli_info  *bci  = bmap_2_bci(b);
-
-	BMAP_LOCK(b);
-	BMPC_LOCK(bmpc);
-
-	psc_assert(bci->bci_nreassigns < SL_MAX_IOSREASSIGN);
-
-	DEBUG_BMAP(PLL_INFO, b, "nreassigns=%d compwr=%u",
-		   bci->bci_nreassigns, bmpc->bmpc_compwr);
-
-	/* For lease reassignment to take place we must have the
-	 *   the full complement of biorq's still in the cache.
-	 *   Additionally, no biorqs may be on the wire since those
-	 *   could be committed by the sliod.
-	 */
-	if (pll_empty(&bmpc->bmpc_pndg_biorqs) &&
-	    !pll_empty(&bmpc->bmpc_new_biorqs) &&
-	    !bmpc->bmpc_compwr) {
-		bci->bci_prev_sliods[bci->bci_nreassigns] =
-			bci->bci_sbd.sbd_ios;
-		bci->bci_nreassigns++;
-
-		BMAP_SETATTR(b, BMAP_CLI_REASSIGNREQ);
-
-		DEBUG_BMAP(PLL_WARN, b, "reassign from ios=%u (nreassigns=%d "
-		   "compwr=%u)", bci->bci_sbd.sbd_ios,
-		   bci->bci_nreassigns, bmpc->bmpc_compwr);
-	}
-
-	BMPC_ULOCK(bmpc);
-	BMAP_ULOCK(b);
-}
-
-/**
  * _bmap_flush_desched - unschedules a biorq, sets the RESCHED bit,
  *    and bumps the resched timer.  Called when a writeback RPC failed
  *    to get off of the ground OR via RPC cb context on failure.
