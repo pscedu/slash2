@@ -367,7 +367,7 @@ bmap_flush_desched(struct bmpc_ioreq *r)
 {
 	struct bmap_pagecache_entry *bmpce;
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(r->biorq_bmap);
-	int i;
+	int i, delta;
 
 	BMPC_RLOCK(bmpc);
 	BIORQ_RLOCK(r);
@@ -376,7 +376,6 @@ bmap_flush_desched(struct bmpc_ioreq *r)
 	psc_assert(r->biorq_flags & BIORQ_SCHED);
 	psc_assert(!(r->biorq_flags & (BIORQ_INFL | BIORQ_RESCHED)));
 	psc_assert(pll_conjoint(&bmpc->bmpc_new_biorqs, r));
-	BMPC_ULOCK(bmpc);
 
 	if (r->biorq_last_sliod == bmap_2_ios(r->biorq_bmap) ||
 	    r->biorq_last_sliod == IOS_ID_ANY)
@@ -386,17 +385,34 @@ bmap_flush_desched(struct bmpc_ioreq *r)
 
 	r->biorq_flags &= ~BIORQ_SCHED;
 	r->biorq_flags |= BIORQ_RESCHED;
-	PFL_GETTIMESPEC(&r->biorq_expire);
-	/* Don't spin in bmap_flush().
-	 * XXX the large timeout is a workaround.. these biorqs should be
-	 *   be placed on their respective sliod import and woken when the
-	 *   connection returns.
-	 */
-	r->biorq_expire.tv_sec += 10;
-	BIORQ_ULOCK(r);
 
-	DEBUG_BIORQ(PLL_WARN, r, "unset sched lease bmap_2_ios(%u), retries (%u)",
-		    bmap_2_ios(r->biorq_bmap), r->biorq_retries);
+	/*
+	 * Back off to allow the I/O server to recover or become less busy. Also
+	 * clear the force expire flag to avoid a spin within ourselves in the 
+	 * bmap flush loop.
+	 *
+	 * In theory, we could place them on a different queue based on its
+	 * target sliod and woken them up with the connection is re-established
+	 * with that sliod.  But that logic is too complicated to get right.
+	 */
+	r->biorq_flags &= ~BIORQ_FORCE_EXPIRE;
+	PFL_GETTIMESPEC(&r->biorq_expire);
+
+	/* retry last more than 11 hours, but don't make it too long between retries */
+	if (r->biorq_retries < 32)
+		delta = 20; 
+	else if (r->biorq_retries < 64)
+		delta = (r->biorq_retries - 32) * 20 + 20; 
+	else
+		delta = 32 * 20;
+
+	r->biorq_expire.tv_sec += delta;
+
+	BIORQ_ULOCK(r);
+	BMPC_ULOCK(bmpc);
+
+	DEBUG_BIORQ(PLL_WARN, r, "unset sched lease bmap_2_ios (%u)",
+		    bmap_2_ios(r->biorq_bmap));
 
 	DYNARRAY_FOREACH(bmpce, i, &r->biorq_pages) {
 		BMPCE_LOCK(bmpce);
@@ -446,7 +462,6 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	struct pscrpc_request *rq;
 	struct bmpc_ioreq *r;
 	struct bmapc_memb *b;
-	int maxretries;
 
 	r = pll_peekhead(&bwc->bwc_pll);
 
@@ -475,18 +490,8 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	return;
 
  error:
-	maxretries = 0;
-
-	PLL_FOREACH(r, &bwc->bwc_pll)
-		if (r->biorq_retries >= SL_MAX_IOSREASSIGN) {
-			maxretries = 1;
-			break;
-		}
-
 	while ((r = pll_get(&bwc->bwc_pll))) {
-		csvc ? bmap_flush_resched(r) : bmap_flush_desched(r);
-
-		if (maxretries) {
+		if (r->biorq_retries >= SL_MAX_BMAP_FLUSH_RETRIES) {
 			/* Cleanup errored I/O requests.
 			 */
 			r->biorq_flags |= (BIORQ_MAXRETRIES |
@@ -494,7 +499,9 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 					   BIORQ_RESCHED);
 
 			biorq_destroy_failed(r);
+			continue;
 		}
+		csvc ? bmap_flush_resched(r) : bmap_flush_desched(r);
 	}
 
 	if (csvc)
