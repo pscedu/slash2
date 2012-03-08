@@ -1327,25 +1327,25 @@ bmap_flush(struct timespec *nexttimeo)
 void
 msbmapflushthr_main(__unusedx struct psc_thread *thr)
 {
-	struct timespec flush, rpcwait, waitq, tmp, tmp1;
+	struct timespec flush, rpcwait, waitq, tmp1, tmp2;
 	int rc, neg;
 
 	while (pscthr_run()) {
 		msbmflthr(pscthr_get())->mbft_failcnt = 1;
 
-		PFL_GETTIMESPEC(&tmp);
-		bmap_flush(&bmapFlushWaitTime);
-		PFL_GETTIMESPEC(&flush);
-		tmp1 = flush;
-		timespecsub(&flush, &tmp, &flush);
-
+		PFL_GETTIMESPEC(&tmp1);
 		bmap_flush_outstanding_rpcwait();
-		PFL_GETTIMESPEC(&rpcwait);
-		tmp = rpcwait;
-		timespecsub(&rpcwait, &tmp1, &rpcwait);
+		PFL_GETTIMESPEC(&tmp2);
+		timespecsub(&tmp2, &tmp1, &rpcwait);
+
+		PFL_GETTIMESPEC(&tmp1);
+		bmap_flush(&bmapFlushWaitTime);
+		PFL_GETTIMESPEC(&tmp2);
+		timespecsub(&tmp2, &tmp1, &flush);
+
+		tmp1 = bmapFlushWaitTime;
 
 		spinlock(&bmapFlushLock);
-		tmp1 = bmapFlushWaitTime;
 		do {
 			rc = psc_waitq_waitabs(&bmapFlushWaitq, &bmapFlushLock,
 			       &bmapFlushWaitTime);
@@ -1354,28 +1354,23 @@ msbmapflushthr_main(__unusedx struct psc_thread *thr)
 		bmapFlushTimeoFlags = 0;
 		freelock(&bmapFlushLock);
 
-		PFL_GETTIMESPEC(&waitq);
-		tmp = waitq;
-		timespecsub(&waitq, &tmp, &waitq);
-
-		if (timespeccmp(&tmp1, &tmp, >)) {
-			timespecsub(&tmp1, &tmp, &tmp1);
-			tmp = tmp1;
+		PFL_GETTIMESPEC(&tmp2);
+		if (timespeccmp(&tmp2, &tmp1, >=)) {
+			timespecsub(&tmp2, &tmp1, &waitq);
 			neg = 0;
 		} else {
-			timespecsub(&tmp, &tmp1, &tmp);
+			timespecsub(&tmp1, &tmp2, &waitq);
 			neg = 1;
 		}
 
 		psclogs_info(SLSS_BMAP, "flush ("PSCPRI_TIMESPEC"), "
 		    "rpcwait ("PSCPRI_TIMESPEC"), "
-		    "waitq ("PSCPRI_TIMESPEC"), bmapFlushTimeoFlags=%d "
-		    "bmapFlushWaitTime(%s"PSCPRI_TIMESPEC") rc=%d",
+		    "bmapFlushTimeoFlags=%d, "
+		    "waitq (%s"PSCPRI_TIMESPEC") rc=%d",
 		    PSCPRI_TIMESPEC_ARGS(&flush),
 		    PSCPRI_TIMESPEC_ARGS(&rpcwait),
-		    PSCPRI_TIMESPEC_ARGS(&waitq),
 		    bmapFlushTimeoFlags,
-		    neg ? "-" : "", PSCPRI_TIMESPEC_ARGS(&tmp), rc);
+		    neg ? "-" : "", PSCPRI_TIMESPEC_ARGS(&waitq), rc);
 	}
 }
 
