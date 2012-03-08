@@ -13,7 +13,7 @@ set routes="
 set nets="sdp11 10.10.101.*; tcp12 *.*.*.*";
 
 set pref_mds="archmds@PSCARCH";
-set pref_ios="sense3@PSCARCH";
+set pref_ios="sense345@PSCARCH";
 set fsuuid="3a8cea38614e8122";
 set zpool_name="arc_s2mds";
 
