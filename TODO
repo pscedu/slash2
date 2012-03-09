@@ -7,6 +7,11 @@ reminders:
 	(o) iod - the sliod daemon
 - do sl_csvc_wantfree() in all to-CLI csvcs
 - ensure reentrancy of 'static' variables in functions
+-----------------------------------------------------------------------
+* Increasing outstanding RPCs
+Instead of using 1 global for all sliods, the client should have a per-sliod
+value so that it may put more rpc's inflight at once.
+This should increase performance!
 
 -----------------------------------------------------------------------
 * Bmpce Write
