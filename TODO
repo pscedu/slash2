@@ -396,19 +396,3 @@ reimport
    (o) attr buf size needs be dynamically sized
    (o) small directories should be encoded into the reply struct to spare the extra
        rtt of using a bulk.
-
-archiver
-- tool to recover softdel files
-   (o) provide ability to access zfs snapshots via MSL .zfs/snapshots
-- work out logistics for where MDS zsnap backups go (off-site)
-- imported files should create CRCs
-- FID modifications details in docs/supporting_recovery.txt.  Without
-  these changes we'll be forced to modify internal MDS structures
-  manually and will be forced to restart all clients and sliods.
-- slm_ptrunc_wake_clients() may need to use rpcsets or nbreqsets to deal
-  with large numbers of blocking clients.  Or, the algorithm should be
-  modified so that the clients retry after some brief sleep period.  (I
-  believe this is how DIO works).
-- do not schedule repl for archiver as SRC when possible
-- split .slupsch scan dir into ptrunc, repldst, etc
-- postpone full upsch startup scan for some activity (repldst)
