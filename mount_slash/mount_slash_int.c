@@ -2357,11 +2357,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 		psc_assert(tsize);
  retry_bmap:
-		/*
-		 * Load up the bmap; if it's not available then we're
-		 * out of luck because we have no idea where the data
-		 * is!
-		 */
 		rc = bmap_get(f, s + i, rw, &b);
 		if (rc) {
 			DEBUG_FCMH(PLL_ERROR, f, "bno=%zd sz=%zu tlen=%zu "
@@ -2516,11 +2511,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		rc = tsize;
 
 	msl_fsrqinfo_readyset(q);
-
-#if 0
-	if (rw == SL_WRITE)
-		fcmh_setlocalsize(f, off + size);
-#endif
 
  out:
 	if (bref)
