@@ -342,20 +342,20 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc || (mp && mp->rc)) {
 			DEBUG_REQ(PLL_ERROR, rq, "dst_resm=%s src_resm=%s rc=%d mp->rc=%d (RPC)",
-				  dst_resm->resm_name, src_resm->resm_name, rc, mp ? mp->rc : 0);
+			    dst_resm->resm_name, src_resm->resm_name, rc, mp ? mp->rc : 0);
 
-			DEBUG_BMAP(PLL_ERROR, b, 
-				   "dst_resm=%s src_resm=%s rc=%d mp->rc=%d (RPC)", 
-				   dst_resm->resm_name, src_resm->resm_name, rc, mp ? mp->rc : 0);
+			DEBUG_BMAP(PLL_ERROR, b,
+			    "dst_resm=%s src_resm=%s rc=%d mp->rc=%d (RPC)",
+			    dst_resm->resm_name, src_resm->resm_name, rc, mp ? mp->rc : 0);
 
 			if (rc == 0 && mp)
 				rc = mp->rc;
 		}
 
 	} else {
-		DEBUG_BMAP(PLL_ERROR, b, 
-			   "dst_resm=%s src_resm=%s rc=%d (mds_repl_bmap_apply)", 
-			   dst_resm->resm_name, src_resm->resm_name, rc); 		
+		DEBUG_BMAP(PLL_ERROR, b,
+		    "dst_resm=%s src_resm=%s rc=%d (mds_repl_bmap_apply)",
+		    dst_resm->resm_name, src_resm->resm_name, rc);
 		rc = ENODEV;
 	}
 	if (rc == 0) {
@@ -382,11 +382,11 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 		sl_csvc_decref(csvc);
 	if (rc) {
 		DEBUG_USWI(rc == SLERR_ION_OFFLINE ? PLL_INFO : PLL_WARN,
-			   wk, "replication arrangement failed (dst=%s, src=%s) rc=%d", 
-			   dst_resm->resm_name, src_resm->resm_name, rc);
+		    wk, "replication arrangement failed (dst=%s, src=%s) rc=%d",
+		    dst_resm->resm_name, src_resm->resm_name, rc);
 		DEBUG_BMAP(rc == SLERR_ION_OFFLINE ? PLL_INFO : PLL_WARN,
-                           b, "replication arrangement failed (dst=%s, src=%s) rc=%d",
-                           dst_resm->resm_name, src_resm->resm_name, rc);
+		    b, "replication arrangement failed (dst=%s, src=%s) rc=%d",
+		    dst_resm->resm_name, src_resm->resm_name, rc);
 	}
 	return (0);
 }
@@ -575,7 +575,7 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 void
 slmupschedthr_main(struct psc_thread *thr)
 {
-	int ngar, uswi_gen, iosidx, off, rc, has_work, val;
+	int ngar, uswi_gen, iosidx, off, rc, has_work, val, tryarchival;
 	struct rnd_iterator src_resm_i, dst_resm_i, bmap_i;
 	struct rnd_iterator wk_i, src_res_i, dst_res_i;
 	struct sl_resource *src_res, *dst_res;
@@ -723,6 +723,10 @@ slmupschedthr_main(struct psc_thread *thr)
 						if (bmap_2_bmi(b)->bmdsi_wr_ion)
 							break;
 
+						for (tryarchival = 0;
+						    tryarchival < 2;
+						    tryarchival++) {
+
 						/* got a bmap; now look for a repl source */
 						FOREACH_RND(&src_res_i, USWI_NREPLS(wk)) {
 							if (uswi_gen != wk->uswi_gen) {
@@ -739,6 +743,10 @@ slmupschedthr_main(struct psc_thread *thr)
 							    SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls,
 							    SL_BITS_PER_REPLICA *
 							    src_res_i.ri_rnd_idx) != BREPLST_VALID)
+								continue;
+
+							if (tryarchival ^
+							    (src_res->res_type != SLREST_ARCHIVAL_FS))
 								continue;
 
 							BMAPOD_MODIFY_DONE(b);
@@ -772,6 +780,7 @@ slmupschedthr_main(struct psc_thread *thr)
 										PFL_GOTOERR(restart, 1);
 							}
 							BMAPOD_MODIFY_START(b);
+						}
 						}
 						break;
 					case BREPLST_TRUNCPNDG:
