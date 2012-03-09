@@ -746,7 +746,7 @@ slmupschedthr_main(struct psc_thread *thr)
 								continue;
 
 							if (tryarchival ^
-							    (src_res->res_type != SLREST_ARCHIVAL_FS))
+							    (src_res->res_type == SLREST_ARCHIVAL_FS))
 								continue;
 
 							BMAPOD_MODIFY_DONE(b);
