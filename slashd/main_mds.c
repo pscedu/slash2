@@ -140,7 +140,7 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 	if (rc == -1)
 		psc_fatal("zpool import");
 	else if (rc)
-		psc_fatalx("zpool import: returned %d", rc);
+		psc_fatalx("zpool import: returned %d", WEXITSTATUS(rc));
 }
 
 __dead void
