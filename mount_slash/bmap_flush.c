@@ -1219,10 +1219,10 @@ bmap_flush(struct timespec *nto)
 			bcm_wake_locked(b);
 			BMAP_ULOCK(b);
 
-		} else if (b->bcm_flags & BMAP_CLI_REASSIGNREQ)
+		} else if (b->bcm_flags & BMAP_CLI_REASSIGNREQ) {
 			BMAP_ULOCK(b);
 
-		else if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED) {
+		} else if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED) {
 			bmpc = bmap_2_bmpc(b);
 			BMAP_ULOCK(b);
 
@@ -1233,8 +1233,8 @@ bmap_flush(struct timespec *nto)
 			if (bmap_flushable(b, &t))
 				psc_dynarray_add(&bmaps, b);
 			else
-				if (timespeccmp(nto, &t, >) ||
-				    (!nto->tv_sec && !nto->tv_nsec))
+				if ((!nto->tv_nsec && !nto->tv_sec) ||
+				    (timespeccmp(nto, &t, >)))
 					*nto = t;
 			BMAP_ULOCK(b);
 		}
