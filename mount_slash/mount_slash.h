@@ -297,9 +297,4 @@ extern struct pscrpc_nbreqset	*pndgBmaplsReqs;
 extern struct psc_poolmgr	*slc_async_req_pool;
 extern struct psc_poolmgr	*slc_biorq_pool;
 
-#define BMAPFLSH_TIMEOA		(1 << 0)
-#define BMAPFLSH_WAKE		(1 << 1)
-#define BMAPFLSH_RPCWAIT	(1 << 2)
-#define BMAPFLSH_EXPIRE		(1 << 3)
-
 #endif /* _MOUNT_SLASH_H_ */

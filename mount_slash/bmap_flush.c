@@ -56,6 +56,7 @@ __static struct pscrpc_nbreqset	*pndgBmapRlsReqs;	/* bmap release */
 __static struct pscrpc_nbreqset	*pndgWrtReqs;
 __static struct psc_listcache	 pndgWrtReqSets;
 __static atomic_t		 outstandingRpcCnt;
+psc_atomic32_t			 offline_nretries = 10;
 
 #define MAX_OUTSTANDING_RPCS	16
 #define MIN_COALESCE_RPC_SZ	LNET_MTU /* Try for big RPC's */
@@ -64,6 +65,11 @@ __static atomic_t		 outstandingRpcCnt;
 struct psc_waitq		bmapFlushWaitq = PSC_WAITQ_INIT;
 psc_spinlock_t			bmapFlushLock = SPINLOCK_INIT;
 int				bmapFlushTimeoFlags = 0;
+
+#define BMAPFLSH_TIMEOA		(1 << 0)
+#define BMAPFLSH_WAKE		(1 << 1)
+#define BMAPFLSH_RPCWAIT	(1 << 2)
+#define BMAPFLSH_EXPIRE		(1 << 3)
 
 __static int
 bmap_flush_biorq_expired(const struct bmpc_ioreq *a, struct timespec *t)
@@ -104,11 +110,15 @@ msl_fd_offline_retry(struct msl_fhent *mfh)
 
 	if (mfh->mfh_oflags & O_NONBLOCK)
 		return (0);
-	if (++*cnt >= 10)
+	if (++*cnt >= psc_atomic32_read(&offline_nretries))
 		return (0);
 	return (1);
 }
 
+/**
+ * _msl_offline_retry - Determine whether an RPC should be retried.
+ * @r: bmap I/O request.
+ */
 int
 _msl_offline_retry(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
 {
@@ -123,7 +133,7 @@ _msl_offline_retry(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
 
 void
 _bmap_flushq_wake(const struct pfl_callerinfo *pci, int mode,
-	 struct timespec *t)
+    struct timespec *t)
 {
 	int wake = 0, tmp;
 
