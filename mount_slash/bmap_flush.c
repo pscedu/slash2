@@ -56,7 +56,7 @@ __static struct pscrpc_nbreqset	*pndgBmapRlsReqs;	/* bmap release */
 __static struct pscrpc_nbreqset	*pndgWrtReqs;
 __static struct psc_listcache	 pndgWrtReqSets;
 __static atomic_t		 outstandingRpcCnt;
-psc_atomic32_t			 offline_nretries = 10;
+psc_atomic32_t			 offline_nretries = PSC_ATOMIC32_INIT(10);
 
 #define MAX_OUTSTANDING_RPCS	16
 #define MIN_COALESCE_RPC_SZ	LNET_MTU /* Try for big RPC's */
