@@ -66,11 +66,6 @@ struct psc_waitq		bmapFlushWaitq = PSC_WAITQ_INIT;
 psc_spinlock_t			bmapFlushLock = SPINLOCK_INIT;
 int				bmapFlushTimeoFlags = 0;
 
-#define BMAPFLSH_TIMEOA		(1 << 0)
-#define BMAPFLSH_WAKE		(1 << 1)
-#define BMAPFLSH_RPCWAIT	(1 << 2)
-#define BMAPFLSH_EXPIRE		(1 << 3)
-
 __static int
 bmap_flush_biorq_expired(const struct bmpc_ioreq *a, struct timespec *t)
 {
