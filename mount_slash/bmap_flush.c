@@ -937,7 +937,7 @@ msl_bmap_release(struct sl_resm *resm)
 void
 msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 {
-	struct timespec crtime, nexttimeo = { 0, 0 };
+	struct timespec crtime, nto = { 0, 0 };
 	struct psc_dynarray rels = DYNARRAY_INIT;
 	struct psc_waitq waitq = PSC_WAITQ_INIT;
 	struct bmap_cli_info *bci, *wrapdetect;
@@ -962,8 +962,8 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			sortbypass--;
 
 		PFL_GETTIMESPEC(&crtime);
-		nexttimeo = crtime;
-		nexttimeo.tv_sec += BMAP_CLI_TIMEO_INC;
+		nto = crtime;
+		nto.tv_sec += BMAP_CLI_TIMEO_INC;
 
 		wrapdetect = NULL;
 		while ((bci = lc_getnb(&bmapTimeoutQ))) {
@@ -977,7 +977,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				/* Don't set expire in the past.
 				 */
 				if (timespeccmp(&crtime, &bci->bci_etime, <))
-					nexttimeo = bci->bci_etime;
+					nto = bci->bci_etime;
 			}
 
 			BMAP_LOCK(b);
@@ -994,7 +994,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				/* Don't spin on expired bmaps while they
 				 *    unwind timedout biorqs.
 				 */
-				nexttimeo = bci->bci_etime;
+				nto = bci->bci_etime;
 
 			if (bmpc_queued_ios(&bci->bci_bmpc)) {
 				int rc;
@@ -1005,8 +1005,8 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				 */
 				if ((!rc || rc == -EAGAIN) &&
 				    timespeccmp(&crtime, &bci->bci_etime, <) &&
-				    timespeccmp(&nexttimeo, &bci->bci_etime, >))
-					nexttimeo = bci->bci_etime;
+				    timespeccmp(&nto, &bci->bci_etime, >))
+					nto = bci->bci_etime;
 
 				lc_addtail(&bmapTimeoutQ, bci);
 				continue;
@@ -1088,14 +1088,14 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			msl_bmap_release(resm);
 
 		psc_dynarray_reset(&rels);
-		psc_waitq_waitabs(&waitq, NULL, &nexttimeo);
+		psc_waitq_waitabs(&waitq, NULL, &nto);
 
 		if (!pscthr_run())
 			break;
 
-		timespecsub(&nexttimeo, &crtime, &nexttimeo);
+		timespecsub(&nto, &crtime, &nto);
 		psclogs_debug(SLSS_BMAP, "waited for ("PSCPRI_TIMESPEC")"
-		    " lc_sz=%zd", PSCPRI_TIMESPEC_ARGS(&nexttimeo),
+		    " lc_sz=%zd", PSCPRI_TIMESPEC_ARGS(&nto),
 		    lc_sz(&bmapTimeoutQ));
 	}
 	psc_dynarray_free(&rels);
