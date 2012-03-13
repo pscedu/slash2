@@ -333,11 +333,10 @@ struct bmpc_ioreq {
 
 #define biorq_wake_locked(r) psc_waitq_wakeall(&(r)->biorq_waitq))
 
-int	_msl_offline_retry(struct bmpc_ioreq *, int);
+int	_msl_offline_retry(const struct pfl_callerinfo *, struct bmpc_ioreq *);
 int	msl_fd_offline_retry(struct msl_fhent *);
 
-#define msl_offline_retry(r)		_msl_offline_retry((r), 0)
-#define msl_offline_retry_ignexpire(r)	_msl_offline_retry((r), 1)
+#define msl_offline_retry(r)		_msl_offline_retry(PFL_CALLERINFOSS(SLSS_BMAP), (r))
 
 struct bmpc_write_coalescer {
 	struct psc_lockedlist		 bwc_pll;

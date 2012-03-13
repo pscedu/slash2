@@ -2398,7 +2398,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		      (BIORQ_READ | BIORQ_RBWFP | BIORQ_RBWLP))) {
 			rc = msl_pages_prefetch(r[i]);
 			if (rc) {
-				rc = msl_offline_retry_ignexpire(r[i]);
+				rc = msl_offline_retry(r[i]);
 				r[i]->biorq_flags |= (r[i]->biorq_flags & BIORQ_READ) ?
 					BIORQ_READFAIL : BIORQ_RBWFAIL;
 				msl_biorq_destroy(r[i]);
@@ -2439,7 +2439,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			}
 			if (rc) {
 				pll_remove(&mfh->mfh_biorqs, r[i]);
-				rc = msl_offline_retry_ignexpire(r[i]);
+				rc = msl_offline_retry(r[i]);
 				if (rc) {
 					r[i] = NULL;
 					goto restart;
@@ -2477,9 +2477,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 					bref = r[i]->biorq_bmap;
 					bmap_op_start_type(bref,
 					    BMAP_OPCNT_BIORQ);
-				} else
-					rc = msl_offline_retry_ignexpire(r[i]);
-				if (rc) {
+
 					r[i]->biorq_flags |= (r[i]->biorq_flags & BIORQ_READ) ?
 						BIORQ_READFAIL : BIORQ_RBWFAIL;
 					msl_biorq_destroy(r[i]);

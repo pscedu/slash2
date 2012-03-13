@@ -731,7 +731,7 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 		 * No connection was immediately available; wait a small
 		 * amount of time to wait for any to come online.
 		 */
-		psc_multiwait_secs(mw, &p, 5);
+		psc_multiwait_secs(mw, &p, BMAP_CLI_MAX_LEASE);
 	}
 	psc_multiwait_leavecritsect(mw);
 	return (NULL);

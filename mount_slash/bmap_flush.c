@@ -95,6 +95,10 @@ msl_fd_offline_retry(struct msl_fhent *mfh)
 	else
 		cnt = &msbmflthr(thr)->mbft_failcnt;
 	psc_assert(*cnt);
+
+	DEBUG_FCMH(PLL_WARN, mfh->mfh_fcmh, "nretries=%d, maxretries=%d "
+	   "(non-blocking=%d)", *cnt, 10, (mfh->mfh_oflags & O_NONBLOCK));
+		   
 	if (mfh->mfh_oflags & O_NONBLOCK)
 		return (0);
 	if (++*cnt >= 10)
@@ -103,12 +107,15 @@ msl_fd_offline_retry(struct msl_fhent *mfh)
 }
 
 int
-_msl_offline_retry(struct bmpc_ioreq *r, int ignore_expire)
+_msl_offline_retry(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
 {
-	//XXX bmap_flush_biorq_expired() is not used properly here.
-	if (!ignore_expire && bmap_flush_biorq_expired(r, NULL))
-		return (0);
-	return (msl_fd_offline_retry(r->biorq_fhent));
+	int retry;
+
+	retry = msl_fd_offline_retry(r->biorq_fhent);
+
+	DEBUG_BIORQ(PLL_WARN, r, "retry=%d", retry);
+
+	return (retry);
 }
 
 void
@@ -969,7 +976,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			}
 
 			BMAP_LOCK(b);
-			DEBUG_BMAP(PLL_INFO, b, "timeoq try reap"
+			DEBUG_BMAP(PLL_DEBUG, b, "timeoq try reap"
 			   " (nbmaps=%zd) etime("PSCPRI_TIMESPEC")",
 			   lc_sz(&bmapTimeoutQ),
 			   PSCPRI_TIMESPEC_ARGS(&bci->bci_etime));
@@ -1082,7 +1089,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			break;
 
 		timespecsub(&nexttimeo, &crtime, &nexttimeo);
-		psclogs_info(SLSS_BMAP, "waited for ("PSCPRI_TIMESPEC")"
+		psclogs_debug(SLSS_BMAP, "waited for ("PSCPRI_TIMESPEC")"
 		    " lc_sz=%zd", PSCPRI_TIMESPEC_ARGS(&nexttimeo),
 		    lc_sz(&bmapTimeoutQ));
 	}
@@ -1363,7 +1370,7 @@ msbmapflushthr_main(__unusedx struct psc_thread *thr)
 			neg = 1;
 		}
 
-		psclogs_info(SLSS_BMAP, "flush ("PSCPRI_TIMESPEC"), "
+		psclogs_debug(SLSS_BMAP, "flush ("PSCPRI_TIMESPEC"), "
 		    "rpcwait ("PSCPRI_TIMESPEC"), "
 		    "bmapFlushTimeoFlags=%d, "
 		    "waitq (%s"PSCPRI_TIMESPEC") rc=%d",
