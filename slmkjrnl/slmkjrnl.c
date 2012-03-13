@@ -427,8 +427,6 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	sl_subsys_register();
-	psc_subsys_register(SLMSS_ZFS, "zfs");
-	psc_subsys_register(SLMSS_JOURNAL, "log");
 
 	fn[0] = '\0';
 	progname = argv[0];
