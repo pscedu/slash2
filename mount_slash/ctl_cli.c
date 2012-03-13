@@ -465,7 +465,7 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 PFLCTL_SVR_DEFS;
 
 void
-msctlthr_begin(__unusedx struct psc_thread *thr)
+msctlthr_main(__unusedx struct psc_thread *thr)
 {
 	psc_ctlthr_main(ctlsockfn, msctlops, nitems(msctlops), MSTHRT_CTLAC);
 }
@@ -491,7 +491,7 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_simple("pref_ios",
 	    msctlparam_prefios_get, msctlparam_prefios_set);
 
-	thr = pscthr_init(MSTHRT_CTL, 0, msctlthr_begin, NULL,
+	thr = pscthr_init(MSTHRT_CTL, 0, msctlthr_main, NULL,
 	    sizeof(struct psc_ctlthr), "msctlthr");
 	pscthr_setready(thr);
 }
