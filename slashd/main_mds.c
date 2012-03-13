@@ -140,7 +140,7 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 	if (rc == -1)
 		psc_fatal("zpool import");
 	else if (rc) {
-		psclog_errorx("Please check, among other things, if the mount point is empty.\n");
+		psclog_errorx("Please check, among other things, if the mount point is empty.");
 		psc_fatalx("zpool import: returned %d", WEXITSTATUS(rc));
 	}
 }
