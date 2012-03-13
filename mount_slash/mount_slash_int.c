@@ -129,7 +129,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 		psc_iostats_intv_add(&msl_io_512k_stat, 1);
 	else
 		psc_iostats_intv_add(&msl_io_1m_stat, 1);
-		
+
 	*newreq = r = psc_pool_get(slc_biorq_pool);
 
 	bmpc_ioreq_init(r, roff, len, op, b, mfh, q);
@@ -456,10 +456,10 @@ msl_biorq_del(struct bmpc_ioreq *r)
 	if (r->biorq_flags & BIORQ_WRITE && !(r->biorq_flags & BIORQ_DIO)) {
 		if (!(r->biorq_flags & BIORQ_RBWFAIL))
 			atomic_dec(&bmpc->bmpc_pndgwr);
-		
+
 		psc_assert(atomic_read(&bmpc->bmpc_pndgwr) >= 0);
 		/* Signify that a WB operation occurred.
-		 */		
+		 */
 		if (!(r->biorq_flags & (BIORQ_FLUSHABORT | BIORQ_RBWFAIL)))
 			bmpc->bmpc_compwr++;
 
@@ -522,24 +522,24 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 				psc_assert(r->biorq_flags & BIORQ_WRITE);
 				psc_assert(psc_atomic16_read(&e->bmpce_wrref) >= 1);
 				psc_assert(psc_atomic16_read(&e->bmpce_rdref) >= 1);
-			}				
-			
-			while (((r->biorq_flags & BIORQ_RBWFAIL) ? 
-				psc_atomic16_read(&e->bmpce_wrref) > 1 : 
+			}
+
+			while (((r->biorq_flags & BIORQ_RBWFAIL) ?
+				psc_atomic16_read(&e->bmpce_wrref) > 1 :
 				psc_atomic16_read(&e->bmpce_wrref)) ||
 			       psc_atomic16_read(&e->bmpce_rdref) > 1) {
 				BMPCE_WAIT(e);
 				BMPCE_LOCK(e);
-			}			
+			}
 			/* Unless this is an RBWFAIL, only my rd ref should remain.
-			 */			
-			psc_assert((psc_atomic16_read(&e->bmpce_wrref) ==  
+			 */
+			psc_assert((psc_atomic16_read(&e->bmpce_wrref) ==
 				    !!(r->biorq_flags & BIORQ_RBWFAIL)) &&
 				   psc_atomic16_read(&e->bmpce_rdref) == 1);
 
 			if (r->biorq_flags & BIORQ_RBWFAIL)
 				psc_atomic16_dec(&e->bmpce_rdref);
-		}	
+		}
 		e->bmpce_flags &= ~BMPCE_INFLIGHT;
 		DEBUG_BMPCE(PLL_INFO, e, "unset inflight");
 		BMPCE_ULOCK(e);
@@ -578,7 +578,7 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
 	if (!(r->biorq_flags & BIORQ_DIO)) {
 		if (r->biorq_flags & BIORQ_WRITE) {
 			if (r->biorq_flags &
-			    ((BIORQ_RBWFAIL | BIORQ_EXPIREDLEASE | 
+			    ((BIORQ_RBWFAIL | BIORQ_EXPIREDLEASE |
 			      BIORQ_RESCHED | BIORQ_BMAPFAIL | BIORQ_READFAIL)))
 				/*
 				 * Ensure this biorq never got off of
@@ -1120,7 +1120,7 @@ int
 msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
-	struct bmpc_write_coalescer *bwc = 
+	struct bmpc_write_coalescer *bwc =
 		args->pointer_arg[MSL_CBARG_BIORQS];
 	struct bmpc_ioreq *r;
 	int rc = 0, expired_lease = 0, maxretries = 0;
@@ -1154,7 +1154,7 @@ msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 			}
 
 		if (maxretries)
-			bmpc_biorqs_fail(bmap_2_bmpc(r->biorq_bmap), 
+			bmpc_biorqs_fail(bmap_2_bmpc(r->biorq_bmap),
 				 BIORQ_MAXRETRIES);
 	}
 
@@ -1167,7 +1167,7 @@ msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 				msl_biorq_destroy(r);
 			} else
 				/* Ok to retry this one.
-				 */ 
+				 */
 				bmap_flush_resched(r);
 		} else
 			/* Success.
@@ -2514,8 +2514,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	if (bref)
 		bmap_op_done_type(bref, BMAP_OPCNT_BIORQ);
 
-	/* Note:  this is 'error' case.  For successful ops, 
-	 *   msl_biorq_destroy called from msl_pages_copy[in|out]. 
+	/* Note:  this is 'error' case.  For successful ops,
+	 *   msl_biorq_destroy called from msl_pages_copy[in|out].
 	 */
 	for (i = 0; i < nr; i++)
 		if (r[i] && r[i] != MSL_BIORQ_COMPLETE) {
