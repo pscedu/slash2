@@ -171,7 +171,8 @@ _bmap_flushq_wake(const struct pfl_callerinfo *pci, int mode,
 	     mode, wake, tmp, atomic_read(&outstandingRpcCnt));
 }
 
-#define bmap_flush_rpccnt_dec() _bmap_flush_rpccnt_dec(PFL_CALLERINFOSS(SLSS_BMAP))
+#define bmap_flush_rpccnt_dec()					\
+	_bmap_flush_rpccnt_dec(PFL_CALLERINFOSS(SLSS_BMAP))
 
 __static void
 _bmap_flush_rpccnt_dec(const struct pfl_callerinfo *pci)
@@ -490,14 +491,12 @@ bmap_flush_biorq_cmp(const void *x, const void *y)
 	const struct bmpc_ioreq * const *pa = x, *a = *pa;
 	const struct bmpc_ioreq * const *pb = y, *b = *pb;
 
-	//DEBUG_BIORQ(PLL_TRACE, a, "compare..");
-	//DEBUG_BIORQ(PLL_TRACE, b, "..compare");
-
 	if (a->biorq_off == b->biorq_off)
 		/* Larger requests with the same start offset should have
 		 *   ordering priority.
 		 */
 		return (CMP(b->biorq_len, a->biorq_len));
+
 	return (CMP(a->biorq_off, b->biorq_off));
 }
 
@@ -522,7 +521,8 @@ bmap_flush_coalesce_prep(struct bmpc_write_coalescer *bwc)
 		if (!e)
 			e = r;
 		else {
-			/* Biorq offsets may not decrease and holes are not allowed.
+			/* Biorq offsets may not decrease and holes are not
+			 * allowed.
 			 */
 			psc_assert(r->biorq_off >= loff);
 			psc_assert(r->biorq_off <= biorq_voff_get(e));
@@ -536,8 +536,8 @@ bmap_flush_coalesce_prep(struct bmpc_write_coalescer *bwc)
 
 		DYNARRAY_FOREACH(bmpce, i, &r->biorq_pages) {
 			DEBUG_BMPCE(PLL_INFO, bmpce,
-			    "adding if DNE nbmpces=%d (i=%d) (off=%"PSCPRIdOFFT")",
-			    bwc->bwc_nbmpces, i, off);
+			    "adding if DNE nbmpces=%d (i=%d) "
+			    "(off=%"PSCPRIdOFFT")", bwc->bwc_nbmpces, i, off);
 
 			bmpce_usecheck(bmpce, BIORQ_WRITE, !i ?
 			       (r->biorq_off & ~BMPC_BUFMASK) : off);
@@ -820,23 +820,21 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 			}
 			pll_addtail(&bwc->bwc_pll, t);
 
-		} else {
-			/*
-			 * This biorq is not contiguous with the
-			 * previous.  If the current set is expired send
-			 * it out now.  Otherwise, deschedule the
-			 * current set and resume activity with 't' as
-			 * the base.
+		} else if (expired) {
+			/* Biorq is not contiguous with the previous.
+			 * If the current set is expired send it out now.
 			 */
-			if (expired)
-				break;
-			else {
-				e = t;
-				bwc_desched(bwc);
-				pll_add(&bwc->bwc_pll, e);
-				bwc->bwc_size = e->biorq_len;
-				bwc->bwc_soff = e->biorq_off;
-			}
+			break;
+
+		} else {
+			/* Otherwise, deschedule the current set and resume 
+			 * activity with 't' as the base.
+			 */
+			e = t;
+			bwc_desched(bwc);
+			pll_add(&bwc->bwc_pll, e);
+			bwc->bwc_size = e->biorq_len;
+			bwc->bwc_soff = e->biorq_off;
 		}
 	}
 
@@ -871,8 +869,9 @@ msl_bmap_release_cb(struct pscrpc_request *rq,
 	for (i = 0; i < mq->nbmaps; i++) {
 		psclog((rc || mp->rc) ? PLL_ERROR : PLL_INFO,
 		       "fid="SLPRI_FID" bmap=%u key=%"PRId64" seq=%"PRId64
-		       " rc=%d", mq->sbd[i].sbd_fg.fg_fid, mq->sbd[i].sbd_bmapno,
-		       mq->sbd[i].sbd_key, mq->sbd[i].sbd_seq, (mp) ? mp->rc : rc);
+		       " rc=%d", mq->sbd[i].sbd_fg.fg_fid, 
+		       mq->sbd[i].sbd_bmapno, mq->sbd[i].sbd_key, 
+		       mq->sbd[i].sbd_seq, (mp) ? mp->rc : rc);
 	}
 
 	return (rc | ((mp) ? mp->rc : 0));
@@ -1143,7 +1142,7 @@ bmpces_inflight_locked(struct bmpc_ioreq *r)
 }
 
 /**
- * msbmflwthr_main -
+ * msbmflwthr_main - lease watcher thread.
  */
 __static void
 msbmflwthr_main(__unusedx struct psc_thread *thr)
