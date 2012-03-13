@@ -153,12 +153,12 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 {
 	struct slashrpc_cservice *csvc;
 	struct srm_connect_rep *mp;
-	int rc = 0;
+	int rc = rq->rq_status;
 
 	/* Check for ETIMEDOUT and friends before delving into closer
 	 *   inspection of the rq.
 	 */
-	if (!rq->rq_status) {
+	if (!rc) {
 		rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
 		if (rc == 0)
 			rc = rq->rq_status;
