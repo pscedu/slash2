@@ -93,8 +93,10 @@ msl_fd_offline_retry(struct msl_fhent *mfh)
 	thr = pscthr_get();
 	if (thr->pscthr_type == MSTHRT_FS)
 		cnt = &msfsthr(thr)->mft_failcnt;
-	else
+	else if (thr->pscthr_type == MSTHRT_BMAPFLSH)
 		cnt = &msbmflthr(thr)->mbft_failcnt;
+	else
+		psc_assert("invalid thread type");
 	psc_assert(*cnt);
 
 	DEBUG_FCMH(PLL_WARN, mfh->mfh_fcmh, "nretries=%d, maxretries=%d "
@@ -375,9 +377,9 @@ bmap_flush_desched(struct bmpc_ioreq *r)
 	 * XXX These magic numbers should be made into tunables.
 	 */
 	if (r->biorq_retries < 32)
-		delta = 20; 
+		delta = 20;
 	else if (r->biorq_retries < 64)
-		delta = (r->biorq_retries - 32) * 20 + 20; 
+		delta = (r->biorq_retries - 32) * 20 + 20;
 	else
 		delta = 32 * 20;
 
