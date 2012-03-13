@@ -1186,7 +1186,7 @@ msbmflwthr_main(__unusedx struct psc_thread *thr)
  * bmap_flush - Send out SRMT_WRITE RPCs to the I/O server.
  */
 __static void
-bmap_flush(struct timespec *nexttimeo)
+bmap_flush(struct timespec *nto)
 {
 	struct psc_dynarray reqs = DYNARRAY_INIT_NOLOG,
 	    bmaps = DYNARRAY_INIT_NOLOG;
@@ -1197,7 +1197,7 @@ bmap_flush(struct timespec *nexttimeo)
 	struct timespec t = {0, 0};
 	int i, j;
 
-	nexttimeo->tv_sec = nexttimeo->tv_nsec = 0;
+	nto->tv_sec = nto->tv_nsec = 0;
 
 	LIST_CACHE_LOCK(&bmapFlushQ);
 	LIST_CACHE_FOREACH_SAFE(b, tmpb, &bmapFlushQ) {
@@ -1233,9 +1233,9 @@ bmap_flush(struct timespec *nexttimeo)
 			if (bmap_flushable(b, &t))
 				psc_dynarray_add(&bmaps, b);
 			else
-				if (timespeccmp(nexttimeo, &t, >) ||
-				    (!nexttimeo->tv_sec && !nexttimeo->tv_nsec))
-					*nexttimeo = t;
+				if (timespeccmp(nto, &t, >) ||
+				    (!nto->tv_sec && !nto->tv_nsec))
+					*nto = t;
 			BMAP_ULOCK(b);
 		}
 
@@ -1246,9 +1246,9 @@ bmap_flush(struct timespec *nexttimeo)
 	}
 
 	PFL_GETTIMESPEC(&t);
-	if ((!nexttimeo->tv_sec && !nexttimeo->tv_nsec) ||
-	    timespeccmp(nexttimeo, &t, <)) {
-		timespecadd(&t, &bmapFlushWaitSecs, nexttimeo);
+	if ((!nto->tv_sec && !nto->tv_nsec) ||
+	    timespeccmp(nto, &t, <)) {
+		timespecadd(&t, &bmapFlushWaitSecs, nto);
 	}
 
 	LIST_CACHE_ULOCK(&bmapFlushQ);
