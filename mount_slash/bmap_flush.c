@@ -59,6 +59,7 @@ __static atomic_t		 outstandingRpcCnt;
 
 #define MAX_OUTSTANDING_RPCS	16
 #define MIN_COALESCE_RPC_SZ	LNET_MTU /* Try for big RPC's */
+#define NUM_READAHEAD_THREADS   4
 
 struct psc_waitq		bmapFlushWaitq = PSC_WAITQ_INIT;
 psc_spinlock_t			bmapFlushLock = SPINLOCK_INIT;
@@ -1518,7 +1519,7 @@ msbmapflushthr_spawn(void)
 	    thr->pscthr_name);
 	pscthr_setready(thr);
 
-	for (i=0; i < 4; i++) {
+	for (i=0; i < NUM_READAHEAD_THREADS; i++) {
 		thr = pscthr_init(MSTHRT_BMAPREADAHEAD, 0,
 		    msbmaprathr_main, NULL, sizeof(struct
 		    msbmflra_thread), "msbrathr%d", i);
