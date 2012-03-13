@@ -1,0 +1,31 @@
+03/13/2012
+----------
+
+Right now, we support only one file system in the pool. In the furture:
+
+ * More than one file system per pool is allowed.
+
+ * The contents of all file systems are accessible from a slash2 client.
+
+ * Only one file system can be made writable per mds, all other file systems 
+   are strictly read-only.
+
+The idea is that the pool layout will be the same across MDS.  Only one MDS
+can write a file system, and we will use snapshot mechanism to propagate
+the updates to other MDs.
+
+The root file system is a place holder now, not really used by any MDS.  We
+need to fake the contents of the root to allow access to other file systems.
+Presumably, we can put private stuff to the root file system that will not
+be shared by other MDS in any way.
+
+We will use site id bits in the fid for each file systems.  The ID of the 
+root file system is 0.   
+
+There could be compatibility issue.  Right under root, we can have existing
+files and directories that do not represent a file system.
+
+
+
+            
+
