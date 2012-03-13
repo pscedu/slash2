@@ -355,9 +355,9 @@ bmap_flush_desched(struct bmpc_ioreq *r)
 	r->biorq_flags |= BIORQ_RESCHED;
 
 	/*
-	 * Back off to allow the I/O server to recover or become less busy. Also
-	 * clear the force expire flag to avoid a spin within ourselves in the 
-	 * bmap flush loop.
+	 * Back off to allow the I/O server to recover or become less busy. 
+	 * Also clear the force expire flag to avoid a spin within ourselves 
+	 * in the bmap flush loop.
 	 *
 	 * In theory, we could place them on a different queue based on its
 	 * target sliod and woken them up with the connection is re-established
@@ -366,7 +366,12 @@ bmap_flush_desched(struct bmpc_ioreq *r)
 	r->biorq_flags &= ~BIORQ_FORCE_EXPIRE;
 	PFL_GETTIMESPEC(&r->biorq_expire);
 
-	/* retry last more than 11 hours, but don't make it too long between retries */
+	/* 
+	 * Retry last more than 11 hours, but don't make it too long between 
+	 * retries.
+	 *
+	 * XXX These magic numbers should be made into tunables.
+	 */
 	if (r->biorq_retries < 32)
 		delta = 20; 
 	else if (r->biorq_retries < 64)
