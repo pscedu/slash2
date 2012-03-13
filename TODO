@@ -387,6 +387,8 @@ reimport
 - upsch inquiries shouldn't wakeup the uswi to retry unnecessary
   processing
 - fix sliod connection bug visible from slmctl
+- slmctl -s outstanding bmap leases
+- msctl -p offline_nretries
 - uptime instance nonce variable that allows msl to dump data if it
   changes while communicating with sliod
    (o) mark new flag on msl csvc when upnonce changes in CONNECT
