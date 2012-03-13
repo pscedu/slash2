@@ -210,12 +210,15 @@ res2rpci(struct sl_resource *res)
 	return (resprof_get_pri(res));
 }
 
+#define MAX_PENDING_RPCS 16
+
 /* CLI-specific data for struct sl_resm */
 struct resm_cli_info {
 	struct pfl_mutex		 rmci_mutex;
 	struct psc_multiwaitcond	 rmci_mwc;
 	struct srm_bmap_release_req	 rmci_bmaprls;
-	struct psc_listcache		 rmci_async_reqs;	/* reqs waiting for read/write completion from ION */
+	struct psc_listcache		 rmci_async_reqs;
+	psc_atomic32_t                   rmci_pndg_rpcs;
 };
 
 static __inline struct resm_cli_info *
