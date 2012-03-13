@@ -101,7 +101,7 @@ msl_fd_offline_retry(struct msl_fhent *mfh)
 
 	DEBUG_FCMH(PLL_WARN, mfh->mfh_fcmh, "nretries=%d, maxretries=%d "
 	   "(non-blocking=%d)", *cnt, 10, (mfh->mfh_oflags & O_NONBLOCK));
-		   
+
 	if (mfh->mfh_oflags & O_NONBLOCK)
 		return (0);
 	if (++*cnt >= 10)
@@ -359,8 +359,8 @@ bmap_flush_desched(struct bmpc_ioreq *r)
 	r->biorq_flags |= BIORQ_RESCHED;
 
 	/*
-	 * Back off to allow the I/O server to recover or become less busy. 
-	 * Also clear the force expire flag to avoid a spin within ourselves 
+	 * Back off to allow the I/O server to recover or become less busy.
+	 * Also clear the force expire flag to avoid a spin within ourselves
 	 * in the bmap flush loop.
 	 *
 	 * In theory, we could place them on a different queue based on its
@@ -370,8 +370,8 @@ bmap_flush_desched(struct bmpc_ioreq *r)
 	r->biorq_flags &= ~BIORQ_FORCE_EXPIRE;
 	PFL_GETTIMESPEC(&r->biorq_expire);
 
-	/* 
-	 * Retry last more than 11 hours, but don't make it too long between 
+	/*
+	 * Retry last more than 11 hours, but don't make it too long between
 	 * retries.
 	 *
 	 * XXX These magic numbers should be made into tunables.
@@ -829,7 +829,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 			break;
 
 		} else {
-			/* Otherwise, deschedule the current set and resume 
+			/* Otherwise, deschedule the current set and resume
 			 * activity with 't' as the base.
 			 */
 			e = t;
@@ -871,8 +871,8 @@ msl_bmap_release_cb(struct pscrpc_request *rq,
 	for (i = 0; i < mq->nbmaps; i++) {
 		psclog((rc || mp->rc) ? PLL_ERROR : PLL_INFO,
 		       "fid="SLPRI_FID" bmap=%u key=%"PRId64" seq=%"PRId64
-		       " rc=%d", mq->sbd[i].sbd_fg.fg_fid, 
-		       mq->sbd[i].sbd_bmapno, mq->sbd[i].sbd_key, 
+		       " rc=%d", mq->sbd[i].sbd_fg.fg_fid,
+		       mq->sbd[i].sbd_bmapno, mq->sbd[i].sbd_key,
 		       mq->sbd[i].sbd_seq, (mp) ? mp->rc : rc);
 	}
 
