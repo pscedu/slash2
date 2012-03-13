@@ -139,8 +139,10 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 	rc = system(cmdbuf);
 	if (rc == -1)
 		psc_fatal("zpool import");
-	else if (rc)
+	else if (rc) {
+		psclog_errorx("Please check, among other things, if the mount point is empty.\n");
 		psc_fatalx("zpool import: returned %d", WEXITSTATUS(rc));
+	}
 }
 
 __dead void
