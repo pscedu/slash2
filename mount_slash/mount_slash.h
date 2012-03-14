@@ -24,6 +24,7 @@
 
 #include "pfl/fs.h"
 #include "psc_rpc/service.h"
+#include "psc_util/atomic.h"
 #include "psc_util/multiwait.h"
 
 #include "bmap.h"
@@ -302,5 +303,6 @@ extern struct pscrpc_nbreqset	*pndgBmaplsReqs;
 
 extern struct psc_poolmgr	*slc_async_req_pool;
 extern struct psc_poolmgr	*slc_biorq_pool;
+extern psc_atomic32_t		 offline_nretries;
 
 #endif /* _MOUNT_SLASH_H_ */

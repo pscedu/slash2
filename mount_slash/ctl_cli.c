@@ -427,6 +427,27 @@ msctlparam_prefios_set(const char *val)
 	return (0);
 }
 
+void
+msctlparam_offlinenretries_get(char buf[PCP_VALUE_MAX])
+{
+	snprintf(buf, PCP_VALUE_MAX, "%d",
+	    psc_atomic32_read(&offline_nretries));
+}
+
+int
+msctlparam_offlinenretries_set(const char *val)
+{
+	char *endp;
+	long l;
+
+	l = strtol(val, &endp, 10);
+	if (l < 1 || l > 1000 ||
+	    endp == val || *endp != '\0')
+		return (-1);
+	psc_atomic32_set(&offline_nretries, l);
+	return (0);
+}
+
 struct psc_ctlop msctlops[] = {
 	PSC_CTLDEFOPS,
 /* ADDREPLRQ		*/ { msctlrep_replrq,		sizeof(struct msctlmsg_replrq) },
@@ -487,9 +508,10 @@ msctlthr_spawn(void)
 	/* XXX: add max_fs_iosz */
 	psc_ctlparam_register_simple("mountpoint",
 	    msctlparam_mountpoint_get, NULL);
-
 	psc_ctlparam_register_simple("pref_ios",
 	    msctlparam_prefios_get, msctlparam_prefios_set);
+	psc_ctlparam_register_simple("offline_nretries",
+	    msctlparam_offlinenretries_get, msctlparam_offlinenretries_set);
 
 	thr = pscthr_init(MSTHRT_CTL, 0, msctlthr_main, NULL,
 	    sizeof(struct psc_ctlthr), "msctlthr");
