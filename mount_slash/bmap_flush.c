@@ -862,6 +862,7 @@ int
 msl_bmap_release_cb(struct pscrpc_request *rq,
 		    struct pscrpc_async_args *args)
 {
+	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
 	uint32_t i;
@@ -881,6 +882,7 @@ msl_bmap_release_cb(struct pscrpc_request *rq,
 		       mq->sbd[i].sbd_seq, (mp) ? mp->rc : rc);
 	}
 
+	sl_csvc_decref(cvsc);
 	return (rc | ((mp) ? mp->rc : 0));
 }
 
@@ -919,6 +921,7 @@ msl_bmap_release(struct sl_resm *resm)
 		goto out;
 
 	memcpy(mq, &rmci->rmci_bmaprls, sizeof(*mq));
+	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 	rc = pscrpc_nbreqset_add(pndgBmapRlsReqs, rq);
 
@@ -926,12 +929,12 @@ msl_bmap_release(struct sl_resm *resm)
  out:
 	if (rc) {
 		/* At this point the bmaps have already been purged from
-		 *   our cache.  If the mds rls request fails then the
-		 *   mds should time them out on his own.  In any case,
+		 *   our cache.  If the MDS RLS request fails then the
+		 *   MDS should time them out on his own.  In any case,
 		 *   the client must reacquire leases to perform further
 		 *   I/O on any bmap in this set.
 		 */
-		psclog_errorx("bmap_release failed res=%s (rc=%d)",
+		psclog_errorx("failed res=%s (rc=%d)",
 		    resm->resm_name, rc);
 
 		if (rq)
