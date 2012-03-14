@@ -1196,9 +1196,9 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *b, enum rw rw)
 	BIOD_LOCK(b);
 	s = SPLAY_FIND(biod_slvrtree, &b->biod_slvrs, &ts);
 	if (s) {
+		SLVR_LOCK(s);		
 		BIOD_ULOCK(b);
 
-		SLVR_LOCK(s);
 		if (s->slvr_flags & SLVR_FREEING) {
 			SLVR_ULOCK(s);
 			goto retry;
