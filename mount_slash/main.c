@@ -1089,6 +1089,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	iov[niov].iov_len = size;
 	niov++;
 
+	/* calculate the max # of attributes that can be prefetched */
 	nstbpref = MIN(nstb_prefetch, (int)howmany(LNET_MTU - size,
 	    sizeof(struct srt_stat)));
 	if (nstbpref) {
