@@ -26,6 +26,10 @@ There could be compatibility issue.  Right under root, we can have existing
 files and directories that do not represent a file system.
 
 
+03/14/2012
+----------
 
+We need to come up with the attributes of roots of these file systems for
+readdir() purpose.  Looks like I can borrow some code from zfs_root().
             
 
