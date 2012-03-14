@@ -882,7 +882,7 @@ msl_bmap_release_cb(struct pscrpc_request *rq,
 		       mq->sbd[i].sbd_seq, (mp) ? mp->rc : rc);
 	}
 
-	sl_csvc_decref(cvsc);
+	sl_csvc_decref(csvc);
 	return (rc | ((mp) ? mp->rc : 0));
 }
 
