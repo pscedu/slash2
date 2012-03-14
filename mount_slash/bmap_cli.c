@@ -632,12 +632,12 @@ msl_bmap_reap_init(struct bmapc_memb *b, const struct srt_bmapdesc *sbd)
 struct slashrpc_cservice *
 msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 {
-	struct sl_resource *res;
-	struct sl_resm *resm;
 	struct slashrpc_cservice *csvc;
 	struct fcmh_cli_info *fci;
 	struct psc_multiwait *mw;
+	struct sl_resource *res;
 	struct rnd_iterator it;
+	struct sl_resm *resm;
 	uint64_t repls = 0; // XXX 1 bit per repl, SL_MAX_REPLICAS
 	int i, j, locked;
 	void *p;
@@ -724,7 +724,7 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 			}
 		}
 
-	block:
+ block:
 		if (i)
 			break;
 		/*
