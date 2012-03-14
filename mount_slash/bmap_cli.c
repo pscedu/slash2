@@ -656,7 +656,7 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 
 	res = libsl_id2res(prefIOS);
 	psc_assert(res);
-	
+
 	fci = fcmh_get_pri(b->bcm_fcmh);
 	mw = msl_getmw();
 	for (i = 0; i < 2; i++) {
@@ -669,8 +669,8 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 			if (csvc) {
 				psc_multiwait_leavecritsect(mw);
 				return (csvc);
-			} else 
-				goto block;			
+			} else
+				goto block;
 		}
 
 		/* first, try preferred IOS */
@@ -678,11 +678,11 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 			/* Scan through the members
 			 */
 			DYNARRAY_FOREACH(resm, j, &res->res_members) {
-				if (fci->fci_reptbl[it.ri_rnd_idx].bs_id != 
+				if (fci->fci_reptbl[it.ri_rnd_idx].bs_id !=
 				    resm->resm_res_id)
 					continue;
-				
-				csvc = msl_try_get_replica_res(b, 
+
+				csvc = msl_try_get_replica_res(b,
 					       it.ri_rnd_idx);
 				if (csvc) {
 					psc_multiwait_leavecritsect(mw);
@@ -707,7 +707,7 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 				psc_multiwait_leavecritsect(mw);
 				return (csvc);
 			}
-				
+
 			repls |= (1 << it.ri_rnd_idx);
 		}
 		/* Could more use the bitmap in a more clever fashion but
@@ -715,7 +715,7 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 		 */
 		FOREACH_RND(&it, fci->fci_nrepls) {
 			if (repls & (1 << it.ri_rnd_idx))
-                                continue;
+				continue;
 
 			csvc = msl_try_get_replica_res(b, it.ri_rnd_idx);
 			if (csvc) {
@@ -724,7 +724,7 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 			}
 		}
 
-	block:			
+	block:
 		if (i)
 			break;
 		/*
