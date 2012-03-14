@@ -1314,6 +1314,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *bufp)
 	 * notification from him when it is ready.
 	 */
 	if (rc == -SLERR_AIOWAIT)
+		/* XXX return */
 		goto out;
 
 	else if (rc)
@@ -1471,7 +1472,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMPC] = bmap_2_bmpc(b);
 	rq->rq_interpret_reply = msl_readahead_cb0;
-	pscrpc_completion_set(rq,  &rpcComp);
+	pscrpc_completion_set(rq, &rpcComp);
 
 	for (i = 0; i < nbmpce; i++) {
 		/* bmpce_ralentry is available at this point, add
