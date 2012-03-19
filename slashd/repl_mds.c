@@ -780,9 +780,9 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 	tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_TRUNCPNDG;
 
 	brepls_init(retifset, 0);
-	tract[BREPLST_REPL_SCHED] = 1;
-	tract[BREPLST_GARBAGE_SCHED] = 1;
-	tract[BREPLST_TRUNCPNDG_SCHED] = 1;
+	retifset[BREPLST_REPL_SCHED] = 1;
+	retifset[BREPLST_GARBAGE_SCHED] = 1;
+	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
 
 	PLL_LOCK(&upsched_listhd);
 	PLL_FOREACH(wk, &upsched_listhd) {
