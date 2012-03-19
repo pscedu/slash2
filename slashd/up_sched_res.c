@@ -125,14 +125,14 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 		    BMAPGETF_LOAD | BMAPGETF_NOAUTOINST, &b))
 			break;
 
-		rc = mds_repl_bmap_walk_all(b, NULL,
-		    retifset, REPL_WALKF_SCIRCUIT);
-		mds_bmap_write_repls_rel(b);
+		rc = mds_repl_bmap_walk_all(b, NULL, retifset,
+		    REPL_WALKF_SCIRCUIT);
+		bmap_op_done(b);
 		if (rc) {
 			struct sl_resource *r;
 			sl_replica_t ios;
 
-			/* requeue */
+			/* requeue XXX do it while bmap wr-locked */
 			r = psc_dynarray_getpos(
 			    &smut->smut_site->site_resources, 0);
 			ios.bs_id = r->res_id;
