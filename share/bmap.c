@@ -63,8 +63,16 @@ bmap_orphan(struct bmapc_memb *b)
 	waslocked = BMAP_RLOCK(b);
 
 	DEBUG_BMAP(PLL_INFO, b, "orphan");
-	psc_assert(!(b->bcm_flags & (BMAP_ORPHAN|BMAP_CLOSING)));
+	psc_assert(!(b->bcm_flags & BMAP_ORPHAN));
 	b->bcm_flags |= BMAP_ORPHAN;
+	
+ 	if (b->bcm_flags & BMAP_CLOSING) {
+		/* bug #249.  bmap_remove() is already 
+		 * pending.
+		 */
+		BMAP_ULOCK(b);
+		return;
+	}
 	BMAP_ULOCK(b);
 
 	FCMH_LOCK(f);
