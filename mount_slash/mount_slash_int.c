@@ -448,7 +448,8 @@ msl_biorq_del(struct bmpc_ioreq *r)
 	BMAP_LOCK(b);
 	BMPC_LOCK(bmpc);
 
-	if (r->biorq_flags & (BIORQ_RESCHED | BIORQ_RBWFAIL | BIORQ_FLUSHABORT))
+	if (r->biorq_flags & (BIORQ_RESCHED | BIORQ_RBWFAIL | BIORQ_FLUSHABORT | 
+		BIORQ_BMAPFAIL))
 		pll_remove(&bmpc->bmpc_new_biorqs, r);
 	else
 		pll_remove(&bmpc->bmpc_pndg_biorqs, r);
@@ -578,8 +579,9 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
 	if (!(r->biorq_flags & BIORQ_DIO)) {
 		if (r->biorq_flags & BIORQ_WRITE) {
 			if (r->biorq_flags &
-			    ((BIORQ_RBWFAIL | BIORQ_EXPIREDLEASE |
-			      BIORQ_RESCHED | BIORQ_BMAPFAIL | BIORQ_READFAIL)))
+			    (BIORQ_RBWFAIL | BIORQ_EXPIREDLEASE |
+				BIORQ_RESCHED | BIORQ_BMAPFAIL |
+				BIORQ_READFAIL))
 				/*
 				 * Ensure this biorq never got off of
 				 * the ground.

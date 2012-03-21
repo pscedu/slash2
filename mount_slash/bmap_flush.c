@@ -401,6 +401,14 @@ bmap_flush_desched(struct bmpc_ioreq *r)
 		bmpce->bmpce_flags &= ~BMPCE_INFLIGHT;
 		BMPCE_ULOCK(bmpce);
 	}
+
+	if (r->biorq_retries >= SL_MAX_BMAP_FLUSH_RETRIES) {
+		/* Cleanup errored I/O requests.
+		 */
+		r->biorq_flags |= (BIORQ_MAXRETRIES | BIORQ_FLUSHABORT);
+		biorq_destroy_failed(r);
+	}
+
 }
 
 /**
@@ -472,19 +480,8 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	return;
 
  error:
-	while ((r = pll_get(&bwc->bwc_pll))) {
-		if (r->biorq_retries >= SL_MAX_BMAP_FLUSH_RETRIES) {
-			/* Cleanup errored I/O requests.
-			 */
-			r->biorq_flags |= (BIORQ_MAXRETRIES |
-					   BIORQ_FLUSHABORT |
-					   BIORQ_RESCHED);
-
-			biorq_destroy_failed(r);
-			continue;
-		}
+	while ((r = pll_get(&bwc->bwc_pll)))
 		csvc ? bmap_flush_resched(r) : bmap_flush_desched(r);
-	}
 
 	if (csvc)
 		sl_csvc_decref(csvc);

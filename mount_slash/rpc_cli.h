@@ -84,7 +84,7 @@ struct pscrpc_request;
 			(error) = authbuf_check((rq), PSCRPC_MSG_REPLY);\
 		if ((error) == 0)					\
 			(error) = (mp) ? (mp)->rc : ENOMSG;		\
-		if ((error) == SLERR_NOTCONN)				\
+		if ((error) == SLERR_NOTCONN && ((csvc)))		\
 			sl_csvc_disconnect(csvc);			\
 	} while (0)
 
