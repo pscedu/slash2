@@ -89,7 +89,7 @@ int
 msl_fd_offline_retry(struct msl_fhent *mfh)
 {
 	struct psc_thread *thr;
-	int *cnt;
+	int *cnt = NULL;
 
 	thr = pscthr_get();
 	if (thr->pscthr_type == MSTHRT_FS)
