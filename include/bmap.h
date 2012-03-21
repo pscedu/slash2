@@ -140,7 +140,7 @@ struct bmapc_memb {
 #define _BMAP_FLSHFT		(1 << 17)
 
 #define SL_MAX_IOSREASSIGN              	16
-#define SL_MAX_BMAP_FLUSH_RETRIES             	128	
+#define SL_MAX_BMAP_FLUSH_RETRIES             	2048
 
 #define BMAP_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bcm_lock)
 #define BMAP_HASLOCK(b)		psc_spin_haslock(&(b)->bcm_lock)
