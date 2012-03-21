@@ -324,7 +324,7 @@ __static struct sl_resm *
 mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios,
     sl_ios_id_t *to_skip, int nskip)
 {
-	int i, j, skip, found = 0, off, val, nr, repls = 0;
+	int i, j, skip, off, val, nr, repls = 0;
 	struct slash_inode_od *ino = fcmh_2_ino(b->bcm_fcmh);
 	struct slash_inode_extras_od *inox = NULL;
 	struct psc_dynarray a = DYNARRAY_INIT;
@@ -402,10 +402,8 @@ mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios,
 				break;
 			}
 
-		if (!skip && mds_try_sliodresm(resm)) {
-			found = 1;
+		if (!skip && mds_try_sliodresm(resm))
 			break;
-		}
 	}
  out:
 	psc_dynarray_free(&a);
@@ -1302,7 +1300,7 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 
 	rc = mds_bmap_bml_add(bml, SL_WRITE, IOS_ID_ANY);
 	if (rc) {
-		bmap_2_bmi(b)->bmdsi_assign = NULL;		
+		bmap_2_bmi(b)->bmdsi_assign = NULL;
 		bml->bml_flags |= (BML_FREEING | BML_RECOVERFAIL);
 		mds_bmap_bml_release(bml);
 	}
