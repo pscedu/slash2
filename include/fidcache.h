@@ -94,6 +94,7 @@ struct fidc_membh {
 #define FCMH_LOCK(f)		spinlock_pci(PFL_CALLERINFOSS(SLSS_FCMH), &(f)->fcmh_lock)
 #define FCMH_ULOCK(f)		freelock_pci(PFL_CALLERINFOSS(SLSS_FCMH), &(f)->fcmh_lock)
 #define FCMH_TRYLOCK(f)		trylock_pci(PFL_CALLERINFOSS(SLSS_FCMH), &(f)->fcmh_lock)
+#define FCMH_TRYREQLOCK(f, lk)	tryreqlock_pci(PFL_CALLERINFOSS(SLSS_FCMH), &(f)->fcmh_lock, (lk))
 #define FCMH_RLOCK(f)		reqlock_pci(PFL_CALLERINFOSS(SLSS_FCMH), &(f)->fcmh_lock)
 #define FCMH_URLOCK(f, lk)	ureqlock_pci(PFL_CALLERINFOSS(SLSS_FCMH), &(f)->fcmh_lock, (lk))
 #define FCMH_LOCK_ENSURE(f)	LOCK_ENSURE(&(f)->fcmh_lock)
