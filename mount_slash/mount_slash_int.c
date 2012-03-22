@@ -2366,8 +2366,10 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			   "off=%"PSCPRIdOFFT" roff=%"PSCPRIdOFFT" rw=%s "
 			   "rc=%zd", s + i, tsize, tlen, off, roff,
 			   (rw == SL_READ) ? "read" : "write", rc);
+
 			if (msl_fd_offline_retry(mfh))
 				goto retry_bmap;
+
 			switch (abs(rc)) {
 			case SLERR_ION_OFFLINE:
 				rc = -EIO;
