@@ -127,7 +127,7 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 		csvc = NULL;
 	}
 
-	if (rc == SLERR_BMAP_DIOWAIT) {
+	if (rc == -SLERR_BMAP_DIOWAIT) {
 		DEBUG_BMAP(PLL_WARN, b, "SLERR_BMAP_DIOWAIT rt=%d", nretries);
 		sleep(BMAP_CLI_DIOWAIT_SECS);
 		if (nretries > BMAP_CLI_MAX_LEASE * 2)
@@ -537,7 +537,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw,
 		csvc = NULL;
 	}
 
-	if (rc == SLERR_BMAP_DIOWAIT) {
+	if (rc == -SLERR_BMAP_DIOWAIT) {
 		/* Retry for bmap to be DIO ready.
 		 */
 		DEBUG_BMAP(PLL_WARN, bmap,
