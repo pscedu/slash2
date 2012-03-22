@@ -60,7 +60,7 @@ fcmh_destroy(struct fidc_membh *f)
 	psc_assert(!psc_waitq_nwaiters(&f->fcmh_waitq));
 
 	psc_waitq_destroy(&f->fcmh_waitq);
-	
+
 	/* slc_fcmh_dtor(), slm_fcmh_dtor(), sli_fcmh_dtor() */
 	if (sl_fcmh_ops.sfop_dtor) {
 		if (f->fcmh_flags & (FCMH_CTOR_FAILED | FCMH_NO_BACKFILE))
@@ -150,7 +150,7 @@ fidc_reap(struct psc_poolmgr *m)
 {
 #define FCMH_MAX_REAP 8
 	struct fidc_membh *f, *tmp, *reap[FCMH_MAX_REAP];
-	int i, nreap=0;
+	int i, waslocked = 0, nreap = 0;
 
 	psc_assert(m == fidcPool);
 
@@ -165,7 +165,7 @@ fidc_reap(struct psc_poolmgr *m)
 		if (fcmh_2_fid(f) == 1)
 			continue;
 
-		if (!FCMH_TRYLOCK(f))
+		if (!FCMH_TRYREQLOCK(f, &waslocked))
 			continue;
 
 		/* skip items in use */
@@ -183,12 +183,12 @@ fidc_reap(struct psc_poolmgr *m)
 		 * Consult the context-specific callback handler before
 		 *    freeing.
 		 */
-		f->fcmh_flags |= FCMH_CAC_REAPED|FCMH_CAC_TOFREE;
+		f->fcmh_flags |= FCMH_CAC_REAPED | FCMH_CAC_TOFREE;
 		lc_remove(&fidcIdleList, f);
 		reap[nreap] = f;
 		nreap++;
  end:
-		FCMH_ULOCK(f);
+		FCMH_URLOCK(f, waslocked);
 	}
 	LIST_CACHE_ULOCK(&fidcIdleList);
 
