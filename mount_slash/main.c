@@ -916,6 +916,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 			dircache_lookup(fcmh_2_dci(p), name, DC_STALE);
 	} else
 		slc_fcmh_initdci(p);
+	FCMH_ULOCK(p);
 
 	if (rc == 0 && mp->cattr.sst_fid) {
 		rc = msl_load_fcmh(pfr, mp->cattr.sst_fid, &c);
