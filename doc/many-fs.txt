@@ -32,4 +32,16 @@ files and directories that do not represent a file system.
 We need to come up with the attributes of roots of these file systems for
 readdir() purpose.  Looks like I can borrow some code from zfs_root().
             
+03/27/2012
+----------
 
+If the pool is created with old utility:
+
+	- there is no fsid file in the default file system
+	- new slashd should be able to read and write it
+	- we can go back and forth between new and old slashd at will.
+
+If the pool is created with new utility:
+
+	- there is a fsid file in the default file system
+	- there is NO going back
