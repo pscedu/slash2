@@ -532,7 +532,17 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 		 * cause us to spin on it.
 		 */
 		if (f->fcmh_flags & FCMH_CTOR_FAILED) {
+			/* This won't race with _fidc_lookup because 
+			 * _fidc_lookup holds the bucket lock which this 
+			 * thread takes in psc_hashent_remove().  So 
+			 * _fidc_lookup is guaranteed to obtain this fcmh lock
+			 * and skip the fcmh because of FCMH_CAC_TOFREE before
+			 * this thread calls fcmh_destroy().
+			 */
 			lc_remove(&fidcIdleList, f);
+			f->fcmh_flags |= FCMH_CAC_TOFREE;
+			FCMH_ULOCK(f);
+
 			psc_hashent_remove(&fidcHtable, f);
 			fcmh_destroy(f);
 			return;
