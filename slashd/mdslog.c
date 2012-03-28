@@ -1796,10 +1796,6 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		iosinfo->si_flags &= ~SIF_NEED_JRNL_INIT;
 	}
 
-	/* Always start a thread to send reclaim updates. */
-	pscthr_init(SLMTHRT_JRECLAIM, 0, slmjreclaimthr_main, NULL, 0,
-	    "slmjreclaimthr");
-
 	psclog_warnx("current_reclaim_batchno = %"PRId64", current_reclaim_xid = %"PRId64,
 	    current_reclaim_batchno, current_reclaim_xid);
 
@@ -1894,12 +1890,6 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		peerinfo->sp_flags &= ~SPF_NEED_JRNL_INIT;
 	);
 
-	/*
-	 * Start a thread to propagate local namespace updates to peers
-	 * after our MDS peer list has been all setup.
-	 */
-	pscthr_init(SLMTHRT_JNAMESPACE, 0, slmjnsthr_main, NULL,
-	    0, "slmjnsthr");
 	psclog_warnx("current_update_batchno = %"PRId64", current_update_xid = %"PRId64,
 	    current_update_batchno, current_update_xid);
 
@@ -1931,6 +1921,18 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 
 	psclog_warnx("Journal UUID=%"PRIx64" MDS UUID=%"PRIx64,
 	     mdsJournal->pj_hdr->pjh_fsuuid, fsuuid);
+
+	/* Always start a thread to send reclaim updates. */
+	pscthr_init(SLMTHRT_JRECLAIM, 0, slmjreclaimthr_main, NULL, 0,
+	    "slmjreclaimthr");
+	if (!npeers)
+		return;
+	/*
+	 * Start a thread to propagate local namespace updates to peers
+	 * after our MDS peer list has been all setup.
+	 */
+	pscthr_init(SLMTHRT_JNAMESPACE, 0, slmjnsthr_main, NULL,
+	    0, "slmjnsthr");
 }
 
 void
