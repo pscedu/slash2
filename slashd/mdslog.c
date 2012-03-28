@@ -399,7 +399,13 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 				reclaim_entryp = PSC_AGP(reclaim_entryp, current_reclaim_entrysize);
 				reclaim_logfile_offset += current_reclaim_entrysize;
 			}
-			psc_assert((size % current_reclaim_entrysize) == 0);
+			/* this should never happen, but we have seen bitten */
+			if ((size > current_reclaim_entrysize * SLM_RECLAIM_BATCH) ||
+	    			((size % current_reclaim_entrysize) != 0)) {
+				psclog_warnx("Reclaim log corrupted! batch = %"PRIx64", size = %"PRId64,
+						current_reclaim_batchno, size);
+				size = current_reclaim_entrysize * SLM_RECLAIM_BATCH;
+			}
 			count = 0;
 			total = size / current_reclaim_entrysize;
 			while (count < total) {
@@ -1228,10 +1234,10 @@ mds_send_batch_reclaim(uint64_t batchno)
  	 * To avoid confusing other code on mds and sliod, pretend
  	 * we have done the job and move on.
  	 */
-	if ((sstb.sst_size > entrysize * SLM_RECLAIM_BATCH) ||
+	if ((size > entrysize * SLM_RECLAIM_BATCH) ||
 	    ((size % entrysize) != 0)) {
 		psclog_warnx("Reclaim log corrupted! batch = %"PRIx64", size = %"PRId64,
-			batchno, sstb.sst_size);
+			batchno, size);
 		mds_skip_reclaim_batch(batchno);
 		PSCFREE(reclaimbuf);
 		return (1);
