@@ -1270,7 +1270,7 @@ bmap_flush(struct timespec *nto)
 		BMAP_LOCK(b);
 		if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED) {
 			BMAP_ULOCK(b);
-			while ((r = pll_get(&bmpc->bmpc_new_biorqs)))
+			while ((r = pll_peekhead(&bmpc->bmpc_new_biorqs)))
 				psc_assert(biorq_destroy_failed(r));
 			continue;
 		}
