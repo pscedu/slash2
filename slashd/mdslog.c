@@ -1728,6 +1728,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	while (batchno < UINT64_MAX) {
 		rc = mds_open_logfile(batchno, 0, 1, &handle);
 		if (rc) {
+			psc_assert(rc == ENOENT);
 			if (batchno > lwm) {
 				batchno--;
 				rc = mds_open_logfile(batchno, 0, 1, &handle);
