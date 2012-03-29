@@ -475,6 +475,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 		psclog_warnx("Next batchno = %"PRId64", current reclaim XID = %"PRId64,
 	    	    current_reclaim_batchno, current_reclaim_xid);
 	}
+	psc_assert(reclaim_logfile_offset <=
+		   SLM_RECLAIM_BATCH * (off_t)current_reclaim_entrysize);
 
 	psclog_notice("current_reclaim_xid=%"PRIu64" batchno=%"PRIu64" fg="SLPRI_FG,
 	    current_reclaim_xid, current_reclaim_batchno,
