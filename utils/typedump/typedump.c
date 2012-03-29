@@ -47,6 +47,7 @@
 #include "sltypes.h"
 #include "slutil.h"
 #include "mount_slash/bmap_cli.h"
+#include "mount_slash/bmapc_mem.h"
 #include "mount_slash/bmpc.h"
 #include "mount_slash/ctl_cli.h"
 #include "mount_slash/ctlsvr_cli.h"

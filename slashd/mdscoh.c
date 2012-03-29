@@ -92,8 +92,9 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 		bml->bml_flags |= BML_FREEING;
 		BML_ULOCK(bml);
 		mds_bmap_bml_release(bml);
-	} else
+	} else {
 		BML_ULOCK(bml);
+	}
 
 	/* bmap_op_done_type() will wake any waiters.
 	 */
@@ -109,9 +110,8 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
  *	a conflicting access request.
  */
 int
-mdscoh_req(struct bmap_mds_lease *bml, int block)
+mdscoh_req(struct bmap_mds_lease *bml)
 {
-	struct pscrpc_export *exp = bml->bml_exp;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_bmap_dio_req *mq;
@@ -121,25 +121,31 @@ mdscoh_req(struct bmap_mds_lease *bml, int block)
 	DEBUG_BMAP(PLL_NOTIFY, bml_2_bmap(bml), "bml=%p", bml);
 
 	BML_LOCK(bml);
+	
 	psc_assert(!(bml->bml_flags & BML_COH));
 
 	if (!(bml->bml_flags & BML_EXP)) {
 		BML_ULOCK(bml);
-		return (block ? -ENOTCONN : 0);
+		return (-ENOTCONN);
 	}
+
 	bml->bml_flags |= BML_COH;
+
 	/* XXX How do we deal with a closing export?
 	 */
-	csvc = slm_getclcsvc(exp);
-	if (csvc == NULL)
+	csvc = slm_getclcsvc(bml->bml_exp);
+	if (csvc == NULL) {
 		bml->bml_flags &= ~BML_COH;
-	BML_ULOCK(bml);
-	if (csvc == NULL)
+		BML_ULOCK(bml);
 		return (-1);
+	} else
+		BML_ULOCK(bml);
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAPDIO, rq, mq, mp);
-	if (rc)
-		goto out;
+	if (rc) {
+		sl_csvc_decref(csvc);
+		return (rc);
+	}
 
 	rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_BML] = bml;
 	rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = csvc;
@@ -149,25 +155,12 @@ mdscoh_req(struct bmap_mds_lease *bml, int block)
 	mq->dio = 1;
 	mq->seq = bml->bml_seq;
 
-	if (block == MDSCOH_BLOCK) {
-		rc = SL_RSX_WAITREP(csvc, rq, mp);
-		if (rc == 0)
-			rc = mp->rc;
-	} else {
-		bmap_op_start_type(bml_2_bmap(bml), BMAP_OPCNT_COHCB);
-		authbuf_sign(rq, PSCRPC_MSG_REQUEST);
-		psc_assert(pscrpc_nbreqset_add(&bmapCbSet, rq) == 0);
-		lc_addtail(&inflBmapCbs, bml);
-		rq = NULL;
-		csvc = NULL;
-	}
+	bmap_op_start_type(bml_2_bmap(bml), BMAP_OPCNT_COHCB);
+	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
+	psc_assert(pscrpc_nbreqset_add(&bmapCbSet, rq) == 0);
+	lc_addtail(&inflBmapCbs, bml);
 
- out:
-	if (rq)
-		pscrpc_req_finished(rq);
-	if (csvc)
-		sl_csvc_decref(csvc);
-	return (rc);
+	return (0);
 }
 
 void
