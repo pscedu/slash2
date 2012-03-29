@@ -131,9 +131,11 @@ mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw,
 	psc_assert(rw == SL_WRITE || rw == SL_READ);
 
 	if (b->bcm_flags & BMAP_DIO) {
+		psc_assert(bmi->bmdsi_wr_ion);
 		goto out;
-
-	} else if (b->bcm_flags & BMAP_DIORQ) {
+	}
+	if (b->bcm_flags & BMAP_DIORQ) {
+		psc_assert(bmi->bmdsi_wr_ion);
 		/* In the process of waiting for an async RPC to complete.
 		 */
 		rc = -SLERR_BMAP_DIOWAIT;
@@ -179,7 +181,7 @@ mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw,
 			 *   retry periodically until the bmap has either
 			 *   reached DIO state or been timed out.
 			 */
-			mdscoh_req(bml);
+			mdscoh_req(bml, MDSCOH_NONBLOCK);
 			rc = -SLERR_BMAP_DIOWAIT;
 			goto out;
 		}
@@ -199,7 +201,8 @@ mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw,
 				if (bml->bml_cli_nidpid.nid != np->nid) {
 					set_dio = 1;
 					if (!(bml->bml_flags & BML_CDIO))
-						mdscoh_req(bml);
+						mdscoh_req(bml,
+						    MDSCOH_NONBLOCK);
 				}
 				tmp = tmp->bml_chain;
 			} while (tmp != bml);
@@ -685,7 +688,6 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 	/* Account for the read lease which is to be converted.
 	 */
 	psc_assert(rlease);
-
 	if (!wlease) {
 		/* Only bump bmdsi_writers if no other write lease
 		 *   is still leased to this client.
@@ -718,7 +720,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 	    bml, rc, bmi->bmdsi_writers, bmi->bmdsi_readers);
 
 	if (rc) {
-		bml->bml_flags |= (BML_READ | BML_ASSFAIL);
+		bml->bml_flags |= (BML_READ|BML_ASSFAIL);
 		bml->bml_flags &= ~(BML_UPGRADE | BML_WRITE);
 
 		if (wlease < 0) {
@@ -797,8 +799,8 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 	 */
 	bcm_wait_locked(b, (b->bcm_flags & BMAP_IONASSIGN));
 
-	rc = mds_bmap_directio_locked(b, rw, &bml->bml_cli_nidpid);
-	if (rc && !(bml->bml_flags & BML_RECOVER))
+	if (!(bml->bml_flags & BML_RECOVER) &&
+	    (rc = mds_bmap_directio_locked(b, rw, &bml->bml_cli_nidpid)))
 		/* 'rc != 0' means that we're waiting on an async cb
 		 *    completion.
 		 */

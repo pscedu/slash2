@@ -24,7 +24,7 @@ struct pscrpc_async_args;
 struct pscrpc_request;
 struct bmap_mds_lease;
 
-int	mdscoh_req(struct bmap_mds_lease *);
+int	mdscoh_req(struct bmap_mds_lease *, int);
 int	mdscoh_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 void	slmcohthr_spawn(void);
 
