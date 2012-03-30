@@ -81,7 +81,6 @@ slm_fcmh_ctor(struct fidc_membh *fcmh)
 	rc = mdsio_lookup_slfid(fcmh_2_fid(fcmh), &rootcreds,
 	    &fcmh->fcmh_sstb, &fcmh_2_mdsio_fid(fcmh));
 	if (rc) {
-		fcmh->fcmh_flags |= FCMH_CTOR_FAILED;
 		fmi->fmi_ctor_rc = rc;
 		DEBUG_FCMH(PLL_WARN, fcmh,
 		    "mdsio_lookup_slfid failed (rc=%d)", rc);
@@ -102,7 +101,6 @@ slm_fcmh_ctor(struct fidc_membh *fcmh)
 				DEBUG_FCMH(PLL_WARN, fcmh,
 				    "could not load inode; rc=%d", rc);
 		} else {
-			fcmh->fcmh_flags |= FCMH_CTOR_FAILED;
 			fmi->fmi_ctor_rc = rc;
 			DEBUG_FCMH(PLL_WARN, fcmh,
 			    "mdsio_opencreate failed (rc=%d)", rc);
