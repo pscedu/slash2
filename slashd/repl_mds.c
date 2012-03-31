@@ -70,6 +70,14 @@ iosidx_cmp(const void *a, const void *b)
 }
 
 __static int
+iosid_cmp(const void *a, const void *b)
+{
+	const sl_replica_t *x = a, *y = b;
+
+	return (CMP(x->bs_id, y->bs_id));
+}
+
+__static int
 iosidx_in(int idx, const int *iosidx, int nios)
 {
 	if (bsearch(&idx, iosidx, nios,
@@ -449,9 +457,56 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 	return (rc);
 }
 
+void
+slm_iosv_setbusy(sl_replica_t *iosv, int nios)
+{
+	struct resprof_mds_info *rpmi;
+	struct sl_mds_iosinfo *si;
+	struct sl_resource *r;
+	int n;
+
+	/* this must be sorted to avoid deadlocks */
+	qsort(iosv, nios, sizeof(iosv[0]), iosid_cmp);
+	for (n = 0; n < nios; n++) {
+		r = libsl_id2res(iosv[n].bs_id);
+		rpmi = res2rpmi(r);
+		si = res2iosinfo(r);
+
+		RPMI_LOCK(rpmi);
+		while (si->si_flags & SIF_BUSY) {
+			psc_waitq_wait(&rpmi->rpmi_waitq,
+			    &rpmi->rpmi_lock);
+			RPMI_LOCK(rpmi);
+		}
+		si->si_flags |= SIF_BUSY;
+		RPMI_ULOCK(rpmi);
+	}
+}
+
+void
+slm_iosv_clearbusy(const sl_replica_t *iosv, int nios)
+{
+	struct resprof_mds_info *rpmi;
+	struct sl_mds_iosinfo *si;
+	struct sl_resource *r;
+	int n;
+
+	for (n = 0; n < nios; n++) {
+		r = libsl_id2res(iosv[n].bs_id);
+		rpmi = res2rpmi(r);
+		si = res2iosinfo(r);
+
+		RPMI_LOCK(rpmi);
+		psc_assert(si->si_flags & SIF_BUSY);
+		si->si_flags &= ~SIF_BUSY;
+		RPMI_ULOCK(rpmi);
+		psc_waitq_wakeall(&rpmi->rpmi_waitq);
+	}
+}
+
 int
 mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
-    const sl_replica_t *iosv, int nios)
+    sl_replica_t *iosv, int nios)
 {
 	int tract[NBREPLST], retifset[NBREPLST], retifzero[NBREPLST];
 	int iosidx[SL_MAX_REPLICAS], rc;
@@ -459,19 +514,19 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	struct bmapc_memb *bcm;
 
 	if (nios < 1 || nios > SL_MAX_REPLICAS)
-		return (EINVAL);
+		return (-EINVAL);
 
 	rc = uswi_findoradd(fgp, &wk);
 	if (rc)
 		return (rc);
 
+	slm_iosv_setbusy(iosv, nios);
+
 	/* Find/add our replica's IOS ID */
 	rc = mds_repl_iosv_lookup_add(USWI_INOH(wk), iosv, iosidx,
 	    nios);
-	if (rc) {
-		uswi_unref(wk);
-		return (rc);
-	}
+	if (rc)
+		goto out;
 
 	/*
 	 * Check inode's bmap state.  INVALID and VALID states become
@@ -567,31 +622,33 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	else if (rc == SLERR_BMAP_ZERO)
 		rc = 0;
 
+ out:
 	uswi_unref(wk);
+	slm_iosv_clearbusy(iosv, nios);
 	return (rc);
 }
 
 int
 mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
-    const sl_replica_t *iosv, int nios)
+    sl_replica_t *iosv, int nios)
 {
 	int rc, tract[NBREPLST], retifset[NBREPLST], iosidx[SL_MAX_REPLICAS];
 	struct up_sched_work_item *wk;
 	struct bmapc_memb *bcm;
 
 	if (nios < 1 || nios > SL_MAX_REPLICAS)
-		return (EINVAL);
+		return (-EINVAL);
 
 	rc = uswi_findoradd(fgp, &wk);
 	if (rc)
 		return (rc);
 
+	slm_iosv_setbusy(iosv, nios);
+
 	/* Find replica IOS indexes */
 	rc = mds_repl_iosv_lookup(USWI_INOH(wk), iosv, iosidx, nios);
-	if (rc) {
-		uswi_unref(wk);
-		return (rc);
-	}
+	if (rc)
+		goto out;
 
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_QUEUED] = BREPLST_GARBAGE;
@@ -632,7 +689,10 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		rc = SLERR_BMAP_INVALID;
 
 	uswi_enqueue_sites(wk, iosv, nios);
+
+ out:
 	uswi_unref(wk);
+	slm_iosv_clearbusy(iosv, nios);
 	return (rc);
 }
 
@@ -784,6 +844,8 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 	retifset[BREPLST_GARBAGE_SCHED] = 1;
 	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
 
+	slm_iosv_setbusy(&repl, 1);
+
 	PLL_LOCK(&upsched_listhd);
 	PLL_FOREACH(wk, &upsched_listhd) {
 		USWI_INCREF(wk, USWI_REFT_LOOKUP);
@@ -811,6 +873,7 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 		uswi_unref(wk);
 	}
 	PLL_ULOCK(&upsched_listhd);
+	slm_iosv_clearbusy(&repl, 1);
 }
 
 void

@@ -168,6 +168,7 @@ struct sl_mds_iosinfo {
 #define	SIF_NEED_JRNL_INIT	(1 << 0)		/* journal fields need initialized */
 #define SIF_DISABLE_BIA		(1 << 1)		/* disable bmap lease assignments */
 #define SIF_DISABLE_GC		(1 << 2)		/* disable garbage collection temporarily */
+#define SIF_BUSY		(1 << 3)
 
 #define res2iosinfo(res)	((struct sl_mds_iosinfo *)res2rpmi(res)->rpmi_info)
 
@@ -175,6 +176,7 @@ struct sl_mds_iosinfo {
 struct resprof_mds_info {
 	int			  rpmi_cnt;		/* IOS round-robin assigner */
 	psc_spinlock_t		  rpmi_lock;
+	struct psc_waitq	  rpmi_waitq;
 
 	/* sl_mds_peerinfo for peer MDS or sl_mds_iosinfo for IOS */
 	void			 *rpmi_info;

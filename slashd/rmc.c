@@ -1085,7 +1085,7 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 int
 slm_rmc_handle_addreplrq(struct pscrpc_request *rq)
 {
-	const struct srm_replrq_req *mq;
+	struct srm_replrq_req *mq;
 	struct srm_replrq_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -1097,7 +1097,7 @@ slm_rmc_handle_addreplrq(struct pscrpc_request *rq)
 int
 slm_rmc_handle_delreplrq(struct pscrpc_request *rq)
 {
-	const struct srm_replrq_req *mq;
+	struct srm_replrq_req *mq;
 	struct srm_replrq_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);

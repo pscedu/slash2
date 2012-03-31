@@ -54,10 +54,10 @@ struct slm_resmlink {
 
 typedef void (*brepl_walkcb_t)(struct bmapc_memb *, int, int, void *);
 
-int	 mds_repl_addrq(const struct slash_fidgen *, sl_bmapno_t, const sl_replica_t *, int);
+int	 mds_repl_addrq(const struct slash_fidgen *, sl_bmapno_t, sl_replica_t *, int);
 int	_mds_repl_bmap_apply(struct bmapc_memb *, const int *, const int *, int, int, int *, brepl_walkcb_t, void *);
 int	_mds_repl_bmap_walk(struct bmapc_memb *, const int *, const int *, int, const int *, int, brepl_walkcb_t, void *);
-int	 mds_repl_delrq(const struct slash_fidgen *, sl_bmapno_t, const sl_replica_t *, int);
+int	 mds_repl_delrq(const struct slash_fidgen *, sl_bmapno_t, sl_replica_t *, int);
 void	 mds_repl_init(void);
 int	 mds_repl_inv_except(struct bmapc_memb *, int);
 int	_mds_repl_ios_lookup(struct slash_inode_handle *, sl_ios_id_t, int, int);

@@ -36,6 +36,7 @@ slcfg_init_res(struct sl_resource *res)
 
 	rpmi = res2rpmi(res);
 	INIT_SPINLOCK(&rpmi->rpmi_lock);
+	psc_waitq_init(&rpmi->rpmi_waitq);
 
 	if (res->res_type == SLREST_MDS) {
 		peerinfo = PSCALLOC(sizeof(*peerinfo));
