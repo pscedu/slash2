@@ -282,7 +282,7 @@ struct srt_stat {
 			(dst)->sst_fid = (src)->sst_fid;		\
 		_n = sizeof((dst)->sst_fid);				\
 		memcpy((char *)(dst) + _n, (char *)(src) + _n,		\
-		    sizeof(*(dst))) - _n;				\
+		    sizeof(*(dst)) - _n);				\
 	} while (0)
 
 struct srt_statfs {

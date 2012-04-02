@@ -90,16 +90,13 @@ sli_open_backing_file(struct fidc_membh *fcmh)
 int
 sli_fcmh_getattr(struct fidc_membh *fcmh)
 {
-	struct srt_stat sstb;
 	struct stat stb;
 
 	if (fstat(fcmh_2_fd(fcmh), &stb) == -1)
 		return (-errno);
 
-	sl_externalize_stat(&stb, &sstb);
-
 	FCMH_LOCK(fcmh);
-	COPY_SSTB(&sstb, &fcmh->fcmh_sstb);
+	sl_externalize_stat(&stb, &fcmh->fcmh_sstb);
 	// XXX get ptruncgen and gen
 	fcmh->fcmh_flags |= FCMH_HAVE_ATTRS;
 	FCMH_ULOCK(fcmh);
