@@ -445,7 +445,7 @@ mds_replay_namespace(struct slmds_jent_namespace *sjnm, int replay)
 		if (!replay) {
 			if (fcmh) {
 				/* setattr() above has filled sstb */
-				COPY_SSTB(sstb, &fcmh->fcmh_sstb);
+				COPY_SSTB(&sstb, &fcmh->fcmh_sstb);
 				fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 			}
 		}

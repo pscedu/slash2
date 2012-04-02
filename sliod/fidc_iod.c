@@ -92,7 +92,6 @@ sli_fcmh_getattr(struct fidc_membh *fcmh)
 {
 	struct srt_stat sstb;
 	struct stat stb;
-	size_t n;
 
 	if (fstat(fcmh_2_fd(fcmh), &stb) == -1)
 		return (-errno);
