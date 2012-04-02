@@ -19,6 +19,7 @@ set zpool_name="arc_s2mds";
 
 set allow_exec="
 	/bin/cp:
+	/bin/ls:
 	/bin/mv:
 	/usr/psc/bin/far:
 	/usr/psc/bin/scp:
@@ -88,7 +89,7 @@ site @PSCARCH {
 	resource sense1s1 { desc = "disk-based archiver unit 1 sliod 1"; type = standalone_fs; id = 0x1101; nids = sense1-sliod1; selftest = "/usr/local/psc/sbin/st /arc_sliod/1"; fsroot = /arc_sliod/1; }
 	resource sense1s2 { desc = "disk-based archiver unit 1 sliod 2"; type = standalone_fs; id = 0x1102; nids = sense1-sliod2; selftest = "/usr/local/psc/sbin/st /arc_sliod/2"; fsroot = /arc_sliod/2; }
 	resource sense1s3 { desc = "disk-based archiver unit 1 sliod 3"; type = standalone_fs; id = 0x1103; nids = sense1-sliod3; selftest = "/usr/local/psc/sbin/st /arc_sliod/3"; fsroot = /arc_sliod/3; }
- 	resource sense1s4 { desc = "disk-based archiver unit 1 sliod 4"; type = standalone_fs; id = 0x1104; nids = sense1-sliod4; selftest = "/usr/local/psc/sbin/st /arc_sliod/4"; fsroot = /arc_sliod/4; }
+	resource sense1s4 { desc = "disk-based archiver unit 1 sliod 4"; type = standalone_fs; id = 0x1104; nids = sense1-sliod4; selftest = "/usr/local/psc/sbin/st /arc_sliod/4"; fsroot = /arc_sliod/4; }
 	resource sense1s5 { desc = "disk-based archiver unit 1 sliod 5"; type = standalone_fs; id = 0x1105; nids = sense1-sliod5; selftest = "/usr/local/psc/sbin/st /arc_sliod/5"; fsroot = /arc_sliod/5; }
 	resource sense1s6 { desc = "disk-based archiver unit 1 sliod 6"; type = standalone_fs; id = 0x1106; nids = sense1-sliod6; selftest = "/usr/local/psc/sbin/st /arc_sliod/6"; fsroot = /arc_sliod/6; }
 
