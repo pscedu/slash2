@@ -406,7 +406,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 	    			((size % current_reclaim_entrysize) != 0)) {
 				psclog_warnx("Reclaim log corrupted! batch = %"PRIx64", size = %"PRId64,
 						current_reclaim_batchno, size);
-				size = current_reclaim_entrysize * SLM_RECLAIM_BATCH;
+				size = current_reclaim_entrysize * (SLM_RECLAIM_BATCH - 1);
 			}
 			count = 0;
 			total = size / current_reclaim_entrysize;
