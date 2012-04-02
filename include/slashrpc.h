@@ -277,8 +277,10 @@ struct srt_stat {
 #define COPY_SSTB(src, dst)						\
 	do {								\
 		size_t _n;						\
+									\
 		if ((dst)->sst_fid != (src)->sst_fid)			\
 			(dst)->sst_fid = (src)->sst_fid;		\
+		_n = sizeof((dst)->sst_fid);				\
 		memcpy((dst) + _n, (src) + _n, sizeof(*(dst)) - _n);	\
 	} while (0)
 
