@@ -128,7 +128,7 @@ fcmh_setattrf(struct fidc_membh *fcmh, struct srt_stat *sstb, int flags)
 			sstb->sst_mtim = fcmh->fcmh_sstb.sst_mtim;
 	}
 
-	fcmh->fcmh_sstb = *sstb;
+	COPY_SSTB(sstb, &fcmh->fcmh_sstb);
 	fcmh->fcmh_flags |= FCMH_HAVE_ATTRS;
 	fcmh->fcmh_flags &= ~FCMH_GETTING_ATTRS;
 
@@ -338,7 +338,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 			try_create = 1;
 			goto restart;
 		}
-	 } else {
+	} else {
 		/*
 		 * FIDC_LOOKUP_CREATE was not specified and the fcmh is
 		 * not present.
