@@ -17,15 +17,17 @@ set pref_ios="sense345@PSCARCH";
 set fsuuid="3a8cea38614e8122";
 set zpool_name="arc_s2mds";
 
-#set allow_exec="
-#	/usr/psc/bin/far:
-#	/usr/psc/bin/scp:
-#	/usr/bin/scp:
-#	/usr/psc/bin/sftp:
-#	/usr/bin/sftp:
-#	/usr/bin/rsync:
-#	/usr/psc/globus/default/bin/globus-url-copy
-#";
+set allow_exec="
+	/bin/cp:
+	/bin/mv:
+	/usr/psc/bin/far:
+	/usr/psc/bin/scp:
+	/usr/bin/scp:
+	/usr/psc/bin/sftp:
+	/usr/bin/sftp:
+	/usr/bin/rsync:
+	/usr/psc/globus/default/bin/globus-url-copy
+";
 
 site @PSCARCH {
 	site_desc	= "PSC archiver";
