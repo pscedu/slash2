@@ -66,7 +66,7 @@ bim_updateseq(uint64_t seq)
 	freelock(&bimSeq.bim_lock);
 
 	if (invalid)
-		psclog_warnx("seq %"PRId64" is invalid (bim_minseq=%"PRId64")",
+		psclog_notify("seq %"PRId64" is invalid (bim_minseq=%"PRId64")",
 			  seq, bimSeq.bim_minseq);
 	return (invalid);
 }
