@@ -273,6 +273,15 @@ struct srt_stat {
 	    (sstb)->sst_mtime, (sstb)->sst_mtime_ns,			\
 	    (sstb)->sst_ctime, (sstb)->sst_ctime_ns, ## __VA_ARGS__)
 
+/* copy an sstb without overwriting the FID field */
+#define COPY_SSTB(src, dst)						\
+	do {								\
+		size_t _n;						\
+		if ((dst)->sst_fid != (src)->sst_fid)			\
+			(dst)->sst_fid = (src)->sst_fid;		\
+		memcpy((dst) + _n, (src) + _n, sizeof(*(dst)) - _n);	\
+	} while (0)
+
 struct srt_statfs {
 	char			sf_type[16];
 	uint32_t		sf_bsize;	/* file system block size */

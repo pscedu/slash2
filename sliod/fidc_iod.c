@@ -83,20 +83,24 @@ sli_open_backing_file(struct fidc_membh *fcmh)
 	}
 	psclog_info("path=%s fd=%d rc=%d",
 	    strstr(fidfn, "fidns"), fcmh_2_fd(fcmh), rc);
-	
+
 	return (rc);
 }
 
 int
 sli_fcmh_getattr(struct fidc_membh *fcmh)
 {
+	struct srt_stat sstb;
 	struct stat stb;
+	size_t n;
 
 	if (fstat(fcmh_2_fd(fcmh), &stb) == -1)
 		return (-errno);
 
+	sl_externalize_stat(&stb, &sstb);
+
 	FCMH_LOCK(fcmh);
-	sl_externalize_stat(&stb, &fcmh->fcmh_sstb);
+	COPY_SSTB(&sstb, &fcmh->fcmh_sstb);
 	// XXX get ptruncgen and gen
 	fcmh->fcmh_flags |= FCMH_HAVE_ATTRS;
 	FCMH_ULOCK(fcmh);
