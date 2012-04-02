@@ -1195,14 +1195,19 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *b, enum rw rw)
 	BIOD_LOCK(b);
 	s = SPLAY_FIND(biod_slvrtree, &b->biod_slvrs, &ts);
 	if (s) {
-		SLVR_LOCK(s);		
-		BIOD_ULOCK(b);
-
+		SLVR_LOCK(s);
 		if (s->slvr_flags & SLVR_FREEING) {
 			SLVR_ULOCK(s);
+			/* BIOD lock is required to free the slvr.
+			 * It must be held here to prevent the slvr
+			 * from being freed before we release the lock.
+			 */
+			BIOD_ULOCK(b);
 			goto retry;
 
 		} else {
+			BIOD_ULOCK(b);
+
 			s->slvr_flags |= SLVR_PINNED;
 
 			if (rw == SL_WRITE)
