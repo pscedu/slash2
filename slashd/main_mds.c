@@ -329,10 +329,6 @@ main(int argc, char *argv[])
 
 	lc_reginit(&slm_replst_workq, struct slm_replst_workreq,
 	    rsw_lentry, "replstwkq");
-	lc_reginit(&pndgBmapCbs, struct bmap_mds_lease, bml_coh_lentry,
-	    "pendingbml");
-	lc_reginit(&inflBmapCbs, struct bmap_mds_lease, bml_coh_lentry,
-	    "inflightbml");
 
 	sl_nbrqset = pscrpc_nbreqset_init(NULL, NULL);
 	pscrpc_nbreapthr_spawn(sl_nbrqset, SLMTHRT_NBRQ, "slmnbrqthr");

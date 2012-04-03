@@ -26,6 +26,7 @@
 #include "psc_util/atomic.h"
 #include "psc_util/log.h"
 
+#include "bmap.h"
 #include "bmap_mds.h"
 #include "cache_params.h"
 #include "fidc_mds.h"
@@ -34,13 +35,12 @@
 #include "slashd.h"
 #include "slashrpc.h"
 
-struct psc_listcache	pndgBmapCbs;
-struct psc_listcache	inflBmapCbs;
 struct pscrpc_nbreqset	bmapCbSet =
     PSCRPC_NBREQSET_INIT(bmapCbSet, NULL, mdscoh_cb);
 
-#define SLM_CBARG_SLOT_BML	0
-#define SLM_CBARG_SLOT_CSVC	1
+#define SLM_CBARG_SLOT_CSVC	0
+
+struct pscrpc_completion mdsCohCompl;
 
 void
 mdscoh_reap(void)
@@ -54,54 +54,83 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 	struct slashrpc_cservice *csvc;
 	struct srm_bmap_dio_req *mq;
 	struct srm_bmap_dio_rep *mp;
+	struct fidc_membh *f;
+	struct bmapc_memb *b = NULL;
 	struct bmap_mds_lease *bml;
-	int flags;
+	int rc = 0;
 
 	mq = pscrpc_msg_buf(req->rq_reqmsg, 0, sizeof(*mq));
 	mp = pscrpc_msg_buf(req->rq_repmsg, 0, sizeof(*mp));
-	bml = req->rq_async_args.pointer_arg[SLM_CBARG_SLOT_BML];
 	csvc = req->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC];
+	
+	if (req->rq_err)
+		rc = req->rq_err;
 
-	DEBUG_BMAP(req->rq_err ? PLL_ERROR : PLL_NOTIFY, bml_2_bmap(bml),
-	   "cli=%s bml=%p seq=%"PRId64" rq_status=%d mp->rc=%d",
-	   libcfs_id2str(req->rq_import->imp_connection->c_peer),
-	   bml, bml->bml_seq, req->rq_status, mp ? mp->rc : -1);
+	else if (req->rq_status)
+		rc = req->rq_status;
 
-	lc_remove(&inflBmapCbs, bml);
+	if (rc)
+		goto out;
+
+	if (mp && mp->rc)
+		rc = mp->rc;
+
+	//XXX if the client has given up the lease then we shouldn't consider
+	// that an error and should proceed.
+
+	/* Leases can come and go regardless of pending coh cb's.
+	 */
+	f = fidc_lookup_fid(mq->fid);
+	if (!f)
+		PFL_GOTOERR(out, rc = -ENOENT);
+	
+	FCMH_LOCK(f);
+	b = bmap_lookup_cache_locked(f, mq->blkno);
+	fcmh_decref(f, FCMH_OPCNT_LOOKUP_FIDC);
+	FCMH_ULOCK(f);
+
+	if (!b)
+		PFL_GOTOERR(out, rc = -ENOENT);
+
+	bml = mds_bmap_getbml_locked(b, mq->seq, 
+	     req->rq_peer.nid, req->rq_peer.pid);
+
+	if (!bml)
+		PFL_GOTOERR(out, rc = -ENOENT);
 
 	BML_LOCK(bml);
-	psc_assert(bml->bml_flags & BML_COH);
-	bml->bml_flags &= ~BML_COH;
-	flags = bml->bml_flags;
-	BML_ULOCK(bml);
+	bml->bml_flags |= BML_CDIO;
+	if (bml->bml_flags & BML_COHDIO) {
+		/* Test for BMAP_DIORQ.  If it was removed, the
+		 * the writer holding the lease, on behalf of 
+		 * which this rq was issued, has relinquished
+		 * its lease.  Therefore, DIO conversion may be 
+		 * bypassed here.
+		 */
+		if (b->bcm_flags & BMAP_DIORQ) {
+			b->bcm_flags &= ~BMAP_DIORQ;
+			b->bcm_flags |= BMAP_DIO;
+		}
 
-	if (flags & BML_COHDIO) {
-		BMAP_LOCK(bml_2_bmap(bml));
-		psc_assert(bml_2_bmap(bml)->bcm_flags & BMAP_DIORQ);
-		bml_2_bmap(bml)->bcm_flags &= ~BMAP_DIORQ;
-		bml_2_bmap(bml)->bcm_flags |= BMAP_DIO;
-		BMAP_ULOCK(bml_2_bmap(bml));
-
-		DEBUG_BMAP(PLL_WARN, bml_2_bmap(bml), "converted to dio");
+		bml->bml_flags &= ~BML_COHDIO;
+		
+		DEBUG_BMAP(PLL_WARN, bml_2_bmap(bml), "converted to dio=%d",
+			   !!(b->bcm_flags & BMAP_DIO));
 	}
-
-	/* Lock again and try to free
-	 */
-	BML_LOCK(bml);
-	if (!(bml->bml_flags & BML_FREEING) && (bml->bml_flags & BML_COHRLS)) {
-		bml->bml_flags |= BML_FREEING;
-		BML_ULOCK(bml);
-		mds_bmap_bml_release(bml);
-	} else
-		BML_ULOCK(bml);
-
-	/* bmap_op_done_type() will wake any waiters.
-	 */
-	bmap_op_done_type(bml_2_bmap(bml), BMAP_OPCNT_COHCB);
-
+	BML_ULOCK(bml);
+ out:
+	if (b) {
+		DEBUG_BMAP(rc ? PLL_WARN : PLL_NOTIFY, b,
+		   "cli=%s seq=%"PRId64" rq_status=%d mp->rc=%d",
+		   libcfs_id2str(req->rq_import->imp_connection->c_peer),
+		   mq->seq, req->rq_status, mp ? mp->rc : -1);	
+		/* I release bmap lock.
+		 */
+		bmap_op_done(b);
+	}
 	sl_csvc_decref(csvc);
 
-	return (0);
+	return (rc);
 }
 
 /**
@@ -109,9 +138,8 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
  *	a conflicting access request.
  */
 int
-mdscoh_req(struct bmap_mds_lease *bml, int block)
+mdscoh_req(struct bmap_mds_lease *bml)
 {
-	struct pscrpc_export *exp = bml->bml_exp;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_bmap_dio_req *mq;
@@ -121,61 +149,49 @@ mdscoh_req(struct bmap_mds_lease *bml, int block)
 	DEBUG_BMAP(PLL_NOTIFY, bml_2_bmap(bml), "bml=%p", bml);
 
 	BML_LOCK(bml);
-	psc_assert(!(bml->bml_flags & BML_COH));
-
-	if (!(bml->bml_flags & BML_EXP)) {
+	if (bml->bml_flags & BML_RECOVER) {
+		psc_assert(!bml->bml_exp);
 		BML_ULOCK(bml);
-		return (block ? -ENOTCONN : 0);
+		return (-ENOTCONN);
+	
 	}
-	bml->bml_flags |= BML_COH;
-	/* XXX How do we deal with a closing export?
-	 */
-	csvc = slm_getclcsvc(exp);
-	if (csvc == NULL)
-		bml->bml_flags &= ~BML_COH;
+	psc_assert(bml->bml_exp);		
+
+	csvc = slm_getclcsvc(bml->bml_exp);
+	if (csvc == NULL) {
+		BML_ULOCK(bml);
+		return (-ENOTCONN);
+	}
 	BML_ULOCK(bml);
-	if (csvc == NULL)
-		return (-1);
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAPDIO, rq, mq, mp);
-	if (rc)
-		goto out;
+	if (rc) {
+		sl_csvc_decref(csvc);
+		return (rc);
+	}
 
-	rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_BML] = bml;
+	rq->rq_comp = &mdsCohCompl;
 	rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = csvc;
 
 	mq->fid = fcmh_2_fid(bml_2_bmap(bml)->bcm_fcmh);
 	mq->blkno = bml_2_bmap(bml)->bcm_bmapno;
-	mq->dio = 1;
 	mq->seq = bml->bml_seq;
+	mq->dio = 1;
 
-	if (block == MDSCOH_BLOCK) {
-		rc = SL_RSX_WAITREP(csvc, rq, mp);
-		if (rc == 0)
-			rc = mp->rc;
-	} else {
-		bmap_op_start_type(bml_2_bmap(bml), BMAP_OPCNT_COHCB);
-		authbuf_sign(rq, PSCRPC_MSG_REQUEST);
-		psc_assert(pscrpc_nbreqset_add(&bmapCbSet, rq) == 0);
-		lc_addtail(&inflBmapCbs, bml);
-		rq = NULL;
-		csvc = NULL;
-	}
+	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
+	psc_assert(pscrpc_nbreqset_add(&bmapCbSet, rq) == 0);
 
- out:
-	if (rq)
-		pscrpc_req_finished(rq);
-	if (csvc)
-		sl_csvc_decref(csvc);
-	return (rc);
+	return (0);
 }
 
 void
 slmcohthr_begin(__unusedx struct psc_thread *thr)
 {
+	pscrpc_completion_init(&mdsCohCompl);
+
 	while (pscthr_run()) {
 		mdscoh_reap();
-		sleep(1);
+		pscrpc_completion_waitrel_s(&mdsCohCompl, 1);
 	}
 }
 

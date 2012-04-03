@@ -260,8 +260,7 @@ mds_inox_ensure_loaded(struct slash_inode_handle *ih)
 }
 
 int
-mds_inodes_odsync(struct fidc_membh *f,
-    void (*logf)(void *, uint64_t, int))
+mds_inodes_odsync(struct fidc_membh *f, void (*logf)(void *, uint64_t, int))
 {
 	struct slash_inode_handle *ih = fcmh_2_inoh(f);
 	int locked, rc;

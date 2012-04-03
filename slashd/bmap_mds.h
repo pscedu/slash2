@@ -172,35 +172,34 @@ struct bmap_mds_lease {
 	struct pscrpc_export	 *bml_exp;
 	struct psclist_head	  bml_bmdsi_lentry;
 	struct psclist_head	  bml_timeo_lentry;
-	struct psclist_head	  bml_coh_lentry;
 	struct bmap_mds_lease	 *bml_chain;		/* chain of duplicate leases */
 };
 
 /* bml_flags */
-#define BML_READ		(1 <<  0)
-#define BML_WRITE		(1 <<  1)
-#define BML_CDIO		(1 <<  2)
-#define BML_COHRLS		(1 <<  3)
-#define BML_COHDIO		(1 <<  4)
-#define BML_EXP			(1 <<  5)
-#define BML_TIMEOQ		(1 <<  6)
-#define BML_BMDSI		(1 <<  7)
-#define BML_COH			(1 <<  8)
-#define BML_RECOVER		(1 <<  9)
-#define BML_CHAIN		(1 << 10)
-#define BML_UPGRADE		(1 << 11)
-#define BML_EXPFAIL		(1 << 12)
-#define BML_FREEING		(1 << 13)
-#define BML_ASSFAIL		(1 << 14)
-#define BML_RECOVERPNDG		(1 << 15)
-#define BML_REASSIGN		(1 << 16)
-#define BML_RECOVERFAIL		(1 << 17)
+#define BML_READ		0x1
+#define BML_WRITE		0x2
+#define BML_CDIO		0x4
+#define BML_COHRLS		0x8
+#define BML_COHDIO		0x10
+#define BML_TIMEOQ		0x20
+#define BML_BMDSI		0x40
+#define BML_RECOVER		0x100
+#define BML_CHAIN		0x200
+#define BML_UPGRADE		0x400
+#define BML_EXPFAIL		0x800
+#define BML_FREEING		0x1000
+#define BML_ASSFAIL		0x2000
+#define BML_RECOVERPNDG		0x4000
+#define BML_REASSIGN		0x8000
+#define BML_RECOVERFAIL		0x10000
+#define BML_COHFAIL             0x20000
 
 #define bml_2_bmap(bml)		bmi_2_bmap((bml)->bml_bmdsi)
 
 #define BML_LOCK_ENSURE(bml)	LOCK_ENSURE(&(bml)->bml_lock)
 #define BML_LOCK(bml)		spinlock(&(bml)->bml_lock)
 #define BML_ULOCK(bml)		freelock(&(bml)->bml_lock)
+#define BML_REQLOCK(bml)        reqlock(&(bml)->bml_lock))
 
 #define BMAP_FOREACH_LEASE(bcm, bml)					\
 	PLL_FOREACH((bml), &bmap_2_bmi(bcm)->bmdsi_leases)
@@ -251,8 +250,7 @@ int	 mds_bmap_loadvalid(struct fidc_membh *, sl_bmapno_t,
 int	 mds_bmap_bml_chwrmode(struct bmap_mds_lease *, sl_ios_id_t);
 int	 mds_bmap_bml_release(struct bmap_mds_lease *);
 void	 mds_bmap_ensure_valid(struct bmapc_memb *);
-struct bmap_mds_lease *
-	 mds_bmap_getbml(struct bmapc_memb *, struct srt_bmapdesc *);
+struct bmap_mds_lease * mds_bmap_getbml_locked(struct bmapc_memb *, uint64_t, uint64_t, uint32_t);
 
 void	 mds_bmap_setcurseq(uint64_t, uint64_t);
 int	 mds_bmap_getcurseq(uint64_t *, uint64_t *);
