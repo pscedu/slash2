@@ -267,11 +267,22 @@ mds_inodes_odsync(struct fidc_membh *f,
 	int locked, rc;
 
 	locked = INOH_RLOCK(ih);
+	if (ih->inoh_ino.ino_nrepls > SL_DEF_REPLICAS) {
+		/* Don't assume the inox have been loaded.  It's possible
+		 * our caller didn't require them (BZ #258).
+		 */
+		rc = mds_inox_ensure_loaded(ih);
+		if (rc) {
+			INOH_URLOCK(ih, locked);
+			return (rc);
+		}
+	}
+
 	rc = mds_inode_write(ih, logf, f);
 	if (rc == 0 && ih->inoh_ino.ino_nrepls > SL_DEF_REPLICAS)
 		rc = mds_inox_write(ih, NULL, NULL);
-	DEBUG_FCMH(PLL_DEBUG, f, "wrote updated ino_repls logf=%p",
-	    logf);
+
+	DEBUG_FCMH(PLL_DEBUG, f, "wrote updated ino_repls logf=%p", logf);
 	INOH_URLOCK(ih, locked);
 	return (rc);
 }
