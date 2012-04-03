@@ -12,12 +12,16 @@ slash.slcfg option:
       Lustre network name.  The resulting list of pairs is copied into
       the daemon process environment as LNET_NETWORKS.
 
-  (o) if 'nets' is the fully fledged LNET_NETWORKS variable, this
-      value is copied to the daemon process environment as
-      LNET_NETWORKS.
+  (o) if 'nets' is a fully fledged LNET_IP2NETS value, this value is
+      used to determine which addresses held by SLASH2 peers correspond
+      to which Lustre networks and the system's network interfaces are
+      queried to determine routes to such peers.
 
 These behaviors will be overridden if LNET_NETWORKS is already specified
 in the process environment, which always takes precedence.
+
+Otherwise, LNET_NETWORKS is fabricated based on the values specified in
+the SLASH2 configuration.
 
 LNET_NETWORKS is then parsed to determine routable addresses and their
 corresponding Lustre network names.  These pairs are used to assign
