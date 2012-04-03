@@ -770,7 +770,7 @@ bwc_desched(struct bmpc_write_coalescer *bwc)
 __static struct bmpc_write_coalescer *
 bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 {
-	int idx, large = 0, expired = 0;
+	int idx, large = 0, mergeable = 0, expired = 0;
 	int32_t sz = 0;
 	struct bmpc_ioreq *t, *e=NULL;
 	struct bmpc_write_coalescer *bwc;
@@ -800,6 +800,8 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 		if (!expired)
 			expired = bmap_flush_biorq_expired(t, NULL);
 
+		mergeable = expired || !(t->biorq_flags & BIORQ_RESCHED);
+
 		DEBUG_BIORQ(PLL_NOTICE, t, "biorq #%d (expired=%d)",
 			    idx, expired);
 
@@ -809,7 +811,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 		/* The next request, 't', can be added to the coalesce
 		 *   group because 't' overlaps or extends 'e'.
 		 */
-		if (t->biorq_off <= biorq_voff_get(e)) {
+		if (mergeable && t->biorq_off <= biorq_voff_get(e)) {
 			sz = biorq_voff_get(t) - biorq_voff_get(e);
 			if (sz > 0) {
 				if (sz + bwc->bwc_size > MIN_COALESCE_RPC_SZ) {
