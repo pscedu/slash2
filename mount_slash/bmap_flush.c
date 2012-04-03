@@ -58,7 +58,7 @@ __static struct psc_listcache	 pndgWrtReqSets;
 __static atomic_t		 outstandingRpcCnt;
 psc_atomic32_t			 offline_nretries = PSC_ATOMIC32_INIT(256);
 
-#define MAX_OUTSTANDING_RPCS	16
+#define MAX_OUTSTANDING_RPCS	40
 #define MIN_COALESCE_RPC_SZ	LNET_MTU /* Try for big RPC's */
 #define NUM_READAHEAD_THREADS   4
 
@@ -1034,10 +1034,17 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 					continue;
 
 			} else if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
+				int expired = 0;
+
+				if (timespeccmp(&crtime, &bci->bci_xtime, >))
+					expired = 1;
+
+				BMAP_ULOCK(b);
+				DEBUG_BMAP(expired ? PLL_WARN : PLL_NOTICE, b, 
+				   "skip due to ref (expired=%d)", expired);
 				/* Put me back on the end of the queue.
 				 */
-				BMAP_ULOCK(b);
-				DEBUG_BMAP(PLL_NOTICE, b, "skip due to ref");
+
 				lc_addtail(&bmapTimeoutQ, bci);
 				continue;
 			}

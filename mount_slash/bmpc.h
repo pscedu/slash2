@@ -433,6 +433,8 @@ void  bmpc_free(void *);
 void  bmpc_freeall_locked(struct bmap_pagecache *);
 int   bmpc_biorq_cmp(const void *, const void *);
 void  bmpc_biorqs_fail(struct bmap_pagecache *, int);
+struct bmpc_ioreq *bmpc_biorq_new(struct bmapc_memb *, struct msl_fhent *, 
+			  struct msl_fsrqinfo *, uint32_t, uint32_t, int);
 int   bmpce_init(struct psc_poolmgr *, void *);
 void  bmpce_getbuf(struct bmap_pagecache_entry *);
 struct bmap_pagecache_entry *
@@ -475,38 +477,6 @@ bmpc_init(struct bmap_pagecache *bmpc)
 	 * freed.
 	 */
 	lc_add(&bmpcLru, bmpc);
-}
-
-static __inline void
-bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len,
-    int op, struct bmapc_memb *bmap, struct msl_fhent *fhent,
-    struct msl_fsrqinfo *q)
-{
-	memset(ioreq, 0, sizeof(*ioreq));
-	psc_waitq_init(&ioreq->biorq_waitq);
-	INIT_PSC_LISTENTRY(&ioreq->biorq_lentry);
-	INIT_PSC_LISTENTRY(&ioreq->biorq_mfh_lentry);
-	INIT_PSC_LISTENTRY(&ioreq->biorq_bwc_lentry);
-	INIT_SPINLOCK(&ioreq->biorq_lock);
-
-	PFL_GETTIMESPEC(&ioreq->biorq_issue);
-	timespecadd(&ioreq->biorq_issue, &bmapFlushDefMaxAge,
-	    &ioreq->biorq_expire);
-
-	ioreq->biorq_off  = off;
-	ioreq->biorq_len  = len;
-	ioreq->biorq_bmap = bmap;
-	ioreq->biorq_flags = op;
-	ioreq->biorq_fhent = fhent;
-	ioreq->biorq_fsrqi = q;
-	ioreq->biorq_last_sliod = IOS_ID_ANY;
-
-	BMAP_LOCK(bmap);
-	if (bmap->bcm_flags & BMAP_DIO)
-		ioreq->biorq_flags |= BIORQ_DIO;
-	if (bmap->bcm_flags & BMAP_ARCHIVER)
-		ioreq->biorq_flags |= BIORQ_ARCHIVER;
-	BMAP_ULOCK(bmap);
 }
 
 static __inline int

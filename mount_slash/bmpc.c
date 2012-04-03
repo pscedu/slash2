@@ -28,6 +28,7 @@
 #include "psc_util/pool.h"
 
 #include "bmpc.h"
+#include "bmap_cli.h"
 #include "mount_slash.h"
 
 struct psc_poolmaster	 bmpcePoolMaster;
@@ -186,8 +187,8 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 		}
 
 	} else {
-		//if (!(bmpce->bmpce_flags & BMPCE_EIO))
-		//	psc_assert(bmpce->bmpce_flags & BMPCE_DATARDY);
+		if (!(bmpce->bmpce_flags & BMPCE_EIO))
+			psc_assert(bmpce->bmpce_flags & BMPCE_DATARDY);
 
 		if (op == BIORQ_WRITE) {
 			psc_assert(psc_atomic16_read(&bmpce->bmpce_wrref) > 0);
@@ -276,6 +277,53 @@ bmpce_release_locked(struct bmap_pagecache_entry *bmpce,
 	psc_pool_return(bmpcePoolMgr, bmpce);
 }
 
+
+struct bmpc_ioreq *
+bmpc_biorq_new(struct bmapc_memb *b, struct msl_fhent *f, 
+       struct msl_fsrqinfo *q, uint32_t off, uint32_t len, int op)
+{
+	struct bmpc_ioreq *r;
+
+	r = psc_pool_get(slc_biorq_pool);
+
+	memset(r, 0, sizeof(*r));
+
+	psc_waitq_init(&r->biorq_waitq);
+	INIT_PSC_LISTENTRY(&r->biorq_lentry);
+	INIT_PSC_LISTENTRY(&r->biorq_mfh_lentry);
+	INIT_PSC_LISTENTRY(&r->biorq_bwc_lentry);
+	INIT_SPINLOCK(&r->biorq_lock);
+
+	PFL_GETTIMESPEC(&r->biorq_issue);
+	timespecadd(&r->biorq_issue, &bmapFlushDefMaxAge,
+	    &r->biorq_expire);
+
+	r->biorq_off  = off;
+	r->biorq_len  = len;
+	r->biorq_bmap = b;
+	r->biorq_flags = op;
+	r->biorq_fhent = f;
+	r->biorq_fsrqi = q;
+	r->biorq_last_sliod = IOS_ID_ANY;
+
+	bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
+
+	BMAP_LOCK(b);
+	if (b->bcm_flags & BMAP_DIO)
+		r->biorq_flags |= BIORQ_DIO;
+	if (b->bcm_flags & BMAP_ARCHIVER)
+		r->biorq_flags |= BIORQ_ARCHIVER;
+
+	if (op == BIORQ_READ || (r->biorq_flags & BIORQ_DIO))
+		pll_add(&bmap_2_bmpc(b)->bmpc_pndg_biorqs, r);
+	else
+		pll_add_sorted(&bmap_2_bmpc(b)->bmpc_new_biorqs, r,
+		    bmpc_biorq_cmp);
+	BMAP_ULOCK(b);
+
+	return (r);
+}
+
 /**
  * bmpc_freeall_locked - Called when a bmap is being released.  Iterate
  *	across the tree freeing each bmpce.  Prior to being invoked, all
@@ -288,9 +336,17 @@ bmpc_freeall_locked(struct bmap_pagecache *bmpc)
 	struct bmap_pagecache_entry *a, *b;
 
 	LOCK_ENSURE(&bmpc->bmpc_lock);
-	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
 	psc_assert(pll_empty(&bmpc->bmpc_new_biorqs));
 	psc_assert(pll_empty(&bmpc->bmpc_pndg_ra));
+
+	/* DIO rq's are allowed since no cached pages are involved.
+	 */
+	if (!pll_empty(&bmpc->bmpc_pndg_biorqs)) {
+		struct bmpc_ioreq *r;
+
+		PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs)
+			psc_assert(r->biorq_flags & BIORQ_DIO);
+	}
 
 	for (a = SPLAY_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); a; a = b) {
 		b = SPLAY_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree, a);

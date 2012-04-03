@@ -300,11 +300,13 @@ struct bmapc_memb {
 int	 bmap_cmp(const void *, const void *);
 void	 bmap_cache_init(size_t);
 void	 bmap_orphan(struct bmapc_memb *);
+void     bmap_orphan_all_locked(struct fidc_membh *);
 void	 bmap_biorq_waitempty(struct bmapc_memb *);
 void	_bmap_op_done(const struct pfl_callerinfo *,
 	    struct bmapc_memb *, const char *, ...);
 int	_bmap_get(const struct pfl_callerinfo *, struct fidc_membh *,
 	    sl_bmapno_t, enum rw, int, struct bmapc_memb **);
+struct bmapc_memb * bmap_lookup_cache_locked(struct fidc_membh *, sl_bmapno_t);
 
 int	 bmapdesc_access_check(struct srt_bmapdesc *, enum rw, sl_ios_id_t);
 
@@ -334,14 +336,13 @@ enum bmap_opcnt_types {
 /*  4 */ BMAP_OPCNT_BIORQ,
 /*  5 */ BMAP_OPCNT_REPLWK,		/* ION */
 /*  6 */ BMAP_OPCNT_REAPER,		/* Client bmap timeout */
-/*  7 */ BMAP_OPCNT_COHCB,		/* MDS coherency callback */
-/*  8 */ BMAP_OPCNT_SLVR,
-/*  9 */ BMAP_OPCNT_BCRSCHED,
-/* 10 */ BMAP_OPCNT_RLSSCHED,
-/* 11 */ BMAP_OPCNT_TRUNCWAIT,
-/* 12 */ BMAP_OPCNT_READA,
-/* 13 */ BMAP_OPCNT_LEASEEXT,
-/* 14 */ BMAP_OPCNT_REASSIGN
+/*  7 */ BMAP_OPCNT_SLVR,
+/*  8 */ BMAP_OPCNT_BCRSCHED,
+/*  9 */ BMAP_OPCNT_RLSSCHED,
+/* 10 */ BMAP_OPCNT_TRUNCWAIT,
+/* 11 */ BMAP_OPCNT_READA,
+/* 12 */ BMAP_OPCNT_LEASEEXT,
+/* 13 */ BMAP_OPCNT_REASSIGN
 };
 
 SPLAY_HEAD(bmap_cache, bmapc_memb);

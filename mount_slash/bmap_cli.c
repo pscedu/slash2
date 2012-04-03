@@ -127,11 +127,11 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 		csvc = NULL;
 	}
 
-	if (rc == -SLERR_BMAP_DIOWAIT) {
+	if (rc == -SLERR_BMAP_DIOWAIT) {		
 		DEBUG_BMAP(PLL_WARN, b, "SLERR_BMAP_DIOWAIT rt=%d", nretries);
-		sleep(BMAP_CLI_DIOWAIT_SECS);
-		if (nretries > BMAP_CLI_MAX_LEASE * 2)
-			return (-ETIMEDOUT);
+		nretries++;
+		// XXX need some sort of randomizer here so that many clients do not flood mds.
+		usleep(10000 * (nretries * nretries));
 		goto retry;
 	}
 
@@ -543,8 +543,8 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw,
 		DEBUG_BMAP(PLL_WARN, bmap,
 		    "SLERR_BMAP_DIOWAIT (rt=%d)", nretries);
 
-		sleep(BMAP_CLI_DIOWAIT_SECS);
-		if (nretries > BMAP_CLI_MAX_LEASE * 2)
+		usleep(200000);
+		if (nretries > BMAP_CLI_MAX_LEASE * 8 * 5)
 			return (-ETIMEDOUT);
 		goto retry;
 	}
@@ -597,10 +597,12 @@ msl_bmap_reap_init(struct bmapc_memb *b, const struct srt_bmapdesc *sbd)
 	 * reap list
 	 */
 	b->bcm_flags |= BMAP_TIMEOQ;
-
+	if (sbd->sbd_flags & SRM_LEASEBMAPF_DIRECTIO)
+		b->bcm_flags |= BMAP_DIO;
+	
 	/* Is this a write for a archival fs?  If so, set the bmap for DIO.
 	 */
-	if (sbd->sbd_ios != IOS_ID_ANY) {
+	if (sbd->sbd_ios != IOS_ID_ANY  && !(b->bcm_flags & BMAP_DIO)) {
 		struct sl_resource *r = libsl_id2res(sbd->sbd_ios);
 
 		psc_assert(r);
@@ -796,8 +798,9 @@ msl_bmap_final_cleanup(struct bmapc_memb *b)
 	    psclist_disjoint(&bmpc->bmpc_lentry)) {
 		psc_assert(SPLAY_EMPTY(&bmpc->bmpc_tree));
 		psc_assert(pll_empty(&bmpc->bmpc_lru));
-	} else
+	} else {
 		bmpc_lru_del(bmpc);
+	}
 
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_flags & BMAP_CLOSING);
