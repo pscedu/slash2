@@ -344,7 +344,7 @@ msl_bmap_lease_tryreassign(struct bmapc_memb *b)
 
 /**
  * msl_bmap_lease_tryext - Attempt to extend the lease time on a bmap.  If
- *    successful, this will result i the creation and assignment of a new
+ *    successful, this will result in the creation and assignment of a new
  *    lease sequence number from the MDS.
  * @secs_rem:  return the number of seconds remaining on the lease.
  * @blockable:  means the caller will not block if a renew rpc is outstanding.
