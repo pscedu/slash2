@@ -176,30 +176,30 @@ struct bmap_mds_lease {
 };
 
 /* bml_flags */
-#define BML_READ		0x1
-#define BML_WRITE		0x2
-#define BML_CDIO		0x4
-#define BML_COHRLS		0x8
-#define BML_COHDIO		0x10
-#define BML_TIMEOQ		0x20
-#define BML_BMDSI		0x40
-#define BML_RECOVER		0x100
-#define BML_CHAIN		0x200
-#define BML_UPGRADE		0x400
-#define BML_EXPFAIL		0x800
-#define BML_FREEING		0x1000
-#define BML_ASSFAIL		0x2000
-#define BML_RECOVERPNDG		0x4000
-#define BML_REASSIGN		0x8000
-#define BML_RECOVERFAIL		0x10000
-#define BML_COHFAIL             0x20000
+#define BML_READ		0x00001
+#define BML_WRITE		0x00002
+#define BML_CDIO		0x00004
+#define BML_COHRLS		0x00008
+#define BML_COHDIO		0x00010
+#define BML_TIMEOQ		0x00020
+#define BML_BMDSI		0x00040
+#define BML_RECOVER		0x00080
+#define BML_CHAIN		0x00100
+#define BML_UPGRADE		0x00200
+#define BML_EXPFAIL		0x00400
+#define BML_FREEING		0x00800
+#define BML_ASSFAIL		0x01000
+#define BML_RECOVERPNDG		0x02000
+#define BML_REASSIGN		0x04000
+#define BML_RECOVERFAIL		0x08000
+#define BML_COHFAIL		0x10000
 
 #define bml_2_bmap(bml)		bmi_2_bmap((bml)->bml_bmdsi)
 
 #define BML_LOCK_ENSURE(bml)	LOCK_ENSURE(&(bml)->bml_lock)
 #define BML_LOCK(bml)		spinlock(&(bml)->bml_lock)
 #define BML_ULOCK(bml)		freelock(&(bml)->bml_lock)
-#define BML_REQLOCK(bml)        reqlock(&(bml)->bml_lock))
+#define BML_REQLOCK(bml)	reqlock(&(bml)->bml_lock)
 
 #define BMAP_FOREACH_LEASE(bcm, bml)					\
 	PLL_FOREACH((bml), &bmap_2_bmi(bcm)->bmdsi_leases)
