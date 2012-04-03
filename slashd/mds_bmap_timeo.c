@@ -189,6 +189,8 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 		   PRId64, nsecs, bml, bml->bml_flags, bml->bml_seq);
 
 		if (!(bml->bml_flags & BML_FREEING)) {
+			int rc;
+
 			/* Don't race with slrmi threads who may be freeing
 			 *    the lease from an rpc context
 			 *    mdsBmapTimeoTbl.btt_lock must be acquired
@@ -200,7 +202,7 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 			spinlock(&mdsBmapTimeoTbl.btt_lock);
 			sjbsq.sjbsq_high_wm = mdsBmapTimeoTbl.btt_maxseq;
 			if (bml->bml_seq < mdsBmapTimeoTbl.btt_minseq) {
-				psclog_warnx("bml->bml_seq (%"PRIx64") is < "
+				psclog_notify("bml->bml_seq (%"PRIx64") is < "
 				    "mdsBmapTimeoTbl.btt_minseq (%"PRIx64")",
 				    bml->bml_seq, mdsBmapTimeoTbl.btt_minseq);
 
@@ -216,8 +218,11 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 			 */
 			mds_bmap_journal_bmapseq(&sjbsq);
 
-			if (mds_bmap_bml_release(bml))
-				psc_fatalx("bml_release");
+			rc = mds_bmap_bml_release(bml);
+			if (rc)
+				DEBUG_BMAP(PLL_WARN, bml_2_bmap(bml),
+				   "rc=%d bml=%p fl=%d seq=%"PRId64, 
+				   rc, bml, bml->bml_flags, bml->bml_seq);
 
 			continue;
 		} else {
