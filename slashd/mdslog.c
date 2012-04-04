@@ -1706,7 +1706,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 
 	/* Find out the highest reclaim batchno and xid */
 
-	batchno = UINT64_MAX;
+	batchno = 0;
 	count = size / sizeof(struct reclaim_prog_entry);
 	for (i = 0; i < count; i++) {
 		res = libsl_id2res(reclaim_prog_buf[i].res_id);
@@ -1719,14 +1719,11 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		iosinfo->si_xid = reclaim_prog_buf[i].res_xid;
 		iosinfo->si_batchno = reclaim_prog_buf[i].res_batchno;
 		iosinfo->si_flags &= ~SIF_NEED_JRNL_INIT;
-		if (iosinfo->si_batchno < batchno)
+		if (iosinfo->si_batchno > batchno)
 			batchno = iosinfo->si_batchno;
 	}
 	PSCFREE(reclaim_prog_buf);
 	reclaim_prog_buf = PSCALLOC(nios * sizeof(struct reclaim_prog_entry));
-
-	if (batchno == UINT64_MAX)
-		batchno = 0;
 
 	lwm = batchno;
 	while (batchno < UINT64_MAX) {
