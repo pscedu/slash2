@@ -248,6 +248,8 @@ _msl_progallowed(struct pscfs_req *pfr)
 	int n;
 
 	ppid = pscfs_getclientctx(pfr)->pfcc_pid;
+	if (ppid == 0)
+		return (1);
 	do {
 		pid = ppid;
 
