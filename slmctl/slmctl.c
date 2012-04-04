@@ -34,6 +34,7 @@
 #include "pathnames.h"
 #include "slashrpc.h"
 
+#include "slashd/bmap_mds.h"
 #include "slashd/ctl_mds.h"
 #include "slashd/repl_mds.h"
 
@@ -80,14 +81,22 @@ packshow_statfs(__unusedx char *pair)
 }
 
 void
-slm_replpair_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
+packshow_bml(__unusedx char *pair)
+{
+	psc_ctlmsg_push(SLMCMT_GETBML, sizeof(struct slmctlmsg_bml));
+}
+
+void
+slm_replpair_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
 {
 	printf("%-28s %-28s  %10s %10s\n",
 	    "repl-resm-A", "repl-resm-B", "used", "avail");
 }
 
 void
-slm_replpair_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
+slm_replpair_prdat(__unusedx const struct psc_ctlmsghdr *mh,
+    const void *m)
 {
 	const struct slmctlmsg_replpair *scrp = m;
 	char abuf[PSCFMT_HUMAN_BUFSIZ], ubuf[PSCFMT_HUMAN_BUFSIZ];
@@ -95,7 +104,8 @@ slm_replpair_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	int i, j;
 
 	for (i = 0; i < 2; i++) {
-		strlcpy(addr[i], scrp->scrp_addrbuf[i], sizeof(addr[i]));
+		strlcpy(addr[i], scrp->scrp_addrbuf[i],
+		    sizeof(addr[i]));
 		p = addr[i];
 		for (j = 0; j < 2 && p; j++)
 			p = strchr(p + 1, '@');
@@ -105,11 +115,13 @@ slm_replpair_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 
 	psc_fmt_human(ubuf, scrp->scrp_used);
 	psc_fmt_human(abuf, scrp->scrp_avail);
-	printf("%-28s %-28s  %8s/s %8s/s\n", addr[0], addr[1], ubuf, abuf);
+	printf("%-28s %-28s  %8s/s %8s/s\n", addr[0], addr[1], ubuf,
+	    abuf);
 }
 
 void
-slm_statfs_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
+slm_statfs_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
 {
 	printf("%-30s %7s %7s %7s %8s %-16s\n",
 	    "resource", "size", "used", "avail", "capacity", "type");
@@ -146,6 +158,39 @@ slm_statfs_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 }
 
 void
+slm_bml_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
+{
+	printf("%-30s %7s %7s %7s %8s %-16s\n",
+	    "resource", "size", "used", "avail", "capacity", "type");
+}
+
+void
+slm_bml_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
+{
+	const struct slmctlmsg_bml *scbl = m;
+
+	printf("%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c\n",
+	    scbl->scbl_flags & BML_READ		? 'R' : '-',
+	    scbl->scbl_flags & BML_WRITE	? 'W' : '-',
+	    scbl->scbl_flags & BML_CDIO		? 'I' : '-',
+	    scbl->scbl_flags & BML_COHRLS	? 'H' : '-',
+	    scbl->scbl_flags & BML_COHDIO	? 'D' : '-',
+	    scbl->scbl_flags & BML_TIMEOQ	? 'T' : '-',
+	    scbl->scbl_flags & BML_BMDSI	? 'B' : '-',
+	    scbl->scbl_flags & BML_RECOVER	? 'V' : '-',
+	    scbl->scbl_flags & BML_CHAIN	? 'N' : '-',
+	    scbl->scbl_flags & BML_UPGRADE	? 'U' : '-',
+	    scbl->scbl_flags & BML_EXPFAIL	? 'X' : '-',
+	    scbl->scbl_flags & BML_FREEING	? 'F' : '-',
+	    scbl->scbl_flags & BML_ASSFAIL	? 'S' : '-',
+	    scbl->scbl_flags & BML_RECOVERPNDG	? 'P' : '-',
+	    scbl->scbl_flags & BML_REASSIGN	? 'A' : '-',
+	    scbl->scbl_flags & BML_RECOVERFAIL	? 'L' : '-',
+	    scbl->scbl_flags & BML_COHFAIL	? 'O' : '-');
+}
+
+void
 slmctlcmd_stop(int ac, char *av[])
 {
 	if (ac > 1)
@@ -155,6 +200,7 @@ slmctlcmd_stop(int ac, char *av[])
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 	PSC_CTLSHOW_DEFS,
+	{ "bml",		packshow_bml },
 	{ "connections",	packshow_conns },
 	{ "fcmhs",		packshow_fcmhs },
 	{ "replpairs",		packshow_replpairs },
@@ -168,6 +214,7 @@ struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 
 struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 	PSC_CTLMSG_PRFMT_DEFS,
+	{ slm_bml_prhdr,	slm_bml_prdat,		sizeof(struct slmctlmsg_bml),		NULL },
 	{ sl_conn_prhdr,	sl_conn_prdat,		sizeof(struct slctlmsg_conn),		NULL },
 	{ sl_fcmh_prhdr,	sl_fcmh_prdat,		sizeof(struct slctlmsg_fcmh),		NULL },
 	{ slm_replpair_prhdr,	slm_replpair_prdat,	sizeof(struct slmctlmsg_replpair),	NULL },

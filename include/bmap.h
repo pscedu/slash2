@@ -113,7 +113,7 @@ struct bmapc_memb {
 	 * next segment of the bmap_ondisk, which must lay contiguous in
 	 * memory for I/O over the network and with ZFS.
 	 */
-	struct bmap_core_state	 bcm_corestate __attribute__ ((aligned (8)));
+	struct bmap_core_state	 bcm_corestate __attribute__ ((aligned(8)));
 
 #define bcm_crcstates	bcm_corestate.bcs_crcstates
 #define bcm_repls	bcm_corestate.bcs_repls
@@ -139,8 +139,8 @@ struct bmapc_memb {
 #define BMAP_ARCHIVER		(1 << 16)	/* archiver */
 #define _BMAP_FLSHFT		(1 << 17)
 
-#define SL_MAX_IOSREASSIGN              	16
-#define SL_MAX_BMAP_FLUSH_RETRIES             	2048
+#define SL_MAX_IOSREASSIGN		16
+#define SL_MAX_BMAP_FLUSH_RETRIES	2048
 
 #define BMAP_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bcm_lock)
 #define BMAP_HASLOCK(b)		psc_spin_haslock(&(b)->bcm_lock)
@@ -193,7 +193,7 @@ struct bmapc_memb {
 		while (cond) {						\
 			(b)->bcm_flags |= BMAP_WAITERS;			\
 			psc_waitq_wait(&(b)->bcm_fcmh->fcmh_waitq,	\
-				       &(b)->bcm_lock);			\
+			    &(b)->bcm_lock);				\
 			BMAP_LOCK(b);					\
 		}							\
 	} while (0)
