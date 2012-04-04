@@ -1769,7 +1769,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 
 		total += size / entrysize;
 		count = 0;
-		psclog_warnx("Scanning the last reclaim log, batchno = %"PRId64", current_reclaim_batchno);
+		psclog_warnx("Scanning the last reclaim log, batchno = %"PRId64, current_reclaim_batchno);
 		while (count < total) {
 			last_reclaim_xid = reclaim_entryp->xid;
 			reclaim_entryp = PSC_AGP(reclaim_entryp, entrysize);
@@ -1779,7 +1779,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 			psclog_warnx("The last reclaim log has %d entries - more than it should have!", total);
 			total = SLM_RECLAIM_BATCH;
 		}
-		if (total = SLM_RECLAIM_BATCH)
+		if (total == SLM_RECLAIM_BATCH)
 			current_reclaim_batchno++;
 		PSCFREE(reclaimbuf);
 	}
