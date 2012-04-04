@@ -943,12 +943,20 @@ __static void
 msl_bmpce_aio_process(struct bmap_pagecache_entry *e)
 {
 	struct msl_fsrqinfo *q;
+	struct psc_dynarray a = DYNARRAY_INIT;
+	int i;
 
 	while ((q = pll_get(&e->bmpce_pndgaios)))
+		psc_dynarray_add(&a, q);
 		/* If fsrq cannot be completed. msl_fsrq_completion_try()
 		 *   will reattach it to another aio'd bmpce.
 		 */
+
+	DYNARRAY_FOREACH(q, i, &a) {
 		msl_fsrq_completion_try(q);
+	}
+
+	psc_dynarray_free(&a);
 }
 
 #define msl_bmpce_rpc_done(e, rc) _msl_bmpce_rpc_done(PFL_CALLERINFOSS(SLSS_BMAP), (e), (rc))
