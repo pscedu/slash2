@@ -1298,9 +1298,18 @@ mds_send_batch_reclaim(uint64_t batchno)
 		/*
 		 * Note that the reclaim xid we can see is not
 		 * necessarily contiguous.
+		 *
+		 * 04/04/2012:
+		 * 
+		 * We only check for xid when the log file is not
+		 * full to get around some internally corrupted
+		 * log file (xid is not increasing all the way).
+		 *
+		 * Note that this workaround only applies when
+		 * the batchno already matches.
 		 */
 		if (iosinfo->si_batchno > batchno ||
-		    iosinfo->si_xid > xid) {
+		    (count < SLM_RECLAIM_BATCH && iosinfo->si_xid > xid)) {
 			RPMI_ULOCK(rpmi);
 			didwork++;
 			continue;
