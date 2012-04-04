@@ -1332,6 +1332,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *bufp)
 				      &msl_diowr_stat : &msl_diord_stat), size);
 
 		msl_biorq_destroy(r);		
+		break;
 
 	case -SLERR_AIOWAIT:
 	case -EKEYEXPIRED:
