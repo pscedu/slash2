@@ -369,7 +369,6 @@ reimport
    (o) crc update doesn't replay nblks setattr
 
 - watch out for EMFILE on freebsd
-- msl missed refcnt on connection errors
 - wolverine/single cpu missed wakeup
 - research holdup in fbsd zio_write_intr
 - test remote syslog
@@ -387,8 +386,7 @@ reimport
 - upsch inquiries shouldn't wakeup the uswi to retry unnecessary
   processing
 - fix sliod connection bug visible from slmctl
-- slmctl -s outstanding bmap leases
-- msctl -p offline_nretries
+- fix mount_slash multiple connection bug visible from slmctl
 - uptime instance nonce variable that allows msl to dump data if it
   changes while communicating with sliod
    (o) mark new flag on msl csvc when upnonce changes in CONNECT
