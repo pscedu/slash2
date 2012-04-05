@@ -47,8 +47,9 @@ dumpfid(const char *fn)
 	struct slash_inode_od ino;
 	struct iovec iovs[2];
 	uint64_t crc, od_crc;
-	int fd, j, nr;
+	uint32_t nr, j;
 	ssize_t rc;
+	int fd;
 
 	fd = open(fn, O_RDONLY);
 	if (fd == -1) {
@@ -70,37 +71,51 @@ dumpfid(const char *fn)
 		goto out;
 	}
 	psc_crc64_calc(&crc, &ino, sizeof(ino));
-	printf("%s\t", fn);
-	dump_ino(&ino);
-	printf("   CRC %s\n", crc == od_crc ? "OK" : "BAD");
+	printf("%s:\n", fn);
+	printf("  crc %s\n", crc == od_crc ? "OK" : "BAD");
+	printf("  version %u\n", ino.ino_version);
+	printf("  flags %#x\n", ino.ino_flags);
+	printf("  bsz %u\n", ino.ino_bsz);
+	printf("  nrepls %u\n", ino.ino_nrepls);
+	printf("  replpol %u\n", ino.ino_replpol);
 
-	lseek(fd, SL_EXTRAS_START_OFF, SEEK_SET);
-	iovs[0].iov_base = &inox;
-	iovs[0].iov_len = sizeof(inox);
-	iovs[1].iov_base = &od_crc;
-	iovs[1].iov_len = sizeof(od_crc);
-	rc = readv(fd, iovs, nitems(iovs));
-	if (rc == -1) {
-		warn("%s", fn);
-		goto out;
-	}
-	if (rc != sizeof(inox) + sizeof(od_crc)) {
-		warnx("%s: short I/O, want %zd got %zd",
-		    fn, sizeof(inox) + sizeof(od_crc), rc);
-		goto out;
-	}
-	psc_crc64_calc(&crc, &inox, sizeof(inox));
-	printf("\tcrc: %s xrepls:", crc == od_crc ? "OK" : "BAD");
 	nr = ino.ino_nrepls;
-	if (nr < SL_DEF_REPLICAS)
-		nr = 0;
-	else if (nr > SL_MAX_REPLICAS) {
-		psclog_errorx("ino_nrepls out of range (%d)", nr);
-		nr = SL_MAX_REPLICAS;
+	if (nr > SL_DEF_REPLICAS) {
+		if (nr > SL_MAX_REPLICAS)
+			nr = SL_MAX_REPLICAS;
+		lseek(fd, SL_EXTRAS_START_OFF, SEEK_SET);
+		iovs[0].iov_base = &inox;
+		iovs[0].iov_len = sizeof(inox);
+		iovs[1].iov_base = &od_crc;
+		iovs[1].iov_len = sizeof(od_crc);
+		rc = readv(fd, iovs, nitems(iovs));
+		if (rc == -1) {
+			warn("%s", fn);
+			goto out;
+		}
+		if (rc != sizeof(inox) + sizeof(od_crc)) {
+			warnx("%s: short I/O, want %zd got %zd",
+			    fn, sizeof(inox) + sizeof(od_crc), rc);
+			goto out;
+		}
+		psc_crc64_calc(&crc, &inox, sizeof(inox));
+		printf("  inox crc: %s %lx %lx\n  xrepls:",
+		    crc == od_crc ? "OK" : "BAD", crc, od_crc);
 	}
-	for (j = 0; j + SL_DEF_REPLICAS < nr; j++)
-		printf("%s%u", j ? "," : "", inox.inox_repls[j].bs_id);
-	printf(" nbp:%d\n", ino.ino_replpol);
+	printf("  repls ");
+	for (j = 0; j < nr; j++)
+		printf("%s%u", j ? "," : "",
+		    j < SL_DEF_REPLICAS ?
+		    ino.ino_repls[j].bs_id :
+		    inox.inox_repls[j - SL_DEF_REPLICAS].bs_id);
+	printf("\n  nblks ");
+	for (j = 0; j < nr; j++)
+		printf("%s%"PRIu64, j ? "," : "",
+		    j < SL_DEF_REPLICAS ?
+		    ino.ino_repl_nblks[j] :
+		    inox.inox_repl_nblks[j - SL_DEF_REPLICAS]);
+	printf("\n");
+
  out:
 	close(fd);
 }
