@@ -520,17 +520,16 @@ slmctlrep_getbml(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct slmctlmsg_bml *scbl = m;
 	struct bmap_mds_lease *bml, *t;
+	struct psc_lockedlist *pll;
 	struct sl_resource *r;
-	int i, rc = 1;
+	int rc = 1;
 
-	CONF_LOCK();
-	SITE_FOREACH_RES(nodeSite, r, i) {
-		if (!RES_ISFS(r))
-			continue;
-
-		r = libsl_id2res(bml->bml_ios);
-
+	pll = &mdsBmapTimeoTbl.btt_leases;
+	PLL_LOCK(pll);
+	PLL_FOREACH(bml, pll) {
 		memset(scbl, 0, sizeof(*scbl));
+		BML_LOCK(bml);
+		r = libsl_id2res(bml->bml_ios);
 		strlcpy(scbl->scbl_resname, r->res_name,
 		    sizeof(scbl->scbl_resname));
 		scbl->scbl_fg = bml_2_bmap(bml)->bcm_fcmh->fcmh_fg;
@@ -542,13 +541,13 @@ slmctlrep_getbml(int fd, struct psc_ctlmsghdr *mh, void *m)
 		pscrpc_id2str(bml->bml_cli_nidpid, scbl->scbl_client);
 		for (t = bml; t->bml_chain != bml; t = t->bml_chain)
 			scbl->scbl_ndups++;
+		BML_ULOCK(bml);
 
 		rc = psc_ctlmsg_sendv(fd, mh, scbl);
 		if (!rc)
-			goto done;
+			break;
 	}
- done:
-	CONF_ULOCK();
+	PLL_ULOCK(pll);
 	return (rc);
 }
 

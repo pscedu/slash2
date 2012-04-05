@@ -265,6 +265,7 @@ void	 mds_bia_odtable_startup_cb(void *, struct odtable_receipt *);
 
 extern struct psc_poolmaster	 bmapMdsLeasePoolMaster;
 extern struct psc_poolmgr	*bmapMdsLeasePool;
+extern struct bmap_timeo_table	 mdsBmapTimeoTbl;
 
 static __inline struct bmapc_memb *
 bmi_2_bmap(struct bmap_mds_info *bmi)
