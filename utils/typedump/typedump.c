@@ -47,7 +47,6 @@
 #include "sltypes.h"
 #include "slutil.h"
 #include "mount_slash/bmap_cli.h"
-#include "mount_slash/bmapc_mem.h"
 #include "mount_slash/bmpc.h"
 #include "mount_slash/ctl_cli.h"
 #include "mount_slash/ctlsvr_cli.h"
@@ -243,6 +242,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slm_replst_workreq);
 	PRTYPE(struct slm_resmlink);
 	PRTYPE(struct slm_workrq);
+	PRTYPE(struct slmctlmsg_bml);
 	PRTYPE(struct slmctlmsg_replpair);
 	PRTYPE(struct slmctlmsg_statfs);
 	PRTYPE(struct slmds_jent_assign_rep);

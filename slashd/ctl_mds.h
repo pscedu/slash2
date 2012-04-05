@@ -36,13 +36,12 @@ struct slmctlmsg_statfs {
 
 /* bmap lease */
 struct slmctlmsg_bml {
-	struct slash_fidgen	scbl_fid;
+	char			scbl_resname[RES_NAME_MAX];
+	struct slash_fidgen	scbl_fg;
 	sl_bmapno_t		scbl_bno;
 	sl_bmapgen_t		scbl_bgen;
 	uint64_t		scbl_seq;
-	uint64_t		scbl_cli_nid;
-	uint32_t		scbl_cli_pid;
-	sl_ios_id_t		scbl_iosid;
+	char			scbl_client[PSCRPC_NIDSTR_SIZE];
 	uint32_t		scbl_flags;
 	uint32_t		scbl_ndups;
 	uint64_t		scbl_start;
