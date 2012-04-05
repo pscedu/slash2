@@ -55,18 +55,18 @@ struct bmap_mds_info {
 	 * bmap_ondisk will be laid contiguously in memory for I/O over
 	 * the network and with ZFS.
 	 */
-	struct bmap_extra_state		 bmdsi_extrastate;
+	struct bmap_extra_state	 bmdsi_extrastate;
 
-	struct resm_mds_info		*bmdsi_wr_ion;		/* pointer to write ION */
-	struct psc_lockedlist		 bmdsi_leases;		/* tracked bmap leases */
-	struct odtable_receipt		*bmdsi_assign;
-	uint64_t			 bmdsi_seq;		/* Largest write bml seq # */
-	uint32_t			 bmdsi_xid;		/* last op recv'd from ION */
-	int32_t				 bmdsi_writers;
-	int32_t				 bmdsi_readers;
-	struct psc_rwlock		 bmdsi_rwlock;
+	struct resm_mds_info	*bmdsi_wr_ion;		/* pointer to write ION */
+	struct psc_lockedlist	 bmdsi_leases;		/* tracked bmap leases */
+	struct odtable_receipt	*bmdsi_assign;
+	uint64_t		 bmdsi_seq;		/* Largest write bml seq # */
+	uint32_t		 bmdsi_xid;		/* last op recv'd from ION */
+	int32_t			 bmdsi_writers;
+	int32_t			 bmdsi_readers;
+	struct psc_rwlock	 bmdsi_rwlock;
 
-	pthread_t			 bmi_owner;
+	pthread_t		 bmi_owner;
 };
 
 /* MDS-specific bcm_flags */
