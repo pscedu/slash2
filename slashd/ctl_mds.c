@@ -25,6 +25,7 @@
 #include "psc_util/ctl.h"
 #include "psc_util/ctlsvr.h"
 
+#include "bmap_mds.h"
 #include "creds.h"
 #include "ctl.h"
 #include "ctl_mds.h"
@@ -508,6 +509,49 @@ slmctlparam_nextfid_get(char *val)
 	freelock(&slm_fid_lock);
 }
 
+/**
+ * slmctlrep_getbml - Send a response to a "GETBML" inquiry.
+ * @fd: client socket descriptor.
+ * @mh: already filled-in control message header.
+ * @m: control message to examine and reuse.
+ */
+int
+slmctlrep_getbml(int fd, struct psc_ctlmsghdr *mh, void *m)
+{
+	struct slmctlmsg_bml *scbl = m;
+	struct bmap_mds_lease *bml, *t;
+	struct sl_resource *r;
+	int i, rc = 1;
+
+	CONF_LOCK();
+	SITE_FOREACH_RES(nodeSite, r, i) {
+		if (!RES_ISFS(r))
+			continue;
+
+		r = libsl_id2res(bml->bml_ios);
+
+		memset(scbl, 0, sizeof(*scbl));
+		strlcpy(scbl->scbl_resname, r->res_name,
+		    sizeof(scbl->scbl_resname));
+		scbl->scbl_fg = bml_2_bmap(bml)->bcm_fcmh->fcmh_fg;
+		scbl->scbl_bno = bml_2_bmap(bml)->bcm_bmapno;
+		scbl->scbl_seq = bml->bml_seq;
+		scbl->scbl_flags = bml->bml_flags;
+		scbl->scbl_start = bml->bml_start;
+		scbl->scbl_expire = bml->bml_expire;
+		pscrpc_id2str(bml->bml_cli_nidpid, scbl->scbl_client);
+		for (t = bml; t->bml_chain != bml; t = t->bml_chain)
+			scbl->scbl_ndups++;
+
+		rc = psc_ctlmsg_sendv(fd, mh, scbl);
+		if (!rc)
+			goto done;
+	}
+ done:
+	CONF_ULOCK();
+	return (rc);
+}
+
 int
 slmctlparam_nextfid_set(const char *val)
 {
@@ -534,10 +578,11 @@ slmctlparam_nextfid_set(const char *val)
 
 struct psc_ctlop slmctlops[] = {
 	PSC_CTLDEFOPS,
-	{ slctlrep_getconns,		sizeof(struct slctlmsg_conn ) },
-	{ slctlrep_getfcmhs,		sizeof(struct slctlmsg_fcmh ) },
-	{ slmctlrep_getreplpairs,	sizeof(struct slmctlmsg_replpair ) },
-	{ slmctlrep_getstatfs,		sizeof(struct slmctlmsg_statfs ) },
+	{ slmctlrep_getbml,		sizeof(struct slmctlmsg_bml) },
+	{ slctlrep_getconns,		sizeof(struct slctlmsg_conn) },
+	{ slctlrep_getfcmhs,		sizeof(struct slctlmsg_fcmh) },
+	{ slmctlrep_getreplpairs,	sizeof(struct slmctlmsg_replpair) },
+	{ slmctlrep_getstatfs,		sizeof(struct slmctlmsg_statfs) },
 	{ slmctlcmd_stop,		0 }
 };
 
