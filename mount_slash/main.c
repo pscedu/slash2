@@ -248,10 +248,11 @@ _msl_progallowed(struct pscfs_req *pfr)
 	int n;
 
 	ppid = pscfs_getclientctx(pfr)->pfcc_pid;
-	if (ppid == 0)
-		return (1);
 	do {
 		pid = ppid;
+
+		if (pid == 0 || pid == 1)
+			return (1);
 
 		snprintf(fn, sizeof(fn), "/proc/%d/exe", pid);
 		if (readlink(fn, exe, sizeof(exe)) == -1) {
@@ -1920,10 +1921,10 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	struct fidc_membh *c = NULL;
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
-	struct slash_creds cr;
-	int flush_attrs = 0;
 	struct fcmh_cli_info *fci;
+	struct slash_creds cr;
 	struct timespec ts;
+	int flush_attrs = 0;
 
 	msfsthr_ensure();
 
@@ -2067,9 +2068,9 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	}
 	FCMH_ULOCK(c);
 	/*
-	 * Turn on mtime explicitly if we are going to change the size. We want
-	 * our local time to be saved, not the time when the RPC arrives at the
-	 * mds.
+	 * Turn on mtime explicitly if we are going to change the size.
+	 * We want our local time to be saved, not the time when the RPC
+	 * arrives at the MDS.
 	 */
 	if ((to_set & PSCFS_SETATTRF_DATASIZE) &&
 	    !(to_set & PSCFS_SETATTRF_MTIME)) {
