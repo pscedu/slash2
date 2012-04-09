@@ -1764,11 +1764,9 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		rc = mds_read_file(handle, reclaimbuf, sstb.sst_size, &size, 0);
 		psc_assert(rc == 0 && size == sstb.sst_size);
 
-		total = 0;
 		reclaim_entryp = reclaimbuf;
 		if (reclaim_entryp->fg.fg_fid == RECLAIM_MAGIC_FID &&
 		    reclaim_entryp->fg.fg_gen == RECLAIM_MAGIC_GEN) {
-			total = 1;
 			entrysize = sizeof(struct srt_reclaim_entry);
 			size -= entrysize;
 			reclaim_entryp = PSC_AGP(reclaim_entryp, entrysize);
@@ -1776,7 +1774,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 
 		psc_assert((size % entrysize) == 0);
 
-		total += size / entrysize;
+		total = size / entrysize;
 		count = 0;
 		psclog_warnx("Scanning the last reclaim log, batchno = %"PRId64, current_reclaim_batchno);
 		while (count < total) {
