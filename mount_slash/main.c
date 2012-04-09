@@ -2014,8 +2014,8 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		if (!stb->st_size) {
 			DEBUG_FCMH(PLL_NOTIFY, c,
 			   "full truncate, orphan bmaps");
-			
-			bmap_orphan_all_locked(c); 			
+
+			bmap_orphan_all_locked(c);
 			FCMH_ULOCK(c);
 
 		} else if (stb->st_size == (ssize_t)fcmh_2_fsz(c)) {
@@ -2038,7 +2038,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 				 *   fcmh lock.
 				 */
 				bmap_op_start_type(b, BMAP_OPCNT_TRUNCWAIT);
-				DEBUG_BMAP(PLL_NOTIFY, b, 
+				DEBUG_BMAP(PLL_NOTIFY, b,
 					   "BMAP_OPCNT_TRUNCWAIT");
 				psc_dynarray_add(&a, b);
 			}
@@ -2071,7 +2071,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	 * our local time to be saved, not the time when the RPC arrives at the
 	 * mds.
 	 */
-	if ((to_set & PSCFS_SETATTRF_DATASIZE) && 
+	if ((to_set & PSCFS_SETATTRF_DATASIZE) &&
 	    !(to_set & PSCFS_SETATTRF_MTIME)) {
 		to_set |= PSCFS_SETATTRF_MTIME;
 		PFL_GETTIMESPEC(&ts);
