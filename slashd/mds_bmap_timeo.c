@@ -53,13 +53,13 @@ mds_bmap_journal_bmapseq(struct slmds_jent_bmapseq *sjbsq)
 	struct slmds_jent_bmapseq *buf;
 
 	buf = pjournal_get_buf(mdsJournal,
-		sizeof(struct slmds_jent_bmapseq));
+	    sizeof(struct slmds_jent_bmapseq));
 
 	*buf = *sjbsq;
 
 	mds_reserve_slot(1);
-	pjournal_add_entry(mdsJournal, 0, MDS_LOG_BMAP_SEQ,
-		0, buf, sizeof(struct slmds_jent_bmapseq));
+	pjournal_add_entry(mdsJournal, 0, MDS_LOG_BMAP_SEQ, 0, buf,
+	    sizeof(struct slmds_jent_bmapseq));
 	mds_unreserve_slot(1);
 
 	pjournal_put_buf(mdsJournal, buf);
@@ -221,7 +221,7 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 			rc = mds_bmap_bml_release(bml);
 			if (rc)
 				DEBUG_BMAP(PLL_WARN, bml_2_bmap(bml),
-				   "rc=%d bml=%p fl=%d seq=%"PRId64, 
+				   "rc=%d bml=%p fl=%d seq=%"PRId64,
 				   rc, bml, bml->bml_flags, bml->bml_seq);
 
 			continue;
