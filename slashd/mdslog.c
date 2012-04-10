@@ -1325,13 +1325,24 @@ mds_send_batch_reclaim(uint64_t batchno)
 			i--;
 			entryp = PSC_AGP(entryp, len);
 		}
-		do {
-			if (entryp->xid >= iosinfo->si_xid)
-				break;
-			i--;
-			total -= len;
-			entryp = PSC_AGP(entryp, len);
-		} while (total);
+
+		/*
+ 		 * In a perfect world, iosinfo->si_xid <= xid is always true.
+ 		 * This is because batchno and xid are related.  But I was
+ 		 * met with cold reality and couldn't explain why it happened.
+ 		 * Anyway, resending requests is not the end of the world.
+ 		 */
+		if (iosinfo->si_xid <= xid) {
+			do {
+				if (entryp->xid >= iosinfo->si_xid)
+					break;
+				i--;
+				total -= len;
+				entryp = PSC_AGP(entryp, len);
+			} while (total);
+		} else
+			psclog_warnx("batch (%"PRId64") versus xids (%"PRId64":%"PRId64")\n",
+				batchno, iosinfo->si_xid, xid);
 
 		psc_assert(total);
 
