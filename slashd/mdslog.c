@@ -1635,7 +1635,7 @@ void
 mds_journal_init(int disable_propagation, uint64_t fsuuid)
 {
 	uint64_t lwm, batchno, last_reclaim_xid = 0, last_update_xid = 0, last_distill_xid = 0;
-	int i, ri, rc, nios, count, total, npeers;
+	int i, ri, rc, max, nios, count, total, npeers;
 	struct srt_reclaim_entry *reclaim_entryp;
 	struct srt_update_entry *update_entryp;
 	struct sl_mds_peerinfo *peerinfo;
@@ -1764,11 +1764,13 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		rc = mds_read_file(handle, reclaimbuf, sstb.sst_size, &size, 0);
 		psc_assert(rc == 0 && size == sstb.sst_size);
 
+		max = SLM_RECLAIM_BATCH;
 		reclaim_entryp = reclaimbuf;
 		if (reclaim_entryp->fg.fg_fid == RECLAIM_MAGIC_FID &&
 		    reclaim_entryp->fg.fg_gen == RECLAIM_MAGIC_GEN) {
 			entrysize = sizeof(struct srt_reclaim_entry);
 			size -= entrysize;
+			max = SLM_RECLAIM_BATCH - 1;
 			reclaim_entryp = PSC_AGP(reclaim_entryp, entrysize);
 		}
 
@@ -1782,11 +1784,11 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 			reclaim_entryp = PSC_AGP(reclaim_entryp, entrysize);
 			count++;
 		}
-		if (total > SLM_RECLAIM_BATCH) {
+		if (total > max) {
 			psclog_warnx("The last reclaim log has %d entries - more than it should have!", total);
-			total = SLM_RECLAIM_BATCH;
+			total = max;
 		}
-		if (total == SLM_RECLAIM_BATCH)
+		if (total == max)
 			current_reclaim_batchno++;
 		PSCFREE(reclaimbuf);
 	}
