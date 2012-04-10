@@ -1091,8 +1091,8 @@ slm_rmc_handle_addreplrq(struct pscrpc_request *rq)
 	struct srm_replrq_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = mds_repl_addrq(&mq->fg,
-	    mq->bmapno, mq->repls, mq->nrepls);
+	mp->rc = mds_repl_addrq(&mq->fg, mq->bmapno, mq->repls,
+	    mq->nrepls);
 	return (0);
 }
 
@@ -1103,15 +1103,15 @@ slm_rmc_handle_delreplrq(struct pscrpc_request *rq)
 	struct srm_replrq_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = mds_repl_delrq(&mq->fg,
-	    mq->bmapno, mq->repls, mq->nrepls);
+	mp->rc = mds_repl_delrq(&mq->fg, mq->bmapno, mq->repls,
+	    mq->nrepls);
 	return (0);
 }
 
 int
 slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 {
-	struct srm_replst_master_req *mq;
+	const struct srm_replst_master_req *mq;
 	struct srm_replst_master_rep *mp;
 	struct slm_replst_workreq *rsw;
 
@@ -1133,7 +1133,7 @@ slm_rmc_handler(struct pscrpc_request *rq)
 	if (rq->rq_reqmsg->opc != SRMT_CONNECT) {
 		EXPORT_LOCK(rq->rq_export);
 		if (rq->rq_export->exp_private == NULL)
-			rc = SLERR_NOTCONN;
+			rc = -SLERR_NOTCONN;
 		EXPORT_ULOCK(rq->rq_export);
 		if (rc)
 			goto out;
