@@ -457,7 +457,7 @@ sli_ric_handler(struct pscrpc_request *rq)
 	if (rq->rq_reqmsg->opc != SRMT_CONNECT) {
 		EXPORT_LOCK(rq->rq_export);
 		if (rq->rq_export->exp_private == NULL)
-			rc = SLERR_NOTCONN;
+			rc = -SLERR_NOTCONN;
 		EXPORT_ULOCK(rq->rq_export);
 		if (rc) {
 			DEBUG_REQ(PLL_ERROR, rq,
