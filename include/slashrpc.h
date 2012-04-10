@@ -539,7 +539,7 @@ struct srm_bmap_ptrunc_req {
 	struct slash_fidgen	fg;
 	sl_bmapno_t		bmapno;
 	sl_bmapgen_t		bgen;
-	 int32_t		offset;		/* relative to this bmap */
+	 int32_t		offset;		/* relative to in this bmap */
 	 int32_t		rc;
 } __packed;
 
