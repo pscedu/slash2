@@ -443,7 +443,7 @@ msl_biorq_del(struct bmpc_ioreq *r)
 	/* Reads and DIO's go directly to the pndg list.
 	 */
 	if (!(r->biorq_flags & (BIORQ_READ | BIORQ_DIO)) &&
-	    (r->biorq_flags & (BIORQ_RESCHED | BIORQ_RBWFAIL | 
+	    (r->biorq_flags & (BIORQ_RESCHED | BIORQ_RBWFAIL |
 			       BIORQ_FLUSHABORT | BIORQ_BMAPFAIL)))
 		pll_remove(&bmpc->bmpc_new_biorqs, r);
 	else
@@ -524,12 +524,12 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 			e->bmpce_flags |= BMPCE_EIO;
 
 		if (biorq_is_my_bmpce(r, e) && (e->bmpce_flags & BMPCE_EIO)) {
-			if ((r->biorq_flags & BIORQ_RBWFAIL) && 
+			if ((r->biorq_flags & BIORQ_RBWFAIL) &&
 			    (e->bmpce_flags & BMPCE_RBWPAGE)) {
 				psc_assert(r->biorq_flags & BIORQ_WRITE);
-				psc_assert(psc_atomic16_read(&e->bmpce_wrref) 
+				psc_assert(psc_atomic16_read(&e->bmpce_wrref)
 					   >= 1);
-				psc_assert(psc_atomic16_read(&e->bmpce_rdref) 
+				psc_assert(psc_atomic16_read(&e->bmpce_rdref)
 					   >= 1);
 			}
 
@@ -540,13 +540,13 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 				BMPCE_WAIT(e);
 				BMPCE_LOCK(e);
 			}
-			/* Unless this is an RBWFAIL, only my rd ref should 
+			/* Unless this is an RBWFAIL, only my rd ref should
 			 * remain.
 			 */
 			psc_assert((psc_atomic16_read(&e->bmpce_wrref) ==
 				    !!(r->biorq_flags & BIORQ_RBWFAIL)));
-		
-			if (r->biorq_flags & BIORQ_RBWFAIL && 
+
+			if (r->biorq_flags & BIORQ_RBWFAIL &&
 			    (e->bmpce_flags & BMPCE_RBWPAGE)) {
 				psc_assert(psc_atomic16_read(&e->bmpce_rdref) == 1);
 				psc_atomic16_dec(&e->bmpce_rdref);
@@ -564,7 +564,7 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 		BMPCE_LOCK(e);
 		eio = (e->bmpce_flags & BMPCE_EIO) ? 1 : 0;
 		bmpce_handle_lru_locked(e, bmpc,
-			(r->biorq_flags & BIORQ_WRITE) ? 
+			(r->biorq_flags & BIORQ_WRITE) ?
 					BIORQ_WRITE : BIORQ_READ, 0);
 
 		if (!eio)
@@ -1339,7 +1339,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *bufp)
 		psc_iostats_intv_add((op == SRMT_WRITE ?
 				      &msl_diowr_stat : &msl_diord_stat), size);
 
-		msl_biorq_destroy(r);		
+		msl_biorq_destroy(r);
 		break;
 
 	case -SLERR_AIOWAIT:
@@ -1769,7 +1769,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 				continue;
 
 			e = psc_dynarray_getpos(&r->biorq_pages, i ? (npages - 1) : 0);
-				
+
 			psc_assert(biorq_is_my_bmpce(r, e));
 			psc_assert(e->bmpce_flags & BMPCE_RBWPAGE);
 			psc_assert(!(e->bmpce_flags & BMPCE_DATARDY));
@@ -2047,7 +2047,7 @@ msl_pages_copyout(struct bmpc_ioreq *r, char *buf)
 	}
 	psc_assert(!tsize);
 	msl_biorq_destroy(r);
-	
+
 	return (tbytes);
 }
 
