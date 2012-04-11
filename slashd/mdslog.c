@@ -412,8 +412,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 			total = size / current_reclaim_entrysize;
 			while (count < total) {
 				if (reclaim_entryp->xid == pje->pje_xid) {
-					psclog_warnx("Reclaim xid %"PRId64" already in use!",
-					    pje->pje_xid);
+					psclog_warnx("Reclaim xid %"PRId64" already in use! batch = %"PRId64,
+					    pje->pje_xid, current_reclaim_batchno);
 				}
 				reclaim_entryp = PSC_AGP(reclaim_entryp, current_reclaim_entrysize);
 				count++;
