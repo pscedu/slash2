@@ -105,8 +105,8 @@ fcmh_setattrf(struct fidc_membh *fcmh, struct srt_stat *sstb, int flags)
 	}
 
 	/*
-	 * If we don't have stat attributes, how can we save
-	 * our local updates?
+	 * If we don't have stat attributes, how can we save our local
+	 * updates?
 	 */
 	if ((fcmh->fcmh_flags & FCMH_HAVE_ATTRS) == 0)
 		flags &= ~FCMH_SETATTRF_SAVELOCAL;
@@ -143,7 +143,7 @@ fcmh_setattrf(struct fidc_membh *fcmh, struct srt_stat *sstb, int flags)
 }
 
 /**
- * fidc_reap - Reap some inodes from the idle list.
+ * fidc_reap - Reap some fcmhs from the idle list.
  */
 int
 fidc_reap(struct psc_poolmgr *m)
@@ -278,7 +278,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 			continue;
 		FCMH_LOCK(tmp);
 
-		/* if the item is being freed, ingore it */
+		/* if the item is being freed, ignore it */
 		if (tmp->fcmh_flags & FCMH_CAC_TOFREE) {
 			FCMH_ULOCK(tmp);
 			continue;
@@ -379,11 +379,10 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 
 	/*
 	 * Call service specific constructor slm_fcmh_ctor(),
-	 * sli_fcmh_ctor(), and slc_fcmh_ctor() to initialize
-	 * their private fields that follow the main fcmh
-	 * structure.  It is safe to not lock because we don't
-	 * touch the state, and other thread should be waiting
-	 * for us.
+	 * sli_fcmh_ctor(), and slc_fcmh_ctor() to initialize their
+	 * private fields that follow the main fcmh structure.  It is
+	 * safe to not lock because we don't touch the state, and other
+	 * thread should be waiting for us.
 	 */
 	if (sstb) {
 		FCMH_LOCK(fcmh);
@@ -465,7 +464,7 @@ fcmh_getsize(struct fidc_membh *h)
 
 /**
  * _fcmh_op_start_type: We only move a cache item to the busy list if we
- *	know that the reference being taken is a long one. For
+ *	know that the reference being taken is a long one.  For
  *	short-lived references, we avoid moving the cache item around.
  *	Also, we only move a cache item back to the idle list when the
  *	_last_ reference is dropped.
@@ -520,11 +519,12 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 	FCMH_RLOCK(f);
 
 	psc_assert(f->fcmh_refcnt > 0);
-
-
 	f->fcmh_refcnt--;
 	if (f->fcmh_refcnt == 0) {
-		DEBUG_FCMH(PLL_INFO, (f), "flags=%x, type=%d", f->fcmh_flags, type);
+		DEBUG_FCMH(PLL_INFO, (f),
+		    "release last ref flags=%x, type=%d",
+		    f->fcmh_flags, type);
+
 		/*
 		 * If we fail to initialize a fcmh, free it now.
 		 * Note that the reaper won't run if there is no
@@ -532,9 +532,10 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 		 * cause us to spin on it.
 		 */
 		if (f->fcmh_flags & FCMH_CTOR_FAILED) {
-			/* This won't race with _fidc_lookup because 
-			 * _fidc_lookup holds the bucket lock which this 
-			 * thread takes in psc_hashent_remove().  So 
+			/*
+			 * This won't race with _fidc_lookup because
+			 * _fidc_lookup holds the bucket lock which this
+			 * thread takes in psc_hashent_remove().  So
 			 * _fidc_lookup is guaranteed to obtain this fcmh lock
 			 * and skip the fcmh because of FCMH_CAC_TOFREE before
 			 * this thread calls fcmh_destroy().
@@ -554,6 +555,7 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 			lc_add(&fidcIdleList, f);
 		}
 	}
+	DEBUG_FCMH(PLL_DEBUG, (f), "release ref (type=%d)", type);
 	fcmh_wake_locked(f);
 	FCMH_ULOCK(f);
 }
