@@ -421,6 +421,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 			}
 			PSCFREE(reclaimbuf);
 			reclaimbuf = NULL;
+			psc_assert(reclaim_logfile_offset == (off_t)sstb.sst_size);
 		} else {
 			reclaim_entry.xid = RECLAIM_MAGIC_VER;
 			reclaim_entry.fg.fg_fid = RECLAIM_MAGIC_FID;
