@@ -161,21 +161,32 @@ void
 slm_bml_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("%-16s %6s %14s %15s %17s %5s %2s\n",
-	    "bmap-lease-fid", "bmapno", "ios", "cli", "flags", "seqno", "dp");
+	printf("%-16s %6s %14s %15s %17s %7s\n",
+	    "bmap-lease-fid", "bmapno", "ios", "cli", "flags", "seqno");
 }
 
 void
 slm_bml_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 {
 	const struct slmctlmsg_bml *scbl = m;
+	char *p, cli[PSCRPC_NIDSTR_SIZE];
+	size_t n;
+
+	strlcpy(cli, scbl->scbl_client, sizeof(cli));
+	p = strchr(cli, '@');
+	if (p)
+		*p = '\0';
+	p = cli;
+	n = strcspn(p, "-");
+	if (n)
+		p += n + 1;
 
 	printf("%016"SLPRIxFID" %6u "
-	    "%14s %15s"
+	    "%14s %15s "
 	    "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c "
-	    "%5"PRIu64" %2u\n",
+	    "%7"PRIu64"\n",
 	    scbl->scbl_fg.fg_fid, scbl->scbl_bno,
-	    scbl->scbl_resname, scbl->scbl_client,
+	    scbl->scbl_resname, p,
 	    scbl->scbl_flags & BML_READ		? 'R' : '-',
 	    scbl->scbl_flags & BML_WRITE	? 'W' : '-',
 	    scbl->scbl_flags & BML_CDIO		? 'I' : '-',
@@ -193,7 +204,7 @@ slm_bml_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    scbl->scbl_flags & BML_REASSIGN	? 'A' : '-',
 	    scbl->scbl_flags & BML_RECOVERFAIL	? 'L' : '-',
 	    scbl->scbl_flags & BML_COHFAIL	? 'O' : '-',
-	    scbl->scbl_seq, scbl->scbl_ndups);
+	    scbl->scbl_seq);
 }
 
 void
