@@ -521,7 +521,7 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 	psc_assert(f->fcmh_refcnt > 0);
 	f->fcmh_refcnt--;
 	if (f->fcmh_refcnt == 0) {
-		DEBUG_FCMH(PLL_INFO, (f),
+		DEBUG_FCMH(PLL_INFO, f,
 		    "release last ref flags=%x, type=%d",
 		    f->fcmh_flags, type);
 
@@ -536,9 +536,10 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 			 * This won't race with _fidc_lookup because
 			 * _fidc_lookup holds the bucket lock which this
 			 * thread takes in psc_hashent_remove().  So
-			 * _fidc_lookup is guaranteed to obtain this fcmh lock
-			 * and skip the fcmh because of FCMH_CAC_TOFREE before
-			 * this thread calls fcmh_destroy().
+			 * _fidc_lookup is guaranteed to obtain this
+			 * fcmh lock and skip the fcmh because of
+			 * FCMH_CAC_TOFREE before this thread calls
+			 * fcmh_destroy().
 			 */
 			lc_remove(&fidcIdleList, f);
 			f->fcmh_flags |= FCMH_CAC_TOFREE;
@@ -555,7 +556,7 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 			lc_add(&fidcIdleList, f);
 		}
 	} else
-		DEBUG_FCMH(PLL_DEBUG, (f), "release ref (type=%d)", type);
+		DEBUG_FCMH(PLL_DEBUG, f, "release ref (type=%d)", type);
 	fcmh_wake_locked(f);
 	FCMH_ULOCK(f);
 }
