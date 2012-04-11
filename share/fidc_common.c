@@ -554,8 +554,8 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 			lc_remove(&fidcBusyList, f);
 			lc_add(&fidcIdleList, f);
 		}
-	}
-	DEBUG_FCMH(PLL_DEBUG, (f), "release ref (type=%d)", type);
+	} else
+		DEBUG_FCMH(PLL_DEBUG, (f), "release ref (type=%d)", type);
 	fcmh_wake_locked(f);
 	FCMH_ULOCK(f);
 }
