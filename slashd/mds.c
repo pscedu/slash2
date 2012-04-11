@@ -1960,7 +1960,7 @@ slm_ptrunc_prepare(struct slm_workrq *wkrq)
 			    PSCFS_SETATTRF_DATASIZE, &sstb);
 		}
 		fcmh->fcmh_flags &= ~FCMH_IN_PTRUNC;
-		fcmh_op_done_type(fcmh, FCMH_OPCNT_WORKER);
+		FCMH_ULOCK(fcmh);
 		slm_ptrunc_wake_clients(wkrq);
 		return (0);
 	}
