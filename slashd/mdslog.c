@@ -1949,6 +1949,8 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	psclog_warnx("Last bmap sequence number high water mark is %"PRIx64,
 	    mds_cursor.pjc_seqno_hwm);
 
+	psclog_warnx("The next FID will be %"PRId64, slm_get_curr_slashfid());
+
 	psclog_warnx("Journal UUID=%"PRIx64" MDS UUID=%"PRIx64,
 	     mdsJournal->pj_hdr->pjh_fsuuid, fsuuid);
 
