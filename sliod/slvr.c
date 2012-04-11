@@ -245,26 +245,22 @@ slvr_aio_chkslvrs(const struct sli_aiocb_reply *a)
 __static void
 slvr_aio_replreply(struct sli_aiocb_reply *a)
 {
-	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_repl_read_req *mq;
 	struct srm_repl_read_rep *mp;
 	struct slvr_ref *s;
-	struct sl_resm *resm;
 
 	psc_assert(a->aiocbr_nslvrs = 1);
 
-	s = a->aiocbr_slvrs[0];
-
-	resm = libsl_try_nid2resm(a->aiocbr_peer->exp_connection->c_peer.nid);
-	csvc = sli_geticsvc(resm);
-	if (csvc == NULL)
+	if (!a->aiocbr_csvc)
 		goto out;
 
-	if (SL_RSX_NEWREQ(csvc, SRMT_REPL_READAIO, rq, mq, mp))
+	if (SL_RSX_NEWREQ(a->aiocbr_csvc, SRMT_REPL_READAIO, rq, mq, mp))
 		goto out;
 
 	psc_atomic64_inc(&sli_rpc_repl_readaio);
+
+	s = a->aiocbr_slvrs[0];
 
 	mq->rc = slvr_aio_chkslvrs(a);
 	mq->fg = slvr_2_fcmh(s)->fcmh_fg;
@@ -275,18 +271,17 @@ slvr_aio_replreply(struct sli_aiocb_reply *a)
 		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
 	else
 		mq->rc = rsx_bulkclient(rq, BULK_GET_SOURCE, SRII_BULK_PORTAL,
-				a->aiocbr_iovs, a->aiocbr_niov);
+		    a->aiocbr_iovs, a->aiocbr_niov);
 
-	SL_RSX_WAITREP(csvc, rq, mp);
+	SL_RSX_WAITREP(a->aiocbr_csvc, rq, mp);
 	if (rq)
 		pscrpc_req_finished(rq);
 
  out:
 	slvr_rio_done(s);
 
-	pscrpc_export_put(a->aiocbr_peer);
-	if (csvc)
-		sl_csvc_decref(csvc);
+	if (a->aiocbr_csvc)
+		sl_csvc_decref(a->aiocbr_csvc);
 	
 	sli_aio_aiocbr_release(a);
 }
@@ -294,17 +289,15 @@ slvr_aio_replreply(struct sli_aiocb_reply *a)
 __static void
 slvr_aio_reply(struct sli_aiocb_reply *a)
 {
-	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	int rc, i;
 
-	csvc = sli_getclcsvc(a->aiocbr_peer);
-	if (csvc == NULL)
+	if (!a->aiocbr_csvc)
 		goto out;
 
-	rc = SL_RSX_NEWREQ(csvc, a->aiocbr_rw == SL_WRITE ? 
+	rc = SL_RSX_NEWREQ(a->aiocbr_csvc, a->aiocbr_rw == SL_WRITE ? 
 		   SRMT_WRITE : SRMT_READ, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -329,15 +322,13 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 			    a->aiocbr_niov);
 	}
 
-	SL_RSX_WAITREP(csvc, rq, mp);
+	SL_RSX_WAITREP(a->aiocbr_csvc, rq, mp);
 
 	if (rq)
 		pscrpc_req_finished(rq);
 
- out:
-	pscrpc_export_put(a->aiocbr_peer);
-	if (csvc)
-		sl_csvc_decref(csvc);
+ out:	
+	sl_csvc_decref(a->aiocbr_csvc);
 
 	if (a->aiocbr_rw == SL_READ) {
 		for (i = 0; i < a->aiocbr_nslvrs; i++)
@@ -500,9 +491,13 @@ sli_aio_replreply_setup(struct sli_aiocb_reply *a,
 	memcpy(a->aiocbr_iovs, iov, sizeof(*iov));
 	a->aiocbr_slvrs[0] = s;
 	a->aiocbr_nslvrs = a->aiocbr_niov = 1;
-	a->aiocbr_peer = pscrpc_export_get(rq->rq_export);
 	a->aiocbr_len = iov->iov_len;
 	a->aiocbr_off = 0;
+
+	/* Ref taken here must persist until reply is attempted.
+	 */
+	a->aiocbr_csvc = sli_geticsvcx(libsl_try_nid2resm(rq->rq_peer.nid), 
+	    rq->rq_export);
 
 	spinlock(&a->aiocbr_lock);
 	a->aiocbr_flags |= SLI_AIOCBSF_REPL | SLI_AIOCBSF_READY;
@@ -541,10 +536,10 @@ sli_aio_reply_setup(struct sli_aiocb_reply *a, struct pscrpc_request *rq,
 	memcpy(a->aiocbr_iovs, iovs, niovs * sizeof(*iovs));
 
 	a->aiocbr_niov = niovs;
-	a->aiocbr_peer = pscrpc_export_get(rq->rq_export);
 	a->aiocbr_len = len;
 	a->aiocbr_off = off;
 	a->aiocbr_rw = rw;
+	a->aiocbr_csvc = sli_getclcsvc(rq->rq_export);
 
 	spinlock(&a->aiocbr_lock);
 	a->aiocbr_flags |= SLI_AIOCBSF_READY;

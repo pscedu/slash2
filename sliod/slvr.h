@@ -176,7 +176,7 @@ struct sli_aiocb_reply {
 	int			  aiocbr_nslvrs;
 	int			  aiocbr_niov;
 	int			  aiocbr_rc;
-	struct pscrpc_export	 *aiocbr_peer;
+	struct slashrpc_cservice *aiocbr_csvc;
 	struct srt_bmapdesc	  aiocbr_sbd;
 	uint64_t		  aiocbr_id;
 	enum rw			  aiocbr_rw;
@@ -212,12 +212,11 @@ void	slvr_wio_done(struct slvr_ref *);
 void	slvr_worker_init(void);
 
 void	sli_aio_reply_setup(struct sli_aiocb_reply *, struct pscrpc_request *,
-	    uint32_t, uint32_t, struct slvr_ref **, int,
-	    struct iovec *, int, enum rw);
+    uint32_t, uint32_t, struct slvr_ref **, int, struct iovec *, int, enum rw);
 
 void	sli_aio_aiocbr_release(struct sli_aiocb_reply *);
-void	sli_aio_replreply_setup(struct sli_aiocb_reply *, struct pscrpc_request *,
-	    struct slvr_ref *, struct iovec *);
+void	sli_aio_replreply_setup(struct sli_aiocb_reply *, 
+    struct pscrpc_request *, struct slvr_ref *, struct iovec *);
 
 extern struct psc_listcache lruSlvrs;
 extern struct psc_listcache crcqSlvrs;
