@@ -503,11 +503,9 @@ fcmh_decref(struct fidc_membh *f, enum fcmh_opcnt_types type)
 	int locked;
 
 	locked = FCMH_RLOCK(f);
-
-	DEBUG_FCMH(PLL_DEBUG, (f), "release ref (type=%d)", type);
-
 	psc_assert(f->fcmh_refcnt > 1);
 	f->fcmh_refcnt--;
+	DEBUG_FCMH(PLL_DEBUG, (f), "release ref (type=%d)", type);
 	fcmh_wake_locked(f);
 	FCMH_URLOCK(f, locked);
 }
