@@ -46,6 +46,13 @@ If the pool is created with new utility:
 	- there is a fsid file in the default file system
 	- there is NO going back
 
+To choose a different file system, we must
+
+	- reformat the journal with the matching uuid
+	- change the uuid in the slash2 config file to match the uuid in the journal.
+
+The uuid is used to select a file system in a pool.
+
 04/09/2012
 ----------
 
