@@ -499,6 +499,11 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 		/*
 		 * If we fail above, we still skip these SLASH2 FIDs here
 		 * in case a client gets confused.
+		 *
+		 * 04/12/2012:
+		 *
+		 * Alternatively, we can just set it to be one beyond the last
+		 * fid stored in a journal entry.
 		 */
 		if (sjnm->sjnm_op == NS_OP_CREATE ||
 		    sjnm->sjnm_op == NS_OP_MKDIR ||
