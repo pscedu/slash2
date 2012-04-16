@@ -159,6 +159,7 @@ To switch file systems in a pool:
 	* reformat journal with the same fsuuid.
 	* slashd will pick the file system with the same fsuuid as the only writable file system.
 	* all other file systems in the pool will be read-only.
+	* make sure you have all the uuid directories on the I/O server.
 
 Because you are going to reformat the journal, make sure the journal is empty with the following:
 
