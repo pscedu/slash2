@@ -135,13 +135,13 @@ mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw,
 	if (b->bcm_flags & BMAP_DIO)
 		return (0);
 
-	/* A second writer or a reader wants access. 
+	/* A second writer or a reader wants access.
 	 */
 	if (bmi->bmdsi_writers) {
 		struct bmap_mds_lease *tmp1;
 		int wtrs = 0;
 
-		/* Since the bmap is not yet in DIO mode, ensure only 
+		/* Since the bmap is not yet in DIO mode, ensure only
 		 * one lease is present and that a write bml exists.
 		 */
 		psc_assert(pll_nitems(&bmi->bmdsi_leases) == 1);
@@ -168,10 +168,10 @@ mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw,
 			BML_ULOCK(bml);
 
 			DEBUG_BMAP(PLL_NOTIFY, b, "dup lease");
-			
+
 			return (0);
 		}
-		
+
 		if (bml->bml_flags & BML_CDIO) {
 			/* The other leaseholder is already DIO'd.
 			 */
@@ -179,16 +179,16 @@ mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw,
 
 			b->bcm_flags |= BMAP_DIO;
 
-			DEBUG_BMAP(PLL_WARN, b, 
+			DEBUG_BMAP(PLL_WARN, b,
 			   "set BMAP_DIO due to leaseholder BML_CDIO");
 
 			return (0);
 		}
-		
+
 		if (b->bcm_flags & BMAP_DIORQ) {
 			psc_assert(bmi->bmdsi_wr_ion);
 			BML_ULOCK(bml);
-			/* In the process of waiting for an async RPC to 
+			/* In the process of waiting for an async RPC to
 			 * complete.
 			 */
 			return (-SLERR_BMAP_DIOWAIT);
@@ -196,24 +196,24 @@ mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw,
 
 		if (bml->bml_flags & BML_COHDIO) {
 			/* DIO request was already on the wire.  This may
-			 * occur if a DIO rq was pending and BMAP_DIO was 
+			 * occur if a DIO rq was pending and BMAP_DIO was
 			 * recently unset.
-			 */			
+			 */
 			BML_ULOCK(bml);
 
-			b->bcm_flags |= BMAP_DIORQ;			
+			b->bcm_flags |= BMAP_DIORQ;
 
-			return (-SLERR_BMAP_DIOWAIT);			
-		} 
+			return (-SLERR_BMAP_DIOWAIT);
+		}
 
 		b->bcm_flags |= BMAP_DIORQ;
 		bml->bml_flags |= BML_COHDIO;
 		BML_ULOCK(bml);
-		
+
 		DEBUG_BMAP(PLL_WARN, b, "set BMAP_DIORQ, issuing cb");
 
 		mdscoh_req(bml);
-		
+
 		return (-SLERR_BMAP_DIOWAIT);
 
 	} else if (rw == SL_WRITE && bmi->bmdsi_readers) {
@@ -221,12 +221,12 @@ mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw,
 
 		/* Writer being added amidst one or more readers.  Issue
 		 * courtesy callbacks to the readers so they will avoid
-		 * stale cached data. 
+		 * stale cached data.
 		 */
 		PLL_FOREACH(bml, &bmi->bmdsi_leases) {
 			tmp = bml;
 			do {
-				psc_assert(bml->bml_flags & BML_READ && 
+				psc_assert(bml->bml_flags & BML_READ &&
 					   !(bml->bml_flags & BML_WRITE));
 
 				if (bml->bml_cli_nidpid.nid != np->nid) {
@@ -391,7 +391,7 @@ mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios,
 		if (repls != 1) {
 			DEBUG_FCMH(PLL_WARN, b->bcm_fcmh,
 				   "invalid reassign req");
-			DEBUG_BMAP(PLL_WARN, b, 
+			DEBUG_BMAP(PLL_WARN, b,
 				   "invalid reassign req (repls=%d)", repls);
 			goto out;
 		}
@@ -775,7 +775,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
  * @seq: lease sequence.
  */
 struct bmap_mds_lease *
-mds_bmap_getbml_locked(struct bmapc_memb *b, uint64_t seq, uint64_t nid, 
+mds_bmap_getbml_locked(struct bmapc_memb *b, uint64_t seq, uint64_t nid,
        uint32_t pid)
 {
 	struct bmap_mds_info *bmi;
@@ -793,7 +793,7 @@ mds_bmap_getbml_locked(struct bmapc_memb *b, uint64_t seq, uint64_t nid,
 		do {
 			if (bml2->bml_seq == seq)
 				return (bml2);
-			
+
 			bml2 = bml2->bml_chain;
 		} while (bml != bml2);
 	}
@@ -1183,7 +1183,7 @@ mds_handle_rls_bmap(struct pscrpc_request *rq, int sliod)
 			goto next;
 
 		BMAP_LOCK(b);
-		bml = mds_bmap_getbml_locked(b, sbd->sbd_seq, sbd->sbd_nid, 
+		bml = mds_bmap_getbml_locked(b, sbd->sbd_seq, sbd->sbd_nid,
 				      sbd->sbd_pid);
 
 		DEBUG_BMAP((bml ? PLL_INFO : PLL_WARN), b,
@@ -1283,7 +1283,7 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 	bml->bml_seq = bia->bia_seq;
 	bml->bml_ios = bia->bia_ios;
 	/* Taking the lease origination time in this manner leaves
-	 *    us suscpetible to gross changes in the system time.
+	 *    us susceptible to gross changes in the system time.
 	 */
 	bml->bml_start = bia->bia_start;
 	/* Grant recovered leases some additional time.
@@ -1675,7 +1675,7 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 		return (rc);
 
 	BMAP_LOCK(b);
-	obml = mds_bmap_getbml_locked(b, sbd_in->sbd_seq, sbd_in->sbd_nid, 
+	obml = mds_bmap_getbml_locked(b, sbd_in->sbd_seq, sbd_in->sbd_nid,
 			      sbd_in->sbd_pid);
 
 	if (!obml) {
@@ -1776,7 +1776,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	/* Lookup the original lease to ensure it actually exists.
 	 */
 	BMAP_LOCK(b);
-	obml = mds_bmap_getbml_locked(b, sbd_in->sbd_seq, sbd_in->sbd_nid, 
+	obml = mds_bmap_getbml_locked(b, sbd_in->sbd_seq, sbd_in->sbd_nid,
 			      sbd_in->sbd_pid);
 	BMAP_ULOCK(b);
 
