@@ -451,9 +451,6 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 			    slstrerror(rc));
 	}
 	*fp = fcmh;
-
-	if (rc)
-		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 	return (rc);
 }
 

@@ -1186,6 +1186,8 @@ upsched_scandir(void)
 				iosv[j].bs_id = USWI_GETREPL(wk, j).bs_id;
 			uswi_enqueue_sites(wk, iosv, USWI_NREPLS(wk));
 			uswi_unref(wk);
+
+			fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 		}
 		off += tsiz;
 	}
