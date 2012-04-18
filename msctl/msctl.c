@@ -420,6 +420,14 @@ cmd_replrq_one(const char *fn, __unusedx const struct stat *stb,
 		return (0);
 	}
 
+	if (S_ISLNK(stb->st_mode)) {
+		if (!recursive) {
+			errno = EINVAL;
+			warn("%s", fn);
+		}
+		return (0);
+	}
+
 	mrq = psc_ctlmsg_push(ra->opcode, sizeof(*mrq));
 	mrq->mrq_bmapno = ra->bmapno;
 	mrq->mrq_nios = ra->nios;
