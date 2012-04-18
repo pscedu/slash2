@@ -29,6 +29,7 @@
 #include "mdsio.h"
 #include "repl_mds.h"
 #include "slerr.h"
+#include "up_sched_res.h"
 
 static __inline void *
 bmap_2_mdsio_data(struct bmapc_memb *b)
@@ -97,6 +98,7 @@ mds_bmap_ensure_valid(struct bmapc_memb *b)
 int
 mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 {
+//	int tract[NBREPLST], retifset[NBREPLST];
 	uint64_t crc, od_crc = 0;
 	struct iovec iovs[2];
 	size_t nb;
@@ -146,6 +148,52 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 	mds_bmap_ensure_valid(b);
 
 	DEBUG_BMAPOD(PLL_INFO, b, "successfully loaded from disk");
+
+#if 0
+//	if (flags & BMAPGETF_REPLAY)
+//		return (0);
+
+	/*
+	 * If we crashed, revert all inflight SCHED'ed bmaps so they get
+	 * resent.
+	 *
+	 * Because only a portion of replication work is held in memory
+	 * at any time, whenever a new bmap gets loaded we must take
+	 * care to reidentify such work to prevent inconsistency.
+	 */
+	brepls_init(tract, -1);
+	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+	tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_TRUNCPNDG;
+	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
+
+	brepls_init(retifset, 0);
+	retifset[BREPLST_REPL_SCHED] = 1;
+	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
+	retifset[BREPLST_GARBAGE_SCHED] = 1;
+
+	if (mds_repl_bmap_walk(b, tract, retifset, 0, NULL, 0)) {
+		sl_replica_t iosv[SL_MAX_REPLICAS];
+		struct up_sched_work_item *wk;
+		struct fidc_membh *f;
+		unsigned j;
+
+		f = b->bcm_fcmh;
+		mds_bmap_write_logrepls(b);
+
+		rc = uswi_findoradd(&b->bcm_fcmh->fcmh_fg, &wk);
+
+		/*
+		 * Requeue pending updates on all registered sites.  If
+		 * there is no work to do, it will be promptly removed
+		 * by the slmupschedthr.
+		 */
+		for (j = 0; j < fcmh_2_nrepls(f); j++)
+			iosv[j].bs_id = USWI_GETREPL(wk, j).bs_id;
+		uswi_enqueue_sites(wk, iosv, fcmh_2_nrepls(f));
+		uswi_unref(wk);
+	}
+#endif
+
 	return (0);
 }
 
