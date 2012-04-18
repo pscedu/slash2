@@ -46,6 +46,7 @@ site @PSCARCH {
 		desc	= "brashear client 1";
 		type	= parallel_lfs_compnt;
 		id	= 0x5;
+		nids	= firehose1-99.psc.edu;
 		fsroot	= /brashear/.arc;
 	}
 
@@ -53,6 +54,7 @@ site @PSCARCH {
 		desc	= "brashear client 2";
 		type	= parallel_lfs_compnt;
 		id	= 0x6;
+		nids	= firehose2-99.psc.edu;
 		fsroot	= /brashear/.arc;
 	}
 
@@ -60,6 +62,7 @@ site @PSCARCH {
 		desc	= "brashear client 3";
 		type	= parallel_lfs_compnt;
 		id	= 0x7;
+		nids	= firehose3-99.psc.edu;
 		fsroot	= /brashear/.arc;
 	}
 
@@ -67,6 +70,7 @@ site @PSCARCH {
 		desc	= "brashear client 4";
 		type	= parallel_lfs_compnt;
 		id	= 0x8;
+		nids	= firehose4-99.psc.edu;
 		fsroot	= /brashear/.arc;
 	}
 	
