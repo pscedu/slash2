@@ -498,14 +498,15 @@ _fcmh_op_start_type(const struct pfl_callerinfo *pci,
 }
 
 void
-fcmh_decref(struct fidc_membh *f, enum fcmh_opcnt_types type)
+_fcmh_decref(const struct pfl_callerinfo *pci, struct fidc_membh *f,
+    enum fcmh_opcnt_types type)
 {
 	int locked;
 
 	locked = FCMH_RLOCK(f);
 	psc_assert(f->fcmh_refcnt > 1);
 	f->fcmh_refcnt--;
-	DEBUG_FCMH(PLL_DEBUG, (f), "release ref (type=%d)", type);
+	DEBUG_FCMH(PLL_DEBUG, f, "release ref (type=%d)", type);
 	fcmh_wake_locked(f);
 	FCMH_URLOCK(f, locked);
 }
@@ -515,14 +516,10 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
     struct fidc_membh *f, enum fcmh_opcnt_types type)
 {
 	FCMH_RLOCK(f);
-
 	psc_assert(f->fcmh_refcnt > 0);
 	f->fcmh_refcnt--;
+	DEBUG_FCMH(PLL_DEBUG, f, "release ref (type=%d)", type);
 	if (f->fcmh_refcnt == 0) {
-		DEBUG_FCMH(PLL_INFO, f,
-		    "release last ref flags=%x, type=%d",
-		    f->fcmh_flags, type);
-
 		/*
 		 * If we fail to initialize a fcmh, free it now.
 		 * Note that the reaper won't run if there is no
@@ -553,8 +550,7 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 			lc_remove(&fidcBusyList, f);
 			lc_add(&fidcIdleList, f);
 		}
-	} else
-		DEBUG_FCMH(PLL_DEBUG, f, "release ref (type=%d)", type);
+	}
 	fcmh_wake_locked(f);
 	FCMH_ULOCK(f);
 }
