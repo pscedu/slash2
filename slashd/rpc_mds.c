@@ -24,6 +24,7 @@
 #include "pfl/str.h"
 #include "psc_ds/tree.h"
 #include "psc_rpc/rpc.h"
+#include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/service.h"
 
@@ -174,16 +175,16 @@ slm_rpc_ion_unpack_statfs(struct pscrpc_request *rq, int type)
 
 	m = type == PSCRPC_MSG_REPLY ? rq->rq_repmsg : rq->rq_reqmsg;
 	if (m == NULL) {
-		psclog_errorx("unable to import statfs");
+		DEBUG_REQ(PLL_ERROR, rq, "unable to import statfs");
 		return;
 	}
 	if (m->bufcount < 2) {
-		psclog_errorx("unable to import statfs");
+		DEBUG_REQ(PLL_ERROR, rq, "unable to import statfs");
 		return;
 	}
 	f = pscrpc_msg_buf(m, m->bufcount - 2, sizeof(*f));
 	if (f == NULL) {
-		psclog_errorx("unable to import statfs");
+		DEBUG_REQ(PLL_ERROR, rq, "unable to import statfs");
 		return;
 	}
 	resm = libsl_nid2resm(pscrpc_req_getconn(rq)->c_peer.nid);
