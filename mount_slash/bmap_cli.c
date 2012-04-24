@@ -642,6 +642,7 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 	struct sl_resm *resm;
 	uint64_t repls = 0; // XXX 1 bit per repl, SL_MAX_REPLICAS
 	int i, j, locked;
+	int waitsecs = BMAP_CLI_MAX_LEASE;
 	void *p;
 
 	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
@@ -695,6 +696,11 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 			}
 		}
 
+		if (!i && !csvc) {
+			waitsecs = 1;
+			goto block;
+		}
+
 		/* rats, not available; try anyone available now */
 		FOREACH_RND(&it, fci->fci_nrepls) {
 			if (repls & (1 << it.ri_rnd_idx))
@@ -726,6 +732,7 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 			}
 		}
 
+		waitsecs = BMAP_CLI_MAX_LEASE;
  block:
 		if (i)
 			break;
@@ -733,7 +740,7 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 		 * No connection was immediately available; wait a small
 		 * amount of time to wait for any to come online.
 		 */
-		psc_multiwait_secs(mw, &p, BMAP_CLI_MAX_LEASE);
+		psc_multiwait_secs(mw, &p, waitsecs);
 	}
 	psc_multiwait_leavecritsect(mw);
 	return (NULL);
