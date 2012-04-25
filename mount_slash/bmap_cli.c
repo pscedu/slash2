@@ -696,11 +696,6 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 			}
 		}
 
-		if (!i && !csvc) {
-			waitsecs = 1;
-			goto block;
-		}
-
 		/* rats, not available; try anyone available now */
 		FOREACH_RND(&it, fci->fci_nrepls) {
 			if (repls & (1 << it.ri_rnd_idx))
@@ -718,6 +713,15 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 
 			repls |= (1 << it.ri_rnd_idx);
 		}
+
+		/* Wait a bit for async connection establishment before
+		 * resorting to archival resources.
+		 */
+		if (!i && !csvc) {
+			waitsecs = 1;
+			goto block;
+		}
+
 		/* Could more use the bitmap in a more clever fashion but
 		 *   this code is due to change shortly anyway..
 		 */
