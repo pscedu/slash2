@@ -707,11 +707,6 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 			}
 		}
 
-		if (!i && !csvc) {
-			waitsecs = 1;
-			goto block;
-		}
-
 		/* rats, not available; try anyone available now */
 		FOREACH_RND(&it, fci->fci_nrepls) {
 			if (repls & (1 << it.ri_rnd_idx))
