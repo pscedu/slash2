@@ -110,13 +110,13 @@ msl_update_iocounters(int len)
  * Notes: roff is bmap aligned.
  */
 __static void
-msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
-	struct msl_fhent *mfh, struct msl_fsrqinfo *q, uint32_t roff,
-	uint32_t len, int op)
+msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
+    int rqnum, uint32_t roff, uint32_t len, int op)
 {
 	struct bmpc_ioreq *r;
 	struct bmap_pagecache *bmpc;
 	struct bmap_pagecache_entry *e, bmpce_search, *bmpce_new;
+	struct msl_fhent *mfh = q->mfsrq_fh;
 	uint32_t aoff = (roff & ~BMPC_BUFMASK); /* aligned, relative offset */
 	uint32_t alen = len + (roff & BMPC_BUFMASK);
 	uint64_t foff = roff + bmap_foff(b); /* filewise offset */
@@ -136,7 +136,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 
 	msl_update_iocounters(len);
 
-	*newreq = r = bmpc_biorq_new(b, mfh, q, roff, len, op);
+	r = bmpc_biorq_new(q, b, buf, rqnum, roff, len, op);
 	if (r->biorq_flags & BIORQ_DIO)
 		/* The bmap is set to use directio, we may then skip
 		 * cache preparation.
@@ -164,6 +164,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	}
 
 	psc_assert(npages <= BMPC_IOMAXBLKS);
+
 	if (op == BIORQ_WRITE)
 		maxpages = npages;
 	else {
@@ -171,7 +172,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 		 *    that could be acquired from this bmap.
 		 */
 		int rapages;
-
+		
 		/* First, query the read ahead struct in the mfh to
 		 *   obtain rapages and ra direction.
 		 */
@@ -182,30 +183,29 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 			psc_assert(bkwdra == 0 || bkwdra == 1);
 			n = bkwdra ? (aoff / BMPC_BLKSZ) :
 				(SLASH_BMAP_SIZE - aoff) / BMPC_BLKSZ;
-
-			/* Read ahead must be contained within this bmap.
+			/* Read ahead must be contained within this bmap
 			 */
 			maxpages = MIN(rapages, n);
 			if (!bkwdra) {
 				/* Don't prefetch past EOF
 				 */
 				n = ((fsz - (bmap_foff(b) + roff)) /
-				     BMPC_BLKSZ) +
+				    BMPC_BLKSZ) +
 					((fsz % BMPC_BLKSZ) ? 1 : 0);
 
 				maxpages = MIN(maxpages, n);
 			}
 			if (maxpages < npages)
 				maxpages = npages;
-
+			
 			DEBUG_BMAP(PLL_INFO, b, "maxpages=%d npages=%d "
-			   "bkwdra=%d", maxpages, npages, bkwdra);
+			    "bkwdra=%d", maxpages, npages, bkwdra);
 		} else {
 			maxpages = npages;
 			bkwdra = 0;
 		}
 	}
-
+	
 	/* Lock the bmap's page cache and try to locate cached pages
 	 *   which correspond to this request.
 	 */
@@ -565,7 +565,7 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 		eio = (e->bmpce_flags & BMPCE_EIO) ? 1 : 0;
 		bmpce_handle_lru_locked(e, bmpc,
 			(r->biorq_flags & BIORQ_WRITE) ?
-					BIORQ_WRITE : BIORQ_READ, 0);
+				BIORQ_WRITE : BIORQ_READ, 0);
 
 		if (!eio)
 		    BMPCE_ULOCK(e);
@@ -719,8 +719,9 @@ msl_biorq_aio_decref(struct bmpc_ioreq *r)
 
 	MFH_LOCK(r->biorq_fhent);
 	rc = --q->mfsrq_ref;
-	DEBUG_BIORQ(PLL_NOTIFY, r, "(mfsrq_ref=%d)", q->mfsrq_ref);
 	MFH_ULOCK(r->biorq_fhent);
+
+	DEBUG_BIORQ(PLL_WARN, r, "q=%p (mfsrq_ref=%d)", q, rc);
 
 	psc_assert(rc >= 0);
 
@@ -731,6 +732,7 @@ __static void
 msl_biorq_aio_prep(struct bmpc_ioreq *r)
 {
 	struct msl_fsrqinfo *q = r->biorq_fsrqi;
+	int cnt;
 
 	psc_assert(q);
 
@@ -739,9 +741,11 @@ msl_biorq_aio_prep(struct bmpc_ioreq *r)
 	BIORQ_ULOCK(r);
 
 	MFH_LOCK(r->biorq_fhent);
-	q->mfsrq_ref++;
-	DEBUG_BIORQ(PLL_NOTIFY, r, "(mfsrq_ref=%d)", q->mfsrq_ref);
+	if (!(q->mfsrq_flags & MFSRQ_REISSUED))
+		cnt = ++q->mfsrq_ref;
 	MFH_ULOCK(r->biorq_fhent);
+
+	DEBUG_BIORQ(PLL_WARN, r, "q=%p (mfsrq_ref=%d)", q, cnt);
 }
 
 __static void
@@ -779,6 +783,7 @@ msl_req_aio_add(struct pscrpc_request *rq,
 	car = psc_pool_get(slc_async_req_pool);
 	car->car_id = mp->id;
 	car->car_cbf = cbf;
+
 	/* pscfs_req has the pointers to each biorq needed for completion.
 	 */
 	memcpy(&car->car_argv, av, sizeof(*av));
@@ -821,14 +826,15 @@ msl_req_aio_add(struct pscrpc_request *rq,
 	} else if (cbf == msl_dio_cb) {
 		msl_biorq_aio_prep(r);
 		if (r->biorq_flags & BIORQ_WRITE)
-			/* The biorq is will be destroyed.
-			 */
 			av->pointer_arg[MSL_CBARG_BIORQ] = NULL;
 
 		car->car_fsrqinfo = r->biorq_fsrqi;
 		car->car_len = r->biorq_len;
 	} else
 		abort();
+
+	psclog_info("get car=%p car_id=%"PRIx64" q=%p",
+	    car, car->car_id, car->car_fsrqinfo);
 
 	lc_add(&resm2rmci(m)->rmci_async_reqs, car);
 
@@ -839,44 +845,59 @@ __static void
 msl_fsrq_complete(struct msl_fsrqinfo *q)
 {
 	struct bmpc_ioreq *r;
-	size_t len, rc;
-	char *buf = q->mfsrq_buf;
+	size_t len = 0, rc;
 	int i;
 
 	psc_assert(!q->mfsrq_ref);
 
 	for (i = 0, len = 0; i < MAX_BMAPS_REQ; i++) {
 		r = q->mfsrq_biorq[i];
-		if (!r)
-			break;
+
+		if (!r || r == MSL_BIORQ_COMPLETE || 
+		    !(r->biorq_flags & BIORQ_AIOWAIT))
+			continue;
 
 		BIORQ_LOCK(r);
 		r->biorq_flags &= ~(BIORQ_INFL | BIORQ_SCHED);
 		r->biorq_flags &= ~(BIORQ_RBWLP | BIORQ_RBWFP);
 		BIORQ_ULOCK(r);
 
-		DEBUG_BIORQ(PLL_INFO, r, "fsrq_complete");
-		if (q->mfsrq_err)
+		DEBUG_BIORQ(PLL_WARN, r, "fsrq_complete q=%p err=%d", 
+		    q, q->mfsrq_err);
+
+		if (q->mfsrq_rw != SL_READ)
+			abort();
+
+		psc_assert(r->biorq_flags & BIORQ_READ);
+		
+		if (q->mfsrq_err) {
+			msl_biorq_destroy(r);
+			continue;
+		}
+
+		if (i && !len)
+			/* This fsrq has 2 biorqs (probably spanned 2 bmaps)
+			 * and the first biorq was completed via cache so
+			 * interpolate its len.
+			 */
+			len = q->mfsrq_size - r->biorq_len;
+
+		if (r->biorq_flags & BIORQ_DIO) {
+			/* Support mix of dio and cached reads.  This may occur
+			 * if the read request spans bmaps.  The 'len' here was
+			 * possibly adjusted against the tail of the file in
+			 * msl_io.
+			 */
+			len += r->biorq_len;
 			msl_biorq_destroy(r);
 
-		else if (q->mfsrq_rw == SL_READ) {
-			psc_assert(r->biorq_flags & BIORQ_READ);
-			/* Support mix of dio and cached reads.  This may occur
-			 *   if the read request spans bmaps.
-			 */
-			if (r->biorq_flags & BIORQ_DIO) {
-				len += r->biorq_len;
-				msl_biorq_destroy(r);
-			} else {
-				rc = msl_pages_copyout(r, buf);
-				if (!rc)
-					break;
-				len += rc;
-			}
-			buf += len;
+		} else {
+			rc = msl_pages_copyout(r);
+			if (!rc)
+				break;
+			len += rc;
 			psc_assert(len <= q->mfsrq_size);
-		} else
-			abort();
+		}
 	}
 
 	if (!q->mfsrq_err) {
@@ -894,35 +915,46 @@ msl_fsrq_completion_try(struct msl_fsrqinfo *q)
 {
 	struct bmpc_ioreq *r;
 	struct bmap_pagecache_entry *e;
-	int i, j;
+	int i, j, aio_done = 0;
 
 	psc_assert(q);
+
+	/* Read-ahead completions need to barrier here or else risk finishing
+	 * before msl_io() is ready.
+	 */
+	msl_fsrqinfo_readywait(q);
 
 	/* Scan through the biorq's and their bmpce's for pages still blocked
 	 *    in AIOWAIT.
 	 */
 	for (i = 0; i < MAX_BMAPS_REQ; i++) {
 		r = q->mfsrq_biorq[i];
-		if (!r)
+		if (!r) {
+			psc_assert(i);
 			break;
+		}
 
-		psc_assert(r->biorq_flags & BIORQ_AIOWAIT);
+		if (r == MSL_BIORQ_COMPLETE || 
+		    !(r->biorq_flags & BIORQ_AIOWAIT))
+			continue;
+
+		aio_done = 1;
 
 		DYNARRAY_FOREACH(e, j, &r->biorq_pages) {
 			BMPCE_LOCK(e);
 			if (e->bmpce_flags & BMPCE_EIO) {
 				BMPCE_ULOCK(e);
-
+				
 				MFH_LOCK(r->biorq_fhent);
 				q->mfsrq_err = EIO;
 				MFH_ULOCK(r->biorq_fhent);
-
+				
 				goto out;
-
+				
 			} else if (!(e->bmpce_flags & BMPCE_DATARDY)) {
 				MFH_LOCK(r->biorq_fhent);
 				psc_assert(msl_fsrqinfo_isset(r->biorq_fsrqi,
-					      MFSRQ_BMPCEATT));
+					MFSRQ_BMPCEATT));
 				r->biorq_fsrqi->mfsrq_flags &= ~MFSRQ_BMPCEATT;
 				r->biorq_fsrqi->mfsrq_bmpceatt = NULL;
 				msl_fsrq_aiowait_tryadd_locked(e, r);
@@ -936,6 +968,8 @@ msl_fsrq_completion_try(struct msl_fsrqinfo *q)
 		}
 	}
  out:
+	psc_assert(aio_done);
+	
 	msl_fsrq_complete(q);
 }
 
@@ -946,11 +980,14 @@ msl_bmpce_aio_process(struct bmap_pagecache_entry *e)
 	struct psc_dynarray a = DYNARRAY_INIT;
 	int i;
 
+	/* If fsrq cannot be completed. msl_fsrq_completion_try()
+	 * will reattach it to another aio'd bmpce.
+	 */
 	while ((q = pll_get(&e->bmpce_pndgaios)))
-		psc_dynarray_add(&a, q);
-		/* If fsrq cannot be completed. msl_fsrq_completion_try()
-		 *   will reattach it to another aio'd bmpce.
+		/* msl_fsrq_completion_try() may remove 'e' so loop
+		 * gather work before calling msl_fsrq_completion_try().
 		 */
+		psc_dynarray_add(&a, q);
 
 	DYNARRAY_FOREACH(q, i, &a) {
 		msl_fsrq_completion_try(q);
@@ -1072,6 +1109,8 @@ msl_read_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 	if (rc == SLERR_AIOWAIT)
 		return (msl_req_aio_add(rq, msl_read_cb, args));
+
+	psc_assert(rc != -SLERR_AIOWAIT);
 
 	return (msl_read_cb(rq, rc, args));
 }
@@ -1247,7 +1286,7 @@ msl_dio_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 }
 
 __static int
-msl_pages_dio_getput(struct bmpc_ioreq *r, char *bufp)
+msl_pages_dio_getput(struct bmpc_ioreq *r)
 {
 	struct slashrpc_cservice  *csvc = NULL;
 	struct pscrpc_request	  *rq = NULL;
@@ -1260,6 +1299,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *bufp)
 	size_t len, nbytes, size = r->biorq_len;
 	int i, op, n = 0, rc = 1;
 
+	uint64_t *v8;
+
 	psc_assert(r->biorq_flags & BIORQ_DIO);
 	psc_assert(r->biorq_bmap);
 	psc_assert(size);
@@ -1271,7 +1312,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *bufp)
 	iovs = PSCALLOC(sizeof(*iovs) * n);
 
  retry:
-	DEBUG_BIORQ(PLL_INFO, r, "dio req");
+	v8 = (uint64_t *)r->biorq_buf;
+	DEBUG_BIORQ(PLL_DEBUG, r, "dio req v8(%"PRIx64")", *v8);
 
 	op = r->biorq_flags & BIORQ_WRITE ? SRMT_WRITE : SRMT_READ;
 
@@ -1297,8 +1339,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *bufp)
 		rq->rq_interpret_reply = msl_dio_cb0;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQ] = r;
-		rq->rq_async_args.pointer_arg[MSL_CBARG_BUF] = bufp + nbytes;
-		iovs[i].iov_base = bufp + nbytes;
+		iovs[i].iov_base = r->biorq_buf + nbytes;
 		iovs[i].iov_len  = len;
 
 		rc = rsx_bulkclient(rq, (op == SRMT_WRITE ?
@@ -1310,8 +1351,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *bufp)
 		mq->offset = r->biorq_off + nbytes;
 		mq->size = len;
 		mq->op = (op == SRMT_WRITE ? SRMIOP_WR : SRMIOP_RD);
-		mq->flags |= SRM_IOF_DIO |
-		    (r->biorq_flags & BIORQ_APPEND ? SRM_IOF_APPEND : 0);
+		mq->flags |= SRM_IOF_DIO;
+
 		memcpy(&mq->sbd, &bci->bci_sbd, sizeof(mq->sbd));
 
 		authbuf_sign(rq, PSCRPC_MSG_REQUEST);
@@ -1337,7 +1378,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *bufp)
 	switch (rc) {
 	case 0:
 		psc_iostats_intv_add((op == SRMT_WRITE ?
-				      &msl_diowr_stat : &msl_diord_stat), size);
+			&msl_diowr_stat : &msl_diord_stat), size);
 
 		msl_biorq_destroy(r);
 		break;
@@ -1862,11 +1903,14 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 			if (rc == 0 && (e->bmpce_flags & BMPCE_AIOWAIT)) {
 				rc = -SLERR_AIOWAIT;
 				if (!aio_placed) {
+					MFH_LOCK(r->biorq_fhent);
 					BIORQ_LOCK(r);
 					r->biorq_flags |= BIORQ_AIOWAIT;
 					BIORQ_ULOCK(r);
-
+					
 					msl_fsrq_aiowait_tryadd_locked(e, r);
+					MFH_ULOCK(r->biorq_fhent);
+
 					aio_placed = 1;
 				}
 			}
@@ -1893,16 +1937,16 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
  * @buf: the source (application) buffer.
  */
 __static size_t
-msl_pages_copyin(struct bmpc_ioreq *r, char *buf)
+msl_pages_copyin(struct bmpc_ioreq *r)
 {
 	struct bmap_pagecache_entry *e;
 	uint32_t toff, tsize, nbytes;
 	char *dest, *src;
 	int i;
 
-	src    = buf;
-	tsize  = r->biorq_len;
-	toff   = r->biorq_off;
+	src = r->biorq_buf;
+	tsize = r->biorq_len;
+	toff = r->biorq_off;
 
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 		/* All pages are involved, therefore tsize should have value.
@@ -1977,7 +2021,7 @@ msl_pages_copyin(struct bmpc_ioreq *r, char *buf)
  * msl_pages_copyout - Copy pages to the user application buffer.
  */
 size_t
-msl_pages_copyout(struct bmpc_ioreq *r, char *buf)
+msl_pages_copyout(struct bmpc_ioreq *r)
 {
 	struct bmap_pagecache_entry *e;
 	size_t nbytes, tbytes=0, rflen;
@@ -1985,10 +2029,10 @@ msl_pages_copyout(struct bmpc_ioreq *r, char *buf)
 	char *dest, *src;
 	off_t toff;
 
-	dest   = buf;
-	toff   = r->biorq_off;
+	dest = r->biorq_buf;
+	toff = r->biorq_off;
 
-	rflen  = fcmh_getsize(r->biorq_bmap->bcm_fcmh) -
+	rflen = fcmh_getsize(r->biorq_bmap->bcm_fcmh) -
 		bmap_foff(r->biorq_bmap);
 
 	if (biorq_voff_get(r) > rflen) {
@@ -2145,9 +2189,10 @@ msl_fsrqinfo_state(struct msl_fsrqinfo *q, int flag, int set,
 	}
 
 	if (wait_or_wake) {
-		if (set)
+		if (set) {
 			psc_waitq_wakeall(&msl_fhent_flush_waitq);
-		else {
+
+		} else {
 			/* Wait for the condition to become true.
 			 */
 			if (!rc) {
@@ -2163,12 +2208,17 @@ msl_fsrqinfo_state(struct msl_fsrqinfo *q, int flag, int set,
 	return (rc);
 }
 
+#if 0
 void
 msl_fsrqinfo_write(struct msl_fsrqinfo *q)
 {
 	int rc;
 	struct fidc_membh *f = q->mfsrq_fh->mfh_fcmh;
+	struct fcmh_cli_info *fci;
 	struct timespec ts;
+	extern struct psc_listcache		attrTimeoutQ;
+	extern psc_spinlock_t			attrTimeoutQLock;
+
 
 	MFH_LOCK(q->mfsrq_fh);
 	psc_assert(msl_fsrqinfo_aioisset(q));
@@ -2190,6 +2240,26 @@ msl_fsrqinfo_write(struct msl_fsrqinfo *q)
 	PFL_GETTIMESPEC(&ts);
 	f->fcmh_sstb.sst_mtime = ts.tv_sec;
 	f->fcmh_sstb.sst_mtime_ns = ts.tv_nsec;
+	if (q->mfsrq_size + q->mfsrq_off > fcmh_2_fsz(f)) {
+		psclog_info("fid: "SLPRI_FID", "
+		    "size from %"PRId64" to %"PRId64,
+		    fcmh_2_fid(f), fcmh_2_fsz(f), 
+		    q->mfsrq_size + q->mfsrq_off);
+		fcmh_2_fsz(f) = q->mfsrq_size + q->mfsrq_off;
+	}
+	if (!(f->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
+		f->fcmh_flags |= FCMH_CLI_DIRTY_ATTRS;
+		fci = fcmh_2_fci(f);
+		fci->fci_etime.tv_sec = ts.tv_sec;
+		fci->fci_etime.tv_nsec = ts.tv_nsec;
+		if (!(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE)) {
+			f->fcmh_flags |= FCMH_CLI_DIRTY_QUEUE;
+			spinlock(&attrTimeoutQLock);
+			lc_addtail(&attrTimeoutQ, fci);
+			freelock(&attrTimeoutQLock);
+			fcmh_op_start_type(f, FCMH_OPCNT_DIRTY_QUEUE);
+		}
+	}
 	FCMH_ULOCK(f);
 
 	MFH_LOCK(q->mfsrq_fh);
@@ -2200,16 +2270,24 @@ msl_fsrqinfo_write(struct msl_fsrqinfo *q)
 	DEBUG_FCMH(PLL_INFO, f, "write: buf=%p rc=%d sz=%zu "
 	    "off=%"PSCPRIdOFFT, q->mfsrq_buf, rc, q->mfsrq_size,
 	    q->mfsrq_off);
+
+	psc_waitq_wakeone(&q->mfsrq_pfr->pfr_waitq);
+	
 	pscfs_reply_write(q->mfsrq_pfr, q->mfsrq_size, rc);
 }
 
-__static void
-msl_fsrqinfo_biorq_add(struct msl_fsrqinfo *q, struct bmpc_ioreq *r,
-    int pos)
+#endif
+
+void
+msl_fsrqinfo_biorq_add(struct msl_fsrqinfo *q, struct bmpc_ioreq *r, 
+    int biorq_num)
 {
+	psc_assert(q->mfsrq_fh == r->biorq_fhent);
+
 	MFH_LOCK(r->biorq_fhent);
-	DEBUG_BIORQ(PLL_INFO, r, "q=%p pos=%d", q, pos);
-	q->mfsrq_biorq[pos] = r;
+	DEBUG_BIORQ(PLL_INFO, r, "q=%p pos=%d", q, biorq_num);
+	psc_assert(!q->mfsrq_biorq[biorq_num]);
+	q->mfsrq_biorq[biorq_num] = r;
 	MFH_ULOCK(r->biorq_fhent);
 }
 
@@ -2236,6 +2314,8 @@ msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
 		int i;
 
 		/* The fs request was reissued.  Clear out any old state.
+		 * Yes, this can happen by the magic (or insanity) that is
+		 * async IO and slc_rci_handle_io().
 		 */
 		psc_assert(q->mfsrq_fh == mfh &&
 			   q->mfsrq_buf == buf &&
@@ -2244,13 +2324,26 @@ msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
 			   q->mfsrq_rw == rw &&
 			   q->mfsrq_pfr == pfr);
 
+		/* Only allow 1 reissue since doing otherwise is buggy.
+		 */
+		MFH_LOCK(mfh);
+		//psc_assert(!(q->mfsrq_flags & MFSRQ_REISSUED));
+		//q->mfsrq_flags &= ~(MFSRQ_AIOWAIT | MFSRQ_AIOREADY | MFSRQ_READY);
+		q->mfsrq_flags = MFSRQ_REISSUED;
+		q->mfsrq_reissue++;
+		MFH_ULOCK(mfh);
+
 		for (i = 0; i < MAX_BMAPS_REQ; i++) {
 			if (!q->mfsrq_biorq[i])
-				break;
+				continue;
 
 			msl_biorq_destroy(q->mfsrq_biorq[i]);
+			q->mfsrq_biorq[i] = NULL;
 		}
 	}
+
+	psclog_info("q=%p nreissue=%d", q, q->mfsrq_reissue);
+
 	return (q);
 }
 
@@ -2274,10 +2367,10 @@ ssize_t
 msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
     const size_t size, const off_t off, enum rw rw)
 {
-	struct bmpc_ioreq *r[MAX_BMAPS_REQ];
 	struct bmapc_memb *b, *bref = NULL;
 	struct fidc_membh *f;
 	struct msl_fsrqinfo *q;
+	struct bmpc_ioreq *r;
 	size_t s, e, tlen, tsize;
 	uint64_t fsz;
 	ssize_t rc;
@@ -2285,12 +2378,11 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	char *bufp;
 	int nr, i;
 
-#define MSL_BIORQ_COMPLETE	((void *)0x1)
-
-	memset(r, 0, sizeof(r));
-
 	psc_assert(mfh);
 	psc_assert(mfh->mfh_fcmh);
+
+	if (!size)
+		return (0);
 
 	f = mfh->mfh_fcmh;
 
@@ -2316,12 +2408,21 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
  restart:
 	rc = 0;
-
 	tsize = size;
+
 	FCMH_LOCK(f);
+	/*
+	 * All I/O's block here for pending truncate requests.
+	 *
+	 * XXX there is a race here.  We should set CLI_TRUNC ourselves
+	 * until we are done setting up the I/O to block intervening
+	 * truncates.
+	 */
+	fcmh_wait_locked(f, f->fcmh_flags & FCMH_CLI_TRUNC);
+
 	fsz = fcmh_getsize(f);
 
-	if (!size || (rw == SL_READ && off >= (off_t)fsz)) {
+	if ((rw == SL_READ && off >= (off_t)fsz)) {
 		FCMH_ULOCK(f);
 		goto out;
 	}
@@ -2331,31 +2432,23 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	if ((rw == SL_READ) && ((tsize + off) > fsz))
 		tsize = fsz - off;
 
-	/*
-	 * All I/O's block here for pending truncate requests.
-	 *
-	 * XXX there is a race here.  We should set CLI_TRUNC ourselves
-	 * until we are done setting up the I/O to block intervening
-	 * truncates.
-	 */
-	fcmh_wait_locked(f, f->fcmh_flags & FCMH_CLI_TRUNC);
 	FCMH_ULOCK(f);
 
 	/* Relativize the length and offset (roff is not aligned).
 	 */
-	roff  = off - (s * SLASH_BMAP_SIZE);
+	roff = off - (s * SLASH_BMAP_SIZE);
 	psc_assert(roff < SLASH_BMAP_SIZE);
 
 	/* Length of the first bmap request.
 	 */
-	tlen  = MIN(SLASH_BMAP_SIZE - (size_t)roff, tsize);
+	tlen = MIN(SLASH_BMAP_SIZE - (size_t)roff, tsize);
 
 	/*
 	 * Foreach block range, get its bmap and make a request into its
 	 *  page cache.  This first loop retrieves all the pages.
 	 */
 	for (i = 0, bufp = buf; i < nr; i++) {
-		if (r[i])
+		if (q->mfsrq_biorq[i])
 			goto load_next;
 
 		DEBUG_FCMH(PLL_INFO, f, "sz=%zu tlen=%zu off=%"PSCPRIdOFFT" "
@@ -2384,36 +2477,39 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 		rc = msl_bmap_lease_tryext(b, NULL, 1);
 		if (rc) {
-			bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+			bmap_op_done(b);
 			goto retry_bmap;
 		}
 		/*
 		 * Re-relativize the offset if this request spans more
 		 * than 1 bmap.
 		 */
-		msl_biorq_build(&r[i], b, mfh, q,
-		    roff - (i * SLASH_BMAP_SIZE), tlen,
-		    (rw == SL_READ) ? BIORQ_READ : BIORQ_WRITE);
-		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
-
-		/* Add the biorq to the fsrq. */
-		msl_fsrqinfo_biorq_add(q, r[i], i);
+		msl_biorq_build(q, b, bufp, i, roff - (i * SLASH_BMAP_SIZE), 
+		    tlen, (rw == SL_READ) ? BIORQ_READ : BIORQ_WRITE);
+		
+		bmap_op_done(b);
 		/*
 		 * If we are not doing direct I/O, launch read for read
 		 * requests and pre-read for unaligned write requests.
 		 */
-		if (!(r[i]->biorq_flags & BIORQ_DIO) &&
-		    (r[i]->biorq_flags &
+		r = q->mfsrq_biorq[i];
+
+		if (!(r->biorq_flags & BIORQ_DIO) &&
+		    (r->biorq_flags &
 		      (BIORQ_READ | BIORQ_RBWFP | BIORQ_RBWLP))) {
-			rc = msl_pages_prefetch(r[i]);
+			rc = msl_pages_prefetch(r);
 			if (rc) {
-				rc = msl_offline_retry(r[i]);
-				r[i]->biorq_flags |= (r[i]->biorq_flags & BIORQ_READ) ?
+				rc = msl_offline_retry(r);
+				r->biorq_flags |=
+					(r->biorq_flags & BIORQ_READ) ?
 					BIORQ_READFAIL : BIORQ_RBWFAIL;
-				msl_biorq_destroy(r[i]);
-				r[i] = NULL;
+
+				msl_biorq_destroy(r);
+				q->mfsrq_biorq[i] = NULL;
+
 				if (rc)
 					goto retry_bmap;
+
 				rc = -EIO;
 				goto out;
 			}
@@ -2430,27 +2526,29 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 * Note that the offsets used here are file-wise offsets not
 	 * offsets into the buffer.
 	 */
-	for (i = 0, tlen = 0, tsize = 0, bufp = buf;
-	     i < nr; i++, bufp += tlen) {
-		if (r[i] == MSL_BIORQ_COMPLETE)
+	for (i = 0, tlen = 0, tsize = 0; i < nr; i++) {
+		r = q->mfsrq_biorq[i];
+
+		if (r == MSL_BIORQ_COMPLETE)
 			continue;
 
 		/* Associate the biorq's with the mfh. */
-		pll_addtail(&mfh->mfh_biorqs, r[i]);
+		pll_addtail(&mfh->mfh_biorqs, r);
 
-		tlen = r[i]->biorq_len;
+		tlen = r->biorq_len;
 
-		if (r[i]->biorq_flags & BIORQ_DIO) {
-			rc = msl_pages_dio_getput(r[i], bufp);
+		if (r->biorq_flags & BIORQ_DIO) {
+			rc = msl_pages_dio_getput(r);
 			if (rc == -SLERR_AIOWAIT) {
 				msl_fsrqinfo_aioset(q);
-				goto next_ioreq;
+				continue;
 			}
 			if (rc) {
-				pll_remove(&mfh->mfh_biorqs, r[i]);
-				rc = msl_offline_retry(r[i]);
+				pll_remove(&mfh->mfh_biorqs, r);
+				rc = msl_offline_retry(r);
 				if (rc) {
-					r[i] = NULL;
+					msl_biorq_destroy(r);
+					q->mfsrq_biorq[i] = NULL;	
 					goto restart;
 				}
 				rc = -EIO;
@@ -2461,14 +2559,14 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			 *   other threads which may be working on pages
 			 *   which we need.
 			 */
-			rc = msl_pages_blocking_load(r[i]);
+			rc = msl_pages_blocking_load(r);
 			if (rc == -SLERR_AIOWAIT) {
-				DEBUG_BIORQ(PLL_INFO, r[i], "SLERR_AIOWAIT");
+				DEBUG_BIORQ(PLL_INFO, r, "SLERR_AIOWAIT");
 				msl_fsrqinfo_aioset(q);
-				goto next_ioreq;
+				continue;
 			}
 			if (rc) {
-				rc = msl_offline_retry(r[i]);
+				rc = msl_offline_retry(r);
 				if (rc) {
 					/*
 					 * The app wants to retry the
@@ -2483,14 +2581,16 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 					if (bref)
 						bmap_op_done_type(bref,
 						    BMAP_OPCNT_BIORQ);
-					bref = r[i]->biorq_bmap;
+					bref = r->biorq_bmap;
 					bmap_op_start_type(bref,
 					    BMAP_OPCNT_BIORQ);
 
-					r[i]->biorq_flags |= (r[i]->biorq_flags & BIORQ_READ) ?
+					r->biorq_flags |= 
+						(r->biorq_flags & BIORQ_READ) ?
 						BIORQ_READFAIL : BIORQ_RBWFAIL;
-					msl_biorq_destroy(r[i]);
-					r[i] = NULL;
+
+					msl_biorq_destroy(r);
+					q->mfsrq_biorq[i] = NULL;
 					goto restart;
 				}
 				rc = -EIO;
@@ -2498,13 +2598,15 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			}
 
 			if (rw == SL_READ)
-				tlen = msl_pages_copyout(r[i], bufp);
+				tlen = msl_pages_copyout(r);
 			else
-				tlen = msl_pages_copyin(r[i], bufp);
+				tlen = msl_pages_copyin(r);
 		}
+
+		/* Not needed for AIO purposes.
+		 */
+		q->mfsrq_biorq[i] = MSL_BIORQ_COMPLETE;
 		tsize += tlen;
- next_ioreq:
-		r[i] = MSL_BIORQ_COMPLETE;
 	}
 	/* Check for AIO in the fsrq prior to opening the fsrq for async
 	 *    operation.  Otherwise a race condition is possible where the
@@ -2512,24 +2614,55 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 *    look like a success.  The 'rc' is not used since more than
 	 *    one BIORQ may be involved in this operation.
 	 */
-	if (msl_fsrqinfo_aioisset(q))
+	if (msl_fsrqinfo_aioisset(q)) {		
+		
+		msl_fsrqinfo_readyset(q);
 		rc = -SLERR_AIOWAIT;
-	else
-		rc = tsize;
 
-	msl_fsrqinfo_readyset(q);
+		if (rw == SL_WRITE) {
+			/* Writes can't leave this function before completing.
+			 * Block here until rci.c tells us to proceed.	
+			 */
+			msl_fsrqinfo_aioreadywait(q);
+			psc_assert(q->mfsrq_flags & MFSRQ_AIOREADY);
+
+			msl_fsrqinfo_init(pfr, mfh, buf, size, off, rw);
+
+			goto restart;
+		}
+
+	} else {
+		rc = tsize;
+	}
 
  out:
 	if (bref)
 		bmap_op_done_type(bref, BMAP_OPCNT_BIORQ);
 
-	/* Note:  this is 'error' case.  For successful ops,
-	 *   msl_biorq_destroy called from msl_pages_copy[in|out].
-	 */
-	for (i = 0; i < nr; i++)
-		if (r[i] && r[i] != MSL_BIORQ_COMPLETE) {
-			r[i]->biorq_flags |= BIORQ_BMAPFAIL;
-			msl_biorq_destroy(r[i]);
+	for (i = 0; i < nr; i++) {
+		r = q->mfsrq_biorq[i];
+
+		if (!r || r == MSL_BIORQ_COMPLETE)
+			continue;
+
+		BIORQ_LOCK(r);
+
+		if (!(r->biorq_flags & BIORQ_AIOWAIT)) {		
+			/* Cleanup faild biorq's.  For successful ops,
+			 *   msl_biorq_destroy called from 
+			 *   msl_pages_copy[in|out].
+			 */
+			r->biorq_flags |= BIORQ_BMAPFAIL;
+			BIORQ_ULOCK(r);
+			msl_biorq_destroy(r);
+
+			q->mfsrq_biorq[i] = MSL_BIORQ_COMPLETE;
+			q->mfsrq_err = rc;
+
+		} else {
+			BIORQ_ULOCK(r);
 		}
+	}
+
 	return (rc);
 }

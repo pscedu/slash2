@@ -1505,7 +1505,7 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 
 	c = mfh->mfh_fcmh;
 
-	spinlock(&mfh->mfh_lock);
+	MFH_LOCK(mfh);
 	mfh->mfh_flags |= MSL_FHENT_CLOSING;
 #if FHENT_EARLY_RELEASE
 	PLL_FOREACH(r, &mfh->mfh_biorqs) {
@@ -1520,7 +1520,7 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 	while (!pll_empty(&mfh->mfh_ra_bmpces) ||
 	       (mfh->mfh_flags & MSL_FHENT_RASCHED)) {
 		psc_waitq_wait(&c->fcmh_waitq, &mfh->mfh_lock);
-		spinlock(&mfh->mfh_lock);
+		MFH_LOCK(mfh);
 	}
 
 	/*
@@ -1575,6 +1575,7 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 		    SLPRI_TIMESPEC_ARGS(&c->fcmh_sstb.sst_mtim), sid,
 		    PSCPRI_TIMESPEC_ARGS(&mfh->mfh_open_time),
 		    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr);
+
 	fcmh_op_done_type(c, FCMH_OPCNT_OPEN);
 	PSCFREE(mfh);
 }
@@ -2261,8 +2262,9 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 	msfsthr(pscthr_get())->mft_failcnt = 1;
 	rc = msl_write(pfr, mfh, buf, size, off);
 	if (rc < 0) {
-		if (rc == -SLERR_AIOWAIT)
+		if (rc == -SLERR_AIOWAIT) {
 			return;
+		}
 		rc = -rc;
 		goto out;
 	}

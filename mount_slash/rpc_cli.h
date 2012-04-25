@@ -31,7 +31,6 @@ struct pscrpc_request;
 /* async RPC pointers */
 #define MSL_CBARG_BMPCE			0
 #define MSL_CBARG_CSVC			1
-#define MSL_CBARG_BUF			2
 #define MSL_CBARG_BIORQ			3
 #define MSL_CBARG_BIORQS		4
 #define MSL_CBARG_BMPC			5

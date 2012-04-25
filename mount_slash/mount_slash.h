@@ -133,12 +133,15 @@ struct msl_ra {
 	int				 mra_bkwd;	/* reverse access io */
 };
 
-#define MAX_BMAPS_REQ			4
+#define MAX_BMAPS_REQ			2
+
+#define MSL_BIORQ_COMPLETE	((void *)0x1)
 
 struct slc_async_req {
 	struct psc_listentry		  car_lentry;
 	struct pscrpc_async_args	  car_argv;
-	int				(*car_cbf)(struct pscrpc_request *, int,
+	int				(*car_cbf)(struct pscrpc_request *, 
+	    int,
 						struct pscrpc_async_args *);
 	uint64_t			  car_id;
 	size_t				  car_len;
@@ -182,6 +185,7 @@ struct msl_fsrqinfo {
 	int				 mfsrq_flags;
 	int				 mfsrq_err;
 	int				 mfsrq_ref;	/* # car's needed to satisfy this req */
+	int                              mfsrq_reissue;
 	enum rw				 mfsrq_rw;
 	struct pscfs_req		*mfsrq_pfr;
 	struct psclist_head		 mfsrq_lentry;	/* pending AIOs in struct bmap_pagecache_entry  */
@@ -191,15 +195,20 @@ struct msl_fsrqinfo {
 #define MFSRQ_READY			(1 << 1)
 #define MFSRQ_BMPCEATT			(1 << 2)
 #define MFSRQ_DIO			(1 << 3)
+#define MFSRQ_AIOREADY			(1 << 4)
+#define MFSRQ_REISSUED                  (1 << 5)
 
 void	msl_fsrqinfo_write(struct msl_fsrqinfo *);
 int	msl_fsrqinfo_state(struct msl_fsrqinfo *, int, int, int);
+void    msl_fsrqinfo_biorq_add(struct msl_fsrqinfo *, struct bmpc_ioreq *,int);
 
 #define msl_fsrqinfo_isset(q, f)	msl_fsrqinfo_state((q), (f), 0, 0)
 #define msl_fsrqinfo_aioisset(q)	msl_fsrqinfo_state((q), MFSRQ_AIOWAIT, 0, 0)
 #define msl_fsrqinfo_aioset(q)		msl_fsrqinfo_state((q), MFSRQ_AIOWAIT, 1, 0)
 #define msl_fsrqinfo_readywait(q)	msl_fsrqinfo_state((q), MFSRQ_READY, 0, 1)
 #define msl_fsrqinfo_readyset(q)	msl_fsrqinfo_state((q), MFSRQ_READY, 1, 1)
+#define msl_fsrqinfo_aioreadywait(q)	msl_fsrqinfo_state((q), MFSRQ_AIOREADY, 0, 1)
+#define msl_fsrqinfo_aioreadyset(q)	msl_fsrqinfo_state((q), MFSRQ_AIOREADY, 1, 1)
 
 struct resprof_cli_info {
 	struct psc_dynarray		 rpci_pinned_bmaps;
@@ -248,7 +257,7 @@ int	 msl_stat(struct fidc_membh *, void *);
 int	 msl_write_rpc_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int	 msl_write_rpcset_cb(struct pscrpc_request_set *, void *, int);
 
-size_t	 msl_pages_copyout(struct bmpc_ioreq *, char *);
+size_t	 msl_pages_copyout(struct bmpc_ioreq *);
 
 struct slashrpc_cservice *
 	 msl_try_get_replica_res(struct bmapc_memb *, int);

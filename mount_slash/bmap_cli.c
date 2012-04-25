@@ -220,15 +220,20 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 		 *   bmap out of the fid cache so that others don't stumble
 		 *   across it while it's active I/O's are failed.
 		 */
-		if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED)
+		if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED) {
 			psc_assert(b->bcm_flags & BMAP_ORPHAN);
-		else {
+
+		} else {
 			/* Note:  bmap_orphan() will drop the bmap lock
 			 *   so it's important that BMAP_CLI_LEASEEXPIRED
 			 *   is set afterwards so that it is atomic with
 			 *   bmpc_biorqs_fail().
 			 */
-			bmap_orphan(b);
+			if (b->bcm_flags & BMAP_ORPHAN)
+				DEBUG_BMAP(PLL_WARN, b, "already orphaned");
+			else 
+				bmap_orphan(b);
+
 			BMAP_SETATTR(b, BMAP_CLI_LEASEEXPIRED);
 			bmpc_biorqs_fail(bmap_2_bmpc(b),
 				 BIORQ_EXPIREDLEASE);
@@ -397,11 +402,15 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 			}
 		} // else NOOP
 
-	} else if (secs > BMAP_CLI_EXTREQSECS)
+	} else if (b->bcm_flags & BMAP_ORPHAN) {
+		DEBUG_BMAP(PLL_WARN, b,
+		   "not requesting extension for orphaned bmap");
+
+	} else if (secs > BMAP_CLI_EXTREQSECS) {
 		timespecadd(&ts, &msl_bmap_timeo_inc,
 		    &bmap_2_bci(b)->bci_etime);
 
-	else {
+	} else {
 		struct slashrpc_cservice *csvc = NULL;
 		struct pscrpc_request *rq = NULL;
 		struct srm_leasebmapext_req *mq;
@@ -440,6 +449,8 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 				pscrpc_req_finished(rq);
 			if (csvc)
 				sl_csvc_decref(csvc);
+
+			bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
 		}
 		DEBUG_BMAP(rc ? PLL_ERROR : PLL_NOTIFY, b,
 			   "lease extension req (rc=%d) (secs=%d)", rc, secs);
@@ -694,6 +705,11 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 
 				repls |= (1 << it.ri_rnd_idx);
 			}
+		}
+
+		if (!i && !csvc) {
+			waitsecs = 1;
+			goto block;
 		}
 
 		/* rats, not available; try anyone available now */

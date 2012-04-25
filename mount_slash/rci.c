@@ -27,13 +27,11 @@
 #include "rpc_cli.h"
 #include "slashrpc.h"
 
-#define RCI_AIO_READ_WAIT 2
-
+#define RCI_AIO_READ_WAIT 1000000
+#define CAR_LOOKUP_MAX 1000
 /*
  * Routines for handling RPC requests for CLI from ION.
  */
-
-#define CAR_LOOKUP_MAX 30
 
 /**
  * slc_rci_handle_io - Handle a READ or WRITE completion for CLI from ION.
@@ -48,59 +46,52 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 	struct srm_io_rep *mp;
 	struct sl_resm *m;
 	struct iovec iov;
-	int tries = 0;
+	int tries = 0, found = 0;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	m = libsl_try_nid2resm(rq->rq_export->exp_connection->c_peer.nid);
 	if (m == NULL) {
 		mp->rc = SLERR_ION_UNKNOWN;
-		goto error;
+		goto out;
 	}
 
 	lc = &resm2rmci(m)->rmci_async_reqs;
- retry:
-	LIST_CACHE_LOCK(lc);
-	LIST_CACHE_FOREACH(car, lc)
-		if (mq->id == car->car_id) {
-			lc_remove(lc, car);
-			break;
+
+	while (!found && (tries++ < CAR_LOOKUP_MAX)) {
+		LIST_CACHE_LOCK(lc);
+		LIST_CACHE_FOREACH(car, lc)
+			if (car->car_id == mq->id) {
+				lc_remove(lc, car);
+				found = 1;
+				break;
+			}
+
+		if (!found) {
+			struct timespec ts = { 0, RCI_AIO_READ_WAIT };
+			/*
+			 * The AIO RPC from the sliod beat our fs thread.
+			 *   Give our thread a chance to put the 'car' onto
+			 *   the list.  No RPC is involved, this wait should
+			 *   only require a few ms at the most.
+			 */
+			psc_waitq_waitrel(&lc->plc_wq_empty, &lc->plc_lock, 
+			    &ts);
+		} else {
+			LIST_CACHE_ULOCK(lc);
 		}
-	LIST_CACHE_ULOCK(lc);
-
-	if (car == NULL) {
-		struct timespec now;
-
-		PFL_GETTIMESPEC(&now);
-		/*
-		 * The AIO RPC from the sliod beat our fs thread.
-		 *   Give our thread a chance to put the 'car' onto
-		 *   the list.  No RPC is involved, this wait should
-		 *   only require a few ms at the most.
-		 */
-		now.tv_sec += RCI_AIO_READ_WAIT;
-		car = lc_gettimed(lc, &now);
-		if (car == NULL) {
-			if (tries++ < CAR_LOOKUP_MAX)
-				goto retry;
-			else {
-				mp->rc = EINVAL;
-				goto error;
-			}
-
-		} else if (mq->id != car->car_id) {
-			lc_add(lc, car);
-			if (tries++ < CAR_LOOKUP_MAX) {
-				sleep(RCI_AIO_READ_WAIT);
-				goto retry;
-
-			} else {
-				mp->rc = EINVAL;
-				goto error;
-			}
-		} else
-			psc_assert(mq->id == car->car_id);
 	}
+
+	if (found) {
+		psc_assert(car->car_id == mq->id);
+
+	} else {
+		mp->rc = -ENOENT;
+		goto out;
+	}
+	
+	psclog_info("car=%p car_id=%"PRIx64" q=%p", car, car->car_id, 
+	    car->car_fsrqinfo);
 
 	if (car->car_cbf == msl_read_cb) {
 		struct bmap_pagecache_entry *e;
@@ -108,18 +99,21 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		struct psc_dynarray *a;
 		int i;
 
-		msl_fsrqinfo_readywait(car->car_fsrqinfo);
-
 		a = car->car_argv.pointer_arg[MSL_CBARG_BMPCE];
 
-		DYNARRAY_FOREACH(e, i, a) {
-			iovs[i].iov_base = e->bmpce_base;
-			iovs[i].iov_len = BMPC_BUFSZ;
-			if (mq->rc)
+		msl_fsrqinfo_readywait(car->car_fsrqinfo);
+
+		DYNARRAY_FOREACH (e, i, a) {
+			if (!mq->rc) {
+				iovs[i].iov_base = e->bmpce_base;
+				iovs[i].iov_len = BMPC_BUFSZ;		
+
+			} else {
 				e->bmpce_flags |= BMPCE_EIO;
+			}
 		}
 
-		if (mq->rc == 0)
+		if (!mq->rc)
 			mq->rc = rsx_bulkserver(rq, BULK_GET_SINK,
 			    SRCI_BULK_PORTAL, iovs, psc_dynarray_len(a));
 
@@ -152,30 +146,47 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		msl_fsrqinfo_readywait(car->car_fsrqinfo);
 
 		if (mq->rc)
-			goto error;
+			goto out;
 
 		if (mq->op == SRMIOP_RD) {
-			iov.iov_base = car->car_argv.pointer_arg[MSL_CBARG_BUF];
+			struct bmpc_ioreq *r = 
+				car->car_argv.pointer_arg[MSL_CBARG_BIORQ];
+
+			iov.iov_base = r->biorq_buf;
 			iov.iov_len = car->car_len;
 
 			mq->rc = rsx_bulkserver(rq, BULK_GET_SINK,
-						SRCI_BULK_PORTAL, &iov, 1);
+			    SRCI_BULK_PORTAL, &iov, 1);
 		} else {
-			msl_fsrqinfo_write(car->car_fsrqinfo);
-			return (0);
+			MFH_LOCK(car->car_fsrqinfo->mfsrq_fh);
+			msl_fsrqinfo_state(car->car_fsrqinfo, MFSRQ_AIOWAIT,
+			    -1, 0);
+			msl_fsrqinfo_aioreadyset(car->car_fsrqinfo);
+			MFH_ULOCK(car->car_fsrqinfo->mfsrq_fh);
+			
+			car->car_cbf = NULL;
 		}
-	} else
+
+	} else {
 		psc_fatalx("unknown callback");
+	}
+
 	/*
 	 * The callback needs to be run even if the RPC failed so
 	 * cleanup can happen.
 	 */
-	car->car_cbf(rq, mq->rc, &car->car_argv);
+	if (car->car_cbf)
+		car->car_cbf(rq, mq->rc, &car->car_argv);
+
+	psclog_info("return car=%p car_id=%"PRIx64" q=%p", car, car->car_id, 
+	    car->car_fsrqinfo);
+
 	psc_pool_return(slc_async_req_pool, car);
 
- error:
+ out:
 	if (mp->rc)
 		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
+
 	return (mp->rc);
 }
 

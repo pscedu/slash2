@@ -203,6 +203,10 @@ sl_resm_hldrop(struct sl_resm *resm)
 		lc = &resm2rmci(resm)->rmci_async_reqs;
 		while ((car = lc_getnb(lc)) != NULL) {
 			car->car_cbf(NULL, ECONNRESET, &car->car_argv);
+
+			psclog_info("return car=%p car_id=%"PRIx64" q=%p",
+			    car, car->car_id, car->car_fsrqinfo);
+
 			psc_pool_return(slc_async_req_pool, car);
 		}
 	}
