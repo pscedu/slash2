@@ -215,9 +215,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		rv = slvr_io_prep(slvr_ref[i], roff[i], len[i], rw,
 			  &aiocbr);
 
-		DEBUG_SLVR(((rv && rv != -SLERR_AIOWAIT) ?
-		    PLL_WARN : PLL_INFO), slvr_ref[i],
-		   "post io_prep rw=%d rv=%zd", rw, rv);
+		DEBUG_SLVR(((rv && rv != -SLERR_AIOWAIT) ? PLL_WARN : PLL_INFO),
+		    slvr_ref[i], "post io_prep rw=%d rv=%zd", rw, rv);
 
 		/* mq->offset is the offset into the bmap, here we must
 		 *  translate it into the offset of the sliver.
@@ -282,10 +281,12 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 			pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
 			goto out;
-		} else
+
+		} else {
 			/* All slvrs are ready.
 			 */
 			sli_aio_aiocbr_release(aiocbr);
+		}
 	}
 
 	mp->rc = rsx_bulkserver(rq,
@@ -299,13 +300,13 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 				slvr_ref[i]->slvr_pndgreads--;
 			else
 				slvr_ref[i]->slvr_pndgwrts--;
-
+			
 			slvr_clear_inuse(slvr_ref[i], 0, SLASH_SLVR_SIZE);
 			slvr_lru_tryunpin_locked(slvr_ref[i]);
 			SLVR_ULOCK(slvr_ref[i]);
-
+			
 			DEBUG_SLVR(PLL_WARN, slvr_ref[i],
-			   "unwind ref due to bulk error (rw=%d)", rw);
+			    "unwind ref due to bulk error (rw=%d)", rw);
 		}
 		goto out;
 	}
