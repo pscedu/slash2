@@ -242,7 +242,7 @@ slvr_lru_tryunpin_locked(struct slvr_ref *s)
 
 	psc_assert(s->slvr_flags & SLVR_LRU);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
-	psc_assert(s->slvr_flags & SLVR_DATARDY);
+	psc_assert(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR));
 
 	psc_assert(!(s->slvr_flags & (SLVR_NEW|SLVR_FAULTING|SLVR_GETSLAB)));
 
