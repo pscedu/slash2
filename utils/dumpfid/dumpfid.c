@@ -31,12 +31,37 @@
 
 #include "slashd/inode.h"
 
+int	show;
+
 const char *progname;
+
+#define K_BSZ		(1 << 0)
+#define	K_CRC		(1 << 1)
+#define	K_FLAGS		(1 << 2)
+#define	K_NBLKS		(1 << 3)
+#define	K_NREPLS	(1 << 4)
+#define	K_REPLPOL	(1 << 5)
+#define	K_REPLS		(1 << 6)
+#define	K_VERSION	(1 << 7)
+#define	K_XCRC		(1 << 8)
+#define	K_ALL		(~0)
+
+const char *show_keywords[] = {
+	"bszn",
+	"crc",
+	"flags",
+	"nblks",
+	"nrepls",
+	"replpol",
+	"repls",
+	"version",
+	"xcrc",
+};
 
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s file ...\n", progname);
+	fprintf(stderr, "usage: %s [-o keys] file ...\n", progname);
 	exit(1);
 }
 
@@ -72,12 +97,18 @@ dumpfid(const char *fn)
 	}
 	psc_crc64_calc(&crc, &ino, sizeof(ino));
 	printf("%s:\n", fn);
-	printf("  crc %s\n", crc == od_crc ? "OK" : "BAD");
-	printf("  version %u\n", ino.ino_version);
-	printf("  flags %#x\n", ino.ino_flags);
-	printf("  bsz %u\n", ino.ino_bsz);
-	printf("  nrepls %u\n", ino.ino_nrepls);
-	printf("  replpol %u\n", ino.ino_replpol);
+	if (show & K_CRC)
+		printf("  crc %s\n", crc == od_crc ? "OK" : "BAD");
+	if (show & K_VERSION)
+		printf("  version %u\n", ino.ino_version);
+	if (show & K_FLAGS)
+		printf("  flags %#x\n", ino.ino_flags);
+	if (show & K_BSZ)
+		printf("  bsz %u\n", ino.ino_bsz);
+	if (show & K_NREPLS)
+		printf("  nrepls %u\n", ino.ino_nrepls);
+	if (show & K_REPLPOL)
+		printf("  replpol %u\n", ino.ino_replpol);
 
 	nr = ino.ino_nrepls;
 	if (nr > SL_DEF_REPLICAS) {
@@ -99,38 +130,70 @@ dumpfid(const char *fn)
 			goto out;
 		}
 		psc_crc64_calc(&crc, &inox, sizeof(inox));
-		printf("  inox crc: %s %lx %lx\n  xrepls:",
-		    crc == od_crc ? "OK" : "BAD", crc, od_crc);
+		if (show & K_XCRC)
+			printf("  inox crc: %s %lx %lx\n",
+			    crc == od_crc ? "OK" : "BAD", crc, od_crc);
 	}
-	printf("  repls ");
-	for (j = 0; j < nr; j++)
-		printf("%s%u", j ? "," : "",
-		    j < SL_DEF_REPLICAS ?
-		    ino.ino_repls[j].bs_id :
-		    inox.inox_repls[j - SL_DEF_REPLICAS].bs_id);
-	printf("\n  nblks ");
-	for (j = 0; j < nr; j++)
-		printf("%s%"PRIu64, j ? "," : "",
-		    j < SL_DEF_REPLICAS ?
-		    ino.ino_repl_nblks[j] :
-		    inox.inox_repl_nblks[j - SL_DEF_REPLICAS]);
-	printf("\n");
+	if (show & K_REPLS) {
+		printf("  repls ");
+		for (j = 0; j < nr; j++)
+			printf("%s%u", j ? "," : "",
+			    j < SL_DEF_REPLICAS ?
+			    ino.ino_repls[j].bs_id :
+			    inox.inox_repls[j - SL_DEF_REPLICAS].bs_id);
+		printf("\n");
+	}
+	if (show & K_NBLKS) {
+		printf("  nblks ");
+		for (j = 0; j < nr; j++)
+			printf("%s%"PRIu64, j ? "," : "",
+			    j < SL_DEF_REPLICAS ?
+			    ino.ino_repl_nblks[j] :
+			    inox.inox_repl_nblks[j - SL_DEF_REPLICAS]);
+		printf("\n");
+	}
 
  out:
 	close(fd);
 }
 
+void
+lookupshow(const char *flg)
+{
+	const char **p;
+	int i;
+
+	for (i = 0, p = show_keywords;
+	    i < nitems(show_keywords); i++, p++)
+		if (strcmp(flg, *p) == 0) {
+			show |= 1 << i;
+			return;
+		}
+	errx(1, "unknown show field: %s", flg);
+}
+
 int
 main(int argc, char *argv[])
 {
+	int c;
+
 	pfl_init();
 	progname = argv[0];
-	if (getopt(argc, argv, "") != -1)
-		usage();
+	while ((c = getopt(argc, argv, "o:")) != -1) {
+		switch (c) {
+		case 'o':
+			lookupshow(optarg);
+			break;
+		default:
+			usage();
+		}
+	}
 	argc -= optind;
 	argv += optind;
 	if (!argc)
 		usage();
+	if (!show)
+		show = K_ALL;
 	for (; *argv; argv++)
 		dumpfid(*argv);
 	exit(0);
