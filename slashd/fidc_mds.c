@@ -87,14 +87,16 @@ slm_fcmh_ctor(struct fidc_membh *fcmh)
 		return (rc);
 	}
 
-	if (fcmh_isdir(fcmh))
+	if (fcmh_isdir(fcmh)) {
 		rc = mdsio_opendir(fcmh_2_mdsio_fid(fcmh), &rootcreds,
 		    NULL, &fmi->fmi_mdsio_data);
-	else if (fcmh_isreg(fcmh)) {
+
+	} else if (fcmh_isreg(fcmh)) {
 		slash_inode_handle_init(&fmi->fmi_inodeh, fcmh);
 		rc = mdsio_opencreate(fcmh_2_mdsio_fid(fcmh),
 		    &rootcreds, O_RDWR, 0, NULL, NULL, NULL,
 		    &fcmh_2_mdsio_data(fcmh), NULL, NULL, 0);
+
 		if (rc == 0) {
 			rc = mds_inode_read(&fmi->fmi_inodeh);
 			if (rc)
