@@ -342,10 +342,12 @@ main(int argc, char *argv[])
 		psclog_warnx("config UUID=%"PRIx64" doesn't match FS "
 		    "UUID=%"PRIx64, globalConfig.gconf_fsuuid, slm_fsuuid);
 
-	psclog_warnx("SLASH2 metadata daemon (mds) revision is %d", SL_STK_VERSION);
+	psclog_info("SLASH2 metadata daemon (mds) revision is %d",
+	    SL_STK_VERSION);
 
 	mds_journal_init(disable_propagation, (nofsuuid ? 0 : slm_fsuuid));
-	mds_odtable_load(&mdsBmapAssignTable, SL_FN_BMAP_ODTAB, "bmapassign");
+	mds_odtable_load(&mdsBmapAssignTable, SL_FN_BMAP_ODTAB,
+	    "bmapassign");
 	mds_bmap_timeotbl_init();
 	mds_odtable_scan(mdsBmapAssignTable, mds_bia_odtable_startup_cb);
 
