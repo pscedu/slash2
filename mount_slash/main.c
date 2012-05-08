@@ -571,43 +571,38 @@ msl_stat(struct fidc_membh *fcmh, void *arg)
 		return (0);
 	}
 
- restart:
 	FCMH_LOCK(fcmh);
+	fcmh_wait_locked(fcmh, (fcmh->fcmh_flags & FCMH_GETTING_ATTRS));
+
 	if (fcmh->fcmh_flags & FCMH_HAVE_ATTRS) {
 		PFL_GETTIMEVAL(&now);
 		if (timercmp(&now, &fcmh_2_fci(fcmh)->fci_age, <)) {
-			DEBUG_FCMH(PLL_DEBUG, fcmh,
+			DEBUG_FCMH(PLL_INFO, fcmh,
 			    "attrs retrieved from local cache");
-			goto check;
+			FCMH_ULOCK(fcmh);
+			return (0);
 		}
-		fcmh->fcmh_flags &= ~FCMH_HAVE_ATTRS;
 	}
-
-	/* If someone is already fetching attributes, wait for it to
-	 *   complete
+	/* Attrs have expired or do not exist.
 	 */
-	if (fcmh->fcmh_flags & FCMH_GETTING_ATTRS) {
-		psc_waitq_wait(&fcmh->fcmh_waitq, &fcmh->fcmh_lock);
-		goto restart;
-	}
 	fcmh->fcmh_flags |= FCMH_GETTING_ATTRS;
 	FCMH_ULOCK(fcmh);
 
- retry:
-	MSL_RMC_NEWREQ_PFCC(pfcc, fcmh, csvc, SRMT_GETATTR, rq, mq, mp,
-	    rc);
-	if (rc)
-		goto out;
+	do { 
+		MSL_RMC_NEWREQ_PFCC(pfcc, fcmh, csvc, SRMT_GETATTR, rq, mq, mp,
+		    rc);
+		if (rc)
+			break;
 
-	mq->fg = fcmh->fcmh_fg;
-	mq->iosid = prefIOS;
+		mq->fg = fcmh->fcmh_fg;
+		mq->iosid = prefIOS;
 
-	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc && slc_rmc_retry_pfcc(pfcc, &rc))
-		goto retry;
+		rc = SL_RSX_WAITREP(csvc, rq, mp);
+	} while (rc && slc_rmc_retry_pfcc(pfcc, &rc));
+
 	if (rc == 0)
 		rc = mp->rc;
- out:
+
 	FCMH_LOCK(fcmh);
 	if (!rc && fcmh_2_fid(fcmh) != mp->attr.sst_fid)
 		rc = EBADF;
@@ -623,7 +618,6 @@ msl_stat(struct fidc_membh *fcmh, void *arg)
 
 	DEBUG_FCMH(PLL_DEBUG, fcmh, "attrs retrieved via rpc rc=%d", rc);
 
- check:
 	FCMH_ULOCK(fcmh);
 	if (csvc)
 		sl_csvc_decref(csvc);
