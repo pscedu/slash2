@@ -554,6 +554,10 @@ msl_stat(struct fidc_membh *fcmh, void *arg)
 	struct timeval now;
 	int rc = 0;
 
+	/*
+	 * Special case to handle accesses to
+	 * /$mountpoint/.slfidns/<fid>
+	 */
 	if (fcmh_2_fid(fcmh) == SLFID_NS) {
 		fcmh->fcmh_sstb.sst_fid = SLFID_NS;
 		fcmh->fcmh_sstb.sst_gen = 0;
