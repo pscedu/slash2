@@ -147,7 +147,7 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 
 static void
 slm_rmc_bmapdesc_setup(struct bmapc_memb *bmap,
-       struct srt_bmapdesc *sbd, enum rw rw)
+    struct srt_bmapdesc *sbd, enum rw rw)
 {
 	sbd->sbd_fg = bmap->bcm_fcmh->fcmh_fg;
 	sbd->sbd_bmapno = bmap->bcm_bmapno;
@@ -189,8 +189,8 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	bmi = bmap_2_bmi(b);
 
 	BMAP_LOCK(b);
-	bml = mds_bmap_getbml_locked(b, mq->sbd.sbd_seq, 
-	     mq->sbd.sbd_nid, mq->sbd.sbd_pid);
+	bml = mds_bmap_getbml_locked(b, mq->sbd.sbd_seq,
+	    mq->sbd.sbd_nid, mq->sbd.sbd_pid);
 
 	if (bml == NULL) {
 		mp->rc = -EINVAL;
@@ -208,7 +208,8 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	mp->sbd.sbd_key = bmi->bmdsi_assign->odtr_key;
 
 	psc_assert(bmi->bmdsi_wr_ion);
-	mp->sbd.sbd_ios = bmi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id;
+	mp->sbd.sbd_ios = bmi->bmdsi_wr_ion->rmmi_resm->resm_res_id;
+
  out:
 	if (b)
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
@@ -248,8 +249,8 @@ slm_rmc_handle_reassignbmapls(struct pscrpc_request *rq)
 	if (mp->rc)
 		return (0);
 
-	mp->rc = mds_lease_reassign(f, &mq->sbd, mq->pios, mq->prev_sliods,
-		    mq->nreassigns, &mp->sbd, rq->rq_export);
+	mp->rc = mds_lease_reassign(f, &mq->sbd, mq->pios,
+	    mq->prev_sliods, mq->nreassigns, &mp->sbd, rq->rq_export);
 
 	fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 	return (0);
@@ -1227,7 +1228,8 @@ slm_rmc_handler(struct pscrpc_request *rq)
 		rc = slm_rmc_handle_unlink(rq, 1);
 		break;
 	default:
-		psclog_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
+		psclog_errorx("Unexpected opcode %d",
+		    rq->rq_reqmsg->opc);
 		rq->rq_status = -ENOSYS;
 		return (pscrpc_error(rq));
 	}
