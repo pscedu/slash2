@@ -588,9 +588,9 @@ msl_stat(struct fidc_membh *fcmh, void *arg)
 	fcmh->fcmh_flags |= FCMH_GETTING_ATTRS;
 	FCMH_ULOCK(fcmh);
 
-	do { 
-		MSL_RMC_NEWREQ_PFCC(pfcc, fcmh, csvc, SRMT_GETATTR, rq, mq, mp,
-		    rc);
+	do {
+		MSL_RMC_NEWREQ_PFCC(pfcc, fcmh, csvc, SRMT_GETATTR, rq,
+		    mq, mp, rc);
 		if (rc)
 			break;
 
@@ -1512,14 +1512,14 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 	psc_assert(pll_empty(&mfh->mfh_biorqs));
 #endif
 	while (!pll_empty(&mfh->mfh_ra_bmpces) ||
-	       (mfh->mfh_flags & MSL_FHENT_RASCHED)) {
+	    (mfh->mfh_flags & MSL_FHENT_RASCHED)) {
 		psc_waitq_wait(&c->fcmh_waitq, &mfh->mfh_lock);
 		MFH_LOCK(mfh);
 	}
 
 	/*
-	 * Perhaps this checking should only be done on the mfh, with which
-	 * we have modified the attributes.
+	 * Perhaps this checking should only be done on the mfh, with
+	 * which we have modified the attributes.
 	 */
 	FCMH_LOCK(c);
 	fcmh_wait_locked(c, c->fcmh_flags & FCMH_IN_SETATTR);
@@ -1595,7 +1595,8 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	msfsthr_ensure();
 
 #if 0
-	if (strcmp(oldname, ".") == 0 || strcmp(oldname, "..") == 0) {
+	if (strcmp(oldname, ".") == 0 ||
+	    strcmp(oldname, "..") == 0) {
 		rc = EINVAL;
 		goto out;
 	}
@@ -2040,7 +2041,9 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			}
 			FCMH_ULOCK(c);
 
-			/* XXX some writes can be cancelled, but no api exists yet.
+			/*
+			 * XXX some writes can be cancelled, but no api
+			 * exists yet.
 			 */
 			DYNARRAY_FOREACH(b, j, &a)
 				bmap_biorq_expire(b);
@@ -2081,8 +2084,9 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 	FCMH_LOCK(c);
 	/*
-	 * No need to do this on retry.  To do: set PSCFS_SETATTRF_TRUNCATE if
-	 * setattr truncates a cached size so that the MDS can act accordingly.
+	 * No need to do this on retry.  To do: set
+	 * PSCFS_SETATTRF_TRUNCATE if setattr truncates a cached size so
+	 * that the MDS can act accordingly.
 	 */
 	if (c->fcmh_flags & FCMH_CLI_DIRTY_ATTRS) {
 		flush_attrs = 1;
@@ -2184,7 +2188,8 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 		if (rc && flush_attrs)
 			c->fcmh_flags |= FCMH_CLI_DIRTY_ATTRS;
-		if (!rc && flush_attrs && !(c->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
+		if (!rc && flush_attrs &&
+		    !(c->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
 			psc_assert(c->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
 			c->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
 			spinlock(&attrTimeoutQLock);
@@ -2465,7 +2470,8 @@ msattrflushthr_main(__unusedx struct psc_thread *thr)
 			freelock(&attrTimeoutQLock);
 
 		spinlock(&msl_flush_attrqlock);
-		psc_waitq_waitrel(&msl_flush_attrq, &msl_flush_attrqlock, &nexttimeo);
+		psc_waitq_waitrel(&msl_flush_attrq,
+		    &msl_flush_attrqlock, &nexttimeo);
 	}
 }
 
@@ -2583,32 +2589,32 @@ msl_init(void)
 }
 
 struct pscfs pscfs = {
-		mslfsop_access,
-		mslfsop_close,
-/* closedir */	mslfsop_close,
-		mslfsop_create,
-		mslfsop_flush,
-		mslfsop_fsync,
-		mslfsop_fsync,
-		mslfsop_getattr,
-/* ioctl */	NULL,
-		mslfsop_link,
-		mslfsop_lookup,
-		mslfsop_mkdir,
-		mslfsop_mknod,
-		mslfsop_open,
-		mslfsop_opendir,
-		mslfsop_read,
-		mslfsop_readdir,
-		mslfsop_readlink,
-		mslfsop_rename,
-		mslfsop_rmdir,
-		mslfsop_setattr,
-		mslfsop_statfs,
-		mslfsop_symlink,
-		mslfsop_unlink,
-		mslfsop_umount,
-		mslfsop_write
+	mslfsop_access,
+	mslfsop_close,
+	mslfsop_close,		/* closedir */
+	mslfsop_create,
+	mslfsop_flush,
+	mslfsop_fsync,
+	mslfsop_fsync,
+	mslfsop_getattr,
+	NULL,			/* ioctl */
+	mslfsop_link,
+	mslfsop_lookup,
+	mslfsop_mkdir,
+	mslfsop_mknod,
+	mslfsop_open,
+	mslfsop_opendir,
+	mslfsop_read,
+	mslfsop_readdir,
+	mslfsop_readlink,
+	mslfsop_rename,
+	mslfsop_rmdir,
+	mslfsop_setattr,
+	mslfsop_statfs,
+	mslfsop_symlink,
+	mslfsop_unlink,
+	mslfsop_umount,
+	mslfsop_write
 };
 
 int
