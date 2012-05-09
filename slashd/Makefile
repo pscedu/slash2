@@ -57,6 +57,7 @@ SRCS+=		${PFL_BASE}/psc_util/list.c
 SRCS+=		${PFL_BASE}/psc_util/log.c
 SRCS+=		${PFL_BASE}/psc_util/meter.c
 SRCS+=		${PFL_BASE}/psc_util/mkdirs.c
+SRCS+=		${PFL_BASE}/psc_util/mlist.c
 SRCS+=		${PFL_BASE}/psc_util/multiwait.c
 SRCS+=		${PFL_BASE}/psc_util/netutil.c
 SRCS+=		${PFL_BASE}/psc_util/pool.c
@@ -73,7 +74,7 @@ SRCS+=		${SETRESUID_SRC}
 
 DEFINES+=	-DZPOOL_PATH=\"$(realpath ${ZFS_BASE}/src/cmd/zpool)\"
 DEFINES+=	-D_SLASH_MDS
-MODULES+=	lnet pthread zfs z gcrypt fuse-hdrs aio pscfs ctl rpc
+MODULES+=	lnet pthread zfs z gcrypt fuse-hdrs aio pscfs ctl rpc sqlite
 
 include ${SLASHMK}
 
