@@ -2020,7 +2020,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			FCMH_ULOCK(c);
 
 		} else if (stb->st_size == (ssize_t)fcmh_2_fsz(c)) {
-			/* Noop.  Don't send truncate request if the
+			/* No-op.  Don't send truncate request if the
 			 *    sizes match.
 			 */
 			goto out;
@@ -2241,9 +2241,9 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 {
 	struct msl_fhent *mfh = data;
 	struct fidc_membh *f, *ftmp;
+	struct fcmh_cli_info *fci;
 	struct timespec ts;
 	int rc = 0;
-	struct fcmh_cli_info *fci;
 
 	msfsthr_ensure();
 
@@ -2405,7 +2405,6 @@ mslfsop_flush_attr(struct fidc_membh *fcmh)
 	if (csvc)
 		sl_csvc_decref(csvc);
 
-	/* ENOTSUP = -95 */
 	return (rc);
 }
 
