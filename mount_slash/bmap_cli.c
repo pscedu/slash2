@@ -127,7 +127,7 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 		csvc = NULL;
 	}
 
-	if (rc == -SLERR_BMAP_DIOWAIT) {		
+	if (rc == -SLERR_BMAP_DIOWAIT) {
 		DEBUG_BMAP(PLL_WARN, b, "SLERR_BMAP_DIOWAIT rt=%d", nretries);
 		nretries++;
 		// XXX need some sort of randomizer here so that many clients do not flood mds.
@@ -231,7 +231,7 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 			 */
 			if (b->bcm_flags & BMAP_ORPHAN)
 				DEBUG_BMAP(PLL_WARN, b, "already orphaned");
-			else 
+			else
 				bmap_orphan(b);
 
 			BMAP_SETATTR(b, BMAP_CLI_LEASEEXPIRED);
@@ -610,7 +610,7 @@ msl_bmap_reap_init(struct bmapc_memb *b, const struct srt_bmapdesc *sbd)
 	b->bcm_flags |= BMAP_TIMEOQ;
 	if (sbd->sbd_flags & SRM_LEASEBMAPF_DIRECTIO)
 		b->bcm_flags |= BMAP_DIO;
-	
+
 	/* Is this a write for a archival fs?  If so, set the bmap for DIO.
 	 */
 	if (sbd->sbd_ios != IOS_ID_ANY  && !(b->bcm_flags & BMAP_DIO)) {
