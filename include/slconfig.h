@@ -115,6 +115,11 @@ resm_get_pri(struct sl_resm *resm)
 	return (resm + 1);
 }
 
+#define resm_getcsvcerr(m)						\
+	((m)->resm_csvc ?						\
+	   ((m)->resm_csvc->csvc_lasterrno ?				\
+	    (m)->resm_csvc->csvc_lasterrno : -ENOTCONN) : -ENOTCONN)
+
 /* Site (a collection of I/O systems) */
 struct sl_site {
 	char			 site_name[SITE_NAME_MAX];
