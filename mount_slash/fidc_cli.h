@@ -76,7 +76,6 @@ fci_2_fcmh(struct fcmh_cli_info *fci)
 #define FCMH_CLI_DIRTY_ATTRS	(_FCMH_FLGSHFT << 4)	/* has dirty attributes */
 #define FCMH_CLI_DIRTY_QUEUE	(_FCMH_FLGSHFT << 5)	/* on dirty queue */
 
-void	fcmh_setlocalsize(struct fidc_membh *, uint64_t);
 void	slc_fcmh_initdci(struct fidc_membh *);
 
 #define fidc_lookup_load_inode(fid, fcmhp, pfcc)			\

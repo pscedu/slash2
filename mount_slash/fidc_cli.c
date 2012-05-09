@@ -48,25 +48,6 @@
 
 struct dircache_mgr dircacheMgr;
 
-/**
- * fcmh_setlocalsize - Apply a local WRITE update to a fid cache member
- *	handle.
- */
-void
-fcmh_setlocalsize(struct fidc_membh *fcmh, uint64_t size)
-{
-	int locked;
-
-	locked = FCMH_RLOCK(fcmh);
-	if (size > fcmh_2_fsz(fcmh)) {
-		psclog_info("fid: "SLPRI_FID", "
-		    "size from %"PRId64" to %"PRId64,
-		    fcmh_2_fid(fcmh), fcmh_2_fsz(fcmh), size);
-		fcmh_2_fsz(fcmh) = size;
-	}
-	FCMH_URLOCK(fcmh, locked);
-}
-
 void
 slc_fcmh_refresh_age(struct fidc_membh *fcmh)
 {
