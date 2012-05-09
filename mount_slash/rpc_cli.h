@@ -74,27 +74,6 @@ struct pscrpc_request;
 	MSL_RMC_NEWREQ_PFCC(pscfs_getclientctx(pfr), (f), (csvc), (op),	\
 	    (rq), (mq), (mp), (rc))
 
-#define MSL_GET_RQ_STATUS(csvc, rq, mp, error)				\
-	do {								\
-		(error) = (rq)->rq_repmsg->status;			\
-		if ((error) == 0)					\
-			(error) = (rq)->rq_status;			\
-		if ((error) == 0)					\
-			(error) = authbuf_check((rq), PSCRPC_MSG_REPLY);\
-		if ((error) == 0)					\
-			(error) = (mp) ? (mp)->rc : ENOMSG;		\
-		if ((error) == SLERR_NOTCONN && ((csvc)))		\
-			sl_csvc_disconnect(csvc);			\
-	} while (0)
-
-#define MSL_GET_RQ_STATUS_TYPE(csvc, rq, type, rc)			\
-	do {								\
-		struct type *_mp;					\
-									\
-		_mp = pscrpc_msg_buf((rq)->rq_repmsg, 0, sizeof(*_mp));	\
-		MSL_GET_RQ_STATUS((csvc), (rq), _mp, (rc));		\
-	} while (0)
-
 #define slc_geticsvcxf(resm, fl, exp)					\
 	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT | (fl),	\
 	    (exp), &(resm)->resm_nids, SRIC_REQ_PORTAL,			\

@@ -1109,7 +1109,7 @@ msl_read_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 	psc_assert(rq->rq_reqmsg->opc == SRMT_READ);
 
-	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
+	SL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
 
 	if (rc == SLERR_AIOWAIT)
 		return (msl_req_aio_add(rq, msl_read_cb, args));
@@ -1174,7 +1174,7 @@ msl_readahead_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 	psc_assert(rq->rq_reqmsg->opc == SRMT_READ);
 
-	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
+	SL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
 
 	if (rc == SLERR_AIOWAIT)
 		return (msl_req_aio_add(rq, msl_readahead_cb, args));
@@ -1191,7 +1191,7 @@ msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	struct bmpc_ioreq *r;
 	int rc = 0, expired_lease = 0, maxretries = 0;
 
-	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
+	SL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
 
 	DEBUG_REQ(rc ? PLL_ERROR : PLL_INFO, rq, "cb");
 
@@ -1282,7 +1282,7 @@ msl_dio_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	int rc;
 
-	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
+	SL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
 	if (rc == SLERR_AIOWAIT)
 		return (msl_req_aio_add(rq, msl_dio_cb, args));
 

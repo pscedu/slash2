@@ -198,7 +198,7 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	int rc;
 
-	MSL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
+	SL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
 
 	bmap_flush_rpccnt_dec();
 

@@ -153,7 +153,7 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_flags & BMAP_CLI_REASSIGNREQ);
 
-	MSL_GET_RQ_STATUS(csvc, rq, mp, rc);
+	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 	if (rc) {
 		/* If the MDS replies with SLERR_ION_OFFLINE then don't bother
 		 *    with further retry attempts.
@@ -200,7 +200,7 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_flags & BMAP_CLI_LEASEEXTREQ);
 
-	MSL_GET_RQ_STATUS(csvc, rq, mp, rc);
+	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 	if (rc)
 		goto out;
 
