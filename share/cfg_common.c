@@ -223,8 +223,8 @@ libsl_profile_dump(void)
 void
 libsl_init(int nmsgs)
 {
-	char lnetstr[LNETS_MAX], pbuf[6];
 	char netbuf[PSCRPC_NIDSTR_SIZE], ltmp[LNETS_MAX];
+	char lnetstr[LNETS_MAX], pbuf[6];
 	struct lnetif_pair *lp, *lpnext;
 	int mode = PSCNET_SERVER, rc, k;
 
