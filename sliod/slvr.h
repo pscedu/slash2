@@ -49,12 +49,12 @@ struct slvr_ref {
 	uint32_t		 slvr_compwrts;	/* # compltd wrts when !LRU */
 	uint32_t		 slvr_flags;	/* see SLVR_* flags */
 	uint64_t		 slvr_crc;	/* accumulator  */
-	uint32_t                 slvr_ncrc;     /* n times slvr was crc'd */
+	uint32_t		 slvr_ncrc;	/* n times slvr was crc'd */
 	int32_t			 slvr_err;
-	int32_t                  slvr_dirty_cnt;
+	int32_t			 slvr_dirty_cnt;
 	psc_spinlock_t		 slvr_lock;
 	void			*slvr_pri;	/* backptr (bmap_iod_info) */
-	struct timespec          slvr_ts;
+	struct timespec		 slvr_ts;
 	struct sli_iocb		*slvr_iocb;
 	struct sl_buffer	*slvr_slab;
 	struct psc_lockedlist	 slvr_pndgaios;
@@ -152,17 +152,19 @@ struct slvr_ref {
 
 #define DEBUG_SLVR(level, s, fmt, ...)					\
 	psclogs((level), SLISS_SLVR, "slvr@%p num=%hu pw=%hu "		\
-		"pr=%hu cw=%hu ncrc=%u dc=%d ts="PSCPRI_TIMESPEC	\
-		" pri@%p slab@%p bmap@%p fid:"SLPRI_FID " iocb@%p flgs:" \
-		SLVR_FLAGS_FMT" :: "fmt,				\
-		(s), (s)->slvr_num, (s)->slvr_pndgwrts,			\
-		(s)->slvr_pndgreads, (s)->slvr_compwrts,		\
-		(s)->slvr_ncrc, (s)->slvr_dirty_cnt, PSCPRI_TIMESPEC_ARGS(&(s)->slvr_ts), \
-		(s)->slvr_pri, (s)->slvr_slab,				\
-		((s)->slvr_pri) ? slvr_2_bmap((s)) : NULL,		\
-		((s)->slvr_pri) ? fcmh_2_fid(slvr_2_bmap((s))->bcm_fcmh) : FID_ANY, \
-		(s)->slvr_iocb,						\
-		DEBUG_SLVR_FLAGS(s), ## __VA_ARGS__)
+	    "pr=%hu cw=%hu ncrc=%u dc=%d ts="PSCPRI_TIMESPEC" "		\
+	    "pri@%p slab@%p bmap@%p fid:"SLPRI_FID " iocb@%p flgs:"	\
+	    SLVR_FLAGS_FMT" :: "fmt,					\
+	    (s), (s)->slvr_num, (s)->slvr_pndgwrts,			\
+	    (s)->slvr_pndgreads, (s)->slvr_compwrts,			\
+	    (s)->slvr_ncrc, (s)->slvr_dirty_cnt,			\
+	    PSCPRI_TIMESPEC_ARGS(&(s)->slvr_ts),			\
+	    (s)->slvr_pri, (s)->slvr_slab,				\
+	    (s)->slvr_pri ? slvr_2_bmap(s) : NULL,			\
+	    (s)->slvr_pri ?						\
+	      fcmh_2_fid(slvr_2_bmap(s)->bcm_fcmh) : FID_ANY,		\
+	    (s)->slvr_iocb,						\
+	    DEBUG_SLVR_FLAGS(s), ## __VA_ARGS__)
 
 #define RIC_MAX_SLVRS_PER_IO	2
 
@@ -203,7 +205,7 @@ void	slvr_clear_inuse(struct slvr_ref *, int, uint32_t);
 int	slvr_do_crc(struct slvr_ref *);
 ssize_t	slvr_fsbytes_wio(struct slvr_ref *, uint32_t, uint32_t);
 ssize_t	slvr_io_prep(struct slvr_ref *, uint32_t, uint32_t, enum rw,
-	     struct sli_aiocb_reply **);
+	    struct sli_aiocb_reply **);
 void	slvr_repl_prep(struct slvr_ref *, int);
 void	slvr_rio_done(struct slvr_ref *);
 void	slvr_schedule_crc(struct slvr_ref *);
@@ -212,14 +214,15 @@ void	slvr_wio_done(struct slvr_ref *);
 void	slvr_worker_init(void);
 
 void	sli_aio_reply_setup(struct sli_aiocb_reply *, struct pscrpc_request *,
-    uint32_t, uint32_t, struct slvr_ref **, int, struct iovec *, int, enum rw);
+	    uint32_t, uint32_t, struct slvr_ref **, int, struct iovec *, int, enum rw);
 
 void	sli_aio_aiocbr_release(struct sli_aiocb_reply *);
-void	sli_aio_replreply_setup(struct sli_aiocb_reply *, 
-    struct pscrpc_request *, struct slvr_ref *, struct iovec *);
+void	sli_aio_replreply_setup(struct sli_aiocb_reply *,
+	    struct pscrpc_request *, struct slvr_ref *, struct iovec *);
 
-extern struct psc_listcache lruSlvrs;
-extern struct psc_listcache crcqSlvrs;
+extern struct psc_listcache	lruSlvrs;
+extern struct psc_listcache	crcqSlvrs;
+extern struct psc_waitq		slvrWaitq;
 
 static __inline int
 slvr_cmp(const void *x, const void *y)

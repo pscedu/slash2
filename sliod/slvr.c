@@ -94,17 +94,17 @@ slvr_do_crc(struct slvr_ref *s)
 
 	SLVR_LOCK(s);
 	psc_assert((s->slvr_flags & SLVR_PINNED) &&
-		   (s->slvr_flags & SLVR_FAULTING || 
+		   (s->slvr_flags & SLVR_FAULTING ||
 		    s->slvr_flags & SLVR_CRCDIRTY));
 
 	if (s->slvr_flags & SLVR_FAULTING) {
 		if (slvr_2_crcbits(s) & BMAP_SLVR_CRCABSENT) {
 			SLVR_ULOCK(s);
-			return SLERR_CRCABSENT;
+			return (SLERR_CRCABSENT);
 		}
 		/*
-		 * SLVR_FAULTING implies that we're bringing this data buffer
-		 *   in from the filesystem.
+		 * SLVR_FAULTING implies that we're bringing this data
+		 * buffer in from the filesystem.
 		 */
 		if (!s->slvr_pndgreads && !(s->slvr_flags & SLVR_REPLDST)) {
 			/*
@@ -127,8 +127,8 @@ slvr_do_crc(struct slvr_ref *s)
 		if (!(s->slvr_flags & SLVR_REPLDST))
 			/*
 			 *  For now we assume that all blocks are being
-			 *  processed, otherwise there's no guarantee that the
-			 *  entire slvr was read.
+			 *  processed, otherwise there's no guarantee
+			 *  that the entire slvr was read.
 			 */
 			psc_assert(!psc_vbitmap_nfree(s->slvr_slab->slb_inuse));
 
@@ -136,8 +136,8 @@ slvr_do_crc(struct slvr_ref *s)
 		    (slvr_2_crcbits(s) & BMAP_SLVR_CRC)) {
 			SLVR_ULOCK(s);
 
-			psc_crc64_calc(&crc, slvr_2_buf(s, 0), 
-			       SLASH_SLVR_SIZE);
+			psc_crc64_calc(&crc, slvr_2_buf(s, 0),
+			    SLASH_SLVR_SIZE);
 
 			if (crc != slvr_2_crc(s)) {
 				DEBUG_SLVR(PLL_ERROR, s, "CRC failed "
@@ -165,12 +165,12 @@ slvr_do_crc(struct slvr_ref *s)
 
 #ifdef ADLERCRC32
 		// XXX not a running CRC?  double check for correctness
-		s->slvr_crc = adler32(s->slvr_crc, slvr_2_buf(s, 0) + soff,
-		    (int)(eoff - soff));
+		s->slvr_crc = adler32(s->slvr_crc, slvr_2_buf(s, 0) +
+		    soff, (int)(eoff - soff));
 		crc = s->slvr_crc;
 #else
-		psc_crc64_add(&s->slvr_crc, slvr_2_buf(s, 0), 
-		      SLASH_SLVR_SIZE);
+		psc_crc64_add(&s->slvr_crc, slvr_2_buf(s, 0),
+		    SLASH_SLVR_SIZE);
 
 		crc = s->slvr_crc;
 		PSC_CRC64_FIN(&crc);
@@ -255,7 +255,8 @@ slvr_aio_replreply(struct sli_aiocb_reply *a)
 	if (!a->aiocbr_csvc)
 		goto out;
 
-	if (SL_RSX_NEWREQ(a->aiocbr_csvc, SRMT_REPL_READAIO, rq, mq, mp))
+	if (SL_RSX_NEWREQ(a->aiocbr_csvc, SRMT_REPL_READAIO, rq, mq,
+	    mp))
 		goto out;
 
 	psc_atomic64_inc(&sli_rpc_repl_readaio);
@@ -270,8 +271,8 @@ slvr_aio_replreply(struct sli_aiocb_reply *a)
 	if (mq->rc)
 		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
 	else
-		mq->rc = rsx_bulkclient(rq, BULK_GET_SOURCE, SRII_BULK_PORTAL,
-		    a->aiocbr_iovs, a->aiocbr_niov);
+		mq->rc = rsx_bulkclient(rq, BULK_GET_SOURCE,
+		    SRII_BULK_PORTAL, a->aiocbr_iovs, a->aiocbr_niov);
 
 	SL_RSX_WAITREP(a->aiocbr_csvc, rq, mp);
 	if (rq)
@@ -282,7 +283,7 @@ slvr_aio_replreply(struct sli_aiocb_reply *a)
 
 	if (a->aiocbr_csvc)
 		sl_csvc_decref(a->aiocbr_csvc);
-	
+
 	sli_aio_aiocbr_release(a);
 }
 
@@ -297,7 +298,7 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 	if (!a->aiocbr_csvc)
 		goto out;
 
-	rc = SL_RSX_NEWREQ(a->aiocbr_csvc, a->aiocbr_rw == SL_WRITE ? 
+	rc = SL_RSX_NEWREQ(a->aiocbr_csvc, a->aiocbr_rw == SL_WRITE ?
 		   SRMT_WRITE : SRMT_READ, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -327,7 +328,7 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 	if (rq)
 		pscrpc_req_finished(rq);
 
- out:	
+ out:
 	sl_csvc_decref(a->aiocbr_csvc);
 
 	if (a->aiocbr_rw == SL_READ) {
@@ -496,7 +497,7 @@ sli_aio_replreply_setup(struct sli_aiocb_reply *a,
 
 	/* Ref taken here must persist until reply is attempted.
 	 */
-	a->aiocbr_csvc = sli_geticsvcx(libsl_try_nid2resm(rq->rq_peer.nid), 
+	a->aiocbr_csvc = sli_geticsvcx(libsl_try_nid2resm(rq->rq_peer.nid),
 	    rq->rq_export);
 
 	spinlock(&a->aiocbr_lock);
@@ -727,7 +728,7 @@ slvr_fsbytes_rio(struct slvr_ref *s, struct sli_aiocb_reply **aiocbr)
 		}
 		if (nblks) {
 			rc = slvr_fsio(s, blk, nblks * SLASH_SLVR_BLKSZ,
-			       SL_READ, aiocbr);
+			    SL_READ, aiocbr);
 			if (rc)
 				goto out;
 
@@ -737,8 +738,8 @@ slvr_fsbytes_rio(struct slvr_ref *s, struct sli_aiocb_reply **aiocbr)
 	}
 
 	if (nblks)
-		rc = slvr_fsio(s, blk, nblks * SLASH_SLVR_BLKSZ, SL_READ,
-		       aiocbr);
+		rc = slvr_fsio(s, blk, nblks * SLASH_SLVR_BLKSZ,
+		    SL_READ, aiocbr);
  out:
 	if (rc == -SLERR_AIOWAIT)
 		return (rc);
@@ -775,25 +776,25 @@ slvr_repl_prep(struct slvr_ref *s, int src_or_dst)
 		psc_assert(s->slvr_pndgwrts > 0);
 
 		if (s->slvr_flags & SLVR_DATARDY) {
-			/* The slvr is about to be overwritten by this 
-			 *    replication request. For sanity's sake, wait 
-			 *    for pending io competion and set 'faulting' 
+			/* The slvr is about to be overwritten by this
+			 *    replication request. For sanity's sake, wait
+			 *    for pending io competion and set 'faulting'
 			 *    before proceeding.
 			 */
-			DEBUG_SLVR(PLL_WARN, s, 
+			DEBUG_SLVR(PLL_WARN, s,
 				   "mds requested repldst of active slvr");
 			SLVR_WAIT(s, ((s->slvr_pndgwrts > 1) ||
 				      s->slvr_pndgreads));
 			s->slvr_flags &= ~SLVR_DATARDY;
 		}
-		
+
 		s->slvr_flags |= (SLVR_FAULTING | src_or_dst);
-		
+
 	} else {
 		psc_assert(s->slvr_pndgreads > 0);
 	}
-	
-	DEBUG_SLVR(PLL_INFO, s, "replica_%s", 
+
+	DEBUG_SLVR(PLL_INFO, s, "replica_%s",
 	   (src_or_dst & SLVR_REPLDST) ? "dst" : "src");
 
 	SLVR_ULOCK(s);
@@ -879,7 +880,7 @@ slvr_slab_prep(struct slvr_ref *s, enum rw rw)
  */
 ssize_t
 slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
-     struct sli_aiocb_reply **aiocbr)
+    struct sli_aiocb_reply **aiocbr)
 {
 	int i, blks, unaligned[2] = { -1, -1 };
 	ssize_t rc = 0;
@@ -1217,7 +1218,7 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *b, enum rw rw)
 
 	} else {
 		if (!tmp) {
-			BIOD_ULOCK(b);	       
+			BIOD_ULOCK(b);
 			tmp = psc_pool_get(slvr_pool);
 			goto retry;
 		} else
@@ -1296,7 +1297,6 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 	static struct psc_dynarray a;
 	struct slvr_ref *s, *dummy;
 	int i, n, locked;
-	extern struct psc_waitq slvrWaitq;
 
 	n = 0;
 	psc_dynarray_init(&a);
@@ -1305,7 +1305,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 	LIST_CACHE_FOREACH_SAFE(s, dummy, &lruSlvrs) {
 		DEBUG_SLVR(PLL_INFO, s, "considering for reap, nwaiters=%d",
 			   atomic_read(&m->ppm_nwaiters));
-		
+
 		/* We are reaping, so it is fine to back off on some
 		 *   slivers.  We have to use a reqlock here because
 		 *   slivers do not have private spinlocks, instead
