@@ -253,6 +253,33 @@ struct sl_expcli_ops {
 			return ((mp)->rc);				\
 	} while (0)
 
+#define SL_NBRQSET_ADD(rq)						\
+	_PFL_RVSTART {							\
+		authbuf_sign((rq), PSCRPC_MSG_REQUEST);			\
+		pscrpc_nbreqset_add(sl_nbrqset, (rq));			\
+	} _PFL_RVEND
+
+#define SL_GET_RQ_STATUS(csvc, rq, mp, error)				\
+	do {								\
+		(error) = (rq)->rq_repmsg->status;			\
+		if ((error) == 0)					\
+			(error) = (rq)->rq_status;			\
+		if ((error) == 0)					\
+			(error) = authbuf_check((rq), PSCRPC_MSG_REPLY);\
+		if ((error) == 0)					\
+			(error) = (mp) ? (mp)->rc : -ENOMSG;		\
+		if ((error) == -SLERR_NOTCONN && (csvc))		\
+			sl_csvc_disconnect(csvc);			\
+	} while (0)
+
+#define SL_GET_RQ_STATUS_TYPE(csvc, rq, type, rc)			\
+	do {								\
+		type *_mp;						\
+									\
+		_mp = pscrpc_msg_buf((rq)->rq_repmsg, 0, sizeof(*_mp));	\
+		SL_GET_RQ_STATUS((csvc), (rq), _mp, (rc));		\
+	} while (0)
+
 struct slashrpc_cservice *
 	 _sl_csvc_get(const struct pfl_callerinfo *,
 	     struct slashrpc_cservice **, int, struct pscrpc_export *,
