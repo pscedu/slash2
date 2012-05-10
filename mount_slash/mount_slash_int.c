@@ -847,7 +847,7 @@ __static void
 msl_fsrq_complete(struct msl_fsrqinfo *q)
 {
 	struct bmpc_ioreq *r;
-	size_t len = 0, rc;
+	size_t len, rc;
 	int i;
 
 	psc_assert(!q->mfsrq_ref);
@@ -1109,8 +1109,7 @@ msl_read_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 	psc_assert(rq->rq_reqmsg->opc == SRMT_READ);
 
-	SL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
-
+	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_io_rep, rc);
 	if (rc == SLERR_AIOWAIT)
 		return (msl_req_aio_add(rq, msl_read_cb, args));
 
@@ -1174,8 +1173,7 @@ msl_readahead_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 	psc_assert(rq->rq_reqmsg->opc == SRMT_READ);
 
-	SL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
-
+	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_io_rep, rc);
 	if (rc == SLERR_AIOWAIT)
 		return (msl_req_aio_add(rq, msl_readahead_cb, args));
 
@@ -1191,7 +1189,7 @@ msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	struct bmpc_ioreq *r;
 	int rc = 0, expired_lease = 0, maxretries = 0;
 
-	SL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
+	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_io_rep, rc);
 
 	DEBUG_REQ(rc ? PLL_ERROR : PLL_INFO, rq, "cb");
 
@@ -1282,7 +1280,7 @@ msl_dio_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	int rc;
 
-	SL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
+	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_io_rep, rc);
 	if (rc == SLERR_AIOWAIT)
 		return (msl_req_aio_add(rq, msl_dio_cb, args));
 
@@ -2099,9 +2097,9 @@ msl_pages_copyout(struct bmpc_ioreq *r)
 static int
 msl_getra(struct msl_fhent *mfh, int npages, int *bkwd)
 {
-	int rapages=0;
+	int rapages = 0;
 
-	spinlock(&mfh->mfh_lock);
+	MFH_LOCK(mfh);
 
 	if (mfh->mfh_ra.mra_nseq > 0) {
 		psc_assert(mfh->mfh_ra.mra_bkwd == 0 ||
@@ -2115,7 +2113,7 @@ msl_getra(struct msl_fhent *mfh, int npages, int *bkwd)
 	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "rapages=%d bkwd=%d",
 		   rapages, *bkwd);
 
-	freelock(&mfh->mfh_lock);
+	MFH_ULOCK(mfh);
 	return (rapages);
 }
 
