@@ -101,7 +101,7 @@ msl_fd_offline_retry(struct msl_fhent *mfh)
 	psc_assert(*cnt);
 
 	DEBUG_FCMH(PLL_WARN, mfh->mfh_fcmh, "nretries=%d, maxretries=%d "
-	    "(non-blocking=%d)", *cnt, psc_atomic32_read(&offline_nretries), 
+	    "(non-blocking=%d)", *cnt, psc_atomic32_read(&offline_nretries),
 	    (mfh->mfh_oflags & O_NONBLOCK));
 
 	if (mfh->mfh_oflags & O_NONBLOCK)
@@ -198,7 +198,7 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	int rc;
 
-	SL_GET_RQ_STATUS_TYPE(csvc, rq, srm_io_rep, rc);
+	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_io_rep, rc);
 
 	bmap_flush_rpccnt_dec();
 
@@ -1040,7 +1040,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 					expired = 1;
 
 				BMAP_ULOCK(b);
-				DEBUG_BMAP(expired ? PLL_WARN : PLL_NOTICE, b, 
+				DEBUG_BMAP(expired ? PLL_WARN : PLL_NOTICE, b,
 				   "skip due to ref (expired=%d)", expired);
 				/* Put me back on the end of the queue.
 				 */
