@@ -43,12 +43,14 @@
 #define SRII_REPLREAD_CBARG_WKRQ	0
 #define SRII_REPLREAD_CBARG_SLVR	1
 
-psc_atomic64_t		 sli_rpc_replread = PSC_ATOMIC64_INIT(0);
-psc_atomic64_t		 sli_rpc_replread_aio = PSC_ATOMIC64_INIT(0);
+psc_atomic64_t	 sli_rii_st_handle_replread = PSC_ATOMIC64_INIT(0);
+psc_atomic64_t	 sli_rii_st_handle_replread_aio = PSC_ATOMIC64_INIT(0);
+psc_atomic64_t	 sli_rii_st_handle_replread_err = PSC_ATOMIC64_INIT(0);
 
-psc_atomic64_t		 sli_rpc_repl_read = PSC_ATOMIC64_INIT(0);
-psc_atomic64_t		 sli_rpc_repl_read_cb = PSC_ATOMIC64_INIT(0);
-psc_atomic64_t		 sli_rpc_repl_read_cb_aio = PSC_ATOMIC64_INIT(0);
+psc_atomic64_t	 sli_rii_st_issue_replread = PSC_ATOMIC64_INIT(0);
+psc_atomic64_t	 sli_rii_st_issue_replread_cb = PSC_ATOMIC64_INIT(0);
+psc_atomic64_t	 sli_rii_st_issue_replread_cb_aio = PSC_ATOMIC64_INIT(0);
+psc_atomic64_t	 sli_rii_st_issue_replread_err = PSC_ATOMIC64_INIT(0);
 
 /**
  * sli_rii_replread_release_sliver: We call this function in three
@@ -147,21 +149,21 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 	bcm = NULL;
 
 	if (aio)
-		psc_atomic64_inc(&sli_rpc_replread_aio);
+		psc_atomic64_inc(&sli_rii_st_handle_replread_aio);
 	else
-		psc_atomic64_inc(&sli_rpc_replread);
+		psc_atomic64_inc(&sli_rii_st_handle_replread);
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fg.fg_fid == FID_ANY) {
-		mp->rc = SLERR_INVAL;
+		mp->rc = -SLERR_INVAL;
 		return (mp->rc);
 	}
 	if (mq->len <= 0 || mq->len > SLASH_SLVR_SIZE) {
-		mp->rc = SLERR_INVAL;
+		mp->rc = -SLERR_INVAL;
 		return (mp->rc);
 	}
 	if (mq->slvrno < 0 || mq->slvrno >= SLASH_SLVRS_PER_BMAP) {
-		mp->rc = SLERR_INVAL;
+		mp->rc = -SLERR_INVAL;
 		return (mp->rc);
 	}
 
@@ -177,7 +179,7 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 	}
 
 	s = slvr_lookup(mq->slvrno, bmap_2_biodi(bcm), aio ?
-		SL_WRITE : SL_READ);
+	    SL_WRITE : SL_READ);
 
 	if (aio) {
 		SLVR_LOCK(s);
@@ -189,7 +191,7 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 		 */
 		w = sli_repl_findwq(&mq->fg, mq->bmapno);
 		if (!w) {
-			mp->rc = ENOENT;
+			mp->rc = -ENOENT;
 			DEBUG_SLVR(PLL_ERROR, s,
 			   "sli_repl_findwq() failed to find wq");
 			//XXX cleanup the sliver ref
@@ -203,7 +205,7 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 				break;
 
 		if (slvridx == (int)nitems(w->srw_slvr_refs)) {
-			mp->rc = ENOENT;
+			mp->rc = -ENOENT;
 			DEBUG_SLVR(PLL_ERROR, s,
 			   "failed to find slvr in wq=%p", w);
 			goto out;
@@ -299,9 +301,11 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 	psc_assert(slvridx < (int)nitems(w->srw_slvr_refs));
 
 	if (rc == -SLERR_AIOWAIT)
-		psc_atomic64_inc(&sli_rpc_repl_read_cb_aio);
+		psc_atomic64_inc(&sli_rii_st_issue_replread_cb_aio);
+	else if (rc)
+		psc_atomic64_inc(&sli_rii_st_issue_replread_err);
 	else
-		psc_atomic64_inc(&sli_rpc_repl_read_cb);
+		psc_atomic64_inc(&sli_rii_st_issue_replread_cb);
 	return (sli_rii_replread_release_sliver(w, slvridx, rc));
 }
 
@@ -324,8 +328,6 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	if (rc)
 		return (rc);
 
-	psc_atomic64_inc(&sli_rpc_repl_read);
-
 	mq->len = SLASH_SLVR_SIZE;
 	/* adjust the request size for the last sliver */
 	if ((unsigned)slvrno == w->srw_len / SLASH_SLVR_SIZE)
@@ -339,7 +341,7 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 		slvr_lookup(slvrno, bmap_2_biodi(w->srw_bcm), SL_WRITE);
 
 	slvr_slab_prep(s, SL_WRITE);
-	slvr_repl_prep(s, SLVR_REPLDST|SLVR_REPLWIRE);
+	slvr_repl_prep(s, SLVR_REPLDST | SLVR_REPLWIRE);
 	rc = slvr_io_prep(s, 0, mq->len, SL_WRITE, NULL);
 	if (rc)
 		goto out;
@@ -360,10 +362,16 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 	psc_atomic32_inc(&w->srw_refcnt);
 	psc_assert(pscrpc_nbreqset_add(&sli_replwk_nbset, rq) == 0);
+	rq = NULL;
 
  out:
-	if (rc)
+	if (rc) {
 		sli_rii_replread_release_sliver(w, slvridx, rc);
+		psc_atomic64_inc(&sli_rii_st_issue_replread_err);
+	} else
+		psc_atomic64_inc(&sli_rii_st_issue_replread);
+	if (rq)
+		pscrpc_req_finished(rq);
 	return (rc);
 }
 
