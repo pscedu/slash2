@@ -68,6 +68,10 @@ struct pscrpc_request;
 			break;						\
 		(rc) = SL_RSX_NEWREQ((csvc), (op), (rq), (mq),		\
 		    (mp));						\
+		if (rc) {						\
+			sl_csvc_decref(csvc);				\
+			(csvc) = NULL;					\
+		}							\
 	} while ((rc) && slc_rmc_retry_pfcc((pfcc), &(rc)))
 
 #define MSL_RMC_NEWREQ(pfr, f, csvc, op, rq, mq, mp, rc)		\
