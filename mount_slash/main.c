@@ -2366,11 +2366,11 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 static int
 mslfsop_flush_attr(struct fidc_membh *fcmh)
 {
-	int rc;
+	struct slashrpc_cservice *csvc;
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
 	struct pscrpc_request *rq;
-	struct slashrpc_cservice *csvc;
+	int rc;
 
 	rq = NULL;
 	csvc = NULL;
@@ -2397,14 +2397,10 @@ mslfsop_flush_attr(struct fidc_membh *fcmh)
 	FCMH_ULOCK(fcmh);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-
 	if (rc == 0)
 		rc = mp->rc;
-	if (rq)
-		pscrpc_req_finished(rq);
-	if (csvc)
-		sl_csvc_decref(csvc);
-
+	pscrpc_req_finished(rq);
+	sl_csvc_decref(csvc);
 	return (rc);
 }
 
