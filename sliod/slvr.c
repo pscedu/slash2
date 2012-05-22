@@ -275,8 +275,7 @@ slvr_aio_replreply(struct sli_aiocb_reply *a)
 		    SRII_BULK_PORTAL, a->aiocbr_iovs, a->aiocbr_niov);
 
 	SL_RSX_WAITREP(a->aiocbr_csvc, rq, mp);
-	if (rq)
-		pscrpc_req_finished(rq);
+	pscrpc_req_finished(rq);
 
  out:
 	slvr_rio_done(s);
@@ -299,7 +298,7 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 		goto out;
 
 	rc = SL_RSX_NEWREQ(a->aiocbr_csvc, a->aiocbr_rw == SL_WRITE ?
-		   SRMT_WRITE : SRMT_READ, rq, mq, mp);
+	    SRMT_WRITE : SRMT_READ, rq, mq, mp);
 	if (rc)
 		goto out;
 
@@ -324,9 +323,7 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 	}
 
 	SL_RSX_WAITREP(a->aiocbr_csvc, rq, mp);
-
-	if (rq)
-		pscrpc_req_finished(rq);
+	pscrpc_req_finished(rq);
 
  out:
 	sl_csvc_decref(a->aiocbr_csvc);
