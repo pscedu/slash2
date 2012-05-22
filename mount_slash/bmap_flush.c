@@ -232,7 +232,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	if (rc)
 		goto error;
 
-	rq->rq_timeout = (msl_bmap_lease_secs_remaining(b) / 2);
+	rq->rq_timeout = msl_bmap_lease_secs_remaining(b) / 2;
 	if (rq->rq_timeout < 0) {
 		DEBUG_REQ(PLL_ERROR, rq, "off=%u sz=%u op=%u",
 			  mq->offset, mq->size, mq->op);
@@ -241,7 +241,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 
 	rq->rq_interpret_reply = bmap_flush_rpc_cb;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
-	pscrpc_completion_set(rq,  &rpcComp);
+	pscrpc_completion_set(rq, &rpcComp);
 
 	atomic_inc(&outstandingRpcCnt);
 
@@ -265,10 +265,8 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 
  error:
 	sl_csvc_decref(csvc);
-	if (rq) {
+	if (rq)
 		pscrpc_req_finished_locked(rq);
-		rq = NULL;
-	}
 	return (NULL);
 }
 
