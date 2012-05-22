@@ -250,7 +250,7 @@ slvr_aio_replreply(struct sli_aiocb_reply *a)
 	struct srm_repl_read_rep *mp;
 	struct slvr_ref *s;
 
-	psc_assert(a->aiocbr_nslvrs = 1);
+	psc_assert(a->aiocbr_nslvrs == 1);
 
 	if (!a->aiocbr_csvc)
 		goto out;
