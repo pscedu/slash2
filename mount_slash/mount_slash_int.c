@@ -733,7 +733,7 @@ __static void
 msl_biorq_aio_prep(struct bmpc_ioreq *r)
 {
 	struct msl_fsrqinfo *q = r->biorq_fsrqi;
-	int cnt;
+	int cnt = 0;
 
 	psc_assert(q);
 
