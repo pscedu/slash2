@@ -226,8 +226,10 @@ slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
 			rq->rq_async_args.pointer_arg[0] = csvc;
 			authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 			rc = pscrpc_nbreqset_add(sl_nbrqset, rq);
-			if (rc)
+			if (rc) {
+				pscrpc_req_finished(rq);
 				return (rc);
+			}
 			return (EWOULDBLOCK);
 		}
 		psclog_warnx("unable to try non-blocking connect without "
