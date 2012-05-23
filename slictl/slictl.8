@@ -15,7 +15,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES ctl rpc %
-.Dd November 4, 2011
+.Dd May 23, 2012
 .Dt SLICTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -558,7 +558,7 @@ may also be specified to display a list of recognized values.
 .\"	thrs => {
 .\"		"sliaiothr"			=> "Asynchronous\n.Tn I/O\nprocessor",
 .\"		"slibmaprlsthr"			=> "Bmap releaser",
-.\"		"sliconnthr"			=> "Remote server connection monitor",
+.\"		"sliconnthr"			=> "Peer resource connection monitor",
 .\"		"slictlacthr"			=> ".Nm\nconnection acceptor",
 .\"		"slictlthr"			=> ".Nm\nconnection processor",
 .\"		"slilnacthr- Ns Ar %s"		=> "Lustre network acceptor thread",
@@ -586,7 +586,7 @@ processor
 .It Cm slibmaprlsthr
 Bmap releaser
 .It Cm sliconnthr
-Remote server connection monitor
+Peer resource connection monitor
 .It Cm slictlacthr
 .Nm
 connection acceptor
