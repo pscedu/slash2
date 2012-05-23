@@ -1242,20 +1242,9 @@ slm_rmc_handler(struct pscrpc_request *rq)
 void
 mexpc_allocpri(struct pscrpc_export *exp)
 {
-	struct slm_cli_csvc_cpart *mcccp;
 	struct slm_exp_cli *mexpc;
 
 	mexpc = exp->exp_private = PSCALLOC(sizeof(*mexpc));
-
-	/*
-	 * This is freed in sl_csvc_decref() since the csvc lock is
-	 * operated on until the end compliant with APIs used in
-	 * teardown.
-	 */
-	mcccp = mexpc->mexpc_cccp = PSCALLOC(sizeof(*mcccp));
-
-	INIT_SPINLOCK(&mcccp->mcccp_lock);
-	psc_waitq_init(&mcccp->mcccp_waitq);
 	slm_getclcsvc(exp);
 }
 

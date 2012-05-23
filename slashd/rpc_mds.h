@@ -68,16 +68,9 @@ enum slm_fwd_op {
 #define SLM_UPDATE_BATCH		2048			/* namespace updates */
 #define SLM_RECLAIM_BATCH		2048			/* garbage reclamation */
 
-/* counterpart to csvc */
-struct slm_cli_csvc_cpart {
-	psc_spinlock_t			 mcccp_lock;
-	struct psc_waitq		 mcccp_waitq;
-};
-
 struct slm_exp_cli {
 	struct slashrpc_cservice	*mexpc_csvc;		/* must be first field */
 	uint32_t			 mexpc_stkvers;		/* must be second field */
-	struct slm_cli_csvc_cpart	*mexpc_cccp;
 };
 
 void	slm_rpc_initsvc(void);
@@ -98,16 +91,14 @@ int	slm_symlink(struct pscrpc_request *, struct srm_symlink_req *,
 
 /* aliases for connection management */
 #define slm_getmcsvcx(resm, exp)					\
-	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT, (exp),	\
+	sl_csvc_get(&(resm)->resm_csvc, 0, (exp),			\
 	    &(resm)->resm_nids, SRMM_REQ_PORTAL, SRMM_REP_PORTAL,	\
-	    SRMM_MAGIC, SRMM_VERSION, &resm2rmmi(resm)->rmmi_mutex,	\
-	    &resm2rmmi(resm)->rmmi_mwcond, SLCONNT_MDS, NULL)
+	    SRMM_MAGIC, SRMM_VERSION, SLCONNT_MDS, NULL)
 
 #define slm_geticsvcxf(resm, exp, fl, arg)				\
-	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT | (fl),	\
-	    (exp), &(resm)->resm_nids, SRIM_REQ_PORTAL, SRIM_REP_PORTAL,\
-	    SRIM_MAGIC,	SRIM_VERSION, &resm2rmmi(resm)->rmmi_mutex,	\
-	    &resm2rmmi(resm)->rmmi_mwcond, SLCONNT_IOD, (arg))
+	sl_csvc_get(&(resm)->resm_csvc, (fl), (exp),			\
+	    &(resm)->resm_nids, SRIM_REQ_PORTAL, SRIM_REP_PORTAL,	\
+	    SRIM_MAGIC,	SRIM_VERSION, SLCONNT_IOD, (arg))
 
 #define slm_getclcsvc(exp)		_slm_getclcsvc(PFL_CALLERINFO(), (exp))
 
@@ -119,15 +110,15 @@ int	slm_symlink(struct pscrpc_request *, struct srm_symlink_req *,
 
 #define _pfl_callerinfo pci
 static __inline struct slashrpc_cservice *
-_slm_getclcsvc(const struct pfl_callerinfo *pci, struct pscrpc_export *exp)
+_slm_getclcsvc(const struct pfl_callerinfo *pci,
+    struct pscrpc_export *exp)
 {
 	struct slm_exp_cli *mexpc;
 
 	mexpc = sl_exp_getpri_cli(exp);
 	return (sl_csvc_get(&mexpc->mexpc_csvc, 0, exp, NULL,
 	    SRCM_REQ_PORTAL, SRCM_REP_PORTAL, SRCM_MAGIC, SRCM_VERSION,
-	    &mexpc->mexpc_cccp->mcccp_lock,
-	    &mexpc->mexpc_cccp->mcccp_waitq, SLCONNT_CLI, NULL));
+	    SLCONNT_CLI, NULL));
 }
 #undef _pfl_callerinfo
 

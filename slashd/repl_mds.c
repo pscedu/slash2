@@ -52,6 +52,7 @@
 #include "pathnames.h"
 #include "repl_mds.h"
 #include "slashd.h"
+#include "slconn.h"
 #include "slerr.h"
 #include "up_sched_res.h"
 
@@ -703,11 +704,15 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
  *	been reserved or zero if none could be allocated.
  */
 int64_t
-mds_repl_nodes_adjbusy(struct resm_mds_info *ma,
-    struct resm_mds_info *mb, int64_t amt)
+mds_repl_nodes_adjbusy(struct sl_resm *rma, struct sl_resm *rmb,
+    int64_t amt)
 {
 	int wake = 0, minid, maxid, locked;
+	struct resm_mds_info *ma, *mb;
 	struct slm_resmlink *srl;
+
+	ma = resm2rmmi(rma);
+	mb = resm2rmmi(rmb);
 
 	psc_assert(ma->rmmi_busyid != mb->rmmi_busyid);
 	minid = MIN(ma->rmmi_busyid, mb->rmmi_busyid);
@@ -733,54 +738,44 @@ mds_repl_nodes_adjbusy(struct resm_mds_info *ma,
 	 * new connection slots.
 	 */
 	if (wake) {
-		locked = RMMI_RLOCK(ma);
-		psc_multiwaitcond_wakeup(&ma->rmmi_mwcond);
-		RMMI_URLOCK(ma, locked);
-
-		locked = RMMI_RLOCK(mb);
-		psc_multiwaitcond_wakeup(&mb->rmmi_mwcond);
-		RMMI_URLOCK(mb, locked);
+		CSVC_WAKE(rma->resm_csvc);
+		CSVC_WAKE(rmb->resm_csvc);
 	}
 	return (amt);
 }
 
 void
-mds_repl_node_clearallbusy(struct resm_mds_info *rmmi)
+mds_repl_node_clearallbusy(struct sl_resm *m)
 {
-	int n, j, locked[3], dummy;
+	int n, j, locked[2], dummy;
+	struct resm_mds_info *rmmi;
 	struct sl_resource *r;
 	struct sl_resm *resm;
 	struct sl_site *s;
 
-	PLL_TRYRLOCK(&globalConfig.gconf_sites, locked);
+	rmmi = resm2rmmi(m);
+	CONF_TRYRLOCK(locked);
 	tryreqlock(&repl_busytable_lock, locked + 1);
-	RMMI_TRYRLOCK(rmmi, locked + 2);
 
 	if (0) {
  retry:
-		if (psc_spin_haslock(&repl_busytable_lock))
-			freelock(&repl_busytable_lock);
-		if (PLL_HASLOCK(&globalConfig.gconf_sites))
-			PLL_ULOCK(&globalConfig.gconf_sites);
+		if (CONF_HASLOCK())
+			CONF_ULOCK();
 	}
 
-	if (!PLL_TRYRLOCK(&globalConfig.gconf_sites, &dummy))
+	if (!CONF_TRYRLOCK(&dummy))
 		goto retry;
 	if (!tryreqlock(&repl_busytable_lock, &dummy))
 		goto retry;
-	if (!RMMI_TRYRLOCK(rmmi, &dummy))
-		goto retry;
 
 	CONF_FOREACH_RESM(s, r, n, resm, j) {
-		if (!RES_ISFS(r))
+		if (!RES_ISFS(r) || resm->resm_csvc == NULL)
 			continue;
 		if (resm2rmmi(resm) != rmmi)
-			mds_repl_nodes_clearbusy(rmmi,
-			    resm2rmmi(resm));
+			mds_repl_nodes_clearbusy(m, resm);
 	}
-	RMMI_URLOCK(rmmi, locked[2]);
 	ureqlock(&repl_busytable_lock, locked[1]);
-	PLL_URLOCK(&globalConfig.gconf_sites, locked[0]);
+	CONF_URLOCK(locked[0]);
 }
 
 void
@@ -794,7 +789,7 @@ mds_repl_buildbusytable(void)
 	int n, j;
 
 	/* count # resm's (IONs) and assign each a busy identifier */
-	PLL_LOCK(&globalConfig.gconf_sites);
+	CONF_LOCK();
 	spinlock(&repl_busytable_lock);
 	repl_busytable_nents = 0;
 	CONF_FOREACH_SITE(s)
@@ -806,7 +801,7 @@ mds_repl_buildbusytable(void)
 				rmmi->rmmi_busyid = repl_busytable_nents++;
 			}
 		}
-	PLL_ULOCK(&globalConfig.gconf_sites);
+	CONF_ULOCK();
 
 	if (repl_busytable)
 		PSCFREE(repl_busytable);

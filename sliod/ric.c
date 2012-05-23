@@ -495,20 +495,9 @@ sli_ric_handler(struct pscrpc_request *rq)
 void
 iexpc_allocpri(struct pscrpc_export *exp)
 {
-	struct sli_cli_csvc_cpart *icccp;
 	struct sli_exp_cli *iexpc;
 
 	iexpc = exp->exp_private = PSCALLOC(sizeof(*iexpc));
-
-	/*
-	 * This is freed in sl_csvc_decref() since the csvc lock is
-	 * operated on until the end compliant with APIs used in
-	 * teardown.
-	 */
-	icccp = iexpc->iexpc_cccp = PSCALLOC(sizeof(*icccp));
-
-	INIT_SPINLOCK(&icccp->icccp_lock);
-	psc_waitq_init(&icccp->icccp_waitq);
 	sli_getclcsvc(exp);
 }
 

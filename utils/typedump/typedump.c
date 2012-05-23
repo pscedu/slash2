@@ -224,11 +224,11 @@ main(int argc, char *argv[])
 	PRTYPE(struct slash_inode_od);
 	PRTYPE(struct slashrpc_cservice);
 	PRTYPE(struct slc_async_req);
+	PRTYPE(struct slconn_params);
 	PRTYPE(struct slconn_thread);
 	PRTYPE(struct slctlmsg_conn);
 	PRTYPE(struct slctlmsg_fcmh);
 	PRTYPE(struct sli_aiocb_reply);
-	PRTYPE(struct sli_cli_csvc_cpart);
 	PRTYPE(struct sli_exp_cli);
 	PRTYPE(struct sli_iocb);
 	PRTYPE(struct sli_repl_workrq);
@@ -237,7 +237,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct sliric_thread);
 	PRTYPE(struct slirii_thread);
 	PRTYPE(struct slirim_thread);
-	PRTYPE(struct slm_cli_csvc_cpart);
 	PRTYPE(struct slm_exp_cli);
 	PRTYPE(struct slm_replst_workreq);
 	PRTYPE(struct slm_resmlink);
@@ -623,6 +622,7 @@ main(int argc, char *argv[])
 	PRVAL(SLITHRT_CTL);
 	PRVAL(SLITHRT_CTLAC);
 	PRVAL(SLITHRT_LNETAC);
+	PRVAL(SLITHRT_NBRQ);
 	PRVAL(SLITHRT_REPLPND);
 	PRVAL(SLITHRT_REPLREAP);
 	PRVAL(SLITHRT_RIC);
@@ -636,6 +636,7 @@ main(int argc, char *argv[])
 	PRVAL(SLI_REPLWKOP_REPL);
 	PRVAL(SLMTHRT_BMAPTIMEO);
 	PRVAL(SLMTHRT_COH);
+	PRVAL(SLMTHRT_CONN);
 	PRVAL(SLMTHRT_CTL);
 	PRVAL(SLMTHRT_CTLAC);
 	PRVAL(SLMTHRT_CURSOR);
@@ -645,7 +646,6 @@ main(int argc, char *argv[])
 	PRVAL(SLMTHRT_LNETAC);
 	PRVAL(SLMTHRT_NBRQ);
 	PRVAL(SLMTHRT_RCM);
-	PRVAL(SLMTHRT_RESMON);
 	PRVAL(SLMTHRT_RMC);
 	PRVAL(SLMTHRT_RMI);
 	PRVAL(SLMTHRT_RMM);

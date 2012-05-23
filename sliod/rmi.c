@@ -51,35 +51,29 @@ sli_rmi_getcsvc(struct slashrpc_cservice **csvcp)
 
 	for (;;) {
 		rc = 0;
-		sl_csvc_lock(rmi_resm->resm_csvc);
+		CSVC_LOCK(rmi_resm->resm_csvc);
 		*csvcp = sli_getmcsvc(rmi_resm);
 		if (*csvcp)
 			break;
 		sl_csvc_waitrel_s(rmi_resm->resm_csvc, CSVC_RECONNECT_INTV);
 	}
-	sl_csvc_unlock(rmi_resm->resm_csvc);
+	CSVC_ULOCK(rmi_resm->resm_csvc);
 	return (rc);
-}
-
-int
-slirmiconnthr_upcall(__unusedx void *arg)
-{
-	int rc;
-
-	if (nodeResm->resm_res->res_selftest[0] == '\0')
-		return (0);
-	rc = system(nodeResm->resm_res->res_selftest);
-	return (WEXITSTATUS(rc));
 }
 
 int
 sli_rmi_setmds(const char *name)
 {
+	struct slashrpc_cservice *csvc;
 	struct sl_resource *res;
 //	struct sl_resm *old;
 	lnet_nid_t nid;
 
+	/* XXX kill any old MDS and purge any bmap updates being held */
+//	slconnthr_unwatch(rmi_resm->resm_csvc);
 //	old = rmi_resm;
+//	sl_csvc_disable(old->resm_csvc);
+
 	nid = libcfs_str2nid(name);
 	if (nid == LNET_NID_ANY) {
 		res = libsl_str2res(name);
@@ -89,14 +83,13 @@ sli_rmi_setmds(const char *name)
 	} else
 		rmi_resm = libsl_nid2resm(nid);
 
-	/* XXX kill any old MDS and purge any bmap updates being held */
-//	sl_csvc_disable(old->resm_csvc);
-
-	slconnthr_spawn(rmi_resm, SRMI_REQ_PORTAL, SRMI_REP_PORTAL,
-	    SRMI_MAGIC, SRMI_VERSION, &resm2rmii(rmi_resm)->rmii_lock, 0,
-	    &resm2rmii(rmi_resm)->rmii_waitq, SLCONNT_MDS, SLITHRT_CONN,
-	    "sli", slirmiconnthr_upcall, NULL);
-
+	if (sli_rmi_getcsvc(&csvc))
+		psclog_errorx("error connecting to MDS");
+	else {
+		slconnthr_watch(sliconnthr, csvc, CSVCF_PING, NULL,
+		    NULL);
+		sl_csvc_decref(csvc);
+	}
 	return (0);
 }
 

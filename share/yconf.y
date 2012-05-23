@@ -221,7 +221,7 @@ site_profile	: site_prof_start site_defs '}' {
 site_prof_start	: SITE_PROFILE '@' NAME '{' {
 			struct sl_site *s;
 
-			PLL_FOREACH(s, &globalConfig.gconf_sites)
+			CONF_FOREACH_SITE(s)
 				if (strcasecmp(s->site_name, $3) == 0)
 					yyerror("duplicate site name: %s", $3);
 
@@ -884,9 +884,9 @@ slcfg_parse(const char *config_file)
 	if (!globalConfig.gconf_fsuuid)
 		psclog_errorx("no fsuuid specified");
 
-	PLL_LOCK(&globalConfig.gconf_sites);
+	CONF_LOCK();
 	pll_sort(&globalConfig.gconf_sites, qsort, slcfg_site_cmp);
-	PLL_FOREACH(s, &globalConfig.gconf_sites) {
+	CONF_FOREACH_SITE(s) {
 		psc_dynarray_sort(&s->site_resources, qsort,
 		    slcfg_res_cmp);
 		DYNARRAY_FOREACH(r, j, &s->site_resources) {
@@ -907,7 +907,7 @@ slcfg_parse(const char *config_file)
 			}
 		}
 	}
-	PLL_ULOCK(&globalConfig.gconf_sites);
+	CONF_ULOCK();
 }
 
 void

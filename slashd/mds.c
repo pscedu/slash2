@@ -271,8 +271,9 @@ mds_bmap_ios_restart(struct bmap_mds_lease *bml)
 }
 
 int
-mds_sliod_alive(struct sl_mds_iosinfo *si)
+mds_sliod_alive(void *arg)
 {
+	struct sl_mds_iosinfo *si = arg;
 	int ok = 0;
 
 	if (si->si_lastcomm.tv_sec) {

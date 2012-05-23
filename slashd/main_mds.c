@@ -67,6 +67,7 @@ struct psc_poolmaster	 upsched_poolmaster;
 struct slash_creds	 rootcreds = { 0, 0 };
 struct pscfs		 pscfs;
 uint64_t		 slm_fsuuid;
+struct psc_thread	*slmconnthr;
 uint32_t		 sys_upnonce;
 
 int
@@ -356,6 +357,8 @@ main(int argc, char *argv[])
 	slmbmaptimeothr_spawn();
 	slmupschedthr_spawnall();
 	slm_rpc_initsvc();
+
+	slmconnthr = slconnthr_spawn(SLMTHRT_CONN, "slm", NULL, NULL);
 
 	mds_repl_init();
 	slmtimerthr_spawn();

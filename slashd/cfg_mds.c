@@ -63,9 +63,6 @@ slcfg_init_resm(struct sl_resm *resm)
 	struct resm_mds_info *rmmi;
 
 	rmmi = resm2rmmi(resm);
-	psc_mutex_init(&rmmi->rmmi_mutex);
-	psc_multiwaitcond_init(&rmmi->rmmi_mwcond,
-	    NULL, 0, "rmmi-%s", resm->resm_res->res_name);
 	atomic_set(&rmmi->rmmi_refcnt, 0);
 	rmmi->rmmi_resm = resm;
 }

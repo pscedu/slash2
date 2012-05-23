@@ -215,7 +215,7 @@ int
 slrpc_newreq(struct slashrpc_cservice *csvc, int op,
     struct pscrpc_request **rqp, int qlen, int plen, void *mqp)
 {
-	if (csvc->csvc_ctype == SLCONNT_MDS) {
+	if (csvc->csvc_peertype == SLCONNT_MDS) {
 		int qlens[] = {
 			qlen,
 			sizeof(struct srt_statfs),
@@ -240,10 +240,10 @@ slrpc_waitrep(struct slashrpc_cservice *csvc,
 {
 	int rc;
 
-	if (csvc->csvc_ctype == SLCONNT_MDS)
+	if (csvc->csvc_peertype == SLCONNT_MDS)
 		sli_rpc_mds_pack_statfs(rq->rq_reqmsg);
 	rc = slrpc_waitgenrep(rq, plen, mpp);
-	if (csvc->csvc_ctype == SLCONNT_MDS) {
+	if (csvc->csvc_peertype == SLCONNT_MDS) {
 		sli_rpc_mds_unpack_bminseq(rq, PSCRPC_MSG_REPLY);
 		if (rq->rq_reqmsg->opc == SRMT_CONNECT)
 			sli_rpc_mds_unpack_fsuuid(rq, PSCRPC_MSG_REPLY);

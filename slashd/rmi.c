@@ -298,8 +298,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 
  out:
 	if (dst_resm && bcm)
-		mds_repl_nodes_adjbusy(resm2rmmi(src_resm),
-		    resm2rmmi(dst_resm),
+		mds_repl_nodes_adjbusy(src_resm, dst_resm,
 		    -slm_bmap_calc_repltraffic(bcm));
 	if (bcm)
 		bmap_op_done_type(bcm, BMAP_OPCNT_REPLWK);
@@ -674,12 +673,13 @@ slm_rmi_handler(struct pscrpc_request *rq)
 		if (!rc) {
 			struct sl_resm *m;
 
-			m = libsl_try_nid2resm(rq->rq_peer.nid);
-			psc_assert(m);
+			m = libsl_nid2resm(rq->rq_peer.nid);
 			clock_gettime(CLOCK_MONOTONIC,
 			      &res2iosinfo(m->resm_res)->si_lastcomm);
+			slconnthr_watch(slmconnthr, m->resm_csvc,
+			    CSVCF_NORECON, mds_sliod_alive,
+			    res2iosinfo(m->resm_res));
 		}
-
 		break;
 	case SRMT_PING:
 		rc = slm_rmi_handle_ping(rq);

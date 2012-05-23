@@ -39,43 +39,6 @@ struct pscrpc_svc_handle slm_rmm_svc;
 struct pscrpc_svc_handle slm_rmc_svc;
 
 void
-slmresmonthr_main(__unusedx struct psc_thread *thr)
-{
-	struct slashrpc_cservice *csvc;
-	struct sl_resource *r;
-	struct sl_resm *m;
-	int i;
-
-	while (pscthr_run()) {
-		sleep(30);
-
-		SITE_FOREACH_RES(nodeSite, r, i)
-			if (RES_ISFS(r)) {
-				m = psc_dynarray_getpos(&r->res_members,
-				    0);
-				csvc = slm_geticsvcf(m, CSVCF_NONBLOCK |
-				    CSVCF_NORECON);
-				if (!csvc)
-					continue;
-				if (!mds_sliod_alive(res2iosinfo(r)))
-					sl_csvc_disconnect(csvc);
-				sl_csvc_decref(csvc);
-			}
-#if 0
-		SL_MDS_WALK(m,
-			csvc = slm_getmcsvcf(m, CSVCF_NONBLOCK |
-			    CSVCF_NORECON);
-			if (!csvc)
-				continue;
-			if (!slmm_peer_alive(res2mdsinfo(r)))
-				sl_csvc_disconnect(csvc);
-			sl_csvc_decref(csvc);
-		);
-#endif
-	}
-}
-
-void
 slm_rpc_initsvc(void)
 {
 	struct pscrpc_svc_handle *svh;
@@ -132,9 +95,6 @@ slm_rpc_initsvc(void)
 	srcm = thr->pscthr_private;
 	srcm->srcm_page = PSCALLOC(SRM_REPLST_PAGESIZ);
 	pscthr_setready(thr);
-
-	pscthr_init(SLMTHRT_RESMON, 0, slmresmonthr_main, NULL, 0,
-	    "slmresmonthr");
 }
 
 void
@@ -143,7 +103,7 @@ sl_resm_hldrop(struct sl_resm *resm)
 	if (resm->resm_type == SLREST_MDS) {
 	} else {
 		mds_repl_reset_scheduled(resm->resm_res_id);
-		mds_repl_node_clearallbusy(resm2rmmi(resm));
+		mds_repl_node_clearallbusy(resm);
 	}
 }
 
@@ -167,7 +127,6 @@ slm_rpc_ion_pack_bmapminseq(struct pscrpc_msg *m)
 void
 slm_rpc_ion_unpack_statfs(struct pscrpc_request *rq, int type)
 {
-	struct resm_mds_info *rmmi;
 	struct sl_mds_iosinfo *si;
 	struct srt_statfs *f;
 	struct pscrpc_msg *m;
@@ -192,11 +151,10 @@ slm_rpc_ion_unpack_statfs(struct pscrpc_request *rq, int type)
 		psclog_errorx("unknown peer");
 		return;
 	}
-	rmmi = resm2rmmi(resm);
-	RMMI_LOCK(rmmi);
+	CSVC_LOCK(resm->resm_csvc);
 	si = res2iosinfo(resm->resm_res);
 	memcpy(&si->si_ssfb, f, sizeof(*f));
-	RMMI_ULOCK(rmmi);
+	CSVC_ULOCK(resm->resm_csvc);
 }
 
 int
@@ -205,7 +163,7 @@ slrpc_newreq(struct slashrpc_cservice *csvc, int op,
 {
 	int rc;
 
-	if (csvc->csvc_ctype == SLCONNT_IOD) {
+	if (csvc->csvc_peertype == SLCONNT_IOD) {
 		int qlens[] = {
 			qlen,
 			sizeof(struct srt_bmapminseq),
@@ -236,10 +194,10 @@ slrpc_waitrep(struct slashrpc_cservice *csvc,
 {
 	int rc;
 
-	if (csvc->csvc_ctype == SLCONNT_IOD)
+	if (csvc->csvc_peertype == SLCONNT_IOD)
 		slm_rpc_ion_pack_bmapminseq(rq->rq_reqmsg);
 	rc = slrpc_waitgenrep(rq, plen, mpp);
-	if (csvc->csvc_ctype == SLCONNT_IOD)
+	if (csvc->csvc_peertype == SLCONNT_IOD)
 		slm_rpc_ion_unpack_statfs(rq, PSCRPC_MSG_REPLY);
 	return (rc);
 }

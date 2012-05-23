@@ -42,6 +42,7 @@ struct srt_stat;
 enum {
 	SLMTHRT_BMAPTIMEO,	/* bmap timeout thread */
 	SLMTHRT_COH,		/* coherency thread */
+	SLMTHRT_CONN,		/* peer resource connection monitor */
 	SLMTHRT_CTL,		/* control processor */
 	SLMTHRT_CTLAC,		/* control acceptor */
 	SLMTHRT_CURSOR,		/* cursor update thread */
@@ -51,7 +52,6 @@ enum {
 	SLMTHRT_LNETAC,		/* lustre net accept thr */
 	SLMTHRT_NBRQ,		/* non-blocking RPC reply handler */
 	SLMTHRT_RCM,		/* CLI <- MDS msg issuer */
-	SLMTHRT_RESMON,		/* peer resource connection monitor */
 	SLMTHRT_RMC,		/* MDS <- CLI msg svc handler */
 	SLMTHRT_RMI,		/* MDS <- I/O msg svc handler */
 	SLMTHRT_RMM,		/* MDS <- MDS msg svc handler */
@@ -193,20 +193,10 @@ res2rpmi(struct sl_resource *res)
 
 /* MDS-specific data for struct sl_resm */
 struct resm_mds_info {
-	struct pfl_mutex	  rmmi_mutex;
-	struct psc_multiwaitcond  rmmi_mwcond;
 	int			  rmmi_busyid;
 	struct sl_resm		 *rmmi_resm;
 	atomic_t		  rmmi_refcnt;		/* #CLIs using this ion */
 };
-
-#define RMMI_HASLOCK(rmmi)	psc_mutex_haslock(&(rmmi)->rmmi_mutex)
-#define RMMI_LOCK(rmmi)		psc_mutex_lock(&(rmmi)->rmmi_mutex)
-#define RMMI_RLOCK(rmmi)	psc_mutex_reqlock(&(rmmi)->rmmi_mutex)
-#define RMMI_TRYLOCK(rmmi)	psc_mutex_trylock(&(rmmi)->rmmi_mutex)
-#define RMMI_TRYRLOCK(rmmi, lk)	psc_mutex_tryreqlock(&(rmmi)->rmmi_mutex, (lk))
-#define RMMI_ULOCK(rmmi)	psc_mutex_unlock(&(rmmi)->rmmi_mutex)
-#define RMMI_URLOCK(rmmi, lk)	psc_mutex_ureqlock(&(rmmi)->rmmi_mutex, (lk))
 
 static __inline struct resm_mds_info *
 resm2rmmi(struct sl_resm *resm)
@@ -230,7 +220,7 @@ int		 mds_lease_reassign(struct fidc_membh *,
 			 int, struct srt_bmapdesc *,
 			 struct pscrpc_export *);
 
-int		 mds_sliod_alive(struct sl_mds_iosinfo *);
+int		 mds_sliod_alive(void *);
 
 __dead void	 slmctlthr_main(const char *);
 void		 slmbmaptimeothr_spawn(void);
@@ -258,6 +248,7 @@ extern struct sl_mds_peerinfo	*localinfo;
 extern uint64_t			 slm_fsuuid;
 extern struct psc_poolmgr	*slm_workrq_pool;
 extern struct psc_listcache	 slm_workq;
+extern struct psc_thread	*slmconnthr;
 
 static __inline int
 slm_get_rpmi_idx(struct sl_resource *res)

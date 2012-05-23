@@ -43,7 +43,6 @@
 #include "slashrpc.h"
 #include "slerr.h"
 
-struct psc_lockedlist	 psc_mlists;
 struct psc_lockedlist	 psc_odtables;
 
 psc_atomic32_t		 msctl_id = PSC_ATOMIC32_INIT(0);

@@ -730,6 +730,7 @@ display additional information about each operation being performed.
 .\"		q{msbrlsthr}			=> qq{Bmap timed releaser},
 .\"		q{msctlacthr}			=> qq{.Nm\nconnection acceptor/multiplexor},
 .\"		q{msctlthr}			=> qq{.Nm\nconnection processor},
+.\"		q{msconnthr}			=> qq{Peer resource connection monitor},
 .\"		q{mseqpollthr}			=> qq{Lustre\n.Fn LNetEQPoll\nissuer},
 .\"		q{msfsmgrthr}			=> qq{Userland file system manager\n.Pq e.g. FUSE},
 .\"		q{msfsthr Ns Ar %d}		=> qq{File system syscall handler},
@@ -760,6 +761,8 @@ Bmap flush queue lease watcher
 Bmap read-ahead queuer
 .It Cm msbrlsthr
 Bmap timed releaser
+.It Cm msconnthr
+Peer resource connection monitor
 .It Cm msctlacthr
 .Nm
 connection acceptor/multiplexor

@@ -51,7 +51,6 @@
 			*_p = '\0';					\
 	} while (0)
 
-struct psc_lockedlist psc_mlists;
 struct psc_lockedlist psc_odtables;
 
 int
@@ -505,6 +504,7 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* CTL		*/ psc_ctlthr_get,
 /* CTLAC	*/ psc_ctlacthr_get,
 /* LNETAC	*/ NULL,
+/* NBRQ		*/ NULL,
 /* REPLPND	*/ NULL,
 /* REPLREAP	*/ NULL,
 /* RIC		*/ NULL,

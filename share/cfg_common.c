@@ -85,11 +85,11 @@ libsl_siteid2site(sl_siteid_t siteid)
 {
 	struct sl_site *s;
 
-	PLL_LOCK(&globalConfig.gconf_sites);
-	PLL_FOREACH(s, &globalConfig.gconf_sites)
+	CONF_LOCK();
+	CONF_FOREACH_SITE(s)
 		if (s->site_id == siteid)
 			break;
-	PLL_ULOCK(&globalConfig.gconf_sites);
+	CONF_ULOCK();
 	return (s);
 }
 
@@ -172,8 +172,8 @@ libsl_str2res(const char *res_name)
 	if (site_name == NULL)
 		return (NULL);
 	site_name++;
-	locked = PLL_RLOCK(&globalConfig.gconf_sites);
-	PLL_FOREACH(s, &globalConfig.gconf_sites)
+	locked = CONF_RLOCK();
+	CONF_FOREACH_SITE(s)
 		if (strcasecmp(s->site_name, site_name) == 0)
 			DYNARRAY_FOREACH(r, n, &s->site_resources)
 				/* res_name includes '@SITE' in both */
@@ -181,7 +181,7 @@ libsl_str2res(const char *res_name)
 					goto done;
 	r = NULL;
  done:
-	PLL_URLOCK(&globalConfig.gconf_sites, locked);
+	CONF_URLOCK(locked);
 	return (r);
 }
 

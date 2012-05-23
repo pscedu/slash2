@@ -35,8 +35,6 @@
 #include "slashd.h"
 #include "slconfig.h"
 
-struct psc_lockedlist		 psc_mlists;
-
 struct sl_mds_nsstats		 slm_nsstats_aggr;	/* aggregate stats */
 
 const char *slm_nslogst_acts[] = {
@@ -590,6 +588,7 @@ struct psc_ctlop slmctlops[] = {
 psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* BMAPTIMEO	*/ NULL,
 /* COH		*/ NULL,
+/* CONN		*/ NULL,
 /* CTL		*/ psc_ctlthr_get,
 /* CTLAC	*/ psc_ctlacthr_get,
 /* CURSOR	*/ NULL,
@@ -599,7 +598,6 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* LNETAC	*/ NULL,
 /* NBRQ		*/ NULL,
 /* RCM		*/ NULL,
-/* RESMON	*/ NULL,
 /* RMC		*/ NULL,
 /* RMI		*/ NULL,
 /* RMM		*/ NULL,

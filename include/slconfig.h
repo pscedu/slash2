@@ -97,11 +97,12 @@ struct sl_resm_nid {
 
 /* Resource member (a machine in an I/O system) */
 struct sl_resm {
+	struct slashrpc_cservice*resm_csvc;	/* client RPC service - must be first */
 	struct psc_dynarray	 resm_nids;	/* network interfaces */
 	struct sl_resource	*resm_res;
-	struct slashrpc_cservice*resm_csvc;	/* client RPC service */
 	uint32_t		 resm_stkvers;	/* peer SLASH2 stack version */
 	uint32_t		 resm_upnonce;	/* tracked peer's system uptime nonce */
+	struct pfl_mutex	 resm_mutex;
 #define resm_site		 resm_res->res_site
 #define resm_siteid		 resm_site->site_id
 #define resm_type		 resm_res->res_type
@@ -188,7 +189,9 @@ struct sl_gconf {
 #define CONF_LOCK()			spinlock(&globalConfig.gconf_lock)
 #define CONF_ULOCK()			freelock(&globalConfig.gconf_lock)
 #define CONF_RLOCK()			reqlock(&globalConfig.gconf_lock)
+#define CONF_TRYRLOCK(lk)		tryreqlock(&globalConfig.gconf_lock, (lk))
 #define CONF_URLOCK(lk)			ureqlock(&globalConfig.gconf_lock, (lk))
+#define CONF_HASLOCK(lk)		psc_spin_haslock(&globalConfig.gconf_lock)
 
 #define CONF_FOREACH_SITE(s)		PLL_FOREACH((s), &globalConfig.gconf_sites)
 #define SITE_FOREACH_RES(s, r, i)	DYNARRAY_FOREACH((r), (i), &(s)->site_resources)

@@ -1240,6 +1240,7 @@ msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	}
 
 	bwc_release(bwc);
+	sl_csvc_decref(csvc);
 	return (0);
 }
 

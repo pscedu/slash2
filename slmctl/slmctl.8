@@ -531,6 +531,7 @@ may also be specified to display a list of recognized values.
 .\"	thrs => {
 .\"		"slmbmaptimeothr"		=> "Bmap lease timeout monitor",
 .\"		"slmcohthr"			=> "Bmap data coherency thread",
+.\"		"slmconnthr"			=> "Peer resource connection monitor",
 .\"		"slmctlacthr"			=> ".Nm\nconnection acceptor",
 .\"		"slmctlthr"			=> ".Nm\nconnection processor",
 .\"		"slmjcursorthr"			=> "Journal cursor updater thread",
@@ -538,7 +539,6 @@ may also be specified to display a list of recognized values.
 .\"		"slmlnacthr- Ns Ar %s"		=> ".Tn LNET\nnetwork acceptor thread",
 .\"		"slmnbrqthr"			=> "Non-blocking\n.Tn RPC\nreply handler",
 .\"		"slmrcmthr"			=> "Client\n.Tn RPC\nrequest initiator thread",
-.\"		"slmresmonthr"			=> "Peer resource connection monitor",
 .\"		"slmrmcthr Ns Ar %02d"		=> "Client\n.Tn RPC\nrequest service thread",
 .\"		"slmrmithr Ns Ar %02d"		=> ".Tn I/O\nnode\n.Tn RPC\nrequest service thread",
 .\"		"slmrmmthr Ns Ar %02d"		=> ".No Inter- Ns Tn MDS RPC\nrequest service thread",
@@ -559,6 +559,8 @@ separated by commas:
 Bmap lease timeout monitor
 .It Cm slmcohthr
 Bmap data coherency thread
+.It Cm slmconnthr
+Peer resource connection monitor
 .It Cm slmctlacthr
 .Nm
 connection acceptor
@@ -580,8 +582,6 @@ reply handler
 Client
 .Tn RPC
 request initiator thread
-.It Cm slmresmonthr
-Peer resource connection monitor
 .It Cm slmrmcthr Ns Ar %02d
 Client
 .Tn RPC

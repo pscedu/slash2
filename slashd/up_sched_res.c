@@ -259,6 +259,8 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	dst_rmmi = resm2rmmi(dst_resm);
 	src_rmmi = resm2rmmi(src_resm);
 
+	csvc = slm_geticsvcf(dst_resm, CSVCF_NONBLOCK | CSVCF_NORECON);
+
 	/*
 	 * At this point, add this connection to our multiwait.
 	 *
@@ -271,22 +273,27 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	 * becomes available.
 	 */
 	if (!psc_multiwait_hascond(&smi->smi_mw,
-	    &dst_rmmi->rmmi_mwcond))
+	    &dst_resm->resm_csvc->csvc_mwc))
 		psc_multiwait_addcond(&smi->smi_mw,
-		    &dst_rmmi->rmmi_mwcond);
+		    &dst_resm->resm_csvc->csvc_mwc);
 
-	csvc = slm_geticsvcf(dst_resm, CSVCF_NONBLOCK | CSVCF_NORECON);
 	if (csvc == NULL)
 		PFL_GOTOERR(fail, rc = SLERR_ION_OFFLINE);
 
-	amt = mds_repl_nodes_adjbusy(src_rmmi, dst_rmmi,
+	amt = mds_repl_nodes_adjbusy(src_resm, dst_resm,
 	    slm_bmap_calc_repltraffic(b));
 	if (amt == 0) {
+		struct slashrpc_cservice *src_csvc;
+
+		src_csvc = slm_geticsvcf(src_resm, CSVCF_NONBLOCK | CSVCF_NORECON); 
+		if (src_csvc)
+			sl_csvc_decref(src_csvc);
+
 		/* add "src to become unbusy" condition to multiwait */
 		if (!psc_multiwait_hascond(&smi->smi_mw,
-		    &src_rmmi->rmmi_mwcond))
+		    &src_resm->resm_csvc->csvc_mwc))
 			psc_multiwait_addcond(&smi->smi_mw,
-			    &src_rmmi->rmmi_mwcond);
+			    &src_resm->resm_csvc->csvc_mwc);
 		PFL_GOTOERR(fail, rc);
 	}
 
@@ -375,7 +382,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 
  fail:
 	if (amt)
-		mds_repl_nodes_adjbusy(src_rmmi, dst_rmmi, -amt);
+		mds_repl_nodes_adjbusy(src_resm, dst_resm, -amt);
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
@@ -430,9 +437,9 @@ slmupschedthr_tryptrunc(struct up_sched_work_item *wk,
 	csvc = slm_geticsvcf(dst_resm, CSVCF_NONBLOCK | CSVCF_NORECON);
 	if (csvc == NULL) {
 		if (!psc_multiwait_hascond(&smi->smi_mw,
-		    &dst_rmmi->rmmi_mwcond))
+		    &dst_resm->resm_csvc->csvc_mwc))
 			psc_multiwait_addcond(&smi->smi_mw,
-			    &dst_rmmi->rmmi_mwcond);
+			    &dst_resm->resm_csvc->csvc_mwc);
 		return (0);
 	}
 
@@ -500,6 +507,8 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	dst_resm = psc_dynarray_getpos(&dst_res->res_members, j);
 	dst_rmmi = resm2rmmi(dst_resm);
 
+	csvc = slm_geticsvcf(dst_resm, CSVCF_NONBLOCK | CSVCF_NORECON);
+
 	/*
 	 * At this point, add this connection to our multiwait.
 	 * If a wakeup event comes while we are timing our own
@@ -508,11 +517,10 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	 * wake us when it becomes available.
 	 */
 	if (!psc_multiwait_hascond(&smi->smi_mw,
-	    &dst_rmmi->rmmi_mwcond))
+	    &dst_resm->resm_csvc->csvc_mwc))
 		psc_multiwait_addcond(&smi->smi_mw,
-		    &dst_rmmi->rmmi_mwcond);
+		    &dst_resm->resm_csvc->csvc_mwc);
 
-	csvc = slm_geticsvcf(dst_resm, CSVCF_NONBLOCK | CSVCF_NORECON);
 	if (csvc == NULL)
 		goto fail;
 
@@ -763,9 +771,9 @@ slmupschedthr_main(struct psc_thread *thr)
 								csvc = slm_geticsvc_nb(src_resm, NULL);
 								if (csvc == NULL) {
 									if (!psc_multiwait_hascond(&smi->smi_mw,
-									    &resm2rmmi(src_resm)->rmmi_mwcond))
+									    &src_resm->resm_csvc->csvc_mwc))
 										if (psc_multiwait_addcond(&smi->smi_mw,
-										    &resm2rmmi(src_resm)->rmmi_mwcond))
+										    &src_resm->resm_csvc->csvc_mwc))
 											psc_fatal("multiwait_addcond");
 									continue;
 								}

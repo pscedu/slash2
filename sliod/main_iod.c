@@ -58,6 +58,7 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 struct srt_statfs	 sli_ssfb;
 psc_spinlock_t		 sli_ssfb_lock = SPINLOCK_INIT;
+struct psc_thread	*sliconnthr;
 
 uint32_t		 sys_upnonce;
 int			 allow_root_uid = 1;
@@ -119,6 +120,17 @@ slistatfsthr_main(__unusedx struct psc_thread *thr)
 	}
 }
 
+int
+slirmiconnthr_upcall(__unusedx void *arg)
+{
+	int rc;
+
+	if (nodeResm->resm_res->res_selftest[0] == '\0')
+		return (0);
+	rc = system(nodeResm->resm_res->res_selftest);
+	return (WEXITSTATUS(rc));
+}
+
 __dead void
 usage(void)
 {
@@ -132,7 +144,6 @@ int
 main(int argc, char *argv[])
 {
 	const char *cfn, *sfn, *p, *prefmds;
-	struct slashrpc_cservice *mds_csvc;
 	sigset_t signal_set;
 	int rc, c;
 
@@ -229,6 +240,9 @@ main(int argc, char *argv[])
 	pscthr_init(SLITHRT_STATFS, 0, slistatfsthr_main, NULL, 0,
 	    "slistatfsthr");
 
+	sliconnthr = slconnthr_spawn(SLITHRT_CONN, "sli",
+	    slirmiconnthr_upcall, NULL);
+
 	prefmds = globalConfig.gconf_prefmds;
 	if (argc)
 		prefmds = argv[0];
@@ -237,11 +251,11 @@ main(int argc, char *argv[])
 		psc_fatalx("invalid MDS %s: %s", argv[0],
 		    slstrerror(rc));
 
-	if (sli_rmi_getcsvc(&mds_csvc))
-		psc_fatalx("error connecting to MDS");
-
 	psc_assert(globalConfig.gconf_fsuuid);
 	psclog_info("gconf_fsuuid=%"PRIx64, globalConfig.gconf_fsuuid);
+
+	sl_nbrqset = pscrpc_nbreqset_init(NULL, NULL);
+	pscrpc_nbreapthr_spawn(sl_nbrqset, SLITHRT_NBRQ, "slinbrqthr"); 
 
 	sli_rpc_initsvc();
 	psc_tiosthr_spawn(SLITHRT_TIOS, "slitiosthr");

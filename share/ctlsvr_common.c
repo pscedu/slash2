@@ -77,6 +77,10 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct sl_resm *resm;
 	struct sl_site *s;
 	int i, j, rc = 1;
+	struct {
+		struct slashrpc_cservice *csvc;
+		uint32_t stkvers;
+	} *expc;
 
 	CONF_LOCK();
 	CONF_FOREACH_RESM(s, r, i, resm, j) {
@@ -112,7 +116,8 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 		else
 			strlcpy(scc->scc_addrbuf, "?",
 			    sizeof(scc->scc_addrbuf));
-//		scc->scc_stkvers = m->resm_stkvers;
+		expc = (void *)csvc->csvc_params.scp_csvcp;
+		scc->scc_stkvers = expc->stkvers;
 		scc->scc_type = SLCTL_REST_CLI;
 
 		rc = psc_ctlmsg_sendv(fd, mh, scc);

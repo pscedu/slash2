@@ -103,8 +103,7 @@ slc_rmc_setmds(const char *name)
 //	sl_csvc_disable(old->resm_csvc);
 #if 0
 	slconnthr_spawn(slc_rmc_resm, SRMC_REQ_PORTAL, SRMC_REP_PORTAL,
-	    SRMC_MAGIC, SRMC_VERSION,
-	    &resm2rmci(slc_rmc_resm)->rmci_mutex, CSVCF_USE_MULTIWAIT,
+	    SRMC_MAGIC, SRMC_VERSION, 0,
 	    &resm2rmci(slc_rmc_resm)->rmci_mwc,
 	    SLCONNT_MDS, MSTHRT_CONN, "ms");
 #endif
@@ -161,7 +160,7 @@ slc_rmc_getcsvc(struct pscfs_clientctx *pfcc, struct sl_resm *resm,
 
 	for (;;) {
 		rc = 0;
-		sl_csvc_lock(resm->resm_csvc);
+		CSVC_LOCK(resm->resm_csvc);
 		*csvcp = slc_getmcsvc(resm);
 		if (*csvcp)
 			break;
@@ -171,7 +170,7 @@ slc_rmc_getcsvc(struct pscfs_clientctx *pfcc, struct sl_resm *resm,
 			break;
 		sl_csvc_waitrel_s(resm->resm_csvc, CSVC_RECONNECT_INTV);
 	}
-	sl_csvc_unlock(resm->resm_csvc);
+	CSVC_ULOCK(resm->resm_csvc);
 	return (rc);
 }
 

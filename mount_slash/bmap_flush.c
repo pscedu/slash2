@@ -204,8 +204,8 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 
 	DEBUG_REQ(rq->rq_err ? PLL_ERROR : PLL_INFO, rq, "done rc=%d", rc);
 
-	sl_csvc_decref(csvc);
-	args->pointer_arg[MSL_CBARG_CSVC] = NULL;
+//	sl_csvc_decref(csvc);
+//	args->pointer_arg[MSL_CBARG_CSVC] = NULL;
 
 	return (rc);
 }
@@ -219,9 +219,9 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	struct srm_io_rep *mp;
 	int rc;
 
-	sl_csvc_lock(csvc);
+	CSVC_LOCK(csvc);
 	sl_csvc_incref(csvc);
-	sl_csvc_unlock(csvc);
+	CSVC_ULOCK(csvc);
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_WRITE, rq, mq, mp);
 	if (rc)

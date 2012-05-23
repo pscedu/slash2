@@ -79,18 +79,14 @@ struct pscrpc_request;
 	    (rq), (mq), (mp), (rc))
 
 #define slc_geticsvcxf(resm, fl, exp)					\
-	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT | (fl),	\
-	    (exp), &(resm)->resm_nids, SRIC_REQ_PORTAL,			\
-	    SRIC_REP_PORTAL, SRIC_MAGIC, SRIC_VERSION,			\
-	    &resm2rmci(resm)->rmci_mutex, &resm2rmci(resm)->rmci_mwc,	\
-	    SLCONNT_IOD, msl_getmw())
+	sl_csvc_get(&(resm)->resm_csvc, (fl), (exp),			\
+	    &(resm)->resm_nids, SRIC_REQ_PORTAL, SRIC_REP_PORTAL,	\
+	    SRIC_MAGIC, SRIC_VERSION, SLCONNT_IOD, msl_getmw())
 
 #define slc_getmcsvcx(resm, fl, exp)					\
-	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT | (fl),	\
-	    (exp), &(resm)->resm_nids, SRMC_REQ_PORTAL,			\
-	    SRMC_REP_PORTAL, SRMC_MAGIC, SRMC_VERSION,			\
-	    &resm2rmci(resm)->rmci_mutex, &resm2rmci(resm)->rmci_mwc,	\
-	    SLCONNT_MDS, msl_getmw())
+	sl_csvc_get(&(resm)->resm_csvc, (fl), (exp),			\
+	    &(resm)->resm_nids, SRMC_REQ_PORTAL, SRMC_REP_PORTAL,	\
+	    SRMC_MAGIC, SRMC_VERSION, SLCONNT_MDS, msl_getmw())
 
 #define slc_geticsvc(resm)		slc_geticsvcxf((resm), 0, NULL)
 #define slc_geticsvcx(resm, exp)	slc_geticsvcxf((resm), 0, (exp))
@@ -100,12 +96,13 @@ struct pscrpc_request;
 
 void	slc_rpc_initsvc(void);
 
-int	slc_rmc_getcsvc(struct pscfs_clientctx *, struct sl_resm *, struct slashrpc_cservice **);
+int	slc_rmc_getcsvc(struct pscfs_clientctx *, struct sl_resm *,
+	    struct slashrpc_cservice **);
 int	slc_rmc_getcsvc1(struct slashrpc_cservice **, struct sl_resm *);
 int	slc_rmc_retry_pfcc(struct pscfs_clientctx *, int *);
 int	slc_rmc_setmds(const char *);
 
-#define slc_rmc_retry(pfr, rcp)	slc_rmc_retry_pfcc(pscfs_getclientctx(pfr), (rcp))
+#define slc_rmc_retry(pfr, rcp)		slc_rmc_retry_pfcc(pscfs_getclientctx(pfr), (rcp))
 
 int	slc_rci_handler(struct pscrpc_request *);
 int	slc_rcm_handler(struct pscrpc_request *);
@@ -118,7 +115,6 @@ msl_getmw(void)
 	struct psc_thread *thr;
 
 	thr = pscthr_get();
-
 	switch (thr->pscthr_type) {
 	case MSTHRT_FS:
 		return (&msfsthr(thr)->mft_mw);

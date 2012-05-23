@@ -118,7 +118,8 @@ PSCTHR_MKCAST(msrcithr, msrci_thread, MSTHRT_RCI);
 #define MS_READAHEAD_MAXPGS		256
 #define MS_READAHEAD_DIRUNK		(-1)
 
-#define MSL_RA_RESET(ra) do {						\
+#define MSL_RA_RESET(ra)						\
+	do {								\
 		(ra)->mra_nseq  = -(MS_READAHEAD_MINSEQ);		\
 		(ra)->mra_bkwd = MS_READAHEAD_DIRUNK;			\
 		(ra)->mra_raoff = 0;					\
@@ -173,7 +174,7 @@ struct msl_fhent {			 /* XXX rename */
 #define MFH_LOCK(m)			spinlock(&(m)->mfh_lock)
 #define MFH_ULOCK(m)			freelock(&(m)->mfh_lock)
 #define MFH_RLOCK(m)			reqlock(&(m)->mfh_lock)
-#define MFH_URLOCK(m, locked)		ureqlock(&(m)->mfh_lock, (locked))
+#define MFH_URLOCK(m, lk)		ureqlock(&(m)->mfh_lock, (lk))
 
 struct msl_fsrqinfo {
 	struct bmpc_ioreq		*mfsrq_biorq[MAX_BMAPS_REQ];
@@ -224,8 +225,6 @@ res2rpci(struct sl_resource *res)
 
 /* CLI-specific data for struct sl_resm */
 struct resm_cli_info {
-	struct pfl_mutex		 rmci_mutex;
-	struct psc_multiwaitcond	 rmci_mwc;
 	struct srm_bmap_release_req	 rmci_bmaprls;
 	struct psc_listcache		 rmci_async_reqs;
 	psc_atomic32_t                   rmci_pndg_rpcs;
@@ -240,14 +239,14 @@ resm2rmci(struct sl_resm *resm)
 #define msl_read(pfr, fh, buf, size, off)	msl_io((pfr), (fh), (buf), (size), (off), SL_READ)
 #define msl_write(pfr, fh, buf, size, off)	msl_io((pfr), (fh), (char *)(buf), (size), (off), SL_WRITE)
 
-#define msl_biorq_destroy(r) _msl_biorq_destroy(PFL_CALLERINFOSS(SLSS_BMAP), (r))
+#define msl_biorq_destroy(r)	_msl_biorq_destroy(PFL_CALLERINFOSS(SLSS_BMAP), (r))
 
 struct slashrpc_cservice *
 	 msl_bmap_to_csvc(struct bmapc_memb *, int);
 void	 msl_bmap_reap_init(struct bmapc_memb *, const struct srt_bmapdesc *);
-void     msl_bmpces_fail(struct bmpc_ioreq *);
+void	 msl_bmpces_fail(struct bmpc_ioreq *);
 void	_msl_biorq_destroy(const struct pfl_callerinfo *, struct bmpc_ioreq *);
-void     msl_mfh_seterr(struct msl_fhent *);
+void	 msl_mfh_seterr(struct msl_fhent *);
 int	 msl_dio_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 ssize_t	 msl_io(struct pscfs_req *, struct msl_fhent *, char *, size_t, off_t, enum rw);
 int	 msl_read_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);

@@ -242,6 +242,7 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 psc_ctl_prthr_t psc_ctl_prthrs[] = {
 /* BMAPTIMEO	*/ NULL,
 /* COH		*/ NULL,
+/* CONN		*/ NULL,
 /* CTL		*/ psc_ctlthr_pr,
 /* CTLAC	*/ psc_ctlacthr_pr,
 /* CURSOR	*/ NULL,
@@ -251,7 +252,6 @@ psc_ctl_prthr_t psc_ctl_prthrs[] = {
 /* LNETAC	*/ NULL,
 /* NBRQ		*/ NULL,
 /* RCM		*/ NULL,
-/* RESMON	*/ NULL,
 /* RMC		*/ slmrmcthr_pr,
 /* RMI		*/ NULL,
 /* RMM		*/ slmrmmthr_pr,

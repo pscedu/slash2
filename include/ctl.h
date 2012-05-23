@@ -24,7 +24,7 @@
 #include "slconfig.h"
 
 struct slctlmsg_conn {
-	char			scc_addrbuf[PSC_ALIGN(RESM_ADDRBUF_SZ, 8)];
+	char			scc_addrbuf[RESM_ADDRBUF_SZ];
 	int32_t			scc_type;	/* SLREST_* or SLCTL_REST_* */
 	int32_t			scc_refcnt;
 	int32_t			scc_flags;	/* CSVCF_* */
