@@ -92,7 +92,7 @@ uint64_t			 current_reclaim_batchno;
 
 /*
  * The entry size must be the same for the same batch of log entries.
- * In version 0, the size is RECLAIM_ENTRY_SIZE (512). The next version 
+ * In version 0, the size is RECLAIM_ENTRY_SIZE (512). The next version
  * will be the size of the reclaim log entry.
  */
 size_t				 current_reclaim_entrysize;
@@ -329,11 +329,11 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 	struct srt_update_entry update_entry, *update_entryp;
 	struct slmds_jent_namespace *sjnm = NULL;
 	struct slmds_jent_bmap_crc *sjbc = NULL;
+	struct srt_stat sstb;
+	void *reclaimbuf = NULL;
 	int rc, count, total;
 	uint16_t type;
 	size_t size;
-	void *reclaimbuf = NULL;
-	struct srt_stat sstb;
 
 	psc_assert(pje->pje_magic == PJE_MAGIC);
 
@@ -403,9 +403,10 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 			}
 			/* this should never happen, but we have seen bitten */
 			if ((size > current_reclaim_entrysize * SLM_RECLAIM_BATCH) ||
-	    			((size % current_reclaim_entrysize) != 0)) {
-				psclog_warnx("Reclaim log corrupted! batch = %"PRIx64", size = %"PRId64,
-						current_reclaim_batchno, size);
+			    ((size % current_reclaim_entrysize) != 0)) {
+				psclog_warnx("Reclaim log corrupted! "
+				    "batch=%"PRIx64" size=%zd",
+				    current_reclaim_batchno, size);
 				size = current_reclaim_entrysize * (SLM_RECLAIM_BATCH - 1);
 			}
 			count = 0;
@@ -476,7 +477,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 		psc_waitq_wakeall(&mds_reclaim_waitq);
 		freelock(&mds_reclaim_waitqlock);
 		psclog_warnx("Next batchno = %"PRId64", current reclaim XID = %"PRId64,
-	    	    current_reclaim_batchno, current_reclaim_xid);
+		    current_reclaim_batchno, current_reclaim_xid);
 	}
 	psc_assert(reclaim_logfile_offset <=
 		   SLM_RECLAIM_BATCH * (off_t)current_reclaim_entrysize);
@@ -1235,10 +1236,10 @@ mds_send_batch_reclaim(uint64_t batchno)
 		return (didwork);
 	}
 	/*
- 	 * We have seen odd file size (> 600MB) without any clue.
- 	 * To avoid confusing other code on mds and sliod, pretend
- 	 * we have done the job and move on.
- 	 */
+	 * We have seen odd file size (> 600MB) without any clue.
+	 * To avoid confusing other code on mds and sliod, pretend
+	 * we have done the job and move on.
+	 */
 	if ((size > entrysize * SLM_RECLAIM_BATCH) ||
 	    ((size % entrysize) != 0)) {
 		psclog_warnx("Reclaim log corrupted! batch = %"PRIx64", size = %"PRId64,
@@ -1301,7 +1302,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 		 * necessarily contiguous.
 		 *
 		 * 04/04/2012:
-		 * 
+		 *
 		 * We only check for xid when the log file is not
 		 * full to get around some internally corrupted
 		 * log file (xid is not increasing all the way).
@@ -1328,11 +1329,11 @@ mds_send_batch_reclaim(uint64_t batchno)
 		}
 
 		/*
- 		 * In a perfect world, iosinfo->si_xid <= xid is always true.
- 		 * This is because batchno and xid are related.  But I was
- 		 * met with cold reality and couldn't explain why it happened.
- 		 * Anyway, resending requests is not the end of the world.
- 		 */
+		 * In a perfect world, iosinfo->si_xid <= xid is always true.
+		 * This is because batchno and xid are related.  But I was
+		 * met with cold reality and couldn't explain why it happened.
+		 * Anyway, resending requests is not the end of the world.
+		 */
 		if (iosinfo->si_xid <= xid) {
 			do {
 				if (entryp->xid >= iosinfo->si_xid)
@@ -1411,11 +1412,11 @@ mds_send_batch_reclaim(uint64_t batchno)
 		mds_record_reclaim_prog();
 
 	/*
- 	 * XXX if the log file is never filled to its capacity for some reason, 
- 	 * then we are stuck! Perhaps We should check for the existence of the 
- 	 * next log file and skip it.  But we must make sure all IOS have seen
- 	 * this log file.
- 	 */
+	 * XXX if the log file is never filled to its capacity for some
+	 * reason, then we are stuck! Perhaps We should check for the
+	 * existence of the next log file and skip it.  But we must make
+	 * sure all IOS have seen this log file.
+	 */
 
 	/*
 	 * If this log file is full and all I/O servers have applied its
