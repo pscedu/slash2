@@ -29,7 +29,7 @@ slcfg_init_res(__unusedx struct sl_resource *res)
 }
 
 void
-slcfg_init_resm(struct sl_resm *resm)
+slcfg_init_resm(__unusedx struct sl_resm *resm)
 {
 }
 
