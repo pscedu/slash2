@@ -131,7 +131,7 @@ dumpfid(const char *fn)
 		}
 		psc_crc64_calc(&crc, &inox, sizeof(inox));
 		if (show & K_XCRC)
-			printf("  inox crc: %s %lx %lx\n",
+			printf("  inox crc: %s %"PSCPRIxCRC64" %"PSCPRIxCRC64"\n",
 			    crc == od_crc ? "OK" : "BAD", crc, od_crc);
 	}
 	if (show & K_REPLS) {
