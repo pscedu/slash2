@@ -130,10 +130,10 @@ int
 slrpc_connect_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
+	struct srm_connect_rep *mp = NULL;
 	struct slashrpc_cservice *csvc;
-	struct srm_connect_rep *mp;
-	uint32_t *stkversp;
 	int rc = rq->rq_status;
+	uint32_t *stkversp;
 
 	/*
 	 * Check for ETIMEDOUT and friends before delving into closer
