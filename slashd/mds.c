@@ -1036,9 +1036,9 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	struct bmap_mds_info *bmi = bml->bml_bmdsi;
 	struct slmds_jent_assign_rep *logentry;
 	struct odtable_receipt *odtr = NULL;
-	int rc = 0, locked;
 	uint64_t key;
 	size_t elem;
+	int rc = 0;
 
 	psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 	psc_assert(bml->bml_flags & BML_FREEING);
@@ -1054,7 +1054,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	 *   if this becomes problematic we should investigate more.
 	 *   ATM the BMAP_IONASSIGN is not relied upon
 	 */
-	locked = BMAP_RLOCK(b);
+	BMAP_RLOCK(b);
 	bcm_wait_locked(b, (b->bcm_flags & BMAP_IONASSIGN));
 	b->bcm_flags |= BMAP_IONASSIGN;
 
