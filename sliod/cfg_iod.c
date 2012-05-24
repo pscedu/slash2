@@ -31,9 +31,6 @@ slcfg_init_res(__unusedx struct sl_resource *res)
 void
 slcfg_init_resm(struct sl_resm *resm)
 {
-	struct resm_iod_info *rmii;
-
-	rmii = resm2rmii(resm);
 }
 
 void
