@@ -83,8 +83,7 @@ slmctlparam_namespace_stats_process(int fd, struct psc_ctlmsghdr *mh,
 
 	if (mh->mh_type == PCMT_SETPARAM)
 		return (psc_ctlsenderr(fd, mh,
-		    "field is read-only: %s",
-		    slm_nslogst_fields[i_s]));
+		    "field is read-only"));
 
 	d_start = d_val == -1 ? 0 : d_val;
 	o_start = o_val == -1 ? 0 : o_val;
