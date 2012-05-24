@@ -78,10 +78,13 @@ slmctlparam_namespace_stats_process(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels,
     struct sl_mds_nsstats *st, int d_val, int o_val, int s_val)
 {
-	int d_start, o_start, s_start, set, i_d, i_o, i_s;
+	int d_start, o_start, s_start, i_d, i_o, i_s;
 	char nbuf[15];
 
-	set = (mh->mh_type == PCMT_SETPARAM);
+	if (mh->mh_type == PCMT_SETPARAM)
+		return (psc_ctlsenderr(fd, mh,
+		    "field is read-only: %s",
+		    slm_nslogst_fields[i_s]));
 
 	d_start = d_val == -1 ? 0 : d_val;
 	o_start = o_val == -1 ? 0 : o_val;
@@ -95,10 +98,6 @@ slmctlparam_namespace_stats_process(int fd, struct psc_ctlmsghdr *mh,
 			levels[4] = (char *)slm_nslogst_ops[i_o];
 			for (i_s = s_start; i_s < NS_NSUMS &&
 			    (i_s == s_val || s_val == -1); i_s++) {
-				if (mh->mh_type == PCMT_SETPARAM)
-					return (psc_ctlsenderr(fd, mh,
-					    "field is read-only: %s",
-					    slm_nslogst_fields[i_s]));
 
 				levels[5] = (char *)
 				    slm_nslogst_fields[i_s];
