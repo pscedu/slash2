@@ -19,6 +19,7 @@
 
 #include <sys/types.h>
 #include <sys/statvfs.h>
+#include <sys/wait.h>
 
 #include <err.h>
 #include <stdio.h>
