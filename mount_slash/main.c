@@ -251,13 +251,14 @@ _msl_progallowed(struct pscfs_req *pfr)
 	do {
 		pid = ppid;
 
+		/* we made it to the root; disallow */
 		if (pid == 0 || pid == 1)
-			return (1);
+			return (0);
 
 		snprintf(fn, sizeof(fn), "/proc/%d/exe", pid);
 		if (readlink(fn, exe, sizeof(exe)) == -1) {
 			psclog_warn("unable to check access on %s", fn);
-			return (1);
+			return (0);
 		}
 		DYNARRAY_FOREACH(p, n, &allow_exe)
 		    if (strcmp(exe, p) == 0)
@@ -267,13 +268,13 @@ _msl_progallowed(struct pscfs_req *pfr)
 		fp = fopen(fn, "r");
 		if (fp == NULL) {
 			psclog_warn("unable to read parent PID from %s", fn);
-			return (1);
+			return (0);
 		}
 		n = fscanf(fp, "%*d %*s %*c %d ", &ppid);
 		fclose(fp);
 		if (n != 1) {
 			psclog_warn("unable to read parent PID from %s", fn);
-			return (1);
+			return (0);
 		}
 	} while (pid != ppid);
 	return (0);
