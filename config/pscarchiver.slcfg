@@ -21,13 +21,12 @@ set allow_exec="
 	/bin/cp:
 	/bin/ls:
 	/bin/mv:
-	/usr/psc/bin/far:
-	/usr/psc/bin/scp:
+	/usr/local/bin/far:
 	/usr/bin/scp:
-	/usr/psc/bin/sftp:
 	/usr/bin/sftp:
 	/usr/bin/rsync:
-	/usr/psc/globus/default/bin/globus-url-copy
+	/usr/psc/globus/default/bin/globus-url-copy:
+	/usr/depot/x86_64_rhel5/globus-clients.002/globus/5.0.2/bin/gsiscp
 ";
 
 site @PSCARCH {
@@ -41,7 +40,7 @@ site @PSCARCH {
 		nids	= illusion-mds;
 		jrnldev	= /dev/disk/by-id/scsi-35000c50033f6faa7;
 	}
-	
+
 	resource firehose1 {
 		desc	= "brashear client 1";
 		type	= parallel_lfs_compnt;
@@ -73,15 +72,15 @@ site @PSCARCH {
 		nids	= firehose4-99.psc.edu;
 		fsroot	= /brashear/.arc;
 	}
-	
+
 	resource brashear {
 		desc	= "PSC lustre scratch filesystem";
 		type	= parallel_lfs;
 		id	= 0x10;
-		ios     = firehose1@PSCARCH, firehose2@PSCARCH, 
+		ios     = firehose1@PSCARCH, firehose2@PSCARCH,
 			  firehose3@PSCARCH, firehose4@PSCARCH;
 	}
-	
+
 	resource uo {
 		desc	= "tape archiver";
 		type	= archival_fs;
