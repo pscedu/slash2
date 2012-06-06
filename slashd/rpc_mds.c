@@ -102,8 +102,11 @@ sl_resm_hldrop(struct sl_resm *resm)
 {
 	if (resm->resm_type == SLREST_MDS) {
 	} else {
-		mds_repl_reset_scheduled(resm->resm_res_id);
-		mds_repl_node_clearallbusy(resm);
+		sl_replica_t repl;
+
+		repl.bs_id = resm->resm_res_id;
+		slm_iosv_setbusy(&repl, 1);
+		upschq_resm(resm, UPDT_HLDROP);
 	}
 }
 
@@ -180,26 +183,38 @@ slrpc_newreq(struct slashrpc_cservice *csvc, int op,
 		    plens, *(void **)mqp);
 	} else
 		rc = slrpc_newgenreq(csvc, op, rqp, qlen, plen, mqp);
-	if (rc == 0 && op == SRMT_CONNECT) {
+	return (rc);
+}
+
+
+void
+slrpc_req_out(struct slashrpc_cservice *csvc, struct pscrpc_request *rq)
+{
+#if 0
+	if (rq->rq_reqmsg->opc == SRMT_CONNECT) {
 		struct srm_connect_req *mq = *(void **)mqp;
 
 		mq->fsuuid = slm_fsuuid;
 	}
-	return (rc);
-}
-
-int
-slrpc_waitrep(struct slashrpc_cservice *csvc,
-    struct pscrpc_request *rq, int plen, void *mpp)
-{
-	int rc;
-
+#endif
 	if (csvc->csvc_peertype == SLCONNT_IOD)
 		slm_rpc_ion_pack_bmapminseq(rq->rq_reqmsg);
-	rc = slrpc_waitgenrep(rq, plen, mpp);
+}
+
+void
+slrpc_rep_in(struct slashrpc_cservice *csvc, struct pscrpc_request *rq)
+{
 	if (csvc->csvc_peertype == SLCONNT_IOD)
 		slm_rpc_ion_unpack_statfs(rq, PSCRPC_MSG_REPLY);
-	return (rc);
+}
+
+void
+slrpc_req_in(struct pscrpc_request *rq)
+{
+	if (rq->rq_rqbd->rqbd_service == slm_rmi_svc.svh_service) {
+		slm_rpc_ion_unpack_statfs(rq, PSCRPC_MSG_REQUEST);
+		slm_rpc_ion_pack_bmapminseq(rq->rq_repmsg);
+	}
 }
 
 int
@@ -217,8 +232,6 @@ slrpc_allocrep(struct pscrpc_request *rq, void *mqp, int qlen,
 
 		rc = slrpc_allocrepn(rq, mqp, qlen, mpp, nitems(plens),
 		    plens, rcoff);
-		slm_rpc_ion_unpack_statfs(rq, PSCRPC_MSG_REQUEST);
-		slm_rpc_ion_pack_bmapminseq(rq->rq_repmsg);
 	} else
 		rc = slrpc_allocgenrep(rq, mqp, qlen, mpp, plen, rcoff);
 	if (rc == 0 && rq->rq_reqmsg->opc == SRMT_CONNECT) {

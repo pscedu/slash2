@@ -228,8 +228,9 @@ struct sl_expcli_ops {
 			return ((mp)->rc);				\
 	} while (0)
 
-#define SL_NBRQSET_ADD(rq)						\
+#define SL_NBRQSET_ADD(csvc, rq)					\
 	_PFL_RVSTART {							\
+		slrpc_req_out((csvc), (rq));				\
 		authbuf_sign((rq), PSCRPC_MSG_REQUEST);			\
 		pscrpc_nbreqset_add(sl_nbrqset, (rq));			\
 	} _PFL_RVEND
@@ -294,6 +295,10 @@ int	 slrpc_allocgenrep(struct pscrpc_request *, void *, int, void *,
 		int, int);
 int	 slrpc_allocrep(struct pscrpc_request *, void *, int, void *,
 		int, int);
+
+void	 slrpc_req_out(struct slashrpc_cservice *, struct pscrpc_request *);
+void	 slrpc_rep_in(struct slashrpc_cservice *, struct pscrpc_request *);
+void	 slrpc_req_in(struct pscrpc_request *);
 
 extern struct psc_dynarray	 lnet_prids;
 extern struct psc_lockedlist	 client_csvcs;

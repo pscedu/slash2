@@ -145,6 +145,7 @@ sli_rpc_mds_unpack_fsuuid(struct pscrpc_request *rq, int msgtype)
 		m = rq->rq_reqmsg;
 	else
 		m = rq->rq_repmsg;
+
 	if (m == NULL)
 		goto error;
 	if (m->bufcount < 1)
@@ -172,17 +173,17 @@ sli_rpc_mds_unpack_fsuuid(struct pscrpc_request *rq, int msgtype)
 		xmkfn(fn, "%s/%s/%"PRIx64"/%s",
 		      globalConfig.gconf_fsroot, SL_RPATH_META_DIR,
 		      fsuuid, SL_RPATH_FIDNS_DIR);
-		
+
 		if (stat(fn, &stb) || !S_ISDIR(stb.st_mode))
 			psc_fatalx("sliod directories have not been created "
 			   "(uuid=%"PRIx64")", fsuuid);
 
 		globalConfig.gconf_fsuuid = sli_fsuuid = fsuuid;
 	}
-	
+
 	if (globalConfig.gconf_fsuuid != fsuuid)
 		psc_fatalx("Mismatching UUIDs detected!  "
-		   "gconf_fsuuid=%"PRIx64" mds_fsuuid=%"PRIx64, 
+		   "gconf_fsuuid=%"PRIx64" mds_fsuuid=%"PRIx64,
 		   globalConfig.gconf_fsuuid, fsuuid);
 
 	return;
@@ -201,6 +202,7 @@ sli_rpc_mds_pack_statfs(struct pscrpc_msg *m)
 		psclog_errorx("msg is NULL");
 		return;
 	}
+	psc_assert(m->bufcount > 2);
 	f = pscrpc_msg_buf(m, m->bufcount - 2, sizeof(*f));
 	if (f == NULL) {
 		psclog_errorx("unable to pack statfs");
@@ -234,21 +236,33 @@ slrpc_newreq(struct slashrpc_cservice *csvc, int op,
 	return (slrpc_newgenreq(csvc, op, rqp, qlen, plen, mqp));
 }
 
-int
-slrpc_waitrep(struct slashrpc_cservice *csvc,
-    struct pscrpc_request *rq, int plen, void *mpp)
+void
+slrpc_req_out(struct slashrpc_cservice *csvc, struct pscrpc_request *rq)
 {
-	int rc;
-
 	if (csvc->csvc_peertype == SLCONNT_MDS)
 		sli_rpc_mds_pack_statfs(rq->rq_reqmsg);
-	rc = slrpc_waitgenrep(rq, plen, mpp);
+}
+
+void
+slrpc_rep_in(struct slashrpc_cservice *csvc, struct pscrpc_request *rq)
+{
 	if (csvc->csvc_peertype == SLCONNT_MDS) {
 		sli_rpc_mds_unpack_bminseq(rq, PSCRPC_MSG_REPLY);
 		if (rq->rq_reqmsg->opc == SRMT_CONNECT)
 			sli_rpc_mds_unpack_fsuuid(rq, PSCRPC_MSG_REPLY);
 	}
-	return (rc);
+}
+
+void
+slrpc_req_in(struct pscrpc_request *rq)
+{
+	if (rq->rq_rqbd->rqbd_service == sli_rim_svc.svh_service) {
+		sli_rpc_mds_unpack_bminseq(rq, PSCRPC_MSG_REQUEST);
+		if (rq->rq_reqmsg->opc == SRMT_CONNECT)
+			sli_rpc_mds_unpack_fsuuid(rq,
+			    PSCRPC_MSG_REQUEST);
+		sli_rpc_mds_pack_statfs(rq->rq_repmsg);
+	}
 }
 
 int
@@ -264,10 +278,6 @@ slrpc_allocrep(struct pscrpc_request *rq, void *mqp, int qlen,
 
 		rc = slrpc_allocrepn(rq, mqp, qlen, mpp, nitems(plens),
 		    plens, rcoff);
-		sli_rpc_mds_unpack_bminseq(rq, PSCRPC_MSG_REQUEST);
-		sli_rpc_mds_pack_statfs(rq->rq_repmsg);
-		if (rc == 0 && rq->rq_reqmsg->opc == SRMT_CONNECT)
-			sli_rpc_mds_unpack_fsuuid(rq, PSCRPC_MSG_REQUEST);
 		return (rc);
 	}
 	return (slrpc_allocgenrep(rq, mqp, qlen, mpp, plen, rcoff));

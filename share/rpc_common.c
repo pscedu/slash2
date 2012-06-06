@@ -58,23 +58,38 @@ slrpc_newreq(struct slashrpc_cservice *csvc, int op,
 	return (slrpc_newgenreq(csvc, op, rqp, qlen, plen, mqp));
 }
 
-int
-slrpc_waitgenrep(struct pscrpc_request *rq, int plen, void *mpp)
+__weak void
+slrpc_req_out(__unusedx struct slashrpc_cservice *csvc,
+    __unusedx struct pscrpc_request *rq)
 {
-	int rc;
-
-	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
-	rc = pfl_rsx_waitrep(rq, plen, mpp);
-	if (rc == 0)
-		rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
-	return (rc);
 }
 
-__weak int
+__weak void
+slrpc_rep_in(__unusedx struct slashrpc_cservice *csvc,
+    __unusedx struct pscrpc_request *rq)
+{
+}
+
+__weak void
+slrpc_req_in(__unusedx struct pscrpc_request *rq)
+{
+}
+
+int
 slrpc_waitrep(__unusedx struct slashrpc_cservice *csvc,
     struct pscrpc_request *rq, int plen, void *mpp)
 {
-	return (slrpc_waitgenrep(rq, plen, mpp));
+	int rc;
+
+	slrpc_req_out(csvc, rq);
+	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
+	rc = pfl_rsx_waitrep(rq, plen, mpp);
+	if (rc == 0) {
+		rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
+		if (rc == 0)
+			slrpc_rep_in(csvc, rq);
+	}
+	return (rc);
 }
 
 int
@@ -87,6 +102,8 @@ slrpc_allocrepn(struct pscrpc_request *rq, void *mq0p, int q0len,
 	    plens, rcoff);
 	rcp = PSC_AGP(*(void **)mp0p, rcoff);
 	*rcp = authbuf_check(rq, PSCRPC_MSG_REQUEST);
+	if (*rcp == 0)
+		slrpc_req_in(rq);
 	return (*rcp);
 }
 
@@ -162,6 +179,7 @@ slrpc_connect_cb(struct pscrpc_request *rq,
 	} else {
 		sl_csvc_online(csvc);
 		*stkversp = mp->stkvers;
+		slrpc_rep_in(csvc, rq);
 	}
 	CSVC_WAKE(csvc);
 	sl_csvc_decref(csvc);
@@ -213,9 +231,7 @@ slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
 		rq->rq_interpret_reply = slrpc_connect_cb;
 		rq->rq_async_args.pointer_arg[0] = csvc;
 		rq->rq_async_args.pointer_arg[1] = stkversp;
-		authbuf_sign(rq, PSCRPC_MSG_REQUEST);
-//		psc_multiwait_addcond(mw, &csvc->csvc_mwc);
-		rc = pscrpc_nbreqset_add(sl_nbrqset, rq);
+		rc = SL_NBRQSET_ADD(csvc, rq);
 		if (rc) {
 			pscrpc_req_finished(rq);
 			return (rc);
@@ -256,6 +272,8 @@ slrpc_ping_cb(struct pscrpc_request *rq,
 	clock_gettime(CLOCK_MONOTONIC, &csvc->csvc_mtime);
 	if (rc)
 		sl_csvc_disconnect(csvc);
+	else
+		slrpc_rep_in(csvc, rq);
 	sl_csvc_decref(csvc);
 	return (0);
 }
@@ -276,13 +294,15 @@ slrpc_issue_ping(struct slashrpc_cservice *csvc, int st_rc)
 	rq->rq_timeoutable = 1;
 	rq->rq_interpret_reply = slrpc_ping_cb;
 	rq->rq_async_args.pointer_arg[0] = csvc;
-	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 
 	CSVC_LOCK(csvc);
 	sl_csvc_incref(csvc);
 	CSVC_ULOCK(csvc);
 
-	return (pscrpc_nbreqset_add(sl_nbrqset, rq));
+	rc = SL_NBRQSET_ADD(csvc, rq);
+	if (rc)
+		sl_csvc_decref(csvc);
+	return (rc);
 }
 
 int
@@ -371,7 +391,7 @@ sl_csvc_useable(struct slashrpc_cservice *csvc)
 /**
  * sl_csvc_markfree - Mark that a connection will be freed when the last
  *	reference goes away.  This should never be performed on service
- *	connections on resms, only for service connections to clients.
+ *	connections to resms, only for service connections to clients.
  * @csvc: client service.
  */
 void
@@ -581,8 +601,7 @@ slrpc_getstkversp(struct slashrpc_cservice *csvc)
 int
 csvc_cli_cmp(const void *a, const void *b)
 {
-	const struct slashrpc_cservice *ca = a;
-	const struct slashrpc_cservice *cb = b;
+	const struct slashrpc_cservice *ca = a, *cb = b;
 
 	return (CMP(ca->csvc_import->imp_connection->c_peer.nid,
 	    cb->csvc_import->imp_connection->c_peer.nid));
@@ -807,9 +826,13 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
  out:
 	if (csvc)
 		sl_csvc_incref(csvc);
-	else if ((flags & CSVCF_NONBLOCK) && mw)
-		psc_multiwait_addcond(mw,
-		    &(*csvcp)->csvc_mwc);
+	else if ((flags & CSVCF_NONBLOCK) && mw) {
+		if (psc_multiwait_hascond(mw, &(*csvcp)->csvc_mwc))
+			psc_multiwait_setcondwakeable(mw,
+			    &(*csvcp)->csvc_mwc, 1);
+		else
+			psc_multiwait_addcond(mw, &(*csvcp)->csvc_mwc);
+	}
 	CSVC_URLOCK(*csvcp, locked);
 	return (csvc);
 }
@@ -842,7 +865,8 @@ slconnthr_main(struct psc_thread *thr)
 			if (timespeccmp(&diff, &intv, >=)) {
 				pingrc = sct->sct_pingupc(sct->sct_pingupcarg);
 				if (pingrc)
-					psclog_errorx("sct_pingupc failed (rc=%d)", pingrc);
+					psclog_errorx("sct_pingupc "
+					    "failed (rc=%d)", pingrc);
 				memcpy(&ts0, &ts1, sizeof(ts0));
 			}
 		}
