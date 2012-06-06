@@ -59,17 +59,17 @@ bmap_orphan(struct bmapc_memb *b)
 {
 	struct fidc_membh *f = b->bcm_fcmh;
 	int waslocked, waslocked2;
-	
+
 	waslocked = BMAP_RLOCK(b);
 	psc_assert(!(b->bcm_flags & BMAP_ORPHAN));
 
- 	if (b->bcm_flags & BMAP_CLOSING) {
+	if (b->bcm_flags & BMAP_CLOSING) {
 		/* bug #249.  bmap_remove() is already pending.
 		 */
 		BMAP_ULOCK(b);
 		return;
 	}
-	b->bcm_flags |= BMAP_ORPHAN;	
+	b->bcm_flags |= BMAP_ORPHAN;
 	BMAP_ULOCK(b);
 
 	DEBUG_BMAP(PLL_INFO, b, "orphan");
@@ -90,9 +90,9 @@ bmap_orphan_all_locked(struct fidc_membh *f)
 	struct bmapc_memb *a, *b;
 
 	FCMH_LOCK_ENSURE(f);
-	
+
 	for (a = SPLAY_MIN(bmap_cache, &f->fcmh_bmaptree); a; a = b) {
-                b = SPLAY_NEXT(bmap_cache, &f->fcmh_bmaptree, a);
+		b = SPLAY_NEXT(bmap_cache, &f->fcmh_bmaptree, a);
 		bmap_orphan(a);
 	}
 }
