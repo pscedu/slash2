@@ -182,7 +182,7 @@ slm_bml_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 		p += n + 1;
 
 	printf("%016"SLPRIxFID" %6u "
-	    "%14s %15s "
+	    "%14.14s %15s "
 	    "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c "
 	    "%7"PRIu64"\n",
 	    scbl->scbl_fg.fg_fid, scbl->scbl_bno,
