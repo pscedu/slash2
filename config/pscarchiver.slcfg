@@ -17,17 +17,22 @@ set pref_ios="sense345@PSCARCH";
 set fsuuid="3a8cea38614e8122";
 set zpool_name="arc_s2mds";
 
-set allow_exec="
-	/bin/cp:
-	/bin/ls:
-	/bin/mv:
-	/usr/local/bin/far:
-	/usr/bin/scp:
-	/usr/bin/sftp:
-	/usr/bin/rsync:
-	/usr/psc/globus/default/bin/globus-url-copy:
-	/usr/depot/x86_64_rhel5/globus-clients.002/globus/5.0.2/bin/gsiscp
-";
+#set allow_exec="
+#	/bin/cp:
+#	/bin/ls:
+#	/bin/mv:
+#	/bin/cat:
+#	/bin/dd:
+#	/usr/local/bin/far:
+#	/usr/bin/scp:
+#	/usr/bin/sftp:
+#	/usr/bin/rsync:
+#	/usr/bin/md5sum:
+#	/usr/bin/sha1sum:
+#	/usr/bin/sum:
+#	/usr/psc/globus/default/bin/globus-url-copy:
+#	/usr/depot/x86_64_rhel5/globus-clients.002/globus/5.0.2/bin/gsiscp
+#";
 
 site @PSCARCH {
 	site_desc	= "PSC archiver";
