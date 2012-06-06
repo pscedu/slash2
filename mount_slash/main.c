@@ -560,7 +560,6 @@ msl_stat(struct fidc_membh *fcmh, void *arg)
 	 * /$mountpoint/.slfidns/<fid>
 	 */
 	if (fcmh_2_fid(fcmh) == SLFID_NS) {
-		fcmh->fcmh_sstb.sst_fid = SLFID_NS;
 		fcmh->fcmh_sstb.sst_gen = 0;
 		fcmh->fcmh_sstb.sst_mode = S_IFDIR | 0111;
 		fcmh->fcmh_sstb.sst_nlink = 2;
