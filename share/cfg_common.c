@@ -122,8 +122,8 @@ libsl_ios2resm(sl_ios_id_t id)
 	/* May only be called on behalf of the following types
 	 *   of resources.
 	 */
-	psc_assert((res->res_type == SLREST_STANDALONE_FS     ||
-		    res->res_type == SLREST_ARCHIVAL_FS       ||
+	psc_assert((res->res_type == SLREST_STANDALONE_FS	||
+		    res->res_type == SLREST_ARCHIVAL_FS		||
 		    res->res_type == SLREST_PARALLEL_COMPNT) &&
 		   (psc_dynarray_len(&res->res_members) == 1));
 

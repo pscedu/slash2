@@ -610,8 +610,8 @@ slcfg_resm_addaddr(char *addr, const char *lnetname)
 			yyerror("NID already registered");
 
 		rc = snprintf(resm_nidp->resmnid_addrbuf,
-		      sizeof(resm_nidp->resmnid_addrbuf),
-		      "%s:%s", currentRes->res_name, addr);
+		    sizeof(resm_nidp->resmnid_addrbuf),
+		    "%s:%s", currentRes->res_name, addr);
 		if (rc >= (int)sizeof(resm_nidp->resmnid_addrbuf)) {
 			errno = ENAMETOOLONG;
 			rc = -1;
