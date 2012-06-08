@@ -838,7 +838,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 }
 
 /**
- * slconnthr_main -
+ * slconnthr_main - Logic for peer resource connection monitor.
  * MDS - needs to check pings from IONs
  * ION - needs to send PINGs to MDS
  * CLI - needs to send PINGs to IONs
@@ -878,7 +878,7 @@ slconnthr_main(struct psc_thread *thr)
 			PSCTHR_ULOCK(thr);
 			csvc = sl_csvc_get(scp->scp_csvcp,
 			    psc_atomic32_read(&scp->scp_flags) |
-			    CSVCF_NONBLOCK | CSVCF_NORECON, NULL,
+			    CSVCF_NONBLOCK, NULL,
 			    scp->scp_peernids,
 			    scp->scp_rqptl, scp->scp_rpptl,
 			    scp->scp_magic, scp->scp_version,
