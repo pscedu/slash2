@@ -1,5 +1,7 @@
 -- $Id$
 
+DROP TABLE IF EXISTS upsch;
+
 CREATE TABLE upsch (
 	id		INT			AUTO_INCREMENT,
 	resid		UNSIGNED INT,
@@ -7,12 +9,11 @@ CREATE TABLE upsch (
 	uid		UNSIGNED INT,
 	gid		UNSIGNED INT,
 	bno		UNSIGNED INT,
-	status		ENUM('Q', 'S'),
+	status		CHAR(1), -- 'Q' or 'S'
 
-	PRIMARY KEY(id)
---	KEY(resid),
---	KEY(fid),
---	KEY(uid),
---	KEY(gid),
---	KEY(bno)
+	recpt_elem	BIGINT,
+	recpt_key	BIGINT UNSIGNED,
+
+	PRIMARY KEY(id),
+	UNIQUE(resid, fid, bno)
 );
