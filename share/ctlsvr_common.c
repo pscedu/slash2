@@ -178,3 +178,9 @@ slctlrep_getfcmhs(int fd, struct psc_ctlmsghdr *mh, void *m)
 	}
 	return (rc);
 }
+
+void
+slctlparam_version_get(char *val)
+{
+	snprintf(val, PCP_VALUE_MAX, "%d", SL_STK_VERSION);
+}

@@ -506,6 +506,9 @@ msctlthr_spawn(void)
 	psc_ctlparam_register("rlim", psc_ctlparam_rlim);
 	psc_ctlparam_register("run", psc_ctlparam_run);
 
+	psc_ctlparam_register_simple("version", slctlparam_version_get,
+	    NULL);
+
 	/* XXX: add max_fs_iosz */
 	psc_ctlparam_register_simple("mountpoint",
 	    msctlparam_mountpoint_get, NULL);

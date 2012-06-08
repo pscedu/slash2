@@ -530,5 +530,8 @@ slictlthr_main(const char *fn)
 	psc_ctlparam_register("rlim", psc_ctlparam_rlim);
 	psc_ctlparam_register("run", psc_ctlparam_run);
 
+	psc_ctlparam_register_simple("version", slctlparam_version_get,
+	    NULL);
+
 	psc_ctlthr_main(fn, slictlops, nitems(slictlops), SLITHRT_CTLAC);
 }
