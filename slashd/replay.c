@@ -69,6 +69,7 @@ mds_replay_bmap(void *jent, int op)
 		bmap_2_replpol(b) = sjbr->sjbr_replpol;
 		memcpy(b->bcm_repls, sjbr->sjbr_repls,
 		    SL_REPLICA_NBYTES);
+		/* XXX update db entries */
 		break;
 	case B_REPLAY_OP_CRC: {
 		struct slash_inode_handle *ih;
