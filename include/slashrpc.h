@@ -256,7 +256,7 @@ struct srt_stat {
 } __packed;
 
 #define DEBUG_SSTB(level, sstb, fmt, ...)				\
-	psclog((level), "sstb (%p) fg:"SLPRI_FG" "			\
+	psclog((level), "sstb@%p fg:"SLPRI_FG" "			\
 	    "dev:%"PRIu64" mode:%#o "					\
 	    "nlink:%"PRIu64" uid:%u gid:%u "				\
 	    "rdev:%"PRIu64" sz:%"PRIu64" "				\
@@ -298,12 +298,12 @@ struct srt_statfs {
 } __packed;
 
 #define DEBUG_SSTATFS(level, s, fmt, ...)				\
-	psclog((level), "sstatfs (%p) type=%s "				\
-	       "bsz=%u iosz=%u nblks=%"PRIu64" bfree=%"PRIu64" "	\
-	       "bavail=%"PRIu64" " fmt,					\
-	       (s), (s)->sf_type, (s)->sf_bsize, (s)->sf_iosize,	\
-	       (s)->sf_blocks, (s)->sf_bfree, (s)->sf_bavail,		\
-	       ## __VA_ARGS__)
+	psclog((level), "sstatfs@%p type=%s "				\
+	    "bsz=%u iosz=%u nblks=%"PRIu64" bfree=%"PRIu64" "		\
+	    "bavail=%"PRIu64" " fmt,					\
+	    (s), (s)->sf_type, (s)->sf_bsize, (s)->sf_iosize,		\
+	    (s)->sf_blocks, (s)->sf_bfree, (s)->sf_bavail,		\
+	    ## __VA_ARGS__)
 
 struct srt_bmapminseq {
 	uint64_t		bminseq;
