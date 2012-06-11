@@ -171,3 +171,7 @@ sdg1       --B-    0   4096   0          f704            b4          f704   1796
 My impression is that the journal can be reformatted once its contents are used.  But Paul has
 some concerns.  Anyway, my tests work fine with me.
 
+06/11/2012
+----------
+
+Now I can register a newly-created file system on the fly.
