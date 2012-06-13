@@ -300,11 +300,11 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 				slvr_ref[i]->slvr_pndgreads--;
 			else
 				slvr_ref[i]->slvr_pndgwrts--;
-			
+
 			slvr_clear_inuse(slvr_ref[i], 0, SLASH_SLVR_SIZE);
 			slvr_lru_tryunpin_locked(slvr_ref[i]);
 			SLVR_ULOCK(slvr_ref[i]);
-			
+
 			DEBUG_SLVR(PLL_WARN, slvr_ref[i],
 			    "unwind ref due to bulk error (rw=%d)", rw);
 		}
