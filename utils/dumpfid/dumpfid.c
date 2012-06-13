@@ -19,6 +19,7 @@
 
 #include <sys/param.h>
 #include <sys/uio.h>
+#include <sys/xattr.h>
 
 #include <err.h>
 #include <fcntl.h>
@@ -44,6 +45,7 @@ const char *progname;
 #define	K_REPLS		(1 << 6)
 #define	K_VERSION	(1 << 7)
 #define	K_XCRC		(1 << 8)
+#define	K_FSIZE		(1 << 9)
 #define	K_ALL		(~0)
 
 const char *show_keywords[] = {
@@ -56,12 +58,13 @@ const char *show_keywords[] = {
 	"repls",
 	"version",
 	"xcrc",
+	"fsize",
 };
 
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-o keys] file ...\n", progname);
+	fprintf(stderr, "usage: %s [-u] [-o keys] file ...\n", progname);
 	exit(1);
 }
 
@@ -73,6 +76,7 @@ dumpfid(const char *fn)
 	struct iovec iovs[2];
 	uint64_t crc, od_crc;
 	uint32_t nr, j;
+	char fsize[64];
 	ssize_t rc;
 	int fd;
 
@@ -95,6 +99,10 @@ dumpfid(const char *fn)
 		    fn, sizeof(ino) + sizeof(od_crc), rc);
 		goto out;
 	}
+
+#define SLXAT_SIZE	".sl2-fsize"
+	rc = fgetxattr(fd, SLXAT_SIZE, fsize, sizeof(fsize));
+
 	psc_crc64_calc(&crc, &ino, sizeof(ino));
 	printf("%s:\n", fn);
 	if (show & K_CRC)
@@ -109,6 +117,8 @@ dumpfid(const char *fn)
 		printf("  nrepls %u\n", ino.ino_nrepls);
 	if (show & K_REPLPOL)
 		printf("  replpol %u\n", ino.ino_replpol);
+	if (show & K_SIZE && rc > 0)
+		printf("  fsize %s\n", fsize);
 
 	nr = ino.ino_nrepls;
 	if (nr > SL_DEF_REPLICAS) {
