@@ -117,7 +117,7 @@ dumpfid(const char *fn)
 		printf("  nrepls %u\n", ino.ino_nrepls);
 	if (show & K_REPLPOL)
 		printf("  replpol %u\n", ino.ino_replpol);
-	if (show & K_SIZE && rc > 0)
+	if (show & K_FSIZE && rc > 0)
 		printf("  fsize %s\n", fsize);
 
 	nr = ino.ino_nrepls;
