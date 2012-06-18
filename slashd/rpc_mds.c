@@ -131,6 +131,7 @@ slm_rpc_ion_unpack_statfs(struct pscrpc_request *rq, int type)
 	struct srt_statfs *f;
 	struct pscrpc_msg *m;
 	struct sl_resm *resm;
+	int locked;
 
 	m = type == PSCRPC_MSG_REPLY ? rq->rq_repmsg : rq->rq_reqmsg;
 	if (m == NULL) {
@@ -151,10 +152,10 @@ slm_rpc_ion_unpack_statfs(struct pscrpc_request *rq, int type)
 		psclog_errorx("unknown peer");
 		return;
 	}
-	CSVC_LOCK(resm->resm_csvc);
+	locked = CSVC_LOCK(resm->resm_csvc);
 	si = res2iosinfo(resm->resm_res);
 	memcpy(&si->si_ssfb, f, sizeof(*f));
-	CSVC_ULOCK(resm->resm_csvc);
+	CSVC_URLOCK(resm->resm_csvc, locked);
 }
 
 int
