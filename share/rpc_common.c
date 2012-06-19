@@ -644,7 +644,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	} *expc;
 
 	if (*csvcp == NULL) {
-		CONF_LOCK();
+		locked = CONF_RLOCK();
 		if (*csvcp == NULL) {
 			/* initialize service */
 			csvc = *csvcp = sl_csvc_create(rqptl, rpptl);
@@ -719,7 +719,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 			if (peertype == SLCONNT_CLI)
 				addlist = 1;
 		}
-		CONF_ULOCK();
+		CONF_URLOCK(locked);
 	}
 	csvc = *csvcp;
 
