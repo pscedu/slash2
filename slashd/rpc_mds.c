@@ -152,7 +152,7 @@ slm_rpc_ion_unpack_statfs(struct pscrpc_request *rq, int type)
 		psclog_errorx("unknown peer");
 		return;
 	}
-	locked = CSVC_LOCK(resm->resm_csvc);
+	locked = CSVC_RLOCK(resm->resm_csvc);
 	si = res2iosinfo(resm->resm_res);
 	memcpy(&si->si_ssfb, f, sizeof(*f));
 	CSVC_URLOCK(resm->resm_csvc, locked);
