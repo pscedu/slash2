@@ -195,7 +195,7 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
  out:
 	reqlock(&mrsq->mrsq_lock);
 	if (eof)
-		mrsq_release(mrsq, 0);
+		mrsq_release(mrsq, 1);
 	mrsq_release(mrsq, rc);
 	PSCFREE(mrsl);
 	return (mp->rc);
@@ -294,7 +294,7 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 	b->bcm_flags |= BMAP_DIO;
 	BMAP_ULOCK(b);
 
-	DEBUG_BMAP(PLL_WARN, b, "trying to dump the cache");	
+	DEBUG_BMAP(PLL_WARN, b, "trying to dump the cache");
 	msl_bmap_cache_rls(b);
 	DEBUG_BMAP(PLL_WARN, b, "done");
 
