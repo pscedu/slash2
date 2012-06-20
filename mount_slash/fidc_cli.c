@@ -93,6 +93,7 @@ slc_fcmh_ctor(struct fidc_membh *fcmh)
 
 	fci = fcmh_get_pri(fcmh);
 	slc_fcmh_refresh_age(fcmh);
+	INIT_PSC_LISTENTRY(&fci->fci_lentry);
 	siteid = FID_GET_SITEID(fcmh_2_fid(fcmh));
 	if (fcmh_2_fid(fcmh) >= SLFID_MIN &&
 	    siteid != slc_rmc_resm->resm_siteid) {
@@ -114,7 +115,6 @@ slc_fcmh_ctor(struct fidc_membh *fcmh)
 		return (ESTALE);
 	}
 	fci->fci_resm = slc_rmc_resm;
-	INIT_PSC_LISTENTRY(&fci->fci_lentry);
 	return (0);
 }
 
