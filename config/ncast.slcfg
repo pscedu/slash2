@@ -5,6 +5,7 @@
 # NCAST configuration
 set port=1300;
 set net=tcp10;
+set fsuuid="3a8cea38614e8123";
 
 # Pull in other/local config files
 # include "/etc/slash/*.slcfg"
