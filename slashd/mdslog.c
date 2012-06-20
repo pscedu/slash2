@@ -1657,11 +1657,10 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	struct resprof_mds_info *rpmi;
 	struct sl_resource *res;
 	struct sl_resm *resm;
-	char *jrnldev, fn[PATH_MAX];
-	void *handle;
-	size_t size, entrysize;
 	struct srt_stat	sstb;
-	void *reclaimbuf = NULL;
+	void *handle, *reclaimbuf = NULL;
+	char *jrnldev, fn[PATH_MAX];
+	size_t size, entrysize;
 
 	psc_assert(_MDS_LOG_LAST_TYPE <= (1 << 15));
 	psc_assert(sizeof(struct srt_update_entry) == 512);
@@ -1775,7 +1774,8 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	if (sstb.sst_size) {
 		reclaimbuf = PSCALLOC(sstb.sst_size);
 
-		rc = mds_read_file(handle, reclaimbuf, sstb.sst_size, &size, 0);
+		rc = mds_read_file(handle, reclaimbuf, sstb.sst_size,
+		    &size, 0);
 		psc_assert(rc == 0 && size == sstb.sst_size);
 
 		max = SLM_RECLAIM_BATCH;
@@ -1792,7 +1792,8 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 
 		total = size / entrysize;
 		count = 0;
-		psclog_warnx("Scanning the last reclaim log, batchno = %"PRId64, current_reclaim_batchno);
+		psclog_warnx("Scanning the last reclaim log, batchno=%"PRId64,
+		    current_reclaim_batchno);
 		while (count < total) {
 			last_reclaim_xid = reclaim_entryp->xid;
 			reclaim_entryp = PSC_AGP(reclaim_entryp, entrysize);
