@@ -393,6 +393,7 @@ reimport
 - st_blocks is broken
 - convert MDS rcmc.c to async RPCs
 - add du(1) functionality in dumpfid
+- remove bulk exchange on small RENAMEs to cut overhead
 
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
