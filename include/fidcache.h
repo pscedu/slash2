@@ -223,6 +223,8 @@ void	_fcmh_op_done_type(const struct pfl_callerinfo *, struct fidc_membh *, enum
 #define fcmh_op_done_type(fcmh, type)					\
 	_fcmh_op_done_type(PFL_CALLERINFOSS(SLSS_FCMH), (fcmh), (type))
 
+#define fcmh_op_done(fcmh)	fcmh_op_done_type((fcmh), FCMH_OPCNT_LOOKUP_FIDC)
+
 void	 _dump_fcmh_flags_common(int *, int *);
 
 extern struct sl_fcmh_ops	 sl_fcmh_ops;
