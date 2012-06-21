@@ -101,7 +101,7 @@ struct bmap_ondisk {
 struct bmapc_memb {
 	sl_bmapno_t		 bcm_bmapno;	/* bmap index number */
 	struct fidc_membh	*bcm_fcmh;	/* pointer to fid info */
-	psc_atomic32_t		 bcm_opcnt;	/* pending opcnt */
+	psc_atomic32_t		 bcm_opcnt;	/* pending opcnt (# refs) */
 	uint32_t		 bcm_flags;	/* see BMAP_* below */
 	psc_spinlock_t		 bcm_lock;
 	SPLAY_ENTRY(bmapc_memb)	 bcm_tentry;	/* bmap_cache splay tree entry */
@@ -138,6 +138,8 @@ struct bmapc_memb {
 #define BMAP_NEW		(1 << 15)	/* just created */
 #define BMAP_ARCHIVER		(1 << 16)	/* archiver */
 #define _BMAP_FLSHFT		(1 << 17)
+
+#define bmap_2_fid(b)		fcmh_2_fid((b)->bcm_fcmh)
 
 #define SL_MAX_IOSREASSIGN		16
 #define SL_MAX_BMAP_FLUSH_RETRIES	2048
@@ -296,17 +298,19 @@ struct bmapc_memb {
 #define BMAPGETF_LOAD		(1 << 0)	/* allow loading if not in cache */
 #define BMAPGETF_NORETRIEVE	(1 << 1)	/* when loading, do not invoke retrievef */
 #define BMAPGETF_NOAUTOINST	(1 << 2)	/* do not autoinstantiate */
+#define BMAPGETF_REPLAY		(1 << 3)	/* loading during journal replay */
 
 int	 bmap_cmp(const void *, const void *);
 void	 bmap_cache_init(size_t);
 void	 bmap_orphan(struct bmapc_memb *);
-void     bmap_orphan_all_locked(struct fidc_membh *);
+void	 bmap_orphan_all_locked(struct fidc_membh *);
 void	 bmap_biorq_waitempty(struct bmapc_memb *);
 void	_bmap_op_done(const struct pfl_callerinfo *,
 	    struct bmapc_memb *, const char *, ...);
 int	_bmap_get(const struct pfl_callerinfo *, struct fidc_membh *,
 	    sl_bmapno_t, enum rw, int, struct bmapc_memb **);
-struct bmapc_memb * bmap_lookup_cache_locked(struct fidc_membh *, sl_bmapno_t);
+struct bmapc_memb *
+	 bmap_lookup_cache_locked(struct fidc_membh *, sl_bmapno_t);
 
 int	 bmapdesc_access_check(struct srt_bmapdesc *, enum rw, sl_ios_id_t);
 
@@ -342,7 +346,8 @@ enum bmap_opcnt_types {
 /* 10 */ BMAP_OPCNT_TRUNCWAIT,
 /* 11 */ BMAP_OPCNT_READA,
 /* 12 */ BMAP_OPCNT_LEASEEXT,
-/* 13 */ BMAP_OPCNT_REASSIGN
+/* 13 */ BMAP_OPCNT_REASSIGN,
+/* 14 */ BMAP_OPCNT_UPSCH
 };
 
 SPLAY_HEAD(bmap_cache, bmapc_memb);
