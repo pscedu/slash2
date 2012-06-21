@@ -237,4 +237,12 @@ fcmh_get_pri(struct fidc_membh *fcmh)
 	return (fcmh + 1);
 }
 
+static __inline struct fidc_membh *
+fcmh_from_pri(void *p)
+{
+	struct fidc_membh *f = p;
+
+	return (f - 1);
+}
+
 #endif /* _SL_FIDCACHE_H_ */
