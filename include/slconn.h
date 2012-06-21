@@ -106,7 +106,7 @@ struct slashrpc_cservice {
 #define CSVCF_NORECON		(1 << 6)		/* do not attempt reconnection if down */
 
 #define CSVC_RECONNECT_INTV	10			/* seconds */
-#define CSVC_PING_INTV          10			/* seconds */
+#define CSVC_PING_INTV		10			/* seconds */
 
 #define DEBUG_CSVC(lvl, csvc, fmt, ...)					\
 	do {								\
@@ -137,7 +137,7 @@ struct sl_expcli_ops {
 	    (pq), (pp), (mag), (vers), (ctype), (mw))
 
 #define sl_csvc_decref(csvc)		_sl_csvc_decref(CSVC_CALLERINFO, (csvc))
-#define sl_csvc_disconnect(csvc)        _sl_csvc_disconnect(CSVC_CALLERINFO, (csvc))
+#define sl_csvc_disconnect(csvc)	_sl_csvc_disconnect(CSVC_CALLERINFO, (csvc))
 
 #define SL_EXP_REGISTER_RESM(exp, getcsvc)				\
 	_PFL_RVSTART {							\
