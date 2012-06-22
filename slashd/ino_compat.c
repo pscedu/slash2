@@ -227,7 +227,8 @@ mds_inode_update_interrupted(struct slash_inode_handle *ih, int *rc)
  out:
 	if (h)
 		mdsio_release(&rootcreds, h);
-	mdsio_unlink(mds_tmpdir_inum, NULL, fn, &rootcreds, NULL, NULL);
+	if (rc)
+		mdsio_unlink(mds_tmpdir_inum, NULL, fn, &rootcreds, NULL, NULL);
 	inoh_2_mdsio_data(ih) = th;
 	return (exists);
 }
