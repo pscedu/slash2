@@ -175,10 +175,7 @@ in release but I don't see good performance for 'ls -al'.
 - merge set_bmapreplpol and friends into a single slfattr interface
 - push O_APPEND writes always to EOF instead of the the client-sent offset
 
-- add ctl knobs for changing preferred IOS
 - allow multiple preferred IOS servers
-
-- hold a maximum # entries in mem from .slmd/upsch at any given time?
 
 -------------------------------------------------------------------------
 
@@ -237,9 +234,9 @@ MDS must do this for scheduling traffic between sliods
 
 - failure of connections
     (o) write messages to stderr of the process trying to do I/O when
-	the connections are down
+	the connections are down, or maybe TTY
 
-- add throttling and ping channel control to slash
+- add throttling and ping channel control
 
 utime
     (o)	track how long sliod has held the I/O and send the difference to
@@ -268,9 +265,6 @@ API rename
   remove old backing directories at their convenience while not
   compromising data integrity.
 
-- change upsched to do async callbacks
-- does upsched get hung up by huge recursive repl reqs ?
-
 - if the target ptrunc offset falls inside a bmap, do more stuff:
     (o) mark the CRC for this bmap as unknown (we don't do this)
 
@@ -279,7 +273,6 @@ API rename
 - need a general mechanism to pass data between msctl/slictl/slmctl
   so we get all the functionality everywhere and don't have to copy huge
   chunks of code
-- slmctl -s peertraffic -s replrqs -s diskusage
 - ensure all system errno values in rpc msgs are standardized
 - convert CONF_LOCK to a rwlock
 - we can't hold fcmh in memory at all times just because PTRUNC has to
@@ -290,7 +283,6 @@ API rename
 - add a generic SRMT_BMAPCTL that bunches up ops such as WAKE, RELEASE,
   DIO, etc.
 - do full truncate and unlink do the right things while ptrunc is resolving?
-- add SSL transport which uses keys and can therefore disable authbuf
 
 - write a ptrunc tester: or just use truncate(1) or a dd(1) that does truncate(2)
 - for -s connections, we arguably do not need to show members of the
