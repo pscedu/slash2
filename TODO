@@ -353,7 +353,7 @@ API rename
   We might want to do the same thing for metadata server.
 - msctl is broken on 32-bit because of ino # compression
 - move msctl sock to $MOUNTPOINT/.slmd/ctlsock and have msctl ascend to
-  that on arguments
+  that on arguments?
 - add authbuf file path to slcfg
 
 reimport
@@ -370,7 +370,6 @@ reimport
 - watch out for EMFILE on freebsd
 - wolverine/single cpu missed wakeup
 - research holdup in fbsd zio_write_intr
-- test remote syslog
 - file system-level replication controls, e.g.
 
     $ cp myfile .sl/foo@BAR
@@ -388,11 +387,12 @@ reimport
 - uptime instance nonce variable that allows msl to dump data if it
   changes while communicating with sliod
    (o) mark new flag on msl csvc when upnonce changes in CONNECT
-- st_blocks is broken
-- msctl -r is broken on some files in the archiver, figure out what is
+- st_blocks is broken on some files in /arc
+- msctl -r is broken on some files in /arc, figure out what is
   going on
 - convert MDS rcmc.c to async RPCs
 - msl iostats intv do not tally total data, they count #
+    - maybe add a flag to iostats to count in base 2 or base 10
 - add du(1) functionality in dumpfid
     - requires import of zfs-fuse-0.7.0
 
