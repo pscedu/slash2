@@ -846,7 +846,12 @@ struct srm_rename_req {
 	struct slash_fidgen	opfg;		/* old parent dir */
 	uint32_t		fromlen;	/* NUL not transmitted */
 	uint32_t		tolen;		/* NUL not transmitted */
-/* 'from' and 'to' component names are in bulk data without terminating NULs */
+#define SRM_RENAME_NAMEMAX	448
+	char			buf[SRM_RENAME_NAMEMAX];
+/*
+ * 'from' and 'to' component names are in bulk data without terminating
+ * NULs, unless they are small and can fit directly in the RPC.
+ */
 } __packed;
 
 struct srm_rename_rep {

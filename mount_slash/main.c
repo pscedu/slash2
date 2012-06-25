@@ -1705,12 +1705,18 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	mq->fromlen = strlen(oldname);
 	mq->tolen = strlen(newname);
 
-	iov[0].iov_base = (char *)oldname;
-	iov[0].iov_len = mq->fromlen;
-	iov[1].iov_base = (char *)newname;
-	iov[1].iov_len = mq->tolen;
+	if (mq->fromlen + mq->tolen > SRM_RENAME_NAMEMAX) {
+		iov[0].iov_base = (char *)oldname;
+		iov[0].iov_len = mq->fromlen;
+		iov[1].iov_base = (char *)newname;
+		iov[1].iov_len = mq->tolen;
 
-	rsx_bulkclient(rq, BULK_GET_SOURCE, SRMC_BULK_PORTAL, iov, 2);
+		rsx_bulkclient(rq, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
+		    iov, 2);
+	} else {
+		memcpy(mq->buf, oldname, mq->fromlen);
+		memcpy(mq->buf + mq->fromlen, newname, mq->tolen);
+	}
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc))

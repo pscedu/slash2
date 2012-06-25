@@ -692,21 +692,29 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fromlen == 0 || mq->tolen == 0 ||
-	    mq->fromlen > SL_NAME_MAX || mq->tolen > SL_NAME_MAX)
-		return (EINVAL);
-
-	iov[0].iov_base = from;
-	iov[0].iov_len = mq->fromlen;
-	iov[1].iov_base = to;
-	iov[1].iov_len = mq->tolen;
-
-	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, SRMC_BULK_PORTAL,
-	    iov, 2);
-	if (mp->rc)
+	    mq->fromlen > SL_NAME_MAX ||
+	    mq->tolen   > SL_NAME_MAX) {
+		mp->rc = -EINVAL;
 		return (mp->rc);
+	}
+
+	if (mq->fromlen + mq->tolen > SRM_RENAME_NAMEMAX) {
+		iov[0].iov_base = from;
+		iov[0].iov_len = mq->fromlen;
+		iov[1].iov_base = to;
+		iov[1].iov_len = mq->tolen;
+
+		mp->rc = rsx_bulkserver(rq, BULK_GET_SINK,
+		    SRMC_BULK_PORTAL, iov, 2);
+		if (mp->rc)
+			return (mp->rc);
+	} else {
+		memcpy(from, mq->buf, mq->fromlen);
+		memcpy(to, mq->buf + mq->fromlen, mq->tolen);
+	}
 
 	from[mq->fromlen] = '\0';
-	to[mq->tolen] = '\0';
+	to[mq->tolen]     = '\0';
 
 	mp->rc = slm_fcmh_get(&mq->opfg, &op);
 	if (mp->rc)
