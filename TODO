@@ -179,7 +179,6 @@ in release but I don't see good performance for 'ls -al'.
 - allow multiple preferred IOS servers
 
 - hold a maximum # entries in mem from .slmd/upsch at any given time?
-- merge uswk into fmi and kill uswi struct
 
 -------------------------------------------------------------------------
 
@@ -378,22 +377,24 @@ reimport
     $ cat .slrpl/myfile
 
 - kill -D argument; provide arg/slcfg var for authbuf key
-- add -D arg to daemons for to stop daemonization and make that behavior
+- add -d arg to daemons to stop daemonization and make that behavior
   default in developer builds
 - directory replica table inheritance
 - test msctl -Q <symlink>
 - journal log ino_repl_nblks modifications
-- upsch inquiries shouldn't wakeup the uswi to retry unnecessary
-  processing
 - fix sliod connection bug visible from slmctl
 - fix mount_slash multiple connection bug visible from slmctl
+   (o) should be fixed by new connthr diff
 - uptime instance nonce variable that allows msl to dump data if it
   changes while communicating with sliod
    (o) mark new flag on msl csvc when upnonce changes in CONNECT
 - st_blocks is broken
+- msctl -r is broken on some files in the archiver, figure out what is
+  going on
 - convert MDS rcmc.c to async RPCs
+- msl iostats intv do not tally total data, they count #
 - add du(1) functionality in dumpfid
-- remove bulk exchange on small RENAMEs to cut overhead
+    - requires import of zfs-fuse-0.7.0
 
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
