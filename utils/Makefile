@@ -3,10 +3,13 @@
 ROOTDIR=../..
 include ${ROOTDIR}/Makefile.path
 
-SUBDIRS+=	cursor
-SUBDIRS+=	dumpfid
 SUBDIRS+=	prslerr
-SUBDIRS+=	reclaim
 SUBDIRS+=	typedump
+
+ifneq ($(filter ${SLASH_MODULES},mds),)
+  SUBDIRS+=	cursor
+  SUBDIRS+=	dumpfid
+  SUBDIRS+=	reclaim
+endif
 
 include ${SLASHMK}
