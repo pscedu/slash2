@@ -4348,7 +4348,7 @@ Index: slash_nara/slashd/rmm.c
  		break;
  	}
 -	mds_unreserve_slot(1);
-+	mds_reserve_slot(2);
++	mds_unreserve_slot(2);
  	if (p)
  		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
  	if (op)
