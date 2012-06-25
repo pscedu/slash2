@@ -1,0 +1,19 @@
+Index: slash_nara/sliod/rpc_iod.c
+===================================================================
+--- slash_nara/sliod/rpc_iod.c	(revision 19215)
++++ slash_nara/sliod/rpc_iod.c	(working copy)
+@@ -181,11 +181,14 @@
+ 		globalConfig.gconf_fsuuid = sli_fsuuid = fsuuid;
+ 	}
+ 
++#if 0
+ 	if (globalConfig.gconf_fsuuid != fsuuid)
+ 		psc_fatalx("Mismatching UUIDs detected!  "
+ 		   "gconf_fsuuid=%"PRIx64" mds_fsuuid=%"PRIx64,
+ 		   globalConfig.gconf_fsuuid, fsuuid);
+ 
++#endif
++
+ 	return;
+ 
+  error:
