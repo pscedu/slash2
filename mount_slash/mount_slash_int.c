@@ -601,7 +601,7 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
 				 * the ground.
 				 */
 				psc_assert(!(r->biorq_flags &
-				     (BIORQ_INFL|BIORQ_SCHED)));
+				    (BIORQ_INFL | BIORQ_SCHED)));
 			else {
 				psc_assert(r->biorq_flags & BIORQ_INFL);
 				psc_assert(r->biorq_flags & BIORQ_SCHED);
@@ -609,7 +609,7 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
 			}
 		} else
 			psc_assert(!(r->biorq_flags &
-			     (BIORQ_INFL|BIORQ_SCHED)));
+			    (BIORQ_INFL | BIORQ_SCHED)));
 	}
 
 	r->biorq_flags |= BIORQ_DESTROY;
@@ -1971,11 +1971,11 @@ msl_pages_copyin(struct bmpc_ioreq *r)
 			 *    a bump if the request offset is unaligned.
 			 */
 			bmpce_usecheck(e, BIORQ_WRITE,
-				       (toff & ~BMPC_BUFMASK));
+			    (toff & ~BMPC_BUFMASK));
 			psc_assert((toff - e->bmpce_off) < BMPC_BUFSZ);
 			dest += toff - e->bmpce_off;
 			nbytes = MIN(BMPC_BUFSZ - (toff - e->bmpce_off),
-				     tsize);
+			    tsize);
 		} else {
 			bmpce_usecheck(e, BIORQ_WRITE, toff);
 			nbytes = MIN(BMPC_BUFSZ, tsize);
@@ -2106,7 +2106,7 @@ msl_getra(struct msl_fhent *mfh, int npages, int *bkwd)
 		psc_assert(mfh->mfh_ra.mra_bkwd == 0 ||
 			   mfh->mfh_ra.mra_bkwd == 1);
 		rapages = MIN(npages * mfh->mfh_ra.mra_nseq,
-			      MS_READAHEAD_MAXPGS);
+		    MS_READAHEAD_MAXPGS);
 	}
 
 	*bkwd = mfh->mfh_ra.mra_bkwd;
@@ -2197,7 +2197,7 @@ msl_fsrqinfo_state(struct msl_fsrqinfo *q, int flag, int set,
 			 */
 			if (!rc) {
 				psc_waitq_wait(&msl_fhent_flush_waitq,
-				       &q->mfsrq_fh->mfh_lock);
+				    &q->mfsrq_fh->mfh_lock);
 				MFH_LOCK(q->mfsrq_fh);
 				goto retry;
 			}
@@ -2501,8 +2501,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			if (rc) {
 				rc = msl_offline_retry(r);
 				r->biorq_flags |=
-					(r->biorq_flags & BIORQ_READ) ?
-					BIORQ_READFAIL : BIORQ_RBWFAIL;
+				    (r->biorq_flags & BIORQ_READ) ?
+				    BIORQ_READFAIL : BIORQ_RBWFAIL;
 
 				msl_biorq_destroy(r);
 				q->mfsrq_biorq[i] = NULL;
