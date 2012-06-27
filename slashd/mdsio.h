@@ -98,7 +98,7 @@ struct mdsio_ops {
 	int	(*mio_rmdir)(mdsio_fid_t, slfid_t *, const char *, const struct slash_creds *, sl_log_update_t);
 	int	(*mio_setattr)(mdsio_fid_t, const struct srt_stat *, int, const struct slash_creds *, struct srt_stat *, void *, sl_log_update_t);
 	int	(*mio_statfs)(struct statvfs *);
-	int	(*mio_symlink)(const char *, mdsio_fid_t, const char *, const struct slash_creds *, struct srt_stat *, mdsio_fid_t *, sl_getslfid_cb_t, sl_log_update_t);
+	int	(*mio_symlink)(const char *, mdsio_fid_t, const char *, const struct slash_creds *, struct srt_stat *, mdsio_fid_t *, sl_log_update_t, sl_getslfid_cb_t, slfid_t);
 	int	(*mio_unlink)(mdsio_fid_t, slfid_t *, const char *, const struct slash_creds *, sl_log_update_t, void *);
 	int	(*mio_write)(const struct slash_creds *, const void *, size_t, size_t *, off_t, int, void *, sl_log_write_t, void *);
 

@@ -1016,8 +1016,7 @@ slm_symlink(struct pscrpc_request *rq, struct srm_symlink_req *mq,
 
 	mds_reserve_slot(1);
 	mp->rc = mdsio_symlink(linkname, fcmh_2_mdsio_fid(p), mq->name,
-	    &cr, &mp->cattr, NULL, slm_get_next_slashfid,
-	    mdslog_namespace);
+	    &cr, &mp->cattr, NULL, mdslog_namespace, slm_get_next_slashfid, 0);
 	mds_unreserve_slot(1);
 
 	mdsio_fcmh_refreshattr(p, &mp->pattr);
