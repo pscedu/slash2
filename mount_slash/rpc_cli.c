@@ -126,7 +126,6 @@ slc_rmc_retry_pfcc(__unusedx struct pscfs_clientctx *pfcc, int *rc)
 	case EHOSTDOWN:
 	case EHOSTUNREACH:
 	case EIO:
-	case ENOENT:
 	case ENETDOWN:
 	case ENETRESET:
 	case ENETUNREACH:
@@ -135,7 +134,7 @@ slc_rmc_retry_pfcc(__unusedx struct pscfs_clientctx *pfcc, int *rc)
 	case ETIMEDOUT:
 		break;
 	default:
-		return (*rc);
+		return (0);
 	}
 
 //	retry = global setting
