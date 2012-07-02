@@ -645,6 +645,7 @@ msl_bmap_reap_init(struct bmapc_memb *b, const struct srt_bmapdesc *sbd)
 struct slashrpc_cservice *
 msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 {
+	int i, j, locked, waitsecs = BMAP_CLI_MAX_LEASE;
 	struct slashrpc_cservice *csvc;
 	struct fcmh_cli_info *fci;
 	struct psc_multiwait *mw;
@@ -652,15 +653,12 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 	struct rnd_iterator it;
 	struct sl_resm *resm;
 	uint64_t repls = 0; // XXX 1 bit per repl, SL_MAX_REPLICAS
-	int i, j, locked;
-	int waitsecs = BMAP_CLI_MAX_LEASE;
 	void *p;
 
 	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
 
 	if (exclusive) {
 		locked = BMAP_RLOCK(b);
-
 		resm = libsl_ios2resm(bmap_2_ios(b));
 		psc_assert(resm->resm_res->res_id == bmap_2_ios(b));
 		BMAP_URLOCK(b, locked);
@@ -674,6 +672,18 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 	fci = fcmh_get_pri(b->bcm_fcmh);
 	mw = msl_getmw();
 	for (i = 0; i < 2; i++) {
+		/*
+		 * Do two iterations:
+		 *
+		 *   (o) first time through we consider non-archival
+		 *	 resources only, to prioritize faster resources,
+		 *	 even if we have to wait a few moments for
+		 *	 connections to get established.
+		 *
+		 *   (o) second time through, only archival resources,
+		 *	 as we've already checked non-archival
+		 *	 resources.
+		 */
 		repls = 0;
 		psc_multiwait_reset(mw);
 		psc_multiwait_entercritsect(mw);
@@ -683,8 +693,8 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 			if (csvc) {
 				psc_multiwait_leavecritsect(mw);
 				return (csvc);
-			} else
-				goto block;
+			}
+			goto block;
 		}
 
 		/* first, try preferred IOS */
@@ -697,7 +707,7 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 					continue;
 
 				csvc = msl_try_get_replica_res(b,
-					       it.ri_rnd_idx);
+				    it.ri_rnd_idx);
 				if (csvc) {
 					psc_multiwait_leavecritsect(mw);
 					return (csvc);
@@ -734,8 +744,7 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 			goto block;
 		}
 
-		/* Could more use the bitmap in a more clever fashion but
-		 *   this code is due to change shortly anyway..
+		/* Could more use the bitmap in a more clever fashion
 		 */
 		FOREACH_RND(&it, fci->fci_nrepls) {
 			if (repls & (1 << it.ri_rnd_idx))
