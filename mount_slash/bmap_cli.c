@@ -726,9 +726,10 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 		}
 
 		/* Wait a bit for async connection establishment before
-		 * resorting to archival resources.
+		 * resorting to archival resources but only if one or more
+		 * IOS's have been registered in the mw (bug #276).
 		 */
-		if (!i && !csvc) {
+		if (!i && !csvc && psc_dynarray_len(&mw->mw_conds)) {
 			waitsecs = 1;
 			goto block;
 		}
