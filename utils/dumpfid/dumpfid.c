@@ -200,8 +200,8 @@ dumpfid(const char *fn)
 
 			for (j = 0, off = 0; j < nr;
 			    j++, off += SL_BITS_PER_REPLICA)
-				printf("%s%c", j ? "," : "",
-				    repl_states[SL_REPL_GET_BMAP_IOS_STAT(
+				printf("%c", repl_states[
+				    SL_REPL_GET_BMAP_IOS_STAT(
 				    bd.bod.bod_repls, off)]);
 
 
