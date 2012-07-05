@@ -400,11 +400,10 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 			if (fsync_time > 10)
 				DEBUG_FCMH(PLL_WARN, f, "long fsync %d",
 				   fsync_time);
+			if (rc)
+				DEBUG_FCMH(PLL_ERROR, f, "fsync failure rc=%d fd=%d"
+				   " errno=%d", rc, fcmh_2_fd(f), errno);
 		}
-
-		if (rc)
-			DEBUG_FCMH(PLL_ERROR, f, "fsync failure rc=%d fd=%d"
-			   " errno=%d", rc, fcmh_2_fd(f), errno);
 
 		rc = bmap_get(f, sbd->sbd_bmapno, SL_WRITE, &b);
 		if (rc) {
