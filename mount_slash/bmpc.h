@@ -83,7 +83,7 @@ struct bmap_pagecache_entry {
 #define	BMPCE_FREE		(1 << 5)	/* 0x00020 */
 #define	BMPCE_FREEING		(1 << 6)	/* 0x00040 */
 #define	BMPCE_INIT		(1 << 7)	/* 0x00080 */
-#define	BMPCE_READPNDG		(1 << 8)	/* 0x00100: Pending read */
+#define	BMPCE_READPNDG		(1 << 8)	/* 0x00100: pending read */
 #define	BMPCE_RBWPAGE		(1 << 9)	/* 0x00200 */
 #define	BMPCE_RBWRDY		(1 << 10)	/* 0x00400 */
 #define	BMPCE_INFLIGHT		(1 << 11)	/* 0x00800: I/O in progress */
@@ -203,7 +203,7 @@ struct bmap_pagecache {
 	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* chain pending I/O requests */
 	struct psc_lockedlist		 bmpc_pndg_ra;		/* RA bmpce's pending comp */
 	atomic_t			 bmpc_pndgwr;		/* # pending wr req */
-	int                              bmpc_compwr;           /* # of completed writes */
+	int				 bmpc_compwr;		/* # of completed writes */
 	psc_spinlock_t			 bmpc_lock;		/* serialize access to splay tree and locked lists  */
 	struct psclist_head		 bmpc_lentry;		/* chain to global LRU lc */
 };
@@ -240,12 +240,12 @@ bmpc_queued_ios(struct bmap_pagecache *bmpc)
 }
 
 struct bmpc_ioreq {
-	char                            *biorq_buf;
+	char				*biorq_buf;
 	uint32_t			 biorq_off;	/* filewise, bmap relative	*/
 	uint32_t			 biorq_len;	/* non-aligned, real length	*/
 	uint32_t			 biorq_flags;	/* state and op type bits	*/
-	uint32_t                         biorq_retries;
-	sl_ios_id_t                      biorq_last_sliod;
+	uint32_t			 biorq_retries;
+	sl_ios_id_t			 biorq_last_sliod;
 	psc_spinlock_t			 biorq_lock;
 	struct timespec			 biorq_issue;	/* time to initiate I/O		*/
 	struct timespec			 biorq_expire;

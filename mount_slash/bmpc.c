@@ -34,7 +34,7 @@
 struct psc_poolmaster	 bmpcePoolMaster;
 struct psc_poolmgr	*bmpcePoolMgr;
 struct psc_poolmaster    bwcPoolMaster;
-struct psc_poolmgr      *bwcPoolMgr;
+struct psc_poolmgr	*bwcPoolMgr;
 
 struct psc_listcache	 bmpcLru;
 
@@ -134,6 +134,11 @@ __static void
 bmpce_release_locked(struct bmap_pagecache_entry *,
     struct bmap_pagecache *);
 
+/**
+ * bmpce_handle_lru_locked - Handle LRU list membership of a page entry.
+ * @op: READ or WRITE
+ * @incref:
+ */
 void
 bmpce_handle_lru_locked(struct bmap_pagecache_entry *e,
     struct bmap_pagecache *bmpc, int op, int incref)
@@ -187,13 +192,14 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *e,
 
 	} else {
 		if (!(e->bmpce_flags & BMPCE_EIO)) {
-			if (e->bmpce_flags & BMPCE_READA && 
+			if (e->bmpce_flags & BMPCE_READA &&
 			    !(e->bmpce_flags & BMPCE_DATARDY))
-				/* A biorq may be fail while ref'ing READA
-				 * pages.
+				/*
+				 * A biorq may be failed while ref'ing
+				 * READA pages.
 				 */
 				psc_assert(
-				   psc_atomic16_read(&e->bmpce_rdref) > 1);
+				    psc_atomic16_read(&e->bmpce_rdref) > 1);
 			else
 				psc_assert(e->bmpce_flags & BMPCE_DATARDY);
 		}
@@ -285,9 +291,8 @@ bmpce_release_locked(struct bmap_pagecache_entry *e,
 	psc_pool_return(bmpcePoolMgr, e);
 }
 
-
 struct bmpc_ioreq *
-bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf, 
+bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
     int rqnum, uint32_t off, uint32_t len, int op)
 {
 	struct bmpc_ioreq *r;
