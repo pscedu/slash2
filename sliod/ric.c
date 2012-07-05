@@ -186,9 +186,9 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		goto out;
 	}
 
-	DEBUG_FCMH(PLL_INFO, fcmh, "bmapno=%u size=%u off=%u rw=%d "
-	    "sbd_seq=%"PRId64, bmap->bcm_bmapno, mq->size, mq->offset, rw,
-	    mq->sbd.sbd_seq);
+	DEBUG_FCMH(PLL_INFO, fcmh, "bmapno=%u size=%u off=%u rw=%s "
+	    "sbd_seq=%"PRId64, bmap->bcm_bmapno, mq->size, mq->offset,
+	    rw == SL_WRITE ? "wr" : "rd", mq->sbd.sbd_seq);
 
 	/*
 	 * Currently we have LNET_MTU = SLASH_SLVR_SIZE = 1MB, therefore
@@ -206,17 +206,19 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		     tsize = mq->size;
 	     i < nslvrs; i++, roff[i] = 0) {
 
-		slvr_ref[i] = slvr_lookup(slvrno + i, bmap_2_biodi(bmap), rw);
+		slvr_ref[i] = slvr_lookup(slvrno + i,
+		    bmap_2_biodi(bmap), rw);
 		slvr_slab_prep(slvr_ref[i], rw);
 
 		/* Fault in pages either for read or RBW.
 		 */
 		len[i] = MIN(tsize, SLASH_SLVR_SIZE - roff[i]);
 		rv = slvr_io_prep(slvr_ref[i], roff[i], len[i], rw,
-			  &aiocbr);
+		    &aiocbr);
 
 		DEBUG_SLVR(((rv && rv != -SLERR_AIOWAIT) ? PLL_WARN : PLL_INFO),
-		    slvr_ref[i], "post io_prep rw=%d rv=%zd", rw, rv);
+		    slvr_ref[i], "post io_prep rw=%s rv=%zd",
+		    rw == SL_WRITE ? "wr" : "rd", rv);
 
 		/* mq->offset is the offset into the bmap, here we must
 		 *  translate it into the offset of the sliver.
@@ -257,7 +259,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			SLVR_LOCK(s);
 			if (s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR)) {
 				DEBUG_SLVR(PLL_NOTIFY, s,
-				   "aio early ready, rw=%d", rw);
+				   "aio early ready, rw=%s",
+				   rw == SL_WRITE ? "wr" : "rd");
 				SLVR_ULOCK(s);
 
 			} else {
@@ -306,7 +309,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			SLVR_ULOCK(slvr_ref[i]);
 
 			DEBUG_SLVR(PLL_WARN, slvr_ref[i],
-			    "unwind ref due to bulk error (rw=%d)", rw);
+			    "unwind ref due to bulk error (rw=%d)",
+			    rw == SL_WRITE ? "wr" : "rd");
 		}
 		goto out;
 	}
