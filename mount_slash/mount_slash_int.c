@@ -421,7 +421,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 }
 
 /**
- * msl_mfh_seterr - apply error to the mfh_flush_rc so that threads
+ * msl_mfh_seterr - Apply error to the mfh_flush_rc so that threads
  *	blocked in flush may error out.
  */
 void
@@ -435,8 +435,8 @@ msl_mfh_seterr(struct msl_fhent *mfh)
 __static void
 msl_biorq_del(struct bmpc_ioreq *r)
 {
-	struct bmapc_memb *b=r->biorq_bmap;
-	struct bmap_pagecache *bmpc=bmap_2_bmpc(b);
+	struct bmapc_memb *b = r->biorq_bmap;
+	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 
 	BMAP_LOCK(b);
 	BMPC_LOCK(bmpc);
@@ -469,7 +469,7 @@ msl_biorq_del(struct bmpc_ioreq *r)
 			 *   since read requests may be present.
 			 */
 			DEBUG_BMAP(PLL_INFO, b, "unset DIRTY nitems_pndg(%d)",
-			   pll_nitems(&bmpc->bmpc_pndg_biorqs));
+			    pll_nitems(&bmpc->bmpc_pndg_biorqs));
 		}
 	}
 
@@ -528,10 +528,10 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 			if ((r->biorq_flags & BIORQ_RBWFAIL) &&
 			    (e->bmpce_flags & BMPCE_RBWPAGE)) {
 				psc_assert(r->biorq_flags & BIORQ_WRITE);
-				psc_assert(psc_atomic16_read(&e->bmpce_wrref)
-					   >= 1);
-				psc_assert(psc_atomic16_read(&e->bmpce_rdref)
-					   >= 1);
+				psc_assert(psc_atomic16_read(
+				    &e->bmpce_wrref) >= 1);
+				psc_assert(psc_atomic16_read(
+				    &e->bmpce_rdref) >= 1);
 			}
 
 			while (((r->biorq_flags & BIORQ_RBWFAIL) ?
@@ -565,11 +565,11 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 		BMPCE_LOCK(e);
 		eio = (e->bmpce_flags & BMPCE_EIO) ? 1 : 0;
 		bmpce_handle_lru_locked(e, bmpc,
-			(r->biorq_flags & BIORQ_WRITE) ?
-				BIORQ_WRITE : BIORQ_READ, 0);
+		    (r->biorq_flags & BIORQ_WRITE) ?
+		    BIORQ_WRITE : BIORQ_READ, 0);
 
 		if (!eio)
-		    BMPCE_ULOCK(e);
+			BMPCE_ULOCK(e);
 	}
 	BMPC_ULOCK(bmpc);
 }
