@@ -36,29 +36,31 @@ int	show;
 
 const char *progname;
 
-#define K_BSZ		(1 << 0)
-#define	K_CRC		(1 << 1)
-#define	K_FLAGS		(1 << 2)
-#define	K_NBLKS		(1 << 3)
-#define	K_NREPLS	(1 << 4)
-#define	K_REPLPOL	(1 << 5)
-#define	K_REPLS		(1 << 6)
-#define	K_VERSION	(1 << 7)
-#define	K_XCRC		(1 << 8)
-#define	K_FSIZE		(1 << 9)
-#define	K_ALL		(~0)
+#define K_BSZ		(1 <<  0)
+#define	K_CRC		(1 <<  1)
+#define	K_FLAGS		(1 <<  2)
+#define	K_NBLKS		(1 <<  3)
+#define	K_NREPLS	(1 <<  4)
+#define	K_REPLPOL	(1 <<  5)
+#define	K_REPLS		(1 <<  6)
+#define	K_VERSION	(1 <<  7)
+#define	K_XCRC		(1 <<  8)
+#define	K_FSIZE		(1 <<  9)
+#define	K_BMAPS		(1 << 10)
+#define	K_ALL		((~0) & ~K_BMAPS)
 
 const char *show_keywords[] = {
+	"bmaps",
 	"bszn",
 	"crc",
 	"flags",
+	"fsize",
 	"nblks",
 	"nrepls",
 	"replpol",
 	"repls",
 	"version",
 	"xcrc",
-	"fsize",
 };
 
 __dead void
@@ -74,8 +76,10 @@ dumpfid(const char *fn)
 	struct slash_inode_extras_od inox;
 	struct slash_inode_od ino;
 	struct iovec iovs[2];
+	strucr stat stb;
 	uint64_t crc, od_crc;
 	uint32_t nr, j;
+	sl_bmapno_t bno;
 	char fsize[64];
 	ssize_t rc;
 	int fd;
@@ -85,6 +89,12 @@ dumpfid(const char *fn)
 		warn("%s", fn);
 		return;
 	}
+
+	if (fstat(fd, &stb) == -1) {
+		warn("%s", fn);
+		return;
+	}
+
 	iovs[0].iov_base = &ino;
 	iovs[0].iov_len = sizeof(ino);
 	iovs[1].iov_base = &od_crc;
@@ -161,6 +171,36 @@ dumpfid(const char *fn)
 			    ino.ino_repl_nblks[j] :
 			    inox.inox_repl_nblks[j - SL_DEF_REPLICAS]);
 		printf("\n");
+	}
+	if (show & K_BMAPS) {
+		printf("  bmaps %u\n",
+		    (stb.st_size - SL_BMAP_START_OFF) / BMAP_OD_SZ);
+		if (lseek(fd, SL_BMAP_START_OFF, SEEK_SET) == -1)
+			warn("seek");
+		for (bno = 0; ; bno++) {
+			struct {
+				struct bmap_ondisk bod;
+				uint64_t crc;
+			} bod;
+			off_t off;
+			int nslvr;
+
+			rc = read(fd, &bod, sizeof(bod));
+			if (rc != sizeof(bod))
+				break;
+			printf("    %u: gen %u pol %u res ",
+			    bno, bod->bod_gen, bod->bod_replpol);
+			nslvr = SLASH_SLVRS_PER_BMAP;
+			for (j = 0; j < nr; j++)
+				printf("%s%s", j ? "," : "", );
+
+	uint8_t			bcs_crcstates[SLASH_CRCS_PER_BMAP];
+	uint8_t			bcs_repls[SL_REPLICA_NBYTES];
+	uint64_t		bes_crcs[SLASH_CRCS_PER_BMAP];
+
+		}
+		if (rc != -1)
+			;
 	}
 
  out:

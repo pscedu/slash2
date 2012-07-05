@@ -86,6 +86,7 @@ struct bmap_ondisk {
 #define bod_crcstates	bod_corestate.bcs_crcstates
 #define bod_crcs	bod_extrastate.bes_crcs
 #define bod_replpol	bod_extrastate.bes_replpol
+#define bod_gen		bod_extrastate.bes_gen
 };
 
 /**
