@@ -36,22 +36,22 @@ int	show;
 
 const char *progname;
 
-#define K_BSZ		(1 <<  0)
-#define	K_CRC		(1 <<  1)
-#define	K_FLAGS		(1 <<  2)
-#define	K_NBLKS		(1 <<  3)
-#define	K_NREPLS	(1 <<  4)
-#define	K_REPLPOL	(1 <<  5)
-#define	K_REPLS		(1 <<  6)
-#define	K_VERSION	(1 <<  7)
-#define	K_XCRC		(1 <<  8)
-#define	K_FSIZE		(1 <<  9)
-#define	K_BMAPS		(1 << 10)
+#define	K_BMAPS		(1 <<  0)
+#define	K_BSZ		(1 <<  1)
+#define	K_CRC		(1 <<  2)
+#define	K_FLAGS		(1 <<  3)
+#define	K_FSIZE		(1 <<  4)
+#define	K_NBLKS		(1 <<  5)
+#define	K_NREPLS	(1 <<  6)
+#define	K_REPLPOL	(1 <<  7)
+#define	K_REPLS		(1 <<  8)
+#define	K_VERSION	(1 <<  9)
+#define	K_XCRC		(1 << 10)
 #define	K_ALL		((~0) & ~K_BMAPS)
 
 const char *show_keywords[] = {
 	"bmaps",
-	"bszn",
+	"bsz",
 	"crc",
 	"flags",
 	"fsize",
@@ -62,6 +62,8 @@ const char *show_keywords[] = {
 	"version",
 	"xcrc",
 };
+
+const char *repl_states = "-sq+tpgx";
 
 __dead void
 usage(void)
@@ -76,7 +78,7 @@ dumpfid(const char *fn)
 	struct slash_inode_extras_od inox;
 	struct slash_inode_od ino;
 	struct iovec iovs[2];
-	strucr stat stb;
+	struct stat stb;
 	uint64_t crc, od_crc;
 	uint32_t nr, j;
 	sl_bmapno_t bno;
@@ -116,7 +118,8 @@ dumpfid(const char *fn)
 	psc_crc64_calc(&crc, &ino, sizeof(ino));
 	printf("%s:\n", fn);
 	if (show & K_CRC)
-		printf("  crc %s\n", crc == od_crc ? "OK" : "BAD");
+		printf("  crc: %s %"PSCPRIxCRC64" %"PSCPRIxCRC64"\n",
+		    crc == od_crc ? "OK" : "BAD", crc, od_crc);
 	if (show & K_VERSION)
 		printf("  version %u\n", ino.ino_version);
 	if (show & K_FLAGS)
@@ -173,7 +176,7 @@ dumpfid(const char *fn)
 		printf("\n");
 	}
 	if (show & K_BMAPS) {
-		printf("  bmaps %u\n",
+		printf("  bmaps %lu\n",
 		    (stb.st_size - SL_BMAP_START_OFF) / BMAP_OD_SZ);
 		if (lseek(fd, SL_BMAP_START_OFF, SEEK_SET) == -1)
 			warn("seek");
@@ -181,26 +184,33 @@ dumpfid(const char *fn)
 			struct {
 				struct bmap_ondisk bod;
 				uint64_t crc;
-			} bod;
-			off_t off;
-			int nslvr;
+			} bd;
+			int off;
 
-			rc = read(fd, &bod, sizeof(bod));
-			if (rc != sizeof(bod))
+			rc = read(fd, &bd, sizeof(bd));
+			if (rc == 0)
 				break;
-			printf("    %u: gen %u pol %u res ",
-			    bno, bod->bod_gen, bod->bod_replpol);
-			nslvr = SLASH_SLVRS_PER_BMAP;
-			for (j = 0; j < nr; j++)
-				printf("%s%s", j ? "," : "", );
+			if (rc != sizeof(bd)) {
+				warn("read");
+				break;
+			}
+			printf("   %5u: gen %5u pol %u res ",
+			    bno, bd.bod.bod_gen,
+			    bd.bod.bod_replpol);
 
-	uint8_t			bcs_crcstates[SLASH_CRCS_PER_BMAP];
-	uint8_t			bcs_repls[SL_REPLICA_NBYTES];
-	uint64_t		bes_crcs[SLASH_CRCS_PER_BMAP];
+			for (j = 0, off = 0; j < nr;
+			    j++, off += SL_BITS_PER_REPLICA)
+				printf("%s%c", j ? "," : "",
+				    repl_states[SL_REPL_GET_BMAP_IOS_STAT(
+				    bd.bod.bod_repls, off)]);
 
+
+//			nslvr = SLASH_SLVRS_PER_BMAP;
+//			for (j = 0; j < nr; j++)
+//				printf("%s%s", j ? "," : "", );
+
+			printf("\n");
 		}
-		if (rc != -1)
-			;
 	}
 
  out:
