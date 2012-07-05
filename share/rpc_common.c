@@ -904,7 +904,7 @@ slconnthr_main(struct psc_thread *thr)
 					CSVC_LOCK(csvc);
 					memcpy(&csvc->csvc_mtime, &ts1,
 					    sizeof(ts1));
-					if (pingrc)
+					if (rc)
 						sl_csvc_disconnect(csvc);
 				}
 			}
