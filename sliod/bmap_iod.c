@@ -237,6 +237,10 @@ biod_rlssched_locked(struct bmap_iod_info *biod)
 
 }
 
+/*
+ * We are done with this batch of CRC updates.   Drop its reference to the bmap
+ * and free the CRC update structure.
+ */
 __static void
 bcr_ready_remove(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 {
