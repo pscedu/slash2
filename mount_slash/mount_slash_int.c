@@ -2648,7 +2648,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		BIORQ_LOCK(r);
 
 		if (!(r->biorq_flags & BIORQ_AIOWAIT)) {
-			/* Cleanup faild biorq's.  For successful ops,
+			/* Cleanup failed biorq's.  For successful ops,
 			 *   msl_biorq_destroy called from
 			 *   msl_pages_copy[in|out].
 			 */
