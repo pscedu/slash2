@@ -101,8 +101,7 @@ sli_repl_addwk(int op, struct sl_resource *res,
 		goto out;
 
 	/* get the replication chunk's bmap */
-	rc = bmap_get(w->srw_fcmh, w->srw_bmapno,
-	    SL_READ, &w->srw_bcm);
+	rc = bmap_get(w->srw_fcmh, w->srw_bmapno, SL_READ, &w->srw_bcm);
 	if (rc)
 		psclog_errorx("bmap_get %u: %s",
 		    w->srw_bmapno, slstrerror(rc));
@@ -111,16 +110,18 @@ sli_repl_addwk(int op, struct sl_resource *res,
 		bmap_op_done_type(w->srw_bcm, BMAP_OPCNT_LOOKUP);
 
 		/* mark slivers for replication */
-		BMAP_LOCK(w->srw_bcm);
-		if (op == SLI_REPLWKOP_REPL)
-			for (i = len = 0; i < SLASH_SLVRS_PER_BMAP &&
-				     len < (int)w->srw_len;
-			     i++, len += SLASH_SLVR_SIZE) {
+		if (op == SLI_REPLWKOP_REPL) {
+			BMAP_LOCK(w->srw_bcm);
+			for (i = len = 0;
+			    i < SLASH_SLVRS_PER_BMAP &&
+			    len < (int)w->srw_len;
+			    i++, len += SLASH_SLVR_SIZE) {
 				w->srw_bcm->bcm_crcstates[i] |=
-					    BMAP_SLVR_WANTREPL;
+				    BMAP_SLVR_WANTREPL;
 				w->srw_nslvr_tot++;
 			}
-		BMAP_ULOCK(w->srw_bcm);
+			BMAP_ULOCK(w->srw_bcm);
+		}
 	}
 	psclog_info("fid="SLPRI_FG" bmap=%d #slivers=%d",
 	    SLPRI_FG_ARGS(fgp), bmapno, w->srw_nslvr_tot);
