@@ -1236,6 +1236,7 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *b, enum rw rw)
 		else
 			s->slvr_pndgreads = 1;
 
+		/* XXX XINSERT */
 		SPLAY_INSERT(biod_slvrtree, &b->biod_slvrs, tmp);
 		bmap_op_start_type(bii_2_bmap(b), BMAP_OPCNT_SLVR);
 		BIOD_ULOCK(b);
@@ -1246,7 +1247,7 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *b, enum rw rw)
 __static void
 slvr_remove(struct slvr_ref *s)
 {
-	struct bmap_iod_info	*b;
+	struct bmap_iod_info *b;
 
 	DEBUG_SLVR(PLL_DEBUG, s, "freeing slvr");
 	/* Slvr should be detached from any listheads.
@@ -1258,6 +1259,7 @@ slvr_remove(struct slvr_ref *s)
 	b = slvr_2_biod(s);
 
 	BIOD_LOCK(b);
+	/* XXX XREMOVE */
 	SPLAY_REMOVE(biod_slvrtree, &b->biod_slvrs, s);
 	bmap_op_done_type(bii_2_bmap(b), BMAP_OPCNT_SLVR);
 
@@ -1267,7 +1269,7 @@ slvr_remove(struct slvr_ref *s)
 void
 slvr_slb_free_locked(struct slvr_ref *s, struct psc_poolmgr *m)
 {
-	struct sl_buffer *tmp=s->slvr_slab;
+	struct sl_buffer *tmp = s->slvr_slab;
 
 	SLVR_LOCK_ENSURE(s);
 	psc_assert(s->slvr_flags & SLVR_SLBFREEING);

@@ -135,8 +135,8 @@ slvr_worker_push_crcups(void)
 
 	pscrpc_nbreqset_reap(slvrNbReqSet);
 	/*
-	 * Check if an earlier CRC update RPC, if any, has finished.  If one
-	 * is still inflight, we won't be able to initiate a new one.
+	 * Check if an earlier CRC update RPC, if any, has finished.  If
+	 * one is still inflight, we won't be able to initiate a new one.
 	 */
 	spinlock(&binflCrcs.binfcrcs_lock);
 	bcrs = PSCALLOC(sizeof(struct psc_dynarray));
