@@ -356,9 +356,8 @@ main(int argc, char *argv[])
 	slmcohthr_spawn();
 	slmbmaptimeothr_spawn();
 	slmupschedthr_spawnall();
-	slm_rpc_initsvc();
-
 	slmconnthr = slconnthr_spawn(SLMTHRT_CONN, "slm", NULL, NULL);
+	slm_rpc_initsvc();
 
 	mds_repl_init();
 	slmtimerthr_spawn();
