@@ -285,7 +285,8 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	if (amt == 0) {
 		struct slashrpc_cservice *src_csvc;
 
-		src_csvc = slm_geticsvcf(src_resm, CSVCF_NONBLOCK | CSVCF_NORECON); 
+		src_csvc = slm_geticsvcf(src_resm, CSVCF_NONBLOCK |
+		    CSVCF_NORECON);
 		if (src_csvc)
 			sl_csvc_decref(src_csvc);
 
@@ -448,6 +449,7 @@ slmupschedthr_tryptrunc(struct up_sched_work_item *wk,
 		goto fail;
 	mq->fg = *USWI_FG(wk);
 	mq->bmapno = b->bcm_bmapno;
+	mq->bgen = bmap_2_bgen(b);
 	mq->offset = fcmh_2_fsz(wk->uswi_fcmh) % SLASH_BMAP_SIZE;
 
 	brepls_init(tract, -1);
