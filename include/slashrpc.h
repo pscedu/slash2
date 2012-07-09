@@ -122,54 +122,54 @@ enum {
 	SRMT_PING,
 
 	/* namespace operations */
-	SRMT_NAMESPACE_UPDATE,			/* send a batch of namespace update logs */
-	SRMT_NAMESPACE_FORWARD,			/* a namespace operation request from a peer */
+	SRMT_NAMESPACE_UPDATE,			/* 4: send a batch of namespace update logs */
+	SRMT_NAMESPACE_FORWARD,			/* 5: a namespace operation request from a peer */
 
 	/* bmap operations */
-	SRMT_BMAPCHWRMODE,			/* change read/write access mode */
-	SRMT_BMAPCRCWRT,			/* update bmap data checksums */
-	SRMT_BMAPDIO,				/* request client direct I/O on a bmap */
-	SRMT_BMAP_PTRUNC,			/* partial truncate and redo CRC for bmap */
-	SRMT_BMAP_WAKE,				/* client work may now progress after EAGAIN */
-	SRMT_GETBMAP,				/* get client lease for bmap access */
-	SRMT_GETBMAPCRCS,			/* get bmap data checksums */
+	SRMT_BMAPCHWRMODE,			/* 6: change read/write access mode */
+	SRMT_BMAPCRCWRT,			/* 7: update bmap data checksums */
+	SRMT_BMAPDIO,				/* 8: request client direct I/O on a bmap */
+	SRMT_BMAP_PTRUNC,			/* 9: partial truncate and redo CRC for bmap */
+	SRMT_BMAP_WAKE,				/* 10: client work may now progress after EAGAIN */
+	SRMT_GETBMAP,				/* 11: get client lease for bmap access */
+	SRMT_GETBMAPCRCS,			/* 12: get bmap data checksums */
 	SRMT_GETBMAPMINSEQ,
-	SRMT_RELEASEBMAP,			/* relinquish a client's bmap access lease */
-	SRMT_EXTENDBMAPLS,			/* bmap lease extension request */
+	SRMT_RELEASEBMAP,			/* 14: relinquish a client's bmap access lease */
+	SRMT_EXTENDBMAPLS,			/* 15: bmap lease extension request */
 	SRMT_REASSIGNBMAPLS,
 
 	/* garbage operations */
-	SRMT_RECLAIM,				/* trash storage space for a given FID+GEN */
+	SRMT_RECLAIM,				/* 17: trash storage space for a given FID+GEN */
 
 	/* replication operations */
 	SRMT_REPL_ADDRQ,
 	SRMT_REPL_DELRQ,
-	SRMT_REPL_GETST,			/* get replication request status */
-	SRMT_REPL_GETST_SLAVE,			/* all bmap repl info for a file */
-	SRMT_REPL_READ,				/* ION to ION replicate */
-	SRMT_REPL_READAIO,			/* ION aio response */
-	SRMT_REPL_SCHEDWK,			/* MDS to ION replication staging */
-	SRMT_SET_BMAPREPLPOL,			/* bmap replication policy */
-	SRMT_SET_NEWREPLPOL,			/* file new bmap repl policy */
+	SRMT_REPL_GETST,			/* 20: get replication request status */
+	SRMT_REPL_GETST_SLAVE,			/* 21: all bmap repl info for a file */
+	SRMT_REPL_READ,				/* 22: ION to ION replicate */
+	SRMT_REPL_READAIO,			/* 23: ION aio response */
+	SRMT_REPL_SCHEDWK,			/* 24: MDS to ION replication staging */
+	SRMT_SET_BMAPREPLPOL,			/* 25: bmap replication policy */
+	SRMT_SET_NEWREPLPOL,			/* 26: file new bmap repl policy */
 
 	/* file system operations */
-	SRMT_CREATE,				/* creat(2) */
-	SRMT_GETATTR,				/* stat(2) */
-	SRMT_LINK,				/* link(2) */
+	SRMT_CREATE,				/* 27: creat(2) */
+	SRMT_GETATTR,				/* 28: stat(2) */
+	SRMT_LINK,				/* 29: link(2) */
 	SRMT_LOOKUP,
-	SRMT_MKDIR,				/* mkdir(2) */
-	SRMT_MKNOD,				/* mknod(2) */
-	SRMT_READ,				/* read(2) */
-	SRMT_READDIR,				/* readdir(2) */
-	SRMT_READLINK,				/* readlink(2) */
-	SRMT_RENAME,				/* rename(2) */
-	SRMT_RMDIR,				/* rmdir(2) */
-	SRMT_SETATTR,				/* chmod(2), chown(2), utimes(2) */
-	SRMT_STATFS,				/* statvfs(2) */
-	SRMT_SYMLINK,				/* symlink(2) */
-	SRMT_UNLINK,				/* unlink(2) */
-	SRMT_WRITE,				/* write(2) */
-	SRMT_XCTL,				/* ancillary operation */
+	SRMT_MKDIR,				/* 31: mkdir(2) */
+	SRMT_MKNOD,				/* 32: mknod(2) */
+	SRMT_READ,				/* 33: read(2) */
+	SRMT_READDIR,				/* 34: readdir(2) */
+	SRMT_READLINK,				/* 35: readlink(2) */
+	SRMT_RENAME,				/* 36: rename(2) */
+	SRMT_RMDIR,				/* 37: rmdir(2) */
+	SRMT_SETATTR,				/* 38: chmod(2), chown(2), utimes(2) */
+	SRMT_STATFS,				/* 39: statvfs(2) */
+	SRMT_SYMLINK,				/* 40: symlink(2) */
+	SRMT_UNLINK,				/* 41: unlink(2) */
+	SRMT_WRITE,				/* 42: write(2) */
+	SRMT_XCTL,				/* 43: ancillary operation */
 
 	/* import/export */
 	SRMT_IMPORT
