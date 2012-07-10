@@ -254,7 +254,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 				DEBUG_BMPCE(PLL_WARN, e,
 				    "wait and retry for EIO to clear");
 				psc_assert(e->bmpce_waitq);
-				BMPCE_WAIT(e);
+				BMPCE_WAIT(e);		/* XXX: should take a ref before wait */
 				BMPC_LOCK(bmpc);
 				goto restart;
 			}
