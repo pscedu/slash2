@@ -629,10 +629,6 @@ slcfg_resm_addaddr(char *addr, const char *lnetname)
 	freeaddrinfo(res0);
 }
 
-enum {
-	CFGF_DISABLE_BIA
-};
-
 int
 slcfg_str2flags(const char *flags)
 {

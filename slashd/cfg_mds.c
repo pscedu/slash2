@@ -30,30 +30,28 @@
 void
 slcfg_init_res(struct sl_resource *res)
 {
-	struct sl_mds_peerinfo *peerinfo;
-	struct sl_mds_iosinfo *iosinfo;
 	struct resprof_mds_info *rpmi;
+	struct sl_mds_peerinfo *sp;
+	struct sl_mds_iosinfo *si;
 
 	rpmi = res2rpmi(res);
 	INIT_SPINLOCK(&rpmi->rpmi_lock);
 	psc_waitq_init(&rpmi->rpmi_waitq);
 
 	if (res->res_type == SLREST_MDS) {
-		peerinfo = PSCALLOC(sizeof(*peerinfo));
-		rpmi->rpmi_info = peerinfo;
-		peerinfo->sp_flags = SPF_NEED_JRNL_INIT;
-		psc_meter_init(&peerinfo->sp_batchmeter, 0, "nsupd-%s",
+		rpmi->rpmi_info = sp = PSCALLOC(sizeof(*sp));
+		sp->sp_flags = SPF_NEED_JRNL_INIT;
+		psc_meter_init(&sp->sp_batchmeter, 0, "nsupd-%s",
 		    res->res_name);
-		peerinfo->sp_batchmeter.pm_maxp =
-		    &current_update_batchno;
+		sp->sp_batchmeter.pm_maxp = &current_update_batchno;
 	} else {
-		iosinfo = PSCALLOC(sizeof(*iosinfo));
-		rpmi->rpmi_info = iosinfo;
-		iosinfo->si_flags = SIF_NEED_JRNL_INIT;
-		psc_meter_init(&iosinfo->si_batchmeter, 0, "reclaim-%s",
+		rpmi->rpmi_info = si = PSCALLOC(sizeof(*si));
+		si->si_flags = SIF_NEED_JRNL_INIT;
+		psc_meter_init(&si->si_batchmeter, 0, "reclaim-%s",
 		    res->res_name);
-		iosinfo->si_batchmeter.pm_maxp =
-		    &current_reclaim_batchno;
+		si->si_batchmeter.pm_maxp = &current_reclaim_batchno;
+		if (res->res_flags & CFGF_DISABLE_BIA)
+			si->si_flags |= SIF_DISABLE_BIA;
 	}
 }
 

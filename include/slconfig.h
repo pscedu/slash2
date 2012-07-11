@@ -187,6 +187,11 @@ struct sl_gconf {
 		    site_lentry, &(cf)->gconf_lock);			\
 	} while (0)
 
+/* configuration flags */
+enum {
+	CFGF_DISABLE_BIA
+};
+
 #define CONF_LOCK()			spinlock(&globalConfig.gconf_lock)
 #define CONF_ULOCK()			freelock(&globalConfig.gconf_lock)
 #define CONF_RLOCK()			reqlock(&globalConfig.gconf_lock)
