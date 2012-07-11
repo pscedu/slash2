@@ -69,7 +69,7 @@ enum slconf_sym_struct {
 	SL_STRUCT_SITE
 };
 
-typedef uint32_t (*cfg_sym_handler_t)(const char *);
+typedef int (*cfg_sym_handler_t)(const char *);
 
 struct slconf_symbol {
 	char			*c_name;
@@ -88,7 +88,8 @@ struct cfg_file {
 int		 lnet_match_networks(char **, char *, uint32_t *, char **, int);
 
 void		 slcfg_add_include(const char *);
-uint32_t	 slcfg_str2restype(const char *);
+int		 slcfg_str2restype(const char *);
+int		 slcfg_str2flags(const char *);
 void		 slcfg_store_tok_val(const char *, char *);
 
 int		 yylex(void);
@@ -125,11 +126,13 @@ struct slconf_symbol sym_table[] = {
 	TABENT_SITE("site_id",		SL_TYPE_INT,	SITE_MAXID,	site_id,	NULL),
 
 	TABENT_RES("desc",		SL_TYPE_STRP,	0,		res_desc,	NULL),
+	TABENT_RES("flags",		SL_TYPE_INT,	0,		res_flags,	slcfg_str2flags),
 	TABENT_RES("fsroot",		SL_TYPE_STR,	PATH_MAX,	res_fsroot,	NULL),
 	TABENT_RES("id",		SL_TYPE_INT,	RES_MAXID,	res_id,		NULL),
 	TABENT_RES("jrnldev",		SL_TYPE_STR,	PATH_MAX,	res_jrnldev,	NULL),
 	TABENT_RES("selftest",		SL_TYPE_STR,	BUFSIZ,		res_selftest,	NULL),
 	TABENT_RES("type",		SL_TYPE_INT,	0,		res_type,	slcfg_str2restype),
+
 	{ NULL, 0, 0, 0, 0, NULL }
 };
 
@@ -626,7 +629,49 @@ slcfg_resm_addaddr(char *addr, const char *lnetname)
 	freeaddrinfo(res0);
 }
 
-uint32_t
+enum {
+	CFGF_DISABLE_BIA
+};
+
+int
+slcfg_str2flags(const char *flags)
+{
+	char *p, *t, *s, **fp, buf[LINE_MAX], *ftab[] = {
+		"disable_bia",
+		NULL
+	};
+	int i, rc = 0;
+
+	if (strlcpy(buf, flags, sizeof(buf)) >= strlen(flags)) {
+		yyerror("flag too long: %s", flags);
+		return (0);
+	}
+	for (p = buf; p; p = t) {
+		t = strchr(p, '|');
+		if (t)
+			*t++ = '\0';
+
+		/* trim space */
+		while (isspace(*p))
+			p++;
+		s = p + strlen(p) - 1;
+		for (; s - 1 >= p && isspace(s[-1]); *--s = '\0')
+			;
+
+		/* locate flag struct */
+		for (i = 0, fp = ftab; *fp; fp++, i++) {
+			if (strcasecmp(*fp, p) == 0) {
+				rc |= 1 << i;
+				break;
+			}
+		}
+		if (*fp == NULL)
+			yyerror("unrecognized flag: %p", p);
+	}
+	return (rc);
+}
+
+int
 slcfg_str2restype(const char *res_type)
 {
 	if (!strcmp(res_type, "parallel_lfs"))

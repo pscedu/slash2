@@ -77,6 +77,7 @@ struct sl_resource {
 	char			 res_fsroot[PATH_MAX];
 	char			 res_jrnldev[PATH_MAX];
 	char			 res_selftest[BUFSIZ];
+	int			 res_flags;
 	struct sl_site		*res_site;
 };
 
