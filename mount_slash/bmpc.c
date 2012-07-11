@@ -138,7 +138,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *,
 /**
  * bmpce_handle_lru_locked - Handle LRU list membership of a page entry.
  * @op: READ or WRITE
- * @incref:
+ * @incref: 1 = increment, 0 = decrement
  */
 void
 bmpce_handle_lru_locked(struct bmap_pagecache_entry *e,
