@@ -638,8 +638,8 @@ slcfg_str2flags(const char *flags)
 	};
 	int i, rc = 0;
 
-	if (strlcpy(buf, flags, sizeof(buf)) >= strlen(flags)) {
-		yyerror("flag too long: %s", flags);
+	if (strlcpy(buf, flags, sizeof(buf)) >= sizeof(buf)) {
+		yyerror("flags too long: %s", flags);
 		return (0);
 	}
 	for (p = buf; p; p = t) {
