@@ -412,7 +412,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		rc = bmap_get(f, sbd->sbd_bmapno, SL_WRITE, &b);
 		if (rc) {
 			psclog_errorx("failed to load bmap %u",
-			      sbd->sbd_bmapno);
+			    sbd->sbd_bmapno);
 			fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 			continue;
 		} else
@@ -430,6 +430,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 				/* psc_pool_return() nulls our pointer.
 				 */
 				psc_pool_return(bmap_rls_pool, newsbd);
+				newsbd = NULL;
 				break;
 			}
 		}
