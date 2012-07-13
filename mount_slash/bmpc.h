@@ -435,8 +435,9 @@ void	 bmpc_freeall_locked(struct bmap_pagecache *);
 int	 bmpc_biorq_cmp(const void *, const void *);
 void	 bmpc_biorqs_fail(struct bmap_pagecache *, int);
 struct bmpc_ioreq *
-	bmpc_biorq_new(struct msl_fsrqinfo *, struct bmapc_memb *,
+	 bmpc_biorq_new(struct msl_fsrqinfo *, struct bmapc_memb *,
 	    char *, int, uint32_t, uint32_t, int);
+
 int	 bmpce_init(struct psc_poolmgr *, void *);
 void	 bmpce_getbuf(struct bmap_pagecache_entry *);
 struct bmap_pagecache_entry *
@@ -444,6 +445,7 @@ struct bmap_pagecache_entry *
 	    uint32_t, struct psc_waitq *);
 void	 bmpce_handle_lru_locked(struct bmap_pagecache_entry *,
 	    struct bmap_pagecache *, int, int);
+
 void	 bwc_release(struct bmpc_write_coalescer *);
 
 extern struct psc_poolmgr	*bmpcePoolMgr;
@@ -464,16 +466,17 @@ bmpc_init(struct bmap_pagecache *bmpc)
 	INIT_SPINLOCK(&bmpc->bmpc_lock);
 
 	pll_init(&bmpc->bmpc_lru, struct bmap_pagecache_entry,
-		 bmpce_lentry, &bmpc->bmpc_lock);
+	    bmpce_lentry, &bmpc->bmpc_lock);
 
 	pll_init(&bmpc->bmpc_pndg_ra, struct bmap_pagecache_entry,
-		 bmpce_lentry, &bmpc->bmpc_lock);
+	    bmpce_lentry, &bmpc->bmpc_lock);
 
 	pll_init(&bmpc->bmpc_pndg_biorqs, struct bmpc_ioreq,
-		 biorq_lentry, &bmpc->bmpc_lock);
+	    biorq_lentry, &bmpc->bmpc_lock);
 
 	pll_init(&bmpc->bmpc_new_biorqs, struct bmpc_ioreq,
-		 biorq_lentry, &bmpc->bmpc_lock);
+	    biorq_lentry, &bmpc->bmpc_lock);
+
 	/*
 	 * Add the bmpc to the tail of LRU where it will stay until it's
 	 * freed.
