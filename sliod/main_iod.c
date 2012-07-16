@@ -234,7 +234,7 @@ main(int argc, char *argv[])
 
 	psc_poolmaster_init(&bmap_rls_poolmaster, struct bmap_iod_rls,
 	    bir_lentry, PPMF_AUTO, 64, 64, 0, NULL, NULL, NULL,
-	    "bmap_rls");
+	    "bmaprls");
 	bmap_rls_pool = psc_poolmaster_getmgr(&bmap_rls_poolmaster);
 
 	sli_repl_init();
@@ -256,7 +256,7 @@ main(int argc, char *argv[])
 	psclog_info("gconf_fsuuid=%"PRIx64, globalConfig.gconf_fsuuid);
 
 	sl_nbrqset = pscrpc_nbreqset_init(NULL, NULL);
-	pscrpc_nbreapthr_spawn(sl_nbrqset, SLITHRT_NBRQ, "slinbrqthr"); 
+	pscrpc_nbreapthr_spawn(sl_nbrqset, SLITHRT_NBRQ, "slinbrqthr");
 
 	sli_rpc_initsvc();
 	psc_tiosthr_spawn(SLITHRT_TIOS, "slitiosthr");
