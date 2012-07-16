@@ -75,8 +75,8 @@ enum {
  *    the dirty list.
  */
 struct sl_buffer {
-	struct psc_vbitmap	*slb_inuse;		/* track which segments are busy	*/
-	int			 slb_nblks;		/* num blocks				*/
+	struct psc_vbitmap	*slb_inuse;		/* track block I/O within a sliver	*/
+	int			 slb_nblks;		/* num blocks, XXX: always 32		*/
 	uint32_t		 slb_blksz;		/* blocksize				*/
 	void			*slb_base;		/* point to the data buffer		*/
 	atomic_t		 slb_ref;
