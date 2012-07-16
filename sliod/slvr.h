@@ -40,7 +40,8 @@ struct bmap_iod_info;
 /**
  * slvr_ref - sliver reference used for scheduling dirty slivers to be
  *	CRC'd and sent to the mds.
- * Note: slivers are locked through their bmap_iod_info lock.
+ * Note: slivers are locked through their bmap_iod_info lock.  A slab
+ *       is an in-memory representation of a sliver.
  */
 struct slvr_ref {
 	uint16_t		 slvr_num;	/* bmap slvr offset */
