@@ -1623,7 +1623,7 @@ mdslog_bmap_crc(void *datap, uint64_t txg, __unusedx int flag)
 		sjbc->sjbc_repl_nblks = crcup->nblks;
 		sjbc->sjbc_aggr_nblks = fcmh_2_nblks(bmap->bcm_fcmh);
 		sjbc->sjbc_extend = distill;
-		sjbc->sjbc_utimgen = crcup->utimgen;     /* utime generation number */
+		sjbc->sjbc_utimgen = crcup->utimgen;		/* utime generation number */
 
 		memcpy(sjbc->sjbc_crc, &crcup->crcs[t],
 		    n * sizeof(struct srt_bmap_crcwire));
@@ -1955,7 +1955,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	psclog_warnx("The next FID will be %"PRId64, slm_get_curr_slashfid());
 
 	psclog_warnx("Journal UUID=%"PRIx64" MDS UUID=%"PRIx64,
-	     mdsJournal->pj_hdr->pjh_fsuuid, fsuuid);
+	    mdsJournal->pj_hdr->pjh_fsuuid, fsuuid);
 
 	/* Always start a thread to send reclaim updates. */
 	pscthr_init(SLMTHRT_JRECLAIM, 0, slmjreclaimthr_main, NULL, 0,
