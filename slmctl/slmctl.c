@@ -153,8 +153,8 @@ void
 slm_statfs_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 {
 	struct class {
-		int frac;
-		int col;
+		unsigned frac;
+		int	 col;
 	} *c, classes[] = {
 		{ 85, COLOR_RED },
 		{ 60, COLOR_YELLOW },
@@ -198,7 +198,6 @@ slm_statfs_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	if (col)
 		uncolor();
 	printf("%-16s\n", b->sf_type);
-
 }
 
 void
