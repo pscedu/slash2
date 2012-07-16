@@ -17,9 +17,11 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#include <curses.h>
 #include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <term.h>
 #include <unistd.h>
 
 #include "pfl/pfl.h"
@@ -37,6 +39,26 @@
 #include "slashd/bmap_mds.h"
 #include "slashd/ctl_mds.h"
 #include "slashd/repl_mds.h"
+
+int				 has_col;
+
+void
+setcolor(int col)
+{
+	if (!has_col || col == -1)
+		return;
+	putp(tparm(enter_bold_mode));
+	putp(tparm(set_a_foreground, col));
+}
+
+void
+uncolor(void)
+{
+	if (!has_col)
+		return;
+	putp(tparm(orig_pair));
+	putp(tparm(exit_attribute_mode));
+}
 
 void
 slmrmcthr_pr(const struct psc_ctlmsg_thread *pcst)
@@ -130,11 +152,20 @@ slm_statfs_prhdr(__unusedx struct psc_ctlmsghdr *mh,
 void
 slm_statfs_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 {
+	struct class {
+		int frac;
+		int col;
+	} *c, classes[] = {
+		{ 85, COLOR_RED },
+		{ 60, COLOR_YELLOW },
+		{  0, COLOR_GREEN }
+	};
 	const struct slmctlmsg_statfs *scsf = m;
+	const struct srt_statfs *b = &scsf->scsf_ssfb;
 	char sbuf[PSCFMT_HUMAN_BUFSIZ], ubuf[PSCFMT_HUMAN_BUFSIZ];
 	char abuf[PSCFMT_HUMAN_BUFSIZ], cbuf[PSCFMT_RATIO_BUFSIZ];
-	const struct srt_statfs *b = &scsf->scsf_ssfb;
 	char *p, name[RES_NAME_MAX];
+	int j, col = 0;
 
 	if (b->sf_blocks) {
 		psc_fmt_human(sbuf, b->sf_blocks * b->sf_bsize);
@@ -143,6 +174,13 @@ slm_statfs_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 		psc_fmt_human(abuf, b->sf_bavail * b->sf_bsize);
 		psc_fmt_ratio(cbuf, b->sf_blocks -
 		    (int64_t)b->sf_bavail, b->sf_blocks);
+
+		for (c = classes, j = 0; j < nitems(classes); j++, c++)
+			if (100 * (b->sf_blocks - b->sf_bavail) /
+			     b->sf_blocks >= c->frac) {
+				col = c->col;
+				break;
+			}
 	} else {
 		strlcpy(sbuf, "-", sizeof(sbuf));
 		strlcpy(ubuf, "-", sizeof(ubuf));
@@ -153,8 +191,14 @@ slm_statfs_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	p = strchr(name, '@');
 	if (p)
 		*p = '\0';
-	printf("%-30s %7s %7s %7s %8s %-16s\n",
-	    name, sbuf, ubuf, abuf, cbuf, b->sf_type);
+	printf("%-30s %7s %7s %7s ", name, sbuf, ubuf, abuf);
+	if (col)
+		setcolor(col);
+	printf("%8s", cbuf);
+	if (col)
+		uncolor();
+	printf("%-16s\n", b->sf_type);
+
 }
 
 void
@@ -293,6 +337,10 @@ main(int argc, char *argv[])
 {
 	pfl_init();
 	progname = argv[0];
+
+	setupterm(NULL, STDOUT_FILENO, NULL);
+	has_col = has_colors() && isatty(STDOUT_FILENO);
+
 	psc_ctlcli_main(SL_PATH_SLMCTLSOCK, argc, argv, opts,
 	    nitems(opts));
 	exit(0);
