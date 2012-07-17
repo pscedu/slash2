@@ -278,7 +278,7 @@ slmctlparam_resources(int fd, struct psc_ctlmsghdr *mh,
 			sp = res2mdsinfo(r);
 			f_val = lookup(slm_resmds_fields,
 			    nitems(slm_resmds_fields), p_field);
-			if (f_val == -1 && strcmp(p_field, "*"))
+			if (f_val == -1 && strcmp(p_res, "*"))
 				return (psc_ctlsenderr(fd, mh,
 				    "invalid resources field: %s", p_field));
 			if (strcmp(p_field, "*") == 0 ||
@@ -298,7 +298,7 @@ slmctlparam_resources(int fd, struct psc_ctlmsghdr *mh,
 			si = res2iosinfo(r);
 			f_val = lookup(slm_resios_fields,
 			    nitems(slm_resios_fields), p_field);
-			if (f_val == -1 && strcmp(p_field, "*"))
+			if (f_val == -1 && strcmp(p_res, "*"))
 				return (psc_ctlsenderr(fd, mh,
 				    "invalid resources field: %s", p_field));
 			if (strcmp(p_field, "*") == 0 ||
