@@ -158,7 +158,8 @@ slm_rmc_bmapdesc_setup(struct bmapc_memb *bmap,
 		struct bmap_mds_info *bmi = bmap_2_bmi(bmap);
 
 		psc_assert(bmi->bmdsi_wr_ion);
-		sbd->sbd_ios = bmi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id;
+		sbd->sbd_ios =
+		    bmi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id;
 	} else
 		sbd->sbd_ios = IOS_ID_ANY;
 }
@@ -1016,7 +1017,8 @@ slm_symlink(struct pscrpc_request *rq, struct srm_symlink_req *mq,
 
 	mds_reserve_slot(1);
 	mp->rc = mdsio_symlink(linkname, fcmh_2_mdsio_fid(p), mq->name,
-	    &cr, &mp->cattr, NULL, mdslog_namespace, slm_get_next_slashfid, 0);
+	    &cr, &mp->cattr, NULL, mdslog_namespace,
+	    slm_get_next_slashfid, 0);
 	mds_unreserve_slot(1);
 
 	mdsio_fcmh_refreshattr(p, &mp->pattr);
