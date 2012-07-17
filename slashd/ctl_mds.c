@@ -475,18 +475,23 @@ int
 slmctlrep_getstatfs(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct slmctlmsg_statfs *scsf = m;
+	struct resprof_mds_info *rpmi;
 	struct sl_resource *r;
+	struct sl_site *s;
 	int i, rc = 1;
 
 	CONF_LOCK();
-	SITE_FOREACH_RES(nodeSite, r, i) {
+	CONF_FOREACH_RES(s, r, i) {
 		if (!RES_ISFS(r))
 			continue;
 
+		rpmi = res2rpmi(r);
+		RPMI_LOCK(rpmi);
 		strlcpy(scsf->scsf_resname, r->res_name,
 		    sizeof(scsf->scsf_resname));
 		memcpy(&scsf->scsf_ssfb, &res2iosinfo(r)->si_ssfb,
 		    sizeof(scsf->scsf_ssfb));
+		RPMI_ULOCK(rpmi);
 
 		rc = psc_ctlmsg_sendv(fd, mh, scsf);
 		if (!rc)
