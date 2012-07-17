@@ -183,7 +183,9 @@ struct resprof_mds_info {
 };
 
 #define RPMI_LOCK(rpmi)		spinlock(&(rpmi)->rpmi_lock)
+#define RPMI_RLOCK(rpmi)	reqlock(&(rpmi)->rpmi_lock)
 #define RPMI_ULOCK(rpmi)	freelock(&(rpmi)->rpmi_lock)
+#define RPMI_URLOCK(rpmi, lk)	ureqlock(&(rpmi)->rpmi_lock, (lk))
 
 static __inline struct resprof_mds_info *
 res2rpmi(struct sl_resource *res)
