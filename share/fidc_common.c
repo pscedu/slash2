@@ -233,6 +233,14 @@ _fidc_lookup_fid(const struct pfl_callerinfo *pci, slfid_t f)
 /**
  * _fidc_lookup - Search the FID cache for a member by its FID,
  *	optionally creating it.
+ * @pci: thread caller information.
+ * @fgp: FID and GEN #.
+ * @flags: access flags.
+ * @sstb: statbuf to use if populating a new entry.
+ * @setattrflags: SETATTRF_* flags specifying which statbuf fields are
+ *	valid.
+ * @fcmhp: value-result fcmh return.
+ * @arg: argument to GETATTR.
  * Notes:  Newly acquired fcmh's are ref'd with FCMH_OPCNT_NEW, reused
  *	ones are ref'd with FCMH_OPCNT_LOOKUP_FIDC.
  */
