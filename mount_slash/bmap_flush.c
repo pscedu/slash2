@@ -167,7 +167,7 @@ _bmap_flushq_wake(const struct pfl_callerinfo *pci, int mode,
 		break;
 
 	default:
-		abort();
+		psc_fatalx("invalid mode %d", mode);
 	}
 	tmp = bmapFlushTimeoFlags;
 	if (wake)
