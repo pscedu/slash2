@@ -507,7 +507,7 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 	psc_assert(r->biorq_flags & BIORQ_DESTROY);
 	psc_assert(!(r->biorq_flags & (BIORQ_INFL | BIORQ_SCHED)));
 
-	/* Block here on an of our EIO'd pages waiting for other threads
+	/* Block here on any of our EIO'd pages waiting for other threads
 	 *   to release their references.
 	 * Additionally, we need to block for RA pages which have not
 	 *   yet been marked as EIO.
