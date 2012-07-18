@@ -28,10 +28,4 @@ int	mdscoh_req(struct bmap_mds_lease *);
 int	mdscoh_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 void	slmcohthr_spawn(void);
 
-#define MDSCOH_BLOCK	1
-#define MDSCOH_NONBLOCK	0
-
-extern struct psc_listcache pndgBmapCbs;
-extern struct psc_listcache inflBmapCbs;
-
 #endif /* _MDSCOH_H_ */

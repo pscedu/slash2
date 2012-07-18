@@ -141,8 +141,7 @@ struct msl_ra {
 struct slc_async_req {
 	struct psc_listentry		  car_lentry;
 	struct pscrpc_async_args	  car_argv;
-	int				(*car_cbf)(struct pscrpc_request *, 
-	    int,
+	int				(*car_cbf)(struct pscrpc_request *, int,
 						struct pscrpc_async_args *);
 	uint64_t			  car_id;
 	size_t				  car_len;
@@ -186,7 +185,7 @@ struct msl_fsrqinfo {
 	int				 mfsrq_flags;
 	int				 mfsrq_err;
 	int				 mfsrq_ref;	/* # car's needed to satisfy this req */
-	int                              mfsrq_reissue;
+	int				 mfsrq_reissue;
 	enum rw				 mfsrq_rw;
 	struct pscfs_req		*mfsrq_pfr;
 	struct psclist_head		 mfsrq_lentry;	/* pending AIOs in struct bmap_pagecache_entry  */
@@ -197,7 +196,7 @@ struct msl_fsrqinfo {
 #define MFSRQ_BMPCEATT			(1 << 2)
 #define MFSRQ_DIO			(1 << 3)
 #define MFSRQ_AIOREADY			(1 << 4)
-#define MFSRQ_REISSUED                  (1 << 5)
+#define MFSRQ_REISSUED			(1 << 5)
 
 void	msl_fsrqinfo_write(struct msl_fsrqinfo *);
 int	msl_fsrqinfo_state(struct msl_fsrqinfo *, int, int, int);
@@ -227,7 +226,7 @@ res2rpci(struct sl_resource *res)
 struct resm_cli_info {
 	struct srm_bmap_release_req	 rmci_bmaprls;
 	struct psc_listcache		 rmci_async_reqs;
-	psc_atomic32_t                   rmci_pndg_rpcs;
+	psc_atomic32_t			 rmci_pndg_rpcs;
 };
 
 static __inline struct resm_cli_info *
@@ -254,7 +253,6 @@ void	 msl_reada_rpc_launch(struct bmap_pagecache_entry **, int);
 int	 msl_readahead_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 int	 msl_stat(struct fidc_membh *, void *);
 int	 msl_write_rpc_cb(struct pscrpc_request *, struct pscrpc_async_args *);
-int	 msl_write_rpcset_cb(struct pscrpc_request_set *, void *, int);
 
 size_t	 msl_pages_copyout(struct bmpc_ioreq *);
 
@@ -264,7 +262,6 @@ struct msl_fhent *
 	 msl_fhent_new(struct fidc_membh *);
 
 void	 msbmapflushthr_spawn(void);
-void	 msctlthr_begin(struct psc_thread *);
 void	 msctlthr_spawn(void);
 void	 mstimerthr_spawn(void);
 
@@ -272,7 +269,7 @@ void	 mstimerthr_spawn(void);
 	_bmap_flushq_wake(PFL_CALLERINFOSS(SLSS_BMAP), (mode), (t))
 
 void	 _bmap_flushq_wake(const struct pfl_callerinfo *, int, struct timespec *);
-void	 bmap_flush_resched(struct bmpc_ioreq *);
+void	  bmap_flush_resched(struct bmpc_ioreq *);
 
 /* bmap flush modes (bmap_flushq_wake) */
 #define BMAPFLSH_TIMEOA		(1 << 0)

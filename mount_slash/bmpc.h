@@ -439,7 +439,6 @@ struct bmpc_ioreq *
 	    char *, int, uint32_t, uint32_t, int);
 
 int	 bmpce_init(struct psc_poolmgr *, void *);
-void	 bmpce_getbuf(struct bmap_pagecache_entry *);
 struct bmap_pagecache_entry *
 	 bmpce_lookup_locked(struct bmap_pagecache *, struct bmpc_ioreq *,
 	    uint32_t, struct psc_waitq *);

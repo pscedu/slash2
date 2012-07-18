@@ -249,7 +249,6 @@ int                      slcfg_get_ioslist(sl_ios_id_t,
 				   struct psc_dynarray *, int);
 
 int			 slcfg_res_cmp(const void *, const void *);
-int			 slcfg_resm_cmp(const void *, const void *);
 int			 slcfg_site_cmp(const void *, const void *);
 
 void			 slcfg_parse(const char *);

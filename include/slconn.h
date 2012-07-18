@@ -285,7 +285,6 @@ int	 slrpc_newgenreq(struct slashrpc_cservice *, int,
 int	 slrpc_newreq(struct slashrpc_cservice *, int,
 		struct pscrpc_request **, int, int, void *);
 
-int	 slrpc_waitgenrep(struct pscrpc_request *, int, void *);
 int	 slrpc_waitrep(struct slashrpc_cservice *,
 		struct pscrpc_request *, int, void *);
 
