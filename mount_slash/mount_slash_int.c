@@ -575,7 +575,8 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 }
 
 void
-_msl_biorq_destroy(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
+_msl_biorq_destroy(const struct pfl_callerinfo *pci,
+    struct bmpc_ioreq *r)
 {
 	struct msl_fhent *f = r->biorq_fhent;
 #if FHENT_EARLY_RELEASE
@@ -605,7 +606,8 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
 			else {
 				psc_assert(r->biorq_flags & BIORQ_INFL);
 				psc_assert(r->biorq_flags & BIORQ_SCHED);
-				r->biorq_flags &= ~(BIORQ_INFL|BIORQ_SCHED);
+				r->biorq_flags &= ~(BIORQ_INFL |
+				    BIORQ_SCHED);
 			}
 		} else
 			psc_assert(!(r->biorq_flags &
