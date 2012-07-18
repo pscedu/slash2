@@ -261,6 +261,10 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 	psclog_info("fid="SLPRI_FID" bmapno=%u seq=%"PRId64,
 	    mq->fid, mq->blkno, mq->seq);
 
+	/*
+	 * XXX it is possible this fcmh won't be in the cache -- force a
+	 * load?
+	 */
 	f = fidc_lookup_fid(mq->fid);
 	if (!f) {
 		mp->rc = -ENOENT;
