@@ -944,6 +944,7 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 int
 slm_rmc_handle_statfs(struct pscrpc_request *rq)
 {
+	struct resprof_mds_info *rpmi;
 	struct sl_resource *r, *ri;
 	struct srm_statfs_req *mq;
 	struct srm_statfs_rep *mp;
@@ -971,15 +972,20 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 	}
 	DYNARRAY_FOREACH(ri, j, &r->res_peers) {
  single:
+		rpmi = res2rpmi(r);
 		si = res2iosinfo(ri);
-		if (si->si_ssfb.sf_bsize == 0)
+		RPMI_LOCK(rpmi);
+		if (si->si_ssfb.sf_bsize == 0) {
+			RPMI_ULOCK(rpmi);
 			continue;
+		}
 		if (mp->ssfb.sf_bsize == 0)
 			mp->ssfb.sf_bsize = si->si_ssfb.sf_bsize;
 		adj = mp->ssfb.sf_bsize * 1. / si->si_ssfb.sf_bsize;
 		mp->ssfb.sf_blocks	+= adj * si->si_ssfb.sf_blocks;
 		mp->ssfb.sf_bfree	+= adj * si->si_ssfb.sf_bfree;
 		mp->ssfb.sf_bavail	+= adj * si->si_ssfb.sf_bavail;
+		RPMI_ULOCK(rpmi);
 
 		if (single)
 			break;
