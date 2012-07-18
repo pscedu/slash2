@@ -386,8 +386,8 @@ reimport
 - add du(1) functionality in dumpfid
     - requires import of zfs-fuse-0.7.0
 - optimize READLINK for small RPCs to avoid bulk
-- fix the msl multiwait csvc crash
 - fix slmctl -ss missing sliod bug
+- df on mount_slash reports continually different stats
 
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
