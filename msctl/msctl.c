@@ -849,12 +849,14 @@ struct psc_ctlopt opts[] = {
 int
 main(int argc, char *argv[])
 {
+	int error;
+
 	pfl_init();
 	progname = argv[0];
 	psc_hashtbl_init(&fnfidpairs, 0, struct fnfidpair, ffp_fid,
 	    ffp_hentry, 1024, NULL, "fnfidpairs");
 
-	setupterm(NULL, STDOUT_FILENO, NULL);
+	setupterm(NULL, STDOUT_FILENO, &error);
 	has_col = has_colors() && isatty(STDOUT_FILENO);
 
 	psc_ctlcli_main(SL_PATH_MSCTLSOCK, argc, argv, opts,
