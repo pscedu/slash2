@@ -165,7 +165,7 @@ fidc_reap(struct psc_poolmgr *m)
 		if (fcmh_2_fid(f) == 1)
 			continue;
 
-		if (!FCMH_TRYREQLOCK(f, &waslocked))
+		if (!FCMH_TRYRLOCK(f, &waslocked))
 			continue;
 
 		/* skip items in use */

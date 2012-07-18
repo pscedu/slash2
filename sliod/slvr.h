@@ -91,7 +91,7 @@ struct slvr_ref {
 #define SLVR_URLOCK(s, lk)	ureqlock(&(s)->slvr_lock, (lk))
 #define SLVR_LOCK_ENSURE(s)	LOCK_ENSURE(&(s)->slvr_lock)
 #define SLVR_TRYLOCK(s)		trylock(&(s)->slvr_lock)
-#define SLVR_TRYREQLOCK(s, lk)	tryreqlock(&(s)->slvr_lock, (lk))
+#define SLVR_TRYRLOCK(s, lk)	tryreqlock(&(s)->slvr_lock, (lk))
 
 #define SLVR_WAKEUP(b)							\
 	do {								\

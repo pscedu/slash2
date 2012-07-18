@@ -1312,7 +1312,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 		 *   tries to free a slvr from the same biod trylock
 		 *   will abort.
 		 */
-		if (!SLVR_TRYREQLOCK(s, &locked))
+		if (!SLVR_TRYRLOCK(s, &locked))
 			continue;
 
 		/* Look for slvrs which can be freed, slvr_lru_freeable()
