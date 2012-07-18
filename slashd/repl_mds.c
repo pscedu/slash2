@@ -101,7 +101,7 @@ int
 _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
     int add, int log)
 {
-	int locked, rc = -ENOENT, inox_rc = 0;
+	int locked, rc = -SLERR_REPL_NOT_ACT, inox_rc = 0;
 	struct sl_resource *res;
 	sl_replica_t *repl;
 	uint32_t j, k;
