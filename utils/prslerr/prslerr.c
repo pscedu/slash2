@@ -57,7 +57,6 @@ main(int argc, char *argv[])
 	printf("%4d [SLERR_IOS_UNKNOWN]: %s\n", SLERR_IOS_UNKNOWN, slstrerror(SLERR_IOS_UNKNOWN));
 	printf("%4d [SLERR_ION_UNKNOWN]: %s\n", SLERR_ION_UNKNOWN, slstrerror(SLERR_ION_UNKNOWN));
 	printf("%4d [SLERR_ION_OFFLINE]: %s\n", SLERR_ION_OFFLINE, slstrerror(SLERR_ION_OFFLINE));
-	printf("%4d [SLERR_ION_NOTREPL]: %s\n", SLERR_ION_NOTREPL, slstrerror(SLERR_ION_NOTREPL));
 	printf("%4d [SLERR_XACT_FAIL]: %s\n", SLERR_XACT_FAIL, slstrerror(SLERR_XACT_FAIL));
 	printf("%4d [SLERR_SHORTIO]: %s\n", SLERR_SHORTIO, slstrerror(SLERR_SHORTIO));
 	printf("%4d [SLERR_AUTHBUF_BADMAGIC]: %s\n", SLERR_AUTHBUF_BADMAGIC, slstrerror(SLERR_AUTHBUF_BADMAGIC));
@@ -75,7 +74,6 @@ main(int argc, char *argv[])
 	printf("%4d [SLERR_REIMPORT_OLD]: %s\n", SLERR_REIMPORT_OLD, slstrerror(SLERR_REIMPORT_OLD));
 	printf("%4d [SLERR_IMPORT_XREPL_DIFF]: %s\n", SLERR_IMPORT_XREPL_DIFF, slstrerror(SLERR_IMPORT_XREPL_DIFF));
 	printf("%4d [SLERR_BMAP_LEASEEXT_FAILED]: %s\n", SLERR_BMAP_LEASEEXT_FAILED, slstrerror(SLERR_BMAP_LEASEEXT_FAILED));
-	printf("%4d [SLERR_BMAP_LEASEREASSIGN_FAILED]: %s\n", SLERR_BMAP_LEASEREASSIGN_FAILED, slstrerror(SLERR_BMAP_LEASEREASSIGN_FAILED));
 	printf("%4d [SLERR_RES_BADTYPE]: %s\n", SLERR_RES_BADTYPE, slstrerror(SLERR_RES_BADTYPE));
 	printf("%4d [SLERR_ALREADY]: %s\n", SLERR_ALREADY, slstrerror(SLERR_ALREADY));
 	printf("%4d [SLERR_INVAL]: %s\n", SLERR_INVAL, slstrerror(SLERR_INVAL));
