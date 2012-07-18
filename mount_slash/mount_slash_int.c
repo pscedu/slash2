@@ -182,7 +182,8 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 
 			psc_assert(bkwdra == 0 || bkwdra == 1);
 			n = bkwdra ? (aoff / BMPC_BLKSZ) :
-				(SLASH_BMAP_SIZE - aoff) / BMPC_BLKSZ;
+			    (SLASH_BMAP_SIZE - aoff) / BMPC_BLKSZ;
+
 			/* Read ahead must be contained within this bmap
 			 */
 			maxpages = MIN(rapages, n);
