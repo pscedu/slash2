@@ -252,9 +252,9 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 {
 	struct srm_bmap_dio_req *mq;
 	struct srm_bmap_dio_rep *mp;
+	struct bmapc_memb *b = NULL;
 	struct bmap_cli_info *bci;
 	struct fidc_membh *f;
-	struct bmapc_memb *b;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
