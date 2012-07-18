@@ -248,9 +248,11 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		sli_aio_reply_setup(aiocbr, rq, mq->size, mq->offset,
 		    slvr_ref, nslvrs, iovs, nslvrs, rw);
 
-		/* Now check for early completion.   If all slvrs are ready,
-		 *   then we must reply with the data now.  Otherwise, we'll
-		 *   never be woken since the aio cb(s) have been run.
+		/*
+		 * Now check for early completion.   If all slvrs are
+		 * ready, then we must reply with the data now.
+		 * Otherwise, we'll never be woken since the aio cb(s)
+		 * have been run.
 		 */
 		spinlock(&aiocbr->aiocbr_lock);
 
@@ -283,7 +285,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		if (i != nslvrs) {
 			mp->rc = SLERR_AIOWAIT;
 
-			pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
+			pscrpc_msg_add_flags(rq->rq_repmsg,
+			    MSG_ABORT_BULK);
 			goto out;
 
 		} else {
@@ -300,13 +303,14 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		rc = mp->rc;
 		for (i = 0; i < nslvrs; i++) {
 			SLVR_LOCK(slvr_ref[i]);
-			if (rw == SL_READ)
-				slvr_ref[i]->slvr_pndgreads--;
-			else
-				slvr_ref[i]->slvr_pndgwrts--;
-
 			slvr_clear_inuse(slvr_ref[i], 0, SLASH_SLVR_SIZE);
-			slvr_lru_tryunpin_locked(slvr_ref[i]);
+			if (rw == SL_READ) {
+				slvr_ref[i]->slvr_pndgreads--;
+				slvr_lru_tryunpin_locked(slvr_ref[i]);
+			} else {
+				slvr_try_crcsched_locked(slvr_ref[i]);
+			}
+
 			SLVR_ULOCK(slvr_ref[i]);
 
 			DEBUG_SLVR(PLL_WARN, slvr_ref[i],

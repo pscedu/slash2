@@ -1088,7 +1088,7 @@ slvr_schedule_crc_locked(struct slvr_ref *s)
 
 void slvr_slb_free_locked(struct slvr_ref *, struct psc_poolmgr *);
 
-__static void
+void
 slvr_try_crcsched_locked(struct slvr_ref *s)
 {
 	if ((s->slvr_flags & SLVR_LRU) && s->slvr_pndgwrts > 1)
