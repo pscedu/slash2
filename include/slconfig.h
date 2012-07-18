@@ -177,7 +177,6 @@ struct sl_gconf {
 	uint64_t		 gconf_fsuuid;
 };
 
-#define GCONF_HASHTBL_SZ	63
 #define INIT_GCONF(cf)							\
 	do {								\
 		memset((cf), 0, sizeof(*(cf)));				\
@@ -245,7 +244,7 @@ void			 slcfg_init_res(struct sl_resource *);
 void			 slcfg_init_resm(struct sl_resm *);
 void			 slcfg_init_site(struct sl_site *);
 
-int                      slcfg_get_ioslist(sl_ios_id_t,
+int			 slcfg_get_ioslist(sl_ios_id_t,
 				   struct psc_dynarray *, int);
 
 int			 slcfg_res_cmp(const void *, const void *);
