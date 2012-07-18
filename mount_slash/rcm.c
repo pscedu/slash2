@@ -258,7 +258,7 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	psclog_warnx("fid="SLPRI_FID" bmapno=%u seq=%"PRId64,
+	psclog_info("fid="SLPRI_FID" bmapno=%u seq=%"PRId64,
 	    mq->fid, mq->blkno, mq->seq);
 
 	f = fidc_lookup_fid(mq->fid);
