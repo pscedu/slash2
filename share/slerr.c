@@ -25,10 +25,10 @@
 #include "slerr.h"
 
 char *slash_errstrs[] = {
-/*  0 */ "Replica is already active",
-/*  1 */ "Replication is not active",
-/*  2 */ "Replica is already inactive",
-/*  3 */ "All replicas inactive",
+/*  0 */ "Specified replica(s) already exist",
+/*  1 */ "Specified replica(s) do not exist",
+/*  2 */ "",
+/*  3 */ "",
 /*  4 */ "Invalid bmap",
 /*  5 */ "Bmap direct I/O must wait",
 /*  6 */ "Uninitialized bmap",

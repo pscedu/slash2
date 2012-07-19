@@ -25,8 +25,6 @@ char *slstrerror(int);
 #define _SLERR_START			1000		/* must be >max errno */
 #define SLERR_REPL_ALREADY_ACT		(_SLERR_START +  0)
 #define SLERR_REPL_NOT_ACT		(_SLERR_START +  1)
-#define SLERR_REPL_ALREADY_INACT	(_SLERR_START +  2)
-#define SLERR_REPLS_ALL_INACT		(_SLERR_START +  3)
 #define SLERR_BMAP_INVALID		(_SLERR_START +  4)
 #define SLERR_BMAP_DIOWAIT		(_SLERR_START +  5)
 #define SLERR_BMAP_ZERO			(_SLERR_START +  6)
