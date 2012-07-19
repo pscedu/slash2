@@ -38,11 +38,13 @@ slcfg_init_res(struct sl_resource *res)
 void
 slcfg_init_resm(struct sl_resm *resm)
 {
+	struct sl_resource *r = resm->resm_res;
 	struct resm_cli_info *rmci;
 
 	rmci = resm2rmci(resm);
 	lc_reginit(&rmci->rmci_async_reqs, struct slc_async_req,
-	    car_lentry, "aiorq-%s:%d", resm->resm_res->res_name, 0);
+	    car_lentry, "aiorq-%s:%d", r->res_name,
+	    psc_dynarray_len(&r->res_members));
 }
 
 void
