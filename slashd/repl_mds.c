@@ -573,9 +573,9 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 
 			repl_some_act |= mds_repl_bmap_walk(b,
 			    tract, retifset, 0, iosidx, nios);
-			if (repl_all_act && mds_repl_bmap_walk(b,
-			    NULL, ret_if_inact, REPL_WALKF_SCIRCUIT,
-			    iosidx, nios))
+			if (repl_all_act && mds_repl_bmap_walk(b, NULL,
+			    ret_if_inact, REPL_WALKF_SCIRCUIT, iosidx,
+			    nios))
 				repl_all_act = 0;
 			mds_bmap_write_repls_rel(b);
 		}
@@ -670,7 +670,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		retifset[BREPLST_REPL_QUEUED] = 1;
 		retifset[BREPLST_REPL_SCHED] = 1;
 
-		rc = -SLERR_REPLS_ALL_INACT;
+		rc = -SLERR_REPL_NOT_ACT;
 		for (bmapno = 0; bmapno <
 		    fcmh_nvalidbmaps(wk->uswi_fcmh); bmapno++) {
 			if (mds_bmap_load(wk->uswi_fcmh, bmapno, &b))
@@ -688,7 +688,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		}
 	} else if (mds_bmap_exists(wk->uswi_fcmh, bmapno)) {
 		brepls_init(retifset, 0);
-		retifset[BREPLST_INVALID] = -SLERR_REPL_ALREADY_INACT;
+		retifset[BREPLST_INVALID] = -SLERR_REPL_NOT_ACT;
 		/* XXX BREPLST_TRUNCPNDG -> -EINVAL? */
 		retifset[BREPLST_GARBAGE] = -EINVAL;
 		retifset[BREPLST_GARBAGE_SCHED] = -EINVAL;
