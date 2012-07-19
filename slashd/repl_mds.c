@@ -222,18 +222,18 @@ mds_brepls_check(uint8_t *repls, int nr)
 }
 
 int
-_mds_repl_bmap_apply(struct bmapc_memb *bcm, const int *tract,
+_mds_repl_bmap_apply(struct bmapc_memb *b, const int *tract,
     const int *retifset, int flags, int off, int *scircuit,
     brepl_walkcb_t cbf, void *cbarg)
 {
-	struct bmap_mds_info *bmdsi = bmap_2_bmi(bcm);
+	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	int locked, val, rc = 0;
 
 	/* Take a write lock on the bmapod. */
 	if (tract)
-		locked = BMAPOD_REQWRLOCK(bmdsi);
+		locked = BMAPOD_REQWRLOCK(bmi);
 	else
-		locked = BMAPOD_REQRDLOCK(bmdsi);
+		locked = BMAPOD_REQRDLOCK(bmi);
 
 	if (scircuit)
 		*scircuit = 0;
@@ -241,13 +241,13 @@ _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int *tract,
 		psc_assert((flags & REPL_WALKF_SCIRCUIT) == 0);
 
 	/* retrieve IOS status given a bit offset into the map */
-	val = SL_REPL_GET_BMAP_IOS_STAT(bcm->bcm_repls, off);
+	val = SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls, off);
 
 	if (val >= NBREPLST)
 		psc_fatalx("corrupt bmap");
 
 	if (cbf)
-		cbf(bcm, off / SL_BITS_PER_REPLICA, val, cbarg);
+		cbf(b, off / SL_BITS_PER_REPLICA, val, cbarg);
 
 	/* Check for return values */
 	if (retifset && retifset[val]) {
@@ -263,11 +263,11 @@ _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int *tract,
 
 	/* Apply any translations */
 	if (tract && tract[val] != -1)
-		SL_REPL_SET_BMAP_IOS_STAT(bcm->bcm_repls,
+		SL_REPL_SET_BMAP_IOS_STAT(b->bcm_repls,
 		    off, tract[val]);
 
  out:
-	BMAPOD_UREQLOCK(bmdsi, locked);
+	BMAPOD_UREQLOCK(bmi, locked);
 	return (rc);
 }
 
@@ -289,20 +289,20 @@ _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int *tract,
  * @nios: # I/O system indexes specified.
  */
 int
-_mds_repl_bmap_walk(struct bmapc_memb *bcm, const int *tract,
+_mds_repl_bmap_walk(struct bmapc_memb *b, const int *tract,
     const int *retifset, int flags, const int *iosidx, int nios,
     brepl_walkcb_t cbf, void *cbarg)
 {
 	int scircuit, nr, off, k, rc, trc;
 
 	scircuit = rc = 0;
-	nr = fcmh_2_inoh(bcm->bcm_fcmh)->inoh_ino.ino_nrepls;
+	nr = fcmh_2_inoh(b->bcm_fcmh)->inoh_ino.ino_nrepls;
 
 	if (nios == 0)
 		/* no one specified; apply to all */
 		for (k = 0, off = 0; k < nr;
 		    k++, off += SL_BITS_PER_REPLICA) {
-			trc = _mds_repl_bmap_apply(bcm, tract, retifset,
+			trc = _mds_repl_bmap_apply(b, tract, retifset,
 			    flags, off, &scircuit, cbf, cbarg);
 			if (trc)
 				rc = trc;
@@ -314,7 +314,7 @@ _mds_repl_bmap_walk(struct bmapc_memb *bcm, const int *tract,
 		for (k = 0, off = 0; k < nr; k++,
 		    off += SL_BITS_PER_REPLICA)
 			if (!iosidx_in(k, iosidx, nios)) {
-				trc = _mds_repl_bmap_apply(bcm, tract,
+				trc = _mds_repl_bmap_apply(b, tract,
 				    retifset, flags, off, &scircuit,
 				    cbf, cbarg);
 				if (trc)
@@ -325,7 +325,7 @@ _mds_repl_bmap_walk(struct bmapc_memb *bcm, const int *tract,
 	} else
 		/* modify only the sites specified */
 		for (k = 0; k < nios; k++) {
-			trc = _mds_repl_bmap_apply(bcm, tract, retifset,
+			trc = _mds_repl_bmap_apply(b, tract, retifset,
 			    flags, iosidx[k] * SL_BITS_PER_REPLICA,
 			    &scircuit, cbf, cbarg);
 			if (trc)
@@ -509,7 +509,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	int tract[NBREPLST], retifset[NBREPLST], retifzero[NBREPLST];
 	int iosidx[SL_MAX_REPLICAS], rc;
 	struct up_sched_work_item *wk;
-	struct bmapc_memb *bcm;
+	struct bmapc_memb *b;
 
 	if (nios < 1 || nios > SL_MAX_REPLICAS)
 		return (-EINVAL);
@@ -556,28 +556,28 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 
 		for (bmapno = 0; bmapno <
 		    fcmh_nvalidbmaps(wk->uswi_fcmh); bmapno++) {
-			if (mds_bmap_load(wk->uswi_fcmh, bmapno, &bcm))
+			if (mds_bmap_load(wk->uswi_fcmh, bmapno, &b))
 				continue;
 
-			BMAP_LOCK(bcm);
+			BMAP_LOCK(b);
 
 			/*
 			 * If no VALID replicas exist, the bmap must be
 			 * uninitialized/all zeroes.  Skip it.
 			 */
-			if (mds_repl_bmap_walk_all(bcm, NULL, retifzero,
+			if (mds_repl_bmap_walk_all(b, NULL, retifzero,
 			    REPL_WALKF_SCIRCUIT) == 0) {
-				bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
+				bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 				continue;
 			}
 
-			repl_some_act |= mds_repl_bmap_walk(bcm,
+			repl_some_act |= mds_repl_bmap_walk(b,
 			    tract, retifset, 0, iosidx, nios);
-			if (repl_all_act && mds_repl_bmap_walk(bcm,
+			if (repl_all_act && mds_repl_bmap_walk(b,
 			    NULL, ret_if_inact, REPL_WALKF_SCIRCUIT,
 			    iosidx, nios))
 				repl_all_act = 0;
-			mds_bmap_write_repls_rel(bcm);
+			mds_bmap_write_repls_rel(b);
 		}
 		if (bmapno && repl_some_act == 0)
 			rc = EALREADY;
@@ -594,22 +594,22 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		retifset[BREPLST_REPL_QUEUED] = EALREADY;
 		retifset[BREPLST_VALID] = 0;
 
-		rc = mds_bmap_load(wk->uswi_fcmh, bmapno, &bcm);
+		rc = mds_bmap_load(wk->uswi_fcmh, bmapno, &b);
 		if (rc == 0) {
-			BMAP_LOCK(bcm);
+			BMAP_LOCK(b);
 
 			/*
 			 * If no VALID replicas exist, the bmap must be
 			 * uninitialized/all zeroes.  Skip it.
 			 */
-			if (mds_repl_bmap_walk_all(bcm, NULL, retifzero,
+			if (mds_repl_bmap_walk_all(b, NULL, retifzero,
 			    REPL_WALKF_SCIRCUIT) == 0) {
-				bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
+				bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 				rc = SLERR_BMAP_ZERO;
 			} else {
-				rc = mds_repl_bmap_walk(bcm,
+				rc = mds_repl_bmap_walk(b,
 				    tract, retifset, 0, iosidx, nios);
-				mds_bmap_write_repls_rel(bcm);
+				mds_bmap_write_repls_rel(b);
 			}
 		}
 	} else
@@ -632,7 +632,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 {
 	int rc, tract[NBREPLST], retifset[NBREPLST], iosidx[SL_MAX_REPLICAS];
 	struct up_sched_work_item *wk;
-	struct bmapc_memb *bcm;
+	struct bmapc_memb *b;
 
 	if (nios < 1 || nios > SL_MAX_REPLICAS)
 		return (-EINVAL);
@@ -662,13 +662,13 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		rc = SLERR_REPLS_ALL_INACT;
 		for (bmapno = 0; bmapno <
 		    fcmh_nvalidbmaps(wk->uswi_fcmh); bmapno++) {
-			if (mds_bmap_load(wk->uswi_fcmh, bmapno, &bcm))
+			if (mds_bmap_load(wk->uswi_fcmh, bmapno, &b))
 				continue;
 
-			if (mds_repl_bmap_walk(bcm, tract,
+			if (mds_repl_bmap_walk(b, tract,
 			    retifset, 0, iosidx, nios))
 				rc = 0;
-			mds_bmap_write_repls_rel(bcm);
+			mds_bmap_write_repls_rel(b);
 		}
 	} else if (mds_bmap_exists(wk->uswi_fcmh, bmapno)) {
 		brepls_init(retifset, 0);
@@ -677,11 +677,11 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		retifset[BREPLST_GARBAGE] = EINVAL;
 		retifset[BREPLST_GARBAGE_SCHED] = EINVAL;
 
-		rc = mds_bmap_load(wk->uswi_fcmh, bmapno, &bcm);
+		rc = mds_bmap_load(wk->uswi_fcmh, bmapno, &b);
 		if (rc == 0) {
-			rc = mds_repl_bmap_walk(bcm,
+			rc = mds_repl_bmap_walk(b,
 			    tract, retifset, 0, iosidx, nios);
-			mds_bmap_write_repls_rel(bcm);
+			mds_bmap_write_repls_rel(b);
 		}
 	} else
 		rc = SLERR_BMAP_INVALID;
@@ -820,7 +820,7 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 {
 	int tract[NBREPLST], retifset[NBREPLST], iosidx;
 	struct up_sched_work_item *wk;
-	struct bmapc_memb *bcm;
+	struct bmapc_memb *b;
 	sl_replica_t repl;
 	sl_bmapno_t n;
 
@@ -850,14 +850,14 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 			goto end;
 
 		for (n = 0; n < fcmh_nvalidbmaps(wk->uswi_fcmh); n++) {
-			if (mds_bmap_load(wk->uswi_fcmh, n, &bcm))
+			if (mds_bmap_load(wk->uswi_fcmh, n, &b))
 				continue;
 
-			if (mds_repl_bmap_walk(bcm, tract, retifset, 0,
+			if (mds_repl_bmap_walk(b, tract, retifset, 0,
 			    &iosidx, 1))
-				mds_bmap_write_repls_rel(bcm);
+				mds_bmap_write_repls_rel(b);
 			else
-				bmap_op_done(bcm);
+				bmap_op_done(b);
 		}
  end:
 		uswi_enqueue_sites(wk, &repl, 1);
