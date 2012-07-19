@@ -241,8 +241,9 @@ _fidc_lookup_fid(const struct pfl_callerinfo *pci, slfid_t f)
  *	valid.
  * @fcmhp: value-result fcmh return.
  * @arg: argument to GETATTR.
- * Notes:  Newly acquired fcmh's are ref'd with FCMH_OPCNT_NEW, reused
+ * Note:  Newly acquired fcmh's are ref'd with FCMH_OPCNT_NEW, reused
  *	ones are ref'd with FCMH_OPCNT_LOOKUP_FIDC.
+ * Note: Returns positive errno.
  */
 int
 _fidc_lookup(const struct pfl_callerinfo *pci,
