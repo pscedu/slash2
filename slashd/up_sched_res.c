@@ -1143,8 +1143,9 @@ upsched_scandir(void)
 			rc = mds_repl_loadino(&fg, &fcmh);
 			if (rc) {
 				/* XXX if ENOENT, remove from repldir and continue */
-				psclog_errorx("mds_repl_loadino: %s",
-				    slstrerror(rc));
+				psclog_errorx("mds_repl_loadino "
+				    "%"SLPRI_FID": %s",
+				    fg.fg_fid, slstrerror(rc));
 				mdsio_unlink(mds_upschdir_inum, NULL, fn,
 				    &rootcreds, NULL, NULL);
 				continue;
