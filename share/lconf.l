@@ -80,9 +80,9 @@ parallel_lfs_compnt|standalone_fs|archival_fs|mds {
 	psclog_trace("Resource type string %s", yytext);
 	psc_assert(!currentResm);
 	currentResm = PSCALLOC(sizeof(struct sl_resm) + cfg_resm_pri_sz);
+	currentResm->resm_res = currentRes;
 	slcfg_init_resm(currentResm);
 	psc_dynarray_add(&currentRes->res_members, currentResm);
-	currentResm->resm_res = currentRes;
 	yylval = pfl_strdup(yytext);
 	return (RESOURCE_TYPE);
 }
