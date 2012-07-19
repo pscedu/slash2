@@ -516,15 +516,15 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 
 	rc = uswi_findoradd(fgp, &wk);
 	if (rc)
-		return (rc);
+		return (-rc);
 
 	slm_iosv_setbusy(iosv, nios);
 
 	/* Find/add our replica's IOS ID */
-	rc = mds_repl_iosv_lookup_add(USWI_INOH(wk), iosv, iosidx,
+	rc = -mds_repl_iosv_lookup_add(USWI_INOH(wk), iosv, iosidx,
 	    nios);
 	if (rc)
-		goto out;
+		PFL_GOTOERR(out, rc);
 
 	/*
 	 * Check inode's bmap state.  INVALID and VALID states become
@@ -580,21 +580,21 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 			mds_bmap_write_repls_rel(b);
 		}
 		if (bmapno && repl_some_act == 0)
-			rc = EALREADY;
+			rc = -EALREADY;
 		else if (bmapno && repl_all_act)
-			rc = SLERR_REPL_ALREADY_ACT;
+			rc = -SLERR_REPL_ALREADY_ACT;
 	} else if (mds_bmap_exists(wk->uswi_fcmh, bmapno)) {
 		/*
 		 * If this bmap is already being replicated, return
 		 * EALREADY.
 		 */
-		brepls_init(retifset, SLERR_REPL_NOT_ACT);
+		brepls_init(retifset, -SLERR_REPL_NOT_ACT);
 		retifset[BREPLST_INVALID] = 0;
-		retifset[BREPLST_REPL_SCHED] = EALREADY;
-		retifset[BREPLST_REPL_QUEUED] = EALREADY;
+		retifset[BREPLST_REPL_SCHED] = -EALREADY;
+		retifset[BREPLST_REPL_QUEUED] = -EALREADY;
 		retifset[BREPLST_VALID] = 0;
 
-		rc = mds_bmap_load(wk->uswi_fcmh, bmapno, &b);
+		rc = -mds_bmap_load(wk->uswi_fcmh, bmapno, &b);
 		if (rc == 0) {
 			BMAP_LOCK(b);
 
@@ -605,7 +605,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 			if (mds_repl_bmap_walk_all(b, NULL, retifzero,
 			    REPL_WALKF_SCIRCUIT) == 0) {
 				bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
-				rc = SLERR_BMAP_ZERO;
+				rc = -SLERR_BMAP_ZERO;
 			} else {
 				rc = mds_repl_bmap_walk(b,
 				    tract, retifset, 0, iosidx, nios);
@@ -613,17 +613,27 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 			}
 		}
 	} else
-		rc = SLERR_BMAP_INVALID;
+		rc = -SLERR_BMAP_INVALID;
 
 	if (rc == 0)
 		uswi_enqueue_sites(wk, iosv, nios);
-	else if (rc == SLERR_BMAP_ZERO)
+	else if (rc == -SLERR_BMAP_ZERO)
 		rc = 0;
 
  out:
 	uswi_unref(wk);
 	slm_iosv_clearbusy(iosv, nios);
 	return (rc);
+}
+
+void
+slm_repl_countvalid_cb(struct bmapc_memb *b, int iosidx, int val,
+    void *arg)
+{
+	int *p = arg;
+
+	if (val == BREPLST_VALID)
+		++*p;
 }
 
 int
@@ -633,20 +643,21 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	int rc, tract[NBREPLST], retifset[NBREPLST], iosidx[SL_MAX_REPLICAS];
 	struct up_sched_work_item *wk;
 	struct bmapc_memb *b;
+	int nvalid;
 
 	if (nios < 1 || nios > SL_MAX_REPLICAS)
 		return (-EINVAL);
 
 	rc = uswi_findoradd(fgp, &wk);
 	if (rc)
-		return (rc);
+		return (-rc);
 
 	slm_iosv_setbusy(iosv, nios);
 
 	/* Find replica IOS indexes */
-	rc = mds_repl_iosv_lookup(USWI_INOH(wk), iosv, iosidx, nios);
+	rc = -mds_repl_iosv_lookup(USWI_INOH(wk), iosv, iosidx, nios);
 	if (rc)
-		goto out;
+		PFL_GOTOERR(out, rc);
 
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_QUEUED] = BREPLST_GARBAGE;
@@ -659,32 +670,44 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		retifset[BREPLST_REPL_QUEUED] = 1;
 		retifset[BREPLST_REPL_SCHED] = 1;
 
-		rc = SLERR_REPLS_ALL_INACT;
+		rc = -SLERR_REPLS_ALL_INACT;
 		for (bmapno = 0; bmapno <
 		    fcmh_nvalidbmaps(wk->uswi_fcmh); bmapno++) {
 			if (mds_bmap_load(wk->uswi_fcmh, bmapno, &b))
 				continue;
 
-			if (mds_repl_bmap_walk(b, tract,
-			    retifset, 0, iosidx, nios))
+			nvalid = 0;
+			BMAPOD_MODIFY_START(b);
+			mds_repl_bmap_walkcb(b, NULL, NULL, 0,
+			    slm_repl_countvalid_cb, &nvalid);
+			if (nvalid > 1 &&
+			    mds_repl_bmap_walk(b, tract, retifset, 0,
+			    iosidx, nios))
 				rc = 0;
 			mds_bmap_write_repls_rel(b);
 		}
 	} else if (mds_bmap_exists(wk->uswi_fcmh, bmapno)) {
 		brepls_init(retifset, 0);
-		retifset[BREPLST_INVALID] = SLERR_REPL_ALREADY_INACT;
-		/* XXX BREPLST_TRUNCPNDG -> EINVAL? */
-		retifset[BREPLST_GARBAGE] = EINVAL;
-		retifset[BREPLST_GARBAGE_SCHED] = EINVAL;
+		retifset[BREPLST_INVALID] = -SLERR_REPL_ALREADY_INACT;
+		/* XXX BREPLST_TRUNCPNDG -> -EINVAL? */
+		retifset[BREPLST_GARBAGE] = -EINVAL;
+		retifset[BREPLST_GARBAGE_SCHED] = -EINVAL;
 
-		rc = mds_bmap_load(wk->uswi_fcmh, bmapno, &b);
+		rc = -mds_bmap_load(wk->uswi_fcmh, bmapno, &b);
 		if (rc == 0) {
-			rc = mds_repl_bmap_walk(b,
-			    tract, retifset, 0, iosidx, nios);
+			nvalid = 0;
+			BMAPOD_MODIFY_START(b);
+			mds_repl_bmap_walkcb(b, NULL, NULL, 0,
+			    slm_repl_countvalid_cb, &nvalid);
+			if (nvalid == 1)
+				rc = -SLERR_LASTREPL;
+			else
+				rc = mds_repl_bmap_walk(b, tract,
+				    retifset, 0, iosidx, nios);
 			mds_bmap_write_repls_rel(b);
 		}
 	} else
-		rc = SLERR_BMAP_INVALID;
+		rc = -SLERR_BMAP_INVALID;
 
 	uswi_enqueue_sites(wk, iosv, nios);
 
