@@ -142,11 +142,13 @@ mds_inode_write(struct slash_inode_handle *ih, void *logf, void *arg)
 
 	if (rc)
 		DEBUG_INOH(PLL_ERROR, ih,
-		    "mdsio_pwritev: error (resid=%d nb=%d rc=%d)",
+		    "mdsio_pwritev: error (resid=%zd nb=%zd rc=%d)",
 		    sizeof(ih->inoh_ino) + sizeof(crc), nb, rc);
 	else {
-		DEBUG_INOH(PLL_INFO, ih, "wrote inode, flags=%x, size=%d, data=%p",
-			ih->inoh_flags,  inoh_2_fsz(ih), inoh_2_mdsio_data(ih));
+		DEBUG_INOH(PLL_INFO, ih, "wrote inode, "
+		    "flags=%x size=%"PRIu64" data=%p",
+		    ih->inoh_flags, inoh_2_fsz(ih),
+		    inoh_2_mdsio_data(ih));
 		if (ih->inoh_flags & INOH_INO_NEW)
 			ih->inoh_flags &= ~INOH_INO_NEW;
 	}
@@ -318,7 +320,8 @@ dump_inoh(const struct slash_inode_handle *ih)
 	char buf[BUFSIZ];
 
 	_dump_ino(buf, sizeof(buf), &ih->inoh_ino);
-	printf("fl:"INOH_FLAGS_FMT" %s\n", DEBUG_INOH_FLAGS(ih), buf);
+	fprintf(stderr, "fl:"INOH_FLAGS_FMT" %s\n",
+	    DEBUG_INOH_FLAGS(ih), buf);
 }
 
 void

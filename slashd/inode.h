@@ -153,6 +153,8 @@ int	mds_inox_ensure_loaded(struct slash_inode_handle *);
 
 int	mds_inodes_odsync(struct fidc_membh *, void (*logf)(void *, uint64_t, int));
 
+char	*_dump_ino(char *, size_t, const struct slash_inode_od *);
+
 extern struct sl_ino_compat sl_ino_compat_table[];
 
 static __inline void
