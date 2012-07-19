@@ -286,13 +286,46 @@ mds_inodes_odsync(struct fidc_membh *f, void (*logf)(void *, uint64_t, int))
 	return (rc);
 }
 
+char *
+_dump_ino(char *buf, size_t siz, const struct slash_inode_od *ino)
+{
+	char nbuf[LINE_MAX], rbuf[LINE_MAX];
+	int nr, j;
+
+	nr = ino->ino_nrepls;
+	if (nr < 0)
+		nr = 1;
+	else if (nr > SL_DEF_REPLICAS)
+		nr = SL_DEF_REPLICAS;
+
+	rbuf[0] = '\0';
+	for (j = 0; j < nr; j++) {
+		if (j)
+			strlcat(rbuf, ",", sizeof(rbuf));
+		snprintf(nbuf, sizeof(nbuf), "%u",
+		    ino->ino_repls[j].bs_id);
+		strlcat(rbuf, nbuf, sizeof(rbuf));
+	}
+	snprintf(buf, siz, "bsz:%u nr:%u nbpol:%u repl:%s",
+	    ino->ino_bsz, ino->ino_nrepls, ino->ino_replpol, rbuf);
+	return (buf);
+}
+
 #if PFL_DEBUG > 0
-static __inline void
+void
 dump_inoh(const struct slash_inode_handle *ih)
 {
 	char buf[BUFSIZ];
 
 	_dump_ino(buf, sizeof(buf), &ih->inoh_ino);
 	printf("fl:"INOH_FLAGS_FMT" %s\n", DEBUG_INOH_FLAGS(ih), buf);
+}
+
+void
+dump_ino(const struct slash_inode_od *ino)
+{
+	char buf[BUFSIZ];
+
+	fprintf(stderr, "%s", _dump_ino(buf, sizeof(buf), ino));
 }
 #endif

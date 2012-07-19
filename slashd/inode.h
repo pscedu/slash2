@@ -124,7 +124,17 @@ struct slash_inode_handle {
 	(i)->inoh_flags & INOH_IN_IO		? "I" : ""
 
 #define DEBUG_INOH(level, ih, fmt, ...)					\
-	_log_debug_inoh(PFL_CALLERINFO(), (level), (ih), (fmt), ## __VA_ARGS__)
+	do {								\
+		char _buf[LINE_MAX];					\
+									\
+		psclog((level), "inoh@%p fcmh=%p f+g="SLPRI_FG" "	\
+		    "fl:%#x:"INOH_FLAGS_FMT" %s :: " fmt,		\
+		    (ih), (ih)->inoh_fcmh,				\
+		    SLPRI_FG_ARGS(&(ih)->inoh_fcmh->fcmh_fg),		\
+		    (ih)->inoh_flags, DEBUG_INOH_FLAGS(ih),		\
+		    _dump_ino(_buf, sizeof(_buf), &(ih)->inoh_ino),	\
+		    ## __VA_ARGS__);					\
+	} while (0)
 
 struct sl_ino_compat {
 	int			(*sic_read_ino)(struct slash_inode_handle *);
@@ -151,59 +161,6 @@ slash_inode_handle_init(struct slash_inode_handle *ih,
 {
 	ih->inoh_fcmh = f;
 	ih->inoh_flags = INOH_INO_NOTLOADED;
-}
-
-static __inline char *
-_dump_ino(char *buf, size_t siz, const struct slash_inode_od *ino)
-{
-	char nbuf[LINE_MAX], rbuf[LINE_MAX];
-	int nr, j;
-
-	nr = ino->ino_nrepls;
-	if (nr < 0)
-		nr = 1;
-	else if (nr > SL_DEF_REPLICAS)
-		nr = SL_DEF_REPLICAS;
-
-	rbuf[0] = '\0';
-	for (j = 0; j < nr; j++) {
-		if (j)
-			strlcat(rbuf, ",", sizeof(rbuf));
-		snprintf(nbuf, sizeof(nbuf), "%u",
-		    ino->ino_repls[j].bs_id);
-		strlcat(rbuf, nbuf, sizeof(rbuf));
-	}
-	snprintf(buf, siz, "bsz:%u nr:%u nbpol:%u repl:%s",
-	    ino->ino_bsz, ino->ino_nrepls, ino->ino_replpol, rbuf);
-	return (buf);
-}
-
-static __inline void
-_log_debug_inoh(const struct pfl_callerinfo *pci, int level,
-    const struct slash_inode_handle *ih, const char *fmt, ...)
-#define _pfl_callerinfo pci
-{
-	char buf[LINE_MAX], mbuf[LINE_MAX];
-	va_list ap;
-
-	va_start(ap, fmt);
-	vsnprintf(mbuf, sizeof(mbuf), fmt, ap);
-	va_end(ap);
-
-	psclog(level,
-	    "inoh@%p fcmh=%p f+g="SLPRI_FG" fl:%#x:"INOH_FLAGS_FMT" %s :: %s",
-	    ih, ih->inoh_fcmh, SLPRI_FG_ARGS(&ih->inoh_fcmh->fcmh_fg),
-	    ih->inoh_flags, DEBUG_INOH_FLAGS(ih),
-	    _dump_ino(buf, sizeof(buf), &ih->inoh_ino), mbuf);
-}
-#undef _pfl_callerinfo
-
-static __inline void
-dump_ino(const struct slash_inode_od *ino)
-{
-	char buf[BUFSIZ];
-
-	fprintf(stderr, "%s", _dump_ino(buf, sizeof(buf), ino));
 }
 
 #endif /* _SLASHD_INODE_H_ */
