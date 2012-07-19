@@ -626,14 +626,36 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	return (rc);
 }
 
+struct slm_repl_valid {
+	int  n;
+	int  nios;
+	int *idx;
+};
+
+/**
+ * slm_repl_countvalid_cb - Count the number of replicas that would
+ *	exist after a potential DELRQ operation, to ensure the last
+ *	replicas aren't removed.
+ */
 void
 slm_repl_countvalid_cb(struct bmapc_memb *b, int iosidx, int val,
     void *arg)
 {
-	int *p = arg;
+	struct slm_repl_valid *t = arg;
+	int j;
 
-	if (val == BREPLST_VALID)
-		++*p;
+	/* If the state isn't VALID, nothing to count. */
+	if (val != BREPLST_VALID)
+		return;
+
+	/*
+	 * If we find an IOS that was specified, we can't factor it into
+	 * our count since it won't be here much longer.
+	 */
+	for (j = 0; j < t->nios; j++)
+		if (iosidx == t->idx[j])
+			return;
+	t->n++;
 }
 
 int
@@ -642,8 +664,8 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 {
 	int rc, tract[NBREPLST], retifset[NBREPLST], iosidx[SL_MAX_REPLICAS];
 	struct up_sched_work_item *wk;
+	struct slm_repl_valid replv;
 	struct bmapc_memb *b;
-	int nvalid;
 
 	if (nios < 1 || nios > SL_MAX_REPLICAS)
 		return (-EINVAL);
@@ -659,12 +681,17 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	replv.nios = nios;
+	replv.idx = iosidx;
+
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_QUEUED] = BREPLST_GARBAGE;
 	tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE;
 	tract[BREPLST_VALID] = BREPLST_GARBAGE;
 
 	if (bmapno == (sl_bmapno_t)-1) {
+		sl_bmapno_t all_invalid = 0;
+
 		brepls_init(retifset, 0);
 		retifset[BREPLST_VALID] = 1;
 		retifset[BREPLST_REPL_QUEUED] = 1;
@@ -676,16 +703,20 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 			if (mds_bmap_load(wk->uswi_fcmh, bmapno, &b))
 				continue;
 
-			nvalid = 0;
+			replv.n = 0;
 			BMAPOD_MODIFY_START(b);
 			mds_repl_bmap_walkcb(b, NULL, NULL, 0,
-			    slm_repl_countvalid_cb, &nvalid);
-			if (nvalid > 1 &&
-			    mds_repl_bmap_walk(b, tract, retifset, 0,
-			    iosidx, nios))
-				rc = 0;
+			    slm_repl_countvalid_cb, &replv);
+			if (replv.n > 0) {
+				if (mds_repl_bmap_walk(b, tract,
+				    retifset, 0, iosidx, nios))
+					rc = 0;
+			} else
+				all_invalid++;
 			mds_bmap_write_repls_rel(b);
 		}
+		if (all_invalid == bmapno)
+			rc = -SLERR_LASTREPL;
 	} else if (mds_bmap_exists(wk->uswi_fcmh, bmapno)) {
 		brepls_init(retifset, 0);
 		retifset[BREPLST_INVALID] = -SLERR_REPL_NOT_ACT;
@@ -695,15 +726,15 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 
 		rc = -mds_bmap_load(wk->uswi_fcmh, bmapno, &b);
 		if (rc == 0) {
-			nvalid = 0;
+			replv.n = 0;
 			BMAPOD_MODIFY_START(b);
 			mds_repl_bmap_walkcb(b, NULL, NULL, 0,
-			    slm_repl_countvalid_cb, &nvalid);
-			if (nvalid == 1)
-				rc = -SLERR_LASTREPL;
-			else
+			    slm_repl_countvalid_cb, &replv);
+			if (replv.n > 0)
 				rc = mds_repl_bmap_walk(b, tract,
 				    retifset, 0, iosidx, nios);
+			else
+				rc = -SLERR_LASTREPL;
 			mds_bmap_write_repls_rel(b);
 		}
 	} else
