@@ -389,6 +389,8 @@ reimport
 - fix slmctl -ss missing sliod bug
 - add slmctl -ss fstypes (use statfs(2) on fbsd/linux and f_type)
 - df on mount_slash reports continually different stats
+- merge fuse 2.9
+- fix instructions for probing fuse instead of in-tree fuse
 
 - optimization: only write changes to brepls in delrq/addrq when changes
   are actually made
