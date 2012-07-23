@@ -24,7 +24,7 @@ SRCS+=		${PFL_BASE}/psc_util/thread.c
 SRCS+=		${PFL_BASE}/psc_util/usklndthr.c
 SRCS+=		${PFL_BASE}/psc_util/waitq.c
 
-MODULES+=	lnet pthread l rpc clock
+MODULES+=	lnet pthread rpc clock
 DEFINES+=	-D_SLASH_CLIENT
 
 include ${SLASHMK}
