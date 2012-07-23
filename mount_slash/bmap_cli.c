@@ -130,7 +130,10 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 	if (rc == -SLERR_BMAP_DIOWAIT) {
 		DEBUG_BMAP(PLL_WARN, b, "SLERR_BMAP_DIOWAIT rt=%d", nretries);
 		nretries++;
-		// XXX need some sort of randomizer here so that many clients do not flood mds.
+		/*
+		 * XXX need some sort of randomizer here so that many
+		 * clients do not flood mds.
+		 */
 		usleep(10000 * (nretries * nretries));
 		goto retry;
 	}
@@ -192,7 +195,7 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 	struct bmapc_memb *b = args->pointer_arg[MSL_CBARG_BMAP];
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct srm_leasebmapext_rep *mp =
-		pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
+	    pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 	int rc;
 
 	psc_assert(&rq->rq_async_args == args);
@@ -205,7 +208,7 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 		goto out;
 
 	memcpy(&bmap_2_bci(b)->bci_sbd, &mp->sbd,
-	       sizeof(struct srt_bmapdesc));
+	    sizeof(struct srt_bmapdesc));
 
 	PFL_GETTIMESPEC(&bmap_2_bci(b)->bci_xtime);
 
@@ -236,7 +239,7 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 
 			BMAP_SETATTR(b, BMAP_CLI_LEASEEXPIRED);
 			bmpc_biorqs_fail(bmap_2_bmpc(b),
-				 BIORQ_EXPIREDLEASE);
+			    BIORQ_EXPIREDLEASE);
 		}
 	}
 
@@ -294,7 +297,7 @@ msl_bmap_lease_tryreassign(struct bmapc_memb *b)
 		int rc;
 
 		bci->bci_prev_sliods[bci->bci_nreassigns] =
-			bci->bci_sbd.sbd_ios;
+		    bci->bci_sbd.sbd_ios;
 		bci->bci_nreassigns++;
 
 		BMAP_SETATTR(b, BMAP_CLI_REASSIGNREQ);
@@ -309,7 +312,7 @@ msl_bmap_lease_tryreassign(struct bmapc_memb *b)
 		BMAP_ULOCK(b);
 
 		rc = slc_rmc_getcsvc1(&csvc,
-		      fcmh_2_fci(b->bcm_fcmh)->fci_resm);
+		    fcmh_2_fci(b->bcm_fcmh)->fci_resm);
 		if (rc)
 			goto error;
 
@@ -318,9 +321,9 @@ msl_bmap_lease_tryreassign(struct bmapc_memb *b)
 			goto error;
 
 		memcpy(&mq->sbd, &bci->bci_sbd,
-		       sizeof(struct srt_bmapdesc));
+		    sizeof(struct srt_bmapdesc));
 		memcpy(&mq->prev_sliods, &bci->bci_prev_sliods,
-		       sizeof(sl_ios_id_t) * (bci->bci_nreassigns + 1));
+		    sizeof(sl_ios_id_t) * (bci->bci_nreassigns + 1));
 		mq->nreassigns = bci->bci_nreassigns;
 		mq->pios = prefIOS;
 
@@ -389,7 +392,7 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 					   "blocking on lease renewal");
 				bmap_op_start_type(b, BMAP_OPCNT_LEASEEXT);
 				bcm_wait_locked(b, (b->bcm_flags &
-					    BMAP_CLI_LEASEEXTREQ));
+				    BMAP_CLI_LEASEEXTREQ));
 
 				if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED)
 					rc = -SLERR_BMAP_LEASEEXT_FAILED;
@@ -530,7 +533,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw,
 
 	fci->fci_nrepls = mp->nrepls;
 	memcpy(&fci->fci_reptbl, &mp->reptbl,
-	       sizeof(sl_replica_t) * SL_MAX_REPLICAS);
+	    sizeof(sl_replica_t) * SL_MAX_REPLICAS);
 	f->fcmh_flags |= FCMH_CLI_HAVEREPLTBL;
 
 	/* XXX not sure if this is really needed since nothing blocks on
@@ -645,7 +648,7 @@ msl_bmap_reap_init(struct bmapc_memb *b, const struct srt_bmapdesc *sbd)
 struct slashrpc_cservice *
 msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 {
-	int i, j, locked, waitsecs = BMAP_CLI_MAX_LEASE;
+	int off, i, j, locked, waitsecs = BMAP_CLI_MAX_LEASE;
 	struct slashrpc_cservice *csvc;
 	struct fcmh_cli_info *fci;
 	struct psc_multiwait *mw;
@@ -722,7 +725,8 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 			if (repls & (1 << it.ri_rnd_idx))
 				continue;
 
-			resm = libsl_ios2resm(fci->fci_reptbl[it.ri_rnd_idx].bs_id);
+			resm = libsl_ios2resm(fci->fci_reptbl[
+			    it.ri_rnd_idx].bs_id);
 			if (resm->resm_type == SLREST_ARCHIVAL_FS)
 				continue;
 
@@ -761,6 +765,18 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
  block:
 		if (i)
 			break;
+
+		for (i = 0, off = 0; i < fcmh_2_fci(b->bcm_fcmh)->fci_nrepls;
+		    i++, off += SL_BITS_PER_REPLICA)
+			if (SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls,
+			    off))
+				break;
+		if (i == fcmh_2_fci(b->bcm_fcmh)->fci_nrepls) {
+			DEBUG_BMAP(PLL_ERROR, b,
+			    "corrupt bmap!  no valid replicas!");
+			return (NULL);
+		}
+
 		/*
 		 * No connection was immediately available; wait a small
 		 * amount of time to wait for any to come online.
