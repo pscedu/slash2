@@ -394,6 +394,18 @@ reimport
 
 - optimization: only write changes to brepls in delrq/addrq when changes
   are actually made
+ 
+- /arc wrapper scripts:
+   - purge old psclogs (two weeks)
+
+/arc -> fruits for kier
+   - talk with jray
+
+   prioritize softdel
+
+   oprofile on firehoses
+
+   doument how to disable_bia to new sliods
 
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
