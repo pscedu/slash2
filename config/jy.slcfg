@@ -5,15 +5,15 @@
 # Global network config
 set port=1300;
 set net=tcp10;
-set pref_ios="citron@PSC";
-set pref_mds="md@PSC";
+set pref_ios="citron@JY";
+set pref_mds="md@JY";
 set fsuuid="4c0fa37db6e31718";
 
 # Pull in other/local config files
 # include "/etc/slash/*.slcfg"
 
-site @PSC {
-	site_desc	= "PSC";
+site @JY {
+	site_desc	= "JY testbed";
 	site_id		= 100;
 
 	resource md {
