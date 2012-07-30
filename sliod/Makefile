@@ -65,6 +65,6 @@ SRCS+=		${PFL_BASE}/psc_util/walk.c
 
 SRCS+=		${SETRESUID_SRC}
 
-MODULES+=	pthread lnet fuse-hdrs gcrypt rpc ctl clock futimens
+MODULES+=	pthread lnet gcrypt rpc ctl clock futimens
 
 include ${SLASHMK}
