@@ -9,7 +9,7 @@ SRCS+=		${PFL_BASE}/psc_util/crc.c
 SRCS+=		${SLASH_BASE}/share/slerr.c
 
 # pthread is specified here to use correct struct sizes
-MODULES+=	lnet-hdrs pthread fuse-hdrs gcrypt
+MODULES+=	lnet-hdrs pthread gcrypt
 
 include ${SLASHMK}
 
