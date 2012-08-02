@@ -166,72 +166,72 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 void
 slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 {
-	int nsecs;
+	int rc, nsecs;
 	struct bmap_mds_lease *bml;
 	struct slmds_jent_bmapseq sjbsq;
 
 	while (pscthr_run()) {
+		spinlock(&mdsBmapTimeoTbl.btt_lock);
 		bml = pll_peekhead(&mdsBmapTimeoTbl.btt_leases);
 		if (!bml) {
+			freelock(&mdsBmapTimeoTbl.btt_lock);
 			nsecs = BMAP_TIMEO_MAX;
 			goto sleep;
 		}
 
-		BML_LOCK(bml);
-		nsecs = bml->bml_expire - time(NULL);
-		if (nsecs > 0) {
-			BML_ULOCK(bml);
+		if (!BML_TRYLOCK(bml)) {
+			freelock(&mdsBmapTimeoTbl.btt_lock);
+			nsecs = 1;
 			goto sleep;
+		}
+		if (bml->bml_refcnt) {
+			BML_ULOCK(bml);
+			freelock(&mdsBmapTimeoTbl.btt_lock);
+			nsecs = 1;
+			goto sleep;
+		}
+
+		if (!(bml->bml_flags & BML_FREEING)) {
+			nsecs = bml->bml_expire - time(NULL);
+			if (nsecs > 0) {
+				BML_ULOCK(bml);
+				freelock(&mdsBmapTimeoTbl.btt_lock);
+				goto sleep;
+			}
+			bml->bml_flags |= BML_FREEING;
 		}
 
 		DEBUG_BMAP(PLL_INFO, bml_2_bmap(bml),
 		   "nsecs=%d bml=%p fl=%d seq=%"
 		   PRId64, nsecs, bml, bml->bml_flags, bml->bml_seq);
 
-		if (!(bml->bml_flags & BML_FREEING)) {
-			int rc;
+		sjbsq.sjbsq_high_wm = mdsBmapTimeoTbl.btt_maxseq;
+		if (bml->bml_seq < mdsBmapTimeoTbl.btt_minseq) {
+			psclog_notify("bml->bml_seq (%"PRIx64") is < "
+			    "mdsBmapTimeoTbl.btt_minseq (%"PRIx64")",
+			    bml->bml_seq, mdsBmapTimeoTbl.btt_minseq);
 
-			/* Don't race with slrmi threads who may be freeing
-			 *    the lease from an rpc context
-			 *    mdsBmapTimeoTbl.btt_lock must be acquired
-			 *    before pulling the bml from this list.
-			 */
-			bml->bml_flags |= BML_FREEING;
-			BML_ULOCK(bml);
+			sjbsq.sjbsq_low_wm =
+				mdsBmapTimeoTbl.btt_minseq;
+		} else
+			sjbsq.sjbsq_low_wm =
+				mdsBmapTimeoTbl.btt_minseq =
+				bml->bml_seq;
 
-			spinlock(&mdsBmapTimeoTbl.btt_lock);
-			sjbsq.sjbsq_high_wm = mdsBmapTimeoTbl.btt_maxseq;
-			if (bml->bml_seq < mdsBmapTimeoTbl.btt_minseq) {
-				psclog_notify("bml->bml_seq (%"PRIx64") is < "
-				    "mdsBmapTimeoTbl.btt_minseq (%"PRIx64")",
-				    bml->bml_seq, mdsBmapTimeoTbl.btt_minseq);
+		BML_ULOCK(bml);
+		freelock(&mdsBmapTimeoTbl.btt_lock);
+		/* Journal the new low watermark.
+		 */
+		mds_bmap_journal_bmapseq(&sjbsq);
 
-				sjbsq.sjbsq_low_wm =
-					mdsBmapTimeoTbl.btt_minseq;
-			} else
-				sjbsq.sjbsq_low_wm =
-					mdsBmapTimeoTbl.btt_minseq =
-					bml->bml_seq;
-
-			freelock(&mdsBmapTimeoTbl.btt_lock);
-			/* Journal the new low watermark.
-			 */
-			mds_bmap_journal_bmapseq(&sjbsq);
-
-			rc = mds_bmap_bml_release(bml);
-			if (rc)
-				DEBUG_BMAP(PLL_WARN, bml_2_bmap(bml),
-				   "rc=%d bml=%p fl=%d seq=%"PRId64,
-				   rc, bml, bml->bml_flags, bml->bml_seq);
-
-			continue;
-		} else {
-			/* Avoid spinning on this BML while it's being
-			 *    freed.
-			 */
-			BML_ULOCK(bml);
+		rc = mds_bmap_bml_release(bml);
+		if (rc) {
+			DEBUG_BMAP(PLL_WARN, bml_2_bmap(bml),
+			   "rc=%d bml=%p fl=%d seq=%"PRId64,
+			   rc, bml, bml->bml_flags, bml->bml_seq);
 			nsecs = 1;
-		}
+		} else
+			nsecs = 0;
  sleep:
 		psclog_info("nsecs=%d", nsecs);
 

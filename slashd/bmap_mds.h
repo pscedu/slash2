@@ -161,6 +161,7 @@ struct bmap_timeo_table {
 						*/
 
 struct bmap_mds_lease {
+	uint32_t		  bml_refcnt;
 	uint64_t		  bml_seq;
 	sl_ios_id_t		  bml_ios;
 	lnet_process_id_t	  bml_cli_nidpid;
@@ -187,7 +188,7 @@ struct bmap_mds_lease {
 #define BML_CHAIN		0x00100
 #define BML_UPGRADE		0x00200
 #define BML_EXPFAIL		0x00400
-#define BML_FREEING		0x00800
+#define BML_FREEING		0x00800			/* being freed, don't reuse */
 #define BML_ASSFAIL		0x01000
 #define BML_RECOVERPNDG		0x02000
 #define BML_REASSIGN		0x04000
@@ -200,6 +201,7 @@ struct bmap_mds_lease {
 #define BML_LOCK(bml)		spinlock(&(bml)->bml_lock)
 #define BML_ULOCK(bml)		freelock(&(bml)->bml_lock)
 #define BML_REQLOCK(bml)	reqlock(&(bml)->bml_lock)
+#define BML_TRYLOCK(bml)	trylock(&(bml)->bml_lock)
 
 #define BMAP_FOREACH_LEASE(bcm, bml)					\
 	PLL_FOREACH((bml), &bmap_2_bmi(bcm)->bmdsi_leases)
@@ -224,8 +226,6 @@ struct bmap_ios_assign {
 #define BIAF_DIO		(1 << 0)
 
 #define mds_bmap_load(f, n, bp)	bmap_get((f), (n), SL_WRITE, (bp))
-
-#define mds_bml_free(bml)	psc_pool_return(bmapMdsLeasePool, (bml))
 
 int	 mds_bmap_read(struct bmapc_memb *, enum rw, int);
 int	 mds_bmap_write(struct bmapc_memb *, int, void *, void *);

@@ -212,6 +212,8 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	mp->sbd.sbd_ios = bmi->bmdsi_wr_ion->rmmi_resm->resm_res_id;
 
  out:
+	if (bml)
+		mds_bmap_bml_release(bml);
 	if (b)
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 	if (f)

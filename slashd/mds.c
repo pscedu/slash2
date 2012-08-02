@@ -780,8 +780,9 @@ mds_bmap_getbml_locked(struct bmapc_memb *b, uint64_t seq, uint64_t nid,
        uint32_t pid)
 {
 	struct bmap_mds_info *bmi;
-	struct bmap_mds_lease *bml, *bml2;
+	struct bmap_mds_lease *bml, *bml1, *bml2;
 
+	bml1 = NULL;
 	BMAP_LOCK_ENSURE(b);
 
 	bmi = bmap_2_bmi(b);
@@ -792,14 +793,24 @@ mds_bmap_getbml_locked(struct bmapc_memb *b, uint64_t seq, uint64_t nid,
 
 		bml2 = bml;
 		do {
-			if (bml2->bml_seq == seq)
-				return (bml2);
+			if (bml2->bml_seq == seq) {
+				/*
+				 * A lease won't go away with bmap lock taken.
+				 */
+				BML_LOCK(bml2);
+				if (!(bml2->bml_flags & BML_FREEING)) {
+					bml1 = bml2;
+					bml1->bml_refcnt++;
+				}
+				BML_ULOCK(bml2);
+				goto out;
+			}
 
 			bml2 = bml2->bml_chain;
 		} while (bml != bml2);
 	}
-
-	return (NULL);
+ out:
+	return (bml1);
 }
 
 /**
@@ -829,6 +840,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 	/* Wait for BMAP_IONASSIGN to be removed before proceeding.
 	 */
 	bcm_wait_locked(b, (b->bcm_flags & BMAP_IONASSIGN));
+	bmap_op_start_type(b, BMAP_OPCNT_LEASE);
 
 	rc = mds_bmap_directio_locked(b, rw, &bml->bml_cli_nidpid);
 	if (rc && !(bml->bml_flags & BML_RECOVER))
@@ -836,8 +848,6 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 		 *    completion.
 		 */
 		goto out;
-
-	bmap_op_start_type(b, BMAP_OPCNT_LEASE);
 
 	obml = mds_bmap_dupls_find(bmi, &bml->bml_cli_nidpid, &wlease,
 	    &rlease);
@@ -1040,8 +1050,10 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	size_t elem;
 	int rc = 0;
 
+	/*
+ 	 * On the last release, BML_FREEING must be set.
+ 	 */
 	psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
-	psc_assert(bml->bml_flags & BML_FREEING);
 
 	DEBUG_BMAP(PLL_INFO, b, "bml=%p fl=%d seq=%"PRId64, bml,
 		   bml->bml_flags, bml->bml_seq);
@@ -1059,12 +1071,27 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	b->bcm_flags |= BMAP_IONASSIGN;
 
 	BML_LOCK(bml);
+	if (bml->bml_refcnt > 1 || !(bml->bml_flags & BML_FREEING)) {
+		bml->bml_refcnt--;
+		BML_ULOCK(bml);
+		b->bcm_flags &= ~BMAP_IONASSIGN;
+		bcm_wake_locked(b);
+		return (0);
+	}
+	
+	/*
+	 * While holding the last reference to the lease, take the lease
+	 * off the timeout list to avoid a race with the timeout thread.
+	 */
 	if (bml->bml_flags & BML_TIMEOQ) {
 		BML_ULOCK(bml);
 		mds_bmap_timeotbl_mdsi(bml, BTE_DEL);
 		BML_LOCK(bml);
 	}
-
+	/*
+ 	 * If I am called by the timeout thread, then the refcnt is zero.
+ 	 */
+	psc_assert(bml->bml_refcnt <= 1);
 	if (!(bml->bml_flags & BML_BMDSI)) {
 		BML_ULOCK(bml);
 		goto out;
@@ -1193,12 +1220,9 @@ mds_handle_rls_bmap(struct pscrpc_request *rq, int sliod)
 		if (bml) {
 			psc_assert(sbd->sbd_seq == bml->bml_seq);
 			BML_LOCK(bml);
-			if (!(bml->bml_flags & BML_FREEING)) {
-				bml->bml_flags |= BML_FREEING;
-				BML_ULOCK(bml);
-				(int)mds_bmap_bml_release(bml);
-			} else
-				BML_ULOCK(bml);
+			bml->bml_flags |= BML_FREEING;
+			BML_ULOCK(bml);
+			(int)mds_bmap_bml_release(bml);
 		}
 		/* bmap_op_done_type will drop the lock.
 		 */
@@ -1223,6 +1247,7 @@ mds_bml_new(struct bmapc_memb *b, struct pscrpc_export *e, int flags,
 	INIT_SPINLOCK(&bml->bml_lock);
 
 	bml->bml_exp = e;
+	bml->bml_refcnt = 1;
 	bml->bml_bmdsi = bmap_2_bmi(b);
 	bml->bml_flags = flags;
 	bml->bml_cli_nidpid = *cnp;
@@ -1302,8 +1327,8 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 	if (rc) {
 		bmap_2_bmi(b)->bmdsi_assign = NULL;
 		bml->bml_flags |= (BML_FREEING | BML_RECOVERFAIL);
-		mds_bmap_bml_release(bml);
 	}
+	mds_bmap_bml_release(bml);
 
  out:
 	if (rc)
@@ -1628,16 +1653,11 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 
 	rc = mds_bmap_bml_add(bml, rw, prefios);
 	if (rc) {
-		if (rc == -SLERR_BMAP_DIOWAIT)
-			mds_bml_free(bml);
-		else {
-			BML_LOCK(bml);
-			if (rc == -SLERR_ION_OFFLINE)
-				bml->bml_flags |= BML_ASSFAIL;
-			bml->bml_flags |= BML_FREEING;
-			BML_ULOCK(bml);
-			mds_bmap_bml_release(bml);
-		}
+		BML_LOCK(bml);
+		bml->bml_flags |= BML_FREEING;
+		if (rc == -SLERR_ION_OFFLINE)
+			bml->bml_flags |= BML_ASSFAIL;
+		BML_ULOCK(bml);
 		goto out;
 	}
 	*bmap = b;
@@ -1655,6 +1675,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	sbd->sbd_nid = exp->exp_connection->c_peer.nid;
 	sbd->sbd_pid = exp->exp_connection->c_peer.pid;
  out:
+	mds_bmap_bml_release(bml);
 	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 	return (rc);
 }
@@ -1752,6 +1773,8 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	BMAP_CLEARATTR(b, BMAP_IONASSIGN);
 	bcm_wake_locked(b);
  out2:
+	if (obml)
+		mds_bmap_bml_release(obml);
 	DEBUG_BMAP(rc ? PLL_WARN : PLL_INFO, b,
 	    "rc=%d renew oseq=%"PRIu64" nseq=%"PRIu64" "
 	    "nid=%"PRIu64" pid=%u",
@@ -1792,16 +1815,11 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	rc = mds_bmap_bml_add(bml, (rw == BML_READ ? SL_READ : SL_WRITE),
 	    sbd_in->sbd_ios);
 	if (rc) {
-		if (rc == -SLERR_BMAP_DIOWAIT)
-			mds_bml_free(bml);
-		else {
-			BML_LOCK(bml);
-			if (rc == -SLERR_ION_OFFLINE)
-				bml->bml_flags |= BML_ASSFAIL;
-			bml->bml_flags |= BML_FREEING;
-			BML_ULOCK(bml);
-			mds_bmap_bml_release(bml);
-		}
+		BML_LOCK(bml);
+		bml->bml_flags |= BML_FREEING;
+		if (rc == -SLERR_ION_OFFLINE)
+			bml->bml_flags |= BML_ASSFAIL;
+		BML_ULOCK(bml);
 		goto out;
 	}
 
@@ -1836,14 +1854,14 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	 *   issued.
 	 */
 	BML_LOCK(obml);
-	if (!(bml->bml_flags & BML_FREEING)) {
-		obml->bml_flags |= BML_FREEING;
-		BML_ULOCK(obml);
-		mds_bmap_bml_release(obml);
-	} else
-		BML_ULOCK(obml);
+	obml->bml_flags |= BML_FREEING;
+	BML_ULOCK(obml);
 
  out:
+	if (bml)
+		mds_bmap_bml_release(bml);
+	if (obml)
+		mds_bmap_bml_release(obml);
 	DEBUG_BMAP(rc ? PLL_WARN : PLL_INFO, b,
 	   "renew oseq=%"PRIu64" nseq=%"PRIu64" nid=%"PRIu64" pid=%u",
 	   sbd_in->sbd_seq, bml ? bml->bml_seq : 0,

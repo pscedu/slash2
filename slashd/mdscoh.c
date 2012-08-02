@@ -69,8 +69,12 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 	else if (req->rq_status)
 		rc = req->rq_status;
 
-	if (rc)
+	if (rc) {
+		psclog_warnx("cli=%s seq=%"PRId64" rq_status=%d mp->rc=%d",
+		   libcfs_id2str(req->rq_import->imp_connection->c_peer),
+		   mq->seq, req->rq_status, mp ? mp->rc : -1);	
 		goto out;
+	}
 
 	if (mp && mp->rc)
 		rc = mp->rc;
@@ -118,6 +122,8 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 			   !!(b->bcm_flags & BMAP_DIO));
 	}
 	BML_ULOCK(bml);
+	mds_bmap_bml_release(bml);
+
  out:
 	if (b) {
 		DEBUG_BMAP(rc ? PLL_WARN : PLL_NOTIFY, b,
