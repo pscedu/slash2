@@ -69,10 +69,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	struct iovec iovs[RIC_MAX_SLVRS_PER_IO];
 	struct sli_aiocb_reply *aiocbr = NULL;
 	struct slash_fidgen *fgp;
-	struct fidc_membh *fcmh;
 	struct bmapc_memb *bmap;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
+	struct fidc_membh *f;
 	sl_bmapno_t bmapno, slvrno;
 	int rc = 0, nslvrs, i;
 	lnet_process_id_t *pp;
@@ -169,25 +169,25 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	/* Lookup inode and fetch bmap, don't forget to decref bmap
 	 *  on failure.
 	 */
-	rc = sli_fcmh_get(fgp, &fcmh);
+	rc = sli_fcmh_get(fgp, &f);
 	psc_assert(rc == 0);
 
-	FCMH_LOCK(fcmh);
+	FCMH_LOCK(f);
 	/* Update the utimegen if necessary.
 	 */
-	if (fcmh->fcmh_sstb.sst_utimgen < mq->utimgen)
-		fcmh->fcmh_sstb.sst_utimgen = mq->utimgen;
-	FCMH_ULOCK(fcmh);
+	if (f->fcmh_sstb.sst_utimgen < mq->utimgen)
+		f->fcmh_sstb.sst_utimgen = mq->utimgen;
+	FCMH_ULOCK(f);
 
 	/* ATM, not much to do here for write operations.
 	 */
-	rc = bmap_get(fcmh, bmapno, rw, &bmap);
+	rc = bmap_get(f, bmapno, rw, &bmap);
 	if (rc) {
 		psclog_errorx("failed to load bmap %u", bmapno);
 		goto out;
 	}
 
-	DEBUG_FCMH(PLL_INFO, fcmh, "bmapno=%u size=%u off=%u rw=%s "
+	DEBUG_FCMH(PLL_INFO, f, "bmapno=%u size=%u off=%u rw=%s "
 	    "sbd_seq=%"PRId64, bmap->bcm_bmapno, mq->size, mq->offset,
 	    rw == SL_WRITE ? "wr" : "rd", mq->sbd.sbd_seq);
 
@@ -361,7 +361,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 *   iod_inode_open()) then we must have a way to notify other
 	 *   threads blocked on DATARDY.
 	 */
-	fcmh_op_done(fcmh);
+	fcmh_op_done(f);
 	return (rc);
 }
 
