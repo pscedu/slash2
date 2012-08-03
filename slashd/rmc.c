@@ -141,7 +141,7 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 
  out:
 	if (fcmh)
-		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(fcmh);
 	return (0);
 }
 
@@ -217,7 +217,7 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	if (b)
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 	if (f)
-		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(f);
 	return (0);
 }
 
@@ -235,7 +235,7 @@ slm_rmc_handle_extendbmapls(struct pscrpc_request *rq)
 		return (0);
 
 	mp->rc = mds_lease_renew(f, &mq->sbd, &mp->sbd, rq->rq_export);
-	fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
+	fcmh_op_done(f);
 	return (0);
 }
 
@@ -255,7 +255,7 @@ slm_rmc_handle_reassignbmapls(struct pscrpc_request *rq)
 	mp->rc = mds_lease_reassign(f, &mq->sbd, mq->pios,
 	    mq->prev_sliods, mq->nreassigns, &mp->sbd, rq->rq_export);
 
-	fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
+	fcmh_op_done(f);
 	return (0);
 }
 
@@ -309,7 +309,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	}
 
  out:
-	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+	fcmh_op_done(fcmh);
 	return (rc ? rc : mp->rc);
 }
 
@@ -338,9 +338,9 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 
  out:
 	if (c)
-		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(c);
 	if (p)
-		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(p);
 	return (0);
 }
 
@@ -367,7 +367,7 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 
  out:
 	if (p)
-		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(p);
 	return (0);
 }
 
@@ -421,9 +421,9 @@ slm_mkdir(struct srm_mkdir_req *mq, struct srm_mkdir_rep *mp,
 		c = NULL;
 	}
 	if (p)
-		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(p);
 	if (c)
-		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(c);
 	return (0);
 }
 
@@ -459,7 +459,7 @@ slm_rmc_handle_mknod(struct pscrpc_request *rq)
 	mdsio_fcmh_refreshattr(p, &mp->pattr);
  out:
 	if (p)
-		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(p);
 	return (0);
 }
 
@@ -543,7 +543,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	mp->rc2 = mds_bmap_load_cli(c, 0, mp->flags, SL_WRITE,
 	    mq->prefios[0], &mp->sbd, rq->rq_export, &bmap);
 
-	fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+	fcmh_op_done(c);
 
 	if (mp->rc2)
 		goto out;
@@ -552,7 +552,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
  out:
 	if (p)
-		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(p);
 	return (0);
 }
 
@@ -640,7 +640,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	PSCFREE(iov[0].iov_base);
 	PSCFREE(iov[1].iov_base);
 	if (fcmh)
-		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(fcmh);
 	return (mp->rc);
 }
 
@@ -670,7 +670,7 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 
  out:
 	if (fcmh)
-		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(fcmh);
 
 	return (mp->rc);
 }
@@ -763,16 +763,15 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 			if (slm_fcmh_get(&chfg, &c) == 0) {
 				mdsio_fcmh_refreshattr(c,
 				    &mp->srr_cattr);
-				fcmh_op_done_type(c,
-				    FCMH_OPCNT_LOOKUP_FIDC);
+				fcmh_op_done(c);
 			}
 		}
 	}
 
 	if (np)
-		fcmh_op_done_type(np, FCMH_OPCNT_LOOKUP_FIDC);
-	if (op != np)
-		fcmh_op_done_type(op, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(np);
+	if (op && op != np)
+		fcmh_op_done(op);
 	return (0);
 }
 
@@ -871,7 +870,7 @@ goto out;
 		FCMH_RLOCK(fcmh);
 		if (mp->rc == 0 || mp->rc == SLERR_BMAP_PTRUNC_STARTED)
 			mp->attr = fcmh->fcmh_sstb;
-		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(fcmh);
 	}
 	return (0);
 }
@@ -901,7 +900,7 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 
  out:
 	if (fcmh)
-		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(fcmh);
 
 	return (0);
 }
@@ -939,7 +938,7 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 
  out:
 	if (fcmh)
-		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(fcmh);
 	return (0);
 }
 
@@ -1033,7 +1032,7 @@ slm_symlink(struct pscrpc_request *rq, struct srm_symlink_req *mq,
 
  out:
 	if (p)
-		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(p);
 	return (0);
 }
 
@@ -1086,14 +1085,14 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	if (mp->rc == 0)
 		mdsio_fcmh_refreshattr(p, &mp->pattr);
 	if (p)
-		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(p);
 
 	if (chfg.fg_fid != FID_ANY) {
 		struct fidc_membh *c;
 
 		if (slm_fcmh_get(&chfg, &c) == 0) {
 			mdsio_fcmh_refreshattr(c, &mp->cattr);
-			fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+			fcmh_op_done(c);
 		}
 	}
 
