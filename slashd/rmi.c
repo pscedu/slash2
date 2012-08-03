@@ -82,7 +82,7 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 	DEBUG_BMAP(PLL_INFO, b, "sending to sliod");
 
 	memcpy(&mp->bod, bmap_2_ondisk(b), sizeof(mp->bod));
-	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+	bmap_op_done(b);
 
 	return (0);
 }

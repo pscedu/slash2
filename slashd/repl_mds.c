@@ -567,7 +567,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 			 */
 			if (mds_repl_bmap_walk_all(b, NULL, retifzero,
 			    REPL_WALKF_SCIRCUIT) == 0) {
-				bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+				bmap_op_done(b);
 				continue;
 			}
 
@@ -604,7 +604,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 			 */
 			if (mds_repl_bmap_walk_all(b, NULL, retifzero,
 			    REPL_WALKF_SCIRCUIT) == 0) {
-				bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+				bmap_op_done(b);
 				rc = -SLERR_BMAP_ZERO;
 			} else {
 				rc = mds_repl_bmap_walk(b,

@@ -349,7 +349,7 @@ _mds_bmap_write_rel(const struct pfl_callerinfo *pci,
 	int rc;
 
 	rc = mds_bmap_write(b, 0, logf, b);
-	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+	bmap_op_done(b);
 	return (rc);
 }
 

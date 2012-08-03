@@ -283,7 +283,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		    (flags & BMAPGETF_NOAUTOINST) == 0) ?
 		    PLL_ERROR : PLL_INFO, b, "grabbed rc=%d", rc);
 		if (rc)
-			bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+			bmap_op_done(b);
 		else {
 			BMAP_ULOCK(b);
 			*bp = b;

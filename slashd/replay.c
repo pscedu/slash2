@@ -121,7 +121,7 @@ mds_replay_bmap(void *jent, int op)
 
  out:
 	if (b)
-		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+		bmap_op_done(b);
 	if (f)
 		fcmh_op_done(f);
 	return (rc);

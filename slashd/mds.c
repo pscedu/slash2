@@ -1226,9 +1226,9 @@ mds_handle_rls_bmap(struct pscrpc_request *rq, int sliod)
 		}
 		/* bmap_op_done_type will drop the lock.
 		 */
-		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+		bmap_op_done(b);
  next:
-		fcmh_op_done_type(f);
+		fcmh_op_done(f);
 	}
 	return (0);
 }
@@ -1333,10 +1333,10 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
  out:
 	if (rc)
 		mds_odtable_freeitem(mdsBmapAssignTable, odtr);
+	if (b)
+		bmap_op_done(b);
 	if (f)
 		fcmh_op_done(f);
-	if (b)
-		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 }
 
 /**
@@ -1519,7 +1519,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 	if (bmap)
 		/* BMAP_OP #2, drop lookup ref
 		 */
-		bmap_op_done_type(bmap, BMAP_OPCNT_LOOKUP);
+		bmap_op_done(bmap);
 
 	fcmh_op_done(fcmh);
 	return (rc);
@@ -1561,10 +1561,11 @@ mds_bmap_loadvalid(struct fidc_membh *f, sl_bmapno_t bmapno,
 			*bp = b;
 			return (0);
 		}
+
 	/* BMAP_OP #3, unref if bmap is empty.
 	 *    NOTE that our callers must drop this ref.
 	 */
-	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+	bmap_op_done(b);
 	return (SLERR_BMAP_ZERO);
 }
 
@@ -1674,9 +1675,10 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	 */
 	sbd->sbd_nid = exp->exp_connection->c_peer.nid;
 	sbd->sbd_pid = exp->exp_connection->c_peer.pid;
+
  out:
 	mds_bmap_bml_release(bml);
-	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+	bmap_op_done(b);
 	return (rc);
 }
 
@@ -1781,7 +1783,7 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	    rc, sbd_in->sbd_seq, (obml ? obml->bml_seq : 0),
 	    exp->exp_connection->c_peer.nid,
 	    exp->exp_connection->c_peer.pid);
-	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+	bmap_op_done(b);
 	return (rc);
 }
 
@@ -1868,7 +1870,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	   exp->exp_connection->c_peer.nid,
 	   exp->exp_connection->c_peer.pid);
 
-	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+	bmap_op_done(b);
 	return (rc);
 }
 
@@ -2017,7 +2019,7 @@ slm_ptrunc_prepare(struct slm_workrq *wkrq)
 		}
 		if (pll_nitems(&bmap_2_bmi(b)->bmdsi_leases))
 			wait = 1;
-		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+		bmap_op_done(b);
 	}
 	if (wait)
 		return (1);

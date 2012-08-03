@@ -215,7 +215,7 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	if (bml)
 		mds_bmap_bml_release(bml);
 	if (b)
-		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+		bmap_op_done(b);
 	if (f)
 		fcmh_op_done(f);
 	return (0);

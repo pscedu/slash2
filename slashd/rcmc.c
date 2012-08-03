@@ -223,7 +223,7 @@ slmrcmthr_walk_bmaps(struct slm_replst_workreq *rsw,
 			BMAP_LOCK(b);
 			rc = slmrcmthr_walk_brepls(rsw, wk, b, n,
 			    &rq);
-			bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+			bmap_op_done(b);
 		}
 		if (rq) {
 			rc2 = slmrmcthr_replst_slave_waitrep(

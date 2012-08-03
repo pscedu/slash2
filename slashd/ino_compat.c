@@ -65,7 +65,7 @@ mds_inode_dump(struct sl_ino_compat *sic, struct slash_inode_handle *ih,
 		if (sic) {
 			rc = sic->sic_read_bmap(b, readh);
 			if (rc) {
-				bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+				bmap_op_done(b);
 				INOH_RLOCK(ih);
 				if (rc == SLERR_BMAP_INVALID)
 					break;
@@ -74,7 +74,7 @@ mds_inode_dump(struct sl_ino_compat *sic, struct slash_inode_handle *ih,
 		}
 
 		rc = mds_bmap_write(b, 0, NULL, NULL);
-		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+		bmap_op_done(b);
 		INOH_RLOCK(ih);
 		if (rc)
 			return (rc);
