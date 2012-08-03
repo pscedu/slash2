@@ -1298,9 +1298,9 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct bmap_cli_info *bci;
-	struct bmapc_memb *b;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
+	struct bmapc_memb *b;
 	struct iovec *iovs;
 	int i, op, n = 0, rc = 1;
 	uint64_t *v8;
