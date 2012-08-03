@@ -392,6 +392,7 @@ reimport
 - merge fuse 2.9
 - fix instructions for probing fuse instead of in-tree fuse
 - make macro version of accessors for speed (e.g. bmap_2_bmi())
+- in RPC layer, add a EINVAL -> SLERR_INVAL portability translation layer
 
 - optimization: only write changes to brepls in delrq/addrq when changes
   are actually made
