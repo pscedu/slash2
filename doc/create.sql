@@ -10,6 +10,7 @@ CREATE TABLE upsch (
 	gid		UNSIGNED INT,
 	bno		UNSIGNED INT,
 	status		CHAR(1), -- 'Q' or 'S'
+	pri		INT,
 
 	recpt_elem	BIGINT,
 	recpt_key	BIGINT UNSIGNED,
