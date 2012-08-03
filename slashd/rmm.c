@@ -113,10 +113,8 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 		goto out;
 
 	psc_crc64_calc(&crc, iov.iov_base, iov.iov_len);
-	if (crc != mq->crc) {
-		mp->rc = EINVAL;
-		goto out;
-	}
+	if (crc != mq->crc)
+		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
 	/* Search for the peer information by the given site ID. */
 	site = libsl_siteid2site(mq->siteid);
@@ -129,8 +127,7 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 			}
 	if (p == NULL) {
 		psclog_info("fail to find site ID %d", mq->siteid);
-		mp->rc = EINVAL;
-		goto out;
+		PFL_GOTOERR(out, mp->rc = -EINVAL);
 	}
 
 	/*
@@ -174,7 +171,7 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 	    mq->op != SLM_FORWARD_UNLINK &&
 	    mq->op != SLM_FORWARD_RENAME &&
 	    mq->op != SLM_FORWARD_SETATTR) {
-		mp->rc = EINVAL;
+		mp->rc = -EINVAL;
 		return (0);
 	}
 
@@ -328,7 +325,7 @@ slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
 		resm = psc_dynarray_getpos(&res->res_members, 0);
 		break;
 	}
-	csvc = slm_getmcsvc(resm);
+	csvc = slm_getmcsvc_wait(resm);
 	if (csvc == NULL) {
 		psclog_info("unable to connect to site %d", siteid);
 		return (EIO);
