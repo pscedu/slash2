@@ -39,6 +39,7 @@
 /* runtime files */
 #define SL_FN_AUTHBUFKEY	"authbuf.key"
 #define SL_FN_OPJOURNAL		"op-journal"
+#define SL_FN_UPSCHDB		"upsch.db"
 
 /* configuration files */
 #define SL_PATH_CONF		SL_PATH_ETC_DIR"/slcfg"
@@ -51,11 +52,12 @@
  */
 #define SL_RPATH_META_DIR	".slmd"
 
-#define SL_RPATH_UPSCH_DIR	"upsch"
 #define SL_RPATH_FIDNS_DIR	"fidns"
 #define SL_RPATH_TMP_DIR	"tmp"
 
 #define SL_FN_BMAP_ODTAB	"bmap.odtab"
+#define SL_FN_REPL_ODTAB	"repl.odt"
+#define SL_FN_PTRUNC_ODTAB	"ptrunc.odt"
 
 #define SL_FN_UPDATELOG		"op-update"
 #define SL_FN_UPDATEPROG	"op-update-prog"

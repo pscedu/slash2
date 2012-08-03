@@ -166,14 +166,13 @@ struct fidc_membh {
 /* debugging aid: spit out the reason for the reference count taking/dropping */
 enum fcmh_opcnt_types {
 /* 0 */	FCMH_OPCNT_BMAP,		/* bcm_fcmh */
-/* 1 */	FCMH_OPCNT_DIRENTBUF,
+/* 1 */	FCMH_OPCNT_DIRENTBUF,		/* mount_slash READDIR cache */
 /* 2 */	FCMH_OPCNT_LOOKUP_FIDC,		/* fidc_lookup() */
 /* 3 */	FCMH_OPCNT_NEW,
 /* 4 */	FCMH_OPCNT_OPEN,		/* mount_slash pscfs file info */
-/* 5 */	FCMH_OPCNT_UPSCHED,		/* MDS uswi_fcmh */
-/* 6 */	FCMH_OPCNT_WAIT,
-/* 7 */	FCMH_OPCNT_WORKER,		/* MDS worker */
-/* 8 */	FCMH_OPCNT_DIRTY_QUEUE
+/* 5 */	FCMH_OPCNT_WAIT,
+/* 6 */	FCMH_OPCNT_WORKER,		/* MDS worker */
+/* 7 */	FCMH_OPCNT_DIRTY_QUEUE
 };
 
 /* fcmh_setattr() flags */

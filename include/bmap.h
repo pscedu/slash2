@@ -51,7 +51,8 @@ struct srt_bmapdesc;
 /**
  * bmap_core_state - Basic information needed by all nodes.
  * @bcs_crcstates: bits describing the state of each sliver.
- * @bcs_repls: bitmap used for tracking the replication status of this bmap.
+ * @bcs_repls: bitmap used for tracking the replication status of this
+ *	bmap.
  *
  * This structure must be 64-bit aligned and padded.
  */
@@ -77,7 +78,7 @@ struct bmap_extra_state {
 /**
  * bmap_ondisk - Bmap over-wire/on-disk structure.  This structure maps
  *	the persistent state of the bmap within the inode's metafile.
- * @bod_bhcrc: on-disk checksum.
+ *	This structure is followed by a 64-bit CRC on disk.
  */
 struct bmap_ondisk {
 	struct bmap_core_state	bod_corestate;
@@ -107,6 +108,7 @@ struct bmapc_memb {
 	psc_spinlock_t		 bcm_lock;
 	SPLAY_ENTRY(bmapc_memb)	 bcm_tentry;	/* bmap_cache splay tree entry */
 	struct psc_listentry	 bcm_lentry;	/* free pool */
+//	pthread_t		 bcm_owner;	/* temporary processor */
 
 	/*
 	 * This must start on a 64-bit boundary, and must lay at the end
@@ -114,7 +116,7 @@ struct bmapc_memb {
 	 * next segment of the bmap_ondisk, which must lay contiguous in
 	 * memory for I/O over the network and with ZFS.
 	 */
-	struct bmap_core_state	 bcm_corestate __attribute__ ((aligned(8)));
+	struct bmap_core_state	 bcm_corestate __attribute__((aligned(8)));
 
 #define bcm_crcstates	bcm_corestate.bcs_crcstates
 #define bcm_repls	bcm_corestate.bcs_repls
@@ -138,7 +140,8 @@ struct bmapc_memb {
 #define BMAP_BUSY		(1 << 14)	/* temporary processing lock */
 #define BMAP_NEW		(1 << 15)	/* just created */
 #define BMAP_ARCHIVER		(1 << 16)	/* archiver */
-#define _BMAP_FLSHFT		(1 << 17)
+#define BMAP_REPLAY		(1 << 17)	/* during journal replay */
+#define _BMAP_FLSHFT		(1 << 18)
 
 #define bmap_2_fid(b)		fcmh_2_fid((b)->bcm_fcmh)
 
@@ -331,7 +334,8 @@ void	_log_dump_bmapod(const struct pfl_callerinfo *, int,
 					    BMAPGETF_LOAD, (bp))
 
 #define bmap_get_noretr(f, n, rw, bp)	bmap_getf((f), (n), (rw),	\
-					  BMAPGETF_LOAD | BMAPGETF_NORETRIEVE, (bp))
+					    BMAPGETF_LOAD |		\
+					    BMAPGETF_NORETRIEVE, (bp))
 
 enum bmap_opcnt_types {
 /*  0 */ BMAP_OPCNT_LOOKUP,
@@ -348,7 +352,8 @@ enum bmap_opcnt_types {
 /* 11 */ BMAP_OPCNT_READA,
 /* 12 */ BMAP_OPCNT_LEASEEXT,
 /* 13 */ BMAP_OPCNT_REASSIGN,
-/* 14 */ BMAP_OPCNT_UPSCH
+/* 14 */ BMAP_OPCNT_UPSCH,
+/* 15 */ BMAP_OPCNT_WORK
 };
 
 SPLAY_HEAD(bmap_cache, bmapc_memb);
