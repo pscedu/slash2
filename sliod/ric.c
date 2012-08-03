@@ -90,7 +90,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (mq->size <= 0 || mq->size > LNET_MTU) {
 		psclog_errorx("invalid size %u, fid:"SLPRI_FG,
 		    mq->size, SLPRI_FG_ARGS(fgp));
-		mp->rc = SLERR_INVAL;
+		mp->rc = -SLERR_INVAL;
 		return (mp->rc);
 	}
 
@@ -153,7 +153,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		psclog_errorx("req offset / size outside of the bmap's "
 		    "address range off=%u len=%u",
 		    mq->offset, mq->size);
-		mp->rc = ERANGE;
+		mp->rc = -ERANGE;
 		return (mp->rc);
 	}
 
@@ -162,7 +162,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		/* Reject old bmapdesc. */
 		psclog_warnx("seq %"PRId64" < bim_getcurseq(%"PRId64")",
 		    mq->sbd.sbd_seq, seqno);
-		mp->rc = EKEYEXPIRED;
+		mp->rc = -EKEYEXPIRED;
 		return (mp->rc);
 	}
 
@@ -288,12 +288,9 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			pscrpc_msg_add_flags(rq->rq_repmsg,
 			    MSG_ABORT_BULK);
 			goto out;
-
-		} else {
-			/* All slvrs are ready.
-			 */
-			sli_aio_aiocbr_release(aiocbr);
 		}
+		/* All slvrs are ready. */
+		sli_aio_aiocbr_release(aiocbr);
 	}
 
 	mp->rc = rsx_bulkserver(rq,
@@ -383,7 +380,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	if (mq->nbmaps > MAX_BMAP_RELEASE) {
-		mp->rc = SLERR_2BIG;
+		mp->rc = -SLERR_2BIG;
 		goto out;
 	}
 
