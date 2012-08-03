@@ -106,11 +106,11 @@ extern struct timespec msl_bmap_timeo_inc;
 static __inline struct bmapc_memb *
 bci_2_bmap(struct bmap_cli_info *bci)
 {
-	struct bmapc_memb *bcm;
+	struct bmapc_memb *b;
 
 	psc_assert(bci);
-	bcm = (void *)bci;
-	return (bcm - 1);
+	b = (void *)bci;
+	return (b - 1);
 }
 
 static __inline int

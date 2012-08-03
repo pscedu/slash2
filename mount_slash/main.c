@@ -291,7 +291,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct srm_create_req *mq;
 	struct msl_fhent *mfh = NULL;
 	struct fcmh_cli_info *fci;
-	struct bmapc_memb *bcm;
+	struct bmapc_memb *b;
 	struct stat stb;
 	int rc = 0;
 
@@ -391,18 +391,18 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	FCMH_ULOCK(c);
 
 	mp->rc2 = bmap_getf(c, 0, SL_WRITE, BMAPGETF_LOAD |
-	    BMAPGETF_NORETRIEVE, &bcm);
+	    BMAPGETF_NORETRIEVE, &b);
 	if (mp->rc2)
 		goto out;
 
-	msl_bmap_reap_init(bcm, &mp->sbd);
+	msl_bmap_reap_init(b, &mp->sbd);
 
-	DEBUG_BMAP(PLL_INFO, bcm, "ios(%s) sbd_seq=%"PRId64,
+	DEBUG_BMAP(PLL_INFO, b, "ios(%s) sbd_seq=%"PRId64,
 	   libsl_ios2name(mp->sbd.sbd_ios), mp->sbd.sbd_seq);
 
-	SL_REPL_SET_BMAP_IOS_STAT(bcm->bcm_repls, 0, BREPLST_VALID);
+	SL_REPL_SET_BMAP_IOS_STAT(b->bcm_repls, 0, BREPLST_VALID);
 
-	bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
+	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 
  out:
 	if (mp && rc == 0 && mp->rc == 0 && mp->rc2)

@@ -364,15 +364,15 @@ struct bmap_ops {
 extern struct bmap_ops bmap_ops;
 
 static __inline void *
-bmap_get_pri(struct bmapc_memb *bcm)
+bmap_get_pri(struct bmapc_memb *b)
 {
-	return (bcm + 1);
+	return (b + 1);
 }
 
 static __inline const void *
-bmap_get_pri_const(const struct bmapc_memb *bcm)
+bmap_get_pri_const(const struct bmapc_memb *b)
 {
-	return (bcm + 1);
+	return (b + 1);
 }
 
 static __inline void

@@ -1298,7 +1298,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct bmap_cli_info *bci;
-	struct bmapc_memb *bcm;
+	struct bmapc_memb *b;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct iovec *iovs;
@@ -1309,8 +1309,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	psc_assert(r->biorq_bmap);
 	psc_assert(size);
 
-	bcm = r->biorq_bmap;
-	bci = bmap_2_bci(bcm);
+	b = r->biorq_bmap;
+	bci = bmap_2_bci(b);
 
 	n = howmany(size, LNET_MTU);
 	iovs = PSCALLOC(sizeof(*iovs) * n);
@@ -1321,7 +1321,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 
 	op = r->biorq_flags & BIORQ_WRITE ? SRMT_WRITE : SRMT_READ;
 
-	csvc = msl_bmap_to_csvc(bcm, op == SRMT_WRITE);
+	csvc = msl_bmap_to_csvc(b, op == SRMT_WRITE);
 	if (csvc == NULL)
 		goto error;
 
