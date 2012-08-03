@@ -124,7 +124,7 @@ _bmap_op_done(const struct pfl_callerinfo *pci, struct bmapc_memb *b,
 	va_list ap;
 
 	BMAP_LOCK_ENSURE(b);
-	(b)->bcm_flags &= ~BMAP_BUSY;
+	b->bcm_flags &= ~BMAP_BUSY;
 
 	va_start(ap, fmt);
 	psclogsv(PLL_DEBUG, SLSS_BMAP, fmt, ap);
@@ -277,6 +277,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 			}
 		}
 	}
+
  out:
 	if (b) {
 		DEBUG_BMAP(rc && (rc != SLERR_BMAP_INVALID ||
