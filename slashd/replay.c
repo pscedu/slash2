@@ -59,7 +59,8 @@ mds_replay_bmap(void *jent, int op)
 	if (rc)
 		goto out;
 
-	rc = mds_bmap_load(f, cp->bno, &b);
+	rc = bmap_getf(f, cp->bno, SL_WRITE, BMAPGETF_REPLAY |
+	    BMAPGETF_LOAD, &b);
 	if (rc)
 		goto out;
 
@@ -69,7 +70,7 @@ mds_replay_bmap(void *jent, int op)
 		bmap_2_replpol(b) = sjbr->sjbr_replpol;
 		memcpy(b->bcm_repls, sjbr->sjbr_repls,
 		    SL_REPLICA_NBYTES);
-		/* XXX update db entries */
+		slm_repl_upd_odt_write(b, NULL, 0);
 		break;
 	case B_REPLAY_OP_CRC: {
 		struct slash_inode_handle *ih;

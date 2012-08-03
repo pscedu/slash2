@@ -79,22 +79,12 @@ struct slmrmm_thread {
 	struct pscrpc_thread	  smrmt_prt;
 };
 
-struct slmupsched_thread {
-	struct sl_site		 *smut_site;
-};
-
 PSCTHR_MKCAST(slmrcmthr, slmrcm_thread, SLMTHRT_RCM)
 PSCTHR_MKCAST(slmrmcthr, slmrmc_thread, SLMTHRT_RMC)
 PSCTHR_MKCAST(slmrmithr, slmrmi_thread, SLMTHRT_RMI)
 PSCTHR_MKCAST(slmrmmthr, slmrmm_thread, SLMTHRT_RMM)
-PSCTHR_MKCAST(slmupschedthr, slmupsched_thread, SLMTHRT_UPSCHED)
 
 struct site_mds_info {
-	struct psc_dynarray	  smi_upq;		/* update queue */
-	psc_spinlock_t		  smi_lock;
-	struct psc_multiwait	  smi_mw;
-	struct psc_multiwaitcond  smi_mwcond;
-	int			  smi_flags;
 };
 
 static __inline struct site_mds_info *
@@ -175,17 +165,18 @@ struct sl_mds_iosinfo {
 /* MDS-specific data for struct sl_resource */
 struct resprof_mds_info {
 	int			  rpmi_cnt;		/* IOS round-robin assigner */
-	psc_spinlock_t		  rpmi_lock;
+	struct pfl_mutex	  rpmi_mutex;
+	struct psc_dynarray	  rpmi_upschq;		/* updates queue */
 	struct psc_waitq	  rpmi_waitq;
 
 	/* sl_mds_peerinfo for peer MDS or sl_mds_iosinfo for IOS */
 	void			 *rpmi_info;
 };
 
-#define RPMI_LOCK(rpmi)		spinlock(&(rpmi)->rpmi_lock)
-#define RPMI_RLOCK(rpmi)	reqlock(&(rpmi)->rpmi_lock)
-#define RPMI_ULOCK(rpmi)	freelock(&(rpmi)->rpmi_lock)
-#define RPMI_URLOCK(rpmi, lk)	ureqlock(&(rpmi)->rpmi_lock, (lk))
+#define RPMI_LOCK(rpmi)		psc_mutex_lock(&(rpmi)->rpmi_mutex)
+#define RPMI_RLOCK(rpmi)	psc_mutex_reqlock(&(rpmi)->rpmi_mutex)
+#define RPMI_ULOCK(rpmi)	psc_mutex_unlock(&(rpmi)->rpmi_mutex)
+#define RPMI_URLOCK(rpmi, lkd)	psc_mutex_ureqlock(&(rpmi)->rpmi_mutex, (lkd))
 
 static __inline struct resprof_mds_info *
 res2rpmi(struct sl_resource *res)
@@ -195,9 +186,9 @@ res2rpmi(struct sl_resource *res)
 
 /* MDS-specific data for struct sl_resm */
 struct resm_mds_info {
-	int			  rmmi_busyid;
-	struct sl_resm		 *rmmi_resm;
-	atomic_t		  rmmi_refcnt;		/* #CLIs using this ion */
+	int			 rmmi_busyid;
+	struct sl_resm		*rmmi_resm;
+	atomic_t		 rmmi_refcnt;		/* #CLIs using this ion */
 };
 
 static __inline struct resm_mds_info *
@@ -208,48 +199,59 @@ resm2rmmi(struct sl_resm *resm)
 
 #define resm2rpmi(resm)		res2rpmi((resm)->resm_res)
 
-struct slm_workrq {
-	int			(*wkrq_cbf)(struct slm_workrq *);
-	struct psc_listentry	  wkrq_lentry;
-	struct fidc_membh	 *wkrq_fcmh;
+struct slm_wkdata_wr_brepl {
+	struct bmapc_memb	*b;
+
+	/* only used during REPLAY */
+	struct slash_fidgen	 fg;
+	sl_bmapno_t		 bno;
 };
+
+struct slm_wkdata_ptrunc {
+	struct fidc_membh	*f;
+};
+
+#define SLM_NWORKER_THREADS	4
 
 int		 mds_handle_rls_bmap(struct pscrpc_request *, int);
 int		 mds_lease_renew(struct fidc_membh *, struct srt_bmapdesc *,
-			 struct srt_bmapdesc *, struct pscrpc_export *);
+			struct srt_bmapdesc *, struct pscrpc_export *);
 int		 mds_lease_reassign(struct fidc_membh *,
-			 struct srt_bmapdesc *, sl_ios_id_t, sl_ios_id_t *,
-			 int, struct srt_bmapdesc *,
-			 struct pscrpc_export *);
+			struct srt_bmapdesc *, sl_ios_id_t, sl_ios_id_t *,
+			int, struct srt_bmapdesc *, struct pscrpc_export *);
 
 int		 mds_sliod_alive(void *);
+
+void		 slm_iosv_setbusy(sl_replica_t *, int);
 
 __dead void	 slmctlthr_main(const char *);
 void		 slmbmaptimeothr_spawn(void);
 void		 slmrcmthr_main(struct psc_thread *);
-void		 slmupschedthr_spawnall(void);
 void		 slmtimerthr_spawn(void);
 
 slfid_t		 slm_get_curr_slashfid(void);
 void		 slm_set_curr_slashfid(slfid_t);
 int		 slm_get_next_slashfid(slfid_t *);
 
-int		 slm_ptrunc_prepare(struct slm_workrq *);
-void		 slm_ptrunc_apply(struct slm_workrq *);
-int		 slm_ptrunc_wake_clients(struct slm_workrq *);
+int		 slm_ptrunc_prepare(void *);
+void		 slm_ptrunc_apply(struct slm_wkdata_ptrunc *);
+int		 slm_ptrunc_wake_clients(void *);
 void		 slm_setattr_core(struct fidc_membh *, struct srt_stat *, int);
 
-void		 slm_workq_init(void);
-void		 slm_workers_spawn(void);
+void		 slm_upsch_init(void);
+void		 slmupschedthr_spawn(void);
+
+void		 dbdo(int (*)(void *, int, char **,char **), void *,
+			const char *, ...);
 
 extern struct slash_creds	 rootcreds;
 extern struct odtable		*mdsBmapAssignTable;
+extern struct odtable		*slm_repl_odt;
+extern struct odtable		*slm_ptrunc_odt;
 extern struct sl_mds_nsstats	 slm_nsstats_aggr;	/* aggregate namespace stats */
 extern struct sl_mds_peerinfo	*localinfo;
 
 extern uint64_t			 slm_fsuuid;
-extern struct psc_poolmgr	*slm_workrq_pool;
-extern struct psc_listcache	 slm_workq;
 extern struct psc_thread	*slmconnthr;
 
 static __inline int
@@ -259,11 +261,11 @@ slm_get_rpmi_idx(struct sl_resource *res)
 	int locked, n;
 
 	rpmi = res2rpmi(res);
-	locked = reqlock(&rpmi->rpmi_lock);
+	locked = RPMI_RLOCK(rpmi);
 	if (rpmi->rpmi_cnt >= psc_dynarray_len(&res->res_members))
 		rpmi->rpmi_cnt = 0;
 	n = rpmi->rpmi_cnt++;
-	ureqlock(&rpmi->rpmi_lock, locked);
+	RPMI_URLOCK(rpmi, locked);
 	return (n);
 }
 

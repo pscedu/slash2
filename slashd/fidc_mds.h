@@ -28,6 +28,7 @@
 #include "mdsio.h"
 #include "mdslog.h"
 #include "slashd.h"
+#include "up_sched_res.h"
 
 struct fcmh_mds_info {
 	struct slash_inode_handle fmi_inodeh;		/* MDS sl_inodeh_t goes here */
@@ -36,8 +37,6 @@ struct fcmh_mds_info {
 	int			  fmi_ctor_rc;		/* constructor return code */
 	uint64_t		  fmi_ptrunc_size;	/* new truncate(2) size */
 	struct psc_dynarray	  fmi_ptrunc_clients;	/* clients awaiting CRC recalc */
-
-	pthread_t		  fmi_owner;
 };
 
 #define FCMH_IN_PTRUNC		(_FCMH_FLGSHFT << 0)
@@ -52,6 +51,10 @@ struct fcmh_mds_info {
 #define fcmh_2_metafsize(f)	(f)->fcmh_sstb.sst_blksize
 #define fcmh_nallbmaps(f)	howmany(fcmh_2_metafsize(f) - SL_BMAP_START_OFF, BMAP_OD_SZ)
 #define fcmh_nvalidbmaps(f)	howmany(fcmh_2_fsz(f), SLASH_BMAP_SIZE)
+
+#define fcmh_getrepl(f, n)	((n) < SL_DEF_REPLICAS ?		\
+				    fcmh_2_ino(f)->ino_repls[n] :	\
+				    fcmh_2_inox(f)->inox_repls[(n) - SL_DEF_REPLICAS])
 
 #define FCMH_HAS_GARBAGE(f)	(fcmh_nallbmaps(f) > fcmh_nvalidbmaps(f))
 
@@ -118,6 +121,12 @@ fcmh_set_repl_nblks(struct fidc_membh *f, int idx, uint64_t nblks)
 		mds_inox_ensure_loaded(fcmh_2_inoh(f));
 		fcmh_2_inox(f)->inox_repl_nblks[idx - SL_DEF_REPLICAS] = nblks;
 	}
+}
+
+static __inline struct fidc_membh *
+fmi_2_fcmh(struct fcmh_mds_info *fmi)
+{
+	return (fcmh_from_pri(fmi));
 }
 
 #endif /* _FIDC_MDS_H_ */

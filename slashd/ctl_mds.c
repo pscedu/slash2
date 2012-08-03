@@ -31,6 +31,7 @@
 #include "ctl_mds.h"
 #include "ctlsvr.h"
 #include "mdsio.h"
+#include "odtable_mds.h"
 #include "repl_mds.h"
 #include "slashd.h"
 #include "slconfig.h"
@@ -373,8 +374,13 @@ __dead int
 slmctlcmd_stop(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
     __unusedx void *m)
 {
+	sqlite3 *dbh = slm_dbh;
+
 	mdsio_exit();
 	/* XXX journal_close */
+	UPSCH_LOCK();
+	slm_dbh = NULL;
+	sqlite3_close(dbh);
 	exit(0);
 }
 

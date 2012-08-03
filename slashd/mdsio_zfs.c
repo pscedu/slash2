@@ -45,7 +45,6 @@
 #include "zfs-fuse/zfs_slashlib.h"
 
 mdsio_fid_t		 mds_metadir_inum;
-mdsio_fid_t		 mds_upschdir_inum;
 mdsio_fid_t		 mds_fidnsdir_inum;
 mdsio_fid_t		 mds_tmpdir_inum;
 

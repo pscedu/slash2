@@ -64,6 +64,17 @@ typedef void (*sl_log_update_t)(int, uint64_t, uint64_t, uint64_t,
 	mdsio_opencreatef((pino), (crp), (fflags), 0, (mode), (fn),	\
 	    (mfp), (sstb), (mdsio_datap), (logfunc), (getslfid), (slfid))
 
+#define MDSIO_FOREACH_DIRENT(dh, credp, buf, bufsiz, ip, d, rc)		\
+	for ((ip)->mdi_off = 0; ((rc) = mdsio_readdir((credp),		\
+	    (bufsiz), (ip)->mdi_off, (buf), &(ip)->mdi_tsiz, NULL,	\
+	    NULL, 0, (dh))) == 0 && (ip)->mdi_tsiz;			\
+	    (ip)->mdi_off += (ip)->mdi_tsiz)				\
+		for ((ip)->mdi_toff = 0;				\
+		     (ip)->mdi_toff < (off64_t)(ip)->mdi_tsiz &&	\
+		      ((d) = (void *)((buf) + (ip)->mdi_toff)) &&	\
+		      ((ip)->mdi_off = (d)->pfd_off);			\
+		     (ip)->mdi_toff += PFL_DIRENT_SIZE((d)->pfd_namelen))
+
 /* high-level interface */
 int	mdsio_fcmh_refreshattr(struct fidc_membh *, struct srt_stat *);
 int	mdsio_write_cursor(void *, size_t, void *, sl_log_write_t);
@@ -155,9 +166,8 @@ struct mdsio_ops {
 #define mdsio_redo_unlink	mdsio_ops.mio_redo_unlink		/* zfsslash2_replay_unlink() */
 
 extern struct mdsio_ops	mdsio_ops;
-extern mdsio_fid_t	mds_upschdir_inum;
 extern mdsio_fid_t	mds_metadir_inum;
 extern mdsio_fid_t	mds_fidnsdir_inum;
 extern mdsio_fid_t	mds_tmpdir_inum;
 
-#endif
+#endif /* _SLASHD_MDSIO_H_ */

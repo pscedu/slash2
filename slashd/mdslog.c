@@ -43,10 +43,12 @@
 #include "mdslog.h"
 #include "mkfn.h"
 #include "pathnames.h"
+#include "repl_mds.h"
 #include "rpc_mds.h"
 #include "slashd.h"
 #include "slashrpc.h"
 #include "slerr.h"
+#include "worker.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
 
@@ -61,28 +63,6 @@ struct prog_entry {
 	int32_t			 _pad;
 };
 
-struct prog_tracker {
-	char			 pt_prog_fn[PATH_MAX];
-	struct prog_entry	*pt_prog_buf;
-	void			*pt_progfile_handle;
-
-	void			*pt_logfile_handle;
-	off_t			 pt_logfile_offset;
-
-	uint64_t		 pt_current_batchno;
-	uint64_t		 pt_current_xid;
-	uint64_t		 pt_sync_xid;
-
-	struct psc_waitq	 pt_waitq;
-	psc_spinlock_t		 pt_lock;
-	struct psclist_head	 pt_buflist;
-	void			*pt_buf;
-};
-
-#define PT_INIT(hd)							\
-	{ "", NULL, NULL, 0, 0, 0, NULL, 0, PSC_WAITQ_INIT,		\
-	  SPINLOCK_INIT, PSCLIST_HEAD_INIT(hd.pt_buflist), NULL }
-
 struct psc_journal		*mdsJournal;
 
 static psc_spinlock_t		 mds_distill_lock = SPINLOCK_INIT;
@@ -92,7 +72,7 @@ uint64_t			 current_reclaim_batchno;
 
 /*
  * The entry size must be the same for the same batch of log entries.
- * In version 0, the size is RECLAIM_ENTRY_SIZE (512). The next version
+ * In version 0, the size is RECLAIM_ENTRY_SIZE (512).  The next version
  * will be the size of the reclaim log entry.
  */
 size_t				 current_reclaim_entrysize;
@@ -262,7 +242,7 @@ mds_remove_logfile(uint64_t batchno, int update)
 		xmkfn(logfn, "%s.%d", SL_FN_RECLAIMLOG, batchno);
 	rc = mdsio_unlink(mds_metadir_inum, NULL, logfn, &rootcreds, NULL,
 	    NULL);
-	psclog_warnx("Removing log file %s, rc = %d\n", logfn, rc);
+	psclog_warnx("Removing log file %s, rc=%d", logfn, rc);
 }
 
 int
@@ -309,7 +289,7 @@ mds_open_logfile(uint64_t batchno, int update, int readonly,
  * mds_distill_handler - Distill information from the system journal and
  *	write into namespace update or garbage reclaim logs.
  *
- *	Writing the information to secondary logs allows us to recyle
+ *	Writing the information to secondary logs allows us to recycle
  *	the space in the main system log as quick as possible.  The
  *	distill process is continuous in order to make room for system
  *	logs.  Once in a secondary log, we can process them as we see
@@ -341,7 +321,6 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 	 * The following can only be executed by the singleton distill
 	 * thread.
 	 */
-
 	type = pje->pje_type & ~(_PJE_FLSHFT - 1);
 	if (type == MDS_LOG_BMAP_CRC) {
 		sjbc = PJE_DATA(pje);
@@ -372,7 +351,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 
 	if (reclaim_logfile_handle == NULL) {
 
-		rc = mds_open_logfile(current_reclaim_batchno, 0, 0, &reclaim_logfile_handle);
+		rc = mds_open_logfile(current_reclaim_batchno, 0, 0,
+		    &reclaim_logfile_handle);
 		psc_assert(rc == 0);
 
 		rc = mdsio_getattr(0, reclaim_logfile_handle, &rootcreds, &sstb);
@@ -385,7 +365,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 		 */
 		if (sstb.sst_size) {
 			reclaimbuf = PSCALLOC(sstb.sst_size);
-			rc = mds_read_file(reclaim_logfile_handle, reclaimbuf, sstb.sst_size, &size, 0);
+			rc = mds_read_file(reclaim_logfile_handle,
+			    reclaimbuf, sstb.sst_size, &size, 0);
 			if (rc || size != sstb.sst_size)
 				psc_fatalx("Failed to read reclaim log "
 				    "file, batchno=%"PRId64": %s",
@@ -429,12 +410,13 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 			reclaim_entry.fg.fg_gen = RECLAIM_MAGIC_GEN;
 			if (current_reclaim_entrysize == RECLAIM_ENTRY_SIZE) {
 				/*
-				 * This might not give us the correct batchno if the machine
-				 * crashed after writing a full log and just came back.
+				 * This might not give us the correct
+				 * batchno if the machine crashed after
+				 * writing a full log and just came back.
 				 */
 				current_reclaim_entrysize = sizeof(struct srt_reclaim_entry);
 				psclog_warnx("Switch to new log format, batchno=%"PRId64,
-					      current_reclaim_batchno);
+				    current_reclaim_batchno);
 			}
 
 			rc = mds_write_file(reclaim_logfile_handle, &reclaim_entry,
@@ -658,7 +640,7 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 		/*
 		 * We want to reclaim the space taken by the previous
 		 * generation.  Note that changing the attributes of a
-		 * zero-lengh file should NOT trigger this code.
+		 * zero-length file should NOT trigger this code.
 		 */
 		distill += 100;
 		sjnm->sjnm_flag |= SJ_NAMESPACE_RECLAIM;
@@ -956,7 +938,7 @@ mds_send_batch_update(uint64_t batchno)
 		iov.iov_len = total;
 		iov.iov_base = entryp;
 
-		csvc = slm_getmcsvc(resm);
+		csvc = slm_getmcsvc_wait(resm);
 		if (csvc == NULL) {
 			peerinfo->sp_fails++;
 			continue;
@@ -1142,11 +1124,10 @@ mds_open_cursor(void)
 void
 mds_skip_reclaim_batch(uint batchno)
 {
-	int ri;
-	int nios = 0, record = 0, didwork = 0;
+	int ri, nios = 0, record = 0, didwork = 0;
+	struct sl_mds_iosinfo *iosinfo;
 	struct resprof_mds_info *rpmi;
 	struct sl_resource *res;
-	struct sl_mds_iosinfo *iosinfo;
 
 	if (batchno >= current_reclaim_batchno)
 		return;
@@ -1178,7 +1159,8 @@ mds_skip_reclaim_batch(uint batchno)
 int
 mds_send_batch_reclaim(uint64_t batchno)
 {
-	int i, j, ri, rc, len, count, nentry, total, nios, didwork = 0, record = 0;
+	int i, j, ri, rc, len, count, nentry, total, nios, didwork = 0,
+	    record = 0, version;
 	struct srt_reclaim_entry *entryp, *next_entryp;
 	struct slashrpc_cservice *csvc;
 	struct sl_mds_iosinfo *iosinfo;
@@ -1188,14 +1170,12 @@ mds_send_batch_reclaim(uint64_t batchno)
 	struct pscrpc_request *rq;
 	struct sl_resm *dst_resm;
 	struct sl_resource *res;
+	struct sl_resm_nid *mn;
+	struct srt_stat sstb;
 	struct iovec iov;
 	uint64_t xid;
 	size_t size, entrysize;
-	void *handle;
-	struct sl_resm_nid *mn;
-	int version;
-	void *reclaimbuf;
-	struct srt_stat sstb;
+	void *handle, *reclaimbuf;
 
 	rc = mds_open_logfile(batchno, 0, 1, &handle);
 	if (rc) {
@@ -1237,7 +1217,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 	}
 	/*
 	 * We have seen odd file size (> 600MB) without any clue.
-	 * To avoid confusing other code on mds and sliod, pretend
+	 * To avoid confusing other code on the MDS and sliod, pretend
 	 * we have done the job and move on.
 	 */
 	if ((size > entrysize * SLM_RECLAIM_BATCH) ||
@@ -1302,8 +1282,6 @@ mds_send_batch_reclaim(uint64_t batchno)
 		 * Note that the reclaim xid we can see is not
 		 * necessarily contiguous.
 		 *
-		 * 04/04/2012:
-		 *
 		 * We only check for xid when the log file is not
 		 * full to get around some internally corrupted
 		 * log file (xid is not increasing all the way).
@@ -1344,8 +1322,8 @@ mds_send_batch_reclaim(uint64_t batchno)
 				entryp = PSC_AGP(entryp, len);
 			} while (total);
 		} else
-			psclog_warnx("batch (%"PRId64") versus xids (%"PRId64":%"PRId64")\n",
-				batchno, iosinfo->si_xid, xid);
+			psclog_warnx("batch (%"PRId64") versus xids (%"PRId64":%"PRId64")",
+			    batchno, iosinfo->si_xid, xid);
 
 		psc_assert(total);
 
@@ -1551,6 +1529,7 @@ mdslogfill_bmap_repls(struct bmapc_memb *b,
 	sjbr->sjbr_bmapno = b->bcm_bmapno;
 	BHGEN_GET(b, &sjbr->sjbr_bgen);
 
+//	FCMH_ENSURE_LOCKED(f);
 	locked = FCMH_RLOCK(f);
 	sjbr->sjbr_nrepls = fcmh_2_nrepls(f);
 	sjbr->sjbr_replpol = fcmh_2_replpol(f);
@@ -1558,11 +1537,20 @@ mdslogfill_bmap_repls(struct bmapc_memb *b,
 
 	memcpy(sjbr->sjbr_repls, b->bcm_repls, SL_REPLICA_NBYTES);
 
-	DEBUG_BMAPOD(PLL_DEBUG, b, "filled bmap_repls journal log");
+	DEBUG_BMAPOD(PLL_DEBUG, b, "filled bmap_repls journal log entry");
+}
+
+int
+slm_wkcb_wr_brepl(void *p)
+{
+	struct slm_wkdata_wr_brepl *wk = p;
+
+	slm_repl_upd_odt_write(wk->b, &wk->fg, wk->bno);
+	return (0);
 }
 
 /**
- * mdslog_bmap_repl - Write a modified replication table to the
+ * mdslog_bmap_repl - Write a recently modified replication table to the
  *	journal.
  * Note:  bmap must be locked to prevent further changes from sneaking
  *	in before the repl table is committed to the journal.
@@ -1571,6 +1559,7 @@ void
 mdslog_bmap_repls(void *datap, uint64_t txg, __unusedx int flag)
 {
 	struct slmds_jent_bmap_repls *sjbr;
+	struct slm_wkdata_wr_brepl *wk;
 	struct bmapc_memb *b = datap;
 
 	sjbr = pjournal_get_buf(mdsJournal, sizeof(*sjbr));
@@ -1578,13 +1567,24 @@ mdslog_bmap_repls(void *datap, uint64_t txg, __unusedx int flag)
 	pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_REPLS, 0, sjbr,
 	    sizeof(*sjbr));
 	pjournal_put_buf(mdsJournal, sjbr);
+
+	wk = pfl_workq_getitem(slm_wkcb_wr_brepl,
+	    struct slm_wkdata_wr_brepl);
+	if (b->bcm_flags & BMAP_REPLAY) {
+		wk->b = NULL;
+		wk->fg = b->bcm_fcmh->fcmh_fg;
+		wk->bno = b->bcm_bmapno;
+	} else {
+		wk->b = b;
+		bmap_op_start_type(b, BMAP_OPCNT_WORK);
+	}
+	pfl_workq_putitem(wk);
 }
 
 /**
  * mdslog_bmap_crc - Commit bmap CRC changes to the journal.
- * @bmap: the bmap (not locked).
- * @crcs: array of CRC / slot pairs.
- * @n: the number of CRC / slot pairs.
+ * @datap: CRC log structure.
+ * @txg: transaction group ID.
  * Notes: bmap_crc_writes from the ION are sent here directly because
  *	this function is responsible for updating the cached bmap after
  *	the CRC has been committed to the journal.  This allows us to
@@ -1923,7 +1923,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		peerinfo->sp_flags &= ~SPF_NEED_JRNL_INIT;
 	);
 
-	psclog_warnx("current_update_batchno = %"PRId64", current_update_xid = %"PRId64,
+	psclog_info("current_update_batchno = %"PRId64", current_update_xid = %"PRId64,
 	    current_update_batchno, current_update_xid);
 
  replay_log:
@@ -1933,28 +1933,28 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	mdsJournal->pj_commit_txg = mds_cursor.pjc_commit_txg;
 	mdsJournal->pj_replay_xid = mds_cursor.pjc_replay_xid;
 
-	psclog_warnx("Journal device is %s", jrnldev);
-	psclog_warnx("Last SLASH FID is "SLPRI_FID, mds_cursor.pjc_fid);
-	psclog_warnx("Last synced ZFS transaction group number is %"PRId64,
+	psclog_info("Journal device is %s", jrnldev);
+	psclog_info("Last SLASH FID is "SLPRI_FID, mds_cursor.pjc_fid);
+	psclog_info("Last synced ZFS transaction group number is %"PRId64,
 	    mdsJournal->pj_commit_txg);
-	psclog_warnx("Last replayed SLASH2 transaction ID is %"PRId64,
+	psclog_info("Last replayed SLASH2 transaction ID is %"PRId64,
 	    mdsJournal->pj_replay_xid);
 
 	pjournal_replay(mdsJournal, SLMTHRT_JRNL, "slmjthr",
 	    mds_replay_handler, mds_distill_handler);
 
-	psclog_warnx("Last used SLASH2 transaction ID is %"PRId64,
+	psclog_info("Last used SLASH2 transaction ID is %"PRId64,
 	   mdsJournal->pj_lastxid);
 
 	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm, mds_cursor.pjc_seqno_lwm);
-	psclog_warnx("Last bmap sequence number low water mark is %"PRIx64,
+	psclog_info("Last bmap sequence number low water mark is %"PRIx64,
 	    mds_cursor.pjc_seqno_lwm);
-	psclog_warnx("Last bmap sequence number high water mark is %"PRIx64,
+	psclog_info("Last bmap sequence number high water mark is %"PRIx64,
 	    mds_cursor.pjc_seqno_hwm);
 
-	psclog_warnx("The next FID will be %"PRId64, slm_get_curr_slashfid());
+	psclog_info("The next FID will be %"PRId64, slm_get_curr_slashfid());
 
-	psclog_warnx("Journal UUID=%"PRIx64" MDS UUID=%"PRIx64,
+	psclog_info("Journal UUID=%"PRIx64" MDS UUID=%"PRIx64,
 	    mdsJournal->pj_hdr->pjh_fsuuid, fsuuid);
 
 	/* Always start a thread to send reclaim updates. */

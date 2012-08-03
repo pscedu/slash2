@@ -49,14 +49,13 @@
 #include "inode.h"
 #include "mdsio.h"
 #include "mdslog.h"
+#include "odtable_mds.h"
 #include "pathnames.h"
 #include "repl_mds.h"
 #include "slashd.h"
 #include "slconn.h"
 #include "slerr.h"
 #include "up_sched_res.h"
-
-struct psc_listcache	 slm_replst_workq;
 
 struct slm_resmlink	*repl_busytable;
 int			 repl_busytable_nents;
@@ -87,15 +86,19 @@ iosidx_in(int idx, const int *iosidx, int nios)
 	return (0);
 }
 
-int
-uswi_cmp(const void *a, const void *b)
+void
+slm_repl_bmap_rel(struct bmapc_memb *b)
 {
-	const struct up_sched_work_item *x = a, *y = b;
+	if (BMAPOD_HASWRLOCK(bmap_2_bmi(b)) &&
+	    !(b->bcm_flags & BMAP_MDS_REPLMODWR)) {
+		/* we took a write lock but did not modify; undo */
+		BMAPOD_MODIFY_DONE(b);
 
-	return (CMP(USWI_FID(x), USWI_FID(y)));
+		BMAP_RLOCK(b);
+		b->bcm_flags &= BMAP_MDS_REPLMOD;
+	}
+	bmap_op_done(b);
 }
-
-SPLAY_GENERATE(upschedtree, up_sched_work_item, uswi_tentry, uswi_cmp);
 
 int
 _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
@@ -175,13 +178,7 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
 	return (inox_rc ? inox_rc : rc);
 }
 
-#define mds_repl_iosv_lookup(ih, ios, iosidx, nios)			\
-	_mds_repl_iosv_lookup((ih), (ios), (iosidx), (nios), 0)
-
-#define mds_repl_iosv_lookup_add(ih, ios, iosidx, nios)			\
-	_mds_repl_iosv_lookup((ih), (ios), (iosidx), (nios), 1)
-
-__static int
+int
 _mds_repl_iosv_lookup(struct slash_inode_handle *ih,
     const sl_replica_t iosv[], int iosidx[], int nios, int add)
 {
@@ -227,12 +224,20 @@ _mds_repl_bmap_apply(struct bmapc_memb *b, const int *tract,
     brepl_walkcb_t cbf, void *cbarg)
 {
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
-	int locked, val, rc = 0;
+	int locked = 0, val, rc = 0;
 
-	/* Take a write lock on the bmapod. */
-	if (tract)
-		locked = BMAPOD_REQWRLOCK(bmi);
-	else
+	if (tract) {
+		if (!BMAPOD_HASWRLOCK(bmi)) {
+			locked = BMAP_RLOCK(b);
+			bmap_wait_locked(b, b->bcm_flags &
+			    BMAP_MDS_REPLMOD);
+			BMAPOD_MODIFY_START(b);
+			b->bcm_flags |= BMAP_MDS_REPLMOD;
+			BMAP_URLOCK(b, locked);
+			memcpy(bmi->bmi_orepls, b->bcm_repls,
+			    sizeof(bmi->bmi_orepls));
+		}
+	} else if (!BMAPOD_HASWRLOCK(bmi))
 		locked = BMAPOD_REQRDLOCK(bmi);
 
 	if (scircuit)
@@ -249,11 +254,8 @@ _mds_repl_bmap_apply(struct bmapc_memb *b, const int *tract,
 	if (cbf)
 		cbf(b, off / SL_BITS_PER_REPLICA, val, cbarg);
 
-	/* Check for return values */
+	/* check for & apply return values */
 	if (retifset && retifset[val]) {
-		/* Assign here instead of above to prevent
-		 *   overwriting a zero return value.
-		 */
 		rc = retifset[val];
 		if (flags & REPL_WALKF_SCIRCUIT) {
 			*scircuit = 1;
@@ -261,13 +263,17 @@ _mds_repl_bmap_apply(struct bmapc_memb *b, const int *tract,
 		}
 	}
 
-	/* Apply any translations */
-	if (tract && tract[val] != -1)
-		SL_REPL_SET_BMAP_IOS_STAT(b->bcm_repls,
-		    off, tract[val]);
+	/* apply any translations */
+	if (tract && tract[val] != -1) {
+		DEBUG_BMAP(PLL_DEBUG, b, "before modification");
+		SL_REPL_SET_BMAP_IOS_STAT(b->bcm_repls, off,
+		    tract[val]);
+		DEBUG_BMAP(PLL_DEBUG, b, "after modification");
+	}
 
  out:
-	BMAPOD_UREQLOCK(bmi, locked);
+	if (!BMAPOD_HASWRLOCK(bmi))
+		BMAPOD_UREQLOCK(bmi, locked);
 	return (rc);
 }
 
@@ -348,7 +354,8 @@ mds_repl_inv_requeue(struct bmapc_memb *b, int idx, int val, void *arg)
 	struct iosidv *qv = arg;
 
 	if (val == BREPLST_VALID)
-		qv->iosv[qv->nios++].bs_id = fcmh_2_repl(b->bcm_fcmh, idx);
+		qv->iosv[qv->nios++].bs_id = fcmh_2_repl(b->bcm_fcmh,
+		    idx);
 }
 
 /**
@@ -373,7 +380,6 @@ int
 mds_repl_inv_except(struct bmapc_memb *b, int iosidx)
 {
 	int rc, tract[NBREPLST], retifset[NBREPLST];
-	struct up_sched_work_item *wk;
 	struct iosidv qv;
 	uint32_t policy;
 
@@ -413,6 +419,7 @@ mds_repl_inv_except(struct bmapc_memb *b, int iosidx)
 	    &iosidx, 1, mds_repl_inv_requeue, &qv))
 		BHGEN_INCREMENT(b);
 
+	/* XXX why are we not using journalling here??? */
 	rc = mds_bmap_write(b, 0, NULL, NULL);
 
 	/*
@@ -422,36 +429,9 @@ mds_repl_inv_except(struct bmapc_memb *b, int iosidx)
 	 * processing it as this activity now means they have more to
 	 * do.
 	 */
-	if (policy == BRPOL_PERSIST) {
-		wk = uswi_find(&b->bcm_fcmh->fcmh_fg);
-		uswi_enqueue_sites(wk, qv.iosv, qv.nios);
-		uswi_unref(wk);
-	}
-	return (rc);
-}
-
-/* XXX remove this routine */
-int
-mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
-{
-	struct slash_inode_handle *ih;
-	struct fidc_membh *fcmh;
-	int rc;
-
-	*fp = NULL;
-
-	rc = slm_fcmh_get(fgp, &fcmh);
-	if (rc)
-		return (rc);
-
-	if (fcmh_2_nrepls(fcmh) > SL_DEF_REPLICAS) {
-		ih = fcmh_2_inoh(fcmh);
-		rc = mds_inox_ensure_loaded(ih);
-		if (rc)
-			psc_fatalx("mds_inox_ensure_loaded: %s",
-			    slstrerror(rc));
-	}
-	*fp = fcmh;
+	if (policy == BRPOL_PERSIST)
+		upsch_enqueue(&bmap_2_bmi(b)->bmi_upd, qv.iosv,
+		    qv.nios);
 	return (rc);
 }
 
@@ -472,8 +452,8 @@ slm_iosv_setbusy(sl_replica_t *iosv, int nios)
 
 		RPMI_LOCK(rpmi);
 		while (si->si_flags & SIF_BUSY) {
-			psc_waitq_wait(&rpmi->rpmi_waitq,
-			    &rpmi->rpmi_lock);
+			psc_waitq_wait_mutex(&rpmi->rpmi_waitq,
+			    &rpmi->rpmi_mutex);
 			RPMI_LOCK(rpmi);
 		}
 		si->si_flags |= SIF_BUSY;
@@ -502,26 +482,157 @@ slm_iosv_clearbusy(const sl_replica_t *iosv, int nios)
 	}
 }
 
+void
+slm_repl_upd_odt_write(struct bmapc_memb *b, struct slash_fidgen *fg,
+    sl_bmapno_t bno)
+{
+	struct {
+		sl_replica_t	iosv[SL_MAX_REPLICAS];
+		unsigned	nios;
+	} add, del, sch, deq;
+	int locked, rc, off, vold, vnew;
+	struct bmap_repls_upd_odent br;
+	struct slm_update_data *upd;
+	struct bmap_mds_info *bmi;
+	struct fidc_membh *f;
+	unsigned n;
+
+	if (b)
+		upd = bmap_2_upd(b);
+	else {
+		/*
+		 * Called from replay; ensure we don't duplicate odt
+		 * entry.
+		 */
+		rc = slm_fcmh_get(fg, &f);
+		if (rc)
+			;
+
+		rc = bmap_get(f, bno, SL_WRITE, &b);
+		if (rc)
+			;
+
+		bmap_op_start_type(b, BMAP_OPCNT_WORK);
+		bmap_op_done(b);
+
+		upd = bmap_2_upd(b);
+		upd_init(upd, UPDT_BMAP);
+
+		fcmh_op_done(f);
+	}
+
+	locked = BMAPOD_READ_START(b);
+
+	bmi = bmap_2_bmi(b);
+	f = b->bcm_fcmh;
+
+	add.nios = 0;
+	del.nios = 0;
+	sch.nios = 0;
+	deq.nios = 0;
+	for (n = 0, off = 0; n < fcmh_2_nrepls(f);
+	    n++, off += SL_BITS_PER_REPLICA) {
+		vold = SL_REPL_GET_BMAP_IOS_STAT(
+		    bmi->bmi_orepls, off);
+		vnew = SL_REPL_GET_BMAP_IOS_STAT(
+		    b->bcm_repls, off);
+		if (vold != BREPLST_REPL_QUEUED &&
+		    vnew == BREPLST_REPL_QUEUED)
+			add.iosv[add.nios++].bs_id = fcmh_2_repl(f, n);
+		else if ((vold == BREPLST_REPL_QUEUED ||
+		    vold == BREPLST_REPL_SCHED) &&
+		    vnew == BREPLST_GARBAGE)
+			del.iosv[del.nios++].bs_id = fcmh_2_repl(f, n);
+	}
+
+	if (add.nios) {
+		if (!upd->upd_recpt) {
+			br.br_fg = f->fcmh_fg;
+			br.br_bno = b->bcm_bmapno;
+			upd->upd_recpt =
+			    mds_odtable_putitem(slm_repl_odt, &br,
+				sizeof(br));
+			DEBUG_UPD(PLL_DEBUG, upd,
+			    "assigned odtable receipt [%ld,%zd]",
+			    upd->upd_recpt->odtr_elem,
+			    upd->upd_recpt->odtr_key);
+		}
+
+		for (n = 0; n < add.nios; n++)
+			dbdo(NULL, NULL,
+			    " INSERT INTO upsch ("
+			    "	resid, fid, bno, uid, gid, status, "
+			    "   recpt_elem, recpt_key"
+			    ") VALUES ("
+			    "	%d, %"PRIu64", %u, %u, %u, 'Q', "
+			    "	%zd, %"PRIu64
+			    ")",
+			    add.iosv[n].bs_id, bmap_2_fid(b),
+			    b->bcm_bmapno,
+			    f->fcmh_sstb.sst_uid,
+			    f->fcmh_sstb.sst_gid,
+			    upd->upd_recpt->odtr_elem,
+			    upd->upd_recpt->odtr_key);
+	}
+	if (deq.nios)
+		for (n = 0; n < deq.nios; n++)
+			dbdo(NULL, NULL,
+			    " UPDATE	upsch"
+			    " SET	status = 'Q'"
+			    " WHERE	resid = %d"
+			    "	AND	fid = %"PRIu64
+			    "	AND	bno = %u",
+			    deq.iosv[n].bs_id, bmap_2_fid(b),
+			    b->bcm_bmapno);
+	if (sch.nios)
+		for (n = 0; n < sch.nios; n++)
+			dbdo(NULL, NULL,
+			    " UPDATE	upsch"
+			    " SET	status = 'S'"
+			    " WHERE	resid = %d"
+			    "	AND	fid = %"PRIu64
+			    "	AND	bno = %u",
+			    sch.iosv[n].bs_id, bmap_2_fid(b),
+			    b->bcm_bmapno);
+	if (del.nios) {
+		for (n = 0; n < del.nios; n++)
+			dbdo(NULL, NULL,
+			    " DELETE FROM upsch"
+			    " WHERE	resid = %d"
+			    "   AND	fid = %"PRIu64
+			    "   AND	bno = %u",
+			    del.iosv[n].bs_id, bmap_2_fid(b),
+			    b->bcm_bmapno);
+		upd_tryremove(upd);
+	}
+	UPD_UNBUSY(upd);
+	BMAPOD_READ_DONE(b, locked);
+	BMAP_RLOCK(b);
+	b->bcm_flags &= ~(BMAP_MDS_REPLMOD | BMAP_MDS_REPLMODWR);
+	bmap_wake_locked(b);
+	bmap_op_done_type(b, BMAP_OPCNT_WORK);
+}
+
 int
 mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
     sl_replica_t *iosv, int nios)
 {
 	int tract[NBREPLST], retifset[NBREPLST], retifzero[NBREPLST];
-	int iosidx[SL_MAX_REPLICAS], rc;
-	struct up_sched_work_item *wk;
+	int iosidx[SL_MAX_REPLICAS], rc, i;
+	struct fidc_membh *f;
 	struct bmapc_memb *b;
 
 	if (nios < 1 || nios > SL_MAX_REPLICAS)
-		return (-EINVAL);
+		return (-SLERR_INVAL);
 
-	rc = uswi_findoradd(fgp, &wk);
+	rc = slm_fcmh_get(fgp, &f);
 	if (rc)
 		return (-rc);
 
 	slm_iosv_setbusy(iosv, nios);
 
 	/* Find/add our replica's IOS ID */
-	rc = -mds_repl_iosv_lookup_add(USWI_INOH(wk), iosv, iosidx,
+	rc = -mds_repl_iosv_lookup_add(fcmh_2_inoh(f), iosv, iosidx,
 	    nios);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -543,20 +654,25 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		int repl_some_act = 0, repl_all_act = 1;
 		int ret_if_inact[NBREPLST];
 
+#define F_LOG		(1 << 0)
+#define F_REPORT	(1 << 1)
+#define F_ALREADY	(1 << 2)
+
 		/* check if all bmaps are already old/queued */
 		brepls_init(retifset, 0);
-		retifset[BREPLST_INVALID] = 1;
-		retifset[BREPLST_VALID] = 1;
-		retifset[BREPLST_GARBAGE] = 1;
-		retifset[BREPLST_GARBAGE_SCHED] = 1;
+		retifset[BREPLST_INVALID] = F_LOG | F_REPORT;
+		retifset[BREPLST_REPL_SCHED] = F_LOG;
+		retifset[BREPLST_VALID] = F_REPORT;
+		retifset[BREPLST_GARBAGE] = F_LOG | F_REPORT;
+		retifset[BREPLST_GARBAGE_SCHED] = F_LOG | F_REPORT;
 
 		/* check if all bmaps are already valid */
 		brepls_init(ret_if_inact, 1);
 		ret_if_inact[BREPLST_VALID] = 0;
 
-		for (bmapno = 0; bmapno <
-		    fcmh_nvalidbmaps(wk->uswi_fcmh); bmapno++) {
-			if (mds_bmap_load(wk->uswi_fcmh, bmapno, &b))
+		for (bmapno = 0; bmapno < fcmh_nvalidbmaps(f);
+		    bmapno++) {
+			if (mds_bmap_load(f, bmapno, &b))
 				continue;
 
 			BMAP_LOCK(b);
@@ -571,30 +687,41 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 				continue;
 			}
 
-			repl_some_act |= mds_repl_bmap_walk(b,
-			    tract, retifset, 0, iosidx, nios);
+			i = mds_repl_bmap_walk(b, tract, retifset, 0,
+			    iosidx, nios);
+			if (i & F_REPORT)
+				repl_some_act |= 1;
 			if (repl_all_act && mds_repl_bmap_walk(b, NULL,
 			    ret_if_inact, REPL_WALKF_SCIRCUIT, iosidx,
 			    nios))
 				repl_all_act = 0;
-			mds_bmap_write_repls_rel(b);
+			if (i & F_LOG) {
+				struct slm_update_data *upd;
+
+				upd = &bmap_2_bmi(b)->bmi_upd;
+				if (pfl_memchk(upd, 0,
+				    sizeof(*upd)) == 1)
+					upd_init(upd, UPDT_BMAP);
+				else
+					UPD_WAIT(upd);
+				mds_bmap_write_logrepls(b);
+			}
+			slm_repl_bmap_rel(b);
 		}
 		if (bmapno && repl_some_act == 0)
-			rc = -EALREADY;
+			rc = -SLERR_ALREADY;
 		else if (bmapno && repl_all_act)
 			rc = -SLERR_REPL_ALREADY_ACT;
-	} else if (mds_bmap_exists(wk->uswi_fcmh, bmapno)) {
-		/*
-		 * If this bmap is already being replicated, return
-		 * EALREADY.
-		 */
-		brepls_init(retifset, -SLERR_REPL_NOT_ACT);
-		retifset[BREPLST_INVALID] = 0;
-		retifset[BREPLST_REPL_SCHED] = -EALREADY;
-		retifset[BREPLST_REPL_QUEUED] = -EALREADY;
-		retifset[BREPLST_VALID] = 0;
+	} else if (mds_bmap_exists(f, bmapno)) {
+		brepls_init(retifset, 0);
+		retifset[BREPLST_INVALID] = F_LOG;
+		retifset[BREPLST_REPL_SCHED] = F_LOG;
+		retifset[BREPLST_REPL_QUEUED] = F_ALREADY;
+		retifset[BREPLST_VALID] = F_ALREADY;
+		retifset[BREPLST_GARBAGE] = F_LOG;
+		retifset[BREPLST_GARBAGE_SCHED] = F_LOG;
 
-		rc = -mds_bmap_load(wk->uswi_fcmh, bmapno, &b);
+		rc = -mds_bmap_load(f, bmapno, &b);
 		if (rc == 0) {
 			BMAP_LOCK(b);
 
@@ -607,21 +734,43 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 				bmap_op_done(b);
 				rc = -SLERR_BMAP_ZERO;
 			} else {
-				rc = mds_repl_bmap_walk(b,
-				    tract, retifset, 0, iosidx, nios);
-				mds_bmap_write_repls_rel(b);
+				rc = mds_repl_bmap_walk(b, tract,
+				    retifset, 0, iosidx, nios);
+				if (rc & F_LOG) {
+					struct slm_update_data *upd;
+
+					upd = &bmap_2_bmi(b)->bmi_upd;
+					if (pfl_memchk(upd, 0,
+					    sizeof(*upd)) == 1)
+						upd_init(upd, UPDT_BMAP);
+					else
+						UPD_WAIT(upd);
+					mds_bmap_write_logrepls(b);
+					rc = 0;
+				} else if (rc & F_ALREADY)
+					rc = -SLERR_ALREADY;
+				else
+					rc = -SLERR_REPL_NOT_ACT;
+				slm_repl_bmap_rel(b);
 			}
 		}
 	} else
 		rc = -SLERR_BMAP_INVALID;
 
-	if (rc == 0)
-		uswi_enqueue_sites(wk, iosv, nios);
-	else if (rc == -SLERR_BMAP_ZERO)
+	if (rc == 0) {
+		for (i = 0; i < nios; i++) {
+			struct sl_resource *r;
+
+			r = libsl_id2res(iosv[i].bs_id);
+			upschq_resm(psc_dynarray_getpos(&r->res_members,
+			    0), UPDT_PAGEIN);
+		}
+	} else if (rc == -SLERR_BMAP_ZERO)
 		rc = 0;
 
  out:
-	uswi_unref(wk);
+	if (f)
+		fcmh_op_done(f);
 	slm_iosv_clearbusy(iosv, nios);
 	return (rc);
 }
@@ -663,21 +812,21 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
     sl_replica_t *iosv, int nios)
 {
 	int rc, tract[NBREPLST], retifset[NBREPLST], iosidx[SL_MAX_REPLICAS];
-	struct up_sched_work_item *wk;
 	struct slm_repl_valid replv;
+	struct fidc_membh *f = NULL;
 	struct bmapc_memb *b;
 
 	if (nios < 1 || nios > SL_MAX_REPLICAS)
-		return (-EINVAL);
+		return (-SLERR_INVAL);
 
-	rc = uswi_findoradd(fgp, &wk);
+	rc = slm_fcmh_get(fgp, &f);
 	if (rc)
 		return (-rc);
 
 	slm_iosv_setbusy(iosv, nios);
 
 	/* Find replica IOS indexes */
-	rc = -mds_repl_iosv_lookup(USWI_INOH(wk), iosv, iosidx, nios);
+	rc = -mds_repl_iosv_lookup(fcmh_2_inoh(f), iosv, iosidx, nios);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -698,9 +847,9 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		retifset[BREPLST_REPL_SCHED] = 1;
 
 		rc = -SLERR_REPL_NOT_ACT;
-		for (bmapno = 0; bmapno <
-		    fcmh_nvalidbmaps(wk->uswi_fcmh); bmapno++) {
-			if (mds_bmap_load(wk->uswi_fcmh, bmapno, &b))
+		for (bmapno = 0; bmapno < fcmh_nvalidbmaps(f);
+		    bmapno++) {
+			if (mds_bmap_load(f, bmapno, &b))
 				continue;
 
 			replv.n = 0;
@@ -709,41 +858,51 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 			    slm_repl_countvalid_cb, &replv);
 			if (replv.n > 0) {
 				if (mds_repl_bmap_walk(b, tract,
-				    retifset, 0, iosidx, nios))
+				    retifset, 0, iosidx, nios)) {
+					mds_bmap_write_logrepls(b);
 					rc = 0;
+				}
 			} else
 				all_invalid++;
-			mds_bmap_write_repls_rel(b);
+			slm_repl_bmap_rel(b);
 		}
 		if (all_invalid == bmapno)
 			rc = -SLERR_LASTREPL;
-	} else if (mds_bmap_exists(wk->uswi_fcmh, bmapno)) {
+	} else if (mds_bmap_exists(f, bmapno)) {
 		brepls_init(retifset, 0);
-		retifset[BREPLST_INVALID] = -SLERR_REPL_NOT_ACT;
-		/* XXX BREPLST_TRUNCPNDG -> -EINVAL? */
-		retifset[BREPLST_GARBAGE] = -EINVAL;
-		retifset[BREPLST_GARBAGE_SCHED] = -EINVAL;
+		/* XXX BREPLST_TRUNCPNDG : F_REPORT ? */
+		retifset[BREPLST_GARBAGE] = F_REPORT;
+		retifset[BREPLST_GARBAGE_SCHED] = F_REPORT;
+		retifset[BREPLST_REPL_QUEUED] = F_LOG;
+		retifset[BREPLST_REPL_SCHED] = F_LOG;
+		retifset[BREPLST_VALID] = F_LOG;
 
-		rc = -mds_bmap_load(wk->uswi_fcmh, bmapno, &b);
+		rc = -mds_bmap_load(f, bmapno, &b);
 		if (rc == 0) {
 			replv.n = 0;
 			BMAPOD_MODIFY_START(b);
 			mds_repl_bmap_walkcb(b, NULL, NULL, 0,
 			    slm_repl_countvalid_cb, &replv);
-			if (replv.n > 0)
+			if (replv.n > 0) {
 				rc = mds_repl_bmap_walk(b, tract,
 				    retifset, 0, iosidx, nios);
-			else
+				if (rc & F_LOG) {
+					mds_bmap_write_logrepls(b);
+					rc = 0;
+				} else if (rc & F_REPORT)
+					rc = -SLERR_INVAL;
+				else
+					rc = -SLERR_REPL_NOT_ACT;
+			} else
 				rc = -SLERR_LASTREPL;
-			mds_bmap_write_repls_rel(b);
+			slm_repl_bmap_rel(b);
 		}
 	} else
 		rc = -SLERR_BMAP_INVALID;
 
-	uswi_enqueue_sites(wk, iosv, nios);
-
  out:
-	uswi_unref(wk);
+	if (f)
+		fcmh_op_done(f);
 	slm_iosv_clearbusy(iosv, nios);
 	return (rc);
 }
@@ -838,7 +997,7 @@ mds_repl_buildbusytable(void)
 	struct resm_mds_info *rmmi;
 	struct slm_resmlink *srl;
 	struct sl_resource *r;
-	struct sl_resm *resm;
+	struct sl_resm *m;
 	struct sl_site *s;
 	int n, j;
 
@@ -846,15 +1005,12 @@ mds_repl_buildbusytable(void)
 	CONF_LOCK();
 	spinlock(&repl_busytable_lock);
 	repl_busytable_nents = 0;
-	CONF_FOREACH_SITE(s)
-		DYNARRAY_FOREACH(r, n, &s->site_resources) {
-			if (!RES_ISFS(r))
-				continue;
-			DYNARRAY_FOREACH(resm, j, &r->res_members) {
-				rmmi = resm2rmmi(resm);
-				rmmi->rmmi_busyid = repl_busytable_nents++;
-			}
-		}
+	CONF_FOREACH_RESM(s, r, n, m, j) {
+		if (!RES_ISFS(r))
+			continue;
+		rmmi = resm2rmmi(m);
+		rmmi->rmmi_busyid = repl_busytable_nents++;
+	}
 	CONF_ULOCK();
 
 	if (repl_busytable)
@@ -869,62 +1025,50 @@ mds_repl_buildbusytable(void)
 	freelock(&repl_busytable_lock);
 }
 
-void
-mds_repl_reset_scheduled(sl_ios_id_t resid)
+int
+slm_repl_odt_startup_cb(void *data, struct odtable_receipt *odtr,
+    __unusedx void *arg)
 {
-	int tract[NBREPLST], retifset[NBREPLST], iosidx;
-	struct up_sched_work_item *wk;
-	struct bmapc_memb *b;
-	sl_replica_t repl;
-	sl_bmapno_t n;
+	struct bmap_repls_upd_odent *br = data;
+	struct fidc_membh *f = NULL;
+	struct bmapc_memb *b = NULL;
+	int rc, off;
+	uint32_t n;
 
-	repl.bs_id = resid;
-
-	brepls_init(tract, -1);
-	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
-	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
-	tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_TRUNCPNDG;
-
-	brepls_init(retifset, 0);
-	retifset[BREPLST_REPL_SCHED] = 1;
-	retifset[BREPLST_GARBAGE_SCHED] = 1;
-	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
-
-	slm_iosv_setbusy(&repl, 1);
-
-	PLL_LOCK(&upsched_listhd);
-	PLL_FOREACH(wk, &upsched_listhd) {
-		USWI_INCREF(wk, USWI_REFT_LOOKUP);
-		if (!uswi_access(wk))
-			continue;
-		PLL_ULOCK(&upsched_listhd);
-
-		iosidx = mds_repl_ios_lookup(USWI_INOH(wk), resid);
-		if (iosidx < 0)
-			goto end;
-
-		for (n = 0; n < fcmh_nvalidbmaps(wk->uswi_fcmh); n++) {
-			if (mds_bmap_load(wk->uswi_fcmh, n, &b))
-				continue;
-
-			if (mds_repl_bmap_walk(b, tract, retifset, 0,
-			    &iosidx, 1))
-				mds_bmap_write_repls_rel(b);
-			else
-				bmap_op_done(b);
+	rc = slm_fcmh_get(&br->br_fg, &f);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+	rc = bmap_get(f, br->br_bno, SL_READ, &b);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+	for (n = 0, off = 0; n < fcmh_2_nrepls(f);
+	    n++, off += SL_BITS_PER_REPLICA)
+		switch (SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls, off)) {
+		case BREPLST_REPL_QUEUED:
+		case BREPLST_GARBAGE:
+			dbdo(NULL, NULL,
+			    " INSERT INTO upsch ("
+			    "	resid, fid, bno, uid, gid, status, "
+			    "   recpt_elem, recpt_key"
+			    ") VALUES ("
+			    "	%d, %"PRIu64", %u, %u, %u, 'Q', "
+			    "	%zd, %"PRIu64
+			    ")",
+			    fcmh_2_repl(f, n), bmap_2_fid(b),
+			    b->bcm_bmapno,
+			    f->fcmh_sstb.sst_uid,
+			    f->fcmh_sstb.sst_gid,
+			    odtr->odtr_elem,
+			    odtr->odtr_key);
+			break;
 		}
- end:
-		uswi_enqueue_sites(wk, &repl, 1);
-		PLL_LOCK(&upsched_listhd);
-		uswi_unref(wk);
-	}
-	PLL_ULOCK(&upsched_listhd);
-	slm_iosv_clearbusy(&repl, 1);
-}
 
-void
-mds_repl_init(void)
-{
-	mds_repl_buildbusytable();
-	upsched_scandir();
+	PSCFREE(odtr);
+
+ out:
+	if (b)
+		bmap_op_done(b);
+	if (f)
+		fcmh_op_done(f);
+	return (0);
 }

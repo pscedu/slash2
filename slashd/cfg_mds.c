@@ -35,7 +35,7 @@ slcfg_init_res(struct sl_resource *res)
 	struct sl_mds_iosinfo *si;
 
 	rpmi = res2rpmi(res);
-	INIT_SPINLOCK(&rpmi->rpmi_lock);
+	psc_mutex_init(&rpmi->rpmi_mutex);
 	psc_waitq_init(&rpmi->rpmi_waitq);
 
 	if (res->res_type == SLREST_MDS) {
@@ -72,9 +72,9 @@ slcfg_resm_roundrobin(struct sl_resource *res, struct psc_dynarray *a)
 	struct resprof_mds_info *rpmi = res2rpmi(res);
 	struct sl_resm *resm;
 
-	spinlock(&rpmi->rpmi_lock);
+	RPMI_LOCK(rpmi);
 	idx = slm_get_rpmi_idx(res);
-	freelock(&rpmi->rpmi_lock);
+	RPMI_ULOCK(rpmi);
 
 	for (i = 0; i < psc_dynarray_len(&res->res_members); i++, idx++) {
 		if (idx >= psc_dynarray_len(&res->res_members))
@@ -114,17 +114,8 @@ slcfg_get_ioslist(sl_ios_id_t piosid, struct psc_dynarray *a,
 }
 
 void
-slcfg_init_site(struct sl_site *site)
+slcfg_init_site(__unusedx struct sl_site *site)
 {
-	struct site_mds_info *smi;
-
-	smi = site2smi(site);
-	psc_dynarray_init(&smi->smi_upq);
-	INIT_SPINLOCK(&smi->smi_lock);
-	psc_multiwait_init(&smi->smi_mw, "smi-%s",
-	    site->site_name + strspn(site->site_name, "@"));
-	psc_multiwaitcond_init(&smi->smi_mwcond, NULL, 0, "smi-%s",
-	    site->site_name + strspn(site->site_name, "@"));
 }
 
 int	 cfg_site_pri_sz = sizeof(struct site_mds_info);

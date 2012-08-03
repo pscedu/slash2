@@ -90,23 +90,25 @@ int	slm_symlink(struct pscrpc_request *, struct srm_symlink_req *,
 	    struct srm_symlink_rep *, int);
 
 /* aliases for connection management */
-#define slm_getmcsvcx(resm, exp)					\
-	sl_csvc_get(&(resm)->resm_csvc, 0, (exp),			\
+#define slm_getmcsvc(resm, exp, fl, mw)					\
+	sl_csvc_get(&(resm)->resm_csvc, (fl), (exp),			\
 	    &(resm)->resm_nids, SRMM_REQ_PORTAL, SRMM_REP_PORTAL,	\
-	    SRMM_MAGIC, SRMM_VERSION, SLCONNT_MDS, NULL)
+	    SRMM_MAGIC, SRMM_VERSION, SLCONNT_MDS, (mw))
 
-#define slm_geticsvcxf(resm, exp, fl, arg)				\
+#define slm_geticsvc(resm, exp, fl, mw)					\
 	sl_csvc_get(&(resm)->resm_csvc, (fl), (exp),			\
 	    &(resm)->resm_nids, SRIM_REQ_PORTAL, SRIM_REP_PORTAL,	\
-	    SRIM_MAGIC,	SRIM_VERSION, SLCONNT_IOD, (arg))
+	    SRIM_MAGIC,	SRIM_VERSION, SLCONNT_IOD, (mw))
 
-#define slm_getclcsvc(exp)		_slm_getclcsvc(PFL_CALLERINFO(), (exp))
+#define slm_getclcsvc(x)	_slm_getclcsvc(PFL_CALLERINFO(), (x))
 
-#define slm_getmcsvc(resm)		slm_getmcsvcx((resm), NULL)
-#define slm_geticsvcx(resm, exp)	slm_geticsvcxf((resm), (exp), 0, NULL)
-#define slm_geticsvc_nb(resm, ml)	slm_geticsvcxf((resm), NULL, CSVCF_NONBLOCK, (ml))
-#define slm_geticsvc(resm)		slm_geticsvcxf((resm), NULL, 0, NULL)
-#define slm_geticsvcf(resm, fl)		slm_geticsvcxf((resm), NULL, (fl), NULL)
+#define slm_getmcsvcx(m, x)	slm_getmcsvc((m), (x), 0, NULL)
+#define slm_getmcsvcf(m, fl)	slm_getmcsvc((m), NULL, (fl), NULL)
+#define slm_getmcsvc_wait(m)	slm_getmcsvc((m), NULL, 0, NULL)
+
+#define slm_geticsvcx(m, x)	slm_geticsvc((m), (x), 0, NULL)
+#define slm_geticsvcf(m, fl)	slm_geticsvc((m), NULL, (fl), NULL)
+#define slm_geticsvc_nb(m, mw)	slm_geticsvc((m), NULL, CSVCF_NONBLOCK, (mw))
 
 #define _pfl_callerinfo pci
 static __inline struct slashrpc_cservice *

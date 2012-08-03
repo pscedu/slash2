@@ -29,106 +29,141 @@
 
 #include "subsys_mds.h"
 
-struct up_sched_work_item {
-	struct fidc_membh		*uswi_fcmh;	/* key is fg_fid; see uswi_cmp() */
-	psc_atomic32_t			 uswi_refcnt;
-	int				 uswi_gen;
-	int				 uswi_flags;
-	struct pfl_mutex		 uswi_mutex;
-	struct psc_multiwaitcond	 uswi_mwcond;
-	struct psclist_head		 uswi_lentry;
-	SPLAY_ENTRY(up_sched_work_item)	 uswi_tentry;
+#include <sqlite3.h>
+
+struct odtable_receipt;
+
+#define UPSCH_MAX_ITEMS			1024
+#define UPSCH_MAX_ITEMS_RES		64
+
+struct slm_update_data {
+	int				 upd_type:4;
+	int				 upd_flags;
+	struct pfl_mutex		 upd_mutex;
+	struct psc_multiwaitcond	 upd_mwc;
+	struct psc_listentry		 upd_lentry;
+	struct odtable_receipt		*upd_recpt;
 };
 
-/* work item flags */
-#define USWIF_BUSY		(1 << 0)	/* work item is being modified */
-#define USWIF_DIE		(1 << 1)	/* work item is going away */
+/* upd_flags */
+#define UPDF_BUSY			(1 << 0)	/* item is being modified */
 
-#define USWI_INOH(wk)		fcmh_2_inoh((wk)->uswi_fcmh)
-#define USWI_INO(wk)		(&USWI_INOH(wk)->inoh_ino)
-#define USWI_INOX(wk)		USWI_INOH(wk)->inoh_extras
-#define USWI_NREPLS(wk)		USWI_INO(wk)->ino_nrepls
-#define USWI_FG(wk)		(&(wk)->uswi_fcmh->fcmh_fg)
-#define USWI_FID(wk)		USWI_FG(wk)->fg_fid
-
-#define USWI_GETREPL(wk, n)	((n) < SL_DEF_REPLICAS ?		\
-				    USWI_INO(wk)->ino_repls[n] :	\
-				    USWI_INOX(wk)->inox_repls[(n) - SL_DEF_REPLICAS])
-
-#define USWI_LOCK(wk)		psc_mutex_lock(&(wk)->uswi_mutex)
-#define USWI_ULOCK(wk)		psc_mutex_unlock(&(wk)->uswi_mutex)
-#define USWI_RLOCK(wk)		psc_mutex_reqlock(&(wk)->uswi_mutex)
-#define USWI_URLOCK(wk, lk)	psc_mutex_ureqlock(&(wk)->uswi_mutex, (lk))
-
-#define USWI_WAIT(wk, lk)						\
-	while ((wk)->uswi_flags & USWIF_BUSY) {				\
-		if (lk)							\
-			UPSCHED_MGR_ULOCK();				\
-		psc_multiwaitcond_wait(&(wk)->uswi_mwcond,		\
-		    &(wk)->uswi_mutex);					\
-		if (lk)							\
-			UPSCHED_MGR_LOCK();				\
-		psc_mutex_lock(&(wk)->uswi_mutex);			\
-	}
-
+/* upd_type */
 enum {
-/* 0 */	USWI_REFT_LOOKUP,	/* uswi_find() temporary */
-/* 1 */	USWI_REFT_SITEUPQ,	/* in scheduler queue for a site */
-/* 2 */	USWI_REFT_TREE		/* in tree/list in memory */
+	UPDT_BMAP,
+	UPDT_GARBAGE,
+	UPDT_HLDROP,
+	UPDT_PAGEIN,
+	UPDT_PAGEIN_UNIT
 };
 
-#define DEBUG_USWI(lvl, wk, fmt, ...)					\
-	psclogs((lvl), SLMSS_UPSCH, "uswi@%p f+g:"SLPRI_FG" "		\
-	    "fl:%#x:%s%s ref:%d gen:%d : " fmt,				\
-	    (wk), SLPRI_FG_ARGS(USWI_FG(wk)), (wk)->uswi_flags,		\
-	    (wk)->uswi_flags & USWIF_BUSY	? "b" : "",		\
-	    (wk)->uswi_flags & USWIF_DIE	? "d" : "",		\
-	    psc_atomic32_read(&(wk)->uswi_refcnt), (wk)->uswi_gen, ## __VA_ARGS__)
+#define upd_2_bmi(upd)			((struct bmap_mds_info *)upd_getpriv(upd))
+#define upd_2_bmap(upd)			bmi_2_bmap(upd_2_bmi(upd))
+#define upd_2_fcmh(upd)			upd_2_bmap(upd)->bcm_fcmh
+#define upd_2_inoh(upd)			fcmh_2_inoh(upd_2_fcmh(upd))
 
-#define USWI_INCREF(wk, reftype)					\
+struct slm_update_generic {
+	struct sl_resm			*upg_resm;
+	struct slash_fidgen		 upg_fg;
+	sl_bmapno_t			 upg_bno;
+	struct slm_update_data		 upg_upd;
+	struct psc_listentry		 upg_lentry;
+};
+
+#define UPD_LOCK(upd)			psc_mutex_lock(&(upd)->upd_mutex)
+#define UPD_ULOCK(upd)			psc_mutex_unlock(&(upd)->upd_mutex)
+#define UPD_RLOCK(upd)			psc_mutex_reqlock(&(upd)->upd_mutex)
+#define UPD_URLOCK(upd, lk)		psc_mutex_ureqlock(&(upd)->upd_mutex, (lk))
+#define UPD_HASLOCK(upd)		psc_mutex_haslock(&(upd)->upd_mutex)
+#define UPD_WAKE(upd)			psc_multiwaitcond_wakeup(&(upd)->upd_mwc)
+
+#define UPD_WAIT(upd)							\
 	do {								\
-		psc_atomic32_inc(&(wk)->uswi_refcnt);			\
-		DEBUG_USWI(PLL_DEBUG, (wk),				\
-		    "grabbed reference [type=%d]", (reftype));		\
+		UPD_RLOCK(upd);						\
+		while ((upd)->upd_flags & UPDF_BUSY) {			\
+			psc_multiwaitcond_wait(&(upd)->upd_mwc,		\
+			    &(upd)->upd_mutex);				\
+			UPD_LOCK(upd);					\
+		}							\
 	} while (0)
 
-#define USWI_DECREF(wk, reftype)					\
+#define UPD_UNBUSY(upd)							\
 	do {								\
-		psc_assert(psc_atomic32_read(&(wk)->uswi_refcnt) > 0);	\
-		psc_atomic32_dec(&(wk)->uswi_refcnt);			\
-		DEBUG_USWI(PLL_DEBUG, (wk),				\
-		    "dropped reference [type=%d]", (reftype));		\
+		UPD_RLOCK(upd);						\
+		(upd)->upd_flags &= ~UPDF_BUSY;				\
+		UPD_WAKE(upd);						\
+		UPD_ULOCK(upd);						\
 	} while (0)
 
-#define uswi_access(wk)		_uswi_access((wk), 0)
-#define uswi_access_lock(wk)	_uswi_access((wk), 1)
+#define UPD_INCREF(upd)							\
+	do {								\
+		void *_p;						\
+									\
+		_p = upd_getpriv(upd);					\
+		switch ((upd)->upd_type) {				\
+		case UPDT_PAGEIN:					\
+		case UPDT_HLDROP:					\
+			break;						\
+		case UPDT_BMAP: {					\
+			struct bmap_mds_info *_bmi = _p;		\
+			struct bmapc_memb *_b = bmi_2_bmap(_bmi);	\
+									\
+			bmap_op_start_type(_b, BMAP_OPCNT_UPSCH);	\
+			break;						\
+		    }							\
+		default:						\
+			psc_assert("invalid type");			\
+		}							\
+	} while (0)
 
-#define uswi_unref(wk)		_uswi_unref(PFL_CALLERINFO(), (wk), 1)
-#define uswi_unref_nowake(wk)	_uswi_unref(PFL_CALLERINFO(), (wk), 0)
+#define UPD_DECREF(upd)							\
+	do {								\
+		void *_p;						\
+									\
+		_p = upd_getpriv(upd);					\
+		switch ((upd)->upd_type) {				\
+		case UPDT_PAGEIN:					\
+		case UPDT_HLDROP:					\
+			break;						\
+		case UPDT_BMAP: {					\
+			struct bmap_mds_info *_bmi = _p;		\
+			struct bmapc_memb *_b = bmi_2_bmap(_bmi);	\
+									\
+			bmap_op_done_type(_b, BMAP_OPCNT_UPSCH);	\
+			break;						\
+		    }							\
+		default:						\
+			psc_assert("invalid type");			\
+		}							\
+	} while (0)
 
-struct up_sched_work_item *
-	 uswi_find(const struct slash_fidgen *);
-int	_uswi_access(struct up_sched_work_item *, int);
-int	 uswi_cmp(const void *, const void *);
-void	 uswi_enqueue_sites(struct up_sched_work_item *, const sl_replica_t *, int);
-int	 uswi_findoradd(const struct slash_fidgen *, struct up_sched_work_item **);
-void	 uswi_init(struct up_sched_work_item *, slfid_t);
-int	_uswi_unref(const struct pfl_callerinfo *, struct up_sched_work_item *, int);
+#define DEBUG_UPD(level, upd, msg, ...)					\
+	psclogs((level), SLMSS_UPSCH,					\
+	    "upd@%p type=%d flags=%u:%s " msg,				\
+	    (upd), (upd)->upd_type, (upd)->upd_flags,			\
+	    (upd)->upd_flags & UPDF_BUSY	? "b" : "",		\
+	    ## __VA_ARGS__)
 
-void	 upsched_scandir(void);
+void	 upsch_enqueue(struct slm_update_data *, const sl_replica_t *, int);
+void	 upschq_resm(struct sl_resm *, int);
 
-SPLAY_HEAD(upschedtree, up_sched_work_item);
-SPLAY_PROTOTYPE(upschedtree, up_sched_work_item, uswi_tentry, uswi_cmp);
+void	 upd_init(struct slm_update_data *, int);
+void	 upd_destroy(struct slm_update_data *);
+void	*upd_getpriv(struct slm_update_data *);
+void	 upd_tryremove(struct slm_update_data *);
 
-#define UPSCHED_MGR_LOCK()		PLL_LOCK(&upsched_listhd)
-#define UPSCHED_MGR_ULOCK()		PLL_ULOCK(&upsched_listhd)
-#define UPSCHED_MGR_HASLOCK()		PLL_HASLOCK(&upsched_listhd)
-#define UPSCHED_MGR_RLOCK()		PLL_RLOCK(&upsched_listhd)
-#define UPSCHED_MGR_URLOCK(lk)		PLL_URLOCK(&upsched_listhd, (lk))
-#define UPSCHED_MGR_ENSURE_LOCKED()	PLL_ENSURE_LOCKED(&upsched_listhd)
+int	 slm_ptrunc_odt_startup_cb(void *, struct odtable_receipt *, void *);
+int	 slm_repl_odt_startup_cb(void *, struct odtable_receipt *, void *);
 
-extern struct psc_poolmgr	*upsched_pool;
-extern struct upschedtree	 upsched_tree;
-extern struct psc_lockedlist	 upsched_listhd;
+#define UPSCH_LOCK()		MLIST_LOCK(&slm_upschq)
+#define UPSCH_ULOCK()		MLIST_ULOCK(&slm_upschq)
+#define UPSCH_HASLOCK()		MLIST_HASLOCK(&slm_upschq)
+#define UPSCH_RLOCK()		MLIST_REQLOCK(&slm_upschq)
+#define UPSCH_URLOCK(lk)	MLIST_URLOCK(&slm_upschq, (lk))
+#define UPSCH_ENSURE_LOCKED()	MLIST_ENSURE_LOCKED(&slm_upschq)
+#define UPSCH_WAKE()		psc_multiwaitcond_wakeup(&slm_upschq.pml_mwcond_empty)
+
+extern struct psc_mlist		 slm_upschq;
+sqlite3				*slm_dbh;
 
 #endif /* _UP_SCHED_RES_H_ */

@@ -28,15 +28,16 @@
 #include "psc_util/pthrutil.h"
 
 #include "bmap.h"
+#include "inode.h"
 #include "mdslog.h"
 #include "slashd.h"
-#include "inode.h"
+#include "up_sched_res.h"
 
 struct srm_bmap_crcwrt_req;
 struct srt_bmapdesc;
 
 /*
- * bmap_mds_info - the bmap_get_pri() data structure for the slash2 mds.
+ * bmap_mds_info - the bmap_get_pri() data structure for the SLASH2 MDS.
  *   bmap_mds_info holds all bmap specific context for the mds which
  *   includes the journal handle, ref counts for client readers and writers
  *   a point to our ION, a tree of our client's exports, a pointer to the
@@ -65,8 +66,8 @@ struct bmap_mds_info {
 	int32_t			 bmdsi_writers;
 	int32_t			 bmdsi_readers;
 	struct psc_rwlock	 bmi_rwlock;
-
-	pthread_t		 bmi_owner;
+	struct slm_update_data	 bmi_upd;
+	uint8_t			 bmi_orepls[SL_REPLICA_NBYTES];
 };
 
 /* MDS-specific bcm_flags */
@@ -75,6 +76,10 @@ struct bmap_mds_info {
 #define BMAP_MDS_NOION		(_BMAP_FLSHFT << 2)
 #define BMAP_MDS_DIO		(_BMAP_FLSHFT << 3)	/* direct I/O enabled */
 #define BMAP_MDS_SEQWRAP	(_BMAP_FLSHFT << 4)	/* sequence number wrapped */
+#define BMAP_MDS_REPLMOD	(_BMAP_FLSHFT << 5)	/* residency states may have changed */
+#define BMAP_MDS_REPLMODWR	(_BMAP_FLSHFT << 6)	/* res state changes have been written */
+
+#define bmi_2_fcmh(bmi)		bmi_2_bmap(bmi)->bcm_fcmh
 
 #define bmap_2_xstate(b)	(&bmap_2_bmi(b)->bmi_extrastate)
 #define bmap_2_bgen(b)		bmap_2_xstate(b)->bes_gen
@@ -82,11 +87,15 @@ struct bmap_mds_info {
 #define bmap_2_repl(b, i)	fcmh_2_repl((b)->bcm_fcmh, (i))
 #define bmap_2_crcs(b, n)	bmap_2_xstate(b)->bes_crcs[n]
 #define bmap_2_ondisk(b)	((struct bmap_ondisk *)&(b)->bcm_corestate)
+#define bmap_2_upd(b)		(&bmap_2_bmi(b)->bmi_upd)
+#define bmap_2_ino(b)		fcmh_2_ino((b)->bcm_fcmh)
+#define bmap_2_inoh(b)		fcmh_2_inoh((b)->bcm_fcmh)
 
 #define BMAPOD_CALLERINFO	PFL_CALLERINFOSS(SLSS_BMAP)
 #define BMAPOD_RDLOCK(bmi)	psc_rwlock_rdlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
 #define BMAPOD_REQRDLOCK(bmi)	psc_rwlock_reqrdlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
 #define BMAPOD_REQWRLOCK(bmi)	psc_rwlock_reqwrlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
+#define BMAPOD_HASWRLOCK(bmi)	psc_rwlock_haswrlock(&(bmi)->bmi_rwlock)
 #define BMAPOD_ULOCK(bmi)	psc_rwlock_unlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
 #define BMAPOD_UREQLOCK(bmi, l)	psc_rwlock_ureqlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock, (l))
 #define BMAPOD_WRLOCK(bmi)	psc_rwlock_wrlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
@@ -249,7 +258,8 @@ int	 mds_bmap_loadvalid(struct fidc_membh *, sl_bmapno_t,
 int	 mds_bmap_bml_chwrmode(struct bmap_mds_lease *, sl_ios_id_t);
 int	 mds_bmap_bml_release(struct bmap_mds_lease *);
 void	 mds_bmap_ensure_valid(struct bmapc_memb *);
-struct bmap_mds_lease * mds_bmap_getbml_locked(struct bmapc_memb *, uint64_t, uint64_t, uint32_t);
+struct bmap_mds_lease *
+	 mds_bmap_getbml_locked(struct bmapc_memb *, uint64_t, uint64_t, uint32_t);
 
 void	 mds_bmap_setcurseq(uint64_t, uint64_t);
 int	 mds_bmap_getcurseq(uint64_t *, uint64_t *);
@@ -258,9 +268,9 @@ void	 mds_bmap_timeotbl_init(void);
 uint64_t mds_bmap_timeotbl_getnextseq(void);
 uint64_t mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *, int);
 
- int64_t slm_bmap_calc_repltraffic(struct bmapc_memb *);
+int64_t	 slm_bmap_calc_repltraffic(struct bmapc_memb *);
 
-void	 mds_bia_odtable_startup_cb(void *, struct odtable_receipt *);
+int	 mds_bia_odtable_startup_cb(void *, struct odtable_receipt *, void *);
 
 extern struct psc_poolmaster	 bmapMdsLeasePoolMaster;
 extern struct psc_poolmgr	*bmapMdsLeasePool;

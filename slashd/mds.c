@@ -45,9 +45,11 @@
 #include "slashrpc.h"
 #include "slerr.h"
 #include "up_sched_res.h"
+#include "worker.h"
 
 struct odtable	*mdsBmapAssignTable;
-uint64_t	 mdsBmapSequenceNo;
+
+sqlite3		*slm_dbh;
 
 int
 mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
@@ -318,7 +320,7 @@ mds_try_sliodresm(struct sl_resm *resm)
 	si = res2iosinfo(resm->resm_res);
 	if (si->si_flags & SIF_DISABLE_BIA) {
 		psclog_notify("res=%s skipped due to SIF_DISABLE_BIA",
-		      resm->resm_res->res_name);
+		    resm->resm_res->res_name);
 		return (0);
 	}
 
@@ -328,14 +330,14 @@ mds_try_sliodresm(struct sl_resm *resm)
 		 *   us.
 		 */
 		psclog_notify("res=%s skipped due to NULL csvc",
-		      resm->resm_res->res_name);
+		    resm->resm_res->res_name);
 		return (0);
 	}
 
 	ok = mds_sliod_alive(si);
 	if (!ok)
 		psclog_notify("res=%s skipped due to lastcomm",
-		      resm->resm_res->res_name);
+		    resm->resm_res->res_name);
 
 	if (csvc)
 		sl_csvc_decref(csvc);
@@ -429,9 +431,9 @@ mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios,
 		for (j = 0, skip = 0; j < nskip; j++)
 			if (resm->resm_res->res_id == to_skip[j]) {
 				skip = 1;
-				psclog_notify("res=%s skipped due being a "
-				      "prev_ios",
-				      resm->resm_res->res_name);
+				psclog_notice("res=%s skipped due being a "
+				    "prev_ios",
+				    resm->resm_res->res_name);
 				break;
 			}
 
@@ -611,7 +613,8 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 
 	psc_assert(bia.bia_seq == bmi->bmdsi_seq);
 	bia.bia_start = time(NULL);
-	bia.bia_seq = bmi->bmdsi_seq = mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
+	bia.bia_seq = bmi->bmdsi_seq = mds_bmap_timeotbl_mdsi(bml,
+	    BTE_ADD);
 	bia.bia_lastcli = bml->bml_cli_nidpid;
 	bia.bia_flags = dio ? BIAF_DIO : 0;
 
@@ -777,7 +780,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
  */
 struct bmap_mds_lease *
 mds_bmap_getbml_locked(struct bmapc_memb *b, uint64_t seq, uint64_t nid,
-       uint32_t pid)
+    uint32_t pid)
 {
 	struct bmap_mds_info *bmi;
 	struct bmap_mds_lease *bml, *bml1, *bml2;
@@ -1046,6 +1049,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	struct bmap_mds_info *bmi = bml->bml_bmdsi;
 	struct slmds_jent_assign_rep *logentry;
 	struct odtable_receipt *odtr = NULL;
+	struct fidc_membh *f = b->bcm_fcmh;
 	uint64_t key;
 	size_t elem;
 	int rc = 0;
@@ -1124,13 +1128,20 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 			 *   be relevant to any odtable entry.
 			 */
 			if (!(bml->bml_flags & BML_ASSFAIL)) {
+				sl_replica_t iosv[SL_MAX_REPLICAS];
+				struct slm_update_data *upd;
+				int retifset[NBREPLST];
+				unsigned j;
+
 				/* odtable sanity checks:
 				 */
 				struct bmap_ios_assign bia;
 
 				if (!(bml->bml_flags & BML_RECOVERFAIL)) {
-					rc = mds_odtable_getitem(mdsBmapAssignTable,
-						 bmi->bmdsi_assign, &bia, sizeof(bia));
+					rc = mds_odtable_getitem(
+					    mdsBmapAssignTable,
+					    bmi->bmdsi_assign, &bia,
+					    sizeof(bia));
 					psc_assert(!rc &&
 					   bia.bia_seq == bmi->bmdsi_seq);
 					psc_assert(bia.bia_bmapno == b->bcm_bmapno);
@@ -1143,6 +1154,28 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 				}
 				atomic_dec(&bmi->bmdsi_wr_ion->rmmi_refcnt);
 				bmi->bmdsi_wr_ion = NULL;
+
+				/*
+				 * Lease has been released; requeue any
+				 * replication work involving this bmap.
+				 */
+				brepls_init(retifset, 0);
+				retifset[BREPLST_REPL_QUEUED] = 1;
+				retifset[BREPLST_TRUNCPNDG] = 1;
+//				retifset[BREPLST_GARBAGE] = 1;
+				if (mds_repl_bmap_walk_all(b, NULL,
+				    retifset, REPL_WALKF_SCIRCUIT)) {
+					upd = &bmi->bmi_upd;
+					UPD_WAIT(upd);
+					for (j = 0;
+					    j < fcmh_2_nrepls(f); j++)
+						iosv[j].bs_id =
+						    fcmh_getrepl(f,
+							j).bs_id;
+					upsch_enqueue(upd, iosv,
+					    fcmh_2_nrepls(f));
+					UPD_UNBUSY(upd);
+				}
 			}
 		}
 	}
@@ -1193,7 +1226,7 @@ mds_handle_rls_bmap(struct pscrpc_request *rq, int sliod)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->nbmaps > MAX_BMAP_RELEASE) {
-		mp->rc = EINVAL;
+		mp->rc = -SLERR_INVAL;
 		return (0);
 	}
 
@@ -1223,10 +1256,8 @@ mds_handle_rls_bmap(struct pscrpc_request *rq, int sliod)
 			BML_LOCK(bml);
 			bml->bml_flags |= BML_FREEING;
 			BML_ULOCK(bml);
-			(int)mds_bmap_bml_release(bml);
+			mds_bmap_bml_release(bml);
 		}
-		/* bmap_op_done_type will drop the lock.
-		 */
 		bmap_op_done(b);
  next:
 		fcmh_op_done(f);
@@ -1236,7 +1267,7 @@ mds_handle_rls_bmap(struct pscrpc_request *rq, int sliod)
 
 static struct bmap_mds_lease *
 mds_bml_new(struct bmapc_memb *b, struct pscrpc_export *e, int flags,
-	       lnet_process_id_t *cnp)
+    lnet_process_id_t *cnp)
 {
 	struct bmap_mds_lease *bml;
 
@@ -1258,8 +1289,9 @@ mds_bml_new(struct bmapc_memb *b, struct pscrpc_export *e, int flags,
 	return (bml);
 }
 
-void
-mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
+int
+mds_bia_odtable_startup_cb(void *data,
+    __unusedx struct odtable_receipt *odtr, __unusedx void *arg)
 {
 	struct fidc_membh *f = NULL;
 	struct bmapc_memb *b = NULL;
@@ -1287,8 +1319,8 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 	fg.fg_gen = FGEN_ANY;
 
 	/*
-	 * Because we don't revoke leases when an unlink comes in, ENOENT
-	 * is actually legitimate after a crash.
+	 * Because we don't revoke leases when an unlink comes in,
+	 * ENOENT is actually legitimate after a crash.
 	 */
 	rc = slm_fcmh_get(&fg, &f);
 	if (rc) {
@@ -1305,7 +1337,7 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 	}
 
 	bml = mds_bml_new(b, NULL, (BML_WRITE | BML_RECOVER),
-		  &bia->bia_lastcli);
+	    &bia->bia_lastcli);
 
 	bml->bml_seq = bia->bia_seq;
 	bml->bml_ios = bia->bia_ios;
@@ -1338,6 +1370,7 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 		bmap_op_done(b);
 	if (f)
 		fcmh_op_done(f);
+	return (0);
 }
 
 /**
@@ -1447,8 +1480,8 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 
 	if (mq->flags & SRM_BMAPCRCWRT_PTRUNC) {
 		struct slash_inode_handle *ih;
+		struct slm_wkdata_ptrunc *wk;
 		int iosidx, tract[NBREPLST];
-		struct slm_workrq *wkrq;
 		uint32_t bpol;
 
 		ih = fcmh_2_inoh(f);
@@ -1481,10 +1514,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 			 * them INVALID since the sliod will have zeroed
 			 * those regions.
 			 */
-
-			psc_multiwaitcond_wakeup(
-			    &site2smi(bmi->bmdsi_wr_ion->rmmi_resm->
-			    resm_site)->smi_mwcond);
+			UPD_WAKE(&bmi->bmi_upd);
 		}
 
 		FCMH_LOCK(f);
@@ -1492,11 +1522,11 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 		fcmh_wake_locked(f);
 		FCMH_ULOCK(f);
 
-		wkrq = psc_pool_get(slm_workrq_pool);
+		wk = pfl_workq_getitem(slm_ptrunc_wake_clients,
+		    struct slm_wkdata_ptrunc);
 		fcmh_op_start_type(f, FCMH_OPCNT_WORKER);
-		wkrq->wkrq_fcmh = f;
-		wkrq->wkrq_cbf = slm_ptrunc_wake_clients;
-		slm_ptrunc_wake_clients(wkrq);
+		wk->f = f;
+		slm_ptrunc_wake_clients(wk);
 	}
 
 	if (f->fcmh_sstb.sst_mode & (S_ISGID | S_ISUID)) {
@@ -1527,13 +1557,13 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 }
 
 /**
- * mds_bmap_loadvalid - Load a bmap if disk I/O is successful and the bmap
- *	has been initialized (i.e. is not all zeroes).
+ * mds_bmap_loadvalid - Load a bmap if disk I/O is successful and the
+ *	bmap has been initialized (i.e. is not all zeroes).
  * @f: fcmh.
  * @bmapno: bmap index number to load.
  * @bp: value-result bmap pointer.
  * NOTE: callers must issue bmap_op_done() if mds_bmap_loadvalid() is
- *     successful.
+ *	successful.
  */
 int
 mds_bmap_loadvalid(struct fidc_membh *f, sl_bmapno_t bmapno,
@@ -1593,9 +1623,9 @@ mds_bmap_load_fg(const struct slash_fidgen *fg, sl_bmapno_t bmapno,
 }
 
 /**
- * mds_bmap_load_cli - Routine called to retrieve a bmap, presumably so that
- *	it may be sent to a client.  It first checks for existence in
- *	the cache otherwise the bmap is retrieved from disk.
+ * mds_bmap_load_cli - Routine called to retrieve a bmap, presumably so
+ *	that it may be sent to a client.  It first checks for existence
+ *	in the cache otherwise the bmap is retrieved from disk.
  *
  *	mds_bmap_load_cli() also manages the bmap_lease reference
  *	which is used to track the bmaps a particular client knows
@@ -1664,7 +1694,8 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	}
 	*bmap = b;
 
-	/* SLASH2 monotonic coherency sequence number assigned to this lease.
+	/* SLASH2 monotonic coherency sequence number assigned to this
+	 * lease.
 	 */
 	sbd->sbd_seq = bml->bml_seq;
 	/* Stash the odtable key if this is a write lease.
@@ -1685,8 +1716,8 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 
 int
 mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
-	   sl_ios_id_t pios, sl_ios_id_t *prev_ios, int nprev_ios,
-	   struct srt_bmapdesc *sbd_out, struct pscrpc_export *exp)
+    sl_ios_id_t pios, sl_ios_id_t *prev_ios, int nprev_ios,
+    struct srt_bmapdesc *sbd_out, struct pscrpc_export *exp)
 {
 	struct bmapc_memb *b;
 	struct bmap_mds_lease *obml;
@@ -1700,8 +1731,8 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 		return (rc);
 
 	BMAP_LOCK(b);
-	obml = mds_bmap_getbml_locked(b, sbd_in->sbd_seq, sbd_in->sbd_nid,
-			      sbd_in->sbd_pid);
+	obml = mds_bmap_getbml_locked(b, sbd_in->sbd_seq,
+	    sbd_in->sbd_nid, sbd_in->sbd_pid);
 
 	if (!obml) {
 		PFL_GOTOERR(out2, rc = -ENOENT);
@@ -1805,8 +1836,8 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	/* Lookup the original lease to ensure it actually exists.
 	 */
 	BMAP_LOCK(b);
-	obml = mds_bmap_getbml_locked(b, sbd_in->sbd_seq, sbd_in->sbd_nid,
-			      sbd_in->sbd_pid);
+	obml = mds_bmap_getbml_locked(b, sbd_in->sbd_seq,
+	    sbd_in->sbd_nid, sbd_in->sbd_pid);
 	BMAP_ULOCK(b);
 
 	if (!obml) {
@@ -1882,8 +1913,8 @@ slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
     int to_set)
 {
 	int locked, deref = 0, rc = 0;
+	struct slm_wkdata_ptrunc *wk;
 	struct fcmh_mds_info *fmi;
-	struct slm_workrq *wkrq;
 
 	if ((to_set & PSCFS_SETATTRF_DATASIZE) && sstb->sst_size) {
 		if (f == NULL) {
@@ -1904,11 +1935,11 @@ slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
 		fmi->fmi_ptrunc_size = sstb->sst_size;
 		FCMH_URLOCK(f, locked);
 
-		wkrq = psc_pool_get(slm_workrq_pool);
+		wk = pfl_workq_getitem(slm_ptrunc_prepare,
+		    struct slm_wkdata_ptrunc);
+		wk->f = f;
 		fcmh_op_start_type(f, FCMH_OPCNT_WORKER);
-		wkrq->wkrq_fcmh = f;
-		wkrq->wkrq_cbf = slm_ptrunc_prepare;
-		lc_add(&slm_workq, wkrq);
+		pfl_workq_putitem(wk);
 
 		if (deref)
 			fcmh_op_done(f);
@@ -1946,9 +1977,10 @@ ptrunc_tally_ios(struct bmapc_memb *b, int iosidx, int val, void *arg)
 }
 
 int
-slm_ptrunc_prepare(struct slm_workrq *wkrq)
+slm_ptrunc_prepare(void *p)
 {
 	int to_set, rc, wait = 0;
+	struct slm_wkdata_ptrunc *wk = p;
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
 	struct slashrpc_cservice *csvc;
@@ -1960,7 +1992,7 @@ slm_ptrunc_prepare(struct slm_workrq *wkrq)
 	struct bmapc_memb *b;
 	sl_bmapno_t i;
 
-	f = wkrq->wkrq_fcmh;
+	f = wk->f;
 	fmi = fcmh_2_fmi(f);
 	da = &fcmh_2_fmi(f)->fmi_ptrunc_clients;
 
@@ -1985,7 +2017,7 @@ slm_ptrunc_prepare(struct slm_workrq *wkrq)
 		}
 		f->fcmh_flags &= ~FCMH_IN_PTRUNC;
 		FCMH_ULOCK(f);
-		slm_ptrunc_wake_clients(wkrq);
+		slm_ptrunc_wake_clients(wk);
 		return (0);
 	}
 
@@ -2045,21 +2077,20 @@ slm_ptrunc_prepare(struct slm_workrq *wkrq)
 		psclog_error("setattr rc=%d", rc);
 
 	FCMH_ULOCK(f);
-	slm_ptrunc_apply(wkrq);
+	slm_ptrunc_apply(wk);
 	return (0);
 }
 
 void
-slm_ptrunc_apply(struct slm_workrq *wkrq)
+slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 {
-	int rc, done = 0, tract[NBREPLST];
-	struct up_sched_work_item *uswi;
+	int done = 0, tract[NBREPLST];
 	struct ios_list ios_list;
 	struct fidc_membh *f;
 	struct bmapc_memb *b;
 	sl_bmapno_t i;
 
-	f = wkrq->wkrq_fcmh;
+	f = wk->f;
 
 	brepls_init(tract, -1);
 	tract[BREPLST_VALID] = BREPLST_TRUNCPNDG;
@@ -2076,6 +2107,9 @@ slm_ptrunc_apply(struct slm_workrq *wkrq)
 			mds_repl_bmap_walkcb(b, tract, NULL, 0,
 			    ptrunc_tally_ios, &ios_list);
 			mds_bmap_write_repls_rel(b);
+
+			upsch_enqueue(bmap_2_upd(b), ios_list.iosv,
+			    ios_list.nios);
 		}
 		i++;
 	} else {
@@ -2097,19 +2131,13 @@ slm_ptrunc_apply(struct slm_workrq *wkrq)
 		mds_bmap_write_repls_rel(b);
 	}
 
-	rc = uswi_findoradd(&f->fcmh_fg, &uswi);
-	if (rc)
-		psc_fatalx("uswi_findoradd: %s",
-		    slstrerror(rc));
-	uswi_enqueue_sites(uswi, ios_list.iosv, ios_list.nios);
-	uswi_unref(uswi);
 
 	if (done) {
 		FCMH_LOCK(f);
 		f->fcmh_flags &= ~FCMH_IN_PTRUNC;
 		fcmh_wake_locked(f);
 		FCMH_ULOCK(f);
-		slm_ptrunc_wake_clients(wkrq);
+		slm_ptrunc_wake_clients(wk);
 	}
 
 	/* XXX adjust nblks */
@@ -2118,18 +2146,19 @@ slm_ptrunc_apply(struct slm_workrq *wkrq)
 }
 
 int
-slm_ptrunc_wake_clients(struct slm_workrq *wkrq)
+slm_ptrunc_wake_clients(void *p)
 {
+	struct slm_wkdata_ptrunc *wk = p;
 	struct slashrpc_cservice *csvc;
 	struct srm_bmap_wake_req *mq;
 	struct srm_bmap_wake_rep *mp;
 	struct pscrpc_request *rq;
 	struct fcmh_mds_info *fmi;
-	struct fidc_membh *f;
 	struct psc_dynarray *da;
+	struct fidc_membh *f;
 	int rc;
 
-	f = wkrq->wkrq_fcmh;
+	f = wk->f;
 	fmi = fcmh_2_fmi(f);
 	da = &fmi->fmi_ptrunc_clients;
 	FCMH_LOCK(f);
@@ -2150,5 +2179,50 @@ slm_ptrunc_wake_clients(struct slm_workrq *wkrq)
 		FCMH_LOCK(f);
 	}
 	fcmh_op_done_type(f, FCMH_OPCNT_WORKER);
+	return (0);
+}
+
+void
+dbdo(int (*cb)(void *, int, char **,char **), void *arg,
+    const char *fmt, ...)
+{
+	static psc_spinlock_t lock = SPINLOCK_INIT;
+	char buf[LINE_MAX], *errstr;
+	va_list ap;
+	int rc;
+
+	va_start(ap, fmt);
+	vsnprintf(buf, sizeof(buf), fmt, ap);
+	va_end(ap);
+
+	/* XXX XXX hash table of compiled statements */
+
+	spinlock(&lock);
+	rc = sqlite3_exec(slm_dbh, buf, cb, arg, &errstr);
+	freelock(&lock);
+	if (rc) {
+		psclog_errorx("SQL error: query=%s; msg=%s", buf,
+		    errstr);
+	}
+}
+
+int
+slm_ptrunc_odt_startup_cb(void *data, struct odtable_receipt *odtr,
+    __unusedx void *arg)
+{
+	struct {
+		struct slash_fidgen fg;
+	} *pt = data;
+	struct fidc_membh *f;
+	sl_bmapno_t bno;
+	int rc;
+
+	PSCFREE(odtr);
+
+	rc = slm_fcmh_get(&pt->fg, &f);
+	if (rc == 0) {
+		bno = howmany(fcmh_2_fsz(f), SLASH_BMAP_SIZE) - 1;
+		fcmh_op_done(f);
+	}
 	return (0);
 }

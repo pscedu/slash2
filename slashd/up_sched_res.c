@@ -31,6 +31,8 @@
 #include <dirent.h>
 #include <stdio.h>
 
+#include <sqlite3.h>
+
 #include "pfl/cdefs.h"
 #include "pfl/fs.h"
 #include "psc_ds/dynarray.h"
@@ -38,6 +40,7 @@
 #include "psc_ds/treeutil.h"
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/rpclog.h"
+#include "psc_util/mlist.h"
 #include "psc_util/multiwait.h"
 #include "psc_util/pthrutil.h"
 #include "psc_util/random.h"
@@ -45,6 +48,7 @@
 
 #include "bmap_mds.h"
 #include "mdsio.h"
+#include "odtable_mds.h"
 #include "pathnames.h"
 #include "repl_mds.h"
 #include "rpc_mds.h"
@@ -54,248 +58,210 @@
 #include "slutil.h"
 #include "up_sched_res.h"
 
-struct upschedtree	 upsched_tree = SPLAY_INITIALIZER(&upsched_tree);
-struct psc_poolmgr	*upsched_pool;
-struct psc_lockedlist	 upsched_listhd =
-    PLL_INIT(&upsched_listhd, struct up_sched_work_item,
-	uswi_lentry);
+/* RPC callback numeric arg indexes */
+#define IN_RC		0
+#define IN_UNDO_WR	1
+#define IN_OFF		2
+#define IN_AMT		3
 
-/**
- * slmupschedthr_removeq - A file that required updates to be sent to
- *	I/O systems for a given site appears to be finished.  Do a quick
- *	run through the file ensuring there is truely nothing left to do
- *	and remove it from our processing queue if so.
- *
- * XXX this needs to remove any IOS' from ino_repls that are empty in
- *	all bmaps from the inode.
- */
+/* RPC callback pointer arg indexes */
+#define IP_CSVC		0
+#define IP_DSTRESM	1
+#define IP_SRCRESM	2
+#define IP_BMAP		3
+
+struct psc_mlist	 slm_upschq;
+struct psc_multiwait	 slm_upsch_mw;
+struct psc_poolmaster	 slm_upgen_poolmaster;
+struct psc_poolmgr	*slm_upgen_pool;
+
+extern int (*upd_proctab[])(struct slm_update_data *);
+
 void
-slmupschedthr_removeq(struct up_sched_work_item *wk)
+upd_tryremove(struct slm_update_data *upd)
 {
-	int locked, uswi_gen, rc, retifset[NBREPLST];
-	struct slmupsched_thread *smut;
-	struct site_mds_info *smi;
-	struct psc_thread *thr;
-	struct bmapc_memb *b;
-	struct sl_site *site;
-	sl_bmapno_t n;
+	struct bmapc_memb *b = upd_2_bmap(upd);
+	int retifset[NBREPLST];
 
-	thr = pscthr_get();
-	smut = slmupschedthr(thr);
-	site = smut->smut_site;
-	smi = site2smi(site);
-
-	locked = reqlock(&smi->smi_lock);
-	psc_dynarray_remove(&smi->smi_upq, wk);
-	ureqlock(&smi->smi_lock, locked);
-
-	psc_mutex_reqlock(&wk->uswi_mutex);
-	USWI_DECREF(wk, USWI_REFT_SITEUPQ);
-
-	if (wk->uswi_flags & USWIF_DIE) {
-		/* someone is already waiting for this to go away */
-		uswi_unref(wk);
-		return;
-	}
-
-	while (wk->uswi_flags & USWIF_BUSY) {
-		psc_assert(psc_atomic32_read(&wk->uswi_refcnt) > 1);
-		psc_multiwaitcond_wait(&wk->uswi_mwcond, &wk->uswi_mutex);
-		psc_mutex_lock(&wk->uswi_mutex);
-	}
-
- rescan:
-	/*
-	 * If someone bumps the generation while we're processing, we'll
-	 * know there is work to do and that the uswi shouldn't go away.
-	 */
-	uswi_gen = wk->uswi_gen;
-	wk->uswi_flags |= USWIF_BUSY;
-	psc_mutex_unlock(&wk->uswi_mutex);
-
-	/* Scan for any OLD states. */
 	brepls_init(retifset, 1);
-	retifset[BREPLST_INVALID] = 0;
 	retifset[BREPLST_VALID] = 0;
-	retifset[BREPLST_GARBAGE] = 0;
 
-	/* Scan bmaps to see if the inode should disappear. */
-	for (n = 0;; n++) {
-		if (bmap_getf(wk->uswi_fcmh, n, SL_WRITE,
-		    BMAPGETF_LOAD | BMAPGETF_NOAUTOINST, &b))
-			break;
-
-		rc = mds_repl_bmap_walk_all(b, NULL, retifset,
-		    REPL_WALKF_SCIRCUIT);
-		bmap_op_done(b);
-		if (rc) {
-			struct sl_resource *r;
-			sl_replica_t ios;
-
-			/* requeue XXX do it while bmap wr-locked */
-			r = psc_dynarray_getpos(
-			    &smut->smut_site->site_resources, 0);
-			ios.bs_id = r->res_id;
-			uswi_enqueue_sites(wk, &ios, 1);
-			uswi_unref(wk);
-			return;
-		}
+	retifset[BREPLST_INVALID] = 0;
+	if (!mds_repl_bmap_walk_all(b, NULL, retifset,
+	    REPL_WALKF_SCIRCUIT)) {
+		mds_odtable_freeitem(slm_repl_odt, upd->upd_recpt);
+		upd->upd_recpt = NULL;
+		DEBUG_UPD(PLL_DEBUG, upd, "removed odtable entry");
 	}
-
-	/*
-	 * All states are INACTIVE/ACTIVE;
-	 * remove it and its persistent link.
-	 */
-	UPSCHED_MGR_LOCK();
-	psc_mutex_lock(&wk->uswi_mutex);
-	if (wk->uswi_gen != uswi_gen) {
-		UPSCHED_MGR_ULOCK();
-		goto rescan;
-	}
-	if (!uswi_unref(wk))
-		UPSCHED_MGR_ULOCK();
 }
 
-/**
- * uswi_trykill - Try to release a resource update scheduler work item.
- * This should be invoked by uswi_unref() only when there are no
- * remaining references to the structure (i.e. one for LOOKUP and one
- * for TREE membership of the structure) when it has been decided that
- * the uswi no longer needs to stay in memory (i.e. there is no more
- * work to be done by the update scheduler engine).
- * @wk: the little guy to try to release.
- */
-__static int
-uswi_trykill(struct up_sched_work_item *wk)
+void
+upd_rpmi_remove(struct resprof_mds_info *rpmi,
+    struct slm_update_data *upd)
 {
-	char fn[FID_MAX_PATH];
-	int rc;
+	int locked, idx;
 
-	psc_mutex_ensure_locked(&wk->uswi_mutex);
-
-	if (wk->uswi_flags & USWIF_DIE)
-		return (0);
-	wk->uswi_flags |= USWIF_DIE;
-	wk->uswi_flags &= ~USWIF_BUSY;		/* XXX ensure we set this */
-
-	USWI_ULOCK(wk);
-	UPSCHED_MGR_RLOCK();
-	USWI_LOCK(wk);
-	if (psc_atomic32_read(&wk->uswi_refcnt) != 2) {
-		UPSCHED_MGR_ULOCK();
-		wk->uswi_flags &= ~USWIF_DIE;
-		DEBUG_USWI(PLL_DEBUG, wk, "abort trykill");
-		return (0);
-	}
-	USWI_DECREF(wk, USWI_REFT_LOOKUP);
-	USWI_ULOCK(wk);
-	UPSCHED_MGR_ULOCK();
-
-	rc = snprintf(fn, sizeof(fn), SLPRI_FID, USWI_FID(wk));
-	if (rc == -1)
-		rc = errno;
-	else if (rc >= (int)sizeof(fn))
-		rc = ENAMETOOLONG;
-	else
-		rc = mdsio_unlink(mds_upschdir_inum, NULL, fn,
-		    &rootcreds, NULL, NULL);
-	if (rc)
-		psclog_error("trying to remove upsch link: %s",
-		    slstrerror(rc));
-
-	UPSCHED_MGR_LOCK();
-	USWI_LOCK(wk);
-
-	while (psc_atomic32_read(&wk->uswi_refcnt) > 1) {
-		psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
-		UPSCHED_MGR_ULOCK();
-		psc_multiwaitcond_wait(&wk->uswi_mwcond,
-		    &wk->uswi_mutex);
-		UPSCHED_MGR_LOCK();
-		psc_mutex_lock(&wk->uswi_mutex);
-	}
-
-	PSC_SPLAY_XREMOVE(upschedtree, &upsched_tree, wk);
-	pll_remove(&upsched_listhd, wk);
-	UPSCHED_MGR_ULOCK();
-
-	USWI_DECREF(wk, USWI_REFT_TREE);
-
-	if (wk->uswi_fcmh)
-		fcmh_op_done(wk->uswi_fcmh);
-	USWI_ULOCK(wk);
-	psc_mutex_destroy(&wk->uswi_mutex);
-	psc_pool_return(upsched_pool, wk);
-	return (1);
+	locked = RPMI_RLOCK(rpmi);
+	idx = psc_dynarray_finditem(&rpmi->rpmi_upschq, upd);
+	if (idx != -1)
+		psc_dynarray_removepos(&rpmi->rpmi_upschq, idx);
+	RPMI_URLOCK(rpmi, locked);
+	if (idx != -1)
+		UPD_DECREF(upd);
 }
 
 int
-slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
+slmupschedthr_tryrepldst_cb(struct pscrpc_request *rq,
+    struct pscrpc_async_args *av)
+{
+	struct slashrpc_cservice *csvc = av->pointer_arg[IP_CSVC];
+	struct sl_resm *dst_resm = av->pointer_arg[IP_DSTRESM];
+	struct sl_resm *src_resm = av->pointer_arg[IP_SRCRESM];
+	struct bmapc_memb *b = av->pointer_arg[IP_BMAP];
+	struct resm_mds_info *src_rmmi, *dst_rmmi;
+	struct resprof_mds_info *rpmi;
+	struct slm_update_data *upd;
+	int64_t amt = av->space[IN_AMT];
+	int rc = 0, tract[NBREPLST];
+
+	upd = bmap_2_upd(b);
+	src_rmmi = resm2rmmi(src_resm);
+	dst_rmmi = resm2rmmi(dst_resm);
+
+	if (rq)
+		SL_GET_RQ_STATUS_TYPE(csvc, rq,
+		    struct srm_repl_schedwk_rep, rc);
+	if (rc == 0)
+		rc = av->space[IN_RC];
+
+	if (rc) {
+		if (b) {
+			/* undo brepls change */
+			brepls_init(tract, -1);
+			tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+			mds_repl_bmap_apply(b, tract, NULL,
+			    av->space[IN_OFF]);
+			if (av->space[IN_UNDO_WR])
+				mds_bmap_write_logrepls(b);
+		}
+
+		if (rq)
+			DEBUG_REQ(PLL_ERROR, rq,
+			    "dst_resm=%s src_resm=%s rc=%d",
+			    dst_resm->resm_name, src_resm->resm_name,
+			    rc);
+		if (b)
+			DEBUG_BMAP(PLL_ERROR, b,
+			    "dst_resm=%s src_resm=%s rq=%p rc=%d",
+			    dst_resm->resm_name, src_resm->resm_name,
+			    rq, rc);
+
+		/*
+		 * Page more work in if a high level error; low level
+		 * (connection) should page in once connection is
+		 * reestablished.
+		 *
+		 * XXX this shouldn't be necessary as bandwidth should
+		 * be freed in the busy adjustment below.
+		 */
+//		upschq_resm(dst_resm, UPDT_PAGEIN);
+	} else {
+		/* Run standard successful RPC processing. */
+		slrpc_rep_in(csvc, rq);
+		amt = 0;
+	}
+
+	/*
+	 * Remove update from queue.
+	 *   (1) if successful, we are done.
+	 *   (2) if network failure, this will will be paged back in and
+	 *	 tried again when the connection is reestablished.
+	 *   (3) if other failure, don't want to keep it in the system.
+	 */
+	rpmi = res2rpmi(dst_resm->resm_res);
+	upd_rpmi_remove(rpmi, upd);
+
+	if (amt)
+		mds_repl_nodes_adjbusy(src_resm, dst_resm, -amt);
+	if (csvc)
+		sl_csvc_decref(csvc);
+	if (b)
+		bmap_op_done_type(b, BMAP_OPCNT_UPSCH);
+	UPSCH_WAKE();
+	return (0);
+}
+
+int
+slmupschedthr_tryrepldst(struct slm_update_data *upd,
     struct bmapc_memb *b, int off, struct sl_resm *src_resm,
     struct sl_resource *dst_res, int j)
 {
-	int undo_write = 0, tract[NBREPLST], retifset[NBREPLST], rc = 0;
+	int locked = 0, tract[NBREPLST], retifset[NBREPLST], rc = 0;
 	struct resm_mds_info *src_rmmi, *dst_rmmi;
 	struct pscrpc_request *rq = NULL;
 	struct srm_repl_schedwk_req *mq;
 	struct srm_repl_schedwk_rep *mp;
 	struct slashrpc_cservice *csvc;
-	struct slmupsched_thread *smut;
-	struct site_mds_info *smi;
+	struct resprof_mds_info *rpmi;
+	struct pscrpc_async_args av;
 	struct sl_resm *dst_resm;
-	struct psc_thread *thr;
-	struct sl_site *site;
+	struct fidc_membh *f;
 	sl_bmapno_t lastbno;
 	int64_t amt = 0;
 
-	thr = pscthr_get();
-	smut = slmupschedthr(thr);
-	site = smut->smut_site;
-	smi = site2smi(site);
-
+	f = upd_2_fcmh(upd);
 	dst_resm = psc_dynarray_getpos(&dst_res->res_members, j);
-
 	dst_rmmi = resm2rmmi(dst_resm);
 	src_rmmi = resm2rmmi(src_resm);
 
-	csvc = slm_geticsvcf(dst_resm, CSVCF_NONBLOCK | CSVCF_NORECON);
+	memset(&av, 0, sizeof(av));
+	av.pointer_arg[IP_DSTRESM] = dst_resm;
+	av.pointer_arg[IP_SRCRESM] = src_resm;
+	av.space[IN_OFF] = off;
+
+	/* HLDROP can reset this */
+	rpmi = res2rpmi(dst_resm->resm_res);
+	RPMI_LOCK(rpmi);
+	if (!psc_dynarray_add_ifdne(&rpmi->rpmi_upschq, upd))
+		UPD_INCREF(upd);
+	RPMI_ULOCK(rpmi);
+
+	csvc = slm_geticsvc(dst_resm, NULL, CSVCF_NONBLOCK |
+	    CSVCF_NORECON, &slm_upsch_mw);
+	if (csvc == NULL)
+		PFL_GOTOERR(fail, rc = resm_getcsvcerr(dst_resm));
+	av.pointer_arg[IP_CSVC] = csvc;
 
 	/*
-	 * At this point, add this connection to our multiwait.
-	 *
-	 * If we schedule work here, we don't go into this multiwait;
-	 * we'll try another iteration of more scheduling.
-	 *
-	 * If a wakeup event comes while we are timing our own
-	 * establishment attempt below, we will wake up immediately when
-	 * we multiwait; otherwise, the connection will wake us when it
-	 * becomes available.
+	 * If upsch is still processing, we retain the lock.
+	 * Otherwise, it would have been released while it waits for the
+	 * callback to be issued.
 	 */
-	if (!psc_multiwait_hascond(&smi->smi_mw,
-	    &dst_resm->resm_csvc->csvc_mwc))
-		psc_multiwait_addcond(&smi->smi_mw,
-		    &dst_resm->resm_csvc->csvc_mwc);
-
-	if (csvc == NULL)
-		PFL_GOTOERR(fail, rc = SLERR_ION_OFFLINE);
-
-	amt = mds_repl_nodes_adjbusy(src_resm, dst_resm,
-	    slm_bmap_calc_repltraffic(b));
-	if (amt == 0) {
-		struct slashrpc_cservice *src_csvc;
-
-		src_csvc = slm_geticsvcf(src_resm, CSVCF_NONBLOCK |
-		    CSVCF_NORECON);
-		if (src_csvc)
-			sl_csvc_decref(src_csvc);
-
-		/* add "src to become unbusy" condition to multiwait */
-		if (!psc_multiwait_hascond(&smi->smi_mw,
-		    &src_resm->resm_csvc->csvc_mwc))
-			psc_multiwait_addcond(&smi->smi_mw,
-			    &src_resm->resm_csvc->csvc_mwc);
-		PFL_GOTOERR(fail, rc);
+	if (BMAP_HASLOCK(b)) {
+		UPD_ULOCK(upd);
+		BMAP_ULOCK(b);
+		locked = 1;
 	}
+	amt = slm_bmap_calc_repltraffic(b);
+	if (locked) {
+		BMAP_LOCK(b);
+		UPD_LOCK(upd);
+	}
+
+	spinlock(&repl_busytable_lock);
+	amt = mds_repl_nodes_adjbusy(src_resm, dst_resm, amt);
+	if (amt == 0) {
+		/* add "src to become unbusy" condition to multiwait */
+		psc_multiwait_setcondwakeable(&slm_upsch_mw,
+		    &src_resm->resm_csvc->csvc_mwc, 1);
+		psc_multiwait_setcondwakeable(&slm_upsch_mw,
+		    &dst_resm->resm_csvc->csvc_mwc, 1);
+	}
+	freelock(&repl_busytable_lock);
+	if (amt == 0)
+		PFL_GOTOERR(fail, rc = -EBUSY);
+
+	av.space[IN_AMT] = amt;
 
 	/* Issue replication work request */
 	rc = SL_RSX_NEWREQ(csvc, SRMT_REPL_SCHEDWK, rq, mq, mp);
@@ -303,13 +269,13 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 		PFL_GOTOERR(fail, rc);
 	mq->src_resid = src_resm->resm_res_id;
 	mq->len = SLASH_BMAP_SIZE;
-	lastbno = fcmh_nvalidbmaps(wk->uswi_fcmh);
+	lastbno = fcmh_nvalidbmaps(f);
 	if (lastbno > 0)
 		lastbno--;
 	if (b->bcm_bmapno == lastbno) {
 		uint64_t sz;
 
-		sz = fcmh_getsize(wk->uswi_fcmh);
+		sz = fcmh_getsize(f);
 		if (sz > b->bcm_bmapno * (uint64_t)SLASH_BMAP_SIZE)
 			sz -= b->bcm_bmapno * SLASH_BMAP_SIZE;
 		if (sz == 0)
@@ -317,14 +283,11 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 
 		mq->len = MIN(sz, SLASH_BMAP_SIZE);
 	}
-	mq->fg = *USWI_FG(wk);
+	mq->fg = f->fcmh_fg;
 	mq->bmapno = b->bcm_bmapno;
 	BHGEN_GET(b, &mq->bgen);
 
-	/*
-	 * Mark as SCHED now in case the reply RPC comes in after we
-	 * finish here.
-	 */
+	/* Mark as SCHED here in case the RPC finishes quickly. */
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_QUEUED] = BREPLST_REPL_SCHED;
 	brepls_init_idx(retifset);
@@ -332,7 +295,11 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 
 	if (rc == BREPLST_VALID ||
 	    rc == BREPLST_REPL_SCHED)
-		psc_fatalx("invalid bmap replica state: %d", rc);
+		DEBUG_BMAP(PLL_FATAL, b,
+		    "invalid bmap replica state [off %d]: %d", off, rc);
+
+	av.pointer_arg[IP_BMAP] = b;
+	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
 
 	/*
 	 * If it was still QUEUED, which means we marked it SCHED, then
@@ -340,975 +307,854 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	 * replication request or something.
 	 */
 	if (rc == BREPLST_REPL_QUEUED) {
+		if (locked) {
+			UPD_ULOCK(upd);
+			BMAP_ULOCK(b);
+		}
 		rc = mds_bmap_write_logrepls(b);
-		undo_write = 1;
+		/* XXX check rc */
+
+		if (locked) {
+			UPD_LOCK(upd);
+			BMAP_LOCK(b);
+		}
+
+		av.space[IN_UNDO_WR] = 1;
 		/*
 		 * It is OK if repl sched is resent across reboots
 		 * idempotently.
 		 */
-		rc = SL_RSX_WAITREP(csvc, rq, mp);
-		if (rc || (mp && mp->rc)) {
-			DEBUG_REQ(PLL_ERROR, rq, "dst_resm=%s src_resm=%s rc=%d mp->rc=%d (RPC)",
-			    dst_resm->resm_name, src_resm->resm_name, rc, mp ? mp->rc : 0);
-
-			DEBUG_BMAP(PLL_ERROR, b,
-			    "dst_resm=%s src_resm=%s rc=%d mp->rc=%d (RPC)",
-			    dst_resm->resm_name, src_resm->resm_name, rc, mp ? mp->rc : 0);
-
-			if (rc == 0 && mp)
-				rc = mp->rc;
+		rq->rq_interpret_reply = slmupschedthr_tryrepldst_cb;
+		rq->rq_async_args = av;
+		rc = SL_NBRQSET_ADD(csvc, rq);
+		if (rc == 0) {
+			if (BMAP_HASLOCK(b))
+				BMAP_ULOCK(b);
+			return (1);
 		}
-
 	} else {
-		DEBUG_BMAP(PLL_ERROR, b,
-		    "dst_resm=%s src_resm=%s rc=%d (mds_repl_bmap_apply)",
-		    dst_resm->resm_name, src_resm->resm_name, rc);
 		rc = ENODEV;
 	}
-	if (rc == 0) {
-		pscrpc_req_finished(rq);
-		sl_csvc_decref(csvc);
-		uswi_unref(wk);
-		bmap_op_done(b);
-		return (1);
-	}
-
-	/* handle error return failure & undo */
-	brepls_init(tract, -1);
-	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
-	mds_repl_bmap_apply(b, tract, NULL, off);
-	if (undo_write)
-		mds_bmap_write_logrepls(b);
 
  fail:
-	if (amt)
-		mds_repl_nodes_adjbusy(src_resm, dst_resm, -amt);
-	if (rq)
-		pscrpc_req_finished(rq);
-	if (csvc)
-		sl_csvc_decref(csvc);
-	if (rc) {
-		DEBUG_USWI(rc == SLERR_ION_OFFLINE ? PLL_INFO : PLL_WARN,
-		    wk, "replication arrangement failed (dst=%s, src=%s) rc=%d",
-		    dst_resm->resm_name, src_resm->resm_name, rc);
-		DEBUG_BMAP(rc == SLERR_ION_OFFLINE ? PLL_INFO : PLL_WARN,
-		    b, "replication arrangement failed (dst=%s, src=%s) rc=%d",
-		    dst_resm->resm_name, src_resm->resm_name, rc);
-	}
+	av.space[IN_RC] = rc;
+	slmupschedthr_tryrepldst_cb(rq, &av);
 	return (0);
 }
 
 int
-slmupschedthr_tryptrunc(struct up_sched_work_item *wk,
+slmupschedthr_tryptrunc_cb(struct pscrpc_request *rq,
+    struct pscrpc_async_args *av)
+{
+	struct slashrpc_cservice *csvc = av->pointer_arg[IP_CSVC];
+	struct bmapc_memb *b = av->pointer_arg[IP_BMAP];
+	int rc = 0, tract[NBREPLST];
+
+	if (rq)
+		SL_GET_RQ_STATUS_TYPE(csvc, rq,
+		    struct srm_bmap_ptrunc_rep, rc);
+	if (rc == 0)
+		rc = av->space[IN_RC];
+
+	if (rc) {
+		if (b) {
+			/* undo brepls changes */
+			brepls_init(tract, -1);
+			tract[BREPLST_TRUNCPNDG_SCHED] =
+			    BREPLST_TRUNCPNDG;
+			mds_repl_bmap_apply(b, tract, NULL,
+			    av->space[IN_OFF]);
+			if (av->space[IN_UNDO_WR])
+				mds_bmap_write_logrepls(b);
+		}
+
+		psclog_warnx("partial truncation resolution failed "
+		    "rc=%d", rc);
+	} else
+		slrpc_rep_in(csvc, rq);
+
+	if (csvc)
+		sl_csvc_decref(csvc);
+	if (b)
+		bmap_op_done_type(b, BMAP_OPCNT_UPSCH);
+	UPSCH_WAKE();
+	return (0);
+}
+
+int
+slmupschedthr_tryptrunc(struct slm_update_data *upd,
     struct bmapc_memb *b, int off, struct sl_resource *dst_res,
     int idx)
 {
-	int undo_write = 0, tract[NBREPLST], retifset[NBREPLST], rc;
-	struct slmupsched_thread *smut;
+	int tract[NBREPLST], retifset[NBREPLST], rc;
+	struct pscrpc_request *rq = NULL;
 	struct slashrpc_cservice *csvc;
 	struct resm_mds_info *dst_rmmi;
 	struct srm_bmap_ptrunc_req *mq;
 	struct srm_bmap_ptrunc_rep *mp;
-	struct pscrpc_request *rq;
-	struct site_mds_info *smi;
+	struct pscrpc_async_args av;
 	struct sl_resm *dst_resm;
-	struct psc_thread *thr;
-	struct sl_site *site;
+	struct fidc_membh *f;
 
-	thr = pscthr_get();
-	smut = slmupschedthr(thr);
-	site = smut->smut_site;
-	smi = site2smi(site) ;
-
+	f = upd_2_fcmh(upd);
 	dst_resm = psc_dynarray_getpos(&dst_res->res_members, idx);
 	dst_rmmi = resm2rmmi(dst_resm);
 
-	brepls_init(retifset, 0);
-	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
+	memset(&av, 0, sizeof(av));
+	av.pointer_arg[IP_DSTRESM] = dst_resm;
+	av.space[IN_OFF] = off;
 
 	/*
-	 * Another ION is already handling the ptrunc CRC recomputation;
-	 * go do something else.
+	 * If another ION is already handling this ptrunc CRC
+	 * recomputation, go do something else.
 	 */
+	brepls_init(retifset, 0);
+	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
 	if (mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT))
 		return (-1);
 
-	csvc = slm_geticsvcf(dst_resm, CSVCF_NONBLOCK | CSVCF_NORECON);
-	if (csvc == NULL) {
-		if (!psc_multiwait_hascond(&smi->smi_mw,
-		    &dst_resm->resm_csvc->csvc_mwc))
-			psc_multiwait_addcond(&smi->smi_mw,
-			    &dst_resm->resm_csvc->csvc_mwc);
-		return (0);
-	}
+	csvc = slm_geticsvc(dst_resm, NULL, CSVCF_NONBLOCK |
+	    CSVCF_NORECON, &slm_upsch_mw);
+	if (csvc == NULL)
+		PFL_GOTOERR(fail, rc = resm_getcsvcerr(dst_resm));
+	av.pointer_arg[IP_CSVC] = csvc;
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAP_PTRUNC, rq, mq, mp);
 	if (rc)
-		goto fail;
-	mq->fg = *USWI_FG(wk);
+		PFL_GOTOERR(fail, rc);
+	mq->fg = f->fcmh_fg;
 	mq->bmapno = b->bcm_bmapno;
-	mq->bgen = bmap_2_bgen(b);
-	mq->offset = fcmh_2_fsz(wk->uswi_fcmh) % SLASH_BMAP_SIZE;
+	BHGEN_GET(b, &mq->bgen);
+	mq->offset = fcmh_2_fsz(f) % SLASH_BMAP_SIZE;
 
+	/* Mark as SCHED here in case the RPC finishes quickly. */
 	brepls_init(tract, -1);
 	tract[BREPLST_TRUNCPNDG] = BREPLST_TRUNCPNDG;
-	mds_repl_bmap_apply(b, tract, NULL, off);
-	rc = mds_bmap_write_logrepls(b);
-	undo_write = 1;
 
-	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc == 0)
-		rc = mp->rc;
-	pscrpc_req_finished(rq);
+	brepls_init_idx(retifset);
+	rc = mds_repl_bmap_apply(b, tract, retifset, off);
 
-	if (rc == 0) {
-		uswi_unref(wk);
-		sl_csvc_decref(csvc);
-		bmap_op_done(b);
-		return (1);
-	}
+	av.pointer_arg[IP_BMAP] = b;
+	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
 
-	/* handle error return failure & undo */
-	brepls_init(tract, -1);
-	tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_TRUNCPNDG;
-	mds_repl_bmap_apply(b, tract, NULL, off);
-	if (undo_write)
-		mds_bmap_write_logrepls(b);
+	if (rc == BREPLST_TRUNCPNDG) {
+		rc = mds_bmap_write_logrepls(b);
+		/* XXX check rc */
 
+		av.space[IN_UNDO_WR] = 1;
+		rq->rq_interpret_reply = slmupschedthr_tryptrunc_cb;
+		rq->rq_async_args = av;
+		rc = SL_NBRQSET_ADD(csvc, rq);
+		if (rc == 0) {
+			if (BMAP_HASLOCK(b))
+				BMAP_ULOCK(b);
+			return (1);
+		}
+	} else
+		rc = ENODEV;
  fail:
-	if (csvc)
-		sl_csvc_decref(csvc);
-	if (rc)
-		psclog_warnx("partial truncation failed rc=%d", rc);
+	av.space[IN_RC] = rc;
+	slmupschedthr_tryptrunc_cb(rq, &av);
 	return (0);
 }
 
 int
-slmupschedthr_trygarbage(struct up_sched_work_item *wk,
+slmupschedthr_trygarbage_cb(struct pscrpc_request *rq,
+    struct pscrpc_async_args *av)
+{
+	struct slashrpc_cservice *csvc = av->pointer_arg[IP_CSVC];
+	struct sl_resm *dst_resm = av->pointer_arg[IP_DSTRESM];
+	struct bmapc_memb *b = av->pointer_arg[IP_BMAP];
+	struct resprof_mds_info *rpmi;
+	struct slm_update_data *upd;
+	int rc = 0, tract[NBREPLST];
+
+	if (rq)
+		SL_GET_RQ_STATUS_TYPE(csvc, rq,
+		    struct srm_bmap_ptrunc_rep, rc);
+	if (rc == 0)
+		rc = av->space[IN_RC];
+
+	if (rc) {
+		if (b) {
+			/* undo brepls changes */
+			brepls_init(tract, -1);
+			tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+			tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
+			mds_repl_bmap_apply(b, tract, NULL,
+			    av->space[IN_OFF]);
+			if (av->space[IN_UNDO_WR])
+				mds_bmap_write_logrepls(b);
+		}
+
+		psclog_warnx("garbage reclamation failed rc=%d", rc);
+	} else
+		slrpc_rep_in(csvc, rq);
+
+	rpmi = res2rpmi(dst_resm->resm_res);
+	upd = bmap_2_upd(b);
+	upd_rpmi_remove(rpmi, upd);
+
+	if (csvc)
+		sl_csvc_decref(csvc);
+	if (b)
+		bmap_op_done_type(b, BMAP_OPCNT_UPSCH);
+	UPSCH_WAKE();
+	return (0);
+}
+
+int
+slmupschedthr_trygarbage(struct slm_update_data *upd,
     struct bmapc_memb *b, int off, struct sl_resource *dst_res, int j)
 {
-	int undo_write = 0, tract[NBREPLST], retifset[NBREPLST], rc = 0;
+	int tract[NBREPLST], retifset[NBREPLST], rc = 0;
+	struct pscrpc_request *rq = NULL;
 	struct slashrpc_cservice *csvc;
-	struct slmupsched_thread *smut;
 	struct resm_mds_info *dst_rmmi;
 	struct srm_bmap_ptrunc_req *mq;
 	struct srm_bmap_ptrunc_rep *mp;
-	struct pscrpc_request *rq;
-	struct site_mds_info *smi;
+	struct pscrpc_async_args av;
 	struct sl_resm *dst_resm;
-	struct psc_thread *thr;
-	struct sl_site *site;
+	struct fidc_membh *f;
 
-	thr = pscthr_get();
-	smut = slmupschedthr(thr);
-	site = smut->smut_site;
-	smi = site2smi(site);
-
+	f = upd_2_fcmh(upd);
 	dst_resm = psc_dynarray_getpos(&dst_res->res_members, j);
 	dst_rmmi = resm2rmmi(dst_resm);
 
-	csvc = slm_geticsvcf(dst_resm, CSVCF_NONBLOCK | CSVCF_NORECON);
+	memset(&av, 0, sizeof(av));
+	av.pointer_arg[IP_DSTRESM] = dst_resm;
+	av.space[IN_OFF] = off;
 
-	/*
-	 * At this point, add this connection to our multiwait.
-	 * If a wakeup event comes while we are timing our own
-	 * establishment attempt below, we will wake up immediately
-	 * when we multiwait; otherwise, we the connection will
-	 * wake us when it becomes available.
-	 */
-	if (!psc_multiwait_hascond(&smi->smi_mw,
-	    &dst_resm->resm_csvc->csvc_mwc))
-		psc_multiwait_addcond(&smi->smi_mw,
-		    &dst_resm->resm_csvc->csvc_mwc);
-
+	csvc = slm_geticsvc(dst_resm, NULL, CSVCF_NONBLOCK |
+	    CSVCF_NORECON, &slm_upsch_mw);
 	if (csvc == NULL)
-		goto fail;
+		PFL_GOTOERR(fail, rc = resm_getcsvcerr(dst_resm));
+	av.pointer_arg[IP_CSVC] = csvc;
 
 	/* Issue garbage reclaim request */
 	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAP_PTRUNC, rq, mq, mp);
 	if (rc)
-		goto fail;
-	mq->fg = *USWI_FG(wk);
+		PFL_GOTOERR(fail, rc);
+	mq->fg = f->fcmh_fg;
 	mq->bmapno = b->bcm_bmapno;
-	mq->bgen = bmap_2_bgen(b);
+	BHGEN_GET(b, &mq->bgen);
+	/* offset = 0 implies garbage reclamation for PTRUNC RPC */
 
+	/* Mark as SCHED here in case the RPC finishes quickly. */
 	brepls_init(tract, -1);
 	tract[BREPLST_GARBAGE] = BREPLST_GARBAGE_SCHED;
 	tract[BREPLST_INVALID] = BREPLST_GARBAGE_SCHED;
 
 	brepls_init_idx(retifset);
 
-	/*
-	 * Mark it as SCHED here in case the RPC finishes really
-	 * quickly...
-	 */
 	rc = mds_repl_bmap_apply(b, tract, retifset, off);
 
-	if (rc == BREPLST_VALID ||
-	    rc == BREPLST_REPL_SCHED)
+	if (rc == BREPLST_VALID || rc == BREPLST_REPL_SCHED)
 		psc_fatalx("invalid bmap replica state: %d", rc);
 
-	if (rc == BREPLST_GARBAGE ||
-	    rc == BREPLST_INVALID) {
-		rc = mds_bmap_write_logrepls(b);
-		undo_write = 1;
-		rc = SL_RSX_WAITREP(csvc, rq, mp);
-		if (rc == 0)
-			rc = mp->rc;
-	}
-	pscrpc_req_finished(rq);
-	if (rc == 0) {
-		uswi_unref(wk);
-		sl_csvc_decref(csvc);
-		bmap_op_done(b);
-		return (1);
-	}
+	av.pointer_arg[IP_BMAP] = b;
+	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
 
-	/* handle error return failure & undo */
+	if (rc == BREPLST_GARBAGE || rc == BREPLST_INVALID) {
+		rc = mds_bmap_write_logrepls(b);
+		/* XXX check rc */
+
+		av.space[IN_UNDO_WR] = 1;
+		rq->rq_interpret_reply = slmupschedthr_trygarbage_cb;
+		rq->rq_async_args = av;
+		rc = SL_NBRQSET_ADD(csvc, rq);
+		if (rc == 0) {
+			if (BMAP_HASLOCK(b))
+				BMAP_ULOCK(b);
+			return (1);
+		}
+	}
+		rc = ENODEV;
+ fail:
+	av.space[IN_RC] = rc;
+	slmupschedthr_trygarbage_cb(rq, &av);
+	return (0);
+}
+
+int
+upd_proc_garbage(__unusedx struct slm_update_data *tupd)
+{
+	psc_fatal("no");
+}
+
+int
+upd_proc_hldrop(struct slm_update_data *tupd)
+{
+	int i, rc, tract[NBREPLST], retifset[NBREPLST], iosidx;
+	struct slm_update_generic *upg;
+	struct resprof_mds_info *rpmi;
+	struct slm_update_data *upd;
+	struct bmap_mds_info *bmi;
+	struct bmapc_memb *b;
+	sl_replica_t repl;
+
+	upg = upd_getpriv(tupd);
+	repl.bs_id = upg->upg_resm->resm_res_id;
+
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
-	mds_repl_bmap_apply(b, tract, NULL, off);
-	if (undo_write)
-		mds_bmap_write_logrepls(b);
+	tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_TRUNCPNDG;
 
- fail:
-	if (csvc)
-		sl_csvc_decref(csvc);
-	if (rc)
-		psclog_warnx("garbage reclamation failed rc=%d", rc);
-	return (0);
+	brepls_init(retifset, 0);
+	retifset[BREPLST_REPL_SCHED] = 1;
+	retifset[BREPLST_GARBAGE_SCHED] = 1;
+	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
+
+	rpmi = res2rpmi(upg->upg_resm->resm_res);
+	RPMI_LOCK(rpmi);
+	DYNARRAY_FOREACH(upd, i, &rpmi->rpmi_upschq) {
+		bmi = upd_getpriv(upd);
+		b = bmi_2_bmap(bmi);
+		rc = mds_repl_iosv_lookup(upd_2_inoh(upd), &repl,
+		    &iosidx, 1);
+		if (mds_repl_bmap_walk(b, tract, retifset, 0, &iosidx,
+		    1))
+			mds_bmap_write_repls_rel(b);
+		UPD_DECREF(upd);
+	}
+	psc_dynarray_reset(&rpmi->rpmi_upschq);
+	RPMI_ULOCK(rpmi);
+	slm_iosv_clearbusy(&repl, 1);
+	mds_repl_node_clearallbusy(upg->upg_resm);
+	return (1);
 }
 
-void
-slmupschedthr_main(struct psc_thread *thr)
+int
+upd_proc_bmap(struct slm_update_data *upd)
 {
-	int ngar, uswi_gen, iosidx, off, rc, has_work, val, tryarchival;
-	struct rnd_iterator src_resm_i, dst_resm_i, bmap_i;
-	struct rnd_iterator wk_i, src_res_i, dst_res_i;
-	struct sl_resource *src_res, *dst_res;
-	struct slmupsched_thread *smut;
+	int ngarb, off, val, tryarchival, iosidx;
+	struct rnd_iterator dst_res_i, dst_resm_i;
+	struct rnd_iterator src_res_i, src_resm_i;
+	struct sl_resource *dst_res, *src_res;
 	struct slashrpc_cservice *csvc;
-	struct up_sched_work_item *wk;
-	struct site_mds_info *smi;
-	struct bmapc_memb *b, *bn;
+	struct resprof_mds_info *rpmi;
 	struct sl_resm *src_resm;
-	struct sl_site *site;
+	struct bmap_mds_info *bmi;
+	struct fcmh_mds_info *fmi;
+	struct bmapc_memb *b, *bn;
 	struct fidc_membh *f;
+	sl_ios_id_t iosid;
 	sl_bmapno_t bno;
-	void *dummy;
 
-	smut = slmupschedthr(thr);
-	site = smut->smut_site;
-	smi = site2smi(site);
-	while (pscthr_run()) {
-		if (0)
- restart:
-			sched_yield();
+	bmi = upd_getpriv(upd);
+	b = bmi_2_bmap(bmi);
+	f = b->bcm_fcmh;
+	fmi = fcmh_2_fmi(f);
 
-		/* select or wait for a repl rq */
-		reqlock(&smi->smi_lock);
+//	FCMH_LOCK(f);
+	BMAP_LOCK(b);
 
-		psc_multiwait_reset(&smi->smi_mw);
-		if (psc_multiwait_addcond(&smi->smi_mw,
-		    &smi->smi_mwcond) == -1)
-			psc_fatal("psc_multiwait_addcond");
-		psc_multiwait_entercritsect(&smi->smi_mw);
+	DEBUG_BMAPOD(PLL_DEBUG, b, "processing");
 
-		if (psc_dynarray_len(&smi->smi_upq) == 0) {
-			freelock(&smi->smi_lock);
-			psc_multiwait(&smi->smi_mw, &dummy);
-			continue;
-		}
+	/* find a res in our site this update is destined for */
+	iosidx = -1;
+	FOREACH_RND(&dst_res_i, fcmh_2_nrepls(f)) {
+		iosid = fcmh_2_repl(f, dst_res_i.ri_rnd_idx);
+		dst_res = libsl_id2res(iosid);
+		rpmi = res2rpmi(dst_res);
+		off = SL_BITS_PER_REPLICA * dst_res_i.ri_rnd_idx;
+		val = SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls,
+		    off);
+		switch (val) {
+		case BREPLST_REPL_QUEUED:
+			/*
+			 * There is still a lease out; we'll wait for it
+			 * to be relinquished.
+			 *
+			 * XXX: mask mwc off and make sure lease
+			 * relinquishment masks us back on and wakes up.
+			 */
+			if (bmap_2_bmi(b)->bmdsi_wr_ion)
+				break;
 
-		FOREACH_RND(&wk_i, psc_dynarray_len(&smi->smi_upq)) {
-			reqlock(&smi->smi_lock);
-			if (wk_i.ri_rnd_idx >=
-			    psc_dynarray_len(&smi->smi_upq))
-				goto restart;
+			/* look for a repl source */
+			for (tryarchival = 0; tryarchival < 2;
+			    tryarchival++) {
+				FOREACH_RND(&src_res_i, fcmh_2_nrepls(f)) {
+					src_res = libsl_id2res(fcmh_getrepl(f,
+					    src_res_i.ri_rnd_idx).bs_id);
 
-			wk = psc_dynarray_getpos(&smi->smi_upq,
-			    wk_i.ri_rnd_idx);
-			USWI_INCREF(wk, USWI_REFT_LOOKUP);
-			freelock(&smi->smi_lock);
-
-			rc = uswi_access_lock(wk);
-			if (rc == 0) {
-				/* repl must be going away, drop it */
-				slmupschedthr_removeq(wk);
-				goto restart;
-			}
-
-			f = wk->uswi_fcmh;
-
-#if 0
-			rc = mds_inox_ensure_loaded(USWI_INOH(wk));
-			if (rc) {
-				psclog_warnx("couldn't load inoh repl table: %s",
-				    slstrerror(rc));
-				slmupschedthr_removeq(wk);
-				goto restart;
-			}
-#endif
-
-			has_work = 0;
-
-			psc_mutex_lock(&wk->uswi_mutex);
-			uswi_gen = wk->uswi_gen;
-			wk->uswi_flags &= ~USWIF_BUSY;
-			psc_mutex_unlock(&wk->uswi_mutex);
-
-			/* find a res in our site this uswi is destined for */
-			iosidx = -1;
-			FOREACH_RND(&dst_res_i,
-			    psc_dynarray_len(&site->site_resources)) {
-				dst_res = psc_dynarray_getpos(
-				    &site->site_resources,
-				    dst_res_i.ri_rnd_idx);
-				iosidx = mds_repl_ios_lookup(
-				    USWI_INOH(wk), dst_res->res_id);
-				if (iosidx < 0)
-					continue;
-				off = SL_BITS_PER_REPLICA * iosidx;
-
-				FCMH_LOCK(f);
-				if (f->fcmh_flags & FCMH_IN_PTRUNC) {
- try_ptrunc:
-					has_work = 1;
-
-					/*
-					 * Rig "random" index at
-					 * ptrunc'd bmap to schedule CRC
-					 * recalc.
-					 */
-					bmap_i.ri_n = fcmh_nvalidbmaps(f);
-					bmap_i.ri_iter = bmap_i.ri_n - 1;
-					bmap_i.ri_rnd_idx = howmany(
-					    fcmh_2_fsz(f),
-					    SLASH_BMAP_SIZE) - 1;
-//					uswi_gen = wk->uswi_gen;
-					FCMH_ULOCK(f);
-
-					/*
-					 * Indicate error so the random
-					 * iterator gets reset if we
-					 * can't schedule it.
-					 */
-					rc = 1;
-					PFL_GOTOERR(handle_bmap, 1);
-				}
-				FCMH_ULOCK(f);
-
-				/*
-				 * Select random bmap then scan
-				 * sequentially to check for work.
-				 */
-				FOREACH_RND(&bmap_i,
-				    fcmh_nvalidbmaps(f)) {
-					if (uswi_gen != wk->uswi_gen)
-						PFL_GOTOERR(skipfile, 1);
-					rc = 0;
- handle_bmap:
-					if (mds_bmap_load(f,
-					    bmap_i.ri_rnd_idx, &b))
+					/* skip ourself and old/inactive replicas */
+					if (src_res_i.ri_rnd_idx == iosidx ||
+					    SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls,
+					    SL_BITS_PER_REPLICA *
+					    src_res_i.ri_rnd_idx) != BREPLST_VALID)
 						continue;
 
-					BMAPOD_MODIFY_START(b);
-					val = SL_REPL_GET_BMAP_IOS_STAT(
-					    b->bcm_repls, off);
-					switch (val) {
-					case BREPLST_REPL_QUEUED:
-						has_work = 1;
-						/*
-						 * There is still a
-						 * lease out; we'll wait
-						 * for it to be
-						 * relinquished.
-						 *
-						 * XXX: make sure lease
-						 * drops wake us up.
-						 */
-						if (bmap_2_bmi(b)->bmdsi_wr_ion)
-							break;
+					if (tryarchival ^
+					    (src_res->res_type == SLREST_ARCHIVAL_FS))
+						continue;
 
-						for (tryarchival = 0;
-						    tryarchival < 2;
-						    tryarchival++) {
+					/*
+					 * Search source nodes for an
+					 * idle, online connection.
+					 */
+					FOREACH_RND(&src_resm_i,
+					    psc_dynarray_len(&src_res->res_members)) {
+						src_resm = psc_dynarray_getpos(
+						    &src_res->res_members,
+						    src_resm_i.ri_rnd_idx);
+						csvc = slm_geticsvc(src_resm, NULL,
+						    CSVCF_NONBLOCK | CSVCF_NORECON,
+						    &slm_upsch_mw);
+						if (csvc == NULL)
+							continue;
+						sl_csvc_decref(csvc);
 
-						/* got a bmap; now look for a repl source */
-						FOREACH_RND(&src_res_i, USWI_NREPLS(wk)) {
-							if (uswi_gen != wk->uswi_gen) {
-								BMAPOD_MODIFY_DONE(b);
-								bmap_op_done(b);
-								PFL_GOTOERR(skipfile, 1);
-							}
-							src_res = libsl_id2res(
-							    USWI_GETREPL(wk,
-							    src_res_i.ri_rnd_idx).bs_id);
-
-							/* skip ourself and old/inactive replicas */
-							if (src_res_i.ri_rnd_idx == iosidx ||
-							    SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls,
-							    SL_BITS_PER_REPLICA *
-							    src_res_i.ri_rnd_idx) != BREPLST_VALID)
-								continue;
-
-							if (tryarchival ^
-							    (src_res->res_type == SLREST_ARCHIVAL_FS))
-								continue;
-
-							BMAPOD_MODIFY_DONE(b);
-
-							/*
-							 * Search source nodes for an
-							 * idle, online connection.
-							 */
-							FOREACH_RND(&src_resm_i,
-							    psc_dynarray_len(&src_res->res_members)) {
-								src_resm = psc_dynarray_getpos(
-								    &src_res->res_members,
-								    src_resm_i.ri_rnd_idx);
-								csvc = slm_geticsvc_nb(src_resm, NULL);
-								if (csvc == NULL) {
-									if (!psc_multiwait_hascond(&smi->smi_mw,
-									    &src_resm->resm_csvc->csvc_mwc))
-										if (psc_multiwait_addcond(&smi->smi_mw,
-										    &src_resm->resm_csvc->csvc_mwc))
-											psc_fatal("multiwait_addcond");
-									continue;
-								}
-								sl_csvc_decref(csvc);
-
-								/* scan destination resms */
-								FOREACH_RND(&dst_resm_i,
-								    psc_dynarray_len(&dst_res->res_members))
-									if (slmupschedthr_tryrepldst(wk,
-									    b, off, src_resm, dst_res,
-									    dst_resm_i.ri_rnd_idx))
-										PFL_GOTOERR(restart, 1);
-							}
-							BMAPOD_MODIFY_START(b);
-						}
-						}
-						break;
-					case BREPLST_TRUNCPNDG:
-						has_work = 1;
-						BMAPOD_MODIFY_DONE(b);
-						FOREACH_RND(&dst_resm_i,
-						    psc_dynarray_len(&dst_res->res_members)) {
-							rc = slmupschedthr_tryptrunc(wk,
-							    b, off, dst_res,
-							    dst_resm_i.ri_rnd_idx);
-							if (rc < 0)
-								break;
-							if (rc > 0)
-								PFL_GOTOERR(restart, 1);
-						}
-						BMAPOD_MODIFY_START(b);
-						break;
-					case BREPLST_GARBAGE:
-						ngar = 0;
-						/*
-						 * We found garbage.  We
-						 * must scan from EOF
-						 * toward the beginning of
-						 * the file since we
-						 * can't reclaim garbage
-						 * in the middle of a
-						 * file.
-						 */
-						bno = fcmh_nallbmaps(f);
-						if (bno)
-							bno--;
-						if (b->bcm_bmapno != bno) {
-							BMAPOD_MODIFY_DONE(b);
-							bmap_op_done(b);
-
-							if (f->fcmh_flags & FCMH_IN_PTRUNC)
-								PFL_GOTOERR(try_ptrunc, 1);
-							if (uswi_gen != wk->uswi_gen)
-								PFL_GOTOERR(skipfile, 1);
-							if (mds_bmap_load(f,
-							    bno, &b))
-								continue;
-							BMAPOD_MODIFY_START(b);
-						}
-						val = BREPLST_INVALID;
-						for (bn = b, b = NULL;; ) {
-							val = SL_REPL_GET_BMAP_IOS_STAT(
-							    bn->bcm_repls, off);
-							if (val == BREPLST_GARBAGE)
-								ngar++;
-							if ((val != BREPLST_GARBAGE &&
-							    val != BREPLST_INVALID) ||
-							    bno == 0)
-								break;
-
-							if (b) {
-								BMAPOD_MODIFY_DONE(b);
-								bmap_op_done(b);
-							}
-							b = bn;
-							bn = NULL;
-
-							if (f->fcmh_flags & FCMH_IN_PTRUNC) {
-								BMAPOD_MODIFY_DONE(b);
-								bmap_op_done(b);
-								PFL_GOTOERR(try_ptrunc, 1);
-							}
-							if (uswi_gen != wk->uswi_gen) {
-								BMAPOD_MODIFY_DONE(b);
-								bmap_op_done(b);
-								PFL_GOTOERR(skipfile, 1);
-							}
-
-							bno--;
-							if (mds_bmap_load(f,
-							    bno, &bn))
-								continue;
-							BMAPOD_MODIFY_START(bn);
-						}
-
-						if (bn == NULL) {
-							bn = b;
-							b = NULL;
-						}
-
-						if (val == BREPLST_GARBAGE_SCHED ||
-						    ngar == 0) {
-							if ((int)bno < bmap_i.ri_n)
-								bmap_i.ri_n = bno;
-							if (b) {
-								BMAPOD_MODIFY_DONE(b);
-								bmap_op_done(b);
-							}
-							b = bn;
-							break;
-						}
-						if (b == NULL &&
-						    val != BREPLST_GARBAGE) {
-							b = bn;
-							break;
-						}
-						has_work = 1;
-
-						if (val == BREPLST_GARBAGE ||
-						    val == BREPLST_INVALID) {
-							psc_assert(bno == 0);
-							if (b) {
-								BMAPOD_MODIFY_DONE(b);
-								bmap_op_done(b);
-							}
-							b = bn;
-						} else {
-							BMAPOD_MODIFY_DONE(bn);
-							bmap_op_done(bn);
-						}
-
-						BMAPOD_MODIFY_DONE(b);
-						FOREACH_RND(&dst_resm_i,
-						    psc_dynarray_len(&dst_res->res_members))
-							/*
-							 * We succeed as long as one member
-							 * can do the work because all
-							 * members share the same backend.
-							 * XXX cluster_noshare.
-							 */
-							if (slmupschedthr_trygarbage(wk,
-							    b, off, dst_res,
-							    dst_resm_i.ri_rnd_idx))
-								PFL_GOTOERR(restart, 1);
-						BMAPOD_MODIFY_START(b);
-						break;
-					case BREPLST_REPL_SCHED:
-					case BREPLST_TRUNCPNDG_SCHED:
-					case BREPLST_GARBAGE_SCHED:
-						/*
-						 * We must keep the wkrq
-						 * in mem so
-						 * repl_reset_scheduled()
-						 * can revert the state.
-						 */
-						has_work = 1;
-						break;
-					}
-					BMAPOD_MODIFY_DONE(b);
-					bmap_op_done(b);
-					if (rc)
-						RESET_RND_ITER(&bmap_i);
+						/* scan destination resms */
+					FOREACH_RND(&dst_resm_i,
+					    psc_dynarray_len(&dst_res->res_members))
+						    if (slmupschedthr_tryrepldst(upd,
+							b, off, src_resm, dst_res,
+							dst_resm_i.ri_rnd_idx))
+							    return (0);
 				}
 			}
-
- skipfile:
-			/*
-			 * At this point, we did not find a
-			 * bmap, src/dst resource, etc. involving our
-			 * site needed by this uswi.
-			 */
-			psc_mutex_lock(&wk->uswi_mutex);
-			if (has_work || wk->uswi_gen != uswi_gen) {
-				psc_multiwait_addcond_masked(&smi->smi_mw,
-				    &wk->uswi_mwcond, wk->uswi_gen != uswi_gen);
-				psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
-				psc_multiwait_setcondwakeable(&smi->smi_mw,
-				    &wk->uswi_mwcond, 1);
-				uswi_unref_nowake(wk);
-			} else {
-				slmupschedthr_removeq(wk);
-				goto restart;
-			}
 		}
-		psc_multiwait(&smi->smi_mw, &dummy);
-		/*
-		 * XXX look at the event and process it directly
-		 * instead of doing all this work again.
-		 */
-	}
-}
-
-void
-slmupschedthr_spawnall(void)
-{
-	struct slmupsched_thread *smut;
-	struct psc_thread *thr;
-	struct sl_site *site;
-	int locked;
-
-	locked = CONF_RLOCK();
-	CONF_FOREACH_SITE(site) {
-		thr = pscthr_init(SLMTHRT_UPSCHED, 0,
-		    slmupschedthr_main, NULL, sizeof(*smut),
-		    "slmupschedthr-%s", site->site_name +
-		    strspn(site->site_name, "@"));
-		smut = slmupschedthr(thr);
-		smut->smut_site = site;
-		pscthr_setready(thr);
-	}
-	CONF_URLOCK(locked);
-}
-
-/**
- * _uswi_access - Obtain processing access to a update_scheduler
- *	request.  This routine assumes the refcnt has already been
- *	bumped.
- * @wk: update_scheduler request to access, locked on return.
- * Returns Boolean true on success or false if the request is going
- * away.
- */
-int
-_uswi_access(struct up_sched_work_item *wk, int keep_locked)
-{
-	int locked, rc = 1;
-
-	USWI_RLOCK(wk);
-
-	/* Wait for someone else to finish processing. */
-	locked = PLL_HASLOCK(&upsched_listhd);
-	USWI_WAIT(wk, locked);
-	if (wk->uswi_flags & USWIF_DIE) {
-		/* Release if going away. */
-		USWI_DECREF(wk, USWI_REFT_LOOKUP);
-		psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
-		rc = 0;
-
-		if (!keep_locked)
-			psc_mutex_unlock(&wk->uswi_mutex);
-	} else {
-		wk->uswi_flags |= USWIF_BUSY;
-		USWI_ULOCK(wk);
-	}
-	return (rc);
-}
-
-int
-_uswi_unref(const struct pfl_callerinfo *pci,
-    struct up_sched_work_item *wk, int wake)
-{
-	psc_mutex_reqlock(&wk->uswi_mutex);
-	wk->uswi_flags &= ~USWIF_BUSY;
-
-	if (psc_atomic32_read(&wk->uswi_refcnt) == 2 &&
-	    uswi_trykill(wk))
-		return (1);
-
-	USWI_DECREF(wk, USWI_REFT_LOOKUP);
-	if (wake)
-		psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
-	psc_mutex_unlock(&wk->uswi_mutex);
-	return (0);
-}
-
-struct up_sched_work_item *
-uswi_find(const struct slash_fidgen *fgp)
-{
-	struct up_sched_work_item q, *wk;
-	struct fidc_membh fcmh;
-	int locked;
-
-	fcmh.fcmh_fg = *fgp;
-	q.uswi_fcmh = &fcmh;
-
-	locked = UPSCHED_MGR_RLOCK();
-	wk = SPLAY_FIND(upschedtree, &upsched_tree, &q);
-	if (wk == NULL) {
-		UPSCHED_MGR_URLOCK(locked);
-		return (NULL);
-	}
-	psc_mutex_lock(&wk->uswi_mutex);
-	USWI_INCREF(wk, USWI_REFT_LOOKUP);
-	UPSCHED_MGR_URLOCK(locked);
-
-	/* uswi_access() drops the refcnt on failure */
-	if (uswi_access(wk))
-		return (wk);
-	return (NULL);
-}
-
-int
-uswi_getslfid(__unusedx slfid_t *fidp)
-{
-	/* XXX should I be FID_ANY? */
-	*fidp = 0;
-	return (0);
-}
-
-/**
- * uswi_init - Initialize an update scheduler work item (uswi).
- */
-void
-uswi_init(struct up_sched_work_item *wk, slfid_t fid)
-{
-	memset(wk, 0, sizeof(*wk));
-	INIT_PSC_LISTENTRY(&wk->uswi_lentry);
-	wk->uswi_flags |= USWIF_BUSY;
-	psc_mutex_init(&wk->uswi_mutex);
-	psc_multiwaitcond_init(&wk->uswi_mwcond,
-	    NULL, 0, "upsched-%016"SLPRIxFID, fid);
-	psc_atomic32_set(&wk->uswi_refcnt, 0);
-}
-
-void
-upsched_scandir(void)
-{
-	int rc, tract[NBREPLST], retifset[NBREPLST];
-	sl_replica_t iosv[SL_MAX_REPLICAS];
-	struct up_sched_work_item *wk;
-	struct fidc_membh *fcmh;
-	struct slash_fidgen fg;
-	struct pscfs_dirent *d;
-	struct bmapc_memb *b;
-	char *buf, fn[NAME_MAX];
-	off64_t off, toff;
-	size_t siz, tsiz;
-	uint32_t j;
-	void *data;
-
-	rc = mdsio_opendir(mds_upschdir_inum, &rootcreds, NULL, &data);
-	if (rc)
-		psc_fatalx("mdsio_opendir %s: %s", SL_RPATH_UPSCH_DIR,
-		    slstrerror(rc));
-
-	off = 0;
-	siz = 8 * 1024;
-	buf = PSCALLOC(siz);
-
-	for (;;) {
-		rc = mdsio_readdir(&rootcreds, siz,
-			   off, buf, &tsiz, NULL, NULL, 0, data);
-		if (rc)
-			psc_fatalx("mdsio_readdir %s: %s",
-			    SL_RPATH_UPSCH_DIR, slstrerror(rc));
-		if (tsiz == 0)
 			break;
-		for (toff = 0; toff < (off64_t)tsiz;
-		    toff += PFL_DIRENT_SIZE(d->pfd_namelen)) {
-			d = (void *)(buf + toff);
-			off = d->pfd_off;
+		case BREPLST_TRUNCPNDG:
+			FOREACH_RND(&dst_resm_i,
+			    psc_dynarray_len(&dst_res->res_members)) {
+				int rv;
 
-			if (strlcpy(fn, d->pfd_name, sizeof(fn)) >
-			    sizeof(fn))
-				psc_assert("impossible");
-			if (d->pfd_namelen < sizeof(fn))
-				fn[d->pfd_namelen] = '\0';
-
-			if (fn[0] == '.')
-				continue;
-
-			memset(&fg, 0, sizeof(fg));
-			fg.fg_fid = strtoll(fn, NULL, 16);
-			fg.fg_gen = FGEN_ANY;
-
-			rc = mds_repl_loadino(&fg, &fcmh);
-			if (rc) {
-				/* XXX if ENOENT, remove from repldir and continue */
-				psclog_errorx("mds_repl_loadino "
-				    SLPRI_FID": %s",
-				    fg.fg_fid, slstrerror(rc));
-				mdsio_unlink(mds_upschdir_inum, NULL, fn,
-				    &rootcreds, NULL, NULL);
-				continue;
+				rv = slmupschedthr_tryptrunc(upd, b,
+				    off, dst_res,
+				    dst_resm_i.ri_rnd_idx);
+				if (rv < 0)
+					break;
+				if (rv > 0)
+					return (rv);
 			}
-
-			rc = uswi_findoradd(&fg, &wk);
-			if (rc)
-				psc_fatal("uswi_findoradd: %s",
-				    slstrerror(rc));
-
-			psc_mutex_lock(&wk->uswi_mutex);
-			wk->uswi_fcmh = fcmh;
-			wk->uswi_flags &= ~USWIF_BUSY;
-			psc_mutex_unlock(&wk->uswi_mutex);
-
-			brepls_init(tract, -1);
-			tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
-			tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_TRUNCPNDG;
-			tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
-
-			brepls_init(retifset, 0);
-			retifset[BREPLST_REPL_SCHED] = 1;
-			retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
-			retifset[BREPLST_GARBAGE_SCHED] = 1;
+			break;
+		case BREPLST_GARBAGE:
+			/* XXX just look at fcmh size to determine this */
+			ngarb = 0;
 
 			/*
-			 * If we crashed, revert all inflight SCHED'ed
-			 * bmaps so they get resent.
+			 * We found garbage.  We must scan from EOF
+			 * toward the beginning of the file since we
+			 * can't reclaim garbage in the middle of a
+			 * file.
 			 */
-			for (j = 0;; j++) {
-				if (bmap_getf(wk->uswi_fcmh, j,
-				    SL_WRITE, BMAPGETF_LOAD |
-				    BMAPGETF_NOAUTOINST, &b))
+			bno = fcmh_nallbmaps(f);
+			if (bno)
+				bno--;
+			if (b->bcm_bmapno != bno) {
+				if (f->fcmh_flags & FCMH_IN_PTRUNC)
+					return (1);
+				bmap_op_done(b);
+				if (mds_bmap_load(f, bno, &b))
+					break;
+				BMAP_LOCK(b);
+			}
+			val = BREPLST_INVALID;
+
+			/*
+			 * XXX get rid of the bmap scanning; replace
+			 * with fcmh size
+			 */
+			for (bn = b, b = NULL;; ) {
+				val = SL_REPL_GET_BMAP_IOS_STAT(
+				    bn->bcm_repls, off);
+				if (val == BREPLST_GARBAGE)
+					ngarb++;
+				if ((val != BREPLST_GARBAGE &&
+				    val != BREPLST_INVALID) ||
+				    bno == 0)
 					break;
 
-				if (mds_repl_bmap_walk(b, tract,
-				    retifset, 0, NULL, 0))
-					mds_bmap_write_repls_rel(b);
-				else
+				if (b)
 					bmap_op_done(b);
+				b = bn;
+				bn = NULL;
+
+				if (f->fcmh_flags & FCMH_IN_PTRUNC)  {
+					bmap_op_done(b);
+					return (0);
+				}
+
+				bno--;
+				if (mds_bmap_load(f, bno, &bn))
+					continue;
+				BMAP_LOCK(b);
 			}
 
-			/*
-			 * Requeue pending updates on all registered
-			 * sites.  If there is no work to do, it will be
-			 * promptly removed by the slmupschedthr.
-			 */
-			for (j = 0; j < USWI_NREPLS(wk); j++)
-				iosv[j].bs_id = USWI_GETREPL(wk, j).bs_id;
-			uswi_enqueue_sites(wk, iosv, USWI_NREPLS(wk));
-			uswi_unref(wk);
+			if (bn == NULL) {
+				bn = b;
+				b = NULL;
+			}
 
-			fcmh_op_done(fcmh);
+			if (val == BREPLST_GARBAGE_SCHED ||
+			    ngarb == 0) {
+				if (b)
+					bmap_op_done(b);
+				b = bn;
+				break;
+			}
+			if (b == NULL && val != BREPLST_GARBAGE) {
+				b = bn;
+				break;
+			}
+
+			if (val == BREPLST_GARBAGE ||
+			    val == BREPLST_INVALID) {
+				psc_assert(bno == 0);
+				if (b)
+					bmap_op_done(b);
+				b = bn;
+			} else
+				bmap_op_done(bn);
+
+			FOREACH_RND(&dst_resm_i,
+			    psc_dynarray_len(&dst_res->res_members))
+				/*
+				 * We succeed as long as one
+				 * member can do the work
+				 * because all members share the
+				 * same backend.
+				 *
+				 * XXX cluster_noshare.
+				 */
+				if (slmupschedthr_trygarbage(upd, b,
+				    off, dst_res,
+				    dst_resm_i.ri_rnd_idx))
+					return (0);
+			break;
 		}
-		off += tsiz;
+		upd_rpmi_remove(rpmi, upd);
+		BMAP_RLOCK(b);
 	}
-	rc = mdsio_release(&rootcreds, data);
-	if (rc)
-		psc_fatalx("mdsio_release %s: %s", SL_RPATH_UPSCH_DIR,
-		    slstrerror(rc));
+//	FCMH_LOCK(f);
+	return (1);
+}
 
-	PSCFREE(buf);
+#define DBF_RESID	1
+#define DBF_FID		2
+#define DBF_BNO		5
+
+#define PARSENUM(buf, max)						\
+	_PFL_RVSTART {							\
+		unsigned long long _l;					\
+		char *_endp;						\
+									\
+		_l = strtoull((buf), &_endp, 10);			\
+		if (_l > (max) || *_endp || _endp == (buf)) {		\
+			psclog_error("error parsing db buf %s", (buf));	\
+			return (0);					\
+		}							\
+		_l;							\
+	} _PFL_RVEND
+
+int
+upd_proc_pagein_unit(struct slm_update_data *upd)
+{
+	struct slm_update_generic *upg;
+	struct fidc_membh *f = NULL;
+	struct bmapc_memb *b = NULL;
+	int rc;
+
+	upg = upd_getpriv(upd);
+	rc = slm_fcmh_get(&upg->upg_fg, &f);
+	if (!rc)
+		mds_bmap_load(f, upg->upg_bno, &b);
+	if (b)
+		bmap_op_done(b);
+	if (f)
+		fcmh_op_done(f);
+	return (1);
 }
 
 int
-uswi_findoradd(const struct slash_fidgen *fgp,
-    struct up_sched_work_item **wkp)
+upd_proc_pagein_cb(__unusedx void *arg, __unusedx int ac, char **av,
+    __unusedx char **cols)
 {
-	struct up_sched_work_item *newrq = NULL;
-	char fn[PATH_MAX];
-	void *mdsio_data;
-	int rc = 0;
+	struct slm_update_generic *upg;
 
-	*wkp = uswi_find(fgp);
-	if (*wkp)
-		goto out;
+	upg = psc_pool_get(slm_upgen_pool);
+	memset(upg, 0, sizeof(*upg));
+	INIT_PSC_LISTENTRY(&upg->upg_lentry);
+	upd_init(&upg->upg_upd, UPDT_PAGEIN_UNIT);
+//	iosid = PARSENUM(av[DBF_RESID], UINT32_MAX);
+	upg->upg_fg.fg_fid = PARSENUM(av[DBF_FID], UINT64_MAX);
+	upg->upg_fg.fg_gen = FGEN_ANY;
+	upg->upg_bno = PARSENUM(av[DBF_BNO], UINT32_MAX);
+	upsch_enqueue(&upg->upg_upd, NULL, 0);
+	UPD_UNBUSY(&upg->upg_upd);
+	return (0);
+}
 
-	newrq = psc_pool_get(upsched_pool);
-	uswi_init(newrq, fgp->fg_fid);
+int
+upd_proc_pagein(struct slm_update_data *upd)
+{
+	struct slm_update_generic *upg;
+	struct resprof_mds_info *rpmi;
+	struct sl_resource *r;
+	int n;
 
-	rc = mds_repl_loadino(fgp, &newrq->uswi_fcmh);
-	if (rc)
-		goto out;
-	if (fcmh_isdir(newrq->uswi_fcmh)) {
-		rc = EISDIR;
-		goto out;
+	upg = upd_getpriv(upd);
+	r = upg->upg_resm->resm_res;
+	rpmi = res2rpmi(r);
+
+	RPMI_LOCK(rpmi);
+	n = UPSCH_MAX_ITEMS_RES	- psc_dynarray_len(&rpmi->rpmi_upschq);
+	RPMI_ULOCK(rpmi);
+
+	if (n > 0)
+		dbdo(upd_proc_pagein_cb, NULL,
+		    " SELECT	*"
+		    " FROM	upsch"
+		    " WHERE	resid = %d"
+		    " ORDER BY	pri DESC,"
+		    "		RANDOM()"
+		    " LIMIT	%d", r->res_id, n);
+
+	return (1);
+}
+
+int
+upd_proc(struct slm_update_data *upd)
+{
+	int rc, locked;
+
+	locked = UPSCH_HASLOCK();
+
+	if (locked)
+		UPSCH_ULOCK();
+	UPD_LOCK(upd);
+	UPD_WAIT(upd);
+	upd->upd_flags |= UPDF_BUSY;
+	rc = upd_proctab[upd->upd_type](upd);
+	upd->upd_flags &= ~UPDF_BUSY;
+	UPD_WAKE(upd);
+	if (rc) {
+		UPD_ULOCK(upd);
+		UPD_DECREF(upd);
+	} else {
+		/*
+		 * Item indicated it should stay in the system; add it
+		 * back to our thing here.
+		 */
+		psc_mlist_addtail(&slm_upschq, upd);
+		UPD_ULOCK(upd);
 	}
+	if (locked)
+		UPSCH_LOCK();
+	if (!rc)
+		return (rc);
 
-	rc = snprintf(fn, sizeof(fn), SLPRI_FID, fgp->fg_fid);
-	if (rc == -1) {
-		rc = errno;
-		goto out;
+	switch (upd->upd_type) {
+	case UPDT_HLDROP:
+	case UPDT_PAGEIN:
+	case UPDT_PAGEIN_UNIT: {
+		struct slm_update_generic *upg;
+
+		upg = upd_getpriv(upd);
+		psc_pool_return(slm_upgen_pool, upg);
+		break;
+	    }
 	}
-	if (rc >= (int)sizeof(fn)) {
-		rc = ENAMETOOLONG;
-		goto out;
-	}
-
-	rc = mdsio_opencreatef(mds_upschdir_inum, &rootcreds,
-	    O_CREAT | O_WRONLY, MDSIO_OPENCRF_NOLINK, 0600, fn,
-	    NULL, NULL, &mdsio_data, NULL, uswi_getslfid, 0);
-	if (rc)
-		goto out;
-	mdsio_release(&rootcreds, mdsio_data);
-
-	UPSCHED_MGR_LOCK();
-	*wkp = uswi_find(fgp);
-	if (*wkp) {
-		if (UPSCHED_MGR_HASLOCK())
-			UPSCHED_MGR_ULOCK();
-		fcmh_op_done(newrq->uswi_fcmh);
-		goto out;
-	}
-
-	psc_mutex_lock(&newrq->uswi_mutex);
-	USWI_INCREF(newrq, USWI_REFT_TREE);
-	USWI_INCREF(newrq, USWI_REFT_LOOKUP);
-
-	SPLAY_INSERT(upschedtree, &upsched_tree, newrq);
-	pll_addtail(&upsched_listhd, newrq);
-	UPSCHED_MGR_ULOCK();
-
-	psc_mutex_unlock(&newrq->uswi_mutex);
-
-	*wkp = newrq;
-	newrq = NULL;
-
- out:
-	if (rc && newrq && newrq->uswi_fcmh)
-		fcmh_op_done(newrq->uswi_fcmh);
-
-	if (newrq)
-		psc_pool_return(upsched_pool, newrq);
-
 	return (rc);
 }
 
 void
-uswi_enqueue_sites(struct up_sched_work_item *wk,
-    const sl_replica_t *iosv, int nios)
+slmupschedthr_main(__unusedx struct psc_thread *thr)
 {
-	struct site_mds_info *smi;
-	struct sl_site *site;
-	int locked, n;
+	struct slm_update_data *upd;
+	struct sl_resource *r;
+	struct sl_resm *m;
+	struct sl_site *s;
+	int i, j, rc;
 
-	locked = psc_mutex_reqlock(&wk->uswi_mutex);
-	wk->uswi_gen++;
-	for (n = 0; n < nios; n++) {
-		site = libsl_resid2site(iosv[n].bs_id);
-		smi = site2smi(site);
+	while (pscthr_run()) {
+		rc = 0;
 
-		spinlock(&smi->smi_lock);
-		if (!psc_dynarray_exists(&smi->smi_upq, wk)) {
-			psc_dynarray_add(&smi->smi_upq, wk);
-			USWI_INCREF(wk, USWI_REFT_SITEUPQ);
-		}
-		psc_multiwaitcond_wakeup(&smi->smi_mwcond);
-		freelock(&smi->smi_lock);
+		CONF_FOREACH_RESM(s, r, i, m, j)
+			if (RES_ISFS(r))
+				/* XXX add API to reset all efficiently */
+				psc_multiwait_setcondwakeable(&slm_upsch_mw,
+				    &m->resm_csvc->csvc_mwc, 0);
+
+		UPSCH_LOCK();
+		psc_multiwait_entercritsect(&slm_upsch_mw);
+		upd = psc_mlist_tryget(&slm_upschq);
+		if (upd)
+			rc = upd_proc(upd);
+		UPSCH_ULOCK();
+	if (rc)
+			psc_multiwait_leavecritsect(&slm_upsch_mw);
+		else
+			psc_multiwait_secs(&slm_upsch_mw, &upd, 5);
 	}
-	psc_mutex_ureqlock(&wk->uswi_mutex, locked);
 }
 
 void
-dump_uswi(struct up_sched_work_item *wk)
+slm_upsch_init(void)
 {
-	DEBUG_USWI(PLL_MAX, wk, "");
+	psc_poolmaster_init(&slm_upgen_poolmaster,
+	    struct slm_update_generic, upg_lentry, PPMF_AUTO, 64, 64, 0,
+	    NULL, NULL, NULL, "upgen");
+	slm_upgen_pool = psc_poolmaster_getmgr(&slm_upgen_poolmaster);
+
+	psc_mlist_reginit(&slm_upschq, NULL, struct slm_update_data,
+	    upd_lentry, "upschq");
+
+	mds_repl_buildbusytable();
 }
+
+void
+slmupschedthr_spawn(void)
+{
+	struct sl_resource *r;
+	struct sl_site *s;
+	struct sl_resm *m;
+	int i, j;
+
+	psc_multiwait_init(&slm_upsch_mw, "upsch");
+	if (psc_multiwait_addcond(&slm_upsch_mw,
+	    &slm_upschq.pml_mwcond_empty) == -1)
+		psc_fatal("psc_multiwait_addcond");
+
+	CONF_FOREACH_RESM(s, r, i, m, j)
+		if (RES_ISFS(r))
+			psc_multiwait_addcond(&slm_upsch_mw,
+			    &m->resm_csvc->csvc_mwc);
+
+	pscthr_init(SLMTHRT_UPSCHED, 0, slmupschedthr_main, NULL,
+	    0, "slmupschedthr");
+
+	/* page in initial replrq workload */
+	CONF_FOREACH_RES(s, r, i)
+		if (RES_ISFS(r))
+			upschq_resm(psc_dynarray_getpos(&r->res_members,
+			    0), UPDT_PAGEIN);
+}
+
+/**
+ * upschq_resm - Schedule a PAGEIN for a resm.
+ */
+void
+upschq_resm(struct sl_resm *m, int type)
+{
+	struct slm_update_generic *upg;
+	struct slm_update_data *upd;
+
+	upg = psc_pool_get(slm_upgen_pool);
+	memset(upg, 0, sizeof(*upg));
+	INIT_PSC_LISTENTRY(&upg->upg_lentry);
+	upg->upg_resm = m;
+	upd = &upg->upg_upd;
+	upd_init(upd, type);
+	upsch_enqueue(upd, NULL, 0);
+	UPD_UNBUSY(upd);
+}
+
+/**
+ * upd_init - Initialize a peer resource update.
+ */
+void
+upd_init(struct slm_update_data *upd, int type)
+{
+	psc_assert(pfl_memchk(upd, 0, sizeof(*upd)) == 1);
+	INIT_PSC_LISTENTRY(&upd->upd_lentry);
+	upd->upd_type = type;
+	upd->upd_flags |= UPDF_BUSY;
+	psc_mutex_init(&upd->upd_mutex);
+	psc_multiwaitcond_init(&upd->upd_mwc, upd, 0, "upd-%p", upd);
+
+	switch (type) {
+	case UPDT_BMAP: {
+		struct bmap_mds_info *bmi;
+		struct bmapc_memb *b;
+
+		bmi = upd_getpriv(upd);
+		b = bmi_2_bmap(bmi);
+		DEBUG_UPD(PLL_DEBUG, upd, "init fid="SLPRI_FID" bno=%u",
+		    b->bcm_fcmh->fcmh_fg.fg_fid, b->bcm_bmapno);
+		slm_repl_upd_odt_read(b);
+		break;
+	    }
+	default:
+		DEBUG_UPD(PLL_DEBUG, upd, "init");
+	}
+}
+
+void
+upd_destroy(struct slm_update_data *upd)
+{
+	DEBUG_UPD(PLL_DEBUG, upd, "destroy");
+	psc_assert(psclist_disjoint(&upd->upd_lentry));
+	psc_assert(!(upd->upd_flags & UPDF_BUSY));
+	psc_mutex_destroy(&upd->upd_mutex);
+	psc_multiwaitcond_destroy(&upd->upd_mwc);
+	PSCFREE(upd->upd_recpt);
+	memset(upd, 0, sizeof(*upd));
+}
+
+void
+upsch_enqueue(struct slm_update_data *upd, const sl_replica_t *iosv,
+    int nios)
+{
+	struct resprof_mds_info *rpmi;
+	struct sl_resource *r;
+	int locked, n;
+
+	locked = UPD_RLOCK(upd);
+	for (n = 0; n < nios; n++) {
+		r = libsl_id2res(iosv[n].bs_id);
+		rpmi = res2rpmi(r);
+		RPMI_LOCK(rpmi);
+		if (!psc_dynarray_add_ifdne(&rpmi->rpmi_upschq, upd))
+			UPD_INCREF(upd);
+		RPMI_ULOCK(rpmi);
+	}
+	if (!psc_mlist_conjoint(&slm_upschq, upd)) {
+		if (upd->upd_type == UPDT_BMAP &&
+		    (upd_2_fcmh(upd)->fcmh_flags & FCMH_IN_PTRUNC) == 0)
+			psc_mlist_addtail(&slm_upschq, upd);
+		else
+			psc_mlist_addhead(&slm_upschq, upd);
+		UPD_INCREF(upd);
+	}
+	UPD_URLOCK(upd, locked);
+}
+
+void *
+upd_getpriv(struct slm_update_data *upd)
+{
+	char *p = (void *)upd;
+
+	switch (upd->upd_type) {
+	case UPDT_BMAP:
+		return (p - offsetof(struct bmap_mds_info, bmi_upd));
+	case UPDT_HLDROP:
+	case UPDT_PAGEIN:
+	case UPDT_PAGEIN_UNIT:
+		return (p - offsetof(struct slm_update_generic,
+		    upg_upd));
+	default:
+		psc_fatal("type");
+	}
+}
+
+#if PFL_DEBUG > 0
+void
+dump_upd(struct slm_update_data *upd)
+{
+	DEBUG_UPD(PLL_MAX, upd, "");
+}
+#endif
+
+int (*upd_proctab[])(struct slm_update_data *) = {
+	upd_proc_bmap,
+	upd_proc_garbage,
+	upd_proc_hldrop,
+	upd_proc_pagein,
+	upd_proc_pagein_unit
+};

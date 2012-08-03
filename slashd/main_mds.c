@@ -23,6 +23,7 @@
 #include <unistd.h>
 
 #include <gcrypt.h>
+#include <sqlite3.h>
 
 #include "pfl/fs.h"
 #include "pfl/pfl.h"
@@ -52,6 +53,7 @@
 #include "slsubsys.h"
 #include "subsys_mds.h"
 #include "up_sched_res.h"
+#include "worker.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
 
@@ -62,13 +64,14 @@ int			 disable_propagation = 0;
 
 const char		*progname;
 
-struct psc_poolmaster	 upsched_poolmaster;
-
 struct slash_creds	 rootcreds = { 0, 0 };
 struct pscfs		 pscfs;
 uint64_t		 slm_fsuuid;
 struct psc_thread	*slmconnthr;
 uint32_t		 sys_upnonce;
+
+struct odtable		*slm_repl_odt;
+struct odtable		*slm_ptrunc_odt;
 
 int
 psc_usklndthr_get_type(const char *namefmt)
@@ -129,7 +132,8 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 
 	if (zfspoolcf)
 		rc = snprintf(cmdbuf, sizeof(cmdbuf),
-		    "zpool import -f -c '%s' '%s'", zfspoolcf, zpoolname);
+		    "zpool import -f -c '%s' '%s'", zfspoolcf,
+		    zpoolname);
 	else
 		rc = snprintf(cmdbuf, sizeof(cmdbuf),
 		    "zpool import -f '%s'", zpoolname);
@@ -140,10 +144,9 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 	rc = system(cmdbuf);
 	if (rc == -1)
 		psc_fatal("zpool import");
-	else if (rc) {
-		psclog_errorx("Please check, among other things, if the mount point is empty.");
-		psc_fatalx("zpool import: returned %d", WEXITSTATUS(rc));
-	}
+	else if (rc)
+		psc_fatalx("zpool import: returned %d\n"
+		    "check if mount point is empty", WEXITSTATUS(rc));
 }
 
 __dead void
@@ -156,10 +159,26 @@ usage(void)
 	exit(1);
 }
 
+void
+slmconnthr_spawn(void)
+{
+	struct sl_resource *r;
+	struct sl_site *s;
+	struct sl_resm *m;
+	int i, j;
+
+	slmconnthr = slconnthr_spawn(SLMTHRT_CONN, "slm", NULL, NULL);
+	CONF_FOREACH_RESM(s, r, i, m, j)
+		if (r->res_type == SLREST_MDS)
+			slm_getmcsvcf(m, CSVCF_NORECON);
+		else if (RES_ISFS(r))
+			slm_geticsvcf(m, CSVCF_NORECON);
+}
+
 int
 main(int argc, char *argv[])
 {
-	char *zpcachefn = NULL, *zpname;
+	char *zpcachefn = NULL, *zpname, fn[PATH_MAX];
 	const char *cfn, *sfn, *p;
 	int rc, c, nofsuuid = 0;
 	mdsio_fid_t mf;
@@ -253,12 +272,6 @@ main(int argc, char *argv[])
 	if (rc)
 		psc_fatalx("lookup .slmd metadir: %s", slstrerror(rc));
 
-	rc = mdsio_lookup(mds_metadir_inum, SL_RPATH_UPSCH_DIR,
-	    &mds_upschdir_inum, &rootcreds, NULL);
-	if (rc)
-		psc_fatalx("lookup %s/%s dir: %s", SL_RPATH_META_DIR,
-		    SL_RPATH_UPSCH_DIR, slstrerror(rc));
-
 	rc = mdsio_lookup(mds_metadir_inum, SL_RPATH_FIDNS_DIR,
 	    &mds_fidnsdir_inum, &rootcreds, NULL);
 	if (rc)
@@ -316,20 +329,20 @@ main(int argc, char *argv[])
 
 	libsl_init(2 * (SLM_RMM_NBUFS + SLM_RMI_NBUFS + SLM_RMC_NBUFS));
 
-	slm_workq_init();
+	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_UPSCHDB);
+	rc = sqlite3_open(fn, &slm_dbh);
+	if (rc)
+		psc_fatal("%s: %s", fn, sqlite3_errmsg(slm_dbh));
 
-	psc_poolmaster_init(&upsched_poolmaster,
-	    struct up_sched_work_item, uswi_lentry, PPMF_AUTO, 256, 256,
-	    0, NULL, NULL, NULL, "upschwk");
-	upsched_pool = psc_poolmaster_getmgr(&upsched_poolmaster);
+	lc_reginit(&slm_replst_workq, struct slm_replst_workreq,
+	    rsw_lentry, "replstwkq");
+	pfl_workq_init(128);
+	slm_upsch_init();
 
 	psc_poolmaster_init(&bmapMdsLeasePoolMaster,
 	    struct bmap_mds_lease, bml_bmdsi_lentry, PPMF_AUTO, 256,
 	    256, 0, NULL, NULL, NULL, "bmplease");
 	bmapMdsLeasePool = psc_poolmaster_getmgr(&bmapMdsLeasePoolMaster);
-
-	lc_reginit(&slm_replst_workq, struct slm_replst_workreq,
-	    rsw_lentry, "replstwkq");
 
 	sl_nbrqset = pscrpc_nbreqset_init(NULL, NULL);
 	pscrpc_nbreapthr_spawn(sl_nbrqset, SLMTHRT_NBRQ, "slmnbrqthr");
@@ -346,21 +359,33 @@ main(int argc, char *argv[])
 	psclog_info("SLASH2 metadata daemon (mds) revision is %d",
 	    SL_STK_VERSION);
 
-	mds_journal_init(disable_propagation, (nofsuuid ? 0 : slm_fsuuid));
+	dbdo(NULL, NULL,
+	    " UPDATE	upsch"
+	    " SET	status = 'Q'"
+	    " WHERE	status = 'S'");
+
 	mds_odtable_load(&mdsBmapAssignTable, SL_FN_BMAP_ODTAB,
 	    "bmapassign");
-	mds_bmap_timeotbl_init();
-	mds_odtable_scan(mdsBmapAssignTable, mds_bia_odtable_startup_cb);
+	mds_odtable_load(&slm_repl_odt, SL_FN_REPL_ODTAB, "repl");
+	mds_odtable_load(&slm_ptrunc_odt, SL_FN_PTRUNC_ODTAB, "ptrunc");
 
-	slm_workers_spawn();
+	mds_journal_init(disable_propagation, (nofsuuid ? 0 : slm_fsuuid));
+	mds_bmap_timeotbl_init();
+	mds_odtable_scan(mdsBmapAssignTable, mds_bia_odtable_startup_cb, NULL);
+	mds_odtable_scan(slm_repl_odt, slm_repl_odt_startup_cb, NULL);
+	mds_odtable_scan(slm_ptrunc_odt, slm_ptrunc_odt_startup_cb, NULL);
+
+	pfl_workq_lock();
+	pfl_wkthr_spawn(SLMTHRT_WORKER, SLM_NWORKER_THREADS,
+	    "slmwkthr%d");
+	pfl_workq_waitempty();
+
 	slmcohthr_spawn();
 	slmbmaptimeothr_spawn();
-	slmupschedthr_spawnall();
-	slmconnthr = slconnthr_spawn(SLMTHRT_CONN, "slm", NULL, NULL);
-	slm_rpc_initsvc();
-
-	mds_repl_init();
+	slmconnthr_spawn();
+	slmupschedthr_spawn();
 	slmtimerthr_spawn();
+	slm_rpc_initsvc();
 	slmctlthr_main(sfn);
 	/* NOTREACHED */
 }

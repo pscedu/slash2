@@ -83,7 +83,6 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 
 	memcpy(&mp->bod, bmap_2_ondisk(b), sizeof(mp->bod));
 	bmap_op_done(b);
-
 	return (0);
 }
 
@@ -183,27 +182,28 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 
 /**
  * slm_rmi_handle_repl_schedwk - Handle a REPL_SCHEDWK request from ION,
- *	which is information pertaining to the status of a replication
+ *	which is notification pertaining to the status of a replication
  *	request, either succesful finish or failure.
  * @rq: request.
  */
 int
 slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 {
-	int tract[NBREPLST], retifset[NBREPLST], iosidx, src_iosidx;
-	struct sl_resm *dst_resm = NULL, *src_resm;
+	int rc, tract[NBREPLST], retifset[NBREPLST], iosidx, src_iosidx;
+	struct sl_resm *dst_resm = NULL, *src_resm = NULL;
 	struct srm_repl_schedwk_req *mq;
 	struct srm_repl_schedwk_rep *mp;
-	struct up_sched_work_item *wk;
-	struct bmapc_memb *b = NULL;
 	struct sl_resource *src_res;
+	struct slm_update_data *upd;
+	struct bmapc_memb *b = NULL;
+	struct fidc_membh *f = NULL;
 	sl_replica_t iosv[2];
 	sl_bmapgen_t gen;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	wk = uswi_find(&mq->fg);
-	if (wk == NULL)
-		PFL_GOTOERR(out, mp->rc = -ENOENT);
+	mp->rc = slm_fcmh_get(&mq->fg, &f);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
 
 	/* XXX should we trust them to tell us who the src was? */
 	src_res = libsl_id2res(mq->src_resid);
@@ -214,38 +214,37 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	if (dst_resm == NULL)
 		PFL_GOTOERR(out, mp->rc = -SLERR_ION_UNKNOWN);
 
-	iosidx = mds_repl_ios_lookup(USWI_INOH(wk),
+	iosidx = mds_repl_ios_lookup(fcmh_2_inoh(f),
 	    dst_resm->resm_res->res_id);
 	if (iosidx < 0) {
-		DEBUG_USWI(PLL_ERROR, wk,
-		    "res %s not found found in file",
+		DEBUG_FCMH(PLL_ERROR, f,
+		    "res %s not found in file",
 		    dst_resm->resm_name);
-		goto out;
+		PFL_GOTOERR(out, mp->rc = -SLERR_REPL_NOT_ACT);
 	}
 
-	if (bmap_getf(wk->uswi_fcmh, mq->bmapno, SL_WRITE,
+	if (bmap_getf(f, mq->bmapno, SL_WRITE,
 	    BMAPGETF_LOAD | BMAPGETF_NOAUTOINST, &b)) {
-		DEBUG_USWI(PLL_ERROR, wk, "unable to load bmap %d",
+		DEBUG_FCMH(PLL_ERROR, f, "unable to load bmap %d",
 		    mq->bmapno);
-		goto out;
+		PFL_GOTOERR(out, mp->rc = -EIO);
 	}
 
-	bmap_op_start_type(b, BMAP_OPCNT_REPLWK);
-
+	upd = bmap_2_upd(b);
 	brepls_init(tract, -1);
 
 	BHGEN_GET(b, &gen);
 	if (mq->rc == 0 && mq->bgen != gen)
 		mq->rc = SLERR_GEN_OLD;
 	if (mq->rc) {
-		DEBUG_USWI(PLL_WARN, wk, "rc=%d", mq->rc);
+		DEBUG_UPD(PLL_WARN, upd, "rc=%d", mq->rc);
 
 		if (mq->rc == SLERR_BADCRC) {
 			/*
 			 * Bad CRC, media error perhaps.
 			 * Check if other replicas exist.
 			 */
-			src_iosidx = mds_repl_ios_lookup(USWI_INOH(wk),
+			src_iosidx = mds_repl_ios_lookup(fcmh_2_inoh(f),
 			    src_res->res_id);
 			if (src_iosidx < 0)
 				goto out;
@@ -285,25 +284,29 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 		tract[BREPLST_REPL_SCHED] = BREPLST_VALID;
 	}
 
-	brepls_init(retifset, EINVAL);
-	retifset[BREPLST_REPL_SCHED] = 0;
-	retifset[BREPLST_TRUNCPNDG] = 0;
+	brepls_init_idx(retifset);
 
-	mds_repl_bmap_walk(b, tract, retifset, 0, &iosidx, 1);
-	mds_bmap_write_repls_rel(b);
-
-	iosv[0].bs_id = src_res->res_id;
-	iosv[1].bs_id = dst_resm->resm_res_id;
-	uswi_enqueue_sites(wk, iosv, 2);
+	rc = mds_repl_bmap_walk(b, tract, retifset, 0, &iosidx, 1);
+	mds_bmap_write_logrepls(b);
+	if (rc == BREPLST_REPL_SCHED) {
+		if (mq->rc == 0) {
+			upd_tryremove(upd);
+		} else {
+			iosv[0].bs_id = src_res->res_id;
+			iosv[1].bs_id = dst_resm->resm_res_id;
+			upsch_enqueue(upd, iosv, 2);
+		}
+	}
+	upschq_resm(dst_resm, UPDT_PAGEIN);
 
  out:
-	if (dst_resm && b)
+	if (src_resm && dst_resm && b)
 		mds_repl_nodes_adjbusy(src_resm, dst_resm,
 		    -slm_bmap_calc_repltraffic(b));
 	if (b)
-		bmap_op_done_type(b, BMAP_OPCNT_REPLWK);
-	if (wk)
-		uswi_unref(wk);
+		bmap_op_done(b);
+	if (f)
+		fcmh_op_done(f);
 	return (0);
 }
 
@@ -334,7 +337,7 @@ slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 
 	f = fidc_lookup_fg(&mq->fg);
 	if (f == NULL) {
-		mp->rc = ENOENT;
+		mp->rc = -ENOENT;
 		return (0);
 	}
 
@@ -621,8 +624,8 @@ slm_rmi_handle_ping(struct pscrpc_request *rq)
 			if (!(res2iosinfo(m->resm_res)->si_flags &
 			      SIF_DISABLE_BIA)) {
 				psclog_warnx("self-test from %s failed, "
-				     "disabling write lease assignment",
-				     m->resm_name);
+				    "disabling write lease assignment",
+				    m->resm_name);
 				res2iosinfo(m->resm_res)->si_flags |=
 					SIF_DISABLE_BIA;
 			}
@@ -675,7 +678,10 @@ slm_rmi_handler(struct pscrpc_request *rq)
 
 			m = libsl_nid2resm(rq->rq_peer.nid);
 			clock_gettime(CLOCK_MONOTONIC,
-			      &res2iosinfo(m->resm_res)->si_lastcomm);
+			    &res2iosinfo(m->resm_res)->si_lastcomm);
+
+			/* XXX PAGEIN upsch work */
+
 			slconnthr_watch(slmconnthr, m->resm_csvc,
 			    CSVCF_NORECON, mds_sliod_alive,
 			    res2iosinfo(m->resm_res));

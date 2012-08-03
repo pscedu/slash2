@@ -90,6 +90,34 @@ mds_bmap_ensure_valid(struct bmapc_memb *b)
 		DEBUG_BMAP(PLL_FATAL, b, "bmap has no valid replicas");
 }
 
+int
+slm_bmap_read_db_cb(void *arg, __unusedx int ac, char **av,
+    __unusedx char **cols)
+{
+	struct odtable_receipt *odtr;
+	struct slm_update_data *upd;
+	struct bmapc_memb *b = arg;
+
+	upd = &bmap_2_bmi(b)->bmi_upd;
+	upd->upd_recpt = odtr = PSCALLOC(sizeof(*odtr));
+	odtr->odtr_elem = strtoll(av[0], NULL, 10);
+	odtr->odtr_key = strtoull(av[1], NULL, 10);
+	DEBUG_BMAP(PLL_DEBUG, b, "upd %p loaded odtr [%ld,%zd]",
+	    upd, odtr->odtr_elem, odtr->odtr_key);
+	return (0);
+}
+
+void
+slm_repl_upd_odt_read(struct bmapc_memb *b)
+{
+	dbdo(slm_bmap_read_db_cb, b,
+	    " SELECT	recpt_elem, recpt_key"
+	    " FROM	upsch"
+	    " WHERE	fid = %"PRIu64
+	    "	AND	bno = %u",
+	    fcmh_2_fid(b->bcm_fcmh), b->bcm_bmapno);
+}
+
 /**
  * mds_bmap_read - Retrieve a bmap from the ondisk inode file.
  * @b: bmap.
@@ -98,11 +126,13 @@ mds_bmap_ensure_valid(struct bmapc_memb *b)
 int
 mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 {
-//	int tract[NBREPLST], retifset[NBREPLST];
+	int rc, tract[NBREPLST], retifset[NBREPLST];
 	uint64_t crc, od_crc = 0;
+	struct fidc_membh *f;
 	struct iovec iovs[2];
 	size_t nb;
-	int rc;
+
+	f = b->bcm_fcmh;
 
 	iovs[0].iov_base = bmap_2_ondisk(b);
 	iovs[0].iov_len = BMAP_OD_CRCSZ;
@@ -125,12 +155,14 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 		if (nb == 0 || (nb == BMAP_OD_SZ && od_crc == 0 &&
 		    pfl_memchk(bmap_2_ondisk(b), 0, BMAP_OD_CRCSZ))) {
 			    mds_bmap_initnew(b);
-			    DEBUG_BMAPOD(PLL_INFO, b, "initialized new bmap");
+			    DEBUG_BMAPOD(PLL_INFO, b,
+				"initialized new bmap");
 			    return (0);
 		    }
 
 		if (nb == BMAP_OD_SZ) {
-			psc_crc64_calc(&crc, bmap_2_ondisk(b), BMAP_OD_CRCSZ);
+			psc_crc64_calc(&crc, bmap_2_ondisk(b),
+			    BMAP_OD_CRCSZ);
 			if (od_crc != crc)
 				rc = SLERR_BADCRC;
 		}
@@ -149,9 +181,9 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 
 	DEBUG_BMAPOD(PLL_INFO, b, "successfully loaded from disk");
 
-#if 0
-//	if (flags & BMAPGETF_REPLAY)
-//		return (0);
+	if (flags & BMAPGETF_REPLAY)
+		return (0);
+	b->bcm_flags |= BMAP_REPLAY;
 
 	/*
 	 * If we crashed, revert all inflight SCHED'ed bmaps so they get
@@ -171,16 +203,25 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
 	retifset[BREPLST_GARBAGE_SCHED] = 1;
 
-	if (mds_repl_bmap_walk(b, tract, retifset, 0, NULL, 0)) {
+	if (mds_repl_bmap_walk_all(b, tract, retifset, 0))
+		mds_bmap_write_logrepls(b);
+	else {
+		BMAPOD_MODIFY_DONE(b);
+		b->bcm_flags &= BMAP_MDS_REPLMOD;
+	}
+
+	brepls_init(retifset, 0);
+	retifset[BREPLST_REPL_QUEUED] = 1;
+	retifset[BREPLST_TRUNCPNDG] = 1;
+//	retifset[BREPLST_GARBAGE] = 1;
+	if (mds_repl_bmap_walk_all(b, NULL, retifset,
+	    REPL_WALKF_SCIRCUIT)) {
 		sl_replica_t iosv[SL_MAX_REPLICAS];
-		struct up_sched_work_item *wk;
-		struct fidc_membh *f;
+		struct slm_update_data *upd;
 		unsigned j;
 
-		f = b->bcm_fcmh;
-		mds_bmap_write_logrepls(b);
-
-		rc = uswi_findoradd(&b->bcm_fcmh->fcmh_fg, &wk);
+		upd = bmap_2_upd(b);
+		upd_init(upd, UPDT_BMAP);
 
 		/*
 		 * Requeue pending updates on all registered sites.  If
@@ -188,36 +229,37 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 		 * by the slmupschedthr.
 		 */
 		for (j = 0; j < fcmh_2_nrepls(f); j++)
-			iosv[j].bs_id = USWI_GETREPL(wk, j).bs_id;
-		uswi_enqueue_sites(wk, iosv, fcmh_2_nrepls(f));
-		uswi_unref(wk);
-	}
-#endif
+			iosv[j].bs_id = fcmh_getrepl(f, j).bs_id;
+		upsch_enqueue(upd, iosv, fcmh_2_nrepls(f));
 
+		UPD_UNBUSY(upd);
+	}
 	return (0);
 }
 
 /**
- * mds_bmap_write - Update a bmap of an inode.  Note we must reserve log
- *     space if logf is given.
- *
- * update_mtime: we used to allow CRC update code path to update mtime if
- * the generation number it carries matches what we have.  This is no
- * long used.  Now, only the client can update the mtime.  The code will
- * be removed after things are proven to be stablized.
+ * mds_bmap_write - Update a bmap of an inode.  Note we must reserve
+ *	journal log space if logf is given.
+ * @update_mtime: we used to allow CRC update code path to update mtime
+ *	if the generation number it carries matches what we have.  This
+ *	is no longer used.  Now, only the client can update the mtime.
+ *	The code will be removed after things are proven to be
+ *	stabilized.
  */
 int
 mds_bmap_write(struct bmapc_memb *b, int update_mtime, void *logf,
     void *logarg)
 {
 	struct iovec iovs[2];
-	int locked, rc, new;
+	int rc, new;
 	uint64_t crc;
 	size_t nb;
 
+	BMAP_RLOCK(b);
+	b->bcm_flags |= BMAP_MDS_REPLMODWR;
+	BMAP_ULOCK(b);
+
 	BMAPOD_REQRDLOCK(bmap_2_bmi(b));
-	if (BMAP_HASLOCK(b))
-		BMAP_ULOCK(b);
 	mds_bmap_ensure_valid(b);
 
 	psc_crc64_calc(&crc, bmap_2_ondisk(b), BMAP_OD_CRCSZ);
@@ -244,11 +286,11 @@ mds_bmap_write(struct bmapc_memb *b, int update_mtime, void *logf,
 		DEBUG_BMAP(PLL_INFO, b, "written successfully");
 	BMAPOD_READ_DONE(b, 0);
 
-	locked = BMAP_RLOCK(b);
+	BMAP_LOCK(b);
 //	psc_assert(b->bcm_flags & BMAP_BUSY);
 	new = b->bcm_flags & BMAP_NEW;
 	b->bcm_flags &= ~BMAP_NEW;
-	BMAP_URLOCK(b, locked);
+	BMAP_ULOCK(b);
 
 	if (new)
 		mdsio_fcmh_refreshattr(b->bcm_fcmh, NULL);
@@ -263,7 +305,6 @@ mds_bmap_init(struct bmapc_memb *b)
 	bmi = bmap_2_bmi(b);
 	pll_init(&bmi->bmdsi_leases, struct bmap_mds_lease,
 	    bml_bmdsi_lentry, &b->bcm_lock);
-	bmi->bmdsi_xid = 0;
 	psc_rwlock_init(&bmi->bmi_rwlock);
 }
 
@@ -277,6 +318,8 @@ mds_bmap_destroy(struct bmapc_memb *b)
 	psc_assert(bmi->bmdsi_assign == NULL);
 	psc_assert(pll_empty(&bmi->bmdsi_leases));
 	psc_rwlock_destroy(&bmi->bmi_rwlock);
+	if (pfl_memchk(&bmi->bmi_upd, 0, sizeof(bmi->bmi_upd)) == 0)
+		upd_destroy(&bmi->bmi_upd);
 }
 
 /**
@@ -292,9 +335,9 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 	struct sl_mds_crc_log crclog;
 	struct fidc_membh *f;
 	struct srt_stat sstb;
-	uint32_t i;
 	sl_ios_id_t iosid;
 	int fl, idx;
+	uint32_t i;
 
 	psc_assert(bmap->bcm_flags & BMAP_MDS_CRC_UP);
 

@@ -102,8 +102,11 @@ sl_resm_hldrop(struct sl_resm *resm)
 {
 	if (resm->resm_type == SLREST_MDS) {
 	} else {
-		mds_repl_reset_scheduled(resm->resm_res_id);
-		mds_repl_node_clearallbusy(resm);
+		sl_replica_t repl;
+
+		repl.bs_id = resm->resm_res_id;
+		slm_iosv_setbusy(&repl, 1);
+		upschq_resm(resm, UPDT_HLDROP);
 	}
 }
 
@@ -185,7 +188,6 @@ slrpc_newreq(struct slashrpc_cservice *csvc, int op,
 		rc = slrpc_newgenreq(csvc, op, rqp, qlen, plen, mqp);
 	return (rc);
 }
-
 
 void
 slrpc_req_out(struct slashrpc_cservice *csvc, struct pscrpc_request *rq)
