@@ -67,64 +67,64 @@ _mds_fcmh_setattr(struct fidc_membh *f, int to_set,
 }
 
 int
-slm_fcmh_ctor(struct fidc_membh *fcmh)
+slm_fcmh_ctor(struct fidc_membh *f)
 {
 	struct fcmh_mds_info *fmi;
 	int rc;
 
-	DEBUG_FCMH(PLL_INFO, fcmh, "ctor");
+	DEBUG_FCMH(PLL_INFO, f, "ctor");
 
-	fmi = fcmh_2_fmi(fcmh);
+	fmi = fcmh_2_fmi(f);
 	memset(fmi, 0, sizeof(*fmi));
 	psc_dynarray_init(&fmi->fmi_ptrunc_clients);
 
-	rc = mdsio_lookup_slfid(fcmh_2_fid(fcmh), &rootcreds,
-	    &fcmh->fcmh_sstb, &fcmh_2_mdsio_fid(fcmh));
+	rc = mdsio_lookup_slfid(fcmh_2_fid(f), &rootcreds,
+	    &f->fcmh_sstb, &fcmh_2_mdsio_fid(f));
 	if (rc) {
 		fmi->fmi_ctor_rc = rc;
-		DEBUG_FCMH(PLL_WARN, fcmh,
+		DEBUG_FCMH(PLL_WARN, f,
 		    "mdsio_lookup_slfid failed (rc=%d)", rc);
 		return (rc);
 	}
 
-	if (fcmh_isdir(fcmh)) {
-		rc = mdsio_opendir(fcmh_2_mdsio_fid(fcmh), &rootcreds,
+	if (fcmh_isdir(f)) {
+		rc = mdsio_opendir(fcmh_2_mdsio_fid(f), &rootcreds,
 		    NULL, &fmi->fmi_mdsio_data);
 
-	} else if (fcmh_isreg(fcmh)) {
-		slash_inode_handle_init(&fmi->fmi_inodeh, fcmh);
-		rc = mdsio_opencreate(fcmh_2_mdsio_fid(fcmh),
-		    &rootcreds, O_RDWR, 0, NULL, NULL, NULL,
-		    &fcmh_2_mdsio_data(fcmh), NULL, NULL, 0);
+	} else if (fcmh_isreg(f)) {
+		slash_inode_handle_init(&fmi->fmi_inodeh, f);
+		rc = mdsio_opencreate(fcmh_2_mdsio_fid(f), &rootcreds,
+		    O_RDWR, 0, NULL, NULL, NULL, &fcmh_2_mdsio_data(f),
+		    NULL, NULL, 0);
 
 		if (rc == 0) {
 			rc = mds_inode_read(&fmi->fmi_inodeh);
 			if (rc)
-				DEBUG_FCMH(PLL_WARN, fcmh,
+				DEBUG_FCMH(PLL_WARN, f,
 				    "could not load inode; rc=%d", rc);
 		} else {
 			fmi->fmi_ctor_rc = rc;
-			DEBUG_FCMH(PLL_WARN, fcmh,
+			DEBUG_FCMH(PLL_WARN, f,
 			    "mdsio_opencreate failed (rc=%d)", rc);
 		}
 	} else
-		DEBUG_FCMH(PLL_INFO, fcmh, "special file, no zfs obj");
+		DEBUG_FCMH(PLL_INFO, f, "special file, no zfs obj");
 
 	return (rc);
 }
 
 void
-slm_fcmh_dtor(struct fidc_membh *fcmh)
+slm_fcmh_dtor(struct fidc_membh *f)
 {
 	struct fcmh_mds_info *fmi;
 	int rc;
 
-	fmi = fcmh_2_fmi(fcmh);
+	fmi = fcmh_2_fmi(f);
 	psc_assert(psc_dynarray_len(&fmi->fmi_ptrunc_clients) == 0);
 	psc_dynarray_free(&fmi->fmi_ptrunc_clients);
 
-	if (S_ISREG(fcmh->fcmh_sstb.sst_mode) ||
-	    S_ISDIR(fcmh->fcmh_sstb.sst_mode)) {
+	if (S_ISREG(f->fcmh_sstb.sst_mode) ||
+	    S_ISDIR(f->fcmh_sstb.sst_mode)) {
 		/* XXX Need to worry about other modes here */
 		if (!fmi->fmi_ctor_rc) {
 			rc = mdsio_release(&rootcreds,
@@ -164,7 +164,8 @@ _slm_fcmh_endow(struct fidc_membh *p, struct fidc_membh *c, int log)
 //		fcmh_2_ino(c)->ino_nrepls = 1;
 //		memcpy(fcmh_2_ino(c)->ino_repls, repls, sizeof());
 		if (log)
-			rc = mds_inode_write(fcmh_2_inoh(c), mdslog_ino_repls, c);
+			rc = mds_inode_write(fcmh_2_inoh(c),
+			    mdslog_ino_repls, c);
 //		if (log)
 //			rc = mds_inox_write(fcmh_2_inoh(c), mdslog_ino_repls, c);
 	}
