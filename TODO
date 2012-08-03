@@ -395,7 +395,7 @@ reimport
 
 - optimization: only write changes to brepls in delrq/addrq when changes
   are actually made
- 
+
 - /arc wrapper scripts:
    - purge old psclogs (two weeks)
 
@@ -405,6 +405,8 @@ reimport
    prioritize softdel
 
    oprofile on firehoses
+
+  advise upsch.db on SSD
 
    doument how to disable_bia to new sliods
 
