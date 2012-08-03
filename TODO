@@ -391,6 +391,7 @@ reimport
 - df on mount_slash reports continually different stats
 - merge fuse 2.9
 - fix instructions for probing fuse instead of in-tree fuse
+- make macro version of accessors for speed (e.g. bmap_2_bmi())
 
 - optimization: only write changes to brepls in delrq/addrq when changes
   are actually made
