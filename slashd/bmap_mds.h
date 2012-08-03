@@ -203,8 +203,8 @@ struct bmap_mds_lease {
 #define BML_REQLOCK(bml)	reqlock(&(bml)->bml_lock)
 #define BML_TRYLOCK(bml)	trylock(&(bml)->bml_lock)
 
-#define BMAP_FOREACH_LEASE(bcm, bml)					\
-	PLL_FOREACH((bml), &bmap_2_bmi(bcm)->bmdsi_leases)
+#define BMAP_FOREACH_LEASE(b, bml)					\
+	PLL_FOREACH((bml), &bmap_2_bmi(b)->bmdsi_leases)
 
 /**
  * bmap_ios_assign - The structure used for tracking the MDS's bmap/ion
@@ -270,11 +270,11 @@ extern struct bmap_timeo_table	 mdsBmapTimeoTbl;
 static __inline struct bmapc_memb *
 bmi_2_bmap(struct bmap_mds_info *bmi)
 {
-	struct bmapc_memb *bcm;
+	struct bmapc_memb *b;
 
 	psc_assert(bmi);
-	bcm = (void *)bmi;
-	return (bcm - 1);
+	b = (void *)bmi;
+	return (b - 1);
 }
 
 #endif /* _SLASHD_BMAP_MDS_H_ */

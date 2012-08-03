@@ -108,7 +108,7 @@ slmrmcthr_replst_slave_waitrep(struct slashrpc_cservice *csvc,
 
 int
 slmrcmthr_walk_brepls(struct slm_replst_workreq *rsw,
-      struct up_sched_work_item *wk, struct bmapc_memb *bcm,
+      struct up_sched_work_item *wk, struct bmapc_memb *b,
       sl_bmapno_t n, struct pscrpc_request **rqp)
 {
 	struct srm_replst_slave_req *mq;
@@ -143,11 +143,11 @@ slmrcmthr_walk_brepls(struct slm_replst_workreq *rsw,
 		srcm->srcm_page_bitpos = 0;
 	}
 	memset(&bhdr, 0, sizeof(bhdr));
-	bhdr.srsb_replpol = bmap_2_replpol(bcm);
+	bhdr.srsb_replpol = bmap_2_replpol(b);
 	pfl_bitstr_copy(srcm->srcm_page, srcm->srcm_page_bitpos,
 	    &bhdr, 0, SL_NBITS_REPLST_BHDR);
 	pfl_bitstr_copy(srcm->srcm_page, srcm->srcm_page_bitpos +
-	    SL_NBITS_REPLST_BHDR, bcm->bcm_repls, 0,
+	    SL_NBITS_REPLST_BHDR, b->bcm_repls, 0,
 	    USWI_INOH(wk)->inoh_ino.ino_nrepls * SL_BITS_PER_REPLICA);
 	srcm->srcm_page_bitpos += nbits;
 	return (0);
@@ -209,7 +209,7 @@ slmrcmthr_walk_bmaps(struct slm_replst_workreq *rsw,
     struct up_sched_work_item *wk)
 {
 	struct pscrpc_request *rq = NULL;
-	struct bmapc_memb *bcm;
+	struct bmapc_memb *b;
 	sl_bmapno_t n;
 	int rc, rc2;
 
@@ -217,13 +217,13 @@ slmrcmthr_walk_bmaps(struct slm_replst_workreq *rsw,
 	if (fcmh_isreg(wk->uswi_fcmh)) {
 		for (n = 0; rc == 0; n++) {
 			if (bmap_getf(wk->uswi_fcmh, n, SL_WRITE,
-			    BMAPGETF_LOAD | BMAPGETF_NOAUTOINST, &bcm))
+			    BMAPGETF_LOAD | BMAPGETF_NOAUTOINST, &b))
 				break;
 
-			BMAP_LOCK(bcm);
-			rc = slmrcmthr_walk_brepls(rsw, wk, bcm, n,
+			BMAP_LOCK(b);
+			rc = slmrcmthr_walk_brepls(rsw, wk, b, n,
 			    &rq);
-			bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
+			bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 		}
 		if (rq) {
 			rc2 = slmrmcthr_replst_slave_waitrep(

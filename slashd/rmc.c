@@ -912,7 +912,7 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	struct srm_set_bmapreplpol_req *mq;
 	struct srm_set_bmapreplpol_rep *mp;
 	struct fidc_membh *fcmh;
-	struct bmapc_memb *bcm;
+	struct bmapc_memb *b;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -929,13 +929,13 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 		mp->rc = -SLERR_BMAP_INVALID;
 		goto out;
 	}
-	mp->rc = mds_bmap_load(fcmh, mq->bmapno, &bcm);
+	mp->rc = mds_bmap_load(fcmh, mq->bmapno, &b);
 	if (mp->rc)
 		goto out;
 
-	BHREPL_POLICY_SET(bcm, mq->pol);
+	BHREPL_POLICY_SET(b, mq->pol);
 
-	mds_bmap_write_repls_rel(bcm);
+	mds_bmap_write_repls_rel(b);
 
  out:
 	if (fcmh)

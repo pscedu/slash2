@@ -1051,8 +1051,8 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	int rc = 0;
 
 	/*
- 	 * On the last release, BML_FREEING must be set.
- 	 */
+	 * On the last release, BML_FREEING must be set.
+	 */
 	psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
 	DEBUG_BMAP(PLL_INFO, b, "bml=%p fl=%d seq=%"PRId64, bml,
@@ -1078,7 +1078,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		bcm_wake_locked(b);
 		return (0);
 	}
-	
+
 	/*
 	 * While holding the last reference to the lease, take the lease
 	 * off the timeout list to avoid a race with the timeout thread.
@@ -1089,8 +1089,8 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		BML_LOCK(bml);
 	}
 	/*
- 	 * If I am called by the timeout thread, then the refcnt is zero.
- 	 */
+	 * If I am called by the timeout thread, then the refcnt is zero.
+	 */
 	psc_assert(bml->bml_refcnt <= 1);
 	if (!(bml->bml_flags & BML_BMDSI)) {
 		BML_ULOCK(bml);
@@ -1916,7 +1916,7 @@ struct ios_list {
 };
 
 __static void
-ptrunc_tally_ios(struct bmapc_memb *bcm, int iosidx, int val, void *arg)
+ptrunc_tally_ios(struct bmapc_memb *b, int iosidx, int val, void *arg)
 {
 	struct ios_list *ios_list = arg;
 	sl_ios_id_t ios_id;
@@ -1931,7 +1931,7 @@ ptrunc_tally_ios(struct bmapc_memb *bcm, int iosidx, int val, void *arg)
 		return;
 	}
 
-	ios_id = bmap_2_repl(bcm, iosidx);
+	ios_id = bmap_2_repl(b, iosidx);
 
 	for (i = 0; i < ios_list->nios; i++)
 		if (ios_list->iosv[i].bs_id == ios_id)
