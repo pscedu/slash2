@@ -17,6 +17,15 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * odtable: on-disk table for persistent storage of otherwise memory
+ * resident data structures.
+ *
+ * This API is complementary to the vanilla odtable API provided by PFL
+ * to write the same format through the ZFS backend so the odtables are
+ * contained within the ZFS backend metadata file system.
+ */
+
 #ifndef _ODTABLE_MDS_H_
 #define _ODTABLE_MDS_H_
 
@@ -28,6 +37,6 @@ int	 mds_odtable_freeitem(struct odtable *, struct odtable_receipt *);
 struct odtable_receipt *
 	 mds_odtable_replaceitem(struct odtable *, struct odtable_receipt *, void *, size_t);
 void	 mds_odtable_release(struct odtable *);
-void	 mds_odtable_scan(struct odtable *, void (*)(void *, struct odtable_receipt *));
+void	 mds_odtable_scan(struct odtable *, int (*)(void *, struct odtable_receipt *, void *), void *);
 
 #endif /* _ODTABLE_MDS_H_ */
