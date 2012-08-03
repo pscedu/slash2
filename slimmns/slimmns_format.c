@@ -82,20 +82,18 @@ slnewfs_create_int(const char *pdirnam, uint32_t curdepth,
 	}
 }
 
-/*
- * Create an empty odtable in the ZFS pool.  We also maintain a separate
- * utility to create/edit/show the odtable (use ZFS fuse mount).
+/**
+ * slnewfs_create_odtable: Create an empty odtable in the ZFS pool.  We
+ *	also maintain a separate utility to create/edit/show the odtable
+ *	(use ZFS FUSE mount).
  */
 void
-slnewfs_create_odtable(const char *metadir)
+slnewfs_create_odtable(const char *fn)
 {
 	struct odtable_entftr odtf;
 	struct odtable_hdr odth;
 	struct odtable odt;
-	char fn[PATH_MAX];
 	size_t i;
-
-	xmkfn(fn, "%s/%s", metadir, SL_FN_BMAP_ODTAB);
 
 	odt.odt_fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
 	if (odt.odt_fd < 0)
@@ -189,10 +187,6 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 	xmkfn(fn, "%s/%s", metadir, SL_RPATH_TMP_DIR);
 	slnewfs_mkdir(fn);
 
-	/* create replication queue directory */
-	xmkfn(fn, "%s/%s", metadir, SL_RPATH_UPSCH_DIR);
-	slnewfs_mkdir(fn);
-
 	/* create the FSUUID file */
 	xmkfn(fn, "%s/%s", metadir, SL_FN_FSUUID);
 	fp = fopen(fn, "w");
@@ -241,7 +235,14 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 	    ctime((time_t *)&cursor.pjc_timestamp), psc_get_hostname());
 	fclose(fp);
 
-	slnewfs_create_odtable(metadir);
+	xmkfn(fn, "%s/%s", metadir, SL_FN_BMAP_ODTAB);
+	slnewfs_create_odtable(fn);
+
+	xmkfn(fn, "%s/%s", metadir, SL_FN_REPL_ODTAB);
+	slnewfs_create_odtable(fn);
+
+	xmkfn(fn, "%s/%s", metadir, SL_FN_PTRUNC_ODTAB);
+	slnewfs_create_odtable(fn);
 }
 
 void

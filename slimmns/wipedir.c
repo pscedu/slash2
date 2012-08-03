@@ -89,31 +89,4 @@ wipefs(const char *dir)
 			psclog_error("unlink %s", f->fts_path);
 	}
 	fts_close(fp);
-
-	if (ion)
-		return;
-
-	/* remove the slash replication queue */
-	xmkfn(fn, "%s/%s", dir, SL_RPATH_META_DIR, SL_RPATH_UPSCH_DIR);
-	pathv[0] = fn;
-
-	/* XXX security implications of FTS_NOCHDIR? */
-	fp = fts_open(pathv, FTS_COMFOLLOW | FTS_NOCHDIR | FTS_PHYSICAL,
-	    NULL);
-	if (fp == NULL)
-		psc_fatal("fts_open %s", fn);
-	while ((f = fts_read(fp)) != NULL) {
-		if (f->fts_level < 1)
-			continue;
-		if (S_ISDIR(f->fts_statp->st_mode)) {
-			if ((f->fts_info == FTS_DP) &&
-			    rmdir(f->fts_path) == -1)
-				psc_fatal("rmdir %s", f->fts_path);
-			/* do not descend into hardlinked directories */
-			else if (f->fts_level > 1)
-				fts_set(fp, f, FTS_SKIP);
-		} else if (unlink(f->fts_path) == -1)
-			psclog_error("unlink %s", f->fts_path);
-	}
-	fts_close(fp);
 }
