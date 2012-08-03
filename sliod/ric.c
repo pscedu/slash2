@@ -358,7 +358,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
  out:
 	if (bmap)
-		bmap_op_done_type(bmap, BMAP_OPCNT_LOOKUP);
+		bmap_op_done(bmap);
 
 	/* XXX In situations where errors occur (such as an ENOSPC from
 	 *   iod_inode_open()) then we must have a way to notify other
@@ -430,9 +430,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		PLL_FOREACH(p, &biod->biod_rls) {
 			if (!memcmp(p, sbd, sizeof(*p))) {
 				BIOD_ULOCK(biod);
-				bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
-				/* psc_pool_return() nulls our pointer.
-				 */
+				bmap_op_done(b);
 				psc_pool_return(bmap_rls_pool, newsbd);
 				newsbd = NULL;
 				break;
@@ -452,7 +450,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		biod_rlssched_locked(biod);
 		BIOD_ULOCK(biod);
 
-		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+		bmap_op_done(b);
 	}
  out:
 	return (0);

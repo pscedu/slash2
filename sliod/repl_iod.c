@@ -107,7 +107,7 @@ sli_repl_addwk(int op, struct sl_resource *res,
 		    w->srw_bmapno, slstrerror(rc));
 	else {
 		bmap_op_start_type(w->srw_bcm, BMAP_OPCNT_REPLWK);
-		bmap_op_done_type(w->srw_bcm, BMAP_OPCNT_LOOKUP);
+		bmap_op_done(w->srw_bcm);
 
 		/* mark slivers for replication */
 		if (op == SLI_REPLWKOP_REPL) {

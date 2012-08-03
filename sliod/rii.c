@@ -256,7 +256,7 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 
  out:
 	if (b)
-		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+		bmap_op_done(b);
 	fcmh_op_done(fcmh);
 	return (mp->rc);
 }

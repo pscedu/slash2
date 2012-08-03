@@ -402,7 +402,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	SL_REPL_SET_BMAP_IOS_STAT(b->bcm_repls, 0, BREPLST_VALID);
 
-	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+	bmap_op_done(b);
 
  out:
 	if (mp && rc == 0 && mp->rc == 0 && mp->rc2)
