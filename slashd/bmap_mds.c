@@ -264,7 +264,7 @@ mds_bmap_init(struct bmapc_memb *b)
 	pll_init(&bmi->bmdsi_leases, struct bmap_mds_lease,
 	    bml_bmdsi_lentry, &b->bcm_lock);
 	bmi->bmdsi_xid = 0;
-	psc_rwlock_init(&bmi->bmdsi_rwlock);
+	psc_rwlock_init(&bmi->bmi_rwlock);
 }
 
 void
@@ -276,7 +276,7 @@ mds_bmap_destroy(struct bmapc_memb *b)
 	psc_assert(bmi->bmdsi_readers == 0);
 	psc_assert(bmi->bmdsi_assign == NULL);
 	psc_assert(pll_empty(&bmi->bmdsi_leases));
-	psc_rwlock_destroy(&bmi->bmdsi_rwlock);
+	psc_rwlock_destroy(&bmi->bmi_rwlock);
 }
 
 /**

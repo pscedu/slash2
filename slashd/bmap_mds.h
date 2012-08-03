@@ -64,7 +64,7 @@ struct bmap_mds_info {
 	uint32_t		 bmdsi_xid;		/* last op recv'd from ION */
 	int32_t			 bmdsi_writers;
 	int32_t			 bmdsi_readers;
-	struct psc_rwlock	 bmdsi_rwlock;
+	struct psc_rwlock	 bmi_rwlock;
 
 	pthread_t		 bmi_owner;
 };
@@ -84,12 +84,12 @@ struct bmap_mds_info {
 #define bmap_2_ondisk(b)	((struct bmap_ondisk *)&(b)->bcm_corestate)
 
 #define BMAPOD_CALLERINFO	PFL_CALLERINFOSS(SLSS_BMAP)
-#define BMAPOD_RDLOCK(bmi)	psc_rwlock_rdlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmdsi_rwlock)
-#define BMAPOD_REQRDLOCK(bmi)	psc_rwlock_reqrdlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmdsi_rwlock)
-#define BMAPOD_REQWRLOCK(bmi)	psc_rwlock_reqwrlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmdsi_rwlock)
-#define BMAPOD_ULOCK(bmi)	psc_rwlock_unlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmdsi_rwlock)
-#define BMAPOD_UREQLOCK(bmi, l)	psc_rwlock_ureqlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmdsi_rwlock, (l))
-#define BMAPOD_WRLOCK(bmi)	psc_rwlock_wrlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmdsi_rwlock)
+#define BMAPOD_RDLOCK(bmi)	psc_rwlock_rdlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
+#define BMAPOD_REQRDLOCK(bmi)	psc_rwlock_reqrdlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
+#define BMAPOD_REQWRLOCK(bmi)	psc_rwlock_reqwrlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
+#define BMAPOD_ULOCK(bmi)	psc_rwlock_unlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
+#define BMAPOD_UREQLOCK(bmi, l)	psc_rwlock_ureqlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock, (l))
+#define BMAPOD_WRLOCK(bmi)	psc_rwlock_wrlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
 
 static __inline struct bmap_mds_info *
 bmap_2_bmi(struct bmapc_memb *b)
