@@ -1075,7 +1075,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		bml->bml_refcnt--;
 		BML_ULOCK(bml);
 		b->bcm_flags &= ~BMAP_IONASSIGN;
-		bcm_wake_locked(b);
+		bmap_wake_locked(b);
 		return (0);
 	}
 
