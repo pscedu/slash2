@@ -698,7 +698,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 	bmi = bml->bml_bmdsi;
 	b = bmi_2_bmap(bmi);
 
-	bcm_wait_locked(b, b->bcm_flags & BMAP_IONASSIGN);
+	bmap_wait_locked(b, b->bcm_flags & BMAP_IONASSIGN);
 
 	DEBUG_BMAP(PLL_INFO, b, "bml=%p bmdsi_writers=%d bmdsi_readers=%d",
 	    bml, bmi->bmdsi_writers, bmi->bmdsi_readers);
@@ -763,7 +763,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 			bmi->bmdsi_readers++;
 	}
 	BMAP_CLEARATTR(b, BMAP_IONASSIGN);
-	bcm_wake_locked(b);
+	bmap_wake_locked(b);
 	return (rc);
 }
 
@@ -839,7 +839,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 	BMAP_LOCK(b);
 	/* Wait for BMAP_IONASSIGN to be removed before proceeding.
 	 */
-	bcm_wait_locked(b, (b->bcm_flags & BMAP_IONASSIGN));
+	bmap_wait_locked(b, (b->bcm_flags & BMAP_IONASSIGN));
 	bmap_op_start_type(b, BMAP_OPCNT_LEASE);
 
 	rc = mds_bmap_directio_locked(b, rw, &bml->bml_cli_nidpid);
@@ -944,7 +944,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 	   bmi->bmdsi_wr_ion, bml, bml->bml_seq, rw, bmi->bmdsi_writers,
 	   bmi->bmdsi_readers, rc);
 
-	bcm_wake_locked(b);
+	bmap_wake_locked(b);
 	BMAP_ULOCK(b);
 	/* On error, the caller will issue mds_bmap_bml_release() which
 	 *   deals with the gory details of freeing a fullly, or partially,
@@ -1067,7 +1067,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	 *   ATM the BMAP_IONASSIGN is not relied upon
 	 */
 	BMAP_RLOCK(b);
-	bcm_wait_locked(b, (b->bcm_flags & BMAP_IONASSIGN));
+	bmap_wait_locked(b, (b->bcm_flags & BMAP_IONASSIGN));
 	b->bcm_flags |= BMAP_IONASSIGN;
 
 	BML_LOCK(bml);
@@ -1147,7 +1147,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	}
  out:
 	b->bcm_flags &= ~BMAP_IONASSIGN;
-	bcm_wake_locked(b);
+	bmap_wake_locked(b);
 	bmap_op_done_type(b, BMAP_OPCNT_LEASE);
 
 	if (odtr) {
@@ -1709,7 +1709,7 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 		PFL_GOTOERR(out2, rc = -EINVAL);
 	}
 
-	bcm_wait_locked(b, b->bcm_flags & BMAP_IONASSIGN);
+	bmap_wait_locked(b, b->bcm_flags & BMAP_IONASSIGN);
 	/* Set BMAP_IONASSIGN before checking the lease counts since
 	 *   BMAP_IONASSIGN will block further lease additions and removals
 	 *   - including the removal this lease's odtable entry.
@@ -1769,11 +1769,13 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	sbd_out->sbd_pid = exp->exp_connection->c_peer.pid;
 	sbd_out->sbd_key = obml->bml_bmdsi->bmdsi_assign->odtr_key;
 	sbd_out->sbd_ios = obml->bml_ios;
+
  out1:
 	BMAP_RLOCK(b);
 	psc_assert(b->bcm_flags & BMAP_IONASSIGN);
 	BMAP_CLEARATTR(b, BMAP_IONASSIGN);
-	bcm_wake_locked(b);
+	bmap_wake_locked(b);
+
  out2:
 	if (obml)
 		mds_bmap_bml_release(obml);

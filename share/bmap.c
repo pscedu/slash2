@@ -139,7 +139,7 @@ _bmap_op_done(const struct pfl_callerinfo *pci, struct bmapc_memb *b,
 
 		bmap_remove(b);
 	} else {
-		bcm_wake_locked(b);
+		bmap_wake_locked(b);
 		BMAP_ULOCK(b);
 	}
 }
@@ -230,14 +230,14 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 
 		BMAP_LOCK(b);
 		b->bcm_flags &= ~BMAP_INIT;
-		bcm_wake_locked(b);
+		bmap_wake_locked(b);
 		if (rc)
 			goto out;
 
 	} else {
 		/* Wait while BMAP_INIT is set.
 		 */
-		bcm_wait_locked(b, (b->bcm_flags & BMAP_INIT));
+		bmap_wait_locked(b, (b->bcm_flags & BMAP_INIT));
 
  retry:
 		/* Not all lookups are done with the intent of
@@ -257,7 +257,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 			 *   which pertain to its mode.
 			 */
 			if (b->bcm_flags & BMAP_MDCHNG) {
-				bcm_wait_locked(b,
+				bmap_wait_locked(b,
 				    b->bcm_flags & BMAP_MDCHNG);
 				goto retry;
 
@@ -273,7 +273,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 				b->bcm_flags &= ~BMAP_MDCHNG;
 				if (!rc)
 					b->bcm_flags |= bmaprw;
-				bcm_wake_locked(b);
+				bmap_wake_locked(b);
 			}
 		}
 	}

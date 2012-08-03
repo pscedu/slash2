@@ -1230,7 +1230,7 @@ bmap_flush(struct timespec *nto)
 				b->bcm_flags &= ~BMAP_CLI_FLUSHPROC;
 			}
 			BMPC_ULOCK(bmpc);
-			bcm_wake_locked(b);
+			bmap_wake_locked(b);
 			BMAP_ULOCK(b);
 
 		} else if (b->bcm_flags & BMAP_CLI_REASSIGNREQ) {

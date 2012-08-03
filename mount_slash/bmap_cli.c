@@ -391,7 +391,7 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 				DEBUG_BMAP(PLL_WARN, b,
 					   "blocking on lease renewal");
 				bmap_op_start_type(b, BMAP_OPCNT_LEASEEXT);
-				bcm_wait_locked(b, (b->bcm_flags &
+				bmap_wait_locked(b, (b->bcm_flags &
 				    BMAP_CLI_LEASEEXTREQ));
 
 				if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED)
@@ -791,10 +791,10 @@ void
 bmap_biorq_waitempty(struct bmapc_memb *b)
 {
 	BMAP_LOCK(b);
-	bcm_wait_locked(b, (!pll_empty(&bmap_2_bmpc(b)->bmpc_pndg_biorqs) ||
-			    !pll_empty(&bmap_2_bmpc(b)->bmpc_new_biorqs)  ||
-			    !pll_empty(&bmap_2_bmpc(b)->bmpc_pndg_ra)     ||
-			    (b->bcm_flags & BMAP_CLI_FLUSHPROC)));
+	bmap_wait_locked(b, (!pll_empty(&bmap_2_bmpc(b)->bmpc_pndg_biorqs) ||
+			     !pll_empty(&bmap_2_bmpc(b)->bmpc_new_biorqs)  ||
+			     !pll_empty(&bmap_2_bmpc(b)->bmpc_pndg_ra)     ||
+			     (b->bcm_flags & BMAP_CLI_FLUSHPROC)));
 
 	psc_assert(pll_empty(&bmap_2_bmpc(b)->bmpc_pndg_biorqs));
 	psc_assert(pll_empty(&bmap_2_bmpc(b)->bmpc_new_biorqs));

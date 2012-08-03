@@ -190,7 +190,7 @@ struct bmapc_memb {
 	_psclog_pci((pci), (level), 0, _DEBUG_BMAP_FMT fmt,		\
 	    _DEBUG_BMAP_FMTARGS(b), ## __VA_ARGS__)
 
-#define bcm_wait_locked(b, cond)					\
+#define bmap_wait_locked(b, cond)					\
 	do {								\
 		BMAP_LOCK_ENSURE(b);					\
 		while (cond) {						\
@@ -201,7 +201,7 @@ struct bmapc_memb {
 		}							\
 	} while (0)
 
-#define bcm_wake_locked(b)						\
+#define bmap_wake_locked(b)						\
 	do {								\
 		BMAP_LOCK_ENSURE(b);					\
 		if ((b)->bcm_flags & BMAP_WAITERS) {			\
