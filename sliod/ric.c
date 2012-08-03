@@ -368,9 +368,9 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 static int
 sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 {
+	struct srt_bmapdesc *sbd, *newsbd, *p;
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
-	struct srt_bmapdesc *sbd, *newsbd, *p;
 	struct bmap_iod_info *biod;
 	struct fidc_membh *f;
 	struct bmapc_memb *b;
