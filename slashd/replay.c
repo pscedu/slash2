@@ -352,7 +352,7 @@ int
 mds_replay_namespace(struct slmds_jent_namespace *sjnm, int replay)
 {
 	char name[SL_NAME_MAX + 1], newname[SL_NAME_MAX + 1];
-	struct fidc_membh *fcmh = NULL;
+	struct fidc_membh *f = NULL;
 	struct srt_stat sstb;
 	int rc;
 
@@ -435,19 +435,19 @@ mds_replay_namespace(struct slmds_jent_namespace *sjnm, int replay)
 			 * to the fcmh layer if work is done at
 			 * the ZFS layer.
 			 */
-			rc = slm_fcmh_peek(&sstb.sst_fg, &fcmh);
-			if (fcmh)
-				FCMH_LOCK(fcmh);
+			rc = slm_fcmh_peek(&sstb.sst_fg, &f);
+			if (f)
+				FCMH_LOCK(f);
 		}
 		rc = mdsio_redo_setattr(sjnm->sjnm_target_fid,
 		    sjnm->sjnm_mask, &sstb);
-		slm_setattr_core(fcmh, &sstb,
+		slm_setattr_core(f, &sstb,
 		    mdsio_setattrmask_2_slflags(sjnm->sjnm_mask));
 		if (!replay) {
-			if (fcmh) {
+			if (f) {
 				/* setattr() above has filled sstb */
-				COPY_SSTB(&sstb, &fcmh->fcmh_sstb);
-				fcmh_op_done(fcmh);
+				COPY_SSTB(&sstb, &f->fcmh_sstb);
+				fcmh_op_done(f);
 			}
 		}
 		break;

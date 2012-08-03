@@ -129,19 +129,19 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 {
 	const struct srm_getattr_req *mq;
 	struct srm_getattr_rep *mp;
-	struct fidc_membh *fcmh;
+	struct fidc_membh *f;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = slm_fcmh_get(&mq->fg, &fcmh);
+	mp->rc = slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
 		goto out;
 
-	FCMH_LOCK(fcmh);
-	mp->attr = fcmh->fcmh_sstb;
+	FCMH_LOCK(f);
+	mp->attr = f->fcmh_sstb;
 
  out:
-	if (fcmh)
-		fcmh_op_done(fcmh);
+	if (f)
+		fcmh_op_done(f);
 	return (0);
 }
 
@@ -265,7 +265,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	const struct srm_leasebmap_req *mq;
 	struct bmapc_memb *bmap = NULL;
 	struct srm_leasebmap_rep *mp;
-	struct fidc_membh *fcmh;
+	struct fidc_membh *f;
 	int rc = 0;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -274,12 +274,12 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		return (0);
 	}
 
-	mp->rc = slm_fcmh_get(&mq->fg, &fcmh);
+	mp->rc = slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
 		return (0);
 	mp->flags = mq->flags;
 
-	mp->rc = mds_bmap_load_cli(fcmh, mq->bmapno, mq->flags, mq->rw,
+	mp->rc = mds_bmap_load_cli(f, mq->bmapno, mq->flags, mq->rw,
 	    mq->prefios[0], &mp->sbd, rq->rq_export, &bmap);
 	if (mp->rc)
 		goto out;
@@ -294,7 +294,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	if (mp->flags & SRM_LEASEBMAPF_GETREPLTBL) {
 		struct slash_inode_handle *ih;
 
-		ih = fcmh_2_inoh(fcmh);
+		ih = fcmh_2_inoh(f);
 		mp->nrepls = ih->inoh_ino.ino_nrepls;
 		memcpy(&mp->reptbl[0], &ih->inoh_ino.ino_repls,
 		    sizeof(ih->inoh_ino.ino_repls));
@@ -309,7 +309,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	}
 
  out:
-	fcmh_op_done(fcmh);
+	fcmh_op_done(f);
 	return (rc ? rc : mp->rc);
 }
 
@@ -559,7 +559,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 int
 slm_rmc_handle_readdir(struct pscrpc_request *rq)
 {
-	struct fidc_membh *fcmh = NULL;
+	struct fidc_membh *f = NULL;
 	struct srm_readdir_req *mq;
 	struct srm_readdir_rep *mp;
 	struct iovec iov[2];
@@ -571,7 +571,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	mp->rc = slm_fcmh_get(&mq->fg, &fcmh);
+	mp->rc = slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
 		goto out;
 
@@ -596,12 +596,12 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 
 	mp->rc = mdsio_readdir(&rootcreds, mq->size, mq->offset,
 	    iov[0].iov_base, &outsize, &nents, iov[1].iov_base,
-	    mq->nstbpref, fcmh_2_mdsio_data(fcmh));
+	    mq->nstbpref, fcmh_2_mdsio_data(f));
 	mp->size = outsize;
 	mp->num = nents;
 
 	psclog_info("mdsio_readdir: rc=%d, data=%p", mp->rc,
-	    fcmh_2_mdsio_data(fcmh));
+	    fcmh_2_mdsio_data(f));
 
 	if (mp->rc)
 		goto out;
@@ -639,8 +639,8 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
  out:
 	PSCFREE(iov[0].iov_base);
 	PSCFREE(iov[1].iov_base);
-	if (fcmh)
-		fcmh_op_done(fcmh);
+	if (f)
+		fcmh_op_done(f);
 	return (mp->rc);
 }
 
@@ -649,16 +649,16 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 {
 	struct srm_readlink_req *mq;
 	struct srm_readlink_rep *mp;
-	struct fidc_membh *fcmh;
+	struct fidc_membh *f;
 	struct iovec iov;
 	char buf[SL_PATH_MAX];
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = slm_fcmh_get(&mq->fg, &fcmh);
+	mp->rc = slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
 		goto out;
 
-	mp->rc = mdsio_readlink(fcmh_2_mdsio_fid(fcmh), buf,
+	mp->rc = mdsio_readlink(fcmh_2_mdsio_fid(f), buf,
 	    &rootcreds);
 	if (mp->rc)
 		goto out;
@@ -669,9 +669,8 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 	    &iov, 1);
 
  out:
-	if (fcmh)
-		fcmh_op_done(fcmh);
-
+	if (f)
+		fcmh_op_done(f);
 	return (mp->rc);
 }
 
@@ -780,18 +779,18 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 {
 	int to_set, flush, tadj = 0, unbump = 0;
 	struct slashrpc_cservice *csvc;
-	struct fidc_membh *fcmh = NULL;
+	struct fidc_membh *f = NULL;
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	mp->rc = slm_fcmh_get(&mq->attr.sst_fg, &fcmh);
+	mp->rc = slm_fcmh_get(&mq->attr.sst_fg, &f);
 	if (mp->rc)
 		goto out;
 
-	FCMH_LOCK(fcmh);
-	fcmh_wait_locked(fcmh, fcmh->fcmh_flags & FCMH_IN_SETATTR);
+	FCMH_LOCK(f);
+	fcmh_wait_locked(f, f->fcmh_flags & FCMH_IN_SETATTR);
 
 	flush = mq->to_set & PSCFS_SETATTRF_FLUSH;
 	to_set = mq->to_set & SL_SETATTRF_CLI_ALL;
@@ -814,7 +813,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			 * updates from the sliod may be pending for
 			 * this generation.
 			 */
-			mq->attr.sst_fg.fg_gen = fcmh_2_gen(fcmh) + 1;
+			mq->attr.sst_fg.fg_gen = fcmh_2_gen(f) + 1;
 			to_set |= SL_SETATTRF_GEN;
 			unbump = 1;
 		} else if (!flush) {
@@ -822,7 +821,7 @@ mp->rc = -ENOTSUP;
 goto out;
 
 			/* partial truncate */
-			if (fcmh->fcmh_flags & FCMH_IN_PTRUNC) {
+			if (f->fcmh_flags & FCMH_IN_PTRUNC) {
 				mp->rc = -SLERR_BMAP_IN_PTRUNC;
 				goto out;
 			}
@@ -843,34 +842,33 @@ goto out;
 			 * and used.  Otherwise, it will be NULL, and
 			 * we'll use the mdsio_fid.
 			 */
-			mp->rc = mds_fcmh_setattr(fcmh, to_set,
-			    &mq->attr);
+			mp->rc = mds_fcmh_setattr(f, to_set, &mq->attr);
 		}
 	}
 
 	if (mp->rc) {
 		if (unbump)
-			fcmh_2_gen(fcmh)--;
+			fcmh_2_gen(f)--;
 	} else if (!flush) {
 		if (tadj & PSCFS_SETATTRF_DATASIZE) {
-			fcmh->fcmh_flags |= FCMH_IN_PTRUNC;
+			f->fcmh_flags |= FCMH_IN_PTRUNC;
 
 			csvc = slm_getclcsvc(rq->rq_export);
-			psc_dynarray_add(&fcmh_2_fmi(fcmh)->
+			psc_dynarray_add(&fcmh_2_fmi(f)->
 			    fmi_ptrunc_clients, csvc);
 
 			mp->rc = -SLERR_BMAP_PTRUNC_STARTED;
 		}
 
-		slm_setattr_core(fcmh, &mq->attr, to_set | tadj);
+		slm_setattr_core(f, &mq->attr, to_set | tadj);
 	}
 
  out:
-	if (fcmh) {
-		FCMH_RLOCK(fcmh);
+	if (f) {
+		FCMH_RLOCK(f);
 		if (mp->rc == 0 || mp->rc == SLERR_BMAP_PTRUNC_STARTED)
-			mp->attr = fcmh->fcmh_sstb;
-		fcmh_op_done(fcmh);
+			mp->attr = f->fcmh_sstb;
+		fcmh_op_done(f);
 	}
 	return (0);
 }
@@ -880,7 +878,7 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 {
 	struct srm_set_newreplpol_req *mq;
 	struct srm_set_newreplpol_rep *mp;
-	struct fidc_membh *fcmh;
+	struct fidc_membh *f;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -889,19 +887,17 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 		return (0);
 	}
 
-	mp->rc = slm_fcmh_get(&mq->fg, &fcmh);
+	mp->rc = slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
 		goto out;
 
-	FCMH_LOCK(fcmh);
-	fcmh_2_replpol(fcmh) = mq->pol;
-	mp->rc = mds_inode_write(fcmh_2_inoh(fcmh), mdslog_ino_repls,
-	    fcmh);
+	FCMH_LOCK(f);
+	fcmh_2_replpol(f) = mq->pol;
+	mp->rc = mds_inode_write(fcmh_2_inoh(f), mdslog_ino_repls, f);
 
  out:
-	if (fcmh)
-		fcmh_op_done(fcmh);
-
+	if (f)
+		fcmh_op_done(f);
 	return (0);
 }
 
@@ -910,7 +906,7 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 {
 	struct srm_set_bmapreplpol_req *mq;
 	struct srm_set_bmapreplpol_rep *mp;
-	struct fidc_membh *fcmh;
+	struct fidc_membh *f;
 	struct bmapc_memb *b;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -920,15 +916,15 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 		return (0);
 	}
 
-	mp->rc = slm_fcmh_get(&mq->fg, &fcmh);
+	mp->rc = slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
 		goto out;
 
-	if (!mds_bmap_exists(fcmh, mq->bmapno)) {
+	if (!mds_bmap_exists(f, mq->bmapno)) {
 		mp->rc = -SLERR_BMAP_INVALID;
 		goto out;
 	}
-	mp->rc = mds_bmap_load(fcmh, mq->bmapno, &b);
+	mp->rc = mds_bmap_load(f, mq->bmapno, &b);
 	if (mp->rc)
 		goto out;
 
@@ -937,8 +933,8 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	mds_bmap_write_repls_rel(b);
 
  out:
-	if (fcmh)
-		fcmh_op_done(fcmh);
+	if (f)
+		fcmh_op_done(f);
 	return (0);
 }
 
