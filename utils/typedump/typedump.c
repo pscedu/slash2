@@ -70,6 +70,7 @@
 #include "slashd/slashd.h"
 #include "slashd/subsys_mds.h"
 #include "slashd/up_sched_res.h"
+#include "slashd/worker.h"
 #include "sliod/bmap_iod.h"
 #include "sliod/ctl_iod.h"
 #include "sliod/fidc_iod.h"
@@ -159,6 +160,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct bmap_ops);
 	PRTYPE(struct bmap_pagecache);
 	PRTYPE(struct bmap_pagecache_entry);
+	PRTYPE(struct bmap_repls_upd_odent);
 	PRTYPE(struct bmap_timeo_table);
 	PRTYPE(struct bmapc_memb);
 	PRTYPE(struct bmpc_ioreq);
@@ -194,6 +196,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct msl_ra);
 	PRTYPE(struct msrci_thread);
 	PRTYPE(struct msrcm_thread);
+	PRTYPE(struct pfl_workrq);
 	PRTYPE(struct resm_cli_info);
 	PRTYPE(struct resm_iod_info);
 	PRTYPE(struct resm_mds_info);
@@ -240,7 +243,10 @@ main(int argc, char *argv[])
 	PRTYPE(struct slm_exp_cli);
 	PRTYPE(struct slm_replst_workreq);
 	PRTYPE(struct slm_resmlink);
-	PRTYPE(struct slm_workrq);
+	PRTYPE(struct slm_update_data);
+	PRTYPE(struct slm_update_generic);
+	PRTYPE(struct slm_wkdata_ptrunc);
+	PRTYPE(struct slm_wkdata_wr_brepl);
 	PRTYPE(struct slmctlmsg_bml);
 	PRTYPE(struct slmctlmsg_replpair);
 	PRTYPE(struct slmctlmsg_statfs);
@@ -255,7 +261,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct slmrmc_thread);
 	PRTYPE(struct slmrmi_thread);
 	PRTYPE(struct slmrmm_thread);
-	PRTYPE(struct slmupsched_thread);
 	PRTYPE(struct slvr_ref);
 	PRTYPE(struct srm_bmap_chwrmode_rep);
 	PRTYPE(struct srm_bmap_chwrmode_req);
@@ -329,7 +334,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct srt_stat);
 	PRTYPE(struct srt_statfs);
 	PRTYPE(struct srt_update_entry);
-	PRTYPE(struct up_sched_work_item);
 	/* end structs */
 
 	/* start constants */
@@ -458,6 +462,7 @@ main(int argc, char *argv[])
 	PRVAL(SLI_RIM_REPSZ);
 	PRVAL(SLJ_MDS_ENTSIZE);
 	PRVAL(SLJ_MDS_READSZ);
+	PRVAL(SLM_NWORKER_THREADS);
 	PRVAL(SLM_RECLAIM_BATCH);
 	PRVAL(SLM_RMC_BUFSZ);
 	PRVAL(SLM_RMC_NBUFS);
@@ -535,6 +540,8 @@ main(int argc, char *argv[])
 	PRVAL(SRMM_REQ_PORTAL);
 	PRVAL(SRMM_VERSION);
 	PRVAL(SRM_RENAME_NAMEMAX);
+	PRVAL(UPSCH_MAX_ITEMS);
+	PRVAL(UPSCH_MAX_ITEMS_RES);
 	PRVAL(_SLERR_START);
 	PRVAL(dirent_timeo);
 	/* end constants */
@@ -556,6 +563,7 @@ main(int argc, char *argv[])
 	PRVAL(BMAP_OPCNT_SLVR);
 	PRVAL(BMAP_OPCNT_TRUNCWAIT);
 	PRVAL(BMAP_OPCNT_UPSCH);
+	PRVAL(BMAP_OPCNT_WORK);
 	PRVAL(CFGF_DISABLE_BIA);
 	PRVAL(FCMH_OPCNT_BMAP);
 	PRVAL(FCMH_OPCNT_DIRENTBUF);
@@ -563,7 +571,6 @@ main(int argc, char *argv[])
 	PRVAL(FCMH_OPCNT_LOOKUP_FIDC);
 	PRVAL(FCMH_OPCNT_NEW);
 	PRVAL(FCMH_OPCNT_OPEN);
-	PRVAL(FCMH_OPCNT_UPSCHED);
 	PRVAL(FCMH_OPCNT_WAIT);
 	PRVAL(FCMH_OPCNT_WORKER);
 	PRVAL(INO_BMAP_AFFINITY);
@@ -716,9 +723,11 @@ main(int argc, char *argv[])
 	PRVAL(SRMT_UNLINK);
 	PRVAL(SRMT_WRITE);
 	PRVAL(SRMT_XCTL);
-	PRVAL(USWI_REFT_LOOKUP);
-	PRVAL(USWI_REFT_SITEUPQ);
-	PRVAL(USWI_REFT_TREE);
+	PRVAL(UPDT_BMAP);
+	PRVAL(UPDT_GARBAGE);
+	PRVAL(UPDT_HLDROP);
+	PRVAL(UPDT_PAGEIN);
+	PRVAL(UPDT_PAGEIN_UNIT);
 	/* end enums */
 
 	PRVAL(SL_REPLICA_NBYTES);
