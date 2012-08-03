@@ -280,7 +280,7 @@ slmrcmthr_main(struct psc_thread *thr)
 			uswi_init(wk, rsw->rsw_fg.fg_fid);
 			wk->uswi_fcmh = fcmh;
 			slmrcmthr_walk_bmaps(rsw, wk);
-			fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+			fcmh_op_done(fcmh);
 			psc_pool_return(upsched_pool, wk);
 		}
 

@@ -123,7 +123,7 @@ mds_replay_bmap(void *jent, int op)
 	if (b)
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 	if (f)
-		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(f);
 	return (rc);
 }
 
@@ -239,7 +239,7 @@ mds_replay_ino(void *jent, int op)
 	psclog(rc ? PLL_ERROR : PLL_DEBUG,
 	    "fid="SLPRI_FID" rc=%d", fg.fg_fid, rc);
 	if (f)
-		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(f);
 	return (rc);
 }
 
@@ -252,7 +252,7 @@ mds_replay_ino_repls(struct psc_journal_enthdr *pje)
 	sjir = PJE_DATA(pje);
 	rc = mdsio_redo_fidlink(sjir->sjir_fid, &rootcreds);
 	if (!rc)
-	    rc = mds_replay_ino(sjir, I_REPLAY_OP_REPLS);
+		rc = mds_replay_ino(sjir, I_REPLAY_OP_REPLS);
 	return (rc);
 }
 
@@ -447,7 +447,7 @@ mds_replay_namespace(struct slmds_jent_namespace *sjnm, int replay)
 			if (fcmh) {
 				/* setattr() above has filled sstb */
 				COPY_SSTB(&sstb, &fcmh->fcmh_sstb);
-				fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+				fcmh_op_done(fcmh);
 			}
 		}
 		break;

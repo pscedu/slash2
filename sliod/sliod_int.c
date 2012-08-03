@@ -62,9 +62,8 @@ iod_inode_getinfo(struct slash_fidgen *fg, uint64_t *size,
 
 	FCMH_LOCK(f);
 	*utimgen = f->fcmh_sstb.sst_utimgen;
-	/* fcmh_op_done_type() will drop the lock.
-	 */
-	fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
+	/* fcmh_op_done() will drop the lock. */
+	fcmh_op_done(f);
 	return (0);
 }
 

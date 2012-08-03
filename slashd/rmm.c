@@ -249,11 +249,11 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 	}
 	mds_unreserve_slot(1);
 	if (p)
-		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(p);
 	if (op)
-		fcmh_op_done_type(op, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(op);
 	if (np)
-		fcmh_op_done_type(np, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(np);
 	return (mp->rc);
 }
 

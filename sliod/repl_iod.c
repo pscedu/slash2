@@ -129,8 +129,7 @@ sli_repl_addwk(int op, struct sl_resource *res,
  out:
 	if (rc) {
 		if (w->srw_fcmh)
-			fcmh_op_done_type(w->srw_fcmh,
-			    FCMH_OPCNT_LOOKUP_FIDC);
+			fcmh_op_done(w->srw_fcmh);
 
 		psc_pool_return(sli_replwkrq_pool, w);
 	} else {
@@ -166,7 +165,7 @@ sli_replwkrq_decref(struct sli_repl_workrq *w, int rc)
 	if (w->srw_bcm)
 		bmap_op_done_type(w->srw_bcm, BMAP_OPCNT_REPLWK);
 	if (w->srw_fcmh)
-		fcmh_op_done_type(w->srw_fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(w->srw_fcmh);
 
 	psc_pool_return(sli_replwkrq_pool, w);
 }

@@ -170,7 +170,7 @@ slctlrep_getfcmhs(int fd, struct psc_ctlmsghdr *mh, void *m)
 		f = fidc_lookup_fid(scf->scf_fg.fg_fid);
 		if (f) {
 			rc = slctlmsg_fcmh_send(fd, mh, scf, f);
-			fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
+			fcmh_op_done(f);
 		} else
 			rc = psc_ctlsenderr(fd, mh,
 			    "FID "SLPRI_FID" not in cache",
