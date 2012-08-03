@@ -73,9 +73,9 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct pscfs_clientctx pfcc;
 	struct srm_replrq_rep *mp;
 	struct srm_replrq_req *mq;
-	struct fidc_membh *fcmh;
 	struct slash_fidgen fg;
 	struct slash_creds cr;
+	struct fidc_membh *f;
 	uint32_t n;
 	int rc;
 
@@ -95,25 +95,25 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    SLPRI_FID": unable to obtain client context: %s",
 		    mrq->mrq_fid, slstrerror(rc)));
 
-	rc = fidc_lookup_load_inode(mrq->mrq_fid, &fcmh, &pfcc);
+	rc = fidc_lookup_load_inode(mrq->mrq_fid, &f, &pfcc);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mrq->mrq_fid, slstrerror(rc)));
 
-	FCMH_LOCK(fcmh);
-	if (!S_ISREG(fcmh->fcmh_sstb.sst_mode) &&
-	    !S_ISDIR(fcmh->fcmh_sstb.sst_mode))
+	FCMH_LOCK(f);
+	if (!S_ISREG(f->fcmh_sstb.sst_mode) &&
+	    !S_ISDIR(f->fcmh_sstb.sst_mode))
 		rc = ENOTSUP;
 	else
-		rc = checkcreds(&fcmh->fcmh_sstb, &cr, W_OK);
-	fg = fcmh->fcmh_fg;
-	fcmh_op_done(fcmh);
+		rc = checkcreds(&f->fcmh_sstb, &cr, W_OK);
+	fg = f->fcmh_fg;
+	fcmh_op_done(f);
 
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mrq->mrq_fid, slstrerror(rc)));
 
-	MSL_RMC_NEWREQ_PFCC(&pfcc, fcmh, csvc,
+	MSL_RMC_NEWREQ_PFCC(&pfcc, f, csvc,
 	    mh->mh_type == MSCMT_ADDREPLRQ ?
 	    SRMT_REPL_ADDRQ : SRMT_REPL_DELRQ, rq, mq, mp, rc);
 	if (rc) {
@@ -158,7 +158,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct srm_replst_master_req *mq;
 	struct srm_replst_master_rep *mp;
 	struct msctlmsg_replrq *mrq = m;
-	struct fidc_membh *fcmh = NULL;
+	struct fidc_membh *f = NULL;
 	struct pscfs_clientctx pfcc;
 	struct msctl_replstq mrsq;
 	struct slash_fidgen fg;
@@ -182,27 +182,27 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    SLPRI_FID": unable to obtain client context: %s",
 		    mrq->mrq_fid, slstrerror(rc)));
 
-	rc = fidc_lookup_load_inode(mrq->mrq_fid, &fcmh, &pfcc);
+	rc = fidc_lookup_load_inode(mrq->mrq_fid, &f, &pfcc);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mrq->mrq_fid, slstrerror(rc)));
 
-	FCMH_LOCK(fcmh);
-	if (!S_ISREG(fcmh->fcmh_sstb.sst_mode) &&
-	    !S_ISDIR(fcmh->fcmh_sstb.sst_mode))
+	FCMH_LOCK(f);
+	if (!S_ISREG(f->fcmh_sstb.sst_mode) &&
+	    !S_ISDIR(f->fcmh_sstb.sst_mode))
 		rc = ENOTSUP;
 	else
-		rc = checkcreds(&fcmh->fcmh_sstb, &cr, R_OK);
-	fg = fcmh->fcmh_fg;
-	fcmh_op_done(fcmh);
+		rc = checkcreds(&f->fcmh_sstb, &cr, R_OK);
+	fg = f->fcmh_fg;
+	fcmh_op_done(f);
 
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mrq->mrq_fid, slstrerror(rc)));
 
  issue:
-	MSL_RMC_NEWREQ_PFCC(&pfcc, fcmh, csvc, SRMT_REPL_GETST, rq, mq,
-	    mp, rc);
+	MSL_RMC_NEWREQ_PFCC(&pfcc, f, csvc, SRMT_REPL_GETST, rq, mq, mp,
+	    rc);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, "%s: %s",
 		    fg.fg_fid, slstrerror(rc));
@@ -275,9 +275,9 @@ msctlhnd_set_newreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct srm_set_newreplpol_rep *mp;
 	struct pscrpc_request *rq = NULL;
 	struct pscfs_clientctx pfcc;
-	struct fidc_membh *fcmh;
 	struct slash_fidgen fg;
 	struct slash_creds cr;
+	struct fidc_membh *f;
 	int rc;
 
 	rc = msctl_getcreds(fd, &cr);
@@ -291,26 +291,26 @@ msctlhnd_set_newreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    SLPRI_FID": unable to obtain client context: %s",
 		    mfnrp->mfnrp_fid, slstrerror(rc)));
 
-	rc = fidc_lookup_load_inode(mfnrp->mfnrp_fid, &fcmh, &pfcc);
+	rc = fidc_lookup_load_inode(mfnrp->mfnrp_fid, &f, &pfcc);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfnrp->mfnrp_fid, slstrerror(rc)));
 
-	FCMH_LOCK(fcmh);
-	if (!S_ISREG(fcmh->fcmh_sstb.sst_mode) &&
-	    !S_ISDIR(fcmh->fcmh_sstb.sst_mode))
+	FCMH_LOCK(f);
+	if (!S_ISREG(f->fcmh_sstb.sst_mode) &&
+	    !S_ISDIR(f->fcmh_sstb.sst_mode))
 		rc = ENOTSUP;
 	else
-		rc = checkcreds(&fcmh->fcmh_sstb, &cr, W_OK);
-	fg = fcmh->fcmh_fg;
-	fcmh_op_done(fcmh);
+		rc = checkcreds(&f->fcmh_sstb, &cr, W_OK);
+	fg = f->fcmh_fg;
+	fcmh_op_done(f);
 
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfnrp->mfnrp_fid, slstrerror(rc)));
 
-	MSL_RMC_NEWREQ_PFCC(&pfcc, fcmh, csvc, SRMT_SET_NEWREPLPOL, rq,
-	    mq, mp, rc);
+	MSL_RMC_NEWREQ_PFCC(&pfcc, f, csvc, SRMT_SET_NEWREPLPOL, rq, mq,
+	    mp, rc);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfnrp->mfnrp_fid, slstrerror(rc));
@@ -342,9 +342,9 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct srm_set_bmapreplpol_rep *mp;
 	struct pscrpc_request *rq = NULL;
 	struct pscfs_clientctx pfcc;
-	struct fidc_membh *fcmh;
 	struct slash_fidgen fg;
 	struct slash_creds cr;
+	struct fidc_membh *f;
 	int rc;
 
 	rc = msctl_getcreds(fd, &cr);
@@ -358,24 +358,24 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    SLPRI_FID": unable to obtain client context: %s",
 		    mfbrp->mfbrp_fid, slstrerror(rc)));
 
-	rc = fidc_lookup_load_inode(mfbrp->mfbrp_fid, &fcmh, &pfcc);
+	rc = fidc_lookup_load_inode(mfbrp->mfbrp_fid, &f, &pfcc);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfbrp->mfbrp_fid, slstrerror(rc)));
 
-	FCMH_LOCK(fcmh);
-	if (!S_ISREG(fcmh->fcmh_sstb.sst_mode))
+	FCMH_LOCK(f);
+	if (!S_ISREG(f->fcmh_sstb.sst_mode))
 		rc = ENOTSUP;
 	else
-		rc = checkcreds(&fcmh->fcmh_sstb, &cr, W_OK);
-	fg = fcmh->fcmh_fg;
-	fcmh_op_done(fcmh);
+		rc = checkcreds(&f->fcmh_sstb, &cr, W_OK);
+	fg = f->fcmh_fg;
+	fcmh_op_done(f);
 
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfbrp->mfbrp_fid, slstrerror(rc)));
 
-	MSL_RMC_NEWREQ_PFCC(&pfcc, fcmh, csvc, SRMT_SET_BMAPREPLPOL, rq,
+	MSL_RMC_NEWREQ_PFCC(&pfcc, f, csvc, SRMT_SET_BMAPREPLPOL, rq,
 	    mq, mp, rc);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
