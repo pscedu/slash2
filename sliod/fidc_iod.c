@@ -64,42 +64,42 @@ sli_fg_makepath(const struct slash_fidgen *fg, char *fid_path)
 }
 
 static int
-sli_open_backing_file(struct fidc_membh *fcmh)
+sli_open_backing_file(struct fidc_membh *f)
 {
 	char fidfn[PATH_MAX];
 	int flags, incr, rc = 0;
 
 	flags = O_CREAT | O_RDWR;
-	if (fcmh->fcmh_flags & FCMH_CAC_RLSBMAP)
+	if (f->fcmh_flags & FCMH_CAC_RLSBMAP)
 		flags &= ~O_CREAT;
 	incr = psc_rlim_adj(RLIMIT_NOFILE, 1);
-	sli_fg_makepath(&fcmh->fcmh_fg, fidfn);
-	DEBUG_FCMH(PLL_INFO, fcmh, "before opening new backing file");
-	fcmh_2_fd(fcmh) = open(fidfn, flags, 0600);
-	if (fcmh_2_fd(fcmh) == -1) {
+	sli_fg_makepath(&f->fcmh_fg, fidfn);
+	DEBUG_FCMH(PLL_INFO, f, "before opening new backing file");
+	fcmh_2_fd(f) = open(fidfn, flags, 0600);
+	if (fcmh_2_fd(f) == -1) {
 		rc = errno;
 		if (incr)
 			psc_rlim_adj(RLIMIT_NOFILE, -1);
 	}
 	psclog_info("path=%s fd=%d rc=%d",
-	    strstr(fidfn, "fidns"), fcmh_2_fd(fcmh), rc);
+	    strstr(fidfn, "fidns"), fcmh_2_fd(f), rc);
 
 	return (rc);
 }
 
 int
-sli_fcmh_getattr(struct fidc_membh *fcmh)
+sli_fcmh_getattr(struct fidc_membh *f)
 {
 	struct stat stb;
 
-	if (fstat(fcmh_2_fd(fcmh), &stb) == -1)
+	if (fstat(fcmh_2_fd(f), &stb) == -1)
 		return (-errno);
 
-	FCMH_LOCK(fcmh);
-	sl_externalize_stat(&stb, &fcmh->fcmh_sstb);
+	FCMH_LOCK(f);
+	sl_externalize_stat(&stb, &f->fcmh_sstb);
 	// XXX get ptruncgen and gen
-	fcmh->fcmh_flags |= FCMH_HAVE_ATTRS;
-	FCMH_ULOCK(fcmh);
+	f->fcmh_flags |= FCMH_HAVE_ATTRS;
+	FCMH_ULOCK(f);
 	return (0);
 }
 
@@ -139,46 +139,46 @@ sli_fcmh_lookup_fid(struct slashrpc_cservice *csvc,
  *	attach it to the fcmh.
  */
 int
-sli_fcmh_reopen(struct fidc_membh *fcmh, const struct slash_fidgen *fg)
+sli_fcmh_reopen(struct fidc_membh *f, const struct slash_fidgen *fg)
 {
 	int rc = 0;
 
-	FCMH_LOCK_ENSURE(fcmh);
-	psc_assert(fg->fg_fid == fcmh_2_fid(fcmh));
+	FCMH_LOCK_ENSURE(f);
+	psc_assert(fg->fg_fid == fcmh_2_fid(f));
 
 	/* If our generation number is still unknown try to set it here.
 	 */
-	if (fcmh_2_gen(fcmh) == FGEN_ANY && fg->fg_gen != FGEN_ANY)
-		fcmh_2_gen(fcmh) = fg->fg_gen;
+	if (fcmh_2_gen(f) == FGEN_ANY && fg->fg_gen != FGEN_ANY)
+		fcmh_2_gen(f) = fg->fg_gen;
 
 	if (fg->fg_gen == FGEN_ANY) {
 		/* Noop.  The caller's operation is generation
 		 *    number agnostic (such as rlsbmap).
 		 */
-	} else if (fg->fg_gen > fcmh_2_gen(fcmh)) {
+	} else if (fg->fg_gen > fcmh_2_gen(f)) {
 		struct slash_fidgen oldfg;
 		char fidfn[PATH_MAX];
 
-		DEBUG_FCMH(PLL_INFO, fcmh, "reopening new backing file");
+		DEBUG_FCMH(PLL_INFO, f, "reopening new backing file");
 		/* Need to reopen the backing file and possibly
 		 *   remove the old one.
 		 */
-		if (close(fcmh_2_fd(fcmh)) == -1)
-			DEBUG_FCMH(PLL_ERROR, fcmh, "close() failed errno=%d",
+		if (close(fcmh_2_fd(f)) == -1)
+			DEBUG_FCMH(PLL_ERROR, f, "close() failed errno=%d",
 			   errno);
 		else
 			psc_rlim_adj(RLIMIT_NOFILE, -1);
 
-		oldfg.fg_fid = fcmh_2_fid(fcmh);
-		oldfg.fg_gen = fcmh_2_gen(fcmh);
+		oldfg.fg_fid = fcmh_2_fid(f);
+		oldfg.fg_gen = fcmh_2_gen(f);
 
-		fcmh_2_gen(fcmh) = fg->fg_gen;
+		fcmh_2_gen(f) = fg->fg_gen;
 
-		rc = sli_open_backing_file(fcmh);
+		rc = sli_open_backing_file(f);
 		/* Notify upper layers that open() has failed
 		 */
 		if (rc)
-			fcmh->fcmh_flags |= FCMH_CTOR_FAILED;
+			f->fcmh_flags |= FCMH_CTOR_FAILED;
 
 		/* Do some upfront garbage collection.
 		 */
@@ -186,19 +186,19 @@ sli_fcmh_reopen(struct fidc_membh *fcmh, const struct slash_fidgen *fg)
 
 		errno = 0;
 		unlink(fidfn);
-		DEBUG_FCMH(PLL_INFO, fcmh, "upfront unlink(), errno=%d", errno);
+		DEBUG_FCMH(PLL_INFO, f, "upfront unlink(), errno=%d", errno);
 
-	} else if (fcmh->fcmh_flags & FCMH_NO_BACKFILE) {
+	} else if (f->fcmh_flags & FCMH_NO_BACKFILE) {
 
-		rc = sli_open_backing_file(fcmh);
+		rc = sli_open_backing_file(f);
 		if (!rc)
-			fcmh->fcmh_flags &=
+			f->fcmh_flags &=
 				~(FCMH_CTOR_FAILED | FCMH_NO_BACKFILE);
 
-		DEBUG_FCMH(PLL_NOTIFY, fcmh, "open FCMH_NO_BACKFILE (rc=%d)",
+		DEBUG_FCMH(PLL_NOTIFY, f, "open FCMH_NO_BACKFILE (rc=%d)",
 		   rc);
 
-	} else if (fg->fg_gen < fcmh_2_gen(fcmh)) {
+	} else if (fg->fg_gen < fcmh_2_gen(f)) {
 		/*
 		 * For now, requests from old generations (i.e. old
 		 * bdbufs) will be honored.  Clients which issue full
@@ -206,20 +206,20 @@ sli_fcmh_reopen(struct fidc_membh *fcmh, const struct slash_fidgen *fg)
 		 * cache pages, prior to issuing a truncate request to
 		 * the MDS.
 		 */
-		DEBUG_FCMH(PLL_WARN, fcmh, "request from old gen "
+		DEBUG_FCMH(PLL_WARN, f, "request from old gen "
 		    "(%"SLPRI_FGEN")", fg->fg_gen);
 	}
 	return (rc);
 }
 
 int
-sli_fcmh_ctor(struct fidc_membh *fcmh)
+sli_fcmh_ctor(struct fidc_membh *f)
 {
 	int rc = 0;
 
-	if (fcmh->fcmh_fg.fg_gen == FGEN_ANY) {
-		fcmh->fcmh_flags |= FCMH_NO_BACKFILE;
-		DEBUG_FCMH(PLL_NOTIFY, fcmh, "refusing to open backing file "
+	if (f->fcmh_fg.fg_gen == FGEN_ANY) {
+		f->fcmh_flags |= FCMH_NO_BACKFILE;
+		DEBUG_FCMH(PLL_NOTIFY, f, "refusing to open backing file "
 		   "with FGEN_ANY");
 		/* This is not an error, we just don't have enough info
 		 * to create the backing file.
@@ -228,16 +228,15 @@ sli_fcmh_ctor(struct fidc_membh *fcmh)
 	}
 
 	/* try to get a file descriptor for this backing obj */
-	rc = sli_open_backing_file(fcmh);
+	rc = sli_open_backing_file(f);
 	if (rc == 0)
-		rc = sli_fcmh_getattr(fcmh);
-	DEBUG_FCMH(PLL_INFO, fcmh, "after opening new backing file rc=%d", rc);
-	if (rc == ENOENT && (fcmh->fcmh_flags & FCMH_CAC_RLSBMAP)) {
-		fcmh->fcmh_flags |= FCMH_NO_BACKFILE;
+		rc = sli_fcmh_getattr(f);
+	DEBUG_FCMH(PLL_INFO, f, "after opening new backing file rc=%d", rc);
+	if (rc == ENOENT && (f->fcmh_flags & FCMH_CAC_RLSBMAP)) {
+		f->fcmh_flags |= FCMH_NO_BACKFILE;
 		psclog_notice("RLSBMAP: Fail to open backing file - this is Okay");
 		rc = 0;
 	}
-
 	return (rc);
 }
 
