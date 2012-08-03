@@ -176,11 +176,11 @@ extern struct psc_poolmgr	*bmap_rls_pool;
 static __inline struct bmapc_memb *
 bii_2_bmap(struct bmap_iod_info *bii)
 {
-	struct bmapc_memb *bcm;
+	struct bmapc_memb *b;
 
 	psc_assert(bii);
-	bcm = (void *)bii;
-	return (bcm - 1);
+	b = (void *)bii;
+	return (b - 1);
 }
 
 #endif /* _SLIOD_BMAP_H_ */

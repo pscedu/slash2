@@ -138,15 +138,13 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 	struct sli_aiocb_reply *aiocbr = NULL;
 	struct sli_repl_workrq *w = NULL;
 	struct srm_repl_read_rep *mp;
+	struct bmapc_memb *b = NULL;
 	struct fidc_membh *fcmh;
-	struct bmapc_memb *bcm;
 	struct slvr_ref *s;
 	struct iovec iov;
 	int rv, slvridx = 0;
 
 	sliriithr(pscthr_get())->sirit_st_nread++;
-
-	bcm = NULL;
 
 	if (aio)
 		psc_atomic64_inc(&sli_rii_st_handle_replread_aio);
@@ -171,14 +169,14 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 	if (mp->rc)
 		goto out;
 
-	mp->rc = bmap_get(fcmh, mq->bmapno, SL_READ, &bcm);
+	mp->rc = bmap_get(fcmh, mq->bmapno, SL_READ, &b);
 	if (mp->rc) {
 		psclog_errorx("failed to load fid "SLPRI_FID" bmap %u: %s",
 		    mq->fg.fg_fid, mq->bmapno, slstrerror(mp->rc));
 		goto out;
 	}
 
-	s = slvr_lookup(mq->slvrno, bmap_2_biodi(bcm), aio ?
+	s = slvr_lookup(mq->slvrno, bmap_2_biodi(b), aio ?
 	    SL_WRITE : SL_READ);
 
 	if (aio) {
@@ -257,10 +255,9 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 		slvr_rio_done(s);
 
  out:
-	if (bcm)
-		bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
+	if (b)
+		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
-
 	return (mp->rc);
 }
 

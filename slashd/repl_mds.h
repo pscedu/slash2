@@ -112,8 +112,8 @@ void	 mds_brepls_check(uint8_t *, int);
 #define mds_repl_bmap_walkcb(b, t, r, fl, cbf, arg)			\
 	_mds_repl_bmap_walk((b), (t), (r), (fl), NULL, 0, (cbf), (arg))
 
-#define mds_repl_bmap_apply(bcm, tract, retifset, off)			\
-	_mds_repl_bmap_apply((bcm), (tract), (retifset), 0, (off), NULL, NULL, NULL)
+#define mds_repl_bmap_apply(b, tract, retifset, off)			\
+	_mds_repl_bmap_apply((b), (tract), (retifset), 0, (off), NULL, NULL, NULL)
 
 #define mds_repl_nodes_clearbusy(a, b)		 mds_repl_nodes_adjbusy((a), (b), INT64_MIN)
 
