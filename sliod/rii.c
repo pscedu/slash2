@@ -139,7 +139,7 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 	struct sli_repl_workrq *w = NULL;
 	struct srm_repl_read_rep *mp;
 	struct bmapc_memb *b = NULL;
-	struct fidc_membh *fcmh;
+	struct fidc_membh *f;
 	struct slvr_ref *s;
 	struct iovec iov;
 	int rv, slvridx = 0;
@@ -165,11 +165,11 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 		return (mp->rc);
 	}
 
-	mp->rc = sli_fcmh_get(&mq->fg, &fcmh);
+	mp->rc = sli_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
 		goto out;
 
-	mp->rc = bmap_get(fcmh, mq->bmapno, SL_READ, &b);
+	mp->rc = bmap_get(f, mq->bmapno, SL_READ, &b);
 	if (mp->rc) {
 		psclog_errorx("failed to load fid "SLPRI_FID" bmap %u: %s",
 		    mq->fg.fg_fid, mq->bmapno, slstrerror(mp->rc));
@@ -257,7 +257,7 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
  out:
 	if (b)
 		bmap_op_done(b);
-	fcmh_op_done(fcmh);
+	fcmh_op_done(f);
 	return (mp->rc);
 }
 
