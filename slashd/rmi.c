@@ -195,7 +195,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	struct srm_repl_schedwk_req *mq;
 	struct srm_repl_schedwk_rep *mp;
 	struct up_sched_work_item *wk;
-	struct bmapc_memb *bcm = NULL;
+	struct bmapc_memb *b = NULL;
 	struct sl_resource *src_res;
 	sl_replica_t iosv[2];
 	sl_bmapgen_t gen;
@@ -224,17 +224,17 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	}
 
 	if (bmap_getf(wk->uswi_fcmh, mq->bmapno, SL_WRITE,
-	    BMAPGETF_LOAD | BMAPGETF_NOAUTOINST, &bcm)) {
+	    BMAPGETF_LOAD | BMAPGETF_NOAUTOINST, &b)) {
 		DEBUG_USWI(PLL_ERROR, wk, "unable to load bmap %d",
 		    mq->bmapno);
 		goto out;
 	}
 
-	bmap_op_start_type(bcm, BMAP_OPCNT_REPLWK);
+	bmap_op_start_type(b, BMAP_OPCNT_REPLWK);
 
 	brepls_init(tract, -1);
 
-	BHGEN_GET(bcm, &gen);
+	BHGEN_GET(b, &gen);
 	if (mq->rc == 0 && mq->bgen != gen)
 		mq->rc = SLERR_GEN_OLD;
 	if (mq->rc) {
@@ -253,14 +253,14 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 			brepls_init(retifset, 0);
 			retifset[BREPLST_VALID] = 1;
 
-			if (mds_repl_bmap_walk(bcm, NULL, retifset,
+			if (mds_repl_bmap_walk(b, NULL, retifset,
 			    REPL_WALKF_MODOTH, &src_iosidx, 1)) {
 				/*
 				 * Other replicas exist.  Mark this
 				 * failed source replica as garbage.
 				 */
 				tract[BREPLST_VALID] = BREPLST_GARBAGE;
-				mds_repl_bmap_walk(bcm, tract, NULL, 0,
+				mds_repl_bmap_walk(b, tract, NULL, 0,
 				    &src_iosidx, 1);
 
 				/* Try from another replica. */
@@ -289,19 +289,19 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	retifset[BREPLST_REPL_SCHED] = 0;
 	retifset[BREPLST_TRUNCPNDG] = 0;
 
-	mds_repl_bmap_walk(bcm, tract, retifset, 0, &iosidx, 1);
-	mds_bmap_write_repls_rel(bcm);
+	mds_repl_bmap_walk(b, tract, retifset, 0, &iosidx, 1);
+	mds_bmap_write_repls_rel(b);
 
 	iosv[0].bs_id = src_res->res_id;
 	iosv[1].bs_id = dst_resm->resm_res_id;
 	uswi_enqueue_sites(wk, iosv, 2);
 
  out:
-	if (dst_resm && bcm)
+	if (dst_resm && b)
 		mds_repl_nodes_adjbusy(src_resm, dst_resm,
-		    -slm_bmap_calc_repltraffic(bcm));
-	if (bcm)
-		bmap_op_done_type(bcm, BMAP_OPCNT_REPLWK);
+		    -slm_bmap_calc_repltraffic(b));
+	if (b)
+		bmap_op_done_type(b, BMAP_OPCNT_REPLWK);
 	if (wk)
 		uswi_unref(wk);
 	return (0);
