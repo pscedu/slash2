@@ -42,7 +42,7 @@ struct srt_bmapdesc;
  *   a point to our ION, a tree of our client's exports, a pointer to the
  *   on-disk structure, a receipt for the odtable, and a reqset for issuing
  *   callbacks (XXX is that really needed?).
- * Notes: both read and write clients are stored to bmdsi_exports, the ref
+ * Notes: both read and write clients are stored to bmi_exports, the ref
  *   counts are used to determine the number of both and hence the caching
  *   mode used at the clients.   bmdsi_wr_ion is a shortcut pointer used
  *   only when the bmap has client writers - all writers (and readers) are
@@ -55,7 +55,7 @@ struct bmap_mds_info {
 	 * bmap_ondisk will be laid contiguously in memory for I/O over
 	 * the network and with ZFS.
 	 */
-	struct bmap_extra_state	 bmdsi_extrastate;
+	struct bmap_extra_state	 bmi_extrastate;
 
 	struct resm_mds_info	*bmdsi_wr_ion;		/* pointer to write ION */
 	struct psc_lockedlist	 bmdsi_leases;		/* tracked bmap leases */
@@ -76,8 +76,7 @@ struct bmap_mds_info {
 #define BMAP_MDS_DIO		(_BMAP_FLSHFT << 3)	/* direct I/O enabled */
 #define BMAP_MDS_SEQWRAP	(_BMAP_FLSHFT << 4)	/* sequence number wrapped */
 
-#define bmap_2_bmdsassign(b)	bmap_2_bmi(b)->bmdsi_assign
-#define bmap_2_xstate(b)	(&bmap_2_bmi(b)->bmdsi_extrastate)
+#define bmap_2_xstate(b)	(&bmap_2_bmi(b)->bmi_extrastate)
 #define bmap_2_bgen(b)		bmap_2_xstate(b)->bes_gen
 #define bmap_2_replpol(b)	bmap_2_xstate(b)->bes_replpol
 #define bmap_2_repl(b, i)	fcmh_2_repl((b)->bcm_fcmh, (i))
