@@ -239,7 +239,7 @@ msrcm_handle_bmap_wake(struct pscrpc_request *rq)
 	}
  out:
 	if (c)
-		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(c);
 	return (0);
 }
 
@@ -306,7 +306,7 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 	if (b)
 		bmap_op_done(b);
 	if (f)
-		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(f);
 	return (0);
 }
 

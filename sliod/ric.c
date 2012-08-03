@@ -364,8 +364,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 *   iod_inode_open()) then we must have a way to notify other
 	 *   threads blocked on DATARDY.
 	 */
-	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
-
+	fcmh_op_done(fcmh);
 	return (rc);
 }
 
@@ -418,10 +417,10 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		if (rc) {
 			psclog_errorx("failed to load bmap %u",
 			    sbd->sbd_bmapno);
-			fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
+			fcmh_op_done(f);
 			continue;
-		} else
-			fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
+		}
+		fcmh_op_done(f);
 
 		newsbd = psc_pool_get(bmap_rls_pool);
 		memcpy(newsbd, sbd, sizeof(*sbd));

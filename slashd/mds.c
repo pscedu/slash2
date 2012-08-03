@@ -1228,7 +1228,7 @@ mds_handle_rls_bmap(struct pscrpc_request *rq, int sliod)
 		 */
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
  next:
-		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done_type(f);
 	}
 	return (0);
 }
@@ -1334,7 +1334,7 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 	if (rc)
 		mds_odtable_freeitem(mdsBmapAssignTable, odtr);
 	if (f)
-		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(f);
 	if (b)
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 }
@@ -1521,7 +1521,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 		 */
 		bmap_op_done_type(bmap, BMAP_OPCNT_LOOKUP);
 
-	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+	fcmh_op_done(fcmh);
 	return (rc);
 }
 
@@ -1586,7 +1586,7 @@ mds_bmap_load_fg(const struct slash_fidgen *fg, sl_bmapno_t bmapno,
 	if (rc == 0)
 		*bp = b;
 
-	fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
+	fcmh_op_done(f);
 	return (rc);
 }
 
@@ -1906,7 +1906,7 @@ slm_setattr_core(struct fidc_membh *fcmh, struct srt_stat *sstb,
 		lc_add(&slm_workq, wkrq);
 
 		if (deref)
-			fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+			fcmh_op_done(fcmh);
 	}
 }
 

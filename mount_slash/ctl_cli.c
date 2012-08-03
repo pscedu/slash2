@@ -107,7 +107,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	else
 		rc = checkcreds(&fcmh->fcmh_sstb, &cr, W_OK);
 	fg = fcmh->fcmh_fg;
-	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+	fcmh_op_done(fcmh);
 
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
@@ -194,7 +194,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	else
 		rc = checkcreds(&fcmh->fcmh_sstb, &cr, R_OK);
 	fg = fcmh->fcmh_fg;
-	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+	fcmh_op_done(fcmh);
 
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
@@ -303,7 +303,7 @@ msctlhnd_set_newreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	else
 		rc = checkcreds(&fcmh->fcmh_sstb, &cr, W_OK);
 	fg = fcmh->fcmh_fg;
-	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+	fcmh_op_done(fcmh);
 
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
@@ -369,7 +369,7 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	else
 		rc = checkcreds(&fcmh->fcmh_sstb, &cr, W_OK);
 	fg = fcmh->fcmh_fg;
-	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+	fcmh_op_done(fcmh);
 
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",

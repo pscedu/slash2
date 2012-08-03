@@ -370,7 +370,7 @@ slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 	/* truncate metafile to remove garbage collected bmap */
 //	mdsio_setattr(METASIZE)
 //	fcmh_set_repl_nblks(f, idx, sjbc->sjbc_repl_nblks);
-	fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
+	fcmh_op_done(f);
 	return (0);
 }
 
@@ -546,9 +546,9 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	 * no repl table), then we should unlink it...
 	 */
 	if (c)
-		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(c);
 	if (p)
-		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(p);
 
 	return (0);
 }
@@ -581,7 +581,7 @@ slm_rmi_handle_mkdir(struct pscrpc_request *rq)
 	    PSCFS_SETATTRF_UID | PSCFS_SETATTRF_GID |
 	    PSCFS_SETATTRF_ATIME | PSCFS_SETATTRF_MTIME |
 	    PSCFS_SETATTRF_CTIME, &sstb);
-	fcmh_op_done_type(d, FCMH_OPCNT_LOOKUP_FIDC);
+	fcmh_op_done(d);
 	if (rc)
 		mp->rc = rc;
 	return (0);

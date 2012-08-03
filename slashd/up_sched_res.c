@@ -222,8 +222,7 @@ uswi_trykill(struct up_sched_work_item *wk)
 	USWI_DECREF(wk, USWI_REFT_TREE);
 
 	if (wk->uswi_fcmh)
-		fcmh_op_done_type(wk->uswi_fcmh,
-		    FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(wk->uswi_fcmh);
 	USWI_ULOCK(wk);
 	psc_mutex_destroy(&wk->uswi_mutex);
 	psc_pool_return(upsched_pool, wk);
@@ -1198,7 +1197,7 @@ upsched_scandir(void)
 			uswi_enqueue_sites(wk, iosv, USWI_NREPLS(wk));
 			uswi_unref(wk);
 
-			fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+			fcmh_op_done(fcmh);
 		}
 		off += tsiz;
 	}
@@ -1256,8 +1255,7 @@ uswi_findoradd(const struct slash_fidgen *fgp,
 	if (*wkp) {
 		if (UPSCHED_MGR_HASLOCK())
 			UPSCHED_MGR_ULOCK();
-		fcmh_op_done_type(newrq->uswi_fcmh,
-		    FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(newrq->uswi_fcmh);
 		goto out;
 	}
 
@@ -1276,8 +1274,7 @@ uswi_findoradd(const struct slash_fidgen *fgp,
 
  out:
 	if (rc && newrq && newrq->uswi_fcmh)
-		fcmh_op_done_type(newrq->uswi_fcmh,
-		    FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(newrq->uswi_fcmh);
 
 	if (newrq)
 		psc_pool_return(upsched_pool, newrq);
