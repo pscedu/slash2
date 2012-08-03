@@ -232,7 +232,7 @@ mslfsop_access(struct pscfs_req *pfr, pscfs_inum_t inum, int mask)
  out:
 	pscfs_reply_access(pfr, rc);
 	if (c)
-		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(c);
 }
 
 #define msl_progallowed(r)						\
@@ -411,11 +411,11 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (c) {
 		DEBUG_FCMH(PLL_DEBUG, c, "new mfh=%p rc=%d name=(%s) "
 		    "oflags=%#o", mfh, rc, name, oflags);
-		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(c);
 	}
 
 	if (p)
-		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(p);
 
 	pscfs_reply_create(pfr, mp ? mp->cattr.sst_fid : 0,
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
@@ -517,7 +517,7 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	if (c) {
 		DEBUG_FCMH(PLL_INFO, c, "new mfh=%p dir=%s rc=%d oflags=%#o",
 		    *mfhp, (oflags & O_DIRECTORY) ? "yes" : "no", rc, oflags);
-		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(c);
 	}
 	return (rc);
 }
@@ -664,7 +664,7 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 
  out:
 	if (f)
-		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(f);
 	pscfs_reply_getattr(pfr, &stb, pscfs_attr_timeout, rc);
 }
 
@@ -743,9 +743,9 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 
  out:
 	if (c)
-		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(c);
 	if (p)
-		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(p);
 
 	pscfs_reply_link(pfr, mp ? mp->cattr.sst_fid : 0,
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
@@ -826,9 +826,9 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
  out:
 	if (c)
-		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(c);
 	if (p)
-		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(p);
 
 	pscfs_reply_mkdir(pfr, mp ? mp->cattr.sst_fid : 0,
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
@@ -931,9 +931,9 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	    pinum, name, isfile, rc);
 
 	if (c)
-		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(c);
 	if (p)
-		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(p);
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
@@ -1032,9 +1032,9 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
 	    pscfs_attr_timeout, rc);
 	if (c)
-		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(c);
 	if (p)
-		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(p);
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
@@ -1156,8 +1156,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 			    attr, FCMH_SETATTRF_SAVELOCAL, &fcmh);
 
 			if (fcmh)
-				fcmh_op_done_type(fcmh,
-				    FCMH_OPCNT_LOOKUP_FIDC);
+				fcmh_op_done(fcmh);
 		}
 	}
 
@@ -1243,7 +1242,7 @@ msl_lookuprpc(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc == 0 && fp)
 		*fp = m;
 	else if (m)
-		fcmh_op_done_type(m, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(m);
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
@@ -1271,7 +1270,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	FCMH_LOCK(p);
 	rc = checkcreds(&p->fcmh_sstb, crp, X_OK);
 	if (rc) {
-		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(p);
 		goto out;
 	}
 
@@ -1282,7 +1281,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	cfid = dircache_lookup(fcmh_2_dci(p), name, DC_LOOKUP);
 	/* It's OK to unref the parent now.
 	 */
-	fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+	fcmh_op_done(p);
 
 	if (cfid == FID_ANY)
 		goto remote;
@@ -1347,7 +1346,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	if (rc == 0 && fp)
 		*fp = c;
 	else if (c)
-		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(c);
 
 	psclog_info("look for file: %s under inode: "SLPRI_FID ", rc=%d",
 	    name, pinum, rc);
@@ -1425,7 +1424,7 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 
  out:
 	if (c)
-		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(c);
 
 	pscfs_reply_readlink(pfr, buf, rc);
 
@@ -1757,11 +1756,11 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 
  out:
 	if (child)
-		fcmh_op_done_type(child, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(child);
 	if (op)
-		fcmh_op_done_type(op, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(op);
 	if (np && np != op)
-		fcmh_op_done_type(np, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(np);
 
 	pscfs_reply_rename(pfr, rc);
 
@@ -1888,9 +1887,9 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 
  out:
 	if (c)
-		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(c);
 	if (p)
-		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(p);
 
 	pscfs_reply_symlink(pfr, mp ? mp->cattr.sst_fid : 0,
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
@@ -2208,7 +2207,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			freelock(&attrTimeoutQLock);
 			fcmh_op_done_type(c, FCMH_OPCNT_DIRTY_QUEUE);
 		}
-		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(c);
 	}
 	/* XXX if there is no fcmh, what do we do?? */
 	pscfs_reply_setattr(pfr, stb, pscfs_attr_timeout, rc);
@@ -2258,7 +2257,7 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 	if (ftmp != f)
 		rc = EBADF;
 	if (ftmp)
-		fcmh_op_done_type(ftmp, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(ftmp);
 	if (rc)
 		goto out;
 
@@ -2330,7 +2329,7 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	if (ftmp != f)
 		rc = EBADF;
 	if (ftmp)
-		fcmh_op_done_type(ftmp, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done(ftmp);
 	if (rc)
 		goto out;
 
