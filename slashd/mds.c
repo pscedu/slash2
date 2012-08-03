@@ -1072,6 +1072,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 
 	BML_LOCK(bml);
 	if (bml->bml_refcnt > 1 || !(bml->bml_flags & BML_FREEING)) {
+		psc_assert(bml->bml_refcnt > 0);
 		bml->bml_refcnt--;
 		BML_ULOCK(bml);
 		b->bcm_flags &= ~BMAP_IONASSIGN;

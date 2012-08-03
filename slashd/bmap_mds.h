@@ -161,7 +161,7 @@ struct bmap_timeo_table {
 						*/
 
 struct bmap_mds_lease {
-	uint32_t		  bml_refcnt;
+	 int32_t		  bml_refcnt;
 	uint64_t		  bml_seq;
 	sl_ios_id_t		  bml_ios;
 	lnet_process_id_t	  bml_cli_nidpid;
