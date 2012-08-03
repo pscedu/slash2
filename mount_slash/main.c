@@ -1114,7 +1114,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	rsx_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, iov, niov);
 	rq->rq_bulk_abortable = 1;
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc && rc != -ENOTDIR && rc != -ENOENT && slc_rmc_retry(pfr, &rc))
+	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (rc == 0)
 		rc = mp->rc;
