@@ -194,7 +194,7 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	    mq->sbd.sbd_nid, mq->sbd.sbd_pid);
 
 	if (bml == NULL) {
-		mp->rc = -EINVAL;
+		mp->rc = -SLERR_INVAL;
 		goto out;
 	}
 
