@@ -80,7 +80,7 @@ sli_repl_addwk(int op, struct sl_resource *res,
 	 */
 	w = sli_repl_findwq(fgp, bmapno);
 	if (w)
-		return (SLERR_ALREADY);
+		return (-SLERR_ALREADY);
 
 	w = psc_pool_get(sli_replwkrq_pool);
 	memset(w, 0, sizeof(*w));
