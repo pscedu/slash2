@@ -95,7 +95,7 @@ slm_repl_bmap_rel(struct bmapc_memb *b)
 		BMAPOD_MODIFY_DONE(b);
 
 		BMAP_RLOCK(b);
-		b->bcm_flags &= BMAP_MDS_REPLMOD;
+		b->bcm_flags &= ~BMAP_MDS_REPLMOD;
 	}
 	bmap_op_done(b);
 }

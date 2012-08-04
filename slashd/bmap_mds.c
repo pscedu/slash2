@@ -207,7 +207,7 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 		mds_bmap_write_logrepls(b);
 	else {
 		BMAPOD_MODIFY_DONE(b);
-		b->bcm_flags &= BMAP_MDS_REPLMOD;
+		b->bcm_flags &= ~BMAP_MDS_REPLMOD;
 	}
 
 	brepls_init(retifset, 0);
