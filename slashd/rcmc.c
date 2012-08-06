@@ -259,6 +259,7 @@ slmrcmthr_main(struct psc_thread *thr)
 
 		if (rsw->rsw_fg.fg_fid == FID_ANY) {
 			UPSCH_LOCK();
+			/* XXX this isn't going to work */
 			mds_odtable_scan(slm_repl_odt, slmrcmthr_walk,
 			    rsw);
 			UPSCH_ULOCK();
