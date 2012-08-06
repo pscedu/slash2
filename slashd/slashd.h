@@ -241,7 +241,9 @@ void		 slm_setattr_core(struct fidc_membh *, struct srt_stat *, int);
 void		 slm_upsch_init(void);
 void		 slmupschedthr_spawn(void);
 
-void		 dbdo(int (*)(void *, int, char **,char **), void *,
+#define dbdo(cb, arg, fmt, ...)	_dbdo(PFL_CALLERINFO(), (cb), (arg), (fmt), ## __VA_ARGS__)
+void		 _dbdo(const struct pfl_callerinfo *,
+			int (*)(void *, int, char **,char **), void *,
 			const char *, ...);
 
 extern struct slash_creds	 rootcreds;

@@ -1290,18 +1290,16 @@ mds_bml_new(struct bmapc_memb *b, struct pscrpc_export *e, int flags,
 }
 
 int
-mds_bia_odtable_startup_cb(void *data,
-    __unusedx struct odtable_receipt *odtr, __unusedx void *arg)
+mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr,
+    __unusedx void *arg)
 {
+	struct bmap_ios_assign *bia = data;
 	struct fidc_membh *f = NULL;
 	struct bmapc_memb *b = NULL;
-	struct bmap_ios_assign *bia;
 	struct bmap_mds_lease *bml;
 	struct slash_fidgen fg;
 	struct sl_resm *resm;
 	int rc;
-
-	bia = data;
 
 	resm = libsl_ios2resm(bia->bia_ios);
 
@@ -1311,8 +1309,7 @@ mds_bia_odtable_startup_cb(void *data,
 
 	if (!bia->bia_fid) {
 		psclog_warnx("found fid #0 in odtable");
-		rc = -EINVAL;
-		goto out;
+		PFL_GOTOERR(out, rc = -EINVAL);
 	}
 
 	fg.fg_fid = bia->bia_fid;
@@ -1326,14 +1323,14 @@ mds_bia_odtable_startup_cb(void *data,
 	if (rc) {
 		psclog_errorx("failed to load: item=%zd, fid="SLPRI_FID,
 		    odtr->odtr_elem, fg.fg_fid);
-		goto out;
+		PFL_GOTOERR(out, rc);
 	}
 
 	rc = mds_bmap_load(f, bia->bia_bmapno, &b);
 	if (rc) {
 		DEBUG_FCMH(PLL_ERROR, f, "failed to load bmap %u (rc=%d)",
 		    bia->bia_bmapno, rc);
-		goto out;
+		PFL_GOTOERR(out, rc);
 	}
 
 	bml = mds_bml_new(b, NULL, (BML_WRITE | BML_RECOVER),
@@ -2183,26 +2180,33 @@ slm_ptrunc_wake_clients(void *p)
 }
 
 void
-dbdo(int (*cb)(void *, int, char **,char **), void *arg,
-    const char *fmt, ...)
+_dbdo(const struct pfl_callerinfo *pci,
+    int (*cb)(void *, int, char **,char **), void *arg, const char *fmt,
+    ...)
 {
 	static psc_spinlock_t lock = SPINLOCK_INIT;
 	char buf[LINE_MAX], *errstr;
 	va_list ap;
 	int rc;
 
+	/* XXX XXX hash table of compiled statements */
+#if 0
+	sth = pfl_hashtbl_getitem(stl_sth_hashtbl, buf);
+	if (sth == NULL) {
+		sth = PSCALLOC(sizeof(*st));
+		pfl_hashtbl_putitem(slm_sth_hashtbl, sth);
+	}
+#endif
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
-
-	/* XXX XXX hash table of compiled statements */
 
 	spinlock(&lock);
 	rc = sqlite3_exec(slm_dbh, buf, cb, arg, &errstr);
 	freelock(&lock);
 	if (rc) {
-		psclog_errorx("SQL error: query=%s; msg=%s", buf,
-		    errstr);
+		psclog_errorx("SQL error: rc=%d query=%s; msg=%s", rc,
+		    buf, errstr);
 	}
 }
 

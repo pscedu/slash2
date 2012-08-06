@@ -85,7 +85,6 @@ upd_tryremove(struct slm_update_data *upd)
 
 	brepls_init(retifset, 1);
 	retifset[BREPLST_VALID] = 0;
-
 	retifset[BREPLST_INVALID] = 0;
 	if (!mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT)) {
