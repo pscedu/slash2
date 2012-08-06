@@ -181,9 +181,10 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 
 	DEBUG_BMAPOD(PLL_INFO, b, "successfully loaded from disk");
 
-	if (flags & BMAPGETF_REPLAY)
+	if (flags & BMAPGETF_REPLAY) {
+		b->bcm_flags |= BMAP_REPLAY;
 		return (0);
-	b->bcm_flags |= BMAP_REPLAY;
+	}
 
 	/*
 	 * If we crashed, revert all inflight SCHED'ed bmaps so they get

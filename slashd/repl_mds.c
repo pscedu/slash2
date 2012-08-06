@@ -541,8 +541,16 @@ slm_repl_upd_odt_write(struct bmapc_memb *b, struct slash_fidgen *fg,
 			add.iosv[add.nios++].bs_id = fcmh_2_repl(f, n);
 		else if ((vold == BREPLST_REPL_QUEUED ||
 		    vold == BREPLST_REPL_SCHED) &&
-		    vnew == BREPLST_GARBAGE)
+		    (vnew == BREPLST_GARBAGE ||
+		     vnew == BREPLST_VALID ||
+		     vnew == BREPLST_INVALID))
 			del.iosv[del.nios++].bs_id = fcmh_2_repl(f, n);
+		else if (vold == BREPLST_REPL_SCHED &&
+		    vnew != BREPLST_REPL_SCHED)
+			deq.iosv[deq.nios++].bs_id = fcmh_2_repl(f, n);
+		else if (vold != BREPLST_REPL_QUEUED &&
+		     vnew == BREPLST_REPL_QUEUED)
+			sch.iosv[sch.nios++].bs_id = fcmh_2_repl(f, n);
 	}
 
 	if (add.nios) {
