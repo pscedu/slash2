@@ -94,9 +94,7 @@ mds_odtable_putitem(struct odtable *odt, void *data, size_t len)
 	odtf->odtf_slotno = elem;
 	odtf->odtf_magic = ODTBL_MAGIC;
 
-	/*
-	 * Setup and return the receipt.
-	 */
+	/* Setup and return the receipt. */
 	odtr = PSCALLOC(sizeof(*odtr));
 	odtr->odtr_elem = elem;
 	odtr->odtr_key = crc;
@@ -111,7 +109,7 @@ mds_odtable_putitem(struct odtable *odt, void *data, size_t len)
 }
 
 /**
- * odtable_putitem - Retrieve an item from an odtable.
+ * odtable_getitem - Retrieve an item from an odtable.
  */
 int
 mds_odtable_getitem(struct odtable *odt,
