@@ -52,8 +52,8 @@ const char	*progname;
 int		 wipe;
 int		 ion;
 struct passwd	*pw;
-uint64_t         fsUuid = 0;
-const char      *datadir = SL_PATH_DATA_DIR;
+uint64_t	 fsuuid = 0;
+const char	*datadir = SL_PATH_DATA_DIR;
 
 struct psc_journal_cursor cursor;
 
@@ -167,7 +167,7 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 
 	/* create immutable namespace top directory */
 	if (ion) {
-		xmkfn(fn, "%s/%"PRIx64, metadir, fsUuid);
+		xmkfn(fn, "%s/%"PRIx64, metadir, fsuuid);
 		slnewfs_mkdir(fn);
 		strlcpy(metadir, fn, sizeof(metadir));
 		xmkfn(fn, "%s/%s", metadir, SL_RPATH_FIDNS_DIR);
@@ -193,11 +193,11 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 	if (fp == NULL)
 		psc_fatal("open %s", fn);
 
-	if (!fsUuid)
-		fsUuid = psc_random64();
-	fprintf(fp, "%16"PRIx64"\n", fsUuid);
+	if (!fsuuid)
+		fsuuid = psc_random64();
+	fprintf(fp, "%16"PRIx64"\n", fsuuid);
 	if (!ion)
-		printf("The UUID of the pool is %#16"PRIx64"\n", fsUuid);
+		printf("The UUID of the pool is %#16"PRIx64"\n", fsuuid);
 
 	fclose(fp);
 
@@ -307,7 +307,7 @@ main(int argc, char *argv[])
 			break;
 		case 'u':
 			endp = NULL;
-			fsUuid = strtoull(optarg, &endp, 16);
+			fsuuid = strtoull(optarg, &endp, 16);
 			if (endp == optarg || *endp)
 				errx(1, "%s: invalid FSUUID", optarg);
 			break;
@@ -326,7 +326,7 @@ main(int argc, char *argv[])
 		slcfg_parse(cfgfn);
 
 	/* on ION, we must specify a uuid */
-	if (ion && !fsUuid)
+	if (ion && !fsuuid)
 		usage();
 
 	sl_getuserpwent(&pw);
