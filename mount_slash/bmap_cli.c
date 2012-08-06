@@ -702,8 +702,7 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 
 		/* first, try preferred IOS */
 		FOREACH_RND(&it, fci->fci_nrepls) {
-			/* Scan through the members
-			 */
+			/* scan through the members */
 			DYNARRAY_FOREACH(resm, j, &res->res_members) {
 				if (fci->fci_reptbl[it.ri_rnd_idx].bs_id !=
 				    resm->resm_res_id)
