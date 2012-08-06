@@ -419,8 +419,7 @@ mds_repl_inv_except(struct bmapc_memb *b, int iosidx)
 	    &iosidx, 1, mds_repl_inv_requeue, &qv))
 		BHGEN_INCREMENT(b);
 
-	/* XXX why are we not using journalling here??? */
-	rc = mds_bmap_write(b, 0, NULL, NULL);
+	rc = mds_bmap_write_logrepls(b);
 
 	/*
 	 * If this bmap is marked for persistent replication, the repl
@@ -483,48 +482,24 @@ slm_iosv_clearbusy(const sl_replica_t *iosv, int nios)
 }
 
 void
-slm_repl_upd_odt_write(struct bmapc_memb *b, struct slash_fidgen *fg,
-    sl_bmapno_t bno)
+slm_repl_upd_odt_write(struct bmapc_memb *b)
 {
 	struct {
 		sl_replica_t	iosv[SL_MAX_REPLICAS];
 		unsigned	nios;
 	} add, del, sch, deq;
-	int locked, rc, off, vold, vnew;
+	int locked, off, vold, vnew;
 	struct bmap_repls_upd_odent br;
 	struct slm_update_data *upd;
 	struct bmap_mds_info *bmi;
 	struct fidc_membh *f;
 	unsigned n;
 
-	if (b)
-		upd = bmap_2_upd(b);
-	else {
-		/*
-		 * Called from replay; ensure we don't duplicate odt
-		 * entry.
-		 */
-		rc = slm_fcmh_get(fg, &f);
-		if (rc)
-			;
-
-		rc = bmap_get(f, bno, SL_WRITE, &b);
-		if (rc)
-			;
-
-		bmap_op_start_type(b, BMAP_OPCNT_WORK);
-		bmap_op_done(b);
-
-		upd = bmap_2_upd(b);
-		upd_init(upd, UPDT_BMAP);
-
-		fcmh_op_done(f);
-	}
+	bmi = bmap_2_bmi(b);
+	upd = &bmi->bmi_upd;
+	f = b->bcm_fcmh;
 
 	locked = BMAPOD_READ_START(b);
-
-	bmi = bmap_2_bmi(b);
-	f = b->bcm_fcmh;
 
 	add.nios = 0;
 	del.nios = 0;

@@ -1545,7 +1545,7 @@ slm_wkcb_wr_brepl(void *p)
 {
 	struct slm_wkdata_wr_brepl *wk = p;
 
-	slm_repl_upd_odt_write(wk->b, &wk->fg, wk->bno);
+	slm_repl_upd_odt_write(wk->b);
 	return (0);
 }
 
@@ -1562,6 +1562,8 @@ mdslog_bmap_repls(void *datap, uint64_t txg, __unusedx int flag)
 	struct slm_wkdata_wr_brepl *wk;
 	struct bmapc_memb *b = datap;
 
+	psc_assert((b->bcm_flags & BMAP_REPLAY) == 0);
+
 	sjbr = pjournal_get_buf(mdsJournal, sizeof(*sjbr));
 	mdslogfill_bmap_repls(b, sjbr);
 	pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_REPLS, 0, sjbr,
@@ -1570,14 +1572,8 @@ mdslog_bmap_repls(void *datap, uint64_t txg, __unusedx int flag)
 
 	wk = pfl_workq_getitem(slm_wkcb_wr_brepl,
 	    struct slm_wkdata_wr_brepl);
-	if (b->bcm_flags & BMAP_REPLAY) {
-		wk->b = NULL;
-		wk->fg = b->bcm_fcmh->fcmh_fg;
-		wk->bno = b->bcm_bmapno;
-	} else {
-		wk->b = b;
-		bmap_op_start_type(b, BMAP_OPCNT_WORK);
-	}
+	wk->b = b;
+	bmap_op_start_type(b, BMAP_OPCNT_WORK);
 	pfl_workq_putitem(wk);
 }
 

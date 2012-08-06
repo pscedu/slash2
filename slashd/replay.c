@@ -70,7 +70,12 @@ mds_replay_bmap(void *jent, int op)
 		bmap_2_replpol(b) = sjbr->sjbr_replpol;
 		memcpy(b->bcm_repls, sjbr->sjbr_repls,
 		    SL_REPLICA_NBYTES);
-		slm_repl_upd_odt_write(b, NULL, 0);
+
+		bmap_op_start_type(b, BMAP_OPCNT_WORK);
+
+		upd_init(bmap_2_upd(b), UPDT_BMAP);
+
+		slm_repl_upd_odt_write(b);
 		break;
 	case B_REPLAY_OP_CRC: {
 		struct slash_inode_handle *ih;
