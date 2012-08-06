@@ -78,13 +78,16 @@ int64_t
 slm_bmap_calc_repltraffic(struct bmapc_memb *b)
 {
 	struct fidc_membh *f;
+	int i, locked[2];
 	int64_t amt = 0;
 	off_t bsiz, sz;
-	int i;
 
 	f = b->bcm_fcmh;
-	FCMH_LOCK(f);
-	BMAP_LOCK(b);
+	locked[0] = FCMH_RLOCK(f);
+	if (locked[0] == PSLRV_WASLOCKED)
+		locked[1] = BMAP_RLOCK(b);
+	else
+		BMAP_LOCK(b);
 	for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++) {
 		if (b->bcm_crcstates[i] & BMAP_SLVR_DATA) {
 			/*
@@ -107,8 +110,11 @@ slm_bmap_calc_repltraffic(struct bmapc_memb *b)
 			amt += SLASH_SLVR_SIZE;
 		}
 	}
-	BMAP_ULOCK(b);
-	FCMH_ULOCK(f);
+	if (locked[0] == PSLRV_WASLOCKED)
+		BMAP_URLOCK(b, locked[1]);
+	else
+		BMAP_ULOCK(b);
+	FCMH_URLOCK(f, locked[0]);
 	return (amt);
 }
 

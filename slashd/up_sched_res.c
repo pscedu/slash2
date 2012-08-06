@@ -195,7 +195,7 @@ slmupschedthr_tryrepldst(struct slm_update_data *upd,
     struct bmapc_memb *b, int off, struct sl_resm *src_resm,
     struct sl_resource *dst_res, int j)
 {
-	int locked = 0, tract[NBREPLST], retifset[NBREPLST], rc = 0;
+	int tract[NBREPLST], retifset[NBREPLST], rc = 0;
 	struct resm_mds_info *src_rmmi, *dst_rmmi;
 	struct pscrpc_request *rq = NULL;
 	struct srm_repl_schedwk_req *mq;
@@ -236,16 +236,7 @@ slmupschedthr_tryrepldst(struct slm_update_data *upd,
 	 * Otherwise, it would have been released while it waits for the
 	 * callback to be issued.
 	 */
-	if (BMAP_HASLOCK(b)) {
-		UPD_ULOCK(upd);
-		BMAP_ULOCK(b);
-		locked = 1;
-	}
 	amt = slm_bmap_calc_repltraffic(b);
-	if (locked) {
-		BMAP_LOCK(b);
-		UPD_LOCK(upd);
-	}
 
 	spinlock(&repl_busytable_lock);
 	amt = mds_repl_nodes_adjbusy(src_resm, dst_resm, amt);
@@ -306,19 +297,12 @@ slmupschedthr_tryrepldst(struct slm_update_data *upd,
 	 * replication request or something.
 	 */
 	if (rc == BREPLST_REPL_QUEUED) {
-		if (locked) {
-			UPD_ULOCK(upd);
-			BMAP_ULOCK(b);
-		}
 		rc = mds_bmap_write_logrepls(b);
-		/* XXX check rc */
-
-		if (locked) {
-			UPD_LOCK(upd);
-			BMAP_LOCK(b);
-		}
-
 		av.space[IN_UNDO_WR] = 1;
+		BMAP_LOCK(b);
+		if (rc)
+			PFL_GOTOERR(fail, rc);
+
 		/*
 		 * It is OK if repl sched is resent across reboots
 		 * idempotently.
@@ -326,18 +310,15 @@ slmupschedthr_tryrepldst(struct slm_update_data *upd,
 		rq->rq_interpret_reply = slmupschedthr_tryrepldst_cb;
 		rq->rq_async_args = av;
 		rc = SL_NBRQSET_ADD(csvc, rq);
-		if (rc == 0) {
-			if (BMAP_HASLOCK(b))
-				BMAP_ULOCK(b);
+		if (rc == 0)
 			return (1);
-		}
-	} else {
+	} else
 		rc = ENODEV;
-	}
 
  fail:
 	av.space[IN_RC] = rc;
 	slmupschedthr_tryrepldst_cb(rq, &av);
+	BMAPOD_REQWRLOCK(bmap_2_bmi(b));
 	return (0);
 }
 
@@ -439,22 +420,23 @@ slmupschedthr_tryptrunc(struct slm_update_data *upd,
 
 	if (rc == BREPLST_TRUNCPNDG) {
 		rc = mds_bmap_write_logrepls(b);
-		/* XXX check rc */
-
 		av.space[IN_UNDO_WR] = 1;
+		BMAP_LOCK(b);
+		if (rc)
+			PFL_GOTOERR(fail, rc);
+
 		rq->rq_interpret_reply = slmupschedthr_tryptrunc_cb;
 		rq->rq_async_args = av;
 		rc = SL_NBRQSET_ADD(csvc, rq);
-		if (rc == 0) {
-			if (BMAP_HASLOCK(b))
-				BMAP_ULOCK(b);
+		if (rc == 0)
 			return (1);
-		}
 	} else
 		rc = ENODEV;
+
  fail:
 	av.space[IN_RC] = rc;
 	slmupschedthr_tryptrunc_cb(rq, &av);
+	BMAPOD_REQWRLOCK(bmap_2_bmi(b));
 	return (0);
 }
 
@@ -557,22 +539,23 @@ slmupschedthr_trygarbage(struct slm_update_data *upd,
 
 	if (rc == BREPLST_GARBAGE || rc == BREPLST_INVALID) {
 		rc = mds_bmap_write_logrepls(b);
-		/* XXX check rc */
-
 		av.space[IN_UNDO_WR] = 1;
+		BMAP_LOCK(b);
+		if (rc)
+			PFL_GOTOERR(fail, rc);
+
 		rq->rq_interpret_reply = slmupschedthr_trygarbage_cb;
 		rq->rq_async_args = av;
 		rc = SL_NBRQSET_ADD(csvc, rq);
-		if (rc == 0) {
-			if (BMAP_HASLOCK(b))
-				BMAP_ULOCK(b);
+		if (rc == 0)
 			return (1);
-		}
-	}
+	} else
 		rc = ENODEV;
+
  fail:
 	av.space[IN_RC] = rc;
 	slmupschedthr_trygarbage_cb(rq, &av);
+	BMAPOD_REQWRLOCK(bmap_2_bmi(b));
 	return (0);
 }
 
@@ -628,7 +611,7 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 int
 upd_proc_bmap(struct slm_update_data *upd)
 {
-	int ngarb, off, val, tryarchival, iosidx;
+	int rc = 1, ngarb, off, val, tryarchival, iosidx;
 	struct rnd_iterator dst_res_i, dst_resm_i;
 	struct rnd_iterator src_res_i, src_resm_i;
 	struct sl_resource *dst_res, *src_res;
@@ -647,8 +630,9 @@ upd_proc_bmap(struct slm_update_data *upd)
 	f = b->bcm_fcmh;
 	fmi = fcmh_2_fmi(f);
 
-//	FCMH_LOCK(f);
+	FCMH_LOCK(f);
 	BMAP_LOCK(b);
+	BMAPOD_MODIFY_START(b);
 
 	DEBUG_BMAPOD(PLL_DEBUG, b, "processing");
 
@@ -713,7 +697,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 						    if (slmupschedthr_tryrepldst(upd,
 							b, off, src_resm, dst_res,
 							dst_resm_i.ri_rnd_idx))
-							    return (0);
+							    PFL_GOTOERR(out, rc = 0);
 				}
 			}
 		}
@@ -729,7 +713,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 				if (rv < 0)
 					break;
 				if (rv > 0)
-					return (rv);
+					PFL_GOTOERR(out, rc = rv);
 			}
 			break;
 		case BREPLST_GARBAGE:
@@ -747,7 +731,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 				bno--;
 			if (b->bcm_bmapno != bno) {
 				if (f->fcmh_flags & FCMH_IN_PTRUNC)
-					return (1);
+					PFL_GOTOERR(out, rc = 1);
 				bmap_op_done(b);
 				if (mds_bmap_load(f, bno, &b))
 					break;
@@ -776,7 +760,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 
 				if (f->fcmh_flags & FCMH_IN_PTRUNC)  {
 					bmap_op_done(b);
-					return (0);
+					PFL_GOTOERR(out, 0);
 				}
 
 				bno--;
@@ -824,14 +808,20 @@ upd_proc_bmap(struct slm_update_data *upd)
 				if (slmupschedthr_trygarbage(upd, b,
 				    off, dst_res,
 				    dst_resm_i.ri_rnd_idx))
-					return (0);
+					PFL_GOTOERR(out, rc = 0);
 			break;
 		}
 		upd_rpmi_remove(rpmi, upd);
 		BMAP_RLOCK(b);
 	}
-//	FCMH_LOCK(f);
-	return (1);
+ out:
+	if (BMAPOD_HASWRLOCK(bmap_2_bmi(b))) {
+		BMAPOD_MODIFY_DONE(b);
+		b->bcm_flags &= ~BMAP_MDS_REPLMOD;
+	}
+	BMAP_ULOCK(b);
+	FCMH_ULOCK(f);
+	return (rc);
 }
 
 #define DBF_RESID	1

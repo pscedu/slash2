@@ -75,6 +75,7 @@ void	 slm_iosv_clearbusy(const sl_replica_t *, int);
 
 void	 slm_repl_upd_odt_read(struct bmapc_memb *);
 void	 slm_repl_upd_odt_write(struct bmapc_memb *);
+void	 slm_repl_bmap_rel(struct bmapc_memb *);
 
 void	 mds_brepls_check(uint8_t *, int);
 

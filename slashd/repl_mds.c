@@ -227,7 +227,15 @@ _mds_repl_bmap_apply(struct bmapc_memb *b, const int *tract,
 	int locked = 0, val, rc = 0;
 
 	if (tract) {
-		if (!BMAPOD_HASWRLOCK(bmi)) {
+		if (BMAPOD_HASWRLOCK(bmi)) {
+			if ((b->bcm_flags & BMAP_MDS_REPLMOD) == 0) {
+				locked = BMAP_RLOCK(b);
+				b->bcm_flags |= BMAP_MDS_REPLMOD;
+				BMAP_URLOCK(b, locked);
+				memcpy(bmi->bmi_orepls, b->bcm_repls,
+				    sizeof(bmi->bmi_orepls));
+			}
+		} else {
 			locked = BMAP_RLOCK(b);
 			bmap_wait_locked(b, b->bcm_flags &
 			    BMAP_MDS_REPLMOD);
@@ -265,10 +273,10 @@ _mds_repl_bmap_apply(struct bmapc_memb *b, const int *tract,
 
 	/* apply any translations */
 	if (tract && tract[val] != -1) {
-		DEBUG_BMAP(PLL_DEBUG, b, "before modification");
+		DEBUG_BMAPOD(PLL_WARN, b, "before modification");
 		SL_REPL_SET_BMAP_IOS_STAT(b->bcm_repls, off,
 		    tract[val]);
-		DEBUG_BMAP(PLL_DEBUG, b, "after modification");
+		DEBUG_BMAPOD(PLL_WARN, b, "after modification");
 	}
 
  out:
@@ -511,9 +519,13 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 		    bmi->bmi_orepls, off);
 		vnew = SL_REPL_GET_BMAP_IOS_STAT(
 		    b->bcm_repls, off);
-		if (vold != BREPLST_REPL_QUEUED &&
+		if (vold == vnew)
+			;
+		else if (vold != BREPLST_REPL_QUEUED &&
 		    vnew == BREPLST_REPL_QUEUED)
+{printf("change %d -> %d\n", vold, vnew);
 			add.iosv[add.nios++].bs_id = fcmh_2_repl(f, n);
+}
 		else if ((vold == BREPLST_REPL_QUEUED ||
 		    vold == BREPLST_REPL_SCHED) &&
 		    (vnew == BREPLST_GARBAGE ||
@@ -542,6 +554,7 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 		}
 
 		for (n = 0; n < add.nios; n++)
+{printf("  exec %d insert\n", n);
 			dbdo(NULL, NULL,
 			    " INSERT INTO upsch ("
 			    "	resid, fid, bno, uid, gid, status, "
@@ -556,6 +569,7 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 			    f->fcmh_sstb.sst_gid,
 			    upd->upd_recpt->odtr_elem,
 			    upd->upd_recpt->odtr_key);
+}
 	}
 	if (deq.nios)
 		for (n = 0; n < deq.nios; n++)
@@ -589,11 +603,11 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 		upd_tryremove(upd);
 	}
 	BMAPOD_READ_DONE(b, locked);
-	UPD_UNBUSY(upd);
 	BMAP_RLOCK(b);
 	b->bcm_flags &= ~(BMAP_MDS_REPLMOD | BMAP_MDS_REPLMODWR);
 	bmap_wake_locked(b);
 	bmap_op_done_type(b, BMAP_OPCNT_WORK);
+	UPD_UNBUSY(upd);
 }
 
 int
@@ -1046,9 +1060,9 @@ slm_repl_odt_startup_cb(void *data, struct odtable_receipt *odtr,
 			break;
 		}
 
+ out:
 	PSCFREE(odtr);
 
- out:
 	if (b)
 		bmap_op_done(b);
 	if (f)
