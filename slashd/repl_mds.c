@@ -588,8 +588,8 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 			    b->bcm_bmapno);
 		upd_tryremove(upd);
 	}
-	UPD_UNBUSY(upd);
 	BMAPOD_READ_DONE(b, locked);
+	UPD_UNBUSY(upd);
 	BMAP_RLOCK(b);
 	b->bcm_flags &= ~(BMAP_MDS_REPLMOD | BMAP_MDS_REPLMODWR);
 	bmap_wake_locked(b);

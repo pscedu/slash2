@@ -128,6 +128,7 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 {
 	int rc, tract[NBREPLST], retifset[NBREPLST];
 	uint64_t crc, od_crc = 0;
+	struct slm_update_data *upd;
 	struct fidc_membh *f;
 	struct iovec iovs[2];
 	size_t nb;
@@ -186,6 +187,8 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 		return (0);
 	}
 
+	upd = bmap_2_upd(b);
+
 	/*
 	 * If we crashed, revert all inflight SCHED'ed bmaps so they get
 	 * resent.
@@ -204,9 +207,10 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
 	retifset[BREPLST_GARBAGE_SCHED] = 1;
 
-	if (mds_repl_bmap_walk_all(b, tract, retifset, 0))
+	if (mds_repl_bmap_walk_all(b, tract, retifset, 0)) {
+		upd_init(upd, UPDT_BMAP);
 		mds_bmap_write_logrepls(b);
-	else {
+	} else {
 		BMAPOD_MODIFY_DONE(b);
 		b->bcm_flags &= ~BMAP_MDS_REPLMOD;
 	}
@@ -218,11 +222,11 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 	if (mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT)) {
 		sl_replica_t iosv[SL_MAX_REPLICAS];
-		struct slm_update_data *upd;
 		unsigned j;
 
-		upd = bmap_2_upd(b);
-		upd_init(upd, UPDT_BMAP);
+		if (pfl_memchk(upd, 0,
+		    sizeof(*upd)) == 1)
+			upd_init(upd, UPDT_BMAP);
 
 		/*
 		 * Requeue pending updates on all registered sites.  If
