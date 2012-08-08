@@ -369,9 +369,9 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	psc_hashent_init(&fidcHtable, fcmh);
 	psc_waitq_init(&fcmh->fcmh_waitq);
 
+	COPYFG(&fcmh->fcmh_fg, fgp);
 	fcmh_op_start_type(fcmh, FCMH_OPCNT_NEW);
 
-	COPYFG(&fcmh->fcmh_fg, fgp);
 	DEBUG_FCMH(PLL_DEBUG, fcmh, "new fcmh");
 
 	/*
@@ -604,7 +604,7 @@ _dump_fcmh_flags_common(int *flags, int *seq)
 	PFL_PRFLAG(FCMH_GETTING_ATTRS, flags, seq);
 	PFL_PRFLAG(FCMH_CTOR_FAILED, flags, seq);
 	PFL_PRFLAG(FCMH_NO_BACKFILE, flags, seq);
-	PFL_PRFLAG(FCMH_IN_SETATTR, flags, seq);
+	PFL_PRFLAG(FCMH_BUSY, flags, seq);
 }
 
 __weak void
