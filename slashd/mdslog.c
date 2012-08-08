@@ -1523,17 +1523,18 @@ mdslogfill_bmap_repls(struct bmapc_memb *b,
     struct slmds_jent_bmap_repls *sjbr)
 {
 	struct fidc_membh *f = b->bcm_fcmh;
-	int locked;
+
+	FCMH_BUSY_ENSURE(f);
+	BMAP_BUSY_ENSURE(b);
+	f->fcmh_owner = 0;
+	b->bcm_owner = 0;
 
 	sjbr->sjbr_fid = fcmh_2_fid(f);
 	sjbr->sjbr_bmapno = b->bcm_bmapno;
 	BHGEN_GET(b, &sjbr->sjbr_bgen);
 
-//	FCMH_ENSURE_LOCKED(f);
-	locked = FCMH_RLOCK(f);
 	sjbr->sjbr_nrepls = fcmh_2_nrepls(f);
 	sjbr->sjbr_replpol = fcmh_2_replpol(f);
-	FCMH_URLOCK(f, locked);
 
 	memcpy(sjbr->sjbr_repls, b->bcm_repls, SL_REPLICA_NBYTES);
 
@@ -1942,7 +1943,8 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	psclog_info("Last used SLASH2 transaction ID is %"PRId64,
 	   mdsJournal->pj_lastxid);
 
-	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm, mds_cursor.pjc_seqno_lwm);
+	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm,
+	    mds_cursor.pjc_seqno_lwm);
 	psclog_info("Last bmap sequence number low water mark is %"PRIx64,
 	    mds_cursor.pjc_seqno_lwm);
 	psclog_info("Last bmap sequence number high water mark is %"PRIx64,
@@ -1958,12 +1960,13 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	    "slmjreclaimthr");
 	if (!npeers)
 		return;
+
 	/*
 	 * Start a thread to propagate local namespace updates to peers
 	 * after our MDS peer list has been all setup.
 	 */
-	pscthr_init(SLMTHRT_JNAMESPACE, 0, slmjnsthr_main, NULL,
-	    0, "slmjnsthr");
+	pscthr_init(SLMTHRT_JNAMESPACE, 0, slmjnsthr_main, NULL, 0,
+	    "slmjnsthr");
 }
 
 void
