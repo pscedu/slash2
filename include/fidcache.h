@@ -69,6 +69,7 @@ struct fidc_membh {
 	struct psclist_head	 fcmh_lentry;	/* busy or idle list */
 	struct psc_waitq	 fcmh_waitq;	/* wait here for operations */
 	struct bmap_cache	 fcmh_bmaptree;	/* bmap cache splay */
+	pthread_t		 fcmh_owner;	/* holds BUSY */
 };
 
 /* fcmh_flags (cache) */
@@ -84,7 +85,7 @@ struct fidc_membh {
 #define	FCMH_GETTING_ATTRS	(1 <<  9)	/* fetching stat(2) info */
 #define	FCMH_CTOR_FAILED	(1 << 10)	/* constructor func failed */
 #define	FCMH_NO_BACKFILE	(1 << 11)	/* fcmh does not have a backing file */
-#define FCMH_IN_SETATTR		(1 << 12)	/* setattr in progress */
+#define	FCMH_BUSY		(1 << 12)	/* fcmh being processed */
 #define	_FCMH_FLGSHFT		(1 << 13)
 
 /* number of seconds in which attribute times out */
@@ -134,6 +135,36 @@ struct fidc_membh {
 		FCMH_LOCK_ENSURE(f);					\
 		if (psc_waitq_nwaiters(&(f)->fcmh_waitq))		\
 			psc_waitq_wakeall(&(f)->fcmh_waitq);		\
+	} while (0)
+
+#define FCMH_WAIT_BUSY(f)						\
+	do {								\
+		pthread_t _pthr = pthread_self();			\
+									\
+		FCMH_RLOCK(f);						\
+		fcmh_wait_locked((f),					\
+		    ((f)->fcmh_flags & FCMH_BUSY) &&			\
+		    (f)->fcmh_owner != _pthr);				\
+		(f)->fcmh_flags |= FCMH_BUSY;				\
+		(f)->fcmh_owner = _pthr;				\
+		DEBUG_FCMH(PLL_DEBUG, (f), "set BUSY");			\
+	} while (0)
+
+#define FCMH_UNBUSY(f)							\
+	do {								\
+		FCMH_RLOCK(f);						\
+		FCMH_BUSY_ENSURE(f);					\
+		(f)->fcmh_owner = 0;					\
+		(f)->fcmh_flags &= ~FCMH_BUSY;				\
+		DEBUG_FCMH(PLL_DEBUG, (f), "cleared BUSY");		\
+		fcmh_wake_locked(f);					\
+		FCMH_ULOCK(f);						\
+	} while (0)
+
+#define FCMH_BUSY_ENSURE(f)						\
+	do {								\
+		psc_assert((f)->fcmh_flags & FCMH_BUSY);		\
+		psc_assert((f)->fcmh_owner == pthread_self());		\
 	} while (0)
 
 #ifdef _SLASH_MDS
@@ -216,13 +247,13 @@ ssize_t	 fcmh_getsize(struct fidc_membh *);
 void	_fcmh_op_start_type(const struct pfl_callerinfo *, struct fidc_membh *, enum fcmh_opcnt_types);
 void	_fcmh_op_done_type(const struct pfl_callerinfo *, struct fidc_membh *, enum fcmh_opcnt_types);
 
-#define fcmh_op_start_type(fcmh, type)					\
-	_fcmh_op_start_type(PFL_CALLERINFOSS(SLSS_FCMH), (fcmh), (type))
+#define fcmh_op_start_type(f, type)					\
+	_fcmh_op_start_type(PFL_CALLERINFOSS(SLSS_FCMH), (f), (type))
 
-#define fcmh_op_done_type(fcmh, type)					\
-	_fcmh_op_done_type(PFL_CALLERINFOSS(SLSS_FCMH), (fcmh), (type))
+#define fcmh_op_done_type(f, type)					\
+	_fcmh_op_done_type(PFL_CALLERINFOSS(SLSS_FCMH), (f), (type))
 
-#define fcmh_op_done(fcmh)	fcmh_op_done_type((fcmh), FCMH_OPCNT_LOOKUP_FIDC)
+#define fcmh_op_done(f)		fcmh_op_done_type((f), FCMH_OPCNT_LOOKUP_FIDC)
 
 void	 _dump_fcmh_flags_common(int *, int *);
 
@@ -231,9 +262,9 @@ extern struct psc_poolmgr	*fidcPool;
 extern struct psc_hashtbl	 fidcHtable;
 
 static __inline void *
-fcmh_get_pri(struct fidc_membh *fcmh)
+fcmh_get_pri(struct fidc_membh *f)
 {
-	return (fcmh + 1);
+	return (f + 1);
 }
 
 static __inline struct fidc_membh *
