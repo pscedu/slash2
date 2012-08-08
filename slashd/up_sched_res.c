@@ -154,16 +154,6 @@ slmupschedthr_tryrepldst_cb(struct pscrpc_request *rq,
 			    "dst_resm=%s src_resm=%s rq=%p rc=%d",
 			    dst_resm->resm_name, src_resm->resm_name,
 			    rq, rc);
-
-		/*
-		 * Page more work in if a high level error; low level
-		 * (connection) should page in once connection is
-		 * reestablished.
-		 *
-		 * XXX this shouldn't be necessary as bandwidth should
-		 * be freed in the busy adjustment below.
-		 */
-//		upschq_resm(dst_resm, UPDT_PAGEIN);
 	} else {
 		/* Run standard successful RPC processing. */
 		slrpc_rep_in(csvc, rq);
@@ -185,7 +175,7 @@ slmupschedthr_tryrepldst_cb(struct pscrpc_request *rq,
 	if (csvc)
 		sl_csvc_decref(csvc);
 	if (b)
-		bmap_op_done_type(b, BMAP_OPCNT_UPSCH);
+		slm_repl_bmap_rel_type(b, BMAP_OPCNT_UPSCH);
 	UPSCH_WAKE();
 	return (0);
 }
@@ -299,7 +289,6 @@ slmupschedthr_tryrepldst(struct slm_update_data *upd,
 	if (rc == BREPLST_REPL_QUEUED) {
 		rc = mds_bmap_write_logrepls(b);
 		av.space[IN_UNDO_WR] = 1;
-		BMAP_LOCK(b);
 		if (rc)
 			PFL_GOTOERR(fail, rc);
 
@@ -318,7 +307,6 @@ slmupschedthr_tryrepldst(struct slm_update_data *upd,
  fail:
 	av.space[IN_RC] = rc;
 	slmupschedthr_tryrepldst_cb(rq, &av);
-	BMAPOD_REQWRLOCK(bmap_2_bmi(b));
 	return (0);
 }
 
@@ -356,11 +344,18 @@ slmupschedthr_tryptrunc_cb(struct pscrpc_request *rq,
 	if (csvc)
 		sl_csvc_decref(csvc);
 	if (b)
-		bmap_op_done_type(b, BMAP_OPCNT_UPSCH);
+		slm_repl_bmap_rel_type(b, BMAP_OPCNT_UPSCH);
 	UPSCH_WAKE();
 	return (0);
 }
 
+/**
+ * slmupschedthr_tryptrunc - Try to issue a PTRUNC resolution to an ION.
+ * Returns:
+ *   -1	: The activity can never happen; give up.
+ *    0	: Unsuccessful.
+ *    1	: Success.
+ */
 int
 slmupschedthr_tryptrunc(struct slm_update_data *upd,
     struct bmapc_memb *b, int off, struct sl_resource *dst_res,
@@ -421,7 +416,6 @@ slmupschedthr_tryptrunc(struct slm_update_data *upd,
 	if (rc == BREPLST_TRUNCPNDG) {
 		rc = mds_bmap_write_logrepls(b);
 		av.space[IN_UNDO_WR] = 1;
-		BMAP_LOCK(b);
 		if (rc)
 			PFL_GOTOERR(fail, rc);
 
@@ -436,7 +430,6 @@ slmupschedthr_tryptrunc(struct slm_update_data *upd,
  fail:
 	av.space[IN_RC] = rc;
 	slmupschedthr_tryptrunc_cb(rq, &av);
-	BMAPOD_REQWRLOCK(bmap_2_bmi(b));
 	return (0);
 }
 
@@ -480,7 +473,7 @@ slmupschedthr_trygarbage_cb(struct pscrpc_request *rq,
 	if (csvc)
 		sl_csvc_decref(csvc);
 	if (b)
-		bmap_op_done_type(b, BMAP_OPCNT_UPSCH);
+		slm_repl_bmap_rel_type(b, BMAP_OPCNT_UPSCH);
 	UPSCH_WAKE();
 	return (0);
 }
@@ -540,7 +533,6 @@ slmupschedthr_trygarbage(struct slm_update_data *upd,
 	if (rc == BREPLST_GARBAGE || rc == BREPLST_INVALID) {
 		rc = mds_bmap_write_logrepls(b);
 		av.space[IN_UNDO_WR] = 1;
-		BMAP_LOCK(b);
 		if (rc)
 			PFL_GOTOERR(fail, rc);
 
@@ -555,7 +547,6 @@ slmupschedthr_trygarbage(struct slm_update_data *upd,
  fail:
 	av.space[IN_RC] = rc;
 	slmupschedthr_trygarbage_cb(rq, &av);
-	BMAPOD_REQWRLOCK(bmap_2_bmi(b));
 	return (0);
 }
 
@@ -617,10 +608,10 @@ upd_proc_bmap(struct slm_update_data *upd)
 	struct sl_resource *dst_res, *src_res;
 	struct slashrpc_cservice *csvc;
 	struct resprof_mds_info *rpmi;
-	struct sl_resm *src_resm;
 	struct bmap_mds_info *bmi;
 	struct fcmh_mds_info *fmi;
 	struct bmapc_memb *b, *bn;
+	struct sl_resm *src_resm;
 	struct fidc_membh *f;
 	sl_ios_id_t iosid;
 	sl_bmapno_t bno;
@@ -630,8 +621,12 @@ upd_proc_bmap(struct slm_update_data *upd)
 	f = b->bcm_fcmh;
 	fmi = fcmh_2_fmi(f);
 
-	FCMH_LOCK(f);
-	BMAP_LOCK(b);
+	FCMH_WAIT_BUSY(f);
+	FCMH_ULOCK(f);
+
+	BMAP_WAIT_BUSY(b);
+	BMAP_ULOCK(b);
+
 	BMAPOD_MODIFY_START(b);
 
 	DEBUG_BMAPOD(PLL_DEBUG, b, "processing");
@@ -697,7 +692,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 						    if (slmupschedthr_tryrepldst(upd,
 							b, off, src_resm, dst_res,
 							dst_resm_i.ri_rnd_idx))
-							    PFL_GOTOERR(out, rc = 0);
+							    return (0);
 				}
 			}
 		}
@@ -712,8 +707,8 @@ upd_proc_bmap(struct slm_update_data *upd)
 				    dst_resm_i.ri_rnd_idx);
 				if (rv < 0)
 					break;
-				if (rv > 0)
-					PFL_GOTOERR(out, rc = rv);
+				if (rv)
+					return (rc);
 			}
 			break;
 		case BREPLST_GARBAGE:
@@ -760,7 +755,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 
 				if (f->fcmh_flags & FCMH_IN_PTRUNC)  {
 					bmap_op_done(b);
-					PFL_GOTOERR(out, 0);
+					PFL_GOTOERR(out, rc = 1);
 				}
 
 				bno--;
@@ -808,19 +803,16 @@ upd_proc_bmap(struct slm_update_data *upd)
 				if (slmupschedthr_trygarbage(upd, b,
 				    off, dst_res,
 				    dst_resm_i.ri_rnd_idx))
-					PFL_GOTOERR(out, rc = 0);
+					return (0);
 			break;
 		}
 		upd_rpmi_remove(rpmi, upd);
-		BMAP_RLOCK(b);
 	}
  out:
-	if (BMAPOD_HASWRLOCK(bmap_2_bmi(b))) {
+	if (BMAPOD_HASWRLOCK(bmap_2_bmi(b)))
 		BMAPOD_MODIFY_DONE(b);
-		b->bcm_flags &= ~BMAP_MDS_REPLMOD;
-	}
-	BMAP_ULOCK(b);
-	FCMH_ULOCK(f);
+	BMAP_UNBUSY(b);
+	FCMH_UNBUSY(f);
 	return (rc);
 }
 

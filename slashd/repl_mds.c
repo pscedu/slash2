@@ -87,17 +87,16 @@ iosidx_in(int idx, const int *iosidx, int nios)
 }
 
 void
-slm_repl_bmap_rel(struct bmapc_memb *b)
+_slm_repl_bmap_rel_type(struct bmapc_memb *b, int type)
 {
 	if (BMAPOD_HASWRLOCK(bmap_2_bmi(b)) &&
 	    !(b->bcm_flags & BMAP_MDS_REPLMODWR)) {
 		/* we took a write lock but did not modify; undo */
 		BMAPOD_MODIFY_DONE(b);
-
-		BMAP_RLOCK(b);
-		b->bcm_flags &= ~BMAP_MDS_REPLMOD;
+		BMAP_UNBUSY(b);
+		FCMH_UNBUSY(b->bcm_fcmh);
 	}
-	bmap_op_done(b);
+	bmap_op_done_type(b, type);
 }
 
 int
@@ -227,21 +226,24 @@ _mds_repl_bmap_apply(struct bmapc_memb *b, const int *tract,
 	int locked = 0, val, rc = 0;
 
 	if (tract) {
+		if (BMAPOD_HASWRLOCK(bmi))
+			FCMH_BUSY_ENSURE(b->bcm_fcmh);
+
+		FCMH_WAIT_BUSY(b->bcm_fcmh);
+		FCMH_ULOCK(b->bcm_fcmh);
+
 		if (BMAPOD_HASWRLOCK(bmi)) {
-			if ((b->bcm_flags & BMAP_MDS_REPLMOD) == 0) {
-				locked = BMAP_RLOCK(b);
-				b->bcm_flags |= BMAP_MDS_REPLMOD;
-				BMAP_URLOCK(b, locked);
-				memcpy(bmi->bmi_orepls, b->bcm_repls,
-				    sizeof(bmi->bmi_orepls));
-			}
+			BMAP_LOCK(b);
+			BMAP_BUSY_ENSURE(b);
+			psc_assert((b->bcm_flags &
+			    BMAP_MDS_REPLMODWR) == 0);
+			BMAP_ULOCK(b);
 		} else {
-			locked = BMAP_RLOCK(b);
-			bmap_wait_locked(b, b->bcm_flags &
-			    BMAP_MDS_REPLMOD);
+			BMAP_WAIT_BUSY(b);
+			psc_assert((b->bcm_flags &
+			    BMAP_MDS_REPLMODWR) == 0);
+			BMAP_ULOCK(b);
 			BMAPOD_MODIFY_START(b);
-			b->bcm_flags |= BMAP_MDS_REPLMOD;
-			BMAP_URLOCK(b, locked);
 			memcpy(bmi->bmi_orepls, b->bcm_repls,
 			    sizeof(bmi->bmi_orepls));
 		}
@@ -273,10 +275,10 @@ _mds_repl_bmap_apply(struct bmapc_memb *b, const int *tract,
 
 	/* apply any translations */
 	if (tract && tract[val] != -1) {
-		DEBUG_BMAPOD(PLL_WARN, b, "before modification");
+		DEBUG_BMAPOD(PLL_DIAG, b, "before modification");
 		SL_REPL_SET_BMAP_IOS_STAT(b->bcm_repls, off,
 		    tract[val]);
-		DEBUG_BMAPOD(PLL_WARN, b, "after modification");
+		DEBUG_BMAPOD(PLL_DIAG, b, "after modification");
 	}
 
  out:
@@ -501,6 +503,7 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 	struct slm_update_data *upd;
 	struct bmap_mds_info *bmi;
 	struct fidc_membh *f;
+	pthread_t pthr;
 	unsigned n;
 
 	bmi = bmap_2_bmi(b);
@@ -521,11 +524,10 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 		    b->bcm_repls, off);
 		if (vold == vnew)
 			;
-		else if (vold != BREPLST_REPL_QUEUED &&
+		else if ((vold != BREPLST_REPL_QUEUED &&
+		    vold != BREPLST_REPL_SCHED) &&
 		    vnew == BREPLST_REPL_QUEUED)
-{printf("change %d -> %d\n", vold, vnew);
 			add.iosv[add.nios++].bs_id = fcmh_2_repl(f, n);
-}
 		else if ((vold == BREPLST_REPL_QUEUED ||
 		    vold == BREPLST_REPL_SCHED) &&
 		    (vnew == BREPLST_GARBAGE ||
@@ -554,7 +556,6 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 		}
 
 		for (n = 0; n < add.nios; n++)
-{printf("  exec %d insert\n", n);
 			dbdo(NULL, NULL,
 			    " INSERT INTO upsch ("
 			    "	resid, fid, bno, uid, gid, status, "
@@ -569,7 +570,6 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 			    f->fcmh_sstb.sst_gid,
 			    upd->upd_recpt->odtr_elem,
 			    upd->upd_recpt->odtr_key);
-}
 	}
 	if (deq.nios)
 		for (n = 0; n < deq.nios; n++)
@@ -603,11 +603,20 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 		upd_tryremove(upd);
 	}
 	BMAPOD_READ_DONE(b, locked);
-	BMAP_RLOCK(b);
-	b->bcm_flags &= ~(BMAP_MDS_REPLMOD | BMAP_MDS_REPLMODWR);
-	bmap_wake_locked(b);
-	bmap_op_done_type(b, BMAP_OPCNT_WORK);
+
+	/* Transfer ownership to us. */
+	pthr = pthread_self();
+	f->fcmh_owner = pthr;
+	FCMH_UNBUSY(b->bcm_fcmh);
+
+	BMAP_LOCK(b);
+	b->bcm_owner = pthr;
+	b->bcm_flags &= ~BMAP_MDS_REPLMODWR;
+	BMAP_UNBUSY(b);
+
 	UPD_UNBUSY(upd);
+
+	bmap_op_done_type(b, BMAP_OPCNT_WORK);
 }
 
 int
