@@ -1215,7 +1215,7 @@ msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	 */
 	if (rc && !expired_lease) {
 		PLL_FOREACH(r, &bwc->bwc_pll)
-			if (r->biorq_retries >= SL_MAX_BMAP_FLUSH_RETRIES) {
+			if (r->biorq_retries >= SL_MAX_BMAPFLSH_RETRIES) {
 				maxretries = 1;
 				break;
 			}
