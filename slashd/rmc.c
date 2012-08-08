@@ -132,7 +132,7 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	struct fidc_membh *f;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = slm_fcmh_get(&mq->fg, &f);
+	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
 		goto out;
 
@@ -180,7 +180,7 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	struct bmap_mds_info *bmi;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = slm_fcmh_get(&mq->sbd.sbd_fg, &f);
+	mp->rc = -slm_fcmh_get(&mq->sbd.sbd_fg, &f);
 	if (mp->rc)
 		goto out;
 	mp->rc = bmap_lookup(f, mq->sbd.sbd_bmapno, &b);
@@ -230,7 +230,7 @@ slm_rmc_handle_extendbmapls(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	mp->rc = slm_fcmh_get(&mq->sbd.sbd_fg, &f);
+	mp->rc = -slm_fcmh_get(&mq->sbd.sbd_fg, &f);
 	if (mp->rc)
 		return (0);
 
@@ -248,7 +248,7 @@ slm_rmc_handle_reassignbmapls(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	mp->rc = slm_fcmh_get(&mq->sbd.sbd_fg, &f);
+	mp->rc = -slm_fcmh_get(&mq->sbd.sbd_fg, &f);
 	if (mp->rc)
 		return (0);
 
@@ -270,11 +270,11 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->rw != SL_READ && mq->rw != SL_WRITE) {
-		mp->rc = -EINVAL;
+		mp->rc = -SLERR_INVAL;
 		return (0);
 	}
 
-	mp->rc = slm_fcmh_get(&mq->fg, &f);
+	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
 		return (0);
 	mp->flags = mq->flags;
@@ -321,10 +321,10 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 	struct srm_link_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = slm_fcmh_get(&mq->fg, &c);
+	mp->rc = -slm_fcmh_get(&mq->fg, &c);
 	if (mp->rc)
 		goto out;
-	mp->rc = slm_fcmh_get(&mq->pfg, &p);
+	mp->rc = -slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
 		goto out;
 
@@ -352,14 +352,14 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 	struct fidc_membh *p;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = slm_fcmh_get(&mq->pfg, &p);
+	mp->rc = -slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
 		goto out;
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	if (fcmh_2_mdsio_fid(p) == SLFID_ROOT &&
 	    strcmp(mq->name, SL_RPATH_META_DIR) == 0) {
-		mp->rc = -EINVAL;
+		mp->rc = -SLERR_INVAL;
 		goto out;
 	}
 	mp->rc = mdsio_lookup(fcmh_2_mdsio_fid(p),
@@ -379,7 +379,7 @@ slm_mkdir(struct srm_mkdir_req *mq, struct srm_mkdir_rep *mp,
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 
-	mp->rc = slm_fcmh_get(&mq->pfg, &p);
+	mp->rc = -slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
 		goto out;
 
@@ -445,7 +445,7 @@ slm_rmc_handle_mknod(struct pscrpc_request *rq)
 	struct fidc_membh *p;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = slm_fcmh_get(&mq->pfg, &p);
+	mp->rc = -slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
 		goto out;
 
@@ -478,7 +478,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->flags & SRM_LEASEBMAPF_GETREPLTBL) {
-		mp->rc = -EINVAL;
+		mp->rc = -SLERR_INVAL;
 		goto out;
 	}
 
@@ -486,7 +486,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	 *   SLASH2 ino can be translated into the inode for the
 	 *   underlying fs.
 	 */
-	mp->rc = slm_fcmh_get(&mq->pfg, &p);
+	mp->rc = -slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
 		goto out;
 
@@ -530,7 +530,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	DEBUG_FCMH(PLL_DEBUG, p, "mdsio_release() done for %s",
 	    mq->name);
 
-	mp->rc = slm_fcmh_get(&mp->cattr.sst_fg, &c);
+	mp->rc = -slm_fcmh_get(&mp->cattr.sst_fg, &c);
 	if (mp->rc)
 		goto out;
 
@@ -562,8 +562,8 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	struct fidc_membh *f = NULL;
 	struct srm_readdir_req *mq;
 	struct srm_readdir_rep *mp;
-	struct iovec iov[2];
 	size_t outsize, nents;
+	struct iovec iov[2];
 	int niov;
 
 	iov[0].iov_base = NULL;
@@ -571,13 +571,13 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	mp->rc = slm_fcmh_get(&mq->fg, &f);
+	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
 		goto out;
 
 	if (mq->size > MAX_READDIR_BUFSIZ ||
 	    mq->nstbpref > MAX_READDIR_NENTS) {
-		mp->rc = -EINVAL;
+		mp->rc = -SLERR_INVAL;
 		goto out;
 	}
 
@@ -654,7 +654,7 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 	char buf[SL_PATH_MAX];
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = slm_fcmh_get(&mq->fg, &f);
+	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
 		goto out;
 
@@ -696,7 +696,7 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	if (mq->fromlen == 0 || mq->tolen == 0 ||
 	    mq->fromlen > SL_NAME_MAX ||
 	    mq->tolen   > SL_NAME_MAX) {
-		mp->rc = -EINVAL;
+		mp->rc = -SLERR_INVAL;
 		return (mp->rc);
 	}
 
@@ -718,14 +718,14 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	from[mq->fromlen] = '\0';
 	to[mq->tolen]     = '\0';
 
-	mp->rc = slm_fcmh_get(&mq->opfg, &op);
+	mp->rc = -slm_fcmh_get(&mq->opfg, &op);
 	if (mp->rc)
 		goto out;
 
 	if (SAMEFG(&mq->opfg, &mq->npfg)) {
 		np = op;
 	} else {
-		mp->rc = slm_fcmh_get(&mq->npfg, &np);
+		mp->rc = -slm_fcmh_get(&mq->npfg, &np);
 		if (mp->rc)
 			goto out;
 	}
@@ -785,12 +785,11 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	mp->rc = slm_fcmh_get(&mq->attr.sst_fg, &f);
+	mp->rc = -slm_fcmh_get(&mq->attr.sst_fg, &f);
 	if (mp->rc)
-		goto out;
+		return (0);
 
-	FCMH_LOCK(f);
-	fcmh_wait_locked(f, f->fcmh_flags & FCMH_IN_SETATTR);
+	FCMH_WAIT_BUSY(f);
 
 	flush = mq->to_set & PSCFS_SETATTRF_FLUSH;
 	to_set = mq->to_set & SL_SETATTRF_CLI_ALL;
@@ -868,6 +867,7 @@ goto out;
 		FCMH_RLOCK(f);
 		if (mp->rc == 0 || mp->rc == SLERR_BMAP_PTRUNC_STARTED)
 			mp->attr = f->fcmh_sstb;
+		FCMH_UNBUSY(f);
 		fcmh_op_done(f);
 	}
 	return (0);
@@ -883,11 +883,11 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	if (mq->pol < 0 || mq->pol >= NBRPOL) {
-		mp->rc = -EINVAL;
+		mp->rc = -SLERR_INVAL;
 		return (0);
 	}
 
-	mp->rc = slm_fcmh_get(&mq->fg, &f);
+	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
 		goto out;
 
@@ -912,11 +912,11 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	if (mq->pol < 0 || mq->pol >= NBRPOL) {
-		mp->rc = -EINVAL;
+		mp->rc = -SLERR_INVAL;
 		return (0);
 	}
 
-	mp->rc = slm_fcmh_get(&mq->fg, &f);
+	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
 		goto out;
 
@@ -931,6 +931,7 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	BHREPL_POLICY_SET(b, mq->pol);
 
 	mds_bmap_write_repls_rel(b);
+	/* XXX upd_enqueue */
 
  out:
 	if (f)
@@ -1000,8 +1001,10 @@ slm_symlink(struct pscrpc_request *rq, struct srm_symlink_req *mq,
 	struct iovec iov;
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
-	if (mq->linklen == 0 || mq->linklen >= SL_PATH_MAX)
-		return (EINVAL);
+	if (mq->linklen == 0 || mq->linklen >= SL_PATH_MAX) {
+		mp->rc = -SLERR_INVAL;
+		return (mp->rc);
+	}
 
 	iov.iov_base = linkname;
 	iov.iov_len = mq->linklen;
@@ -1009,7 +1012,7 @@ slm_symlink(struct pscrpc_request *rq, struct srm_symlink_req *mq,
 	if (mp->rc)
 		return (mp->rc);
 
-	mp->rc = slm_fcmh_get(&mq->pfg, &p);
+	mp->rc = -slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
 		goto out;
 
@@ -1057,7 +1060,7 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	fg.fg_fid = mq->pfid;
 	fg.fg_gen = FGEN_ANY;
 	mq->name[sizeof(mq->name) - 1] = '\0';
-	mp->rc = slm_fcmh_get(&fg, &p);
+	mp->rc = -slm_fcmh_get(&fg, &p);
 	if (mp->rc)
 		goto out;
 
