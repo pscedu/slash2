@@ -108,7 +108,7 @@ struct bmapc_memb {
 	psc_spinlock_t		 bcm_lock;
 	SPLAY_ENTRY(bmapc_memb)	 bcm_tentry;	/* bmap_cache splay tree entry */
 	struct psc_listentry	 bcm_lentry;	/* free pool */
-//	pthread_t		 bcm_owner;	/* temporary processor */
+	pthread_t		 bcm_owner;	/* temporary processor */
 
 	/*
 	 * This must start on a 64-bit boundary, and must lay at the end
@@ -134,7 +134,7 @@ struct bmapc_memb {
 #define BMAP_DIRTY2LRU		(1 << 8)
 #define BMAP_TIMEOQ		(1 << 9)	/* on timeout queue */
 #define BMAP_IONASSIGN		(1 << 10)	/* has been assigned to an ION for writes */
-#define BMAP_MDCHNG		(1 << 11)
+#define BMAP_MDCHNG		(1 << 11)	/* op mode changing (e.g. READ -> WRITE) */
 #define BMAP_WAITERS		(1 << 12)	/* has bcm_fcmh waiters */
 #define BMAP_ORPHAN		(1 << 13)	/* removed from fcmh_bmaptree */
 #define BMAP_BUSY		(1 << 14)	/* temporary processing lock */
@@ -145,8 +145,8 @@ struct bmapc_memb {
 
 #define bmap_2_fid(b)		fcmh_2_fid((b)->bcm_fcmh)
 
-#define SL_MAX_IOSREASSIGN		16
-#define SL_MAX_BMAP_FLUSH_RETRIES	2048
+#define SL_MAX_IOSREASSIGN	16
+#define SL_MAX_BMAPFLSH_RETRIES	2048
 
 #define BMAP_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bcm_lock)
 #define BMAP_HASLOCK(b)		psc_spin_haslock(&(b)->bcm_lock)
@@ -213,6 +213,36 @@ struct bmapc_memb {
 		}							\
 	} while (0)
 
+#define BMAP_WAIT_BUSY(b)						\
+	do {								\
+		pthread_t _pthr = pthread_self();			\
+									\
+		BMAP_RLOCK(b);						\
+		bmap_wait_locked((b),					\
+		    ((b)->bcm_flags & BMAP_BUSY) &&			\
+		    (b)->bcm_owner != _pthr);				\
+		(b)->bcm_flags |= BMAP_BUSY;				\
+		(b)->bcm_owner = _pthr;					\
+		DEBUG_BMAP(PLL_DEBUG, (b), "set BUSY");			\
+	} while (0)
+
+#define BMAP_UNBUSY(b)							\
+	do {								\
+		BMAP_RLOCK(b);						\
+		BMAP_BUSY_ENSURE(b);					\
+		(b)->bcm_owner = 0;					\
+		(b)->bcm_flags &= ~BMAP_BUSY;				\
+		DEBUG_BMAP(PLL_DEBUG, (b), "cleared BUSY");		\
+		bmap_wake_locked(b);					\
+		BMAP_ULOCK(b);						\
+	} while (0)
+
+#define BMAP_BUSY_ENSURE(b)						\
+	do {								\
+		psc_assert((b)->bcm_flags & BMAP_BUSY);			\
+		psc_assert((b)->bcm_owner == pthread_self());		\
+	} while (0)
+
 #define bmap_op_start_type(b, type)					\
 	do {								\
 		psc_atomic32_inc(&(b)->bcm_opcnt);			\
@@ -226,7 +256,7 @@ struct bmapc_memb {
 		psc_assert(psc_atomic32_read(&(b)->bcm_opcnt) > 0);	\
 		psc_atomic32_dec(&(b)->bcm_opcnt);			\
 		_bmap_op_done(PFL_CALLERINFOSS(SLSS_BMAP), (b),		\
-		    _DEBUG_BMAP_FMT "removing reference (type=%d)",	\
+		    _DEBUG_BMAP_FMT "released reference (type=%d)",	\
 		    _DEBUG_BMAP_FMTARGS(b), (type));			\
 	} while (0)
 
