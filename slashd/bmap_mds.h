@@ -76,8 +76,7 @@ struct bmap_mds_info {
 #define BMAP_MDS_NOION		(_BMAP_FLSHFT << 2)
 #define BMAP_MDS_DIO		(_BMAP_FLSHFT << 3)	/* direct I/O enabled */
 #define BMAP_MDS_SEQWRAP	(_BMAP_FLSHFT << 4)	/* sequence number wrapped */
-#define BMAP_MDS_REPLMOD	(_BMAP_FLSHFT << 5)	/* residency states may have changed */
-#define BMAP_MDS_REPLMODWR	(_BMAP_FLSHFT << 6)	/* res state changes have been written */
+#define BMAP_MDS_REPLMODWR	(_BMAP_FLSHFT << 5)	/* res state changes have been written */
 
 #define bmi_2_fcmh(bmi)		bmi_2_bmap(bmi)->bcm_fcmh
 

@@ -212,7 +212,8 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 		mds_bmap_write_logrepls(b);
 	} else {
 		BMAPOD_MODIFY_DONE(b);
-		b->bcm_flags &= ~BMAP_MDS_REPLMOD;
+		BMAP_UNBUSY(b);
+		FCMH_UNBUSY(b->bcm_fcmh);
 	}
 
 	brepls_init(retifset, 0);
@@ -256,8 +257,8 @@ mds_bmap_write(struct bmapc_memb *b, int update_mtime, void *logf,
     void *logarg)
 {
 	struct iovec iovs[2];
-	int rc, new;
 	uint64_t crc;
+	int rc, new;
 	size_t nb;
 
 	BMAP_RLOCK(b);
@@ -341,7 +342,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 	struct fidc_membh *f;
 	struct srt_stat sstb;
 	sl_ios_id_t iosid;
-	int fl, idx;
+	int rc, fl, idx;
 	uint32_t i;
 
 	psc_assert(bmap->bcm_flags & BMAP_MDS_CRC_UP);
@@ -349,9 +350,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 	f = bmap->bcm_fcmh;
 	ih = fcmh_2_inoh(f);
 
-	FCMH_LOCK(f);
-	fcmh_wait_locked(f, f->fcmh_flags & FCMH_IN_SETATTR);
-
+	FCMH_WAIT_BUSY(f);
 	iosid = bmi->bmdsi_wr_ion->rmmi_resm->resm_res_id;
 	idx = mds_repl_ios_lookup(ih, iosid);
 	if (idx < 0)
@@ -360,16 +359,17 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 	    fcmh_2_repl_nblks(f, idx);
 	fl = SL_SETATTRF_NBLKS;
 
-	/* use nolog because mdslog_bmap_crc will cover this */
-	mds_fcmh_setattr_nolog(f, fl, &sstb);
-
 	fcmh_set_repl_nblks(f, idx, crcup->nblks);
+
+	/* use nolog because mdslog_bmap_crc() will cover this */
+	rc = mds_fcmh_setattr_nolog(f, fl, &sstb);
+
 	if (idx >= SL_DEF_REPLICAS)
 		mds_inox_write(ih, NULL, NULL);
 	else
 		mds_inode_write(ih, NULL, NULL);
 
-	FCMH_ULOCK(f);
+	FCMH_UNBUSY(f);
 
 	crclog.scl_bmap = bmap;
 	crclog.scl_crcup = crcup;
@@ -413,7 +413,6 @@ dump_bmap_flags(uint32_t flags)
 	PFL_PRFLAG(BMAP_MDS_NOION, &flags, &seq);
 	PFL_PRFLAG(BMAP_MDS_DIO, &flags, &seq);
 	PFL_PRFLAG(BMAP_MDS_SEQWRAP, &flags, &seq);
-	PFL_PRFLAG(BMAP_MDS_REPLMOD, &flags, &seq);
 	PFL_PRFLAG(BMAP_MDS_REPLMODWR, &flags, &seq);
 	if (flags)
 		printf(" unknown: %#x", flags);

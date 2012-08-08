@@ -304,7 +304,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 		mds_repl_nodes_adjbusy(src_resm, dst_resm,
 		    -slm_bmap_calc_repltraffic(b));
 	if (b)
-		bmap_op_done(b);
+		slm_repl_bmap_rel(b);
 	if (f)
 		fcmh_op_done(f);
 	return (0);
@@ -461,20 +461,19 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 				    -SLERR_IMPORT_XREPL_DIFF);
 		} else {
 			/* reclaim old data */
-			FCMH_LOCK(c);
-			fcmh_wait_locked(c, c->fcmh_flags &
-			    FCMH_IN_SETATTR);
+			FCMH_WAIT_BUSY(c);
 			sstb.sst_fg.fg_gen = fcmh_2_gen(c) + 1;
 			sstb.sst_size = 0;
 			sstb.sst_blocks = 0;
 			for (i = 0; i < fcmh_2_nrepls(c); i++)
 				fcmh_set_repl_nblks(c, i, 0);
-			/* XXX does this update mtim? */
+			/* XXX journal repl_nblks */
+
 			rc = mds_fcmh_setattr(c,
 			    PSCFS_SETATTRF_DATASIZE | SL_SETATTRF_GEN |
 			    SL_SETATTRF_NBLKS, &sstb);
-			mds_inodes_odsync(c, NULL); /* journal repl_nblks */
-			FCMH_ULOCK(c);
+			mds_inodes_odsync(c, NULL);
+			FCMH_UNBUSY(c);
 
 			if (rc)
 				PFL_GOTOERR(out, mp->rc = -rc);
@@ -520,11 +519,9 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 
 	/* XXX fire off any persistent replications */
 
-	FCMH_LOCK(c);
+	FCMH_WAIT_BUSY(c);
 	mp->fg = c->fcmh_sstb.sst_fg;
-	fcmh_wait_locked(c, c->fcmh_flags & FCMH_IN_SETATTR);
-	/* set nblks regardless of XREPL.
-	 */
+	/* set nblks regardless of XREPL. */
 	fcmh_set_repl_nblks(c, idx, mq->sstb.sst_blocks);
 	fl = SL_SETATTRF_NBLKS;
 	if ((mq->flags & SRM_IMPORTF_XREPL) == 0) {
@@ -533,12 +530,16 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 		    PSCFS_SETATTRF_UID | PSCFS_SETATTRF_GID;
 	}
 	rc = mds_fcmh_setattr(c, fl, &mq->sstb);
-	if (rc)
+	if (rc) {
+		FCMH_UNBUSY(c);
 		PFL_GOTOERR(out, mp->rc = -rc);
+	}
 
 	rc = mds_inodes_odsync(c, NULL); /* journal repl_nblks */
 	if (rc)
 		mp->rc = rc;
+
+	FCMH_UNBUSY(c);
 
  out:
 	psclog_info("import: parent="SLPRI_FG" name=%s rc=%d",
@@ -574,8 +575,7 @@ slm_rmi_handle_mkdir(struct pscrpc_request *rq)
 		return (rc);
 	if (mp->rc && mp->rc != -EEXIST)
 		return (0);
-	FCMH_LOCK(d);
-	fcmh_wait_locked(d, d->fcmh_flags & FCMH_IN_SETATTR);
+	FCMH_WAIT_BUSY(d);
 	/*
 	 * XXX if mp->rc == -EEXIST, only update attrs if target isn't
 	 * newer
@@ -584,6 +584,7 @@ slm_rmi_handle_mkdir(struct pscrpc_request *rq)
 	    PSCFS_SETATTRF_UID | PSCFS_SETATTRF_GID |
 	    PSCFS_SETATTRF_ATIME | PSCFS_SETATTRF_MTIME |
 	    PSCFS_SETATTRF_CTIME, &sstb);
+	FCMH_UNBUSY(d);
 	fcmh_op_done(d);
 	if (rc)
 		mp->rc = rc;

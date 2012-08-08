@@ -75,6 +75,10 @@ mds_replay_bmap(void *jent, int op)
 
 		upd_init(bmap_2_upd(b), UPDT_BMAP);
 
+		FCMH_WAIT_BUSY(f);
+		FCMH_ULOCK(f);
+		BMAP_WAIT_BUSY(b);
+		BMAP_ULOCK(b);
 		slm_repl_upd_odt_write(b);
 		break;
 	case B_REPLAY_OP_CRC: {
@@ -82,13 +86,13 @@ mds_replay_bmap(void *jent, int op)
 		struct srt_stat sstb;
 		int fl, idx;
 
-		FCMH_LOCK(f);
+		FCMH_WAIT_BUSY(f);
 		ih = fcmh_2_inoh(f);
 		idx = mds_repl_ios_lookup(ih, sjbc->sjbc_iosid);
 		if (idx < 0) {
 			psclog_errorx("iosid %d not found in repl "
 			    "table", sjbc->sjbc_iosid);
-			goto out;
+			goto unbusy;
 		}
 		sstb.sst_blocks = sjbc->sjbc_aggr_nblks;
 		fcmh_set_repl_nblks(f, idx, sjbc->sjbc_repl_nblks);
@@ -97,12 +101,11 @@ mds_replay_bmap(void *jent, int op)
 		else
 			rc = mds_inode_write(ih, NULL, NULL);
 		if (rc)
-			goto out;
+			goto unbusy;
 
 		fl = SL_SETATTRF_NBLKS;
 
-		/* Apply the filesize from the journal entry.
-		 */
+		/* Apply the filesize from the journal entry. */
 		if (sjbc->sjbc_extend) {
 			sstb.sst_size = sjbc->sjbc_fsize;
 			fl |= PSCFS_SETATTRF_DATASIZE;
@@ -124,6 +127,10 @@ mds_replay_bmap(void *jent, int op)
 	DEBUG_BMAPOD(PLL_NOTIFY, b, "replayed bmap op=%d", op);
 
 	rc = mds_bmap_write(b, 0, NULL, NULL);
+
+	if (0)
+ unbusy:
+		FCMH_UNBUSY(f);
 
  out:
 	if (b)

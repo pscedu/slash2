@@ -40,17 +40,12 @@ int
 _mds_fcmh_setattr(struct fidc_membh *f, int to_set,
     const struct srt_stat *sstb, int log)
 {
-	int rc = 0;
+	int rc;
 
 	FCMH_LOCK_ENSURE(f);
-	psc_assert((f->fcmh_flags & FCMH_IN_SETATTR) == 0);
-
-	f->fcmh_flags |= FCMH_IN_SETATTR;
-
-	DEBUG_FCMH(PLL_INFO, f, "updating attributes, to_set=%#x",
-	    to_set);
-
+	FCMH_BUSY_ENSURE(f);
 	FCMH_ULOCK(f);
+
 	if (log)
 		mds_reserve_slot(1);
 	rc = mdsio_setattr(fcmh_2_mdsio_fid(f), sstb, to_set,
@@ -58,11 +53,6 @@ _mds_fcmh_setattr(struct fidc_membh *f, int to_set,
 	    log ? mdslog_namespace : NULL);
 	if (log)
 		mds_unreserve_slot(1);
-	FCMH_LOCK(f);
-	psc_assert(f->fcmh_flags & FCMH_IN_SETATTR);
-
-	f->fcmh_flags &= ~FCMH_IN_SETATTR;
-	fcmh_wake_locked(f);
 	return (rc);
 }
 
@@ -136,6 +126,12 @@ slm_fcmh_dtor(struct fidc_membh *f)
 		PSCFREE(fmi->fmi_inodeh.inoh_extras);
 }
 
+/**
+ * _slm_fcmh_endow - "Endow" or apply inheritance to a new directory
+ *	entry from its parent directory replica layout.
+ * Note: the bulk of this is empty until we have a place to store such
+ * info in the SLASH2 metafile.
+ */
 int
 _slm_fcmh_endow(struct fidc_membh *p, struct fidc_membh *c, int log)
 {
@@ -150,7 +146,7 @@ _slm_fcmh_endow(struct fidc_membh *p, struct fidc_membh *c, int log)
 //	memcpy();
 	FCMH_ULOCK(p);
 
-	FCMH_LOCK(c);
+	FCMH_WAIT_BUSY(c);
 	if (fcmh_isdir(c)) {
 		struct srt_stat sstb;
 
@@ -159,17 +155,17 @@ _slm_fcmh_endow(struct fidc_membh *p, struct fidc_membh *c, int log)
 //		c->memcpy();
 		mds_fcmh_setattr(c, SL_SETATTRF_FREPLPOL, &sstb);
 	} else {
-//		fcmh_wait_locked(c, c->fcmh_flags & FCMH_IN_SETATTR);
 		fcmh_2_ino(c)->ino_replpol = pol;
 //		fcmh_2_ino(c)->ino_nrepls = 1;
 //		memcpy(fcmh_2_ino(c)->ino_repls, repls, sizeof());
+		FCMH_ULOCK(c);
 		if (log)
 			rc = mds_inode_write(fcmh_2_inoh(c),
 			    mdslog_ino_repls, c);
 //		if (log)
 //			rc = mds_inox_write(fcmh_2_inoh(c), mdslog_ino_repls, c);
 	}
-	FCMH_ULOCK(c);
+	FCMH_UNBUSY(c);
 	return (rc);
 }
 
@@ -181,7 +177,6 @@ dump_fcmh_flags(int flags)
 
 	_dump_fcmh_flags_common(&flags, &seq);
 	PFL_PRFLAG(FCMH_IN_PTRUNC, &flags, &seq);
-	PFL_PRFLAG(FCMH_IN_SETATTR, &flags, &seq);
 	if (flags)
 		printf(" unknown: %#x", flags);
 	printf("\n");

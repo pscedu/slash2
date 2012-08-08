@@ -1535,14 +1535,12 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 	if (f->fcmh_sstb.sst_mode & (S_ISGID | S_ISUID)) {
 		struct srt_stat sstb;
 
-		FCMH_LOCK(f);
-		fcmh_wait_locked(f, f->fcmh_flags &
-		    FCMH_IN_SETATTR);
+		FCMH_WAIT_BUSY(f);
 		sstb.sst_mode = f->fcmh_sstb.sst_mode &
 		    ~(S_ISGID | S_ISUID);
 		mds_fcmh_setattr_nolog(f, PSCFS_SETATTRF_MODE,
 		    &sstb);
-		FCMH_ULOCK(f);
+		FCMH_UNBUSY(f);
 	}
 
  out:
@@ -2010,7 +2008,7 @@ slm_ptrunc_prepare(void *p)
 	 * are skipped here.
 	 */
 	if (fmi->fmi_ptrunc_size >= fcmh_2_fsz(f)) {
-		fcmh_wait_locked(f, f->fcmh_flags & FCMH_IN_SETATTR);
+		FCMH_WAIT_BUSY(f);
 		if (fmi->fmi_ptrunc_size > fcmh_2_fsz(f)) {
 			struct srt_stat sstb;
 
@@ -2019,7 +2017,7 @@ slm_ptrunc_prepare(void *p)
 			    PSCFS_SETATTRF_DATASIZE, &sstb);
 		}
 		f->fcmh_flags &= ~FCMH_IN_PTRUNC;
-		FCMH_ULOCK(f);
+		FCMH_UNBUSY(f);
 		slm_ptrunc_wake_clients(wk);
 		return (0);
 	}
