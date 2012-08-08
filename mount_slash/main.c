@@ -1526,11 +1526,9 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 	 * Perhaps this checking should only be done on the mfh, with
 	 * which we have modified the attributes.
 	 */
-	FCMH_LOCK(c);
-	fcmh_wait_locked(c, c->fcmh_flags & FCMH_IN_SETATTR);
+	FCMH_WAIT_BUSY(c);
 	if (c->fcmh_flags & FCMH_CLI_DIRTY_ATTRS) {
 		flush_attrs = 1;
-		c->fcmh_flags |= FCMH_IN_SETATTR;
 		c->fcmh_flags &= ~FCMH_CLI_DIRTY_ATTRS;
 	}
 	FCMH_ULOCK(c);
@@ -1539,11 +1537,9 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 	if (flush_attrs) {
 		rc = mslfsop_flush_attr(c);
 		FCMH_LOCK(c);
-		c->fcmh_flags &= ~FCMH_IN_SETATTR;
 		fcmh_wake_locked(c);
 		if (rc) {
 			c->fcmh_flags |= FCMH_CLI_DIRTY_ATTRS;
-			FCMH_ULOCK(c);
 		} else if (!(c->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
 			psc_assert(c->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
 			c->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
@@ -1551,8 +1547,7 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 			lc_remove(&attrTimeoutQ, fci);
 			freelock(&attrTimeoutQLock);
 			fcmh_op_done_type(c, FCMH_OPCNT_DIRTY_QUEUE);
-		} else
-			FCMH_ULOCK(c);
+		}
 	}
 
 	sid = getsid(pscfs_getclientctx(pfr)->pfcc_pid);
@@ -1575,6 +1570,7 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 		    PSCPRI_TIMESPEC_ARGS(&mfh->mfh_open_time),
 		    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr);
 
+	FCMH_UNBUSY(c);
 	fcmh_op_done_type(c, FCMH_OPCNT_OPEN);
 	PSCFREE(mfh);
 }
@@ -1935,16 +1931,15 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 	msfsthr_ensure();
 
-	rc = msl_load_fcmh(pfr, inum, &c);
-	if (rc)
-		goto out;
-
 	if ((to_set & PSCFS_SETATTRF_UID) && stb->st_uid == (uid_t)-1)
 		to_set &= ~PSCFS_SETATTRF_UID;
 	if ((to_set & PSCFS_SETATTRF_GID) && stb->st_gid == (gid_t)-1)
 		to_set &= ~PSCFS_SETATTRF_GID;
-
 	if (to_set == 0)
+		goto out;
+
+	rc = msl_load_fcmh(pfr, inum, &c);
+	if (rc)
 		goto out;
 
 	if (mfh)
@@ -1952,9 +1947,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 	mslfs_getcreds(pfr, &cr);
 
-	FCMH_LOCK(c);
-	fcmh_wait_locked(c, c->fcmh_flags & FCMH_IN_SETATTR);
-	c->fcmh_flags |= FCMH_IN_SETATTR;
+	FCMH_WAIT_BUSY(c);
 
 	if ((to_set & PSCFS_SETATTRF_MODE) && cr.scr_uid) {
 #if 0
@@ -2035,8 +2028,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		} else {
 			uint32_t x = stb->st_size / SLASH_BMAP_SIZE;
 
-			/* Partial truncate.  Block and flush.
-			 */
+			/* Partial truncate.  Block and flush. */
 			SPLAY_FOREACH(b, bmap_cache, &c->fcmh_bmaptree) {
 				if (b->bcm_bmapno < x)
 					continue;
@@ -2191,10 +2183,8 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			c->fcmh_flags &= ~FCMH_CLI_TRUNC;
 			fcmh_wake_locked(c);
 		}
-		c->fcmh_flags &= ~FCMH_IN_SETATTR;
 		if (rc && getting_attrs)
 			c->fcmh_flags &= ~FCMH_GETTING_ATTRS;
-		fcmh_wake_locked(c);
 		sl_internalize_stat(&c->fcmh_sstb, stb);
 
 		if (rc && flush_attrs)
@@ -2209,6 +2199,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			freelock(&attrTimeoutQLock);
 			fcmh_op_done_type(c, FCMH_OPCNT_DIRTY_QUEUE);
 		}
+		FCMH_UNBUSY(c);
 		fcmh_op_done(c);
 	}
 	/* XXX if there is no fcmh, what do we do?? */
@@ -2432,7 +2423,7 @@ msattrflushthr_main(__unusedx struct psc_thread *thr)
 			f = fci_2_fcmh(fci);
 			if (!FCMH_TRYLOCK(f))
 				continue;
-			if (f->fcmh_flags & FCMH_IN_SETATTR) {
+			if (f->fcmh_flags & FCMH_BUSY) {
 				FCMH_ULOCK(f);
 				continue;
 			}
@@ -2445,7 +2436,7 @@ msattrflushthr_main(__unusedx struct psc_thread *thr)
 				FCMH_ULOCK(f);
 				break;
 			}
-			f->fcmh_flags |= FCMH_IN_SETATTR;
+			FCMH_WAIT_BUSY(f);
 			f->fcmh_flags &= ~FCMH_CLI_DIRTY_ATTRS;
 			FCMH_ULOCK(f);
 
@@ -2454,18 +2445,15 @@ msattrflushthr_main(__unusedx struct psc_thread *thr)
 			rc = mslfsop_flush_attr(f);
 
 			FCMH_LOCK(f);
-			f->fcmh_flags &= ~FCMH_IN_SETATTR;
-			fcmh_wake_locked(f);
 			if (rc) {
 				f->fcmh_flags |= FCMH_CLI_DIRTY_ATTRS;
-				FCMH_ULOCK(f);
 			} else if (!(f->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
 				psc_assert(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
 				f->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
 				lc_remove(&attrTimeoutQ, fci);
 				fcmh_op_done_type(f, FCMH_OPCNT_DIRTY_QUEUE);
-			} else
-				FCMH_ULOCK(f);
+			}
+			FCMH_UNBUSY(f);
 
 			did_work = 1;
 			break;
