@@ -124,7 +124,6 @@ _bmap_op_done(const struct pfl_callerinfo *pci, struct bmapc_memb *b,
 	va_list ap;
 
 	BMAP_LOCK_ENSURE(b);
-	b->bcm_flags &= ~BMAP_BUSY;
 
 	va_start(ap, fmt);
 	psclogsv(PLL_DEBUG, SLSS_BMAP, fmt, ap);
@@ -207,12 +206,13 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		b->bcm_bmapno = n;
 
 		/*
-		 * Signify that the bmap is newly initialized and therefore
-		 *  may not contain certain structures.
+		 * Signify that the bmap is newly initialized and
+		 * therefore may not contain certain structures.
 		 */
 		b->bcm_flags = BMAP_INIT | bmaprw;
 
 		bmap_op_start_type(b, BMAP_OPCNT_LOOKUP);
+
 		/* Perform app-specific substructure initialization. */
 		bmap_ops.bmo_init_privatef(b);
 
@@ -221,10 +221,10 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		fcmh_op_start_type(f, FCMH_OPCNT_BMAP);
 		do_load = 1;
 	}
+
 	FCMH_URLOCK(f, locked);
 
 	if (do_load) {
-		/* call either msl_bmap_retrieve() or iod_bmap_retrieve() */
 		if ((flags & BMAPGETF_NORETRIEVE) == 0)
 			rc = bmap_ops.bmo_retrievef(b, rw, flags);
 
@@ -235,12 +235,12 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 			goto out;
 
 	} else {
-		/* Wait while BMAP_INIT is set.
-		 */
+		/* Wait while BMAP_INIT is set. */
 		bmap_wait_locked(b, (b->bcm_flags & BMAP_INIT));
 
  retry:
-		/* Not all lookups are done with the intent of
+		/*
+		 * Not all lookups are done with the intent of
 		 *   changing the bmap mode.  bmap_lookup() does not
 		 *   specify a rw value.
 		 *
@@ -249,7 +249,8 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		 */
 		if (bmaprw && !(bmaprw & b->bcm_flags) &&
 		    bmap_ops.bmo_mode_chngf) {
-			/* Others wishing to access this bmap in the
+			/*
+			 * Others wishing to access this bmap in the
 			 *   same mode must wait until MDCHNG ops have
 			 *   completed.  If the desired mode is present
 			 *   then a thread may proceed without blocking
@@ -416,7 +417,7 @@ dump_bmap_flags(uint32_t flags)
 
 	_dump_bmap_flags_common(&flags, &seq);
 	if (flags)
-		printf(" unknown: %x", flags);
+		printf(" unknown: %#x", flags);
 	printf("\n");
 }
 
