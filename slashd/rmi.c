@@ -197,7 +197,6 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	struct slm_update_data *upd;
 	struct bmapc_memb *b = NULL;
 	struct fidc_membh *f = NULL;
-	sl_replica_t iosv[2];
 	sl_bmapgen_t gen;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -288,15 +287,6 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 
 	rc = mds_repl_bmap_walk(b, tract, retifset, 0, &iosidx, 1);
 	mds_bmap_write_logrepls(b);
-	if (rc == BREPLST_REPL_SCHED) {
-		if (mq->rc == 0) {
-			upd_tryremove(upd);
-		} else {
-			iosv[0].bs_id = src_res->res_id;
-			iosv[1].bs_id = dst_resm->resm_res_id;
-			upsch_enqueue(upd, iosv, 2);
-		}
-	}
 	upschq_resm(dst_resm, UPDT_PAGEIN);
 
  out:
