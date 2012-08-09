@@ -360,6 +360,8 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 	/* use nolog because mdslog_bmap_crc() will cover this */
 	rc = mds_fcmh_setattr_nolog(f, fl, &sstb);
 
+	FCMH_LOCK(f);
+
 	if (idx >= SL_DEF_REPLICAS)
 		mds_inox_write(ih, NULL, NULL);
 	else

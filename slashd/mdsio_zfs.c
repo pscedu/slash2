@@ -51,15 +51,19 @@ mdsio_fid_t		 mds_tmpdir_inum;
 int
 mdsio_fcmh_refreshattr(struct fidc_membh *f, struct srt_stat *out_sstb)
 {
-	int rc;
+	pthread_t pthr;
+	int locked, rc;
 
-	FCMH_WAIT_BUSY(f);
+	pthr = pthread_self();
+	locked = FCMH_RLOCK(f);
+	fcmh_wait_locked(f, (f->fcmh_flags & FCMH_BUSY) &&
+	    f->fcmh_owner != pthr);
 	rc = mdsio_getattr(fcmh_2_mdsio_fid(f), fcmh_2_mdsio_data(f),
 	    &rootcreds, &f->fcmh_sstb);
 	psc_assert(rc == 0);
 	if (out_sstb)
 		*out_sstb = f->fcmh_sstb;
-	FCMH_UNBUSY(f);
+	FCMH_URLOCK(f, locked);
 	return (rc);
 }
 

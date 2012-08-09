@@ -107,15 +107,16 @@ mds_inode_read(struct slash_inode_handle *ih)
 int
 mds_inode_write(struct slash_inode_handle *ih, void *logf, void *arg)
 {
+	int rc, wasbusy, waslocked;
+	struct fidc_membh *f;
 	struct iovec iovs[2];
 	uint64_t crc;
 	size_t nb;
-	int rc;
 
 	INOH_LOCK_ENSURE(ih);
 
-	fcmh_wait_locked(ih->inoh_fcmh, ih->inoh_flags & INOH_IN_IO);
-	ih->inoh_flags |= INOH_IN_IO;
+	f = ih->inoh_fcmh;
+	wasbusy = FCMH_REQ_BUSY(f, &waslocked);
 
 	psc_crc64_calc(&crc, &ih->inoh_ino, sizeof(ih->inoh_ino));
 
@@ -134,8 +135,6 @@ mds_inode_write(struct slash_inode_handle *ih, void *logf, void *arg)
 		mds_unreserve_slot(1);
 
 	INOH_LOCK(ih);
-	ih->inoh_flags &= ~INOH_IN_IO;
-	fcmh_wake_locked(ih->inoh_fcmh);
 
 	if (rc == 0 && nb != sizeof(ih->inoh_ino) + sizeof(crc))
 		rc = SLERR_SHORTIO;
@@ -152,23 +151,25 @@ mds_inode_write(struct slash_inode_handle *ih, void *logf, void *arg)
 		if (ih->inoh_flags & INOH_INO_NEW)
 			ih->inoh_flags &= ~INOH_INO_NEW;
 	}
+	FCMH_UREQ_BUSY(f, wasbusy, waslocked);
 	return (rc);
 }
 
 int
 mds_inox_write(struct slash_inode_handle *ih, void *logf, void *arg)
 {
+	int rc, wasbusy, waslocked;
+	struct fidc_membh *f;
 	struct iovec iovs[2];
 	uint64_t crc;
 	size_t nb;
-	int rc;
 
 	INOH_LOCK_ENSURE(ih);
 
 	psc_assert(ih->inoh_extras);
 
-	fcmh_wait_locked(ih->inoh_fcmh, ih->inoh_flags & INOH_IN_IO);
-	ih->inoh_flags |= INOH_IN_IO;
+	f = ih->inoh_fcmh;
+	wasbusy = FCMH_REQ_BUSY(f, &waslocked);
 
 	psc_crc64_calc(&crc, ih->inoh_extras, INOX_SZ);
 
@@ -187,16 +188,14 @@ mds_inox_write(struct slash_inode_handle *ih, void *logf, void *arg)
 		mds_unreserve_slot(1);
 
 	INOH_LOCK(ih);
-	ih->inoh_flags &= ~INOH_IN_IO;
-	fcmh_wake_locked(ih->inoh_fcmh);
 
 	if (rc == 0 && nb != INOX_SZ + sizeof(crc))
 		rc = SLERR_SHORTIO;
-
 	if (rc)
 		DEBUG_INOH(PLL_ERROR, ih, "mdsio_pwritev: error (rc=%d)",
 		    rc);
 
+	FCMH_UREQ_BUSY(f, wasbusy, waslocked);
 	return (rc);
 }
 

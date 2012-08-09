@@ -229,7 +229,7 @@ _mds_repl_bmap_apply(struct bmapc_memb *b, const int *tract,
 		if (BMAPOD_HASWRLOCK(bmi))
 			FCMH_BUSY_ENSURE(b->bcm_fcmh);
 
-		FCMH_WAIT_BUSY(b->bcm_fcmh);
+		FCMH_REQ_BUSY(b->bcm_fcmh, &locked);
 		FCMH_ULOCK(b->bcm_fcmh);
 
 		if (BMAPOD_HASWRLOCK(bmi)) {
