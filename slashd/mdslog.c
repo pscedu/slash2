@@ -1526,8 +1526,6 @@ mdslogfill_bmap_repls(struct bmapc_memb *b,
 
 	FCMH_BUSY_ENSURE(f);
 	BMAP_BUSY_ENSURE(b);
-	f->fcmh_owner = 0;
-	b->bcm_owner = 0;
 
 	sjbr->sjbr_fid = fcmh_2_fid(f);
 	sjbr->sjbr_bmapno = b->bcm_bmapno;
@@ -1570,6 +1568,16 @@ mdslog_bmap_repls(void *datap, uint64_t txg, __unusedx int flag)
 	pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_REPLS, 0, sjbr,
 	    sizeof(*sjbr));
 	pjournal_put_buf(mdsJournal, sjbr);
+
+	/*
+	 * Relinquish ownership, which was asserted in
+	 * mdslogfill_bmap_repls(), whichever wkthr who gets it.
+	 */
+	b->bcm_fcmh->fcmh_owner = 0;
+	BMAP_RLOCK(b);
+	b->bcm_owner = 0;
+	b->bcm_flags |= BMAP_MDS_REPLMODWR;
+	BMAP_ULOCK(b);
 
 	wk = pfl_workq_getitem(slm_wkcb_wr_brepl,
 	    struct slm_wkdata_wr_brepl);

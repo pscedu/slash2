@@ -356,9 +356,11 @@ mds_try_sliodresm(struct sl_resm *resm)
  *	assignment.
  * @b:  The bmap which is being leased.
  * @pios:  The preferred I/O resource specified by the client.
- * Notes:  This call accounts for the existence of existing replicas.  When
- *    found, mds_resm_select() must choose a replica which is marked as
- *    BREPLST_VALID.
+ * @to_skip:
+ * @nskip:
+ * Notes:  This call accounts for the existence of existing replicas.
+ *	When found, mds_resm_select() must choose a replica which is
+ *	marked as BREPLST_VALID.
  */
 __static struct sl_resm *
 mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios,
@@ -451,25 +453,35 @@ mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios,
 	return (resm);
 }
 
-
 __static int
 mds_bmap_add_repl(struct bmapc_memb *b, struct bmap_ios_assign *bia)
 {
 	struct slmds_jent_assign_rep *logentry;
 	struct slmds_jent_bmap_assign *sjba;
-	struct slash_inode_handle *ih = fcmh_2_inoh(b->bcm_fcmh);
+	struct slash_inode_handle *ih;
+	struct fidc_membh *f;
+	uint32_t nrepls;
 	int iosidx;
-	uint32_t nrepls = ih->inoh_ino.ino_nrepls;
+
+	f = b->bcm_fcmh;
+	ih = fcmh_2_inoh(f);
+	nrepls = ih->inoh_ino.ino_nrepls;
 
 	psc_assert(b->bcm_flags & BMAP_IONASSIGN);
+
+	FCMH_WAIT_BUSY(f);
 
 	iosidx = mds_repl_ios_lookup_add(ih, bia->bia_ios, 0);
 	if (iosidx < 0)
 		psc_fatalx("ios_lookup_add %d: %s", bia->bia_ios,
 		   slstrerror(iosidx));
 
+	BMAP_WAIT_BUSY(b);
+
 	if (mds_repl_inv_except(b, iosidx)) {
 		DEBUG_BMAP(PLL_ERROR, b, "mds_repl_inv_except() failed");
+		BMAP_UNBUSY(b);
+		FCMH_UNBUSY(f);
 		return (-1);
 	}
 	mds_reserve_slot(1);
@@ -477,11 +489,15 @@ mds_bmap_add_repl(struct bmapc_memb *b, struct bmap_ios_assign *bia)
 
 	logentry->sjar_flags = SLJ_ASSIGN_REP_NONE;
 	if (nrepls != ih->inoh_ino.ino_nrepls) {
-		mdslogfill_ino_repls(b->bcm_fcmh, &logentry->sjar_ino);
+		mdslogfill_ino_repls(f, &logentry->sjar_ino);
 		logentry->sjar_flags |= SLJ_ASSIGN_REP_INO;
 	}
 
 	mdslogfill_bmap_repls(b, &logentry->sjar_rep);
+
+	BMAP_UNBUSY(b);
+	FCMH_UNBUSY(f);
+
 	logentry->sjar_flags |= SLJ_ASSIGN_REP_REP;
 
 	sjba = &logentry->sjar_bmap;
@@ -777,8 +793,8 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 }
 
 /**
- * mds_bmap_getbml_locked - Obtain the lease handle for a bmap denoted by the
- *	specified issued sequence number.
+ * mds_bmap_getbml_locked - Obtain the lease handle for a bmap denoted
+ *	by the specified issued sequence number.
  * @b: locked bmap.
  * @cli_nid: client network ID.
  * @cli_pid: client network process ID.
@@ -1453,8 +1469,10 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 		goto out;
 
 	} else if (bmap->bcm_flags & BMAP_MDS_CRC_UP) {
-		/* Ensure that this thread is the only thread updating the
-		 *  bmap crc table.  XXX may have to replace this with a waitq
+		/*
+		 * Ensure that this thread is the only thread updating
+		 * the bmap crc table.
+		 * XXX may have to replace this with a waitq
 		 */
 		rc = -EALREADY;
 		BMAP_ULOCK(bmap);
@@ -2132,7 +2150,6 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 		mds_bmap_write_repls_rel(b);
 	}
 
-
 	if (done) {
 		FCMH_LOCK(f);
 		f->fcmh_flags &= ~FCMH_IN_PTRUNC;
@@ -2185,8 +2202,8 @@ slm_ptrunc_wake_clients(void *p)
 
 void
 _dbdo(const struct pfl_callerinfo *pci,
-    int (*cb)(void *, int, char **,char **), void *arg, const char *fmt,
-    ...)
+    int (*cb)(void *, int, char **, char **), void *arg,
+    const char *fmt, ...)
 {
 	static psc_spinlock_t lock = SPINLOCK_INIT;
 	char buf[LINE_MAX], *errstr;
@@ -2211,6 +2228,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 	if (rc) {
 		psclog_errorx("SQL error: rc=%d query=%s; msg=%s", rc,
 		    buf, errstr);
+		/* XXX rebuild db? */
 	}
 }
 

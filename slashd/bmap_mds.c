@@ -261,10 +261,6 @@ mds_bmap_write(struct bmapc_memb *b, int update_mtime, void *logf,
 	int rc, new;
 	size_t nb;
 
-	BMAP_RLOCK(b);
-	b->bcm_flags |= BMAP_MDS_REPLMODWR;
-	BMAP_ULOCK(b);
-
 	BMAPOD_REQRDLOCK(bmap_2_bmi(b));
 	mds_bmap_ensure_valid(b);
 

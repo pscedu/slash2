@@ -429,7 +429,7 @@ mds_repl_inv_except(struct bmapc_memb *b, int iosidx)
 	    &iosidx, 1, mds_repl_inv_requeue, &qv))
 		BHGEN_INCREMENT(b);
 
-	rc = mds_bmap_write_logrepls(b);
+	rc = mds_bmap_write(b, 0, NULL, NULL);
 
 	/*
 	 * If this bmap is marked for persistent replication, the repl
