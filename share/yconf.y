@@ -706,7 +706,7 @@ slcfg_store_tok_val(const char *tok, char *val)
 	char *endp;
 	void *ptr;
 
-	psclog_debug("val %s tok %s", val, tok);
+	psclog_debug("tok %s val: %s", val, tok);
 
 	e = slcfg_get_symbol(tok);
 	if (e == NULL)
