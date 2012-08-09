@@ -550,7 +550,7 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 			    mds_odtable_putitem(slm_repl_odt, &br,
 				sizeof(br));
 			DEBUG_UPD(PLL_DEBUG, upd,
-			    "assigned odtable receipt [%ld,%zd]",
+			    "assigned odtable receipt [%ld,%zu]",
 			    upd->upd_recpt->odtr_elem,
 			    upd->upd_recpt->odtr_key);
 		}
@@ -562,7 +562,7 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 			    "   recpt_elem, recpt_key"
 			    ") VALUES ("
 			    "	%d, %"PRIu64", %u, %u, %u, 'Q', "
-			    "	%zd, %"PRIu64
+			    "	%zd, '%"PRIu64"'"
 			    ")",
 			    add.iosv[n].bs_id, bmap_2_fid(b),
 			    b->bcm_bmapno,
@@ -1058,7 +1058,7 @@ slm_repl_odt_startup_cb(void *data, struct odtable_receipt *odtr,
 			    "   recpt_elem, recpt_key"
 			    ") VALUES ("
 			    "	%d, %"PRIu64", %u, %u, %u, 'Q', "
-			    "	%zd, %"PRIu64
+			    "	%zd, '%"PRIu64"'"
 			    ")",
 			    fcmh_2_repl(f, n), bmap_2_fid(b),
 			    b->bcm_bmapno,
