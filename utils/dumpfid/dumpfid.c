@@ -204,7 +204,6 @@ dumpfid(const char *fn)
 				    SL_REPL_GET_BMAP_IOS_STAT(
 				    bd.bod.bod_repls, off)]);
 
-
 //			nslvr = SLASH_SLVRS_PER_BMAP;
 //			for (j = 0; j < nr; j++)
 //				printf("%s%s", j ? "," : "", );

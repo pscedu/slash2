@@ -2068,6 +2068,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		c->fcmh_flags |= FCMH_GETTING_ATTRS;
 	}
 	FCMH_ULOCK(c);
+
 	/*
 	 * Turn on mtime explicitly if we are going to change the size.
 	 * We want our local time to be saved, not the time when the RPC
