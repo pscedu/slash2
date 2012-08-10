@@ -104,7 +104,7 @@ slm_bmap_read_db_cb(void *arg, __unusedx int ac, char **av,
 	upd->upd_recpt = odtr = PSCALLOC(sizeof(*odtr));
 	odtr->odtr_elem = strtoll(av[0], NULL, 10);
 	odtr->odtr_key = strtoull(av[1], NULL, 10);
-	DEBUG_BMAP(PLL_DEBUG, b, "upd %p loaded odtr [%ld,%zd v %s]",
+	DEBUG_BMAP(PLL_DEBUG, b, "upd %p loaded odtr [%ld,%zu v %s]",
 	    upd, odtr->odtr_elem, odtr->odtr_key, av[1]);
 	return (0);
 }
