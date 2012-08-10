@@ -24,9 +24,10 @@
 
 #include <stdint.h>
 
+#include "pfl/hashtbl.h"
+
 #include "fid.h"
 #include "sltypes.h"
-#include "pfl/hashtbl.h"
 
 struct statvfs;
 struct iovec;
@@ -38,7 +39,6 @@ struct slash_inode_handle;
 struct srt_stat;
 
 typedef uint64_t mdsio_fid_t;
-
 
 struct mdsio_fh {
 	void *fh;
@@ -63,8 +63,8 @@ typedef void (*sl_log_update_t)(int, uint64_t, uint64_t, uint64_t,
 
 #define mdsio_opencreate(vfs, pino, crp, fflags, mode, fn, mfp, sstb,	\
 	    mdsio_datap, logfunc, getslfid, slfid)			\
-	mdsio_opencreatef((vfs), (pino), (crp), (fflags), 0, (mode), (fn),	\
-	    (mfp), (sstb), (mdsio_datap), (logfunc), (getslfid), (slfid))
+	mdsio_opencreatef((vfs), (pino), (crp), (fflags), 0, (mode),	\
+	    (fn), (mfp), (sstb), (mdsio_datap), (logfunc), (getslfid), (slfid))
 
 #define MDSIO_FOREACH_DIRENT(dh, credp, buf, bufsiz, ip, d, rc)		\
 	for ((ip)->mdi_off = 0; ((rc) = mdsio_readdir((credp),		\
@@ -97,30 +97,30 @@ struct mdsio_ops {
 	int	(*mio_link)(int, mdsio_fid_t, mdsio_fid_t, const char *, const struct slash_creds *, struct srt_stat *, sl_log_update_t);
 	int	(*mio_lookup)(int, mdsio_fid_t, const char *, mdsio_fid_t *, const struct slash_creds *, struct srt_stat *);
 	int	(*mio_lookup_slfid)(int, slfid_t, const struct slash_creds *, struct srt_stat *, mdsio_fid_t *);
-	int	(*mio_mkdir)(int, mdsio_fid_t, const char *, const struct srt_stat *, int, int, struct srt_stat *, mdsio_fid_t *, \
+	int	(*mio_mkdir)(int, mdsio_fid_t, const char *, const struct srt_stat *, int, int, struct srt_stat *, mdsio_fid_t *,
 			sl_log_update_t, sl_getslfid_cb_t, slfid_t);
-	int	(*mio_mknod)(int, mdsio_fid_t, const char *, mode_t, const struct slash_creds *, struct srt_stat *, mdsio_fid_t *, \
+	int	(*mio_mknod)(int, mdsio_fid_t, const char *, mode_t, const struct slash_creds *, struct srt_stat *, mdsio_fid_t *,
 			sl_log_update_t, sl_getslfid_cb_t);
-	int	(*mio_opencreatef)(int, mdsio_fid_t, const struct slash_creds *, int, int, mode_t, const char *, mdsio_fid_t *, \
+	int	(*mio_opencreatef)(int, mdsio_fid_t, const struct slash_creds *, int, int, mode_t, const char *, mdsio_fid_t *,
 			struct srt_stat *, void *, sl_log_update_t, sl_getslfid_cb_t, slfid_t);
 	int	(*mio_opendir)(int, mdsio_fid_t, const struct slash_creds *, struct slash_fidgen *, void *);
 	int	(*mio_preadv)(int, const struct slash_creds *, struct iovec *, int, size_t *, off_t, void *);
-	int	(*mio_pwritev)(int, const struct slash_creds *, const struct iovec *, int, size_t *, off_t, int, void *, \
+	int	(*mio_pwritev)(int, const struct slash_creds *, const struct iovec *, int, size_t *, off_t, int, void *,
 			sl_log_write_t, void *);
 	int	(*mio_read)(int, const struct slash_creds *, void *, size_t, size_t *, off_t, void *);
 	int	(*mio_readdir)(int, const struct slash_creds *, size_t, off_t, void *, size_t *, size_t *, void *, int, void *);
 	int	(*mio_readlink)(int, mdsio_fid_t, char *, const struct slash_creds *);
 	int	(*mio_release)(int, const struct slash_creds *, void *);
-	int	(*mio_rename)(int, mdsio_fid_t, const char *, mdsio_fid_t, const char *, const struct slash_creds *, \
+	int	(*mio_rename)(int, mdsio_fid_t, const char *, mdsio_fid_t, const char *, const struct slash_creds *,
 			sl_log_update_t, void *);
 	int	(*mio_rmdir)(int, mdsio_fid_t, slfid_t *, const char *, const struct slash_creds *, sl_log_update_t);
-	int	(*mio_setattr)(int, mdsio_fid_t, const struct srt_stat *, int, const struct slash_creds *, struct srt_stat *, \
+	int	(*mio_setattr)(int, mdsio_fid_t, const struct srt_stat *, int, const struct slash_creds *, struct srt_stat *,
 			void *, sl_log_update_t);
 	int	(*mio_statfs)(int, struct statvfs *);
-	int	(*mio_symlink)(int, const char *, mdsio_fid_t, const char *, const struct slash_creds *, struct srt_stat *, \
+	int	(*mio_symlink)(int, const char *, mdsio_fid_t, const char *, const struct slash_creds *, struct srt_stat *,
 			mdsio_fid_t *, sl_log_update_t, sl_getslfid_cb_t, slfid_t);
 	int	(*mio_unlink)(int, mdsio_fid_t, slfid_t *, const char *, const struct slash_creds *, sl_log_update_t, void *);
-	int	(*mio_write)(int, const struct slash_creds *, const void *, size_t, size_t *, off_t, int, void *, \
+	int	(*mio_write)(int, const struct slash_creds *, const void *, size_t, size_t *, off_t, int, void *,
 			sl_log_write_t, void *);
 
 	/* replay interface */

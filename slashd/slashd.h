@@ -241,6 +241,8 @@ void		 slm_setattr_core(struct fidc_membh *, struct srt_stat *, int);
 void		 slm_upsch_init(void);
 void		 slmupschedthr_spawn(void);
 
+void		 psc_scan_filesystems(void);
+
 #define dbdo(cb, arg, fmt, ...)	_dbdo(PFL_CALLERINFO(), (cb), (arg), (fmt), ## __VA_ARGS__)
 void		 _dbdo(const struct pfl_callerinfo *,
 			int (*)(void *, int, char **,char **), void *,
@@ -270,7 +272,5 @@ slm_get_rpmi_idx(struct sl_resource *res)
 	RPMI_URLOCK(rpmi, locked);
 	return (n);
 }
-
-void psc_scan_filesystems(void);
 
 #endif /* _SLASHD_H_ */

@@ -40,8 +40,6 @@ struct pscrpc_svc_handle slm_rmi_svc;
 struct pscrpc_svc_handle slm_rmm_svc;
 struct pscrpc_svc_handle slm_rmc_svc;
 
-extern int current_vfsid;
-
 void
 slm_rpc_initsvc(void)
 {
