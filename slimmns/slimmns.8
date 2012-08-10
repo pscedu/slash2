@@ -28,6 +28,7 @@ backing store file system
 .Op Fl iW
 .Op Fl c Ar conf
 .Op Fl D Ar datadir
+.Op Fl I Ar siteid
 .Op Fl u Ar fsuuid
 .Pa fsroot
 .Sh DESCRIPTION
@@ -42,9 +43,11 @@ node operation for the specified
 file system root
 .Ar fsroot .
 .Pp
-The directory structures includes facilities such as the immutable namespace,
-which is responsible for providing persistent access to file data regardless of
-file pathname renames and unlinks, and the replication queue.
+The directory structures includes facilities such as the immutable
+namespace,
+which is responsible for providing persistent access to file data
+regardless of file pathname renames and unlinks, and the replication
+queue.
 .Pp
 The following options are available:
 .Bl -tag -offset 3n -width 3n
@@ -55,6 +58,10 @@ Specify configuration file from which to extract other parameters
 Specify an alternative directory where operation data is stored.
 Defaults to
 .Pa /var/lib/slash .
+.It Fl I Ar siteid
+Specify this site's ID number.
+Should match the same value of the site ID from its profile in the
+specified configuration file.
 .It Fl i
 Format a file system suitable for use with
 .Tn I/O
