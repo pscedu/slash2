@@ -101,6 +101,15 @@ utility:
 # slmkjrnl -f
 .Ed
 .Pp
+The MDS server also maintains an
+.Tn SQLite
+database for managing some workloads.
+This can be created with
+.Xr sqlite3 1 :
+.Bd -literal -offset indent
+# sqlite3 doc/create.sql < /var/lib/slash/upsch.db
+.Ed
+.Pp
 Now launch
 .Xr slashd 8 :
 .Bd -literal -offset indent
