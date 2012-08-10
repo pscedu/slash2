@@ -44,8 +44,6 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
-extern int current_vfsid;
-
 int
 slm_rmm_apply_update(struct srt_update_entry *entryp)
 {
@@ -103,8 +101,10 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	count = mq->count;
-	if (count <= 0 || mq->size > LNET_MTU)
-		return (EINVAL);
+	if (count <= 0 || mq->size > LNET_MTU) {
+		mp->rc = -EINVAL;
+		return (mp->rc);
+	}
 
 	iov.iov_len = mq->size;
 	iov.iov_base = PSCALLOC(mq->size);
@@ -157,13 +157,12 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 int
 slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 {
+	char *from, *to, *name, *linkname;
 	struct fidc_membh *p, *op, *np;
 	struct srm_forward_req *mq;
 	struct srm_forward_rep *mp;
 	struct srt_stat sstb;
 	void *mdsio_data;
-	char *from, *to;
-	char *name, *linkname;
 	int vfsid;
 
 	p = op = np = NULL;
@@ -183,11 +182,11 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 	psclog_info("op=%d, name=%s", mq->op, mq->req.name);
 
 	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid)) {
-		mp->rc = EINVAL;
+		mp->rc = -EINVAL;
 		return (0);
 	}
 	if (current_vfsid != vfsid) {
-		mp->rc = EINVAL;
+		mp->rc = -EINVAL;
 		return (0);
 	}
 
@@ -200,9 +199,9 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		sstb.sst_mode = mq->mode;
 		sstb.sst_uid = mq->creds.scr_uid;
 		sstb.sst_gid = mq->creds.scr_gid;
-		mp->rc = -mdsio_mkdir(vfsid, fcmh_2_mdsio_fid(p), mq->req.name,
-		    &sstb, 0, 0, &mp->attr, NULL, mdslog_namespace,
-		    slm_get_next_slashfid, 0);
+		mp->rc = -mdsio_mkdir(vfsid, fcmh_2_mdsio_fid(p),
+		    mq->req.name, &sstb, 0, 0, &mp->attr, NULL,
+		    mdslog_namespace, slm_get_next_slashfid, 0);
 		break;
 	    case SLM_FORWARD_CREATE:
 		mp->rc = slm_fcmh_get(&mq->fg, &p);
@@ -210,8 +209,8 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 			break;
 		mp->rc = mdsio_opencreate(vfsid, fcmh_2_mdsio_fid(p),
 		    &mq->creds, O_CREAT | O_EXCL | O_RDWR, mq->mode,
-		    mq->req.name, NULL, &mp->attr, &mdsio_data, mdslog_namespace,
-		    slm_get_next_slashfid, 0);
+		    mq->req.name, NULL, &mp->attr, &mdsio_data,
+		    mdslog_namespace, slm_get_next_slashfid, 0);
 		if (!mp->rc)
 			mdsio_release(vfsid, &rootcreds, mdsio_data);
 		break;
@@ -262,8 +261,9 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 			break;
 		name = mq->req.name;
 		linkname = mq->req.name + strlen(mq->req.name) + 1;
-		mp->rc = mdsio_symlink(vfsid, linkname, fcmh_2_mdsio_fid(p), name,
-			    &mq->creds, &mp->attr, NULL, NULL, slm_get_next_slashfid, 0);
+		mp->rc = mdsio_symlink(vfsid, linkname,
+		    fcmh_2_mdsio_fid(p), name, &mq->creds, &mp->attr,
+		    NULL, NULL, slm_get_next_slashfid, 0);
 		break;
 	}
 	mds_unreserve_slot(2);
@@ -310,9 +310,10 @@ slm_rmm_handler(struct pscrpc_request *rq)
 	return (rc);
 }
 
-/*
- * Forward a name space operation to a remote MDS first before replicating
- * the operation locally by our callers.
+/**
+ * slm_rmm_forward_namespace - Forward a name space operation to a
+ * remote MDS first before replicating the operation locally by our
+ * callers.
  */
 int
 slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
@@ -327,10 +328,8 @@ slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
 	struct srm_forward_rep *mp;
 	struct sl_resource *res;
 	struct sl_site *site;
+	int rc, len, i, vfsid;
 	sl_siteid_t siteid;
-	int rc, len, i;
-	int vfsid;
-
 
 	if (op != SLM_FORWARD_MKDIR  && op != SLM_FORWARD_RMDIR &&
 	    op != SLM_FORWARD_CREATE && op != SLM_FORWARD_UNLINK &&
@@ -379,15 +378,17 @@ slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
 		    sizeof(mq->req.name) - len);
 	}
 
-	if (op == SLM_FORWARD_MKDIR || op == SLM_FORWARD_CREATE || op == SLM_FORWARD_SYMLINK) {
+	if (op == SLM_FORWARD_MKDIR ||
+	    op == SLM_FORWARD_CREATE ||
+	    op == SLM_FORWARD_SYMLINK) {
 		mq->mode = mode;
 		mq->creds = *creds;
 	}
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (!rc) 
+	if (!rc)
 		rc = mp->rc;
-	if (!rc && sstb) 
+	if (!rc && sstb)
 		*sstb = mp->attr;
  out:
 	if (rq)
