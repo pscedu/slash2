@@ -257,11 +257,11 @@ mds_ino_read_v1(struct slash_inode_handle *ih)
 		uint32_t	replpol;
 		sl_replica_t	repls[4];
 	} ino;
-	uint64_t crc, od_crc;
+	struct fidc_membh *fcmh;
 	struct iovec iovs[2];
-	size_t nb;
+	uint64_t crc, od_crc;
 	int i, rc, vfsid;
-	struct fidc_membh	*fcmh;
+	size_t nb;
 
 	iovs[0].iov_base = &ino;
 	iovs[0].iov_len = sizeof(ino);
@@ -297,11 +297,11 @@ mds_inox_read_v1(struct slash_inode_handle *ih)
 		sl_snap_t	snaps[1];
 		sl_replica_t	repls[60];
 	} inox;
-	uint64_t crc, od_crc;
+	struct fidc_membh *fcmh;
 	struct iovec iovs[2];
-	size_t nb;
+	uint64_t crc, od_crc;
 	int i, rc, vfsid;
-	struct fidc_membh	*fcmh;
+	size_t nb;
 
 	memset(&inox, 0, sizeof(inox));
 
@@ -340,11 +340,11 @@ mds_bmap_read_v1(struct bmapc_memb *b, void *readh)
 		uint32_t	gen;
 		uint32_t	replpol;
 	} bod;
-	uint64_t crc, od_crc;
+	struct fidc_membh *fcmh;
 	struct iovec iovs[2];
-	size_t nb, bsz;
+	uint64_t crc, od_crc;
 	int i, rc, vfsid;
-	struct fidc_membh	*fcmh;
+	size_t nb, bsz;
 
 	bsz = sizeof(bod) + sizeof(crc);
 
