@@ -45,12 +45,12 @@ mds_inode_od_initnew(struct slash_inode_handle *ih)
 int
 mds_inode_read(struct slash_inode_handle *ih)
 {
-	struct iovec iovs[2];
 	uint64_t crc, od_crc = 0;
-	uint16_t vers;
-	int rc, locked, vfsid;
-	size_t nb;
 	struct fidc_membh *fcmh;
+	struct iovec iovs[2];
+	int rc, locked, vfsid;
+	uint16_t vers;
+	size_t nb;
 
 	fcmh = ih->inoh_fcmh;
 	if (mdsio_fid_to_vfsid(fcmh_2_fid(fcmh), &vfsid) < 0)
@@ -164,7 +164,8 @@ mds_inode_write(int vfsid, struct slash_inode_handle *ih, void *logf, void *arg)
 }
 
 int
-mds_inox_write(int vfsid, struct slash_inode_handle *ih, void *logf, void *arg)
+mds_inox_write(int vfsid, struct slash_inode_handle *ih, void *logf,
+    void *arg)
 {
 	int rc, wasbusy, waslocked;
 	struct fidc_membh *f;
@@ -210,11 +211,11 @@ mds_inox_write(int vfsid, struct slash_inode_handle *ih, void *logf, void *arg)
 int
 mds_inox_load_locked(struct slash_inode_handle *ih)
 {
+	struct fidc_membh *fcmh;
 	struct iovec iovs[2];
 	uint64_t crc, od_crc;
-	size_t nb;
 	int rc, vfsid;
-	struct fidc_membh *fcmh;
+	size_t nb;
 
 	INOH_LOCK_ENSURE(ih);
 
@@ -273,15 +274,17 @@ mds_inox_ensure_loaded(struct slash_inode_handle *ih)
 }
 
 int
-mds_inodes_odsync(int vfsid, struct fidc_membh *f, void (*logf)(void *, uint64_t, int))
+mds_inodes_odsync(int vfsid, struct fidc_membh *f,
+    void (*logf)(void *, uint64_t, int))
 {
 	struct slash_inode_handle *ih = fcmh_2_inoh(f);
 	int locked, rc;
 
 	locked = INOH_RLOCK(ih);
 	if (ih->inoh_ino.ino_nrepls > SL_DEF_REPLICAS) {
-		/* Don't assume the inox have been loaded.  It's possible
-		 * our caller didn't require them (BZ #258).
+		/*
+		 * Don't assume the inox have been loaded.  It's
+		 * possible our caller didn't require them (BZ #258).
 		 */
 		rc = mds_inox_ensure_loaded(ih);
 		if (rc) {
