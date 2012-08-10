@@ -587,8 +587,8 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 	DYNARRAY_FOREACH(upd, i, &rpmi->rpmi_upschq) {
 		bmi = upd_getpriv(upd);
 		b = bmi_2_bmap(bmi);
-		rc = mds_repl_iosv_lookup(current_vfsid, upd_2_inoh(upd), &repl,
-		    &iosidx, 1);
+		rc = mds_repl_iosv_lookup(current_vfsid,
+		    upd_2_inoh(upd), &repl, &iosidx, 1);
 		if (mds_repl_bmap_walk(b, tract, retifset, 0, &iosidx,
 		    1))
 			mds_bmap_write_repls_rel(b);

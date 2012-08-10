@@ -640,8 +640,8 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	slm_iosv_setbusy(iosv, nios);
 
 	/* Find/add our replica's IOS ID */
-	rc = -mds_repl_iosv_lookup_add(current_vfsid, fcmh_2_inoh(f), iosv, iosidx,
-	    nios);
+	rc = -mds_repl_iosv_lookup_add(current_vfsid, fcmh_2_inoh(f),
+	    iosv, iosidx, nios);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -834,7 +834,8 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	slm_iosv_setbusy(iosv, nios);
 
 	/* Find replica IOS indexes */
-	rc = -mds_repl_iosv_lookup(current_vfsid, fcmh_2_inoh(f), iosv, iosidx, nios);
+	rc = -mds_repl_iosv_lookup(current_vfsid, fcmh_2_inoh(f), iosv,
+	    iosidx, nios);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
