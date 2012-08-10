@@ -202,6 +202,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct resm_mds_info);
 	PRTYPE(struct resprof_cli_info);
 	PRTYPE(struct resprof_mds_info);
+	PRTYPE(struct rootNames);
 	PRTYPE(struct site_mds_info);
 	PRTYPE(struct site_progress);
 	PRTYPE(struct sl_buffer);
@@ -666,6 +667,7 @@ main(int argc, char *argv[])
 	PRVAL(SLM_FORWARD_RENAME);
 	PRVAL(SLM_FORWARD_RMDIR);
 	PRVAL(SLM_FORWARD_SETATTR);
+	PRVAL(SLM_FORWARD_SYMLINK);
 	PRVAL(SLM_FORWARD_UNLINK);
 	PRVAL(SLNCONNT);
 	PRVAL(SLREST_ARCHIVAL_FS);

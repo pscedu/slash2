@@ -52,6 +52,7 @@ enum slm_fwd_op {
 	SLM_FORWARD_RMDIR,
 	SLM_FORWARD_UNLINK,
 	SLM_FORWARD_RENAME,
+	SLM_FORWARD_SYMLINK,
 	SLM_FORWARD_SETATTR
 };
 
@@ -84,7 +85,7 @@ int	slm_rmm_forward_namespace(int, struct slash_fidgen *,
 	    struct slash_fidgen *, char *, char *, uint32_t,
 	    const struct slash_creds *, struct srt_stat *, int32_t);
 
-int	slm_mkdir(struct srm_mkdir_req *, struct srm_mkdir_rep *, int,
+int	slm_mkdir(int, struct srm_mkdir_req *, struct srm_mkdir_rep *, int,
 	    struct fidc_membh **);
 int	slm_symlink(struct pscrpc_request *, struct srm_symlink_req *,
 	    struct srm_symlink_rep *, int);

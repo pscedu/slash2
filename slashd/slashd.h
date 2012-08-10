@@ -253,7 +253,7 @@ extern struct odtable		*slm_ptrunc_odt;
 extern struct sl_mds_nsstats	 slm_nsstats_aggr;	/* aggregate namespace stats */
 extern struct sl_mds_peerinfo	*localinfo;
 
-extern uint64_t			 slm_fsuuid;
+extern uint64_t			 slm_fsuuid[];
 extern struct psc_thread	*slmconnthr;
 
 static __inline int
@@ -270,5 +270,7 @@ slm_get_rpmi_idx(struct sl_resource *res)
 	RPMI_URLOCK(rpmi, locked);
 	return (n);
 }
+
+void psc_scan_filesystems(void);
 
 #endif /* _SLASHD_H_ */

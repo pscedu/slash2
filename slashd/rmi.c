@@ -46,6 +46,10 @@
 #include "slerr.h"
 #include "up_sched_res.h"
 
+#include "zfs-fuse/zfs_slashlib.h"
+
+extern int current_vfsid;
+
 /**
  * slm_rmi_handle_bmap_getcrcs - Handle a BMAPGETCRCS request from ION,
  *	so the ION can load the CRCs for a bmap and verify them against
@@ -213,7 +217,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	if (dst_resm == NULL)
 		PFL_GOTOERR(out, mp->rc = -SLERR_ION_UNKNOWN);
 
-	iosidx = mds_repl_ios_lookup(fcmh_2_inoh(f),
+	iosidx = mds_repl_ios_lookup(current_vfsid, fcmh_2_inoh(f),
 	    dst_resm->resm_res->res_id);
 	if (iosidx < 0) {
 		DEBUG_FCMH(PLL_ERROR, f,
@@ -243,7 +247,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 			 * Bad CRC, media error perhaps.
 			 * Check if other replicas exist.
 			 */
-			src_iosidx = mds_repl_ios_lookup(fcmh_2_inoh(f),
+			src_iosidx = mds_repl_ios_lookup(current_vfsid, fcmh_2_inoh(f),
 			    src_res->res_id);
 			if (src_iosidx < 0)
 				goto out;
@@ -335,7 +339,7 @@ slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 	if (mp->rc)
 		return (0);
 
-	iosidx = mds_repl_ios_lookup(fcmh_2_inoh(b->bcm_fcmh),
+	iosidx = mds_repl_ios_lookup(current_vfsid, fcmh_2_inoh(b->bcm_fcmh),
 	    libsl_nid2resm(rq->rq_export->exp_connection->
 	    c_peer.nid)->resm_res_id);
 
@@ -392,8 +396,17 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	sl_bmapno_t bno;
 	int64_t fsiz;
 	uint32_t i;
+	int vfsid;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
+	if (mdsio_fid_to_vfsid(mq->pfg.fg_fid, &vfsid) < 0) {
+		mp->rc = EINVAL;
+		goto out;
+	}
+	if (vfsid != current_vfsid) {
+		mp->rc = EINVAL;
+		goto out;
+	}
 
 	m = libsl_try_nid2resm(rq->rq_export->exp_connection->c_peer.nid);
 	if (m == NULL)
@@ -410,7 +423,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	mq->cpn[sizeof(mq->cpn) - 1] = '\0';
 
 	mds_reserve_slot(1);
-	rc = mdsio_opencreatef(fcmh_2_mdsio_fid(p), &rootcreds,
+	rc = mdsio_opencreatef(current_vfsid, fcmh_2_mdsio_fid(p), &rootcreds,
 	    O_CREAT | O_EXCL | O_RDWR, MDSIO_OPENCRF_NOMTIM,
 	    mq->sstb.sst_mode, mq->cpn, NULL, &sstb, &mdsio_data,
 	    mdslog_namespace, slm_get_next_slashfid, 0);
@@ -421,7 +434,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, mp->rc);
 
 	if (rc == EEXIST) {
-		rc2 = mdsio_lookup(fcmh_2_mdsio_fid(p), mq->cpn,
+		rc2 = mdsio_lookup(current_vfsid, fcmh_2_mdsio_fid(p), mq->cpn,
 		    NULL, &rootcreds, &sstb);
 		if (rc2)
 			PFL_GOTOERR(out, mp->rc = -rc2);
@@ -429,7 +442,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 		if (IS_REMOTE_FID(sstb.sst_fid))
 			PFL_GOTOERR(out, mp->rc = -ENOTSUP);
 	} else
-		mdsio_release(&cr, mdsio_data);
+		mdsio_release(current_vfsid, &cr, mdsio_data);
 
 	mp->fg = sstb.sst_fg;
 	if (S_ISDIR(sstb.sst_mode))
@@ -459,19 +472,20 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 				fcmh_set_repl_nblks(c, i, 0);
 			/* XXX journal repl_nblks */
 
-			rc = mds_fcmh_setattr(c,
+			rc = mds_fcmh_setattr(vfsid, c,
 			    PSCFS_SETATTRF_DATASIZE | SL_SETATTRF_GEN |
 			    SL_SETATTRF_NBLKS, &sstb);
-			mds_inodes_odsync(c, NULL);
+
+			mds_inodes_odsync(vfsid, c, NULL);
 			FCMH_UNBUSY(c);
 
 			if (rc)
 				PFL_GOTOERR(out, mp->rc = -rc);
 		}
 	} else
-		slm_fcmh_endow_nolog(p, c);
+		slm_fcmh_endow_nolog(vfsid, p, c);
 
-	idx = mds_repl_ios_lookup_add(fcmh_2_inoh(c), m->resm_res_id,
+	idx = mds_repl_ios_lookup_add(vfsid, fcmh_2_inoh(c), m->resm_res_id,
 	    1);
 	if (idx < 0)
 		PFL_GOTOERR(out, mp->rc = rc);
@@ -519,13 +533,13 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 		    PSCFS_SETATTRF_CTIME | PSCFS_SETATTRF_ATIME |
 		    PSCFS_SETATTRF_UID | PSCFS_SETATTRF_GID;
 	}
-	rc = mds_fcmh_setattr(c, fl, &mq->sstb);
+	rc = mds_fcmh_setattr(vfsid, c, fl, &mq->sstb);
 	if (rc) {
 		FCMH_UNBUSY(c);
 		PFL_GOTOERR(out, mp->rc = -rc);
 	}
 
-	rc = mds_inodes_odsync(c, NULL); /* journal repl_nblks */
+	rc = mds_inodes_odsync(vfsid, c, NULL); /* journal repl_nblks */
 	if (rc)
 		mp->rc = rc;
 
@@ -554,13 +568,22 @@ slm_rmi_handle_mkdir(struct pscrpc_request *rq)
 	struct srm_mkdir_rep *mp;
 	struct fidc_membh *d;
 	struct srt_stat sstb;
-	int rc;
+	int rc, vfsid;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
+	if (mdsio_fid_to_vfsid(mq->pfg.fg_fid, &vfsid) < 0) {
+		mp->rc = EINVAL;
+		return (0);
+	}
+	if (vfsid != current_vfsid) {
+		mp->rc = EINVAL;
+		return (0);
+	}
+
 	sstb = mq->sstb;
 	mq->sstb.sst_uid = 0;
 	mq->sstb.sst_gid = 0;
-	rc = slm_mkdir(mq, mp, MDSIO_OPENCRF_NOMTIM, &d);
+	rc = slm_mkdir(vfsid, mq, mp, MDSIO_OPENCRF_NOMTIM, &d);
 	if (rc)
 		return (rc);
 	if (mp->rc && mp->rc != -EEXIST)
@@ -570,7 +593,7 @@ slm_rmi_handle_mkdir(struct pscrpc_request *rq)
 	 * XXX if mp->rc == -EEXIST, only update attrs if target isn't
 	 * newer
 	 */
-	rc = -mds_fcmh_setattr(d,
+	rc = -mds_fcmh_setattr(vfsid, d,
 	    PSCFS_SETATTRF_UID | PSCFS_SETATTRF_GID |
 	    PSCFS_SETATTRF_ATIME | PSCFS_SETATTRF_MTIME |
 	    PSCFS_SETATTRF_CTIME, &sstb);

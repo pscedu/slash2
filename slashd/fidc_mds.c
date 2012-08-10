@@ -36,8 +36,10 @@
 #include "mdsio.h"
 #include "slashd.h"
 
+#include "zfs-fuse/zfs_slashlib.h"
+
 int
-_mds_fcmh_setattr(struct fidc_membh *f, int to_set,
+_mds_fcmh_setattr(int vfsid, struct fidc_membh *f, int to_set,
     const struct srt_stat *sstb, int log)
 {
 	int rc;
@@ -48,7 +50,7 @@ _mds_fcmh_setattr(struct fidc_membh *f, int to_set,
 
 	if (log)
 		mds_reserve_slot(1);
-	rc = mdsio_setattr(fcmh_2_mdsio_fid(f), sstb, to_set,
+	rc = mdsio_setattr(vfsid, fcmh_2_mdsio_fid(f), sstb, to_set,
 	    &rootcreds, &f->fcmh_sstb, fcmh_2_mdsio_data(f),
 	    log ? mdslog_namespace : NULL);
 	if (log)
@@ -61,15 +63,21 @@ slm_fcmh_ctor(struct fidc_membh *f)
 {
 	struct fcmh_mds_info *fmi;
 	int rc;
+	int vfsid;
 
 	DEBUG_FCMH(PLL_INFO, f, "ctor");
 
+	if (mdsio_fid_to_vfsid(fcmh_2_fid(f), &vfsid) < 0) {
+		rc = EINVAL;
+		DEBUG_FCMH(PLL_WARN, f, "invalid file system id (rc=%d)", rc);
+		return (rc);
+	}
 	fmi = fcmh_2_fmi(f);
 	memset(fmi, 0, sizeof(*fmi));
 	psc_dynarray_init(&fmi->fmi_ptrunc_clients);
 
-	rc = mdsio_lookup_slfid(fcmh_2_fid(f), &rootcreds,
-	    &f->fcmh_sstb, &fcmh_2_mdsio_fid(f));
+	rc = mdsio_lookup_slfid(vfsid, fcmh_2_fid(f), 
+		&rootcreds, &f->fcmh_sstb, &fcmh_2_mdsio_fid(f));
 	if (rc) {
 		fmi->fmi_ctor_rc = rc;
 		DEBUG_FCMH(PLL_WARN, f,
@@ -78,15 +86,13 @@ slm_fcmh_ctor(struct fidc_membh *f)
 	}
 
 	if (fcmh_isdir(f)) {
-		rc = mdsio_opendir(fcmh_2_mdsio_fid(f), &rootcreds,
-		    NULL, &fmi->fmi_mdsio_data);
-
+		rc = mdsio_opendir(vfsid, fcmh_2_mdsio_fid(f), 
+			&rootcreds, NULL, &fmi->fmi_mdsio_data);
 	} else if (fcmh_isreg(f)) {
 		slash_inode_handle_init(&fmi->fmi_inodeh, f);
-		rc = mdsio_opencreate(fcmh_2_mdsio_fid(f), &rootcreds,
-		    O_RDWR, 0, NULL, NULL, NULL, &fcmh_2_mdsio_data(f),
-		    NULL, NULL, 0);
-
+		rc = mdsio_opencreate(vfsid, fcmh_2_mdsio_fid(f),
+		    &rootcreds, O_RDWR, 0, NULL, NULL, NULL,
+		    &fcmh_2_mdsio_data(f), NULL, NULL, 0);
 		if (rc == 0) {
 			rc = mds_inode_read(&fmi->fmi_inodeh);
 			if (rc)
@@ -107,7 +113,7 @@ void
 slm_fcmh_dtor(struct fidc_membh *f)
 {
 	struct fcmh_mds_info *fmi;
-	int rc;
+	int rc, vfsid;
 
 	fmi = fcmh_2_fmi(f);
 	psc_assert(psc_dynarray_len(&fmi->fmi_ptrunc_clients) == 0);
@@ -117,7 +123,8 @@ slm_fcmh_dtor(struct fidc_membh *f)
 	    S_ISDIR(f->fcmh_sstb.sst_mode)) {
 		/* XXX Need to worry about other modes here */
 		if (!fmi->fmi_ctor_rc) {
-			rc = mdsio_release(&rootcreds,
+			mdsio_fid_to_vfsid(fcmh_2_fid(f), &vfsid);
+			rc = mdsio_release(vfsid, &rootcreds,
 			    fmi->fmi_mdsio_data);
 			psc_assert(rc == 0);
 		}
@@ -133,7 +140,7 @@ slm_fcmh_dtor(struct fidc_membh *f)
  * info in the SLASH2 metafile.
  */
 int
-_slm_fcmh_endow(struct fidc_membh *p, struct fidc_membh *c, int log)
+_slm_fcmh_endow(int vfsid, struct fidc_membh *p, struct fidc_membh *c, int log)
 {
 //	sl_replica_t repls[SL_MAX_REPLICAS];
 	uint32_t pol;
@@ -153,15 +160,14 @@ _slm_fcmh_endow(struct fidc_membh *p, struct fidc_membh *c, int log)
 		sstb.sstd_freplpol = pol;
 //		c->nrepls =
 //		c->memcpy();
-		mds_fcmh_setattr(c, SL_SETATTRF_FREPLPOL, &sstb);
+		mds_fcmh_setattr(vfsid, c, SL_SETATTRF_FREPLPOL, &sstb);
 	} else {
 		fcmh_2_ino(c)->ino_replpol = pol;
 //		fcmh_2_ino(c)->ino_nrepls = 1;
 //		memcpy(fcmh_2_ino(c)->ino_repls, repls, sizeof());
 		FCMH_ULOCK(c);
 		if (log)
-			rc = mds_inode_write(fcmh_2_inoh(c),
-			    mdslog_ino_repls, c);
+			rc = mds_inode_write(vfsid, fcmh_2_inoh(c), mdslog_ino_repls, c);
 //		if (log)
 //			rc = mds_inox_write(fcmh_2_inoh(c), mdslog_ino_repls, c);
 	}

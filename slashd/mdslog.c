@@ -156,23 +156,23 @@ mds_open_file(char *fn, int flags, void **handle)
 	mdsio_fid_t mf;
 	int rc;
 
-	rc = mdsio_lookup(mds_metadir_inum, fn, &mf, &rootcreds, NULL);
+	rc = mdsio_lookup(current_vfsid, mds_metadir_inum[current_vfsid], fn, &mf, &rootcreds, NULL);
 	if (rc == ENOENT && (flags & O_CREAT)) {
-		rc = mdsio_opencreatef(mds_metadir_inum, &rootcreds,
+		rc = mdsio_opencreatef(current_vfsid, mds_metadir_inum[current_vfsid], &rootcreds,
 		    flags, MDSIO_OPENCRF_NOLINK, 0600, fn, NULL, NULL,
 		    handle, NULL, NULL, 0);
 	} else if (!rc) {
-		rc = mdsio_opencreate(mf, &rootcreds, flags, 0, NULL,
+		rc = mdsio_opencreate(current_vfsid, mf, &rootcreds, flags, 0, NULL,
 		    NULL, NULL, handle, NULL, NULL, 0);
 	}
 	return (rc);
 }
 
 #define mds_read_file(h, buf, size, nb, off)				\
-	mdsio_read(&rootcreds, (buf), (size), (nb), (off), (h))
+	mdsio_read(current_vfsid, &rootcreds, (buf), (size), (nb), (off), (h))
 
 #define mds_write_file(h, buf, size, nb, off)				\
-	mdsio_write(&rootcreds, (buf), (size), (nb), (off), 0, (h), NULL, NULL)
+	mdsio_write(current_vfsid, &rootcreds, (buf), (size), (nb), (off), 0, (h), NULL, NULL)
 
 static void
 mds_record_update_prog(void)
@@ -240,8 +240,8 @@ mds_remove_logfile(uint64_t batchno, int update)
 		xmkfn(logfn, "%s.%d", SL_FN_UPDATELOG, batchno);
 	else
 		xmkfn(logfn, "%s.%d", SL_FN_RECLAIMLOG, batchno);
-	rc = mdsio_unlink(mds_metadir_inum, NULL, logfn, &rootcreds, NULL,
-	    NULL);
+	rc = mdsio_unlink(current_vfsid, mds_metadir_inum[current_vfsid], NULL, 
+		logfn, &rootcreds, NULL, NULL);
 	psclog_warnx("Removing log file %s, rc=%d", logfn, rc);
 }
 
@@ -355,7 +355,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 		    &reclaim_logfile_handle);
 		psc_assert(rc == 0);
 
-		rc = mdsio_getattr(0, reclaim_logfile_handle, &rootcreds, &sstb);
+		rc = mdsio_getattr(current_vfsid, 0, reclaim_logfile_handle, &rootcreds, &sstb);
 		psc_assert(rc == 0);
 
 		reclaim_logfile_offset = 0;
@@ -446,7 +446,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 	if (reclaim_logfile_offset ==
 	    SLM_RECLAIM_BATCH * (off_t)current_reclaim_entrysize) {
 
-		mdsio_release(&rootcreds, reclaim_logfile_handle);
+		mdsio_release(current_vfsid, &rootcreds, reclaim_logfile_handle);
 
 		reclaim_logfile_handle = NULL;
 		current_reclaim_batchno++;
@@ -556,7 +556,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
 	if (update_logfile_offset ==
 	    SLM_UPDATE_BATCH * sizeof(struct srt_update_entry)) {
 
-		mdsio_release(&rootcreds, update_logfile_handle);
+		mdsio_release(current_vfsid, &rootcreds, update_logfile_handle);
 
 		update_logfile_handle = NULL;
 		current_update_batchno++;
@@ -854,7 +854,7 @@ mds_send_batch_update(uint64_t batchno)
 	}
 	rc = mds_read_file(handle, updatebuf,
 	    SLM_UPDATE_BATCH * sizeof(struct srt_update_entry), &size, 0);
-	mdsio_release(&rootcreds, handle);
+	mdsio_release(current_vfsid, &rootcreds, handle);
 
 	if (size == 0)
 		return (didwork);
@@ -1064,7 +1064,7 @@ mds_cursor_thread(__unusedx struct psc_thread *thr)
 	int rc;
 
 	while (pscthr_run()) {
-		rc = mdsio_write_cursor(&mds_cursor, sizeof(mds_cursor),
+		rc = mdsio_write_cursor(current_vfsid, &mds_cursor, sizeof(mds_cursor),
 			mds_cursor_handle, mds_update_cursor);
 		if (rc)
 			psclog_warnx("failed to update cursor, rc=%d", rc);
@@ -1087,15 +1087,15 @@ mds_open_cursor(void)
 	size_t nb;
 	int rc;
 
-	rc = mdsio_lookup(mds_metadir_inum, SL_FN_CURSOR, &mf,
+	rc = mdsio_lookup(current_vfsid, mds_metadir_inum[current_vfsid], SL_FN_CURSOR, &mf,
 	    &rootcreds, NULL);
 	psc_assert(rc == 0);
 
-	rc = mdsio_opencreate(mf, &rootcreds, O_RDWR, 0, NULL, NULL,
+	rc = mdsio_opencreate(current_vfsid, mf, &rootcreds, O_RDWR, 0, NULL, NULL,
 	    NULL, &mds_cursor_handle, NULL, NULL, 0);
 	psc_assert(!rc && mds_cursor_handle);
 
-	rc = mdsio_read(&rootcreds, &mds_cursor,
+	rc = mdsio_read(current_vfsid, &rootcreds, &mds_cursor,
 	    sizeof(struct psc_journal_cursor), &nb, 0, mds_cursor_handle);
 	psc_assert(rc == 0 && nb == sizeof(struct psc_journal_cursor));
 
@@ -1103,12 +1103,25 @@ mds_open_cursor(void)
 	psc_assert(mds_cursor.pjc_version == PJRNL_CURSOR_VERSION);
 	psc_assert(mds_cursor.pjc_fid >= SLFID_MIN);
 
+#if 0
 	if (FID_GET_SITEID(mds_cursor.pjc_fid) == 0)
 		mds_cursor.pjc_fid |= (uint64_t)nodeSite->site_id <<
 		    SLASH_FID_SITE_SHFT;
 	if (FID_GET_SITEID(mds_cursor.pjc_fid) != nodeSite->site_id)
 		psc_fatal("Mismatched site ID in the FID, expected %d",
 		    nodeSite->site_id);
+#endif
+	/* old utility does not set fsid, so we fill it here */
+	if (FID_GET_SITEID(mds_cursor.pjc_fid) == 0)
+		FID_SET_SITEID(mds_cursor.pjc_fid, zfsMount[current_vfsid].siteid);
+
+#if 0
+	/* backward compatibility */
+	if (mount_index == 1) {
+		psc_assert(current_vfsid == 0);
+		zfsMount[current_vfsid].fsid = FID_GET_SITEID(mds_cursor.pjc_fid);
+	}
+#endif
 
 	slm_set_curr_slashfid(mds_cursor.pjc_fid);
 	psclog_notice("File system was formatted on %"PRIu64" seconds "
@@ -1189,18 +1202,18 @@ mds_send_batch_reclaim(uint64_t batchno)
 			    batchno, slstrerror(rc));
 		return (didwork);
 	}
-	rc = mdsio_getattr(0, handle, &rootcreds, &sstb);
+	rc = mdsio_getattr(current_vfsid, 0, handle, &rootcreds, &sstb);
 	psc_assert(rc == 0);
 
 	if (sstb.sst_size == 0) {
-		mdsio_release(&rootcreds, handle);
+		mdsio_release(current_vfsid, &rootcreds, handle);
 		return (didwork);
 	}
 	reclaimbuf = PSCALLOC(sstb.sst_size);
 
 	rc = mds_read_file(handle, reclaimbuf, sstb.sst_size, &size, 0);
 	psc_assert(rc == 0 && sstb.sst_size == size);
-	mdsio_release(&rootcreds, handle);
+	mdsio_release(current_vfsid, &rootcreds, handle);
 
 	version = 0;
 	entrysize = RECLAIM_ENTRY_SIZE;
@@ -1704,10 +1717,16 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	if (mdsJournal == NULL)
 		psc_fatal("failed to open log file %s", res->res_jrnldev);
 
+#if 0
+	/* 
+	 * We should specify the uuid in the journal when creating it.
+	 * Currently, we allow a random number to be used. 
+	 */
 	if (fsuuid && (mdsJournal->pj_hdr->pjh_fsuuid != fsuuid))
 		psc_fatalx("UUID mismatch FS=%"PRIx64" JRNL=%"PRIx64".  "
 		    "The journal needs to be reinitialized.",
 		  fsuuid, mdsJournal->pj_hdr->pjh_fsuuid);
+#endif
 
 	jrnldev = res->res_jrnldev;
 	mds_open_cursor();
@@ -1763,14 +1782,14 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 			}
 			break;
 		}
-		mdsio_release(&rootcreds, handle);
+		mdsio_release(current_vfsid, &rootcreds, handle);
 		batchno++;
 	}
 	if (rc)
 		psc_fatalx("failed to open reclaim log file, "
 		    "batchno=%"PRId64": %s", batchno, slstrerror(rc));
 
-	rc = mdsio_getattr(0, handle, &rootcreds, &sstb);
+	rc = mdsio_getattr(current_vfsid, 0, handle, &rootcreds, &sstb);
 	psc_assert(rc == 0);
 
 	current_reclaim_batchno = batchno;
@@ -1817,7 +1836,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 
 	last_distill_xid = last_reclaim_xid;
 
-	mdsio_release(&rootcreds, handle);
+	mdsio_release(current_vfsid, &rootcreds, handle);
 
 	/* search for newly-added I/O servers */
 	SITE_FOREACH_RES(nodeSite, res, ri) {
@@ -1894,7 +1913,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 
 	rc = mds_read_file(handle, updatebuf,
 	    SLM_UPDATE_BATCH * sizeof(struct srt_update_entry), &size, 0);
-	mdsio_release(&rootcreds, handle);
+	mdsio_release(current_vfsid, &rootcreds, handle);
 
 	psc_assert(rc == 0);
 	psc_assert((size % sizeof(struct srt_update_entry)) == 0);
@@ -1968,13 +1987,15 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	    "slmjreclaimthr");
 	if (!npeers)
 		return;
-
+#if 0
 	/*
 	 * Start a thread to propagate local namespace updates to peers
 	 * after our MDS peer list has been all setup.
 	 */
 	pscthr_init(SLMTHRT_JNAMESPACE, 0, slmjnsthr_main, NULL, 0,
 	    "slmjnsthr");
+#endif
+
 }
 
 void

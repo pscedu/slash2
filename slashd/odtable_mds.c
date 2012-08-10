@@ -35,6 +35,8 @@
 
 #include "odtable_mds.h"
 
+extern int current_vfsid;
+
 struct psc_lockedlist psc_odtables =
     PLL_INIT(&psc_odtables, struct odtable, odt_lentry);
 
@@ -66,7 +68,7 @@ mds_odtable_putitem(struct odtable *odt, void *data, size_t len)
 		 * of new items
 		 */
 		h->odth_nelems = psc_vbitmap_getsize(odt->odt_bitmap);
-		rc = mdsio_write(&rootcreds, h,
+		rc = mdsio_write(current_vfsid, &rootcreds, h,
 		    sizeof(struct odtable_hdr), &nb, 0, 0,
 		    odt->odt_handle, NULL, NULL);
 		psc_assert(!rc && nb == sizeof(struct odtable_hdr));
@@ -99,7 +101,7 @@ mds_odtable_putitem(struct odtable *odt, void *data, size_t len)
 	odtr->odtr_elem = elem;
 	odtr->odtr_key = crc;
 
-	rc = mdsio_write(&rootcreds, p, h->odth_slotsz, &nb,
+	rc = mdsio_write(current_vfsid, &rootcreds, p, h->odth_slotsz, &nb,
 	    h->odth_start + elem * h->odth_slotsz, 0, odt->odt_handle,
 	    NULL, NULL);
 	psc_assert(!rc && nb == h->odth_slotsz);
@@ -125,7 +127,7 @@ mds_odtable_getitem(struct odtable *odt,
 	psc_assert(odtr->odtr_elem <= odt->odt_hdr->odth_nelems - 1);
 
 	p = PSCALLOC(odt->odt_hdr->odth_slotsz);
-	rc = mdsio_read(&rootcreds, p, odt->odt_hdr->odth_slotsz, &nb,
+	rc = mdsio_read(current_vfsid, &rootcreds, p, odt->odt_hdr->odth_slotsz, &nb,
 	    odt->odt_hdr->odth_start + odtr->odtr_elem *
 	    odt->odt_hdr->odth_slotsz, odt->odt_handle);
 	if (nb != odt->odt_hdr->odth_slotsz && !rc)
@@ -170,7 +172,7 @@ mds_odtable_replaceitem(struct odtable *odt,
 	psc_assert(len <= odt->odt_hdr->odth_elemsz);
 
 	p = PSCALLOC(odt->odt_hdr->odth_slotsz);
-	rc = mdsio_read(&rootcreds, p, odt->odt_hdr->odth_slotsz, &nb,
+	rc = mdsio_read(current_vfsid, &rootcreds, p, odt->odt_hdr->odth_slotsz, &nb,
 	    odt->odt_hdr->odth_start + odtr->odtr_elem *
 	    odt->odt_hdr->odth_slotsz, odt->odt_handle);
 
@@ -187,7 +189,7 @@ mds_odtable_replaceitem(struct odtable *odt,
 	psclog_info("slot=%zd elemcrc=%"PSCPRIxCRC64, odtr->odtr_elem,
 	    crc);
 
-	rc = mdsio_write(&rootcreds, p, odt->odt_hdr->odth_slotsz, &nb,
+	rc = mdsio_write(current_vfsid, &rootcreds, p, odt->odt_hdr->odth_slotsz, &nb,
 	    odt->odt_hdr->odth_start + odtr->odtr_elem *
 	    odt->odt_hdr->odth_slotsz, 0, odt->odt_handle, NULL, NULL);
 	psc_assert(!rc && nb == odt->odt_hdr->odth_slotsz);
@@ -212,7 +214,7 @@ mds_odtable_freeitem(struct odtable *odt, struct odtable_receipt *odtr)
 
 	h = odt->odt_hdr;
 	p = PSCALLOC(h->odth_slotsz);
-	rc = mdsio_read(&rootcreds, p, h->odth_slotsz, &nb,
+	rc = mdsio_read(current_vfsid, &rootcreds, p, h->odth_slotsz, &nb,
 	    h->odth_start + odtr->odtr_elem *
 	    h->odth_slotsz, odt->odt_handle);
 
@@ -224,7 +226,7 @@ mds_odtable_freeitem(struct odtable *odt, struct odtable_receipt *odtr)
 	psc_vbitmap_unset(odt->odt_bitmap, odtr->odtr_elem);
 	freelock(&odt->odt_lock);
 
-	rc = mdsio_write(&rootcreds, p, h->odth_slotsz, &nb,
+	rc = mdsio_write(current_vfsid, &rootcreds, p, h->odth_slotsz, &nb,
 	    h->odth_start + odtr->odtr_elem *
 	    h->odth_slotsz, 0, odt->odt_handle, NULL, NULL);
 	psc_assert(!rc && nb == h->odth_slotsz);
@@ -255,15 +257,15 @@ mds_odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 
 	INIT_SPINLOCK(&odt->odt_lock);
 
-	rc = mdsio_lookup(mds_metadir_inum, fn, &mf, &rootcreds, NULL);
+	rc = mdsio_lookup(current_vfsid, mds_metadir_inum[current_vfsid], fn, &mf, &rootcreds, NULL);
 	psc_assert(rc == 0);
 
-	rc = mdsio_opencreate(mf, &rootcreds, O_RDWR, 0, NULL, NULL,
+	rc = mdsio_opencreate(current_vfsid, mf, &rootcreds, O_RDWR, 0, NULL, NULL,
 	    NULL, &odt->odt_handle, NULL, NULL, 0);
 	psc_assert(!rc && odt->odt_handle);
 
 	odth = PSCALLOC(sizeof(*odth));
-	rc = mdsio_read(&rootcreds, odth, sizeof(*odth), &nb, 0,
+	rc = mdsio_read(current_vfsid, &rootcreds, odth, sizeof(*odth), &nb, 0,
 	    odt->odt_handle);
 	odt->odt_hdr = odth;
 	psc_assert(rc == 0 && nb == sizeof(*odth));
@@ -282,7 +284,7 @@ mds_odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 
 	p = PSCALLOC(odth->odth_slotsz);
 	for (i = 0; i < odth->odth_nelems; i++) {
-		rc = mdsio_read(&rootcreds, p,
+		rc = mdsio_read(current_vfsid, &rootcreds, p,
 		    odth->odth_slotsz, &nb,
 		    odth->odth_start + i *
 		    odth->odth_slotsz, odt->odt_handle);
@@ -344,8 +346,8 @@ mds_odtable_release(struct odtable *odt)
 	odt->odt_bitmap = NULL;
 
 	PSCFREE(odt->odt_hdr);
-	mdsio_fsync(&rootcreds, 0, odt->odt_handle);
-	mdsio_release(&rootcreds, odt->odt_handle);
+	mdsio_fsync(current_vfsid, &rootcreds, 0, odt->odt_handle);
+	mdsio_release(current_vfsid, &rootcreds, odt->odt_handle);
 	PSCFREE(odt);
 }
 
@@ -369,7 +371,7 @@ mds_odtable_scan(struct odtable *odt,
 			odtr = PSCALLOC(sizeof(*odtr));
 		if (!psc_vbitmap_get(odt->odt_bitmap, i))
 			continue;
-		rc = mdsio_read(&rootcreds, p,
+		rc = mdsio_read(current_vfsid, &rootcreds, p,
 		    odt->odt_hdr->odth_slotsz, &nb,
 		    odt->odt_hdr->odth_start +
 		    i * odt->odt_hdr->odth_slotsz, odt->odt_handle);

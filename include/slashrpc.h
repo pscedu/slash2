@@ -360,7 +360,7 @@ struct srt_update_entry {
 #define UPDATE_ENTRY_LEN(e)						\
 	(offsetof(typeof(*(e)), name) + (e)->namelen + (e)->namelen2)
 
-/* namespace forward */
+/* forward a namespace operation */
 struct srm_forward_req {
 	 int32_t		op;		/* create, mkdir, unlink, rmdir, setattr */
 	uint32_t		mode;		/* mkdir/creat mode */
@@ -369,7 +369,6 @@ struct srm_forward_req {
 	struct slash_creds	creds;		/* st_uid owner for new dir/file */
 	struct slash_fidgen	fg;		/* parent dir or target */
 	struct slash_fidgen	nfg;		/* new parent dir or target */
-	slfid_t			fid;		/* new fid provided by the peer MDS */
 	union {
 		struct srt_stat	sstb;
 		char		name[PSC_ALIGN(SL_TWO_NAME_MAX + 2, 8)];
@@ -377,10 +376,7 @@ struct srm_forward_req {
 } __packed;
 
 struct srm_forward_rep {
-	struct srt_stat		cattr;		/* child node */
-	struct srt_stat		pattr;		/* parent dir */
-	struct srt_stat		opattr;		/* old parent dir */
-	slfid_t			fid;		/* provided by the peer MDS */
+	struct srt_stat		attr;		/* target/child attributes, include new FID */
 	 int32_t		rc;		/* return code, 0 for success or slerrno */
 	 int32_t		_pad;
 } __packed;

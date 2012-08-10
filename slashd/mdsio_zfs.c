@@ -44,21 +44,51 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
-mdsio_fid_t		 mds_metadir_inum;
-mdsio_fid_t		 mds_fidnsdir_inum;
-mdsio_fid_t		 mds_tmpdir_inum;
+mdsio_fid_t		 mds_metadir_inum[MAX_FILESYSTEMS];
+mdsio_fid_t		 mds_fidnsdir_inum[MAX_FILESYSTEMS];
+mdsio_fid_t		 mds_tmpdir_inum[MAX_FILESYSTEMS];
+
+int
+mdsio_fid_to_vfsid(slfid_t fid, int *vfsid)
+{
+	int i, siteid;
+	
+#if 0
+	/* our client uses this special fid to contact us
+	 * during mount. */
+	if (fid == SLFID_ROOT) {
+		*vfsid = current_vfsid;
+		return (0);
+	}
+#endif
+	/* only have default file system in the root */
+	if (mount_index == 1) {
+		*vfsid = current_vfsid;
+		return (0);
+	}
+
+	siteid = FID_GET_SITEID(fid);
+	for (i = 0; i < mount_index; i++) {
+		if (zfsMount[i].siteid == (uint64_t)siteid) {
+			*vfsid = i;
+			return (0);
+		}
+	}
+	return (-1);
+}
 
 int
 mdsio_fcmh_refreshattr(struct fidc_membh *f, struct srt_stat *out_sstb)
 {
 	pthread_t pthr;
-	int locked, rc;
+	int locked, rc, vfsid;
 
 	pthr = pthread_self();
 	locked = FCMH_RLOCK(f);
 	fcmh_wait_locked(f, (f->fcmh_flags & FCMH_BUSY) &&
 	    f->fcmh_owner != pthr);
-	rc = mdsio_getattr(fcmh_2_mdsio_fid(f), fcmh_2_mdsio_data(f),
+	mdsio_fid_to_vfsid(fcmh_2_fid(f), &vfsid);
+	rc = mdsio_getattr(vfsid, fcmh_2_mdsio_fid(f), fcmh_2_mdsio_data(f),
 	    &rootcreds, &f->fcmh_sstb);
 	psc_assert(rc == 0);
 	if (out_sstb)
@@ -174,8 +204,8 @@ struct mdsio_ops mdsio_ops = {
 };
 
 int
-mdsio_write_cursor(void *buf, size_t size, void *finfo,
+mdsio_write_cursor(int vfsid, void *buf, size_t size, void *finfo,
     sl_log_write_t funcp)
 {
-	return (zfsslash2_write_cursor(buf, size, finfo, funcp));
+	return (zfsslash2_write_cursor(vfsid, buf, size, finfo, funcp));
 }

@@ -47,8 +47,6 @@ const char	*progname;
 struct pscfs	 pscfs;
 struct mdsio_ops mdsio_ops;
 
-mdsio_fid_t	 mds_fidnsdir_inum;
-
 __dead void
 usage(void)
 {

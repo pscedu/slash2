@@ -101,7 +101,7 @@ slcfg_get_ioslist(sl_ios_id_t piosid, struct psc_dynarray *a,
 	 */
 	slcfg_resm_roundrobin(pios, a);
 
-	DYNARRAY_FOREACH(res, i, &pios->res_site->site_resources) {
+	DYNARRAY_FOREACH(res, i, &nodeSite->site_resources) {
 		if (!RES_ISFS(res) || (res == pios) ||
 		    ((res->res_type == SLREST_ARCHIVAL_FS) &&
 		     !use_archival))

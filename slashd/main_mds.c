@@ -57,16 +57,22 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
+
+/* this table is immutable, at least for now */
+struct psc_hashtbl		 rootHtable;
+
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 int			 allow_root_uid = 1;
 int			 disable_propagation = 0;
 
+int			 current_vfsid;
+
 const char		*progname;
 
 struct slash_creds	 rootcreds = { 0, 0 };
 struct pscfs		 pscfs;
-uint64_t		 slm_fsuuid;
+uint64_t		 slm_fsuuid[MAX_FILESYSTEMS];
 struct psc_thread	*slmconnthr;
 uint32_t		 sys_upnonce;
 
@@ -175,13 +181,215 @@ slmconnthr_spawn(void)
 			slm_geticsvcf(m, CSVCF_NORECON);
 }
 
+/*
+ * Note: The root file system must have fsid of zero, so that a client can
+ * see all the file systems in the pool.
+ */
+int
+read_vfsid(int vfsid, char *fn, uint64_t *id)
+{
+	int rc;
+	void *h;
+	char *endp;
+	size_t nb;
+	mdsio_fid_t mf;
+	char buf[30];
+	
+	rc = mdsio_lookup(vfsid, mds_metadir_inum[vfsid], fn, &mf,
+	    &rootcreds, NULL);
+
+	/* backward compatibility, assuming one default file system in the pool */
+	if (rc == ENOENT && !strcmp(fn, SL_FN_SITEID)) {
+		*id = nodeSite->site_id;
+		return (0);
+	}
+
+	if (rc) {
+		psclog_errorx("lookup %s/%s: %s", SL_RPATH_META_DIR,
+		    fn, slstrerror(rc));
+		goto out;
+	}
+	rc = mdsio_opencreate(vfsid, mf, &rootcreds, O_RDONLY, 0, NULL,
+	    NULL, NULL, &h, NULL, NULL, 0);
+	if (rc) {
+		psclog_errorx("open %s/%s: %s", SL_RPATH_META_DIR,
+		    fn, slstrerror(rc));
+		goto out;
+	}
+	rc = mdsio_read(vfsid, &rootcreds, buf, sizeof(buf), &nb, 0, h);
+	mdsio_release(vfsid, &rootcreds, h);
+
+	if (rc) {
+		psclog_errorx("read %s/%s: %s", SL_RPATH_META_DIR,
+		    fn, slstrerror(rc));
+		goto out;
+	}
+
+	buf[nb - 1] = '\0';
+	* id = strtoull(buf, &endp, 16);
+	if (*endp || endp == buf) {
+		rc = EINVAL;
+		psclog_errorx("read %s/%s: %s", SL_RPATH_META_DIR,
+		    fn, slstrerror(rc));
+	}
+out:
+	return (rc);
+}
+
+
+/*
+ * XXX Allow an empty file system to register and fill in contents later.
+ *     Or use slmctl to register a new file system when it is ready.
+ */
+void
+psc_register_filesystem(int vfsid)
+{
+	int i, rc, found1, found2;
+	uint64_t siteid;
+	uint64_t uuid;
+	struct psc_hashbkt *b;
+	struct rootNames *entry;
+	int root_vfsid;
+	char *fsname;
+    	mdsio_fid_t mfp;
+	struct srt_stat sstb;
+
+	psclog_warnx("Checking file system %s\n", zfsMount[vfsid].name);
+	if (zfsMount[vfsid].name[0] != '/') {
+		psclog_warnx("Bogus file system name: %s", zfsMount[vfsid].name);
+		return;
+	}
+
+	/*
+ 	 * Mimic the behaviour of lib/libzfs/libzfs_mount.c.  Because we are not
+ 	 * fuse mounted, we can't rely on the zfs utility to do this for us.
+ 	 *
+ 	 * libzfs_mount.c actually does a mkdirp().  Since we only do one mkdir,
+ 	 * any new file system must mount directly under the root.
+ 	 */
+	fsname = strchr(&zfsMount[vfsid].name[1], '/');
+	if (!(zfsMount[vfsid].flag & ZFS_SLASH2_MKDIR) && fsname) {
+		fsname++;
+		/* make sure that the newly mounted file system has an entry */
+		mdsio_fid_to_vfsid(SLFID_ROOT, &root_vfsid);
+		rc = mdsio_lookup(root_vfsid, MDSIO_FID_ROOT, fsname,
+		        &mfp, &rootcreds, NULL);
+		if (rc == ENOENT) {
+			sstb.sst_mode = 0755;
+			sstb.sst_uid = rootcreds.scr_uid;
+			sstb.sst_gid = rootcreds.scr_gid;
+			rc = mdsio_mkdir(root_vfsid, MDSIO_FID_ROOT, fsname, &sstb,
+	    			0, MDSIO_OPENCRF_NOLINK, NULL, NULL, NULL, NULL, 0);
+		}
+		if (rc) {
+			psclog_warnx("Verify %s entry: %s", fsname, slstrerror(rc));
+			goto out;
+		}
+	}
+	zfsMount[vfsid].flag |= ZFS_SLASH2_MKDIR;
+
+	rc = mdsio_lookup(vfsid, MDSIO_FID_ROOT, SL_RPATH_META_DIR,
+	    &mds_metadir_inum[vfsid], &rootcreds, NULL);
+	if (rc) {
+		psclog_warnx("lookup .slmd metadir: %s", slstrerror(rc));
+		goto out;
+	}
+
+	rc = mdsio_lookup(vfsid, mds_metadir_inum[vfsid], SL_RPATH_FIDNS_DIR,
+		&mds_fidnsdir_inum[vfsid], &rootcreds, NULL);
+	if (rc) {
+		psclog_warnx("lookup %s/%s dir: %s", SL_RPATH_META_DIR,
+			SL_RPATH_FIDNS_DIR, slstrerror(rc));
+		goto out;
+	}
+
+	rc = mdsio_lookup(vfsid, mds_metadir_inum[vfsid], SL_RPATH_TMP_DIR,
+		&mds_tmpdir_inum[vfsid], &rootcreds, NULL);
+	if (rc) {
+		psclog_warnx("lookup %s/%s dir: %s", SL_RPATH_META_DIR,
+			SL_RPATH_TMP_DIR, slstrerror(rc));
+		goto out;
+	}
+
+	rc = read_vfsid(vfsid, SL_FN_SITEID, &zfsMount[vfsid].siteid);
+	if (rc)
+		goto out;
+	rc = read_vfsid(vfsid, SL_FN_FSUUID, &zfsMount[vfsid].uuid);
+	if (rc)
+		goto out;
+
+	found1 = 0;
+	found2 = 0;
+	uuid = zfsMount[vfsid].uuid;
+	siteid = zfsMount[vfsid].siteid;
+	for (i = 0; i < mount_index; i++) {
+		if (i == vfsid)
+			continue;
+		if (zfsMount[i].siteid == siteid)
+			found1++;
+		if (zfsMount[i].uuid == uuid)
+			found2++;
+	}
+	if (found1) {
+		psclog_warnx("Duplicate SITEID found: %"PRIx64"\n", siteid);
+		goto out;
+	}
+	if (found2) {
+		psclog_warnx("Duplicate UUID found: %"PRIx64"\n", uuid);
+		goto out;
+	}
+	rc = zfsslash2_build_immns_cache(vfsid);
+	if (rc) {
+		psclog_warnx("Fail to create cache for file system %s\n", 
+			basename(zfsMount[vfsid].name));
+		goto out;
+	}
+
+	entry = PSCALLOC(sizeof(struct rootNames));
+	if (!entry) {
+		psclog_warnx("Fail to allocate memory to register %s\n", 
+			basename(zfsMount[vfsid].name));
+		goto out;
+	}
+
+	strcpy(entry->rn_name, basename(zfsMount[vfsid].name));
+	entry->rn_vfsid = vfsid;
+	psc_hashent_init(&rootHtable, entry);
+	b = psc_hashbkt_get(&rootHtable, entry->rn_name);
+	psc_hashbkt_add_item(&rootHtable, b, entry);
+
+	zfsMount[vfsid].flag |= ZFS_SLASH2_READY;
+	psclog_warnx("File system %s registered (%"PRIx64":%"PRIx64").\n", 
+		basename(zfsMount[vfsid].name), siteid, uuid);
+ out:
+	return;
+}
+
+psc_spinlock_t  scan_lock = SPINLOCK_INIT;
+
+/*
+ * Scan for newly added file systems in the pool
+ */
+void
+psc_scan_filesystems(void)
+{
+	int i;
+	spinlock(&scan_lock);
+	for (i = 0; i < mount_index; i++) {
+		if (!(zfsMount[i].flag & ZFS_SLASH2_READY))
+			psc_register_filesystem(i);
+	}
+	freelock(&scan_lock);
+}
+
 int
 main(int argc, char *argv[])
 {
 	char *zpcachefn = NULL, *zpname, fn[PATH_MAX];
 	const char *cfn, *sfn, *p;
-	int rc, c, nofsuuid = 0;
-	mdsio_fid_t mf;
+	int rc, c, found, nofsuuid = 0;
+
+	int vfsid;
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -267,60 +475,11 @@ main(int argc, char *argv[])
 	mdsio_init();
 	import_zpool(zpname, zpcachefn);
 
-	rc = mdsio_lookup(MDSIO_FID_ROOT, SL_RPATH_META_DIR,
-	    &mds_metadir_inum, &rootcreds, NULL);
-	if (rc)
-		psc_fatalx("lookup .slmd metadir: %s", slstrerror(rc));
+	psc_hashtbl_init(&rootHtable, PHTF_STR, struct rootNames,
+		rn_name, rn_hentry, 1024, NULL, "rootnames");
 
-	rc = mdsio_lookup(mds_metadir_inum, SL_RPATH_FIDNS_DIR,
-	    &mds_fidnsdir_inum, &rootcreds, NULL);
-	if (rc)
-		psc_fatalx("lookup %s/%s dir: %s", SL_RPATH_META_DIR,
-		    SL_RPATH_FIDNS_DIR, slstrerror(rc));
-
-	rc = mdsio_lookup(mds_metadir_inum, SL_RPATH_TMP_DIR,
-	    &mds_tmpdir_inum, &rootcreds, NULL);
-	if (rc)
-		psc_fatalx("lookup %s/%s dir: %s", SL_RPATH_META_DIR,
-		    SL_RPATH_TMP_DIR, slstrerror(rc));
-
-	rc = mdsio_lookup(mds_metadir_inum, SL_FN_FSUUID, &mf,
-	    &rootcreds, NULL);
-	if (rc)
-		psclog_errorx("lookup %s/%s: %s", SL_RPATH_META_DIR,
-		    SL_FN_FSUUID, slstrerror(rc));
-	else {
-		char *endp, buf[17] = "";
-		size_t nb;
-		void *h;
-
-		rc = mdsio_opencreate(mf, &rootcreds, O_RDONLY, 0, NULL,
-		    NULL, NULL, &h, NULL, NULL, 0);
-		if (rc)
-			PFL_GOTOERR(skipfsuuid, rc);
-		rc = mdsio_read(&rootcreds, buf, sizeof(buf), &nb, 0,
-		    h);
-		mdsio_release(&rootcreds, h);
-
-		if (rc)
-			goto skipfsuuid;
-		if (nb != sizeof(buf))
-			PFL_GOTOERR(skipfsuuid, rc = SLERR_SHORTIO);
-		buf[sizeof(buf) - 1] = '\0';
-		slm_fsuuid = strtoull(buf, &endp, 16);
-		if (*endp || endp == buf)
-			PFL_GOTOERR(skipfsuuid, rc = EINVAL);
-
-		if (0) {
- skipfsuuid:
-			psclog_errorx("%s/%s: %s %s",
-			    SL_RPATH_META_DIR, SL_FN_FSUUID,
-			    buf, slstrerror(rc));
-			slm_fsuuid = 0;
-		}
-	}
-
-	zfsslash2_build_immns_cache();
+	/* using hook can cause layer violation */
+	zfsslash2_register_hook(psc_register_filesystem);
 
 	authbuf_createkeyfile();
 	authbuf_readkeyfile();
@@ -328,6 +487,23 @@ main(int argc, char *argv[])
 	sl_drop_privs(allow_root_uid);
 
 	libsl_init(2 * (SLM_RMM_NBUFS + SLM_RMI_NBUFS + SLM_RMC_NBUFS));
+
+	for (vfsid = 0; vfsid < mount_index; vfsid++)
+		psc_register_filesystem(vfsid);
+
+	found = 0;
+	for (vfsid = 0; vfsid < mount_index; vfsid++) {
+		if (nodeSite->site_id == zfsMount[vfsid].siteid) {
+			psc_assert(!found);
+			found = 1;
+			current_vfsid = vfsid;
+			psclog_warnx("File system %s (id = %d) matches site ID %d",
+			    zfsMount[vfsid].name, vfsid, nodeSite->site_id);
+		}
+	}
+	if (!found)
+		psc_fatalx("Site ID=%d doesn't match any file system",
+		    nodeSite->site_id);
 
 	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_UPSCHDB);
 	rc = sqlite3_open(fn, &slm_dbh);
@@ -347,15 +523,6 @@ main(int argc, char *argv[])
 	sl_nbrqset = pscrpc_nbreqset_init(NULL, NULL);
 	pscrpc_nbreapthr_spawn(sl_nbrqset, SLMTHRT_NBRQ, "slmnbrqthr");
 
-	if (!nofsuuid) {
-		if (globalConfig.gconf_fsuuid != slm_fsuuid)
-			psc_fatalx("config UUID=%"PRIx64" doesn't match "
-			    "FS UUID=%"PRIx64,
-			    globalConfig.gconf_fsuuid, slm_fsuuid);
-	} else
-		psclog_warnx("config UUID=%"PRIx64" doesn't match FS "
-		    "UUID=%"PRIx64, globalConfig.gconf_fsuuid, slm_fsuuid);
-
 	psclog_info("SLASH2 metadata daemon (mds) revision is %d",
 	    SL_STK_VERSION);
 
@@ -369,7 +536,7 @@ main(int argc, char *argv[])
 	mds_odtable_load(&slm_repl_odt, SL_FN_REPL_ODTAB, "repl");
 	mds_odtable_load(&slm_ptrunc_odt, SL_FN_PTRUNC_ODTAB, "ptrunc");
 
-	mds_journal_init(disable_propagation, (nofsuuid ? 0 : slm_fsuuid));
+	mds_journal_init(disable_propagation, zfsMount[current_vfsid].uuid);
 	mds_bmap_timeotbl_init();
 	mds_odtable_scan(mdsBmapAssignTable, mds_bia_odtable_startup_cb, NULL);
 	mds_odtable_scan(slm_repl_odt, slm_repl_odt_startup_cb, NULL);

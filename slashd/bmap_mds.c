@@ -31,6 +31,8 @@
 #include "slerr.h"
 #include "up_sched_res.h"
 
+#include "zfs-fuse/zfs_slashlib.h"
+
 static __inline void *
 bmap_2_mdsio_data(struct bmapc_memb *b)
 {
@@ -132,6 +134,8 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 	struct fidc_membh *f;
 	struct iovec iovs[2];
 	size_t nb;
+	int vfsid;
+	struct fidc_membh *fcmh;
 
 	f = b->bcm_fcmh;
 
@@ -139,7 +143,10 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 	iovs[0].iov_len = BMAP_OD_CRCSZ;
 	iovs[1].iov_base = &od_crc;
 	iovs[1].iov_len = sizeof(od_crc);
-	rc = mdsio_preadv(&rootcreds, iovs, nitems(iovs), &nb,
+
+	fcmh = b->bcm_fcmh;
+	mdsio_fid_to_vfsid(fcmh_2_fid(fcmh), &vfsid);
+	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
 	    (off_t)BMAP_OD_SZ * b->bcm_bmapno + SL_BMAP_START_OFF,
 	    bmap_2_mdsio_data(b));
 
@@ -260,6 +267,8 @@ mds_bmap_write(struct bmapc_memb *b, int update_mtime, void *logf,
 	uint64_t crc;
 	int rc, new;
 	size_t nb;
+	struct fidc_membh *fcmh;
+	int vfsid;
 
 	BMAPOD_REQRDLOCK(bmap_2_bmi(b));
 	mds_bmap_ensure_valid(b);
@@ -273,7 +282,9 @@ mds_bmap_write(struct bmapc_memb *b, int update_mtime, void *logf,
 
 	if (logf)
 		mds_reserve_slot(1);
-	rc = mdsio_pwritev(&rootcreds, iovs, nitems(iovs), &nb,
+	fcmh = b->bcm_fcmh;
+	mdsio_fid_to_vfsid(fcmh_2_fid(fcmh), &vfsid);
+	rc = mdsio_pwritev(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
 	    (off_t)BMAP_OD_SZ * b->bcm_bmapno + SL_BMAP_START_OFF,
 	    update_mtime, bmap_2_mdsio_data(b), logf, logarg);
 	if (logf)
@@ -338,7 +349,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 	struct fidc_membh *f;
 	struct srt_stat sstb;
 	sl_ios_id_t iosid;
-	int rc, fl, idx;
+	int rc, fl, idx, vfsid;
 	uint32_t i;
 
 	psc_assert(bmap->bcm_flags & BMAP_MDS_CRC_UP);
@@ -346,9 +357,14 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 	f = bmap->bcm_fcmh;
 	ih = fcmh_2_inoh(f);
 
+	if (mdsio_fid_to_vfsid(fcmh_2_fid(f), &vfsid) < 0)
+		return (EINVAL);
+	if (vfsid != current_vfsid)
+		return (EINVAL);
+
 	FCMH_WAIT_BUSY(f);
 	iosid = bmi->bmdsi_wr_ion->rmmi_resm->resm_res_id;
-	idx = mds_repl_ios_lookup(ih, iosid);
+	idx = mds_repl_ios_lookup(vfsid, ih, iosid);
 	if (idx < 0)
 		psc_fatal("not found");
 	sstb.sst_blocks = fcmh_2_nblks(f) + crcup->nblks -
@@ -358,14 +374,14 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 	fcmh_set_repl_nblks(f, idx, crcup->nblks);
 
 	/* use nolog because mdslog_bmap_crc() will cover this */
-	rc = mds_fcmh_setattr_nolog(f, fl, &sstb);
+	rc = mds_fcmh_setattr_nolog(vfsid, f, fl, &sstb);
 
 	FCMH_LOCK(f);
 
 	if (idx >= SL_DEF_REPLICAS)
-		mds_inox_write(ih, NULL, NULL);
+		mds_inox_write(vfsid, ih, NULL, NULL);
 	else
-		mds_inode_write(ih, NULL, NULL);
+		mds_inode_write(vfsid, ih, NULL, NULL);
 
 	FCMH_UNBUSY(f);
 

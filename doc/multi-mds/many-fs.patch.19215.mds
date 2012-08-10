@@ -1,6 +1,6 @@
 Index: zfs/src/zfs-fuse/zfs_dir.c
 ===================================================================
---- zfs/src/zfs-fuse/zfs_dir.c	(revision 19213)
+--- zfs/src/zfs-fuse/zfs_dir.c	(revision 19215)
 +++ zfs/src/zfs-fuse/zfs_dir.c	(working copy)
 @@ -731,19 +731,11 @@
  
@@ -25,7 +25,7 @@ Index: zfs/src/zfs-fuse/zfs_dir.c
  	dnlc_update(ZTOV(dzp), dl->dl_name, vp);
 Index: zfs/src/zfs-fuse/util.c
 ===================================================================
---- zfs/src/zfs-fuse/util.c	(revision 19213)
+--- zfs/src/zfs-fuse/util.c	(revision 19215)
 +++ zfs/src/zfs-fuse/util.c	(working copy)
 @@ -35,6 +35,8 @@
  #include <syslog.h>
@@ -142,7 +142,7 @@ Index: zfs/src/zfs-fuse/util.c
  
 Index: zfs/src/zfs-fuse/zfs_vnops.c
 ===================================================================
---- zfs/src/zfs-fuse/zfs_vnops.c	(revision 19213)
+--- zfs/src/zfs-fuse/zfs_vnops.c	(revision 19215)
 +++ zfs/src/zfs-fuse/zfs_vnops.c	(working copy)
 @@ -2212,7 +2212,6 @@
  	outcount = 0;
@@ -179,7 +179,7 @@ Index: zfs/src/zfs-fuse/zfs_vnops.c
  			next = &(odp->d_off);
 Index: zfs/src/zfs-fuse/zfs_slashlib.h
 ===================================================================
---- zfs/src/zfs-fuse/zfs_slashlib.h	(revision 19213)
+--- zfs/src/zfs-fuse/zfs_slashlib.h	(revision 19215)
 +++ zfs/src/zfs-fuse/zfs_slashlib.h	(working copy)
 @@ -19,34 +19,64 @@
  } file_info_t;
@@ -308,7 +308,7 @@ Index: zfs/src/zfs-fuse/zfs_slashlib.h
  #endif /* _ZFS_SLASHLIB_H_ */
 Index: zfs/src/zfs-fuse/zfs_operations_slash.c
 ===================================================================
---- zfs/src/zfs-fuse/zfs_operations_slash.c	(revision 19213)
+--- zfs/src/zfs-fuse/zfs_operations_slash.c	(revision 19215)
 +++ zfs/src/zfs-fuse/zfs_operations_slash.c	(working copy)
 @@ -67,10 +67,9 @@
  
@@ -1345,7 +1345,7 @@ Index: zfs/src/zfs-fuse/zfs_operations_slash.c
 +}
 Index: zfs/src/zfs-fuse/main.c
 ===================================================================
---- zfs/src/zfs-fuse/main.c	(revision 19213)
+--- zfs/src/zfs-fuse/main.c	(revision 19215)
 +++ zfs/src/zfs-fuse/main.c	(working copy)
 @@ -44,7 +44,6 @@
  extern void fuse_unmount_all(); // in fuse_listener.c
@@ -1357,7 +1357,7 @@ Index: zfs/src/zfs-fuse/main.c
  {
 Index: zfs/src/lib/libzfscommon/include/sys/zap.h
 ===================================================================
---- zfs/src/lib/libzfscommon/include/sys/zap.h	(revision 19213)
+--- zfs/src/lib/libzfscommon/include/sys/zap.h	(revision 19215)
 +++ zfs/src/lib/libzfscommon/include/sys/zap.h	(working copy)
 @@ -312,7 +312,6 @@
  	boolean_t za_normalization_conflict;
@@ -1369,7 +1369,7 @@ Index: zfs/src/lib/libzfscommon/include/sys/zap.h
  
 Index: zfs/src/lib/libsolkerncompat/include/sys/dirent.h
 ===================================================================
---- zfs/src/lib/libsolkerncompat/include/sys/dirent.h	(revision 19213)
+--- zfs/src/lib/libsolkerncompat/include/sys/dirent.h	(revision 19215)
 +++ zfs/src/lib/libsolkerncompat/include/sys/dirent.h	(working copy)
 @@ -76,7 +76,6 @@
   */
@@ -1381,7 +1381,7 @@ Index: zfs/src/lib/libsolkerncompat/include/sys/dirent.h
  	char		d_name[1];	/* name of file */
 Index: slash_nara/slimmns/slimmns_format.c
 ===================================================================
---- slash_nara/slimmns/slimmns_format.c	(revision 19213)
+--- slash_nara/slimmns/slimmns_format.c	(revision 19215)
 +++ slash_nara/slimmns/slimmns_format.c	(working copy)
 @@ -52,6 +52,7 @@
  int		 wipe;
@@ -1451,7 +1451,7 @@ Index: slash_nara/slimmns/slimmns_format.c
  			break;
 Index: slash_nara/include/slashrpc.h
 ===================================================================
---- slash_nara/include/slashrpc.h	(revision 19213)
+--- slash_nara/include/slashrpc.h	(revision 19215)
 +++ slash_nara/include/slashrpc.h	(working copy)
 @@ -360,7 +360,7 @@
  #define UPDATE_ENTRY_LEN(e)						\
@@ -1484,7 +1484,7 @@ Index: slash_nara/include/slashrpc.h
  } __packed;
 Index: slash_nara/include/pathnames.h
 ===================================================================
---- slash_nara/include/pathnames.h	(revision 19213)
+--- slash_nara/include/pathnames.h	(revision 19215)
 +++ slash_nara/include/pathnames.h	(working copy)
 @@ -65,6 +65,7 @@
  
@@ -1496,7 +1496,7 @@ Index: slash_nara/include/pathnames.h
  
 Index: slash_nara/slmkjrnl/slmkjrnl.c
 ===================================================================
---- slash_nara/slmkjrnl/slmkjrnl.c	(revision 19213)
+--- slash_nara/slmkjrnl/slmkjrnl.c	(revision 19215)
 +++ slash_nara/slmkjrnl/slmkjrnl.c	(working copy)
 @@ -47,8 +47,6 @@
  struct pscfs	 pscfs;
@@ -1509,7 +1509,7 @@ Index: slash_nara/slmkjrnl/slmkjrnl.c
  {
 Index: slash_nara/utils/typedump/typedump.c
 ===================================================================
---- slash_nara/utils/typedump/typedump.c	(revision 19213)
+--- slash_nara/utils/typedump/typedump.c	(revision 19215)
 +++ slash_nara/utils/typedump/typedump.c	(working copy)
 @@ -199,6 +199,7 @@
  	PRTYPE(struct resm_mds_info);
@@ -1521,7 +1521,7 @@ Index: slash_nara/utils/typedump/typedump.c
  	PRTYPE(struct sl_buffer);
 Index: slash_nara/slashd/cfg_mds.c
 ===================================================================
---- slash_nara/slashd/cfg_mds.c	(revision 19213)
+--- slash_nara/slashd/cfg_mds.c	(revision 19215)
 +++ slash_nara/slashd/cfg_mds.c	(working copy)
 @@ -103,7 +103,7 @@
  	 */
@@ -1534,7 +1534,7 @@ Index: slash_nara/slashd/cfg_mds.c
  		     !use_archival))
 Index: slash_nara/slashd/up_sched_res.c
 ===================================================================
---- slash_nara/slashd/up_sched_res.c	(revision 19213)
+--- slash_nara/slashd/up_sched_res.c	(revision 19215)
 +++ slash_nara/slashd/up_sched_res.c	(working copy)
 @@ -54,6 +54,8 @@
  #include "slutil.h"
@@ -1616,7 +1616,7 @@ Index: slash_nara/slashd/up_sched_res.c
  	*wkp = uswi_find(fgp);
 Index: slash_nara/slashd/repl_mds.c
 ===================================================================
---- slash_nara/slashd/repl_mds.c	(revision 19213)
+--- slash_nara/slashd/repl_mds.c	(revision 19215)
 +++ slash_nara/slashd/repl_mds.c	(working copy)
 @@ -62,6 +62,8 @@
  int			 repl_busytable_nents;
@@ -1701,7 +1701,7 @@ Index: slash_nara/slashd/repl_mds.c
  
 Index: slash_nara/slashd/repl_mds.h
 ===================================================================
---- slash_nara/slashd/repl_mds.h	(revision 19213)
+--- slash_nara/slashd/repl_mds.h	(revision 19215)
 +++ slash_nara/slashd/repl_mds.h	(working copy)
 @@ -60,7 +60,7 @@
  int	 mds_repl_delrq(const struct slash_fidgen *, sl_bmapno_t, sl_replica_t *, int);
@@ -1725,7 +1725,7 @@ Index: slash_nara/slashd/repl_mds.h
  
 Index: slash_nara/slashd/odtable_mds.c
 ===================================================================
---- slash_nara/slashd/odtable_mds.c	(revision 19213)
+--- slash_nara/slashd/odtable_mds.c	(revision 19215)
 +++ slash_nara/slashd/odtable_mds.c	(working copy)
 @@ -35,6 +35,8 @@
  
@@ -1849,7 +1849,7 @@ Index: slash_nara/slashd/odtable_mds.c
  		    odt->odt_hdr->odth_slotsz, odt->odt_handle);
 Index: slash_nara/slashd/mdsio.h
 ===================================================================
---- slash_nara/slashd/mdsio.h	(revision 19213)
+--- slash_nara/slashd/mdsio.h	(revision 19215)
 +++ slash_nara/slashd/mdsio.h	(working copy)
 @@ -26,6 +26,7 @@
  
@@ -1988,7 +1988,7 @@ Index: slash_nara/slashd/mdsio.h
  #endif
 Index: slash_nara/slashd/bmap_mds.c
 ===================================================================
---- slash_nara/slashd/bmap_mds.c	(revision 19213)
+--- slash_nara/slashd/bmap_mds.c	(revision 19215)
 +++ slash_nara/slashd/bmap_mds.c	(working copy)
 @@ -31,6 +31,8 @@
  #include "slerr.h"
@@ -2084,7 +2084,7 @@ Index: slash_nara/slashd/bmap_mds.c
  
 Index: slash_nara/slashd/mds.c
 ===================================================================
---- slash_nara/slashd/mds.c	(revision 19213)
+--- slash_nara/slashd/mds.c	(revision 19215)
 +++ slash_nara/slashd/mds.c	(working copy)
 @@ -46,6 +46,8 @@
  #include "slerr.h"
@@ -2157,7 +2157,7 @@ Index: slash_nara/slashd/mds.c
  	mds_unreserve_slot(1);
 Index: slash_nara/slashd/slashd.h
 ===================================================================
---- slash_nara/slashd/slashd.h	(revision 19213)
+--- slash_nara/slashd/slashd.h	(revision 19215)
 +++ slash_nara/slashd/slashd.h	(working copy)
 @@ -245,7 +245,7 @@
  extern struct sl_mds_nsstats	 slm_nsstats_aggr;	/* aggregate namespace stats */
@@ -2177,7 +2177,7 @@ Index: slash_nara/slashd/slashd.h
  #endif /* _SLASHD_H_ */
 Index: slash_nara/slashd/rpc_mds.c
 ===================================================================
---- slash_nara/slashd/rpc_mds.c	(revision 19213)
+--- slash_nara/slashd/rpc_mds.c	(revision 19215)
 +++ slash_nara/slashd/rpc_mds.c	(working copy)
 @@ -34,10 +34,14 @@
  #include "slashd.h"
@@ -2214,7 +2214,7 @@ Index: slash_nara/slashd/rpc_mds.c
  }
 Index: slash_nara/slashd/ino_compat.c
 ===================================================================
---- slash_nara/slashd/ino_compat.c	(revision 19213)
+--- slash_nara/slashd/ino_compat.c	(revision 19215)
 +++ slash_nara/slashd/ino_compat.c	(working copy)
 @@ -32,8 +32,12 @@
  #include "slashd.h"
@@ -2449,7 +2449,7 @@ Index: slash_nara/slashd/ino_compat.c
  	if (rc)
 Index: slash_nara/slashd/rpc_mds.h
 ===================================================================
---- slash_nara/slashd/rpc_mds.h	(revision 19213)
+--- slash_nara/slashd/rpc_mds.h	(revision 19215)
 +++ slash_nara/slashd/rpc_mds.h	(working copy)
 @@ -84,7 +84,7 @@
  	    struct slash_fidgen *, char *, char *, uint32_t,
@@ -2462,7 +2462,7 @@ Index: slash_nara/slashd/rpc_mds.h
  	    struct srm_symlink_rep *, int);
 Index: slash_nara/slashd/mdsio_zfs.c
 ===================================================================
---- slash_nara/slashd/mdsio_zfs.c	(revision 19213)
+--- slash_nara/slashd/mdsio_zfs.c	(revision 19215)
 +++ slash_nara/slashd/mdsio_zfs.c	(working copy)
 @@ -44,19 +44,49 @@
  
@@ -2533,7 +2533,7 @@ Index: slash_nara/slashd/mdsio_zfs.c
  }
 Index: slash_nara/slashd/inode.c
 ===================================================================
---- slash_nara/slashd/inode.c	(revision 19213)
+--- slash_nara/slashd/inode.c	(revision 19215)
 +++ slash_nara/slashd/inode.c	(working copy)
 @@ -30,6 +30,8 @@
  #include "slashd.h"
@@ -2673,7 +2673,7 @@ Index: slash_nara/slashd/inode.c
  	INOH_URLOCK(ih, locked);
 Index: slash_nara/slashd/inode.h
 ===================================================================
---- slash_nara/slashd/inode.h	(revision 19213)
+--- slash_nara/slashd/inode.h	(revision 19215)
 +++ slash_nara/slashd/inode.h	(working copy)
 @@ -132,16 +132,16 @@
  	int			(*sic_read_bmap)(struct bmapc_memb *, void *);
@@ -2699,7 +2699,7 @@ Index: slash_nara/slashd/inode.h
  
 Index: slash_nara/slashd/fidc_mds.c
 ===================================================================
---- slash_nara/slashd/fidc_mds.c	(revision 19213)
+--- slash_nara/slashd/fidc_mds.c	(revision 19215)
 +++ slash_nara/slashd/fidc_mds.c	(working copy)
 @@ -36,8 +36,10 @@
  #include "mdsio.h"
@@ -2809,7 +2809,7 @@ Index: slash_nara/slashd/fidc_mds.c
  	}
 Index: slash_nara/slashd/fidc_mds.h
 ===================================================================
---- slash_nara/slashd/fidc_mds.h	(revision 19213)
+--- slash_nara/slashd/fidc_mds.h	(revision 19215)
 +++ slash_nara/slashd/fidc_mds.h	(working copy)
 @@ -61,15 +61,15 @@
  #define slm_fcmh_get(fgp, fp)	fidc_lookup((fgp), FIDC_LOOKUP_CREATE, NULL, 0, (fp))
@@ -2835,7 +2835,7 @@ Index: slash_nara/slashd/fidc_mds.h
  extern psc_spinlock_t	slm_fid_lock;
 Index: slash_nara/slashd/rmc.c
 ===================================================================
---- slash_nara/slashd/rmc.c	(revision 19213)
+--- slash_nara/slashd/rmc.c	(revision 19215)
 +++ slash_nara/slashd/rmc.c	(working copy)
 @@ -58,9 +58,22 @@
  #include "slutil.h"
@@ -3482,7 +3482,7 @@ Index: slash_nara/slashd/rmc.c
  
 Index: slash_nara/slashd/mdslog.c
 ===================================================================
---- slash_nara/slashd/mdslog.c	(revision 19213)
+--- slash_nara/slashd/mdslog.c	(revision 19215)
 +++ slash_nara/slashd/mdslog.c	(working copy)
 @@ -176,23 +176,23 @@
  	mdsio_fid_t mf;
@@ -3690,7 +3690,7 @@ Index: slash_nara/slashd/mdslog.c
  void
 Index: slash_nara/slashd/rmi.c
 ===================================================================
---- slash_nara/slashd/rmi.c	(revision 19213)
+--- slash_nara/slashd/rmi.c	(revision 19215)
 +++ slash_nara/slashd/rmi.c	(working copy)
 @@ -46,6 +46,10 @@
  #include "slerr.h"
@@ -3849,7 +3849,7 @@ Index: slash_nara/slashd/rmi.c
  	    PSCFS_SETATTRF_CTIME, &sstb);
 Index: slash_nara/slashd/main_mds.c
 ===================================================================
---- slash_nara/slashd/main_mds.c	(revision 19213)
+--- slash_nara/slashd/main_mds.c	(revision 19215)
 +++ slash_nara/slashd/main_mds.c	(working copy)
 @@ -55,18 +55,24 @@
  
@@ -4237,7 +4237,7 @@ Index: slash_nara/slashd/main_mds.c
  	mds_bmap_timeotbl_init();
 Index: slash_nara/slashd/rmm.c
 ===================================================================
---- slash_nara/slashd/rmm.c	(revision 19213)
+--- slash_nara/slashd/rmm.c	(revision 19215)
 +++ slash_nara/slashd/rmm.c	(working copy)
 @@ -44,6 +44,8 @@
  
@@ -4449,7 +4449,7 @@ Index: slash_nara/slashd/rmm.c
  		pscrpc_req_finished(rq);
 Index: slash_nara/slashd/replay.c
 ===================================================================
---- slash_nara/slashd/replay.c	(revision 19213)
+--- slash_nara/slashd/replay.c	(revision 19215)
 +++ slash_nara/slashd/replay.c	(working copy)
 @@ -29,12 +29,24 @@
  #include "pathnames.h"

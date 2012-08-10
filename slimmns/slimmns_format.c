@@ -52,8 +52,9 @@ const char	*progname;
 int		 wipe;
 int		 ion;
 struct passwd	*pw;
-uint64_t	 fsuuid = 0;
-const char	*datadir = SL_PATH_DATA_DIR;
+uint64_t         siteid = 0;
+uint64_t         fsuuid = 0;
+const char      *datadir = SL_PATH_DATA_DIR;
 
 struct psc_journal_cursor cursor;
 
@@ -195,9 +196,23 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 
 	if (!fsuuid)
 		fsuuid = psc_random64();
+	fprintf(fp, "%#16"PRIx64"\n", fsuuid);
+	if (!fsuuid)
+		fsuuid = psc_random64();
 	fprintf(fp, "%16"PRIx64"\n", fsuuid);
 	if (!ion)
-		printf("The UUID of the pool is %#16"PRIx64"\n", fsuuid);
+		printf("The UUID of the file system is %#16"PRIx64"\n", fsuuid);
+
+	fclose(fp);
+
+	/* create the SITEID file */
+	xmkfn(fn, "%s/%s", metadir, SL_FN_SITEID);
+	fp = fopen(fn, "w");
+	if (fp == NULL)
+		psc_fatal("open %s", fn);
+	fprintf(fp, "%18"PRId64"\n", siteid);
+	if (!ion)
+		printf("The SITEID of the file system is %18"PRId64"\n", siteid);
 
 	fclose(fp);
 
@@ -214,6 +229,7 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 	cursor.pjc_version = PJRNL_CURSOR_VERSION;
 	cursor.pjc_timestamp = time(NULL);
 	cursor.pjc_fid = SLFID_MIN;
+	FID_SET_SITEID(cursor.pjc_fid, siteid);
 	if (pwrite(fd, &cursor, sizeof(cursor), 0) != sizeof(cursor))
 		psc_fatal("write %s", fn);
 	close(fd);
@@ -294,7 +310,7 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "c:D:iWu:")) != -1)
+	while ((c = getopt(argc, argv, "c:D:iI:Wu:")) != -1)
 		switch (c) {
 		case 'c':
 			cfgfn = optarg;
@@ -310,6 +326,14 @@ main(int argc, char *argv[])
 			fsuuid = strtoull(optarg, &endp, 16);
 			if (endp == optarg || *endp)
 				errx(1, "%s: invalid FSUUID", optarg);
+			break;
+		case 'I':
+			endp = NULL;
+			siteid = strtoull(optarg, &endp, 0);
+			if (endp == optarg || *endp)
+				errx(1, "%s: invalid SITEID", optarg);
+			if (siteid >= (1 << SLASH_FID_SITE_BITS))
+				errx(1, "%lu: SITEID too big", siteid);
 			break;
 		case 'W':
 			wipe = 1;

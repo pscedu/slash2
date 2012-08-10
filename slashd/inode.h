@@ -142,16 +142,16 @@ struct sl_ino_compat {
 	int			(*sic_read_bmap)(struct bmapc_memb *, void *);
 };
 
-int	mds_inode_update(struct slash_inode_handle *, int);
-int	mds_inode_update_interrupted(struct slash_inode_handle *, int *);
+int	mds_inode_update(int, struct slash_inode_handle *, int);
+int	mds_inode_update_interrupted(int, struct slash_inode_handle *, int *);
 int	mds_inode_read(struct slash_inode_handle *);
-int	mds_inode_write(struct slash_inode_handle *, void *, void *);
-int	mds_inox_write(struct slash_inode_handle *, void *, void *);
+int	mds_inode_write(int, struct slash_inode_handle *, void *, void *);
+int	mds_inox_write(int, struct slash_inode_handle *, void *, void *);
 
 int	mds_inox_load_locked(struct slash_inode_handle *);
 int	mds_inox_ensure_loaded(struct slash_inode_handle *);
 
-int	mds_inodes_odsync(struct fidc_membh *, void (*logf)(void *, uint64_t, int));
+int	mds_inodes_odsync(int, struct fidc_membh *, void (*logf)(void *, uint64_t, int));
 
 char	*_dump_ino(char *, size_t, const struct slash_inode_od *);
 

@@ -44,6 +44,8 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
+extern int current_vfsid;
+
 int
 slm_rmm_apply_update(struct srt_update_entry *entryp)
 {
@@ -161,6 +163,8 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 	struct srt_stat sstb;
 	void *mdsio_data;
 	char *from, *to;
+	char *name, *linkname;
+	int vfsid;
 
 	p = op = np = NULL;
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -169,16 +173,25 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 	    mq->op != SLM_FORWARD_RMDIR &&
 	    mq->op != SLM_FORWARD_CREATE &&
 	    mq->op != SLM_FORWARD_UNLINK &&
+	    mq->op != SLM_FORWARD_SYMLINK &&
 	    mq->op != SLM_FORWARD_RENAME &&
 	    mq->op != SLM_FORWARD_SETATTR) {
 		mp->rc = -EINVAL;
 		return (0);
 	}
 
-	psclog_info("op=%d, fid="SLPRI_FID", name=%s", mq->op, mq->fid,
-	    mq->req.name);
+	psclog_info("op=%d, name=%s", mq->op, mq->req.name);
 
-	mds_reserve_slot(1);
+	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid)) {
+		mp->rc = EINVAL;
+		return (0);
+	}
+	if (current_vfsid != vfsid) {
+		mp->rc = EINVAL;
+		return (0);
+	}
+
+	mds_reserve_slot(2);
 	switch (mq->op) {
 	    case SLM_FORWARD_MKDIR:
 		mp->rc = slm_fcmh_get(&mq->fg, &p);
@@ -187,35 +200,35 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		sstb.sst_mode = mq->mode;
 		sstb.sst_uid = mq->creds.scr_uid;
 		sstb.sst_gid = mq->creds.scr_gid;
-		mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(p), mq->req.name,
-		    &sstb, 0, 0, &mp->cattr, NULL, mdslog_namespace,
-		    NULL, mq->fid);
+		mp->rc = -mdsio_mkdir(vfsid, fcmh_2_mdsio_fid(p), mq->req.name,
+		    &sstb, 0, 0, &mp->attr, NULL, mdslog_namespace,
+		    slm_get_next_slashfid, 0);
 		break;
 	    case SLM_FORWARD_CREATE:
 		mp->rc = slm_fcmh_get(&mq->fg, &p);
 		if (mp->rc)
 			break;
-		mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p),
+		mp->rc = mdsio_opencreate(vfsid, fcmh_2_mdsio_fid(p),
 		    &mq->creds, O_CREAT | O_EXCL | O_RDWR, mq->mode,
-		    mq->req.name, NULL, &mp->cattr, &mdsio_data,
-		    mdslog_namespace, NULL, mq->fid);
+		    mq->req.name, NULL, &mp->attr, &mdsio_data, mdslog_namespace,
+		    slm_get_next_slashfid, 0);
 		if (!mp->rc)
-			mdsio_release(&rootcreds, mdsio_data);
+			mdsio_release(vfsid, &rootcreds, mdsio_data);
 		break;
 	    case SLM_FORWARD_RMDIR:
 		mp->rc = slm_fcmh_get(&mq->fg, &p);
 		if (mp->rc)
 			break;
-		mp->rc = mdsio_rmdir(fcmh_2_mdsio_fid(p), &mp->fid,
+		mp->rc = mdsio_rmdir(vfsid, fcmh_2_mdsio_fid(p), NULL,
 		    mq->req.name, &rootcreds, mdslog_namespace);
 		break;
 	    case SLM_FORWARD_UNLINK:
 		mp->rc = slm_fcmh_get(&mq->fg, &p);
 		if (mp->rc)
 			break;
-		mp->rc = mdsio_unlink(fcmh_2_mdsio_fid(p), &mp->fid,
+		mp->rc = -mdsio_unlink(vfsid, fcmh_2_mdsio_fid(p), NULL,
 		    mq->req.name, &rootcreds, mdslog_namespace,
-		    &mp->cattr);
+		    &mp->attr);
 		break;
 	    case SLM_FORWARD_RENAME:
 		mp->rc = slm_fcmh_get(&mq->fg, &op);
@@ -226,9 +239,9 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 			break;
 		from = mq->req.name;
 		to = mq->req.name + strlen(mq->req.name) + 1;
-		mp->rc = mdsio_rename(fcmh_2_mdsio_fid(op), from,
+		mp->rc = mdsio_rename(vfsid, fcmh_2_mdsio_fid(op), from,
 		    fcmh_2_mdsio_fid(np), to, &rootcreds,
-		    mdslog_namespace, &mp->cattr);
+		    mdslog_namespace, &mp->attr);
 		break;
 	    case SLM_FORWARD_SETATTR:
 		/*
@@ -239,19 +252,28 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		mp->rc = slm_fcmh_get(&mq->fg, &p);
 		if (mp->rc)
 			break;
-		mp->rc = mdsio_setattr(fcmh_2_mdsio_fid(p),
-		    &mq->req.sstb, mq->to_set, &rootcreds, &mp->cattr,
+		mp->rc = -mdsio_setattr(vfsid, fcmh_2_mdsio_fid(p),
+		    &mq->req.sstb, mq->to_set, &rootcreds, &mp->attr,
 		    fcmh_2_mdsio_data(p), mdslog_namespace);
 		break;
+	    case SLM_FORWARD_SYMLINK:
+		mp->rc = slm_fcmh_get(&mq->fg, &p);
+		if (mp->rc)
+			break;
+		name = mq->req.name;
+		linkname = mq->req.name + strlen(mq->req.name) + 1;
+		mp->rc = mdsio_symlink(vfsid, linkname, fcmh_2_mdsio_fid(p), name,
+			    &mq->creds, &mp->attr, NULL, NULL, slm_get_next_slashfid, 0);
+		break;
 	}
-	mds_unreserve_slot(1);
+	mds_unreserve_slot(2);
 	if (p)
 		fcmh_op_done(p);
 	if (op)
 		fcmh_op_done(op);
 	if (np)
 		fcmh_op_done(np);
-	return (mp->rc);
+	return (0);
 }
 
 /**
@@ -289,8 +311,8 @@ slm_rmm_handler(struct pscrpc_request *rq)
 }
 
 /*
- * TODO:
- *	- return parent sstb to piggyback updates such as mtime
+ * Forward a name space operation to a remote MDS first before replicating
+ * the operation locally by our callers.
  */
 int
 slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
@@ -307,14 +329,19 @@ slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
 	struct sl_site *site;
 	sl_siteid_t siteid;
 	int rc, len, i;
+	int vfsid;
 
-	siteid = FID_GET_SITEID(fg->fg_fid);
 
 	if (op != SLM_FORWARD_MKDIR  && op != SLM_FORWARD_RMDIR &&
 	    op != SLM_FORWARD_CREATE && op != SLM_FORWARD_UNLINK &&
-	    op != SLM_FORWARD_RENAME && op != SLM_FORWARD_SETATTR)
+	    op != SLM_FORWARD_RENAME && op != SLM_FORWARD_SETATTR &&
+	    op != SLM_FORWARD_SYMLINK)
 		return (ENOSYS);
 
+	if (mdsio_fid_to_vfsid(fg->fg_fid, &vfsid) < 0)
+		return (EINVAL);
+
+	siteid = FID_GET_SITEID(fg->fg_fid);
 	site = libsl_siteid2site(siteid);
 	if (site == NULL)
 		return (EBADF);
@@ -344,61 +371,24 @@ slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
 	} else
 		strlcpy(mq->req.name, name, sizeof(mq->req.name));
 
-	if (op == SLM_FORWARD_RENAME) {
-		mq->nfg	= *nfg;
+	if (op == SLM_FORWARD_RENAME || op == SLM_FORWARD_SYMLINK) {
+		if (op == SLM_FORWARD_RENAME)
+			mq->nfg	= *nfg;
 		len = strlen(name) + 1;
 		strlcpy(mq->req.name + len, newname,
 		    sizeof(mq->req.name) - len);
 	}
 
-	if (op == SLM_FORWARD_MKDIR || op == SLM_FORWARD_CREATE) {
+	if (op == SLM_FORWARD_MKDIR || op == SLM_FORWARD_CREATE || op == SLM_FORWARD_SYMLINK) {
 		mq->mode = mode;
 		mq->creds = *creds;
-		rc = slm_get_next_slashfid(&mq->fid);
 	}
-	if (rc)
-		goto out;
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc)
-		goto out;
-
-	switch (op) {
-	    case SLM_FORWARD_MKDIR:
-		rc = mdsio_redo_mkdir(mq->fg.fg_fid, name, &mp->cattr);
-		if (!rc)
-			*sstb = mp->cattr;
-		break;
-	    case SLM_FORWARD_RMDIR:
-		rc = mdsio_redo_rmdir(mq->fg.fg_fid, mp->fid, name);
-		break;
-	    case SLM_FORWARD_CREATE:
-		rc = mdsio_redo_create(mq->fg.fg_fid, name, &mp->cattr);
-		if (!rc)
-			*sstb = mp->cattr;
-		break;
-	    case SLM_FORWARD_UNLINK:
-		rc = mdsio_redo_unlink(mq->fg.fg_fid, mp->fid, name);
-		break;
-	    case SLM_FORWARD_RENAME:
-		rc = mdsio_redo_rename(mq->fg.fg_fid, name,
-		    mq->nfg.fg_fid, newname, sstb);
-		if (!rc)
-			*sstb = mp->cattr;
-		break;
-	    case SLM_FORWARD_SETATTR:
-		rc = mdsio_redo_setattr(mq->fg.fg_fid, mq->to_set,
-		    sstb);
-		if (!rc)
-			*sstb = mp->cattr;
-		break;
-	    default:
-		rc = EINVAL;
-		break;
-	}
-	psclog_errorx("replay failed: op=%d fid="SLPRI_FID" name=%s rc=%d",
-	    op, mq->fg.fg_fid, name, rc);
-
+	if (!rc) 
+		rc = mp->rc;
+	if (!rc && sstb) 
+		*sstb = mp->attr;
  out:
 	if (rq)
 		pscrpc_req_finished(rq);

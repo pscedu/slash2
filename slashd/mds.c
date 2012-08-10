@@ -47,6 +47,8 @@
 #include "up_sched_res.h"
 #include "worker.h"
 
+#include "zfs-fuse/zfs_slashlib.h"
+
 struct odtable	*mdsBmapAssignTable;
 
 sqlite3		*slm_dbh;
@@ -470,8 +472,8 @@ mds_bmap_add_repl(struct bmapc_memb *b, struct bmap_ios_assign *bia)
 	psc_assert(b->bcm_flags & BMAP_IONASSIGN);
 
 	FCMH_WAIT_BUSY(f);
+	iosidx = mds_repl_ios_lookup_add(current_vfsid, ih, bia->bia_ios, 0);
 
-	iosidx = mds_repl_ios_lookup_add(ih, bia->bia_ios, 0);
 	if (iosidx < 0)
 		psc_fatalx("ios_lookup_add %d: %s", bia->bia_ios,
 		   slstrerror(iosidx));
@@ -1406,7 +1408,12 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 	struct bmapc_memb *bmap = NULL;
 	struct bmap_mds_info *bmi;
 	struct fidc_membh *f;
-	int rc;
+	int rc, vfsid;
+
+	if (mdsio_fid_to_vfsid(c->fg.fg_fid, &vfsid) < 0)
+		return (-EINVAL);
+	if (vfsid != current_vfsid)
+		return (-EINVAL);
 
 	rc = slm_fcmh_get(&c->fg, &f);
 	if (rc) {
@@ -1506,7 +1513,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 		uint32_t bpol;
 
 		ih = fcmh_2_inoh(f);
-		iosidx = mds_repl_ios_lookup(ih,
+		iosidx = mds_repl_ios_lookup(vfsid, ih,
 		    bmi->bmdsi_wr_ion->rmmi_resm->resm_res_id);
 		if (iosidx < 0)
 			psclog_errorx("ios not found");
@@ -1556,7 +1563,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 		FCMH_WAIT_BUSY(f);
 		sstb.sst_mode = f->fcmh_sstb.sst_mode &
 		    ~(S_ISGID | S_ISUID);
-		mds_fcmh_setattr_nolog(f, PSCFS_SETATTRF_MODE,
+		mds_fcmh_setattr_nolog(vfsid, f, PSCFS_SETATTRF_MODE,
 		    &sstb);
 		FCMH_UNBUSY(f);
 	}
@@ -2031,7 +2038,7 @@ slm_ptrunc_prepare(void *p)
 			struct srt_stat sstb;
 
 			sstb.sst_size = fmi->fmi_ptrunc_size;
-			mds_fcmh_setattr_nolog(f,
+			mds_fcmh_setattr_nolog(current_vfsid, f,
 			    PSCFS_SETATTRF_DATASIZE, &sstb);
 		}
 		f->fcmh_flags &= ~FCMH_IN_PTRUNC;
@@ -2087,7 +2094,7 @@ slm_ptrunc_prepare(void *p)
 	f->fcmh_sstb.sst_size = fmi->fmi_ptrunc_size;
 
 	mds_reserve_slot(1);
-	rc = mdsio_setattr(fcmh_2_mdsio_fid(f), &f->fcmh_sstb,
+	rc = mdsio_setattr(current_vfsid, fcmh_2_mdsio_fid(f), &f->fcmh_sstb,
 	    to_set, &rootcreds, &f->fcmh_sstb,
 	    fcmh_2_mdsio_data(f), mdslog_namespace);
 	mds_unreserve_slot(1);

@@ -61,6 +61,8 @@ struct slm_resmlink	*repl_busytable;
 int			 repl_busytable_nents;
 psc_spinlock_t		 repl_busytable_lock = SPINLOCK_INIT;
 
+extern int current_vfsid;
+
 __static int
 iosidx_cmp(const void *a, const void *b)
 {
@@ -100,7 +102,7 @@ _slm_repl_bmap_rel_type(struct bmapc_memb *b, int type)
 }
 
 int
-_mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
+_mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih, sl_ios_id_t ios,
     int add, int log)
 {
 	int locked, rc = -SLERR_REPL_NOT_ACT, inox_rc = 0;
@@ -168,7 +170,7 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
 		DEBUG_INOH(PLL_INFO, ih, "add IOS(%u) to repls, index %d",
 		    ios, j);
 
-		mds_inodes_odsync(ih->inoh_fcmh, mdslog_ino_repls);
+		mds_inodes_odsync(vfsid, ih->inoh_fcmh, mdslog_ino_repls);
 
 		rc = j;
 	}
@@ -178,13 +180,13 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios,
 }
 
 int
-_mds_repl_iosv_lookup(struct slash_inode_handle *ih,
+_mds_repl_iosv_lookup(int vfsid, struct slash_inode_handle *ih,
     const sl_replica_t iosv[], int iosidx[], int nios, int add)
 {
 	int k, last;
 
 	for (k = 0; k < nios; k++)
-		if ((iosidx[k] = _mds_repl_ios_lookup(ih,
+		if ((iosidx[k] = _mds_repl_ios_lookup(vfsid, ih,
 		    iosv[k].bs_id, add, add)) < 0)
 			return (-iosidx[k]);
 
@@ -638,7 +640,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	slm_iosv_setbusy(iosv, nios);
 
 	/* Find/add our replica's IOS ID */
-	rc = -mds_repl_iosv_lookup_add(fcmh_2_inoh(f), iosv, iosidx,
+	rc = -mds_repl_iosv_lookup_add(current_vfsid, fcmh_2_inoh(f), iosv, iosidx,
 	    nios);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -832,7 +834,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	slm_iosv_setbusy(iosv, nios);
 
 	/* Find replica IOS indexes */
-	rc = -mds_repl_iosv_lookup(fcmh_2_inoh(f), iosv, iosidx, nios);
+	rc = -mds_repl_iosv_lookup(current_vfsid, fcmh_2_inoh(f), iosv, iosidx, nios);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 

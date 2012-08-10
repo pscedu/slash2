@@ -32,8 +32,12 @@
 #include "slashd.h"
 #include "slerr.h"
 
+#include "zfs-fuse/zfs_slashlib.h"
+
+extern int current_vfsid;
+
 int
-mds_inode_dump(struct sl_ino_compat *sic, struct slash_inode_handle *ih,
+mds_inode_dump(int vfsid, struct sl_ino_compat *sic, struct slash_inode_handle *ih,
     void *readh)
 {
 	struct fidc_membh *f;
@@ -80,26 +84,27 @@ mds_inode_dump(struct sl_ino_compat *sic, struct slash_inode_handle *ih,
 			return (rc);
 	}
 
-	rc = mds_inox_write(ih, NULL, NULL);
+	rc = mds_inox_write(vfsid, ih, NULL, NULL);
 	if (rc)
 		return (rc);
 
-	rc = mds_inode_write(ih, NULL, NULL);
+	rc = mds_inode_write(vfsid, ih, NULL, NULL);
 	if (rc)
 		return (rc);
 
-	mdsio_fsync(&rootcreds, 1, th);
+	mdsio_fsync(vfsid, &rootcreds, 1, th);
 	return (0);
 }
 
 int
-mds_inode_update(struct slash_inode_handle *ih, int old_version)
+mds_inode_update(int vfsid, struct slash_inode_handle *ih, int old_version)
 {
 	char fn[NAME_MAX + 1];
 	struct sl_ino_compat *sic;
 	struct srt_stat sstb;
 	void *h = NULL, *th;
 	int rc;
+	struct fidc_membh	*fcmh;
 
 	sic = &sl_ino_compat_table[old_version];
 	rc = sic->sic_read_ino(ih);
@@ -108,11 +113,12 @@ mds_inode_update(struct slash_inode_handle *ih, int old_version)
 	DEBUG_INOH(PLL_INFO, ih, "updating old inode (v %d)",
 	    old_version);
 
+	fcmh = ih->inoh_fcmh;
 	snprintf(fn, sizeof(fn), "%016"PRIx64".update",
-	    fcmh_2_fid(ih->inoh_fcmh));
-	rc = mdsio_opencreatef(mds_tmpdir_inum, &rootcreds, O_RDWR |
-	    O_CREAT | O_TRUNC, MDSIO_OPENCRF_NOLINK, 0644, fn, NULL,
-	    NULL, &h, NULL, NULL, 0);
+	    fcmh_2_fid(fcmh));
+	rc = mdsio_opencreatef(vfsid, mds_tmpdir_inum[vfsid], 
+		&rootcreds, O_RDWR | O_CREAT | O_TRUNC, MDSIO_OPENCRF_NOLINK, 0644, fn, NULL, 
+		NULL, &h, NULL, NULL, 0);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -127,30 +133,30 @@ mds_inode_update(struct slash_inode_handle *ih, int old_version)
 
 	th = inoh_2_mdsio_data(ih);
 	inoh_2_mdsio_data(ih) = h;
-	rc = mds_inode_dump(sic, ih, th);
+	rc = mds_inode_dump(vfsid, sic, ih, th);
 	inoh_2_mdsio_data(ih) = th;
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
 	/* move new structures to inode meta file */
 	memset(&sstb, 0, sizeof(sstb));
-	rc = mdsio_setattr(0, &sstb, SL_SETATTRF_METASIZE, &rootcreds,
+	rc = mdsio_setattr(vfsid, 0, &sstb, SL_SETATTRF_METASIZE, &rootcreds,
 	    NULL, th, NULL);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
 //	mdsio_rename(mds_tmpdir_inum, NULL, fn, &rootcreds, NULL);
-	rc = mds_inode_dump(NULL, ih, h);
+	rc = mds_inode_dump(vfsid, NULL, ih, h);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	mdsio_unlink(mds_tmpdir_inum, NULL, fn, &rootcreds, NULL, NULL);
+	mdsio_unlink(vfsid, mds_tmpdir_inum[vfsid], NULL, fn, &rootcreds, NULL, NULL);
 
  out:
 	if (h)
-		mdsio_release(&rootcreds, h);
+		mdsio_release(vfsid, &rootcreds, h);
 	if (rc) {
-		mdsio_unlink(mds_tmpdir_inum, NULL, fn, &rootcreds,
+		mdsio_unlink(vfsid, mds_tmpdir_inum[vfsid], NULL, fn, &rootcreds,
 		    NULL, NULL);
 		DEBUG_INOH(PLL_ERROR, ih, "error updating old inode "
 		    "rc=%d", rc);
@@ -159,7 +165,7 @@ mds_inode_update(struct slash_inode_handle *ih, int old_version)
 }
 
 int
-mds_inode_update_interrupted(struct slash_inode_handle *ih, int *rc)
+mds_inode_update_interrupted(int vfsid, struct slash_inode_handle *ih, int *rc)
 {
 	char fn[NAME_MAX + 1];
 	struct srt_stat sstb;
@@ -169,17 +175,19 @@ mds_inode_update_interrupted(struct slash_inode_handle *ih, int *rc)
 	mdsio_fid_t inum;
 	int exists = 0;
 	size_t nb;
+	struct fidc_membh *fcmh;
 
+	fcmh = ih->inoh_fcmh;
 	th = inoh_2_mdsio_data(ih);
 
 	snprintf(fn, sizeof(fn), "%016"PRIx64".update",
 	    fcmh_2_fid(ih->inoh_fcmh));
 
-	*rc = mdsio_lookup(mds_tmpdir_inum, fn, &inum, &rootcreds, NULL);
+	*rc = mdsio_lookup(vfsid, mds_tmpdir_inum[vfsid], fn, &inum, &rootcreds, NULL);
 	if (*rc)
 		PFL_GOTOERR(out, *rc);
 
-	*rc = mdsio_opencreatef(inum, &rootcreds, O_RDONLY,
+	*rc = mdsio_opencreatef(vfsid, inum, &rootcreds, O_RDONLY,
 	    MDSIO_OPENCRF_NOLINK, 0644, NULL, NULL, NULL, &h, NULL,
 	    NULL, 0);
 	if (*rc)
@@ -189,7 +197,7 @@ mds_inode_update_interrupted(struct slash_inode_handle *ih, int *rc)
 	iovs[0].iov_len = sizeof(ih->inoh_ino);
 	iovs[1].iov_base = &od_crc;
 	iovs[1].iov_len = sizeof(od_crc);
-	*rc = mdsio_preadv(&rootcreds, iovs, nitems(iovs), &nb, 0, h);
+	*rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb, 0, h);
 	if (*rc)
 		PFL_GOTOERR(out, *rc);
 
@@ -213,22 +221,22 @@ mds_inode_update_interrupted(struct slash_inode_handle *ih, int *rc)
 	inoh_2_mdsio_data(ih) = th;
 
 	memset(&sstb, 0, sizeof(sstb));
-	*rc = mdsio_setattr(0, &sstb, SL_SETATTRF_METASIZE, &rootcreds,
+	*rc = mdsio_setattr(vfsid, 0, &sstb, SL_SETATTRF_METASIZE, &rootcreds,
 	    NULL, th, NULL);
 	if (*rc)
 		PFL_GOTOERR(out, *rc);
 
-	*rc = mds_inode_dump(NULL, ih, h);
+	*rc = mds_inode_dump(vfsid, NULL, ih, h);
 	if (*rc)
 		PFL_GOTOERR(out, *rc);
 
-	mdsio_unlink(mds_tmpdir_inum, NULL, fn, &rootcreds, NULL, NULL);
+	mdsio_unlink(vfsid, mds_tmpdir_inum[vfsid], NULL, fn, &rootcreds, NULL, NULL);
 
  out:
 	if (h)
-		mdsio_release(&rootcreds, h);
+		mdsio_release(vfsid, &rootcreds, h);
 	if (*rc)
-		mdsio_unlink(mds_tmpdir_inum, NULL, fn, &rootcreds, NULL, NULL);
+		mdsio_unlink(vfsid, mds_tmpdir_inum[vfsid], NULL, fn, &rootcreds, NULL, NULL);
 	inoh_2_mdsio_data(ih) = th;
 	return (exists);
 }
@@ -247,13 +255,17 @@ mds_ino_read_v1(struct slash_inode_handle *ih)
 	uint64_t crc, od_crc;
 	struct iovec iovs[2];
 	size_t nb;
-	int i, rc;
+	int i, rc, vfsid;
+	struct fidc_membh	*fcmh;
 
 	iovs[0].iov_base = &ino;
 	iovs[0].iov_len = sizeof(ino);
 	iovs[1].iov_base = &od_crc;
 	iovs[1].iov_len = sizeof(od_crc);
-	rc = mdsio_preadv(&rootcreds, iovs, nitems(iovs), &nb, 0,
+
+	fcmh = ih->inoh_fcmh;
+	mdsio_fid_to_vfsid(fcmh_2_fid(fcmh), &vfsid);
+	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb, 0,
 	    inoh_2_mdsio_data(ih));
 
 	if (rc)
@@ -283,7 +295,8 @@ mds_inox_read_v1(struct slash_inode_handle *ih)
 	uint64_t crc, od_crc;
 	struct iovec iovs[2];
 	size_t nb;
-	int i, rc;
+	int i, rc, vfsid;
+	struct fidc_membh	*fcmh;
 
 	memset(&inox, 0, sizeof(inox));
 
@@ -291,7 +304,10 @@ mds_inox_read_v1(struct slash_inode_handle *ih)
 	iovs[0].iov_len = sizeof(inox);
 	iovs[1].iov_base = &od_crc;
 	iovs[1].iov_len = sizeof(od_crc);
-	rc = mdsio_preadv(&rootcreds, iovs, nitems(iovs), &nb, 0x400,
+
+	fcmh = ih->inoh_fcmh;
+	mdsio_fid_to_vfsid(fcmh_2_fid(fcmh), &vfsid);
+	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb, 0x400,
 	    inoh_2_mdsio_data(ih));
 
 	if (rc)
@@ -322,7 +338,8 @@ mds_bmap_read_v1(struct bmapc_memb *b, void *readh)
 	uint64_t crc, od_crc;
 	struct iovec iovs[2];
 	size_t nb, bsz;
-	int i, rc;
+	int i, rc, vfsid;
+	struct fidc_membh	*fcmh;
 
 	bsz = sizeof(bod) + sizeof(crc);
 
@@ -330,7 +347,9 @@ mds_bmap_read_v1(struct bmapc_memb *b, void *readh)
 	iovs[0].iov_len = sizeof(bod);
 	iovs[1].iov_base = &od_crc;
 	iovs[1].iov_len = sizeof(od_crc);
-	rc = mdsio_preadv(&rootcreds, iovs, nitems(iovs), &nb,
+	fcmh = b->bcm_fcmh;
+	mdsio_fid_to_vfsid(fcmh_2_fid(fcmh), &vfsid);
+	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
 	    bsz * b->bcm_bmapno + 0x1000, readh);
 
 	if (rc)

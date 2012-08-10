@@ -58,6 +58,8 @@
 #include "slutil.h"
 #include "up_sched_res.h"
 
+extern int current_vfsid;
+
 /* RPC callback numeric arg indexes */
 #define IN_RC		0
 #define IN_UNDO_WR	1
@@ -585,7 +587,7 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 	DYNARRAY_FOREACH(upd, i, &rpmi->rpmi_upschq) {
 		bmi = upd_getpriv(upd);
 		b = bmi_2_bmap(bmi);
-		rc = mds_repl_iosv_lookup(upd_2_inoh(upd), &repl,
+		rc = mds_repl_iosv_lookup(current_vfsid, upd_2_inoh(upd), &repl,
 		    &iosidx, 1);
 		if (mds_repl_bmap_walk(b, tract, retifset, 0, &iosidx,
 		    1))

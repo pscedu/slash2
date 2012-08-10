@@ -35,6 +35,18 @@
 
 #define I_REPLAY_OP_REPLS	0
 
+/*
+ * Alternatively, we could add vfsid to each log entry in the journal.  But doing
+ * so can break backward compatibility. It also reduces the space of each log
+ * entry.  We could infer vfsid from the fid stored in a log entry.  But some
+ * entries such as bmap assignment log entries do not have one.
+ *
+ * Actually, we can use the FSUUID stored in the log header to do the matching.
+ */
+
+extern int current_vfsid;
+
+
 /**
  * mds_replay_bmap - Replay an operation on a bmap.
  */
@@ -88,7 +100,7 @@ mds_replay_bmap(void *jent, int op)
 
 		FCMH_WAIT_BUSY(f);
 		ih = fcmh_2_inoh(f);
-		idx = mds_repl_ios_lookup(ih, sjbc->sjbc_iosid);
+		idx = mds_repl_ios_lookup(current_vfsid, ih, sjbc->sjbc_iosid);
 		if (idx < 0) {
 			psclog_errorx("iosid %d not found in repl "
 			    "table", sjbc->sjbc_iosid);
@@ -97,9 +109,9 @@ mds_replay_bmap(void *jent, int op)
 		sstb.sst_blocks = sjbc->sjbc_aggr_nblks;
 		fcmh_set_repl_nblks(f, idx, sjbc->sjbc_repl_nblks);
 		if (idx >= SL_DEF_REPLICAS)
-			rc = mds_inox_write(ih, NULL, NULL);
+			rc = mds_inox_write(current_vfsid, ih, NULL, NULL);
 		else
-			rc = mds_inode_write(ih, NULL, NULL);
+			rc = mds_inode_write(current_vfsid, ih, NULL, NULL);
 		if (rc)
 			goto unbusy;
 
@@ -110,7 +122,7 @@ mds_replay_bmap(void *jent, int op)
 			sstb.sst_size = sjbc->sjbc_fsize;
 			fl |= PSCFS_SETATTRF_DATASIZE;
 		}
-		rc = mds_fcmh_setattr_nolog(f, fl, &sstb);
+		rc = mds_fcmh_setattr_nolog(current_vfsid, f, fl, &sstb);
 		if (rc)
 			goto out;
 
@@ -228,7 +240,7 @@ mds_replay_ino(void *jent, int op)
 			memcpy(ih->inoh_extras->inox_repls,
 			    &sjir->sjir_repls[SL_DEF_REPLICAS],
 			    sizeof(ih->inoh_extras->inox_repls));
-			rc = mds_inox_write(ih, NULL, NULL);
+			rc = mds_inox_write(current_vfsid, ih, NULL, NULL);
 			if (rc)
 				goto out;
 
@@ -244,7 +256,7 @@ mds_replay_ino(void *jent, int op)
 		psc_fatalx("unknown op");
 	}
 
-	rc = mds_inode_write(ih, NULL, NULL);
+	rc = mds_inode_write(current_vfsid, ih, NULL, NULL);
 
  out:
 	if (ih)
@@ -263,7 +275,7 @@ mds_replay_ino_repls(struct psc_journal_enthdr *pje)
 	int rc;
 
 	sjir = PJE_DATA(pje);
-	rc = mdsio_redo_fidlink(sjir->sjir_fid, &rootcreds);
+	rc = mdsio_redo_fidlink(current_vfsid, sjir->sjir_fid, &rootcreds);
 	if (!rc)
 		rc = mds_replay_ino(sjir, I_REPLAY_OP_REPLS);
 	return (rc);
@@ -300,15 +312,15 @@ mds_replay_bmap_assign(struct psc_journal_enthdr *pje)
 	if (logentry->sjar_flags & SLJ_ASSIGN_REP_REP)
 		mds_replay_bmap(&logentry->sjar_rep,
 		    B_REPLAY_OP_REPLS);
-	rc = mdsio_lookup(mds_metadir_inum, SL_FN_BMAP_ODTAB, &mf,
-	    &rootcreds, NULL);
+	rc = mdsio_lookup(current_vfsid, mds_metadir_inum[current_vfsid], 
+	     SL_FN_BMAP_ODTAB, &mf, &rootcreds, NULL);
 	psc_assert(rc == 0);
 
-	rc = mdsio_opencreate(mf, &rootcreds, O_RDWR, 0, NULL, NULL,
+	rc = mdsio_opencreate(current_vfsid, mf, &rootcreds, O_RDWR, 0, NULL, NULL,
 	    NULL, &handle, NULL, NULL, 0);
 	psc_assert(!rc && handle);
 
-	rc = mdsio_read(&rootcreds, &odth, sizeof(odth), &nb, 0,
+	rc = mdsio_read(current_vfsid, &rootcreds, &odth, sizeof(odth), &nb, 0,
 	    handle);
 	psc_assert(rc == 0 && nb == sizeof(odth));
 
@@ -344,13 +356,13 @@ mds_replay_bmap_assign(struct psc_journal_enthdr *pje)
 	if (logentry->sjar_flags & SLJ_ASSIGN_REP_FREE)
 		odtf->odtf_inuse = ODTBL_FREE;
 
-	rc = mdsio_write(&rootcreds, p, odth.odth_slotsz,
+	rc = mdsio_write(current_vfsid, &rootcreds, p, odth.odth_slotsz,
 	   &nb, odth.odth_start + elem * odth.odth_slotsz,
 	   0, handle, NULL, NULL);
 	psc_assert(!rc && nb == odth.odth_slotsz);
 
 	PSCFREE(p);
-	mdsio_release(&rootcreds, handle);
+	mdsio_release(current_vfsid, &rootcreds, handle);
 	return (0);
 }
 
@@ -413,31 +425,31 @@ mds_replay_namespace(struct slmds_jent_namespace *sjnm, int replay)
 		rc = 0;
 		break;
 	    case NS_OP_CREATE:
-		rc = mdsio_redo_create(sjnm->sjnm_parent_fid, name,
+		rc = mdsio_redo_create(current_vfsid, sjnm->sjnm_parent_fid, name,
 		    &sstb);
 		break;
 	    case NS_OP_MKDIR:
-		rc = mdsio_redo_mkdir(sjnm->sjnm_parent_fid, name,
+		rc = mdsio_redo_mkdir(current_vfsid, sjnm->sjnm_parent_fid, name,
 		    &sstb);
 		break;
 	    case NS_OP_LINK:
-		rc = mdsio_redo_link(sjnm->sjnm_parent_fid,
+		rc = mdsio_redo_link(current_vfsid, sjnm->sjnm_parent_fid,
 		    sjnm->sjnm_target_fid, name, &sstb);
 		break;
 	    case NS_OP_SYMLINK:
-		rc = mdsio_redo_symlink(sjnm->sjnm_parent_fid,
+		rc = mdsio_redo_symlink(current_vfsid, sjnm->sjnm_parent_fid,
 		    sjnm->sjnm_target_fid, name, newname, &sstb);
 		break;
 	    case NS_OP_RENAME:
-		rc = mdsio_redo_rename(sjnm->sjnm_parent_fid, name,
+		rc = mdsio_redo_rename(current_vfsid, sjnm->sjnm_parent_fid, name,
 		    sjnm->sjnm_new_parent_fid, newname, &sstb);
 		break;
 	    case NS_OP_UNLINK:
-		rc = mdsio_redo_unlink(sjnm->sjnm_parent_fid,
+		rc = mdsio_redo_unlink(current_vfsid, sjnm->sjnm_parent_fid,
 		    sjnm->sjnm_target_fid, name);
 		break;
 	    case NS_OP_RMDIR:
-		rc = mdsio_redo_rmdir(sjnm->sjnm_parent_fid,
+		rc = mdsio_redo_rmdir(current_vfsid, sjnm->sjnm_parent_fid,
 		    sjnm->sjnm_target_fid, name);
 		break;
 	    case NS_OP_SETSIZE:
@@ -452,7 +464,7 @@ mds_replay_namespace(struct slmds_jent_namespace *sjnm, int replay)
 			if (f)
 				FCMH_LOCK(f);
 		}
-		rc = mdsio_redo_setattr(sjnm->sjnm_target_fid,
+		rc = mdsio_redo_setattr(current_vfsid, sjnm->sjnm_target_fid,
 		    sjnm->sjnm_mask, &sstb);
 		slm_setattr_core(f, &sstb,
 		    mdsio_setattrmask_2_slflags(sjnm->sjnm_mask));

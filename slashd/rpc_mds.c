@@ -34,9 +34,13 @@
 #include "slashd.h"
 #include "slashrpc.h"
 
+#include "zfs-fuse/zfs_slashlib.h"
+
 struct pscrpc_svc_handle slm_rmi_svc;
 struct pscrpc_svc_handle slm_rmm_svc;
 struct pscrpc_svc_handle slm_rmc_svc;
+
+extern int current_vfsid;
 
 void
 slm_rpc_initsvc(void)
@@ -196,7 +200,7 @@ slrpc_req_out(struct slashrpc_cservice *csvc, struct pscrpc_request *rq)
 	if (rq->rq_reqmsg->opc == SRMT_CONNECT) {
 		struct srm_connect_req *mq = *(void **)mqp;
 
-		mq->fsuuid = slm_fsuuid;
+		mq->fsuuid = zfsMount[current_vfsid].uuid;
 	}
 #endif
 	if (csvc->csvc_peertype == SLCONNT_IOD)
@@ -239,7 +243,7 @@ slrpc_allocrep(struct pscrpc_request *rq, void *mqp, int qlen,
 	if (rc == 0 && rq->rq_reqmsg->opc == SRMT_CONNECT) {
 		struct srm_connect_rep *mp = *(void **)mpp;
 
-		mp->fsuuid = slm_fsuuid;
+		mp->fsuuid = zfsMount[current_vfsid].uuid;
 	}
 	return (rc);
 }

@@ -26,6 +26,7 @@
 
 #include "fid.h"
 #include "sltypes.h"
+#include "pfl/hashtbl.h"
 
 struct statvfs;
 struct iovec;
@@ -37,6 +38,7 @@ struct slash_inode_handle;
 struct srt_stat;
 
 typedef uint64_t mdsio_fid_t;
+
 
 struct mdsio_fh {
 	void *fh;
@@ -59,9 +61,9 @@ typedef void (*sl_log_update_t)(int, uint64_t, uint64_t, uint64_t,
 #define MDSIO_OPENCRF_NOLINK	(1 << 0)	/* do not create links in FID namespace */
 #define MDSIO_OPENCRF_NOMTIM	(1 << 1)	/* do not update st_mtim */
 
-#define mdsio_opencreate(pino, crp, fflags, mode, fn, mfp, sstb,	\
+#define mdsio_opencreate(vfs, pino, crp, fflags, mode, fn, mfp, sstb,	\
 	    mdsio_datap, logfunc, getslfid, slfid)			\
-	mdsio_opencreatef((pino), (crp), (fflags), 0, (mode), (fn),	\
+	mdsio_opencreatef((vfs), (pino), (crp), (fflags), 0, (mode), (fn),	\
 	    (mfp), (sstb), (mdsio_datap), (logfunc), (getslfid), (slfid))
 
 #define MDSIO_FOREACH_DIRENT(dh, credp, buf, bufsiz, ip, d, rc)		\
@@ -77,7 +79,7 @@ typedef void (*sl_log_update_t)(int, uint64_t, uint64_t, uint64_t,
 
 /* high-level interface */
 int	mdsio_fcmh_refreshattr(struct fidc_membh *, struct srt_stat *);
-int	mdsio_write_cursor(void *, size_t, void *, sl_log_write_t);
+int	mdsio_write_cursor(int, void *, size_t, void *, sl_log_write_t);
 
 struct mdsio_ops {
 	/* control interface */
@@ -89,40 +91,48 @@ struct mdsio_ops {
 	uint	(*mio_slflags_2_setattrmask)(int);
 
 	/* low-level file system interface */
-	int	(*mio_access)(mdsio_fid_t, int, const struct slash_creds *);
-	int	(*mio_fsync)(const struct slash_creds *, int, void *);
-	int	(*mio_getattr)(mdsio_fid_t, void *, const struct slash_creds *, struct srt_stat *);
-	int	(*mio_link)(mdsio_fid_t, mdsio_fid_t, const char *, const struct slash_creds *, struct srt_stat *, sl_log_update_t);
-	int	(*mio_lookup)(mdsio_fid_t, const char *, mdsio_fid_t *, const struct slash_creds *, struct srt_stat *);
-	int	(*mio_lookup_slfid)(slfid_t, const struct slash_creds *, struct srt_stat *, mdsio_fid_t *);
-	int	(*mio_mkdir)(mdsio_fid_t, const char *, const struct srt_stat *, int, int, struct srt_stat *, mdsio_fid_t *, sl_log_update_t, sl_getslfid_cb_t, slfid_t);
-	int	(*mio_mknod)(mdsio_fid_t, const char *, mode_t, const struct slash_creds *, struct srt_stat *, mdsio_fid_t *, sl_log_update_t, sl_getslfid_cb_t);
-	int	(*mio_opencreatef)(mdsio_fid_t, const struct slash_creds *, int, int, mode_t, const char *, mdsio_fid_t *, struct srt_stat *, void *, sl_log_update_t, sl_getslfid_cb_t, slfid_t);
-	int	(*mio_opendir)(mdsio_fid_t, const struct slash_creds *, struct slash_fidgen *, void *);
-	int	(*mio_preadv)(const struct slash_creds *, struct iovec *, int, size_t *, off_t, void *);
-	int	(*mio_pwritev)(const struct slash_creds *, const struct iovec *, int, size_t *, off_t, int, void *, sl_log_write_t, void *);
-	int	(*mio_read)(const struct slash_creds *, void *, size_t, size_t *, off_t, void *);
-	int	(*mio_readdir)(const struct slash_creds *, size_t, off_t, void *, size_t *, size_t *, void *, int, void *);
-	int	(*mio_readlink)(mdsio_fid_t, char *, const struct slash_creds *);
-	int	(*mio_release)(const struct slash_creds *, void *);
-	int	(*mio_rename)(mdsio_fid_t, const char *, mdsio_fid_t, const char *, const struct slash_creds *, sl_log_update_t, void *);
-	int	(*mio_rmdir)(mdsio_fid_t, slfid_t *, const char *, const struct slash_creds *, sl_log_update_t);
-	int	(*mio_setattr)(mdsio_fid_t, const struct srt_stat *, int, const struct slash_creds *, struct srt_stat *, void *, sl_log_update_t);
-	int	(*mio_statfs)(struct statvfs *);
-	int	(*mio_symlink)(const char *, mdsio_fid_t, const char *, const struct slash_creds *, struct srt_stat *, mdsio_fid_t *, sl_log_update_t, sl_getslfid_cb_t, slfid_t);
-	int	(*mio_unlink)(mdsio_fid_t, slfid_t *, const char *, const struct slash_creds *, sl_log_update_t, void *);
-	int	(*mio_write)(const struct slash_creds *, const void *, size_t, size_t *, off_t, int, void *, sl_log_write_t, void *);
+	int	(*mio_access)(int, mdsio_fid_t, int, const struct slash_creds *);
+	int	(*mio_fsync)(int, const struct slash_creds *, int, void *);
+	int	(*mio_getattr)(int, mdsio_fid_t, void *, const struct slash_creds *, struct srt_stat *);
+	int	(*mio_link)(int, mdsio_fid_t, mdsio_fid_t, const char *, const struct slash_creds *, struct srt_stat *, sl_log_update_t);
+	int	(*mio_lookup)(int, mdsio_fid_t, const char *, mdsio_fid_t *, const struct slash_creds *, struct srt_stat *);
+	int	(*mio_lookup_slfid)(int, slfid_t, const struct slash_creds *, struct srt_stat *, mdsio_fid_t *);
+	int	(*mio_mkdir)(int, mdsio_fid_t, const char *, const struct srt_stat *, int, int, struct srt_stat *, mdsio_fid_t *, \
+			sl_log_update_t, sl_getslfid_cb_t, slfid_t);
+	int	(*mio_mknod)(int, mdsio_fid_t, const char *, mode_t, const struct slash_creds *, struct srt_stat *, mdsio_fid_t *, \
+			sl_log_update_t, sl_getslfid_cb_t);
+	int	(*mio_opencreatef)(int, mdsio_fid_t, const struct slash_creds *, int, int, mode_t, const char *, mdsio_fid_t *, \
+			struct srt_stat *, void *, sl_log_update_t, sl_getslfid_cb_t, slfid_t);
+	int	(*mio_opendir)(int, mdsio_fid_t, const struct slash_creds *, struct slash_fidgen *, void *);
+	int	(*mio_preadv)(int, const struct slash_creds *, struct iovec *, int, size_t *, off_t, void *);
+	int	(*mio_pwritev)(int, const struct slash_creds *, const struct iovec *, int, size_t *, off_t, int, void *, \
+			sl_log_write_t, void *);
+	int	(*mio_read)(int, const struct slash_creds *, void *, size_t, size_t *, off_t, void *);
+	int	(*mio_readdir)(int, const struct slash_creds *, size_t, off_t, void *, size_t *, size_t *, void *, int, void *);
+	int	(*mio_readlink)(int, mdsio_fid_t, char *, const struct slash_creds *);
+	int	(*mio_release)(int, const struct slash_creds *, void *);
+	int	(*mio_rename)(int, mdsio_fid_t, const char *, mdsio_fid_t, const char *, const struct slash_creds *, \
+			sl_log_update_t, void *);
+	int	(*mio_rmdir)(int, mdsio_fid_t, slfid_t *, const char *, const struct slash_creds *, sl_log_update_t);
+	int	(*mio_setattr)(int, mdsio_fid_t, const struct srt_stat *, int, const struct slash_creds *, struct srt_stat *, \
+			void *, sl_log_update_t);
+	int	(*mio_statfs)(int, struct statvfs *);
+	int	(*mio_symlink)(int, const char *, mdsio_fid_t, const char *, const struct slash_creds *, struct srt_stat *, \
+			mdsio_fid_t *, sl_log_update_t, sl_getslfid_cb_t, slfid_t);
+	int	(*mio_unlink)(int, mdsio_fid_t, slfid_t *, const char *, const struct slash_creds *, sl_log_update_t, void *);
+	int	(*mio_write)(int, const struct slash_creds *, const void *, size_t, size_t *, off_t, int, void *, \
+			sl_log_write_t, void *);
 
 	/* replay interface */
-	int	(*mio_redo_create)(slfid_t, char *, struct srt_stat *);
-	int	(*mio_redo_fidlink)(slfid_t, const struct slash_creds *);
-	int	(*mio_redo_link)(slfid_t, slfid_t, char *, struct srt_stat *);
-	int	(*mio_redo_mkdir)(slfid_t, char *, struct srt_stat *);
-	int	(*mio_redo_rename)(slfid_t, const char *, slfid_t, const char *, struct srt_stat *);
-	int	(*mio_redo_rmdir)(slfid_t, slfid_t, char *);
-	int	(*mio_redo_setattr)(slfid_t, uint, struct srt_stat *);
-	int	(*mio_redo_symlink)(slfid_t, slfid_t, char *, char *, struct srt_stat *);
-	int	(*mio_redo_unlink)(slfid_t, slfid_t, char *);
+	int	(*mio_redo_create)(int, slfid_t, char *, struct srt_stat *);
+	int	(*mio_redo_fidlink)(int,slfid_t, const struct slash_creds *);
+	int	(*mio_redo_link)(int, slfid_t, slfid_t, char *, struct srt_stat *);
+	int	(*mio_redo_mkdir)(int, slfid_t, char *, struct srt_stat *);
+	int	(*mio_redo_rename)(int, slfid_t, const char *, slfid_t, const char *, struct srt_stat *);
+	int	(*mio_redo_rmdir)(int, slfid_t, slfid_t, char *);
+	int	(*mio_redo_setattr)(int, slfid_t, uint, struct srt_stat *);
+	int	(*mio_redo_symlink)(int, slfid_t, slfid_t, char *, char *, struct srt_stat *);
+	int	(*mio_redo_unlink)(int, slfid_t, slfid_t, char *);
 };
 
 #define mdsio_init		mdsio_ops.mio_init			/* zfsslash2_init() */
@@ -166,8 +176,14 @@ struct mdsio_ops {
 #define mdsio_redo_unlink	mdsio_ops.mio_redo_unlink		/* zfsslash2_replay_unlink() */
 
 extern struct mdsio_ops	mdsio_ops;
-extern mdsio_fid_t	mds_metadir_inum;
-extern mdsio_fid_t	mds_fidnsdir_inum;
-extern mdsio_fid_t	mds_tmpdir_inum;
+extern mdsio_fid_t	mds_metadir_inum[];
+extern mdsio_fid_t	mds_fidnsdir_inum[];
+extern mdsio_fid_t	mds_tmpdir_inum[];
+
+struct rootNames {
+	char			 rn_name[MAXPATHLEN];
+	int			 rn_vfsid;
+	struct psc_hashent	 rn_hentry;
+};
 
 #endif /* _SLASHD_MDSIO_H_ */
