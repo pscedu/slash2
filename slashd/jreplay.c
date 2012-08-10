@@ -123,6 +123,7 @@ mds_replay_bmap(void *jent, int op)
 			fl |= PSCFS_SETATTRF_DATASIZE;
 		}
 		rc = mds_fcmh_setattr_nolog(current_vfsid, f, fl, &sstb);
+		FCMH_UNBUSY(f);
 		if (rc)
 			goto out;
 
