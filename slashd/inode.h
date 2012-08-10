@@ -78,9 +78,7 @@ struct slash_inode_od {
 	uint64_t		 ino_repl_nblks[SL_DEF_REPLICAS];/* embed a few replicas */
 };
 
-enum ino_flags {
-	INO_BMAP_AFFINITY = (1 << 0) /* Try to assign new bmaps to existing backing objects */
-};
+#define INO_BMAP_AFFINITY	(1 << 0)	/* Try to assign new bmaps to existing backing objects */
 
 /*
  * A 64-bit checksum follows this structure on disk.
