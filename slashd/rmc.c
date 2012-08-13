@@ -1100,13 +1100,13 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 int
 slm_rmc_handle_statfs(struct pscrpc_request *rq)
 {
+	int j = 0, single = 0, vfsid;
 	struct resprof_mds_info *rpmi;
 	struct sl_resource *r, *ri;
 	struct srm_statfs_req *mq;
 	struct srm_statfs_rep *mp;
 	struct sl_mds_iosinfo *si;
 	struct statvfs sfb;
-	int j = 0, single = 0, vfsid;
 	double adj;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
