@@ -52,7 +52,7 @@ int
 mdsio_fid_to_vfsid(slfid_t fid, int *vfsid)
 {
 	int i, siteid;
-	
+
 #if 0
 	/* our client uses this special fid to contact us
 	 * during mount. */
@@ -74,7 +74,7 @@ mdsio_fid_to_vfsid(slfid_t fid, int *vfsid)
 			return (0);
 		}
 	}
-	return (-1);
+	return (-EINVAL);
 }
 
 int
@@ -88,8 +88,8 @@ mdsio_fcmh_refreshattr(struct fidc_membh *f, struct srt_stat *out_sstb)
 	fcmh_wait_locked(f, (f->fcmh_flags & FCMH_BUSY) &&
 	    f->fcmh_owner != pthr);
 	mdsio_fid_to_vfsid(fcmh_2_fid(f), &vfsid);
-	rc = mdsio_getattr(vfsid, fcmh_2_mdsio_fid(f), fcmh_2_mdsio_data(f),
-	    &rootcreds, &f->fcmh_sstb);
+	rc = mdsio_getattr(vfsid, fcmh_2_mdsio_fid(f),
+	    fcmh_2_mdsio_data(f), &rootcreds, &f->fcmh_sstb);
 	psc_assert(rc == 0);
 	if (out_sstb)
 		*out_sstb = f->fcmh_sstb;
