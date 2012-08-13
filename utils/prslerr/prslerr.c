@@ -75,8 +75,6 @@ main(int argc, char *argv[])
 	printf("%4d [SLERR_BMAP_LEASEEXT_FAILED]: %s\n", SLERR_BMAP_LEASEEXT_FAILED, slstrerror(SLERR_BMAP_LEASEEXT_FAILED));
 	printf("%4d [SLERR_RES_BADTYPE]: %s\n", SLERR_RES_BADTYPE, slstrerror(SLERR_RES_BADTYPE));
 	printf("%4d [SLERR_ALREADY]: %s\n", SLERR_ALREADY, slstrerror(SLERR_ALREADY));
-	printf("%4d [SLERR_INVAL]: %s\n", SLERR_INVAL, slstrerror(SLERR_INVAL));
-	printf("%4d [SLERR_2BIG]: %s\n", SLERR_2BIG, slstrerror(SLERR_2BIG));
 	printf("%4d [SLERR_CRCABSENT]: %s\n", SLERR_CRCABSENT, slstrerror(SLERR_CRCABSENT));
 	printf("%4d [SLERR_BADMSG]: %s\n", SLERR_BADMSG, slstrerror(SLERR_BADMSG));
 	/* end custom errnos */
