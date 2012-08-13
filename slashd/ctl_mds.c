@@ -491,8 +491,11 @@ slmctlrep_getstatfs(int fd, struct psc_ctlmsghdr *mh, void *m)
 		if (!RES_ISFS(r))
 			continue;
 
+		memset(scsf, 0, sizeof(*scsf));
+
 		rpmi = res2rpmi(r);
 		RPMI_LOCK(rpmi);
+		scsf->scsf_flags = res2iosinfo(r)->si_flags;
 		strlcpy(scsf->scsf_resname, r->res_name,
 		    sizeof(scsf->scsf_resname));
 		memcpy(&scsf->scsf_ssfb, &res2iosinfo(r)->si_ssfb,

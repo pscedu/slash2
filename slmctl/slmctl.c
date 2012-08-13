@@ -145,8 +145,8 @@ void
 slm_statfs_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("%-30s %7s %7s %7s %8s %-16s\n",
-	    "resource", "size", "used", "avail", "capacity", "type");
+	printf("%-27s %2s %7s %7s %7s %8s %-16s\n",
+	    "resource", "fl", "size", "used", "avail", "capacity", "type");
 }
 
 void
@@ -191,7 +191,10 @@ slm_statfs_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	p = strchr(name, '@');
 	if (p)
 		*p = '\0';
-	printf("%-30s %7s %7s %7s ", name, sbuf, ubuf, abuf);
+	printf("%-27s %c%c %7s %7s %7s ", name,
+	    scsf->scsf_flags & SIF_DISABLE_BIA ? 'W' : '-',
+	    scsf->scsf_flags & SIF_DISABLE_GC  ? 'G' : '-',
+	    sbuf, ubuf, abuf);
 	if (col)
 		setcolor(col);
 	printf("%8s", cbuf);

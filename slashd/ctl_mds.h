@@ -31,6 +31,7 @@ struct slmctlmsg_replpair {
 
 struct slmctlmsg_statfs {
 	char			scsf_resname[RES_NAME_MAX];
+	int32_t			scsf_flags;
 	struct srt_statfs	scsf_ssfb;
 };
 
