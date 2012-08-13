@@ -51,7 +51,7 @@ __static const char *slconn_restypes[] = {
 void
 sl_conn_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	printf("%-14s %33s %-8s %6s %5s %4s %4s\n",
+	printf("%-10s %37s %-8s %6s %5s %4s %4s\n",
 	    "resource", "host", "type", "flags", "stvrs", "txcr", "#ref");
 }
 
@@ -139,7 +139,7 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	    strcmp(site, lastsite))
 		printf("%s\n", site);
 
-	printf("  %-15s %31s %-8s %c%c%c%c%c %5d %4d %4d\n",
+	printf("  %-11s %35s %-8s %c%c%c%c%c %5d %4d %4d\n",
 	    res, nid, stype,
 	    scc->scc_flags & CSVCF_CONNECTING		? 'C' : '-',
 	    scc->scc_flags & CSVCF_CONNECTED		? 'O' : '-',
