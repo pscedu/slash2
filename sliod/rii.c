@@ -153,15 +153,15 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fg.fg_fid == FID_ANY) {
-		mp->rc = -SLERR_INVAL;
+		mp->rc = -EINVAL;
 		return (mp->rc);
 	}
 	if (mq->len <= 0 || mq->len > SLASH_SLVR_SIZE) {
-		mp->rc = -SLERR_INVAL;
+		mp->rc = -EINVAL;
 		return (mp->rc);
 	}
 	if (mq->slvrno < 0 || mq->slvrno >= SLASH_SLVRS_PER_BMAP) {
-		mp->rc = -SLERR_INVAL;
+		mp->rc = -EINVAL;
 		return (mp->rc);
 	}
 

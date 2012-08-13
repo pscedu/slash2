@@ -91,7 +91,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 
 	psc_crc64_calc(&crc, iov.iov_base, iov.iov_len);
 	if (crc != mq->crc) {
-		mp->rc = -SLERR_INVAL;
+		mp->rc = -EINVAL;
 		goto out;
 	}
 
@@ -129,9 +129,9 @@ sli_rim_handle_repl_schedwk(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fg.fg_fid == FID_ANY)
-		mp->rc = -SLERR_INVAL;
+		mp->rc = -EINVAL;
 	else if (mq->len < 1 || mq->len > SLASH_BMAP_SIZE)
-		mp->rc = -SLERR_INVAL;
+		mp->rc = -EINVAL;
 	else {
 		res = libsl_id2res(mq->src_resid);
 		if (res == NULL)
@@ -151,7 +151,7 @@ sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->offset < 0 || mq->offset >= SLASH_BMAP_SIZE) {
-		mp->rc = -SLERR_INVAL;
+		mp->rc = -EINVAL;
 		return (0);
 	}
 	mp->rc = sli_repl_addwk(SLI_REPLWKOP_PTRUNC, NULL, &mq->fg,

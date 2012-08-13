@@ -90,7 +90,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (mq->size <= 0 || mq->size > LNET_MTU) {
 		psclog_errorx("invalid size %u, fid:"SLPRI_FG,
 		    mq->size, SLPRI_FG_ARGS(fgp));
-		mp->rc = -SLERR_INVAL;
+		mp->rc = -EINVAL;
 		return (mp->rc);
 	}
 
@@ -380,7 +380,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	if (mq->nbmaps > MAX_BMAP_RELEASE) {
-		mp->rc = -SLERR_2BIG;
+		mp->rc = -E2BIG;
 		goto out;
 	}
 

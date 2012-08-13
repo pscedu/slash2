@@ -403,9 +403,9 @@ mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios,
 	if (nskip) {
 		if (repls != 1) {
 			DEBUG_FCMH(PLL_WARN, b->bcm_fcmh,
-				   "invalid reassign req");
+			    "invalid reassign req");
 			DEBUG_BMAP(PLL_WARN, b,
-				   "invalid reassign req (repls=%d)", repls);
+			    "invalid reassign req (repls=%d)", repls);
 			goto out;
 		}
 		/* Make sure the client had the resource id which
@@ -718,9 +718,9 @@ mds_bmap_dupls_find(struct bmap_mds_info *bmi, lnet_process_id_t *cnp,
 int
 mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 {
+	int rc = 0, wlease, rlease;
 	struct bmap_mds_info *bmi;
 	struct bmapc_memb *b;
-	int rc = 0, wlease, rlease;
 
 	bmi = bml->bml_bmdsi;
 	b = bmi_2_bmap(bmi);
@@ -1250,7 +1250,7 @@ mds_handle_rls_bmap(struct pscrpc_request *rq, int sliod)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->nbmaps > MAX_BMAP_RELEASE) {
-		mp->rc = -SLERR_INVAL;
+		mp->rc = -EINVAL;
 		return (0);
 	}
 
@@ -2094,8 +2094,8 @@ slm_ptrunc_prepare(void *p)
 	f->fcmh_sstb.sst_size = fmi->fmi_ptrunc_size;
 
 	mds_reserve_slot(1);
-	rc = mdsio_setattr(current_vfsid, fcmh_2_mdsio_fid(f), &f->fcmh_sstb,
-	    to_set, &rootcreds, &f->fcmh_sstb,
+	rc = mdsio_setattr(current_vfsid, fcmh_2_mdsio_fid(f),
+	    &f->fcmh_sstb, to_set, &rootcreds, &f->fcmh_sstb,
 	    fcmh_2_mdsio_data(f), mdslog_namespace);
 	mds_unreserve_slot(1);
 

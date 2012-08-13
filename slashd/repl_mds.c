@@ -102,8 +102,8 @@ _slm_repl_bmap_rel_type(struct bmapc_memb *b, int type)
 }
 
 int
-_mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih, sl_ios_id_t ios,
-    int add, int log)
+_mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
+    sl_ios_id_t ios, int add, int log)
 {
 	int locked, rc = -SLERR_REPL_NOT_ACT, inox_rc = 0;
 	struct sl_resource *res;
@@ -631,7 +631,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	struct bmapc_memb *b;
 
 	if (nios < 1 || nios > SL_MAX_REPLICAS)
-		return (-SLERR_INVAL);
+		return (-EINVAL);
 
 	rc = slm_fcmh_get(fgp, &f);
 	if (rc)
@@ -825,7 +825,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	struct bmapc_memb *b;
 
 	if (nios < 1 || nios > SL_MAX_REPLICAS)
-		return (-SLERR_INVAL);
+		return (-EINVAL);
 
 	rc = slm_fcmh_get(fgp, &f);
 	if (rc)
@@ -899,7 +899,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 					mds_bmap_write_logrepls(b);
 					rc = 0;
 				} else if (rc & F_REPORT)
-					rc = -SLERR_INVAL;
+					rc = -EINVAL;
 				else
 					rc = -SLERR_REPL_NOT_ACT;
 			} else
