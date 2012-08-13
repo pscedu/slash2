@@ -196,9 +196,6 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 
 	if (!fsuuid)
 		fsuuid = psc_random64();
-	fprintf(fp, "%#16"PRIx64"\n", fsuuid);
-	if (!fsuuid)
-		fsuuid = psc_random64();
 	fprintf(fp, "%16"PRIx64"\n", fsuuid);
 	if (!ion)
 		printf("The UUID of the file system is %#16"PRIx64"\n", fsuuid);
