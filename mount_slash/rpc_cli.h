@@ -54,7 +54,7 @@ struct pscrpc_request;
 	do {								\
 		struct sl_resm *_resm;					\
 									\
-		_resm = (f) ? fcmh_2_fci(f)->fci_resm : slc_rmc_resm;	\
+		_resm = slc_rmc_resm;					\
 		if (rq) {						\
 			pscrpc_req_finished(rq);			\
 			(rq) = NULL;					\
