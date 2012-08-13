@@ -25,6 +25,8 @@ char *slstrerror(int);
 #define _SLERR_START			1000		/* must be >max errno */
 #define SLERR_REPL_ALREADY_ACT		(_SLERR_START +  0)
 #define SLERR_REPL_NOT_ACT		(_SLERR_START +  1)
+/* 2 - reuse */
+/* 3 - reuse */
 #define SLERR_BMAP_INVALID		(_SLERR_START +  4)
 #define SLERR_BMAP_DIOWAIT		(_SLERR_START +  5)
 #define SLERR_BMAP_ZERO			(_SLERR_START +  6)
@@ -50,10 +52,11 @@ char *slstrerror(int);
 #define SLERR_REIMPORT_OLD		(_SLERR_START + 26)
 #define SLERR_IMPORT_XREPL_DIFF		(_SLERR_START + 27)
 #define SLERR_BMAP_LEASEEXT_FAILED	(_SLERR_START + 28)
+/* 29 - reuse */
 #define SLERR_RES_BADTYPE		(_SLERR_START + 30)
 #define SLERR_ALREADY			(_SLERR_START + 31)
-#define SLERR_INVAL			(_SLERR_START + 32)
-#define SLERR_2BIG			(_SLERR_START + 33)
+/* 32 - reuse me */
+/* 33 - reuse me */
 #define SLERR_CRCABSENT			(_SLERR_START + 34)
 #define SLERR_BADMSG			(_SLERR_START + 35)
 
