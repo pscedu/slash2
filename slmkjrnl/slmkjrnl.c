@@ -132,7 +132,8 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 		nb = pwrite(pj.pj_fd, jbuf, PJ_PJESZ(&pj) * rs,
 		    PJ_GETENTOFF(&pj, slot));
 		if ((size_t)nb != PJ_PJESZ(&pj) * rs)
-			psc_fatal("failed to write slot %u", slot);
+			psc_fatal("failed to write slot %u (%zd)",
+			    slot, nb);
 	}
 	if (close(fd) == -1)
 		psc_fatal("failed to close journal");
