@@ -207,7 +207,7 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	    mq->sbd.sbd_nid, mq->sbd.sbd_pid);
 
 	if (bml == NULL) {
-		mp->rc = -SLERR_INVAL;
+		mp->rc = -EINVAL;
 		goto out;
 	}
 
@@ -283,7 +283,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->rw != SL_READ && mq->rw != SL_WRITE) {
-		mp->rc = -SLERR_INVAL;
+		mp->rc = -EINVAL;
 		return (0);
 	}
 
@@ -349,8 +349,9 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mds_reserve_slot(1);
-	mp->rc = mdsio_link(vfsid, fcmh_2_mdsio_fid(c), fcmh_2_mdsio_fid(p),
-	    mq->name, &rootcreds, &mp->cattr, mdslog_namespace);
+	mp->rc = mdsio_link(vfsid, fcmh_2_mdsio_fid(c),
+	    fcmh_2_mdsio_fid(p), mq->name, &rootcreds, &mp->cattr,
+	    mdslog_namespace);
 	mds_unreserve_slot(1);
 
 	mdsio_fcmh_refreshattr(p, &mp->pattr);
@@ -383,11 +384,11 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	if (fcmh_2_mdsio_fid(p) == SLFID_ROOT &&
 	    strcmp(mq->name, SL_RPATH_META_DIR) == 0) {
-		mp->rc = -SLERR_INVAL;
+		mp->rc = -EINVAL;
 		goto out;
 	}
-	mp->rc = mdsio_lookup(vfsid, fcmh_2_mdsio_fid(p),
-	    mq->name, NULL, &rootcreds, &mp->attr);
+	mp->rc = mdsio_lookup(vfsid, fcmh_2_mdsio_fid(p), mq->name,
+	    NULL, &rootcreds, &mp->attr);
 	if (mp->rc)
 		goto out;
 	if (mq->pfg.fg_fid == SLFID_ROOT) {
@@ -404,8 +405,9 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 			fid = SLFID_ROOT;
 			FID_SET_SITEID(fid, mountinfo->siteid);
 
-			error = mdsio_getattr(p->rn_vfsid, mountinfo->rootid, 
-				mountinfo->rootinfo, &rootcreds, &tmpattr); 
+			error = mdsio_getattr(p->rn_vfsid,
+			    mountinfo->rootid, mountinfo->rootinfo,
+			    &rootcreds, &tmpattr);
 			if (!error) {
 				tmpattr.sst_fg.fg_fid = fid;
 				mp->attr = tmpattr;
@@ -448,9 +450,9 @@ slm_mkdir(int vfsid, struct srm_mkdir_req *mq, struct srm_mkdir_rep *mp,
 		goto out;
 
 	mds_reserve_slot(1);
-	mp->rc = -mdsio_mkdir(vfsid, fcmh_2_mdsio_fid(p), mq->name, &mq->sstb,
-	    0, opflags, &mp->cattr, NULL, fid ? NULL : mdslog_namespace,
-	    fid ? 0 : slm_get_next_slashfid, fid);
+	mp->rc = -mdsio_mkdir(vfsid, fcmh_2_mdsio_fid(p), mq->name,
+	    &mq->sstb, 0, opflags, &mp->cattr, NULL, fid ? NULL :
+	    mdslog_namespace, fid ? 0 : slm_get_next_slashfid, fid);
 	mds_unreserve_slot(1);
 
  out:
@@ -488,7 +490,7 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mdsio_fid_to_vfsid(mq->pfg.fg_fid, &vfsid) < 0) {
-		mp->rc = EINVAL;
+		mp->rc = -EINVAL;
 		return (0);
 	}
 	return (slm_mkdir(vfsid, mq, mp, 0, NULL));
@@ -497,14 +499,14 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 int
 slm_rmc_handle_mknod(struct pscrpc_request *rq)
 {
+	struct fidc_membh *p = NULL;
 	struct srm_mknod_req *mq;
 	struct srm_mknod_rep *mp;
-	struct fidc_membh *p = NULL;
 	int vfsid;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mdsio_fid_to_vfsid(mq->pfg.fg_fid, &vfsid) < 0) {
-		mp->rc = EINVAL;
+		mp->rc = -EINVAL;
 		goto out;
 	}
 
@@ -514,8 +516,8 @@ slm_rmc_handle_mknod(struct pscrpc_request *rq)
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mds_reserve_slot(1);
-	mp->rc = mdsio_mknod(vfsid, fcmh_2_mdsio_fid(p), mq->name, mq->mode,
-	    &mq->creds, &mp->cattr, NULL, mdslog_namespace,
+	mp->rc = mdsio_mknod(vfsid, fcmh_2_mdsio_fid(p), mq->name,
+	    mq->mode, &mq->creds, &mp->cattr, NULL, mdslog_namespace,
 	    slm_get_next_slashfid);
 	mds_unreserve_slot(1);
 
@@ -549,7 +551,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	}
 
 	if (mq->flags & SRM_LEASEBMAPF_GETREPLTBL) {
-		mp->rc = -SLERR_INVAL;
+		mp->rc = -EINVAL;
 		goto out;
 	}
 	mq->name[sizeof(mq->name) - 1] = '\0';
@@ -630,15 +632,16 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 }
 
 void
-slm_rmc_handle_readdir_roots(struct iovec *iov0, struct iovec *iov1, size_t nents)
+slm_rmc_handle_readdir_roots(struct iovec *iov0, struct iovec *iov1,
+    size_t nents)
 {
-	int error;
 	struct srt_stat tmpattr, *attr;
 	struct pscfs_dirent *dirent;
-	size_t i, entsize;
-	uint64_t fid;
 	struct rootNames *p;
 	mount_info_t *mountinfo;
+	size_t i, entsize;
+	uint64_t fid;
+	int error;
 
 	attr = iov1->iov_base;
 	dirent = iov0->iov_base;
@@ -651,8 +654,9 @@ slm_rmc_handle_readdir_roots(struct iovec *iov0, struct iovec *iov1, size_t nent
 			FID_SET_SITEID(fid, mountinfo->siteid);
 			dirent->pfd_ino = fid;
 
-			error = mdsio_getattr(p->rn_vfsid, mountinfo->rootid, 
-				mountinfo->rootinfo, &rootcreds, &tmpattr); 
+			error = mdsio_getattr(p->rn_vfsid,
+			    mountinfo->rootid, mountinfo->rootinfo,
+			    &rootcreds, &tmpattr);
 			if (!error) {
 				tmpattr.sst_fg.fg_fid = fid;
 				*attr = tmpattr;
@@ -663,7 +667,6 @@ slm_rmc_handle_readdir_roots(struct iovec *iov0, struct iovec *iov1, size_t nent
 		attr++;
 		entsize = PFL_DIRENT_SIZE(dirent->pfd_namelen);
 		dirent = PSC_AGP(dirent, entsize);
-
 	}
 }
 
@@ -683,7 +686,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid) < 0) {
-		mp->rc = EINVAL;
+		mp->rc = -EINVAL;
 		goto out;
 	}
 
@@ -693,7 +696,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 
 	if (mq->size > MAX_READDIR_BUFSIZ ||
 	    mq->nstbpref > MAX_READDIR_NENTS) {
-		mp->rc = -SLERR_INVAL;
+		mp->rc = -EINVAL;
 		goto out;
 	}
 
@@ -711,7 +714,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	}
 
 	/* make sure things are populated under the root before readdir() */
-	if (mq->fg.fg_fid == SLFID_ROOT) 
+	if (mq->fg.fg_fid == SLFID_ROOT)
 		psc_scan_filesystems();
 
 	mp->rc = mdsio_readdir(vfsid, &rootcreds, mq->size, mq->offset,
@@ -730,7 +733,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	 * If this is the root, we fake part of readdir contents by
 	 * return the file system names here.
 	 */
-	if (mq->fg.fg_fid == SLFID_ROOT) 
+	if (mq->fg.fg_fid == SLFID_ROOT)
 		slm_rmc_handle_readdir_roots(&iov[0], &iov[1], nents);
 #if 1
 	{
@@ -782,7 +785,7 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid) < 0) {
-		mp->rc = EINVAL;
+		mp->rc = -EINVAL;
 		goto out;
 	}
 
@@ -826,13 +829,15 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	chfg.fg_fid = FID_ANY;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mdsio_fid_to_vfsid(mq->opfg.fg_fid, &vfsid) < 0) 
-		return (EINVAL);
+	if (mdsio_fid_to_vfsid(mq->opfg.fg_fid, &vfsid) < 0) {
+		mp->rc = -EINVAL;
+		return (mp->rc);
+	}
 
 	if (mq->fromlen == 0 || mq->tolen == 0 ||
 	    mq->fromlen > SL_NAME_MAX ||
 	    mq->tolen   > SL_NAME_MAX) {
-		mp->rc = -SLERR_INVAL;
+		mp->rc = -EINVAL;
 		return (mp->rc);
 	}
 
@@ -863,7 +868,7 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_RENAME,
 		    &mq->opfg, &mq->npfg, from, to, 0, &rootcreds,
 		    &mp->srr_npattr, 0);
-		if (mp->rc) 
+		if (mp->rc)
 			goto out;
 	}
 
@@ -922,7 +927,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mdsio_fid_to_vfsid(mq->attr.sst_fg.fg_fid, &vfsid) < 0) {
-		mp->rc = EINVAL;
+		mp->rc = -EINVAL;
 		goto out;
 	}
 
@@ -974,9 +979,9 @@ goto out;
 
 	if (to_set) {
 		if (IS_REMOTE_FID(mq->attr.sst_fg.fg_fid)) {
-			mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_SETATTR, 
-			    &mq->attr.sst_fg, NULL, NULL, NULL, 
-			    0, NULL, &mq->attr, to_set);
+			mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_SETATTR,
+			    &mq->attr.sst_fg, NULL, NULL, NULL, 0, NULL,
+			    &mq->attr, to_set);
 			if (mp->rc)
 				goto out;
 		}
@@ -985,8 +990,7 @@ goto out;
 		 * and used.  Otherwise, it will be NULL, and
 		 * we'll use the mdsio_fid.
 		 */
-		mp->rc = mds_fcmh_setattr(vfsid, f, to_set,
-		    &mq->attr);
+		mp->rc = mds_fcmh_setattr(vfsid, f, to_set, &mq->attr);
 	}
 
 	if (mp->rc) {
@@ -1028,15 +1032,15 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	if (mq->pol < 0 || mq->pol >= NBRPOL) {
-		mp->rc = -SLERR_INVAL;
+		mp->rc = -EINVAL;
 		return (0);
 	}
 	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid) < 0) {
-		mp->rc = EINVAL;
+		mp->rc = -EINVAL;
 		goto out;
 	}
 	if (vfsid != current_vfsid) {
-		mp->rc = EINVAL;
+		mp->rc = -EINVAL;
 		goto out;
 	}
 
@@ -1046,8 +1050,8 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 
 	FCMH_LOCK(f);
 	fcmh_2_replpol(f) = mq->pol;
-	mp->rc = mds_inode_write(vfsid, fcmh_2_inoh(f), mdslog_ino_repls,
-	    f);
+	mp->rc = mds_inode_write(vfsid, fcmh_2_inoh(f),
+	    mdslog_ino_repls, f);
 
  out:
 	if (f)
@@ -1066,7 +1070,7 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	if (mq->pol < 0 || mq->pol >= NBRPOL) {
-		mp->rc = -SLERR_INVAL;
+		mp->rc = -EINVAL;
 		return (0);
 	}
 
@@ -1107,7 +1111,7 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mdsio_fid_to_vfsid(mq->fid, &vfsid) < 0) {
-		mp->rc = EINVAL;
+		mp->rc = -EINVAL;
 		return (0);
 	}
 	mp->rc = mdsio_statfs(vfsid, &sfb);
@@ -1157,15 +1161,17 @@ slm_symlink(struct pscrpc_request *rq, struct srm_symlink_req *mq,
 	struct fidc_membh *p = NULL;
 	struct slash_creds cr;
 	struct iovec iov;
-	int vfsid;
 	slfid_t fid = 0;
+	int vfsid;
 
-	if (mdsio_fid_to_vfsid(mq->pfg.fg_fid, &vfsid) < 0)
-		return (-EINVAL);
+	if (mdsio_fid_to_vfsid(mq->pfg.fg_fid, &vfsid) < 0) {
+		mp->rc = -EINVAL;
+		return (mp->rc);
+	}
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	if (mq->linklen == 0 || mq->linklen >= SL_PATH_MAX) {
-		mp->rc = -SLERR_INVAL;
+		mp->rc = -EINVAL;
 		return (mp->rc);
 	}
 
@@ -1181,9 +1187,9 @@ slm_symlink(struct pscrpc_request *rq, struct srm_symlink_req *mq,
 	cr.scr_gid = mq->sstb.sst_gid;
 
 	if (IS_REMOTE_FID(mq->pfg.fg_fid)) {
-		mp->rc = slm_rmm_forward_namespace(
-		    SLM_FORWARD_SYMLINK, &mq->pfg, NULL,
-		    mq->name, linkname, 0, &cr, &mp->cattr, 0);
+		mp->rc = slm_rmm_forward_namespace( SLM_FORWARD_SYMLINK,
+		    &mq->pfg, NULL, mq->name, linkname, 0, &cr,
+		    &mp->cattr, 0);
 		if (mp->rc)
 			goto out;
 		fid = mp->cattr.sst_fg.fg_fid;
@@ -1194,9 +1200,9 @@ slm_symlink(struct pscrpc_request *rq, struct srm_symlink_req *mq,
 		goto out;
 
 	mds_reserve_slot(1);
-	mp->rc = mdsio_symlink(vfsid, linkname, fcmh_2_mdsio_fid(p), mq->name,
-	    &cr, &mp->cattr, NULL, fid ? NULL : mdslog_namespace, 
-	    fid ? 0: slm_get_next_slashfid, fid);
+	mp->rc = mdsio_symlink(vfsid, linkname, fcmh_2_mdsio_fid(p),
+	    mq->name, &cr, &mp->cattr, NULL, fid ? NULL :
+	    mdslog_namespace, fid ? 0: slm_get_next_slashfid, fid);
 	mds_unreserve_slot(1);
 
 	mdsio_fcmh_refreshattr(p, &mp->pattr);
@@ -1230,7 +1236,7 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mdsio_fid_to_vfsid(mq->pfid, &vfsid) < 0) {
-		mp->rc = EINVAL;
+		mp->rc = -EINVAL;
 		goto out;
 	}
 
