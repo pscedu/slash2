@@ -194,7 +194,7 @@ read_vfsid(int vfsid, char *fn, uint64_t *id)
 	size_t nb;
 	mdsio_fid_t mf;
 	char buf[30];
-	
+
 	rc = mdsio_lookup(vfsid, mds_metadir_inum[vfsid], fn, &mf,
 	    &rootcreds, NULL);
 
@@ -232,7 +232,7 @@ read_vfsid(int vfsid, char *fn, uint64_t *id)
 		psclog_errorx("read %s/%s: %s", SL_RPATH_META_DIR,
 		    fn, slstrerror(rc));
 	}
-out:
+ out:
 	return (rc);
 }
 
@@ -244,46 +244,49 @@ out:
 void
 psc_register_filesystem(int vfsid)
 {
-	int i, rc, found1, found2;
-	uint64_t siteid;
-	uint64_t uuid;
-	struct psc_hashbkt *b;
+	int i, rc, found1, found2, root_vfsid;
+	uint64_t siteid, uuid;
 	struct rootNames *entry;
-	int root_vfsid;
-	char *fsname;
-    	mdsio_fid_t mfp;
+	struct psc_hashbkt *b;
 	struct srt_stat sstb;
+	mdsio_fid_t mfp;
+	char *fsname;
 
-	psclog_warnx("Checking file system %s\n", zfsMount[vfsid].name);
+	psclog_warnx("Checking file system %s", zfsMount[vfsid].name);
 	if (zfsMount[vfsid].name[0] != '/') {
-		psclog_warnx("Bogus file system name: %s", zfsMount[vfsid].name);
+		psclog_warnx("Bogus file system name: %s",
+		    zfsMount[vfsid].name);
 		return;
 	}
 
 	/*
- 	 * Mimic the behaviour of lib/libzfs/libzfs_mount.c.  Because we are not
- 	 * fuse mounted, we can't rely on the zfs utility to do this for us.
- 	 *
- 	 * libzfs_mount.c actually does a mkdirp().  Since we only do one mkdir,
- 	 * any new file system must mount directly under the root.
- 	 */
+	 * Mimic the behaviour of lib/libzfs/libzfs_mount.c.  Because we
+	 * are not fuse mounted, we can't rely on the zfs utility to do
+	 * this for us.
+	 *
+	 * libzfs_mount.c actually does a mkdirp().  Since we only do
+	 * one mkdir, any new file system must mount directly under the
+	 * root.
+	 */
 	fsname = strchr(&zfsMount[vfsid].name[1], '/');
 	if (!(zfsMount[vfsid].flag & ZFS_SLASH2_MKDIR) && fsname) {
 		fsname++;
 		/* make sure that the newly mounted file system has an entry */
 		mdsio_fid_to_vfsid(SLFID_ROOT, &root_vfsid);
 		rc = mdsio_lookup(root_vfsid, MDSIO_FID_ROOT, fsname,
-		        &mfp, &rootcreds, NULL);
+		    &mfp, &rootcreds, NULL);
 		if (rc == ENOENT) {
 			sstb.sst_mode = 0755;
 			sstb.sst_uid = rootcreds.scr_uid;
 			sstb.sst_gid = rootcreds.scr_gid;
-			rc = mdsio_mkdir(root_vfsid, MDSIO_FID_ROOT, fsname, &sstb,
-	    			0, MDSIO_OPENCRF_NOLINK, NULL, NULL, NULL, NULL, 0);
+			rc = mdsio_mkdir(root_vfsid, MDSIO_FID_ROOT,
+			    fsname, &sstb, 0, MDSIO_OPENCRF_NOLINK,
+			    NULL, NULL, NULL, NULL, 0);
 		}
 		if (rc) {
-			psclog_warnx("Verify %s entry: %s", fsname, slstrerror(rc));
-			goto out;
+			psclog_warnx("Verify %s entry: %s", fsname,
+			    slstrerror(rc));
+			return;
 		}
 	}
 	zfsMount[vfsid].flag |= ZFS_SLASH2_MKDIR;
@@ -292,31 +295,33 @@ psc_register_filesystem(int vfsid)
 	    &mds_metadir_inum[vfsid], &rootcreds, NULL);
 	if (rc) {
 		psclog_warnx("lookup .slmd metadir: %s", slstrerror(rc));
-		goto out;
+		return;
 	}
 
-	rc = mdsio_lookup(vfsid, mds_metadir_inum[vfsid], SL_RPATH_FIDNS_DIR,
-		&mds_fidnsdir_inum[vfsid], &rootcreds, NULL);
+	rc = mdsio_lookup(vfsid, mds_metadir_inum[vfsid],
+	    SL_RPATH_FIDNS_DIR, &mds_fidnsdir_inum[vfsid], &rootcreds,
+	    NULL);
 	if (rc) {
 		psclog_warnx("lookup %s/%s dir: %s", SL_RPATH_META_DIR,
-			SL_RPATH_FIDNS_DIR, slstrerror(rc));
-		goto out;
+		    SL_RPATH_FIDNS_DIR, slstrerror(rc));
+		return;
 	}
 
-	rc = mdsio_lookup(vfsid, mds_metadir_inum[vfsid], SL_RPATH_TMP_DIR,
-		&mds_tmpdir_inum[vfsid], &rootcreds, NULL);
+	rc = mdsio_lookup(vfsid, mds_metadir_inum[vfsid],
+	    SL_RPATH_TMP_DIR, &mds_tmpdir_inum[vfsid], &rootcreds,
+	    NULL);
 	if (rc) {
 		psclog_warnx("lookup %s/%s dir: %s", SL_RPATH_META_DIR,
-			SL_RPATH_TMP_DIR, slstrerror(rc));
-		goto out;
+		    SL_RPATH_TMP_DIR, slstrerror(rc));
+		return;
 	}
 
 	rc = read_vfsid(vfsid, SL_FN_SITEID, &zfsMount[vfsid].siteid);
 	if (rc)
-		goto out;
+		return;
 	rc = read_vfsid(vfsid, SL_FN_FSUUID, &zfsMount[vfsid].uuid);
 	if (rc)
-		goto out;
+		return;
 
 	found1 = 0;
 	found2 = 0;
@@ -331,25 +336,25 @@ psc_register_filesystem(int vfsid)
 			found2++;
 	}
 	if (found1) {
-		psclog_warnx("Duplicate SITEID found: %"PRIx64"\n", siteid);
-		goto out;
+		psclog_warnx("Duplicate SITEID found: %"PRIx64, siteid);
+		return;
 	}
 	if (found2) {
-		psclog_warnx("Duplicate UUID found: %"PRIx64"\n", uuid);
-		goto out;
+		psclog_warnx("Duplicate UUID found: %"PRIx64, uuid);
+		return;
 	}
 	rc = zfsslash2_build_immns_cache(vfsid);
 	if (rc) {
-		psclog_warnx("Fail to create cache for file system %s\n", 
-			basename(zfsMount[vfsid].name));
-		goto out;
+		psclog_warnx("Fail to create cache for file system %s",
+		    basename(zfsMount[vfsid].name));
+		return;
 	}
 
 	entry = PSCALLOC(sizeof(struct rootNames));
 	if (!entry) {
-		psclog_warnx("Fail to allocate memory to register %s\n", 
-			basename(zfsMount[vfsid].name));
-		goto out;
+		psclog_warnx("Fail to allocate memory to register %s",
+		    basename(zfsMount[vfsid].name));
+		return;
 	}
 
 	strcpy(entry->rn_name, basename(zfsMount[vfsid].name));
@@ -359,10 +364,8 @@ psc_register_filesystem(int vfsid)
 	psc_hashbkt_add_item(&rootHtable, b, entry);
 
 	zfsMount[vfsid].flag |= ZFS_SLASH2_READY;
-	psclog_warnx("File system %s registered (%"PRIx64":%"PRIx64").\n", 
-		basename(zfsMount[vfsid].name), siteid, uuid);
- out:
-	return;
+	psclog_warnx("File system %s registered (%"PRIx64":%"PRIx64")",
+	    basename(zfsMount[vfsid].name), siteid, uuid);
 }
 
 psc_spinlock_t  scan_lock = SPINLOCK_INIT;

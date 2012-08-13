@@ -48,8 +48,6 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
-extern int current_vfsid;
-
 /**
  * slm_rmi_handle_bmap_getcrcs - Handle a BMAPGETCRCS request from ION,
  *	so the ION can load the CRCs for a bmap and verify them against
@@ -247,8 +245,8 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 			 * Bad CRC, media error perhaps.
 			 * Check if other replicas exist.
 			 */
-			src_iosidx = mds_repl_ios_lookup(current_vfsid, fcmh_2_inoh(f),
-			    src_res->res_id);
+			src_iosidx = mds_repl_ios_lookup(current_vfsid,
+			    fcmh_2_inoh(f), src_res->res_id);
 			if (src_iosidx < 0)
 				goto out;
 
@@ -339,7 +337,8 @@ slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 	if (mp->rc)
 		return (0);
 
-	iosidx = mds_repl_ios_lookup(current_vfsid, fcmh_2_inoh(b->bcm_fcmh),
+	iosidx = mds_repl_ios_lookup(current_vfsid,
+	    fcmh_2_inoh(b->bcm_fcmh),
 	    libsl_nid2resm(rq->rq_export->exp_connection->
 	    c_peer.nid)->resm_res_id);
 
@@ -384,6 +383,7 @@ slm_rmi_handle_bmap_getminseq(struct pscrpc_request *rq)
 int
 slm_rmi_handle_import(struct pscrpc_request *rq)
 {
+	int fl, rc, rc2, idx, vfsid;
 	struct fidc_membh *p = NULL, *c = NULL;
 	struct srm_import_req *mq;
 	struct srm_import_rep *mp;
@@ -391,20 +391,18 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	struct bmapc_memb *b;
 	struct srt_stat sstb;
 	struct sl_resm *m;
-	int fl, rc, rc2, idx;
 	void *mdsio_data;
 	sl_bmapno_t bno;
 	int64_t fsiz;
 	uint32_t i;
-	int vfsid;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mdsio_fid_to_vfsid(mq->pfg.fg_fid, &vfsid) < 0) {
-		mp->rc = EINVAL;
+		mp->rc = -EINVAL;
 		goto out;
 	}
 	if (vfsid != current_vfsid) {
-		mp->rc = EINVAL;
+		mp->rc = -EINVAL;
 		goto out;
 	}
 
@@ -423,8 +421,8 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	mq->cpn[sizeof(mq->cpn) - 1] = '\0';
 
 	mds_reserve_slot(1);
-	rc = mdsio_opencreatef(current_vfsid, fcmh_2_mdsio_fid(p), &rootcreds,
-	    O_CREAT | O_EXCL | O_RDWR, MDSIO_OPENCRF_NOMTIM,
+	rc = mdsio_opencreatef(current_vfsid, fcmh_2_mdsio_fid(p),
+	    &rootcreds, O_CREAT | O_EXCL | O_RDWR, MDSIO_OPENCRF_NOMTIM,
 	    mq->sstb.sst_mode, mq->cpn, NULL, &sstb, &mdsio_data,
 	    mdslog_namespace, slm_get_next_slashfid, 0);
 	mds_unreserve_slot(1);
@@ -434,8 +432,8 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, mp->rc);
 
 	if (rc == EEXIST) {
-		rc2 = mdsio_lookup(current_vfsid, fcmh_2_mdsio_fid(p), mq->cpn,
-		    NULL, &rootcreds, &sstb);
+		rc2 = mdsio_lookup(current_vfsid, fcmh_2_mdsio_fid(p),
+		    mq->cpn, NULL, &rootcreds, &sstb);
 		if (rc2)
 			PFL_GOTOERR(out, mp->rc = -rc2);
 
@@ -485,8 +483,8 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	} else
 		slm_fcmh_endow_nolog(vfsid, p, c);
 
-	idx = mds_repl_ios_lookup_add(vfsid, fcmh_2_inoh(c), m->resm_res_id,
-	    1);
+	idx = mds_repl_ios_lookup_add(vfsid, fcmh_2_inoh(c),
+	    m->resm_res_id, 1);
 	if (idx < 0)
 		PFL_GOTOERR(out, mp->rc = rc);
 	fsiz = mq->sstb.sst_size;
@@ -572,11 +570,11 @@ slm_rmi_handle_mkdir(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mdsio_fid_to_vfsid(mq->pfg.fg_fid, &vfsid) < 0) {
-		mp->rc = EINVAL;
+		mp->rc = -EINVAL;
 		return (0);
 	}
 	if (vfsid != current_vfsid) {
-		mp->rc = EINVAL;
+		mp->rc = -EINVAL;
 		return (0);
 	}
 
@@ -641,7 +639,7 @@ slm_rmi_handle_ping(struct pscrpc_request *rq)
 				    "disabling write lease assignment",
 				    m->resm_name);
 				res2iosinfo(m->resm_res)->si_flags |=
-					SIF_DISABLE_BIA;
+				    SIF_DISABLE_BIA;
 			}
 		}
 	}
