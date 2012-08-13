@@ -407,9 +407,12 @@ reimport
 
    oprofile on firehoses
 
-  advise upsch.db on SSD
+   fix round robin among senses when TRUNCATE
+   fix ios_nblks[idx] accounting on TRUNCATE
+   advise upsch.db on SSD
 
-   doument how to disable_bia to new sliods
+   tear out SLERR_INVAL and SLERR_2BIG, they are standard
+   (anything POSIX -- any portabilize anything non POSIX)
 
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
