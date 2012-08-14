@@ -254,7 +254,7 @@ slm_bml_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 }
 
 void
-slmctlcmd_stop(int ac, char *av[])
+slmctlcmd_stop(int ac, __unusedx char *av[])
 {
 	if (ac > 1)
 		errx(1, "stop: unknown arguments");
