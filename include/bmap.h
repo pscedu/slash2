@@ -368,7 +368,7 @@ void	_log_dump_bmapod(const struct pfl_callerinfo *, int,
 					    BMAPGETF_NORETRIEVE, (bp))
 
 enum bmap_opcnt_types {
-/*  0 */ BMAP_OPCNT_LOOKUP,
+/*  0 */ BMAP_OPCNT_LOOKUP,		/* bmap_get */
 /*  1 */ BMAP_OPCNT_IONASSIGN,
 /*  2 */ BMAP_OPCNT_LEASE,
 /*  3 */ BMAP_OPCNT_MDSLOG,
@@ -382,8 +382,8 @@ enum bmap_opcnt_types {
 /* 11 */ BMAP_OPCNT_READA,
 /* 12 */ BMAP_OPCNT_LEASEEXT,
 /* 13 */ BMAP_OPCNT_REASSIGN,
-/* 14 */ BMAP_OPCNT_UPSCH,
-/* 15 */ BMAP_OPCNT_WORK
+/* 14 */ BMAP_OPCNT_UPSCH,		/* peer update scheduler */
+/* 15 */ BMAP_OPCNT_WORK		/* generic worker thread */
 };
 
 SPLAY_HEAD(bmap_cache, bmapc_memb);
