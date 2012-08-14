@@ -1006,6 +1006,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = FGEN_ANY;
 	mq->mode = mode;
+	mq->rdev = rdev;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
