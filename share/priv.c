@@ -39,7 +39,7 @@ sl_getuserpwent(struct passwd **pwp)
 }
 
 void
-sl_drop_privs(int allow_root_uid)
+sl_drop_privs(__unusedx int allow_root_uid)
 {
 	struct passwd *pw;
 
