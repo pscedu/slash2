@@ -41,13 +41,14 @@ The following options are available:
 .It Fl b Ar block-device
 Specify a raw device as the journal target instead of a regular file.
 This option is incompatible with
-.Fl D .  
-This is the recommended setup for obvious performance reason.
+.Fl D .
+This is the recommended setup for performance reasons.
 .It Fl D Ar datadir
 Specify an alternative directory where operation data is stored.
 Defaults to
-.Pa /var/lib/slash .  
-The journal file is always named op-journal.
+.Pa /var/lib/slash .
+The journal file is always named
+.Pa op-journal .
 .It Fl f
 Format the operations journal.
 .It Fl n Ar nentries
@@ -62,7 +63,7 @@ Display verbose information about activity performed.
 .Sh FILES
 .Bl -tag -width Pa -compact
 .It Pa /var/lib/slash/op-journal
-Default journal file for pending operations.
+journal file for pending operations
 .El
 .Sh SEE ALSO
 .Xr sladm 7 ,
