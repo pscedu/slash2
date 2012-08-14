@@ -178,7 +178,7 @@ my $slmkjrnl = "$slbase/slmkjrnl/slmkjrnl";
 my $slmctl = "$slbase/slmctl/slmctl";
 my $slictl = "$slbase/slictl/slictl";
 my $slkeymgt = "$slbase/slkeymgt/slkeymgt";
-my $slimmns_format = "$slbase/slimmns/slimmns_format";
+my $slmkfs = "$slbase/slmkfs/slmkfs";
 
 my $ssh_init = <<EOF;
 	set -ex
@@ -329,7 +329,7 @@ foreach $i (@mds) {
 		$zpool destroy $i->{zpool_name} || true
 		$zpool create -f $i->{zpool_name} $i->{zpool_args}
 		$zpool set cachefile=$i->{zpool_cache} $i->{zpool_name}
-		$slimmns_format /$i->{zpool_name}
+		$slmkfs /$i->{zpool_name}
 		sync; sync
 		umount /$i->{zpool_name}
 		pkill zfs-fuse
@@ -391,7 +391,7 @@ foreach $i (@ion) {
 		@{[init_env(%$global_env)]}
 		mkdir -p $datadir
 		mkdir -p $i->{fsroot}
-		$slimmns_format -Wi $i->{fsroot}
+		$slmkfs -Wi $i->{fsroot}
 		cp -p $base/authbuf.key $datadir
 EOF
 }
