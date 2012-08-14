@@ -3,7 +3,7 @@
 ROOTDIR=../..
 include ${ROOTDIR}/Makefile.path
 
-PROG=		slmkfs		
+PROG=		slmkfs
 MAN+=		slmkfs.8
 SRCS+=		slmkfs.c
 SRCS+=		wipedir.c
