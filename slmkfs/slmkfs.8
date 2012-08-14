@@ -81,10 +81,26 @@ initializing the internal structure.
 .El
 .Sh FILES
 .Bl -tag -width Pa -compact
-.It Ar fsroot Ns Pa /.slfidns
+.It Ar fsroot Ns Pa /.slmd/bmap.odtab
+block map assignments
+.It Ar fsroot Ns Pa /.slmd/cursor
+journal cursor
+.It Ar fsroot Ns Pa /.slmd/fidns
 immutable namespace
-.It Ar fsroot Ns Pa /.slrepls
+.It Ar fsroot Ns Pa /.slmd/fsuuid
+file system universally unique ID
+.It Ar fsroot Ns Pa /.slmd/op- Ns Ar *
+various operation logs
+.It Ar fsroot Ns Pa /.slmd/ptrunc.odt
+partial truncation resolutions
+.It Ar fsroot Ns Pa /.slmd/repl.odt
 replication queue
+.It Ar fsroot Ns Pa /.slmd/repls
+replication queue
+.It Ar fsroot Ns Pa /.slmd/timestamp
+file system creation date
+.It Ar fsroot Ns Pa /.slmd/tmp
+temporary processing directory
 .El
 .Sh SEE ALSO
 .Xr sladm 7 ,
