@@ -482,14 +482,20 @@ slcfg_add_lnet(uint32_t lnet, char *ifn)
 	union pfl_sockaddr sa;
 	in_addr_t ip;
 
-	if (!pflnet_getifaddr(cfg_ifaddrs, ifn, &sa))
+	if (!pflnet_getifaddr(cfg_ifaddrs, ifn, &sa)) {
+		psclog_debug("unable to lookup address information "
+		    "for interface %s", ifn);
 		return;
+	}
 
 	ifv[0] = ifn;
 	ip = ntohl(sa.sin.sin_addr.s_addr);
 	if (lnet_match_networks(&tnam, globalConfig.gconf_lnets,
-	    &ip, ifv, 1) == 0)
+	    &ip, ifv, 1) == 0) {
+		psclog_debug("unable to lookup address information "
+		    "for interface %s", ifn);
 		return;
+	}
 
 	p = strchr(tnam, '(');
 	if (p)
@@ -603,7 +609,7 @@ slcfg_resm_addaddr(char *addr, const char *lnetname)
 				continue;
 			}
 		}
-		/* XXX else: check letname */
+		/* XXX else: check lnetname */
 		if (rc)
 			slcfg_add_lnet(lnet, ifn);
 
