@@ -305,8 +305,8 @@ mds_open_logfile(uint64_t batchno, int update, int readonly,
  *	format changes.
  */
 int
-mds_distill_handler(struct psc_journal_enthdr *pje, uint64_t xid,
-    int npeers, int action)
+mds_distill_handler(struct psc_journal_enthdr *pje,
+    __unusedx uint64_t xid, int npeers, int action)
 {
 	struct srt_reclaim_entry reclaim_entry, *reclaim_entryp;
 	struct srt_update_entry update_entry, *update_entryp;

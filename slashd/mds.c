@@ -472,7 +472,8 @@ mds_bmap_add_repl(struct bmapc_memb *b, struct bmap_ios_assign *bia)
 	psc_assert(b->bcm_flags & BMAP_IONASSIGN);
 
 	FCMH_WAIT_BUSY(f);
-	iosidx = mds_repl_ios_lookup_add(current_vfsid, ih, bia->bia_ios, 0);
+	iosidx = mds_repl_ios_lookup_add(current_vfsid, ih,
+	    bia->bia_ios);
 
 	if (iosidx < 0)
 		psc_fatalx("ios_lookup_add %d: %s", bia->bia_ios,
@@ -1237,7 +1238,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
  *	I/O server.
  */
 int
-mds_handle_rls_bmap(struct pscrpc_request *rq, int sliod)
+mds_handle_rls_bmap(struct pscrpc_request *rq, __unusedx int sliod)
 {
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;

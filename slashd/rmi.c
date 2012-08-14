@@ -484,7 +484,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 		slm_fcmh_endow_nolog(vfsid, p, c);
 
 	idx = mds_repl_ios_lookup_add(vfsid, fcmh_2_inoh(c),
-	    m->resm_res_id, 1);
+	    m->resm_res_id);
 	if (idx < 0)
 		PFL_GOTOERR(out, mp->rc = rc);
 	fsiz = mq->sstb.sst_size;

@@ -103,7 +103,7 @@ _slm_repl_bmap_rel_type(struct bmapc_memb *b, int type)
 
 int
 _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
-    sl_ios_id_t ios, int add, int log)
+    sl_ios_id_t ios, int add)
 {
 	int locked, rc = -SLERR_REPL_NOT_ACT, inox_rc = 0;
 	struct sl_resource *res;
@@ -187,7 +187,7 @@ _mds_repl_iosv_lookup(int vfsid, struct slash_inode_handle *ih,
 
 	for (k = 0; k < nios; k++)
 		if ((iosidx[k] = _mds_repl_ios_lookup(vfsid, ih,
-		    iosv[k].bs_id, add, add)) < 0)
+		    iosv[k].bs_id, add)) < 0)
 			return (-iosidx[k]);
 
 	qsort(iosidx, nios, sizeof(iosidx[0]), iosidx_cmp);
@@ -795,8 +795,8 @@ struct slm_repl_valid {
  *	replicas aren't removed.
  */
 void
-slm_repl_countvalid_cb(struct bmapc_memb *b, int iosidx, int val,
-    void *arg)
+slm_repl_countvalid_cb(__unusedx struct bmapc_memb *b, int iosidx,
+    int val, void *arg)
 {
 	struct slm_repl_valid *t = arg;
 	int j;
