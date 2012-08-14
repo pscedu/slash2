@@ -191,7 +191,7 @@ slictlcmd_import(int ac, char *av[])
 }
 
 void
-slictlcmd_stop(int ac, char *av[])
+slictlcmd_stop(int ac, __unusedx char *av[])
 {
 	if (ac > 1)
 		errx(1, "stop: unknown arguments");
