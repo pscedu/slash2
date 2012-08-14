@@ -187,9 +187,7 @@ struct sl_gconf {
 	} while (0)
 
 /* configuration flags */
-enum {
-	CFGF_DISABLE_BIA
-};
+#define CFGF_DISABLE_BIA		(1 << 0)	/* disable write assignments */
 
 #define CONF_LOCK()			spinlock(&globalConfig.gconf_lock)
 #define CONF_ULOCK()			freelock(&globalConfig.gconf_lock)
