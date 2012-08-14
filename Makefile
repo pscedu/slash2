@@ -28,7 +28,7 @@ ifneq ($(filter ion,${SLASH_MODULES}),)
 endif
 
 ifneq ($(filter ion,${SLASH_MODULES})$(filter mds,${SLASH_MODULES}),)
-  SUBDIRS+=	slimmns
+  SUBDIRS+=	slmkfs
 endif
 
 SUBDIRS+=	slkeymgt
