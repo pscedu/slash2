@@ -76,9 +76,9 @@ to load this file system, create a cache dump file:
 Before this file system can be used by the
 .Tn SLASH
 metadata server, it must be initialized by
-.Xr slimmns_format 8 :
+.Xr slmkfs 8 :
 .Bd -literal -offset indent
-# slimmns_format /mypool
+# slmkfs /mypool
 .Ed
 .Pp
 Now that the metadata file system has been set up,
@@ -132,9 +132,9 @@ network to the root of the directory specified by the
 .Xr slcfg 5
 option.
 This directory must be initialized for use with
-.Xr slimmns_format 8 :
+.Xr slmkfs 8 :
 .Bd -literal -offset indent
-# slimmns_format -i fsroot
+# slmkfs -i fsroot
 .Ed
 .Pp
 Next, ensure that the shared
@@ -228,7 +228,7 @@ port must be used globally for all daemons.
 .Xr msctl 8 ,
 .Xr slashd 8 ,
 .Xr slictl 8 ,
-.Xr slimmns 8 ,
+.Xr slmkfs 8 ,
 .Xr sliod 8 ,
 .Xr slkeymgt 8 ,
 .Xr slmctl 8 ,
