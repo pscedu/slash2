@@ -252,7 +252,7 @@ psc_register_filesystem(int vfsid)
 	mdsio_fid_t mfp;
 	char *fsname;
 
-	psclog_warnx("Checking file system %s", zfsMount[vfsid].name);
+	psclog_info("Checking file system %s", zfsMount[vfsid].name);
 	if (zfsMount[vfsid].name[0] != '/') {
 		psclog_warnx("Bogus file system name: %s",
 		    zfsMount[vfsid].name);
