@@ -3,9 +3,9 @@
 ROOTDIR=../..
 include ${ROOTDIR}/Makefile.path
 
-PROG=		slimmns_format
-MAN+=		slimmns.8
-SRCS+=		slimmns_format.c
+PROG=		slmkfs		
+MAN+=		slmkfs.8
+SRCS+=		slmkfs.c
 SRCS+=		wipedir.c
 SRCS+=		${SLASH_BASE}/share/cfg_common.c
 SRCS+=		${SLASH_BASE}/share/lconf.l
