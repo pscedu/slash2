@@ -60,7 +60,7 @@ psc_atomic32_t			 offline_nretries = PSC_ATOMIC32_INIT(256);
 
 #define MAX_OUTSTANDING_RPCS	40
 #define MIN_COALESCE_RPC_SZ	LNET_MTU /* Try for big RPC's */
-#define NUM_READAHEAD_THREADS   4
+#define NUM_READAHEAD_THREADS	4
 
 struct psc_waitq		bmapFlushWaitq = PSC_WAITQ_INIT;
 psc_spinlock_t			bmapFlushLock = SPINLOCK_INIT;
@@ -73,8 +73,8 @@ bmap_flush_biorq_expired(const struct bmpc_ioreq *a, struct timespec *t)
 
 	PFL_GETTIMESPEC(&ts);
 
-	if ((a->biorq_flags & BIORQ_FORCE_EXPIRE)     ||
-	    (a->biorq_expire.tv_sec < ts.tv_sec       ||
+	if ((a->biorq_flags & BIORQ_FORCE_EXPIRE) ||
+	    (a->biorq_expire.tv_sec < ts.tv_sec   ||
 	     (a->biorq_expire.tv_sec == ts.tv_sec &&
 	      a->biorq_expire.tv_nsec <= ts.tv_nsec)))
 		return (1);
@@ -101,7 +101,8 @@ msl_fd_offline_retry(struct msl_fhent *mfh)
 	psc_assert(*cnt);
 
 	DEBUG_FCMH(PLL_WARN, mfh->mfh_fcmh, "nretries=%d, maxretries=%d "
-	    "(non-blocking=%d)", *cnt, psc_atomic32_read(&offline_nretries),
+	    "(non-blocking=%d)", *cnt,
+	    psc_atomic32_read(&offline_nretries),
 	    (mfh->mfh_oflags & O_NONBLOCK));
 
 	if (mfh->mfh_oflags & O_NONBLOCK)
@@ -116,7 +117,8 @@ msl_fd_offline_retry(struct msl_fhent *mfh)
  * @r: bmap I/O request.
  */
 int
-_msl_offline_retry(const struct pfl_callerinfo *pci, struct bmpc_ioreq *r)
+_msl_offline_retry(const struct pfl_callerinfo *pci,
+    struct bmpc_ioreq *r)
 {
 	int retry;
 
@@ -156,10 +158,11 @@ _bmap_flushq_wake(const struct pfl_callerinfo *pci, int mode,
 		    (timespeccmp(t, &bmapFlushWaitTime, <))) {
 			//bmapFlushTimeoFlags |= BMAPFLSH_TIMEOA;
 
-			psclogs_info(SLSS_BMAP, "oldalarm=("PSCPRI_TIMESPEC") "
-			     "newalarm=("PSCPRI_TIMESPEC")",
-			     PSCPRI_TIMESPEC_ARGS(&bmapFlushWaitTime),
-			     PSCPRI_TIMESPEC_ARGS(t));
+			psclogs_info(SLSS_BMAP,
+			    "oldalarm=("PSCPRI_TIMESPEC") "
+			    "newalarm=("PSCPRI_TIMESPEC")",
+			    PSCPRI_TIMESPEC_ARGS(&bmapFlushWaitTime),
+			    PSCPRI_TIMESPEC_ARGS(t));
 
 			bmapFlushWaitTime = *t;
 			wake = 1;
@@ -176,7 +179,7 @@ _bmap_flushq_wake(const struct pfl_callerinfo *pci, int mode,
 	freelock(&bmapFlushLock);
 
 	psclog_info("mode=%x wake=%d flags=%x outstandingRpcCnt=%d",
-	     mode, wake, tmp, atomic_read(&outstandingRpcCnt));
+	    mode, wake, tmp, atomic_read(&outstandingRpcCnt));
 }
 
 #define bmap_flush_rpccnt_dec()					\
@@ -202,7 +205,8 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 
 	bmap_flush_rpccnt_dec();
 
-	DEBUG_REQ(rq->rq_err ? PLL_ERROR : PLL_INFO, rq, "done rc=%d", rc);
+	DEBUG_REQ(rq->rq_err ? PLL_ERROR : PLL_INFO, rq, "done rc=%d",
+	    rc);
 
 //	sl_csvc_decref(csvc);
 //	args->pointer_arg[MSL_CBARG_CSVC] = NULL;
@@ -314,7 +318,6 @@ biorq_destroy_failed(struct bmpc_ioreq *r)
 	BIORQ_LOCK(r);
 	if (!(r->biorq_flags & BIORQ_FLUSHRDY)) {
 		BIORQ_ULOCK(r);
-
 		return (-EBUSY);
 	}
 
@@ -333,10 +336,11 @@ biorq_destroy_failed(struct bmpc_ioreq *r)
 }
 
 /**
- * _bmap_flush_desched - unschedules a biorq, sets the RESCHED bit,
- *    and bumps the resched timer.  Called when a writeback RPC failed
- *    to get off of the ground OR via RPC cb context on failure.
- * Notes:  _bmap_flush_desched strictly asserts the biorq is not on the 'wire'.
+ * _bmap_flush_desched - unschedules a biorq, sets the RESCHED bit, and
+ *	bumps the resched timer.  Called when a writeback RPC failed to
+ *	get off of the ground OR via RPC cb context on failure.
+ * Notes:  _bmap_flush_desched strictly asserts the biorq is not on the
+ *	'wire'.
  */
 __static void
 bmap_flush_desched(struct bmpc_ioreq *r)
@@ -363,20 +367,21 @@ bmap_flush_desched(struct bmpc_ioreq *r)
 	r->biorq_flags |= BIORQ_RESCHED;
 
 	/*
-	 * Back off to allow the I/O server to recover or become less busy.
-	 * Also clear the force expire flag to avoid a spin within ourselves
-	 * in the bmap flush loop.
+	 * Back off to allow the I/O server to recover or become less
+	 * busy.  Also clear the force expire flag to avoid a spin
+	 * within ourselves in the bmap flush loop.
 	 *
-	 * In theory, we could place them on a different queue based on its
-	 * target sliod and woken them up with the connection is re-established
-	 * with that sliod.  But that logic is too complicated to get right.
+	 * In theory, we could place them on a different queue based on
+	 * its target sliod and woken them up with the connection is
+	 * re-established with that sliod.  But that logic is too
+	 * complicated to get right.
 	 */
 	r->biorq_flags &= ~BIORQ_FORCE_EXPIRE;
 	PFL_GETTIMESPEC(&r->biorq_expire);
 
 	/*
-	 * Retry last more than 11 hours, but don't make it too long between
-	 * retries.
+	 * Retry last more than 11 hours, but don't make it too long
+	 * between retries.
 	 *
 	 * XXX These magic numbers should be made into tunables.
 	 */
@@ -542,11 +547,11 @@ bmap_flush_coalesce_prep(struct bmpc_write_coalescer *bwc)
 			    "adding if DNE nbmpces=%d (i=%d) "
 			    "(off=%"PSCPRIdOFFT")", bwc->bwc_nbmpces, i, off);
 
-			bmpce_usecheck(bmpce, BIORQ_WRITE, !i ?
-			       (r->biorq_off & ~BMPC_BUFMASK) : off);
+			bmpce_usecheck(bmpce, BIORQ_WRITE,
+			    !i ? (r->biorq_off & ~BMPC_BUFMASK) : off);
 
 			tlen = MIN(reqsz, !i ? BMPC_BUFSZ -
-				    (off - bmpce->bmpce_off) : BMPC_BUFSZ);
+			    (off - bmpce->bmpce_off) : BMPC_BUFSZ);
 
 			off += tlen;
 			reqsz -= tlen;
@@ -610,7 +615,7 @@ bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
 		BMPCE_ULOCK(bmpce);
 
 		bwc->bwc_iovs[i].iov_base = bmpce->bmpce_base +
-			(!i ? (r->biorq_off - bmpce->bmpce_off) : 0);
+		    (!i ? (r->biorq_off - bmpce->bmpce_off) : 0);
 
 		bwc->bwc_iovs[i].iov_len = MIN(tot_reqsz,
 		    (!i ? BMPC_BUFSZ - (r->biorq_off - bmpce->bmpce_off) :
@@ -1179,7 +1184,7 @@ msbmflwthr_main(__unusedx struct psc_thread *thr)
 			      (((bmap_2_bci(b)->bci_xtime.tv_sec - ts.tv_sec) <
 				BMAP_CLI_EXTREQSECS))) ||
 			     timespeccmp(&ts, &bmap_2_bci(b)->bci_etime, >=))) {
-				    psc_dynarray_add(&bmaps, b);
+				psc_dynarray_add(&bmaps, b);
 			}
 			BMAP_ULOCK(b);
 		}
@@ -1374,8 +1379,8 @@ msbmapflushthr_main(__unusedx struct psc_thread *thr)
 
 		spinlock(&bmapFlushLock);
 		do {
-			rc = psc_waitq_waitabs(&bmapFlushWaitq, &bmapFlushLock,
-			       &bmapFlushWaitTime);
+			rc = psc_waitq_waitabs(&bmapFlushWaitq,
+			    &bmapFlushLock, &bmapFlushWaitTime);
 			spinlock(&bmapFlushLock);
 		} while (!rc && !(bmapFlushTimeoFlags & BMAPFLSH_EXPIRE));
 		bmapFlushTimeoFlags = 0;
