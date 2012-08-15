@@ -1382,7 +1382,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	switch (rc) {
 	case 0:
 		psc_iostats_intv_add((op == SRMT_WRITE ?
-			&msl_diowr_stat : &msl_diord_stat), size);
+		    &msl_diowr_stat : &msl_diord_stat), size);
 
 		msl_biorq_destroy(r);
 		break;
@@ -2394,6 +2394,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 	if (rw == SL_READ)
 		msl_setra(mfh, size, off);
+
 	/*
 	 * Get the start and end block regions from the input
 	 * parameters.
@@ -2405,6 +2406,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		rc = -EINVAL;
 		goto out;
 	}
+
 	/* Initialize some state in the pfr to help with aio requests.
 	 */
 	q = msl_fsrqinfo_init(pfr, mfh, buf, size, off, rw);
