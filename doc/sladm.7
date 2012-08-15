@@ -81,6 +81,13 @@ metadata server, it must be initialized by
 # slmkfs /mypool
 .Ed
 .Pp
+During formatting of a new MDS file system, a file system unique ID will
+be generated
+.Pq Dq fsuuid .
+The value for this setting in
+.Xr slcfg 5
+must match the ID the file system has been formatted with.
+.Pp
 Now that the metadata file system has been set up,
 .Xr zfs-fuse 8
 must be terminated before the
@@ -98,7 +105,7 @@ This can be created with the
 .Xr slmkjrnl 8
 utility:
 .Bd -literal -offset indent
-# slmkjrnl -f
+# slmkjrnl -f -b /dev/disk0 -u $fsuuid
 .Ed
 .Pp
 The MDS server also maintains an
@@ -153,7 +160,7 @@ or manually with
 Now launch
 .Xr sliod 8 :
 .Bd -literal -offset indent
-# sliod md@SITE
+# sliod
 .Ed
 .Pp
 .Xr slictl 8
@@ -181,7 +188,7 @@ may be used to mount a
 .Tn SLASH
 file system under a directory node on the local system:
 .Bd -literal -offset indent
-# mount_slash -U -M md@SITE -I io@SITE /myfs
+# mount_slash -U /myfs
 .Ed
 .Pp
 .Xr msctl 8
