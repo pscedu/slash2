@@ -385,31 +385,17 @@ reimport
 - optimize READLINK for small RPCs to avoid bulk
 - fix slmctl -ss missing sliod bug
 - add slmctl -ss fstypes (use statfs(2) on fbsd/linux and f_type)
-- df on mount_slash reports continually different stats
-- merge fuse 2.9
-- fix instructions for probing fuse instead of in-tree fuse
+- merge fuse 2.9.1
 - make macro version of accessors for speed (e.g. bmap_2_bmi())
-- in RPC layer, add a EINVAL -> SLERR_INVAL portability translation layer
+  inline are for debugging/gdb
+- in RPC layer, add a EINVAL -> SLERR_INVAL checker/portability translation layer
 
 - optimization: only write changes to brepls in delrq/addrq when changes
   are actually made
 
-- /arc wrapper scripts:
-   - purge old psclogs (two weeks)
-
-/arc -> fruits for kier
-   - talk with jray
-
-   prioritize softdel
-
-   oprofile on firehoses
-
-   fix round robin among senses when TRUNCATE
-   fix ios_nblks[idx] accounting on TRUNCATE
+   fix round robin among senses when open(O_TRUNC)
+   fix ios_nblks[idx] accounting on open(O_TRUNC)
    advise upsch.db on SSD
-
-   tear out SLERR_INVAL and SLERR_2BIG, they are standard
-   (anything POSIX -- any portabilize anything non POSIX)
 
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
