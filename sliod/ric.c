@@ -224,10 +224,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		iovs[i].iov_base = slvr_ref[i]->slvr_slab->slb_base + roff;
 		tsize -= iovs[i].iov_len = len[i];
 
-		/* Ensure that I/O map doesn't extend past the end of the buf.
-		 */
-		psc_assert((roff + len[i]) <= SLASH_SLVR_SIZE);
-
 		/* Avoid more complicated errors within lnet by ensuring
 		 *   that len is non-zero.
 		 */
