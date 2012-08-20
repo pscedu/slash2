@@ -166,7 +166,7 @@ sl_fcmh_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 	w = psc_ctl_get_display_maxwidth() - PSC_CTL_DISPLAY_WIDTH;
 	printf("%-16s %11s %6s %5s %5s "
 	    "%7s %3s %7s %4s %4s",
-	    "file-ID_(in_hex)", "flags", "mode", "uid", "gid",
+	    "fid", "flags", "mode", "uid", "gid",
 	    "size", "ref", "fgen", "pgen", "ugen");
 	if (w > 6)
 		printf(" %6s", BLKSIZE_LABEL);
