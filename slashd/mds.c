@@ -2213,7 +2213,7 @@ _dbdo(const struct pfl_callerinfo *pci,
     int (*cb)(void *, int, char **, char **), void *arg,
     const char *fmt, ...)
 {
-	static psc_spinlock_t lock = SPINLOCK_INIT;
+	static struct pfl_mutex mut = PSC_MUTEX_INIT;
 	char buf[LINE_MAX], *errstr;
 	va_list ap;
 	int rc;
@@ -2230,9 +2230,9 @@ _dbdo(const struct pfl_callerinfo *pci,
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
 
-	spinlock(&lock);
+	psc_mutex_lock(&mut);
 	rc = sqlite3_exec(slm_dbh, buf, cb, arg, &errstr);
-	freelock(&lock);
+	psc_mutex_unlock(&mut);
 	if (rc) {
 		psclog_errorx("SQL error: rc=%d query=%s; msg=%s", rc,
 		    buf, errstr);
