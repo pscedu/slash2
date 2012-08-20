@@ -165,9 +165,9 @@ sl_fcmh_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 
 	w = psc_ctl_get_display_maxwidth() - PSC_CTL_DISPLAY_WIDTH;
 	printf("%-16s %11s %6s %5s %5s "
-	    "%7s %4s %9s %4s %4s",
+	    "%7s %3s %7s %4s %4s",
 	    "file-ID_(in_hex)", "flags", "mode", "uid", "gid",
-	    "size", "#ref", "fgen", "pgen", "ugen");
+	    "size", "ref", "fgen", "pgen", "ugen");
 	if (w > 6)
 		printf(" %6s", BLKSIZE_LABEL);
 	printf("\n");
@@ -182,21 +182,23 @@ sl_fcmh_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 
 	w = psc_ctl_get_display_maxwidth() - PSC_CTL_DISPLAY_WIDTH;
 	psc_fmt_human(buf, scf->scf_size);
-	printf("%016"SLPRIxFID" %c%c%c%c%c%c%c%c%c%c%c "
-	    "%6o %5u %5u "
-	    "%7s %4d %9s %4u %4u",
+	printf("%016"SLPRIxFID" %c%c%c%c%c%c%c%c%c%c%c%c "
+	    "%6o %5u %5u %7s "
+	    "%3d %7s "
+	    "%4u %4u",
 	    scf->scf_fg.fg_fid,
-	    scf->scf_flags & FCMH_CAC_FREE	? 'F' : '-',
 	    scf->scf_flags & FCMH_CAC_IDLE	? 'i' : '-',
 	    scf->scf_flags & FCMH_CAC_BUSY	? 'B' : '-',
 	    scf->scf_flags & FCMH_CAC_INITING	? 'I' : '-',
 	    scf->scf_flags & FCMH_CAC_WAITING	? 'W' : '-',
 	    scf->scf_flags & FCMH_CAC_TOFREE	? 'T' : '-',
 	    scf->scf_flags & FCMH_CAC_REAPED	? 'R' : '-',
+	    scf->scf_flags & FCMH_CAC_RLSBMAP	? 'L' : '-',
 	    scf->scf_flags & FCMH_HAVE_ATTRS	? 'A' : '-',
 	    scf->scf_flags & FCMH_GETTING_ATTRS	? 'G' : '-',
 	    scf->scf_flags & FCMH_CTOR_FAILED	? 'f' : '-',
 	    scf->scf_flags & FCMH_NO_BACKFILE	? 'N' : '-',
+	    scf->scf_flags & FCMH_BUSY		? 'S' : '-',
 	    scf->scf_st_mode, scf->scf_uid, scf->scf_gid, buf,
 	    scf->scf_refcnt, sl_sprinta_fgen(scf->scf_fg.fg_gen),
 	    scf->scf_ptruncgen, scf->scf_utimgen);
