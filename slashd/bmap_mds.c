@@ -59,16 +59,16 @@ __static void
 mds_bmap_initnew(struct bmapc_memb *b)
 {
 	struct bmap_ondisk *bod = bmap_2_ondisk(b);
-	struct fidc_membh *fcmh = b->bcm_fcmh;
+	struct fidc_membh *f = b->bcm_fcmh;
 	uint32_t pol;
 	int i;
 
 	for (i = 0; i < SLASH_CRCS_PER_BMAP; i++)
 		bod->bod_crcs[i] = BMAP_NULL_CRC;
 
-	INOH_LOCK(fcmh_2_inoh(fcmh));
-	pol = fcmh_2_ino(fcmh)->ino_replpol;
-	INOH_ULOCK(fcmh_2_inoh(fcmh));
+	INOH_LOCK(fcmh_2_inoh(f));
+	pol = fcmh_2_ino(f)->ino_replpol;
+	INOH_ULOCK(fcmh_2_inoh(f));
 
 	BHREPL_POLICY_SET(b, pol);
 
@@ -135,7 +135,6 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 	struct iovec iovs[2];
 	size_t nb;
 	int vfsid;
-	struct fidc_membh *fcmh;
 
 	f = b->bcm_fcmh;
 
@@ -144,8 +143,7 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 	iovs[1].iov_base = &od_crc;
 	iovs[1].iov_len = sizeof(od_crc);
 
-	fcmh = b->bcm_fcmh;
-	mdsio_fid_to_vfsid(fcmh_2_fid(fcmh), &vfsid);
+	mdsio_fid_to_vfsid(fcmh_2_fid(f), &vfsid);
 	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
 	    (off_t)BMAP_OD_SZ * b->bcm_bmapno + SL_BMAP_START_OFF,
 	    bmap_2_mdsio_data(b));
@@ -215,6 +213,10 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 	retifset[BREPLST_GARBAGE_SCHED] = 1;
 
 	if (mds_repl_bmap_walk_all(b, tract, retifset, 0)) {
+		/*
+		 * XXX flag this as UPSCH_NOT_INIT and do a flag dance
+		 * when paging it in as needed.
+		 */
 		upd_init(upd, UPDT_BMAP);
 		mds_bmap_write_logrepls(b);
 	} else {
@@ -263,11 +265,11 @@ int
 mds_bmap_write(struct bmapc_memb *b, int update_mtime, void *logf,
     void *logarg)
 {
+	struct fidc_membh *f;
 	struct iovec iovs[2];
 	uint64_t crc;
 	int rc, new;
 	size_t nb;
-	struct fidc_membh *fcmh;
 	int vfsid;
 
 	BMAPOD_REQRDLOCK(bmap_2_bmi(b));
@@ -282,8 +284,8 @@ mds_bmap_write(struct bmapc_memb *b, int update_mtime, void *logf,
 
 	if (logf)
 		mds_reserve_slot(1);
-	fcmh = b->bcm_fcmh;
-	mdsio_fid_to_vfsid(fcmh_2_fid(fcmh), &vfsid);
+	f = b->bcm_fcmh;
+	mdsio_fid_to_vfsid(fcmh_2_fid(f), &vfsid);
 	rc = mdsio_pwritev(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
 	    (off_t)BMAP_OD_SZ * b->bcm_bmapno + SL_BMAP_START_OFF,
 	    update_mtime, bmap_2_mdsio_data(b), logf, logarg);
