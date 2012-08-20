@@ -84,7 +84,7 @@ struct fidc_membh {
 #define	FCMH_HAVE_ATTRS		(1 <<  8)	/* has valid stat(2) info */
 #define	FCMH_GETTING_ATTRS	(1 <<  9)	/* fetching stat(2) info */
 #define	FCMH_CTOR_FAILED	(1 << 10)	/* constructor func failed */
-#define	FCMH_NO_BACKFILE	(1 << 11)	/* fcmh does not have a backing file */
+#define	FCMH_NO_BACKFILE	(1 << 11)	/* fcmh does not have a backing file (sliod) */
 #define	FCMH_BUSY		(1 << 12)	/* fcmh being processed */
 #define	_FCMH_FLGSHFT		(1 << 13)
 
@@ -196,7 +196,8 @@ struct fidc_membh {
 
 #define DEBUG_FCMH(level, f, fmt, ...)					\
 	psclogs((level), SLSS_FCMH,					\
-	    "fcmh@%p f+g="SLPRI_FG" flg=%#x:%s%s%s%s%s%s%s%s%s%s%s%s "	\
+	    "fcmh@%p f+g="SLPRI_FG" "					\
+	    "flg=%#x:%s%s%s%s%s%s%s%s%s%s%s%s%s%s "			\
 	    "ref=%d sz=%"PRId64" "DEBUG_FCMH_BLKSIZE_LABEL"=%"PRId64" "	\
 	    "mode=%#o : "fmt,						\
 	    (f), SLPRI_FG_ARGS(&(f)->fcmh_fg), (f)->fcmh_flags,		\
@@ -207,10 +208,12 @@ struct fidc_membh {
 	    (f)->fcmh_flags & FCMH_CAC_WAITING		? "W" : "",	\
 	    (f)->fcmh_flags & FCMH_CAC_TOFREE		? "T" : "",	\
 	    (f)->fcmh_flags & FCMH_CAC_REAPED		? "R" : "",	\
+	    (f)->fcmh_flags & FCMH_CAC_RLSBMAP		? "L" : "",	\
 	    (f)->fcmh_flags & FCMH_HAVE_ATTRS		? "A" : "",	\
 	    (f)->fcmh_flags & FCMH_GETTING_ATTRS	? "G" : "",	\
 	    (f)->fcmh_flags & FCMH_CTOR_FAILED		? "f" : "",	\
 	    (f)->fcmh_flags & FCMH_NO_BACKFILE		? "N" : "",	\
+	    (f)->fcmh_flags & FCMH_BUSY			? "S" : "",	\
 	    (f)->fcmh_flags & ~(_FCMH_FLGSHFT - 1)	? "+" : "",	\
 	    (f)->fcmh_refcnt, fcmh_2_fsz(f), (f)->fcmh_sstb.sst_blksize,\
 	    (f)->fcmh_sstb.sst_mode, ## __VA_ARGS__)
@@ -222,7 +225,7 @@ enum fcmh_opcnt_types {
 /* 2 */	FCMH_OPCNT_LOOKUP_FIDC,		/* fidc_lookup() */
 /* 3 */	FCMH_OPCNT_NEW,
 /* 4 */	FCMH_OPCNT_OPEN,		/* mount_slash pscfs file info */
-/* 5 */	FCMH_OPCNT_WAIT,
+/* 5 */	FCMH_OPCNT_WAIT,		/* dup ref during initialization */
 /* 6 */	FCMH_OPCNT_WORKER,		/* MDS worker */
 /* 7 */	FCMH_OPCNT_DIRTY_QUEUE
 };

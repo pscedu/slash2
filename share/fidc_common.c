@@ -592,7 +592,6 @@ dump_fidcache(void)
 void
 _dump_fcmh_flags_common(int *flags, int *seq)
 {
-	PFL_PRFLAG(FCMH_CAC_FREE, flags, seq);
 	PFL_PRFLAG(FCMH_CAC_IDLE, flags, seq);
 	PFL_PRFLAG(FCMH_CAC_BUSY, flags, seq);
 	PFL_PRFLAG(FCMH_CAC_INITING, flags, seq);
