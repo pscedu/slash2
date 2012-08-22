@@ -34,6 +34,39 @@
 #include "sltypes.h"
 #include "slutil.h"
 
+int
+iod_inode_getinfo(struct slash_fidgen *fg, uint64_t *size,
+    uint64_t *nblks, uint32_t *utimgen)
+{
+	struct fidc_membh *f;
+	struct stat stb;
+
+	f = fidc_lookup_fg(fg);
+	psc_assert(f);
+
+	if (fstat(fcmh_2_fd(f), &stb) == -1)
+		return (-errno);
+
+	*size = stb.st_size;
+	*nblks = stb.st_blocks;
+
+	FCMH_LOCK(f);
+	*utimgen = f->fcmh_sstb.sst_utimgen;
+	fcmh_op_done(f);
+	return (0);
+}
+
+struct fidc_membh *
+iod_inode_lookup(const struct slash_fidgen *fg)
+{
+	struct fidc_membh *f;
+	int rc;
+
+	rc = fidc_lookup(fg, FIDC_LOOKUP_CREATE, NULL, 0, &f);
+	psc_assert(rc == 0);
+	return (f);
+}
+
 /**
  * sli_fid_makepath - Build the pathname in the FID object root that
  *	corresponds to a FID, allowing easily lookup of file metadata

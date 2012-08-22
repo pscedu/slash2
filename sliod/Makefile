@@ -16,7 +16,6 @@ SRCS+=		rii.c
 SRCS+=		rim.c
 SRCS+=		rmi.c
 SRCS+=		rpc_iod.c
-SRCS+=		sliod_int.c
 SRCS+=		slvr.c
 SRCS+=		slvr_worker.c
 SRCS+=		${SLASH_BASE}/share/adler32.c
