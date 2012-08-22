@@ -330,7 +330,7 @@ API rename
 - use uint32_t for nanosecond atime/mtime/ctime in znode_phys to save space
 - 'slmctl stop' should completely wait for all ops to prevent relying on journal
 - upsch will not scale without multiwait waker arg
-- ensure user mounting works
+- ensure user mode mounting works
 - add provisions to ensure journal disk doesnt overwrite something special
   (superblock check)
 
@@ -380,8 +380,7 @@ reimport
 - msctl -r is broken on some files in /arc, figure out what is
   going on
 - convert MDS rcmc.c to async RPCs
-- add du(1) functionality in dumpfid
-    - requires import of zfs-fuse-0.7.0
+- add du(1) functionality in dumpfid via extattr
 - optimize READLINK for small RPCs to avoid bulk
 - fix slmctl -ss missing sliod bug
 - add slmctl -ss fstypes (use statfs(2) on fbsd/linux and f_type)
@@ -393,7 +392,7 @@ reimport
 - optimization: only write changes to brepls in delrq/addrq when changes
   are actually made
 
-   fix round robin among senses when open(O_TRUNC)
+   fix round robin among senses when open(O_TRUNC) -- prefer old IOS
    fix ios_nblks[idx] accounting on open(O_TRUNC)
    advise upsch.db on SSD
 
