@@ -199,7 +199,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (((mq->offset + (mq->size-1)) / SLASH_SLVR_SIZE) > slvrno)
 		nslvrs++;
 
-	/* This loop assumes that nslvrs is always no larger than RIC_MAX_SLVRS_PER_IO.  
+	/*
+	 * This loop assumes that nslvrs is always no larger than
+	 * RIC_MAX_SLVRS_PER_IO.
+	 *
 	 * Note that once i > 0, roff is always 0.
 	 */
 	roff = mq->offset - slvrno * SLASH_SLVR_SIZE;

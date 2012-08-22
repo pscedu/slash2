@@ -27,14 +27,16 @@
 #include "rpc_cli.h"
 #include "slashrpc.h"
 
-#define RCI_AIO_READ_WAIT 1000000
-#define CAR_LOOKUP_MAX 1000
 /*
  * Routines for handling RPC requests for CLI from ION.
  */
 
+#define RCI_AIO_READ_WAIT 1000000
+#define CAR_LOOKUP_MAX 1000
+
 /**
- * slc_rci_handle_io - Handle a READ or WRITE completion for CLI from ION.
+ * slc_rci_handle_io - Handle a READ or WRITE completion for CLI from
+ *	ION.
  * @rq: request.
  */
 int
@@ -69,14 +71,16 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 
 		if (!found) {
 			struct timespec ts = { 0, RCI_AIO_READ_WAIT };
+
 			/*
-			 * The AIO RPC from the sliod beat our fs thread.
-			 *   Give our thread a chance to put the 'car' onto
-			 *   the list.  No RPC is involved, this wait should
-			 *   only require a few ms at the most.
+			 * The AIO RPC from the sliod beat our fs
+			 * thread.  Give our thread a chance to put the
+			 * 'car' onto the list.  No RPC is involved,
+			 * this wait should only require a few ms at the
+			 * most.
 			 */
-			psc_waitq_waitrel(&lc->plc_wq_empty, &lc->plc_lock, 
-			    &ts);
+			psc_waitq_waitrel(&lc->plc_wq_empty,
+			    &lc->plc_lock, &ts);
 		} else {
 			LIST_CACHE_ULOCK(lc);
 		}
@@ -89,8 +93,8 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		mp->rc = -ENOENT;
 		goto out;
 	}
-	
-	psclog_info("car=%p car_id=%"PRIx64" q=%p", car, car->car_id, 
+
+	psclog_info("car=%p car_id=%"PRIx64" q=%p", car, car->car_id,
 	    car->car_fsrqinfo);
 
 	if (car->car_cbf == msl_read_cb) {
@@ -106,7 +110,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		DYNARRAY_FOREACH (e, i, a) {
 			if (!mq->rc) {
 				iovs[i].iov_base = e->bmpce_base;
-				iovs[i].iov_len = BMPC_BUFSZ;		
+				iovs[i].iov_len = BMPC_BUFSZ;
 
 			} else {
 				e->bmpce_flags |= BMPCE_EIO;
@@ -119,7 +123,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 
 	} else if (car->car_cbf == msl_readahead_cb) {
 		struct bmap_pagecache_entry *e, **bmpces =
-			car->car_argv.pointer_arg[MSL_CBARG_BMPCE];
+		    car->car_argv.pointer_arg[MSL_CBARG_BMPCE];
 		struct iovec *iovs = NULL;
 		int i;
 
@@ -129,7 +133,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 				break;
 
 			iovs = PSC_REALLOC(iovs,
-				   sizeof(struct iovec) * (i + 1));
+			    sizeof(struct iovec) * (i + 1));
 
 			iovs[i].iov_base = e->bmpce_base;
 			iovs[i].iov_len = BMPC_BUFSZ;
@@ -149,8 +153,8 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 			goto out;
 
 		if (mq->op == SRMIOP_RD) {
-			struct bmpc_ioreq *r = 
-				car->car_argv.pointer_arg[MSL_CBARG_BIORQ];
+			struct bmpc_ioreq *r =
+			    car->car_argv.pointer_arg[MSL_CBARG_BIORQ];
 
 			iov.iov_base = r->biorq_buf;
 			iov.iov_len = car->car_len;
@@ -159,11 +163,11 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 			    SRCI_BULK_PORTAL, &iov, 1);
 		} else {
 			MFH_LOCK(car->car_fsrqinfo->mfsrq_fh);
-			msl_fsrqinfo_state(car->car_fsrqinfo, MFSRQ_AIOWAIT,
-			    -1, 0);
+			msl_fsrqinfo_state(car->car_fsrqinfo,
+			    MFSRQ_AIOWAIT, -1, 0);
 			msl_fsrqinfo_aioreadyset(car->car_fsrqinfo);
 			MFH_ULOCK(car->car_fsrqinfo->mfsrq_fh);
-			
+
 			car->car_cbf = NULL;
 		}
 
@@ -178,8 +182,8 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 	if (car->car_cbf)
 		car->car_cbf(rq, mq->rc, &car->car_argv);
 
-	psclog_info("return car=%p car_id=%"PRIx64" q=%p", car, car->car_id, 
-	    car->car_fsrqinfo);
+	psclog_info("return car=%p car_id=%"PRIx64" q=%p", car,
+	    car->car_id, car->car_fsrqinfo);
 
 	psc_pool_return(slc_async_req_pool, car);
 
