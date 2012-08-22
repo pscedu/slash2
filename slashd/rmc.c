@@ -735,7 +735,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	 */
 	if (mq->fg.fg_fid == SLFID_ROOT)
 		slm_rmc_handle_readdir_roots(&iov[0], &iov[1], nents);
-#if 1
+#if 0
 	{
 		/* debugging only */
 		unsigned int i;
