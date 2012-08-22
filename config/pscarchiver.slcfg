@@ -85,7 +85,7 @@ site @PSCARCH {
 		desc	= "PSC lustre scratch filesystem";
 		type	= parallel_lfs;
 		id	= 0x10;
-		ios     = firehose1@PSCARCH, firehose2@PSCARCH,
+		ios	= firehose1@PSCARCH, firehose2@PSCARCH,
 			  firehose3@PSCARCH, firehose4@PSCARCH;
 	}
 
