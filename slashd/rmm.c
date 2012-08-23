@@ -335,7 +335,7 @@ slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
 	    op != SLM_FORWARD_CREATE && op != SLM_FORWARD_UNLINK &&
 	    op != SLM_FORWARD_RENAME && op != SLM_FORWARD_SETATTR &&
 	    op != SLM_FORWARD_SYMLINK)
-		return (ENOSYS);
+		return (-ENOSYS);
 
 	if (mdsio_fid_to_vfsid(fg->fg_fid, &vfsid) < 0)
 		return (EINVAL);
@@ -343,7 +343,7 @@ slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
 	siteid = FID_GET_SITEID(fg->fg_fid);
 	site = libsl_siteid2site(siteid);
 	if (site == NULL)
-		return (EBADF);
+		return (-EBADF);
 
 	SITE_FOREACH_RES(site, res, i) {
 		if (res->res_type != SLREST_MDS)
@@ -354,7 +354,7 @@ slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
 	csvc = slm_getmcsvc_wait(resm);
 	if (csvc == NULL) {
 		psclog_info("unable to connect to site %d", siteid);
-		return (EIO);
+		return (-EIO);
 	}
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_NAMESPACE_FORWARD, rq, mq, mp);
@@ -390,6 +390,7 @@ slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
 		rc = mp->rc;
 	if (!rc && sstb)
 		*sstb = mp->attr;
+
  out:
 	if (rq)
 		pscrpc_req_finished(rq);
