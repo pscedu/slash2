@@ -288,6 +288,7 @@ extern struct psc_hashtbl	 fidcHtable;
 static __inline void *
 fcmh_get_pri(struct fidc_membh *f)
 {
+	psc_assert(f);
 	return (f + 1);
 }
 
@@ -296,6 +297,7 @@ fcmh_from_pri(void *p)
 {
 	struct fidc_membh *f = p;
 
+	psc_assert(f);
 	return (f - 1);
 }
 

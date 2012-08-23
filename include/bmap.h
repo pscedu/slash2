@@ -373,8 +373,8 @@ enum bmap_opcnt_types {
 /*  2 */ BMAP_OPCNT_LEASE,
 /*  3 */ BMAP_OPCNT_MDSLOG,
 /*  4 */ BMAP_OPCNT_BIORQ,
-/*  5 */ BMAP_OPCNT_REPLWK,		/* ION */
-/*  6 */ BMAP_OPCNT_REAPER,		/* Client bmap timeout */
+/*  5 */ BMAP_OPCNT_REPLWK,		/* repl work inside ION */
+/*  6 */ BMAP_OPCNT_REAPER,		/* client bmap timeout */
 /*  7 */ BMAP_OPCNT_SLVR,
 /*  8 */ BMAP_OPCNT_BCRSCHED,
 /*  9 */ BMAP_OPCNT_RLSSCHED,
@@ -401,12 +401,14 @@ extern struct bmap_ops bmap_ops;
 static __inline void *
 bmap_get_pri(struct bmapc_memb *b)
 {
+	psc_assert(b);
 	return (b + 1);
 }
 
 static __inline const void *
 bmap_get_pri_const(const struct bmapc_memb *b)
 {
+	psc_assert(b);
 	return (b + 1);
 }
 
