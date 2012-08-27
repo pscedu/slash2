@@ -123,6 +123,11 @@ struct mdsio_ops {
 	int	(*mio_write)(int, const struct slash_creds *, const void *, size_t, size_t *, off_t, int, void *,
 			sl_log_write_t, void *);
 
+	int	(*mio_listxattr)(int, const struct slash_creds *, void *, size_t, size_t *, mdsio_fid_t);
+	int	(*mio_setxattr)(int, const struct slash_creds *, const char *, const char *, size_t, mdsio_fid_t);
+	int	(*mio_getxattr)(int, const struct slash_creds *, const char *, char *, size_t, size_t *, mdsio_fid_t);
+	int	(*mio_removexattr)(int, const struct slash_creds *, const char *, mdsio_fid_t);
+
 	/* replay interface */
 	int	(*mio_redo_create)(int, slfid_t, char *, struct srt_stat *);
 	int	(*mio_redo_fidlink)(int,slfid_t, const struct slash_creds *);
@@ -133,6 +138,9 @@ struct mdsio_ops {
 	int	(*mio_redo_setattr)(int, slfid_t, uint, struct srt_stat *);
 	int	(*mio_redo_symlink)(int, slfid_t, slfid_t, char *, char *, struct srt_stat *);
 	int	(*mio_redo_unlink)(int, slfid_t, slfid_t, char *);
+
+	int	(*mio_redo_setxattr)(int, slfid_t, const char *, const char *, size_t size);
+	int	(*mio_redo_removexattr)(int, slfid_t, const char *);
 };
 
 #define mdsio_init		mdsio_ops.mio_init			/* zfsslash2_init() */
@@ -164,6 +172,10 @@ struct mdsio_ops {
 #define mdsio_symlink		mdsio_ops.mio_symlink			/* zfsslash2_symlink() */
 #define mdsio_unlink		mdsio_ops.mio_unlink			/* zfsslash2_unlink() */
 #define mdsio_write		mdsio_ops.mio_write			/* zfsslash2_write() */
+#define mdsio_listxattr		mdsio_ops.mio_listxattr			/* zfsslash2_listxattr() */
+#define mdsio_setxattr		mdsio_ops.mio_setxattr			/* zfsslash2_setxattr() */
+#define mdsio_getxattr		mdsio_ops.mio_getxattr			/* zfsslash2_getxattr() */
+#define mdsio_removexattr	mdsio_ops.mio_removexattr		/* zfsslash2_removexattr() */
 
 #define mdsio_redo_create	mdsio_ops.mio_redo_create		/* zfsslash2_replay_create() */
 #define mdsio_redo_fidlink	mdsio_ops.mio_redo_fidlink		/* zfsslash2_replay_fidlink() */
@@ -174,6 +186,8 @@ struct mdsio_ops {
 #define mdsio_redo_setattr	mdsio_ops.mio_redo_setattr		/* zfsslash2_replay_setattr() */
 #define mdsio_redo_symlink	mdsio_ops.mio_redo_symlink		/* zfsslash2_replay_symlink() */
 #define mdsio_redo_unlink	mdsio_ops.mio_redo_unlink		/* zfsslash2_replay_unlink() */
+#define mdsio_redo_setxattr	mdsio_ops.mio_redo_setxattr		/* zfsslash2_replay_setxattr() */
+#define mdsio_redo_removexattr	mdsio_ops.mio_redo_removexattr		/* zfsslash2_replay_removexattr() */
 
 extern struct mdsio_ops	mdsio_ops;
 extern mdsio_fid_t	mds_metadir_inum[];

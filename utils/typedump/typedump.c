@@ -289,6 +289,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_getbmap_full_req);
 	PRTYPE(struct srm_getbmapminseq_rep);
 	PRTYPE(struct srm_getbmapminseq_req);
+	PRTYPE(struct srm_getxattr_rep);
+	PRTYPE(struct srm_getxattr_req);
 	PRTYPE(struct srm_import_rep);
 	PRTYPE(struct srm_import_req);
 	PRTYPE(struct srm_io_rep);
@@ -298,6 +300,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_leasebmapext_rep);
 	PRTYPE(struct srm_leasebmapext_req);
 	PRTYPE(struct srm_link_req);
+	PRTYPE(struct srm_listxattr_rep);
+	PRTYPE(struct srm_listxattr_req);
 	PRTYPE(struct srm_lookup_req);
 	PRTYPE(struct srm_mkdir_req);
 	PRTYPE(struct srm_mknod_req);
@@ -309,6 +313,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_reassignbmap_req);
 	PRTYPE(struct srm_reclaim_rep);
 	PRTYPE(struct srm_reclaim_req);
+	PRTYPE(struct srm_removexattr_rep);
+	PRTYPE(struct srm_removexattr_req);
 	PRTYPE(struct srm_rename_rep);
 	PRTYPE(struct srm_rename_req);
 	PRTYPE(struct srm_repl_read_req);
@@ -319,6 +325,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_set_bmapreplpol_req);
 	PRTYPE(struct srm_set_newreplpol_req);
 	PRTYPE(struct srm_setattr_req);
+	PRTYPE(struct srm_setxattr_rep);
+	PRTYPE(struct srm_setxattr_req);
 	PRTYPE(struct srm_statfs_rep);
 	PRTYPE(struct srm_statfs_req);
 	PRTYPE(struct srm_symlink_req);
@@ -692,8 +700,10 @@ main(int argc, char *argv[])
 	PRVAL(SRMT_GETBMAP);
 	PRVAL(SRMT_GETBMAPCRCS);
 	PRVAL(SRMT_GETBMAPMINSEQ);
+	PRVAL(SRMT_GETXATTR);
 	PRVAL(SRMT_IMPORT);
 	PRVAL(SRMT_LINK);
+	PRVAL(SRMT_LISTXATTR);
 	PRVAL(SRMT_LOOKUP);
 	PRVAL(SRMT_MKDIR);
 	PRVAL(SRMT_MKNOD);
@@ -706,6 +716,7 @@ main(int argc, char *argv[])
 	PRVAL(SRMT_REASSIGNBMAPLS);
 	PRVAL(SRMT_RECLAIM);
 	PRVAL(SRMT_RELEASEBMAP);
+	PRVAL(SRMT_REMOVEXATTR);
 	PRVAL(SRMT_RENAME);
 	PRVAL(SRMT_REPL_ADDRQ);
 	PRVAL(SRMT_REPL_DELRQ);
@@ -716,6 +727,7 @@ main(int argc, char *argv[])
 	PRVAL(SRMT_REPL_SCHEDWK);
 	PRVAL(SRMT_RMDIR);
 	PRVAL(SRMT_SETATTR);
+	PRVAL(SRMT_SETXATTR);
 	PRVAL(SRMT_SET_BMAPREPLPOL);
 	PRVAL(SRMT_SET_NEWREPLPOL);
 	PRVAL(SRMT_STATFS);

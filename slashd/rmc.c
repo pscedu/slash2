@@ -1286,6 +1286,167 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 }
 
 int
+slm_rmc_handle_listxattr(struct pscrpc_request *rq)
+{
+	struct fidc_membh *f = NULL;
+	struct srm_listxattr_req *mq;
+	struct srm_listxattr_rep *mp;
+	size_t outsize;
+	struct iovec iov;
+	int vfsid;
+
+	iov.iov_base = NULL;
+	SL_RSX_ALLOCREP(rq, mq, mp);
+	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid) < 0) {
+		mp->rc = -EINVAL;
+		goto out;
+	}
+	mp->rc = -slm_fcmh_get(&mq->fg, &f);
+	if (mp->rc)
+		goto out;
+
+	if (mq->size) {
+		iov.iov_base = PSCALLOC(mq->size);
+		iov.iov_len = mq->size;
+	}
+
+	/* even a list can create the xaddr directory */
+	mds_reserve_slot(1);
+	mp->rc = mdsio_listxattr(vfsid, &rootcreds, 
+	    iov.iov_base, mq->size, &outsize, fcmh_2_mdsio_fid(f));
+	mds_unreserve_slot(1);
+	if (mp->rc)
+		goto out;
+
+	mp->size = outsize;
+	if (mq->size) {
+		mp->rc = rsx_bulkserver(rq, BULK_PUT_SOURCE,
+		    SRMC_BULK_PORTAL, &iov, 1); 
+	}
+
+ out:
+	if (mq->size)
+		PSCFREE(iov.iov_base);
+	if (f)
+		fcmh_op_done(f);
+	return (mp->rc);
+}
+
+int
+slm_rmc_handle_setxattr(struct pscrpc_request *rq)
+{
+	struct fidc_membh *f = NULL;
+	struct srm_setxattr_req *mq;
+	struct srm_setxattr_rep *mp;
+	char name[SL_NAME_MAX + 1], value[SL_NAME_MAX + 1];
+	int vfsid;
+	struct iovec iov;
+
+	SL_RSX_ALLOCREP(rq, mq, mp);
+	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid) < 0) {
+		mp->rc = -EINVAL;
+		goto out;
+	}
+	if (mq->namelen > SL_NAME_MAX || mq->valuelen > SL_NAME_MAX) {
+		mp->rc = -EINVAL;
+		goto out;
+	}
+		
+	mp->rc = -slm_fcmh_get(&mq->fg, &f);
+	if (mp->rc)
+		goto out;
+
+	memcpy(name, mq->name, mq->namelen);
+	name[mq->namelen] = '\0';
+
+	iov.iov_base = value;
+	iov.iov_len = mq->valuelen;
+	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, SRMC_BULK_PORTAL, &iov, 1);
+	if (mp->rc)
+		return (mp->rc);
+
+	mds_reserve_slot(1);
+	mp->rc = mdsio_setxattr(vfsid, &rootcreds, name, value,
+	    mq->valuelen,  fcmh_2_mdsio_fid(f));
+	mds_unreserve_slot(1);
+
+ out:
+	if (f)
+		fcmh_op_done(f);
+	return (mp->rc);
+}
+
+int
+slm_rmc_handle_getxattr(struct pscrpc_request *rq)
+{
+	struct fidc_membh *f = NULL;
+	struct srm_getxattr_req *mq;
+	struct srm_getxattr_rep *mp;
+	char value[SL_NAME_MAX + 1];
+	struct iovec iov;
+	size_t outsize;
+	int vfsid;
+
+	SL_RSX_ALLOCREP(rq, mq, mp);
+	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid) < 0) {
+		mp->rc = -EINVAL;
+		goto out;
+	}
+	mp->rc = -slm_fcmh_get(&mq->fg, &f);
+	if (mp->rc)
+		goto out;
+
+	mds_reserve_slot(1);
+	mp->rc = mdsio_getxattr(vfsid, &rootcreds, mq->name, value, 
+	    mq->size, &outsize, fcmh_2_mdsio_fid(f));
+	mds_unreserve_slot(1);
+	if (mp->rc)
+		goto out;
+	mp->valuelen = outsize;
+
+	iov.iov_base = value;
+	iov.iov_len = outsize;
+	if (mq->size) {
+		mp->rc = rsx_bulkserver(rq, BULK_PUT_SOURCE,
+		    SRMC_BULK_PORTAL, &iov, 1); 
+	}
+
+ out:
+	if (f)
+		fcmh_op_done(f);
+	return (mp->rc);
+}
+
+int
+slm_rmc_handle_removexattr(struct pscrpc_request *rq)
+{
+	struct fidc_membh *f = NULL;
+	struct srm_removexattr_req *mq;
+	struct srm_removexattr_rep *mp;
+	int vfsid;
+
+	SL_RSX_ALLOCREP(rq, mq, mp);
+	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid) < 0) {
+		mp->rc = -EINVAL;
+		goto out;
+	}
+	mp->rc = -slm_fcmh_get(&mq->fg, &f);
+	if (mp->rc)
+		goto out;
+
+	mq->name[sizeof(mq->name) - 1] = '\0';
+	mds_reserve_slot(1);
+	mp->rc = mdsio_removexattr(vfsid, &rootcreds, mq->name, 
+	    fcmh_2_mdsio_fid(f));
+	mds_unreserve_slot(1);
+
+ out:
+	if (f)
+		fcmh_op_done(f);
+	return (mp->rc);
+}
+
+int
 slm_rmc_handle_addreplrq(struct pscrpc_request *rq)
 {
 	struct srm_replrq_req *mq;
@@ -1426,6 +1587,18 @@ slm_rmc_handler(struct pscrpc_request *rq)
 		break;
 	case SRMT_UNLINK:
 		rc = slm_rmc_handle_unlink(rq, 1);
+		break;
+	case SRMT_LISTXATTR:
+		rc = slm_rmc_handle_listxattr(rq);
+		break;
+	case SRMT_SETXATTR:
+		rc = slm_rmc_handle_setxattr(rq);
+		break;
+	case SRMT_GETXATTR:
+		rc = slm_rmc_handle_getxattr(rq);
+		break;
+	case SRMT_REMOVEXATTR:
+		rc = slm_rmc_handle_removexattr(rq);
 		break;
 	default:
 		psclog_errorx("Unexpected opcode %d",

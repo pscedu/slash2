@@ -192,6 +192,11 @@ struct mdsio_ops mdsio_ops = {
 	zfsslash2_unlink,
 	zfsslash2_write,
 
+	zfsslash2_listxattr,
+	zfsslash2_setxattr,
+	zfsslash2_getxattr,
+	zfsslash2_removexattr,
+
 	zfsslash2_replay_create,
 	zfsslash2_replay_fidlink,
 	zfsslash2_replay_link,
@@ -200,7 +205,10 @@ struct mdsio_ops mdsio_ops = {
 	zfsslash2_replay_rmdir,
 	zfsslash2_replay_setattr,
 	zfsslash2_replay_symlink,
-	zfsslash2_replay_unlink
+	zfsslash2_replay_unlink,
+
+	zfsslash2_replay_setxattr,
+	zfsslash2_replay_removexattr
 };
 
 int

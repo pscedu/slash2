@@ -169,7 +169,11 @@ enum {
 	SRMT_SYMLINK,				/* 40: symlink(2) */
 	SRMT_UNLINK,				/* 41: unlink(2) */
 	SRMT_WRITE,				/* 42: write(2) */
-	SRMT_XCTL,				/* 43: ancillary operation */
+	SRMT_LISTXATTR,
+	SRMT_SETXATTR,
+	SRMT_GETXATTR,
+	SRMT_REMOVEXATTR,
+	SRMT_XCTL,				/* 47: ancillary operation */
 
 	/* import/export */
 	SRMT_IMPORT
@@ -904,6 +908,53 @@ struct srm_unlink_req {
 } __packed;
 
 #define srm_unlink_rep		srm_getattr2_rep
+
+struct srm_listxattr_req {
+	struct slash_fidgen	fg;
+	 int32_t		size;
+	 int32_t		_pad;
+} __packed;
+
+struct srm_listxattr_rep {
+	 int32_t		size;
+	 int32_t		rc;
+} __packed;
+
+struct srm_getxattr_req {
+	struct slash_fidgen	fg;
+	char			name[SL_NAME_MAX + 1];
+	int32_t			namelen;
+	int32_t			size;
+} __packed;
+
+struct srm_getxattr_rep {
+	int32_t			rc;
+	int32_t			valuelen;
+} __packed;
+
+struct srm_setxattr_req {
+	struct slash_fidgen	fg;
+	int32_t			namelen;
+	int32_t			valuelen;
+	char			name[SL_NAME_MAX + 1];
+} __packed;
+
+struct srm_setxattr_rep {
+	 int32_t		rc;
+	 int32_t		_pad;
+} __packed;
+
+struct srm_removexattr_req {
+	struct slash_fidgen	fg;
+	char			name[SL_NAME_MAX + 1];
+	int32_t			namelen;
+	int32_t			_pad;
+} __packed;
+
+struct srm_removexattr_rep {
+	 int32_t		rc;
+	 int32_t		_pad;
+} __packed;
 
 /* ---------------------- BEGIN IMPORT/EXPORT MESSAGES ---------------------- */
 
