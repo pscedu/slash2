@@ -769,7 +769,8 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 		BMAP_ULOCK(b);
 		rc = mds_bmap_ios_assign(bml, prefios);
 	}
-	psc_assert(bmi->bmdsi_wr_ion);
+	if (!rc)
+		psc_assert(bmi->bmdsi_wr_ion);
 
 	BMAP_LOCK(b);
 
