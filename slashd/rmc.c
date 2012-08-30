@@ -953,7 +953,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			to_set |= PSCFS_SETATTRF_MTIME;
 			SL_GETTIMESPEC(&mq->attr.sst_mtim);
 		}
-		if (mq->attr.sst_size == 0) {
+		if (mq->attr.sst_size == 0 || !fcmh_2_fsz(f)) {
 			/*
 			 * Full truncate.  If file size is already zero,
 			 * we must still bump the generation since size
