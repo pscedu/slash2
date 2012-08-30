@@ -2399,6 +2399,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 		iov.iov_base = buf;
 		iov.iov_len = size;
 		rsx_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, &iov, 1);
+		rq->rq_bulk_abortable = 1;
 	}
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
@@ -2518,6 +2519,7 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 		iov.iov_base = buf;
 		iov.iov_len = size;
 		rsx_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, &iov, 1);
+		rq->rq_bulk_abortable = 1;
 	}
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
