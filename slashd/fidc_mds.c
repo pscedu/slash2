@@ -89,9 +89,9 @@ slm_fcmh_ctor(struct fidc_membh *f)
 			&rootcreds, NULL, &fmi->fmi_mdsio_data);
 	} else if (fcmh_isreg(f)) {
 		slash_inode_handle_init(&fmi->fmi_inodeh, f);
-		/* XXX need compiler flag tweak to use O_LARGEFILE */
+		/* We shouldn't need O_LARGEFILE because slash2 metafiles are small */
 		rc = mdsio_opencreate(vfsid, fcmh_2_mdsio_fid(f),
-		    &rootcreds, O_RDWR | 0100000, 0, NULL, NULL, NULL,
+		    &rootcreds, O_RDWR, 0, NULL, NULL, NULL,
 		    &fcmh_2_mdsio_data(f), NULL, NULL, 0);
 		if (rc == 0) {
 			rc = mds_inode_read(&fmi->fmi_inodeh);
