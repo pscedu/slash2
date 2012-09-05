@@ -2363,18 +2363,18 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	    "len=%zd off=%"PSCPRIdOFFT, buf, rc, size, len, off);
 }
 
-__static void
+void
 mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 {
-	struct fidc_membh *c = NULL;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_listxattr_rep *mp = NULL;
 	struct srm_listxattr_req *mq;
+	struct fidc_membh *c = NULL;
 	struct slash_creds cr;
-	int rc;
-	char *buf = NULL;
 	struct iovec iov;
+	char *buf = NULL;
+	int rc;
 
 	msfsthr_ensure();
 
@@ -2386,6 +2386,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 
 	if (size)
 		buf = PSCALLOC(size);
+
  retry:
 	MSL_RMC_NEWREQ(pfr, c, csvc, SRMT_LISTXATTR, rq, mq, mp, rc);
 	if (rc)
@@ -2398,7 +2399,8 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	if (size) {
 		iov.iov_base = buf;
 		iov.iov_len = size;
-		rsx_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, &iov, 1);
+		rsx_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL,
+		    &iov, 1);
 		rq->rq_bulk_abortable = 1;
 	}
 
@@ -2408,6 +2410,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 
 	if (rc == 0)
 		rc = mp->rc;
+
  out:
 	pscfs_reply_listxattr(pfr, buf, mp ? mp->size : 0, rc);
 
@@ -2420,9 +2423,9 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	PSCFREE(buf);
 }
 
-__static void
-mslfsop_setxattr(struct pscfs_req *pfr, const char *name, const void *value,
-	size_t size, pscfs_inum_t inum)
+void
+mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
+    const void *value, size_t size, pscfs_inum_t inum)
 {
 	struct fidc_membh *c = NULL;
 	struct slashrpc_cservice *csvc = NULL;
@@ -2430,8 +2433,8 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name, const void *value,
 	struct srm_setxattr_rep *mp = NULL;
 	struct srm_setxattr_req *mq;
 	struct slash_creds cr;
-	int rc;
 	struct iovec iov;
+	int rc;
 
 	msfsthr_ensure();
 
@@ -2467,6 +2470,7 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name, const void *value,
 
 	if (rc == 0)
 		rc = mp->rc;
+
  out:
 	pscfs_reply_setxattr(pfr, rc);
 
@@ -2479,18 +2483,18 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name, const void *value,
 }
 
 __static void
-mslfsop_getxattr(struct pscfs_req *pfr, const char *name, 
+mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 	size_t size, pscfs_inum_t inum)
 {
-	struct fidc_membh *c = NULL;
 	struct slashrpc_cservice *csvc = NULL;
-	struct pscrpc_request *rq = NULL;
 	struct srm_getxattr_rep *mp = NULL;
 	struct srm_getxattr_req *mq;
+	struct pscrpc_request *rq = NULL;
+	struct fidc_membh *c = NULL;
 	struct slash_creds cr;
-	int rc;
 	struct iovec iov;
 	char *buf = NULL;
+	int rc;
 
 	iov.iov_base = NULL;
 
@@ -2504,6 +2508,7 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 
 	if (size)
 		buf = PSCALLOC(size);
+
  retry:
 	MSL_RMC_NEWREQ(pfr, c, csvc, SRMT_GETXATTR, rq, mq, mp, rc);
 	if (rc)
@@ -2518,7 +2523,8 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 	if (size) {
 		iov.iov_base = buf;
 		iov.iov_len = size;
-		rsx_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, &iov, 1);
+		rsx_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL,
+		    &iov, 1);
 		rq->rq_bulk_abortable = 1;
 	}
 
@@ -2528,8 +2534,12 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 
 	if (rc == 0)
 		rc = mp->rc;
+
  out:
-	/* If MDS does not support this, we return no attributes successfully */
+	/*
+	 * If MDS does not support this, we return no attributes
+	 * successfully.
+	 */
 	if (rc == -ENOSYS)
 		rc = 0;
 	pscfs_reply_getxattr(pfr, buf, mp ? mp->valuelen : 0, rc);
@@ -2544,14 +2554,15 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 	PSCFREE(buf);
 }
 
-__static void
-mslfsop_removexattr(struct pscfs_req *pfr, const char *name, pscfs_inum_t inum)
+void
+mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
+    pscfs_inum_t inum)
 {
-	struct fidc_membh *c = NULL;
 	struct slashrpc_cservice *csvc = NULL;
-	struct pscrpc_request *rq = NULL;
 	struct srm_removexattr_rep *mp = NULL;
 	struct srm_removexattr_req *mq;
+	struct pscrpc_request *rq = NULL;
+	struct fidc_membh *c = NULL;
 	struct slash_creds cr;
 	int rc;
 
@@ -2562,6 +2573,7 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name, pscfs_inum_t inum)
 	rc = msl_load_fcmh(pfr, inum, &c);
 	if (rc)
 		goto out;
+
  retry:
 	MSL_RMC_NEWREQ(pfr, c, csvc, SRMT_REMOVEXATTR, rq, mq, mp, rc);
 	if (rc)
@@ -2578,6 +2590,7 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name, pscfs_inum_t inum)
 
 	if (rc == 0)
 		rc = mp->rc;
+
  out:
 	pscfs_reply_removexattr(pfr, rc);
 
@@ -2600,7 +2613,8 @@ mslfsop_flush_attr(struct fidc_membh *f)
 
 	rq = NULL;
 	csvc = NULL;
-	MSL_RMC_NEWREQ_PFCC(NULL, f, csvc, SRMT_SETATTR, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ_PFCC(NULL, f, csvc, SRMT_SETATTR, rq, mq, mp,
+	    rc);
 	if (rc)
 		return (rc);
 
