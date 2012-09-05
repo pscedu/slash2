@@ -2689,13 +2689,15 @@ msattrflushthr_main(__unusedx struct psc_thread *thr)
 			FCMH_LOCK(f);
 			if (rc) {
 				f->fcmh_flags |= FCMH_CLI_DIRTY_ATTRS;
+				FCMH_UNBUSY(f);
 			} else if (!(f->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
 				psc_assert(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
 				f->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
 				lc_remove(&attrTimeoutQ, fci);
+				FCMH_UNBUSY(f);
 				fcmh_op_done_type(f, FCMH_OPCNT_DIRTY_QUEUE);
-			}
-			FCMH_UNBUSY(f);
+			} else
+				FCMH_UNBUSY(f);
 
 			did_work = 1;
 			break;
