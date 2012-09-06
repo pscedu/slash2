@@ -222,7 +222,8 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *e,
 			/* Last ref on an EIO page so remove it.
 			 */
 			if (e->bmpce_flags & BMPCE_EIO) {
-				DEBUG_BMPCE(PLL_WARN, e, "freeing EIO");
+				DEBUG_BMPCE(PLL_DIAG, e,
+				    "freeing bmpce marked EIO");
 
 				if (e->bmpce_flags & BMPCE_READPNDG) {
 					e->bmpce_flags &= ~BMPCE_READPNDG;
