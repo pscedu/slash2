@@ -80,8 +80,8 @@ mdsio_fid_to_vfsid(slfid_t fid, int *vfsid)
 int
 mdsio_fcmh_refreshattr(struct fidc_membh *f, struct srt_stat *out_sstb)
 {
-	pthread_t pthr;
 	int locked, rc, vfsid;
+	pthread_t pthr;
 
 	pthr = pthread_self();
 	locked = FCMH_RLOCK(f);
