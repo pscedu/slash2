@@ -1722,7 +1722,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	if (rc == 0)
 		rc = mp->rc;
 
-	psclog_info("opfid="SLPRI_FID" npfid="SLPRI_FID" from='%s' "
+	psclog_diag("opfid="SLPRI_FID" npfid="SLPRI_FID" from='%s' "
 	    "to='%s' rc=%d", opinum, npinum, oldname, newname, rc);
 
 	if (rc)
@@ -1742,8 +1742,8 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 
 	if (srcfg.fg_fid == FID_ANY) {
 		/* XXX race */
-		rc = msl_lookup_fidcache(pfr, &cr, npinum,
-		    newname, &srcfg, &srcsstb, &child);
+		rc = msl_lookup_fidcache(pfr, &cr, npinum, newname,
+		    &srcfg, &srcsstb, &child);
 		if (rc)
 			goto out;
 	}
