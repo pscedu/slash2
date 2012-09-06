@@ -100,7 +100,7 @@ static int msl_lookup_fidcache(struct pscfs_req *,
     const struct slash_creds *, pscfs_inum_t, const char *,
     struct slash_fidgen *, struct srt_stat *, struct fidc_membh **);
 
-static int mslfsop_flush_attr(struct fidc_membh *);
+static int msl_flush_attr(struct fidc_membh *);
 
 sl_ios_id_t			 prefIOS = IOS_ID_ANY;
 const char			*progname;
@@ -205,7 +205,7 @@ mslfs_getcreds(struct pscfs_req *pfr, struct slash_creds *cr)
 	cr->scr_gid = pfc.pfc_gid;
 }
 
-__static void
+void
 mslfsop_access(struct pscfs_req *pfr, pscfs_inum_t inum, int mask)
 {
 	struct slash_creds creds;
@@ -280,7 +280,7 @@ _msl_progallowed(struct pscfs_req *pfr)
 	return (0);
 }
 
-__static void
+void
 mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name, int oflags, mode_t mode)
 {
@@ -522,7 +522,7 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	return (rc);
 }
 
-__static void
+void
 mslfsop_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags)
 {
 	struct msl_fhent *mfh;
@@ -533,7 +533,7 @@ mslfsop_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags)
 	pscfs_reply_open(pfr, mfh, rflags, rc);
 }
 
-__static void
+void
 mslfsop_opendir(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags)
 {
 	struct msl_fhent *mfh;
@@ -628,7 +628,7 @@ msl_stat(struct fidc_membh *f, void *arg)
 	return (rc);
 }
 
-__static void
+void
 mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 {
 	struct slash_creds creds;
@@ -668,7 +668,7 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 	pscfs_reply_getattr(pfr, &stb, pscfs_attr_timeout, rc);
 }
 
-__static void
+void
 mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
     pscfs_inum_t p_inum, const char *newname)
 {
@@ -757,7 +757,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 		sl_csvc_decref(csvc);
 }
 
-__static void
+void
 mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name, mode_t mode)
 {
@@ -941,21 +941,21 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	return (rc);
 }
 
-__static void
+void
 mslfsop_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name)
 {
 	pscfs_reply_unlink(pfr, msl_delete(pfr, pinum, name, 1));
 }
 
-__static void
+void
 mslfsop_rmdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name)
 {
 	pscfs_reply_unlink(pfr, msl_delete(pfr, pinum, name, 0));
 }
 
-__static void
+void
 mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name, mode_t mode, dev_t rdev)
 {
@@ -1042,7 +1042,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		sl_csvc_decref(csvc);
 }
 
-__static void
+void
 mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
     void *data)
 {
@@ -1357,7 +1357,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	return (rc);
 }
 
-__static void
+void
 mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name)
 {
@@ -1381,7 +1381,7 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	    pscfs_entry_timeout, &stb, pscfs_attr_timeout, rc);
 }
 
-__static void
+void
 mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 {
 	struct slashrpc_cservice *csvc = NULL;
@@ -1475,7 +1475,7 @@ msl_flush_int_locked(struct msl_fhent *mfh)
 	return (0);
 }
 
-__static void
+void
 mslfsop_flush(struct pscfs_req *pfr, void *data)
 {
 	struct msl_fhent *mfh = data;
@@ -1492,14 +1492,14 @@ mslfsop_flush(struct pscfs_req *pfr, void *data)
 	pscfs_reply_flush(pfr, rc);
 }
 
-__static void
+void
 mslfsop_close(struct pscfs_req *pfr, void *data)
 {
 	struct msl_fhent *mfh = data;
-	struct fidc_membh *c;
-	pid_t sid;
-	int rc, flush_attrs = 0;
 	struct fcmh_cli_info *fci;
+	struct fidc_membh *c;
+	int rc, flush_attrs = 0;
+	pid_t sid;
 
 	msfsthr_ensure();
 
@@ -1536,7 +1536,7 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 
 	fci = fcmh_2_fci(c);
 	if (flush_attrs) {
-		rc = mslfsop_flush_attr(c);
+		rc = msl_flush_attr(c);
 		FCMH_LOCK(c);
 		fcmh_wake_locked(c);
 		if (rc) {
@@ -1576,7 +1576,7 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 	PSCFREE(mfh);
 }
 
-__static void
+void
 mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
     const char *oldname, pscfs_inum_t npinum, const char *newname)
 {
@@ -1769,7 +1769,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		sl_csvc_decref(csvc);
 }
 
-__static void
+void
 mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 {
 	struct slashrpc_cservice *csvc = NULL;
@@ -1816,7 +1816,7 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 		sl_csvc_decref(csvc);
 }
 
-__static void
+void
 mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
     pscfs_inum_t pinum, const char *name)
 {
@@ -1914,7 +1914,7 @@ msl_dc_inv_entry(struct dircache_desc *d, void *arg)
 	    mdie->mdie_pinum, d->dd_name, d->dd_namelen);
 }
 
-__static void
+void
 mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
     struct stat *stb, int to_set, void *data)
 {
@@ -2212,7 +2212,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		sl_csvc_decref(csvc);
 }
 
-__static void
+void
 mslfsop_fsync(struct pscfs_req *pfr, __unusedx int datasync, void *data)
 {
 	struct msl_fhent *mfh;
@@ -2228,7 +2228,7 @@ mslfsop_fsync(struct pscfs_req *pfr, __unusedx int datasync, void *data)
 	pscfs_reply_fsync(pfr, 0);
 }
 
-__static void
+void
 mslfsop_umount(void)
 {
 //	unmount_mp();
@@ -2265,9 +2265,8 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 	msfsthr(pscthr_get())->mft_failcnt = 1;
 	rc = msl_write(pfr, mfh, buf, size, off);
 	if (rc < 0) {
-		if (rc == -SLERR_AIOWAIT) {
+		if (rc == -SLERR_AIOWAIT)
 			return;
-		}
 		rc = -rc;
 		goto out;
 	}
@@ -2332,7 +2331,7 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	    "len=%zd off=%"PSCPRIdOFFT, buf, rc, size, len, off);
 
 	if (fcmh_isdir(f)) {
-//		psc_fatalx("pscfs gave us a directory");
+//		psclog_errorx("regular file is a directory");
 		rc = EISDIR;
 		goto out;
 	}
@@ -2482,7 +2481,7 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 		sl_csvc_decref(csvc);
 }
 
-__static void
+void
 mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 	size_t size, pscfs_inum_t inum)
 {
@@ -2602,8 +2601,8 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 		sl_csvc_decref(csvc);
 }
 
-static int
-mslfsop_flush_attr(struct fidc_membh *f)
+__static int
+msl_flush_attr(struct fidc_membh *f)
 {
 	struct slashrpc_cservice *csvc;
 	struct srm_setattr_req *mq;
@@ -2684,7 +2683,7 @@ msattrflushthr_main(__unusedx struct psc_thread *thr)
 
 			freelock(&attrTimeoutQLock);
 
-			rc = mslfsop_flush_attr(f);
+			rc = msl_flush_attr(f);
 
 			FCMH_LOCK(f);
 			if (rc) {
