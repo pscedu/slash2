@@ -844,7 +844,7 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	if (FID_GET_SITEID(mq->opfg.fg_fid) !=
 	    FID_GET_SITEID(mq->npfg.fg_fid)) {
 		mp->rc = -EXDEV;
-		goto out;
+		return (mp->rc);
 	}
 
 	if (mq->fromlen + mq->tolen > SRM_RENAME_NAMEMAX) {
