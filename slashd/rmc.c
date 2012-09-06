@@ -579,7 +579,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	mp->rc = mdsio_opencreate(vfsid, fcmh_2_mdsio_fid(p), &mq->creds,
 	    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->name, NULL,
 	    &mp->cattr, &mdsio_data, fid ? NULL : mdslog_namespace,
-	    fid ? 0: slm_get_next_slashfid, fid);
+	    fid ? 0 : slm_get_next_slashfid, fid);
 	mds_unreserve_slot(1);
 
 	if (mp->rc)
@@ -1187,7 +1187,7 @@ slm_symlink(struct pscrpc_request *rq, struct srm_symlink_req *mq,
 	cr.scr_gid = mq->sstb.sst_gid;
 
 	if (IS_REMOTE_FID(mq->pfg.fg_fid)) {
-		mp->rc = slm_rmm_forward_namespace( SLM_FORWARD_SYMLINK,
+		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_SYMLINK,
 		    &mq->pfg, NULL, mq->name, linkname, 0, &cr,
 		    &mp->cattr, 0);
 		if (mp->rc)
@@ -1202,7 +1202,7 @@ slm_symlink(struct pscrpc_request *rq, struct srm_symlink_req *mq,
 	mds_reserve_slot(1);
 	mp->rc = mdsio_symlink(vfsid, linkname, fcmh_2_mdsio_fid(p),
 	    mq->name, &cr, &mp->cattr, NULL, fid ? NULL :
-	    mdslog_namespace, fid ? 0: slm_get_next_slashfid, fid);
+	    mdslog_namespace, fid ? 0 : slm_get_next_slashfid, fid);
 	mds_unreserve_slot(1);
 
 	mdsio_fcmh_refreshattr(p, &mp->pattr);
@@ -1313,19 +1313,20 @@ slm_rmc_handle_listxattr(struct pscrpc_request *rq)
 
 	/* even a list can create the xaddr directory */
 	mds_reserve_slot(1);
-	mp->rc = mdsio_listxattr(vfsid, &rootcreds, 
+	mp->rc = mdsio_listxattr(vfsid, &rootcreds,
 	    iov.iov_base, mq->size, &outsize, fcmh_2_mdsio_fid(f));
 	mds_unreserve_slot(1);
 	if (mp->rc) {
-		if (mq->size) 
-			pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
+		if (mq->size)
+			pscrpc_msg_add_flags(rq->rq_repmsg,
+			    MSG_ABORT_BULK);
 		goto out;
 	}
 
 	mp->size = outsize;
 	if (mq->size) {
 		mp->rc = rsx_bulkserver(rq, BULK_PUT_SOURCE,
-		    SRMC_BULK_PORTAL, &iov, 1); 
+		    SRMC_BULK_PORTAL, &iov, 1);
 	}
 
  out:
@@ -1351,11 +1352,12 @@ slm_rmc_handle_setxattr(struct pscrpc_request *rq)
 		mp->rc = -EINVAL;
 		goto out;
 	}
-	if (mq->namelen > SL_NAME_MAX || mq->valuelen > SL_NAME_MAX) {
+	if (mq->namelen  > SL_NAME_MAX ||
+	    mq->valuelen > SL_NAME_MAX) {
 		mp->rc = -EINVAL;
 		goto out;
 	}
-		
+
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
 		goto out;
@@ -1365,7 +1367,8 @@ slm_rmc_handle_setxattr(struct pscrpc_request *rq)
 
 	iov.iov_base = value;
 	iov.iov_len = mq->valuelen;
-	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, SRMC_BULK_PORTAL, &iov, 1);
+	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, SRMC_BULK_PORTAL,
+	    &iov, 1);
 	if (mp->rc)
 		goto out;
 
@@ -1402,15 +1405,16 @@ slm_rmc_handle_getxattr(struct pscrpc_request *rq)
 
 	mp->valuelen = 0;
 	mds_reserve_slot(1);
-	mp->rc = mdsio_getxattr(vfsid, &rootcreds, mq->name, value, 
+	mp->rc = mdsio_getxattr(vfsid, &rootcreds, mq->name, value,
 	    mq->size, &outsize, fcmh_2_mdsio_fid(f));
 	mds_unreserve_slot(1);
 	if (mp->rc) {
 		/* XXX compiler tweak ENOATTR */
 		if (mp->rc == 5001)
 			mp->rc = 0;
-		if (mq->size) 
-			pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
+		if (mq->size)
+			pscrpc_msg_add_flags(rq->rq_repmsg,
+			    MSG_ABORT_BULK);
 		goto out;
 	}
 	mp->valuelen = outsize;
@@ -1419,7 +1423,7 @@ slm_rmc_handle_getxattr(struct pscrpc_request *rq)
 	iov.iov_len = outsize;
 	if (mq->size) {
 		mp->rc = rsx_bulkserver(rq, BULK_PUT_SOURCE,
-		    SRMC_BULK_PORTAL, &iov, 1); 
+		    SRMC_BULK_PORTAL, &iov, 1);
 	}
 
  out:
@@ -1447,7 +1451,7 @@ slm_rmc_handle_removexattr(struct pscrpc_request *rq)
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mds_reserve_slot(1);
-	mp->rc = mdsio_removexattr(vfsid, &rootcreds, mq->name, 
+	mp->rc = mdsio_removexattr(vfsid, &rootcreds, mq->name,
 	    fcmh_2_mdsio_fid(f));
 	mds_unreserve_slot(1);
 
