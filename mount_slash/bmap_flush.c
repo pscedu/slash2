@@ -1033,8 +1033,8 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				sawnew++;
 				if (sawnew == ITEMS_TRY_AFTER_UNEXPIRED)
 					break;
-				else
-					continue;
+
+				continue;
 
 			} else if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
 				int expired = 0;
@@ -1043,11 +1043,12 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 					expired = 1;
 
 				BMAP_ULOCK(b);
-				DEBUG_BMAP(expired ? PLL_WARN : PLL_NOTICE, b,
-				   "skip due to ref (expired=%d)", expired);
-				/* Put me back on the end of the queue.
-				 */
+				DEBUG_BMAP(expired ?
+				    PLL_DIAG : PLL_DEBUG, b,
+				    "skip due to ref (expired=%d)",
+				    expired);
 
+				/* Put back on the end of the queue. */
 				lc_addtail(&bmapTimeoutQ, bci);
 				continue;
 			}
