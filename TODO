@@ -387,7 +387,8 @@ reimport
 - merge fuse 2.9.1
 - make macro version of accessors for speed (e.g. bmap_2_bmi())
   inline are for debugging/gdb
-- in RPC layer, add a EINVAL -> SLERR_INVAL checker/portability translation layer
+- in RPC layer, add a syserrno -> PFLERR_* checker/portability
+  translation layer
 
 - optimization: only write changes to brepls in delrq/addrq when changes
   are actually made
