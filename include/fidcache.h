@@ -279,7 +279,7 @@ void	_fcmh_op_done_type(const struct pfl_callerinfo *, struct fidc_membh *, enum
 
 #define fcmh_op_done(f)		fcmh_op_done_type((f), FCMH_OPCNT_LOOKUP_FIDC)
 
-void	 _dump_fcmh_flags_common(int *, int *);
+void	_dump_fcmh_flags_common(int *, int *);
 
 extern struct sl_fcmh_ops	 sl_fcmh_ops;
 extern struct psc_poolmgr	*fidcPool;
