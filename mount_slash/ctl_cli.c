@@ -503,6 +503,7 @@ msctlthr_spawn(void)
 	psc_ctlparam_register("log.level", psc_ctlparam_log_level);
 	psc_ctlparam_register("pause", psc_ctlparam_pause);
 	psc_ctlparam_register("pool", psc_ctlparam_pool);
+	psc_ctlparam_register("opstat", psc_ctlparam_opstat);
 	psc_ctlparam_register("rlim", psc_ctlparam_rlim);
 	psc_ctlparam_register("run", psc_ctlparam_run);
 
