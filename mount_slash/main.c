@@ -1748,8 +1748,16 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 
 	fcmh_setattr_locked(op, &mp->srr_opattr);
 	FCMH_ULOCK(op);
+
+	FCMH_LOCK(np);
+	if (DIRCACHE_INITIALIZED(np))
+		dircache_lookup(fcmh_2_dci(np), newname, DC_STALE);
+	else
+		slc_fcmh_initdci(np);
+
 	if (np != op)
-		fcmh_setattr(np, &mp->srr_npattr);
+		fcmh_setattr_locked(np, &mp->srr_npattr);
+	FCMH_ULOCK(np);
 
 	if (srcfg.fg_fid == FID_ANY) {
 		/* XXX race */
