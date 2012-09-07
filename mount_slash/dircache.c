@@ -193,7 +193,7 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 
 				found = 1;
 			}
-			
+
 			psclog_dbg("fid="SLPRI_FID" off=%"PRId64" nlen=%u "
 			   "type=%#o dname=%.*s lookupname=%s off=%d d=%p "
 			   "found=%d",
@@ -315,7 +315,7 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 	psc_assert(!e->de_desc);
 
 	PFL_GETTIMEVAL(&e->de_age);
-	e->de_age.tv_sec += dirent_timeo;
+	e->de_age.tv_sec += DIRENT_TIMEO;
 	e->de_remlookup = nents - 2; /* subtract "." and ".." */
 	e->de_flags = 0; /* remain '0' until readdir req has completed */
 
@@ -333,7 +333,7 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 		    dirent->pfd_namelen, dirent->pfd_name, dirent, off);
 
 		c->dd_namelen	= dirent->pfd_namelen;
-		c->dd_hash	= psc_strn_hashify(dirent->pfd_name, 
+		c->dd_hash	= psc_strn_hashify(dirent->pfd_name,
 					   dirent->pfd_namelen);
 		c->dd_flags	= 0;
 		c->dd_offset	= off;

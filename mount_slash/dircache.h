@@ -51,7 +51,7 @@
  * each individual files.
  */
 
-#define dirent_timeo 4
+#define DIRENT_TIMEO 4
 
 struct fidc_membh;
 
@@ -110,8 +110,8 @@ struct dircache_desc {
 };
 
 /* dd_flags */
-#define DC_STALE		(1 << 0)	/* Set on rename or unlink */
-#define	DC_LOOKUP		(1 << 1)	/* Item was accessed via lookup */
+#define DC_STALE		(1 << 0)	/* set on rename or unlink */
+#define	DC_LOOKUP		(1 << 1)	/* item was accessed via lookup */
 
 /*
  * This is also a sort comparison.  We need dirent_cmp() and dirent_sort_cmp()
@@ -141,7 +141,7 @@ dirent_sort_cmp(const void *x, const void *y)
 	return (dirent_cmp(a, b));
 }
 
-#define DIRCACHE_INITIALIZED(fcmh)	((fcmh)->fcmh_flags & FCMH_CLI_INITDCI)
+#define DIRCACHE_INITIALIZED(f)		((f)->fcmh_flags & FCMH_CLI_INITDCI)
 
 struct dircache_ents *
 	dircache_new_ents(struct dircache_info *, size_t);
@@ -152,8 +152,8 @@ void	dircache_rls_ents(struct dircache_ents *, int);
 void	dircache_setfreeable_ents(struct dircache_ents *);
 void	dircache_walk(struct dircache_info *, void (*)(struct dircache_desc *, void *), void *);
 
-#define DCFREEF_RELEASE	(1 << 0)	/* fcmh may be released */
-#define DCFREEF_EARLY	(1 << 1)	/* dircache ent not attached */
+#define DCFREEF_RELEASE		(1 << 0)	/* fcmh may be released */
+#define DCFREEF_EARLY		(1 << 1)	/* dircache ent not attached */
 
 extern struct dircache_mgr dircacheMgr;
 
