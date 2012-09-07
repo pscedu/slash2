@@ -1244,8 +1244,8 @@ msl_lookuprpc(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	}
 
  out:
-	psclog_info("pfid="SLPRI_FID" name='%s', rc=%d", pinum, name,
-	    rc);
+	psclog_diag("pfid="SLPRI_FID" name='%s' cfid="SLPRI_FID" rc=%d",
+	    pinum, name, m ? m->fcmh_sstb.sst_fid : FID_ANY, rc);
 	if (rc == 0 && fp)
 		*fp = m;
 	else if (m)
