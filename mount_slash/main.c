@@ -913,7 +913,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (!rc)
 		fcmh_setattr_locked(p, &mp->pattr);
 	if (DIRCACHE_INITIALIZED(p)) {
-		if (rc == 0 || rc == ENOENT)
+		if (rc == 0 || rc == -ENOENT)
 			dircache_lookup(fcmh_2_dci(p), name, DC_STALE);
 	} else
 		slc_fcmh_initdci(p);
@@ -1057,7 +1057,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	struct slash_creds cr;
 	struct iovec iov[2];
 
-	OPSTATS_INC(readdir);
+	OPSTAT_INCR(OPSTAT_READDIR);
 
 	iov[0].iov_base = NULL;
 	iov[1].iov_base = NULL;
@@ -1118,7 +1118,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	rq->rq_bulk_abortable = 1;
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc)) {
-		OPSTATS_INC(readdir_retry);
+		OPSTAT_INCR(OPSTAT_READDIR_RETRY);
 		goto retry;
 	}
 	if (rc == 0)
@@ -1599,7 +1599,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	dstfg.fg_fid = FID_ANY;
 
 	msfsthr_ensure();
-	OPSTATS_INC(rename);
+	OPSTAT_INCR(OPSTAT_RENAME);
 
 #if 0
 	if (strcmp(oldname, ".") == 0 ||
@@ -1609,7 +1609,8 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	}
 #endif
 
-	if (strlen(oldname) == 0 || strlen(newname) == 0) {
+	if (strlen(oldname) == 0 ||
+	    strlen(newname) == 0) {
 		rc = ENOENT;
 		goto out;
 	}
@@ -1931,7 +1932,7 @@ void
 mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
     struct stat *stb, int to_set, void *data)
 {
-	int rc = 0, unset_trunc = 0, getting_attrs = 0;
+	int rc = 0, unset_trunc = 0, getting_attrs, flush_attrs = 0;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct msl_fhent *mfh = data;
@@ -1941,11 +1942,10 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	struct fcmh_cli_info *fci;
 	struct slash_creds cr;
 	struct timespec ts;
-	int flush_attrs = 0;
-
-	OPSTATS_INC(setattr);
 
 	msfsthr_ensure();
+
+	OPSTAT_INCR(OPSTAT_SETATTR);
 
 	if ((to_set & PSCFS_SETATTRF_UID) && stb->st_uid == (uid_t)-1)
 		to_set &= ~PSCFS_SETATTRF_UID;
@@ -2146,21 +2146,28 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 	if (rc == 0) {
-		if (mp->rc == SLERR_BMAP_IN_PTRUNC) {
+		switch (mp->rc) {
+		case -SLERR_BMAP_IN_PTRUNC:
 			if (getting_attrs) {
 				getting_attrs = 0;
+				FCMH_LOCK(c);
 				c->fcmh_flags &= ~FCMH_GETTING_ATTRS;
 			}
 			goto wait_trunc_res;
-		}
-		rc = mp->rc;
-		if (mp->rc == SLERR_BMAP_IN_PTRUNC)
+		case -SLERR_BMAP_PTRUNC_STARTED:
 			unset_trunc = 0;
+			rc = 0;
+			break;
+		default:
+			rc = -mp->rc;
+			break;
+		}
 	}
 	if (rc)
-		goto out;
+		PFL_GOTOERR(out, rc);
 
 	FCMH_LOCK(c);
+
 	/*
 	 * If we are setting mtime or size, we told the MDS what we
 	 * wanted it to be and must now blindly accept what he returns
@@ -2233,7 +2240,7 @@ mslfsop_fsync(struct pscfs_req *pfr, __unusedx int datasync, void *data)
 	struct msl_fhent *mfh;
 
 	mfh = data;
-	OPSTATS_INC(fsync);
+	OPSTAT_INCR(OPSTAT_FSYNC);
 
 	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "fsyncing via flush");
 
@@ -2261,8 +2268,9 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 	struct timespec ts;
 	int rc = 0;
 
-	OPSTATS_INC(write);
 	msfsthr_ensure();
+
+	OPSTAT_INCR(OPSTAT_WRITE);
 
 	f = mfh->mfh_fcmh;
 	ftmp = fidc_lookup_fg(&f->fcmh_fg);
@@ -2335,7 +2343,7 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 
 	msfsthr_ensure();
 
-	OPSTATS_INC(read);
+	OPSTAT_INCR(OPSTAT_READ);
 
 	f = mfh->mfh_fcmh;
 	ftmp = fidc_lookup_fg(&f->fcmh_fg);
@@ -2394,9 +2402,9 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	char *buf = NULL;
 	int rc;
 
-	OPSTATS_INC(listxattr);
-
 	msfsthr_ensure();
+
+	OPSTAT_INCR(OPSTAT_LISTXATTR);
 
 	mslfs_getcreds(pfr, &cr);
 
@@ -2456,8 +2464,9 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	struct iovec iov;
 	int rc;
 
-	OPSTATS_INC(setxattr);
 	msfsthr_ensure();
+
+	OPSTAT_INCR(OPSTAT_SETXATTR);
 
 	if (size > SL_NAME_MAX) {
 		rc = -EINVAL;
@@ -2519,8 +2528,9 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 
 	iov.iov_base = NULL;
 
-	OPSTATS_INC(getxattr);
 	msfsthr_ensure();
+
+	OPSTAT_INCR(OPSTAT_GETXATTR);
 
 	mslfs_getcreds(pfr, &cr);
 
@@ -2588,8 +2598,9 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 	struct slash_creds cr;
 	int rc;
 
-	OPSTATS_INC(removexattr);
 	msfsthr_ensure();
+
+	OPSTAT_INCR(OPSTAT_REMOVEXATTR);
 
 	mslfs_getcreds(pfr, &cr);
 
@@ -2707,7 +2718,8 @@ msattrflushthr_main(__unusedx struct psc_thread *thr)
 
 			freelock(&attrTimeoutQLock);
 
-			OPSTATS_INC(flush_attr);
+			OPSTAT_INCR(OPSTAT_FLUSH_ATTR);
+
 			rc = msl_flush_attr(f);
 
 			FCMH_LOCK(f);

@@ -620,6 +620,8 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* ZFS_KSTAT	*/ NULL
 };
 
+struct pfl_opstat pflctl_opstats[] = { };
+
 PFLCTL_SVR_DEFS;
 
 void

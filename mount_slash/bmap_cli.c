@@ -22,8 +22,9 @@
 
 #include <stddef.h>
 
-#include "psc_util/random.h"
+#include "psc_util/ctlsvr.h"
 #include "psc_util/iostats.h"
+#include "psc_util/random.h"
 #include "psc_rpc/rpc.h"
 
 #include "slconfig.h"
@@ -461,7 +462,7 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 		if (rc)
 			rc = -SLERR_BMAP_LEASEEXT_FAILED;
 		else
-			OPSTATS_INC(bmap_lease_ext);
+			OPSTAT_INCR(OPSTAT_BMAP_LEASE_EXT);
 
 		BMAP_LOCK(b);
 	}
@@ -504,7 +505,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw,
 	fci = fcmh_2_fci(f);
 
  retry:
-	OPSTATS_INC(bmap_retrieve);
+	OPSTAT_INCR(OPSTAT_BMAP_RETRIEVE);
 	rc = slc_rmc_getcsvc1(&csvc, fci->fci_resm);
 	if (rc)
 		goto out;

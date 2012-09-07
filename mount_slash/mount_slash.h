@@ -299,6 +299,26 @@ extern struct psc_iostats	 msl_io_128k_stat;
 extern struct psc_iostats	 msl_io_512k_stat;
 extern struct psc_iostats	 msl_io_1m_stat;
 
+enum {
+	OPSTAT_BMAP_LEASE_EXT,
+	OPSTAT_BMAP_RETRIEVE,
+	OPSTAT_FLUSH_ATTR,
+	OPSTAT_FSYNC,
+	OPSTAT_GETXATTR,
+	OPSTAT_LISTXATTR,
+	OPSTAT_OFFLINE_RETRY,
+	OPSTAT_READ,
+	OPSTAT_READDIR,
+	OPSTAT_READDIR_RETRY,
+	OPSTAT_READ_AHEAD,
+	OPSTAT_READ_RPC_LAUNCH,
+	OPSTAT_REMOVEXATTR,
+	OPSTAT_RENAME,
+	OPSTAT_SETATTR,
+	OPSTAT_SETXATTR,
+	OPSTAT_WRITE
+};
+
 extern struct psc_listcache	 bmapTimeoutQ;
 extern struct psc_waitq		 bmapFlushWaitq;
 

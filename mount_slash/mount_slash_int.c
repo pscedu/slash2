@@ -40,6 +40,7 @@
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"
+#include "psc_util/ctlsvr.h"
 #include "psc_util/iostats.h"
 #include "psc_util/log.h"
 #include "psc_util/random.h"
@@ -1607,7 +1608,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	uint32_t off = 0;
 	int rc, i;
 
-	OPSTATS_INC(read_rpc_launch);
+	OPSTAT_INCR(OPSTAT_READ_RPC_LAUNCH);
 
 	a = PSCALLOC(sizeof(*a));
 	psc_dynarray_init(a);
@@ -2598,7 +2599,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 					msl_biorq_destroy(r);
 					q->mfsrq_biorq[i] = NULL;
-					OPSTATS_INC(offline_retry);
+					OPSTAT_INCR(OPSTAT_OFFLINE_RETRY);
 					goto restart;
 				}
 				rc = -EIO;

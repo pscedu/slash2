@@ -484,12 +484,33 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* USKLNDPL	*/ NULL
 };
 
+struct pfl_opstat pflctl_opstats[] = {
+	PFL_OPSTAT_INIT("bmap_lease_ext"),
+	PFL_OPSTAT_INIT("bmap_retrieve"),
+	PFL_OPSTAT_INIT("flush_attr"),
+	PFL_OPSTAT_INIT("fsync"),
+	PFL_OPSTAT_INIT("getxattr"),
+	PFL_OPSTAT_INIT("listxattr"),
+	PFL_OPSTAT_INIT("offline_retry"),
+	PFL_OPSTAT_INIT("read"),
+	PFL_OPSTAT_INIT("readdir"),
+	PFL_OPSTAT_INIT("readdir_retry"),
+	PFL_OPSTAT_INIT("read_ahead"),
+	PFL_OPSTAT_INIT("read_rpc_launch"),
+	PFL_OPSTAT_INIT("removexattr"),
+	PFL_OPSTAT_INIT("rename"),
+	PFL_OPSTAT_INIT("setattr"),
+	PFL_OPSTAT_INIT("setxattr"),
+	PFL_OPSTAT_INIT("write")
+};
+
 PFLCTL_SVR_DEFS;
 
 void
 msctlthr_main(__unusedx struct psc_thread *thr)
 {
-	psc_ctlthr_main(ctlsockfn, msctlops, nitems(msctlops), MSTHRT_CTLAC);
+	psc_ctlthr_main(ctlsockfn, msctlops, nitems(msctlops),
+	    MSTHRT_CTLAC);
 }
 
 void
@@ -501,9 +522,9 @@ msctlthr_spawn(void)
 	psc_ctlparam_register("log.file", psc_ctlparam_log_file);
 	psc_ctlparam_register("log.format", psc_ctlparam_log_format);
 	psc_ctlparam_register("log.level", psc_ctlparam_log_level);
+	psc_ctlparam_register("opstats", psc_ctlparam_opstats);
 	psc_ctlparam_register("pause", psc_ctlparam_pause);
 	psc_ctlparam_register("pool", psc_ctlparam_pool);
-	psc_ctlparam_register("opstat", psc_ctlparam_opstat);
 	psc_ctlparam_register("rlim", psc_ctlparam_rlim);
 	psc_ctlparam_register("run", psc_ctlparam_run);
 
@@ -516,7 +537,8 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_simple("pref_ios",
 	    msctlparam_prefios_get, msctlparam_prefios_set);
 	psc_ctlparam_register_simple("offline_nretries",
-	    msctlparam_offlinenretries_get, msctlparam_offlinenretries_set);
+	    msctlparam_offlinenretries_get,
+	    msctlparam_offlinenretries_set);
 
 	thr = pscthr_init(MSTHRT_CTL, 0, msctlthr_main, NULL,
 	    sizeof(struct psc_ctlthr), "msctlthr");
