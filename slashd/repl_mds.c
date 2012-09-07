@@ -552,7 +552,7 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 			    mds_odtable_putitem(slm_repl_odt, &br,
 				sizeof(br));
 			DEBUG_UPD(PLL_DEBUG, upd,
-			    "assigned odtable receipt [%ld,%zu]",
+			    "assigned odtable receipt [%zu,%"PRIu64"]",
 			    upd->upd_recpt->odtr_elem,
 			    upd->upd_recpt->odtr_key);
 		}
