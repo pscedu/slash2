@@ -123,17 +123,6 @@ struct psc_poolmgr		*slc_biorq_pool;
 
 uint32_t			 sys_upnonce;
 
-/* names must match the field definitions in struct slash2_client_opstats */
-struct slash2_client_opstats msl_opstats = {
-
-	{ "read", 		0 },
-	{ "read_ahead",		0 },
-	{ "read_retry",		0 },
-	{ "write",		0 },
-	{ "write_retry",	0 },
-	{ NULL,			0 }
-};
-
 __inline int
 fcmh_checkcreds(struct fidc_membh *f, const struct slash_creds *crp,
     int accmode)
