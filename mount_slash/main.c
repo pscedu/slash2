@@ -1943,6 +1943,8 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	struct timespec ts;
 	int flush_attrs = 0;
 
+	OPSTATS_INC(setattr);
+
 	msfsthr_ensure();
 
 	if ((to_set & PSCFS_SETATTRF_UID) && stb->st_uid == (uid_t)-1)
@@ -2392,6 +2394,8 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	char *buf = NULL;
 	int rc;
 
+	OPSTATS_INC(listxattr);
+
 	msfsthr_ensure();
 
 	mslfs_getcreds(pfr, &cr);
@@ -2452,6 +2456,7 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	struct iovec iov;
 	int rc;
 
+	OPSTATS_INC(setxattr);
 	msfsthr_ensure();
 
 	if (size > SL_NAME_MAX) {
@@ -2514,6 +2519,7 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 
 	iov.iov_base = NULL;
 
+	OPSTATS_INC(getxattr);
 	msfsthr_ensure();
 
 	mslfs_getcreds(pfr, &cr);
@@ -2582,6 +2588,7 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 	struct slash_creds cr;
 	int rc;
 
+	OPSTATS_INC(removexattr);
 	msfsthr_ensure();
 
 	mslfs_getcreds(pfr, &cr);
