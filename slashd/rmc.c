@@ -1392,16 +1392,21 @@ slm_rmc_handle_getxattr(struct pscrpc_request *rq)
 	char value[SL_NAME_MAX + 1];
 	struct iovec iov;
 	size_t outsize;
-	int vfsid;
+	int vfsid, abort_bulk = 0;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid) < 0) {
+		if (mq->size)
+			abort_bulk = 1;
 		mp->rc = -EINVAL;
 		goto out;
 	}
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
-	if (mp->rc)
+	if (mp->rc) {
+		if (mq->size)
+			abort_bulk = 1;
 		goto out;
+	}
 
 	mp->valuelen = 0;
 	mds_reserve_slot(1);
@@ -1413,8 +1418,7 @@ slm_rmc_handle_getxattr(struct pscrpc_request *rq)
 		if (mp->rc == 5001)
 			mp->rc = 0;
 		if (mq->size)
-			pscrpc_msg_add_flags(rq->rq_repmsg,
-			    MSG_ABORT_BULK);
+			abort_bulk = 1;
 		goto out;
 	}
 	mp->valuelen = outsize;
@@ -1427,6 +1431,8 @@ slm_rmc_handle_getxattr(struct pscrpc_request *rq)
 	}
 
  out:
+	if (abort_bulk)
+		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
 	if (f)
 		fcmh_op_done(f);
 	return (0);
