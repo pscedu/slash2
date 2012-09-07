@@ -1607,6 +1607,8 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	uint32_t off = 0;
 	int rc, i;
 
+	OPSTATS_INC(read_rpc_launch);
+
 	a = PSCALLOC(sizeof(*a));
 	psc_dynarray_init(a);
 
@@ -2596,6 +2598,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 					msl_biorq_destroy(r);
 					q->mfsrq_biorq[i] = NULL;
+					OPSTATS_INC(offline_retry);
 					goto restart;
 				}
 				rc = -EIO;

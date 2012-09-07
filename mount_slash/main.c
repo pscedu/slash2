@@ -1057,6 +1057,8 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	struct slash_creds cr;
 	struct iovec iov[2];
 
+	OPSTATS_INC(readdir);
+
 	iov[0].iov_base = NULL;
 	iov[1].iov_base = NULL;
 
@@ -1115,8 +1117,10 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	rsx_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, iov, niov);
 	rq->rq_bulk_abortable = 1;
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc && slc_rmc_retry(pfr, &rc))
+	if (rc && slc_rmc_retry(pfr, &rc)) {
+		OPSTATS_INC(readdir_retry);
 		goto retry;
+	}
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
@@ -1595,6 +1599,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	dstfg.fg_fid = FID_ANY;
 
 	msfsthr_ensure();
+	OPSTATS_INC(rename);
 
 #if 0
 	if (strcmp(oldname, ".") == 0 ||
@@ -2226,6 +2231,7 @@ mslfsop_fsync(struct pscfs_req *pfr, __unusedx int datasync, void *data)
 	struct msl_fhent *mfh;
 
 	mfh = data;
+	OPSTATS_INC(fsync);
 
 	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "fsyncing via flush");
 
@@ -2253,6 +2259,7 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 	struct timespec ts;
 	int rc = 0;
 
+	OPSTATS_INC(write);
 	msfsthr_ensure();
 
 	f = mfh->mfh_fcmh;
@@ -2693,6 +2700,7 @@ msattrflushthr_main(__unusedx struct psc_thread *thr)
 
 			freelock(&attrTimeoutQLock);
 
+			OPSTATS_INC(flush_attr);
 			rc = msl_flush_attr(f);
 
 			FCMH_LOCK(f);
