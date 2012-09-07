@@ -89,7 +89,14 @@ slm_fcmh_ctor(struct fidc_membh *f)
 			&rootcreds, NULL, &fmi->fmi_mdsio_data);
 	} else if (fcmh_isreg(f)) {
 		slash_inode_handle_init(&fmi->fmi_inodeh, f);
-		/* We shouldn't need O_LARGEFILE because slash2 metafiles are small */
+		/* 
+		 * We shouldn't need O_LARGEFILE because slash2 metafiles are small.
+		 *
+		 * I created a file with size of 8070450532247928832 using dd by seeking
+		 * to a large offset and writing one byte. Somehow, the ZFS size becomes 
+		 * 5119601018368. Without O_LARGEFILE, I got EOVERFLOW (75) here.  The
+		 * slash2 size is correct though.
+		 */
 		rc = mdsio_opencreate(vfsid, fcmh_2_mdsio_fid(f),
 		    &rootcreds, O_RDWR, 0, NULL, NULL, NULL,
 		    &fcmh_2_mdsio_data(f), NULL, NULL, 0);
