@@ -30,9 +30,9 @@
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/atomic.h"
+#include "psc_util/ctlsvr.h"
 #include "psc_util/lock.h"
 #include "psc_util/pthrutil.h"
-#include "psc_util/ctlsvr.h"
 
 #include "bmap_iod.h"
 #include "buffer.h"

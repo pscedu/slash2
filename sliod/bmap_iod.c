@@ -23,9 +23,9 @@
 #include "psc_ds/listcache.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
+#include "psc_util/ctlsvr.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
-#include "psc_util/ctlsvr.h"
 
 #include "bmap_iod.h"
 #include "fidcache.h"
@@ -215,7 +215,7 @@ biod_rlssched_locked(struct bmap_iod_info *biod)
 	DEBUG_BMAP(PLL_INFO, bii_2_bmap(biod), "crcdrty_slvrs=%d "
 	   "BMAP_IOD_RLSSEQ=(%d) biod_bcr_xid=%"PRId64" biod_bcr_xid_last=%"
 	   PRId64, psc_atomic32_read(&biod->biod_crcdrty_slvrs),
-	   !!(bii_2_flags(biod) & BMAP_IOD_RLSSEQ), biod->biod_bcr_xid, 
+	   !!(bii_2_flags(biod) & BMAP_IOD_RLSSEQ), biod->biod_bcr_xid,
 	   biod->biod_bcr_xid_last);
 
 	if (bii_2_bmap(biod)->bcm_flags & BMAP_IOD_RLSSCHED)
@@ -264,9 +264,9 @@ bcr_ready_remove(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 		bii_2_bmap(biod)->bcm_flags &= ~BMAP_IOD_BCRSCHED;
 
 		DEBUG_BMAP(PLL_INFO, bii_2_bmap(biod),
-		   "descheduling drtyslvrs=%u", 
+		   "descheduling drtyslvrs=%u",
 		   psc_atomic32_read(&biod->biod_crcdrty_slvrs));
-		
+
 		biod_rlssched_locked(biod);
 	}
 	BIOD_ULOCK(bcr->bcr_biodi);
@@ -356,9 +356,9 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 			psc_assert(pll_nitems(&biod->biod_rls));
 
 			DEBUG_BMAP(PLL_INFO, b, "ndrty=%u nrls=%d xid=%"PRIu64
-			   " xid_last=%"PRIu64, 
+			   " xid_last=%"PRIu64,
 			   psc_atomic32_read(&biod->biod_crcdrty_slvrs),
-			   pll_nitems(&biod->biod_rls), biod->biod_bcr_xid, 
+			   pll_nitems(&biod->biod_rls), biod->biod_bcr_xid,
 			   biod->biod_bcr_xid_last);
 
 			psc_assert(bii_2_flags(biod) & BMAP_IOD_RLSSEQ);
@@ -373,7 +373,7 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 				continue;
 			}
 
-			i = 0;			
+			i = 0;
 			while (nrls < MAX_BMAP_RELEASE &&
 			    (brls = pll_get(&biod->biod_rls))) {
 				memcpy(&brr->sbd[nrls++], &brls->bir_sbd,
@@ -381,12 +381,12 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 				psc_pool_return(bmap_rls_pool, brls);
 				i++;
 			}
-			/* The last entry (or entries) did not fit, so 
+			/* The last entry (or entries) did not fit, so
 			 *    reschedule.
 			 */
 			if (pll_nitems(&biod->biod_rls))
 				psc_dynarray_add(&a, biod);
-			else			
+			else
 				BMAP_CLEARATTR(bii_2_bmap(biod),
 				       BMAP_IOD_RLSSEQ | BMAP_IOD_RLSSCHED);
 			BIOD_ULOCK(biod);
@@ -431,7 +431,7 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
  end:
 		/* put any unreapable biods back to the list */
 		rc = lc_sz(&bmapRlsQ);
-		
+
 		DYNARRAY_FOREACH(biod, nrls, &a)
 			lc_addtail(&bmapRlsQ, biod);
 
@@ -488,7 +488,7 @@ iod_bmap_finalcleanup(struct bmapc_memb *b)
 	psc_assert(pll_empty(&biod->biod_rls));
 	psc_assert(SPLAY_EMPTY(&biod->biod_slvrs));
 	psc_assert(psclist_disjoint(&biod->biod_lentry));
-	
+
 	psc_assert(!psc_atomic32_read(&biod->biod_crcdrty_slvrs));
 }
 
@@ -518,8 +518,8 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 	for (i = 0, n = BMAP_SLVR_DATA; i < SLASH_SLVRS_PER_BMAP; i++) {
 		if (b->bcm_crcstates[i] & BMAP_SLVR_DATA)
 			n--;
-	}	
-	
+	}
+
 	if (!n) {
 		DEBUG_BMAP(PLL_INFO, b, "CRC table exists locally");
 		BMAP_ULOCK(b);
@@ -558,10 +558,10 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 		//XXX  shoudln't retrieve if all slvrs are BMAP_SLVR_DATA
 		if (b->bcm_crcstates[i] & BMAP_SLVR_DATA)
 			continue;
-		
+
 		b->bcm_crcstates[i] = mp->bod.bod_crcstates[i];
 		bmap_2_ondisk(b)->bod_crcs[i] = mp->bod.bod_crcs[i];
-	}			
+	}
 
 	DEBUG_BMAPOD(PLL_INFO, b, "retrieved");
 	BMAP_ULOCK(b);
