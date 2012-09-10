@@ -620,7 +620,17 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* ZFS_KSTAT	*/ NULL
 };
 
-struct pfl_opstat pflctl_opstats[] = { };
+struct pfl_opstat pflctl_opstats[] = { 
+	PFL_OPSTAT_INIT("bmap_chwrmode"),
+	PFL_OPSTAT_INIT("bmap_release"),
+	PFL_OPSTAT_INIT("extend_bmap_lease"),
+	PFL_OPSTAT_INIT("get_bmap_lease_read"),
+	PFL_OPSTAT_INIT("get_bmap_lease_write"),
+	PFL_OPSTAT_INIT("getxattr"),
+	PFL_OPSTAT_INIT("readdir"),
+	PFL_OPSTAT_INIT("reassign_bmap_lease"),
+	PFL_OPSTAT_INIT("setxattr")
+};
 
 PFLCTL_SVR_DEFS;
 
@@ -633,6 +643,7 @@ slmctlthr_main(const char *fn)
 	psc_ctlparam_register("log.level", psc_ctlparam_log_level);
 	psc_ctlparam_register("pause", psc_ctlparam_pause);
 	psc_ctlparam_register("pool", psc_ctlparam_pool);
+	psc_ctlparam_register("opstats", psc_ctlparam_opstats);
 	psc_ctlparam_register("rlim", psc_ctlparam_rlim);
 	psc_ctlparam_register("run", psc_ctlparam_run);
 
