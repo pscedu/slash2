@@ -32,6 +32,7 @@
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 #include "psc_util/pthrutil.h"
+#include "psc_util/ctlsvr.h"
 
 #include "bmap_iod.h"
 #include "buffer.h"
@@ -294,6 +295,7 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 	struct srm_io_rep *mp;
 	int rc, i;
 
+	OPSTAT_INCR(OPSTAT_SLVR_AIO_REPLY);
 	if (!a->aiocbr_csvc)
 		goto out;
 

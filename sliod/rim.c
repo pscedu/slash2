@@ -30,6 +30,7 @@
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/service.h"
 #include "psc_util/lock.h"
+#include "psc_util/ctlsvr.h"
 
 #include "authbuf.h"
 #include "bmap.h"
@@ -63,6 +64,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 
 	len = offsetof(struct srt_reclaim_entry, _pad);
 
+	OPSTAT_INCR(OPSTAT_RECLAIM);
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	if (mq->size < len || mq->size > LNET_MTU)

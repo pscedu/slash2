@@ -23,6 +23,7 @@
 #include "pfl/rlimit.h"
 #include "pfl/str.h"
 #include "psc_util/log.h"
+#include "psc_util/ctlsvr.h"
 
 #include "fidc_iod.h"
 #include "fidcache.h"
@@ -102,6 +103,7 @@ sli_open_backing_file(struct fidc_membh *f)
 	char fidfn[PATH_MAX];
 	int flags, incr, rc = 0;
 
+	OPSTAT_INCR(OPSTAT_OPEN);
 	flags = O_CREAT | O_RDWR;
 	if (f->fcmh_flags & FCMH_CAC_RLSBMAP)
 		flags &= ~O_CREAT;
@@ -113,7 +115,9 @@ sli_open_backing_file(struct fidc_membh *f)
 		rc = errno;
 		if (incr)
 			psc_rlim_adj(RLIMIT_NOFILE, -1);
-	}
+		OPSTAT_INCR(OPSTAT_OPEN_FAIL);
+	} else
+		OPSTAT_INCR(OPSTAT_OPEN_SUCCEED);
 	psclog_info("path=%s fd=%d rc=%d",
 	    strstr(fidfn, "fidns"), fcmh_2_fd(f), rc);
 
@@ -178,6 +182,8 @@ sli_fcmh_reopen(struct fidc_membh *f, const struct slash_fidgen *fg)
 
 	FCMH_LOCK_ENSURE(f);
 	psc_assert(fg->fg_fid == fcmh_2_fid(f));
+
+	OPSTAT_INCR(OPSTAT_REOPEN);
 
 	/* If our generation number is still unknown try to set it here.
 	 */

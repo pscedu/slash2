@@ -29,6 +29,7 @@
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/service.h"
 #include "psc_util/iostats.h"
+#include "psc_util/ctlsvr.h"
 
 #include "authbuf.h"
 #include "bmap_iod.h"
@@ -80,6 +81,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 	sblk = 0; /* gcc */
 
+	OPSTAT_INCR(OPSTAT_HANDLE_IO);
 	psc_assert(rw == SL_READ || rw == SL_WRITE);
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -375,6 +377,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
+	OPSTAT_INCR(OPSTAT_RELEASE_BMAP);
 	if (mq->nbmaps > MAX_BMAP_RELEASE) {
 		mp->rc = -E2BIG;
 		goto out;

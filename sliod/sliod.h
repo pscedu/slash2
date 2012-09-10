@@ -87,4 +87,16 @@ extern struct srt_statfs	 sli_ssfb;
 extern psc_spinlock_t		 sli_ssfb_lock;
 extern struct psc_thread	*sliconnthr;
 
+enum {
+	OPSTAT_BMAP_RELEASE,
+	OPSTAT_HANDLE_IO,
+	OPSTAT_OPEN,
+	OPSTAT_OPEN_FAIL,
+	OPSTAT_OPEN_SUCCEED,
+	OPSTAT_REOPEN,
+	OPSTAT_RELEASE_BMAP,
+	OPSTAT_RECLAIM,
+	OPSTAT_SLVR_AIO_REPLY
+};
+
 #endif /* _SLIOD_H_ */

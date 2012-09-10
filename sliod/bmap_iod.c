@@ -25,6 +25,7 @@
 #include "psc_rpc/rsx.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
+#include "psc_util/ctlsvr.h"
 
 #include "bmap_iod.h"
 #include "fidcache.h"
@@ -400,6 +401,8 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 			goto end;
 
 		brr->nbmaps = nrls;
+
+		OPSTAT_INCR(OPSTAT_BMAP_RELEASE);
 
 		/*
 		 * The system can tolerate the loss of these messages so

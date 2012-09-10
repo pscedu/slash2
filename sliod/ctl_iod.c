@@ -516,7 +516,18 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* USKLNDPL	*/ NULL
 };
 
-struct pfl_opstat pflctl_opstats[] = { };
+struct pfl_opstat pflctl_opstats[] = {
+	PFL_OPSTAT_INIT("bmap_release"),
+	PFL_OPSTAT_INIT("handle_io"),
+	PFL_OPSTAT_INIT("open"),
+	PFL_OPSTAT_INIT("open_fail"),
+	PFL_OPSTAT_INIT("open_succeed"),
+	PFL_OPSTAT_INIT("reopen"),
+	PFL_OPSTAT_INIT("release_bmap"),
+	PFL_OPSTAT_INIT("reclaim"),
+	PFL_OPSTAT_INIT("slvr_aio_reply")
+};
+
 
 PFLCTL_SVR_DEFS;
 
@@ -529,6 +540,7 @@ slictlthr_main(const char *fn)
 	psc_ctlparam_register("log.level", psc_ctlparam_log_level);
 	psc_ctlparam_register("pause", psc_ctlparam_pause);
 	psc_ctlparam_register("pool", psc_ctlparam_pool);
+	psc_ctlparam_register("opstats", psc_ctlparam_opstats);
 	psc_ctlparam_register("rlim", psc_ctlparam_rlim);
 	psc_ctlparam_register("run", psc_ctlparam_run);
 
