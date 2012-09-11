@@ -51,7 +51,6 @@ enum {
 #define NSLVRCRC_THRS		4	/* perhaps default to ncores + configurable? */
 
 enum {
-	OPSTAT_SRMT_RELEASE,
 	OPSTAT_FSIO_READ,
 	OPSTAT_FSIO_READ_FAIL,
 	OPSTAT_FSIO_WRITE,
@@ -63,7 +62,8 @@ enum {
 	OPSTAT_REOPEN,
 	OPSTAT_RELEASE_BMAP,
 	OPSTAT_RECLAIM,
-	OPSTAT_SLVR_AIO_REPLY
+	OPSTAT_SLVR_AIO_REPLY,
+	OPSTAT_SRMT_RELEASE
 };
 
 struct bmapc_memb;

@@ -517,7 +517,6 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 };
 
 struct pfl_opstat pflctl_opstats[] = {
-	PFL_OPSTAT_INIT("srmt_release"),
 	PFL_OPSTAT_INIT("fsio_read"),
 	PFL_OPSTAT_INIT("fsio_read_fail"),
 	PFL_OPSTAT_INIT("fsio_write"),
@@ -529,7 +528,8 @@ struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("reopen"),
 	PFL_OPSTAT_INIT("release_bmap"),
 	PFL_OPSTAT_INIT("reclaim"),
-	PFL_OPSTAT_INIT("slvr_aio_reply")
+	PFL_OPSTAT_INIT("slvr_aio_reply"),
+	PFL_OPSTAT_INIT("srmt_release")
 };
 
 
