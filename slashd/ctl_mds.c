@@ -626,10 +626,10 @@ struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("extend_bmap_lease"),
 	PFL_OPSTAT_INIT("get_bmap_lease_read"),
 	PFL_OPSTAT_INIT("get_bmap_lease_write"),
-	PFL_OPSTAT_INIT("getxattr"),
-	PFL_OPSTAT_INIT("readdir"),
+	PFL_OPSTAT_INIT("getxattr_rpc"),
+	PFL_OPSTAT_INIT("readdir_rpc"),
 	PFL_OPSTAT_INIT("reassign_bmap_lease"),
-	PFL_OPSTAT_INIT("setxattr")
+	PFL_OPSTAT_INIT("setxattr_rpc")
 };
 
 PFLCTL_SVR_DEFS;

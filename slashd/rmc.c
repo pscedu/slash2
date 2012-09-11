@@ -693,7 +693,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	iov[1].iov_base = NULL;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	OPSTAT_INCR(OPSTAT_READDIR);
+	OPSTAT_INCR(OPSTAT_READDIR_RPC);
 
 	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid) < 0) {
 		mp->rc = -EINVAL;
@@ -1358,7 +1358,7 @@ slm_rmc_handle_setxattr(struct pscrpc_request *rq)
 	int vfsid;
 	struct iovec iov;
 
-	OPSTAT_INCR(OPSTAT_SETXATTR);
+	OPSTAT_INCR(OPSTAT_SETXATTR_RPC);
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid) < 0) {
 		mp->rc = -EINVAL;
@@ -1406,7 +1406,7 @@ slm_rmc_handle_getxattr(struct pscrpc_request *rq)
 	size_t outsize;
 	int vfsid, abort_bulk = 0;
 
-	OPSTAT_INCR(OPSTAT_GETXATTR);
+	OPSTAT_INCR(OPSTAT_GETXATTR_RPC);
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid) < 0) {
 		if (mq->size)
