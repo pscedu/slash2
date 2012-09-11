@@ -488,6 +488,7 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("bmap_lease_ext"),
 	PFL_OPSTAT_INIT("bmap_retrieve"),
+	PFL_OPSTAT_INIT("bmpce_insert"),
 	PFL_OPSTAT_INIT("flush_attr"),
 	PFL_OPSTAT_INIT("fsync"),
 	PFL_OPSTAT_INIT("getxattr"),

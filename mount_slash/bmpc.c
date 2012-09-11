@@ -26,6 +26,7 @@
 #include "psc_ds/lockedlist.h"
 #include "psc_util/atomic.h"
 #include "psc_util/pool.h"
+#include "psc_util/ctlsvr.h"
 
 #include "bmpc.h"
 #include "bmap_cli.h"
@@ -121,6 +122,7 @@ bmpce_lookup_locked(struct bmap_pagecache *bmpc, struct bmpc_ioreq *r,
 			e->bmpce_off = search.bmpce_off;
 			bmpce_useprep(e, r, wq);
 
+			OPSTAT_INCR(OPSTAT_BMPCE_INSERT);
 			SPLAY_INSERT(bmap_pagecachetree,
 			    &bmpc->bmpc_tree, e);
 		}
