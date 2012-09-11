@@ -124,6 +124,10 @@ _msl_offline_retry(const struct pfl_callerinfo *pci,
 	int retry;
 
 	retry = msl_fd_offline_retry(r->biorq_fhent);
+	if (retry)
+		OPSTAT_INCR(OPSTAT_OFFLINE_RETRY);
+	else
+		OPSTAT_INCR(OPSTAT_OFFLINE_NO_RETRY);
 
 	DEBUG_BIORQ(PLL_WARN, r, "retry=%d", retry);
 

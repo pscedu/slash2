@@ -2599,7 +2599,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 					msl_biorq_destroy(r);
 					q->mfsrq_biorq[i] = NULL;
-					OPSTAT_INCR(OPSTAT_OFFLINE_RETRY);
 					goto restart;
 				}
 				rc = -EIO;
