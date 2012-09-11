@@ -109,9 +109,12 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 		 * Anyway, we don't report an error back to MDS because
 		 * it can do nothing.
 		 */
+		OPSTAT_INCR(OPSTAT_RECLAIM_FILE);
 		rc = unlink(fidfn);
-		if (rc == -1)
+		if (rc == -1) {
+			OPSTAT_INCR(OPSTAT_RECLAIM_FILE_FAIL);
 			rc = errno;
+		}
 
 		psclog_info("reclaim fid="SLPRI_FG", xid=%"PRId64", rc=%d",
 		    SLPRI_FG_ARGS(&entryp->fg), entryp->xid, rc);

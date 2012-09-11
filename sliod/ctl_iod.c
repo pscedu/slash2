@@ -516,6 +516,7 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* USKLNDPL	*/ NULL
 };
 
+/* names must match enum list in file sliod.h */
 struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("fsio_read"),
 	PFL_OPSTAT_INIT("fsio_read_fail"),
@@ -528,6 +529,8 @@ struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("reopen"),
 	PFL_OPSTAT_INIT("release_bmap"),
 	PFL_OPSTAT_INIT("reclaim"),
+	PFL_OPSTAT_INIT("reclaim_file"),
+	PFL_OPSTAT_INIT("reclaim_file_fail"),
 	PFL_OPSTAT_INIT("slvr_aio_reply"),
 	PFL_OPSTAT_INIT("srmt_release")
 };
