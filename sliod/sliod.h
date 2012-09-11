@@ -51,7 +51,7 @@ enum {
 #define NSLVRCRC_THRS		4	/* perhaps default to ncores + configurable? */
 
 enum {
-	OPSTAT_BMAP_RELEASE,
+	OPSTAT_SRMT_RELEASE,
 	OPSTAT_HANDLE_IO,
 	OPSTAT_OPEN,
 	OPSTAT_OPEN_FAIL,
