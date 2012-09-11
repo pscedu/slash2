@@ -389,6 +389,11 @@ reimport
   inline are for debugging/gdb
 - in RPC layer, add a syserrno -> PFLERR_* checker/portability
   translation layer
+- expose SLASH2 non-POSIX (e.g. repl) interface through extattr magic
+- sliod backend for
+     - google drive
+     - box
+     - amazon S3/glacier
 
 - optimization: only write changes to brepls in delrq/addrq when changes
   are actually made
