@@ -2572,8 +2572,10 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 	 * If MDS does not support this, we return no attributes
 	 * successfully.
 	 */
-	if (rc == -ENOSYS)
+	if (rc == -ENOSYS) {
+		OPSTAT_INCR(OPSTAT_GETXATTR_NOSYS);
 		rc = 0;
+	}
 	pscfs_reply_getxattr(pfr, buf, mp ? mp->valuelen : 0, rc);
 
 	if (c)
