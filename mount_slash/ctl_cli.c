@@ -501,6 +501,8 @@ struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("rename"),
 	PFL_OPSTAT_INIT("setattr"),
 	PFL_OPSTAT_INIT("setxattr"),
+	PFL_OPSTAT_INIT("slc_fcmh_ctor"),
+	PFL_OPSTAT_INIT("slc_fcmh_dtor"),
 	PFL_OPSTAT_INIT("write")
 };
 
