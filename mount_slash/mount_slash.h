@@ -299,6 +299,7 @@ extern struct psc_iostats	 msl_io_128k_stat;
 extern struct psc_iostats	 msl_io_512k_stat;
 extern struct psc_iostats	 msl_io_1m_stat;
 
+/* must match listing pflctl_opstats[] in file ctl_cli.c */
 enum {
 	OPSTAT_BMAP_LEASE_EXT,
 	OPSTAT_BMAP_RETRIEVE,
@@ -319,6 +320,7 @@ enum {
 	OPSTAT_SETXATTR,
 	OPSTAT_SLC_FCMH_CTOR,
 	OPSTAT_SLC_FCMH_DTOR,
+	OPSTAT_SRMT_WRITE,
 	OPSTAT_WRITE
 };
 

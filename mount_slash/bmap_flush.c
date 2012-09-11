@@ -33,6 +33,7 @@
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/log.h"
+#include "psc_util/ctlsvr.h"
 
 #include "bmap.h"
 #include "bmap_cli.h"
@@ -227,6 +228,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	sl_csvc_incref(csvc);
 	CSVC_ULOCK(csvc);
 
+	OPSTAT_INCR(OPSTAT_SRMT_WRITE);
 	rc = SL_RSX_NEWREQ(csvc, SRMT_WRITE, rq, mq, mp);
 	if (rc)
 		goto error;
