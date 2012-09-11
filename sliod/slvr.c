@@ -622,6 +622,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 
 	if (rw == SL_READ) {
+		OPSTAT_INCR(OPSTAT_FSIO_READ);
 		psc_assert(s->slvr_flags & SLVR_FAULTING);
 		errno = 0;
 		if (globalConfig.gconf_async_io) {
@@ -636,8 +637,10 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 		rc = pread(slvr_2_fd(s), slvr_2_buf(s, sblk),
 			   size, slvr_2_fileoff(s, sblk));
 
-		if (rc < 0)
+		if (rc < 0) {
+			OPSTAT_INCR(OPSTAT_FSIO_READ_FAIL);
 			save_errno = errno;
+		}
 
 		/* XXX this is a bit of a hack.  Here we'll check crc's
 		 *  only when nblks == an entire sliver.  Only RMW will
@@ -659,6 +662,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 				    nblks, slvr_2_fileoff(s, sblk));
 		}
 	} else {
+		OPSTAT_INCR(OPSTAT_FSIO_WRITE);
 		for (i = 0; i < nblks; i++)
 			psc_vbitmap_unset(s->slvr_slab->slb_inuse, sblk + i);
 
@@ -667,8 +671,10 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 
 		rc = pwrite(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
 			    slvr_2_fileoff(s, sblk));
-		if (rc == -1)
+		if (rc == -1) {
+			OPSTAT_INCR(OPSTAT_FSIO_WRITE_FAIL);
 			save_errno = errno;
+		}
 	}
 
 	if (rc < 0)

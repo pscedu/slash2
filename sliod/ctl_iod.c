@@ -518,6 +518,10 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 
 struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("srmt_release"),
+	PFL_OPSTAT_INIT("fsio_read"),
+	PFL_OPSTAT_INIT("fsio_read_fail"),
+	PFL_OPSTAT_INIT("fsio_write"),
+	PFL_OPSTAT_INIT("fsio_write_fail"),
 	PFL_OPSTAT_INIT("handle_io"),
 	PFL_OPSTAT_INIT("open"),
 	PFL_OPSTAT_INIT("open_fail"),
