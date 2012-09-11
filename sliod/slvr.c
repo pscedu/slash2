@@ -750,6 +750,7 @@ slvr_fsbytes_rio(struct slvr_ref *s, struct sli_aiocb_reply **aiocbr)
 		 */
 		SLVR_LOCK(s);
 		s->slvr_flags |= SLVR_DATAERR;
+		s->slvr_flags &= ~SLVR_FAULTING;
 		DEBUG_SLVR(PLL_ERROR, s, "slvr_fsio() error, rc=%zd", rc);
 		SLVR_WAKEUP(s);
 		SLVR_ULOCK(s);
