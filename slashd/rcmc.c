@@ -177,12 +177,12 @@ slm_rcm_issue_getreplst(struct slm_replst_workreq *rsw,
 		mq->nrepls = fcmh_2_nrepls(f);
 		mq->newreplpol = fcmh_2_replpol(f);
 		memcpy(mq->repls, fcmh_2_ino(f)->ino_repls,
-		    MIN(mq->nrepls, SL_DEF_REPLICAS) * sizeof(*mq->repls));
+		    MIN(mq->nrepls, SL_DEF_REPLICAS) * sizeof(mq->repls[0]));
 		if (mq->nrepls > SL_DEF_REPLICAS)
 			memcpy(mq->repls + SL_DEF_REPLICAS,
 			    fcmh_2_inox(f)->inox_repls,
 			    (fcmh_2_nrepls(f) - SL_DEF_REPLICAS) *
-			    sizeof(*mq->repls));
+			    sizeof(mq->repls[0]));
 	}
 	if (is_eof)
 		mq->rc = EOF;
