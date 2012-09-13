@@ -109,12 +109,9 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 	mrs.mrs_nios = mq->nrepls;
 	for (n = 0; n < (int)mq->nrepls; n++) {
 		res = libsl_id2res(mq->repls[n].bs_id);
-		if (res)
-			strlcpy(mrs.mrs_iosv[n], res->res_name,
-			    RES_NAME_MAX);
-		else
-			strlcpy(mrs.mrs_iosv[n], "<unknown IOS>",
-			    RES_NAME_MAX);
+		strlcpy(mrs.mrs_iosv[n],
+		    res ? res->res_name : "<unknown IOS>",
+		    sizeof(mrs.mrs_iosv[0]));
 	}
 	rc = psc_ctlmsg_sendv(mrsq->mrsq_fd, &mh, &mrs);
 	return (0);
