@@ -74,7 +74,7 @@ struct replst_slave_bdata {
 };
 
 struct replrq_arg {
-	char			 iosv[SITE_NAME_MAX][SL_MAX_REPLICAS];
+	char			 iosv[SL_MAX_REPLICAS][SITE_NAME_MAX];
 	int			 nios;
 	int			 opcode;
 	int			 bmapno;
@@ -638,14 +638,18 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 					printf("\n    ");
 
 				memset(&bhdr, 0, sizeof(bhdr));
-				pfl_bitstr_copy(&bhdr, 0, rsb->rsb_data, nb *
-				    (SL_NBITS_REPLST_BHDR + SL_BITS_PER_REPLICA *
-				     current_mrs.mrs_nios), SL_NBITS_REPLST_BHDR);
-				val = SL_REPL_GET_BMAP_IOS_STAT(rsb->rsb_data, off);
+				pfl_bitstr_copy(&bhdr, 0, rsb->rsb_data,
+				    nb * (SL_NBITS_REPLST_BHDR +
+				     SL_BITS_PER_REPLICA *
+				     current_mrs.mrs_nios),
+				    SL_NBITS_REPLST_BHDR);
+				val = SL_REPL_GET_BMAP_IOS_STAT(
+				    rsb->rsb_data, off);
 				setcolor(cmap[val]);
-				putchar((bhdr.srsb_replpol == BRPOL_PERSIST ?
-				    pmap : map)[SL_REPL_GET_BMAP_IOS_STAT(
-				    rsb->rsb_data, off)]);
+				putchar((bhdr.srsb_replpol ==
+				    BRPOL_PERSIST ?  pmap : map)[
+				     SL_REPL_GET_BMAP_IOS_STAT(
+				     rsb->rsb_data, off)]);
 				uncolor();
 			}
 		}
@@ -653,7 +657,8 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	}
 
 	/* reset current_mrs for next replst */
-	psclist_for_each_entry_safe(rsb, nrsb, &current_mrs_bdata, rsb_lentry) {
+	psclist_for_each_entry_safe(rsb, nrsb, &current_mrs_bdata,
+	    rsb_lentry) {
 		psclist_del(&rsb->rsb_lentry, &current_mrs_bdata);
 		PSCFREE(rsb);
 	}
