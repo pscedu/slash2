@@ -31,7 +31,7 @@
 struct msctlmsg_replst {
 	slfid_t			mrs_fid;
 	struct slash_fidgen	mrs_fg;		/* used intermittenly */
-	char			mrs_iosv[SITE_NAME_MAX][SL_MAX_REPLICAS];
+	char			mrs_iosv[SL_MAX_REPLICAS][RES_NAME_MAX];
 	uint32_t		mrs_nios;
 	uint32_t		mrs_newreplpol;	/* default replication policy */
 };
@@ -49,7 +49,7 @@ struct msctlmsg_replst_slave {
 /* for issuing/controlling replication requests */
 struct msctlmsg_replrq {
 	slfid_t			mrq_fid;
-	char			mrq_iosv[SITE_NAME_MAX][SL_MAX_REPLICAS];
+	char			mrq_iosv[SL_MAX_REPLICAS][RES_NAME_MAX];
 	uint32_t		mrq_nios;
 	sl_bmapno_t		mrq_bmapno;
 };
