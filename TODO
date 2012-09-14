@@ -367,7 +367,8 @@ reimport
 - kill -D argument; provide arg/slcfg var for authbuf key
 - add -d arg to daemons to stop daemonization and make that behavior
   default in developer builds
-- directory replica table inheritance
+- directory replica table inheritance, requires ondisk SLASH2 inode
+  changes (for directories)
 - test msctl -Q <symlink>
 - journal log ino_repl_nblks modifications
 - fix sliod connection bug visible from slmctl
@@ -376,9 +377,7 @@ reimport
 - uptime instance nonce variable that allows msl to dump data if it
   changes while communicating with sliod
    (o) mark new flag on msl csvc when upnonce changes in CONNECT
-- st_blocks is broken on some files in /arc
-- msctl -r is broken on some files in /arc, figure out what is
-  going on
+- st_blocks is zero on some files in /arc
 - convert MDS rcmc.c to async RPCs
 - add du(1) functionality in dumpfid via extattr
 - optimize READLINK for small RPCs to avoid bulk
@@ -387,23 +386,18 @@ reimport
 - merge fuse 2.9.1
 - make macro version of accessors for speed (e.g. bmap_2_bmi())
   inline are for debugging/gdb
-- in RPC layer, add a syserrno -> PFLERR_* checker/portability
-  translation layer
 - expose SLASH2 non-POSIX (e.g. repl) interface through extattr magic
 - sliod backend for
      - google drive
      - box
      - amazon S3/glacier
 
-- optimization: only write changes to brepls in delrq/addrq when changes
-  are actually made
-
    fix round robin among senses when open(O_TRUNC) -- prefer old IOS
    fix ios_nblks[idx] accounting on open(O_TRUNC)
-   advise upsch.db on SSD
+   advise upsch.db on SSD in docs
 
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
    (o) attr buf size needs be dynamically sized
-   (o) small directories should be encoded into the reply struct to spare the extra
-       rtt of using a bulk.
+   (o) small directories should be encoded into the reply struct to
+       spare the extra rtt of using a bulk.
