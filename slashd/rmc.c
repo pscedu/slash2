@@ -186,11 +186,11 @@ slm_rmc_bmapdesc_setup(struct bmapc_memb *bmap,
 int
 slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 {
+	struct bmap_mds_lease *bml = NULL;
 	struct srm_bmap_chwrmode_req *mq;
 	struct srm_bmap_chwrmode_rep *mp;
 	struct fidc_membh *f = NULL;
 	struct bmapc_memb *b = NULL;
-	struct bmap_mds_lease *bml;
 	struct bmap_mds_info *bmi;
 
 	OPSTAT_INCR(OPSTAT_BMAP_CHWRMODE);
