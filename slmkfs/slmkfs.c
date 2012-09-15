@@ -330,7 +330,8 @@ main(int argc, char *argv[])
 			if (endp == optarg || *endp)
 				errx(1, "%s: invalid SITEID", optarg);
 			if (siteid >= (1 << SLASH_FID_SITE_BITS))
-				errx(1, "%lu: SITEID too big", siteid);
+				errx(1, "%"PRIu64": SITEID too big",
+				    siteid);
 			break;
 		case 'W':
 			wipe = 1;
