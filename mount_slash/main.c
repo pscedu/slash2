@@ -1932,7 +1932,7 @@ void
 mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
     struct stat *stb, int to_set, void *data)
 {
-	int rc = 0, unset_trunc = 0, getting_attrs, flush_attrs = 0;
+	int rc = 0, unset_trunc = 0, getting_attrs = 0, flush_attrs = 0;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct msl_fhent *mfh = data;
