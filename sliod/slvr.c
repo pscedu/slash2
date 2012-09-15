@@ -249,7 +249,7 @@ slvr_aio_replreply(struct sli_aiocb_reply *a)
 	struct pscrpc_request *rq = NULL;
 	struct srm_repl_read_req *mq;
 	struct srm_repl_read_rep *mp;
-	struct slvr_ref *s;
+	struct slvr_ref *s = NULL;
 
 	psc_assert(a->aiocbr_nslvrs == 1);
 
@@ -279,7 +279,8 @@ slvr_aio_replreply(struct sli_aiocb_reply *a)
 	pscrpc_req_finished(rq);
 
  out:
-	slvr_rio_done(s);
+	if (s)
+		slvr_rio_done(s);
 
 	if (a->aiocbr_csvc)
 		sl_csvc_decref(a->aiocbr_csvc);
