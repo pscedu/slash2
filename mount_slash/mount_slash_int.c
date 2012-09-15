@@ -2374,7 +2374,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
     const size_t size, const off_t off, enum rw rw)
 {
 	struct bmapc_memb *b, *bref = NULL;
-	struct msl_fsrqinfo *q;
+	struct msl_fsrqinfo *q = NULL;
 	struct fidc_membh *f;
 	struct bmpc_ioreq *r;
 	size_t s, e, tlen, tsize;
