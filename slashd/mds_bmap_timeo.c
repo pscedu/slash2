@@ -166,9 +166,9 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 void
 slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 {
-	int rc, nsecs;
-	struct bmap_mds_lease *bml;
 	struct slmds_jent_bmapseq sjbsq;
+	struct bmap_mds_lease *bml;
+	int rc, nsecs = 0;
 
 	while (pscthr_run()) {
 		spinlock(&mdsBmapTimeoTbl.btt_lock);
