@@ -84,6 +84,8 @@ slm_bmap_calc_repltraffic(struct bmapc_memb *b)
 	int64_t amt = 0;
 	off_t bsiz, sz;
 
+	locked[1] = 0; /* gcc */
+
 	f = b->bcm_fcmh;
 	locked[0] = FCMH_RLOCK(f);
 	if (locked[0] == PSLRV_WASLOCKED)
