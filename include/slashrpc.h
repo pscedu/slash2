@@ -576,10 +576,9 @@ struct srm_reclaim_rep {
  */
 #define	RECLAIM_ENTRY_SIZE	512
 
-#define RECLAIM_MAGIC_VER	0x0000000000000001
-#define RECLAIM_MAGIC_FID	0xffffffffffffffff
-#define RECLAIM_MAGIC_GEN	0xabcdefabcdef5678
-
+#define RECLAIM_MAGIC_VER	UINT64_C(0x0000000000000001)
+#define RECLAIM_MAGIC_FID	UINT64_C(0xffffffffffffffff)
+#define RECLAIM_MAGIC_GEN	UINT64_C(0xabcdefabcdef5678)
 
 struct srt_reclaim_entry {
 	uint64_t		xid;
