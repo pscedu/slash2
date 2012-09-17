@@ -281,7 +281,7 @@ struct bmpc_ioreq {
 #define BIORQ_MAXRETRIES		(1 << 19)	/* too many retries.. */
 #define BIORQ_BMAPFAIL			(1 << 20)
 #define BIORQ_READFAIL			(1 << 21)
-#define BIORQ_PENDING 			(1 << 22)
+#define BIORQ_PENDING			(1 << 22)
 
 #define BIORQ_LOCK(r)			spinlock(&(r)->biorq_lock)
 #define BIORQ_ULOCK(r)			freelock(&(r)->biorq_lock)
@@ -318,7 +318,7 @@ struct bmpc_ioreq {
 	    (b)->biorq_flags & BIORQ_MAXRETRIES		? "x" : "",	\
 	    (b)->biorq_flags & BIORQ_BMAPFAIL		? "b" : "",	\
 	    (b)->biorq_flags & BIORQ_READFAIL		? "E" : "",	\
-	    (b)->biorq_flags & BIORQ_PENDING 		? "p" : "",	\
+	    (b)->biorq_flags & BIORQ_PENDING		? "p" : "",	\
 	    (b)->biorq_off, (b)->biorq_len, (b)->biorq_retries,		\
 	    (b)->biorq_buf, (b)->biorq_fsrqi, (b)->biorq_last_sliod,	\
 	    psc_dynarray_len(&(b)->biorq_pages), (b)->biorq_bmap,	\
