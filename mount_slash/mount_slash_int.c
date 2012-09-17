@@ -443,11 +443,7 @@ msl_biorq_del(struct bmpc_ioreq *r)
 	BMAP_LOCK(b);
 	BMPC_LOCK(bmpc);
 
-	/* Reads and DIO's go directly to the pndg list.
-	 */
-	if (!(r->biorq_flags & (BIORQ_READ | BIORQ_DIO)) &&
-	    (r->biorq_flags & (BIORQ_RESCHED | BIORQ_RBWFAIL |
-			       BIORQ_FLUSHABORT | BIORQ_BMAPFAIL)))
+	if (!(r->biorq_flags & BIORQ_PENDING))
 		pll_remove(&bmpc->bmpc_new_biorqs, r);
 	else
 		pll_remove(&bmpc->bmpc_pndg_biorqs, r);

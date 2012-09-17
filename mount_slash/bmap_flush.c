@@ -289,6 +289,8 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r)
 
 	PFL_GETTIMESPEC(&t);
 
+	bmpc = bmap_2_bmpc(r->biorq_bmap);
+	BMPC_LOCK(bmpc);
 	BIORQ_LOCK(r);
 	psc_assert(r->biorq_flags & BIORQ_SCHED);
 
@@ -301,18 +303,17 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r)
 	} else
 		timespecsub(&r->biorq_expire, &t, &t);
 
-	BIORQ_ULOCK(r);
 	DEBUG_BIORQ(old ? PLL_NOTIFY : PLL_INFO, r, "set inflight %s("
 	    PSCPRI_TIMESPEC")", old ? "expired: -" : "",
 	    PSCPRI_TIMESPEC_ARGS(&t));
 
-	bmpc = bmap_2_bmpc(r->biorq_bmap);
 	/* Limit the amount of scanning done by this
 	 *   thread.  Move pending biorqs out of the way.
 	 */
-	BMPC_LOCK(bmpc);
+	r->biorq_flags |= BIORQ_PENDING;
 	pll_remove(&bmpc->bmpc_new_biorqs, r);
 	pll_addtail(&bmpc->bmpc_pndg_biorqs, r);
+	BIORQ_ULOCK(r);
 	BMPC_ULOCK(bmpc);
 }
 

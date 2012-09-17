@@ -337,9 +337,10 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	if (b->bcm_flags & BMAP_ARCHIVER)
 		r->biorq_flags |= BIORQ_ARCHIVER;
 
-	if (op == BIORQ_READ || (r->biorq_flags & BIORQ_DIO))
+	if (op == BIORQ_READ || (r->biorq_flags & BIORQ_DIO)) {
+		r->biorq_flags |= BIORQ_PENDING;
 		pll_add(&bmap_2_bmpc(b)->bmpc_pndg_biorqs, r);
-	else
+	} else
 		pll_add_sorted(&bmap_2_bmpc(b)->bmpc_new_biorqs, r,
 		    bmpc_biorq_cmp);
 	BMAP_ULOCK(b);
