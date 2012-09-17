@@ -605,6 +605,7 @@ dump_biorq_flags(uint32_t flags)
 	PFL_PRFLAG(BIORQ_MAXRETRIES, &flags, &seq);
 	PFL_PRFLAG(BIORQ_BMAPFAIL, &flags, &seq);
 	PFL_PRFLAG(BIORQ_READFAIL, &flags, &seq);
+	PFL_PRFLAG(BIORQ_PENDING, &flags, &seq);
 	if (flags)
 		printf(" unknown: %#x", flags);
 	printf("\n");
