@@ -1689,8 +1689,10 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	pscrpc_set_add_new_req(r->biorq_rqset, rq);
 
 	rc = pscrpc_push_req(rq);
-	if (rc)
+	if (rc) {
+		pscrpc_set_remove_req(r->biorq_rqset, rq);
 		goto error;
+	}
 	return (0);
 
  error:
