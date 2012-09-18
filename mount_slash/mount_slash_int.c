@@ -795,6 +795,7 @@ msl_req_aio_add(struct pscrpc_request *rq,
 		 */
 		psc_assert(!r);
 		bmpces = av->pointer_arg[MSL_CBARG_BMPCE];
+		OPSTAT_INCR(OPSTAT_READ_AHEAD_CB_ADD);
 
 		for (i = 0;; i++) {
 			e = bmpces[i];
@@ -806,6 +807,7 @@ msl_req_aio_add(struct pscrpc_request *rq,
 	} else if (cbf == msl_read_cb) {
 		int naio = 0;
 
+		OPSTAT_INCR(OPSTAT_READ_CB_ADD);
 		DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 			BMPCE_LOCK(e);
 			if (e->bmpce_flags & BMPCE_DATARDY) {
@@ -826,6 +828,7 @@ msl_req_aio_add(struct pscrpc_request *rq,
 		car->car_fsrqinfo = r->biorq_fsrqi;
 
 	} else if (cbf == msl_dio_cb) {
+		OPSTAT_INCR(OPSTAT_DIO_CB_ADD);
 		msl_biorq_aio_prep(r);
 		if (r->biorq_flags & BIORQ_WRITE)
 			av->pointer_arg[MSL_CBARG_BIORQ] = NULL;
