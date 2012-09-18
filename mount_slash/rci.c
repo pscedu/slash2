@@ -22,18 +22,18 @@
 #include "pfl/fs.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
+#include "psc_util/ctlsvr.h"
 
 #include "bmpc.h"
 #include "rpc_cli.h"
 #include "slashrpc.h"
-#include "psc_util/ctlsvr.h"
 
 /*
  * Routines for handling RPC requests for CLI from ION.
  */
 
-#define RCI_AIO_READ_WAIT 1000000
-#define CAR_LOOKUP_MAX 1000
+#define RCI_AIO_READ_WAIT	1000000
+#define CAR_LOOKUP_MAX		1000
 
 /**
  * slc_rci_handle_io - Handle a READ or WRITE completion for CLI from
@@ -142,11 +142,11 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 			iovs[i].iov_base = e->bmpce_base;
 			iovs[i].iov_len = BMPC_BUFSZ;
 			if (mq->rc)
-			       e->bmpce_flags |= BMPCE_EIO;
+				e->bmpce_flags |= BMPCE_EIO;
 		}
 		if (mq->rc == 0)
 			mq->rc = rsx_bulkserver(rq, BULK_GET_SINK,
-				SRCI_BULK_PORTAL, iovs, i);
+			    SRCI_BULK_PORTAL, iovs, i);
 
 		PSCFREE(iovs);
 
