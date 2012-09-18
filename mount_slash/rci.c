@@ -26,6 +26,7 @@
 #include "bmpc.h"
 #include "rpc_cli.h"
 #include "slashrpc.h"
+#include "psc_util/ctlsvr.h"
 
 /*
  * Routines for handling RPC requests for CLI from ION.
@@ -70,6 +71,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 			}
 
 		if (!found) {
+			OPSTAT_INCR(OPSTAT_READ_AIO_NOT_FOUND);
 			struct timespec ts = { 0, RCI_AIO_READ_WAIT };
 
 			/*

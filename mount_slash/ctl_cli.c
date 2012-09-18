@@ -500,6 +500,7 @@ struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("readdir"),
 	PFL_OPSTAT_INIT("readdir_retry"),
 	PFL_OPSTAT_INIT("read_ahead"),
+	PFL_OPSTAT_INIT("read_aio_not_found"),
 	PFL_OPSTAT_INIT("read_rpc_launch"),
 	PFL_OPSTAT_INIT("removexattr"),
 	PFL_OPSTAT_INIT("rename"),
