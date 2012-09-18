@@ -1113,10 +1113,10 @@ msl_read_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	psc_assert(rq->rq_reqmsg->opc == SRMT_READ);
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_io_rep, rc);
+
+	/* XXX should be negative errno */
 	if (rc == SLERR_AIOWAIT)
 		return (msl_req_aio_add(rq, msl_read_cb, args));
-
-	psc_assert(rc != -SLERR_AIOWAIT);
 
 	return (msl_read_cb(rq, rc, args));
 }
