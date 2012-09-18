@@ -1363,6 +1363,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		pscrpc_set_add_new_req(r->biorq_rqset, rq);
 		rc = pscrpc_push_req(rq);
 		if (rc) {
+			OPSTAT_INCR(OPSTAT_RPC_PUSH_REQ_FAIL);
 			pscrpc_set_remove_req(r->biorq_rqset, rq);
 			goto error;
 		}
@@ -1690,6 +1691,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 
 	rc = pscrpc_push_req(rq);
 	if (rc) {
+		OPSTAT_INCR(OPSTAT_RPC_PUSH_REQ_FAIL);
 		pscrpc_set_remove_req(r->biorq_rqset, rq);
 		goto error;
 	}

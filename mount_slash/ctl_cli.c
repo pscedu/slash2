@@ -510,6 +510,7 @@ struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("read_rpc_launch"),
 	PFL_OPSTAT_INIT("removexattr"),
 	PFL_OPSTAT_INIT("rename"),
+	PFL_OPSTAT_INIT("rpc_push_req_fail"),
 	PFL_OPSTAT_INIT("setattr"),
 	PFL_OPSTAT_INIT("setxattr"),
 	PFL_OPSTAT_INIT("slc_fcmh_ctor"),
