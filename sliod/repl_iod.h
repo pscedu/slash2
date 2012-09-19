@@ -78,7 +78,6 @@ void	sli_repl_init(void);
 
 void	sli_replwkrq_decref(struct sli_repl_workrq *, int);
 
-extern struct pscrpc_nbreqset	 sli_replwk_nbset;
 extern struct psc_lockedlist	 sli_replwkq_active;
 extern struct psc_listcache	 sli_replwkq_pending;
 

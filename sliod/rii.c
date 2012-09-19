@@ -335,7 +335,7 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 
 	psc_assert(w->srw_slvr_refs[slvridx] == SLI_REPL_SLVR_SCHED);
 	w->srw_slvr_refs[slvridx] = s =
-		slvr_lookup(slvrno, bmap_2_biodi(w->srw_bcm), SL_WRITE);
+	    slvr_lookup(slvrno, bmap_2_biodi(w->srw_bcm), SL_WRITE);
 
 	slvr_slab_prep(s, SL_WRITE);
 	slvr_repl_prep(s, SLVR_REPLDST | SLVR_REPLWIRE);
@@ -356,9 +356,11 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_WKRQ] = w;
 	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_SLVR] = s;
 
-	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 	psc_atomic32_inc(&w->srw_refcnt);
-	psc_assert(pscrpc_nbreqset_add(&sli_replwk_nbset, rq) == 0);
+
+	rc = SL_NBRQSET_ADD(csvc, rq);
+	psc_assert(rc == 0);
+
 	rq = NULL;
 
  out:

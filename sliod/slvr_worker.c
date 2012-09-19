@@ -39,9 +39,11 @@
 #include "sliod.h"
 #include "slvr.h"
 
+int slvr_nbreqset_cb(struct pscrpc_request *, struct pscrpc_async_args *);
+
 static struct biod_infl_crcs	 binflCrcs;
-struct pscrpc_nbreqset		*slvrNbReqSet;
-struct timespec			 slvrCrcDelay = {0, 50000000L}; /* 50 milliseconds */
+struct pscrpc_nbreqset		*sl_nbrqset;
+struct timespec			 slvrCrcDelay = { 0, 50000000L }; /* 50 milliseconds */
 struct psc_waitq		 slvrWaitq = PSC_WAITQ_INIT;
 
 /*
@@ -76,6 +78,7 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 	PSC_CRC64_INIT(&mq->crc);
 
 	mq->ncrc_updates = psc_dynarray_len(bcrs);
+	rq->rq_interpret_reply = slvr_nbreqset_cb;
 	rq->rq_async_args.pointer_arg[0] = (void *)bcrs;
 	rq->rq_async_args.pointer_arg[1] = csvc;
 
@@ -114,26 +117,27 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 	    mq->ncrc_updates);
 	PSCFREE(iovs);
 
-	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
-	psc_assert(pscrpc_nbreqset_add(slvrNbReqSet, rq) == 0);
+	psc_assert(rc == 0);
 
+	rc = SL_NBRQSET_ADD(csvc, rq);
+	psc_assert(rc == 0);
 	return (rc);
 }
 
 __static void
 slvr_worker_push_crcups(void)
 {
-	int			 i;
-	int			 rc;
 	struct timespec		 now;
 	struct biod_crcup_ref	*bcr, *tmp;
 	struct psc_dynarray	*bcrs;
 	static atomic_t busy = ATOMIC_INIT(0);
+	int i, rc;
 
 	if (atomic_xchg(&busy, 1))
 		return;
 
-	pscrpc_nbreqset_reap(slvrNbReqSet);
+	pscrpc_nbreqset_reap(sl_nbrqset);
+
 	/*
 	 * Check if an earlier CRC update RPC, if any, has finished.  If
 	 * one is still inflight, we won't be able to initiate a new one.
@@ -184,7 +188,7 @@ slvr_worker_push_crcups(void)
 			continue;
 
 		else if (now.tv_sec <
-			 (bcr->bcr_age.tv_sec + BIOD_CRCUP_MAX_AGE)) {
+		    (bcr->bcr_age.tv_sec + BIOD_CRCUP_MAX_AGE)) {
 			BIOD_ULOCK(bcr->bcr_biodi);
 			continue;
 		}
@@ -247,7 +251,7 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 		biod = bcr->bcr_biodi;
 
 		DEBUG_BCR(((rq->rq_status || !mp || mp->rc) ?
-		   PLL_ERROR : PLL_INFO),  bcr, "rq_status=%d rc=%d%s",
+		    PLL_ERROR : PLL_INFO),  bcr, "rq_status=%d rc=%d%s",
 		  rq->rq_status, mp ? mp->rc : -4096,
 		  mp ? "" : " (unknown, no buf)");
 
@@ -258,6 +262,7 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 			spinlock(&binflCrcs.binfcrcs_lock);
 			bcr->bcr_flags &= ~BCR_SCHEDULED;
 			freelock(&binflCrcs.binfcrcs_lock);
+
 			/* Unset the inflight bit on the biodi since
 			 *   bcr_xid_last_bump() will not be called.
 			 */
@@ -281,12 +286,12 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 __static void
 slvr_worker_int(void)
 {
-	struct slvr_ref	*s;
-	struct timespec ts, slvr_ts;
 	struct biod_crcup_ref *bcr = NULL;
+	struct timespec ts, slvr_ts;
 	struct bmap_iod_info *biod;
-	uint64_t crc;
+	struct slvr_ref	*s;
 	uint16_t slvr_num;
+	uint64_t crc;
 
 #define SLVR_MIN_FREE 8
 
@@ -317,7 +322,7 @@ slvr_worker_int(void)
 			int n;
 
 			if ((n = atomic_read(&slvrWaitq.wq_nwaiters))) {
-				struct timespec tmp = {0, 200000L};
+				struct timespec tmp = { 0, 200000L };
 
 				tmp.tv_nsec *= n;
 				timespecadd(&ts, &tmp, &ts);
@@ -356,6 +361,7 @@ slvr_worker_int(void)
 
 	SLVR_LOCK(s);
 	DEBUG_SLVR(PLL_INFO, s, "slvr_worker");
+
 	/* Sliver assertions:
 	 *  CRCING - only one slvr_worker thread may handle a sliver.
 	 *  !LRU - ensure that slvr is in the right state.
@@ -382,10 +388,12 @@ slvr_worker_int(void)
 		SLVR_ULOCK(s);
 		goto start;
 	}
+
 	/* Ok, we've got a sliver to work on.
 	 *   From this point until we set to inflight, the slvr_lentry
 	 *   should be disjointed.
 	 */
+
 	s->slvr_flags |= SLVR_CRCING;
 	/* 'completed writes' signifier can be reset, the upcoming
 	 *    instantiation of slvr_do_crc() will cover those writes.
@@ -413,10 +421,12 @@ slvr_worker_int(void)
 		lc_addtail(&crcqSlvrs, s);
 		goto start;
 	}
+
 	/* Copy the accumulator to the tmp variable.
 	 */
 	crc = s->slvr_crc;
 	PSC_CRC64_FIN(&crc);
+
 	/* Put the slvr back to the LRU so it may have its slab
 	 *   reaped.
 	 */
@@ -424,10 +434,10 @@ slvr_worker_int(void)
 	psc_atomic32_dec(&biod->biod_crcdrty_slvrs);
 	s->slvr_dirty_cnt--;
 	DEBUG_SLVR(PLL_INFO, s, "prep for move to LRU (ndirty=%u)",
-	   psc_atomic32_read(&slvr_2_biod(s)->biod_crcdrty_slvrs));
+	    psc_atomic32_read(&slvr_2_biod(s)->biod_crcdrty_slvrs));
 
 	s->slvr_flags |= SLVR_LRU;
-	(int)slvr_lru_tryunpin_locked(s);
+	slvr_lru_tryunpin_locked(s);
 
 	lc_addqueue(&lruSlvrs, s);
 
@@ -500,9 +510,9 @@ slvr_worker_int(void)
 		bcr->bcr_crcup.nups = 1;
 
 		DEBUG_BCR(PLL_NOTIFY, bcr,
-		  "newly added (bcr_bklog=%d) (sched=%d)",
-		  pll_nitems(&slvr_2_biod(s)->biod_bklog_bcrs),
-		  !!(bii_2_bmap(biod)->bcm_flags & BMAP_IOD_BCRSCHED));
+		    "newly added (bcr_bklog=%d) (sched=%d)",
+		    pll_nitems(&slvr_2_biod(s)->biod_bklog_bcrs),
+		    !!(bii_2_bmap(biod)->bcm_flags & BMAP_IOD_BCRSCHED));
 
 		if (bii_2_bmap(biod)->bcm_flags & BMAP_IOD_BCRSCHED)
 			/* The bklog may be empty but a pending bcr may be
@@ -538,10 +548,6 @@ slvr_worker_init(void)
 	    bcr_lentry, &binflCrcs.binfcrcs_lock);
 	pll_init(&binflCrcs.binfcrcs_hold, struct biod_crcup_ref,
 	    bcr_lentry, &binflCrcs.binfcrcs_lock);
-
-	slvrNbReqSet = pscrpc_nbreqset_init(NULL, slvr_nbreqset_cb);
-	if (!slvrNbReqSet)
-		psc_fatalx("nbreqset_init() failed");
 
 	for (i = 0; i < NSLVRCRC_THRS; i++)
 		pscthr_init(SLITHRT_SLVR_CRC, 0, slvr_worker, NULL, 0,

@@ -38,9 +38,6 @@
 #include "sliod.h"
 #include "sltypes.h"
 
-struct pscrpc_nbreqset	 sli_replwk_nbset =
-    PSCRPC_NBREQSET_INIT(sli_replwk_nbset, NULL, NULL);
-
 struct psc_poolmaster	 sli_replwkrq_poolmaster;
 struct psc_poolmgr	*sli_replwkrq_pool;
 
@@ -284,7 +281,4 @@ sli_repl_init(void)
 
 	pscthr_init(SLITHRT_REPLPND, 0, slireplpndthr_main, NULL, 0,
 	    "slireplpndthr");
-
-	pscrpc_nbreapthr_spawn(&sli_replwk_nbset, SLITHRT_REPLREAP,
-	    "slireplreapthr");
 }
