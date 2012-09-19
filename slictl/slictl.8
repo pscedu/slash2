@@ -15,7 +15,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES ctl rpc %
-.Dd May 23, 2012
+.Dd September 19, 2012
 .Dt SLICTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -595,10 +595,12 @@ connection acceptor
 connection processor
 .It Cm slilnacthr- Ns Ar %s
 Lustre network acceptor thread
+.It Cm slinbrqthr
+Non-blocking
+.Tn RPC
+reply handler
 .It Cm slireplpndthr
 Pending replication work processor
-.It Cm slireplreapthr
-Finished replication work reaper
 .It Cm sliricthr Ns Ar %02d
 Client
 .Tn RPC
