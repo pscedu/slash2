@@ -759,7 +759,6 @@ psc_ctl_prthr_t psc_ctl_prthrs[] = {
 /* EQPOLL	*/ NULL,
 /* FS		*/ NULL,
 /* FSMGR	*/ NULL,
-/* LNETAC	*/ NULL,
 /* NBRQ		*/ NULL,
 /* RCI		*/ NULL,
 /* RCM		*/ NULL,

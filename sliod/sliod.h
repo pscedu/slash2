@@ -38,7 +38,6 @@ enum {
 	SLITHRT_LNETAC,		/* Lustre net accept thr */
 	SLITHRT_NBRQ,		/* non blocking RPC request processor */
 	SLITHRT_REPLPND,	/* process enqueued replication work */
-	SLITHRT_REPLREAP,	/* reap in-flight replication work */
 	SLITHRT_RIC,		/* service RPC requests from CLI */
 	SLITHRT_RII,		/* service RPC requests from ION */
 	SLITHRT_RIM,		/* service RPC requests from MDS */

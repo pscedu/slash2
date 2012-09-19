@@ -476,7 +476,6 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* EQPOLL	*/ NULL,
 /* FS		*/ NULL,
 /* FSMGR	*/ NULL,
-/* LNETAC	*/ NULL,
 /* NBRQ		*/ NULL,
 /* RCI		*/ NULL,
 /* RCM		*/ NULL,

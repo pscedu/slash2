@@ -2901,7 +2901,7 @@ int
 psc_usklndthr_get_type(const char *namefmt)
 {
 	if (strstr(namefmt, "lnacthr"))
-		return (MSTHRT_LNETAC);
+		psc_fatalx("invalid name");
 	return (MSTHRT_USKLNDPL);
 }
 

@@ -52,7 +52,6 @@ enum {
 	MSTHRT_EQPOLL,			/* LNET event queue polling */
 	MSTHRT_FS,			/* file system syscall handler workers */
 	MSTHRT_FSMGR,			/* pscfs manager */
-	MSTHRT_LNETAC,			/* lustre net accept thr */
 	MSTHRT_NBRQ,			/* non-blocking RPC reply handler */
 	MSTHRT_RCI,			/* service RPC reqs for CLI from ION */
 	MSTHRT_RCM,			/* service RPC reqs for CLI from MDS */
