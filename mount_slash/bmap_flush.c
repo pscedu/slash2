@@ -448,6 +448,7 @@ bmap_flush_resched(struct bmpc_ioreq *r)
 	psc_assert(r->biorq_flags & BIORQ_INFL);
 	r->biorq_flags &= ~BIORQ_INFL;
 
+	r->biorq_flags &= ~BIORQ_PENDING;
 	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 	pll_add_sorted(&bmpc->bmpc_new_biorqs, r, bmpc_biorq_cmp);
 	/* bmap_flush_desched drops BIORQ_LOCK and BMPC_LOCK

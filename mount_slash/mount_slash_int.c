@@ -445,8 +445,10 @@ msl_biorq_del(struct bmpc_ioreq *r)
 
 	if (!(r->biorq_flags & BIORQ_PENDING))
 		pll_remove(&bmpc->bmpc_new_biorqs, r);
-	else
+	else {
 		pll_remove(&bmpc->bmpc_pndg_biorqs, r);
+		r->biorq_flags &= ~BIORQ_PENDING;
+	}
 
 	if (r->biorq_flags & BIORQ_WRITE && !(r->biorq_flags & BIORQ_DIO)) {
 		if (!(r->biorq_flags & BIORQ_RBWFAIL))
