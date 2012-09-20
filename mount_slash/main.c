@@ -298,6 +298,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	msfsthr_ensure();
 
 	psc_assert(oflags & O_CREAT);
+	OPSTAT_INCR(OPSTAT_CREAT);
 
 	if (!msl_progallowed(pfr)) {
 		rc = EPERM;
