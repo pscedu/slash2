@@ -133,7 +133,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 
 	psc_assert(len);
 	psc_assert((roff + len) <= SLASH_BMAP_SIZE);
-	psc_assert(op == BIORQ_WRITE || op == BIORQ_READ);
 
 	msl_update_iocounters(len);
 
