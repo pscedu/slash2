@@ -116,7 +116,8 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 {
 	struct bmpc_ioreq *r;
 	struct bmap_pagecache *bmpc;
-	struct bmap_pagecache_entry *e, bmpce_search, *bmpce_new;
+	uint32_t bmpce_off;
+	struct bmap_pagecache_entry *e, *bmpce_new;
 	struct msl_fhent *mfh = q->mfsrq_fh;
 	uint32_t aoff = (roff & ~BMPC_BUFMASK); /* aligned, relative offset */
 	uint32_t alen = len + (roff & BMPC_BUFMASK);
@@ -215,27 +216,24 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	BMPC_LOCK(bmpc);
 	while (i < maxpages) {
 		if (bkwdra)
-			bmpce_search.bmpce_off = aoff +
-			    ((npages - 1 - i) * BMPC_BUFSZ);
+			bmpce_off = aoff + ((npages - 1 - i) * BMPC_BUFSZ);
 		else
-			bmpce_search.bmpce_off = aoff + (i * BMPC_BUFSZ);
+			bmpce_off = aoff + (i * BMPC_BUFSZ);
 
 		// XXX make work for backward ra!
 		MFH_LOCK(mfh);
 		if (i >= npages && bmap_foff(b) +
-		    bmpce_search.bmpce_off <= mfh->mfh_ra.mra_raoff) {
+		    bmpce_off <= mfh->mfh_ra.mra_raoff) {
 			MFH_ULOCK(mfh);
 			i++;
 			continue;
 		}
 		psclog_info("i=%d npages=%d raoff=%"PRIx64
 		    " bmpce_foff=%"PRIx64, i, npages, mfh->mfh_ra.mra_raoff,
-		    (off_t)(bmpce_search.bmpce_off + bmap_foff(b)));
+		    (off_t)(bmpce_off + bmap_foff(b)));
 		MFH_ULOCK(mfh);
  restart:
-		e = bmpce_lookup_locked(bmpc, r,
-		    (bkwdra ? (aoff + ((npages - 1 - i) * BMPC_BUFSZ)) :
-		     aoff + (i * BMPC_BUFSZ)),
+		e = bmpce_lookup_locked(bmpc, r, bmpce_off,
 		    (i < npages) ? NULL : &r->biorq_bmap->bcm_fcmh->fcmh_waitq);
 
 		BMPCE_LOCK(e);
@@ -244,7 +242,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 
 		DEBUG_BMPCE(PLL_INFO, e, "i=%d, npages=%d maxpages=%d aoff=%u "
 		    " aoff_search=%u", i, npages, maxpages, aoff,
-		    bmpce_search.bmpce_off);
+		    bmpce_off);
 
 		if (i < npages) {
 			if (e->bmpce_flags & BMPCE_EIO) {
@@ -273,7 +271,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 			    " bmpce_foff=%"PRIx64,
 			    pll_nitems(&mfh->mfh_ra_bmpces), i,
 			    biorq_is_my_bmpce(r, e), mfh->mfh_ra.mra_raoff,
-			    (off_t)(bmpce_search.bmpce_off + bmap_foff(b)));
+			    (off_t)(bmpce_off + bmap_foff(b)));
 
 			/* These are read-ahead bmpce's.  Only add
 			 *   pages which have yet to be retrieved.
@@ -328,15 +326,14 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 				    bmpce_lrusort_cmp1);
 			}
 			MFH_LOCK(mfh);
-			mfh->mfh_ra.mra_raoff = bmap_foff(b) +
-				bmpce_search.bmpce_off;
+			mfh->mfh_ra.mra_raoff = bmap_foff(b) + bmpce_off;
 			MFH_ULOCK(mfh);
 		}
 		BMPCE_ULOCK(e);
 
 		i++;
 
-		if (bkwdra && !bmpce_search.bmpce_off)
+		if (bkwdra && !bmpce_off)
 			break;
 	}
 	BMPC_ULOCK(bmpc);
