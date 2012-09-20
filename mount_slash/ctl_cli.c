@@ -495,6 +495,7 @@ struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("getxattr"),
 	PFL_OPSTAT_INIT("getxattr_nosys"),
 	PFL_OPSTAT_INIT("listxattr"),
+	PFL_OPSTAT_INIT("mkdir"),
 	PFL_OPSTAT_INIT("offline_retry"),
 	PFL_OPSTAT_INIT("offline_no_retry"),
 	PFL_OPSTAT_INIT("read"),

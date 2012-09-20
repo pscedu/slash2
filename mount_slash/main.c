@@ -771,6 +771,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	int rc;
 
 	msfsthr_ensure();
+	OPSTAT_INCR(OPSTAT_MKDIR);
 
 	if (strlen(name) == 0) {
 		rc = ENOENT;
