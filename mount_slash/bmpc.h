@@ -324,18 +324,6 @@ struct bmpc_ioreq {
 	    psc_dynarray_len(&(b)->biorq_pages), (b)->biorq_bmap,	\
 	    PSCPRI_TIMESPEC_ARGS(&(b)->biorq_expire), ## __VA_ARGS__)
 
-#define biorq_wait_locked(r, cond)					\
-	do {								\
-		BIORQ_LOCK_ENSURE(r);					\
-		while (cond) {						\
-			psc_waitq_wait(&(r)->biorq_waitq,		\
-			    &(r)->biorq_lock);				\
-			BIORQ_LOCK(r);					\
-		}							\
-	} while (0)
-
-#define biorq_wake_locked(r)		psc_waitq_wakeall(&(r)->biorq_waitq)
-
 int	_msl_offline_retry(const struct pfl_callerinfo *, struct bmpc_ioreq *);
 int	msl_fd_offline_retry(struct msl_fhent *);
 
