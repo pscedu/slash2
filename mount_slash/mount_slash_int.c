@@ -349,7 +349,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 		psc_dynarray_reverse(&r->biorq_pages);
 
 	/*
-	 * Pass1: Deal with RBW pages
+	 * Deal with RBW pages
 	 */
 	for (i = 0; i < npages; i++) {
 		e = psc_dynarray_getpos(&r->biorq_pages, i);
@@ -357,6 +357,11 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 
 		if (biorq_is_my_bmpce(r, e)) {
 			uint32_t rfsz = fsz - bmap_foff(b);
+
+			e->bmpce_flags &= ~BMPCE_INIT;
+
+			if (op == BIORQ_READ)
+				e->bmpce_flags |= BMPCE_READPNDG;
 
 			/* Increase the rdref cnt in preparation for any
 			 *   RBW ops but only on new pages owned by this
@@ -383,36 +388,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 			}
 		}
 		BMPCE_ULOCK(e);
-	}
-
-	/* Pass2: Sanity Check
-	 */
-	for (i=0; i < npages; i++) {
-		e = psc_dynarray_getpos(&r->biorq_pages, i);
-		BMPCE_LOCK(e);
-		if (i < npages)
-			psc_assert(e->bmpce_off ==
-			   aoff + (i * BMPC_BUFSZ));
-
-		if (op == BIORQ_WRITE)
-			psc_assert(psc_atomic16_read(&e->bmpce_wrref) > 0);
-		else
-			psc_assert(psc_atomic16_read(&e->bmpce_rdref) > 0);
-
-		if (biorq_is_my_bmpce(r, e)) {
-			/* The page is my reponsibility, ensure a cache
-			 *   block has been assigned.
-			 */
-			psc_assert(e->bmpce_base);
-			psc_assert(e->bmpce_flags & BMPCE_INIT);
-			psc_assert(!(e->bmpce_flags & BMPCE_EIO));
-			e->bmpce_flags &= ~BMPCE_INIT;
-
-			if (op == BIORQ_READ)
-				e->bmpce_flags |= BMPCE_READPNDG;
-		}
-		BMPCE_ULOCK(e);
-		DEBUG_BMPCE(PLL_INFO, e, "bmpce prep done");
 	}
 
 	DEBUG_BIORQ(PLL_NOTIFY, r, "new req (fetchpgs=%d)", fetchpgs);
