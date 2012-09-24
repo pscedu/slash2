@@ -463,7 +463,8 @@ msl_bmpces_fail(struct bmpc_ioreq *r)
 
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 		BMPCE_LOCK(e);
-		e->bmpce_flags |= BMPCE_EIO;
+		if (biorq_is_my_bmpce(r, e))
+			e->bmpce_flags |= BMPCE_EIO;
 		BMPCE_ULOCK(e);
 	}
 }
