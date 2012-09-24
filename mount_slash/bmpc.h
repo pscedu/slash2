@@ -254,7 +254,7 @@ struct bmpc_ioreq {
 	struct psclist_head		 biorq_bwc_lentry;
 	struct bmapc_memb		*biorq_bmap;	/* backpointer to our bmap	*/
 	struct pscrpc_request_set	*biorq_rqset;
-	struct psc_waitq		 biorq_waitq;
+	struct psc_waitq		 biorq_waitq;	/* XXX to be removed */
 	struct msl_fhent		*biorq_fhent;	/* back pointer to msl_fhent */
 	struct msl_fsrqinfo		*biorq_fsrqi;
 };
