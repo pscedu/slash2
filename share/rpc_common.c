@@ -22,6 +22,7 @@
 
 #include <stdio.h>
 
+#include "pfl/time.h"
 #include "psc_ds/list.h"
 #include "psc_rpc/export.h"
 #include "psc_rpc/rpc.h"
@@ -923,7 +924,7 @@ slconnthr_main(struct psc_thread *thr)
 				PSCFREE(scp);
 			}
  next:
-			PSCTHR_RLOCK(thr);
+			(void)PSCTHR_RLOCK(thr);
 		}
 		PSCTHR_ULOCK(thr);
 		psc_multiwait_secs(&sct->sct_mw, &dummy, 1);
