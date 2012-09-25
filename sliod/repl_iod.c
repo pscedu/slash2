@@ -140,7 +140,7 @@ sli_repl_addwk(int op, struct sl_resource *res,
 void
 sli_replwkrq_decref(struct sli_repl_workrq *w, int rc)
 {
-	reqlock(&w->srw_lock);
+	(void)reqlock(&w->srw_lock);
 
 	/*
 	 * This keeps the very first error and cause our thread to drop
