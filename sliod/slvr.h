@@ -76,11 +76,11 @@ struct slvr_ref {
 #define	SLVR_CRCING		(1 <<  9)	/* unfinalized crc accumulator */
 #define	SLVR_FREEING		(1 << 10)	/* sliver is being reaped */
 #define	SLVR_SLBFREEING		(1 << 11)	/* slvr's slab is being reaped */
-#define	SLVR_REPLDST		(1 << 13)	/* slvr is replication destination */
-#define SLVR_REPLFAIL		(1 << 14)	/* replication op failed */
-#define SLVR_AIOWAIT		(1 << 15)	/* early return for AIO (for both local and remote) */
-#define SLVR_RDMODWR		(1 << 16)	/* read modify write */
-#define SLVR_REPLWIRE		(1 << 17)	/* prevent aio race */
+#define	SLVR_REPLDST		(1 << 12)	/* slvr is replication destination */
+#define SLVR_REPLFAIL		(1 << 13)	/* replication op failed */
+#define SLVR_AIOWAIT		(1 << 14)	/* early return for AIO (for both local and remote) */
+#define SLVR_RDMODWR		(1 << 15)	/* read modify write */
+#define SLVR_REPLWIRE		(1 << 16)	/* prevent aio race */
 
 #define SLVR_2_BLK(s)		((s)->slvr_num *			\
 				 (SLASH_BMAP_SIZE / SLASH_SLVR_BLKSZ))
@@ -152,8 +152,9 @@ struct slvr_ref {
 	(s)->slvr_flags & SLVR_RDMODWR		? "m" : "-"
 
 #define DEBUG_SLVR(level, s, fmt, ...)					\
-	psclogs((level), SLISS_SLVR, "slvr@%p num=%hu pw=%hu "		\
-	    "pr=%hu cw=%hu ncrc=%u dc=%d ts="PSCPRI_TIMESPEC" "		\
+	psclogs((level), SLISS_SLVR, "slvr@%p num=%hu pw=%u "		\
+	    "pr=%u cw=%u "						\
+	    "ncrc=%u dc=%d ts="PSCPRI_TIMESPEC" "			\
 	    "pri@%p slab@%p bmap@%p fid:"SLPRI_FID " iocb@%p flgs:"	\
 	    SLVR_FLAGS_FMT" :: "fmt,					\
 	    (s), (s)->slvr_num, (s)->slvr_pndgwrts,			\
