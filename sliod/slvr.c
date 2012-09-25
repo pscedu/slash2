@@ -250,6 +250,7 @@ slvr_aio_replreply(struct sli_aiocb_reply *a)
 	struct srm_repl_read_req *mq;
 	struct srm_repl_read_rep *mp;
 	struct slvr_ref *s = NULL;
+	int rc;
 
 	psc_assert(a->aiocbr_nslvrs == 1);
 
@@ -275,8 +276,11 @@ slvr_aio_replreply(struct sli_aiocb_reply *a)
 		mq->rc = rsx_bulkclient(rq, BULK_GET_SOURCE,
 		    SRII_BULK_PORTAL, a->aiocbr_iovs, a->aiocbr_niov);
 
-	SL_RSX_WAITREP(a->aiocbr_csvc, rq, mp);
+	rc = SL_RSX_WAITREP(a->aiocbr_csvc, rq, mp);
 	pscrpc_req_finished(rq);
+
+	if (rc)
+		DEBUG_SLVR(PLL_ERROR, s, "rc=%d", rc);
 
  out:
 	if (s)
@@ -325,7 +329,7 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 			    a->aiocbr_niov);
 	}
 
-	SL_RSX_WAITREP(a->aiocbr_csvc, rq, mp);
+	rc = SL_RSX_WAITREP(a->aiocbr_csvc, rq, mp);
 	pscrpc_req_finished(rq);
 
  out:
