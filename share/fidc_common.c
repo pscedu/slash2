@@ -415,7 +415,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	}
 
  finish:
-	FCMH_RLOCK(fcmh);
+	(void)FCMH_RLOCK(fcmh);
 	fcmh->fcmh_flags &= ~FCMH_CAC_INITING;
 	fcmh->fcmh_flags &= ~FCMH_CAC_RLSBMAP;
 	if (fcmh->fcmh_flags & FCMH_CAC_WAITING) {
@@ -524,7 +524,7 @@ void
 _fcmh_op_done_type(const struct pfl_callerinfo *pci,
     struct fidc_membh *f, enum fcmh_opcnt_types type)
 {
-	FCMH_RLOCK(f);
+	(void)FCMH_RLOCK(f);
 	psc_assert(f->fcmh_refcnt > 0);
 	f->fcmh_refcnt--;
 	DEBUG_FCMH(PLL_DEBUG, f, "release ref (type=%d)", type);

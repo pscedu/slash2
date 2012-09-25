@@ -108,7 +108,7 @@ bmap_remove(struct bmapc_memb *b)
 	psc_assert(!(b->bcm_flags & BMAP_DIRTY));
 	psc_assert(!atomic_read(&b->bcm_opcnt));
 
-	FCMH_RLOCK(f);
+	(void)FCMH_RLOCK(f);
 
 	if (!(b->bcm_flags & BMAP_ORPHAN))
 		PSC_SPLAY_XREMOVE(bmap_cache, &f->fcmh_bmaptree, b);

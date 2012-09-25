@@ -217,7 +217,7 @@ struct bmapc_memb {
 	do {								\
 		pthread_t _pthr = pthread_self();			\
 									\
-		BMAP_RLOCK(b);						\
+		(void)BMAP_RLOCK(b);					\
 		bmap_wait_locked((b),					\
 		    ((b)->bcm_flags & BMAP_BUSY) &&			\
 		    (b)->bcm_owner != _pthr);				\
@@ -228,7 +228,7 @@ struct bmapc_memb {
 
 #define BMAP_UNBUSY(b)							\
 	do {								\
-		BMAP_RLOCK(b);						\
+		(void)BMAP_RLOCK(b);					\
 		BMAP_BUSY_ENSURE(b);					\
 		(b)->bcm_owner = 0;					\
 		(b)->bcm_flags &= ~BMAP_BUSY;				\
@@ -252,7 +252,7 @@ struct bmapc_memb {
 
 #define bmap_op_done_type(b, type)					\
 	do {								\
-		BMAP_RLOCK(b);						\
+		(void)BMAP_RLOCK(b);					\
 		psc_assert(psc_atomic32_read(&(b)->bcm_opcnt) > 0);	\
 		psc_atomic32_dec(&(b)->bcm_opcnt);			\
 		_bmap_op_done(PFL_CALLERINFOSS(SLSS_BMAP), (b),		\
