@@ -642,6 +642,11 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 		rc = pread(slvr_2_fd(s), slvr_2_buf(s, sblk),
 			   size, slvr_2_fileoff(s, sblk));
 
+		if (OPSTAT_CURR(OPSTAT_DEBUG) == 1) {
+			rc = -1;
+			errno = EBADF;
+		}
+
 		if (rc < 0) {
 			OPSTAT_INCR(OPSTAT_FSIO_READ_FAIL);
 			save_errno = errno;

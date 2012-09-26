@@ -49,7 +49,9 @@ enum {
 
 #define NSLVRCRC_THRS		4	/* perhaps default to ncores + configurable? */
 
+/* The following should match pflctl_opstats[] in file ctl_iod.c */
 enum {
+	OPSTAT_DEBUG,
 	OPSTAT_FSIO_READ,
 	OPSTAT_FSIO_READ_FAIL,
 	OPSTAT_FSIO_WRITE,

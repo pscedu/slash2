@@ -201,6 +201,9 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (((mq->offset + (mq->size-1)) / SLASH_SLVR_SIZE) > slvrno)
 		nslvrs++;
 
+	for (i = 0; i < nslvrs; i++) 
+		slvr_ref[i] = NULL;
+
 	/*
 	 * This loop assumes that nslvrs is always no larger than
 	 * RIC_MAX_SLVRS_PER_IO.
@@ -222,6 +225,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		DEBUG_SLVR(((rv && rv != -SLERR_AIOWAIT) ? PLL_WARN : PLL_INFO),
 		    slvr_ref[i], "post io_prep rw=%s rv=%zd",
 		    rw == SL_WRITE ? "wr" : "rd", rv);
+		if (rv) {
+			rc = rv;
+			goto out;
+		}
 
 		/* mq->offset is the offset into the bmap, here we must
 		 *  translate it into the offset of the sliver.
@@ -296,22 +303,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	    SRIC_BULK_PORTAL, iovs, nslvrs);
 	if (mp->rc) {
 		rc = mp->rc;
-		for (i = 0; i < nslvrs; i++) {
-			SLVR_LOCK(slvr_ref[i]);
-			slvr_clear_inuse(slvr_ref[i], 0, SLASH_SLVR_SIZE);
-			if (rw == SL_READ) {
-				slvr_ref[i]->slvr_pndgreads--;
-				slvr_lru_tryunpin_locked(slvr_ref[i]);
-			} else {
-				slvr_try_crcsched_locked(slvr_ref[i]);
-			}
-
-			SLVR_ULOCK(slvr_ref[i]);
-
-			DEBUG_SLVR(PLL_WARN, slvr_ref[i],
-			    "unwind ref due to bulk error (rw=%s)",
-			    rw == SL_WRITE ? "wr" : "rd");
-		}
 		goto out;
 	}
 
@@ -337,8 +328,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 			tsize -= tsz;
 			rv = slvr_fsbytes_wio(slvr_ref[i], tsz, sblk);
-			if (rv)
+			if (rv) { 
+				rc = rv;
 				goto out;
+			}
 
 			/* Only the first sliver may use a blk offset.
 			 */
@@ -346,12 +339,34 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			slvr_wio_done(slvr_ref[i]);
 		} else
 			slvr_rio_done(slvr_ref[i]);
+
+		slvr_ref[i] = NULL;
 	}
 
 	if (rw == SL_WRITE)
 		psc_assert(!tsize);
 
  out:
+	if (rc) {
+		for (i = 0; i < nslvrs; i++) {
+			if (slvr_ref[i] == NULL)
+				continue;
+			SLVR_LOCK(slvr_ref[i]);
+			slvr_clear_inuse(slvr_ref[i], 0, SLASH_SLVR_SIZE);
+			if (rw == SL_READ) {
+				slvr_ref[i]->slvr_pndgreads--;
+				slvr_lru_tryunpin_locked(slvr_ref[i]);
+			} else {
+				slvr_try_crcsched_locked(slvr_ref[i]);
+			}
+
+			SLVR_ULOCK(slvr_ref[i]);
+
+			DEBUG_SLVR(PLL_WARN, slvr_ref[i],
+			    "unwind ref due to bulk error (rw=%s)",
+			    rw == SL_WRITE ? "wr" : "rd");
+		}
+	}
 	if (bmap)
 		bmap_op_done(bmap);
 
