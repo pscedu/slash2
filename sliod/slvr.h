@@ -212,10 +212,10 @@ void	slvr_repl_prep(struct slvr_ref *, int);
 void	slvr_rio_done(struct slvr_ref *);
 void	slvr_schedule_crc(struct slvr_ref *);
 void	slvr_slab_prep(struct slvr_ref *, enum rw);
+int     slvr_lru_tryunpin_locked(struct slvr_ref *);
 void	slvr_wio_done(struct slvr_ref *);
 void	slvr_worker_init(void);
 void	slvr_try_crcsched_locked(struct slvr_ref *);
-
 void	sli_aio_reply_setup(struct sli_aiocb_reply *, struct pscrpc_request *,
 	    uint32_t, uint32_t, struct slvr_ref **, int, struct iovec *, int, enum rw);
 
@@ -237,24 +237,6 @@ slvr_cmp(const void *x, const void *y)
 
 SPLAY_PROTOTYPE(biod_slvrtree, slvr_ref, slvr_tentry, slvr_cmp);
 
-static __inline int
-slvr_lru_tryunpin_locked(struct slvr_ref *s)
-{
-	SLVR_LOCK_ENSURE(s);
-	psc_assert(s->slvr_slab);
-	if (s->slvr_pndgwrts || s->slvr_pndgreads ||
-	    s->slvr_flags & SLVR_CRCDIRTY || s->slvr_flags & SLVR_CRCING)
-		return (0);
-
-	psc_assert(s->slvr_flags & SLVR_LRU);
-	psc_assert(s->slvr_flags & SLVR_PINNED);
-	psc_assert(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR));
-
-	psc_assert(!(s->slvr_flags & (SLVR_NEW|SLVR_FAULTING|SLVR_GETSLAB)));
-
-	s->slvr_flags &= ~SLVR_PINNED;
-	return (1);
-}
 
 static __inline int
 slvr_lru_slab_freeable(struct slvr_ref *s)

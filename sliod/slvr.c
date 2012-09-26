@@ -1129,6 +1129,31 @@ slvr_try_crcsched_locked(struct slvr_ref *s)
 	}
 }
 
+int
+slvr_lru_tryunpin_locked(struct slvr_ref *s)
+{
+	SLVR_LOCK_ENSURE(s);
+	psc_assert(s->slvr_slab);
+	if (s->slvr_pndgwrts || s->slvr_pndgreads ||
+	    s->slvr_flags & SLVR_CRCDIRTY || s->slvr_flags & SLVR_CRCING)
+		return (0);
+
+	psc_assert(s->slvr_flags & SLVR_LRU);
+	psc_assert(s->slvr_flags & SLVR_PINNED);
+	psc_assert(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR));
+
+	psc_assert(!(s->slvr_flags & (SLVR_NEW|SLVR_FAULTING|SLVR_GETSLAB)));
+
+	s->slvr_flags &= ~SLVR_PINNED;
+
+	if (s->slvr_flags & SLVR_DATAERR) {
+		s->slvr_flags |= SLVR_SLBFREEING;
+		slvr_slb_free_locked(s, slBufsPool);
+	}
+
+	return (1);
+}
+
 /**
  * slvr_wio_done - Called after a write RPC has completed.  The sliver
  *	may be FAULTING which is handled separately from DATARDY.  If
@@ -1295,7 +1320,7 @@ slvr_slb_free_locked(struct slvr_ref *s, struct psc_poolmgr *m)
 	psc_assert(!(s->slvr_flags & SLVR_FREEING));
 	psc_assert(s->slvr_slab);
 
-	s->slvr_flags &= ~(SLVR_SLBFREEING | SLVR_DATARDY);
+	s->slvr_flags &= ~(SLVR_SLBFREEING | SLVR_DATARDY | SLVR_DATAERR);
 
 	DEBUG_SLVR(PLL_INFO, s, "freeing slvr slab=%p", s->slvr_slab);
 	s->slvr_slab = NULL;
