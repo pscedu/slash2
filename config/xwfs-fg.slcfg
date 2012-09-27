@@ -7,13 +7,14 @@ site @XWFS-FG {
   site_id    = 1;
 
   resource xwfsfg_mds {
-    desc    = "XWFS FutureGrid MDS";
-    type    = mds;
-    id      = 1;
-    fsroot  = /xwfs-zpool;    # created by "slmkfs /xwfs-zpool" on MDS
-    nid     = 10.141.0.92,    # eth0
-              129.114.32.92,  # eth1
-              192.168.100.92; # ib0
+    desc        = "XWFS FutureGrid MDS";
+    type        = mds;
+    id          = 1;
+    fsroot      = /xwfs-zpool;      # created by "slmkfs /xwfs-zpool" on MDS
+    zpool_cache = /xwfs-zpool.zcf;  # ZFS pool cache file
+    nids        = 10.141.0.92,      # eth0
+                  129.114.32.92,    # eth1
+                  192.168.100.92;   # ib0
   }
 
   resource xwfsfg_io1 {
@@ -70,8 +71,8 @@ site @XWFS-FG {
   resource xwfsfg_io {
     desc  = "XWFS FutureGrid IO Servers";
     type  = cluster_noshare_lfs;  # Cluster composed of one or more nodes with independent (non-shared) file systems
-    id    = 199;
-    ios   = xwfsfg_io1,
-            xwfsfg_io2;
+    id    = 199;                  # related to the others, but out of sequence
+    ios   = xwfsfg_io1@XWFS-FG,   # all of the above servers
+            xwfsfg_io2@XWFS-FG;   #
   }
 }
