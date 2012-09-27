@@ -1,0 +1,77 @@
+set port    =1000;
+set nets    =tcp10;
+set fsuuid  ="b4b1bb97990930ce"; # reported by "slmkfs /xwfs-zpool" on MDS
+
+site @XWFS-FG {
+  site_desc  = "XWFS FutureGrid Testbed";
+  site_id    = 1;
+
+  resource xwfsfg_mds {
+    desc    = "XWFS FutureGrid MDS";
+    type    = mds;
+    id      = 1;
+    fsroot  = /xwfs-zpool;    # created by "slmkfs /xwfs-zpool" on MDS
+    nid     = 10.141.0.92,    # eth0
+              129.114.32.92,  # eth1
+              192.168.100.92; # ib0
+  }
+
+  resource xwfsfg_io1 {
+    type    = standalone_fs;   # Independent file systems
+    id      = 101;             # just pick one
+    fsroot  = /slash2;         # LVM mounted from /dev/vg1/lg_slash2 (see below)
+    nids    = 10.141.0.93,     # eth0
+              129.114.32.93,   # eth1
+              192.168.100.93;  # ib0
+  }
+
+#[root@c093 ~]# lvdisplay /dev/mapper/vg1-lg_slash2
+#  --- Logical volume ---
+#  LV Name                /dev/vg1/lg_slash2
+#  VG Name                vg1
+#  LV UUID                9IV5RI-Dyzf-rEtu-6I5G-lZAd-fn8g-51cGWs
+#  LV Write Access        read/write
+#  LV Status              available
+#  # open                 1
+#  LV Size                1.77 TB
+#  Current LE             464726
+#  Segments               2
+#  Allocation             inherit
+#  Read ahead sectors     auto
+#  - currently set to     256
+#  Block device           253:0
+
+
+  resource xwfsfg_io2 {
+    type    = standalone_fs;   # Independent file systems
+    id      = 102;             # just pick one
+    fsroot  = /slash2;         # LVM mounted from /dev/vg1/lg_slash2 (see below)
+    nids    = 10.141.0.94,     # eth0
+              129.114.32.94,   # eth1
+              192.168.100.94;  # ib0
+  }
+
+#[root@c094 ~]# lvdisplay /dev/mapper/vg1-lg_slash2
+#  --- Logical volume ---
+#  LV Name                /dev/vg1/lg_slash2
+#  VG Name                vg1
+#  LV UUID                dO0aoH-J5hl-hyBa-dQOs-za2f-G0ix-EvKyyZ
+#  LV Write Access        read/write
+#  LV Status              available
+#  # open                 1
+#  LV Size                1.77 TB
+#  Current LE             464726
+#  Segments               2
+#  Allocation             inherit
+#  Read ahead sectors     auto
+#  - currently set to     256
+#  Block device           253:0
+
+  resource xwfsfg_io {
+    desc  = "XWFS FutureGrid IO Servers";
+    type  = cluster_noshare_lfs;  # Cluster composed of one or more nodes with independent (non-shared) file systems
+    id    = 199;
+    ios   = xwfsfg_io1,
+            xwfsfg_io2;
+  }
+}
