@@ -1,6 +1,6 @@
 set port    =1000;
 set nets    =tcp10;
-set fsuuid  ="b4b1bb97990930ce"; # reported by "slmkfs /xwfs-zpool" on MDS
+set fsuuid  ="560ce5c77748b6e1"; # reported by "slmkfs /xwfs-zpool" on MDS
 
 site @XWFS-FG {
   site_desc  = "XWFS FutureGrid Testbed";
