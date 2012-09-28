@@ -261,6 +261,7 @@ slvr_aio_replreply(struct sli_aiocb_reply *a)
 	    mp))
 		goto out;
 
+	OPSTAT_INCR(OPSTAT_REPL_READAIO);
 	psc_atomic64_inc(&sli_rpc_repl_readaio);
 
 	s = a->aiocbr_slvrs[0];
