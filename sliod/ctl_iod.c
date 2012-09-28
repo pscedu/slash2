@@ -525,6 +525,7 @@ struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("handle_io"),
 	PFL_OPSTAT_INIT("issue_replread"),
 	PFL_OPSTAT_INIT("issue_replread_cb"),
+	PFL_OPSTAT_INIT("issue_replread_cb_aio"),
 	PFL_OPSTAT_INIT("issue_replread_error"),
 	PFL_OPSTAT_INIT("open"),
 	PFL_OPSTAT_INIT("open_fail"),

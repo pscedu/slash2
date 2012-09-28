@@ -48,8 +48,6 @@ psc_atomic64_t	 sli_rii_st_handle_replread = PSC_ATOMIC64_INIT(0);
 psc_atomic64_t	 sli_rii_st_handle_replread_aio = PSC_ATOMIC64_INIT(0);
 psc_atomic64_t	 sli_rii_st_handle_replread_err = PSC_ATOMIC64_INIT(0);
 
-psc_atomic64_t	 sli_rii_st_issue_replread_cb_aio = PSC_ATOMIC64_INIT(0);
-
 /**
  * sli_rii_replread_release_sliver: We call this function in three
  * cases:
@@ -296,7 +294,7 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 	psc_assert(slvridx < (int)nitems(w->srw_slvr_refs));
 
 	if (rc == -SLERR_AIOWAIT)
-		psc_atomic64_inc(&sli_rii_st_issue_replread_cb_aio);
+		OPSTAT_INCR(OPSTAT_ISSUE_REPLREAD_CB_AIO);
 	else if (rc)
 		OPSTAT_INCR(OPSTAT_ISSUE_REPLREAD_ERROR);
 	else {
