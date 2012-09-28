@@ -195,7 +195,7 @@ extern mdsio_fid_t	mds_fidnsdir_inum[];
 extern mdsio_fid_t	mds_tmpdir_inum[];
 
 struct rootNames {
-	char			 rn_name[MAXPATHLEN];
+	char			 rn_name[PATH_MAX];
 	int			 rn_vfsid;
 	struct psc_hashent	 rn_hentry;
 };
