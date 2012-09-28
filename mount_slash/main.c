@@ -123,7 +123,7 @@ struct psc_poolmgr		*slc_biorq_pool;
 
 uint32_t			 sys_upnonce;
 
-__inline int
+int
 fcmh_checkcreds(struct fidc_membh *f, const struct slash_creds *crp,
     int accmode)
 {
@@ -2081,7 +2081,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 	}
 
-	FCMH_RLOCK(c);
+	(void)FCMH_RLOCK(c);
 	/* We're obtaining the attributes now. */
 	if ((c->fcmh_flags & (FCMH_GETTING_ATTRS | FCMH_HAVE_ATTRS)) == 0) {
 		getting_attrs = 1;
@@ -2206,7 +2206,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
  out:
 	if (c) {
-		FCMH_RLOCK(c);
+		(void)FCMH_RLOCK(c);
 		if (unset_trunc) {
 			c->fcmh_flags &= ~FCMH_CLI_TRUNC;
 			fcmh_wake_locked(c);
