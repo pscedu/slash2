@@ -51,7 +51,6 @@ psc_atomic64_t	 sli_rii_st_handle_replread_err = PSC_ATOMIC64_INIT(0);
 psc_atomic64_t	 sli_rii_st_issue_replread = PSC_ATOMIC64_INIT(0);
 psc_atomic64_t	 sli_rii_st_issue_replread_cb = PSC_ATOMIC64_INIT(0);
 psc_atomic64_t	 sli_rii_st_issue_replread_cb_aio = PSC_ATOMIC64_INIT(0);
-psc_atomic64_t	 sli_rii_st_issue_replread_err = PSC_ATOMIC64_INIT(0);
 
 /**
  * sli_rii_replread_release_sliver: We call this function in three
@@ -301,7 +300,7 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 	if (rc == -SLERR_AIOWAIT)
 		psc_atomic64_inc(&sli_rii_st_issue_replread_cb_aio);
 	else if (rc)
-		psc_atomic64_inc(&sli_rii_st_issue_replread_err);
+		OPSTAT_INCR(OPSTAT_ISSUE_REPLREAD_ERROR);
 	else
 		psc_atomic64_inc(&sli_rii_st_issue_replread_cb);
 	return (sli_rii_replread_release_sliver(w, slvridx, rc));
@@ -368,7 +367,6 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	if (rc) {
 		sli_rii_replread_release_sliver(w, slvridx, rc);
 		OPSTAT_INCR(OPSTAT_ISSUE_REPLREAD_ERROR);
-		psc_atomic64_inc(&sli_rii_st_issue_replread_err);
 	} else {
 		OPSTAT_INCR(OPSTAT_ISSUE_REPLREAD);
 		psc_atomic64_inc(&sli_rii_st_issue_replread);
