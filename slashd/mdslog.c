@@ -1601,7 +1601,7 @@ mdslog_bmap_repls(void *datap, uint64_t txg, __unusedx int flag)
 	 * mdslogfill_bmap_repls(), whichever wkthr who gets it.
 	 */
 	b->bcm_fcmh->fcmh_owner = 0;
-	BMAP_RLOCK(b);
+	(void)BMAP_RLOCK(b);
 	b->bcm_owner = 0;
 	b->bcm_flags |= BMAP_MDS_REPLMODWR;
 	BMAP_ULOCK(b);

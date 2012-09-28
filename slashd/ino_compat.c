@@ -57,7 +57,7 @@ mds_inode_dump(int vfsid, struct sl_ino_compat *sic,
 		inoh_2_mdsio_data(ih) = th;
 
 		if (rc == SLERR_BMAP_INVALID) {
-			INOH_RLOCK(ih);
+			(void)INOH_RLOCK(ih);
 			break;
 		}
 
@@ -68,7 +68,7 @@ mds_inode_dump(int vfsid, struct sl_ino_compat *sic,
 			rc = sic->sic_read_bmap(b, readh);
 			if (rc) {
 				bmap_op_done(b);
-				INOH_RLOCK(ih);
+				(void)INOH_RLOCK(ih);
 				if (rc == SLERR_BMAP_INVALID)
 					break;
 				return (rc);
@@ -77,7 +77,7 @@ mds_inode_dump(int vfsid, struct sl_ino_compat *sic,
 
 		rc = mds_bmap_write(b, 0, NULL, NULL);
 		bmap_op_done(b);
-		INOH_RLOCK(ih);
+		(void)INOH_RLOCK(ih);
 		if (rc)
 			return (rc);
 	}

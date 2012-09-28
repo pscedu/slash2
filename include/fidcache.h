@@ -159,7 +159,7 @@ struct fidc_membh {
 
 #define FCMH_UREQ_BUSY(f, wasbusy, waslocked)				\
 	do {								\
-		FCMH_RLOCK(f);						\
+		(void)FCMH_RLOCK(f);					\
 		FCMH_BUSY_ENSURE(f);					\
 		if (wasbusy) {						\
 			DEBUG_FCMH(PLL_DEBUG, (f), "unrequire BUSY");	\

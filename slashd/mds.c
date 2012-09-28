@@ -1098,7 +1098,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	 *   if this becomes problematic we should investigate more.
 	 *   ATM the BMAP_IONASSIGN is not relied upon
 	 */
-	BMAP_RLOCK(b);
+	(void)BMAP_RLOCK(b);
 	bmap_wait_locked(b, (b->bcm_flags & BMAP_IONASSIGN));
 	b->bcm_flags |= BMAP_IONASSIGN;
 
@@ -1833,7 +1833,7 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	sbd_out->sbd_ios = obml->bml_ios;
 
  out1:
-	BMAP_RLOCK(b);
+	(void)BMAP_RLOCK(b);
 	psc_assert(b->bcm_flags & BMAP_IONASSIGN);
 	BMAP_CLEARATTR(b, BMAP_IONASSIGN);
 	bmap_wake_locked(b);
@@ -2071,7 +2071,7 @@ slm_ptrunc_prepare(void *p)
 				mq->sbd[0].sbd_fg.fg_fid = fcmh_2_fid(f);
 				mq->sbd[0].sbd_bmapno = i;
 				mq->nbmaps = 1;
-				SL_RSX_WAITREP(csvc, rq, mp);
+				(void)SL_RSX_WAITREP(csvc, rq, mp);
 				pscrpc_req_finished(rq);
 
 				FCMH_LOCK(f);
@@ -2200,7 +2200,7 @@ slm_ptrunc_wake_clients(void *p)
 		if (rc == 0) {
 			mq->fg = f->fcmh_fg;
 			mq->bmapno = fcmh_2_fsz(f) / SLASH_BMAP_SIZE;
-			SL_RSX_WAITREP(csvc, rq, mp);
+			(void)SL_RSX_WAITREP(csvc, rq, mp);
 			pscrpc_req_finished(rq);
 		}
 		sl_csvc_decref(csvc);

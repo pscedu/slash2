@@ -356,8 +356,8 @@ bmap_flush_desched(struct bmpc_ioreq *r)
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(r->biorq_bmap);
 	int i, delta;
 
-	BMPC_RLOCK(bmpc);
-	BIORQ_RLOCK(r);
+	(void)BMPC_RLOCK(bmpc);
+	(void)BIORQ_RLOCK(r);
 	/* biorq [rd]esched semantics must be strictly enforced.
 	 */
 	psc_assert(r->biorq_flags & BIORQ_SCHED);

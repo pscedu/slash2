@@ -61,7 +61,7 @@ mrsq_lookup(int id)
 void
 mrsq_release(struct msctl_replstq *mrsq, int ctlrc)
 {
-	reqlock(&mrsq->mrsq_lock);
+	(void)reqlock(&mrsq->mrsq_lock);
 	if (mrsq->mrsq_ctlrc)
 		mrsq->mrsq_ctlrc = ctlrc;
 	if (--mrsq->mrsq_refcnt == 0)
@@ -190,7 +190,7 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 		eof = 1;
 	}
  out:
-	reqlock(&mrsq->mrsq_lock);
+	(void)reqlock(&mrsq->mrsq_lock);
 	if (eof)
 		mrsq_release(mrsq, 1);
 	mrsq_release(mrsq, rc);
