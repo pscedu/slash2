@@ -142,10 +142,13 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 
 	sliriithr(pscthr_get())->sirit_st_nread++;
 
-	if (aio)
+	if (aio) {
+		OPSTAT_INCR(OPSTAT_HANDLE_REPLREAD_AIO);
 		psc_atomic64_inc(&sli_rii_st_handle_replread_aio);
-	else
+	} else {
+		OPSTAT_INCR(OPSTAT_HANDLE_REPLREAD);
 		psc_atomic64_inc(&sli_rii_st_handle_replread);
+	}
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fg.fg_fid == FID_ANY) {
