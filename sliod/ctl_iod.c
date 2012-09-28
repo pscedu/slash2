@@ -523,6 +523,8 @@ struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("fsio_write"),
 	PFL_OPSTAT_INIT("fsio_write_fail"),
 	PFL_OPSTAT_INIT("handle_io"),
+	PFL_OPSTAT_INIT("issue_replread"),
+	PFL_OPSTAT_INIT("issue_replread_error"),
 	PFL_OPSTAT_INIT("open"),
 	PFL_OPSTAT_INIT("open_fail"),
 	PFL_OPSTAT_INIT("open_succeed"),

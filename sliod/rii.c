@@ -28,6 +28,7 @@
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/service.h"
 #include "psc_util/pool.h"
+#include "psc_util/ctlsvr.h"
 
 #include "authbuf.h"
 #include "bmap.h"
@@ -366,9 +367,12 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
  out:
 	if (rc) {
 		sli_rii_replread_release_sliver(w, slvridx, rc);
+		OPSTAT_INCR(OPSTAT_ISSUE_REPLREAD_ERROR);
 		psc_atomic64_inc(&sli_rii_st_issue_replread_err);
-	} else
+	} else {
+		OPSTAT_INCR(OPSTAT_ISSUE_REPLREAD);
 		psc_atomic64_inc(&sli_rii_st_issue_replread);
+	}
 	if (rq)
 		pscrpc_req_finished(rq);
 	return (rc);
