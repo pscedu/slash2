@@ -148,7 +148,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 	/* Ensure that this request fits into the bmap's address range.
 	 *   XXX this check assumes that mq->offset has not been made
-	 *     bmap relative (ie it's filewise).
+	 *     bmap relative (i.e. it's filewise).
 	 */
 	if ((mq->offset + mq->size) > SLASH_BMAP_SIZE) {
 		psclog_errorx("req offset / size outside of the bmap's "
@@ -193,8 +193,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	    rw == SL_WRITE ? "wr" : "rd", mq->sbd.sbd_seq);
 
 	/*
-	 * Currently we have LNET_MTU = SLASH_SLVR_SIZE = 1MiB, therefore
-	 * we would never exceed two slivers.
+	 * Currently we have LNET_MTU = SLASH_SLVR_SIZE = 1MiB,
+	 * therefore we would never exceed two slivers.
 	 */
 	nslvrs = 1;
 	slvrno = mq->offset / SLASH_SLVR_SIZE;
@@ -220,7 +220,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		/* Fault in pages either for read or RBW.
 		 */
 		len[i] = MIN(tsize, SLASH_SLVR_SIZE - roff);
-		rv = slvr_io_prep(slvr_ref[i], roff, len[i], rw, &aiocbr);
+		rv = slvr_io_prep(slvr_ref[i], roff, len[i], rw,
+		    &aiocbr);
 
 		DEBUG_SLVR(((rv && rv != -SLERR_AIOWAIT) ? PLL_WARN : PLL_INFO),
 		    slvr_ref[i], "post io_prep rw=%s rv=%zd",
@@ -254,7 +255,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		    slvr_ref, nslvrs, iovs, nslvrs, rw);
 
 		/*
-		 * Now check for early completion.   If all slvrs are
+		 * Now check for early completion.  If all slvrs are
 		 * ready, then we must reply with the data now.
 		 * Otherwise, we'll never be woken since the aio cb(s)
 		 * have been run.
