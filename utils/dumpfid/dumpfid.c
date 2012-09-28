@@ -176,7 +176,7 @@ dumpfid(const char *fn)
 		printf("\n");
 	}
 	if (show & K_BMAPS) {
-		printf("  bmaps %lu\n",
+		printf("  bmaps %"PSCPRIdOFFT"\n",
 		    (stb.st_size - SL_BMAP_START_OFF) / BMAP_OD_SZ);
 		if (lseek(fd, SL_BMAP_START_OFF, SEEK_SET) == -1)
 			warn("seek");
