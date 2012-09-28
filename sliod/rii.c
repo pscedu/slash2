@@ -45,8 +45,6 @@
 #define SRII_REPLREAD_CBARG_SLVR	1
 
 psc_atomic64_t	 sli_rii_st_handle_replread = PSC_ATOMIC64_INIT(0);
-psc_atomic64_t	 sli_rii_st_handle_replread_aio = PSC_ATOMIC64_INIT(0);
-psc_atomic64_t	 sli_rii_st_handle_replread_err = PSC_ATOMIC64_INIT(0);
 
 /**
  * sli_rii_replread_release_sliver: We call this function in three
@@ -144,10 +142,8 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 
 	if (aio) {
 		OPSTAT_INCR(OPSTAT_HANDLE_REPLREAD_AIO);
-		psc_atomic64_inc(&sli_rii_st_handle_replread_aio);
 	} else {
 		OPSTAT_INCR(OPSTAT_HANDLE_REPLREAD);
-		psc_atomic64_inc(&sli_rii_st_handle_replread);
 	}
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
