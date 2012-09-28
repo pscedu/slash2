@@ -2145,6 +2145,11 @@ msl_setra(struct msl_fhent *mfh, size_t size, off_t off)
 	freelock(&mfh->mfh_lock);
 }
 
+/*
+ * msl_fsrqinfo_state: manipulate the state of fsrqinfo structure.
+ *
+ * set: 0 = query, 1 = set, -1 = clear.
+ */
 int
 msl_fsrqinfo_state(struct msl_fsrqinfo *q, int flag, int set,
     int wait_or_wake)
