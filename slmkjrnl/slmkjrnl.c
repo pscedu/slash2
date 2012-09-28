@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "pfl/fcntl.h"
 #include "pfl/fs.h"
 #include "pfl/pfl.h"
 #include "pfl/str.h"
