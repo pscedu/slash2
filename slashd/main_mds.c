@@ -18,6 +18,7 @@
  */
 
 #include <err.h>
+#include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -357,7 +358,8 @@ psc_register_filesystem(int vfsid)
 		return;
 	}
 
-	strcpy(entry->rn_name, basename(zfsMount[vfsid].name));
+	strlcpy(entry->rn_name, basename(zfsMount[vfsid].name),
+	    sizeof(entry->rn_name));
 	entry->rn_vfsid = vfsid;
 	psc_hashent_init(&rootHtable, entry);
 	b = psc_hashbkt_get(&rootHtable, entry->rn_name);
