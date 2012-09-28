@@ -48,7 +48,6 @@ psc_atomic64_t	 sli_rii_st_handle_replread = PSC_ATOMIC64_INIT(0);
 psc_atomic64_t	 sli_rii_st_handle_replread_aio = PSC_ATOMIC64_INIT(0);
 psc_atomic64_t	 sli_rii_st_handle_replread_err = PSC_ATOMIC64_INIT(0);
 
-psc_atomic64_t	 sli_rii_st_issue_replread = PSC_ATOMIC64_INIT(0);
 psc_atomic64_t	 sli_rii_st_issue_replread_cb = PSC_ATOMIC64_INIT(0);
 psc_atomic64_t	 sli_rii_st_issue_replread_cb_aio = PSC_ATOMIC64_INIT(0);
 
@@ -369,7 +368,6 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 		OPSTAT_INCR(OPSTAT_ISSUE_REPLREAD_ERROR);
 	} else {
 		OPSTAT_INCR(OPSTAT_ISSUE_REPLREAD);
-		psc_atomic64_inc(&sli_rii_st_issue_replread);
 	}
 	if (rq)
 		pscrpc_req_finished(rq);
