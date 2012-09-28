@@ -44,8 +44,6 @@
 #define SRII_REPLREAD_CBARG_WKRQ	0
 #define SRII_REPLREAD_CBARG_SLVR	1
 
-psc_atomic64_t	 sli_rii_st_handle_replread = PSC_ATOMIC64_INIT(0);
-
 /**
  * sli_rii_replread_release_sliver: We call this function in three
  * cases:
