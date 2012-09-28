@@ -23,6 +23,11 @@
 char *slstrerror(int);
 
 #define _SLERR_START			1000		/* must be >max errno */
+
+#if ELAST >= _SLERR_START
+#  error system error codes into application space, need to adjust and recompile
+#endif
+
 #define SLERR_REPL_ALREADY_ACT		(_SLERR_START +  0)
 #define SLERR_REPL_NOT_ACT		(_SLERR_START +  1)
 /* 2 - reuse */
