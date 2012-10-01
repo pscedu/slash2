@@ -1052,6 +1052,9 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 		DEBUG_REQ(rc ? PLL_ERROR : PLL_INFO, rq, "bmap=%p biorq=%p",
 		  b, r);
 
+	if (OPSTAT_CURR(OPSTAT_DEBUG) == 1)
+		rc = EIO;
+
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b, "sbd_seq=%"PRId64,
 	   bmap_2_sbd(b)->sbd_seq);
 
@@ -1109,6 +1112,9 @@ msl_readahead_cb(struct pscrpc_request *rq, int rc,
 
 	if (rq)
 		DEBUG_REQ(PLL_INFO, rq, "bmpces=%p", bmpces);
+
+	if (OPSTAT_CURR(OPSTAT_DEBUG) == 1)
+		rc = EIO;
 
 	for (i = 0, e = bmpces[0], b = e->bmpce_owner; e; i++, e = bmpces[i]) {
 		psc_assert(b == e->bmpce_owner);
@@ -1799,6 +1805,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 			psc_assert(e->bmpce_flags & BMPCE_RBWPAGE);
 			psc_assert(!(e->bmpce_flags & BMPCE_DATARDY));
 
+			OPSTAT_INCR(OPSTAT_PREFETCH);
 			rc = msl_read_rpc_launch(r, i ? (npages - 1) : 0, 1);
 			if (rc)
 				break;

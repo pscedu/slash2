@@ -500,6 +500,7 @@ struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("mkdir"),
 	PFL_OPSTAT_INIT("offline_retry"),
 	PFL_OPSTAT_INIT("offline_no_retry"),
+	PFL_OPSTAT_INIT("prefetch"),
 	PFL_OPSTAT_INIT("read"),
 	PFL_OPSTAT_INIT("readdir"),
 	PFL_OPSTAT_INIT("readdir_retry"),
