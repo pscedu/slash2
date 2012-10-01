@@ -538,7 +538,7 @@ msctlthr_spawn(void)
 {
 	struct psc_thread *thr;
 
-//	psc_ctlparam_register("faults", psc_ctlparam_faults);
+	psc_ctlparam_register("faults", psc_ctlparam_faults);
 	psc_ctlparam_register("log.file", psc_ctlparam_log_file);
 	psc_ctlparam_register("log.format", psc_ctlparam_log_format);
 	psc_ctlparam_register("log.level", psc_ctlparam_log_level);
