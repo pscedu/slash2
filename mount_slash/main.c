@@ -123,6 +123,10 @@ struct psc_poolmgr		*slc_biorq_pool;
 
 uint32_t			 sys_upnonce;
 
+const char *psc_fault_names[] = {
+	NULL
+};
+
 int
 fcmh_checkcreds(struct fidc_membh *f, const struct slash_creds *crp,
     int accmode)
