@@ -1052,7 +1052,7 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 		DEBUG_REQ(rc ? PLL_ERROR : PLL_INFO, rq, "bmap=%p biorq=%p",
 		  b, r);
 
-	if (SLC_OPST_CURR(SLC_OPST_DEBUG) == 1)
+	if (OPSTAT_CURR(SLC_OPST_DEBUG) == 1)
 		rc = EIO;
 
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b, "sbd_seq=%"PRId64,
@@ -1103,7 +1103,7 @@ msl_readahead_cb(struct pscrpc_request *rq, int rc,
     struct pscrpc_async_args *args)
 {
 	struct bmap_pagecache_entry *e,
-		**bmpces = args->pointer_arg[MSL_CBARG_BMPCE];
+	    **bmpces = args->pointer_arg[MSL_CBARG_BMPCE];
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct bmap_pagecache *bmpc = args->pointer_arg[MSL_CBARG_BMPC];
 	struct psc_waitq *wq = NULL;
@@ -1113,7 +1113,7 @@ msl_readahead_cb(struct pscrpc_request *rq, int rc,
 	if (rq)
 		DEBUG_REQ(PLL_INFO, rq, "bmpces=%p", bmpces);
 
-	if (SLC_OPST_CURR(SLC_OPST_DEBUG) == 1)
+	if (OPSTAT_CURR(SLC_OPST_DEBUG) == 1)
 		rc = EIO;
 
 	for (i = 0, e = bmpces[0], b = e->bmpce_owner; e; i++, e = bmpces[i]) {
