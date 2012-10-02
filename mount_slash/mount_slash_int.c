@@ -769,7 +769,7 @@ msl_req_aio_add(struct pscrpc_request *rq,
 		 */
 		psc_assert(!r);
 		bmpces = av->pointer_arg[MSL_CBARG_BMPCE];
-		OPSTAT_INCR(OPSTAT_READ_AHEAD_CB_ADD);
+		OPSTAT_INCR(SLC_OPST_READ_AHEAD_CB_ADD);
 
 		for (i = 0;; i++) {
 			e = bmpces[i];
@@ -781,7 +781,7 @@ msl_req_aio_add(struct pscrpc_request *rq,
 	} else if (cbf == msl_read_cb) {
 		int naio = 0;
 
-		OPSTAT_INCR(OPSTAT_READ_CB_ADD);
+		OPSTAT_INCR(SLC_OPST_READ_CB_ADD);
 		DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 			BMPCE_LOCK(e);
 			if (e->bmpce_flags & BMPCE_DATARDY) {
@@ -802,7 +802,7 @@ msl_req_aio_add(struct pscrpc_request *rq,
 		car->car_fsrqinfo = r->biorq_fsrqi;
 
 	} else if (cbf == msl_dio_cb) {
-		OPSTAT_INCR(OPSTAT_DIO_CB_ADD);
+		OPSTAT_INCR(SLC_OPST_DIO_CB_ADD);
 		msl_biorq_aio_prep(r);
 		if (r->biorq_flags & BIORQ_WRITE)
 			av->pointer_arg[MSL_CBARG_BIORQ] = NULL;
@@ -1052,7 +1052,7 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 		DEBUG_REQ(rc ? PLL_ERROR : PLL_INFO, rq, "bmap=%p biorq=%p",
 		  b, r);
 
-	if (OPSTAT_CURR(OPSTAT_DEBUG) == 1)
+	if (SLC_OPST_CURR(SLC_OPST_DEBUG) == 1)
 		rc = EIO;
 
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b, "sbd_seq=%"PRId64,
@@ -1113,7 +1113,7 @@ msl_readahead_cb(struct pscrpc_request *rq, int rc,
 	if (rq)
 		DEBUG_REQ(PLL_INFO, rq, "bmpces=%p", bmpces);
 
-	if (OPSTAT_CURR(OPSTAT_DEBUG) == 1)
+	if (SLC_OPST_CURR(SLC_OPST_DEBUG) == 1)
 		rc = EIO;
 
 	for (i = 0, e = bmpces[0], b = e->bmpce_owner; e; i++, e = bmpces[i]) {
@@ -1343,7 +1343,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		pscrpc_set_add_new_req(r->biorq_rqset, rq);
 		rc = pscrpc_push_req(rq);
 		if (rc) {
-			OPSTAT_INCR(OPSTAT_RPC_PUSH_REQ_FAIL);
+			OPSTAT_INCR(SLC_OPST_RPC_PUSH_REQ_FAIL);
 			pscrpc_set_remove_req(r->biorq_rqset, rq);
 			goto error;
 		}
@@ -1588,7 +1588,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	uint32_t off = 0;
 	int rc, i;
 
-	OPSTAT_INCR(OPSTAT_READ_RPC_LAUNCH);
+	OPSTAT_INCR(SLC_OPST_READ_RPC_LAUNCH);
 
 	a = PSCALLOC(sizeof(*a));
 	psc_dynarray_init(a);
@@ -1671,7 +1671,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 
 	rc = pscrpc_push_req(rq);
 	if (rc) {
-		OPSTAT_INCR(OPSTAT_RPC_PUSH_REQ_FAIL);
+		OPSTAT_INCR(SLC_OPST_RPC_PUSH_REQ_FAIL);
 		pscrpc_set_remove_req(r->biorq_rqset, rq);
 		goto error;
 	}
@@ -1805,7 +1805,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 			psc_assert(e->bmpce_flags & BMPCE_RBWPAGE);
 			psc_assert(!(e->bmpce_flags & BMPCE_DATARDY));
 
-			OPSTAT_INCR(OPSTAT_PREFETCH);
+			OPSTAT_INCR(SLC_OPST_PREFETCH);
 			rc = msl_read_rpc_launch(r, i ? (npages - 1) : 0, 1);
 			if (rc)
 				break;

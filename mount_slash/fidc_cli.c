@@ -92,7 +92,7 @@ slc_fcmh_ctor(struct fidc_membh *fcmh)
 	sl_siteid_t siteid;
 	int i;
 
-	OPSTAT_INCR(OPSTAT_SLC_FCMH_CTOR);
+	OPSTAT_INCR(SLC_OPST_SLC_FCMH_CTOR);
 	fci = fcmh_get_pri(fcmh);
 	slc_fcmh_refresh_age(fcmh);
 	INIT_PSC_LISTENTRY(&fci->fci_lentry);
@@ -123,7 +123,7 @@ slc_fcmh_ctor(struct fidc_membh *fcmh)
 void
 slc_fcmh_dtor(struct fidc_membh *fcmh)
 {
-	OPSTAT_INCR(OPSTAT_SLC_FCMH_DTOR);
+	OPSTAT_INCR(SLC_OPST_SLC_FCMH_DTOR);
 	if (fcmh_isdir(fcmh) && DIRCACHE_INITIALIZED(fcmh)) {
 		struct fcmh_cli_info *fci;
 

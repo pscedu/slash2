@@ -122,7 +122,7 @@ bmpce_lookup_locked(struct bmap_pagecache *bmpc, struct bmpc_ioreq *r,
 			e->bmpce_off = search.bmpce_off;
 			bmpce_useprep(e, r, wq);
 
-			OPSTAT_INCR(OPSTAT_BMPCE_INSERT);
+			OPSTAT_INCR(SLC_OPST_BMPCE_INSERT);
 			SPLAY_INSERT(bmap_pagecachetree,
 			    &bmpc->bmpc_tree, e);
 		}

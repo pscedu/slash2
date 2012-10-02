@@ -71,7 +71,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 			}
 
 		if (!found) {
-			OPSTAT_INCR(OPSTAT_READ_AIO_NOT_FOUND);
+			OPSTAT_INCR(SLC_OPST_READ_AIO_NOT_FOUND);
 			struct timespec ts = { 0, RCI_AIO_READ_WAIT };
 
 			/*
@@ -105,7 +105,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		struct psc_dynarray *a;
 		int i;
 
-		OPSTAT_INCR(OPSTAT_READ_CB);
+		OPSTAT_INCR(SLC_OPST_READ_CB);
 		a = car->car_argv.pointer_arg[MSL_CBARG_BMPCE];
 
 		msl_fsrqinfo_readywait(car->car_fsrqinfo);
@@ -130,7 +130,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		struct iovec *iovs = NULL;
 		int i;
 
-		OPSTAT_INCR(OPSTAT_READ_AHEAD_CB);
+		OPSTAT_INCR(SLC_OPST_READ_AHEAD_CB);
 		for (i = 0;; i++) {
 			e = bmpces[i];
 			if (!e)
@@ -151,7 +151,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		PSCFREE(iovs);
 
 	} else if (car->car_cbf == msl_dio_cb) {
-		OPSTAT_INCR(OPSTAT_DIO_CB);
+		OPSTAT_INCR(SLC_OPST_DIO_CB);
 		msl_fsrqinfo_readywait(car->car_fsrqinfo);
 
 		if (mq->rc)

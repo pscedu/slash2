@@ -302,7 +302,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	msfsthr_ensure();
 
 	psc_assert(oflags & O_CREAT);
-	OPSTAT_INCR(OPSTAT_CREAT);
+	OPSTAT_INCR(SLC_OPST_CREAT);
 
 	if (!msl_progallowed(pfr)) {
 		rc = EPERM;
@@ -776,7 +776,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	int rc;
 
 	msfsthr_ensure();
-	OPSTAT_INCR(OPSTAT_MKDIR);
+	OPSTAT_INCR(SLC_OPST_MKDIR);
 
 	if (strlen(name) == 0) {
 		rc = ENOENT;
@@ -951,7 +951,7 @@ void
 mslfsop_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name)
 {
-	OPSTAT_INCR(OPSTAT_UNLINK);
+	OPSTAT_INCR(SLC_OPST_UNLINK);
 	pscfs_reply_unlink(pfr, msl_delete(pfr, pinum, name, 1));
 }
 
@@ -959,7 +959,7 @@ void
 mslfsop_rmdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name)
 {
-	OPSTAT_INCR(OPSTAT_RMDIR);
+	OPSTAT_INCR(SLC_OPST_RMDIR);
 	pscfs_reply_unlink(pfr, msl_delete(pfr, pinum, name, 0));
 }
 
@@ -1065,7 +1065,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	struct slash_creds cr;
 	struct iovec iov[2];
 
-	OPSTAT_INCR(OPSTAT_READDIR);
+	OPSTAT_INCR(SLC_OPST_READDIR);
 
 	iov[0].iov_base = NULL;
 	iov[1].iov_base = NULL;
@@ -1126,7 +1126,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	rq->rq_bulk_abortable = 1;
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc)) {
-		OPSTAT_INCR(OPSTAT_READDIR_RETRY);
+		OPSTAT_INCR(SLC_OPST_READDIR_RETRY);
 		goto retry;
 	}
 	if (rc == 0)
@@ -1607,7 +1607,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	dstfg.fg_fid = FID_ANY;
 
 	msfsthr_ensure();
-	OPSTAT_INCR(OPSTAT_RENAME);
+	OPSTAT_INCR(SLC_OPST_RENAME);
 
 #if 0
 	if (strcmp(oldname, ".") == 0 ||
@@ -1953,7 +1953,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 	msfsthr_ensure();
 
-	OPSTAT_INCR(OPSTAT_SETATTR);
+	OPSTAT_INCR(SLC_OPST_SETATTR);
 
 	if ((to_set & PSCFS_SETATTRF_UID) && stb->st_uid == (uid_t)-1)
 		to_set &= ~PSCFS_SETATTRF_UID;
@@ -2248,7 +2248,7 @@ mslfsop_fsync(struct pscfs_req *pfr, __unusedx int datasync, void *data)
 	struct msl_fhent *mfh;
 
 	mfh = data;
-	OPSTAT_INCR(OPSTAT_FSYNC);
+	OPSTAT_INCR(SLC_OPST_FSYNC);
 
 	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "fsyncing via flush");
 
@@ -2278,7 +2278,7 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 
 	msfsthr_ensure();
 
-	OPSTAT_INCR(OPSTAT_WRITE);
+	OPSTAT_INCR(SLC_OPST_WRITE);
 
 	f = mfh->mfh_fcmh;
 	ftmp = fidc_lookup_fg(&f->fcmh_fg);
@@ -2351,7 +2351,7 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 
 	msfsthr_ensure();
 
-	OPSTAT_INCR(OPSTAT_READ);
+	OPSTAT_INCR(SLC_OPST_READ);
 
 	f = mfh->mfh_fcmh;
 	ftmp = fidc_lookup_fg(&f->fcmh_fg);
@@ -2412,7 +2412,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 
 	msfsthr_ensure();
 
-	OPSTAT_INCR(OPSTAT_LISTXATTR);
+	OPSTAT_INCR(SLC_OPST_LISTXATTR);
 
 	mslfs_getcreds(pfr, &cr);
 
@@ -2474,7 +2474,7 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 
 	msfsthr_ensure();
 
-	OPSTAT_INCR(OPSTAT_SETXATTR);
+	OPSTAT_INCR(SLC_OPST_SETXATTR);
 
 	if (size > SL_NAME_MAX) {
 		rc = -EINVAL;
@@ -2538,7 +2538,7 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 
 	msfsthr_ensure();
 
-	OPSTAT_INCR(OPSTAT_GETXATTR);
+	OPSTAT_INCR(SLC_OPST_GETXATTR);
 
 	mslfs_getcreds(pfr, &cr);
 
@@ -2581,7 +2581,7 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 	 * successfully.
 	 */
 	if (rc == -ENOSYS) {
-		OPSTAT_INCR(OPSTAT_GETXATTR_NOSYS);
+		OPSTAT_INCR(SLC_OPST_GETXATTR_NOSYS);
 		rc = 0;
 	}
 	pscfs_reply_getxattr(pfr, buf, mp ? mp->valuelen : 0, rc);
@@ -2610,7 +2610,7 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 
 	msfsthr_ensure();
 
-	OPSTAT_INCR(OPSTAT_REMOVEXATTR);
+	OPSTAT_INCR(SLC_OPST_REMOVEXATTR);
 
 	mslfs_getcreds(pfr, &cr);
 
@@ -2728,7 +2728,7 @@ msattrflushthr_main(__unusedx struct psc_thread *thr)
 
 			freelock(&attrTimeoutQLock);
 
-			OPSTAT_INCR(OPSTAT_FLUSH_ATTR);
+			OPSTAT_INCR(SLC_OPST_FLUSH_ATTR);
 
 			rc = msl_flush_attr(f);
 

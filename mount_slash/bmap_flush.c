@@ -125,9 +125,9 @@ _msl_offline_retry(const struct pfl_callerinfo *pci,
 
 	retry = msl_fd_offline_retry(r->biorq_fhent);
 	if (retry)
-		OPSTAT_INCR(OPSTAT_OFFLINE_RETRY);
+		OPSTAT_INCR(SLC_OPST_OFFLINE_RETRY);
 	else
-		OPSTAT_INCR(OPSTAT_OFFLINE_NO_RETRY);
+		OPSTAT_INCR(SLC_OPST_OFFLINE_NO_RETRY);
 
 	DEBUG_BIORQ(PLL_WARN, r, "retry=%d", retry);
 
@@ -232,7 +232,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	sl_csvc_incref(csvc);
 	CSVC_ULOCK(csvc);
 
-	OPSTAT_INCR(OPSTAT_SRMT_WRITE);
+	OPSTAT_INCR(SLC_OPST_SRMT_WRITE);
 	rc = SL_RSX_NEWREQ(csvc, SRMT_WRITE, rq, mq, mp);
 	if (rc)
 		goto error;
