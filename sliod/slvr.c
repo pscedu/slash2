@@ -641,7 +641,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 		rc = pread(slvr_2_fd(s), slvr_2_buf(s, sblk),
 			   size, slvr_2_fileoff(s, sblk));
 
-		if (SLI_OPST_CURR(SLI_OPST_DEBUG) == 1) {
+		if (OPSTAT_CURR(SLI_OPST_DEBUG) == 1) {
 			rc = -1;
 			errno = EBADF;
 		}
