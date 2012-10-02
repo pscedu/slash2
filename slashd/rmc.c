@@ -193,7 +193,7 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	struct bmapc_memb *b = NULL;
 	struct bmap_mds_info *bmi;
 
-	OPSTAT_INCR(OPSTAT_BMAP_CHWRMODE);
+	OPSTAT_INCR(SLM_OPST_BMAP_CHWRMODE);
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = -slm_fcmh_get(&mq->sbd.sbd_fg, &f);
 	if (mp->rc)
@@ -243,7 +243,7 @@ slm_rmc_handle_extendbmapls(struct pscrpc_request *rq)
 	struct srm_leasebmapext_rep *mp;
 	struct fidc_membh *f;
 
-	OPSTAT_INCR(OPSTAT_EXTEND_BMAP_LEASE);
+	OPSTAT_INCR(SLM_OPST_EXTEND_BMAP_LEASE);
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	mp->rc = -slm_fcmh_get(&mq->sbd.sbd_fg, &f);
@@ -263,7 +263,7 @@ slm_rmc_handle_reassignbmapls(struct pscrpc_request *rq)
 	struct fidc_membh *f;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	OPSTAT_INCR(OPSTAT_REASSIGN_BMAP_LEASE);
+	OPSTAT_INCR(SLM_OPST_REASSIGN_BMAP_LEASE);
 
 	mp->rc = -slm_fcmh_get(&mq->sbd.sbd_fg, &f);
 	if (mp->rc)
@@ -288,9 +288,9 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	if (mq->rw != SL_WRITE)
-		OPSTAT_INCR(OPSTAT_GET_BMAP_LEASE_READ);
+		OPSTAT_INCR(SLM_OPST_GET_BMAP_LEASE_READ);
 	else
-		OPSTAT_INCR(OPSTAT_GET_BMAP_LEASE_WRITE);
+		OPSTAT_INCR(SLM_OPST_GET_BMAP_LEASE_WRITE);
 	if (mq->rw != SL_READ && mq->rw != SL_WRITE) {
 		mp->rc = -EINVAL;
 		return (0);
@@ -693,7 +693,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	iov[1].iov_base = NULL;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	OPSTAT_INCR(OPSTAT_READDIR_RPC);
+	OPSTAT_INCR(SLM_OPST_READDIR_RPC);
 
 	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid) < 0) {
 		mp->rc = -EINVAL;
@@ -822,7 +822,7 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 int
 slm_rmc_handle_rls_bmap(struct pscrpc_request *rq)
 {
-	OPSTAT_INCR(OPSTAT_BMAP_RELEASE);
+	OPSTAT_INCR(SLM_OPST_BMAP_RELEASE);
 	return (mds_handle_rls_bmap(rq, 0));
 }
 
@@ -1358,7 +1358,7 @@ slm_rmc_handle_setxattr(struct pscrpc_request *rq)
 	int vfsid;
 	struct iovec iov;
 
-	OPSTAT_INCR(OPSTAT_SETXATTR_RPC);
+	OPSTAT_INCR(SLM_OPST_SETXATTR_RPC);
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid) < 0) {
 		mp->rc = -EINVAL;
@@ -1406,7 +1406,7 @@ slm_rmc_handle_getxattr(struct pscrpc_request *rq)
 	size_t outsize;
 	int vfsid, abort_bulk = 0;
 
-	OPSTAT_INCR(OPSTAT_GETXATTR_RPC);
+	OPSTAT_INCR(SLM_OPST_GETXATTR_RPC);
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid) < 0) {
 		if (mq->size)
