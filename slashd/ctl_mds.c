@@ -531,7 +531,6 @@ slmctlrep_getbml(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct slmctlmsg_bml *scbl = m;
 	struct bmap_mds_lease *bml, *t;
 	struct psc_lockedlist *pll;
-	struct sl_resource *r;
 	int rc = 1;
 
 	pll = &mdsBmapTimeoTbl.btt_leases;
@@ -539,11 +538,9 @@ slmctlrep_getbml(int fd, struct psc_ctlmsghdr *mh, void *m)
 	PLL_FOREACH(bml, pll) {
 		memset(scbl, 0, sizeof(*scbl));
 		BML_LOCK(bml);
-		if (bml->bml_ios) {
-			r = libsl_id2res(bml->bml_ios);
-			strlcpy(scbl->scbl_resname, r->res_name,
-			    sizeof(scbl->scbl_resname));
-		}
+		strlcpy(scbl->scbl_resname, bml->bml_ios ?
+		    libsl_id2res(bml->bml_ios)->res_name : "<any>",
+		    sizeof(scbl->scbl_resname));
 		scbl->scbl_fg = bml_2_bmap(bml)->bcm_fcmh->fcmh_fg;
 		scbl->scbl_bno = bml_2_bmap(bml)->bcm_bmapno;
 		scbl->scbl_seq = bml->bml_seq;
