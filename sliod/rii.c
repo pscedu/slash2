@@ -139,9 +139,9 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 	sliriithr(pscthr_get())->sirit_st_nread++;
 
 	if (aio) {
-		OPSTAT_INCR(OPSTAT_HANDLE_REPLREAD_AIO);
+		OPSTAT_INCR(SLI_OPST_HANDLE_REPLREAD_AIO);
 	} else {
-		OPSTAT_INCR(OPSTAT_HANDLE_REPLREAD);
+		OPSTAT_INCR(SLI_OPST_HANDLE_REPLREAD);
 	}
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -291,11 +291,11 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 	psc_assert(slvridx < (int)nitems(w->srw_slvr_refs));
 
 	if (rc == -SLERR_AIOWAIT)
-		OPSTAT_INCR(OPSTAT_ISSUE_REPLREAD_CB_AIO);
+		OPSTAT_INCR(SLI_OPST_ISSUE_REPLREAD_CB_AIO);
 	else if (rc)
-		OPSTAT_INCR(OPSTAT_ISSUE_REPLREAD_ERROR);
+		OPSTAT_INCR(SLI_OPST_ISSUE_REPLREAD_ERROR);
 	else {
-		OPSTAT_INCR(OPSTAT_ISSUE_REPLREAD_CB);
+		OPSTAT_INCR(SLI_OPST_ISSUE_REPLREAD_CB);
 	}
 	return (sli_rii_replread_release_sliver(w, slvridx, rc));
 }
@@ -360,9 +360,9 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
  out:
 	if (rc) {
 		sli_rii_replread_release_sliver(w, slvridx, rc);
-		OPSTAT_INCR(OPSTAT_ISSUE_REPLREAD_ERROR);
+		OPSTAT_INCR(SLI_OPST_ISSUE_REPLREAD_ERROR);
 	} else {
-		OPSTAT_INCR(OPSTAT_ISSUE_REPLREAD);
+		OPSTAT_INCR(SLI_OPST_ISSUE_REPLREAD);
 	}
 	if (rq)
 		pscrpc_req_finished(rq);

@@ -260,7 +260,7 @@ slvr_aio_replreply(struct sli_aiocb_reply *a)
 	    mp))
 		goto out;
 
-	OPSTAT_INCR(OPSTAT_REPL_READAIO);
+	OPSTAT_INCR(SLI_OPST_REPL_READAIO);
 
 	s = a->aiocbr_slvrs[0];
 
@@ -299,7 +299,7 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 	struct srm_io_rep *mp;
 	int rc, i;
 
-	OPSTAT_INCR(OPSTAT_SLVR_AIO_REPLY);
+	OPSTAT_INCR(SLI_OPST_SLVR_AIO_REPLY);
 	if (!a->aiocbr_csvc)
 		goto out;
 
@@ -626,7 +626,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 
 	if (rw == SL_READ) {
-		OPSTAT_INCR(OPSTAT_FSIO_READ);
+		OPSTAT_INCR(SLI_OPST_FSIO_READ);
 		psc_assert(s->slvr_flags & SLVR_FAULTING);
 		errno = 0;
 		if (globalConfig.gconf_async_io) {
@@ -641,13 +641,13 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 		rc = pread(slvr_2_fd(s), slvr_2_buf(s, sblk),
 			   size, slvr_2_fileoff(s, sblk));
 
-		if (OPSTAT_CURR(OPSTAT_DEBUG) == 1) {
+		if (SLI_OPST_CURR(SLI_OPST_DEBUG) == 1) {
 			rc = -1;
 			errno = EBADF;
 		}
 
 		if (rc < 0) {
-			OPSTAT_INCR(OPSTAT_FSIO_READ_FAIL);
+			OPSTAT_INCR(SLI_OPST_FSIO_READ_FAIL);
 			save_errno = errno;
 		}
 
@@ -671,7 +671,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 				    nblks, slvr_2_fileoff(s, sblk));
 		}
 	} else {
-		OPSTAT_INCR(OPSTAT_FSIO_WRITE);
+		OPSTAT_INCR(SLI_OPST_FSIO_WRITE);
 		for (i = 0; i < nblks; i++)
 			psc_vbitmap_unset(s->slvr_slab->slb_inuse, sblk + i);
 
@@ -681,7 +681,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 		rc = pwrite(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
 			    slvr_2_fileoff(s, sblk));
 		if (rc == -1) {
-			OPSTAT_INCR(OPSTAT_FSIO_WRITE_FAIL);
+			OPSTAT_INCR(SLI_OPST_FSIO_WRITE_FAIL);
 			save_errno = errno;
 		}
 	}

@@ -402,7 +402,7 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 		brr->nbmaps = nrls;
 
-		OPSTAT_INCR(OPSTAT_SRMT_RELEASE);
+		OPSTAT_INCR(SLI_OPST_SRMT_RELEASE);
 
 		/*
 		 * The system can tolerate the loss of these messages so

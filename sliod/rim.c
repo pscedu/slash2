@@ -64,7 +64,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 
 	len = offsetof(struct srt_reclaim_entry, _pad);
 
-	OPSTAT_INCR(OPSTAT_RECLAIM);
+	OPSTAT_INCR(SLI_OPST_RECLAIM);
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	if (mq->size < len || mq->size > LNET_MTU)
@@ -109,10 +109,10 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 		 * Anyway, we don't report an error back to MDS because
 		 * it can do nothing.
 		 */
-		OPSTAT_INCR(OPSTAT_RECLAIM_FILE);
+		OPSTAT_INCR(SLI_OPST_RECLAIM_FILE);
 		rc = unlink(fidfn);
 		if (rc == -1) {
-			OPSTAT_INCR(OPSTAT_RECLAIM_FILE_FAIL);
+			OPSTAT_INCR(SLI_OPST_RECLAIM_FILE_FAIL);
 			rc = errno;
 		}
 
