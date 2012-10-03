@@ -633,7 +633,8 @@ struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("rename"),
 	PFL_OPSTAT_INIT("setattr"),
 	PFL_OPSTAT_INIT("setxattr"),
-	PFL_OPSTAT_INIT("statfs")
+	PFL_OPSTAT_INIT("statfs"),
+	PFL_OPSTAT_INIT("unlink")
 };
 
 PFLCTL_SVR_DEFS;
