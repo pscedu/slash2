@@ -795,6 +795,7 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 	char buf[SL_PATH_MAX];
 	int vfsid;
 
+	OPSTAT_INCR(SLM_OPST_READLINK);
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid) < 0) {
 		mp->rc = -EINVAL;
