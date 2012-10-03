@@ -125,7 +125,6 @@ slmupschedthr_tryrepldst_cb(struct pscrpc_request *rq,
 	int64_t amt = av->space[IN_AMT];
 	int rc = 0, tract[NBREPLST];
 
-	upd = bmap_2_upd(b);
 	src_rmmi = resm2rmmi(src_resm);
 	dst_rmmi = resm2rmmi(dst_resm);
 
@@ -170,7 +169,10 @@ slmupschedthr_tryrepldst_cb(struct pscrpc_request *rq,
 	 *   (3) if other failure, don't want to keep it in the system.
 	 */
 	rpmi = res2rpmi(dst_resm->resm_res);
-	upd_rpmi_remove(rpmi, upd);
+	if (b) {
+		upd = bmap_2_upd(b);
+		upd_rpmi_remove(rpmi, upd);
+	}
 
 	if (amt)
 		mds_repl_nodes_adjbusy(src_resm, dst_resm, -amt);
