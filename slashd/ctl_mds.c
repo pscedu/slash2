@@ -626,6 +626,7 @@ struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("get_bmap_lease_write"),
 	PFL_OPSTAT_INIT("getxattr"),
 	PFL_OPSTAT_INIT("link"),
+	PFL_OPSTAT_INIT("mkdir"),
 	PFL_OPSTAT_INIT("readdir"),
 	PFL_OPSTAT_INIT("reassign_bmap_lease"),
 	PFL_OPSTAT_INIT("setxattr")

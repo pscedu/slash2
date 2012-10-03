@@ -62,6 +62,7 @@ enum {
 	SLMTHRT_ZFS_KSTAT	/* ZFS stats */
 };
 
+/* The following should match pflctl_opstats[] in file ctl_mds.c */
 enum {
 	SLM_OPST_BMAP_CHWRMODE,
 	SLM_OPST_BMAP_RELEASE,
@@ -70,6 +71,7 @@ enum {
 	SLM_OPST_GET_BMAP_LEASE_WRITE,
 	SLM_OPST_GETXATTR,
 	SLM_OPST_LINK,
+	SLM_OPST_MKDIR,
 	SLM_OPST_READDIR,
 	SLM_OPST_REASSIGN_BMAP_LEASE,
 	SLM_OPST_SETXATTR,
