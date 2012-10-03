@@ -145,6 +145,7 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	struct srm_getattr_rep *mp;
 	struct fidc_membh *f;
 
+	OPSTAT_INCR(SLM_OPST_GETATTR);
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
@@ -382,6 +383,7 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 	struct fidc_membh *p = NULL;
 	int vfsid;
 
+	OPSTAT_INCR(SLM_OPST_LOOKUP);
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mdsio_fid_to_vfsid(mq->pfg.fg_fid, &vfsid) < 0) {
 		mp->rc = -EINVAL;
