@@ -940,6 +940,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	struct srm_setattr_rep *mp;
 	int vfsid;
 
+	OPSTAT_INCR(SLM_OPST_SETATTR);
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mdsio_fid_to_vfsid(mq->attr.sst_fg.fg_fid, &vfsid) < 0) {
 		mp->rc = -EINVAL;

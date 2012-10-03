@@ -631,6 +631,7 @@ struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("readlink"),
 	PFL_OPSTAT_INIT("reassign_bmap_lease"),
 	PFL_OPSTAT_INIT("rename"),
+	PFL_OPSTAT_INIT("setattr"),
 	PFL_OPSTAT_INIT("setxattr")
 };
 
