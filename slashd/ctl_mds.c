@@ -621,6 +621,7 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("bmap_chwrmode"),
 	PFL_OPSTAT_INIT("bmap_release"),
+	PFL_OPSTAT_INIT("create"),
 	PFL_OPSTAT_INIT("extend_bmap_lease"),
 	PFL_OPSTAT_INIT("get_bmap_lease_read"),
 	PFL_OPSTAT_INIT("get_bmap_lease_write"),

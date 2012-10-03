@@ -554,6 +554,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	int vfsid;
 	slfid_t fid = 0;
 
+	OPSTAT_INCR(SLM_OPST_CREATE);
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	if (mdsio_fid_to_vfsid(mq->pfg.fg_fid, &vfsid) < 0) {
