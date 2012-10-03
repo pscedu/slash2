@@ -842,6 +842,7 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 
 	chfg.fg_fid = FID_ANY;
 
+	OPSTAT_INCR(SLM_OPST_RENAME);
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mdsio_fid_to_vfsid(mq->opfg.fg_fid, &vfsid) < 0) {
 		mp->rc = -EINVAL;
