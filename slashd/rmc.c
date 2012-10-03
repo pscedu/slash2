@@ -1237,6 +1237,7 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 	struct srm_symlink_req *mq;
 	struct srm_symlink_rep *mp;
 
+	OPSTAT_INCR(SLM_OPST_SYMLINK);
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	return (slm_symlink(rq, mq, mp, SRMC_BULK_PORTAL));
 }
