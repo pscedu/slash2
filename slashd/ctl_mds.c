@@ -630,6 +630,7 @@ struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("link"),
 	PFL_OPSTAT_INIT("lookup"),
 	PFL_OPSTAT_INIT("mkdir"),
+	PFL_OPSTAT_INIT("mknod"),
 	PFL_OPSTAT_INIT("readdir"),
 	PFL_OPSTAT_INIT("readlink"),
 	PFL_OPSTAT_INIT("reassign_bmap_lease"),

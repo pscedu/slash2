@@ -517,6 +517,7 @@ slm_rmc_handle_mknod(struct pscrpc_request *rq)
 	struct srm_mknod_rep *mp;
 	int vfsid;
 
+	OPSTAT_INCR(SLM_OPST_MKNOD);
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mdsio_fid_to_vfsid(mq->pfg.fg_fid, &vfsid) < 0) {
 		mp->rc = -EINVAL;
