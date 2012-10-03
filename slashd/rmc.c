@@ -1125,6 +1125,7 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 	struct statvfs sfb;
 	double adj;
 
+	OPSTAT_INCR(SLM_OPST_STATFS);
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mdsio_fid_to_vfsid(mq->fid, &vfsid) < 0) {
 		mp->rc = -EINVAL;
