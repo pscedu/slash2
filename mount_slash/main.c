@@ -977,6 +977,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	int rc;
 
 	msfsthr_ensure();
+	OPSTAT_INCR(SLC_OPST_MKNOD);
 
 	if (!S_ISFIFO(mode)) {
 		rc = EOPNOTSUPP;
