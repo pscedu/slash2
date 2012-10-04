@@ -226,7 +226,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		DEBUG_SLVR(((rv && rv != -SLERR_AIOWAIT) ? PLL_WARN : PLL_INFO),
 		    slvr_ref[i], "post io_prep rw=%s rv=%zd",
 		    rw == SL_WRITE ? "wr" : "rd", rv);
-		if (rv) {
+		if (rv && rv != -SLERR_AIOWAIT) {
 			rc = rv;
 			goto out;
 		}
