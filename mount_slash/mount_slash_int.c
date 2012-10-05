@@ -1880,8 +1880,9 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 			}
 		}
 
-		/* If this a read request OR another thread is dealing
-		 *   with this bmpce then check.
+		/*
+		 * If this is a read request OR another thread is
+		 * dealing with this bmpce then check.
 		 */
 		if ((r->biorq_flags & BIORQ_READ) ||
 		    !biorq_is_my_bmpce(r, e)) {
