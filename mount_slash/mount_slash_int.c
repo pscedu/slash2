@@ -1718,8 +1718,6 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r, int *psched)
 	struct bmap_pagecache_entry *e;
 	int rc = 0, i, j = -1;
 
-	*psched = 0;
-
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 		BMPCE_LOCK(e);
 		/* If readahead, biorq_getaligned_off needs to account
@@ -1742,21 +1740,26 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r, int *psched)
 		} else {
 			if (!biorq_is_my_bmpce(r, e)) {
 				rc = msl_read_rpc_launch(r, j, i - j);
+				if (rc)
+					break;
 				j = -1;
-				*psched = 1;
+				(*psched)++;
 
 			} else if ((i-j) == BMPC_MAXBUFSRPC) {
 				rc = msl_read_rpc_launch(r, j, i - j);
+				if (rc)
+					break;
 				j = i;
-				*psched = 1;
+				(*psched)++;
 			}
 		}
 	}
-	if (j >= 0) {
+	if (!rc && j >= 0) {
 		/* Catch any unsent frags at the end of the array.
 		 */
 		rc = msl_read_rpc_launch(r, j, i - j);
-		*psched = 1;
+		if (!rc)
+			(*psched)++;
 	}
 
 	return (rc);
@@ -1770,7 +1773,7 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r, int *psched)
 __static int
 msl_pages_prefetch(struct bmpc_ioreq *r)
 {
-	int sched = 0, rc = 0, npages;
+	int sched = 0, rc = 0, npages = 0;
 	struct bmap_pagecache_entry *e;
 
 	npages = psc_dynarray_len(&r->biorq_pages);
@@ -1778,10 +1781,6 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 	DEBUG_BIORQ(PLL_INFO, r, "check prefetch");
 
 	psc_assert(!r->biorq_rqset);
-
-	BIORQ_LOCK(r);
-	r->biorq_flags |= BIORQ_SCHED;
-	BIORQ_ULOCK(r);
 
 	/* Only read in the pages owned by this request.  To do this
 	 *   the below loop marks only the iov slots which correspond
@@ -1810,13 +1809,13 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 			if (rc)
 				break;
 
-			sched = 1;
+			sched++;
 		}
 	}
 
-	if (rc || !sched) {
+	if (sched) {
 		BIORQ_LOCK(r);
-		r->biorq_flags &= ~BIORQ_SCHED;
+		r->biorq_flags |= BIORQ_SCHED;
 		BIORQ_ULOCK(r);
 	}
 	return (rc);
@@ -1880,9 +1879,8 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 			}
 		}
 
-		/*
-		 * If this is a read request OR another thread is
-		 * dealing with this bmpce then check.
+		/* If this a read request OR another thread is dealing
+		 *   with this bmpce then check.
 		 */
 		if ((r->biorq_flags & BIORQ_READ) ||
 		    !biorq_is_my_bmpce(r, e)) {
