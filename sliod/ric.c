@@ -74,7 +74,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	struct srm_io_rep *mp;
 	struct fidc_membh *f;
 	sl_bmapno_t bmapno, slvrno;
-	int rc = 0, nslvrs, i;
+	int rc = 0, nslvrs = 0, i;
 	lnet_process_id_t *pp;
 	uint64_t seqno;
 	ssize_t rv;
