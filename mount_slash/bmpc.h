@@ -90,7 +90,7 @@ struct bmap_pagecache_entry {
 #define	BMPCE_EIO		(1 << 12)	/* 0x01000: I/O error */
 #define BMPCE_READA		(1 << 13)	/* 0x02000: read-ahead */
 #define BMPCE_AIOWAIT		(1 << 14)	/* 0x04000: wait on async read */
-#define BMPCE_SYNCWAIT		(1 << 15)	/* 0x10000: wait on sliod sync */
+#define BMPCE_SYNCWAIT		(1 << 15)	/* 0x08000: wait on sliod sync */
 
 #define BMPCE_LOCK(b)		spinlock(&(b)->bmpce_lock)
 #define BMPCE_ULOCK(b)		freelock(&(b)->bmpce_lock)
@@ -121,9 +121,10 @@ struct bmap_pagecache_entry {
 		BMPCE_URLOCK((bmpce), _locked);				\
 	} while (0)
 
-#define BMPCE_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
+#define BMPCE_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
 #define DEBUG_BMPCE_FLAGS(b)						\
 	(b)->bmpce_flags & BMPCE_NEW			? "n" : "",	\
+	(b)->bmpce_flags & BMPCE_GETBUF			? "G" : "",	\
 	(b)->bmpce_flags & BMPCE_DATARDY		? "d" : "",	\
 	(b)->bmpce_flags & BMPCE_DIRTY2LRU		? "D" : "",	\
 	(b)->bmpce_flags & BMPCE_LRU			? "l" : "",	\

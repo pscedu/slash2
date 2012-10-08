@@ -1509,7 +1509,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 
 	iovs = PSCALLOC(nbmpce * sizeof(*iovs));
 
-	for (i=0; i < nbmpce; i++) {
+	for (i = 0; i < nbmpce; i++) {
 		e = bmpces_cbarg[i] = bmpces[i];
 		psc_assert(!(e->bmpce_flags & BMPCE_EIO));
 		psc_assert(e->bmpce_base);
@@ -1584,7 +1584,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 	/* Deal with errored read ahead bmpce's.
 	 */
 	BMPC_LOCK(bmap_2_bmpc(b));
-	for (i=0; i < nbmpce; i++) {
+	for (i = 0; i < nbmpce; i++) {
 		e = bmpces[i];
 
 		BMPCE_LOCK(e);
@@ -1593,8 +1593,8 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 
 		e->bmpce_flags |= BMPCE_EIO;
 		DEBUG_BMPCE(PLL_WARN, e, "set BMPCE_EIO");
-		bmpce_handle_lru_locked(e, bmap_2_bmpc(b),
-		    BIORQ_READ, 0);
+		bmpce_handle_lru_locked(e, bmap_2_bmpc(b), BIORQ_READ,
+		    0);
 	}
 	BMPC_ULOCK(bmap_2_bmpc(b));
 
