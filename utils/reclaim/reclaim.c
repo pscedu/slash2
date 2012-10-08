@@ -95,7 +95,7 @@ dump_reclaim_prog_log(void *buf, int size, uint64_t batchno, unsigned int id)
 	modified = 0;
 	printf("Current contents of the reclaim progress log are as follows:\n\n");
 	for (i = 0; i < count; i++) {
-		printf("%4d:  xid = %10ld, batchno = %10ld, id = %d\n",
+		printf("%4d:  xid = %10"PRId64", batchno = %10"PRId64", id = %d\n",
 			i, prog_entryp->res_xid, prog_entryp->res_batchno,
 			prog_entryp->res_id);
 		if (id == prog_entryp->res_id) {
@@ -114,7 +114,7 @@ dump_reclaim_prog_log(void *buf, int size, uint64_t batchno, unsigned int id)
 	printf("\nNew contents of the reclaim progress log are as follows:\n\n");
 	prog_entryp = buf;
 	for (i = 0; i < count; i++) {
-		printf("%4d:  xid = %10ld, batchno = %10ld, id = %d\n",
+		printf("%4d:  xid = %10"PRId64", batchno = %10"PRId64", id = %d\n",
 			i, prog_entryp->res_xid, prog_entryp->res_batchno,
 			prog_entryp->res_id);
 		prog_entryp = PSC_AGP(prog_entryp, entrysize);
