@@ -240,9 +240,9 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 		if (e->bmpce_flags & BMPCE_INIT)
 			fetchpgs++;
 
-		DEBUG_BMPCE(PLL_INFO, e, "i=%d, npages=%d maxpages=%d aoff=%u "
-		    " aoff_search=%u", i, npages, maxpages, aoff,
-		    bmpce_off);
+		DEBUG_BMPCE(PLL_INFO, e,
+		    "i=%d, npages=%d maxpages=%d aoff=%u aoff_search=%u",
+		    i, npages, maxpages, aoff, bmpce_off);
 
 		if (i < npages) {
 			if (e->bmpce_flags & BMPCE_EIO) {
@@ -280,7 +280,9 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 			 *   pages which have yet to be retrieved.
 			 */
 			if (e->bmpce_flags & BMPCE_EIO) {
-				/* Don't bother with RA of pages marked EIO.
+				/*
+				 * Don't bother with RA of pages marked
+				 * EIO.
 				 */
 				DEBUG_BMPCE(PLL_WARN, e, "no RA for EIO");
 
@@ -366,10 +368,11 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 			if (op == BIORQ_READ)
 				e->bmpce_flags |= BMPCE_READPNDG;
 
-			/* Increase the rdref cnt in preparation for any
-			 *   RBW ops but only on new pages owned by this
-			 *   page cache entry.  For now bypass
-			 *   bmpce_handle_lru_locked() for this op.
+			/*
+			 * Increase the rdref cnt in preparation for any
+			 * RBW ops but only on new pages owned by this
+			 * page cache entry.  For now bypass
+			 * bmpce_handle_lru_locked() for this op.
 			 */
 			if (!i && (rbw & BIORQ_RBWFP) &&
 			    (fsz > foff ||
@@ -523,8 +526,9 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 				BMPCE_WAIT(e);
 				BMPCE_LOCK(e);
 			}
-			/* Unless this is an RBWFAIL, only my rd ref should
-			 * remain.
+			/*
+			 * Unless this is an RBWFAIL, only my rd ref
+			 * should remain.
 			 */
 			psc_assert((psc_atomic16_read(&e->bmpce_wrref) ==
 				    !!(r->biorq_flags & BIORQ_RBWFAIL)));
@@ -543,7 +547,9 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 
 	BMPC_LOCK(bmpc);
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
-		/* bmpce with no reference will be freed by the reaper */
+		/*
+		 * bmpce with no reference will be freed by the reaper.
+		 */
 		BMPCE_LOCK(e);
 		eio = (e->bmpce_flags & BMPCE_EIO) ? 1 : 0;
 		bmpce_handle_lru_locked(e, bmpc,
@@ -569,9 +575,10 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 
 	psc_assert(!(r->biorq_flags & BIORQ_DESTROY));
 
-	/* Reads req's have their BIORQ_SCHED and BIORQ_INFL flags
-	 *    cleared in msl_read_cb to unblock waiting
-	 *    threads at the earliest possible moment.
+	/*
+	 * Reads req's have their BIORQ_SCHED and BIORQ_INFL flags
+	 * cleared in msl_read_cb to unblock waiting threads at the
+	 * earliest possible moment.
 	 */
 	if (!(r->biorq_flags & BIORQ_DIO)) {
 		if (r->biorq_flags & BIORQ_WRITE) {
@@ -770,13 +777,14 @@ msl_req_aio_add(struct pscrpc_request *rq,
 	car->car_id = mp->id;
 	car->car_cbf = cbf;
 
-	/* pscfs_req has the pointers to each biorq needed for completion.
+	/*
+	 * pscfs_req has the pointers to each biorq needed for
+	 * completion.
 	 */
 	memcpy(&car->car_argv, av, sizeof(*av));
 
 	if (cbf == msl_readahead_cb) {
-		/* readahead's are not associated with any biorq.
-		 */
+		/* readahead's are not associated with any biorq. */
 		psc_assert(!r);
 		bmpces = av->pointer_arg[MSL_CBARG_BMPCE];
 		OPSTAT_INCR(SLC_OPST_READ_AHEAD_CB_ADD);
@@ -805,8 +813,7 @@ msl_req_aio_add(struct pscrpc_request *rq,
 			BMPCE_ULOCK(e);
 			naio++;
 		}
-		/* Should have found at least one aio'd page.
-		 */
+		/* Should have found at least one aio'd page. */
 		psc_assert(naio);
 		msl_biorq_aio_prep(r);
 		car->car_fsrqinfo = r->biorq_fsrqi;
@@ -865,9 +872,10 @@ msl_fsrq_complete(struct msl_fsrqinfo *q)
 		}
 
 		if (i && !len)
-			/* This fsrq has 2 biorqs (probably spanned 2 bmaps)
-			 * and the first biorq was completed via cache so
-			 * interpolate its len.
+			/*
+			 * This fsrq has 2 biorqs (probably spanned two
+			 * bmaps) and the first biorq was completed via
+			 * cache so interpolate its len.
 			 */
 			len = q->mfsrq_size - r->biorq_len;
 
@@ -945,7 +953,7 @@ msl_fsrq_completion_try(struct msl_fsrqinfo *q)
 			} else if (!(e->bmpce_flags & BMPCE_DATARDY)) {
 				MFH_LOCK(r->biorq_fhent);
 				psc_assert(msl_fsrqinfo_isset(r->biorq_fsrqi,
-					MFSRQ_BMPCEATT));
+				    MFSRQ_BMPCEATT));
 				r->biorq_fsrqi->mfsrq_flags &= ~MFSRQ_BMPCEATT;
 				r->biorq_fsrqi->mfsrq_bmpceatt = NULL;
 				msl_fsrq_aiowait_tryadd_locked(e, r);
@@ -987,7 +995,8 @@ msl_bmpce_aio_process(struct bmap_pagecache_entry *e)
 	psc_dynarray_free(&a);
 }
 
-#define msl_bmpce_rpc_done(e, rc) _msl_bmpce_rpc_done(PFL_CALLERINFOSS(SLSS_BMAP), (e), (rc))
+#define msl_bmpce_rpc_done(e, rc)					\
+	_msl_bmpce_rpc_done(PFL_CALLERINFOSS(SLSS_BMAP), (e), (rc))
 
 __static void
 _msl_bmpce_rpc_done(const struct pfl_callerinfo *pci,
@@ -1007,9 +1016,10 @@ _msl_bmpce_rpc_done(const struct pfl_callerinfo *pci,
 		BMPCE_WAKE(e);
 
 	} else if (e->bmpce_flags & BMPCE_RBWPAGE) {
-		/* The RBW stuff needs to be managed outside of
-		 *   the LRU; this is not the best place but should
-		 *   suffice for now.
+		/*
+		 * The RBW stuff needs to be managed outside of the LRU;
+		 * this is not the best place but should suffice for
+		 * now.
 		 */
 		psc_assert(psc_atomic16_read(&e->bmpce_rdref) >= 1);
 		psc_atomic16_dec(&e->bmpce_rdref);
@@ -1022,11 +1032,13 @@ _msl_bmpce_rpc_done(const struct pfl_callerinfo *pci,
 		DEBUG_BMPCE(PLL_INFO, e, "datardy via read_cb");
 		BMPCE_WAKE(e);
 
+//		psc_assert(psc_atomic32_read(
+//		    &e->bmpce_waitq->wq_nwaiters) == 0);
+
 		e->bmpce_waitq = NULL;
 		e->bmpce_owner = NULL;
 	}
-	/* AIOWAIT is removed no matter what.
-	 */
+	/* AIOWAIT is removed no matter what. */
 	e->bmpce_flags &= ~BMPCE_AIOWAIT;
 
 	BMPCE_ULOCK(e);
@@ -1059,22 +1071,23 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 	psc_assert(b);
 
 	if (rq)
-		DEBUG_REQ(rc ? PLL_ERROR : PLL_INFO, rq, "bmap=%p biorq=%p",
-		  b, r);
+		DEBUG_REQ(rc ? PLL_ERROR : PLL_INFO, rq,
+		    "bmap=%p biorq=%p", b, r);
 
 	if (OPSTAT_CURR(SLC_OPST_DEBUG) == 1)
 		rc = EIO;
 
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b, "sbd_seq=%"PRId64,
-	   bmap_2_sbd(b)->sbd_seq);
+	    bmap_2_sbd(b)->sbd_seq);
 
 	DEBUG_BIORQ(rc ? PLL_ERROR : PLL_INFO, r, "rc=%d", rc);
 
 	DYNARRAY_FOREACH(e, i, a) {
 		if ((r->biorq_flags & BIORQ_AIOWAIT) &&
 		    (e->bmpce_flags & BMPCE_AIOWAIT) && !decrefd) {
-			/* Call aio decref one time per-RPC but only
-			 *   if a page in the RPC is marked AIO.
+			/*
+			 * Call aio decref one time per-RPC but only if
+			 * a page in the RPC is marked AIO.
 			 */
 			msl_biorq_aio_decref(r);
 			decrefd = 1;
@@ -1082,7 +1095,9 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 		msl_bmpce_rpc_done(e, rc);
 	}
 
-	/* Free the dynarray which was allocated in msl_read_rpc_launch().
+	/*
+	 * Free the dynarray which was allocated in
+	 * msl_read_rpc_launch().
 	 */
 	psc_dynarray_free(a);
 	PSCFREE(a);
@@ -1091,6 +1106,11 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 	return (rc);
 }
 
+/**
+ * msl_read_cb0 - Thin layer around msl_read_cb(), which does the real
+ *	READ completion processing, in case an AIOWAIT is discovered.
+ *	Upon completion of the AIO, msl_read_cb() is called.
+ */
 int
 msl_read_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
@@ -1212,7 +1232,7 @@ msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 		if (maxretries)
 			bmpc_biorqs_fail(bmap_2_bmpc(r->biorq_bmap),
-				 BIORQ_MAXRETRIES);
+			    BIORQ_MAXRETRIES);
 	}
 
 	while ((r = pll_get(&bwc->bwc_pll))) {
@@ -1367,7 +1387,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	r->biorq_rqset = NULL;
 
 	/*
-	 * async I/O registered by sliod; we must wait for a
+	 * Async I/O registered by sliod; we must wait for a
 	 * notification from him when it is ready.
 	 */
 	switch (rc) {
@@ -1526,7 +1546,8 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 	mq->offset = off;
 	memcpy(&mq->sbd, bmap_2_sbd(b), sizeof(mq->sbd));
 
-	DEBUG_BMAP(PLL_NOTIFY, b, "reada req off=%u, npages=%d", off, nbmpce);
+	DEBUG_BMAP(PLL_NOTIFY, b, "reada req off=%u, npages=%d", off,
+	    nbmpce);
 
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 
@@ -1814,7 +1835,8 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 			    (i && !(r->biorq_flags & BIORQ_RBWLP)))
 				continue;
 
-			e = psc_dynarray_getpos(&r->biorq_pages, i ? (npages - 1) : 0);
+			e = psc_dynarray_getpos(&r->biorq_pages,
+			    i ? (npages - 1) : 0);
 
 			psc_assert(biorq_is_my_bmpce(r, e));
 			psc_assert(e->bmpce_flags & BMPCE_RBWPAGE);
@@ -1989,13 +2011,16 @@ msl_pages_copyin(struct bmpc_ioreq *r)
 		DEBUG_BMPCE(PLL_DEBUG, e, "tsize=%u nbytes=%u toff=%u",
 			    tsize, nbytes, toff);
 		BMPCE_ULOCK(e);
-		/* Do the deed.
-		 */
+		/* Do the deed. */
 		memcpy(dest, src, nbytes);
-		/* If the bmpce belongs to this request and is not yet
-		 *   DATARDY (ie wasn't an RBW block) then set DATARDY
-		 *   and wakeup anyone who was blocked.  Note the waitq
-		 *   pointer will hang around until the request has completed.
+
+		/*
+		 * If the bmpce belongs to this request and is not yet
+		 * DATARDY (i.e. wasn't an RBW block) then set DATARDY
+		 * and wakeup anyone who was blocked.  Note the waitq
+		 * pointer will hang around until the request has
+		 * completed.
+		 *
 		 * Note:  wrrefs are held until the
 		 */
 		BMPCE_LOCK(e);
@@ -2135,16 +2160,16 @@ msl_setra(struct msl_fhent *mfh, size_t size, off_t off)
 				mfh->mfh_ra.mra_bkwd = 1;
 				mfh->mfh_ra.mra_nseq++;
 
-			} else if ((mfh->mfh_ra.mra_loff + mfh->mfh_ra.mra_lsz)
-				   == off) {
+			} else if ((mfh->mfh_ra.mra_loff +
+			    mfh->mfh_ra.mra_lsz) == off) {
 				mfh->mfh_ra.mra_bkwd = 0;
 				mfh->mfh_ra.mra_nseq++;
 			}
 			break;
 
 		case 0: /* forward read mode */
-			if ((mfh->mfh_ra.mra_loff + mfh->mfh_ra.mra_lsz) ==
-			    off)
+			if ((mfh->mfh_ra.mra_loff +
+			    mfh->mfh_ra.mra_lsz) == off)
 				mfh->mfh_ra.mra_nseq++;
 			else
 				MSL_RA_RESET(&mfh->mfh_ra);
@@ -2157,7 +2182,8 @@ msl_setra(struct msl_fhent *mfh, size_t size, off_t off)
 				MSL_RA_RESET(&mfh->mfh_ra);
 			break;
 		default:
-			psc_fatalx("invalid value (%d)", mfh->mfh_ra.mra_bkwd);
+			psc_fatalx("invalid value (%d)",
+			    mfh->mfh_ra.mra_bkwd);
 		}
 	}
 	mfh->mfh_ra.mra_loff = off;
@@ -2167,10 +2193,9 @@ msl_setra(struct msl_fhent *mfh, size_t size, off_t off)
 	freelock(&mfh->mfh_lock);
 }
 
-/*
+/**
  * msl_fsrqinfo_state: manipulate the state of fsrqinfo structure.
- *
- * set: 0 = query, 1 = set, -1 = clear.
+ * @set: 0 = query, 1 = set, -1 = clear.
  */
 int
 msl_fsrqinfo_state(struct msl_fsrqinfo *q, int flag, int set,
