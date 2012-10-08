@@ -253,7 +253,10 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 				DEBUG_BMPCE(PLL_WARN, e,
 				    "wait and retry for EIO to clear");
 				psc_assert(e->bmpce_waitq);
-				BMPCE_WAIT(e);		/* XXX: should take a ref before wait */
+
+				/* XXX: should take a ref before wait */
+				BMPCE_WAIT(e);
+
 				BMPC_LOCK(bmpc);
 				goto restart;
 			}
@@ -463,8 +466,10 @@ msl_bmpces_fail(struct bmpc_ioreq *r)
 
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 		BMPCE_LOCK(e);
-		if (biorq_is_my_bmpce(r, e))
+		if (biorq_is_my_bmpce(r, e)) {
 			e->bmpce_flags |= BMPCE_EIO;
+			DEBUG_BMPCE(PLL_WARN, e, "set BMPCE_EIO");
+		}
 		BMPCE_ULOCK(e);
 	}
 }
@@ -479,22 +484,27 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 	psc_assert(r->biorq_flags & BIORQ_DESTROY);
 	psc_assert(!(r->biorq_flags & (BIORQ_INFL | BIORQ_SCHED)));
 
-	/* Block here on any of our EIO'd pages waiting for other threads
-	 *   to release their references.
+	/*
+	 * Block here on any of our EIO'd pages waiting for other
+	 * threads to release their references.
+	 *
 	 * Additionally, we need to block for RA pages which have not
-	 *   yet been marked as EIO.
+	 * yet been marked as EIO.
 	 */
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 		BMPCE_LOCK(e);
 
 		if (biorq_is_my_bmpce(r, e) &&
-		    (r->biorq_flags & BIORQ_RBWFAIL))
-			/* BIORQ_RBWFAIL is set in msl_io when the page
+		    (r->biorq_flags & BIORQ_RBWFAIL)) {
+			/*
+			 * BIORQ_RBWFAIL is set in msl_io when the page
 			 * failed to be faulted from the IOS.  Fail
 			 * these here to ensure that we don't move to
 			 * the LRU without DATARDY EIO set.
 			 */
 			e->bmpce_flags |= BMPCE_EIO;
+			DEBUG_BMPCE(PLL_WARN, e, "set BMPCE_EIO");
+		}
 
 		if (biorq_is_my_bmpce(r, e) && (e->bmpce_flags & BMPCE_EIO)) {
 			if ((r->biorq_flags & BIORQ_RBWFAIL) &&
@@ -993,7 +1003,7 @@ _msl_bmpce_rpc_done(const struct pfl_callerinfo *pci,
 
 	if (rc) {
 		e->bmpce_flags |= BMPCE_EIO;
-		DEBUG_BMPCE(PLL_WARN, e, "set EIO");
+		DEBUG_BMPCE(PLL_WARN, e, "set BMPCE_EIO");
 		BMPCE_WAKE(e);
 
 	} else if (e->bmpce_flags & BMPCE_RBWPAGE) {
@@ -1561,6 +1571,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 			pll_remove(&bmap_2_bmpc(b)->bmpc_pndg_ra, e);
 
 		e->bmpce_flags |= BMPCE_EIO;
+		DEBUG_BMPCE(PLL_WARN, e, "set BMPCE_EIO");
 		bmpce_handle_lru_locked(e, bmap_2_bmpc(b),
 		    BIORQ_READ, 0);
 	}
@@ -1704,7 +1715,12 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 
 		BMPCE_LOCK(e);
 		e->bmpce_flags |= BMPCE_EIO;
+		DEBUG_BMPCE(PLL_WARN, e, "set BMPCE_EIO");
 		BMPCE_WAKE(e);
+		/*
+		 * XXX XXX could this cause a potential dangling
+		 * reference problem?
+		 */
 		BMPCE_ULOCK(e);
 	}
 	BMPC_ULOCK(bmap_2_bmpc(r->biorq_bmap));

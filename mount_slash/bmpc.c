@@ -42,7 +42,8 @@ struct psc_listcache	 bmpcLru;
 __static SPLAY_GENERATE(bmap_pagecachetree, bmap_pagecache_entry,
 			bmpce_tentry, bmpce_cmp);
 
-/* bwc_init - Initialize write coalescer pool entry.
+/**
+ * bwc_init - Initialize write coalescer pool entry.
  */
 int
 bwc_init(__unusedx struct psc_poolmgr *poolmgr, void *p)
@@ -51,8 +52,8 @@ bwc_init(__unusedx struct psc_poolmgr *poolmgr, void *p)
 
 	memset(bwc, 0, sizeof(*bwc));
 	INIT_PSC_LISTENTRY(&bwc->bwc_lentry);
-	pll_init(&bwc->bwc_pll, struct bmpc_ioreq, biorq_bwc_lentry, NULL);
-
+	pll_init(&bwc->bwc_pll, struct bmpc_ioreq, biorq_bwc_lentry,
+	    NULL);
 	return (0);
 }
 
@@ -97,7 +98,7 @@ bmpce_destroy(void *p)
 
 struct bmap_pagecache_entry *
 bmpce_lookup_locked(struct bmap_pagecache *bmpc, struct bmpc_ioreq *r,
-		    uint32_t off, struct psc_waitq *wq)
+    uint32_t off, struct psc_waitq *wq)
 {
 	struct bmap_pagecache_entry search, *e = NULL, *e2 = NULL;
 
@@ -247,10 +248,11 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *e,
 			}
 
 		} else if (e->bmpce_flags & BMPCE_EIO) {
-			/* In cases where EIO is present the lock must be
-			 *   freed no matter what.  This is because we
-			 *   try to free the bmpce above, which when
-			 *   successful, replaces the bmpce to the pool.
+			/*
+			 * In cases where EIO is present the lock must
+			 * be freed no matter what.  This is because we
+			 * try to free the bmpce above, which when
+			 * successful, replaces the bmpce to the pool.
 			 */
 			BMPCE_WAKE(e);
 			BMPCE_ULOCK(e);
@@ -260,7 +262,7 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *e,
 	if (pll_nitems(&bmpc->bmpc_lru) > 0) {
 		e = pll_peekhead(&bmpc->bmpc_lru);
 		memcpy(&bmpc->bmpc_oldest, &e->bmpce_laccess,
-		       sizeof(struct timespec));
+		    sizeof(struct timespec));
 	}
 }
 
@@ -398,8 +400,8 @@ bmpc_biorq_seterr(struct bmpc_ioreq *r, int err)
 }
 
 /**
- * bmpc_biorqs_fail - Set the flushrc so that fuse calls blocked in flush()
- *    will awake.
+ * bmpc_biorqs_fail - Set the flushrc so that fuse calls blocked in
+ *	flush() will awake.
  * Notes: Pending RA pages should fail on their own via RPC callback.
  */
 void
@@ -487,7 +489,7 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 	if (pll_nitems(&bmpc->bmpc_lru) > 0) {
 		e = pll_peekhead(&bmpc->bmpc_lru);
 		memcpy(&bmpc->bmpc_oldest, &e->bmpce_laccess,
-		       sizeof(struct timespec));
+		    sizeof(struct timespec));
 	}
 	PLL_ULOCK(&bmpc->bmpc_lru);
 
@@ -495,8 +497,8 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 }
 
 /**
- * bmpc_reap - Reap bmpce from the LRU list.  Sometimes we free
- *	bmpce directly into the pool, so we can't wait here forever.
+ * bmpc_reap - Reap bmpce from the LRU list.  Sometimes we free bmpce
+ *	directly into the pool, so we can't wait here forever.
  */
 __static int
 bmpce_reap(struct psc_poolmgr *m)
@@ -510,9 +512,10 @@ bmpce_reap(struct psc_poolmgr *m)
 	/* Should be sorted from oldest bmpc to newest.
 	 */
 	LIST_CACHE_FOREACH(bmpc, &bmpcLru) {
-		psclog_dbg("bmpc=%p npages=%d age(%ld:%ld) waiters=%d", bmpc,
-		   pll_nitems(&bmpc->bmpc_lru), bmpc->bmpc_oldest.tv_sec,
-		   bmpc->bmpc_oldest.tv_nsec, waiters);
+		psclog_dbg("bmpc=%p npages=%d age(%ld:%ld) waiters=%d",
+		    bmpc, pll_nitems(&bmpc->bmpc_lru),
+		    bmpc->bmpc_oldest.tv_sec, bmpc->bmpc_oldest.tv_nsec,
+		    waiters);
 
 		/* First check for LRU items.
 		 */

@@ -110,19 +110,24 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 
 		msl_fsrqinfo_readywait(car->car_fsrqinfo);
 
-		DYNARRAY_FOREACH (e, i, a) {
+		DYNARRAY_FOREACH(e, i, a) {
 			if (!mq->rc) {
 				iovs[i].iov_base = e->bmpce_base;
 				iovs[i].iov_len = BMPC_BUFSZ;
 
 			} else {
+				BMPCE_LOCK(e);
 				e->bmpce_flags |= BMPCE_EIO;
+				DEBUG_BMPCE(PLL_WARN, e,
+				    "set BMPCE_EIO");
+				BMPCE_ULOCK(e);
 			}
 		}
 
 		if (!mq->rc)
 			mq->rc = rsx_bulkserver(rq, BULK_GET_SINK,
-			    SRCI_BULK_PORTAL, iovs, psc_dynarray_len(a));
+			    SRCI_BULK_PORTAL, iovs,
+			    psc_dynarray_len(a));
 
 	} else if (car->car_cbf == msl_readahead_cb) {
 		struct bmap_pagecache_entry *e, **bmpces =
@@ -141,8 +146,13 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 
 			iovs[i].iov_base = e->bmpce_base;
 			iovs[i].iov_len = BMPC_BUFSZ;
-			if (mq->rc)
+			if (mq->rc) {
+				BMPCE_LOCK(e);
 				e->bmpce_flags |= BMPCE_EIO;
+				DEBUG_BMPCE(PLL_WARN, e,
+				    "set BMPCE_EIO");
+				BMPCE_ULOCK(e);
+			}
 		}
 		if (mq->rc == 0)
 			mq->rc = rsx_bulkserver(rq, BULK_GET_SINK,
