@@ -29,6 +29,7 @@
 #include "psc_rpc/rsx.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
+#include "psc_util/ctlsvr.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 
@@ -65,6 +66,9 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 	size_t len;
 	uint32_t i;
 	int rc;
+
+	if (OPSTAT_CURR(SLI_OPST_DEBUG) == 2)
+		return (EHOSTDOWN);
 
 	rc = sli_rmi_getcsvc(&csvc);
 	if (rc)
@@ -217,6 +221,9 @@ slvr_worker_push_crcups(void)
 				bcr->bcr_flags &= ~(BCR_SCHEDULED);
 				DEBUG_BCR(PLL_INFO, bcr,
 					  "unsetting BCR_SCHEDULED");
+				BIOD_LOCK(bcr->bcr_biodi);
+				bcr_2_bmap(bcr)->bcm_flags &= ~BMAP_IOD_INFLIGHT;
+				BIOD_ULOCK(bcr->bcr_biodi);
 			}
 			freelock(&binflCrcs.binfcrcs_lock);
 			psc_dynarray_free(bcrs);
