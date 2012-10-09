@@ -217,6 +217,7 @@ main(int argc, char *argv[])
 	bmap_cache_init(sizeof(struct bmap_iod_info));
 	fidc_init(sizeof(struct fcmh_iod_info), FIDC_ION_DEFSZ);
 	bim_init();
+	sl_nbrqset = pscrpc_nbreqset_init(NULL, NULL);
 	slvr_cache_init();
 
 	psc_iostats_init(&sliod_wr_1b_stat,   "wr: < 1k");
@@ -259,7 +260,6 @@ main(int argc, char *argv[])
 	psc_assert(globalConfig.gconf_fsuuid);
 	psclog_info("gconf_fsuuid=%"PRIx64, globalConfig.gconf_fsuuid);
 
-	sl_nbrqset = pscrpc_nbreqset_init(NULL, NULL);
 	pscrpc_nbreapthr_spawn(sl_nbrqset, SLITHRT_NBRQ, "slinbrqthr");
 
 	sli_rpc_initsvc();
