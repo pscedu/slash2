@@ -123,6 +123,8 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 
 	psc_assert(rc == 0);
 
+	OPSTAT_INCR(SLI_OPST_CRC_UPDATE);
+
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	psc_assert(rc == 0);
 	return (rc);
@@ -244,6 +246,8 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 	struct bmap_iod_info *biod;
 	struct psc_dynarray *a;
 	int i;
+
+	OPSTAT_INCR(SLI_OPST_CRC_UPDATE_CB);
 
 	a = args->pointer_arg[0];
 	csvc = args->pointer_arg[1];
