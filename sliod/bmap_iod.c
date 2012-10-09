@@ -261,7 +261,7 @@ bcr_ready_remove(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 		 */
 		psc_assert(pll_empty(&biod->biod_bklog_bcrs));
 		psc_assert(!biod->biod_bcr);
-		bii_2_bmap(biod)->bcm_flags &= ~BMAP_IOD_BCRSCHED;
+		BMAP_CLEARATTR(bii_2_bmap(biod), BMAP_IOD_BCRSCHED);
 
 		DEBUG_BMAP(PLL_INFO, bii_2_bmap(biod),
 		   "descheduling drtyslvrs=%u",
