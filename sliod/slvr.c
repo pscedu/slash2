@@ -270,7 +270,7 @@ slvr_aio_replreply(struct sli_aiocb_reply *a)
 	mq->bmapno = slvr_2_bmap(s)->bcm_bmapno;
 	mq->slvrno = s->slvr_num;
 	if (mq->rc)
-		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
+		pscrpc_msg_add_flags(rq->rq_reqmsg, MSG_ABORT_BULK);
 	else
 		mq->rc = rsx_bulkclient(rq, BULK_GET_SOURCE,
 		    SRII_BULK_PORTAL, a->aiocbr_iovs, a->aiocbr_niov);
@@ -300,6 +300,7 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 	int rc, i;
 
 	OPSTAT_INCR(SLI_OPST_SLVR_AIO_REPLY);
+
 	if (!a->aiocbr_csvc)
 		goto out;
 
@@ -321,7 +322,8 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 	else {
 		mq->op = SRMIOP_RD;
 		if (mq->rc)
-			pscrpc_msg_add_flags(rq->rq_reqmsg, MSG_ABORT_BULK);
+			pscrpc_msg_add_flags(rq->rq_reqmsg,
+			    MSG_ABORT_BULK);
 		else
 			mq->rc = rsx_bulkclient(rq, BULK_GET_SOURCE,
 			    SRCI_BULK_PORTAL, a->aiocbr_iovs,
