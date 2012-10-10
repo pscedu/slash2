@@ -227,18 +227,20 @@ sli_aio_aiocbr_release(struct sli_aiocb_reply *a)
 __static int
 slvr_aio_chkslvrs(const struct sli_aiocb_reply *a)
 {
-	int i, rc = 0;
 	struct slvr_ref *s;
+	int i, rc = 0;
 
 	for (i = 0; i < a->aiocbr_nslvrs; i++) {
 		s = a->aiocbr_slvrs[i];
 		SLVR_LOCK(s);
-		psc_assert(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR));
+		psc_assert(s->slvr_flags &
+		    (SLVR_DATARDY | SLVR_DATAERR));
 		if (s->slvr_flags & SLVR_DATAERR)
 			rc = s->slvr_err;
 		SLVR_ULOCK(s);
+		if (rc)
+			return (rc);
 	}
-
 	return (rc);
 }
 
@@ -399,7 +401,7 @@ slvr_aio_tryreply(struct sli_aiocb_reply *a)
 }
 
 /**
- * slvr_aio_process - given a slvr, scan the list of pndg aio's for those
+ * slvr_aio_process - Given a slvr, scan the list of pndg aio's for those
  *   ready for completion.
  */
 void
@@ -486,7 +488,7 @@ slvr_iocb_release(struct sli_iocb *iocb)
 
 void
 sli_aio_replreply_setup(struct sli_aiocb_reply *a,
-	struct pscrpc_request *rq, struct slvr_ref *s, struct iovec *iov)
+    struct pscrpc_request *rq, struct slvr_ref *s, struct iovec *iov)
 {
 	//const struct srm_repl_read_req *mq;
 	struct srm_repl_read_rep *mp;
@@ -502,8 +504,8 @@ sli_aio_replreply_setup(struct sli_aiocb_reply *a,
 
 	/* Ref taken here must persist until reply is attempted.
 	 */
-	a->aiocbr_csvc = sli_geticsvcx(libsl_try_nid2resm(rq->rq_peer.nid),
-	    rq->rq_export);
+	a->aiocbr_csvc = sli_geticsvcx(libsl_try_nid2resm(
+	    rq->rq_peer.nid), rq->rq_export);
 
 	spinlock(&a->aiocbr_lock);
 	a->aiocbr_flags |= SLI_AIOCBSF_REPL | SLI_AIOCBSF_READY;
@@ -525,9 +527,9 @@ sli_aio_reply_setup(struct sli_aiocb_reply *a, struct pscrpc_request *rq,
 		a->aiocbr_slvrs[i] = slvrs[i];
 
 		if (rw == SL_WRITE)
-			psc_assert(a->aiocbr_slvrs[i]->slvr_pndgwrts > 0);
+			psc_assert(slvrs[i]->slvr_pndgwrts > 0);
 		else
-			psc_assert(a->aiocbr_slvrs[i]->slvr_pndgreads > 0);
+			psc_assert(slvrs[i]->slvr_pndgreads > 0);
 	}
 	freelock(&a->aiocbr_lock);
 
@@ -566,7 +568,8 @@ sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp,
 	if (!a)
 		a = *aiocbrp = sli_aio_aiocbr_new();
 
-	DEBUG_SLVR(PLL_NOTIFY, s, "issue=%d *aiocbrp=%p", issue, *aiocbrp);
+	DEBUG_SLVR(PLL_NOTIFY, s, "issue=%d *aiocbrp=%p", issue,
+	    *aiocbrp);
 
 	if (!issue)
 		/* Not called from slvr_fsio().
@@ -599,10 +602,10 @@ sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp,
 	error = aio_read(aio);
 	if (error == 0) {
 		error = SLERR_AIOWAIT;
-		psclog_info("aio_read: fd=%d, iocb=%p, sliver=%p",
+		psclog_info("aio_read: fd=%d iocb=%p sliver=%p",
 		    aio->aio_fildes, iocb, s);
 	} else {
-		psclog_warn("aio_read: fd=%d, iocb=%p, sliver=%p, error=%d",
+		psclog_warn("aio_read: fd=%d iocb=%p sliver=%p error=%d",
 		    aio->aio_fildes, iocb, s, error);
 		lc_remove(&sli_iocb_pndg, iocb);
 		slvr_iocb_release(iocb);
@@ -675,7 +678,8 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 	} else {
 		OPSTAT_INCR(SLI_OPST_FSIO_WRITE);
 		for (i = 0; i < nblks; i++)
-			psc_vbitmap_unset(s->slvr_slab->slb_inuse, sblk + i);
+			psc_vbitmap_unset(s->slvr_slab->slb_inuse,
+			    sblk + i);
 
 		errno = 0;
 		SLVR_ULOCK(s);
@@ -812,7 +816,7 @@ slvr_repl_prep(struct slvr_ref *s, int src_or_dst)
 	}
 
 	DEBUG_SLVR(PLL_INFO, s, "replica_%s",
-	   (src_or_dst & SLVR_REPLDST) ? "dst" : "src");
+	    (src_or_dst & SLVR_REPLDST) ? "dst" : "src");
 
 	SLVR_ULOCK(s);
 }
@@ -931,7 +935,8 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 		}
 	}
 
-	DEBUG_SLVR(((s->slvr_flags & SLVR_DATAERR) ? PLL_ERROR : PLL_INFO), s,
+	DEBUG_SLVR(s->slvr_flags & SLVR_DATAERR ?
+	    PLL_ERROR : PLL_INFO, s,
 	    "slvrno=%hu off=%u len=%u rw=%d",
 	    s->slvr_num, off, len, rw);
 
@@ -963,7 +968,8 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 		psc_assert(!off);
 		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
 		psc_assert(s->slvr_flags & SLVR_FAULTING);
-		psc_assert(s->slvr_pndgreads == 0 && s->slvr_pndgwrts == 1);
+		psc_assert(s->slvr_pndgreads == 0 &&
+		    s->slvr_pndgwrts == 1);
 
 		blks = len / SLASH_SLVR_BLKSZ +
 			(len & SLASH_SLVR_BLKMASK) ? 1 : 0;
@@ -1143,7 +1149,8 @@ slvr_lru_tryunpin_locked(struct slvr_ref *s)
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	psc_assert(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR));
 
-	psc_assert(!(s->slvr_flags & (SLVR_NEW|SLVR_FAULTING|SLVR_GETSLAB)));
+	psc_assert(!(s->slvr_flags &
+	    (SLVR_NEW | SLVR_FAULTING | SLVR_GETSLAB)));
 
 	s->slvr_flags &= ~SLVR_PINNED;
 
@@ -1170,8 +1177,9 @@ slvr_wio_done(struct slvr_ref *s)
 	psc_assert(s->slvr_pndgwrts > 0);
 
 	if (s->slvr_flags & SLVR_REPLDST) {
-		/* This was a replication dest slvr.  Adjust the slvr flags
-		 *    so that the slvr may be freed on demand.
+		/*
+		 * This was a replication dest slvr.  Adjust the slvr
+		 * flags so that the slvr may be freed on demand.
 		 */
 		if (s->slvr_flags & SLVR_REPLFAIL)
 			DEBUG_SLVR(PLL_ERROR, s, "replication failure");
@@ -1183,12 +1191,15 @@ slvr_wio_done(struct slvr_ref *s)
 		psc_assert(s->slvr_flags & SLVR_FAULTING);
 		psc_assert(!(s->slvr_flags & SLVR_CRCDIRTY));
 		s->slvr_pndgwrts--;
-		s->slvr_flags &= ~(SLVR_PINNED|SLVR_AIOWAIT|SLVR_FAULTING|SLVR_REPLDST);
+		s->slvr_flags &= ~(SLVR_PINNED | SLVR_AIOWAIT |
+		    SLVR_FAULTING | SLVR_REPLDST);
 
 		if (s->slvr_flags & SLVR_REPLFAIL) {
-			/* Perhaps this should block for any readers?
-			 *   Technically it should be impossible since this
-			 *   replica has yet to be registered with the mds.
+			/*
+			 * Perhaps this should block for any readers?
+			 * Technically it should be impossible since
+			 * this replica has yet to be registered with
+			 * the MDS.
 			 */
 			s->slvr_flags |= SLVR_SLBFREEING;
 			slvr_slb_free_locked(s, slBufsPool);
@@ -1419,9 +1430,9 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 void
 sliaiothr_main(__unusedx struct psc_thread *thr)
 {
-	int signo;
-	sigset_t signal_set;
 	struct sli_iocb *iocb, *next;
+	sigset_t signal_set;
+	int signo;
 
 	sigemptyset(&signal_set);
 	sigaddset(&signal_set, SIGIO);
@@ -1445,7 +1456,7 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 			psclog_info("got signal: iocb=%p", iocb);
 			lc_remove(&sli_iocb_pndg, iocb);
 			LIST_CACHE_ULOCK(&sli_iocb_pndg);
-			iocb->iocb_cbf(iocb);			/* slvr_fsaio_done() */
+			iocb->iocb_cbf(iocb);	/* slvr_fsaio_done() */
 			slvr_iocb_release(iocb);
 			LIST_CACHE_LOCK(&sli_iocb_pndg);
 		}
