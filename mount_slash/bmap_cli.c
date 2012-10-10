@@ -408,7 +408,7 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 		} // else NOOP
 
 	} else if (b->bcm_flags & BMAP_ORPHAN) {
-		DEBUG_BMAP(PLL_WARN, b,
+		DEBUG_BMAP(PLL_INFO, b,
 		   "not requesting extension for orphaned bmap");
 
 	} else if (secs > BMAP_CLI_EXTREQSECS) {
