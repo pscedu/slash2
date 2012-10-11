@@ -51,10 +51,12 @@ struct msl_fsrqinfo;
 #define BMPC_MAXSLBS		32
 #define BMPC_BUFMASK		(BMPC_BLKSZ - 1)
 #define BMPC_IOMAXBLKS		64
-#define BMPC_MAXBUFSRPC		(1024 * 1024 / BMPC_BUFSZ)
+#define BMPC_MAXBUFSRPC		(1024 * 1024 / BMPC_BUFSZ)	/* same as LNET_MTU / BMPC_BUFSZ */
 
 #define BMPC_DEF_MINAGE		{ 0, 600000000 } /* seconds, nanoseconds */
 #define BMPC_INTERVAL		{ 0, 200000000 }
+
+#define BMPC_COALESCE_MAX_IOV	BMPC_MAXBUFSRPC
 
 struct timespec			bmapFlushDefMaxAge;
 
@@ -338,8 +340,8 @@ struct bmpc_write_coalescer {
 	struct psc_lockedlist		 bwc_pll;
 	size_t				 bwc_size;
 	off_t				 bwc_soff;
-	struct iovec			 bwc_iovs[34];  //XXX need define for this: (MIN_COALESCE_RPC_SZ/BMPC_BUFSZ)+2
-	struct bmap_pagecache_entry	*bwc_bmpces[34];
+	struct iovec			 bwc_iovs[BMPC_COALESCE_MAX_IOV];
+	struct bmap_pagecache_entry	*bwc_bmpces[BMPC_COALESCE_MAX_IOV];
 	int				 bwc_niovs;
 	int				 bwc_nbmpces;
 	struct psclist_head		 bwc_lentry;

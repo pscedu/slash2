@@ -633,7 +633,7 @@ bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
 		bwc->bwc_niovs++;
 	}
 
-	psc_assert(bwc->bwc_niovs <= 256);
+	psc_assert(bwc->bwc_niovs <= BMPC_COALESCE_MAX_IOV);
 	psc_assert(!tot_reqsz);
 }
 
