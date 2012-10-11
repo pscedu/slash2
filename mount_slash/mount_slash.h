@@ -342,6 +342,13 @@ enum {
 	SLC_OPST_WRITE_COALESCE_MAX
 };
 
+enum {
+	SLC_DEBUG_NONE,
+	SLC_DEBUG_READ_CB_EIO,
+	SLC_DEBUG_READAHEAD_CB_EIO,
+	SLC_DEBUG_REQUEST_TIMEOUT
+};
+
 extern struct psc_listcache	 bmapTimeoutQ;
 extern struct psc_waitq		 bmapFlushWaitq;
 

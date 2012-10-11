@@ -243,6 +243,10 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 		goto error;
 
 	rq->rq_timeout = msl_bmap_lease_secs_remaining(b) / 2;
+
+	if (OPSTAT_CURR(SLC_OPST_DEBUG) == SLC_DEBUG_REQUEST_TIMEOUT)
+		rq->rq_timeout = -1;
+
 	if (rq->rq_timeout < 0) {
 		DEBUG_REQ(PLL_ERROR, rq, "off=%u sz=%u op=%u",
 			  mq->offset, mq->size, mq->op);

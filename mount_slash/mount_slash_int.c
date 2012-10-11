@@ -1074,7 +1074,7 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 		DEBUG_REQ(rc ? PLL_ERROR : PLL_INFO, rq,
 		    "bmap=%p biorq=%p", b, r);
 
-	if (OPSTAT_CURR(SLC_OPST_DEBUG) == 1)
+	if (OPSTAT_CURR(SLC_OPST_DEBUG) == SLC_DEBUG_READ_CB_EIO)
 		rc = EIO;
 
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b, "sbd_seq=%"PRId64,
@@ -1143,7 +1143,7 @@ msl_readahead_cb(struct pscrpc_request *rq, int rc,
 	if (rq)
 		DEBUG_REQ(PLL_INFO, rq, "bmpces=%p", bmpces);
 
-	if (OPSTAT_CURR(SLC_OPST_DEBUG) == 1)
+	if (OPSTAT_CURR(SLC_OPST_DEBUG) == SLC_DEBUG_READAHEAD_CB_EIO)
 		rc = EIO;
 
 	for (i = 0, e = bmpces[0], b = e->bmpce_owner; e; i++, e = bmpces[i]) {
