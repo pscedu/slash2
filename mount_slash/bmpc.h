@@ -199,7 +199,11 @@ struct bmap_pagecache {
 	struct bmap_pagecachetree	 bmpc_tree;		/* tree of cbuf_handle */
 	struct timespec			 bmpc_oldest;		/* LRU's oldest item */
 	struct psc_lockedlist		 bmpc_lru;		/* cleancnt can be kept here  */
-	struct psc_lockedlist		 bmpc_new_biorqs;	/* new requests minus BIORQ_READ and BIORQ_DIO */
+	/*
+ 	 * List for new requests minus BIORQ_READ and BIORQ_DIO. All requests are sorted
+ 	 * based on their starting offsets to falicitate write coalescing.
+ 	 */
+	struct psc_lockedlist		 bmpc_new_biorqs;	
 	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* chain pending I/O requests */
 	struct psc_lockedlist		 bmpc_pndg_ra;		/* RA bmpce's pending comp */
 	atomic_t			 bmpc_pndgwr;		/* # pending wr req */
