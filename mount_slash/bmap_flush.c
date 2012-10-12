@@ -442,6 +442,7 @@ bmap_flush_resched(struct bmpc_ioreq *r)
 
 	DEBUG_BIORQ(PLL_NOTIFY, r, "resched");
 
+	psc_assert(!(r->biorq_flags & BIORQ_RESCHED));
 	if (r->biorq_flags & BIORQ_RESCHED) {
 		BMPC_ULOCK(bmpc);
 		DEBUG_BIORQ(PLL_WARN, r, "already rescheduled");
@@ -818,6 +819,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 		if (!expired)
 			expired = bmap_flush_biorq_expired(t, NULL);
 
+		psc_assert(!(t->biorq_flags & BIORQ_RESCHED));
 		mergeable = expired || !(t->biorq_flags & BIORQ_RESCHED);
 
 		DEBUG_BIORQ(PLL_NOTICE, t, "biorq #%d (expired=%d)",
