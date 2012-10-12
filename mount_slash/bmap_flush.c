@@ -428,7 +428,8 @@ bmap_flush_desched(struct bmpc_ioreq *r)
 
 /**
  * bmap_flush_resched - called in error contexts where the biorq must be
- *    rescheduled.  Typically this is from a write RPC cb.
+ *    rescheduled by putting it back to the new request queue.  Typically 
+ *    this is from a write RPC cb.
  */
 void
 bmap_flush_resched(struct bmpc_ioreq *r)
