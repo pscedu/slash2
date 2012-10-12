@@ -56,7 +56,8 @@ struct msl_fsrqinfo;
 #define BMPC_DEF_MINAGE		{ 0, 600000000 } /* seconds, nanoseconds */
 #define BMPC_INTERVAL		{ 0, 200000000 }
 
-#define BMPC_COALESCE_MAX_IOV	BMPC_MAXBUFSRPC
+/* plus one because the offset in the first request might not be page aligned */
+#define BMPC_COALESCE_MAX_IOV	(BMPC_MAXBUFSRPC + 1)
 
 struct timespec			bmapFlushDefMaxAge;
 
