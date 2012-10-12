@@ -488,8 +488,6 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	psclog_info("bwc cb arg (%p) size=%zu nbiorqs=%d",
 	    bwc, bwc->bwc_size, pll_nitems(&bwc->bwc_pll));
 
-	psc_assert(bwc->bwc_niovs <= PSCRPC_MAX_BRW_PAGES);
-
 	rq = bmap_flush_create_rpc(bwc, csvc, b);
 	if (rq == NULL)
 		goto error;
