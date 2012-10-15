@@ -575,6 +575,8 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 
 	psc_assert(!(r->biorq_flags & BIORQ_DESTROY));
 
+	OPSTAT_INCR(SLC_OPST_BIORQ_DESTROY);
+
 	/*
 	 * Reads req's have their BIORQ_SCHED and BIORQ_INFL flags
 	 * cleared in msl_read_cb to unblock waiting threads at the

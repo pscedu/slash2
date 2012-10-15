@@ -485,6 +485,8 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 
 /* must match the list in file mount_slash.h */
 struct pfl_opstat pflctl_opstats[] = {
+	PFL_OPSTAT_INIT("biorq_destroy"),
+	PFL_OPSTAT_INIT("biorq_new"),
 	PFL_OPSTAT_INIT("bmap_lease_ext"),
 	PFL_OPSTAT_INIT("bmap_retrieve"),
 	PFL_OPSTAT_INIT("bmpce_insert"),
