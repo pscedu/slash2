@@ -1607,6 +1607,11 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 		sl_csvc_decref(csvc);
 }
 
+/*
+ * Launch a RPC for a given range of pages. Note that a request can be satisfied
+ * by multiple RPCs because parts of the range covered by the request may have
+ * already been cached.
+ */
 __static int
 msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 {
