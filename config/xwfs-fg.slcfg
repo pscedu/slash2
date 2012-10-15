@@ -1,30 +1,35 @@
-set port    =1000;
-set nets    =tcp10;
-set fsuuid  ="560ce5c77748b6e1"; # reported by "slmkfs /xwfs-zpool" on MDS
+# $Id$
 
-site @XWFS-FG {
-  site_desc  = "XWFS FutureGrid Testbed";
-  site_id    = 1;
+set port=1000;
+set nets=tcp10;
+set fsuuid="560ce5c77748b6e1"; # reported by "slmkfs /xwfs-zpool" on MDS
+set zpool_name="xwfs-zpool";
+#set zpool_cache="/xwfs-zpool.zcf";
+set pref_ios="io@XWFS";
+set pref_mds="md@XWFS";
 
-  resource xwfsfg_mds {
-    desc        = "XWFS FutureGrid MDS";
-    type        = mds;
-    id          = 1;
-    fsroot      = /xwfs-zpool;      # created by "slmkfs /xwfs-zpool" on MDS
-    zpool_cache = /xwfs-zpool.zcf;  # ZFS pool cache file
-    nids        = 10.141.0.92,      # eth0
-                  129.114.32.92,    # eth1
-                  192.168.100.92;   # ib0
-  }
+site @XWFS {
+	site_desc	= "XWFS FutureGrid Testbed";
+	site_id		= 1;
 
-  resource xwfsfg_io1 {
-    type    = standalone_fs;   # Independent file systems
-    id      = 101;             # just pick one
-    fsroot  = /slash2;         # LVM mounted from /dev/vg1/lg_slash2 (see below)
-    nids    = 10.141.0.93,     # eth0
-              129.114.32.93,   # eth1
-              192.168.100.93;  # ib0
-  }
+	resource md {
+		desc	= "XWFS FutureGrid MDS";
+		type	= mds;
+		id	= 1;
+		fsroot	= /xwfs-zpool;
+		nids	= 10.141.0.92,		# eth0
+			  129.114.32.92,	# eth1
+			  192.168.100.92;	# ib0
+	}
+
+	resource io0 {
+		type	= standalone_fs;
+		id	= 101;
+		fsroot	= /slash2;		# LVM mounted from /dev/vg1/lg_slash2 (see below)
+		nids	= 10.141.0.93,		# eth0
+			  129.114.32.93,	# eth1
+			  192.168.100.93;	# ib0
+	}
 
 #[root@c093 ~]# lvdisplay /dev/mapper/vg1-lg_slash2
 #  --- Logical volume ---
@@ -42,15 +47,14 @@ site @XWFS-FG {
 #  - currently set to     256
 #  Block device           253:0
 
-
-  resource xwfsfg_io2 {
-    type    = standalone_fs;   # Independent file systems
-    id      = 102;             # just pick one
-    fsroot  = /slash2;         # LVM mounted from /dev/vg1/lg_slash2 (see below)
-    nids    = 10.141.0.94,     # eth0
-              129.114.32.94,   # eth1
-              192.168.100.94;  # ib0
-  }
+	resource io1 {
+		type	 = standalone_fs;
+		id	 = 102;
+		fsroot	 = /slash2;		# LVM mounted from /dev/vg1/lg_slash2 (see below)
+		nids	 = 10.141.0.94,		# eth0
+			   129.114.32.94,	# eth1
+			   192.168.100.94;	# ib0
+	}
 
 #[root@c094 ~]# lvdisplay /dev/mapper/vg1-lg_slash2
 #  --- Logical volume ---
@@ -68,11 +72,11 @@ site @XWFS-FG {
 #  - currently set to     256
 #  Block device           253:0
 
-  resource xwfsfg_io {
-    desc  = "XWFS FutureGrid IO Servers";
-    type  = cluster_noshare_lfs;  # Cluster composed of one or more nodes with independent (non-shared) file systems
-    id    = 199;                  # related to the others, but out of sequence
-    ios   = xwfsfg_io1@XWFS-FG,   # all of the above servers
-            xwfsfg_io2@XWFS-FG;   #
-  }
+	resource io {
+		desc	= "XWFS FutureGrid IO Servers";
+		type	= cluster_noshare_lfs;
+		id	= 199;
+		ios	= io0@XWFS,
+			  io1@XWFS;
+	}
 }
