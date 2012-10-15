@@ -713,6 +713,7 @@ bmap_flushable(struct bmapc_memb *b, struct timespec *t)
 			/* Wait for RBW I/O to complete before
 			 *  pushing out any pages.
 			 */
+			psc_assert(0);
 			if (!bmap_flush_biorq_rbwdone(r)) {
 				BIORQ_ULOCK(r);
 				continue;
@@ -1327,6 +1328,7 @@ bmap_flush(struct timespec *nto)
 				/* Wait for RBW I/O to complete before
 				 *  pushing out any pages.
 				 */
+				psc_assert(0);
 				if (!bmap_flush_biorq_rbwdone(r)) {
 					BIORQ_ULOCK(r);
 					continue;
