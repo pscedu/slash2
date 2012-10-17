@@ -95,7 +95,7 @@ site @PSCARCH {
 		id	= 0x100;
 		nids	= tahini-99o;
 		fsroot	= /usr/uo;
-#		flags	= "disable_bia";
+		flags	= "disable_bia";
 	}
 
 	resource ue {
@@ -104,7 +104,7 @@ site @PSCARCH {
 		id	= 0x101;
 		nids	= tahini-99e;
 		fsroot	= /usr/ue;
-#		flags	= "disable_bia";
+		flags	= "disable_bia";
 	}
 
 	# temporary/test nids
