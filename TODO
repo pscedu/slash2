@@ -391,6 +391,7 @@ reimport
      - google drive
      - box
      - amazon S3/glacier
+- fix bug when no IODs are online yet writes are somehow successful
 - umount /$mp doesn't seem to be killing mount_slash
 
    fix round robin among senses when open(O_TRUNC) -- prefer old IOS
