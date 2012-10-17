@@ -1729,7 +1729,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 
 	mdsJournal = pjournal_open(res->res_jrnldev);
 	if (mdsJournal == NULL)
-		psc_fatal("failed to open log file %s", res->res_jrnldev);
+		psc_fatalx("failed to open log file %s", res->res_jrnldev);
 
 #if 0
 	/*
