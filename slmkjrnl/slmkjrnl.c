@@ -110,7 +110,8 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 
 	nb = pwrite(pj.pj_fd, &pjh, pjh.pjh_iolen, 0);
 	if ((size_t)nb != pjh.pjh_iolen)
-		psc_fatalx("failed to write journal header");
+		psc_fatalx("failed to write journal header: %s",
+		    nb == -1 ? strerror(errno) : "short write");
 
 	nb = PJ_PJESZ(&pj) * pj.pj_hdr->pjh_readsize;
 	jbuf = psc_alloc(nb, PAF_PAGEALIGN);
