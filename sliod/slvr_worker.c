@@ -280,6 +280,7 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 			BIOD_ULOCK(biod);
 
 			DEBUG_BCR(PLL_ERROR, bcr, "rescheduling");
+			OPSTAT_INCR(SLI_OPST_CRC_UPDATE_CB_FAILURE);
 		} else
 			/*
 			 * bcr will be freed, so no need to clear BCR_SCHEDULED

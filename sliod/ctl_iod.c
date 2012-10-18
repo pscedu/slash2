@@ -519,6 +519,7 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("crc_update"),
 	PFL_OPSTAT_INIT("crc_update_cb"),
+	PFL_OPSTAT_INIT("crc_update_cb_failure"),
 	PFL_OPSTAT_INIT("debug"),
 	PFL_OPSTAT_INIT("fsio_read"),
 	PFL_OPSTAT_INIT("fsio_read_fail"),
