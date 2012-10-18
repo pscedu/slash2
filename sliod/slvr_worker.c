@@ -156,25 +156,25 @@ slvr_worker_push_crcups(void)
 	PLL_FOREACH(bcr, &binflCrcs.binfcrcs_ready) {
 		psc_assert(bcr->bcr_crcup.nups > 0);
 
-		if (bcr->bcr_flags & BCR_SCHEDULED)
+		if (!BIOD_TRYLOCK(bcr->bcr_biodi))
 			continue;
 
-		if (BIOD_TRYLOCK(bcr->bcr_biodi)) {
-			if (bcr_2_bmap(bcr)->bcm_flags & BMAP_IOD_INFLIGHT) {
-				DEBUG_BCR(PLL_FATAL, bcr, "tried to schedule "
-					  "multiple bcr's xid=%"PRIu64,
-					  bcr->bcr_biodi->biod_bcr_xid_last);
-			} else {
-				bcr_2_bmap(bcr)->bcm_flags |= BMAP_IOD_INFLIGHT;
-				BIOD_ULOCK(bcr->bcr_biodi);
-			}
-		} else
-			/* Don't deadlock trying for the biodi lock.
-			 */
+		if (bcr->bcr_flags & BCR_SCHEDULED) {
+			BIOD_ULOCK(bcr->bcr_biodi);
 			continue;
+		}
+
+		if (bcr_2_bmap(bcr)->bcm_flags & BMAP_IOD_INFLIGHT)
+			DEBUG_BCR(PLL_FATAL, bcr, "tried to schedule "
+				  "multiple bcr's xid=%"PRIu64,
+				  bcr->bcr_biodi->biod_bcr_xid_last);
+
+		bcr_2_bmap(bcr)->bcm_flags |= BMAP_IOD_INFLIGHT;
 
 		psc_dynarray_add(bcrs, bcr);
 		bcr->bcr_flags |= BCR_SCHEDULED;
+
+		BIOD_ULOCK(bcr->bcr_biodi);
 
 		DEBUG_BCR(PLL_INFO, bcr, "scheduled nbcrs=%d total_bcrs=%d",
 			  psc_dynarray_len(bcrs),
@@ -217,17 +217,16 @@ slvr_worker_push_crcups(void)
 		 *   from the tree.
 		 */
 		if (rc) {
-			spinlock(&binflCrcs.binfcrcs_lock);
 			for (i = 0; i < psc_dynarray_len(bcrs); i++) {
 				bcr = psc_dynarray_getpos(bcrs, i);
-				bcr->bcr_flags &= ~(BCR_SCHEDULED);
-				DEBUG_BCR(PLL_INFO, bcr,
-					  "unsetting BCR_SCHEDULED");
+
 				BIOD_LOCK(bcr->bcr_biodi);
+				bcr->bcr_flags &= ~BCR_SCHEDULED;
 				bcr_2_bmap(bcr)->bcm_flags &= ~BMAP_IOD_INFLIGHT;
 				BIOD_ULOCK(bcr->bcr_biodi);
+
+				DEBUG_BCR(PLL_INFO, bcr, "unsetting BCR_SCHEDULED");
 			}
-			freelock(&binflCrcs.binfcrcs_lock);
 			psc_dynarray_free(bcrs);
 			PSCFREE(bcrs);
 		}
@@ -270,20 +269,22 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 		    (BMAP_IOD_INFLIGHT|BMAP_IOD_BCRSCHED));
 
 		if (rq->rq_status) {
-			spinlock(&binflCrcs.binfcrcs_lock);
-			bcr->bcr_flags &= ~BCR_SCHEDULED;
-			freelock(&binflCrcs.binfcrcs_lock);
 
 			/* Unset the inflight bit on the biodi since
 			 *   bcr_xid_last_bump() will not be called.
 			 */
 			BIOD_LOCK(biod);
+			bcr->bcr_flags &= ~BCR_SCHEDULED;
 			BMAP_CLEARATTR(bii_2_bmap(biod), BMAP_IOD_INFLIGHT);
 			bcr_xid_check(bcr);
 			BIOD_ULOCK(biod);
 
 			DEBUG_BCR(PLL_ERROR, bcr, "rescheduling");
 		} else
+			/*
+			 * bcr will be freed, so no need to clear BCR_SCHEDULED
+			 * in this case, but we do clear BMAP_IOD_INFLIGHT.
+			 */
 			bcr_finalize(&binflCrcs, bcr);
 	}
 	psc_dynarray_free(a);
