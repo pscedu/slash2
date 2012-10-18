@@ -73,7 +73,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	struct psc_journal pj;
 	struct stat stb;
 	unsigned char *jbuf;
-	uint32_t i, slot;
+	uint32_t i, j, slot;
 	int rc, fd;
 	ssize_t nb;
 
@@ -110,10 +110,10 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 
 	nb = pwrite(pj.pj_fd, &pjh, pjh.pjh_iolen, 0);
 	if ((size_t)nb != pjh.pjh_iolen)
-		psc_fatal("failed to write journal header");
+		psc_fatalx("failed to write journal header");
 
-	jbuf = psc_alloc(PJ_PJESZ(&pj) * pj.pj_hdr->pjh_readsize,
-	    PAF_PAGEALIGN | PAF_LOCK);
+	nb = PJ_PJESZ(&pj) * pj.pj_hdr->pjh_readsize;
+	jbuf = psc_alloc(nb, PAF_PAGEALIGN);
 	for (i = 0; i < rs; i++) {
 		pje = PSC_AGP(jbuf, PJ_PJESZ(&pj) * i);
 		pje->pje_magic = PJE_MAGIC;
@@ -129,16 +129,28 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 		PSC_CRC64_FIN(&pje->pje_chksum);
 	}
 
+	j = 0;
 	for (slot = 0; slot < pjh.pjh_nents; slot += rs) {
 		nb = pwrite(pj.pj_fd, jbuf, PJ_PJESZ(&pj) * rs,
 		    PJ_GETENTOFF(&pj, slot));
 		if ((size_t)nb != PJ_PJESZ(&pj) * rs)
 			psc_fatal("failed to write slot %u (%zd)",
 			    slot, nb);
+		if (verbose && ((slot % 262144 == 0))) {
+			printf(".");
+			fflush(stdout);
+			fsync(pj.pj_fd);
+			if (++j == 80) {
+				printf("\n");
+				j = 0;
+			}
+		}
 	}
+	if (verbose && j)
+		printf("\n");
 	if (close(fd) == -1)
 		psc_fatal("failed to close journal");
-	psc_free(jbuf, PAF_LOCK | PAF_PAGEALIGN, PJ_PJESZ(&pj) * rs);
+	psc_free(jbuf, PAF_PAGEALIGN, PJ_PJESZ(&pj) * rs);
 	psclog_info("journal %s formatted: %d slots, %d readsize, error=%d",
 	    fn, nents, rs, rc);
 }
@@ -300,7 +312,7 @@ pjournal_dump(const char *fn, int verbose)
 	 * size.
 	 */
 	pjhlen = PSC_ALIGN(sizeof(*pjh), statbuf.st_blksize);
-	pjh = psc_alloc(pjhlen, PAF_PAGEALIGN | PAF_LOCK);
+	pjh = psc_alloc(pjhlen, PAF_PAGEALIGN);
 	nb = pread(pj->pj_fd, pjh, pjhlen, 0);
 	if (nb != pjhlen)
 		psc_fatal("failed to read journal header");
@@ -346,7 +358,7 @@ pjournal_dump(const char *fn, int verbose)
 	    ctime((time_t *)&pjh->pjh_timestamp), pjh->pjh_fsuuid);
 
 	jbuf = psc_alloc(PJ_PJESZ(pj) * pj->pj_hdr->pjh_readsize,
-			 PAF_PAGEALIGN | PAF_LOCK);
+			 PAF_PAGEALIGN);
 	for (slot = 0; slot < pjh->pjh_nents; slot += pjh->pjh_readsize) {
 
 		nb = pread(pj->pj_fd, jbuf, PJ_PJESZ(pj) *
@@ -411,7 +423,7 @@ pjournal_dump(const char *fn, int verbose)
 	if (close(pj->pj_fd) == -1)
 		printf("failed closing journal %s", fn);
 
-	psc_free(jbuf, PAF_LOCK | PAF_PAGEALIGN, PJ_PJESZ(pj));
+	psc_free(jbuf, PAF_PAGEALIGN, PJ_PJESZ(pj));
 	PSCFREE(pj);
 
 	printf("\n%d slot(s) total, %d in use, %d formatted, "
