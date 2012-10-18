@@ -80,3 +80,27 @@ site @XWFS {
 			  io1@XWFS;
 	}
 }
+
+#site @PSC {
+#	site_desc	= "PSC";
+#	site_id		= 2;
+#
+#	resource io {
+#		type	= standalone_fs;
+#		id	= 1;
+#		fsroot	= /slash2;io
+#		nids	= io.psc.edu;
+#	}
+#}
+
+#site @SC12 {
+#	site_desc	= "Supercomputing 12 show floor";
+#	site_id		= 3;
+#
+#	resource peel0io {
+#		type	= standalone_fs;
+#		id	= 1;
+#		fsroot	= /slash2io;
+#		nids	= peel0.sc12.org;
+#	}
+#}
