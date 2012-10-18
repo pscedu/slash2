@@ -52,6 +52,7 @@ enum {
 /* The following should match pflctl_opstats[] in file ctl_iod.c */
 enum {
 	SLI_OPST_CRC_UPDATE,
+	SLI_OPST_CRC_UPDATE_BACKLOG,
 	SLI_OPST_CRC_UPDATE_CB,
 	SLI_OPST_CRC_UPDATE_CB_FAILURE,
 	SLI_OPST_DEBUG,

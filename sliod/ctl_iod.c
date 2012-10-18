@@ -518,6 +518,7 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* names must match enum list in file sliod.h */
 struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("crc_update"),
+	PFL_OPSTAT_INIT("crc_update_backlog"),
 	PFL_OPSTAT_INIT("crc_update_cb"),
 	PFL_OPSTAT_INIT("crc_update_cb_failure"),
 	PFL_OPSTAT_INIT("debug"),

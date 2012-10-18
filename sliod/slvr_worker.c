@@ -527,12 +527,13 @@ slvr_worker_int(void)
 		    pll_nitems(&slvr_2_biod(s)->biod_bklog_bcrs),
 		    !!(bii_2_bmap(biod)->bcm_flags & BMAP_IOD_BCRSCHED));
 
-		if (bii_2_bmap(biod)->bcm_flags & BMAP_IOD_BCRSCHED)
+		if (bii_2_bmap(biod)->bcm_flags & BMAP_IOD_BCRSCHED) {
 			/* The bklog may be empty but a pending bcr may be
 			 *    present on the ready list.
 			 */
+			OPSTAT_INCR(SLI_OPST_CRC_UPDATE_BACKLOG);
 			pll_addtail(&biod->biod_bklog_bcrs, bcr);
-		else {
+		} else {
 			BMAP_SETATTR(bii_2_bmap(biod), BMAP_IOD_BCRSCHED);
 			bcr_hold_add(&binflCrcs, bcr);
 		}
