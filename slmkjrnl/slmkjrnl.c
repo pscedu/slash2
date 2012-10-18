@@ -108,6 +108,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	    offsetof(struct psc_journal_hdr, pjh_chksum));
 	PSC_CRC64_FIN(&pjh.pjh_chksum);
 
+	/* XXX fixme: segfault below (seen when iolen is 32768) */
 	nb = pwrite(pj.pj_fd, &pjh, pjh.pjh_iolen, 0);
 	if ((size_t)nb != pjh.pjh_iolen)
 		psc_fatalx("failed to write journal header: %s",
@@ -131,6 +132,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	}
 
 	j = 0;
+	/* XXX use an option to write only one entry in fast create mode */
 	for (slot = 0; slot < pjh.pjh_nents; slot += rs) {
 		nb = pwrite(pj.pj_fd, jbuf, PJ_PJESZ(&pj) * rs,
 		    PJ_GETENTOFF(&pj, slot));
