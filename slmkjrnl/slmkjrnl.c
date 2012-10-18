@@ -364,9 +364,13 @@ pjournal_dump(const char *fn, int verbose)
 					slot + i);
 				continue;
 			}
+			/*
+			 * If we hit a new entry that is never used, we assume that
+			 * the rest of the journal is never used.
+			 */
 			if (pje->pje_type == PJE_FORMAT) {
-				nformat++;
-				continue;
+				nformat = nformat + pjh->pjh_nents - (slot + i);
+				goto done;
 			}
 
 			PSC_CRC64_INIT(&chksum);
@@ -377,9 +381,9 @@ pjournal_dump(const char *fn, int verbose)
 
 			if (pje->pje_chksum != chksum) {
 				nchksum++;
-				printf("Journal slot %d has a bad checksum",
+				printf("Journal slot %d has a corrupt checksum, bail out.\n",
 					slot + i);
-				continue;
+				goto done;
 			}
 			if (verbose) {
 				ndump++;
@@ -402,6 +406,8 @@ pjournal_dump(const char *fn, int verbose)
 		}
 
 	}
+
+ done:
 	if (close(pj->pj_fd) == -1)
 		printf("failed closing journal %s", fn);
 
