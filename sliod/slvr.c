@@ -476,13 +476,6 @@ sli_aio_iocb_new(struct slvr_ref *s)
 __static void
 slvr_iocb_release(struct sli_iocb *iocb)
 {
-	struct slvr_ref *s = iocb->iocb_slvr;
-
-	SLVR_LOCK(s);
-	psc_assert(s->slvr_iocb == iocb);
-	psc_assert(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR));
-	s->slvr_iocb = NULL;
-	SLVR_ULOCK(s);
 	psc_pool_return(sli_iocb_pool, iocb);
 }
 
@@ -1152,6 +1145,11 @@ slvr_lru_tryunpin_locked(struct slvr_ref *s)
 	psc_assert(!(s->slvr_flags &
 	    (SLVR_NEW | SLVR_FAULTING | SLVR_GETSLAB)));
 
+	if (s->slvr_iocb) {
+		slvr_iocb_release(s->slvr_iocb);
+		s->slvr_iocb = NULL;
+	}
+
 	s->slvr_flags &= ~SLVR_PINNED;
 
 	if (s->slvr_flags & SLVR_DATAERR) {
@@ -1460,7 +1458,7 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 			lc_remove(&sli_iocb_pndg, iocb);
 			LIST_CACHE_ULOCK(&sli_iocb_pndg);
 			iocb->iocb_cbf(iocb);	/* slvr_fsaio_done() */
-			slvr_iocb_release(iocb);
+			//slvr_iocb_release(iocb);
 			LIST_CACHE_LOCK(&sli_iocb_pndg);
 		}
 		LIST_CACHE_ULOCK(&sli_iocb_pndg);
