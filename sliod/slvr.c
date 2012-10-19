@@ -1453,6 +1453,9 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 			if (iocb->iocb_rc == 0)
 				iocb->iocb_len = aio_return(&iocb->iocb_aiocb);
 
+			if (OPSTAT_CURR(SLI_OPST_DEBUG) == 3)
+				iocb->iocb_rc = EIO;
+
 			psclog_info("got signal: iocb=%p", iocb);
 			lc_remove(&sli_iocb_pndg, iocb);
 			LIST_CACHE_ULOCK(&sli_iocb_pndg);
