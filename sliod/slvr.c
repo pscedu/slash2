@@ -380,6 +380,9 @@ slvr_aio_tryreply(struct sli_aiocb_reply *a)
 			replsrc = 1;
 		}
 
+		/*
+ 		 * FixMe: What if the sliver get reused for another purpose?
+ 		 */
 		if (s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR))
 			ready++;
 
