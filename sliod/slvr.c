@@ -422,11 +422,20 @@ slvr_aio_process(struct slvr_ref *s)
 }
 
 __static void
+slvr_iocb_release(struct sli_iocb *iocb)
+{
+	OPSTAT_INCR(SLI_OPST_IOCB_FREE);
+	psc_pool_return(sli_iocb_pool, iocb);
+}
+
+__static void
 slvr_fsaio_done(struct sli_iocb *iocb)
 {
+	int rc;
 	struct slvr_ref *s;
 
 	s = iocb->iocb_slvr;
+	rc = iocb->iocb_rc;
 
 	SLVR_LOCK(s);
 	psc_assert(iocb == s->slvr_iocb);
@@ -442,14 +451,17 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 	 */
 	s->slvr_flags &= ~(SLVR_AIOWAIT | SLVR_FAULTING);
 
-	if (iocb->iocb_rc) {
+	slvr_iocb_release(s->slvr_iocb);
+	s->slvr_iocb = NULL;
+
+	if (rc) {
 		/*
 		 * There was a problem; unblock any waiters and
 		 * tell them the bad news.
 		 */
 		s->slvr_flags |= SLVR_DATAERR;
-		DEBUG_SLVR(PLL_ERROR, s, "error, rc=%d", iocb->iocb_rc);
-		s->slvr_err = iocb->iocb_rc;
+		DEBUG_SLVR(PLL_ERROR, s, "error, rc=%d", rc);
+		s->slvr_err = rc;
 	} else {
 		s->slvr_flags |= SLVR_DATARDY;
 		DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
@@ -475,13 +487,6 @@ sli_aio_iocb_new(struct slvr_ref *s)
 	iocb->iocb_cbf = slvr_fsaio_done;
 
 	return (iocb);
-}
-
-__static void
-slvr_iocb_release(struct sli_iocb *iocb)
-{
-	OPSTAT_INCR(SLI_OPST_IOCB_FREE);
-	psc_pool_return(sli_iocb_pool, iocb);
 }
 
 void
@@ -1152,11 +1157,6 @@ slvr_lru_tryunpin_locked(struct slvr_ref *s)
 	psc_assert(!(s->slvr_flags &
 	    (SLVR_NEW | SLVR_FAULTING | SLVR_GETSLAB)));
 
-	if (s->slvr_iocb) {
-		slvr_iocb_release(s->slvr_iocb);
-		s->slvr_iocb = NULL;
-	}
-
 	s->slvr_flags &= ~SLVR_PINNED;
 
 	if (s->slvr_flags & SLVR_DATAERR) {
@@ -1465,7 +1465,6 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 			lc_remove(&sli_iocb_pndg, iocb);
 			LIST_CACHE_ULOCK(&sli_iocb_pndg);
 			iocb->iocb_cbf(iocb);	/* slvr_fsaio_done() */
-			//slvr_iocb_release(iocb);
 			LIST_CACHE_LOCK(&sli_iocb_pndg);
 		}
 		LIST_CACHE_ULOCK(&sli_iocb_pndg);
