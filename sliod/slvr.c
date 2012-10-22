@@ -993,6 +993,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 		goto out;
 	}
 
+ 	/* FixMe: Check the underlying file size to avoid useless RMW */
 	OPSTAT_INCR(SLI_OPST_IO_PREP_RMW);
 
 	/*
