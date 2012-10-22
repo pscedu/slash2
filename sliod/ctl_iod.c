@@ -531,6 +531,7 @@ struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("handle_replread_aio"),
 	PFL_OPSTAT_INIT("iocb_get"),
 	PFL_OPSTAT_INIT("iocb_free"),
+	PFL_OPSTAT_INIT("io_prep_rmw"),
 	PFL_OPSTAT_INIT("issue_replread"),
 	PFL_OPSTAT_INIT("issue_replread_cb"),
 	PFL_OPSTAT_INIT("issue_replread_cb_aio"),

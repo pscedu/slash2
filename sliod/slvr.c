@@ -988,6 +988,8 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 		goto out;
 	}
 
+	OPSTAT_INCR(SLI_OPST_IO_PREP_RMW);
+
 	/*
 	 * Prepare the sliver for a read-modify-write.  Mark the blocks
 	 * that need to be read as 1 so that they can be faulted in by
