@@ -464,6 +464,7 @@ sli_aio_iocb_new(struct slvr_ref *s)
 {
 	struct sli_iocb *iocb;
 
+	OPSTAT_INCR(SLI_OPST_IOCB_GET);
 	iocb = psc_pool_get(sli_iocb_pool);
 	memset(iocb, 0, sizeof(*iocb));
 	INIT_LISTENTRY(&iocb->iocb_lentry);
@@ -476,6 +477,7 @@ sli_aio_iocb_new(struct slvr_ref *s)
 __static void
 slvr_iocb_release(struct sli_iocb *iocb)
 {
+	OPSTAT_INCR(SLI_OPST_IOCB_FREE);
 	psc_pool_return(sli_iocb_pool, iocb);
 }
 
