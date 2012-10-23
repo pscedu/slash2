@@ -497,6 +497,7 @@ struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("flush_attr"),
 	PFL_OPSTAT_INIT("fsrq_read"),
 	PFL_OPSTAT_INIT("fsrq_read_free"),
+	PFL_OPSTAT_INIT("fsrq_reissue"),
 	PFL_OPSTAT_INIT("fsrq_write"),
 	PFL_OPSTAT_INIT("fsrq_write_free"),
 	PFL_OPSTAT_INIT("fsync"),

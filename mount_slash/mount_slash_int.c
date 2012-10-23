@@ -2380,6 +2380,7 @@ msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
 		q->mfsrq_flags = MFSRQ_REISSUED;
 		q->mfsrq_reissue++;
 		MFH_ULOCK(mfh);
+		OPSTAT_INCR(SLC_OPST_FSRQ_REISSUE);
 
 		for (i = 0; i < MAX_BMAPS_REQ; i++) {
 			if (!q->mfsrq_biorq[i])
