@@ -907,6 +907,7 @@ msl_fsrq_complete(struct msl_fsrqinfo *q)
 
 	pscfs_reply_read(q->mfsrq_pfr, q->mfsrq_buf, len,
 	    -abs(q->mfsrq_err));
+	OPSTAT_INCR(SLC_OPST_FSRQ_READ_FREE);
 }
 
 __static void
@@ -2316,6 +2317,7 @@ msl_fsrqinfo_write(struct msl_fsrqinfo *q)
 	psc_waitq_wakeone(&q->mfsrq_pfr->pfr_waitq);
 
 	pscfs_reply_write(q->mfsrq_pfr, q->mfsrq_size, rc);
+	OPSTAT_INCR(SLC_OPST_FSRQ_WRITE_FREE);
 }
 
 #endif
