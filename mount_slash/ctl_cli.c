@@ -495,6 +495,8 @@ struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("dio_cb"),
 	PFL_OPSTAT_INIT("dio_cb_add"),
 	PFL_OPSTAT_INIT("flush_attr"),
+	PFL_OPSTAT_INIT("fsrq_read"),
+	PFL_OPSTAT_INIT("fsrq_write"),
 	PFL_OPSTAT_INIT("fsync"),
 	PFL_OPSTAT_INIT("getxattr"),
 	PFL_OPSTAT_INIT("getxattr_nosys"),

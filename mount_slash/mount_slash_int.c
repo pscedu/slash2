@@ -2351,6 +2351,10 @@ msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
 
 		INIT_PSC_LISTENTRY(&q->mfsrq_lentry);
 		pfr->pfr_info = q;
+		if (rw == SL_READ)
+			OPSTAT_INCR(SLC_OPST_FSRQ_READ);
+		else
+			OPSTAT_INCR(SLC_OPST_FSRQ_WRITE);
 
 	} else {
 		int i;
