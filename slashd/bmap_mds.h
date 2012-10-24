@@ -105,17 +105,19 @@ bmap_2_bmi(struct bmapc_memb *b)
 	return (bmap_get_pri(b));
 }
 
-#define BMAPOD_MODIFY_START(b)	BMAPOD_WRLOCK(bmap_2_bmi(b))
-#define BMAPOD_MODIFY_DONE(b)	BMAPOD_ULOCK(bmap_2_bmi(b))
+#define BMAPOD_MODIFY_START(b)	BMAPOD_REQWRLOCK(bmap_2_bmi(b))
+#define BMAPOD_MODIFY_DONE(b,w)	BMAPOD_UREQLOCK(bmap_2_bmi(b), (w))
 
 #define BMAPOD_READ_START(b)	BMAPOD_REQRDLOCK(bmap_2_bmi(b))
 #define BMAPOD_READ_DONE(b, lk)	BMAPOD_UREQLOCK(bmap_2_bmi(b), (lk))
 
 #define BHREPL_POLICY_SET(b, pol)					\
 	do {								\
-		BMAPOD_MODIFY_START(b);					\
+		int _lk;						\
+									\
+		_lk = BMAPOD_MODIFY_START(b);				\
 		bmap_2_replpol(b) = (pol);				\
-		BMAPOD_MODIFY_DONE(b);					\
+		BMAPOD_MODIFY_DONE((b), _lk);				\
 	} while (0)
 
 #define BHREPL_POLICY_GET(b, pol)					\
@@ -129,9 +131,11 @@ bmap_2_bmi(struct bmapc_memb *b)
 
 #define BHGEN_INCREMENT(b)						\
 	do {								\
-		BMAPOD_MODIFY_START(b);					\
+		int _lk;						\
+									\
+		_lk = BMAPOD_MODIFY_START(b);				\
 		bmap_2_bgen(b)++;					\
-		BMAPOD_MODIFY_DONE(b);					\
+		BMAPOD_MODIFY_DONE((b), _lk);				\
 	} while (0)
 
 #define BHGEN_GET(b, bgen)						\

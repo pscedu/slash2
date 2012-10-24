@@ -814,7 +814,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 	}
  out:
 	if (BMAPOD_HASWRLOCK(bmap_2_bmi(b)))
-		BMAPOD_MODIFY_DONE(b);
+		BMAPOD_MODIFY_DONE(b, 0);
 	BMAP_UNBUSY(b);
 	FCMH_UNBUSY(f);
 	return (rc);

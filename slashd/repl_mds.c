@@ -94,7 +94,7 @@ _slm_repl_bmap_rel_type(struct bmapc_memb *b, int type)
 	if (BMAPOD_HASWRLOCK(bmap_2_bmi(b)) &&
 	    !(b->bcm_flags & BMAP_MDS_REPLMODWR)) {
 		/* we took a write lock but did not modify; undo */
-		BMAPOD_MODIFY_DONE(b);
+		BMAPOD_MODIFY_DONE(b, 0);
 		BMAP_UNBUSY(b);
 		FCMH_UNBUSY(b->bcm_fcmh);
 	}

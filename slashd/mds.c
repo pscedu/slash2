@@ -1539,7 +1539,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 			    REPL_WALKF_MODOTH, &iosidx, 1);
 
 			// XXX write bmap!!!
-			BMAPOD_MODIFY_DONE(bmap);
+			BMAPOD_MODIFY_DONE(bmap, 0);
 
 			/*
 			 * XXX modify all bmaps after this one and mark

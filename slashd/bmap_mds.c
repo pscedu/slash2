@@ -220,7 +220,7 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 		upd_init(upd, UPDT_BMAP);
 		mds_bmap_write_logrepls(b);
 	} else {
-		BMAPOD_MODIFY_DONE(b);
+		BMAPOD_MODIFY_DONE(b, 0);
 		BMAP_UNBUSY(b);
 		FCMH_UNBUSY(b->bcm_fcmh);
 	}
