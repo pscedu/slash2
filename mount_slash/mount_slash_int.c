@@ -2662,8 +2662,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	if (msl_fsrqinfo_aioisset(q)) {
 
 		msl_fsrqinfo_readyset(q);
-		rc = -SLERR_AIOWAIT;
-
 		if (rw == SL_WRITE) {
 			/* Writes can't leave this function before completing.
 			 * Block here until rci.c tells us to proceed.
@@ -2675,6 +2673,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 			goto restart;
 		}
+		rc = -SLERR_AIOWAIT;
 
 	} else {
 		rc = tsize;
