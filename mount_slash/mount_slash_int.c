@@ -2360,10 +2360,8 @@ msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
 
 	} else {
 		int i;
-
-		/* The fs request was reissued.  Clear out any old state.
-		 * Yes, this can happen by the magic (or insanity) that is
-		 * async IO and slc_rci_handle_io().
+		/*
+		 * A write request must wait for AIO to complete.
 		 */
 		psc_assert(q->mfsrq_fh == mfh &&
 			   q->mfsrq_buf == buf &&
@@ -2372,11 +2370,7 @@ msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
 			   q->mfsrq_rw == rw &&
 			   q->mfsrq_pfr == pfr);
 
-		/* Only allow 1 reissue since doing otherwise is buggy.
-		 */
 		MFH_LOCK(mfh);
-		//psc_assert(!(q->mfsrq_flags & MFSRQ_REISSUED));
-		//q->mfsrq_flags &= ~(MFSRQ_AIOWAIT | MFSRQ_AIOREADY | MFSRQ_READY);
 		q->mfsrq_flags = MFSRQ_REISSUED;
 		q->mfsrq_reissue++;
 		MFH_ULOCK(mfh);
