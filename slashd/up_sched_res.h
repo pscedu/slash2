@@ -144,10 +144,14 @@ struct slm_update_generic {
 	    (upd)->upd_flags & UPDF_BUSY	? "b" : "",		\
 	    ## __VA_ARGS__)
 
+#define UPD_INITF_NOKEY		(1 << 0)	/* don't consult upsch db for odt key  */
+
+#define upd_init(upd, type)	upd_initf((upd), (type), 0)
+
 void	 upsch_enqueue(struct slm_update_data *, const sl_replica_t *, int);
 void	 upschq_resm(struct sl_resm *, int);
 
-void	 upd_init(struct slm_update_data *, int);
+void	 upd_initf(struct slm_update_data *, int, int);
 void	 upd_destroy(struct slm_update_data *);
 void	*upd_getpriv(struct slm_update_data *);
 void	 upd_tryremove(struct slm_update_data *);

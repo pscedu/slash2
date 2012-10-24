@@ -234,8 +234,7 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 		sl_replica_t iosv[SL_MAX_REPLICAS];
 		unsigned j;
 
-		if (pfl_memchk(upd, 0,
-		    sizeof(*upd)) == 1)
+		if (pfl_memchk(upd, 0, sizeof(*upd)) == 1)
 			upd_init(upd, UPDT_BMAP);
 
 		/*

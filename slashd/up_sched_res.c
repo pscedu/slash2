@@ -1041,10 +1041,13 @@ upschq_resm(struct sl_resm *m, int type)
 }
 
 /**
- * upd_init - Initialize a peer resource update.
+ * upd_initf - Initialize a peer resource update.
+ * @upd: peer update structure.
+ * @type: type of update.
+ * @flags: operation flags.
  */
 void
-upd_init(struct slm_update_data *upd, int type)
+upd_initf(struct slm_update_data *upd, int type, int flags)
 {
 	psc_assert(pfl_memchk(upd, 0, sizeof(*upd)) == 1);
 	INIT_PSC_LISTENTRY(&upd->upd_lentry);
@@ -1062,7 +1065,8 @@ upd_init(struct slm_update_data *upd, int type)
 		b = bmi_2_bmap(bmi);
 		DEBUG_UPD(PLL_DEBUG, upd, "init fid="SLPRI_FID" bno=%u",
 		    b->bcm_fcmh->fcmh_fg.fg_fid, b->bcm_bmapno);
-		slm_repl_upd_odt_read(b);
+		if ((flags & UPD_INITF_NOKEY) == 0)
+			slm_repl_upd_odt_read(b);
 		break;
 	    }
 	default:

@@ -709,7 +709,8 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 				upd = &bmap_2_bmi(b)->bmi_upd;
 				if (pfl_memchk(upd, 0,
 				    sizeof(*upd)) == 1)
-					upd_init(upd, UPDT_BMAP);
+					upd_initf(upd, UPDT_BMAP,
+					    UPD_INITF_NOKEY);
 				else
 					UPD_WAIT(upd);
 				mds_bmap_write_logrepls(b);
@@ -750,7 +751,9 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 					upd = &bmap_2_bmi(b)->bmi_upd;
 					if (pfl_memchk(upd, 0,
 					    sizeof(*upd)) == 1)
-						upd_init(upd, UPDT_BMAP);
+						upd_initf(upd,
+						    UPDT_BMAP,
+						    UPD_INITF_NOKEY);
 					else
 						UPD_WAIT(upd);
 					mds_bmap_write_logrepls(b);
