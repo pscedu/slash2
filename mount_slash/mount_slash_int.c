@@ -1940,6 +1940,13 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 				rc = -SLERR_AIOWAIT;
 				if (!aio_placed) {
 					MFH_LOCK(r->biorq_fhent);
+					/*
+					 * 10/25/2012:
+					 *
+					 * This flag is used to determine whether we should
+					 * decrement mfsrq_ref on I/O completion. When is
+					 * the corresponding increment?
+					 */
 					BIORQ_LOCK(r);
 					r->biorq_flags |= BIORQ_AIOWAIT;
 					BIORQ_ULOCK(r);
