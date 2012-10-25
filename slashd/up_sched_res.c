@@ -765,7 +765,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 				bno--;
 				if (mds_bmap_load(f, bno, &bn))
 					continue;
-				BMAP_LOCK(b);
+				BMAP_LOCK(bn);
 			}
 
 			if (bn == NULL) {
