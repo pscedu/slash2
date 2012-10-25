@@ -529,7 +529,7 @@ fnstat_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	/* XXX add #repls, #bmaps */
 	printf("%-59s %6s %6s %6s\n",
-	    "file-replication-status", "#valid", "#bmap", "%prog");
+	    "file-replication-status", "#valid", "#bmap", "%res");
 }
 
 void
