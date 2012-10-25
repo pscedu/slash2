@@ -165,6 +165,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		OPSTAT_INCR(SLC_OPST_DIO_CB);
 		msl_fsrqinfo_readywait(car->car_fsrqinfo);
 
+		/* FixMe: Should wake up waiters regardless of results */
 		if (mq->rc)
 			goto out;
 
