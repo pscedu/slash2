@@ -71,7 +71,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 			}
 
 		if (!found) {
-			OPSTAT_INCR(SLC_OPST_READ_AIO_NOT_FOUND);
+			OPSTAT_INCR(SLC_OPST_READ_AIO_WAIT);
 			struct timespec ts = { 0, RCI_AIO_READ_WAIT };
 
 			/*
@@ -92,6 +92,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		psc_assert(car->car_id == mq->id);
 
 	} else {
+		OPSTAT_INCR(SLC_OPST_READ_AIO_NOT_FOUND);
 		mp->rc = -ENOENT;
 		goto out;
 	}

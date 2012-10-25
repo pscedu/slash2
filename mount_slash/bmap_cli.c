@@ -621,7 +621,7 @@ msl_bmap_reap_init(struct bmapc_memb *b, const struct srt_bmapdesc *sbd)
 
 	/* Is this a write for a archival fs?  If so, set the bmap for DIO.
 	 */
-	if (sbd->sbd_ios != IOS_ID_ANY  && !(b->bcm_flags & BMAP_DIO)) {
+	if (sbd->sbd_ios != IOS_ID_ANY && !(b->bcm_flags & BMAP_DIO)) {
 		struct sl_resource *r = libsl_id2res(sbd->sbd_ios);
 
 		psc_assert(r);

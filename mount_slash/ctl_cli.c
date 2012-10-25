@@ -516,6 +516,7 @@ struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("read_ahead_cb"),
 	PFL_OPSTAT_INIT("read_ahead_cb_add"),
 	PFL_OPSTAT_INIT("read_aio_not_found"),
+	PFL_OPSTAT_INIT("read_aio_wait"),
 	PFL_OPSTAT_INIT("read_cb"),
 	PFL_OPSTAT_INIT("read_cb_add"),
 	PFL_OPSTAT_INIT("read_rpc_launch"),
