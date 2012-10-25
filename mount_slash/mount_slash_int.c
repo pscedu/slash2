@@ -1947,6 +1947,7 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 					msl_fsrq_aiowait_tryadd_locked(e, r);
 					MFH_ULOCK(r->biorq_fhent);
 
+					OPSTAT_INCR(SLC_OPST_AIO_PLACED);
 					aio_placed = 1;
 				}
 			}

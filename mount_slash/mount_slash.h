@@ -300,6 +300,7 @@ extern struct psc_iostats	 msl_io_1m_stat;
 
 /* must match listing pflctl_opstats[] in file ctl_cli.c */
 enum {
+	SLC_OPST_AIO_PLACED,
 	SLC_OPST_BIORQ_DESTROY,
 	SLC_OPST_BIORQ_NEW,
 	SLC_OPST_BMAP_LEASE_EXT,
