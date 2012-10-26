@@ -1,6 +1,6 @@
 # $Id$
 
-set port=1000;
+set port=5005;
 set nets=tcp10;
 set fsuuid="560ce5c77748b6e1"; # reported by "slmkfs /xwfs-zpool" on MDS
 set zpool_name="xwfs-zpool";
