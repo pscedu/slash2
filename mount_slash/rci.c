@@ -88,10 +88,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		}
 	}
 
-	if (found) {
-		psc_assert(car->car_id == mq->id);
-
-	} else {
+	if (!found) {
 		psclog_warn("Missing id=%"PRIx64, mp->id);
 		OPSTAT_INCR(SLC_OPST_READ_AIO_NOT_FOUND);
 		mp->rc = -ENOENT;
