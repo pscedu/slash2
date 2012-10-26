@@ -33,7 +33,7 @@
  */
 
 #define RCI_AIO_READ_WAIT_NS	1000000
-#define CAR_LOOKUP_MAX		1000
+#define CAR_LOOKUP_MAX		5000
 
 /**
  * slc_rci_handle_io - Handle a READ or WRITE completion for CLI from
@@ -92,6 +92,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		psc_assert(car->car_id == mq->id);
 
 	} else {
+		psclog_warn("Missing id=%"PRIx64, mp->id);
 		OPSTAT_INCR(SLC_OPST_READ_AIO_NOT_FOUND);
 		mp->rc = -ENOENT;
 		goto out;
