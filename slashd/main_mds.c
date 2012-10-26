@@ -506,12 +506,12 @@ main(int argc, char *argv[])
 			psc_assert(!found);
 			found = 1;
 			current_vfsid = vfsid;
-			psclog_warnx("File system %s (id = %d) matches site ID %d",
+			psclog_info("file system %s (id=%d) matches site ID %d",
 			    zfsMount[vfsid].name, vfsid, nodeSite->site_id);
 		}
 	}
 	if (!found)
-		psc_fatalx("Site ID=%d doesn't match any file system",
+		psc_fatalx("site ID=%d doesn't match any file system",
 		    nodeSite->site_id);
 
 	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_UPSCHDB);
