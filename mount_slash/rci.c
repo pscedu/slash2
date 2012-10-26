@@ -32,7 +32,7 @@
  * Routines for handling RPC requests for CLI from ION.
  */
 
-#define RCI_AIO_READ_WAIT	1000000
+#define RCI_AIO_READ_WAIT_NS	1000000
 #define CAR_LOOKUP_MAX		1000
 
 /**
@@ -72,7 +72,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 
 		if (!found) {
 			OPSTAT_INCR(SLC_OPST_READ_AIO_WAIT);
-			struct timespec ts = { 0, RCI_AIO_READ_WAIT };
+			struct timespec ts = { 0, RCI_AIO_READ_WAIT_NS };
 
 			/*
 			 * The AIO RPC from the sliod beat our fs
