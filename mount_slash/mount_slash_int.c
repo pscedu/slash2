@@ -1645,7 +1645,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 
 		psc_assert(biorq_is_my_bmpce(r, e));
 		psc_assert(!(e->bmpce_flags & BMPCE_DATARDY));
-		DEBUG_BMPCE(PLL_INFO, e, "adding to rpc");
+		DEBUG_BMPCE(PLL_INFO, e, "rpc startpage = %d", startpage);
 
 		BMPCE_ULOCK(e);
 
