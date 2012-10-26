@@ -49,7 +49,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 	struct srm_io_rep *mp;
 	struct sl_resm *m;
 	struct iovec iov;
-	int tries = 0, found = 0;
+	int tries = 0, nwait = 0, found = 0;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -71,8 +71,10 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 			}
 
 		if (!found) {
-			OPSTAT_INCR(SLC_OPST_READ_AIO_WAIT);
 			struct timespec ts = { 0, RCI_AIO_READ_WAIT_NS };
+
+			nwait++;
+			OPSTAT_INCR(SLC_OPST_READ_AIO_WAIT);
 
 			/*
 			 * The AIO RPC from the sliod beat our fs
@@ -87,6 +89,8 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 			LIST_CACHE_ULOCK(lc);
 		}
 	}
+	if (nwait > OPSTAT_CURR(SLC_OPST_READ_AIO_WAIT_MAX))
+		OPSTAT_ASSIGN(SLC_OPST_READ_AIO_WAIT_MAX, nwait);
 
 	if (!found) {
 		psclog_warn("Missing id=%"PRIx64, mp->id);
