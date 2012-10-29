@@ -33,7 +33,7 @@
  */
 
 #define RCI_AIO_READ_WAIT_NS	1000000
-#define CAR_LOOKUP_MAX		5000
+#define CAR_LOOKUP_MAX		10000
 
 /**
  * slc_rci_handle_io - Handle a READ or WRITE completion for CLI from
