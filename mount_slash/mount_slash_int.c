@@ -2579,7 +2579,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 * Note that the offsets used here are file-wise offsets not
 	 * offsets into the buffer.
 	 */
-	for (i = 0, tlen = 0, tsize = 0; i < nr; i++) {
+	for (i = 0, tsize = 0; i < nr; i++) {
 		r = q->mfsrq_biorq[i];
 
 		if (r == MSL_BIORQ_COMPLETE)
