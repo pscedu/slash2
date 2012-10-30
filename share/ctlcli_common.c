@@ -92,7 +92,7 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	int type;
 
 	type = scc->scc_type;
-	if (type < 0 || type >= nitems(slconn_restypes))
+	if (type < 0 || type >= (int)nitems(slconn_restypes))
 		type = nitems(slconn_restypes) - 1;
 	stype = slconn_restypes[scc->scc_type];
 
