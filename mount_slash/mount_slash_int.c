@@ -831,8 +831,8 @@ msl_req_aio_add(struct pscrpc_request *rq,
 	} else
 		abort();
 
-	psclog_info("get car=%p car_id=%"PRIx64" q=%p",
-	    car, car->car_id, car->car_fsrqinfo);
+	psclog_info("get car=%p car_id=%"PRIx64" q=%p, r=%p",
+	    car, car->car_id, car->car_fsrqinfo, r);
 
 	lc_add(&resm2rmci(m)->rmci_async_reqs, car);
 
@@ -1559,6 +1559,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 	rq->rq_bulk_abortable = 1;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMPCE] = bmpces_cbarg;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
+	rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQ] = NULL;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMPC] = bmap_2_bmpc(b);
 	rq->rq_interpret_reply = msl_readahead_cb0;
 	pscrpc_completion_set(rq, &rpcComp);
