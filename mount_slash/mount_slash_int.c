@@ -2677,6 +2677,12 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			msl_fsrqinfo_aioreadywait(q);
 			psc_assert(q->mfsrq_flags & MFSRQ_AIOREADY);
 
+			/*
+			 * Our sliod does not know this could be a DIO
+			 * request.  So we have to re-send the request
+			 * again if the first one got AIOWAIT. This can
+			 * be improved some day.
+			 */
 			msl_fsrqinfo_init(pfr, mfh, buf, size, off, rw);
 
 			goto restart;
