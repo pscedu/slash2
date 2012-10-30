@@ -248,6 +248,9 @@ bmpc_queued_ios(struct bmap_pagecache *bmpc)
 
 struct bmpc_ioreq {
 	char				*biorq_buf;
+	/*
+	 * Note that a request may fall somewhere within a bmap. It might be not page aligned.
+	 */
 	uint32_t			 biorq_off;	/* filewise, bmap relative	*/
 	uint32_t			 biorq_len;	/* non-aligned, real length	*/
 	uint32_t			 biorq_flags;	/* state and op type bits	*/
