@@ -267,7 +267,7 @@ mds_odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 	rc = mdsio_opencreate(current_vfsid, mf, &rootcreds, O_RDWR, 0,
 	    NULL, NULL, NULL, &odt->odt_handle, NULL, NULL, 0);
 	if (rc || !odt->odt_handle)
-		psc_fatalx("Fail to open odtable %s, rc= %d", fn, rc);
+		psc_fatalx("Fail to open odtable %s, rc = %d", fn, rc);
 
 	odth = PSCALLOC(sizeof(*odth));
 	rc = mdsio_read(current_vfsid, &rootcreds, odth, sizeof(*odth),
