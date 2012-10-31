@@ -168,8 +168,8 @@ slmupschedthr_tryrepldst_cb(struct pscrpc_request *rq,
 	 *	 tried again when the connection is reestablished.
 	 *   (3) if other failure, don't want to keep it in the system.
 	 */
-	rpmi = res2rpmi(dst_resm->resm_res);
 	if (b) {
+		rpmi = res2rpmi(dst_resm->resm_res);
 		upd = bmap_2_upd(b);
 		upd_rpmi_remove(rpmi, upd);
 	}
@@ -470,9 +470,11 @@ slmupschedthr_trygarbage_cb(struct pscrpc_request *rq,
 	} else
 		slrpc_rep_in(csvc, rq);
 
-	rpmi = res2rpmi(dst_resm->resm_res);
-	upd = bmap_2_upd(b);
-	upd_rpmi_remove(rpmi, upd);
+	if (b) {
+		rpmi = res2rpmi(dst_resm->resm_res);
+		upd = bmap_2_upd(b);
+		upd_rpmi_remove(rpmi, upd);
+	}
 
 	if (csvc)
 		sl_csvc_decref(csvc);
