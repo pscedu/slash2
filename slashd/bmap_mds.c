@@ -128,13 +128,12 @@ slm_repl_upd_odt_read(struct bmapc_memb *b)
 int
 mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 {
-	int rc, tract[NBREPLST], retifset[NBREPLST];
+	int rc, vfsid, tract[NBREPLST], retifset[NBREPLST];
 	uint64_t crc, od_crc = 0;
 	struct slm_update_data *upd;
 	struct fidc_membh *f;
 	struct iovec iovs[2];
 	size_t nb;
-	int vfsid;
 
 	f = b->bcm_fcmh;
 
@@ -236,6 +235,9 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 
 		if (pfl_memchk(upd, 0, sizeof(*upd)) == 1)
 			upd_init(upd, UPDT_BMAP);
+
+		if (fcmh_2_nrepls(f) > SL_DEF_REPLICAS)
+			mds_inox_ensure_loaded(fcmh_2_inoh(f));
 
 		/*
 		 * Requeue pending updates on all registered sites.  If
