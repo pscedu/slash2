@@ -397,6 +397,7 @@ reimport
    fix round robin among senses when open(O_TRUNC) -- prefer old IOS
    fix ios_nblks[idx] accounting on open(O_TRUNC)
    advise upsch.db on SSD in docs
+- make cursor file contents ASCII for debugging
 
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
