@@ -187,6 +187,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 			msl_fsrqinfo_aioreadyset(car->car_fsrqinfo);
 			MFH_ULOCK(car->car_fsrqinfo->mfsrq_fh);
 
+			/* XXX this causes a callback not being called */
 			car->car_cbf = NULL;
 		}
 
