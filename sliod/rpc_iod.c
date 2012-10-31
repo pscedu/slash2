@@ -26,6 +26,7 @@
 #include "pfl/str.h"
 #include "psc_ds/tree.h"
 #include "psc_rpc/rpc.h"
+#include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/service.h"
 
@@ -162,7 +163,7 @@ sli_rpc_mds_unpack_fsuuid(struct pscrpc_request *rq, int msgtype)
 		fsuuid = mp->fsuuid;
 	}
 	if (!fsuuid) {
-		psclog_warnx("invalid zero fsuuid");
+		DEBUG_REQ(PLL_WARN, rq, "invalid zero fsuuid");
 		return;
 	}
 
