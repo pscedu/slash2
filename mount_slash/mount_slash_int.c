@@ -2685,6 +2685,9 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			 * request.  So we have to re-send the request
 			 * again if the first one got AIOWAIT. This can
 			 * be improved some day.
+			 *
+			 * This code only handles DIO request. Other write
+			 * requests are handled by msl_pages_blocking_load().
 			 */
 			msl_fsrqinfo_init(pfr, mfh, buf, size, off, rw);
 
