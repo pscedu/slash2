@@ -951,6 +951,7 @@ msl_fsrq_completion_try(struct msl_fsrqinfo *q)
 				q->mfsrq_err = EIO;
 				MFH_ULOCK(r->biorq_fhent);
 
+				/* XXX shouldn't we check all pages? */
 				goto out;
 
 			} else if (!(e->bmpce_flags & BMPCE_DATARDY)) {
