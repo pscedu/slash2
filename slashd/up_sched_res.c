@@ -699,9 +699,9 @@ upd_proc_bmap(struct slm_update_data *upd)
 							b, off, src_resm, dst_res,
 							dst_resm_i.ri_rnd_idx))
 							    return (0);
+					}
 				}
 			}
-		}
 			break;
 		case BREPLST_TRUNCPNDG:
 			FOREACH_RND(&dst_resm_i,
@@ -718,6 +718,8 @@ upd_proc_bmap(struct slm_update_data *upd)
 			}
 			break;
 		case BREPLST_GARBAGE:
+			break;
+
 			/* XXX just look at fcmh size to determine this */
 			ngarb = 0;
 
@@ -733,6 +735,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 			if (b->bcm_bmapno != bno) {
 				if (f->fcmh_flags & FCMH_IN_PTRUNC)
 					PFL_GOTOERR(out, rc = 1);
+				BMAPOD_MODIFY_DONE(b, 0);
 				bmap_op_done(b);
 				if (mds_bmap_load(f, bno, &b))
 					break;
@@ -767,7 +770,6 @@ upd_proc_bmap(struct slm_update_data *upd)
 				bno--;
 				if (mds_bmap_load(f, bno, &bn))
 					continue;
-				BMAP_LOCK(bn);
 			}
 
 			if (bn == NULL) {
