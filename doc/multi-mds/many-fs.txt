@@ -175,3 +175,80 @@ some concerns.  Anyway, my tests work fine with me.
 ----------
 
 Now I can register a newly-created file system on the fly.
+
+
+11/02/2012
+----------
+
+Save some command lines:
+
+Take a snapshot on citron and send it to orange:
+
+root@citron: ~# ZFS_SOCK_NAME=/var/run/zfs/zfs_socket_zhihui ZFS_LOCK_FILE=/var/lock/zfs/zfs_lock_zhihui \
+                /home/zhihui/projects-citron-manyfs/zfs/src/cmd/zfs/zfs snapshot zhihui_slash2_citron/citron@`date +%s`
+root@citron: ~# ZFS_SOCK_NAME=/var/run/zfs/zfs_socket_zhihui ZFS_LOCK_FILE=/var/lock/zfs/zfs_lock_zhihui \
+                /home/zhihui/projects-citron-manyfs/zfs/src/cmd/zfs/zfs list -t snapshot
+NAME                                     USED  AVAIL  REFER  MOUNTPOINT
+xwfs_test@test                           155M      -   586M  -
+zhihui_slash2_citron/citron@1338919874  36.5K      -   291M  -
+
+root@citron: ~# ZFS_SOCK_NAME=/var/run/zfs/zfs_socket_zhihui ZFS_LOCK_FILE=/var/lock/zfs/zfs_lock_zhihui \
+                /home/zhihui/projects-citron-manyfs/zfs/src/cmd/zfs/zfs send zhihui_slash2_citron/citron@1338919874 > \
+                citron@1338919874.dump
+root@citron: ~# ls -al citron@1338919874.dump
+-rw-r--r-- 1 root root 411143352 Jun  5 14:15 citron@1338919874.dump
+
+[root@orange zhihui]# /home/zhihui/projects-orange-manyfs/zfs/src/cmd/zfs/zfs recv zhihui_slash2_orange/citron < \
+                      citron@1338919874.dump
+[root@orange zhihui]# /home/zhihui/projects-orange-manyfs/zfs/src/cmd/zfs/zfs list -t snapshot
+NAME                                     USED  AVAIL  REFER  MOUNTPOINT
+zhihui_slash2_orange/citron@1338919874  36.6M      -   291M  -
+
+
+Do it the other way:
+
+[root@orange zhihui]# /home/zhihui/projects-orange-manyfs/zfs/src/cmd/zfs/zfs snapshot zhihui_slash2_orange/orange@`date +%s`
+[root@orange zhihui]# /home/zhihui/projects-orange-manyfs/zfs/src/cmd/zfs/zfs list -t snapshot
+NAME                                     USED  AVAIL  REFER  MOUNTPOINT
+zhihui_slash2_orange/citron@1338919874  39.8M      -   291M  -
+zhihui_slash2_orange/orange@1338921645  34.5K      -   133M  -
+
+[root@orange zhihui]# /home/zhihui/projects-orange-manyfs/zfs/src/cmd/zfs/zfs send zhihui_slash2_orange/orange@1338921645 > \
+                      orange@1338921645.dump 
+
+root@citron: ~# ZFS_SOCK_NAME=/var/run/zfs/zfs_socket_zhihui ZFS_LOCK_FILE=/var/lock/zfs/zfs_lock_zhihui \
+                /home/zhihui/projects-citron-manyfs/zfs/src/cmd/zfs/zfs recv zhihui_slash2_citron/orange < \
+                orange@1338921645.dump
+root@citron: ~# 
+
+Take another snapshot, and send a delta:
+
+root@citron: ~# ZFS_SOCK_NAME=/var/run/zfs/zfs_socket_zhihui ZFS_LOCK_FILE=/var/lock/zfs/zfs_lock_zhihui \
+                /home/zhihui/projects-citron-manyfs/zfs/src/cmd/zfs/zfs snapshot zhihui_slash2_citron/citron@`date +%s`
+root@citron: ~# ZFS_SOCK_NAME=/var/run/zfs/zfs_socket_zhihui ZFS_LOCK_FILE=/var/lock/zfs/zfs_lock_zhihui \
+                /home/zhihui/projects-citron-manyfs/zfs/src/cmd/zfs/zfs list -t snapshot
+NAME                                     USED  AVAIL  REFER  MOUNTPOINT
+xwfs_test@test                           155M      -   586M  -
+zhihui_slash2_citron/citron@1338919874  1.93M      -   291M  -
+zhihui_slash2_citron/citron@1338922388  36.5K      -   291M  -
+zhihui_slash2_citron/orange@1338921645  8.27M      -   133M  -
+
+root@citron: ~# ZFS_SOCK_NAME=/var/run/zfs/zfs_socket_zhihui ZFS_LOCK_FILE=/var/lock/zfs/zfs_lock_zhihui \
+                /home/zhihui/projects-citron-manyfs/zfs/src/cmd/zfs/zfs send -i \
+                zhihui_slash2_citron/citron@1338919874 zhihui_slash2_citron/citron@1338922388 > citron@1338922388.delta
+
+root@citron: ~# ls -al citron@1338922388.delta
+-rw-r--r-- 1 root root 3772472 Jun  5 15:07 citron@1338922388.delta
+
+
+[root@orange zhihui]# /home/zhihui/projects-orange-manyfs/zfs/src/cmd/zfs/zfs set readonly=on \
+                      zhihui_slash2_orange/citron@1338919874
+cannot set property for 'zhihui_slash2_orange/citron@1338919874': this property can not be modified for snapshots
+
+[root@orange zhihui]# /home/zhihui/projects-orange-manyfs/zfs/src/cmd/zfs/zfs recv zhihui_slash2_orange/citron < \
+                      citron@1338922388.delta
+cannot receive incremental stream: destination zhihui_slash2_orange/citron has been modified
+since most recent snapshot
+
+
+[web] ls will modify a snapshot.
