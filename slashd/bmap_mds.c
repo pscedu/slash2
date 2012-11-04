@@ -300,7 +300,8 @@ mds_bmap_write(struct bmapc_memb *b, int update_mtime, void *logf,
 		    "mdsio_write: error (rc=%d)", rc);
 	else
 		DEBUG_BMAP(PLL_INFO, b, "written successfully");
-	BMAPOD_READ_DONE(b, 0);
+	if (BMAPOD_HASRDLOCK(bmap_2_bmi(b)))
+		BMAPOD_READ_DONE(b, 0);
 
 	BMAP_LOCK(b);
 //	psc_assert(b->bcm_flags & BMAP_BUSY);
