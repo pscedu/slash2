@@ -94,6 +94,7 @@ struct bmap_mds_info {
 #define BMAPOD_RDLOCK(bmi)	psc_rwlock_rdlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
 #define BMAPOD_REQRDLOCK(bmi)	psc_rwlock_reqrdlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
 #define BMAPOD_REQWRLOCK(bmi)	psc_rwlock_reqwrlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
+#define BMAPOD_HASRDLOCK(bmi)	psc_rwlock_hasrdlock(&(bmi)->bmi_rwlock)
 #define BMAPOD_HASWRLOCK(bmi)	psc_rwlock_haswrlock(&(bmi)->bmi_rwlock)
 #define BMAPOD_ULOCK(bmi)	psc_rwlock_unlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
 #define BMAPOD_UREQLOCK(bmi, l)	psc_rwlock_ureqlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock, (l))
