@@ -812,7 +812,7 @@ msl_req_aio_add(struct pscrpc_request *rq,
 			if (!naio)
 				msl_fsrq_aiowait_tryadd_locked(e, r);
 
-			BMPCE_SETATTR(e, BMPCE_AIOWAIT, "set aio");
+			BMPCE_SETATTR(e, BMPCE_AIOWAIT, "set aio, r=%p", r);
 			BMPCE_ULOCK(e);
 			naio++;
 		}
