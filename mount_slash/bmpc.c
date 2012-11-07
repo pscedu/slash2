@@ -115,6 +115,7 @@ bmpce_lookup_locked(struct bmap_pagecache *bmpc, struct bmpc_ioreq *r,
 		else if (e2 == NULL) {
 			BMPC_ULOCK(bmpc);
 			e2 = psc_pool_get(bmpcePoolMgr);
+			OPSTAT_INCR(SLC_OPST_BMPCE_GET);
 			BMPC_LOCK(bmpc);
 			continue;
 		} else {
@@ -128,8 +129,10 @@ bmpce_lookup_locked(struct bmap_pagecache *bmpc, struct bmpc_ioreq *r,
 			    &bmpc->bmpc_tree, e);
 		}
 	}
-	if (e2)
+	if (e2) {
+		OPSTAT_INCR(SLC_OPST_BMPCE_PUT);
 		psc_pool_return(bmpcePoolMgr, e2);
+	}
 
 	return (e);
 }
@@ -295,6 +298,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *e,
 	if (pll_conjoint(&bmpc->bmpc_lru, e))
 		pll_remove(&bmpc->bmpc_lru, e);
 
+	OPSTAT_INCR(SLC_OPST_BMPCE_PUT);
 	bmpce_init(bmpcePoolMgr, e);
 	psc_pool_return(bmpcePoolMgr, e);
 }
