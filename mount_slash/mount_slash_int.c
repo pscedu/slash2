@@ -117,7 +117,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	struct bmpc_ioreq *r;
 	struct bmap_pagecache *bmpc;
 	uint32_t bmpce_off;
-	struct bmap_pagecache_entry *e, *bmpce_new;
+	struct bmap_pagecache_entry *e;
 	struct msl_fhent *mfh = q->mfsrq_fh;
 	uint32_t aoff = (roff & ~BMPC_BUFMASK); /* aligned, relative offset */
 	uint32_t alen = len + (roff & BMPC_BUFMASK);
@@ -212,7 +212,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	 *   which correspond to this request.
 	 */
 	i = 0;
-	bmpce_new = NULL;
 	BMPC_LOCK(bmpc);
 	while (i < maxpages) {
 		if (bkwdra)
@@ -342,9 +341,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 			break;
 	}
 	BMPC_ULOCK(bmpc);
-
-	if (unlikely(bmpce_new))
-		psc_pool_return(bmpcePoolMgr, bmpce_new);
 
 	psc_assert(psc_dynarray_len(&r->biorq_pages) == npages);
 
