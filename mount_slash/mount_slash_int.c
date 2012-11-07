@@ -1879,6 +1879,10 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 	int rc = 0, i, aio_placed = 0;
 
 	if (r->biorq_rqset) {
+		/*
+		 * Note: This can trigger invocation of our read callback
+		 * in this same thread.
+		 */
 		rc = pscrpc_set_wait(r->biorq_rqset);
 		/*
 		 * The set cb is not being used; msl_read_cb() is
