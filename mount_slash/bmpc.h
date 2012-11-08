@@ -102,6 +102,9 @@ struct bmap_pagecache_entry {
 #define BMPCE_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bmpce_lock)
 
 #define BMPCE_WAIT(b)		psc_waitq_wait((b)->bmpce_waitq, &(b)->bmpce_lock)
+
+/* introduce a flag to avoid unconditional wakeup */
+
 #define BMPCE_WAKE(b)							\
 	do {								\
 		if ((b)->bmpce_waitq)					\
