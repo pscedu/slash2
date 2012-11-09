@@ -179,6 +179,7 @@ sli_rim_handler(struct pscrpc_request *rq)
 		rc = sli_rim_handle_repl_schedwk(rq);
 		break;
 	case SRMT_BMAP_PTRUNC:
+		return (-ENOTSUP);
 		rc = sli_rim_handle_bmap_ptrunc(rq);
 		break;
 	case SRMT_RECLAIM:
