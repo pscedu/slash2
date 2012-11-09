@@ -83,7 +83,7 @@ struct bmap_pagecache_entry {
 #define	BMPCE_DATARDY		(1 <<  2)	/* 0x00004 */
 #define	BMPCE_DIRTY2LRU		(1 <<  3)	/* 0x00008 */
 #define	BMPCE_LRU		(1 <<  4)	/* 0x00010 */
-#define	BMPCE_FREE		(1 <<  5)	/* 0x00020 */
+#define	BMPCE_REAP		(1 <<  5)	/* 0x00020 */
 #define	BMPCE_FREEING		(1 <<  6)	/* 0x00040 */
 #define	BMPCE_INIT		(1 <<  7)	/* 0x00080 */
 #define	BMPCE_READPNDG		(1 <<  8)	/* 0x00100: pending read */
@@ -134,7 +134,7 @@ struct bmap_pagecache_entry {
 	(b)->bmpce_flags & BMPCE_DATARDY		? "d" : "",	\
 	(b)->bmpce_flags & BMPCE_DIRTY2LRU		? "D" : "",	\
 	(b)->bmpce_flags & BMPCE_LRU			? "l" : "",	\
-	(b)->bmpce_flags & BMPCE_FREE			? "f" : "",	\
+	(b)->bmpce_flags & BMPCE_REAP			? "P" : "",	\
 	(b)->bmpce_flags & BMPCE_FREEING		? "F" : "",	\
 	(b)->bmpce_flags & BMPCE_INIT			? "i" : "",	\
 	(b)->bmpce_flags & BMPCE_READPNDG		? "r" : "",	\
