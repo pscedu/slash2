@@ -79,6 +79,14 @@ site @XWFS {
 		ios	= io0@XWFS,
 			  io1@XWFS;
 	}
+
+	resource io2 {
+		desc 	= "PSC Orange IO Server";
+		type 	= standalone_fs;
+		id 	= 299;
+		fsroot	= /local/sc12;
+		nids 	= 128.182.99.28; #orange.psc.edu;
+	}
 }
 
 #site @PSC {
