@@ -17,60 +17,23 @@ site @XWFS {
 		type	= mds;
 		id	= 1;
 		fsroot	= /xwfs-zpool;
-		nids	= 10.141.0.92,		# eth0
-			  129.114.32.92,	# eth1
-			  192.168.100.92;	# ib0
+		nids	= 129.114.32.92;
+
 	}
 
 	resource io0 {
 		type	= standalone_fs;
 		id	= 101;
 		fsroot	= /slash2;		# LVM mounted from /dev/vg1/lg_slash2 (see below)
-		nids	= 10.141.0.93,		# eth0
-			  129.114.32.93,	# eth1
-			  192.168.100.93;	# ib0
+		nids	= 129.114.32.93;
 	}
-
-#[root@c093 ~]# lvdisplay /dev/mapper/vg1-lg_slash2
-#  --- Logical volume ---
-#  LV Name                /dev/vg1/lg_slash2
-#  VG Name                vg1
-#  LV UUID                9IV5RI-Dyzf-rEtu-6I5G-lZAd-fn8g-51cGWs
-#  LV Write Access        read/write
-#  LV Status              available
-#  # open                 1
-#  LV Size                1.77 TB
-#  Current LE             464726
-#  Segments               2
-#  Allocation             inherit
-#  Read ahead sectors     auto
-#  - currently set to     256
-#  Block device           253:0
 
 	resource io1 {
 		type	 = standalone_fs;
 		id	 = 102;
 		fsroot	 = /slash2;		# LVM mounted from /dev/vg1/lg_slash2 (see below)
-		nids	 = 10.141.0.94,		# eth0
-			   129.114.32.94,	# eth1
-			   192.168.100.94;	# ib0
+		nids	 = 129.114.32.94;
 	}
-
-#[root@c094 ~]# lvdisplay /dev/mapper/vg1-lg_slash2
-#  --- Logical volume ---
-#  LV Name                /dev/vg1/lg_slash2
-#  VG Name                vg1
-#  LV UUID                dO0aoH-J5hl-hyBa-dQOs-za2f-G0ix-EvKyyZ
-#  LV Write Access        read/write
-#  LV Status              available
-#  # open                 1
-#  LV Size                1.77 TB
-#  Current LE             464726
-#  Segments               2
-#  Allocation             inherit
-#  Read ahead sectors     auto
-#  - currently set to     256
-#  Block device           253:0
 
 	resource io {
 		desc	= "XWFS FutureGrid IO Servers";
