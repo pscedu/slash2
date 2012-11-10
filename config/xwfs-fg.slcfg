@@ -79,27 +79,20 @@ site @XWFS {
 		ios	= io0@XWFS,
 			  io1@XWFS;
 	}
-
-	resource io2 {
-		desc 	= "PSC Orange IO Server";
-		type 	= standalone_fs;
-		id 	= 299;
-		fsroot	= /local/sc12;
-		nids 	= 128.182.99.28; #orange.psc.edu;
-	}
 }
 
-#site @PSC {
-#	site_desc	= "PSC";
-#	site_id		= 2;
-#
-#	resource io {
-#		type	= standalone_fs;
-#		id	= 1;
-#		fsroot	= /slash2;io
-#		nids	= io.psc.edu;
-#	}
-#}
+site @PSC {
+	site_desc	= "PSC";
+	site_id		= 2;
+
+	resource io {
+		type	= standalone_fs;
+		id	= 1;
+		fsroot	= /local/sc12;
+		nids	= io.psc.edu;
+		nids	= orange.psc.edu;
+	}
+}
 
 #site @SC12 {
 #	site_desc	= "Supercomputing 12 show floor";
