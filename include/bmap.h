@@ -128,7 +128,7 @@ struct bmapc_memb {
 #define BMAP_INIT		(1 << 2)	/* initializing from disk/network */
 #define BMAP_DIO		(1 << 3)	/* direct I/O, no client caching */
 #define BMAP_DIORQ		(1 << 4)
-#define BMAP_CLOSING		(1 << 5)	/* refcnt dropped to zero, removing */
+#define BMAP_TOFREE		(1 << 5)	/* refcnt dropped to zero, removing */
 #define BMAP_DIRTY		(1 << 6)
 #define BMAP_MEMRLS		(1 << 7)
 #define BMAP_DIRTY2LRU		(1 << 8)
@@ -170,7 +170,7 @@ struct bmapc_memb {
 	(b)->bcm_flags & BMAP_INIT	? "I" : "",			\
 	(b)->bcm_flags & BMAP_DIO	? "D" : "",			\
 	(b)->bcm_flags & BMAP_DIORQ	? "Q" : "",			\
-	(b)->bcm_flags & BMAP_CLOSING	? "C" : "",			\
+	(b)->bcm_flags & BMAP_TOFREE	? "F" : "",			\
 	(b)->bcm_flags & BMAP_DIRTY	? "d" : "",			\
 	(b)->bcm_flags & BMAP_MEMRLS	? "M" : "",			\
 	(b)->bcm_flags & BMAP_DIRTY2LRU	? "L" : "",			\

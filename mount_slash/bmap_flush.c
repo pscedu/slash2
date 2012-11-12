@@ -1196,7 +1196,7 @@ msbmflwthr_main(__unusedx struct psc_thread *thr)
 		LIST_CACHE_FOREACH_SAFE(b, tmpb, &bmapFlushQ) {
 			BMAP_LOCK(b);
 			DEBUG_BMAP(PLL_INFO, b, "");
-			if (!(b->bcm_flags & BMAP_CLOSING) &&
+			if (!(b->bcm_flags & BMAP_TOFREE) &&
 			    ((!(b->bcm_flags &
 				(BMAP_CLI_LEASEEXPIRED|BMAP_CLI_REASSIGNREQ)) &&
 			      (((bmap_2_bci(b)->bci_xtime.tv_sec - ts.tv_sec) <

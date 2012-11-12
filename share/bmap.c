@@ -63,7 +63,7 @@ bmap_orphan(struct bmapc_memb *b)
 	waslocked = BMAP_RLOCK(b);
 	psc_assert(!(b->bcm_flags & BMAP_ORPHAN));
 
-	if (b->bcm_flags & BMAP_CLOSING) {
+	if (b->bcm_flags & BMAP_TOFREE) {
 		/* bug #249.  bmap_remove() is already pending.
 		 */
 		BMAP_ULOCK(b);
@@ -104,7 +104,7 @@ bmap_remove(struct bmapc_memb *b)
 
 	DEBUG_BMAP(PLL_INFO, b, "removing");
 
-	psc_assert(b->bcm_flags & BMAP_CLOSING);
+	psc_assert(b->bcm_flags & BMAP_TOFREE);
 	psc_assert(!(b->bcm_flags & BMAP_DIRTY));
 	psc_assert(!atomic_read(&b->bcm_opcnt));
 
@@ -130,7 +130,7 @@ _bmap_op_done(const struct pfl_callerinfo *pci, struct bmapc_memb *b,
 	va_end(ap);
 
 	if (!psc_atomic32_read(&b->bcm_opcnt)) {
-		b->bcm_flags |= BMAP_CLOSING;
+		b->bcm_flags |= BMAP_TOFREE;
 		BMAP_ULOCK(b);
 
 		/* 
@@ -158,7 +158,7 @@ bmap_lookup_cache_locked(struct fidc_membh *f, sl_bmapno_t n)
 	b = SPLAY_FIND(bmap_cache, &f->fcmh_bmaptree, &lb);
 	if (b) {
 		BMAP_LOCK(b);
-		if (b->bcm_flags & (BMAP_CLOSING | BMAP_ORPHAN)) {
+		if (b->bcm_flags & (BMAP_TOFREE | BMAP_ORPHAN)) {
 			/*
 			 * This bmap is going away; wait for
 			 * it so we can reload it back.
@@ -400,7 +400,7 @@ _dump_bmap_flags_common(uint32_t *flags, int *seq)
 	PFL_PRFLAG(BMAP_INIT, flags, seq);
 	PFL_PRFLAG(BMAP_DIO, flags, seq);
 	PFL_PRFLAG(BMAP_DIORQ, flags, seq);
-	PFL_PRFLAG(BMAP_CLOSING, flags, seq);
+	PFL_PRFLAG(BMAP_TOFREE, flags, seq);
 	PFL_PRFLAG(BMAP_DIRTY, flags, seq);
 	PFL_PRFLAG(BMAP_MEMRLS, flags, seq);
 	PFL_PRFLAG(BMAP_DIRTY2LRU, flags, seq);

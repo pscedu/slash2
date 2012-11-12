@@ -855,7 +855,7 @@ msl_bmap_final_cleanup(struct bmapc_memb *b)
 	}
 
 	BMAP_LOCK(b);
-	psc_assert(b->bcm_flags & BMAP_CLOSING);
+	psc_assert(b->bcm_flags & BMAP_TOFREE);
 	psc_assert(!(b->bcm_flags & BMAP_DIRTY));
 	/* Assert that this bmap can no longer be scheduled by the
 	 *   write back cache thread.
