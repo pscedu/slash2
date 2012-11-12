@@ -52,7 +52,7 @@ site @PSC {
 		type	= standalone_fs;
 		id	= 1;
 		fsroot	= /local/sc12;
-		nids	= orange.psc.edu;
+		nids	= 128.182.99.28;
 	}
 }
 
