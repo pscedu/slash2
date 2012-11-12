@@ -8,9 +8,9 @@ set zpool_name="xwfs-zpool";
 set pref_ios="io@FG";
 set pref_mds="md@FG";
 
-site @FG {
+site @XWFS {
 	site_desc	= "XWFS FutureGrid testbed";
-	site_id		= 1;
+	site_id		= 0;
 
 	resource md {
 		desc	= "XWFS FutureGrid MDS";
@@ -18,49 +18,23 @@ site @FG {
 		id	= 1;
 		fsroot	= /xwfs-zpool;
 		nids	= 129.114.32.92;
-
 	}
 
-	resource io0 {
+	resource fg {
 		type	= standalone_fs;
 		id	= 101;
 		fsroot	= /slash2;		# LVM mounted from /dev/vg1/lg_slash2
 		nids	= 129.114.32.93;
 	}
 
-	resource io1 {
-		type	 = standalone_fs;
-		id	 = 102;
-		fsroot	 = /slash2;		# LVM mounted from /dev/vg1/lg_slash2
-		nids	 = 129.114.32.94;
-	}
-
-	resource io {
-		desc	= "XWFS FutureGrid I/O servers";
-		type	= cluster_noshare_lfs;
-		id	= 199;
-		ios	= io0@FG,
-			  io1@FG;
-	}
-}
-
-site @PSC {
-	site_desc	= "PSC";
-	site_id		= 2;
-
-	resource io {
+	resource psc {
 		type	= standalone_fs;
 		id	= 1;
 		fsroot	= /local/sc12;
 		nids	= 128.182.99.28;
 	}
-}
 
-site @SC12 {
-	site_desc	= "Supercomputing 12 show floor";
-	site_id		= 3;
-
-	resource io {
+	resource sc12 {
 		type	= standalone_fs;
 		id	= 1;
 		fsroot	= /slio0;
