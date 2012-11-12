@@ -9,7 +9,7 @@ set pref_ios="io@FG";
 set pref_mds="md@FG";
 
 site @FG {
-	site_desc	= "XWFS FutureGrid Testbed";
+	site_desc	= "XWFS FutureGrid testbed";
 	site_id		= 1;
 
 	resource md {
@@ -36,11 +36,11 @@ site @FG {
 	}
 
 	resource io {
-		desc	= "XWFS FutureGrid IO Servers";
+		desc	= "XWFS FutureGrid I/O servers";
 		type	= cluster_noshare_lfs;
 		id	= 199;
-		ios	= io0@XWFS,
-			  io1@XWFS;
+		ios	= io0@FG,
+			  io1@FG;
 	}
 }
 
