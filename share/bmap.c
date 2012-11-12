@@ -133,6 +133,11 @@ _bmap_op_done(const struct pfl_callerinfo *pci, struct bmapc_memb *b,
 		b->bcm_flags |= BMAP_CLOSING;
 		BMAP_ULOCK(b);
 
+		/* 
+		 * Invoke service specific bmap cleanup callbacks:
+		 * mds_bmap_destroy(), iod_bmap_finalcleanup(), and 
+		 * msl_bmap_final_cleanup().
+		 */
 		if (bmap_ops.bmo_final_cleanupf)
 			bmap_ops.bmo_final_cleanupf(b);
 
