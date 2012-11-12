@@ -112,7 +112,7 @@ bmpce_lookup_locked(struct bmap_pagecache *bmpc, struct bmpc_ioreq *r,
 		if (e)
 			break;
 
-		else if (e2 == NULL) {
+		if (e2 == NULL) {
 			BMPC_ULOCK(bmpc);
 			e2 = psc_pool_get(bmpcePoolMgr);
 			OPSTAT_INCR(SLC_OPST_BMPCE_GET);
