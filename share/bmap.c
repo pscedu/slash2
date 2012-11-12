@@ -185,7 +185,7 @@ int
 _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
     sl_bmapno_t n, enum rw rw, int flags, struct bmapc_memb **bp)
 {
-	int rc = 0, do_load = 0, locked, bmaprw = 0;
+	int rc = 0, locked, bmaprw = 0;
 	struct bmapc_memb *b;
 
 	*bp = NULL;
@@ -224,12 +224,9 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		/* Add to the fcmh's bmap cache */
 		SPLAY_INSERT(bmap_cache, &f->fcmh_bmaptree, b);
 		fcmh_op_start_type(f, FCMH_OPCNT_BMAP);
-		do_load = 1;
-	}
+	
+		FCMH_URLOCK(f, locked);
 
-	FCMH_URLOCK(f, locked);
-
-	if (do_load) {
 		if ((flags & BMAPGETF_NORETRIEVE) == 0)
 			rc = bmap_ops.bmo_retrievef(b, rw, flags);
 
@@ -240,6 +237,9 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 			goto out;
 
 	} else {
+
+		FCMH_URLOCK(f, locked);
+
 		/* Wait while BMAP_INIT is set. */
 		bmap_wait_locked(b, (b->bcm_flags & BMAP_INIT));
 
