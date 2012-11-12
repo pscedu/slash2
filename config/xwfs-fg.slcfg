@@ -5,10 +5,10 @@ set nets=tcp10;
 set fsuuid="560ce5c77748b6e1"; # reported by "slmkfs /xwfs-zpool" on MDS
 set zpool_name="xwfs-zpool";
 #set zpool_cache="/xwfs-zpool.zcf";
-set pref_ios="io@XWFS";
-set pref_mds="md@XWFS";
+set pref_ios="io@FG";
+set pref_mds="md@FG";
 
-site @XWFS {
+site @FG {
 	site_desc	= "XWFS FutureGrid Testbed";
 	site_id		= 1;
 
@@ -24,14 +24,14 @@ site @XWFS {
 	resource io0 {
 		type	= standalone_fs;
 		id	= 101;
-		fsroot	= /slash2;		# LVM mounted from /dev/vg1/lg_slash2 (see below)
+		fsroot	= /slash2;		# LVM mounted from /dev/vg1/lg_slash2
 		nids	= 129.114.32.93;
 	}
 
 	resource io1 {
 		type	 = standalone_fs;
 		id	 = 102;
-		fsroot	 = /slash2;		# LVM mounted from /dev/vg1/lg_slash2 (see below)
+		fsroot	 = /slash2;		# LVM mounted from /dev/vg1/lg_slash2
 		nids	 = 129.114.32.94;
 	}
 
@@ -56,14 +56,14 @@ site @PSC {
 	}
 }
 
-#site @SC12 {
-#	site_desc	= "Supercomputing 12 show floor";
-#	site_id		= 3;
-#
-#	resource peel0io {
-#		type	= standalone_fs;
-#		id	= 1;
-#		fsroot	= /slash2io;
-#		nids	= peel0.sc12.org;
-#	}
-#}
+site @SC12 {
+	site_desc	= "Supercomputing 12 show floor";
+	site_id		= 3;
+
+	resource io {
+		type	= standalone_fs;
+		id	= 1;
+		fsroot	= /slio0;
+		nids	= 140.221.146.230;
+	}
+}
