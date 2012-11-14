@@ -57,7 +57,7 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 	struct fidc_membh *f;
 	struct bmapc_memb *b = NULL;
 	struct bmap_mds_lease *bml;
-	int rc = 0;
+	int rc = 0, new_bmap = 0;
 
 	mq = pscrpc_msg_buf(req->rq_reqmsg, 0, sizeof(*mq));
 	mp = pscrpc_msg_buf(req->rq_repmsg, 0, sizeof(*mp));
@@ -88,8 +88,9 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 	if (!f)
 		PFL_GOTOERR(out, rc = -ENOENT);
 	
+	b = bmap_lookup_cache_locked(f, mq->blkno, &new_bmap);
+
 	FCMH_LOCK(f);
-	b = bmap_lookup_cache_locked(f, mq->blkno);
 	fcmh_decref(f, FCMH_OPCNT_LOOKUP_FIDC);
 	FCMH_ULOCK(f);
 

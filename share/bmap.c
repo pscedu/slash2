@@ -149,12 +149,16 @@ _bmap_op_done(const struct pfl_callerinfo *pci, struct bmapc_memb *b,
 }
 
 struct bmapc_memb *
-bmap_lookup_cache_locked(struct fidc_membh *f, sl_bmapno_t n)
+bmap_lookup_cache_locked(struct fidc_membh *f, sl_bmapno_t n, int *new_bmap)
 {
-	struct bmapc_memb lb, *b;
+	int locked, doalloc;
+	struct bmapc_memb lb, *b, *b2 = NULL;
+
+	doalloc = *new_bmap;
+	lb.bcm_bmapno = n;
 
  restart:
-	lb.bcm_bmapno = n;
+	locked = FCMH_RLOCK(f);
 	b = SPLAY_FIND(bmap_cache, &f->fcmh_bmaptree, &lb);
 	if (b) {
 		BMAP_LOCK(b);
@@ -165,11 +169,53 @@ bmap_lookup_cache_locked(struct fidc_membh *f, sl_bmapno_t n)
 			 */
 			BMAP_ULOCK(b);
 			fcmh_wait_nocond_locked(f);
+			FCMH_URLOCK(f, locked);
 			goto restart;
 		}
 		bmap_op_start_type(b, BMAP_OPCNT_LOOKUP);
+	} 
+	if ((doalloc == 0) || b) {
+		FCMH_URLOCK(f, locked);
+		if (b2)
+			psc_pool_return(bmap_pool, b2);
+		*new_bmap = 0;
+		return (b);
 	}
-	return (b);
+	if (b2 == NULL) {
+		FCMH_URLOCK(f, locked);
+		b2 = psc_pool_get(bmap_pool);
+		goto restart;
+	}
+	b = b2;
+
+	*new_bmap = 1;
+	memset(b, 0, bmap_pool->ppm_master->pms_entsize);
+	INIT_PSC_LISTENTRY(&b->bcm_lentry);
+	INIT_SPINLOCK(&b->bcm_lock);
+
+	atomic_set(&b->bcm_opcnt, 0);
+	b->bcm_fcmh = f;
+	b->bcm_bmapno = n;
+
+	/*
+	 * Signify that the bmap is newly initialized and
+	 * therefore may not contain certain structures.
+	 */
+	b->bcm_flags = BMAP_INIT;
+
+	bmap_op_start_type(b, BMAP_OPCNT_LOOKUP);
+
+	/* Perform app-specific substructure initialization. */
+	bmap_ops.bmo_init_privatef(b);
+
+	BMAP_LOCK(b);
+
+	/* Add to the fcmh's bmap cache */
+	SPLAY_INSERT(bmap_cache, &f->fcmh_bmaptree, b);
+	fcmh_op_start_type(f, FCMH_OPCNT_BMAP);
+
+	FCMH_URLOCK(f, locked);
+	return b;
 }
 
 /**
@@ -185,51 +231,28 @@ int
 _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
     sl_bmapno_t n, enum rw rw, int flags, struct bmapc_memb **bp)
 {
-	int rc = 0, locked, bmaprw = 0;
-	struct bmapc_memb *b;
+	int rc = 0, new_bmap,  bmaprw = 0;
+	struct bmapc_memb *b, *b2;
 
+	b2 = NULL;
 	*bp = NULL;
 
 	if (rw)
 		bmaprw = ((rw == SL_WRITE) ? BMAP_WR : BMAP_RD);
 
-	locked = FCMH_RLOCK(f);
-	b = bmap_lookup_cache_locked(f, n);
+	new_bmap = flags & BMAPGETF_LOAD;
+	b = bmap_lookup_cache_locked(f, n, &new_bmap);
 	if (b == NULL) {
-		if ((flags & BMAPGETF_LOAD) == 0) {
-			FCMH_URLOCK(f, locked);
-			rc = ENOENT;
-			goto out;
-		}
-		b = psc_pool_get(bmap_pool);
-		memset(b, 0, bmap_pool->ppm_master->pms_entsize);
-		INIT_PSC_LISTENTRY(&b->bcm_lentry);
-		INIT_SPINLOCK(&b->bcm_lock);
-
-		atomic_set(&b->bcm_opcnt, 0);
-		b->bcm_fcmh = f;
-		b->bcm_bmapno = n;
-
-		/*
-		 * Signify that the bmap is newly initialized and
-		 * therefore may not contain certain structures.
-		 */
-		b->bcm_flags = BMAP_INIT | bmaprw;
-
-		bmap_op_start_type(b, BMAP_OPCNT_LOOKUP);
-
-		/* Perform app-specific substructure initialization. */
-		bmap_ops.bmo_init_privatef(b);
-
-		/* Add to the fcmh's bmap cache */
-		SPLAY_INSERT(bmap_cache, &f->fcmh_bmaptree, b);
-		fcmh_op_start_type(f, FCMH_OPCNT_BMAP);
-	
-		FCMH_URLOCK(f, locked);
+		rc = ENOENT;
+		goto out;
+	}
+	if (new_bmap) {
+		b->bcm_flags |= bmaprw;
+		BMAP_ULOCK(b);
 
 		if ((flags & BMAPGETF_NORETRIEVE) == 0)
 			rc = bmap_ops.bmo_retrievef(b, rw, flags);
-
+		
 		BMAP_LOCK(b);
 		b->bcm_flags &= ~BMAP_INIT;
 		bmap_wake_locked(b);
@@ -237,8 +260,6 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 			goto out;
 
 	} else {
-
-		FCMH_URLOCK(f, locked);
 
 		/* Wait while BMAP_INIT is set. */
 		bmap_wait_locked(b, (b->bcm_flags & BMAP_INIT));
