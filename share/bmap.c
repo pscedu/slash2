@@ -148,6 +148,10 @@ _bmap_op_done(const struct pfl_callerinfo *pci, struct bmapc_memb *b,
 	}
 }
 
+/*
+ * Lookup and optionally create a new bmap structure. Note that new_bmap is
+ * an in/out argument.
+ */
 struct bmapc_memb *
 bmap_lookup_cache_locked(struct fidc_membh *f, sl_bmapno_t n, int *new_bmap)
 {
