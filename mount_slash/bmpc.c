@@ -436,11 +436,9 @@ __static int
 bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 {
 	struct bmap_pagecache_entry *e, *tmp;
-//	struct timespec ts, expire;
 	int freed = 0;
 
-//	PFL_GETTIMESPEC(&ts);
-
+	/* same lock used to protect bmap page cache */
 	PLL_LOCK(&bmpc->bmpc_lru);
 	PLL_FOREACH_SAFE(e, tmp, &bmpc->bmpc_lru) {
 		BMPCE_LOCK(e);
