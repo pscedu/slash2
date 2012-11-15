@@ -837,6 +837,7 @@ bmap_biorq_expire(struct bmapc_memb *b)
 	bmap_flushq_wake(BMAPFLSH_RPCWAIT, NULL);
 }
 
+/* implement bmo_final_cleanupf() operation */
 void
 msl_bmap_final_cleanup(struct bmapc_memb *b)
 {
