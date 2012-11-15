@@ -1598,6 +1598,9 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 		DEBUG_BMPCE(PLL_WARN, e, "set BMPCE_EIO");
 		bmpce_handle_lru_locked(e, bmap_2_bmpc(b), BIORQ_READ,
 		    0);
+
+		if (added)
+			bmap_op_done_type(b, BMAP_OPCNT_READA);
 	}
 	BMPC_ULOCK(bmap_2_bmpc(b));
 
