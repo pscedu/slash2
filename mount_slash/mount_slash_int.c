@@ -807,6 +807,7 @@ msl_req_aio_add(struct pscrpc_request *rq,
 				continue;
 
 			}
+			/* XXX avoid this if the biorq is the owner */
 			if (!naio)
 				msl_fsrq_aiowait_tryadd_locked(e, r);
 
