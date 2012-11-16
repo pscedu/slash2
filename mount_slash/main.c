@@ -2264,7 +2264,7 @@ void
 mslfsop_umount(void)
 {
 //	unmount_mp();
-//	exit();
+	exit();
 }
 
 void
