@@ -383,7 +383,6 @@ reimport
 - optimize READLINK for small RPCs to avoid bulk
 - fix slmctl -ss missing sliod bug
 - add slmctl -ss fstypes (use statfs(2) on fbsd/linux and f_type)
-- merge fuse 2.9.1
 - make macro version of accessors for speed (e.g. bmap_2_bmi())
   inline are for debugging/gdb
 - expose SLASH2 non-POSIX (e.g. repl) interface through extattr magic
