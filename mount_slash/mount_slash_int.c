@@ -292,7 +292,9 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 				 */
 				psc_assert(e->bmpce_flags & BMPCE_INIT);
 				psc_assert(!(e->bmpce_flags & BMPCE_EIO));
-				/* Stash the bmap pointer in 'owner'.
+				/* 
+				 * Stash the bmap pointer in 'owner'. As a side
+				 * effect, the cache is no longer mine.
 				 */
 				e->bmpce_owner = b;
 				bmpce_handle_lru_locked(e, bmpc, op, 1);
