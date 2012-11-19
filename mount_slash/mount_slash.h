@@ -135,7 +135,8 @@ struct msl_ra {
 
 #define MAX_BMAPS_REQ			2
 
-#define MSL_BIORQ_COMPLETE	((void *)0x1)
+#define MSL_BIORQ_INIT		((void *)0x1)
+#define MSL_BIORQ_COMPLETE	((void *)0x2)
 
 struct slc_async_req {
 	struct psc_listentry		  car_lentry;

@@ -2360,6 +2360,7 @@ __static struct msl_fsrqinfo *
 msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
     char *buf, size_t size, off_t off, enum rw rw)
 {
+	int i;
 	struct msl_fsrqinfo *q = pfr->pfr_info;
 
 	if (!q) {
@@ -2372,15 +2373,17 @@ msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
 		q->mfsrq_rw = rw;
 		q->mfsrq_pfr = pfr;
 
+		/* avoid a theoretical race */
+		for (i = 0; i < MAX_BMAPS_REQ; i++)
+			q->mfsrq_biorq[i] = MSL_BIORQ_INIT;
+
 		INIT_PSC_LISTENTRY(&q->mfsrq_lentry);
 		pfr->pfr_info = q;
 		if (rw == SL_READ)
 			OPSTAT_INCR(SLC_OPST_FSRQ_READ);
 		else
 			OPSTAT_INCR(SLC_OPST_FSRQ_WRITE);
-
 	} else {
-		int i;
 		/*
 		 * A write request must wait for AIO to complete.
 		 */
