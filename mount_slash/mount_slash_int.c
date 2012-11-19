@@ -1898,6 +1898,9 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 		 *   here.
 		 */
 		BIORQ_LOCK(r);
+		/*
+ 		 * XXX, rc seems to be the last rq_status of a bunch of requests.
+ 		 */
 		if (rc != -SLERR_AIOWAIT)
 			r->biorq_flags &= ~(BIORQ_INFL | BIORQ_SCHED);
 
