@@ -2373,9 +2373,11 @@ msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
 		q->mfsrq_rw = rw;
 		q->mfsrq_pfr = pfr;
 
+#if 0
 		/* avoid a theoretical race */
 		for (i = 0; i < MAX_BMAPS_REQ; i++)
 			q->mfsrq_biorq[i] = MSL_BIORQ_INIT;
+#endif
 
 		INIT_PSC_LISTENTRY(&q->mfsrq_lentry);
 		pfr->pfr_info = q;
