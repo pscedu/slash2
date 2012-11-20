@@ -133,9 +133,9 @@ _bmap_op_done(const struct pfl_callerinfo *pci, struct bmapc_memb *b,
 		b->bcm_flags |= BMAP_TOFREE;
 		BMAP_ULOCK(b);
 
-		/* 
+		/*
 		 * Invoke service specific bmap cleanup callbacks:
-		 * mds_bmap_destroy(), iod_bmap_finalcleanup(), and 
+		 * mds_bmap_destroy(), iod_bmap_finalcleanup(), and
 		 * msl_bmap_final_cleanup().
 		 */
 		if (bmap_ops.bmo_final_cleanupf)
@@ -177,7 +177,7 @@ bmap_lookup_cache_locked(struct fidc_membh *f, sl_bmapno_t n, int *new_bmap)
 			goto restart;
 		}
 		bmap_op_start_type(b, BMAP_OPCNT_LOOKUP);
-	} 
+	}
 	if ((doalloc == 0) || b) {
 		FCMH_URLOCK(f, locked);
 		if (b2)
@@ -256,7 +256,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 
 		if ((flags & BMAPGETF_NORETRIEVE) == 0)
 			rc = bmap_ops.bmo_retrievef(b, rw, flags);
-		
+
 		BMAP_LOCK(b);
 		b->bcm_flags &= ~BMAP_INIT;
 		bmap_wake_locked(b);
