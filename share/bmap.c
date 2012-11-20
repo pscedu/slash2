@@ -148,32 +148,36 @@ _bmap_op_done(const struct pfl_callerinfo *pci, struct bmapc_memb *b,
 	}
 }
 
-/*
- * Lookup and optionally create a new bmap structure. Note that new_bmap is
- * an in/out argument.
+/**
+ * bmap_lookup_cache_locked - Lookup and optionally create a new bmap
+ *	structure.
+ * @new_bmap: whether to allow creation and also value-result of status.
  */
 struct bmapc_memb *
-bmap_lookup_cache_locked(struct fidc_membh *f, sl_bmapno_t n, int *new_bmap)
+bmap_lookup_cache_locked(struct fidc_membh *f, sl_bmapno_t n,
+    int *new_bmap)
 {
-	int locked, doalloc;
 	struct bmapc_memb lb, *b, *b2 = NULL;
+	int locked, doalloc;
 
 	doalloc = *new_bmap;
 	lb.bcm_bmapno = n;
 
- restart:
 	locked = FCMH_RLOCK(f);
+	if (0)
+ restart:
+		FCMH_RLOCK(f);
+
 	b = SPLAY_FIND(bmap_cache, &f->fcmh_bmaptree, &lb);
 	if (b) {
 		BMAP_LOCK(b);
 		if (b->bcm_flags & (BMAP_TOFREE | BMAP_ORPHAN)) {
 			/*
-			 * This bmap is going away; wait for
-			 * it so we can reload it back.
+			 * This bmap is going away; wait for it so we
+			 * can reload it back.
 			 */
 			BMAP_ULOCK(b);
 			fcmh_wait_nocond_locked(f);
-			FCMH_URLOCK(f, locked);
 			goto restart;
 		}
 		bmap_op_start_type(b, BMAP_OPCNT_LOOKUP);
@@ -186,7 +190,7 @@ bmap_lookup_cache_locked(struct fidc_membh *f, sl_bmapno_t n, int *new_bmap)
 		return (b);
 	}
 	if (b2 == NULL) {
-		FCMH_URLOCK(f, locked);
+		FCMH_ULOCK(f);
 		b2 = psc_pool_get(bmap_pool);
 		goto restart;
 	}
@@ -202,8 +206,8 @@ bmap_lookup_cache_locked(struct fidc_membh *f, sl_bmapno_t n, int *new_bmap)
 	b->bcm_bmapno = n;
 
 	/*
-	 * Signify that the bmap is newly initialized and
-	 * therefore may not contain certain structures.
+	 * Signify that the bmap is newly initialized and therefore may
+	 * not contain certain structures.
 	 */
 	b->bcm_flags = BMAP_INIT;
 
@@ -219,7 +223,7 @@ bmap_lookup_cache_locked(struct fidc_membh *f, sl_bmapno_t n, int *new_bmap)
 	fcmh_op_start_type(f, FCMH_OPCNT_BMAP);
 
 	FCMH_URLOCK(f, locked);
-	return b;
+	return (b);
 }
 
 /**
