@@ -1,0 +1,67 @@
+# $Id: pscarchiver.slcfg 19870 2012-10-24 18:13:52Z yanovich $
+
+# See slcfg(5) for more information.
+
+set port=15015;
+
+set nets="tcp3 *.*.*.*";
+set pref_mds="archmds@PSCARCH";
+set pref_ios="sense@PSCARCH";
+set fsuuid="3a8cea38614e8122";
+set zpool_name="arc_s2mds";
+
+site @PITT {
+}
+
+site @PSC {
+	site_desc	= "PSC archiver";
+	site_id		= 0;
+
+	resource archmds {
+		desc	= "PSC archiver MDS";
+		type	= mds;
+		id	= 1;
+		nids	= illusion-mds;
+		jrnldev	= /dev/disk/by-id/scsi-35000c50033f6faa7;
+	}
+
+	resource firehose4 {
+		desc	= "brashear client 4";
+		type	= parallel_lfs_compnt;
+		id	= 0x8;
+		nids	= firehose4-99.psc.edu;
+		fsroot	= /brashear/.arc;
+	}
+
+
+	resource ue {
+		desc	= "tape archiver";
+		type	= archival_fs;
+		id	= 0x101;
+		nids	= tahini-99e;
+		fsroot	= /usr/ue;
+		flags	= "disable_bia";
+	}
+
+	# temporary/test nids
+	resource peel0 {
+		desc	= "PSC test I/O node";
+		type	= standalone_fs;
+		id	= 0x200;
+		nids	= 128.182.99.23;
+		fsroot	= /arc_sliod/0;
+		selftest = "/usr/local/psc/sbin/st /arc_sliod/0";
+		flags	= "disable_bia";
+	}
+
+	resource lime {
+		desc	= "PSC test I/O node";
+		type	= standalone_fs;
+		id	= 0x201;
+		nids	= lime-ib1-0.pvt, lime;
+		fsroot	= /local/p0_archive_backfs;
+		flags	= "disable_bia";
+	}
+
+	resource sense7s6 { desc = "disk-based archiver unit 7 sliod 6"; type = standalone_fs; id = 0x1706; nids = sense7-sliod6; selftest = "/usr/local/psc/sbin/st /arc_sliod/6"; fsroot = /arc_sliod/6; flags = "disable_bia"; }
+}
