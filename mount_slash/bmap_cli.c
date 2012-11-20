@@ -77,8 +77,9 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 	psc_assert(b->bcm_flags & BMAP_MDCHNG);
 
 	if (b->bcm_flags & BMAP_WR)
-		/* Write enabled bmaps are allowed to read with no
-		 *   further action being taken.
+		/*
+		 * Write enabled bmaps are allowed to read with no
+		 * further action being taken.
 		 */
 		return (0);
 
@@ -109,8 +110,9 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 	r = libsl_id2res(bmap_2_sbd(b)->sbd_ios);
 	psc_assert(r);
 	if (r->res_type == SLREST_ARCHIVAL_FS) {
-		/* Prepare for archival write by ensuring that all subsequent
-		 *    IO's are direct.
+		/*
+		 * Prepare for archival write by ensuring that all
+		 * subsequent IO's are direct.
 		 */
 		BMAP_LOCK(b);
 		b->bcm_flags |= BMAP_DIO | BMAP_ARCHIVER;
@@ -130,7 +132,8 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 	}
 
 	if (rc == -SLERR_BMAP_DIOWAIT) {
-		DEBUG_BMAP(PLL_WARN, b, "SLERR_BMAP_DIOWAIT rt=%d", nretries);
+		DEBUG_BMAP(PLL_WARN, b, "SLERR_BMAP_DIOWAIT rt=%d",
+		    nretries);
 		nretries++;
 		/*
 		 * XXX need some sort of randomizer here so that many
@@ -145,12 +148,12 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 
 __static int
 msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
-			   struct pscrpc_async_args *args)
+    struct pscrpc_async_args *args)
 {
 	struct bmapc_memb *b = args->pointer_arg[MSL_CBARG_BMAP];
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct srm_reassignbmap_rep *mp =
-		pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
+	    pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 	int rc;
 
 	psc_assert(&rq->rq_async_args == args);
@@ -160,8 +163,9 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 	if (rc) {
-		/* If the MDS replies with SLERR_ION_OFFLINE then don't bother
-		 *    with further retry attempts.
+		/*
+		 * If the MDS replies with SLERR_ION_OFFLINE then don't
+		 * bother with further retry attempts.
 		 */
 		if (rc == -SLERR_ION_OFFLINE)
 			bmap_2_bci(b)->bci_nreassigns = SLERR_ION_OFFLINE;
@@ -192,7 +196,7 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 
 __static int
 msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
-			 struct pscrpc_async_args *args)
+    struct pscrpc_async_args *args)
 {
 	struct bmapc_memb *b = args->pointer_arg[MSL_CBARG_BMAP];
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
@@ -218,21 +222,24 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 	    &bmap_2_bci(b)->bci_etime);
 	timespecadd(&bmap_2_bci(b)->bci_xtime, &msl_bmap_max_lease,
 	    &bmap_2_bci(b)->bci_xtime);
+
  out:
 	BMAP_CLEARATTR(b, BMAP_CLI_LEASEEXTREQ);
 	if (rc) {
-		/* Unflushed data in this bmap is now invalid.  Move the
-		 *   bmap out of the fid cache so that others don't stumble
-		 *   across it while it's active I/O's are failed.
+		/*
+		 * Unflushed data in this bmap is now invalid.  Move the
+		 * bmap out of the fid cache so that others don't
+		 * stumble across it while it's active I/O's are failed.
 		 */
 		if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED) {
 			psc_assert(b->bcm_flags & BMAP_ORPHAN);
 
 		} else {
-			/* Note:  bmap_orphan() will drop the bmap lock
-			 *   so it's important that BMAP_CLI_LEASEEXPIRED
-			 *   is set afterwards so that it is atomic with
-			 *   bmpc_biorqs_fail().
+			/*
+			 * Note:  bmap_orphan() will drop the bmap lock
+			 * so it's important that BMAP_CLI_LEASEEXPIRED
+			 * is set afterwards so that it is atomic with
+			 * bmpc_biorqs_fail().
 			 */
 			if (b->bcm_flags & BMAP_ORPHAN)
 				DEBUG_BMAP(PLL_WARN, b, "already orphaned");
@@ -246,8 +253,8 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 	}
 
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_NOTIFY, b,
-		   "lease extension (rc=%d) nseq=%"PRId64, rc,
-		   rc ? BMAPSEQ_ANY : mp->sbd.sbd_seq);
+	    "lease extension (rc=%d) nseq=%"PRId64, rc,
+	    rc ? BMAPSEQ_ANY : mp->sbd.sbd_seq);
 	bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
 
 	return (rc);
@@ -277,10 +284,12 @@ msl_bmap_lease_tryreassign(struct bmapc_memb *b)
 	BMAP_LOCK(b);
 	BMPC_LOCK(bmpc);
 
-	/* For lease reassignment to take place we must have the
-	 *   the full complement of biorq's still in the cache.
-	 *   Additionally, no biorqs may be on the wire since those
-	 *   could be committed by the sliod.
+	/*
+	 * For lease reassignment to take place we must have the the
+	 * full complement of biorq's still in the cache.
+	 *
+	 * Additionally, no biorqs may be on the wire since those could
+	 * be committed by the sliod.
 	 */
 	if ((b->bcm_flags & BMAP_CLI_REASSIGNREQ) ||
 	    pll_empty(&bmpc->bmpc_new_biorqs)     ||
@@ -378,8 +387,9 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 	secs = (int)(bmap_2_bci(b)->bci_xtime.tv_sec - ts.tv_sec);
 
 	if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED) {
-		/* Catch the case where another thread has already marked
-		 *    this bmap as expired.
+		/*
+		 * Catch the case where another thread has already
+		 * marked this bmap as expired.
 		 */
 		psc_assert(b->bcm_flags & BMAP_ORPHAN);
 		rc = -SLERR_BMAP_LEASEEXT_FAILED;
@@ -423,11 +433,9 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 
 		BMAP_SETATTR(b, BMAP_CLI_LEASEEXTREQ);
 		bmap_op_start_type(b, BMAP_OPCNT_LEASEEXT);
-		/* Yield the remaining time.
-		 */
+		/* Yield the remaining time. */
 		bmap_2_bci(b)->bci_etime = bmap_2_bci(b)->bci_xtime;
-		/* Unlock no matter what.
-		 */
+		/* Unlock no matter what. */
 		BMAP_ULOCK(b);
 
 		rc = slc_rmc_getcsvc1(&csvc,
@@ -458,7 +466,7 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 			bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
 		}
 		DEBUG_BMAP(rc ? PLL_ERROR : PLL_NOTIFY, b,
-			   "lease extension req (rc=%d) (secs=%d)", rc, secs);
+		    "lease extension req (rc=%d) (secs=%d)", rc, secs);
 		if (rc)
 			rc = -SLERR_BMAP_LEASEEXT_FAILED;
 		else
@@ -541,8 +549,9 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw,
 	    sizeof(sl_replica_t) * SL_MAX_REPLICAS);
 	f->fcmh_flags |= FCMH_CLI_HAVEREPLTBL;
 
-	/* XXX not sure if this is really needed since nothing blocks on
-	 *     FCMH_CLI_HAVEREPLTBL
+	/*
+	 * XXX not sure if this is really needed since nothing blocks on
+	 * FCMH_CLI_HAVEREPLTBL
 	 */
 	psc_waitq_wakeall(&f->fcmh_waitq);
 	FCMH_ULOCK(f);
@@ -557,8 +566,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw,
 	}
 
 	if (rc == -SLERR_BMAP_DIOWAIT) {
-		/* Retry for bmap to be DIO ready.
-		 */
+		/* Retry for bmap to be DIO ready. */
 		DEBUG_BMAP(PLL_WARN, bmap,
 		    "SLERR_BMAP_DIOWAIT (rt=%d)", nretries);
 
@@ -619,7 +627,9 @@ msl_bmap_reap_init(struct bmapc_memb *b, const struct srt_bmapdesc *sbd)
 	if (sbd->sbd_flags & SRM_LEASEBMAPF_DIRECTIO)
 		b->bcm_flags |= BMAP_DIO;
 
-	/* Is this a write for a archival fs?  If so, set the bmap for DIO.
+	/*
+	 * Is this a write for a archival fs?  If so, set the bmap for
+	 * DIO.
 	 */
 	if (sbd->sbd_ios != IOS_ID_ANY && !(b->bcm_flags & BMAP_DIO)) {
 		struct sl_resource *r = libsl_id2res(sbd->sbd_ios);
@@ -837,7 +847,9 @@ bmap_biorq_expire(struct bmapc_memb *b)
 	bmap_flushq_wake(BMAPFLSH_RPCWAIT, NULL);
 }
 
-/* implement bmo_final_cleanupf() operation */
+/**
+ * msl_bmap_final_cleanup - Implement bmo_final_cleanupf() operation.
+ */
 void
 msl_bmap_final_cleanup(struct bmapc_memb *b)
 {
@@ -845,8 +857,7 @@ msl_bmap_final_cleanup(struct bmapc_memb *b)
 
 	bmap_biorq_waitempty(b);
 
-	/* Mind lock ordering, remove from LRU first.
-	 */
+	/* Mind lock ordering; remove from LRU first. */
 	if (b->bcm_flags & BMAP_DIO &&
 	    psclist_disjoint(&bmpc->bmpc_lentry)) {
 		psc_assert(SPLAY_EMPTY(&bmpc->bmpc_tree));
