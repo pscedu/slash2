@@ -2372,6 +2372,8 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 		rc = EISDIR;
 		goto out;
 	}
+	if (!size)
+		goto out;
 
 	msfsthr(pscthr_get())->mft_failcnt = 1;
 
