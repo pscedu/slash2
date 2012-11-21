@@ -2383,9 +2383,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	psc_assert(mfh);
 	psc_assert(mfh->mfh_fcmh);
 
-	if (!size)
-		return (0);
-
+	psc_assert(size);
 	f = mfh->mfh_fcmh;
 
 	DEBUG_FCMH(PLL_INFO, f, "buf=%p size=%zu off=%"PRId64" rw=%s",
