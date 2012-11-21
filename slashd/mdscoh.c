@@ -88,7 +88,7 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 	if (!f)
 		PFL_GOTOERR(out, rc = -ENOENT);
 	
-	b = bmap_lookup_cache_locked(f, mq->blkno, &new_bmap);
+	b = bmap_lookup_cache(f, mq->blkno, &new_bmap);
 
 	FCMH_LOCK(f);
 	fcmh_decref(f, FCMH_OPCNT_LOOKUP_FIDC);

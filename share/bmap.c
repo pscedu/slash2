@@ -149,12 +149,12 @@ _bmap_op_done(const struct pfl_callerinfo *pci, struct bmapc_memb *b,
 }
 
 /**
- * bmap_lookup_cache_locked - Lookup and optionally create a new bmap
+ * bmap_lookup_cache - Lookup and optionally create a new bmap
  *	structure.
  * @new_bmap: whether to allow creation and also value-result of status.
  */
 struct bmapc_memb *
-bmap_lookup_cache_locked(struct fidc_membh *f, sl_bmapno_t n,
+bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n,
     int *new_bmap)
 {
 	struct bmapc_memb lb, *b, *b2 = NULL;
@@ -249,7 +249,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		bmaprw = ((rw == SL_WRITE) ? BMAP_WR : BMAP_RD);
 
 	new_bmap = flags & BMAPGETF_LOAD;
-	b = bmap_lookup_cache_locked(f, n, &new_bmap);
+	b = bmap_lookup_cache(f, n, &new_bmap);
 	if (b == NULL) {
 		rc = ENOENT;
 		goto out;
