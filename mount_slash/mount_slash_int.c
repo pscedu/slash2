@@ -2401,7 +2401,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	nr = e - s + 1;
 	if (nr > MAX_BMAPS_REQ) {
 		rc = -EINVAL;
-		goto out;
+		return (rc);
 	}
 
 	/* Initialize some state in the pfr to help with aio requests.
