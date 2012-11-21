@@ -2295,6 +2295,8 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 		rc = EISDIR;
 		goto out;
 	}
+	if (!size)
+		goto out;
 
 	msfsthr(pscthr_get())->mft_failcnt = 1;
 	rc = msl_write(pfr, mfh, buf, size, off);
