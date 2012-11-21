@@ -1884,6 +1884,10 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 	struct bmap_pagecache_entry *e;
 	int rc = 0, i, aio_placed = 0;
 
+	/*
+	 * Wait for all read activities (include RBW) associated with the
+	 * bioreq to complete.
+	 */
 	if (r->biorq_rqset) {
 		/*
 		 * Note: This can trigger invocation of our read callback
