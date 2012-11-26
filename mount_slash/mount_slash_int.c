@@ -2356,6 +2356,10 @@ msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
  *	file's fcmh and is ultimately responsible for data being
  *	prefetched (as needed), copied into or from the cache, and (on
  *	write) being pushed to the correct I/O server.
+ *
+ *	The function implements the backend of mslfsop_read() and 
+ *	mslfsop_write().
+ *
  * @pfr: file system request, used for tracking potentially asynchronous
  *	activity.
  * @mfh: file handle structure passed to us by pscfs which contains the
