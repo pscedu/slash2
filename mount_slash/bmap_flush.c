@@ -347,7 +347,7 @@ biorq_destroy_failed(struct bmpc_ioreq *r)
 }
 
 /**
- * _bmap_flush_desched - unschedules a biorq, sets the RESCHED bit, and
+ * _bmap_flush_desched - Unschedules a biorq, sets the RESCHED bit, and
  *	bumps the resched timer.  Called when a writeback RPC failed to
  *	get off of the ground OR via RPC cb context on failure.
  * Notes:  _bmap_flush_desched strictly asserts the biorq is not on the
@@ -362,6 +362,7 @@ bmap_flush_desched(struct bmpc_ioreq *r)
 
 	(void)BMPC_RLOCK(bmpc);
 	(void)BIORQ_RLOCK(r);
+
 	/* biorq [rd]esched semantics must be strictly enforced.
 	 */
 	psc_assert(r->biorq_flags & BIORQ_SCHED);
@@ -408,7 +409,7 @@ bmap_flush_desched(struct bmpc_ioreq *r)
 	BIORQ_ULOCK(r);
 	BMPC_ULOCK(bmpc);
 
-	DEBUG_BIORQ(PLL_WARN, r, "unset sched lease bmap_2_ios (%u)",
+	DEBUG_BIORQ(PLL_INFO, r, "unset sched lease bmap_2_ios (%u)",
 		    bmap_2_ios(r->biorq_bmap));
 
 	DYNARRAY_FOREACH(bmpce, i, &r->biorq_pages) {
@@ -428,7 +429,7 @@ bmap_flush_desched(struct bmpc_ioreq *r)
 
 /**
  * bmap_flush_resched - called in error contexts where the biorq must be
- *    rescheduled by putting it back to the new request queue.  Typically 
+ *    rescheduled by putting it back to the new request queue.  Typically
  *    this is from a write RPC cb.
  */
 void
