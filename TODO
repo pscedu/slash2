@@ -398,6 +398,8 @@ reimport
    advise upsch.db on SSD in docs
 - make cursor file contents ASCII for debugging
 
+- the DSC webpage no where mentions SLASH2
+
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
    (o) attr buf size needs be dynamically sized
