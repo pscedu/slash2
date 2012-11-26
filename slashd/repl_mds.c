@@ -129,7 +129,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 			k = 0;
 		}
 
-		DEBUG_INOH(PLL_INFO, ih, "rep%u[%u] == %u",
+		DEBUG_INOH(PLL_DEBUG, ih, "is rep[%u](=%u) == %u ?",
 		    k, repl[k].bs_id, ios);
 
 		if (repl[k].bs_id == ios) {
