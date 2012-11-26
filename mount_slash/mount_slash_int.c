@@ -469,7 +469,7 @@ msl_bmpces_fail(struct bmpc_ioreq *r)
 		BMPCE_LOCK(e);
 		if (biorq_is_my_bmpce(r, e)) {
 			e->bmpce_flags |= BMPCE_EIO;
-			DEBUG_BMPCE(PLL_WARN, e, "set BMPCE_EIO");
+			DEBUG_BMPCE(PLL_INFO, e, "set BMPCE_EIO");
 		}
 		BMPCE_ULOCK(e);
 	}
@@ -504,7 +504,7 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 			 * the LRU without DATARDY EIO set.
 			 */
 			e->bmpce_flags |= BMPCE_EIO;
-			DEBUG_BMPCE(PLL_WARN, e, "set BMPCE_EIO");
+			DEBUG_BMPCE(PLL_INFO, e, "set BMPCE_EIO");
 		}
 
 		if (biorq_is_my_bmpce(r, e) && (e->bmpce_flags & BMPCE_EIO)) {
@@ -1016,7 +1016,7 @@ _msl_bmpce_rpc_done(const struct pfl_callerinfo *pci,
 
 	if (rc) {
 		e->bmpce_flags |= BMPCE_EIO;
-		DEBUG_BMPCE(PLL_WARN, e, "set BMPCE_EIO");
+		DEBUG_BMPCE(PLL_INFO, e, "set BMPCE_EIO");
 		BMPCE_WAKE(e);
 
 	} else if (e->bmpce_flags & BMPCE_RBWPAGE) {
@@ -1598,7 +1598,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 			pll_remove(&bmap_2_bmpc(b)->bmpc_pndg_ra, e);
 
 		e->bmpce_flags |= BMPCE_EIO;
-		DEBUG_BMPCE(PLL_WARN, e, "set BMPCE_EIO");
+		DEBUG_BMPCE(PLL_INFO, e, "set BMPCE_EIO");
 		bmpce_handle_lru_locked(e, bmap_2_bmpc(b), BIORQ_READ,
 		    0);
 
