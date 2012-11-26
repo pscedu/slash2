@@ -101,7 +101,7 @@ msl_fd_offline_retry(struct msl_fhent *mfh)
 		psc_assert("invalid thread type");
 	psc_assert(*cnt);
 
-	DEBUG_FCMH(PLL_WARN, mfh->mfh_fcmh, "nretries=%d, maxretries=%d "
+	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "nretries=%d, maxretries=%d "
 	    "(non-blocking=%d)", *cnt,
 	    psc_atomic32_read(&offline_nretries),
 	    (mfh->mfh_oflags & O_NONBLOCK));
