@@ -474,6 +474,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 
 	r = pll_peekhead(&bwc->bwc_pll);
 
+	/* XXX return error here? */
 	csvc = msl_bmap_to_csvc(r->biorq_bmap, 1);
 	if (csvc == NULL)
 		goto error;
