@@ -1337,8 +1337,10 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	op = r->biorq_flags & BIORQ_WRITE ? SRMT_WRITE : SRMT_READ;
 
 	csvc = msl_bmap_to_csvc(b, op == SRMT_WRITE);
-	if (csvc == NULL)
+	if (csvc == NULL) {
+		rc = -ENOTCONN;
 		goto error;
+	}
 
 	if (r->biorq_rqset == NULL)
 		r->biorq_rqset = pscrpc_prep_set();
@@ -1439,7 +1441,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		goto retry;
 
 	PSCFREE(iovs);
-	return (-1);
+	return (rc);
 }
 
 __static void
