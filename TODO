@@ -381,7 +381,6 @@ reimport
 - convert MDS rcmc.c to async RPCs
 - add du(1) functionality in dumpfid via extattr
 - optimize READLINK for small RPCs to avoid bulk
-- fix slmctl -ss missing sliod bug
 - add slmctl -ss fstypes (use statfs(2) on fbsd/linux and f_type)
 - make macro version of accessors for speed (e.g. bmap_2_bmi())
   inline are for debugging/gdb
@@ -397,8 +396,6 @@ reimport
    fix ios_nblks[idx] accounting on open(O_TRUNC)
    advise upsch.db on SSD in docs
 - make cursor file contents ASCII for debugging
-
-- the DSC webpage no where mentions SLASH2
 
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
