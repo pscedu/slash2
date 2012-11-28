@@ -344,7 +344,7 @@ void	_bmap_op_done(const struct pfl_callerinfo *,
 int	_bmap_get(const struct pfl_callerinfo *, struct fidc_membh *,
 	    sl_bmapno_t, enum rw, int, struct bmapc_memb **);
 struct bmapc_memb *
-	 bmap_lookup_cache_locked(struct fidc_membh *, sl_bmapno_t, int *);
+	 bmap_lookup_cache(struct fidc_membh *, sl_bmapno_t, int *);
 
 int	 bmapdesc_access_check(struct srt_bmapdesc *, enum rw, sl_ios_id_t);
 
