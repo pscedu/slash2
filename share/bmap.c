@@ -240,9 +240,8 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
     sl_bmapno_t n, enum rw rw, int flags, struct bmapc_memb **bp)
 {
 	int rc = 0, new_bmap,  bmaprw = 0;
-	struct bmapc_memb *b, *b2;
+	struct bmapc_memb *b;
 
-	b2 = NULL;
 	*bp = NULL;
 
 	if (rw)
