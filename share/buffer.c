@@ -39,23 +39,6 @@
 struct psc_poolmaster	 slBufsPoolMaster;
 struct psc_poolmgr	*slBufsPool;
 
-sl_iov_try_memrls_t	 slMemRlsTrylock;
-sl_iov_memrls_ulock_t	 slMemRlsUlock;
-
-__static void
-sl_buffer_lru_assertions(struct sl_buffer *b)
-{
-	psc_assert(b->slb_flags == SLB_LRU);
-	psc_assert(psc_vbitmap_nfree(b->slb_inuse) < b->slb_nblks);
-	psc_assert(!psc_listhd_empty(&b->slb_iov_list));
-	psc_assert(psclist_conjoint(&b->slb_fcmh_lentry,
-	    psc_lentry_hd(&b->slb_fcmh_lentry)));
-	psc_assert(atomic_read(&b->slb_ref));
-	//	psc_assert(!atomic_read(&b->slb_unmapd_ref));
-	psc_assert((!atomic_read(&b->slb_inflight)) &&
-		   (!atomic_read(&b->slb_inflpndg)));
-}
-
 void
 sl_buffer_fresh_assertions(struct sl_buffer *b)
 {
@@ -76,94 +59,6 @@ void
 sl_buffer_clear(struct sl_buffer *b, size_t size)
 {
 	memset(b->slb_base, 0, size);
-}
-
-__static void
-sl_buffer_pin_assertions(struct sl_buffer *b)
-{
-	psc_assert(ATTR_TEST(b->slb_flags, SLB_PINNED));
-	psc_assert(!ATTR_TEST(b->slb_flags, SLB_FRESH));
-	psc_assert(!ATTR_TEST(b->slb_flags, SLB_LRU));
-	psc_assert(!ATTR_TEST(b->slb_flags, SLB_FREEING));
-	psc_assert(!ATTR_TEST(b->slb_flags, SLB_FREE));
-	psc_assert(!psc_listhd_empty(&b->slb_iov_list));
-	/* Test this before pinning.. */
-	//psc_assert(psclist_disjoint(&b->slb_mgmt_lentry));
-	psc_assert(b->slb_base);
-	psc_assert((atomic_read(&b->slb_ref) > 0) ||
-		   (atomic_read(&b->slb_unmapd_ref) > 0));
-	psc_assert((atomic_read(&b->slb_inflight) > 0) ||
-		   (atomic_read(&b->slb_inflpndg) > 0));
-	psc_assert(atomic_read(&b->slb_inflpndg) >=
-		   (atomic_read(&b->slb_inflight)));
-}
-
-__static void
-sl_buffer_pin_2_lru_assertions(struct sl_buffer *b)
-{
-	psc_assert(ATTR_TEST(b->slb_flags, SLB_PINNED));
-	psc_assert(!ATTR_TEST(b->slb_flags, SLB_FRESH));
-	psc_assert(!ATTR_TEST(b->slb_flags, SLB_LRU));
-	psc_assert(!ATTR_TEST(b->slb_flags, SLB_FREEING));
-	psc_assert(!ATTR_TEST(b->slb_flags, SLB_FREE));
-	psc_assert(!psc_listhd_empty(&b->slb_iov_list));
-	/* Test this before pinning.. */
-	//psc_assert(psclist_disjoint(&b->slb_mgmt_lentry));
-	psc_assert(b->slb_base);
-	psc_assert((atomic_read(&b->slb_ref) > 0) ||
-		   (atomic_read(&b->slb_unmapd_ref) > 0));
-	psc_assert(!(atomic_read(&b->slb_inflight)) &&
-		   !(atomic_read(&b->slb_inflpndg)));
-	psc_assert(psc_vbitmap_nfree(b->slb_inuse) < b->slb_nblks);
-	psc_assert(!psc_listhd_empty(&b->slb_iov_list));
-	psc_assert(psclist_conjoint(&b->slb_fcmh_lentry,
-	    psc_lentry_hd(&b->slb_fcmh_lentry)));
-	psc_assert(atomic_read(&b->slb_ref));
-	psc_assert(!atomic_read(&b->slb_unmapd_ref));
-	psc_assert((!atomic_read(&b->slb_inflight)) &&
-		   (!atomic_read(&b->slb_inflpndg)));
-}
-
-/**
- * sl_buffer_get - pull a buffer from the listcache
- * @lc: the list cache in question
- * @block: wait (or not)
- */
-__static struct sl_buffer *
-sl_buffer_get(struct psc_listcache *lc, int block)
-{
-	struct sl_buffer *slb;
-
-	psc_assert(lc != &slBufsPool->ppm_lc);
-
-	psclog_trace("slb from %s", lc->plc_name);
-
-	slb = (block ? lc_getwait(lc) : lc_getnb(lc));
-	return (slb);
-}
-
-__static struct sl_buffer *
-sl_buffer_timedget(struct psc_listcache *lc)
-{
-	struct timespec ts;
-
-	psclog_warnx("Blocking get for LRU sl_buffer");
-	slb_set_alloctimer(&ts);
-
-	//struct sl_buffer *slb = lc_gettimed(lc, abstime);
-	//return (slb);
-	//return ((struct sl_buffer *)lc_gettimed(lc, abstime));
-	return (lc_gettimed(lc, &ts));
-}
-
-#define SLB_IOV_VERIFY(v) {						\
-		struct sl_buffer *SSs = (v)->oftiov_pri;		\
-		int IIi = 0;						\
-		psc_assert(SSs->slb_blksz == (v)->oftiov_blksz);	\
-		psc_assert((SSs->slb_base <= (v)->oftiov_base) &&	\
-			   SLB_SLB2EBASE(SSs) >= SLB_IOV2EBASE((v), SSs)); \
-		IIi = ((v)->oftiov_base - SSs->slb_base) % SSs->slb_blksz; \
-		psc_assert(!IIi);					\
 }
 
 int
