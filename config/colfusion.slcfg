@@ -5,10 +5,11 @@
 set port=15015;
 
 set nets="tcp3 *.*.*.*";
-set pref_mds="archmds@PSCARCH";
-set pref_ios="sense@PSCARCH";
-set fsuuid="3a8cea38614e8122";
+set pref_mds="md@COLFUSION";
+set pref_ios="io0@COLFUSION";
+set fsuuid="a1409fb20bfa0b5b";
 set zpool_name="colfusion_s2mds";
+#set zpool_cache="/local/colfusion.s2/var/zcf";
 
 site @COLFUSION {
 	site_desc	= "ColFusion network";
@@ -19,7 +20,7 @@ site @COLFUSION {
 		type	= mds;
 		id	= 1;
 		nids	= orange.psc.edu;
-		jrnldev	= /dev/disk/by-id/scsi-35000c50033f6faa7;
+		jrnldev	= /dev/disk/by-id/ata-ST3750640AS_3QD04P64;
 	}
 
 	resource io0 {
