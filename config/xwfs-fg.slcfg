@@ -41,3 +41,5 @@ site @XWFS {
 		nids	= 140.221.146.230;
 	}
 }
+
+include "/local/xwfs.s2/slcfg.local"
