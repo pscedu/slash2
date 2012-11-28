@@ -3,7 +3,7 @@
 ROOTDIR=../..
 include ${ROOTDIR}/Makefile.path
 
-PROG=		slashd
+PROG=		slashd slashd.sh
 MAN+=		slashd.8
 SRCS+=		bmap_mds.c
 SRCS+=		cfg_mds.c
