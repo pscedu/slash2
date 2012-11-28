@@ -27,7 +27,7 @@ site @COLFUSION {
 		desc	= "node 1";
 		type	= standalone_fs;
 		id	= 10;
-		nids	= exp.sis.pitt.edu;
+		nids	= colfusion.exp.sis.pitt.edu;
 		fsroot	= /local/slio/;
 #		selftest = "/usr/local/psc/sbin/st /arc_sliod/0";
 	}
