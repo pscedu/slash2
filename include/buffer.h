@@ -101,7 +101,6 @@ struct sl_buffer {
 	    ATTR_TEST((slb)->slb_flags, SLB_FREE)	? "f" : "",	\
 	    ATTR_TEST((slb)->slb_flags, SLB_INIT)	? "i" : "",	\
 	    ATTR_TEST((slb)->slb_flags, SLB_FRESH)	? "r" : "",	\
-	    DEBUG_SLB_FLAGS(slb),					\
 	    (slb)->slb_lc_fcmh, (slb)->slb_lc_owner,			\
 	    ## __VA_ARGS__)
 
