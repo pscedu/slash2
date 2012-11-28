@@ -105,12 +105,12 @@ struct bmap_pagecache_entry {
 
 /* introduce a flag to avoid unconditional wakeup */
 
-#define BMPCE_WAKE(b)							\
+#define BMPCE_WAKE(e)							\
 	do {								\
-		if ((b)->bmpce_waitq)					\
-			psc_waitq_wakeall((b)->bmpce_waitq);		\
+		if ((e)->bmpce_waitq)					\
+			psc_waitq_wakeall((e)->bmpce_waitq);		\
 		else							\
-			DEBUG_BMPCE(PLL_MAX, b, "NULL bmpce_waitq");	\
+			DEBUG_BMPCE(PLL_MAX, e, "NULL bmpce_waitq");	\
 	} while (0)
 
 #define BMPCE_2_BIORQ(b)						\
