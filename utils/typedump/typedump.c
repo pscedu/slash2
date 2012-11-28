@@ -206,7 +206,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct site_mds_info);
 	PRTYPE(struct site_progress);
 	PRTYPE(struct sl_buffer);
-	PRTYPE(struct sl_buffer_iovref);
 	PRTYPE(struct sl_expcli_ops);
 	PRTYPE(struct sl_fcmh_ops);
 	PRTYPE(struct sl_gconf);
@@ -452,8 +451,6 @@ main(int argc, char *argv[])
 	PRVAL(SLB_MIN);
 	PRVAL(SLB_NBLK);
 	PRVAL(SLB_NDEF);
-	PRVAL(SLB_TIMEOUT_NSECS);
-	PRVAL(SLB_TIMEOUT_SECS);
 	PRVAL(SLCTL_REST_CLI);
 	PRVAL(SLFID_MIN);
 	PRVAL(SLFID_NS);
@@ -616,8 +613,6 @@ main(int argc, char *argv[])
 	PRVAL(NS_SUM_FAIL);
 	PRVAL(NS_SUM_PEND);
 	PRVAL(NS_SUM_SUCC);
-	PRVAL(SLBREF_MAPPED);
-	PRVAL(SLBREF_REAP);
 	PRVAL(SLB_DIRTY);
 	PRVAL(SLB_FREE);
 	PRVAL(SLB_FREEING);
