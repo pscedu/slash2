@@ -8,13 +8,14 @@ ctl=slmctl
 
 usage()
 {
-	echo "usage: $0 [-gs]" >&2
+	echo "usage: $0 [-P profile] [-gs]" >&2
 	exit 1
 }
 
-while getopts "gs" c; do
+while getopts "gP:s" c; do
 	case $c in
 	g) mygdb='mygdb'	;;
+	P) prof=$OPTARG		;;
 	s) mystrace='strace'	;;
 	*) usage		;;
 	esac

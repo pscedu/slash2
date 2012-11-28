@@ -8,13 +8,14 @@ ctl=slictl
 
 usage()
 {
-	echo "usage: $0 [-gs] [instance]" >&2
+	echo "usage: $0 [-P profile] [-gs] [instance]" >&2
 	exit 1
 }
 
-while getopts "gs" c; do
+while getopts "gP:s" c; do
 	case $c in
 	g) mygdb='mygdb'	;;
+	P) prof=$OPTARG		;;
 	s) mystrace='strace'	;;
 	*) usage		;;
 	esac
