@@ -3,7 +3,8 @@
 ROOTDIR=../..
 include ${ROOTDIR}/Makefile.path
 
-PROG=		sliod sliod.sh
+PROG=		sliod
+BIN=		sliod.sh
 MAN+=		sliod.8
 SRCS+=		bmap_iod.c
 SRCS+=		cfg_iod.c
