@@ -50,6 +50,8 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 	struct sl_resm *m;
 	struct iovec iov;
 	int tries = 0, nwait = 0, found = 0;
+	struct bmpc_ioreq *r = NULL;
+
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -100,6 +102,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		goto out;
 	}
 
+	r = car->car_argv.pointer_arg[MSL_CBARG_BIORQ];
 	if (car->car_cbf == msl_read_cb) {
 		struct bmap_pagecache_entry *e;
 		struct iovec iovs[MAX_BMAPS_REQ];
@@ -170,8 +173,6 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 			goto out;
 
 		if (mq->op == SRMIOP_RD) {
-			struct bmpc_ioreq *r =
-			    car->car_argv.pointer_arg[MSL_CBARG_BIORQ];
 
 			iov.iov_base = r->biorq_buf;
 			iov.iov_len = car->car_len;
@@ -200,8 +201,8 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 	if (car->car_cbf)
 		car->car_cbf(rq, mq->rc, &car->car_argv);
 
-	psclog_info("return car=%p car_id=%"PRIx64" q=%p", car,
-	    car->car_id, car->car_fsrqinfo);
+	psclog_info("return car=%p car_id=%"PRIx64" q=%p, r=%p", car,
+	    car->car_id, car->car_fsrqinfo, r);
 
 	psc_pool_return(slc_async_req_pool, car);
 
