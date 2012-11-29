@@ -25,10 +25,7 @@ shift $(($OPTIND - 1))
 narg=0
 
 apply_host_prefs "$@"
-[ -n $notfound ] && cat <<EOF
-no profile for this host, assuming defaults.
-create a profile and send to archproj@psc.edu
-EOF
+[ -n "$notfound" ] && warn "no profile for this host ($prof); assuming defaults"
 
 [ $# -gt $narg ] && usage
 

@@ -22,13 +22,12 @@ while getopts "gP:s" c; do
 done
 shift $(($OPTIND - 1))
 
-apply_host_prefs "$@"
-[ -n $notfound ] && cat <<EOF
-no profile for this host, assuming defaults.
-create a profile and send to archproj@psc.edu
-EOF
+narg=0
 
-[ $# -gt 0 ] && usage
+apply_host_prefs "$@"
+[ -n "$notfound" ] && warn "no profile for this host ($prof); assuming defaults"
+
+[ $# -gt $narg ] && usage
 
 mp=/$prof
 base=$dir/$prof.s2
