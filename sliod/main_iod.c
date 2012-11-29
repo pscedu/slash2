@@ -157,11 +157,11 @@ main(int argc, char *argv[])
 	if (!gcry_check_version(GCRYPT_VERSION))
 		errx(1, "libgcrypt version mismatch");
 
+	progname = argv[0];
 	pfl_init();
 	sl_subsys_register();
 	psc_subsys_register(SLISS_SLVR, "slvr");
 
-	progname = argv[0];
 	sfn = SL_PATH_SLICTLSOCK;
 	p = getenv("CTL_SOCK_FILE");
 	if (p)
@@ -172,7 +172,7 @@ main(int argc, char *argv[])
 	if (p)
 		cfn = p;
 
-	while ((c = getopt(argc, argv, "D:f:S:XV")) != -1)
+	while ((c = getopt(argc, argv, "D:f:S:VX")) != -1)
 		switch (c) {
 		case 'D':
 			sl_datadir = optarg;
@@ -183,11 +183,10 @@ main(int argc, char *argv[])
 		case 'S':
 			sfn = optarg;
 			break;
-		case 'X':
-			allow_root_uid = 1;
-			break;
 		case 'V':
 			errx(0, "revision is %d", SL_STK_VERSION);
+		case 'X':
+			allow_root_uid = 1;
 			break;
 		default:
 			usage();

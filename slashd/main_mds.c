@@ -160,16 +160,6 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 		    "check if mount point is empty", WEXITSTATUS(rc));
 }
 
-__dead void
-usage(void)
-{
-	fprintf(stderr,
-	    "usage: %s [-V] [-D datadir] [-f slashconf] [-p zpoolcache] [-S socket]\n"
-	    "\t[zpoolname]\n",
-	    progname);
-	exit(1);
-}
-
 void
 slmconnthr_spawn(void)
 {
@@ -391,20 +381,29 @@ psc_scan_filesystems(void)
 	freelock(&scan_lock);
 }
 
+__dead void
+usage(void)
+{
+	fprintf(stderr,
+	    "usage: %s [-UV] [-D datadir] [-f slashconf] [-p zpoolcache] [-S socket]\n"
+	    "\t[zpoolname]\n",
+	    progname);
+	exit(1);
+}
+
 int
 main(int argc, char *argv[])
 {
 	char *zpcachefn = NULL, *zpname, fn[PATH_MAX];
+	int vfsid, rc, c, found, nofsuuid = 0;
 	const char *cfn, *sfn, *p;
-	int rc, c, found, nofsuuid = 0;
-
-	int vfsid;
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
 	if (!gcry_check_version(GCRYPT_VERSION))
 		errx(1, "libgcrypt version mismatch");
 
+	progname = argv[0];
 	pfl_init();
 	sl_subsys_register();
 	psc_subsys_register(SLMSS_ZFS, "zfs");
@@ -420,9 +419,11 @@ main(int argc, char *argv[])
 	if (p)
 		cfn = p;
 
-	progname = argv[0];
 	sfn = SL_PATH_SLMCTLSOCK;
-	while ((c = getopt(argc, argv, "D:f:p:S:X:YUV")) != -1)
+	p = getenv("CTL_SOCK");
+	if (p)
+		sfn = p;
+	while ((c = getopt(argc, argv, "D:f:p:S:UVX:Y")) != -1)
 		switch (c) {
 		case 'D':
 			sl_datadir = optarg;
@@ -436,17 +437,17 @@ main(int argc, char *argv[])
 		case 'S':
 			sfn = optarg;
 			break;
+		case 'U':
+			nofsuuid = 1;
+			break;
+		case 'V':
+			errx(0, "revision is %d", SL_STK_VERSION);
 		case 'X': /* undocumented, developer only */
 			allow_root_uid = 1;
 			break;
 		case 'Y': /* undocumented, developer only */
 			disable_propagation = 1;
 			break;
-		case 'U':
-			nofsuuid = 1;
-			break;
-		case 'V':
-			errx(0, "revision is %d", SL_STK_VERSION);
 		default:
 			usage();
 		}
@@ -511,7 +512,7 @@ main(int argc, char *argv[])
 		}
 	}
 	if (!found)
-		psc_fatalx("site ID=%d doesn't match any file system",
+		psc_fatalx("site id=%d doesn't match any file system",
 		    nodeSite->site_id);
 
 	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_UPSCHDB);
@@ -532,8 +533,7 @@ main(int argc, char *argv[])
 	sl_nbrqset = pscrpc_nbreqset_init(NULL, NULL);
 	pscrpc_nbreapthr_spawn(sl_nbrqset, SLMTHRT_NBRQ, "slmnbrqthr");
 
-	psclog_info("SLASH2 metadata daemon (mds) revision is %d",
-	    SL_STK_VERSION);
+	psclog_info("%s: revision is %d", progname, SL_STK_VERSION);
 
 	dbdo(NULL, NULL,
 	    " UPDATE	upsch"
