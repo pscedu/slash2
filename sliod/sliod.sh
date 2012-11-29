@@ -25,7 +25,7 @@ shift $(($OPTIND - 1))
 narg=0
 
 apply_host_prefs "$@"
-[ -n "$notfound" ] && warn "no profile for this host ($prof); assuming defaults"
+[ $found -eq 0 ] && warn "no profile for this host ($prof); assuming defaults"
 
 [ $# -gt $narg ] && usage
 
