@@ -2773,7 +2773,7 @@ msattrflushthr_spawn(void)
 	struct psc_thread *thr;
 
 	lc_reginit(&attrTimeoutQ, struct fcmh_cli_info,
-	    fci_lentry, "attrTimeout");
+	    fci_lentry, "attrtimeout");
 
 	thr = pscthr_init(MSTHRT_ATTRFLSH, 0,
 	    msattrflushthr_main, NULL,
