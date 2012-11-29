@@ -100,9 +100,6 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		goto out;
 	}
 
-	psclog_info("car=%p car_id=%"PRIx64" q=%p", car, car->car_id,
-	    car->car_fsrqinfo);
-
 	if (car->car_cbf == msl_read_cb) {
 		struct bmap_pagecache_entry *e;
 		struct iovec iovs[MAX_BMAPS_REQ];
