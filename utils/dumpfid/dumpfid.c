@@ -80,9 +80,9 @@ dumpfid(const char *fn)
 	struct iovec iovs[2];
 	struct stat stb;
 	uint64_t crc, od_crc;
+	int64_t s2usz;
 	uint32_t nr, j;
 	sl_bmapno_t bno;
-	char fsize[64];
 	ssize_t rc;
 	int fd;
 
@@ -112,8 +112,17 @@ dumpfid(const char *fn)
 		goto out;
 	}
 
+#ifdef SL2_SIZE_EXTATTR
+	{
+		char fsize[64];
+
 #define SLXAT_SIZE	".sl2-fsize"
-	rc = fgetxattr(fd, SLXAT_SIZE, fsize, sizeof(fsize));
+		rc = fgetxattr(fd, SLXAT_SIZE, fsize, sizeof(fsize));
+		s2usz = strtoull(fsize, NULL, 10);
+	}
+#else
+	s2usz = stb.st_rdev;
+#endif
 
 	psc_crc64_calc(&crc, &ino, sizeof(ino));
 	printf("%s:\n", fn);
@@ -131,7 +140,7 @@ dumpfid(const char *fn)
 	if (show & K_REPLPOL)
 		printf("  replpol %u\n", ino.ino_replpol);
 	if (show & K_FSIZE && rc > 0)
-		printf("  fsize %s\n", fsize);
+		printf("  fsize %"PRId64"\n", s2usz);
 
 	nr = ino.ino_nrepls;
 	if (nr > SL_DEF_REPLICAS) {
