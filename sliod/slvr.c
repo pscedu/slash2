@@ -431,8 +431,8 @@ slvr_iocb_release(struct sli_iocb *iocb)
 __static void
 slvr_fsaio_done(struct sli_iocb *iocb)
 {
-	int rc;
 	struct slvr_ref *s;
+	int rc;
 
 	s = iocb->iocb_slvr;
 	rc = iocb->iocb_rc;
@@ -464,9 +464,8 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 	} else {
 		s->slvr_flags |= SLVR_DATARDY;
 		DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
-
-		psc_vbitmap_invert(s->slvr_slab->slb_inuse);
 	}
+	psc_vbitmap_invert(s->slvr_slab->slb_inuse);
 	SLVR_WAKEUP(s);
 	SLVR_ULOCK(s);
 
