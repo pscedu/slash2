@@ -1792,7 +1792,8 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 			psc_assert(rc == ENOENT);
 			if (batchno > lwm) {
 				batchno--;
-				rc = mds_open_logfile(batchno, 0, 1, &handle);
+				rc = mds_open_logfile(batchno, 0, 1,
+				    &handle);
 			}
 			break;
 		}
@@ -1830,7 +1831,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 
 		total = size / entrysize;
 		count = 0;
-		psclog_warnx("Scanning the last reclaim log, batchno=%"PRId64,
+		psclog_info("scanning the last reclaim log, batchno=%"PRId64,
 		    current_reclaim_batchno);
 		while (count < total) {
 			last_reclaim_xid = reclaim_entryp->xid;
@@ -1838,7 +1839,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 			count++;
 		}
 		if (total > max) {
-			psclog_warnx("The last reclaim log has %d "
+			psclog_warnx("the last reclaim log has %d "
 			    "entries - more than it should have!",
 			    total);
 			total = max;

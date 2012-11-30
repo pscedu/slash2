@@ -360,14 +360,14 @@ psc_register_filesystem(int vfsid)
 	psc_hashbkt_add_item(&rootHtable, b, entry);
 
 	zfsMount[vfsid].flag |= ZFS_SLASH2_READY;
-	psclog_warnx("File system %s registered (%"PRIx64":%"PRIx64")",
+	psclog_info("file system %s registered (site=%"PRIx64" uuid=%"PRIx64")",
 	    basename(zfsMount[vfsid].name), siteid, uuid);
 }
 
 psc_spinlock_t  scan_lock = SPINLOCK_INIT;
 
-/*
- * Scan for newly added file systems in the pool
+/**
+ * psc_scan_filesystems - Scan for newly added file systems in the pool.
  */
 void
 psc_scan_filesystems(void)
