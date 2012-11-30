@@ -245,7 +245,7 @@ sli_fcmh_reopen(struct fidc_membh *f, const struct slash_fidgen *fg)
 		 * cache pages, prior to issuing a truncate request to
 		 * the MDS.
 		 */
-		DEBUG_FCMH(PLL_WARN, f, "request from old gen "
+		DEBUG_FCMH(PLL_INFO, f, "request from old gen "
 		    "(%"SLPRI_FGEN")", fg->fg_gen);
 	}
 	return (rc);
