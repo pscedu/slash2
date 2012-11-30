@@ -398,6 +398,7 @@ reimport
 - make cursor file contents ASCII for debugging
 
 - investigate diaser(1)
+- setup arc testrig
 
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
