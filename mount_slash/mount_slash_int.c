@@ -816,7 +816,9 @@ msl_req_aio_add(struct pscrpc_request *rq,
 			naio++;
 		}
 		/* Should have found at least one aio'd page. */
-		psc_assert(naio);
+		if (!naio)
+			psc_fatalx("biorq %p has no AIO pages", r);		\
+		
 		msl_biorq_aio_prep(r);
 		car->car_fsrqinfo = r->biorq_fsrqi;
 
