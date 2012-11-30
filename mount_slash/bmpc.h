@@ -206,10 +206,11 @@ struct bmap_pagecache {
 	struct timespec			 bmpc_oldest;		/* LRU's oldest item */
 	struct psc_lockedlist		 bmpc_lru;		/* cleancnt can be kept here  */
 	/*
- 	 * List for new requests minus BIORQ_READ and BIORQ_DIO. All requests are sorted
- 	 * based on their starting offsets to falicitate write coalescing.
- 	 */
-	struct psc_lockedlist		 bmpc_new_biorqs;	
+	 * List for new requests minus BIORQ_READ and BIORQ_DIO.  All
+	 * requests are sorted based on their starting offsets to
+	 * facilitate write coalescing.
+	 */
+	struct psc_lockedlist		 bmpc_new_biorqs;
 	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* chain pending I/O requests */
 	struct psc_lockedlist		 bmpc_pndg_ra;		/* RA bmpce's pending comp */
 	atomic_t			 bmpc_pndgwr;		/* # pending wr req */
@@ -252,7 +253,8 @@ bmpc_queued_ios(struct bmap_pagecache *bmpc)
 struct bmpc_ioreq {
 	char				*biorq_buf;
 	/*
-	 * Note that a request may fall somewhere within a bmap. It might be not page aligned.
+	 * Note that a request may fall somewhere within a bmap.  It
+	 * might be not page aligned.
 	 */
 	uint32_t			 biorq_off;	/* filewise, bmap relative	*/
 	uint32_t			 biorq_len;	/* non-aligned, real length	*/
@@ -339,7 +341,7 @@ struct bmpc_ioreq {
 	    PSCPRI_TIMESPEC_ARGS(&(b)->biorq_expire), ## __VA_ARGS__)
 
 int	_msl_offline_retry(const struct pfl_callerinfo *, struct bmpc_ioreq *);
-int	msl_fd_offline_retry(struct msl_fhent *);
+int	 msl_fd_offline_retry(struct msl_fhent *);
 
 #define msl_offline_retry(r)		_msl_offline_retry(PFL_CALLERINFOSS(SLSS_BMAP), (r))
 
@@ -413,10 +415,10 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
 }
 
 /**
- * biorq_is_my_bmpce - Informs the caller that biorq, r, owns the
- *    the page cache entry, b.  This state implies that the thread
- *    processing 'r' is responsible for allocating a memory page
- *    and possible faulting in that page from the ION.
+ * biorq_is_my_bmpce - Informs the caller that biorq, r, owns the the
+ *	page cache entry, b.  This state implies that the thread
+ *	processing 'r' is responsible for allocating a memory page and
+ *	possible faulting in that page from the ION.
  */
 #define biorq_is_my_bmpce(r, b)	((r) == (b)->bmpce_owner)
 

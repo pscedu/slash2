@@ -292,7 +292,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 				 */
 				psc_assert(e->bmpce_flags & BMPCE_INIT);
 				psc_assert(!(e->bmpce_flags & BMPCE_EIO));
-				/* 
+				/*
 				 * Stash the bmap pointer in 'owner'. As a side
 				 * effect, the cache is no longer mine.
 				 */
@@ -817,8 +817,8 @@ msl_req_aio_add(struct pscrpc_request *rq,
 		}
 		/* Should have found at least one aio'd page. */
 		if (!naio)
-			psc_fatalx("biorq %p has no AIO pages", r);		\
-		
+			psc_fatalx("biorq %p has no AIO pages", r);
+
 		msl_biorq_aio_prep(r);
 		car->car_fsrqinfo = r->biorq_fsrqi;
 
@@ -1478,8 +1478,9 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 		b->bcm_flags |= BMAP_DIRTY;
 
 		if (!(b->bcm_flags & BMAP_CLI_FLUSHPROC)) {
-			/* Give control of the msdb_lentry to the bmap_flush
-			 *   thread.
+			/*
+			 * Give control of the msdb_lentry to the
+			 * bmap_flush thread.
 			 */
 			b->bcm_flags |= BMAP_CLI_FLUSHPROC;
 			psc_assert(psclist_disjoint(&b->bcm_lentry));
@@ -1620,10 +1621,11 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 		sl_csvc_decref(csvc);
 }
 
-/*
- * Launch a RPC for a given range of pages. Note that a request can be satisfied
- * by multiple RPCs because parts of the range covered by the request may have
- * already been cached.
+/**
+ * msl_read_rpc_launch - Launch a RPC for a given range of pages. Note
+ *	that a request can be satisfied by multiple RPCs because parts
+ *	of the range covered by the request may have already been
+ *	cached.
  */
 __static int
 msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
@@ -1837,10 +1839,11 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 
 	psc_assert(!r->biorq_rqset);
 
-	/* Only read in the pages owned by this request.  To do this
-	 *   the below loop marks only the iov slots which correspond
-	 *   to page cache entries owned by this request as determined
-	 *   by biorq_is_my_bmpce().
+	/*
+	 * Only read in the pages owned by this request.  To do this the
+	 * below loop marks only the iov slots which correspond to page
+	 * cache entries owned by this request as determined by
+	 * biorq_is_my_bmpce().
 	 */
 	if (r->biorq_flags & BIORQ_READ)
 		rc = msl_launch_read_rpcs(r, &sched);
@@ -1897,6 +1900,7 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 		 * Note: This can trigger invocation of our read callback
 		 * in this same thread.
 		 */
+
 		rc = pscrpc_set_wait(r->biorq_rqset);
 		/*
 		 * The set cb is not being used; msl_read_cb() is
@@ -1906,9 +1910,10 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 		 *   here.
 		 */
 		BIORQ_LOCK(r);
+
 		/*
- 		 * XXX, rc seems to be the last rq_status of a bunch of requests.
- 		 */
+		 * XXX, rc seems to be the last rq_status of a bunch of requests.
+		 */
 		if (rc != -SLERR_AIOWAIT)
 			r->biorq_flags &= ~(BIORQ_INFL | BIORQ_SCHED);
 
@@ -1920,8 +1925,7 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 		}
 		BIORQ_ULOCK(r);
 
-		/* Destroy and cleanup the set now.
-		 */
+		/* Destroy and cleanup the set now. */
 		pscrpc_set_destroy(r->biorq_rqset);
 		r->biorq_rqset = NULL;
 
@@ -1934,9 +1938,9 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 		DEBUG_BMPCE(PLL_INFO, e, " ");
 
 		if (!biorq_is_my_bmpce(r, e)) {
-			/* For pages not owned by this request,
-			 *    wait for them to become DATARDY
-			 *    or to have failed.
+			/*
+			 * For pages not owned by this request, wait for
+			 * them to become DATARDY or to have failed.
 			 */
 			while (!(e->bmpce_flags &
 			    (BMPCE_DATARDY | BMPCE_EIO | BMPCE_AIOWAIT))) {
@@ -1962,11 +1966,11 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 				if (!aio_placed) {
 					MFH_LOCK(r->biorq_fhent);
 					/*
-					 * 10/25/2012:
-					 *
-					 * This flag is used to determine whether we should
-					 * decrement mfsrq_ref on I/O completion. When is
-					 * the corresponding increment?
+					 * This flag is used to
+					 * determine whether we should
+					 * decrement mfsrq_ref on I/O
+					 * completion.  When is the
+					 * corresponding increment?
 					 */
 					BIORQ_LOCK(r);
 					r->biorq_flags |= BIORQ_AIOWAIT;
@@ -1980,10 +1984,11 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 				}
 			}
 
-			/* Read requests must have had their bmpce's
-			 *   put into DATARDY by now (i.e. all RPCs
-			 *   must have already been completed).
-			 *   Same goes for pages owned by other requests.
+			/*
+			 * Read requests must have had their bmpce's put
+			 * into DATARDY by now (i.e. all RPCs must have
+			 * already been completed).  Same goes for pages
+			 * owned by other requests.
 			 */
 			psc_assert(e->bmpce_flags &
 			    (BMPCE_DATARDY | BMPCE_EIO | BMPCE_AIOWAIT));
@@ -2361,7 +2366,7 @@ msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
  *	prefetched (as needed), copied into or from the cache, and (on
  *	write) being pushed to the correct I/O server.
  *
- *	The function implements the backend of mslfsop_read() and 
+ *	The function implements the backend of mslfsop_read() and
  *	mslfsop_write().
  *
  * @pfr: file system request, used for tracking potentially asynchronous
@@ -2618,18 +2623,22 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		q->mfsrq_biorq[i] = MSL_BIORQ_COMPLETE;
 		tsize += tlen;
 	}
-	/* Check for AIO in the fsrq prior to opening the fsrq for async
-	 *    operation.  Otherwise a race condition is possible where the
-	 *    async handler will unset the 'aio' flag, making this ioreq
-	 *    look like a success.  The 'rc' is not used since more than
-	 *    one BIORQ may be involved in this operation.
+
+	/*
+	 * Check for AIO in the fsrq prior to opening the fsrq for async
+	 * operation.  Otherwise a race condition is possible where the
+	 * async handler will unset the 'aio' flag, making this ioreq
+	 * look like a success.  The 'rc' is not used since more than
+	 * one BIORQ may be involved in this operation.
 	 */
 	if (msl_fsrqinfo_aioisset(q)) {
 
 		msl_fsrqinfo_readyset(q);
 		if (rw == SL_WRITE) {
-			/* Writes can't leave this function before completing.
-			 * Block here until rci.c tells us to proceed.
+			/*
+			 * Writes can't leave this function before
+			 * completing.  Block here until rci.c tells us
+			 * to proceed.
 			 */
 			msl_fsrqinfo_aioreadywait(q);
 			psc_assert(q->mfsrq_flags & MFSRQ_AIOREADY);
