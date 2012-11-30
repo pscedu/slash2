@@ -2604,6 +2604,11 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 					q->mfsrq_biorq[i] = NULL;
 					goto restart;
 				}
+
+				r->biorq_flags |=
+				    (r->biorq_flags & BIORQ_READ) ?
+				    BIORQ_READFAIL : BIORQ_RBWFAIL;
+
 				PFL_GOTOERR(out, rc = -EIO);
 			}
 
