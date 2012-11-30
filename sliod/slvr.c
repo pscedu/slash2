@@ -381,8 +381,8 @@ slvr_aio_tryreply(struct sli_aiocb_reply *a)
 		}
 
 		/*
- 		 * FixMe: What if the sliver get reused for another purpose?
- 		 */
+		 * FixMe: What if the sliver get reused for another purpose?
+		 */
 		if (s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR))
 			ready++;
 
@@ -447,8 +447,7 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 	else
 		psc_assert(s->slvr_pndgreads > 0);
 
-	/* Prevent additions from new requests.
-	 */
+	/* Prevent additions from new requests. */
 	s->slvr_flags &= ~(SLVR_AIOWAIT | SLVR_FAULTING);
 
 	slvr_iocb_release(s->slvr_iocb);
@@ -993,7 +992,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 		goto out;
 	}
 
- 	/* FixMe: Check the underlying file size to avoid useless RMW */
+	/* FixMe: Check the underlying file size to avoid useless RMW */
 	OPSTAT_INCR(SLI_OPST_IO_PREP_RMW);
 
 	/*
@@ -1021,16 +1020,16 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 
 	//psc_vbitmap_printbin1(s->slvr_slab->slb_inuse);
 	psclog_info("psc_vbitmap_nfree()=%d",
-		 psc_vbitmap_nfree(s->slvr_slab->slb_inuse));
-	/* We must have found some work to do.
-	 */
+	    psc_vbitmap_nfree(s->slvr_slab->slb_inuse));
+
+	/* We must have found some work to do. */
 	psc_assert(psc_vbitmap_nfree(s->slvr_slab->slb_inuse) <
 		   SLASH_BLKS_PER_SLVR);
 
 	if (s->slvr_flags & SLVR_DATARDY)
 		goto invert;
-	else
-		s->slvr_flags |= SLVR_RDMODWR;
+
+	s->slvr_flags |= SLVR_RDMODWR;
 
  do_read:
 	SLVR_ULOCK(s);
@@ -1056,10 +1055,10 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 		return (0);
 	}
 
-	/* Above, the bits were set for the RMW blocks, now
-	 *  that they have been read, invert the bitmap so that
-	 *  it properly represents the blocks to be dirtied by
-	 *  the rpc.
+	/*
+	 * Above, the bits were set for the RMW blocks, now that they
+	 * have been read, invert the bitmap so that it properly
+	 * represents the blocks to be dirtied by the RPC.
 	 */
 	SLVR_LOCK(s);
 
@@ -1070,7 +1069,9 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 
 	if (unaligned[1] >= 0)
 		psc_vbitmap_set(s->slvr_slab->slb_inuse, unaligned[1]);
-		//psc_vbitmap_printbin1(s->slvr_slab->slb_inuse);
+
+//	psc_vbitmap_printbin1(s->slvr_slab->slb_inuse);
+
  out:
 	if (!rc && s->slvr_flags & SLVR_FAULTING) {
 		s->slvr_flags |= SLVR_DATARDY;

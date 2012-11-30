@@ -80,7 +80,6 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 	if (rc) {
 		SLVR_LOCK(s);
 		if (rc != -SLERR_AIOWAIT) {
-			//slvr_clear_inuse(s, 0, slvrsiz);
 			psc_vbitmap_clearall(s->slvr_slab->slb_inuse);
 			s->slvr_flags |= SLVR_REPLFAIL;
 		} else {
