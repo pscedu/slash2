@@ -201,7 +201,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (((mq->offset + (mq->size-1)) / SLASH_SLVR_SIZE) > slvrno)
 		nslvrs++;
 
-	for (i = 0; i < nslvrs; i++) 
+	for (i = 0; i < nslvrs; i++)
 		slvr_ref[i] = NULL;
 
 	/*
@@ -217,8 +217,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		    bmap_2_biodi(bmap), rw);
 		slvr_slab_prep(slvr_ref[i], rw);
 
-		/* Fault in pages either for read or RBW.
-		 */
+		/* Fault in pages either for read or RBW. */
 		len[i] = MIN(tsize, SLASH_SLVR_SIZE - roff);
 		rv = slvr_io_prep(slvr_ref[i], roff, len[i], rw,
 		    &aiocbr);
@@ -231,14 +230,16 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			goto out;
 		}
 
-		/* mq->offset is the offset into the bmap, here we must
-		 *  translate it into the offset of the sliver.
+		/*
+		 * mq->offset is the offset into the bmap, here we must
+		 * translate it into the offset of the sliver.
 		 */
 		iovs[i].iov_base = slvr_ref[i]->slvr_slab->slb_base + roff;
 		tsize -= iovs[i].iov_len = len[i];
 
-		/* Avoid more complicated errors within lnet by ensuring
-		 *   that len is non-zero.
+		/*
+		 * Avoid more complicated errors within lnet by ensuring
+		 * that len is non-zero.
 		 */
 		psc_assert(iovs[i].iov_len > 0);
 	}
@@ -334,8 +335,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 				goto out;
 			}
 
-			/* Only the first sliver may use a blk offset.
-			 */
+			/* Only the first sliver may use a blk offset. */
 			sblk = 0;
 			slvr_wio_done(slvr_ref[i]);
 		} else
