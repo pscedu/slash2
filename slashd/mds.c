@@ -977,6 +977,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 
 	bmap_wake_locked(b);
 	BMAP_ULOCK(b);
+
 	/* On error, the caller will issue mds_bmap_bml_release() which
 	 *   deals with the gory details of freeing a fullly, or partially,
 	 *   instantiated bml.  Therefore, BMAP_OPCNT_LEASE will not be
@@ -1090,13 +1091,14 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	DEBUG_BMAP(PLL_INFO, b, "bml=%p fl=%d seq=%"PRId64, bml,
 		   bml->bml_flags, bml->bml_seq);
 
-	/* BMAP_IONASSIGN acts as a barrier for operations which
-	 *   may modify bmdsi_wr_ion.  Since ops associated with
-	 *   BMAP_IONASSIGN do disk and net i/o, the spinlock is
-	 *   dropped.
+	/*
+	 * BMAP_IONASSIGN acts as a barrier for operations which may
+	 * modify bmdsi_wr_ion.  Since ops associated with
+	 * BMAP_IONASSIGN do disk and net I/O, the spinlock is dropped.
+	 *
 	 * XXX actually, the bcm_lock is not dropped until the very end.
-	 *   if this becomes problematic we should investigate more.
-	 *   ATM the BMAP_IONASSIGN is not relied upon
+	 * If this becomes problematic we should investigate more.
+	 * ATM the BMAP_IONASSIGN is not relied upon
 	 */
 	(void)BMAP_RLOCK(b);
 	bmap_wait_locked(b, (b->bcm_flags & BMAP_IONASSIGN));
@@ -1121,6 +1123,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		mds_bmap_timeotbl_mdsi(bml, BTE_DEL);
 		BML_LOCK(bml);
 	}
+
 	/*
 	 * If I am called by the timeout thread, then the refcnt is zero.
 	 */
