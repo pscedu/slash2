@@ -106,7 +106,7 @@ struct slmds_jent_bmap_assign {
 	uint64_t			sjba_seq;
 	uint32_t			sjba_flags;
 	sl_bmapno_t			sjba_bmapno;
-	time_t				sjba_start;
+	uint64_t			sjba_start;
 } __packed;
 
 struct slmds_jent_bmapseq {
