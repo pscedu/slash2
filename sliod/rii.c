@@ -95,7 +95,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		} else {
 			psc_vbitmap_clearall(s->slvr_slab->slb_inuse);
 			s->slvr_flags |= SLVR_REPLFAIL;
-//			slvr_try_crcsched_locked(slvr_ref[i]);
+			slvr_try_crcsched_locked(s);
 		}
 		SLVR_ULOCK(s);
 	}
