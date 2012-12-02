@@ -79,10 +79,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 
 	if (rc) {
 		SLVR_LOCK(s);
-		if (rc != -SLERR_AIOWAIT) {
-			psc_vbitmap_clearall(s->slvr_slab->slb_inuse);
-			s->slvr_flags |= SLVR_REPLFAIL;
-		} else {
+		if (rc == -SLERR_AIOWAIT) {
 			s->slvr_flags |= SLVR_AIOWAIT;
 			aio = 1;
 			/*
@@ -95,6 +92,10 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 			s->slvr_pndgwrts--;
 			s->slvr_flags &= ~(SLVR_REPLDST|SLVR_REPLWIRE);
 			SLVR_WAKEUP(s);
+		} else {
+			psc_vbitmap_clearall(s->slvr_slab->slb_inuse);
+			s->slvr_flags |= SLVR_REPLFAIL;
+//			slvr_try_crcsched_locked(slvr_ref[i]);
 		}
 		SLVR_ULOCK(s);
 	}
