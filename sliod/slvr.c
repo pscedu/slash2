@@ -973,7 +973,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 		    s->slvr_pndgwrts == 1);
 
 		blks = len / SLASH_SLVR_BLKSZ +
-			(len & SLASH_SLVR_BLKMASK) ? 1 : 0;
+		    (len & SLASH_SLVR_BLKMASK) ? 1 : 0;
 
 		psc_vbitmap_setrange(s->slvr_slab->slb_inuse, 0, blks);
 		SLVR_ULOCK(s);
@@ -1126,10 +1126,11 @@ slvr_try_crcsched_locked(struct slvr_ref *s)
 	if ((s->slvr_flags & SLVR_LRU) && s->slvr_pndgwrts > 1)
 		slvr_lru_requeue(s, 1);
 
-	/* If there are no more pending writes, schedule a CRC op.
-	 *   Increment slvr_compwrts to prevent a crc op from being skipped
-	 *   which can happen due to the release of the slvr lock being
-	 *   released prior to the crc of the buffer.
+	/*
+	 * If there are no more pending writes, schedule a CRC op.
+	 * Increment slvr_compwrts to prevent a CRC op from being
+	 * skipped which can happen due to the release of the slvr lock
+	 * being released prior to the CRC of the buffer.
 	 */
 	s->slvr_pndgwrts--;
 	s->slvr_compwrts++;
