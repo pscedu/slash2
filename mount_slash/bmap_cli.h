@@ -33,11 +33,7 @@
  */
 #define NUM_BMAP_FLUSH_THREADS		1
 
-/* Less than this value, lease retries are blocking
- */
-#define BMAP_LEASE_AGE_RETRY		10
-
-/*
+/**
  * bmap_cli_data - private data associated with a bmap used by a SLASH2 client
  */
 struct bmap_cli_info {

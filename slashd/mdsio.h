@@ -149,7 +149,6 @@ struct mdsio_ops {
 #define mdsio_setattrmask_2_slflags mdsio_ops.mio_setattrmask_2_slflags	/* zfsslash2_setattrmask_2_slflags() */
 #define mdsio_slflags_2_setattrmask mdsio_ops.mio_slflags_2_setattrmask	/* zfsslash2_slflags_2_setattrmask() */
 
-#define mdsio_access		mdsio_ops.mio_access			/* zfsslash2_access() */
 #define mdsio_fsync		mdsio_ops.mio_fsync			/* zfsslash2_fsync() */
 #define mdsio_getattr		mdsio_ops.mio_getattr			/* zfsslash2_getattr() */
 #define mdsio_link		mdsio_ops.mio_link			/* zfsslash2_link() */
