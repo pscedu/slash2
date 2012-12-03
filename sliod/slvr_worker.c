@@ -169,7 +169,7 @@ slvr_worker_push_crcups(void)
 		if (bcr_2_bmap(bcr)->bcm_flags & BMAP_IOD_INFLIGHT)
 			DEBUG_BCR(PLL_FATAL, bcr, "tried to schedule "
 				  "multiple bcr's xid=%"PRIu64,
-				  bcr->bcr_bii->biod_bcr_xid_last);
+				  bcr->bcr_bii->bii_bcr_xid_last);
 
 		bcr_2_bmap(bcr)->bcm_flags |= BMAP_IOD_INFLIGHT;
 
@@ -512,7 +512,7 @@ slvr_worker_int(void)
 		    &b->bcm_fcmh->fcmh_fg);
 
 		bcr->bcr_bii = bii;
-		bcr->bcr_xid = bii->biod_bcr_xid++;
+		bcr->bcr_xid = bii->bii_bcr_xid++;
 		bcr->bcr_crcup.blkno = b->bcm_bmapno;
 		bcr->bcr_crcup.crcs[0].crc = crc;
 		bcr->bcr_crcup.crcs[0].slot = slvr_num;

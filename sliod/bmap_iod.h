@@ -86,14 +86,14 @@ struct bmap_iod_rls {
 	psclogs((level), SLSS_BMAP,					\
 	    "bcr@%p fid="SLPRI_FG" xid=%"PRIu64" nups=%d fl=%d "	\
 	    "age=%"PSCPRI_TIMET" "					\
-	    "bmap@%p:%u biod_bcr_xid=%"PRId64" "			\
-	    "biod_bcr_xid_last=%"PRId64" :: " fmt,			\
+	    "bmap@%p:%u bcr_xid=%"PRId64" "				\
+	    "bcr_xid_last=%"PRId64" :: " fmt,				\
 	    (bcr), SLPRI_FG_ARGS(&(bcr)->bcr_crcup.fg), (bcr)->bcr_xid,	\
 	    (bcr)->bcr_crcup.nups, (bcr)->bcr_flags,			\
 	    (bcr)->bcr_age.tv_sec,					\
 	    bcr_2_bmap(bcr), bcr_2_bmap(bcr)->bcm_bmapno,		\
-	    (bcr)->bcr_bii->biod_bcr_xid,				\
-	    (bcr)->bcr_bii->biod_bcr_xid_last, ## __VA_ARGS__)
+	    (bcr)->bcr_bii->bii_bcr_xid,				\
+	    (bcr)->bcr_bii->bii_bcr_xid_last, ## __VA_ARGS__)
 
 SPLAY_HEAD(biod_slvrtree, slvr_ref);
 
@@ -121,8 +121,8 @@ struct bmap_iod_info {
 	struct timespec		 bii_age;
 	struct psc_lockedlist	 biod_bklog_bcrs;	/* at most one CRC update RPC per bmap */
 	struct psc_lockedlist	 biod_rls;
-	uint64_t		 biod_bcr_xid;
-	uint64_t		 biod_bcr_xid_last;
+	uint64_t		 bii_bcr_xid;
+	uint64_t		 bii_bcr_xid_last;
 	psc_atomic32_t		 biod_crcdrty_slvrs;
 };
 

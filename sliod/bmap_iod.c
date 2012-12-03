@@ -187,12 +187,12 @@ bcr_xid_check(struct biod_crcup_ref *bcr)
 	int locked;
 
 	locked = BII_RLOCK(bcr->bcr_bii);
-	psc_assert(bcr->bcr_xid < bcr->bcr_bii->biod_bcr_xid);
-	psc_assert(bcr->bcr_xid == bcr->bcr_bii->biod_bcr_xid_last);
+	psc_assert(bcr->bcr_xid < bcr->bcr_bii->bii_bcr_xid);
+	psc_assert(bcr->bcr_xid == bcr->bcr_bii->bii_bcr_xid_last);
 	/* bcr_xid_check() must be called prior to bumping xid_last.
 	 */
-	psc_assert(bcr->bcr_bii->biod_bcr_xid >
-		   bcr->bcr_bii->biod_bcr_xid_last);
+	psc_assert(bcr->bcr_bii->bii_bcr_xid >
+		   bcr->bcr_bii->bii_bcr_xid_last);
 
 	BII_URLOCK(bcr->bcr_bii, locked);
 }
@@ -201,7 +201,7 @@ static void
 bcr_xid_last_bump(struct biod_crcup_ref *bcr)
 {
 	bcr_xid_check(bcr);
-	bcr->bcr_bii->biod_bcr_xid_last++;
+	bcr->bcr_bii->bii_bcr_xid_last++;
 	bcr_2_bmap(bcr)->bcm_flags &= ~BMAP_IOD_INFLIGHT;
 }
 
@@ -211,10 +211,10 @@ biod_rlssched_locked(struct bmap_iod_info *bii)
 	BII_LOCK_ENSURE(bii);
 
 	DEBUG_BMAP(PLL_INFO, bii_2_bmap(bii), "crcdrty_slvrs=%d "
-	   "BMAP_IOD_RLSSEQ=(%d) biod_bcr_xid=%"PRId64" biod_bcr_xid_last=%"
+	   "BMAP_IOD_RLSSEQ=(%d) bcr_xid=%"PRId64" bcr_xid_last=%"
 	   PRId64, psc_atomic32_read(&bii->biod_crcdrty_slvrs),
-	   !!(bii_2_flags(bii) & BMAP_IOD_RLSSEQ), bii->biod_bcr_xid,
-	   bii->biod_bcr_xid_last);
+	   !!(bii_2_flags(bii) & BMAP_IOD_RLSSEQ), bii->bii_bcr_xid,
+	   bii->bii_bcr_xid_last);
 
 	if (bii_2_bmap(bii)->bcm_flags & BMAP_IOD_RLSSCHED)
 		/*
@@ -229,7 +229,7 @@ biod_rlssched_locked(struct bmap_iod_info *bii)
 
 		if (!psc_atomic32_read(&bii->biod_crcdrty_slvrs) &&
 		    (bii_2_bmap(bii)->bcm_flags & BMAP_IOD_RLSSEQ) &&
-		    (bii->biod_bcr_xid == bii->biod_bcr_xid_last)) {
+		    (bii->bii_bcr_xid == bii->bii_bcr_xid_last)) {
 			BMAP_SETATTR(bii_2_bmap(bii), BMAP_IOD_RLSSCHED);
 			lc_addtail(&bmapRlsQ, bii);
 		}
@@ -254,7 +254,7 @@ bcr_ready_remove(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 	psc_assert(bcr->bcr_flags & BCR_SCHEDULED);
 	bcr_xid_last_bump(bcr);
 
-	if (bii->biod_bcr_xid == bii->biod_bcr_xid_last) {
+	if (bii->bii_bcr_xid == bii->bii_bcr_xid_last) {
 		/* This was the last bcr. */
 		psc_assert(pll_empty(&bii->biod_bklog_bcrs));
 		psc_assert(!bii->bii_bcr);
@@ -284,11 +284,11 @@ bcr_finalize(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 	psc_assert(b->bcm_flags & BMAP_IOD_BCRSCHED);
 
 	/*
-	 * bii->biod_bcr_xid_last is bumped in bcr_ready_remove().
+	 * bii->bii_bcr_xid_last is bumped in bcr_ready_remove().
 	 * bcr_ready_remove() may release the bmap so it must be issued
 	 * at the end of this call.
 	 */
-	if (bii->biod_bcr_xid > bii->biod_bcr_xid_last + 1) {
+	if (bii->bii_bcr_xid > bii->bii_bcr_xid_last + 1) {
 		struct biod_crcup_ref *tmp;
 
 		tmp = pll_gethead(&bii->biod_bklog_bcrs);
@@ -359,14 +359,14 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 			DEBUG_BMAP(PLL_INFO, b, "ndrty=%u nrls=%d xid=%"PRIu64
 			   " xid_last=%"PRIu64,
 			   psc_atomic32_read(&bii->biod_crcdrty_slvrs),
-			   pll_nitems(&bii->biod_rls), bii->biod_bcr_xid,
-			   bii->biod_bcr_xid_last);
+			   pll_nitems(&bii->biod_rls), bii->bii_bcr_xid,
+			   bii->bii_bcr_xid_last);
 
 			psc_assert(bii_2_flags(bii) & BMAP_IOD_RLSSEQ);
 			psc_assert(bii_2_flags(bii) & BMAP_IOD_RLSSCHED);
 
 			if (psc_atomic32_read(&bii->biod_crcdrty_slvrs) ||
-			    (bii->biod_bcr_xid != bii->biod_bcr_xid_last)) {
+			    (bii->bii_bcr_xid != bii->bii_bcr_xid_last)) {
 				/* Temporarily remove unreapable bii's */
 				psc_dynarray_add(&a, bii);
 				BII_ULOCK(bii);
