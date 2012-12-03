@@ -194,7 +194,7 @@ slvr_worker_push_crcups(void)
 			continue;
 
 		if (now.tv_sec <
-		    (bcr->bcr_age.tv_sec + BII_CRCUP_MAX_AGE)) {
+		    (bcr->bcr_age.tv_sec + BCR_MAX_AGE)) {
 			BII_ULOCK(bcr->bcr_bii);
 			continue;
 		}
