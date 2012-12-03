@@ -147,6 +147,7 @@ main(int argc, char *argv[])
 	PRTYPE(slfid_t);
 	PRTYPE(struct biod_crcup_ref);
 	PRTYPE(struct biod_infl_crcs);
+	PRTYPE(struct bmap);
 	PRTYPE(struct bmap_cli_info);
 	PRTYPE(struct bmap_core_state);
 	PRTYPE(struct bmap_extra_state);
@@ -162,7 +163,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct bmap_pagecache_entry);
 	PRTYPE(struct bmap_repls_upd_odent);
 	PRTYPE(struct bmap_timeo_table);
-	PRTYPE(struct bmapc_memb);
 	PRTYPE(struct bmpc_ioreq);
 	PRTYPE(struct bmpc_write_coalescer);
 	PRTYPE(struct cli_finfo);
@@ -348,6 +348,7 @@ main(int argc, char *argv[])
 	printf("\nvalues:\n");
 	PRVAL(AUTHBUF_KEYSIZE);
 	PRVAL(AUTHBUF_REPRLEN);
+	PRVAL(BCR_MAX_AGE);
 	PRVAL(BIM_MINAGE);
 	PRVAL(BIM_RETRIEVE_SEQ);
 	PRVAL(BMAP_CLI_DIOWAIT_SECS);
