@@ -457,7 +457,7 @@ slvr_worker_int(void)
 	SLVR_ULOCK(s);
 
 	BII_LOCK(bii);
-	bcr = bii->biod_bcr;
+	bcr = bii->bii_bcr;
 
 	if (bcr) {
 		uint32_t i, found;
@@ -492,7 +492,7 @@ slvr_worker_int(void)
 				/* This is a backlogged bcr, cap it and
 				 *   move on.
 				 */
-				bcr->bcr_bii->biod_bcr = NULL;
+				bcr->bcr_bii->bii_bcr = NULL;
 			else
 				/* The bcr is full, push it out now. */
 				bcr_hold_2_ready(&binflCrcs, bcr);
@@ -502,7 +502,7 @@ slvr_worker_int(void)
 		bmap_op_start_type(b, BMAP_OPCNT_BCRSCHED);
 
 		/* Freed by bcr_ready_remove() */
-		bii->biod_bcr = bcr =
+		bii->bii_bcr = bcr =
 		    PSCALLOC(sizeof(struct biod_crcup_ref) +
 			(sizeof(struct srt_bmap_crcwire) *
 			 MAX_BMAP_INODE_PAIRS));

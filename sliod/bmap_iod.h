@@ -115,7 +115,7 @@ struct bmap_iod_info {
 	 * new biod_crcup_ref structure must be allocated for future
 	 * CRC updates.
 	 */
-	struct biod_crcup_ref	*biod_bcr;
+	struct biod_crcup_ref	*bii_bcr;
 	struct biod_slvrtree	 biod_slvrs;
 	struct psclist_head	 bii_lentry;
 	struct timespec		 bii_age;
