@@ -264,8 +264,6 @@ main(int argc, char *argv[])
 	sli_rpc_initsvc();
 	psc_tiosthr_spawn(SLITHRT_TIOS, "slitiosthr");
 	slibmaprlsthr_spawn();
-	lc_reginit(&bmapReapQ, struct bmapc_memb, bcm_lentry,
-	    "bmapReapQ");
 
 	slictlthr_main(sfn);
 	/* NOTREACHED */

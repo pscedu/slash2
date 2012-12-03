@@ -36,7 +36,6 @@
 struct bmap_iod_minseq	 bimSeq;
 static struct timespec	 bim_timeo = { BIM_MINAGE, 0 };
 
-struct psc_listcache	 bmapReapQ;
 struct psc_listcache	 bmapRlsQ;
 
 struct psc_poolmaster    bmap_rls_poolmaster;
@@ -225,7 +224,7 @@ biod_rlssched_locked(struct bmap_iod_info *biod)
 		psc_assert(bii_2_bmap(biod)->bcm_flags & BMAP_IOD_RLSSEQ);
 
 	else {
-		psc_assert(psclist_disjoint(&biod->biod_lentry));
+		psc_assert(psclist_disjoint(&biod->bii_lentry));
 
 		if (!psc_atomic32_read(&biod->biod_crcdrty_slvrs) &&
 		    (bii_2_bmap(biod)->bcm_flags & BMAP_IOD_RLSSEQ) &&
@@ -442,7 +441,7 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 void
 slibmaprlsthr_spawn(void)
 {
-	lc_reginit(&bmapRlsQ, struct bmap_iod_info, biod_lentry,
+	lc_reginit(&bmapRlsQ, struct bmap_iod_info, bii_lentry,
 	    "bmapRlsQ");
 
 	pscthr_init(SLITHRT_BMAPRLS, 0, slibmaprlsthr_main, NULL, 0,
@@ -457,7 +456,7 @@ iod_bmap_init(struct bmapc_memb *b)
 	biod = bmap_2_bii(b);
 
 	memset(biod, 0, sizeof(*biod));
-	INIT_PSC_LISTENTRY(&biod->biod_lentry);
+	INIT_PSC_LISTENTRY(&biod->bii_lentry);
 	SPLAY_INIT(&biod->biod_slvrs);
 	pll_init(&biod->biod_bklog_bcrs, struct biod_crcup_ref,
 	    bcr_lentry, NULL);
@@ -465,7 +464,7 @@ iod_bmap_init(struct bmapc_memb *b)
 	pll_init(&biod->biod_rls, struct bmap_iod_rls,
 	    bir_lentry, NULL);
 
-	PFL_GETTIMESPEC(&biod->biod_age);
+	PFL_GETTIMESPEC(&biod->bii_age);
 
 	psc_atomic32_set(&biod->biod_crcdrty_slvrs, 0);
 
@@ -484,7 +483,7 @@ iod_bmap_finalcleanup(struct bmapc_memb *b)
 	biod = bmap_2_bii(b);
 	psc_assert(pll_empty(&biod->biod_rls));
 	psc_assert(SPLAY_EMPTY(&biod->biod_slvrs));
-	psc_assert(psclist_disjoint(&biod->biod_lentry));
+	psc_assert(psclist_disjoint(&biod->bii_lentry));
 
 	psc_assert(!psc_atomic32_read(&biod->biod_crcdrty_slvrs));
 }

@@ -107,7 +107,7 @@ struct bmap_iod_info {
 	 * bmap_ondisk will be laid contiguously in memory for I/O over
 	 * the network and with ZFS.
 	 */
-	struct bmap_extra_state	 biod_extrastate;
+	struct bmap_extra_state	 bii_extrastate;
 
 	/*
 	 * Accumulate CRC updates until its associated biod_crcup_ref
@@ -117,8 +117,8 @@ struct bmap_iod_info {
 	 */
 	struct biod_crcup_ref	*biod_bcr;
 	struct biod_slvrtree	 biod_slvrs;
-	struct psclist_head	 biod_lentry;
-	struct timespec		 biod_age;
+	struct psclist_head	 bii_lentry;
+	struct timespec		 bii_age;
 	struct psc_lockedlist	 biod_bklog_bcrs;	/* at most one CRC update RPC per bmap */
 	struct psc_lockedlist	 biod_rls;
 	uint64_t		 biod_bcr_xid;
@@ -135,8 +135,8 @@ struct bmap_iod_info {
 #define bii_2_flags(b)		bii_2_bmap(b)->bcm_flags
 
 #define bmap_2_bii(b)		((struct bmap_iod_info *)bmap_get_pri(b))
-#define bmap_2_bii_age(b)	bmap_2_bii(b)->biod_age
-#define bmap_2_bii_lentry(b)	bmap_2_bii(b)->biod_lentry
+#define bmap_2_bii_age(b)	bmap_2_bii(b)->bii_age
+#define bmap_2_bii_lentry(b)	bmap_2_bii(b)->bii_lentry
 #define bmap_2_bii_slvrs(b)	(&bmap_2_bii(b)->biod_slvrs)
 #define bmap_2_ondisk(b)	((struct bmap_ondisk *)&(b)->bcm_corestate)
 
@@ -168,7 +168,6 @@ void biod_rlssched_locked(struct bmap_iod_info *);
 void slibmaprlsthr_spawn(void);
 
 extern struct psc_listcache	 bmapRlsQ;
-extern struct psc_listcache	 bmapReapQ;
 extern struct psc_poolmaster	 bmap_rls_poolmaster;
 extern struct psc_poolmgr	*bmap_rls_pool;
 
