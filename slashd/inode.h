@@ -101,7 +101,6 @@ struct slash_inode_handle {
 #define	INOH_HAVE_EXTRAS	(1 << 0)			/* inoh_extras are loaded in mem */
 #define	INOH_INO_NEW		(1 << 1)			/* not yet written to disk */
 #define	INOH_INO_NOTLOADED	(1 << 2)
-#define	INOH_IN_IO		(1 << 3)			/* being written to ZFS */
 
 #define INOH_GETLOCK(ih)	(&(ih)->inoh_fcmh->fcmh_lock)
 #define INOH_LOCK(ih)		spinlock(INOH_GETLOCK(ih))
@@ -114,22 +113,18 @@ struct slash_inode_handle {
 #define inoh_2_fsz(ih)		fcmh_2_fsz((ih)->inoh_fcmh)
 #define inoh_2_fid(ih)		fcmh_2_fid((ih)->inoh_fcmh)
 
-#define INOH_FLAGS_FMT		"%s%s%s%s"
-#define DEBUG_INOH_FLAGS(i)						\
-	(i)->inoh_flags & INOH_HAVE_EXTRAS	? "X" : "",		\
-	(i)->inoh_flags & INOH_INO_NEW		? "N" : "",		\
-	(i)->inoh_flags & INOH_INO_NOTLOADED	? "L" : "",		\
-	(i)->inoh_flags & INOH_IN_IO		? "I" : ""
-
 #define DEBUG_INOH(level, ih, fmt, ...)					\
 	do {								\
 		char _buf[LINE_MAX];					\
 									\
 		psclog((level), "inoh@%p fcmh=%p f+g="SLPRI_FG" "	\
-		    "fl:%#x:"INOH_FLAGS_FMT" %s :: " fmt,		\
+		    "fl:%#x:%s%s%s :: " fmt,				\
 		    (ih), (ih)->inoh_fcmh,				\
 		    SLPRI_FG_ARGS(&(ih)->inoh_fcmh->fcmh_fg),		\
-		    (ih)->inoh_flags, DEBUG_INOH_FLAGS(ih),		\
+		    (ih)->inoh_flags,					\
+		    (ih)->inoh_flags & INOH_HAVE_EXTRAS	  ? "X" : "",	\
+		    (ih)->inoh_flags & INOH_INO_NEW	  ? "N" : "",	\
+		    (ih)->inoh_flags & INOH_INO_NOTLOADED ? "L" : "",	\
 		    _dump_ino(_buf, sizeof(_buf), &(ih)->inoh_ino),	\
 		    ## __VA_ARGS__);					\
 	} while (0)
