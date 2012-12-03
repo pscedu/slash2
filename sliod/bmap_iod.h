@@ -50,7 +50,7 @@ struct biod_crcup_ref {
 	uint64_t		 bcr_xid;
 	uint16_t		 bcr_flags;
 	struct timespec		 bcr_age;
-	struct bmap_iod_info	*bcr_biodi;
+	struct bmap_iod_info	*bcr_bii;
 	struct psclist_head	 bcr_lentry;
 	struct srm_bmap_crcup	 bcr_crcup;
 };
@@ -59,7 +59,7 @@ struct biod_crcup_ref {
 #define	BCR_NONE		0x00
 #define BCR_SCHEDULED		0x01
 
-#define bcr_2_bmap(bcr)		bii_2_bmap((bcr)->bcr_biodi)
+#define bcr_2_bmap(bcr)		bii_2_bmap((bcr)->bcr_bii)
 
 struct bmap_iod_minseq {
 	psc_spinlock_t		 bim_lock;
@@ -92,8 +92,8 @@ struct bmap_iod_rls {
 	    (bcr)->bcr_crcup.nups, (bcr)->bcr_flags,			\
 	    (bcr)->bcr_age.tv_sec,					\
 	    bcr_2_bmap(bcr), bcr_2_bmap(bcr)->bcm_bmapno,		\
-	    (bcr)->bcr_biodi->biod_bcr_xid,				\
-	    (bcr)->bcr_biodi->biod_bcr_xid_last, ## __VA_ARGS__)
+	    (bcr)->bcr_bii->biod_bcr_xid,				\
+	    (bcr)->bcr_bii->biod_bcr_xid_last, ## __VA_ARGS__)
 
 SPLAY_HEAD(biod_slvrtree, slvr_ref);
 
@@ -134,11 +134,10 @@ struct bmap_iod_info {
 
 #define bii_2_flags(b)		bii_2_bmap(b)->bcm_flags
 
-#define bmap_2_biodi(b)		((struct bmap_iod_info *)bmap_get_pri(b))
 #define bmap_2_bii(b)		((struct bmap_iod_info *)bmap_get_pri(b))
-#define bmap_2_biodi_age(b)	bmap_2_biodi(b)->biod_age
-#define bmap_2_biodi_lentry(b)	bmap_2_biodi(b)->biod_lentry
-#define bmap_2_biodi_slvrs(b)	(&bmap_2_biodi(b)->biod_slvrs)
+#define bmap_2_bii_age(b)	bmap_2_bii(b)->biod_age
+#define bmap_2_bii_lentry(b)	bmap_2_bii(b)->biod_lentry
+#define bmap_2_bii_slvrs(b)	(&bmap_2_bii(b)->biod_slvrs)
 #define bmap_2_ondisk(b)	((struct bmap_ondisk *)&(b)->bcm_corestate)
 
 #define BMAP_SLVR_WANTREPL	(_BMAP_SLVR_FLSHFT)	/* Queued for replication */

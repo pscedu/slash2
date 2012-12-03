@@ -145,14 +145,14 @@ bcr_hold_2_ready(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 {
 	int locked;
 
-	BIOD_LOCK_ENSURE(bcr->bcr_biodi);
+	BIOD_LOCK_ENSURE(bcr->bcr_bii);
 
 	locked = reqlock(&inf->binfcrcs_lock);
 	pll_remove(&inf->binfcrcs_hold, bcr);
 	pll_addtail(&inf->binfcrcs_ready, bcr);
 	ureqlock(&inf->binfcrcs_lock, locked);
 
-	bcr->bcr_biodi->biod_bcr = NULL;
+	bcr->bcr_bii->biod_bcr = NULL;
 }
 
 void
@@ -187,25 +187,24 @@ bcr_xid_check(struct biod_crcup_ref *bcr)
 {
 	int locked;
 
-	locked = BIOD_RLOCK(bcr->bcr_biodi);
-	psc_assert(bcr->bcr_xid < bcr->bcr_biodi->biod_bcr_xid);
-	psc_assert(bcr->bcr_xid == bcr->bcr_biodi->biod_bcr_xid_last);
+	locked = BIOD_RLOCK(bcr->bcr_bii);
+	psc_assert(bcr->bcr_xid < bcr->bcr_bii->biod_bcr_xid);
+	psc_assert(bcr->bcr_xid == bcr->bcr_bii->biod_bcr_xid_last);
 	/* bcr_xid_check() must be called prior to bumping xid_last.
 	 */
-	psc_assert(bcr->bcr_biodi->biod_bcr_xid >
-		   bcr->bcr_biodi->biod_bcr_xid_last);
+	psc_assert(bcr->bcr_bii->biod_bcr_xid >
+		   bcr->bcr_bii->biod_bcr_xid_last);
 
-	BIOD_URLOCK(bcr->bcr_biodi, locked);
+	BIOD_URLOCK(bcr->bcr_bii, locked);
 }
 
 static void
 bcr_xid_last_bump(struct biod_crcup_ref *bcr)
 {
 	bcr_xid_check(bcr);
-	bcr->bcr_biodi->biod_bcr_xid_last++;
+	bcr->bcr_bii->biod_bcr_xid_last++;
 	bcr_2_bmap(bcr)->bcm_flags &= ~BMAP_IOD_INFLIGHT;
 }
-
 
 void
 biod_rlssched_locked(struct bmap_iod_info *biod)
@@ -238,27 +237,26 @@ biod_rlssched_locked(struct bmap_iod_info *biod)
 
 }
 
-/*
- * We are done with this batch of CRC updates.   Drop its reference to the bmap
- * and free the CRC update structure.
+/**
+ * bcr_ready_remove - We are done with this batch of CRC updates.   Drop
+ *	its reference to the bmap and free the CRC update structure.
  */
 __static void
 bcr_ready_remove(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 {
-	struct bmap_iod_info *biod = bcr->bcr_biodi;
+	struct bmap_iod_info *biod = bcr->bcr_bii;
 
 	spinlock(&inf->binfcrcs_lock);
 	pll_remove(&inf->binfcrcs_ready, bcr);
 	atomic_dec(&inf->binfcrcs_nbcrs);
 	freelock(&inf->binfcrcs_lock);
 
-	BIOD_LOCK(bcr->bcr_biodi);
+	BIOD_LOCK(bcr->bcr_bii);
 	psc_assert(bcr->bcr_flags & BCR_SCHEDULED);
 	bcr_xid_last_bump(bcr);
 
 	if (biod->biod_bcr_xid == biod->biod_bcr_xid_last) {
-		/* This was the last bcr.
-		 */
+		/* This was the last bcr. */
 		psc_assert(pll_empty(&biod->biod_bklog_bcrs));
 		psc_assert(!biod->biod_bcr);
 		BMAP_CLEARATTR(bii_2_bmap(biod), BMAP_IOD_BCRSCHED);
@@ -269,7 +267,7 @@ bcr_ready_remove(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 
 		biod_rlssched_locked(biod);
 	}
-	BIOD_ULOCK(bcr->bcr_biodi);
+	BIOD_ULOCK(bcr->bcr_bii);
 
 	bmap_op_done_type(bcr_2_bmap(bcr), BMAP_OPCNT_BCRSCHED);
 	PSCFREE(bcr);
@@ -278,7 +276,7 @@ bcr_ready_remove(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 void
 bcr_finalize(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 {
-	struct bmap_iod_info *biod = bcr->bcr_biodi;
+	struct bmap_iod_info *biod = bcr->bcr_bii;
 
 	DEBUG_BCR(PLL_INFO, bcr, "finalize");
 
@@ -334,8 +332,8 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 	struct pscrpc_request *rq = NULL;
 	struct slashrpc_cservice *csvc;
 	struct bmap_iod_info *biod;
-	struct bmapc_memb *b;
 	struct bmap_iod_rls *brls;
+	struct bmapc_memb *b;
 	int nrls, rc, i;
 
 	brr = PSCALLOC(sizeof(struct srm_bmap_release_req));
@@ -366,8 +364,7 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 			if (psc_atomic32_read(&biod->biod_crcdrty_slvrs) ||
 			    (biod->biod_bcr_xid != biod->biod_bcr_xid_last)) {
-				/* Temporarily remove unreapable biod's
-				 */
+				/* Temporarily remove unreapable biod's */
 				psc_dynarray_add(&a, biod);
 				BIOD_ULOCK(biod);
 				continue;

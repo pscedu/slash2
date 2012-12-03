@@ -148,8 +148,8 @@ slvr_worker_push_crcups(void)
 	 * Check if an earlier CRC update RPC, if any, has finished.  If
 	 * one is still inflight, we won't be able to initiate a new one.
 	 */
-	spinlock(&binflCrcs.binfcrcs_lock);
 	bcrs = PSCALLOC(sizeof(struct psc_dynarray));
+	spinlock(&binflCrcs.binfcrcs_lock);
 
 	/*
 	 * Leave scheduled bcr's on the list so that in case of a
@@ -158,25 +158,25 @@ slvr_worker_push_crcups(void)
 	PLL_FOREACH(bcr, &binflCrcs.binfcrcs_ready) {
 		psc_assert(bcr->bcr_crcup.nups > 0);
 
-		if (!BIOD_TRYLOCK(bcr->bcr_biodi))
+		if (!BIOD_TRYLOCK(bcr->bcr_bii))
 			continue;
 
 		if (bcr->bcr_flags & BCR_SCHEDULED) {
-			BIOD_ULOCK(bcr->bcr_biodi);
+			BIOD_ULOCK(bcr->bcr_bii);
 			continue;
 		}
 
 		if (bcr_2_bmap(bcr)->bcm_flags & BMAP_IOD_INFLIGHT)
 			DEBUG_BCR(PLL_FATAL, bcr, "tried to schedule "
 				  "multiple bcr's xid=%"PRIu64,
-				  bcr->bcr_biodi->biod_bcr_xid_last);
+				  bcr->bcr_bii->biod_bcr_xid_last);
 
 		bcr_2_bmap(bcr)->bcm_flags |= BMAP_IOD_INFLIGHT;
 
 		psc_dynarray_add(bcrs, bcr);
 		bcr->bcr_flags |= BCR_SCHEDULED;
 
-		BIOD_ULOCK(bcr->bcr_biodi);
+		BIOD_ULOCK(bcr->bcr_bii);
 
 		DEBUG_BCR(PLL_INFO, bcr, "scheduled nbcrs=%d total_bcrs=%d",
 			  psc_dynarray_len(bcrs),
@@ -190,19 +190,18 @@ slvr_worker_push_crcups(void)
 	/* Now scan for old bcr's hanging about. */
 	PLL_FOREACH_SAFE(bcr, tmp, &binflCrcs.binfcrcs_hold) {
 		/* Use trylock here to avoid deadlock. */
-		if (!BIOD_TRYLOCK(bcr->bcr_biodi))
+		if (!BIOD_TRYLOCK(bcr->bcr_bii))
 			continue;
 
 		if (now.tv_sec <
 		    (bcr->bcr_age.tv_sec + BIOD_CRCUP_MAX_AGE)) {
-			BIOD_ULOCK(bcr->bcr_biodi);
+			BIOD_ULOCK(bcr->bcr_bii);
 			continue;
 		}
 
 		bcr_hold_2_ready(&binflCrcs, bcr);
 		DEBUG_BCR(PLL_INFO, bcr, "old, moved to ready");
-		BIOD_ULOCK(bcr->bcr_biodi);
-
+		BIOD_ULOCK(bcr->bcr_bii); 
 	}
 	freelock(&binflCrcs.binfcrcs_lock);
 
@@ -220,10 +219,10 @@ slvr_worker_push_crcups(void)
 			for (i = 0; i < psc_dynarray_len(bcrs); i++) {
 				bcr = psc_dynarray_getpos(bcrs, i);
 
-				BIOD_LOCK(bcr->bcr_biodi);
+				BIOD_LOCK(bcr->bcr_bii);
 				bcr->bcr_flags &= ~BCR_SCHEDULED;
 				bcr_2_bmap(bcr)->bcm_flags &= ~BMAP_IOD_INFLIGHT;
-				BIOD_ULOCK(bcr->bcr_biodi);
+				BIOD_ULOCK(bcr->bcr_bii);
 
 				DEBUG_BCR(PLL_INFO, bcr, "unsetting BCR_SCHEDULED");
 			}
@@ -258,19 +257,19 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 
 	for (i = 0; i < psc_dynarray_len(a); i++) {
 		bcr = psc_dynarray_getpos(a, i);
-		biod = bcr->bcr_biodi;
+		biod = bcr->bcr_bii;
 
 		DEBUG_BCR(((rq->rq_status || !mp || mp->rc) ?
-		    PLL_ERROR : PLL_INFO),  bcr, "rq_status=%d rc=%d%s",
-		  rq->rq_status, mp ? mp->rc : -4096,
-		  mp ? "" : " (unknown, no buf)");
+		    PLL_ERROR : PLL_INFO), bcr, "rq_status=%d rc=%d%s",
+		    rq->rq_status, mp ? mp->rc : -4096,
+		    mp ? "" : " (unknown, no buf)");
 
 		psc_assert(bii_2_bmap(biod)->bcm_flags &
 		    (BMAP_IOD_INFLIGHT|BMAP_IOD_BCRSCHED));
 
 		if (rq->rq_status) {
 			/*
-			 * Unset the inflight bit on the biodi since
+			 * Unset the inflight bit on the bii since
 			 * bcr_xid_last_bump() will not be called.
 			 */
 			BIOD_LOCK(biod);
@@ -495,7 +494,7 @@ slvr_worker_int(void)
 				/* This is a backlogged bcr, cap it and
 				 *   move on.
 				 */
-				bcr->bcr_biodi->biod_bcr = NULL;
+				bcr->bcr_bii->biod_bcr = NULL;
 			else
 				/* The bcr is full, push it out now. */
 				bcr_hold_2_ready(&binflCrcs, bcr);
@@ -504,8 +503,7 @@ slvr_worker_int(void)
 	} else {
 		bmap_op_start_type(bii_2_bmap(biod), BMAP_OPCNT_BCRSCHED);
 
-		/* Freed by bcr_ready_remove()
-		 */
+		/* Freed by bcr_ready_remove() */
 		biod->biod_bcr = bcr =
 		    PSCALLOC(sizeof(struct biod_crcup_ref) +
 			(sizeof(struct srt_bmap_crcwire) *
@@ -515,7 +513,7 @@ slvr_worker_int(void)
 		COPYFG(&bcr->bcr_crcup.fg,
 		    &bii_2_bmap(biod)->bcm_fcmh->fcmh_fg);
 
-		bcr->bcr_biodi = biod;
+		bcr->bcr_bii = biod;
 		bcr->bcr_xid = biod->biod_bcr_xid++;
 		bcr->bcr_crcup.blkno = bii_2_bmap(biod)->bcm_bmapno;
 		bcr->bcr_crcup.crcs[0].crc = crc;

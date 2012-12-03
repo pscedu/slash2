@@ -214,7 +214,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	for (i = 0, tsize = mq->size; i < nslvrs; i++, roff = 0) {
 
 		slvr_ref[i] = slvr_lookup(slvrno + i,
-		    bmap_2_biodi(bmap), rw);
+		    bmap_2_bii(bmap), rw);
 		slvr_slab_prep(slvr_ref[i], rw);
 
 		/* Fault in pages either for read or RBW. */
@@ -438,7 +438,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		newsbd = psc_pool_get(bmap_rls_pool);
 		memcpy(newsbd, sbd, sizeof(*sbd));
 
-		biod = bmap_2_biodi(b);
+		biod = bmap_2_bii(b);
 		BIOD_LOCK(biod);
 		PLL_FOREACH(p, &biod->biod_rls) {
 			if (!memcmp(p, sbd, sizeof(*p))) {
