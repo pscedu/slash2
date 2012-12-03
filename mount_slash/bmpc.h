@@ -53,9 +53,6 @@ struct msl_fsrqinfo;
 #define BMPC_IOMAXBLKS		64
 #define BMPC_MAXBUFSRPC		(1024 * 1024 / BMPC_BUFSZ)	/* same as LNET_MTU / BMPC_BUFSZ */
 
-#define BMPC_DEF_MINAGE		{ 0, 600000000 } /* seconds, nanoseconds */
-#define BMPC_INTERVAL		{ 0, 200000000 }
-
 /* plus one because the offset in the first request might not be page aligned */
 #define BMPC_COALESCE_MAX_IOV	(BMPC_MAXBUFSRPC + 1)
 
@@ -113,10 +110,6 @@ struct bmap_pagecache_entry {
 			DEBUG_BMPCE(PLL_MAX, e, "NULL bmpce_waitq");	\
 	} while (0)
 
-#define BMPCE_2_BIORQ(b)						\
-	((b)->bmpce_waitq ? (char *)(b)->bmpce_waitq -			\
-	 offsetof(struct bmpc_ioreq, biorq_waitq) : NULL)
-
 #define BMPCE_SETATTR(bmpce, fl, ...)					\
 	do {								\
 		int _locked;						\
@@ -127,33 +120,30 @@ struct bmap_pagecache_entry {
 		BMPCE_URLOCK((bmpce), _locked);				\
 	} while (0)
 
-#define BMPCE_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
-#define DEBUG_BMPCE_FLAGS(b)						\
-	(b)->bmpce_flags & BMPCE_NEW			? "n" : "",	\
-	(b)->bmpce_flags & BMPCE_GETBUF			? "G" : "",	\
-	(b)->bmpce_flags & BMPCE_DATARDY		? "d" : "",	\
-	(b)->bmpce_flags & BMPCE_DIRTY2LRU		? "D" : "",	\
-	(b)->bmpce_flags & BMPCE_LRU			? "l" : "",	\
-	(b)->bmpce_flags & BMPCE_TOFREE			? "T" : "",	\
-	(b)->bmpce_flags & BMPCE_FREEING		? "F" : "",	\
-	(b)->bmpce_flags & BMPCE_INIT			? "i" : "",	\
-	(b)->bmpce_flags & BMPCE_READPNDG		? "r" : "",	\
-	(b)->bmpce_flags & BMPCE_RBWPAGE		? "B" : "",	\
-	(b)->bmpce_flags & BMPCE_RBWRDY			? "R" : "",	\
-	(b)->bmpce_flags & BMPCE_INFLIGHT		? "L" : "",	\
-	(b)->bmpce_flags & BMPCE_EIO			? "E" : "",	\
-	(b)->bmpce_flags & BMPCE_READA			? "a" : "",	\
-	(b)->bmpce_flags & BMPCE_AIOWAIT		? "w" : "",	\
-	(b)->bmpce_flags & BMPCE_SYNCWAIT		? "S" : ""
-
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP,					\
-	    "bmpce@%p fl=%u:"BMPCE_FLAGS_FORMAT" "			\
+	    "bmpce@%p fl=%u:%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "		\
 	    "o=%#x b=%p "						\
 	    "ts="PSCPRI_TIMESPEC" "					\
 	    "wr=%hu rd=%hu "						\
 	    "owner=%p : " fmt,						\
-	    (b), (b)->bmpce_flags, DEBUG_BMPCE_FLAGS(b),		\
+	    (b), (b)->bmpce_flags,					\
+	    (b)->bmpce_flags & BMPCE_NEW		? "n" : "",	\
+	    (b)->bmpce_flags & BMPCE_GETBUF		? "G" : "",	\
+	    (b)->bmpce_flags & BMPCE_DATARDY		? "d" : "",	\
+	    (b)->bmpce_flags & BMPCE_DIRTY2LRU		? "D" : "",	\
+	    (b)->bmpce_flags & BMPCE_LRU		? "l" : "",	\
+	    (b)->bmpce_flags & BMPCE_TOFREE		? "T" : "",	\
+	    (b)->bmpce_flags & BMPCE_FREEING		? "F" : "",	\
+	    (b)->bmpce_flags & BMPCE_INIT		? "i" : "",	\
+	    (b)->bmpce_flags & BMPCE_READPNDG		? "r" : "",	\
+	    (b)->bmpce_flags & BMPCE_RBWPAGE		? "B" : "",	\
+	    (b)->bmpce_flags & BMPCE_RBWRDY		? "R" : "",	\
+	    (b)->bmpce_flags & BMPCE_INFLIGHT		? "L" : "",	\
+	    (b)->bmpce_flags & BMPCE_EIO		? "E" : "",	\
+	    (b)->bmpce_flags & BMPCE_READA		? "a" : "",	\
+	    (b)->bmpce_flags & BMPCE_AIOWAIT		? "w" : "",	\
+	    (b)->bmpce_flags & BMPCE_SYNCWAIT		? "S" : "",	\
 	    (b)->bmpce_off, (b)->bmpce_base,				\
 	    PSCPRI_TIMESPEC_ARGS(&(b)->bmpce_laccess),			\
 	    psc_atomic16_read(&(b)->bmpce_wrref),			\
@@ -426,12 +416,6 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
 	(((r)->biorq_off & ~BMPC_BUFMASK) + ((nbmpce) * BMPC_BUFSZ))
 
 #define biorq_voff_get(r)	((r)->biorq_off + (r)->biorq_len)
-
-#define bmpce_is_rbw_page(r, b, pos)					\
-	(biorq_is_my_bmpce((r), (b)) &&					\
-	 ((!(pos) && ((r)->biorq_flags & BIORQ_RBWFP)) ||		\
-	  (((pos) == (psc_dynarray_len(&(r)->biorq_pages) - 1) &&	\
-	    ((r)->biorq_flags & BIORQ_RBWLP)))))
 
 void	 bmpc_global_init(void);
 void	 bmpc_free(void *);
