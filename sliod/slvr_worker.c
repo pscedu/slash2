@@ -302,6 +302,7 @@ slvr_worker_int(void)
 	struct biod_crcup_ref *bcr = NULL;
 	struct timespec ts, slvr_ts;
 	struct bmap_iod_info *biod;
+	struct bmapc_memb *b;
 	struct slvr_ref	*s;
 	uint16_t slvr_num;
 	uint64_t crc;
@@ -350,8 +351,9 @@ slvr_worker_int(void)
 			timespecadd(&slvr_ts, &slvrCrcDelay, &slvr_ts);
 
 			if (timespeccmp(&ts, &slvr_ts, <)) {
-				/* The case where a new write updated the ts
-				 *   between list removal and now.
+				/*
+				 * The case where a new write updated
+				 * the ts between list removal and now.
 				 */
 				lc_addtail(&crcqSlvrs, s);
 				goto start;
@@ -406,8 +408,8 @@ slvr_worker_int(void)
 	 *   From this point until we set to inflight, the slvr_lentry
 	 *   should be disjointed.
 	 */
-
 	s->slvr_flags |= SLVR_CRCING;
+
 	/* 'completed writes' signifier can be reset, the upcoming
 	 *    instantiation of slvr_do_crc() will cover those writes.
 	 */
@@ -418,8 +420,7 @@ slvr_worker_int(void)
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
 	psc_assert(slvr_do_crc(s));
 
-	/* Be paraniod, ensure the sliver is not queued anywhere.
-	 */
+	/* Be paranoid, ensure the sliver is not queued anywhere. */
 	SLVR_LOCK(s);
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
 	psc_assert(s->slvr_flags & SLVR_CRCING);
@@ -427,23 +428,20 @@ slvr_worker_int(void)
 
 	if ((s->slvr_flags & SLVR_CRCDIRTY || s->slvr_compwrts) &&
 	    !s->slvr_pndgwrts) {
-		/* The slvr will be crc'd again due to pending write.
-		 */
+		/* The slvr will be CRC'd again due to pending write. */
 		SLVR_ULOCK(s);
 		DEBUG_SLVR(PLL_INFO, s, "replace onto crcSlvrs");
 		lc_addtail(&crcqSlvrs, s);
 		goto start;
 	}
 
-	/* Copy the accumulator to the tmp variable.
-	 */
+	/* Copy the accumulator to the tmp variable. */
 	crc = s->slvr_crc;
 	PSC_CRC64_FIN(&crc);
 
-	/* Put the slvr back to the LRU so it may have its slab
-	 *   reaped.
-	 */
+	/* Put the slvr back to the LRU so it may have its slab reaped. */
 	biod = slvr_2_biod(s);
+	b = bii_2_bmap(biod);
 	psc_atomic32_dec(&biod->biod_crcdrty_slvrs);
 	s->slvr_dirty_cnt--;
 	DEBUG_SLVR(PLL_INFO, s, "prep for move to LRU (ndirty=%u)",
@@ -464,15 +462,15 @@ slvr_worker_int(void)
 	if (bcr) {
 		uint32_t i, found;
 
-		psc_assert(bcr->bcr_crcup.blkno ==
-			   bii_2_bmap(biod)->bcm_bmapno);
+		psc_assert(bcr->bcr_crcup.blkno == b->bcm_bmapno);
 		psc_assert(bcr->bcr_crcup.fg.fg_fid ==
-			   bii_2_bmap(biod)->bcm_fcmh->fcmh_fg.fg_fid);
+		    b->bcm_fcmh->fcmh_fg.fg_fid);
 		psc_assert(bcr->bcr_crcup.nups < MAX_BMAP_INODE_PAIRS);
-		psc_assert(bii_2_bmap(biod)->bcm_flags & BMAP_IOD_BCRSCHED);
+		psc_assert(b->bcm_flags & BMAP_IOD_BCRSCHED);
 
-		/* If we already have a slot for our slvr_num then
-		 *   reuse it.
+		/*
+		 * If we already have a slot for our slvr_num then reuse
+		 * it.
 		 */
 		for (i = 0, found = 0; i < bcr->bcr_crcup.nups; i++) {
 			if (bcr->bcr_crcup.crcs[i].slot == slvr_num) {
@@ -501,7 +499,7 @@ slvr_worker_int(void)
 		}
 
 	} else {
-		bmap_op_start_type(bii_2_bmap(biod), BMAP_OPCNT_BCRSCHED);
+		bmap_op_start_type(b, BMAP_OPCNT_BCRSCHED);
 
 		/* Freed by bcr_ready_remove() */
 		biod->biod_bcr = bcr =
@@ -511,11 +509,11 @@ slvr_worker_int(void)
 
 		INIT_PSC_LISTENTRY(&bcr->bcr_lentry);
 		COPYFG(&bcr->bcr_crcup.fg,
-		    &bii_2_bmap(biod)->bcm_fcmh->fcmh_fg);
+		    &b->bcm_fcmh->fcmh_fg);
 
 		bcr->bcr_bii = biod;
 		bcr->bcr_xid = biod->biod_bcr_xid++;
-		bcr->bcr_crcup.blkno = bii_2_bmap(biod)->bcm_bmapno;
+		bcr->bcr_crcup.blkno = b->bcm_bmapno;
 		bcr->bcr_crcup.crcs[0].crc = crc;
 		bcr->bcr_crcup.crcs[0].slot = slvr_num;
 		bcr->bcr_crcup.nups = 1;
@@ -523,16 +521,17 @@ slvr_worker_int(void)
 		DEBUG_BCR(PLL_NOTIFY, bcr,
 		    "newly added (bcr_bklog=%d) (sched=%d)",
 		    pll_nitems(&slvr_2_biod(s)->biod_bklog_bcrs),
-		    !!(bii_2_bmap(biod)->bcm_flags & BMAP_IOD_BCRSCHED));
+		    !!(b->bcm_flags & BMAP_IOD_BCRSCHED));
 
-		if (bii_2_bmap(biod)->bcm_flags & BMAP_IOD_BCRSCHED) {
-			/* The bklog may be empty but a pending bcr may be
-			 *    present on the ready list.
+		if (b->bcm_flags & BMAP_IOD_BCRSCHED) {
+			/*
+			 * The bklog may be empty but a pending bcr may
+			 * be present on the ready list.
 			 */
 			OPSTAT_INCR(SLI_OPST_CRC_UPDATE_BACKLOG);
 			pll_addtail(&biod->biod_bklog_bcrs, bcr);
 		} else {
-			BMAP_SETATTR(bii_2_bmap(biod), BMAP_IOD_BCRSCHED);
+			BMAP_SETATTR(b, BMAP_IOD_BCRSCHED);
 			bcr_hold_add(&binflCrcs, bcr);
 		}
 	}
