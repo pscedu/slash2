@@ -100,7 +100,7 @@ struct bmap_ondisk {
  * XXX some of these elements may need to be moved into the bcm_info_pri
  *     area (as part of new structures?) so save space on the mds.
  */
-struct bmapc_memb {
+struct bmap {
 	sl_bmapno_t		 bcm_bmapno;	/* bmap index number */
 	struct fidc_membh	*bcm_fcmh;	/* pointer to fid info */
 	psc_atomic32_t		 bcm_opcnt;	/* pending opcnt (# refs) */
@@ -121,6 +121,8 @@ struct bmapc_memb {
 #define bcm_crcstates	bcm_corestate.bcs_crcstates
 #define bcm_repls	bcm_corestate.bcs_repls
 };
+
+#define bmapc_memb bmap
 
 /* shared bmap_flags */
 #define BMAP_RD			(1 << 0)	/* XXX use enum rw */
