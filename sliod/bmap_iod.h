@@ -137,7 +137,7 @@ struct bmap_iod_info {
 #define bmap_2_bii(b)		((struct bmap_iod_info *)bmap_get_pri(b))
 #define bmap_2_bii_age(b)	bmap_2_bii(b)->bii_age
 #define bmap_2_bii_lentry(b)	bmap_2_bii(b)->bii_lentry
-#define bmap_2_bii_slvrs(b)	(&bmap_2_bii(b)->biod_slvrs)
+#define bmap_2_bii_slvrs(b)	(&bmap_2_bii(b)->bii_slvrs)
 #define bmap_2_ondisk(b)	((struct bmap_ondisk *)&(b)->bcm_corestate)
 
 #define BMAP_SLVR_WANTREPL	(_BMAP_SLVR_FLSHFT)	/* Queued for replication */
