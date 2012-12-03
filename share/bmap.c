@@ -166,7 +166,7 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n,
 	locked = FCMH_RLOCK(f);
 	if (0)
  restart:
-		FCMH_RLOCK(f);
+		(void)FCMH_RLOCK(f);
 
 	b = SPLAY_FIND(bmap_cache, &f->fcmh_bmaptree, &lb);
 	if (b) {
