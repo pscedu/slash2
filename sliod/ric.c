@@ -440,7 +440,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 
 		bii = bmap_2_bii(b);
 		BII_LOCK(bii);
-		PLL_FOREACH(p, &bii->biod_rls) {
+		PLL_FOREACH(p, &bii->bii_rls) {
 			if (!memcmp(p, sbd, sizeof(*p))) {
 				BII_ULOCK(bii);
 				bmap_op_done(b);
@@ -458,7 +458,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 
 		bmap_op_start_type(bii_2_bmap(bii), BMAP_OPCNT_RLSSCHED);
 
-		pll_add(&bii->biod_rls, newsbd);
+		pll_add(&bii->bii_rls, newsbd);
 		BMAP_SETATTR(b, BMAP_IOD_RLSSEQ);
 		biod_rlssched_locked(bii);
 		BII_ULOCK(bii);

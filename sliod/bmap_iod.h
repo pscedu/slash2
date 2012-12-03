@@ -116,14 +116,14 @@ struct bmap_iod_info {
 	 * CRC updates.
 	 */
 	struct biod_crcup_ref	*bii_bcr;
-	struct biod_slvrtree	 biod_slvrs;
+	struct biod_slvrtree	 bii_slvrs;
 	struct psclist_head	 bii_lentry;
 	struct timespec		 bii_age;
-	struct psc_lockedlist	 biod_bklog_bcrs;	/* at most one CRC update RPC per bmap */
-	struct psc_lockedlist	 biod_rls;
+	struct psc_lockedlist	 bii_bklog_bcrs;	/* at most one CRC update RPC per bmap */
+	struct psc_lockedlist	 bii_rls;
 	uint64_t		 bii_bcr_xid;
 	uint64_t		 bii_bcr_xid_last;
-	psc_atomic32_t		 biod_crcdrty_slvrs;
+	psc_atomic32_t		 bii_crcdrty_slvrs;
 };
 
 /* sliod-specific bcm_flags */

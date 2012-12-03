@@ -212,7 +212,7 @@ biod_rlssched_locked(struct bmap_iod_info *bii)
 
 	DEBUG_BMAP(PLL_INFO, bii_2_bmap(bii), "crcdrty_slvrs=%d "
 	   "BMAP_IOD_RLSSEQ=(%d) bcr_xid=%"PRId64" bcr_xid_last=%"
-	   PRId64, psc_atomic32_read(&bii->biod_crcdrty_slvrs),
+	   PRId64, psc_atomic32_read(&bii->bii_crcdrty_slvrs),
 	   !!(bii_2_flags(bii) & BMAP_IOD_RLSSEQ), bii->bii_bcr_xid,
 	   bii->bii_bcr_xid_last);
 
@@ -227,7 +227,7 @@ biod_rlssched_locked(struct bmap_iod_info *bii)
 	else {
 		psc_assert(psclist_disjoint(&bii->bii_lentry));
 
-		if (!psc_atomic32_read(&bii->biod_crcdrty_slvrs) &&
+		if (!psc_atomic32_read(&bii->bii_crcdrty_slvrs) &&
 		    (bii_2_bmap(bii)->bcm_flags & BMAP_IOD_RLSSEQ) &&
 		    (bii->bii_bcr_xid == bii->bii_bcr_xid_last)) {
 			BMAP_SETATTR(bii_2_bmap(bii), BMAP_IOD_RLSSCHED);
@@ -256,13 +256,13 @@ bcr_ready_remove(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 
 	if (bii->bii_bcr_xid == bii->bii_bcr_xid_last) {
 		/* This was the last bcr. */
-		psc_assert(pll_empty(&bii->biod_bklog_bcrs));
+		psc_assert(pll_empty(&bii->bii_bklog_bcrs));
 		psc_assert(!bii->bii_bcr);
 		BMAP_CLEARATTR(bii_2_bmap(bii), BMAP_IOD_BCRSCHED);
 
 		DEBUG_BMAP(PLL_INFO, bii_2_bmap(bii),
 		   "descheduling drtyslvrs=%u",
-		   psc_atomic32_read(&bii->biod_crcdrty_slvrs));
+		   psc_atomic32_read(&bii->bii_crcdrty_slvrs));
 
 		biod_rlssched_locked(bii);
 	}
@@ -291,12 +291,12 @@ bcr_finalize(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 	if (bii->bii_bcr_xid > bii->bii_bcr_xid_last + 1) {
 		struct biod_crcup_ref *tmp;
 
-		tmp = pll_gethead(&bii->biod_bklog_bcrs);
+		tmp = pll_gethead(&bii->bii_bklog_bcrs);
 		if (tmp) {
 			DEBUG_BCR(PLL_INFO, tmp, "backlogged bcr, nblklog=%d",
-				  pll_nitems(&bii->biod_bklog_bcrs));
+				  pll_nitems(&bii->bii_bklog_bcrs));
 
-			if (pll_empty(&bii->biod_bklog_bcrs)) {
+			if (pll_empty(&bii->bii_bklog_bcrs)) {
 				/*
 				 * I am the only one on the backlog list
 				 * of the bmap.  A NULL bii_bcr is OK
@@ -354,18 +354,18 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 		do {
 			b = bii_2_bmap(bii);
 			BII_LOCK(bii);
-			psc_assert(pll_nitems(&bii->biod_rls));
+			psc_assert(pll_nitems(&bii->bii_rls));
 
 			DEBUG_BMAP(PLL_INFO, b, "ndrty=%u nrls=%d xid=%"PRIu64
 			   " xid_last=%"PRIu64,
-			   psc_atomic32_read(&bii->biod_crcdrty_slvrs),
-			   pll_nitems(&bii->biod_rls), bii->bii_bcr_xid,
+			   psc_atomic32_read(&bii->bii_crcdrty_slvrs),
+			   pll_nitems(&bii->bii_rls), bii->bii_bcr_xid,
 			   bii->bii_bcr_xid_last);
 
 			psc_assert(bii_2_flags(bii) & BMAP_IOD_RLSSEQ);
 			psc_assert(bii_2_flags(bii) & BMAP_IOD_RLSSCHED);
 
-			if (psc_atomic32_read(&bii->biod_crcdrty_slvrs) ||
+			if (psc_atomic32_read(&bii->bii_crcdrty_slvrs) ||
 			    (bii->bii_bcr_xid != bii->bii_bcr_xid_last)) {
 				/* Temporarily remove unreapable bii's */
 				psc_dynarray_add(&a, bii);
@@ -375,7 +375,7 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 			i = 0;
 			while (nrls < MAX_BMAP_RELEASE &&
-			    (brls = pll_get(&bii->biod_rls))) {
+			    (brls = pll_get(&bii->bii_rls))) {
 				memcpy(&brr->sbd[nrls++], &brls->bir_sbd,
 				    sizeof(struct srt_bmapdesc));
 				psc_pool_return(bmap_rls_pool, brls);
@@ -384,7 +384,7 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 			/* The last entry (or entries) did not fit, so
 			 *    reschedule.
 			 */
-			if (pll_nitems(&bii->biod_rls))
+			if (pll_nitems(&bii->bii_rls))
 				psc_dynarray_add(&a, bii);
 			else
 				BMAP_CLEARATTR(bii_2_bmap(bii),
@@ -461,16 +461,16 @@ iod_bmap_init(struct bmapc_memb *b)
 
 	memset(bii, 0, sizeof(*bii));
 	INIT_PSC_LISTENTRY(&bii->bii_lentry);
-	SPLAY_INIT(&bii->biod_slvrs);
-	pll_init(&bii->biod_bklog_bcrs, struct biod_crcup_ref,
+	SPLAY_INIT(&bii->bii_slvrs);
+	pll_init(&bii->bii_bklog_bcrs, struct biod_crcup_ref,
 	    bcr_lentry, NULL);
 
-	pll_init(&bii->biod_rls, struct bmap_iod_rls,
+	pll_init(&bii->bii_rls, struct bmap_iod_rls,
 	    bir_lentry, NULL);
 
 	PFL_GETTIMESPEC(&bii->bii_age);
 
-	psc_atomic32_set(&bii->biod_crcdrty_slvrs, 0);
+	psc_atomic32_set(&bii->bii_crcdrty_slvrs, 0);
 
 	/* XXX At some point we'll want to let bmaps hang around in the
 	 *   cache to prevent extra reads and CRC table fetches.
@@ -485,11 +485,11 @@ iod_bmap_finalcleanup(struct bmapc_memb *b)
 	struct bmap_iod_info *bii;
 
 	bii = bmap_2_bii(b);
-	psc_assert(pll_empty(&bii->biod_rls));
-	psc_assert(SPLAY_EMPTY(&bii->biod_slvrs));
+	psc_assert(pll_empty(&bii->bii_rls));
+	psc_assert(SPLAY_EMPTY(&bii->bii_slvrs));
 	psc_assert(psclist_disjoint(&bii->bii_lentry));
 
-	psc_assert(!psc_atomic32_read(&bii->biod_crcdrty_slvrs));
+	psc_assert(!psc_atomic32_read(&bii->bii_crcdrty_slvrs));
 }
 
 /**

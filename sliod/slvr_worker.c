@@ -442,10 +442,10 @@ slvr_worker_int(void)
 	/* Put the slvr back to the LRU so it may have its slab reaped. */
 	bii = slvr_2_biod(s);
 	b = bii_2_bmap(bii);
-	psc_atomic32_dec(&bii->biod_crcdrty_slvrs);
+	psc_atomic32_dec(&bii->bii_crcdrty_slvrs);
 	s->slvr_dirty_cnt--;
 	DEBUG_SLVR(PLL_INFO, s, "prep for move to LRU (ndirty=%u)",
-	    psc_atomic32_read(&slvr_2_biod(s)->biod_crcdrty_slvrs));
+	    psc_atomic32_read(&slvr_2_biod(s)->bii_crcdrty_slvrs));
 
 	s->slvr_flags |= SLVR_LRU;
 	slvr_lru_tryunpin_locked(s);
@@ -488,7 +488,7 @@ slvr_worker_int(void)
 			  "nups=%d", i, bcr->bcr_crcup.nups);
 
 		if (bcr->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS) {
-			if (pll_nitems(&bii->biod_bklog_bcrs))
+			if (pll_nitems(&bii->bii_bklog_bcrs))
 				/* This is a backlogged bcr, cap it and
 				 *   move on.
 				 */
@@ -520,7 +520,7 @@ slvr_worker_int(void)
 
 		DEBUG_BCR(PLL_NOTIFY, bcr,
 		    "newly added (bcr_bklog=%d) (sched=%d)",
-		    pll_nitems(&slvr_2_biod(s)->biod_bklog_bcrs),
+		    pll_nitems(&slvr_2_biod(s)->bii_bklog_bcrs),
 		    !!(b->bcm_flags & BMAP_IOD_BCRSCHED));
 
 		if (b->bcm_flags & BMAP_IOD_BCRSCHED) {
@@ -529,7 +529,7 @@ slvr_worker_int(void)
 			 * be present on the ready list.
 			 */
 			OPSTAT_INCR(SLI_OPST_CRC_UPDATE_BACKLOG);
-			pll_addtail(&bii->biod_bklog_bcrs, bcr);
+			pll_addtail(&bii->bii_bklog_bcrs, bcr);
 		} else {
 			BMAP_SETATTR(b, BMAP_IOD_BCRSCHED);
 			bcr_hold_add(&binflCrcs, bcr);

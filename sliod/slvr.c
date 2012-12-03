@@ -1105,12 +1105,12 @@ slvr_schedule_crc_locked(struct slvr_ref *s)
 	psc_assert(s->slvr_flags & SLVR_LRU);
 
 	if (!s->slvr_dirty_cnt) {
-		psc_atomic32_inc(&slvr_2_biod(s)->biod_crcdrty_slvrs);
+		psc_atomic32_inc(&slvr_2_biod(s)->bii_crcdrty_slvrs);
 		s->slvr_dirty_cnt++;
 	}
 
 	DEBUG_SLVR(PLL_INFO, s, "crc sched (ndirty slvrs=%u)",
-	   psc_atomic32_read(&slvr_2_biod(s)->biod_crcdrty_slvrs));
+	   psc_atomic32_read(&slvr_2_biod(s)->bii_crcdrty_slvrs));
 
 	s->slvr_flags &= ~SLVR_LRU;
 
@@ -1249,7 +1249,7 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *b, enum rw rw)
 
  retry:
 	BII_LOCK(b);
-	s = SPLAY_FIND(biod_slvrtree, &b->biod_slvrs, &ts);
+	s = SPLAY_FIND(biod_slvrtree, &b->bii_slvrs, &ts);
 	if (s) {
 		SLVR_LOCK(s);
 		if (s->slvr_flags & SLVR_FREEING) {
@@ -1300,7 +1300,7 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *b, enum rw rw)
 			s->slvr_pndgreads = 1;
 
 		/* XXX XINSERT */
-		SPLAY_INSERT(biod_slvrtree, &b->biod_slvrs, tmp);
+		SPLAY_INSERT(biod_slvrtree, &b->bii_slvrs, tmp);
 		bmap_op_start_type(bii_2_bmap(b), BMAP_OPCNT_SLVR);
 		BII_ULOCK(b);
 	}
@@ -1313,8 +1313,7 @@ slvr_remove(struct slvr_ref *s)
 	struct bmap_iod_info *b;
 
 	DEBUG_SLVR(PLL_DEBUG, s, "freeing slvr");
-	/* Slvr should be detached from any listheads.
-	 */
+	/* Slvr should be detached from any listheads. */
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
 	psc_assert(!(s->slvr_flags & SLVR_SPLAYTREE));
 	psc_assert(s->slvr_flags & SLVR_FREEING);
@@ -1323,7 +1322,7 @@ slvr_remove(struct slvr_ref *s)
 
 	BII_LOCK(b);
 	/* XXX XREMOVE */
-	SPLAY_REMOVE(biod_slvrtree, &b->biod_slvrs, s);
+	SPLAY_REMOVE(biod_slvrtree, &b->bii_slvrs, s);
 	bmap_op_done_type(bii_2_bmap(b), BMAP_OPCNT_SLVR);
 
 	psc_pool_return(slvr_pool, s);
