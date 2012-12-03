@@ -39,7 +39,7 @@ static struct timespec	 bim_timeo = { BIM_MINAGE, 0 };
 struct psc_listcache	 bmapRlsQ;
 
 struct psc_poolmaster    bmap_rls_poolmaster;
-struct psc_poolmgr      *bmap_rls_pool;
+struct psc_poolmgr	*bmap_rls_pool;
 
 void
 bim_init(void)
@@ -388,7 +388,7 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 				psc_dynarray_add(&a, bii);
 			else
 				BMAP_CLEARATTR(bii_2_bmap(bii),
-				       BMAP_IOD_RLSSEQ | BMAP_IOD_RLSSCHED);
+				    BMAP_IOD_RLSSEQ | BMAP_IOD_RLSSCHED);
 			BII_ULOCK(bii);
 
 			while (i--)
