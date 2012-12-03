@@ -110,8 +110,8 @@ struct slvr_ref {
 		}							\
 	} while (0)
 
-#define slvr_2_biod(s)		((struct bmap_iod_info *)(s)->slvr_pri)
-#define slvr_2_bmap(s)		bii_2_bmap(slvr_2_biod(s))
+#define slvr_2_bii(s)		((struct bmap_iod_info *)(s)->slvr_pri)
+#define slvr_2_bmap(s)		bii_2_bmap(slvr_2_bii(s))
 #define slvr_2_fcmh(s)		slvr_2_bmap(s)->bcm_fcmh
 #define slvr_2_fii(s)		fcmh_2_fii(slvr_2_fcmh(s))
 #define slvr_2_fd(s)		slvr_2_fii(s)->fii_fd
