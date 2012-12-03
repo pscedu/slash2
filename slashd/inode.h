@@ -118,7 +118,7 @@ struct slash_inode_handle {
 		char _buf[LINE_MAX];					\
 									\
 		psclog((level), "inoh@%p fcmh=%p f+g="SLPRI_FG" "	\
-		    "fl:%#x:%s%s%s :: " fmt,				\
+		    "fl:%#x:%s%s%s %s :: " fmt,				\
 		    (ih), (ih)->inoh_fcmh,				\
 		    SLPRI_FG_ARGS(&(ih)->inoh_fcmh->fcmh_fg),		\
 		    (ih)->inoh_flags,					\

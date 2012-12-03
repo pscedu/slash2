@@ -331,11 +331,7 @@ _dump_ino(char *buf, size_t siz, const struct slash_inode_od *ino)
 void
 dump_inoh(const struct slash_inode_handle *ih)
 {
-	char buf[BUFSIZ];
-
-	_dump_ino(buf, sizeof(buf), &ih->inoh_ino);
-	fprintf(stderr, "fl:"INOH_FLAGS_FMT" %s\n",
-	    DEBUG_INOH_FLAGS(ih), buf);
+	DEBUG_INOH(PLL_MAX, ih, "");
 }
 
 void
