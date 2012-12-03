@@ -91,12 +91,12 @@ struct bmap_ondisk {
 };
 
 /**
- * bmapc_memb - Central structure for block map caching used in all
- *	SLASH service contexts (mds, ios, client).  The pool for this
+ * bmap - Central structure for block map caching used in all SLASH2
+ *	service contexts (mds, ios, client).  The pool for this
  *	structure and its private area for each service is initialized
  *	in bmap_cache_init().
  *
- * bmapc_memb sits in the middle of the GFC stratum.
+ * bmap sits in the middle of the GFC stratum.
  * XXX some of these elements may need to be moved into the bcm_info_pri
  *     area (as part of new structures?) so save space on the mds.
  */
@@ -106,7 +106,7 @@ struct bmap {
 	psc_atomic32_t		 bcm_opcnt;	/* pending opcnt (# refs) */
 	uint32_t		 bcm_flags;	/* see BMAP_* below */
 	psc_spinlock_t		 bcm_lock;
-	SPLAY_ENTRY(bmapc_memb)	 bcm_tentry;	/* bmap_cache splay tree entry */
+	SPLAY_ENTRY(bmap)	 bcm_tentry;	/* bmap_cache splay tree entry */
 	struct psc_listentry	 bcm_lentry;	/* free pool */
 	pthread_t		 bcm_owner;	/* temporary processor */
 
