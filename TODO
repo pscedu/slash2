@@ -394,7 +394,7 @@ reimport
 
    fix round robin among senses when open(O_TRUNC) -- prefer old IOS
    fix ios_nblks[idx] accounting on open(O_TRUNC)
-   advise upsch.db on SSD in docs
+   advise upsch.db on SSD or tmpfs in docs
 - make cursor file contents ASCII for debugging
 
 - investigate diaser(1)
