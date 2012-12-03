@@ -142,14 +142,14 @@ struct bmap_iod_info {
 
 #define BMAP_SLVR_WANTREPL	(_BMAP_SLVR_FLSHFT)	/* Queued for replication */
 
-#define BIOD_LOCK(bii)		BMAP_LOCK(bii_2_bmap(bii))
-#define BIOD_ULOCK(bii)		BMAP_ULOCK(bii_2_bmap(bii))
-#define BIOD_RLOCK(bii)		BMAP_RLOCK(bii_2_bmap(bii))
-#define BIOD_URLOCK(bii, lk)	BMAP_URLOCK(bii_2_bmap(bii), (lk))
-#define BIOD_TRYLOCK(bii)	BMAP_TRYLOCK(bii_2_bmap(bii))
-#define BIOD_LOCK_ENSURE(bii)	BMAP_LOCK_ENSURE(bii_2_bmap(bii))
+#define BII_LOCK(bii)		BMAP_LOCK(bii_2_bmap(bii))
+#define BII_ULOCK(bii)		BMAP_ULOCK(bii_2_bmap(bii))
+#define BII_RLOCK(bii)		BMAP_RLOCK(bii_2_bmap(bii))
+#define BII_URLOCK(bii, lk)	BMAP_URLOCK(bii_2_bmap(bii), (lk))
+#define BII_TRYLOCK(bii)	BMAP_TRYLOCK(bii_2_bmap(bii))
+#define BII_LOCK_ENSURE(bii)	BMAP_LOCK_ENSURE(bii_2_bmap(bii))
 
-#define BIOD_CRCUP_MAX_AGE	1			/* in seconds */
+#define BCR_MAX_AGE		1			/* in seconds */
 
 uint64_t	bim_getcurseq(void);
 void		bim_init(void);

@@ -1248,7 +1248,7 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *b, enum rw rw)
 	ts.slvr_num = num;
 
  retry:
-	BIOD_LOCK(b);
+	BII_LOCK(b);
 	s = SPLAY_FIND(biod_slvrtree, &b->biod_slvrs, &ts);
 	if (s) {
 		SLVR_LOCK(s);
@@ -1258,11 +1258,11 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *b, enum rw rw)
 			 * It must be held here to prevent the slvr
 			 * from being freed before we release the lock.
 			 */
-			BIOD_ULOCK(b);
+			BII_ULOCK(b);
 			goto retry;
 
 		} else {
-			BIOD_ULOCK(b);
+			BII_ULOCK(b);
 
 			s->slvr_flags |= SLVR_PINNED;
 
@@ -1278,7 +1278,7 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *b, enum rw rw)
 
 	} else {
 		if (!tmp) {
-			BIOD_ULOCK(b);
+			BII_ULOCK(b);
 			tmp = psc_pool_get(slvr_pool);
 			goto retry;
 		} else
@@ -1302,7 +1302,7 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *b, enum rw rw)
 		/* XXX XINSERT */
 		SPLAY_INSERT(biod_slvrtree, &b->biod_slvrs, tmp);
 		bmap_op_start_type(bii_2_bmap(b), BMAP_OPCNT_SLVR);
-		BIOD_ULOCK(b);
+		BII_ULOCK(b);
 	}
 	return (s);
 }
@@ -1321,7 +1321,7 @@ slvr_remove(struct slvr_ref *s)
 
 	b = slvr_2_biod(s);
 
-	BIOD_LOCK(b);
+	BII_LOCK(b);
 	/* XXX XREMOVE */
 	SPLAY_REMOVE(biod_slvrtree, &b->biod_slvrs, s);
 	bmap_op_done_type(bii_2_bmap(b), BMAP_OPCNT_SLVR);

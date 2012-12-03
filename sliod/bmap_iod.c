@@ -144,7 +144,7 @@ bcr_hold_2_ready(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 {
 	int locked;
 
-	BIOD_LOCK_ENSURE(bcr->bcr_bii);
+	BII_LOCK_ENSURE(bcr->bcr_bii);
 
 	locked = reqlock(&inf->binfcrcs_lock);
 	pll_remove(&inf->binfcrcs_hold, bcr);
@@ -186,7 +186,7 @@ bcr_xid_check(struct biod_crcup_ref *bcr)
 {
 	int locked;
 
-	locked = BIOD_RLOCK(bcr->bcr_bii);
+	locked = BII_RLOCK(bcr->bcr_bii);
 	psc_assert(bcr->bcr_xid < bcr->bcr_bii->biod_bcr_xid);
 	psc_assert(bcr->bcr_xid == bcr->bcr_bii->biod_bcr_xid_last);
 	/* bcr_xid_check() must be called prior to bumping xid_last.
@@ -194,7 +194,7 @@ bcr_xid_check(struct biod_crcup_ref *bcr)
 	psc_assert(bcr->bcr_bii->biod_bcr_xid >
 		   bcr->bcr_bii->biod_bcr_xid_last);
 
-	BIOD_URLOCK(bcr->bcr_bii, locked);
+	BII_URLOCK(bcr->bcr_bii, locked);
 }
 
 static void
@@ -208,7 +208,7 @@ bcr_xid_last_bump(struct biod_crcup_ref *bcr)
 void
 biod_rlssched_locked(struct bmap_iod_info *biod)
 {
-	BIOD_LOCK_ENSURE(biod);
+	BII_LOCK_ENSURE(biod);
 
 	DEBUG_BMAP(PLL_INFO, bii_2_bmap(biod), "crcdrty_slvrs=%d "
 	   "BMAP_IOD_RLSSEQ=(%d) biod_bcr_xid=%"PRId64" biod_bcr_xid_last=%"
@@ -250,7 +250,7 @@ bcr_ready_remove(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 	atomic_dec(&inf->binfcrcs_nbcrs);
 	freelock(&inf->binfcrcs_lock);
 
-	BIOD_LOCK(bcr->bcr_bii);
+	BII_LOCK(bcr->bcr_bii);
 	psc_assert(bcr->bcr_flags & BCR_SCHEDULED);
 	bcr_xid_last_bump(bcr);
 
@@ -266,7 +266,7 @@ bcr_ready_remove(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 
 		biod_rlssched_locked(biod);
 	}
-	BIOD_ULOCK(bcr->bcr_bii);
+	BII_ULOCK(bcr->bcr_bii);
 
 	bmap_op_done_type(bcr_2_bmap(bcr), BMAP_OPCNT_BCRSCHED);
 	PSCFREE(bcr);
@@ -279,7 +279,7 @@ bcr_finalize(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 
 	DEBUG_BCR(PLL_INFO, bcr, "finalize");
 
-	BIOD_LOCK(biod);
+	BII_LOCK(biod);
 	psc_assert(bii_2_bmap(biod)->bcm_flags & BMAP_IOD_BCRSCHED);
 	/* biod->biod_bcr_xid_last is bumped in bcr_ready_remove().
 	 *    bcr_ready_remove() may release the bmap so it must be
@@ -317,7 +317,7 @@ bcr_finalize(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 			}
 		}
 	}
-	BIOD_ULOCK(biod);
+	BII_ULOCK(biod);
 
 	bcr_ready_remove(inf, bcr);
 }
@@ -349,7 +349,7 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 		do {
 			b = bii_2_bmap(biod);
-			BIOD_LOCK(biod);
+			BII_LOCK(biod);
 			psc_assert(pll_nitems(&biod->biod_rls));
 
 			DEBUG_BMAP(PLL_INFO, b, "ndrty=%u nrls=%d xid=%"PRIu64
@@ -365,7 +365,7 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 			    (biod->biod_bcr_xid != biod->biod_bcr_xid_last)) {
 				/* Temporarily remove unreapable biod's */
 				psc_dynarray_add(&a, biod);
-				BIOD_ULOCK(biod);
+				BII_ULOCK(biod);
 				continue;
 			}
 
@@ -385,7 +385,7 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 			else
 				BMAP_CLEARATTR(bii_2_bmap(biod),
 				       BMAP_IOD_RLSSEQ | BMAP_IOD_RLSSCHED);
-			BIOD_ULOCK(biod);
+			BII_ULOCK(biod);
 
 			while (i--)
 				bmap_op_done_type(b, BMAP_OPCNT_RLSSCHED);
@@ -547,7 +547,7 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 		goto out;
 	}
 
-	BMAP_LOCK(b); /* equivalent to BIOD_LOCK() */
+	BMAP_LOCK(b); /* equivalent to BII_LOCK() */
 
 	for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++) {
 		//XXX set BMAP_SLVR_DATA before do_crc()

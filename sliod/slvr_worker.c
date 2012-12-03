@@ -158,11 +158,11 @@ slvr_worker_push_crcups(void)
 	PLL_FOREACH(bcr, &binflCrcs.binfcrcs_ready) {
 		psc_assert(bcr->bcr_crcup.nups > 0);
 
-		if (!BIOD_TRYLOCK(bcr->bcr_bii))
+		if (!BII_TRYLOCK(bcr->bcr_bii))
 			continue;
 
 		if (bcr->bcr_flags & BCR_SCHEDULED) {
-			BIOD_ULOCK(bcr->bcr_bii);
+			BII_ULOCK(bcr->bcr_bii);
 			continue;
 		}
 
@@ -176,7 +176,7 @@ slvr_worker_push_crcups(void)
 		psc_dynarray_add(bcrs, bcr);
 		bcr->bcr_flags |= BCR_SCHEDULED;
 
-		BIOD_ULOCK(bcr->bcr_bii);
+		BII_ULOCK(bcr->bcr_bii);
 
 		DEBUG_BCR(PLL_INFO, bcr, "scheduled nbcrs=%d total_bcrs=%d",
 			  psc_dynarray_len(bcrs),
@@ -190,18 +190,18 @@ slvr_worker_push_crcups(void)
 	/* Now scan for old bcr's hanging about. */
 	PLL_FOREACH_SAFE(bcr, tmp, &binflCrcs.binfcrcs_hold) {
 		/* Use trylock here to avoid deadlock. */
-		if (!BIOD_TRYLOCK(bcr->bcr_bii))
+		if (!BII_TRYLOCK(bcr->bcr_bii))
 			continue;
 
 		if (now.tv_sec <
-		    (bcr->bcr_age.tv_sec + BIOD_CRCUP_MAX_AGE)) {
-			BIOD_ULOCK(bcr->bcr_bii);
+		    (bcr->bcr_age.tv_sec + BII_CRCUP_MAX_AGE)) {
+			BII_ULOCK(bcr->bcr_bii);
 			continue;
 		}
 
 		bcr_hold_2_ready(&binflCrcs, bcr);
 		DEBUG_BCR(PLL_INFO, bcr, "old, moved to ready");
-		BIOD_ULOCK(bcr->bcr_bii); 
+		BII_ULOCK(bcr->bcr_bii);
 	}
 	freelock(&binflCrcs.binfcrcs_lock);
 
@@ -219,10 +219,10 @@ slvr_worker_push_crcups(void)
 			for (i = 0; i < psc_dynarray_len(bcrs); i++) {
 				bcr = psc_dynarray_getpos(bcrs, i);
 
-				BIOD_LOCK(bcr->bcr_bii);
+				BII_LOCK(bcr->bcr_bii);
 				bcr->bcr_flags &= ~BCR_SCHEDULED;
 				bcr_2_bmap(bcr)->bcm_flags &= ~BMAP_IOD_INFLIGHT;
-				BIOD_ULOCK(bcr->bcr_bii);
+				BII_ULOCK(bcr->bcr_bii);
 
 				DEBUG_BCR(PLL_INFO, bcr, "unsetting BCR_SCHEDULED");
 			}
@@ -272,11 +272,11 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 			 * Unset the inflight bit on the bii since
 			 * bcr_xid_last_bump() will not be called.
 			 */
-			BIOD_LOCK(biod);
+			BII_LOCK(biod);
 			bcr->bcr_flags &= ~BCR_SCHEDULED;
 			BMAP_CLEARATTR(bii_2_bmap(biod), BMAP_IOD_INFLIGHT);
 			bcr_xid_check(bcr);
-			BIOD_ULOCK(biod);
+			BII_ULOCK(biod);
 
 			DEBUG_BCR(PLL_ERROR, bcr, "rescheduling");
 			OPSTAT_INCR(SLI_OPST_CRC_UPDATE_CB_FAILURE);
@@ -327,7 +327,7 @@ slvr_worker_int(void)
 				s = NULL;
 			}
 		} else
-			ts.tv_sec += BIOD_CRCUP_MAX_AGE;
+			ts.tv_sec += BCR_MAX_AGE;
 
 		LIST_CACHE_ULOCK(&crcqSlvrs);
 
@@ -361,7 +361,7 @@ slvr_worker_int(void)
 		DEBUG_SLVR(PLL_INFO, s, "crc0");
 
 	} else {
-		ts.tv_sec += BIOD_CRCUP_MAX_AGE;
+		ts.tv_sec += BCR_MAX_AGE;
 		s = lc_gettimed(&crcqSlvrs, &ts);
 
 		if (!s) {
@@ -458,7 +458,7 @@ slvr_worker_int(void)
 
 	SLVR_ULOCK(s);
 
-	BIOD_LOCK(biod);
+	BII_LOCK(biod);
 	bcr = biod->biod_bcr;
 
 	if (bcr) {
@@ -538,7 +538,7 @@ slvr_worker_int(void)
 	}
 
 	PFL_GETTIMESPEC(&bcr->bcr_age);
-	BIOD_ULOCK(biod);
+	BII_ULOCK(biod);
 
 	slvr_worker_push_crcups();
 }
