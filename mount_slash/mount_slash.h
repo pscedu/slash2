@@ -194,9 +194,8 @@ struct msl_fsrqinfo {
 #define MFSRQ_AIOWAIT			(1 << 0)
 #define MFSRQ_READY			(1 << 1)
 #define MFSRQ_BMPCEATT			(1 << 2)
-#define MFSRQ_DIO			(1 << 3)
-#define MFSRQ_AIOREADY			(1 << 4)
-#define MFSRQ_REISSUED			(1 << 5)
+#define MFSRQ_AIOREADY			(1 << 3)
+#define MFSRQ_REISSUED			(1 << 4)
 
 int	msl_fsrqinfo_state(struct msl_fsrqinfo *, int, int, int);
 void    msl_fsrqinfo_biorq_add(struct msl_fsrqinfo *, struct bmpc_ioreq *,int);
@@ -218,8 +217,6 @@ res2rpci(struct sl_resource *res)
 {
 	return (resprof_get_pri(res));
 }
-
-#define MAX_PENDING_RPCS 16
 
 /* CLI-specific data for struct sl_resm */
 struct resm_cli_info {

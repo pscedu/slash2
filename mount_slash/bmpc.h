@@ -47,8 +47,6 @@ struct msl_fsrqinfo;
 
 #define BMPC_BUFSZ		SLASH_SLVR_BLKSZ
 #define BMPC_BLKSZ		BMPC_BUFSZ
-#define BMPC_DEFSLBS		1
-#define BMPC_MAXSLBS		32
 #define BMPC_BUFMASK		(BMPC_BLKSZ - 1)
 #define BMPC_IOMAXBLKS		64
 #define BMPC_MAXBUFSRPC		(1024 * 1024 / BMPC_BUFSZ)	/* same as LNET_MTU / BMPC_BUFSZ */

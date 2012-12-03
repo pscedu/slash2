@@ -90,7 +90,6 @@ struct fidc_membh {
 
 /* number of seconds in which attribute times out */
 #define FCMH_ATTR_TIMEO		8
-#define FCMH_ATTR_TIMEO_SHORT	4
 
 #define FCMH_LOCK(f)		spinlock_pci(PFL_CALLERINFOSS(SLSS_FCMH), &(f)->fcmh_lock)
 #define FCMH_ULOCK(f)		freelock_pci(PFL_CALLERINFOSS(SLSS_FCMH), &(f)->fcmh_lock)
