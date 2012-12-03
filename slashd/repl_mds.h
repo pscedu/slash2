@@ -66,10 +66,8 @@ int	 mds_repl_delrq(const struct slash_fidgen *, sl_bmapno_t, sl_replica_t *, in
 int	 mds_repl_inv_except(struct bmapc_memb *, int);
 int	_mds_repl_ios_lookup(int, struct slash_inode_handle *, sl_ios_id_t, int);
 int	_mds_repl_iosv_lookup(int, struct slash_inode_handle *, const sl_replica_t [], int [], int, int);
-int	 mds_repl_loadino(const struct slash_fidgen *, struct fidc_membh **);
 void	 mds_repl_node_clearallbusy(struct sl_resm *);
 int64_t	 mds_repl_nodes_adjbusy(struct sl_resm *, struct sl_resm *, int64_t);
-void	 mds_repl_reset_scheduled(struct sl_resm *);
 
 void	 slm_iosv_clearbusy(const sl_replica_t *, int);
 

@@ -434,8 +434,6 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
 	    ((r)->biorq_flags & BIORQ_RBWLP)))))
 
 void	 bmpc_global_init(void);
-int	 bmpc_grow(int);
-void	*bmpc_alloc(void);
 void	 bmpc_free(void *);
 void	 bmpc_freeall_locked(struct bmap_pagecache *);
 int	 bmpc_biorq_cmp(const void *, const void *);
@@ -503,36 +501,5 @@ bmpc_lru_cmp(const void *x, const void *y)
 
 	return (0);
 }
-
-#if 0
-static __inline void
-bmpc_decrease_minage(void)
-{
-	struct timespec ts = BMPC_INTERVAL;
-
-	BMPCSLABS_LOCK();
-
-	timespecsub(&bmpcSlabs.bmms_minage, &ts,
-		    &bmpcSlabs.bmms_minage);
-
-	if (bmpcSlabs.bmms_minage.tv_sec < 0)
-		timespecclear(&bmpcSlabs.bmms_minage);
-
-	BMPCSLABS_ULOCK();
-}
-
-static __inline void
-bmpc_increase_minage(void)
-{
-	struct timespec ts = BMPC_INTERVAL;
-
-	BMPCSLABS_LOCK();
-
-	timespecadd(&bmpcSlabs.bmms_minage, &ts,
-		    &bmpcSlabs.bmms_minage);
-
-	BMPCSLABS_ULOCK();
-}
-#endif
 
 #endif /* _SL_BMPC_H_ */

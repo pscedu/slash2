@@ -198,7 +198,6 @@ struct msl_fsrqinfo {
 #define MFSRQ_AIOREADY			(1 << 4)
 #define MFSRQ_REISSUED			(1 << 5)
 
-void	msl_fsrqinfo_write(struct msl_fsrqinfo *);
 int	msl_fsrqinfo_state(struct msl_fsrqinfo *, int, int, int);
 void    msl_fsrqinfo_biorq_add(struct msl_fsrqinfo *, struct bmpc_ioreq *,int);
 
