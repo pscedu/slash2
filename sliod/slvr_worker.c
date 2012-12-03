@@ -241,7 +241,7 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 	struct srm_bmap_crcwrt_rep *mp;
 	struct slashrpc_cservice *csvc;
 	struct biod_crcup_ref *bcr;
-	struct bmap_iod_info *biod;
+	struct bmap_iod_info *bii;
 	struct psc_dynarray *a;
 	int i;
 
@@ -257,14 +257,14 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 
 	for (i = 0; i < psc_dynarray_len(a); i++) {
 		bcr = psc_dynarray_getpos(a, i);
-		biod = bcr->bcr_bii;
+		bii = bcr->bcr_bii;
 
 		DEBUG_BCR(((rq->rq_status || !mp || mp->rc) ?
 		    PLL_ERROR : PLL_INFO), bcr, "rq_status=%d rc=%d%s",
 		    rq->rq_status, mp ? mp->rc : -4096,
 		    mp ? "" : " (unknown, no buf)");
 
-		psc_assert(bii_2_bmap(biod)->bcm_flags &
+		psc_assert(bii_2_bmap(bii)->bcm_flags &
 		    (BMAP_IOD_INFLIGHT|BMAP_IOD_BCRSCHED));
 
 		if (rq->rq_status) {
@@ -272,11 +272,11 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 			 * Unset the inflight bit on the bii since
 			 * bcr_xid_last_bump() will not be called.
 			 */
-			BII_LOCK(biod);
+			BII_LOCK(bii);
 			bcr->bcr_flags &= ~BCR_SCHEDULED;
-			BMAP_CLEARATTR(bii_2_bmap(biod), BMAP_IOD_INFLIGHT);
+			BMAP_CLEARATTR(bii_2_bmap(bii), BMAP_IOD_INFLIGHT);
 			bcr_xid_check(bcr);
-			BII_ULOCK(biod);
+			BII_ULOCK(bii);
 
 			DEBUG_BCR(PLL_ERROR, bcr, "rescheduling");
 			OPSTAT_INCR(SLI_OPST_CRC_UPDATE_CB_FAILURE);
@@ -301,7 +301,7 @@ slvr_worker_int(void)
 {
 	struct biod_crcup_ref *bcr = NULL;
 	struct timespec ts, slvr_ts;
-	struct bmap_iod_info *biod;
+	struct bmap_iod_info *bii;
 	struct bmapc_memb *b;
 	struct slvr_ref	*s;
 	uint16_t slvr_num;
@@ -440,9 +440,9 @@ slvr_worker_int(void)
 	PSC_CRC64_FIN(&crc);
 
 	/* Put the slvr back to the LRU so it may have its slab reaped. */
-	biod = slvr_2_biod(s);
-	b = bii_2_bmap(biod);
-	psc_atomic32_dec(&biod->biod_crcdrty_slvrs);
+	bii = slvr_2_biod(s);
+	b = bii_2_bmap(bii);
+	psc_atomic32_dec(&bii->biod_crcdrty_slvrs);
 	s->slvr_dirty_cnt--;
 	DEBUG_SLVR(PLL_INFO, s, "prep for move to LRU (ndirty=%u)",
 	    psc_atomic32_read(&slvr_2_biod(s)->biod_crcdrty_slvrs));
@@ -456,8 +456,8 @@ slvr_worker_int(void)
 
 	SLVR_ULOCK(s);
 
-	BII_LOCK(biod);
-	bcr = biod->biod_bcr;
+	BII_LOCK(bii);
+	bcr = bii->biod_bcr;
 
 	if (bcr) {
 		uint32_t i, found;
@@ -488,7 +488,7 @@ slvr_worker_int(void)
 			  "nups=%d", i, bcr->bcr_crcup.nups);
 
 		if (bcr->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS) {
-			if (pll_nitems(&biod->biod_bklog_bcrs))
+			if (pll_nitems(&bii->biod_bklog_bcrs))
 				/* This is a backlogged bcr, cap it and
 				 *   move on.
 				 */
@@ -502,7 +502,7 @@ slvr_worker_int(void)
 		bmap_op_start_type(b, BMAP_OPCNT_BCRSCHED);
 
 		/* Freed by bcr_ready_remove() */
-		biod->biod_bcr = bcr =
+		bii->biod_bcr = bcr =
 		    PSCALLOC(sizeof(struct biod_crcup_ref) +
 			(sizeof(struct srt_bmap_crcwire) *
 			 MAX_BMAP_INODE_PAIRS));
@@ -511,8 +511,8 @@ slvr_worker_int(void)
 		COPYFG(&bcr->bcr_crcup.fg,
 		    &b->bcm_fcmh->fcmh_fg);
 
-		bcr->bcr_bii = biod;
-		bcr->bcr_xid = biod->biod_bcr_xid++;
+		bcr->bcr_bii = bii;
+		bcr->bcr_xid = bii->biod_bcr_xid++;
 		bcr->bcr_crcup.blkno = b->bcm_bmapno;
 		bcr->bcr_crcup.crcs[0].crc = crc;
 		bcr->bcr_crcup.crcs[0].slot = slvr_num;
@@ -529,7 +529,7 @@ slvr_worker_int(void)
 			 * be present on the ready list.
 			 */
 			OPSTAT_INCR(SLI_OPST_CRC_UPDATE_BACKLOG);
-			pll_addtail(&biod->biod_bklog_bcrs, bcr);
+			pll_addtail(&bii->biod_bklog_bcrs, bcr);
 		} else {
 			BMAP_SETATTR(b, BMAP_IOD_BCRSCHED);
 			bcr_hold_add(&binflCrcs, bcr);
@@ -537,7 +537,7 @@ slvr_worker_int(void)
 	}
 
 	PFL_GETTIMESPEC(&bcr->bcr_age);
-	BII_ULOCK(biod);
+	BII_ULOCK(bii);
 
 	slvr_worker_push_crcups();
 }

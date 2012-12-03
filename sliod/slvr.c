@@ -1371,8 +1371,8 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 		/* We are reaping, so it is fine to back off on some
 		 *   slivers.  We have to use a reqlock here because
 		 *   slivers do not have private spinlocks, instead
-		 *   they use the lock of the biod.  So if this thread
-		 *   tries to free a slvr from the same biod trylock
+		 *   they use the lock of the bii.  So if this thread
+		 *   tries to free a slvr from the same bii trylock
 		 *   will abort.
 		 */
 		if (!SLVR_TRYRLOCK(s, &locked))
