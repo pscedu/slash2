@@ -3077,5 +3077,6 @@ main(int argc, char *argv[])
 	pscfs_entry_timeout = 8.;
 	pscfs_attr_timeout = 8.;
 
+	OPSTAT_ASSIGN(SLC_OPST_VERSION, SL_STK_VERSION);
 	exit(pscfs_main());
 }

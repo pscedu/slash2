@@ -537,7 +537,8 @@ struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("unlink"),
 	PFL_OPSTAT_INIT("write"),
 	PFL_OPSTAT_INIT("write_coalesce"),
-	PFL_OPSTAT_INIT("write_coalesce_max")
+	PFL_OPSTAT_INIT("write_coalesce_max"),
+	PFL_OPSTAT_INIT("version")
 };
 
 PFLCTL_SVR_DEFS;
