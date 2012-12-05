@@ -689,7 +689,7 @@ bmap_flushable(struct bmapc_memb *b, struct timespec *t)
 	PLL_FOREACH_SAFE(r, tmp, &bmpc->bmpc_new_biorqs) {
 		BIORQ_LOCK(r);
 
-		DEBUG_BIORQ(PLL_NOTICE, r, "consider for flush");
+		DEBUG_BIORQ(PLL_INFO, r, "consider for flush");
 		psc_assert(r->biorq_off >= off);
 		off = r->biorq_off;
 
