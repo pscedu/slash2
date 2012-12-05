@@ -305,7 +305,8 @@ bcr_finalize(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 				psc_assert(bii->bii_bcr == tmp ||
 					   !bii->bii_bcr);
 				if (tmp->bcr_crcup.nups ==
-				    MAX_BMAP_INODE_PAIRS) {
+				    MAX_BMAP_INODE_PAIRS &&
+				    !(b->bcm_flags & BMAP_IOD_INFLIGHT)) {
 					bii->bii_bcr = NULL;
 					bcr_ready_add(inf, tmp);
 				} else
