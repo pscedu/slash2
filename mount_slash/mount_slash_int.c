@@ -394,7 +394,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 		BMPCE_ULOCK(e);
 	}
 
-	DEBUG_BIORQ(PLL_NOTIFY, r, "new req (fetchpgs=%d)", fetchpgs);
+	DEBUG_BIORQ(PLL_DEBUG, r, "new req (fetchpgs=%d)", fetchpgs);
 }
 
 /**
