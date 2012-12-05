@@ -1109,10 +1109,11 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			    &bci->bci_sbd, sizeof(bci->bci_sbd));
 			rmci->rmci_bmaprls.nbmaps++;
 
-			/* The bmap should be going away now, this
-			 *    will call BMAP_URLOCK().
+			/*
+			 * The bmap should be going away now; this will
+			 * call BMAP_URLOCK().
 			 */
-			DEBUG_BMAP(PLL_NOTICE, b, "release");
+			DEBUG_BMAP(PLL_DEBUG, b, "release");
 
 			bmap_op_done_type(b, BMAP_OPCNT_REAPER);
 
