@@ -816,7 +816,9 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 			pll_addtail(&bwc->bwc_pll, t);
 		}
 
-		/* If any member is expired then we'll push everything out.
+		/*
+		 * If any member is expired then we'll push everything
+		 * out.
 		 */
 		if (!expired)
 			expired = bmap_flush_biorq_expired(t, NULL);
@@ -824,21 +826,23 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 		psc_assert(!(t->biorq_flags & BIORQ_RESCHED));
 		mergeable = expired || !(t->biorq_flags & BIORQ_RESCHED);
 
-		DEBUG_BIORQ(PLL_NOTICE, t, "biorq #%d (expired=%d)",
-			    idx, expired);
+		DEBUG_BIORQ(PLL_INFO, t, "biorq #%d (expired=%d)", idx,
+		    expired);
 
 		if (!idx)
 			continue;
 
-		/* The next request, 't', can be added to the coalesce
-		 *   group because 't' overlaps or extends 'e'.
+		/*
+		 * The next request, 't', can be added to the coalesce
+		 * group because 't' overlaps or extends 'e'.
 		 */
 		if (mergeable && t->biorq_off <= biorq_voff_get(e)) {
 			sz = biorq_voff_get(t) - biorq_voff_get(e);
 			if (sz > 0) {
 				if (sz + bwc->bwc_size > MIN_COALESCE_RPC_SZ) {
-					/* Adding this biorq will push us over
-					 *   the limit.
+					/*
+					 * Adding this biorq will push
+					 * us over the limit.
 					 */
 					large = 1;
 					break;
@@ -868,8 +872,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 	}
 
 	if (!(large || expired)) {
-		/* Clean up any lingering biorq's.
-		 */
+		/* Clean up any lingering biorq's. */
 		bwc_desched(bwc);
 		bwc_release(bwc);
 		bwc = NULL;
@@ -898,10 +901,10 @@ msl_bmap_release_cb(struct pscrpc_request *rq,
 
 	for (i = 0; i < mq->nbmaps; i++) {
 		psclog((rc || mp->rc) ? PLL_ERROR : PLL_INFO,
-		       "fid="SLPRI_FID" bmap=%u key=%"PRId64" seq=%"PRId64
-		       " rc=%d", mq->sbd[i].sbd_fg.fg_fid,
-		       mq->sbd[i].sbd_bmapno, mq->sbd[i].sbd_key,
-		       mq->sbd[i].sbd_seq, (mp) ? mp->rc : rc);
+		    "fid="SLPRI_FID" bmap=%u key=%"PRId64" "
+		    "seq=%"PRId64" rc=%d", mq->sbd[i].sbd_fg.fg_fid,
+		    mq->sbd[i].sbd_bmapno, mq->sbd[i].sbd_key,
+		    mq->sbd[i].sbd_seq, (mp) ? mp->rc : rc);
 	}
 
 	sl_csvc_decref(csvc);
@@ -923,10 +926,11 @@ msl_bmap_release(struct sl_resm *resm)
 	csvc = (resm == slc_rmc_resm) ?
 	    slc_getmcsvc(resm) : slc_geticsvc(resm);
 	if (csvc == NULL) {
-		/* Per bug 136.  If the csvc is not available then nuke
-		 *   any pending bmap releases.  For now, this op is
-		 *   single threaded so resetting nbmaps here should not
-		 *   be racy.
+		/*
+		 * Per bug 136.  If the csvc is not available then nuke
+		 * any pending bmap releases.  For now, this op is
+		 * single threaded so resetting nbmaps here should not
+		 * be racy.
 		 */
 		rmci->rmci_bmaprls.nbmaps = 0;
 		if (resm->resm_csvc)
@@ -950,14 +954,15 @@ msl_bmap_release(struct sl_resm *resm)
 	rmci->rmci_bmaprls.nbmaps = 0;
  out:
 	if (rc) {
-		/* At this point the bmaps have already been purged from
-		 *   our cache.  If the MDS RLS request fails then the
-		 *   MDS should time them out on his own.  In any case,
-		 *   the client must reacquire leases to perform further
-		 *   I/O on any bmap in this set.
+		/*
+		 * At this point the bmaps have already been purged from
+		 * our cache.  If the MDS RLS request fails then the MDS
+		 * should time them out on his own.  In any case, the
+		 * client must reacquire leases to perform further I/O
+		 * on any bmap in this set.
 		 */
-		psclog_errorx("failed res=%s (rc=%d)",
-		    resm->resm_name, rc);
+		psclog_errorx("failed res=%s (rc=%d)", resm->resm_name,
+		    rc);
 
 		if (rq)
 			pscrpc_req_finished(rq);
@@ -1008,15 +1013,16 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				wrapdetect = bci;
 				/* Don't set expire in the past.
 				 */
-				if (timespeccmp(&crtime, &bci->bci_etime, <))
+				if (timespeccmp(&crtime,
+				    &bci->bci_etime, <))
 					nto = bci->bci_etime;
 			}
 
 			BMAP_LOCK(b);
 			DEBUG_BMAP(PLL_DEBUG, b, "timeoq try reap"
-			   " (nbmaps=%zd) etime("PSCPRI_TIMESPEC")",
-			   lc_sz(&bmapTimeoutQ),
-			   PSCPRI_TIMESPEC_ARGS(&bci->bci_etime));
+			    " (nbmaps=%zd) etime("PSCPRI_TIMESPEC")",
+			    lc_sz(&bmapTimeoutQ),
+			    PSCPRI_TIMESPEC_ARGS(&bci->bci_etime));
 
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 			psc_assert(b->bcm_flags & BMAP_TIMEOQ);
