@@ -1558,7 +1558,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 	mq->offset = off;
 	memcpy(&mq->sbd, bmap_2_sbd(b), sizeof(mq->sbd));
 
-	DEBUG_BMAP(PLL_NOTIFY, b, "reada req off=%u, npages=%d", off,
+	DEBUG_BMAP(PLL_DIAG, b, "reada req off=%u, npages=%d", off,
 	    nbmpce);
 
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
@@ -1946,7 +1946,7 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 			 */
 			while (!(e->bmpce_flags &
 			    (BMPCE_DATARDY | BMPCE_EIO | BMPCE_AIOWAIT))) {
-				DEBUG_BMPCE(PLL_NOTIFY, e, "waiting");
+				DEBUG_BMPCE(PLL_DIAG, e, "waiting");
 				BMPCE_WAIT(e);
 				BMPCE_LOCK(e);
 			}

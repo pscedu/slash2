@@ -1179,17 +1179,18 @@ bmpces_inflight_locked(struct bmpc_ioreq *r)
 	DYNARRAY_FOREACH(bmpce, i, &r->biorq_pages) {
 		BMPCE_LOCK(bmpce);
 		if (bmpce->bmpce_flags & BMPCE_INFLIGHT) {
-			DEBUG_BMPCE(PLL_NOTIFY, bmpce, "inflight already");
+			DEBUG_BMPCE(PLL_NOTIFY, bmpce,
+			    "inflight already");
 			BMPCE_ULOCK(bmpce);
 			return (1);
-		} else
-			BMPCE_ULOCK(bmpce);
+		}
+		BMPCE_ULOCK(bmpce);
 	}
 	return (0);
 }
 
 /**
- * msbmflwthr_main - lease watcher thread.
+ * msbmflwthr_main - Lease watcher thread.
  */
 __static void
 msbmflwthr_main(__unusedx struct psc_thread *thr)
@@ -1220,8 +1221,8 @@ msbmflwthr_main(__unusedx struct psc_thread *thr)
 		DYNARRAY_FOREACH(b, i, &bmaps) {
 			rc = msl_bmap_lease_tryext(b, &secs, 0);
 			DEBUG_BMAP((rc && rc != -EAGAIN) ?
-			   PLL_ERROR : PLL_INFO, b,
-			   "rc=%d secs=%d",  rc, secs);
+			    PLL_ERROR : PLL_INFO, b,
+			    "rc=%d secs=%d",  rc, secs);
 		}
 		psc_dynarray_reset(&bmaps);
 		usleep(200000);
@@ -1344,14 +1345,16 @@ bmap_flush(struct timespec *nto)
 				}
 
 			} else if (bmpces_inflight_locked(r)) {
-				/* Check for the BMPCE_INFLIGHT bit which is
-				 *  used to prevent out-of-order writes
-				 *  from being sent to the I/O server.
-				 *  That situation is possible since large
-				 *  RPCs could take 32x longer to ship.
+				/*
+				 * Check for the BMPCE_INFLIGHT bit
+				 * which is used to prevent out-of-order
+				 * writes from being sent to the I/O
+				 * server.  That situation is possible
+				 * since large RPCs could take 32x
+				 * longer to ship.
 				 *
-				 *  BMPCE_INFLIGHT is not set until the bulk
-				 *  is created.
+				 * BMPCE_INFLIGHT is not set until the
+				 * bulk is created.
 				 */
 				BIORQ_ULOCK(r);
 				continue;
