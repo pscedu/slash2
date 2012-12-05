@@ -307,7 +307,7 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r)
 	} else
 		timespecsub(&r->biorq_expire, &t, &t);
 
-	DEBUG_BIORQ(old ? PLL_NOTIFY : PLL_INFO, r, "set inflight %s("
+	DEBUG_BIORQ(old ? PLL_DIAG : PLL_DEBUG, r, "set inflight %s("
 	    PSCPRI_TIMESPEC")", old ? "expired: -" : "",
 	    PSCPRI_TIMESPEC_ARGS(&t));
 
