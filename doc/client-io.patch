@@ -1,6 +1,6 @@
 Index: slash_nara/mount_slash/mount_slash.h
 ===================================================================
---- slash_nara/mount_slash/mount_slash.h	(revision 20154)
+--- slash_nara/mount_slash/mount_slash.h	(revision 20158)
 +++ slash_nara/mount_slash/mount_slash.h	(working copy)
 @@ -142,7 +142,7 @@
  	struct psc_listentry		  car_lentry;
@@ -66,7 +66,7 @@ Index: slash_nara/mount_slash/mount_slash.h
  	SLC_OPST_BMPCE_GET,
 Index: slash_nara/mount_slash/mount_slash_int.c
 ===================================================================
---- slash_nara/mount_slash/mount_slash_int.c	(revision 20154)
+--- slash_nara/mount_slash/mount_slash_int.c	(revision 20158)
 +++ slash_nara/mount_slash/mount_slash_int.c	(working copy)
 @@ -64,6 +64,10 @@
  struct timespec		msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
@@ -245,7 +245,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  	DEBUG_BMAP(PLL_INFO, b, "remove biorq=%p nitems_pndg(%d)",
  		   r, pll_nitems(&bmpc->bmpc_pndg_biorqs));
  
-@@ -480,82 +436,12 @@
+@@ -480,83 +436,18 @@
  {
  	struct bmap_pagecache_entry *e;
  	struct bmap_pagecache *bmpc = bmap_2_bmpc(r->biorq_bmap);
@@ -262,8 +262,9 @@ Index: slash_nara/mount_slash/mount_slash_int.c
 -	 * Additionally, we need to block for RA pages which have not
 -	 * yet been marked as EIO.
 -	 */
--	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
--		BMPCE_LOCK(e);
++	BMPC_LOCK(bmpc);
+ 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
+ 		BMPCE_LOCK(e);
 -
 -		if (biorq_is_my_bmpce(r, e) &&
 -		    (r->biorq_flags & BIORQ_RBWFAIL)) {
@@ -275,7 +276,11 @@ Index: slash_nara/mount_slash/mount_slash_int.c
 -			 */
 -			e->bmpce_flags |= BMPCE_EIO;
 -			DEBUG_BMPCE(PLL_INFO, e, "set BMPCE_EIO");
--		}
++		if (biorq_is_my_bmpce(r, e)) {
++			DEBUG_BMPCE(PLL_INFO, e, "disown");
++			/* avoid reuse trouble */
++			e->bmpce_owner = NULL;
+ 		}
 -
 -		if (biorq_is_my_bmpce(r, e) && (e->bmpce_flags & BMPCE_EIO)) {
 -			if ((r->biorq_flags & BIORQ_RBWFAIL) &&
@@ -311,14 +316,15 @@ Index: slash_nara/mount_slash/mount_slash_int.c
 -		e->bmpce_flags &= ~BMPCE_INFLIGHT;
 -		DEBUG_BMPCE(PLL_INFO, e, "unset inflight");
 -		BMPCE_ULOCK(e);
--	}
++		bmpce_release_locked(e, bmpc);
+ 	}
 -
- 	BMPC_LOCK(bmpc);
- 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
+-	BMPC_LOCK(bmpc);
+-	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 -		/*
 -		 * bmpce with no reference will be freed by the reaper.
 -		 */
- 		BMPCE_LOCK(e);
+-		BMPCE_LOCK(e);
 -		eio = (e->bmpce_flags & BMPCE_EIO) ? 1 : 0;
 -		bmpce_handle_lru_locked(e, bmpc,
 -		    (r->biorq_flags & BIORQ_WRITE) ?
@@ -326,13 +332,16 @@ Index: slash_nara/mount_slash/mount_slash_int.c
 -
 -		if (!eio)
 -			BMPCE_ULOCK(e);
-+		bmpce_release_locked(e, bmpc);
- 	}
+-	}
  	BMPC_ULOCK(bmpc);
  }
-@@ -565,51 +451,63 @@
+ 
+@@ -564,62 +455,28 @@
+ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
      struct bmpc_ioreq *r)
  {
++	int i;
++	struct bmap_pagecache_entry *e;
  	struct msl_fhent *f = r->biorq_fhent;
 +
  #if FHENT_EARLY_RELEASE
@@ -342,36 +351,10 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  	BIORQ_LOCK(r);
  
 -	psc_assert(!(r->biorq_flags & BIORQ_DESTROY));
-+	r->biorq_ref--;
-+	psc_assert(r->biorq_ref >= 0);
-+	DEBUG_BIORQ(PLL_INFO, r, "destroying (ref=%d)", r->biorq_ref);
-+	if (r->biorq_ref) {
-+		BIORQ_ULOCK(r);
-+		return;
-+	}
-+	BIORQ_ULOCK(r);
- 
+-
 -	OPSTAT_INCR(SLC_OPST_BIORQ_DESTROY);
-+	if (r->biorq_flags & BIORQ_FLUSHRDY)
-+		goto destroy;
- 
-+#if FHENT_EARLY_RELEASE
-+	if (fhent) {
-+		spinlock(&f->mfh_lock);
-+		pll_remove(&f->mfh_biorqs, r);
-+		psc_waitq_wakeall(&msl_fhent_flush_waitq);
-+		freelock(&f->mfh_lock);
-+	}
-+#else
-+	if (pll_conjoint(&f->mfh_biorqs, r)) {
-+		spinlock(&f->mfh_lock);
-+		pll_remove(&f->mfh_biorqs, r);
-+		psc_waitq_wakeall(&msl_fhent_flush_waitq);
-+		freelock(&f->mfh_lock);
-+	}
-+#endif
-+
- 	/*
+-
+-	/*
 -	 * Reads req's have their BIORQ_SCHED and BIORQ_INFL flags
 -	 * cleared in msl_read_cb to unblock waiting threads at the
 -	 * earliest possible moment.
@@ -397,51 +380,76 @@ Index: slash_nara/mount_slash/mount_slash_int.c
 -		} else
 -			psc_assert(!(r->biorq_flags &
 -			    (BIORQ_INFL | BIORQ_SCHED)));
++	r->biorq_ref--;
++	psc_assert(r->biorq_ref >= 0);
++	DEBUG_BIORQ(PLL_INFO, r, "destroying (ref=%d)", r->biorq_ref);
++	if (r->biorq_ref) {
++		BIORQ_ULOCK(r);
++		return;
+ 	}
+-
+-	r->biorq_flags |= BIORQ_DESTROY;
+-
+-#if FHENT_EARLY_RELEASE
+-	if (r->biorq_flags & BIORQ_NOFHENT)
+-		fhent = 0;
+-#endif
+ 	BIORQ_ULOCK(r);
+ 
+-	DEBUG_BIORQ(PLL_INFO, r, "destroying (nwaiters=%d)",
+-		    atomic_read(&r->biorq_waitq.wq_nwaiters));
++	if (r->biorq_flags & BIORQ_FLUSHRDY)
++		goto destroy;
+ 
+-	/* One last shot to wakeup any blocked threads. */
+-	psc_waitq_wakeall(&r->biorq_waitq);
+-
+-	msl_biorq_unref(r);
+-	msl_biorq_del(r);
+-
+ #if FHENT_EARLY_RELEASE
+ 	if (fhent) {
+ 		spinlock(&f->mfh_lock);
+@@ -636,9 +493,45 @@
+ 	}
+ #endif
+ 
++	/*
 + 	 * A request can be split into several RPCs, so we can't declare it
 +	 * as complete after its reference count drops to zero.
 + 	 */
 +	msl_biorq_complete_fsrq(r);
++	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
++		BMPCE_LOCK(e);
++		if (biorq_is_my_bmpce(r, e)) {
++			DEBUG_BMPCE(PLL_INFO, e, "wakeup");
++			BMPCE_WAKE(e);
++		}
++	}
 +	if (r->biorq_flags & BIORQ_FLUSHRDY) {
 +		msl_pages_schedflush(r);
 +		return;
- 	}
- 
++	}
++
 + destroy:
 +
 +	psc_assert(!(r->biorq_flags & BIORQ_DESTROY));
- 	r->biorq_flags |= BIORQ_DESTROY;
- 
++	r->biorq_flags |= BIORQ_DESTROY;
++
 +	OPSTAT_INCR(SLC_OPST_BIORQ_DESTROY);
 +	psc_assert(!(r->biorq_flags & (BIORQ_INFL | BIORQ_SCHED)));
 +
- #if FHENT_EARLY_RELEASE
- 	if (r->biorq_flags & BIORQ_NOFHENT)
- 		fhent = 0;
- #endif
--	BIORQ_ULOCK(r);
- 
- 	DEBUG_BIORQ(PLL_INFO, r, "destroying (nwaiters=%d)",
- 		    atomic_read(&r->biorq_waitq.wq_nwaiters));
-@@ -620,25 +518,9 @@
- 	msl_biorq_unref(r);
- 	msl_biorq_del(r);
- 
--#if FHENT_EARLY_RELEASE
--	if (fhent) {
--		spinlock(&f->mfh_lock);
--		pll_remove(&f->mfh_biorqs, r);
--		psc_waitq_wakeall(&msl_fhent_flush_waitq);
--		freelock(&f->mfh_lock);
--	}
--#else
--	if (pll_conjoint(&f->mfh_biorqs, r)) {
--		spinlock(&f->mfh_lock);
--		pll_remove(&f->mfh_biorqs, r);
--		psc_waitq_wakeall(&msl_fhent_flush_waitq);
--		freelock(&f->mfh_lock);
--	}
--#endif
--
++#if FHENT_EARLY_RELEASE
++	if (r->biorq_flags & BIORQ_NOFHENT)
++		fhent = 0;
++#endif
++
++	DEBUG_BIORQ(PLL_INFO, r, "destroying (nwaiters=%d)",
++		    atomic_read(&r->biorq_waitq.wq_nwaiters));
++
++	msl_biorq_unref(r);
++	msl_biorq_del(r);
++
  	psc_dynarray_free(&r->biorq_pages);
  
 -	if (r->biorq_rqset && !(r->biorq_flags & BIORQ_AIOWAIT)) {
@@ -449,7 +457,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  		pscrpc_set_destroy(r->biorq_rqset);
  		r->biorq_rqset = NULL;
  	}
-@@ -699,67 +581,35 @@
+@@ -699,67 +592,35 @@
  	return (NULL);
  }
  
@@ -532,7 +540,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
      struct pscrpc_async_args *av)
  {
  	struct bmpc_ioreq *r = av->pointer_arg[MSL_CBARG_BIORQ];
-@@ -801,34 +651,39 @@
+@@ -801,34 +662,39 @@
  		OPSTAT_INCR(SLC_OPST_READ_CB_ADD);
  		DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
  			BMPCE_LOCK(e);
@@ -584,7 +592,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  	} else
  		abort();
  
-@@ -841,39 +696,70 @@
+@@ -841,39 +707,70 @@
  }
  
  __static void
@@ -678,7 +686,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  		if (i && !len)
  			/*
  			 * This fsrq has 2 biorqs (probably spanned two
-@@ -881,7 +767,7 @@
+@@ -881,7 +778,7 @@
  			 * cache so interpolate its len.
  			 */
  			len = q->mfsrq_size - r->biorq_len;
@@ -687,7 +695,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  		if (r->biorq_flags & BIORQ_DIO) {
  			/*
  			 * Support mix of dio and cached reads.  This
-@@ -890,116 +776,59 @@
+@@ -890,116 +787,59 @@
  			 * the tail of the file in msl_io().
  			 */
  			len += r->biorq_len;
@@ -837,7 +845,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  #define msl_bmpce_rpc_done(e, rc)					\
  	_msl_bmpce_rpc_done(PFL_CALLERINFOSS(SLSS_BMAP), (e), (rc))
  
-@@ -1007,14 +836,9 @@
+@@ -1007,18 +847,12 @@
  _msl_bmpce_rpc_done(const struct pfl_callerinfo *pci,
      struct bmap_pagecache_entry *e, int rc)
  {
@@ -852,7 +860,11 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  	if (rc) {
  		e->bmpce_flags |= BMPCE_EIO;
  		DEBUG_BMPCE(PLL_INFO, e, "set BMPCE_EIO");
-@@ -1026,30 +850,21 @@
+-		BMPCE_WAKE(e);
+ 
+ 	} else if (e->bmpce_flags & BMPCE_RBWPAGE) {
+ 		/*
+@@ -1026,30 +860,18 @@
  		 * this is not the best place but should suffice for
  		 * now.
  		 */
@@ -865,7 +877,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  	} else {
  		e->bmpce_flags |= BMPCE_DATARDY;
  		DEBUG_BMPCE(PLL_INFO, e, "datardy via read_cb");
- 		BMPCE_WAKE(e);
+-		BMPCE_WAKE(e);
 -
 -//		psc_assert(psc_atomic32_read(
 -//		    &e->bmpce_waitq->wq_nwaiters) == 0);
@@ -876,8 +888,6 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  	/* AIOWAIT is removed no matter what. */
  	e->bmpce_flags &= ~BMPCE_AIOWAIT;
  
-+	/* biorq can be reused, clear this just in case */
-+	e->bmpce_owner = NULL;
  	BMPCE_ULOCK(e);
 -
 -	if (aio_completion_try)
@@ -886,7 +896,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  }
  
  /**
-@@ -1061,14 +876,15 @@
+@@ -1061,14 +883,15 @@
   */
  int
  msl_read_cb(struct pscrpc_request *rq, int rc,
@@ -904,7 +914,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  
  	b = r->biorq_bmap;
  
-@@ -1088,18 +904,22 @@
+@@ -1088,18 +911,22 @@
  	DEBUG_BIORQ(rc ? PLL_ERROR : PLL_INFO, r, "rc=%d", rc);
  
  	DYNARRAY_FOREACH(e, i, a) {
@@ -936,7 +946,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  	/*
  	 * Free the dynarray which was allocated in
  	 * msl_read_rpc_launch().
-@@ -1130,12 +950,12 @@
+@@ -1130,12 +957,12 @@
  	if (rc == SLERR_AIOWAIT)
  		return (msl_req_aio_add(rq, msl_read_cb, args));
  
@@ -951,7 +961,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  {
  	struct bmap_pagecache_entry *e,
  	    **bmpces = args->pointer_arg[MSL_CBARG_BMPCE];
-@@ -1161,17 +981,23 @@
+@@ -1161,17 +988,23 @@
  
  		DEBUG_BMPCE(rc ? PLL_ERROR : PLL_INFO, e, "rc=%d", rc);
  
@@ -983,7 +993,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  		BMPC_ULOCK(bmpc);
  	}
  
-@@ -1196,7 +1022,7 @@
+@@ -1196,7 +1029,7 @@
  	if (rc == SLERR_AIOWAIT)
  		return (msl_req_aio_add(rq, msl_readahead_cb, args));
  
@@ -992,7 +1002,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  }
  
  int
-@@ -1242,6 +1068,11 @@
+@@ -1242,6 +1075,11 @@
  	}
  
  	while ((r = pll_get(&bwc->bwc_pll))) {
@@ -1004,7 +1014,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  		if (rc) {
  			if (expired_lease || maxretries) {
  				/* Cleanup errored I/O requests.
-@@ -1264,12 +1095,13 @@
+@@ -1264,12 +1102,13 @@
  }
  
  int
@@ -1020,7 +1030,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  
  	DEBUG_REQ(PLL_INFO, rq, "cb");
  
-@@ -1282,14 +1114,24 @@
+@@ -1282,14 +1121,24 @@
  	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
  	psc_assert(mq);
  
@@ -1051,7 +1061,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  
  	return (rc);
  }
-@@ -1305,7 +1147,7 @@
+@@ -1305,7 +1154,7 @@
  	if (rc == SLERR_AIOWAIT)
  		return (msl_req_aio_add(rq, msl_dio_cb, args));
  
@@ -1060,7 +1070,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  }
  
  __static int
-@@ -1321,6 +1163,8 @@
+@@ -1321,6 +1170,8 @@
  	struct iovec *iovs;
  	int i, op, n = 0, rc = 1;
  	uint64_t *v8;
@@ -1069,7 +1079,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  
  	psc_assert(r->biorq_flags & BIORQ_DIO);
  	psc_assert(r->biorq_bmap);
-@@ -1332,7 +1176,6 @@
+@@ -1332,7 +1183,6 @@
  	n = howmany(size, LNET_MTU);
  	iovs = PSCALLOC(sizeof(*iovs) * n);
  
@@ -1077,7 +1087,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  	v8 = (uint64_t *)r->biorq_buf;
  	DEBUG_BIORQ(PLL_DEBUG, r, "dio req v8(%"PRIx64")", *v8);
  
-@@ -1386,6 +1229,10 @@
+@@ -1386,6 +1236,10 @@
  			pscrpc_set_remove_req(r->biorq_rqset, rq);
  			goto error;
  		}
@@ -1088,7 +1098,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  	}
  	/* Should be no need for a callback since this call is fully
  	 *   blocking.
-@@ -1403,10 +1250,6 @@
+@@ -1403,10 +1257,6 @@
  	case 0:
  		psc_iostats_intv_add((op == SRMT_WRITE ?
  		    &msl_diowr_stat : &msl_diord_stat), size);
@@ -1099,7 +1109,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  	case -SLERR_AIOWAIT:
  	case -EKEYEXPIRED:
  	default:
-@@ -1416,6 +1259,31 @@
+@@ -1416,6 +1266,31 @@
   out:
  	PSCFREE(iovs);
  	sl_csvc_decref(csvc);
@@ -1131,7 +1141,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  	return (rc);
  
   error:
-@@ -1439,9 +1307,6 @@
+@@ -1439,9 +1314,6 @@
  		csvc = NULL;
  	}
  
@@ -1141,7 +1151,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  	PSCFREE(iovs);
  	return (rc);
  }
-@@ -1460,8 +1325,7 @@
+@@ -1460,8 +1332,7 @@
  	 * processed prematurely.
  	 */
  	BIORQ_LOCK(r);
@@ -1151,7 +1161,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  	psc_assert(psclist_conjoint(&r->biorq_lentry,
  	    psc_lentry_hd(&r->biorq_lentry)));
  	atomic_inc(&bmpc->bmpc_pndgwr);
-@@ -1606,8 +1470,7 @@
+@@ -1606,8 +1477,7 @@
  
  		e->bmpce_flags |= BMPCE_EIO;
  		DEBUG_BMPCE(PLL_INFO, e, "set BMPCE_EIO");
@@ -1161,7 +1171,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  
  		if (added)
  			bmap_op_done_type(b, BMAP_OPCNT_READA);
-@@ -1659,7 +1522,7 @@
+@@ -1659,7 +1529,7 @@
  
  		psc_assert(biorq_is_my_bmpce(r, e));
  		psc_assert(!(e->bmpce_flags & BMPCE_DATARDY));
@@ -1170,7 +1180,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  
  		BMPCE_ULOCK(e);
  
-@@ -1729,6 +1592,12 @@
+@@ -1729,6 +1599,12 @@
  		pscrpc_set_remove_req(r->biorq_rqset, rq);
  		goto error;
  	}
@@ -1183,7 +1193,15 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  	return (0);
  
   error:
-@@ -1832,13 +1701,11 @@
+@@ -1759,7 +1635,6 @@
+ 		BMPCE_LOCK(e);
+ 		e->bmpce_flags |= BMPCE_EIO;
+ 		DEBUG_BMPCE(PLL_WARN, e, "set BMPCE_EIO");
+-		BMPCE_WAKE(e);
+ 		/*
+ 		 * XXX XXX could this cause a potential dangling
+ 		 * reference problem?
+@@ -1832,13 +1707,11 @@
  __static int
  msl_pages_prefetch(struct bmpc_ioreq *r)
  {
@@ -1199,7 +1217,15 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  	psc_assert(!r->biorq_rqset);
  
  	/*
-@@ -1879,20 +1746,8 @@
+@@ -1869,7 +1742,6 @@
+ 			rc = msl_read_rpc_launch(r, i ? (npages - 1) : 0, 1);
+ 			if (rc)
+ 				break;
+-
+ 			sched++;
+ 		}
+ 	}
+@@ -1879,20 +1751,8 @@
  		r->biorq_flags |= BIORQ_SCHED;
  		BIORQ_ULOCK(r);
  	}
@@ -1222,7 +1248,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  	/*
  	 * Wait for all read activities (include RBW) associated with the
  	 * bioreq to complete.
-@@ -1932,73 +1787,55 @@
+@@ -1932,73 +1792,49 @@
  		r->biorq_rqset = NULL;
  
  		if (rc && rc != -SLERR_AIOWAIT)
@@ -1236,8 +1262,6 @@ Index: slash_nara/mount_slash/mount_slash_int.c
 +	waitflag = BMPCE_DATARDY | BMPCE_EIO;
 +	if (r->biorq_flags & BIORQ_READ)
 +		waitflag |= BMPCE_AIOWAIT;
-+	else
-+		waitflag |= BMPCE_RBWRDY;
 +
  	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
  		BMPCE_LOCK(e);
@@ -1311,10 +1335,6 @@ Index: slash_nara/mount_slash/mount_slash_int.c
 +			BMPCE_ULOCK(e);
 +			break;
 +		}
-+		if (e->bmpce_flags & BMPCE_RBWRDY) {
-+			BMPCE_ULOCK(e);
-+			continue;
-+		}
 +		if (e->bmpce_flags & BMPCE_DATARDY) {
 +			BMPCE_ULOCK(e);
 +			continue;
@@ -1336,7 +1356,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  	return (rc);
  }
  
-@@ -2028,10 +1865,6 @@
+@@ -2028,10 +1864,6 @@
  		 *   must still be valid in order for this check to work.
  		 */
  		BMPCE_LOCK(e);
@@ -1347,27 +1367,33 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  
  		/* Set the starting buffer pointer into
  		 *  our cache vector.
-@@ -2064,18 +1897,15 @@
- 		 * and wakeup anyone who was blocked.  Note the waitq
- 		 * pointer will hang around until the request has
- 		 * completed.
+@@ -2058,35 +1890,11 @@
+ 		/* Do the deed. */
+ 		memcpy(dest, src, nbytes);
+ 
+-		/*
+-		 * If the bmpce belongs to this request and is not yet
+-		 * DATARDY (i.e. wasn't an RBW block) then set DATARDY
+-		 * and wakeup anyone who was blocked.  Note the waitq
+-		 * pointer will hang around until the request has
+-		 * completed.
 -		 *
 -		 * Note:  wrrefs are held until the
- 		 */
- 		BMPCE_LOCK(e);
- 		if (biorq_is_my_bmpce(r, e) &&
- 		    !(e->bmpce_flags & BMPCE_DATARDY)) {
- 			psc_assert(e->bmpce_owner);
-+			e->bmpce_owner = NULL;
- 			e->bmpce_flags |= BMPCE_DATARDY;
- 			e->bmpce_flags &= ~(BMPCE_RBWPAGE | BMPCE_RBWRDY);
- 			psc_waitq_wakeall(e->bmpce_waitq);
+-		 */
+-		BMPCE_LOCK(e);
+-		if (biorq_is_my_bmpce(r, e) &&
+-		    !(e->bmpce_flags & BMPCE_DATARDY)) {
+-			psc_assert(e->bmpce_owner);
+-			e->bmpce_flags |= BMPCE_DATARDY;
+-			e->bmpce_flags &= ~(BMPCE_RBWPAGE | BMPCE_RBWRDY);
+-			psc_waitq_wakeall(e->bmpce_waitq);
 -			e->bmpce_waitq = NULL;
 -			e->bmpce_owner = NULL;
- 		}
- 		BMPCE_ULOCK(e);
- 
-@@ -2084,9 +1914,6 @@
+-		}
+-		BMPCE_ULOCK(e);
+-
+ 		toff  += nbytes;
+ 		src   += nbytes;
  		tsize -= nbytes;
  	}
  	psc_assert(!tsize);
@@ -1377,7 +1403,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  	return (r->biorq_len);
  }
  
-@@ -2163,7 +1990,6 @@
+@@ -2163,7 +1971,6 @@
  		tsize  -= nbytes;
  	}
  	psc_assert(!tsize);
@@ -1385,7 +1411,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  
  	return (tbytes);
  }
-@@ -2236,56 +2062,6 @@
+@@ -2236,56 +2043,6 @@
  	freelock(&mfh->mfh_lock);
  }
  
@@ -1442,7 +1468,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  void
  msl_fsrqinfo_biorq_add(struct msl_fsrqinfo *q, struct bmpc_ioreq *r,
      int biorq_num)
-@@ -2296,6 +2072,7 @@
+@@ -2296,6 +2053,7 @@
  	DEBUG_BIORQ(PLL_INFO, r, "q=%p pos=%d", q, biorq_num);
  	psc_assert(!q->mfsrq_biorq[biorq_num]);
  	q->mfsrq_biorq[biorq_num] = r;
@@ -1450,7 +1476,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  	MFH_ULOCK(r->biorq_fhent);
  }
  
-@@ -2303,59 +2080,28 @@
+@@ -2303,59 +2061,28 @@
  msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
      char *buf, size_t size, off_t off, enum rw rw)
  {
@@ -1527,7 +1553,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  	return (q);
  }
  
-@@ -2383,7 +2129,7 @@
+@@ -2383,7 +2110,7 @@
  msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
      const size_t size, const off_t off, enum rw rw)
  {
@@ -1536,7 +1562,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  	struct msl_fsrqinfo *q = NULL;
  	struct fidc_membh *f;
  	struct bmpc_ioreq *r;
-@@ -2414,7 +2160,7 @@
+@@ -2414,7 +2141,7 @@
  	e = ((off + size) - 1) / SLASH_BMAP_SIZE;
  	nr = e - s + 1;
  	if (nr > MAX_BMAPS_REQ) {
@@ -1545,7 +1571,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  		return (rc);
  	}
  
-@@ -2422,6 +2168,7 @@
+@@ -2422,6 +2149,7 @@
  	q = msl_fsrqinfo_init(pfr, mfh, buf, size, off, rw);
  
   restart:
@@ -1553,7 +1579,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  	rc = 0;
  	tsize = size;
  
-@@ -2456,12 +2203,12 @@
+@@ -2456,12 +2184,12 @@
  	tlen = MIN(SLASH_BMAP_SIZE - (size_t)roff, tsize);
  
  	/*
@@ -1570,7 +1596,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  
  		DEBUG_FCMH(PLL_INFO, f, "sz=%zu tlen=%zu off=%"PSCPRIdOFFT" "
  		    "roff=%"PSCPRIdOFFT" rw=%s", tsize, tlen, off, roff,
-@@ -2470,23 +2217,9 @@
+@@ -2470,23 +2198,9 @@
  		psc_assert(tsize);
   retry_bmap:
  		rc = bmap_get(f, s + i, rw, &b);
@@ -1596,7 +1622,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  		rc = msl_bmap_lease_tryext(b, NULL, 1);
  		if (rc) {
  			bmap_op_done(b);
-@@ -2497,199 +2230,83 @@
+@@ -2497,199 +2211,83 @@
  		 * Re-relativize the offset if this request spans more
  		 * than 1 bmap.
  		 */
@@ -1850,7 +1876,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
  }
 Index: slash_nara/mount_slash/ctl_cli.c
 ===================================================================
---- slash_nara/mount_slash/ctl_cli.c	(revision 20154)
+--- slash_nara/mount_slash/ctl_cli.c	(revision 20158)
 +++ slash_nara/mount_slash/ctl_cli.c	(working copy)
 @@ -488,6 +488,7 @@
  	PFL_OPSTAT_INIT("aio_placed"),
@@ -1862,7 +1888,7 @@ Index: slash_nara/mount_slash/ctl_cli.c
  	PFL_OPSTAT_INIT("bmpce_get"),
 Index: slash_nara/mount_slash/rpc_cli.c
 ===================================================================
---- slash_nara/mount_slash/rpc_cli.c	(revision 20154)
+--- slash_nara/mount_slash/rpc_cli.c	(revision 20158)
 +++ slash_nara/mount_slash/rpc_cli.c	(working copy)
 @@ -201,7 +201,7 @@
  
@@ -1875,7 +1901,7 @@ Index: slash_nara/mount_slash/rpc_cli.c
  			    car, car->car_id, car->car_fsrqinfo);
 Index: slash_nara/mount_slash/rci.c
 ===================================================================
---- slash_nara/mount_slash/rci.c	(revision 20154)
+--- slash_nara/mount_slash/rci.c	(revision 20158)
 +++ slash_nara/mount_slash/rci.c	(working copy)
 @@ -112,8 +112,6 @@
  		OPSTAT_INCR(SLC_OPST_READ_CB);
@@ -1921,7 +1947,7 @@ Index: slash_nara/mount_slash/rci.c
  	    car->car_id, car->car_fsrqinfo, r);
 Index: slash_nara/mount_slash/bmpc.c
 ===================================================================
---- slash_nara/mount_slash/bmpc.c	(revision 20154)
+--- slash_nara/mount_slash/bmpc.c	(revision 20158)
 +++ slash_nara/mount_slash/bmpc.c	(working copy)
 @@ -79,8 +79,8 @@
  	INIT_PSC_LISTENTRY(&e->bmpce_lentry);
@@ -2242,7 +2268,7 @@ Index: slash_nara/mount_slash/bmpc.c
  	/* Save CPU, assume that the head of the list is the oldest entry.
 Index: slash_nara/mount_slash/main.c
 ===================================================================
---- slash_nara/mount_slash/main.c	(revision 20154)
+--- slash_nara/mount_slash/main.c	(revision 20158)
 +++ slash_nara/mount_slash/main.c	(working copy)
 @@ -1474,7 +1474,8 @@
  
@@ -2324,7 +2350,7 @@ Index: slash_nara/mount_slash/main.c
  }
 Index: slash_nara/mount_slash/bmpc.h
 ===================================================================
---- slash_nara/mount_slash/bmpc.h	(revision 20154)
+--- slash_nara/mount_slash/bmpc.h	(revision 20158)
 +++ slash_nara/mount_slash/bmpc.h	(working copy)
 @@ -57,8 +57,7 @@
  struct timespec			bmapFlushDefMaxAge;
