@@ -207,9 +207,9 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 	fp = fopen(fn, "w");
 	if (fp == NULL)
 		psc_fatal("open %s", fn);
-	fprintf(fp, "%"PRId64"\n", siteid);
+	fprintf(fp, "%"PRIx64"\n", siteid);
 	if (!ion)
-		printf("The SITEID of the file system is %"PRId64"\n", siteid);
+		printf("The SITEID of the file system is %#"PRIx64"\n", siteid);
 
 	fclose(fp);
 
@@ -326,7 +326,7 @@ main(int argc, char *argv[])
 			break;
 		case 'I':
 			endp = NULL;
-			siteid = strtoull(optarg, &endp, 0);
+			siteid = strtoull(optarg, &endp, 16);
 			if (endp == optarg || *endp)
 				errx(1, "%s: invalid SITEID", optarg);
 			if (siteid >= (1 << SLASH_FID_SITE_BITS))
