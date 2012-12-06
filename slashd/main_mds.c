@@ -503,7 +503,8 @@ main(int argc, char *argv[])
 
 	found = 0;
 	for (vfsid = 0; vfsid < mount_index; vfsid++) {
-		if (nodeSite->site_id == zfsMount[vfsid].siteid) {
+		/* nodeSite->site_id is nodeResm->resm_res->res_site */
+		if (nodeSite->site_id == zfsMount[vfsid].siteid) {	
 			psc_assert(!found);
 			found = 1;
 			current_vfsid = vfsid;
