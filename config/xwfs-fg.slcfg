@@ -34,12 +34,12 @@ site @XWFS {
 		nids	= 128.182.99.28;
 	}
 
-	resource sc12 {
+	resource peel0 {
 		type	= standalone_fs;
 		id	= 4;
 		fsroot	= /slio0;
-		nids	= 140.221.146.230;
+		nids	= peel0.psc.edu;
 	}
 }
 
-include "/local/xwfs.s2/slcfg.local"
+# include "/local/xwfs.s2/slcfg.local"
