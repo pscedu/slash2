@@ -58,9 +58,8 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
-
 /* this table is immutable, at least for now */
-struct psc_hashtbl		 rootHtable;
+struct psc_hashtbl	 rootHtable;
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
@@ -176,9 +175,11 @@ slmconnthr_spawn(void)
 			slm_geticsvcf(m, CSVCF_NORECON);
 }
 
-/*
- * Note: The root file system must have fsid of zero, so that a client can
- * see all the file systems in the pool.
+/**
+ * read_vfsid -
+ *
+ * Note: The root file system must have fsid of zero, so that a client
+ * can see all the file systems in the pool.
  */
 int
 read_vfsid(int vfsid, char *fn, uint64_t *id)
@@ -193,7 +194,10 @@ read_vfsid(int vfsid, char *fn, uint64_t *id)
 	rc = mdsio_lookup(vfsid, mds_metadir_inum[vfsid], fn, &mf,
 	    &rootcreds, NULL);
 
-	/* backward compatibility, assuming one default file system in the pool */
+	/*
+	 * backward compatibility: assuming one default file system in
+	 * the pool
+	 */
 	if (rc == ENOENT && !strcmp(fn, SL_FN_SITEID)) {
 		*id = nodeSite->site_id;
 		return (0);
@@ -231,8 +235,9 @@ read_vfsid(int vfsid, char *fn, uint64_t *id)
 	return (rc);
 }
 
-
-/*
+/**
+ * psc_register_filesystem -
+ *
  * XXX Allow an empty file system to register and fill in contents later.
  *     Or use slmctl to register a new file system when it is ready.
  */
@@ -266,7 +271,10 @@ psc_register_filesystem(int vfsid)
 	fsname = strchr(&zfsMount[vfsid].name[1], '/');
 	if (!(zfsMount[vfsid].flag & ZFS_SLASH2_MKDIR) && fsname) {
 		fsname++;
-		/* make sure that the newly mounted file system has an entry */
+		/*
+		 * make sure that the newly mounted file system has an
+		 * entry
+		 */
 		mdsio_fid_to_vfsid(SLFID_ROOT, &root_vfsid);
 		rc = mdsio_lookup(root_vfsid, MDSIO_FID_ROOT, fsname,
 		    &mfp, &rootcreds, NULL);
