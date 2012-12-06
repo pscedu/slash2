@@ -127,7 +127,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 
 	DEBUG_BMAP(PLL_INFO, b,
 	    "adding req for (off=%u) (size=%u) (nbmpce=%d)", roff, len,
-	    pll_nitems(&(bmap_2_bmpc(b)->bmpc_lru)));
+	    pll_nitems(&bmap_2_bmpc(b)->bmpc_lru));
 
 	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh,
 	    "adding req for (off=%u) (size=%u)", roff, len);
@@ -189,8 +189,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 			 */
 			maxpages = MIN(rapages, n);
 			if (!bkwdra) {
-				/* Don't prefetch past EOF
-				 */
+				/* Don't prefetch past EOF. */
 				n = ((fsz - (bmap_foff(b) + roff)) /
 				    BMPC_BLKSZ) +
 					((fsz % BMPC_BLKSZ) ? 1 : 0);
@@ -228,12 +227,14 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 			continue;
 		}
 		psclog_info("i=%d npages=%d raoff=%"PRIx64
-		    " bmpce_foff=%"PRIx64, i, npages, mfh->mfh_ra.mra_raoff,
-		    (off_t)(bmpce_off + bmap_foff(b)));
+		    " bmpce_foff=%"PRIx64, i, npages,
+		    mfh->mfh_ra.mra_raoff, (off_t)(bmpce_off +
+		    bmap_foff(b)));
 		MFH_ULOCK(mfh);
  restart:
 		e = bmpce_lookup_locked(bmpc, r, bmpce_off,
-		    (i < npages) ? NULL : &r->biorq_bmap->bcm_fcmh->fcmh_waitq);
+		    (i < npages) ? NULL :
+		    &r->biorq_bmap->bcm_fcmh->fcmh_waitq);
 
 		BMPCE_LOCK(e);
 		if (e->bmpce_flags & BMPCE_INIT)
@@ -259,10 +260,12 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 				BMPC_LOCK(bmpc);
 				goto restart;
 			}
-			/* Increment the ref cnt via the lru mgmt
-			 *   function for all pages needed to
-			 *   fulfill the read and for ra pages
-			 *   which need to be retrieved.
+
+			/*
+			 * Increment the ref cnt via the lru mgmt
+			 * function for all pages needed to fulfill the
+			 * read and for ra pages which need to be
+			 * retrieved.
 			 */
 			bmpce_handle_lru_locked(e, bmpc, op, 1);
 			psc_dynarray_add(&r->biorq_pages, e);
@@ -292,6 +295,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 				 */
 				psc_assert(e->bmpce_flags & BMPCE_INIT);
 				psc_assert(!(e->bmpce_flags & BMPCE_EIO));
+
 				/*
 				 * Stash the bmap pointer in 'owner'. As a side
 				 * effect, the cache is no longer mine.
@@ -299,6 +303,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 				e->bmpce_owner = b;
 				bmpce_handle_lru_locked(e, bmpc, op, 1);
 				bmap_op_start_type(b, BMAP_OPCNT_READA);
+
 				/*
 				 * Place the bmpce into our private pll.
 				 * This is done so that the ra thread
@@ -351,9 +356,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	if (bkwdra)
 		psc_dynarray_reverse(&r->biorq_pages);
 
-	/*
-	 * Deal with RBW pages
-	 */
+	/* Deal with RBW pages. */
 	for (i = 0; i < npages; i++) {
 		e = psc_dynarray_getpos(&r->biorq_pages, i);
 		BMPCE_LOCK(e);
