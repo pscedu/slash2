@@ -238,7 +238,7 @@ slm_bml_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    scbl->scbl_flags & BML_CDIO		? 'I' : '-',
 	    scbl->scbl_flags & BML_COHDIO	? 'D' : '-',
 	    scbl->scbl_flags & BML_TIMEOQ	? 'T' : '-',
-	    scbl->scbl_flags & BML_BMDSI	? 'B' : '-',
+	    scbl->scbl_flags & BML_BMI		? 'B' : '-',
 	    scbl->scbl_flags & BML_RECOVER	? 'V' : '-',
 	    scbl->scbl_flags & BML_CHAIN	? 'N' : '-',
 	    scbl->scbl_flags & BML_UPGRADE	? 'U' : '-',
