@@ -204,8 +204,6 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 	    pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 	int rc;
 
-	psc_assert(&rq->rq_async_args == args);
-
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_flags & BMAP_CLI_LEASEEXTREQ);
 
@@ -225,6 +223,7 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 
  out:
 	BMAP_CLEARATTR(b, BMAP_CLI_LEASEEXTREQ);
+	bmap_wake_locked(b);
 	if (rc) {
 		/*
 		 * Unflushed data in this bmap is now invalid.  Move the
