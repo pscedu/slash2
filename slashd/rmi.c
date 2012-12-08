@@ -94,6 +94,8 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
  *	their integrity during transmission, and records them in our
  *	metadata file system.
  * @rq: request.
+ *
+ * XXX should we check if an actual lease is out??
  */
 int
 slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
@@ -114,14 +116,16 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 	}
 
 	len = mq->ncrc_updates * sizeof(struct srm_bmap_crcup);
-	for (i = 0; i < mq->ncrc_updates; i++)
+	for (i = 0; i < mq->ncrc_updates; i++) {
+		// XXX sanity check mq->ncrcs_per_update[i]
 		len += mq->ncrcs_per_update[i] *
 		    sizeof(struct srt_bmap_crcwire);
+	}
 
 	iovs = PSCALLOC(sizeof(*iovs) * mq->ncrc_updates);
 	buf = PSCALLOC(len);
 
-	for (i=0, off=0; i < mq->ncrc_updates; i++) {
+	for (i = 0, off = 0; i < mq->ncrc_updates; i++) {
 		iovs[i].iov_base = buf + off;
 		iovs[i].iov_len = (mq->ncrcs_per_update[i] *
 		    sizeof(struct srt_bmap_crcwire)) +
@@ -141,7 +145,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 	psc_crc64_calc(&crc, buf, len);
 	if (crc != mq->crc) {
 		psclog_errorx("crc verification of crcwrt payload failed");
-		mp->rc = SLERR_BADCRC;
+		mp->rc = -SLERR_BADCRC;
 		goto out;
 	}
 
