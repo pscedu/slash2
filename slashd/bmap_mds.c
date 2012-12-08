@@ -445,17 +445,14 @@ dump_bml_flags(uint32_t flags)
 	PFL_PRFLAG(BML_READ, &flags, &seq);
 	PFL_PRFLAG(BML_WRITE, &flags, &seq);
 	PFL_PRFLAG(BML_CDIO, &flags, &seq);
-	PFL_PRFLAG(BML_COHRLS, &flags, &seq);
 	PFL_PRFLAG(BML_COHDIO, &flags, &seq);
 	PFL_PRFLAG(BML_TIMEOQ, &flags, &seq);
 	PFL_PRFLAG(BML_BMDSI, &flags, &seq);
 	PFL_PRFLAG(BML_RECOVER, &flags, &seq);
 	PFL_PRFLAG(BML_CHAIN, &flags, &seq);
 	PFL_PRFLAG(BML_UPGRADE, &flags, &seq);
-	PFL_PRFLAG(BML_EXPFAIL, &flags, &seq);
 	PFL_PRFLAG(BML_FREEING, &flags, &seq);
 	PFL_PRFLAG(BML_ASSFAIL, &flags, &seq);
-	PFL_PRFLAG(BML_RECOVERPNDG, &flags, &seq);
 	PFL_PRFLAG(BML_REASSIGN, &flags, &seq);
 	PFL_PRFLAG(BML_RECOVERFAIL, &flags, &seq);
 	printf("\n");
