@@ -207,8 +207,8 @@ void
 slm_bml_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("%-16s %6s %14s %15s %17s %7s\n",
-	    "bmap-lease-fid", "bmapno", "ios", "cli", "flags", "seqno");
+	printf("%-16s %6s %-16s %-15s %14s %9s\n",
+	    "bmap-lease-fid", "bmapno", "io-system", "client", "flags", "seqno");
 }
 
 void
@@ -228,28 +228,24 @@ slm_bml_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 		p += n + 1;
 
 	printf("%016"SLPRIxFID" %6u "
-	    "%14.14s %15s "
-	    "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c "
+	    "%-16.16s %-15s "
+	    "%c%c%c%c%c%c%c%c%c%c%c%c%c "
 	    "%7"PRIu64"\n",
 	    scbl->scbl_fg.fg_fid, scbl->scbl_bno,
 	    scbl->scbl_resname, p,
 	    scbl->scbl_flags & BML_READ		? 'R' : '-',
 	    scbl->scbl_flags & BML_WRITE	? 'W' : '-',
 	    scbl->scbl_flags & BML_CDIO		? 'I' : '-',
-	    scbl->scbl_flags & BML_COHRLS	? 'H' : '-',
 	    scbl->scbl_flags & BML_COHDIO	? 'D' : '-',
 	    scbl->scbl_flags & BML_TIMEOQ	? 'T' : '-',
 	    scbl->scbl_flags & BML_BMDSI	? 'B' : '-',
 	    scbl->scbl_flags & BML_RECOVER	? 'V' : '-',
 	    scbl->scbl_flags & BML_CHAIN	? 'N' : '-',
 	    scbl->scbl_flags & BML_UPGRADE	? 'U' : '-',
-	    scbl->scbl_flags & BML_EXPFAIL	? 'X' : '-',
 	    scbl->scbl_flags & BML_FREEING	? 'F' : '-',
 	    scbl->scbl_flags & BML_ASSFAIL	? 'S' : '-',
-	    scbl->scbl_flags & BML_RECOVERPNDG	? 'P' : '-',
 	    scbl->scbl_flags & BML_REASSIGN	? 'A' : '-',
 	    scbl->scbl_flags & BML_RECOVERFAIL	? 'L' : '-',
-	    scbl->scbl_flags & BML_COHFAIL	? 'O' : '-',
 	    scbl->scbl_seq);
 }
 
