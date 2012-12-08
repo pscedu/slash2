@@ -494,7 +494,7 @@ main(int argc, char *argv[])
 	import_zpool(zpname, zpcachefn);
 
 	psc_hashtbl_init(&rootHtable, PHTF_STR, struct rootNames,
-		rn_name, rn_hentry, 1024, NULL, "rootnames");
+	    rn_name, rn_hentry, 1024, NULL, "rootnames");
 
 	/* using hook can cause layer violation */
 	zfsslash2_register_hook(psc_register_filesystem);
