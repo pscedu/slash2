@@ -283,7 +283,7 @@ mds_bmap_ios_restart(struct bmap_mds_lease *bml)
 	bml->bml_bmdsi->bmdsi_seq = bml->bml_seq;
 
 	DEBUG_BMAP(PLL_INFO, bml_2_bmap(bml), "res(%s) seq=%"PRIx64,
-	   resm->resm_res->res_name, bml->bml_seq);
+	    resm->resm_res->res_name, bml->bml_seq);
 
 	return (rc);
 }
@@ -488,7 +488,7 @@ mds_bmap_add_repl(struct bmapc_memb *b, struct bmap_ios_assign *bia)
 
 	if (iosidx < 0)
 		psc_fatalx("ios_lookup_add %d: %s", bia->bia_ios,
-		   slstrerror(iosidx));
+		    slstrerror(iosidx));
 
 	BMAP_WAIT_BUSY(b);
 
@@ -1373,8 +1373,10 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr,
 
 	bml->bml_seq = bia->bia_seq;
 	bml->bml_ios = bia->bia_ios;
-	/* Taking the lease origination time in this manner leaves
-	 *    us susceptible to gross changes in the system time.
+
+	/*
+	 * Taking the lease origination time in this manner leaves us
+	 * susceptible to gross changes in the system time.
 	 */
 	bml->bml_start = bia->bia_start;
 
@@ -1808,9 +1810,10 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	if (!resm)
 		PFL_GOTOERR(out1, rc = -SLERR_ION_OFFLINE);
 
-	/* Deal with the lease renewal and repl_add before modifying
-	 *    the ios part of the lease or bmi so that mds_bmap_add_repl()
-	 *    failure doesn't compromise the existing lease.
+	/*
+	 * Deal with the lease renewal and repl_add before modifying the
+	 * IOS part of the lease or bmi so that mds_bmap_add_repl()
+	 * failure doesn't compromise the existing lease.
 	 */
 	obml->bml_flags |= BML_REASSIGN;
 	bia.bia_seq = mds_bmap_timeotbl_mdsi(obml, BTE_ADD);
