@@ -207,7 +207,7 @@ void
 slm_bml_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("%-16s %6s %-16s %-15s %14s %9s\n",
+	printf("%-16s %6s %-16s %-15s %13s %9s\n",
 	    "bmap-lease-fid", "bmapno", "io-system", "client", "flags", "seqno");
 }
 
