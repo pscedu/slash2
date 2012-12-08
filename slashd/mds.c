@@ -913,13 +913,14 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 		pll_addtail(&bmi->bmdsi_leases, bml);
 	}
 
-	bml->bml_flags |= BML_BMDSI;
+	bml->bml_flags |= BML_BMI;
 
 	if (rw == SL_WRITE) {
 		/* Drop the lock prior to doing disk and possibly network
 		 *    I/O.
 		 */
 		b->bcm_flags |= BMAP_IONASSIGN;
+
 		/* For any given chain of leases, the bmdsi_[readers|writers]
 		 *    value may only be 1rd or 1wr.  In the case where 2
 		 *    wtrs are present, the value is 1wr.  Mixed readers and
@@ -944,7 +945,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 			psc_assert(!bmi->bmdsi_readers);
 			psc_assert(!bmi->bmdsi_wr_ion);
 			psc_assert(bml->bml_ios &&
-			   bml->bml_ios != IOS_ID_ANY);
+			    bml->bml_ios != IOS_ID_ANY);
 			BMAP_ULOCK(b);
 			rc = mds_bmap_ios_restart(bml);
 
@@ -1133,13 +1134,13 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	 * zero.
 	 */
 	psc_assert(bml->bml_refcnt <= 1);
-	if (!(bml->bml_flags & BML_BMDSI)) {
+	if (!(bml->bml_flags & BML_BMI)) {
 		BML_ULOCK(bml);
 		goto out;
 	}
 
 	mds_bmap_bml_del_locked(bml);
-	bml->bml_flags &= ~BML_BMDSI;
+	bml->bml_flags &= ~BML_BMI;
 
 	BML_ULOCK(bml);
 
