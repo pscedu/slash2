@@ -37,7 +37,7 @@
 
 /*
  * Alternatively, we could add vfsid to each log entry in the journal.
- * But doing so can break backward compatibility. It also reduces the
+ * But doing so can break backward compatibility.  It also reduces the
  * space of each log entry.  We could infer vfsid from the fid stored in
  * a log entry.  But some entries such as bmap assignment log entries do
  * not have one.
@@ -320,7 +320,7 @@ mds_replay_bmap_assign(struct psc_journal_enthdr *pje)
 		mds_replay_bmap(&logentry->sjar_rep,
 		    B_REPLAY_OP_REPLS);
 	rc = mdsio_lookup(current_vfsid, mds_metadir_inum[current_vfsid],
-	     SL_FN_BMAP_ODTAB, &mf, &rootcreds, NULL);
+	    SL_FN_BMAP_ODTAB, &mf, &rootcreds, NULL);
 	psc_assert(rc == 0);
 
 	rc = mdsio_opencreate(current_vfsid, mf, &rootcreds, O_RDWR, 0,
