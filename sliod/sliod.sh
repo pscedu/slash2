@@ -22,12 +22,7 @@ while getopts "gP:s" c; do
 done
 shift $(($OPTIND - 1))
 
-narg=0
-
 apply_host_prefs "$@"
-[ $found -eq 0 ] && warn "no profile for this host ($prof); assuming defaults"
-
-[ $# -gt $narg ] && usage
 
 base=$dir/$prof.s2
 # Initialization/configuration
