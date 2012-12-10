@@ -67,11 +67,16 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	OPSTAT_INCR(SLI_OPST_RECLAIM);
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	if (mq->size < len || mq->size > LNET_MTU)
-		return (EINVAL);
+	// XXX adjust for RPC overhead in metric?
+	if (mq->size < len || mq->size > LNET_MTU) {
+		mp->rc = -EINVAL;
+		return (mp->rc);
+	}
 
-	if (mq->count != mq->size / len)
-		return (EINVAL);
+	if (mq->count != mq->size / len) {
+		mp->rc = -EINVAL;
+		return (mp->rc);
+	}
 
 	xid = mq->xid;
 	batchno = mq->batchno;
@@ -92,10 +97,8 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 		goto out;
 
 	psc_crc64_calc(&crc, iov.iov_base, iov.iov_len);
-	if (crc != mq->crc) {
-		mp->rc = -EINVAL;
-		goto out;
-	}
+	if (crc != mq->crc)
+		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
 	entryp = iov.iov_base;
 	for (i = 0; i < mq->count; i++) {
@@ -112,8 +115,8 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 		OPSTAT_INCR(SLI_OPST_RECLAIM_FILE);
 		rc = unlink(fidfn);
 		if (rc == -1) {
-			OPSTAT_INCR(SLI_OPST_RECLAIM_FILE_FAIL);
 			rc = errno;
+			OPSTAT_INCR(SLI_OPST_RECLAIM_FILE_FAIL);
 		}
 
 		psclog_info("reclaim fid="SLPRI_FG", xid=%"PRId64", rc=%d",
