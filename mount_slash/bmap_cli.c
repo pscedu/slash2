@@ -385,7 +385,15 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 
 	secs = (int)(bmap_2_bci(b)->bci_xtime.tv_sec - ts.tv_sec);
 
-	if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED) {
+	if (b->bcm_flags & BMAP_TOFREE) {
+		/*
+		 * Someday, we should really remove such a bmap from the
+		 * bmapFlushQ in the first place.
+		 */
+		DEBUG_BMAP(PLL_WARN, b, "bmap to be freed");
+		rc = -SLERR_BMAP_INVALID;
+
+	} else if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED) {
 		/*
 		 * Catch the case where another thread has already
 		 * marked this bmap as expired.
