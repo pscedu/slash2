@@ -1224,6 +1224,12 @@ msbmflwthr_main(__unusedx struct psc_thread *thr)
 		LIST_CACHE_ULOCK(&bmapFlushQ);
 
 		DYNARRAY_FOREACH(b, i, &bmaps) {
+			/*
+ 			 * XXX: If BMAP_TOFREE is set after the above loop but
+ 			 * before this one. The bmap reaper logic will assert
+ 			 * on the bmap reference count not being zero.  And this 
+ 			 * has been seen although with a different patch.
+ 			 */
 			rc = msl_bmap_lease_tryext(b, &secs, 0);
 			DEBUG_BMAP((rc && rc != -EAGAIN) ?
 			    PLL_ERROR : PLL_INFO, b,
