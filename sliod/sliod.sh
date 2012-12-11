@@ -8,15 +8,16 @@ ctl=slictl
 
 usage()
 {
-	echo "usage: $0 [-P profile] [-gs] [instance]" >&2
+	echo "usage: $0 [-P profile] [-gsv] [instance]" >&2
 	exit 1
 }
 
-while getopts "gP:s" c; do
+while getopts "gP:sv" c; do
 	case $c in
 	g) mygdb='mygdb'	;;
 	P) prof=$OPTARG		;;
 	s) mystrace='strace'	;;
+	v) verbose=1		;;
 	*) usage		;;
 	esac
 done
@@ -36,12 +37,9 @@ export PSC_LOG_FILE=$base/log/$host.$name/%t
 export PSC_LOG_FILE_LINK=$base/log/$host.$name/latest
 export CONFIG_FILE=$base/slcfg
 
-do_exec
-
+preproc
 $mystrace $mygdb $prog -D $base/var
-[ $? -eq 0 ] && trap '' EXIT && exit
-
-postproc
+postproc $?
 
 sleep 10
 exec $0 "$@"

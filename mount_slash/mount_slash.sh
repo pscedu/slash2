@@ -8,15 +8,16 @@ ctl=msctl
 
 usage()
 {
-	echo "usage: $0 [-P profile] [-gs]" >&2
+	echo "usage: $0 [-P profile] [-gsv]" >&2
 	exit 1
 }
 
-while getopts "gP:s" c; do
+while getopts "gP:sv" c; do
 	case $c in
 	g) mygdb='mygdb'	;;
 	P) prof=$OPTARG		;;
 	s) mystrace='strace'	;;
+	v) verbose=1		;;
 	*) usage		;;
 	esac
 done
@@ -39,12 +40,9 @@ export CONFIG_FILE=$base/slcfg
 
 type modprobe >/dev/null 2>&1 && modprobe fuse
 
-do_exec
-
+preproc
 $mystrace $mygdb $prog -D $base/var -U $mp
-[ $? -eq 0 ] && trap '' EXIT && exit
-
-postproc
+postproc $?
 
 sleep 10
 exec $0 "$@"
