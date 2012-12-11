@@ -1202,6 +1202,11 @@ msbmflwthr_main(__unusedx struct psc_thread *thr)
 
 	while (pscthr_run()) {
 		PFL_GETTIMESPEC(&ts);
+		/*
+		 * A bmap can be on both bmapFlushQ and bmapTimeoutQ. 
+		 * Even if we take it off bmapTimeoutQ, it can still
+		 * be on the bmapFlushQ. This is odd.
+		 */
 		LIST_CACHE_LOCK(&bmapFlushQ);
 		LIST_CACHE_FOREACH_SAFE(b, tmpb, &bmapFlushQ) {
 			BMAP_LOCK(b);
