@@ -64,6 +64,30 @@ Index: slash_nara/mount_slash/mount_slash.h
  	SLC_OPST_BMAP_LEASE_EXT,
  	SLC_OPST_BMAP_RETRIEVE,
  	SLC_OPST_BMPCE_GET,
+@@ -316,6 +317,7 @@
+ 	SLC_OPST_FSRQ_WRITE,
+ 	SLC_OPST_FSRQ_WRITE_FREE,
+ 	SLC_OPST_FSYNC,
++	SLC_OPST_FSYNC_DONE,
+ 	SLC_OPST_GETXATTR,
+ 	SLC_OPST_GETXATTR_NOSYS,
+ 	SLC_OPST_LISTXATTR,
+@@ -325,6 +327,7 @@
+ 	SLC_OPST_OFFLINE_NO_RETRY,
+ 	SLC_OPST_PREFETCH,
+ 	SLC_OPST_READ,
++	SLC_OPST_READ_DONE,
+ 	SLC_OPST_READDIR,
+ 	SLC_OPST_READDIR_RETRY,
+ 	SLC_OPST_READ_AHEAD,
+@@ -347,6 +350,7 @@
+ 	SLC_OPST_SRMT_WRITE,
+ 	SLC_OPST_UNLINK,
+ 	SLC_OPST_WRITE,
++	SLC_OPST_WRITE_DONE,
+ 	SLC_OPST_WRITE_COALESCE,
+ 	SLC_OPST_WRITE_COALESCE_MAX,
+ 	SLC_OPST_VERSION
 Index: slash_nara/mount_slash/mount_slash_int.c
 ===================================================================
 --- slash_nara/mount_slash/mount_slash_int.c	(revision 20203)
@@ -1897,6 +1921,30 @@ Index: slash_nara/mount_slash/ctl_cli.c
  	PFL_OPSTAT_INIT("bmap_lease_ext"),
  	PFL_OPSTAT_INIT("bmap_retrieve"),
  	PFL_OPSTAT_INIT("bmpce_get"),
+@@ -505,6 +506,7 @@
+ 	PFL_OPSTAT_INIT("fsrq_write"),
+ 	PFL_OPSTAT_INIT("fsrq_write_free"),
+ 	PFL_OPSTAT_INIT("fsync"),
++	PFL_OPSTAT_INIT("fsync_done"),
+ 	PFL_OPSTAT_INIT("getxattr"),
+ 	PFL_OPSTAT_INIT("getxattr_nosys"),
+ 	PFL_OPSTAT_INIT("listxattr"),
+@@ -514,6 +516,7 @@
+ 	PFL_OPSTAT_INIT("offline_no_retry"),
+ 	PFL_OPSTAT_INIT("prefetch"),
+ 	PFL_OPSTAT_INIT("read"),
++	PFL_OPSTAT_INIT("read_done"),
+ 	PFL_OPSTAT_INIT("readdir"),
+ 	PFL_OPSTAT_INIT("readdir_retry"),
+ 	PFL_OPSTAT_INIT("read_ahead"),
+@@ -536,6 +539,7 @@
+ 	PFL_OPSTAT_INIT("srmt_write"),
+ 	PFL_OPSTAT_INIT("unlink"),
+ 	PFL_OPSTAT_INIT("write"),
++	PFL_OPSTAT_INIT("write_done"),
+ 	PFL_OPSTAT_INIT("write_coalesce"),
+ 	PFL_OPSTAT_INIT("write_coalesce_max"),
+ 	PFL_OPSTAT_INIT("version")
 Index: slash_nara/mount_slash/rpc_cli.c
 ===================================================================
 --- slash_nara/mount_slash/rpc_cli.c	(revision 20203)
@@ -1960,7 +2008,17 @@ Index: slash_nara/mount_slash/bmap_flush.c
 ===================================================================
 --- slash_nara/mount_slash/bmap_flush.c	(revision 20203)
 +++ slash_nara/mount_slash/bmap_flush.c	(working copy)
-@@ -451,9 +451,6 @@
+@@ -363,9 +363,6 @@
+ 	(void)BMPC_RLOCK(bmpc);
+ 	(void)BIORQ_RLOCK(r);
+ 
+-	/* biorq [rd]esched semantics must be strictly enforced.
+-	 */
+-	psc_assert(r->biorq_flags & BIORQ_SCHED);
+ 	psc_assert(!(r->biorq_flags & (BIORQ_INFL | BIORQ_RESCHED)));
+ 	psc_assert(pll_conjoint(&bmpc->bmpc_new_biorqs, r));
+ 
+@@ -451,9 +448,6 @@
  		BIORQ_ULOCK(r);
  		return;
  	}
@@ -1970,7 +2028,7 @@ Index: slash_nara/mount_slash/bmap_flush.c
  
  	r->biorq_flags &= ~BIORQ_PENDING;
  	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
-@@ -498,8 +495,14 @@
+@@ -498,8 +492,14 @@
  	return;
  
   error:
@@ -2321,7 +2379,15 @@ Index: slash_nara/mount_slash/main.c
  		DEBUG_BIORQ(PLL_INFO, r, "force expire");
  		BIORQ_ULOCK(r);
  	}
-@@ -2300,13 +2301,8 @@
+@@ -2258,6 +2259,7 @@
+ 	freelock(&mfh->mfh_lock);
+ 
+ 	pscfs_reply_fsync(pfr, 0);
++	OPSTAT_INCR(SLC_OPST_FSYNC_DONE);
+ }
+ 
+ void
+@@ -2300,13 +2302,8 @@
  
  	msfsthr(pscthr_get())->mft_failcnt = 1;
  	rc = msl_write(pfr, mfh, buf, size, off);
@@ -2336,7 +2402,7 @@ Index: slash_nara/mount_slash/main.c
  
  	FCMH_LOCK(f);
  	PFL_GETTIMESPEC(&ts);
-@@ -2333,15 +2329,13 @@
+@@ -2333,15 +2330,15 @@
  	}
  	FCMH_ULOCK(f);
  
@@ -2353,10 +2419,12 @@ Index: slash_nara/mount_slash/main.c
  	    "off=%"PSCPRIdOFFT, buf, rc, size, off);
 -	pscfs_reply_write(pfr, size, rc);
 -	OPSTAT_INCR(SLC_OPST_FSRQ_WRITE_FREE);
++
++	OPSTAT_INCR(SLC_OPST_WRITE_DONE);
  }
  
  void
-@@ -2379,27 +2373,14 @@
+@@ -2379,29 +2376,18 @@
  
  	msfsthr(pscthr_get())->mft_failcnt = 1;
  
@@ -2388,7 +2456,11 @@ Index: slash_nara/mount_slash/main.c
 -	OPSTAT_INCR(SLC_OPST_FSRQ_READ_FREE);
  	DEBUG_FCMH(PLL_INFO, f, "read (end): buf=%p rc=%d sz=%zu "
  	    "len=%zd off=%"PSCPRIdOFFT, buf, rc, size, len, off);
++
++	OPSTAT_INCR(SLC_OPST_READ_DONE);
  }
+ 
+ void
 Index: slash_nara/mount_slash/bmpc.h
 ===================================================================
 --- slash_nara/mount_slash/bmpc.h	(revision 20203)
