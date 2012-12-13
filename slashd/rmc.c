@@ -1258,6 +1258,7 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 
 	OPSTAT_INCR(SLM_OPST_UNLINK);
 	SL_RSX_ALLOCREP(rq, mq, mp);
+	mp->cattr.fg_fid = FID_ANY;
 	if (mdsio_fid_to_vfsid(mq->pfid, &vfsid) < 0) {
 		mp->rc = -EINVAL;
 		goto out;
