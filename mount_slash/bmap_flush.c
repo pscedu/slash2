@@ -1179,7 +1179,7 @@ bmpces_inflight_locked(struct bmpc_ioreq *r)
 	DYNARRAY_FOREACH(bmpce, i, &r->biorq_pages) {
 		BMPCE_LOCK(bmpce);
 		if (bmpce->bmpce_flags & BMPCE_INFLIGHT) {
-			DEBUG_BMPCE(PLL_NOTIFY, bmpce,
+			DEBUG_BMPCE(PLL_DIAG, bmpce,
 			    "inflight already");
 			BMPCE_ULOCK(bmpce);
 			return (1);
