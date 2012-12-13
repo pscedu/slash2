@@ -181,11 +181,12 @@ struct fidc_membh {
 
 #define FCMH_UNBUSY(f)		FCMH_UREQ_BUSY((f), 0, PSLRV_WASNOTLOCKED)
 
+#define FCMH_HAS_BUSY(f)						\
+	(((f)->fcmh_flags & FCMH_BUSY) &&				\
+	 (f)->fcmh_owner == pthread_self())
+
 #define FCMH_BUSY_ENSURE(f)						\
-	do {								\
-		psc_assert((f)->fcmh_flags & FCMH_BUSY);		\
-		psc_assert((f)->fcmh_owner == pthread_self());		\
-	} while (0)
+	psc_assert(FCMH_HAS_BUSY(f))
 
 #ifdef _SLASH_MDS
 # define DEBUG_FCMH_BLKSIZE_LABEL "msz"
