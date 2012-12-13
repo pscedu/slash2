@@ -546,8 +546,7 @@ struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("reclaim_file_fail"),
 	PFL_OPSTAT_INIT("repl_readaio"),
 	PFL_OPSTAT_INIT("slvr_aio_reply"),
-	PFL_OPSTAT_INIT("srmt_release"),
-	PFL_OPSTAT_INIT("version")
+	PFL_OPSTAT_INIT("srmt_release")
 };
 
 

@@ -572,7 +572,6 @@ main(int argc, char *argv[])
 	slmtimerthr_spawn();
 	slm_rpc_initsvc();
 
-	OPSTAT_ASSIGN(SLM_OPST_VERSION, SL_STK_VERSION);
 	slmctlthr_main(sfn);
 	/* NOTREACHED */
 }

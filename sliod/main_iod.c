@@ -265,7 +265,6 @@ main(int argc, char *argv[])
 	psc_tiosthr_spawn(SLITHRT_TIOS, "slitiosthr");
 	slibmaprlsthr_spawn();
 
-	OPSTAT_ASSIGN(SLI_OPST_VERSION, SL_STK_VERSION);
 	slictlthr_main(sfn);
 	/* NOTREACHED */
 }
