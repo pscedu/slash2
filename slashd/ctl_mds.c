@@ -640,7 +640,8 @@ struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("setxattr"),
 	PFL_OPSTAT_INIT("statfs"),
 	PFL_OPSTAT_INIT("symlink"),
-	PFL_OPSTAT_INIT("unlink")
+	PFL_OPSTAT_INIT("unlink"),
+	PFL_OPSTAT_INIT("version")
 };
 
 PFLCTL_SVR_DEFS;
