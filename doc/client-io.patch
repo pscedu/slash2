@@ -685,7 +685,7 @@ Index: slash_nara/mount_slash/mount_slash_int.c
 +		if (rc)
 +			continue;
 +
-+		if (r->biorq_flags & BIORQ_WRITE && !r->biorq_flags & BIORQ_DIO) {
++		if ((r->biorq_flags & BIORQ_WRITE) && !(r->biorq_flags & BIORQ_DIO)) {
 +			r->biorq_flags |= BIORQ_FLUSHRDY;
 +			DEBUG_BIORQ(PLL_INFO, r, "BIORQ_FLUSHRDY");
  		}
