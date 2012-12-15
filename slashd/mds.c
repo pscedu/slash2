@@ -977,10 +977,11 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 	}
 
  out:
-	DEBUG_BMAP(rc ? PLL_WARN : PLL_INFO, b, "bml_add (mion=%p) bml=%p "
-	   "(seq=%"PRId64") (rw=%d) (nwtrs=%d nrdrs=%d) (rc=%d)",
-	   bmi->bmdsi_wr_ion, bml, bml->bml_seq, rw, bmi->bmdsi_writers,
-	   bmi->bmdsi_readers, rc);
+	DEBUG_BMAP(rc && rc != -SLERR_BMAP_DIOWAIT ? PLL_WARN : PLL_INFO,
+	    b, "bml_add (mion=%p) bml=%p (seq=%"PRId64") (rw=%d) "
+	    "(nwtrs=%d nrdrs=%d) (rc=%d)",
+	    bmi->bmdsi_wr_ion, bml, bml->bml_seq, rw,
+	    bmi->bmdsi_writers, bmi->bmdsi_readers, rc);
 
 	bmap_wake_locked(b);
 	BMAP_ULOCK(b);
