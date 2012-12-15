@@ -1006,9 +1006,9 @@ goto out;
 				goto out;
 		}
 		/*
-		 * If the file is open, mdsio_data will be valid
-		 * and used.  Otherwise, it will be NULL, and
-		 * we'll use the mdsio_fid.
+		 * If the file is open, mdsio_data will be valid and
+		 * used.  Otherwise, it will be NULL, and we'll use the
+		 * mdsio_fid.
 		 */
 		mp->rc = mds_fcmh_setattr(vfsid, f, to_set, &mq->attr);
 	}
@@ -1032,7 +1032,7 @@ goto out;
 
  out:
 	if (f) {
-		FCMH_RLOCK(f);
+		(void)FCMH_RLOCK(f);
 		if (mp->rc == 0 || mp->rc == SLERR_BMAP_PTRUNC_STARTED)
 			mp->attr = f->fcmh_sstb;
 		FCMH_UNBUSY(f);
@@ -1055,14 +1055,10 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 		mp->rc = -EINVAL;
 		return (0);
 	}
-	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid) < 0) {
-		mp->rc = -EINVAL;
-		goto out;
-	}
-	if (vfsid != current_vfsid) {
-		mp->rc = -EINVAL;
-		goto out;
-	}
+	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid) < 0)
+		PFL_GOTOERR(out, mp->rc = -EINVAL);
+	if (vfsid != current_vfsid)
+		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
@@ -1258,11 +1254,9 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 
 	OPSTAT_INCR(SLM_OPST_UNLINK);
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mp->cattr.fg_fid = FID_ANY;
-	if (mdsio_fid_to_vfsid(mq->pfid, &vfsid) < 0) {
-		mp->rc = -EINVAL;
-		goto out;
-	}
+	mp->cattr.sst_fid = FID_ANY;
+	if (mdsio_fid_to_vfsid(mq->pfid, &vfsid) < 0)
+		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
 	fg.fg_fid = mq->pfid;
 	fg.fg_gen = FGEN_ANY;
@@ -1315,16 +1309,14 @@ slm_rmc_handle_listxattr(struct pscrpc_request *rq)
 	struct fidc_membh *f = NULL;
 	struct srm_listxattr_req *mq;
 	struct srm_listxattr_rep *mp;
-	size_t outsize;
 	struct iovec iov;
+	size_t outsize;
 	int vfsid;
 
 	iov.iov_base = NULL;
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid) < 0) {
-		mp->rc = -EINVAL;
-		goto out;
-	}
+	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid) < 0)
+		PFL_GOTOERR(out, mp->rc = -EINVAL);
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
 		goto out;
@@ -1364,24 +1356,20 @@ slm_rmc_handle_listxattr(struct pscrpc_request *rq)
 int
 slm_rmc_handle_setxattr(struct pscrpc_request *rq)
 {
+	char name[SL_NAME_MAX + 1], value[SL_NAME_MAX + 1];
 	struct fidc_membh *f = NULL;
 	struct srm_setxattr_req *mq;
 	struct srm_setxattr_rep *mp;
-	char name[SL_NAME_MAX + 1], value[SL_NAME_MAX + 1];
-	int vfsid;
 	struct iovec iov;
+	int vfsid;
 
 	OPSTAT_INCR(SLM_OPST_SETXATTR);
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid) < 0) {
-		mp->rc = -EINVAL;
-		goto out;
-	}
+	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid) < 0)
+		PFL_GOTOERR(out, mp->rc = -EINVAL);
 	if (mq->namelen  > SL_NAME_MAX ||
-	    mq->valuelen > SL_NAME_MAX) {
-		mp->rc = -EINVAL;
-		goto out;
-	}
+	    mq->valuelen > SL_NAME_MAX)
+		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
@@ -1411,21 +1399,20 @@ slm_rmc_handle_setxattr(struct pscrpc_request *rq)
 int
 slm_rmc_handle_getxattr(struct pscrpc_request *rq)
 {
+	char value[SL_NAME_MAX + 1];
+	int vfsid, abort_bulk = 0;
 	struct fidc_membh *f = NULL;
 	struct srm_getxattr_req *mq;
 	struct srm_getxattr_rep *mp;
-	char value[SL_NAME_MAX + 1];
 	struct iovec iov;
 	size_t outsize;
-	int vfsid, abort_bulk = 0;
 
 	OPSTAT_INCR(SLM_OPST_GETXATTR);
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid) < 0) {
 		if (mq->size)
 			abort_bulk = 1;
-		mp->rc = -EINVAL;
-		goto out;
+		PFL_GOTOERR(out, mp->rc = -EINVAL);
 	}
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc) {
@@ -1451,10 +1438,9 @@ slm_rmc_handle_getxattr(struct pscrpc_request *rq)
 
 	iov.iov_base = value;
 	iov.iov_len = outsize;
-	if (mq->size) {
+	if (mq->size)
 		mp->rc = rsx_bulkserver(rq, BULK_PUT_SOURCE,
 		    SRMC_BULK_PORTAL, &iov, 1);
-	}
 
  out:
 	if (abort_bulk)
@@ -1473,10 +1459,8 @@ slm_rmc_handle_removexattr(struct pscrpc_request *rq)
 	int vfsid;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid) < 0) {
-		mp->rc = -EINVAL;
-		goto out;
-	}
+	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid) < 0)
+		PFL_GOTOERR(out, mp->rc = -EINVAL);
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
 		goto out;
