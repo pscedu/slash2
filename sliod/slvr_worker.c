@@ -99,7 +99,7 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 		/* Bail for now if we can't stat() our file objects. */
 		psc_assert(!rc);
 
-		DEBUG_BCR(PLL_NOTIFY, bcr, "bcrs pos=%d fsz=%"PRId64, i,
+		DEBUG_BCR(PLL_DIAG, bcr, "bcrs pos=%d fsz=%"PRId64, i,
 		    bcr->bcr_crcup.fsize);
 
 		bcr_xid_check(bcr);
@@ -484,8 +484,8 @@ slvr_worker_int(void)
 		if (!found)
 			bcr->bcr_crcup.nups++;
 
-		DEBUG_BCR(PLL_NOTIFY, bcr, "add to existing bcr slot=%d "
-			  "nups=%d", i, bcr->bcr_crcup.nups);
+		DEBUG_BCR(PLL_DIAG, bcr, "add to existing bcr slot=%d "
+		    "nups=%d", i, bcr->bcr_crcup.nups);
 
 		if (bcr->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS) {
 			if (pll_nitems(&bii->bii_bklog_bcrs))
@@ -518,7 +518,7 @@ slvr_worker_int(void)
 		bcr->bcr_crcup.crcs[0].slot = slvr_num;
 		bcr->bcr_crcup.nups = 1;
 
-		DEBUG_BCR(PLL_NOTIFY, bcr,
+		DEBUG_BCR(PLL_DIAG, bcr,
 		    "newly added (bcr_bklog=%d) (sched=%d)",
 		    pll_nitems(&bii->bii_bklog_bcrs),
 		    !!(b->bcm_flags & BMAP_IOD_BCRSCHED));
