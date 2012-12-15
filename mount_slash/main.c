@@ -925,7 +925,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		slc_fcmh_initdci(p);
 	FCMH_ULOCK(p);
 
-	if (rc == 0 && mp->cattr.sst_fid) {
+	if (rc == 0 && mp->cattr.sst_fid != FID_ANY) {
 		rc = msl_load_fcmh(pfr, mp->cattr.sst_fid, &c);
 		if (!rc)
 			fcmh_setattrf(c, &mp->cattr,
@@ -933,7 +933,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	}
 
  out:
-	psclog_info("pfid="SLPRI_FID" name='%s', isfile=%d rc=%d",
+	psclog_info("pfid="SLPRI_FID" name='%s' isfile=%d rc=%d",
 	    pinum, name, isfile, rc);
 
 	if (c)
@@ -1604,8 +1604,8 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	struct iovec iov[2];
 	int sticky, rc;
 
+	memset(&dstsstb, 0, sizeof(dstsstb));
 	srcfg.fg_fid = FID_ANY;
-	dstfg.fg_fid = FID_ANY;
 
 	msfsthr_ensure();
 	OPSTAT_INCR(SLC_OPST_RENAME);
@@ -1775,6 +1775,12 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		    FCMH_SETATTRF_SAVELOCAL);
 	DEBUG_FCMH(PLL_INFO, child, "newname=%s, setattr=%s",
 	    newname, mp->srr_cattr.sst_fid ? "yes" : "no");
+
+	/*
+	 * XXX we do not update dstsstb in our cache if the dst was
+	 * nlinks>1 and the inode was not removed from the filesystem
+	 * outright as a result of this rename op.
+	 */
 
  out:
 	if (child)
@@ -2033,20 +2039,21 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	}
 
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
-		struct bmapc_memb *b;
 		struct psc_dynarray a = DYNARRAY_INIT;
+		struct bmapc_memb *b;
 		int j;
 
 		if (!stb->st_size) {
-			DEBUG_FCMH(PLL_NOTIFY, c,
+			DEBUG_FCMH(PLL_DIAG, c,
 			   "full truncate, orphan bmaps");
 
 			bmap_orphan_all_locked(c);
 			FCMH_ULOCK(c);
 
 		} else if (stb->st_size == (ssize_t)fcmh_2_fsz(c)) {
-			/* No-op.  Don't send truncate request if the
-			 *    sizes match.
+			/*
+			 * No-op.  Don't send truncate request if the
+			 * sizes match.
 			 */
 			goto out;
 
@@ -2057,10 +2064,11 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			SPLAY_FOREACH(b, bmap_cache, &c->fcmh_bmaptree) {
 				if (b->bcm_bmapno < x)
 					continue;
-				/* Take a reference to ensure the bmap
-				 *   is still valid.  bmap_biorq_waitempty()
-				 *   shoudn't be called while holding the
-				 *   fcmh lock.
+				/*
+				 * Take a reference to ensure the bmap
+				 * is still valid.
+				 * bmap_biorq_waitempty() shoudn't be
+				 * called while holding the fcmh lock.
 				 */
 				bmap_op_start_type(b, BMAP_OPCNT_TRUNCWAIT);
 				DEBUG_BMAP(PLL_NOTIFY, b,
@@ -2112,11 +2120,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		goto out;
 
 	FCMH_LOCK(c);
-	/*
-	 * No need to do this on retry.  To do: set
-	 * PSCFS_SETATTRF_TRUNCATE if setattr truncates a cached size so
-	 * that the MDS can act accordingly.
-	 */
+	/* No need to do this on retry. */
 	if (c->fcmh_flags & FCMH_CLI_DIRTY_ATTRS) {
 		flush_attrs = 1;
 		to_set |= PSCFS_SETATTRF_FLUSH;
