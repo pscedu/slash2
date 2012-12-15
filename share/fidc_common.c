@@ -514,6 +514,7 @@ _fcmh_decref(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 	int locked;
 
 	locked = FCMH_RLOCK(f);
+	psc_assert(!FCMH_HAS_BUSY(f));
 	psc_assert(f->fcmh_refcnt > 1);
 	f->fcmh_refcnt--;
 	DEBUG_FCMH(PLL_DEBUG, f, "release ref (type=%d)", type);
@@ -526,6 +527,7 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
     struct fidc_membh *f, enum fcmh_opcnt_types type)
 {
 	(void)FCMH_RLOCK(f);
+	psc_assert(!FCMH_HAS_BUSY(f));
 	psc_assert(f->fcmh_refcnt > 0);
 	f->fcmh_refcnt--;
 	DEBUG_FCMH(PLL_DEBUG, f, "release ref (type=%d)", type);
