@@ -260,7 +260,8 @@ sli_fcmh_ctor(struct fidc_membh *f)
 		f->fcmh_flags |= FCMH_NO_BACKFILE;
 		DEBUG_FCMH(PLL_NOTIFY, f, "refusing to open backing file "
 		   "with FGEN_ANY");
-		/* This is not an error, we just don't have enough info
+		/*
+		 * This is not an error, we just don't have enough info
 		 * to create the backing file.
 		 */
 		return (0);
@@ -273,7 +274,7 @@ sli_fcmh_ctor(struct fidc_membh *f)
 	DEBUG_FCMH(PLL_INFO, f, "after opening new backing file rc=%d", rc);
 	if (rc == ENOENT && (f->fcmh_flags & FCMH_CAC_RLSBMAP)) {
 		f->fcmh_flags |= FCMH_NO_BACKFILE;
-		psclog_notice("RLSBMAP: Fail to open backing file - this is Okay");
+		psclog_diag("RLSBMAP: failed to open backing file");
 		rc = 0;
 	}
 	return (rc);
