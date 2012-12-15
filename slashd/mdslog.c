@@ -1369,7 +1369,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 			if (csvc == NULL) {
 				int error = dst_resm->resm_csvc->csvc_lasterrno;
 				DYNARRAY_FOREACH(mn, j, &dst_resm->resm_nids)
-					psclog_notice("GC: failed to contact: %s; rc=%d",
+					psclog_diag("GC: failed to contact: %s; rc=%d",
 					    mn->resmnid_addrbuf, error);
 				continue;
 			}
@@ -1600,6 +1600,7 @@ mdslog_bmap_repls(void *datap, uint64_t txg, __unusedx int flag)
 	 * Relinquish ownership, which was asserted in
 	 * mdslogfill_bmap_repls(), whichever wkthr who gets it.
 	 */
+	DEBUG_FCMH(PLL_DEBUG, b->bcm_fcmh, "relinquish BUSY");
 	b->bcm_fcmh->fcmh_owner = 0;
 	(void)BMAP_RLOCK(b);
 	b->bcm_owner = 0;
