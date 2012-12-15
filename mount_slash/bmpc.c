@@ -478,9 +478,9 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 
 		}
 #else
-		DEBUG_BMPCE(PLL_NOTICE, e, "freeing last_access=("
-			    PSCPRI_TIMESPEC")",
-			    PSCPRI_TIMESPEC_ARGS(&e->bmpce_laccess));
+		DEBUG_BMPCE(PLL_DIAG, e,
+		    "freeing last_access=("PSCPRI_TIMESPEC")",
+		    PSCPRI_TIMESPEC_ARGS(&e->bmpce_laccess));
 		bmpce_freeprep(e);
 		bmpce_release_locked(e, bmpc);
 		if (++freed >= nfree)
@@ -488,7 +488,9 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 #endif
 	}
 
-	/* Save CPU, assume that the head of the list is the oldest entry.
+	/*
+	 * Save CPU, assume that the head of the list is the oldest
+	 * entry.
 	 */
 	if (pll_nitems(&bmpc->bmpc_lru) > 0) {
 		e = pll_peekhead(&bmpc->bmpc_lru);
