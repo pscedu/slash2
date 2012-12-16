@@ -143,6 +143,8 @@ dump_fcmh_flags(int flags)
 	PFL_PRFLAG(FCMH_CLI_FETCHREPLTBL, &flags, &seq);
 	PFL_PRFLAG(FCMH_CLI_INITDCI, &flags, &seq);
 	PFL_PRFLAG(FCMH_CLI_TRUNC, &flags, &seq);
+	PFL_PRFLAG(FCMH_CLI_DIRTY_ATTRS, &flags, &seq);
+	PFL_PRFLAG(FCMH_CLI_DIRTY_QUEUE, &flags, &seq);
 	if (flags)
 		printf(" unknown: %x", flags);
 	printf("\n");
