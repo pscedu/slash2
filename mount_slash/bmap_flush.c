@@ -896,6 +896,8 @@ msl_bmap_release_cb(struct pscrpc_request *rq,
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 
+	// SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_release_rep, rc);
+
 	if (!mp)
 		rc = -1;
 
@@ -1203,7 +1205,7 @@ msbmflwthr_main(__unusedx struct psc_thread *thr)
 	while (pscthr_run()) {
 		PFL_GETTIMESPEC(&ts);
 		/*
-		 * A bmap can be on both bmapFlushQ and bmapTimeoutQ. 
+		 * A bmap can be on both bmapFlushQ and bmapTimeoutQ.
 		 * Even if we take it off bmapTimeoutQ, it can still
 		 * be on the bmapFlushQ. This is odd.
 		 */
@@ -1225,11 +1227,12 @@ msbmflwthr_main(__unusedx struct psc_thread *thr)
 
 		DYNARRAY_FOREACH(b, i, &bmaps) {
 			/*
- 			 * XXX: If BMAP_TOFREE is set after the above loop but
- 			 * before this one. The bmap reaper logic will assert
- 			 * on the bmap reference count not being zero.  And this 
- 			 * has been seen although with a different patch.
- 			 */
+			 * XXX: If BMAP_TOFREE is set after the above
+			 * loop but before this one.  The bmap reaper
+			 * logic will assert on the bmap reference count
+			 * not being zero.  And this has been seen
+			 * although with a different patch.
+			 */
 			rc = msl_bmap_lease_tryext(b, &secs, 0);
 			DEBUG_BMAP((rc && rc != -EAGAIN) ?
 			    PLL_ERROR : PLL_INFO, b,
