@@ -37,6 +37,7 @@
 #include "fid.h"
 #include "pathnames.h"
 #include "slashrpc.h"
+#include "slconfig.h"
 #include "sltypes.h"
 #include "slutil.h"
 
@@ -145,7 +146,7 @@ checkcreds(const struct srt_stat *sstb, const struct slash_creds *cr,
 	psc_assert(!pfl_memchk(sstb, 0, sizeof(*sstb)));
 #endif
 
-	if (cr->scr_uid == 0)
+	if (!globalConfig.gconf_root_squash && cr->scr_uid == 0)
 		return (0);
 	if (sstb->sst_uid == cr->scr_uid) {
 		if (((xmode & R_OK) && (sstb->sst_mode & S_IRUSR) == 0) ||
