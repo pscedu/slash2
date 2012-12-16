@@ -417,6 +417,7 @@ main(int argc, char *argv[])
 	psc_subsys_register(SLMSS_ZFS, "zfs");
 	psc_subsys_register(SLMSS_JOURNAL, "log");
 	psc_subsys_register(SLMSS_UPSCH, "upsch");
+	psc_subsys_register(SLMSS_INFO, "info");
 
 #ifdef ZPOOL_PATH
 	append_path(ZPOOL_PATH);
