@@ -156,10 +156,12 @@ slvr_do_crc(struct slvr_ref *s)
 		}
 
 	} else if (s->slvr_flags & SLVR_CRCDIRTY) {
-		/* SLVR_CRCDIRTY means that DATARDY has been set and that
-		 *   a write dirtied the buffer and invalidated the CRC.
+		/*
+		 * SLVR_CRCDIRTY means that DATARDY has been set and
+		 * that a write dirtied the buffer and invalidated the
+		 * CRC.
 		 */
-		DEBUG_SLVR(PLL_NOTIFY, s, "crc");
+		DEBUG_SLVR(PLL_DIAG, s, "crc");
 		PSC_CRC64_INIT(&s->slvr_crc);
 		SLVR_ULOCK(s);
 
@@ -175,7 +177,8 @@ slvr_do_crc(struct slvr_ref *s)
 		crc = s->slvr_crc;
 		PSC_CRC64_FIN(&crc);
 #endif
-		DEBUG_SLVR(PLL_NOTIFY, s, "crc=%"PSCPRIxCRC64, crc);
+
+		DEBUG_SLVR(PLL_DIAG, s, "crc=%"PSCPRIxCRC64, crc);
 
 		SLVR_LOCK(s);
 		if (!s->slvr_pndgwrts && !s->slvr_compwrts)
@@ -559,8 +562,8 @@ int
 sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp,
     int issue)
 {
-	struct sli_iocb *iocb;
 	struct sli_aiocb_reply *a;
+	struct sli_iocb *iocb;
 	struct aiocb *aio;
 	int error = SLERR_AIOWAIT;
 
@@ -569,12 +572,11 @@ sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp,
 	if (!a)
 		a = *aiocbrp = sli_aio_aiocbr_new();
 
-	DEBUG_SLVR(PLL_NOTIFY, s, "issue=%d *aiocbrp=%p", issue,
+	DEBUG_SLVR(PLL_DIAG, s, "issue=%d *aiocbrp=%p", issue,
 	    *aiocbrp);
 
 	if (!issue)
-		/* Not called from slvr_fsio().
-		 */
+		/* Not called from slvr_fsio(). */
 		goto out;
 
 	iocb = sli_aio_iocb_new(s);
@@ -589,8 +591,8 @@ sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp,
 
 	aio = &iocb->iocb_aiocb;
 	aio->aio_fildes = slvr_2_fd(s);
-	/* Read the entire sliver.
-	 */
+
+	/* Read the entire sliver. */
 	aio->aio_offset = slvr_2_fileoff(s, 0);
 	aio->aio_buf = slvr_2_buf(s, 0);
 	aio->aio_nbytes = SLASH_SLVR_SIZE;
@@ -617,11 +619,12 @@ sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp,
 
 __static ssize_t
 slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
-  struct sli_aiocb_reply **aiocbr)
+    struct sli_aiocb_reply **aiocbr)
 {
 	int i, nblks, save_errno = 0;
 	uint64_t *v8;
 	ssize_t	rc;
+	size_t off;
 
 	psc_assert(rw == SL_READ || rw == SL_WRITE);
 
@@ -630,6 +633,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 
 	SLVR_LOCK(s);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
+	off = slvr_2_fileoff(s, sblk);
 
 	if (rw == SL_READ) {
 		OPSTAT_INCR(SLI_OPST_FSIO_READ);
@@ -641,23 +645,24 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 			SLVR_ULOCK(s);
 
 			return (sli_aio_register(s, aiocbr, 1));
-		} else
-			SLVR_ULOCK(s);
+		}
+		SLVR_ULOCK(s);
 
-		rc = pread(slvr_2_fd(s), slvr_2_buf(s, sblk),
-			   size, slvr_2_fileoff(s, sblk));
+		rc = pread(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
+		    off);
 
 		if (OPSTAT_CURR(SLI_OPST_DEBUG) == 1) {
 			rc = -1;
 			errno = EBADF;
 		}
 
-		if (rc < 0) {
+		if (rc == -1) {
 			OPSTAT_INCR(SLI_OPST_FSIO_READ_FAIL);
 			save_errno = errno;
 		}
 
-		/* XXX this is a bit of a hack.  Here we'll check crc's
+		/*
+		 * XXX this is a bit of a hack.  Here we'll check CRCs
 		 *  only when nblks == an entire sliver.  Only RMW will
 		 *  have their checks bypassed.  This should probably be
 		 *  handled more cleanly, like checking for RMW and then
@@ -674,7 +679,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 			if (crc_rc == SLERR_BADCRC)
 				DEBUG_SLVR(PLL_ERROR, s,
 				    "bad crc blks=%d off=%#"PRIx64,
-				    nblks, slvr_2_fileoff(s, sblk));
+				    nblks, off);
 		}
 	} else {
 		OPSTAT_INCR(SLI_OPST_FSIO_WRITE);
@@ -686,7 +691,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 		SLVR_ULOCK(s);
 
 		rc = pwrite(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
-			    slvr_2_fileoff(s, sblk));
+		    off);
 		if (rc == -1) {
 			OPSTAT_INCR(SLI_OPST_FSIO_WRITE_FAIL);
 			save_errno = errno;
@@ -697,19 +702,21 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 		DEBUG_SLVR(PLL_ERROR, s, "failed (rc=%zd, size=%u) "
 		    "%s blks=%d off=%#"PRIx64" errno=%d",
 		    rc, size, (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
-		    nblks, slvr_2_fileoff(s, sblk), save_errno);
+		    nblks, off, save_errno);
 
-	else if ((uint32_t)rc != size)
-		DEBUG_SLVR(PLL_NOTICE, s, "short I/O (rc=%zd, size=%u) "
+	else if ((uint32_t)rc != size) {
+		DEBUG_SLVR(off + size > slvr_2_fcmh(s)->
+		    fcmh_sstb.sst_size ? PLL_DIAG : PLL_NOTICE, s,
+		    "short I/O (rc=%zd, size=%u) "
 		    "%s blks=%d off=%"PRIu64" errno=%d",
 		    rc, size, (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
-		    nblks, slvr_2_fileoff(s, sblk), save_errno);
-	else {
+		    nblks, off, save_errno);
+	} else {
 		v8 = slvr_2_buf(s, sblk);
 		DEBUG_SLVR(PLL_INFO, s, "ok %s size=%u off=%"PRIu64
 		    " rc=%zd nblks=%d v8(%"PRIx64")",
 		    (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
-		    size, slvr_2_fileoff(s, sblk), rc, nblks, *v8);
+		    size, off, rc, nblks, *v8);
 		rc = 0;
 	}
 
