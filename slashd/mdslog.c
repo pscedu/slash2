@@ -48,6 +48,7 @@
 #include "slashd.h"
 #include "slashrpc.h"
 #include "slerr.h"
+#include "subsys_mds.h"
 #include "worker.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
@@ -473,7 +474,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 	psc_assert(reclaim_logfile_offset <=
 	    SLM_RECLAIM_BATCH * (off_t)current_reclaim_entrysize);
 
-	psclog_notice("current_reclaim_xid=%"PRIu64" batchno=%"PRIu64" fg="SLPRI_FG,
+	psclog_diag("current_reclaim_xid=%"PRIu64" batchno=%"PRIu64" "
+	    "fg="SLPRI_FG,
 	    current_reclaim_xid, current_reclaim_batchno,
 	    SLPRI_FG_ARGS(&reclaim_entry.fg));
 
@@ -653,7 +655,7 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 		 * generation.  Note that changing the attributes of a
 		 * zero-length file should NOT trigger this code.
 		 */
-		distill += 100;
+		distill += 100; // XXX wtf is this?
 		sjnm->sjnm_flag |= SJ_NAMESPACE_RECLAIM;
 		sjnm->sjnm_target_gen = sstb->sst_gen;
 		if (op == NS_OP_SETSIZE) {
@@ -683,7 +685,7 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 	if (!distill)
 		pjournal_put_buf(mdsJournal, sjnm);
 
-	psclog_notice("namespace op %s (%d): distill=%d "
+	psclog_info("namespace op %s (%d): distill=%d "
 	    "fid="SLPRI_FID" name='%s%s%s' mask=%#x size=%"PRId64" "
 	    "link=%"PRId64" pfid="SLPRI_FID" npfid="SLPRI_FID" txg=%"PRId64,
 	    slm_ns_opnames[op], op, distill, sjnm->sjnm_target_fid, name,
@@ -693,12 +695,24 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 	switch (op) {
 	case NS_OP_UNLINK:
 		if (sstb->sst_nlink > 1)
-			memcpy(arg, &sstb->sst_fg, sizeof(sstb->sst_fg));
+			COPYFG(arg, &sstb->sst_fg);
 		break;
 	case NS_OP_RENAME:
-		memcpy(arg, &sstb->sst_fg, sizeof(sstb->sst_fg));
+		COPYFG(arg, &sstb->sst_fg);
 		break;
 	}
+
+	if (S_ISREG(sjnm->sjnm_mode) &&
+	    ((op == NS_OP_RECLAIM) ||
+	     (op == NS_OP_UNLINK && sstb->sst_nlink == 1) ||
+	     (op == NS_OP_SETSIZE && sstb->sst_size == 0)))
+		psclogs(PLL_INFO, SLMSS_INFO,
+		    "file data removed fid="SLPRI_FID" "
+		    "uid=%u gid=%u "
+		    "fsize=%"PRId64,
+		    sjnm->sjnm_target_fid,
+		    sjnm->sjnm_uid, sjnm->sjnm_gid,
+		    sjnm->sjnm_size);
 }
 
 /**
@@ -1081,7 +1095,7 @@ mds_cursor_thread(__unusedx struct psc_thread *thr)
 		if (rc)
 			psclog_warnx("failed to update cursor, rc=%d", rc);
 		else
-			psclog_notice("cursor updated: txg=%"PRId64", xid=%"PRId64
+			psclog_diag("cursor updated: txg=%"PRId64", xid=%"PRId64
 			    ", fid="SLPRI_FID", seqno=(%"PRIx64", %"PRIx64")",
 			    mds_cursor.pjc_commit_txg,
 			    mds_cursor.pjc_distill_xid,
