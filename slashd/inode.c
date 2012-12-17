@@ -46,14 +46,14 @@ int
 mds_inode_read(struct slash_inode_handle *ih)
 {
 	uint64_t crc, od_crc = 0;
-	struct fidc_membh *fcmh;
+	struct fidc_membh *f;
 	struct iovec iovs[2];
 	int rc, locked, vfsid;
 	uint16_t vers;
 	size_t nb;
 
-	fcmh = ih->inoh_fcmh;
-	if (mdsio_fid_to_vfsid(fcmh_2_fid(fcmh), &vfsid) < 0)
+	f = ih->inoh_fcmh;
+	if (mdsio_fid_to_vfsid(fcmh_2_fid(f), &vfsid) < 0)
 		return (EINVAL);
 
 	locked = INOH_RLOCK(ih); /* XXX bad on slow archiver */
@@ -211,7 +211,7 @@ mds_inox_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 int
 mds_inox_load_locked(struct slash_inode_handle *ih)
 {
-	struct fidc_membh *fcmh;
+	struct fidc_membh *f;
 	struct iovec iovs[2];
 	uint64_t crc, od_crc;
 	int rc, vfsid;
@@ -229,8 +229,8 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 	iovs[1].iov_base = &od_crc;
 	iovs[1].iov_len = sizeof(od_crc);
 
-	fcmh = ih->inoh_fcmh;
-	mdsio_fid_to_vfsid(fcmh_2_fid(fcmh), &vfsid);
+	f = ih->inoh_fcmh;
+	mdsio_fid_to_vfsid(fcmh_2_fid(f), &vfsid);
 	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
 	    SL_EXTRAS_START_OFF, inoh_2_mdsio_data(ih));
 	if (rc == 0 && od_crc == 0 &&
