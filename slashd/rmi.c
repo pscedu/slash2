@@ -144,16 +144,17 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 	/* Check the CRC the CRC's! */
 	psc_crc64_calc(&crc, buf, len);
 	if (crc != mq->crc) {
-		psclog_errorx("crc verification of crcwrt payload failed");
-		mp->rc = -SLERR_BADCRC;
-		goto out;
+		psclog_errorx("CRC verification of crcwrt payload failed");
+		PFL_GOTOERR(out, mp->rc = -SLERR_BADCRC);
 	}
 
 	for (i = 0, off = 0; i < mq->ncrc_updates; i++) {
 		struct srm_bmap_crcup *c = iovs[i].iov_base;
 		uint32_t j;
 
-		/* Does the bulk payload agree with the original request?
+		/*
+		 * Does the bulk payload agree with the original
+		 * request?
 		 */
 		if (c->nups != mq->ncrcs_per_update[i]) {
 			psclog_errorx("nups(%u) != ncrcs_per_update(%u)",
@@ -161,14 +162,12 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 			mp->crcup_rc[i] = -EINVAL;
 		}
 
-		/* Verify slot number validity.
-		 */
+		/* Verify slot number validity. */
 		for (j = 0; j < c->nups; j++)
 			if (c->crcs[j].slot >= SLASH_CRCS_PER_BMAP)
 				mp->crcup_rc[i] = -ERANGE;
 
-		/* Look up the bmap in the cache and write the CRCs.
-		 */
+		/* Look up the bmap in the cache and write the CRCs. */
 		mp->crcup_rc[i] = mds_bmap_crc_write(c,
 		    libsl_nid2iosid(rq->rq_conn->c_peer.nid), mq);
 		if (mp->crcup_rc[i])
@@ -189,7 +188,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 /**
  * slm_rmi_handle_repl_schedwk - Handle a REPL_SCHEDWK request from ION,
  *	which is notification pertaining to the status of a replication
- *	request, either succesful finish or failure.
+ *	request, either successful finish or failure.
  * @rq: request.
  */
 int
@@ -322,10 +321,10 @@ slm_rmi_handle_rls_bmap(struct pscrpc_request *rq)
 int
 slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 {
+	int iosidx, tract[NBREPLST];
 	struct srm_bmap_ptrunc_req *mq;
 	struct srm_bmap_ptrunc_rep *mp;
 	struct bmapc_memb *b = NULL;
-	int iosidx, tract[NBREPLST];
 	struct fidc_membh *f;
 	sl_bmapno_t bno;
 
