@@ -396,6 +396,7 @@ reimport
    fix ios_nblks[idx] accounting on open(O_TRUNC)
    advise upsch.db on SSD or tmpfs in docs
 - make cursor file contents ASCII for debugging
+- do journal logs for SETATTR factor in nlink, nblks, etc??
 
 - investigate diaser(1)
 - setup arc testrig
