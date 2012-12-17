@@ -393,7 +393,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-UV] [-D datadir] [-f slashconf] [-p zpoolcache] [-S socket]\n"
+	    "usage: %s [-V] [-D datadir] [-f slashconf] [-p zpoolcache] [-S socket]\n"
 	    "\t[zpoolname]\n",
 	    progname);
 	exit(1);
@@ -403,7 +403,7 @@ int
 main(int argc, char *argv[])
 {
 	char *zpcachefn = NULL, *zpname, fn[PATH_MAX];
-	int vfsid, rc, c, found, nofsuuid = 0;
+	int vfsid, rc, c, found;
 	const char *cfn, *sfn, *p;
 
 	/* gcrypt must be initialized very early on */
@@ -432,7 +432,7 @@ main(int argc, char *argv[])
 	p = getenv("CTL_SOCK");
 	if (p)
 		sfn = p;
-	while ((c = getopt(argc, argv, "D:f:p:S:UVX:Y")) != -1)
+	while ((c = getopt(argc, argv, "D:f:p:S:VX:Y")) != -1)
 		switch (c) {
 		case 'D':
 			sl_datadir = optarg;
@@ -445,9 +445,6 @@ main(int argc, char *argv[])
 			break;
 		case 'S':
 			sfn = optarg;
-			break;
-		case 'U':
-			nofsuuid = 1;
 			break;
 		case 'V':
 			errx(0, "revision is %d", SL_STK_VERSION);
@@ -513,7 +510,7 @@ main(int argc, char *argv[])
 	found = 0;
 	for (vfsid = 0; vfsid < mount_index; vfsid++) {
 		/* nodeSite->site_id is nodeResm->resm_res->res_site */
-		if (nodeSite->site_id == zfsMount[vfsid].siteid) {	
+		if (nodeSite->site_id == zfsMount[vfsid].siteid) {
 			psc_assert(!found);
 			found = 1;
 			current_vfsid = vfsid;

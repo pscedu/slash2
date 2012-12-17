@@ -15,7 +15,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES lnet pflenv %
-.Dd September 19, 2012
+.Dd December 17, 2012
 .Dt SLASHD 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -26,7 +26,7 @@
 metadata server daemon
 .Sh SYNOPSIS
 .Nm slashd
-.Op Fl UV
+.Op Fl V
 .Op Fl D Ar datadir
 .Op Fl f Ar conf
 .Op Fl p Ar zfspoolcache
@@ -83,8 +83,6 @@ character
 .Pp
 The default is
 .Pa /var/run/slash. Ns Ic %h Ns Pa .sock .
-.It Fl U
-Instruct the MDS to bypass journal affinity check (not recommended).
 .It Fl V
 Print version and exit.
 .El
