@@ -604,9 +604,9 @@ const char *slm_ns_opnames[] = {
 };
 
 /**
- * mdslog_namespace - Log namespace operation before we attempt an
- *	it.  This makes sure that it will be propagated towards
- *	other MDSes and made permanent before we reply to the client.
+ * mdslog_namespace - Log a namespace operation before we attempt it.
+ *	This makes sure that it will be propagated towards other MDSes
+ *	and made permanent before we reply to the client.
  */
 void
 mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
@@ -615,6 +615,7 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 {
 	struct slmds_jent_namespace *sjnm;
 	int distill = 0;
+	size_t siz;
 
 	if (op == NS_OP_SETATTR)
 		psc_assert(mask);
@@ -641,6 +642,8 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 	sjnm->sjnm_ctime = sstb->sst_ctime;
 	sjnm->sjnm_ctime_ns = sstb->sst_ctime_ns;
 	sjnm->sjnm_size = sstb->sst_size;
+
+	siz = sstb->sst_size;
 
 	/*
 	 * We need distill if we have a peer MDS or we need to do
@@ -688,31 +691,33 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 	psclog_info("namespace op %s (%d): distill=%d "
 	    "fid="SLPRI_FID" name='%s%s%s' mask=%#x size=%"PRId64" "
 	    "link=%"PRId64" pfid="SLPRI_FID" npfid="SLPRI_FID" txg=%"PRId64,
-	    slm_ns_opnames[op], op, distill, sjnm->sjnm_target_fid, name,
+	    slm_ns_opnames[op], op, distill, sstb->sst_fid, name,
 	    newname ? "' newname='" : "", newname ? newname : "",
 	    mask, sstb->sst_size, sstb->sst_nlink, pfid, npfid, txg);
 
 	switch (op) {
 	case NS_OP_UNLINK:
 		if (sstb->sst_nlink > 1)
-			COPYFG(arg, &sstb->sst_fg);
+			COPYFG((struct slash_fidgen *)arg, &sstb->sst_fg);
 		break;
 	case NS_OP_RENAME:
-		COPYFG(arg, &sstb->sst_fg);
+		COPYFG((struct slash_fidgen *)arg, &sstb->sst_fg);
+		break;
+	case NS_OP_SETSIZE:
+		siz = *(size_t)arg;
 		break;
 	}
 
-	if (S_ISREG(sjnm->sjnm_mode) &&
-	    ((op == NS_OP_RECLAIM) ||
+	if (((op == NS_OP_RECLAIM) ||
 	     (op == NS_OP_UNLINK && sstb->sst_nlink == 1) ||
 	     (op == NS_OP_SETSIZE && sstb->sst_size == 0)))
 		psclogs(PLL_INFO, SLMSS_INFO,
 		    "file data removed fid="SLPRI_FID" "
 		    "uid=%u gid=%u "
-		    "fsize=%"PRId64,
-		    sjnm->sjnm_target_fid,
-		    sjnm->sjnm_uid, sjnm->sjnm_gid,
-		    sjnm->sjnm_size);
+		    "fsize=%"PRId64" op=%d",
+		    sstb->sst_fid,
+		    sstb->sst_uid, sstb->sst_gid,
+		    siz, op);
 }
 
 /**
