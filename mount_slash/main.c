@@ -90,17 +90,16 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 #define MSL_FLUSH_ATTR_TIMEOUT	8
 
-struct psc_waitq		msl_flush_attrq = PSC_WAITQ_INIT;
-psc_spinlock_t			msl_flush_attrqlock = SPINLOCK_INIT;
-
-struct psc_listcache		attrTimeoutQ;
-psc_spinlock_t			attrTimeoutQLock = SPINLOCK_INIT;
-
 static int msl_lookup_fidcache(struct pscfs_req *,
     const struct slash_creds *, pscfs_inum_t, const char *,
     struct slash_fidgen *, struct srt_stat *, struct fidc_membh **);
 
 static int msl_flush_attr(struct fidc_membh *);
+
+struct psc_waitq		 msl_flush_attrq = PSC_WAITQ_INIT;
+psc_spinlock_t			 msl_flush_attrqlock = SPINLOCK_INIT;
+
+struct psc_listcache		 attrTimeoutQ;
 
 sl_ios_id_t			 prefIOS = IOS_ID_ANY;
 const char			*progname;
@@ -1557,9 +1556,7 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 		} else if (!(c->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
 			psc_assert(c->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
 			c->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
-			spinlock(&attrTimeoutQLock);
 			lc_remove(&attrTimeoutQ, fci);
-			freelock(&attrTimeoutQLock);
 			fcmh_op_done_type(c, FCMH_OPCNT_DIRTY_QUEUE);
 		}
 	}
@@ -2230,10 +2227,10 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		    !(c->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
 			psc_assert(c->fcmh_flags & FCMH_CLI_DIRTY_QUEUE);
 			c->fcmh_flags &= ~FCMH_CLI_DIRTY_QUEUE;
-			spinlock(&attrTimeoutQLock);
+
 			fci = fcmh_2_fci(c);
 			lc_remove(&attrTimeoutQ, fci);
-			freelock(&attrTimeoutQLock);
+
 			fcmh_op_done_type(c, FCMH_OPCNT_DIRTY_QUEUE);
 		}
 		FCMH_UNBUSY(c);
@@ -2329,9 +2326,7 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 		fci->fci_etime.tv_nsec = ts.tv_nsec;
 		if (!(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE)) {
 			f->fcmh_flags |= FCMH_CLI_DIRTY_QUEUE;
-			spinlock(&attrTimeoutQLock);
 			lc_addtail(&attrTimeoutQ, fci);
-			freelock(&attrTimeoutQLock);
 			fcmh_op_start_type(f, FCMH_OPCNT_DIRTY_QUEUE);
 		}
 	}
@@ -2714,7 +2709,7 @@ msattrflushthr_main(__unusedx struct psc_thread *thr)
 		nexttimeo.tv_sec = FCMH_ATTR_TIMEO;
 		nexttimeo.tv_nsec = 0;
 
-		spinlock(&attrTimeoutQLock);
+		LIST_CACHE_LOCK(&attrTimeoutQ);
 		LIST_CACHE_FOREACH_SAFE(fci, tmp_fci, &attrTimeoutQ) {
 
 			f = fci_2_fcmh(fci);
@@ -2737,7 +2732,7 @@ msattrflushthr_main(__unusedx struct psc_thread *thr)
 			f->fcmh_flags &= ~FCMH_CLI_DIRTY_ATTRS;
 			FCMH_ULOCK(f);
 
-			freelock(&attrTimeoutQLock);
+			LIST_CACHE_ULOCK(&attrTimeoutQ);
 
 			OPSTAT_INCR(SLC_OPST_FLUSH_ATTR);
 
@@ -2762,7 +2757,7 @@ msattrflushthr_main(__unusedx struct psc_thread *thr)
 		if (did_work)
 			continue;
 		else
-			freelock(&attrTimeoutQLock);
+			LIST_CACHE_ULOCK(&attrTimeoutQ);
 
 		spinlock(&msl_flush_attrqlock);
 		psc_waitq_waitrel(&msl_flush_attrq,
