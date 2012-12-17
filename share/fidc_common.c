@@ -514,9 +514,7 @@ _fcmh_decref(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 	int locked;
 
 	locked = FCMH_RLOCK(f);
-	psc_assert(!FCMH_HAS_BUSY(f));
-	psc_assert(f->fcmh_refcnt > 1);
-	f->fcmh_refcnt--;
+	psc_assert(f->fcmh_refcnt-- > 1);
 	DEBUG_FCMH(PLL_DEBUG, f, "release ref (type=%d)", type);
 	fcmh_wake_locked(f);
 	FCMH_URLOCK(f, locked);
@@ -526,12 +524,15 @@ void
 _fcmh_op_done_type(const struct pfl_callerinfo *pci,
     struct fidc_membh *f, enum fcmh_opcnt_types type)
 {
+	int rc;
+
 	(void)FCMH_RLOCK(f);
-	psc_assert(!FCMH_HAS_BUSY(f));
-	psc_assert(f->fcmh_refcnt > 0);
-	f->fcmh_refcnt--;
+	rc = f->fcmh_refcnt--;
+	psc_assert(rc > 0);
 	DEBUG_FCMH(PLL_DEBUG, f, "release ref (type=%d)", type);
-	if (f->fcmh_refcnt == 0) {
+	if (rc == 1) {
+		psc_assert(!FCMH_HAS_BUSY(f));
+
 		/*
 		 * If we fail to initialize a fcmh, free it now.
 		 * Note that the reaper won't run if there is no
