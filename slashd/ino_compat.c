@@ -100,7 +100,7 @@ mds_inode_update(int vfsid, struct slash_inode_handle *ih,
 {
 	char fn[NAME_MAX + 1];
 	struct sl_ino_compat *sic;
-	struct fidc_membh *fcmh;
+	struct fidc_membh *f;
 	struct srt_stat sstb;
 	void *h = NULL, *th;
 	int rc;
@@ -112,9 +112,8 @@ mds_inode_update(int vfsid, struct slash_inode_handle *ih,
 	DEBUG_INOH(PLL_INFO, ih, "updating old inode (v %d)",
 	    old_version);
 
-	fcmh = ih->inoh_fcmh;
-	snprintf(fn, sizeof(fn), "%016"PRIx64".update",
-	    fcmh_2_fid(fcmh));
+	f = ih->inoh_fcmh;
+	snprintf(fn, sizeof(fn), "%016"PRIx64".update", fcmh_2_fid(f));
 	rc = mdsio_opencreatef(vfsid, mds_tmpdir_inum[vfsid],
 	    &rootcreds, O_RDWR | O_CREAT | O_TRUNC,
 	    MDSIO_OPENCRF_NOLINK, 0644, fn, NULL, NULL, &h, NULL, NULL,
@@ -170,7 +169,7 @@ mds_inode_update_interrupted(int vfsid, struct slash_inode_handle *ih,
     int *rc)
 {
 	char fn[NAME_MAX + 1];
-	struct fidc_membh *fcmh;
+	struct fidc_membh *f;
 	struct srt_stat sstb;
 	struct iovec iovs[2];
 	uint64_t crc, od_crc;
@@ -179,7 +178,7 @@ mds_inode_update_interrupted(int vfsid, struct slash_inode_handle *ih,
 	int exists = 0;
 	size_t nb;
 
-	fcmh = ih->inoh_fcmh;
+	f = ih->inoh_fcmh;
 	th = inoh_2_mdsio_data(ih);
 
 	snprintf(fn, sizeof(fn), "%016"PRIx64".update",
@@ -257,7 +256,7 @@ mds_ino_read_v1(struct slash_inode_handle *ih)
 		uint32_t	replpol;
 		sl_replica_t	repls[4];
 	} ino;
-	struct fidc_membh *fcmh;
+	struct fidc_membh *f;
 	struct iovec iovs[2];
 	uint64_t crc, od_crc;
 	int i, rc, vfsid;
@@ -268,8 +267,8 @@ mds_ino_read_v1(struct slash_inode_handle *ih)
 	iovs[1].iov_base = &od_crc;
 	iovs[1].iov_len = sizeof(od_crc);
 
-	fcmh = ih->inoh_fcmh;
-	mdsio_fid_to_vfsid(fcmh_2_fid(fcmh), &vfsid);
+	f = ih->inoh_fcmh;
+	mdsio_fid_to_vfsid(fcmh_2_fid(f), &vfsid);
 	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb, 0,
 	    inoh_2_mdsio_data(ih));
 
@@ -297,7 +296,7 @@ mds_inox_read_v1(struct slash_inode_handle *ih)
 		sl_snap_t	snaps[1];
 		sl_replica_t	repls[60];
 	} inox;
-	struct fidc_membh *fcmh;
+	struct fidc_membh *f;
 	struct iovec iovs[2];
 	uint64_t crc, od_crc;
 	int i, rc, vfsid;
@@ -310,8 +309,8 @@ mds_inox_read_v1(struct slash_inode_handle *ih)
 	iovs[1].iov_base = &od_crc;
 	iovs[1].iov_len = sizeof(od_crc);
 
-	fcmh = ih->inoh_fcmh;
-	mdsio_fid_to_vfsid(fcmh_2_fid(fcmh), &vfsid);
+	f = ih->inoh_fcmh;
+	mdsio_fid_to_vfsid(fcmh_2_fid(f), &vfsid);
 	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
 	    0x400, inoh_2_mdsio_data(ih));
 
@@ -340,7 +339,7 @@ mds_bmap_read_v1(struct bmapc_memb *b, void *readh)
 		uint32_t	gen;
 		uint32_t	replpol;
 	} bod;
-	struct fidc_membh *fcmh;
+	struct fidc_membh *f;
 	struct iovec iovs[2];
 	uint64_t crc, od_crc;
 	int i, rc, vfsid;
@@ -352,8 +351,8 @@ mds_bmap_read_v1(struct bmapc_memb *b, void *readh)
 	iovs[0].iov_len = sizeof(bod);
 	iovs[1].iov_base = &od_crc;
 	iovs[1].iov_len = sizeof(od_crc);
-	fcmh = b->bcm_fcmh;
-	mdsio_fid_to_vfsid(fcmh_2_fid(fcmh), &vfsid);
+	f = b->bcm_fcmh;
+	mdsio_fid_to_vfsid(fcmh_2_fid(f), &vfsid);
 	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
 	    bsz * b->bcm_bmapno + 0x1000, readh);
 
