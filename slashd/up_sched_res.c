@@ -119,14 +119,10 @@ slmupschedthr_tryrepldst_cb(struct pscrpc_request *rq,
 	struct sl_resm *dst_resm = av->pointer_arg[IP_DSTRESM];
 	struct sl_resm *src_resm = av->pointer_arg[IP_SRCRESM];
 	struct bmapc_memb *b = av->pointer_arg[IP_BMAP];
-	struct resm_mds_info *src_rmmi, *dst_rmmi;
 	struct resprof_mds_info *rpmi;
 	struct slm_update_data *upd;
 	int64_t amt = av->space[IN_AMT];
 	int rc = 0, tract[NBREPLST];
-
-	src_rmmi = resm2rmmi(src_resm);
-	dst_rmmi = resm2rmmi(dst_resm);
 
 	if (rq)
 		SL_GET_RQ_STATUS_TYPE(csvc, rq,
@@ -190,7 +186,6 @@ slmupschedthr_tryrepldst(struct slm_update_data *upd,
     struct sl_resource *dst_res, int j)
 {
 	int tract[NBREPLST], retifset[NBREPLST], rc = 0;
-	struct resm_mds_info *src_rmmi, *dst_rmmi;
 	struct pscrpc_request *rq = NULL;
 	struct srm_repl_schedwk_req *mq;
 	struct srm_repl_schedwk_rep *mp;
@@ -204,8 +199,6 @@ slmupschedthr_tryrepldst(struct slm_update_data *upd,
 
 	f = upd_2_fcmh(upd);
 	dst_resm = psc_dynarray_getpos(&dst_res->res_members, j);
-	dst_rmmi = resm2rmmi(dst_resm);
-	src_rmmi = resm2rmmi(src_resm);
 
 	memset(&av, 0, sizeof(av));
 	av.pointer_arg[IP_DSTRESM] = dst_resm;
@@ -368,7 +361,6 @@ slmupschedthr_tryptrunc(struct slm_update_data *upd,
 	int tract[NBREPLST], retifset[NBREPLST], rc;
 	struct pscrpc_request *rq = NULL;
 	struct slashrpc_cservice *csvc;
-	struct resm_mds_info *dst_rmmi;
 	struct srm_bmap_ptrunc_req *mq;
 	struct srm_bmap_ptrunc_rep *mp;
 	struct pscrpc_async_args av;
@@ -377,7 +369,6 @@ slmupschedthr_tryptrunc(struct slm_update_data *upd,
 
 	f = upd_2_fcmh(upd);
 	dst_resm = psc_dynarray_getpos(&dst_res->res_members, idx);
-	dst_rmmi = resm2rmmi(dst_resm);
 
 	memset(&av, 0, sizeof(av));
 	av.pointer_arg[IP_DSTRESM] = dst_resm;
@@ -491,7 +482,6 @@ slmupschedthr_trygarbage(struct slm_update_data *upd,
 	int tract[NBREPLST], retifset[NBREPLST], rc = 0;
 	struct pscrpc_request *rq = NULL;
 	struct slashrpc_cservice *csvc;
-	struct resm_mds_info *dst_rmmi;
 	struct srm_bmap_ptrunc_req *mq;
 	struct srm_bmap_ptrunc_rep *mp;
 	struct pscrpc_async_args av;
@@ -500,7 +490,6 @@ slmupschedthr_trygarbage(struct slm_update_data *upd,
 
 	f = upd_2_fcmh(upd);
 	dst_resm = psc_dynarray_getpos(&dst_res->res_members, j);
-	dst_rmmi = resm2rmmi(dst_resm);
 
 	memset(&av, 0, sizeof(av));
 	av.pointer_arg[IP_DSTRESM] = dst_resm;
@@ -593,6 +582,7 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 		b = bmi_2_bmap(bmi);
 		rc = mds_repl_iosv_lookup(current_vfsid,
 		    upd_2_inoh(upd), &repl, &iosidx, 1);
+		// XXX check rc??
 		if (mds_repl_bmap_walk(b, tract, retifset, 0, &iosidx,
 		    1))
 			mds_bmap_write_repls_rel(b);
@@ -615,7 +605,6 @@ upd_proc_bmap(struct slm_update_data *upd)
 	struct slashrpc_cservice *csvc;
 	struct resprof_mds_info *rpmi;
 	struct bmap_mds_info *bmi;
-	struct fcmh_mds_info *fmi;
 	struct bmapc_memb *b, *bn;
 	struct sl_resm *src_resm;
 	struct fidc_membh *f;
@@ -625,7 +614,6 @@ upd_proc_bmap(struct slm_update_data *upd)
 	bmi = upd_getpriv(upd);
 	b = bmi_2_bmap(bmi);
 	f = b->bcm_fcmh;
-	fmi = fcmh_2_fmi(f);
 
 	FCMH_WAIT_BUSY(f);
 	FCMH_ULOCK(f);
