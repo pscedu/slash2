@@ -704,7 +704,7 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 		COPYFG((struct slash_fidgen *)arg, &sstb->sst_fg);
 		break;
 	case NS_OP_SETSIZE:
-		siz = *(size_t)arg;
+		siz = *(size_t *)arg;
 		break;
 	}
 
