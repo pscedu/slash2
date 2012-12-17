@@ -291,6 +291,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	brepls_init_idx(retifset);
 
 	rc = mds_repl_bmap_walk(b, tract, retifset, 0, &iosidx, 1);
+	// XXX check rc??
 	mds_bmap_write_logrepls(b);
 	upschq_resm(dst_resm, UPDT_PAGEIN);
 
