@@ -169,7 +169,6 @@ mds_inode_update_interrupted(int vfsid, struct slash_inode_handle *ih,
     int *rc)
 {
 	char fn[NAME_MAX + 1];
-	struct fidc_membh *f;
 	struct srt_stat sstb;
 	struct iovec iovs[2];
 	uint64_t crc, od_crc;
@@ -178,7 +177,6 @@ mds_inode_update_interrupted(int vfsid, struct slash_inode_handle *ih,
 	int exists = 0;
 	size_t nb;
 
-	f = ih->inoh_fcmh;
 	th = inoh_2_mdsio_data(ih);
 
 	snprintf(fn, sizeof(fn), "%016"PRIx64".update",
