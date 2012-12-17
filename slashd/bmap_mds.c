@@ -352,8 +352,8 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 	struct sl_mds_crc_log crclog;
 	struct fidc_membh *f;
 	struct srt_stat sstb;
-	sl_ios_id_t iosid;
 	int rc, fl, idx, vfsid;
+	sl_ios_id_t iosid;
 	uint32_t i;
 
 	psc_assert(bmap->bcm_flags & BMAP_MDS_CRC_UP);
@@ -379,6 +379,8 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 
 	/* use nolog because mdslog_bmap_crc() will cover this */
 	rc = mds_fcmh_setattr_nolog(vfsid, f, fl, &sstb);
+	if (rc)
+		psclog_error("unable to setattr: rc=%d", rc);
 
 	FCMH_LOCK(f);
 
