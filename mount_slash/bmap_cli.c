@@ -228,7 +228,7 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 		/*
 		 * Unflushed data in this bmap is now invalid.  Move the
 		 * bmap out of the fid cache so that others don't
-		 * stumble across it while it's active I/O's are failed.
+		 * stumble across it while its active I/O's are failed.
 		 */
 		if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED) {
 			psc_assert(b->bcm_flags & BMAP_ORPHAN);
