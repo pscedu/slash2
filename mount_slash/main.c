@@ -1294,8 +1294,8 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	FCMH_ULOCK(p);
 
 	cfid = dircache_lookup(fcmh_2_dci(p), name, DC_LOOKUP);
-	/* It's OK to unref the parent now.
-	 */
+
+	/* It's OK to unref the parent now. */
 	fcmh_op_done(p);
 
 	if (cfid == FID_ANY)
@@ -2968,7 +2968,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-dUVX] [-D datadir] [-f conf] [-I iosystem] [-M mds]\n"
+	    "usage: %s [-dQUVX] [-D datadir] [-f conf] [-I iosystem] [-M mds]\n"
 	    "\t[-o mountopt] [-p #prefetch] [-S socket] node\n",
 	    progname);
 	exit(1);
@@ -3001,7 +3001,7 @@ main(int argc, char *argv[])
 	if (p)
 		cfg = p;
 
-	while ((c = getopt(argc, argv, "D:df:I:M:o:p:S:UVX")) != -1)
+	while ((c = getopt(argc, argv, "D:df:I:M:o:p:QS:UVX")) != -1)
 		switch (c) {
 		case 'D':
 			sl_datadir = optarg;
@@ -3030,6 +3030,9 @@ main(int argc, char *argv[])
 				    "#prefetch (max %d): %s",
 				    MAX_READDIR_NENTS, optarg);
 			nstb_prefetch = (int)l;
+			break;
+		case 'Q':
+			globalConfig.gconf_root_squash = 1;
 			break;
 		case 'S':
 			if (strlcpy(ctlsockfn, optarg,

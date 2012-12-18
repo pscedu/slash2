@@ -15,7 +15,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES lnet pflenv %
-.Dd August 4, 2012
+.Dd December 18, 2012
 .Dt MOUNT_SLASH 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -26,7 +26,7 @@
 file system
 .Sh SYNOPSIS
 .Nm mount_slash
-.Op Fl dUV
+.Op Fl dQUV
 .Op Fl D Ar datadir
 .Op Fl f Ar conf
 .Op Fl I Ar iosystem
@@ -61,14 +61,20 @@ Specify the preferred
 system resource name.
 .It Fl M Ar mds
 Specify the primary metadata server resource name.
+.It Fl o Ar mountopt
+Pass additional options to the low-level file system mounter.
 .It Fl p Ar #prefetch
 Specify the maximum number of file
 .Xr stat 2
 buffers to fetch when performing
 .Tn READDIR RPC Ns s .
 The default is as many as can fit.
-.It Fl o Ar mountopt
-Pass additional options to the low-level file system mounter.
+.It Fl Q
+Enable root squash.
+Root squash mode disables traditional superuser access and instead
+treats superuser like any other user.
+Note that this is not a security feature per se but more of a guard
+against accidental behavior.
 .It Fl S Ar socket
 Specify an alternative path for the named socket through which
 .Nm
