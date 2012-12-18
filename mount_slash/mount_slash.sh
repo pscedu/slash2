@@ -23,6 +23,7 @@ while getopts "gP:sv" c; do
 done
 shift $(($OPTIND - 1))
 
+xargs=
 apply_host_prefs "$@"
 
 mp=/$prof
@@ -41,7 +42,7 @@ export CONFIG_FILE=$base/slcfg
 type modprobe >/dev/null 2>&1 && modprobe fuse
 
 preproc
-$mystrace $mygdb $prog -D $base/var -U $mp
+$mystrace $mygdb $prog -D $base/var -U $xargs $mp
 postproc $?
 
 sleep 10
