@@ -2057,6 +2057,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		} else {
 			uint32_t x = stb->st_size / SLASH_BMAP_SIZE;
 
+			DEBUG_FCMH(PLL_INFO, c, "partial truncate");
 			/* Partial truncate.  Block and flush. */
 			SPLAY_FOREACH(b, bmap_cache, &c->fcmh_bmaptree) {
 				if (b->bcm_bmapno < x)
