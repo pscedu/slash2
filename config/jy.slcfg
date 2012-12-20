@@ -13,11 +13,9 @@ set fsuuid="4c0fa37db6e31718";
 # include "/etc/slash/*.slcfg"
 
 site @JY {
-	site_desc	= "JY testbed";
 	site_id		= 100;
 
 	resource md {
-		desc	= "lime metadata server";
 		type	= mds;
 		id	= 101;
 		nids	= lime;
@@ -25,7 +23,6 @@ site @JY {
 	}
 
 	resource io {
-		desc	= "xmen I/O";
 		type	= parallel_lfs_compnt;
 		id	= 102;
 		fsroot	= /home/slio-jy;
@@ -33,7 +30,6 @@ site @JY {
 	}
 
 	resource kam {
-		desc	= "kaminari desktop";
 		type	= standalone_fs;
 		id	= 103;
 		fsroot	= /slio-jy;
@@ -41,7 +37,6 @@ site @JY {
 	}
 
 	resource cyclops {
-		desc	= "test archiver storage node";
 		type	= standalone_fs;
 		id	= 104;
 		fsroot	= /usr/slio-jy;
@@ -49,7 +44,6 @@ site @JY {
 	}
 
 	resource citron {
-		desc	= "fruit storage";
 		type	= standalone_fs;
 		id	= 105;
 		fsroot	= /local/jy.s2/io;
@@ -57,10 +51,16 @@ site @JY {
 	}
 
 	resource orange {
-		desc	= "fruit storage";
 		type	= standalone_fs;
 		id	= 106;
 		fsroot	= /local/jy.s2/io;
 		nids	= orange;
+	}
+
+	resource peel0 {
+		type	= standalone_fs;
+		id	= 107;
+		fsroot	= /slio0;
+		nids	= peel0;
 	}
 }
