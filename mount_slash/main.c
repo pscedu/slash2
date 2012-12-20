@@ -2190,7 +2190,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
 		if (c->fcmh_sstb.sst_size != mp->attr.sst_size) {
-			psclog_warn("fid: "SLPRI_FID", size change from %"PRId64" to %"PRId64,
+			psclog_info("fid: "SLPRI_FID", size change from %"PRId64" to %"PRId64,
 				   fcmh_2_fid(c), c->fcmh_sstb.sst_size, mp->attr.sst_size);
 		}
 		c->fcmh_sstb.sst_size = mp->attr.sst_size;
