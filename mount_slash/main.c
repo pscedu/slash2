@@ -2678,14 +2678,7 @@ msl_flush_attr(struct fidc_membh *f)
 	mq->attr.sst_size = f->fcmh_sstb.sst_size;
 	mq->attr.sst_mtim = f->fcmh_sstb.sst_mtim;
 
-	psclog_info("f %p setattr%s%s%s%s%s%s%s", f,
-	    mq->to_set & PSCFS_SETATTRF_MODE ? " mode" : "",
-	    mq->to_set & PSCFS_SETATTRF_UID ? " uid" : "",
-	    mq->to_set & PSCFS_SETATTRF_GID ? " gid" : "",
-	    mq->to_set & PSCFS_SETATTRF_ATIME ? " atime" : "",
-	    mq->to_set & PSCFS_SETATTRF_MTIME ? " mtime" : "",
-	    mq->to_set & PSCFS_SETATTRF_CTIME ? " ctime" : "",
-	    mq->to_set & PSCFS_SETATTRF_DATASIZE ? " datasize" : "");
+	DEBUG_SSTB(PLL_INFO, &f->fcmh_sstb, "attr flush, to_set = %x", mq->to_set);
 
 	FCMH_ULOCK(f);
 
