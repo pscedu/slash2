@@ -2197,7 +2197,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	fcmh_setattrf(c, &mp->attr, FCMH_SETATTRF_SAVELOCAL |
 	    FCMH_SETATTRF_HAVELOCK);
 
-	DEBUG_SSTB(PLL_INFO, &c->fcmh_sstb, "fcmh %p post setattr", c);
+	DEBUG_SSTB(PLL_INFO, &c->fcmh_sstb, "fcmh %p post setattr, set = %x", c, to_set);
 
 #if 0
 	if (fcmh_isdir(c) && DIRCACHE_INITIALIZED(c)) {
