@@ -2139,7 +2139,8 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	mq->to_set = to_set;
 	sl_externalize_stat(stb, &mq->attr);
 
-	DEBUG_SSTB(PLL_INFO, &c->fcmh_sstb, "fcmh %p pre setattr, set = %x", c, to_set);
+	DEBUG_SSTB(PLL_INFO, &c->fcmh_sstb,
+	    "fcmh %p pre setattr, set = %#x", c, to_set);
 
 	psclog_dbg("fcmh %p setattr%s%s%s%s%s%s%s", c,
 	    to_set & PSCFS_SETATTRF_MODE ? " mode" : "",
@@ -2189,10 +2190,11 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	}
 
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
-		if (c->fcmh_sstb.sst_size != mp->attr.sst_size) {
-			psclog_info("fid: "SLPRI_FID", size change from %"PRId64" to %"PRId64,
-				   fcmh_2_fid(c), c->fcmh_sstb.sst_size, mp->attr.sst_size);
-		}
+		if (c->fcmh_sstb.sst_size != mp->attr.sst_size)
+			psclog_info("fid: "SLPRI_FID", size change "
+			    "from %"PRId64" to %"PRId64,
+			    fcmh_2_fid(c), c->fcmh_sstb.sst_size,
+			    mp->attr.sst_size);
 		c->fcmh_sstb.sst_size = mp->attr.sst_size;
 		c->fcmh_sstb.sst_ctime = mp->attr.sst_ctime;
 		c->fcmh_sstb.sst_ctime_ns = mp->attr.sst_ctime_ns;
