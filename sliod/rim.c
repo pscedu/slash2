@@ -54,13 +54,13 @@ static uint64_t	current_reclaim_batchno;
 int
 sli_rim_handle_reclaim(struct pscrpc_request *rq)
 {
+	char fidfn[PATH_MAX];
+	uint64_t crc, xid, batchno;
 	struct srt_reclaim_entry *entryp;
 	struct srm_reclaim_req *mq;
 	struct srm_reclaim_rep *mp;
 	struct iovec iov;
-	char fidfn[PATH_MAX];
 	int i, rc, len;
-	uint64_t crc, xid, batchno;
 
 	len = offsetof(struct srt_reclaim_entry, _pad);
 
