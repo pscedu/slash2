@@ -245,6 +245,7 @@ struct bmap {
 		psc_assert((b)->bcm_owner == pthread_self());		\
 	} while (0)
 
+// XXX ensure locked???
 #define bmap_op_start_type(b, type)					\
 	do {								\
 		psc_atomic32_inc(&(b)->bcm_opcnt);			\
