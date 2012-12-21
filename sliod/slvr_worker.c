@@ -42,6 +42,9 @@
 
 int slvr_nbreqset_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 
+struct psc_poolmaster		 bmap_crcupd_poolmaster;
+struct psc_poolmgr		*bmap_crcupd_pool;
+
 static struct biod_infl_crcs	 binflCrcs;
 struct pscrpc_nbreqset		*sl_nbrqset;
 struct timespec			 slvrCrcDelay = { 0, 50000000L }; /* 50 milliseconds */
@@ -502,14 +505,11 @@ slvr_worker_int(void)
 		bmap_op_start_type(b, BMAP_OPCNT_BCRSCHED);
 
 		/* Freed by bcr_ready_remove() */
-		bii->bii_bcr = bcr =
-		    PSCALLOC(sizeof(struct biod_crcup_ref) +
-			(sizeof(struct srt_bmap_crcwire) *
-			 MAX_BMAP_INODE_PAIRS));
+		bii->bii_bcr = bcr = psc_pool_get(bmap_crcupd_pool);
+		memset(bcr, 0, bmap_crcupd_pool->ppm_entsize);
 
 		INIT_PSC_LISTENTRY(&bcr->bcr_lentry);
-		COPYFG(&bcr->bcr_crcup.fg,
-		    &b->bcm_fcmh->fcmh_fg);
+		COPYFG(&bcr->bcr_crcup.fg, &b->bcm_fcmh->fcmh_fg);
 
 		bcr->bcr_bii = bii;
 		bcr->bcr_xid = bii->bii_bcr_xid++;
@@ -543,7 +543,7 @@ slvr_worker_int(void)
 }
 
 void
-slvr_worker(__unusedx struct psc_thread *thr)
+slislvrthr_main(__unusedx struct psc_thread *thr)
 {
 	while (pscthr_run())
 		slvr_worker_int();
@@ -560,7 +560,14 @@ slvr_worker_init(void)
 	pll_init(&binflCrcs.binfcrcs_hold, struct biod_crcup_ref,
 	    bcr_lentry, &binflCrcs.binfcrcs_lock);
 
+	_psc_poolmaster_init(&bmap_crcupd_poolmaster,
+	    sizeof(struct biod_crcup_ref) +
+	    sizeof(struct srt_bmap_crcwire) * MAX_BMAP_INODE_PAIRS,
+	    offsetof(struct biod_crcup_ref, bcr_lentry), PPMF_AUTO, 64,
+	    64, 0, NULL, NULL, NULL, NULL, "bcrcupd");
+	bmap_crcupd_pool = psc_poolmaster_getmgr(&bmap_crcupd_poolmaster);
+
 	for (i = 0; i < NSLVRCRC_THRS; i++)
-		pscthr_init(SLITHRT_SLVR_CRC, 0, slvr_worker, NULL, 0,
-		    "slislvrthr%d", i);
+		pscthr_init(SLITHRT_SLVR_CRC, 0, slislvrthr_main, NULL,
+		    0, "slislvrthr%d", i);
 }

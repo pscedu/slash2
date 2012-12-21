@@ -269,7 +269,7 @@ bcr_ready_remove(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 	BII_ULOCK(bcr->bcr_bii);
 
 	bmap_op_done_type(bcr_2_bmap(bcr), BMAP_OPCNT_BCRSCHED);
-	PSCFREE(bcr);
+	psc_pool_return(bmap_crcupd_pool, bcr);
 }
 
 void
