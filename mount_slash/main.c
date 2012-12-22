@@ -924,7 +924,8 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		slc_fcmh_initdci(p);
 	FCMH_ULOCK(p);
 
-	if (rc == 0 && mp->cattr.sst_fid) {
+	if (rc == 0 && mp->cattr.sst_fid &&
+	    mp->cattr.sst_fid != FID_ANY) {
 		rc = msl_load_fcmh(pfr, mp->cattr.sst_fid, &c);
 		if (!rc)
 			fcmh_setattrf(c, &mp->cattr,
