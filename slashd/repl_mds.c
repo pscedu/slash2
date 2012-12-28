@@ -224,15 +224,27 @@ _mds_repl_bmap_apply(struct bmapc_memb *b, const int *tract,
     const int *retifset, int flags, int off, int *scircuit,
     brepl_walkcb_t cbf, void *cbarg)
 {
+	int locked = 0, val, rc = 0, waslocked = 0;
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
-	int locked = 0, val, rc = 0;
+	struct fidc_membh *f = b->bcm_fcmh;
 
 	if (tract) {
 		if (BMAPOD_HASWRLOCK(bmi))
-			FCMH_BUSY_ENSURE(b->bcm_fcmh);
+			FCMH_BUSY_ENSURE(f);
 
-		(void)FCMH_REQ_BUSY(b->bcm_fcmh, &locked);
-		FCMH_ULOCK(b->bcm_fcmh);
+		if (FCMH_HAS_BUSY(f)) {
+			if (FCMH_HAS_LOCK(f))
+				FCMH_ULOCK(f);
+		} else {
+			if (BMAP_HASLOCK(b)) {
+				waslocked = 1;
+				BMAP_ULOCK(b);
+			}
+			(void)FCMH_REQ_BUSY(f, &locked);
+			FCMH_ULOCK(f);
+			if (waslocked)
+				BMAP_LOCK(b);
+		}
 
 		if (BMAPOD_HASWRLOCK(bmi)) {
 			BMAP_LOCK(b);
