@@ -389,16 +389,14 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 	struct bmap_iod_info *bii;
 	struct fidc_membh *f;
 	struct bmapc_memb *b;
-	uint32_t i;
 	int rc, sync, fsync_time = 0;
+	uint32_t i;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	OPSTAT_INCR(SLI_OPST_RELEASE_BMAP);
-	if (mq->nbmaps > MAX_BMAP_RELEASE) {
-		mp->rc = -E2BIG;
-		goto out;
-	}
+	if (mq->nbmaps > MAX_BMAP_RELEASE)
+		PFL_GOTOERR(out, mp->rc = -E2BIG);
 
 	for (i = 0, sync = 0; i < mq->nbmaps; i++, sync = 0) {
 		sbd = &mq->sbd[i];
@@ -418,12 +416,14 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 			rc = fsync(fcmh_2_fd(f));
 			fsync_time = CURRENT_SECONDS - fsync_time;
 
-			if (fsync_time > 10)
-				DEBUG_FCMH(PLL_WARN, f, "long fsync %d",
-				   fsync_time);
+#define NOTIFY_FSYNC_TIMEOUT 10 /* seconds */
+			if (fsync_time > NOTIFY_FSYNC_TIMEOUT)
+				DEBUG_FCMH(PLL_NOTICE, f,
+				    "long fsync %d", fsync_time);
 			if (rc)
-				DEBUG_FCMH(PLL_ERROR, f, "fsync failure rc=%d fd=%d"
-				   " errno=%d", rc, fcmh_2_fd(f), errno);
+				DEBUG_FCMH(PLL_ERROR, f,
+				    "fsync failure rc=%d fd=%d errno=%d",
+				    rc, fcmh_2_fd(f), errno);
 		}
 
 		rc = bmap_get(f, sbd->sbd_bmapno, SL_WRITE, &b);
