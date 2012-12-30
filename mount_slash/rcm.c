@@ -51,6 +51,8 @@ mrsq_lookup(int id)
 		if (mrsq->mrsq_id == id) {
 			spinlock(&mrsq->mrsq_lock);
 			mrsq->mrsq_refcnt++;
+			psclog_debug("mrsq@%p ref=%d incref", mrsq,
+			    mrsq->mrsq_refcnt);
 			freelock(&mrsq->mrsq_lock);
 			break;
 		}
@@ -59,13 +61,16 @@ mrsq_lookup(int id)
 }
 
 void
-mrsq_release(struct msctl_replstq *mrsq, int ctlrc)
+mrsq_release(struct msctl_replstq *mrsq, int rc)
 {
 	(void)reqlock(&mrsq->mrsq_lock);
-	if (mrsq->mrsq_ctlrc)
-		mrsq->mrsq_ctlrc = ctlrc;
+	if (mrsq->mrsq_rc == 0)
+		mrsq->mrsq_rc = rc;
+	psc_assert(mrsq->mrsq_refcnt > 0);
 	if (--mrsq->mrsq_refcnt == 0)
 		psc_waitq_wakeall(&mrsq->mrsq_waitq);
+	psclog_debug("mrsq@%p ref=%d rc=%d decref", mrsq, 
+	    mrsq->mrsq_refcnt, rc);
 	freelock(&mrsq->mrsq_lock);
 }
 
@@ -96,13 +101,7 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 	mrs.mrs_fid = mq->fg.fg_fid;
 
 	if (mq->rc) {
-		rc = 1;
-		if (mq->rc != EOF)
-			rc = psc_ctlsenderr(mrsq->mrsq_fd, &mh, "%s",
-			    slstrerror(mq->rc));
-		spinlock(&mrsq->mrsq_lock);
-		mrsq->mrsq_eof = 1;
-		mrsq_release(mrsq, rc);
+		mrsq_release(mrsq, mq->rc);
 		return (0);
 	}
 	mrs.mrs_newreplpol = mq->newreplpol;
@@ -114,6 +113,7 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 		    sizeof(mrs.mrs_iosv[0]));
 	}
 	rc = psc_ctlmsg_sendv(mrsq->mrsq_fd, &mh, &mrs);
+	mrsq_release(mrsq, 0);
 	return (0);
 }
 
@@ -132,7 +132,7 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	struct msctl_replstq *mrsq;
 	struct psc_ctlmsghdr mh;
 	struct iovec iov;
-	int rc, eof = 0;
+	int rc;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -142,22 +142,10 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 
 	mh = *mrsq->mrsq_mh;
 
-	if (mq->rc && mq->rc != EOF) {
-		rc = psc_ctlsenderr(mrsq->mrsq_fd, &mh, "%s",
-		    slstrerror(mq->rc));
-		spinlock(&mrsq->mrsq_lock);
-		eof = 1;
+	if (mq->rc && mq->rc != EOF)
 		goto out;
-	}
-
-	if (mq->len < 0 || mq->len > SRM_REPLST_PAGESIZ) {
-		mp->rc = -EINVAL;
-		rc = psc_ctlsenderr(mrsq->mrsq_fd, &mh, "%s",
-		    slstrerror(mq->rc));
-		spinlock(&mrsq->mrsq_lock);
-		eof = 1;
-		goto out;
-	}
+	if (mq->len < 0 || mq->len > SRM_REPLST_PAGESIZ)
+		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
 	mrsl = PSCALLOC(sizeof(*mrsl) + mq->len);
 	mrsl->mrsl_fid = mrsq->mrsq_fid;
@@ -177,23 +165,12 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 		rc = psc_ctlmsg_send(mrsq->mrsq_fd,
 		    mrsq->mrsq_mh->mh_id, MSCMT_GETREPLST_SLAVE,
 		    mq->len + sizeof(*mrsl), mrsl);
-
-		if (mq->rc == EOF) {
-			spinlock(&mrsq->mrsq_lock);
-			eof = 1;
-		}
-	} else {
-		rc = psc_ctlsenderr(mrsq->mrsq_fd, &mh, "%s",
-		    slstrerror(mq->rc));
-
-		spinlock(&mrsq->mrsq_lock);
-		eof = 1;
+		if (rc)
+			mq->rc = 0;
 	}
+
  out:
-	(void)reqlock(&mrsq->mrsq_lock);
-	if (eof)
-		mrsq_release(mrsq, 1);
-	mrsq_release(mrsq, rc);
+	mrsq_release(mrsq, mq->rc);
 	PSCFREE(mrsl);
 	return (mp->rc);
 }

@@ -220,7 +220,6 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	mrsq.mrsq_id = mq->id;
 	mrsq.mrsq_fd = fd;
 	mrsq.mrsq_fid = mrq->mrq_fid;
-	mrsq.mrsq_ctlrc = 1;
 	mrsq.mrsq_mh = mh;
 
 	pll_add(&msctl_replsts, &mrsq);
@@ -235,7 +234,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		goto out;
 	}
 
-	while (mrsq.mrsq_ctlrc && mrsq.mrsq_eof == 0) {
+	while (mrsq.mrsq_rc == 0) {
 		psc_waitq_wait(&mrsq.mrsq_waitq, &mrsq.mrsq_lock);
 		spinlock(&mrsq.mrsq_lock);
 	}
@@ -249,10 +248,13 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		PLL_LOCK(&msctl_replsts);
 		spinlock(&mrsq.mrsq_lock);
 	}
-	rc = mrsq.mrsq_ctlrc;
 	pll_remove(&msctl_replsts, &mrsq);
 	PLL_ULOCK(&msctl_replsts);
 	added = 0;
+
+	if (mrsq.mrsq_rc && mrsq.mrsq_rc != EOF)
+		rc = psc_ctlsenderr(mrsq.mrsq_fd, mh, "%s",
+		    slstrerror(mrsq.mrsq_rc));
 
  out:
 	if (added) {

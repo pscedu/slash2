@@ -34,8 +34,7 @@ struct msctl_replstq {
 	struct psc_waitq		 mrsq_waitq;
 	int				 mrsq_id;
 	int				 mrsq_fd;
-	int				 mrsq_eof;	/* whether processing has finished */
-	int				 mrsq_ctlrc;	/* EOF/OK return code to ctl layer */
+	int				 mrsq_rc;
 	const struct psc_ctlmsghdr	*mrsq_mh;
 	psc_spinlock_t			 mrsq_lock;
 	slfid_t				 mrsq_fid;
