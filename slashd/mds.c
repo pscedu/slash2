@@ -226,7 +226,7 @@ mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw,
 		bml->bml_flags |= BML_COHDIO;
 		BML_ULOCK(bml);
 
-		DEBUG_BMAP(PLL_WARN, b, "set BMAP_DIORQ, issuing cb");
+		DEBUG_BMAP(PLL_INFO, b, "set BMAP_DIORQ, issuing cb");
 
 		mdscoh_req(bml);
 

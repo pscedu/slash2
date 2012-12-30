@@ -62,7 +62,7 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 	mq = pscrpc_msg_buf(req->rq_reqmsg, 0, sizeof(*mq));
 	mp = pscrpc_msg_buf(req->rq_repmsg, 0, sizeof(*mp));
 	csvc = req->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC];
-	
+
 	if (req->rq_err)
 		rc = req->rq_err;
 
@@ -72,7 +72,7 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 	if (rc) {
 		psclog_warnx("cli=%s seq=%"PRId64" rq_status=%d mp->rc=%d",
 		   libcfs_id2str(req->rq_import->imp_connection->c_peer),
-		   mq->seq, req->rq_status, mp ? mp->rc : -1);	
+		   mq->seq, req->rq_status, mp ? mp->rc : -1);
 		goto out;
 	}
 
@@ -82,12 +82,11 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 	//XXX if the client has given up the lease then we shouldn't consider
 	// that an error and should proceed.
 
-	/* Leases can come and go regardless of pending coh cb's.
-	 */
+	/* Leases can come and go regardless of pending coh cb's. */
 	f = fidc_lookup_fid(mq->fid);
 	if (!f)
 		PFL_GOTOERR(out, rc = -ENOENT);
-	
+
 	b = bmap_lookup_cache(f, mq->blkno, &new_bmap);
 
 	FCMH_LOCK(f);
@@ -97,7 +96,7 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 	if (!b)
 		PFL_GOTOERR(out, rc = -ENOENT);
 
-	bml = mds_bmap_getbml_locked(b, mq->seq, 
+	bml = mds_bmap_getbml_locked(b, mq->seq,
 	     req->rq_peer.nid, req->rq_peer.pid);
 
 	if (!bml)
@@ -106,11 +105,11 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 	BML_LOCK(bml);
 	bml->bml_flags |= BML_CDIO;
 	if (bml->bml_flags & BML_COHDIO) {
-		/* Test for BMAP_DIORQ.  If it was removed, the
-		 * the writer holding the lease, on behalf of 
-		 * which this rq was issued, has relinquished
-		 * its lease.  Therefore, DIO conversion may be 
-		 * bypassed here.
+		/*
+		 * Test for BMAP_DIORQ.  If it was removed, the writer
+		 * holding the lease, on behalf of which this rq was
+		 * issued, has relinquished its lease.  Therefore, DIO
+		 * conversion may be bypassed here.
 		 */
 		if (b->bcm_flags & BMAP_DIORQ) {
 			b->bcm_flags &= ~BMAP_DIORQ;
@@ -118,21 +117,21 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 		}
 
 		bml->bml_flags &= ~BML_COHDIO;
-		
-		DEBUG_BMAP(PLL_WARN, bml_2_bmap(bml), "converted to dio=%d",
-			   !!(b->bcm_flags & BMAP_DIO));
+
+		DEBUG_BMAP(PLL_INFO, bml_2_bmap(bml),
+		    "converted to dio=%d",
+		    !!(b->bcm_flags & BMAP_DIO));
 	}
 	BML_ULOCK(bml);
 	mds_bmap_bml_release(bml);
 
  out:
 	if (b) {
-		DEBUG_BMAP(rc ? PLL_WARN : PLL_NOTIFY, b,
+		DEBUG_BMAP(rc ? PLL_WARN : PLL_INFO, b,
 		   "cli=%s seq=%"PRId64" rq_status=%d mp->rc=%d",
 		   libcfs_id2str(req->rq_import->imp_connection->c_peer),
-		   mq->seq, req->rq_status, mp ? mp->rc : -1);	
-		/* I release bmap lock.
-		 */
+		   mq->seq, req->rq_status, mp ? mp->rc : -1);
+
 		bmap_op_done(b);
 	}
 	sl_csvc_decref(csvc);
@@ -160,9 +159,9 @@ mdscoh_req(struct bmap_mds_lease *bml)
 		psc_assert(!bml->bml_exp);
 		BML_ULOCK(bml);
 		return (-ENOTCONN);
-	
+
 	}
-	psc_assert(bml->bml_exp);		
+	psc_assert(bml->bml_exp);
 
 	csvc = slm_getclcsvc(bml->bml_exp);
 	if (csvc == NULL) {
