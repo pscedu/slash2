@@ -69,7 +69,7 @@ mrsq_release(struct msctl_replstq *mrsq, int rc)
 	psc_assert(mrsq->mrsq_refcnt > 0);
 	if (--mrsq->mrsq_refcnt == 0)
 		psc_waitq_wakeall(&mrsq->mrsq_waitq);
-	psclog_debug("mrsq@%p ref=%d rc=%d decref", mrsq, 
+	psclog_debug("mrsq@%p ref=%d rc=%d decref", mrsq,
 	    mrsq->mrsq_refcnt, rc);
 	freelock(&mrsq->mrsq_lock);
 }
@@ -240,41 +240,36 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 	 * load?
 	 */
 	f = fidc_lookup_fid(mq->fid);
-	if (!f) {
-		mp->rc = -ENOENT;
-		goto out;
-	}
+	if (!f)
+		PFL_GOTOERR(out, mp->rc = -ENOENT);
 
-	DEBUG_FCMH(PLL_WARN, f, "bmapno=%u seq=%"PRId64,
+	DEBUG_FCMH(PLL_INFO, f, "bmapno=%u seq=%"PRId64,
 	    mq->blkno, mq->seq);
 
 	mp->rc = bmap_lookup(f, mq->blkno, &b);
 	if (mp->rc)
 		goto out;
 
-	DEBUG_BMAP(PLL_WARN, b, "seq=%"PRId64, mq->seq);
+	DEBUG_BMAP(PLL_INFO, b, "seq=%"PRId64, mq->seq);
 
 	BMAP_LOCK(b);
 	if (b->bcm_flags & BMAP_DIO) {
 		BMAP_ULOCK(b);
 		goto out;
 	}
-	/* Verify that the sequence number matches.
-	 */
+
+	/* Verify that the sequence number matches. */
 	bci = bmap_2_bci(b);
 	if (bci->bci_sbd.sbd_seq != mq->seq) {
 		BMAP_ULOCK(b);
-		mp->rc = -ESTALE;
-		goto out;
+		PFL_GOTOERR(out, mp->rc = -ESTALE);
 	}
-	/* All new read and write I/O's will get BIORQ_DIO.
-	 */
+
+	/* All new read and write I/O's will get BIORQ_DIO. */
 	b->bcm_flags |= BMAP_DIO;
 	BMAP_ULOCK(b);
 
-	DEBUG_BMAP(PLL_WARN, b, "trying to dump the cache");
 	msl_bmap_cache_rls(b);
-	DEBUG_BMAP(PLL_WARN, b, "done");
 
  out:
 	if (b)
