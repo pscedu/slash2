@@ -723,8 +723,6 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 				    sizeof(*upd)) == 1)
 					upd_initf(upd, UPDT_BMAP,
 					    UPD_INITF_NOKEY);
-				else
-					UPD_WAIT(upd);
 				mds_bmap_write_logrepls(b);
 			}
 			slm_repl_bmap_rel(b);
