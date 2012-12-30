@@ -171,10 +171,10 @@ struct sl_expcli_ops {
 		(_rc);							\
 	} _PFL_RVEND
 
-#define CSVC_LOCK(csvc)			psc_mutex_lock_pci(CSVC_CALLERINFO, &(csvc)->csvc_mutex)
-#define CSVC_ULOCK(csvc)		psc_mutex_unlock_pci(CSVC_CALLERINFO, &(csvc)->csvc_mutex)
-#define CSVC_RLOCK(csvc)		psc_mutex_reqlock_pci(CSVC_CALLERINFO, &(csvc)->csvc_mutex)
-#define CSVC_URLOCK(csvc, lk)		psc_mutex_ureqlock_pci(CSVC_CALLERINFO, &(csvc)->csvc_mutex, (lk))
+#define CSVC_LOCK(csvc)			_psc_mutex_lock(CSVC_CALLERINFO, &(csvc)->csvc_mutex)
+#define CSVC_ULOCK(csvc)		_psc_mutex_unlock(CSVC_CALLERINFO, &(csvc)->csvc_mutex)
+#define CSVC_RLOCK(csvc)		_psc_mutex_reqlock(CSVC_CALLERINFO, &(csvc)->csvc_mutex)
+#define CSVC_URLOCK(csvc, lk)		_psc_mutex_ureqlock(CSVC_CALLERINFO, &(csvc)->csvc_mutex, (lk))
 #define CSVC_LOCK_ENSURE(csvc)		psc_mutex_ensure_locked(&(csvc)->csvc_mutex)
 
 #define CSVC_WAKE(csvc)			psc_multiwaitcond_wakeup(&(csvc)->csvc_mwc)
