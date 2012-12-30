@@ -230,7 +230,7 @@ slm_bml_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	printf("%016"SLPRIxFID" %6u "
 	    "%-16.16s %-15s "
 	    "%c%c%c%c%c%c%c%c%c%c%c%c%c "
-	    "%7"PRIu64"\n",
+	    "%9"PRIu64"\n",
 	    scbl->scbl_fg.fg_fid, scbl->scbl_bno,
 	    scbl->scbl_resname, p,
 	    scbl->scbl_flags & BML_READ		? 'R' : '-',
