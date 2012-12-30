@@ -91,14 +91,14 @@ struct bmap_mds_info {
 #define bmap_2_inoh(b)		fcmh_2_inoh((b)->bcm_fcmh)
 
 #define BMAPOD_CALLERINFO	PFL_CALLERINFOSS(SLSS_BMAP)
-#define BMAPOD_RDLOCK(bmi)	psc_rwlock_rdlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
-#define BMAPOD_REQRDLOCK(bmi)	psc_rwlock_reqrdlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
-#define BMAPOD_REQWRLOCK(bmi)	psc_rwlock_reqwrlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
-#define BMAPOD_HASRDLOCK(bmi)	psc_rwlock_hasrdlock(&(bmi)->bmi_rwlock)
-#define BMAPOD_HASWRLOCK(bmi)	psc_rwlock_haswrlock(&(bmi)->bmi_rwlock)
-#define BMAPOD_ULOCK(bmi)	psc_rwlock_unlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
-#define BMAPOD_UREQLOCK(bmi, l)	psc_rwlock_ureqlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock, (l))
-#define BMAPOD_WRLOCK(bmi)	psc_rwlock_wrlock_pci(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
+#define BMAPOD_RDLOCK(bmi)	_psc_rwlock_rdlock(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
+#define BMAPOD_REQRDLOCK(bmi)	_psc_rwlock_reqrdlock(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
+#define BMAPOD_REQWRLOCK(bmi)	_psc_rwlock_reqwrlock(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
+#define BMAPOD_HASRDLOCK(bmi)	 psc_rwlock_hasrdlock(&(bmi)->bmi_rwlock)
+#define BMAPOD_HASWRLOCK(bmi)	 psc_rwlock_haswrlock(&(bmi)->bmi_rwlock)
+#define BMAPOD_ULOCK(bmi)	_psc_rwlock_unlock(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
+#define BMAPOD_UREQLOCK(bmi, l)	_psc_rwlock_ureqlock(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock, (l))
+#define BMAPOD_WRLOCK(bmi)	_psc_rwlock_wrlock(BMAPOD_CALLERINFO, &(bmi)->bmi_rwlock)
 
 static __inline struct bmap_mds_info *
 bmap_2_bmi(struct bmapc_memb *b)
