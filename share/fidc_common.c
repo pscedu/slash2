@@ -273,7 +273,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	if (flags & FIDC_LOOKUP_LOAD)
 		psc_assert(sstb == NULL);
 
-	/* OK.  now check if it is already in the cache */
+	/* OK.  Now check if it is already in the cache. */
 	b = psc_hashbkt_get(&fidcHtable, &fgp->fg_fid);
  restart:
 	fcmh = NULL;
@@ -293,7 +293,11 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 			sched_yield();
 			continue;
 		}
-		/* if the item is being inited, take a reference and wait */
+
+		/*
+		 * If the item is being initialized, take a reference
+		 * and wait.
+		 */
 		if (tmp->fcmh_flags & FCMH_CAC_INITING) {
 			psc_hashbkt_unlock(b);
 			tmp->fcmh_flags |= FCMH_CAC_WAITING;
