@@ -625,15 +625,17 @@ upd_proc_bmap(struct slm_update_data *upd)
 
 	DEBUG_BMAPOD(PLL_DEBUG, b, "processing");
 
-	/* find a res in our site this update is destined for */
+	/*
+	 * Scan residency states (through file's inode table) of bmap
+	 * for an update.
+	 */
 	iosidx = -1;
 	FOREACH_RND(&dst_res_i, fcmh_2_nrepls(f)) {
 		iosid = fcmh_2_repl(f, dst_res_i.ri_rnd_idx);
 		dst_res = libsl_id2res(iosid);
 		rpmi = res2rpmi(dst_res);
 		off = SL_BITS_PER_REPLICA * dst_res_i.ri_rnd_idx;
-		val = SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls,
-		    off);
+		val = SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls, off);
 		switch (val) {
 		case BREPLST_REPL_QUEUED:
 			/*
