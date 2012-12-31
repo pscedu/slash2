@@ -1117,6 +1117,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		BML_ULOCK(bml);
 		b->bcm_flags &= ~BMAP_IONASSIGN;
 		bmap_wake_locked(b);
+		BMAP_ULOCK(b);
 		return (0);
 	}
 
@@ -1152,69 +1153,64 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		b->bcm_flags &= ~(BMAP_DIO | BMAP_DIORQ);
 	}
 
-	/* Only release the odtable entry if the key matches.  If a match
-	 *   is found then verify the sequence number matches.
+	/*
+	 * Only release the odtable entry if the key matches.  If a
+	 * match is found then verify the sequence number matches.
 	 */
 	if ((bml->bml_flags & BML_WRITE) && !bmi->bmdsi_writers) {
+		sl_replica_t iosv[SL_MAX_REPLICAS];
+		struct slm_update_data *upd;
+		struct bmap_ios_assign bia;
+		int retifset[NBREPLST];
+		unsigned j;
+
 		if (b->bcm_flags & BMAP_MDS_NOION) {
 			psc_assert(!bmi->bmdsi_assign);
 			psc_assert(!bmi->bmdsi_wr_ion);
+			goto out;
+		}
 
+		/*
+		 * Bml's which have failed ion assignment shouldn't be
+		 * relevant to any odtable entry.
+		 */
+		if (bml->bml_flags & BML_ASSFAIL)
+			goto out;
+
+		if (!(bml->bml_flags & BML_RECOVERFAIL)) {
+			rc = mds_odtable_getitem(mdsBmapAssignTable,
+			    bmi->bmdsi_assign, &bia, sizeof(bia));
+			psc_assert(!rc && bia.bia_seq == bmi->bmdsi_seq);
+			psc_assert(bia.bia_bmapno == b->bcm_bmapno);
+			/* End sanity checks. */
+			odtr = bmi->bmdsi_assign;
+			bmi->bmdsi_assign = NULL;
 		} else {
-			/*
-			 * Bml's which have failed ion assignment
-			 * shouldn't be relevant to any odtable entry.
-			 */
-			if (!(bml->bml_flags & BML_ASSFAIL)) {
-				sl_replica_t iosv[SL_MAX_REPLICAS];
-				struct slm_update_data *upd;
-				int retifset[NBREPLST];
-				unsigned j;
+			psc_assert(!bmi->bmdsi_assign);
+		}
+		atomic_dec(&bmi->bmdsi_wr_ion->rmmi_refcnt);
+		bmi->bmdsi_wr_ion = NULL;
 
-				/* odtable sanity checks: */
-				struct bmap_ios_assign bia;
-
-				if (!(bml->bml_flags & BML_RECOVERFAIL)) {
-					rc = mds_odtable_getitem(
-					    mdsBmapAssignTable,
-					    bmi->bmdsi_assign, &bia,
-					    sizeof(bia));
-					psc_assert(!rc &&
-					   bia.bia_seq == bmi->bmdsi_seq);
-					psc_assert(bia.bia_bmapno == b->bcm_bmapno);
-					/* End sanity checks. */
-					odtr = bmi->bmdsi_assign;
-					bmi->bmdsi_assign = NULL;
-				} else {
-					psc_assert(!bmi->bmdsi_assign);
-				}
-				atomic_dec(&bmi->bmdsi_wr_ion->rmmi_refcnt);
-				bmi->bmdsi_wr_ion = NULL;
-
-				/*
-				 * Lease has been released; requeue any
-				 * replication work involving this bmap.
-				 */
-				brepls_init(retifset, 0);
-				retifset[BREPLST_REPL_QUEUED] = 1;
-				retifset[BREPLST_TRUNCPNDG] = 1;
-//				retifset[BREPLST_GARBAGE] = 1;
-				if (mds_repl_bmap_walk_all(b, NULL,
-				    retifset, REPL_WALKF_SCIRCUIT)) {
-					upd = &bmi->bmi_upd;
-					UPD_WAIT(upd);
-					for (j = 0;
-					    j < fcmh_2_nrepls(f); j++)
-						iosv[j].bs_id =
-						    fcmh_getrepl(f,
-							j).bs_id;
-					upsch_enqueue(upd, iosv,
-					    fcmh_2_nrepls(f));
-					UPD_UNBUSY(upd);
-				}
-			}
+		/*
+		 * Lease has been released; requeue any replication work
+		 * involving this bmap.
+		 */
+		brepls_init(retifset, 0);
+		retifset[BREPLST_REPL_QUEUED] = 1;
+		retifset[BREPLST_TRUNCPNDG] = 1;
+//		retifset[BREPLST_GARBAGE] = 1;
+		if (mds_repl_bmap_walk_all(b, NULL, retifset,
+		    REPL_WALKF_SCIRCUIT)) {
+			upd = &bmi->bmi_upd;
+			UPD_WAIT(upd);
+			for (j = 0; j < fcmh_2_nrepls(f); j++)
+				iosv[j].bs_id = fcmh_getrepl(f,
+				    j).bs_id;
+			upsch_enqueue(upd, iosv, fcmh_2_nrepls(f));
+			UPD_UNBUSY(upd);
 		}
 	}
+
  out:
 	b->bcm_flags &= ~BMAP_IONASSIGN;
 	bmap_wake_locked(b);
@@ -1923,9 +1919,10 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 		sbd_out->sbd_flags |= SRM_LEASEBMAPF_DIRECTIO;
 	BMAP_ULOCK(b);
 
-	/* By this point it should be safe to ignore the error from
-	 *   mds_bmap_bml_release() since a new lease has already been
-	 *   issued.
+	/*
+	 * By this point it should be safe to ignore the error from
+	 * mds_bmap_bml_release() since a new lease has already been
+	 * issued.
 	 */
 	BML_LOCK(obml);
 	obml->bml_flags |= BML_FREEING;
