@@ -224,7 +224,7 @@ _mds_repl_bmap_apply(struct bmapc_memb *b, const int *tract,
     const int *retifset, int flags, int off, int *scircuit,
     brepl_walkcb_t cbf, void *cbarg)
 {
-	int locked = 0, val, rc = 0, waslocked = 0;
+	int locked = 0, unlock = 0, relock = 0, val, rc = 0, dummy;
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct fidc_membh *f = b->bcm_fcmh;
 
@@ -237,12 +237,12 @@ _mds_repl_bmap_apply(struct bmapc_memb *b, const int *tract,
 				FCMH_ULOCK(f);
 		} else {
 			if (BMAP_HASLOCK(b)) {
-				waslocked = 1;
+				locked = 1;
 				BMAP_ULOCK(b);
 			}
-			(void)FCMH_REQ_BUSY(f, &locked);
+			(void)FCMH_REQ_BUSY(f, &dummy);
 			FCMH_ULOCK(f);
-			if (waslocked)
+			if (locked)
 				BMAP_LOCK(b);
 		}
 
@@ -261,8 +261,13 @@ _mds_repl_bmap_apply(struct bmapc_memb *b, const int *tract,
 			memcpy(bmi->bmi_orepls, b->bcm_repls,
 			    sizeof(bmi->bmi_orepls));
 		}
-	} else if (!BMAPOD_HASWRLOCK(bmi))
-		locked = BMAPOD_REQRDLOCK(bmi);
+	} else if (!BMAPOD_HASWRLOCK(bmi) && !BMAPOD_HASRDLOCK(bmi)) {
+		relock = BMAP_HASLOCK(b);
+		BMAP_WAIT_BUSY(b);
+		BMAPOD_RDLOCK(bmi);
+		BMAP_UNBUSY(b);
+		unlock = 1;
+	}
 
 	if (scircuit)
 		*scircuit = 0;
@@ -296,8 +301,10 @@ _mds_repl_bmap_apply(struct bmapc_memb *b, const int *tract,
 	}
 
  out:
-	if (!BMAPOD_HASWRLOCK(bmi))
-		BMAPOD_UREQLOCK(bmi, locked);
+	if (unlock)
+		BMAPOD_ULOCK(bmi);
+	if (relock)
+		BMAP_LOCK(b);
 	return (rc);
 }
 
