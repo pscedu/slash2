@@ -1284,7 +1284,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	sl_csvc_decref(csvc);
 
 	if (rc == -SLERR_AIOWAIT) {
-		DEBUG_BIORQ(PLL_INFO, r, "aio op = %d\n", op);
+		DEBUG_BIORQ(PLL_INFO, r, "aio op=%d", op);
 		rc = 0;
 		if (op == SRMT_WRITE) {
 			q = r->biorq_fsrqi;
