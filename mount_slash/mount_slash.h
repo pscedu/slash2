@@ -119,7 +119,7 @@ PSCTHR_MKCAST(msrcithr, msrci_thread, MSTHRT_RCI);
 
 #define MSL_RA_RESET(ra)						\
 	do {								\
-		(ra)->mra_nseq  = -(MS_READAHEAD_MINSEQ);		\
+		(ra)->mra_nseq = -MS_READAHEAD_MINSEQ;			\
 		(ra)->mra_bkwd = MS_READAHEAD_DIRUNK;			\
 		(ra)->mra_raoff = 0;					\
 	} while (0)
@@ -142,7 +142,7 @@ struct slc_async_req {
 	struct psc_listentry		  car_lentry;
 	struct pscrpc_async_args	  car_argv;
 	int				(*car_cbf)(struct pscrpc_request *, int,
-						struct pscrpc_async_args *);
+					    struct pscrpc_async_args *);
 	uint64_t			  car_id;
 	size_t				  car_len;
 	struct msl_fsrqinfo		 *car_fsrqinfo;
@@ -189,7 +189,7 @@ struct msl_fsrqinfo {
 	int				 mfsrq_reissue;
 	enum rw				 mfsrq_rw;
 	struct pscfs_req		*mfsrq_pfr;
-	struct psclist_head		 mfsrq_lentry;	/* pending AIOs in struct bmap_pagecache_entry  */
+	struct psclist_head		 mfsrq_lentry;	/* pending AIOs in struct bmap_pagecache_entry */
 };
 
 #define MFSRQ_AIOWAIT			(1 << 0)
@@ -197,10 +197,10 @@ struct msl_fsrqinfo {
 #define MFSRQ_BMPCEATT			(1 << 2)
 #define MFSRQ_AIOREADY			(1 << 3)
 #define MFSRQ_REISSUED			(1 << 4)
-#define MFSRQ_REPLIED			(1 << 6)
+#define MFSRQ_REPLIED			(1 << 5)
 
 int	msl_fsrqinfo_state(struct msl_fsrqinfo *, int, int, int);
-void    msl_fsrqinfo_biorq_add(struct msl_fsrqinfo *, struct bmpc_ioreq *,int);
+void	msl_fsrqinfo_biorq_add(struct msl_fsrqinfo *, struct bmpc_ioreq *,int);
 
 #define msl_fsrqinfo_isset(q, f)	msl_fsrqinfo_state((q), (f), 0, 0)
 #define msl_fsrqinfo_aioisset(q)	msl_fsrqinfo_state((q), MFSRQ_AIOWAIT, 0, 0)
