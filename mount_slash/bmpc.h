@@ -57,7 +57,7 @@ struct msl_fsrqinfo;
 struct timespec			bmapFlushDefMaxAge;
 
 struct bmap_pagecache_entry {
-	psc_atomic32_t		 bmpce_ref;	/* biorq and readahead refs     */
+	psc_atomic32_t		 bmpce_ref;	/* biorq and readahead refs	*/
 	uint64_t		 bmpce_syncxid;	/* xid associated with sync op	*/
 	uint32_t		 bmpce_flags;	/* BMPCE_* flag bits		*/
 	uint32_t		 bmpce_off;	/* filewise, bmap relative	*/
@@ -299,7 +299,8 @@ struct bmpc_ioreq {
 
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP, "biorq@%p "				\
-	    "flg=%#x:%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "	\
+	    "flg=%#x:"							\
+	    "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "	\
 	    "ref=%d off=%u len=%u "					\
 	    "retry=%u buf=%p rqi=%p "					\
 	    "sliod=%x np=%d "						\

@@ -174,7 +174,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *e,
 	int rc;
 
 	LOCK_ENSURE(&bmpc->bmpc_lock);
-	LOCK_ENSURE(&bmpce->bmpce_lock);
+	LOCK_ENSURE(&e->bmpce_lock);
 	rc = psc_atomic32_read(&e->bmpce_ref);
 	psc_assert(rc > 0);
 	psc_atomic32_dec(&e->bmpce_ref);
