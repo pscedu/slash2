@@ -102,7 +102,7 @@ struct slvr_ref {
 #define SLVR_WAIT(s, cond)						\
 	do {								\
 		SLVR_LOCK_ENSURE(s);					\
-		DEBUG_SLVR(PLL_NOTIFY, (s), "SLVR_WAIT");		\
+		DEBUG_SLVR(PLL_INFO, (s), "SLVR_WAIT");			\
 		while (cond) {						\
 			psc_waitq_wait(&slvr_2_fcmh(s)->fcmh_waitq,	\
 				       &(s)->slvr_lock);		\
@@ -216,8 +216,9 @@ int	slvr_lru_tryunpin_locked(struct slvr_ref *);
 void	slvr_wio_done(struct slvr_ref *);
 void	slvr_worker_init(void);
 void	slvr_try_crcsched_locked(struct slvr_ref *);
-void	sli_aio_reply_setup(struct sli_aiocb_reply *, struct pscrpc_request *,
-	    uint32_t, uint32_t, struct slvr_ref **, int, struct iovec *, int, enum rw);
+void	sli_aio_reply_setup(struct sli_aiocb_reply *,
+	    struct pscrpc_request *, uint32_t, uint32_t,
+	    struct slvr_ref **, int, struct iovec *, int, enum rw);
 
 void	sli_aio_aiocbr_release(struct sli_aiocb_reply *);
 void	sli_aio_replreply_setup(struct sli_aiocb_reply *,
