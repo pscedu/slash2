@@ -601,12 +601,12 @@ msl_try_get_replica_res(struct bmapc_memb *b, int iosidx)
 	return (NULL);
 }
 
-#define msl_fsrq_aiowait_tryadd_locked(e,r) \
-	_msl_fsrq_aiowait_tryadd_locked(e,r, __LINE__)
+#define msl_fsrq_aiowait_tryadd_locked(e,r)	\
+	_msl_fsrq_aiowait_tryadd_locked(PFL_CALLERINFO(), (e), (r))
 
 __static void
-_msl_fsrq_aiowait_tryadd_locked(struct bmap_pagecache_entry *e,
-    struct bmpc_ioreq *r, int line)
+_msl_fsrq_aiowait_tryadd_locked(const struct pfl_callerinfo *pci,
+    struct bmap_pagecache_entry *e, struct bmpc_ioreq *r)
 {
 	int locked;
 
@@ -619,7 +619,8 @@ _msl_fsrq_aiowait_tryadd_locked(struct bmap_pagecache_entry *e,
 	if (!(r->biorq_flags & BIORQ_WAIT)) {
 		r->biorq_ref++;
 		r->biorq_flags |= BIORQ_WAIT;
-		DEBUG_BIORQ(PLL_INFO, r, "biorq pending (e=%p, line=%d)", e, line);
+		DEBUG_BIORQ(PLL_INFO, r, "biorq pending "
+		    "(e=%p)", e);
 		pll_add(&e->bmpce_pndgaios, r);
 	}
 	BIORQ_ULOCK(r);
@@ -673,7 +674,8 @@ msl_req_aio_add(struct pscrpc_request *rq,
 			BMPCE_LOCK(e);
 			if (biorq_is_my_bmpce(r, e)) {
 				naio++;
-				BMPCE_SETATTR(e, BMPCE_AIOWAIT, "set aio, r=%p", r);
+				BMPCE_SETATTR(e, BMPCE_AIOWAIT,
+				    "set aio, r=%p", r);
 			}
 			BMPCE_ULOCK(e);
 		}
@@ -699,8 +701,8 @@ msl_req_aio_add(struct pscrpc_request *rq,
 		BIORQ_LOCK(r);
 		if (r->biorq_flags & BIORQ_WRITE) {
 			r->biorq_flags |= BIORQ_AIOWAIT;
-			DEBUG_BIORQ(PLL_INFO, r, "aiowait mark, q = %p",
-				car->car_fsrqinfo);
+			DEBUG_BIORQ(PLL_INFO, r, "aiowait mark, q=%p",
+			    car->car_fsrqinfo);
 		}
 		BIORQ_ULOCK(r);
 
@@ -738,15 +740,15 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, int rc, size_t len)
 	MFH_ULOCK(q->mfsrq_fh);
 	if (q->mfsrq_rw == SL_READ) {
 		pscfs_reply_read(q->mfsrq_pfr, q->mfsrq_buf,
-			q->mfsrq_len, -abs(q->mfsrq_err));
+		    q->mfsrq_len, -abs(q->mfsrq_err));
 		OPSTAT_INCR(SLC_OPST_FSRQ_READ_FREE);
 	} else {
 		pscfs_reply_write(q->mfsrq_pfr,
-			q->mfsrq_len, -abs(q->mfsrq_err));
+		    q->mfsrq_len, -abs(q->mfsrq_err));
 		OPSTAT_INCR(SLC_OPST_FSRQ_WRITE_FREE);
 	}
-	psclog_info("q = %p, len = %zd, error = %d, pfr = %p",
-		q, q->mfsrq_len, q->mfsrq_err, q->mfsrq_pfr);
+	psclog_info("q=%p len=%zd error=%d pfr=%p",
+	    q, q->mfsrq_len, q->mfsrq_err, q->mfsrq_pfr);
 }
 
 __static void
@@ -763,7 +765,8 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r0)
 	rc = q->mfsrq_err;
 	MFH_ULOCK(q->mfsrq_fh);
 
-	psclog_info("biorq = %p, fsrq = %p, pfr = %p", r0, q, q->mfsrq_pfr);
+	psclog_info("biorq=%p fsrq=%p pfr=%p", r0, q,
+	    q->mfsrq_pfr);
 
 	for (i = 0, len = 0; i < MAX_BMAPS_REQ; i++) {
 		r = q->mfsrq_biorq[i];
@@ -776,7 +779,8 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r0)
 		if (rc)
 			continue;
 
-		if ((r->biorq_flags & BIORQ_WRITE) && !(r->biorq_flags & BIORQ_DIO)) {
+		if ((r->biorq_flags & BIORQ_WRITE) &&
+		    !(r->biorq_flags & BIORQ_DIO)) {
 			r->biorq_flags |= BIORQ_FLUSHRDY;
 			DEBUG_BIORQ(PLL_INFO, r, "BIORQ_FLUSHRDY");
 		}
@@ -812,20 +816,21 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r0)
 		}
 	}
 	if (!found)
-		psc_fatalx("Missing biorq %p in fsrq %p\n", r0, q);
+		psc_fatalx("missing biorq %p in fsrq %p", r0, q);
 
 	msl_complete_fsrq(q, 0, len);
 }
 
-/*
- * Try to complete biorqs waiting on this page cache entry.
+/**
+ * msl_bmpce_complete_biorq: Try to complete biorqs waiting on this page
+ *	cache entry.
  */
 __static void
 msl_bmpce_complete_biorq(struct bmap_pagecache_entry *e0)
 {
-	int i;
-	struct bmpc_ioreq *r;
 	struct bmap_pagecache_entry *e;
+	struct bmpc_ioreq *r;
+	int i;
 
 	/*
 	 * The owning request of the cache entry should not be on its
@@ -843,7 +848,7 @@ msl_bmpce_complete_biorq(struct bmap_pagecache_entry *e0)
 			    !(e->bmpce_flags & BMPCE_DATARDY)) {
 				msl_fsrq_aiowait_tryadd_locked(e, r);
 				DEBUG_BIORQ(PLL_NOTIFY, r,
-					"still blocked on (bmpce@%p)", e);
+				    "still blocked on (bmpce@%p)", e);
 				BMPCE_ULOCK(e);
 				break;
 			} else
@@ -892,7 +897,7 @@ _msl_bmpce_rpc_done(const struct pfl_callerinfo *pci,
  *	The primary purpose is to set the bmpce's to DATARDY so that
  *	other threads waiting for DATARDY may be unblocked.
  *  Note: Unref of the biorq will happen after the pages have been
- *     copied out to the applicaton buffers.
+ *	copied out to the applicaton buffers.
  */
 int
 msl_read_cb(struct pscrpc_request *rq, int rc,
@@ -903,8 +908,8 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
 	struct bmap_pagecache_entry *e;
 	struct bmapc_memb *b;
-	int i;
 	struct msl_fsrqinfo *q;
+	int i;
 
 	b = r->biorq_bmap;
 
@@ -923,9 +928,8 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 
 	DEBUG_BIORQ(rc ? PLL_ERROR : PLL_INFO, r, "rc=%d", rc);
 
-	DYNARRAY_FOREACH(e, i, a) {
+	DYNARRAY_FOREACH(e, i, a)
 		msl_bmpce_rpc_done(e, rc);
-	}
 	BIORQ_LOCK(r);
 	r->biorq_flags &= ~(BIORQ_INFL | BIORQ_SCHED);
 	BIORQ_ULOCK(r);
@@ -1116,9 +1120,9 @@ msl_dio_cb(struct pscrpc_request *rq, int rc, struct pscrpc_async_args *args)
 {
 	//struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
+	struct msl_fsrqinfo *q;
 	struct srm_io_req *mq;
 	int op, locked;
-	struct msl_fsrqinfo *q;
 
 	DEBUG_REQ(PLL_INFO, rq, "cb");
 
@@ -1140,7 +1144,7 @@ msl_dio_cb(struct pscrpc_request *rq, int rc, struct pscrpc_async_args *args)
 	r->biorq_flags &= ~BIORQ_AIOWAIT;
 	if (q->mfsrq_flags & MFSRQ_AIOWAIT) {
 		q->mfsrq_flags &= ~MFSRQ_AIOWAIT;
-		DEBUG_BIORQ(PLL_INFO, r, "aiowait wakeup, q = %p", q);
+		DEBUG_BIORQ(PLL_INFO, r, "aiowait wakeup, q=%p", q);
 		psc_waitq_wakeall(&msl_fhent_flush_waitq);
 	}
 	BIORQ_ULOCK(r);
@@ -1284,7 +1288,10 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		rc = 0;
 		if (op == SRMT_WRITE) {
 			q = r->biorq_fsrqi;
-			/* the waitq of biorq is used for bmpce, so this hackery */
+			/*
+			 * The waitq of biorq is used for bmpce, so this
+			 * hackery.
+			 */
 			while (1) {
 				locked = MFH_RLOCK(q->mfsrq_fh);
 				BIORQ_LOCK(r);
@@ -1295,7 +1302,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 				}
 				BIORQ_ULOCK(r);
 				q->mfsrq_flags |= MFSRQ_AIOWAIT;
-				DEBUG_BIORQ(PLL_INFO, r, "aiowait sleep, q = %p", q);
+				DEBUG_BIORQ(PLL_INFO, r,
+				    "aiowait sleep, q=%p", q);
 				psc_waitq_wait(&msl_fhent_flush_waitq,
 					&q->mfsrq_fh->mfh_lock);
 			}
@@ -1843,8 +1851,8 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 		break;
 	}
  out:
-	DEBUG_BIORQ(PLL_INFO, r, "sched = %d, wait = %#x, aio = %d, rc = %d",
-		sched, waitflag, aiowait, rc);
+	DEBUG_BIORQ(PLL_INFO, r, "sched=%d wait=%#x aio=%d rc=%d",
+	    sched, waitflag, aiowait, rc);
 	return (rc);
 }
 
