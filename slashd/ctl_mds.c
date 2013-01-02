@@ -539,7 +539,7 @@ slmctlrep_getbml(int fd, struct psc_ctlmsghdr *mh, void *m)
 		memset(scbl, 0, sizeof(*scbl));
 		BML_LOCK(bml);
 		strlcpy(scbl->scbl_resname,
-		    bml->bml_ios || bml->bml_ios == IOS_ID_ANY ?
+		    bml->bml_ios && bml->bml_ios != IOS_ID_ANY ?
 		    "<any>" : libsl_id2res(bml->bml_ios)->res_name,
 		    sizeof(scbl->scbl_resname));
 		scbl->scbl_fg = bml_2_bmap(bml)->bcm_fcmh->fcmh_fg;
