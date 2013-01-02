@@ -138,10 +138,6 @@ bmpce_lookup_locked(struct bmap_pagecache *bmpc, struct bmpc_ioreq *r,
 	return (e);
 }
 
-__static void
-bmpce_release_locked(struct bmap_pagecache_entry *,
-    struct bmap_pagecache *);
-
 int
 bmpc_biorq_cmp(const void *x, const void *y)
 {
@@ -163,7 +159,8 @@ bmpce_free(struct bmap_pagecache_entry *e,
 	LOCK_ENSURE(&bmpc->bmpc_lock);
 	DEBUG_BMPCE(PLL_INFO, e, "freeing");
 
-	psc_assert(SPLAY_REMOVE(bmap_pagecachetree, &bmpc->bmpc_tree, e));
+	psc_assert(SPLAY_REMOVE(bmap_pagecachetree, &bmpc->bmpc_tree,
+	    e));
 
 	OPSTAT_INCR(SLC_OPST_BMPCE_PUT);
 	bmpce_init(bmpcePoolMgr, e);
@@ -174,15 +171,19 @@ void
 bmpce_release_locked(struct bmap_pagecache_entry *e,
     struct bmap_pagecache *bmpc)
 {
+	int rc;
+
 	LOCK_ENSURE(&bmpc->bmpc_lock);
-	DEBUG_BMPCE(PLL_INFO, e, "drop reference");
+	LOCK_ENSURE(&bmpce->bmpce_lock);
+	rc = psc_atomic32_read(&e->bmpce_ref);
+	psc_assert(rc > 0);
 	psc_atomic32_dec(&e->bmpce_ref);
-	if (psc_atomic32_read(&e->bmpce_ref) > 0) {
+	DEBUG_BMPCE(PLL_DIAG, e, "drop reference");
+	if (rc > 1) {
 		BMPCE_ULOCK(e);
 		return;
 	}
 	psc_assert(pll_empty(&e->bmpce_pndgaios));
-	psc_assert(!psc_atomic32_read(&e->bmpce_ref));
 
 	if (e->bmpce_flags & BMPCE_LRU) {
 		e->bmpce_flags &= ~BMPCE_LRU;
@@ -479,6 +480,11 @@ dump_biorq_flags(uint32_t flags)
 	PFL_PRFLAG(BIORQ_BMAPFAIL, &flags, &seq);
 	PFL_PRFLAG(BIORQ_READFAIL, &flags, &seq);
 	PFL_PRFLAG(BIORQ_PENDING, &flags, &seq);
+	PFL_PRFLAG(BIORQ_WAIT, &flags, &seq);
+	PFL_PRFLAG(BIORQ_DATARDY, &flags, &seq);
+	PFL_PRFLAG(BIORQ_EIO, &flags, &seq);
+	PFL_PRFLAG(BIORQ_MFHLIST, &flags, &seq);
+
 	if (flags)
 		printf(" unknown: %#x", flags);
 	printf("\n");
