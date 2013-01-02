@@ -819,8 +819,8 @@ struct bmap_mds_lease *
 mds_bmap_getbml_locked(struct bmapc_memb *b, uint64_t seq, uint64_t nid,
     uint32_t pid)
 {
-	struct bmap_mds_info *bmi;
 	struct bmap_mds_lease *bml, *bml1, *bml2;
+	struct bmap_mds_info *bmi;
 
 	bml1 = NULL;
 	BMAP_LOCK_ENSURE(b);
@@ -1365,7 +1365,7 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr,
 		PFL_GOTOERR(out, rc);
 	}
 
-	bml = mds_bml_new(b, NULL, (BML_WRITE | BML_RECOVER),
+	bml = mds_bml_new(b, NULL, BML_WRITE | BML_RECOVER,
 	    &bia->bia_lastcli);
 
 	bml->bml_seq = bia->bia_seq;
@@ -1726,7 +1726,8 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	}
 	*bmap = b;
 
-	/* SLASH2 monotonic coherency sequence number assigned to this
+	/*
+	 * SLASH2 monotonic coherency sequence number assigned to this
 	 * lease.
 	 */
 	sbd->sbd_seq = bml->bml_seq;
@@ -1735,8 +1736,9 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	sbd->sbd_key = (rw == SL_WRITE) ?
 	    bml->bml_bmdsi->bmdsi_assign->odtr_key : BMAPSEQ_ANY;
 
-	/* Store the nid/pid of the client interface in the bmapdesc
-	 *   to deal properly deal with IONs on other LNETs.
+	/*
+	 * Store the nid/pid of the client interface in the bmapdesc to
+	 * deal properly deal with IONs on other LNETs.
 	 */
 	sbd->sbd_nid = exp->exp_connection->c_peer.nid;
 	sbd->sbd_pid = exp->exp_connection->c_peer.pid;
