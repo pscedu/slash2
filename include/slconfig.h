@@ -180,7 +180,6 @@ struct sl_gconf {
 
 #define INIT_GCONF(cf)							\
 	do {								\
-		memset((cf), 0, sizeof(*(cf)));				\
 		INIT_LISTHEAD(&(cf)->gconf_routehd);			\
 		INIT_SPINLOCK(&(cf)->gconf_lock);			\
 		pll_init(&(cf)->gconf_sites, struct sl_site,		\
