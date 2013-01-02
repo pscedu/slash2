@@ -721,6 +721,8 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, int rc, size_t len)
 
 	MFH_LOCK(q->mfsrq_fh);
 	if (!q->mfsrq_err) {
+		if (rc)
+			q->mfsrq_err = rc;
 		q->mfsrq_len += len;
 		if (q->mfsrq_rw == SL_READ)
 			q->mfsrq_fh->mfh_nbytes_rd += len;
@@ -734,8 +736,6 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, int rc, size_t len)
 		return;
 	}
 	MFH_ULOCK(q->mfsrq_fh);
-	if (!q->mfsrq_err && rc)
-		q->mfsrq_err = rc;
 	if (q->mfsrq_rw == SL_READ) {
 		pscfs_reply_read(q->mfsrq_pfr, q->mfsrq_buf,
 			q->mfsrq_len, -abs(q->mfsrq_err));
