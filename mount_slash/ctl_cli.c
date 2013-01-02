@@ -204,7 +204,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	MSL_RMC_NEWREQ_PFCC(&pfcc, f, csvc, SRMT_REPL_GETST, rq, mq, mp,
 	    rc);
 	if (rc) {
-		rc = psc_ctlsenderr(fd, mh, "%s: %s",
+		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    fg.fg_fid, slstrerror(rc));
 		goto out;
 	}
@@ -229,7 +229,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc) {
-		rc = psc_ctlsenderr(fd, mh, "%s: %s",
+		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    fg.fg_fid, slstrerror(rc));
 		goto out;
 	}
@@ -253,8 +253,8 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	added = 0;
 
 	if (mrsq.mrsq_rc && mrsq.mrsq_rc != EOF)
-		rc = psc_ctlsenderr(mrsq.mrsq_fd, mh, "%s",
-		    slstrerror(mrsq.mrsq_rc));
+		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
+		    fg.fg_fid, slstrerror(mrsq.mrsq_rc));
 
  out:
 	if (added) {
