@@ -167,21 +167,20 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		return (mp->rc);
 	}
 
-	/* Lookup inode and fetch bmap, don't forget to decref bmap
-	 *  on failure.
+	/*
+	 * Lookup inode and fetch bmap, don't forget to decref bmap on
+	 * failure.
 	 */
 	rc = sli_fcmh_get(fgp, &f);
 	psc_assert(rc == 0);
 
 	FCMH_LOCK(f);
-	/* Update the utimegen if necessary.
-	 */
+	/* Update the utimegen if necessary. */
 	if (f->fcmh_sstb.sst_utimgen < mq->utimgen)
 		f->fcmh_sstb.sst_utimgen = mq->utimgen;
 	FCMH_ULOCK(f);
 
-	/* ATM, not much to do here for write operations.
-	 */
+	/* ATM, not much to do here for write operations. */
 	rc = bmap_get(f, bmapno, rw, &bmap);
 	if (rc) {
 		psclog_errorx("failed to load bmap %u", bmapno);
@@ -249,8 +248,9 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (aiocbr) {
 		struct slvr_ref *s;
 
-		/* Setup first since this aiocb needs to be attached
-		 *   to an aio'd sliver ASAP.
+		/*
+		 * Setup first since this aiocb needs to be attached to
+		 * an aio'd sliver ASAP.
 		 */
 		sli_aio_reply_setup(aiocbr, rq, mq->size, mq->offset,
 		    slvr_ref, nslvrs, iovs, nslvrs, rw);
@@ -274,9 +274,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 				SLVR_ULOCK(s);
 
 			} else {
-				/* Attach the reply to the first sliver
-				 *    waiting for aio and return AIOWAIT
-				 *    to client later.
+				/*
+				 * Attach the reply to the first sliver
+				 * waiting for aio and return AIOWAIT to
+				 * client later.
 				 */
 				pll_add(&s->slvr_pndgaios, aiocbr);
 				aiocbr->aiocbr_slvratt = s;
