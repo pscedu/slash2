@@ -440,8 +440,8 @@ msl_bmpces_fail(struct bmpc_ioreq *r)
 __static void
 msl_biorq_unref(struct bmpc_ioreq *r)
 {
-	struct bmap_pagecache_entry *e;
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(r->biorq_bmap);
+	struct bmap_pagecache_entry *e;
 	int i;
 
 	BMPC_LOCK(bmpc);
