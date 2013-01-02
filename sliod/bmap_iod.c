@@ -146,6 +146,8 @@ bcr_hold_2_ready(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 
 	BII_LOCK_ENSURE(bcr->bcr_bii);
 
+	psc_assert((bcr_2_bmap(bcr)->bcm_flags & BMAP_IOD_INFLIGHT) == 0);
+
 	locked = reqlock(&inf->binfcrcs_lock);
 	pll_remove(&inf->binfcrcs_hold, bcr);
 	pll_addtail(&inf->binfcrcs_ready, bcr);
@@ -165,6 +167,10 @@ bcr_hold_add(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 void
 bcr_ready_add(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 {
+	BII_LOCK_ENSURE(bcr->bcr_bii);
+
+	psc_assert((bcr_2_bmap(bcr)->bcm_flags & BMAP_IOD_INFLIGHT) == 0); 
+
 	psc_assert(psclist_disjoint(&bcr->bcr_lentry));
 	pll_addtail(&inf->binfcrcs_ready, bcr);
 	atomic_inc(&inf->binfcrcs_nbcrs);
