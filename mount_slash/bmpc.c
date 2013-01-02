@@ -110,7 +110,7 @@ bmpce_lookup_locked(struct bmap_pagecache *bmpc, struct bmpc_ioreq *r,
 		e = SPLAY_FIND(bmap_pagecachetree, &bmpc->bmpc_tree,
 		    &search);
 		if (e) {
-    			psc_atomic32_inc(&e->bmpce_ref);
+			psc_atomic32_inc(&e->bmpce_ref);
 			break;
 		}
 
@@ -153,7 +153,7 @@ bmpc_biorq_cmp(const void *x, const void *y)
 		 * have ordering priority.
 		 */
 		return (CMP(b->biorq_len, a->biorq_len));
-return (CMP(a->biorq_off, b->biorq_off));
+	return (CMP(a->biorq_off, b->biorq_off));
 }
 
 void
