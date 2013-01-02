@@ -299,10 +299,11 @@ struct bmpc_ioreq {
 
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP, "biorq@%p "				\
-	    "fl=%#x:%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "	\
-	    "ref=%d o=%u l=%u r=%u buf=%p q=%p sliod=%x "		\
-	    "np=%d b=%p "						\
-	    "ex="PSCPRI_TIMESPEC" : "fmt,				\
+	    "flg=%#x:%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "	\
+	    "ref=%d off=%u len=%u "					\
+	    "retry=%u buf=%p rqi=%p "					\
+	    "sliod=%x np=%d "						\
+	    "b=%p ex="PSCPRI_TIMESPEC" : "fmt,				\
 	    (b), (b)->biorq_flags,					\
 	    (b)->biorq_flags & BIORQ_READ		? "r" : "",	\
 	    (b)->biorq_flags & BIORQ_WRITE		? "w" : "",	\
@@ -313,24 +314,28 @@ struct bmpc_ioreq {
 	    (b)->biorq_flags & BIORQ_DIO		? "d" : "",	\
 	    (b)->biorq_flags & BIORQ_FORCE_EXPIRE	? "x" : "",	\
 	    (b)->biorq_flags & BIORQ_DESTROY		? "D" : "",	\
-	    (b)->biorq_flags & BIORQ_FLUSHRDY		? "r" : "",	\
+	    (b)->biorq_flags & BIORQ_FLUSHRDY		? "L" : "",	\
 	    (b)->biorq_flags & BIORQ_NOFHENT		? "n" : "",	\
 	    (b)->biorq_flags & BIORQ_APPEND		? "A" : "",	\
-	    (b)->biorq_flags & BIORQ_READAHEAD		? "a" : "",	\
+	    (b)->biorq_flags & BIORQ_READAHEAD		? "H" : "",	\
 	    (b)->biorq_flags & BIORQ_RBWFAIL		? "F" : "",	\
-	    (b)->biorq_flags & BIORQ_AIOWAIT		? "W" : "",	\
+	    (b)->biorq_flags & BIORQ_AIOWAIT		? "S" : "",	\
 	    (b)->biorq_flags & BIORQ_RESCHED		? "R" : "",	\
 	    (b)->biorq_flags & BIORQ_ARCHIVER		? "c" : "",	\
 	    (b)->biorq_flags & BIORQ_FLUSHABORT		? "B" : "",	\
 	    (b)->biorq_flags & BIORQ_EXPIREDLEASE	? "X" : "",	\
-	    (b)->biorq_flags & BIORQ_MAXRETRIES		? "x" : "",	\
+	    (b)->biorq_flags & BIORQ_MAXRETRIES		? "T" : "",	\
 	    (b)->biorq_flags & BIORQ_BMAPFAIL		? "b" : "",	\
 	    (b)->biorq_flags & BIORQ_READFAIL		? "E" : "",	\
 	    (b)->biorq_flags & BIORQ_PENDING		? "p" : "",	\
-	    (b)->biorq_ref, (b)->biorq_off, (b)->biorq_len, (b)->biorq_retries,		\
-	    (b)->biorq_buf, (b)->biorq_fsrqi, (b)->biorq_last_sliod,	\
-	    psc_dynarray_len(&(b)->biorq_pages), (b)->biorq_bmap,	\
-	    PSCPRI_TIMESPEC_ARGS(&(b)->biorq_expire), ## __VA_ARGS__)
+	    (b)->biorq_flags & BIORQ_WAIT		? "W" : "",	\
+	    (b)->biorq_flags & BIORQ_DATARDY		? "y" : "",	\
+	    (b)->biorq_flags & BIORQ_EIO		? "e" : "",	\
+	    (b)->biorq_flags & BIORQ_MFHLIST		? "m" : "",	\
+	    (b)->biorq_ref, (b)->biorq_off, (b)->biorq_len,		\
+	    (b)->biorq_retries, (b)->biorq_buf, (b)->biorq_fsrqi,	\
+	    (b)->biorq_last_sliod, psc_dynarray_len(&(b)->biorq_pages),	\
+	    (b)->biorq_bmap, PSCPRI_TIMESPEC_ARGS(&(b)->biorq_expire), ## __VA_ARGS__)
 
 int	_msl_offline_retry(const struct pfl_callerinfo *, struct bmpc_ioreq *);
 int	 msl_fd_offline_retry(struct msl_fhent *);
@@ -360,10 +365,11 @@ bmpce_useprep(struct bmap_pagecache_entry *bmpce,
 	psc_atomic32_set(&bmpce->bmpce_ref, 1);
 	bmpce->bmpce_flags = BMPCE_INIT;
 	bmpce->bmpce_owner = biorq;
+
 	/*
-	 * We put the entry back to the splay tree before it
-	 * is fully allocated, so we need this field to remember
-	 * who owns it.  Alternatively, we could use locking.
+	 * We put the entry back to the splay tree before it is fully
+	 * allocated, so we need this field to remember who owns it.
+	 * Alternatively, we could use locking.
 	 */
 	if (!wq)
 		bmpce->bmpce_waitq = &biorq->biorq_waitq;
@@ -417,7 +423,7 @@ struct bmap_pagecache_entry *
 void	 bmpce_handle_lru_locked(struct bmap_pagecache_entry *,
 	    struct bmap_pagecache *, int);
 
-void	 bmpce_release_locked(struct bmap_pagecache_entry *, 
+void	 bmpce_release_locked(struct bmap_pagecache_entry *,
 	    struct bmap_pagecache *);
 
 void	 bwc_release(struct bmpc_write_coalescer *);
