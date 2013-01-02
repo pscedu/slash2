@@ -1617,15 +1617,11 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 #endif
 
 	if (strlen(oldname) == 0 ||
-	    strlen(newname) == 0) {
-		rc = ENOENT;
-		goto out;
-	}
+	    strlen(newname) == 0)
+		PFL_GOTOERR(out, rc = ENOENT);
 	if (strlen(oldname) > SL_NAME_MAX ||
-	    strlen(newname) > SL_NAME_MAX) {
-		rc = ENAMETOOLONG;
-		goto out;
-	}
+	    strlen(newname) > SL_NAME_MAX)
+		PFL_GOTOERR(out, rc = ENAMETOOLONG);
 
 	mslfs_getcreds(pfr, &cr);
 
@@ -1859,15 +1855,11 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 
 	msfsthr_ensure();
 
-	if (strlen(buf) == 0 || strlen(name) == 0) {
-		rc = ENOENT;
-		goto out;
-	}
+	if (strlen(buf) == 0 || strlen(name) == 0)
+		PFL_GOTOERR(out, rc = ENOENT);
 	if (strlen(buf) >= SL_PATH_MAX ||
-	    strlen(name) > SL_NAME_MAX) {
-		rc = ENAMETOOLONG;
-		goto out;
-	}
+	    strlen(name) > SL_NAME_MAX)
+		PFL_GOTOERR(out, rc = ENAMETOOLONG);
 
 	mslfs_getcreds(pfr, &creds);
 
@@ -1875,10 +1867,8 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	if (rc)
 		goto out;
 
-	if (!fcmh_isdir(p)) {
-		rc = ENOTDIR;
-		goto out;
-	}
+	if (!fcmh_isdir(p))
+		PFL_GOTOERR(out, rc = ENOTDIR);
 
  retry:
 	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_SYMLINK, rq, mq, mp, rc);
@@ -1986,10 +1976,8 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			goto out;
 		}
 #endif
-		if (cr.scr_uid != c->fcmh_sstb.sst_uid) {
-			rc = EPERM;
-			goto out;
-		}
+		if (cr.scr_uid != c->fcmh_sstb.sst_uid)
+			PFL_GOTOERR(out, rc = EPERM);
 		if (cr.scr_gid != c->fcmh_sstb.sst_gid &&
 		    !pscfs_inprocgrouplist(pfr, c->fcmh_sstb.sst_gid))
 			stb->st_mode &= ~S_ISGID;
@@ -2000,23 +1988,17 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			goto out;
 	}
 	if ((to_set & (PSCFS_SETATTRF_ATIME | PSCFS_SETATTRF_MTIME)) &&
-	    cr.scr_uid && cr.scr_uid != c->fcmh_sstb.sst_uid) {
-		rc = EPERM;
-		goto out;
-	}
+	    cr.scr_uid && cr.scr_uid != c->fcmh_sstb.sst_uid)
+		PFL_GOTOERR(out, rc = EPERM);
 	if ((to_set & PSCFS_SETATTRF_UID) && cr.scr_uid) {
 		if (cr.scr_uid != c->fcmh_sstb.sst_uid ||
-		    cr.scr_uid != stb->st_uid) {
-			rc = EPERM;
-			goto out;
-		}
+		    cr.scr_uid != stb->st_uid)
+			PFL_GOTOERR(out, rc = EPERM);
 	}
 	if ((to_set & PSCFS_SETATTRF_GID) && cr.scr_uid) {
 		if (cr.scr_uid != c->fcmh_sstb.sst_uid ||
-		    !pscfs_inprocgrouplist(pfr, stb->st_gid)) {
-			rc = EPERM;
-			goto out;
-		}
+		    !pscfs_inprocgrouplist(pfr, stb->st_gid))
+			PFL_GOTOERR(out, rc = EPERM);
 		if (c->fcmh_sstb.sst_mode & (S_ISGID | S_ISUID)) {
 			to_set |= PSCFS_SETATTRF_MODE;
 			stb->st_mode = c->fcmh_sstb.sst_mode &
@@ -2063,6 +2045,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			SPLAY_FOREACH(b, bmap_cache, &c->fcmh_bmaptree) {
 				if (b->bcm_bmapno < x)
 					continue;
+
 				/*
 				 * Take a reference to ensure the bmap
 				 * is still valid.
@@ -2299,10 +2282,8 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 		goto out;
 
 	/* XXX EBADF if fd is not open for writing */
-	if (fcmh_isdir(f)) {
-		rc = EISDIR;
-		goto out;
-	}
+	if (fcmh_isdir(f))
+		PFL_GOTOERR(out, rc = EISDIR);
 	if (!size)
 		goto out;
 
@@ -2377,8 +2358,7 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 
 	if (fcmh_isdir(f)) {
 //		psclog_errorx("regular file is a directory");
-		rc = EISDIR;
-		goto out;
+		PFL_GOTOERR(out, rc = EISDIR);
 	}
 	if (!size)
 		goto out;
@@ -2489,10 +2469,8 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 
 	OPSTAT_INCR(SLC_OPST_SETXATTR);
 
-	if (size > SL_NAME_MAX) {
-		rc = -EINVAL;
-		goto out;
-	}
+	if (size > SL_NAME_MAX)
+		PFL_GOTOERR(out, rc = -EINVAL);
 
 	mslfs_getcreds(pfr, &cr);
 	rc = msl_load_fcmh(pfr, inum, &c);
@@ -2724,7 +2702,8 @@ msattrflushthr_main(__unusedx struct psc_thread *thr)
 			if (fci->fci_etime.tv_sec > ts.tv_sec ||
 			   (fci->fci_etime.tv_sec == ts.tv_sec &&
 			    fci->fci_etime.tv_nsec > ts.tv_nsec)) {
-				timespecsub(&fci->fci_etime, &ts, &nexttimeo);
+				timespecsub(&fci->fci_etime, &ts,
+				    &nexttimeo);
 				FCMH_ULOCK(f);
 				break;
 			}
