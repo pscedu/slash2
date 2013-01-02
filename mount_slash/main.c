@@ -1474,7 +1474,8 @@ msl_flush_int_locked(struct msl_fhent *mfh)
 
 	PLL_FOREACH(r, &mfh->mfh_biorqs) {
 		BIORQ_LOCK(r);
-		r->biorq_flags |= BIORQ_FORCE_EXPIRE;
+		if (!r->biorq_ref)
+			r->biorq_flags |= BIORQ_FORCE_EXPIRE;
 		DEBUG_BIORQ(PLL_INFO, r, "force expire");
 		BIORQ_ULOCK(r);
 	}
@@ -2249,6 +2250,7 @@ mslfsop_fsync(struct pscfs_req *pfr, __unusedx int datasync, void *data)
 	freelock(&mfh->mfh_lock);
 
 	pscfs_reply_fsync(pfr, 0);
+	OPSTAT_INCR(SLC_OPST_FSYNC_DONE);
 }
 
 void
@@ -2289,13 +2291,8 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 
 	msfsthr(pscthr_get())->mft_failcnt = 1;
 	rc = msl_write(pfr, mfh, buf, size, off);
-	if (rc < 0) {
-		if (rc == -SLERR_AIOWAIT)
-			return;
-		rc = -rc;
+	if (rc)
 		goto out;
-	}
-	rc = 0;
 
 	FCMH_LOCK(f);
 	PFL_GETTIMESPEC(&ts);
@@ -2320,15 +2317,15 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 	}
 	FCMH_ULOCK(f);
 
-	MFH_LOCK(mfh);
-	mfh->mfh_nbytes_wr += size;
-	MFH_ULOCK(mfh);
-
  out:
+	if (rc) {
+		pscfs_reply_write(pfr, size, rc);
+		OPSTAT_INCR(SLC_OPST_FSRQ_WRITE_FREE);
+	}
 	DEBUG_FCMH(PLL_INFO, f, "write: buf=%p rc=%d sz=%zu "
 	    "off=%"PSCPRIdOFFT, buf, rc, size, off);
-	pscfs_reply_write(pfr, size, rc);
-	OPSTAT_INCR(SLC_OPST_FSRQ_WRITE_FREE);
+
+	OPSTAT_INCR(SLC_OPST_WRITE_DONE);
 }
 
 void
@@ -2365,29 +2362,18 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 
 	msfsthr(pscthr_get())->mft_failcnt = 1;
 
-	len = msl_read(pfr, mfh, buf, size, off);
+	rc = msl_read(pfr, mfh, buf, size, off);
+ out:
 
-	/*
-	 * If this request will be finished asynchronously, e.g. in the
-	 * case of a archival storage system, do not tie up this fs
-	 * worker thread.
-	 */
-	if (len == -SLERR_AIOWAIT)
-		return;
-
-	if (len < 0)
-		rc = -len;
-	else {
-		MFH_LOCK(mfh);
-		mfh->mfh_nbytes_rd += len;
-		MFH_ULOCK(mfh);
+	if (rc) {
+		pscfs_reply_read(pfr, buf, len, rc);
+		OPSTAT_INCR(SLC_OPST_FSRQ_READ_FREE);
 	}
 
- out:
-	pscfs_reply_read(pfr, buf, len, rc);
-	OPSTAT_INCR(SLC_OPST_FSRQ_READ_FREE);
 	DEBUG_FCMH(PLL_INFO, f, "read (end): buf=%p rc=%d sz=%zu "
 	    "len=%zd off=%"PSCPRIdOFFT, buf, rc, size, len, off);
+
+	OPSTAT_INCR(SLC_OPST_READ_DONE);
 }
 
 void

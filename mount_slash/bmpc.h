@@ -57,8 +57,7 @@ struct msl_fsrqinfo;
 struct timespec			bmapFlushDefMaxAge;
 
 struct bmap_pagecache_entry {
-	psc_atomic16_t		 bmpce_wrref;	/* pending write ops		*/
-	psc_atomic16_t		 bmpce_rdref;	/* pending read ops		*/
+	psc_atomic32_t		 bmpce_ref;	/* biorq and readahead refs     */
 	uint64_t		 bmpce_syncxid;	/* xid associated with sync op	*/
 	uint32_t		 bmpce_flags;	/* BMPCE_* flag bits		*/
 	uint32_t		 bmpce_off;	/* filewise, bmap relative	*/
@@ -123,7 +122,7 @@ struct bmap_pagecache_entry {
 	    "bmpce@%p fl=%u:%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "		\
 	    "o=%#x b=%p "						\
 	    "ts="PSCPRI_TIMESPEC" "					\
-	    "wr=%hu rd=%hu "						\
+	    "ref=%u "							\
 	    "owner=%p : " fmt,						\
 	    (b), (b)->bmpce_flags,					\
 	    (b)->bmpce_flags & BMPCE_NEW		? "n" : "",	\
@@ -144,8 +143,7 @@ struct bmap_pagecache_entry {
 	    (b)->bmpce_flags & BMPCE_SYNCWAIT		? "S" : "",	\
 	    (b)->bmpce_off, (b)->bmpce_base,				\
 	    PSCPRI_TIMESPEC_ARGS(&(b)->bmpce_laccess),			\
-	    psc_atomic16_read(&(b)->bmpce_wrref),			\
-	    psc_atomic16_read(&(b)->bmpce_rdref),			\
+	    psc_atomic32_read(&(b)->bmpce_ref),				\
 	    (b)->bmpce_owner, ## __VA_ARGS__)
 
 static __inline int
@@ -240,6 +238,7 @@ bmpc_queued_ios(struct bmap_pagecache *bmpc)
 
 struct bmpc_ioreq {
 	char				*biorq_buf;
+	int32_t				 biorq_ref;
 	/*
 	 * Note that a request may fall somewhere within a bmap.  It
 	 * might be not page aligned.
@@ -256,6 +255,7 @@ struct bmpc_ioreq {
 	struct psclist_head		 biorq_lentry;	/* chain on bmpc_pndg_biorqs	*/
 	struct psclist_head		 biorq_mfh_lentry; /* chain on file handle	*/
 	struct psclist_head		 biorq_bwc_lentry;
+	struct psclist_head		 biorq_png_lentry;
 	struct bmapc_memb		*biorq_bmap;	/* backpointer to our bmap	*/
 	struct pscrpc_request_set	*biorq_rqset;
 	struct psc_waitq		 biorq_waitq;	/* used by a bmpce */
@@ -286,6 +286,10 @@ struct bmpc_ioreq {
 #define BIORQ_BMAPFAIL			(1 << 20)
 #define BIORQ_READFAIL			(1 << 21)
 #define BIORQ_PENDING			(1 << 22)
+#define BIORQ_WAIT			(1 << 23)
+#define BIORQ_DATARDY			(1 << 24)
+#define BIORQ_EIO			(1 << 25)
+#define BIORQ_MFHLIST			(1 << 26)
 
 #define BIORQ_LOCK(r)			spinlock(&(r)->biorq_lock)
 #define BIORQ_ULOCK(r)			freelock(&(r)->biorq_lock)
@@ -296,7 +300,7 @@ struct bmpc_ioreq {
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP, "biorq@%p "				\
 	    "fl=%#x:%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "	\
-	    "o=%u l=%u r=%u buf=%p q=%p sliod=%x "			\
+	    "ref=%d o=%u l=%u r=%u buf=%p q=%p sliod=%x "		\
 	    "np=%d b=%p "						\
 	    "ex="PSCPRI_TIMESPEC" : "fmt,				\
 	    (b), (b)->biorq_flags,					\
@@ -323,7 +327,7 @@ struct bmpc_ioreq {
 	    (b)->biorq_flags & BIORQ_BMAPFAIL		? "b" : "",	\
 	    (b)->biorq_flags & BIORQ_READFAIL		? "E" : "",	\
 	    (b)->biorq_flags & BIORQ_PENDING		? "p" : "",	\
-	    (b)->biorq_off, (b)->biorq_len, (b)->biorq_retries,		\
+	    (b)->biorq_ref, (b)->biorq_off, (b)->biorq_len, (b)->biorq_retries,		\
 	    (b)->biorq_buf, (b)->biorq_fsrqi, (b)->biorq_last_sliod,	\
 	    psc_dynarray_len(&(b)->biorq_pages), (b)->biorq_bmap,	\
 	    PSCPRI_TIMESPEC_ARGS(&(b)->biorq_expire), ## __VA_ARGS__)
@@ -345,20 +349,6 @@ struct bmpc_write_coalescer {
 };
 
 static __inline void
-bmpce_freeprep(struct bmap_pagecache_entry *bmpce)
-{
-	LOCK_ENSURE(&bmpce->bmpce_lock);
-
-	psc_assert(!(bmpce->bmpce_flags & (BMPCE_FREEING | BMPCE_NEW)));
-	psc_assert(bmpce->bmpce_flags & (BMPCE_DATARDY | BMPCE_EIO));
-
-	psc_assert(!psc_atomic16_read(&bmpce->bmpce_rdref));
-	psc_assert(!psc_atomic16_read(&bmpce->bmpce_wrref));
-
-	bmpce->bmpce_flags = BMPCE_FREEING;
-}
-
-static __inline void
 bmpce_useprep(struct bmap_pagecache_entry *bmpce,
     struct bmpc_ioreq *biorq, struct psc_waitq *wq)
 {
@@ -366,9 +356,8 @@ bmpce_useprep(struct bmap_pagecache_entry *bmpce,
 	psc_assert(psclist_disjoint(&bmpce->bmpce_lentry));
 	psc_assert(psclist_disjoint(&bmpce->bmpce_ralentry));
 	psc_assert(bmpce->bmpce_flags == BMPCE_NEW);
-	psc_assert(!psc_atomic16_read(&bmpce->bmpce_wrref));
-	psc_assert(!psc_atomic16_read(&bmpce->bmpce_rdref));
 
+	psc_atomic32_set(&bmpce->bmpce_ref, 1);
 	bmpce->bmpce_flags = BMPCE_INIT;
 	bmpce->bmpce_owner = biorq;
 	/*
@@ -393,10 +382,7 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
 
 	DEBUG_BMPCE(PLL_DEBUG, bmpce, "op=%d off=%u", op, off);
 
-	if (op == BIORQ_READ)
-		psc_assert(psc_atomic16_read(&bmpce->bmpce_rdref) > 0);
-	else
-		psc_assert(psc_atomic16_read(&bmpce->bmpce_wrref) > 0);
+	psc_assert(psc_atomic32_read(&bmpce->bmpce_ref) > 0);
 
 	psc_assert(bmpce->bmpce_off == off);
 	ureqlock(&bmpce->bmpce_lock, locked);
@@ -429,7 +415,10 @@ struct bmap_pagecache_entry *
 	 bmpce_lookup_locked(struct bmap_pagecache *, struct bmpc_ioreq *,
 	    uint32_t, struct psc_waitq *);
 void	 bmpce_handle_lru_locked(struct bmap_pagecache_entry *,
-	    struct bmap_pagecache *, int, int);
+	    struct bmap_pagecache *, int);
+
+void	 bmpce_release_locked(struct bmap_pagecache_entry *, 
+	    struct bmap_pagecache *);
 
 void	 bwc_release(struct bmpc_write_coalescer *);
 
@@ -449,6 +438,8 @@ bmpc_init(struct bmap_pagecache *bmpc)
 	memset(bmpc, 0, sizeof(*bmpc));
 	INIT_PSC_LISTENTRY(&bmpc->bmpc_lentry);
 	INIT_SPINLOCK(&bmpc->bmpc_lock);
+
+	// Double check the exclusivity of these lists...
 
 	pll_init(&bmpc->bmpc_lru, struct bmap_pagecache_entry,
 	    bmpce_lentry, &bmpc->bmpc_lock);

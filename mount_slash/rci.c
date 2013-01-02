@@ -112,8 +112,6 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		OPSTAT_INCR(SLC_OPST_READ_CB);
 		a = car->car_argv.pointer_arg[MSL_CBARG_BMPCE];
 
-		msl_fsrqinfo_readywait(car->car_fsrqinfo);
-
 		DYNARRAY_FOREACH(e, i, a) {
 			if (!mq->rc) {
 				iovs[i].iov_base = e->bmpce_base;
@@ -166,7 +164,6 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 
 	} else if (car->car_cbf == msl_dio_cb) {
 		OPSTAT_INCR(SLC_OPST_DIO_CB);
-		msl_fsrqinfo_readywait(car->car_fsrqinfo);
 
 		/* FixMe: Should wake up waiters regardless of results */
 		if (mq->rc)
@@ -179,15 +176,6 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 
 			mq->rc = rsx_bulkserver(rq, BULK_GET_SINK,
 			    SRCI_BULK_PORTAL, &iov, 1);
-		} else {
-			MFH_LOCK(car->car_fsrqinfo->mfsrq_fh);
-			msl_fsrqinfo_state(car->car_fsrqinfo,
-			    MFSRQ_AIOWAIT, -1, 0);
-			msl_fsrqinfo_aioreadyset(car->car_fsrqinfo);
-			MFH_ULOCK(car->car_fsrqinfo->mfsrq_fh);
-
-			/* XXX this causes a callback not being called */
-			car->car_cbf = NULL;
 		}
 
 	} else {
@@ -199,7 +187,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 	 * cleanup can happen.
 	 */
 	if (car->car_cbf)
-		car->car_cbf(rq, mq->rc, &car->car_argv);
+		car->car_cbf(rq, mq->rc, &car->car_argv, 1);
 
 	psclog_info("return car=%p car_id=%"PRIx64" q=%p, r=%p", car,
 	    car->car_id, car->car_fsrqinfo, r);

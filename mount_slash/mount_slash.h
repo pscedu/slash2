@@ -142,7 +142,7 @@ struct slc_async_req {
 	struct psc_listentry		  car_lentry;
 	struct pscrpc_async_args	  car_argv;
 	int				(*car_cbf)(struct pscrpc_request *, int,
-						struct pscrpc_async_args *);
+						struct pscrpc_async_args *, int);
 	uint64_t			  car_id;
 	size_t				  car_len;
 	struct msl_fsrqinfo		 *car_fsrqinfo;
@@ -181,10 +181,11 @@ struct msl_fsrqinfo {
 	struct msl_fhent		*mfsrq_fh;
 	char				*mfsrq_buf;
 	size_t				 mfsrq_size;
+	size_t				 mfsrq_len;	/* I/O result, must be accurate if no error */
 	off_t				 mfsrq_off;
 	int				 mfsrq_flags;
 	int				 mfsrq_err;
-	int				 mfsrq_ref;	/* # car's needed to satisfy this req */
+	int				 mfsrq_ref;	/* taken by biorq and the thread that does the I/O */
 	int				 mfsrq_reissue;
 	enum rw				 mfsrq_rw;
 	struct pscfs_req		*mfsrq_pfr;
@@ -196,6 +197,7 @@ struct msl_fsrqinfo {
 #define MFSRQ_BMPCEATT			(1 << 2)
 #define MFSRQ_AIOREADY			(1 << 3)
 #define MFSRQ_REISSUED			(1 << 4)
+#define MFSRQ_REPLIED			(1 << 6)
 
 int	msl_fsrqinfo_state(struct msl_fsrqinfo *, int, int, int);
 void    msl_fsrqinfo_biorq_add(struct msl_fsrqinfo *, struct bmpc_ioreq *,int);
@@ -203,8 +205,6 @@ void    msl_fsrqinfo_biorq_add(struct msl_fsrqinfo *, struct bmpc_ioreq *,int);
 #define msl_fsrqinfo_isset(q, f)	msl_fsrqinfo_state((q), (f), 0, 0)
 #define msl_fsrqinfo_aioisset(q)	msl_fsrqinfo_state((q), MFSRQ_AIOWAIT, 0, 0)
 #define msl_fsrqinfo_aioset(q)		msl_fsrqinfo_state((q), MFSRQ_AIOWAIT, 1, 0)
-#define msl_fsrqinfo_readywait(q)	msl_fsrqinfo_state((q), MFSRQ_READY, 0, 1)
-#define msl_fsrqinfo_readyset(q)	msl_fsrqinfo_state((q), MFSRQ_READY, 1, 1)
 #define msl_fsrqinfo_aioreadywait(q)	msl_fsrqinfo_state((q), MFSRQ_AIOREADY, 0, 1)
 #define msl_fsrqinfo_aioreadyset(q)	msl_fsrqinfo_state((q), MFSRQ_AIOREADY, 1, 1)
 
@@ -242,11 +242,11 @@ void	 msl_bmap_reap_init(struct bmapc_memb *, const struct srt_bmapdesc *);
 void	 msl_bmpces_fail(struct bmpc_ioreq *);
 void	_msl_biorq_destroy(const struct pfl_callerinfo *, struct bmpc_ioreq *);
 void	 msl_mfh_seterr(struct msl_fhent *);
-int	 msl_dio_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
+int	 msl_dio_cb(struct pscrpc_request *, int, struct pscrpc_async_args *, int);
 ssize_t	 msl_io(struct pscfs_req *, struct msl_fhent *, char *, size_t, off_t, enum rw);
-int	 msl_read_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
+int	 msl_read_cb(struct pscrpc_request *, int, struct pscrpc_async_args *, int);
 void	 msl_reada_rpc_launch(struct bmap_pagecache_entry **, int);
-int	 msl_readahead_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
+int	 msl_readahead_cb(struct pscrpc_request *, int, struct pscrpc_async_args *, int);
 int	 msl_stat(struct fidc_membh *, void *);
 int	 msl_write_rpc_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 
@@ -299,6 +299,7 @@ enum {
 	SLC_OPST_AIO_PLACED,
 	SLC_OPST_BIORQ_DESTROY,
 	SLC_OPST_BIORQ_NEW,
+	SLC_OPST_BIORQ_RESTART,
 	SLC_OPST_BMAP_LEASE_EXT,
 	SLC_OPST_BMAP_RETRIEVE,
 	SLC_OPST_BMPCE_GET,
@@ -316,6 +317,7 @@ enum {
 	SLC_OPST_FSRQ_WRITE,
 	SLC_OPST_FSRQ_WRITE_FREE,
 	SLC_OPST_FSYNC,
+	SLC_OPST_FSYNC_DONE,
 	SLC_OPST_GETXATTR,
 	SLC_OPST_GETXATTR_NOSYS,
 	SLC_OPST_LISTXATTR,
@@ -325,6 +327,7 @@ enum {
 	SLC_OPST_OFFLINE_NO_RETRY,
 	SLC_OPST_PREFETCH,
 	SLC_OPST_READ,
+	SLC_OPST_READ_DONE,
 	SLC_OPST_READDIR,
 	SLC_OPST_READDIR_RETRY,
 	SLC_OPST_READ_AHEAD,
@@ -347,6 +350,7 @@ enum {
 	SLC_OPST_SRMT_WRITE,
 	SLC_OPST_UNLINK,
 	SLC_OPST_WRITE,
+	SLC_OPST_WRITE_DONE,
 	SLC_OPST_WRITE_COALESCE,
 	SLC_OPST_WRITE_COALESCE_MAX,
 	SLC_OPST_VERSION

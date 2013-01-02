@@ -363,9 +363,6 @@ bmap_flush_desched(struct bmpc_ioreq *r)
 	(void)BMPC_RLOCK(bmpc);
 	(void)BIORQ_RLOCK(r);
 
-	/* biorq [rd]esched semantics must be strictly enforced.
-	 */
-	psc_assert(r->biorq_flags & BIORQ_SCHED);
 	psc_assert(!(r->biorq_flags & (BIORQ_INFL | BIORQ_RESCHED)));
 	psc_assert(pll_conjoint(&bmpc->bmpc_new_biorqs, r));
 
@@ -451,9 +448,6 @@ bmap_flush_resched(struct bmpc_ioreq *r)
 		BIORQ_ULOCK(r);
 		return;
 	}
-	psc_assert(r->biorq_flags & BIORQ_SCHED);
-	psc_assert(r->biorq_flags & BIORQ_INFL);
-	r->biorq_flags &= ~BIORQ_INFL;
 
 	r->biorq_flags &= ~BIORQ_PENDING;
 	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
@@ -498,8 +492,14 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	return;
 
  error:
-	while ((r = pll_get(&bwc->bwc_pll)))
+	while ((r = pll_get(&bwc->bwc_pll))) {
+
+		BIORQ_LOCK(r);
+		r->biorq_flags &= ~(BIORQ_INFL | BIORQ_SCHED);
+		BIORQ_ULOCK(r);
+
 		csvc ? bmap_flush_resched(r) : bmap_flush_desched(r);
+	}
 
 	if (csvc)
 		sl_csvc_decref(csvc);
