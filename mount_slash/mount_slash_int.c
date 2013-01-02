@@ -629,7 +629,7 @@ _msl_fsrq_aiowait_tryadd_locked(struct bmap_pagecache_entry *e,
 
 __static int
 msl_req_aio_add(struct pscrpc_request *rq,
-    int (*cbf)(struct pscrpc_request *, int, struct pscrpc_async_args *, int),
+    int (*cbf)(struct pscrpc_request *, int, struct pscrpc_async_args *),
     struct pscrpc_async_args *av)
 {
 	struct bmpc_ioreq *r = av->pointer_arg[MSL_CBARG_BIORQ];
@@ -896,7 +896,7 @@ _msl_bmpce_rpc_done(const struct pfl_callerinfo *pci,
  */
 int
 msl_read_cb(struct pscrpc_request *rq, int rc,
-    struct pscrpc_async_args *args, __unusedx int aio)
+    struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct psc_dynarray *a = args->pointer_arg[MSL_CBARG_BMPCE];
@@ -970,12 +970,12 @@ msl_read_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	if (rc == SLERR_AIOWAIT)
 		return (msl_req_aio_add(rq, msl_read_cb, args));
 
-	return (msl_read_cb(rq, rc, args, 0));
+	return (msl_read_cb(rq, rc, args));
 }
 
 int
 msl_readahead_cb(struct pscrpc_request *rq, int rc,
-    struct pscrpc_async_args *args, __unusedx int aio)
+    struct pscrpc_async_args *args)
 {
 	struct bmap_pagecache_entry *e,
 	    **bmpces = args->pointer_arg[MSL_CBARG_BMPCE];
@@ -1042,7 +1042,7 @@ msl_readahead_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	if (rc == SLERR_AIOWAIT)
 		return (msl_req_aio_add(rq, msl_readahead_cb, args));
 
-	return (msl_readahead_cb(rq, rc, args, 0));
+	return (msl_readahead_cb(rq, rc, args));
 }
 
 int
@@ -1112,7 +1112,7 @@ msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 }
 
 int
-msl_dio_cb(struct pscrpc_request *rq, int rc, struct pscrpc_async_args *args, int aio)
+msl_dio_cb(struct pscrpc_request *rq, int rc, struct pscrpc_async_args *args)
 {
 	//struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
@@ -1131,8 +1131,8 @@ msl_dio_cb(struct pscrpc_request *rq, int rc, struct pscrpc_async_args *args, in
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 	psc_assert(mq);
 
-	DEBUG_BIORQ(PLL_INFO, r, "dio complete (op=%d, aio=%d) off=%u sz=%u rc=%d",
-	    op, aio, mq->offset, mq->size, rc);
+	DEBUG_BIORQ(PLL_INFO, r, "dio complete (op=%d) off=%u sz=%u rc=%d",
+	    op, mq->offset, mq->size, rc);
 
 	q = r->biorq_fsrqi;
 	locked = MFH_RLOCK(q->mfsrq_fh);
@@ -1164,7 +1164,7 @@ msl_dio_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	if (rc == SLERR_AIOWAIT)
 		return (msl_req_aio_add(rq, msl_dio_cb, args));
 
-	return (msl_dio_cb(rq, rc, args, 0));
+	return (msl_dio_cb(rq, rc, args));
 }
 
 __static int
