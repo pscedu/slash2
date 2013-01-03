@@ -135,10 +135,15 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	int rc;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
+	rc = mq->rc;
+	if (rc == EOF)
+		rc = 0;
 
 	mrsq = mrsq_lookup(mq->id);
-	if (mrsq == NULL)
-		return (-ECANCELED);
+	if (mrsq == NULL) {
+		mp->rc = -ECANCELED;
+		return (mp->rc);
+	}
 
 	mh = *mrsq->mrsq_mh;
 
@@ -165,19 +170,18 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 		rc = psc_ctlmsg_send(mrsq->mrsq_fd,
 		    mrsq->mrsq_mh->mh_id, MSCMT_GETREPLST_SLAVE,
 		    mq->len + sizeof(*mrsl), mrsl);
-		if (rc)
-			mq->rc = 0;
+		rc = rc ? 0 : EOF;
 	}
 
  out:
-	mrsq_release(mrsq, mq->rc);
+	mrsq_release(mrsq, rc);
 	PSCFREE(mrsl);
 	return (mp->rc);
 }
 
 /**
  * msrcm_handle_releasebmap - Handle a RELEASEBMAP request for CLI from
- *	MDS.
+	MDS.
  * @rq: request.
  */
 int
@@ -253,17 +257,13 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 	DEBUG_BMAP(PLL_INFO, b, "seq=%"PRId64, mq->seq);
 
 	BMAP_LOCK(b);
-	if (b->bcm_flags & BMAP_DIO) {
-		BMAP_ULOCK(b);
+	if (b->bcm_flags & BMAP_DIO)
 		goto out;
-	}
 
 	/* Verify that the sequence number matches. */
 	bci = bmap_2_bci(b);
-	if (bci->bci_sbd.sbd_seq != mq->seq) {
-		BMAP_ULOCK(b);
+	if (bci->bci_sbd.sbd_seq != mq->seq)
 		PFL_GOTOERR(out, mp->rc = -ESTALE);
-	}
 
 	/* All new read and write I/O's will get BIORQ_DIO. */
 	b->bcm_flags |= BMAP_DIO;

@@ -252,6 +252,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	PLL_ULOCK(&msctl_replsts);
 	added = 0;
 
+	rc = 1;
 	if (mrsq.mrsq_rc && mrsq.mrsq_rc != EOF)
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    fg.fg_fid, slstrerror(mrsq.mrsq_rc));
