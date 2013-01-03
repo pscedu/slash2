@@ -86,7 +86,6 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 	struct srm_replst_master_rep *mp;
 	struct msctlmsg_replst mrs;
 	struct msctl_replstq *mrsq;
-	struct psc_ctlmsghdr mh;
 	struct sl_resource *res;
 	int rc, n;
 
@@ -95,8 +94,6 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 	mrsq = mrsq_lookup(mq->id);
 	if (mrsq == NULL)
 		return (0);
-
-	mh = *mrsq->mrsq_mh;
 
 	mrs.mrs_fid = mq->fg.fg_fid;
 
@@ -113,7 +110,7 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 		    sizeof(mrs.mrs_iosv[0]));
 	}
 	rc = psc_ctlmsg_sendv(mrsq->mrsq_fd, &mh, &mrs);
-	mrsq_release(mrsq, 0);
+	mrsq_release(mrsq, rc ? 0 : EOF);
 	return (0);
 }
 
