@@ -184,7 +184,7 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
  out:
 	BMAP_CLEARATTR(b, BMAP_CLI_REASSIGNREQ);
 
-	DEBUG_BMAP(rc ? PLL_ERROR : PLL_NOTIFY, b,
+	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b,
 		   "lease reassign (rc=%d) nseq=%"PRId64, rc,
 		   rc ? BMAPSEQ_ANY : mp->sbd.sbd_seq);
 	bmap_op_done_type(b, BMAP_OPCNT_REASSIGN);
