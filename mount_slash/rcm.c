@@ -86,6 +86,7 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 	struct srm_replst_master_rep *mp;
 	struct msctlmsg_replst mrs;
 	struct msctl_replstq *mrsq;
+	struct psc_ctlmsghdr mh;
 	struct sl_resource *res;
 	int rc, n;
 
@@ -94,6 +95,8 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 	mrsq = mrsq_lookup(mq->id);
 	if (mrsq == NULL)
 		return (0);
+
+	mh = *mrsq->mrsq_mh;
 
 	mrs.mrs_fid = mq->fg.fg_fid;
 
@@ -127,7 +130,6 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	struct srm_replst_slave_req *mq;
 	struct srm_replst_slave_rep *mp;
 	struct msctl_replstq *mrsq;
-	struct psc_ctlmsghdr mh;
 	struct iovec iov;
 	int rc;
 
@@ -141,8 +143,6 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 		mp->rc = -ECANCELED;
 		return (mp->rc);
 	}
-
-	mh = *mrsq->mrsq_mh;
 
 	if (mq->rc && mq->rc != EOF)
 		goto out;
