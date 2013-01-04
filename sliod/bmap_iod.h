@@ -35,18 +35,7 @@
 struct bmap_iod_info;
 struct slvr_ref;
 
-/*
- * For now only one of these structures is needed.  In the future
- *   we'll need one per MDS.
- */
-struct biod_infl_crcs {
-	psc_spinlock_t		 binfcrcs_lock;
-	atomic_t		 binfcrcs_nbcrs;
-	struct psc_lockedlist	 binfcrcs_hold;
-	struct psc_lockedlist	 binfcrcs_ready;
-};
-
-struct biod_crcup_ref {
+struct bcrcupd {
 	uint64_t		 bcr_xid;
 	uint16_t		 bcr_flags;
 	struct timespec		 bcr_age;
@@ -76,11 +65,10 @@ struct bmap_iod_rls {
 
 #define BIM_RETRIEVE_SEQ	1
 
-#define BIM_MINAGE		5	/* Seconds */
+#define BIM_MINAGE		5	/* seconds */
 
-#define SLIOD_BMAP_RLS_WAIT_SECS 1 /* Number of seconds to wait for more
-				    *  bmap releases from the client
-				    */
+/* time to wait for more bmap releases from the client */
+#define SLIOD_BMAP_RLS_WAIT_SECS 1	/* seconds */
 
 #define DEBUG_BCR(level, bcr, fmt, ...)					\
 	psclogs((level), SLSS_BMAP,					\
@@ -110,12 +98,12 @@ struct bmap_iod_info {
 	struct bmap_extra_state	 bii_extrastate;
 
 	/*
-	 * Accumulate CRC updates until its associated biod_crcup_ref
-	 * structure is full, at which point it is set to NULL and a
-	 * new biod_crcup_ref structure must be allocated for future
-	 * CRC updates.
+	 * Accumulate CRC updates here until its associated bcrcupd
+	 * structure is full, at which point it is set to NULL then
+	 * moved to a ready/hold list for transmission, and a new
+	 * bcrcupd structure must be allocated for future CRC updates.
 	 */
-	struct biod_crcup_ref	*bii_bcr;
+	struct bcrcupd		*bii_bcr;
 	struct biod_slvrtree	 bii_slvrs;
 	struct psclist_head	 bii_lentry;
 	struct timespec		 bii_age;
@@ -140,7 +128,7 @@ struct bmap_iod_info {
 #define bmap_2_bii_slvrs(b)	(&bmap_2_bii(b)->bii_slvrs)
 #define bmap_2_ondisk(b)	((struct bmap_ondisk *)&(b)->bcm_corestate)
 
-#define BMAP_SLVR_WANTREPL	(_BMAP_SLVR_FLSHFT)	/* Queued for replication */
+#define BMAP_SLVR_WANTREPL	_BMAP_SLVR_FLSHFT	/* Queued for replication */
 
 #define BII_LOCK(bii)		BMAP_LOCK(bii_2_bmap(bii))
 #define BII_ULOCK(bii)		BMAP_ULOCK(bii_2_bmap(bii))
@@ -155,17 +143,17 @@ uint64_t	bim_getcurseq(void);
 void		bim_init(void);
 int		bim_updateseq(uint64_t);
 
-void bcr_finalize(struct biod_infl_crcs *, struct biod_crcup_ref *);
-void bcr_hold_2_ready(struct biod_infl_crcs *, struct biod_crcup_ref *);
-void bcr_hold_add(struct biod_infl_crcs *, struct biod_crcup_ref *);
-void bcr_hold_requeue(struct biod_infl_crcs *, struct biod_crcup_ref *);
-void bcr_ready_add(struct biod_infl_crcs *, struct biod_crcup_ref *);
-void bcr_ready_remove(struct biod_infl_crcs *, struct biod_crcup_ref *);
-void bcr_xid_check(struct biod_crcup_ref *);
+void	bcr_finalize(struct bcrcupd *);
+void	bcr_hold_2_ready(struct bcrcupd *);
+void	bcr_hold_add(struct bcrcupd *);
+void	bcr_hold_requeue(struct bcrcupd *);
+void	bcr_ready_add(struct bcrcupd *);
+void	bcr_ready_remove(struct bcrcupd *);
+void	bcr_xid_check(struct bcrcupd *);
 
-void biod_rlssched_locked(struct bmap_iod_info *);
+void	biod_rlssched_locked(struct bmap_iod_info *);
 
-void slibmaprlsthr_spawn(void);
+void	slibmaprlsthr_spawn(void);
 
 extern struct psc_listcache	 bmapRlsQ;
 extern struct psc_poolmaster	 bmap_rls_poolmaster;
@@ -173,6 +161,9 @@ extern struct psc_poolmgr	*bmap_rls_pool;
 
 extern struct psc_poolmaster	 bmap_crcupd_poolmaster;
 extern struct psc_poolmgr	*bmap_crcupd_pool;
+
+extern struct psc_listcache	 bcr_ready;
+extern struct psc_listcache	 bcr_hold;
 
 static __inline struct bmapc_memb *
 bii_2_bmap(struct bmap_iod_info *bii)

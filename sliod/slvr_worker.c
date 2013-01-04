@@ -45,7 +45,8 @@ int slvr_nbreqset_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 struct psc_poolmaster		 bmap_crcupd_poolmaster;
 struct psc_poolmgr		*bmap_crcupd_pool;
 
-static struct biod_infl_crcs	 binflCrcs;
+struct psc_listcache		 bcr_ready;
+struct psc_listcache		 bcr_hold;
 struct pscrpc_nbreqset		*sl_nbrqset;
 struct timespec			 slvrCrcDelay = { 0, 50000000L }; /* 50 milliseconds */
 struct psc_waitq		 slvrWaitq = PSC_WAITQ_INIT;
@@ -63,8 +64,8 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 	struct slashrpc_cservice *csvc;
 	struct srm_bmap_crcwrt_req *mq;
 	struct srm_bmap_crcwrt_rep *mp;
-	struct biod_crcup_ref *bcr;
 	struct pscrpc_request *rq;
+	struct bcrcupd *bcr;
 	struct iovec *iovs;
 	size_t len;
 	uint32_t i;
@@ -137,7 +138,7 @@ __static void
 slvr_worker_push_crcups(void)
 {
 	static atomic_t busy = ATOMIC_INIT(0);
-	struct biod_crcup_ref *bcr, *tmp;
+	struct bcrcupd *bcr, *tmp;
 	struct psc_dynarray *bcrs;
 	struct timespec now;
 	int i, rc;
@@ -152,13 +153,13 @@ slvr_worker_push_crcups(void)
 	 * one is still inflight, we won't be able to initiate a new one.
 	 */
 	bcrs = PSCALLOC(sizeof(struct psc_dynarray));
-	spinlock(&binflCrcs.binfcrcs_lock);
 
 	/*
 	 * Leave scheduled bcr's on the list so that in case of a
 	 * failure ordering will be maintained.
 	 */
-	PLL_FOREACH(bcr, &binflCrcs.binfcrcs_ready) {
+	LIST_CACHE_LOCK(&bcr_ready);
+	LIST_CACHE_FOREACH(bcr, &bcr_ready) {
 		psc_assert(bcr->bcr_crcup.nups > 0);
 
 		if (!BII_TRYLOCK(bcr->bcr_bii))
@@ -171,8 +172,8 @@ slvr_worker_push_crcups(void)
 
 		if (bcr_2_bmap(bcr)->bcm_flags & BMAP_IOD_INFLIGHT)
 			DEBUG_BCR(PLL_FATAL, bcr, "tried to schedule "
-				  "multiple bcr's xid=%"PRIu64,
-				  bcr->bcr_bii->bii_bcr_xid_last);
+			    "multiple bcr's xid=%"PRIu64,
+			    bcr->bcr_bii->bii_bcr_xid_last);
 
 		bcr_2_bmap(bcr)->bcm_flags |= BMAP_IOD_INFLIGHT;
 
@@ -182,16 +183,18 @@ slvr_worker_push_crcups(void)
 		BII_ULOCK(bcr->bcr_bii);
 
 		DEBUG_BCR(PLL_INFO, bcr, "scheduled nbcrs=%d total_bcrs=%d",
-			  psc_dynarray_len(bcrs),
-			  atomic_read(&binflCrcs.binfcrcs_nbcrs));
+		    psc_dynarray_len(bcrs),
+		    lc_nitems(&bcr_ready) + lc_nitems(&bcr_hold));
 
 		if (psc_dynarray_len(bcrs) == MAX_BMAP_NCRC_UPDATES)
 			break;
 	}
+	LIST_CACHE_ULOCK(&bcr_ready);
 
 	PFL_GETTIMESPEC(&now);
 	/* Now scan for old bcr's hanging about. */
-	PLL_FOREACH_SAFE(bcr, tmp, &binflCrcs.binfcrcs_hold) {
+	LIST_CACHE_LOCK(&bcr_hold);
+	LIST_CACHE_FOREACH_SAFE(bcr, tmp, &bcr_hold) {
 		/* Use trylock here to avoid deadlock. */
 		if (!BII_TRYLOCK(bcr->bcr_bii))
 			continue;
@@ -202,11 +205,11 @@ slvr_worker_push_crcups(void)
 			continue;
 		}
 
-		bcr_hold_2_ready(&binflCrcs, bcr);
+		bcr_hold_2_ready(bcr);
 		DEBUG_BCR(PLL_INFO, bcr, "old, moved to ready");
 		BII_ULOCK(bcr->bcr_bii);
 	}
-	freelock(&binflCrcs.binfcrcs_lock);
+	LIST_CACHE_ULOCK(&bcr_hold);
 
 	if (!psc_dynarray_len(bcrs))
 		PSCFREE(bcrs);
@@ -224,10 +227,12 @@ slvr_worker_push_crcups(void)
 
 				BII_LOCK(bcr->bcr_bii);
 				bcr->bcr_flags &= ~BCR_SCHEDULED;
-				bcr_2_bmap(bcr)->bcm_flags &= ~BMAP_IOD_INFLIGHT;
+				bcr_2_bmap(bcr)->bcm_flags &=
+				    ~BMAP_IOD_INFLIGHT;
 				BII_ULOCK(bcr->bcr_bii);
 
-				DEBUG_BCR(PLL_INFO, bcr, "unsetting BCR_SCHEDULED");
+				DEBUG_BCR(PLL_INFO, bcr,
+				    "unsetting BCR_SCHEDULED");
 			}
 			psc_dynarray_free(bcrs);
 			PSCFREE(bcrs);
@@ -243,9 +248,9 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 {
 	struct srm_bmap_crcwrt_rep *mp;
 	struct slashrpc_cservice *csvc;
-	struct biod_crcup_ref *bcr;
 	struct bmap_iod_info *bii;
 	struct psc_dynarray *a;
+	struct bcrcupd *bcr;
 	int i;
 
 	OPSTAT_INCR(SLI_OPST_CRC_UPDATE_CB);
@@ -289,7 +294,7 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 			 * BCR_SCHEDULED in this case, but we do clear
 			 * BMAP_IOD_INFLIGHT.
 			 */
-			bcr_finalize(&binflCrcs, bcr);
+			bcr_finalize(bcr);
 	}
 	psc_dynarray_free(a);
 	PSCFREE(a);
@@ -302,7 +307,7 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 __static void
 slvr_worker_int(void)
 {
-	struct biod_crcup_ref *bcr = NULL;
+	struct bcrcupd *bcr = NULL;
 	struct timespec ts, slvr_ts;
 	struct bmap_iod_info *bii;
 	struct bmapc_memb *b;
@@ -316,7 +321,7 @@ slvr_worker_int(void)
 	PFL_GETTIMESPEC(&ts);
 	s = NULL;
 	if ((psc_pool_nfree(slBufsPool) > SLVR_MIN_FREE) ||
-	    lc_sz(&lruSlvrs) > SLVR_MIN_FREE) {
+	    lc_nitems(&lruSlvrs) > SLVR_MIN_FREE) {
 		LIST_CACHE_LOCK(&crcqSlvrs);
 
 		if ((s = lc_peekhead(&crcqSlvrs))) {
@@ -392,10 +397,11 @@ slvr_worker_int(void)
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	psc_assert(s->slvr_flags & SLVR_DATARDY);
 
-	/* Try our best to determine whether or we should hold off
-	 *   the crc operation strivonly crc slivers which have
-	 *   no pending writes.  This section directly below may race
-	 *   with slvr_wio_done().
+	/*
+	 * Try our best to determine whether or we should hold off the
+	 * CRC operation strivonly crc slivers which have no pending
+	 * writes.  This section directly below may race with
+	 * slvr_wio_done().
 	 */
 	if (s->slvr_pndgwrts > 0) {
 		s->slvr_flags |= SLVR_LRU;
@@ -407,9 +413,9 @@ slvr_worker_int(void)
 		goto start;
 	}
 
-	/* Ok, we've got a sliver to work on.
-	 *   From this point until we set to inflight, the slvr_lentry
-	 *   should be disjointed.
+	/*
+	 * OK, we've got a sliver to work on.  From this point until we
+	 * set to inflight, the slvr_lentry should be disjointed.
 	 */
 	s->slvr_flags |= SLVR_CRCING;
 
@@ -492,19 +498,19 @@ slvr_worker_int(void)
 
 		if (bcr->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS) {
 			if (pll_nitems(&bii->bii_bklog_bcrs))
-				/* This is a backlogged bcr, cap it and
-				 *   move on.
+				/*
+				 * This is a backlogged bcr, cap it and
+				 * move on.
 				 */
 				bcr->bcr_bii->bii_bcr = NULL;
 			else
 				/* The bcr is full, push it out now. */
-				bcr_hold_2_ready(&binflCrcs, bcr);
+				bcr_hold_2_ready(bcr);
 		}
 
 	} else {
 		bmap_op_start_type(b, BMAP_OPCNT_BCRSCHED);
 
-		/* Freed by bcr_ready_remove() */
 		bii->bii_bcr = bcr = psc_pool_get(bmap_crcupd_pool);
 		memset(bcr, 0, bmap_crcupd_pool->ppm_entsize);
 
@@ -532,7 +538,7 @@ slvr_worker_int(void)
 			pll_addtail(&bii->bii_bklog_bcrs, bcr);
 		} else {
 			BMAP_SETATTR(b, BMAP_IOD_BCRSCHED);
-			bcr_hold_add(&binflCrcs, bcr);
+			bcr_hold_add(bcr);
 		}
 	}
 
@@ -554,16 +560,13 @@ slvr_worker_init(void)
 {
 	int i;
 
-	INIT_SPINLOCK(&binflCrcs.binfcrcs_lock);
-	pll_init(&binflCrcs.binfcrcs_ready, struct biod_crcup_ref,
-	    bcr_lentry, &binflCrcs.binfcrcs_lock);
-	pll_init(&binflCrcs.binfcrcs_hold, struct biod_crcup_ref,
-	    bcr_lentry, &binflCrcs.binfcrcs_lock);
+	lc_reginit(&bcr_ready, struct bcrcupd, bcr_lentry, "bcr_ready");
+	lc_reginit(&bcr_hold, struct bcrcupd, bcr_lentry, "bcr_hold");
 
 	_psc_poolmaster_init(&bmap_crcupd_poolmaster,
-	    sizeof(struct biod_crcup_ref) +
+	    sizeof(struct bcrcupd) +
 	    sizeof(struct srt_bmap_crcwire) * MAX_BMAP_INODE_PAIRS,
-	    offsetof(struct biod_crcup_ref, bcr_lentry), PPMF_AUTO, 64,
+	    offsetof(struct bcrcupd, bcr_lentry), PPMF_AUTO, 64,
 	    64, 0, NULL, NULL, NULL, NULL, "bcrcupd");
 	bmap_crcupd_pool = psc_poolmaster_getmgr(&bmap_crcupd_poolmaster);
 

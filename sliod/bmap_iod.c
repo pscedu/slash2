@@ -66,8 +66,8 @@ bim_updateseq(uint64_t seq)
 	freelock(&bimSeq.bim_lock);
 
 	if (invalid)
-		psclog_notify("seq %"PRId64" is invalid (bim_minseq=%"PRId64")",
-			  seq, bimSeq.bim_minseq);
+		psclog_notice("seq %"PRId64" is invalid (bim_minseq=%"PRId64")",
+		    seq, bimSeq.bim_minseq);
 	return (invalid);
 }
 
@@ -140,63 +140,48 @@ bim_getcurseq(void)
 }
 
 void
-bcr_hold_2_ready(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
+bcr_hold_2_ready(struct bcrcupd *bcr)
 {
-	int locked;
-
 	BII_LOCK_ENSURE(bcr->bcr_bii);
 
 	psc_assert((bcr_2_bmap(bcr)->bcm_flags & BMAP_IOD_INFLIGHT) == 0);
 
-	locked = reqlock(&inf->binfcrcs_lock);
-	pll_remove(&inf->binfcrcs_hold, bcr);
-	pll_addtail(&inf->binfcrcs_ready, bcr);
-	ureqlock(&inf->binfcrcs_lock, locked);
+	lc_remove(&bcr_hold, bcr);
+	lc_add(&bcr_ready, bcr);
 
 	bcr->bcr_bii->bii_bcr = NULL;
 }
 
 void
-bcr_hold_add(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
+bcr_hold_add(struct bcrcupd *bcr)
 {
-	psc_assert(psclist_disjoint(&bcr->bcr_lentry));
-	pll_addtail(&inf->binfcrcs_hold, bcr);
-	atomic_inc(&inf->binfcrcs_nbcrs);
+	lc_addtail(&bcr_hold, bcr);
 }
 
 void
-bcr_ready_add(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
+bcr_ready_add(struct bcrcupd *bcr)
 {
 	BII_LOCK_ENSURE(bcr->bcr_bii);
-
-	psc_assert((bcr_2_bmap(bcr)->bcm_flags & BMAP_IOD_INFLIGHT) == 0); 
-
-	psc_assert(psclist_disjoint(&bcr->bcr_lentry));
-	pll_addtail(&inf->binfcrcs_ready, bcr);
-	atomic_inc(&inf->binfcrcs_nbcrs);
+	psc_assert((bcr_2_bmap(bcr)->bcm_flags & BMAP_IOD_INFLIGHT) == 0);
+	lc_addtail(&bcr_ready, bcr);
 }
 
 void
-bcr_hold_requeue(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
+bcr_hold_requeue(struct bcrcupd *bcr)
 {
-	int locked;
-
-	locked = reqlock(&inf->binfcrcs_lock);
-	pll_remove(&inf->binfcrcs_hold, bcr);
-	pll_addtail(&inf->binfcrcs_hold, bcr);
-	ureqlock(&inf->binfcrcs_lock, locked);
+	lc_remove(&bcr_hold, bcr);
+	lc_addtail(&bcr_hold, bcr);
 }
 
 void
-bcr_xid_check(struct biod_crcup_ref *bcr)
+bcr_xid_check(struct bcrcupd *bcr)
 {
 	int locked;
 
 	locked = BII_RLOCK(bcr->bcr_bii);
 	psc_assert(bcr->bcr_xid < bcr->bcr_bii->bii_bcr_xid);
 	psc_assert(bcr->bcr_xid == bcr->bcr_bii->bii_bcr_xid_last);
-	/* bcr_xid_check() must be called prior to bumping xid_last.
-	 */
+	/* bcr_xid_check() must be called prior to bumping xid_last. */
 	psc_assert(bcr->bcr_bii->bii_bcr_xid >
 		   bcr->bcr_bii->bii_bcr_xid_last);
 
@@ -204,7 +189,7 @@ bcr_xid_check(struct biod_crcup_ref *bcr)
 }
 
 static void
-bcr_xid_last_bump(struct biod_crcup_ref *bcr)
+bcr_xid_last_bump(struct bcrcupd *bcr)
 {
 	bcr_xid_check(bcr);
 	bcr->bcr_bii->bii_bcr_xid_last++;
@@ -247,16 +232,12 @@ biod_rlssched_locked(struct bmap_iod_info *bii)
  *	its reference to the bmap and free the CRC update structure.
  */
 __static void
-bcr_ready_remove(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
+bcr_ready_remove(struct bcrcupd *bcr)
 {
 	struct bmap_iod_info *bii = bcr->bcr_bii;
 
-	spinlock(&inf->binfcrcs_lock);
-	pll_remove(&inf->binfcrcs_ready, bcr);
-	atomic_dec(&inf->binfcrcs_nbcrs);
-	freelock(&inf->binfcrcs_lock);
+	lc_remove(&bcr_ready, bcr);
 
-	BII_LOCK(bcr->bcr_bii);
 	psc_assert(bcr->bcr_flags & BCR_SCHEDULED);
 	bcr_xid_last_bump(bcr);
 
@@ -279,13 +260,14 @@ bcr_ready_remove(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 }
 
 void
-bcr_finalize(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
+bcr_finalize(struct bcrcupd *bcr)
 {
 	struct bmap_iod_info *bii = bcr->bcr_bii;
 	struct bmapc_memb *b = bii_2_bmap(bii);
 
 	DEBUG_BCR(PLL_INFO, bcr, "finalize");
 
+	LIST_CACHE_LOCK(&bcr_ready);
 	BII_LOCK(bii);
 	psc_assert(b->bcm_flags & BMAP_IOD_BCRSCHED);
 
@@ -295,12 +277,13 @@ bcr_finalize(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 	 * at the end of this call.
 	 */
 	if (bii->bii_bcr_xid > bii->bii_bcr_xid_last + 1) {
-		struct biod_crcup_ref *tmp;
+		struct bcrcupd *tmp;
 
 		tmp = pll_gethead(&bii->bii_bklog_bcrs);
 		if (tmp) {
-			DEBUG_BCR(PLL_INFO, tmp, "backlogged bcr, nblklog=%d",
-				  pll_nitems(&bii->bii_bklog_bcrs));
+			DEBUG_BCR(PLL_INFO, tmp,
+			    "backlogged bcr, n_bklog=%d",
+			    pll_nitems(&bii->bii_bklog_bcrs));
 
 			if (pll_empty(&bii->bii_bklog_bcrs)) {
 				/*
@@ -311,12 +294,11 @@ bcr_finalize(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 				psc_assert(bii->bii_bcr == tmp ||
 					   !bii->bii_bcr);
 				if (tmp->bcr_crcup.nups ==
-				    MAX_BMAP_INODE_PAIRS &&
-				    !(b->bcm_flags & BMAP_IOD_INFLIGHT)) {
+				    MAX_BMAP_INODE_PAIRS) {
 					bii->bii_bcr = NULL;
-					bcr_ready_add(inf, tmp);
+					bcr_ready_add(tmp);
 				} else
-					bcr_hold_add(inf, tmp);
+					bcr_hold_add(tmp);
 
 			} else {
 				/*
@@ -324,13 +306,12 @@ bcr_finalize(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 				 * active bcr.
 				 */
 				psc_assert(bii->bii_bcr != tmp);
-				bcr_ready_add(inf, tmp);
+				bcr_ready_add(tmp);
 			}
 		}
 	}
-	BII_ULOCK(bii);
-
-	bcr_ready_remove(inf, bcr);
+	bcr_ready_remove(bcr);
+	LIST_CACHE_ULOCK(&bcr_ready);
 }
 
 void
@@ -352,7 +333,7 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 		nrls = 0;
 
 		bii = lc_getwait(&bmapRlsQ);
-		if (lc_sz(&bmapRlsQ) < MAX_BMAP_RELEASE)
+		if (lc_nitems(&bmapRlsQ) < MAX_BMAP_RELEASE)
 			/* Try to coalesce, wait for others.
 			 *   yes, this is a bit ugly.
 			 */
@@ -417,13 +398,13 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 		 */
 		rc = sli_rmi_getcsvc(&csvc);
 		if (rc) {
-			psclog_errorx("Failed to get MDS import rc=%d", rc);
+			psclog_errorx("failed to get MDS import rc=%d", rc);
 			goto end;
 		}
 
 		rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq, mq, mp);
 		if (rc) {
-			psclog_errorx("Failed to generate new req rc=%d", rc);
+			psclog_errorx("failed to generate new req rc=%d", rc);
 			sl_csvc_decref(csvc);
 			goto end;
 		}
@@ -437,7 +418,7 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 		sl_csvc_decref(csvc);
  end:
 		/* put any unreapable biods back to the list */
-		rc = lc_sz(&bmapRlsQ);
+		rc = lc_nitems(&bmapRlsQ);
 
 		DYNARRAY_FOREACH(bii, nrls, &a)
 			lc_addtail(&bmapRlsQ, bii);
@@ -453,7 +434,7 @@ void
 slibmaprlsthr_spawn(void)
 {
 	lc_reginit(&bmapRlsQ, struct bmap_iod_info, bii_lentry,
-	    "bmapRlsQ");
+	    "bmaprlsq");
 
 	pscthr_init(SLITHRT_BMAPRLS, 0, slibmaprlsthr_main, NULL, 0,
 	    "slibmaprlsthr");
@@ -469,11 +450,10 @@ iod_bmap_init(struct bmapc_memb *b)
 	memset(bii, 0, sizeof(*bii));
 	INIT_PSC_LISTENTRY(&bii->bii_lentry);
 	SPLAY_INIT(&bii->bii_slvrs);
-	pll_init(&bii->bii_bklog_bcrs, struct biod_crcup_ref,
-	    bcr_lentry, NULL);
+	pll_init(&bii->bii_bklog_bcrs, struct bcrcupd, bcr_lentry,
+	    NULL);
 
-	pll_init(&bii->bii_rls, struct bmap_iod_rls,
-	    bir_lentry, NULL);
+	pll_init(&bii->bii_rls, struct bmap_iod_rls, bir_lentry, NULL);
 
 	PFL_GETTIMESPEC(&bii->bii_age);
 
@@ -495,7 +475,6 @@ iod_bmap_finalcleanup(struct bmapc_memb *b)
 	psc_assert(pll_empty(&bii->bii_rls));
 	psc_assert(SPLAY_EMPTY(&bii->bii_slvrs));
 	psc_assert(psclist_disjoint(&bii->bii_lentry));
-
 	psc_assert(!psc_atomic32_read(&bii->bii_crcdrty_slvrs));
 }
 

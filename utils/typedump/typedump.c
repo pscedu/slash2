@@ -145,8 +145,7 @@ main(int argc, char *argv[])
 	PRTYPE(sl_siteid_t);
 	PRTYPE(slfgen_t);
 	PRTYPE(slfid_t);
-	PRTYPE(struct biod_crcup_ref);
-	PRTYPE(struct biod_infl_crcs);
+	PRTYPE(struct bcrcupd);
 	PRTYPE(struct bmap);
 	PRTYPE(struct bmap_cli_info);
 	PRTYPE(struct bmap_core_state);
@@ -449,6 +448,7 @@ main(int argc, char *argv[])
 	PRVAL(SLFID_MIN);
 	PRVAL(SLFID_NS);
 	PRVAL(SLFID_ROOT);
+	PRVAL(SLIOD_BMAP_RLS_WAIT_SECS);
 	PRVAL(SLI_RIC_BUFSZ);
 	PRVAL(SLI_RIC_NBUFS);
 	PRVAL(SLI_RIC_NTHREADS);
