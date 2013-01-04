@@ -131,32 +131,12 @@ struct slvr_ref {
 #define slvr_2_crc(s)							\
 	slvr_2_bmap_ondisk(s)->bod_crcs[(s)->slvr_num]
 
-#define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
-#define DEBUG_SLVR_FLAGS(s)						\
-	(s)->slvr_flags & SLVR_NEW		? "n" : "-",		\
-	(s)->slvr_flags & SLVR_SPLAYTREE	? "t" : "-",		\
-	(s)->slvr_flags & SLVR_FAULTING		? "f" : "-",		\
-	(s)->slvr_flags & SLVR_GETSLAB		? "G" : "-",		\
-	(s)->slvr_flags & SLVR_PINNED		? "p" : "-",		\
-	(s)->slvr_flags & SLVR_DATARDY		? "d" : "-",		\
-	(s)->slvr_flags & SLVR_DATAERR		? "E" : "-",		\
-	(s)->slvr_flags & SLVR_LRU		? "l" : "-",		\
-	(s)->slvr_flags & SLVR_CRCDIRTY		? "D" : "-",		\
-	(s)->slvr_flags & SLVR_CRCING		? "c" : "-",		\
-	(s)->slvr_flags & SLVR_FREEING		? "F" : "-",		\
-	(s)->slvr_flags & SLVR_SLBFREEING	? "b" : "-",		\
-	(s)->slvr_flags & SLVR_REPLDST		? "T" : "-",		\
-	(s)->slvr_flags & SLVR_REPLFAIL		? "x" : "-",		\
-	(s)->slvr_flags & SLVR_REPLWIRE		? "w" : "-",		\
-	(s)->slvr_flags & SLVR_AIOWAIT		? "a" : "-",		\
-	(s)->slvr_flags & SLVR_RDMODWR		? "m" : "-"
-
 #define DEBUG_SLVR(level, s, fmt, ...)					\
 	psclogs((level), SLISS_SLVR, "slvr@%p num=%hu pw=%u "		\
 	    "pr=%u cw=%u "						\
 	    "ncrc=%u dc=%d ts="PSCPRI_TIMESPEC" "			\
 	    "pri@%p slab@%p bmap@%p fid:"SLPRI_FID " iocb@%p flgs:"	\
-	    SLVR_FLAGS_FMT" :: "fmt,					\
+	    "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s :: " fmt,		\
 	    (s), (s)->slvr_num, (s)->slvr_pndgwrts,			\
 	    (s)->slvr_pndgreads, (s)->slvr_compwrts,			\
 	    (s)->slvr_ncrc, (s)->slvr_dirty_cnt,			\
@@ -166,7 +146,24 @@ struct slvr_ref {
 	    (s)->slvr_pri ?						\
 	      fcmh_2_fid(slvr_2_bmap(s)->bcm_fcmh) : FID_ANY,		\
 	    (s)->slvr_iocb,						\
-	    DEBUG_SLVR_FLAGS(s), ## __VA_ARGS__)
+	    (s)->slvr_flags & SLVR_NEW		? "n" : "-",		\
+	    (s)->slvr_flags & SLVR_SPLAYTREE	? "t" : "-",		\
+	    (s)->slvr_flags & SLVR_FAULTING	? "f" : "-",		\
+	    (s)->slvr_flags & SLVR_GETSLAB	? "G" : "-",		\
+	    (s)->slvr_flags & SLVR_PINNED	? "p" : "-",		\
+	    (s)->slvr_flags & SLVR_DATARDY	? "d" : "-",		\
+	    (s)->slvr_flags & SLVR_DATAERR	? "E" : "-",		\
+	    (s)->slvr_flags & SLVR_LRU		? "l" : "-",		\
+	    (s)->slvr_flags & SLVR_CRCDIRTY	? "D" : "-",		\
+	    (s)->slvr_flags & SLVR_CRCING	? "c" : "-",		\
+	    (s)->slvr_flags & SLVR_FREEING	? "F" : "-",		\
+	    (s)->slvr_flags & SLVR_SLBFREEING	? "b" : "-",		\
+	    (s)->slvr_flags & SLVR_REPLDST	? "T" : "-",		\
+	    (s)->slvr_flags & SLVR_REPLFAIL	? "x" : "-",		\
+	    (s)->slvr_flags & SLVR_REPLWIRE	? "w" : "-",		\
+	    (s)->slvr_flags & SLVR_AIOWAIT	? "a" : "-",		\
+	    (s)->slvr_flags & SLVR_RDMODWR	? "m" : "-",		\
+	    ## __VA_ARGS__)
 
 #define RIC_MAX_SLVRS_PER_IO	2
 
@@ -200,22 +197,27 @@ struct sli_iocb {
 	int			  iocb_rc;
 };
 
+#define slvr_lookup(n, bii, rw)						\
+	_slvr_lookup(PFL_CALLERINFO(), (n), (bii), (rw))
+
 struct slvr_ref *
-	slvr_lookup(uint32_t, struct bmap_iod_info *, enum rw);
+	_slvr_lookup(const struct pfl_callerinfo *pci, uint32_t,
+	    struct bmap_iod_info *, enum rw);
 void	slvr_cache_init(void);
 void	slvr_clear_inuse(struct slvr_ref *, int, uint32_t);
 int	slvr_do_crc(struct slvr_ref *);
 ssize_t	slvr_fsbytes_wio(struct slvr_ref *, uint32_t, uint32_t);
 ssize_t	slvr_io_prep(struct slvr_ref *, uint32_t, uint32_t, enum rw,
 	    struct sli_aiocb_reply **);
+int	slvr_lru_tryunpin_locked(struct slvr_ref *);
 void	slvr_repl_prep(struct slvr_ref *, int);
 void	slvr_rio_done(struct slvr_ref *);
 void	slvr_schedule_crc(struct slvr_ref *);
 void	slvr_slab_prep(struct slvr_ref *, enum rw);
-int	slvr_lru_tryunpin_locked(struct slvr_ref *);
+void	slvr_try_crcsched_locked(struct slvr_ref *);
 void	slvr_wio_done(struct slvr_ref *);
 void	slvr_worker_init(void);
-void	slvr_try_crcsched_locked(struct slvr_ref *);
+
 void	sli_aio_reply_setup(struct sli_aiocb_reply *,
 	    struct pscrpc_request *, uint32_t, uint32_t,
 	    struct slvr_ref **, int, struct iovec *, int, enum rw);
