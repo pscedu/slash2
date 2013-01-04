@@ -125,16 +125,16 @@ struct bmap {
 #define bmapc_memb bmap
 
 /* shared bmap_flags */
-#define BMAP_RD			(1 << 0)	/* XXX use enum rw */
-#define BMAP_WR			(1 << 1)	/* XXX use enum rw */
-#define BMAP_INIT		(1 << 2)	/* initializing from disk/network */
-#define BMAP_DIO		(1 << 3)	/* direct I/O, no client caching */
-#define BMAP_DIORQ		(1 << 4)
-#define BMAP_TOFREE		(1 << 5)	/* refcnt dropped to zero, removing */
-#define BMAP_DIRTY		(1 << 6)
-#define BMAP_MEMRLS		(1 << 7)
-#define BMAP_DIRTY2LRU		(1 << 8)
-#define BMAP_TIMEOQ		(1 << 9)	/* on timeout queue */
+#define BMAP_RD			(1 <<  0)	/* XXX use enum rw */
+#define BMAP_WR			(1 <<  1)	/* XXX use enum rw */
+#define BMAP_INIT		(1 <<  2)	/* initializing from disk/network */
+#define BMAP_DIO		(1 <<  3)	/* direct I/O, no client caching */
+#define BMAP_DIORQ		(1 <<  4)
+#define BMAP_TOFREE		(1 <<  5)	/* refcnt dropped to zero, removing */
+#define BMAP_DIRTY		(1 <<  6)
+#define BMAP_MEMRLS		(1 <<  7)
+#define BMAP_DIRTY2LRU		(1 <<  8)
+#define BMAP_TIMEOQ		(1 <<  9)	/* on timeout queue */
 #define BMAP_IONASSIGN		(1 << 10)	/* has been assigned to an ION for writes */
 #define BMAP_MDCHNG		(1 << 11)	/* op mode changing (e.g. READ -> WRITE) */
 #define BMAP_WAITERS		(1 << 12)	/* has bcm_fcmh waiters */
@@ -183,6 +183,8 @@ struct bmap {
 	(b)->bcm_flags & BMAP_ORPHAN	? "O" : "",			\
 	(b)->bcm_flags & BMAP_BUSY	? "B" : "",			\
 	(b)->bcm_flags & BMAP_NEW	? "N" : "",			\
+	(b)->bcm_flags & BMAP_ARCHIVER	? "C" : "",			\
+	(b)->bcm_flags & BMAP_REPLAY	? "P" : "",			\
 	(b)->bcm_flags & ~(_BMAP_FLSHFT - 1) ? "+" : "",		\
 	(b)->bcm_fcmh ? fcmh_2_fid((b)->bcm_fcmh) : 0,			\
 	psc_atomic32_read(&(b)->bcm_opcnt)
