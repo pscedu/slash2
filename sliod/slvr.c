@@ -26,6 +26,7 @@
 #include "subsys_iod.h"
 
 #include "psc_ds/listcache.h"
+#include "psc_ds/treeutil.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
@@ -850,14 +851,16 @@ slvr_slab_prep(struct slvr_ref *s, enum rw rw)
  newbuf:
 	if (s->slvr_flags & SLVR_NEW) {
 		if (!tmp) {
-			/* Drop the lock before potentially blocking
-			 *   in the pool reaper.  To do this we
-			 *   must first allocate to a tmp pointer.
+			/*
+			 * Drop the lock before potentially blocking in
+			 * the pool reaper.  To do this we must first
+			 * allocate to a tmp pointer.
 			 */
+
  getbuf:
 			SLVR_ULOCK(s);
 
-			tmp = psc_pool_get(slBufsPool);
+			tmp = psc_pool_get(sl_bufs_pool);
 			sl_buffer_fresh_assertions(tmp);
 			sl_buffer_clear(tmp, tmp->slb_blksz * tmp->slb_nblks);
 			SLVR_LOCK(s);
@@ -896,7 +899,7 @@ slvr_slab_prep(struct slvr_ref *s, enum rw rw)
 	SLVR_ULOCK(s);
 
 	if (tmp)
-		psc_pool_return(slBufsPool, tmp);
+		psc_pool_return(sl_bufs_pool, tmp);
 }
 
 /**
@@ -1098,9 +1101,9 @@ slvr_rio_done(struct slvr_ref *s)
 	s->slvr_pndgreads--;
 	if (slvr_lru_tryunpin_locked(s)) {
 		slvr_lru_requeue(s, 1);
-		DEBUG_SLVR(PLL_INFO, s, "unpinned");
+		DEBUG_SLVR(PLL_INFO, s, "decref, unpinned");
 	} else
-		DEBUG_SLVR(PLL_INFO, s, "ops still pending or dirty");
+		DEBUG_SLVR(PLL_INFO, s, "decref, ops still pending or dirty");
 
 	SLVR_ULOCK(s);
 }
@@ -1143,6 +1146,8 @@ slvr_try_crcsched_locked(struct slvr_ref *s)
 	s->slvr_pndgwrts--;
 	s->slvr_compwrts++;
 
+	DEBUG_SLVR(PLL_DEBUG, s, "decref");
+
 	if (!s->slvr_pndgwrts && (s->slvr_flags & SLVR_LRU)) {
 		if (s->slvr_flags & SLVR_CRCDIRTY)
 			slvr_schedule_crc_locked(s);
@@ -1174,7 +1179,7 @@ slvr_lru_tryunpin_locked(struct slvr_ref *s)
 
 	if (s->slvr_flags & (SLVR_DATAERR | SLVR_REPLFAIL)) {
 		s->slvr_flags |= SLVR_SLBFREEING;
-		slvr_slb_free_locked(s, slBufsPool);
+		slvr_slb_free_locked(s, sl_bufs_pool);
 	}
 
 	return (1);
@@ -1220,13 +1225,16 @@ slvr_wio_done(struct slvr_ref *s)
 			 * the MDS.
 			 */
 			s->slvr_flags |= SLVR_SLBFREEING;
-			slvr_slb_free_locked(s, slBufsPool);
+			slvr_slb_free_locked(s, sl_bufs_pool);
 			s->slvr_flags &= ~SLVR_REPLFAIL;
 
 		} else {
 			s->slvr_flags |= SLVR_DATARDY;
 			SLVR_WAKEUP(s);
 		}
+
+		DEBUG_SLVR(PLL_DEBUG, s, "decref");
+
 		slvr_lru_requeue(s, 0);
 		SLVR_ULOCK(s);
 
@@ -1250,7 +1258,8 @@ slvr_wio_done(struct slvr_ref *s)
  *	is being freed.
  */
 struct slvr_ref *
-slvr_lookup(uint32_t num, struct bmap_iod_info *bii, enum rw rw)
+_slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
+    struct bmap_iod_info *bii, enum rw rw)
 {
 	struct slvr_ref *s, *tmp = NULL, ts;
 
@@ -1265,7 +1274,8 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *bii, enum rw rw)
 		SLVR_LOCK(s);
 		if (s->slvr_flags & SLVR_FREEING) {
 			SLVR_ULOCK(s);
-			/* BIOD lock is required to free the slvr.
+			/*
+			 * Lock is required to free the slvr.
 			 * It must be held here to prevent the slvr
 			 * from being freed before we release the lock.
 			 */
@@ -1292,29 +1302,28 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *bii, enum rw rw)
 			BII_ULOCK(bii);
 			tmp = psc_pool_get(slvr_pool);
 			goto retry;
-		} else
-			s = tmp;
+		}
 
+		s = tmp;
 		memset(s, 0, sizeof(*s));
 		s->slvr_num = num;
 		s->slvr_flags = SLVR_NEW | SLVR_SPLAYTREE | SLVR_PINNED;
 		s->slvr_pri = bii;
-		s->slvr_slab = NULL;
-		INIT_PSC_LISTENTRY(&tmp->slvr_lentry);
-		INIT_SPINLOCK(&tmp->slvr_lock);
-		pll_init(&tmp->slvr_pndgaios, struct sli_aiocb_reply,
-			 aiocbr_lentry, &tmp->slvr_lock);
+		INIT_PSC_LISTENTRY(&s->slvr_lentry);
+		INIT_SPINLOCK(&s->slvr_lock);
+		pll_init(&s->slvr_pndgaios, struct sli_aiocb_reply,
+		    aiocbr_lentry, &s->slvr_lock);
 
 		if (rw == SL_WRITE)
 			s->slvr_pndgwrts = 1;
 		else
 			s->slvr_pndgreads = 1;
 
-		/* XXX XINSERT */
-		SPLAY_INSERT(biod_slvrtree, &bii->bii_slvrs, tmp);
+		PSC_SPLAY_XINSERT(biod_slvrtree, &bii->bii_slvrs, s);
 		bmap_op_start_type(bii_2_bmap(bii), BMAP_OPCNT_SLVR);
 		BII_ULOCK(bii);
 	}
+	DEBUG_SLVR(PLL_DEBUG, s, "incref");
 	return (s);
 }
 
@@ -1324,6 +1333,7 @@ slvr_remove(struct slvr_ref *s)
 	struct bmap_iod_info *bii;
 
 	DEBUG_SLVR(PLL_DEBUG, s, "freeing slvr");
+
 	/* Slvr should be detached from any listheads. */
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
 	psc_assert(!(s->slvr_flags & SLVR_SPLAYTREE));
@@ -1332,8 +1342,7 @@ slvr_remove(struct slvr_ref *s)
 	bii = slvr_2_bii(s);
 
 	BII_LOCK(bii);
-	/* XXX XREMOVE */
-	SPLAY_REMOVE(biod_slvrtree, &bii->bii_slvrs, s);
+	PSC_SPLAY_XREMOVE(biod_slvrtree, &bii->bii_slvrs, s);
 	bmap_op_done_type(bii_2_bmap(bii), BMAP_OPCNT_SLVR);
 
 	psc_pool_return(slvr_pool, s);
@@ -1359,9 +1368,9 @@ slvr_slb_free_locked(struct slvr_ref *s, struct psc_poolmgr *m)
 }
 
 /**
- * slvr_buffer_reap - The reclaim function for slBufsPool.  Note that
+ * slvr_buffer_reap - The reclaim function for sl_bufs_pool.  Note that
  *	our caller psc_pool_get() ensures that we are called
- *	exclusviely.
+ *	exclusively.
  */
 int
 slvr_buffer_reap(struct psc_poolmgr *m)
@@ -1378,18 +1387,20 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 		DEBUG_SLVR(PLL_INFO, s, "considering for reap, nwaiters=%d",
 			   atomic_read(&m->ppm_nwaiters));
 
-		/* We are reaping, so it is fine to back off on some
-		 *   slivers.  We have to use a reqlock here because
-		 *   slivers do not have private spinlocks, instead
-		 *   they use the lock of the bii.  So if this thread
-		 *   tries to free a slvr from the same bii trylock
-		 *   will abort.
+		/*
+		 * We are reaping, so it is fine to back off on some
+		 * slivers.  We have to use a reqlock here because
+		 * slivers do not have private spinlocks, instead they
+		 * use the lock of the bii.  So if this thread tries to
+		 * free a slvr from the same bii trylock will abort.
 		 */
 		if (!SLVR_TRYRLOCK(s, &locked))
 			continue;
 
-		/* Look for slvrs which can be freed, slvr_lru_freeable()
-		 *   returning true means that no slab is attached.
+		/*
+		 * Look for slvrs which can be freed;
+		 * slvr_lru_freeable() returning true means that no slab
+		 * is attached.
 		 */
 		if (slvr_lru_freeable(s)) {
 			psc_dynarray_add(&a, s);
@@ -1399,9 +1410,10 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 		}
 
 		if (slvr_lru_slab_freeable(s)) {
-			/* At this point we know that the slab can be
-			 *   reclaimed, however the slvr itself may
-			 *   have to stay.
+			/*
+			 * At this point we know that the slab can be
+			 * reclaimed, however the slvr itself may have
+			 * to stay.
 			 */
 			psc_dynarray_add(&a, s);
 			s->slvr_flags |= SLVR_SLBFREEING;

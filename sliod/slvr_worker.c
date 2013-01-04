@@ -320,7 +320,7 @@ slvr_worker_int(void)
  start:
 	PFL_GETTIMESPEC(&ts);
 	s = NULL;
-	if ((psc_pool_nfree(slBufsPool) > SLVR_MIN_FREE) ||
+	if ((psc_pool_nfree(sl_bufs_pool) > SLVR_MIN_FREE) ||
 	    lc_nitems(&lruSlvrs) > SLVR_MIN_FREE) {
 		LIST_CACHE_LOCK(&crcqSlvrs);
 
