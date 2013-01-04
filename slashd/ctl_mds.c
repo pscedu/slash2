@@ -588,8 +588,8 @@ slmctlparam_nextfid_set(const char *val)
 struct psc_ctlop slmctlops[] = {
 	PSC_CTLDEFOPS,
 	{ slmctlrep_getbml,		sizeof(struct slmctlmsg_bml) },
-	{ slctlrep_getconns,		sizeof(struct slctlmsg_conn) },
-	{ slctlrep_getfcmhs,		sizeof(struct slctlmsg_fcmh) },
+	{ slctlrep_getconn,		sizeof(struct slctlmsg_conn) },
+	{ slctlrep_getfcmh,		sizeof(struct slctlmsg_fcmh) },
 	{ slmctlrep_getreplpairs,	sizeof(struct slmctlmsg_replpair) },
 	{ slmctlrep_getstatfs,		sizeof(struct slmctlmsg_statfs) },
 	{ slmctlcmd_stop,		0 }
