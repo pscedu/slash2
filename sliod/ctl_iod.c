@@ -490,11 +490,12 @@ sliriithr_get(struct psc_thread *thr, struct psc_ctlmsg_thread *pcst)
 struct psc_ctlop slictlops[] = {
 	PSC_CTLDEFOPS,
 	{ slictlrep_getreplwkst,	sizeof(struct slictlmsg_replwkst ) },
-	{ slctlrep_getconns,		sizeof(struct slctlmsg_conn ) },
-	{ slctlrep_getfcmhs,		sizeof(struct slctlmsg_fcmh ) },
+	{ slctlrep_getconn,		sizeof(struct slctlmsg_conn ) },
+	{ slctlrep_getfcmh,		sizeof(struct slctlmsg_fcmh ) },
 	{ slictlcmd_export,		sizeof(struct slictlmsg_fileop) },
 	{ slictlcmd_import,		sizeof(struct slictlmsg_fileop) },
-	{ slictlcmd_stop,		0 }
+	{ slictlcmd_stop,		0 },
+	{ slctlrep_getbmap,		sizeof(struct slctlmsg_bmap) }
 };
 
 psc_ctl_thrget_t psc_ctl_thrgets[] = {
@@ -548,7 +549,6 @@ struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("slvr_aio_reply"),
 	PFL_OPSTAT_INIT("srmt_release")
 };
-
 
 PFLCTL_SVR_DEFS;
 

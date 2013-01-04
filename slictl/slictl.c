@@ -41,9 +41,15 @@ const char	*progname;
 const char	*daemon_name = "sliod";
 
 void
+packshow_bmaps(__unusedx char *bmaps)
+{
+	psc_ctlmsg_push(SLICMT_GETBMAP, sizeof(struct slctlmsg_bmap));
+}
+
+void
 packshow_conns(__unusedx char *conn)
 {
-	psc_ctlmsg_push(SLICMT_GETCONNS, sizeof(struct slctlmsg_conn));
+	psc_ctlmsg_push(SLICMT_GETCONN, sizeof(struct slctlmsg_conn));
 }
 
 void
@@ -194,12 +200,13 @@ void
 slictlcmd_stop(int ac, __unusedx char *av[])
 {
 	if (ac > 1)
-		errx(1, "stop: unknown arguments");
+		errx(1, "stop: invalid arguments");
 	psc_ctlmsg_push(SLICMT_STOP, 0);
 }
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 	PSC_CTLSHOW_DEFS,
+	{ "bmaps",		packshow_bmaps },
 	{ "connections",	packshow_conns },
 	{ "fcmhs",		packshow_fcmhs },
 	{ "replwkst",		packshow_replwkst },
@@ -217,7 +224,8 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 	{ sl_fcmh_prhdr,	sl_fcmh_prdat,		sizeof(struct slctlmsg_fcmh),		NULL },
 	{ NULL,			NULL,			sizeof(struct slictlmsg_fileop),	NULL },
 	{ NULL,			NULL,			sizeof(struct slictlmsg_fileop),	NULL },
-	{ NULL,			NULL,			0,					NULL }
+	{ NULL,			NULL,			0,					NULL },
+	{ sl_bmap_prhdr,	sl_bmap_prdat,		sizeof(struct slctlmsg_bmap),		NULL }
 };
 
 psc_ctl_prthr_t psc_ctl_prthrs[] = {

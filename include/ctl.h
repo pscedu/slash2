@@ -47,4 +47,11 @@ struct slctlmsg_fcmh {
 	int32_t			scf_refcnt;
 };
 
+struct slctlmsg_bmap {
+	struct slash_fidgen	scb_fg;
+	uint32_t		scb_bno;
+	 int32_t		scb_opcnt;
+	uint32_t		scb_flags;
+};
+
 #endif /* _SL_CTL_H_ */
