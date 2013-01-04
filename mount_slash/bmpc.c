@@ -24,6 +24,7 @@
 
 #include "pfl/fsmod.h"
 #include "psc_ds/lockedlist.h"
+#include "psc_ds/treeutil.h"
 #include "psc_util/atomic.h"
 #include "psc_util/pool.h"
 #include "psc_util/ctlsvr.h"
@@ -127,7 +128,7 @@ bmpce_lookup_locked(struct bmap_pagecache *bmpc, struct bmpc_ioreq *r,
 			bmpce_useprep(e, r, wq);
 
 			OPSTAT_INCR(SLC_OPST_BMPCE_INSERT);
-			SPLAY_INSERT(bmap_pagecachetree,
+			PSC_SPLAY_XINSERT(bmap_pagecachetree,
 			    &bmpc->bmpc_tree, e);
 		}
 	}
@@ -159,8 +160,7 @@ bmpce_free(struct bmap_pagecache_entry *e,
 	LOCK_ENSURE(&bmpc->bmpc_lock);
 	DEBUG_BMPCE(PLL_INFO, e, "freeing");
 
-	psc_assert(SPLAY_REMOVE(bmap_pagecachetree, &bmpc->bmpc_tree,
-	    e));
+	PSC_SPLAY_XREMOVE(bmap_pagecachetree, &bmpc->bmpc_tree, e);
 
 	OPSTAT_INCR(SLC_OPST_BMPCE_PUT);
 	bmpce_init(bmpcePoolMgr, e);
