@@ -26,4 +26,7 @@ void sl_conn_prdat(const struct psc_ctlmsghdr *, const void *);
 void sl_fcmh_prhdr(struct psc_ctlmsghdr *, const void *);
 void sl_fcmh_prdat(const struct psc_ctlmsghdr *, const void *);
 
+void sl_bmap_prhdr(struct psc_ctlmsghdr *, const void *);
+void sl_bmap_prdat(const struct psc_ctlmsghdr *, const void *);
+
 #endif /* _SL_CTLCLI_H_ */

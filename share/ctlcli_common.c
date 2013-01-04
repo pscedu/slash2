@@ -152,6 +152,42 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	strlcpy(lastres, res, sizeof(lastres));
 }
 
+void
+sl_bmap_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
+{
+	printf("%-16s %10s %-18s %7s\n",
+	    "fid", "bno", "flags", "refs");
+}
+
+void
+sl_bmap_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
+{
+	const struct slctlmsg_bmap *scb = m;
+
+	printf("%016"SLPRIxFID" %10d "
+	    "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c %7u\n",
+	    scb->scb_fg.fg_fid, scb->scb_bno,
+	    scb->scb_flags & BMAP_RD		? 'R' : '-',
+	    scb->scb_flags & BMAP_WR		? 'W' : '-',
+	    scb->scb_flags & BMAP_INIT		? 'I' : '-',
+	    scb->scb_flags & BMAP_DIO		? 'D' : '-',
+	    scb->scb_flags & BMAP_DIORQ		? 'Q' : '-',
+	    scb->scb_flags & BMAP_TOFREE	? 'F' : '-',
+	    scb->scb_flags & BMAP_DIRTY		? 'd' : '-',
+	    scb->scb_flags & BMAP_MEMRLS	? 'M' : '-',
+	    scb->scb_flags & BMAP_DIRTY2LRU	? 'L' : '-',
+	    scb->scb_flags & BMAP_TIMEOQ	? 'T' : '-',
+	    scb->scb_flags & BMAP_IONASSIGN	? 'A' : '-',
+	    scb->scb_flags & BMAP_MDCHNG	? 'G' : '-',
+	    scb->scb_flags & BMAP_WAITERS	? 'w' : '-',
+	    scb->scb_flags & BMAP_ORPHAN	? 'O' : '-',
+	    scb->scb_flags & BMAP_BUSY		? 'B' : '-',
+	    scb->scb_flags & BMAP_NEW		? 'N' : '-',
+	    scb->scb_flags & BMAP_ARCHIVER	? 'C' : '-',
+	    scb->scb_flags & BMAP_REPLAY	? 'P' : '-',
+	    scb->scb_opcnt);
+}
+
 #ifdef _SLASH_MDS
 # define BLKSIZE_LABEL "msize"
 #else

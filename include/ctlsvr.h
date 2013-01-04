@@ -20,8 +20,9 @@
 #ifndef _SL_CTLSVR_H_
 #define _SL_CTLSVR_H_
 
-int slctlrep_getconns(int, struct psc_ctlmsghdr *, void *);
-int slctlrep_getfcmhs(int, struct psc_ctlmsghdr *, void *);
+int slctlrep_getconn(int, struct psc_ctlmsghdr *, void *);
+int slctlrep_getfcmh(int, struct psc_ctlmsghdr *, void *);
+int slctlrep_getbmap(int, struct psc_ctlmsghdr *, void *);
 
 void slctlparam_version_get(char *);
 

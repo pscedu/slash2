@@ -61,13 +61,13 @@ slctl_fillconn(struct slctlmsg_conn *scc,
 }
 
 /**
- * slctlrep_getconns - Send a response to a "GETCONNS" inquiry.
+ * slctlrep_getconn - Send a response to a "GETCONN" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to examine and reuse.
  */
 int
-slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
+slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct slashrpc_cservice *csvc;
 	struct slctlmsg_conn *scc = m;
@@ -146,7 +146,7 @@ slctlmsg_fcmh_send(int fd, struct psc_ctlmsghdr *mh,
 }
 
 int
-slctlrep_getfcmhs(int fd, struct psc_ctlmsghdr *mh, void *m)
+slctlrep_getfcmh(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct slctlmsg_fcmh *scf = m;
 	struct psc_hashbkt *b;
@@ -175,6 +175,47 @@ slctlrep_getfcmhs(int fd, struct psc_ctlmsghdr *mh, void *m)
 			rc = psc_ctlsenderr(fd, mh,
 			    "FID "SLPRI_FID" not in cache",
 			    scf->scf_fg.fg_fid);
+	}
+	return (rc);
+}
+
+__static int
+slctlmsg_bmap_send(int fd, struct psc_ctlmsghdr *mh,
+    struct slctlmsg_bmap *scb, struct bmap *b)
+{
+	scb->scb_fg = b->bcm_fcmh->fcmh_fg;
+	scb->scb_bno = b->bcm_bmapno;
+	scb->scb_opcnt = psc_atomic32_read(&b->bcm_opcnt);
+	scb->scb_flags = b->bcm_flags;
+	return (psc_ctlmsg_sendv(fd, mh, scb));
+}
+
+int
+slctlrep_getbmap(int fd, struct psc_ctlmsghdr *mh, void *m)
+{
+	struct slctlmsg_bmap *scb = m;
+	struct psc_hashbkt *hb;
+	struct fidc_membh *f;
+	struct bmap *b;
+	int rc;
+
+	rc = 1;
+	PSC_HASHTBL_FOREACH_BUCKET(hb, &fidcHtable) {
+		psc_hashbkt_lock(hb);
+		PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, f, hb) {
+			FCMH_LOCK(f);
+			SPLAY_FOREACH(b, bmap_cache, &f->fcmh_bmaptree) {
+				rc = slctlmsg_bmap_send(fd, mh, scb, b);
+				if (!rc)
+					break;
+			}
+			FCMH_ULOCK(f);
+			if (!rc)
+				break;
+		}
+		psc_hashbkt_unlock(hb);
+		if (!rc)
+			break;
 	}
 	return (rc);
 }
