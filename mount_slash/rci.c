@@ -105,13 +105,15 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 	r = car->car_argv.pointer_arg[MSL_CBARG_BIORQ];
 	if (car->car_cbf == msl_read_cb) {
 		struct bmap_pagecache_entry *e;
-		struct iovec iovs[MAX_BMAPS_REQ];
+		struct iovec *iovs = NULL;
 		struct psc_dynarray *a;
 		int i;
 
 		OPSTAT_INCR(SLC_OPST_READ_CB);
 		a = car->car_argv.pointer_arg[MSL_CBARG_BMPCE];
 
+ 		/* MAX_BMAPS_REQ*SLASH_BMAP_SIZE/BMPC_BUFSZ is just too large */
+		iovs = PSCALLOC(sizeof(struct iovec) * psc_dynarray_len(a));
 		DYNARRAY_FOREACH(e, i, a) {
 			if (!mq->rc) {
 				iovs[i].iov_base = e->bmpce_base;
@@ -130,6 +132,8 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 			mq->rc = rsx_bulkserver(rq, BULK_GET_SINK,
 			    SRCI_BULK_PORTAL, iovs,
 			    psc_dynarray_len(a));
+
+		PSCFREE(iovs);
 
 	} else if (car->car_cbf == msl_readahead_cb) {
 		struct bmap_pagecache_entry *e, **bmpces =
