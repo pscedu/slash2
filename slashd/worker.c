@@ -61,7 +61,7 @@ pfl_wkthr_main(__unusedx struct psc_thread *thr)
 		if (wkrq->wkrq_cbf(p)) {
 			LIST_CACHE_LOCK(&pfl_workq);
 			lc_addhead(&pfl_workq, wkrq);
-			if (lc_sz(&pfl_workq) == 1)
+			if (lc_nitems(&pfl_workq) == 1)
 				psc_waitq_waitrel_us(
 				    &pfl_workq.plc_wq_empty,
 				    &pfl_workq.plc_lock, 1);

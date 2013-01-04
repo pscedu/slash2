@@ -1023,7 +1023,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			BMAP_LOCK(b);
 			DEBUG_BMAP(PLL_DEBUG, b, "timeoq try reap"
 			    " (nbmaps=%zd) etime("PSCPRI_TIMESPEC")",
-			    lc_sz(&bmapTimeoutQ),
+			    lc_nitems(&bmapTimeoutQ),
 			    PSCPRI_TIMESPEC_ARGS(&bci->bci_etime));
 
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
@@ -1143,9 +1143,9 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			break;
 
 		timespecsub(&nto, &crtime, &nto);
-		psclogs_debug(SLSS_BMAP, "waited for ("PSCPRI_TIMESPEC")"
-		    " lc_sz=%zd", PSCPRI_TIMESPEC_ARGS(&nto),
-		    lc_sz(&bmapTimeoutQ));
+		psclogs_debug(SLSS_BMAP, "waited for ("PSCPRI_TIMESPEC") "
+		    "nitems=%zd", PSCPRI_TIMESPEC_ARGS(&nto),
+		    lc_nitems(&bmapTimeoutQ));
 	}
 	psc_dynarray_free(&rels);
 }
@@ -1153,16 +1153,15 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 static void
 bmap_flush_outstanding_rpcwait(void)
 {
-	/* XXX this should really be held in the import / resm on a
-	 *   per sliod basis using multiwait instead of a single global
-	 *   value
+	/*
+	 * XXX this should really be held in the import/resm on a per
+	 * sliod basis using multiwait instead of a single global value.
 	 */
 	spinlock(&bmapFlushLock);
 	while (((MAX_OUTSTANDING_RPCS - atomic_read(&outstandingRpcCnt)) <= 0) ||
 	       bmapFlushTimeoFlags & BMAPFLSH_RPCWAIT) {
 		bmapFlushTimeoFlags |= BMAPFLSH_RPCWAIT;
-		/* RPC completion will wake us up.
-		 */
+		/* RPC completion will wake us up. */
 		psc_waitq_waitrel(&bmapFlushWaitq, &bmapFlushLock,
 			  &bmapFlushWaitSecs);
 		spinlock(&bmapFlushLock);
