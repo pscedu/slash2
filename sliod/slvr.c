@@ -920,7 +920,8 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 	 * Note we have taken our read or write references, so the
 	 * sliver won't be freed from under us.
 	 */
-	if (s->slvr_flags & SLVR_FAULTING && !(s->slvr_flags & SLVR_REPLDST)) {
+	if (s->slvr_flags & SLVR_FAULTING &&
+	    !(s->slvr_flags & SLVR_REPLDST)) {
 		/*
 		 * Common courtesy requires us to wait for another
 		 * thread's work FIRST.  Otherwise, we could bail out
@@ -1161,14 +1162,17 @@ slvr_lru_tryunpin_locked(struct slvr_ref *s)
 
 	psc_assert(s->slvr_flags & SLVR_LRU);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
-	psc_assert(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR));
 
-	psc_assert(!(s->slvr_flags &
-	    (SLVR_NEW | SLVR_FAULTING | SLVR_GETSLAB)));
+	psc_assert(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR |
+	    SLVR_REPLFAIL));
+	psc_assert(!(s->slvr_flags & (SLVR_NEW | SLVR_GETSLAB)));
+
+	if ((s->slvr_flags & SLVR_REPLDST) == 0)
+		psc_assert(!(s->slvr_flags & SLVR_FAULTING));
 
 	s->slvr_flags &= ~SLVR_PINNED;
 
-	if (s->slvr_flags & SLVR_DATAERR) {
+	if (s->slvr_flags & (SLVR_DATAERR | SLVR_REPLFAIL)) {
 		s->slvr_flags |= SLVR_SLBFREEING;
 		slvr_slb_free_locked(s, slBufsPool);
 	}
