@@ -162,7 +162,7 @@ struct bmap {
 #define BMAP_CLEARATTR(b, fl)	CLEARATTR_LOCKED(&(b)->bcm_lock, &(b)->bcm_flags, (fl))
 
 #define _DEBUG_BMAP_FMT		"bmap@%p bno:%u flg:%#x:"		\
-				"%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "	\
+				"%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s " \
 				"fid:"SLPRI_FID" opcnt=%u "
 
 #define _DEBUG_BMAP_FMTARGS(b)						\
