@@ -90,7 +90,10 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 			psc_assert(s->slvr_pndgwrts > 0);
 			psc_assert(s->slvr_flags & SLVR_REPLDST);
 			s->slvr_pndgwrts--;
-			s->slvr_flags &= ~(SLVR_REPLDST|SLVR_REPLWIRE);
+			s->slvr_flags &= ~(SLVR_REPLDST | SLVR_REPLWIRE);
+
+			DEBUG_SLVR(PLL_DEBUG, s, "decref");
+
 			SLVR_WAKEUP(s);
 		} else {
 			psc_vbitmap_clearall(s->slvr_slab->slb_inuse);
@@ -100,8 +103,8 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		SLVR_ULOCK(s);
 	}
 
-	DEBUG_SLVR(rc ? PLL_ERROR : PLL_INFO, s, "replread %s rc=%d", aio ?
-	    "aiowait" : "complete", rc);
+	DEBUG_SLVR(rc ? PLL_ERROR : PLL_INFO, s, "replread %s rc=%d",
+	    aio ? "aiowait" : "complete", rc);
 
 	if (!aio) {
 		slvr_wio_done(s);
@@ -174,12 +177,10 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 
 	if (aio) {
 		SLVR_LOCK(s);
-		/* Block until the callback handler has finished.
-		 */
+		/* Block until the callback handler has finished. */
 		SLVR_WAIT(s, (s->slvr_flags & SLVR_REPLWIRE));
 		SLVR_ULOCK(s);
-		/* Lookup the workrq.  It should have already been created.
-		 */
+		/* Lookup the workrq.  It should have already been created. */
 		w = sli_repl_findwq(&mq->fg, mq->bmapno);
 		if (!w) {
 			mp->rc = -ENOENT;
@@ -188,8 +189,7 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 			//XXX cleanup the sliver ref
 			goto out;
 		}
-		/* Ensure the sliver is found in the work item's array.
-		 */
+		/* Ensure the sliver is found in the work item's array. */
 		for (slvridx = 0; slvridx < (int)nitems(w->srw_slvr_refs);
 		     slvridx++)
 			if (w->srw_slvr_refs[slvridx] == s)
