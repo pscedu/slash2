@@ -1022,7 +1022,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 			BMAP_LOCK(b);
 			DEBUG_BMAP(PLL_DEBUG, b, "timeoq try reap"
-			    " (nbmaps=%zd) etime("PSCPRI_TIMESPEC")",
+			    " (nbmaps=%d) etime("PSCPRI_TIMESPEC")",
 			    lc_nitems(&bmapTimeoutQ),
 			    PSCPRI_TIMESPEC_ARGS(&bci->bci_etime));
 
@@ -1144,7 +1144,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 		timespecsub(&nto, &crtime, &nto);
 		psclogs_debug(SLSS_BMAP, "waited for ("PSCPRI_TIMESPEC") "
-		    "nitems=%zd", PSCPRI_TIMESPEC_ARGS(&nto),
+		    "nitems=%d", PSCPRI_TIMESPEC_ARGS(&nto),
 		    lc_nitems(&bmapTimeoutQ));
 	}
 	psc_dynarray_free(&rels);
