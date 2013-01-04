@@ -53,9 +53,10 @@ struct slictlmsg_fileop {
 #define pcst_nread		pcst_u32_2
 
 /* sliod message types */
-#define SLICMT_GET_REPLWKST	NPCMT
-#define SLICMT_GETCONNS		(NPCMT + 1)
+#define SLICMT_GET_REPLWKST	(NPCMT + 0)
+#define SLICMT_GETCONN		(NPCMT + 1)
 #define SLICMT_GETFCMH		(NPCMT + 2)
 #define SLICMT_EXPORT		(NPCMT + 3)
 #define SLICMT_IMPORT		(NPCMT + 4)
 #define SLICMT_STOP		(NPCMT + 5)
+#define SLICMT_GETBMAP		(NPCMT + 6)
