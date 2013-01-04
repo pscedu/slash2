@@ -241,7 +241,7 @@ utime
 	took place
 
 tree
-- rename include/buffer.h and share/buffer.c as sliod/slab.h sliod/slab.c
+- rename include/buffer.h as sliod/slab.h
 - rename the zfs_init() alias, it is already a routine in ZFS
 - rename slconfig.h to slcfg.h to disambiguate slco prefix
 
