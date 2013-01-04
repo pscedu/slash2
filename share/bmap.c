@@ -64,8 +64,7 @@ bmap_orphan(struct bmapc_memb *b)
 	psc_assert(!(b->bcm_flags & BMAP_ORPHAN));
 
 	if (b->bcm_flags & BMAP_TOFREE) {
-		/* bug #249.  bmap_remove() is already pending.
-		 */
+		/* bug #249.  bmap_remove() is already pending. */
 		BMAP_ULOCK(b);
 		return;
 	}
@@ -219,7 +218,7 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n,
 	BMAP_LOCK(b);
 
 	/* Add to the fcmh's bmap cache */
-	SPLAY_INSERT(bmap_cache, &f->fcmh_bmaptree, b);
+	PSC_SPLAY_XINSERT(bmap_cache, &f->fcmh_bmaptree, b);
 	fcmh_op_start_type(f, FCMH_OPCNT_BMAP);
 
 	FCMH_URLOCK(f, locked);
