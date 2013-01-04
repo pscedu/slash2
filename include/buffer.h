@@ -108,6 +108,6 @@ void sl_buffer_cache_init(void);
 void sl_buffer_fresh_assertions(struct sl_buffer *);
 void sl_buffer_clear(struct sl_buffer *, size_t);
 
-extern struct psc_poolmgr	*slBufsPool;
+extern struct psc_poolmgr	*sl_bufs_pool;
 
 #endif /* _SL_BUFFER_H_ */

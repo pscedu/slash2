@@ -36,8 +36,8 @@
 #include "cache_params.h"
 #include "fidcache.h"
 
-struct psc_poolmaster	 slBufsPoolMaster;
-struct psc_poolmgr	*slBufsPool;
+struct psc_poolmaster	 sl_bufs_poolmaster;
+struct psc_poolmgr	*sl_bufs_pool;
 
 void
 sl_buffer_fresh_assertions(struct sl_buffer *b)
@@ -103,11 +103,11 @@ sl_buffer_cache_init(void)
 
 	psc_assert(SLB_SIZE <= LNET_MTU);
 
-	psc_poolmaster_init(&slBufsPoolMaster, struct sl_buffer,
+	psc_poolmaster_init(&sl_bufs_poolmaster, struct sl_buffer,
 	    slb_mgmt_lentry, PPMF_AUTO, SLB_NDEF, SLB_MIN, SLB_MAX,
 	    sl_buffer_init, sl_buffer_destroy, slvr_buffer_reap, "slab",
 	    NULL);
-	slBufsPool = psc_poolmaster_getmgr(&slBufsPoolMaster);
+	sl_bufs_pool = psc_poolmaster_getmgr(&sl_bufs_poolmaster);
 
 //	lc_reginit(&slBufsLru,  struct sl_buffer, slb_mgmt_lentry, "slabBufLru");
 //	lc_reginit(&slBufsPin,  struct sl_buffer, slb_mgmt_lentry, "slabBufPin");
