@@ -51,7 +51,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 	struct iovec iov;
 	int tries = 0, nwait = 0, found = 0;
 	struct bmpc_ioreq *r = NULL;
-
+	struct iovec *iovs = NULL;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -105,7 +105,6 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 	r = car->car_argv.pointer_arg[MSL_CBARG_BIORQ];
 	if (car->car_cbf == msl_read_cb) {
 		struct bmap_pagecache_entry *e;
-		struct iovec *iovs = NULL;
 		struct psc_dynarray *a;
 		int i;
 
@@ -138,7 +137,6 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 	} else if (car->car_cbf == msl_readahead_cb) {
 		struct bmap_pagecache_entry *e, **bmpces =
 		    car->car_argv.pointer_arg[MSL_CBARG_BMPCE];
-		struct iovec *iovs = NULL;
 		int i;
 
 		OPSTAT_INCR(SLC_OPST_READ_AHEAD_CB);
