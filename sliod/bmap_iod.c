@@ -193,7 +193,6 @@ bcr_xid_last_bump(struct bcrcupd *bcr)
 {
 	bcr_xid_check(bcr);
 	bcr->bcr_bii->bii_bcr_xid_last++;
-	bcr_2_bmap(bcr)->bcm_flags &= ~BMAP_IOD_INFLIGHT;
 }
 
 void
@@ -270,6 +269,8 @@ bcr_finalize(struct bcrcupd *bcr)
 	LIST_CACHE_LOCK(&bcr_ready);
 	BII_LOCK(bii);
 	psc_assert(b->bcm_flags & BMAP_IOD_BCRSCHED);
+	psc_assert(b->bcm_flags & BMAP_IOD_INFLIGHT);
+	b->bcm_flags &= ~BMAP_IOD_INFLIGHT;
 
 	/*
 	 * bii->bii_bcr_xid_last is bumped in bcr_ready_remove().
