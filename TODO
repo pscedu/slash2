@@ -398,6 +398,7 @@ reimport
    advise upsch.db on SSD or tmpfs in docs
 - make cursor file contents ASCII for debugging
 - do journal logs for SETATTR factor in nlink, nblks, etc??
+- while :; do dmesg > file; done      produces lots of EBADMSG from sliod
 
 - investigate diaser(1)
 - setup arc testrig
