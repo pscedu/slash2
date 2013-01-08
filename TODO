@@ -391,6 +391,7 @@ reimport
      - amazon S3/glacier
 - fix bug when no IODs are online yet writes are somehow successful
 - umount /$mp doesn't seem to be killing mount_slash
+- UNLINK is very slow when interspersed with READDIR
 
    fix round robin among senses when open(O_TRUNC) -- prefer old IOS
    fix ios_nblks[idx] accounting on open(O_TRUNC)
