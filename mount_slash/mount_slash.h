@@ -148,11 +148,12 @@ struct slc_async_req {
 	struct msl_fsrqinfo		 *car_fsrqinfo;
 };
 
-struct msl_fhent {			 /* XXX rename */
+struct msl_fhent {
 	psc_spinlock_t			 mfh_lock;
 	struct fidc_membh		*mfh_fcmh;
 	struct psclist_head		 mfh_lentry;
 	int				 mfh_flags;
+	int				 mfh_refcnt;
 
 	int				 mfh_oflags;	/* open(2) flags */
 	int				 mfh_flush_rc;	/* fsync(2) status */
@@ -178,7 +179,7 @@ struct msl_fhent {			 /* XXX rename */
 struct msl_fsrqinfo {
 	struct bmpc_ioreq		*mfsrq_biorq[MAX_BMAPS_REQ];
 	struct bmap_pagecache_entry	*mfsrq_bmpceatt;
-	struct msl_fhent		*mfsrq_fh;
+	struct msl_fhent		*mfsrq_mfh;
 	char				*mfsrq_buf;
 	size_t				 mfsrq_size;
 	size_t				 mfsrq_len;	/* I/O result, must be accurate if no error */
@@ -241,7 +242,11 @@ struct slashrpc_cservice *
 void	 msl_bmap_reap_init(struct bmapc_memb *, const struct srt_bmapdesc *);
 void	 msl_bmpces_fail(struct bmpc_ioreq *);
 void	_msl_biorq_destroy(const struct pfl_callerinfo *, struct bmpc_ioreq *);
-void	 msl_mfh_seterr(struct msl_fhent *);
+
+void	 mfh_decref(struct msl_fhent *);
+void	 mfh_incref(struct msl_fhent *);
+void	 mfh_seterr(struct msl_fhent *);
+
 int	 msl_dio_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 ssize_t	 msl_io(struct pscfs_req *, struct msl_fhent *, char *, size_t, off_t, enum rw);
 int	 msl_read_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
@@ -372,6 +377,9 @@ extern struct pscrpc_nbreqset	*pndgBmaplsReqs;
 
 extern struct psc_poolmgr	*slc_async_req_pool;
 extern struct psc_poolmgr	*slc_biorq_pool;
+extern struct psc_poolmgr	*mfh_pool;
+extern struct psc_poolmgr	*mfsrq_pool;
+
 extern psc_atomic32_t		 offline_nretries;
 
 #endif /* _MOUNT_SLASH_H_ */

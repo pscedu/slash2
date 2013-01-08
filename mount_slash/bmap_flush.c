@@ -123,7 +123,7 @@ _msl_offline_retry(const struct pfl_callerinfo *pci,
 {
 	int retry;
 
-	retry = msl_fd_offline_retry(r->biorq_fhent);
+	retry = msl_fd_offline_retry(r->biorq_mfh);
 	if (retry)
 		OPSTAT_INCR(SLC_OPST_OFFLINE_RETRY);
 	else
@@ -439,7 +439,7 @@ bmap_flush_resched(struct bmpc_ioreq *r)
 	BMPC_LOCK(bmpc);
 	BIORQ_LOCK(r);
 
-	DEBUG_BIORQ(PLL_NOTIFY, r, "resched");
+	DEBUG_BIORQ(PLL_INFO, r, "resched");
 
 	psc_assert(!(r->biorq_flags & BIORQ_RESCHED));
 	if (r->biorq_flags & BIORQ_RESCHED) {
@@ -452,8 +452,7 @@ bmap_flush_resched(struct bmpc_ioreq *r)
 	r->biorq_flags &= ~BIORQ_PENDING;
 	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 	pll_add_sorted(&bmpc->bmpc_new_biorqs, r, bmpc_biorq_cmp);
-	/* bmap_flush_desched drops BIORQ_LOCK and BMPC_LOCK
-	 */
+	/* bmap_flush_desched drops BIORQ_LOCK and BMPC_LOCK */
 	bmap_flush_desched(r);
 	msl_bmap_lease_tryreassign(r->biorq_bmap);
 }
@@ -1479,9 +1478,10 @@ msbmaprathr_main(__unusedx struct psc_thread *thr)
 		spinlock(&mfh->mfh_lock);
 		psc_assert(mfh->mfh_flags & MSL_FHENT_RASCHED);
 		PLL_FOREACH_SAFE(bmpce, tmp, &mfh->mfh_ra_bmpces) {
-			/* Check for sequentiality.  Note that since bmpce
-			 *   offsets are intra-bmap, we must check that the
-			 *   bmap (bmpce_owner) is the same too.
+			/*
+			 * Check for sequentiality.  Note that since
+			 * bmpce offsets are intra-bmap, we must check
+			 * that the bmap (bmpce_owner) is the same too.
 			 */
 			if (nbmpces &&
 			    ((bmpce->bmpce_owner !=
@@ -1502,9 +1502,11 @@ msbmaprathr_main(__unusedx struct psc_thread *thr)
 			mfh->mfh_flags &= ~MSL_FHENT_RASCHED;
 			if (mfh->mfh_flags & MSL_FHENT_CLOSING)
 				psc_waitq_wakeall(&mfh->mfh_fcmh->fcmh_waitq);
-		} else
+			mfh_decref(mfh);
+		} else {
 			lc_addtail(&bmapReadAheadQ, mfh);
-		freelock(&mfh->mfh_lock);
+			freelock(&mfh->mfh_lock);
+		}
 
 		for (i=0; i < nbmpces; i++) {
 			/* XXX If read / wr refs are 0 then bmpce_getbuf()

@@ -259,7 +259,7 @@ struct bmpc_ioreq {
 	struct bmapc_memb		*biorq_bmap;	/* backpointer to our bmap	*/
 	struct pscrpc_request_set	*biorq_rqset;
 	struct psc_waitq		 biorq_waitq;	/* used by a bmpce */
-	struct msl_fhent		*biorq_fhent;	/* back pointer to msl_fhent */
+	struct msl_fhent		*biorq_mfh;	/* back pointer to msl_fhent */
 	struct msl_fsrqinfo		*biorq_fsrqi;
 };
 

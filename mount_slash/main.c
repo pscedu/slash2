@@ -120,6 +120,12 @@ struct psc_poolmgr		*slc_async_req_pool;
 struct psc_poolmaster		 slc_biorq_poolmaster;
 struct psc_poolmgr		*slc_biorq_pool;
 
+struct psc_poolmaster		 mfh_poolmaster;
+struct psc_poolmgr		*mfh_pool;
+
+struct psc_poolmaster		 mfsrq_poolmaster;
+struct psc_poolmgr		*mfsrq_pool;
+
 uint32_t			 sys_upnonce;
 
 const char *psc_fault_names[] = {
@@ -1456,7 +1462,7 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
  * Note that this function is called (at least) once for each open.
  */
 __static int
-msl_flush_int_locked(struct msl_fhent *mfh)
+msl_flush_int_locked(struct msl_fhent *mfh, int wait)
 {
 	struct bmpc_ioreq *r;
 
@@ -1481,10 +1487,12 @@ msl_flush_int_locked(struct msl_fhent *mfh)
 	}
 	bmap_flushq_wake(BMAPFLSH_EXPIRE, NULL);
 
-	while (!pll_empty(&mfh->mfh_biorqs)) {
-		psc_waitq_wait(&msl_fhent_flush_waitq, &mfh->mfh_lock);
-		spinlock(&mfh->mfh_lock);
-	}
+	if (wait)
+		while (!pll_empty(&mfh->mfh_biorqs)) {
+			psc_waitq_wait(&msl_fhent_flush_waitq,
+			    &mfh->mfh_lock);
+			spinlock(&mfh->mfh_lock);
+		}
 
 	return (0);
 }
@@ -1498,7 +1506,7 @@ mslfsop_flush(struct pscfs_req *pfr, void *data)
 	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "flushing (mfh=%p)", mfh);
 
 	spinlock(&mfh->mfh_lock);
-	rc = msl_flush_int_locked(mfh);
+	rc = msl_flush_int_locked(mfh, 0);
 	freelock(&mfh->mfh_lock);
 
 	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "done flushing (mfh=%p)", mfh);
@@ -1506,6 +1514,30 @@ mslfsop_flush(struct pscfs_req *pfr, void *data)
 	pscfs_reply_flush(pfr, rc);
 }
 
+void
+mfh_incref(struct msl_fhent *mfh)
+{
+	int lk;
+
+	lk = MFH_RLOCK(mfh);
+	mfh->mfh_refcnt++;
+	MFH_URLOCK(mfh, lk);
+}
+
+void
+mfh_decref(struct msl_fhent *mfh)
+{
+	MFH_RLOCK(mfh);
+	psc_assert(mfh->mfh_refcnt > 0);
+	if (--mfh->mfh_refcnt == 0) {
+		psc_pool_return(mfh_pool, mfh);
+	} else
+		MFH_ULOCK(mfh);
+}
+
+/**
+ * mslfsop_close - This is not the same as close(2).
+ */
 void
 mslfsop_close(struct pscfs_req *pfr, void *data)
 {
@@ -1522,13 +1554,15 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 	MFH_LOCK(mfh);
 	mfh->mfh_flags |= MSL_FHENT_CLOSING;
 #if FHENT_EARLY_RELEASE
+	struct bmpc_ioreq *r;
+
 	PLL_FOREACH(r, &mfh->mfh_biorqs) {
 		spinlock(&r->biorq_lock);
 		r->biorq_flags |= BIORQ_NOFHENT;
 		freelock(&r->biorq_lock);
 	}
 #else
-	rc = msl_flush_int_locked(mfh);
+	rc = msl_flush_int_locked(mfh, 1);
 	psc_assert(pll_empty(&mfh->mfh_biorqs));
 #endif
 	while (!pll_empty(&mfh->mfh_ra_bmpces) ||
@@ -1585,7 +1619,7 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 
 	FCMH_UNBUSY(c);
 	fcmh_op_done_type(c, FCMH_OPCNT_OPEN);
-	PSCFREE(mfh);
+	mfh_decref(mfh);
 }
 
 void
@@ -2239,6 +2273,7 @@ void
 mslfsop_fsync(struct pscfs_req *pfr, __unusedx int datasync, void *data)
 {
 	struct msl_fhent *mfh;
+	int rc;
 
 	mfh = data;
 	OPSTAT_INCR(SLC_OPST_FSYNC);
@@ -2246,10 +2281,10 @@ mslfsop_fsync(struct pscfs_req *pfr, __unusedx int datasync, void *data)
 	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "fsyncing via flush");
 
 	spinlock(&mfh->mfh_lock);
-	msl_flush_int_locked(mfh);
+	rc = msl_flush_int_locked(mfh, 1);
 	freelock(&mfh->mfh_lock);
 
-	pscfs_reply_fsync(pfr, 0);
+	pscfs_reply_fsync(pfr, rc);
 	OPSTAT_INCR(SLC_OPST_FSYNC_DONE);
 }
 
@@ -2796,6 +2831,16 @@ msl_init(void)
 	    struct bmpc_ioreq, biorq_lentry, PPMF_AUTO, 64, 64, 0, NULL,
 	    NULL, NULL, "biorq");
 	slc_biorq_pool = psc_poolmaster_getmgr(&slc_biorq_poolmaster);
+
+	psc_poolmaster_init(&mfh_poolmaster,
+	    struct msl_fhent, mfh_lentry, PPMF_AUTO, 64, 64, 0, NULL,
+	    NULL, NULL, "mfh");
+	mfh_pool = psc_poolmaster_getmgr(&mfh_poolmaster);
+
+	psc_poolmaster_init(&mfsrq_poolmaster,
+	    struct msl_fsrqinfo, mfsrq_lentry, PPMF_AUTO, 64, 64, 0,
+	    NULL, NULL, NULL, "mfsrq");
+	mfsrq_pool = psc_poolmaster_getmgr(&mfsrq_poolmaster);
 
 	pndgReadaReqs = pscrpc_nbreqset_init(NULL, NULL);
 

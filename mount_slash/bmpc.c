@@ -227,9 +227,11 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	r->biorq_buf = buf;
 	r->biorq_bmap = b;
 	r->biorq_flags = op;
-	r->biorq_fhent = q->mfsrq_fh;
+	r->biorq_mfh = q->mfsrq_mfh;
 	r->biorq_fsrqi = q;
 	r->biorq_last_sliod = IOS_ID_ANY;
+
+	mfh_incref(q->mfsrq_mfh);
 
 	/* Add the biorq to the fsrq. */
 	msl_fsrqinfo_biorq_add(q, r, rqnum);
@@ -300,7 +302,7 @@ bmpc_biorq_seterr(struct bmpc_ioreq *r, int err)
 
 	DEBUG_BIORQ(PLL_ERROR, r, "write-back flush failure (err=%d)", err);
 
-	msl_mfh_seterr(r->biorq_fhent);
+	mfh_seterr(r->biorq_mfh);
 }
 
 /**
@@ -314,13 +316,10 @@ bmpc_biorqs_fail(struct bmap_pagecache *bmpc, int err)
 	struct bmpc_ioreq *r;
 
 	BMPC_LOCK(bmpc);
-	PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs) {
+	PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs)
 		bmpc_biorq_seterr(r, err);
-	}
-
-	PLL_FOREACH(r, &bmpc->bmpc_new_biorqs) {
+	PLL_FOREACH(r, &bmpc->bmpc_new_biorqs)
 		bmpc_biorq_seterr(r, (err | BIORQ_FLUSHABORT));
-	}
 	BMPC_ULOCK(bmpc);
 }
 
