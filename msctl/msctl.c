@@ -245,7 +245,7 @@ parse_replrq(int opcode, const char *fn, char *replrqspec,
 	for (ios = iosv; ios; ios = next) {
 		if ((next = strchr(ios, ',')) != NULL)
 			*next++ = '\0';
-		if (ra.nios >= nitems(ra.iosv))
+		if (ra.nios >= (int)nitems(ra.iosv))
 			errx(1, "%s: too many replicas specified",
 			    replrqspec);
 		if (strchr(ios, '@') == NULL)
