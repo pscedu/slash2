@@ -658,8 +658,8 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 		}
 
 		if (rc == -1) {
-			OPSTAT_INCR(SLI_OPST_FSIO_READ_FAIL);
 			save_errno = errno;
+			OPSTAT_INCR(SLI_OPST_FSIO_READ_FAIL);
 		}
 
 		/*
@@ -694,8 +694,8 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 		rc = pwrite(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
 		    off);
 		if (rc == -1) {
-			OPSTAT_INCR(SLI_OPST_FSIO_WRITE_FAIL);
 			save_errno = errno;
+			OPSTAT_INCR(SLI_OPST_FSIO_WRITE_FAIL);
 		}
 	}
 
