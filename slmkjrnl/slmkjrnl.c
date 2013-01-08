@@ -69,7 +69,6 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 	uint32_t rs, uint64_t uuid)
 {
 	struct psc_journal_enthdr *pje;
-	struct psc_journal_hdr pjh;
 	struct psc_journal pj;
 	struct stat stb;
 	unsigned char *jbuf;
@@ -82,7 +81,6 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 		    "readsize (%u)", nents, rs);
 
 	memset(&pj, 0, sizeof(struct psc_journal));
-	pj.pj_hdr = &pjh;
 
 	rc = 0;
 	fd = open(fn, O_WRONLY | O_CREAT | O_TRUNC, 0600);
@@ -93,24 +91,24 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 		psc_fatal("stat %s", fn);
 
 	pj.pj_fd = fd;
+	pj.pj_hdr = PSCALLOC(PSC_ALIGN(sizeof(struct psc_journal_hdr), stb.st_blksize));
 
-	pjh.pjh_entsz = entsz;
-	pjh.pjh_nents = nents;
-	pjh.pjh_version = PJH_VERSION;
-	pjh.pjh_readsize = rs;
-	pjh.pjh_iolen = PSC_ALIGN(sizeof(pjh), stb.st_blksize);
-	pjh.pjh_magic = PJH_MAGIC;
-	pjh.pjh_timestamp = time(NULL);
-	pjh.pjh_fsuuid = uuid;
+	pj.pj_hdr->pjh_entsz = entsz;
+	pj.pj_hdr->pjh_nents = nents;
+	pj.pj_hdr->pjh_version = PJH_VERSION;
+	pj.pj_hdr->pjh_readsize = rs;
+	pj.pj_hdr->pjh_iolen = PSC_ALIGN(sizeof(struct psc_journal_hdr), stb.st_blksize);
+	pj.pj_hdr->pjh_magic = PJH_MAGIC;
+	pj.pj_hdr->pjh_timestamp = time(NULL);
+	pj.pj_hdr->pjh_fsuuid = uuid;
 
-	PSC_CRC64_INIT(&pjh.pjh_chksum);
-	psc_crc64_add(&pjh.pjh_chksum, &pjh,
+	PSC_CRC64_INIT(&pj.pj_hdr->pjh_chksum);
+	psc_crc64_add(&pj.pj_hdr->pjh_chksum, pj.pj_hdr,
 	    offsetof(struct psc_journal_hdr, pjh_chksum));
-	PSC_CRC64_FIN(&pjh.pjh_chksum);
+	PSC_CRC64_FIN(&pj.pj_hdr->pjh_chksum);
 
-	/* XXX fixme: segfault below (seen when iolen is 32768) */
-	nb = pwrite(pj.pj_fd, &pjh, pjh.pjh_iolen, 0);
-	if ((size_t)nb != pjh.pjh_iolen)
+	nb = pwrite(pj.pj_fd, pj.pj_hdr, pj.pj_hdr->pjh_iolen, 0);
+	if ((size_t)nb != pj.pj_hdr->pjh_iolen)
 		psc_fatalx("failed to write journal header: %s",
 		    nb == -1 ? strerror(errno) : "short write");
 
@@ -133,7 +131,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 
 	j = 0;
 	/* XXX use an option to write only one entry in fast create mode */
-	for (slot = 0; slot < pjh.pjh_nents; slot += rs) {
+	for (slot = 0; slot < pj.pj_hdr->pjh_nents; slot += rs) {
 		nb = pwrite(pj.pj_fd, jbuf, PJ_PJESZ(&pj) * rs,
 		    PJ_GETENTOFF(&pj, slot));
 		if ((size_t)nb != PJ_PJESZ(&pj) * rs)
@@ -400,8 +398,8 @@ pjournal_dump(const char *fn, int verbose)
 					slot + i);
 				goto done;
 			}
+			ndump++;
 			if (verbose) {
-				ndump++;
 				pjournal_dump_entry(slot+i, pje);
 			}
 			if (first) {
@@ -429,7 +427,7 @@ pjournal_dump(const char *fn, int verbose)
 	psc_free(jbuf, PAF_PAGEALIGN, PJ_PJESZ(pj));
 	PSCFREE(pj);
 
-	printf("\n%d slot(s) total, %d in use, %d formatted, "
+	printf("\n%d slot(s) scanned, %d in use, %d formatted, "
 	    "%d bad magic, %d bad checksum(s)\n",
 	    ntotal, ndump, nformat, nmagic, nchksum);
 	printf("\nLowest transaction ID=%#"PRIx64", slot=%d",
