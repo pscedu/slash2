@@ -865,14 +865,10 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	msfsthr_ensure();
 
-	if (strlen(name) == 0) {
-		rc = ENOENT;
-		goto out;
-	}
-	if (strlen(name) > SL_NAME_MAX) {
-		rc = ENAMETOOLONG;
-		goto out;
-	}
+	if (strlen(name) == 0)
+		PFL_GOTOERR(out, rc = ENOENT);
+	if (strlen(name) > SL_NAME_MAX)
+		PFL_GOTOERR(out, rc = ENAMETOOLONG);
 
 	rc = msl_load_fcmh(pfr, pinum, &p);
 	if (rc)
