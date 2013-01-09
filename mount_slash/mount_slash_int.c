@@ -2254,6 +2254,10 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		 */
 		r = q->mfsrq_biorq[i];
 		if (r) {
+			/*
+			 * XXX If I still own my pages, then perhaps I should
+			 * clear the EIO flags on those pages.
+			 */
 			bmap_op_done_type(r->biorq_bmap, BMAP_OPCNT_BIORQ);
 			r->biorq_bmap = b;
 			bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
