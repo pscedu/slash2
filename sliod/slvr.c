@@ -60,7 +60,6 @@ struct psc_listcache	 crcqSlvrs;  /* Slivers ready to be CRC'd and have their
 				      * CRCs shipped to the MDS. */
 
 __static SPLAY_GENERATE(biod_slvrtree, slvr_ref, slvr_tentry, slvr_cmp);
-__static void slvr_try_crcsched_locked(struct slvr_ref *);
 
 __static void
 slvr_lru_requeue(struct slvr_ref *s, int tail)
