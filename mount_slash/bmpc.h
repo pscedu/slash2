@@ -87,7 +87,6 @@ struct bmap_pagecache_entry {
 #define	BMPCE_EIO		(1 << 12)	/* 0x01000: I/O error */
 #define BMPCE_READA		(1 << 13)	/* 0x02000: read-ahead */
 #define BMPCE_AIOWAIT		(1 << 14)	/* 0x04000: wait on async read */
-#define BMPCE_SYNCWAIT		(1 << 15)	/* 0x08000: wait on sliod sync */
 
 #define BMPCE_LOCK(b)		spinlock(&(b)->bmpce_lock)
 #define BMPCE_ULOCK(b)		freelock(&(b)->bmpce_lock)
@@ -119,7 +118,7 @@ struct bmap_pagecache_entry {
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP,					\
-	    "bmpce@%p fl=%u:%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "		\
+	    "bmpce@%p fl=%u:%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "		\
 	    "o=%#x b=%p "						\
 	    "ts="PSCPRI_TIMESPEC" "					\
 	    "ref=%u "							\
@@ -140,7 +139,6 @@ struct bmap_pagecache_entry {
 	    (b)->bmpce_flags & BMPCE_EIO		? "E" : "",	\
 	    (b)->bmpce_flags & BMPCE_READA		? "a" : "",	\
 	    (b)->bmpce_flags & BMPCE_AIOWAIT		? "w" : "",	\
-	    (b)->bmpce_flags & BMPCE_SYNCWAIT		? "S" : "",	\
 	    (b)->bmpce_off, (b)->bmpce_base,				\
 	    PSCPRI_TIMESPEC_ARGS(&(b)->bmpce_laccess),			\
 	    psc_atomic32_read(&(b)->bmpce_ref),				\
