@@ -2319,6 +2319,12 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			rc = -EIO;
 	}
 
+	/* Make sure we don't copy pages from biorq in case of an error */
+	MFH_LOCK(q->mfsrq_mfh);
+	if (!q->mfsrq_err && rc)
+		q->mfsrq_err = rc;
+	MFH_ULOCK(q->mfsrq_mfh);
+
 	/* Step 4: finish up biorqs */
 	for (i = 0; i < nr; i++) {
 		r = q->mfsrq_biorq[i];
