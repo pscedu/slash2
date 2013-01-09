@@ -837,9 +837,11 @@ slvr_slab_prep(struct slvr_ref *s, enum rw rw)
 
 	//XXX may have to lock bmap instead..
 	SLVR_LOCK(s);
+
  restart:
-	/* slvr_lookup() must pin all slvrs to avoid racing with
-	 *   the reaper.
+	/*
+	 * slvr_lookup() must pin all slvrs to avoid racing with the
+	 * reaper.
 	 */
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 
@@ -919,6 +921,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 
 	SLVR_LOCK(s);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
+
 	/*
 	 * Note we have taken our read or write references, so the
 	 * sliver won't be freed from under us.
@@ -1176,6 +1179,7 @@ slvr_lru_tryunpin_locked(struct slvr_ref *s)
 		psc_assert(!(s->slvr_flags & SLVR_FAULTING));
 
 	s->slvr_flags &= ~SLVR_PINNED;
+	DEBUG_SLVR(PLL_MAX, s, "clear PINNED");
 
 	if (s->slvr_flags & (SLVR_DATAERR | SLVR_REPLFAIL)) {
 		s->slvr_flags |= SLVR_SLBFREEING;
@@ -1233,7 +1237,7 @@ slvr_wio_done(struct slvr_ref *s)
 			SLVR_WAKEUP(s);
 		}
 
-		DEBUG_SLVR(PLL_DEBUG, s, "decref");
+		DEBUG_SLVR(PLL_MAX, s, "decref");
 
 		slvr_lru_requeue(s, 0);
 		SLVR_ULOCK(s);
