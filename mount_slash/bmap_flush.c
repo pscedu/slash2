@@ -672,10 +672,10 @@ bmap_flush_biorq_rbwdone(const struct bmpc_ioreq *r)
 __static int
 bmap_flushable(struct bmapc_memb *b, struct timespec *t)
 {
-	uint32_t off;
-	int count, contig, flush;
-	struct bmap_pagecache *bmpc;
 	struct bmpc_ioreq *r, *start, *end, *tmp;
+	struct bmap_pagecache *bmpc;
+	int count, contig, flush;
+	uint32_t off;
 
 	off = 0;
 	count = 0; /* gcc */
@@ -711,8 +711,9 @@ bmap_flushable(struct bmapc_memb *b, struct timespec *t)
 
 		} else if ((r->biorq_flags & BIORQ_RBWFP) ||
 			   (r->biorq_flags & BIORQ_RBWLP)) {
-			/* Wait for RBW I/O to complete before
-			 *  pushing out any pages.
+			/*
+			 * Wait for RBW I/O to complete before pushing
+			 * out any pages.
 			 */
 			psc_assert(0);
 			if (!bmap_flush_biorq_rbwdone(r)) {
