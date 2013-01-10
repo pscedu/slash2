@@ -745,11 +745,11 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, int rc, size_t len)
 
 	if (q->mfsrq_rw == SL_READ) {
 		pscfs_reply_read(q->mfsrq_pfr, q->mfsrq_buf,
-		    q->mfsrq_len, -abs(q->mfsrq_err));
+		    q->mfsrq_len, abs(q->mfsrq_err));
 		OPSTAT_INCR(SLC_OPST_FSRQ_READ_FREE);
 	} else {
 		pscfs_reply_write(q->mfsrq_pfr,
-		    q->mfsrq_len, -abs(q->mfsrq_err));
+		    q->mfsrq_len, abs(q->mfsrq_err));
 		OPSTAT_INCR(SLC_OPST_FSRQ_WRITE_FREE);
 	}
 
@@ -1568,6 +1568,10 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	}
 
  retry:
+	if (OPSTAT_CURR(SLC_OPST_DEBUG) == SLC_DEBUG_READRPC_OFFLINE) {
+		rc = -ENOTCONN;
+		goto error;
+	}
 	csvc = msl_bmap_to_csvc(r->biorq_bmap,
 	    r->biorq_bmap->bcm_flags & BMAP_WR);
 	if (csvc == NULL) {
