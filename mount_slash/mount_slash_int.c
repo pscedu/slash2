@@ -1690,6 +1690,7 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r, int *psched)
 		bmpce_usecheck(e, BIORQ_READ,
 		    biorq_getaligned_off(r, i));
 
+		/* XXX bogus assert if a biorq is partially retried */
 		if (biorq_is_my_bmpce(r, e))
 			psc_assert(!(e->bmpce_flags & BMPCE_DATARDY));
 
