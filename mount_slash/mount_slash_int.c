@@ -2195,7 +2195,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	q = msl_fsrqinfo_init(pfr, mfh, buf, size, off, rw);
 
  restart:
-
 	rc = 0;
 	tsize = size;
 
@@ -2232,8 +2231,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	/*
 	 * Step 1: build biorqs and get bmap.
 	 *
-	 * For each block range, get its bmap and make a request into its
-	 *  page cache.  This first loop retrieves all the pages.
+	 * For each block range, get its bmap and make a request into
+	 * its page cache.  This first loop retrieves all the pages.
 	 */
 	for (i = 0, bufp = buf; i < nr; i++) {
 
@@ -2242,6 +2241,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		    (rw == SL_READ) ? "read" : "write");
 
 		psc_assert(tsize);
+
  retry_bmap:
 		rc = bmap_get(f, s + i, rw, &b);
 		if (rc)
@@ -2299,14 +2299,16 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			rc = msl_pages_dio_getput(r);
 			if (rc)
 				break;
-		} else if (r->biorq_flags & (BIORQ_READ | BIORQ_RBWFP | BIORQ_RBWLP)) {
+		} else if (r->biorq_flags &
+		    (BIORQ_READ | BIORQ_RBWFP | BIORQ_RBWLP)) {
 			rc = msl_pages_prefetch(r);
 			if (rc)
 				break;
 		}
 		/*
-		 * If this is a complete overwrite, we don't need to launch a RPC
-		 * to satisfy the write request at least for now.
+		 * If this is a complete overwrite, we don't need to
+		 * launch a RPC to satisfy the write request at least
+		 * for now.
 		 */
 	}
 	if (r->biorq_flags & BIORQ_DIO && rc == -EAGAIN) {
@@ -2317,10 +2319,11 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
  out:
 	/* Step 3: retry if at least one biorq failed */
 	if (rc) {
-		DEBUG_FCMH(PLL_ERROR, f, "bno=%zd sz=%zu tlen=%zu "
-		   "off=%"PSCPRIdOFFT" roff=%"PSCPRIdOFFT" rw=%s "
-		   "rc=%zd", s + i, tsize, tlen, off, roff,
-		   (rw == SL_READ) ? "read" : "write", rc);
+		DEBUG_FCMH(PLL_ERROR, f,
+		    "q=%p bno=%zd sz=%zu tlen=%zu off=%"PSCPRIdOFFT" "
+		    "roff=%"PSCPRIdOFFT" rw=%s rc=%zd",
+		    q, s + i, tsize, tlen, off,
+		    roff, (rw == SL_READ) ? "read" : "write", rc);
 
 		if (msl_fd_offline_retry(mfh))
 			goto restart;
@@ -2346,7 +2349,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 * a barrier to multiple biorqs so that none of them can
 	 * complete a fsrq prematurely.
 	 *
-	 * In addition, it allows us to abort the I/O if we can not even
+	 * In addition, it allows us to abort the I/O if we cannot even
 	 * build a biorq with bmap.
 	 */
 	msl_complete_fsrq(q, rc, 0);
