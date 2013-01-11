@@ -29,7 +29,7 @@
 #include "psc_util/pool.h"
 #include "psc_util/ctlsvr.h"
 
-#include "bmpc.h"
+#include "pgcache.h"
 #include "bmap_cli.h"
 #include "mount_slash.h"
 

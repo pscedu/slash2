@@ -24,7 +24,7 @@
 #include "psc_rpc/rsx.h"
 #include "psc_util/ctlsvr.h"
 
-#include "bmpc.h"
+#include "pgcache.h"
 #include "rpc_cli.h"
 #include "slashrpc.h"
 

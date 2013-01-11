@@ -24,7 +24,7 @@
 #include "psc_util/lock.h"
 
 #include "bmap.h"
-#include "bmpc.h"
+#include "pgcache.h"
 #include "slashrpc.h"
 
 /* number of bmap flush threads */

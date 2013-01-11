@@ -47,7 +47,7 @@
 
 #include "bmap.h"
 #include "bmap_cli.h"
-#include "bmpc.h"
+#include "pgcache.h"
 #include "buffer.h"
 #include "fidc_cli.h"
 #include "fidcache.h"

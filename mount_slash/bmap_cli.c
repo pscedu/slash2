@@ -29,7 +29,7 @@
 
 #include "slconfig.h"
 #include "bmap_cli.h"
-#include "bmpc.h"
+#include "pgcache.h"
 #include "fidc_cli.h"
 #include "mount_slash.h"
 #include "rpc_cli.h"

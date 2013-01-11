@@ -37,7 +37,7 @@
 
 #include "bmap.h"
 #include "bmap_cli.h"
-#include "bmpc.h"
+#include "pgcache.h"
 #include "buffer.h"
 #include "mount_slash.h"
 #include "rpc_cli.h"
