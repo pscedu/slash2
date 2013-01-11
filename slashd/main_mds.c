@@ -481,6 +481,8 @@ main(int argc, char *argv[])
 		usage();
 	}
 
+	psclog_info("%s: revision is %d", progname, SL_STK_VERSION);
+
 	fidc_init(sizeof(struct fcmh_mds_info), FIDC_MDS_DEFSZ);
 	bmap_cache_init(sizeof(struct bmap_mds_info));
 
@@ -540,7 +542,11 @@ main(int argc, char *argv[])
 	sl_nbrqset = pscrpc_nbreqset_init(NULL, NULL);
 	pscrpc_nbreapthr_spawn(sl_nbrqset, SLMTHRT_NBRQ, "slmnbrqthr");
 
-	psclog_info("%s: revision is %d", progname, SL_STK_VERSION);
+	pfl_workq_lock();
+	pfl_wkthr_spawn(SLMTHRT_WORKER, SLM_NWORKER_THREADS,
+	    "slmwkthr%d");
+	pfl_workq_waitempty();
+
 
 	dbdo(NULL, NULL,
 	    " UPDATE	upsch"
@@ -557,11 +563,6 @@ main(int argc, char *argv[])
 	mds_odtable_scan(mdsBmapAssignTable, mds_bia_odtable_startup_cb, NULL);
 	mds_odtable_scan(slm_repl_odt, slm_repl_odt_startup_cb, NULL);
 	mds_odtable_scan(slm_ptrunc_odt, slm_ptrunc_odt_startup_cb, NULL);
-
-	pfl_workq_lock();
-	pfl_wkthr_spawn(SLMTHRT_WORKER, SLM_NWORKER_THREADS,
-	    "slmwkthr%d");
-	pfl_workq_waitempty();
 
 	slmcohthr_spawn();
 	slmbmaptimeothr_spawn();
