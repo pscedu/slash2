@@ -80,5 +80,5 @@ MODULES+=	lnet pthread zfs z gcrypt fuse-hdrs aio pscfs ctl rpc sqlite
 
 include ${SLASHMK}
 
-$(call ADD_FILE_CFLAGS,${PFL_BASE}/psc_util/journal.c,			\
+$(call ADD_FILE_CFLAGS,${PFL_BASE}/journal.c,			\
 		-DPSC_SUBSYS=SLMSS_JOURNAL -include subsys_mds.h)
