@@ -297,7 +297,7 @@ _mds_repl_bmap_apply(struct bmapc_memb *b, const int *tract,
 		DEBUG_BMAPOD(PLL_DIAG, b, "before modification");
 		SL_REPL_SET_BMAP_IOS_STAT(b->bcm_repls, off,
 		    tract[val]);
-		DEBUG_BMAPOD(PLL_MAX, b, "after modification");
+		DEBUG_BMAPOD(PLL_DIAG, b, "after modification");
 	}
 
  out:
@@ -1068,8 +1068,7 @@ slm_repl_odt_startup_cb(void *data, struct odtable_receipt *odtr,
 	rc = slm_fcmh_get(&br->br_fg, &f);
 	if (rc)
 		PFL_GOTOERR(out, rc);
-	rc = bmap_getf(f, br->br_bno, SL_READ, BMAPGETF_REPLAY |
-	    BMAPGETF_LOAD, &b);
+	rc = bmap_get(f, br->br_bno, SL_READ, &b);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	for (n = 0, off = 0; n < fcmh_2_nrepls(f);
