@@ -2152,17 +2152,16 @@ ssize_t
 msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
     const size_t size, const off_t off, enum rw rw)
 {
+	size_t start, end, tlen, tsize;
 	struct msl_fsrqinfo *q = NULL;
 	struct bmapc_memb *b;
 	struct fidc_membh *f;
 	struct bmpc_ioreq *r;
-	size_t start, end, tlen, tsize;
 	uint64_t fsz;
 	ssize_t rc;
 	off_t roff;
 	char *bufp;
 	int nr, i, j;
-	struct bmap_pagecache_entry *e;
 
 	psc_assert(mfh);
 	psc_assert(mfh->mfh_fcmh);
