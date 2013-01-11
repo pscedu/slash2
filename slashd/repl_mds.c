@@ -1118,7 +1118,7 @@ slm_repl_odt_startup_cb(void *data, struct odtable_receipt *odtr,
 		 * XXX flag this as UPSCH_NOT_INIT and do a flag dance
 		 * when paging it in as needed.
 		 */
-		upd = bmap_2_upd(b); 
+		upd = bmap_2_upd(b);
 		if (pfl_memchk(upd, 0, sizeof(*upd)) == 1)
 			upd_init(upd, UPDT_BMAP);
 		mds_bmap_write_logrepls(b);
