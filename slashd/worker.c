@@ -46,6 +46,7 @@ pfl_workq_putitem(void *p)
 
 	psc_assert(p);
 	wk = PSC_AGP(p, -sizeof(*wk));
+	psclog_debug("placing work %p on queue", wk);
 	lc_addtail(&pfl_workq, wk);
 }
 

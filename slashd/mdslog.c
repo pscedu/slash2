@@ -1890,7 +1890,8 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		iosinfo->si_flags &= ~SIF_NEED_JRNL_INIT;
 	}
 
-	psclog_warnx("current_reclaim_batchno = %"PRId64", current_reclaim_xid = %"PRId64,
+	psclog_info("current_reclaim_batchno=%"PRId64" "
+	    "current_reclaim_xid=%"PRId64,
 	    current_reclaim_batchno, current_reclaim_xid);
 
 	/* We are done if we don't have any peer MDSes */
