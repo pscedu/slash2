@@ -6,15 +6,15 @@ include ${ROOTDIR}/Makefile.path
 PROG=		mount_slash
 BIN=		mount_slash.sh
 MAN+=		mount_slash.8
+SRCS+=		bflush.c
 SRCS+=		bmap_cli.c
-SRCS+=		bmap_flush.c
-SRCS+=		bmpc.c
 SRCS+=		cfg_cli.c
 SRCS+=		ctl_cli.c
 SRCS+=		dircache.c
 SRCS+=		fidc_cli.c
 SRCS+=		main.c
 SRCS+=		mount_slash_int.c
+SRCS+=		pgcache.c
 SRCS+=		rci.c
 SRCS+=		rcm.c
 SRCS+=		rpc_cli.c
