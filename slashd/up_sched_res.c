@@ -83,17 +83,24 @@ void
 upd_tryremove(struct slm_update_data *upd)
 {
 	struct bmapc_memb *b = upd_2_bmap(upd);
-	int retifset[NBREPLST];
+	struct bmap_mds_info *bmi = bmap_2_bmi(b);
+	int lk, retifset[NBREPLST];
 
 	brepls_init(retifset, 1);
 	retifset[BREPLST_VALID] = 0;
 	retifset[BREPLST_INVALID] = 0;
+
+	lk = BMAPOD_REQRDLOCK(bmi);
+
 	if (!mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT)) {
+		UPD_LOCK(upd);
 		mds_odtable_freeitem(slm_repl_odt, upd->upd_recpt);
 		upd->upd_recpt = NULL;
+		UPD_ULOCK(upd);
 		DEBUG_UPD(PLL_DEBUG, upd, "removed odtable entry");
 	}
+	BMAPOD_UREQLOCK(bmi, lk);
 }
 
 void
