@@ -788,12 +788,6 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r0)
 		if (rc)
 			continue;
 
-		if ((r->biorq_flags & BIORQ_WRITE) &&
-		    !(r->biorq_flags & BIORQ_DIO)) {
-			r->biorq_flags |= BIORQ_FLUSHRDY;
-			DEBUG_BIORQ(PLL_INFO, r, "BIORQ_FLUSHRDY");
-		}
-
 		/*
 		 * copy data in and out on behand of the finishing biorq.
 		 */
@@ -816,8 +810,12 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r0)
 		} else {
 			if (q->mfsrq_rw == SL_READ)
 				tlen = msl_pages_copyout(r);
-			else
+			else {
 				tlen = msl_pages_copyin(r);
+				r->biorq_retries = 0;
+				r->biorq_flags |= BIORQ_FLUSHRDY;
+				DEBUG_BIORQ(PLL_INFO, r, "BIORQ_FLUSHRDY");
+			}
 			if (!tlen)
 				break;
 			len += tlen;
