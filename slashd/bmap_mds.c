@@ -128,7 +128,7 @@ slm_repl_upd_odt_read(struct bmapc_memb *b)
 int
 mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 {
-	int rc, vfsid, tract[NBREPLST], retifset[NBREPLST];
+	int rc, vfsid, retifset[NBREPLST];
 	uint64_t crc, od_crc = 0;
 	struct slm_update_data *upd;
 	struct fidc_membh *f;
@@ -193,61 +193,15 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 
 	upd = bmap_2_upd(b);
 
-	/*
-	 * If we crashed, revert all inflight SCHED'ed bmaps so they get
-	 * resent.
-	 *
-	 * Because only a portion of replication work is held in memory
-	 * at any time, whenever a new bmap gets loaded we must take
-	 * care to reidentify such work to prevent inconsistency.
-	 */
-	brepls_init(tract, -1);
-	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
-	tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_TRUNCPNDG;
-	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
-
-	brepls_init(retifset, 0);
-	retifset[BREPLST_REPL_SCHED] = 1;
-	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
-	retifset[BREPLST_GARBAGE_SCHED] = 1;
-
-	if (mds_repl_bmap_walk_all(b, tract, retifset, 0)) {
-		/*
-		 * XXX flag this as UPSCH_NOT_INIT and do a flag dance
-		 * when paging it in as needed.
-		 */
-		upd_init(upd, UPDT_BMAP);
-		mds_bmap_write_logrepls(b);
-	} else {
-		BMAPOD_MODIFY_DONE(b, 0);
-		BMAP_UNBUSY(b);
-		FCMH_UNBUSY(b->bcm_fcmh);
-	}
-
 	brepls_init(retifset, 0);
 	retifset[BREPLST_REPL_QUEUED] = 1;
+	retifset[BREPLST_REPL_SCHED] = 1;
 	retifset[BREPLST_TRUNCPNDG] = 1;
+	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
 //	retifset[BREPLST_GARBAGE] = 1;
 	if (mds_repl_bmap_walk_all(b, NULL, retifset,
-	    REPL_WALKF_SCIRCUIT)) {
-		sl_replica_t iosv[SL_MAX_REPLICAS];
-		unsigned j;
-
-		if (pfl_memchk(upd, 0, sizeof(*upd)) == 1)
-			upd_init(upd, UPDT_BMAP);
-
-		if (fcmh_2_nrepls(f) > SL_DEF_REPLICAS)
-			mds_inox_ensure_loaded(fcmh_2_inoh(f));
-
-		/*
-		 * Requeue pending updates on all registered sites.  If
-		 * there is no work to do, it will be promptly removed
-		 * by the slmupschedthr.
-		 */
-		for (j = 0; j < fcmh_2_nrepls(f); j++)
-			iosv[j].bs_id = fcmh_getrepl(f, j).bs_id;
-		upsch_enqueue(upd, iosv, fcmh_2_nrepls(f));
-
+	    REPL_WALKF_SCIRCUIT)) { 
+		upd_init(upd, UPDT_BMAP);
 		UPD_UNBUSY(upd);
 	}
 	return (0);

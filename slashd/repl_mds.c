@@ -297,7 +297,7 @@ _mds_repl_bmap_apply(struct bmapc_memb *b, const int *tract,
 		DEBUG_BMAPOD(PLL_DIAG, b, "before modification");
 		SL_REPL_SET_BMAP_IOS_STAT(b->bcm_repls, off,
 		    tract[val]);
-		DEBUG_BMAPOD(PLL_DIAG, b, "after modification");
+		DEBUG_BMAPOD(PLL_MAX, b, "after modification");
 	}
 
  out:
@@ -839,7 +839,8 @@ int
 mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
     sl_replica_t *iosv, int nios)
 {
-	int rc, tract[NBREPLST], retifset[NBREPLST], iosidx[SL_MAX_REPLICAS];
+	int rc, empty_tract[NBREPLST], tract[NBREPLST],
+	    retifset[NBREPLST], iosidx[SL_MAX_REPLICAS];
 	struct slm_repl_valid replv;
 	struct fidc_membh *f = NULL;
 	struct bmapc_memb *b;
@@ -862,6 +863,8 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	replv.nios = nios;
 	replv.idx = iosidx;
 
+	brepls_init(empty_tract, -1);
+
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_QUEUED] = BREPLST_GARBAGE;
 	tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE;
@@ -882,8 +885,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 				continue;
 
 			replv.n = 0;
-			BMAPOD_MODIFY_START(b);
-			mds_repl_bmap_walkcb(b, NULL, NULL, 0,
+			mds_repl_bmap_walkcb(b, empty_tract, NULL, 0,
 			    slm_repl_countvalid_cb, &replv);
 			if (replv.n > 0) {
 				if (mds_repl_bmap_walk(b, tract,
@@ -909,8 +911,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		rc = -mds_bmap_load(f, bmapno, &b);
 		if (rc == 0) {
 			replv.n = 0;
-			BMAPOD_MODIFY_START(b);
-			mds_repl_bmap_walkcb(b, NULL, NULL, 0,
+			mds_repl_bmap_walkcb(b, empty_tract, NULL, 0,
 			    slm_repl_countvalid_cb, &replv);
 			if (replv.n > 0) {
 				rc = mds_repl_bmap_walk(b, tract,
@@ -1058,16 +1059,17 @@ int
 slm_repl_odt_startup_cb(void *data, struct odtable_receipt *odtr,
     __unusedx void *arg)
 {
+	int rc, off, tract[NBREPLST], retifset[NBREPLST];
 	struct bmap_repls_upd_odent *br = data;
 	struct fidc_membh *f = NULL;
 	struct bmapc_memb *b = NULL;
-	int rc, off;
 	uint32_t n;
 
 	rc = slm_fcmh_get(&br->br_fg, &f);
 	if (rc)
 		PFL_GOTOERR(out, rc);
-	rc = bmap_get(f, br->br_bno, SL_READ, &b);
+	rc = bmap_getf(f, br->br_bno, SL_READ, BMAPGETF_REPLAY |
+	    BMAPGETF_LOAD, &b);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	for (n = 0, off = 0; n < fcmh_2_nrepls(f);
@@ -1091,6 +1093,40 @@ slm_repl_odt_startup_cb(void *data, struct odtable_receipt *odtr,
 			    odtr->odtr_key);
 			break;
 		}
+
+	/*
+	 * Revert all inflight SCHED'ed bmaps so they get resent.
+	 *
+	 * Because only a portion of replication work is held in memory
+	 * at any time, whenever a new bmap gets loaded we must take
+	 * care to reidentify such work to prevent inconsistency.
+	 */
+	brepls_init(tract, -1);
+	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+	tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_TRUNCPNDG;
+	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
+
+	brepls_init(retifset, 0);
+	retifset[BREPLST_REPL_SCHED] = 1;
+	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
+	retifset[BREPLST_GARBAGE_SCHED] = 1;
+
+	if (mds_repl_bmap_walk_all(b, tract, retifset, 0)) {
+		struct slm_update_data *upd;
+
+		/*
+		 * XXX flag this as UPSCH_NOT_INIT and do a flag dance
+		 * when paging it in as needed.
+		 */
+		upd = bmap_2_upd(b); 
+		if (pfl_memchk(upd, 0, sizeof(*upd)) == 1)
+			upd_init(upd, UPDT_BMAP);
+		mds_bmap_write_logrepls(b);
+	} else {
+		BMAPOD_MODIFY_DONE(b, 0);
+		BMAP_UNBUSY(b);
+		FCMH_UNBUSY(f);
+	}
 
  out:
 	PSCFREE(odtr);
