@@ -47,12 +47,12 @@
 #include "sltypes.h"
 #include "slutil.h"
 #include "mount_slash/bmap_cli.h"
-#include "mount_slash/bmpc.h"
 #include "mount_slash/ctl_cli.h"
 #include "mount_slash/ctlsvr_cli.h"
 #include "mount_slash/dircache.h"
 #include "mount_slash/fidc_cli.h"
 #include "mount_slash/mount_slash.h"
+#include "mount_slash/pgcache.h"
 #include "mount_slash/rpc_cli.h"
 #include "mount_slash/subsys_cli.h"
 #include "slashd/bmap_mds.h"
@@ -621,6 +621,7 @@ main(int argc, char *argv[])
 	PRVAL(SLCONNT_MDS);
 	PRVAL(SLC_DEBUG_NONE);
 	PRVAL(SLC_DEBUG_READAHEAD_CB_EIO);
+	PRVAL(SLC_DEBUG_READRPC_OFFLINE);
 	PRVAL(SLC_DEBUG_READ_CB_EIO);
 	PRVAL(SLC_DEBUG_REQUEST_TIMEOUT);
 	PRVAL(SLC_OPST_AIO_PLACED);
