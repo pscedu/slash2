@@ -565,6 +565,9 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 
 	if (add.nios) {
 		if (!upd->upd_recpt) {
+			slm_repl_upd_odt_read(b);
+			psc_assert(upd->upd_recpt == NULL);
+
 			br.br_fg = f->fcmh_fg;
 			br.br_bno = b->bcm_bmapno;
 			upd->upd_recpt =
