@@ -101,11 +101,12 @@ slm_bmap_read_db_cb(void *arg, __unusedx int ac, char **av,
 	struct bmapc_memb *b = arg;
 
 	upd = &bmap_2_bmi(b)->bmi_upd;
+	psc_assert(upd->upd_recpt == NULL);
 	upd->upd_recpt = odtr = PSCALLOC(sizeof(*odtr));
 	odtr->odtr_elem = strtoll(av[0], NULL, 10);
 	odtr->odtr_key = strtoull(av[1], NULL, 10);
-	DEBUG_BMAP(PLL_DEBUG, b, "upd %p loaded odtr [%zu,%"PRIu64" v %s]",
-	    upd, odtr->odtr_elem, odtr->odtr_key, av[1]);
+	DEBUG_BMAP(PLL_DEBUG, b, "upd %p loaded odtr [elem=%zu, key=%"PRIu64"]",
+	    upd, odtr->odtr_elem, odtr->odtr_key);
 	return (0);
 }
 
@@ -116,7 +117,8 @@ slm_repl_upd_odt_read(struct bmapc_memb *b)
 	    " SELECT	recpt_elem, recpt_key"
 	    " FROM	upsch"
 	    " WHERE	fid = %"PRIu64
-	    "	AND	bno = %u",
+	    "	AND	bno = %u"
+	    " LIMIT	1",
 	    fcmh_2_fid(b->bcm_fcmh), b->bcm_bmapno);
 }
 
@@ -200,7 +202,7 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
 //	retifset[BREPLST_GARBAGE] = 1;
 	if (mds_repl_bmap_walk_all(b, NULL, retifset,
-	    REPL_WALKF_SCIRCUIT)) { 
+	    REPL_WALKF_SCIRCUIT)) {
 		upd_init(upd, UPDT_BMAP);
 		UPD_UNBUSY(upd);
 	}
