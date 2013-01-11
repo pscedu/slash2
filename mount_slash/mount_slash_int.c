@@ -118,16 +118,16 @@ __static void
 msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
     int rqnum, uint32_t roff, uint32_t len, int op)
 {
-	struct bmpc_ioreq *r;
-	struct bmap_pagecache *bmpc;
-	uint32_t bmpce_off;
-	struct bmap_pagecache_entry *e;
+	int i, npages = 0, rbw = 0, maxpages, fetchpgs = 0, bkwdra = 0;
 	struct msl_fhent *mfh = q->mfsrq_mfh;
-	uint32_t aoff = (roff & ~BMPC_BUFMASK); /* aligned, relative offset */
-	uint32_t alen = len + (roff & BMPC_BUFMASK);
+	struct bmap_pagecache_entry *e;
+	struct bmap_pagecache *bmpc;
+	struct bmpc_ioreq *r;
 	uint64_t foff = roff + bmap_foff(b); /* filewise offset */
 	uint64_t fsz = fcmh_getsize(mfh->mfh_fcmh);
-	int i, npages = 0, rbw = 0, maxpages, fetchpgs = 0, bkwdra = 0;
+	uint32_t aoff = (roff & ~BMPC_BUFMASK); /* aligned, relative offset */
+	uint32_t alen = len + (roff & BMPC_BUFMASK);
+	uint32_t bmpce_off;
 
 	DEBUG_BMAP(PLL_INFO, b,
 	    "adding req for (off=%u) (size=%u) (nbmpce=%d)", roff, len,
@@ -143,15 +143,17 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 
 	r = bmpc_biorq_new(q, b, buf, rqnum, roff, len, op);
 	if (r->biorq_flags & BIORQ_DIO)
-		/* The bmap is set to use directio, we may then skip
+		/*
+		 * The bmap is set to use directio; we may then skip
 		 * cache preparation.
 		 */
 		return;
 
 	bmpc = bmap_2_bmpc(b);
-	/* How many pages are needed to accommodate the request?
-	 *   Determine and record whether RBW (read-before-write)
-	 *   operations are needed on the first or last pages.
+	/*
+	 * How many pages are needed to accommodate the request?
+	 * Determine and record whether RBW (read-before-write)
+	 * operations are needed on the first or last pages.
 	 */
 	if (roff & BMPC_BUFMASK && op == BIORQ_WRITE)
 		rbw = BIORQ_RBWFP;
@@ -173,13 +175,15 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	if (op == BIORQ_WRITE)
 		maxpages = npages;
 	else {
-		/* Given the provided offset, determine the max pages
-		 *    that could be acquired from this bmap.
+		/*
+		 * Given the provided offset, determine the max pages
+		 * that could be acquired from this bmap.
 		 */
 		int rapages;
 
-		/* First, query the read ahead struct in the mfh to
-		 *   obtain rapages and ra direction.
+		/*
+		 * First, query the read ahead struct in the mfh to
+		 * obtain rapages and ra direction.
 		 */
 		rapages = msl_getra(mfh, npages, &bkwdra);
 		if (rapages) {
@@ -245,8 +249,9 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 
 		BMPCE_LOCK(e);
 		if (e->bmpce_flags & BMPCE_EIO) {
-			/* Don't take on pages marked with EIO.
-			 *   Go back and try again.
+			/*
+			 * Don't take on pages marked with EIO.  Go back
+			 * and try again.
 			 */
 			BMPC_ULOCK(bmpc);
 			DEBUG_BMPCE(PLL_WARN, e,
@@ -2152,16 +2157,17 @@ ssize_t
 msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
     const size_t size, const off_t off, enum rw rw)
 {
+	struct bmap_pagecache_entry *e;
 	size_t start, end, tlen, tsize;
 	struct msl_fsrqinfo *q = NULL;
 	struct bmapc_memb *b;
 	struct fidc_membh *f;
 	struct bmpc_ioreq *r;
 	uint64_t fsz;
+	int nr, i, j;
 	ssize_t rc;
 	off_t roff;
 	char *bufp;
-	int nr, i, j;
 
 	psc_assert(mfh);
 	psc_assert(mfh->mfh_fcmh);
@@ -2259,17 +2265,19 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		if (r) {
 			r->biorq_retries++;
 			/*
-			 * On retry, clear EIO and DATARDY flag. Waiters should not
-			 * see the transition because no wakeup is made until the
-			 * biorq is done.  We lose a bit by clearing DATARDY, but
-			 * it is simpler.
+			 * On retry, clear EIO and DATARDY flag.
+			 * Waiters should not see the transition because
+			 * no wakeup is made until the biorq is done.
+			 * We lose a bit by clearing DATARDY, but it is
+			 * simpler.
 			 */
 			DYNARRAY_FOREACH(e, j, &r->biorq_pages) {
 				BMPCE_LOCK(e);
 				if (biorq_is_my_bmpce(r, e)) {
 					e->bmpce_flags &= ~BMPCE_EIO;
 					e->bmpce_flags &= ~BMPCE_DATARDY;
-					DEBUG_BMPCE(PLL_INFO, e, "clear BMPCE_EIO/DATARDY");
+					DEBUG_BMPCE(PLL_INFO, e,
+					    "clear BMPCE_EIO/DATARDY");
 				}
 				BMPCE_ULOCK(e);
 			}
