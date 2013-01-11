@@ -980,7 +980,6 @@ slmupschedthr_main(__unusedx struct psc_thread *thr)
 
 		CONF_FOREACH_RESM(s, r, i, m, j)
 			if (RES_ISFS(r))
-				/* XXX add API to reset all efficiently */
 				psc_multiwait_setcondwakeable(&slm_upsch_mw,
 				    &m->resm_csvc->csvc_mwc, 0);
 
