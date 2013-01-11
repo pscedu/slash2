@@ -181,6 +181,7 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 	    &bmap_2_bci(b)->bci_etime);
 	timespecadd(&bmap_2_bci(b)->bci_xtime, &msl_bmap_max_lease,
 	    &bmap_2_bci(b)->bci_xtime);
+
  out:
 	BMAP_CLEARATTR(b, BMAP_CLI_REASSIGNREQ);
 
@@ -407,8 +408,8 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 				rc = -EAGAIN;
 			else {
 				rc = 0;
-				DEBUG_BMAP(PLL_WARN, b,
-					   "blocking on lease renewal");
+				DEBUG_BMAP(PLL_ERROR, b,
+				    "blocking on lease renewal");
 				bmap_op_start_type(b, BMAP_OPCNT_LEASEEXT);
 				bmap_wait_locked(b, (b->bcm_flags &
 				    BMAP_CLI_LEASEEXTREQ));
@@ -417,9 +418,6 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 					rc = -SLERR_BMAP_LEASEEXT_FAILED;
 
 				bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
-				/* Note: bmap_op_done_type() always drops
-				 *   the lock.
-				 */
 				BMAP_LOCK(b);
 			}
 		} // else NOOP
