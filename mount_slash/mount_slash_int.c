@@ -2156,12 +2156,13 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	struct bmapc_memb *b;
 	struct fidc_membh *f;
 	struct bmpc_ioreq *r;
-	size_t s, e, tlen, tsize;
+	size_t start, end, tlen, tsize;
 	uint64_t fsz;
 	ssize_t rc;
 	off_t roff;
 	char *bufp;
 	int nr, i;
+	struct bmap_pagecache_entry *e;
 
 	psc_assert(mfh);
 	psc_assert(mfh->mfh_fcmh);
@@ -2179,9 +2180,9 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 * Get the start and end block regions from the input
 	 * parameters.
 	 */
-	s = off / SLASH_BMAP_SIZE;
-	e = ((off + size) - 1) / SLASH_BMAP_SIZE;
-	nr = e - s + 1;
+	start = off / SLASH_BMAP_SIZE;
+	end = ((off + size) - 1) / SLASH_BMAP_SIZE;
+	nr = end - start + 1;
 	if (nr > MAX_BMAPS_REQ) {
 		rc = EINVAL;
 		return (rc);
@@ -2220,7 +2221,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	FCMH_ULOCK(f);
 
 	/* Relativize the length and offset (roff is not aligned). */
-	roff = off - (s * SLASH_BMAP_SIZE);
+	roff = off - (start * SLASH_BMAP_SIZE);
 	psc_assert(roff < SLASH_BMAP_SIZE);
 
 	/* Length of the first bmap request. */
@@ -2241,7 +2242,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		psc_assert(tsize);
 
  retry_bmap:
-		rc = bmap_get(f, s + i, rw, &b);
+		rc = bmap_get(f, start + i, rw, &b);
 		if (rc)
 			break;
 
@@ -2320,7 +2321,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		DEBUG_FCMH(PLL_ERROR, f,
 		    "q=%p bno=%zd sz=%zu tlen=%zu off=%"PSCPRIdOFFT" "
 		    "roff=%"PSCPRIdOFFT" rw=%s rc=%zd",
-		    q, s + i, tsize, tlen, off,
+		    q, start + i, tsize, tlen, off,
 		    roff, (rw == SL_READ) ? "read" : "write", rc);
 
 		if (msl_fd_offline_retry(mfh))
