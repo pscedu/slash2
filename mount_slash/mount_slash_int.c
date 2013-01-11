@@ -2161,7 +2161,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	ssize_t rc;
 	off_t roff;
 	char *bufp;
-	int nr, i;
+	int nr, i, j;
 	struct bmap_pagecache_entry *e;
 
 	psc_assert(mfh);
@@ -2258,10 +2258,22 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		 */
 		r = q->mfsrq_biorq[i];
 		if (r) {
+			r->biorq_retries++;
 			/*
-			 * XXX If I still own my pages, then perhaps I should
-			 * clear the EIO flags on those pages.
+			 * On retry, clear EIO and DATARDY flag. Waiters should not
+			 * see the transition because no wakeup is made until the
+			 * biorq is done.  We lose a bit by clearing DATARDY, but
+			 * it is simpler.
 			 */
+			DYNARRAY_FOREACH(e, j, &r->biorq_pages) {
+				BMPCE_LOCK(e);
+				if (biorq_is_my_bmpce(r, e)) {
+					e->bmpce_flags &= ~BMPCE_EIO;
+					e->bmpce_flags &= ~BMPCE_DATARDY;
+					DEBUG_BMPCE(PLL_INFO, e, "clear BMPCE_EIO/DATARDY");
+				}
+				BMPCE_ULOCK(e);
+			}
 			bmap_op_done_type(r->biorq_bmap, BMAP_OPCNT_BIORQ);
 			r->biorq_bmap = b;
 			bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
