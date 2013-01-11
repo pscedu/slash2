@@ -449,7 +449,6 @@ slmupschedthr_trygarbage_cb(struct pscrpc_request *rq,
 		if (b) {
 			/* undo brepls changes */
 			brepls_init(tract, -1);
-			tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 			tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
 			mds_repl_bmap_apply(b, tract, NULL,
 			    av->space[IN_OFF]);
@@ -683,12 +682,12 @@ upd_proc_bmap(struct slm_update_data *upd)
 						sl_csvc_decref(csvc);
 
 						/* scan destination resms */
-					FOREACH_RND(&dst_resm_i,
-					    psc_dynarray_len(&dst_res->res_members))
-						    if (slmupschedthr_tryrepldst(upd,
-							b, off, src_resm, dst_res,
-							dst_resm_i.ri_rnd_idx))
-							    return (0);
+						FOREACH_RND(&dst_resm_i,
+						    psc_dynarray_len(&dst_res->res_members))
+							if (slmupschedthr_tryrepldst(upd,
+							    b, off, src_resm, dst_res,
+							    dst_resm_i.ri_rnd_idx))
+								return (0);
 					}
 				}
 			}
@@ -704,7 +703,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 				if (rv < 0)
 					break;
 				if (rv)
-					return (rc);
+					return (0);
 			}
 			break;
 		case BREPLST_GARBAGE:
