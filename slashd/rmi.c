@@ -696,11 +696,11 @@ slm_rmi_handler(struct pscrpc_request *rq)
 			clock_gettime(CLOCK_MONOTONIC,
 			    &res2iosinfo(m->resm_res)->si_lastcomm);
 
-			/* XXX PAGEIN upsch work */
-
 			slconnthr_watch(slmconnthr, m->resm_csvc,
 			    CSVCF_NORECON, mds_sliod_alive,
 			    res2iosinfo(m->resm_res));
+
+			upschq_resm(m, UPDT_PAGEIN);
 		}
 		break;
 	case SRMT_PING:
