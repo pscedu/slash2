@@ -45,7 +45,7 @@
 #define SRII_REPLREAD_CBARG_SLVR	1
 
 /**
- * sli_rii_replread_release_sliver: We call this function in three
+ * sli_rii_replread_release_sliver - We call this function in three
  * cases:
  *  (1) When we fail to issue a request for a replication of a sliver;
  *  (2) When the request for a replication of a sliver has completed;
