@@ -450,8 +450,8 @@ bmpc_init(struct bmap_pagecache *bmpc)
 	pll_init(&bmpc->bmpc_pndg_ra, struct bmap_pagecache_entry,
 	    bmpce_lentry, &bmpc->bmpc_lock);
 
-	pll_init(&bmpc->bmpc_pndg_biorqs, struct bmpc_ioreq,
-	    biorq_lentry, &bmpc->bmpc_lock);
+	pll_initf(&bmpc->bmpc_pndg_biorqs, struct bmpc_ioreq,
+	    biorq_lentry, &bmpc->bmpc_lock, PLLIF_LOGTMP);
 
 	pll_init(&bmpc->bmpc_new_biorqs, struct bmpc_ioreq,
 	    biorq_lentry, &bmpc->bmpc_lock);
