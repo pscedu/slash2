@@ -818,7 +818,6 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r0)
 				tlen = msl_pages_copyout(r);
 			else {
 				tlen = msl_pages_copyin(r);
-				r->biorq_retries = 0;
 				r->biorq_flags |= BIORQ_FLUSHRDY;
 				DEBUG_BIORQ(PLL_INFO, r, "BIORQ_FLUSHRDY");
 			}
