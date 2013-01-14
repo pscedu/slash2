@@ -155,6 +155,7 @@ struct msl_fhent {
 	int				 mfh_flags;
 	int				 mfh_refcnt;
 
+	int				 mfh_retries;
 	int				 mfh_oflags;	/* open(2) flags */
 	int				 mfh_flush_rc;	/* fsync(2) status */
 	struct psc_lockedlist		 mfh_biorqs;	/* track biorqs (flush) */

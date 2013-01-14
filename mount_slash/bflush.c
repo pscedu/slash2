@@ -89,50 +89,30 @@ bmap_flush_biorq_expired(const struct bmpc_ioreq *a, struct timespec *t)
 int
 msl_fd_offline_retry(struct msl_fhent *mfh)
 {
-	struct psc_thread *thr;
-	int *cnt = NULL;
-
-	thr = pscthr_get();
-	if (thr->pscthr_type == MSTHRT_FS)
-		cnt = &msfsthr(thr)->mft_failcnt;
-	else if (thr->pscthr_type == MSTHRT_BMAPFLSH)
-		cnt = &msbmflthr(thr)->mbft_failcnt;
-	else
-		psc_assert("invalid thread type");
-	psc_assert(*cnt);
+	int retry = 1;
 
 	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "nretries=%d, maxretries=%d "
-	    "(non-blocking=%d)", *cnt,
+	    "(non-blocking=%d)", mfh->mfh_retries,
 	    psc_atomic32_read(&offline_nretries),
 	    (mfh->mfh_oflags & O_NONBLOCK));
 
 	if (mfh->mfh_oflags & O_NONBLOCK)
-		return (0);
-	if (++*cnt >= psc_atomic32_read(&offline_nretries))
-		return (0);
-	return (1);
-}
+		retry = 0;
+	if (++mfh->mfh_retries >= psc_atomic32_read(&offline_nretries))
+		retry = 0;
 
-/**
- * _msl_offline_retry - Determine whether an RPC should be retried.
- * @r: bmap I/O request.
- */
-int
-_msl_offline_retry(const struct pfl_callerinfo *pci,
-    struct bmpc_ioreq *r)
-{
-	int retry;
-
-	retry = msl_fd_offline_retry(r->biorq_mfh);
-	if (retry)
+	if (retry) {
+		if (mfh->mfh_retries < 10)
+			usleep(1000);
+		else
+			usleep(1000000);
 		OPSTAT_INCR(SLC_OPST_OFFLINE_RETRY);
-	else
+	} else
 		OPSTAT_INCR(SLC_OPST_OFFLINE_NO_RETRY);
-
-	DEBUG_BIORQ(PLL_INFO, r, "retry=%d", retry);
 
 	return (retry);
 }
+
 
 void
 _bmap_flushq_wake(const struct pfl_callerinfo *pci, int mode,

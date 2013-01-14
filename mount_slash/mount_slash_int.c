@@ -1571,8 +1571,8 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 		psc_dynarray_add(a, e);
 	}
 
- retry:
 	if (OPSTAT_CURR(SLC_OPST_DEBUG) == SLC_DEBUG_READRPC_OFFLINE) {
+		//OPSTAT_ASSIGN(SLC_OPST_DEBUG, 0);
 		rc = -ENOTCONN;
 		goto error;
 	}
@@ -1650,8 +1650,6 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 		sl_csvc_decref(csvc);
 		csvc = NULL;
 	}
-	if (msl_offline_retry(r))
-		goto retry;
 
 	PSCFREE(a);
 	PSCFREE(iovs);
@@ -2193,7 +2191,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		rc = EINVAL;
 		return (rc);
 	}
-
+	mfh->mfh_retries = 0;
 	/*
 	 * Initialize some state in the pfr to help with aio requests.
 	 */

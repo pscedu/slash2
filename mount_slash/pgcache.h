@@ -337,7 +337,6 @@ struct bmpc_ioreq {
 int	_msl_offline_retry(const struct pfl_callerinfo *, struct bmpc_ioreq *);
 int	 msl_fd_offline_retry(struct msl_fhent *);
 
-#define msl_offline_retry(r)		_msl_offline_retry(PFL_CALLERINFOSS(SLSS_BMAP), (r))
 
 struct bmpc_write_coalescer {
 	struct psc_lockedlist		 bwc_pll;
