@@ -113,7 +113,6 @@ msl_fd_offline_retry(struct msl_fhent *mfh)
 	return (retry);
 }
 
-
 void
 _bmap_flushq_wake(const struct pfl_callerinfo *pci, int mode,
     struct timespec *t)
