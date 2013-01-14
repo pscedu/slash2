@@ -260,6 +260,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 
 			BMPCE_WAIT(e);
 
+			BMPCE_LOCK(e);
 			bmpce_release_locked(e, bmpc);
 			BMPC_LOCK(bmpc);
 			goto restart;
