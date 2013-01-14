@@ -69,7 +69,6 @@ struct msrci_thread {
 };
 
 struct msfs_thread {
-	int				 mft_failcnt;
 	size_t				 mft_uniqid;
 	struct psc_multiwait		 mft_mw;
 };

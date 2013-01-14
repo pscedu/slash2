@@ -2320,7 +2320,6 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 	if (!size)
 		goto out;
 
-	msfsthr(pscthr_get())->mft_failcnt = 1;
 	rc = msl_write(pfr, mfh, buf, size, off);
 	if (rc)
 		goto out;
@@ -2390,8 +2389,6 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	}
 	if (!size)
 		goto out;
-
-	msfsthr(pscthr_get())->mft_failcnt = 1;
 
 	rc = msl_read(pfr, mfh, buf, size, off);
  out:
