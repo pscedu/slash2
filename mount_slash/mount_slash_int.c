@@ -726,6 +726,19 @@ msl_req_aio_add(struct pscrpc_request *rq,
 	return (SLERR_AIOWAIT);
 }
 
+void
+mfsrq_seterr(struct msl_fsrqinfo *q, int rc)
+{
+	int lk;
+
+	lk = MFH_RLOCK(q->mfsrq_mfh);
+	if (q->mfsrq_err == 0 && rc) {
+		q->mfsrq_err = rc;
+		psclog_diag("setting rqinfo q=%p err=%d", q, rc);
+	}
+	MFH_URLOCK(q->mfsrq_mfh, lk);
+}
+
 __static void
 msl_complete_fsrq(struct msl_fsrqinfo *q, int rc, size_t len)
 {
@@ -919,7 +932,6 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 	struct psc_dynarray *a = args->pointer_arg[MSL_CBARG_BMPCE];
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
 	struct bmap_pagecache_entry *e;
-	struct msl_fsrqinfo *q;
 	struct bmapc_memb *b;
 	int i;
 
@@ -946,13 +958,8 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 	r->biorq_flags &= ~(BIORQ_INFL | BIORQ_SCHED);
 	BIORQ_ULOCK(r);
 
-	if (rc) {
-		q = r->biorq_fsrqi;
-		MFH_LOCK(q->mfsrq_mfh);
-		if (!q->mfsrq_err)
-			q->mfsrq_err = rc;
-		MFH_ULOCK(q->mfsrq_mfh);
-	}
+	if (rc)
+		mfsrq_seterr(r->biorq_fsrqi, rc);
 
 	msl_biorq_destroy(r);
 
@@ -2272,8 +2279,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			DYNARRAY_FOREACH(e, j, &r->biorq_pages) {
 				BMPCE_LOCK(e);
 				if (biorq_is_my_bmpce(r, e)) {
-					e->bmpce_flags &= ~BMPCE_EIO;
-					e->bmpce_flags &= ~BMPCE_DATARDY;
+					e->bmpce_flags &= ~(BMPCE_EIO |
+					    BMPCE_DATARDY);
 					DEBUG_BMPCE(PLL_INFO, e,
 					    "clear BMPCE_EIO/DATARDY");
 				}
@@ -2348,10 +2355,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	}
 
 	/* Make sure we don't copy pages from biorq in case of an error */
-	MFH_LOCK(q->mfsrq_mfh);
-	if (!q->mfsrq_err && rc)
-		q->mfsrq_err = rc;
-	MFH_ULOCK(q->mfsrq_mfh);
+	mfsrq_seterr(q, rc);
 
 	/* Step 4: finish up biorqs */
 	for (i = 0; i < nr; i++) {

@@ -272,8 +272,7 @@ bmpc_freeall_locked(struct bmap_pagecache *bmpc)
 	psc_assert(pll_empty(&bmpc->bmpc_new_biorqs));
 	psc_assert(pll_empty(&bmpc->bmpc_pndg_ra));
 
-	/* DIO rq's are allowed since no cached pages are involved.
-	 */
+	/* DIO rq's are allowed since no cached pages are involved. */
 	if (!pll_empty(&bmpc->bmpc_pndg_biorqs)) {
 		struct bmpc_ioreq *r;
 
@@ -281,7 +280,8 @@ bmpc_freeall_locked(struct bmap_pagecache *bmpc)
 			psc_assert(r->biorq_flags & BIORQ_DIO);
 	}
 
-	for (a = SPLAY_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); a; a = b) {
+	for (a = SPLAY_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); a;
+	    a = b) {
 		b = SPLAY_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree, a);
 
 		BMPCE_LOCK(a);
@@ -300,7 +300,8 @@ bmpc_biorq_seterr(struct bmpc_ioreq *r, int err)
 	r->biorq_flags |= err;
 	BIORQ_ULOCK(r);
 
-	DEBUG_BIORQ(PLL_ERROR, r, "write-back flush failure (err=%d)", err);
+	DEBUG_BIORQ(PLL_ERROR, r, "write-back flush failure (err=%d)",
+	    err);
 
 	mfh_seterr(r->biorq_mfh);
 }
@@ -319,7 +320,7 @@ bmpc_biorqs_fail(struct bmap_pagecache *bmpc, int err)
 	PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs)
 		bmpc_biorq_seterr(r, err);
 	PLL_FOREACH(r, &bmpc->bmpc_new_biorqs)
-		bmpc_biorq_seterr(r, (err | BIORQ_FLUSHABORT));
+		bmpc_biorq_seterr(r, err | BIORQ_FLUSHABORT);
 	BMPC_ULOCK(bmpc);
 }
 
