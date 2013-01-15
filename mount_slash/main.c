@@ -1505,7 +1505,7 @@ mslfsop_flush(struct pscfs_req *pfr, void *data)
 	rc = msl_flush_int_locked(mfh, 0);
 	freelock(&mfh->mfh_lock);
 
-	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "done flushing (mfh=%p)", mfh);
+	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "done flushing (mfh=%p, rc=%d)", mfh, rc);
 
 	pscfs_reply_flush(pfr, rc);
 }
@@ -2659,6 +2659,7 @@ msl_flush_attr(struct fidc_membh *f)
 	struct srm_setattr_rep *mp;
 	struct pscrpc_request *rq;
 	int rc;
+	int32_t to_set;
 
 	rq = NULL;
 	csvc = NULL;
@@ -2669,12 +2670,11 @@ msl_flush_attr(struct fidc_membh *f)
 
 	FCMH_LOCK(f);
 	mq->attr.sst_fg = f->fcmh_fg;
-	mq->to_set = PSCFS_SETATTRF_FLUSH;
-	mq->to_set |= PSCFS_SETATTRF_MTIME | PSCFS_SETATTRF_DATASIZE;
+	to_set = PSCFS_SETATTRF_FLUSH;
+	to_set |= PSCFS_SETATTRF_MTIME | PSCFS_SETATTRF_DATASIZE;
 	mq->attr.sst_size = f->fcmh_sstb.sst_size;
 	mq->attr.sst_mtim = f->fcmh_sstb.sst_mtim;
-
-	DEBUG_SSTB(PLL_INFO, &f->fcmh_sstb, "attr flush, to_set = %x", mq->to_set);
+	mq->to_set = to_set;
 
 	FCMH_ULOCK(f);
 
@@ -2683,6 +2683,7 @@ msl_flush_attr(struct fidc_membh *f)
 		rc = mp->rc;
 	pscrpc_req_finished(rq);
 	sl_csvc_decref(csvc);
+	DEBUG_SSTB(PLL_INFO, &f->fcmh_sstb, "attr flush, set=%x, rc=%d", to_set, rc);
 	return (rc);
 }
 
