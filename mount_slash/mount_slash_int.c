@@ -823,12 +823,12 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r0)
 				r->biorq_flags |= BIORQ_FLUSHRDY;
 				DEBUG_BIORQ(PLL_INFO, r, "BIORQ_FLUSHRDY");
 			}
-			psc_assert(len <= q->mfsrq_size);
 		}
 	}
 	if (!found)
 		psc_fatalx("missing biorq %p in fsrq %p", r0, q);
 
+	psc_assert(len <= q->mfsrq_size);
 	msl_complete_fsrq(q, 0, len);
 }
 
