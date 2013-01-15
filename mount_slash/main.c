@@ -1176,8 +1176,10 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		}
 	}
 
-	/* Establish these dirents in our cache.  Do this before replying
-	 *   to pscfs in order to prevent unnecessary lookup RPC's.
+	/*
+	 * Establish these dirents in our cache.  Do this before
+	 * replying to pscfs in order to prevent unnecessary lookup
+	 * RPC's.
 	 */
 	if (mp->num)
 		dircache_reg_ents(e, mp->num);
@@ -1188,8 +1190,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 
 	pscfs_reply_readdir(pfr, iov[0].iov_base, mp ? mp->size : 0, rc);
 
-	/* At this point the dirent cache is technically freeable.
-	 */
+	/* At this point the dirent cache is technically freeable. */
 	if (mp && mp->num)
 		dircache_setfreeable_ents(e);
 	else if (e)
@@ -2391,8 +2392,8 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 		goto out;
 
 	rc = msl_read(pfr, mfh, buf, size, off);
- out:
 
+ out:
 	if (rc) {
 		pscfs_reply_read(pfr, buf, len, rc);
 		OPSTAT_INCR(SLC_OPST_FSRQ_READ_FREE);
