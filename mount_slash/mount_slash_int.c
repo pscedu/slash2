@@ -784,7 +784,7 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r0)
 {
 	struct msl_fsrqinfo *q;
 	struct bmpc_ioreq *r;
-	size_t len, tlen;
+	size_t len = 0;
 	int i, rc, found = 0;
 
 	q = r0->biorq_fsrqi;
@@ -796,7 +796,7 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r0)
 	psclog_info("biorq=%p fsrq=%p pfr=%p", r0, q,
 	    q->mfsrq_pfr);
 
-	for (i = 0, len = 0; i < MAX_BMAPS_REQ; i++) {
+	for (i = 0; i < MAX_BMAPS_REQ; i++) {
 		r = q->mfsrq_biorq[i];
 
 		/* only complete myself */
@@ -807,17 +807,6 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r0)
 		if (rc)
 			continue;
 
-		/*
-		 * copy data in and out on behand of the finishing biorq.
-		 */
-		if (i && !len)
-			/*
-			 * This fsrq has 2 biorqs (probably spanned two
-			 * bmaps) and the first biorq was completed via
-			 * cache so interpolate its len.
-			 */
-			len = q->mfsrq_size - r->biorq_len;
-
 		if (r->biorq_flags & BIORQ_DIO) {
 			/*
 			 * Support mix of dio and cached reads.  This
@@ -825,18 +814,15 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r0)
 			 * The 'len' here was possibly adjusted against
 			 * the tail of the file in msl_io().
 			 */
-			len += r->biorq_len;
+			len = r->biorq_len;
 		} else {
 			if (q->mfsrq_rw == SL_READ)
-				tlen = msl_pages_copyout(r);
+				len = msl_pages_copyout(r);
 			else {
-				tlen = msl_pages_copyin(r);
+				len = msl_pages_copyin(r);
 				r->biorq_flags |= BIORQ_FLUSHRDY;
 				DEBUG_BIORQ(PLL_INFO, r, "BIORQ_FLUSHRDY");
 			}
-			if (!tlen)
-				break;
-			len += tlen;
 			psc_assert(len <= q->mfsrq_size);
 		}
 	}
