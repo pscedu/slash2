@@ -120,7 +120,6 @@ sli_open_backing_file(struct fidc_membh *f)
 		OPSTAT_INCR(SLI_OPST_OPEN_SUCCEED);
 	psclog_info("path=%s fd=%d rc=%d",
 	    strstr(fidfn, "fidns"), fcmh_2_fd(f), rc);
-
 	return (rc);
 }
 
@@ -219,7 +218,7 @@ sli_fcmh_reopen(struct fidc_membh *f, const struct slash_fidgen *fg)
 		fcmh_2_gen(f) = fg->fg_gen;
 
 		rc = sli_open_backing_file(f);
-		/* Notify upper layers that open() has failed */
+		/* Notify upper layers that open() has failed. */
 		if (rc)
 			f->fcmh_flags |= FCMH_CTOR_FAILED;
 
@@ -238,7 +237,7 @@ sli_fcmh_reopen(struct fidc_membh *f, const struct slash_fidgen *fg)
 			f->fcmh_flags &=
 			    ~(FCMH_CTOR_FAILED | FCMH_NO_BACKFILE);
 
-		DEBUG_FCMH(PLL_NOTIFY, f, "open FCMH_NO_BACKFILE (rc=%d)",
+		DEBUG_FCMH(PLL_NOTICE, f, "open FCMH_NO_BACKFILE (rc=%d)",
 		    rc);
 
 	} else if (fg->fg_gen < fcmh_2_gen(f)) {
@@ -264,6 +263,7 @@ sli_fcmh_ctor(struct fidc_membh *f)
 		f->fcmh_flags |= FCMH_NO_BACKFILE;
 		DEBUG_FCMH(PLL_NOTICE, f, "refusing to open backing file "
 		   "with FGEN_ANY");
+
 		/*
 		 * This is not an error, we just don't have enough info
 		 * to create the backing file.
