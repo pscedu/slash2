@@ -89,6 +89,7 @@ upd_tryremove(struct slm_update_data *upd)
 	brepls_init(retifset, 1);
 	retifset[BREPLST_VALID] = 0;
 	retifset[BREPLST_INVALID] = 0;
+	retifset[BREPLST_GARBAGE] = 0;
 
 	lk = BMAPOD_REQRDLOCK(bmi);
 
@@ -621,11 +622,15 @@ upd_proc_bmap(struct slm_update_data *upd)
 	b = bmi_2_bmap(bmi);
 	f = b->bcm_fcmh;
 
+	UPD_ULOCK(upd);
+
 	FCMH_WAIT_BUSY(f);
 	FCMH_ULOCK(f);
 
 	BMAP_WAIT_BUSY(b);
 	BMAP_ULOCK(b);
+
+	UPD_LOCK(upd);
 
 	BMAPOD_MODIFY_START(b);
 
@@ -934,7 +939,6 @@ upd_proc(struct slm_update_data *upd)
 	int rc, locked;
 
 	locked = UPSCH_HASLOCK();
-
 	if (locked)
 		UPSCH_ULOCK();
 	UPD_LOCK(upd);
