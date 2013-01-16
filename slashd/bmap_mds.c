@@ -104,8 +104,9 @@ slm_bmap_read_db_cb(void *arg, __unusedx int ac, char **av,
 	psc_assert(upd->upd_recpt == NULL);
 	upd->upd_recpt = odtr = PSCALLOC(sizeof(*odtr));
 	odtr->odtr_elem = strtoll(av[0], NULL, 10);
-	odtr->odtr_key = strtoull(av[1], NULL, 10);
-	DEBUG_BMAP(PLL_DEBUG, b, "upd %p loaded odtr [elem=%zu, key=%"PRIu64"]",
+	odtr->odtr_key = strtoull(av[1], NULL, 16);
+	DEBUG_BMAP(PLL_DEBUG, b,
+	    "upd %p loaded odtr [elem=%zu, key=%"PSCPRIxCRC64"]",
 	    upd, odtr->odtr_elem, odtr->odtr_key);
 	return (0);
 }
@@ -195,12 +196,9 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 
 	upd = bmap_2_upd(b);
 
-	brepls_init(retifset, 0);
-	retifset[BREPLST_REPL_QUEUED] = 1;
-	retifset[BREPLST_REPL_SCHED] = 1;
-	retifset[BREPLST_TRUNCPNDG] = 1;
-	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
-//	retifset[BREPLST_GARBAGE] = 1;
+	brepls_init(retifset, 1);
+	retifset[BREPLST_VALID] = 0;
+	retifset[BREPLST_INVALID] = 0;
 	if (mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT)) {
 		upd_init(upd, UPDT_BMAP);
