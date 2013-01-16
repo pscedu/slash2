@@ -89,7 +89,7 @@ slnewfs_create_int(const char *pdirnam, uint32_t curdepth,
  *	(use ZFS FUSE mount).
  */
 void
-slnewfs_create_odtable(const char *fn)
+slnewfs_create_odtable(const char *fn, int flags)
 {
 	struct odtable_entftr odtf;
 	struct odtable_hdr odth;
@@ -106,7 +106,7 @@ slnewfs_create_odtable(const char *fn)
 	    sizeof(struct odtable_entftr);
 	odth.odth_magic = ODTBL_MAGIC;
 	odth.odth_version = ODTBL_VERS;
-	odth.odth_options = ODTBL_OPT_CRC;
+	odth.odth_options = ODTBL_OPT_CRC | flags;
 	odth.odth_start = ODTBL_START;
 
 	odtf.odtf_crc = 0;
@@ -249,13 +249,13 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 	fclose(fp);
 
 	xmkfn(fn, "%s/%s", metadir, SL_FN_BMAP_ODTAB);
-	slnewfs_create_odtable(fn);
+	slnewfs_create_odtable(fn, 0);
 
 	xmkfn(fn, "%s/%s", metadir, SL_FN_REPL_ODTAB);
-	slnewfs_create_odtable(fn);
+	slnewfs_create_odtable(fn, ODTBL_OPT_SYNC);
 
 	xmkfn(fn, "%s/%s", metadir, SL_FN_PTRUNC_ODTAB);
-	slnewfs_create_odtable(fn);
+	slnewfs_create_odtable(fn, ODTBL_OPT_SYNC);
 }
 
 void
