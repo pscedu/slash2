@@ -404,6 +404,7 @@ reimport
 - setup arc testrig
 - checkcreds() needs to take a supplementary group list
 - the following command can apparently corrupt a bmap:
+- listxattr returns ERANGE
 
  perl -Wle 'open F, ">", "r000"; seek F,128*1024*1024,0; print F "0" or die $!; '
 
