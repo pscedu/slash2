@@ -414,7 +414,6 @@ msl_biorq_del(struct bmpc_ioreq *r)
 		r->biorq_flags &= ~BIORQ_PENDING;
 	}
 	if (r->biorq_flags & BIORQ_FLUSHRDY) {
-		b = r->biorq_bmap;
 		atomic_dec(&bmpc->bmpc_pndgwr);
 		if (!atomic_read(&bmpc->bmpc_pndgwr))
 			b->bcm_flags &= ~BMAP_DIRTY;
