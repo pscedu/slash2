@@ -57,7 +57,7 @@ __static struct pscrpc_nbreqset	*pndgBmapRlsReqs;	/* bmap release */
 __static struct pscrpc_nbreqset	*pndgWrtReqs;
 __static struct psc_listcache	 pndgWrtReqSets;
 __static atomic_t		 outstandingRpcCnt;
-psc_atomic32_t			 offline_nretries = PSC_ATOMIC32_INIT(256);
+psc_atomic32_t			 max_nretries = PSC_ATOMIC32_INIT(256);
 
 #define MAX_OUTSTANDING_RPCS	40
 #define MIN_COALESCE_RPC_SZ	LNET_MTU /* Try for big RPC's */
@@ -87,18 +87,21 @@ bmap_flush_biorq_expired(const struct bmpc_ioreq *a, struct timespec *t)
 }
 
 int
-msl_fd_offline_retry(struct msl_fhent *mfh)
+msl_fd_should_retry(struct msl_fhent *mfh, int rc)
 {
 	int retry = 1;
 
 	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "nretries=%d, maxretries=%d "
 	    "(non-blocking=%d)", mfh->mfh_retries,
-	    psc_atomic32_read(&offline_nretries),
+	    psc_atomic32_read(&max_nretries),
 	    (mfh->mfh_oflags & O_NONBLOCK));
 
-	if (mfh->mfh_oflags & O_NONBLOCK)
+	/* test for retryable error codes */
+	if (rc != -ENOTCONN)
 		retry = 0;
-	if (++mfh->mfh_retries >= psc_atomic32_read(&offline_nretries))
+	else if (mfh->mfh_oflags & O_NONBLOCK)
+		retry = 0;
+	else if (++mfh->mfh_retries >= psc_atomic32_read(&max_nretries))
 		retry = 0;
 
 	if (retry) {

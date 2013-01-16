@@ -334,8 +334,7 @@ struct bmpc_ioreq {
 	    (b)->biorq_last_sliod, psc_dynarray_len(&(b)->biorq_pages),	\
 	    (b)->biorq_bmap, PSCPRI_TIMESPEC_ARGS(&(b)->biorq_expire), ## __VA_ARGS__)
 
-int	_msl_offline_retry(const struct pfl_callerinfo *, struct bmpc_ioreq *);
-int	 msl_fd_offline_retry(struct msl_fhent *);
+int	 msl_fd_offline_retry(struct msl_fhent *, int);
 
 
 struct bmpc_write_coalescer {

@@ -2334,7 +2334,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		    q, start + i, tsize, tlen, off,
 		    roff, (rw == SL_READ) ? "read" : "write", rc);
 
-		if (msl_fd_offline_retry(mfh))
+		if (msl_fd_should_retry(mfh, rc))
 			goto restart;
 		if (abs(rc) == SLERR_ION_OFFLINE)
 			rc = -EIO;

@@ -435,7 +435,7 @@ void
 msctlparam_offlinenretries_get(char buf[PCP_VALUE_MAX])
 {
 	snprintf(buf, PCP_VALUE_MAX, "%d",
-	    psc_atomic32_read(&offline_nretries));
+	    psc_atomic32_read(&max_nretries));
 }
 
 int
@@ -448,7 +448,7 @@ msctlparam_offlinenretries_set(const char *val)
 	if (l < 1 || l > 1000 ||
 	    endp == val || *endp != '\0')
 		return (-1);
-	psc_atomic32_set(&offline_nretries, l);
+	psc_atomic32_set(&max_nretries, l);
 	return (0);
 }
 
