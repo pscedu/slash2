@@ -563,7 +563,7 @@ slvr_worker_init(void)
 	lc_reginit(&bcr_ready, struct bcrcupd, bcr_lentry, "bcr_ready");
 	lc_reginit(&bcr_hold, struct bcrcupd, bcr_lentry, "bcr_hold");
 	bcr_hold.plc_flags |= PLLF_EXTLOCK;
-	bcr_hold.plc_lockp = &bcr_hold.plc_lock;
+	bcr_hold.plc_lockp = &bcr_ready.plc_lock;
 
 	_psc_poolmaster_init(&bmap_crcupd_poolmaster,
 	    sizeof(struct bcrcupd) +
