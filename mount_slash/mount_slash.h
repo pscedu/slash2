@@ -251,6 +251,7 @@ int	 msl_stat(struct fidc_membh *, void *);
 int	 msl_write_rpc_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 
 size_t	 msl_pages_copyout(struct bmpc_ioreq *);
+int	 msl_fd_should_retry(struct msl_fhent *, int);
 
 struct slashrpc_cservice *
 	 msl_try_get_replica_res(struct bmapc_memb *, int);

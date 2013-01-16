@@ -1429,7 +1429,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 
 	csvc = msl_bmap_to_csvc(b, 0);
 	if (csvc == NULL) {
-		rc = ENOTCONN;
+		rc = -ENOTCONN;
 		goto error;
 	}
 
