@@ -13,7 +13,7 @@ CREATE TABLE upsch (
 	pri		INT,
 
 	recpt_elem	BIGINT,
-	recpt_key	CHAR(20),
+	recpt_key	CHAR(16),
 
 	PRIMARY KEY(id),
 	UNIQUE(resid, fid, bno)

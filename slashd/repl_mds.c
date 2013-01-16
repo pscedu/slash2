@@ -531,6 +531,11 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 	upd = &bmi->bmi_upd;
 	f = b->bcm_fcmh;
 
+	/* Transfer ownership to us. */
+	pthr = pthread_self();
+	f->fcmh_owner = pthr;
+	b->bcm_owner = pthr;
+
 	locked = BMAPOD_READ_START(b);
 
 	add.nios = 0;
@@ -570,11 +575,10 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 
 			br.br_fg = f->fcmh_fg;
 			br.br_bno = b->bcm_bmapno;
-			upd->upd_recpt =
-			    mds_odtable_putitem(slm_repl_odt, &br,
-				sizeof(br));
+			upd->upd_recpt = mds_odtable_putitem(
+			    slm_repl_odt, &br, sizeof(br));
 			DEBUG_UPD(PLL_DEBUG, upd,
-			    "assigned odtable receipt [%zu,%"PRIu64"]",
+			    "assigned odtable receipt [%zu,%"PSCPRIxCRC64"]",
 			    upd->upd_recpt->odtr_elem,
 			    upd->upd_recpt->odtr_key);
 		}
@@ -586,7 +590,7 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 			    "   recpt_elem, recpt_key"
 			    ") VALUES ("
 			    "	%d, %"PRIu64", %u, %u, %u, 'Q', "
-			    "	%zd, '%"PRIu64"'"
+			    "	%zd, '%"PRIx64"'"
 			    ")",
 			    add.iosv[n].bs_id, bmap_2_fid(b),
 			    b->bcm_bmapno,
@@ -628,13 +632,9 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 	}
 	BMAPOD_READ_DONE(b, locked);
 
-	/* Transfer ownership to us. */
-	pthr = pthread_self();
-	f->fcmh_owner = pthr;
 	FCMH_UNBUSY(b->bcm_fcmh);
 
 	BMAP_LOCK(b);
-	b->bcm_owner = pthr;
 	b->bcm_flags &= ~BMAP_MDS_REPLMODWR;
 	BMAP_UNBUSY(b);
 
@@ -1085,7 +1085,7 @@ slm_repl_odt_startup_cb(void *data, struct odtable_receipt *odtr,
 			    "   recpt_elem, recpt_key"
 			    ") VALUES ("
 			    "	%d, %"PRIu64", %u, %u, %u, 'Q', "
-			    "	%zd, '%"PRIu64"'"
+			    "	%zd, '%"PRIx64"'"
 			    ")",
 			    fcmh_2_repl(f, n), bmap_2_fid(b),
 			    b->bcm_bmapno,
