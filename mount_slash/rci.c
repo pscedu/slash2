@@ -174,7 +174,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		if (mq->op == SRMIOP_RD) {
 
 			iov.iov_base = r->biorq_buf;
-			iov.iov_len = car->car_len;
+			iov.iov_len = r->biorq_len;
 
 			mq->rc = rsx_bulkserver(rq, BULK_GET_SINK,
 			    SRCI_BULK_PORTAL, &iov, 1);

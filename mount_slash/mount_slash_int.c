@@ -704,7 +704,6 @@ msl_req_aio_add(struct pscrpc_request *rq,
 			av->pointer_arg[MSL_CBARG_BIORQ] = NULL;
 
 		car->car_fsrqinfo = r->biorq_fsrqi;
-		car->car_len = r->biorq_len;
 
 		BIORQ_LOCK(r);
 		if (r->biorq_flags & BIORQ_WRITE) {

@@ -138,7 +138,6 @@ struct slc_async_req {
 	int				(*car_cbf)(struct pscrpc_request *, int,
 					    struct pscrpc_async_args *);
 	uint64_t			  car_id;
-	size_t				  car_len;
 	struct msl_fsrqinfo		 *car_fsrqinfo;
 };
 
