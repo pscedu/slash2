@@ -165,7 +165,11 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		PSCFREE(iovs);
 
 	} else if (car->car_cbf == msl_dio_cb) {
-		OPSTAT_INCR(SLC_OPST_DIO_CB);
+
+		if (mq->op == SRMIOP_RD)
+			OPSTAT_INCR(SLC_OPST_DIO_CB_READ);
+		else
+			OPSTAT_INCR(SLC_OPST_DIO_CB_WRITE);
 
 		/* FixMe: Should wake up waiters regardless of results */
 		if (mq->rc)
