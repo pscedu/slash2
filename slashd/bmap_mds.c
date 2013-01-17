@@ -199,6 +199,7 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 	brepls_init(retifset, 1);
 	retifset[BREPLST_VALID] = 0;
 	retifset[BREPLST_INVALID] = 0;
+	retifset[BREPLST_GARBAGE] = 0;
 	if (mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT)) {
 		upd_init(upd, UPDT_BMAP);
