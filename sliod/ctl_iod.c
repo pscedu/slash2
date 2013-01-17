@@ -547,8 +547,7 @@ struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("reclaim_file_fail"),
 	PFL_OPSTAT_INIT("repl_readaio"),
 	PFL_OPSTAT_INIT("slvr_aio_reply"),
-	PFL_OPSTAT_INIT("srmt_release"),
-	PFL_OPSTAT_INIT(NULL)
+	PFL_OPSTAT_INIT("srmt_release")
 };
 
 PFLCTL_SVR_DEFS;
@@ -557,11 +556,7 @@ void
 slictlthr_main(const char *fn)
 {
 
-	int i;
-
-	i = 0;
-	while (pflctl_opstats[i].pos_name != NULL) i++;
-	psc_assert(i == SLI_OPST_MAX);
+	psc_assert(nitems(pflctl_opstats) == SLI_OPST_MAX);
 
 	psc_ctlparam_register("faults", psc_ctlparam_faults);
 	psc_ctlparam_register("log.file", psc_ctlparam_log_file);
