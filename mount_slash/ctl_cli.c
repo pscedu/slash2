@@ -546,7 +546,8 @@ struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("write_done"),
 	PFL_OPSTAT_INIT("write_coalesce"),
 	PFL_OPSTAT_INIT("write_coalesce_max"),
-	PFL_OPSTAT_INIT("version")
+	PFL_OPSTAT_INIT("version"),
+	PFL_OPSTAT_INIT(NULL)
 };
 
 PFLCTL_SVR_DEFS;
@@ -561,7 +562,12 @@ msctlthr_main(__unusedx struct psc_thread *thr)
 void
 msctlthr_spawn(void)
 {
+	int i;
 	struct psc_thread *thr;
+
+	i = 0;
+	while (pflctl_opstats[i].pos_name != NULL) i++;
+	psc_assert(i == SLC_OPST_MAX);
 
 	psc_ctlparam_register("faults", psc_ctlparam_faults);
 	psc_ctlparam_register("log.file", psc_ctlparam_log_file);
