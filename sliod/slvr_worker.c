@@ -465,6 +465,7 @@ slvr_worker_int(void)
 
 	SLVR_ULOCK(s);
 
+	LIST_CACHE_LOCK(&bcr_hold);
 	BII_LOCK(bii);
 	bcr = bii->bii_bcr;
 
@@ -506,8 +507,7 @@ slvr_worker_int(void)
 			else
 				/* The bcr is full, push it out now. */
 				bcr_hold_2_ready(bcr);
-		}
-
+		} 
 	} else {
 		bmap_op_start_type(b, BMAP_OPCNT_BCRSCHED);
 
@@ -544,6 +544,7 @@ slvr_worker_int(void)
 
 	PFL_GETTIMESPEC(&bcr->bcr_age);
 	BII_ULOCK(bii);
+	LIST_CACHE_ULOCK(&bcr_hold);
 
 	slvr_worker_push_crcups();
 }
