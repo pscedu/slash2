@@ -640,7 +640,8 @@ struct pfl_opstat pflctl_opstats[] = {
 	PFL_OPSTAT_INIT("setxattr"),
 	PFL_OPSTAT_INIT("statfs"),
 	PFL_OPSTAT_INIT("symlink"),
-	PFL_OPSTAT_INIT("unlink")
+	PFL_OPSTAT_INIT("unlink"),
+	PFL_OPSTAT_INIT(NULL)
 };
 
 PFLCTL_SVR_DEFS;
@@ -648,6 +649,12 @@ PFLCTL_SVR_DEFS;
 void
 slmctlthr_main(const char *fn)
 {
+	int i;
+
+	i = 0;
+	while (pflctl_opstats[i].pos_name != NULL) i++;
+	psc_assert(i == SLM_OPST_MAX);
+
 	psc_ctlparam_register("faults", psc_ctlparam_faults);
 	psc_ctlparam_register("log.file", psc_ctlparam_log_file);
 	psc_ctlparam_register("log.format", psc_ctlparam_log_format);
