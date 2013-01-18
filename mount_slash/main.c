@@ -2451,7 +2451,6 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
-
 	if (rc == 0)
 		rc = mp->rc;
 
@@ -2655,15 +2654,12 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 __static int
 msl_flush_attr(struct fidc_membh *f)
 {
-	struct slashrpc_cservice *csvc;
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
-	struct pscrpc_request *rq;
 	int rc;
-	int32_t to_set;
 
-	rq = NULL;
-	csvc = NULL;
 	MSL_RMC_NEWREQ_PFCC(NULL, f, csvc, SRMT_SETATTR, rq, mq, mp,
 	    rc);
 	if (rc)
@@ -2671,20 +2667,20 @@ msl_flush_attr(struct fidc_membh *f)
 
 	FCMH_LOCK(f);
 	mq->attr.sst_fg = f->fcmh_fg;
-	to_set = PSCFS_SETATTRF_FLUSH;
-	to_set |= PSCFS_SETATTRF_MTIME | PSCFS_SETATTRF_DATASIZE;
 	mq->attr.sst_size = f->fcmh_sstb.sst_size;
 	mq->attr.sst_mtim = f->fcmh_sstb.sst_mtim;
-	mq->to_set = to_set;
-
 	FCMH_ULOCK(f);
+
+	mq->to_set = PSCFS_SETATTRF_FLUSH | PSCFS_SETATTRF_MTIME |
+	    PSCFS_SETATTRF_DATASIZE;
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
+	DEBUG_SSTB(PLL_INFO, &f->fcmh_sstb, "attr flush, set=%x, rc=%d",
+	    mq->to_set, rc);
 	pscrpc_req_finished(rq);
 	sl_csvc_decref(csvc);
-	DEBUG_SSTB(PLL_INFO, &f->fcmh_sstb, "attr flush, set=%x, rc=%d", to_set, rc);
 	return (rc);
 }
 
