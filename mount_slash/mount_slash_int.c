@@ -1529,7 +1529,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	struct srm_io_rep *mp;
 	struct iovec *iovs;
 	uint32_t off = 0;
-	int rc, i;
+	int rc = 0, i;
 
 	OPSTAT_INCR(SLC_OPST_READ_RPC_LAUNCH);
 
