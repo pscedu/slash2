@@ -2199,13 +2199,13 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 	fsz = fcmh_getsize(f);
 
-	if ((rw == SL_READ && off >= (off_t)fsz)) {
+	if (rw == SL_READ && off >= (off_t)fsz) {
 		FCMH_ULOCK(f);
 		PFL_GOTOERR(out, 0);
 	}
 
 	/* Catch read ops which extend beyond EOF. */
-	if ((rw == SL_READ) && ((tsize + off) > fsz))
+	if (rw == SL_READ && tsize + (uint64_t)off > fsz)
 		tsize = fsz - off;
 
 	FCMH_ULOCK(f);
