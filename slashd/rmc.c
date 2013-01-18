@@ -508,6 +508,7 @@ slm_rmc_handle_mknod(struct pscrpc_request *rq)
 	struct fidc_membh *p = NULL;
 	struct srm_mknod_req *mq;
 	struct srm_mknod_rep *mp;
+	struct slash_creds cr;
 	int vfsid;
 
 	OPSTAT_INCR(SLM_OPST_MKNOD);
@@ -522,8 +523,10 @@ slm_rmc_handle_mknod(struct pscrpc_request *rq)
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mds_reserve_slot(1);
+	cr.scr_uid = mq->creds.scr_uid;
+	cr.scr_gid = mq->creds.scr_gid;
 	mp->rc = mdsio_mknod(vfsid, fcmh_2_mdsio_fid(p), mq->name,
-	    mq->mode, &mq->creds, &mp->cattr, NULL, mdslog_namespace,
+	    mq->mode, &cr, &mp->cattr, NULL, mdslog_namespace,
 	    slm_get_next_slashfid);
 	mds_unreserve_slot(1);
 
@@ -545,6 +548,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	struct srm_create_rep *mp;
 	struct srm_create_req *mq;
 	struct bmapc_memb *bmap;
+	struct slash_creds cr;
 	void *mdsio_data;
 	slfid_t fid = 0;
 	int vfsid;
@@ -559,10 +563,13 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 
+	cr.scr_uid = mq->creds.scr_uid;
+	cr.scr_gid = mq->creds.scr_gid;
+
 	if (IS_REMOTE_FID(mq->pfg.fg_fid)) {
 		mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_CREATE,
-		    &mq->pfg, NULL, mq->name, NULL, mq->mode,
-		    &mq->creds, &mp->cattr, 0);
+		    &mq->pfg, NULL, mq->name, NULL, mq->mode, &cr,
+		    &mp->cattr, 0);
 		if (mp->rc)
 			PFL_GOTOERR(out, mp->rc);
 		fid = mp->cattr.sst_fg.fg_fid;
@@ -579,7 +586,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	DEBUG_FCMH(PLL_DEBUG, p, "create op start for %s", mq->name);
 
 	mds_reserve_slot(1);
-	mp->rc = mdsio_opencreate(vfsid, fcmh_2_mdsio_fid(p), &mq->creds,
+	mp->rc = mdsio_opencreate(vfsid, fcmh_2_mdsio_fid(p), &cr,
 	    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->name, NULL,
 	    &mp->cattr, &mdsio_data, fid ? NULL : mdslog_namespace,
 	    fid ? 0 : slm_get_next_slashfid, fid);
