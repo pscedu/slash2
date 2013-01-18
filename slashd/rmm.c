@@ -161,6 +161,7 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 	struct fidc_membh *p, *op, *np;
 	struct srm_forward_req *mq;
 	struct srm_forward_rep *mp;
+	struct slash_creds cr;
 	struct srt_stat sstb;
 	void *mdsio_data;
 	int vfsid;
@@ -190,6 +191,9 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		return (0);
 	}
 
+	cr.scr_uid = mq->creds.scr_uid;
+	cr.scr_gid = mq->creds.scr_gid;
+
 	mds_reserve_slot(2);
 	switch (mq->op) {
 	    case SLM_FORWARD_MKDIR:
@@ -208,7 +212,7 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		if (mp->rc)
 			break;
 		mp->rc = mdsio_opencreate(vfsid, fcmh_2_mdsio_fid(p),
-		    &mq->creds, O_CREAT | O_EXCL | O_RDWR, mq->mode,
+		    &cr, O_CREAT | O_EXCL | O_RDWR, mq->mode,
 		    mq->req.name, NULL, &mp->attr, &mdsio_data,
 		    mdslog_namespace, slm_get_next_slashfid, 0);
 		if (!mp->rc)
@@ -244,7 +248,7 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		break;
 	    case SLM_FORWARD_SETATTR:
 		/*
-		 * This is tough, because we have some logic at the fcmh
+		 * This is tough because we have some logic at the fcmh
 		 * layer dealing with (partial) truncates.  It is not a
 		 * pure namespace operation.
 		 */
@@ -262,8 +266,8 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		name = mq->req.name;
 		linkname = mq->req.name + strlen(mq->req.name) + 1;
 		mp->rc = mdsio_symlink(vfsid, linkname,
-		    fcmh_2_mdsio_fid(p), name, &mq->creds, &mp->attr,
-		    NULL, NULL, slm_get_next_slashfid, 0);
+		    fcmh_2_mdsio_fid(p), name, &cr, &mp->attr, NULL,
+		    NULL, slm_get_next_slashfid, 0);
 		break;
 	}
 	mds_unreserve_slot(2);
@@ -317,9 +321,9 @@ slm_rmm_handler(struct pscrpc_request *rq)
  */
 int
 slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
-    struct slash_fidgen *nfg, char *name, char *newname,
-    uint32_t mode, const struct slash_creds *creds,
-    struct srt_stat *sstb, int32_t to_set)
+    struct slash_fidgen *nfg, char *name, char *newname, uint32_t mode,
+    const struct slash_creds *crp, struct srt_stat *sstb,
+    int32_t to_set)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -382,7 +386,8 @@ slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
 	    op == SLM_FORWARD_CREATE ||
 	    op == SLM_FORWARD_SYMLINK) {
 		mq->mode = mode;
-		mq->creds = *creds;
+		mq->creds.scr_uid = crp->scr_uid;
+		mq->creds.scr_gid = crp->scr_gid;
 	}
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
