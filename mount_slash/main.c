@@ -2993,6 +2993,11 @@ main(int argc, char *argv[])
 	sl_subsys_register();
 	psc_subsys_register(SLCSS_INFO, "info");
 
+	psc_fault_register(SLC_FAULT_READAHEAD_CB_EIO);
+	psc_fault_register(SLC_FAULT_READRPC_OFFLINE);
+	psc_fault_register(SLC_FAULT_READ_CB_EIO);
+	psc_fault_register(SLC_FAULT_REQUEST_TIMEOUT);
+
 	pscfs_addarg(&args, "");		/* progname/argv[0] */
 	pscfs_addarg(&args, "-o");
 	pscfs_addarg(&args, STD_MOUNT_OPTIONS);
