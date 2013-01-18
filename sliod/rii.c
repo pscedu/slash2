@@ -140,11 +140,10 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 
 	sliriithr(pscthr_get())->sirit_st_nread++;
 
-	if (aio) {
+	if (aio)
 		OPSTAT_INCR(SLI_OPST_HANDLE_REPLREAD_AIO);
-	} else {
+	else
 		OPSTAT_INCR(SLI_OPST_HANDLE_REPLREAD);
-	}
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fg.fg_fid == FID_ANY) {
@@ -182,11 +181,10 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 		/* Lookup the workrq.  It should have already been created. */
 		w = sli_repl_findwq(&mq->fg, mq->bmapno);
 		if (!w) {
-			mp->rc = -ENOENT;
 			DEBUG_SLVR(PLL_ERROR, s,
 			   "sli_repl_findwq() failed to find wq");
 			//XXX cleanup the sliver ref
-			goto out;
+			PFL_GOTOERR(out, mp->rc = -ENOENT);
 		}
 		/* Ensure the sliver is found in the work item's array. */
 		for (slvridx = 0; slvridx < (int)nitems(w->srw_slvr_refs);
@@ -195,10 +193,9 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 				break;
 
 		if (slvridx == (int)nitems(w->srw_slvr_refs)) {
-			mp->rc = -ENOENT;
 			DEBUG_SLVR(PLL_ERROR, s,
 			   "failed to find slvr in wq=%p", w);
-			goto out;
+			PFL_GOTOERR(out, mp->rc = -ENOENT);
 		}
 	}
 
@@ -210,8 +207,9 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 	iov.iov_len = mq->len;
 
 	if (aiocbr) {
-		/* Ran into an async I/O.  It's possible that this sliod
-		 *   is an archival_fs.
+		/*
+		 * Ran into an async I/O.  It's possible that this sliod
+		 * is an archival_fs.
 		 */
 		if (s->slvr_flags & SLVR_REPLDST)
 			DEBUG_SLVR(PLL_WARN, s, "repldst saw aiowait");
@@ -224,8 +222,7 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 			SLVR_ULOCK(s);
 			sli_aio_replreply_setup(aiocbr, rq, s, &iov);
 			pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
-			mp->rc = rv;
-			goto out;
+			PFL_GOTOERR(out, mp->rc = rv);
 		}
 		SLVR_ULOCK(s);
 		sli_aio_aiocbr_release(aiocbr);
@@ -233,10 +230,8 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 		rv = 0;
 	}
 
-	if (rv) {
-		mp->rc = rv;
-		goto out;
-	}
+	if (rv)
+		PFL_GOTOERR(out, mp->rc = rv);
 
 	mp->rc = rsx_bulkserver(rq, aio ? BULK_GET_SINK :
 	    BULK_PUT_SOURCE, SRII_BULK_PORTAL, &iov, 1);
@@ -293,9 +288,8 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 		OPSTAT_INCR(SLI_OPST_ISSUE_REPLREAD_CB_AIO);
 	else if (rc)
 		OPSTAT_INCR(SLI_OPST_ISSUE_REPLREAD_ERROR);
-	else {
+	else
 		OPSTAT_INCR(SLI_OPST_ISSUE_REPLREAD_CB);
-	}
 	return (sli_rii_replread_release_sliver(w, slvridx, rc));
 }
 
@@ -353,7 +347,6 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	psc_assert(rc == 0);
-
 	rq = NULL;
 
  out:
