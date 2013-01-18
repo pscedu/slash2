@@ -79,10 +79,6 @@ uint32_t		 sys_upnonce;
 struct odtable		*slm_repl_odt;
 struct odtable		*slm_ptrunc_odt;
 
-const char *psc_fault_names[] = {
-	NULL
-};
-
 int
 psc_usklndthr_get_type(const char *namefmt)
 {

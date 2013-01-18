@@ -84,10 +84,6 @@ struct psc_iostats	sliod_rd_128k_stat;
 struct psc_iostats	sliod_rd_512k_stat;
 struct psc_iostats	sliod_rd_1m_stat;
 
-const char *psc_fault_names[] = {
-	NULL
-};
-
 int
 psc_usklndthr_get_type(const char *namefmt)
 {
