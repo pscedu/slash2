@@ -516,47 +516,11 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* USKLNDPL	*/ NULL
 };
 
-/* names must match enum list in file sliod.h */
-struct pfl_opstat pflctl_opstats[] = {
-	PFL_OPSTAT_INIT("crc_update"),
-	PFL_OPSTAT_INIT("crc_update_backlog"),
-	PFL_OPSTAT_INIT("crc_update_cb"),
-	PFL_OPSTAT_INIT("crc_update_cb_failure"),
-	PFL_OPSTAT_INIT("debug"),
-	PFL_OPSTAT_INIT("fsio_read"),
-	PFL_OPSTAT_INIT("fsio_read_fail"),
-	PFL_OPSTAT_INIT("fsio_write"),
-	PFL_OPSTAT_INIT("fsio_write_fail"),
-	PFL_OPSTAT_INIT("handle_io"),
-	PFL_OPSTAT_INIT("handle_replread"),
-	PFL_OPSTAT_INIT("handle_replread_aio"),
-	PFL_OPSTAT_INIT("iocb_get"),
-	PFL_OPSTAT_INIT("iocb_free"),
-	PFL_OPSTAT_INIT("io_prep_rmw"),
-	PFL_OPSTAT_INIT("issue_replread"),
-	PFL_OPSTAT_INIT("issue_replread_cb"),
-	PFL_OPSTAT_INIT("issue_replread_cb_aio"),
-	PFL_OPSTAT_INIT("issue_replread_error"),
-	PFL_OPSTAT_INIT("open"),
-	PFL_OPSTAT_INIT("open_fail"),
-	PFL_OPSTAT_INIT("open_succeed"),
-	PFL_OPSTAT_INIT("reopen"),
-	PFL_OPSTAT_INIT("release_bmap"),
-	PFL_OPSTAT_INIT("reclaim"),
-	PFL_OPSTAT_INIT("reclaim_file"),
-	PFL_OPSTAT_INIT("reclaim_file_fail"),
-	PFL_OPSTAT_INIT("repl_readaio"),
-	PFL_OPSTAT_INIT("slvr_aio_reply"),
-	PFL_OPSTAT_INIT("srmt_release")
-};
-
 PFLCTL_SVR_DEFS;
 
 void
 slictlthr_main(const char *fn)
 {
-
-	psc_assert(nitems(pflctl_opstats) == SLI_OPST_MAX);
 
 	psc_ctlparam_register("faults", psc_ctlparam_faults);
 	psc_ctlparam_register("log.file", psc_ctlparam_log_file);

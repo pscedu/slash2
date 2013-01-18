@@ -618,38 +618,11 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* ZFS_KSTAT	*/ NULL
 };
 
-/* names must match enum list in file slashd.h */
-struct pfl_opstat pflctl_opstats[] = {
-	PFL_OPSTAT_INIT("bmap_chwrmode"),
-	PFL_OPSTAT_INIT("bmap_release"),
-	PFL_OPSTAT_INIT("create"),
-	PFL_OPSTAT_INIT("extend_bmap_lease"),
-	PFL_OPSTAT_INIT("get_bmap_lease_read"),
-	PFL_OPSTAT_INIT("get_bmap_lease_write"),
-	PFL_OPSTAT_INIT("getattr"),
-	PFL_OPSTAT_INIT("getxattr"),
-	PFL_OPSTAT_INIT("link"),
-	PFL_OPSTAT_INIT("lookup"),
-	PFL_OPSTAT_INIT("mkdir"),
-	PFL_OPSTAT_INIT("mknod"),
-	PFL_OPSTAT_INIT("readdir"),
-	PFL_OPSTAT_INIT("readlink"),
-	PFL_OPSTAT_INIT("reassign_bmap_lease"),
-	PFL_OPSTAT_INIT("rename"),
-	PFL_OPSTAT_INIT("setattr"),
-	PFL_OPSTAT_INIT("setxattr"),
-	PFL_OPSTAT_INIT("statfs"),
-	PFL_OPSTAT_INIT("symlink"),
-	PFL_OPSTAT_INIT("unlink")
-};
-
 PFLCTL_SVR_DEFS;
 
 void
 slmctlthr_main(const char *fn)
 {
-
-	psc_assert(nitems(pflctl_opstats) == SLM_OPST_MAX);
 
 	psc_ctlparam_register("faults", psc_ctlparam_faults);
 	psc_ctlparam_register("log.file", psc_ctlparam_log_file);

@@ -41,6 +41,7 @@
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/ctlsvr.h"
+#include "psc_util/fault.h"
 #include "psc_util/iostats.h"
 #include "psc_util/log.h"
 #include "psc_util/random.h"
@@ -928,8 +929,7 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 		DEBUG_REQ(rc ? PLL_ERROR : PLL_INFO, rq,
 		    "bmap=%p biorq=%p", b, r);
 
-	if (OPSTAT_CURR(SLC_OPST_DEBUG) == SLC_DEBUG_READ_CB_EIO)
-		rc = EIO;
+	psc_fault_here_rc(SLC_FAULT_READ_CB_EIO, &rc, EIO);
 
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b, "sbd_seq=%"PRId64,
 	    bmap_2_sbd(b)->sbd_seq);
@@ -995,8 +995,7 @@ msl_readahead_cb(struct pscrpc_request *rq, int rc,
 	if (rq)
 		DEBUG_REQ(PLL_INFO, rq, "bmpces=%p", bmpces);
 
-	if (OPSTAT_CURR(SLC_OPST_DEBUG) == SLC_DEBUG_READAHEAD_CB_EIO)
-		rc = EIO;
+	psc_fault_here_rc(SLC_FAULT_READAHEAD_CB_EIO, &rc, EIO);
 
 	for (i = 0, e = bmpces[0], b = e->bmpce_owner; e;
 	    i++, e = bmpces[i]) {
@@ -1561,17 +1560,13 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 		psc_dynarray_add(a, e);
 	}
 
-	if (OPSTAT_CURR(SLC_OPST_DEBUG) == SLC_DEBUG_READRPC_OFFLINE) {
-		//OPSTAT_ASSIGN(SLC_OPST_DEBUG, 0);
-		rc = -ENOTCONN;
-		goto error;
-	}
+	psc_fault_here_rc(SLC_FAULT_READRPC_OFFLINE, &rc, -ENOTCONN);
+	if (rc)
+		PFL_GOTOERR(error, rc);
 	csvc = msl_bmap_to_csvc(r->biorq_bmap,
 	    r->biorq_bmap->bcm_flags & BMAP_WR);
-	if (csvc == NULL) {
-		rc = -ENOTCONN;
-		goto error;
-	}
+	if (csvc == NULL)
+		PFL_GOTOERR(error, rc = -ENOTCONN);
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
 	if (rc)

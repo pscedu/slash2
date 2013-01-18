@@ -486,69 +486,6 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* USKLNDPL	*/ NULL
 };
 
-/* must match the list in file mount_slash.h */
-struct pfl_opstat pflctl_opstats[] = {
-	PFL_OPSTAT_INIT("aio_placed"),
-	PFL_OPSTAT_INIT("biorq_destroy"),
-	PFL_OPSTAT_INIT("biorq_new"),
-	PFL_OPSTAT_INIT("biorq_restart"),
-	PFL_OPSTAT_INIT("bmap_lease_ext"),
-	PFL_OPSTAT_INIT("bmap_retrieve"),
-	PFL_OPSTAT_INIT("bmpce_get"),
-	PFL_OPSTAT_INIT("bmpce_insert"),
-	PFL_OPSTAT_INIT("bmpce_put"),
-	PFL_OPSTAT_INIT("creat"),
-	PFL_OPSTAT_INIT("debug"),
-	PFL_OPSTAT_INIT("dio_cb_read"),
-	PFL_OPSTAT_INIT("dio_cb_write"),
-	PFL_OPSTAT_INIT("dio_cb0"),
-	PFL_OPSTAT_INIT("dio_cb_add"),
-	PFL_OPSTAT_INIT("flush_attr"),
-	PFL_OPSTAT_INIT("fsrq_read"),
-	PFL_OPSTAT_INIT("fsrq_read_free"),
-	PFL_OPSTAT_INIT("fsrq_reissue"),
-	PFL_OPSTAT_INIT("fsrq_write"),
-	PFL_OPSTAT_INIT("fsrq_write_free"),
-	PFL_OPSTAT_INIT("fsync"),
-	PFL_OPSTAT_INIT("fsync_done"),
-	PFL_OPSTAT_INIT("getxattr"),
-	PFL_OPSTAT_INIT("getxattr_nosys"),
-	PFL_OPSTAT_INIT("listxattr"),
-	PFL_OPSTAT_INIT("mkdir"),
-	PFL_OPSTAT_INIT("mknod"),
-	PFL_OPSTAT_INIT("offline_retry"),
-	PFL_OPSTAT_INIT("offline_no_retry"),
-	PFL_OPSTAT_INIT("prefetch"),
-	PFL_OPSTAT_INIT("read"),
-	PFL_OPSTAT_INIT("read_done"),
-	PFL_OPSTAT_INIT("readdir"),
-	PFL_OPSTAT_INIT("readdir_retry"),
-	PFL_OPSTAT_INIT("read_ahead"),
-	PFL_OPSTAT_INIT("read_ahead_cb"),
-	PFL_OPSTAT_INIT("read_ahead_cb_add"),
-	PFL_OPSTAT_INIT("read_aio_not_found"),
-	PFL_OPSTAT_INIT("read_aio_wait"),
-	PFL_OPSTAT_INIT("read_aio_wait_max"),
-	PFL_OPSTAT_INIT("read_cb"),
-	PFL_OPSTAT_INIT("read_cb_add"),
-	PFL_OPSTAT_INIT("read_rpc_launch"),
-	PFL_OPSTAT_INIT("removexattr"),
-	PFL_OPSTAT_INIT("rename"),
-	PFL_OPSTAT_INIT("rmdir"),
-	PFL_OPSTAT_INIT("rpc_push_req_fail"),
-	PFL_OPSTAT_INIT("setattr"),
-	PFL_OPSTAT_INIT("setxattr"),
-	PFL_OPSTAT_INIT("slc_fcmh_ctor"),
-	PFL_OPSTAT_INIT("slc_fcmh_dtor"),
-	PFL_OPSTAT_INIT("srmt_write"),
-	PFL_OPSTAT_INIT("unlink"),
-	PFL_OPSTAT_INIT("write"),
-	PFL_OPSTAT_INIT("write_done"),
-	PFL_OPSTAT_INIT("write_coalesce"),
-	PFL_OPSTAT_INIT("write_coalesce_max"),
-	PFL_OPSTAT_INIT("version")
-};
-
 PFLCTL_SVR_DEFS;
 
 void
@@ -562,8 +499,6 @@ void
 msctlthr_spawn(void)
 {
 	struct psc_thread *thr;
-
-	psc_assert(nitems(pflctl_opstats) == SLC_OPST_MAX);
 
 	psc_ctlparam_register("faults", psc_ctlparam_faults);
 	psc_ctlparam_register("log.file", psc_ctlparam_log_file);
