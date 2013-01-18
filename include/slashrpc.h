@@ -313,6 +313,11 @@ struct srt_bmapminseq {
 	uint64_t		bminseq;
 };
 
+struct srt_creds {
+	uint32_t		scr_uid;
+	uint32_t		scr_gid;
+};
+
 /* ------------------------ BEGIN NAMESPACE MESSAGES ------------------------ */
 
 /* namespace update */
@@ -370,7 +375,7 @@ struct srm_forward_req {
 	uint32_t		mode;		/* mkdir/creat mode */
 	 int32_t		to_set;		/* SETATTR field flags */
 	 int32_t		_pad;
-	struct slash_creds	creds;		/* st_uid owner for new dir/file */
+	struct srt_creds	creds;		/* st_uid owner for new dir/file */
 	struct slash_fidgen	fg;		/* parent dir or target */
 	struct slash_fidgen	nfg;		/* new parent dir or target */
 	union {
@@ -697,7 +702,7 @@ struct srm_set_bmapreplpol_req {
 
 struct srm_create_req {
 	struct slash_fidgen	pfg;		/* parent dir's file ID + generation */
-	struct slash_creds	creds;		/* st_uid owner for new file */
+	struct srt_creds	creds;		/* st_uid owner for new file */
 	char			name[SL_NAME_MAX + 1];
 	uint32_t		mode;		/* mode_t permission for new file */
 
@@ -795,7 +800,7 @@ struct srm_mkdir_req {
 #define srm_mkdir_rep		srm_getattr2_rep
 
 struct srm_mknod_req {
-	struct slash_creds	creds;		/* st_uid owner for new file */
+	struct srt_creds	creds;		/* st_uid owner for new file */
 	char			name[SL_NAME_MAX + 1];
 	struct slash_fidgen	pfg;		/* parent dir */
 	uint32_t		mode;

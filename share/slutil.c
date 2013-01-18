@@ -28,6 +28,7 @@
 #include <unistd.h>
 
 #include "pfl/fcntl.h"
+#include "pfl/fs.h"
 #include "pfl/stat.h"
 #include "pfl/str.h"
 #include "pfl/types.h"
@@ -131,41 +132,39 @@ sl_internalize_statfs(const struct srt_statfs *ssfb, struct statvfs *sfb)
 	sfb->f_favail		= ssfb->sf_favail;
 }
 
+#define PERMCHECK(accmode, fmode, mask)						\
+	(((((accmode) & R_OK) && ((fmode) & ((mask) & _S_IRUGO)) == 0) ||	\
+	  (((accmode) & W_OK) && ((fmode) & ((mask) & _S_IWUGO)) == 0) ||	\
+	  (((accmode) & X_OK) && ((fmode) & ((mask) & _S_IXUGO)) == 0)) ? EACCES : 0)
+
 /**
- * checkcreds - Perform a classic UNIX permission access check.
+ * checkcreds - Perform a classic UNIX-style permission access check.
  * @sstb: ownership info.
- * @cr: credentials of access.
- * @xmode: type of access.
+ * @pcrp: credentials of access.
+ * @accmode: type of access.
  * Returns zero on success, errno code on failure.
  */
 int
-checkcreds(const struct srt_stat *sstb, const struct slash_creds *cr,
-    int xmode)
+checkcreds(const struct srt_stat *sstb, const struct pscfs_creds *pcrp,
+    int accmode)
 {
+	gid_t gid;
+	int n;
+
 #if PFL_DEBUG > 0
 	psc_assert(!pfl_memchk(sstb, 0, sizeof(*sstb)));
 #endif
+	/* root can do anything, unless rootsquash is enabled */
+	if (!globalConfig.gconf_root_squash && pcrp->pcr_uid == 0)
+		return (0);
 
-	if (!globalConfig.gconf_root_squash && cr->scr_uid == 0)
-		return (0);
-	if (sstb->sst_uid == cr->scr_uid) {
-		if (((xmode & R_OK) && (sstb->sst_mode & S_IRUSR) == 0) ||
-		    ((xmode & W_OK) && (sstb->sst_mode & S_IWUSR) == 0) ||
-		    ((xmode & X_OK) && (sstb->sst_mode & S_IXUSR) == 0))
-			return (EACCES);
-		return (0);
+	if (sstb->sst_uid == pcrp->pcr_uid)
+		return (PERMCHECK(accmode, sstb->sst_mode, S_IRWXU));
+	for (n = 0; n <= pcrp->pcr_ngid; n++) {
+		gid = n == 0 ? pcrp->pcr_gid : pcrp->pcr_gidv[n - 1];
+		if (sstb->sst_gid == gid)
+			return (PERMCHECK(accmode, sstb->sst_mode,
+			    S_IRWXG));
 	}
-	/* XXX check process supplementary group list */
-	if (sstb->sst_gid == cr->scr_gid) {
-		if (((xmode & R_OK) && (sstb->sst_mode & S_IRGRP) == 0) ||
-		    ((xmode & W_OK) && (sstb->sst_mode & S_IWGRP) == 0) ||
-		    ((xmode & X_OK) && (sstb->sst_mode & S_IXGRP) == 0))
-			return (EACCES);
-		return (0);
-	}
-	if (((xmode & R_OK) && (sstb->sst_mode & S_IROTH) == 0) ||
-	    ((xmode & W_OK) && (sstb->sst_mode & S_IWOTH) == 0) ||
-	    ((xmode & X_OK) && (sstb->sst_mode & S_IXOTH) == 0))
-		return (EACCES);
-	return (0);
+	return (PERMCHECK(accmode, sstb->sst_mode, S_IRWXO));
 }

@@ -52,9 +52,17 @@ struct psc_lockedlist	 msctl_replsts = PLL_INIT(&msctl_replsts,
 #define REPLRQ_BMAPNO_ALL (-1)
 
 int
-msctl_getcreds(int s, struct slash_creds *crp)
+msctl_getcreds(int s, struct pscfs_creds *pcrp)
 {
-	return (pfl_socket_getpeercred(s, &crp->scr_uid, &crp->scr_gid));
+	uid_t uid;
+	gid_t gid;
+	int rc;
+
+	rc = pfl_socket_getpeercred(s, &uid, &gid);
+	pcrp->pcr_uid = uid;
+	pcrp->pcr_gid = gid;
+	pcrp->pcr_ngid = 1;
+	return (rc);
 }
 
 int
@@ -74,7 +82,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct srm_replrq_rep *mp;
 	struct srm_replrq_req *mq;
 	struct slash_fidgen fg;
-	struct slash_creds cr;
+	struct pscfs_creds pcr;
 	struct fidc_membh *f;
 	uint32_t n;
 	int rc;
@@ -84,7 +92,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh,
 		    "replication request: %s", slstrerror(EINVAL)));
 
-	rc = msctl_getcreds(fd, &cr);
+	rc = msctl_getcreds(fd, &pcr);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
 		    SLPRI_FID": unable to obtain credentials: %s",
@@ -105,7 +113,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	    !S_ISDIR(f->fcmh_sstb.sst_mode))
 		rc = ENOTSUP;
 	else
-		rc = checkcreds(&f->fcmh_sstb, &cr, W_OK);
+		rc = fcmh_checkcreds(f, &pcr, W_OK);
 	fg = f->fcmh_fg;
 	fcmh_op_done(f);
 
@@ -162,7 +170,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct pscfs_clientctx pfcc;
 	struct msctl_replstq mrsq;
 	struct slash_fidgen fg;
-	struct slash_creds cr;
+	struct pscfs_creds pcr;
 	int added = 0, rc;
 
 	if (mrq->mrq_fid == FID_ANY) {
@@ -171,7 +179,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		goto issue;
 	}
 
-	rc = msctl_getcreds(fd, &cr);
+	rc = msctl_getcreds(fd, &pcr);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
 		    SLPRI_FID": unable to obtain credentials: %s",
@@ -192,7 +200,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	    !S_ISDIR(f->fcmh_sstb.sst_mode))
 		rc = ENOTSUP;
 	else
-		rc = checkcreds(&f->fcmh_sstb, &cr, R_OK);
+		rc = fcmh_checkcreds(f, &pcr, R_OK);
 	fg = f->fcmh_fg;
 	fcmh_op_done(f);
 
@@ -279,11 +287,11 @@ msctlhnd_set_newreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct pscrpc_request *rq = NULL;
 	struct pscfs_clientctx pfcc;
 	struct slash_fidgen fg;
-	struct slash_creds cr;
+	struct pscfs_creds pcr;
 	struct fidc_membh *f;
 	int rc;
 
-	rc = msctl_getcreds(fd, &cr);
+	rc = msctl_getcreds(fd, &pcr);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
 		    SLPRI_FID": unable to obtain credentials: %s",
@@ -304,7 +312,7 @@ msctlhnd_set_newreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	    !S_ISDIR(f->fcmh_sstb.sst_mode))
 		rc = ENOTSUP;
 	else
-		rc = checkcreds(&f->fcmh_sstb, &cr, W_OK);
+		rc = fcmh_checkcreds(f, &pcr, W_OK);
 	fg = f->fcmh_fg;
 	fcmh_op_done(f);
 
@@ -346,11 +354,11 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct pscrpc_request *rq = NULL;
 	struct pscfs_clientctx pfcc;
 	struct slash_fidgen fg;
-	struct slash_creds cr;
+	struct pscfs_creds pcr;
 	struct fidc_membh *f;
 	int rc;
 
-	rc = msctl_getcreds(fd, &cr);
+	rc = msctl_getcreds(fd, &pcr);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
 		    SLPRI_FID": unable to obtain credentials: %s",
@@ -370,7 +378,7 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (!S_ISREG(f->fcmh_sstb.sst_mode))
 		rc = ENOTSUP;
 	else
-		rc = checkcreds(&f->fcmh_sstb, &cr, W_OK);
+		rc = fcmh_checkcreds(f, &pcr, W_OK);
 	fg = f->fcmh_fg;
 	fcmh_op_done(f);
 

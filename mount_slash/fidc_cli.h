@@ -78,6 +78,8 @@ fci_2_fcmh(struct fcmh_cli_info *fci)
 
 void	slc_fcmh_initdci(struct fidc_membh *);
 
+int	fcmh_checkcreds(struct fidc_membh *, const struct pscfs_creds *, int);
+
 #define fidc_lookup_load_inode(fid, fcmhp, pfcc)			\
 	_fidc_lookup_load_inode(PFL_CALLERINFOSS(SLSS_FCMH), (fid),	\
 	    (fcmhp), (pfcc))
