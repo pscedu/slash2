@@ -43,15 +43,15 @@
 int
 slc_rci_handle_io(struct pscrpc_request *rq)
 {
+	int tries = 0, nwait = 0, found = 0;
+	struct bmpc_ioreq *r = NULL;
+	struct iovec *iovs = NULL;
 	struct slc_async_req *car;
 	struct psc_listcache *lc;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct sl_resm *m;
 	struct iovec iov;
-	int tries = 0, nwait = 0, found = 0;
-	struct bmpc_ioreq *r = NULL;
-	struct iovec *iovs = NULL;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -111,13 +111,12 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		OPSTAT_INCR(SLC_OPST_READ_CB);
 		a = car->car_argv.pointer_arg[MSL_CBARG_BMPCE];
 
- 		/* MAX_BMAPS_REQ*SLASH_BMAP_SIZE/BMPC_BUFSZ is just too large */
+		/* MAX_BMAPS_REQ*SLASH_BMAP_SIZE/BMPC_BUFSZ is just too large */
 		iovs = PSCALLOC(sizeof(struct iovec) * psc_dynarray_len(a));
 		DYNARRAY_FOREACH(e, i, a) {
 			if (!mq->rc) {
 				iovs[i].iov_base = e->bmpce_base;
 				iovs[i].iov_len = BMPC_BUFSZ;
-
 			} else {
 				BMPCE_LOCK(e);
 				e->bmpce_flags |= BMPCE_EIO;
