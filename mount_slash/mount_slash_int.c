@@ -1659,6 +1659,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	}
 	BMPC_ULOCK(bmap_2_bmpc(r->biorq_bmap));
 
+	DEBUG_BIORQ(PLL_INFO, r, "rpc launch falied (rc=%d)", rc);
 	return (rc);
 }
 
