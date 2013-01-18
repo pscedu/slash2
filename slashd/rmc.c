@@ -149,7 +149,7 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
 	FCMH_LOCK(f);
 	mp->attr = f->fcmh_sstb;
@@ -198,10 +198,10 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = -slm_fcmh_get(&mq->sbd.sbd_fg, &f);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 	mp->rc = bmap_lookup(f, mq->sbd.sbd_bmapno, &b);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
 	bmi = bmap_2_bmi(b);
 
@@ -216,7 +216,7 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	if (mp->rc == -EALREADY)
 		mp->rc = 0;
 	else if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
 	mp->sbd = mq->sbd;
 	mp->sbd.sbd_seq = bml->bml_seq;
@@ -303,7 +303,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	mp->rc = mds_bmap_load_cli(f, mq->bmapno, mq->flags, mq->rw,
 	    mq->prefios[0], &mp->sbd, rq->rq_export, &bmap);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
 	if (mq->flags & SRM_LEASEBMAPF_DIRECTIO)
 		mp->sbd.sbd_flags |= SRM_LEASEBMAPF_DIRECTIO;
@@ -346,14 +346,14 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
 	mp->rc = -slm_fcmh_get(&mq->fg, &c);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 	mp->rc = -slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mds_reserve_slot(1);
@@ -384,21 +384,19 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = mdsio_fid_to_vfsid(mq->pfg.fg_fid, &vfsid);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 	mp->rc = -slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	if (fcmh_2_mdsio_fid(p) == SLFID_ROOT &&
-	    strcmp(mq->name, SL_RPATH_META_DIR) == 0) {
-		mp->rc = -EINVAL;
-		goto out;
-	}
+	    strcmp(mq->name, SL_RPATH_META_DIR) == 0)
+		PFL_GOTOERR(out, mp->rc = -EINVAL);
 	mp->rc = mdsio_lookup(vfsid, fcmh_2_mdsio_fid(p), mq->name,
 	    NULL, &rootcreds, &mp->attr);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 	if (mq->pfg.fg_fid == SLFID_ROOT) {
 
 		int error;
@@ -449,13 +447,13 @@ slm_mkdir(int vfsid, struct srm_mkdir_req *mq, struct srm_mkdir_rep *mp,
 		    &mq->pfg, NULL, mq->name, NULL, mq->sstb.sst_mode,
 		    &cr, &mp->cattr, 0);
 		if (mp->rc)
-			goto out;
+			PFL_GOTOERR(out, mp->rc);
 		fid = mp->cattr.sst_fg.fg_fid;
 	}
 
 	mp->rc = -slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
 	mds_reserve_slot(1);
 	mp->rc = -mdsio_mkdir(vfsid, fcmh_2_mdsio_fid(p), mq->name,
@@ -516,11 +514,11 @@ slm_rmc_handle_mknod(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = mdsio_fid_to_vfsid(mq->pfg.fg_fid, &vfsid);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
 	mp->rc = -slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mds_reserve_slot(1);
@@ -548,14 +546,14 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	struct srm_create_req *mq;
 	struct bmapc_memb *bmap;
 	void *mdsio_data;
-	int vfsid;
 	slfid_t fid = 0;
+	int vfsid;
 
 	OPSTAT_INCR(SLM_OPST_CREATE);
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = mdsio_fid_to_vfsid(mq->pfg.fg_fid, &vfsid);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 	if (mq->flags & SRM_LEASEBMAPF_GETREPLTBL)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
@@ -566,17 +564,17 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 		    &mq->pfg, NULL, mq->name, NULL, mq->mode,
 		    &mq->creds, &mp->cattr, 0);
 		if (mp->rc)
-			goto out;
+			PFL_GOTOERR(out, mp->rc);
 		fid = mp->cattr.sst_fg.fg_fid;
 	}
 
-	/* Lookup the parent directory in the cache so that the
-	 *   SLASH2 ino can be translated into the inode for the
-	 *   underlying fs.
+	/*
+	 * Lookup the parent directory in the cache so that the SLASH2
+	 * ino can be translated into the inode for the underlying fs.
 	 */
 	mp->rc = -slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
 	DEBUG_FCMH(PLL_DEBUG, p, "create op start for %s", mq->name);
 
@@ -588,31 +586,31 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	mds_unreserve_slot(1);
 
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
-	/* Refresh the cached attributes of our parent and pack them
-	 *   in the reply.
+	/*
+	 * Refresh the cached attributes of our parent and pack them in
+	 * the reply.
 	 */
 	mdsio_fcmh_refreshattr(p, &mp->pattr);
 
 	DEBUG_FCMH(PLL_DEBUG, p, "create op done for %s", mq->name);
-	/* XXX enter this into the fcmh cache instead of doing it again
-	 *   This release may be the sanest thing actually, unless EXCL is
-	 *   used.
+	/*
+	 * XXX enter this into the fcmh cache instead of doing it again
+	 * This release may be the sanest thing actually, unless EXCL is
+	 * used.
 	 */
 	mdsio_release(vfsid, &rootcreds, mdsio_data);
 
 	DEBUG_FCMH(PLL_DEBUG, p, "mdsio_release() done for %s",
 	    mq->name);
 
-	if (fid) {
-		mp->rc2 = ENOENT;
-		goto out;
-	}
+	if (fid)
+		PFL_GOTOERR(out, mp->rc2 = ENOENT);
 
 	mp->rc = -slm_fcmh_get(&mp->cattr.sst_fg, &c);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
 	slm_fcmh_endow_nolog(vfsid, p, c);
 
@@ -626,7 +624,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	fcmh_op_done(c);
 
 	if (mp->rc2)
-		goto out;
+		PFL_GOTOERR(out, mp->rc2);
 
 	slm_rmc_bmapdesc_setup(bmap, &mp->sbd, SL_WRITE);
 
@@ -693,11 +691,11 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 
 	mp->rc = mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
 	if (mq->size > MAX_READDIR_BUFSIZ ||
 	    mq->nstbpref > MAX_READDIR_NENTS)
@@ -730,7 +728,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	mp->num = nents;
 
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
 	/*
 	 * If this is the root, we fake part of readdir contents by
@@ -790,16 +788,16 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
 	mp->rc = mdsio_readlink(vfsid, fcmh_2_mdsio_fid(f), buf,
 	    &rootcreds);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
 	iov.iov_base = buf;
 	iov.iov_len = sizeof(buf);
@@ -874,19 +872,19 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 		    &mq->opfg, &mq->npfg, from, to, 0, &rootcreds,
 		    &mp->srr_npattr, 0);
 		if (mp->rc)
-			goto out;
+			PFL_GOTOERR(out, mp->rc);
 	}
 
 	mp->rc = -slm_fcmh_get(&mq->opfg, &op);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
 	if (SAMEFG(&mq->opfg, &mq->npfg)) {
 		np = op;
 	} else {
 		mp->rc = -slm_fcmh_get(&mq->npfg, &np);
 		if (mp->rc)
-			goto out;
+			PFL_GOTOERR(out, mp->rc);
 	}
 
 	/* if we get here, op and np must be owned by the current MDS */
@@ -932,10 +930,9 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 
 	OPSTAT_INCR(SLM_OPST_SETATTR);
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mdsio_fid_to_vfsid(mq->attr.sst_fg.fg_fid, &vfsid) < 0) {
-		mp->rc = -EINVAL;
-		goto out;
-	}
+	mp->rc = mdsio_fid_to_vfsid(mq->attr.sst_fg.fg_fid, &vfsid);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
 
 	mp->rc = -slm_fcmh_get(&mq->attr.sst_fg, &f);
 	if (mp->rc)
@@ -955,7 +952,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 #endif
 		/* our client should really do this on its own */
 		if (!(to_set & PSCFS_SETATTRF_MTIME)) {
-			psclog_warn("setattr: missing MTIME flag in RPC request");
+			psclog_warn("missing MTIME flag in RPC request");
 			to_set |= PSCFS_SETATTRF_MTIME;
 			SL_GETTIMESPEC(&mq->attr.sst_mtim);
 		}
@@ -970,14 +967,12 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			to_set |= SL_SETATTRF_GEN;
 			unbump = 1;
 		} else if (!flush) {
-mp->rc = -ENOTSUP;
-goto out;
+PFL_GOTOERR(out, mp->rc = -ENOTSUP);
 
 			/* partial truncate */
-			if (f->fcmh_flags & FCMH_IN_PTRUNC) {
-				mp->rc = -SLERR_BMAP_IN_PTRUNC;
-				goto out;
-			}
+			if (f->fcmh_flags & FCMH_IN_PTRUNC)
+				PFL_GOTOERR(out, mp->rc =
+				    -SLERR_BMAP_IN_PTRUNC);
 			to_set &= ~PSCFS_SETATTRF_DATASIZE;
 			tadj |= PSCFS_SETATTRF_DATASIZE;
 		}
@@ -989,7 +984,7 @@ goto out;
 			    &mq->attr.sst_fg, NULL, NULL, NULL, 0, NULL,
 			    &mq->attr, to_set);
 			if (mp->rc)
-				goto out;
+				PFL_GOTOERR(out, mp->rc);
 		}
 		/*
 		 * If the file is open, mdsio_data will be valid and
@@ -1048,7 +1043,7 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
 	FCMH_LOCK(f);
 	fcmh_2_replpol(f) = mq->pol;
@@ -1078,15 +1073,13 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
-	if (!mds_bmap_exists(f, mq->bmapno)) {
-		mp->rc = -SLERR_BMAP_INVALID;
-		goto out;
-	}
+	if (!mds_bmap_exists(f, mq->bmapno))
+		PFL_GOTOERR(out, mp->rc = -SLERR_BMAP_INVALID);
 	mp->rc = mds_bmap_load(f, mq->bmapno, &b);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
 	BHREPL_POLICY_SET(b, mq->pol);
 
@@ -1194,13 +1187,13 @@ slm_symlink(struct pscrpc_request *rq, struct srm_symlink_req *mq,
 		    &mq->pfg, NULL, mq->name, linkname, 0, &cr,
 		    &mp->cattr, 0);
 		if (mp->rc)
-			goto out;
+			PFL_GOTOERR(out, mp->rc);
 		fid = mp->cattr.sst_fg.fg_fid;
 	}
 
 	mp->rc = -slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
 	mds_reserve_slot(1);
 	mp->rc = mdsio_symlink(vfsid, linkname, fcmh_2_mdsio_fid(p),
@@ -1253,12 +1246,12 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 		    SLM_FORWARD_UNLINK : SLM_FORWARD_RMDIR, &fg, NULL,
 		    mq->name, NULL, 0, NULL, NULL, 0);
 		if (mp->rc)
-			goto out;
+			PFL_GOTOERR(out, mp->rc);
 	}
 
 	mp->rc = -slm_fcmh_get(&fg, &p);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
 	mds_reserve_slot(1);
 	if (isfile)
@@ -1305,7 +1298,7 @@ slm_rmc_handle_listxattr(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
 	if (mq->size) {
 		iov.iov_base = PSCALLOC(mq->size);
@@ -1322,14 +1315,13 @@ slm_rmc_handle_listxattr(struct pscrpc_request *rq)
 		if (mq->size)
 			pscrpc_msg_add_flags(rq->rq_repmsg,
 			    MSG_ABORT_BULK);
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 	}
 
 	mp->size = outsize;
-	if (mq->size) {
+	if (mq->size)
 		mp->rc = rsx_bulkserver(rq, BULK_PUT_SOURCE,
 		    SRMC_BULK_PORTAL, &iov, 1);
-	}
 
  out:
 	if (mq->size)
@@ -1359,7 +1351,7 @@ slm_rmc_handle_setxattr(struct pscrpc_request *rq)
 
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
 	memcpy(name, mq->name, mq->namelen);
 	name[mq->namelen] = '\0';
@@ -1369,7 +1361,7 @@ slm_rmc_handle_setxattr(struct pscrpc_request *rq)
 	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, SRMC_BULK_PORTAL,
 	    &iov, 1);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
 	mds_reserve_slot(1);
 	mp->rc = mdsio_setxattr(vfsid, &rootcreds, name, value,
@@ -1395,16 +1387,17 @@ slm_rmc_handle_getxattr(struct pscrpc_request *rq)
 
 	OPSTAT_INCR(SLM_OPST_GETXATTR);
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid) < 0) {
+	mp->rc = mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid);
+	if (mp->rc) {
 		if (mq->size)
 			abort_bulk = 1;
-		PFL_GOTOERR(out, mp->rc = -EINVAL);
+		PFL_GOTOERR(out, mp->rc);
 	}
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc) {
 		if (mq->size)
 			abort_bulk = 1;
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 	}
 
 	mp->valuelen = 0;
@@ -1418,7 +1411,7 @@ slm_rmc_handle_getxattr(struct pscrpc_request *rq)
 			mp->rc = 0;
 		if (mq->size)
 			abort_bulk = 1;
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 	}
 	mp->valuelen = outsize;
 
@@ -1449,7 +1442,7 @@ slm_rmc_handle_removexattr(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, mp->rc);
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mds_reserve_slot(1);
@@ -1515,7 +1508,7 @@ slm_rmc_handler(struct pscrpc_request *rq)
 			rc = -SLERR_NOTCONN;
 		EXPORT_ULOCK(rq->rq_export);
 		if (rc)
-			goto out;
+			PFL_GOTOERR(out, rc);
 	}
 
 	switch (rq->rq_reqmsg->opc) {
