@@ -401,7 +401,7 @@ bmap_flush_desched(struct bmpc_ioreq *r)
 	if (r->biorq_retries >= SL_MAX_BMAPFLSH_RETRIES) {
 		/* Cleanup errored I/O requests.
 		 */
-		r->biorq_flags |= (BIORQ_MAXRETRIES | BIORQ_FLUSHABORT);
+		r->biorq_flags |= BIORQ_MAXRETRIES;
 		biorq_destroy_failed(r);
 	}
 

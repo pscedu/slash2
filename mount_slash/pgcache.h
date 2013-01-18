@@ -278,15 +278,14 @@ struct bmpc_ioreq {
 #define BIORQ_AIOWAIT			(1 << 14)
 #define BIORQ_RESCHED			(1 << 15)
 #define BIORQ_ARCHIVER			(1 << 16)
-#define BIORQ_FLUSHABORT		(1 << 17)
-#define BIORQ_EXPIREDLEASE		(1 << 18)
-#define BIORQ_MAXRETRIES		(1 << 19)	/* too many retries.. */
-#define BIORQ_BMAPFAIL			(1 << 20)
-#define BIORQ_READFAIL			(1 << 21)
-#define BIORQ_PENDING			(1 << 22)
-#define BIORQ_WAIT			(1 << 23)
-#define BIORQ_EIO			(1 << 24)
-#define BIORQ_MFHLIST			(1 << 25)
+#define BIORQ_EXPIREDLEASE		(1 << 17)
+#define BIORQ_MAXRETRIES		(1 << 18)	/* too many retries.. */
+#define BIORQ_BMAPFAIL			(1 << 19)
+#define BIORQ_READFAIL			(1 << 20)
+#define BIORQ_PENDING			(1 << 21)
+#define BIORQ_WAIT			(1 << 22)
+#define BIORQ_EIO			(1 << 23)
+#define BIORQ_MFHLIST			(1 << 24)
 
 #define BIORQ_LOCK(r)			spinlock(&(r)->biorq_lock)
 #define BIORQ_ULOCK(r)			freelock(&(r)->biorq_lock)
@@ -297,7 +296,7 @@ struct bmpc_ioreq {
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP, "biorq@%p "				\
 	    "flg=%#x:"							\
-	    "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "	\
+	    "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "	\
 	    "ref=%d off=%u len=%u "					\
 	    "retry=%u buf=%p rqi=%p "					\
 	    "sliod=%x np=%d "						\
@@ -320,7 +319,6 @@ struct bmpc_ioreq {
 	    (b)->biorq_flags & BIORQ_AIOWAIT		? "S" : "",	\
 	    (b)->biorq_flags & BIORQ_RESCHED		? "R" : "",	\
 	    (b)->biorq_flags & BIORQ_ARCHIVER		? "c" : "",	\
-	    (b)->biorq_flags & BIORQ_FLUSHABORT		? "B" : "",	\
 	    (b)->biorq_flags & BIORQ_EXPIREDLEASE	? "X" : "",	\
 	    (b)->biorq_flags & BIORQ_MAXRETRIES		? "T" : "",	\
 	    (b)->biorq_flags & BIORQ_BMAPFAIL		? "b" : "",	\

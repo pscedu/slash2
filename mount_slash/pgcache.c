@@ -320,7 +320,7 @@ bmpc_biorqs_fail(struct bmap_pagecache *bmpc, int err)
 	PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs)
 		bmpc_biorq_seterr(r, err);
 	PLL_FOREACH(r, &bmpc->bmpc_new_biorqs)
-		bmpc_biorq_seterr(r, err | BIORQ_FLUSHABORT);
+		bmpc_biorq_seterr(r, err);
 	BMPC_ULOCK(bmpc);
 }
 
@@ -473,7 +473,6 @@ dump_biorq_flags(uint32_t flags)
 	PFL_PRFLAG(BIORQ_AIOWAIT, &flags, &seq);
 	PFL_PRFLAG(BIORQ_RESCHED, &flags, &seq);
 	PFL_PRFLAG(BIORQ_ARCHIVER, &flags, &seq);
-	PFL_PRFLAG(BIORQ_FLUSHABORT, &flags, &seq);
 	PFL_PRFLAG(BIORQ_EXPIREDLEASE, &flags, &seq);
 	PFL_PRFLAG(BIORQ_MAXRETRIES, &flags, &seq);
 	PFL_PRFLAG(BIORQ_BMAPFAIL, &flags, &seq);
