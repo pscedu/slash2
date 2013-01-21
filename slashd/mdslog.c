@@ -714,7 +714,7 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 		psclogs(PLL_INFO, SLMSS_INFO,
 		    "file data removed fid="SLPRI_FID" "
 		    "uid=%u gid=%u "
-		    "fsize=%"PRId64" op=%d",
+		    "fsize=%zu op=%d",
 		    sstb->sst_fid,
 		    sstb->sst_uid, sstb->sst_gid,
 		    siz, op);

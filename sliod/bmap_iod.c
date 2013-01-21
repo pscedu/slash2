@@ -456,15 +456,14 @@ iod_bmap_init(struct bmapc_memb *b)
 
 	pll_init(&bii->bii_rls, struct bmap_iod_rls, bir_lentry, NULL);
 
-	PFL_GETTIMESPEC(&bii->bii_age);
-
 	psc_atomic32_set(&bii->bii_crcdrty_slvrs, 0);
 
-	/* XXX At some point we'll want to let bmaps hang around in the
-	 *   cache to prevent extra reads and CRC table fetches.
+	/*
+	 * XXX At some point we'll want to let bmaps hang around in the
+	 * cache to prevent extra reads and CRC table fetches.
 	 */
-	//bmap_op_start_type(b, BMAP_OPCNT_REAPER);
-	//lc_addtail(b, &bmapReapQ);
+//	bmap_op_start_type(b, BMAP_OPCNT_REAPER);
+//	lc_addtail(b, &bmapReapQ);
 }
 
 void

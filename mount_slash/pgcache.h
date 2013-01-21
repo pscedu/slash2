@@ -72,21 +72,20 @@ struct bmap_pagecache_entry {
 	struct psc_listentry	 bmpce_lentry;	/* chain on bmap LRU		*/
 };
 
-#define	BMPCE_NEW		(1 <<  0)	/* 0x00001 */
-#define	BMPCE_GETBUF		(1 <<  1)	/* 0x00002 */
-#define	BMPCE_DATARDY		(1 <<  2)	/* 0x00004 */
-#define	BMPCE_DIRTY2LRU		(1 <<  3)	/* 0x00008 */
-#define	BMPCE_LRU		(1 <<  4)	/* 0x00010 */
-#define	BMPCE_TOFREE		(1 <<  5)	/* 0x00020 */
-#define	BMPCE_FREEING		(1 <<  6)	/* 0x00040 */
-#define	BMPCE_INIT		(1 <<  7)	/* 0x00080 */
-#define	BMPCE_READPNDG		(1 <<  8)	/* 0x00100: pending read */
-#define	BMPCE_RBWPAGE		(1 <<  9)	/* 0x00200 */
-#define	BMPCE_RBWRDY		(1 << 10)	/* 0x00400 */
-#define	BMPCE_INFLIGHT		(1 << 11)	/* 0x00800: I/O in progress */
-#define	BMPCE_EIO		(1 << 12)	/* 0x01000: I/O error */
-#define BMPCE_READA		(1 << 13)	/* 0x02000: read-ahead */
-#define BMPCE_AIOWAIT		(1 << 14)	/* 0x04000: wait on async read */
+#define BMPCE_NEW		(1 <<  0)	/* 0x00001 */
+#define BMPCE_DATARDY		(1 <<  1)	/* 0x00002 */
+#define BMPCE_DIRTY2LRU		(1 <<  2)	/* 0x00004 */
+#define BMPCE_LRU		(1 <<  3)	/* 0x00008 */
+#define BMPCE_TOFREE		(1 <<  4)	/* 0x00010 */
+#define BMPCE_FREEING		(1 <<  5)	/* 0x00020 */
+#define BMPCE_INIT		(1 <<  6)	/* 0x00040 */
+#define BMPCE_READPNDG		(1 <<  7)	/* 0x00080: pending read */
+#define BMPCE_RBWPAGE		(1 <<  8)	/* 0x00100 */
+#define BMPCE_RBWRDY		(1 <<  9)	/* 0x00200 */
+#define BMPCE_INFLIGHT		(1 << 10)	/* 0x00400: I/O in progress */
+#define BMPCE_EIO		(1 << 11)	/* 0x00800: I/O error */
+#define BMPCE_READA		(1 << 12)	/* 0x01000: read-ahead */
+#define BMPCE_AIOWAIT		(1 << 13)	/* 0x02000: wait on async read */
 
 #define BMPCE_LOCK(b)		spinlock(&(b)->bmpce_lock)
 #define BMPCE_ULOCK(b)		freelock(&(b)->bmpce_lock)
@@ -118,14 +117,13 @@ struct bmap_pagecache_entry {
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP,					\
-	    "bmpce@%p fl=%u:%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "		\
+	    "bmpce@%p fl=%u:%s%s%s%s%s%s%s%s%s%s%s%s%s%s "		\
 	    "o=%#x b=%p "						\
 	    "ts="PSCPRI_TIMESPEC" "					\
 	    "ref=%u "							\
 	    "owner=%p : " fmt,						\
 	    (b), (b)->bmpce_flags,					\
 	    (b)->bmpce_flags & BMPCE_NEW		? "n" : "",	\
-	    (b)->bmpce_flags & BMPCE_GETBUF		? "G" : "",	\
 	    (b)->bmpce_flags & BMPCE_DATARDY		? "d" : "",	\
 	    (b)->bmpce_flags & BMPCE_DIRTY2LRU		? "D" : "",	\
 	    (b)->bmpce_flags & BMPCE_LRU		? "l" : "",	\

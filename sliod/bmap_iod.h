@@ -106,7 +106,6 @@ struct bmap_iod_info {
 	struct bcrcupd		*bii_bcr;
 	struct biod_slvrtree	 bii_slvrs;
 	struct psclist_head	 bii_lentry;
-	struct timespec		 bii_age;
 	struct psc_lockedlist	 bii_bklog_bcrs;	/* at most one CRC update RPC per bmap */
 	struct psc_lockedlist	 bii_rls;
 	uint64_t		 bii_bcr_xid;
@@ -123,7 +122,6 @@ struct bmap_iod_info {
 #define bii_2_flags(b)		bii_2_bmap(b)->bcm_flags
 
 #define bmap_2_bii(b)		((struct bmap_iod_info *)bmap_get_pri(b))
-#define bmap_2_bii_age(b)	bmap_2_bii(b)->bii_age
 #define bmap_2_bii_lentry(b)	bmap_2_bii(b)->bii_lentry
 #define bmap_2_bii_slvrs(b)	(&bmap_2_bii(b)->bii_slvrs)
 #define bmap_2_ondisk(b)	((struct bmap_ondisk *)&(b)->bcm_corestate)
