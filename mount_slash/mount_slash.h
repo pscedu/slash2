@@ -189,18 +189,14 @@ struct msl_fsrqinfo {
 
 #define MFSRQ_AIOWAIT			(1 << 0)
 #define MFSRQ_READY			(1 << 1)
-#define MFSRQ_BMPCEATT			(1 << 2)
-#define MFSRQ_AIOREADY			(1 << 3)
-#define MFSRQ_REISSUED			(1 << 4)
-#define MFSRQ_REPLIED			(1 << 5)
+#define MFSRQ_AIOREADY			(1 << 2)
+#define MFSRQ_REISSUED			(1 << 3)
 
 int	msl_fsrqinfo_state(struct msl_fsrqinfo *, int, int, int);
 void	msl_fsrqinfo_biorq_add(struct msl_fsrqinfo *, struct bmpc_ioreq *,int);
 
 #define msl_fsrqinfo_isset(q, f)	msl_fsrqinfo_state((q), (f), 0, 0)
 #define msl_fsrqinfo_aioisset(q)	msl_fsrqinfo_state((q), MFSRQ_AIOWAIT, 0, 0)
-#define msl_fsrqinfo_aioset(q)		msl_fsrqinfo_state((q), MFSRQ_AIOWAIT, 1, 0)
-#define msl_fsrqinfo_aioreadywait(q)	msl_fsrqinfo_state((q), MFSRQ_AIOREADY, 0, 1)
 #define msl_fsrqinfo_aioreadyset(q)	msl_fsrqinfo_state((q), MFSRQ_AIOREADY, 1, 1)
 
 struct resprof_cli_info {

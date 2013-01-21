@@ -72,22 +72,6 @@ bmap_2_bci(struct bmapc_memb *b)
 #define bmap_2_sbd(b)		(&bmap_2_bci(b)->bci_sbd)
 #define bmap_2_ios(b)		bmap_2_sbd(b)->sbd_ios
 
-#define BMAP_CLI_BUMP_TIMEO(b)						\
-	do {								\
-		struct timespec _ctime;					\
-									\
-		PFL_GETTIMESPEC(&_ctime);				\
-		BMAP_LOCK(b);						\
-		timespecadd(&_ctime, &msl_bmap_timeo_inc,		\
-		    &bmap_2_bci(b)->bci_etime);				\
-		if (timespeccmp(&bmap_2_bci(b)->bci_etime,		\
-		    &bmap_2_bci(b)->bci_xtime, >))			\
-			memcpy(&bmap_2_bci(b)->bci_etime,		\
-			    &bmap_2_bci(b)->bci_xtime,			\
-			    sizeof(struct timespec));			\
-		BMAP_ULOCK(b);						\
-	} while (0)
-
 void	 msl_bmap_cache_rls(struct bmapc_memb *);
 int	 msl_bmap_lease_secs_remaining(struct bmapc_memb *);
 int	 msl_bmap_lease_tryext(struct bmapc_memb *, int *, int);

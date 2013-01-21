@@ -361,8 +361,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 			/*
 			 * Increase the rdref cnt in preparation for any
 			 * RBW ops but only on new pages owned by this
-			 * page cache entry.  For now bypass
-			 * bmpce_handle_lru_locked() for this op.
+			 * page cache entry.
 			 */
 			if (!i && (rbw & BIORQ_RBWFP) &&
 			    (fsz > foff ||

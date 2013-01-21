@@ -145,35 +145,6 @@ struct bmap_pagecache_entry {
 	    (b)->bmpce_owner, ## __VA_ARGS__)
 
 static __inline int
-bmpce_lrusort_cmp(const void *x, const void *y)
-{
-	const struct bmap_pagecache_entry * const *pa = x, *a = *pa;
-	const struct bmap_pagecache_entry * const *pb = y, *b = *pb;
-
-	if (timespeccmp(&a->bmpce_laccess, &b->bmpce_laccess, <))
-		return (-1);
-
-	if (timespeccmp(&a->bmpce_laccess, &b->bmpce_laccess, >))
-		return (1);
-
-	return (0);
-}
-
-static __inline int
-bmpce_lrusort_cmp1(const void *x, const void *y)
-{
-	const struct bmap_pagecache_entry *a = x, *b = y;
-
-	if (timespeccmp(&a->bmpce_laccess, &b->bmpce_laccess, >))
-		return (-1);
-
-	if (timespeccmp(&a->bmpce_laccess, &b->bmpce_laccess, <))
-		return (1);
-
-	return (0);
-}
-
-static __inline int
 bmpce_cmp(const void *x, const void *y)
 {
 	const struct bmap_pagecache_entry *a = x, *b = y;
@@ -332,9 +303,6 @@ struct bmpc_ioreq {
 	    (b)->biorq_last_sliod, psc_dynarray_len(&(b)->biorq_pages),	\
 	    (b)->biorq_bmap, PSCPRI_TIMESPEC_ARGS(&(b)->biorq_expire), ## __VA_ARGS__)
 
-int	 msl_fd_offline_retry(struct msl_fhent *, int);
-
-
 struct bmpc_write_coalescer {
 	struct psc_lockedlist		 bwc_pll;
 	size_t				 bwc_size;
@@ -413,8 +381,6 @@ int	 bmpce_init(struct psc_poolmgr *, void *);
 struct bmap_pagecache_entry *
 	 bmpce_lookup_locked(struct bmap_pagecache *, struct bmpc_ioreq *,
 	    uint32_t, struct psc_waitq *);
-void	 bmpce_handle_lru_locked(struct bmap_pagecache_entry *,
-	    struct bmap_pagecache *, int);
 
 void	 bmpce_release_locked(struct bmap_pagecache_entry *,
 	    struct bmap_pagecache *);
