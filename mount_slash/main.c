@@ -1964,8 +1964,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		to_set &= ~PSCFS_SETATTRF_UID;
 	if ((to_set & PSCFS_SETATTRF_GID) && stb->st_gid == (gid_t)-1)
 		to_set &= ~PSCFS_SETATTRF_GID;
-	if (to_set == 0)
-		goto out;
 
 	rc = msl_load_fcmh(pfr, inum, &c);
 	if (rc)
@@ -1974,9 +1972,12 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	if (mfh)
 		psc_assert(c == mfh->mfh_fcmh);
 
-	pscfs_getcreds(pfr, &pcr);
-
 	FCMH_WAIT_BUSY(c);
+
+	if (to_set == 0)
+		goto out;
+
+	pscfs_getcreds(pfr, &pcr);
 
 	if ((to_set & PSCFS_SETATTRF_MODE) && pcr.pcr_uid) {
 #if 0
