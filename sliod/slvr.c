@@ -1234,7 +1234,7 @@ slvr_wio_done(struct slvr_ref *s)
 			SLVR_WAKEUP(s);
 		}
 
-		DEBUG_SLVR(PLL_MAX, s, "decref");
+		DEBUG_SLVR(PLL_DEBUG, s, "decref");
 
 		slvr_lru_requeue(s, 0);
 		SLVR_ULOCK(s);
