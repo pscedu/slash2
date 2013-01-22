@@ -85,7 +85,7 @@ bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *p)
 	e->bmpce_flags = BMPCE_NEW;
 	e->bmpce_base = base;
 	if (!e->bmpce_base)
-		e->bmpce_base  = psc_alloc(BMPC_BUFSZ, PAF_PAGEALIGN);
+		e->bmpce_base = psc_alloc(BMPC_BUFSZ, PAF_PAGEALIGN);
 	return (0);
 }
 

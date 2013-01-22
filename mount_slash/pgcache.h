@@ -411,7 +411,7 @@ bmpc_init(struct bmap_pagecache *bmpc)
 	    bmpce_lentry, &bmpc->bmpc_lock);
 
 	pll_initf(&bmpc->bmpc_pndg_biorqs, struct bmpc_ioreq,
-	    biorq_lentry, &bmpc->bmpc_lock, PLLIF_LOGTMP);
+	    biorq_lentry, &bmpc->bmpc_lock, PLLF_LOGTMP);
 
 	pll_init(&bmpc->bmpc_new_biorqs, struct bmpc_ioreq,
 	    biorq_lentry, &bmpc->bmpc_lock);
