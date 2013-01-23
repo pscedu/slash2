@@ -475,7 +475,7 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 
 	/*
 	 * A request can be split into several RPCs, so we can't declare it
-	 * as complete after its reference count drops to zero.
+	 * as complete until after its reference count drops to zero.
 	 */
 	msl_biorq_complete_fsrq(r);
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
@@ -1917,7 +1917,7 @@ size_t
 msl_pages_copyout(struct bmpc_ioreq *r)
 {
 	struct bmap_pagecache_entry *e;
-	size_t nbytes, tbytes=0, rflen;
+	size_t nbytes, tbytes = 0, rflen;
 	int i, npages, tsize;
 	char *dest, *src;
 	off_t toff;
@@ -1944,8 +1944,9 @@ msl_pages_copyout(struct bmpc_ioreq *r)
 
 	psc_assert(npages);
 
-	/* Due to page prefetching, the pages contained in
-	 *   biorq_pages may exceed the requested len.
+	/*
+	 * Due to page prefetching, the pages contained in biorq_pages
+	 * may exceed the requested len.
 	 */
 	for (i = 0; i < npages && tsize; i++) {
 		e = psc_dynarray_getpos(&r->biorq_pages, i);
