@@ -407,5 +407,3 @@ reimport
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
    (o) attr buf size needs be dynamically sized
-   (o) small directories should be encoded into the reply struct to
-       spare the extra rtt of using a bulk.
