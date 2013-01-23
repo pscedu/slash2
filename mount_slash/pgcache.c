@@ -213,6 +213,7 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
     int rqnum, uint32_t off, uint32_t len, int op)
 {
 	struct bmpc_ioreq *r;
+	struct timespec issue;
 
 	r = psc_pool_get(slc_biorq_pool);
 
@@ -225,9 +226,8 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	INIT_PSC_LISTENTRY(&r->biorq_png_lentry);
 	INIT_SPINLOCK(&r->biorq_lock);
 
-	PFL_GETTIMESPEC(&r->biorq_issue);
-	timespecadd(&r->biorq_issue, &bmapFlushDefMaxAge,
-	    &r->biorq_expire);
+	PFL_GETTIMESPEC(&issue);
+	timespecadd(&issue, &bmapFlushDefMaxAge, &r->biorq_expire);
 
 	r->biorq_off = off;
 	r->biorq_ref = 1;

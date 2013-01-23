@@ -216,7 +216,6 @@ struct bmpc_ioreq {
 	uint32_t			 biorq_retries;	/* dirty data flush retries     */
 	sl_ios_id_t			 biorq_last_sliod;
 	psc_spinlock_t			 biorq_lock;
-	struct timespec			 biorq_issue;	/* time to initiate I/O		*/
 	struct timespec			 biorq_expire;
 	struct psc_dynarray		 biorq_pages;	/* array of bmpce		*/
 	struct psclist_head		 biorq_lentry;	/* chain on bmpc_pndg_biorqs	*/
