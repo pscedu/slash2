@@ -2315,10 +2315,14 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			goto restart;
 		if (abs(rc) == SLERR_ION_OFFLINE)
 			rc = -EIO;
+
+		/* 
+		 * Make sure we don't copy pages from biorq in 
+		 * case of an error.
+		 */
+		mfsrq_seterr(q, rc);
 	}
 
-	/* Make sure we don't copy pages from biorq in case of an error */
-	mfsrq_seterr(q, rc);
 
 	/* Step 4: finish up biorqs */
 	for (i = 0; i < nr; i++) {
