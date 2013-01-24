@@ -817,7 +817,7 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r0)
  *	cache entry.
  */
 __static void
-msl_bmpce_complete_biorq(struct bmap_pagecache_entry *e0)
+msl_bmpce_complete_biorq(struct bmap_pagecache_entry *e0, int rc)
 {
 	struct bmap_pagecache_entry *e;
 	struct bmpc_ioreq *r;
@@ -830,6 +830,7 @@ msl_bmpce_complete_biorq(struct bmap_pagecache_entry *e0)
 	while ((r = pll_get(&e0->bmpce_pndgaios))) {
 		BIORQ_LOCK(r);
 		r->biorq_flags &= ~BIORQ_WAIT;
+		mfsrq_seterr(r->biorq_fsrqi, rc);
 		BIORQ_ULOCK(r);
 		DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 			if (e == e0)
@@ -880,7 +881,7 @@ _msl_bmpce_rpc_done(const struct pfl_callerinfo *pci,
 	e->bmpce_flags &= ~BMPCE_AIOWAIT;
 
 	BMPCE_ULOCK(e);
-	msl_bmpce_complete_biorq(e);
+	msl_bmpce_complete_biorq(e, 0);
 }
 
 /**
@@ -998,7 +999,7 @@ msl_readahead_cb(struct pscrpc_request *rq, int rc,
 		BMPCE_WAKE(e);
 		BMPCE_ULOCK(e);
 
-		msl_bmpce_complete_biorq(e);
+		msl_bmpce_complete_biorq(e, rc);
 
 		BMPC_LOCK(bmpc);
 		pll_remove(&bmpc->bmpc_pndg_ra, e);
