@@ -252,8 +252,7 @@ struct bmpc_ioreq {
 #define BIORQ_READFAIL			(1 << 20)
 #define BIORQ_PENDING			(1 << 21)
 #define BIORQ_WAIT			(1 << 22)
-#define BIORQ_EIO			(1 << 23)
-#define BIORQ_MFHLIST			(1 << 24)
+#define BIORQ_MFHLIST			(1 << 23)
 
 #define BIORQ_LOCK(r)			spinlock(&(r)->biorq_lock)
 #define BIORQ_ULOCK(r)			freelock(&(r)->biorq_lock)
@@ -264,7 +263,7 @@ struct bmpc_ioreq {
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP, "biorq@%p "				\
 	    "flg=%#x:"							\
-	    "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "	\
+	    "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "		\
 	    "ref=%d off=%u len=%u "					\
 	    "retry=%u buf=%p rqi=%p "					\
 	    "sliod=%x np=%d "						\
@@ -293,7 +292,6 @@ struct bmpc_ioreq {
 	    (b)->biorq_flags & BIORQ_READFAIL		? "E" : "",	\
 	    (b)->biorq_flags & BIORQ_PENDING		? "p" : "",	\
 	    (b)->biorq_flags & BIORQ_WAIT		? "W" : "",	\
-	    (b)->biorq_flags & BIORQ_EIO		? "e" : "",	\
 	    (b)->biorq_flags & BIORQ_MFHLIST		? "m" : "",	\
 	    (b)->biorq_ref, (b)->biorq_off, (b)->biorq_len,		\
 	    (b)->biorq_retries, (b)->biorq_buf, (b)->biorq_fsrqi,	\

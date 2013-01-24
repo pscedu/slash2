@@ -487,7 +487,6 @@ dump_biorq_flags(uint32_t flags)
 	PFL_PRFLAG(BIORQ_READFAIL, &flags, &seq);
 	PFL_PRFLAG(BIORQ_PENDING, &flags, &seq);
 	PFL_PRFLAG(BIORQ_WAIT, &flags, &seq);
-	PFL_PRFLAG(BIORQ_EIO, &flags, &seq);
 	PFL_PRFLAG(BIORQ_MFHLIST, &flags, &seq);
 
 	if (flags)
