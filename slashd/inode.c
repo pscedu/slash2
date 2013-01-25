@@ -219,9 +219,8 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 
 	INOH_LOCK_ENSURE(ih);
 
-	psc_assert(!(ih->inoh_flags & INOH_HAVE_EXTRAS));
-
 	psc_assert(ih->inoh_extras == NULL);
+
 	ih->inoh_extras = PSCALLOC(INOX_SZ);
 
 	iovs[0].iov_base = ih->inoh_extras;
@@ -235,7 +234,6 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 	    SL_EXTRAS_START_OFF, inoh_2_mdsio_data(ih));
 	if (rc == 0 && od_crc == 0 &&
 	    pfl_memchk(ih->inoh_extras, 0, INOX_SZ)) {
-		ih->inoh_flags |= INOH_HAVE_EXTRAS;
 		rc = 0;
 	} else if (rc) {
 		rc = -abs(rc);
@@ -245,9 +243,7 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 		DEBUG_INOH(PLL_ERROR, ih, "read inox: %d nb=%zu", rc, nb);
 	} else {
 		psc_crc64_calc(&crc, ih->inoh_extras, INOX_SZ);
-		if (crc == od_crc)
-			ih->inoh_flags |= INOH_HAVE_EXTRAS;
-		else {
+		if (crc != od_crc) {
 			psclog_errorx("inox CRC fail (rc=%d) "
 			    "disk=%"PSCPRIxCRC64" mem=%"PSCPRIxCRC64,
 			    rc, od_crc, crc);
@@ -267,7 +263,7 @@ mds_inox_ensure_loaded(struct slash_inode_handle *ih)
 	int locked, rc = 0;
 
 	locked = INOH_RLOCK(ih);
-	if (ATTR_NOTSET(ih->inoh_flags, INOH_HAVE_EXTRAS))
+	if (ih->inoh_extras == NULL)
 		rc = mds_inox_load_locked(ih);
 	INOH_URLOCK(ih, locked);
 	return (rc);

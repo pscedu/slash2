@@ -123,7 +123,6 @@ mds_inode_update(int vfsid, struct slash_inode_handle *ih,
 
 	psc_assert(ih->inoh_extras == NULL);
 	ih->inoh_extras = PSCALLOC(INOX_SZ);
-	ih->inoh_flags |= INOH_HAVE_EXTRAS;
 
 	/* convert old structures into new into temp file */
 	rc = sic->sic_read_inox(ih);
@@ -211,7 +210,6 @@ mds_inode_update_interrupted(int vfsid, struct slash_inode_handle *ih,
 
 	psc_assert(ih->inoh_extras == NULL);
 	ih->inoh_extras = PSCALLOC(INOX_SZ);
-	ih->inoh_flags |= INOH_HAVE_EXTRAS;
 
 	inoh_2_mdsio_data(ih) = h;
 	*rc = mds_inox_ensure_loaded(ih);

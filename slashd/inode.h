@@ -98,9 +98,8 @@ struct slash_inode_handle {
 	int			 inoh_flags;
 };
 
-#define	INOH_HAVE_EXTRAS	(1 << 0)			/* inoh_extras are loaded in mem */
-#define	INOH_INO_NEW		(1 << 1)			/* not yet written to disk */
-#define	INOH_INO_NOTLOADED	(1 << 2)
+#define	INOH_INO_NEW		(1 << 0)			/* not yet written to disk */
+#define	INOH_INO_NOTLOADED	(1 << 1)
 
 #define INOH_GETLOCK(ih)	(&(ih)->inoh_fcmh->fcmh_lock)
 #define INOH_LOCK(ih)		spinlock(INOH_GETLOCK(ih))
@@ -118,11 +117,10 @@ struct slash_inode_handle {
 		char _buf[LINE_MAX];					\
 									\
 		psclog((level), "inoh@%p fcmh=%p f+g="SLPRI_FG" "	\
-		    "fl:%#x:%s%s%s %s :: " fmt,				\
+		    "fl:%#x:%s%s %s :: " fmt,				\
 		    (ih), (ih)->inoh_fcmh,				\
 		    SLPRI_FG_ARGS(&(ih)->inoh_fcmh->fcmh_fg),		\
 		    (ih)->inoh_flags,					\
-		    (ih)->inoh_flags & INOH_HAVE_EXTRAS	  ? "X" : "",	\
 		    (ih)->inoh_flags & INOH_INO_NEW	  ? "N" : "",	\
 		    (ih)->inoh_flags & INOH_INO_NOTLOADED ? "L" : "",	\
 		    _dump_ino(_buf, sizeof(_buf), &(ih)->inoh_ino),	\
