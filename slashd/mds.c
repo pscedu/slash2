@@ -2283,9 +2283,13 @@ _dbdo(const struct pfl_callerinfo *pci,
 	for (j = 0; j < n; j++) {
 		int type = va_arg(ap, int);
 		switch (type) {
-		case SQLITE_INTEGER:
+		case SQLITE_INTEGER64:
 			rc = sqlite3_bind_int64(sth->sth_sth, j,
 			    va_arg(ap, int64_t));
+			break;
+		case SQLITE_INTEGER:
+			rc = sqlite3_bind_int(sth->sth_sth, j,
+			    va_arg(ap, int32_t));
 			break;
 		case SQLITE_TEXT:
 			p = va_arg(ap, char *);
