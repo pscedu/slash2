@@ -309,7 +309,7 @@ bmpc_biorq_seterr(struct bmpc_ioreq *r, int err)
 	BIORQ_ULOCK(r);
 
 	/*
-	 * XXX, this could be a lease expire situation.
+	 * XXX, this could also be a lease expire situation.
 	 */
 	DEBUG_BIORQ(PLL_ERROR, r, "write-back flush failure (err=%d)",
 	    err);
