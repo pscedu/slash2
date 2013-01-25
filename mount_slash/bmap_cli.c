@@ -247,8 +247,7 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 				bmap_orphan(b);
 
 			BMAP_SETATTR(b, BMAP_CLI_LEASEEXPIRED);
-			bmpc_biorqs_fail(bmap_2_bmpc(b),
-			    BIORQ_EXPIREDLEASE);
+			bmpc_biorqs_fail(bmap_2_bmpc(b), rc);
 		}
 	}
 
