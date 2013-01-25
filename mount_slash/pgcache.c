@@ -364,6 +364,7 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 			BMPCE_ULOCK(e);
 			continue;
 		}
+		OPSTAT_INCR(SLC_OPST_BMPCE_REAP);
 		pll_remove(&bmpc->bmpc_lru, e);
 		bmpce_free(e, bmpc);
 		if (++freed >= nfree)
