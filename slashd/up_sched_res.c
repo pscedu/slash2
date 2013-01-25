@@ -887,8 +887,7 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 }
 
 int
-upd_proc_pagein_cb(__unusedx void *arg, __unusedx int ac, char **av,
-    __unusedx char **cols)
+upd_proc_pagein_cb(struct slm_sth *sth, __unusedx void *p)
 {
 	struct slm_update_generic *upg;
 
@@ -897,9 +896,9 @@ upd_proc_pagein_cb(__unusedx void *arg, __unusedx int ac, char **av,
 	INIT_PSC_LISTENTRY(&upg->upg_lentry);
 	upd_init(&upg->upg_upd, UPDT_PAGEIN_UNIT);
 //	iosid = PARSENUM(av[DBF_RESID], UINT32_MAX);
-	upg->upg_fg.fg_fid = PARSENUM(av[DBF_FID], UINT64_MAX);
+	upg->upg_fg.fg_fid = sqlite3_column_int64(sth->sth_sth, DBF_FID);
 	upg->upg_fg.fg_gen = FGEN_ANY;
-	upg->upg_bno = PARSENUM(av[DBF_BNO], UINT32_MAX);
+	upg->upg_bno = sqlite3_column_int(sth->sth_sth, DBF_BNO);
 	upsch_enqueue(&upg->upg_upd, NULL, 0);
 	UPD_UNBUSY(&upg->upg_upd);
 	return (0);
@@ -925,10 +924,12 @@ upd_proc_pagein(struct slm_update_data *upd)
 		dbdo(upd_proc_pagein_cb, NULL,
 		    " SELECT	*"
 		    " FROM	upsch"
-		    " WHERE	resid = %d"
+		    " WHERE	resid = ?"
 		    " ORDER BY	pri DESC,"
 		    "		RANDOM()"
-		    " LIMIT	%d", r->res_id, n);
+		    " LIMIT	?",
+		    SQLITE_INTEGER, r->res_id,
+		    SQLITE_INTEGER, n);
 
 	return (1);
 }

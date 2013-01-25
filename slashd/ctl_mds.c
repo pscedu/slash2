@@ -378,7 +378,7 @@ slmctlcmd_stop(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 
 	mdsio_exit();
 	/* XXX journal_close */
-	UPSCH_LOCK();
+	psc_mutex_lock(&slm_dbh_mut);
 	slm_dbh = NULL;
 	sqlite3_close(dbh);
 	exit(0);

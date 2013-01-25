@@ -36,6 +36,7 @@
 struct odtable;
 
 struct fidc_membh;
+struct slm_sth;
 struct srt_stat;
 
 /* MDS thread types. */
@@ -269,7 +270,7 @@ void		 psc_scan_filesystems(void);
 
 #define dbdo(cb, arg, fmt, ...)	_dbdo(PFL_CALLERINFO(), (cb), (arg), (fmt), ## __VA_ARGS__)
 void		 _dbdo(const struct pfl_callerinfo *,
-			int (*)(void *, int, char **,char **), void *,
+			int (*)(struct slm_sth *, void *), void *,
 			const char *, ...);
 
 extern struct slash_creds	 rootcreds;

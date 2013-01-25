@@ -168,6 +168,19 @@ int	 slm_repl_odt_startup_cb(void *, struct odtable_receipt *, void *);
 #define UPSCH_WAKE()		psc_multiwaitcond_wakeup(&slm_upschq.pml_mwcond_empty)
 
 extern struct psc_mlist		 slm_upschq;
-sqlite3				*slm_dbh;
+extern sqlite3			*slm_dbh;
+extern struct pfl_mutex		 slm_dbh_mut;
+extern struct psc_hashtbl	 slm_sth_hashtbl;
+
+struct slm_sth {
+	struct psc_hashent	 sth_hentry;
+	const char		*sth_fmt;
+	sqlite3_stmt		*sth_sth;
+	psc_spinlock_t		 sth_lock;
+};
+
+#ifndef SQLITE_INTEGER64 
+#define SQLITE_INTEGER64 (SQLITE_INTEGER + 1000)
+#endif
 
 #endif /* _UP_SCHED_RES_H_ */

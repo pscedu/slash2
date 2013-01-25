@@ -93,18 +93,17 @@ mds_bmap_ensure_valid(struct bmapc_memb *b)
 }
 
 int
-slm_bmap_read_db_cb(void *arg, __unusedx int ac, char **av,
-    __unusedx char **cols)
+slm_bmap_read_db_cb(struct slm_sth *sth, void *p)
 {
 	struct odtable_receipt *odtr;
 	struct slm_update_data *upd;
-	struct bmapc_memb *b = arg;
+	struct bmapc_memb *b = p;
 
 	upd = &bmap_2_bmi(b)->bmi_upd;
 	psc_assert(upd->upd_recpt == NULL);
 	upd->upd_recpt = odtr = PSCALLOC(sizeof(*odtr));
-	odtr->odtr_elem = strtoll(av[0], NULL, 10);
-	odtr->odtr_key = strtoull(av[1], NULL, 16);
+	odtr->odtr_elem = sqlite3_column_int64(sth->sth_sth, 0);
+	odtr->odtr_key = sqlite3_column_int64(sth->sth_sth, 1);
 	DEBUG_BMAP(PLL_DEBUG, b,
 	    "upd %p loaded odtr [elem=%zu, key=%"PSCPRIxCRC64"]",
 	    upd, odtr->odtr_elem, odtr->odtr_key);
@@ -117,10 +116,11 @@ slm_repl_upd_odt_read(struct bmapc_memb *b)
 	dbdo(slm_bmap_read_db_cb, b,
 	    " SELECT	recpt_elem, recpt_key"
 	    " FROM	upsch"
-	    " WHERE	fid = %"PRIu64
-	    "	AND	bno = %u"
+	    " WHERE	fid = ?"
+	    "	AND	bno = ?%u"
 	    " LIMIT	1",
-	    fcmh_2_fid(b->bcm_fcmh), b->bcm_bmapno);
+	    SQLITE_INTEGER64, fcmh_2_fid(b->bcm_fcmh),
+	    SQLITE_INTEGER, b->bcm_bmapno);
 }
 
 /**

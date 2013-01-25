@@ -18,6 +18,7 @@
  */
 
 #include "pfl/fs.h"
+#include "pfl/hashtbl.h"
 #include "psc_ds/lockedlist.h"
 #include "psc_ds/tree.h"
 #include "psc_ds/treeutil.h"
@@ -52,6 +53,7 @@
 struct odtable	*mdsBmapAssignTable;
 
 sqlite3		*slm_dbh;
+struct pfl_mutex slm_dbh_mut = PSC_MUTEX_INIT;
 
 int
 mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
@@ -2243,34 +2245,78 @@ slm_ptrunc_wake_clients(void *p)
 
 void
 _dbdo(const struct pfl_callerinfo *pci,
-    int (*cb)(void *, int, char **, char **), void *arg,
+    int (*cb)(struct slm_sth *, void *), void *arg,
     const char *fmt, ...)
 {
-	static struct pfl_mutex mut = PSC_MUTEX_INIT;
-	char buf[LINE_MAX], *errstr;
+	char *p, buf[LINE_MAX];
+	struct slm_sth *sth;
+	const char *errstr;
+	int rc, n, j;
+	uint64_t key;
 	va_list ap;
-	int rc;
 
-	/* XXX XXX hash table of compiled statements */
-#if 0
-	sth = pfl_hashtbl_getitem(stl_sth_hashtbl, buf);
+	key = (uint64_t)fmt;
+	sth = psc_hashtbl_search(&slm_sth_hashtbl, NULL, NULL, &key);
 	if (sth == NULL) {
-		sth = PSCALLOC(sizeof(*st));
-		pfl_hashtbl_putitem(slm_sth_hashtbl, sth);
+		struct psc_hashbkt *hb;
+
+		hb = psc_hashbkt_get(&slm_sth_hashtbl, &key);
+		psc_hashbkt_lock(hb);
+		sth = psc_hashbkt_search(&slm_sth_hashtbl, hb, NULL,
+		    NULL, &key);
+		if (sth == NULL) {
+			sth = PSCALLOC(sizeof(*sth));
+			psc_hashent_init(&slm_sth_hashtbl, sth);
+			INIT_SPINLOCK(&sth->sth_lock);
+			sth->sth_fmt = fmt;
+			rc = sqlite3_prepare_v2(slm_dbh, buf, -1,
+			    &sth->sth_sth, NULL);
+			psc_assert(rc == SQLITE_OK);
+			psc_hashbkt_add_item(&slm_sth_hashtbl, hb, sth);
+		}
+		psc_hashbkt_unlock(hb);
 	}
-#endif
+
+	spinlock(&sth->sth_lock);
+	n = sqlite3_bind_parameter_count(sth->sth_sth);
 	va_start(ap, fmt);
-	vsnprintf(buf, sizeof(buf), fmt, ap);
+	for (j = 0; j < n; j++) {
+		int type = va_arg(ap, int);
+		switch (type) {
+		case SQLITE_INTEGER:
+			rc = sqlite3_bind_int64(sth->sth_sth, j,
+			    va_arg(ap, int64_t));
+			break;
+		case SQLITE_TEXT:
+			p = va_arg(ap, char *);
+			rc = sqlite3_bind_text(sth->sth_sth, j, p,
+			    strlen(p), SQLITE_STATIC);
+			break;
+		}
+		psc_assert(rc == SQLITE_OK);
+	}
 	va_end(ap);
 
-	psc_mutex_lock(&mut);
-	rc = sqlite3_exec(slm_dbh, buf, cb, arg, &errstr);
-	psc_mutex_unlock(&mut);
-	if (rc) {
+ next:
+	psc_mutex_lock(&slm_dbh_mut);
+	rc = sqlite3_step(sth->sth_sth);
+	if (rc == SQLITE_ROW) {
+		psc_mutex_unlock(&slm_dbh_mut);
+		cb(sth, arg);
+		goto next;
+	} else if (rc != SQLITE_DONE) {
+		errstr = sqlite3_errmsg(slm_dbh);
 		psclog_errorx("SQL error: rc=%d query=%s; msg=%s", rc,
-		    buf, errstr);
+		    fmt, errstr);
+		psc_mutex_unlock(&slm_dbh_mut);
 		/* XXX rebuild db? */
-	}
+	} else
+		psc_mutex_unlock(&slm_dbh_mut);
+	rc = sqlite3_reset(sth->sth_sth);
+	psc_assert(rc == SQLITE_OK);
+	rc = sqlite3_clear_bindings(sth->sth_sth);
+	psc_assert(rc == SQLITE_OK);
+	freelock(&sth->sth_lock);
 }
 
 int

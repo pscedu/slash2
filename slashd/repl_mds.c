@@ -578,7 +578,7 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 			upd->upd_recpt = mds_odtable_putitem(
 			    slm_repl_odt, &br, sizeof(br));
 			DEBUG_UPD(PLL_DEBUG, upd,
-			    "assigned odtable receipt [%zu,%"PSCPRIxCRC64"]",
+			    "assigned odtable receipt [%zu, %"PSCPRIxCRC64"]",
 			    upd->upd_recpt->odtr_elem,
 			    upd->upd_recpt->odtr_key);
 		}
@@ -589,45 +589,51 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 			    "	resid, fid, bno, uid, gid, status, "
 			    "   recpt_elem, recpt_key"
 			    ") VALUES ("
-			    "	%d, %"PRIu64", %u, %u, %u, 'Q', "
-			    "	%zd, '%"PRIx64"'"
+			    "	?, ?, ?, ?, ?, 'Q', "
+			    "	?, ?"
 			    ")",
-			    add.iosv[n].bs_id, bmap_2_fid(b),
-			    b->bcm_bmapno,
-			    f->fcmh_sstb.sst_uid,
-			    f->fcmh_sstb.sst_gid,
-			    upd->upd_recpt->odtr_elem,
-			    upd->upd_recpt->odtr_key);
+			    SQLITE_INTEGER, add.iosv[n].bs_id,
+			    SQLITE_INTEGER64, bmap_2_fid(b),
+			    SQLITE_INTEGER, b->bcm_bmapno,
+			    SQLITE_INTEGER, f->fcmh_sstb.sst_uid,
+			    SQLITE_INTEGER, f->fcmh_sstb.sst_gid,
+			    SQLITE_INTEGER64, upd->upd_recpt->odtr_elem,
+			    SQLITE_INTEGER64, upd->upd_recpt->odtr_key);
 	}
 	if (deq.nios)
 		for (n = 0; n < deq.nios; n++)
 			dbdo(NULL, NULL,
 			    " UPDATE	upsch"
-			    " SET	status = 'Q'"
-			    " WHERE	resid = %d"
-			    "	AND	fid = %"PRIu64
-			    "	AND	bno = %u",
-			    deq.iosv[n].bs_id, bmap_2_fid(b),
-			    b->bcm_bmapno);
+			    " SET	status = ?"
+			    " WHERE	resid = ?"
+			    "	AND	fid = ?"
+			    "	AND	bno = ?",
+			    SQLITE3_TEXT, "Q",
+			    SQLITE_INTEGER, deq.iosv[n].bs_id,
+			    SQLITE_INTEGER64, bmap_2_fid(b),
+			    SQLITE_INTEGER, b->bcm_bmapno);
 	if (sch.nios)
 		for (n = 0; n < sch.nios; n++)
 			dbdo(NULL, NULL,
 			    " UPDATE	upsch"
-			    " SET	status = 'S'"
-			    " WHERE	resid = %d"
-			    "	AND	fid = %"PRIu64
-			    "	AND	bno = %u",
-			    sch.iosv[n].bs_id, bmap_2_fid(b),
-			    b->bcm_bmapno);
+			    " SET	status = ?"
+			    " WHERE	resid = ?"
+			    "	AND	fid = ?"
+			    "	AND	bno = ?",
+			    SQLITE3_TEXT, "S",
+			    SQLITE_INTEGER, sch.iosv[n].bs_id,
+			    SQLITE_INTEGER64, bmap_2_fid(b),
+			    SQLITE_INTEGER, b->bcm_bmapno);
 	if (del.nios) {
 		for (n = 0; n < del.nios; n++)
 			dbdo(NULL, NULL,
 			    " DELETE FROM upsch"
-			    " WHERE	resid = %d"
-			    "   AND	fid = %"PRIu64
-			    "   AND	bno = %u",
-			    del.iosv[n].bs_id, bmap_2_fid(b),
-			    b->bcm_bmapno);
+			    " WHERE	resid = ?"
+			    "   AND	fid = ?"
+			    "   AND	bno = ?",
+			    SQLITE_INTEGER, del.iosv[n].bs_id,
+			    SQLITE_INTEGER64, bmap_2_fid(b),
+			    SQLITE_INTEGER, b->bcm_bmapno);
 		upd_tryremove(upd);
 	}
 	BMAPOD_READ_DONE(b, locked);
@@ -966,7 +972,7 @@ mds_repl_nodes_adjbusy(struct sl_resm *rma, struct sl_resm *rmb,
 
 	locked = reqlock(&repl_busytable_lock);
 	srl = repl_busytable + MDS_REPL_BUSYNODES(minid, maxid);
-	if (srl->srl_used + amt > srl->srl_avail) {
+	if (srl->srl_used + amt >= srl->srl_avail) {
 		amt = srl->srl_avail - srl->srl_used;
 		srl->srl_used = srl->srl_avail;
 	} else {
@@ -1084,15 +1090,16 @@ slm_repl_odt_startup_cb(void *data, struct odtable_receipt *odtr,
 			    "	resid, fid, bno, uid, gid, status, "
 			    "   recpt_elem, recpt_key"
 			    ") VALUES ("
-			    "	%d, %"PRIu64", %u, %u, %u, 'Q', "
-			    "	%zd, '%"PRIx64"'"
+			    "	?, ?, ?, ?, ?, 'Q', "
+			    "	?, ?"
 			    ")",
-			    fcmh_2_repl(f, n), bmap_2_fid(b),
-			    b->bcm_bmapno,
-			    f->fcmh_sstb.sst_uid,
-			    f->fcmh_sstb.sst_gid,
-			    odtr->odtr_elem,
-			    odtr->odtr_key);
+			    SQLITE_INTEGER, fcmh_2_repl(f, n),
+			    SQLITE_INTEGER64, bmap_2_fid(b),
+			    SQLITE_INTEGER, b->bcm_bmapno,
+			    SQLITE_INTEGER, f->fcmh_sstb.sst_uid,
+			    SQLITE_INTEGER, f->fcmh_sstb.sst_gid,
+			    SQLITE_INTEGER64, odtr->odtr_elem,
+			    SQLITE_INTEGER64, odtr->odtr_key);
 			break;
 		}
 

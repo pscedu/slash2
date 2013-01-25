@@ -491,6 +491,8 @@ main(int argc, char *argv[])
 
 	psc_hashtbl_init(&rootHtable, PHTF_STR, struct rootNames,
 	    rn_name, rn_hentry, 1024, NULL, "rootnames");
+	psc_hashtbl_init(&slm_sth_hashtbl, 0, struct slm_sth, sth_fmt,
+	    sth_hentry, 8, NULL, "sth");
 
 	/* using hook can cause layer violation */
 	zfsslash2_register_hook(psc_register_filesystem);
@@ -542,7 +544,6 @@ main(int argc, char *argv[])
 	pfl_wkthr_spawn(SLMTHRT_WORKER, SLM_NWORKER_THREADS,
 	    "slmwkthr%d");
 	pfl_workq_waitempty();
-
 
 	dbdo(NULL, NULL,
 	    " UPDATE	upsch"
