@@ -1158,11 +1158,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	 * match is found then verify the sequence number matches.
 	 */
 	if ((bml->bml_flags & BML_WRITE) && !bmi->bmdsi_writers) {
-		sl_replica_t iosv[SL_MAX_REPLICAS];
-		struct slm_update_data *upd;
-		struct bmap_ios_assign bia;
 		int retifset[NBREPLST];
-		unsigned j;
 
 		if (b->bcm_flags & BMAP_MDS_NOION) {
 			psc_assert(!bmi->bmdsi_assign);
@@ -1178,6 +1174,8 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 			goto out;
 
 		if (!(bml->bml_flags & BML_RECOVERFAIL)) {
+			struct bmap_ios_assign bia;
+
 			rc = mds_odtable_getitem(mdsBmapAssignTable,
 			    bmi->bmdsi_assign, &bia, sizeof(bia));
 			psc_assert(!rc && bia.bia_seq == bmi->bmdsi_seq);
@@ -1192,22 +1190,47 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		bmi->bmdsi_wr_ion = NULL;
 
 		/*
-		 * Lease has been released; requeue any replication work
-		 * involving this bmap.
+		 * Check if any replication work is ready and queue it
+		 * up.
 		 */
 		brepls_init(retifset, 0);
 		retifset[BREPLST_REPL_QUEUED] = 1;
 		retifset[BREPLST_TRUNCPNDG] = 1;
-//		retifset[BREPLST_GARBAGE] = 1;
 		if (mds_repl_bmap_walk_all(b, NULL, retifset,
 		    REPL_WALKF_SCIRCUIT)) {
+			sl_replica_t iosv[SL_MAX_REPLICAS];
+			struct slm_update_data *upd;
+			int k, off, val;
+			unsigned j, nr;
+
+			if (!FCMH_HAS_BUSY(f))
+				BMAP_ULOCK(b);
+			FCMH_WAIT_BUSY(f);
+			BMAP_WAIT_BUSY(b);
+
 			upd = &bmi->bmi_upd;
 			UPD_WAIT(upd);
-			for (j = 0; j < fcmh_2_nrepls(f); j++)
-				iosv[j].bs_id = fcmh_getrepl(f,
-				    j).bs_id;
-			upsch_enqueue(upd, iosv, fcmh_2_nrepls(f));
+			nr = fcmh_2_nrepls(f);
+			for (j = k = 0; j < nr;
+			    j++, off += SL_BITS_PER_REPLICA) {
+				val = SL_REPL_GET_BMAP_IOS_STAT(
+				    b->bcm_repls, off);
+				if (val == BREPLST_REPL_QUEUED ||
+				    val == BREPLST_TRUNCPNDG) {
+					if (j >= SL_DEF_REPLICAS)
+						mds_inox_ensure_loaded(
+						    fcmh_2_inoh(f));
+					iosv[k++].bs_id =
+					    fcmh_getrepl(f, j).bs_id;
+				}
+			}
+			if (k)
+				upsch_enqueue(upd, iosv, k);
 			UPD_UNBUSY(upd);
+			BMAP_UNBUSY(b);
+			FCMH_UNBUSY(f);
+
+			BMAP_LOCK(b);
 		}
 	}
 
@@ -1220,7 +1243,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		key = odtr->odtr_key;
 		elem = odtr->odtr_elem;
 		rc = mds_odtable_freeitem(mdsBmapAssignTable, odtr);
-		DEBUG_BMAP(PLL_NOTIFY, b, "odtable remove seq=%"PRId64" "
+		DEBUG_BMAP(PLL_DIAG, b, "odtable remove seq=%"PRId64" "
 		    "key=%#"PRIx64" rc=%d", bml->bml_seq, key, rc);
 		bmap_op_done_type(b, BMAP_OPCNT_IONASSIGN);
 
