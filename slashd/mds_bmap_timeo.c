@@ -207,21 +207,20 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 
 		sjbsq.sjbsq_high_wm = mdsBmapTimeoTbl.btt_maxseq;
 		if (bml->bml_seq < mdsBmapTimeoTbl.btt_minseq) {
-			psclog_notify("bml->bml_seq (%"PRIx64") is < "
+			psclog_notify("bml %p seq (%"PRIx64") is < "
 			    "mdsBmapTimeoTbl.btt_minseq (%"PRIx64")",
-			    bml->bml_seq, mdsBmapTimeoTbl.btt_minseq);
+			    bml, bml->bml_seq,
+			    mdsBmapTimeoTbl.btt_minseq);
 
 			sjbsq.sjbsq_low_wm =
-				mdsBmapTimeoTbl.btt_minseq;
+			    mdsBmapTimeoTbl.btt_minseq;
 		} else
 			sjbsq.sjbsq_low_wm =
-				mdsBmapTimeoTbl.btt_minseq =
-				bml->bml_seq;
+			    mdsBmapTimeoTbl.btt_minseq = bml->bml_seq;
 
 		BML_ULOCK(bml);
 		freelock(&mdsBmapTimeoTbl.btt_lock);
-		/* Journal the new low watermark.
-		 */
+		/* Journal the new low watermark. */
 		mds_bmap_journal_bmapseq(&sjbsq);
 
 		rc = mds_bmap_bml_release(bml);
@@ -233,7 +232,7 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 		} else
 			nsecs = 0;
  sleep:
-		psclog_info("nsecs=%d", nsecs);
+		psclog_debug("nsecs=%d", nsecs);
 
 		if (nsecs > 0)
 			sleep((uint32_t)nsecs);
