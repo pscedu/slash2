@@ -291,6 +291,12 @@ bmpc_freeall_locked(struct bmap_pagecache *bmpc)
 	for (a = SPLAY_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); a;
 	    a = b) {
 		b = SPLAY_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree, a);
+		/* 
+		 * We should never call bmpce_free() directly. Luckily,
+		 * because we have drained biorqs above, this code should 
+		 * never be executed.  To be removed.
+		 */
+		OPSTAT_INCR(SLC_OPST_DEADCODE);
 
 		BMPCE_LOCK(a);
 		psc_assert(a->bmpce_flags & BMPCE_LRU);
