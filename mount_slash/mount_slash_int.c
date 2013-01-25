@@ -243,7 +243,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 		    mfh->mfh_ra.mra_raoff, (off_t)(bmpce_off +
 		    bmap_foff(b)));
 		MFH_ULOCK(mfh);
- restart:
+
 		e = bmpce_lookup_locked(bmpc, r, bmpce_off,
 		    (i < npages) ? NULL :
 		    &r->biorq_bmap->bcm_fcmh->fcmh_waitq);
@@ -2316,13 +2316,12 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		if (abs(rc) == SLERR_ION_OFFLINE)
 			rc = -EIO;
 
-		/* 
-		 * Make sure we don't copy pages from biorq in 
+		/*
+		 * Make sure we don't copy pages from biorq in
 		 * case of an error.
 		 */
 		mfsrq_seterr(q, rc);
 	}
-
 
 	/* Step 4: finish up biorqs */
 	for (i = 0; i < nr; i++) {
