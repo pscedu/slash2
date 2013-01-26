@@ -652,9 +652,9 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 		rc = pread(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
 		    off);
 
-		if (psc_fault_here_rc(SLI_FAULT_FSIO_READ_FAIL, &rc,
-		    -1))
-			errno = EBADF;
+		if (psc_fault_here_rc(SLI_FAULT_FSIO_READ_FAIL, &errno,
+		    EBADF))
+			rc = -1;
 
 		if (rc == -1) {
 			save_errno = errno;
