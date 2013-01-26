@@ -30,6 +30,7 @@
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/ctlsvr.h"
+#include "psc_util/fault.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 
@@ -71,8 +72,8 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 	uint32_t i;
 	int rc;
 
-	if (OPSTAT_CURR(SLI_OPST_DEBUG) == 2)
-		return (EHOSTDOWN);
+	if (psc_fault_here_rc(SLI_FAULT_CRCUP_FAIL, &rc, EHOSTDOWN))
+		return (rc);
 
 	rc = sli_rmi_getcsvc(&csvc);
 	if (rc)
@@ -505,9 +506,9 @@ slvr_worker_int(void)
 				 */
 				bcr->bcr_bii->bii_bcr = NULL;
 			else
-				/* The bcr is full, push it out now. */
+				/* The bcr is full; push it out now. */
 				bcr_hold_2_ready(bcr);
-		} 
+		}
 	} else {
 		bmap_op_start_type(b, BMAP_OPCNT_BCRSCHED);
 

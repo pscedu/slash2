@@ -32,6 +32,7 @@
 #include "psc_rpc/rsx.h"
 #include "psc_util/atomic.h"
 #include "psc_util/ctlsvr.h"
+#include "psc_util/fault.h"
 #include "psc_util/lock.h"
 #include "psc_util/pthrutil.h"
 
@@ -651,10 +652,9 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 		rc = pread(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
 		    off);
 
-		if (OPSTAT_CURR(SLI_OPST_DEBUG) == 1) {
-			rc = -1;
+		if (psc_fault_here_rc(SLI_FAULT_FSIO_READ_FAIL, &rc,
+		    -1))
 			errno = EBADF;
-		}
 
 		if (rc == -1) {
 			save_errno = errno;
@@ -666,12 +666,11 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 		 *  only when nblks == an entire sliver.  Only RMW will
 		 *  have their checks bypassed.  This should probably be
 		 *  handled more cleanly, like checking for RMW and then
-		 *  grabbing the crc table, we use the 1MB buffer in
+		 *  grabbing the CRC table; we use the 1MB buffer in
 		 *  either case.
 		 */
 
-		/* XXX do the right thing when EOF is reached..
-		 */
+		/* XXX do the right thing when EOF is reached. */
 		if (rc > 0 && nblks == SLASH_BLKS_PER_SLVR) {
 			int crc_rc;
 
@@ -1468,7 +1467,6 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 	sigaddset(&signal_set, SIGIO);
 
 	for (;;) {
-
 		sigwait(&signal_set, &signo);
 		psc_assert(signo == SIGIO);
 
@@ -1481,10 +1479,11 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 				continue;
 			psc_assert(iocb->iocb_rc != ECANCELED);
 			if (iocb->iocb_rc == 0)
-				iocb->iocb_len = aio_return(&iocb->iocb_aiocb);
+				iocb->iocb_len =
+				    aio_return(&iocb->iocb_aiocb);
 
-			if (OPSTAT_CURR(SLI_OPST_DEBUG) == 3)
-				iocb->iocb_rc = EIO;
+			psc_fault_here_rc(SLI_FAULT_AIO_FAIL,
+			    &iocb->iocb_rc, EIO);
 
 			psclog_info("got signal: iocb=%p", iocb);
 			lc_remove(&sli_iocb_pndg, iocb);
