@@ -59,6 +59,7 @@
 #include "slutil.h"
 #include "up_sched_res.h"
 
+#include "lib/libsolkerncompat/include/errno_compat.h"
 #include "zfs-fuse/zfs_slashlib.h"
 
 uint64_t		slm_next_fid = UINT64_MAX;
@@ -1413,8 +1414,7 @@ slm_rmc_handle_getxattr(struct pscrpc_request *rq)
 	    mq->size, &outsize, fcmh_2_mdsio_fid(f));
 	mds_unreserve_slot(1);
 	if (mp->rc) {
-		/* XXX compiler tweak ENOATTR */
-		if (mp->rc == 5001)
+		if (mp->rc == ENOATTR)
 			mp->rc = 0;
 		if (mq->size)
 			abort_bulk = 1;
