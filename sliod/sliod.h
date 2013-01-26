@@ -28,6 +28,9 @@
 #include "slconfig.h"
 #include "sltypes.h"
 
+struct bmapc_memb;
+struct fidc_membh;
+
 /* sliod thread types */
 enum {
 	SLITHRT_ASYNC_IO,	/* asynchronous I/O handlers */
@@ -54,7 +57,6 @@ enum {
 	SLI_OPST_CRC_UPDATE_BACKLOG,
 	SLI_OPST_CRC_UPDATE_CB,
 	SLI_OPST_CRC_UPDATE_CB_FAILURE,
-	SLI_OPST_DEBUG,
 	SLI_OPST_FSIO_READ,
 	SLI_OPST_FSIO_READ_FAIL,
 	SLI_OPST_FSIO_WRITE,
@@ -82,8 +84,11 @@ enum {
 	SLI_OPST_SRMT_RELEASE
 };
 
-struct bmapc_memb;
-struct fidc_membh;
+enum {
+	SLI_FAULT_AIO_FAIL,
+	SLI_FAULT_CRCUP_FAIL,
+	SLI_FAULT_FSIO_READ_FAIL
+};
 
 struct sliric_thread {
 	struct pscrpc_thread	 sirct_prt;
