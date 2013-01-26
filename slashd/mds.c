@@ -50,10 +50,11 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
-struct odtable	*mdsBmapAssignTable;
+struct odtable		*mdsBmapAssignTable;
 
-sqlite3		*slm_dbh;
-struct pfl_mutex slm_dbh_mut = PSC_MUTEX_INIT;
+sqlite3			*slm_dbh;
+struct pfl_mutex	 slm_dbh_mut = PSC_MUTEX_INIT;
+struct psc_hashtbl	 slm_sth_hashtbl;
 
 int
 mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
