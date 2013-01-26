@@ -176,10 +176,10 @@ struct slm_sth {
 	struct psc_hashent	 sth_hentry;
 	const char		*sth_fmt;
 	sqlite3_stmt		*sth_sth;
-	psc_spinlock_t		 sth_lock;
+	struct pfl_mutex	 sth_mutex;
 };
 
-#ifndef SQLITE_INTEGER64 
+#ifndef SQLITE_INTEGER64
 #define SQLITE_INTEGER64 (SQLITE_INTEGER + 1000)
 #endif
 

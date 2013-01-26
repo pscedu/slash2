@@ -117,7 +117,7 @@ slm_repl_upd_odt_read(struct bmapc_memb *b)
 	    " SELECT	recpt_elem, recpt_key"
 	    " FROM	upsch"
 	    " WHERE	fid = ?"
-	    "	AND	bno = ?%u"
+	    "	AND	bno = ?"
 	    " LIMIT	1",
 	    SQLITE_INTEGER64, fcmh_2_fid(b->bcm_fcmh),
 	    SQLITE_INTEGER, b->bcm_bmapno);

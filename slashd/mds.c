@@ -2249,12 +2249,12 @@ _dbdo(const struct pfl_callerinfo *pci,
     int (*cb)(struct slm_sth *, void *), void *arg,
     const char *fmt, ...)
 {
-	char *p, buf[LINE_MAX];
 	struct slm_sth *sth;
 	const char *errstr;
 	int rc, n, j;
 	uint64_t key;
 	va_list ap;
+	char *p;
 
 	key = (uint64_t)fmt;
 	sth = psc_hashtbl_search(&slm_sth_hashtbl, NULL, NULL, &key);
@@ -2268,60 +2268,68 @@ _dbdo(const struct pfl_callerinfo *pci,
 		if (sth == NULL) {
 			sth = PSCALLOC(sizeof(*sth));
 			psc_hashent_init(&slm_sth_hashtbl, sth);
-			INIT_SPINLOCK(&sth->sth_lock);
+			psc_mutex_init(&sth->sth_mutex);
 			sth->sth_fmt = fmt;
-			rc = sqlite3_prepare_v2(slm_dbh, buf, -1,
+
+			psc_mutex_lock(&slm_dbh_mut);
+			rc = sqlite3_prepare_v2(slm_dbh, fmt, -1,
 			    &sth->sth_sth, NULL);
+			psc_mutex_unlock(&slm_dbh_mut);
 			psc_assert(rc == SQLITE_OK);
+
 			psc_hashbkt_add_item(&slm_sth_hashtbl, hb, sth);
 		}
 		psc_hashbkt_unlock(hb);
 	}
 
-	spinlock(&sth->sth_lock);
+	psc_mutex_lock(&sth->sth_mutex);
 	n = sqlite3_bind_parameter_count(sth->sth_sth);
 	va_start(ap, fmt);
 	for (j = 0; j < n; j++) {
 		int type = va_arg(ap, int);
 		switch (type) {
 		case SQLITE_INTEGER64:
-			rc = sqlite3_bind_int64(sth->sth_sth, j,
+			rc = sqlite3_bind_int64(sth->sth_sth, j + 1,
 			    va_arg(ap, int64_t));
 			break;
 		case SQLITE_INTEGER:
-			rc = sqlite3_bind_int(sth->sth_sth, j,
+			rc = sqlite3_bind_int(sth->sth_sth, j + 1,
 			    va_arg(ap, int32_t));
 			break;
 		case SQLITE_TEXT:
 			p = va_arg(ap, char *);
-			rc = sqlite3_bind_text(sth->sth_sth, j, p,
+			rc = sqlite3_bind_text(sth->sth_sth, j + 1, p,
 			    strlen(p), SQLITE_STATIC);
 			break;
+		default:
+			psc_fatalx("type");
 		}
 		psc_assert(rc == SQLITE_OK);
 	}
 	va_end(ap);
 
- next:
 	psc_mutex_lock(&slm_dbh_mut);
+ next:
+
 	rc = sqlite3_step(sth->sth_sth);
 	if (rc == SQLITE_ROW) {
-		psc_mutex_unlock(&slm_dbh_mut);
 		cb(sth, arg);
+		psc_mutex_unlock(&slm_dbh_mut);
 		goto next;
 	} else if (rc != SQLITE_DONE) {
 		errstr = sqlite3_errmsg(slm_dbh);
 		psclog_errorx("SQL error: rc=%d query=%s; msg=%s", rc,
 		    fmt, errstr);
-		psc_mutex_unlock(&slm_dbh_mut);
 		/* XXX rebuild db? */
+		psc_mutex_unlock(&slm_dbh_mut);
 	} else
 		psc_mutex_unlock(&slm_dbh_mut);
-	rc = sqlite3_reset(sth->sth_sth);
-	psc_assert(rc == SQLITE_OK);
-	rc = sqlite3_clear_bindings(sth->sth_sth);
-	psc_assert(rc == SQLITE_OK);
-	freelock(&sth->sth_lock);
+	sqlite3_reset(sth->sth_sth);
+	if (n) {
+		rc = sqlite3_clear_bindings(sth->sth_sth);
+		psc_assert(rc == SQLITE_OK);
+	}
+	psc_mutex_unlock(&sth->sth_mutex);
 }
 
 int
