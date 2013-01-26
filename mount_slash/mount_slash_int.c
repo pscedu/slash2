@@ -474,8 +474,8 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 		goto destroy;
 
 	/*
-	 * A request can be split into several RPCs, so we can't declare it
-	 * as complete until after its reference count drops to zero.
+	 * A request can be split into several RPCs, so we can't declare
+	 * it as complete until after its reference count drops to zero.
 	 */
 	msl_biorq_complete_fsrq(r);
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
@@ -1108,9 +1108,6 @@ msl_dio_cb(struct pscrpc_request *rq, int rc, struct pscrpc_async_args *args)
 	int op, locked;
 
 	DEBUG_REQ(PLL_INFO, rq, "cb");
-
-	if (rq == NULL)
-		return (rc);
 
 	op = rq->rq_reqmsg->opc;
 	psc_assert(op == SRMT_READ || op == SRMT_WRITE);
@@ -2124,8 +2121,8 @@ ssize_t
 msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
     const size_t size, const off_t off, enum rw rw)
 {
-	struct bmap_pagecache_entry *e;
 	size_t start, end, tlen, tsize;
+	struct bmap_pagecache_entry *e;
 	struct msl_fsrqinfo *q = NULL;
 	struct bmapc_memb *b;
 	struct fidc_membh *f;
