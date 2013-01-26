@@ -243,6 +243,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slm_exp_cli);
 	PRTYPE(struct slm_replst_workreq);
 	PRTYPE(struct slm_resmlink);
+	PRTYPE(struct slm_sth);
 	PRTYPE(struct slm_update_data);
 	PRTYPE(struct slm_update_generic);
 	PRTYPE(struct slm_wkdata_ptrunc);
@@ -629,12 +630,15 @@ main(int argc, char *argv[])
 	PRVAL(SLC_OPST_BIORQ_EIO_PAGE);
 	PRVAL(SLC_OPST_BIORQ_NEW);
 	PRVAL(SLC_OPST_BIORQ_RESTART);
+	PRVAL(SLC_OPST_BMAP_DIO);
 	PRVAL(SLC_OPST_BMAP_LEASE_EXT);
 	PRVAL(SLC_OPST_BMAP_RETRIEVE);
 	PRVAL(SLC_OPST_BMPCE_GET);
 	PRVAL(SLC_OPST_BMPCE_INSERT);
 	PRVAL(SLC_OPST_BMPCE_PUT);
+	PRVAL(SLC_OPST_BMPCE_REAP);
 	PRVAL(SLC_OPST_CREAT);
+	PRVAL(SLC_OPST_DEADCODE);
 	PRVAL(SLC_OPST_DEBUG);
 	PRVAL(SLC_OPST_DIO_CB0);
 	PRVAL(SLC_OPST_DIO_CB_ADD);
