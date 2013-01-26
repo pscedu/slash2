@@ -398,8 +398,7 @@ bmap_flush_desched(struct bmpc_ioreq *r)
 	}
 
 	if (r->biorq_retries >= SL_MAX_BMAPFLSH_RETRIES) {
-		/* Cleanup errored I/O requests.
-		 */
+		/* Cleanup errored I/O requests. */
 		r->biorq_flags |= BIORQ_MAXRETRIES;
 		biorq_destroy_failed(r);
 	}
@@ -407,7 +406,7 @@ bmap_flush_desched(struct bmpc_ioreq *r)
 }
 
 /**
- * bmap_flush_resched - called in error contexts where the biorq must be
+ * bmap_flush_resched - Called in error contexts where the biorq must be
  *    rescheduled by putting it back to the new request queue.  Typically
  *    this is from a write RPC cb.
  */
