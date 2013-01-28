@@ -202,7 +202,7 @@ main(int argc, char *argv[])
 	sigprocmask(SIG_BLOCK, &signal_set, NULL);
 
 	pscthr_init(SLITHRT_CTL, 0, NULL, NULL,
-	    sizeof(struct psc_ctlthr), "slictlthr");
+	    sizeof(struct psc_ctlthr), "slictlthr0");
 
 	sys_upnonce = psc_random32();
 

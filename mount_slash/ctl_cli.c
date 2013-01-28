@@ -531,6 +531,6 @@ msctlthr_spawn(void)
 	    msctlparam_offlinenretries_set);
 
 	thr = pscthr_init(MSTHRT_CTL, 0, msctlthr_main, NULL,
-	    sizeof(struct psc_ctlthr), "msctlthr");
+	    sizeof(struct psc_ctlthr), "msctlthr0");
 	pscthr_setready(thr);
 }
