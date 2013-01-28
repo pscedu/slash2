@@ -268,7 +268,7 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 /**
  * bmpc_freeall_locked - Called when a bmap is being released.  Iterate
  *	across the tree freeing each bmpce.  Prior to being invoked, all
- *	bmpce's must be idle (ie have zero refcnts) and be present on
+ *	bmpce's must be idle (i.e. have zero refcnts) and be present on
  *	bmpc_lru.
  */
 void
@@ -310,9 +310,7 @@ bmpc_freeall_locked(struct bmap_pagecache *bmpc)
 __static void
 bmpc_biorq_seterr(struct bmpc_ioreq *r, int err)
 {
-	BIORQ_LOCK(r);
-	r->biorq_flags |= err;
-	BIORQ_ULOCK(r);
+	BIORQ_SETATTR(r, err);
 
 	/*
 	 * XXX, this could also be a lease expire situation.
