@@ -1522,11 +1522,8 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 #if FHENT_EARLY_RELEASE
 	struct bmpc_ioreq *r;
 
-	PLL_FOREACH(r, &mfh->mfh_biorqs) {
-		spinlock(&r->biorq_lock);
-		r->biorq_flags |= BIORQ_NOFHENT;
-		freelock(&r->biorq_lock);
-	}
+	PLL_FOREACH(r, &mfh->mfh_biorqs)
+		BIORQ_SETATTR(r, BIORQ_NOFHENT);
 #else
 	rc = msl_flush_int_locked(mfh, 1);
 	psc_assert(pll_empty(&mfh->mfh_biorqs));
