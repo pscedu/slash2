@@ -1072,7 +1072,7 @@ upschq_resm(struct sl_resm *m, int type)
 		proc = 0;
 	else
 		si->si_flags |= SIF_UPSCH_PAGING;
-	RPMI_LOCK(rpmi);
+	RPMI_ULOCK(rpmi);
 
 	if (!proc)
 		return;
