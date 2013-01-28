@@ -171,7 +171,6 @@ struct sli_aiocb_reply {
 	struct psc_listentry	  aiocbr_lentry;
 	struct iovec		  aiocbr_iovs[RIC_MAX_SLVRS_PER_IO];
 	struct slvr_ref		 *aiocbr_slvrs[RIC_MAX_SLVRS_PER_IO];
-	struct slvr_ref		 *aiocbr_slvratt;
 	psc_spinlock_t		  aiocbr_lock;
 	int			  aiocbr_flags;
 	int			  aiocbr_nslvrs;

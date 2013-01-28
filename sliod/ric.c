@@ -280,7 +280,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 				 * client later.
 				 */
 				pll_add(&s->slvr_pndgaios, aiocbr);
-				aiocbr->aiocbr_slvratt = s;
 				psc_assert(s->slvr_flags & SLVR_AIOWAIT);
 				SLVR_ULOCK(s);
 

@@ -391,10 +391,11 @@ slvr_aio_tryreply(struct sli_aiocb_reply *a)
 			ready++;
 
 		else if (s->slvr_flags & SLVR_AIOWAIT) {
-			/* One of our slvrs is still waiting on aio
-			 *    completion.  Add this reply to that slvr.
+			/* 
+			 * One of our slvrs is still waiting on aio completion.  
+			 * Add this reply to that slvr. Note that a has already
+			 * been removed from the pending list of previous slvr.
 			 */
-			a->aiocbr_slvratt = s;
 			pll_add(&s->slvr_pndgaios, a);
 			SLVR_ULOCK(s);
 			break;
