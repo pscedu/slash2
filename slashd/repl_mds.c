@@ -1072,6 +1072,8 @@ slm_repl_odt_startup_cb(void *data, struct odtable_receipt *odtr,
 	struct bmap_repls_upd_odent *br = data;
 	struct fidc_membh *f = NULL;
 	struct bmapc_memb *b = NULL;
+	struct sl_resource *r;
+	sl_ios_id_t resid;
 	uint32_t n;
 
 	rc = slm_fcmh_get(&br->br_fg, &f);
@@ -1084,7 +1086,8 @@ slm_repl_odt_startup_cb(void *data, struct odtable_receipt *odtr,
 	    n++, off += SL_BITS_PER_REPLICA)
 		switch (SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls, off)) {
 		case BREPLST_REPL_QUEUED:
-		case BREPLST_GARBAGE:
+		case BREPLST_TRUNCPNDG:
+			resid = fcmh_2_repl(f, n);
 			dbdo(NULL, NULL,
 			    " INSERT INTO upsch ("
 			    "	resid, fid, bno, uid, gid, status, "
@@ -1093,13 +1096,16 @@ slm_repl_odt_startup_cb(void *data, struct odtable_receipt *odtr,
 			    "	?, ?, ?, ?, ?, 'Q', "
 			    "	?, ?"
 			    ")",
-			    SQLITE_INTEGER, fcmh_2_repl(f, n),
+			    SQLITE_INTEGER, resid,
 			    SQLITE_INTEGER64, bmap_2_fid(b),
 			    SQLITE_INTEGER, b->bcm_bmapno,
 			    SQLITE_INTEGER, f->fcmh_sstb.sst_uid,
 			    SQLITE_INTEGER, f->fcmh_sstb.sst_gid,
 			    SQLITE_INTEGER64, odtr->odtr_elem,
 			    SQLITE_INTEGER64, odtr->odtr_key);
+			r = libsl_id2res(resid);
+			upschq_resm(psc_dynarray_getpos(&r->res_members,
+			    0), UPDT_PAGEIN);
 			break;
 		}
 
