@@ -910,14 +910,17 @@ upd_proc_pagein(struct slm_update_data *upd)
 	struct slm_update_generic *upg;
 	struct resprof_mds_info *rpmi;
 	struct sl_resource *r;
+	struct sl_mds_iosinfo *si;
 	int n;
 
 	upg = upd_getpriv(upd);
 	r = upg->upg_resm->resm_res;
 	rpmi = res2rpmi(r);
+	si = res2iosinfo(r);
 
 	RPMI_LOCK(rpmi);
 	n = UPSCH_MAX_ITEMS_RES	- psc_dynarray_len(&rpmi->rpmi_upschq);
+	si->si_flags &= ~SIF_UPSCH_PAGING;
 	RPMI_ULOCK(rpmi);
 
 	if (n > 0)
@@ -1057,8 +1060,24 @@ void
 upschq_resm(struct sl_resm *m, int type)
 {
 	struct slm_update_generic *upg;
+	struct resprof_mds_info *rpmi;
 	struct slm_update_data *upd;
+	struct sl_mds_iosinfo *si;
+	int proc = 1;
 
+	rpmi = res2rpmi(m->resm_res);
+	si = res2iosinfo(m->resm_res);
+	RPMI_LOCK(rpmi);
+	if (si->si_flags & SIF_UPSCH_PAGING)
+		proc = 0;
+	else
+		si->si_flags |= SIF_UPSCH_PAGING;
+	RPMI_LOCK(rpmi);
+
+	if (!proc)
+		return;
+
+	if (si->si_flags & SIF_UPSCH_PAGING)
 	upg = psc_pool_get(slm_upgen_pool);
 	memset(upg, 0, sizeof(*upg));
 	INIT_PSC_LISTENTRY(&upg->upg_lentry);

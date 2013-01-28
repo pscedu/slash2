@@ -184,6 +184,7 @@ struct sl_mds_iosinfo {
 #define SIF_DISABLE_BIA		(1 << 1)		/* disable bmap lease assignments */
 #define SIF_DISABLE_GC		(1 << 2)		/* disable garbage collection temporarily */
 #define SIF_BUSY		(1 << 3)
+#define SIF_UPSCH_PAGING	(1 << 4)
 
 #define res2iosinfo(res)	((struct sl_mds_iosinfo *)res2rpmi(res)->rpmi_info)
 
