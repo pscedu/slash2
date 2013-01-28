@@ -99,10 +99,11 @@ struct bmap_pagecache_entry {
 
 #define BMPCE_WAKE(e)							\
 	do {								\
-		if ((e)->bmpce_waitq)					\
+		if ((e)->bmpce_waitq) {					\
 			psc_waitq_wakeall((e)->bmpce_waitq);		\
-		else							\
-			DEBUG_BMPCE(PLL_MAX, e, "NULL bmpce_waitq");	\
+			DEBUG_BMPCE(PLL_DEBUG, (e), "wakeup");		\
+		} else							\
+			DEBUG_BMPCE(PLL_MAX, (e), "NULL bmpce_waitq");	\
 	} while (0)
 
 #define BMPCE_SETATTR(bmpce, fl, ...)					\
@@ -260,9 +261,11 @@ struct bmpc_ioreq {
 #define BIORQ_URLOCK(r)			ureqlock(&(r)->biorq_lock)
 #define BIORQ_LOCK_ENSURE(r)		LOCK_ENSURE(&(r)->biorq_lock)
 
+#define BIORQ_SETATTR(r, fl)		SETATTR_LOCKED(&(r)->biorq_lock, &(r)->biorq_flags, (fl))
+#define BIORQ_CLEARATTR(r, fl)		CLEARATTR_LOCKED(&(r)->biorq_lock, &(r)->biorq_flags, (fl))
+
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
-	psclogs((level), SLSS_BMAP, "biorq@%p "				\
-	    "flg=%#x:"							\
+	psclogs((level), SLSS_BMAP, "biorq@%p flg=%#x:"			\
 	    "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "		\
 	    "ref=%d off=%u len=%u "					\
 	    "retry=%u buf=%p rqi=%p "					\
