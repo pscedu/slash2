@@ -460,7 +460,7 @@ main(int argc, char *argv[])
 		usage();
 
 	pscthr_init(SLMTHRT_CTL, 0, NULL, NULL,
-	    sizeof(struct psc_ctlthr), "slmctlthr");
+	    sizeof(struct psc_ctlthr), "slmctlthr0");
 
 	sys_upnonce = psc_random32();
 
