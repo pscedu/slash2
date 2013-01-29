@@ -2077,7 +2077,6 @@ msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
 	q = psc_pool_get(mfsrq_pool);
 	memset(q, 0, sizeof(*q));
 	INIT_PSC_LISTENTRY(&q->mfsrq_lentry);
-	mfh_incref(mfh);
 	q->mfsrq_mfh = mfh;
 	q->mfsrq_buf = buf;
 	q->mfsrq_size = size;
@@ -2086,6 +2085,7 @@ msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
 	q->mfsrq_pfr = pfr;
 	q->mfsrq_ref = 1;
 	q->mfsrq_len = 0;
+	mfh_incref(q->mfsrq_mfh);
 
 	pfr->pfr_info = q;
 	if (rw == SL_READ)

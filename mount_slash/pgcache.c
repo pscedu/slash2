@@ -239,7 +239,7 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	r->biorq_fsrqi = q;
 	r->biorq_last_sliod = IOS_ID_ANY;
 
-	mfh_incref(q->mfsrq_mfh);
+	mfh_incref(r->biorq_mfh);
 
 	/* Add the biorq to the fsrq. */
 	msl_fsrqinfo_biorq_add(q, r, rqnum);
