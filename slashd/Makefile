@@ -74,7 +74,7 @@ SRCS+=		${PFL_BASE}/waitq.c
 
 SRCS+=		${SETRESUID_SRC}
 
-DEFINES+=	-DZPOOL_PATH=\"$(realpath ${ZFS_BASE}/src/cmd/zpool)\"
+DEFINES+=	-DZFS_BIN_PATH=\"$(realpath ${ZFS_BASE}/src/cmd/zfs)\"
 DEFINES+=	-D_SLASH_MDS
 MODULES+=	lnet pthread zfs z gcrypt fuse-hdrs aio pscfs ctl rpc sqlite
 
