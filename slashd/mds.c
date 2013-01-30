@@ -370,8 +370,6 @@ mds_try_sliodresm(struct sl_resm *resm)
  * @pios: The preferred I/O resource specified by the client.
  * @to_skip: IONs to skip
  * @nskip: # IONS in @to_skip.
- * @to_skip:
- * @nskip:
  * Notes:  This call accounts for the existence of existing replicas.
  *	When found, mds_resm_select() must choose a replica which is
  *	marked as BREPLST_VALID.
@@ -444,7 +442,6 @@ mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios,
 	}
 
 	if (repls && !psc_dynarray_len(&a)) {
-		/* No replicas were marked BREPLST_VALID. */
 		DEBUG_BMAP(PLL_ERROR, b, "no replicas marked BREPLST_VALID");
 		return (NULL);
 	}
