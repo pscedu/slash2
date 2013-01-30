@@ -83,8 +83,7 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 		 */
 		return (0);
 
-	/* Add write mode to this bmap.
-	 */
+	/* Add write mode to this bmap. */
 	psc_assert(rw == SL_WRITE && (b->bcm_flags & BMAP_RD));
 
 	rc = slc_rmc_getcsvc1(&csvc, fci->fci_resm);
@@ -784,7 +783,8 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 		if (i)
 			break;
 
-		for (i = 0, off = 0; i < fcmh_2_fci(b->bcm_fcmh)->fci_nrepls;
+		for (i = 0, off = 0;
+		    i < fcmh_2_fci(b->bcm_fcmh)->fci_nrepls;
 		    i++, off += SL_BITS_PER_REPLICA)
 			if (SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls,
 			    off))
@@ -823,29 +823,20 @@ bmap_biorq_waitempty(struct bmapc_memb *b)
 void
 bmap_biorq_expire(struct bmapc_memb *b)
 {
-	struct bmpc_ioreq *biorq;
+	struct bmpc_ioreq *r;
 
 	/*
 	 * Note that the following two lists and the bmapc_memb
 	 * structure itself all share the same lock.
 	 */
 	BMPC_LOCK(bmap_2_bmpc(b));
-	PLL_FOREACH(biorq, &bmap_2_bmpc(b)->bmpc_new_biorqs) {
-		BIORQ_LOCK(biorq);
-		biorq->biorq_flags |= BIORQ_FORCE_EXPIRE;
-		DEBUG_BIORQ(PLL_INFO, biorq, "FORCE_EXPIRE");
-		BIORQ_ULOCK(biorq);
-	}
-	PLL_FOREACH(biorq, &bmap_2_bmpc(b)->bmpc_pndg_biorqs) {
-		BIORQ_LOCK(biorq);
-		biorq->biorq_flags |= BIORQ_FORCE_EXPIRE;
-		DEBUG_BIORQ(PLL_INFO, biorq, "FORCE_EXPIRE");
-		BIORQ_ULOCK(biorq);
-	}
+	PLL_FOREACH(r, &bmap_2_bmpc(b)->bmpc_new_biorqs)
+		BIORQ_SETATTR(r, BIORQ_FORCE_EXPIRE);
+	PLL_FOREACH(r, &bmap_2_bmpc(b)->bmpc_pndg_biorqs)
+		BIORQ_SETATTR(r, BIORQ_FORCE_EXPIRE);
 	BMPC_ULOCK(bmap_2_bmpc(b));
 
-	/* Minimize biorq scanning via this hint.
-	 */
+	/* Minimize biorq scanning via this hint. */
 	BMAP_SETATTR(b, BMAP_CLI_BIORQEXPIRE);
 
 	bmap_flushq_wake(BMAPFLSH_RPCWAIT, NULL);
