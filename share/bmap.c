@@ -358,13 +358,9 @@ bmapdesc_access_check(struct srt_bmapdesc *sbd, enum rw rw,
 }
 
 void
-dump_bmapod(struct bmapc_memb *bmap, const char *fmt, ...)
+dump_bmapod(struct bmapc_memb *bmap)
 {
-	va_list ap;
-
-	va_start(ap, fmt);
-	DEBUG_BMAPODV(PLL_MAX, bmap, fmt, ap);
-	va_end(ap);
+	DEBUG_BMAPOD(PLL_MAX, bmap, "");
 }
 
 void
@@ -401,7 +397,7 @@ _dump_bmapod(const struct pfl_callerinfo *pci, int level,
 	} while (0)
 
 void
-dump_bmap_repls(void *repls)
+dump_bmap_repls(uint8_t *repls)
 {
 	char rbuf[SL_MAX_REPLICAS + 1];
 
@@ -415,6 +411,7 @@ _dump_bmapodv(const struct pfl_callerinfo *pci, int level,
 {
 	char mbuf[LINE_MAX], rbuf[SL_MAX_REPLICAS + 1],
 	     cbuf[SLASH_CRCS_PER_BMAP + 1];
+	int k;
 
 	vsnprintf(mbuf, sizeof(mbuf), fmt, ap);
 
