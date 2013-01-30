@@ -49,45 +49,16 @@ site @PSCARCH {
 		jrnldev	= /dev/disk/by-id/scsi-35000c50033f6faa7;
 	}
 
-	resource firehose1 {
-		desc	= "brashear client 1";
-		type	= parallel_lfs_compnt;
-		id	= 0x5;
-		nids	= firehose1-99.psc.edu;
-		fsroot	= /brashear/.arc;
-	}
-
-	resource firehose2 {
-		desc	= "brashear client 2";
-		type	= parallel_lfs_compnt;
-		id	= 0x6;
-		nids	= firehose2-99.psc.edu;
-		fsroot	= /brashear/.arc;
-	}
-
-	resource firehose3 {
-		desc	= "brashear client 3";
-		type	= parallel_lfs_compnt;
-		id	= 0x7;
-		nids	= firehose3-99.psc.edu;
-		fsroot	= /brashear/.arc;
-	}
-
-	resource firehose4 {
-		desc	= "brashear client 4";
-		type	= parallel_lfs_compnt;
-		id	= 0x8;
-		nids	= firehose4-99.psc.edu;
-		fsroot	= /brashear/.arc;
-	}
-
-	resource brashear {
-		desc	= "PSC lustre scratch filesystem";
-		type	= parallel_lfs;
-		id	= 0x10;
-		ios	= firehose1@PSCARCH, firehose2@PSCARCH,
-			  firehose3@PSCARCH, firehose4@PSCARCH;
-	}
+	/*
+	 * used IDs:
+	 *	0x05	firehose1
+	 *	0x06	firehose2
+	 *	0x07	firehose3
+	 *	0x08	firehose4
+	 *	0x10	brashear
+	 *	0x200	peel0
+	 *	0x201	lime
+	 */
 
 	resource uo {
 		desc	= "tape archiver";
@@ -104,26 +75,6 @@ site @PSCARCH {
 		id	= 0x101;
 		nids	= tahini-99e;
 		fsroot	= /usr/ue;
-		flags	= "disable_bia";
-	}
-
-	# temporary/test nids
-	resource peel0 {
-		desc	= "PSC test I/O node";
-		type	= standalone_fs;
-		id	= 0x200;
-		nids	= 128.182.99.23;
-		fsroot	= /arc_sliod/0;
-		selftest = "/usr/local/psc/sbin/st /arc_sliod/0";
-		flags	= "disable_bia";
-	}
-
-	resource lime {
-		desc	= "PSC test I/O node";
-		type	= standalone_fs;
-		id	= 0x201;
-		nids	= lime-ib1-0.pvt, lime;
-		fsroot	= /local/p0_archive_backfs;
 		flags	= "disable_bia";
 	}
 
