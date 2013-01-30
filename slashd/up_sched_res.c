@@ -92,7 +92,6 @@ upd_tryremove(struct slm_update_data *upd)
 	retifset[BREPLST_GARBAGE] = 0;
 
 	lk = BMAPOD_REQRDLOCK(bmi);
-
 	if (!mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT)) {
 		UPD_LOCK(upd);

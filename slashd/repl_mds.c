@@ -512,6 +512,13 @@ slm_iosv_clearbusy(const sl_replica_t *iosv, int nios)
 	}
 }
 
+#define PUSH_IOS(b, a, id)						\
+	do {								\
+		(a)->iosv[(a)->nios++].bs_id = (id);			\
+		DEBUG_BMAP(PLL_DEBUG, (b),				\
+		    "registering resid %d with %s", (id), #a);		\
+	} while (0)
+
 void
 slm_repl_upd_odt_write(struct bmapc_memb *b)
 {
@@ -519,11 +526,12 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 		sl_replica_t	iosv[SL_MAX_REPLICAS];
 		unsigned	nios;
 	} add, del, sch, deq;
-	int locked, off, vold, vnew;
+	int rm = 1, locked, off, vold, vnew;
 	struct bmap_repls_upd_odent br;
 	struct slm_update_data *upd;
 	struct bmap_mds_info *bmi;
 	struct fidc_membh *f;
+	sl_ios_id_t resid;
 	pthread_t pthr;
 	unsigned n;
 
@@ -544,6 +552,7 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 	deq.nios = 0;
 	for (n = 0, off = 0; n < fcmh_2_nrepls(f);
 	    n++, off += SL_BITS_PER_REPLICA) {
+		resid = fcmh_2_repl(f, n);
 		vold = SL_REPL_GET_BMAP_IOS_STAT(
 		    bmi->bmi_orepls, off);
 		vnew = SL_REPL_GET_BMAP_IOS_STAT(
@@ -553,19 +562,30 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 		else if ((vold != BREPLST_REPL_QUEUED &&
 		    vold != BREPLST_REPL_SCHED) &&
 		    vnew == BREPLST_REPL_QUEUED)
-			add.iosv[add.nios++].bs_id = fcmh_2_repl(f, n);
+			PUSH_IOS(b, &add, resid);
 		else if ((vold == BREPLST_REPL_QUEUED ||
-		    vold == BREPLST_REPL_SCHED) &&
+		     vold == BREPLST_REPL_SCHED ||
+		     vold == BREPLST_TRUNCPNDG_SCHED ||
+		     vold == BREPLST_TRUNCPNDG) &&
 		    (vnew == BREPLST_GARBAGE ||
 		     vnew == BREPLST_VALID ||
 		     vnew == BREPLST_INVALID))
-			del.iosv[del.nios++].bs_id = fcmh_2_repl(f, n);
-		else if (vold == BREPLST_REPL_SCHED &&
-		    vnew != BREPLST_REPL_SCHED)
-			deq.iosv[deq.nios++].bs_id = fcmh_2_repl(f, n);
-		else if (vold != BREPLST_REPL_QUEUED &&
-		     vnew == BREPLST_REPL_QUEUED)
-			sch.iosv[sch.nios++].bs_id = fcmh_2_repl(f, n);
+			PUSH_IOS(b, &del, resid);
+		else if ((vold == BREPLST_REPL_SCHED &&
+		     vnew != BREPLST_REPL_SCHED) ||
+		    (vold == BREPLST_TRUNCPNDG_SCHED &&
+		     vnew != BREPLST_TRUNCPNDG_SCHED))
+			PUSH_IOS(b, &deq, resid);
+		else if ((vold != BREPLST_REPL_QUEUED &&
+		      vnew == BREPLST_REPL_QUEUED) ||
+		     (vold != BREPLST_TRUNCPNDG &&
+		      vnew == BREPLST_TRUNCPNDG))
+			PUSH_IOS(b, &sch, resid);
+
+		if (vnew != BREPLST_VALID &&
+		    vnew != BREPLST_INVALID &&
+		    vnew != BREPLST_GARBAGE)
+			rm = 0;
 	}
 
 	if (add.nios) {
@@ -578,7 +598,8 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 			upd->upd_recpt = mds_odtable_putitem(
 			    slm_repl_odt, &br, sizeof(br));
 			DEBUG_UPD(PLL_DEBUG, upd,
-			    "assigned odtable receipt [%zu, %"PSCPRIxCRC64"]",
+			    "assigned odtable receipt "
+			    "[%zu, %"PSCPRIxCRC64"]",
 			    upd->upd_recpt->odtr_elem,
 			    upd->upd_recpt->odtr_key);
 		}
@@ -634,7 +655,8 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 			    SQLITE_INTEGER, del.iosv[n].bs_id,
 			    SQLITE_INTEGER64, bmap_2_fid(b),
 			    SQLITE_INTEGER, b->bcm_bmapno);
-		upd_tryremove(upd);
+		if (rm)
+			upd_tryremove(upd);
 	}
 	BMAPOD_READ_DONE(b, locked);
 
