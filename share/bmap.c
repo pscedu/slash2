@@ -336,16 +336,6 @@ bmap_cache_init(size_t priv_size)
 	bmap_pool = psc_poolmaster_getmgr(&bmap_poolmaster);
 }
 
-void
-_dump_bmapod(struct bmapc_memb *bmap, const char *fmt, ...)
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	DEBUG_BMAPODV(PLL_MAX, bmap, fmt, ap);
-	va_end(ap);
-}
-
 int
 bmapdesc_access_check(struct srt_bmapdesc *sbd, enum rw rw,
     sl_ios_id_t ios_id)
@@ -368,31 +358,67 @@ bmapdesc_access_check(struct srt_bmapdesc *sbd, enum rw rw,
 }
 
 void
-_log_dump_bmapodv(const struct pfl_callerinfo *pci, int level,
+dump_bmapod(struct bmapc_memb *bmap, const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	DEBUG_BMAPODV(PLL_MAX, bmap, fmt, ap);
+	va_end(ap);
+}
+
+void
+_dump_bmapod(const struct pfl_callerinfo *pci, int level,
+    struct bmapc_memb *bmap, const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	_dump_bmapodv(pci, level, bmap, fmt, ap);
+	va_end(ap);
+}
+
+#define DUMP_BMAP_REPLS(repls, buf)					\
+	do {								\
+		int _k, off, ch[NBREPLST];				\
+									\
+		ch[BREPLST_INVALID] = '-';				\
+		ch[BREPLST_REPL_SCHED] = 's';				\
+		ch[BREPLST_REPL_QUEUED] = 'q';				\
+		ch[BREPLST_VALID] = '+';				\
+		ch[BREPLST_TRUNCPNDG] = 't';				\
+		ch[BREPLST_TRUNCPNDG_SCHED] = 'p';			\
+		ch[BREPLST_GARBAGE] = 'g';				\
+		ch[BREPLST_GARBAGE_SCHED] = 'x';			\
+									\
+		for (_k = 0, off = 0; _k < SL_MAX_REPLICAS;		\
+		    _k++, off += SL_BITS_PER_REPLICA)			\
+			(buf)[_k] = ch[SL_REPL_GET_BMAP_IOS_STAT(repls,	\
+			    off)];					\
+		while (_k > 1 && (buf)[_k - 1] == '-')			\
+			_k--;						\
+		(buf)[_k] = '\0';					\
+	} while (0)
+
+void
+dump_bmap_repls(void *repls)
+{
+	char rbuf[SL_MAX_REPLICAS + 1];
+
+	DUMP_BMAP_REPLS(repls, rbuf);
+	printf("%s\n", rbuf);
+}
+
+void
+_dump_bmapodv(const struct pfl_callerinfo *pci, int level,
     struct bmapc_memb *bmap, const char *fmt, va_list ap)
 {
 	char mbuf[LINE_MAX], rbuf[SL_MAX_REPLICAS + 1],
 	     cbuf[SLASH_CRCS_PER_BMAP + 1];
-	unsigned char *b = bmap->bcm_repls;
-	int off, k, ch[NBREPLST];
 
 	vsnprintf(mbuf, sizeof(mbuf), fmt, ap);
 
-	ch[BREPLST_INVALID] = '-';
-	ch[BREPLST_REPL_SCHED] = 's';
-	ch[BREPLST_REPL_QUEUED] = 'q';
-	ch[BREPLST_VALID] = '+';
-	ch[BREPLST_TRUNCPNDG] = 't';
-	ch[BREPLST_TRUNCPNDG_SCHED] = 'p';
-	ch[BREPLST_GARBAGE] = 'g';
-	ch[BREPLST_GARBAGE_SCHED] = 'x';
-
-	for (k = 0, off = 0; k < SL_MAX_REPLICAS;
-	    k++, off += SL_BITS_PER_REPLICA)
-		rbuf[k] = ch[SL_REPL_GET_BMAP_IOS_STAT(b, off)];
-	while (k > 1 && rbuf[k - 1] == '-')
-		k--;
-	rbuf[k] = '\0';
+	DUMP_BMAP_REPLS(bmap->bcm_repls, rbuf);
 
 	for (k = 0; k < SLASH_CRCS_PER_BMAP; k++)
 		if (bmap->bcm_crcstates[k] > 9)
@@ -405,17 +431,6 @@ _log_dump_bmapodv(const struct pfl_callerinfo *pci, int level,
 
 	_DEBUG_BMAP(pci, level, bmap, "repls={%s} crcstates=[0x%s] %s",
 	    rbuf, cbuf, mbuf);
-}
-
-void
-_log_dump_bmapod(const struct pfl_callerinfo *pci, int level,
-    struct bmapc_memb *bmap, const char *fmt, ...)
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	_log_dump_bmapodv(pci, level, bmap, fmt, ap);
-	va_end(ap);
 }
 
 #if PFL_DEBUG > 0
