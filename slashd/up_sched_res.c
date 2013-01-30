@@ -94,11 +94,18 @@ upd_tryremove(struct slm_update_data *upd)
 	lk = BMAPOD_REQRDLOCK(bmi);
 	if (!mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT)) {
-		UPD_LOCK(upd);
-		mds_odtable_freeitem(slm_repl_odt, upd->upd_recpt);
-		upd->upd_recpt = NULL;
-		UPD_ULOCK(upd);
-		DEBUG_UPD(PLL_DEBUG, upd, "removed odtable entry");
+		if (upd->upd_recpt) {
+			UPD_LOCK(upd);
+			mds_odtable_freeitem(slm_repl_odt,
+			    upd->upd_recpt);
+			upd->upd_recpt = NULL;
+			UPD_ULOCK(upd);
+			DEBUG_UPD(PLL_DEBUG, upd,
+			    "removed odtable entry");
+		} else {
+			psclog_error("no upd_recpt, "
+			    "likely a very serious problem");
+		}
 	}
 	BMAPOD_UREQLOCK(bmi, lk);
 }
@@ -1062,21 +1069,23 @@ upschq_resm(struct sl_resm *m, int type)
 	struct resprof_mds_info *rpmi;
 	struct slm_update_data *upd;
 	struct sl_mds_iosinfo *si;
-	int proc = 1;
 
-	rpmi = res2rpmi(m->resm_res);
-	si = res2iosinfo(m->resm_res);
-	RPMI_LOCK(rpmi);
-	if (si->si_flags & SIF_UPSCH_PAGING)
-		proc = 0;
-	else
-		si->si_flags |= SIF_UPSCH_PAGING;
-	RPMI_ULOCK(rpmi);
+	if (type == UPDT_PAGEIN) {
+		int proc = 1;
 
-	if (!proc)
-		return;
+		rpmi = res2rpmi(m->resm_res);
+		si = res2iosinfo(m->resm_res);
+		RPMI_LOCK(rpmi);
+		if (si->si_flags & SIF_UPSCH_PAGING)
+			proc = 0;
+		else
+			si->si_flags |= SIF_UPSCH_PAGING;
+		RPMI_ULOCK(rpmi);
 
-	if (si->si_flags & SIF_UPSCH_PAGING)
+		if (!proc)
+			return;
+	}
+
 	upg = psc_pool_get(slm_upgen_pool);
 	memset(upg, 0, sizeof(*upg));
 	INIT_PSC_LISTENTRY(&upg->upg_lentry);
