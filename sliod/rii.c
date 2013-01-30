@@ -108,10 +108,16 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 	if (!aio) {
 		slvr_wio_done(s);
 
+		LIST_CACHE_LOCK(&sli_replwkq_pending);
 		spinlock(&w->srw_lock);
 		w->srw_nslvr_cur++;
 		w->srw_slvr_refs[slvridx] = NULL;
+		if (!lc_conjoint(&sli_replwkq_pending, w)) {
+			psc_atomic32_inc(&w->srw_refcnt);
+			lc_add(&sli_replwkq_pending, w);
+		}
 		sli_replwkrq_decref(w, rc);
+		LIST_CACHE_ULOCK(&sli_replwkq_pending);
 	}
 
 	return (rc);
