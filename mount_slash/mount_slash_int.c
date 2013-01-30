@@ -480,10 +480,8 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 	msl_biorq_complete_fsrq(r);
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 		BMPCE_LOCK(e);
-		if (biorq_is_my_bmpce(r, e)) {
-			DEBUG_BMPCE(PLL_INFO, e, "wakeup");
+		if (biorq_is_my_bmpce(r, e))
 			BMPCE_WAKE(e);
-		}
 		BMPCE_ULOCK(e);
 	}
 	if (r->biorq_flags & BIORQ_FLUSHRDY) {
@@ -492,7 +490,6 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 	}
 
  destroy:
-
 	psc_assert(!(r->biorq_flags & BIORQ_DESTROY));
 	r->biorq_flags |= BIORQ_DESTROY;
 
@@ -800,8 +797,7 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r0)
 				len = msl_pages_copyout(r);
 			else {
 				len = msl_pages_copyin(r);
-				r->biorq_flags |= BIORQ_FLUSHRDY;
-				DEBUG_BIORQ(PLL_INFO, r, "BIORQ_FLUSHRDY");
+				BIORQ_SETATTR(r, BIORQ_FLUSHRDY);
 			}
 		}
 	}
@@ -920,9 +916,8 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 
 	DYNARRAY_FOREACH(e, i, a)
 		msl_bmpce_rpc_done(e, rc);
-	BIORQ_LOCK(r);
-	r->biorq_flags &= ~(BIORQ_INFL | BIORQ_SCHED);
-	BIORQ_ULOCK(r);
+
+	BIORQ_CLEARATTR(r, BIORQ_INFL | BIORQ_SCHED);
 
 	if (rc)
 		mfsrq_seterr(r->biorq_fsrqi, rc);
@@ -1044,7 +1039,7 @@ msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_io_rep, rc);
 
-	DEBUG_REQ(rc ? PLL_ERROR : PLL_INFO, rq, "cb");
+	DEBUG_REQ(rc ? PLL_ERROR : PLL_DIAG, rq, "cb");
 
 	r = pll_peekhead(&bwc->bwc_pll);
 	BMAP_LOCK(r->biorq_bmap);
@@ -1076,9 +1071,7 @@ msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 	while ((r = pll_get(&bwc->bwc_pll))) {
 
-		BIORQ_LOCK(r);
-		r->biorq_flags &= ~(BIORQ_INFL | BIORQ_SCHED);
-		BIORQ_ULOCK(r);
+		BIORQ_CLEARATTR(r, BIORQ_INFL | BIORQ_SCHED);
 
 		if (rc) {
 			if (expired_lease || maxretries) {
@@ -1351,8 +1344,8 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 
 		if (!(b->bcm_flags & BMAP_CLI_FLUSHPROC)) {
 			/*
-			 * Give control of the msdb_lentry to the
-			 * bmap_flush thread.
+			 * Give control of the bmap to the bmap_flush
+			 * thread.
 			 */
 			b->bcm_flags |= BMAP_CLI_FLUSHPROC;
 			psc_assert(psclist_disjoint(&b->bcm_lentry));
@@ -1742,11 +1735,8 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 		}
 	}
 
-	if (sched) {
-		BIORQ_LOCK(r);
-		r->biorq_flags |= BIORQ_SCHED;
-		BIORQ_ULOCK(r);
-	}
+	if (sched)
+		BIORQ_SETATTR(r, BIORQ_SCHED);
 	if (rc)
 		goto out;
 	/*
@@ -1774,10 +1764,10 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 		 * requests.
 		 */
 		if (rc != -SLERR_AIOWAIT)
-			r->biorq_flags &= ~(BIORQ_INFL | BIORQ_SCHED);
+			BIORQ_CLEARATTR(r, BIORQ_INFL | BIORQ_SCHED);
 
 		if (!rc) {
-			r->biorq_flags &= ~(BIORQ_RBWLP | BIORQ_RBWFP);
+			BIORQ_CLEARATTR(r, BIORQ_RBWLP | BIORQ_RBWFP);
 			DEBUG_BIORQ(PLL_INFO, r, "read cb complete");
 			psc_waitq_wakeall(&r->biorq_waitq);
 
