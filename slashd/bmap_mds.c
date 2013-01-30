@@ -223,10 +223,9 @@ mds_bmap_write(struct bmapc_memb *b, int update_mtime, void *logf,
 {
 	struct fidc_membh *f;
 	struct iovec iovs[2];
+	int rc, new, vfsid;
 	uint64_t crc;
-	int rc, new;
 	size_t nb;
-	int vfsid;
 
 	BMAPOD_REQRDLOCK(bmap_2_bmi(b));
 	mds_bmap_ensure_valid(b);
