@@ -1483,7 +1483,7 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 				iocb->iocb_len =
 				    aio_return(&iocb->iocb_aiocb);
 
-			psc_fault_here_rc(SLI_FAULT_AIO_FAIL,
+			(void)psc_fault_here_rc(SLI_FAULT_AIO_FAIL,
 			    &iocb->iocb_rc, EIO);
 
 			psclog_info("got signal: iocb=%p", iocb);
