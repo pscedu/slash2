@@ -326,11 +326,11 @@ struct bmap {
 #define NBRPOL			2
 
 #define DEBUG_BMAPOD(level, bmap, fmt, ...)				\
-	_log_dump_bmapod(PFL_CALLERINFOSS(SLSS_BMAP), (level), (bmap),	\
+	_dump_bmapod(PFL_CALLERINFOSS(SLSS_BMAP), (level), (bmap),	\
 	    (fmt), ## __VA_ARGS__)
 
 #define DEBUG_BMAPODV(level, bmap, fmt, ap)				\
-	_log_dump_bmapodv(PFL_CALLERINFOSS(SLSS_BMAP), (level),		\
+	_dump_bmapodv(PFL_CALLERINFOSS(SLSS_BMAP), (level),		\
 	    (bmap), (fmt), (ap))
 
 /* bmap_get flags */
@@ -355,9 +355,9 @@ int	 bmapdesc_access_check(struct srt_bmapdesc *, enum rw, sl_ios_id_t);
 
 void	_dump_bmap_flags_common(uint32_t *, int *);
 
-void	_log_dump_bmapodv(const struct pfl_callerinfo *, int,
+void	_dump_bmapodv(const struct pfl_callerinfo *, int,
 	    struct bmapc_memb *, const char *, va_list);
-void	_log_dump_bmapod(const struct pfl_callerinfo *, int,
+void	_dump_bmapod(const struct pfl_callerinfo *, int,
 	    struct bmapc_memb *, const char *, ...);
 
 #define bmap_getf(f, n, rw, fl, bp)	_bmap_get(			\
