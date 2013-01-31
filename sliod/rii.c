@@ -216,13 +216,10 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 
 	if (aiocbr) {
 		/*
-		 * Ran into an async I/O.  It's possible that this sliod
-		 * is an archival_fs.
+		 * Ran into an async I/O. We may have already issued the
+		 * AIO. So the sliver may be already ready at this point.
 		 */
-		if (s->slvr_flags & SLVR_REPLDST)
-			DEBUG_SLVR(PLL_WARN, s, "repldst saw aiowait");
-
-		psc_assert(rv == -SLERR_AIOWAIT);
+		psc_assert(!(s->slvr_flags & SLVR_REPLDST));
 
 		SLVR_LOCK(s);
 		if (!(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR))) {
