@@ -45,6 +45,7 @@
 #include "psc_util/pthrutil.h"
 #include "psc_util/random.h"
 #include "psc_util/thread.h"
+#include "psc_util/ctlsvr.h"
 
 #include "bmap_mds.h"
 #include "mdsio.h"
@@ -258,6 +259,8 @@ slmupschedthr_tryrepldst(struct slm_update_data *upd,
 	rc = SL_RSX_NEWREQ(csvc, SRMT_REPL_SCHEDWK, rq, mq, mp);
 	if (rc)
 		PFL_GOTOERR(fail, rc);
+	OPSTAT_INCR(SLM_OPST_REPL_SCHEDWK);
+
 	mq->src_resid = src_resm->resm_res_id;
 	mq->len = SLASH_BMAP_SIZE;
 	lastbno = fcmh_nvalidbmaps(f);
