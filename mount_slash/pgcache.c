@@ -319,7 +319,7 @@ bmpc_biorq_seterr(struct bmpc_ioreq *r, int err)
 	/*
  	 * Note that r->biorq_fsrqi may have been freed by now.
  	 */
-	mfh_seterr(r->biorq_mfh);
+	mfh_seterr(r->biorq_mfh, err);
 }
 
 /**

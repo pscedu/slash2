@@ -224,7 +224,7 @@ void	_msl_biorq_destroy(const struct pfl_callerinfo *, struct bmpc_ioreq *);
 
 void	 mfh_decref(struct msl_fhent *);
 void	 mfh_incref(struct msl_fhent *);
-void	 mfh_seterr(struct msl_fhent *);
+void	 mfh_seterr(struct msl_fhent *, int);
 
 int	 msl_dio_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 ssize_t	 msl_io(struct pscfs_req *, struct msl_fhent *, char *, size_t, off_t, enum rw);

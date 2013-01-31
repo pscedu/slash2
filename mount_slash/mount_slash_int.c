@@ -373,10 +373,10 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
  *	blocked in flush may error out.
  */
 void
-mfh_seterr(struct msl_fhent *mfh)
+mfh_seterr(struct msl_fhent *mfh, int err)
 {
 	MFH_LOCK(mfh);
-	mfh->mfh_flush_rc = -EIO;
+	mfh->mfh_flush_rc = err;
 	MFH_ULOCK(mfh);
 }
 
