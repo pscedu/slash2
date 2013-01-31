@@ -135,6 +135,7 @@ sli_rim_handle_repl_schedwk(struct pscrpc_request *rq)
 	struct srm_repl_schedwk_rep *mp;
 	struct sl_resource *res;
 
+	OPSTAT_INCR(SLI_OPST_HANDLE_REPL_SCHED);
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fg.fg_fid == FID_ANY)
 		mp->rc = -EINVAL;
