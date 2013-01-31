@@ -308,8 +308,9 @@ bmpc_freeall_locked(struct bmap_pagecache *bmpc)
 }
 
 __static void
-bmpc_biorq_seterr(struct bmpc_ioreq *r, int err)
+bmpc_biorq_seterr(struct bmpc_ioreq *r, int err, uint32_t flag)
 {
+	BIORQ_SETATTR(r, flag);
 	/*
 	 * XXX, this could also be a lease expire situation.
 	 */
@@ -328,15 +329,15 @@ bmpc_biorq_seterr(struct bmpc_ioreq *r, int err)
  * Notes: Pending RA pages should fail on their own via RPC callback.
  */
 void
-bmpc_biorqs_fail(struct bmap_pagecache *bmpc, int err)
+bmpc_biorqs_fail(struct bmap_pagecache *bmpc, int err, uint32_t flag)
 {
 	struct bmpc_ioreq *r;
 
 	BMPC_LOCK(bmpc);
 	PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs)
-		bmpc_biorq_seterr(r, err);
+		bmpc_biorq_seterr(r, err, flag);
 	PLL_FOREACH(r, &bmpc->bmpc_new_biorqs)
-		bmpc_biorq_seterr(r, err);
+		bmpc_biorq_seterr(r, err, flag);
 	BMPC_ULOCK(bmpc);
 }
 

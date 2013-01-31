@@ -1066,7 +1066,8 @@ msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 			}
 
 		if (maxretries)
-			bmpc_biorqs_fail(bmap_2_bmpc(r->biorq_bmap), rc);
+			bmpc_biorqs_fail(bmap_2_bmpc(r->biorq_bmap), rc, 
+				BIORQ_MAXRETRIES);
 	}
 
 	while ((r = pll_get(&bwc->bwc_pll))) {
