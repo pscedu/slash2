@@ -256,6 +256,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		    slvr_ref, nslvrs, iovs, nslvrs, rw);
 
 		/*
+ 		 * XXX The aiocbr could be freed at this point. Need reference.
+ 		 */
+
+		/*
 		 * Now check for early completion.  If all slvrs are
 		 * ready, then we must reply with the data now.
 		 * Otherwise, we'll never be woken since the aio cb(s)
