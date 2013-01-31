@@ -208,6 +208,8 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 	slvr_slab_prep(s, aio ? SL_WRITE : SL_READ);
 	slvr_repl_prep(s, aio ? SLVR_REPLDST : 0);
 	rv = slvr_io_prep(s, 0, mq->len, aio ? SL_WRITE : SL_READ, &aiocbr);
+	if (rv && rv != -SLERR_AIOWAIT)
+		PFL_GOTOERR(out, mp->rc = rv);
 
 	iov.iov_base = s->slvr_slab->slb_base;
 	iov.iov_len = mq->len;
@@ -228,6 +230,7 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 			SLVR_ULOCK(s);
 			sli_aio_replreply_setup(aiocbr, rq, s, &iov);
 			pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
+			OPSTAT_INCR(SLI_OPST_HANDLE_REPLREAD_INSERT);
 			PFL_GOTOERR(out, mp->rc = rv);
 		}
 		SLVR_ULOCK(s);
@@ -235,9 +238,6 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 		/* XXX: SLVR_DATAERR */
 		rv = 0;
 	}
-
-	if (rv)
-		PFL_GOTOERR(out, mp->rc = rv);
 
 	mp->rc = rsx_bulkserver(rq, aio ? BULK_GET_SINK :
 	    BULK_PUT_SOURCE, SRII_BULK_PORTAL, &iov, 1);
