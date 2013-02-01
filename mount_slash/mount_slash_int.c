@@ -1177,7 +1177,6 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	struct iovec *iovs;
 	uint64_t *v8;
 
-	psc_assert(r->biorq_flags & BIORQ_DIO);
 	psc_assert(r->biorq_bmap);
 	psc_assert(size);
 
