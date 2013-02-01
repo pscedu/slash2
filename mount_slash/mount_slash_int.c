@@ -1115,7 +1115,8 @@ msl_dio_cb(struct pscrpc_request *rq, int rc, struct pscrpc_async_args *args)
 	struct srm_io_req *mq;
 	int op, locked;
 
-	DEBUG_REQ(PLL_INFO, rq, "cb");
+	if (rq)
+		DEBUG_REQ(PLL_INFO, rq, "cb");
 
 	op = rq->rq_reqmsg->opc;
 	psc_assert(op == SRMT_READ || op == SRMT_WRITE);
