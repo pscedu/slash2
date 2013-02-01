@@ -104,7 +104,7 @@ slm_bmap_read_db_cb(struct slm_sth *sth, void *p)
 	upd->upd_recpt = odtr = PSCALLOC(sizeof(*odtr));
 	odtr->odtr_elem = sqlite3_column_int64(sth->sth_sth, 0);
 	odtr->odtr_key = sqlite3_column_int64(sth->sth_sth, 1);
-	DEBUG_BMAP(PLL_DEBUG, b,
+	DEBUG_BMAP(PLL_MAX, b,
 	    "upd %p loaded odtr [elem=%zu, key=%"PSCPRIxCRC64"]",
 	    upd, odtr->odtr_elem, odtr->odtr_key);
 	return (0);
@@ -193,6 +193,7 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 		b->bcm_flags |= BMAP_REPLAY;
 		return (0);
 	}
+DEBUG_BMAP(PLL_MAX, b, "loaded");
 
 	upd = bmap_2_upd(b);
 
@@ -209,8 +210,8 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 }
 
 /**
- * mds_bmap_write - Update a bmap of an inode.  Note we must reserve
- *	journal log space if logf is given.
+ * mds_bmap_write - Update the on-disk data of bmap.  Note we must
+ *	reserve journal log space if logf is given.
  * @update_mtime: we used to allow CRC update code path to update mtime
  *	if the generation number it carries matches what we have.  This
  *	is no longer used.  Now, only the client can update the mtime.

@@ -101,7 +101,7 @@ upd_tryremove(struct slm_update_data *upd)
 			    upd->upd_recpt);
 			upd->upd_recpt = NULL;
 			UPD_ULOCK(upd);
-			DEBUG_UPD(PLL_DEBUG, upd,
+			DEBUG_UPD(PLL_MAX, upd,
 			    "removed odtable entry");
 		} else {
 			psclog_error("no upd_recpt, "
@@ -211,6 +211,7 @@ slmupschedthr_tryrepldst(struct slm_update_data *upd,
 	struct fidc_membh *f;
 	sl_bmapno_t lastbno;
 	int64_t amt = 0;
+printf("tryrepldst\n");
 
 	f = upd_2_fcmh(upd);
 	dst_resm = psc_dynarray_getpos(&dst_res->res_members, j);
@@ -627,6 +628,8 @@ upd_proc_bmap(struct slm_update_data *upd)
 	sl_ios_id_t iosid;
 	sl_bmapno_t bno;
 
+printf("processing bmap!\n");
+
 	bmi = upd_getpriv(upd);
 	b = bmi_2_bmap(bmi);
 	f = b->bcm_fcmh;
@@ -658,6 +661,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 		val = SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls, off);
 		switch (val) {
 		case BREPLST_REPL_QUEUED:
+			printf("replq\n");
 			/*
 			 * There is still a lease out; we'll wait for it
 			 * to be relinquished.
@@ -667,6 +671,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 			 */
 			if (bmap_2_bmi(b)->bmdsi_wr_ion)
 				break;
+			printf("replq 2\n");
 
 			/* look for a repl source */
 			for (tryarchival = 0; tryarchival < 2;
@@ -682,9 +687,12 @@ upd_proc_bmap(struct slm_update_data *upd)
 					    src_res_i.ri_rnd_idx) != BREPLST_VALID)
 						continue;
 
+printf("tryarc %d     restype %d     arctype %d\n", tryarchival,
+    src_res->res_type, SLREST_ARCHIVAL_FS);
 					if (tryarchival ^
 					    (src_res->res_type == SLREST_ARCHIVAL_FS))
 						continue;
+printf("trying\n");
 
 					/*
 					 * Search source nodes for an
@@ -860,6 +868,7 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 	struct bmapc_memb *b = NULL;
 	uint32_t j, n;
 	int rc;
+printf("page in unit\n");
 
 	upg = upd_getpriv(upd);
 	rc = slm_fcmh_get(&upg->upg_fg, &f);
@@ -900,6 +909,7 @@ upd_proc_pagein_cb(struct slm_sth *sth, __unusedx void *p)
 {
 	struct slm_update_generic *upg;
 
+printf("got item\n");
 	upg = psc_pool_get(slm_upgen_pool);
 	memset(upg, 0, sizeof(*upg));
 	INIT_PSC_LISTENTRY(&upg->upg_lentry);
@@ -931,6 +941,7 @@ upd_proc_pagein(struct slm_update_data *upd)
 	n = UPSCH_MAX_ITEMS_RES	- psc_dynarray_len(&rpmi->rpmi_upschq);
 	si->si_flags &= ~SIF_UPSCH_PAGING;
 	RPMI_ULOCK(rpmi);
+printf("page in %d\n", n);
 
 	if (n > 0)
 		dbdo(upd_proc_pagein_cb, NULL,
@@ -1088,7 +1099,7 @@ upschq_resm(struct sl_resm *m, int type)
 		if (!proc)
 			return;
 	}
-
+printf("upschq_resm\n");
 	upg = psc_pool_get(slm_upgen_pool);
 	memset(upg, 0, sizeof(*upg));
 	INIT_PSC_LISTENTRY(&upg->upg_lentry);
@@ -1122,7 +1133,7 @@ upd_initf(struct slm_update_data *upd, int type, int flags)
 
 		bmi = upd_getpriv(upd);
 		b = bmi_2_bmap(bmi);
-		DEBUG_UPD(PLL_DEBUG, upd, "init fid="SLPRI_FID" bno=%u",
+		DEBUG_UPD(PLL_MAX, upd, "init fid="SLPRI_FID" bno=%u",
 		    b->bcm_fcmh->fcmh_fg.fg_fid, b->bcm_bmapno);
 		if ((flags & UPD_INITF_NOKEY) == 0)
 			slm_repl_upd_odt_read(b);
@@ -1171,6 +1182,7 @@ upsch_enqueue(struct slm_update_data *upd, const sl_replica_t *iosv,
 		UPD_INCREF(upd);
 	}
 	UPD_URLOCK(upd, locked);
+printf("ENQUEUED UPSCH WORK\n");
 }
 
 void *
