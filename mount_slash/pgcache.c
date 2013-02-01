@@ -119,6 +119,7 @@ bmpce_lookup_locked(struct bmap_pagecache *bmpc, struct bmpc_ioreq *r,
 				BMPC_LOCK(bmpc);
 				continue;
 			}
+			DEBUG_BMPCE(PLL_INFO, e, "add reference");
 			psc_atomic32_inc(&e->bmpce_ref);
 			break;
 		}
@@ -186,7 +187,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *e,
 	rc = psc_atomic32_read(&e->bmpce_ref);
 	psc_assert(rc > 0);
 	psc_atomic32_dec(&e->bmpce_ref);
-	DEBUG_BMPCE(PLL_DIAG, e, "drop reference");
+	DEBUG_BMPCE(PLL_INFO, e, "drop reference");
 	if (rc > 1) {
 		BMPCE_ULOCK(e);
 		return;
@@ -199,6 +200,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *e,
 	}
 
 	if (e->bmpce_flags & BMPCE_DATARDY) {
+		DEBUG_BMPCE(PLL_INFO, e, "put on LRU");
 		PFL_GETTIMESPEC(&e->bmpce_laccess);
 		e->bmpce_flags |= BMPCE_LRU;
 		pll_add(&bmpc->bmpc_lru, e);
