@@ -604,7 +604,9 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 			    upd->upd_recpt->odtr_key);
 		}
 
-		for (n = 0; n < add.nios; n++)
+		for (n = 0; n < add.nios; n++) {
+			struct sl_resource *r;
+
 			dbdo(NULL, NULL,
 			    " INSERT INTO upsch ("
 			    "	resid, fid, bno, uid, gid, status, "
@@ -620,6 +622,10 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 			    SQLITE_INTEGER, f->fcmh_sstb.sst_gid,
 			    SQLITE_INTEGER64, upd->upd_recpt->odtr_elem,
 			    SQLITE_INTEGER64, upd->upd_recpt->odtr_key);
+			r = libsl_id2res(add.iosv[n].bs_id);
+			upschq_resm(psc_dynarray_getpos(&r->res_members,
+			    0), UPDT_PAGEIN);
+		}
 	}
 	if (deq.nios)
 		for (n = 0; n < deq.nios; n++)
@@ -816,15 +822,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	} else
 		rc = -SLERR_BMAP_INVALID;
 
-	if (rc == 0) {
-		for (i = 0; i < nios; i++) {
-			struct sl_resource *r;
-
-			r = libsl_id2res(iosv[i].bs_id);
-			upschq_resm(psc_dynarray_getpos(&r->res_members,
-			    0), UPDT_PAGEIN);
-		}
-	} else if (rc == -SLERR_BMAP_ZERO)
+	if (rc == -SLERR_BMAP_ZERO)
 		rc = 0;
 
  out:
