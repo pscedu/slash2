@@ -1115,17 +1115,19 @@ msl_dio_cb(struct pscrpc_request *rq, int rc, struct pscrpc_async_args *args)
 	struct srm_io_req *mq;
 	int op, locked;
 
-	if (rq)
+	/* rq is NULL it we are called from sl_resm_hldrop() */
+	if (rq) {
 		DEBUG_REQ(PLL_INFO, rq, "cb");
 
-	op = rq->rq_reqmsg->opc;
-	psc_assert(op == SRMT_READ || op == SRMT_WRITE);
+		op = rq->rq_reqmsg->opc;
+		psc_assert(op == SRMT_READ || op == SRMT_WRITE);
 
-	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
-	psc_assert(mq);
+		mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
+		psc_assert(mq);
 
-	DEBUG_BIORQ(PLL_INFO, r, "dio complete (op=%d) off=%u sz=%u rc=%d",
-	    op, mq->offset, mq->size, rc);
+		DEBUG_BIORQ(PLL_INFO, r, "dio complete (op=%d) off=%u sz=%u rc=%d",
+	    		op, mq->offset, mq->size, rc);
+	}
 
 	q = r->biorq_fsrqi;
 	locked = MFH_RLOCK(q->mfsrq_mfh);
