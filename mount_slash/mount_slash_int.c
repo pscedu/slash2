@@ -2079,8 +2079,6 @@ msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
 {
 	struct msl_fsrqinfo *q = pfr->pfr_info;
 
-	psc_assert(!q);
-
 	q = psc_pool_get(mfsrq_pool);
 	memset(q, 0, sizeof(*q));
 	INIT_PSC_LISTENTRY(&q->mfsrq_lentry);
