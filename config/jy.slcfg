@@ -44,14 +44,16 @@ site @JY {
 	}
 
 	resource citron {
-		type	= standalone_fs;
+#		type	= standalone_fs;
+		type	= archival_fs;
 		id	= 105;
 		fsroot	= /local/jy.s2/io;
 		nids	= citron;
 	}
 
 	resource orange {
-		type	= standalone_fs;
+#		type	= standalone_fs;
+		type	= archival_fs;
 		id	= 106;
 		fsroot	= /local/jy.s2/io;
 		nids	= orange;
