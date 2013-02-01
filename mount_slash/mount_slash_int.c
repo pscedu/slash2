@@ -704,6 +704,20 @@ msl_req_aio_add(struct pscrpc_request *rq,
 }
 
 void
+mfsrq_clrerr(struct msl_fsrqinfo *q)
+{
+	int lk;
+
+	lk = MFH_RLOCK(q->mfsrq_mfh);
+	if (q->mfsrq_err) {
+		psclog_warn("clearing rqinfo q=%p err=%d", q, q->mfsrq_err);
+		q->mfsrq_err = 0;
+		OPSTAT_INCR(SLC_OPST_OFFLINE_RETRY_CLEAR_ERR);
+	}
+	MFH_URLOCK(q->mfsrq_mfh, lk);
+}
+
+void
 mfsrq_seterr(struct msl_fsrqinfo *q, int rc)
 {
 	int lk;
@@ -2298,8 +2312,10 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		    q, start + i, tsize, tlen, off,
 		    roff, (rw == SL_READ) ? "read" : "write", rc);
 
-		if (msl_fd_should_retry(mfh, rc))
+		if (msl_fd_should_retry(mfh, rc)) {
+			mfsrq_clrerr(q);
 			goto restart;
+		}
 		if (abs(rc) == SLERR_ION_OFFLINE)
 			rc = -EIO;
 
