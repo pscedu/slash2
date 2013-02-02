@@ -566,7 +566,8 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 		else if ((vold == BREPLST_REPL_QUEUED ||
 		     vold == BREPLST_REPL_SCHED ||
 		     vold == BREPLST_TRUNCPNDG_SCHED ||
-		     vold == BREPLST_TRUNCPNDG) &&
+		     vold == BREPLST_TRUNCPNDG ||
+		     vold == BREPLST_VALID) &&
 		    (vnew == BREPLST_GARBAGE ||
 		     vnew == BREPLST_VALID ||
 		     vnew == BREPLST_INVALID))
@@ -597,7 +598,7 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 			br.br_bno = b->bcm_bmapno;
 			upd->upd_recpt = mds_odtable_putitem(
 			    slm_repl_odt, &br, sizeof(br));
-			DEBUG_UPD(PLL_DEBUG, upd,
+			DEBUG_UPD(PLL_DIAG, upd,
 			    "assigned odtable receipt "
 			    "[%zu, %"PSCPRIxCRC64"]",
 			    upd->upd_recpt->odtr_elem,
@@ -1088,7 +1089,7 @@ int
 slm_repl_odt_startup_cb(void *data, struct odtable_receipt *odtr,
     __unusedx void *arg)
 {
-	int rc, off, tract[NBREPLST], retifset[NBREPLST];
+	int wr, rc, off, tract[NBREPLST], retifset[NBREPLST];
 	struct bmap_repls_upd_odent *br = data;
 	struct fidc_membh *f = NULL;
 	struct bmapc_memb *b = NULL;
@@ -1102,6 +1103,25 @@ slm_repl_odt_startup_cb(void *data, struct odtable_receipt *odtr,
 	rc = bmap_get(f, br->br_bno, SL_READ, &b);
 	if (rc)
 		PFL_GOTOERR(out, rc);
+
+	/*
+	 * Revert all inflight SCHED'ed bmaps so they get resent.
+	 *
+	 * Because only a portion of replication work is held in memory
+	 * at any time, whenever a new bmap gets loaded we must take
+	 * care to reidentify such work to prevent inconsistency.
+	 */
+	brepls_init(tract, -1);
+	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+	tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_TRUNCPNDG;
+	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
+
+	brepls_init(retifset, 0);
+	retifset[BREPLST_REPL_SCHED] = 1;
+	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
+	retifset[BREPLST_GARBAGE_SCHED] = 1;
+	wr = mds_repl_bmap_walk_all(b, tract, retifset, 0);
+
 	for (n = 0, off = 0; n < fcmh_2_nrepls(f);
 	    n++, off += SL_BITS_PER_REPLICA)
 		switch (SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls, off)) {
@@ -1129,24 +1149,7 @@ slm_repl_odt_startup_cb(void *data, struct odtable_receipt *odtr,
 			break;
 		}
 
-	/*
-	 * Revert all inflight SCHED'ed bmaps so they get resent.
-	 *
-	 * Because only a portion of replication work is held in memory
-	 * at any time, whenever a new bmap gets loaded we must take
-	 * care to reidentify such work to prevent inconsistency.
-	 */
-	brepls_init(tract, -1);
-	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
-	tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_TRUNCPNDG;
-	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
-
-	brepls_init(retifset, 0);
-	retifset[BREPLST_REPL_SCHED] = 1;
-	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
-	retifset[BREPLST_GARBAGE_SCHED] = 1;
-
-	if (mds_repl_bmap_walk_all(b, tract, retifset, 0)) {
+	if (wr) {
 		struct slm_update_data *upd;
 
 		/*
