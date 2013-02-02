@@ -178,7 +178,7 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 
 	/*
 	 * At this point, the short I/O is an error since the bmap isn't
-	 *    zeros.
+	 * zeros.
 	 */
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, b, "mdsio_read: rc=%d", rc);
@@ -193,7 +193,6 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 		b->bcm_flags |= BMAP_REPLAY;
 		return (0);
 	}
-DEBUG_BMAP(PLL_MAX, b, "loaded");
 
 	upd = bmap_2_upd(b);
 
