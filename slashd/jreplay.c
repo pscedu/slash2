@@ -59,6 +59,7 @@ mds_replay_bmap(void *jent, int op)
 	struct srt_bmap_crcwire *bmap_wire;
 	struct fidc_membh *f = NULL;
 	struct bmapc_memb *b = NULL;
+	struct bmap_mds_info *bmi;
 	struct slash_fidgen fg;
 	int i, rc;
 	struct {
@@ -76,13 +77,13 @@ mds_replay_bmap(void *jent, int op)
 	    BMAPGETF_LOAD, &b);
 	if (rc)
 		goto out;
+	bmi = bmap_2_bmi(b);
+
+	DEBUG_BMAPOD(PLL_INFO, b, "before bmap replay op=%d", op);
 
 	switch (op) {
 	case B_REPLAY_OP_REPLS:
 		mds_brepls_check(sjbr->sjbr_repls, sjbr->sjbr_nrepls);
-		bmap_2_replpol(b) = sjbr->sjbr_replpol;
-		memcpy(b->bcm_repls, sjbr->sjbr_repls,
-		    SL_REPLICA_NBYTES);
 
 		bmap_op_start_type(b, BMAP_OPCNT_WORK);
 
@@ -91,6 +92,14 @@ mds_replay_bmap(void *jent, int op)
 		FCMH_WAIT_BUSY(f);
 		FCMH_ULOCK(f);
 		BMAP_WAIT_BUSY(b);
+
+		memcpy(bmi->bmi_orepls, b->bcm_repls,
+		    sizeof(bmi->bmi_orepls));
+		b->bcm_flags |= BMAP_MDS_REPLMODWR;
+		bmap_2_replpol(b) = sjbr->sjbr_replpol;
+		memcpy(b->bcm_repls, sjbr->sjbr_repls,
+		    SL_REPLICA_NBYTES);
+
 		BMAP_ULOCK(b);
 		slm_repl_upd_odt_write(b);
 		break;
@@ -142,7 +151,7 @@ mds_replay_bmap(void *jent, int op)
 	    }
 	}
 
-	DEBUG_BMAPOD(PLL_NOTIFY, b, "replayed bmap op=%d", op);
+	DEBUG_BMAPOD(PLL_INFO, b, "replayed bmap op=%d", op);
 
 	rc = mds_bmap_write(b, 0, NULL, NULL);
 
