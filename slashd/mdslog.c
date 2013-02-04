@@ -1619,7 +1619,7 @@ mdslog_bmap_repls(void *datap, uint64_t txg, __unusedx int flag)
 	 * Relinquish ownership, which was asserted in
 	 * mdslogfill_bmap_repls(), whichever wkthr who gets it.
 	 */
-	DEBUG_FCMH(PLL_DEBUG, b->bcm_fcmh, "relinquish BUSY");
+	DEBUG_FCMH(PLL_DEBUG, b->bcm_fcmh, "pass BUSY to wkthr");
 	b->bcm_fcmh->fcmh_owner = 0;
 	(void)BMAP_RLOCK(b);
 	b->bcm_owner = 0;
