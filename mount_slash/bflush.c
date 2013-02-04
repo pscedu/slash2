@@ -973,7 +973,8 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 	 * XXX: just put the resm's in the dynarray.  When pushing out
 	 * the bid's, assume an ion unless resm == slc_rmc_resm.
 	 */
-	for (;;) {
+	while (pscthr_run()) {
+
 		OPSTAT_INCR(SLC_OPST_BMAP_RELEASE);
 		sawnew = 0;
 		if (!sortbypass) {
@@ -1120,9 +1121,6 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 		psc_dynarray_reset(&rels);
 		psc_waitq_waitabs(&waitq, NULL, &nto);
-
-		if (!pscthr_run())
-			break;
 
 		timespecsub(&nto, &crtime, &nto);
 		psclogs_debug(SLSS_BMAP, "waited for ("PSCPRI_TIMESPEC") "
