@@ -2702,6 +2702,7 @@ msattrflushthr_main(__unusedx struct psc_thread *thr)
 		else
 			LIST_CACHE_ULOCK(&attrTimeoutQ);
 
+		OPSTAT_INCR(SLC_OPST_FLUSH_ATTR_WAIT);
 		spinlock(&msl_flush_attrqlock);
 		psc_waitq_waitrel(&msl_flush_attrq,
 		    &msl_flush_attrqlock, &nexttimeo);
