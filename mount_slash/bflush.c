@@ -1183,6 +1183,7 @@ msbmflwthr_main(__unusedx struct psc_thread *thr)
 	int i, rc, secs;
 
 	while (pscthr_run()) {
+		OPSTAT_INCR(SLC_OPST_LEASE_REFRESH);
 		PFL_GETTIMESPEC(&ts);
 		/*
 		 * A bmap can be on both bmapFlushQ and bmapTimeoutQ.
