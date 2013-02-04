@@ -442,7 +442,8 @@ mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios,
 	}
 
 	if (repls && !psc_dynarray_len(&a)) {
-		DEBUG_BMAP(PLL_ERROR, b, "no replicas marked BREPLST_VALID");
+		DEBUG_BMAP(PLL_ERROR, b, "no replicas marked valid we "
+		    "can use; repls=%d nskip=%d", repls, nskip);
 		return (NULL);
 	}
 
