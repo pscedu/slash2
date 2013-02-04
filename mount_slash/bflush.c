@@ -1456,6 +1456,8 @@ msbmaprathr_main(__unusedx struct psc_thread *thr)
 	int nbmpces, i;
 
 	while (pscthr_run()) {
+
+		OPSTAT_INCR(SLC_OPST_READ_AHEAD);
 		nbmpces = 0;
 		mfh = lc_getwait(&bmapReadAheadQ);
 		if (mfh == lmfh)
