@@ -238,6 +238,10 @@ struct slm_wkdata_ptrunc {
 	struct fidc_membh	*f;
 };
 
+struct slm_wkdata_upsch_purge {
+	slfid_t			 fid;
+};
+
 #define SLM_NWORKER_THREADS	4
 
 int		 mds_handle_rls_bmap(struct pscrpc_request *, int);

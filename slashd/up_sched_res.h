@@ -149,6 +149,7 @@ struct slm_update_generic {
 #define upd_init(upd, type)	upd_initf((upd), (type), 0)
 
 void	 upsch_enqueue(struct slm_update_data *, const sl_replica_t *, int);
+void	 upsch_purge(slfid_t);
 void	 upschq_resm(struct sl_resm *, int);
 
 void	 upd_initf(struct slm_update_data *, int, int);

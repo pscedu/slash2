@@ -872,9 +872,7 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 	if (fcmh_2_nrepls(f) > SL_DEF_REPLICAS)
 		mds_inox_ensure_loaded(fcmh_2_inoh(f));
 
-	/*
-	 * Requeue pending updates on all registered sites.
-	 */
+	/* Requeue pending updates on all registered sites. */
 	for (j = n = 0; j < fcmh_2_nrepls(f); j++) {
 		switch (SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls,
 		    SL_BITS_PER_REPLICA * j)) {
@@ -1142,6 +1140,37 @@ upd_destroy(struct slm_update_data *upd)
 	psc_multiwaitcond_destroy(&upd->upd_mwc);
 	PSCFREE(upd->upd_recpt);
 	memset(upd, 0, sizeof(*upd));
+}
+
+int
+upsch_purge_cb(struct slm_sth *sth, __unusedx void *p)
+{
+	struct odtable_receipt *odtr;
+
+	odtr = PSCALLOC(sizeof(*odtr));
+	odtr->odtr_elem = sqlite3_column_int64(sth->sth_sth, 0);
+	odtr->odtr_key = sqlite3_column_int64(sth->sth_sth, 1);
+	mds_odtable_freeitem(slm_repl_odt, odtr);
+	return (0);
+}
+
+void
+upsch_purge(slfid_t fid)
+{
+	dbdo(upsch_purge_cb, NULL,
+	    " SELECT",
+	    "	recpt_elem,"
+	    "	recpt_key"
+	    " FROM"
+	    "	upsch"
+	    " WHERE"
+	    "	fid = ?", fid);
+
+	dbdo(NULL, NULL,
+	    " DELETE FROM ",
+	    "	upsch"
+	    " WHERE"
+	    "	fid = ?", fid);
 }
 
 void
