@@ -723,7 +723,7 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 	     (op == NS_OP_UNLINK && sstb->sst_nlink == 1))) {
 		struct slm_wkdata_upsch_purge *wk;
 
-		wk = pfl_workq_getitem(slm_ptrunc_prepare,
+		wk = pfl_workq_getitem(slm_wk_upsch_purge,
 		    struct slm_wkdata_upsch_purge);
 		wk->fid = sstb->sst_fid;
 		pfl_workq_putitem(wk);

@@ -152,6 +152,8 @@ void	 upsch_enqueue(struct slm_update_data *, const sl_replica_t *, int);
 void	 upsch_purge(slfid_t);
 void	 upschq_resm(struct sl_resm *, int);
 
+int	 slm_wk_upsch_purge(void *);
+
 void	 upd_initf(struct slm_update_data *, int, int);
 void	 upd_destroy(struct slm_update_data *);
 void	*upd_getpriv(struct slm_update_data *);

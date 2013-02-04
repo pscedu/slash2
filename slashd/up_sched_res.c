@@ -1158,19 +1158,29 @@ void
 upsch_purge(slfid_t fid)
 {
 	dbdo(upsch_purge_cb, NULL,
-	    " SELECT",
+	    " SELECT"
 	    "	recpt_elem,"
 	    "	recpt_key"
 	    " FROM"
 	    "	upsch"
 	    " WHERE"
-	    "	fid = ?", fid);
-
+	    "	fid = ?",
+	    SQLITE_INTEGER64, fid);
 	dbdo(NULL, NULL,
-	    " DELETE FROM ",
+	    " DELETE FROM "
 	    "	upsch"
 	    " WHERE"
-	    "	fid = ?", fid);
+	    "	fid = ?",
+	    SQLITE_INTEGER64, fid);
+}
+
+int
+slm_wk_upsch_purge(void *p)
+{
+	struct slm_wkdata_upsch_purge *wk = p;
+
+	upsch_purge(wk->fid);
+	return (0);
 }
 
 void
