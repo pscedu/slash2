@@ -974,6 +974,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 	 * the bid's, assume an ion unless resm == slc_rmc_resm.
 	 */
 	for (;;) {
+		OPSTAT_INCR(SLC_OPST_BMAP_RELEASE);
 		sawnew = 0;
 		if (!sortbypass) {
 			lc_sort(&bmapTimeoutQ, qsort, bmap_cli_timeo_cmp);
