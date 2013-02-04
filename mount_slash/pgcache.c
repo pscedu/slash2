@@ -289,19 +289,19 @@ bmpc_freeall_locked(struct bmap_pagecache *bmpc)
 		PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs)
 			psc_assert(r->biorq_flags & BIORQ_DIO);
 	}
-
+	/*
+	 * Remove any LRU pages still associated with the bmap.
+	 */
 	for (a = SPLAY_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); a;
 	    a = b) {
 		b = SPLAY_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree, a);
-		/* 
-		 * We should never call bmpce_free() directly. Luckily,
-		 * because we have drained biorqs above, this code should 
-		 * never be executed.  To be removed.
-		 */
-		OPSTAT_INCR(SLC_OPST_DEADCODE);
 
 		BMPCE_LOCK(a);
+
 		psc_assert(a->bmpce_flags & BMPCE_LRU);
+		psc_assert(!psc_atomic32_read(&a->bmpce_ref));
+
+		OPSTAT_INCR(SLC_OPST_BMPCE_BMAP_REAP);
 		pll_remove(&bmpc->bmpc_lru, a);
 		bmpce_free(a, bmpc);
 	}

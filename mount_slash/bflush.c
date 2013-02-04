@@ -1395,6 +1395,8 @@ msbmapflushthr_main(__unusedx struct psc_thread *thr)
 		PFL_GETTIMESPEC(&tmp2);
 		timespecsub(&tmp2, &tmp1, &rpcwait);
 
+		OPSTAT_INCR(SLC_OPST_BMAP_FLUSH);
+
 		PFL_GETTIMESPEC(&tmp1);
 		bmap_flush(&bmapFlushWaitTime);
 		PFL_GETTIMESPEC(&tmp2);
