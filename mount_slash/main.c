@@ -400,6 +400,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
+	OPSTAT_INCR(SLC_OPST_CREAT_DONE);
 }
 
 __static int
