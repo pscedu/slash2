@@ -414,6 +414,8 @@ reimport
 - setup arc testrig
 - listxattr returns ERANGE
 - extattr are broke
+- if upsch fails to load an fcmh, delete from workq
+- convert bmpc_new_biorqs to a tree to cut out pll_add_sorted() CPU
 - upsch multiwait doesn't work; bring an IOS up and down and work doesnt
   get scheduled
 
