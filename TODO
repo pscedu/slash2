@@ -414,6 +414,8 @@ reimport
 - setup arc testrig
 - listxattr returns ERANGE
 - extattr are broke
+- upsch multiwait doesn't work; bring an IOS up and down and work doesnt
+  get scheduled
 
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
