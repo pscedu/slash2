@@ -1072,6 +1072,7 @@ mslfsop_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum,
 {
 	OPSTAT_INCR(SLC_OPST_UNLINK);
 	pscfs_reply_unlink(pfr, msl_delete(pfr, pinum, name, 1));
+	OPSTAT_INCR(SLC_OPST_UNLINK_DONE);
 }
 
 void
@@ -1080,6 +1081,7 @@ mslfsop_rmdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 {
 	OPSTAT_INCR(SLC_OPST_RMDIR);
 	pscfs_reply_unlink(pfr, msl_delete(pfr, pinum, name, 0));
+	OPSTAT_INCR(SLC_OPST_RMDIR_DONE);
 }
 
 void
