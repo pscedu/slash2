@@ -511,8 +511,7 @@ sli_aio_replreply_setup(struct sli_aiocb_reply *a,
 	a->aiocbr_len = iov->iov_len;
 	a->aiocbr_off = 0;
 
-	/* Ref taken here must persist until reply is attempted.
-	 */
+	/* Ref taken here must persist until reply is attempted. */
 	a->aiocbr_csvc = sli_geticsvcx(libsl_try_nid2resm(
 	    rq->rq_peer.nid), rq->rq_export);
 
