@@ -1126,6 +1126,7 @@ mds_open_cursor(void)
 	char *p, tmbuf[26];
 	mdsio_fid_t mf;
 	size_t nb;
+	time_t tm;
 	int rc;
 
 	rc = mdsio_lookup(current_vfsid,
@@ -1167,14 +1168,15 @@ mds_open_cursor(void)
 #endif
 
 	slm_set_curr_slashfid(mds_cursor.pjc_fid);
-	psclog_notice("File system was formatted on %"PRIu64" seconds "
-	    "since the Epoch", mds_cursor.pjc_timestamp);
-	psclog_notice("SLFID prior to replay="SLPRI_FID, mds_cursor.pjc_fid);
-	ctime_r((time_t *)&mds_cursor.pjc_timestamp, tmbuf);
+	psclog_info("SLFID prior to replay="SLPRI_FID,
+	    mds_cursor.pjc_fid);
+	tm = mds_cursor.pjc_timestamp;
+	ctime_r(&tm, tmbuf);
 	p = strchr(tmbuf, '\n');
 	if (p)
 		*p = '\0';
-	psclog_notice("File system was formatted on %s", tmbuf);
+	psclog_info("file system was formatted on %s "
+	    "(%"PSCPRI_TIMET")", tmbuf, tm);
 }
 
 void
