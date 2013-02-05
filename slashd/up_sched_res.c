@@ -1119,7 +1119,7 @@ upd_initf(struct slm_update_data *upd, int type, int flags)
 
 		bmi = upd_getpriv(upd);
 		b = bmi_2_bmap(bmi);
-		DEBUG_UPD(PLL_MAX, upd, "init fid="SLPRI_FID" bno=%u",
+		DEBUG_UPD(PLL_DIAG, upd, "init fid="SLPRI_FID" bno=%u",
 		    b->bcm_fcmh->fcmh_fg.fg_fid, b->bcm_bmapno);
 		if ((flags & UPD_INITF_NOKEY) == 0)
 			slm_repl_upd_odt_read(b);
