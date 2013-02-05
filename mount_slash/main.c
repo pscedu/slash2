@@ -1307,6 +1307,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
+	OPSTAT_INCR(SLC_OPST_READDIR_DONE);
 }
 
 void
