@@ -418,6 +418,7 @@ reimport
 - convert bmpc_new_biorqs to a tree to cut out pll_add_sorted() CPU
 - upsch multiwait doesn't work; bring an IOS up and down and work doesnt
   get scheduled
+- client should not post errors from SLERR_AIOWAIT on WRITE/READ RPC
 
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
