@@ -1514,6 +1514,7 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 	pid_t sid;
 
 	msfsthr_ensure();
+	OPSTAT_INCR(SLC_OPST_CLOSE);
 
 	c = mfh->mfh_fcmh;
 
@@ -1583,6 +1584,7 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 	FCMH_UNBUSY(c);
 	fcmh_op_done_type(c, FCMH_OPCNT_OPEN);
 	mfh_decref(mfh);
+	OPSTAT_INCR(SLC_OPST_CLOSE_DONE);
 }
 
 void
