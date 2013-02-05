@@ -773,22 +773,21 @@ __static struct bmpc_write_coalescer *
 bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 {
 	int idx, large = 0, mergeable = 0, expired = 0;
-	int32_t sz = 0;
-	struct bmpc_ioreq *t, *e=NULL;
 	struct bmpc_write_coalescer *bwc;
+	struct bmpc_ioreq *t, *e = NULL;
+	int32_t sz = 0;
 
 	psc_assert(psc_dynarray_len(biorqs) > *indexp);
 
 	bwc = psc_pool_get(bwcPoolMgr);
 
-	for (idx=0; (idx + *indexp) < psc_dynarray_len(biorqs); idx++) {
+	for (idx = 0; idx + *indexp < psc_dynarray_len(biorqs); idx++) {
 		t = psc_dynarray_getpos(biorqs, idx + *indexp);
 
 		psc_assert((t->biorq_flags & BIORQ_SCHED) &&
 			   !(t->biorq_flags & BIORQ_INFL));
 		if (idx)
-			/* Assert 'lowest to highest' ordering.
-			 */
+			/* Assert 'lowest to highest' ordering. */
 			psc_assert(t->biorq_off >= e->biorq_off);
 		else {
 			e = t;
@@ -820,7 +819,8 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 		if (mergeable && t->biorq_off <= biorq_voff_get(e)) {
 			sz = biorq_voff_get(t) - biorq_voff_get(e);
 			if (sz > 0) {
-				if (sz + bwc->bwc_size > MIN_COALESCE_RPC_SZ) {
+				if (sz + bwc->bwc_size >
+				    MIN_COALESCE_RPC_SZ) {
 					/*
 					 * Adding this biorq will push
 					 * us over the limit.
@@ -835,14 +835,17 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 			pll_addtail(&bwc->bwc_pll, t);
 
 		} else if (expired) {
-			/* Biorq is not contiguous with the previous.
-			 * If the current set is expired send it out now.
+			/*
+			 * Biorq is not contiguous with the previous.
+			 * If the current set is expired send it out
+			 * now.
 			 */
 			break;
 
 		} else {
-			/* Otherwise, deschedule the current set and resume
-			 * activity with 't' as the base.
+			/*
+			 * Otherwise, deschedule the current set and
+			 * resume activity with 't' as the base.
 			 */
 			e = t;
 			bwc_desched(bwc);
