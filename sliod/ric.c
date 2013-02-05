@@ -256,8 +256,9 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		    slvr_ref, nslvrs, iovs, nslvrs, rw);
 
 		/*
- 		 * XXX The aiocbr could be freed at this point. Need reference.
- 		 */
+		 * XXX The aiocbr could be freed at this point.  Need
+		 * reference.
+		 */
 
 		/*
 		 * Now check for early completion.  If all slvrs are
@@ -408,9 +409,10 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		rc = sli_fcmh_get_rlsbmap(&sbd->sbd_fg, &f);
 		psc_assert(rc == 0);
 
-		/* Fsync here to guarantee that buffers are flushed to
-		 *   disk before the MDS releases its odtable entry for
-		 *   this bmap.
+		/*
+		 * fsync here to guarantee that buffers are flushed to
+		 * disk before the MDS releases its odtable entry for
+		 * this bmap.
 		 */
 		FCMH_LOCK(f);
 		if (!(f->fcmh_flags & FCMH_NO_BACKFILE))
