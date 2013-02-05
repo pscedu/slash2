@@ -171,6 +171,7 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 
 	mp->rc = bmap_get(f, mq->bmapno, SL_READ, &b);
 	if (mp->rc) {
+		/* XXX abort bulk here, otherwise all future RPCs will fail */
 		psclog_errorx("failed to load fid = "SLPRI_FID" bmap = %u aio = %d: %s",
 		    mq->fg.fg_fid, mq->bmapno, aio, slstrerror(mp->rc));
 		goto out;
