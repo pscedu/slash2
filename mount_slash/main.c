@@ -1436,6 +1436,7 @@ mslfsop_flush(struct pscfs_req *pfr, void *data)
 	struct msl_fhent *mfh = data;
 	int rc;
 
+	OPSTAT_INCR(SLC_OPST_FLUSH);
 	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "flushing (mfh=%p)", mfh);
 
 	spinlock(&mfh->mfh_lock);
@@ -1445,6 +1446,7 @@ mslfsop_flush(struct pscfs_req *pfr, void *data)
 	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "done flushing (mfh=%p, rc=%d)", mfh, rc);
 
 	pscfs_reply_flush(pfr, rc);
+	OPSTAT_INCR(SLC_OPST_FLUSH_DONE);
 }
 
 void
