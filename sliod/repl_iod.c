@@ -260,7 +260,8 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 			BMAP_ULOCK(w->srw_bcm);
 			freelock(&w->srw_lock);
 		}
-		lc_add(&sli_replwkq_pending, w);
+		if (!lc_conjoint(&sli_replwkq_pending, w))
+			lc_add(&sli_replwkq_pending, w);
 		continue;
 
  release:
