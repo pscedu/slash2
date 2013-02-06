@@ -171,7 +171,10 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 
 	mp->rc = bmap_get(f, mq->bmapno, SL_READ, &b);
 	if (mp->rc) {
-		/* XXX abort bulk here, otherwise all future RPCs will fail */
+		/*
+		 * XXX abort bulk here, otherwise all future RPCs will
+		 * fail
+		 */
 		psclog_errorx("failed to load fid = "SLPRI_FID" bmap = %u aio = %d: %s",
 		    mq->fg.fg_fid, mq->bmapno, aio, slstrerror(mp->rc));
 		goto out;
@@ -185,7 +188,11 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 		/* Block until the callback handler has finished. */
 		SLVR_WAIT(s, (s->slvr_flags & SLVR_REPLWIRE));
 		SLVR_ULOCK(s);
-		/* Lookup the workrq.  It should have already been created. */
+
+		/*
+		 * Lookup the workrq.  It should have already been
+		 * created.
+		 */
 		w = sli_repl_findwq(&mq->fg, mq->bmapno);
 		if (!w) {
 			DEBUG_SLVR(PLL_ERROR, s,
@@ -193,6 +200,7 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 			//XXX cleanup the sliver ref
 			PFL_GOTOERR(out, mp->rc = -ENOENT);
 		}
+
 		/* Ensure the sliver is found in the work item's array. */
 		for (slvridx = 0; slvridx < (int)nitems(w->srw_slvr_refs);
 		     slvridx++)
@@ -217,8 +225,9 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 
 	if (aiocbr) {
 		/*
-		 * Ran into an async I/O. We may have already issued the
-		 * AIO. So the sliver may be already ready at this point.
+		 * Ran into an async I/O.  We may have already issued
+		 * the AIO.  So the sliver may be already ready at this
+		 * point.
 		 */
 		psc_assert(!(s->slvr_flags & SLVR_REPLDST));
 
