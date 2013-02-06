@@ -1802,9 +1802,10 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	count = size / sizeof(struct reclaim_prog_entry);
 	for (i = 0; i < count; i++) {
 		res = libsl_id2res(reclaim_prog_buf[i].res_id);
-		if (!RES_ISFS(res)) {
+		if (res == NULL || !RES_ISFS(res)) {
 			psclog_warnx("non-FS resource ID %u "
-			    "in reclaim file", res->res_id);
+			    "in reclaim file",
+			    reclaim_prog_buf[i].res_id);
 			continue;
 		}
 		iosinfo = res2rpmi(res)->rpmi_info;
