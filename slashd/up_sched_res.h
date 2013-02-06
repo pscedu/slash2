@@ -39,6 +39,7 @@ struct odtable_receipt;
 struct slm_update_data {
 	int				 upd_type:4;
 	int				 upd_flags;
+	pthread_t			 upd_owner;
 	struct pfl_mutex		 upd_mutex;
 	struct psc_multiwaitcond	 upd_mwc;
 	struct psc_listentry		 upd_lentry;
@@ -91,6 +92,7 @@ struct slm_update_generic {
 	do {								\
 		UPD_RLOCK(upd);						\
 		(upd)->upd_flags &= ~UPDF_BUSY;				\
+		(upd)->upd_owner = 0;					\
 		UPD_WAKE(upd);						\
 		UPD_ULOCK(upd);						\
 	} while (0)

@@ -641,6 +641,8 @@ upd_proc_bmap(struct slm_update_data *upd)
 	BMAP_ULOCK(b);
 
 	UPD_WAIT(upd);
+	upd->upd_flags |= UPDF_BUSY;
+	upd->upd_owner = pthread_self();
 
 	BMAPOD_MODIFY_START(b);
 
@@ -965,6 +967,7 @@ upd_proc(struct slm_update_data *upd)
 	UPD_LOCK(upd);
 	UPD_WAIT(upd);
 	upd->upd_flags |= UPDF_BUSY;
+	upd->upd_owner = pthread_self();
 	rc = upd_proctab[upd->upd_type](upd);
 	upd->upd_flags &= ~UPDF_BUSY;
 	UPD_WAKE(upd);
@@ -1119,6 +1122,7 @@ upd_initf(struct slm_update_data *upd, int type, int flags)
 	INIT_PSC_LISTENTRY(&upd->upd_lentry);
 	upd->upd_type = type;
 	upd->upd_flags |= UPDF_BUSY;
+	upd->upd_owner = pthread_self();
 	psc_mutex_init(&upd->upd_mutex);
 	psc_multiwaitcond_init(&upd->upd_mwc, upd, 0, "upd-%p", upd);
 
