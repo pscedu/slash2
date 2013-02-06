@@ -58,6 +58,7 @@
 #include "slerr.h"
 #include "slutil.h"
 #include "up_sched_res.h"
+#include "worker.h"
 
 extern int current_vfsid;
 
@@ -101,7 +102,7 @@ upd_tryremove(struct slm_update_data *upd)
 			    upd->upd_recpt);
 			upd->upd_recpt = NULL;
 			UPD_ULOCK(upd);
-			DEBUG_UPD(PLL_MAX, upd,
+			DEBUG_UPD(PLL_DIAG, upd,
 			    "removed odtable entry");
 		} else {
 			psclog_errorx("no upd_recpt, "
@@ -863,8 +864,17 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 
 	upg = upd_getpriv(upd);
 	rc = slm_fcmh_get(&upg->upg_fg, &f);
-	if (rc)
+	if (rc) {
+		struct slm_wkdata_upsch_purge *wk;
+
+		if (rc == ENOENT) {
+			wk = pfl_workq_getitem(slm_wk_upsch_purge,
+			    struct slm_wkdata_upsch_purge);
+			wk->fid = upg->upg_fg.fg_fid;
+			pfl_workq_putitem(wk);
+		}
 		goto out;
+	}
 	rc = mds_bmap_load(f, upg->upg_bno, &b);
 	if (rc)
 		goto out;
