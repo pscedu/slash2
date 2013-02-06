@@ -632,7 +632,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 	b = bmi_2_bmap(bmi);
 	f = b->bcm_fcmh;
 
-	UPD_ULOCK(upd);
+	UPD_UNBUSY(upd);
 
 	FCMH_WAIT_BUSY(f);
 	FCMH_ULOCK(f);
@@ -640,7 +640,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 	BMAP_WAIT_BUSY(b);
 	BMAP_ULOCK(b);
 
-	UPD_LOCK(upd);
+	UPD_WAIT(upd);
 
 	BMAPOD_MODIFY_START(b);
 
