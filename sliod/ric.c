@@ -221,7 +221,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		rv = slvr_io_prep(slvr_ref[i], roff, len[i], rw,
 		    &aiocbr);
 
-		DEBUG_SLVR(((rv && rv != -SLERR_AIOWAIT) ? PLL_WARN : PLL_INFO),
+		DEBUG_SLVR(((rv && rv != -SLERR_AIOWAIT) ?
+		    PLL_WARN : PLL_INFO),
 		    slvr_ref[i], "post io_prep rw=%s rv=%zd",
 		    rw == SL_WRITE ? "wr" : "rd", rv);
 		if (rv && rv != -SLERR_AIOWAIT) {
@@ -274,8 +275,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			SLVR_LOCK(s);
 			if (s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR)) {
 				DEBUG_SLVR(PLL_NOTIFY, s,
-				   "aio early ready, rw=%s",
-				   rw == SL_WRITE ? "wr" : "rd");
+				    "aio early ready, rw=%s",
+				    rw == SL_WRITE ? "wr" : "rd");
 				SLVR_ULOCK(s);
 
 			} else {
