@@ -104,7 +104,7 @@ slm_bmap_read_db_cb(struct slm_sth *sth, void *p)
 	upd->upd_recpt = odtr = PSCALLOC(sizeof(*odtr));
 	odtr->odtr_elem = sqlite3_column_int64(sth->sth_sth, 0);
 	odtr->odtr_key = sqlite3_column_int64(sth->sth_sth, 1);
-	DEBUG_BMAP(PLL_MAX, b,
+	DEBUG_BMAP(PLL_DIAG, b,
 	    "upd %p loaded odtr [elem=%zu, key=%"PSCPRIxCRC64"]",
 	    upd, odtr->odtr_elem, odtr->odtr_key);
 	return (0);
