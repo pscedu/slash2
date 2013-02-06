@@ -759,6 +759,7 @@ slvr_fsbytes_rio(struct slvr_ref *s, struct sli_aiocb_reply **aiocbr)
 		if (nblks) {
 			rc = slvr_fsio(s, blk, nblks * SLASH_SLVR_BLKSZ,
 			    SL_READ, aiocbr);
+			/* XXX should continue to issue I/O in AIO case */
 			if (rc)
 				goto out;
 
