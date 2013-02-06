@@ -236,8 +236,8 @@ mds_txg_handler(__unusedx uint64_t *txgp, __unusedx void *data, int op)
 void
 mds_remove_logfile(uint64_t batchno, int update)
 {
-	int rc;
 	char logfn[PATH_MAX];
+	int rc;
 
 	if (update)
 		xmkfn(logfn, "%s.%d", SL_FN_UPDATELOG, batchno);
@@ -246,7 +246,7 @@ mds_remove_logfile(uint64_t batchno, int update)
 	rc = mdsio_unlink(current_vfsid,
 	    mds_metadir_inum[current_vfsid], NULL, logfn, &rootcreds,
 	    NULL, NULL);
-	psclog_warnx("Removing log file %s, rc=%d", logfn, rc);
+	psclog_info("removed log file %s, rc=%d", logfn, rc);
 }
 
 int
