@@ -431,10 +431,11 @@ mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios,
 
 		if (ios == IOS_ID_ANY) {
 			DEBUG_FCMH(PLL_WARN, b->bcm_fcmh,
-			   "invalid reassign req (res=%x)",
-			   resm->resm_res_id);
-			DEBUG_BMAP(PLL_WARN, b, "invalid reassign req "
-			   "(res=%x)", resm->resm_res_id);
+			    "invalid reassign req (res=%x)",
+			    resm->resm_res_id);
+			DEBUG_BMAP(PLL_WARN, b,
+			    "invalid reassign req (res=%x)",
+			    resm->resm_res_id);
 			goto out;
 		}
 		psc_dynarray_reset(&a);
@@ -442,7 +443,7 @@ mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios,
 	}
 
 	if (repls && !psc_dynarray_len(&a)) {
-		DEBUG_BMAP(PLL_ERROR, b, "no replicas marked valid we "
+		DEBUG_BMAPOD(PLL_ERROR, b, "no replicas marked valid we "
 		    "can use; repls=%d nskip=%d", repls, nskip);
 		return (NULL);
 	}
@@ -1212,7 +1213,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 			upd = &bmi->bmi_upd;
 			UPD_WAIT(upd);
 			nr = fcmh_2_nrepls(f);
-			for (j = k = 0; j < nr;
+			for (j = k = off = 0; j < nr;
 			    j++, off += SL_BITS_PER_REPLICA) {
 				val = SL_REPL_GET_BMAP_IOS_STAT(
 				    b->bcm_repls, off);
