@@ -112,10 +112,8 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		spinlock(&w->srw_lock);
 		w->srw_nslvr_cur++;
 		w->srw_slvr_refs[slvridx] = NULL;
-		if (!lc_conjoint(&sli_replwkq_pending, w)) {
-			psc_atomic32_inc(&w->srw_refcnt);
+		if (!lc_conjoint(&sli_replwkq_pending, w))
 			lc_add(&sli_replwkq_pending, w);
-		}
 		sli_replwkrq_decref(w, rc);
 		LIST_CACHE_ULOCK(&sli_replwkq_pending);
 	}
@@ -236,7 +234,8 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 			pll_add(&s->slvr_pndgaios, aiocbr);
 			SLVR_ULOCK(s);
 			sli_aio_replreply_setup(aiocbr, rq, s, &iov);
-			pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
+			pscrpc_msg_add_flags(rq->rq_repmsg,
+			    MSG_ABORT_BULK);
 			OPSTAT_INCR(SLI_OPST_HANDLE_REPLREAD_INSERT);
 			PFL_GOTOERR(out, mp->rc = rv);
 		}
