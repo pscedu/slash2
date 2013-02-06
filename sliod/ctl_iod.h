@@ -33,6 +33,7 @@ struct slictlmsg_replwkst {
 	sl_bmapno_t		srws_bmapno;
 	uint32_t		srws_data_tot;
 	uint32_t		srws_data_cur;
+	int32_t			srws_refcnt;
 	/* XXX #inflight slivers? */
 };
 

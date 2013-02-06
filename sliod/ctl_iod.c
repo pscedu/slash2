@@ -458,6 +458,7 @@ slictlrep_getreplwkst(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 		srws->srws_fg = w->srw_fg;
 		srws->srws_bmapno = w->srw_bmapno;
+		srws->srws_refcnt = psc_atomic32_read(&w->srw_refcnt);
 		srws->srws_data_tot = SLASH_SLVR_SIZE * w->srw_nslvr_tot;
 		srws->srws_data_cur = SLASH_SLVR_SIZE * w->srw_nslvr_cur;
 		strlcpy(srws->srws_peer_addr, w->srw_src_res->res_name,
@@ -520,7 +521,7 @@ PFLCTL_SVR_DEFS;
 
 void
 slictlthr_main(const char *fn)
-{ 
+{
 	psc_ctlparam_register("faults", psc_ctlparam_faults);
 	psc_ctlparam_register("log.file", psc_ctlparam_log_file);
 	psc_ctlparam_register("log.format", psc_ctlparam_log_format);
