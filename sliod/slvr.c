@@ -990,6 +990,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 		blks = len / SLASH_SLVR_BLKSZ +
 		    (len & SLASH_SLVR_BLKMASK) ? 1 : 0;
 
+		/* XXX - no needed based on experiment and code review */
 		psc_vbitmap_setrange(s->slvr_slab->slb_inuse, 0, blks);
 		SLVR_ULOCK(s);
 
