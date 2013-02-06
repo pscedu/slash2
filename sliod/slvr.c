@@ -804,6 +804,11 @@ slvr_repl_prep(struct slvr_ref *s, int src_or_dst)
 {
 	SLVR_LOCK(s);
 
+	/*
+   	 * XXX Setting flags while the sliver is in transit is risky. And
+	 * this is compounded by the fact we have same code fragment handling
+	 * different cases.
+	 */
 	if (src_or_dst & SLVR_REPLDST) {
 		psc_assert(s->slvr_pndgwrts > 0);
 
