@@ -185,7 +185,7 @@ mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw,
 			 */
 			BML_ULOCK(bml);
 
-			DEBUG_BMAP(PLL_NOTIFY, b, "dup lease");
+			DEBUG_BMAP(PLL_NOTICE, b, "dup lease");
 
 			return (0);
 		}
