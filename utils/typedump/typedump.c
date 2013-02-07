@@ -247,6 +247,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slm_update_data);
 	PRTYPE(struct slm_update_generic);
 	PRTYPE(struct slm_wkdata_ptrunc);
+	PRTYPE(struct slm_wkdata_upsch_cb);
 	PRTYPE(struct slm_wkdata_upsch_purge);
 	PRTYPE(struct slm_wkdata_wr_brepl);
 	PRTYPE(struct slmctlmsg_bml);
