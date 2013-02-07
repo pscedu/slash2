@@ -242,6 +242,14 @@ struct slm_wkdata_upsch_purge {
 	slfid_t			 fid;
 };
 
+struct slm_wkdata_upsch_cb {
+	struct slashrpc_cservice	*csvc;
+	struct bmap			*b;
+	int				 rc;
+	int				 off;
+	int				 undowr;
+};
+
 #define SLM_NWORKER_THREADS	4
 
 int		 mds_handle_rls_bmap(struct pscrpc_request *, int);

@@ -325,19 +325,11 @@ slmupschedthr_tryrepldst(struct slm_update_data *upd,
 	return (0);
 }
 
-int
-slmupschedthr_tryptrunc_cb(struct pscrpc_request *rq,
-    struct pscrpc_async_args *av)
+void
+slmupschedthr_finish_ptrunc(struct slashrpc_cservice *csvc,
+    struct bmap *b, int rc, int off, int undowr)
 {
-	struct slashrpc_cservice *csvc = av->pointer_arg[IP_CSVC];
-	struct bmapc_memb *b = av->pointer_arg[IP_BMAP];
-	int rc = 0, tract[NBREPLST];
-
-	if (rq)
-		SL_GET_RQ_STATUS_TYPE(csvc, rq,
-		    struct srm_bmap_ptrunc_rep, rc);
-	if (rc == 0)
-		rc = av->space[IN_RC];
+	int tract[NBREPLST];
 
 	if (rc) {
 		if (b) {
@@ -345,22 +337,54 @@ slmupschedthr_tryptrunc_cb(struct pscrpc_request *rq,
 			brepls_init(tract, -1);
 			tract[BREPLST_TRUNCPNDG_SCHED] =
 			    BREPLST_TRUNCPNDG;
-			mds_repl_bmap_apply(b, tract, NULL,
-			    av->space[IN_OFF]);
-			if (av->space[IN_UNDO_WR])
+			mds_repl_bmap_apply(b, tract, NULL, off);
+			if (undowr)
 				mds_bmap_write_logrepls(b);
 		}
 
 		psclog_warnx("partial truncation resolution failed "
 		    "rc=%d", rc);
-	} else
-		slrpc_rep_in(csvc, rq);
+	}
 
 	if (csvc)
 		sl_csvc_decref(csvc);
 	if (b)
 		slm_repl_bmap_rel_type(b, BMAP_OPCNT_UPSCH);
 	UPSCH_WAKE();
+}
+
+int
+slmupschedthr_wk_finish_ptrunc(void *p)
+{
+	struct slm_wkdata_upsch_cb *wk = p;
+
+	slmupschedthr_finish_ptrunc(wk->csvc,
+	    wk->b, wk->rc, wk->off, wk->undowr);
+	return (0);
+}
+
+int
+slmupschedthr_tryptrunc_cb(struct pscrpc_request *rq,
+    struct pscrpc_async_args *av)
+{
+	struct slashrpc_cservice *csvc = av->pointer_arg[IP_CSVC];
+	struct slm_wkdata_upsch_cb *wk;
+	int rc = 0;
+
+	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_ptrunc_rep, rc);
+	if (rc == 0)
+		rc = av->space[IN_RC];
+	if (rc == 0)
+		slrpc_rep_in(csvc, rq);
+
+	wk = pfl_workq_getitem(slmupschedthr_wk_finish_ptrunc,
+	    struct slm_wkdata_upsch_cb);
+	wk->csvc = csvc;
+	wk->b = av->pointer_arg[IP_BMAP];
+	wk->rc = rc;
+	wk->off = av->space[IN_OFF];
+	wk->undowr = av->space[IN_UNDO_WR];
+	pfl_workq_putitem(wk);
 	return (0);
 }
 
@@ -389,7 +413,6 @@ slmupschedthr_tryptrunc(struct slm_update_data *upd,
 	dst_resm = psc_dynarray_getpos(&dst_res->res_members, idx);
 
 	memset(&av, 0, sizeof(av));
-	av.pointer_arg[IP_DSTRESM] = dst_resm;
 	av.space[IN_OFF] = off;
 
 	/*
@@ -441,124 +464,11 @@ slmupschedthr_tryptrunc(struct slm_update_data *upd,
 		rc = ENODEV;
 
  fail:
-	av.space[IN_RC] = rc;
-	slmupschedthr_tryptrunc_cb(rq, &av);
-	return (0);
-}
-
-int
-slmupschedthr_trygarbage_cb(struct pscrpc_request *rq,
-    struct pscrpc_async_args *av)
-{
-	struct slashrpc_cservice *csvc = av->pointer_arg[IP_CSVC];
-	struct sl_resm *dst_resm = av->pointer_arg[IP_DSTRESM];
-	struct bmapc_memb *b = av->pointer_arg[IP_BMAP];
-	struct resprof_mds_info *rpmi;
-	struct slm_update_data *upd;
-	int rc = 0, tract[NBREPLST];
-
 	if (rq)
-		SL_GET_RQ_STATUS_TYPE(csvc, rq,
-		    struct srm_bmap_ptrunc_rep, rc);
-	if (rc == 0)
-		rc = av->space[IN_RC];
-
-	if (rc) {
-		if (b) {
-			/* undo brepls changes */
-			brepls_init(tract, -1);
-			tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
-			mds_repl_bmap_apply(b, tract, NULL,
-			    av->space[IN_OFF]);
-			if (av->space[IN_UNDO_WR])
-				mds_bmap_write_logrepls(b);
-		}
-
-		psclog_warnx("garbage reclamation failed rc=%d", rc);
-	} else
-		slrpc_rep_in(csvc, rq);
-
-	if (b) {
-		rpmi = res2rpmi(dst_resm->resm_res);
-		upd = bmap_2_upd(b);
-		upd_rpmi_remove(rpmi, upd);
-	}
-
-	if (csvc)
-		sl_csvc_decref(csvc);
-	if (b)
-		slm_repl_bmap_rel_type(b, BMAP_OPCNT_UPSCH);
-	UPSCH_WAKE();
-	return (0);
-}
-
-int
-slmupschedthr_trygarbage(struct slm_update_data *upd,
-    struct bmapc_memb *b, int off, struct sl_resource *dst_res, int j)
-{
-	int tract[NBREPLST], retifset[NBREPLST], rc = 0;
-	struct pscrpc_request *rq = NULL;
-	struct slashrpc_cservice *csvc;
-	struct srm_bmap_ptrunc_req *mq;
-	struct srm_bmap_ptrunc_rep *mp;
-	struct pscrpc_async_args av;
-	struct sl_resm *dst_resm;
-	struct fidc_membh *f;
-
-	f = upd_2_fcmh(upd);
-	dst_resm = psc_dynarray_getpos(&dst_res->res_members, j);
-
-	memset(&av, 0, sizeof(av));
-	av.pointer_arg[IP_DSTRESM] = dst_resm;
-	av.space[IN_OFF] = off;
-
-	csvc = slm_geticsvc(dst_resm, NULL, CSVCF_NONBLOCK |
-	    CSVCF_NORECON, &slm_upsch_mw);
-	if (csvc == NULL)
-		PFL_GOTOERR(fail, rc = resm_getcsvcerr(dst_resm));
-	av.pointer_arg[IP_CSVC] = csvc;
-
-	/* Issue garbage reclaim request */
-	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAP_PTRUNC, rq, mq, mp);
-	if (rc)
-		PFL_GOTOERR(fail, rc);
-	mq->fg = f->fcmh_fg;
-	mq->bmapno = b->bcm_bmapno;
-	BHGEN_GET(b, &mq->bgen);
-	/* offset = 0 implies garbage reclamation for PTRUNC RPC */
-
-	/* Mark as SCHED here in case the RPC finishes quickly. */
-	brepls_init(tract, -1);
-	tract[BREPLST_GARBAGE] = BREPLST_GARBAGE_SCHED;
-	tract[BREPLST_INVALID] = BREPLST_GARBAGE_SCHED;
-
-	brepls_init_idx(retifset);
-
-	rc = mds_repl_bmap_apply(b, tract, retifset, off);
-
-	if (rc == BREPLST_VALID || rc == BREPLST_REPL_SCHED)
-		psc_fatalx("invalid bmap replica state: %d", rc);
-
-	av.pointer_arg[IP_BMAP] = b;
-	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
-
-	if (rc == BREPLST_GARBAGE || rc == BREPLST_INVALID) {
-		rc = mds_bmap_write_logrepls(b);
-		av.space[IN_UNDO_WR] = 1;
-		if (rc)
-			PFL_GOTOERR(fail, rc);
-
-		rq->rq_interpret_reply = slmupschedthr_trygarbage_cb;
-		rq->rq_async_args = av;
-		rc = SL_NBRQSET_ADD(csvc, rq);
-		if (rc == 0)
-			return (1);
-	} else
-		rc = ENODEV;
-
- fail:
-	av.space[IN_RC] = rc;
-	slmupschedthr_trygarbage_cb(rq, &av);
+		pscrpc_req_finished(rq);
+	slmupschedthr_finish_ptrunc(av.pointer_arg[IP_CSVC],
+	    av.pointer_arg[IP_BMAP], rc, off,
+	    av.space[IN_UNDO_WR]);
 	return (0);
 }
 
@@ -615,18 +525,17 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 int
 upd_proc_bmap(struct slm_update_data *upd)
 {
-	int rc = 1, ngarb, off, val, tryarchival, iosidx;
+	int rc = 1, off, val, tryarchival, iosidx;
 	struct rnd_iterator dst_res_i, dst_resm_i;
 	struct rnd_iterator src_res_i, src_resm_i;
 	struct sl_resource *dst_res, *src_res;
 	struct slashrpc_cservice *csvc;
 	struct resprof_mds_info *rpmi;
 	struct bmap_mds_info *bmi;
-	struct bmapc_memb *b, *bn;
 	struct sl_resm *src_resm;
+	struct bmapc_memb *b;
 	struct fidc_membh *f;
 	sl_ios_id_t iosid;
-	sl_bmapno_t bno;
 
 	bmi = upd_getpriv(upd);
 	b = bmi_2_bmap(bmi);
@@ -656,6 +565,10 @@ upd_proc_bmap(struct slm_update_data *upd)
 	FOREACH_RND(&dst_res_i, fcmh_2_nrepls(f)) {
 		iosid = fcmh_2_repl(f, dst_res_i.ri_rnd_idx);
 		dst_res = libsl_id2res(iosid);
+		if (dst_res == NULL) {
+			psclog_errorx("invalid iosid %u", iosid);
+			continue;
+		}
 		rpmi = res2rpmi(dst_res);
 		off = SL_BITS_PER_REPLICA * dst_res_i.ri_rnd_idx;
 		val = SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls, off);
@@ -730,8 +643,13 @@ upd_proc_bmap(struct slm_update_data *upd)
 					return (0);
 			}
 			break;
+#if 0
 		case BREPLST_GARBAGE:
 			break;
+
+	int ngarb;
+	struct bmapc_memb *bn;
+	sl_bmapno_t bno;
 
 			/* XXX just look at fcmh size to determine this */
 			ngarb = 0;
@@ -826,10 +744,11 @@ upd_proc_bmap(struct slm_update_data *upd)
 				    dst_resm_i.ri_rnd_idx))
 					return (0);
 			break;
+#endif
 		}
 		upd_rpmi_remove(rpmi, upd);
 	}
- out:
+// out:
 	if (BMAPOD_HASWRLOCK(bmap_2_bmi(b)))
 		BMAPOD_MODIFY_DONE(b, 0);
 	BMAP_UNBUSY(b);
