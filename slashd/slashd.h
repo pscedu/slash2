@@ -244,9 +244,12 @@ struct slm_wkdata_upsch_purge {
 
 struct slm_wkdata_upsch_cb {
 	struct slashrpc_cservice	*csvc;
+	struct sl_resm			*src_resm;
+	struct sl_resm			*dst_resm;
 	struct bmap			*b;
 	int				 rc;
 	int				 off;
+	int64_t				 amt;
 	int				 undowr;
 };
 

@@ -127,49 +127,30 @@ upd_rpmi_remove(struct resprof_mds_info *rpmi,
 		UPD_DECREF(upd);
 }
 
-int
-slmupschedthr_tryrepldst_cb(struct pscrpc_request *rq,
-    struct pscrpc_async_args *av)
+void
+slmupschedthr_finish_replsch(struct slashrpc_cservice *csvc,
+    struct sl_resm *src_resm, struct sl_resm *dst_resm, struct bmap *b,
+    int rc, int off, int64_t amt, int undowr)
 {
-	struct slashrpc_cservice *csvc = av->pointer_arg[IP_CSVC];
-	struct sl_resm *dst_resm = av->pointer_arg[IP_DSTRESM];
-	struct sl_resm *src_resm = av->pointer_arg[IP_SRCRESM];
-	struct bmapc_memb *b = av->pointer_arg[IP_BMAP];
 	struct resprof_mds_info *rpmi;
 	struct slm_update_data *upd;
-	int64_t amt = av->space[IN_AMT];
-	int rc = 0, tract[NBREPLST];
-
-	if (rq)
-		SL_GET_RQ_STATUS_TYPE(csvc, rq,
-		    struct srm_repl_schedwk_rep, rc);
-	if (rc == 0)
-		rc = av->space[IN_RC];
+	int tract[NBREPLST];
 
 	if (rc) {
 		if (b) {
 			/* undo brepls change */
 			brepls_init(tract, -1);
 			tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
-			mds_repl_bmap_apply(b, tract, NULL,
-			    av->space[IN_OFF]);
-			if (av->space[IN_UNDO_WR])
+			mds_repl_bmap_apply(b, tract, NULL, off);
+			if (undowr)
 				mds_bmap_write_logrepls(b);
-		}
 
-		if (rq)
-			DEBUG_REQ(PLL_ERROR, rq,
+			DEBUG_BMAP(PLL_ERROR, b,
 			    "dst_resm=%s src_resm=%s rc=%d",
 			    dst_resm->resm_name, src_resm->resm_name,
 			    rc);
-		if (b)
-			DEBUG_BMAP(PLL_ERROR, b,
-			    "dst_resm=%s src_resm=%s rq=%p rc=%d",
-			    dst_resm->resm_name, src_resm->resm_name,
-			    rq, rc);
+		}
 	} else {
-		/* Run standard successful RPC processing. */
-		slrpc_rep_in(csvc, rq);
 		amt = 0;
 	}
 
@@ -186,6 +167,7 @@ slmupschedthr_tryrepldst_cb(struct pscrpc_request *rq,
 		upd_rpmi_remove(rpmi, upd);
 	}
 
+	/* XXX can we race here?? */
 	if (amt)
 		mds_repl_nodes_adjbusy(src_resm, dst_resm, -amt);
 	if (csvc)
@@ -193,11 +175,61 @@ slmupschedthr_tryrepldst_cb(struct pscrpc_request *rq,
 	if (b)
 		slm_repl_bmap_rel_type(b, BMAP_OPCNT_UPSCH);
 	UPSCH_WAKE();
+}
+
+int
+slmupschedthr_wk_finish_replsch(void *p)
+{
+	struct slm_wkdata_upsch_cb *wk = p;
+
+	slmupschedthr_finish_replsch(wk->csvc, wk->src_resm,
+	    wk->dst_resm, wk->b, wk->rc, wk->off, wk->amt, wk->undowr);
 	return (0);
 }
 
 int
-slmupschedthr_tryrepldst(struct slm_update_data *upd,
+slmupschedthr_tryreplsch_cb(struct pscrpc_request *rq,
+    struct pscrpc_async_args *av)
+{
+	struct slashrpc_cservice *csvc = av->pointer_arg[IP_CSVC];
+	struct sl_resm *src_resm = av->pointer_arg[IP_SRCRESM],
+		       *dst_resm = av->pointer_arg[IP_DSTRESM];
+	struct slm_wkdata_upsch_cb *wk;
+	int rc = 0;
+
+	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_repl_schedwk_rep,
+	    rc);
+	if (rc == 0)
+		rc = av->space[IN_RC];
+	if (rc == 0)
+		slrpc_rep_in(csvc, rq);
+
+	if (rc)
+		DEBUG_REQ(PLL_ERROR, rq,
+		    "dst_resm=%s src_resm=%s rc=%d",
+		    dst_resm->resm_name, src_resm->resm_name,
+		    rc);
+
+	wk = pfl_workq_getitem(slmupschedthr_wk_finish_replsch,
+	    struct slm_wkdata_upsch_cb);
+	wk->csvc = csvc;
+	wk->src_resm = src_resm;
+	wk->dst_resm = dst_resm;
+	wk->b = av->pointer_arg[IP_BMAP];
+	wk->rc = rc;
+	wk->off = av->space[IN_OFF];
+	wk->amt = av->space[IN_AMT];
+	wk->undowr = av->space[IN_UNDO_WR];
+	pfl_workq_putitem(wk);
+	return (0);
+}
+
+/**
+ * slmupschedthr_tryreplsch - Try arranging a REPL_SCHEDWK for a bmap
+ *	between a source and dst IOS pair.
+ */
+int
+slmupschedthr_tryreplsch(struct slm_update_data *upd,
     struct bmapc_memb *b, int off, struct sl_resm *src_resm,
     struct sl_resource *dst_res, int j)
 {
@@ -311,7 +343,7 @@ slmupschedthr_tryrepldst(struct slm_update_data *upd,
 		 * It is OK if repl sched is resent across reboots
 		 * idempotently.
 		 */
-		rq->rq_interpret_reply = slmupschedthr_tryrepldst_cb;
+		rq->rq_interpret_reply = slmupschedthr_tryreplsch_cb;
 		rq->rq_async_args = av;
 		rc = SL_NBRQSET_ADD(csvc, rq);
 		if (rc == 0)
@@ -320,8 +352,11 @@ slmupschedthr_tryrepldst(struct slm_update_data *upd,
 		rc = ENODEV;
 
  fail:
-	av.space[IN_RC] = rc;
-	slmupschedthr_tryrepldst_cb(rq, &av);
+	if (rq)
+		pscrpc_req_finished(rq);
+	slmupschedthr_finish_replsch(av.pointer_arg[IP_CSVC],
+	    src_resm, dst_resm, av.pointer_arg[IP_BMAP], rc, off,
+	    av.space[IN_AMT], av.space[IN_UNDO_WR]);
 	return (0);
 }
 
@@ -376,6 +411,9 @@ slmupschedthr_tryptrunc_cb(struct pscrpc_request *rq,
 		rc = av->space[IN_RC];
 	if (rc == 0)
 		slrpc_rep_in(csvc, rq);
+
+	if (rc)
+		DEBUG_REQ(PLL_ERROR, rq, "rc=%d", rc);
 
 	wk = pfl_workq_getitem(slmupschedthr_wk_finish_ptrunc,
 	    struct slm_wkdata_upsch_cb);
@@ -621,7 +659,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 						/* scan destination resms */
 						FOREACH_RND(&dst_resm_i,
 						    psc_dynarray_len(&dst_res->res_members))
-							if (slmupschedthr_tryrepldst(upd,
+							if (slmupschedthr_tryreplsch(upd,
 							    b, off, src_resm, dst_res,
 							    dst_resm_i.ri_rnd_idx))
 								return (0);
@@ -943,7 +981,7 @@ slmupschedthr_main(__unusedx struct psc_thread *thr)
 		if (upd)
 			rc = upd_proc(upd);
 		UPSCH_ULOCK();
-	if (rc)
+		if (rc)
 			psc_multiwait_leavecritsect(&slm_upsch_mw);
 		else
 			psc_multiwait_secs(&slm_upsch_mw, &upd, 5);
