@@ -114,6 +114,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		w->srw_slvr_refs[slvridx] = NULL;
 		if (!lc_conjoint(&sli_replwkq_pending, w)) {
 			psc_atomic32_inc(&w->srw_refcnt);
+			DEBUG_SRW(w, PLL_MAX, "incref");
 			lc_add(&sli_replwkq_pending, w);
 		}
 		sli_replwkrq_decref(w, rc);
@@ -128,7 +129,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
  * @rq: request.
  * @aio:  this argument signifies that the peer has completed an async I/O
  *    of a previously requested sliver and that sliver has been posted for
- *    GET.  In essense, this flag causes the internals of the RPC handler
+ *    GET.  In essence, this flag causes the internals of the RPC handler
  *    to be reversed.
  */
 __static int
@@ -358,6 +359,7 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_SLVR] = s;
 
 	psc_atomic32_inc(&w->srw_refcnt);
+	DEBUG_SRW(w, PLL_MAX, "incref");
 
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	psc_assert(rc == 0);

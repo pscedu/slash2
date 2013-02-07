@@ -150,10 +150,11 @@ sli_replwkrq_decref(struct sli_repl_workrq *w, int rc)
 		w->srw_status = rc;
 
 	if (!psc_atomic32_dec_and_test0(&w->srw_refcnt)) {
-		DEBUG_SRW(w, PLL_DEBUG, "");
+		DEBUG_SRW(w, PLL_MAX, "decref");
 		freelock(&w->srw_lock);
 		return;
 	}
+	DEBUG_SRW(w, PLL_MAX, "destroying");
 
 	pll_remove(&sli_replwkq_active, w);
 	/* inform MDS we've finished */
