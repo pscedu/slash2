@@ -85,6 +85,9 @@ struct psc_iostats	msl_io_128k_stat;
 struct psc_iostats	msl_io_512k_stat;
 struct psc_iostats	msl_io_1m_stat;
 
+extern struct psc_listcache	attrTimeoutQ;
+
+void msl_update_attributes(struct msl_fsrqinfo *);
 static int msl_getra(struct msl_fhent *, int, int *);
 
 #define MS_DEF_READAHEAD_PAGES 8
@@ -758,6 +761,7 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, int rc, size_t len)
 		    q->mfsrq_len, abs(q->mfsrq_err));
 		OPSTAT_INCR(SLC_OPST_FSRQ_READ_FREE);
 	} else {
+		msl_update_attributes(q);
 		pscfs_reply_write(q->mfsrq_pfr,
 		    q->mfsrq_len, abs(q->mfsrq_err));
 		OPSTAT_INCR(SLC_OPST_FSRQ_WRITE_FREE);
@@ -2100,6 +2104,45 @@ msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
 
 	psclog_info("fsrq=%p pfr=%p rw=%d", q, q->mfsrq_pfr, rw);
 	return (q);
+}
+
+void
+msl_update_attributes(struct msl_fsrqinfo *q)
+{
+	struct timespec ts;
+	struct fidc_membh *f;
+	struct msl_fhent *mfh;
+	struct fcmh_cli_info *fci;
+
+	if (q->mfsrq_err)
+		return;
+
+	mfh = q->mfsrq_mfh;
+	f = mfh->mfh_fcmh;
+
+	FCMH_LOCK(f);
+	PFL_GETTIMESPEC(&ts);
+	f->fcmh_sstb.sst_mtime = ts.tv_sec;
+	f->fcmh_sstb.sst_mtime_ns = ts.tv_nsec;
+	if (q->mfsrq_off + q->mfsrq_len > fcmh_2_fsz(f)) {
+		psclog_info("fid: "SLPRI_FID", "
+		    "size from %"PRId64" to %"PRId64,
+		    fcmh_2_fid(f), fcmh_2_fsz(f), 
+		    q->mfsrq_off + q->mfsrq_len);
+		fcmh_2_fsz(f) = q->mfsrq_off + q->mfsrq_len;
+	}
+	if (!(f->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
+		f->fcmh_flags |= FCMH_CLI_DIRTY_ATTRS;
+		fci = fcmh_2_fci(f);
+		fci->fci_etime.tv_sec = ts.tv_sec;
+		fci->fci_etime.tv_nsec = ts.tv_nsec;
+		if (!(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE)) {
+			f->fcmh_flags |= FCMH_CLI_DIRTY_QUEUE;
+			lc_addtail(&attrTimeoutQ, fci);
+			fcmh_op_start_type(f, FCMH_OPCNT_DIRTY_QUEUE);
+		}
+	}
+	FCMH_ULOCK(f);
 }
 
 /**

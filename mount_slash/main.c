@@ -2293,8 +2293,6 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 {
 	struct msl_fhent *mfh = data;
 	struct fidc_membh *f, *ftmp;
-	struct fcmh_cli_info *fci;
-	struct timespec ts;
 	int rc = 0;
 
 	msfsthr_ensure();
@@ -2317,31 +2315,6 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 		goto out;
 
 	rc = msl_write(pfr, mfh, buf, size, off);
-	if (rc)
-		PFL_GOTOERR(out, rc);
-
-	FCMH_LOCK(f);
-	PFL_GETTIMESPEC(&ts);
-	f->fcmh_sstb.sst_mtime = ts.tv_sec;
-	f->fcmh_sstb.sst_mtime_ns = ts.tv_nsec;
-	if ((uint64_t)off + size > fcmh_2_fsz(f)) {
-		psclog_info("fid: "SLPRI_FID", "
-		    "size from %"PRId64" to %"PRId64,
-		    fcmh_2_fid(f), fcmh_2_fsz(f), off+size);
-		fcmh_2_fsz(f) = off + size;
-	}
-	if (!(f->fcmh_flags & FCMH_CLI_DIRTY_ATTRS)) {
-		f->fcmh_flags |= FCMH_CLI_DIRTY_ATTRS;
-		fci = fcmh_2_fci(f);
-		fci->fci_etime.tv_sec = ts.tv_sec;
-		fci->fci_etime.tv_nsec = ts.tv_nsec;
-		if (!(f->fcmh_flags & FCMH_CLI_DIRTY_QUEUE)) {
-			f->fcmh_flags |= FCMH_CLI_DIRTY_QUEUE;
-			lc_addtail(&attrTimeoutQ, fci);
-			fcmh_op_start_type(f, FCMH_OPCNT_DIRTY_QUEUE);
-		}
-	}
-	FCMH_ULOCK(f);
 
  out:
 	if (rc) {
