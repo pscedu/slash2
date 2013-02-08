@@ -17,8 +17,9 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#include <sys/types.h>
+#include <sys/param.h>
 #include <sys/statvfs.h>
+#include <sys/mount.h>
 #include <sys/wait.h>
 
 #include <err.h>
@@ -108,14 +109,31 @@ void
 slistatfsthr_main(__unusedx struct psc_thread *thr)
 {
 	struct statvfs sfb;
+	int rc;
 
 	while (pscthr_run()) {
-		if (statvfs(globalConfig.gconf_fsroot, &sfb) == -1)
+#ifdef HAVE_STATFS_FSTYPE
+		struct statfs b;
+
+		rc = statfs(globalConfig.gconf_fsroot, &b);
+		if (rc == -1)
+			psclog_error("statfs %s",
+			    globalConfig.gconf_fsroot);
+		statfs_2_statvfs(&b, &sfb);
+#else
+		rc = statvfs(globalConfig.gconf_fsroot, &sfb);
+		if (rc == -1)
 			psclog_error("statvfs %s",
 			    globalConfig.gconf_fsroot);
-		else {
+#endif
+
+		if (rc == 0) {
 			spinlock(&sli_ssfb_lock);
 			sl_externalize_statfs(&sfb, &sli_ssfb);
+#ifdef HAVE_STATFS_FSTYPE
+			strlcpy(sli_ssfb->sf_type, b->f_fstypename,
+			    sizeof(sli_ssfb->sf_type));
+#endif
 			freelock(&sli_ssfb_lock);
 		}
 		sleep(5);

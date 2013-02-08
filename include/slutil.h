@@ -24,6 +24,7 @@
 
 struct stat;
 struct statvfs;
+struct statfs;
 
 struct srt_stat;
 struct srt_statfs;
@@ -34,5 +35,7 @@ void	sl_externalize_stat(const struct stat *, struct srt_stat *);
 void	sl_internalize_stat(const struct srt_stat *, struct stat *);
 void	sl_externalize_statfs(const struct statvfs *, struct srt_statfs *);
 void	sl_internalize_statfs(const struct srt_statfs *, struct statvfs *);
+
+void	statfs_2_statvfs(const struct statfs *, struct statvfs *);
 
 #endif /* _SLUTIL_H_ */

@@ -17,9 +17,10 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#include <sys/types.h>
+#include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
+#include <sys/mount.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -105,7 +106,8 @@ sl_internalize_stat(const struct srt_stat *sstb, struct stat *stb)
 }
 
 void
-sl_externalize_statfs(const struct statvfs *sfb, struct srt_statfs *ssfb)
+sl_externalize_statfs(const struct statvfs *sfb,
+    struct srt_statfs *ssfb)
 {
 	memset(ssfb, 0, sizeof(*ssfb));
 	ssfb->sf_bsize		= sfb->f_frsize;
@@ -119,7 +121,8 @@ sl_externalize_statfs(const struct statvfs *sfb, struct srt_statfs *ssfb)
 }
 
 void
-sl_internalize_statfs(const struct srt_statfs *ssfb, struct statvfs *sfb)
+sl_internalize_statfs(const struct srt_statfs *ssfb,
+    struct statvfs *sfb)
 {
 	memset(sfb, 0, sizeof(*sfb));
 	sfb->f_bsize		= ssfb->sf_iosize;
@@ -131,6 +134,21 @@ sl_internalize_statfs(const struct srt_statfs *ssfb, struct statvfs *sfb)
 	sfb->f_ffree		= ssfb->sf_ffree;
 	sfb->f_favail		= ssfb->sf_favail;
 }
+
+#ifdef HAVE_STATFS_FSTYPE
+void
+statfs_2_statvfs(const struct statfs *sfb, struct statvfs *svfs)
+{
+	svfb->f_bsize		= sfb->f_bsize;
+	svfb->f_iosize		= sfb->f_iosize;
+	svfb->f_blocks		= sfb->f_blocks;
+	svfb->f_bfree		= sfb->f_bfree;
+	svfb->f_bavail		= sfb->f_bavail;
+	svfb->f_files		= sfb->f_files;
+	svfb->f_ffree		= sfb->f_ffree;
+	svfb->f_favail		= sfb->f_favail;
+}
+#endif
 
 #define PERMCHECK(accmode, fmode, mask)						\
 	(((((accmode) & R_OK) && ((fmode) & ((mask) & _S_IRUGO)) == 0) ||	\
