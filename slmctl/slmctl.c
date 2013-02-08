@@ -162,41 +162,40 @@ slm_statfs_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	};
 	const struct slmctlmsg_statfs *scsf = m;
 	const struct srt_statfs *b = &scsf->scsf_ssfb;
-	char sbuf[PSCFMT_HUMAN_BUFSIZ], ubuf[PSCFMT_HUMAN_BUFSIZ];
-	char abuf[PSCFMT_HUMAN_BUFSIZ], cbuf[PSCFMT_RATIO_BUFSIZ];
+	char cbuf[PSCFMT_RATIO_BUFSIZ];
 	char *p, name[RES_NAME_MAX];
 	int j, col = 0;
 
-	if (b->sf_blocks) {
-		psc_fmt_human(sbuf, b->sf_blocks * b->sf_bsize);
-		psc_fmt_human(ubuf, (b->sf_blocks - b->sf_bfree) *
-		    b->sf_bsize);
-		psc_fmt_human(abuf, b->sf_bavail * b->sf_bsize);
-		psc_fmt_ratio(cbuf, b->sf_blocks -
-		    (int64_t)b->sf_bavail, b->sf_blocks);
-
+	if (b->sf_blocks)
 		for (c = classes, j = 0; j < nitems(classes); j++, c++)
 			if (100 * (b->sf_blocks - b->sf_bavail) /
 			     b->sf_blocks >= c->frac) {
 				col = c->col;
 				break;
 			}
-	} else {
-		strlcpy(sbuf, "-", sizeof(sbuf));
-		strlcpy(ubuf, "-", sizeof(ubuf));
-		strlcpy(abuf, "-", sizeof(abuf));
-		strlcpy(cbuf, "-", sizeof(cbuf));
-	}
 	strlcpy(name, scsf->scsf_resname, sizeof(name));
 	p = strchr(name, '@');
 	if (p)
 		*p = '\0';
-	printf("%-27s %c%c %7s %7s %7s ", name,
+	printf("%-27s %c%c ", name,
 	    scsf->scsf_flags & SIF_DISABLE_BIA ? 'W' : '-',
-	    scsf->scsf_flags & SIF_DISABLE_GC  ? 'G' : '-',
-	    sbuf, ubuf, abuf);
+	    scsf->scsf_flags & SIF_DISABLE_GC  ? 'G' : '-');
+	b->sf_blocks ? psc_ctl_prhuman(b->sf_blocks * b->sf_bsize) :
+	    printf("%7s", "-");
+	printf(" ");
+	b->sf_blocks ? psc_ctl_prhuman((b->sf_blocks - b->sf_bfree) *
+	    b->sf_bsize) : printf("%7s", "-");
+	printf(" ");
+	b->sf_blocks ? psc_ctl_prhuman(b->sf_bavail * b->sf_bsize) :
+	    printf("%7s", "-");
+
 	if (col)
 		setcolor(col);
+	if (b->sf_blocks)
+		psc_fmt_ratio(cbuf, b->sf_blocks -
+		    (int64_t)b->sf_bavail, b->sf_blocks);
+	else
+		strlcpy(cbuf, "-", sizeof(cbuf));
 	printf("%8s", cbuf);
 	if (col)
 		uncolor();
