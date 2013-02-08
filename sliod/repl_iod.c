@@ -245,6 +245,7 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 		src_resm = psc_dynarray_getpos(
 		    &w->srw_src_res->res_members, 0);
 		csvc = sli_geticsvc(src_resm);
+		lc_add(&sli_replwkq_pending, w);
 		if (csvc == NULL)
 			rc = SLERR_ION_OFFLINE;
 		else {
@@ -261,8 +262,6 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 			BMAP_ULOCK(w->srw_bcm);
 			freelock(&w->srw_lock);
 		}
-		if (!lc_conjoint(&sli_replwkq_pending, w))
-			lc_add(&sli_replwkq_pending, w);
 		continue;
 
  release:
