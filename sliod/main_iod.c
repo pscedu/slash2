@@ -131,8 +131,8 @@ slistatfsthr_main(__unusedx struct psc_thread *thr)
 			spinlock(&sli_ssfb_lock);
 			sl_externalize_statfs(&sfb, &sli_ssfb);
 #ifdef HAVE_STATFS_FSTYPE
-			strlcpy(sli_ssfb->sf_type, b->f_fstypename,
-			    sizeof(sli_ssfb->sf_type));
+			strlcpy(sli_ssfb.sf_type, b.f_fstypename,
+			    sizeof(sli_ssfb.sf_type));
 #endif
 			freelock(&sli_ssfb_lock);
 		}
