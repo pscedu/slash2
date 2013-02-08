@@ -137,16 +137,16 @@ sl_internalize_statfs(const struct srt_statfs *ssfb,
 
 #ifdef HAVE_STATFS_FSTYPE
 void
-statfs_2_statvfs(const struct statfs *sfb, struct statvfs *svfs)
+statfs_2_statvfs(const struct statfs *sfb, struct statvfs *svfb)
 {
-	svfb->f_bsize		= sfb->f_bsize;
-	svfb->f_iosize		= sfb->f_iosize;
+	svfb->f_frsize		= sfb->f_bsize;
+	svfb->f_bsize		= sfb->f_iosize;
 	svfb->f_blocks		= sfb->f_blocks;
 	svfb->f_bfree		= sfb->f_bfree;
 	svfb->f_bavail		= sfb->f_bavail;
 	svfb->f_files		= sfb->f_files;
 	svfb->f_ffree		= sfb->f_ffree;
-	svfb->f_favail		= sfb->f_favail;
+	svfb->f_favail		= sfb->f_files;
 }
 #endif
 
