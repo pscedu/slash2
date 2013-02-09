@@ -153,7 +153,7 @@ bmpce_cmp(const void *x, const void *y)
 
 SPLAY_HEAD(bmap_pagecachetree, bmap_pagecache_entry);
 SPLAY_PROTOTYPE(bmap_pagecachetree, bmap_pagecache_entry, bmpce_tentry,
-		bmpce_cmp);
+		bmpce_cmp)
 
 struct bmap_pagecache {
 	struct bmap_pagecachetree	 bmpc_tree;		/* tree of cbuf_handle */
