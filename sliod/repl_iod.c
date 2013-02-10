@@ -220,7 +220,8 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 			BMAP_ULOCK(w->srw_bcm);
 			freelock(&w->srw_lock);
 			LIST_CACHE_LOCK(&sli_replwkq_pending);
-			lc_add(&sli_replwkq_pending, w);
+			if (!lc_conjoint(&sli_replwkq_pending, w))
+				lc_add(&sli_replwkq_pending, w);
 			if (w == wrap)
 				psc_waitq_waitrel_us(
 				    &sli_replwkq_pending.plc_wq_empty,
