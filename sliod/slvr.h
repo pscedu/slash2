@@ -135,7 +135,7 @@ struct slvr_ref {
 	psclogs((level), SLISS_SLVR, "slvr@%p num=%hu pw=%u "		\
 	    "pr=%u cw=%u "						\
 	    "ncrc=%u dc=%d ts="PSCPRI_TIMESPEC" "			\
-	    "pri@%p slab@%p bmap@%p fid:"SLPRI_FID " iocb@%p flgs:"	\
+	    "pri@%p slab@%p bmap@%p fid:"SLPRI_FID" iocb@%p flgs:"	\
 	    "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s :: " fmt,		\
 	    (s), (s)->slvr_num, (s)->slvr_pndgwrts,			\
 	    (s)->slvr_pndgreads, (s)->slvr_compwrts,			\
@@ -163,7 +163,7 @@ struct slvr_ref {
 	    (s)->slvr_flags & SLVR_REPLWIRE	? "w" : "-",		\
 	    (s)->slvr_flags & SLVR_AIOWAIT	? "a" : "-",		\
 	    (s)->slvr_flags & SLVR_RDMODWR	? "m" : "-",		\
-	    ## __VA_ARGS__)
+	    ##__VA_ARGS__)
 
 #define RIC_MAX_SLVRS_PER_IO	2
 
@@ -237,8 +237,7 @@ slvr_cmp(const void *x, const void *y)
 	return (CMP(a->slvr_num, b->slvr_num));
 }
 
-SPLAY_PROTOTYPE(biod_slvrtree, slvr_ref, slvr_tentry, slvr_cmp);
-
+SPLAY_PROTOTYPE(biod_slvrtree, slvr_ref, slvr_tentry, slvr_cmp)
 
 static __inline int
 slvr_lru_slab_freeable(struct slvr_ref *s)
