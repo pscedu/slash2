@@ -107,7 +107,7 @@ bmpce_lookup_locked(struct bmap_pagecache *bmpc, struct bmpc_ioreq *r,
 
 	search.bmpce_off = off;
 
-	while (!e) {
+	while (1) {
 		e = SPLAY_FIND(bmap_pagecachetree, &bmpc->bmpc_tree,
 		    &search);
 		if (e) {
@@ -139,6 +139,7 @@ bmpce_lookup_locked(struct bmap_pagecache *bmpc, struct bmpc_ioreq *r,
 			OPSTAT_INCR(SLC_OPST_BMPCE_INSERT);
 			PSC_SPLAY_XINSERT(bmap_pagecachetree,
 			    &bmpc->bmpc_tree, e);
+			break;
 		}
 	}
 	if (e2) {
