@@ -26,7 +26,7 @@ char *slstrerror(int);
 
 #define _SLERR_START			1000		/* must be >max errno */
 
-#if ELAST >= _SLERR_START
+#if defined(ELAST) && ELAST >= _SLERR_START
 #  error system error codes into application space, need to adjust and recompile
 #endif
 
