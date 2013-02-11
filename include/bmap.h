@@ -163,7 +163,7 @@ struct bmap {
 
 #define _DEBUG_BMAP_FMT		"bmap@%p bno:%u flg:%#x:"		\
 				"%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s " \
-				"fid:"SLPRI_FID" opcnt=%u "
+				"fid:"SLPRI_FID" opcnt=%d "
 
 #define _DEBUG_BMAP_FMTARGS(b)						\
 	(b), (b)->bcm_bmapno, (b)->bcm_flags,				\
@@ -186,7 +186,7 @@ struct bmap {
 	(b)->bcm_flags & BMAP_ARCHIVER	? "C" : "",			\
 	(b)->bcm_flags & BMAP_REPLAY	? "P" : "",			\
 	(b)->bcm_flags & ~(_BMAP_FLSHFT - 1) ? "+" : "",		\
-	(b)->bcm_fcmh ? fcmh_2_fid((b)->bcm_fcmh) : 0,			\
+	(b)->bcm_fcmh ? fcmh_2_fid((b)->bcm_fcmh) : FID_ANY,		\
 	psc_atomic32_read(&(b)->bcm_opcnt)
 
 #define DEBUG_BMAP(level, b, fmt, ...)					\
@@ -252,7 +252,7 @@ struct bmap {
 	do {								\
 		psc_atomic32_inc(&(b)->bcm_opcnt);			\
 		DEBUG_BMAP(PLL_DEBUG, (b),				\
-		    "took reference (type=%d)", (type));		\
+		    "took reference (type=%u)", (type));		\
 	} while (0)
 
 #define bmap_op_done_type(b, type)					\
@@ -261,7 +261,7 @@ struct bmap {
 		psc_assert(psc_atomic32_read(&(b)->bcm_opcnt) > 0);	\
 		psc_atomic32_dec(&(b)->bcm_opcnt);			\
 		_bmap_op_done(PFL_CALLERINFOSS(SLSS_BMAP), (b),		\
-		    _DEBUG_BMAP_FMT "released reference (type=%d)",	\
+		    _DEBUG_BMAP_FMT "released reference (type=%u)",	\
 		    _DEBUG_BMAP_FMTARGS(b), (type));			\
 	} while (0)
 
