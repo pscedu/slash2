@@ -540,6 +540,8 @@ main(int argc, char *argv[])
 	sl_nbrqset = pscrpc_nbreqset_init(NULL, NULL);
 	pscrpc_nbreapthr_spawn(sl_nbrqset, SLMTHRT_NBRQ, "slmnbrqthr");
 
+	mds_journal_init(disable_propagation, zfsMount[current_vfsid].uuid);
+
 	pfl_workq_lock();
 	pfl_wkthr_spawn(SLMTHRT_WORKER, SLM_NWORKER_THREADS,
 	    "slmwkthr%d");
@@ -555,7 +557,6 @@ main(int argc, char *argv[])
 	mds_odtable_load(&slm_repl_odt, SL_FN_REPL_ODTAB, "repl");
 	mds_odtable_load(&slm_ptrunc_odt, SL_FN_PTRUNC_ODTAB, "ptrunc");
 
-	mds_journal_init(disable_propagation, zfsMount[current_vfsid].uuid);
 	mds_bmap_timeotbl_init();
 	mds_odtable_scan(mdsBmapAssignTable, mds_bia_odtable_startup_cb, NULL);
 	mds_odtable_scan(slm_repl_odt, slm_repl_odt_startup_cb, NULL);
