@@ -422,6 +422,7 @@ reimport
 - upsch multiwait doesn't work; bring an IOS up and down and work doesnt
   get scheduled
 - client should not post errors from SLERR_AIOWAIT on WRITE/READ RPC
+- parse /proc/mounts if it's there for sliod statfs f_fstype
 
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
