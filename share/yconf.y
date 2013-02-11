@@ -54,6 +54,7 @@
 #include "slerr.h"
 
 enum slconf_sym_type {
+	SL_TYPE_NONE,
 	SL_TYPE_BOOL,
 	SL_TYPE_FLOAT,
 	SL_TYPE_HEXU64,
@@ -64,6 +65,7 @@ enum slconf_sym_type {
 };
 
 enum slconf_sym_struct {
+	SL_STRUCT_NONE,
 	SL_STRUCT_VAR,
 	SL_STRUCT_RES,
 	SL_STRUCT_SITE
@@ -133,7 +135,7 @@ struct slconf_symbol sym_table[] = {
 	TABENT_RES("selftest",		SL_TYPE_STR,	BUFSIZ,		res_selftest,	NULL),
 	TABENT_RES("type",		SL_TYPE_INT,	0,		res_type,	slcfg_str2restype),
 
-	{ NULL, 0, 0, 0, 0, NULL }
+	{ NULL, SL_STRUCT_NONE, SL_TYPE_NONE, 0, 0, NULL }
 };
 
 struct sl_gconf		   globalConfig;
@@ -718,7 +720,7 @@ slcfg_store_tok_val(const char *tok, char *val)
 	if (e == NULL)
 		return;
 
-	psclog_debug("sym entry %p, name %s, type %d",
+	psclog_debug("sym entry %p, name %s, type %u",
 	    e, e->c_name, e->c_type);
 
 	/*
@@ -737,10 +739,10 @@ slcfg_store_tok_val(const char *tok, char *val)
 		ptr = e->c_offset + (char *)currentRes;
 		break;
 	default:
-		psc_fatalx("invalid structure type %d", e->c_struct);
+		psc_fatalx("invalid structure type %u", e->c_struct);
 	}
 
-	psclog_debug("type %d ptr %p", e->c_struct, ptr);
+	psclog_debug("type %u ptr %p", e->c_struct, ptr);
 
 	switch (e->c_type) {
 	case SL_TYPE_STR:
