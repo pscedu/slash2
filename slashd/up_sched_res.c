@@ -551,11 +551,19 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 		b = bmi_2_bmap(bmi);
 		rc = mds_repl_iosv_lookup(current_vfsid,
 		    upd_2_inoh(upd), &repl, &iosidx, 1);
-		// XXX check rc??
+		if (rc) {
+			psclog_error("iosv_lookup: rc=%d", rc);
+			goto next;
+		}
 		if (mds_repl_bmap_walk(b, tract, retifset, 0, &iosidx,
 		    1))
 			mds_bmap_write_logrepls(b);
-		slm_repl_bmap_rel(b);
+		else {
+			BMAPOD_MODIFY_DONE(b, 0);
+			BMAP_UNBUSY(b);
+			FCMH_UNBUSY(b->bcm_fcmh);
+		}
+ next:
 		UPD_DECREF(upd);
 
 		RPMI_LOCK(rpmi);
