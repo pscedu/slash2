@@ -540,6 +540,11 @@ main(int argc, char *argv[])
 	sl_nbrqset = pscrpc_nbreqset_init(NULL, NULL);
 	pscrpc_nbreapthr_spawn(sl_nbrqset, SLMTHRT_NBRQ, "slmnbrqthr");
 
+	mds_odtable_load(&mdsBmapAssignTable, SL_FN_BMAP_ODTAB,
+	    "bmapassign");
+	mds_odtable_load(&slm_repl_odt, SL_FN_REPL_ODTAB, "repl");
+	mds_odtable_load(&slm_ptrunc_odt, SL_FN_PTRUNC_ODTAB, "ptrunc");
+
 	mds_journal_init(disable_propagation, zfsMount[current_vfsid].uuid);
 
 	pfl_workq_lock();
@@ -551,11 +556,6 @@ main(int argc, char *argv[])
 	    " UPDATE	upsch"
 	    " SET	status = 'Q'"
 	    " WHERE	status = 'S'");
-
-	mds_odtable_load(&mdsBmapAssignTable, SL_FN_BMAP_ODTAB,
-	    "bmapassign");
-	mds_odtable_load(&slm_repl_odt, SL_FN_REPL_ODTAB, "repl");
-	mds_odtable_load(&slm_ptrunc_odt, SL_FN_PTRUNC_ODTAB, "ptrunc");
 
 	mds_bmap_timeotbl_init();
 	mds_odtable_scan(mdsBmapAssignTable, mds_bia_odtable_startup_cb, NULL);
