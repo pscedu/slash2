@@ -423,6 +423,8 @@ reimport
   get scheduled
 - client should not post errors from SLERR_AIOWAIT on WRITE/READ RPC
 - parse /proc/mounts if it's there for sliod statfs f_fstype
+- during upsch repl PAGEIN, do we do two SQL, one for loading the work
+  then one for loading the recpt?  optimize this if so
 
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
