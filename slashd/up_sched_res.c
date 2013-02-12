@@ -519,7 +519,7 @@ upd_proc_garbage(__unusedx struct slm_update_data *tupd)
 int
 upd_proc_hldrop(struct slm_update_data *tupd)
 {
-	int i, rc, tract[NBREPLST], retifset[NBREPLST], iosidx;
+	int rc, tract[NBREPLST], retifset[NBREPLST], iosidx;
 	struct slm_update_generic *upg;
 	struct resprof_mds_info *rpmi;
 	struct slm_update_data *upd;
