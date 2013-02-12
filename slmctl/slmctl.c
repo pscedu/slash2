@@ -199,7 +199,7 @@ slm_statfs_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	printf("%8s", cbuf);
 	if (col)
 		uncolor();
-	printf("%-16s\n", b->sf_type);
+	printf(" %-16s\n", b->sf_type);
 }
 
 void
