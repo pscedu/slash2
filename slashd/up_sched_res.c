@@ -542,7 +542,11 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 
 	rpmi = res2rpmi(upg->upg_resm->resm_res);
 	RPMI_LOCK(rpmi);
-	DYNARRAY_FOREACH(upd, i, &rpmi->rpmi_upschq) {
+	while (psc_dynarray_len(&rpmi->rpmi_upschq)) {
+		upd = psc_dynarray_getpos(&rpmi->rpmi_upschq, 0);
+		psc_dynarray_removepos(&rpmi->rpmi_upschq, 0);
+		RPMI_ULOCK(rpmi);
+
 		bmi = upd_getpriv(upd);
 		b = bmi_2_bmap(bmi);
 		rc = mds_repl_iosv_lookup(current_vfsid,
@@ -552,8 +556,9 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 		    1))
 			mds_bmap_write_repls_rel(b);
 		UPD_DECREF(upd);
+
+		RPMI_LOCK(rpmi);
 	}
-	psc_dynarray_reset(&rpmi->rpmi_upschq);
 	RPMI_ULOCK(rpmi);
 	slm_iosv_clearbusy(&repl, 1);
 	mds_repl_node_clearallbusy(upg->upg_resm);
