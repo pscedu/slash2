@@ -554,7 +554,8 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 		// XXX check rc??
 		if (mds_repl_bmap_walk(b, tract, retifset, 0, &iosidx,
 		    1))
-			mds_bmap_write_repls_rel(b);
+			mds_bmap_write_logrepls(b);
+		slm_repl_bmap_rel(b);
 		UPD_DECREF(upd);
 
 		RPMI_LOCK(rpmi);
