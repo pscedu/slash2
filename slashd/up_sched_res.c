@@ -837,17 +837,8 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 
 	upg = upd_getpriv(upd);
 	rc = slm_fcmh_get(&upg->upg_fg, &f);
-	if (rc) {
-		struct slm_wkdata_upsch_purge *wk;
-
-		if (rc == ENOENT) {
-			wk = pfl_workq_getitem(slm_wk_upsch_purge,
-			    struct slm_wkdata_upsch_purge);
-			wk->fid = upg->upg_fg.fg_fid;
-			pfl_workq_putitem(wk);
-		}
+	if (rc)
 		goto out;
-	}
 	rc = mds_bmap_load(f, upg->upg_bno, &b);
 	if (rc)
 		goto out;
@@ -869,6 +860,16 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 		upsch_enqueue(bmap_2_upd(b), iosv, n);
 
  out:
+	if (rc) {
+		struct slm_wkdata_upsch_purge *wk;
+
+		if (rc == ENOENT) {
+			wk = pfl_workq_getitem(slm_wk_upsch_purge,
+			    struct slm_wkdata_upsch_purge);
+			wk->fid = upg->upg_fg.fg_fid;
+			pfl_workq_putitem(wk);
+		}
+	}
 	if (b)
 		bmap_op_done(b);
 	if (f)
