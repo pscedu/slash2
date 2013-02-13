@@ -239,7 +239,6 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	pscrpc_completion_set(rq, &rpcComp);
 
-	atomic_inc(&outstandingRpcCnt);
 
 	mq->offset = bwc->bwc_soff;
 	mq->size = bwc->bwc_size;
@@ -257,6 +256,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	if (pscrpc_nbreqset_add(pndgWrtReqs, rq))
 		goto error;
 
+	atomic_inc(&outstandingRpcCnt);
 	return (rq);
 
  error:
