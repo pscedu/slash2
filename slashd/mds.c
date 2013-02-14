@@ -160,9 +160,9 @@ mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw,
 		 * Since the bmap is not yet in DIO mode, ensure only
 		 * one lease is present and that a write bml exists.
 		 */
-		psc_assert(pll_nitems(&bmi->bmdsi_leases) == 1);
+		psc_assert(pll_nitems(&bmi->bmi_leases) == 1);
 
-		tmp = tmp1 = pll_peektail(&bmi->bmdsi_leases);
+		tmp = tmp1 = pll_peektail(&bmi->bmi_leases);
 		do {
 			if (tmp->bml_flags & BML_WRITE)
 				wtrs++;
@@ -243,7 +243,7 @@ mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw,
 		 * courtesy callbacks to the readers so they will avoid
 		 * stale cached data.
 		 */
-		PLL_FOREACH(bml, &bmi->bmdsi_leases) {
+		PLL_FOREACH(bml, &bmi->bmi_leases) {
 			tmp = bml;
 			do {
 				psc_assert(bml->bml_flags & BML_READ &&
@@ -679,7 +679,7 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
  * mds_bmap_dupls_find - Find the first lease of a given client based on
  *	its {nid, pid} pair.  Also walk the chain of duplicate leases to
  *	count the number of read and write leases.  Note that only the
- *	first lease of a client is linked on the bmi->bmdsi_leases
+ *	first lease of a client is linked on the bmi->bmi_leases
  *	list, the rest is linked on a private chain and tagged with
  *	BML_CHAIN flag.
  */
@@ -692,7 +692,7 @@ mds_bmap_dupls_find(struct bmap_mds_info *bmi, lnet_process_id_t *cnp,
 	*rlease = 0;
 	*wlease = 0;
 
-	PLL_FOREACH(tmp, &bmi->bmdsi_leases) {
+	PLL_FOREACH(tmp, &bmi->bmi_leases) {
 		if (tmp->bml_cli_nidpid.nid != cnp->nid ||
 		    tmp->bml_cli_nidpid.pid != cnp->pid)
 			continue;
@@ -828,7 +828,7 @@ mds_bmap_getbml_locked(struct bmapc_memb *b, uint64_t seq, uint64_t nid,
 	BMAP_LOCK_ENSURE(b);
 
 	bmi = bmap_2_bmi(b);
-	PLL_FOREACH(bml, &bmi->bmdsi_leases) {
+	PLL_FOREACH(bml, &bmi->bmi_leases) {
 		if (bml->bml_cli_nidpid.nid != nid ||
 		    bml->bml_cli_nidpid.pid != pid)
 			continue;
@@ -912,7 +912,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 	} else {
 		/* First on the list. */
 		bml->bml_chain = bml;
-		pll_addtail(&bmi->bmdsi_leases, bml);
+		pll_addtail(&bmi->bmi_leases, bml);
 	}
 
 	bml->bml_flags |= BML_BMI;
@@ -1037,7 +1037,7 @@ mds_bmap_bml_del_locked(struct bmap_mds_lease *bml)
 	} else {
 		psc_assert(obml == bml);
 		psc_assert(!(bml->bml_flags & BML_CHAIN));
-		pll_remove(&bmi->bmdsi_leases, bml);
+		pll_remove(&bmi->bmi_leases, bml);
 
 		if ((wlease + rlease) > 1) {
 			psc_assert(bml->bml_chain->bml_flags & BML_CHAIN);
@@ -1045,7 +1045,7 @@ mds_bmap_bml_del_locked(struct bmap_mds_lease *bml)
 			    &bml->bml_chain->bml_bmdsi_lentry));
 
 			bml->bml_chain->bml_flags &= ~BML_CHAIN;
-			pll_addtail(&bmi->bmdsi_leases, bml->bml_chain);
+			pll_addtail(&bmi->bmi_leases, bml->bml_chain);
 
 			tail->bml_chain = bml->bml_chain;
 		} else
@@ -2114,7 +2114,7 @@ slm_ptrunc_prepare(void *p)
 
 			BMAP_LOCK(b);
 		}
-		if (pll_nitems(&bmap_2_bmi(b)->bmdsi_leases))
+		if (pll_nitems(&bmap_2_bmi(b)->bmi_leases))
 			wait = 1;
 		bmap_op_done(b);
 	}

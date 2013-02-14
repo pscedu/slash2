@@ -59,7 +59,7 @@ struct bmap_mds_info {
 	struct bmap_extra_state	 bmi_extrastate;
 
 	struct resm_mds_info	*bmdsi_wr_ion;		/* pointer to write ION */
-	struct psc_lockedlist	 bmdsi_leases;		/* tracked bmap leases */
+	struct psc_lockedlist	 bmi_leases;		/* tracked bmap leases */
 	struct odtable_receipt	*bmdsi_assign;
 	uint64_t		 bmdsi_seq;		/* Largest write bml seq # */
 	uint32_t		 bmdsi_xid;		/* last op recv'd from ION */
@@ -212,7 +212,7 @@ struct bmap_mds_lease {
 #define BML_TRYLOCK(bml)	trylock(&(bml)->bml_lock)
 
 #define BMAP_FOREACH_LEASE(b, bml)					\
-	PLL_FOREACH((bml), &bmap_2_bmi(b)->bmdsi_leases)
+	PLL_FOREACH((bml), &bmap_2_bmi(b)->bmi_leases)
 
 /**
  * bmap_ios_assign - The structure used for tracking the MDS's bmap/ion
