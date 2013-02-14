@@ -426,6 +426,11 @@ reimport
 - parse /proc/mounts if it's there for sliod statfs f_fstype
 - during upsch repl PAGEIN, do we do two SQL, one for loading the work
   then one for loading the recpt?  optimize this if so
+- pfl/compat.h must have universal values for constants, so avoid this
+  approach altogether and use portable constants instead
+- unlink $mp/.slfidns/$fid produces EBADF
+- can replrq race with general I/O to end up with bmap in no valid
+  replica states?
 
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
@@ -446,19 +451,6 @@ reimport
 - prod miami, psu, iowa
 
 - read DIBS proposal
-- SLASH2 constraints
-  - multiple writers, etc.
-  - flock/lockf advisory etc. semantics
-  - 
-
-
-
-
-
-
-
-
-
 
 
 
