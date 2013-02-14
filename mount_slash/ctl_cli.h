@@ -83,6 +83,7 @@ struct msctlmsg_fncmd {
 #define MSCMT_GET_NEWREPLPOL	(NPCMT +  7)
 #define MSCMT_SET_BMAPREPLPOL	(NPCMT +  8)
 #define MSCMT_SET_NEWREPLPOL	(NPCMT +  9)
+#define MSCMT_GETBMAP		(NPCMT + 10)
 
 #define SLASH_FSID		0x51a54
 

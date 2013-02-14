@@ -472,6 +472,17 @@ slictlrep_getreplwkst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
+int
+slctlmsg_bmap_send(int fd, struct psc_ctlmsghdr *mh,
+    struct slctlmsg_bmap *scb, struct bmap *b)
+{
+	scb->scb_fg = b->bcm_fcmh->fcmh_fg;
+	scb->scb_bno = b->bcm_bmapno;
+	scb->scb_opcnt = psc_atomic32_read(&b->bcm_opcnt);
+	scb->scb_flags = b->bcm_flags;
+	return (psc_ctlmsg_sendv(fd, mh, scb));
+}
+
 /**
  * slictlcmd_stop - Handle a STOP command to terminate execution.
  */

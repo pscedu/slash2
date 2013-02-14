@@ -33,6 +33,7 @@
 #include "psc_util/ctlsvr.h"
 #include "psc_util/net.h"
 
+#include "bmap.h"
 #include "ctl.h"
 #include "ctl_cli.h"
 #include "ctlsvr.h"
@@ -460,6 +461,17 @@ msctlparam_offlinenretries_set(const char *val)
 	return (0);
 }
 
+int
+slctlmsg_bmap_send(int fd, struct psc_ctlmsghdr *mh,
+    struct slctlmsg_bmap *scb, struct bmap *b)
+{
+	scb->scb_fg = b->bcm_fcmh->fcmh_fg;
+	scb->scb_bno = b->bcm_bmapno;
+	scb->scb_opcnt = psc_atomic32_read(&b->bcm_opcnt);
+	scb->scb_flags = b->bcm_flags;
+	return (psc_ctlmsg_sendv(fd, mh, scb));
+}
+
 struct psc_ctlop msctlops[] = {
 	PSC_CTLDEFOPS,
 /* ADDREPLRQ		*/ { msctlrep_replrq,		sizeof(struct msctlmsg_replrq) },
@@ -471,7 +483,8 @@ struct psc_ctlop msctlops[] = {
 /* GET_BMAPREPLPOL	*/ { NULL,			0 },
 /* GET_NEWREPLPOL	*/ { NULL,			0 },
 /* SET_BMAPREPLPOL	*/ { msctlhnd_set_bmapreplpol,	sizeof(struct msctlmsg_bmapreplpol) },
-/* SET_NEWREPLPOL	*/ { msctlhnd_set_newreplpol,	sizeof(struct msctlmsg_newreplpol) }
+/* SET_NEWREPLPOL	*/ { msctlhnd_set_newreplpol,	sizeof(struct msctlmsg_newreplpol) },
+/* GETBMAP		*/ { slctlrep_getbmap,		sizeof(struct slctlmsg_bmap) }
 };
 
 psc_ctl_thrget_t psc_ctl_thrgets[] = {

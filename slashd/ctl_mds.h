@@ -35,20 +35,6 @@ struct slmctlmsg_statfs {
 	struct srt_statfs	scsf_ssfb;
 };
 
-/* bmap lease */
-struct slmctlmsg_bml {
-	char			scbl_resname[RES_NAME_MAX];
-	struct slash_fidgen	scbl_fg;
-	sl_bmapno_t		scbl_bno;
-	sl_bmapgen_t		scbl_bgen;
-	uint64_t		scbl_seq;
-	char			scbl_client[PSCRPC_NIDSTR_SIZE];
-	uint32_t		scbl_flags;
-	uint32_t		scbl_ndups;
-	uint64_t		scbl_start;
-	uint64_t		scbl_expire;
-};
-
 /* slrmcthr stats */
 #define pcst_nopen		pcst_u32_1
 #define pcst_nstat		pcst_u32_2
