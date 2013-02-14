@@ -251,7 +251,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	memcpy(&mq->sbd, &bmap_2_bci(b)->bci_sbd, sizeof(mq->sbd));
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 
-	/* biorqs will be freed by the nbreqset callback. */
+	/* biorqs will be freed by the nbreqset callback msl_write_rpc_cb() */
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQS] = bwc;
 	if (pscrpc_nbreqset_add(pndgWrtReqs, rq))
 		goto error;
