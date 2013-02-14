@@ -152,7 +152,7 @@ mdscoh_req(struct bmap_mds_lease *bml)
 	struct srm_bmap_dio_rep *mp;
 	int rc = 0;
 
-	DEBUG_BMAP(PLL_NOTIFY, bml_2_bmap(bml), "bml=%p", bml);
+	DEBUG_BMAP(PLL_INFO, bml_2_bmap(bml), "bml=%p", bml);
 
 	BML_LOCK(bml);
 	if (bml->bml_flags & BML_RECOVER) {
