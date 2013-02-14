@@ -382,7 +382,7 @@ reimport
   changes (for directories)
 - test msctl -Q <symlink>
 - journal log ino_repl_nblks modifications
-- fix sliod connection bug visible from slmctl
+- fix sliod connection linger bug visible from slmctl
 - fix mount_slash multiple connection bug visible from slmctl
    (o) should be fixed by new connthr diff
 - uptime instance nonce variable that allows msl to dump data if it
@@ -392,7 +392,7 @@ reimport
 - convert MDS rcmc.c to async RPCs
 - add du(1) functionality in dumpfid via extattr
 - add slmctl -ss fstypes (use statfs(2) on fbsd/linux and f_type)
-- make macro version of accessors for speed (e.g. bmap_2_bmi())
+- make macro version of accessors for speed in gdb (e.g. bmap_2_bmi())
   inline are for debugging/gdb
 - expose SLASH2 non-POSIX (e.g. repl) interface through extattr magic
 - sliod backend for
@@ -422,6 +422,7 @@ reimport
 - upsch multiwait doesn't work; bring an IOS up and down and work doesnt
   get scheduled
 - client should not post errors from SLERR_AIOWAIT on WRITE/READ RPC
+- scan for zeroed/corrupt regions on recent files
 - parse /proc/mounts if it's there for sliod statfs f_fstype
 - during upsch repl PAGEIN, do we do two SQL, one for loading the work
   then one for loading the recpt?  optimize this if so
@@ -431,3 +432,35 @@ reimport
    (o) attr buf size needs be dynamically sized
    (o) predictive/readahead async READDIR to make large directory
        listings fast
+
+
+- send bug reports into some kind of arch-robot-admin@ list
+- vecnet?  nstone
+-
+
+
+
+- slash2 license
+
+- tarfs
+- prod miami, psu, iowa
+
+- read DIBS proposal
+- SLASH2 constraints
+  - multiple writers, etc.
+  - flock/lockf advisory etc. semantics
+  - 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
