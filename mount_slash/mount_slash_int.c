@@ -925,7 +925,7 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 		DEBUG_REQ(rc ? PLL_ERROR : PLL_INFO, rq,
 		    "bmap=%p biorq=%p", b, r);
 
-	psc_fault_here_rc(SLC_FAULT_READ_CB_EIO, &rc, EIO);
+	(void)psc_fault_here_rc(SLC_FAULT_READ_CB_EIO, &rc, EIO);
 
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b, "sbd_seq=%"PRId64,
 	    bmap_2_sbd(b)->sbd_seq);
@@ -990,7 +990,7 @@ msl_readahead_cb(struct pscrpc_request *rq, int rc,
 	if (rq)
 		DEBUG_REQ(PLL_INFO, rq, "bmpces=%p", bmpces);
 
-	psc_fault_here_rc(SLC_FAULT_READAHEAD_CB_EIO, &rc, EIO);
+	(void)psc_fault_here_rc(SLC_FAULT_READAHEAD_CB_EIO, &rc, EIO);
 
 	for (i = 0, e = bmpces[0], b = e->bmpce_owner; e;
 	    i++, e = bmpces[i]) {
@@ -1546,7 +1546,8 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 		psc_dynarray_add(a, e);
 	}
 
-	psc_fault_here_rc(SLC_FAULT_READRPC_OFFLINE, &rc, -ENOTCONN);
+	(void)psc_fault_here_rc(SLC_FAULT_READRPC_OFFLINE, &rc,
+	    -ENOTCONN);
 	if (rc)
 		PFL_GOTOERR(error, rc);
 	csvc = msl_bmap_to_csvc(r->biorq_bmap,
