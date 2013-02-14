@@ -548,7 +548,10 @@ slctlmsg_bmap_send(int fd, struct psc_ctlmsghdr *mh,
     struct slctlmsg_bmap *scb, struct bmap *b)
 {
 	struct bmap_mds_lease *bml, *t;
+	struct bmap_mds_info *bmi;
 	int rc = 1;
+
+	bmi = bmap_2_bmi(b);
 
 	scb->scb_fg = b->bcm_fcmh->fcmh_fg;
 	scb->scb_bno = b->bcm_bmapno;
@@ -563,7 +566,8 @@ slctlmsg_bmap_send(int fd, struct psc_ctlmsghdr *mh,
 		    libsl_id2res(bml->bml_ios)->res_name : "<any>",
 		    sizeof(scb->scb_resname));
 		scb->scb_seq = bml->bml_seq;
-		scb->scb_key = bml->bml_key;
+		scb->scb_key = bmi->bmdsi_assign ?
+		    bmi->bmdsi_assign->odtr_key : BMAPSEQ_ANY;
 		scb->scb_lflags = bml->bml_flags;
 		scb->scb_start = bml->bml_start;
 		scb->scb_expire = bml->bml_expire;
@@ -582,7 +586,7 @@ slctlmsg_bmap_send(int fd, struct psc_ctlmsghdr *mh,
 
 struct psc_ctlop slmctlops[] = {
 	PSC_CTLDEFOPS,
-	{ slmctlrep_getbml,		sizeof(struct slmctlmsg_bml) },
+	{ slctlrep_getbmap,		sizeof(struct slctlmsg_bmap) },
 	{ slctlrep_getconn,		sizeof(struct slctlmsg_conn) },
 	{ slctlrep_getfcmh,		sizeof(struct slctlmsg_fcmh) },
 	{ slmctlrep_getreplpairs,	sizeof(struct slmctlmsg_replpair) },

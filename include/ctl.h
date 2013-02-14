@@ -56,11 +56,11 @@ struct slctlmsg_bmap {
 	 int32_t		scb_opcnt;
 
 	/* lease */
-	uint64_t		sbd_seq;
-	uint64_t		sbd_key;
+	uint64_t		scb_seq;
+	uint64_t		scb_key;
 	char			scb_resname[RES_NAME_MAX];
 	char			scb_client[PSCRPC_NIDSTR_SIZE];
-	uint32_t		sbd_lflags;
+	uint32_t		scb_lflags;
 
 	/* lease metadata */
 	uint32_t		scb_ndups;

@@ -225,7 +225,7 @@ struct srt_bmapdesc {
 	uint32_t		sbd_pid;
 	sl_ios_id_t		sbd_ios;
 	sl_bmapno_t		sbd_bmapno;
-	uint32_t		sbd_flags;
+	uint32_t		sbd_flags;	/* SRM_LEASEBMAPF_* */
 } __packed;
 
 /* SLASH RPC transportably safe structures. */

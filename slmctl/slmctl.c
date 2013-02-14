@@ -105,7 +105,7 @@ packshow_statfs(__unusedx char *pair)
 void
 packshow_bml(__unusedx char *pair)
 {
-	psc_ctlmsg_push(SLMCMT_GETBML, sizeof(struct slmctlmsg_bml));
+	psc_ctlmsg_push(SLMCMT_GETBMAP, sizeof(struct slctlmsg_bmap));
 }
 
 void
@@ -226,7 +226,7 @@ struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 
 struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 	PSC_CTLMSG_PRFMT_DEFS,
-	{ sl_bmap_prhdr,	sl_bmap_prdat,		sizeof(struct slctlmsg_bml),		NULL },
+	{ sl_bmap_prhdr,	sl_bmap_prdat,		sizeof(struct slctlmsg_bmap),		NULL },
 	{ sl_conn_prhdr,	sl_conn_prdat,		sizeof(struct slctlmsg_conn),		NULL },
 	{ sl_fcmh_prhdr,	sl_fcmh_prdat,		sizeof(struct slctlmsg_fcmh),		NULL },
 	{ slm_replpair_prhdr,	slm_replpair_prdat,	sizeof(struct slmctlmsg_replpair),	NULL },

@@ -41,7 +41,7 @@ struct slmctlmsg_statfs {
 #define pcst_nclose		pcst_u32_3
 
 /* slashd message types */
-#define SLMCMT_GETBML		(NPCMT + 0)
+#define SLMCMT_GETBMAP		(NPCMT + 0)
 #define SLMCMT_GETCONNS		(NPCMT + 1)
 #define SLMCMT_GETFCMHS		(NPCMT + 2)
 #define SLMCMT_GETREPLPAIRS	(NPCMT + 3)
