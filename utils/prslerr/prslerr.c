@@ -77,6 +77,7 @@ main(int argc, char *argv[])
 	printf("%4d [SLERR_ALREADY]: %s\n", SLERR_ALREADY, slstrerror(SLERR_ALREADY));
 	printf("%4d [SLERR_CRCABSENT]: %s\n", SLERR_CRCABSENT, slstrerror(SLERR_CRCABSENT));
 	printf("%4d [SLERR_BADMSG]: %s\n", SLERR_BADMSG, slstrerror(SLERR_BADMSG));
+	printf("%4d [SLERR_KEYEXPIRED]: %s\n", SLERR_KEYEXPIRED, slstrerror(SLERR_KEYEXPIRED));
 	/* end custom errnos */
 	exit(0);
 }
