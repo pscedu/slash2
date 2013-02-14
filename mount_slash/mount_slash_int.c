@@ -1084,7 +1084,7 @@ msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 			}
 
 		if (maxretries)
-			bmpc_biorqs_fail(bmap_2_bmpc(r->biorq_bmap), rc, 
+			bmpc_biorqs_fail(bmap_2_bmpc(r->biorq_bmap), rc,
 				BIORQ_MAXRETRIES);
 	}
 
@@ -1129,8 +1129,9 @@ msl_dio_cb(struct pscrpc_request *rq, int rc, struct pscrpc_async_args *args)
 		mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 		psc_assert(mq);
 
-		DEBUG_BIORQ(PLL_INFO, r, "dio complete (op=%d) off=%u sz=%u rc=%d",
-	    		op, mq->offset, mq->size, rc);
+		DEBUG_BIORQ(PLL_INFO, r,
+		    "dio complete (op=%d) off=%u sz=%u rc=%d",
+		    op, mq->offset, mq->size, rc);
 	}
 
 	q = r->biorq_fsrqi;
@@ -1262,17 +1263,10 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	 * Async I/O registered by sliod; we must wait for a
 	 * notification from him when it is ready.
 	 */
-	switch (rc) {
-	case 0:
+	if (rc == 0)
 		psc_iostats_intv_add((op == SRMT_WRITE ?
 		    &msl_diowr_stat : &msl_diord_stat), size);
-	case -SLERR_AIOWAIT:
-	case -EKEYEXPIRED:
-	default:
-		goto out;
-	}
 
- out:
 	PSCFREE(iovs);
 	sl_csvc_decref(csvc);
 
@@ -1760,6 +1754,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 		BIORQ_SETATTR(r, BIORQ_SCHED);
 	if (rc)
 		goto out;
+
 	/*
 	 * Wait for all read activities (include RBW) associated with the
 	 * bioreq to complete.
@@ -2127,7 +2122,7 @@ msl_update_attributes(struct msl_fsrqinfo *q)
 	if (q->mfsrq_off + q->mfsrq_len > fcmh_2_fsz(f)) {
 		psclog_info("fid: "SLPRI_FID", "
 		    "size from %"PRId64" to %"PRId64,
-		    fcmh_2_fid(f), fcmh_2_fsz(f), 
+		    fcmh_2_fid(f), fcmh_2_fsz(f),
 		    q->mfsrq_off + q->mfsrq_len);
 		fcmh_2_fsz(f) = q->mfsrq_off + q->mfsrq_len;
 	}
