@@ -66,5 +66,6 @@ char *slstrerror(int);
 /* 33 - reuse me */
 #define SLERR_CRCABSENT			(_SLERR_START + 34)
 #define SLERR_BADMSG			(_SLERR_START + 35)
+#define SLERR_KEYEXPIRED		(_SLERR_START + 36)
 
 #endif /* _SLERR_H_ */

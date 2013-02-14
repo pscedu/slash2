@@ -61,6 +61,7 @@ char *slash_errstrs[] = {
 /* 33 */ "Argument list too long",
 /* 34 */ "CRC absent",
 /* 35 */ "Bad message",
+/* 36 */ "Key expired",
 	NULL
 };
 
