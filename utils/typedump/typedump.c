@@ -250,7 +250,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct slm_wkdata_upsch_cb);
 	PRTYPE(struct slm_wkdata_upsch_purge);
 	PRTYPE(struct slm_wkdata_wr_brepl);
-	PRTYPE(struct slmctlmsg_bml);
 	PRTYPE(struct slmctlmsg_replpair);
 	PRTYPE(struct slmctlmsg_statfs);
 	PRTYPE(struct slmds_jent_assign_rep);
@@ -395,6 +394,7 @@ main(int argc, char *argv[])
 	PRVAL(MRSLF_EOF);
 	PRVAL(MSCMT_ADDREPLRQ);
 	PRVAL(MSCMT_DELREPLRQ);
+	PRVAL(MSCMT_GETBMAP);
 	PRVAL(MSCMT_GETCONNS);
 	PRVAL(MSCMT_GETFCMH);
 	PRVAL(MSCMT_GETREPLST);
