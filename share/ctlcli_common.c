@@ -38,6 +38,8 @@
 #include "slconfig.h"
 #include "slconn.h"
 
+#include "slashd/bmap_mds.h"
+
 __static const char *slconn_restypes[] = {
 	"client",
 	"archival",
@@ -155,17 +157,32 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 void
 sl_bmap_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	printf("%-16s %10s %-18s %7s\n",
-	    "fid", "bno", "flags", "refs");
+	printf("%-16s %6s %-18s %7s "
+	    "%16s %15s %13s %9s\n",
+	    "fid", "bmapno", "flags", "refs",
+	    "ios", "client", "lflags", "seqno");
 }
 
 void
 sl_bmap_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 {
 	const struct slctlmsg_bmap *scb = m;
+	char *p, cli[PSCRPC_NIDSTR_SIZE];
+	size_t n;
 
-	printf("%016"SLPRIxFID" %10d "
-	    "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c %7u\n",
+	strlcpy(cli, scb->scb_client, sizeof(cli));
+	p = strchr(cli, '@');
+	if (p)
+		*p = '\0';
+	p = cli;
+	n = strcspn(p, "-");
+	if (n)
+		p += n + 1;
+
+	printf("%016"SLPRIxFID" %6d "
+	    "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c %7u\n"
+	    "%16s %15s %c%c%c%c%c%c%c%c%c%c%c%c%c "
+	    "",
 	    scb->scb_fg.fg_fid, scb->scb_bno,
 	    scb->scb_flags & BMAP_RD		? 'R' : '-',
 	    scb->scb_flags & BMAP_WR		? 'W' : '-',
@@ -185,7 +202,21 @@ sl_bmap_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    scb->scb_flags & BMAP_NEW		? 'N' : '-',
 	    scb->scb_flags & BMAP_ARCHIVER	? 'C' : '-',
 	    scb->scb_flags & BMAP_REPLAY	? 'P' : '-',
-	    scb->scb_opcnt);
+	    scb->scb_opcnt, scb->scb_resname, p,
+	    scb->scb_lflags & BML_READ		? 'R' : '-',
+	    scb->scb_lflags & BML_WRITE		? 'W' : '-',
+	    scb->scb_lflags & BML_CDIO		? 'I' : '-',
+	    scb->scb_lflags & BML_COHDIO	? 'D' : '-',
+	    scb->scb_lflags & BML_TIMEOQ	? 'T' : '-',
+	    scb->scb_lflags & BML_BMI		? 'B' : '-',
+	    scb->scb_lflags & BML_RECOVER	? 'V' : '-',
+	    scb->scb_lflags & BML_CHAIN		? 'N' : '-',
+	    scb->scb_lflags & BML_UPGRADE	? 'U' : '-',
+	    scb->scb_lflags & BML_FREEING	? 'F' : '-',
+	    scb->scb_lflags & BML_ASSFAIL	? 'S' : '-',
+	    scb->scb_lflags & BML_REASSIGN	? 'A' : '-',
+	    scb->scb_lflags & BML_RECOVERFAIL	? 'L' : '-',
+	    scb->scb_seq);
 }
 
 #ifdef _SLASH_MDS
