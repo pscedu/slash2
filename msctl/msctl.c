@@ -741,7 +741,8 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 /* GET_BMAPREPLPOL	*/ { fnstat_prhdr,	fnstat_prdat,	0,				NULL },
 /* GET_NEWREPLPOL	*/ { fnstat_prhdr,	fnstat_prdat,	0,				NULL },
 /* SET_BMAPREPLPOL	*/ { NULL,		NULL,		0,				NULL },
-/* SET_NEWREPLPOL	*/ { NULL,		NULL,		0,				NULL }
+/* SET_NEWREPLPOL	*/ { NULL,		NULL,		0,				NULL },
+/* GETBMAP		*/ { sl_bmap_prhdr,	sl_bmap_prdat,	sizeof(struct slctlmsg_bmap),	NULL }
 };
 
 psc_ctl_prthr_t psc_ctl_prthrs[] = {
