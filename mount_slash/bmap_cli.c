@@ -246,8 +246,8 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 				bmap_orphan(b);
 
 			BMAP_SETATTR(b, BMAP_CLI_LEASEEXPIRED);
-			bmpc_biorqs_fail(bmap_2_bmpc(b), rc, 
-				BIORQ_EXPIREDLEASE);
+			bmpc_biorqs_fail(bmap_2_bmpc(b), rc,
+			    BIORQ_EXPIREDLEASE);
 		}
 	}
 
@@ -623,6 +623,7 @@ msl_bmap_reap_init(struct bmapc_memb *b, const struct srt_bmapdesc *sbd)
 	    &bci->bci_etime);
 	timespecadd(&bci->bci_xtime, &msl_bmap_max_lease,
 	    &bci->bci_xtime);
+
 	/*
 	 * Take the reaper ref cnt early and place the bmap onto the
 	 * reap list
@@ -632,7 +633,7 @@ msl_bmap_reap_init(struct bmapc_memb *b, const struct srt_bmapdesc *sbd)
 		b->bcm_flags |= BMAP_DIO;
 
 	/*
-	 * Is this a write for a archival fs?  If so, set the bmap for
+	 * Is this a write for an archival fs?  If so, set the bmap for
 	 * DIO.
 	 */
 	if (sbd->sbd_ios != IOS_ID_ANY && !(b->bcm_flags & BMAP_DIO)) {
