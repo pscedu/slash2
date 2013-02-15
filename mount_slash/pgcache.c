@@ -220,6 +220,8 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 {
 	struct bmpc_ioreq *r;
 	struct timespec issue;
+	long  inflight;
+	
 
 	r = psc_pool_get(slc_biorq_pool);
 
@@ -267,6 +269,12 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	BMAP_ULOCK(b);
 
 	OPSTAT_INCR(SLC_OPST_BIORQ_ALLOC);
+
+	inflight = OPSTAT_CURR(SLC_OPST_BIORQ_ALLOC) - 
+			OPSTAT_CURR(SLC_OPST_BIORQ_DESTROY);
+	if (inflight > OPSTAT_CURR(SLC_OPST_BIORQ_MAX))
+		OPSTAT_ASSIGN(SLC_OPST_BIORQ_MAX, inflight);
+
 	return (r);
 }
 
@@ -454,6 +462,9 @@ bmpc_global_init(void)
 
 	lc_reginit(&bmpcLru, struct bmap_pagecache, bmpc_lentry,
 	    "bmpclru");
+
+	/* make it visible */
+	OPSTAT_INCR(SLC_OPST_BIORQ_MAX);
 }
 
 #if PFL_DEBUG > 0
