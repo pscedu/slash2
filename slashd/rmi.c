@@ -151,6 +151,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 	for (i = 0, off = 0; i < mq->ncrc_updates; i++) {
 		struct srm_bmap_crcup *c = iovs[i].iov_base;
 		uint32_t j;
+		int rc;
 
 		/*
 		 * Does the bulk payload agree with the original
@@ -168,8 +169,10 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 				mp->crcup_rc[i] = -ERANGE;
 
 		/* Look up the bmap in the cache and write the CRCs. */
-		mp->crcup_rc[i] = mds_bmap_crc_write(c,
+		rc = mds_bmap_crc_write(c,
 		    libsl_nid2iosid(rq->rq_conn->c_peer.nid), mq);
+		if (rc)
+			mp->crcup_rc[i] = rc;
 		if (mp->crcup_rc[i])
 			psclog(mp->crcup_rc[i] == -SLERR_GEN_OLD ?
 			    PLL_INFO : PLL_ERROR,
