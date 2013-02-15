@@ -781,7 +781,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 
 	bwc = psc_pool_get(bwcPoolMgr);
 
-	for (idx = 0; idx + *indexp < psc_dynarray_len(biorqs); idx++) {
+	for (idx = 0; idx + *indexp < psc_dynarray_len(biorqs); idx++, e = t) {
 		t = psc_dynarray_getpos(biorqs, idx + *indexp);
 
 		psc_assert((t->biorq_flags & BIORQ_SCHED) &&
@@ -793,7 +793,6 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 			bwc->bwc_size = t->biorq_len;
 			bwc->bwc_soff = t->biorq_off;
 			pll_addtail(&bwc->bwc_pll, t);
-			e = t;
 		}
 
 		/*
@@ -833,7 +832,6 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 				}
 			}
 			pll_addtail(&bwc->bwc_pll, t);
-			e = t;
 
 		} else if (expired) {
 			/*
@@ -852,7 +850,6 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 			bwc->bwc_size = t->biorq_len;
 			bwc->bwc_soff = t->biorq_off;
 			pll_add(&bwc->bwc_pll, t);
-			e = t;
 		}
 	}
 
