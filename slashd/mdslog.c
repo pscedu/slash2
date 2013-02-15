@@ -1642,7 +1642,7 @@ mdslog_bmap_repls(void *datap, uint64_t txg, __unusedx int flag)
 	    struct slm_wkdata_wr_brepl);
 	wk->b = b;
 	bmap_op_start_type(b, BMAP_OPCNT_WORK);
-	pfl_workq_putitem(wk);
+	pfl_workq_putitem_head(wk);
 }
 
 /**
