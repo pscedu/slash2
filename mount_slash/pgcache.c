@@ -115,7 +115,7 @@ bmpce_lookup_locked(struct bmap_pagecache *bmpc, struct bmpc_ioreq *r,
 				DEBUG_BMPCE(PLL_WARN, e, "skip an EIO page");
 				BMPC_ULOCK(bmpc);
 				sched_yield();
-				OPSTAT_INCR(SLC_OPST_BIORQ_EIO_PAGE);
+				OPSTAT_INCR(SLC_OPST_BMPCE_EIO);
 				BMPC_LOCK(bmpc);
 				continue;
 			}
