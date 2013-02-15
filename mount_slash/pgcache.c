@@ -267,8 +267,14 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	BMAP_ULOCK(b);
 
 	OPSTAT_INCR(SLC_OPST_BIORQ_ALLOC);
-
 	return (r);
+}
+
+inline void
+bmpc_biorq_free(struct bmpc_ioreq *r)
+{
+	OPSTAT_INCR(SLC_OPST_BIORQ_DESTROY);
+	psc_pool_return(slc_biorq_pool, r);
 }
 
 /**

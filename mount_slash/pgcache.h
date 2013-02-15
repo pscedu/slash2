@@ -375,6 +375,9 @@ struct bmpc_ioreq *
 	 bmpc_biorq_new(struct msl_fsrqinfo *, struct bmapc_memb *,
 	    char *, int, uint32_t, uint32_t, int);
 
+inline void 	
+	bmpc_biorq_free(struct bmpc_ioreq *);
+
 int	 bmpce_init(struct psc_poolmgr *, void *);
 struct bmap_pagecache_entry *
 	 bmpce_lookup_locked(struct bmap_pagecache *, struct bmpc_ioreq *,

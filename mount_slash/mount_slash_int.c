@@ -496,7 +496,6 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 	psc_assert(!(r->biorq_flags & BIORQ_DESTROY));
 	r->biorq_flags |= BIORQ_DESTROY;
 
-	OPSTAT_INCR(SLC_OPST_BIORQ_DESTROY);
 	psc_assert(!(r->biorq_flags & (BIORQ_INFL | BIORQ_SCHED)));
 
 #if FHENT_EARLY_RELEASE
@@ -539,7 +538,7 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 	psc_waitq_destroy(&r->biorq_waitq);
 
 	mfh_decref(r->biorq_mfh);
-	psc_pool_return(slc_biorq_pool, r);
+	bmpc_biorq_free(r);
 }
 
 struct msl_fhent *
