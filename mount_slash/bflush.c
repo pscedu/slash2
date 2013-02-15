@@ -790,10 +790,10 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 			/* Assert 'lowest to highest' ordering. */
 			psc_assert(t->biorq_off >= e->biorq_off);
 		else {
-			e = t;
-			bwc->bwc_size = e->biorq_len;
-			bwc->bwc_soff = e->biorq_off;
+			bwc->bwc_size = t->biorq_len;
+			bwc->bwc_soff = t->biorq_off;
 			pll_addtail(&bwc->bwc_pll, t);
+			e = t;
 		}
 
 		/*
@@ -832,8 +832,8 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 					bwc->bwc_size += sz;
 				}
 			}
-			e = t;
 			pll_addtail(&bwc->bwc_pll, t);
+			e = t;
 
 		} else if (expired) {
 			/*
@@ -848,11 +848,11 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 			 * Otherwise, deschedule the current set and
 			 * resume activity with 't' as the base.
 			 */
-			e = t;
 			bwc_desched(bwc);
-			pll_add(&bwc->bwc_pll, e);
-			bwc->bwc_size = e->biorq_len;
-			bwc->bwc_soff = e->biorq_off;
+			bwc->bwc_size = t->biorq_len;
+			bwc->bwc_soff = t->biorq_off;
+			pll_add(&bwc->bwc_pll, t);
+			e = t;
 		}
 	}
 
