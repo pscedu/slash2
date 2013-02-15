@@ -40,14 +40,17 @@ _pfl_workq_getitem(int (*cb)(void *), size_t len)
 }
 
 void
-pfl_workq_putitem(void *p)
+_pfl_workq_putitem(void *p, int tails)
 {
 	struct pfl_workrq *wk;
 
 	psc_assert(p);
 	wk = PSC_AGP(p, -sizeof(*wk));
 	psclog_debug("placing work %p on queue", wk);
-	lc_addtail(&pfl_workq, wk);
+	if (tails)
+		lc_addtail(&pfl_workq, wk);
+	else
+		lc_addhead(&pfl_workq, wk);
 }
 
 void
@@ -61,7 +64,7 @@ pfl_wkthr_main(__unusedx struct psc_thread *thr)
 		p = PSC_AGP(wkrq, sizeof(*wkrq));
 		if (wkrq->wkrq_cbf(p)) {
 			LIST_CACHE_LOCK(&pfl_workq);
-			lc_addhead(&pfl_workq, wkrq);
+			lc_addtail(&pfl_workq, wkrq);
 			if (lc_nitems(&pfl_workq) == 1)
 				psc_waitq_waitrel_us(
 				    &pfl_workq.plc_wq_empty,

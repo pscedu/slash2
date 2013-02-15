@@ -38,7 +38,11 @@ struct pfl_workrq {
 void   pfl_wkthr_spawn(int, int, const char *);
 void *_pfl_workq_getitem(int (*)(void *), size_t);
 void   pfl_workq_init(size_t);
-void   pfl_workq_putitem(void *);
+void  _pfl_workq_putitem(void *, int);
+
+#define pfl_workq_putitem_head(p)	_pfl_workq_putitem((p), 0)
+#define pfl_workq_putitem_tail(p)	_pfl_workq_putitem((p), 1)
+#define pfl_workq_putitem(p)		_pfl_workq_putitem((p), 1)
 
 extern struct psc_listcache	pfl_workq;
 
