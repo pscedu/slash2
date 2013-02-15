@@ -250,6 +250,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slm_wkdata_upsch_cb);
 	PRTYPE(struct slm_wkdata_upsch_purge);
 	PRTYPE(struct slm_wkdata_wr_brepl);
+	PRTYPE(struct slmctlmsg_bml);
 	PRTYPE(struct slmctlmsg_replpair);
 	PRTYPE(struct slmctlmsg_statfs);
 	PRTYPE(struct slmds_jent_assign_rep);

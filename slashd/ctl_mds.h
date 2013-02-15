@@ -35,6 +35,21 @@ struct slmctlmsg_statfs {
 	struct srt_statfs	scsf_ssfb;
 };
 
+struct slmctlmsg_bml {
+	struct slash_fidgen	scbl_fg;
+	uint32_t		scbl_bno;
+	uint32_t		scbl_flags;
+	uint32_t		scbl_ndups;
+	 int32_t		_scbl_pad;
+
+	uint64_t		scbl_seq;
+	uint64_t		scbl_key;
+	uint64_t		scbl_start;	/* time_t */
+	uint64_t		scbl_expire;	/* time_t */
+	char			scbl_resname[RES_NAME_MAX];
+	char			scbl_client[PSCRPC_NIDSTR_SIZE];
+};
+
 /* slrmcthr stats */
 #define pcst_nopen		pcst_u32_1
 #define pcst_nstat		pcst_u32_2
@@ -47,3 +62,4 @@ struct slmctlmsg_statfs {
 #define SLMCMT_GETREPLPAIRS	(NPCMT + 3)
 #define SLMCMT_GETSTATFS	(NPCMT + 4)
 #define SLMCMT_STOP		(NPCMT + 5)
+#define SLMCMT_GETBML		(NPCMT + 6)

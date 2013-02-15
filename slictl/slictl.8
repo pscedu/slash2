@@ -337,12 +337,13 @@ The default is
 .\" }%
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/show.mdoc {
 .\"	show => {
+.\"		bmap		=> "In-memory bmaps",
 .\"		connections	=> "Status of\n.Tn SLASH\npeers on network",
 .\"		fidcache	=> ".Tn FID\n.Pq file- Ns Tn ID\ncache members",
-.\"		replwkst	=> "Status of active replications"
+.\"		replwkst	=> "Status of active replications",
 .\"	},
 .\"	pools => {
-.\"		bmap		=> "Block map structures"
+.\"		bmap		=> "Block map structures",
 .\"	},
 .\"	listcaches => {
 .\"		bmapReapQ	=> "Bmaps to be processed by reaper",
@@ -352,11 +353,11 @@ The default is
 .\"		fcmhbusy	=> "Files with pending activity e.g.\\&\n.Tn I/O",
 .\"		fcmhidle	=> "Clean\n.Pq reapable\nfiles",
 .\"		lruSlvrs	=> "Reapable bmap slivers",
-.\"		replwkpnd	=> "Pending replication work"
+.\"		replwkpnd	=> "Pending replication work",
 .\"	},
 .\"	hashtables => {
 .\"		fidc		=> "files\n.Po file\n.Tn ID\ncache\n.Pc",
-.\"		resnid		=> "network resources\n.Pq network Tn ID"
+.\"		resnid		=> "network resources\n.Pq network Tn ID",
 .\"	}
 .It Fl s Ar showspec
 Show values.

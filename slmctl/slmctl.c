@@ -210,6 +210,54 @@ slmctlcmd_stop(int ac, __unusedx char *av[])
 	psc_ctlmsg_push(SLMCMT_STOP, 0);
 }
 
+void
+slm_bml_prhdr(__unusedx struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
+{
+	printf("%-16s %6s %-16s "
+	    "%-15s %13s %9s\n",
+	    "bmap-lease-fid", "bmapno", "io-system",
+	    "client", "flags", "seqno");
+}
+
+void
+slm_bml_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
+{
+	const struct slmctlmsg_bml *scbl = m;
+	char *p, cli[PSCRPC_NIDSTR_SIZE];
+	size_t n;
+
+	strlcpy(cli, scbl->scbl_client, sizeof(cli));
+	p = strchr(cli, '@');
+	if (p)
+		*p = '\0';
+	p = cli;
+	n = strcspn(p, "-");
+	if (n)
+		p += n + 1;
+
+	printf("%016"SLPRIxFID" %6u "
+	    "%-16.16s %-15s "
+	    "%c%c%c%c%c%c%c%c%c%c%c%c%c "
+	    "%9"PRIu64"\n",
+	    scbl->scbl_fg.fg_fid, scbl->scbl_bno,
+	    scbl->scbl_resname, p,
+	    scbl->scbl_flags & BML_READ		? 'R' : '-',
+	    scbl->scbl_flags & BML_WRITE	? 'W' : '-',
+	    scbl->scbl_flags & BML_CDIO		? 'I' : '-',
+	    scbl->scbl_flags & BML_COHDIO	? 'D' : '-',
+	    scbl->scbl_flags & BML_TIMEOQ	? 'T' : '-',
+	    scbl->scbl_flags & BML_BMI		? 'B' : '-',
+	    scbl->scbl_flags & BML_RECOVER	? 'V' : '-',
+	    scbl->scbl_flags & BML_CHAIN	? 'N' : '-',
+	    scbl->scbl_flags & BML_UPGRADE	? 'U' : '-',
+	    scbl->scbl_flags & BML_FREEING	? 'F' : '-',
+	    scbl->scbl_flags & BML_ASSFAIL	? 'S' : '-',
+	    scbl->scbl_flags & BML_REASSIGN	? 'A' : '-',
+	    scbl->scbl_flags & BML_RECOVERFAIL	? 'L' : '-',
+	    scbl->scbl_seq);
+}
+
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 	PSC_CTLSHOW_DEFS,
 	{ "bml",		packshow_bml },
@@ -231,7 +279,8 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 	{ sl_fcmh_prhdr,	sl_fcmh_prdat,		sizeof(struct slctlmsg_fcmh),		NULL },
 	{ slm_replpair_prhdr,	slm_replpair_prdat,	sizeof(struct slmctlmsg_replpair),	NULL },
 	{ slm_statfs_prhdr,	slm_statfs_prdat,	sizeof(struct slmctlmsg_statfs),	NULL },
-	{ NULL,			NULL,			0,					NULL }
+	{ NULL,			NULL,			0,					NULL },
+	{ slm_bml_prhdr,	slm_bml_prdat,		sizeof(struct slmctlmsg_bml),		NULL }
 };
 
 psc_ctl_prthr_t psc_ctl_prthrs[] = {
@@ -270,7 +319,8 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-HIn] [-p paramspec] [-S socket] [-s value] [cmd arg ...]\n",
+	    "usage: %s [-HIn] [-p paramspec] [-S socket] [-s value] "
+	    "[cmd arg ...]\n",
 	    progname);
 	exit(1);
 }

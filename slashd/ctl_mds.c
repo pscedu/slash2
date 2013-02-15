@@ -547,40 +547,57 @@ int
 slctlmsg_bmap_send(int fd, struct psc_ctlmsghdr *mh,
     struct slctlmsg_bmap *scb, struct bmap *b)
 {
-	struct bmap_mds_lease *bml, *t;
-	struct bmap_mds_info *bmi;
-	int rc = 1;
-
-	bmi = bmap_2_bmi(b);
-
 	scb->scb_fg = b->bcm_fcmh->fcmh_fg;
 	scb->scb_bno = b->bcm_bmapno;
 	BHGEN_GET(b, &scb->scb_bgen);
 	scb->scb_flags = b->bcm_flags;
 	scb->scb_opcnt = psc_atomic32_read(&b->bcm_opcnt);
+	return (psc_ctlmsg_sendv(fd, mh, scb));
+}
 
-	PLL_LOCK(&bmi->bmi_leases);
-	PLL_FOREACH(bml, &bmi->bmi_leases) {
-		strlcpy(scb->scb_resname,
+/**
+ * slmctlrep_getbml - Send a response to a "GETBML" inquiry.
+ * @fd: client socket descriptor.
+ * @mh: already filled-in control message header.
+ * @m: control message to examine and reuse.
+ */
+int
+slmctlrep_getbml(int fd, struct psc_ctlmsghdr *mh, void *m)
+{
+	struct slmctlmsg_bml *scbl = m;
+	struct bmap_mds_lease *bml, *t;
+	struct psc_lockedlist *pll;
+	struct bmap_mds_info *bmi;
+	int rc = 1;
+
+	pll = &mdsBmapTimeoTbl.btt_leases;
+	PLL_LOCK(pll);
+	PLL_FOREACH(bml, pll) {
+		bmi = bml->bml_bmdsi;
+		memset(scbl, 0, sizeof(*scbl));
+		BML_LOCK(bml);
+		strlcpy(scbl->scbl_resname,
 		    bml->bml_ios && bml->bml_ios != IOS_ID_ANY ?
 		    libsl_id2res(bml->bml_ios)->res_name : "<any>",
-		    sizeof(scb->scb_resname));
-		scb->scb_seq = bml->bml_seq;
-		scb->scb_key = bmi->bmdsi_assign ?
+		    sizeof(scbl->scbl_resname));
+		scbl->scbl_fg = bml_2_bmap(bml)->bcm_fcmh->fcmh_fg;
+		scbl->scbl_bno = bml_2_bmap(bml)->bcm_bmapno;
+		scbl->scbl_seq = bml->bml_seq;
+		scbl->scbl_key = bmi->bmdsi_assign ?
 		    bmi->bmdsi_assign->odtr_key : BMAPSEQ_ANY;
-		scb->scb_lflags = bml->bml_flags;
-		scb->scb_start = bml->bml_start;
-		scb->scb_expire = bml->bml_expire;
-		pscrpc_id2str(bml->bml_cli_nidpid, scb->scb_client);
-		scb->scb_ndups = 0;
+		scbl->scbl_flags = bml->bml_flags;
+		scbl->scbl_start = bml->bml_start;
+		scbl->scbl_expire = bml->bml_expire;
+		pscrpc_id2str(bml->bml_cli_nidpid, scbl->scbl_client);
 		for (t = bml; t->bml_chain != bml; t = t->bml_chain)
-			scb->scb_ndups++;
+			scbl->scbl_ndups++;
+		BML_ULOCK(bml);
 
-		rc = psc_ctlmsg_sendv(fd, mh, scb);
+		rc = psc_ctlmsg_sendv(fd, mh, scbl);
 		if (!rc)
 			break;
 	}
-	PLL_ULOCK(&bmi->bmi_leases);
+	PLL_ULOCK(pll);
 	return (rc);
 }
 
@@ -591,7 +608,8 @@ struct psc_ctlop slmctlops[] = {
 	{ slctlrep_getfcmh,		sizeof(struct slctlmsg_fcmh) },
 	{ slmctlrep_getreplpairs,	sizeof(struct slmctlmsg_replpair) },
 	{ slmctlrep_getstatfs,		sizeof(struct slmctlmsg_statfs) },
-	{ slmctlcmd_stop,		0 }
+	{ slmctlcmd_stop,		0 },
+	{ slmctlrep_getbml,		sizeof(struct slmctlmsg_bml) }
 };
 
 psc_ctl_thrget_t psc_ctl_thrgets[] = {
