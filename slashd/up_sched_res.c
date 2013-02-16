@@ -182,6 +182,12 @@ slmupschedthr_wk_finish_replsch(void *p)
 {
 	struct slm_wkdata_upsch_cb *wk = p;
 
+	/* skip, there is more important work to do */
+	if (wk->b->bcm_fcmh->fcmh_flags & FCMH_BUSY &&
+	    wk->b->bcm_fcmh->fcmh_owner == 0 &&
+	    wk->b->bcm_flags & BMAP_MDS_REPLMODWR)
+		return (1);
+
 	slmupschedthr_finish_replsch(wk->csvc, wk->src_resm,
 	    wk->dst_resm, wk->b, wk->rc, wk->off, wk->amt, wk->undowr);
 	return (0);
@@ -392,6 +398,12 @@ int
 slmupschedthr_wk_finish_ptrunc(void *p)
 {
 	struct slm_wkdata_upsch_cb *wk = p;
+
+	/* skip, there is more important work to do */
+	if (wk->b->bcm_fcmh->fcmh_flags & FCMH_BUSY &&
+	    wk->b->bcm_fcmh->fcmh_owner == 0 &&
+	    wk->b->bcm_flags & BMAP_MDS_REPLMODWR)
+		return (1);
 
 	slmupschedthr_finish_ptrunc(wk->csvc,
 	    wk->b, wk->rc, wk->off, wk->undowr);
