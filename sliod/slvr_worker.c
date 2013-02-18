@@ -491,9 +491,10 @@ slvr_worker_int(void)
 		}
 
 		bcr->bcr_crcup.crcs[i].crc = crc;
-		bcr->bcr_crcup.crcs[i].slot = slvr_num;
-		if (!found)
+		if (!found) {
 			bcr->bcr_crcup.nups++;
+			bcr->bcr_crcup.crcs[i].slot = slvr_num;
+		}
 
 		DEBUG_BCR(PLL_DIAG, bcr, "add to existing bcr slot=%d "
 		    "nups=%d", i, bcr->bcr_crcup.nups);
