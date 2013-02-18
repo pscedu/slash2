@@ -526,8 +526,8 @@ slvr_worker_int(void)
 		bcr->bcr_crcup.crcs[0].slot = slvr_num;
 		bcr->bcr_crcup.nups = 1;
 
-		psclog_info("bcr@%p xid=%"PRIu64" bii@%p xid=%"PRIu64,
-			bcr, bcr->bcr_xid, bii, bii->bii_bcr_xid);
+		psclog_info("new bcr@%p xid=%"PRIu64" bii@%p xid=%"PRIu64" bmap=%p",
+			bcr, bcr->bcr_xid, bii, bii->bii_bcr_xid, b);
 		DEBUG_BCR(PLL_DIAG, bcr,
 		    "newly added (bcr_bklog=%d) (sched=%d)",
 		    pll_nitems(&bii->bii_bklog_bcrs),
