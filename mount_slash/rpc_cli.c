@@ -41,7 +41,19 @@ slc_rci_init(void)
 
 	thr = pscthr_get();
 
-	psc_multiwait_init(&msrcithr(thr)->mrci_mw, "%s", thr->pscthr_name);
+	psc_multiwait_init(&msrcithr(thr)->mrci_mw, "%s",
+	    thr->pscthr_name);
+}
+
+__static void
+slc_rcm_init(void)
+{
+	struct psc_thread *thr;
+
+	thr = pscthr_get();
+
+	psc_multiwait_init(&msrcmthr(thr)->mrcm_mw, "%s",
+	    thr->pscthr_name);
 }
 
 /**
@@ -63,6 +75,7 @@ slc_rpc_initsvc(void)
 	svh->svh_type = MSTHRT_RCM;
 	svh->svh_nthreads = SRCM_NTHREADS;
 	svh->svh_handler = slc_rcm_handler;
+	svh->svh_initf = slc_rcm_init;
 	strlcpy(svh->svh_svc_name, SRCM_SVCNAME, sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct msrcm_thread);
 

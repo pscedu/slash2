@@ -132,6 +132,8 @@ msl_getmw(void)
 		return (&msbmflwthr(thr)->mbfwa_mw);
 	case MSTHRT_RCI:
 		return (&msrcithr(thr)->mrci_mw);
+	case MSTHRT_RCM:
+		return (&msrcmthr(thr)->mrcm_mw);
 	case MSTHRT_CTL:
 		return (NULL);
 	}

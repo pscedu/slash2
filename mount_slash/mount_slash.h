@@ -61,6 +61,7 @@ enum {
 
 struct msrcm_thread {
 	struct pscrpc_thread		 mrcm_prt;
+	struct psc_multiwait		 mrcm_mw;
 };
 
 struct msrci_thread {
@@ -106,6 +107,7 @@ PSCTHR_MKCAST(msbmfrathr, msbmflra_thread, MSTHRT_BMAPREADAHEAD);
 PSCTHR_MKCAST(msattrflthr, msattrfl_thread, MSTHRT_ATTRFLSH);
 PSCTHR_MKCAST(msfsthr, msfs_thread, MSTHRT_FS);
 PSCTHR_MKCAST(msrcithr, msrci_thread, MSTHRT_RCI);
+PSCTHR_MKCAST(msrcmthr, msrcm_thread, MSTHRT_RCM);
 
 #define MS_READAHEAD_MINSEQ		2
 #define MS_READAHEAD_MAXPGS		256
