@@ -182,14 +182,14 @@ slmupschedthr_wk_finish_replsch(void *p)
 {
 	struct slm_wkdata_upsch_cb *wk = p;
 
-	/* skip, there is more important work to do */
-	if (wk->b->bcm_fcmh->fcmh_flags & FCMH_BUSY &&
-	    wk->b->bcm_fcmh->fcmh_owner == 0 &&
-	    wk->b->bcm_flags & BMAP_MDS_REPLMODWR)
+	/* skip; there is more important work to do */
+	if (!FCMH_TRYBUSY(wk->b->bcm_fcmh))
 		return (1);
 
 	slmupschedthr_finish_replsch(wk->csvc, wk->src_resm,
 	    wk->dst_resm, wk->b, wk->rc, wk->off, wk->amt, wk->undowr);
+	if (FCMH_HAS_BUSY(wk->b->bcm_fcmh))
+		FCMH_UNBUSY(wk->b->bcm_fcmh);
 	return (0);
 }
 
@@ -399,14 +399,14 @@ slmupschedthr_wk_finish_ptrunc(void *p)
 {
 	struct slm_wkdata_upsch_cb *wk = p;
 
-	/* skip, there is more important work to do */
-	if (wk->b->bcm_fcmh->fcmh_flags & FCMH_BUSY &&
-	    wk->b->bcm_fcmh->fcmh_owner == 0 &&
-	    wk->b->bcm_flags & BMAP_MDS_REPLMODWR)
+	/* skip; there is more important work to do */
+	if (!FCMH_TRYBUSY(wk->b->bcm_fcmh))
 		return (1);
 
 	slmupschedthr_finish_ptrunc(wk->csvc,
 	    wk->b, wk->rc, wk->off, wk->undowr);
+	if (FCMH_HAS_BUSY(wk->b->bcm_fcmh))
+		FCMH_UNBUSY(wk->b->bcm_fcmh);
 	return (0);
 }
 
@@ -604,6 +604,10 @@ upd_proc_bmap(struct slm_update_data *upd)
 	bmi = upd_getpriv(upd);
 	b = bmi_2_bmap(bmi);
 	f = b->bcm_fcmh;
+
+	/* skip, there is more important work to do */
+	if (b->bcm_flags & BMAP_MDS_REPLMODWR)
+		return (0);
 
 	UPD_UNBUSY(upd);
 
