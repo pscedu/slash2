@@ -142,7 +142,9 @@ slc_rmc_retry_pfcc(__unusedx struct pscfs_clientctx *pfcc, int *rc)
 	case ENETDOWN:
 	case ENETRESET:
 	case ENETUNREACH:
+#ifdef ENONET
 	case ENONET:
+#endif
 	case ENOTCONN:
 	case ETIMEDOUT:
 		break;
