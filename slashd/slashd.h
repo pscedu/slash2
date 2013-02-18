@@ -174,6 +174,7 @@ struct sl_mds_peerinfo {
  */
 struct sl_mds_iosinfo {
 	int			  si_flags;
+	pthread_t		  si_owner;
 	struct timespec		  si_lastcomm;		/* last communication (PING) to track soft conn reset */
 	uint64_t		  si_xid;		/* garbage reclaim transaction group identifier */
 	struct psc_meter	  si_batchmeter;

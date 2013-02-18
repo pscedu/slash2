@@ -487,6 +487,7 @@ slm_iosv_setbusy(sl_replica_t *iosv, int nios)
 			RPMI_LOCK(rpmi);
 		}
 		si->si_flags |= SIF_BUSY;
+		si->si_owner = pthread_self();
 		RPMI_ULOCK(rpmi);
 	}
 }
@@ -507,6 +508,7 @@ slm_iosv_clearbusy(const sl_replica_t *iosv, int nios)
 		RPMI_LOCK(rpmi);
 		psc_assert(si->si_flags & SIF_BUSY);
 		si->si_flags &= ~SIF_BUSY;
+		si->si_owner = 0;
 		RPMI_ULOCK(rpmi);
 		psc_waitq_wakeall(&rpmi->rpmi_waitq);
 	}
