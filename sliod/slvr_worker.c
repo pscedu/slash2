@@ -526,6 +526,8 @@ slvr_worker_int(void)
 		bcr->bcr_crcup.crcs[0].slot = slvr_num;
 		bcr->bcr_crcup.nups = 1;
 
+		psclog_info("bcr@%p xid=%"PRIu64" bii@%p xid=%"PRIu64,
+			bcr, bcr->bcr_xid, bii, bii->bii_bcr_xid);
 		DEBUG_BCR(PLL_DIAG, bcr,
 		    "newly added (bcr_bklog=%d) (sched=%d)",
 		    pll_nitems(&bii->bii_bklog_bcrs),
@@ -542,9 +544,9 @@ slvr_worker_int(void)
 			BMAP_SETATTR(b, BMAP_IOD_BCRSCHED);
 			bcr_hold_add(bcr);
 		}
+		PFL_GETTIMESPEC(&bcr->bcr_age);
 	}
 
-	PFL_GETTIMESPEC(&bcr->bcr_age);
 	BII_ULOCK(bii);
 	LIST_CACHE_ULOCK(&bcr_hold);
 
