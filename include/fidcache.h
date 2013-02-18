@@ -248,7 +248,8 @@ enum fcmh_opcnt_types {
 /* 4 */	FCMH_OPCNT_OPEN,		/* mount_slash pscfs file info */
 /* 5 */	FCMH_OPCNT_WAIT,		/* dup ref during initialization */
 /* 6 */	FCMH_OPCNT_WORKER,		/* MDS worker */
-/* 7 */	FCMH_OPCNT_DIRTY_QUEUE
+/* 7 */	FCMH_OPCNT_DIRTY_QUEUE,
+/* 8 */	FCMH_OPCNT_UPSCH		/* temporarily held by upsch engine */
 };
 
 /* fcmh_setattr() flags */
