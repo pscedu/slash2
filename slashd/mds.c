@@ -1528,9 +1528,10 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 		goto out;
 
 	} else {
-		/* Mark that bmap is undergoing CRC updates - this is non-
-		 *  reentrant so the ION must know better than to send
-		 *  multiple requests for the same bmap.
+		/*
+		 * Mark that bmap is undergoing CRC updates - this is
+		 * non-reentrant so the ION must know better than to
+		 * send multiple requests for the same bmap.
 		 */
 		bmap->bcm_flags |= BMAP_MDS_CRC_UP;
 	}
