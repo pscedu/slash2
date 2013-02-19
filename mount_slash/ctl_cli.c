@@ -34,6 +34,7 @@
 #include "psc_util/net.h"
 
 #include "bmap.h"
+#include "bmap_cli.h"
 #include "ctl.h"
 #include "ctl_cli.h"
 #include "ctlsvr.h"
