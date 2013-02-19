@@ -167,13 +167,6 @@ bcr_ready_add(struct bcrcupd *bcr)
 }
 
 void
-bcr_hold_requeue(struct bcrcupd *bcr)
-{
-	lc_remove(&bcr_hold, bcr);
-	lc_addtail(&bcr_hold, bcr);
-}
-
-void
 bcr_xid_check(struct bcrcupd *bcr)
 {
 	int locked;
