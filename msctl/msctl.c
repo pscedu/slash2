@@ -221,6 +221,16 @@ packshow_fcmhs(__unusedx char *fid)
 }
 
 void
+packshow_bmaps(__unusedx char *fid)
+{
+	struct slctlmsg_fcmh *scf;
+
+	scf = psc_ctlmsg_push(MSCMT_GETBMAP,
+	    sizeof(struct slctlmsg_bmap));
+	scf->scf_fg.fg_fid = FID_ANY;
+}
+
+void
 parse_replrq(int opcode, const char *fn, char *replrqspec,
     int (*packf)(const char *, const struct stat *, void *))
 {
@@ -721,6 +731,7 @@ struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 	PSC_CTLSHOW_DEFS,
 	{ "connections",	packshow_conns },
 	{ "fcmhs",		packshow_fcmhs },
+	{ "bmaps",		packshow_bmaps },
 
 	/* aliases */
 	{ "conns",		packshow_conns },
