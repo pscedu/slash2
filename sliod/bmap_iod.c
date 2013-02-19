@@ -188,13 +188,6 @@ bcr_xid_check(struct bcrcupd *bcr)
 	BII_URLOCK(bcr->bcr_bii, locked);
 }
 
-static void
-bcr_xid_last_bump(struct bcrcupd *bcr)
-{
-	bcr_xid_check(bcr);
-	bcr->bcr_bii->bii_bcr_xid_last++;
-}
-
 void
 biod_rlssched_locked(struct bmap_iod_info *bii)
 {
@@ -238,7 +231,9 @@ bcr_ready_remove(struct bcrcupd *bcr)
 	lc_remove(&bcr_ready, bcr);
 
 	psc_assert(bcr->bcr_flags & BCR_SCHEDULED);
-	bcr_xid_last_bump(bcr);
+
+	bcr_xid_check(bcr);
+	bcr->bcr_bii->bii_bcr_xid_last++;
 
 	if (bii->bii_bcr_xid == bii->bii_bcr_xid_last) {
 		/* This was the last bcr. */
