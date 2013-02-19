@@ -246,8 +246,14 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 		src_resm = psc_dynarray_getpos(
 		    &w->srw_src_res->res_members, 0);
 		csvc = sli_geticsvc(src_resm);
+
+		LIST_CACHE_LOCK(&sli_replwkq_pending);
+		spinlock(&w->srw_lock);
 		if (!lc_conjoint(&sli_replwkq_pending, w))
 			lc_add(&sli_replwkq_pending, w);
+		freelock(&w->srw_lock);
+		LIST_CACHE_ULOCK(&sli_replwkq_pending);
+
 		if (csvc == NULL)
 			rc = SLERR_ION_OFFLINE;
 		else {
