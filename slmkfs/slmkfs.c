@@ -252,10 +252,10 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 	slnewfs_create_odtable(fn, 0);
 
 	xmkfn(fn, "%s/%s", metadir, SL_FN_REPL_ODTAB);
-	slnewfs_create_odtable(fn, ODTBL_OPT_SYNC);
+	slnewfs_create_odtable(fn, 0);
 
 	xmkfn(fn, "%s/%s", metadir, SL_FN_PTRUNC_ODTAB);
-	slnewfs_create_odtable(fn, ODTBL_OPT_SYNC);
+	slnewfs_create_odtable(fn, 0);
 }
 
 void
