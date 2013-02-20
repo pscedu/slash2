@@ -251,7 +251,7 @@ struct bmap {
 #define bmap_op_start_type(b, type)					\
 	do {								\
 		psc_atomic32_inc(&(b)->bcm_opcnt);			\
-		DEBUG_BMAP(PLL_DEBUG, (b),				\
+		DEBUG_BMAP(PLL_MAX, (b),				\
 		    "took reference (type=%u)", (type));		\
 	} while (0)
 

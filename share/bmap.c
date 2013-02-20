@@ -129,7 +129,7 @@ _bmap_op_done(const struct pfl_callerinfo *pci, struct bmapc_memb *b,
 	BMAP_LOCK_ENSURE(b);
 
 	va_start(ap, fmt);
-	psclogsv(PLL_DEBUG, SLSS_BMAP, fmt, ap);
+	psclogsv(PLL_MAX, SLSS_BMAP, fmt, ap);
 	va_end(ap);
 
 	if (!psc_atomic32_read(&b->bcm_opcnt)) {
