@@ -71,7 +71,7 @@ bmap_orphan(struct bmapc_memb *b)
 	b->bcm_flags |= BMAP_ORPHAN;
 	BMAP_ULOCK(b);
 
-	DEBUG_BMAP(PLL_INFO, b, "orphan");
+	DEBUG_BMAP(PLL_MAX, b, "orphan");
 
 	waslocked2 = FCMH_RLOCK(f);
 	psc_assert(f->fcmh_refcnt > 0);
@@ -109,8 +109,12 @@ bmap_remove(struct bmapc_memb *b)
 
 	(void)FCMH_RLOCK(f);
 
-	if (!(b->bcm_flags & BMAP_ORPHAN))
+	if (!(b->bcm_flags & BMAP_ORPHAN)) {
+		DEBUG_BMAP(PLL_MAX, b, "removing from bmaptree");
 		PSC_SPLAY_XREMOVE(bmap_cache, &f->fcmh_bmaptree, b);
+	}
+
+//	assert(not in fcmh_bmaptree)
 
 	psc_pool_return(bmap_pool, b);
 	fcmh_op_done_type(f, FCMH_OPCNT_BMAP);
@@ -218,6 +222,7 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n,
 	BMAP_LOCK(b);
 
 	/* Add to the fcmh's bmap cache */
+	DEBUG_BMAP(PLL_MAX, b, "adding to bmaptree");
 	PSC_SPLAY_XINSERT(bmap_cache, &f->fcmh_bmaptree, b);
 	fcmh_op_start_type(f, FCMH_OPCNT_BMAP);
 
