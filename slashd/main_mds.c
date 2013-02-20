@@ -121,12 +121,12 @@ append_path(const char *newpath)
 }
 
 void
-import_zpool(const char *zpoolname, const char *zfspoolcf)
+import_zpool(const char *zpoolname, __unusedx const char *zfspoolcf)
 {
 	char cmdbuf[BUFSIZ];
 	int rc;
 
-	rc = snprintf(cmdbuf, sizeof(cmdbuf), "zpool export '%s'",
+	rc = snprintf(cmdbuf, sizeof(cmdbuf), "zfs mount '%s'",
 	    zpoolname);
 	if (rc == -1)
 		psc_fatal("%s", zpoolname);
@@ -134,25 +134,8 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 		psc_fatalx("pool name too long: %s", zpoolname);
 	rc = system(cmdbuf);
 	if (rc == -1)
-		psclog_error("zpool export failed, will continue");
-
-	if (zfspoolcf)
-		rc = snprintf(cmdbuf, sizeof(cmdbuf),
-		    "zpool import -f -c '%s' '%s'", zfspoolcf,
-		    zpoolname);
-	else
-		rc = snprintf(cmdbuf, sizeof(cmdbuf),
-		    "zpool import -f '%s'", zpoolname);
-	if (rc == -1)
-		psc_fatal("%s", zpoolname);
-	else if (rc >= (int)sizeof(cmdbuf))
-		psc_fatalx("pool name too long: %s", zpoolname);
-	rc = system(cmdbuf);
-	if (rc == -1)
-		psc_fatal("zpool import");
-	else if (rc)
-		psc_fatalx("zpool import: returned %d\n"
-		    "check if mount point is empty", WEXITSTATUS(rc));
+		psc_fatalx("zfs mount failed; ensure mount point is "
+		    "empty");
 }
 
 void
@@ -378,10 +361,9 @@ psc_scan_filesystems(void)
 {
 	int i;
 	spinlock(&scan_lock);
-	for (i = 0; i < mount_index; i++) {
+	for (i = 0; i < mount_index; i++)
 		if (!(zfsMount[i].flag & ZFS_SLASH2_READY))
 			psc_register_filesystem(i);
-	}
 	freelock(&scan_lock);
 }
 
@@ -415,8 +397,8 @@ main(int argc, char *argv[])
 	psc_subsys_register(SLMSS_UPSCH, "upsch");
 	psc_subsys_register(SLMSS_INFO, "info");
 
-#ifdef ZPOOL_PATH
-	append_path(ZPOOL_PATH);
+#ifdef ZFS_BIN_PATH
+	append_path(ZFS_BIN_PATH);
 #endif
 
 	cfn = SL_PATH_CONF;
