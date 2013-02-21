@@ -433,7 +433,6 @@ slvr_worker_int(void)
 	/* Be paranoid, ensure the sliver is not queued anywhere. */
 	SLVR_LOCK(s);
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
-	psc_assert(s->slvr_flags & SLVR_CRCING);
 
 	if ((s->slvr_flags & SLVR_CRCDIRTY || s->slvr_compwrts) &&
 	    !s->slvr_pndgwrts) {
