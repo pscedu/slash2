@@ -296,12 +296,13 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	rc = mds_repl_bmap_walk(b, tract, retifset, 0, &iosidx, 1);
 	// XXX check rc??
 	mds_bmap_write_logrepls(b);
-	upschq_resm(dst_resm, UPDT_PAGEIN);
 
  out:
-	if (src_resm && dst_resm && b)
+	if (src_resm && dst_resm && b) {
 		mds_repl_nodes_adjbusy(src_resm, dst_resm,
 		    -slm_bmap_calc_repltraffic(b));
+		upschq_resm(dst_resm, UPDT_PAGEIN);
+	}
 	if (b)
 		slm_repl_bmap_rel(b);
 	if (f)
