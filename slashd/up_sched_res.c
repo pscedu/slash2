@@ -953,6 +953,7 @@ upd_proc_pagein(struct slm_update_data *upd)
 int
 upd_proc(struct slm_update_data *upd)
 {
+	struct slm_update_generic *upg;
 	int rc, locked;
 
 	locked = UPSCH_HASLOCK();
@@ -965,32 +966,29 @@ upd_proc(struct slm_update_data *upd)
 	rc = upd_proctab[upd->upd_type](upd);
 	upd->upd_flags &= ~UPDF_BUSY;
 	UPD_WAKE(upd);
-	if (rc) {
-		UPD_ULOCK(upd);
-		UPD_DECREF(upd);
-	} else {
+	if (rc == 0)
 		/*
 		 * Item indicated it should stay in the system; add it
 		 * back to our thing here.
 		 */
 		psc_mlist_addtail(&slm_upschq, upd);
-		UPD_ULOCK(upd);
-	}
+	UPD_ULOCK(upd);
 	if (locked)
 		UPSCH_LOCK();
-	if (!rc)
-		return (rc);
 
 	switch (upd->upd_type) {
+	case UPDT_BMAP:
+		if (rc)
+			upd_tryremove(upd);
+		UPD_DECREF(upd);
+		break;
 	case UPDT_HLDROP:
 	case UPDT_PAGEIN:
-	case UPDT_PAGEIN_UNIT: {
-		struct slm_update_generic *upg;
-
+	case UPDT_PAGEIN_UNIT:
 		upg = upd_getpriv(upd);
-		psc_pool_return(slm_upgen_pool, upg);
+		if (rc)
+			psc_pool_return(slm_upgen_pool, upg);
 		break;
-	    }
 	}
 	return (rc);
 }
