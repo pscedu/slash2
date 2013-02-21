@@ -190,8 +190,8 @@ slmupschedthr_wk_finish_replsch(void *p)
 	fcmh_op_start_type(f, FCMH_OPCNT_UPSCH);
 	slmupschedthr_finish_replsch(wk->csvc, wk->src_resm,
 	    wk->dst_resm, wk->b, wk->rc, wk->off, wk->amt, wk->undowr);
-	if (FCMH_HAS_BUSY(wk->b->bcm_fcmh))
-		FCMH_UNBUSY(wk->b->bcm_fcmh);
+	if (FCMH_HAS_BUSY(f))
+		FCMH_UNBUSY(f);
 	fcmh_op_done_type(f, FCMH_OPCNT_UPSCH);
 	return (0);
 }
