@@ -434,7 +434,6 @@ slvr_worker_int(void)
 	SLVR_LOCK(s);
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
 	psc_assert(s->slvr_flags & SLVR_CRCING);
-	s->slvr_flags &= ~SLVR_CRCING;
 
 	if ((s->slvr_flags & SLVR_CRCDIRTY || s->slvr_compwrts) &&
 	    !s->slvr_pndgwrts) {
@@ -442,6 +441,7 @@ slvr_worker_int(void)
 		SLVR_ULOCK(s);
 		DEBUG_SLVR(PLL_INFO, s, "replace onto crcSlvrs");
 		lc_addtail(&crcqSlvrs, s);
+		s->slvr_flags &= ~SLVR_CRCING;
 		goto start;
 	}
 
@@ -454,8 +454,6 @@ slvr_worker_int(void)
 	b = bii_2_bmap(bii);
 	psc_atomic32_dec(&bii->bii_crcdrty_slvrs);
 	s->slvr_dirty_cnt--;
-	DEBUG_SLVR(PLL_INFO, s, "prep for move to LRU (ndirty=%u)",
-	    psc_atomic32_read(&bii->bii_crcdrty_slvrs));
 
 	slvr_num = s->slvr_num;
 
@@ -546,9 +544,15 @@ slvr_worker_int(void)
 	LIST_CACHE_ULOCK(&bcr_hold);
 
 	SLVR_LOCK(s);
+
+	s->slvr_flags &= ~SLVR_CRCING;
+	DEBUG_SLVR(PLL_INFO, s, "prep for move to LRU (ndirty=%u)",
+	    psc_atomic32_read(&bii->bii_crcdrty_slvrs));
+
 	s->slvr_flags |= SLVR_LRU;
 	slvr_lru_tryunpin_locked(s);
 	lc_addqueue(&lruSlvrs, s);
+
 	SLVR_ULOCK(s);
 
 	slvr_worker_push_crcups();
