@@ -251,6 +251,7 @@ bcr_finalize(struct bcrcupd *bcr)
 {
 	struct bmap_iod_info *bii = bcr->bcr_bii;
 	struct bmapc_memb *b = bii_2_bmap(bii);
+	struct bcrcupd *tmp;
 
 	DEBUG_BCR(PLL_INFO, bcr, "finalize");
 
@@ -265,39 +266,37 @@ bcr_finalize(struct bcrcupd *bcr)
 	 * bcr_ready_remove() may release the bmap so it must be issued
 	 * at the end of this call.
 	 */
-	if (bii->bii_bcr_xid > bii->bii_bcr_xid_last + 1) {
-		struct bcrcupd *tmp;
 
-		tmp = pll_gethead(&bii->bii_bklog_bcrs);
-		if (tmp) {
-			DEBUG_BCR(PLL_INFO, tmp,
-			    "backlogged bcr, n_bklog=%d",
-			    pll_nitems(&bii->bii_bklog_bcrs));
+	tmp = pll_gethead(&bii->bii_bklog_bcrs);
+	if (tmp) {
+		DEBUG_BCR(PLL_INFO, tmp,
+		    "backlogged bcr, n_bklog=%d",
+		    pll_nitems(&bii->bii_bklog_bcrs));
 
-			if (pll_empty(&bii->bii_bklog_bcrs)) {
-				/*
-				 * I am the only one on the backlog list
-				 * of the bmap.  A NULL bii_bcr is OK
-				 * as long as the bcr has been filled.
-				 */
-				psc_assert(bii->bii_bcr == tmp ||
-					   !bii->bii_bcr);
-				if (tmp->bcr_crcup.nups ==
-				    MAX_BMAP_INODE_PAIRS) {
-					bii->bii_bcr = NULL;
-					bcr_ready_add(tmp);
-				} else
-					bcr_hold_add(tmp);
-
-			} else {
-				/*
-				 * Only the tail of the bklog may be the
-				 * active bcr.
-				 */
-				psc_assert(bii->bii_bcr != tmp);
+		if (pll_empty(&bii->bii_bklog_bcrs)) {
+			/*
+			 * I am the only one on the backlog list
+			 * of the bmap.  A NULL bii_bcr is OK
+			 * as long as the bcr has been filled.
+			 */
+			psc_assert(bii->bii_bcr == tmp ||
+				   !bii->bii_bcr);
+			if (tmp->bcr_crcup.nups ==
+			    MAX_BMAP_INODE_PAIRS) {
+				bii->bii_bcr = NULL;
 				bcr_ready_add(tmp);
-			}
+			} else
+				bcr_hold_add(tmp);
+
+		} else {
+			/*
+			 * Only the tail of the bklog may be the
+			 * active bcr.
+			 */
+			psc_assert(bii->bii_bcr != tmp);
+			bcr_ready_add(tmp);
 		}
+		OPSTAT_INCR(SLI_OPST_CRC_UPDATE_BACKLOG_CLEAR);
 	}
 	bcr_ready_remove(bcr);
 	LIST_CACHE_ULOCK(&bcr_ready);
