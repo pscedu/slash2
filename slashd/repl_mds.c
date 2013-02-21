@@ -1091,8 +1091,9 @@ int
 slm_repl_odt_startup_cb(void *data, struct odtable_receipt *odtr,
     __unusedx void *arg)
 {
-	int wr, rc, off, tract[NBREPLST], retifset[NBREPLST];
+	int rm = 1, wr, rc, off, tract[NBREPLST], retifset[NBREPLST];
 	struct bmap_repls_upd_odent *br = data;
+	struct slm_update_data *upd;
 	struct fidc_membh *f = NULL;
 	struct bmapc_memb *b = NULL;
 	struct sl_resource *r;
@@ -1105,6 +1106,9 @@ slm_repl_odt_startup_cb(void *data, struct odtable_receipt *odtr,
 	rc = bmap_get(f, br->br_bno, SL_READ, &b);
 	if (rc)
 		PFL_GOTOERR(out, rc);
+	upd = bmap_2_upd(b);
+	upd_initf(upd, UPDT_BMAP, UPD_INITF_NOKEY);
+	upd->upd_recpt = odtr;
 
 	/*
 	 * Revert all inflight SCHED'ed bmaps so they get resent.
@@ -1148,25 +1152,23 @@ slm_repl_odt_startup_cb(void *data, struct odtable_receipt *odtr,
 			r = libsl_id2res(resid);
 			upschq_resm(psc_dynarray_getpos(&r->res_members,
 			    0), UPDT_PAGEIN);
+			rm = 0;
 			break;
 		}
 
 	if (wr) {
-		struct slm_update_data *upd;
-
-		/*
-		 * XXX flag this as UPSCH_NOT_INIT and do a flag dance
-		 * when paging it in as needed.
-		 */
-		upd = bmap_2_upd(b);
-		if (pfl_memchk(upd, 0, sizeof(*upd)) == 1)
-			upd_init(upd, UPDT_BMAP);
 		mds_bmap_write_logrepls(b);
 	} else {
 		BMAPOD_MODIFY_DONE(b, 0);
 		BMAP_UNBUSY(b);
 		FCMH_UNBUSY(f);
 	}
+
+	if (rm) {
+		upd_tryremove(upd);
+		UPD_UNBUSY(upd);
+	}
+	odtr = upd->upd_recpt;
 
  out:
 	PSCFREE(odtr);
