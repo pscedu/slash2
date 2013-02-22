@@ -66,7 +66,7 @@ struct timespec		msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
 struct timespec		msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
 
 __static size_t msl_pages_copyin(struct bmpc_ioreq *);
-__static void msl_biorq_complete_fsrq(struct bmpc_ioreq *);
+__static int msl_biorq_complete_fsrq(struct bmpc_ioreq *);
 __static void msl_pages_schedflush(struct bmpc_ioreq *r);
 
 struct pscrpc_nbreqset *pndgReadaReqs; /* non-blocking set for RA's */
@@ -456,7 +456,7 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 {
 	struct msl_fhent *mfh = r->biorq_mfh;
 	struct bmap_pagecache_entry *e;
-	int i;
+	int i, needflush;
 
 #if FHENT_EARLY_RELEASE
 	int fhent = 1;
@@ -480,14 +480,14 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 	 * A request can be split into several RPCs, so we can't declare
 	 * it as complete until after its reference count drops to zero.
 	 */
-	msl_biorq_complete_fsrq(r);
+	needflush = msl_biorq_complete_fsrq(r);
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 		BMPCE_LOCK(e);
 		if (biorq_is_my_bmpce(r, e))
 			BMPCE_WAKE(e);
 		BMPCE_ULOCK(e);
 	}
-	if (r->biorq_flags & BIORQ_FLUSHRDY) {
+	if (needflush) {
 		msl_pages_schedflush(r);
 		return;
 	}
@@ -773,13 +773,13 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, int rc, size_t len)
 	psc_pool_return(mfsrq_pool, q);
 }
 
-__static void
+__static int
 msl_biorq_complete_fsrq(struct bmpc_ioreq *r0)
 {
 	struct msl_fsrqinfo *q;
 	struct bmpc_ioreq *r;
 	size_t len = 0;
-	int i, rc, found = 0;
+	int i, rc, found = 0, needflush = 0;
 
 	q = r0->biorq_fsrqi;
 
@@ -814,7 +814,7 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r0)
 				len = msl_pages_copyout(r);
 			else {
 				len = msl_pages_copyin(r);
-				BIORQ_SETATTR(r, BIORQ_FLUSHRDY);
+				needflush = 1;
 			}
 		}
 	}
@@ -823,6 +823,7 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r0)
 
 	psc_assert(len <= q->mfsrq_size);
 	msl_complete_fsrq(q, 0, len);
+	return (needflush);
 }
 
 /**
@@ -1339,6 +1340,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	 */
 	BIORQ_LOCK(r);
 	r->biorq_ref++;
+	BIORQ_SETATTR(r, BIORQ_FLUSHRDY);
 	psc_assert(psclist_conjoint(&r->biorq_lentry,
 	    psc_lentry_hd(&r->biorq_lentry)));
 	atomic_inc(&bmpc->bmpc_pndgwr);
