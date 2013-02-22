@@ -155,6 +155,10 @@ slmupschedthr_finish_replsch(struct slashrpc_cservice *csvc,
 			    rc);
 		}
 	} else {
+		/*
+		 * Bandwidth adjustment was already made; do not undo it
+		 * because it should be getting used right now.
+		 */
 		amt = 0;
 	}
 
@@ -832,6 +836,7 @@ upd_proc(struct slm_update_data *upd)
 	locked = UPSCH_HASLOCK();
 	if (locked)
 		UPSCH_ULOCK();
+
 	UPD_LOCK(upd);
 	UPD_WAIT(upd);
 	upd->upd_flags |= UPDF_BUSY;
@@ -840,6 +845,7 @@ upd_proc(struct slm_update_data *upd)
 	upd->upd_flags &= ~UPDF_BUSY;
 	UPD_WAKE(upd);
 	UPD_ULOCK(upd);
+
 	if (locked)
 		UPSCH_LOCK();
 
