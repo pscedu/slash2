@@ -762,7 +762,7 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 		upsch_enqueue(bmap_2_upd(b));
 
  out:
-	if (rc) {
+	if (rc || n == 0) {
 		struct slm_wkdata_upsch_purge *wk;
 
 		if (rc == ENOENT) {
@@ -1101,6 +1101,116 @@ dump_upd(struct slm_update_data *upd)
 #endif
 
 void (*upd_proctab[])(struct slm_update_data *) = {
+	upd_proc_bmap,
+	upd_proc_garbage,
+	upd_proc_hldrop,
+	upd_proc_pagein,
+	upd_proc_pagein_unit
+};
+psc_assert(psclist_disjoint(&upd->upd_lentry));
+	psc_assert(!(upd->upd_flags & UPDF_BUSY));
+	psc_mutex_destroy(&upd->upd_mutex);
+	psc_multiwaitcond_destroy(&upd->upd_mwc);
+	PSCFREE(upd->upd_recpt);
+	memset(upd, 0, sizeof(*upd));
+}
+
+int
+upsch_purge_cb(struct slm_sth *sth, __unusedx void *p)
+{
+	struct odtable_receipt *odtr;
+
+	odtr = PSCALLOC(sizeof(*odtr));
+	odtr->odtr_elem = sqlite3_column_int64(sth->sth_sth, 0);
+	odtr->odtr_key = sqlite3_column_int64(sth->sth_sth, 1);
+	mds_odtable_freeitem(slm_repl_odt, odtr);
+	return (0);
+}
+
+void
+upsch_purge(slfid_t fid)
+{
+	dbdo(upsch_purge_cb, NULL,
+	    " SELECT"
+	    "	recpt_elem,"
+	    "	recpt_key"
+	    " FROM"
+	    "	upsch"
+	    " WHERE"
+	    "	fid = ?",
+	    SQLITE_INTEGER64, fid);
+	dbdo(NULL, NULL,
+	    " DELETE FROM "
+	    "	upsch"
+	    " WHERE"
+	    "	fid = ?",
+	    SQLITE_INTEGER64, fid);
+}
+
+int
+slm_wk_upsch_purge(void *p)
+{
+	struct slm_wkdata_upsch_purge *wk = p;
+
+	upsch_purge(wk->fid);
+	return (0);
+}
+
+void
+upsch_enqueue(struct slm_update_data *upd, const sl_replica_t *iosv,
+    int nios)
+{
+	struct resprof_mds_info *rpmi;
+	struct sl_resource *r;
+	int locked, n;
+
+	locked = UPD_RLOCK(upd);
+	for (n = 0; n < nios; n++) {
+		r = libsl_id2res(iosv[n].bs_id);
+		rpmi = res2rpmi(r);
+		RPMI_LOCK(rpmi);
+		if (!psc_dynarray_add_ifdne(&rpmi->rpmi_upschq, upd))
+			UPD_INCREF(upd);
+		RPMI_ULOCK(rpmi);
+	}
+	if (!psc_mlist_conjoint(&slm_upschq, upd)) {
+		if (upd->upd_type == UPDT_BMAP &&
+		    (upd_2_fcmh(upd)->fcmh_flags & FCMH_IN_PTRUNC) == 0)
+			psc_mlist_addtail(&slm_upschq, upd);
+		else
+			psc_mlist_addhead(&slm_upschq, upd);
+		UPD_INCREF(upd);
+	}
+	UPD_URLOCK(upd, locked);
+}
+
+void *
+upd_getpriv(struct slm_update_data *upd)
+{
+	char *p = (void *)upd;
+
+	switch (upd->upd_type) {
+	case UPDT_BMAP:
+		return (p - offsetof(struct bmap_mds_info, bmi_upd));
+	case UPDT_HLDROP:
+	case UPDT_PAGEIN:
+	case UPDT_PAGEIN_UNIT:
+		return (p - offsetof(struct slm_update_generic,
+		    upg_upd));
+	default:
+		psc_fatal("type");
+	}
+}
+
+#if PFL_DEBUG > 0
+void
+dump_upd(struct slm_update_data *upd)
+{
+	DEBUG_UPD(PLL_MAX, upd, "");
+}
+#endif
+
+int (*upd_proctab[])(struct slm_update_data *) = {
 	upd_proc_bmap,
 	upd_proc_garbage,
 	upd_proc_hldrop,
