@@ -251,15 +251,18 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	memcpy(&mq->sbd, &bmap_2_bci(b)->bci_sbd, sizeof(mq->sbd));
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 
+	atomic_inc(&outstandingRpcCnt);
+
 	/* biorqs will be freed by the nbreqset callback msl_write_rpc_cb() */
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQS] = bwc;
 	if (pscrpc_nbreqset_add(pndgWrtReqs, rq))
 		goto error;
 
-	atomic_inc(&outstandingRpcCnt);
 	return (rq);
 
  error:
+	/* XXX need this inc/dec combo for biorq reference? */
+	atomic_dec(&outstandingRpcCnt);
 	sl_csvc_decref(csvc);
 	if (rq)
 		pscrpc_req_finished_locked(rq);
