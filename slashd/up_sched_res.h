@@ -34,7 +34,7 @@
 struct odtable_receipt;
 
 #define UPSCH_MAX_ITEMS			1024
-#define UPSCH_MAX_ITEMS_RES		64
+#define UPSCH_MAX_ITEMS_RES		256
 
 struct slm_update_data {
 	int				 upd_type:4;
@@ -150,7 +150,7 @@ struct slm_update_generic {
 
 #define upd_init(upd, type)	upd_initf((upd), (type), 0)
 
-void	 upsch_enqueue(struct slm_update_data *, const sl_replica_t *, int);
+void	 upsch_enqueue(struct slm_update_data *);
 void	 upsch_purge(slfid_t);
 void	 upschq_resm(struct sl_resm *, int);
 
@@ -160,6 +160,7 @@ void	 upd_initf(struct slm_update_data *, int, int);
 void	 upd_destroy(struct slm_update_data *);
 void	*upd_getpriv(struct slm_update_data *);
 void	 upd_tryremove(struct slm_update_data *);
+void	 upd_rpmi_remove(struct resprof_mds_info *, struct slm_update_data *);
 
 int	 slm_ptrunc_odt_startup_cb(void *, struct odtable_receipt *, void *);
 int	 slm_repl_odt_startup_cb(void *, struct odtable_receipt *, void *);

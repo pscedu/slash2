@@ -460,8 +460,7 @@ mds_repl_inv_except(struct bmapc_memb *b, int iosidx)
 	 * do.
 	 */
 	if (policy == BRPOL_PERSIST)
-		upsch_enqueue(&bmap_2_bmi(b)->bmi_upd, qv.iosv,
-		    qv.nios);
+		upsch_enqueue(&bmap_2_bmi(b)->bmi_upd);
 	return (rc);
 }
 
@@ -596,6 +595,7 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 			slm_repl_upd_odt_read(b);
 			psc_assert(upd->upd_recpt == NULL);
 
+			memset(&br, 0, sizeof(br));
 			br.br_fg = f->fcmh_fg;
 			br.br_bno = b->bcm_bmapno;
 			upd->upd_recpt = mds_odtable_putitem(
@@ -995,6 +995,11 @@ mds_repl_nodes_adjbusy(struct sl_resm *rma, struct sl_resm *rmb,
 
 	locked = reqlock(&repl_busytable_lock);
 	srl = repl_busytable + MDS_REPL_BUSYNODES(minid, maxid);
+/*
+	if (psc_dynarray_len(&a->rpmi_upschq) == 0 &&
+	    psc_dynarray_len(&b->rpmi_upschq) == 0 && srl->srl_used)
+		srl->srl_used = 0;
+*/
 	if (srl->srl_used + amt >= srl->srl_avail) {
 		amt = srl->srl_avail - srl->srl_used;
 		srl->srl_used = srl->srl_avail;
@@ -1103,11 +1108,21 @@ slm_repl_odt_startup_cb(void *data, struct odtable_receipt *odtr,
 	rc = slm_fcmh_get(&br->br_fg, &f);
 	if (rc)
 		PFL_GOTOERR(out, rc);
-	rc = bmap_get(f, br->br_bno, SL_READ, &b);
+	rc = bmap_getf(f, br->br_bno, SL_READ, BMAPGETF_LOAD |
+	    BMAPGETF_REPLAY, &b);
 	if (rc)
 		PFL_GOTOERR(out, rc);
+
+	BMAP_LOCK(b);
+	b->bcm_flags &= ~BMAP_REPLAY; /* hack */
+	BMAP_ULOCK(b);
+
 	upd = bmap_2_upd(b);
-	upd_initf(upd, UPDT_BMAP, UPD_INITF_NOKEY);
+	if (pfl_memchk(upd, 0, sizeof(*upd)) == 1) {
+		upd_initf(upd, UPDT_BMAP, UPD_INITF_NOKEY);
+		UPD_UNBUSY(upd);
+	}
+	psc_assert(upd->upd_recpt == NULL);
 	upd->upd_recpt = odtr;
 
 	/*
@@ -1164,11 +1179,10 @@ slm_repl_odt_startup_cb(void *data, struct odtable_receipt *odtr,
 		FCMH_UNBUSY(f);
 	}
 
-	if (rm) {
+	if (rm)
 		upd_tryremove(upd);
-		UPD_UNBUSY(upd);
-	}
 	odtr = upd->upd_recpt;
+	upd->upd_recpt = NULL;
 
  out:
 	PSCFREE(odtr);

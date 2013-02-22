@@ -79,7 +79,7 @@ struct psc_multiwait	 slm_upsch_mw;
 struct psc_poolmaster	 slm_upgen_poolmaster;
 struct psc_poolmgr	*slm_upgen_pool;
 
-extern int (*upd_proctab[])(struct slm_update_data *);
+extern void (*upd_proctab[])(struct slm_update_data *);
 
 void
 upd_tryremove(struct slm_update_data *upd)
@@ -95,21 +95,25 @@ upd_tryremove(struct slm_update_data *upd)
 
 	lk = BMAPOD_REQRDLOCK(bmi);
 	if (!mds_repl_bmap_walk_all(b, NULL, retifset,
-	    REPL_WALKF_SCIRCUIT)) {
-		if (upd->upd_recpt) {
-			UPD_LOCK(upd);
-			mds_odtable_freeitem(slm_repl_odt,
-			    upd->upd_recpt);
-			upd->upd_recpt = NULL;
-			UPD_ULOCK(upd);
-			DEBUG_UPD(PLL_DIAG, upd,
-			    "removed odtable entry");
-		} else {
-			psclog_errorx("no upd_recpt, "
-			    "likely a very serious problem");
-		}
+	    REPL_WALKF_SCIRCUIT) && upd->upd_recpt) {
+		UPD_LOCK(upd);
+		mds_odtable_freeitem(slm_repl_odt, upd->upd_recpt);
+		upd->upd_recpt = NULL;
+		UPD_ULOCK(upd);
+		DEBUG_UPD(PLL_DIAG, upd, "removed odtable entry");
 	}
 	BMAPOD_UREQLOCK(bmi, lk);
+}
+
+void
+upd_rpmi_add(struct resprof_mds_info *rpmi, struct slm_update_data *upd)
+{
+	int locked;
+
+	locked = RPMI_RLOCK(rpmi);
+	if (!psc_dynarray_add_ifdne(&rpmi->rpmi_upschq, upd))
+		UPD_INCREF(upd);
+	RPMI_URLOCK(rpmi, locked);
 }
 
 void
@@ -161,7 +165,7 @@ slmupschedthr_finish_replsch(struct slashrpc_cservice *csvc,
 	 *	 tried again when the connection is reestablished.
 	 *   (3) if other failure, don't want to keep it in the system.
 	 */
-	if (b) {
+	if (rc && b) {
 		rpmi = res2rpmi(dst_resm->resm_res);
 		upd = bmap_2_upd(b);
 		upd_rpmi_remove(rpmi, upd);
@@ -247,7 +251,6 @@ slmupschedthr_tryreplsch(struct slm_update_data *upd,
 	struct srm_repl_schedwk_req *mq;
 	struct srm_repl_schedwk_rep *mp;
 	struct slashrpc_cservice *csvc;
-	struct resprof_mds_info *rpmi;
 	struct pscrpc_async_args av;
 	struct sl_resm *dst_resm;
 	struct fidc_membh *f;
@@ -261,13 +264,6 @@ slmupschedthr_tryreplsch(struct slm_update_data *upd,
 	av.pointer_arg[IP_DSTRESM] = dst_resm;
 	av.pointer_arg[IP_SRCRESM] = src_resm;
 	av.space[IN_OFF] = off;
-
-	/* HLDROP can reset this */
-	rpmi = res2rpmi(dst_resm->resm_res);
-	RPMI_LOCK(rpmi);
-	if (!psc_dynarray_add_ifdne(&rpmi->rpmi_upschq, upd))
-		UPD_INCREF(upd);
-	RPMI_ULOCK(rpmi);
 
 	csvc = slm_geticsvc(dst_resm, NULL, CSVCF_NONBLOCK |
 	    CSVCF_NORECON, &slm_upsch_mw);
@@ -347,6 +343,7 @@ slmupschedthr_tryreplsch(struct slm_update_data *upd,
 		av.space[IN_UNDO_WR] = 1;
 		if (rc)
 			PFL_GOTOERR(fail, rc);
+		upd_rpmi_add(res2rpmi(dst_resm->resm_res), upd);
 
 		/*
 		 * It is OK if repl sched is resent across reboots
@@ -528,13 +525,13 @@ slmupschedthr_tryptrunc(struct slm_update_data *upd,
 	return (0);
 }
 
-int
+void
 upd_proc_garbage(__unusedx struct slm_update_data *tupd)
 {
 	psc_fatal("no");
 }
 
-int
+void
 upd_proc_hldrop(struct slm_update_data *tupd)
 {
 	int rc, tract[NBREPLST], retifset[NBREPLST], iosidx;
@@ -589,18 +586,16 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 	RPMI_ULOCK(rpmi);
 	slm_iosv_clearbusy(&repl, 1);
 	mds_repl_node_clearallbusy(upg->upg_resm);
-	return (1);
 }
 
-int
+void
 upd_proc_bmap(struct slm_update_data *upd)
 {
-	int rc = 1, off, val, tryarchival, iosidx;
+	int off, val, tryarchival, iosidx;
 	struct rnd_iterator dst_res_i, dst_resm_i;
 	struct rnd_iterator src_res_i, src_resm_i;
 	struct sl_resource *dst_res, *src_res;
 	struct slashrpc_cservice *csvc;
-	struct resprof_mds_info *rpmi;
 	struct bmap_mds_info *bmi;
 	struct sl_resm *src_resm;
 	struct bmapc_memb *b;
@@ -613,7 +608,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 
 	/* skip, there is more important work to do */
 	if (b->bcm_flags & BMAP_MDS_REPLMODWR)
-		return (0);
+		return;
 
 	UPD_UNBUSY(upd);
 
@@ -643,7 +638,6 @@ upd_proc_bmap(struct slm_update_data *upd)
 			psclog_errorx("invalid iosid %u", iosid);
 			continue;
 		}
-		rpmi = res2rpmi(dst_res);
 		off = SL_BITS_PER_REPLICA * dst_res_i.ri_rnd_idx;
 		val = SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls, off);
 		switch (val) {
@@ -698,7 +692,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 							if (slmupschedthr_tryreplsch(upd,
 							    b, off, src_resm, dst_res,
 							    dst_resm_i.ri_rnd_idx))
-								return (0);
+								return;
 					}
 				}
 			}
@@ -714,140 +708,22 @@ upd_proc_bmap(struct slm_update_data *upd)
 				if (rv < 0)
 					break;
 				if (rv)
-					return (0);
+					return;
 			}
 			break;
-#if 0
-		case BREPLST_GARBAGE:
-			break;
-
-	int ngarb;
-	struct bmapc_memb *bn;
-	sl_bmapno_t bno;
-
-			/* XXX just look at fcmh size to determine this */
-			ngarb = 0;
-
-			/*
-			 * We found garbage.  We must scan from EOF
-			 * toward the beginning of the file since we
-			 * can't reclaim garbage in the middle of a
-			 * file.
-			 */
-			bno = fcmh_nallbmaps(f);
-			if (bno)
-				bno--;
-			if (b->bcm_bmapno != bno) {
-				if (f->fcmh_flags & FCMH_IN_PTRUNC)
-					PFL_GOTOERR(out, rc = 1);
-				BMAPOD_MODIFY_DONE(b, 0);
-				bmap_op_done(b);
-				if (mds_bmap_load(f, bno, &b))
-					break;
-				BMAP_LOCK(b);
-			}
-			val = BREPLST_INVALID;
-
-			/*
-			 * XXX get rid of the bmap scanning; replace
-			 * with fcmh size
-			 */
-			for (bn = b, b = NULL;; ) {
-				val = SL_REPL_GET_BMAP_IOS_STAT(
-				    bn->bcm_repls, off);
-				if (val == BREPLST_GARBAGE)
-					ngarb++;
-				if ((val != BREPLST_GARBAGE &&
-				    val != BREPLST_INVALID) ||
-				    bno == 0)
-					break;
-
-				if (b)
-					bmap_op_done(b);
-				b = bn;
-				bn = NULL;
-
-				if (f->fcmh_flags & FCMH_IN_PTRUNC)  {
-					bmap_op_done(b);
-					PFL_GOTOERR(out, rc = 1);
-				}
-
-				bno--;
-				if (mds_bmap_load(f, bno, &bn))
-					continue;
-			}
-
-			if (bn == NULL) {
-				bn = b;
-				b = NULL;
-			}
-
-			if (val == BREPLST_GARBAGE_SCHED ||
-			    ngarb == 0) {
-				if (b)
-					bmap_op_done(b);
-				b = bn;
-				break;
-			}
-			if (b == NULL && val != BREPLST_GARBAGE) {
-				b = bn;
-				break;
-			}
-
-			if (val == BREPLST_GARBAGE ||
-			    val == BREPLST_INVALID) {
-				psc_assert(bno == 0);
-				if (b)
-					bmap_op_done(b);
-				b = bn;
-			} else
-				bmap_op_done(bn);
-
-			FOREACH_RND(&dst_resm_i,
-			    psc_dynarray_len(&dst_res->res_members))
-				/*
-				 * We succeed as long as one
-				 * member can do the work
-				 * because all members share the
-				 * same backend.
-				 *
-				 * XXX cluster_noshare.
-				 */
-				if (slmupschedthr_trygarbage(upd, b,
-				    off, dst_res,
-				    dst_resm_i.ri_rnd_idx))
-					return (0);
-			break;
-#endif
 		}
-		upd_rpmi_remove(rpmi, upd);
 	}
-// out:
 	if (BMAPOD_HASWRLOCK(bmap_2_bmi(b)))
 		BMAPOD_MODIFY_DONE(b, 0);
 	BMAP_UNBUSY(b);
 	FCMH_UNBUSY(f);
-	return (rc);
 }
 
 #define DBF_RESID	1
 #define DBF_FID		2
 #define DBF_BNO		5
 
-#define PARSENUM(buf, max)						\
-	_PFL_RVSTART {							\
-		unsigned long long _l;					\
-		char *_endp;						\
-									\
-		_l = strtoull((buf), &_endp, 10);			\
-		if (_l > (max) || *_endp || _endp == (buf)) {		\
-			psclog_error("error parsing db buf %s", (buf));	\
-			return (0);					\
-		}							\
-		_l;							\
-	} _PFL_RVEND
-
-int
+void
 upd_proc_pagein_unit(struct slm_update_data *upd)
 {
 	sl_replica_t iosv[SL_MAX_REPLICAS];
@@ -879,7 +755,7 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 		}
 	}
 	if (n)
-		upsch_enqueue(bmap_2_upd(b), iosv, n);
+		upsch_enqueue(bmap_2_upd(b));
 
  out:
 	if (rc) {
@@ -896,7 +772,6 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 		bmap_op_done(b);
 	if (f)
 		fcmh_op_done(f);
-	return (1);
 }
 
 int
@@ -908,16 +783,16 @@ upd_proc_pagein_cb(struct slm_sth *sth, __unusedx void *p)
 	memset(upg, 0, sizeof(*upg));
 	INIT_PSC_LISTENTRY(&upg->upg_lentry);
 	upd_init(&upg->upg_upd, UPDT_PAGEIN_UNIT);
-//	iosid = PARSENUM(av[DBF_RESID], UINT32_MAX);
-	upg->upg_fg.fg_fid = sqlite3_column_int64(sth->sth_sth, DBF_FID);
+	upg->upg_fg.fg_fid = sqlite3_column_int64(sth->sth_sth,
+	    DBF_FID);
 	upg->upg_fg.fg_gen = FGEN_ANY;
 	upg->upg_bno = sqlite3_column_int(sth->sth_sth, DBF_BNO);
-	upsch_enqueue(&upg->upg_upd, NULL, 0);
+	upsch_enqueue(&upg->upg_upd);
 	UPD_UNBUSY(&upg->upg_upd);
 	return (0);
 }
 
-int
+void
 upd_proc_pagein(struct slm_update_data *upd)
 {
 	struct slm_update_generic *upg;
@@ -946,15 +821,13 @@ upd_proc_pagein(struct slm_update_data *upd)
 		    " LIMIT	?",
 		    SQLITE_INTEGER, r->res_id,
 		    SQLITE_INTEGER, n);
-
-	return (1);
 }
 
-int
+void
 upd_proc(struct slm_update_data *upd)
 {
 	struct slm_update_generic *upg;
-	int rc, locked;
+	int locked;
 
 	locked = UPSCH_HASLOCK();
 	if (locked)
@@ -963,34 +836,25 @@ upd_proc(struct slm_update_data *upd)
 	UPD_WAIT(upd);
 	upd->upd_flags |= UPDF_BUSY;
 	upd->upd_owner = pthread_self();
-	rc = upd_proctab[upd->upd_type](upd);
+	upd_proctab[upd->upd_type](upd);
 	upd->upd_flags &= ~UPDF_BUSY;
 	UPD_WAKE(upd);
-	if (rc == 0)
-		/*
-		 * Item indicated it should stay in the system; add it
-		 * back to our thing here.
-		 */
-		psc_mlist_addtail(&slm_upschq, upd);
 	UPD_ULOCK(upd);
 	if (locked)
 		UPSCH_LOCK();
 
 	switch (upd->upd_type) {
 	case UPDT_BMAP:
-		if (rc)
-			upd_tryremove(upd);
+		upd_tryremove(upd);
 		UPD_DECREF(upd);
 		break;
 	case UPDT_HLDROP:
 	case UPDT_PAGEIN:
 	case UPDT_PAGEIN_UNIT:
 		upg = upd_getpriv(upd);
-		if (rc)
-			psc_pool_return(slm_upgen_pool, upg);
+		psc_pool_return(slm_upgen_pool, upg);
 		break;
 	}
-	return (rc);
 }
 
 void
@@ -1000,11 +864,9 @@ slmupschedthr_main(__unusedx struct psc_thread *thr)
 	struct sl_resource *r;
 	struct sl_resm *m;
 	struct sl_site *s;
-	int i, j, rc;
+	int i, j;
 
 	while (pscthr_run()) {
-		rc = 0;
-
 		CONF_FOREACH_RESM(s, r, i, m, j)
 			if (RES_ISFS(r))
 				psc_multiwait_setcondwakeable(&slm_upsch_mw,
@@ -1014,9 +876,9 @@ slmupschedthr_main(__unusedx struct psc_thread *thr)
 		psc_multiwait_entercritsect(&slm_upsch_mw);
 		upd = psc_mlist_tryget(&slm_upschq);
 		if (upd)
-			rc = upd_proc(upd);
+			upd_proc(upd);
 		UPSCH_ULOCK();
-		if (rc)
+		if (upd)
 			psc_multiwait_leavecritsect(&slm_upsch_mw);
 		else
 			psc_multiwait_secs(&slm_upsch_mw, &upd, 5);
@@ -1055,8 +917,8 @@ slmupschedthr_spawn(void)
 			psc_multiwait_addcond(&slm_upsch_mw,
 			    &m->resm_csvc->csvc_mwc);
 
-	pscthr_init(SLMTHRT_UPSCHED, 0, slmupschedthr_main, NULL,
-	    0, "slmupschedthr");
+	pscthr_init(SLMTHRT_UPSCHED, 0, slmupschedthr_main, NULL, 0,
+	    "slmupschedthr");
 
 	/* page in initial replrq workload */
 	CONF_FOREACH_RES(s, r, i)
@@ -1097,7 +959,7 @@ upschq_resm(struct sl_resm *m, int type)
 	upg->upg_resm = m;
 	upd = &upg->upg_upd;
 	upd_init(upd, type);
-	upsch_enqueue(upd, NULL, 0);
+	upsch_enqueue(upd);
 	UPD_UNBUSY(upd);
 }
 
@@ -1190,22 +1052,11 @@ slm_wk_upsch_purge(void *p)
 }
 
 void
-upsch_enqueue(struct slm_update_data *upd, const sl_replica_t *iosv,
-    int nios)
+upsch_enqueue(struct slm_update_data *upd)
 {
-	struct resprof_mds_info *rpmi;
-	struct sl_resource *r;
-	int locked, n;
+	int locked;
 
 	locked = UPD_RLOCK(upd);
-	for (n = 0; n < nios; n++) {
-		r = libsl_id2res(iosv[n].bs_id);
-		rpmi = res2rpmi(r);
-		RPMI_LOCK(rpmi);
-		if (!psc_dynarray_add_ifdne(&rpmi->rpmi_upschq, upd))
-			UPD_INCREF(upd);
-		RPMI_ULOCK(rpmi);
-	}
 	if (!psc_mlist_conjoint(&slm_upschq, upd)) {
 		if (upd->upd_type == UPDT_BMAP &&
 		    (upd_2_fcmh(upd)->fcmh_flags & FCMH_IN_PTRUNC) == 0)
@@ -1243,7 +1094,7 @@ dump_upd(struct slm_update_data *upd)
 }
 #endif
 
-int (*upd_proctab[])(struct slm_update_data *) = {
+void (*upd_proctab[])(struct slm_update_data *) = {
 	upd_proc_bmap,
 	upd_proc_garbage,
 	upd_proc_hldrop,

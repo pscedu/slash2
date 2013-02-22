@@ -1227,7 +1227,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 				}
 			}
 			if (k)
-				upsch_enqueue(upd, iosv, k);
+				upsch_enqueue(upd);
 			UPD_UNBUSY(upd);
 			BMAP_UNBUSY(b);
 			FCMH_UNBUSY(f);
@@ -2171,8 +2171,7 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 			    ptrunc_tally_ios, &ios_list);
 			mds_bmap_write_repls_rel(b);
 
-			upsch_enqueue(bmap_2_upd(b), ios_list.iosv,
-			    ios_list.nios);
+			upsch_enqueue(bmap_2_upd(b));
 		}
 		i++;
 	} else {
