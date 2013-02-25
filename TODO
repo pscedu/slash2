@@ -399,7 +399,7 @@ reimport
      - google drive
      - box
      - amazon S3/glacier
-- fix bug when no IODs are online yet writes are somehow successful
+- fix bug when no IODs are online yet CLI writes are somehow successful
 - umount /$mp doesn't seem to be killing mount_slash
 - UNLINK is very slow when interspersed with READDIR
 
@@ -431,6 +431,10 @@ reimport
 - unlink $mp/.slfidns/$fid produces EBADF
 - can replrq race with general I/O to end up with bmap in no valid
   replica states?
+- fix bug when src ION comes online and upsch doesn't know he should now
+  try to schedule some new work
+    -- upsch_multiwait should be getting woken, needs a PAGEIN for dst though...
+    -- maybe add PAGEIN for src?
 
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
