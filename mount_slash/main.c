@@ -558,8 +558,8 @@ msl_stat(struct fidc_membh *f, void *arg)
 			return (0);
 		}
 	}
-	/* Attrs have expired or do not exist.
-	 */
+
+	/* Attrs have expired or do not exist. */
 	f->fcmh_flags |= FCMH_GETTING_ATTRS;
 	FCMH_ULOCK(f);
 
