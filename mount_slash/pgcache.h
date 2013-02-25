@@ -103,17 +103,17 @@ struct bmap_pagecache_entry {
 			psc_waitq_wakeall((e)->bmpce_waitq);		\
 			DEBUG_BMPCE(PLL_DEBUG, (e), "wakeup");		\
 		} else							\
-			DEBUG_BMPCE(PLL_MAX, (e), "NULL bmpce_waitq");	\
+			DEBUG_BMPCE(PLL_INFO, (e), "NULL bmpce_waitq");	\
 	} while (0)
 
-#define BMPCE_SETATTR(bmpce, fl, ...)					\
+#define BMPCE_SETATTR(e, fl, ...)					\
 	do {								\
 		int _locked;						\
 									\
-		_locked = BMPCE_RLOCK(bmpce);				\
-		(bmpce)->bmpce_flags |= (fl);				\
-		DEBUG_BMPCE(PLL_INFO, (bmpce), ##__VA_ARGS__);		\
-		BMPCE_URLOCK((bmpce), _locked);				\
+		_locked = BMPCE_RLOCK(e);				\
+		(e)->bmpce_flags |= (fl);				\
+		DEBUG_BMPCE(PLL_INFO, (e), ##__VA_ARGS__);		\
+		BMPCE_URLOCK((e), _locked);				\
 	} while (0)
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
@@ -375,8 +375,8 @@ struct bmpc_ioreq *
 	 bmpc_biorq_new(struct msl_fsrqinfo *, struct bmapc_memb *,
 	    char *, int, uint32_t, uint32_t, int);
 
-inline void 	
-	bmpc_biorq_free(struct bmpc_ioreq *);
+inline void
+	 bmpc_biorq_free(struct bmpc_ioreq *);
 
 int	 bmpce_init(struct psc_poolmgr *, void *);
 struct bmap_pagecache_entry *
@@ -405,7 +405,7 @@ bmpc_init(struct bmap_pagecache *bmpc)
 	INIT_PSC_LISTENTRY(&bmpc->bmpc_lentry);
 	INIT_SPINLOCK(&bmpc->bmpc_lock);
 
-	// Double check the exclusivity of these lists...
+	/* Double check the exclusivity of these lists... */
 
 	pll_init(&bmpc->bmpc_lru, struct bmap_pagecache_entry,
 	    bmpce_lentry, &bmpc->bmpc_lock);

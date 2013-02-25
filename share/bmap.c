@@ -71,7 +71,7 @@ bmap_orphan(struct bmapc_memb *b)
 	b->bcm_flags |= BMAP_ORPHAN;
 	BMAP_ULOCK(b);
 
-	DEBUG_BMAP(PLL_MAX, b, "orphan");
+	DEBUG_BMAP(PLL_DIAG, b, "orphan");
 
 	waslocked2 = FCMH_RLOCK(f);
 	psc_assert(f->fcmh_refcnt > 0);
@@ -109,10 +109,8 @@ bmap_remove(struct bmapc_memb *b)
 
 	(void)FCMH_RLOCK(f);
 
-	if (!(b->bcm_flags & BMAP_ORPHAN)) {
-		DEBUG_BMAP(PLL_MAX, b, "removing from bmaptree");
+	if (!(b->bcm_flags & BMAP_ORPHAN))
 		PSC_SPLAY_XREMOVE(bmap_cache, &f->fcmh_bmaptree, b);
-	}
 
 //	assert(not in fcmh_bmaptree)
 
@@ -129,7 +127,7 @@ _bmap_op_done(const struct pfl_callerinfo *pci, struct bmapc_memb *b,
 	BMAP_LOCK_ENSURE(b);
 
 	va_start(ap, fmt);
-	psclogsv(PLL_MAX, SLSS_BMAP, fmt, ap);
+	_psclogv_pci(pci, SLSS_BMAP, 0, fmt, ap);
 	va_end(ap);
 
 	if (!psc_atomic32_read(&b->bcm_opcnt)) {
@@ -222,7 +220,6 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n,
 	BMAP_LOCK(b);
 
 	/* Add to the fcmh's bmap cache */
-	DEBUG_BMAP(PLL_MAX, b, "adding to bmaptree");
 	PSC_SPLAY_XINSERT(bmap_cache, &f->fcmh_bmaptree, b);
 	fcmh_op_start_type(f, FCMH_OPCNT_BMAP);
 
@@ -354,7 +351,6 @@ bmapdesc_access_check(struct srt_bmapdesc *sbd, enum rw rw,
 	} else if (rw == SL_WRITE) {
 		if (sbd->sbd_ios != ios_id)
 			return (EBADF);
-
 	} else {
 		psclog_errorx("invalid rw mode: %d", rw);
 		return (EBADF);

@@ -114,7 +114,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		w->srw_slvr_refs[slvridx] = NULL;
 		if (!lc_conjoint(&sli_replwkq_pending, w)) {
 			psc_atomic32_inc(&w->srw_refcnt);
-			DEBUG_SRW(w, PLL_MAX, "incref");
+			DEBUG_SRW(w, PLL_DEBUG, "incref");
 			lc_add(&sli_replwkq_pending, w);
 		}
 		sli_replwkrq_decref(w, rc);
@@ -359,7 +359,7 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_SLVR] = s;
 
 	psc_atomic32_inc(&w->srw_refcnt);
-	DEBUG_SRW(w, PLL_MAX, "incref");
+	DEBUG_SRW(w, PLL_DEBUG, "incref");
 
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	psc_assert(rc == 0);
