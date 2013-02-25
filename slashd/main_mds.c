@@ -121,10 +121,23 @@ append_path(const char *newpath)
 }
 
 void
-import_zpool(const char *zpoolname, __unusedx const char *zfspoolcf)
+import_zpool(const char *zpoolname, const char *zfspoolcf)
 {
 	char cmdbuf[BUFSIZ];
 	int rc;
+
+	if (zfspoolcf)
+		rc = snprintf(cmdbuf, sizeof(cmdbuf),
+		    "zpool import -f -c '%s' '%s'", zfspoolcf,
+		    zpoolname);
+	else
+		rc = snprintf(cmdbuf, sizeof(cmdbuf),
+		    "zpool import -f '%s'", zpoolname);
+	if (rc >= (int)sizeof(cmdbuf))
+		errno = ENAMETOOLONG;
+	if (rc == -1)
+		psc_fatal("%s", zpoolname);
+	system(cmdbuf);
 
 	rc = snprintf(cmdbuf, sizeof(cmdbuf), "zfs mount '%s'",
 	    zpoolname);
@@ -397,9 +410,8 @@ main(int argc, char *argv[])
 	psc_subsys_register(SLMSS_UPSCH, "upsch");
 	psc_subsys_register(SLMSS_INFO, "info");
 
-#ifdef ZFS_BIN_PATH
 	append_path(ZFS_BIN_PATH);
-#endif
+	append_path(ZPOOL_PATH);
 
 	cfn = SL_PATH_CONF;
 	p = getenv("CONFIG_FILE");
