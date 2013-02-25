@@ -730,12 +730,10 @@ upd_proc_bmap(struct slm_update_data *upd)
 void
 upd_proc_pagein_unit(struct slm_update_data *upd)
 {
-	sl_replica_t iosv[SL_MAX_REPLICAS];
 	struct slm_update_generic *upg;
 	struct fidc_membh *f = NULL;
 	struct bmapc_memb *b = NULL;
-	uint32_t j, n;
-	int rc;
+	int rc, retifset[NBREPLST];
 
 	upg = upd_getpriv(upd);
 	rc = slm_fcmh_get(&upg->upg_fg, &f);
@@ -748,21 +746,19 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 	if (fcmh_2_nrepls(f) > SL_DEF_REPLICAS)
 		mds_inox_ensure_loaded(fcmh_2_inoh(f));
 
-	/* Requeue pending updates on all registered sites. */
-	for (j = n = 0; j < fcmh_2_nrepls(f); j++) {
-		switch (SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls,
-		    SL_BITS_PER_REPLICA * j)) {
-		case BREPLST_REPL_QUEUED:
-		case BREPLST_TRUNCPNDG:
-			iosv[n++].bs_id = fcmh_getrepl(f, j).bs_id;
-			break;
-		}
-	}
-	if (n)
+	brepls_init(retifset, 0);
+	retifset[BREPLST_REPL_QUEUED] = 1;
+	retifset[BREPLST_TRUNCPNDG] = 1;
+
+	rc = mds_repl_bmap_walk_all(b, NULL, retifset,
+	    REPL_WALKF_SCIRCUIT);
+	if (rc)
 		upsch_enqueue(bmap_2_upd(b));
+	if (rc == 0)
+		rc = ENOENT;
 
  out:
-	if (rc || n == 0) {
+	if (rc) {
 		struct slm_wkdata_upsch_purge *wk;
 
 		if (rc == ENOENT) {

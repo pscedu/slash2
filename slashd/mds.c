@@ -1200,33 +1200,24 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		retifset[BREPLST_TRUNCPNDG] = 1;
 		if (mds_repl_bmap_walk_all(b, NULL, retifset,
 		    REPL_WALKF_SCIRCUIT)) {
-			sl_replica_t iosv[SL_MAX_REPLICAS];
+			int retifset[NBREPLST];
 			struct slm_update_data *upd;
-			int k, off, val;
-			unsigned j, nr;
 
 			if (!FCMH_HAS_BUSY(f))
 				BMAP_ULOCK(b);
 			FCMH_WAIT_BUSY(f);
 			BMAP_WAIT_BUSY(b);
 
+			brepls_init(retifset, 0);
+			retifset[BREPLST_REPL_QUEUED] = 1;
+			retifset[BREPLST_TRUNCPNDG] = 1;
+
 			upd = &bmi->bmi_upd;
 			UPD_WAIT(upd);
-			nr = fcmh_2_nrepls(f);
-			for (j = k = off = 0; j < nr;
-			    j++, off += SL_BITS_PER_REPLICA) {
-				val = SL_REPL_GET_BMAP_IOS_STAT(
-				    b->bcm_repls, off);
-				if (val == BREPLST_REPL_QUEUED ||
-				    val == BREPLST_TRUNCPNDG) {
-					if (j >= SL_DEF_REPLICAS)
-						mds_inox_ensure_loaded(
-						    fcmh_2_inoh(f));
-					iosv[k++].bs_id =
-					    fcmh_getrepl(f, j).bs_id;
-				}
-			}
-			if (k)
+			if (fcmh_2_nrepls(f) > SL_DEF_REPLICAS)
+				mds_inox_ensure_loaded(fcmh_2_inoh(f));
+			if (mds_repl_bmap_walk_all(b, NULL, retifset,
+			    REPL_WALKF_SCIRCUIT))
 				upsch_enqueue(upd);
 			UPD_UNBUSY(upd);
 			BMAP_UNBUSY(b);
