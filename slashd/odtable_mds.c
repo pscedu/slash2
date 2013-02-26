@@ -110,8 +110,8 @@ mds_odtable_putitem(struct odtable *odt, void *data, size_t len)
 		mdsio_fsync(current_vfsid, &rootcreds, 0,
 		    odt->odt_handle);
 
-	psclog_info("odtr=%p slot=%zd elemcrc=%"PSCPRIxCRC64" rc=%d",
-	    odtr, odtr->odtr_elem, crc, rc);
+	psclog_info("putitem odtr=%p slot=%zd elemcrc=%"PSCPRIxCRC64" "
+	    "rc=%d", odtr, odtr->odtr_elem, crc, rc);
 
 	PSCFREE(p);
 	return (odtr);
@@ -136,9 +136,8 @@ mds_odtable_getitem(struct odtable *odt,
 	psc_assert(odtr->odtr_elem <= h->odth_nelems - 1);
 
 	p = PSCALLOC(h->odth_slotsz);
-	rc = mdsio_read(current_vfsid, &rootcreds, p,
-	    h->odth_slotsz, &nb, h->odth_start +
-	    odtr->odtr_elem * h->odth_slotsz,
+	rc = mdsio_read(current_vfsid, &rootcreds, p, h->odth_slotsz,
+	    &nb, h->odth_start + odtr->odtr_elem * h->odth_slotsz,
 	    odt->odt_handle);
 	if (nb != h->odth_slotsz && !rc)
 		rc = EIO;
@@ -164,6 +163,7 @@ mds_odtable_getitem(struct odtable *odt,
 		}
 	}
 	memcpy(data, p, len);
+
  out:
 	PSCFREE(p);
 	return (rc);
@@ -199,7 +199,8 @@ mds_odtable_replaceitem(struct odtable *odt,
 	odtr->odtr_key = crc;
 	odtf->odtf_crc = crc;
 
-	psclog_info("odtr=%p slot=%zd elemcrc=%"PSCPRIxCRC64,
+	psclog_info("replaceitem odtr=%p slot=%zd "
+	    "elemcrc=%"PSCPRIxCRC64,
 	    odtr, odtr->odtr_elem, crc);
 
 	rc = mdsio_write(current_vfsid, &rootcreds, p,
@@ -253,8 +254,8 @@ mds_odtable_freeitem(struct odtable *odt, struct odtable_receipt *odtr)
 		mdsio_fsync(current_vfsid, &rootcreds, 0,
 		    odt->odt_handle);
 
-	psclog_info("odtr=%p slot=%zd elemcrc=%"PSCPRIxCRC64, odtr,
-	    odtr->odtr_elem, odtf->odtf_crc);
+	psclog_info("freeitem odtr=%p slot=%zd elemcrc=%"PSCPRIxCRC64,
+	    odtr, odtr->odtr_elem, odtf->odtf_crc);
 
 	PSCFREE(p);
 	PSCFREE(odtr);
@@ -330,7 +331,8 @@ mds_odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 			if (odth->odth_options & ODTBL_OPT_CRC) {
 				uint64_t crc;
 
-				psc_crc64_calc(&crc, p, odth->odth_elemsz);
+				psc_crc64_calc(&crc, p,
+				    odth->odth_elemsz);
 				if (crc != odtf->odtf_crc) {
 					odtf->odtf_inuse = ODTBL_BAD;
 					psclog_warnx("slot=%zd CRC fail "
