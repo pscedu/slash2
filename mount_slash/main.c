@@ -609,6 +609,7 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 
 	msfsthr_ensure();
 
+	OPSTAT_INCR(SLC_OPST_GETATTR);
 	pscfs_getcreds(pfr, &pcr);
 	/*
 	 * Lookup and possibly create a new fidcache handle for inum.
@@ -654,6 +655,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 
 	msfsthr_ensure();
 
+	OPSTAT_INCR(SLC_OPST_LINK);
 	if (strlen(newname) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
 	if (strlen(newname) > SL_NAME_MAX)
@@ -1860,6 +1862,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	int rc;
 
 	msfsthr_ensure();
+	OPSTAT_INCR(SLC_OPST_SYMLINK);
 
 	if (strlen(buf) == 0 || strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
