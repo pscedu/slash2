@@ -399,8 +399,8 @@ msl_biorq_del(struct bmpc_ioreq *r)
 		r->biorq_flags &= ~BIORQ_PENDING;
 	}
 	if (r->biorq_flags & BIORQ_FLUSHRDY) {
-		atomic_dec(&bmpc->bmpc_pndgwr);
-		if (!atomic_read(&bmpc->bmpc_pndgwr))
+		bmpc->bmpc_pndgwr--;
+		if (!bmpc->bmpc_pndgwr)
 			b->bcm_flags &= ~BMAP_DIRTY;
 	}
 
@@ -1343,7 +1343,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	BIORQ_SETATTR(r, BIORQ_FLUSHRDY);
 	psc_assert(psclist_conjoint(&r->biorq_lentry,
 	    psc_lentry_hd(&r->biorq_lentry)));
-	atomic_inc(&bmpc->bmpc_pndgwr);
+	bmpc->bmpc_pndgwr++;
 	BIORQ_ULOCK(r);
 
 	if (b->bcm_flags & BMAP_DIRTY) {
@@ -1351,7 +1351,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 		 * If the bmap is already dirty then at least one other
 		 * writer must be present.
 		 */
-		psc_assert(atomic_read(&bmpc->bmpc_pndgwr) > 1);
+		psc_assert(bmpc->bmpc_pndgwr > 1);
 		psc_assert((pll_nitems(&bmpc->bmpc_pndg_biorqs) +
 			    pll_nitems(&bmpc->bmpc_new_biorqs)) > 1);
 

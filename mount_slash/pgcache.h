@@ -167,7 +167,7 @@ struct bmap_pagecache {
 	struct psc_lockedlist		 bmpc_new_biorqs;
 	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* chain pending I/O requests */
 	struct psc_lockedlist		 bmpc_pndg_ra;		/* RA bmpce's pending comp */
-	atomic_t			 bmpc_pndgwr;		/* # pending wr req */
+	int			 	 bmpc_pndgwr;		/* # pending wr req */
 	int				 bmpc_compwr;		/* # of completed writes */
 	psc_spinlock_t			 bmpc_lock;		/* serialize access to splay tree and locked lists  */
 	struct psclist_head		 bmpc_lentry;		/* chain to global LRU lc */
@@ -185,7 +185,7 @@ struct bmap_pagecache {
 static __inline int
 bmpc_queued_writes(struct bmap_pagecache *bmpc)
 {
-	int nwrites = atomic_read(&bmpc->bmpc_pndgwr);
+	int nwrites = bmpc->bmpc_pndgwr;
 
 	psc_assert(nwrites >= 0);
 
