@@ -99,8 +99,8 @@ upd_tryremove(struct slm_update_data *upd)
 		UPD_LOCK(upd);
 		mds_odtable_freeitem(slm_repl_odt, upd->upd_recpt);
 		upd->upd_recpt = NULL;
-		UPD_ULOCK(upd);
 		DEBUG_UPD(PLL_DIAG, upd, "removed odtable entry");
+		UPD_ULOCK(upd);
 	}
 	BMAPOD_UREQLOCK(bmi, lk);
 }
@@ -723,17 +723,18 @@ upd_proc_bmap(struct slm_update_data *upd)
 	FCMH_UNBUSY(f);
 }
 
-#define DBF_RESID	1
-#define DBF_FID		2
-#define DBF_BNO		5
+#define DBF_RESID		1
+#define DBF_FID			2
+#define DBF_BNO			5
 
 void
 upd_proc_pagein_unit(struct slm_update_data *upd)
 {
+	int rel = 0, rc, retifset[NBREPLST];
 	struct slm_update_generic *upg;
 	struct fidc_membh *f = NULL;
 	struct bmapc_memb *b = NULL;
-	int rc, retifset[NBREPLST];
+	struct bmap_mds_info *bmi;
 
 	upg = upd_getpriv(upd);
 	rc = slm_fcmh_get(&upg->upg_fg, &f);
@@ -742,6 +743,7 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 	rc = mds_bmap_load(f, upg->upg_bno, &b);
 	if (rc)
 		goto out;
+	bmi = bmap_2_bmi(b);
 
 	if (fcmh_2_nrepls(f) > SL_DEF_REPLICAS)
 		mds_inox_ensure_loaded(fcmh_2_inoh(f));
@@ -749,6 +751,10 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 	brepls_init(retifset, 0);
 	retifset[BREPLST_REPL_QUEUED] = 1;
 	retifset[BREPLST_TRUNCPNDG] = 1;
+
+	BMAP_WAIT_BUSY(b);
+	BMAPOD_WRLOCK(bmi);
+	rel = 1;
 
 	rc = mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT);
@@ -761,15 +767,25 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 	if (rc) {
 		struct slm_wkdata_upsch_purge *wk;
 
-		if (rc == ENOENT) {
-			wk = pfl_workq_getitem(slm_wk_upsch_purge,
-			    struct slm_wkdata_upsch_purge);
-			wk->fid = upg->upg_fg.fg_fid;
-			pfl_workq_putitem(wk);
+		wk = pfl_workq_getitem(slm_wk_upsch_purge,
+		    struct slm_wkdata_upsch_purge);
+		wk->fid = upg->upg_fg.fg_fid;
+		wk->b = b;
+		if (b) {
+			bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
+			BMAPOD_ULOCK(bmi);
+			b->bcm_owner = 0;
 		}
+		pfl_workq_putitem(wk);
+		rel = 0;
 	}
-	if (b)
+	if (b) {
+		if (rel) {
+			BMAPOD_ULOCK(bmi);
+			BMAP_UNBUSY(b);
+		}
 		bmap_op_done(b);
+	}
 	if (f)
 		fcmh_op_done(f);
 }
@@ -1013,22 +1029,48 @@ upd_destroy(struct slm_update_data *upd)
 }
 
 int
-upsch_purge_cb(struct slm_sth *sth, __unusedx void *p)
+upsch_purge_cb(struct slm_sth *sth, void *p)
 {
 	struct odtable_receipt *odtr;
+	struct slm_update_data *upd;
+	struct fidc_membh *f;
+	struct bmap *b;
+	sl_bmapno_t n;
+	int rc;
 
-	odtr = PSCALLOC(sizeof(*odtr));
-	odtr->odtr_elem = sqlite3_column_int64(sth->sth_sth, 0);
-	odtr->odtr_key = sqlite3_column_int64(sth->sth_sth, 1);
-	mds_odtable_freeitem(slm_repl_odt, odtr);
+	f = p;
+	if (f) {
+		n = sqlite3_column_int(sth->sth_sth, 0);
+		rc = mds_bmap_load(f, n, &b);
+		if (rc)
+			goto freeit;
+		upd = &bmap_2_bmi(b)->bmi_upd;
+		upd_tryremove(upd);
+		bmap_op_done(b);
+	} else {
+ freeit:
+		odtr = PSCALLOC(sizeof(*odtr));
+		odtr->odtr_elem = sqlite3_column_int64(sth->sth_sth, 1);
+		odtr->odtr_key = sqlite3_column_int64(sth->sth_sth, 2);
+		mds_odtable_freeitem(slm_repl_odt, odtr);
+	}
 	return (0);
 }
 
 void
 upsch_purge(slfid_t fid)
 {
-	dbdo(upsch_purge_cb, NULL,
+	struct fidc_membh *f = NULL;
+	struct slash_fidgen fg;
+
+	fg.fg_fid = fid;
+	fg.fg_gen = FGEN_ANY;
+	slm_fcmh_get(&fg, &f);
+	if (f)
+		FCMH_WAIT_BUSY(f);
+	dbdo(upsch_purge_cb, f,
 	    " SELECT"
+	    "	bmapno,"
 	    "	recpt_elem,"
 	    "	recpt_key"
 	    " FROM"
@@ -1036,6 +1078,10 @@ upsch_purge(slfid_t fid)
 	    " WHERE"
 	    "	fid = ?",
 	    SQLITE_INTEGER64, fid);
+	if (f) {
+		FCMH_UNBUSY(f);
+		fcmh_op_done(f);
+	}
 	dbdo(NULL, NULL,
 	    " DELETE FROM "
 	    "	upsch"
@@ -1048,8 +1094,23 @@ int
 slm_wk_upsch_purge(void *p)
 {
 	struct slm_wkdata_upsch_purge *wk = p;
+	struct slm_update_data *upd;
+	struct bmap_mds_info *bmi;
 
-	upsch_purge(wk->fid);
+	if (wk->b) {
+		bmi = bmap_2_bmi(wk->b);
+		wk->b->bcm_owner = pthread_self();
+		BMAPOD_WRLOCK(bmi);
+
+		upd = &bmap_2_bmi(wk->b)->bmi_upd;
+		if (pfl_memchk(upd, 0, sizeof(*upd)))
+			upd_tryremove(upd);
+// else upsch_purge()
+		BMAPOD_ULOCK(bmi);
+		BMAP_UNBUSY(wk->b);
+		bmap_op_done_type(wk->b, BMAP_OPCNT_UPSCH);
+	} else
+		upsch_purge(wk->fid);
 	return (0);
 }
 

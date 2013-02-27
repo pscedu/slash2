@@ -241,6 +241,7 @@ struct slm_wkdata_ptrunc {
 
 struct slm_wkdata_upsch_purge {
 	slfid_t			 fid;
+	struct bmap		*b;
 };
 
 struct slm_wkdata_upsch_cb {
