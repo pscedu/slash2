@@ -156,7 +156,7 @@ SPLAY_PROTOTYPE(bmap_pagecachetree, bmap_pagecache_entry, bmpce_tentry,
 		bmpce_cmp)
 
 struct bmap_pagecache {
-	struct bmap_pagecachetree	 bmpc_tree;		/* tree of cbuf_handle */
+	struct bmap_pagecachetree	 bmpc_tree;		/* tree of entries */
 	struct timespec			 bmpc_oldest;		/* LRU's oldest item */
 	struct psc_lockedlist		 bmpc_lru;		/* cleancnt can be kept here  */
 	/*
@@ -169,7 +169,7 @@ struct bmap_pagecache {
 	struct psc_lockedlist		 bmpc_pndg_ra;		/* RA bmpce's pending comp */
 	int				 bmpc_pndgwr;		/* # pending wr req */
 	int				 bmpc_compwr;		/* # of completed writes */
-	psc_spinlock_t			 bmpc_lock;		/* serialize access to splay tree and locked lists  */
+	psc_spinlock_t			 bmpc_lock;		/* serialize access */
 	struct psclist_head		 bmpc_lentry;		/* chain to global LRU lc */
 };
 
@@ -413,7 +413,7 @@ bmpc_init(struct bmap_pagecache *bmpc)
 	pll_init(&bmpc->bmpc_pndg_ra, struct bmap_pagecache_entry,
 	    bmpce_lentry, &bmpc->bmpc_lock);
 
-	pll_initf(&bmpc->bmpc_pndg_biorqs, struct bmpc_ioreq,
+	pll_init(&bmpc->bmpc_pndg_biorqs, struct bmpc_ioreq,
 	    biorq_lentry, &bmpc->bmpc_lock);
 
 	pll_init(&bmpc->bmpc_new_biorqs, struct bmpc_ioreq,

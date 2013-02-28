@@ -482,47 +482,67 @@ slctlmsg_bmap_send(int fd, struct psc_ctlmsghdr *mh,
 }
 
 int
-slctlmsg_biorq_send(int fd, struct psc_ctlmsghdr *mh,
-    struct msctlmsg_biorq *scb, struct bmap *b)
+msctlmsg_biorq_send(int fd, struct psc_ctlmsghdr *mh,
+    struct msctlmsg_biorq *msr, struct bmpc_ioreq *r)
 {
-	return (psc_ctlmsg_sendv(fd, mh, scb));
+	sl_ios_id_t id = r->biorq_last_sliod;
+
+	memset(msr, 0, sizeof(*msr));
+	msr->msr_fid = r->biorq_bmap->bcm_fcmh->fcmh_sstb.sst_fid;
+	msr->msr_bno = r->biorq_bmap->bcm_bmapno;
+	msr->msr_ref = r->biorq_ref;
+	msr->msr_off = r->biorq_off;
+	msr->msr_len = r->biorq_len;
+	msr->msr_flags = r->biorq_flags;
+	msr->msr_retries = r->biorq_retries;
+	strlcpy(msr->msr_last_sliod, id == IOS_ID_ANY ? "<any>" :
+	    libsl_id2res(id)->res_name, sizeof(msr->msr_last_sliod));
+	msr->msr_expire.tv_sec = r->biorq_expire.tv_sec;
+	msr->msr_expire.tv_nsec = r->biorq_expire.tv_nsec;
+	msr->msr_npages = psc_dynarray_len(&r->biorq_pages);
+	return (psc_ctlmsg_sendv(fd, mh, msr));
 }
 
 int
-slctlrep_getbiorq(int fd, struct psc_ctlmsghdr *mh, void *m)
+slctlrep_biorqs_send(int fd, struct psc_ctlmsghdr *mh,
+    struct msctlmsg_biorq *msr, struct psc_lockedlist *pll)
+{
+	struct bmpc_ioreq *r;
+	int rc = 1;
+
+	PLL_LOCK(pll);
+	PLL_FOREACH(r, pll) {
+		BIORQ_LOCK(r);
+		rc = msctlmsg_biorq_send(fd, mh, msr, r);
+		BIORQ_ULOCK(r);
+		if (!rc)
+			break;
+	}
+	PLL_ULOCK(pll);
+	return (rc);
+}
+
+int
+msctlrep_getbiorq(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct msctlmsg_biorq *msr = m;
-	struct psc_lockedlist *pll;
 	struct psc_hashbkt *hb;
 	struct fidc_membh *f;
 	struct bmap *b;
-	int rc;
+	int rc = 1;
 
-	rc = 1;
 	PSC_HASHTBL_FOREACH_BUCKET(hb, &fidcHtable) {
 		psc_hashbkt_lock(hb);
 		PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, f, hb) {
 			FCMH_LOCK(f);
 			SPLAY_FOREACH(b, bmap_cache, &f->fcmh_bmaptree) {
-				pll = &bmap_2_bmpc(b)->bmpc_pndg_biorqs;
-				PLL_LOCK(pll);
-				for ()
-				pll_add(&bmap_2_bmpc(b)->bmpc_pndg_biorqs, r);
+				rc = slctlrep_biorqs_send(fd, mh, msr,
+				    &bmap_2_bmpc(b)->bmpc_pndg_biorqs);
+				if (!rc)
+					break;
 
-	struct psc_lockedlist		 bmpc_new_biorqs;
-	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* chain pending I/O requests */
-				rc = slctlmsg_bmap_send(fd, mh, scb, b);
-				msr_fid;
-				msr_bno;
-				msr_ref;
-				msr_off;
-				msr_len;
-				msr_flags;
-				msr_retries;
-				msr_last_sliod[RES_NAME_MAX];
-				msr_expire;
-				msr_npages;
-				msr_nrq;
+				rc = slctlrep_biorqs_send(fd, mh, msr,
+				    &bmap_2_bmpc(b)->bmpc_new_biorqs);
 				if (!rc)
 					break;
 			}
