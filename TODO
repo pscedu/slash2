@@ -441,6 +441,3 @@ reimport
    (o) attr buf size needs be dynamically sized
    (o) predictive/readahead async READDIR to make large directory
        listings fast
-
-- vecnet?  nstone
-- prod miami, psu, iowa
