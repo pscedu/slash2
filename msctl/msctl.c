@@ -41,6 +41,7 @@
 #include "psc_util/log.h"
 
 #include "mount_slash/ctl_cli.h"
+#include "mount_slash/pgcache.h"
 #include "bmap.h"
 #include "ctl.h"
 #include "ctlcli.h"
@@ -228,6 +229,12 @@ packshow_bmaps(__unusedx char *fid)
 	scf = psc_ctlmsg_push(MSCMT_GETBMAP,
 	    sizeof(struct slctlmsg_bmap));
 	scf->scf_fg.fg_fid = FID_ANY;
+}
+
+void
+packshow_requests(__unusedx char *spec)
+{
+	psc_ctlmsg_push(MSCMT_GETBIORQ, sizeof(struct msctlmsg_biorq));
 }
 
 void
@@ -693,6 +700,53 @@ replst_savdat(__unusedx struct psc_ctlmsghdr *mh, const void *m)
 }
 
 void
+ms_biorq_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
+{
+	printf("%-16s %7s %3s %9s %9s "
+	    "%25s %3s %10s %10s %2s %2s\n",
+	    "fid", "bno", "ref", "off", "len",
+	    "flags", "try", "sliod", "expire", "np", "nr");
+}
+
+void
+ms_biorq_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
+{
+	const struct msctlmsg_biorq *msr = m;
+
+	printf("%016"SLPRIxFID" %7d %3d %9d %9d "
+	    "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c "
+	    "%3d %10s %10"PRId64" %2d %2d",
+	    msr->msr_fid, msr->msr_bno, msr->msr_ref, msr->msr_off,
+	    msr->msr_len,
+	    msr->msr_flags & BIORQ_READ			? 'r' : '-',
+	    msr->msr_flags & BIORQ_WRITE		? 'w' : '-',
+	    msr->msr_flags & BIORQ_RBWFP		? 'f' : '-',
+	    msr->msr_flags & BIORQ_RBWLP		? 'l' : '-',
+	    msr->msr_flags & BIORQ_SCHED		? 's' : '-',
+	    msr->msr_flags & BIORQ_INFL			? 'i' : '-',
+	    msr->msr_flags & BIORQ_DIO			? 'd' : '-',
+	    msr->msr_flags & BIORQ_FORCE_EXPIRE		? 'x' : '-',
+	    msr->msr_flags & BIORQ_DESTROY		? 'D' : '-',
+	    msr->msr_flags & BIORQ_FLUSHRDY		? 'L' : '-',
+	    msr->msr_flags & BIORQ_NOFHENT		? 'n' : '-',
+	    msr->msr_flags & BIORQ_APPEND		? 'A' : '-',
+	    msr->msr_flags & BIORQ_READAHEAD		? 'H' : '-',
+	    msr->msr_flags & BIORQ_RBWFAIL		? 'F' : '-',
+	    msr->msr_flags & BIORQ_AIOWAIT		? 'S' : '-',
+	    msr->msr_flags & BIORQ_RESCHED		? 'R' : '-',
+	    msr->msr_flags & BIORQ_ARCHIVER		? 'c' : '-',
+	    msr->msr_flags & BIORQ_EXPIREDLEASE		? 'X' : '-',
+	    msr->msr_flags & BIORQ_MAXRETRIES		? 'T' : '-',
+	    msr->msr_flags & BIORQ_BMAPFAIL		? 'b' : '-',
+	    msr->msr_flags & BIORQ_READFAIL		? 'E' : '-',
+	    msr->msr_flags & BIORQ_PENDING		? 'p' : '-',
+	    msr->msr_flags & BIORQ_WAIT			? 'W' : '-',
+	    msr->msr_flags & BIORQ_MFHLIST		? 'm' : '-',
+	    msr->msr_retries, msr->msr_last_sliod,
+	    msr->msr_expire.tv_sec, msr->msr_npages, msr->msr_nrq);
+}
+
+void
 ms_ctlmsg_error_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     const void *m)
 {
@@ -732,6 +786,7 @@ struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 	{ "connections",	packshow_conns },
 	{ "fcmhs",		packshow_fcmhs },
 	{ "bmaps",		packshow_bmaps },
+	{ "requests",		packshow_requests },
 
 	/* aliases */
 	{ "conns",		packshow_conns },
@@ -742,18 +797,19 @@ struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 #define psc_ctlmsg_error_prdat ms_ctlmsg_error_prdat
 
 struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
-	PSC_CTLMSG_PRFMT_DEFS,
-/* ADDREPLRQ		*/ { NULL,		NULL,		0,				NULL },
-/* DELREPLRQ		*/ { NULL,		NULL,		0,				NULL },
-/* GETCONNS		*/ { sl_conn_prhdr,	sl_conn_prdat,	sizeof(struct slctlmsg_conn),	NULL },
-/* GETFCMH		*/ { sl_fcmh_prhdr,	sl_fcmh_prdat,	sizeof(struct slctlmsg_fcmh),	NULL },
-/* GETREPLST		*/ { NULL,		NULL,		0,				replst_savdat },
-/* GETREPLST_SLAVE	*/ { fnstat_prhdr,	fnstat_prdat,	0,				replst_slave_check },
-/* GET_BMAPREPLPOL	*/ { fnstat_prhdr,	fnstat_prdat,	0,				NULL },
-/* GET_NEWREPLPOL	*/ { fnstat_prhdr,	fnstat_prdat,	0,				NULL },
-/* SET_BMAPREPLPOL	*/ { NULL,		NULL,		0,				NULL },
-/* SET_NEWREPLPOL	*/ { NULL,		NULL,		0,				NULL },
-/* GETBMAP		*/ { sl_bmap_prhdr,	sl_bmap_prdat,	sizeof(struct slctlmsg_bmap),	NULL }
+	PSC_CTLMSG_PRFMT_DEFS
+/* ADDREPLRQ		*/ , { NULL,		NULL,		0,				NULL }
+/* DELREPLRQ		*/ , { NULL,		NULL,		0,				NULL }
+/* GETCONNS		*/ , { sl_conn_prhdr,	sl_conn_prdat,	sizeof(struct slctlmsg_conn),	NULL }
+/* GETFCMH		*/ , { sl_fcmh_prhdr,	sl_fcmh_prdat,	sizeof(struct slctlmsg_fcmh),	NULL }
+/* GETREPLST		*/ , { NULL,		NULL,		0,				replst_savdat }
+/* GETREPLST_SLAVE	*/ , { fnstat_prhdr,	fnstat_prdat,	0,				replst_slave_check }
+/* GET_BMAPREPLPOL	*/ , { fnstat_prhdr,	fnstat_prdat,	0,				NULL }
+/* GET_NEWREPLPOL	*/ , { fnstat_prhdr,	fnstat_prdat,	0,				NULL }
+/* SET_BMAPREPLPOL	*/ , { NULL,		NULL,		0,				NULL }
+/* SET_NEWREPLPOL	*/ , { NULL,		NULL,		0,				NULL }
+/* GETBMAP		*/ , { sl_bmap_prhdr,	sl_bmap_prdat,	sizeof(struct slctlmsg_bmap),	NULL }
+/* GETBIORQ		*/ , { ms_biorq_prhdr,	ms_biorq_prdat,	sizeof(struct msctlmsg_biorq),	NULL }
 };
 
 psc_ctl_prthr_t psc_ctl_prthrs[] = {

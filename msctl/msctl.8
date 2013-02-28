@@ -15,7 +15,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES ctl fuse rpc %
-.Dd February 14, 2013
+.Dd February 27, 2013
 .Dt MSCTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -511,6 +511,7 @@ The default is
 .\"		bmap		=> qq{In-memory bmaps},
 .\"		connections	=> qq{Status of\n.Tn SLASH\npeers on network.},
 .\"		fidcache	=> qq{.Tn FID\n.Pq file- Ns Tn ID\ncache members.},
+.\"		requests	=> qq{I/O requests.},
 .\"	},
 .\"	hashtables => {
 .\"		fidc		=> qq{files\n.Po file\n.Tn ID\ncache\n.Pc},
@@ -692,6 +693,8 @@ Block map structures
 If
 .Ar subspec
 is left unspecified, all pools will be accessed.
+.It Cm requests
+I/O requests.
 .It Cm rpcsvcs
 .Tn RPC
 services.
