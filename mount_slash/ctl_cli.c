@@ -558,18 +558,19 @@ msctlrep_getbiorq(int fd, struct psc_ctlmsghdr *mh, void *m)
 }
 
 struct psc_ctlop msctlops[] = {
-	PSC_CTLDEFOPS,
-/* ADDREPLRQ		*/ { msctlrep_replrq,		sizeof(struct msctlmsg_replrq) },
-/* DELREPLRQ		*/ { msctlrep_replrq,		sizeof(struct msctlmsg_replrq) },
-/* GETCONNS		*/ { slctlrep_getconn,		sizeof(struct slctlmsg_conn) },
-/* GETFCMH		*/ { slctlrep_getfcmh,		sizeof(struct slctlmsg_fcmh) },
-/* GETREPLST		*/ { msctlrep_getreplst,	sizeof(struct msctlmsg_replst) },
-/* GETREPLST_SLAVE	*/ { NULL,			0 },
-/* GET_BMAPREPLPOL	*/ { NULL,			0 },
-/* GET_NEWREPLPOL	*/ { NULL,			0 },
-/* SET_BMAPREPLPOL	*/ { msctlhnd_set_bmapreplpol,	sizeof(struct msctlmsg_bmapreplpol) },
-/* SET_NEWREPLPOL	*/ { msctlhnd_set_newreplpol,	sizeof(struct msctlmsg_newreplpol) },
-/* GETBMAP		*/ { slctlrep_getbmap,		sizeof(struct slctlmsg_bmap) }
+	PSC_CTLDEFOPS
+/* ADDREPLRQ		*/ , { msctlrep_replrq,		sizeof(struct msctlmsg_replrq) }
+/* DELREPLRQ		*/ , { msctlrep_replrq,		sizeof(struct msctlmsg_replrq) }
+/* GETCONNS		*/ , { slctlrep_getconn,	sizeof(struct slctlmsg_conn) }
+/* GETFCMH		*/ , { slctlrep_getfcmh,	sizeof(struct slctlmsg_fcmh) }
+/* GETREPLST		*/ , { msctlrep_getreplst,	sizeof(struct msctlmsg_replst) }
+/* GETREPLST_SLAVE	*/ , { NULL,			0 }
+/* GET_BMAPREPLPOL	*/ , { NULL,			0 }
+/* GET_NEWREPLPOL	*/ , { NULL,			0 }
+/* SET_BMAPREPLPOL	*/ , { msctlhnd_set_bmapreplpol,sizeof(struct msctlmsg_bmapreplpol) }
+/* SET_NEWREPLPOL	*/ , { msctlhnd_set_newreplpol,	sizeof(struct msctlmsg_newreplpol) }
+/* GETBMAP		*/ , { slctlrep_getbmap,	sizeof(struct slctlmsg_bmap) }
+/* GETBIORQ		*/ , { msctlrep_getbiorq,	sizeof(struct msctlmsg_biorq) }
 };
 
 psc_ctl_thrget_t psc_ctl_thrgets[] = {
