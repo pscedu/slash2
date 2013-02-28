@@ -167,7 +167,7 @@ struct bmap_pagecache {
 	struct psc_lockedlist		 bmpc_new_biorqs;
 	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* chain pending I/O requests */
 	struct psc_lockedlist		 bmpc_pndg_ra;		/* RA bmpce's pending comp */
-	int			 	 bmpc_pndgwr;		/* # pending wr req */
+	int				 bmpc_pndgwr;		/* # pending wr req */
 	int				 bmpc_compwr;		/* # of completed writes */
 	psc_spinlock_t			 bmpc_lock;		/* serialize access to splay tree and locked lists  */
 	struct psclist_head		 bmpc_lentry;		/* chain to global LRU lc */
@@ -214,7 +214,7 @@ struct bmpc_ioreq {
 	uint32_t			 biorq_off;	/* filewise, bmap relative	*/
 	uint32_t			 biorq_len;	/* non-aligned, real length	*/
 	uint32_t			 biorq_flags;	/* state and op type bits	*/
-	uint32_t			 biorq_retries;	/* dirty data flush retries     */
+	uint32_t			 biorq_retries;	/* dirty data flush retries	*/
 	sl_ios_id_t			 biorq_last_sliod;
 	psc_spinlock_t			 biorq_lock;
 	struct timespec			 biorq_expire;
@@ -414,7 +414,7 @@ bmpc_init(struct bmap_pagecache *bmpc)
 	    bmpce_lentry, &bmpc->bmpc_lock);
 
 	pll_initf(&bmpc->bmpc_pndg_biorqs, struct bmpc_ioreq,
-	    biorq_lentry, &bmpc->bmpc_lock, PLLF_LOGTMP);
+	    biorq_lentry, &bmpc->bmpc_lock);
 
 	pll_init(&bmpc->bmpc_new_biorqs, struct bmpc_ioreq,
 	    biorq_lentry, &bmpc->bmpc_lock);
