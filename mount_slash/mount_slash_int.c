@@ -400,8 +400,11 @@ msl_biorq_del(struct bmpc_ioreq *r)
 	}
 	if (r->biorq_flags & BIORQ_FLUSHRDY) {
 		bmpc->bmpc_pndgwr--;
-		if (!bmpc->bmpc_pndgwr)
+		if (!bmpc->bmpc_pndgwr) {
 			b->bcm_flags &= ~BMAP_DIRTY;
+			lc_remove(&bmapFlushQ, b);
+			bmap_wake_locked(b);
+		}
 	}
 
 	BMPC_ULOCK(bmpc);
@@ -1343,9 +1346,9 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	BIORQ_SETATTR(r, BIORQ_FLUSHRDY);
 	psc_assert(psclist_conjoint(&r->biorq_lentry,
 	    psc_lentry_hd(&r->biorq_lentry)));
-	bmpc->bmpc_pndgwr++;
 	BIORQ_ULOCK(r);
 
+	bmpc->bmpc_pndgwr++;
 	if (b->bcm_flags & BMAP_DIRTY) {
 		/*
 		 * If the bmap is already dirty then at least one other
@@ -1357,17 +1360,9 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 
 	} else {
 		b->bcm_flags |= BMAP_DIRTY;
-
-		if (!(b->bcm_flags & BMAP_CLI_FLUSHPROC)) {
-			/*
-			 * Give control of the bmap to the bmap_flush
-			 * thread.
-			 */
-			b->bcm_flags |= BMAP_CLI_FLUSHPROC;
-			psc_assert(psclist_disjoint(&b->bcm_lentry));
-			DEBUG_BMAP(PLL_INFO, b, "add to bmapFlushQ");
-			lc_addtail(&bmapFlushQ, b);
-		}
+		psc_assert(psclist_disjoint(&b->bcm_lentry));
+		DEBUG_BMAP(PLL_INFO, b, "add to bmapFlushQ");
+		lc_addtail(&bmapFlushQ, b);
 	}
 	bmap_flushq_wake(BMAPFLSH_TIMEOA, &r->biorq_expire);
 

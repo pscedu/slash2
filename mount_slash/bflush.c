@@ -1196,7 +1196,8 @@ msbmflwthr_main(__unusedx struct psc_thread *thr)
 		 */
 		LIST_CACHE_LOCK(&bmapFlushQ);
 		LIST_CACHE_FOREACH_SAFE(b, tmpb, &bmapFlushQ) {
-			BMAP_LOCK(b);
+			if (!BMAP_TRYLOCK(b))
+				continue;
 			DEBUG_BMAP(PLL_INFO, b, "");
 			if (!(b->bcm_flags & BMAP_TOFREE) &&
 			    ((!(b->bcm_flags &
@@ -1250,22 +1251,12 @@ bmap_flush(struct timespec *nto)
 		DEBUG_BMAP(PLL_INFO, b, "flushable? (outstandingRpcCnt=%d)",
 		    atomic_read(&outstandingRpcCnt));
 
-		BMAP_LOCK(b);
-		psc_assert(b->bcm_flags & BMAP_CLI_FLUSHPROC);
+		if (!BMAP_TRYLOCK(b))
+			continue;
 
-		if (!(b->bcm_flags & BMAP_DIRTY)) {
-			bmpc = bmap_2_bmpc(b);
-			BMPC_LOCK(bmpc);
-			psc_assert(!bmpc_queued_writes(bmpc));
-			if (!bmpc_queued_ios(bmpc)) {
-				lc_remove(&bmapFlushQ, b);
-				b->bcm_flags &= ~BMAP_CLI_FLUSHPROC;
-			}
-			BMPC_ULOCK(bmpc);
-			bmap_wake_locked(b);
-			BMAP_ULOCK(b);
+		psc_assert(b->bcm_flags & BMAP_DIRTY);
 
-		} else if (b->bcm_flags & BMAP_CLI_REASSIGNREQ) {
+		if (b->bcm_flags & BMAP_CLI_REASSIGNREQ) {
 			BMAP_ULOCK(b);
 
 		} else if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED) {

@@ -47,7 +47,7 @@ struct bmap_cli_info {
 };
 
 /* mount_slash specific bcm_flags */
-#define BMAP_CLI_FLUSHPROC	(_BMAP_FLSHFT << 0)	/* proc'd by flush thr */
+#define BMAP_CLI_AVAILABLE	(_BMAP_FLSHFT << 0)	/* not used */
 #define BMAP_CLI_BIORQEXPIRE	(_BMAP_FLSHFT << 1)
 #define BMAP_CLI_LEASEEXTREQ	(_BMAP_FLSHFT << 2)	/* requesting a lease ext */
 #define BMAP_CLI_REASSIGNREQ	(_BMAP_FLSHFT << 3)

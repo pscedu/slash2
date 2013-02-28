@@ -815,7 +815,7 @@ bmap_biorq_waitempty(struct bmapc_memb *b)
 	bmap_wait_locked(b, (!pll_empty(&bmap_2_bmpc(b)->bmpc_pndg_biorqs) ||
 			     !pll_empty(&bmap_2_bmpc(b)->bmpc_new_biorqs)  ||
 			     !pll_empty(&bmap_2_bmpc(b)->bmpc_pndg_ra)     ||
-			     (b->bcm_flags & BMAP_CLI_FLUSHPROC)));
+			     (b->bcm_flags & BMAP_DIRTY)));
 
 	psc_assert(pll_empty(&bmap_2_bmpc(b)->bmpc_pndg_biorqs));
 	psc_assert(pll_empty(&bmap_2_bmpc(b)->bmpc_new_biorqs));
@@ -891,7 +891,6 @@ dump_bmap_flags(uint32_t flags)
 	int seq = 0;
 
 	_dump_bmap_flags_common(&flags, &seq);
-	PFL_PRFLAG(BMAP_CLI_FLUSHPROC, &flags, &seq);
 	PFL_PRFLAG(BMAP_CLI_BIORQEXPIRE, &flags, &seq);
 	PFL_PRFLAG(BMAP_CLI_LEASEEXTREQ, &flags, &seq);
 	PFL_PRFLAG(BMAP_CLI_REASSIGNREQ, &flags, &seq);
@@ -907,5 +906,5 @@ struct bmap_ops bmap_ops = {
 	msl_bmap_init,
 	msl_bmap_retrieve,
 	msl_bmap_modeset,
-	msl_bmap_final_cleanup
+	msl_bmap_final_cleanup		/* bmo_final_cleanupf() */
 };
