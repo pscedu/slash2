@@ -249,7 +249,9 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 			bmpc_biorqs_fail(bmap_2_bmpc(b), rc,
 			    BIORQ_EXPIREDLEASE);
 		}
-	}
+		OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_FAIL);
+	} else
+		OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_DONE);
 
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
 	    "lease extension (rc=%d) nseq=%"PRId64, rc,
@@ -462,19 +464,18 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 		rc = pscrpc_nbreqset_add(pndgBmaplsReqs, rq);
 		if (rc) {
  error:
+			rc = -SLERR_BMAP_LEASEEXT_FAILED;
 			if (rq)
 				pscrpc_req_finished(rq);
 			if (csvc)
 				sl_csvc_decref(csvc);
 
 			bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
-		}
+		} else
+			OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_SEND);
+
 		DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
 		    "lease extension req (rc=%d) (secs=%d)", rc, secs);
-		if (rc)
-			rc = -SLERR_BMAP_LEASEEXT_FAILED;
-		else
-			OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT);
 
 		BMAP_LOCK(b);
 	}
