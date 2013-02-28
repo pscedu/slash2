@@ -232,7 +232,7 @@ packshow_bmaps(__unusedx char *fid)
 }
 
 void
-packshow_requests(__unusedx char *spec)
+packshow_biorqs(__unusedx char *spec)
 {
 	psc_ctlmsg_push(MSCMT_GETBIORQ, sizeof(struct msctlmsg_biorq));
 }
@@ -702,8 +702,8 @@ replst_savdat(__unusedx struct psc_ctlmsghdr *mh, const void *m)
 void
 ms_biorq_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	printf("%-16s %7s %3s %9s %9s "
-	    "%25s %3s %10s %10s %2s %2s\n",
+	printf("%-16s %6s %3s %9s %6s "
+	    "%24s %3s %10s %10s %2s %2s\n",
 	    "fid", "bno", "ref", "off", "len",
 	    "flags", "try", "sliod", "expire", "np", "nr");
 }
@@ -713,9 +713,9 @@ ms_biorq_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 {
 	const struct msctlmsg_biorq *msr = m;
 
-	printf("%016"SLPRIxFID" %7d %3d %9d %9d "
+	printf("%016"SLPRIxFID" %6d %3d %9d %6d "
 	    "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c "
-	    "%3d %10s %10"PRId64" %2d %2d",
+	    "%3d %10s %10"PRId64" %2d %2d\n",
 	    msr->msr_fid, msr->msr_bno, msr->msr_ref, msr->msr_off,
 	    msr->msr_len,
 	    msr->msr_flags & BIORQ_READ			? 'r' : '-',
@@ -786,7 +786,7 @@ struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 	{ "connections",	packshow_conns },
 	{ "fcmhs",		packshow_fcmhs },
 	{ "bmaps",		packshow_bmaps },
-	{ "requests",		packshow_requests },
+	{ "requests",		packshow_biorqs },
 
 	/* aliases */
 	{ "conns",		packshow_conns },
