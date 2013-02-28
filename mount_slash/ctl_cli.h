@@ -72,6 +72,20 @@ struct msctlmsg_fncmd {
 	slfid_t			mfc_fid;
 };
 
+struct msctlmsg_biorq {
+	slfid_t			msr_fid;
+	sl_bmapno_t		msr_bno;
+	int32_t			msr_ref;
+	uint32_t		msr_off;
+	uint32_t		msr_len;
+	uint32_t		msr_flags;
+	uint32_t		msr_retries;
+	char			msr_last_sliod[RES_NAME_MAX];
+	struct sl_timespec	msr_expire;
+	int32_t			msr_npages;
+	int32_t			msr_nrq;
+};
+
 /* mount_slash message types */
 #define MSCMT_ADDREPLRQ		(NPCMT +  0)
 #define MSCMT_DELREPLRQ		(NPCMT +  1)
@@ -84,6 +98,7 @@ struct msctlmsg_fncmd {
 #define MSCMT_SET_BMAPREPLPOL	(NPCMT +  8)
 #define MSCMT_SET_NEWREPLPOL	(NPCMT +  9)
 #define MSCMT_GETBMAP		(NPCMT + 10)
+#define MSCMT_GETBIORQ		(NPCMT + 11)
 
 #define SLASH_FSID		0x51a54
 

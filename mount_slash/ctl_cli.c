@@ -481,6 +481,62 @@ slctlmsg_bmap_send(int fd, struct psc_ctlmsghdr *mh,
 	return (psc_ctlmsg_sendv(fd, mh, scb));
 }
 
+int
+slctlmsg_biorq_send(int fd, struct psc_ctlmsghdr *mh,
+    struct msctlmsg_biorq *scb, struct bmap *b)
+{
+	return (psc_ctlmsg_sendv(fd, mh, scb));
+}
+
+int
+slctlrep_getbiorq(int fd, struct psc_ctlmsghdr *mh, void *m)
+{
+	struct msctlmsg_biorq *msr = m;
+	struct psc_lockedlist *pll;
+	struct psc_hashbkt *hb;
+	struct fidc_membh *f;
+	struct bmap *b;
+	int rc;
+
+	rc = 1;
+	PSC_HASHTBL_FOREACH_BUCKET(hb, &fidcHtable) {
+		psc_hashbkt_lock(hb);
+		PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, f, hb) {
+			FCMH_LOCK(f);
+			SPLAY_FOREACH(b, bmap_cache, &f->fcmh_bmaptree) {
+				pll = &bmap_2_bmpc(b)->bmpc_pndg_biorqs;
+				PLL_LOCK(pll);
+				for ()
+				pll_add(&bmap_2_bmpc(b)->bmpc_pndg_biorqs, r);
+
+	struct psc_lockedlist		 bmpc_new_biorqs;
+	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* chain pending I/O requests */
+				rc = slctlmsg_bmap_send(fd, mh, scb, b);
+				msr_fid;
+				msr_bno;
+				msr_ref;
+				msr_off;
+				msr_len;
+				msr_flags;
+				msr_retries;
+				msr_last_sliod[RES_NAME_MAX];
+				msr_expire;
+				msr_npages;
+				msr_nrq;
+				if (!rc)
+					break;
+			}
+			FCMH_ULOCK(f);
+			if (!rc)
+				break;
+		}
+		psc_hashbkt_unlock(hb);
+		if (!rc)
+			break;
+	}
+	return (rc);
+}
+
 struct psc_ctlop msctlops[] = {
 	PSC_CTLDEFOPS,
 /* ADDREPLRQ		*/ { msctlrep_replrq,		sizeof(struct msctlmsg_replrq) },
