@@ -307,9 +307,8 @@ bmpc_freeall_locked(struct bmap_pagecache *bmpc)
 		PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs)
 			psc_assert(r->biorq_flags & BIORQ_DIO);
 	}
-	/*
-	 * Remove any LRU pages still associated with the bmap.
-	 */
+
+	/* Remove any LRU pages still associated with the bmap. */
 	for (a = SPLAY_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); a;
 	    a = b) {
 		b = SPLAY_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree, a);
@@ -331,15 +330,12 @@ __static void
 bmpc_biorq_seterr(struct bmpc_ioreq *r, int err, uint32_t flag)
 {
 	BIORQ_SETATTR(r, flag);
-	/*
-	 * XXX, this could also be a lease expire situation.
-	 */
+
+	/* XXX, this could also be a lease expire situation. */
 	DEBUG_BIORQ(PLL_ERROR, r, "write-back flush failure (err=%d)",
 	    err);
 
-	/*
-	 * Note that r->biorq_fsrqi may have been freed by now.
-	 */
+	/* Note that r->biorq_fsrqi may have been freed by now. */
 	mfh_seterr(r->biorq_mfh, err);
 }
 
