@@ -56,7 +56,6 @@ struct pscrpc_completion	 rpcComp;
 struct pscrpc_nbreqset		*pndgBmaplsReqs;	/* bmap lease */
 __static struct pscrpc_nbreqset	*pndgBmapRlsReqs;	/* bmap release */
 __static struct pscrpc_nbreqset	*pndgWrtReqs;
-__static struct psc_listcache	 pndgWrtReqSets;
 __static atomic_t		 outstandingRpcCnt;
 psc_atomic32_t			 max_nretries = PSC_ATOMIC32_INIT(256);
 
@@ -1388,7 +1387,7 @@ msbmapflushthr_main(__unusedx struct psc_thread *thr)
 
 		if (!lc_peekheadwait(&bmapFlushQ))
 			continue;
-		
+
 		PFL_GETTIMESPEC(&tmp1);
 		bmap_flush_outstanding_rpcwait();
 		PFL_GETTIMESPEC(&tmp2);
@@ -1537,9 +1536,6 @@ msbmapflushthr_spawn(void)
 
 	lc_reginit(&bmapReadAheadQ, struct msl_fhent,
 	    mfh_lentry, "bmapreadahead");
-
-	lc_reginit(&pndgWrtReqSets, struct pscrpc_request_set,
-	    set_lentry, "bmappndgflushsets");
 
 	for (i = 0; i < NUM_BMAP_FLUSH_THREADS; i++) {
 		thr = pscthr_init(MSTHRT_BMAPFLSH, 0,
