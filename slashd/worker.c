@@ -32,11 +32,14 @@ void *
 _pfl_workq_getitem(int (*cb)(void *), size_t len)
 {
 	struct pfl_workrq *wk;
+	void *p;
 
 	psc_assert(len <= pfl_workrq_pool->ppm_entsize - sizeof(*wk));
 	wk = psc_pool_get(pfl_workrq_pool);
 	wk->wkrq_cbf = cb;
-	return (PSC_AGP(wk, sizeof(*wk)));
+	p = PSC_AGP(wk, sizeof(*wk));
+	memset(p, 0, len);
+	return (p);
 }
 
 void
