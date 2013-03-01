@@ -834,6 +834,7 @@ upd_proc_pagein(struct slm_update_data *upd)
 			    " SELECT	*"
 			    " FROM	upsch"
 			    " WHERE	resid = ?"
+			    "   AND	status = 'Q'"
 			    " ORDER BY	pri DESC,"
 			    "		RANDOM()"
 			    " LIMIT	?",
@@ -843,6 +844,7 @@ upd_proc_pagein(struct slm_update_data *upd)
 		dbdo(upd_proc_pagein_cb, NULL,
 		    " SELECT	*"
 		    " FROM	upsch"
+		    " WHERE	status = 'Q'"
 		    " ORDER BY	pri DESC,"
 		    "		RANDOM()"
 		    " LIMIT	1");
