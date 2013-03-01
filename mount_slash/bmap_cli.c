@@ -378,7 +378,7 @@ msl_bmap_lease_tryreassign(struct bmapc_memb *b)
 int
 msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 {
-	int secs = 0, rc = 0, extended = 0;
+	int secs = 0, rc = 0, unlock = 1, extended = 0;
 	struct timespec ts;
 
 	PFL_GETTIMESPEC(&ts);
@@ -419,6 +419,7 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 					rc = -SLERR_BMAP_LEASEEXT_FAILED;
 
 				bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
+				unlock = 0;
 			}
 		} // else NOOP
 
@@ -465,6 +466,8 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 		if (!rc)
 			OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_SEND);
  out:
+		DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
+		    "lease extension req (rc=%d) (secs=%d)", rc, secs);
 		BMAP_LOCK(b);
 		if (rc) {
 			if (rq)
@@ -472,12 +475,11 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 			if (csvc)
 				sl_csvc_decref(csvc);
 
-			bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
 			bmap_wake_locked(b);
+			bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
 			OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_ABRT);
+			unlock = 0;
 		}
-		DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
-		    "lease extension req (rc=%d) (secs=%d)", rc, secs);
 	}
 
 	if (secs_rem) {
@@ -487,7 +489,8 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 		*secs_rem = secs;
 	}
 
-	BMAP_ULOCK(b);
+	if (unlock)
+		BMAP_ULOCK(b);
 
 	return (rc);
 }
