@@ -183,6 +183,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct msbmflrpc_thread);
 	PRTYPE(struct msbmflwatcher_thread);
 	PRTYPE(struct msctl_replstq);
+	PRTYPE(struct msctlmsg_biorq);
 	PRTYPE(struct msctlmsg_bmapreplpol);
 	PRTYPE(struct msctlmsg_fncmd);
 	PRTYPE(struct msctlmsg_newreplpol);
@@ -395,6 +396,7 @@ main(int argc, char *argv[])
 	PRVAL(MRSLF_EOF);
 	PRVAL(MSCMT_ADDREPLRQ);
 	PRVAL(MSCMT_DELREPLRQ);
+	PRVAL(MSCMT_GETBIORQ);
 	PRVAL(MSCMT_GETBMAP);
 	PRVAL(MSCMT_GETCONNS);
 	PRVAL(MSCMT_GETFCMH);
