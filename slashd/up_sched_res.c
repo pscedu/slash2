@@ -813,30 +813,40 @@ upd_proc_pagein(struct slm_update_data *upd)
 {
 	struct slm_update_generic *upg;
 	struct resprof_mds_info *rpmi;
-	struct sl_resource *r;
 	struct sl_mds_iosinfo *si;
+	struct sl_resource *r;
 	int n;
 
 	upg = upd_getpriv(upd);
-	r = upg->upg_resm->resm_res;
-	rpmi = res2rpmi(r);
-	si = res2iosinfo(r);
+	if (upg->upg_resm) {
+		r = upg->upg_resm->resm_res;
+		rpmi = res2rpmi(r);
+		si = res2iosinfo(r);
 
-	RPMI_LOCK(rpmi);
-	n = UPSCH_MAX_ITEMS_RES	- psc_dynarray_len(&rpmi->rpmi_upschq);
-	si->si_flags &= ~SIF_UPSCH_PAGING;
-	RPMI_ULOCK(rpmi);
+		RPMI_LOCK(rpmi);
+		n = UPSCH_MAX_ITEMS_RES	-
+		    psc_dynarray_len(&rpmi->rpmi_upschq);
+		si->si_flags &= ~SIF_UPSCH_PAGING;
+		RPMI_ULOCK(rpmi);
 
-	if (n > 0)
+		if (n > 0)
+			dbdo(upd_proc_pagein_cb, NULL,
+			    " SELECT	*"
+			    " FROM	upsch"
+			    " WHERE	resid = ?"
+			    " ORDER BY	pri DESC,"
+			    "		RANDOM()"
+			    " LIMIT	?",
+			    SQLITE_INTEGER, r->res_id,
+			    SQLITE_INTEGER, n);
+	} else {
 		dbdo(upd_proc_pagein_cb, NULL,
 		    " SELECT	*"
 		    " FROM	upsch"
-		    " WHERE	resid = ?"
 		    " ORDER BY	pri DESC,"
 		    "		RANDOM()"
-		    " LIMIT	?",
-		    SQLITE_INTEGER, r->res_id,
-		    SQLITE_INTEGER, n);
+		    " LIMIT	1");
+	}
 }
 
 void
@@ -882,7 +892,7 @@ slmupschedthr_main(__unusedx struct psc_thread *thr)
 	struct sl_resource *r;
 	struct sl_resm *m;
 	struct sl_site *s;
-	int i, j;
+	int i, j, rc;
 
 	while (pscthr_run()) {
 		CONF_FOREACH_RESM(s, r, i, m, j)
@@ -898,8 +908,11 @@ slmupschedthr_main(__unusedx struct psc_thread *thr)
 		UPSCH_ULOCK();
 		if (upd)
 			psc_multiwait_leavecritsect(&slm_upsch_mw);
-		else
-			psc_multiwait_secs(&slm_upsch_mw, &upd, 5);
+		else {
+			rc = psc_multiwait_secs(&slm_upsch_mw, &upd, 30);
+			if (rc == -ETIMEDOUT)
+				upschq_resm(NULL, UPDT_PAGEIN);
+		}
 	}
 }
 
@@ -956,7 +969,7 @@ upschq_resm(struct sl_resm *m, int type)
 	struct slm_update_data *upd;
 	struct sl_mds_iosinfo *si;
 
-	if (type == UPDT_PAGEIN) {
+	if (type == UPDT_PAGEIN && m) {
 		int proc = 1;
 
 		rpmi = res2rpmi(m->resm_res);
@@ -1070,7 +1083,7 @@ upsch_purge(slfid_t fid)
 		FCMH_WAIT_BUSY(f);
 	dbdo(upsch_purge_cb, f,
 	    " SELECT"
-	    "	bmapno,"
+	    "	bno,"
 	    "	recpt_elem,"
 	    "	recpt_key"
 	    " FROM"
