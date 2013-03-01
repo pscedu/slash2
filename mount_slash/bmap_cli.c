@@ -447,10 +447,10 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 		rc = slc_rmc_getcsvc1(&csvc,
 		    fcmh_2_fci(b->bcm_fcmh)->fci_resm);
 		if (rc)
-			goto error;
+			goto out;
 		rc = SL_RSX_NEWREQ(csvc, SRMT_EXTENDBMAPLS, rq, mq, mp);
 		if (rc)
-			goto error;
+			goto out;
 
 		memcpy(&mq->sbd, &bmap_2_bci(b)->bci_sbd,
 		    sizeof(struct srt_bmapdesc));
@@ -462,23 +462,22 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 		pscrpc_completion_set(rq,  &rpcComp);
 
 		rc = pscrpc_nbreqset_add(pndgBmaplsReqs, rq);
+		if (!rc)
+			OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_SEND);
+ out:
+		BMAP_LOCK(b);
 		if (rc) {
- error:
-			rc = -SLERR_BMAP_LEASEEXT_FAILED;
 			if (rq)
 				pscrpc_req_finished(rq);
 			if (csvc)
 				sl_csvc_decref(csvc);
 
 			bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
-		} else
-			OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_SEND);
-
+			bmap_wake_locked(b);
+			OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_ABRT);
+		}
 		DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
 		    "lease extension req (rc=%d) (secs=%d)", rc, secs);
-
-		BMAP_LOCK(b);
-		bmap_wake_locked(b);
 	}
 
 	if (secs_rem) {
