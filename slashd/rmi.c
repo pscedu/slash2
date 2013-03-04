@@ -199,10 +199,10 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 {
 	int rc, tract[NBREPLST], retifset[NBREPLST], iosidx, src_iosidx;
 	struct sl_resm *dst_resm = NULL, *src_resm = NULL;
+	struct slm_update_data *upd = NULL;
 	struct srm_repl_schedwk_req *mq;
 	struct srm_repl_schedwk_rep *mp;
 	struct sl_resource *src_res;
-	struct slm_update_data *upd;
 	struct bmapc_memb *b = NULL;
 	struct fidc_membh *f = NULL;
 	sl_bmapgen_t gen;

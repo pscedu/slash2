@@ -731,10 +731,10 @@ void
 upd_proc_pagein_unit(struct slm_update_data *upd)
 {
 	int rel = 0, rc, retifset[NBREPLST];
+	struct bmap_mds_info *bmi = NULL;
 	struct slm_update_generic *upg;
 	struct fidc_membh *f = NULL;
 	struct bmapc_memb *b = NULL;
-	struct bmap_mds_info *bmi;
 
 	upg = upd_getpriv(upd);
 	rc = slm_fcmh_get(&upg->upg_fg, &f);
