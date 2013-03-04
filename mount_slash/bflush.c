@@ -238,7 +238,6 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	pscrpc_completion_set(rq, &rpcComp);
 
-
 	mq->offset = bwc->bwc_soff;
 	mq->size = bwc->bwc_size;
 	mq->op = SRMIOP_WR;
