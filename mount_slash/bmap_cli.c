@@ -249,6 +249,7 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 			bmpc_biorqs_fail(bmap_2_bmpc(b), rc,
 			    BIORQ_EXPIREDLEASE);
 		}
+		bmap_2_bci(b)->bci_error = rc;
 		OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_FAIL);
 	} else
 		OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_DONE);
@@ -401,28 +402,25 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 		 * marked this bmap as expired.
 		 */
 		psc_assert(b->bcm_flags & BMAP_ORPHAN);
-		rc = -SLERR_BMAP_LEASEEXT_FAILED;
+		rc = bmap_2_bci(b)->bci_error;
 
 	} else if (b->bcm_flags & BMAP_CLI_LEASEEXTREQ) {
 		if (secs < BMAP_CLI_EXTREQSECSBLOCK) {
 			if (!blockable)
 				rc = -EAGAIN;
 			else {
-				rc = 0;
 				DEBUG_BMAP(PLL_ERROR, b,
 				    "blocking on lease renewal");
 				bmap_op_start_type(b, BMAP_OPCNT_LEASEEXT);
 				bmap_wait_locked(b, (b->bcm_flags &
 				    BMAP_CLI_LEASEEXTREQ));
 
-				if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED)
-					rc = -SLERR_BMAP_LEASEEXT_FAILED;
+				rc = bmap_2_bci(b)->bci_error;
 
 				bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
 				unlock = 0;
 			}
-		} // else NOOP
-
+		}
 	} else if (b->bcm_flags & BMAP_ORPHAN) {
 		DEBUG_BMAP(PLL_INFO, b,
 		   "not requesting extension for orphaned bmap");
@@ -475,10 +473,19 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 			if (csvc)
 				sl_csvc_decref(csvc);
 
+			bmap_2_bci(b)->bci_error = rc;
+			BMAP_CLEARATTR(b, BMAP_CLI_LEASEEXTREQ);
+
 			bmap_wake_locked(b);
 			bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
 			OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_ABRT);
 			unlock = 0;
+		} else if (blockable) {
+#if 0
+			bmap_wait_locked(b, (b->bcm_flags &
+			    BMAP_CLI_LEASEEXTREQ));
+			rc = bmap_2_bci(b)->bci_error;
+#endif
 		}
 	}
 
