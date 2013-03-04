@@ -208,23 +208,20 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 	psc_assert(b->bcm_flags & BMAP_CLI_LEASEEXTREQ);
 
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
-	if (rc)
-		goto out;
+	if (!rc) {
 
-	memcpy(&bmap_2_bci(b)->bci_sbd, &mp->sbd,
-	    sizeof(struct srt_bmapdesc));
+		memcpy(&bmap_2_bci(b)->bci_sbd, &mp->sbd,
+	    		sizeof(struct srt_bmapdesc));
 
-	PFL_GETTIMESPEC(&bmap_2_bci(b)->bci_xtime);
+		PFL_GETTIMESPEC(&bmap_2_bci(b)->bci_xtime);
 
-	timespecadd(&bmap_2_bci(b)->bci_xtime, &msl_bmap_timeo_inc,
-	    &bmap_2_bci(b)->bci_etime);
-	timespecadd(&bmap_2_bci(b)->bci_xtime, &msl_bmap_max_lease,
-	    &bmap_2_bci(b)->bci_xtime);
+		timespecadd(&bmap_2_bci(b)->bci_xtime, &msl_bmap_timeo_inc,
+		    &bmap_2_bci(b)->bci_etime);
+		timespecadd(&bmap_2_bci(b)->bci_xtime, &msl_bmap_max_lease,
+		    &bmap_2_bci(b)->bci_xtime);
 
- out:
-	BMAP_CLEARATTR(b, BMAP_CLI_LEASEEXTREQ);
-	bmap_wake_locked(b);
-	if (rc) {
+		OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_DONE);
+	} else {
 		/*
 		 * Unflushed data in this bmap is now invalid.  Move the
 		 * bmap out of the fid cache so that others don't
@@ -251,8 +248,10 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 		}
 		bmap_2_bci(b)->bci_error = rc;
 		OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_FAIL);
-	} else
-		OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_DONE);
+	}
+
+	BMAP_CLEARATTR(b, BMAP_CLI_LEASEEXTREQ);
+	bmap_wake_locked(b);
 
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
 	    "lease extension (rc=%d) nseq=%"PRId64, rc,
