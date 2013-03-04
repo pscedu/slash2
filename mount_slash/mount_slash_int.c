@@ -2250,7 +2250,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 		psc_assert(tsize);
 
- retry_bmap:
 		rc = bmap_get(f, start + i, rw, &b);
 		if (rc)
 			break;
@@ -2258,7 +2257,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		rc = msl_bmap_lease_tryext(b, NULL, 1);
 		if (rc) {
 			bmap_op_done(b);
-			goto retry_bmap;
+			goto out;
 		}
 
 		/*
