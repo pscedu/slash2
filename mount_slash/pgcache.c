@@ -159,7 +159,7 @@ bmpc_biorq_cmp(const void *x, const void *y)
 		 * Larger requests with the same start offset should
 		 * have ordering priority.
 		 */
-		return (CMP(b->biorq_len, a->biorq_len));
+		return (CMP(a->biorq_len, b->biorq_len));
 	return (CMP(a->biorq_off, b->biorq_off));
 }
 
