@@ -55,36 +55,7 @@ bmap_cmp(const void *x, const void *y)
 }
 
 void
-bmap_orphan(struct bmapc_memb *b)
-{
-	struct fidc_membh *f = b->bcm_fcmh;
-	int waslocked, waslocked2;
-
-	waslocked = BMAP_RLOCK(b);
-	psc_assert(!(b->bcm_flags & BMAP_ORPHAN));
-
-	if (b->bcm_flags & BMAP_TOFREE) {
-		/* bug #249.  bmap_remove() is already pending. */
-		BMAP_ULOCK(b);
-		return;
-	}
-	b->bcm_flags |= BMAP_ORPHAN;
-	BMAP_ULOCK(b);
-
-	DEBUG_BMAP(PLL_DIAG, b, "orphan");
-
-	waslocked2 = FCMH_RLOCK(f);
-	psc_assert(f->fcmh_refcnt > 0);
-	PSC_SPLAY_XREMOVE(bmap_cache, &f->fcmh_bmaptree, b);
-	fcmh_wake_locked(f);
-	FCMH_URLOCK(f, waslocked2);
-
-	if (waslocked == PSLRV_WASLOCKED)
-		BMAP_LOCK(b);
-}
-
-void
-bmap_orphan_all_locked(struct fidc_membh *f)
+bmap_free_all_locked(struct fidc_membh *f)
 {
 	struct bmapc_memb *a, *b;
 
@@ -92,7 +63,7 @@ bmap_orphan_all_locked(struct fidc_membh *f)
 
 	for (a = SPLAY_MIN(bmap_cache, &f->fcmh_bmaptree); a; a = b) {
 		b = SPLAY_NEXT(bmap_cache, &f->fcmh_bmaptree, a);
-		bmap_orphan(a);
+		BMAP_SETATTR(a, BMAP_TOFREE);
 	}
 }
 
@@ -109,10 +80,7 @@ bmap_remove(struct bmapc_memb *b)
 
 	(void)FCMH_RLOCK(f);
 
-	if (!(b->bcm_flags & BMAP_ORPHAN))
-		PSC_SPLAY_XREMOVE(bmap_cache, &f->fcmh_bmaptree, b);
-
-//	assert(not in fcmh_bmaptree)
+	PSC_SPLAY_XREMOVE(bmap_cache, &f->fcmh_bmaptree, b);
 
 	psc_pool_return(bmap_pool, b);
 	fcmh_op_done_type(f, FCMH_OPCNT_BMAP);
@@ -172,7 +140,7 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n,
 	b = SPLAY_FIND(bmap_cache, &f->fcmh_bmaptree, &lb);
 	if (b) {
 		BMAP_LOCK(b);
-		if (b->bcm_flags & (BMAP_TOFREE | BMAP_ORPHAN)) {
+		if (b->bcm_flags & BMAP_TOFREE) {
 			/*
 			 * This bmap is going away; wait for it so we
 			 * can reload it back.
@@ -448,7 +416,6 @@ _dump_bmap_flags_common(uint32_t *flags, int *seq)
 	PFL_PRFLAG(BMAP_IONASSIGN, flags, seq);
 	PFL_PRFLAG(BMAP_MDCHNG, flags, seq);
 	PFL_PRFLAG(BMAP_WAITERS, flags, seq);
-	PFL_PRFLAG(BMAP_ORPHAN, flags, seq);
 	PFL_PRFLAG(BMAP_BUSY, flags, seq);
 	PFL_PRFLAG(BMAP_NEW, flags, seq);
 	PFL_PRFLAG(BMAP_ARCHIVER, flags, seq);

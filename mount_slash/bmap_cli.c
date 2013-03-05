@@ -227,21 +227,8 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 		 * bmap out of the fid cache so that others don't
 		 * stumble across it while its active I/O's are failed.
 		 */
-		if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED) {
-			psc_assert(b->bcm_flags & BMAP_ORPHAN);
-
-		} else {
-			/*
-			 * Note:  bmap_orphan() will drop the bmap lock
-			 * so it's important that BMAP_CLI_LEASEEXPIRED
-			 * is set afterwards so that it is atomic with
-			 * bmpc_biorqs_fail().
-			 */
-			if (b->bcm_flags & BMAP_ORPHAN)
-				DEBUG_BMAP(PLL_WARN, b, "already orphaned");
-			else
-				bmap_orphan(b);
-
+		if (!(b->bcm_flags & BMAP_CLI_LEASEEXPIRED)) {
+			BMAP_SETATTR(b, BMAP_TOFREE);
 			BMAP_SETATTR(b, BMAP_CLI_LEASEEXPIRED);
 			bmpc_biorqs_fail(bmap_2_bmpc(b), rc,
 			    BIORQ_EXPIREDLEASE);
@@ -400,7 +387,6 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 		 * Catch the case where another thread has already
 		 * marked this bmap as expired.
 		 */
-		psc_assert(b->bcm_flags & BMAP_ORPHAN);
 		rc = bmap_2_bci(b)->bci_error;
 
 	} else if (b->bcm_flags & BMAP_CLI_LEASEEXTREQ) {
@@ -420,10 +406,6 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 				unlock = 0;
 			}
 		}
-	} else if (b->bcm_flags & BMAP_ORPHAN) {
-		DEBUG_BMAP(PLL_INFO, b,
-		   "not requesting extension for orphaned bmap");
-
 	} else if (secs > BMAP_CLI_EXTREQSECS) {
 		timespecadd(&ts, &msl_bmap_timeo_inc,
 		    &bmap_2_bci(b)->bci_etime);

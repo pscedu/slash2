@@ -2055,9 +2055,9 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 		if (!stb->st_size) {
 			DEBUG_FCMH(PLL_DIAG, c,
-			   "full truncate, orphan bmaps");
+			   "full truncate, free bmaps");
 
-			bmap_orphan_all_locked(c);
+			bmap_free_all_locked(c);
 			FCMH_ULOCK(c);
 
 		} else if (stb->st_size == (ssize_t)fcmh_2_fsz(c)) {

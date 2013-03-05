@@ -138,7 +138,7 @@ struct bmap {
 #define BMAP_IONASSIGN		(1 << 10)	/* has been assigned to an ION for writes */
 #define BMAP_MDCHNG		(1 << 11)	/* op mode changing (e.g. READ -> WRITE) */
 #define BMAP_WAITERS		(1 << 12)	/* has bcm_fcmh waiters */
-#define BMAP_ORPHAN		(1 << 13)	/* removed from fcmh_bmaptree */
+#define BMAP_NOT_USED		(1 << 13)
 #define BMAP_BUSY		(1 << 14)	/* temporary processing lock */
 #define BMAP_NEW		(1 << 15)	/* just created */
 #define BMAP_ARCHIVER		(1 << 16)	/* archiver */
@@ -162,7 +162,7 @@ struct bmap {
 #define BMAP_CLEARATTR(b, fl)	CLEARATTR_LOCKED(&(b)->bcm_lock, &(b)->bcm_flags, (fl))
 
 #define _DEBUG_BMAP_FMT		"bmap@%p bno:%u flg:%#x:"		\
-				"%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s " \
+				"%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s " \
 				"fid:"SLPRI_FID" opcnt=%d "
 
 #define _DEBUG_BMAP_FMTARGS(b)						\
@@ -180,7 +180,6 @@ struct bmap {
 	(b)->bcm_flags & BMAP_IONASSIGN	? "A" : "",			\
 	(b)->bcm_flags & BMAP_MDCHNG	? "G" : "",			\
 	(b)->bcm_flags & BMAP_WAITERS	? "w" : "",			\
-	(b)->bcm_flags & BMAP_ORPHAN	? "O" : "",			\
 	(b)->bcm_flags & BMAP_BUSY	? "B" : "",			\
 	(b)->bcm_flags & BMAP_NEW	? "N" : "",			\
 	(b)->bcm_flags & BMAP_ARCHIVER	? "C" : "",			\
@@ -341,8 +340,7 @@ struct bmap {
 
 int	 bmap_cmp(const void *, const void *);
 void	 bmap_cache_init(size_t);
-void	 bmap_orphan(struct bmapc_memb *);
-void	 bmap_orphan_all_locked(struct fidc_membh *);
+void	 bmap_free_all_locked(struct fidc_membh *);
 void	 bmap_biorq_waitempty(struct bmapc_memb *);
 void	_bmap_op_done(const struct pfl_callerinfo *,
 	    struct bmapc_memb *, const char *, ...);
