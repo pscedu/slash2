@@ -898,7 +898,7 @@ _msl_bmpce_rpc_done(const struct pfl_callerinfo *pci,
 	e->bmpce_flags &= ~BMPCE_AIOWAIT;
 
 	BMPCE_ULOCK(e);
-	msl_bmpce_complete_biorq(e, 0);
+	msl_bmpce_complete_biorq(e, rc);
 }
 
 /**
