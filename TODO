@@ -429,7 +429,10 @@ reimport
 - pfl/compat.h must have universal values for constants, so avoid this
   approach altogether and use portable constants instead
 - unlink $mp/.slfidns/$fid produces EBADF
-- error 601 or 1036 as a result of bmap leases not expiring in client
+- are leases getting expired in all circumstances?
+  - error 601 (or 1036) as a result of bmap leases not expiring in client
+  - lease ext hang
+  - flush() hang
 - can replrq race with general I/O to end up with bmap in no valid
   replica states?
 - fix bug when src ION comes online and upsch doesn't know he should now
