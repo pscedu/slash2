@@ -436,6 +436,7 @@ reimport
   try to schedule some new work
     -- upsch_multiwait should be getting woken, needs a PAGEIN for dst though...
     -- maybe add PAGEIN for src?
+- sync new version of LNET
 
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
