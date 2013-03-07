@@ -1,0 +1,11 @@
+03/07/2013
+----------
+
+mds: 20898 (illusion2)
+ios:  20898 (sampled sense2)
+client: 20884 (sampled firehose4)
+
+During the update, Susan and Anjana saw errors reading big files.  At least
+one on-going trace showed that the client was somehow getting -107 (ENOTCONN).  
+It could be recent client changes, or some leftover problem files. Nothing 
+conclusive at this moment what could have caused the problems.
