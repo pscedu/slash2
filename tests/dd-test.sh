@@ -35,9 +35,9 @@ then
 fi
 echo "Sleep $sleeptime seconds between each directories..."
 
+rm -rf $3
 START=`date +%s%N`
 for i in `seq 1 $1`; do
-    rm -rf $3
     mkdir -p $3/$i
     echo $i
     for j in `seq 1 $2`; do
