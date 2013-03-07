@@ -105,7 +105,7 @@ packshow_statfs(__unusedx char *pair)
 void
 packshow_bml(__unusedx char *pair)
 {
-	psc_ctlmsg_push(SLMCMT_GETBMAP, sizeof(struct slctlmsg_bmap));
+	psc_ctlmsg_push(SLMCMT_GETBML, sizeof(struct slmctlmsg_bml));
 }
 
 void
