@@ -138,12 +138,11 @@ struct bmap {
 #define BMAP_IONASSIGN		(1 << 10)	/* has been assigned to an ION for writes */
 #define BMAP_MDCHNG		(1 << 11)	/* op mode changing (e.g. READ -> WRITE) */
 #define BMAP_WAITERS		(1 << 12)	/* has bcm_fcmh waiters */
-#define BMAP_NOT_USED		(1 << 13)
-#define BMAP_BUSY		(1 << 14)	/* temporary processing lock */
-#define BMAP_NEW		(1 << 15)	/* just created */
-#define BMAP_ARCHIVER		(1 << 16)	/* archiver */
-#define BMAP_REPLAY		(1 << 17)	/* during journal replay */
-#define _BMAP_FLSHFT		(1 << 18)
+#define BMAP_BUSY		(1 << 13)	/* temporary processing lock */
+#define BMAP_NEW		(1 << 14)	/* just created */
+#define BMAP_ARCHIVER		(1 << 15)	/* archiver */
+#define BMAP_REPLAY		(1 << 16)	/* during journal replay */
+#define _BMAP_FLSHFT		(1 << 17)
 
 #define bmap_2_fid(b)		fcmh_2_fid((b)->bcm_fcmh)
 
