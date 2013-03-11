@@ -286,6 +286,7 @@ msl_bmap_lease_tryreassign(struct bmapc_memb *b)
 	    bci->bci_nreassigns >= SL_MAX_IOSREASSIGN) {
 		BMPC_ULOCK(bmpc);
 		BMAP_ULOCK(b);
+		OPSTAT_INCR(SLC_OPST_BMAP_REASSIGN_BAIL);
 		return;
 
 	} else {
