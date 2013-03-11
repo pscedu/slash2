@@ -424,17 +424,10 @@ bmap_flush_resched(struct bmpc_ioreq *r)
 
 	DEBUG_BIORQ(PLL_INFO, r, "resched");
 
-	psc_assert(!(r->biorq_flags & BIORQ_RESCHED));
-	if (r->biorq_flags & BIORQ_RESCHED) {
-		BMPC_ULOCK(bmpc);
-		DEBUG_BIORQ(PLL_WARN, r, "already rescheduled");
-		BIORQ_ULOCK(r);
-		return;
-	}
-
 	r->biorq_flags &= ~BIORQ_PENDING;
 	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 	pll_add_sorted(&bmpc->bmpc_new_biorqs, r, bmpc_biorq_cmp);
+  
 	/* bmap_flush_desched drops BIORQ_LOCK and BMPC_LOCK */
 	bmap_flush_desched(r);
 	msl_bmap_lease_tryreassign(r->biorq_bmap);
