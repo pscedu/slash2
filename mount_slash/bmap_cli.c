@@ -168,20 +168,21 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 		 */
 		if (rc == -SLERR_ION_OFFLINE)
 			bmap_2_bci(b)->bci_nreassigns = SLERR_ION_OFFLINE;
-		goto out;
+		OPSTAT_INCR(SLC_OPST_BMAP_REASSIGN_FAIL);
+	} else {
+
+		memcpy(&bmap_2_bci(b)->bci_sbd, &mp->sbd,
+		       sizeof(struct srt_bmapdesc));
+
+		PFL_GETTIMESPEC(&bmap_2_bci(b)->bci_xtime);
+
+		timespecadd(&bmap_2_bci(b)->bci_xtime, &msl_bmap_timeo_inc,
+		    &bmap_2_bci(b)->bci_etime);
+		timespecadd(&bmap_2_bci(b)->bci_xtime, &msl_bmap_max_lease,
+		    &bmap_2_bci(b)->bci_xtime);
+			OPSTAT_INCR(SLC_OPST_BMAP_REASSIGN_DONE);
 	}
 
-	memcpy(&bmap_2_bci(b)->bci_sbd, &mp->sbd,
-	       sizeof(struct srt_bmapdesc));
-
-	PFL_GETTIMESPEC(&bmap_2_bci(b)->bci_xtime);
-
-	timespecadd(&bmap_2_bci(b)->bci_xtime, &msl_bmap_timeo_inc,
-	    &bmap_2_bci(b)->bci_etime);
-	timespecadd(&bmap_2_bci(b)->bci_xtime, &msl_bmap_max_lease,
-	    &bmap_2_bci(b)->bci_xtime);
-
- out:
 	BMAP_CLEARATTR(b, BMAP_CLI_REASSIGNREQ);
 
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b,
@@ -314,11 +315,11 @@ msl_bmap_lease_tryreassign(struct bmapc_memb *b)
 		rc = slc_rmc_getcsvc1(&csvc,
 		    fcmh_2_fci(b->bcm_fcmh)->fci_resm);
 		if (rc)
-			goto error;
+			goto out;
 
 		rc = SL_RSX_NEWREQ(csvc, SRMT_REASSIGNBMAPLS, rq, mq, mp);
 		if (rc)
-			goto error;
+			goto out;
 
 		memcpy(&mq->sbd, &bci->bci_sbd,
 		    sizeof(struct srt_bmapdesc));
@@ -335,8 +336,12 @@ msl_bmap_lease_tryreassign(struct bmapc_memb *b)
 		pscrpc_completion_set(rq, &rpcComp);
 
 		rc = pscrpc_nbreqset_add(pndgBmaplsReqs, rq);
+		if (!rc)
+			OPSTAT_INCR(SLC_OPST_BMAP_REASSIGN_SEND);
+ out:
+		DEBUG_BMAP(rc ? PLL_ERROR : PLL_NOTIFY, b,
+		   "lease reassign req (rc=%d)", rc);
 		if (rc) {
- error:
 			BMAP_CLEARATTR(b, BMAP_CLI_REASSIGNREQ);
 			bmap_op_done_type(b, BMAP_OPCNT_REASSIGN);
 
@@ -344,9 +349,8 @@ msl_bmap_lease_tryreassign(struct bmapc_memb *b)
 				pscrpc_req_finished(rq);
 			if (csvc)
 				sl_csvc_decref(csvc);
+			OPSTAT_INCR(SLC_OPST_BMAP_REASSIGN_ABRT);
 		}
-		DEBUG_BMAP(rc ? PLL_ERROR : PLL_NOTIFY, b,
-		   "lease reassign req (rc=%d)", rc);
 	}
 }
 
