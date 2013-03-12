@@ -1438,8 +1438,9 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 	struct fidc_membh *f;
 	int rc, vfsid;
 
-	if (mdsio_fid_to_vfsid(c->fg.fg_fid, &vfsid) < 0)
-		return (-EINVAL);
+	rc = mdsio_fid_to_vfsid(c->fg.fg_fid, &vfsid);
+	if (rc)
+		return (rc);
 	if (vfsid != current_vfsid)
 		return (-EINVAL);
 
@@ -1455,15 +1456,16 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 		return (-rc);
 	}
 
-	/* Ignore updates from old or invalid generation numbers.
+	/*
+	 * Ignore updates from old or invalid generation numbers.
 	 * XXX XXX fcmh is not locked here
 	 */
 	FCMH_LOCK(f);
 	if (fcmh_2_gen(f) != c->fg.fg_gen) {
 		int x = (fcmh_2_gen(f) > c->fg.fg_gen) ? 1 : 0;
 
-		DEBUG_FCMH(x ? PLL_NOTICE : PLL_ERROR, f,
-		   "mds gen (%"PRIu64") %s than crcup gen (%"PRIu64")",
+		DEBUG_FCMH(x ? PLL_INFO : PLL_ERROR, f,
+		   "MDS gen (%"PRIu64") %s than crcup gen (%"PRIu64")",
 		   fcmh_2_gen(f), x ? ">" : "<", c->fg.fg_gen);
 
 		rc = -(x ? SLERR_GEN_OLD : SLERR_GEN_INVALID);
@@ -1472,7 +1474,8 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 	}
 	FCMH_ULOCK(f);
 
-	/* BMAP_OP #2
+	/*
+	 * BMAP_OP #2
 	 * XXX are we sure after restart bmap will be loaded?
 	 */
 	rc = bmap_lookup(f, c->blkno, &bmap);
@@ -1496,8 +1499,12 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 
 	if (!bmi->bmdsi_wr_ion ||
 	    ios != bmi->bmdsi_wr_ion->rmmi_resm->resm_res_id) {
-		/* Whoops, we recv'd a request from an unexpected NID.
-		 */
+		/* Whoops, we recv'd a request from an unexpected NID. */
+		psclog_errorx("CRCUP for/from invalid NID; "
+		    "wr_ion=%s ios=%#x",
+		    bmi->bmdsi_wr_ion ?
+		    bmi->bmdsi_wr_ion->rmmi_resm->resm_name : "<NONE>",
+		    ios);
 		rc = -EINVAL;
 		BMAP_ULOCK(bmap);
 		goto out;
