@@ -1238,7 +1238,7 @@ bmap_flush(struct timespec *nto)
 	struct bmapc_memb *b, *tmpb;
 	struct bmpc_write_coalescer *bwc;
 	struct timespec t = {0, 0};
-	int i, j;
+	int i, j, k, skip = 0;
 
 	nto->tv_sec = nto->tv_nsec = 0;
 
@@ -1278,11 +1278,6 @@ bmap_flush(struct timespec *nto)
 			break;
 	}
 
-	PFL_GETTIMESPEC(&t);
-	if ((!nto->tv_sec && !nto->tv_nsec) ||
-	    timespeccmp(nto, &t, <)) {
-		timespecadd(&t, &bmapFlushWaitSecs, nto);
-	}
 
 	LIST_CACHE_ULOCK(&bmapFlushQ);
 
@@ -1359,18 +1354,28 @@ bmap_flush(struct timespec *nto)
 		}
 		BMPC_ULOCK(bmpc);
 
-		j = 0;
+		j = k = 0;
 		while (j < psc_dynarray_len(&reqs) &&
 		    (bwc = bmap_flush_trycoalesce(&reqs, &j))) {
+			k += pll_nitems(&bwc->bwc_pll);
 			bmap_flush_coalesce_map(bwc);
 			bmap_flush_send_rpcs(bwc);
 			bmap_flush_outstanding_rpcwait();
 		}
+		if (k != psc_dynarray_len(&reqs))
+			skip = 1;
 		psc_dynarray_reset(&reqs);
 	}
 
 	psc_dynarray_free(&reqs);
 	psc_dynarray_free(&bmaps);
+
+	PFL_GETTIMESPEC(&t);
+	if (skip) {
+		timespecadd(&t, &bmapFlushDefMaxAge, nto);
+	} else {
+		timespecadd(&t, &bmapFlushWaitSecs, nto);
+	}
 }
 
 void
