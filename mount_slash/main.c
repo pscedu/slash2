@@ -1468,7 +1468,7 @@ mfh_incref(struct msl_fhent *mfh)
 void
 mfh_decref(struct msl_fhent *mfh)
 {
-	MFH_RLOCK(mfh);
+	(void)MFH_RLOCK(mfh);
 	psc_assert(mfh->mfh_refcnt > 0);
 	if (--mfh->mfh_refcnt == 0) {
 		psc_pool_return(mfh_pool, mfh);
