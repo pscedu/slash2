@@ -172,7 +172,7 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 	} else {
 
 		memcpy(&bmap_2_bci(b)->bci_sbd, &mp->sbd,
-		       sizeof(struct srt_bmapdesc));
+		    sizeof(struct srt_bmapdesc));
 
 		PFL_GETTIMESPEC(&bmap_2_bci(b)->bci_xtime);
 
@@ -180,14 +180,14 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 		    &bmap_2_bci(b)->bci_etime);
 		timespecadd(&bmap_2_bci(b)->bci_xtime, &msl_bmap_max_lease,
 		    &bmap_2_bci(b)->bci_xtime);
-			OPSTAT_INCR(SLC_OPST_BMAP_REASSIGN_DONE);
+		OPSTAT_INCR(SLC_OPST_BMAP_REASSIGN_DONE);
 	}
 
 	BMAP_CLEARATTR(b, BMAP_CLI_REASSIGNREQ);
 
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b,
-		   "lease reassign (rc=%d) nseq=%"PRId64, rc,
-		   rc ? BMAPSEQ_ANY : mp->sbd.sbd_seq);
+	    "lease reassign (rc=%d) nseq=%"PRId64, rc,
+	    rc ? BMAPSEQ_ANY : mp->sbd.sbd_seq);
 	bmap_op_done_type(b, BMAP_OPCNT_REASSIGN);
 
 	sl_csvc_decref(csvc);
@@ -210,16 +210,15 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 	if (!rc) {
-
 		memcpy(&bmap_2_bci(b)->bci_sbd, &mp->sbd,
-			sizeof(struct srt_bmapdesc));
+		    sizeof(struct srt_bmapdesc));
 
 		PFL_GETTIMESPEC(&bmap_2_bci(b)->bci_xtime);
 
-		timespecadd(&bmap_2_bci(b)->bci_xtime, &msl_bmap_timeo_inc,
-		    &bmap_2_bci(b)->bci_etime);
-		timespecadd(&bmap_2_bci(b)->bci_xtime, &msl_bmap_max_lease,
-		    &bmap_2_bci(b)->bci_xtime);
+		timespecadd(&bmap_2_bci(b)->bci_xtime,
+		    &msl_bmap_timeo_inc, &bmap_2_bci(b)->bci_etime);
+		timespecadd(&bmap_2_bci(b)->bci_xtime,
+		    &msl_bmap_max_lease, &bmap_2_bci(b)->bci_xtime);
 
 		OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_DONE);
 	} else {
@@ -271,6 +270,11 @@ msl_bmap_lease_tryreassign(struct bmapc_memb *b)
 {
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 	struct bmap_cli_info  *bci  = bmap_2_bci(b);
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
+	struct srm_reassignbmap_req *mq;
+	struct srm_reassignbmap_rep *mp;
+	int rc;
 
 	BMAP_LOCK(b);
 	BMPC_LOCK(bmpc);
@@ -291,83 +295,75 @@ msl_bmap_lease_tryreassign(struct bmapc_memb *b)
 		BMAP_ULOCK(b);
 		OPSTAT_INCR(SLC_OPST_BMAP_REASSIGN_BAIL);
 		return;
+	}
 
-	} else {
-		struct slashrpc_cservice *csvc = NULL;
-		struct pscrpc_request *rq = NULL;
-		struct srm_reassignbmap_req *mq;
-		struct srm_reassignbmap_rep *mp;
-		int rc;
+	bci->bci_prev_sliods[bci->bci_nreassigns] =
+	    bci->bci_sbd.sbd_ios;
+	bci->bci_nreassigns++;
 
-		bci->bci_prev_sliods[bci->bci_nreassigns] =
-		    bci->bci_sbd.sbd_ios;
-		bci->bci_nreassigns++;
+	BMAP_SETATTR(b, BMAP_CLI_REASSIGNREQ);
 
-		BMAP_SETATTR(b, BMAP_CLI_REASSIGNREQ);
+	DEBUG_BMAP(PLL_WARN, b, "reassign from ios=%u "
+	    "(nreassigns=%d compwr=%u)", bci->bci_sbd.sbd_ios,
+	    bci->bci_nreassigns, bmpc->bmpc_compwr);
 
-		DEBUG_BMAP(PLL_WARN, b, "reassign from ios=%u "
-		   "(nreassigns=%d compwr=%u)", bci->bci_sbd.sbd_ios,
-		   bci->bci_nreassigns, bmpc->bmpc_compwr);
+	bmap_op_start_type(b, BMAP_OPCNT_REASSIGN);
 
-		bmap_op_start_type(b, BMAP_OPCNT_REASSIGN);
+	BMPC_ULOCK(bmpc);
+	BMAP_ULOCK(b);
 
-		BMPC_ULOCK(bmpc);
-		BMAP_ULOCK(b);
+	rc = slc_rmc_getcsvc1(&csvc, fcmh_2_fci(b->bcm_fcmh)->fci_resm);
+	if (rc)
+		goto out;
 
-		rc = slc_rmc_getcsvc1(&csvc,
-		    fcmh_2_fci(b->bcm_fcmh)->fci_resm);
-		if (rc)
-			goto out;
+	rc = SL_RSX_NEWREQ(csvc, SRMT_REASSIGNBMAPLS, rq, mq, mp);
+	if (rc)
+		goto out;
 
-		rc = SL_RSX_NEWREQ(csvc, SRMT_REASSIGNBMAPLS, rq, mq, mp);
-		if (rc)
-			goto out;
+	memcpy(&mq->sbd, &bci->bci_sbd, sizeof(struct srt_bmapdesc));
+	memcpy(&mq->prev_sliods, &bci->bci_prev_sliods,
+	    sizeof(sl_ios_id_t) * (bci->bci_nreassigns + 1));
+	mq->nreassigns = bci->bci_nreassigns;
+	mq->pios = prefIOS;
 
-		memcpy(&mq->sbd, &bci->bci_sbd,
-		    sizeof(struct srt_bmapdesc));
-		memcpy(&mq->prev_sliods, &bci->bci_prev_sliods,
-		    sizeof(sl_ios_id_t) * (bci->bci_nreassigns + 1));
-		mq->nreassigns = bci->bci_nreassigns;
-		mq->pios = prefIOS;
+	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 
-		authbuf_sign(rq, PSCRPC_MSG_REQUEST);
+	rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
+	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
+	rq->rq_interpret_reply = msl_bmap_lease_reassign_cb;
+	pscrpc_completion_set(rq, &rpcComp);
 
-		rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
-		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
-		rq->rq_interpret_reply = msl_bmap_lease_reassign_cb;
-		pscrpc_completion_set(rq, &rpcComp);
-
-		rc = pscrpc_nbreqset_add(pndgBmaplsReqs, rq);
-		if (!rc)
-			OPSTAT_INCR(SLC_OPST_BMAP_REASSIGN_SEND);
+	rc = pscrpc_nbreqset_add(pndgBmaplsReqs, rq);
+	if (!rc)
+		OPSTAT_INCR(SLC_OPST_BMAP_REASSIGN_SEND);
  out:
-		DEBUG_BMAP(rc ? PLL_ERROR : PLL_NOTIFY, b,
-		   "lease reassign req (rc=%d)", rc);
-		if (rc) {
-			BMAP_CLEARATTR(b, BMAP_CLI_REASSIGNREQ);
-			bmap_op_done_type(b, BMAP_OPCNT_REASSIGN);
+	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
+	    "lease reassign req (rc=%d)", rc);
+	if (rc) {
+		BMAP_CLEARATTR(b, BMAP_CLI_REASSIGNREQ);
+		bmap_op_done_type(b, BMAP_OPCNT_REASSIGN);
 
-			if (rq)
-				pscrpc_req_finished(rq);
-			if (csvc)
-				sl_csvc_decref(csvc);
-			OPSTAT_INCR(SLC_OPST_BMAP_REASSIGN_ABRT);
-		}
+		if (rq)
+			pscrpc_req_finished(rq);
+		if (csvc)
+			sl_csvc_decref(csvc);
+		OPSTAT_INCR(SLC_OPST_BMAP_REASSIGN_ABRT);
 	}
 }
 
 /**
- * msl_bmap_lease_tryext - Attempt to extend the lease time on a bmap.  If
- *    successful, this will result in the creation and assignment of a new
- *    lease sequence number from the MDS.
+ * msl_bmap_lease_tryext - Attempt to extend the lease time on a bmap.
+ *	If successful, this will result in the creation and assignment
+ *	of a new lease sequence number from the MDS.
  * @secs_rem:  return the number of seconds remaining on the lease.
- * @blockable:  means the caller will not block if a renew rpc is outstanding.
- *    Currently, only fsthreads which try lease extension prior to initiating
- *    I/O are 'blockable'.  This is so the system doesn't take more work on
- *    on bmaps whose leases are about to expire.
- * Notes:  Should the lease extension fail, all dirty write buffers must be
- *    expelled and the the flush error code should be set to notify the
- *    holders of open file descriptors.
+ * @blockable:  means the caller will not block if a renew rpc is
+ *	outstanding.  Currently, only fsthreads which try lease
+ *	extension prior to initiating I/O are 'blockable'.  This is so
+ *	the system doesn't take more work on bmaps whose leases are
+ *	about to expire.
+ * Notes: should the lease extension fail, all dirty write buffers must
+ *	be expelled and the flush error code should be set to notify the
+ *	holders of open file descriptors.
  */
 int
 msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
@@ -616,7 +612,8 @@ msl_bmap_reap_init(struct bmapc_memb *b, const struct srt_bmapdesc *sbd)
 	locked = BMAP_RLOCK(b);
 
 	bci->bci_sbd = *sbd;
-	/* Record the start time,
+	/*
+	 * Record the start time,
 	 *  XXX the directio status of the bmap needs to be returned by
 	 *	the MDS so we can set the proper expiration time.
 	 */
@@ -761,7 +758,8 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 			repls |= (1 << it.ri_rnd_idx);
 		}
 
-		/* Wait a bit for async connection establishment before
+		/*
+		 * Wait a bit for async connection establishment before
 		 * resorting to archival resources but only if one or more
 		 * IOS's have been registered in the mw (bug #276).
 		 */
@@ -770,7 +768,8 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 			goto block;
 		}
 
-		/* Could more use the bitmap in a more clever fashion
+		/*
+		 * Could more use the bitmap in a more clever fashion.
 		 */
 		FOREACH_RND(&it, fci->fci_nrepls) {
 			if (repls & (1 << it.ri_rnd_idx))
@@ -869,12 +868,16 @@ msl_bmap_final_cleanup(struct bmapc_memb *b)
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_flags & BMAP_TOFREE);
 	psc_assert(!(b->bcm_flags & BMAP_DIRTY));
-	/* Assert that this bmap can no longer be scheduled by the
-	 *   write back cache thread.
+
+	/*
+	 * Assert that this bmap can no longer be scheduled by the write
+	 * back cache thread.
 	 */
 	psc_assert(psclist_disjoint(&b->bcm_lentry));
-	/* Assert that this thread cannot be seen by the page cache
-	 *   reaper (it was lc_remove'd above by bmpc_lru_del()).
+
+	/*
+	 * Assert that this thread cannot be seen by the page cache
+	 * reaper (it was lc_remove'd above by bmpc_lru_del()).
 	 */
 	psc_assert(psclist_disjoint(&bmpc->bmpc_lentry));
 	BMAP_ULOCK(b);
