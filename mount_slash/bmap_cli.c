@@ -246,6 +246,8 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 	    rc ? BMAPSEQ_ANY : mp->sbd.sbd_seq);
 	bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
 
+	sl_csvc_decref(csvc);
+
 	return (rc);
 }
 
