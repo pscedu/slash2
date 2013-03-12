@@ -1399,6 +1399,7 @@ msbmapflushthr_main(__unusedx struct psc_thread *thr)
 
 		tmp1 = bmapFlushWaitTime;
 
+		/* XXX check flags before going sleep */
 		spinlock(&bmapFlushLock);
 		do {
 			rc = psc_waitq_waitabs(&bmapFlushWaitq,
