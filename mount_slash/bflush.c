@@ -698,6 +698,7 @@ bmap_flushable(struct bmapc_memb *b, struct timespec *t)
 			}
 		}
 
+		/* XXX: biorqs are not sorted by expiration time */
 		if (bmap_flush_biorq_expired(r, t)) {
 			flush = 1;
 			BIORQ_ULOCK(r);
