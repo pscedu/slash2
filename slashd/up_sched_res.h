@@ -71,11 +71,13 @@ struct slm_update_generic {
 	struct psc_listentry		 upg_lentry;
 };
 
-#define UPD_LOCK(upd)			psc_mutex_lock(&(upd)->upd_mutex)
-#define UPD_ULOCK(upd)			psc_mutex_unlock(&(upd)->upd_mutex)
-#define UPD_RLOCK(upd)			psc_mutex_reqlock(&(upd)->upd_mutex)
-#define UPD_URLOCK(upd, lk)		psc_mutex_ureqlock(&(upd)->upd_mutex, (lk))
-#define UPD_HASLOCK(upd)		psc_mutex_haslock(&(upd)->upd_mutex)
+#define UPD_CALLERINFO()		PFL_CALLERINFOSS(SLMSS_UPSCH)
+
+#define UPD_LOCK(upd)			_psc_mutex_lock(UPD_CALLERINFO(), &(upd)->upd_mutex)
+#define UPD_ULOCK(upd)			_psc_mutex_unlock(UPD_CALLERINFO(), &(upd)->upd_mutex)
+#define UPD_RLOCK(upd)			_psc_mutex_reqlock(UPD_CALLERINFO(), &(upd)->upd_mutex)
+#define UPD_URLOCK(upd, lk)		_psc_mutex_ureqlock(UPD_CALLERINFO(), &(upd)->upd_mutex, (lk))
+#define UPD_HASLOCK(upd)		_psc_mutex_haslock(UPD_CALLERINFO(), &(upd)->upd_mutex)
 #define UPD_WAKE(upd)			psc_multiwaitcond_wakeup(&(upd)->upd_mwc)
 
 #define UPD_WAIT(upd)							\
