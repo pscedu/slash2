@@ -953,6 +953,7 @@ msl_bmap_release(struct sl_resm *resm)
 void
 msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 {
+	int i, sortbypass = 0, sawnew;
 	struct timespec crtime, nto = { 0, 0 };
 	struct psc_dynarray rels = DYNARRAY_INIT;
 	struct psc_waitq waitq = PSC_WAITQ_INIT;
@@ -960,7 +961,6 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 	struct resm_cli_info *rmci;
 	struct bmapc_memb *b;
 	struct sl_resm *resm;
-	int i, sortbypass = 0, sawnew;
 
 #define SORT_BYPASS_ITERS		32
 #define ITEMS_TRY_AFTER_UNEXPIRED	MAX_BMAP_RELEASE
@@ -992,8 +992,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 			} else if (!wrapdetect) {
 				wrapdetect = bci;
-				/* Don't set expire in the past.
-				 */
+				/* Don't set expire in the past. */
 				if (timespeccmp(&crtime,
 				    &bci->bci_etime, <))
 					nto = bci->bci_etime;
@@ -1010,8 +1009,9 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 			if (!(b->bcm_flags & BMAP_CLI_LEASEEXPIRED) &&
 			    timespeccmp(&crtime, &bci->bci_etime, <))
-				/* Don't spin on expired bmaps while they
-				 *    unwind timedout biorqs.
+				/*
+				 * Don't spin on expired bmaps while
+				 * they unwind timedout biorqs.
 				 */
 				nto = bci->bci_etime;
 
@@ -1020,7 +1020,10 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 				BMAP_ULOCK(b);
 				rc = msl_bmap_lease_tryext(b, NULL, 0);
-				/* msl_bmap_lease_tryext() adjusted etime.
+
+				/*
+				 * msl_bmap_lease_tryext() adjusted
+				 * etime.
 				 */
 				if ((!rc || rc == -EAGAIN) &&
 				    timespeccmp(&crtime, &bci->bci_etime, <) &&
@@ -1033,7 +1036,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			} else if (timespeccmp(&crtime, &bci->bci_etime, <)) {
 				BMAP_ULOCK(b);
 
-				DEBUG_BMAP(PLL_INFO, b, "sawnew=%d", sawnew);
+				DEBUG_BMAP(PLL_DIAG, b, "sawnew=%d", sawnew);
 				lc_addtail(&bmapTimeoutQ, bci);
 
 				sawnew++;
@@ -1060,23 +1063,24 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			}
 
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) == 1);
-			/* Note that only this thread calls
-			 *   msl_bmap_release() so no reentrancy
-			 *   issues can exist unless another rls thr is
-			 *   introduced.
+
+			/*
+			 * Note that only this thread calls
+			 * msl_bmap_release() so no reentrancy issues
+			 * can exist unless another rls thr is
+			 * introduced.
 			 */
 			psc_assert(!bmpc_queued_ios(&bci->bci_bmpc));
 
 			if (b->bcm_flags & BMAP_WR) {
-				/* Setup a msg to an ION.
-				 */
+				/* Setup a msg to an ION. */
 				psc_assert(bmap_2_ios(b) != IOS_ID_ANY);
 
 				resm = libsl_ios2resm(bmap_2_ios(b));
 				rmci = resm2rmci(resm);
 
 				DEBUG_BMAP(PLL_INFO, b, "res(%s)",
-				   resm->resm_res->res_name);
+				    resm->resm_res->res_name);
 			} else {
 				resm = slc_rmc_resm;
 				rmci = resm2rmci(slc_rmc_resm);
@@ -1110,8 +1114,8 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 			PFL_GETTIMESPEC(&crtime);
 		}
-		/* Send out partially filled release request.
-		 */
+
+		/* Send out partially filled release request. */
 		DYNARRAY_FOREACH(resm, i, &rels)
 			msl_bmap_release(resm);
 
