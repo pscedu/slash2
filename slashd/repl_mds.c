@@ -811,9 +811,14 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 						upd_initf(upd,
 						    UPDT_BMAP,
 						    UPD_INITF_NOKEY);
-					else
+					else {
 						UPD_WAIT(upd);
+						upd->upd_flags |= UPDF_BUSY;
+						upd->upd_owner = pthread_self();
+						UPD_ULOCK(upd);
+					}
 					mds_bmap_write_logrepls(b);
+					UPD_UNBUSY(upd);
 					rc = 0;
 				} else if (rc & F_ALREADY)
 					rc = -SLERR_ALREADY;
