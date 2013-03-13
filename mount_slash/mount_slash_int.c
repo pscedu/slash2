@@ -446,8 +446,6 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 			/* avoid reuse trouble */
 			e->bmpce_owner = NULL;
 		}
-		e->bmpce_flags &= ~BMPCE_INFLIGHT;
-		DEBUG_BMPCE(PLL_INFO, e, "unset inflight");
 		bmpce_release_locked(e, bmpc);
 	}
 	BMPC_ULOCK(bmpc);

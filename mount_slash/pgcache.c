@@ -479,7 +479,6 @@ dump_bmpce_flags(uint32_t flags)
 	PFL_PRFLAG(BMPCE_READPNDG, &flags, &seq);
 	PFL_PRFLAG(BMPCE_RBWPAGE, &flags, &seq);
 	PFL_PRFLAG(BMPCE_RBWRDY, &flags, &seq);
-	PFL_PRFLAG(BMPCE_INFLIGHT, &flags, &seq);
 	PFL_PRFLAG(BMPCE_EIO, &flags, &seq);
 	PFL_PRFLAG(BMPCE_READA, &flags, &seq);
 	PFL_PRFLAG(BMPCE_AIOWAIT, &flags, &seq);

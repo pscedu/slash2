@@ -82,7 +82,7 @@ struct bmap_pagecache_entry {
 #define BMPCE_READPNDG		(1 <<  7)	/* 0x00080: pending read */
 #define BMPCE_RBWPAGE		(1 <<  8)	/* 0x00100 */
 #define BMPCE_RBWRDY		(1 <<  9)	/* 0x00200 */
-#define BMPCE_INFLIGHT		(1 << 10)	/* 0x00400: I/O in progress */
+#define BMPCE_NOT_USED		(1 << 10)	/* 0x00400: */
 #define BMPCE_EIO		(1 << 11)	/* 0x00800: I/O error */
 #define BMPCE_READA		(1 << 12)	/* 0x01000: read-ahead */
 #define BMPCE_AIOWAIT		(1 << 13)	/* 0x02000: wait on async read */
@@ -118,7 +118,7 @@ struct bmap_pagecache_entry {
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP,					\
-	    "bmpce@%p fl=%u:%s%s%s%s%s%s%s%s%s%s%s%s%s%s "		\
+	    "bmpce@%p fl=%u:%s%s%s%s%s%s%s%s%s%s%s%s%s "		\
 	    "o=%#x b=%p "						\
 	    "ts="PSCPRI_TIMESPEC" "					\
 	    "ref=%u "							\
@@ -134,7 +134,6 @@ struct bmap_pagecache_entry {
 	    (b)->bmpce_flags & BMPCE_READPNDG		? "r" : "",	\
 	    (b)->bmpce_flags & BMPCE_RBWPAGE		? "B" : "",	\
 	    (b)->bmpce_flags & BMPCE_RBWRDY		? "R" : "",	\
-	    (b)->bmpce_flags & BMPCE_INFLIGHT		? "L" : "",	\
 	    (b)->bmpce_flags & BMPCE_EIO		? "E" : "",	\
 	    (b)->bmpce_flags & BMPCE_READA		? "a" : "",	\
 	    (b)->bmpce_flags & BMPCE_AIOWAIT		? "w" : "",	\

@@ -340,9 +340,8 @@ biorq_destroy_failed(struct bmpc_ioreq *r)
 __static void
 bmap_flush_desched(struct bmpc_ioreq *r)
 {
-	struct bmap_pagecache_entry *bmpce;
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(r->biorq_bmap);
-	int i, delta;
+	int delta;
 
 	(void)BMPC_RLOCK(bmpc);
 	(void)BIORQ_RLOCK(r);
@@ -392,12 +391,6 @@ bmap_flush_desched(struct bmpc_ioreq *r)
 
 	DEBUG_BIORQ(PLL_INFO, r, "unset sched lease bmap_2_ios (%u)",
 		    bmap_2_ios(r->biorq_bmap));
-
-	DYNARRAY_FOREACH(bmpce, i, &r->biorq_pages) {
-		BMPCE_LOCK(bmpce);
-		bmpce->bmpce_flags &= ~BMPCE_INFLIGHT;
-		BMPCE_ULOCK(bmpce);
-	}
 
 	if (r->biorq_retries >= SL_MAX_BMAPFLSH_RETRIES) {
 		/* Cleanup errored I/O requests. */
@@ -597,11 +590,6 @@ bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
 
 	for (i = 0, bmpce = bwc->bwc_bmpces[0]; i < bwc->bwc_nbmpces;
 	     i++, bmpce = bwc->bwc_bmpces[i]) {
-		BMPCE_LOCK(bmpce);
-		bmpce->bmpce_flags |= BMPCE_INFLIGHT;
-		DEBUG_BMPCE(PLL_INFO, bmpce, "inflight set (niovs=%d)",
-			    bwc->bwc_niovs);
-		BMPCE_ULOCK(bmpce);
 
 		bwc->bwc_iovs[i].iov_base = bmpce->bmpce_base +
 		    (!i ? (r->biorq_off - bmpce->bmpce_off) : 0);
@@ -1150,27 +1138,6 @@ bmap_flush_outstanding_rpcwait(void)
 	freelock(&bmapFlushLock);
 }
 
-static int
-bmpces_inflight_locked(struct bmpc_ioreq *r)
-{
-	struct bmap_pagecache_entry *bmpce;
-	int i;
-
-	LOCK_ENSURE(&r->biorq_lock);
-
-	DYNARRAY_FOREACH(bmpce, i, &r->biorq_pages) {
-		BMPCE_LOCK(bmpce);
-		if (bmpce->bmpce_flags & BMPCE_INFLIGHT) {
-			DEBUG_BMPCE(PLL_DIAG, bmpce,
-			    "inflight already");
-			BMPCE_ULOCK(bmpce);
-			return (1);
-		}
-		BMPCE_ULOCK(bmpce);
-	}
-	return (0);
-}
-
 /**
  * msbmflwthr_main - Lease watcher thread.
  */
@@ -1324,21 +1291,6 @@ bmap_flush(struct timespec *nto)
 					BIORQ_ULOCK(r);
 					continue;
 				}
-
-			} else if (bmpces_inflight_locked(r)) {
-				/*
-				 * Check for the BMPCE_INFLIGHT bit
-				 * which is used to prevent out-of-order
-				 * writes from being sent to the I/O
-				 * server.  That situation is possible
-				 * since large RPCs could take 32x
-				 * longer to ship.
-				 *
-				 * BMPCE_INFLIGHT is not set until the
-				 * bulk is created.
-				 */
-				BIORQ_ULOCK(r);
-				continue;
 			}
 			/* Don't assert !BIORQ_INFL until ensuring that
 			 *   we can actually work on this biorq.  A RBW
