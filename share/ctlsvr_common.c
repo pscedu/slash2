@@ -19,6 +19,7 @@
 
 #include <stdio.h>
 
+#include "libcfs/kp30.h"
 #include "lnet/lib-types.h"
 #include "lnet/lib-lnet.h"
 
