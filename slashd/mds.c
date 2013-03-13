@@ -1465,8 +1465,8 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 		int x = (fcmh_2_gen(f) > c->fg.fg_gen) ? 1 : 0;
 
 		DEBUG_FCMH(x ? PLL_INFO : PLL_ERROR, f,
-		   "MDS gen (%"PRIu64") %s than crcup gen (%"PRIu64")",
-		   fcmh_2_gen(f), x ? ">" : "<", c->fg.fg_gen);
+		    "MDS gen (%"PRIu64") %s than crcup gen (%"PRIu64")",
+		    fcmh_2_gen(f), x ? ">" : "<", c->fg.fg_gen);
 
 		rc = -(x ? SLERR_GEN_OLD : SLERR_GEN_INVALID);
 		FCMH_ULOCK(f);
@@ -1499,7 +1499,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 
 	if (!bmi->bmdsi_wr_ion ||
 	    ios != bmi->bmdsi_wr_ion->rmmi_resm->resm_res_id) {
-		/* Whoops, we recv'd a request from an unexpected NID. */
+		/* We recv'd a request from an unexpected NID. */
 		psclog_errorx("CRCUP for/from invalid NID; "
 		    "wr_ion=%s ios=%#x",
 		    bmi->bmdsi_wr_ion ?
@@ -1512,7 +1512,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 	} else if (bmap->bcm_flags & BMAP_MDS_CRC_UP) {
 		/*
 		 * Ensure that this thread is the only thread updating
-		 * the bmap crc table.
+		 * the bmap CRC table.
 		 * XXX may have to replace this with a waitq
 		 */
 		rc = -SLERR_ALREADY;
