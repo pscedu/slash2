@@ -339,7 +339,7 @@ mds_try_sliodresm(struct sl_resm *resm)
 	 */
 	si = res2iosinfo(resm->resm_res);
 	if (si->si_flags & SIF_DISABLE_BIA) {
-		psclog_notify("res=%s skipped due to SIF_DISABLE_BIA",
+		psclog_diag("res=%s skipped due to SIF_DISABLE_BIA",
 		    resm->resm_res->res_name);
 		return (0);
 	}
