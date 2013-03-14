@@ -634,17 +634,13 @@ bmap_flush_biorq_rbwdone(const struct bmpc_ioreq *r)
  *	This function must be non-blocking.
  */
 __static int
-bmap_flushable(struct bmapc_memb *b, struct timespec *t)
+bmap_flushable(struct bmapc_memb *b, __unusedx struct timespec *t)
 {
-	struct bmpc_ioreq *r, *start, *end, *tmp;
+	struct bmpc_ioreq *r, *tmp;
 	struct bmap_pagecache *bmpc;
-	int count, contig, flush;
-	uint32_t off;
+	int flush;
 
-	off = 0;
-	count = 0; /* gcc */
 	flush = 0;
-	start = end = NULL;
 
 	bmpc = bmap_2_bmpc(b);
 
@@ -653,8 +649,6 @@ bmap_flushable(struct bmapc_memb *b, struct timespec *t)
 		BIORQ_LOCK(r);
 
 		DEBUG_BIORQ(PLL_INFO, r, "consider for flush");
-		psc_assert(r->biorq_off >= off);
-		off = r->biorq_off;
 
 		psc_assert(!(r->biorq_flags & BIORQ_READ));
 
@@ -685,51 +679,9 @@ bmap_flushable(struct bmapc_memb *b, struct timespec *t)
 				continue;
 			}
 		}
-
-		/* XXX: biorqs are not sorted by expiration time */
-		if (bmap_flush_biorq_expired(r, t)) {
-			flush = 1;
-			BIORQ_ULOCK(r);
-			break;
-		}
 		BIORQ_ULOCK(r);
-
-		if (start == NULL) {
-			count = 1;
-			contig = 1;
-			start = end = r;
-		} else {
-			contig = 0;
-			if (r->biorq_off <= biorq_voff_get(end)) {
-				contig = 1;
-				count++;
-				if (biorq_voff_get(r) > biorq_voff_get(end))
-					end = r;
-			}
-		}
-		/*
-		 * If the current request is contained completely
-		 * within a previous request, should we count them
-		 * separately? -- No, because the bmpce pages are
-		 * mapped in the rpc bulk, not anything in the
-		 * biorq.
-		 */
-		if (count == PSCRPC_MAX_BRW_PAGES) {
-			flush = 1;
-			break;
-		}
-		if (end->biorq_off - start->biorq_off + end->biorq_len >=
-		    MIN_COALESCE_RPC_SZ) {
-			flush = 1;
-			break;
-		}
-		/*
-		 * Not contiguous, start a new region.
-		 */
-		if (!contig) {
-			count = 1;
-			start = end = r;
-		}
+		flush = 1;
+		break;
 	}
 	BMPC_ULOCK(bmpc);
 	return (flush);
