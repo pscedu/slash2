@@ -1891,7 +1891,6 @@ msl_pages_copyin(struct bmpc_ioreq *r)
 		DEBUG_BMPCE(PLL_DEBUG, e, "tsize=%u nbytes=%u toff=%u",
 			    tsize, nbytes, toff);
 
-		e->bmpce_flags |= BMPCE_DATARDY;
 		BMPCE_ULOCK(e);
 		/* Do the deed. */
 		memcpy(dest, src, nbytes);
