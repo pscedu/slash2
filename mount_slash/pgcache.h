@@ -82,10 +82,9 @@ struct bmap_pagecache_entry {
 #define BMPCE_READPNDG		(1 <<  7)	/* 0x00080: pending read */
 #define BMPCE_RBWPAGE		(1 <<  8)	/* 0x00100 */
 #define BMPCE_RBWRDY		(1 <<  9)	/* 0x00200 */
-#define BMPCE_NOT_USED		(1 << 10)	/* 0x00400: */
-#define BMPCE_EIO		(1 << 11)	/* 0x00800: I/O error */
-#define BMPCE_READA		(1 << 12)	/* 0x01000: read-ahead */
-#define BMPCE_AIOWAIT		(1 << 13)	/* 0x02000: wait on async read */
+#define BMPCE_EIO		(1 << 10)	/* 0x00800: I/O error */
+#define BMPCE_READA		(1 << 11)	/* 0x01000: read-ahead */
+#define BMPCE_AIOWAIT		(1 << 12)	/* 0x02000: wait on async read */
 
 #define BMPCE_LOCK(b)		spinlock(&(b)->bmpce_lock)
 #define BMPCE_ULOCK(b)		freelock(&(b)->bmpce_lock)
