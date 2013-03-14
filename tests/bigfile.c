@@ -80,7 +80,7 @@ create_file(int i)
 
 read_file(int i)
 {
-	size_t j, size, offset, tmp1, tmp2;
+	size_t j, k, size, offset, tmp1, tmp2;
 
 	offset = random();
 	offset = (1.0 * offset / RAND_MAX) * files[i].size;
@@ -110,7 +110,13 @@ read_file(int i)
 
 	for (j = 0; j < size; j++) {
 		if (scratch[j] != files[i].buf[offset + j]) {
-			printf("Compare Fail: file = %d, offset = %d\n", i, j);
+			printf("Compare Fail: file = %d, offset = %d, size = %d\n", i, j, size);
+			tmp1 = 0;
+			for (k = j; k < size; k++) {
+				if (tmp1++ > 100)
+					break;
+				printf("%02x - %02x\n", scratch[k], files[i].buf[offset + k]);
+			}
 			exit (0);
 		}
 	}
