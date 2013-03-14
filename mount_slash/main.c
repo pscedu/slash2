@@ -632,12 +632,12 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 	sl_internalize_stat(&f->fcmh_sstb, &stb);
 	FCMH_ULOCK(f);
 
-	DEBUG_STATBUF(PLL_DEBUG, &stb, "getattr");
-
  out:
 	if (f)
 		fcmh_op_done(f);
 	pscfs_reply_getattr(pfr, &stb, pscfs_attr_timeout, rc);
+	DEBUG_STATBUF(rc ? PLL_INFO : PLL_DIAG, &stb, "getattr rc=%d",
+	    rc);
 }
 
 void
@@ -948,7 +948,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 			return (ENOENT);
 		rc = msl_load_fcmh(pfr, fid, &c);
 		if (rc)
-			return (rc);
+			return (-rc);
 		if (fgp)
 			*fgp = c->fcmh_fg;
 		if (sstb) {
