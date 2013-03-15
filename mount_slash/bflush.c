@@ -1306,13 +1306,12 @@ msbmapflushthr_main(__unusedx struct psc_thread *thr)
 
 		tmp1 = bmapFlushWaitTime;
 
-		/* XXX check flags before going sleep */
 		spinlock(&bmapFlushLock);
-		do {
+		while (!rc && !bmapFlushTimeoFlags) {
 			rc = psc_waitq_waitabs(&bmapFlushWaitq,
 			    &bmapFlushLock, &bmapFlushWaitTime);
 			spinlock(&bmapFlushLock);
-		} while (!rc && !(bmapFlushTimeoFlags & BMAPFLSH_EXPIRE));
+		}
 		bmapFlushTimeoFlags = 0;
 		freelock(&bmapFlushLock);
 
@@ -1328,7 +1327,7 @@ msbmapflushthr_main(__unusedx struct psc_thread *thr)
 		psclogs_debug(SLSS_BMAP, "flush ("PSCPRI_TIMESPEC"), "
 		    "rpcwait ("PSCPRI_TIMESPEC"), "
 		    "bmapFlushTimeoFlags=%d, "
-		    "waitq (%s"PSCPRI_TIMESPEC") rc=%d",
+		    "waitq (%s"PSCPRI_TIMESPEC"), rc = %d",
 		    PSCPRI_TIMESPEC_ARGS(&flush),
 		    PSCPRI_TIMESPEC_ARGS(&rpcwait),
 		    bmapFlushTimeoFlags,
