@@ -636,11 +636,9 @@ bmap_flush_biorq_rbwdone(const struct bmpc_ioreq *r)
 __static int
 bmap_flushable(struct bmapc_memb *b, __unusedx struct timespec *t)
 {
+	int flush = 0;
 	struct bmpc_ioreq *r, *tmp;
 	struct bmap_pagecache *bmpc;
-	int flush;
-
-	flush = 0;
 
 	bmpc = bmap_2_bmpc(b);
 
