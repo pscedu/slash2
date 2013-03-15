@@ -440,6 +440,8 @@ reimport
     -- upsch_multiwait should be getting woken, needs a PAGEIN for dst though...
     -- maybe add PAGEIN for src?
 - sync new version of LNET
+- some combination of truncate(2) or O_TRUNC and replication can produce
+  corrupt files with no valid bmaps as rbudden has discovered
 
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
