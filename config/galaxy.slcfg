@@ -1,40 +1,31 @@
-# $Id: pscarchiver.slcfg 20686 2013-02-06 00:19:39Z yanovich $
+# $Id$
 
 # See slcfg(5) for more information.
 
-# Archiver configuration
-set port=1302;
-
-# firehose1, firehose2, firehose3, firehose4
-#set routes="
-#  sdp11 [128.182.100.128,128.182.100.127,128.182.100.126,128.182.100.159]@tcp12;
-#  tcp12 [10.10.101.128,10.10.101.129,10.10.101.54,10.10.101.62]@sdp11
-#";
-set nets="sdp11 10.10.101.*; tcp12 *.*.*.*";
-
-set pref_mds="galaxymds@GALAXY";
-set pref_ios="galaxyio@GALAXY";
-set fsuuid="ba945aa454d06323";
-set zpool_name="galaxy";
+set port=5801;
+set nets=tcp8;
+set pref_mds="md@GALAXY";
+set pref_ios="io@GALAXY";
+set fsuuid="f372f9f33113cc97";
+set zpool_name="galaxy_mdfs";
 
 site @GALAXY {
 	site_desc	= "PSC Galaxy Testbed";
-	site_id		= 10;
+	site_id		= 1;
 
-	resource galaxymds {
+	resource md {
 		desc	= "PSC Galaxy MDS";
-		type 	= mds;
+		type	= mds;
 		id	= 1;
 		nids	= galaxy-mds.psc.xsede.org;
+#		jrnldev	= /dev/disk/by-id/scsi-35000c50033f6faa7;
 	}
 
-	resource galaxyio {
+	resource io {
 		desc	= "PSC Galaxy IO Server";
 		type	= standalone_fs;
 		id	= 2;
 		fsroot	= /galaxyio;
-		flags   = "disable_bia";
 		nids	= galaxy-io.psc.xsede.org;
 	}
-
 }
