@@ -854,6 +854,7 @@ msl_bmap_final_cleanup(struct bmapc_memb *b)
 {
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 
+	DEBUG_BMAP(PLL_INFO, b, "start freeing");
 	bmap_biorq_waitempty(b);
 
 	/* Mind lock ordering; remove from LRU first. */
@@ -882,11 +883,11 @@ msl_bmap_final_cleanup(struct bmapc_memb *b)
 	psc_assert(psclist_disjoint(&bmpc->bmpc_lentry));
 	BMAP_ULOCK(b);
 
-	DEBUG_BMAP(PLL_INFO, b, "freeing");
-
 	BMPC_LOCK(bmpc);
 	bmpc_freeall_locked(bmpc);
 	BMPC_ULOCK(bmpc);
+
+	DEBUG_BMAP(PLL_INFO, b, "done freeing");
 }
 
 #if PFL_DEBUG > 0
