@@ -1284,7 +1284,7 @@ void
 msbmapflushthr_main(__unusedx struct psc_thread *thr)
 {
 	struct timespec flush, rpcwait, waitq, tmp1, tmp2;
-	int rc, neg;
+	int rc = 0, neg;
 
 	while (pscthr_run()) {
 		msbmflthr(pscthr_get())->mbft_failcnt = 1;
