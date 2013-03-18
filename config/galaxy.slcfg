@@ -25,7 +25,7 @@ site @GALAXY {
 		desc	= "PSC Galaxy IO Server";
 		type	= standalone_fs;
 		id	= 2;
-		fsroot	= /galaxyio;
+		fsroot	= /home/galaxyio;
 		nids	= galaxy-io.psc.xsede.org;
 	}
 }
