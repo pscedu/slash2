@@ -594,25 +594,6 @@ bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
 	psc_assert(!tot_reqsz);
 }
 
-__static int
-bmap_flush_biorq_rbwdone(const struct bmpc_ioreq *r)
-{
-	struct bmap_pagecache_entry *bmpce;
-	int rc = 0;
-
-	bmpce = (r->biorq_flags & BIORQ_RBWFP) ?
-	    psc_dynarray_getpos(&r->biorq_pages, 0) :
-	    psc_dynarray_getpos(&r->biorq_pages,
-		psc_dynarray_len(&r->biorq_pages)- 1);
-
-	BMPCE_LOCK(bmpce);
-	if (bmpce->bmpce_flags & BMPCE_DATARDY)
-		rc = 1;
-	BMPCE_ULOCK(bmpce);
-
-	return (rc);
-}
-
 /**
  * bmap_flushable - Check if we can flush the given bmpc (either an I/O
  *	request has expired or we have accumulated a big enough I/O).
