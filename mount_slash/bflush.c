@@ -475,21 +475,6 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	bwc_release(bwc);
 }
 
-__static int
-bmap_flush_biorq_cmp(const void *x, const void *y)
-{
-	const struct bmpc_ioreq * const *pa = x, *a = *pa;
-	const struct bmpc_ioreq * const *pb = y, *b = *pb;
-
-	if (a->biorq_off == b->biorq_off)
-		/* Larger requests with the same start offset should have
-		 *   ordering priority.
-		 */
-		return (CMP(b->biorq_len, a->biorq_len));
-
-	return (CMP(a->biorq_off, b->biorq_off));
-}
-
 /**
  * bmap_flush_coalesce_size - This function determines the size of the
  *	region covered by an array of requests.  Note that these
