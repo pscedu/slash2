@@ -736,7 +736,6 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 		 */
 		if (mergeable && t->biorq_off <= biorq_voff_get(e)) {
 			sz = biorq_voff_get(t) - biorq_voff_get(e);
-			psc_assert(sz >= 0);
 			if (sz > 0) {
 				if (sz + bwc->bwc_size >
 				    MIN_COALESCE_RPC_SZ) {
@@ -751,6 +750,10 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 				}
 			}
 			pll_addtail(&bwc->bwc_pll, t);
+
+			/* keep the old e if we didn't extend */
+			if (sz < 0)
+				t = e;
 
 		} else if (expired) {
 			/*
