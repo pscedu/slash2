@@ -91,6 +91,8 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 #define MSL_FLUSH_ATTR_TIMEOUT	8
 
+#define fcmh_reserved(f)	(fcmh_2_fid(f) == SLFID_NS ? EPERM : 0)
+
 struct psc_waitq		 msl_flush_attrq = PSC_WAITQ_INIT;
 psc_spinlock_t			 msl_flush_attrqlock = SPINLOCK_INIT;
 
@@ -247,13 +249,15 @@ _msl_progallowed(struct pscfs_req *pfr)
 		snprintf(fn, sizeof(fn), "/proc/%d/stat", pid);
 		fp = fopen(fn, "r");
 		if (fp == NULL) {
-			psclog_warn("unable to read parent PID from %s", fn);
+			psclog_warn("unable to read parent PID from %s",
+			    fn);
 			return (0);
 		}
 		n = fscanf(fp, "%*d %*s %*c %d ", &ppid);
 		fclose(fp);
 		if (n != 1) {
-			psclog_warn("unable to read parent PID from %s", fn);
+			psclog_warn("unable to read parent PID from %s",
+			    fn);
 			return (0);
 		}
 	} while (pid != ppid);
@@ -294,6 +298,9 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	if (!fcmh_isdir(p))
 		PFL_GOTOERR(out, rc = ENOTDIR);
+	rc = fcmh_reserved(p);
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
 	pscfs_getcreds(pfr, &pcr);
 	rc = fcmh_checkcreds(p, &pcr, W_OK);
@@ -670,6 +677,9 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 
 	if (!fcmh_isdir(p))
 		PFL_GOTOERR(out, rc = ENOTDIR);
+	rc = fcmh_reserved(p);
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
 	rc = fcmh_checkcreds(p, &pcr, W_OK);
 	if (rc)
@@ -749,6 +759,9 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	if (!fcmh_isdir(p))
 		PFL_GOTOERR(out, rc = ENOTDIR);
+	rc = fcmh_reserved(p);
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
 	pscfs_getcreds(pfr, &pcr);
 
@@ -993,6 +1006,9 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	rc = msl_load_fcmh(pfr, pinum, &p);
 	if (rc)
 		PFL_GOTOERR(out, rc);
+	rc = fcmh_reserved(p);
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
 	pscfs_getcreds(pfr, &pcr);
 
@@ -1116,6 +1132,10 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	if (!fcmh_isdir(p))
 		PFL_GOTOERR(out, rc = ENOTDIR);
+	rc = fcmh_reserved(p);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
 	pscfs_getcreds(pfr, &pcr);
 
 	rc = fcmh_checkcreds(p, &pcr, W_OK);
@@ -1194,17 +1214,19 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	psc_assert(d);
 
 	if (!fcmh_isdir(d)) {
-		DEBUG_FCMH(PLL_ERROR, d, "inconsistency: readdir on a non-dir");
+		DEBUG_FCMH(PLL_ERROR, d,
+		    "inconsistency: readdir on a non-dir");
 		PFL_GOTOERR(out, rc = ENOTDIR);
 	}
+	rc = fcmh_reserved(d);
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
 	pscfs_getcreds(pfr, &pcr);
 
 	rc = fcmh_checkcreds(d, &pcr, R_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
-	if (fcmh_2_fid(d) == SLFID_NS)
-		PFL_GOTOERR(out, rc = EPERM);
 
 	FCMH_LOCK(d);
 	if (!DIRCACHE_INITIALIZED(d))
@@ -1300,7 +1322,8 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	if (niov == 2)
 		PSCFREE(iov[1].iov_base);
 
-	pscfs_reply_readdir(pfr, iov[0].iov_base, mp ? mp->size : 0, rc);
+	pscfs_reply_readdir(pfr, iov[0].iov_base, mp ? mp->size : 0,
+	    rc);
 
 	/* At this point the dirent cache is technically freeable. */
 	if (mp && mp->num)
@@ -1449,7 +1472,8 @@ mslfsop_flush(struct pscfs_req *pfr, void *data)
 	rc = msl_flush_int_locked(mfh, 0);
 	freelock(&mfh->mfh_lock);
 
-	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "done flushing (mfh=%p, rc=%d)", mfh, rc);
+	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh,
+	    "done flushing (mfh=%p, rc=%d)", mfh, rc);
 
 	pscfs_reply_flush(pfr, rc);
 	OPSTAT_INCR(SLC_OPST_FLUSH_DONE);
@@ -1470,9 +1494,9 @@ mfh_decref(struct msl_fhent *mfh)
 {
 	(void)MFH_RLOCK(mfh);
 	psc_assert(mfh->mfh_refcnt > 0);
-	if (--mfh->mfh_refcnt == 0) {
+	if (--mfh->mfh_refcnt == 0)
 		psc_pool_return(mfh_pool, mfh);
-	} else
+	else
 		MFH_ULOCK(mfh);
 }
 
@@ -1636,6 +1660,11 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	rc = msl_load_fcmh(pfr, opinum, &op);
 	if (rc)
 		PFL_GOTOERR(out, rc);
+
+	rc = fcmh_reserved(op);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
 	if (pcr.pcr_uid) {
 		FCMH_LOCK(op);
 		sticky = op->fcmh_sstb.sst_mode & S_ISVTX;
@@ -1665,6 +1694,11 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		rc = msl_load_fcmh(pfr, npinum, &np);
 		if (rc)
 			PFL_GOTOERR(out, rc);
+
+		rc = fcmh_reserved(np);
+		if (rc)
+			PFL_GOTOERR(out, rc);
+
 		if (pcr.pcr_uid) {
 			FCMH_LOCK(np);
 			sticky = np->fcmh_sstb.sst_mode & S_ISVTX;
@@ -1878,6 +1912,9 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 
 	if (!fcmh_isdir(p))
 		PFL_GOTOERR(out, rc = ENOTDIR);
+	rc = fcmh_reserved(p);
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
  retry:
 	MSL_RMC_NEWREQ(pfr, p, csvc, SRMT_SYMLINK, rq, mq, mp, rc);
