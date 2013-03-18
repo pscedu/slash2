@@ -433,18 +433,14 @@ reimport
   - error 601 (or 1036) as a result of bmap leases not expiring in client
   - lease ext hang
   - flush() hang
-- can replrq race with general I/O to end up with bmap in no valid
-  replica states?
 - fix bug when src ION comes online and upsch doesn't know he should now
   try to schedule some new work
     -- upsch_multiwait should be getting woken, needs a PAGEIN for dst though...
     -- maybe add PAGEIN for src?
-- sync new version of LNET
 - some combination of truncate(2) or O_TRUNC and replication can produce
   corrupt files with no valid bmaps as rbudden has discovered
 - there is a repl bug in sliod where refcnt does not go to zero so a
   REPL_SCHEDWK is not sent back to MDS
-- check fsuuid in MDS fs against slcfg
 
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
