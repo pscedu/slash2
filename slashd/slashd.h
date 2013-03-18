@@ -299,7 +299,6 @@ extern struct odtable		*slm_ptrunc_odt;
 extern struct sl_mds_nsstats	 slm_nsstats_aggr;	/* aggregate namespace stats */
 extern struct sl_mds_peerinfo	*localinfo;
 
-extern uint64_t			 slm_fsuuid[];
 extern struct psc_thread	*slmconnthr;
 
 static __inline int
