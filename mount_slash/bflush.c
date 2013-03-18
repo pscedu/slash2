@@ -649,18 +649,6 @@ bmap_flushable(struct bmapc_memb *b, __unusedx struct timespec *t)
 			DEBUG_BIORQ(PLL_WARN, r, "skip BIORQ_DESTROY");
 			BIORQ_ULOCK(r);
 			continue;
-
-		} else if ((r->biorq_flags & BIORQ_RBWFP) ||
-			   (r->biorq_flags & BIORQ_RBWLP)) {
-			/*
-			 * Wait for RBW I/O to complete before pushing
-			 * out any pages.
-			 */
-			psc_assert(0);
-			if (!bmap_flush_biorq_rbwdone(r)) {
-				BIORQ_ULOCK(r);
-				continue;
-			}
 		}
 		BIORQ_ULOCK(r);
 		flush = 1;
@@ -1219,16 +1207,6 @@ bmap_flush(struct timespec *nto)
 				BIORQ_ULOCK(r);
 				continue;
 
-			} else if ((r->biorq_flags & BIORQ_RBWFP) ||
-				   (r->biorq_flags & BIORQ_RBWLP)) {
-				/* Wait for RBW I/O to complete before
-				 *  pushing out any pages.
-				 */
-				psc_assert(0);
-				if (!bmap_flush_biorq_rbwdone(r)) {
-					BIORQ_ULOCK(r);
-					continue;
-				}
 			}
 			/* Don't assert !BIORQ_INFL until ensuring that
 			 *   we can actually work on this biorq.  A RBW
