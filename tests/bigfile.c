@@ -115,7 +115,7 @@ read_file(int i)
 			for (k = j; k < size; k++) {
 				if (tmp1++ > 100)
 					break;
-				printf("%02x - %02x\n", scratch[k], files[i].buf[offset + k]);
+				printf("%08x: %08x - %08x\n", k, scratch[k], files[i].buf[offset + k]);
 			}
 			exit (0);
 		}
