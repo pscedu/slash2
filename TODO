@@ -428,7 +428,6 @@ reimport
   then one for loading the recpt?  optimize this if so
 - pfl/compat.h must have universal values for constants, so avoid this
   approach altogether and use portable constants instead
-- unlink $mp/.slfidns/$fid produces EBADF
 - are leases getting expired in all circumstances?
   - error 601 (or 1036) as a result of bmap leases not expiring in client
   - lease ext hang
