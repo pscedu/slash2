@@ -72,7 +72,6 @@ const char		*progname;
 
 struct slash_creds	 rootcreds = { 0, 0 };
 struct pscfs		 pscfs;
-uint64_t		 slm_fsuuid[MAX_FILESYSTEMS];
 struct psc_thread	*slmconnthr;
 uint32_t		 sys_upnonce;
 
@@ -331,26 +330,21 @@ psc_register_filesystem(int vfsid)
 			found2++;
 	}
 	if (found1) {
-		psclog_warnx("Duplicate SITEID found: %"PRIx64, siteid);
+		psclog_warnx("duplicate SITEID found: %"PRIx64, siteid);
 		return;
 	}
 	if (found2) {
-		psclog_warnx("Duplicate UUID found: %"PRIx64, uuid);
+		psclog_warnx("duplicate UUID found: %"PRIx64, uuid);
 		return;
 	}
 	rc = zfsslash2_build_immns_cache(vfsid);
 	if (rc) {
-		psclog_warnx("Fail to create cache for file system %s",
+		psclog_warnx("failed to create cache for file system %s",
 		    basename(zfsMount[vfsid].name));
 		return;
 	}
 
 	entry = PSCALLOC(sizeof(struct rootNames));
-	if (!entry) {
-		psclog_warnx("Fail to allocate memory to register %s",
-		    basename(zfsMount[vfsid].name));
-		return;
-	}
 
 	strlcpy(entry->rn_name, basename(zfsMount[vfsid].name),
 	    sizeof(entry->rn_name));
@@ -515,6 +509,12 @@ main(int argc, char *argv[])
 	if (!found)
 		psc_fatalx("site id=%d doesn't match any file system",
 		    nodeSite->site_id);
+
+	if (zfsMount[current_vfsid].uuid != globalConfig.gconf_fsuuid)
+		psc_fatalx("FSUUID do not match; "
+		    "ZFS=%"PRIx64" slcfg=%"PRIx64,
+		    zfsMount[current_vfsid].uuid,
+		    globalConfig.gconf_fsuuid);
 
 	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_UPSCHDB);
 	rc = sqlite3_open(fn, &slm_dbh);
