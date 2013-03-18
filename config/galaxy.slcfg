@@ -6,7 +6,7 @@ set port=5801;
 set nets=tcp8;
 set pref_mds="md@GALAXY";
 set pref_ios="io@GALAXY";
-set fsuuid="f372f9f33113cc97";
+set fsuuid="a44303a5ccf4a053";
 set zpool_name="galaxy_mdfs";
 
 site @GALAXY {
