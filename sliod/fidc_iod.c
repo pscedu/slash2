@@ -295,9 +295,9 @@ sli_fcmh_dtor(__unusedx struct fidc_membh *f)
 }
 
 struct sl_fcmh_ops sl_fcmh_ops = {
-/* ctor */		sli_fcmh_ctor,
-/* dtor */		sli_fcmh_dtor,
-/* getattr */		NULL,
-/* postsetattr */	NULL,
-/* modify */		sli_fcmh_reopen
+/* sfop_ctor */		sli_fcmh_ctor,
+/* sfop_dtor */		sli_fcmh_dtor,
+/* sfop_getattr */	NULL,
+/* sfop_postsetattr */	NULL,
+/* sfop_modify */	sli_fcmh_reopen
 };
