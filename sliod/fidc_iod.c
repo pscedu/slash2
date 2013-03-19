@@ -205,12 +205,13 @@ sli_fcmh_reopen(struct fidc_membh *f, const struct slash_fidgen *fg)
 		 * Need to reopen the backing file and possibly remove
 		 * the old one.
 		 */
-		if (close(fcmh_2_fd(f)) == -1)
-			DEBUG_FCMH(PLL_ERROR, f,
-			    "close() failed errno=%d",
-			    errno);
-		else
-			psc_rlim_adj(RLIMIT_NOFILE, -1);
+		if (!(f->fcmh_flags & FCMH_NO_BACKFILE)) {
+			if (close(fcmh_2_fd(f)) == -1)
+				DEBUG_FCMH(PLL_ERROR, f,
+				    "close errno=%d", errno);
+			else
+				psc_rlim_adj(RLIMIT_NOFILE, -1);
+		}
 
 		oldfg.fg_fid = fcmh_2_fid(f);
 		oldfg.fg_gen = fcmh_2_gen(f);
