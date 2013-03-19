@@ -733,7 +733,6 @@ ms_biorq_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    msr->msr_flags & BIORQ_READAHEAD		? 'H' : '-',
 	    msr->msr_flags & BIORQ_RBWFAIL		? 'F' : '-',
 	    msr->msr_flags & BIORQ_AIOWAIT		? 'S' : '-',
-	    msr->msr_flags & BIORQ_RESCHED		? 'R' : '-',
 	    msr->msr_flags & BIORQ_ARCHIVER		? 'c' : '-',
 	    msr->msr_flags & BIORQ_EXPIREDLEASE		? 'X' : '-',
 	    msr->msr_flags & BIORQ_MAXRETRIES		? 'T' : '-',

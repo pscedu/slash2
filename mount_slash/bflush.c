@@ -346,7 +346,7 @@ bmap_flush_desched(struct bmpc_ioreq *r)
 	(void)BMPC_RLOCK(bmpc);
 	(void)BIORQ_RLOCK(r);
 
-	psc_assert(!(r->biorq_flags & (BIORQ_INFL | BIORQ_RESCHED)));
+	psc_assert(!(r->biorq_flags & BIORQ_INFL));
 	psc_assert(pll_conjoint(&bmpc->bmpc_new_biorqs, r));
 
 	if (r->biorq_last_sliod == bmap_2_ios(r->biorq_bmap) ||
@@ -356,7 +356,6 @@ bmap_flush_desched(struct bmpc_ioreq *r)
 		r->biorq_retries = 1;
 
 	r->biorq_flags &= ~BIORQ_SCHED;
-	r->biorq_flags |= BIORQ_RESCHED;
 
 	/*
 	 * Back off to allow the I/O server to recover or become less
@@ -655,7 +654,7 @@ bwc_desched(struct bmpc_write_coalescer *bwc)
 __static struct bmpc_write_coalescer *
 bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 {
-	int idx, large = 0, mergeable = 0, expired = 0;
+	int idx, large = 0, expired = 0;
 	struct bmpc_write_coalescer *bwc;
 	struct bmpc_ioreq *t, *e = NULL;
 	int32_t sz = 0;
@@ -685,9 +684,6 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 		if (!expired)
 			expired = bmap_flush_biorq_expired(t, NULL);
 
-		psc_assert(!(t->biorq_flags & BIORQ_RESCHED));
-		mergeable = expired || !(t->biorq_flags & BIORQ_RESCHED);
-
 		DEBUG_BIORQ(PLL_INFO, t, "biorq #%d (expired=%d)", idx,
 		    expired);
 
@@ -698,7 +694,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 		 * The next request, 't', can be added to the coalesce
 		 * group because 't' overlaps or extends 'e'.
 		 */
-		if (mergeable && t->biorq_off <= biorq_voff_get(e)) {
+		if (t->biorq_off <= biorq_voff_get(e)) {
 			sz = biorq_voff_get(t) - biorq_voff_get(e);
 			if (sz > 0) {
 				if (sz + bwc->bwc_size >
@@ -1189,7 +1185,6 @@ bmap_flush(struct timespec *nto)
 			 *   process may be working on it.
 			 */
 			psc_assert(!(r->biorq_flags & BIORQ_INFL));
-			r->biorq_flags &= ~BIORQ_RESCHED;
 			r->biorq_flags |= BIORQ_SCHED;
 			BIORQ_ULOCK(r);
 

@@ -507,7 +507,6 @@ dump_biorq_flags(uint32_t flags)
 	PFL_PRFLAG(BIORQ_READAHEAD, &flags, &seq);
 	PFL_PRFLAG(BIORQ_RBWFAIL, &flags, &seq);
 	PFL_PRFLAG(BIORQ_AIOWAIT, &flags, &seq);
-	PFL_PRFLAG(BIORQ_RESCHED, &flags, &seq);
 	PFL_PRFLAG(BIORQ_ARCHIVER, &flags, &seq);
 	PFL_PRFLAG(BIORQ_EXPIREDLEASE, &flags, &seq);
 	PFL_PRFLAG(BIORQ_MAXRETRIES, &flags, &seq);
