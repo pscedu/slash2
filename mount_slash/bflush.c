@@ -625,11 +625,6 @@ bmap_flushable(struct bmapc_memb *b, __unusedx struct timespec *t)
 			DEBUG_BIORQ(PLL_WARN, r, "already sched");
 			BIORQ_ULOCK(r);
 			continue;
-
-		} else if (r->biorq_flags & BIORQ_DESTROY) {
-			DEBUG_BIORQ(PLL_WARN, r, "skip BIORQ_DESTROY");
-			BIORQ_ULOCK(r);
-			continue;
 		}
 		BIORQ_ULOCK(r);
 		flush = 1;
