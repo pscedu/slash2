@@ -53,6 +53,8 @@ enum {
 #define NSLVRCRC_THRS		4	/* perhaps default to ncores + configurable? */
 
 enum {
+	SLI_OPST_CLOSE_FAIL,
+	SLI_OPST_CLOSE_SUCCEED,
 	SLI_OPST_CRC_UPDATE,
 	SLI_OPST_CRC_UPDATE_BACKLOG,
 	SLI_OPST_CRC_UPDATE_BACKLOG_CLEAR,

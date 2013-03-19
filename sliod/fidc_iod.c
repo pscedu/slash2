@@ -206,11 +206,14 @@ sli_fcmh_reopen(struct fidc_membh *f, const struct slash_fidgen *fg)
 		 * the old one.
 		 */
 		if (!(f->fcmh_flags & FCMH_NO_BACKFILE)) {
-			if (close(fcmh_2_fd(f)) == -1)
+			if (close(fcmh_2_fd(f)) == -1) {
+				OPSTAT_INCR(SLI_OPST_CLOSE_FAIL);
 				DEBUG_FCMH(PLL_ERROR, f,
-				    "close errno=%d", errno);
-			else
+				    "reopen/close errno=%d", errno);
+			} else {
+				OPSTAT_INCR(SLI_OPST_CLOSE_SUCCEED);
 				psc_rlim_adj(RLIMIT_NOFILE, -1);
+			}
 		}
 
 		oldfg.fg_fid = fcmh_2_fid(f);
@@ -290,7 +293,12 @@ void
 sli_fcmh_dtor(__unusedx struct fidc_membh *f)
 {
 	if (!(f->fcmh_flags & FCMH_NO_BACKFILE)) {
-		close(fcmh_2_fd(f));
+		if (close(fcmh_2_fd(f)) == -1) {
+			OPSTAT_INCR(SLI_OPST_CLOSE_FAIL);
+			DEBUG_FCMH(PLL_ERROR, f,
+			    "dtor/close errno=%d", errno);
+		} else
+			OPSTAT_INCR(SLI_OPST_CLOSE_SUCCEED);
 		psc_rlim_adj(RLIMIT_NOFILE, -1);
 	}
 }
