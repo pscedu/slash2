@@ -103,7 +103,6 @@ sli_open_backing_file(struct fidc_membh *f)
 	int flags, incr, rc = 0;
 	char fidfn[PATH_MAX];
 
-	OPSTAT_INCR(SLI_OPST_OPEN);
 	flags = O_CREAT | O_RDWR;
 	if (f->fcmh_flags & FCMH_CAC_RLSBMAP)
 		flags &= ~O_CREAT;
