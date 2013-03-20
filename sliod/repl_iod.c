@@ -81,7 +81,6 @@ sli_repl_addwk(int op, struct sl_resource *res,
 
 	w = psc_pool_get(sli_replwkrq_pool);
 	memset(w, 0, sizeof(*w));
-	psc_atomic32_set(&w->srw_refcnt, 1);
 	INIT_PSC_LISTENTRY(&w->srw_active_lentry);
 	INIT_PSC_LISTENTRY(&w->srw_pending_lentry);
 	INIT_SPINLOCK(&w->srw_lock);
@@ -96,6 +95,7 @@ sli_repl_addwk(int op, struct sl_resource *res,
 	rc = sli_fcmh_get(&w->srw_fg, &w->srw_fcmh);
 	if (rc)
 		goto out;
+	DEBUG_SRW(w, PLL_DEBUG, "created");
 
 	/* get the replication chunk's bmap */
 	rc = bmap_get(w->srw_fcmh, w->srw_bmapno, SL_READ, &w->srw_bcm);
@@ -132,7 +132,7 @@ sli_repl_addwk(int op, struct sl_resource *res,
 	} else {
 		/* add to current processing list */
 		pll_add(&sli_replwkq_active, w);
-		lc_add(&sli_replwkq_pending, w);
+		replwk_queue(w);
 	}
 	return (rc);
 }
@@ -166,6 +166,22 @@ sli_replwkrq_decref(struct sli_repl_workrq *w, int rc)
 		fcmh_op_done(w->srw_fcmh);
 
 	psc_pool_return(sli_replwkrq_pool, w);
+}
+
+void
+replwk_queue(struct sli_repl_workrq *w)
+{
+	int locked;
+
+	locked = LIST_CACHE_RLOCK(&sli_replwkq_pending);
+	spinlock(&w->srw_lock);
+	if (!lc_conjoint(&sli_replwkq_pending, w)) {
+		psc_atomic32_inc(&w->srw_refcnt);
+		DEBUG_SRW(w, PLL_DEBUG, "incref");
+		lc_add(&sli_replwkq_pending, w);
+	}
+	freelock(&w->srw_lock);
+	LIST_CACHE_URLOCK(&sli_replwkq_pending, locked);
 }
 
 void
@@ -220,8 +236,7 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 			BMAP_ULOCK(w->srw_bcm);
 			freelock(&w->srw_lock);
 			LIST_CACHE_LOCK(&sli_replwkq_pending);
-			if (!lc_conjoint(&sli_replwkq_pending, w))
-				lc_add(&sli_replwkq_pending, w);
+			replwk_queue(w);
 			if (w == wrap)
 				psc_waitq_waitrel_us(
 				    &sli_replwkq_pending.plc_wq_empty,
@@ -231,7 +246,7 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 					wrap = w;
 				LIST_CACHE_ULOCK(&sli_replwkq_pending);
 			}
-			continue;
+			goto release;
 		}
 		wrap = NULL;
 
@@ -247,12 +262,7 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 		    &w->srw_src_res->res_members, 0);
 		csvc = sli_geticsvc(src_resm);
 
-		LIST_CACHE_LOCK(&sli_replwkq_pending);
-		spinlock(&w->srw_lock);
-		if (!lc_conjoint(&sli_replwkq_pending, w))
-			lc_add(&sli_replwkq_pending, w);
-		freelock(&w->srw_lock);
-		LIST_CACHE_ULOCK(&sli_replwkq_pending);
+		replwk_queue(w);
 
 		if (csvc == NULL)
 			rc = SLERR_ION_OFFLINE;
@@ -270,7 +280,6 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 			BMAP_ULOCK(w->srw_bcm);
 			freelock(&w->srw_lock);
 		}
-		continue;
 
  release:
 		sli_replwkrq_decref(w, 0);
