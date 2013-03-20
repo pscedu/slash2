@@ -24,6 +24,7 @@
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/atomic.h"
+#include "psc_util/completion.h"
 #include "psc_util/log.h"
 
 #include "bmap.h"
@@ -43,7 +44,8 @@ struct pscrpc_nbreqset	bmapCbSet =
 struct psc_compl mdsCohCompl = PSC_COMPL_INIT;
 
 int
-mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
+mdscoh_cb(struct pscrpc_request *req,
+    __unusedx struct pscrpc_async_args *a)
 {
 	struct slashrpc_cservice *csvc;
 	struct srm_bmap_dio_req *mq;
@@ -65,16 +67,18 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 
 	if (rc) {
 		psclog_warnx("cli=%s seq=%"PRId64" rq_status=%d mp->rc=%d",
-		   libcfs_id2str(req->rq_import->imp_connection->c_peer),
-		   mq->seq, req->rq_status, mp ? mp->rc : -1);
+		    libcfs_id2str(req->rq_import->imp_connection->c_peer),
+		    mq->seq, req->rq_status, mp ? mp->rc : -1);
 		goto out;
 	}
 
 	if (mp && mp->rc)
 		rc = mp->rc;
 
-	//XXX if the client has given up the lease then we shouldn't consider
-	// that an error and should proceed.
+	/*
+	 * XXX if the client has given up the lease then we shouldn't
+	 * consider that an error and should proceed.
+	 */
 
 	/* Leases can come and go regardless of pending coh cb's. */
 	f = fidc_lookup_fid(mq->fid);
@@ -90,8 +94,8 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 	if (!b)
 		PFL_GOTOERR(out, rc = -ENOENT);
 
-	bml = mds_bmap_getbml_locked(b, mq->seq,
-	     req->rq_peer.nid, req->rq_peer.pid);
+	bml = mds_bmap_getbml_locked(b, mq->seq, req->rq_peer.nid,
+	    req->rq_peer.pid);
 
 	if (!bml)
 		PFL_GOTOERR(out, rc = -ENOENT);
@@ -122,9 +126,9 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
  out:
 	if (b) {
 		DEBUG_BMAP(rc ? PLL_WARN : PLL_INFO, b,
-		   "cli=%s seq=%"PRId64" rq_status=%d mp->rc=%d",
-		   libcfs_id2str(req->rq_import->imp_connection->c_peer),
-		   mq->seq, req->rq_status, mp ? mp->rc : -1);
+		    "cli=%s seq=%"PRId64" rq_status=%d mp->rc=%d",
+		    libcfs_id2str(req->rq_import->imp_connection->c_peer),
+		    mq->seq, req->rq_status, mp ? mp->rc : -1);
 
 		bmap_op_done(b);
 	}
@@ -153,7 +157,6 @@ mdscoh_req(struct bmap_mds_lease *bml)
 		psc_assert(!bml->bml_exp);
 		BML_ULOCK(bml);
 		return (-ENOTCONN);
-
 	}
 	psc_assert(bml->bml_exp);
 
