@@ -857,6 +857,9 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 	 */
 	while (pscthr_run()) {
 
+		if (!lc_peekheadwait(&bmapTimeoutQ))
+			continue;
+
 		OPSTAT_INCR(SLC_OPST_BMAP_RELEASE);
 		sawnew = 0;
 		if (!sortbypass) {
