@@ -243,15 +243,14 @@ struct bmpc_ioreq {
 #define BIORQ_READAHEAD			(1 << 12)
 #define BIORQ_RBWFAIL			(1 << 13)
 #define BIORQ_AIOWAIT			(1 << 14)
-#define BIORQ_NOT_USED			(1 << 15)
-#define BIORQ_ARCHIVER			(1 << 16)
-#define BIORQ_EXPIREDLEASE		(1 << 17)
-#define BIORQ_MAXRETRIES		(1 << 18)	/* too many retries.. */
-#define BIORQ_BMAPFAIL			(1 << 19)
-#define BIORQ_READFAIL			(1 << 20)
-#define BIORQ_PENDING			(1 << 21)
-#define BIORQ_WAIT			(1 << 22)
-#define BIORQ_MFHLIST			(1 << 23)
+#define BIORQ_ARCHIVER			(1 << 15)
+#define BIORQ_EXPIREDLEASE		(1 << 16)
+#define BIORQ_MAXRETRIES		(1 << 17)	/* too many retries.. */
+#define BIORQ_BMAPFAIL			(1 << 18)
+#define BIORQ_READFAIL			(1 << 19)
+#define BIORQ_PENDING			(1 << 20)
+#define BIORQ_WAIT			(1 << 21)
+#define BIORQ_MFHLIST			(1 << 22)
 
 #define BIORQ_LOCK(r)			spinlock(&(r)->biorq_lock)
 #define BIORQ_ULOCK(r)			freelock(&(r)->biorq_lock)
