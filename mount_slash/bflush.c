@@ -545,7 +545,7 @@ bmap_flush_coalesce_prep(struct bmpc_write_coalescer *bwc)
 	r = pll_peekhead(&bwc->bwc_pll);
 
 	psc_assert(bwc->bwc_size ==
-	   (e->biorq_off - r->biorq_off) + e->biorq_len);
+	    (e->biorq_off - r->biorq_off) + e->biorq_len);
 }
 
 /**
@@ -857,13 +857,13 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 	 */
 	while (pscthr_run()) {
 
-		if (!lc_peekheadwait(&bmapTimeoutQ))
-			continue;
+		lc_peekheadwait(&bmapTimeoutQ);
 
 		OPSTAT_INCR(SLC_OPST_BMAP_RELEASE);
 		sawnew = 0;
 		if (!sortbypass) {
-			lc_sort(&bmapTimeoutQ, qsort, bmap_cli_timeo_cmp);
+			lc_sort(&bmapTimeoutQ, qsort,
+			    bmap_cli_timeo_cmp);
 			sortbypass = SORT_BYPASS_ITERS;
 		} else
 			sortbypass--;
@@ -925,7 +925,8 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			} else if (timespeccmp(&crtime, &bci->bci_etime, <)) {
 				BMAP_ULOCK(b);
 
-				DEBUG_BMAP(PLL_DIAG, b, "sawnew=%d", sawnew);
+				DEBUG_BMAP(PLL_DIAG, b, "sawnew=%d",
+				    sawnew);
 				lc_addtail(&bmapTimeoutQ, bci);
 
 				sawnew++;
@@ -937,7 +938,8 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			} else if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
 				int expired = 0;
 
-				if (timespeccmp(&crtime, &bci->bci_xtime, >))
+				if (timespeccmp(&crtime,
+				    &bci->bci_xtime, >))
 					expired = 1;
 
 				BMAP_ULOCK(b);
@@ -1027,12 +1029,13 @@ bmap_flush_outstanding_rpcwait(void)
 	 * sliod basis using multiwait instead of a single global value.
 	 */
 	spinlock(&bmapFlushLock);
-	while (((MAX_OUTSTANDING_RPCS - atomic_read(&outstandingRpcCnt)) <= 0) ||
-	       bmapFlushTimeoFlags & BMAPFLSH_RPCWAIT) {
+	while ((MAX_OUTSTANDING_RPCS -
+	    atomic_read(&outstandingRpcCnt) <= 0) ||
+	    bmapFlushTimeoFlags & BMAPFLSH_RPCWAIT) {
 		bmapFlushTimeoFlags |= BMAPFLSH_RPCWAIT;
 		/* RPC completion will wake us up. */
 		psc_waitq_waitrel(&bmapFlushWaitq, &bmapFlushLock,
-			  &bmapFlushWaitSecs);
+		    &bmapFlushWaitSecs);
 		spinlock(&bmapFlushLock);
 	}
 	freelock(&bmapFlushLock);
@@ -1068,7 +1071,7 @@ msbmflwthr_main(__unusedx struct psc_thread *thr)
 			DEBUG_BMAP(PLL_INFO, b, "");
 			if (!(b->bcm_flags & BMAP_TOFREE) &&
 			    ((!(b->bcm_flags &
-				(BMAP_CLI_LEASEEXPIRED|BMAP_CLI_REASSIGNREQ)) &&
+				(BMAP_CLI_LEASEEXPIRED | BMAP_CLI_REASSIGNREQ)) &&
 			      (((bmap_2_bci(b)->bci_xtime.tv_sec - ts.tv_sec) <
 				BMAP_CLI_EXTREQSECS))) ||
 			     timespeccmp(&ts, &bmap_2_bci(b)->bci_etime, >=))) {
@@ -1114,7 +1117,8 @@ bmap_flush(struct timespec *nto)
 
 	LIST_CACHE_LOCK(&bmapFlushQ);
 	LIST_CACHE_FOREACH_SAFE(b, tmpb, &bmapFlushQ) {
-		DEBUG_BMAP(PLL_INFO, b, "flushable? (outstandingRpcCnt=%d)",
+		DEBUG_BMAP(PLL_INFO, b,
+		    "flushable? (outstandingRpcCnt=%d)",
 		    atomic_read(&outstandingRpcCnt));
 
 		if (!BMAP_TRYLOCK(b))
@@ -1185,9 +1189,11 @@ bmap_flush(struct timespec *nto)
 				continue;
 
 			}
-			/* Don't assert !BIORQ_INFL until ensuring that
-			 *   we can actually work on this biorq.  A RBW
-			 *   process may be working on it.
+
+			/*
+			 * Don't assert !BIORQ_INFL until ensuring that
+			 * we can actually work on this biorq.  A RBW
+			 * process may be working on it.
 			 */
 			psc_assert(!(r->biorq_flags & BIORQ_INFL));
 			r->biorq_flags |= BIORQ_SCHED;
@@ -1215,11 +1221,10 @@ bmap_flush(struct timespec *nto)
 	psc_dynarray_free(&bmaps);
 
 	PFL_GETTIMESPEC(&t);
-	if (skip) {
+	if (skip)
 		timespecadd(&t, &bmapFlushDefMaxAge, nto);
-	} else {
+	else
 		timespecadd(&t, &bmapFlushWaitSecs, nto);
-	}
 }
 
 void
