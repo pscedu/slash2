@@ -1050,6 +1050,10 @@ msbmflwthr_main(__unusedx struct psc_thread *thr)
 	int i, rc, secs;
 
 	while (pscthr_run()) {
+
+		if (!lc_peekheadwait(&bmapFlushQ))
+			continue;
+
 		OPSTAT_INCR(SLC_OPST_LEASE_REFRESH);
 		PFL_GETTIMESPEC(&ts);
 		/*
@@ -1088,7 +1092,6 @@ msbmflwthr_main(__unusedx struct psc_thread *thr)
 			    "rc=%d secs=%d",  rc, secs);
 		}
 		psc_dynarray_reset(&bmaps);
-		usleep(200000);
 	}
 }
 
