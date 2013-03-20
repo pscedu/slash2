@@ -278,7 +278,7 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	return (r);
 }
 
-inline void
+void
 bmpc_biorq_free(struct bmpc_ioreq *r)
 {
 	OPSTAT_INCR(SLC_OPST_BIORQ_DESTROY);
