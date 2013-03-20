@@ -331,7 +331,7 @@ msl_bmap_lease_tryreassign(struct bmapc_memb *b)
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_interpret_reply = msl_bmap_lease_reassign_cb;
-	pscrpc_completion_set(rq, &rpcComp);
+	pscrpc_req_setcompl(rq, &rpcComp);
 
 	rc = pscrpc_nbreqset_add(pndgBmaplsReqs, rq);
 	if (!rc)
@@ -442,7 +442,7 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 		rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 		rq->rq_interpret_reply = msl_bmap_lease_tryext_cb;
-		pscrpc_completion_set(rq,  &rpcComp);
+		pscrpc_req_setcompl(rq, &rpcComp);
 
 		rc = pscrpc_nbreqset_add(pndgBmaplsReqs, rq);
 		if (!rc)

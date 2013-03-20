@@ -32,6 +32,7 @@
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"
+#include "psc_util/completion.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/fault.h"
 #include "psc_util/log.h"
@@ -51,7 +52,7 @@ struct timespec			 bmapFlushWaitTime;
 struct psc_listcache		 bmapFlushQ;
 struct psc_listcache		 bmapReadAheadQ;
 struct psc_listcache		 bmapTimeoutQ;
-struct pscrpc_completion	 rpcComp;
+struct psc_compl		 rpcComp = PSC_COMPL_INIT;
 
 struct pscrpc_nbreqset		*pndgBmaplsReqs;	/* bmap lease */
 __static struct pscrpc_nbreqset	*pndgBmapRlsReqs;	/* bmap release */
@@ -226,7 +227,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 
 	rq->rq_timeout = msl_bmap_lease_secs_remaining(b) / 2;
 
-	psc_fault_here_rc(SLC_FAULT_REQUEST_TIMEOUT, &rq->rq_timeout, -1);
+	(void)psc_fault_here_rc(SLC_FAULT_REQUEST_TIMEOUT, &rq->rq_timeout, -1);
 
 	if (rq->rq_timeout < 0) {
 		DEBUG_REQ(PLL_ERROR, rq, "off=%u sz=%u op=%u",
@@ -236,7 +237,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 
 	rq->rq_interpret_reply = bmap_flush_rpc_cb;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
-	pscrpc_completion_set(rq, &rpcComp);
+	pscrpc_req_setcompl(rq, &rpcComp);
 
 	mq->offset = bwc->bwc_soff;
 	mq->size = bwc->bwc_size;
@@ -419,7 +420,7 @@ bmap_flush_resched(struct bmpc_ioreq *r)
 	r->biorq_flags &= ~BIORQ_PENDING;
 	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 	pll_add_sorted(&bmpc->bmpc_new_biorqs, r, bmpc_biorq_cmp);
-  
+
 	/* bmap_flush_desched drops BIORQ_LOCK and BMPC_LOCK */
 	bmap_flush_desched(r);
 	msl_bmap_lease_tryreassign(r->biorq_bmap);
@@ -1277,7 +1278,7 @@ void
 msbmapflushrpcthr_main(__unusedx struct psc_thread *thr)
 {
 	while (pscthr_run()) {
-		pscrpc_completion_waitrel_s(&rpcComp, 1);
+		psc_compl_waitrel_s(&rpcComp, 1);
 		pscrpc_nbreqset_reap(pndgWrtReqs);
 		pscrpc_nbreqset_reap(pndgReadaReqs);
 		pscrpc_nbreqset_reap(pndgBmaplsReqs);
@@ -1289,8 +1290,8 @@ void
 msbmaprathr_main(__unusedx struct psc_thread *thr)
 {
 #define MAX_BMPCES_PER_RPC 32
-	struct msl_fhent *mfh, *lmfh = NULL;
 	struct bmap_pagecache_entry *bmpces[MAX_BMPCES_PER_RPC], *tmp, *bmpce;
+	struct msl_fhent *mfh, *lmfh = NULL;
 	int nbmpces, i;
 
 	while (pscthr_run()) {
@@ -1334,7 +1335,7 @@ msbmaprathr_main(__unusedx struct psc_thread *thr)
 			freelock(&mfh->mfh_lock);
 		}
 
-		for (i=0; i < nbmpces; i++) {
+		for (i = 0; i < nbmpces; i++) {
 			/* XXX If read / wr refs are 0 then bmpce_getbuf()
 			 *    should be called in a non-blocking fashion.
 			 */
@@ -1366,7 +1367,6 @@ msbmapflushthr_spawn(void)
 	pndgBmaplsReqs = pscrpc_nbreqset_init(NULL, NULL);
 	pndgWrtReqs = pscrpc_nbreqset_init(NULL, msl_write_rpc_cb);
 
-	pscrpc_completion_init(&rpcComp);
 	atomic_set(&outstandingRpcCnt, 0);
 	psc_waitq_init(&bmapFlushWaitq);
 

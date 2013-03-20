@@ -1438,7 +1438,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQ] = NULL;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMPC] = bmap_2_bmpc(b);
 	rq->rq_interpret_reply = msl_readahead_cb0;
-	pscrpc_completion_set(rq, &rpcComp);
+	pscrpc_req_setcompl(rq, &rpcComp);
 
 	for (i = 0; i < nbmpce; i++) {
 		/*

@@ -24,7 +24,6 @@
 #include "slconn.h"
 
 struct pscfs_clientctx;
-struct pscrpc_completion;
 struct pscrpc_import;
 struct pscrpc_request;
 
@@ -107,7 +106,7 @@ int	slc_rmc_setmds(const char *);
 int	slc_rci_handler(struct pscrpc_request *);
 int	slc_rcm_handler(struct pscrpc_request *);
 
-extern struct pscrpc_completion rpcComp;
+extern struct psc_compl rpcComp;
 
 static __inline struct psc_multiwait *
 msl_getmw(void)

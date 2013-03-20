@@ -40,13 +40,7 @@ struct pscrpc_nbreqset	bmapCbSet =
 
 #define SLM_CBARG_SLOT_CSVC	0
 
-struct pscrpc_completion mdsCohCompl;
-
-void
-mdscoh_reap(void)
-{
-	pscrpc_nbreqset_reap(&bmapCbSet);
-}
+struct psc_compl mdsCohCompl = PSC_COMPL_INIT;
 
 int
 mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
@@ -176,7 +170,7 @@ mdscoh_req(struct bmap_mds_lease *bml)
 		return (rc);
 	}
 
-	rq->rq_comp = &mdsCohCompl;
+	rq->rq_compl = &mdsCohCompl;
 	rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = csvc;
 
 	mq->fid = fcmh_2_fid(bml_2_bmap(bml)->bcm_fcmh);
@@ -193,17 +187,15 @@ mdscoh_req(struct bmap_mds_lease *bml)
 void
 slmcohthr_begin(__unusedx struct psc_thread *thr)
 {
-	pscrpc_completion_init(&mdsCohCompl);
-
 	while (pscthr_run()) {
-		mdscoh_reap();
-		pscrpc_completion_waitrel_s(&mdsCohCompl, 1);
+		psc_compl_waitrel_s(&mdsCohCompl, 1);
+		pscrpc_nbreqset_reap(&bmapCbSet);
 	}
 }
 
 void
 slmcohthr_spawn(void)
 {
-	pscthr_init(SLMTHRT_COH, 0, slmcohthr_begin,
-	    NULL, 0, "slmcohthr");
+	pscthr_init(SLMTHRT_COH, 0, slmcohthr_begin, NULL, 0,
+	    "slmcohthr");
 }
