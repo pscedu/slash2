@@ -100,7 +100,7 @@ struct psc_listcache		 attrTimeoutQ;
 
 sl_ios_id_t			 prefIOS = IOS_ID_ANY;
 const char			*progname;
-char				 ctlsockfn[PATH_MAX] = SL_PATH_MSCTLSOCK;
+const char			*ctlsockfn = SL_PATH_MSCTLSOCK;
 char				 mountpoint[PATH_MAX];
 int				 allow_root_uid = 1;
 struct psc_dynarray		 allow_exe = DYNARRAY_INIT;
@@ -2979,6 +2979,10 @@ main(int argc, char *argv[])
 	pscfs_addarg(&args, "-o");
 	pscfs_addarg(&args, STD_MOUNT_OPTIONS);
 
+	p = getenv("CTL_SOCK_FILE");
+	if (p)
+		ctlsockfn = p;
+
 	cfg = SL_PATH_CONF;
 	p = getenv("CONFIG_FILE");
 	if (p)
@@ -3018,9 +3022,7 @@ main(int argc, char *argv[])
 			globalConfig.gconf_root_squash = 1;
 			break;
 		case 'S':
-			if (strlcpy(ctlsockfn, optarg,
-			    sizeof(ctlsockfn)) >= sizeof(ctlsockfn))
-				psc_fatalx("%s: too long", optarg);
+			ctlsockfn = optarg;
 			break;
 		case 'U':
 			unmount_first = 1;

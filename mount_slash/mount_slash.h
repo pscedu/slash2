@@ -259,7 +259,7 @@ void	  bmap_flush_resched(struct bmpc_ioreq *);
 #define BMAPFLSH_RPCWAIT	(1 << 1)
 #define BMAPFLSH_EXPIRE		(1 << 2)
 
-extern char			 ctlsockfn[];
+extern const char		*ctlsockfn;
 extern sl_ios_id_t		 prefIOS;
 extern struct psc_listcache	 bmapFlushQ;
 extern struct sl_resm		*slc_rmc_resm;

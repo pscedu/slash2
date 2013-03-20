@@ -407,15 +407,16 @@ main(int argc, char *argv[])
 	append_path(ZFS_BIN_PATH);
 	append_path(ZPOOL_PATH);
 
+	sfn = SL_PATH_SLMCTLSOCK;
+	p = getenv("CTL_SOCK_FILE");
+	if (p)
+		sfn = p;
+
 	cfn = SL_PATH_CONF;
 	p = getenv("CONFIG_FILE");
 	if (p)
 		cfn = p;
 
-	sfn = SL_PATH_SLMCTLSOCK;
-	p = getenv("CTL_SOCK");
-	if (p)
-		sfn = p;
 	while ((c = getopt(argc, argv, "D:f:p:S:VX:Y")) != -1)
 		switch (c) {
 		case 'D':
