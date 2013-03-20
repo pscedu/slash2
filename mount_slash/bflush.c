@@ -669,15 +669,6 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 
 		psc_assert((t->biorq_flags & BIORQ_SCHED) &&
 			   !(t->biorq_flags & BIORQ_INFL));
-		if (idx)
-			/* Assert 'lowest to highest' ordering. */
-			psc_assert(t->biorq_off >= e->biorq_off);
-		else {
-			bwc->bwc_size = t->biorq_len;
-			bwc->bwc_soff = t->biorq_off;
-			pll_addtail(&bwc->bwc_pll, t);
-		}
-
 		/*
 		 * If any member is expired then we'll push everything
 		 * out.
@@ -688,8 +679,15 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 		DEBUG_BIORQ(PLL_INFO, t, "biorq #%d (expired=%d)", idx,
 		    expired);
 
-		if (!idx)
+		if (idx)
+			/* Assert 'lowest to highest' ordering. */
+			psc_assert(t->biorq_off >= e->biorq_off);
+		else {
+			bwc->bwc_size = t->biorq_len;
+			bwc->bwc_soff = t->biorq_off;
+			pll_addtail(&bwc->bwc_pll, t);
 			continue;
+		}
 
 		/*
 		 * The next request, 't', can be added to the coalesce
