@@ -48,12 +48,11 @@ struct bmap_cli_info {
 };
 
 /* mount_slash specific bcm_flags */
-#define BMAP_CLI_AVAILABLE	(_BMAP_FLSHFT << 0)	/* not used */
-#define BMAP_CLI_BIORQEXPIRE	(_BMAP_FLSHFT << 1)
-#define BMAP_CLI_LEASEEXTREQ	(_BMAP_FLSHFT << 2)	/* requesting a lease ext */
-#define BMAP_CLI_REASSIGNREQ	(_BMAP_FLSHFT << 3)
-#define BMAP_CLI_DIOWR		(_BMAP_FLSHFT << 4)	/* dio for archiver write */
-#define BMAP_CLI_LEASEEXPIRED	(_BMAP_FLSHFT << 5)	/* lease has expired, bmap must be released */
+#define BMAP_CLI_BIORQEXPIRE	(_BMAP_FLSHFT << 0)
+#define BMAP_CLI_LEASEEXTREQ	(_BMAP_FLSHFT << 1)	/* requesting a lease ext */
+#define BMAP_CLI_REASSIGNREQ	(_BMAP_FLSHFT << 2)
+#define BMAP_CLI_DIOWR		(_BMAP_FLSHFT << 3)	/* dio for archiver write */
+#define BMAP_CLI_LEASEEXPIRED	(_BMAP_FLSHFT << 4)	/* lease has expired, bmap must be released */
 
 #define BMAP_CLI_MAX_LEASE	60 /* seconds */
 #define BMAP_CLI_EXTREQSECS	20

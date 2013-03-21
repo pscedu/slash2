@@ -144,7 +144,6 @@ int		bim_updateseq(uint64_t);
 void	bcr_finalize(struct bcrcupd *);
 void	bcr_hold_2_ready(struct bcrcupd *);
 void	bcr_hold_add(struct bcrcupd *);
-void	bcr_hold_requeue(struct bcrcupd *);
 void	bcr_ready_add(struct bcrcupd *);
 void	bcr_ready_remove(struct bcrcupd *);
 void	bcr_xid_check(struct bcrcupd *);

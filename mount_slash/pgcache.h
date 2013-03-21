@@ -181,20 +181,6 @@ struct bmap_pagecache {
 #define BMPC_URLOCK(b, lk)	ureqlock(&(b)->bmpc_lock, (lk))
 
 static __inline int
-bmpc_queued_writes(struct bmap_pagecache *bmpc)
-{
-	int nwrites = bmpc->bmpc_pndgwr;
-
-	psc_assert(nwrites >= 0);
-
-	if (nwrites > 0)
-		psc_assert((pll_nitems(&bmpc->bmpc_pndg_biorqs) > 0) ||
-			   (pll_nitems(&bmpc->bmpc_new_biorqs) > 0));
-
-	return (nwrites);
-}
-
-static __inline int
 bmpc_queued_ios(struct bmap_pagecache *bmpc)
 {
 	return (pll_nitems(&bmpc->bmpc_pndg_biorqs) +

@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2007-2011, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2007-2013, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -33,7 +33,6 @@
 #include "sltypes.h"
 
 #define	SL_FIDBUF_LEN		(18 + 1 + 20 + 1)
-#define FID_MAX_PATH		96
 
 struct slash_fidgen;
 
