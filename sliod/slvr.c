@@ -391,8 +391,8 @@ slvr_aio_tryreply(struct sli_aiocb_reply *a)
 			ready++;
 
 		else if (s->slvr_flags & SLVR_AIOWAIT) {
-			/* 
-			 * One of our slvrs is still waiting on aio completion.  
+			/*
+			 * One of our slvrs is still waiting on aio completion.
 			 * Add this reply to that slvr. Note that a has already
 			 * been removed from the pending list of previous slvr.
 			 */
@@ -805,21 +805,22 @@ slvr_repl_prep(struct slvr_ref *s, int src_or_dst)
 	SLVR_LOCK(s);
 
 	/*
-   	 * XXX Setting flags while the sliver is in transit is risky. And
-	 * this is compounded by the fact we have same code fragment handling
-	 * different cases.
+	 * XXX Setting flags while the sliver is in transit is risky.
+	 * And this is compounded by the fact we have same code fragment
+	 * handling different cases.
 	 */
 	if (src_or_dst & SLVR_REPLDST) {
 		psc_assert(s->slvr_pndgwrts > 0);
 
 		if (s->slvr_flags & SLVR_DATARDY) {
-			/* The slvr is about to be overwritten by this
-			 *    replication request. For sanity's sake, wait
-			 *    for pending io competion and set 'faulting'
-			 *    before proceeding.
+			/*
+			 * The slvr is about to be overwritten by this
+			 * replication request.  For sanity's sake, wait
+			 * for pending IO competion and set 'faulting'
+			 * before proceeding.
 			 */
 			DEBUG_SLVR(PLL_WARN, s,
-				   "mds requested repldst of active slvr");
+			    "MDS requested repldst of active slvr");
 			SLVR_WAIT(s, ((s->slvr_pndgwrts > 1) ||
 				      s->slvr_pndgreads));
 			s->slvr_flags &= ~SLVR_DATARDY;
@@ -871,7 +872,8 @@ slvr_slab_prep(struct slvr_ref *s, enum rw rw)
 
 			tmp = psc_pool_get(sl_bufs_pool);
 			sl_buffer_fresh_assertions(tmp);
-			sl_buffer_clear(tmp, tmp->slb_blksz * tmp->slb_nblks);
+			sl_buffer_clear(tmp, tmp->slb_blksz *
+			    tmp->slb_nblks);
 			SLVR_LOCK(s);
 			goto newbuf;
 
@@ -1006,8 +1008,10 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 	psc_assert(rw != SL_READ);
 
 	if (!off && len == SLASH_SLVR_SIZE) {
-		/* Full sliver write, no need to read blocks from disk.
-		 *  All blocks will be dirtied by the incoming network IO.
+		/*
+		 * Full sliver write, no need to read blocks from disk.
+		 * All blocks will be dirtied by the incoming network
+		 * IO.
 		 */
 		psc_vbitmap_setall(s->slvr_slab->slb_inuse);
 		goto out;
