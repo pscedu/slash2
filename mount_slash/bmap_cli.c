@@ -670,9 +670,9 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 {
 	int off, i, j, locked, waitsecs = BMAP_CLI_MAX_LEASE;
 	struct slashrpc_cservice *csvc;
+	struct sl_resource *res, *r;
 	struct fcmh_cli_info *fci;
 	struct psc_multiwait *mw;
-	struct sl_resource *res;
 	struct rnd_iterator it;
 	struct sl_resm *resm;
 	uint64_t repls = 0; // XXX 1 bit per repl, SL_MAX_REPLICAS
@@ -744,9 +744,17 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 			if (repls & (1 << it.ri_rnd_idx))
 				continue;
 
-			resm = libsl_ios2resm(fci->fci_reptbl[
-			    it.ri_rnd_idx].bs_id);
-			if (resm->resm_type == SLREST_ARCHIVAL_FS)
+			sl_ios_id_t id;
+
+			id = fci->fci_reptbl[it.ri_rnd_idx].bs_id;
+			r = libsl_id2res(id);
+			if (r == NULL) {
+				DEBUG_FCMH(PLL_ERROR, bcm->bcm_fcmh,
+				    "unknown resource %#x", id);
+				continue;
+			}
+			if (r != SLREST_PARALLEL_COMPNT &&
+			    r != SLREST_STANDALONE_FS)
 				continue;
 
 			csvc = msl_try_get_replica_res(b, it.ri_rnd_idx);
