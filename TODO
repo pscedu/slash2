@@ -438,6 +438,9 @@ reimport
   corrupt files with no valid bmaps as rbudden has discovered
 - there is a repl bug in sliod where refcnt does not go to zero so a
   REPL_SCHEDWK is not sent back to MDS
+- RPC standardized error messages:
+   - ENOSTR = ETIMEDOUT between BSD and Linux on senses, and the client
+     will not treat ENOSTR as an RPC error
 
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
