@@ -2675,6 +2675,9 @@ msattrflushthr_main(__unusedx struct psc_thread *thr)
 		nexttimeo.tv_sec = FCMH_ATTR_TIMEO;
 		nexttimeo.tv_nsec = 0;
 
+		if (!lc_peekheadwait(&attrTimeoutQ))
+			continue;
+
 		LIST_CACHE_LOCK(&attrTimeoutQ);
 		LIST_CACHE_FOREACH_SAFE(fci, tmp_fci, &attrTimeoutQ) {
 
