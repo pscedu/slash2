@@ -1680,7 +1680,7 @@ mdslog_bmap_crc(void *datap, uint64_t txg, __unusedx int flag)
 
 		sjbc = pjournal_get_buf(mdsJournal, sizeof(*sjbc));
 		sjbc->sjbc_fid = fcmh_2_fid(bmap->bcm_fcmh);
-		sjbc->sjbc_iosid = bmi->bmdsi_wr_ion->rmmi_resm->resm_res_id;
+		sjbc->sjbc_iosid = bmi->bmi_wr_ion->rmmi_resm->resm_res_id;
 		sjbc->sjbc_bmapno = bmap->bcm_bmapno;
 		sjbc->sjbc_ncrcs = n;
 		sjbc->sjbc_fsize = crcup->fsize;		/* largest known size */

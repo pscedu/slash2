@@ -45,7 +45,7 @@ struct srt_bmapdesc;
  *   callbacks (XXX is that really needed?).
  * Notes: both read and write clients are stored to bmi_exports, the ref
  *   counts are used to determine the number of both and hence the caching
- *   mode used at the clients.   bmdsi_wr_ion is a shortcut pointer used
+ *   mode used at the clients.   bmi_wr_ion is a shortcut pointer used
  *   only when the bmap has client writers - all writers (and readers) are
  *   directed to this ion once a client has invoked write mode on the bmap.
  */
@@ -58,13 +58,13 @@ struct bmap_mds_info {
 	 */
 	struct bmap_extra_state	 bmi_extrastate;
 
-	struct resm_mds_info	*bmdsi_wr_ion;		/* pointer to write ION */
+	struct resm_mds_info	*bmi_wr_ion;		/* pointer to write ION */
 	struct psc_lockedlist	 bmi_leases;		/* tracked bmap leases */
-	struct odtable_receipt	*bmdsi_assign;
-	uint64_t		 bmdsi_seq;		/* Largest write bml seq # */
-	uint32_t		 bmdsi_xid;		/* last op recv'd from ION */
-	int32_t			 bmdsi_writers;
-	int32_t			 bmdsi_readers;
+	struct odtable_receipt	*bmi_assign;
+	uint64_t		 bmi_seq;		/* Largest write bml seq # */
+	uint32_t		 bmi_xid;		/* last op recv'd from ION */
+	int32_t			 bmi_writers;
+	int32_t			 bmi_readers;
 	struct psc_rwlock	 bmi_rwlock;
 	struct slm_update_data	 bmi_upd;
 	uint8_t			 bmi_orepls[SL_REPLICA_NBYTES];
@@ -181,9 +181,9 @@ struct bmap_mds_lease {
 	time_t			  bml_start;
 	time_t			  bml_expire;
 	psc_spinlock_t		  bml_lock;
-	struct bmap_mds_info	 *bml_bmdsi;
+	struct bmap_mds_info	 *bml_bmi;
 	struct pscrpc_export	 *bml_exp;
-	struct psclist_head	  bml_bmdsi_lentry;
+	struct psclist_head	  bml_bmi_lentry;
 	struct psclist_head	  bml_timeo_lentry;
 	struct bmap_mds_lease	 *bml_chain;		/* chain of duplicate leases */
 };
@@ -203,7 +203,7 @@ struct bmap_mds_lease {
 #define BML_REASSIGN		(1 << 11)
 #define BML_RECOVERFAIL		(1 << 12)
 
-#define bml_2_bmap(bml)		bmi_2_bmap((bml)->bml_bmdsi)
+#define bml_2_bmap(bml)		bmi_2_bmap((bml)->bml_bmi)
 
 #define BML_LOCK_ENSURE(bml)	LOCK_ENSURE(&(bml)->bml_lock)
 #define BML_LOCK(bml)		spinlock(&(bml)->bml_lock)

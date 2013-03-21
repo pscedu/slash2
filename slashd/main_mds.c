@@ -528,7 +528,7 @@ main(int argc, char *argv[])
 	slm_upsch_init();
 
 	psc_poolmaster_init(&bmapMdsLeasePoolMaster,
-	    struct bmap_mds_lease, bml_bmdsi_lentry, PPMF_AUTO, 256,
+	    struct bmap_mds_lease, bml_bmi_lentry, PPMF_AUTO, 256,
 	    256, 0, NULL, NULL, NULL, "bmplease");
 	bmapMdsLeasePool = psc_poolmaster_getmgr(&bmapMdsLeasePoolMaster);
 

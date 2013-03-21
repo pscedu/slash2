@@ -653,7 +653,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 			 * XXX: mask mwc off and make sure lease
 			 * relinquishment masks us back on and wakes up.
 			 */
-			if (bmap_2_bmi(b)->bmdsi_wr_ion)
+			if (bmap_2_bmi(b)->bmi_wr_ion)
 				break;
 
 			/* look for a repl source */

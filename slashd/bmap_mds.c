@@ -275,7 +275,7 @@ mds_bmap_init(struct bmapc_memb *b)
 
 	bmi = bmap_2_bmi(b);
 	pll_init(&bmi->bmi_leases, struct bmap_mds_lease,
-	    bml_bmdsi_lentry, &b->bcm_lock);
+	    bml_bmi_lentry, &b->bcm_lock);
 	psc_rwlock_init(&bmi->bmi_rwlock);
 }
 
@@ -284,9 +284,9 @@ mds_bmap_destroy(struct bmapc_memb *b)
 {
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 
-	psc_assert(bmi->bmdsi_writers == 0);
-	psc_assert(bmi->bmdsi_readers == 0);
-	psc_assert(bmi->bmdsi_assign == NULL);
+	psc_assert(bmi->bmi_writers == 0);
+	psc_assert(bmi->bmi_readers == 0);
+	psc_assert(bmi->bmi_assign == NULL);
 	psc_assert(pll_empty(&bmi->bmi_leases));
 	psc_rwlock_destroy(&bmi->bmi_rwlock);
 	if (pfl_memchk(&bmi->bmi_upd, 0, sizeof(bmi->bmi_upd)) == 0)
@@ -321,7 +321,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 		return (EINVAL);
 
 	FCMH_WAIT_BUSY(f);
-	iosid = bmi->bmdsi_wr_ion->rmmi_resm->resm_res_id;
+	iosid = bmi->bmi_wr_ion->rmmi_resm->resm_res_id;
 	idx = mds_repl_ios_lookup(vfsid, ih, iosid);
 	if (idx < 0)
 		psc_fatal("not found");

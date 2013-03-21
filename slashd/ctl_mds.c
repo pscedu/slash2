@@ -573,7 +573,7 @@ slmctlrep_getbml(int fd, struct psc_ctlmsghdr *mh, void *m)
 	pll = &mdsBmapTimeoTbl.btt_leases;
 	PLL_LOCK(pll);
 	PLL_FOREACH(bml, pll) {
-		bmi = bml->bml_bmdsi;
+		bmi = bml->bml_bmi;
 		memset(scbl, 0, sizeof(*scbl));
 		BML_LOCK(bml);
 		strlcpy(scbl->scbl_resname,
@@ -583,8 +583,8 @@ slmctlrep_getbml(int fd, struct psc_ctlmsghdr *mh, void *m)
 		scbl->scbl_fg = bml_2_bmap(bml)->bcm_fcmh->fcmh_fg;
 		scbl->scbl_bno = bml_2_bmap(bml)->bcm_bmapno;
 		scbl->scbl_seq = bml->bml_seq;
-		scbl->scbl_key = bmi->bmdsi_assign ?
-		    bmi->bmdsi_assign->odtr_key : BMAPSEQ_ANY;
+		scbl->scbl_key = bmi->bmi_assign ?
+		    bmi->bmi_assign->odtr_key : BMAPSEQ_ANY;
 		scbl->scbl_flags = bml->bml_flags;
 		scbl->scbl_start = bml->bml_start;
 		scbl->scbl_expire = bml->bml_expire;

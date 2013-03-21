@@ -173,9 +173,9 @@ slm_rmc_bmapdesc_setup(struct bmapc_memb *bmap,
 	if (rw == SL_WRITE) {
 		struct bmap_mds_info *bmi = bmap_2_bmi(bmap);
 
-		psc_assert(bmi->bmdsi_wr_ion);
+		psc_assert(bmi->bmi_wr_ion);
 		sbd->sbd_ios =
-		    bmi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id;
+		    bmi->bmi_wr_ion->rmmi_resm->resm_res->res_id;
 	} else
 		sbd->sbd_ios = IOS_ID_ANY;
 }
@@ -221,10 +221,10 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 
 	mp->sbd = mq->sbd;
 	mp->sbd.sbd_seq = bml->bml_seq;
-	mp->sbd.sbd_key = bmi->bmdsi_assign->odtr_key;
+	mp->sbd.sbd_key = bmi->bmi_assign->odtr_key;
 
-	psc_assert(bmi->bmdsi_wr_ion);
-	mp->sbd.sbd_ios = bmi->bmdsi_wr_ion->rmmi_resm->resm_res_id;
+	psc_assert(bmi->bmi_wr_ion);
+	mp->sbd.sbd_ios = bmi->bmi_wr_ion->rmmi_resm->resm_res_id;
 
  out:
 	if (bml)
