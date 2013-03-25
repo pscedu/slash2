@@ -146,7 +146,7 @@ slm_statfs_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	printf("%-27s %2s %8s %7s %7s %6s %-17s\n",
-	    "resource", "fl", "capacity", "used", "avail", "%util", "type");
+	    "resource", "fl", "capacity", "used", "remain", "utiliz", "type");
 }
 
 void
