@@ -471,7 +471,6 @@ dump_bmpce_flags(uint32_t flags)
 
 	PFL_PRFLAG(BMPCE_NEW, &flags, &seq);
 	PFL_PRFLAG(BMPCE_DATARDY, &flags, &seq);
-	PFL_PRFLAG(BMPCE_DIRTY2LRU, &flags, &seq);
 	PFL_PRFLAG(BMPCE_LRU, &flags, &seq);
 	PFL_PRFLAG(BMPCE_TOFREE, &flags, &seq);
 	PFL_PRFLAG(BMPCE_FREEING, &flags, &seq);

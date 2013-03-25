@@ -74,7 +74,7 @@ struct bmap_pagecache_entry {
 
 #define BMPCE_NEW		(1 <<  0)	/* 0x00001 */
 #define BMPCE_DATARDY		(1 <<  1)	/* 0x00002 */
-#define BMPCE_DIRTY2LRU		(1 <<  2)	/* 0x00004 */
+#define BMPCE_NOT_USED		(1 <<  2)	/* 0x00004 */
 #define BMPCE_LRU		(1 <<  3)	/* 0x00008 */
 #define BMPCE_TOFREE		(1 <<  4)	/* 0x00010 */
 #define BMPCE_FREEING		(1 <<  5)	/* 0x00020 */
@@ -117,7 +117,7 @@ struct bmap_pagecache_entry {
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP,					\
-	    "bmpce@%p fl=%u:%s%s%s%s%s%s%s%s%s%s%s%s%s "		\
+	    "bmpce@%p fl=%u:%s%s%s%s%s%s%s%s%s%s%s%s "			\
 	    "o=%#x b=%p "						\
 	    "ts="PSCPRI_TIMESPEC" "					\
 	    "ref=%u "							\
@@ -125,7 +125,6 @@ struct bmap_pagecache_entry {
 	    (b), (b)->bmpce_flags,					\
 	    (b)->bmpce_flags & BMPCE_NEW		? "n" : "",	\
 	    (b)->bmpce_flags & BMPCE_DATARDY		? "d" : "",	\
-	    (b)->bmpce_flags & BMPCE_DIRTY2LRU		? "D" : "",	\
 	    (b)->bmpce_flags & BMPCE_LRU		? "l" : "",	\
 	    (b)->bmpce_flags & BMPCE_TOFREE		? "T" : "",	\
 	    (b)->bmpce_flags & BMPCE_FREEING		? "F" : "",	\
