@@ -145,8 +145,8 @@ void
 slm_statfs_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("%-27s %2s %7s %7s %7s %8s %-16s\n",
-	    "resource", "fl", "size", "used", "avail", "capacity", "type");
+	printf("%-27s %2s %8s %7s %7s %6s %-17s\n",
+	    "resource", "fl", "capacity", "used", "avail", "%util", "type");
 }
 
 void
@@ -180,6 +180,7 @@ slm_statfs_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	printf("%-27s %c%c ", name,
 	    scsf->scsf_flags & SIF_DISABLE_BIA ? 'W' : '-',
 	    scsf->scsf_flags & SIF_DISABLE_GC  ? 'G' : '-');
+	printf(" ");
 	b->sf_blocks ? psc_ctl_prhuman(b->sf_blocks * b->sf_bsize) :
 	    printf("%7s", "-");
 	printf(" ");
@@ -188,6 +189,7 @@ slm_statfs_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	printf(" ");
 	b->sf_blocks ? psc_ctl_prhuman(b->sf_bavail * b->sf_bsize) :
 	    printf("%7s", "-");
+	printf(" ");
 
 	if (col)
 		setcolor(col);
@@ -196,10 +198,10 @@ slm_statfs_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 		    (int64_t)b->sf_bavail, b->sf_blocks);
 	else
 		strlcpy(cbuf, "-", sizeof(cbuf));
-	printf("%8s", cbuf);
+	printf("%6s", cbuf);
 	if (col)
 		uncolor();
-	printf(" %-16s\n", b->sf_type);
+	printf(" %-17s\n", b->sf_type);
 }
 
 void
