@@ -350,7 +350,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 			     /* If file ends in this page then fetch */
 			     (rfsz > e->bmpce_off &&
 			      rfsz < e->bmpce_off + BMPC_BLKSZ))) {
-				    e->bmpce_flags |= BMPCE_RBWPAGE;
 				    r->biorq_flags |= BIORQ_RBWFP;
 
 			} else if ((i == (npages - 1) &&
@@ -358,7 +357,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 				   (fsz > (foff + len) ||
 				    (rfsz > e->bmpce_off &&
 				     rfsz < e->bmpce_off + BMPC_BLKSZ))) {
-				e->bmpce_flags |= BMPCE_RBWPAGE;
 				r->biorq_flags |= BIORQ_RBWLP;
 			}
 		}
@@ -875,14 +873,6 @@ _msl_bmpce_rpc_done(const struct pfl_callerinfo *pci,
 	if (rc) {
 		e->bmpce_flags |= BMPCE_EIO;
 		DEBUG_BMPCE(PLL_INFO, e, "set BMPCE_EIO");
-
-	} else if (e->bmpce_flags & BMPCE_RBWPAGE) {
-		/*
-		 * The RBW stuff needs to be managed outside of the LRU;
-		 * this is not the best place but should suffice for
-		 * now.
-		 */
-		DEBUG_BMPCE(PLL_INFO, e, "rdref dec for RBW, !DATARDY");
 
 	} else {
 		e->bmpce_flags |= BMPCE_DATARDY;
@@ -1730,7 +1720,6 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 			    i ? (npages - 1) : 0);
 
 			psc_assert(biorq_is_my_bmpce(r, e));
-			psc_assert(e->bmpce_flags & BMPCE_RBWPAGE);
 			psc_assert(!(e->bmpce_flags & BMPCE_DATARDY));
 
 			OPSTAT_INCR(SLC_OPST_PREFETCH);
