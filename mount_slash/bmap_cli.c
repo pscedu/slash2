@@ -749,12 +749,12 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 			id = fci->fci_reptbl[it.ri_rnd_idx].bs_id;
 			r = libsl_id2res(id);
 			if (r == NULL) {
-				DEBUG_FCMH(PLL_ERROR, bcm->bcm_fcmh,
+				DEBUG_FCMH(PLL_ERROR, b->bcm_fcmh,
 				    "unknown resource %#x", id);
 				continue;
 			}
-			if (r != SLREST_PARALLEL_COMPNT &&
-			    r != SLREST_STANDALONE_FS)
+			if (r->res_type != SLREST_PARALLEL_COMPNT &&
+			    r->res_type != SLREST_STANDALONE_FS)
 				continue;
 
 			csvc = msl_try_get_replica_res(b, it.ri_rnd_idx);
