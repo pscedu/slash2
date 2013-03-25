@@ -882,7 +882,6 @@ _msl_bmpce_rpc_done(const struct pfl_callerinfo *pci,
 		 * this is not the best place but should suffice for
 		 * now.
 		 */
-		e->bmpce_flags |= BMPCE_RBWRDY;
 		DEBUG_BMPCE(PLL_INFO, e, "rdref dec for RBW, !DATARDY");
 
 	} else {
