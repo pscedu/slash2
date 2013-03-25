@@ -411,18 +411,13 @@ reimport
 - while :; do dmesg > file; done      produces lots of EBADMSG from sliod
 
 - investigate diaser(1)
-- setup arc testrig
 - listxattr returns ERANGE
 - extattr are broke
 - ENOENT on GETATTR and REPL_RQ_ADD produce ERANGE
-- zhihui msl timeout change no longer waits when server offline, EIO immediately
-- upgrade frodo to CentOS 6.2
-- if upsch fails to load an fcmh, delete from workq
+- msl timeout change no longer waits when server offline, EIO immediately
+- upgrade frodo OS
 - convert bmpc_new_biorqs to a tree to cut out pll_add_sorted() CPU
-- upsch multiwait doesn't work; bring an IOS up and down and work doesnt
-  get scheduled
-- client should not post errors from SLERR_AIOWAIT on WRITE/READ RPC
-- scan for zeroed/corrupt regions on recent files
+- client should not psclog ERRORs from SLERR_AIOWAIT on WRITE/READ RPC
 - parse /proc/mounts if it's there for sliod statfs f_fstype
 - during upsch repl PAGEIN, do we do two SQL, one for loading the work
   then one for loading the recpt?  optimize this if so
@@ -436,8 +431,6 @@ reimport
     -- maybe add PAGEIN for src?
 - some combination of truncate(2) or O_TRUNC and replication can produce
   corrupt files with no valid bmaps as rbudden has discovered
-- there is a repl bug in sliod where refcnt does not go to zero so a
-  REPL_SCHEDWK is not sent back to MDS
 - RPC standardized error messages:
    - ENOSTR = ETIMEDOUT between BSD and Linux on senses, and the client
      will not treat ENOSTR as an RPC error
@@ -447,3 +440,7 @@ reimport
    (o) attr buf size needs be dynamically sized
    (o) predictive/readahead async READDIR to make large directory
        listings fast
+
+/arc
+- scan for zeroed/corrupt regions on recent files
+- setup arc testrig
