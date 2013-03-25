@@ -112,7 +112,7 @@ void
 slm_replpair_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	printf("%-28s %-28s  %10s %10s\n",
+	printf("%-26s %-26s %9s %9s\n",
 	    "repl-resm-A", "repl-resm-B", "used", "avail");
 }
 
@@ -121,7 +121,6 @@ slm_replpair_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     const void *m)
 {
 	const struct slmctlmsg_replpair *scrp = m;
-	char abuf[PSCFMT_HUMAN_BUFSIZ], ubuf[PSCFMT_HUMAN_BUFSIZ];
 	char *p, addr[2][RESM_ADDRBUF_SZ];
 	int i, j;
 
@@ -135,10 +134,11 @@ slm_replpair_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 			*p = '\0';
 	}
 
-	psc_fmt_human(ubuf, scrp->scrp_used);
-	psc_fmt_human(abuf, scrp->scrp_avail);
-	printf("%-28s %-28s  %8s/s %8s/s\n", addr[0], addr[1], ubuf,
-	    abuf);
+	printf("%-26s %-26s ", addr[0], addr[1]);
+	psc_ctl_prhuman(scrp->scrp_used);
+	printf("/s ");
+	psc_ctl_prhuman(scrp->scrp_avail);
+	printf("/s\n");
 }
 
 void
