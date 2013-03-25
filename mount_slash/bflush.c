@@ -1356,7 +1356,6 @@ msbmaprathr_main(__unusedx struct psc_thread *thr)
 			BMPCE_LOCK(bmpce);
 			psc_assert(bmpce->bmpce_flags & BMPCE_INIT);
 			bmpce->bmpce_flags &= ~BMPCE_INIT;
-			bmpce->bmpce_flags |= BMPCE_READPNDG;
 			BMPCE_ULOCK(bmpce);
 		}
 

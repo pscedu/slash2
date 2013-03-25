@@ -340,9 +340,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 
 			e->bmpce_flags &= ~BMPCE_INIT;
 
-			if (op == BIORQ_READ)
-				e->bmpce_flags |= BMPCE_READPNDG;
-
 			/*
 			 * Increase the rdref cnt in preparation for any
 			 * RBW ops but only on new pages owned by this
