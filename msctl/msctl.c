@@ -714,7 +714,7 @@ ms_biorq_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	const struct msctlmsg_biorq *msr = m;
 
 	printf("%016"SLPRIxFID" %6d %3d %9d %6d "
-	    "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c "
+	    "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c "
 	    "%3d %10s %10"PRId64" %2d %2d\n",
 	    msr->msr_fid, msr->msr_bno, msr->msr_ref, msr->msr_off,
 	    msr->msr_len,
@@ -729,7 +729,6 @@ ms_biorq_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    msr->msr_flags & BIORQ_DESTROY		? 'D' : '-',
 	    msr->msr_flags & BIORQ_FLUSHRDY		? 'L' : '-',
 	    msr->msr_flags & BIORQ_NOFHENT		? 'n' : '-',
-	    msr->msr_flags & BIORQ_READAHEAD		? 'H' : '-',
 	    msr->msr_flags & BIORQ_AIOWAIT		? 'S' : '-',
 	    msr->msr_flags & BIORQ_ARCHIVER		? 'c' : '-',
 	    msr->msr_flags & BIORQ_EXPIREDLEASE		? 'X' : '-',
