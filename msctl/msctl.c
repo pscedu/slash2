@@ -729,7 +729,6 @@ ms_biorq_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    msr->msr_flags & BIORQ_DESTROY		? 'D' : '-',
 	    msr->msr_flags & BIORQ_FLUSHRDY		? 'L' : '-',
 	    msr->msr_flags & BIORQ_NOFHENT		? 'n' : '-',
-	    msr->msr_flags & BIORQ_APPEND		? 'A' : '-',
 	    msr->msr_flags & BIORQ_READAHEAD		? 'H' : '-',
 	    msr->msr_flags & BIORQ_AIOWAIT		? 'S' : '-',
 	    msr->msr_flags & BIORQ_ARCHIVER		? 'c' : '-',
