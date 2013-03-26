@@ -703,7 +703,7 @@ void
 ms_biorq_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	printf("%-16s %6s %3s %9s %6s "
-	    "%23s %3s %10s %10s %2s %2s\n",
+	    "%19s %3s %10s %10s %2s %2s\n",
 	    "fid", "bno", "ref", "off", "len",
 	    "flags", "try", "sliod", "expire", "np", "nr");
 }
