@@ -72,15 +72,14 @@ struct bmap_pagecache_entry {
 	struct psc_listentry	 bmpce_lentry;	/* chain on bmap LRU		*/
 };
 
-#define BMPCE_NEW		(1 <<  0)	/* 0x00001 */
+#define BMPCE_INIT		(1 <<  0)	/* 0x00001 */
 #define BMPCE_DATARDY		(1 <<  1)	/* 0x00002 */
 #define BMPCE_LRU		(1 <<  2)	/* 0x00004 */
 #define BMPCE_TOFREE		(1 <<  3)	/* 0x00008 */
 #define BMPCE_FREEING		(1 <<  4)	/* 0x00010 */
-#define BMPCE_INIT		(1 <<  5)	/* 0x00020 */
-#define BMPCE_EIO		(1 <<  6)	/* 0x00080: I/O error */
-#define BMPCE_READA		(1 <<  7)	/* 0x00100: read-ahead */
-#define BMPCE_AIOWAIT		(1 <<  8)	/* 0x00200: wait on async read */
+#define BMPCE_EIO		(1 <<  5)	/* 0x00080: I/O error */
+#define BMPCE_READA		(1 <<  6)	/* 0x00100: read-ahead */
+#define BMPCE_AIOWAIT		(1 <<  7)	/* 0x00200: wait on async read */
 
 #define BMPCE_LOCK(b)		spinlock(&(b)->bmpce_lock)
 #define BMPCE_ULOCK(b)		freelock(&(b)->bmpce_lock)
@@ -113,13 +112,12 @@ struct bmap_pagecache_entry {
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP,					\
-	    "bmpce@%p fl=%u:%s%s%s%s%s%s%s%s%s "			\
+	    "bmpce@%p fl=%u:%s%s%s%s%s%s%s%s "				\
 	    "o=%#x b=%p "						\
 	    "ts="PSCPRI_TIMESPEC" "					\
 	    "ref=%u "							\
 	    "owner=%p : " fmt,						\
 	    (b), (b)->bmpce_flags,					\
-	    (b)->bmpce_flags & BMPCE_NEW		? "n" : "",	\
 	    (b)->bmpce_flags & BMPCE_DATARDY		? "d" : "",	\
 	    (b)->bmpce_flags & BMPCE_LRU		? "l" : "",	\
 	    (b)->bmpce_flags & BMPCE_TOFREE		? "T" : "",	\
@@ -285,12 +283,9 @@ bmpce_useprep(struct bmap_pagecache_entry *bmpce,
     struct bmpc_ioreq *biorq, struct psc_waitq *wq)
 {
 	psc_assert(!bmpce->bmpce_waitq);
-	psc_assert(psclist_disjoint(&bmpce->bmpce_lentry));
-	psc_assert(psclist_disjoint(&bmpce->bmpce_ralentry));
-	psc_assert(bmpce->bmpce_flags == BMPCE_NEW);
+	psc_assert(bmpce->bmpce_flags == BMPCE_INIT);
 
 	psc_atomic32_set(&bmpce->bmpce_ref, 1);
-	bmpce->bmpce_flags = BMPCE_INIT;
 	bmpce->bmpce_owner = biorq;
 
 	/*
