@@ -182,7 +182,6 @@ struct msl_fsrqinfo {
 	int				 mfsrq_ref;	/* taken by biorq and the thread that does the I/O */
 	int				 mfsrq_reissue;
 	enum rw				 mfsrq_rw;
-	struct pscfs_req		*mfsrq_pfr;
 	struct psclist_head		 mfsrq_lentry;	/* pending AIOs in struct bmap_pagecache_entry */
 };
 

@@ -731,6 +731,10 @@ mfsrq_seterr(struct msl_fsrqinfo *q, int rc)
 __static void
 msl_complete_fsrq(struct msl_fsrqinfo *q, int rc, size_t len)
 {
+	struct pscfs_req   *pfr;
+
+	pfr = (struct pscfs_req *)((char *)q - sizeof(struct pscfs_req));
+
 	MFH_LOCK(q->mfsrq_mfh);
 	if (!q->mfsrq_err) {
 		if (rc)
@@ -749,24 +753,21 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, int rc, size_t len)
 	}
 	MFH_ULOCK(q->mfsrq_mfh);
 
-	q->mfsrq_pfr->pfr_info = NULL;
+	psclog_diag("q=%p len=%zd error=%d pfr=%p",
+	    q, q->mfsrq_len, q->mfsrq_err, pfr);
+
+	mfh_decref(q->mfsrq_mfh);
 
 	if (q->mfsrq_rw == SL_READ) {
-		pscfs_reply_read(q->mfsrq_pfr, q->mfsrq_buf,
+		pscfs_reply_read(pfr, q->mfsrq_buf,
 		    q->mfsrq_len, abs(q->mfsrq_err));
 		OPSTAT_INCR(SLC_OPST_FSRQ_READ_FREE);
 	} else {
 		msl_update_attributes(q);
-		pscfs_reply_write(q->mfsrq_pfr,
+		pscfs_reply_write(pfr,
 		    q->mfsrq_len, abs(q->mfsrq_err));
 		OPSTAT_INCR(SLC_OPST_FSRQ_WRITE_FREE);
 	}
-
-	psclog_diag("q=%p len=%zd error=%d pfr=%p",
-	    q, q->mfsrq_len, q->mfsrq_err, q->mfsrq_pfr);
-	mfh_decref(q->mfsrq_mfh);
-
-	psc_pool_return(mfsrq_pool, q);
 }
 
 __static int
@@ -784,7 +785,7 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r0)
 	MFH_ULOCK(q->mfsrq_mfh);
 
 	psclog_info("biorq=%p fsrq=%p pfr=%p", r0, q,
-	    q->mfsrq_pfr);
+	    (char *)q - sizeof(struct pscfs_req));
 
 	for (i = 0; i < MAX_BMAPS_REQ; i++) {
 		r = q->mfsrq_biorq[i];
@@ -2055,9 +2056,9 @@ __static struct msl_fsrqinfo *
 msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
     char *buf, size_t size, off_t off, enum rw rw)
 {
-	struct msl_fsrqinfo *q = pfr->pfr_info;
+	struct msl_fsrqinfo *q;
 
-	q = psc_pool_get(mfsrq_pool);
+	q = (struct msl_fsrqinfo *)(pfr + 1);
 	memset(q, 0, sizeof(*q));
 	INIT_PSC_LISTENTRY(&q->mfsrq_lentry);
 	q->mfsrq_mfh = mfh;
@@ -2065,18 +2066,16 @@ msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
 	q->mfsrq_size = size;
 	q->mfsrq_off = off;
 	q->mfsrq_rw = rw;
-	q->mfsrq_pfr = pfr;
 	q->mfsrq_ref = 1;
 	q->mfsrq_len = 0;
 	mfh_incref(q->mfsrq_mfh);
 
-	pfr->pfr_info = q;
 	if (rw == SL_READ)
 		OPSTAT_INCR(SLC_OPST_FSRQ_READ);
 	else
 		OPSTAT_INCR(SLC_OPST_FSRQ_WRITE);
 
-	psclog_info("fsrq=%p pfr=%p rw=%d", q, q->mfsrq_pfr, rw);
+	psclog_info("fsrq=%p pfr=%p rw=%d", q, pfr, rw);
 	return (q);
 }
 
