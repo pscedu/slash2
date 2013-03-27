@@ -576,6 +576,12 @@ msl_try_get_replica_res(struct bmapc_memb *b, int iosidx)
 		return (NULL);
 
 	res = libsl_id2res(fci->fci_reptbl[iosidx].bs_id);
+	if (res == NULL) {
+		DEBUG_FCMH(b->bcm_fcmh, PLL_ERROR,
+		    "unknown IOS in reptbl: %#x",
+		    fci->fci_reptbl[iosidx].bs_id);
+		return (NULL);
+	}
 
 	FOREACH_RND(&it, psc_dynarray_len(&res->res_members)) {
 		resm = psc_dynarray_getpos(&res->res_members,
