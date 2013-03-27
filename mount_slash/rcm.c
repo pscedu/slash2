@@ -108,9 +108,14 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 	mrs.mrs_nios = mq->nrepls;
 	for (n = 0; n < (int)mq->nrepls; n++) {
 		res = libsl_id2res(mq->repls[n].bs_id);
-		strlcpy(mrs.mrs_iosv[n],
-		    res ? res->res_name : "<unknown IOS>",
-		    sizeof(mrs.mrs_iosv[0]));
+		if (res)
+			strlcpy(mrs.mrs_iosv[n], res->res_name,
+			    sizeof(mrs.mrs_iosv[0]));
+		else
+			snprintf(mrs.mrs_iosv[n],
+			    sizeof(mrs.mrs_iosv[0]),
+			    "<unknown IOS %#x>",
+			    mq->repls[n].bs_id);
 	}
 	rc = psc_ctlmsg_sendv(mrsq->mrsq_fd, &mh, &mrs);
 	mrsq_release(mrsq, rc ? 0 : EOF);
