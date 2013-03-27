@@ -577,7 +577,7 @@ msl_try_get_replica_res(struct bmapc_memb *b, int iosidx)
 
 	res = libsl_id2res(fci->fci_reptbl[iosidx].bs_id);
 	if (res == NULL) {
-		DEBUG_FCMH(b->bcm_fcmh, PLL_ERROR,
+		DEBUG_FCMH(PLL_ERROR, b->bcm_fcmh,
 		    "unknown IOS in reptbl: %#x",
 		    fci->fci_reptbl[iosidx].bs_id);
 		return (NULL);
