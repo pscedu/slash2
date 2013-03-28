@@ -171,7 +171,6 @@ struct msl_fhent {
 
 struct msl_fsrqinfo {
 	struct bmpc_ioreq		*mfsrq_biorq[MAX_BMAPS_REQ];
-	struct bmap_pagecache_entry	*mfsrq_bmpceatt;
 	struct msl_fhent		*mfsrq_mfh;
 	char				*mfsrq_buf;
 	size_t				 mfsrq_size;
