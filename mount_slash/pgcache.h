@@ -206,7 +206,7 @@ struct bmpc_ioreq {
 #define	BIORQ_WRITE			(1 <<  1)
 #define	BIORQ_RBWFP			(1 <<  2)	/* read before write - first page */
 #define	BIORQ_RBWLP			(1 <<  3)	/* read before write - last page */
-#define	BIORQ_SCHED			(1 <<  4)
+#define	BIORQ_SCHED			(1 <<  4)	/* guard race between threads and callback */
 #define	BIORQ_INFL			(1 <<  5)
 #define	BIORQ_DIO			(1 <<  6)
 #define	BIORQ_FORCE_EXPIRE		(1 <<  7)
