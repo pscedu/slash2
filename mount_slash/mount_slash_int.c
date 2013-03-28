@@ -2062,17 +2062,22 @@ __static struct msl_fsrqinfo *
 msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
     char *buf, size_t size, off_t off, enum rw rw)
 {
+	int i;
 	struct msl_fsrqinfo *q;
 
 	q = PSC_AGP(pfr + 1, 0);
-	memset(q, 0, sizeof(*q));
+	for (i = 0; i < MAX_BMAPS_REQ; i++)
+		q->mfsrq_biorq[i] = NULL;
 	q->mfsrq_mfh = mfh;
 	q->mfsrq_buf = buf;
 	q->mfsrq_size = size;
-	q->mfsrq_off = off;
-	q->mfsrq_rw = rw;
-	q->mfsrq_ref = 1;
 	q->mfsrq_len = 0;
+	q->mfsrq_off = off;
+	q->mfsrq_flags = 0; 
+	q->mfsrq_err = 0; 
+	q->mfsrq_ref = 1;
+	q->mfsrq_rw = rw;
+
 	mfh_incref(q->mfsrq_mfh);
 
 	if (rw == SL_READ)
