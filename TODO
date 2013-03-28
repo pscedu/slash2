@@ -429,6 +429,9 @@ reimport
   try to schedule some new work
     -- upsch_multiwait should be getting woken, needs a PAGEIN for dst though...
     -- maybe add PAGEIN for src?
+- make sure when RPC fails that disconnect() is called and the structure
+  actually goes entirely away to avoid 'duplicate CONNECT msg received'
+  stuff and so callback handlers are run to ensure consistency in protocols
 - some combination of truncate(2) or O_TRUNC and replication can produce
   corrupt files with no valid bmaps as rbudden has discovered
 - RPC standardized error messages:
