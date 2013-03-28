@@ -180,9 +180,7 @@ struct msl_fsrqinfo {
 	int				 mfsrq_flags;
 	int				 mfsrq_err;
 	int				 mfsrq_ref;	/* taken by biorq and the thread that does the I/O */
-	int				 mfsrq_reissue;
 	enum rw				 mfsrq_rw;
-	struct psclist_head		 mfsrq_lentry;	/* pending AIOs in struct bmap_pagecache_entry */
 };
 
 #define MFSRQ_AIOWAIT			(1 << 0)
@@ -393,7 +391,6 @@ extern struct pscrpc_nbreqset	*pndgBmaplsReqs;
 extern struct psc_poolmgr	*slc_async_req_pool;
 extern struct psc_poolmgr	*slc_biorq_pool;
 extern struct psc_poolmgr	*mfh_pool;
-extern struct psc_poolmgr	*mfsrq_pool;
 
 extern psc_atomic32_t		 max_nretries;
 

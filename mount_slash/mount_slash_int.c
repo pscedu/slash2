@@ -2066,7 +2066,6 @@ msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
 
 	q = PSC_AGP(pfr + 1, 0);
 	memset(q, 0, sizeof(*q));
-	INIT_PSC_LISTENTRY(&q->mfsrq_lentry);
 	q->mfsrq_mfh = mfh;
 	q->mfsrq_buf = buf;
 	q->mfsrq_size = size;

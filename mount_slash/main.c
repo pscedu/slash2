@@ -2808,11 +2808,6 @@ msl_init(void)
 	    NULL, NULL, "mfh");
 	mfh_pool = psc_poolmaster_getmgr(&mfh_poolmaster);
 
-	psc_poolmaster_init(&mfsrq_poolmaster,
-	    struct msl_fsrqinfo, mfsrq_lentry, PPMF_AUTO, 64, 64, 0,
-	    NULL, NULL, NULL, "mfsrq");
-	mfsrq_pool = psc_poolmaster_getmgr(&mfsrq_poolmaster);
-
 	pndgReadaReqs = pscrpc_nbreqset_init(NULL, NULL);
 
 	slc_rpc_initsvc();
