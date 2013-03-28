@@ -72,13 +72,13 @@ struct bmap_pagecache_entry {
 	struct psc_listentry	 bmpce_lentry;	/* chain on bmap LRU		*/
 };
 
-#define BMPCE_INIT		(1 <<  0)	/* 0x00001 */
-#define BMPCE_DATARDY		(1 <<  1)	/* 0x00002 */
-#define BMPCE_LRU		(1 <<  2)	/* 0x00004 */
-#define BMPCE_TOFREE		(1 <<  3)	/* 0x00008 */
-#define BMPCE_EIO		(1 <<  4)	/* 0x00080: I/O error */
-#define BMPCE_READA		(1 <<  5)	/* 0x00100: read-ahead */
-#define BMPCE_AIOWAIT		(1 <<  6)	/* 0x00200: wait on async read */
+#define BMPCE_INIT		(1 <<  0)
+#define BMPCE_DATARDY		(1 <<  1)
+#define BMPCE_LRU		(1 <<  2)
+#define BMPCE_TOFREE		(1 <<  3)
+#define BMPCE_EIO		(1 <<  4)	/* I/O error */
+#define BMPCE_READA		(1 <<  5)	/* read-ahead */
+#define BMPCE_AIOWAIT		(1 <<  6)	/* wait on async read */
 
 #define BMPCE_LOCK(b)		spinlock(&(b)->bmpce_lock)
 #define BMPCE_ULOCK(b)		freelock(&(b)->bmpce_lock)
