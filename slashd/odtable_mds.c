@@ -32,6 +32,7 @@
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 #include "psc_util/odtable.h"
+#include "psc_util/ctlsvr.h"
 
 #include "odtable_mds.h"
 
@@ -59,6 +60,7 @@ mds_odtable_putitem(struct odtable *odt, void *data, size_t len)
 
 	spinlock(&odt->odt_lock);
 	if (psc_vbitmap_next(odt->odt_bitmap, &elem) <= 0) {
+		OPSTAT_INCR(SLM_OPST_ODTABLE_FULL);
 		freelock(&odt->odt_lock);
 		return (NULL);
 	}
