@@ -132,15 +132,14 @@ struct bmap {
 #define BMAP_DIORQ		(1 <<  4)
 #define BMAP_TOFREE		(1 <<  5)	/* refcnt dropped to zero, removing */
 #define BMAP_DIRTY		(1 <<  6)
-#define BMAP_DIRTY2LRU		(1 <<  7)
-#define BMAP_TIMEOQ		(1 <<  8)	/* on timeout queue */
-#define BMAP_IONASSIGN		(1 <<  9)	/* has been assigned to an ION for writes */
-#define BMAP_MDCHNG		(1 << 10)	/* op mode changing (e.g. READ -> WRITE) */
-#define BMAP_WAITERS		(1 << 11)	/* has bcm_fcmh waiters */
-#define BMAP_BUSY		(1 << 12)	/* temporary processing lock */
-#define BMAP_NEW		(1 << 13)	/* just created */
-#define BMAP_REPLAY		(1 << 14)	/* during journal replay */
-#define _BMAP_FLSHFT		(1 << 15)
+#define BMAP_TIMEOQ		(1 <<  7)	/* on timeout queue */
+#define BMAP_IONASSIGN		(1 <<  8)	/* has been assigned to an ION for writes */
+#define BMAP_MDCHNG		(1 <<  9)	/* op mode changing (e.g. READ -> WRITE) */
+#define BMAP_WAITERS		(1 << 10)	/* has bcm_fcmh waiters */
+#define BMAP_BUSY		(1 << 11)	/* temporary processing lock */
+#define BMAP_NEW		(1 << 12)	/* just created */
+#define BMAP_REPLAY		(1 << 13)	/* during journal replay */
+#define _BMAP_FLSHFT		(1 << 14)
 
 #define bmap_2_fid(b)		fcmh_2_fid((b)->bcm_fcmh)
 
@@ -159,7 +158,7 @@ struct bmap {
 #define BMAP_CLEARATTR(b, fl)	CLEARATTR_LOCKED(&(b)->bcm_lock, &(b)->bcm_flags, (fl))
 
 #define _DEBUG_BMAP_FMT		"bmap@%p bno:%u flg:%#x:"		\
-				"%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s " 	\
+				"%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s " 	\
 				"fid:"SLPRI_FID" opcnt=%d "
 
 #define _DEBUG_BMAP_FMTARGS(b)						\
@@ -171,7 +170,6 @@ struct bmap {
 	(b)->bcm_flags & BMAP_DIORQ	? "Q" : "",			\
 	(b)->bcm_flags & BMAP_TOFREE	? "F" : "",			\
 	(b)->bcm_flags & BMAP_DIRTY	? "d" : "",			\
-	(b)->bcm_flags & BMAP_DIRTY2LRU	? "L" : "",			\
 	(b)->bcm_flags & BMAP_TIMEOQ	? "T" : "",			\
 	(b)->bcm_flags & BMAP_IONASSIGN	? "A" : "",			\
 	(b)->bcm_flags & BMAP_MDCHNG	? "G" : "",			\
