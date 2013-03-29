@@ -1117,6 +1117,8 @@ bmap_flush(struct timespec *nto)
 
 	LIST_CACHE_LOCK(&bmapFlushQ);
 	LIST_CACHE_FOREACH_SAFE(b, tmpb, &bmapFlushQ) {
+
+		/* XXX take reference - destroying a biorq can free its bmap */
 		DEBUG_BMAP(PLL_INFO, b,
 		    "flushable? (outstandingRpcCnt=%d)",
 		    atomic_read(&outstandingRpcCnt));
