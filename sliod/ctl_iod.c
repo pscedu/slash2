@@ -483,6 +483,9 @@ slctlmsg_bmap_send(int fd, struct psc_ctlmsghdr *mh,
 	return (psc_ctlmsg_sendv(fd, mh, scb));
 }
 
+const struct slctl_res_field slctl_resmds_fields[] = { { NULL, NULL } };
+const struct slctl_res_field slctl_resios_fields[] = { { NULL, NULL } };
+
 /**
  * slictlcmd_stop - Handle a STOP command to terminate execution.
  */

@@ -210,6 +210,93 @@ slctlrep_getbmap(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
+int
+slctlparam_resources(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
+    __unusedx struct psc_ctlparam_node *pcn)
+{
+	int site_found = 0, res_found = 0, field_found = 0, set, i;
+	char p_site[SITE_NAME_MAX], p_res[RES_NAME_MAX], p_field[32];
+	char *p, resname[RES_NAME_MAX];
+	const struct slctl_res_field *cfv, *cf;
+	struct sl_resource *r;
+	struct sl_site *s;
+
+	if (nlevels > 4)
+		return (psc_ctlsenderr(fd, mh, "invalid field"));
+
+	set = mh->mh_type == PCMT_SETPARAM;
+
+	if (set && nlevels != 4)
+		return (psc_ctlsenderr(fd, mh, "invalid field"));
+
+	/* resources.<site>.<res>.<field> */
+	/* ex: resources.SITE.RES.FLAG */
+	/* ex: resources.SITE.* */
+
+	levels[0] = "resources";
+
+	if (strlcpy(p_site, nlevels > 1 ? levels[1] : "*",
+	    sizeof(p_site)) >= sizeof(p_site))
+		return (psc_ctlsenderr(fd, mh, "invalid site"));
+	if (strlcpy(p_res, nlevels > 2 ? levels[2] : "*",
+	    sizeof(p_res)) >= sizeof(p_res))
+		return (psc_ctlsenderr(fd, mh, "invalid resource"));
+	if (strlcpy(p_field, nlevels > 3 ? levels[3] : "*",
+	    sizeof(p_field)) >= sizeof(p_field))
+		return (psc_ctlsenderr(fd, mh, "invalid field"));
+
+	CONF_FOREACH_RES(s, r, i) {
+		strlcpy(resname, r->res_name, sizeof(resname));
+		p = strchr(resname, '@');
+		if (p)
+			*p = '\0';
+
+		if (strcmp(p_site, "*") && strcmp(p_site, s->site_name))
+			continue;
+		site_found = 1;
+		if (strcmp(p_res, "*") && strcmp(p_res, resname))
+			continue;
+		res_found = 1;
+
+		if (RES_ISCLUSTER(r)) {
+			if (strcmp(p_res, "*"))
+				return (psc_ctlsenderr(fd, mh,
+				    "invalid resource"));
+			continue;
+		}
+
+		levels[1] = s->site_name;
+		levels[2] = resname;
+
+		cfv = r->res_type == SLREST_MDS ?
+		    slctl_resmds_fields : slctl_resios_fields;
+		for (cf = cfv; cf->name; cf++) {
+			if (strcmp(p_field, "*") == 0 ||
+			    strcmp(p_field, cf->name) == 0) {
+				field_found = 1;
+				levels[3] = (char *)cf->name;
+				if (!cf->cbf(fd, mh, pcp, levels, 4,
+				    set, r))
+				    return (0);
+			}
+		}
+		if (!field_found && strcmp(p_res, "*"))
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid resources field: %s", p_field));
+	}
+	if (!site_found)
+		return (psc_ctlsenderr(fd, mh, "invalid site: %s",
+		    p_site));
+	if (!res_found)
+		return (psc_ctlsenderr(fd, mh, "invalid resource: %s",
+		    p_res));
+	if (!field_found)
+		return (psc_ctlsenderr(fd, mh, "invalid field: %s",
+		    p_field));
+	return (1);
+}
+
 void
 slctlparam_version_get(char *val)
 {

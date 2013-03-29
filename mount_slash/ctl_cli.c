@@ -448,15 +448,6 @@ msctlparam_offlinenretries_get(char buf[PCP_VALUE_MAX])
 	    psc_atomic32_read(&max_nretries));
 }
 
-void
-msctlparam_outstandingrpcs_get(char buf[PCP_VALUE_MAX])
-{
-	extern atomic_t outstandingRpcCnt;
-
-	snprintf(buf, PCP_VALUE_MAX, "%d",
-	    atomic_read(&outstandingRpcCnt));
-}
-
 int
 msctlparam_offlinenretries_set(const char *val)
 {
@@ -566,6 +557,9 @@ msctlrep_getbiorq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
+const struct slctl_res_field slctl_resmds_fields[] = { { NULL, NULL } };
+const struct slctl_res_field slctl_resios_fields[] = { { NULL, NULL } };
+
 struct psc_ctlop msctlops[] = {
 	PSC_CTLDEFOPS
 /* ADDREPLRQ		*/ , { msctlrep_replrq,		sizeof(struct msctlmsg_replrq) }
@@ -637,8 +631,6 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_simple("offline_nretries",
 	    msctlparam_offlinenretries_get,
 	    msctlparam_offlinenretries_set);
-	psc_ctlparam_register_simple("outstanding_rpcs",
-	    msctlparam_outstandingrpcs_get, NULL);
 
 	thr = pscthr_init(MSTHRT_CTL, 0, msctlthr_main, NULL,
 	    sizeof(struct psc_ctlthr), "msctlthr0");

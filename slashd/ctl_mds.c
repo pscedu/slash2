@@ -192,180 +192,102 @@ slmctlparam_namespace_stats(int fd, struct psc_ctlmsghdr *mh,
 	return (rc);
 }
 
-const char *slm_resmds_fields[] = {
-	"xid"
-};
+int
+slmctl_resfieldm_xid(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels, int set,
+    struct sl_resource *r)
+{
+	struct sl_mds_peerinfo *sp;
+	char nbuf[20];
 
-const char *slm_resios_fields[] = {
-	"disable_bia",
-	"disable_gc",
-	"xid"
-};
+	sp = res2mdsinfo(r);
+	if (set)
+		return (psc_ctlsenderr(fd, mh,
+		    "xid: field is read-only"));
+	snprintf(nbuf, sizeof(nbuf), "%"PRIu64, sp->sp_xid);
+	return (psc_ctlmsg_param_send(fd, mh, pcp, PCTHRNAME_EVERYONE,
+	    levels, nlevels, nbuf));
+}
 
 int
-slmctlparam_resources(int fd, struct psc_ctlmsghdr *mh,
-    struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
-    __unusedx struct psc_ctlparam_node *pcn)
+slmctl_resfieldi_xid(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels, int set,
+    struct sl_resource *r)
 {
-	char p_site[SITE_NAME_MAX], p_res[RES_NAME_MAX], p_field[32];
-	char *p, *str, nbuf[20], resname[RES_NAME_MAX];
-	int site_found = 0, res_found = 0, field_found = 0;
-	int set, i, f_val, val = 0;
-	struct sl_mds_peerinfo *sp;
 	struct sl_mds_iosinfo *si;
-	struct sl_resource *r;
-	struct sl_site *s;
-	long l;
+	char nbuf[20];
 
-	if (nlevels > 4)
-		return (psc_ctlsenderr(fd, mh, "invalid field"));
-
-	set = mh->mh_type == PCMT_SETPARAM;
-
-	if (set && nlevels != 4)
-		return (psc_ctlsenderr(fd, mh, "invalid field"));
-
-	/* resources.<site>.<res>.<field> */
-	/* ex: namespace.stats.foo.myres.xid */
-	/* ex: namespace.stats.foo.myres.disable_bia */
-
-	levels[0] = "resources";
-
-	if (strlcpy(p_site, nlevels > 1 ? levels[1] : "*",
-	    sizeof(p_site)) >= sizeof(p_site))
-		return (psc_ctlsenderr(fd, mh, "invalid site"));
-	if (strlcpy(p_res, nlevels > 2 ? levels[2] : "*",
-	    sizeof(p_res)) >= sizeof(p_res))
-		return (psc_ctlsenderr(fd, mh, "invalid resource"));
-	if (strlcpy(p_field, nlevels > 3 ? levels[3] : "*",
-	    sizeof(p_field)) >= sizeof(p_field))
-		return (psc_ctlsenderr(fd, mh, "invalid field"));
-
-	if (set) {
-		str = NULL;
-		l = strtol(pcp->pcp_value, &str, 10);
-		if (l == LONG_MAX || l == LONG_MIN || *str != '\0' ||
-		    str == pcp->pcp_value || l > 1 || l < 0)
-			return (psc_ctlsenderr(fd, mh,
-			    "invalid resources value: %s",
-			    pcp->pcp_field));
-		val = (int)l;
-	}
-
-	CONF_FOREACH_RES(s, r, i) {
-		strlcpy(resname, r->res_name, sizeof(resname));
-		p = strchr(resname, '@');
-		if (p)
-			*p = '\0';
-
-		if (strcmp(p_site, "*") && strcmp(p_site, s->site_name))
-			continue;
-		site_found = 1;
-		if (strcmp(p_res, "*") && strcmp(p_res, resname))
-			continue;
-		res_found = 1;
-
-		if (RES_ISCLUSTER(r)) {
-			if (strcmp(p_res, "*"))
-				return (psc_ctlsenderr(fd, mh,
-				    "invalid resource"));
-			continue;
-		}
-
-		levels[1] = s->site_name;
-		levels[2] = resname;
-
-		if (r->res_type == SLREST_MDS) {
-			sp = res2mdsinfo(r);
-			f_val = lookup(slm_resmds_fields,
-			    nitems(slm_resmds_fields), p_field);
-			if (f_val == -1 && strcmp(p_res, "*"))
-				return (psc_ctlsenderr(fd, mh,
-				    "invalid resources field: %s", p_field));
-			if (strcmp(p_field, "*") == 0 ||
-			    strcmp(p_field, "xid") == 0) {
-				if (set)
-					return (psc_ctlsenderr(fd, mh,
-					    "xid: field is read-only"));
-				levels[3] = "xid";
-				snprintf(nbuf, sizeof(nbuf), "%"PRIu64,
-				    sp->sp_xid);
-				if (!psc_ctlmsg_param_send(fd, mh, pcp,
-				    PCTHRNAME_EVERYONE, levels, 4, nbuf))
-					return (0);
-				field_found = 1;
-			}
-		} else {
-			si = res2iosinfo(r);
-			f_val = lookup(slm_resios_fields,
-			    nitems(slm_resios_fields), p_field);
-			if (f_val == -1 && strcmp(p_res, "*"))
-				return (psc_ctlsenderr(fd, mh,
-				    "invalid resources field: %s", p_field));
-			if (strcmp(p_field, "*") == 0 ||
-			    strcmp(p_field, "xid") == 0) {
-				if (set)
-					return (psc_ctlsenderr(fd, mh,
-					    "xid: field is read-only"));
-				levels[3] = "xid";
-				snprintf(nbuf, sizeof(nbuf), "%"PRIu64,
-				    si->si_xid);
-				if (!psc_ctlmsg_param_send(fd, mh, pcp,
-				    PCTHRNAME_EVERYONE, levels, 4, nbuf))
-					return (0);
-				field_found = 1;
-			}
-			if (strcmp(p_field, "*") == 0 ||
-			    strcmp(p_field, "disable_bia") == 0) {
-				if (set) {
-					if (val)
-						si->si_flags |= SIF_DISABLE_BIA;
-					else
-						si->si_flags &= ~SIF_DISABLE_BIA;
-				} else {
-					levels[3] = "disable_bia";
-					snprintf(nbuf, sizeof(nbuf),
-					    "%d", si->si_flags &
-					    SIF_DISABLE_BIA ? 1 : 0);
-					if (!psc_ctlmsg_param_send(fd,
-					    mh, pcp, PCTHRNAME_EVERYONE,
-					    levels, 4, nbuf))
-						return (0);
-				}
-				field_found = 1;
-			}
-			if (strcmp(p_field, "*") == 0 ||
-			    strcmp(p_field, "disable_gc") == 0) {
-				if (set) {
-					if (val)
-						si->si_flags |= SIF_DISABLE_GC;
-					else
-						si->si_flags &= ~SIF_DISABLE_GC;
-				} else {
-					levels[3] = "disable_gc";
-					snprintf(nbuf, sizeof(nbuf),
-					    "%d", si->si_flags &
-					    SIF_DISABLE_GC ? 1 : 0);
-					if (!psc_ctlmsg_param_send(fd,
-					    mh, pcp, PCTHRNAME_EVERYONE,
-					    levels, 4, nbuf))
-						return (0);
-				}
-				field_found = 1;
-			}
-		}
-	}
-	if (!site_found)
-		return (psc_ctlsenderr(fd, mh, "invalid site: %s",
-		    p_site));
-	if (!res_found)
-		return (psc_ctlsenderr(fd, mh, "invalid resource: %s",
-		    p_res));
-	if (!field_found)
-		return (psc_ctlsenderr(fd, mh, "invalid field: %s",
-		    p_field));
-	return (1);
+	si = res2iosinfo(r);
+	if (set)
+		return (psc_ctlsenderr(fd, mh,
+		    "xid: field is read-only"));
+	snprintf(nbuf, sizeof(nbuf), "%"PRIu64,
+	    si->si_xid);
+	return (psc_ctlmsg_param_send(fd, mh, pcp,
+	    PCTHRNAME_EVERYONE, levels, nlevels, nbuf));
 }
+
+int
+slmctl_resfieldi_disable_bia(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels, int set,
+    struct sl_resource *r)
+{
+	struct sl_mds_iosinfo *si;
+	char nbuf[20];
+
+	si = res2iosinfo(r);
+	if (set) {
+		if (pcp->pcp_flags & (PCPF_ADD | PCPF_SUB))
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid operation"));
+		if (strcmp(pcp->pcp_value, "0"))
+			si->si_flags |= SIF_DISABLE_BIA;
+		else
+			si->si_flags &= ~SIF_DISABLE_BIA;
+		return (1);
+	}
+	snprintf(nbuf, sizeof(nbuf), "%d",
+	    si->si_flags & SIF_DISABLE_BIA ? 1 : 0);
+	return (psc_ctlmsg_param_send(fd, mh, pcp, PCTHRNAME_EVERYONE,
+	    levels, nlevels, nbuf));
+}
+
+int
+slmctl_resfieldi_disable_gc(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels, int set,
+    struct sl_resource *r)
+{
+	struct sl_mds_iosinfo *si;
+	char nbuf[20];
+
+	si = res2iosinfo(r);
+	if (set) {
+		if (pcp->pcp_flags & (PCPF_ADD | PCPF_SUB))
+			return (psc_ctlsenderr(fd, mh,
+			    "invalid operation"));
+		if (strcmp(pcp->pcp_value, "0"))
+			si->si_flags |= SIF_DISABLE_GC;
+		else
+			si->si_flags &= ~SIF_DISABLE_GC;
+		return (1);
+	}
+	snprintf(nbuf, sizeof(nbuf), "%d",
+	    si->si_flags & SIF_DISABLE_GC ? 1 : 0);
+	return (psc_ctlmsg_param_send(fd, mh, pcp, PCTHRNAME_EVERYONE,
+	    levels, nlevels, nbuf));
+}
+
+const struct slctl_res_field slctl_resmds_fields[] = {
+	{ "xid",		slmctl_resfieldm_xid },
+	{ NULL, NULL },
+};
+
+const struct slctl_res_field slctl_resios_fields[] = {
+	{ "disable_bia",	slmctl_resfieldi_disable_bia },
+	{ "disable_gc",		slmctl_resfieldi_disable_gc },
+	{ "xid",		slmctl_resfieldi_xid },
+	{ NULL, NULL },
+};
 
 /**
  * slmctlcmd_stop - Handle a STOP command to terminate execution.
@@ -652,7 +574,7 @@ slmctlthr_main(const char *fn)
 
 	psc_ctlparam_register_simple("version", slctlparam_version_get,
 	    NULL);
-	psc_ctlparam_register("resources", slmctlparam_resources);
+	psc_ctlparam_register("resources", slctlparam_resources);
 	psc_ctlparam_register("namespace.stats", slmctlparam_namespace_stats);
 	psc_ctlparam_register_simple("nextfid", slmctlparam_nextfid_get,
 	    slmctlparam_nextfid_set);

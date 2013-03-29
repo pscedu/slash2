@@ -21,6 +21,14 @@
 #define _SL_CTLSVR_H_
 
 struct bmap;
+struct psc_ctlparam_node;
+
+struct slctl_res_field {
+	const char	 *name;
+	int		(*cbf)(int, struct psc_ctlmsghdr *,
+			    struct psc_ctlmsg_param *, char **, int,
+			    int, struct sl_resource *);
+};
 
 int slctlrep_getconn(int, struct psc_ctlmsghdr *, void *);
 int slctlrep_getfcmh(int, struct psc_ctlmsghdr *, void *);
@@ -28,6 +36,13 @@ int slctlrep_getbmap(int, struct psc_ctlmsghdr *, void *);
 int slctlmsg_bmap_send(int, struct psc_ctlmsghdr *, struct
     slctlmsg_bmap *, struct bmap *);
 
+int slctlparam_resources(int, struct psc_ctlmsghdr *,
+    struct psc_ctlmsg_param *, char **, int,
+    struct psc_ctlparam_node *);
+
 void slctlparam_version_get(char *);
+
+extern const struct slctl_res_field slctl_resmds_fields[];
+extern const struct slctl_res_field slctl_resios_fields[];
 
 #endif /* _SL_CTLSVR_H_ */
