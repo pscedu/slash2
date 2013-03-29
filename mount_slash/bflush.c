@@ -1188,8 +1188,7 @@ bmap_flush(struct timespec *nto)
 			} else if (r->biorq_flags & BIORQ_SCHED) {
 				DEBUG_BIORQ(PLL_WARN, r, "already sched");
 				BIORQ_ULOCK(r);
-				continue;
-
+				continue; 
 			}
 
 			/*
