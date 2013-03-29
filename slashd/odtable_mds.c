@@ -77,6 +77,7 @@ mds_odtable_putitem(struct odtable *odt, void *data, size_t len)
 
 		psclog_warnx("on-disk table now has %zd elements (used to be %zd)",
 		    h->odth_nelems, elem);
+		OPSTAT_INCR(SLM_OPST_ODTABLE_EXTEND);
 	}
 
 	freelock(&odt->odt_lock);
