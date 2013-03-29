@@ -418,7 +418,6 @@ _dump_bmap_flags_common(uint32_t *flags, int *seq)
 	PFL_PRFLAG(BMAP_WAITERS, flags, seq);
 	PFL_PRFLAG(BMAP_BUSY, flags, seq);
 	PFL_PRFLAG(BMAP_NEW, flags, seq);
-	PFL_PRFLAG(BMAP_ARCHIVER, flags, seq);
 	PFL_PRFLAG(BMAP_REPLAY, flags, seq);
 }
 

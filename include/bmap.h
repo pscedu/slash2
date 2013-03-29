@@ -140,9 +140,8 @@ struct bmap {
 #define BMAP_WAITERS		(1 << 12)	/* has bcm_fcmh waiters */
 #define BMAP_BUSY		(1 << 13)	/* temporary processing lock */
 #define BMAP_NEW		(1 << 14)	/* just created */
-#define BMAP_ARCHIVER		(1 << 15)	/* archiver */
-#define BMAP_REPLAY		(1 << 16)	/* during journal replay */
-#define _BMAP_FLSHFT		(1 << 17)
+#define BMAP_REPLAY		(1 << 15)	/* during journal replay */
+#define _BMAP_FLSHFT		(1 << 16)
 
 #define bmap_2_fid(b)		fcmh_2_fid((b)->bcm_fcmh)
 
@@ -161,7 +160,7 @@ struct bmap {
 #define BMAP_CLEARATTR(b, fl)	CLEARATTR_LOCKED(&(b)->bcm_lock, &(b)->bcm_flags, (fl))
 
 #define _DEBUG_BMAP_FMT		"bmap@%p bno:%u flg:%#x:"		\
-				"%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s " \
+				"%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s " 	\
 				"fid:"SLPRI_FID" opcnt=%d "
 
 #define _DEBUG_BMAP_FMTARGS(b)						\
@@ -181,7 +180,6 @@ struct bmap {
 	(b)->bcm_flags & BMAP_WAITERS	? "w" : "",			\
 	(b)->bcm_flags & BMAP_BUSY	? "B" : "",			\
 	(b)->bcm_flags & BMAP_NEW	? "N" : "",			\
-	(b)->bcm_flags & BMAP_ARCHIVER	? "C" : "",			\
 	(b)->bcm_flags & BMAP_REPLAY	? "P" : "",			\
 	(b)->bcm_flags & ~(_BMAP_FLSHFT - 1) ? "+" : "",		\
 	(b)->bcm_fcmh ? fcmh_2_fid((b)->bcm_fcmh) : FID_ANY,		\
