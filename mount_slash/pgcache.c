@@ -257,8 +257,6 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	BMAP_LOCK(b);
 	if (b->bcm_flags & BMAP_DIO)
 		r->biorq_flags |= BIORQ_DIO;
-	if (b->bcm_flags & BMAP_ARCHIVER)
-		r->biorq_flags |= BIORQ_ARCHIVER;
 
 	if (op == BIORQ_READ || (r->biorq_flags & BIORQ_DIO)) {
 		r->biorq_flags |= BIORQ_PENDING;
@@ -498,7 +496,6 @@ dump_biorq_flags(uint32_t flags)
 	PFL_PRFLAG(BIORQ_FLUSHRDY, &flags, &seq);
 	PFL_PRFLAG(BIORQ_NOFHENT, &flags, &seq);
 	PFL_PRFLAG(BIORQ_AIOWAIT, &flags, &seq);
-	PFL_PRFLAG(BIORQ_ARCHIVER, &flags, &seq);
 	PFL_PRFLAG(BIORQ_EXPIREDLEASE, &flags, &seq);
 	PFL_PRFLAG(BIORQ_MAXRETRIES, &flags, &seq);
 	PFL_PRFLAG(BIORQ_PENDING, &flags, &seq);
