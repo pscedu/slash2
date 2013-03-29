@@ -229,6 +229,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slc_async_req);
 	PRTYPE(struct slconn_params);
 	PRTYPE(struct slconn_thread);
+	PRTYPE(struct slctl_res_field);
 	PRTYPE(struct slctlmsg_bmap);
 	PRTYPE(struct slctlmsg_conn);
 	PRTYPE(struct slctlmsg_fcmh);
