@@ -58,7 +58,6 @@ struct timespec			bmapFlushDefMaxAge;
 
 struct bmap_pagecache_entry {
 	psc_atomic32_t		 bmpce_ref;	/* biorq and readahead refs	*/
-	uint64_t		 bmpce_syncxid;	/* xid associated with sync op	*/
 	uint32_t		 bmpce_flags;	/* BMPCE_* flag bits		*/
 	uint32_t		 bmpce_off;	/* filewise, bmap relative	*/
 	psc_spinlock_t		 bmpce_lock;	/* serialize			*/
