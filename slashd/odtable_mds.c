@@ -191,6 +191,8 @@ mds_odtable_replaceitem(struct odtable *odt,
 	    h->odth_slotsz, &nb, h->odth_start +
 	    odtr->odtr_elem * h->odth_slotsz,
 	    odt->odt_handle);
+	psc_assert(!rc && nb == h->odth_slotsz);
+	OPSTAT_INCR(SLM_OPST_ODTABLE_REPLACE);
 
 	odtf = p + h->odth_elemsz;
 	psc_assert(!odtable_footercheck(odtf, odtr, 1));
@@ -239,6 +241,8 @@ mds_odtable_freeitem(struct odtable *odt, struct odtable_receipt *odtr)
 	rc = mdsio_read(current_vfsid, &rootcreds, p, h->odth_slotsz,
 	    &nb, h->odth_start + odtr->odtr_elem * h->odth_slotsz,
 	    odt->odt_handle);
+	psc_assert(!rc && nb == h->odth_slotsz);
+	OPSTAT_INCR(SLM_OPST_ODTABLE_FREE);
 
 	odtf = p + h->odth_elemsz;
 	psc_assert(!odtable_footercheck(odtf, odtr, 1));
