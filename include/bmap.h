@@ -367,7 +367,7 @@ enum bmap_opcnt_types {
 /*  0 */ BMAP_OPCNT_LOOKUP,		/* bmap_get */
 /*  1 */ BMAP_OPCNT_IONASSIGN,
 /*  2 */ BMAP_OPCNT_LEASE,
-/*  3 */ BMAP_OPCNT_MDSLOG,
+/*  3 */ BMAP_OPCNT_FLUSH,
 /*  4 */ BMAP_OPCNT_BIORQ,
 /*  5 */ BMAP_OPCNT_REPLWK,		/* repl work inside ION */
 /*  6 */ BMAP_OPCNT_REAPER,		/* client bmap timeout */

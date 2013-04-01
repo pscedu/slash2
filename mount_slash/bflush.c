@@ -600,7 +600,7 @@ bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
  *	This function must be non-blocking.
  */
 __static int
-bmap_flushable(struct bmapc_memb *b, __unusedx struct timespec *t)
+bmap_flushable(struct bmapc_memb *b)
 {
 	int flush = 0;
 	struct bmpc_ioreq *r, *tmp;
@@ -1113,8 +1113,6 @@ bmap_flush(struct timespec *nto)
 	struct timespec t = {0, 0};
 	int i, j, k, skip = 0;
 
-	nto->tv_sec = nto->tv_nsec = 0;
-
 	LIST_CACHE_LOCK(&bmapFlushQ);
 	LIST_CACHE_FOREACH_SAFE(b, tmpb, &bmapFlushQ) {
 
@@ -1139,12 +1137,8 @@ bmap_flush(struct timespec *nto)
 				psc_assert(biorq_destroy_failed(r));
 
 		} else {
-			if (bmap_flushable(b, &t))
+			if (bmap_flushable(b))
 				psc_dynarray_add(&bmaps, b);
-			else
-				if ((!nto->tv_nsec && !nto->tv_sec) ||
-				    (timespeccmp(nto, &t, >)))
-					*nto = t;
 			BMAP_ULOCK(b);
 		}
 
