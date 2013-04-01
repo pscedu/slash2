@@ -1128,26 +1128,31 @@ bmap_flush(struct timespec *nto)
 
 		if (b->bcm_flags & BMAP_CLI_REASSIGNREQ) {
 			BMAP_ULOCK(b);
+			continue;
+		}
 
-		} else if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED) {
+		if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED) {
 			bmpc = bmap_2_bmpc(b);
 			BMAP_ULOCK(b);
 
 			while ((r = pll_peekhead(&bmpc->bmpc_new_biorqs)))
 				psc_assert(biorq_destroy_failed(r));
 
-		} else {
-			if (bmap_flushable(b))
-				psc_dynarray_add(&bmaps, b);
-			BMAP_ULOCK(b);
+			continue;
 		}
 
+		if (!bmap_flushable(b)) {
+			BMAP_ULOCK(b);
+			continue;
+		}
+		BMAP_ULOCK(b);
+
+		psc_dynarray_add(&bmaps, b);
 		if ((psc_dynarray_len(&bmaps) +
 		     atomic_read(&outstandingRpcCnt)) >=
 		    MAX_OUTSTANDING_RPCS)
 			break;
 	}
-
 
 	LIST_CACHE_ULOCK(&bmapFlushQ);
 
