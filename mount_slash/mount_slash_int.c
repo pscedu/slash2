@@ -1055,18 +1055,8 @@ msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 	r = pll_peekhead(&bwc->bwc_pll);
 	BMAP_LOCK(r->biorq_bmap);
-	if (r->biorq_bmap->bcm_flags & BMAP_CLI_LEASEEXPIRED) {
+	if (r->biorq_bmap->bcm_flags & BMAP_CLI_LEASEEXPIRED) 
 		expired_lease = 1;
-		PLL_FOREACH(r, &bwc->bwc_pll) {
-			/*
-			 * Lease extension cb must have already marked
-			 * the biorqs with BIORQ_EXPIREDLEASE.
-			 */
-			BIORQ_LOCK(r);
-			psc_assert(r->biorq_flags & BIORQ_EXPIREDLEASE);
-			BIORQ_ULOCK(r);
-		}
-	}
 	BMAP_ULOCK(r->biorq_bmap);
 
 	while ((r = pll_get(&bwc->bwc_pll))) {

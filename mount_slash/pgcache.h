@@ -213,11 +213,9 @@ struct bmpc_ioreq {
 #define	BIORQ_FLUSHRDY			(1 <<  9)
 #define	BIORQ_NOFHENT			(1 << 10)	/* release a file handle before flush is complete */
 #define BIORQ_AIOWAIT			(1 << 11)
-#define BIORQ_EXPIREDLEASE		(1 << 12)
-#define BIORQ_MAXRETRIES		(1 << 13)	/* too many retries.. */
-#define BIORQ_PENDING			(1 << 14)
-#define BIORQ_WAIT			(1 << 15)
-#define BIORQ_MFHLIST			(1 << 16)
+#define BIORQ_PENDING			(1 << 12)
+#define BIORQ_WAIT			(1 << 13)
+#define BIORQ_MFHLIST			(1 << 14)
 
 #define BIORQ_LOCK(r)			spinlock(&(r)->biorq_lock)
 #define BIORQ_ULOCK(r)			freelock(&(r)->biorq_lock)
@@ -230,7 +228,7 @@ struct bmpc_ioreq {
 
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP, "biorq@%p flg=%#x:"			\
-	    "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "			\
+	    "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "				\
 	    "ref=%d off=%u len=%u "					\
 	    "retry=%u buf=%p rqi=%p "					\
 	    "sliod=%x np=%d "						\
@@ -248,8 +246,6 @@ struct bmpc_ioreq {
 	    (b)->biorq_flags & BIORQ_FLUSHRDY		? "L" : "",	\
 	    (b)->biorq_flags & BIORQ_NOFHENT		? "n" : "",	\
 	    (b)->biorq_flags & BIORQ_AIOWAIT		? "S" : "",	\
-	    (b)->biorq_flags & BIORQ_EXPIREDLEASE	? "X" : "",	\
-	    (b)->biorq_flags & BIORQ_MAXRETRIES		? "T" : "",	\
 	    (b)->biorq_flags & BIORQ_PENDING		? "p" : "",	\
 	    (b)->biorq_flags & BIORQ_WAIT		? "W" : "",	\
 	    (b)->biorq_flags & BIORQ_MFHLIST		? "m" : "",	\
@@ -324,7 +320,7 @@ void	 bmpc_global_init(void);
 void	 bmpc_free(void *);
 void	 bmpc_freeall_locked(struct bmap_pagecache *);
 int	 bmpc_biorq_cmp(const void *, const void *);
-void	 bmpc_biorqs_fail(struct bmap_pagecache *, int, uint32_t);
+void	 bmpc_biorqs_fail(struct bmap_pagecache *, int);
 void	 bmpc_biorqs_destroy(struct bmap_pagecache *);
 
 struct bmpc_ioreq *

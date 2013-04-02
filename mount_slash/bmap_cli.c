@@ -230,8 +230,7 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 		if (!(b->bcm_flags & BMAP_CLI_LEASEEXPIRED)) {
 			BMAP_SETATTR(b, BMAP_TOFREE);
 			BMAP_SETATTR(b, BMAP_CLI_LEASEEXPIRED);
-			bmpc_biorqs_fail(bmap_2_bmpc(b), rc,
-			    BIORQ_EXPIREDLEASE);
+			bmpc_biorqs_fail(bmap_2_bmpc(b), rc);
 		}
 		bmap_2_bci(b)->bci_error = rc;
 		OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_FAIL);

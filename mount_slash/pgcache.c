@@ -325,10 +325,8 @@ bmpc_freeall_locked(struct bmap_pagecache *bmpc)
 }
 
 __static void
-bmpc_biorq_seterr(struct bmpc_ioreq *r, int err, uint32_t flag)
+bmpc_biorq_seterr(struct bmpc_ioreq *r, int err)
 {
-	BIORQ_SETATTR(r, flag);
-
 	/* XXX, this could also be a lease expire situation. */
 	DEBUG_BIORQ(PLL_ERROR, r, "write-back flush failure (err=%d)",
 	    err);
@@ -343,15 +341,15 @@ bmpc_biorq_seterr(struct bmpc_ioreq *r, int err, uint32_t flag)
  * Notes: Pending RA pages should fail on their own via RPC callback.
  */
 void
-bmpc_biorqs_fail(struct bmap_pagecache *bmpc, int err, uint32_t flag)
+bmpc_biorqs_fail(struct bmap_pagecache *bmpc, int err)
 {
 	struct bmpc_ioreq *r;
 
 	BMPC_LOCK(bmpc);
 	PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs)
-		bmpc_biorq_seterr(r, err, flag);
+		bmpc_biorq_seterr(r, err);
 	PLL_FOREACH(r, &bmpc->bmpc_new_biorqs)
-		bmpc_biorq_seterr(r, err, flag);
+		bmpc_biorq_seterr(r, err);
 	BMPC_ULOCK(bmpc);
 }
 
@@ -514,8 +512,6 @@ dump_biorq_flags(uint32_t flags)
 	PFL_PRFLAG(BIORQ_FLUSHRDY, &flags, &seq);
 	PFL_PRFLAG(BIORQ_NOFHENT, &flags, &seq);
 	PFL_PRFLAG(BIORQ_AIOWAIT, &flags, &seq);
-	PFL_PRFLAG(BIORQ_EXPIREDLEASE, &flags, &seq);
-	PFL_PRFLAG(BIORQ_MAXRETRIES, &flags, &seq);
 	PFL_PRFLAG(BIORQ_PENDING, &flags, &seq);
 	PFL_PRFLAG(BIORQ_WAIT, &flags, &seq);
 	PFL_PRFLAG(BIORQ_MFHLIST, &flags, &seq);
