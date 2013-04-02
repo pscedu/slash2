@@ -355,6 +355,24 @@ bmpc_biorqs_fail(struct bmap_pagecache *bmpc, int err, uint32_t flag)
 	BMPC_ULOCK(bmpc);
 }
 
+void
+bmpc_biorqs_destroy(struct bmap_pagecache *bmpc)
+{
+	struct bmpc_ioreq *r;
+
+	PLL_FOREACH(r, &bmpc->bmpc_new_biorqs) {
+
+		BIORQ_LOCK(r);
+		if (!(r->biorq_flags & BIORQ_FLUSHRDY)) {
+			BIORQ_ULOCK(r);
+			continue;
+		}
+		BIORQ_ULOCK(r);
+		msl_bmpces_fail(r);
+		msl_biorq_destroy(r);
+	}
+}
+
 /**
  * bmpc_lru_tryfree - Attempt to free 'nfree' blocks from the provided
  *    bmap_pagecache structure.

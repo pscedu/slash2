@@ -325,6 +325,8 @@ void	 bmpc_free(void *);
 void	 bmpc_freeall_locked(struct bmap_pagecache *);
 int	 bmpc_biorq_cmp(const void *, const void *);
 void	 bmpc_biorqs_fail(struct bmap_pagecache *, int, uint32_t);
+void	 bmpc_biorqs_destroy(struct bmap_pagecache *);
+
 struct bmpc_ioreq *
 	 bmpc_biorq_new(struct msl_fsrqinfo *, struct bmapc_memb *,
 	    char *, int, uint32_t, uint32_t, int);

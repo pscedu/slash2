@@ -306,31 +306,6 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r)
 	BMPC_ULOCK(bmpc);
 }
 
-__static int
-biorq_destroy_failed(struct bmpc_ioreq *r)
-{
-	int destroy = 0;
-
-	BIORQ_LOCK(r);
-	if (!(r->biorq_flags & BIORQ_FLUSHRDY)) {
-		BIORQ_ULOCK(r);
-		return (-EBUSY);
-	}
-
-	if (r->biorq_flags & (BIORQ_EXPIREDLEASE | BIORQ_MAXRETRIES))
-		destroy = 1;
-	BIORQ_ULOCK(r);
-
-	if (destroy) {
-		DEBUG_BIORQ(PLL_WARN, r,
-		    "lease expired or maxretries - destroying");
-		msl_bmpces_fail(r);
-		msl_biorq_destroy(r);
-	}
-
-	return (destroy);
-}
-
 /**
  * _bmap_flush_desched - Unschedules a biorq, sets the RESCHED bit, and
  *	bumps the resched timer.  Called when a writeback RPC failed to
@@ -395,7 +370,8 @@ bmap_flush_desched(struct bmpc_ioreq *r)
 	if (r->biorq_retries >= SL_MAX_BMAPFLSH_RETRIES) {
 		/* Cleanup errored I/O requests. */
 		r->biorq_flags |= BIORQ_MAXRETRIES;
-		biorq_destroy_failed(r);
+		msl_bmpces_fail(r);
+		msl_biorq_destroy(r);
 	}
 
 }
@@ -1155,9 +1131,7 @@ bmap_flush(struct timespec *nto)
 		BMAP_LOCK(b);
 		if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED) {
 			BMAP_ULOCK(b);
-			while ((r = pll_peekhead(&bmpc->bmpc_new_biorqs)))
-				psc_assert(biorq_destroy_failed(r));
-	
+			bmpc_biorqs_destroy(bmap_2_bmpc(b));
 			goto next;
 		}
 		BMAP_ULOCK(b);
