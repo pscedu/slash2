@@ -1116,7 +1116,6 @@ bmap_flush(struct timespec *nto)
 	LIST_CACHE_LOCK(&bmapFlushQ);
 	LIST_CACHE_FOREACH_SAFE(b, tmpb, &bmapFlushQ) {
 
-		/* XXX take reference - destroying a biorq can free its bmap */
 		DEBUG_BMAP(PLL_INFO, b,
 		    "flushable? (outstandingRpcCnt=%d)",
 		    atomic_read(&outstandingRpcCnt));
@@ -1131,25 +1130,15 @@ bmap_flush(struct timespec *nto)
 			continue;
 		}
 
-		if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED) {
-			bmpc = bmap_2_bmpc(b);
-			BMAP_ULOCK(b);
-
-			while ((r = pll_peekhead(&bmpc->bmpc_new_biorqs)))
-				psc_assert(biorq_destroy_failed(r));
-
-			continue;
-		}
-
-		if (!bmap_flushable(b)) {
-			BMAP_ULOCK(b);
-			continue;
+		if ((b->bcm_flags & BMAP_CLI_LEASEEXPIRED) || 
+                    bmap_flushable(b)) {
+			bmap_op_start_type(b, BMAP_OPCNT_FLUSH);
+			psc_dynarray_add(&bmaps, b);
 		}
 		BMAP_ULOCK(b);
 
-		psc_dynarray_add(&bmaps, b);
-		if ((psc_dynarray_len(&bmaps) +
-		     atomic_read(&outstandingRpcCnt)) >=
+		if ((psc_dynarray_len(&bmaps) + 
+                     atomic_read(&outstandingRpcCnt)) >=
 		    MAX_OUTSTANDING_RPCS)
 			break;
 	}
@@ -1168,7 +1157,8 @@ bmap_flush(struct timespec *nto)
 			BMAP_ULOCK(b);
 			while ((r = pll_peekhead(&bmpc->bmpc_new_biorqs)))
 				psc_assert(biorq_destroy_failed(r));
-			continue;
+	
+			goto next;
 		}
 		BMAP_ULOCK(b);
 
@@ -1215,6 +1205,9 @@ bmap_flush(struct timespec *nto)
 		if (k != psc_dynarray_len(&reqs))
 			skip = 1;
 		psc_dynarray_reset(&reqs);
+ next:
+		BMAP_LOCK(b);
+		bmap_op_done_type(b, BMAP_OPCNT_FLUSH);
 	}
 
 	psc_dynarray_free(&reqs);
