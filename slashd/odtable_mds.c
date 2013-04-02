@@ -282,6 +282,7 @@ mds_odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 	va_list ap;
 	void *p;
 
+	memset(&odtr, 0, sizeof(odtr));
 	psc_assert(t);
 	*t = NULL;
 
