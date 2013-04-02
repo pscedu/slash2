@@ -1047,7 +1047,7 @@ msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	struct bmpc_write_coalescer *bwc =
 		args->pointer_arg[MSL_CBARG_BIORQS];
 	struct bmpc_ioreq *r;
-	int rc = 0, expired_lease = 0, maxretries = 0;
+	int rc = 0, expired_lease = 0;
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_io_rep, rc);
 
@@ -1069,25 +1069,12 @@ msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	}
 	BMAP_ULOCK(r->biorq_bmap);
 
-	/* Check for max retries on each biorq. */
-	if (rc && !expired_lease) {
-		PLL_FOREACH(r, &bwc->bwc_pll)
-			if (r->biorq_retries >= SL_MAX_BMAPFLSH_RETRIES) {
-				maxretries = 1;
-				break;
-			}
-
-		if (maxretries)
-			bmpc_biorqs_fail(bmap_2_bmpc(r->biorq_bmap), rc,
-				BIORQ_MAXRETRIES);
-	}
-
 	while ((r = pll_get(&bwc->bwc_pll))) {
 
 		BIORQ_CLEARATTR(r, BIORQ_INFL | BIORQ_SCHED);
 
 		if (rc) {
-			if (expired_lease || maxretries) {
+			if (expired_lease) {
 				/* Cleanup errored I/O requests. */
 				msl_bmpces_fail(r);
 				msl_biorq_destroy(r);
