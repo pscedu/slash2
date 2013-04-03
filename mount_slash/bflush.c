@@ -202,9 +202,10 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 	return (rc);
 }
 
-__static struct pscrpc_request *
+__static int
 bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
-    struct slashrpc_cservice *csvc, struct bmapc_memb *b)
+    struct slashrpc_cservice *csvc, struct bmapc_memb *b,
+    struct pscrpc_request **rqp)
 {
 	struct pscrpc_request *rq = NULL;
 	struct srm_io_req *mq;
@@ -260,13 +261,14 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 		goto error;
 	}
 
-	return (rq);
+	*rqp = rq;
+	return (0);
 
  error:
 	sl_csvc_decref(csvc);
 	if (rq)
 		pscrpc_req_finished_locked(rq);
-	return (NULL);
+	return (rc);
 }
 
 __static void
@@ -403,6 +405,7 @@ bmap_flush_resched(struct bmpc_ioreq *r)
 __static void
 bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 {
+	int rc;
 	struct slashrpc_cservice *csvc;
 	struct pscrpc_request *rq;
 	struct bmpc_ioreq *r;
@@ -426,8 +429,8 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	psclog_info("bwc cb arg (%p) size=%zu nbiorqs=%d",
 	    bwc, bwc->bwc_size, pll_nitems(&bwc->bwc_pll));
 
-	rq = bmap_flush_create_rpc(bwc, csvc, b);
-	if (rq == NULL)
+	rc = bmap_flush_create_rpc(bwc, csvc, b, &rq);
+	if (rc)
 		goto error;
 
 	sl_csvc_decref(csvc);
