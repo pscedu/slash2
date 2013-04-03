@@ -374,7 +374,8 @@ void
 mfh_seterr(struct msl_fhent *mfh, int err)
 {
 	MFH_LOCK(mfh);
-	mfh->mfh_flush_rc = err;
+	if (!mfh->mfh_flush_rc)
+		mfh->mfh_flush_rc = err;
 	MFH_ULOCK(mfh);
 }
 
