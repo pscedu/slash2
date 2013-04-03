@@ -415,8 +415,10 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 
 	/* XXX return error here? */
 	csvc = msl_bmap_to_csvc(r->biorq_bmap, 1);
-	if (csvc == NULL)
+	if (csvc == NULL) {
+		rc = -ENOTCONN;
 		goto error;
+	}
 
 	b = r->biorq_bmap;
 	psc_assert(bwc->bwc_soff == r->biorq_off);
