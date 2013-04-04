@@ -25,6 +25,7 @@ SRCS+=		${PFL_BASE}/random.c
 SRCS+=		${PFL_BASE}/thread.c
 SRCS+=		${PFL_BASE}/usklndthr.c
 SRCS+=		${PFL_BASE}/waitq.c
+SRCS+=		${PFL_BASE}/walk.c
 SRCS+=		${SETRESUID_SRC}
 
 MODULES+=	lnet pthread rpc

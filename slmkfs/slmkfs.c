@@ -170,6 +170,7 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 	if (ion) {
 		xmkfn(fn, "%s/%"PRIx64, metadir, fsuuid);
 		slnewfs_mkdir(fn);
+
 		strlcpy(metadir, fn, sizeof(metadir));
 		xmkfn(fn, "%s/%s", metadir, SL_RPATH_FIDNS_DIR);
 		slnewfs_mkdir(fn);
