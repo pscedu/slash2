@@ -24,6 +24,8 @@
 #ifndef _SL_MKFN_H_
 #define _SL_MKFN_H_
 
+#include <limits.h>
+
 int	mkfn(char[PATH_MAX], const char *, ...);
 int	mkfnv(char[PATH_MAX], const char *, va_list);
 void	xmkfn(char[PATH_MAX], const char *, ...);
