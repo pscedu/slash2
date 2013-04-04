@@ -376,7 +376,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 		pll_add_sorted(&bmpc->bmpc_new_biorqs, r, bmpc_biorq_cmp);
 		msl_bmap_lease_tryreassign(r->biorq_bmap);
 	} else
-		BIORQ_LOCK(r);
+		BIORQ_ULOCK(r);
 }
 
 __static void
