@@ -68,6 +68,7 @@ struct timespec		msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
 __static size_t msl_pages_copyin(struct bmpc_ioreq *);
 __static int msl_biorq_complete_fsrq(struct bmpc_ioreq *);
 __static void msl_pages_schedflush(struct bmpc_ioreq *r);
+void mfsrq_seterr(struct msl_fsrqinfo *, int);
 
 struct pscrpc_nbreqset *pndgReadaReqs; /* non-blocking set for RA's */
 
@@ -412,11 +413,12 @@ msl_biorq_del(struct bmpc_ioreq *r)
 }
 
 void
-msl_bmpces_fail(struct bmpc_ioreq *r)
+msl_bmpces_fail(struct bmpc_ioreq *r, int rc)
 {
 	struct bmap_pagecache_entry *e;
 	int i;
 
+	mfh_seterr(r->biorq_mfh, rc);
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 		BMPCE_LOCK(e);
 		if (biorq_is_my_bmpce(r, e)) {
@@ -1067,11 +1069,11 @@ msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 		if (rc) {
 			if (expired_lease) {
 				/* Cleanup errored I/O requests. */
-				msl_bmpces_fail(r);
+				msl_bmpces_fail(r, rc);
 				msl_biorq_destroy(r);
 			} else
 				/* OK to retry this one. */
-				bmap_flush_resched(r);
+				bmap_flush_resched(r, rc);
 		} else
 			/* Success. */
 			msl_biorq_destroy(r);

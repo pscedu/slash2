@@ -354,7 +354,7 @@ bmpc_biorqs_fail(struct bmap_pagecache *bmpc, int err)
 }
 
 void
-bmpc_biorqs_destroy(struct bmap_pagecache *bmpc)
+bmpc_biorqs_destroy(struct bmap_pagecache *bmpc, int rc)
 {
 	struct bmpc_ioreq *r;
 
@@ -366,7 +366,7 @@ bmpc_biorqs_destroy(struct bmap_pagecache *bmpc)
 			continue;
 		}
 		BIORQ_ULOCK(r);
-		msl_bmpces_fail(r);
+		msl_bmpces_fail(r, rc);
 		msl_biorq_destroy(r);
 	}
 }

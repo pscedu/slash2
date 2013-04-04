@@ -217,7 +217,7 @@ resm2rmci(struct sl_resm *resm)
 struct slashrpc_cservice *
 	 msl_bmap_to_csvc(struct bmapc_memb *, int);
 void	 msl_bmap_reap_init(struct bmapc_memb *, const struct srt_bmapdesc *);
-void	 msl_bmpces_fail(struct bmpc_ioreq *);
+void	 msl_bmpces_fail(struct bmpc_ioreq *, int);
 void	_msl_biorq_destroy(const struct pfl_callerinfo *, struct bmpc_ioreq *);
 
 void	 mfh_decref(struct msl_fhent *);
@@ -248,7 +248,7 @@ void	 mstimerthr_spawn(void);
 	_bmap_flushq_wake(PFL_CALLERINFOSS(SLSS_BMAP), (mode), (t))
 
 void	 _bmap_flushq_wake(const struct pfl_callerinfo *, int, struct timespec *);
-void	  bmap_flush_resched(struct bmpc_ioreq *);
+void	  bmap_flush_resched(struct bmpc_ioreq *, int);
 
 /* bmap flush modes (bmap_flushq_wake) */
 #define BMAPFLSH_TIMEOA		(1 << 0)

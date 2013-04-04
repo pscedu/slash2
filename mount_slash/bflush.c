@@ -309,31 +309,33 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r)
 }
 
 /**
- * _bmap_flush_desched - Unschedules a biorq, sets the RESCHED bit, and
- *	bumps the resched timer.  Called when a writeback RPC failed to
- *	get off of the ground OR via RPC cb context on failure.
- * Notes:  _bmap_flush_desched strictly asserts the biorq is not on the
- *	'wire'.
+ * bmap_flush_resched - Called in error contexts where the biorq must be
+ *    rescheduled by putting it back to the new request queue.  Typically
+ *    this is from a write RPC cb.
  */
-__static void
-bmap_flush_desched(struct bmpc_ioreq *r)
+void
+bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 {
-	struct bmap_pagecache *bmpc = bmap_2_bmpc(r->biorq_bmap);
 	int delta;
+	struct bmap_pagecache *bmpc = bmap_2_bmpc(r->biorq_bmap);
 
-	(void)BMPC_RLOCK(bmpc);
-	(void)BIORQ_RLOCK(r);
+	DEBUG_BIORQ(PLL_INFO, r, "resched");
 
-	psc_assert(!(r->biorq_flags & BIORQ_INFL));
-	psc_assert(pll_conjoint(&bmpc->bmpc_new_biorqs, r));
+	BIORQ_LOCK(r);
+	r->biorq_flags &= ~(BIORQ_INFL | BIORQ_SCHED);
+
+	if (r->biorq_retries >= SL_MAX_BMAPFLSH_RETRIES) {
+		BIORQ_ULOCK(r);
+		msl_bmpces_fail(r, rc);
+		msl_biorq_destroy(r);
+		return;
+	}
 
 	if (r->biorq_last_sliod == bmap_2_ios(r->biorq_bmap) ||
 	    r->biorq_last_sliod == IOS_ID_ANY)
 		r->biorq_retries++;
 	else
 		r->biorq_retries = 1;
-
-	r->biorq_flags &= ~BIORQ_SCHED;
 
 	/*
 	 * Back off to allow the I/O server to recover or become less
@@ -363,43 +365,18 @@ bmap_flush_desched(struct bmpc_ioreq *r)
 
 	r->biorq_expire.tv_sec += delta;
 
-	BIORQ_ULOCK(r);
-	BMPC_ULOCK(bmpc);
-
-	DEBUG_BIORQ(PLL_INFO, r, "unset sched lease bmap_2_ios (%u)",
-		    bmap_2_ios(r->biorq_bmap));
-
-	if (r->biorq_retries >= SL_MAX_BMAPFLSH_RETRIES) {
-		msl_bmpces_fail(r);
-		msl_biorq_destroy(r);
-	}
-
-}
-
-/**
- * bmap_flush_resched - Called in error contexts where the biorq must be
- *    rescheduled by putting it back to the new request queue.  Typically
- *    this is from a write RPC cb.
- */
-void
-bmap_flush_resched(struct bmpc_ioreq *r)
-{
-	struct bmap_pagecache *bmpc = bmap_2_bmpc(r->biorq_bmap);
-
-	psc_assert(r->biorq_flags & BIORQ_WRITE);
-
-	BMPC_LOCK(bmpc);
-	BIORQ_LOCK(r);
-
-	DEBUG_BIORQ(PLL_INFO, r, "resched");
-
-	r->biorq_flags &= ~BIORQ_PENDING;
-	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
-	pll_add_sorted(&bmpc->bmpc_new_biorqs, r, bmpc_biorq_cmp);
-
-	/* bmap_flush_desched drops BIORQ_LOCK and BMPC_LOCK */
-	bmap_flush_desched(r);
-	msl_bmap_lease_tryreassign(r->biorq_bmap);
+	/*
+	 * If we were able to connect to an IOS, but the RPC fails somehow,
+	 * try to use a different IOS if possible.
+	 */
+	if (r->biorq_flags & BIORQ_PENDING) {
+		r->biorq_flags &= ~BIORQ_PENDING;
+		BIORQ_ULOCK(r);
+		pll_remove(&bmpc->bmpc_pndg_biorqs, r);
+		pll_add_sorted(&bmpc->bmpc_new_biorqs, r, bmpc_biorq_cmp);
+		msl_bmap_lease_tryreassign(r->biorq_bmap);
+	} else
+		BIORQ_LOCK(r);
 }
 
 __static void
@@ -439,14 +416,8 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	return;
 
  error:
-	while ((r = pll_get(&bwc->bwc_pll))) {
-
-		BIORQ_LOCK(r);
-		r->biorq_flags &= ~(BIORQ_INFL | BIORQ_SCHED);
-		BIORQ_ULOCK(r);
-
-		csvc ? bmap_flush_resched(r) : bmap_flush_desched(r);
-	}
+	while ((r = pll_get(&bwc->bwc_pll)))
+		bmap_flush_resched(r, rc);
 
 	if (csvc)
 		sl_csvc_decref(csvc);
@@ -1134,7 +1105,8 @@ bmap_flush(struct timespec *nto)
 		BMAP_LOCK(b);
 		if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED) {
 			BMAP_ULOCK(b);
-			bmpc_biorqs_destroy(bmap_2_bmpc(b));
+			bmpc_biorqs_destroy(bmap_2_bmpc(b), 
+			    bmap_2_bci(b)->bci_error);
 			goto next;
 		}
 		BMAP_ULOCK(b);
