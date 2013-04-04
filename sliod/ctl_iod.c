@@ -55,13 +55,13 @@ struct psc_lockedlist psc_odtables;
 
 int
 sli_export(__unusedx const char *fn, __unusedx const struct stat *stb,
-    void *arg)
+    __unusedx int info, __unusedx int level, void *arg)
 {
 	struct slictlmsg_fileop *sfop = arg;
 	int rc = 0;
 
-	psclog_info("export: src=%s, dst=%s, flags=%d",
-		sfop->sfop_fn, sfop->sfop_fn2, sfop->sfop_flags);
+	psclog_info("export: src=%s dst=%s flags=%d",
+	    sfop->sfop_fn, sfop->sfop_fn2, sfop->sfop_flags);
 	return (rc);
 }
 
@@ -143,7 +143,8 @@ sli_rmi_issue_mkdir(struct slashrpc_cservice *csvc,
  * around.
  */
 int
-sli_import(const char *fn, const struct stat *stb, void *arg)
+sli_import(const char *fn, const struct stat *stb, __unusedx int info,
+    __unusedx int level, void *arg)
 {
 	char *p, *np, fidfn[PATH_MAX], cpn[SL_NAME_MAX + 1];
 	int rc = 0, isdir, dolink = 0;
