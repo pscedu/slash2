@@ -64,17 +64,17 @@ sl_conn_gethostname(const char *p, char *buf)
 		struct sockaddr_storage	ss;
 		struct sockaddr_in	sin;
 		struct sockaddr		sa;
-	} sun;
+	} saun;
 
 	if (psc_ctl_nodns)
 		goto cancel;
 
-	memset(&sun, 0, sizeof(sun));
-	if (inet_pton(AF_INET, p, &sun.sin.sin_addr) != 1)
+	memset(&saun, 0, sizeof(saun));
+	if (inet_pton(AF_INET, p, &saun.sin.sin_addr) != 1)
 		goto cancel;
 
-	sun.sa.sa_family = AF_INET;
-	if (getnameinfo(&sun.sa, sizeof(struct sockaddr_in), buf,
+	saun.sa.sa_family = AF_INET;
+	if (getnameinfo(&saun.sa, sizeof(struct sockaddr_in), buf,
 	    NI_MAXHOST, NULL, 0, NI_NAMEREQD))
 		goto cancel;
 
