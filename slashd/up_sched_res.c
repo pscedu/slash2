@@ -97,9 +97,13 @@ upd_tryremove(struct slm_update_data *upd)
 	if (!mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT) && upd->upd_recpt) {
 		UPD_LOCK(upd);
+		DEBUG_UPD(PLL_DIAG, upd,
+		    "removing odtable entry "
+		    "[%zu, %"PSCPRIxCRC64"]",
+		    upd->upd_recpt->odtr_elem,
+		    upd->upd_recpt->odtr_key);
 		mds_odtable_freeitem(slm_repl_odt, upd->upd_recpt);
 		upd->upd_recpt = NULL;
-		DEBUG_UPD(PLL_DIAG, upd, "removed odtable entry");
 		UPD_ULOCK(upd);
 	}
 	BMAPOD_UREQLOCK(bmi, lk);
