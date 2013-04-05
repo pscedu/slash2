@@ -367,6 +367,7 @@ void
 psc_scan_filesystems(void)
 {
 	int i;
+
 	spinlock(&scan_lock);
 	for (i = 0; i < mount_index; i++)
 		if (!(zfsMount[i].flag & ZFS_SLASH2_READY))
