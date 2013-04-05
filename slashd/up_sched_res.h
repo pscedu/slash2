@@ -143,8 +143,12 @@ struct slm_update_generic {
 
 #define DEBUG_UPD(level, upd, msg, ...)					\
 	psclogs((level), SLMSS_UPSCH,					\
-	    "upd@%p type=%d flags=%u:%s " msg,				\
-	    (upd), (upd)->upd_type, (upd)->upd_flags,			\
+	    "upd@%p %s=%p type=%d flags=%u:%s " msg,			\
+	    (upd),							\
+	    (upd)->upd_type == UPDT_BMAP ? "fcmh": "ptr",		\
+	    (upd)->upd_type == UPDT_BMAP ?				\
+	      bmi_2_bmap(upd_getpriv(upd))->bcm_fcmh : NULL,		\
+	    (upd)->upd_type, (upd)->upd_flags,				\
 	    (upd)->upd_flags & UPDF_BUSY	? "b" : "",		\
 	    ## __VA_ARGS__)
 
