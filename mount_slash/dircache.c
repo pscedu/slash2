@@ -36,11 +36,13 @@
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
 #include "psc_util/pool.h"
+#include "psc_util/ctlsvr.h"
 
 #include "dircache.h"
 #include "fidcache.h"
 #include "sltypes.h"
 #include "slutil.h"
+#include "mount_slash.h"
 
 struct psc_poolmaster	 dircache_poolmaster;
 struct psc_poolmgr	*dircache_pool;
@@ -92,6 +94,8 @@ dircache_rls_ents(struct dircache_ents *e, int flags)
 	PSCFREE(e->de_base);
 	PSCFREE(e->de_desc);
 	psc_pool_return(dircache_pool, e);
+
+	OPSTAT_INCR(SLC_OPST_DIRCACHE_REL_ENTRY);
 
 	if ((flags & DCFREEF_EARLY) == 0) {
 		if (flags & DCFREEF_RELEASE)
@@ -318,6 +322,8 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 	e->de_age.tv_sec += DIRENT_TIMEO;
 	e->de_remlookup = nents - 2; /* subtract "." and ".." */
 	e->de_flags = 0; /* remain '0' until readdir req has completed */
+
+	OPSTAT_INCR(SLC_OPST_DIRCACHE_REG_ENTRY);
 
 	c = e->de_desc = PSCALLOC(sizeof(struct dircache_desc) * nents);
 	psc_dynarray_ensurelen(&e->de_dents, nents);
