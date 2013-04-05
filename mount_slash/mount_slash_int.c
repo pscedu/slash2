@@ -1050,33 +1050,19 @@ msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	struct bmpc_write_coalescer *bwc =
 		args->pointer_arg[MSL_CBARG_BIORQS];
 	struct bmpc_ioreq *r;
-	int rc = 0, expired_lease = 0;
+	int rc = 0;
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_io_rep, rc);
 
 	DEBUG_REQ(rc ? PLL_ERROR : PLL_DIAG, rq, "cb");
 
-	r = pll_peekhead(&bwc->bwc_pll);
-	BMAP_LOCK(r->biorq_bmap);
-	if (r->biorq_bmap->bcm_flags & BMAP_CLI_LEASEEXPIRED) 
-		expired_lease = 1;
-	BMAP_ULOCK(r->biorq_bmap);
-
 	while ((r = pll_get(&bwc->bwc_pll))) {
-
-		BIORQ_CLEARATTR(r, BIORQ_INFL | BIORQ_SCHED);
-
 		if (rc) {
-			if (expired_lease) {
-				/* Cleanup errored I/O requests. */
-				msl_bmpces_fail(r, rc);
-				msl_biorq_destroy(r);
-			} else
-				/* OK to retry this one. */
-				bmap_flush_resched(r, rc);
-		} else
-			/* Success. */
+			bmap_flush_resched(r, rc);
+		} else {
+			BIORQ_CLEARATTR(r, BIORQ_INFL | BIORQ_SCHED);
 			msl_biorq_destroy(r);
+		}
 	}
 
 	bwc_release(bwc);
