@@ -54,8 +54,9 @@
 struct psc_lockedlist psc_odtables;
 
 int
-sli_export(__unusedx const char *fn, __unusedx const struct stat *stb,
-    __unusedx int info, __unusedx int level, void *arg)
+sli_export(__unusedx const char *fn,
+    __unusedx const struct pfl_stat *pst, __unusedx int info,
+    __unusedx int level, void *arg)
 {
 	struct slictlmsg_fileop *sfop = arg;
 	int rc = 0;
@@ -143,8 +144,8 @@ sli_rmi_issue_mkdir(struct slashrpc_cservice *csvc,
  * around.
  */
 int
-sli_import(const char *fn, const struct stat *stb, __unusedx int info,
-    __unusedx int level, void *arg)
+sli_import(const char *fn, const struct pfl_stat *pst,
+    __unusedx int info, __unusedx int level, void *arg)
 {
 	char *p, *np, fidfn[PATH_MAX], cpn[SL_NAME_MAX + 1];
 	int rc = 0, isdir, dolink = 0;
@@ -156,6 +157,8 @@ sli_import(const char *fn, const struct stat *stb, __unusedx int info,
 	struct slash_fidgen tfg, fg;
 	struct stat tstb;
 	const char *str;
+
+	PFL_STAT_IMPORT(pst, &tstb);
 
 	/*
 	 * Start from the root of the SLASH2 namespace.  This means
@@ -180,7 +183,7 @@ sli_import(const char *fn, const struct stat *stb, __unusedx int info,
 
 	/* preserve hierarchy in the src tree via concatenation */
 	snprintf(fidfn, sizeof(fidfn), "%s%s%s", sfop->sfop_fn2,
-	    S_ISDIR(stb->st_mode) ? "/" : "",
+	    S_ISDIR(pst->st_mode) ? "/" : "",
 	    fn + strlen(sfop->sfop_fn));
 
 	/* trim trailing '/' chars */
@@ -221,9 +224,12 @@ sli_import(const char *fn, const struct stat *stb, __unusedx int info,
 	}
 
  gotpfid:
-	/* No destination name specified; preserve last component from src. */
+	/*
+	 * No destination name specified; preserve last component from
+	 * src.
+	 */
 	if (cpn[0] == '\0') {
-		if (S_ISREG(stb->st_mode)) {
+		if (S_ISREG(pst->st_mode)) {
 			str = pfl_basename(fn);
 			if (strlen(str) >= sizeof(cpn))
 				PFL_GOTOERR(error, rc = ENAMETOOLONG);
@@ -240,13 +246,13 @@ sli_import(const char *fn, const struct stat *stb, __unusedx int info,
 
 	/* XXX perform user permission checks */
 
-	if (S_ISDIR(stb->st_mode)) {
-		rc = sli_rmi_issue_mkdir(csvc, &fg, cpn, stb, fidfn);
-	} else if (S_ISBLK(stb->st_mode) || S_ISCHR(stb->st_mode) ||
-	    S_ISFIFO(stb->st_mode) || S_ISSOCK(stb->st_mode)) {
+	if (S_ISDIR(pst->st_mode)) {
+		rc = sli_rmi_issue_mkdir(csvc, &fg, cpn, &tstb, fidfn);
+	} else if (S_ISBLK(pst->st_mode) || S_ISCHR(pst->st_mode) ||
+	    S_ISFIFO(pst->st_mode) || S_ISSOCK(pst->st_mode)) {
 		/* XXX: use mknod */
 		rc = ENOTSUP;
-	} else if (S_ISLNK(stb->st_mode)) {
+	} else if (S_ISLNK(pst->st_mode)) {
 		struct srm_symlink_req *mq;
 		struct srm_symlink_rep *mp;
 		char target[PATH_MAX];
@@ -263,7 +269,7 @@ sli_import(const char *fn, const struct stat *stb, __unusedx int info,
 		 * doesn't get a separate SLASH2 FID.
 		 */
 #if 0
-		if (stb->st_nlink > 1)
+		if (pst->st_nlink > 1)
 			PFL_GOTOERR(error, rc = EEXIST);
 #endif
 
@@ -276,7 +282,7 @@ sli_import(const char *fn, const struct stat *stb, __unusedx int info,
 		mq->pfg = fg;
 		mq->linklen = strlen(target);
 		strlcpy(mq->name, cpn, sizeof(mq->name));
-		sl_externalize_stat(stb, &mq->sstb);
+		sl_externalize_stat(&tstb, &mq->sstb);
 
 		iov.iov_base = target;
 		iov.iov_len = mq->linklen;
@@ -291,7 +297,7 @@ sli_import(const char *fn, const struct stat *stb, __unusedx int info,
 			sli_fg_makepath(&mp->cattr.sst_fg, fidfn);
 			dolink = 1;
 		}
-	} else if (S_ISREG(stb->st_mode)) {
+	} else if (S_ISREG(pst->st_mode)) {
 		struct srm_import_req *mq;
 		struct srm_import_rep *mp;
 
@@ -306,7 +312,7 @@ sli_import(const char *fn, const struct stat *stb, __unusedx int info,
 		 * doesn't get a separate SLASH2 FID.
 		 */
 #if 0
-		if (stb->st_nlink > 1)
+		if (pst->st_nlink > 1)
 			PFL_GOTOERR(error, rc = EEXIST);
 #endif
 
@@ -315,7 +321,7 @@ sli_import(const char *fn, const struct stat *stb, __unusedx int info,
 			PFL_GOTOERR(error, rc);
 		mq->pfg = fg;
 		strlcpy(mq->cpn, cpn, sizeof(mq->cpn));
-		sl_externalize_stat(stb, &mq->sstb);
+		sl_externalize_stat(&tstb, &mq->sstb);
 		if (sfop->sfop_flags & SLI_CTL_FOPF_XREPL)
 			mq->flags = SRM_IMPORTF_XREPL;
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
@@ -344,12 +350,12 @@ sli_import(const char *fn, const struct stat *stb, __unusedx int info,
 			rc = errno;
 			a->rc = psc_ctlsenderr(a->fd, mh, "%s: %s", fn,
 			    slstrerror(rc));
-		} else if (tstb.st_ino == stb->st_ino) {
+		} else if (tstb.st_ino == pst->st_ino) {
 			rc = 0;
 			if (sfop->sfop_flags & SLI_CTL_FOPF_VERBOSE)
 				a->rc = psc_ctlsenderr(a->fd, mh,
 				    "reimporting %s%s", fn,
-				    S_ISDIR(stb->st_mode) ?
+				    S_ISDIR(pst->st_mode) ?
 				    "/" : "");
 		} else {
 			a->rc = psc_ctlsenderr(a->fd, mh,
@@ -362,7 +368,7 @@ sli_import(const char *fn, const struct stat *stb, __unusedx int info,
 		    slstrerror(rc));
 	else if (sfop->sfop_flags & SLI_CTL_FOPF_VERBOSE)
 		a->rc = psc_ctlsenderr(a->fd, mh, "importing %s%s", fn,
-		    S_ISDIR(stb->st_mode) ? "/" : "");
+		    S_ISDIR(pst->st_mode) ? "/" : "");
 
 	if (rq)
 		pscrpc_req_finished(rq);

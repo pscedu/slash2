@@ -36,15 +36,15 @@
 extern int ion;
 
 int
-wipefs_user(const char *fn, const struct stat *stb, int info, int level,
-    __unusedx void *arg)
+wipefs_user(const char *fn, const struct pfl_stat *pst, int info,
+    int level, __unusedx void *arg)
 {
 	const char *p;
 	int rc = 0;
 
 	if (level < 1)
 		return (0);
-	if (S_ISDIR(stb->st_mode)) {
+	if (S_ISDIR(pst->st_mode)) {
 		/* skip SLASH internal metadata */
 		p = strrchr(fn, '/');
 		if (p)
@@ -53,7 +53,7 @@ wipefs_user(const char *fn, const struct stat *stb, int info, int level,
 			p = fn;
 		if (strcmp(p, SL_RPATH_META_DIR) == 0)
 			rc = PFL_FILEWALK_RC_SKIP;
-		else if (info == FTS_DP && rmdir(fn) == -1)
+		else if (info == PFWT_DP && rmdir(fn) == -1)
 			psc_fatal("rmdir %s", fn);
 	} else if (unlink(fn) == -1)
 		psclog_error("unlink %s", fn);
@@ -61,15 +61,15 @@ wipefs_user(const char *fn, const struct stat *stb, int info, int level,
 }
 
 int
-wipefs_fidns(const char *fn, const struct stat *stb, int info, int level,
-    __unusedx void *arg)
+wipefs_fidns(const char *fn, const struct pfl_stat *pst, int info,
+    int level, __unusedx void *arg)
 {
 	int rc = 0, skiplevel = ion ? 7 : 6;
 
 	if (level < 1)
 		return (0);
-	if (S_ISDIR(stb->st_mode)) {
-		if (info == FTS_DP && rmdir(fn) == -1)
+	if (S_ISDIR(pst->st_mode)) {
+		if (info == PFWT_DP && rmdir(fn) == -1)
 			psc_fatal("rmdir %s", fn);
 		/*
 		 * Do not descend into hardlinked directories.

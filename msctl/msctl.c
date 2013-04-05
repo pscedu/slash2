@@ -239,7 +239,7 @@ packshow_biorqs(__unusedx char *spec)
 
 void
 parse_replrq(int opcode, const char *fn, char *replrqspec,
-    int (*packf)(const char *, const struct stat *, void *))
+    int (*packf)(const char *, const struct pfl_stat *, int, int, void *))
 {
 	char *endp, *bmapnos, *bmapno, *next, *bend, *iosv, *ios;
 	struct replrq_arg ra;
@@ -318,7 +318,8 @@ lookup_repl_policy(const char *name)
 
 int
 cmd_new_bmap_repl_policy_one(const char *fn,
-    __unusedx const struct stat *stb, void *arg)
+    __unusedx const struct pfl_stat *pst, __unusedx int info,
+    __unusedx int level, void *arg)
 {
 	struct msctlmsg_newreplpol *mfnrp;
 	struct repl_policy_arg *a = arg;
@@ -351,7 +352,8 @@ cmd_new_bmap_repl_policy(int ac, char **av)
 
 int
 cmd_bmap_repl_policy_one(const char *fn,
-    __unusedx const struct stat *stb, void *arg)
+    __unusedx const struct pfl_stat *pst, __unusedx int info,
+    __unusedx int level, void *arg)
 {
 	struct msctlmsg_bmapreplpol *mfbrp;
 	struct repl_policy_arg *a = arg;
@@ -422,14 +424,14 @@ cmd_bmap_repl_policy(int ac, char **av)
 }
 
 int
-cmd_replrq_one(const char *fn, __unusedx const struct stat *stb,
-    void *arg)
+cmd_replrq_one(const char *fn, const struct pfl_stat *pst,
+    __unusedx int info, __unusedx int level, void *arg)
 {
 	struct msctlmsg_replrq *mrq;
 	struct replrq_arg *ra = arg;
 	int n;
 
-	if (S_ISDIR(stb->st_mode)) {
+	if (S_ISDIR(pst->st_mode)) {
 		if (!recursive) {
 			errno = EISDIR;
 			warn("%s", fn);
@@ -437,7 +439,7 @@ cmd_replrq_one(const char *fn, __unusedx const struct stat *stb,
 		return (0);
 	}
 
-	if (S_ISLNK(stb->st_mode)) {
+	if (S_ISLNK(pst->st_mode)) {
 		if (!recursive) {
 			errno = EINVAL;
 			warn("%s", fn);
@@ -476,8 +478,8 @@ cmd_replrq(int ac, char **av)
 }
 
 int
-cmd_replst_one(const char *fn, __unusedx const struct stat *stb,
-    __unusedx void *arg)
+cmd_replst_one(const char *fn, __unusedx const struct pfl_stat *pst,
+    __unusedx int info, __unusedx int level, __unusedx void *arg)
 {
 	struct msctlmsg_replst *mrs;
 
@@ -499,7 +501,7 @@ cmd_replst(int ac, char **av)
 	for (i = 1; i < ac; i++)
 		walk(av[i], cmd_replst_one, &arg);
 	if (ac == 1)
-		cmd_replst_one("", NULL, NULL);
+		cmd_replst_one("", NULL, 0, 0, NULL);
 }
 
 int
@@ -859,7 +861,7 @@ void
 parse_replst(char *arg)
 {
 	if (arg[0] == ':')
-		cmd_replst_one("", NULL, NULL);
+		cmd_replst_one("", NULL, 0, 0, NULL);
 	else
 		walk(arg, cmd_replst_one, NULL);
 }
