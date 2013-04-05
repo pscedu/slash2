@@ -219,7 +219,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct sl_resm_nid);
 	PRTYPE(struct sl_resource);
 	PRTYPE(struct sl_site);
-	PRTYPE(struct sl_timespec);
 	PRTYPE(struct slash_creds);
 	PRTYPE(struct slash_fidgen);
 	PRTYPE(struct slash_inode_extras_od);
