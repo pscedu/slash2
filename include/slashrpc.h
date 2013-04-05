@@ -18,14 +18,16 @@
  */
 
 /*
- * SLASH remote procedure call message (SRM) definitions, for issuing
- * operations on and communicating with other hosts in a SLASH network.
+ * SLASH remote procedure call (RPC) message (SRM) definitions, for
+ * issuing operations on and communicating with other hosts in a SLASH
+ * network.
  */
 
 #ifndef _SLASHRPC_H_
 #define _SLASHRPC_H_
 
 #include "pfl/cdefs.h"
+#include "pfl/time.h"
 
 #include "authbuf.h"
 #include "bmap.h"
@@ -243,9 +245,9 @@ struct srt_stat {
 	uint64_t		sst_size;	/* total size, in bytes */
 	uint64_t		sst_blksize;	/* blocksize for file system I/O */
 	uint64_t		sst_blocks;	/* number of 512B blocks allocated */
-	struct sl_timespec	sst_atim;	/* time of last access */
-	struct sl_timespec	sst_mtim;	/* time of last modification */
-	struct sl_timespec	sst_ctim;	/* time of creation */
+	struct pfl_timespec	sst_atim;	/* time of last access */
+	struct pfl_timespec	sst_mtim;	/* time of last modification */
+	struct pfl_timespec	sst_ctim;	/* time of creation */
 #define sst_fid		sst_fg.fg_fid
 #define sst_gen		sst_fg.fg_gen
 #define sst_atime	sst_atim.tv_sec

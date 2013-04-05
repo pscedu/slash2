@@ -156,7 +156,7 @@ struct msl_fhent {
 
 	/* stats */
 	struct timespec			 mfh_open_time;	/* clock_gettime(2) at open(2) time */
-	struct sl_timespec		 mfh_open_atime;/* st_atime at open(2) time */
+	struct pfl_timespec		 mfh_open_atime;/* st_atime at open(2) time */
 	off_t				 mfh_nbytes_rd;
 	off_t				 mfh_nbytes_wr;
 };

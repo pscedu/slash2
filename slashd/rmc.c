@@ -962,7 +962,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 		if (!(to_set & PSCFS_SETATTRF_MTIME)) {
 			psclog_warn("missing MTIME flag in RPC request");
 			to_set |= PSCFS_SETATTRF_MTIME;
-			SL_GETTIMESPEC(&mq->attr.sst_mtim);
+			PFL_GETPTIMESPEC(&mq->attr.sst_mtim);
 		}
 		if (mq->attr.sst_size == 0 || !fcmh_2_fsz(f)) {
 			/*

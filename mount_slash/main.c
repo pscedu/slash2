@@ -1601,15 +1601,15 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 		    "file closed fid="SLPRI_FID" "
 		    "uid=%u gid=%u "
 		    "fsize=%"PRId64" "
-		    "oatime="SLPRI_TIMESPEC" "
-		    "mtime="SLPRI_TIMESPEC" sessid=%d "
+		    "oatime="PFLPRI_PTIMESPEC" "
+		    "mtime="PFLPRI_PTIMESPEC" sessid=%d "
 		    "otime="PSCPRI_TIMESPEC" "
 		    "rd=%"PSCPRIdOFFT" wr=%"PSCPRIdOFFT,
 		    fcmh_2_fid(c),
 		    c->fcmh_sstb.sst_uid, c->fcmh_sstb.sst_gid,
 		    c->fcmh_sstb.sst_size,
-		    SLPRI_TIMESPEC_ARGS(&mfh->mfh_open_atime),
-		    SLPRI_TIMESPEC_ARGS(&c->fcmh_sstb.sst_mtim), sid,
+		    PFLPRI_PTIMESPEC_ARGS(&mfh->mfh_open_atime),
+		    PFLPRI_PTIMESPEC_ARGS(&c->fcmh_sstb.sst_mtim), sid,
 		    PSCPRI_TIMESPEC_ARGS(&mfh->mfh_open_time),
 		    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr);
 

@@ -104,21 +104,4 @@ typedef uint64_t slfgen_t;
 
 #define	SLASH2_IGNORE_MTIME	0x400000
 
-struct sl_timespec {
-	uint64_t		tv_sec;
-	uint64_t		tv_nsec;
-};
-
-#define SLPRI_TIMESPEC		"%"PRId64":%09"PRId64
-#define SLPRI_TIMESPEC_ARGS(ts)	(ts)->tv_sec, (ts)->tv_nsec
-
-#define SL_GETTIMESPEC(ts)						\
-	do {								\
-		struct timespec _ts;					\
-									\
-		PFL_GETTIMESPEC(&_ts);					\
-		(ts)->tv_sec = _ts.tv_sec;				\
-		(ts)->tv_nsec = _ts.tv_nsec;				\
-	} while (0)
-
 #endif /* _SL_TYPES_H_ */

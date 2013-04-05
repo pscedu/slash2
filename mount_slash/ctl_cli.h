@@ -81,7 +81,7 @@ struct msctlmsg_biorq {
 	uint32_t		msr_flags;
 	uint32_t		msr_retries;
 	char			msr_last_sliod[RES_NAME_MAX];
-	struct sl_timespec	msr_expire;
+	struct pfl_timespec	msr_expire;
 	int32_t			msr_npages;
 	int32_t			msr_nrq;
 };
