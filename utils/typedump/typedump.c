@@ -908,5 +908,7 @@ main(int argc, char *argv[])
 	psc_crc64_calc(&crc, &bmapod, sizeof(bmapod));
 	printf("NULL sl_blkh_t CRC is %#"PRIx64"\n", crc);
 
+	PRVAL(offsetof(struct bmap_mds_info, bmi_upd));
+
 	exit(0);
 }
