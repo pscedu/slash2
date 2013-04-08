@@ -356,7 +356,7 @@ bmpc_biorqs_fail(struct bmap_pagecache *bmpc, int err)
 void
 bmpc_biorqs_destroy(struct bmap_pagecache *bmpc, int rc)
 {
-	struct bmpc_ioreq *r, * tmp;
+	struct bmpc_ioreq *r, *tmp;
 
 	PLL_FOREACH_SAFE(r, tmp, &bmpc->bmpc_new_biorqs) {
 
