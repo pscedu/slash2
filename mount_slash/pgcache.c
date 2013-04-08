@@ -358,6 +358,7 @@ bmpc_biorqs_destroy(struct bmap_pagecache *bmpc, int rc)
 {
 	struct bmpc_ioreq *r;
 
+	BMPC_LOCK(bmpc);
 	PLL_FOREACH(r, &bmpc->bmpc_new_biorqs) {
 
 		BIORQ_LOCK(r);
@@ -369,6 +370,7 @@ bmpc_biorqs_destroy(struct bmap_pagecache *bmpc, int rc)
 		msl_bmpces_fail(r, rc);
 		msl_biorq_destroy(r);
 	}
+	BMPC_ULOCK(bmpc);
 }
 
 /**
