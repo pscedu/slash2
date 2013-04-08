@@ -240,17 +240,17 @@ struct fidc_membh {
 	    (f)->fcmh_sstb.sst_mode, ## __VA_ARGS__)
 
 /* debugging aid: spit out the reason for the reference count taking/dropping */
-enum fcmh_opcnt_types {
-/* 0 */	FCMH_OPCNT_BMAP,		/* bcm_fcmh */
-/* 1 */	FCMH_OPCNT_DIRENTBUF,		/* mount_slash READDIR cache */
-/* 2 */	FCMH_OPCNT_LOOKUP_FIDC,		/* fidc_lookup() */
-/* 3 */	FCMH_OPCNT_NEW,
-/* 4 */	FCMH_OPCNT_OPEN,		/* mount_slash pscfs file info */
-/* 5 */	FCMH_OPCNT_WAIT,		/* dup ref during initialization */
-/* 6 */	FCMH_OPCNT_WORKER,		/* MDS worker */
-/* 7 */	FCMH_OPCNT_DIRTY_QUEUE,
-/* 8 */	FCMH_OPCNT_UPSCH		/* temporarily held by upsch engine */
-};
+
+#define	FCMH_OPCNT_BMAP		0x0001	/* bcm_fcmh */
+#define	FCMH_OPCNT_DIRENTBUF	0x0002	/* mount_slash READDIR cache */
+#define	FCMH_OPCNT_LOOKUP_FIDC	0x0004	/* fidc_lookup() */
+#define	FCMH_OPCNT_NEW		0x0008
+#define	FCMH_OPCNT_OPEN		0x0010	/* mount_slash pscfs file info */
+#define	FCMH_OPCNT_WAIT		0x0020	/* dup ref during initialization */
+#define	FCMH_OPCNT_WORKER	0x0040	/* MDS worker */
+#define	FCMH_OPCNT_DIRTY_QUEUE	0x0080
+#define	FCMH_OPCNT_UPSCH	0x0100	/* temporarily held by upsch engine */
+#define	FCMH_OPCNT_KEEP_LOCK	0x0200	
 
 /* fcmh_setattr() flags */
 #define FCMH_SETATTRF_NONE		0
@@ -259,7 +259,7 @@ enum fcmh_opcnt_types {
 
 void	 fidc_init(int, int);
 void	 fcmh_setattrf(struct fidc_membh *, struct srt_stat *, int);
-void	_fcmh_decref(const struct pfl_callerinfo *, struct fidc_membh *, enum fcmh_opcnt_types);
+void	_fcmh_decref(const struct pfl_callerinfo *, struct fidc_membh *, int);
 
 #define fcmh_decref(f, type)		_fcmh_decref(PFL_CALLERINFOSS(SLSS_FCMH), (f), (type))
 
@@ -290,8 +290,8 @@ struct fidc_membh	*_fidc_lookup_fg(const struct pfl_callerinfo *, const struct s
 
 ssize_t	 fcmh_getsize(struct fidc_membh *);
 
-void	_fcmh_op_start_type(const struct pfl_callerinfo *, struct fidc_membh *, enum fcmh_opcnt_types);
-void	_fcmh_op_done_type(const struct pfl_callerinfo *, struct fidc_membh *, enum fcmh_opcnt_types);
+void	_fcmh_op_start_type(const struct pfl_callerinfo *, struct fidc_membh *, int);
+void	_fcmh_op_done_type(const struct pfl_callerinfo *, struct fidc_membh *, int);
 
 #define fcmh_op_start_type(f, type)					\
 	_fcmh_op_start_type(PFL_CALLERINFOSS(SLSS_FCMH), (f), (type))

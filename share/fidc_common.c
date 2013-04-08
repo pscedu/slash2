@@ -487,7 +487,7 @@ fcmh_getsize(struct fidc_membh *h)
  */
 void
 _fcmh_op_start_type(const struct pfl_callerinfo *pci,
-    struct fidc_membh *f, enum fcmh_opcnt_types type)
+    struct fidc_membh *f, int type)
 {
 	int locked;
 
@@ -515,7 +515,7 @@ _fcmh_op_start_type(const struct pfl_callerinfo *pci,
 
 void
 _fcmh_decref(const struct pfl_callerinfo *pci, struct fidc_membh *f,
-    enum fcmh_opcnt_types type)
+    int type)
 {
 	int locked;
 
@@ -528,7 +528,7 @@ _fcmh_decref(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 
 void
 _fcmh_op_done_type(const struct pfl_callerinfo *pci,
-    struct fidc_membh *f, enum fcmh_opcnt_types type)
+    struct fidc_membh *f, int type)
 {
 	int rc;
 
