@@ -30,7 +30,7 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
-#include "pfl/fcntl.h"
+#include "pfl/stat.h"
 #include "psc_util/atomic.h"
 #include "psc_util/base64.h"
 #include "psc_util/lock.h"
