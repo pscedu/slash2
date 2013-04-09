@@ -185,6 +185,7 @@ mdscoh_req(struct bmap_mds_lease *bml)
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 	psc_assert(pscrpc_nbreqset_add(&bmapCbSet, rq) == 0);
 
+	OPSTAT_INCR(SLM_OPST_COHERENT_REQ);
 	return (0);
 }
 
