@@ -26,6 +26,7 @@
 #include "psc_util/atomic.h"
 #include "psc_util/completion.h"
 #include "psc_util/log.h"
+#include "psc_util/ctlsvr.h"
 
 #include "bmap.h"
 #include "bmap_mds.h"
@@ -55,6 +56,7 @@ mdscoh_cb(struct pscrpc_request *req,
 	struct bmap_mds_lease *bml;
 	int rc = 0, new_bmap = 0;
 
+	OPSTAT_INCR(SLM_OPST_COHERENT_CB);
 	mq = pscrpc_msg_buf(req->rq_reqmsg, 0, sizeof(*mq));
 	mp = pscrpc_msg_buf(req->rq_repmsg, 0, sizeof(*mp));
 	csvc = req->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC];
