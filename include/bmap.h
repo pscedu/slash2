@@ -247,14 +247,14 @@ struct bmap {
 		    "took reference (type=%u)", (type));		\
 	} while (0)
 
-#define bmap_op_done_type(b, type)					\
+#define bmap_op_done_type(b, flag)					\
 	do {								\
 		(void)BMAP_RLOCK(b);					\
 		psc_assert(psc_atomic32_read(&(b)->bcm_opcnt) > 0);	\
 		psc_atomic32_dec(&(b)->bcm_opcnt);			\
 		_bmap_op_done(PFL_CALLERINFOSS(SLSS_BMAP), (b),		\
-		    _DEBUG_BMAP_FMT "released reference (type=%u)",	\
-		    _DEBUG_BMAP_FMTARGS(b), (type));			\
+		    _DEBUG_BMAP_FMT "released reference (flag=%u)",	\
+		    _DEBUG_BMAP_FMTARGS(b), (flag));			\
 	} while (0)
 
 #define bmap_op_done(b)		bmap_op_done_type((b), BMAP_OPCNT_LOOKUP)
