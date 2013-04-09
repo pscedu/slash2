@@ -88,8 +88,7 @@ mdscoh_cb(struct pscrpc_request *req,
 	b = bmap_lookup_cache(f, mq->blkno, &new_bmap);
 
 	FCMH_LOCK(f);
-	fcmh_decref(f, FCMH_OPCNT_LOOKUP_FIDC);
-	FCMH_ULOCK(f);
+	fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 
 	if (!b)
 		PFL_GOTOERR(out, rc = -ENOENT);
