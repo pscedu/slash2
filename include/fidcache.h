@@ -259,9 +259,6 @@ struct fidc_membh {
 
 void	 fidc_init(int, int);
 void	 fcmh_setattrf(struct fidc_membh *, struct srt_stat *, int);
-void	_fcmh_decref(const struct pfl_callerinfo *, struct fidc_membh *, int);
-
-#define fcmh_decref(f, type)		_fcmh_decref(PFL_CALLERINFOSS(SLSS_FCMH), (f), (type))
 
 #define fcmh_setattr(f, sstb)		fcmh_setattrf((f), (sstb), 0)
 #define fcmh_setattr_locked(f, sstb)	fcmh_setattrf((f), (sstb), FCMH_SETATTRF_HAVELOCK)

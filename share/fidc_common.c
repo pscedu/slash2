@@ -514,19 +514,6 @@ _fcmh_op_start_type(const struct pfl_callerinfo *pci,
 }
 
 void
-_fcmh_decref(const struct pfl_callerinfo *pci, struct fidc_membh *f,
-    int type)
-{
-	int locked;
-
-	locked = FCMH_RLOCK(f);
-	psc_assert(f->fcmh_refcnt-- > 1);
-	DEBUG_FCMH(PLL_DEBUG, f, "release ref (type=%d)", type);
-	fcmh_wake_locked(f);
-	FCMH_URLOCK(f, locked);
-}
-
-void
 _fcmh_op_done_type(const struct pfl_callerinfo *pci,
     struct fidc_membh *f, int flag)
 {
