@@ -98,10 +98,9 @@ dircache_rls_ents(struct dircache_ents *e, int flags)
 	OPSTAT_INCR(SLC_OPST_DIRCACHE_REL_ENTRY);
 
 	if ((flags & DCFREEF_EARLY) == 0) {
-		if (flags & DCFREEF_RELEASE)
-			fcmh_op_done_type(i->di_fcmh, FCMH_OPCNT_DIRENTBUF);
-		else
-			fcmh_decref(i->di_fcmh, FCMH_OPCNT_DIRENTBUF);
+		fcmh_op_done_type(i->di_fcmh, 
+			(flags & DCFREEF_RELEASE) ? FCMH_OPCNT_DIRENTBUF :
+			FCMH_OPCNT_DIRENTBUF | FCMH_OPCNT_KEEP_LOCK);
 	}
 }
 
