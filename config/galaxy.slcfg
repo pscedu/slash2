@@ -28,4 +28,12 @@ site @GALAXY {
 		fsroot	= /home/galaxyio;
 		nids	= galaxy-io.psc.xsede.org;
 	}
+
+	resource io1 {
+		desc	= "PSU Galaxy IO Server";
+		type	= standalone_fs;
+		id	= 3;
+		fsroot	= /home/galaxyio;
+		nids	= slio1.galaxyproject.org;
+	}
 }
