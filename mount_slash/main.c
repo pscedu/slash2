@@ -448,13 +448,6 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 		psc_assert((oflags & (O_WRONLY | O_RDWR)) == 0);
 		if (!(oflags & O_DIRECTORY))
 			PFL_GOTOERR(out, rc = EISDIR);
-
-		/*
-		 * sfop_ctor() is called prior to having attrs.
-		 * This means that dir fcmh's can't be initialized fully
-		 * until here.
-		 */
-		slc_fcmh_initdci(c);
 	} else {
 		if (oflags & O_DIRECTORY)
 			PFL_GOTOERR(out, rc = ENOTDIR);
@@ -887,7 +880,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
     struct fidc_membh **fp)
 {
 	struct fidc_membh *p, *c = NULL;
-	slfid_t cfid;
+	slfid_t cfid = FID_ANY;
 	int rc;
 
 	if (fp)
@@ -904,11 +897,8 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 		PFL_GOTOERR(out, rc);
 	}
 
-	if (!DIRCACHE_INITIALIZED(p))
-		slc_fcmh_initdci(p);
-	FCMH_ULOCK(p);
-
-	cfid = dircache_lookup(fcmh_2_dci(p), name, DC_LOOKUP);
+	if (DIRCACHE_INITIALIZED(p)) 
+		cfid = dircache_lookup(fcmh_2_dci(p), name, DC_LOOKUP);
 
 	/* It's OK to unref the parent now. */
 	fcmh_op_done(p);
@@ -1058,8 +1048,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (DIRCACHE_INITIALIZED(p)) {
 		if (rc == 0 || rc == -ENOENT)
 			dircache_lookup(fcmh_2_dci(p), name, DC_STALE);
-	} else
-		slc_fcmh_initdci(p);
+	}
 	FCMH_ULOCK(p);
 
 	if (rc == 0 && mp->cattr.sst_fid &&
@@ -1781,17 +1770,12 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	if (DIRCACHE_INITIALIZED(op))
 		/* we could move the dircache_ent to newparent here */
 		dircache_lookup(fcmh_2_dci(op), oldname, DC_STALE);
-	else
-		slc_fcmh_initdci(op);
-
 	fcmh_setattr_locked(op, &mp->srr_opattr);
 	FCMH_ULOCK(op);
 
 	FCMH_LOCK(np);
 	if (DIRCACHE_INITIALIZED(np))
 		dircache_lookup(fcmh_2_dci(np), newname, DC_STALE);
-	else
-		slc_fcmh_initdci(np);
 
 	if (np != op)
 		fcmh_setattr_locked(np, &mp->srr_npattr);
