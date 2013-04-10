@@ -144,6 +144,8 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 	/* This lock is equiv to dircache_ent_lock() */
 	PLL_LOCK(&i->di_list);
 	PLL_FOREACH(e, &i->di_list) {
+		if (e->de_flags & DIRCE_FREEING)
+			continue;
 		/*
 		 * The return code for psc_dynarray_bsearch() tells us
 		 * the position where our name should be to keep the
