@@ -2,8 +2,14 @@
 
 # See slcfg(5) for more information.
 
+# gateway is test1.galaxycloud.net
+set nets="tcp7 172.18.2.*; tcp8 *.*.*.*";
+set routes="
+  tcp7 [128.118.250.8]@tcp8;
+  tcp8 [172.18.2.8]@tcp7
+";
+
 set port=5801;
-set nets=tcp8;
 set pref_mds="md@GALAXY";
 set pref_ios="io@GALAXY";
 set fsuuid="a44303a5ccf4a053";
