@@ -33,7 +33,7 @@ site @GALAXY {
 		desc	= "PSU Galaxy IO Server";
 		type	= standalone_fs;
 		id	= 3;
-		fsroot	= /home/galaxyio;
+		fsroot	= /slio/slio1;
 		nids	= slio1.galaxyproject.org;
 	}
 }
