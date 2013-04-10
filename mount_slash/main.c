@@ -1222,9 +1222,8 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		slc_fcmh_initdci(d);
 	FCMH_ULOCK(d);
 
-	e = dircache_new_ents(fcmh_2_dci(d), size);
 
-	iov[niov].iov_base = e->de_base;
+	iov[niov].iov_base = PSCALLOC(size);
 	iov[niov].iov_len = size;
 	niov++;
 
@@ -1304,10 +1303,13 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	 * replying to pscfs in order to prevent unnecessary lookup
 	 * RPC's.
 	 */
-	if (mp->num)
+	if (mp->num) {
+		e = dircache_new_ents(fcmh_2_dci(d), size, iov[0].iov_base);
 		dircache_reg_ents(e, mp->num);
+	}
 
  out:
+
 	if (niov == 2)
 		PSCFREE(iov[1].iov_base);
 
@@ -1315,10 +1317,10 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	    rc);
 
 	/* At this point the dirent cache is technically freeable. */
-	if (mp && mp->num)
+	if (e)
 		dircache_setfreeable_ents(e);
-	else if (e)
-		dircache_rls_ents(e, DCFREEF_EARLY);
+	else
+		PSCFREE(iov[0].iov_base);
 
 	if (rq)
 		pscrpc_req_finished(rq);

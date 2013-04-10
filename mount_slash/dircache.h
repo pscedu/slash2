@@ -144,7 +144,7 @@ dirent_sort_cmp(const void *x, const void *y)
 #define DIRCACHE_INITIALIZED(f)		((f)->fcmh_flags & FCMH_CLI_INITDCI)
 
 struct dircache_ents *
-	dircache_new_ents(struct dircache_info *, size_t);
+	dircache_new_ents(struct dircache_info *, size_t, void *);
 void	dircache_init(struct dircache_mgr *, const char *, size_t);
 slfid_t	dircache_lookup(struct dircache_info *, const char *, int);
 void	dircache_reg_ents(struct dircache_ents *, size_t);

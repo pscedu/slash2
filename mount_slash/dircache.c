@@ -224,8 +224,10 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 		 * Set DC_STALE on every matching entry; otherwise, we
 		 * found our guy, so return.
 		 */
-		if (found && !(flag & DC_STALE))
+		if (found && !(flag & DC_STALE)) {
+			OPSTAT_INCR(SLC_OPST_DIRCACHE_HIT);
 			break;
+		}
 	}
 	PLL_ULOCK(&i->di_list);
 
@@ -237,7 +239,7 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 }
 
 struct dircache_ents *
-dircache_new_ents(struct dircache_info *i, size_t size)
+dircache_new_ents(struct dircache_info *i, size_t size, void *base)
 {
 	struct dircache_mgr *m = i->di_dcm;
 	struct dircache_ents *e, *tmp;
@@ -295,7 +297,7 @@ dircache_new_ents(struct dircache_info *i, size_t size)
 	psc_dynarray_init(&e->de_dents);
 	e->de_sz = size;
 	e->de_info = i;
-	e->de_base = PSCALLOC(size);
+	e->de_base = base;
 	return (e);
 }
 
