@@ -1303,7 +1303,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	 * replying to pscfs in order to prevent unnecessary lookup
 	 * RPC's.
 	 */
-	if (mp->num) {
+	if (mp->num > 2) {
 		e = dircache_new_ents(fcmh_2_dci(d), size, iov[0].iov_base);
 		dircache_reg_ents(e, mp->num);
 	}
