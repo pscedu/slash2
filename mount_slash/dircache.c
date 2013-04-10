@@ -71,22 +71,15 @@ dircache_rls_ents(struct dircache_ents *e, int flags)
 	struct dircache_mgr *m = i->di_dcm;
 	int locked;
 
-	if (flags & DCFREEF_EARLY) {
-		psc_assert(psclist_disjoint(&e->de_lentry));
-		psc_assert(psclist_disjoint(&e->de_lentry_lc));
-	} else {
-		DEBUG_FCMH(PLL_DEBUG, i->di_fcmh,
-		    "rls dircache_ents %p cachesz=%zu", e, m->dcm_alloc);
-		psc_assert(e->de_flags & DIRCE_FREEING);
-	}
+	DEBUG_FCMH(PLL_DEBUG, i->di_fcmh,
+	    "rls dircache_ents %p cachesz=%zu", e, m->dcm_alloc);
+	psc_assert(e->de_flags & DIRCE_FREEING);
 
 	locked = reqlock(&m->dcm_lock);
 	m->dcm_alloc -= e->de_sz;
 
-	if ((flags & DCFREEF_EARLY) == 0) {
-		lc_remove(&i->di_dcm->dcm_lc, e);
-		pll_remove(&i->di_list, e);
-	}
+	lc_remove(&i->di_dcm->dcm_lc, e);
+	pll_remove(&i->di_list, e);
 
 	ureqlock(&m->dcm_lock, locked);
 
@@ -97,11 +90,9 @@ dircache_rls_ents(struct dircache_ents *e, int flags)
 
 	OPSTAT_INCR(SLC_OPST_DIRCACHE_REL_ENTRY);
 
-	if ((flags & DCFREEF_EARLY) == 0) {
-		fcmh_op_done_type(i->di_fcmh, 
-			(flags & DCFREEF_RELEASE) ? FCMH_OPCNT_DIRENTBUF :
-			FCMH_OPCNT_DIRENTBUF | FCMH_OPCNT_KEEP_LOCK);
-	}
+	fcmh_op_done_type(i->di_fcmh, 
+		(flags & DCFREEF_RELEASE) ? FCMH_OPCNT_DIRENTBUF :
+		FCMH_OPCNT_DIRENTBUF | FCMH_OPCNT_KEEP_LOCK);
 }
 
 void

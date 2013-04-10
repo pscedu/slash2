@@ -153,7 +153,6 @@ void	dircache_setfreeable_ents(struct dircache_ents *);
 void	dircache_walk(struct dircache_info *, void (*)(struct dircache_desc *, void *), void *);
 
 #define DCFREEF_RELEASE		(1 << 0)	/* fcmh may be released */
-#define DCFREEF_EARLY		(1 << 1)	/* dircache ent not attached */
 
 extern struct dircache_mgr dircacheMgr;
 
