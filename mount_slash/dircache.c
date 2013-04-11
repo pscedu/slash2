@@ -173,10 +173,10 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 			}
 
 			psclog_dbg("fid="SLPRI_FID" off=%"PRId64" nlen=%u "
-			   "type=%#o dname=%.*s lookupname=%s off=%d d=%p "
+			   "dname=%.*s lookupname=%s off=%d d=%p "
 			   "found=%d",
 			   dirent->pfd_ino, dirent->pfd_off,
-			   dirent->pfd_namelen, dirent->pfd_type,
+			   dirent->pfd_namelen,
 			   dirent->pfd_namelen, dirent->pfd_name, name,
 			   d->dd_offset, d, found);
 
@@ -319,10 +319,10 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 		dirent = PSC_AGP(b, off);
 
 		psclog_dbg("fid="SLPRI_FID" off=%"PRId64" "
-		    "nlen=%u type=%#o "
+		    "nlen=%u "
 		    "name=%.*s dirent=%p off=%"PRId64,
 		    dirent->pfd_ino, dirent->pfd_off,
-		    dirent->pfd_namelen, dirent->pfd_type,
+		    dirent->pfd_namelen,
 		    dirent->pfd_namelen, dirent->pfd_name, dirent, off);
 
 		c->dd_namelen	= dirent->pfd_namelen;
