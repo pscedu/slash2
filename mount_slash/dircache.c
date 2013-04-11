@@ -288,7 +288,7 @@ dircache_new_ents(struct dircache_info *i, size_t size, void *base)
 }
 
 /**
- * dircache_reg_ents
+ * dircache_reg_ents: register directory entries with our cache.
  */
 void
 dircache_reg_ents(struct dircache_ents *e, size_t nents)
