@@ -558,8 +558,7 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 		}
 	}
 	fcmh_wake_locked(f);
-	if (!(flag & FCMH_OPCNT_KEEP_LOCK))
-		FCMH_ULOCK(f);
+	FCMH_ULOCK(f);
 }
 
 #if PFL_DEBUG > 0

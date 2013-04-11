@@ -242,7 +242,6 @@ struct fidc_membh {
 /* debugging aid: spit out the reason for the reference count taking/dropping */
 
 #define	FCMH_OPCNT_BMAP		0x0001	/* bcm_fcmh */
-#define	FCMH_OPCNT_DIRENTBUF	0x0002	/* mount_slash READDIR cache */
 #define	FCMH_OPCNT_LOOKUP_FIDC	0x0004	/* fidc_lookup() */
 #define	FCMH_OPCNT_NEW		0x0008
 #define	FCMH_OPCNT_OPEN		0x0010	/* mount_slash pscfs file info */
@@ -250,7 +249,6 @@ struct fidc_membh {
 #define	FCMH_OPCNT_WORKER	0x0040	/* MDS worker */
 #define	FCMH_OPCNT_DIRTY_QUEUE	0x0080
 #define	FCMH_OPCNT_UPSCH	0x0100	/* temporarily held by upsch engine */
-#define	FCMH_OPCNT_KEEP_LOCK	0x0200	
 
 /* fcmh_setattr() flags */
 #define FCMH_SETATTRF_NONE		0
