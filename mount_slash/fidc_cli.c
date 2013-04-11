@@ -124,12 +124,11 @@ void
 slc_fcmh_dtor(struct fidc_membh *fcmh)
 {
 	OPSTAT_INCR(SLC_OPST_SLC_FCMH_DTOR);
-	if (fcmh_isdir(fcmh) && DIRCACHE_INITIALIZED(fcmh)) {
-		struct fcmh_cli_info *fci;
-
-		fci = fcmh_get_pri(fcmh);
-		psc_assert(pll_empty(&fci->fci_dci.di_list));
-	}
+	if (!fcmh_isdir(fcmh))
+		return;
+	if (!DIRCACHE_INITIALIZED(fcmh))
+		return;
+	dircache_free_ents(fcmh_2_dci(fcmh));
 }
 
 #if PFL_DEBUG > 0

@@ -89,10 +89,6 @@ dircache_rls_ents(struct dircache_ents *e, int flags)
 	psc_pool_return(dircache_pool, e);
 
 	OPSTAT_INCR(SLC_OPST_DIRCACHE_REL_ENTRY);
-
-	fcmh_op_done_type(i->di_fcmh, 
-		(flags & DCFREEF_RELEASE) ? FCMH_OPCNT_DIRENTBUF :
-		FCMH_OPCNT_DIRENTBUF | FCMH_OPCNT_KEEP_LOCK);
 }
 
 void
@@ -231,6 +227,20 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 	return (ino);
 }
 
+void
+dircache_free_ents(struct dircache_info *i)
+{
+	struct dircache_ents *e;
+	struct dircache_mgr *m = i->di_dcm;
+
+	spinlock(&m->dcm_lock);
+	while ((e = pll_peekhead(&i->di_list))) {
+		e->de_flags |= DIRCE_FREEING;
+		dircache_rls_ents(e, 0);
+	}
+	freelock(&m->dcm_lock);
+}
+
 struct dircache_ents *
 dircache_new_ents(struct dircache_info *i, size_t size, void *base)
 {
@@ -354,6 +364,4 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 	 *   at the beginning of the list.
 	 */
 	pll_addhead(&i->di_list, e);
-
-	fcmh_op_start_type(i->di_fcmh, FCMH_OPCNT_DIRENTBUF);
 }
