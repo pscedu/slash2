@@ -94,8 +94,7 @@ struct dircache_ents {
 };
 
 /* de_flags */
-#define DIRCE_FREEABLE		(1 << 0)
-#define DIRCE_FREEING		(1 << 1)
+#define DIRCE_FREEING		(1 << 0)
 
 #define dircache_ent_lock(e)	spinlock(&(e)->de_info->di_lock)
 #define dircache_ent_ulock(e)	freelock(&(e)->de_info->di_lock)

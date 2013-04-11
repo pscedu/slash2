@@ -92,20 +92,6 @@ dircache_rls_ents(struct dircache_ents *e)
 }
 
 void
-dircache_setfreeable_ents(struct dircache_ents *e)
-{
-	dircache_ent_lock(e);
-	e->de_flags |= DIRCE_FREEABLE;
-
-	if (!e->de_remlookup && !(e->de_flags & DIRCE_FREEING)) {
-		e->de_flags |= DIRCE_FREEING;
-		dircache_ent_ulock(e);
-		dircache_rls_ents(e);
-	} else
-		dircache_ent_ulock(e);
-}
-
-void
 dircache_walk(struct dircache_info *i,
     void (*cbf)(struct dircache_desc *, void *), void *cbarg)
 {
@@ -198,8 +184,7 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 				break;
 		}
 
-		if (!e->de_remlookup && (e->de_flags &
-		    (DIRCE_FREEABLE | DIRCE_FREEING)) == DIRCE_FREEABLE) {
+		if (!e->de_remlookup && !(e->de_flags & DIRCE_FREEING)) {
 			/*
 			 * If all of the items have been accessed via
 			 * lookup then assume that pscfs has an entry
@@ -258,7 +243,6 @@ dircache_new_ents(struct dircache_info *i, size_t size, void *base)
 	LIST_CACHE_FOREACH_SAFE(e, tmp, &m->dcm_lc) {
 		dircache_ent_lock(e);
 		if (timercmp(&now, &e->de_age, >) &&
-		    (e->de_flags & DIRCE_FREEABLE) &&
 		    !(e->de_flags & DIRCE_FREEING)) {
 			e->de_flags |= DIRCE_FREEING;
 			dircache_ent_ulock(e);
@@ -278,8 +262,7 @@ dircache_new_ents(struct dircache_info *i, size_t size, void *base)
 			break;
 
 		dircache_ent_lock(e);
-		if ((e->de_flags & DIRCE_FREEABLE) &&
-		    !(e->de_flags & DIRCE_FREEING)) {
+		if (!(e->de_flags & DIRCE_FREEING)) {
 			e->de_flags |= DIRCE_FREEING;
 			dircache_ent_ulock(e);
 			dircache_rls_ents(e);

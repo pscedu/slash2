@@ -1316,10 +1316,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	pscfs_reply_readdir(pfr, iov[0].iov_base, mp ? mp->size : 0,
 	    rc);
 
-	/* At this point the dirent cache is technically freeable. */
-	if (e)
-		dircache_setfreeable_ents(e);
-	else
+	if (!e)
 		PSCFREE(iov[0].iov_base);
 
 	if (rq)
