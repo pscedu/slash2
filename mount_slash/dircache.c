@@ -233,10 +233,10 @@ dircache_new_ents(struct dircache_info *i, size_t size, void *base)
 	struct dircache_ents *e, *tmp;
 	struct timeval now;
 
-	PFL_GETTIMEVAL(&now);
-
 	spinlock(&m->dcm_lock);
 	m->dcm_alloc += size;
+
+	PFL_GETTIMEVAL(&now);
 
 	/* Remove old entries from the top of the list.
 	 */
