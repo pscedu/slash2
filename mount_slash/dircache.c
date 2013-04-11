@@ -65,7 +65,7 @@ dircache_init(struct dircache_mgr *m, const char *name, size_t maxsz)
 }
 
 void
-dircache_rls_ents(struct dircache_ents *e, int flags)
+dircache_rls_ents(struct dircache_ents *e)
 {
 	struct dircache_info *i = e->de_info;
 	struct dircache_mgr *m = i->di_dcm;
@@ -100,7 +100,7 @@ dircache_setfreeable_ents(struct dircache_ents *e)
 	if (!e->de_remlookup && !(e->de_flags & DIRCE_FREEING)) {
 		e->de_flags |= DIRCE_FREEING;
 		dircache_ent_ulock(e);
-		dircache_rls_ents(e, DCFREEF_RELEASE);
+		dircache_rls_ents(e);
 	} else
 		dircache_ent_ulock(e);
 }
@@ -221,7 +221,7 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 	PLL_ULOCK(&i->di_list);
 
 	DYNARRAY_FOREACH(e, pos, &da)
-		dircache_rls_ents(e, 0);
+		dircache_rls_ents(e);
 	psc_dynarray_free(&da);
 
 	return (ino);
@@ -236,7 +236,7 @@ dircache_free_ents(struct dircache_info *i)
 	spinlock(&m->dcm_lock);
 	while ((e = pll_peekhead(&i->di_list))) {
 		e->de_flags |= DIRCE_FREEING;
-		dircache_rls_ents(e, 0);
+		dircache_rls_ents(e);
 	}
 	freelock(&m->dcm_lock);
 }
@@ -262,7 +262,7 @@ dircache_new_ents(struct dircache_info *i, size_t size, void *base)
 		    !(e->de_flags & DIRCE_FREEING)) {
 			e->de_flags |= DIRCE_FREEING;
 			dircache_ent_ulock(e);
-			dircache_rls_ents(e, DCFREEF_RELEASE);
+			dircache_rls_ents(e);
 
 		} else {
 			dircache_ent_ulock(e);
@@ -282,7 +282,7 @@ dircache_new_ents(struct dircache_info *i, size_t size, void *base)
 		    !(e->de_flags & DIRCE_FREEING)) {
 			e->de_flags |= DIRCE_FREEING;
 			dircache_ent_ulock(e);
-			dircache_rls_ents(e, DCFREEF_RELEASE);
+			dircache_rls_ents(e);
 		} else {
 			dircache_ent_ulock(e);
 			/* Give someone else a shot to free some
