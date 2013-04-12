@@ -18,3 +18,12 @@ ios:  20948 (sampled sense7)
 client: 20948 (sampled firehose2)
 
 The upgrade was smooth.
+
+04/12/2013
+----------
+
+mds: 20948 (illusion2)
+sense: 21018 (smapled sense4)
+client: 21174 (sampled firehose3)
+
+
