@@ -667,14 +667,14 @@ msl_bmap_reap_init(struct bmapc_memb *b, const struct srt_bmapdesc *sbd)
 struct slashrpc_cservice *
 msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 {
-	int off, i, j, locked, waitsecs = BMAP_CLI_MAX_LEASE;
+	int i, j, tmp, off, locked;
 	struct slashrpc_cservice *csvc;
 	struct sl_resource *res, *r;
 	struct fcmh_cli_info *fci;
 	struct psc_multiwait *mw;
 	struct rnd_iterator it;
 	struct sl_resm *resm;
-	uint64_t repls = 0; // XXX 1 bit per repl, SL_MAX_REPLICAS
+	uint64_t repls; // XXX 1 bit per repl, SL_MAX_REPLICAS
 	void *p;
 
 	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
@@ -702,11 +702,9 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 		 *	 even if we have to wait a few moments for
 		 *	 connections to get established.
 		 *
-		 *   (o) second time through, only archival resources,
-		 *	 as we've already checked non-archival
-		 *	 resources.
+		 *   (o) second time through, ALL types of resources
+		 *       are considered.
 		 */
-		repls = 0;
 		psc_multiwait_reset(mw);
 		psc_multiwait_entercritsect(mw);
 
@@ -719,10 +717,12 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 			goto block;
 		}
 
+		repls = 0;
+
 		/* first, try preferred IOS */
 		FOREACH_RND(&it, fci->fci_nrepls) {
 			/* scan through the members */
-			DYNARRAY_FOREACH(resm, j, &res->res_members) {
+			DYNARRAY_FOREACH(resm, tmp, &res->res_members) {
 				if (fci->fci_reptbl[it.ri_rnd_idx].bs_id !=
 				    resm->resm_res_id)
 					continue;
@@ -752,7 +752,8 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 				    "unknown resource %#x", id);
 				continue;
 			}
-			if (r->res_type != SLREST_PARALLEL_COMPNT &&
+			if (i == 0 &&
+			    r->res_type != SLREST_PARALLEL_COMPNT &&
 			    r->res_type != SLREST_STANDALONE_FS)
 				continue;
 
@@ -765,42 +766,17 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 			repls |= (1 << it.ri_rnd_idx);
 		}
 
-		/*
-		 * Wait a bit for async connection establishment before
-		 * resorting to archival resources but only if one or more
-		 * IOS's have been registered in the mw (bug #276).
-		 */
-		if (!i && !csvc && psc_dynarray_len(&mw->mw_conds)) {
-			waitsecs = 1;
-			goto block;
-		}
-
-		/*
-		 * Could more use the bitmap in a more clever fashion.
-		 */
-		FOREACH_RND(&it, fci->fci_nrepls) {
-			if (repls & (1 << it.ri_rnd_idx))
-				continue;
-
-			csvc = msl_try_get_replica_res(b, it.ri_rnd_idx);
-			if (csvc) {
-				psc_multiwait_leavecritsect(mw);
-				return (csvc);
-			}
-		}
-
-		waitsecs = BMAP_CLI_MAX_LEASE;
  block:
-		if (i)
+		if (!psc_dynarray_len(&mw->mw_conds))
 			break;
 
-		for (i = 0, off = 0;
-		    i < fcmh_2_fci(b->bcm_fcmh)->fci_nrepls;
-		    i++, off += SL_BITS_PER_REPLICA)
+		for (j = 0, off = 0;
+		    j < fcmh_2_fci(b->bcm_fcmh)->fci_nrepls;
+		    j++, off += SL_BITS_PER_REPLICA)
 			if (SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls,
 			    off))
 				break;
-		if (i == fcmh_2_fci(b->bcm_fcmh)->fci_nrepls) {
+		if (j == fcmh_2_fci(b->bcm_fcmh)->fci_nrepls) {
 			DEBUG_BMAP(PLL_ERROR, b,
 			    "corrupt bmap!  no valid replicas!");
 			return (NULL);
@@ -810,7 +786,7 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 		 * No connection was immediately available; wait a small
 		 * amount of time to wait for any to come online.
 		 */
-		psc_multiwait_secs(mw, &p, waitsecs);
+		psc_multiwait_secs(mw, &p, BMAP_CLI_MAX_LEASE);
 	}
 	psc_multiwait_leavecritsect(mw);
 	return (NULL);
