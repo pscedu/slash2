@@ -1044,7 +1044,10 @@ msbmflwthr_main(__unusedx struct psc_thread *thr)
 			    PLL_ERROR : PLL_INFO, b,
 			    "rc=%d secs=%d",  rc, secs);
 		}
-		psc_dynarray_reset(&bmaps);
+		if (!psc_dynarray_len(&bmaps))
+			usleep(1000000);
+		else
+			psc_dynarray_reset(&bmaps);
 	}
 }
 
