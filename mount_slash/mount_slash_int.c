@@ -991,7 +991,9 @@ msl_readahead_cb(struct pscrpc_request *rq, int rc,
 
 	for (i = 0, e = bmpces[0], b = e->bmpce_owner; e;
 	    i++, e = bmpces[i]) {
+
 		psc_assert(b == e->bmpce_owner);
+		OPSTAT_INCR(SLC_OPST_READ_AHEAD_CB_PAGES);
 
 		if (!i)
 			DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b,
@@ -1017,6 +1019,7 @@ msl_readahead_cb(struct pscrpc_request *rq, int rc,
 		BMPCE_LOCK(e);
 		bmpce_release_locked(e, bmpc);
 		BMPC_ULOCK(bmpc);
+		bmap_op_done_type(b, BMAP_OPCNT_READA);
 	}
 
 	if (wq)
@@ -1406,12 +1409,6 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 		 */
 		pll_addtail(&bmap_2_bmpc(b)->bmpc_pndg_ra, bmpces[i]);
 
-		/*
-		 * Once the bmpce's are on the bmpc_pndg_ra list they're
-		 * counted as pending I/O's.  Therefore the bmap won't
-		 * be freed prematurely if we drop ref here.
-		 */
-		bmap_op_done_type(b, BMAP_OPCNT_READA);
 	}
 
 	added = 1;
@@ -1437,8 +1434,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 		DEBUG_BMPCE(PLL_INFO, e, "set BMPCE_EIO");
 		bmpce_release_locked(e, bmap_2_bmpc(b));
 
-		if (added)
-			bmap_op_done_type(b, BMAP_OPCNT_READA);
+		bmap_op_done_type(b, BMAP_OPCNT_READA);
 	}
 	BMPC_ULOCK(bmap_2_bmpc(b));
 
