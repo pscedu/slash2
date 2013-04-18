@@ -818,12 +818,14 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 		} else
 			sortbypass--;
 
-		PFL_GETTIMESPEC(&crtime);
 		nto = crtime;
 		nto.tv_sec += BMAP_CLI_TIMEO_INC;
 
 		wrapdetect = NULL;
 		while ((bci = lc_getnb(&bmapTimeoutQ))) {
+
+			PFL_GETTIMESPEC(&crtime);
+
 			b = bci_2_bmap(bci);
 			if (bci == wrapdetect) {
 				lc_addstack(&bmapTimeoutQ, bci);
@@ -953,7 +955,6 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			if (bci == wrapdetect)
 				wrapdetect = NULL;
 
-			PFL_GETTIMESPEC(&crtime);
 		}
 
 		/* Send out partially filled release request. */
