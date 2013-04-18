@@ -17,8 +17,8 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#ifndef _SLASH_PATHNAMES_H_
-#define _SLASH_PATHNAMES_H_
+#ifndef _SL_PATHNAMES_H_
+#define _SL_PATHNAMES_H_
 
 /* configuration/control socket paths */
 #if DEVELPATHS
@@ -38,6 +38,7 @@
 
 /* runtime files */
 #define SL_FN_AUTHBUFKEY	"authbuf.key"
+#define SL_FN_MAPFILE		"mapfile"
 #define SL_FN_OPJOURNAL		"op-journal"
 #define SL_FN_UPSCHDB		"upsch.db"
 
@@ -71,4 +72,4 @@
 
 extern const char *sl_datadir;
 
-#endif /* _SLASH_PATHNAMES_H_ */
+#endif /* _SL_PATHNAMES_H_ */

@@ -102,6 +102,7 @@ sl_ios_id_t			 prefIOS = IOS_ID_ANY;
 const char			*progname;
 const char			*ctlsockfn = SL_PATH_MSCTLSOCK;
 char				 mountpoint[PATH_MAX];
+int				 use_mapfile;
 int				 allow_root_uid = 1;
 struct psc_dynarray		 allow_exe = DYNARRAY_INIT;
 
@@ -124,6 +125,9 @@ struct psc_poolmaster		 mfsrq_poolmaster;
 struct psc_poolmgr		*mfsrq_pool;
 
 uint32_t			 sys_upnonce;
+
+struct psc_hashtbl		 slc_uidmap_ext;
+struct psc_hashtbl		 slc_uidmap_int;
 
 int
 fcmh_checkcreds(struct fidc_membh *f, const struct pscfs_creds *pcrp,
@@ -897,7 +901,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 		PFL_GOTOERR(out, rc);
 	}
 
-	if (DIRCACHE_INITIALIZED(p)) 
+	if (DIRCACHE_INITIALIZED(p))
 		cfid = dircache_lookup(fcmh_2_dci(p), name, DC_LOOKUP);
 
 	/* It's OK to unref the parent now. */
@@ -2919,8 +2923,101 @@ parse_allowexe(void)
 		}
 
 		psc_dynarray_add(&allow_exe, p);
-		psclog_notice("restricting open(2) access to %s", p);
+		psclog_info("restricting open(2) access to %s", p);
 	}
+}
+
+struct uid_mapping {
+	/* these are 64-bit as limitation of hash API */
+	uint64_t		um_key;
+	uint64_t		um_val;
+	struct psc_hashent	um_hentry;
+};
+
+void
+parse_mapfile(void)
+{
+	char fn[PATH_MAX], buf[LINE_MAX], *endp, *p, *t;
+	struct uid_mapping *um;
+	uid_t to, from;
+	FILE *fp;
+	long l;
+	int ln;
+
+	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_MAPFILE);
+
+	fp = fopen(fn, "r");
+	if (fp == NULL)
+		err(1, "%s", fn);
+	ln = 0;
+	while (fgets(buf, sizeof(buf), fp)) {
+		ln++;
+
+		for (p = t = buf; isdigit(*t); t++)
+			;
+		if (!isspace(*t))
+			goto malformed;
+		*t++ = '\0';
+		while (isspace(*t))
+			t++;
+
+		l = strtol(p, &endp, 10);
+		if (l < 0 || l >= INT_MAX ||
+		    endp == p || *endp)
+			goto malformed;
+		from = l;
+
+		for (p = t; isdigit(*t); t++)
+			;
+		*t++ = '\0';
+		while (isspace(*t))
+			t++;
+		if (*t)
+			goto malformed;
+
+		l = strtol(p, &endp, 10);
+		if (l < 0 || l >= INT_MAX ||
+		    endp == p || *endp)
+			goto malformed;
+		to = l;
+
+		um = PSCALLOC(sizeof(*um));
+		psc_hashent_init(&slc_uidmap_ext, um);
+		um->um_key = from;
+		um->um_val = to;
+
+		um = PSCALLOC(sizeof(*um));
+		psc_hashent_init(&slc_uidmap_int, um);
+		um->um_key = to;
+		um->um_val = from;
+
+		continue;
+
+ malformed:
+		warn("%s: %d: malformed line", fn, ln);
+	}
+	if (ferror(fp))
+		warn("%s", fn);
+	fclose(fp);
+}
+
+int
+opt_lookup(const char *opt)
+{
+	struct {
+		const char	*name;
+		int		*var;
+	} *io, opts[] = {
+		{ "mapfile",	&use_mapfile },
+		{ NULL,		NULL }
+	};
+
+	for (io = opts; io->name; io++)
+		if (strcmp(opt, io->name) == 0) {
+			*io->var = 1;
+			return (1);
+		}
+	return (0);
 }
 
 __dead void
@@ -2987,8 +3084,10 @@ main(int argc, char *argv[])
 			setenv("SLASH_MDS_NID", optarg, 1);
 			break;
 		case 'o':
-			pscfs_addarg(&args, "-o");
-			pscfs_addarg(&args, optarg);
+			if (!opt_lookup(optarg)) {
+				pscfs_addarg(&args, "-o");
+				pscfs_addarg(&args, optarg);
+			}
 			break;
 		case 'p':
 			l = strtol(optarg, &p, 10);
@@ -3040,6 +3139,13 @@ main(int argc, char *argv[])
 
 	slcfg_parse(cfg);
 	parse_allowexe();
+	if (use_mapfile) {
+		psc_hashtbl_init(&slc_uidmap_ext, 0, struct uid_mapping,
+		    um_key, um_hentry, 128, NULL, "uidmapext");
+		psc_hashtbl_init(&slc_uidmap_int, 0, struct uid_mapping,
+		    um_key, um_hentry, 128, NULL, "uidmapint");
+		parse_mapfile();
+	}
 	msl_init();
 
 	pscfs_entry_timeout = 8.;

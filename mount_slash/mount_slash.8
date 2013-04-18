@@ -15,7 +15,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES lnet pflenv %
-.Dd March 21, 2013
+.Dd April 18, 2013
 .Dt MOUNT_SLASH 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -62,7 +62,21 @@ system resource name.
 .It Fl M Ar mds
 Specify the primary metadata server resource name.
 .It Fl o Ar mountopt
-Pass additional options to the low-level file system mounter.
+Specify additional behavioral options.
+The options are as follows:
+.Bl -tag
+.It Ic mapfile
+Use the mapfile
+.Pa /var/lib/slash/mapfile
+.Pq or wherever the data directory is configured
+for translating local user account IDs to global SLASH2 user IDs and
+vice versa as necessary.
+.Pp
+The format of each line in this file is simply:
+.Bd -literal -offset 4n
+local-UID remote-UID
+.Ed
+.El
 .It Fl p Ar #prefetch
 Specify the maximum number of file
 .Xr stat 2
