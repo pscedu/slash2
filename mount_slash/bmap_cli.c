@@ -838,7 +838,6 @@ msl_bmap_final_cleanup(struct bmapc_memb *b)
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 
 	BMAP_LOCK(b);
-	psc_assert(b->bcm_flags & BMAP_TOFREE);
 	psc_assert(!(b->bcm_flags & BMAP_DIRTY));
 
 	psc_assert(pll_empty(&bmap_2_bmpc(b)->bmpc_pndg_biorqs));
