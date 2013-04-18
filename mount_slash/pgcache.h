@@ -153,7 +153,6 @@ struct bmap_pagecache {
 	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* chain pending I/O requests */
 	struct psc_lockedlist		 bmpc_pndg_ra;		/* RA bmpce's pending comp */
 	int				 bmpc_pndgwr;		/* # pending wr req */
-	int				 bmpc_compwr;		/* # of completed writes */
 	psc_spinlock_t			 bmpc_lock;		/* serialize access */
 	struct psclist_head		 bmpc_lentry;		/* chain to global LRU lc */
 };

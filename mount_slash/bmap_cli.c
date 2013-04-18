@@ -288,7 +288,6 @@ msl_bmap_lease_tryreassign(struct bmapc_memb *b)
 	if ((b->bcm_flags & BMAP_CLI_REASSIGNREQ) ||
 	    pll_empty(&bmpc->bmpc_new_biorqs)     ||
 	    !pll_empty(&bmpc->bmpc_pndg_biorqs)   ||
-	    bmpc->bmpc_compwr                     ||
 	    bci->bci_nreassigns >= SL_MAX_IOSREASSIGN) {
 		BMPC_ULOCK(bmpc);
 		BMAP_ULOCK(b);
@@ -303,8 +302,8 @@ msl_bmap_lease_tryreassign(struct bmapc_memb *b)
 	BMAP_SETATTR(b, BMAP_CLI_REASSIGNREQ);
 
 	DEBUG_BMAP(PLL_WARN, b, "reassign from ios=%u "
-	    "(nreassigns=%d compwr=%u)", bci->bci_sbd.sbd_ios,
-	    bci->bci_nreassigns, bmpc->bmpc_compwr);
+	    "(nreassigns=%d)", bci->bci_sbd.sbd_ios,
+	    bci->bci_nreassigns);
 
 	bmap_op_start_type(b, BMAP_OPCNT_REASSIGN);
 
