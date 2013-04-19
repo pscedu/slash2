@@ -587,16 +587,16 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw,
 void
 msl_bmap_cache_rls(struct bmapc_memb *b)
 {
+	struct bmap_pagecache_entry *e;
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 
-	bmap_biorq_expire(b);
-	bmap_biorq_waitempty(b);
-
-	bmpc_lru_del(bmpc);
-
-	/*  XXX Not all pages are on the LRU list */
 	BMPC_LOCK(bmpc);
-	bmpc_freeall_locked(bmpc);
+	for (e = SPLAY_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); e;) {
+		BMPCE_LOCK(e);
+		e->bmpce_flags |= BMPCE_DISCARD;
+		BMPCE_ULOCK(e);
+		e = SPLAY_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree, e);
+	}
 	BMPC_ULOCK(bmpc);
 }
 

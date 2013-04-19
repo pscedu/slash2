@@ -78,6 +78,7 @@ struct bmap_pagecache_entry {
 #define BMPCE_EIO		(1 <<  4)	/* I/O error */
 #define BMPCE_READA		(1 <<  5)	/* read-ahead */
 #define BMPCE_AIOWAIT		(1 <<  6)	/* wait on async read */
+#define BMPCE_DISCARD		(1 <<  7)	/* don't cache after I/O */
 
 #define BMPCE_LOCK(b)		spinlock(&(b)->bmpce_lock)
 #define BMPCE_ULOCK(b)		freelock(&(b)->bmpce_lock)
