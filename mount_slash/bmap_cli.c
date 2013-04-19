@@ -594,6 +594,7 @@ msl_bmap_cache_rls(struct bmapc_memb *b)
 
 	bmpc_lru_del(bmpc);
 
+	/*  XXX Not all pages are on the LRU list */
 	BMPC_LOCK(bmpc);
 	bmpc_freeall_locked(bmpc);
 	BMPC_ULOCK(bmpc);
