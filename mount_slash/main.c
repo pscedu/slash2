@@ -130,6 +130,36 @@ struct psc_hashtbl		 slc_uidmap_ext;
 struct psc_hashtbl		 slc_uidmap_int;
 
 int
+uidmap_ext_cred(struct srt_creds *cr)
+{
+	struct uid_mapping *um, q;
+
+	q.um_key = cr->scr_uid;
+	um = psc_hashtbl_search(slc_uidmap_ext, &q);
+	cr->scr_uid = um->um_val;
+}
+
+int
+uidmap_ext_stat(struct srt_stat *sstb)
+{
+	struct uid_mapping *um, q;
+
+	q.um_key = sstb->sst_uid;
+	um = psc_hashtbl_search(slc_uidmap_ext, &q);
+	sstb->sst_uid = um->um_val;
+}
+
+int
+uidmap_int_stat(struct srt_creds *sstb)
+{
+	struct uid_mapping *um, q;
+
+	q.um_key = sstb->sst_uid;
+	um = psc_hashtbl_search(slc_uidmap_int, &q);
+	sstb->sst_uid = um->um_val;
+}
+
+int
 fcmh_checkcreds(struct fidc_membh *f, const struct pscfs_creds *pcrp,
     int accmode)
 {
@@ -323,6 +353,9 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mq->prefios[0] = prefIOS;
 	mq->creds.scr_uid = pcr.pcr_uid;
 	mq->creds.scr_gid = pcr.pcr_gid;
+	rc = uidmap_ext_cred(&mq->creds);
+	if (rc)
+		PFL_GOTOERR(out, rc);
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
@@ -337,8 +370,10 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	    "mode=%#o name='%s' rc=%d", pinum,
 	    mp->cattr.sst_fg.fg_fid, mode, name, rc);
 
+	uidmap_int_stat(&mp->pattr);
 	fcmh_setattr(p, &mp->pattr);
 
+	uidmap_int_stat(&mp->cattr);
 	rc = msl_create_fcmh(pfr, &mp->cattr, FCMH_SETATTRF_NONE, &c);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -579,8 +614,10 @@ msl_stat(struct fidc_membh *f, void *arg)
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 	} while (rc && slc_rmc_retry_pfcc(pfcc, &rc));
 
-	if (rc == 0)
+	if (rc == 0) {
 		rc = mp->rc;
+		uidmap_int_stat(&mp->attr);
+	}
 
 	FCMH_LOCK(f);
 	if (!rc && fcmh_2_fid(f) != mp->attr.sst_fid)
@@ -707,8 +744,11 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	uidmap_int_stat(&mp->pattr);
 	fcmh_setattr(p, &mp->pattr);
+
 	FCMH_LOCK(c);
+	uidmap_int_stat(&mp->cattr);
 	fcmh_setattrf(c, &mp->cattr, FCMH_SETATTRF_SAVELOCAL |
 	    FCMH_SETATTRF_HAVELOCK);
 	sl_internalize_stat(&c->fcmh_sstb, &stb);
@@ -771,6 +811,9 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mq->pfg.fg_gen = FGEN_ANY;
 	mq->sstb.sst_uid = pcr.pcr_uid;
 	mq->sstb.sst_gid = pcr.pcr_gid;
+	rc = uidmap_ext_stat(&mq->sstb);
+	if (rc)
+		PFL_GOTOERR(out, rc);
 	mq->sstb.sst_mode = mode;
 	mq->to_set = PSCFS_SETATTRF_MODE;
 	strlcpy(mq->name, name, sizeof(mq->name));
@@ -786,8 +829,10 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	psclog_info("pfid="SLPRI_FID" mode=%#o name='%s' rc=%d mp->rc=%d",
 	    mq->pfg.fg_fid, mode, name, rc, mp->rc);
 
+	uidmap_int_stat(&mp->pattr);
 	fcmh_setattr(p, &mp->pattr);
 
+	uidmap_int_stat(&mp->cattr);
 	rc = msl_create_fcmh(pfr, &mp->cattr, FCMH_SETATTRF_NONE, &c);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -849,6 +894,7 @@ msl_lookuprpc(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	 * us with another request for the inode since it won't yet be
 	 * visible in the cache.
 	 */
+	uidmap_int_stat(&mp->attr);
 	rc = msl_create_fcmh(pfr, &mp->attr, FCMH_SETATTRF_SAVELOCAL,
 	    &m);
 	if (rc)
@@ -1046,6 +1092,9 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc == 0)
 		rc = mp->rc;
 
+	uidmap_int_stat(&mp->pattr);
+	uidmap_int_stat(&mp->cattr);
+
 	FCMH_LOCK(p);
 	if (!rc)
 		fcmh_setattr_locked(p, &mp->pattr);
@@ -1142,6 +1191,9 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	mq->creds.scr_uid = pcr.pcr_uid;
 	mq->creds.scr_gid = pcr.pcr_gid;
+	rc = uidmap_ext_cred(&mq->creds);
+	if (rc)
+		PFL_GOTOERR(out, rc);
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = FGEN_ANY;
 	mq->mode = mode;
@@ -1159,8 +1211,10 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	psclog_info("pfid="SLPRI_FID" mode=%#o name='%s' rc=%d mp->rc=%d",
 	    mq->pfg.fg_fid, mq->mode, mq->name, rc, mp->rc);
 
+	uidmap_int_stat(&mp->pattr);
 	fcmh_setattr(p, &mp->pattr);
 
+	uidmap_int_stat(&mp->cattr);
 	rc = msl_create_fcmh(pfr, &mp->cattr, FCMH_SETATTRF_NONE, &c);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -1773,6 +1827,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	if (DIRCACHE_INITIALIZED(op))
 		/* we could move the dircache_ent to newparent here */
 		dircache_lookup(fcmh_2_dci(op), oldname, DC_STALE);
+	uidmap_int_stat(&mp->srr_opattr);
 	fcmh_setattr_locked(op, &mp->srr_opattr);
 	FCMH_ULOCK(op);
 
@@ -1780,8 +1835,10 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	if (DIRCACHE_INITIALIZED(np))
 		dircache_lookup(fcmh_2_dci(np), newname, DC_STALE);
 
-	if (np != op)
+	if (np != op) {
+		uidmap_int_stat(&mp->srr_npattr);
 		fcmh_setattr_locked(np, &mp->srr_npattr);
+	}
 	FCMH_ULOCK(np);
 
 	if (srcfg.fg_fid == FID_ANY) {
@@ -1791,9 +1848,11 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		if (rc)
 			PFL_GOTOERR(out, rc);
 	}
-	if (mp->srr_cattr.sst_fid)
+	if (mp->srr_cattr.sst_fid) {
+		uidmap_int_stat(&mp->srr_cattr);
 		fcmh_setattrf(child, &mp->srr_cattr,
 		    FCMH_SETATTRF_SAVELOCAL);
+	}
 	DEBUG_FCMH(PLL_INFO, child, "newname=%s, setattr=%s",
 	    newname, mp->srr_cattr.sst_fid ? "yes" : "no");
 
@@ -1910,6 +1969,9 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 
 	mq->sstb.sst_uid = pcr.pcr_uid;
 	mq->sstb.sst_gid = pcr.pcr_gid;
+	rc = uidmap_ext_stat(&mq->sstb);
+	if (rc)
+		PFL_GOTOERR(out, rc);
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = FGEN_ANY;
 	mq->linklen = strlen(buf);
@@ -1928,8 +1990,10 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	uidmap_int_stat(&mp->pattr);
 	fcmh_setattr(p, &mp->pattr);
 
+	uidmap_int_stat(&mp->cattr);
 	rc = msl_create_fcmh(pfr, &mp->cattr, FCMH_SETATTRF_NONE, &c);
 
 	sl_internalize_stat(&mp->cattr, &stb);
@@ -2177,6 +2241,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	mq->attr.sst_fg = c->fcmh_fg;
 	mq->to_set = to_set;
 	sl_externalize_stat(stb, &mq->attr);
+	uidmap_ext_stat(&mq->attr);
 
 	DEBUG_SSTB(PLL_INFO, &c->fcmh_sstb,
 	    "fcmh %p pre setattr, set = %#x", c, to_set);
@@ -2239,6 +2304,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		c->fcmh_sstb.sst_ctime_ns = mp->attr.sst_ctime_ns;
 	}
 
+	uidmap_int_stat(&mp->attr);
 	fcmh_setattrf(c, &mp->attr, FCMH_SETATTRF_SAVELOCAL |
 	    FCMH_SETATTRF_HAVELOCK);
 
