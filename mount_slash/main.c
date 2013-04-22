@@ -141,6 +141,9 @@ uidmap_ext_cred(struct srt_creds *cr)
 {
 	struct uid_mapping *um, q;
 
+	if (!use_mapfile)
+		return (0);
+
 	q.um_key = cr->scr_uid;
 	um = psc_hashtbl_search(&slc_uidmap_ext, NULL, NULL, &q);
 	if (um == NULL)
@@ -154,6 +157,9 @@ uidmap_ext_stat(struct srt_stat *sstb)
 {
 	struct uid_mapping *um, q;
 
+	if (!use_mapfile)
+		return (0);
+
 	q.um_key = sstb->sst_uid;
 	um = psc_hashtbl_search(&slc_uidmap_ext, NULL, NULL, &q);
 	if (um == NULL)
@@ -166,6 +172,9 @@ int
 uidmap_int_stat(struct srt_stat *sstb)
 {
 	struct uid_mapping *um, q;
+
+	if (!use_mapfile)
+		return (0);
 
 	q.um_key = sstb->sst_uid;
 	um = psc_hashtbl_search(&slc_uidmap_int, NULL, NULL, &q);
