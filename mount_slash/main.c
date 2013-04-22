@@ -93,6 +93,13 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 #define fcmh_reserved(f)	(fcmh_2_fid(f) == SLFID_NS ? EPERM : 0)
 
+struct uid_mapping {
+	/* these are 64-bit as limitation of hash API */
+	uint64_t		um_key;
+	uint64_t		um_val;
+	struct psc_hashent	um_hentry;
+};
+
 struct psc_waitq		 msl_flush_attrq = PSC_WAITQ_INIT;
 psc_spinlock_t			 msl_flush_attrqlock = SPINLOCK_INIT;
 
@@ -135,8 +142,11 @@ uidmap_ext_cred(struct srt_creds *cr)
 	struct uid_mapping *um, q;
 
 	q.um_key = cr->scr_uid;
-	um = psc_hashtbl_search(slc_uidmap_ext, &q);
+	um = psc_hashtbl_search(&slc_uidmap_ext, NULL, NULL, &q);
+	if (um == NULL)
+		return (ENOENT);
 	cr->scr_uid = um->um_val;
+	return (0);
 }
 
 int
@@ -145,18 +155,24 @@ uidmap_ext_stat(struct srt_stat *sstb)
 	struct uid_mapping *um, q;
 
 	q.um_key = sstb->sst_uid;
-	um = psc_hashtbl_search(slc_uidmap_ext, &q);
+	um = psc_hashtbl_search(&slc_uidmap_ext, NULL, NULL, &q);
+	if (um == NULL)
+		return (ENOENT);
 	sstb->sst_uid = um->um_val;
+	return (0);
 }
 
 int
-uidmap_int_stat(struct srt_creds *sstb)
+uidmap_int_stat(struct srt_stat *sstb)
 {
 	struct uid_mapping *um, q;
 
 	q.um_key = sstb->sst_uid;
-	um = psc_hashtbl_search(slc_uidmap_int, &q);
+	um = psc_hashtbl_search(&slc_uidmap_int, NULL, NULL, &q);
+	if (um == NULL)
+		return (ENOENT);
 	sstb->sst_uid = um->um_val;
+	return (0);
 }
 
 int
@@ -2992,13 +3008,6 @@ parse_allowexe(void)
 		psclog_info("restricting open(2) access to %s", p);
 	}
 }
-
-struct uid_mapping {
-	/* these are 64-bit as limitation of hash API */
-	uint64_t		um_key;
-	uint64_t		um_val;
-	struct psc_hashent	um_hentry;
-};
 
 void
 parse_mapfile(void)
