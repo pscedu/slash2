@@ -437,6 +437,7 @@ reimport
 - RPC standardized error messages:
    - ENOSTR = ETIMEDOUT between BSD and Linux on senses, and the client
      will not treat ENOSTR as an RPC error
+- msctl repl-policy read isnt implemented
 
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
