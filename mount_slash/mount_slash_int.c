@@ -123,7 +123,7 @@ __static void
 msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
     int rqnum, uint32_t roff, uint32_t len, int op)
 {
-	int i, npages = 0, rbw = 0, maxpages, fetchpgs = 0, bkwdra = 0;
+	int i, npages = 0, rbw = 0, maxpages, bkwdra = 0;
 	struct msl_fhent *mfh = q->mfsrq_mfh;
 	struct bmap_pagecache_entry *e;
 	struct bmap_pagecache *bmpc;
@@ -253,8 +253,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 		    &r->biorq_bmap->bcm_fcmh->fcmh_waitq);
 
 		BMPCE_LOCK(e);
-		if (e->bmpce_flags & BMPCE_INIT)
-			fetchpgs++;
 
 		DEBUG_BMPCE(PLL_INFO, e,
 		    "i=%d, npages=%d maxpages=%d aoff=%u aoff_search=%u",
@@ -278,7 +276,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 				 * completion.  The cb handler will
 				 * decref the bmpce.
 				 */
-				psc_assert(e->bmpce_flags & BMPCE_INIT);
 				psc_assert(!(e->bmpce_flags & BMPCE_EIO));
 
 				/*
@@ -338,9 +335,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 
 		if (biorq_is_my_bmpce(r, e)) {
 			uint32_t rfsz = fsz - bmap_foff(b);
-
-			e->bmpce_flags &= ~BMPCE_INIT;
-
 			/*
 			 * Increase the rdref cnt in preparation for any
 			 * RBW ops but only on new pages owned by this
@@ -363,8 +357,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 		}
 		BMPCE_ULOCK(e);
 	}
-
-	DEBUG_BIORQ(PLL_DEBUG, r, "new req (fetchpgs=%d)", fetchpgs);
 }
 
 /**

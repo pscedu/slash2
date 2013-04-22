@@ -272,6 +272,7 @@ bmpce_useprep(struct bmap_pagecache_entry *bmpce,
 	psc_assert(!bmpce->bmpce_waitq);
 	psc_assert(bmpce->bmpce_flags == BMPCE_INIT);
 
+	bmpce->bmpce_flags &= ~BMPCE_INIT;
 	psc_atomic32_set(&bmpce->bmpce_ref, 1);
 	bmpce->bmpce_owner = biorq;
 
