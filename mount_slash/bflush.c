@@ -1246,7 +1246,7 @@ msbmaprathr_main(__unusedx struct psc_thread *thr)
 #define MAX_BMPCES_PER_RPC 32
 	struct bmap_pagecache_entry *bmpces[MAX_BMPCES_PER_RPC], *tmp, *bmpce;
 	struct msl_fhent *mfh, *lmfh = NULL;
-	int nbmpces, i;
+	int nbmpces;
 
 	while (pscthr_run()) {
 
@@ -1287,21 +1287,6 @@ msbmaprathr_main(__unusedx struct psc_thread *thr)
 		} else {
 			lc_addtail(&bmapReadAheadQ, mfh);
 			freelock(&mfh->mfh_lock);
-		}
-
-		for (i = 0; i < nbmpces; i++) {
-			/* XXX If read / wr refs are 0 then bmpce_getbuf()
-			 *    should be called in a non-blocking fashion.
-			 */
-			bmpce = bmpces[i];
-			if (i)
-				psc_assert(bmpce->bmpce_owner ==
-				   bmpces[i-1]->bmpce_owner);
-
-			BMPCE_LOCK(bmpce);
-			psc_assert(bmpce->bmpce_flags & BMPCE_INIT);
-			bmpce->bmpce_flags &= ~BMPCE_INIT;
-			BMPCE_ULOCK(bmpce);
 		}
 
 		msl_reada_rpc_launch(bmpces, nbmpces);
