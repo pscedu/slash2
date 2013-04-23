@@ -421,10 +421,6 @@ reimport
 - parse /proc/mounts if it's there for sliod statfs f_fstype
 - during upsch repl PAGEIN, do we do two SQL, one for loading the work
   then one for loading the recpt?  optimize this if so
-- are leases getting expired in all circumstances?
-  - error 601 (or 1036) as a result of bmap leases not expiring in client
-  - lease ext hang
-  - flush() hang
 - fix bug when src ION comes online and upsch doesn't know he should now
   try to schedule some new work
     -- upsch_multiwait should be getting woken, needs a PAGEIN for dst though...
