@@ -332,11 +332,11 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 			BII_LOCK(bii);
 			psc_assert(pll_nitems(&bii->bii_rls));
 
-			DEBUG_BMAP(PLL_INFO, b, "ndrty=%u nrls=%d xid=%"PRIu64
-			   " xid_last=%"PRIu64,
-			   psc_atomic32_read(&bii->bii_crcdrty_slvrs),
-			   pll_nitems(&bii->bii_rls), bii->bii_bcr_xid,
-			   bii->bii_bcr_xid_last);
+			DEBUG_BMAP(PLL_DIAG, b, "ndrty=%u nrls=%d "
+			    "xid=%"PRIu64" xid_last=%"PRIu64,
+			    psc_atomic32_read(&bii->bii_crcdrty_slvrs),
+			    pll_nitems(&bii->bii_rls), bii->bii_bcr_xid,
+			    bii->bii_bcr_xid_last);
 
 			psc_assert(bii_2_flags(bii) & BMAP_IOD_RLSSEQ);
 			psc_assert(bii_2_flags(bii) & BMAP_IOD_RLSSCHED);
