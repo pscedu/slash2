@@ -290,7 +290,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 				SLVR_ULOCK(s);
 
 				OPSTAT_INCR(SLI_OPST_HANDLE_REPLREAD_INSERT);
-				DEBUG_SLVR(PLL_NOTIFY, s, "aio wait");
+				DEBUG_SLVR(PLL_DIAG, s, "aio wait");
 				break;
 			}
 		}
@@ -460,9 +460,9 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		if (!newsbd)
 			continue;
 
-		DEBUG_FCMH(PLL_INFO, f, "bmapno=%d seq=%"PRId64" key=%"PRId64
-		   " (brls=%p)", b->bcm_bmapno, sbd->sbd_seq, sbd->sbd_key,
-		   newsbd);
+		DEBUG_FCMH(PLL_DIAG, f,
+		    "bmapno=%d seq=%"PRId64" key=%"PRId64" (brls=%p)",
+		    b->bcm_bmapno, sbd->sbd_seq, sbd->sbd_key, newsbd);
 
 		bmap_op_start_type(bii_2_bmap(bii), BMAP_OPCNT_RLSSCHED);
 
