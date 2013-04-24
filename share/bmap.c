@@ -63,7 +63,7 @@ bmap_free_all_locked(struct fidc_membh *f)
 
 	for (a = SPLAY_MIN(bmap_cache, &f->fcmh_bmaptree); a; a = b) {
 		b = SPLAY_NEXT(bmap_cache, &f->fcmh_bmaptree, a);
-		DEBUG_BMAP(PLL_INFO, b, "mark bmap free");
+		DEBUG_BMAP(PLL_INFO, a, "mark bmap free");
 		BMAP_SETATTR(a, BMAP_TOFREE);
 	}
 }
