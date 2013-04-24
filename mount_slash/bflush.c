@@ -1084,10 +1084,9 @@ bmap_flush(struct timespec *nto)
 		}
 
 		if ((b->bcm_flags & BMAP_CLI_LEASEEXPIRED) || 
-                    bmap_flushable(b)) {
-			bmap_op_start_type(b, BMAP_OPCNT_FLUSH);
+                    bmap_flushable(b))
 			psc_dynarray_add(&bmaps, b);
-		}
+
 		BMAP_ULOCK(b);
 
 		if ((psc_dynarray_len(&bmaps) + 
@@ -1110,7 +1109,7 @@ bmap_flush(struct timespec *nto)
 			BMAP_ULOCK(b);
 			bmpc_biorqs_destroy(bmap_2_bmpc(b), 
 			    bmap_2_bci(b)->bci_error);
-			goto next;
+			continue;
 		}
 		BMAP_ULOCK(b);
 
@@ -1157,9 +1156,6 @@ bmap_flush(struct timespec *nto)
 		if (k != psc_dynarray_len(&reqs))
 			skip = 1;
 		psc_dynarray_reset(&reqs);
- next:
-		BMAP_LOCK(b);
-		bmap_op_done_type(b, BMAP_OPCNT_FLUSH);
 	}
 
 	psc_dynarray_free(&reqs);

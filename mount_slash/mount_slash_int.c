@@ -392,7 +392,7 @@ msl_biorq_del(struct bmpc_ioreq *r)
 		if (!bmpc->bmpc_pndgwr) {
 			b->bcm_flags &= ~BMAP_DIRTY;
 			lc_remove(&bmapFlushQ, b);
-			bmap_wake_locked(b);
+			bmap_op_done_type(b, BMAP_OPCNT_FLUSHQ);
 		}
 	}
 
@@ -1315,6 +1315,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 		psc_assert(psclist_disjoint(&b->bcm_lentry));
 		DEBUG_BMAP(PLL_INFO, b, "add to bmapFlushQ");
 		lc_addtail(&bmapFlushQ, b);
+		bmap_op_start_type(b, BMAP_OPCNT_FLUSHQ);
 	}
 	bmap_flushq_wake(BMAPFLSH_TIMEOA, &r->biorq_expire);
 
