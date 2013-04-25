@@ -147,6 +147,7 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n,
 			 * This bmap is going away; wait for it so we
 			 * can reload it back.
 			 */
+			DEBUG_BMAP(PLL_INFO, b, "wait on to-free bmap");
 			BMAP_ULOCK(b);
 			fcmh_wait_nocond_locked(f);
 			goto restart;
