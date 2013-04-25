@@ -1,6 +1,9 @@
+<?xml version="1.0" ?>
+<!-- $Id$ -->
 
+<xdc>
+	<title>Configuring a SLASH2 deployment</title>
 
-Configuring SLASH2 for the first time
 Considerations for metadata server configuration
 Selecting storage for SLASH2 metadata
 A metadata server should employ at least one dedicated disk (or partition) for a ZFS pool and a dedicated disk for journal. It is important for the journal be on its own spindle if one expects decent performance. If fault tolerance is required then at least 2 devices will be required for the ZFS pool.
@@ -117,3 +120,4 @@ drwx------ 3 root root 4096 Jun 18 15:10 2a8ae931a776366e
 Once completed you will see a directory called /disk/.slmd which contains a directory named for the	UUID. Under /disk/.slmd is a hierarchy of 16^4 directories used for storing SLASH2 file objects.
 An explanation of more sophisticated I/O system types is given here: SLASH2IOServices.
 RunningSLASH2Services
+</xdc>

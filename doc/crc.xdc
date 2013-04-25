@@ -1,3 +1,8 @@
+<?xml version="1.0" ?>
+<!-- $Id$ -->
+
+<xdc>
+	<title>User data CRC management</title>
 
 CRC Management: Calculation, communication, storage, retrieval
 The dominant issue with CRC's revolves around the data size encompassed by a single 8byte CRC. This has direct ramifications in the amount of buffering required and the mds capacity needed to store CRCs. Also since the MDS stores the CRCs, the system ingest bandwidth is essentially limited to the number of CRCs the MDS can process. Issues regarding the synchronous storing of MDS-side CRCs need to be explored. For our purposes we will assume that the MDS has safely stored the CRCs before acknowledging back to the IOS.
@@ -25,3 +30,4 @@ This means that we can bulk crc updates up to the size of the bmap (big performa
 Journal buffer-side CRCs (pre-write) to guard against IOS failure. (perhaps not..)
 MDS RPC to IOS for calculating an entire bmap's worth of CRCs - this would be issued when an MDS detects the failure of an IOS and needs to reassign.
 When an mds chooses an ION for write, he should notify other read clients of this.
+</xdc>

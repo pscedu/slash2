@@ -1,3 +1,9 @@
+<?xml version="1.0" ?>
+<!-- $Id$ -->
+
+<xdc>
+	<title>SLASH2 configuration example</title>
+
 SLASH2 I/O Service Types
 
 See the slfcg(5) manual page for more details.
@@ -65,3 +71,4 @@ site PSC {
 }
 When a client selects ios_cnos@PSC as its preferred I/O system, writes will be load balanced amongst the available members of the CNOS. Selection of the preferred I/O system is done via the configuration or during runtime via msctl like so:
 # msctl -p pref_ios=ios_cnos@PSC
+</xdc>

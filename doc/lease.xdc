@@ -1,7 +1,8 @@
 <?xml version="1.0" ?>
+<!-- $Id$ -->
 
 <xdc>
-	<title>Binding Bmaps to I/O Nodes</title>
+	<title>Binding bmaps to I/O servers</title>
 
 	<oof:p>
 		The metadata server must bind bmaps to specific IO nodes in order
