@@ -2378,6 +2378,8 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
+
+	OPSTAT_INCR(SLC_OPST_SETATTR_DONE);
 }
 
 void
