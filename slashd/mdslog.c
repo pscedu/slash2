@@ -614,7 +614,7 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
     const char *name, const char *newname, void *arg)
 {
 	struct slmds_jent_namespace *sjnm;
-	int distill = 0;
+	int chg, distill = 0;
 	size_t siz;
 
 	if (op == NS_OP_SETATTR)
@@ -708,13 +708,24 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 		break;
 	}
 
-	if (((op == NS_OP_RECLAIM) ||
+	chg = 0;
+	if (op == NS_OP_SETATTR) {
+		int sl_mask;
+
+		sl_mask = mdsio_setattrmask_2_slflags(mask);
+		if (sl_mask & (PSCFS_SETATTRF_UID | PSCFS_SETATTRF_GID))
+			chg = 1;
+	}
+
+	if (chg ||
+	    ((op == NS_OP_RECLAIM) ||
 	     (op == NS_OP_UNLINK && sstb->sst_nlink == 1) ||
 	     (op == NS_OP_SETSIZE && sstb->sst_size == 0)))
 		psclogs(PLL_INFO, SLMSS_INFO,
-		    "file data removed fid="SLPRI_FID" "
+		    "file data %s fid="SLPRI_FID" "
 		    "uid=%u gid=%u "
 		    "fsize=%zu op=%d",
+		    chg ? "changed" : "removed",
 		    sstb->sst_fid,
 		    sstb->sst_uid, sstb->sst_gid,
 		    siz, op);
