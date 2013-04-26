@@ -828,16 +828,10 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 		while ((bci = lc_getnb(&bmapTimeoutQ))) {
 			b = bci_2_bmap(bci);
 			if (bci == wrapdetect) {
-				lc_addstack(&bmapTimeoutQ, bci);
+				lc_addhead(&bmapTimeoutQ, bci);
 				break;
-
-			} else if (!wrapdetect) {
+			} else if (!wrapdetect)
 				wrapdetect = bci;
-				/* Don't set expire in the past. */
-				if (timespeccmp(&crtime,
-				    &bci->bci_etime, <))
-					nto = bci->bci_etime;
-			}
 
 			BMAP_LOCK(b);
 			DEBUG_BMAP(PLL_DEBUG, b, "timeoq try reap"
@@ -848,33 +842,14 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 			psc_assert(b->bcm_flags & BMAP_TIMEOQ);
 
-			if (!(b->bcm_flags & BMAP_CLI_LEASEEXPIRED) &&
-			    timespeccmp(&crtime, &bci->bci_etime, <))
+			if (!(b->bcm_flags & BMAP_CLI_LEASEEXPIRED) &&  
+			    timespeccmp(&crtime, &bci->bci_etime, <)) {
 				/*
 				 * Don't spin on expired bmaps while
 				 * they unwind timedout biorqs.
 				 */
 				nto = bci->bci_etime;
 
-			if (bmpc_queued_ios(&bci->bci_bmpc)) {
-				int rc;
-
-				BMAP_ULOCK(b);
-				rc = msl_bmap_lease_tryext(b, NULL, 0);
-
-				/*
-				 * msl_bmap_lease_tryext() adjusted
-				 * etime.
-				 */
-				if ((!rc || rc == -EAGAIN) &&
-				    timespeccmp(&crtime, &bci->bci_etime, <) &&
-				    timespeccmp(&nto, &bci->bci_etime, >))
-					nto = bci->bci_etime;
-
-				lc_addtail(&bmapTimeoutQ, bci);
-				continue;
-
-			} else if (timespeccmp(&crtime, &bci->bci_etime, <)) {
 				BMAP_ULOCK(b);
 
 				DEBUG_BMAP(PLL_DIAG, b, "sawnew=%d",
@@ -905,6 +880,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				continue;
 			}
 
+			b->bcm_flags &= ~BMAP_TIMEOQ;
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) == 1);
 
 			/*
@@ -951,9 +927,6 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 					psc_dynarray_remove(&rels, resm);
 			} else
 				psc_dynarray_add_ifdne(&rels, resm);
-
-			if (bci == wrapdetect)
-				wrapdetect = NULL;
 
 			PFL_GETTIMESPEC(&crtime);
 		}
