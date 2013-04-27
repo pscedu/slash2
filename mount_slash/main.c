@@ -3073,13 +3073,13 @@ parse_mapfile(void)
 		psc_hashent_init(&slc_uidmap_ext, um);
 		um->um_key = from;
 		um->um_val = to;
-		psc_hashent_add_item(&slc_uidmap_ext, um);
+		psc_hashtbl_add_item(&slc_uidmap_ext, um);
 
 		um = PSCALLOC(sizeof(*um));
 		psc_hashent_init(&slc_uidmap_int, um);
 		um->um_key = to;
 		um->um_val = from;
-		psc_hashent_add_item(&slc_uidmap_int, um);
+		psc_hashtbl_add_item(&slc_uidmap_int, um);
 
 		continue;
 
