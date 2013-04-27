@@ -1373,6 +1373,8 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 			psclog_dbg("adding f+g:"SLPRI_FG,
 			    SLPRI_FG_ARGS(&attr->sst_fg));
 
+			uidmap_int_stat(attr);
+
 			fidc_lookup(&attr->sst_fg, FIDC_LOOKUP_CREATE,
 			    attr, FCMH_SETATTRF_SAVELOCAL, &f);
 
