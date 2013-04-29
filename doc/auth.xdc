@@ -52,7 +52,6 @@
 		Idea from Eric Barton: that encryption/uid mapping take place at or
 		close to the router level or on the router.
 	</p>
-	<p>
 
 	<h3>slauthd</h3>
 	<ul>
@@ -86,43 +85,58 @@
 		<li>may be coupled with a slash kerberos deployment</li>
 	</ul>
 
-example
-- assume we have a slash kerb realm "SLASH.ORG"
-- assume we have a compute cluster "cluster.org" with nodes "node1.cluster.org",
-  "node2.cluster.org", etc.
-- assume we have a client machine "client.org"
+	<h3>Example</h3>
+	<ul>
+		<li>assume a kerb realm "SITE.ORG"</li>
+		<li>assume a compute cluster "cluster.org" with nodes
+			"node1.cluster.org", "node2.cluster.org", etc.</li>
+		<li>assume a client machine "client.org"</li>
+	</ul>
 
-steps a user would take to use the file system:
- 1. user on client.org runs slauth_init (random example below)
-       slauth_init rbudden@SLASH.ORG --slashuser=rmbudden --grant="node*.cluster.org" --time=24h
- 2. user enters his slash krb password
- 3. kerberos is contacted and user is given a ticket
- 4. the ticket is sent to slauthd which tells slauthd that the user is allowed to
-    access the file system from the local client and that the user is allowed to
-    setup grants for access
- 5. slauthd approves grants for user on "node1.cluster.org, node2.cluster.org, etc."
- 6. grants are sent to slaccd (slaccd knows user is allowed file system access
-    from node*.cluster.org for 24 hours using the username rmbudden [not
-    necessarily the same slash krb principle rbudden])
- 7. user submits computation job
- 8. computation job tries to write to slash
- 9. slash mount asks slaccd if it's permitted to write to the file system
-10. slaccd looks up grants for user and approves I/O on the node for specified
-    time (insert possible slauthd contact to obtain kerberos credentials)
-11. approval is cached on the client mount
-12. I/O proceeds accordingly
+	<p>Steps a user would take to use the file system:</p>
+	<ol>
+		<li>user on client.org runs slauth_init (random example below)
+			<pre>
+$ slauth_init rbudden@SITE.ORG --slashuser=rmbudden --grant="node*.cluster.org" --time=24h
+</pre></li>
+		<li>user enters his slash krb password</li>
+		<li>kerberos is contacted and user is given a ticket</li>
+		<li>the ticket is sent to slauthd which tells slauthd that the user
+			is allowed to access the file system from the local client and
+			that the user is allowed to setup grants for access</li>
+		<li>slauthd approves grants for user on "node1.cluster.org,
+			node2.cluster.org, etc."</li>
+		<li>grants are sent to slaccd (slaccd knows user is allowed file
+			system access from node*.cluster.org for 24 hours using the
+			username rmbudden [not necessarily the same slash krb principle
+			rbudden])</li>
+		<li>user submits computation job</li>
+		<li>computation job tries to write to slash</li>
+		<li>slash mount asks slaccd if it's permitted to write to the file
+			system</li>
+		<li>slaccd looks up grants for user and approves I/O on the node for
+			specified time (insert possible slauthd contact to obtain kerberos
+			credentials)</li>
+		<li>approval is cached on the client mount</li>
+		<li>I/O proceeds accordingly</li>
+	</ol>
 
-Other ideas:
-- Having a way to request auth from a client, say in the job script, then revoke
-  auth after the job has finished.
+	<p>Other ideas:</p>
+	<ul>
+		<li>Having a way to request auth from a client, say in the job
+			script, then revoke auth after the job has finished.</li>
+	</ul>
 
-This might be for data encryption such as:
+	<p>This might be for data encryption such as:</p>
+	<pre>$ slauth_request_key</pre>
+	<p>(slauthd approves grant, issues a new encryption key)<br />
+		...<br />
+		job runs<br />
+		...</p>
+	<pre>$ slauth_revoke_key</pre>
+	<p>(slauthd revokes encryption key)</p>
+	<pre>$ slauth_revoke_grant</pre>
+	<p>(slauthd revokes access grant from computational nodes since job is
+		finished)</p>
 
-   slauth_request_key (slauthd approves grant, issues a new encryption key)
-   ...
-   job runs
-   ...
-   slauth_revoke_key (slauthd revokes encryption key)
-   slauth_revoke_grant (slauthd revokes access grant from computational nodes
-     since job is finished)
-
+</xdc>
