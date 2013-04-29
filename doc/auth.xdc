@@ -4,69 +4,87 @@
 <xdc>
 	<title>Configuring a SLASH2 deployment</title>
 
+	<h1>Authenticate models</h1>
+	<h2>Phase 1 - User ID mapping</h2>
+	<p>
+		At this time, interoperation between sites is not possible.
+		With relative ease, a UID translator can be placed at mount_slash
+		endpoints which translates UIDs from the OS to the global SLASH2 UID
+		when handling syscalls and vice versa when replying to syscalls.
+	</p>
 
+	<h2>Phase 2 - Host based authentication</h2>
+	<p>
+		However, with no root squashing, and even if we add it, there is
+		still the problem of compromised/untrusted mount_slash endpoints
+		having full reign over all data in the SLASH2 file system.
+		Host-based authentication solves some of these problems in that it
+		can provide a mechanism to revoke access to the SLASH2 file system
+		in cases of known compromised mount_slash endpoints.
+	</p>
+	<p>
+		Furthermore, restrictions can be placed on the certificates for
+		mount_slash endpoints such that all accesses will only be granted to
+		certain UIDs.
+	</p>
+	<p>
+		However, this model still does not solve the problem where an
+		unknown compromised mount_slash with full reign privileges (that is,
+		no UID restrictions; for example, on a large compute system) can
+		wreak havoc on other users' files.
+	</p>
+	<p>
+		This solution entails deploying a PKI model to each host on the
+		network.
+		This means generating a certificate for each slashd, sliod, and
+		mount_slash that wishes to participate on the SLASH2 network.
+	</p>
 
-SLASH2 Authentication models
+	<h2>Phase 3 - Full Kerberos support</h2>
+	<p>
+		This approach alleviates all problems with the previous approaches
+		at the cost of implementation and deployment complexity.
+		But even in the case of unknown compromised full access mount_slash
+		endpoints, only files owned by accounts with valid cached Kerberos
+		tickets on the endpoint may be accessed.
+	</p>
+	<p>
+		Idea from Eric Barton: that encryption/uid mapping take place at or
+		close to the router level or on the router.
+	</p>
+	<p>
 
-Phase 0 - User ID mapping
+	<h3>slauthd</h3>
+	<ul>
+		<li>runs on clients as part of mount_slash</li>
+		<li>
+			handles authentication using kerberos
+			<ul>
+				<li>user is who he says</li>
+				<li>user is allowed to setup time limited grants for clients</li>
+			</ul>
+		</li>
+		<li>
+			handles grant relay to slash server authd and/or slash mds
+			<ul>
+				<li>grant user@domain(s) access to slash uid for time period</li>
+				<li>revoke grants</li>
+			</ul>
+		</li>
+		<li>
+			*possible* vouches for user from hosts with grants.
+			aka slaccd contacts a slauthd client for kerberos verification.
+		</li>
+	</ul>
 
-At this time, interoperation between sites is not possible.  With
-relative ease, a UID translator can be placed at mount_slash endpoints
-which translates UIDs from the OS to the global SLASH2 UID when handling
-syscalls and vice versa when replying to syscalls.
-
-Phase 1 - Host based authentication
-
-However, with no root squashing, and even if we add it, there is still
-the problem of compromised/untrusted mount_slash endpoints having full
-reign over all data in the SLASH2 file system.  Host-based
-authentication solves some of these problems in that it can provide a
-mechanism to revoke access to the SLASH2 file system in cases of known
-compromised mount_slash endpoints.
-
-Furthermore, restrictions can be placed on the certificates for
-mount_slash endpoints such that all accesses will only be granted to
-certain UIDs.
-
-However, this model still does not solve the problem where an unknown
-compromised mount_slash with full reign privileges (that is, no UID
-restrictions; for example, on a large compute system) can wreak havoc on
-other users' files.
-
-This solution entails deploying a PKI model to each host on the network.
-This means generating a certificate for each slashd, sliod, and
-mount_slash that wishes to participate on the SLASH2 network.
-
-Phase 2 - Full Kerberos support
-
-This approach alleviates all problems with the previous approaches at
-the cost of implementation and deployment complexity.  But even in the
-case of unknown compromised full access mount_slash endpoints, only
-files owned by accounts with valid cached Kerberos tickets on the
-endpoint may be accessed.
-
-Notes about implementation from Bob:
-
-Idea from Eric Barton: that encryption/uid mapping take place at or close to
-the router level or on the router.
-
- slauthd:
- - runs on clients as part of mount_slash
- - handles authentication using kerberos
-    - user is who he says
-    - user is allowed to setup time limited grants for clients
- - handles grant relay to slash server authd and/or slash mds
-    - grant user@domain(s) access to slash uid for time period
-    - revoke grants
- - *possible* vouches for user from hosts with grants. aka slaccd contacts a
-   slauthd client for kerberos verification.
-
- slaccd:
- - runs as server on slash mds or seperate server
- - maintains access grants
- - is queried to determine if client reads/writes should be processed
- - maintains keys for data encryption
- - may be coupled with a slash kerberos deployment
+	<h3>slaccd</h3>
+	<ul>
+		<li>runs as server on slash mds or seperate server</li>
+		<li>maintains access grants</li>
+		<li>is queried to determine if client reads/writes should be processed</li>
+		<li>maintains keys for data encryption</li>
+		<li>may be coupled with a slash kerberos deployment</li>
+	</ul>
 
 example
 - assume we have a slash kerb realm "SLASH.ORG"
