@@ -1,4 +1,8 @@
-$Id$
+<?xml version="1.0" ?>
+<!-- $Id$ -->
+
+<xdc>
+	<title>Configuring a SLASH2 deployment</title>
 
 This document describes the architecture of a cache-coherent distributed
 read-only I/O daemon for use by clients in a SLASH2 deployment.  This

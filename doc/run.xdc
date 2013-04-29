@@ -3,42 +3,59 @@
 
 <xdc>
 	<title>Running SLASH2</title>
-	Overview
+
+	<oof:h1>Overview</oof:h1>
 	<oof:p>
 		To run an instance of SLASH2, you need to configure three types of
 		services: metadata service (slashd), I/O service (sliod), and I/O
 		client service (mount_slash).
 		There are manuals for each of these three types of services and all
 		the utilities involved.
-		The best place to start is as follows:
+		The best place to start is <ref sect='7'>sladm</ref>.
+		Basically, there are three major steps to configure a SLASH2
+		deployment:
 	</oof:p>
-	<oof:pre>$ man sladm</oof:pre>
-	<oof:p>
-		Basically, the above man pages outlines three major steps to
-		configure a slash2 instance:
-On the machine where the MDS daemon runs, we need to create a ZFS pool with the help of zfs-fuse. The pool has to be formatted with slmkfs utility before use. In addition, we must create a journal file for the MDS daemon to track on-going operations.
-On a machine where a SLIOD daemon runs, we need to use slmkfs utility to format the directory tree to be used as the back store for the SLIOD daemon.
-On a machine where a mount_slash daemon runs, we only need to run the mount_slash binary.
+	<oof:list>
+		<oof:list-item>
+			On the machine where the MDS daemon runs, we need to create a ZFS
+			pool with the help of zfs-fuse.
+			The pool has to be formatted with slmkfs utility before use.
+			In addition, we must create a journal file for the MDS daemon to
+			track on-going operations.
+		</oof:list-item>
+		<oof:list-item>
+			On a machine where a SLIOD daemon runs, we need to use slmkfs
+			utility to format the directory tree to be used as the back store
+			for the SLIOD daemon.
+		</oof:list-item>
+		<oof:list-item>
+			On a machine where a mount_slash daemon runs, we only need to run
+			the mount_slash binary.
+		</oof:list-item>
+	<oof:list>
 
-Starting the metadata server
+	<oof:h1>Starting the MDS</oof:h1>
 	<oof:p>
 		The slashd manpage slashd(8) details the different command line
-		parameters. Depending on your configuration many of the default
-		parameters should suffice. Here's a command line used for running
-		SLASH2 based on the the example configuration (assuming that the
-		example configuration has been stored at /etc/s2_example.conf"
+		parameters.
+		Depending on your configuration many of the default parameters
+		should suffice.
+		Here's a command line used for running SLASH2 based on the the
+		example configuration (assuming that the example configuration has
+		been stored at /etc/s2_example.conf)
 	</oof:p>
 	<oof:pre># slashd -f /etc/s2_example.conf &amp;</oof:pre>
 	<oof:p>
 		A more sophisticated example of a run time script may be found in
-		the SLASH2 distribution. Note this script should be modified for
-		your own environment.
+		the SLASH2 distribution.
+		Note this script should be modified for your own environment.
+slashd.sh
 	</oof:p>
-projects/apps/arc/slashd.sh
-Determining whether the MDS is running
+
+	<oof:h1>MDS instance control/monitoring</oof:h1>
 	<oof:p>
-		The command slmctl(8) serves as the interface to the running slashd
-		process.
+		<ref sect='8'>slmctl</ref> serves as the interface to the running
+		<ref sect='8'>slashd</ref> process.
 		The man page details the numerous options available to the
 		administrator for querying and changing internal parameters.
 		A simple test to see if your MDS is running would be the following:
@@ -48,13 +65,13 @@ $ slmctl -sc
 resource                                     host type     flags stvrs txcr #ref
 ================================================================================
 XWFS
-  xwfs_psc_ios7_0                        sense7.psc.edu serial   -OM-- 19149    8    0
-  xwfs_tacc_0                         129.114.32.90 serial   -OM-- 19150    8    0
-  xwfs_tacc_1                         129.114.32.91 serial   -OM-- 19150    8    0
-  xwfs_tacc_2                         129.114.32.92 serial   -OM-- 19150    8    0
-  xwfs_tacc_3                         129.114.32.93 serial   --M-- 19150    8    0
+  xwfs_psc_ios7_0                  sense7.psc.edu serial   -OM-- 19149    8    0
+  xwfs_tacc_0                       129.114.32.90 serial   -OM-- 19150    8    0
+  xwfs_tacc_1                       129.114.32.91 serial   -OM-- 19150    8    0
+  xwfs_tacc_2                       129.114.32.92 serial   -OM-- 19150    8    0
+  xwfs_tacc_3                       129.114.32.93 serial   --M-- 19150    8    0
 clients
-		       firehose2.psc.teragrid.org          -O---     0    8    2
+  _                    firehose2.psc.teragrid.org          -O---     0    8    2
 </oof:pre>
 
 	<oof:p>
@@ -63,9 +80,11 @@ clients
 		The fact that the command returned this output shows the
 		MDS is operational.
 	</oof:p>
-Using the zfs and zpool commands
+
+	<oof:h2>zfs and zpool</oof:h2>
 	<oof:p>
-		Once your MDS is operational, the zfs and zpool commands will be
+		Once your MDS is operational, the <ref sect='8'>zfs</ref> and zpool
+		commands will be
 		available for use towards ZFS administration.
 	</oof:p>
 	<oof:p>
@@ -85,7 +104,7 @@ pool        alloc   free   read  write   read  write
 xwfs_test   1001M   148G      3      0  7.69K  7.23K
 
 $ zpool scrub xwfs_test
-$ zfs send xwfs_test@test > /local/xwfs_test@test.zstream
+$ zfs send xwfs_test@test &gt; /local/xwfs_test@test.zstream
 </oof:pre>
 
 Running the SLASH2 I/O service (sliod)
@@ -107,7 +126,7 @@ Contents of /var/lib/slash from the MDS - basically just make a copy of this dir
 	</oof:p>
 	<oof:pre># sliod -f /etc/s2_example.conf &amp;</oof:pre>
 
-Verifying sliod with slictl
+	<oof:h2>Verifying sliod with slictl</oof:h2>
 	<oof:p>
 		Similar to slmctl, the sliod has its own control interface program
 		called slictl(8).
@@ -126,7 +145,7 @@ XWFS
   xwfs_tacc_3                         129.114.32.93 serial   -----     0    0    0
 </oof:pre>
 
-Running the Client - mount_slash
+<oof:h2>Running the Client - mount_slash</oof:h2>
 	<oof:p>
 		The client binary is named mount_slash(8).
 		To run the client one must have done the following:
@@ -146,7 +165,7 @@ Created the file system mount point (i.e. 'mkdir /S2')
 		for use.
 	</oof:p>
 
-Verifying the client with msctl
+	<oof:h2>Verifying the client with msctl</oof:h2>
 	<oof:p>
 		This shows the client being connected to the MDS and several I/O
 		servers.

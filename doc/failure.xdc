@@ -4,7 +4,7 @@
 <xdc>
 	<title>High-Level Drop Operations</title>
 
-	MDS drops Client
+	<oof:h1>MDS drops Client</oof:h1>
 	<oof:p>
 		MDS cleans entire client export.
 		At the moment this is performed through slashrpc_export_destroy()
@@ -21,9 +21,9 @@
 		key-signed fdbuf's which are verifiable across reboots.
 		Further, cold-cache opens may take place via the immutable
 		namespace.
-	<oof:p>
+	</oof:p>
 
-	MDS drops ION
+	<oof:h1>MDS drops ION</oof:h1>
 	<oof:p>
 		Failed or disconnected IONs pose a trickier problem than unavailable
 		clients because of the journaling operations that result and the
@@ -40,14 +40,22 @@
 		notified to relinquish their set of cached bmaps which correspond to
 		the failed ION.
 	</oof:p>
-	Steps involved:
-		Close bmap associations in the journal and mark them as 'unknown'.
-		Schedule bmap's to be re-read.
-		Notify clients to release their bmaps which point to the failed ION.
+	<oof:p>Steps involved:</oof:p>
+	<oof:list>
+		<oof:list-item>
+			Close bmap associations in the journal and mark them as 'unknown'.
+		</oof:list-item>
+		<oof:list-item>
+			Schedule bmap's to be re-read.
+		</oof:list-item>
+		<oof:list-item>
+			Notify clients to release their bmaps which point to the failed
+			ION.
+		</oof:list-item>
 	<oof:p>
 		Should the MDS fail during these operations the system should not be
 		compromised.
-		On reboot the MDS will scan its bmap <--> ION association log to
+		On reboot the MDS will scan its bmap &harr; ION association log to
 		determine the state of the bmaps.
 		Bmaps belonging to the failed ION which were not closed prior to MDS
 		failure will still be considered 'open' but marked as 'unknown'.
@@ -60,7 +68,7 @@
 		notifications are really just 'helpful suggestions'.
 	</oof:p>
 
-	ION drops Client
+	<oof:h1>ION drops Client</oof:h1>
 	<oof:p>
 		Similar to the MDS dropping a client.
 		The bmaps attached to the failed client's export are iterated,
@@ -68,7 +76,7 @@
 		The final step is to cleanup the export.
 	</oof:p>
 
-	ION drops MDS
+	<oof:h1>ION drops MDS</oof:h1>
 	<oof:p>
 		The ION's have no log and hence operate purely from memory.
 		When an MDS fails the ION tries to maintain its state and wait for
@@ -98,7 +106,7 @@
 		rebooted too).
 	</oof:p>
 
-	Client drops ION
+	<oof:h1>Client drops ION</oof:h1>
 	<oof:p>
 		Client must iterate across the ION's import and redirect read-bmaps
 		to alternate destinations which are either another ION in the same
@@ -108,7 +116,7 @@
 		bmap.
 	</oof:p>
 
-	Client drops MDS
+	<oof:h1>Client drops MDS</oof:h1>
 	<oof:p>
 		In this case nothing is cleaned or re-requested.
 		Open file handles remain valid so long as the bdbuf is intact.

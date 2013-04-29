@@ -125,7 +125,8 @@ For example:
 		bmaps on different IOS's without bumping the generation number and,
 		in essence, canceling out writes to peer IOS's.
 	</oof:p>
-Design Fallouts:
+
+	Design Fallouts:
 	<oof:p>
 		Synchronous writes - before returning success on write to the
 		client, the IOS must ensure its buffers are written.

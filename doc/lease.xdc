@@ -4,6 +4,8 @@
 <xdc>
 	<title>Binding bmaps to I/O servers</title>
 
+	<oof:h1>Overview</oof:h1>
+
 	<oof:p>
 		The metadata server must bind bmaps to specific IO nodes in order
 		guaranteeing the correctness of the bmap's crc table (which is
@@ -11,7 +13,7 @@
 		At the moment, the most straight forward way for tracking and
 		verifying these bindings is to log them on the metadata server.
 		This ensures that in the event of a crash the MDS can reliably
-		determine the existing bmap &lt;-&gt; ION relationships.
+		determine the existing bmap &harr; ION relationships.
 	</oof:p>
 
 	<oof:p>
@@ -32,39 +34,39 @@
 	</oof:p>
 
 	<oof:ul>
-		<oof:li>
+		<oof:list-item>
 			Determines if the bmap is already active
-		</oof:li>
-		<oof:li>
+		</oof:list-item>
+		<oof:list-item>
 			If the bmap is already open for writing then an ION has already
 			been chosen and its identifier is returned to the client.
-		</oof:li>
-		<oof:li>
+		</oof:list-item>
+		<oof:list-item>
 			Open for read, then the most appropriate ION must be chosen based
 			on the location of the readers.
-		</oof:li>
-		<oof:li>
+		</oof:list-item>
+		<oof:list-item>
 			In any case where multiple writers exist, or several readers and a
 			writer are present, the clients and ION must work in directio mode
 			to preserve coherency.
-		</oof:li>
-		<oof:li>
+		</oof:list-item>
+		<oof:list-item>
 			For inactive bmaps, the MDS sends a request to the chosen ION
 			(based on the client's IOS preference) which contains a key for
 			write access.
-		</oof:li>
-		<oof:li>
+		</oof:list-item>
+		<oof:list-item>
 			Upon successful reply, the MDS returns the ION number and key to
 			the client.
-		</oof:li>
-		<oof:li>
+		</oof:list-item>
+		<oof:list-item>
 			At this point, the client is permitted to issue writes to the ION
 			for the given bmap and.
-		</oof:li>
-		<oof:li>
-			The ION is now permitted to issue crc updates to the MDS for this
+		</oof:list-item>
+		<oof:list-item>
+			The ION is now permitted to issue CRC updates to the MDS for this
 			bmap.
-		</oof:li>
+		</oof:list-item>
 	</oof:ul>
 
 	<oof:p>

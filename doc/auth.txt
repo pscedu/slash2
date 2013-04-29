@@ -1,4 +1,10 @@
-$Id$
+<?xml version="1.0" ?>
+<!-- $Id$ -->
+
+<xdc>
+	<title>Configuring a SLASH2 deployment</title>
+
+
 
 SLASH2 Authentication models
 
