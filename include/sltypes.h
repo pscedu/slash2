@@ -63,7 +63,6 @@ typedef uint32_t sl_ios_id_t;
 enum rw {
 	SL_READ			= 42,
 	SL_WRITE		= 43
-//	SL_RDWR			= 44
 };
 
 /*
