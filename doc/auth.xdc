@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <!-- $Id$ -->
 
-<xdc>
+<xdc xmlns:oof="http://www.psc.edu/~yanovich/xsl/oof-1.0">
 	<title>Configuring a SLASH2 deployment</title>
 
 	<oof:header size="1">Authenticate models</oof:header>

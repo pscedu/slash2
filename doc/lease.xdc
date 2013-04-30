@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <!-- $Id$ -->
 
-<xdc>
+<xdc xmlns:oof="http://www.psc.edu/~yanovich/xsl/oof-1.0">
 	<title>Binding bmaps to I/O servers</title>
 
 	<oof:header size="1">Overview</oof:header>

@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <!-- $Id$ -->
 
-<xdc>
+<xdc xmlns:oof="http://www.psc.edu/~yanovich/xsl/oof-1.0">
 	<title>I/O server write request processing</title>
 	<oof:p>
 		For both read and write requests the CRC is the dominant activity
