@@ -468,6 +468,8 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 
 		pll_add(&bii->bii_rls, newsbd);
 		BMAP_SETATTR(b, BMAP_IOD_RLSSEQ);
+
+		/* put it on the bmapRlsQ */
 		biod_rlssched_locked(bii);
 		BII_ULOCK(bii);
 
