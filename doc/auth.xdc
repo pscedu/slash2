@@ -132,9 +132,9 @@ $ slauth_init rbudden@SITE.ORG --slashuser=rmbudden --grant="node*.cluster.org" 
 
 	<oof:p>This might be for data encryption such as:</oof:p>
 	<oof:pre>$ slauth_request_key</oof:pre>
-	<oof:p>(slauthd approves grant, issues a new encryption key)<br />
-		...<br />
-		job runs<br />
+	<oof:p>(slauthd approves grant, issues a new encryption key)<oof:br />
+		...<oof:br />
+		job runs<oof:br />
 		...</oof:p>
 	<oof:pre>$ slauth_revoke_key</oof:pre>
 	<oof:p>(slauthd revokes encryption key)</oof:p>
