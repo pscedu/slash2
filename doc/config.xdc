@@ -4,26 +4,27 @@
 <xdc>
 	<title>Configuring a SLASH2 deployment</title>
 
-	<h1>MDS configuration considerations</h1>
-	<h2>Selecting storage for SLASH2 metadata</h2>
-	<p>
+	<oof:header size="1">MDS configuration considerations</oof:header>
+	<oof:header size="2">Selecting storage for SLASH2 metadata</oof:header>
+	<oof:p>
 		A metadata server should employ at least one dedicated disk (or
 		partition) for a ZFS pool and a dedicated disk for journal.
 		It is important for the journal be on its own spindle if one expects
 		decent performance.
 		If fault tolerance is required then at least 2 devices will be
 		required for the ZFS pool.
-	</p>
-	<p>
-		Solid state devices (SSD) are suitable and recommended for SLASH2 metadata storage.
-	</p>
-	<p>
+	</oof:p>
+	<oof:p>
+		Solid state devices (SSD) are suitable and recommended for SLASH2
+		metadata storage.
+	</oof:p>
+	<oof:p>
 		Here is an example zpool configuration taken from the PSC Data
 		Supercell.
 		Here the SLASH2 MDS sits atop 2 vdevs, each of which is
 		triplicated:
-	</p>
-	<pre>
+	</oof:p>
+	<oof:pre>
 # zpool status
   pool: arc_s2mds
  state: ONLINE
@@ -48,10 +49,10 @@ errors: No known data errors
 pool        alloc   free   read  write   read  write
 ----------  -----  -----  -----  -----  -----  -----
 arc_s2mds    379G  3.26T    493     70  2.52M   351K
-</pre>
+</oof:pre>
 
-	<h2>How much storage is required for metadata?</h2>
-	<p>
+	<oof:header size="2">How much storage is required for metadata?</oof:header>
+	<oof:p>
 			PSC's Data Supercell has on the order of 10^8 files and
 			directories.
 			The ZFS storage required to store these metadata items is about
@@ -62,22 +63,22 @@ arc_s2mds    379G  3.26T    493     70  2.52M   351K
 			to consume about 1GB of ZFS metadata storage.
 			With compression, that ratio would improve to about 500k files per
 			1GB of ZFS metadata storage.
-	</p>
+	</oof:p>
 
-	<h2>How much storage is required for the metadata journal?</h2>
-	<p>256MB - 2GB</p>
+	<oof:header size="2">How much storage is required for the metadata journal?</oof:header>
+	<oof:p>256MB - 2GB</oof:p>
 
-	<h2>Should the journal device be mirrored?</h2>
-	<p>
+	<oof:header size="2">Should the journal device be mirrored?</oof:header>
+	<oof:p>
 		Losing a journal will not result in a loss of the filesystem, only
 		the uncommitted changes would be lost.
 		If mirroring is desired, the linux MD mirroring is suitable though
 		we recommend that the devices are partitioned so that rebuilds of
 		the mirror do not require a rebuild of the entire device.
-	</p>
+	</oof:p>
 
-	<h2>Creating an MDS ZFS pool and journal</h2>
-	<p>
+	<oof:header size="2">Creating an MDS ZFS pool and journal</oof:header>
+	<oof:p>
 		The following steps create and tailor a ZFS pool for use as SLASH2
 		metadata storage.
 		These steps are also documented in <ref sect="7">sladm</ref>.
@@ -85,8 +86,8 @@ arc_s2mds    379G  3.26T    493     70  2.52M   351K
 		identifier for the filesystem.
 		This hex value is needed for the SLASH2 configuration file and for
 		I/O server setup.
-	</p>
-	<p>
+	</oof:p>
+	<oof:p>
 		Warning!
 		Use devices which pertain to your system and are not currently in
 		use!
@@ -94,8 +95,8 @@ arc_s2mds    379G  3.26T    493     70  2.52M   351K
 		/dev/disk/by-id, especially for the journal.
 		This may prevent you accidentally trashing another mounted
 		filesystem.
-	</p>
-	<pre>
+	</oof:p>
+	<oof:pre>
 $ zfs-fuse &amp;&amp; sleep 3
 $ zpool create -f s2mds_pool mirror /dev/sdX1 /dev/sdX2
 $ zfs set compression=on s2mds_pool
@@ -107,10 +108,10 @@ $ pkill zfs-fuse
 #   slmkfs.  The journal created by this command will be 512MiB.
 
 $ slmkjrnl -f -b /dev/sdJ1 -n 1048576 -u 0x2a8ae931a776366e
-</pre>
+</oof:pre>
 
-	<h1>Network configuration</h1>
-	<p>
+	<oof:header size="1">Network configuration</oof:header>
+	<oof:p>
 		SLASH2 uses the Lustre networking stack (aka LNet) so configuration
 		will be somewhat familiar to those who use Lustre.
 		At time time SLASH2 supports TCP and Infiniband sockets direct
@@ -121,16 +122,16 @@ $ slmkjrnl -f -b /dev/sdJ1 -n 1048576 -u 0x2a8ae931a776366e
 		For instance, if clients and I/O servers have infiniband and
 		ethernet they may use IB for communication even if the MDS has only
 		an ethernet link.
-	</p>
+	</oof:p>
 
-	<h1>SLASH2 Configuration</h1>
-	<p>
+	<oof:header size="1">SLASH2 Configuration</oof:header>
+	<oof:p>
 		Example configurations are provided in projects/slash_nara/config.
 		The slcfg(5) man page also contains more information on this topic.
-	</p>
+	</oof:p>
 
-	<h1>Setting zpool, fsuuid and network globals</h1>
-	<p>
+	<oof:header size="1">Setting zpool, fsuuid and network globals</oof:header>
+	<oof:p>
 		The previous 2 steps will provide the parameters for the 'fsuuid',
 		'port', and 'nets' attributes.
 		As configured here, the port used by the filesystem's tcp
@@ -140,28 +141,23 @@ $ slmkjrnl -f -b /dev/sdJ1 -n 1048576 -u 0x2a8ae931a776366e
 		match the rule '192.168.*.*' and be configured on the tcp0 network.
 		Hosts with infininband interfaces on the 10.0.0.* network will be
 		configured on the sdp0 network.
-	</p>
-	<p>
-		For now leave 'pref_mds' and 'pref_ios' blank.
-	</p>
-	<pre>
+	</oof:p>
+	<oof:pre>
 set zpool_name="s2mds_pool";
 set fsuuid="2a8ae931a776366e";
 set port=989;
 set nets="tcp0 192.168.*.*; sdp0 10.0.0.*";
-#set pref_mds="";
-#set pref_ios="";
-</pre>
+</oof:pre>
 
-	<h2>Configuring a SLASH2 site</h2>
-	<p>
+	<oof:header size="2">Configuring a SLASH2 site</oof:header>
+	<oof:p>
 		A site is considered to be a management domain in the cloud or
 		wide-area.
 		slcfg(5) details the resource types and the example configurations
 		in the distribution may be used as guides.
 		Here we'll do a walk through of a simple site configuration.
-	<p>
-	<pre>
+	<oof:p>
+	<oof:pre>
 set zpool_name="s2mds_pool";
 set fsuuid="2a8ae931a776366e";
 set port=989;
@@ -204,49 +200,50 @@ site @MYSITE {
 	      fsroot = /disk;
      }
 }
-</pre>
+</oof:pre>
 
-	<p>
-		Note that the <tt>pref_mds</tt> and <tt>pref_ios</tt> global values
-		have been filled in based on the names specified in the site.
-		The <tt>pref_ios</tt> is important because it is by clients as the
-		default target when writing new files.
-	</p>
+	<oof:p>
+		Note that the <oof:tt>pref_mds</oof:tt> and
+		<oof:tt>pref_ios</oof:tt> global values have been filled in based on
+		the names specified in the site.
+		The <oof:tt>pref_ios</oof:tt> is important because it is by clients
+		as the default target when writing new files.
+	</oof:p>
 
-	<h1>I/O Server Setup</h1>
-	<p>
+	<oof:header size="1">I/O Server Setup</oof:header>
+	<oof:p>
 		The configuration above lists 2 SLASH2 I/O servers, ion1 and ion2.
-		Both of which list their <tt>fsroot</tt> as <tt>/disk</tt>.
+		Both of which list their <oof:tt>fsroot</oof:tt> as
+		<oof:tt>/disk</oof:tt>.
 		The SLASH2 I/O server is a stateless process which exports locally
 		mounted storage into the respective SLASH2 file system.
-		In this case, we assume that <tt>/disk</tt> is a mounted filesystem
-		with some available storage behind it.
-	</p>
-	<p>
-		In order to use the storage mounted at <tt>/disk</tt>, a specific
-		directory structure must be created with the slmkfs command prior to
-		starting
-		the I/O server.
+		In this case, we assume that <oof:tt>/disk</oof:tt> is a mounted
+		filesystem with some available storage behind it.
+	</oof:p>
+	<oof:p>
+		In order to use the storage mounted at <oof:tt>/disk</oof:tt>, a
+		specific directory structure must be created with the slmkfs command
+		prior to starting the I/O server.
 		The UUID of the filesystem must be supplied as a parameter.
 		Per this example, the following command is run on both ion1 and
 		ion2:
-	</p>
-	<pre>
+	</oof:p>
+	<oof:pre>
 # slmkfs -i -u 0x2a8ae931a776366e /disk
 $ ls -l /disk/.slmd/
 total 4
 drwx------ 3 root root 4096 Jun 18 15:10 2a8ae931a776366e
-</pre>
+</oof:pre>
 
-	<p>
-		Once completed, the directory <tt>/disk/.slmd</tt> should appear
-		which contains a subdirectory named for theUUID.
-		Under <tt>/disk/.slmd</tt> is a hierarchy of 16^4 directories used
-		for storing SLASH2 file objects.
-	</p>
-	<p>
+	<oof:p>
+		Once completed, the directory <oof:tt>/disk/.slmd</oof:tt> should
+		appear which contains a subdirectory named for theUUID.
+		Under <oof:tt>/disk/.slmd</oof:tt> is a hierarchy of 16^4
+		directories used for storing SLASH2 file objects.
+	</oof:p>
+	<oof:p>
 		An explanation of more sophisticated I/O system types is given here:
 		SLASH2IOServices
 		RunningSLASH2Services
-	</p>
+	</oof:p>
 </xdc>

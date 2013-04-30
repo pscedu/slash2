@@ -12,29 +12,29 @@
 		<tag>retrieval</tag>
 	</taglist>
 
-	<h1>Overview</h1>
-	<p>
+	<oof:header size="1">Overview</oof:header>
+	<oof:p>
 		The dominant issue with CRC's revolves around the data size
-		encompassed by a single 8byte CRC.
+		encompassed by a single 8-byte CRC.
 		This has direct ramifications in the amount of buffering required
-		and the mds capacity needed to store CRCs.
+		and the MDS capacity needed to store CRCs.
 		Also since the MDS stores the CRCs, the system ingest bandwidth is
 		essentially limited to the number of CRCs the MDS can process.
 		Issues regarding the synchronous storing of MDS-side CRCs
 		need to be explored.
 		For our purposes we will assume that the MDS has safely stored the
 		CRCs before acknowledging back to the IOS.
-	</p>
+	</oof:p>
 
-	<h1>Storage</h1>
-	<p>
+	<oof:header size="1">Storage</oof:header>
+	<oof:p>
 		The MDS has a fixed size array for CRC storage, the array size if
 		the product of the CRC granularity and the bmap size.
 		For now we assume that the bmap size is 128mb and the granularity is
 		1MB, so the array size 1k per bmap.
 		Here we can see that 8bytes per 1MB provides a reasonable growth
 		path for CRC storage.
-	</p>
+	</oof:p>
 	<pre>
 (1024^2/(1024^2))*8 // 8bytes per MB
 8
@@ -48,8 +48,8 @@
 8796093022208
 </pre>
 
-	<h1>Communication from IOS</h1>
-	<p>
+	<oof:header size="1">Communication from IOS</oof:header>
+	<oof:p>
 		As writes are processed by the IOS we must ensure that the CRCs are
 		accurate and take into account any cache coherency issues that may
 		arise.
@@ -64,18 +64,18 @@
 		MDS.
 		There will surely be failure ramifications here...
 		For instance:
-	</p>
-	<bq>
+	</oof:p>
+	<oof:p class="padding: 1em">
 		Should the write occur but return with a failure the IOS must have a
 		way of notifying the MDS that the CRC state on disk is unknown.
-	</bq>
-	<p>
+	</oof:p>
+	<oof:p>
 		The IOS performs a write and then fails before sending the CRC
 		update.
 		The CRC should be calculated and stored before writing or sending to
 		the MDS.
-	</p>
-	<p>
+	</oof:p>
+	<oof:p>
 		Synchronously delivered update RPC's will surely slow down the write
 		process.
 		Perhaps we should be able to batch an entire bmap's worth of
@@ -84,34 +84,34 @@
 		deal with failures, so that for any unsent CRCs (post-failure) may
 		be verified the buffer-side crcs against the on-disk state and then
 		update the MDS.
-	</p>
-	<p>
+	</oof:p>
+	<oof:p>
 		Need to consider what happens when an IOS fails from the perspective
 		of the client and the MDS.
 		The MDS may have to log/record bmap - IOS associations to protect
 		against updates from a previous IOS ownership.
-	</p>
+	</oof:p>
 
 	<h2>Design Fallouts:</h2>
-	<p>
+	<oof:p>
 		MDS chooses IOS for a given bmap, CRC updates only come from that
 		IOS.
-	</p>
-	<p>
+	</oof:p>
+	<oof:p>
 		This means that we can bulk crc updates up to the size of the bmap
 		(big performance win).
-	</p>
-	<p>
+	</oof:p>
+	<oof:p>
 		Journal buffer-side CRCs (pre-write) to guard against IOS failure.
 		(perhaps not..)
-	</p>
-	<p>
+	</oof:p>
+	<oof:p>
 		MDS RPC to IOS for calculating an entire bmap's worth of CRCs - this
 		would be issued when an MDS detects the failure of an IOS and needs
 		to reassign.
-	</p>
-	<p>
-		When an mds chooses an ION for write, he should notify other read
+	</oof:p>
+	<oof:p>
+		When an MDS chooses an ION for write, he should notify other read
 		clients of this.
-	</p>
+	</oof:p>
 </xdc>

@@ -6,9 +6,6 @@
 
 
 
-I want to start as simple as possible.  As we gain experience, we can be more sophisticated
-as need be.
-
 (1) Write each unlink operation into the system log before replying the unlink RPC.
 
 (2) Distill the log entry from the tile and write into the one of the unlink log files.

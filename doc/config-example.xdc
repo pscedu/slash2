@@ -8,7 +8,10 @@ SLASH2 I/O Service Types
 
 See the slfcg(5) manual page for more details.
 Stand Alone I/O System (SAIOS)
-The stand alone IOS is the most basic form of a SLASH2 I/O service and is described in the following manner.
+
+The stand alone IOS is the most basic form of a SLASH2 I/O service and
+is described in the following manner.
+
 resource lemon {
     desc   = "Stand-alone I/O server";
     type   = standalone_fs;
@@ -16,9 +19,21 @@ resource lemon {
     nids   = lemon.psc.edu;
     fsroot   = /local/s2io;
 }
-The main parameter fsroot specifies the path to the underlying storage which is to be exported into the SLASH2 filesystem. The SLASH2 I/O daemon will expect to find its private internal directory hierarchy at this location. Currently, the SLASH2 I/O service sliod(8) operates on a single file system root.
+
+The main parameter fsroot specifies the path to the underlying storage
+which is to be exported into the SLASH2 filesystem. The SLASH2 I/O
+daemon will expect to find its private internal directory hierarchy at
+this location. Currently, the SLASH2 I/O service sliod(8) operates on a
+single file system root.
+
 Archival I/O System (AIOS)
-The archival I/O type is used for systems which frequently encounter long delays on read such as a tape archiver or other type of jukebox system. The primary difference between AIOS and SAIOS is internal timeout mechanism for network requests. Otherwise, the configuration is the same:
+
+The archival I/O type is used for systems which frequently encounter
+long delays on read such as a tape archiver or other type of jukebox
+system. The primary difference between AIOS and SAIOS is internal
+timeout mechanism for network requests. Otherwise, the configuration is
+the same:
+
 resource tapearchiver {
     desc     = "Archival I/O server";
     type     = archival_fs;
@@ -26,8 +41,14 @@ resource tapearchiver {
     nids    = turtle.psc.edu;
     fsroot   = /tape;
 }
+
 Cluster No Share I/O System (CNOS)
-The CNOS I/O type is used for binding logical sets of SAIOS nodes into a "single" resource (for organizational purposes). For instance, 4 I/O nodes, each with local storage, may be bound into a "single" I/O resource for the purposes of striping and load balancing:
+
+The CNOS I/O type is used for binding logical sets of SAIOS nodes into a
+"single" resource (for organizational purposes). For instance, 4 I/O
+nodes, each with local storage, may be bound into a "single" I/O
+resource for the purposes of striping and load balancing:
+
 site PSC {
     resource ios0 {
        desc   = "I/O server 0";
@@ -69,6 +90,11 @@ site PSC {
    }
    ...
 }
-When a client selects ios_cnos@PSC as its preferred I/O system, writes will be load balanced amongst the available members of the CNOS. Selection of the preferred I/O system is done via the configuration or during runtime via msctl like so:
+
+When a client selects ios_cnos@PSC as its preferred I/O system, writes
+will be load balanced amongst the available members of the CNOS.
+Selection of the preferred I/O system is done via the configuration or
+during runtime via msctl like so:
+
 # msctl -p pref_ios=ios_cnos@PSC
 </xdc>

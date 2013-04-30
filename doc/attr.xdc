@@ -4,13 +4,14 @@
 <xdc>
 	<title>Attribute (metadata) handling in the MDS</title>
 
-	<h1>Overview:</h1>
-	<p>Currently SLASH2 has two ways of updating attributes:</p>
+	<oof:header size="1">Overview</oof:header>
+	<oof:p>Currently SLASH2 has two ways of updating attributes:</oof:p>
 	<list>
-		<li>the client can issue a setattr RPC to mds.</li>
-		<li>the i/o server can issue a crc-update RPC, piggybacking size and
-			mtime</li>
-	<p>
+		<oof:list-item>the client can issue a setattr RPC to mds.</oof:list-item>
+		<oof:list-item>the i/o server can issue a crc-update RPC,
+			piggybacking size and mtime</oof:list-item>
+	</list>
+	<oof:p>
 		To avoid these two RPCs cross path with each other, we have a
 		utimegen mechanism so that an attribute update is only allowed by
 		the crc-update path if it has the right generation number
@@ -18,8 +19,8 @@
 		This generation number is stored in the ZFS layer (zp_s2utimgen) and
 		is bumped each time we update mtime.
 		It only applies to mtime.
-	</p>
-	<p>
+	</oof:p>
+	<oof:p>
 		Using generation number means that the crc-update path has to
 		compete to get the right to update the attributes.
 		Instead, we should really update attributes based on when the
@@ -29,21 +30,21 @@
 		Imagine that a client writes some data to increase the file size and
 		then decides to truncate the file size.
 		The final file size could be incorrect.
-	</p>
-	<p>
+	</oof:p>
+	<oof:p>
 		Another issue with the current mechanism is that the most recent
 		attributes of a file can be at either mds or ios.
 		When the fchm (file cache entry) of a client needs to be
 		re-established, where does it get attributes from?
 		The most recent attributes might still be en route to mds from IOS.
-	</p>
-	<p>
+	</oof:p>
+	<oof:p>
 		We could make the current scheme work by adding tricks here and
 		there.
 		But to make things robust, we need a simpler way.
 		We will let client be the only one that can update the attributes.
 		It should work regardless of network delays and service outage.
-	</p>
+	</oof:p>
 
 Solution 1
 ----------
