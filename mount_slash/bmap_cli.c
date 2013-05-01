@@ -154,6 +154,7 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 	struct srm_reassignbmap_rep *mp =
 	    pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 	int rc;
+	struct bmap_cli_info  *bci = bmap_2_bci(b);
 
 	psc_assert(&rq->rq_async_args == args);
 
@@ -187,7 +188,7 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b,
 	    "lease reassign (rc=%d) nseq=%"PRId64, rc,
-	    rc ? BMAPSEQ_ANY : mp->sbd.sbd_seq);
+	     bci->bci_sbd.sbd_seq);
 	bmap_op_done_type(b, BMAP_OPCNT_REASSIGN);
 
 	sl_csvc_decref(csvc);
@@ -204,6 +205,7 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 	struct srm_leasebmapext_rep *mp =
 	    pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 	int rc;
+	struct bmap_cli_info  *bci = bmap_2_bci(b);
 
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_flags & BMAP_CLI_LEASEEXTREQ);
@@ -241,7 +243,7 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
 	    "lease extension (rc=%d) nseq=%"PRId64, rc,
-	    rc ? BMAPSEQ_ANY : mp->sbd.sbd_seq);
+	     bci->bci_sbd.sbd_seq);
 	bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
 
 	sl_csvc_decref(csvc);
