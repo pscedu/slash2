@@ -77,8 +77,7 @@ mds_bmap_getcurseq(uint64_t *maxseq, uint64_t *minseq)
 {
 	int locked;
 
-	if (!mdsBmapTimeoTbl.btt_ready)
-		return (-EAGAIN);
+	psc_assert(mdsBmapTimeoTbl.btt_ready);
 
 	locked = reqlock(&mdsBmapTimeoTbl.btt_lock);
 
