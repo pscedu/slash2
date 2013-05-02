@@ -80,6 +80,7 @@ bim_getcurseq(void)
 	struct timespec crtime;
 	uint64_t seqno = BMAPSEQ_ANY;
 
+	OPSTAT_INCR(SLI_OPST_GET_CUR_SEQ);
  retry:
 	PFL_GETTIMESPEC(&crtime);
 	timespecsub(&crtime, &bim_timeo, &crtime);
@@ -99,6 +100,7 @@ bim_getcurseq(void)
 		bimSeq.bim_flags |= BIM_RETRIEVE_SEQ;
 		freelock(&bimSeq.bim_lock);
 
+		OPSTAT_INCR(SLI_OPST_GET_CUR_SEQ_RPC);
 		rc = sli_rmi_getcsvc(&csvc);
 		if (rc)
 			goto out;
