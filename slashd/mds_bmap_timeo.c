@@ -43,8 +43,6 @@ mds_bmap_timeotbl_init(void)
 
 	pll_init(&mdsBmapTimeoTbl.btt_leases, struct bmap_mds_lease,
 	    bml_timeo_lentry, &mdsBmapTimeoTbl.btt_lock);
-
-	mdsBmapTimeoTbl.btt_ready = 1;
 }
 
 static void
@@ -76,8 +74,6 @@ int
 mds_bmap_getcurseq(uint64_t *maxseq, uint64_t *minseq)
 {
 	int locked;
-
-	psc_assert(mdsBmapTimeoTbl.btt_ready);
 
 	locked = reqlock(&mdsBmapTimeoTbl.btt_lock);
 

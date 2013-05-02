@@ -158,7 +158,6 @@ struct bmap_timeo_table {
 	uint64_t		 btt_maxseq;
 	uint64_t		 btt_minseq;
 	struct psc_lockedlist	 btt_leases;
-	int			 btt_ready;
 };
 
 /* mds_bmap_timeotbl_mdsi (bmap timeout event) ops */
