@@ -162,12 +162,12 @@ mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw,
 		 */
 		psc_assert(pll_nitems(&bmi->bmi_leases) == 1);
 
-		tmp = tmp1 = pll_peektail(&bmi->bmi_leases);
+		bml = tmp = tmp1 = pll_peekhead(&bmi->bmi_leases);
 		do {
 			if (tmp->bml_flags & BML_WRITE)
 				wtrs++;
 
-			if (!bml || bml->bml_seq < tmp->bml_seq)
+			if (bml->bml_seq < tmp->bml_seq)
 				bml = tmp;
 
 			tmp = tmp->bml_chain;
