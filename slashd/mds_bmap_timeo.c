@@ -149,11 +149,15 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 		seq = mds_bmap_timeotbl_getnextseq();
 	}
 
-	if (bml->bml_flags & (BML_UPGRADE | BML_REASSIGN))
+	BML_LOCK(bml);
+	if (bml->bml_flags & BML_TIMEOQ) {
 		pll_remove(&mdsBmapTimeoTbl.btt_leases, bml);
-
-	bml->bml_flags |= BML_TIMEOQ;
-	pll_addtail(&mdsBmapTimeoTbl.btt_leases, bml);
+		pll_addtail(&mdsBmapTimeoTbl.btt_leases, bml);
+	} else {
+		bml->bml_flags |= BML_TIMEOQ;
+		pll_addtail(&mdsBmapTimeoTbl.btt_leases, bml);
+	}
+	BML_ULOCK(bml);
 
 	return (seq);
 }

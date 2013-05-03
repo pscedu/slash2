@@ -773,7 +773,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 
 	BMAP_SETATTR(b, BMAP_IONASSIGN);
 	bml->bml_flags &= ~BML_READ;
-	bml->bml_flags |= BML_UPGRADE | BML_WRITE;
+	bml->bml_flags |= BML_WRITE;
 
 	if (bmi->bmi_wr_ion) {
 		BMAP_ULOCK(b);
@@ -793,7 +793,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 
 	if (rc) {
 		bml->bml_flags |= (BML_READ|BML_ASSFAIL);
-		bml->bml_flags &= ~(BML_UPGRADE | BML_WRITE);
+		bml->bml_flags &= ~BML_WRITE;
 
 		if (wlease < 0) {
 			bmi->bmi_writers--;
@@ -975,7 +975,6 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 
 		if (!wlease && !rlease)
 			bmi->bmi_readers++;
-		bml->bml_flags |= BML_TIMEOQ;
 		mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
 	}
 
@@ -1841,7 +1840,6 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	 * IOS part of the lease or bmi so that mds_bmap_add_repl()
 	 * failure doesn't compromise the existing lease.
 	 */
-	obml->bml_flags |= BML_REASSIGN;
 	bia.bia_seq = mds_bmap_timeotbl_mdsi(obml, BTE_ADD);
 	bia.bia_lastcli = obml->bml_cli_nidpid;
 	bia.bia_ios = resm->resm_res->res_id;
