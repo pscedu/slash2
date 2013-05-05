@@ -43,7 +43,7 @@ struct slm_resmpair_bandwidth {
 #endif
 
 /* XXX hack: hardcode 1Gbps */
-#define SLM_RESMLINK_DEF_BANDWIDTH	 (1024 * 1024 * INT64_C(1024) / 8)
+#define SLM_RESMLINK_DEF_BANDWIDTH	 (1024 * 1024 * INT64_C(1024) / 1)
 
 struct slm_resmlink {
 //	struct psc_listentry		 srl_lentry;
@@ -58,12 +58,14 @@ struct bmap_repls_upd_odent {
 
 typedef void (*brepl_walkcb_t)(struct bmapc_memb *, int, int, void *);
 
+#define mds_repl_inv_except(b, idx)	_mds_repl_inv_except((b), (idx), 0)
+
 int	 mds_repl_addrq(const struct slash_fidgen *, sl_bmapno_t, sl_replica_t *, int);
 int	_mds_repl_bmap_apply(struct bmapc_memb *, const int *, const int *, int, int, int *, brepl_walkcb_t, void *);
 int	_mds_repl_bmap_walk(struct bmapc_memb *, const int *, const int *, int, const int *, int, brepl_walkcb_t, void *);
 void	 mds_repl_buildbusytable(void);
 int	 mds_repl_delrq(const struct slash_fidgen *, sl_bmapno_t, sl_replica_t *, int);
-int	 mds_repl_inv_except(struct bmapc_memb *, int);
+int	_mds_repl_inv_except(struct bmapc_memb *, int, int);
 int	_mds_repl_ios_lookup(int, struct slash_inode_handle *, sl_ios_id_t, int);
 int	_mds_repl_iosv_lookup(int, struct slash_inode_handle *, const sl_replica_t [], int [], int, int);
 void	 mds_repl_node_clearallbusy(struct sl_resm *);
