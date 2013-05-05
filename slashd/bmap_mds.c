@@ -343,7 +343,13 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 	else
 		mds_inode_write(vfsid, ih, NULL, NULL);
 
-	FCMH_UNBUSY(f);
+	if (_mds_repl_inv_except(bmap, idx, 1)) {
+		mds_bmap_write_logrepls(bmap);
+	} else {
+		BMAPOD_MODIFY_DONE(bmap, 0);
+		BMAP_UNBUSY(bmap);
+		FCMH_UNBUSY(f);
+	}
 
 	crclog.scl_bmap = bmap;
 	crclog.scl_crcup = crcup;
@@ -355,7 +361,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 		bmap->bcm_crcstates[crcup->crcs[i].slot] =
 		    BMAP_SLVR_DATA | BMAP_SLVR_CRC;
 
-		DEBUG_BMAP(PLL_INFO, bmap, "slot(%d) crc(%"PSCPRIxCRC64")",
+		DEBUG_BMAP(PLL_DIAG, bmap, "slot=%d crc=%"PSCPRIxCRC64,
 		    crcup->crcs[i].slot, crcup->crcs[i].crc);
 	}
 	return (mds_bmap_write(bmap, 0, mdslog_bmap_crc, &crclog));
