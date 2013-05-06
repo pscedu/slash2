@@ -2,82 +2,34 @@
 <!-- $Id$ -->
 
 <xdc xmlns:oof="http://www.psc.edu/~yanovich/xsl/oof-1.0">
-	<title>High-Level Drop Operations</title>
+	<title>High-Level connection dropping operations</title>
 
-	<oof:header size="1">MDS drops Client</oof:header>
+	<oof:header size="1">MDS: client gets dropped</oof:header>
 	<oof:p>
-		MDS cleans entire client export.
-		At the moment this is performed through slashrpc_export_destroy()
-		which calls mexpfcm_cfd_free() on every open file.
-		mexpfcm_cfd_free() removes a single reference from each bmap
-		attached to the fidc_membh.
-	</oof:p>
-	<oof:p>
-		Note that no logging occurs here.
-		It was thought previously that we would need to journal all fcmh
-		opens, which would imply that their closing operations would also
-		require a journal operation.
-		However this is no longer the case since fcmh opens are verified by
-		key-signed fdbuf's which are verifiable across reboots.
-		Further, cold-cache opens may take place via the immutable
-		namespace.
+		No special action.
 	</oof:p>
 
-	<oof:header size="1">MDS drops ION</oof:header>
+	<oof:header size="1">MDS: ION gets dropped</oof:header>
 	<oof:p>
-		Failed or disconnected IONs pose a trickier problem than unavailable
-		clients because of the journaling operations that result and the
-		notification of clients.
-		First we must iterate across the export's set of bmaps, these are
-		the bmaps which the MDS has assigned to the ION for writing.
-		These bmaps must be closed out in the log and marked as 'unknown',
-		signifying their crc table's are possibly compromised.
-		Additionally, these bmaps are scheduled to be re-read so that the
-		crc's may be stored on the MDS.
+		The update scheduler is notified to revert any inflight operations
+		back to their queued state as no state updates can happen when I/O
+		servers are offline (from the MDS's perspective).
+		Flags and bandwidth reservations indicating any such arrangments
+		e.g. via replication are relinquished.
 	</oof:p>
 	<oof:p>
-		Finally, the clients of these bmaps (which are all write-bmaps) are
-		notified to relinquish their set of cached bmaps which correspond to
-		the failed ION.
-	</oof:p>
-	<oof:p>Steps involved:</oof:p>
-	<oof:list type="LIST_UN">
-		<oof:list-item>
-			Close bmap associations in the journal and mark them as 'unknown'.
-		</oof:list-item>
-		<oof:list-item>
-			Schedule bmap's to be re-read.
-		</oof:list-item>
-		<oof:list-item>
-			Notify clients to release their bmaps which point to the failed
-			ION.
-		</oof:list-item>
-	</oof:list>
-	<oof:p>
-		Should the MDS fail during these operations the system should not be
-		compromised.
-		On reboot the MDS will scan its bmap &harr; ION association log to
-		determine the state of the bmaps.
-		Bmaps belonging to the failed ION which were not closed prior to MDS
-		failure will still be considered 'open' but marked as 'unknown'.
-		In fact any 'open' bmap found in the log will be marked as
-		'unknown'.
-		The handling of 'unknown' bmaps causes them to be scheduled for
-		re-reading, so again, we should not miss any operations if the MDS
-		fails.
-		Clients will have their own logic for handling ION failures, MDS
-		notifications are really just 'helpful suggestions'.
+		As bmap &harr; ION lease assignments (bia) are tracked persistently,
+		the MDS will recover any such lost state on startup.
 	</oof:p>
 
-	<oof:header size="1">ION drops Client</oof:header>
+	<oof:header size="1">MDS: MDS gets dropped</oof:header>
 	<oof:p>
-		Similar to the MDS dropping a client.
-		The bmaps attached to the failed client's export are iterated,
-		decref'd, and possibly freed.
-		The final step is to cleanup the export.
+		No special action.
 	</oof:p>
 
-	<oof:header size="1">ION drops MDS</oof:header>
+	<oof:hr />
+
+	<oof:header size="1">ION: MDS gets dropped</oof:header>
 	<oof:p>
 		The ION's have no log and hence operate purely from memory.
 		When an MDS fails the ION tries to maintain its state and wait for
@@ -107,19 +59,48 @@
 		rebooted too).
 	</oof:p>
 
-	<oof:header size="1">Client drops ION</oof:header>
+	<oof:header size="1">ION: ION gets dropped</oof:header>
 	<oof:p>
-		Client must iterate across the ION's import and redirect read-bmaps
-		to alternate destinations which are either another ION in the same
-		IOS or a replica on another IOS.
-		Write-enabled bmaps must be re-requested from the MDS.
-		Note that the client may still have cached buffers attached to that
-		bmap.
+		todo
 	</oof:p>
 
-	<oof:header size="1">Client drops MDS</oof:header>
+	<oof:header size="1">ION: CLI gets dropped</oof:header>
 	<oof:p>
-		In this case nothing is cleaned or re-requested.
-		Open file handles remain valid so long as the bdbuf is intact.
+		Similar to the MDS dropping a client.
+		The bmaps attached to the failed client's export are iterated,
+		decref'd, and possibly freed.
+		The final step is to cleanup the export.
 	</oof:p>
+
+	<oof:hr />
+
+	<oof:header size="1">CLI: MDS gets dropped</oof:header>
+	<oof:p>
+		Replication status inquiries are all given up on.
+	</oof:p>
+
+	<oof:header size="1">CLI: ION gets dropped</oof:header>
+	<oof:p>
+		Asynchronous I/O requests are all given up on.
+	</oof:p>
+	<oof:p>
+		Before all I/O activity, online availability of IONs is
+		factoring into selection of an IOS.
+		For situations when no IONs are available (who harbor residency of
+		the requested data, exclusively), the client will either block
+		awaiting connectivity or fail instantly, depending on configuration.
+	</oof:p>
+	<oof:p>
+		Any failures during synchronous I/O activity are handled directly
+		and not in any callback fashion.
+	</oof:p>
+	<oof:p>
+		Note that the client may still have cached buffers attached to
+		bmaps leased associated with such IONs.
+		The client will retain and retry until success or bail and purge his
+		cache, depending on configuration, as long as the MDS respects his
+		ability to do so, which would only happen if communication with the
+		MDS (from the MDS' perspective) is lost as well.
+	</oof:p>
+
 </xdc>
