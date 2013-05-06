@@ -1510,6 +1510,17 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 }
 
 void
+slibreapthr_main(__unusedx struct psc_thread *thr)
+{
+	while (pscthr_run()) {
+		psc_mutex_lock(&slvr_pool->ppm_reclaim_mutex);
+		slvr_pool->ppm_reclaimcb(slvr_pool);
+		psc_mutex_unlock(&slvr_pool->ppm_reclaim_mutex);
+		sleep(5);
+	}
+}
+
+void
 slvr_cache_init(void)
 {
 	psc_poolmaster_init(&slvr_poolmaster,
@@ -1542,6 +1553,9 @@ slvr_cache_init(void)
 	sl_buffer_cache_init();
 
 	slvr_worker_init();
+
+	pscthr_init(SLITHRT_BREAP, 0, slibreapthr_main, NULL, 0,
+	    "slibreapthr");
 }
 
 #if PFL_DEBUG > 0
