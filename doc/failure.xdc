@@ -18,7 +18,7 @@
 		e.g. via replication are relinquished.
 	</oof:p>
 	<oof:p>
-		As bmap &#8596; ION lease assignments (bia) are tracked persistently,
+		As bmap &amp;harr; ION lease assignments (bia) are tracked persistently,
 		the MDS will recover any such lost state on startup.
 	</oof:p>
 
