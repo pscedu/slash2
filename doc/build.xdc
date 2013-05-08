@@ -62,10 +62,6 @@ $ echo "SLCFG_DST=<oof:strong>/usr/local/my/inst/dir</oof:strong>" &gt; $PROJ_BA
 
 	<oof:header size="5">Compilation Prerequisites</oof:header>
 
-	<oof:p>
-		The following software is required by the various SLASH2 components:
-	</oof:p>
-
 	<oof:header size="6">Required by all components</oof:header>
 	<oof:list type="LIST_UN">
 		<oof:list-item>
@@ -99,6 +95,7 @@ $ echo '_ZFS_BASE:=zfs' > $PROJ_ROOT/local.mk
 
 	<oof:header size="6">Client-specific</oof:header>
 	<oof:list type="LIST_UN">
+		<oof:list-item>ncurses</oof:list-item>
 		<oof:list-item>
 			<oof:link href='http://fuse.sourceforge.net/'>FUSE</oof:link> is
 			also packaged within our repository and can be built with:
@@ -124,7 +121,6 @@ $ echo 'PKG_CONFIG_PATH=/usr/local/fuse' >> mk/local.mk
 				strictly necessary to use ours.
 			</oof:p>
 		</oof:list-item>
-		<oof:list-item>ncurses</oof:list-item>
 	</oof:list>
 
 	<oof:p>

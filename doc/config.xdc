@@ -156,7 +156,7 @@ set nets="tcp0 192.168.*.*; sdp0 10.0.0.*";
 		slcfg(5) details the resource types and the example configurations
 		in the distribution may be used as guides.
 		Here we'll do a walk through of a simple site configuration.
-	<oof:p>
+	</oof:p>
 	<oof:pre>
 set zpool_name="s2mds_pool";
 set fsuuid="2a8ae931a776366e";
