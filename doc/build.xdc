@@ -180,4 +180,4 @@ $ make
 # make install
 </oof:pre>
 
-</page>
+</xdc>
