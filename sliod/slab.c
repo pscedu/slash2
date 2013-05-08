@@ -35,6 +35,7 @@
 #include "buffer.h"
 #include "cache_params.h"
 #include "fidcache.h"
+#include "sliod.h"
 
 struct psc_poolmaster	 sl_bufs_poolmaster;
 struct psc_poolmgr	*sl_bufs_pool;
