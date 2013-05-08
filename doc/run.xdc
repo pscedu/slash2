@@ -15,7 +15,7 @@
 		Basically, there are three major steps to configure a SLASH2
 		deployment:
 	</oof:p>
-	<oof:list-item>
+	<oof:list>
 		<oof:list-item>
 			On the machine where the MDS daemon runs, we need to create a ZFS
 			pool with the help of zfs-fuse.
@@ -112,6 +112,7 @@ Running the SLASH2 I/O service (sliod)
 		Prior to starting sliod on the I/O servers, make sure the following
 		items are accessible on the I/O servers:
 Contents of /var/lib/slash from the MDS - basically just make a copy of this directory.
+	</oof:p>
 	<oof:p>
 		The configuration file has been copied to the I/O server.
 		At this time each server and client must maintain a copy of the
