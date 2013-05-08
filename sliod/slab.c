@@ -97,6 +97,17 @@ sl_buffer_destroy(void *pri)
 }
 
 void
+slibreapthr_main(__unusedx struct psc_thread *thr)
+{
+	while (pscthr_run()) {
+		psc_mutex_lock(&sl_bufs_pool->ppm_reclaim_mutex);
+		sl_bufs_pool->ppm_reclaimcb(sl_bufs_pool);
+		psc_mutex_unlock(&sl_bufs_pool->ppm_reclaim_mutex);
+		sleep(5);
+	}
+}
+
+void
 sl_buffer_cache_init(void)
 {
 	int slvr_buffer_reap(struct psc_poolmgr *);
@@ -111,4 +122,7 @@ sl_buffer_cache_init(void)
 
 //	lc_reginit(&slBufsLru,  struct sl_buffer, slb_mgmt_lentry, "slabBufLru");
 //	lc_reginit(&slBufsPin,  struct sl_buffer, slb_mgmt_lentry, "slabBufPin");
+
+	pscthr_init(SLITHRT_BREAP, 0, slibreapthr_main, NULL, 0,
+	    "slibreapthr");
 }
