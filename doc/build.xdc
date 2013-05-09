@@ -3,7 +3,10 @@
 
 <xdc xmlns:oof="http://www.psc.edu/~yanovich/xsl/oof-1.0">
 	<title>SLASH2 Software Installation</title>
-	<oof:header size="1">Overview</oof:header>
+
+	<oof:header size="1">SLASH2 Software Installation</oof:header>
+
+	<oof:header size="2">Overview</oof:header>
 
 	<oof:p>
 		This document will refer to subdirectories relative to the root of
@@ -60,9 +63,9 @@ $ echo "SLCFG=config/<oof:strong>$mysite.slcfg</oof:strong>" &gt; $PROJ_BASE/sla
 $ echo "SLCFG_DST=<oof:strong>/usr/local/my/inst/dir</oof:strong>" &gt; $PROJ_BASE/slash_nara/mk/local.mk
 </oof:pre>
 
-	<oof:header size="5">Compilation Prerequisites</oof:header>
+	<oof:header size="2">Compilation Prerequisites</oof:header>
 
-	<oof:header size="6">Required by all components</oof:header>
+	<oof:header size="3">Required by all components</oof:header>
 	<oof:list type="LIST_UN">
 		<oof:list-item>
 			<oof:link href='http://www.gnu.org/software/make'>GNU make</oof:link></oof:list-item>
@@ -73,7 +76,7 @@ $ echo "SLCFG_DST=<oof:strong>/usr/local/my/inst/dir</oof:strong>" &gt; $PROJ_BA
 		<oof:list-item>lex (flex is known to work)</oof:list-item>
 	</oof:list>
 
-	<oof:header size="6">MDS-specific</oof:header>
+	<oof:header size="4">MDS-specific</oof:header>
 	<oof:list type="LIST_UN">
 		<oof:list-item>libaio is required by zfs-fuse.</oof:list-item>
 		<oof:list-item>OpenSSL is required by zfs-fuse.</oof:list-item>
@@ -93,7 +96,7 @@ $ echo '_ZFS_BASE:=zfs' > $PROJ_ROOT/local.mk
 			</oof:list-item>
 	</oof:list>
 
-	<oof:header size="6">Client-specific</oof:header>
+	<oof:header size="4">Client-specific</oof:header>
 	<oof:list type="LIST_UN">
 		<oof:list-item>ncurses</oof:list-item>
 		<oof:list-item>
@@ -154,7 +157,7 @@ $ make build
 			list</oof:link>.
 	</oof:p>
 
-	<oof:header size="5">Recompiling/Upgrading</oof:header>
+	<oof:header size="3">Recompiling/Upgrading</oof:header>
 
 	<oof:p>
 		Updating a SLASH2 checkout via Subversion must be executed from the
