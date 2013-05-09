@@ -12,9 +12,9 @@
 	<oof:p>
 		A metadata server should employ at least one dedicated disk (or
 		partition) for a ZFS pool and a dedicated disk for journal.
-		It is important for the journal be on its own spindle if one expects
-		decent performance.
-		If fault tolerance is required then at least 2 devices will be
+		It is important for the journal to be on its own spindle if one
+		expects decent performance.
+		If fault tolerance is required then at least two devices will be
 		required for the ZFS pool.
 	</oof:p>
 	<oof:p>
@@ -24,7 +24,7 @@
 	<oof:p>
 		Here is an example zpool configuration taken from the PSC Data
 		Supercell.
-		Here the SLASH2 MDS sits atop 2 vdevs, each of which is
+		Here the SLASH2 MDS sits atop two vdevs, each of which is
 		triplicated:
 	</oof:p>
 	<oof:pre>
@@ -73,9 +73,9 @@ arc_s2mds    379G  3.26T    493     70  2.52M   351K
 
 	<oof:header size="3">Should the journal device be mirrored?</oof:header>
 	<oof:p>
-		Losing a journal will not result in a loss of the filesystem, only
+		Losing a journal will not result in a loss of the file system; only
 		the uncommitted changes would be lost.
-		If mirroring is desired, the linux MD mirroring is suitable though
+		If mirroring is desired, the Linux MD mirroring is suitable though
 		we recommend that the devices are partitioned so that rebuilds of
 		the mirror do not require a rebuild of the entire device.
 	</oof:p>
@@ -86,7 +86,7 @@ arc_s2mds    379G  3.26T    493     70  2.52M   351K
 		metadata storage.
 		These steps are also documented in <ref sect="7">sladm</ref>.
 		<ref sect="8">slmkfs</ref> will output a UUID which will become the
-		identifier for the filesystem.
+		identifier for the file system.
 		This hex value is needed for the SLASH2 configuration file and for
 		I/O server setup.
 	</oof:p>
@@ -95,9 +95,9 @@ arc_s2mds    379G  3.26T    493     70  2.52M   351K
 		Use devices which pertain to your system and are not currently in
 		use!
 		It is recommended to use the global device identifiers listed in
-		/dev/disk/by-id, especially for the journal.
-		This may prevent you accidentally trashing another mounted
-		filesystem.
+		<oof:tt>/dev/disk/by-id</oof:tt>, especially for the journal.
+		This may prevent you from accidentally trashing another mounted
+		file system.
 	</oof:p>
 	<oof:pre>
 $ zfs-fuse &amp;&amp; sleep 3
@@ -117,33 +117,36 @@ $ slmkjrnl -f -b /dev/sdJ1 -n 1048576 -u 0x2a8ae931a776366e
 	<oof:p>
 		SLASH2 uses the Lustre networking stack (aka LNet) so configuration
 		will be somewhat familiar to those who use Lustre.
-		At time time SLASH2 supports TCP and Infiniband sockets direct
+		At this time SLASH2 supports TCP and Infiniband sockets direct
 		(SDP).
-		It does not currently support LNet routing in a stable manner (this
-		could be fixed if someone needs it) however, mixed topologies are
-		supported to some degree.
-		For instance, if clients and I/O servers have infiniband and
-		ethernet they may use IB for communication even if the MDS has only
-		an ethernet link.
+		Mixed network topologies are supported to some degree.
+		For instance, if clients and I/O servers have Infiniband and
+		Ethernet they may use IB for communication even if the MDS has only
+		an Ethernet link.
 	</oof:p>
 
 	<oof:header size="2">Setting up the master configuration file</oof:header>
 	<oof:p>
-		Example configurations are provided in projects/slash_nara/config.
-		The slcfg(5) man page also contains more information on this topic.
+		Example configurations are provided in
+		<oof:tt>projects/slash_nara/config</oof:tt>.
+		The <ref sect='5'>slcfg</ref> man page also contains more
+		information on this topic.
 	</oof:p>
 
 	<oof:header size="3">Setting zpool, fsuuid and network globals</oof:header>
 	<oof:p>
-		The previous 2 steps will provide the parameters for the 'fsuuid',
-		'port', and 'nets' attributes.
-		As configured here, the port used by the filesystem's tcp
+		The previous two steps will provide the parameters for the
+		<oof:tt>fsuuid</oof:tt>, <oof:tt>port</oof:tt>, and
+		<oof:tt>nets</oof:tt> attributes.
+		As configured here, the port used by the file system's TCP
 		connections will be 989 (non-priviledged ports are allowed).
-		The LNet network identifier for the tcp network is 'tcp0'.
+		The LNet network identifier for the TCP network is
+		<oof:tt>tcp0</oof:tt>.
 		Any clients or servers with interfaces on the 192.168 network will
-		match the rule '192.168.*.*' and be configured on the tcp0 network.
+		match the rule '192.168.*.*' and be configured on the
+		<oof:tt>tcp0</oof:tt> network.
 		Hosts with infininband interfaces on the 10.0.0.* network will be
-		configured on the sdp0 network.
+		configured on the <oof:tt>sdp0</oof:tt> network.
 	</oof:p>
 	<oof:pre>
 set zpool_name="s2mds_pool";
@@ -156,8 +159,8 @@ set nets="tcp0 192.168.*.*; sdp0 10.0.0.*";
 	<oof:p>
 		A site is considered to be a management domain in the cloud or
 		wide-area.
-		slcfg(5) details the resource types and the example configurations
-		in the distribution may be used as guides.
+		<ref sect='5'>slcfg</ref> details the resource types and the example
+		configurations in the distribution may be used as guides.
 		Here we'll do a walk through of a simple site configuration.
 	</oof:p>
 	<oof:pre>
@@ -209,25 +212,25 @@ site @MYSITE {
 		Note that the <oof:tt>pref_mds</oof:tt> and
 		<oof:tt>pref_ios</oof:tt> global values have been filled in based on
 		the names specified in the site.
-		The <oof:tt>pref_ios</oof:tt> is important because it is by clients
-		as the default target when writing new files.
+		The <oof:tt>pref_ios</oof:tt> is important because it is used by
+		clients as the default target when writing new files.
 	</oof:p>
 
 	<oof:header size="2">I/O Server Setup</oof:header>
 	<oof:p>
-		The configuration above lists 2 SLASH2 I/O servers, ion1 and ion2.
+		The configuration above lists two SLASH2 I/O servers, ion1 and ion2.
 		Both of which list their <oof:tt>fsroot</oof:tt> as
 		<oof:tt>/disk</oof:tt>.
 		The SLASH2 I/O server is a stateless process which exports locally
 		mounted storage into the respective SLASH2 file system.
 		In this case, we assume that <oof:tt>/disk</oof:tt> is a mounted
-		filesystem with some available storage behind it.
+		file system with some available storage behind it.
 	</oof:p>
 	<oof:p>
 		In order to use the storage mounted at <oof:tt>/disk</oof:tt>, a
 		specific directory structure must be created with the slmkfs command
 		prior to starting the I/O server.
-		The UUID of the filesystem must be supplied as a parameter.
+		The UUID of the file system must be supplied as a parameter.
 		Per this example, the following command is run on both ion1 and
 		ion2:
 	</oof:p>
