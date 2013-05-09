@@ -4,8 +4,11 @@
 <xdc xmlns:oof="http://www.psc.edu/~yanovich/xsl/oof-1.0">
 	<title>Configuring a SLASH2 deployment</title>
 
-	<oof:header size="1">MDS configuration considerations</oof:header>
-	<oof:header size="2">Selecting storage for SLASH2 metadata</oof:header>
+	<oof:header size="1">Configuring a SLASH2 deployment</oof:header>
+
+	<oof:header size="2">MDS server</oof:header>
+
+	<oof:header size="3">Selecting storage for SLASH2 metadata</oof:header>
 	<oof:p>
 		A metadata server should employ at least one dedicated disk (or
 		partition) for a ZFS pool and a dedicated disk for journal.
@@ -51,7 +54,7 @@ pool        alloc   free   read  write   read  write
 arc_s2mds    379G  3.26T    493     70  2.52M   351K
 </oof:pre>
 
-	<oof:header size="2">How much storage is required for metadata?</oof:header>
+	<oof:header size="3">How much storage is required for metadata?</oof:header>
 	<oof:p>
 			PSC's Data Supercell has on the order of 10^8 files and
 			directories.
@@ -65,10 +68,10 @@ arc_s2mds    379G  3.26T    493     70  2.52M   351K
 			1GB of ZFS metadata storage.
 	</oof:p>
 
-	<oof:header size="2">How much storage is required for the metadata journal?</oof:header>
+	<oof:header size="3">How much storage is required for the metadata journal?</oof:header>
 	<oof:p>256MB - 2GB</oof:p>
 
-	<oof:header size="2">Should the journal device be mirrored?</oof:header>
+	<oof:header size="3">Should the journal device be mirrored?</oof:header>
 	<oof:p>
 		Losing a journal will not result in a loss of the filesystem, only
 		the uncommitted changes would be lost.
@@ -77,7 +80,7 @@ arc_s2mds    379G  3.26T    493     70  2.52M   351K
 		the mirror do not require a rebuild of the entire device.
 	</oof:p>
 
-	<oof:header size="2">Creating an MDS ZFS pool and journal</oof:header>
+	<oof:header size="3">Creating an MDS ZFS pool and journal</oof:header>
 	<oof:p>
 		The following steps create and tailor a ZFS pool for use as SLASH2
 		metadata storage.
@@ -110,7 +113,7 @@ $ pkill zfs-fuse
 $ slmkjrnl -f -b /dev/sdJ1 -n 1048576 -u 0x2a8ae931a776366e
 </oof:pre>
 
-	<oof:header size="1">Network configuration</oof:header>
+	<oof:header size="2">Network configuration</oof:header>
 	<oof:p>
 		SLASH2 uses the Lustre networking stack (aka LNet) so configuration
 		will be somewhat familiar to those who use Lustre.
@@ -124,13 +127,13 @@ $ slmkjrnl -f -b /dev/sdJ1 -n 1048576 -u 0x2a8ae931a776366e
 		an ethernet link.
 	</oof:p>
 
-	<oof:header size="1">SLASH2 Configuration</oof:header>
+	<oof:header size="2">Setting up the master configuration file</oof:header>
 	<oof:p>
 		Example configurations are provided in projects/slash_nara/config.
 		The slcfg(5) man page also contains more information on this topic.
 	</oof:p>
 
-	<oof:header size="1">Setting zpool, fsuuid and network globals</oof:header>
+	<oof:header size="3">Setting zpool, fsuuid and network globals</oof:header>
 	<oof:p>
 		The previous 2 steps will provide the parameters for the 'fsuuid',
 		'port', and 'nets' attributes.
@@ -149,7 +152,7 @@ set port=989;
 set nets="tcp0 192.168.*.*; sdp0 10.0.0.*";
 </oof:pre>
 
-	<oof:header size="2">Configuring a SLASH2 site</oof:header>
+	<oof:header size="3">Configuring a SLASH2 site</oof:header>
 	<oof:p>
 		A site is considered to be a management domain in the cloud or
 		wide-area.
@@ -210,7 +213,7 @@ site @MYSITE {
 		as the default target when writing new files.
 	</oof:p>
 
-	<oof:header size="1">I/O Server Setup</oof:header>
+	<oof:header size="2">I/O Server Setup</oof:header>
 	<oof:p>
 		The configuration above lists 2 SLASH2 I/O servers, ion1 and ion2.
 		Both of which list their <oof:tt>fsroot</oof:tt> as
