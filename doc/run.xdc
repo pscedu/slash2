@@ -9,61 +9,66 @@
 	<oof:header size="2">Overview</oof:header>
 	<oof:p>
 		To run an instance of SLASH2, you need to configure three types of
-		services: metadata service (slashd), I/O service (sliod), and I/O
-		client service (mount_slash).
-		There are manuals for each of these three types of services and all
-		the utilities involved.
-		The best place to start is <ref sect='7'>sladm</ref>.
+		services: metadata service (<ref sect='8'>slashd</ref>), I/O service
+		(<ref sect='8'>sliod</ref>), and client service
+		(<ref sect='8'>mount_slash</ref>).
+		The <ref sect='7'>sladm</ref> manual provides a good overview of how
+		to deploy each service type.
 		Basically, there are three major steps to configure a SLASH2
 		deployment:
 	</oof:p>
 	<oof:list>
 		<oof:list-item>
-			On the machine where the MDS daemon runs, we need to create a ZFS
-			pool with the help of zfs-fuse.
-			The pool has to be formatted with slmkfs utility before use.
-			In addition, we must create a journal file for the MDS daemon to
-			track on-going operations.
+			A metadata server must be set up that will run the MDS service,
+			<ref sect='8'>slashd</ref>.
+			It requires a ZFS pool (zpool) to store its data.
+			The pool has to then be formatted with <ref sect='8'>slmkfs</ref>
+			before use.
+			In addition, a journal file is needed for the MDS daemon to track
+			on-going operations.
 		</oof:list-item>
 		<oof:list-item>
-			On a machine where a SLIOD daemon runs, we need to use slmkfs
-			utility to format the directory tree to be used as the back store
-			for the SLIOD daemon.
+			At least one I/O node must be set up that will run
+			<ref sect='8'>sliod</ref>.
+			<oof:tt>sliod</oof:tt> can contribute any existing POSIX file
+			system to the SLASH2 network it is a member of after formatting
+			with <ref sect='8'>slmkfs</ref>.
+			The formatting process simply creates a directory hierarchy that
+			<oof:tt>sliod</oof:tt> will operate under.
 		</oof:list-item>
 		<oof:list-item>
-			On a machine where a mount_slash daemon runs, we only need to run
-			the mount_slash binary.
+			At least one client service must be set up that will run
+			<ref sect='8'>mount_slash</ref>.
 		</oof:list-item>
 	</oof:list>
 
 	<oof:header size="2">Starting the MDS</oof:header>
 	<oof:p>
-		The slashd manpage slashd(8) details the different command line
-		parameters.
-		Depending on your configuration many of the default parameters
-		should suffice.
-		Here's a command line used for running SLASH2 based on the the
-		example configuration (assuming that the example configuration has
-		been stored at /etc/s2_example.conf)
+		Command-line flags, runtime files, environment variables, etc. are
+		all described in <ref sect='8'>slashd</ref>.
+		A wrapper script is provided in the distribution that monitors and
+		restarts the MDS service upon failure as well as compile and send
+		bug reports when problems arise in operation.
 	</oof:p>
-	<oof:pre># slashd -f /etc/s2_example.conf &amp;</oof:pre>
 	<oof:p>
-		A more sophisticated example of a run time script may be found in
-		the SLASH2 distribution.
-		Note this script should be modified for your own environment.
-slashd.sh
+		Modify the file <oof:tt>pfl/utils/daemon/pfl_daemon.cfg</oof:tt>
+		and add configuration sections for the deployment.
 	</oof:p>
+	<oof:p>
+		Finally, launch the MDS:
+	</oof:p>
+	<oof:pre>mds# slashd.sh</oof:pre>
 
-	<oof:header size="2">MDS instance control/monitoring</oof:header>
+	<oof:header size="2">Controlling <oof:tt>slashd</oof:tt></oof:header>
 	<oof:p>
 		<ref sect='8'>slmctl</ref> serves as the interface to the running
-		<ref sect='8'>slashd</ref> process.
-		The man page details the numerous options available to the
-		administrator for querying and changing internal parameters.
-		A simple test to see if your MDS is running would be the following:
+		<ref sect='8'>slashd</ref> process, providing administrators with
+		numerous options to query parameters and control behavior.
+		A simple peer connections query is a good way to test general
+		service availibility:
 	</oof:p>
 	<oof:pre>
-$ slmctl -sc
+mds$ slmctl -sc
 resource                                     host type     flags stvrs txcr #ref
 ================================================================================
 XWFS
@@ -77,112 +82,131 @@ clients
 </oof:pre>
 
 	<oof:p>
-		The above command shows lists the clients and I/O servers connected
-		to the MDS.
-		The fact that the command returned this output shows the
-		MDS is operational.
+		The above command lists the clients and I/O servers connected to the
+		MDS and also demonostrates the basic health of the MDS.
 	</oof:p>
 
 	<oof:header size="3">zfs and zpool</oof:header>
 	<oof:p>
-		Once your MDS is operational, the <ref sect='8'>zfs</ref> and zpool
-		commands will be
-		available for use towards ZFS administration.
-	</oof:p>
-	<oof:p>
-		Note: these commands were taken on a test MDS here at PSC and do not
-		reflect the example configuration.
+		Once the MDS is operational, the <ref sect='8'>zfs</ref> and
+		<ref sect='8'>zpool</ref> commands may be used for any necessary
+		pool adminstration:
 	</oof:p>
 <oof:pre>
-$ zfs get compressratio
+mds$ zfs get compressratio
 NAME            PROPERTY       VALUE  SOURCE
 xwfs_test       compressratio  3.28x  -
 xwfs_test@test  compressratio  3.04x  -
 
-$ zpool iostat
+mds$ zpool iostat
 	       capacity     operations    bandwidth
 pool        alloc   free   read  write   read  write
 ----------  -----  -----  -----  -----  -----  -----
 xwfs_test   1001M   148G      3      0  7.69K  7.23K
 
-$ zpool scrub xwfs_test
-$ zfs send xwfs_test@test &gt; /local/xwfs_test@test.zstream
+mds$ zpool scrub xwfs_test
+mds$ zfs send xwfs_test@test &gt; /local/xwfs_test@test.zstream
 </oof:pre>
 
-Running the SLASH2 I/O service (sliod)
+	<oof:header size="2">Running the SLASH2 I/O service (<oof:tt>sliod</oof:tt>)</oof:header>
 	<oof:p>
-		Prior to starting sliod on the I/O servers, make sure the following
-		items are accessible on the I/O servers:
-Contents of /var/lib/slash from the MDS - basically just make a copy of this directory.
+		Prior to starting <ref sect='8'>sliod</ref> on an I/O server, make
+		sure the following items are available:
 	</oof:p>
+	<oof:list>
+		<oof:list-item>
+			the SLASH2 deployment configuration file, usually
+			<oof:tt>/etc/slcfg</oof:tt>
+		</oof:list-item>
+		<oof:list-item>
+			the SLASH2 deployment daemon list file, usually
+			<oof:tt>/usr/local/pfl_daemon.cfg</oof:tt>
+		</oof:list-item>
+		<oof:list-item>
+			the SLASH2 deployment secret communication key, usually
+			<oof:tt>/var/lib/slash/authbuf.key</oof:tt>, which is
+			automatically generated by the MDS or may be done so manually by
+			<ref sect='8'>slkeymgt</ref>
+		</oof:list-item>
+		<oof:list-item>
+			format the storage area that will be contributed to the SLASH2
+			deployment network.
+			<oof:tt>sliod</oof:tt> can serve any POSIX file system to the
+			SLASH2 network as long as the resource has been formatted with
+			<ref sect='8'>slmkfs</ref>.
+		</oof:list-item>
+	</oof:list>
 	<oof:p>
-		The configuration file has been copied to the I/O server.
-		At this time each server and client must maintain a copy of the
-		configuration.
+		Launch the I/O service:
 	</oof:p>
-	<oof:p>
-		Once the I/O server has those items, and the slmkfs has been run,
-		sliod may be started.
-		Defer to the sliod manual for the list of options.
-		The following assumes the slash2 configuration file has been placed
-		at /etc/s2_example.conf:
-	</oof:p>
-	<oof:pre># sliod -f /etc/s2_example.conf &amp;</oof:pre>
+	<oof:pre>io# sliod.sh</oof:pre>
 
-	<oof:header size="3">Verifying sliod with slictl</oof:header>
+	<oof:header size="3">Controlling <oof:tt>sliod</oof:tt></oof:header>
 	<oof:p>
-		Similar to slmctl, the sliod has its own control interface program
-		called slictl(8).
-		To ensure that sliod is running and has initiated
-		contact with the MDS run the following command:
+		Similar to <ref sect='8'>slmctl</ref>, <ref sect='8'>sliod</ref> has
+		its own control interface program: <ref sect='8'>slictl</ref>.
+		A similar basic <oof:tt>sliod</oof:tt> daemon health and connection
+		status inquiry may be performed:
 	</oof:p>
 	<oof:pre>
-$ slictl -sc
+io$ slictl -sc
 resource                                    host type      flags stvrs txcr #ref
 ================================================================================
 XWFS
   xwfs_mds                         citron.psc.edu mds      -O--P 19111    8    0
-  xwfs_tacc_0                         129.114.32.90 serial   -----     0    0    0
-  xwfs_tacc_1                         129.114.32.91 serial   -----     0    0    0
-  xwfs_tacc_2                         129.114.32.92 serial   -----     0    0    0
-  xwfs_tacc_3                         129.114.32.93 serial   -----     0    0    0
+  xwfs_tacc_0                       129.114.32.90 serial   -----     0    0    0
+  xwfs_tacc_1                       129.114.32.91 serial   -----     0    0    0
+  xwfs_tacc_2                       129.114.32.92 serial   -----     0    0    0
+  xwfs_tacc_3                       129.114.32.93 serial   -----     0    0    0
 </oof:pre>
 
-	<oof:header size="3">Running the Client - mount_slash</oof:header>
+	<oof:header size="3">Running the client service <oof:tt>mount_slash</oof:tt></oof:header>
 	<oof:p>
-		The client binary is named mount_slash(8).
-		To run the client one must have done the following:
+		Identical to the <ref sect='8'>sliod</ref> prerequisites, prior to
+		starting <ref sect='8'>mount_slash</ref> on an client machine, make
+		sure the following items are available:
 	</oof:p>
-Copied the contents of /var/lib/slash from the metadata server to the client
-Placed a copy of the configuration file in the client's local file system.
-Created the file system mount point (i.e. 'mkdir /S2')
+	<oof:list>
+		<oof:list-item>
+			the SLASH2 deployment configuration file, usually
+			<oof:tt>/etc/slcfg</oof:tt>
+		</oof:list-item>
+		<oof:list-item>
+			the SLASH2 deployment daemon list file, usually
+			<oof:tt>/usr/local/pfl_daemon.cfg</oof:tt>
+		</oof:list-item>
+		<oof:list-item>
+			the SLASH2 deployment secret communication key, usually
+			<oof:tt>/var/lib/slash/authbuf.key</oof:tt>
+		</oof:list-item>
+		<oof:list-item>
+			create the attachment mount point (e.g. <oof:tt>mkdir /s2</oof:tt>)
+		</oof:list-item>
+	</oof:list>
 
 	<oof:p>
-		Within the context of this example, the following command line will
-		launch the client.
-		Please refer to the mount_slash man page for more details.
+		Launch the client service:
 	</oof:p>
-	<oof:pre># mount_slash -f /etc/s2_example.conf -U /S2 &amp;</oof:pre>
-	<oof:p>
-		At this time your mount point should be fully functional and ready
-		for use.
-	</oof:p>
+	<oof:pre>client# mount_slash.sh</oof:pre>
 
-	<oof:header size="3">Verifying the client with msctl</oof:header>
+	<oof:header size="3">Controlling <oof:tt>mount_slash</oof:tt></oof:header>
 	<oof:p>
-		This shows the client being connected to the MDS and several I/O
-		servers.
+		Like <ref sect='8'>slmctl</ref> and <ref sect='8'>slictl</ref>, an
+		analogous command <ref sect='8'>msctl</ref> is provided to control
+		live operation of <ref sect='8'>mount_slash</ref>.
+		Again, a connection status request can be used to ensure
+		connectivity and basic client service health:
 	</oof:p>
 	<oof:pre>
-$ msctl -sc
+client$ msctl -sc
 resource                                    host type      flags stvrs txcr #ref
 ================================================================================
 XWFS
   xwfs_mds                         citron.psc.edu mds      -O--- 19111    8  601
-  xwfs_psc_ios7_0                        sense7.psc.edu serial   ----- 19149    8    0
-  xwfs_tacc_0                         129.114.32.90 serial   -O--- 19150    8    0
-  xwfs_tacc_1                         129.114.32.91 serial   -O--- 19150    8    0
-  xwfs_tacc_2                         129.114.32.92 serial   -O--- 19150    8    0
-  xwfs_tacc_3                         129.114.32.93 serial   -O--- 19150    8    0
+  xwfs_psc_ios7_0                  sense7.psc.edu serial   ----- 19149    8    0
+  xwfs_tacc_0                       129.114.32.90 serial   -O--- 19150    8    0
+  xwfs_tacc_1                       129.114.32.91 serial   -O--- 19150    8    0
+  xwfs_tacc_2                       129.114.32.92 serial   -O--- 19150    8    0
+  xwfs_tacc_3                       129.114.32.93 serial   -O--- 19150    8    0
 </oof:pre>
 </xdc>
