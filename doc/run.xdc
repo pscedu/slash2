@@ -19,11 +19,12 @@
 	</oof:p>
 	<oof:list>
 		<oof:list-item>
-			A metadata server must be set up that will run the MDS service,
+			A metadata server (MDS) machine must be set up to run the SLASH2
+			MDS service provided by the daemon
 			<ref sect='8'>slashd</ref>.
-			It requires a ZFS pool (zpool) to store its data.
-			The pool has to then be formatted with <ref sect='8'>slmkfs</ref>
-			before use.
+			This service requires a ZFS pool (zpool) to store data.
+			Before operation, the zpool must be formatted with
+			<ref sect='8'>slmkfs</ref>.
 			In addition, a journal file is needed for the MDS daemon to track
 			on-going operations.
 		</oof:list-item>
@@ -47,7 +48,7 @@
 		Command-line flags, runtime files, environment variables, etc. are
 		all described in <ref sect='8'>slashd</ref>.
 		A wrapper script is provided in the distribution that monitors and
-		restarts the MDS service upon failure as well as compile and send
+		restarts <oof:tt>slashd</oof:tt> upon failure and compiles and sends
 		bug reports when problems arise in operation.
 	</oof:p>
 	<oof:p>
@@ -59,7 +60,7 @@
 	</oof:p>
 	<oof:pre>mds# slashd.sh</oof:pre>
 
-	<oof:header size="2">Controlling <oof:tt>slashd</oof:tt></oof:header>
+	<oof:header size="3">Controlling <oof:tt>slashd</oof:tt></oof:header>
 	<oof:p>
 		<ref sect='8'>slmctl</ref> serves as the interface to the running
 		<ref sect='8'>slashd</ref> process, providing administrators with
@@ -93,19 +94,19 @@ clients
 		pool adminstration:
 	</oof:p>
 <oof:pre>
-mds$ zfs get compressratio
+<oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> zfs get compressratio
 NAME            PROPERTY       VALUE  SOURCE
 xwfs_test       compressratio  3.28x  -
 xwfs_test@test  compressratio  3.04x  -
 
-mds$ zpool iostat
+mds# zpool iostat
 	       capacity     operations    bandwidth
 pool        alloc   free   read  write   read  write
 ----------  -----  -----  -----  -----  -----  -----
 xwfs_test   1001M   148G      3      0  7.69K  7.23K
 
-mds$ zpool scrub xwfs_test
-mds$ zfs send xwfs_test@test &gt; /local/xwfs_test@test.zstream
+mds# zpool scrub xwfs_test
+mds# zfs send xwfs_test@test &gt; /local/xwfs_test@test.zstream
 </oof:pre>
 
 	<oof:header size="2">Running the SLASH2 I/O service (<oof:tt>sliod</oof:tt>)</oof:header>
@@ -129,7 +130,7 @@ mds$ zfs send xwfs_test@test &gt; /local/xwfs_test@test.zstream
 			<ref sect='8'>slkeymgt</ref>
 		</oof:list-item>
 		<oof:list-item>
-			format the storage area that will be contributed to the SLASH2
+			formatted storage area that will be contributed to the SLASH2
 			deployment network.
 			<oof:tt>sliod</oof:tt> can serve any POSIX file system to the
 			SLASH2 network as long as the resource has been formatted with
@@ -160,10 +161,10 @@ XWFS
   xwfs_tacc_3                       129.114.32.93 serial   -----     0    0    0
 </oof:pre>
 
-	<oof:header size="3">Running the client service <oof:tt>mount_slash</oof:tt></oof:header>
+	<oof:header size="2">Running the client service <oof:tt>mount_slash</oof:tt></oof:header>
 	<oof:p>
 		Identical to the <ref sect='8'>sliod</ref> prerequisites, prior to
-		starting <ref sect='8'>mount_slash</ref> on an client machine, make
+		starting <ref sect='8'>mount_slash</ref> on a client machine, make
 		sure the following items are available:
 	</oof:p>
 	<oof:list>
@@ -180,7 +181,7 @@ XWFS
 			<oof:tt>/var/lib/slash/authbuf.key</oof:tt>
 		</oof:list-item>
 		<oof:list-item>
-			create the attachment mount point (e.g. <oof:tt>mkdir /s2</oof:tt>)
+			the attachment mount point (e.g. <oof:tt>mkdir /s2</oof:tt>)
 		</oof:list-item>
 	</oof:list>
 
@@ -194,8 +195,8 @@ XWFS
 		Like <ref sect='8'>slmctl</ref> and <ref sect='8'>slictl</ref>, an
 		analogous command <ref sect='8'>msctl</ref> is provided to control
 		live operation of <ref sect='8'>mount_slash</ref>.
-		Again, a connection status request can be used to ensure
-		connectivity and basic client service health:
+		Again, a connection status request can be used to check connectivity
+		to peers and basic client service health:
 	</oof:p>
 	<oof:pre>
 client$ msctl -sc
