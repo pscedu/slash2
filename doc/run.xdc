@@ -4,7 +4,7 @@
 <xdc xmlns:oof="http://www.psc.edu/~yanovich/xsl/oof-1.0">
 	<title>Running SLASH2</title>
 
-	<oof:header size="1">Running SLASH2</title>
+	<oof:header size="1">Running SLASH2</oof:header>
 
 	<oof:header size="2">Overview</oof:header>
 	<oof:p>
