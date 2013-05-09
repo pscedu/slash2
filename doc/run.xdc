@@ -4,7 +4,9 @@
 <xdc xmlns:oof="http://www.psc.edu/~yanovich/xsl/oof-1.0">
 	<title>Running SLASH2</title>
 
-	<oof:header size="1">Overview</oof:header>
+	<oof:header size="1">Running SLASH2</title>
+
+	<oof:header size="2">Overview</oof:header>
 	<oof:p>
 		To run an instance of SLASH2, you need to configure three types of
 		services: metadata service (slashd), I/O service (sliod), and I/O
@@ -34,7 +36,7 @@
 		</oof:list-item>
 	</oof:list>
 
-	<oof:header size="1">Starting the MDS</oof:header>
+	<oof:header size="2">Starting the MDS</oof:header>
 	<oof:p>
 		The slashd manpage slashd(8) details the different command line
 		parameters.
@@ -52,7 +54,7 @@
 slashd.sh
 	</oof:p>
 
-	<oof:header size="1">MDS instance control/monitoring</oof:header>
+	<oof:header size="2">MDS instance control/monitoring</oof:header>
 	<oof:p>
 		<ref sect='8'>slmctl</ref> serves as the interface to the running
 		<ref sect='8'>slashd</ref> process.
@@ -81,7 +83,7 @@ clients
 		MDS is operational.
 	</oof:p>
 
-	<oof:header size="2">zfs and zpool</oof:header>
+	<oof:header size="3">zfs and zpool</oof:header>
 	<oof:p>
 		Once your MDS is operational, the <ref sect='8'>zfs</ref> and zpool
 		commands will be
@@ -127,7 +129,7 @@ Contents of /var/lib/slash from the MDS - basically just make a copy of this dir
 	</oof:p>
 	<oof:pre># sliod -f /etc/s2_example.conf &amp;</oof:pre>
 
-	<oof:header size="2">Verifying sliod with slictl</oof:header>
+	<oof:header size="3">Verifying sliod with slictl</oof:header>
 	<oof:p>
 		Similar to slmctl, the sliod has its own control interface program
 		called slictl(8).
@@ -146,7 +148,7 @@ XWFS
   xwfs_tacc_3                         129.114.32.93 serial   -----     0    0    0
 </oof:pre>
 
-	<oof:header size="2">Running the Client - mount_slash</oof:header>
+	<oof:header size="3">Running the Client - mount_slash</oof:header>
 	<oof:p>
 		The client binary is named mount_slash(8).
 		To run the client one must have done the following:
@@ -166,7 +168,7 @@ Created the file system mount point (i.e. 'mkdir /S2')
 		for use.
 	</oof:p>
 
-	<oof:header size="2">Verifying the client with msctl</oof:header>
+	<oof:header size="3">Verifying the client with msctl</oof:header>
 	<oof:p>
 		This shows the client being connected to the MDS and several I/O
 		servers.
