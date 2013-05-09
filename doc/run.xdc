@@ -58,7 +58,9 @@
 	<oof:p>
 		Finally, launch the MDS:
 	</oof:p>
-	<oof:pre>mds# slashd.sh</oof:pre>
+	<oof:pre>
+<oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> slashd.sh
+</oof:pre>
 
 	<oof:header size="3">Controlling <oof:tt>slashd</oof:tt></oof:header>
 	<oof:p>
@@ -69,7 +71,7 @@
 		service availibility:
 	</oof:p>
 	<oof:pre>
-mds$ slmctl -sc
+<oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>$</oof:span> slmctl -sc
 resource                                     host type     flags stvrs txcr #ref
 ================================================================================
 XWFS
@@ -99,14 +101,14 @@ NAME            PROPERTY       VALUE  SOURCE
 xwfs_test       compressratio  3.28x  -
 xwfs_test@test  compressratio  3.04x  -
 
-mds# zpool iostat
+<oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> zpool iostat
 	       capacity     operations    bandwidth
 pool        alloc   free   read  write   read  write
 ----------  -----  -----  -----  -----  -----  -----
 xwfs_test   1001M   148G      3      0  7.69K  7.23K
 
-mds# zpool scrub xwfs_test
-mds# zfs send xwfs_test@test &gt; /local/xwfs_test@test.zstream
+<oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> zpool scrub xwfs_test
+<oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> zfs send xwfs_test@test &gt; /local/xwfs_test@test.zstream
 </oof:pre>
 
 	<oof:header size="2">Running the SLASH2 I/O service (<oof:tt>sliod</oof:tt>)</oof:header>
@@ -140,7 +142,9 @@ mds# zfs send xwfs_test@test &gt; /local/xwfs_test@test.zstream
 	<oof:p>
 		Launch the I/O service:
 	</oof:p>
-	<oof:pre>io# sliod.sh</oof:pre>
+	<oof:pre>
+<oof:span class='prompt_hostname'>io</oof:span><oof:span class='prompt_meta'>#</oof:span> sliod.sh
+</oof:pre>
 
 	<oof:header size="3">Controlling <oof:tt>sliod</oof:tt></oof:header>
 	<oof:p>
@@ -150,7 +154,7 @@ mds# zfs send xwfs_test@test &gt; /local/xwfs_test@test.zstream
 		status inquiry may be performed:
 	</oof:p>
 	<oof:pre>
-io$ slictl -sc
+<oof:span class='prompt_hostname'>io</oof:span><oof:span class='prompt_meta'>$</oof:span> slictl -sc
 resource                                    host type      flags stvrs txcr #ref
 ================================================================================
 XWFS
@@ -188,7 +192,9 @@ XWFS
 	<oof:p>
 		Launch the client service:
 	</oof:p>
-	<oof:pre>client# mount_slash.sh</oof:pre>
+	<oof:pre>
+<oof:span class='prompt_hostname'>client</oof:span><oof:span class='prompt_meta'>#</oof:span> mount_slash.sh
+</oof:pre>
 
 	<oof:header size="3">Controlling <oof:tt>mount_slash</oof:tt></oof:header>
 	<oof:p>
@@ -199,7 +205,7 @@ XWFS
 		to peers and basic client service health:
 	</oof:p>
 	<oof:pre>
-client$ msctl -sc
+<oof:span class='prompt_hostname'>client</oof:span><oof:span class='prompt_meta'>$</oof:span> msctl -sc
 resource                                    host type      flags stvrs txcr #ref
 ================================================================================
 XWFS
