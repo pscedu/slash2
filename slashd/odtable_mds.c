@@ -172,7 +172,7 @@ mds_odtable_getitem(struct odtable *odt,
 	return (rc);
 }
 
-struct odtable_receipt *
+void
 mds_odtable_replaceitem(struct odtable *odt,
     struct odtable_receipt *odtr, void *data, size_t len)
 {
@@ -219,7 +219,6 @@ mds_odtable_replaceitem(struct odtable *odt,
 		    odt->odt_handle);
 
 	PSCFREE(p);
-	return (odtr);
 }
 
 /**

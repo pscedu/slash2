@@ -34,8 +34,7 @@ struct odtable_receipt *
 	 mds_odtable_putitem(struct odtable *, void *, size_t);
 int	 mds_odtable_getitem(struct odtable *, const struct odtable_receipt *, void *, size_t);
 int	 mds_odtable_freeitem(struct odtable *, struct odtable_receipt *);
-struct odtable_receipt *
-	 mds_odtable_replaceitem(struct odtable *, struct odtable_receipt *, void *, size_t);
+void	 mds_odtable_replaceitem(struct odtable *, struct odtable_receipt *, void *, size_t);
 void	 mds_odtable_release(struct odtable *);
 void	 mds_odtable_scan(struct odtable *, int (*)(void *, struct odtable_receipt *, void *), void *);
 

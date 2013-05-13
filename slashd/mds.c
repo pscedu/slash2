@@ -658,10 +658,8 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 	bia.bia_lastcli = bml->bml_cli_nidpid;
 	bia.bia_flags = dio ? BIAF_DIO : 0;
 
-	bmi->bmi_assign = mds_odtable_replaceitem(mdsBmapAssignTable,
+	mds_odtable_replaceitem(mdsBmapAssignTable,
 	    bmi->bmi_assign, &bia, sizeof(bia));
-
-	psc_assert(bmi->bmi_assign);
 
 	bml->bml_ios = bia.bia_ios;
 	bml->bml_seq = bia.bia_seq;
@@ -1851,10 +1849,8 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	bmi->bmi_seq = obml->bml_seq = bia.bia_seq;
 	obml->bml_ios = resm->resm_res->res_id;
 
-	bmi->bmi_assign = mds_odtable_replaceitem(mdsBmapAssignTable,
+	mds_odtable_replaceitem(mdsBmapAssignTable,
 	    bmi->bmi_assign, &bia, sizeof(bia));
-
-	psc_assert(bmi->bmi_assign);
 
 	/* Do some post setup on the modified lease. */
 	sbd_out->sbd_seq = obml->bml_seq;
