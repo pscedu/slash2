@@ -233,8 +233,9 @@ mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw,
 		mdscoh_req(bml);
 
 		return (-SLERR_BMAP_DIOWAIT);
+	}
 
-	} else if (rw == SL_WRITE && bmi->bmi_readers) {
+	if (rw == SL_WRITE && bmi->bmi_readers) {
 		int set_dio = 0;
 
 		/*
