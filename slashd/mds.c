@@ -142,7 +142,6 @@ mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw,
 	struct bmap_mds_lease *bml = NULL, *tmp;
 
 	BMAP_LOCK_ENSURE(b);
-	psc_assert(rw == SL_WRITE || rw == SL_READ);
 
 	/*
 	 * BMAP_DIO, BMAP_DIORQ, and bmi_wr_ion should be managed
