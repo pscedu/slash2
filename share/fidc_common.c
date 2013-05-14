@@ -64,8 +64,7 @@ fcmh_destroy(struct fidc_membh *f)
 	/* slc_fcmh_dtor(), slm_fcmh_dtor(), sli_fcmh_dtor() */
 	if (sl_fcmh_ops.sfop_dtor) {
 		if (f->fcmh_flags & (FCMH_CTOR_FAILED | FCMH_NO_BACKFILE))
-			DEBUG_FCMH(f->fcmh_flags & FCMH_CTOR_FAILED ?
-			    PLL_WARN : PLL_INFO, f,
+			DEBUG_FCMH(PLL_INFO, f,
 			    "bypassing dtor() call");
 		else
 			sl_fcmh_ops.sfop_dtor(f);
