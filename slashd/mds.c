@@ -642,7 +642,7 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 	    bmi->bmi_assign, &bia, sizeof(bia));
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, b, "odtable_getitem() failed");
-		return (-1);
+		return (rc);
 	}
 	if (bia.bia_fid != fcmh_2_fid(b->bcm_fcmh)) {
 		/* XXX release bia? */
