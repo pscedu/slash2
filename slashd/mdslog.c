@@ -560,8 +560,9 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 	    sizeof(struct srt_update_entry), &size,
 	    update_logfile_offset);
 	if (size != sizeof(struct srt_update_entry))
-		psc_fatal("Failed to write update log file, batchno=%"PRId64,
-		    current_update_batchno);
+		psc_fatal("failed to write update log file, "
+		    "batchno=%"PRId64" rc=%d",
+		    current_update_batchno, rc);
 
 	/* see if we need to close the current update log file */
 	update_logfile_offset += sizeof(struct srt_update_entry);
