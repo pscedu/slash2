@@ -2342,6 +2342,7 @@ slm_ptrunc_odt_startup_cb(void *data, struct odtable_receipt *odtr,
 	rc = slm_fcmh_get(&pt->fg, &f);
 	if (rc == 0) {
 		bno = howmany(fcmh_2_fsz(f), SLASH_BMAP_SIZE) - 1;
+		/* XXX do something */
 		fcmh_op_done(f);
 	}
 	return (0);
