@@ -104,7 +104,7 @@ slibreapthr_main(__unusedx struct psc_thread *thr)
 		psc_mutex_lock(&sl_bufs_pool->ppm_reclaim_mutex);
 		sl_bufs_pool->ppm_reclaimcb(sl_bufs_pool);
 		psc_mutex_unlock(&sl_bufs_pool->ppm_reclaim_mutex);
-		sleep(5);
+		sleep(30);
 	}
 }
 
