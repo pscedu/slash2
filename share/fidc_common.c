@@ -258,7 +258,6 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 
 	psclog_dbg("fidc_lookup called for fid "SLPRI_FID, fgp->fg_fid);
 
-	rc = 0;
 	*fcmhp = NULL;
 	fcmh_new = NULL; /* gcc */
 
@@ -423,8 +422,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 
  finish:
 	(void)FCMH_RLOCK(fcmh);
-	fcmh->fcmh_flags &= ~FCMH_CAC_INITING;
-	fcmh->fcmh_flags &= ~FCMH_CAC_RLSBMAP;
+	fcmh->fcmh_flags &= ~(FCMH_CAC_INITING | FCMH_CAC_RLSBMAP);
 	if (fcmh->fcmh_flags & FCMH_CAC_WAITING) {
 		fcmh->fcmh_flags &= ~FCMH_CAC_WAITING;
 		psc_waitq_wakeall(&fcmh->fcmh_waitq);
