@@ -772,14 +772,13 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 	BMAP_SETATTR(b, BMAP_IONASSIGN);
 	bml->bml_flags &= ~BML_READ;
 	bml->bml_flags |= BML_WRITE;
+	BMAP_ULOCK(b);
 
-	if (bmi->bmi_wr_ion) {
-		BMAP_ULOCK(b);
+	if (bmi->bmi_wr_ion)
 		rc = mds_bmap_ios_update(bml);
-	} else {
-		BMAP_ULOCK(b);
+	else
 		rc = mds_bmap_ios_assign(bml, prefios);
-	}
+
 	if (!rc)
 		psc_assert(bmi->bmi_wr_ion);
 
