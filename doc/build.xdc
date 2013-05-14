@@ -21,10 +21,10 @@ $ PROJ_BASE=`pwd`/projects
 		Local customization may be necessary to adapt the code base for a
 		specific machine/deployment environment.
 		Such global customizations can be added to
-		<oof:tt>$PROJ_BASE/mk/local.mk</oof:tt>:
+		<oof:tt>mk/local.mk</oof:tt>:
 	</oof:p>
 	<oof:pre class='code'>
-$ cat $PROJ_BASE/mk/local.mk
+$ cat mk/local.mk
 DEVELPATHS=0			# disable developer knobs
 INST_BASE=/usr/local		# defaults to /usr/psc
 </oof:pre>
@@ -44,7 +44,7 @@ INST_BASE=/usr/local		# defaults to /usr/psc
 		If any of these components is not necessary, you can create local
 		settings to override the build process by specifying only which
 		components should be built in
-		<oof:tt>$PROJ_BASE/slash_nara/mk/local.mk</oof:tt>.
+		<oof:tt>slash_nara/mk/local.mk</oof:tt>.
 	</oof:p>
 	<oof:p>
 		For example, to disable building of the MDS, specify only
@@ -52,15 +52,15 @@ INST_BASE=/usr/local		# defaults to /usr/psc
 		<oof:tt>local.mk</oof:tt>:
 	</oof:p>
 	<oof:pre class='code'>
-$ echo "SLASH_MODULES= ion cli" &gt; $PROJ_BASE/slash_nara/mk/local.mk
+$ echo "SLASH_MODULES= ion cli" &gt; slash_nara/mk/local.mk
 </oof:pre>
 	<oof:p>
 		Also, to enable the installer to pick up the SLASH2 configuration
 		file:
 	</oof:p>
 	<oof:pre class='code'>
-$ echo "SLCFG=config/<oof:strong>$mysite.slcfg</oof:strong>" &gt; $PROJ_BASE/slash_nara/mk/local.mk
-$ echo "SLCFG_DST=<oof:strong>/usr/local/my/inst/dir</oof:strong>" &gt; $PROJ_BASE/slash_nara/mk/local.mk
+$ echo "SLCFG=config/<oof:strong>$mysite.slcfg</oof:strong>" &gt; slash_nara/mk/local.mk
+$ echo "SLCFG_DST=<oof:strong>/usr/local/my/inst/dir</oof:strong>" &gt; slash_nara/mk/local.mk
 </oof:pre>
 
 	<oof:header size="2">Compilation Prerequisites</oof:header>
@@ -88,7 +88,7 @@ $ echo "SLCFG_DST=<oof:strong>/usr/local/my/inst/dir</oof:strong>" &gt; $PROJ_BA
 		<oof:list-item>
 			<oof:link href='http://zfs-fuse.net/'>zfs-fuse</oof:link>
 			is packaged within our repository and is built with our
-			<oof:tt>gmake:</oof:tt> framework <oof:strong>only
+			<oof:tt>gmake</oof:tt> framework <oof:strong>only
 			after</oof:strong> it is specifically enabled:
 			<oof:pre class='code'>
 $ echo '_ZFS_BASE:=zfs' > $PROJ_ROOT/local.mk
@@ -103,7 +103,7 @@ $ echo '_ZFS_BASE:=zfs' > $PROJ_ROOT/local.mk
 			<oof:link href='http://fuse.sourceforge.net/'>FUSE</oof:link> is
 			also packaged within our repository and can be built with:
 			<oof:pre class='code'>
-$ cd $PROJ_BASE/distrib/fuse
+$ cd distrib/fuse
 $ ./configure
 $ make
 # make install
@@ -126,11 +126,12 @@ $ echo 'PKG_CONFIG_PATH=/usr/local/fuse' >> mk/local.mk
 		</oof:list-item>
 	</oof:list>
 
+	pickle
+
 	<oof:p>
 		Finally, build the SLASH2 software with <oof:tt>gmake</oof:tt>:
 	</oof:p>
 	<oof:pre class='code'>
-$ cd $PROJ_BASE/slash_nara
 $ make build
 # make install
 </oof:pre>
@@ -165,7 +166,6 @@ $ make build
 		libraries outside the SLASH2 source root are also fetched:
 	</oof:p>
 	<oof:pre class='code'>
-$ cd $PROJ_BASE
 $ svn up
 </oof:pre>
 
@@ -174,7 +174,6 @@ $ svn up
 		Subversion, recompile the suite:
 	</oof:p>
 	<oof:pre class='code'>
-$ cd $PROJ_BASE/slash_nara
 $ make
 # make install
 </oof:pre>

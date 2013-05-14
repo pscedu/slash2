@@ -2,7 +2,7 @@
 <!-- $Id$ -->
 
 <xdc xmlns:oof="http://www.psc.edu/~yanovich/xsl/oof-1.0">
-	<title>Configuring a SLASH2 deployment</title>
+	<title>Authentication models</title>
 
 	<oof:header size="1">Authenticate models</oof:header>
 	<oof:header size="2">Phase 1 - User ID mapping</oof:header>

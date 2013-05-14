@@ -6,8 +6,8 @@
 
 	<oof:header size="1">Overview</oof:header>
 	<oof:p>
-		The metadata server must bind bmaps to specific IO nodes in order
-		guaranteeing the correctness of the bmap's crc table (which is
+		The metadata server must bind bmaps to specific I/O nodes in order
+		guaranteeing the correctness of the bmap's CRC table (which is
 		stored on the MDS).
 		At the moment, the most straight forward way for tracking and
 		verifying these bindings is to log them on the metadata server.
@@ -32,7 +32,7 @@
 
 	<oof:list type="LIST_UN">
 		<oof:list-item>
-			Determines if the bmap is already active
+			Determines if the bmap is already active.
 		</oof:list-item>
 		<oof:list-item>
 			If the bmap is already open for writing then an ION has already

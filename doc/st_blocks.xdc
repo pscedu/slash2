@@ -2,7 +2,7 @@
 <!-- $Id$ -->
 
 <xdc xmlns:oof="http://www.psc.edu/~yanovich/xsl/oof-1.0">
-	<title>Configuring a SLASH2 deployment</title>
+	<title>Disk usage accounting</title>
 
 	<oof:header size="1">Overview</oof:header>
 	<oof:p>

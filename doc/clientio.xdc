@@ -2,7 +2,7 @@
 <!-- $Id$ -->
 
 <xdc xmlns:oof="http://www.psc.edu/~yanovich/xsl/oof-1.0">
-	<title>Binding Bmaps to I/O Nodes</title>
+	<title>Client I/O and IOS selection</title>
 
 	<oof:header size="1">Overview</oof:header>
 	<oof:p>

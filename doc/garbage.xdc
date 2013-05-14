@@ -2,7 +2,7 @@
 <!-- $Id$ -->
 
 <xdc xmlns:oof="http://www.psc.edu/~yanovich/xsl/oof-1.0">
-	<title>Configuring a SLASH2 deployment</title>
+	<title>Garbage collection and reclamation</title>
 
 
 
@@ -68,3 +68,5 @@ file first before sending down the garbage reclamation RPCs to the IOS.
 
 Right now, partial truncate is handled differently by creating special
 files to represent the work to do.  Maybe that is the way to go.
+
+</xdc>

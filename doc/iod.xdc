@@ -8,8 +8,8 @@
 		around which decisions regarding buffering and disk I/O must be
 		made.
 		Regardless of the size of the write, which must be less than
-		LNET_MTU, the IOD must read an entire 'sliver' of data so that a CRC
-		may be taken.
+		<oof:tt>LNET_MTU</oof:tt>, the IOD must read an entire 'sliver' of
+		data so that a CRC may be taken.
 		A sliver is a sub-unit of the bmap.
 		Presently we assume that all slivers are aligned, 1MB chunks.
 		The process should be the same for DIO and non-DIO bmaps.
