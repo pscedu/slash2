@@ -32,6 +32,7 @@
 #include "psc_util/journal.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
+#include "psc_util/ctlsvr.h"
 
 #include "bmap.h"
 #include "bmap_mds.h"
@@ -247,6 +248,7 @@ mds_remove_logfile(uint64_t batchno, int update)
 	    mds_metadir_inum[current_vfsid], NULL, logfn, &rootcreds,
 	    NULL, NULL);
 	psclog_info("removed log file %s, rc=%d", logfn, rc);
+	OPSTAT_INCR(SLM_OPST_LOGFILE_REMOVE);
 }
 
 int
@@ -286,6 +288,7 @@ mds_open_logfile(uint64_t batchno, int update, int readonly,
 	if (rc)
 		psc_fatalx("Failed to create log file %s: %s", log_fn,
 		    slstrerror(rc));
+	OPSTAT_INCR(SLM_OPST_LOGFILE_CREATE);
 	return (rc);
 }
 
