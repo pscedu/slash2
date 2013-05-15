@@ -107,8 +107,8 @@ arc_s2mds    379G  3.26T    493     70  2.52M   351K
 The UUID of the pool is 0x2a8ae931a776366e
 <oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> pkill zfs-fuse
 
-<oof:span class='prompt_comment'># Create the journal on a separate device with the UUID output by</oof:span>
-<oof:span class='prompt_comment'># slmkfs.  The journal created by this command will be 512MiB.</oof:span>
+<oof:span class='prompt_comment'># Create the journal on a separate device with the UUID output by</oof:span>&#32;
+<oof:span class='prompt_comment'># slmkfs.  The journal created by this command will be 512MiB.</oof:span>&#32;
 
 <oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> slmkjrnl -f -b /dev/sdJ1 -n 1048576 -u 0x2a8ae931a776366e
 </oof:pre>
