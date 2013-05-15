@@ -104,7 +104,7 @@ arc_s2mds    379G  3.26T    493     70  2.52M   351K
 <oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> zpool create -f s2mds_pool mirror /dev/sdX1 /dev/sdX2
 <oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> zfs set compression=on s2mds_pool
 <oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> slmkfs -i $site_id /s2mds_pool
-  The UUID of the pool is 0x2a8ae931a776366e
+The UUID of the pool is 0x2a8ae931a776366e
 <oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> pkill zfs-fuse
 
 <oof:span class='prompt_comment'>
