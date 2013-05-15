@@ -434,6 +434,8 @@ reimport
    - ENOSTR = ETIMEDOUT between BSD and Linux on senses, and the client
      will not treat ENOSTR as an RPC error
 - msctl repl-policy read isnt implemented
+- user quotas??
+- atime??
 - Not all items on the flush queue is flushable.  We may want to defer
   putting an item on the queue until it is flushable.  dd-test.sh can
   have thousands of pending biorqs.
