@@ -10,12 +10,8 @@
 
 	<oof:p>
 		This document will refer to subdirectories relative to the root of
-		the SLASH2 top-level source code directory:
+		the SLASH2 top-level source code directory.
 	</oof:p>
-
-	<oof:pre class='code'>
-$ PROJ_BASE=`pwd`/projects
-</oof:pre>
 
 	<oof:p>
 		Local customization may be necessary to adapt the code base for a
@@ -24,7 +20,7 @@ $ PROJ_BASE=`pwd`/projects
 		<oof:tt>mk/local.mk</oof:tt>:
 	</oof:p>
 	<oof:pre class='code'>
-$ cat mk/local.mk
+<oof:span class='prompt_meta'>$</oof:span> cat mk/local.mk
 DEVELPATHS=0			# disable developer knobs
 INST_BASE=/usr/local		# defaults to /usr/psc
 </oof:pre>
@@ -52,15 +48,15 @@ INST_BASE=/usr/local		# defaults to /usr/psc
 		<oof:tt>local.mk</oof:tt>:
 	</oof:p>
 	<oof:pre class='code'>
-$ echo "SLASH_MODULES= ion cli" &gt; slash_nara/mk/local.mk
+<oof:span class='prompt_meta'>$</oof:span> echo "SLASH_MODULES= ion cli" &gt; slash_nara/mk/local.mk
 </oof:pre>
 	<oof:p>
 		Also, to enable the installer to pick up the SLASH2 configuration
 		file:
 	</oof:p>
 	<oof:pre class='code'>
-$ echo "SLCFG=config/<oof:strong>$mysite.slcfg</oof:strong>" &gt; slash_nara/mk/local.mk
-$ echo "SLCFG_DST=<oof:strong>/usr/local/my/inst/dir</oof:strong>" &gt; slash_nara/mk/local.mk
+<oof:span class='prompt_meta'>$</oof:span> echo "SLCFG=config/<oof:strong>$mysite.slcfg</oof:strong>" &gt; slash_nara/mk/local.mk
+<oof:span class='prompt_meta'>$</oof:span> echo "SLCFG_DST=<oof:strong>/usr/local/my/inst/dir</oof:strong>" &gt; slash_nara/mk/local.mk
 </oof:pre>
 
 	<oof:header size="2">Compilation Prerequisites</oof:header>
@@ -91,7 +87,7 @@ $ echo "SLCFG_DST=<oof:strong>/usr/local/my/inst/dir</oof:strong>" &gt; slash_na
 			<oof:tt>gmake</oof:tt> framework <oof:strong>only
 			after</oof:strong> it is specifically enabled:
 			<oof:pre class='code'>
-$ echo '_ZFS_BASE:=zfs' > $PROJ_ROOT/local.mk
+<oof:span class='prompt_meta'>$</oof:span> echo '_ZFS_BASE:=zfs' > $PROJ_ROOT/local.mk
 </oof:pre>
 			</oof:list-item>
 	</oof:list>
@@ -103,10 +99,10 @@ $ echo '_ZFS_BASE:=zfs' > $PROJ_ROOT/local.mk
 			<oof:link href='http://fuse.sourceforge.net/'>FUSE</oof:link> is
 			also packaged within our repository and can be built with:
 			<oof:pre class='code'>
-$ cd distrib/fuse
-$ ./configure
-$ make
-# make install
+<oof:span class='prompt_meta'>$</oof:span> cd distrib/fuse
+<oof:span class='prompt_meta'>$</oof:span> ./configure
+<oof:span class='prompt_meta'>$</oof:span> make
+<oof:span class='prompt_meta'>#</oof:span> make install
 </oof:pre>
 
 			<oof:p>
@@ -116,7 +112,7 @@ $ make
 				<oof:tt>$PROJ_ROOT/mk/local.mk</oof:tt>:
 			</oof:p>
 			<oof:pre class='code'>
-$ echo 'PKG_CONFIG_PATH=/usr/local/fuse' >> mk/local.mk
+<oof:span class='prompt_meta'>$</oof:span> echo 'PKG_CONFIG_PATH=/usr/local/fuse' >> mk/local.mk
 </oof:pre>
 			<oof:p>
 				We package a version to attempt to reduce potential bugs in
@@ -132,8 +128,8 @@ $ echo 'PKG_CONFIG_PATH=/usr/local/fuse' >> mk/local.mk
 		Finally, build the SLASH2 software with <oof:tt>gmake</oof:tt>:
 	</oof:p>
 	<oof:pre class='code'>
-$ make build
-# make install
+<oof:span class='prompt_meta'>$</oof:span> make build
+<oof:span class='prompt_meta'>#</oof:span> make install
 </oof:pre>
 
 	<oof:p>
@@ -166,7 +162,7 @@ $ make build
 		libraries outside the SLASH2 source root are also fetched:
 	</oof:p>
 	<oof:pre class='code'>
-$ svn up
+<oof:span class='prompt_meta'>$</oof:span> svn up
 </oof:pre>
 
 	<oof:p>
@@ -174,8 +170,8 @@ $ svn up
 		Subversion, recompile the suite:
 	</oof:p>
 	<oof:pre class='code'>
-$ make
-# make install
+<oof:span class='prompt_meta'>$</oof:span> make
+<oof:span class='prompt_meta'>#</oof:span> make install
 </oof:pre>
 
 </xdc>
