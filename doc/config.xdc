@@ -28,7 +28,7 @@
 		triplicated:
 	</oof:p>
 	<oof:pre>
-# zpool status
+<oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>$</oof:span> zpool status
   pool: arc_s2mds
  state: ONLINE
  scrub: none requested
@@ -100,17 +100,19 @@ arc_s2mds    379G  3.26T    493     70  2.52M   351K
 		file system.
 	</oof:p>
 	<oof:pre>
-$ zfs-fuse &amp;&amp; sleep 3
-$ zpool create -f s2mds_pool mirror /dev/sdX1 /dev/sdX2
-$ zfs set compression=on s2mds_pool
-$ slmkfs /s2mds_pool
+<oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> zfs-fuse &amp;&amp; sleep 3
+<oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> zpool create -f s2mds_pool mirror /dev/sdX1 /dev/sdX2
+<oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> zfs set compression=on s2mds_pool
+<oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> slmkfs -i $site_id /s2mds_pool
   The UUID of the pool is 0x2a8ae931a776366e
-$ pkill zfs-fuse
+<oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> pkill zfs-fuse
 
+<oof:span class='prompt_comment'>
 # Create the journal on a separate device with the UUID output by
 #   slmkfs.  The journal created by this command will be 512MiB.
+</oof:span>
 
-$ slmkjrnl -f -b /dev/sdJ1 -n 1048576 -u 0x2a8ae931a776366e
+<oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> slmkjrnl -f -b /dev/sdJ1 -n 1048576 -u 0x2a8ae931a776366e
 </oof:pre>
 
 	<oof:header size="2">Network configuration</oof:header>
@@ -235,7 +237,7 @@ site @MYSITE {
 		ion2:
 	</oof:p>
 	<oof:pre>
-# slmkfs -i -u 0x2a8ae931a776366e /disk
+<oof:span class='prompt_hostname'>io</oof:span><oof:span class='prompt_meta'>#</oof:span> slmkfs -i -u 0x2a8ae931a776366e /disk
 $ ls -l /disk/.slmd/
 total 4
 drwx------ 3 root root 4096 Jun 18 15:10 2a8ae931a776366e
