@@ -63,6 +63,11 @@ struct bmap_mds_info {
 	struct odtable_receipt	*bmi_assign;
 	uint64_t		 bmi_seq;		/* Largest write bml seq # */
 	uint32_t		 bmi_xid;		/* last op recv'd from ION */
+	/*
+	 * The following track the number of clients that have a
+	 * write or read lease.  Each client can have more than
+	 * one outstanding lease.
+	 */
 	int32_t			 bmi_writers;
 	int32_t			 bmi_readers;
 	struct psc_rwlock	 bmi_rwlock;
