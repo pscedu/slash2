@@ -28,6 +28,7 @@
 #include "psc_util/atomic.h"
 #include "psc_util/log.h"
 #include "psc_util/odtable.h"
+#include "psc_util/ctlsvr.h"
 
 #include "bmap.h"
 #include "bmap_mds.h"
@@ -730,7 +731,7 @@ mds_bmap_dupls_find(struct bmap_mds_info *bmi, lnet_process_id_t *cnp,
 int
 mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 {
-	int rc = 0, wlease, rlease;
+	int rc, wlease, rlease;
 	struct bmap_mds_info *bmi;
 	struct bmapc_memb *b;
 
@@ -738,17 +739,39 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 	b = bmi_2_bmap(bmi);
 
 	bmap_wait_locked(b, b->bcm_flags & BMAP_IONASSIGN);
+	BMAP_SETATTR(b, BMAP_IONASSIGN);
 
 	DEBUG_BMAP(PLL_INFO, b, "bml=%p bmi_writers=%d bmi_readers=%d",
 	    bml, bmi->bmi_writers, bmi->bmi_readers);
 
-	if (bml->bml_flags & BML_WRITE)
-		return (-EALREADY);
+	if (bml->bml_flags & BML_WRITE) {
+		rc = -EALREADY;
+		goto out;
+	}
 
 	rc = mds_bmap_directio_locked(b, SL_WRITE,
 	    &bml->bml_cli_nidpid);
 	if (rc)
-		return (rc);
+		goto out;
+
+	BMAP_ULOCK(b);
+
+	if (bmi->bmi_wr_ion)
+		rc = mds_bmap_ios_update(bml);
+	else
+		rc = mds_bmap_ios_assign(bml, prefios);
+
+	BMAP_LOCK(b);
+
+	DEBUG_BMAP(PLL_INFO, b, "bml=%p rc=%d "
+	    "bmi_writers=%d bmi_readers=%d",
+	    bml, rc, bmi->bmi_writers, bmi->bmi_readers);
+
+	if (rc) {
+		bml->bml_flags |= BML_ASSFAIL;
+		goto out;
+	}
+	psc_assert(bmi->bmi_wr_ion);
 
 	mds_bmap_dupls_find(bmi, &bml->bml_cli_nidpid, &wlease,
 	    &rlease);
@@ -761,46 +784,14 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 		 * still leased to this client.
 		 */
 		bmi->bmi_writers++;
-		wlease = -1;
-
-		if (rlease) {
-			bmi->bmi_readers--;
-			rlease = -1;
-		}
+		bmi->bmi_readers--;
 	}
-
-	BMAP_SETATTR(b, BMAP_IONASSIGN);
 	bml->bml_flags &= ~BML_READ;
 	bml->bml_flags |= BML_WRITE;
-	BMAP_ULOCK(b);
+	OPSTAT_INCR(SLM_OPST_BMAP_CHWRMODE_DONE);
 
-	if (bmi->bmi_wr_ion)
-		rc = mds_bmap_ios_update(bml);
-	else
-		rc = mds_bmap_ios_assign(bml, prefios);
+  out:
 
-	if (!rc)
-		psc_assert(bmi->bmi_wr_ion);
-
-	BMAP_LOCK(b);
-
-	DEBUG_BMAP(PLL_INFO, b, "bml=%p rc=%d "
-	    "bmi_writers=%d bmi_readers=%d",
-	    bml, rc, bmi->bmi_writers, bmi->bmi_readers);
-
-	if (rc) {
-		bml->bml_flags |= (BML_READ|BML_ASSFAIL);
-		bml->bml_flags &= ~BML_WRITE;
-
-		if (wlease < 0) {
-			bmi->bmi_writers--;
-			psc_assert(bmi->bmi_writers >= 0);
-		}
-
-		if (rlease < 0)
-			/* Restore the reader cnt. */
-			bmi->bmi_readers++;
-	}
 	BMAP_CLEARATTR(b, BMAP_IONASSIGN);
 	bmap_wake_locked(b);
 	return (rc);
