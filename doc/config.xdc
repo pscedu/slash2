@@ -177,33 +177,33 @@ site @MYSITE {
 
      # MDS resource
      resource mds {
-	      desc = "my metadata server";
-	      type = mds;
-	      id   = 0;
-	      # 'nids' should be the ip or hostname of your mds node.  It
-	      # should be on the network specified in the global 'nets'
-	      # variable above.
-	      nids = 192.168.0.100;
-	      # 'jrnldev' matches the device we formatted above.
-	      jrnldev = /dev/sdJ1;
+	     desc = "my metadata server";
+	     type = mds;
+	     id   = 0;
+	     <oof:span class='prompt_comment'># 'nids' should be the IP or hostname of your MDS node.</oof:span><oof:br />
+		   <oof:span class='prompt_comment'># It should be on the network specified in the variable 'nets'</oof:span><oof:br />
+	     <oof:span class='prompt_comment'># variable above.</oof:span><oof:br />
+	     nids = 192.168.0.100;
+	     # 'jrnldev' matches the device we formatted above.
+	     jrnldev = /dev/sdJ1;
      }
 
      resource ion1 {
-	      desc = "I/O server 1";
-	      type = standalone_fs;
-	      id   = 1;
-	      nids = 192.168.0.101, 10.0.0.1;
-	      # 'fsroot' points to the storage mounted on the I/O server
-	      #  which is to be used by SLASH2
-	      fsroot = /disk;
+	     desc = "I/O server 1";
+	     type = standalone_fs;
+	     id   = 1;
+	     nids = 192.168.0.101, 10.0.0.1;
+	     # 'fsroot' points to the storage mounted on the I/O server
+	     #  which is to be used by SLASH2
+	     fsroot = /disk;
      }
 
      resource ion2 {
-	      desc = "I/O server 2";
-	      type = standalone_fs;
-	      id   = 2;
-	      nids = 192.168.0.102, 10.0.0.2;
-	      fsroot = /disk;
+	     desc = "I/O server 2";
+	     type = standalone_fs;
+	     id   = 2;
+	     nids = 192.168.0.102, 10.0.0.2;
+	     fsroot = /disk;
      }
 }
 </oof:pre>
@@ -236,7 +236,7 @@ site @MYSITE {
 	</oof:p>
 	<oof:pre>
 <oof:span class='prompt_hostname'>io</oof:span><oof:span class='prompt_meta'>#</oof:span> slmkfs -i -u 0x2a8ae931a776366e /disk
-$ ls -l /disk/.slmd/
+<oof:span class='prompt_hostname'>io</oof:span><oof:span class='prompt_meta'>$</oof:span> ls -l /disk/.slmd/
 total 4
 drwx------ 3 root root 4096 Jun 18 15:10 2a8ae931a776366e
 </oof:pre>
