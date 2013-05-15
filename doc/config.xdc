@@ -28,7 +28,7 @@
 		triplicated:
 	</oof:p>
 	<oof:pre>
-<oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>$</oof:span> zpool status
+<oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> zpool status
   pool: arc_s2mds
  state: ONLINE
  scrub: none requested
@@ -47,7 +47,7 @@ config:
 
 errors: No known data errors
 
-# zpool iostat
+<oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> zpool iostat
 	       capacity     operations    bandwidth
 pool        alloc   free   read  write   read  write
 ----------  -----  -----  -----  -----  -----  -----
