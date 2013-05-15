@@ -181,7 +181,7 @@ site @MYSITE {
 	     type = mds;
 	     id   = 0;
 	     <oof:span class='prompt_comment'># 'nids' should be the IP or hostname of your MDS node.</oof:span> #
-		   <oof:span class='prompt_comment'># It should be on the network specified in the variable 'nets'</oof:span> #
+	     <oof:span class='prompt_comment'># It should be on the network specified in the variable 'nets'</oof:span> #
 	     <oof:span class='prompt_comment'># variable above.</oof:span>
 	     nids = 192.168.0.100;
 	     # 'jrnldev' matches the device we formatted above.
