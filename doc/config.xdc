@@ -179,7 +179,7 @@ site @MYSITE {
      resource mds {
 	     <oof:span class='syn_keyword'>desc</oof:span> = "my metadata server";
 	     <oof:span class='syn_keyword'>type</oof:span> = mds;
-	     <oof:span class='syn_keyword'>id   = 0;
+	     <oof:span class='syn_keyword'>id</oof:span>   = 0;
 	     <oof:span class='syn_comment'># 'nids' should be the IP or hostname of your MDS node.</oof:span> #
 	     <oof:span class='syn_comment'># It should be on the network specified in the variable 'nets'</oof:span> #
 	     <oof:span class='syn_comment'># variable above.</oof:span>
