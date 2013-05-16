@@ -171,13 +171,13 @@ set nets="tcp0 192.168.*.*; sdp0 10.0.0.*";
 set pref_mds="mds@MYSITE";
 set pref_ios="ion1@MYSITE";
 
-site @MYSITE {
-     site_desc = "test SLASH2 site configuration";
-     site_id   = 1;
+<oof:span class='syn_keyword>'>site</oof:span> @MYSITE {
+     <oof:span class='syn_keyword'>site_desc</oof:span> = "test SLASH2 site configuration";
+     <oof:span class='syn_keyword'>site_id</oof:span>   = 1;
 
-     # MDS resource
-     resource mds {
-	     <oof:span class='syn_keyword'>desc</oof:span> = <oof:span class='syn_str'>"my metadata server"</oof:span>;
+     <oof:span class='syn_comment'># MDS resource</oof:span> #
+     <oof:span class='syn_keyword'>resource</oof:span> mds {
+	     <oof:span class='syn_keyword'>desc</oof:span> = <oof:span class='syn_val'>"my metadata server"</oof:span>;
 	     <oof:span class='syn_keyword'>type</oof:span> = mds;
 	     <oof:span class='syn_keyword'>id</oof:span>   = 0;
 	     <oof:span class='syn_comment'># 'nids' should be the IP or hostname of your MDS node.</oof:span> #
@@ -193,8 +193,8 @@ site @MYSITE {
 	     type = standalone_fs;
 	     id   = 1;
 	     nids = 192.168.0.101, 10.0.0.1;
-	     # 'fsroot' points to the storage mounted on the I/O server
-	     #  which is to be used by SLASH2
+	     <oof:span class='syn_comment'># 'fsroot' points to the storage mounted on the I/O server</oof:span> #
+	     <oof:span class='syn_comment'># which is to be used by SLASH2</oof:span> #
 	     fsroot = /disk;
      }
 
