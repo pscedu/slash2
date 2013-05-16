@@ -177,19 +177,19 @@ site @MYSITE {
 
      # MDS resource
      resource mds {
-	     <oof:span class='syn_keyword'>desc</oof:span> = "my metadata server";
+	     <oof:span class='syn_keyword'>desc</oof:span> = <oof:span class='syn_str'>"my metadata server"</oof:span>;
 	     <oof:span class='syn_keyword'>type</oof:span> = mds;
 	     <oof:span class='syn_keyword'>id</oof:span>   = 0;
 	     <oof:span class='syn_comment'># 'nids' should be the IP or hostname of your MDS node.</oof:span> #
 	     <oof:span class='syn_comment'># It should be on the network specified in the variable 'nets'</oof:span> #
-	     <oof:span class='syn_comment'># variable above.</oof:span>
+	     <oof:span class='syn_comment'># variable above.</oof:span> #
 	     <oof:span class='syn_keyword'>nids</oof:span> = 192.168.0.100;
 	     <oof:span class='syn_comment'># 'jrnldev' matches the device we formatted above.</oof:span> #
 	     <oof:span class='syn_keyword'>jrnldev</oof:span> = /dev/sdJ1;
      }
 
      resource ion1 {
-	     desc = "I/O server 1";
+	     <oof:span class='syn_keyword'>desc</oof:span> = <oof:span class='syn_val'>"I/O server 1"</oof:span>;
 	     type = standalone_fs;
 	     id   = 1;
 	     nids = 192.168.0.101, 10.0.0.1;
