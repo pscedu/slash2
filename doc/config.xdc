@@ -107,8 +107,8 @@ arc_s2mds    379G  3.26T    493     70  2.52M   351K
 The UUID of the pool is 0x2a8ae931a776366e
 <oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> pkill zfs-fuse
 
-<oof:span class='prompt_comment'># Create the journal on a separate device with the UUID output by</oof:span><oof:br />
-<oof:span class='prompt_comment'># slmkfs.  The journal created by this command will be 512MiB.</oof:span><oof:br /><oof:br />
+<oof:span class='syn_comment'># Create the journal on a separate device with the UUID output by</oof:span><oof:br />
+<oof:span class='syn_comment'># slmkfs.  The journal created by this command will be 512MiB.</oof:span><oof:br /><oof:br />
 
 <oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> slmkjrnl -f -b /dev/sdJ1 -n 1048576 -u 0x2a8ae931a776366e
 </oof:pre>
@@ -177,15 +177,15 @@ site @MYSITE {
 
      # MDS resource
      resource mds {
-	     desc = "my metadata server";
-	     type = mds;
-	     id   = 0;
-	     <oof:span class='prompt_comment'># 'nids' should be the IP or hostname of your MDS node.</oof:span> #
-	     <oof:span class='prompt_comment'># It should be on the network specified in the variable 'nets'</oof:span> #
-	     <oof:span class='prompt_comment'># variable above.</oof:span>
-	     nids = 192.168.0.100;
-	     # 'jrnldev' matches the device we formatted above.
-	     jrnldev = /dev/sdJ1;
+	     <oof:span class='syn_keyword'>desc</oof:span> = "my metadata server";
+	     <oof:span class='syn_keyword'>type</oof:span> = mds;
+	     <oof:span class='syn_keyword'>id   = 0;
+	     <oof:span class='syn_comment'># 'nids' should be the IP or hostname of your MDS node.</oof:span> #
+	     <oof:span class='syn_comment'># It should be on the network specified in the variable 'nets'</oof:span> #
+	     <oof:span class='syn_comment'># variable above.</oof:span>
+	     <oof:span class='syn_keyword'>nids</oof:span> = 192.168.0.100;
+	     <oof:span class='syn_comment'># 'jrnldev' matches the device we formatted above.</oof:span> #
+	     <oof:span class='syn_keyword'>jrnldev</oof:span> = /dev/sdJ1;
      }
 
      resource ion1 {
