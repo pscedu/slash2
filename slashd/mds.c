@@ -26,9 +26,9 @@
 #include "psc_rpc/rsx.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
+#include "psc_util/ctlsvr.h"
 #include "psc_util/log.h"
 #include "psc_util/odtable.h"
-#include "psc_util/ctlsvr.h"
 
 #include "bmap.h"
 #include "bmap_mds.h"
