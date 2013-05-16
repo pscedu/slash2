@@ -171,7 +171,7 @@ set nets="tcp0 192.168.*.*; sdp0 10.0.0.*";
 set pref_mds="mds@MYSITE";
 set pref_ios="ion1@MYSITE";
 
-<oof:span class='syn_keyword>'>site</oof:span> @MYSITE {
+<oof:span class='syn_keyword'>site</oof:span> @MYSITE {
      <oof:span class='syn_keyword'>site_desc</oof:span> = "test SLASH2 site configuration";
      <oof:span class='syn_keyword'>site_id</oof:span>   = 1;
 
