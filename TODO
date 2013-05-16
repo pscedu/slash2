@@ -388,7 +388,7 @@ reimport
 - uptime instance nonce variable that allows msl to dump data if it
   changes while communicating with sliod
    (o) mark new flag on msl csvc when upnonce changes in CONNECT
-- st_blocks is zero on some files in /arc
+
 - convert MDS rcmc.c to async RPCs
 - add du(1) functionality in dumpfid via extattr
 - add slmctl -ss fstypes (use statfs(2) on fbsd/linux and f_type)
@@ -415,7 +415,6 @@ reimport
 - extattr are broke
 - ENOENT on GETATTR and REPL_RQ_ADD produce ERANGE
 - msl timeout change no longer waits when server offline, EIO immediately
-- upgrade frodo OS
 - convert bmpc_new_biorqs to a tree to cut out pll_add_sorted() CPU
 - client should not psclog ERRORs from SLERR_AIOWAIT on WRITE/READ RPC
 - parse /proc/mounts if it's there for sliod statfs f_fstype
@@ -431,7 +430,7 @@ reimport
 - some combination of truncate(2) or O_TRUNC and replication can produce
   corrupt files with no valid bmaps as rbudden has discovered
 - RPC standardized error messages:
-   - ENOSTR = ETIMEDOUT between BSD and Linux on senses, and the client
+   - ENOSTR = ETIMEDOUT between BSD and Linux, and the client
      will not treat ENOSTR as an RPC error
 - msctl repl-policy read isnt implemented
 - user quotas??
@@ -439,13 +438,11 @@ reimport
 - Not all items on the flush queue is flushable.  We may want to defer
   putting an item on the queue until it is flushable.  dd-test.sh can
   have thousands of pending biorqs.
+- st_blocks is zero on some files
+- write a tool to purge specified IOS's from the garbage reclaim log files
 
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
    (o) attr buf size needs be dynamically sized
    (o) predictive/readahead async READDIR to make large directory
        listings fast
-
-/arc
-- scan for zeroed/corrupt regions on recent files
-- setup arc testrig
