@@ -188,22 +188,22 @@ The UUID of the pool is 0x2a8ae931a776366e
 	     <oof:span class='syn_keyword'>jrnldev</oof:span> = /dev/sdJ1;
      }
 
-     resource ion1 {
+     <oof:span class='syn_keyword'>resource</oof:span> ion1 {
 	     <oof:span class='syn_keyword'>desc</oof:span> = <oof:span class='syn_val'>"I/O server 1"</oof:span>;
-	     type = standalone_fs;
-	     id   = 1;
-	     nids = 192.168.0.101, 10.0.0.1;
+	     <oof:span class='syn_keyword'>type</oof:span> = standalone_fs;
+	     <oof:span class='syn_keyword'>id</oof:span>   = 1;
+	     <oof:span class='syn_keyword'>nids</oof:span> = 192.168.0.101, 10.0.0.1;
 	     <oof:span class='syn_comment'># 'fsroot' points to the storage mounted on the I/O server</oof:span> #
 	     <oof:span class='syn_comment'># which is to be used by SLASH2</oof:span> #
-	     fsroot = /disk;
+	     <oof:span class='syn_keyword'>fsroot = /disk;
      }
 
-     resource ion2 {
-	     desc = "I/O server 2";
-	     type = standalone_fs;
-	     id   = 2;
-	     nids = 192.168.0.102, 10.0.0.2;
-	     fsroot = /disk;
+     <oof:span class='syn_keyword'>resource</oof:span> ion2 {
+	   <oof:span class='syn_keyword'>desc</oof:span> = "I/O server 2";
+	   <oof:span class='syn_keyword'>type</oof:span> = standalone_fs;
+	   <oof:span class='syn_keyword'>id</oof:span>   = 2;
+	   <oof:span class='syn_keyword'>nids</oof:span> = 192.168.0.102, 10.0.0.2;
+	   <oof:span class='syn_keyword'>fsroot</oof:span> = /disk;
      }
 }
 </oof:pre>
