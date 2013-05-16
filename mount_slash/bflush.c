@@ -564,12 +564,12 @@ bmap_flushable(struct bmapc_memb *b)
 	PLL_FOREACH_SAFE(r, tmp, &bmpc->bmpc_new_biorqs) {
 		BIORQ_LOCK(r);
 
-		DEBUG_BIORQ(PLL_INFO, r, "consider for flush");
+		DEBUG_BIORQ(PLL_DIAG, r, "consider for flush");
 
 		psc_assert(!(r->biorq_flags & BIORQ_READ));
 
 		if (!(r->biorq_flags & BIORQ_FLUSHRDY)) {
-			DEBUG_BIORQ(PLL_INFO, r, "data not ready");
+			DEBUG_BIORQ(PLL_DIAG, r, "data not ready");
 			BIORQ_ULOCK(r);
 			continue;
 
@@ -621,6 +621,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 
 		psc_assert((t->biorq_flags & BIORQ_SCHED) &&
 			   !(t->biorq_flags & BIORQ_INFL));
+
 		/*
 		 * If any member is expired then we'll push everything
 		 * out.
@@ -628,7 +629,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 		if (!expired)
 			expired = bmap_flush_biorq_expired(t, NULL);
 
-		DEBUG_BIORQ(PLL_INFO, t, "biorq #%d (expired=%d)", idx,
+		DEBUG_BIORQ(PLL_DIAG, t, "biorq #%d (expired=%d)", idx,
 		    expired);
 
 		if (idx)
@@ -842,7 +843,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 			psc_assert(b->bcm_flags & BMAP_TIMEOQ);
 
-			if (!(b->bcm_flags & BMAP_CLI_LEASEEXPIRED) &&  
+			if (!(b->bcm_flags & BMAP_CLI_LEASEEXPIRED) &&
 			    timespeccmp(&crtime, &bci->bci_etime, <)) {
 				/*
 				 * Don't spin on expired bmaps while
@@ -1058,14 +1059,14 @@ bmap_flush(struct timespec *nto)
 			continue;
 		}
 
-		if ((b->bcm_flags & BMAP_CLI_LEASEEXPIRED) || 
-                    bmap_flushable(b))
+		if ((b->bcm_flags & BMAP_CLI_LEASEEXPIRED) ||
+		    bmap_flushable(b))
 			psc_dynarray_add(&bmaps, b);
 
 		BMAP_ULOCK(b);
 
-		if ((psc_dynarray_len(&bmaps) + 
-                     atomic_read(&outstandingRpcCnt)) >=
+		if ((psc_dynarray_len(&bmaps) +
+		     atomic_read(&outstandingRpcCnt)) >=
 		    MAX_OUTSTANDING_RPCS)
 			break;
 	}
@@ -1082,7 +1083,7 @@ bmap_flush(struct timespec *nto)
 		BMAP_LOCK(b);
 		if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED) {
 			BMAP_ULOCK(b);
-			bmpc_biorqs_destroy(bmap_2_bmpc(b), 
+			bmpc_biorqs_destroy(bmap_2_bmpc(b),
 			    bmap_2_bci(b)->bci_error);
 			continue;
 		}
@@ -1096,14 +1097,14 @@ bmap_flush(struct timespec *nto)
 			BIORQ_LOCK(r);
 
 			if (!(r->biorq_flags & BIORQ_FLUSHRDY)) {
-				DEBUG_BIORQ(PLL_INFO, r, "data not ready");
+				DEBUG_BIORQ(PLL_DIAG, r, "data not ready");
 				BIORQ_ULOCK(r);
 				continue;
 
 			} else if (r->biorq_flags & BIORQ_SCHED) {
 				DEBUG_BIORQ(PLL_WARN, r, "already sched");
 				BIORQ_ULOCK(r);
-				continue; 
+				continue;
 			}
 
 			/*

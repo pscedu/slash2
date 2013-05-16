@@ -1313,13 +1313,13 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	} else {
 		b->bcm_flags |= BMAP_DIRTY;
 		psc_assert(psclist_disjoint(&b->bcm_lentry));
-		DEBUG_BMAP(PLL_INFO, b, "add to bmapFlushQ");
+		DEBUG_BMAP(PLL_DIAG, b, "add to bmapFlushQ");
 		lc_addtail(&bmapFlushQ, b);
 		bmap_op_start_type(b, BMAP_OPCNT_FLUSHQ);
 	}
 	bmap_flushq_wake(BMAPFLSH_TIMEOA, &r->biorq_expire);
 
-	DEBUG_BMAP(PLL_INFO, b, "biorq=%p list_empty(%d)",
+	DEBUG_BMAP(PLL_DIAG, b, "biorq=%p list_empty(%d)",
 		   r, pll_empty(&bmpc->bmpc_pndg_biorqs));
 	BMPC_ULOCK(bmpc);
 	BMAP_ULOCK(b);
@@ -2028,8 +2028,8 @@ msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
 	q->mfsrq_size = size;
 	q->mfsrq_len = 0;
 	q->mfsrq_off = off;
-	q->mfsrq_flags = 0; 
-	q->mfsrq_err = 0; 
+	q->mfsrq_flags = 0;
+	q->mfsrq_err = 0;
 	q->mfsrq_ref = 1;
 	q->mfsrq_rw = rw;
 

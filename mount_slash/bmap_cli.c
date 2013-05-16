@@ -186,7 +186,7 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 
 	BMAP_CLEARATTR(b, BMAP_CLI_REASSIGNREQ);
 
-	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b,
+	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
 	    "lease reassign (rc=%d) nseq=%"PRId64, rc,
 	     bci->bci_sbd.sbd_seq);
 	bmap_op_done_type(b, BMAP_OPCNT_REASSIGN);
@@ -530,7 +530,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw,
 	mq->rw = rw;
 	mq->flags |= SRM_LEASEBMAPF_GETREPLTBL;
 
-	DEBUG_FCMH(PLL_INFO, f, "retrieving bmap (bmapno=%u) (rw=%s)",
+	DEBUG_FCMH(PLL_DIAG, f, "retrieving bmap (bmapno=%u) (rw=%s)",
 	    bmap->bcm_bmapno, (rw == SL_READ) ? "read" : "write");
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
@@ -544,7 +544,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw,
 
 	msl_bmap_reap_init(bmap, &mp->sbd);
 
-	DEBUG_BMAP(PLL_INFO, bmap, "rw=%d ios=%#x sbd_seq=%"PRId64, rw,
+	DEBUG_BMAP(PLL_DIAG, bmap, "rw=%d ios=%#x sbd_seq=%"PRId64, rw,
 	    mp->sbd.sbd_ios, mp->sbd.sbd_seq);
 
 	fci->fci_nrepls = mp->nrepls;
@@ -846,7 +846,7 @@ msl_bmap_final_cleanup(struct bmapc_memb *b)
 	psc_assert(pll_empty(&bmap_2_bmpc(b)->bmpc_new_biorqs));
 	psc_assert(pll_empty(&bmap_2_bmpc(b)->bmpc_pndg_ra));
 
-	DEBUG_BMAP(PLL_INFO, b, "start freeing");
+	DEBUG_BMAP(PLL_DIAG, b, "start freeing");
 
 	/* Mind lock ordering; remove from LRU first. */
 	if (b->bcm_flags & BMAP_DIO &&
@@ -874,7 +874,7 @@ msl_bmap_final_cleanup(struct bmapc_memb *b)
 	bmpc_freeall_locked(bmpc);
 	BMPC_ULOCK(bmpc);
 
-	DEBUG_BMAP(PLL_INFO, b, "done freeing");
+	DEBUG_BMAP(PLL_DIAG, b, "done freeing");
 }
 
 #if PFL_DEBUG > 0
