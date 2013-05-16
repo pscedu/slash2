@@ -149,10 +149,10 @@ The UUID of the pool is 0x2a8ae931a776366e
 		configured on the <oof:tt>sdp0</oof:tt> network.
 	</oof:p>
 	<oof:pre>
-set zpool_name="s2mds_pool";
-set fsuuid="2a8ae931a776366e";
-set port=989;
-set nets="tcp0 192.168.*.*; sdp0 10.0.0.*";
+<oof:span class='syn_keyword'>site</oof:span>set</oof:span> zpool_name=<oof:span class='syn_val'>"s2mds_pool"</oof:span>;
+<oof:span class='syn_keyword'>site</oof:span>set</oof:span> fsuuid=<oof:span class='syn_val'>"2a8ae931a776366e"</oof:span>;
+<oof:span class='syn_keyword'>site</oof:span>set</oof:span> port=<oof:span class='syn_val'>989</oof:span>;
+<oof:span class='syn_keyword'>site</oof:span>set</oof:span> nets=<oof:span class='syn_val'>"tcp0 192.168.*.*; sdp0 10.0.0.*"</oof:span>;
 </oof:pre>
 
 	<oof:header size="3">Configuring a SLASH2 site</oof:header>
@@ -164,12 +164,12 @@ set nets="tcp0 192.168.*.*; sdp0 10.0.0.*";
 		Here we'll do a walk through of a simple site configuration.
 	</oof:p>
 	<oof:pre>
-set zpool_name="s2mds_pool";
-set fsuuid="2a8ae931a776366e";
-set port=989;
-set nets="tcp0 192.168.*.*; sdp0 10.0.0.*";
-set pref_mds="mds@MYSITE";
-set pref_ios="ion1@MYSITE";
+<oof:span class='syn_keyword'>site</oof:span>set</oof:span> zpool_name="s2mds_pool";
+<oof:span class='syn_keyword'>site</oof:span>set</oof:span> fsuuid="2a8ae931a776366e";
+<oof:span class='syn_keyword'>site</oof:span>set</oof:span> port=989;
+<oof:span class='syn_keyword'>site</oof:span>set</oof:span> nets="tcp0 192.168.*.*; sdp0 10.0.0.*";
+<oof:span class='syn_keyword'>site</oof:span>set</oof:span> pref_mds="mds@MYSITE";
+<oof:span class='syn_keyword'>site</oof:span>set</oof:span> pref_ios="ion1@MYSITE";
 
 <oof:span class='syn_keyword'>site</oof:span> @MYSITE {
      <oof:span class='syn_keyword'>site_desc</oof:span> = "test SLASH2 site configuration";
