@@ -195,7 +195,7 @@ The UUID of the pool is 0x2a8ae931a776366e
 	     <oof:span class='syn_keyword'>nids</oof:span> = 192.168.0.101, 10.0.0.1;
 	     <oof:span class='syn_comment'># 'fsroot' points to the storage mounted on the I/O server</oof:span> #
 	     <oof:span class='syn_comment'># which is to be used by SLASH2</oof:span> #
-	     <oof:span class='syn_keyword'>fsroot = /disk;
+	     <oof:span class='syn_keyword'>fsroot</oof:span> = /disk;
      }
 
      <oof:span class='syn_keyword'>resource</oof:span> ion2 {
