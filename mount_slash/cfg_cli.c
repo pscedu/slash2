@@ -41,10 +41,12 @@ slcfg_init_resm(struct sl_resm *resm)
 	struct sl_resource *r = resm->resm_res;
 	struct resm_cli_info *rmci;
 
-	rmci = resm2rmci(resm);
-	lc_reginit(&rmci->rmci_async_reqs, struct slc_async_req,
-	    car_lentry, "aiorq-%s:%d", r->res_name,
-	    psc_dynarray_len(&r->res_members));
+	if (resm->resm_type == SLREST_ARCHIVAL_FS) {
+		rmci = resm2rmci(resm);
+		lc_reginit(&rmci->rmci_async_reqs, struct slc_async_req,
+		    car_lentry, "aiorq-%s:%d", r->res_name,
+		    psc_dynarray_len(&r->res_members));
+	}
 }
 
 void
