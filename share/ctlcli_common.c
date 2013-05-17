@@ -176,7 +176,7 @@ sl_bmap_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    scb->scb_flags & BMAP_WR		? 'W' : '-',
 	    scb->scb_flags & BMAP_INIT		? 'I' : '-',
 	    scb->scb_flags & BMAP_DIO		? 'D' : '-',
-	    scb->scb_flags & BMAP_DIORQ		? 'Q' : '-',
+	    scb->scb_flags & BMAP_DIOCB		? 'C' : '-',
 	    scb->scb_flags & BMAP_TOFREE	? 'F' : '-',
 	    scb->scb_flags & BMAP_DIRTY		? 'd' : '-',
 	    scb->scb_flags & BMAP_TIMEOQ	? 'T' : '-',

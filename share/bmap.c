@@ -411,7 +411,7 @@ _dump_bmap_flags_common(uint32_t *flags, int *seq)
 	PFL_PRFLAG(BMAP_WR, flags, seq);
 	PFL_PRFLAG(BMAP_INIT, flags, seq);
 	PFL_PRFLAG(BMAP_DIO, flags, seq);
-	PFL_PRFLAG(BMAP_DIORQ, flags, seq);
+	PFL_PRFLAG(BMAP_DIOCB, flags, seq);
 	PFL_PRFLAG(BMAP_TOFREE, flags, seq);
 	PFL_PRFLAG(BMAP_DIRTY, flags, seq);
 	PFL_PRFLAG(BMAP_TIMEOQ, flags, seq);

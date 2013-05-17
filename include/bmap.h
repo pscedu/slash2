@@ -129,7 +129,7 @@ struct bmap {
 #define BMAP_WR			(1 <<  1)	/* XXX use enum rw */
 #define BMAP_INIT		(1 <<  2)	/* initializing from disk/network */
 #define BMAP_DIO		(1 <<  3)	/* direct I/O, no client caching */
-#define BMAP_DIORQ		(1 <<  4)
+#define BMAP_DIOCB		(1 <<  4)
 #define BMAP_TOFREE		(1 <<  5)	/* refcnt dropped to zero, removing */
 #define BMAP_DIRTY		(1 <<  6)
 #define BMAP_TIMEOQ		(1 <<  7)	/* on timeout queue */
@@ -167,7 +167,7 @@ struct bmap {
 	(b)->bcm_flags & BMAP_WR	? "W" : "",			\
 	(b)->bcm_flags & BMAP_INIT	? "I" : "",			\
 	(b)->bcm_flags & BMAP_DIO	? "D" : "",			\
-	(b)->bcm_flags & BMAP_DIORQ	? "Q" : "",			\
+	(b)->bcm_flags & BMAP_DIOCB	? "C" : "",			\
 	(b)->bcm_flags & BMAP_TOFREE	? "F" : "",			\
 	(b)->bcm_flags & BMAP_DIRTY	? "d" : "",			\
 	(b)->bcm_flags & BMAP_TIMEOQ	? "T" : "",			\

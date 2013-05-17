@@ -159,7 +159,7 @@ mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw, int want_dio,
  	 * DIO by itself, it has to wait if there is a DIO downgrade already
  	 * in progress.
  	 */
-	if (!want_dio && (b->bcm_flags & BMAP_DIORQ))
+	if (!want_dio && (b->bcm_flags & BMAP_DIOCB))
 		want_dio = 1;
 
 	if (want_dio || bmi->bmi_writers || (rw == SL_WRITE && bmi->bmi_readers))
@@ -188,7 +188,7 @@ mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw, int want_dio,
 				rc = -SLERR_BMAP_DIOWAIT;
 				if (!(bml->bml_flags & BML_DIOCB)) {
 					bml->bml_flags |= BML_DIOCB;
-					b->bcm_flags |= BMAP_DIORQ;
+					b->bcm_flags |= BMAP_DIOCB;
 					BML_ULOCK(bml);
 					mdscoh_req(bml);
 				} else
@@ -201,7 +201,7 @@ mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw, int want_dio,
 	if (!rc && (want_dio || force_dio)) {
 		OPSTAT_INCR(SLM_OPST_BMAP_DIO_SET);
 		b->bcm_flags |= BMAP_DIO;
-		b->bcm_flags &= ~BMAP_DIORQ;
+		b->bcm_flags &= ~BMAP_DIOCB;
 	}
 	return (rc);
 }
@@ -1077,11 +1077,11 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 
 	BML_ULOCK(bml);
 
-	if ((b->bcm_flags & (BMAP_DIO | BMAP_DIORQ)) &&
+	if ((b->bcm_flags & (BMAP_DIO | BMAP_DIOCB)) &&
 	    (!bmi->bmi_writers ||
 	     (bmi->bmi_writers == 1 && !bmi->bmi_readers))) {
 		/* Remove the directio flag if possible. */
-		b->bcm_flags &= ~(BMAP_DIO | BMAP_DIORQ);
+		b->bcm_flags &= ~(BMAP_DIO | BMAP_DIOCB);
 		OPSTAT_INCR(SLM_OPST_BMAP_DIO_CLR);
 	}
 
