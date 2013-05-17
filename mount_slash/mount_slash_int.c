@@ -561,6 +561,7 @@ msl_try_get_replica_res(struct bmapc_memb *b, int iosidx,
 	struct fcmh_cli_info *fci;
 	struct sl_resource *res;
 	struct rnd_iterator it;
+	struct sl_resm *m;
 
 	fci = fcmh_2_fci(b->bcm_fcmh);
 
@@ -579,12 +580,16 @@ msl_try_get_replica_res(struct bmapc_memb *b, int iosidx,
 	}
 
 	FOREACH_RND(&it, psc_dynarray_len(&res->res_members)) {
-		*pm = psc_dynarray_getpos(&res->res_members,
+		m = psc_dynarray_getpos(&res->res_members,
 		    it.ri_rnd_idx);
-		csvc = slc_geticsvc_nb(*pm);
+		if (pm)
+			*pm = m;
+		csvc = slc_geticsvc_nb(m);
 		if (csvc)
 			return (csvc);
 	}
+	if (pm)
+		*pm = NULL;
 	return (NULL);
 }
 
