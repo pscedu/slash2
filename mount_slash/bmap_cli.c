@@ -667,7 +667,7 @@ msl_bmap_reap_init(struct bmapc_memb *b, const struct srt_bmapdesc *sbd)
  *	long as it is recent).
  */
 struct slashrpc_cservice *
-msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
+msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive, struct sl_resm **pm)
 {
 	int i, j, tmp, off, locked;
 	struct slashrpc_cservice *csvc;
@@ -675,7 +675,7 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 	struct fcmh_cli_info *fci;
 	struct psc_multiwait *mw;
 	struct rnd_iterator it;
-	struct sl_resm *resm;
+	struct sl_resm *m;
 	uint64_t repls; // XXX 1 bit per repl, SL_MAX_REPLICAS
 	void *p;
 
@@ -683,11 +683,11 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 
 	if (exclusive) {
 		locked = BMAP_RLOCK(b);
-		resm = libsl_ios2resm(bmap_2_ios(b));
-		psc_assert(resm->resm_res->res_id == bmap_2_ios(b));
+		m = *pm = libsl_ios2resm(bmap_2_ios(b));
+		psc_assert(m->resm_res->res_id == bmap_2_ios(b));
 		BMAP_URLOCK(b, locked);
 
-		return (slc_geticsvc(resm));
+		return (slc_geticsvc(m));
 	}
 
 	res = libsl_id2res(prefIOS);
@@ -711,7 +711,7 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 		psc_multiwait_entercritsect(mw);
 
 		if (fci->fci_nrepls == 1) {
-			csvc = msl_try_get_replica_res(b, 0);
+			csvc = msl_try_get_replica_res(b, 0, NULL);
 			if (csvc) {
 				psc_multiwait_leavecritsect(mw);
 				return (csvc);
@@ -724,15 +724,16 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 		/* first, try preferred IOS */
 		FOREACH_RND(&it, fci->fci_nrepls) {
 			/* scan through the members */
-			DYNARRAY_FOREACH(resm, tmp, &res->res_members) {
+			DYNARRAY_FOREACH(m, tmp, &res->res_members) {
 				if (fci->fci_reptbl[it.ri_rnd_idx].bs_id !=
-				    resm->resm_res_id)
+				    m->resm_res_id)
 					continue;
 
 				csvc = msl_try_get_replica_res(b,
-				    it.ri_rnd_idx);
+				    it.ri_rnd_idx, NULL);
 				if (csvc) {
 					psc_multiwait_leavecritsect(mw);
+					*pm = m;
 					return (csvc);
 				}
 
@@ -759,7 +760,8 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 			    r->res_type != SLREST_STANDALONE_FS)
 				continue;
 
-			csvc = msl_try_get_replica_res(b, it.ri_rnd_idx);
+			csvc = msl_try_get_replica_res(b, it.ri_rnd_idx,
+			    pm);
 			if (csvc) {
 				psc_multiwait_leavecritsect(mw);
 				return (csvc);
@@ -786,7 +788,8 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 
 		/*
 		 * No connection was immediately available; wait a small
-		 * amount of time to wait for any to come online.
+		 * amount of time for any to finish connection
+		 * (re)establishment.
 		 */
 		psc_multiwait_secs(mw, &p, BMAP_CLI_MAX_LEASE);
 	}
@@ -828,7 +831,7 @@ bmap_biorq_expire(struct bmapc_memb *b)
 	/* Minimize biorq scanning via this hint. */
 	BMAP_SETATTR(b, BMAP_CLI_BIORQEXPIRE);
 
-	bmap_flushq_wake(BMAPFLSH_RPCWAIT, NULL);
+	bmap_flushq_wake(BMAPFLSH_RPCWAIT);
 }
 
 /**

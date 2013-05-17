@@ -1520,7 +1520,7 @@ msl_flush_int_locked(struct msl_fhent *mfh, int wait)
 		DEBUG_BIORQ(PLL_INFO, r, "force expire");
 		BIORQ_ULOCK(r);
 	}
-	bmap_flushq_wake(BMAPFLSH_EXPIRE, NULL);
+	bmap_flushq_wake(BMAPFLSH_EXPIRE);
 
 	if (wait)
 		while (!pll_empty(&mfh->mfh_biorqs)) {

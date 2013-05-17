@@ -201,6 +201,7 @@ struct resm_cli_info {
 	struct srm_bmap_release_req	 rmci_bmaprls;
 	struct psc_listcache		 rmci_async_reqs;
 	psc_atomic32_t			 rmci_pndg_rpcs;
+	psc_atomic32_t			 rmci_infl_rpcs;
 };
 
 static __inline struct resm_cli_info *
@@ -215,7 +216,7 @@ resm2rmci(struct sl_resm *resm)
 #define msl_biorq_destroy(r)	_msl_biorq_destroy(PFL_CALLERINFOSS(SLSS_BMAP), (r))
 
 struct slashrpc_cservice *
-	 msl_bmap_to_csvc(struct bmapc_memb *, int);
+	 msl_bmap_to_csvc(struct bmapc_memb *, int, struct sl_resm **);
 void	 msl_bmap_reap_init(struct bmapc_memb *, const struct srt_bmapdesc *);
 void	 msl_bmpces_fail(struct bmpc_ioreq *, int);
 void	_msl_biorq_destroy(const struct pfl_callerinfo *, struct bmpc_ioreq *);
@@ -236,7 +237,7 @@ size_t	 msl_pages_copyout(struct bmpc_ioreq *);
 int	 msl_fd_should_retry(struct msl_fhent *, int);
 
 struct slashrpc_cservice *
-	 msl_try_get_replica_res(struct bmapc_memb *, int);
+	 msl_try_get_replica_res(struct bmapc_memb *, int, struct sl_resm **);
 struct msl_fhent *
 	 msl_fhent_new(struct fidc_membh *);
 
@@ -244,16 +245,15 @@ void	 msbmapflushthr_spawn(void);
 void	 msctlthr_spawn(void);
 void	 mstimerthr_spawn(void);
 
-#define bmap_flushq_wake(mode, t)					\
-	_bmap_flushq_wake(PFL_CALLERINFOSS(SLSS_BMAP), (mode), (t))
+#define bmap_flushq_wake(mode)						\
+	_bmap_flushq_wake(PFL_CALLERINFOSS(SLSS_BMAP), (mode))
 
-void	 _bmap_flushq_wake(const struct pfl_callerinfo *, int, struct timespec *);
+void	 _bmap_flushq_wake(const struct pfl_callerinfo *, int);
 void	  bmap_flush_resched(struct bmpc_ioreq *, int);
 
 /* bmap flush modes (bmap_flushq_wake) */
-#define BMAPFLSH_TIMEOA		(1 << 0)
-#define BMAPFLSH_RPCWAIT	(1 << 1)
-#define BMAPFLSH_EXPIRE		(1 << 2)
+#define BMAPFLSH_RPCWAIT	(1 << 0)
+#define BMAPFLSH_EXPIRE		(1 << 1)
 
 extern const char		*ctlsockfn;
 extern sl_ios_id_t		 prefIOS;
