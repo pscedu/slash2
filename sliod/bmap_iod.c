@@ -62,6 +62,12 @@ bim_updateseq(uint64_t seq)
 		psclog_notice("update min seq to %"PRId64, seq);
 		PFL_GETTIMESPEC(&bimSeq.bim_age);
 	} else
+		/*
+ 		 * FixMe:
+ 		 *
+		 * If a MDS restarts, we will return 1 and cause
+		 * our caller to retry again.
+		 */
 		invalid = 1;
 
 	freelock(&bimSeq.bim_lock);
