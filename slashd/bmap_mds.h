@@ -195,8 +195,8 @@ struct bmap_mds_lease {
 /* bml_flags */
 #define BML_READ		(1 <<  0)		/* lease is for read activity */
 #define BML_WRITE		(1 <<  1)		/* lease is for write activity */
-#define BML_CDIO		(1 <<  2)
-#define BML_COHDIO		(1 <<  3)
+#define BML_DIO			(1 <<  2)
+#define BML_DIOCB		(1 <<  3)
 #define BML_TIMEOQ		(1 <<  4)
 #define BML_BMI			(1 <<  5)		/* linked in bmap_mds_info */
 #define BML_RECOVER		(1 <<  6)

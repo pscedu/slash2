@@ -102,25 +102,8 @@ mdscoh_cb(struct pscrpc_request *req,
 		PFL_GOTOERR(out, rc = -ENOENT);
 
 	BML_LOCK(bml);
-	bml->bml_flags |= BML_CDIO;
-	if (bml->bml_flags & BML_COHDIO) {
-		/*
-		 * Test for BMAP_DIORQ.  If it was removed, the writer
-		 * holding the lease, on behalf of which this rq was
-		 * issued, has relinquished its lease.  Therefore, DIO
-		 * conversion may be bypassed here.
-		 */
-		if (b->bcm_flags & BMAP_DIORQ) {
-			b->bcm_flags &= ~BMAP_DIORQ;
-			b->bcm_flags |= BMAP_DIO;
-		}
-
-		bml->bml_flags &= ~BML_COHDIO;
-
-		DEBUG_BMAP(PLL_INFO, bml_2_bmap(bml),
-		    "converted to dio=%d",
-		    !!(b->bcm_flags & BMAP_DIO));
-	}
+	bml->bml_flags |= BML_DIO;
+	bml->bml_flags &= ~BML_DIOCB;
 	BML_ULOCK(bml);
 	mds_bmap_bml_release(bml);
 

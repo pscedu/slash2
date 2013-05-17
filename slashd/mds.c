@@ -136,134 +136,74 @@ slm_bmap_calc_repltraffic(struct bmapc_memb *b)
  * Note: the new bml has yet to be added.
  */
 __static int
-mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw,
+mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw, int want_dio,
     lnet_process_id_t *np)
 {
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct bmap_mds_lease *bml = NULL, *tmp;
+	int rc = 0, force_dio = 0, check_leases = 0;
 
 	BMAP_LOCK_ENSURE(b);
 
-	/*
-	 * BMAP_DIO, BMAP_DIORQ, and bmi_wr_ion should be managed
-	 * atomically.
-	 */
 	if (b->bcm_flags & BMAP_DIO)
 		return (0);
 
-	/* A second writer or a reader wants access. */
-	if (bmi->bmi_writers) {
-		struct bmap_mds_lease *tmp1;
-		int wtrs = 0;
+	/*
+ 	 * We enter into the DIO mode in three cases:
+ 	 *
+ 	 *  (1) Our caller wants a DIO lease
+ 	 *  (2) There is already a write lease out there
+ 	 *  (3) We want to a write lease when there are read leases out there.
+ 	 *
+ 	 * In addition, even if the current lease request does not trigger a
+ 	 * DIO by itself, it has to wait if there is a DIO downgrade already
+ 	 * in progress.
+ 	 */
+	if (!want_dio && (b->bcm_flags & BMAP_DIORQ))
+		want_dio = 1;
 
-		/*
-		 * Since the bmap is not yet in DIO mode, ensure only
-		 * one lease is present and that a write bml exists.
-		 */
-		psc_assert(pll_nitems(&bmi->bmi_leases) == 1);
+	if (want_dio || bmi->bmi_writers || (rw == SL_WRITE && bmi->bmi_readers))
+		check_leases = 1;
 
-		bml = tmp = tmp1 = pll_peekhead(&bmi->bmi_leases);
-		do {
-			if (tmp->bml_flags & BML_WRITE)
-				wtrs++;
-
-			if (bml->bml_seq < tmp->bml_seq)
-				bml = tmp;
-
-			tmp = tmp->bml_chain;
-		} while (tmp != tmp1);
-
-		psc_assert(bml && wtrs);
-
-		BML_LOCK(bml);
-
-		if (bml->bml_cli_nidpid.nid == np->nid &&
-		    bml->bml_cli_nidpid.pid == np->pid) {
-			/*
-			 * Lease belongs to the client making the
-			 * request.
-			 */
-			BML_ULOCK(bml);
-
-			DEBUG_BMAP(PLL_INFO, b, "dup lease");
-
-			return (0);
-		}
-
-		if (bml->bml_flags & BML_CDIO) {
-			/* The other leaseholder is already DIO'd. */
-			BML_ULOCK(bml);
-
-			b->bcm_flags |= BMAP_DIO;
-
-			DEBUG_BMAP(PLL_WARN, b,
-			   "set BMAP_DIO due to leaseholder BML_CDIO");
-
-			return (0);
-		}
-
-		if (b->bcm_flags & BMAP_DIORQ) {
-			psc_assert(bmi->bmi_wr_ion);
-			BML_ULOCK(bml);
-			/*
-			 * In the process of waiting for an async RPC to
-			 * complete.
-			 */
-			return (-SLERR_BMAP_DIOWAIT);
-		}
-
-		if (bml->bml_flags & BML_COHDIO) {
-			/*
-			 * DIO request was already on the wire.  This
-			 * may occur if a DIO rq was pending and BMAP_DIO
-			 * was recently unset.
-			 */
-			BML_ULOCK(bml);
-
-			b->bcm_flags |= BMAP_DIORQ;
-
-			return (-SLERR_BMAP_DIOWAIT);
-		}
-
-		b->bcm_flags |= BMAP_DIORQ;
-		bml->bml_flags |= BML_COHDIO;
-		BML_ULOCK(bml);
-
-		DEBUG_BMAP(PLL_INFO, b, "set BMAP_DIORQ, issuing cb");
-
-		mdscoh_req(bml);
-
-		return (-SLERR_BMAP_DIOWAIT);
-	}
-
-	if (rw == SL_WRITE && bmi->bmi_readers) {
-		int set_dio = 0;
-
-		/*
-		 * Writer being added amidst one or more readers.  Issue
-		 * courtesy callbacks to the readers so they will avoid
-		 * stale cached data.
-		 */
+	if (check_leases) {
 		PLL_FOREACH(bml, &bmi->bmi_leases) {
 			tmp = bml;
 			do {
-				psc_assert(bml->bml_flags & BML_READ &&
-					   !(bml->bml_flags & BML_WRITE));
+				/*
+				 * A client can have more than one lease in flight
+				 * even though it really uses one at any time.
+				 */
+				if (bml->bml_cli_nidpid.nid == np->nid &&
+				    bml->bml_cli_nidpid.pid == np->pid)
+					goto next;
 
-				if (bml->bml_cli_nidpid.nid != np->nid) {
-					set_dio = 1;
-					if (!(bml->bml_flags & BML_CDIO))
-						mdscoh_req(bml);
+				force_dio = 1;
+
+				BML_LOCK(bml);
+				if (bml->bml_flags & BML_DIO) {
+					BML_ULOCK(bml);
+					goto next;
 				}
-				tmp = tmp->bml_chain;
+
+				rc = -SLERR_BMAP_DIOWAIT;
+				if (!(bml->bml_flags & BML_DIOCB)) {
+					bml->bml_flags |= BML_DIOCB;
+					b->bcm_flags |= BMAP_DIORQ;
+					BML_ULOCK(bml);
+					mdscoh_req(bml);
+				} else
+					BML_ULOCK(bml);
+ next:
+				bml = bml->bml_chain;
 			} while (tmp != bml);
 		}
-
-		if (set_dio)
-			b->bcm_flags |= BMAP_DIO;
 	}
-
-	return (0);
+	if (!rc && (want_dio || force_dio)) {
+		OPSTAT_INCR(SLM_OPST_BMAP_DIO_SET);
+		b->bcm_flags |= BMAP_DIO;
+		b->bcm_flags &= ~BMAP_DIORQ;
+	}
+	return (rc);
 }
 
 __static int
@@ -749,7 +689,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 		goto out;
 	}
 
-	rc = mds_bmap_directio_locked(b, SL_WRITE,
+	rc = mds_bmap_directio_locked(b, SL_WRITE, 0,
 	    &bml->bml_cli_nidpid);
 	if (rc)
 		goto out;
@@ -872,7 +812,8 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 	bmap_wait_locked(b, (b->bcm_flags & BMAP_IONASSIGN));
 	bmap_op_start_type(b, BMAP_OPCNT_LEASE);
 
-	rc = mds_bmap_directio_locked(b, rw, &bml->bml_cli_nidpid);
+	rc = mds_bmap_directio_locked(b, rw, bml->bml_flags & BML_DIO, 
+		&bml->bml_cli_nidpid);
 	if (rc && !(bml->bml_flags & BML_RECOVER))
 		/* 'rc != 0' means that we're waiting on an async cb
 		 *    completion.
@@ -1141,6 +1082,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	     (bmi->bmi_writers == 1 && !bmi->bmi_readers))) {
 		/* Remove the directio flag if possible. */
 		b->bcm_flags &= ~(BMAP_DIO | BMAP_DIORQ);
+		OPSTAT_INCR(SLM_OPST_BMAP_DIO_CLR);
 	}
 
 	/*
@@ -1386,10 +1328,8 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr,
 	/* Grant recovered leases some additional time. */
 	bml->bml_expire = time(NULL) + BMAP_RECOVERY_TIMEO_EXT;
 
-	if (bia->bia_flags & BIAF_DIO) {
-		bml->bml_flags |= BML_CDIO;
+	if (bia->bia_flags & BIAF_DIO)
 		b->bcm_flags |= BMAP_DIO;
-	}
 
 	bmap_2_bmi(b)->bmi_assign = odtr;
 
@@ -1726,7 +1666,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 
 	bml = mds_bml_new(b, exp,
 	    ((rw == SL_WRITE ? BML_WRITE : BML_READ) |
-	     (flags & SRM_LEASEBMAPF_DIRECTIO ? BML_CDIO : 0)),
+	     (flags & SRM_LEASEBMAPF_DIRECTIO ? BML_DIO : 0)),
 	    &exp->exp_connection->c_peer);
 
 	rc = mds_bmap_bml_add(bml, rw, prefios);

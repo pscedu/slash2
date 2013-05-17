@@ -406,8 +406,8 @@ dump_bml_flags(uint32_t flags)
 
 	PFL_PRFLAG(BML_READ, &flags, &seq);
 	PFL_PRFLAG(BML_WRITE, &flags, &seq);
-	PFL_PRFLAG(BML_CDIO, &flags, &seq);
-	PFL_PRFLAG(BML_COHDIO, &flags, &seq);
+	PFL_PRFLAG(BML_DIO, &flags, &seq);
+	PFL_PRFLAG(BML_DIOCB, &flags, &seq);
 	PFL_PRFLAG(BML_TIMEOQ, &flags, &seq);
 	PFL_PRFLAG(BML_BMI, &flags, &seq);
 	PFL_PRFLAG(BML_RECOVER, &flags, &seq);
