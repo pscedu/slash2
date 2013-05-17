@@ -446,7 +446,6 @@ bmap_flush_coalesce_prep(struct bmpc_write_coalescer *bwc)
 			psc_assert(r->biorq_off <= biorq_voff_get(e));
 			if (biorq_voff_get(r) > biorq_voff_get(e))
 				e = r;
-
 		}
 
 		loff = off = r->biorq_off;
