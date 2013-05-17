@@ -1057,8 +1057,8 @@ bmap_flush(void)
 			continue;
 		}
 
-		if ((b->bcm_flags & BMAP_CLI_LEASEEXPIRED) ||
-		    bmap_flushable(b, &ninfl))
+		if (bmap_flushable(b, &ninfl) ||
+		    (b->bcm_flags & BMAP_CLI_LEASEEXPIRED))
 			psc_dynarray_add(&bmaps, b);
 
 		BMAP_ULOCK(b);
