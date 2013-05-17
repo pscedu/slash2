@@ -667,7 +667,8 @@ msl_bmap_reap_init(struct bmapc_memb *b, const struct srt_bmapdesc *sbd)
  *	long as it is recent).
  */
 struct slashrpc_cservice *
-msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive, struct sl_resm **pm)
+msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive,
+    struct sl_resm **pm)
 {
 	int i, j, tmp, off, locked;
 	struct slashrpc_cservice *csvc;

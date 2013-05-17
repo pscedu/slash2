@@ -374,12 +374,12 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 __static void
 bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 {
-	int rc;
 	struct slashrpc_cservice *csvc;
 	struct pscrpc_request *rq;
 	struct bmpc_ioreq *r;
 	struct bmapc_memb *b;
 	struct sl_resm *m;
+	int rc;
 
 	r = pll_peekhead(&bwc->bwc_pll);
 
@@ -572,7 +572,9 @@ bmap_flushable(struct bmapc_memb *b, int *ninfl)
 			continue;
 		}
 		rmci = resm2rmci(r->biorq_resm);
-		*ninfl = psc_atomic32_read(&rmci->rmci_infl_rpcs);
+		if (ninfl && r->biorq_resm)
+			*ninfl = psc_atomic32_read(
+			    &rmci->rmci_infl_rpcs);
 		BIORQ_ULOCK(r);
 		flush = 1;
 		break;
@@ -979,15 +981,14 @@ msbmflwthr_main(__unusedx struct psc_thread *thr)
 
 	while (pscthr_run()) {
 
-		if (!lc_peekheadwait(&bmapFlushQ))
-			continue;
+		lc_peekheadwait(&bmapFlushQ);
 
 		OPSTAT_INCR(SLC_OPST_LEASE_REFRESH);
 		PFL_GETTIMESPEC(&ts);
 		/*
 		 * A bmap can be on both bmapFlushQ and bmapTimeoutQ.
 		 * Even if we take it off bmapTimeoutQ, it can still
-		 * be on the bmapFlushQ. This is odd.
+		 * be on the bmapFlushQ.  This is odd.
 		 */
 		LIST_CACHE_LOCK(&bmapFlushQ);
 		LIST_CACHE_FOREACH_SAFE(b, tmpb, &bmapFlushQ) {

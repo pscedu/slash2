@@ -1151,7 +1151,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 
 	op = r->biorq_flags & BIORQ_WRITE ? SRMT_WRITE : SRMT_READ;
 
-	csvc = msl_bmap_to_csvc(b, op == SRMT_WRITE, NULL);
+	csvc = msl_bmap_to_csvc(b, op == SRMT_WRITE, &r->biorq_resm);
 	if (csvc == NULL) {
 		rc = -ENOTCONN;
 		goto error;
@@ -1309,7 +1309,6 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 		psc_assert(bmpc->bmpc_pndgwr > 1);
 		psc_assert((pll_nitems(&bmpc->bmpc_pndg_biorqs) +
 			    pll_nitems(&bmpc->bmpc_new_biorqs)) > 1);
-
 	} else {
 		b->bcm_flags |= BMAP_DIRTY;
 		psc_assert(psclist_disjoint(&b->bcm_lentry));
@@ -1318,7 +1317,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 		bmap_op_start_type(b, BMAP_OPCNT_FLUSHQ);
 	}
 
-	DEBUG_BMAP(PLL_DIAG, b, "biorq=%p list_empty(%d)",
+	DEBUG_BMAP(PLL_DIAG, b, "biorq=%p list_empty=%d",
 	    r, pll_empty(&bmpc->bmpc_pndg_biorqs));
 	BMPC_ULOCK(bmpc);
 	BMAP_ULOCK(b);
@@ -1394,14 +1393,13 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 	rq->rq_interpret_reply = msl_readahead_cb0;
 	pscrpc_req_setcompl(rq, &rpcComp);
 
-	for (i = 0; i < nbmpce; i++) {
+	for (i = 0; i < nbmpce; i++)
 		/*
 		 * bmpce_ralentry is available at this point, add the ra
 		 * to the pndg list before pushing it out the door.
 		 */
 		pll_addtail(&bmap_2_bmpc(b)->bmpc_pndg_ra, bmpces[i]);
 
-	}
 
 	added = 1;
 
@@ -1475,7 +1473,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 
 		psc_assert(biorq_is_my_bmpce(r, e));
 		psc_assert(!(e->bmpce_flags & BMPCE_DATARDY));
-		DEBUG_BMPCE(PLL_INFO, e, "page = %d", i + startpage);
+		DEBUG_BMPCE(PLL_DIAG, e, "page = %d", i + startpage);
 
 		BMPCE_ULOCK(e);
 
@@ -1492,7 +1490,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	if (rc)
 		PFL_GOTOERR(error, rc);
 	csvc = msl_bmap_to_csvc(r->biorq_bmap,
-	    r->biorq_bmap->bcm_flags & BMAP_WR, NULL);
+	    r->biorq_bmap->bcm_flags & BMAP_WR, &r->biorq_resm);
 	if (csvc == NULL)
 		PFL_GOTOERR(error, rc = -ENOTCONN);
 
