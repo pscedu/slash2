@@ -137,6 +137,11 @@ _bmap_flushq_wake(const struct pfl_callerinfo *pci, int mode)
 		}
 		break;
 
+	case BMAPFLSH_TIMEOA:
+		if (!(bmapFlushTimeoFlags & BMAPFLSH_RPCWAIT))
+			wake = 1;
+		break;
+
 	default:
 		psc_fatalx("invalid mode %d", mode);
 	}

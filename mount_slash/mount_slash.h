@@ -254,6 +254,7 @@ void	  bmap_flush_resched(struct bmpc_ioreq *, int);
 /* bmap flush modes (bmap_flushq_wake) */
 #define BMAPFLSH_RPCWAIT	(1 << 0)
 #define BMAPFLSH_EXPIRE		(1 << 1)
+#define BMAPFLSH_TIMEOA		(1 << 2)
 
 extern const char		*ctlsockfn;
 extern sl_ios_id_t		 prefIOS;
