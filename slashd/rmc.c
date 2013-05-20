@@ -161,25 +161,6 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	return (0);
 }
 
-static void
-slm_rmc_bmapdesc_setup(struct bmapc_memb *bmap,
-    struct srt_bmapdesc *sbd, enum rw rw)
-{
-	sbd->sbd_fg = bmap->bcm_fcmh->fcmh_fg;
-	sbd->sbd_bmapno = bmap->bcm_bmapno;
-	if (bmap->bcm_flags & BMAP_DIO)
-		sbd->sbd_flags |= SRM_LEASEBMAPF_DIRECTIO;
-
-	if (rw == SL_WRITE) {
-		struct bmap_mds_info *bmi = bmap_2_bmi(bmap);
-
-		psc_assert(bmi->bmi_wr_ion);
-		sbd->sbd_ios =
-		    bmi->bmi_wr_ion->rmmi_resm->resm_res->res_id;
-	} else
-		sbd->sbd_ios = IOS_ID_ANY;
-}
-
 /**
  * slm_rmc_handle_bmap_chwrmode - Handle a BMAPCHWRMODE request to
  *	upgrade a client bmap lease from READ-only to READ+WRITE.
@@ -305,11 +286,6 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	    mq->prefios[0], &mp->sbd, rq->rq_export, &bmap);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
-
-	if (mq->flags & SRM_LEASEBMAPF_DIRECTIO)
-		mp->sbd.sbd_flags |= SRM_LEASEBMAPF_DIRECTIO;
-
-	slm_rmc_bmapdesc_setup(bmap, &mp->sbd, mq->rw);
 
 	memcpy(&mp->bcs, &bmap->bcm_corestate, sizeof(mp->bcs));
 
@@ -633,9 +609,6 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 	if (mp->rc2)
 		PFL_GOTOERR(out, mp->rc2);
-
-	slm_rmc_bmapdesc_setup(bmap, &mp->sbd, SL_WRITE);
-
  out:
 	if (p)
 		fcmh_op_done(p);

@@ -1697,6 +1697,21 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	sbd->sbd_nid = exp->exp_connection->c_peer.nid;
 	sbd->sbd_pid = exp->exp_connection->c_peer.pid;
 
+	sbd->sbd_fg = b->bcm_fcmh->fcmh_fg;
+	sbd->sbd_bmapno = b->bcm_bmapno;
+
+	if (b->bcm_flags & BMAP_DIO)
+		sbd->sbd_flags |= SRM_LEASEBMAPF_DIRECTIO;
+
+	if (rw == SL_WRITE) {
+		struct bmap_mds_info *bmi = bmap_2_bmi(b);
+
+		psc_assert(bmi->bmi_wr_ion);
+		sbd->sbd_ios =
+		    bmi->bmi_wr_ion->rmmi_resm->resm_res->res_id;
+	} else
+		sbd->sbd_ios = IOS_ID_ANY;
+
  out:
 	mds_bmap_bml_release(bml);
 	bmap_op_done(b);
