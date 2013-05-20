@@ -1167,8 +1167,8 @@ msbmapflushthr_main(__unusedx struct psc_thread *thr)
 		rc = 0;
 		spinlock(&bmapFlushLock);
 		while (!rc && !bmapFlushTimeoFlags) {
-			rc = psc_waitq_wait(&bmapFlushWaitq,
-			    &bmapFlushLock);
+			rc = psc_waitq_waitrel_s(&bmapFlushWaitq,
+			    &bmapFlushLock, 1);
 			spinlock(&bmapFlushLock);
 		}
 		bmapFlushTimeoFlags = 0;
