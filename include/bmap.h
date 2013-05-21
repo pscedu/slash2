@@ -359,10 +359,6 @@ void	_dump_bmapod(const struct pfl_callerinfo *, int,
 #define bmap_get(f, n, rw, bp)		bmap_getf((f), (n), (rw),	\
 					    BMAPGETF_LOAD, (bp))
 
-#define bmap_get_noretr(f, n, rw, bp)	bmap_getf((f), (n), (rw),	\
-					    BMAPGETF_LOAD |		\
-					    BMAPGETF_NORETRIEVE, (bp))
-
 enum bmap_opcnt_types {
 /*  0 */ BMAP_OPCNT_LOOKUP,		/* bmap_get */
 /*  1 */ BMAP_OPCNT_IONASSIGN,
