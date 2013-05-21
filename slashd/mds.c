@@ -1635,14 +1635,12 @@ mds_bmap_load_fg(const struct slash_fidgen *fg, sl_bmapno_t bmapno,
 int
 mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
     enum rw rw, sl_ios_id_t prefios, struct srt_bmapdesc *sbd,
-    struct pscrpc_export *exp, struct bmapc_memb **bmap)
+    struct pscrpc_export *exp, struct bmap_core_state *bcs)
 {
 	struct slashrpc_cservice *csvc;
 	struct bmap_mds_lease *bml;
 	struct bmapc_memb *b;
 	int rc;
-
-	psc_assert(!*bmap);
 
 	FCMH_LOCK(f);
 	rc = (f->fcmh_flags & FCMH_IN_PTRUNC) &&
@@ -1678,8 +1676,6 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 		BML_ULOCK(bml);
 		goto out;
 	}
-	*bmap = b;
-
 	sbd->sbd_fg = f->fcmh_fg;
 	/*
 	 * SLASH2 monotonic coherency sequence number assigned to this
@@ -1711,6 +1707,8 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	if (b->bcm_flags & BMAP_DIO)
 		sbd->sbd_flags |= SRM_LEASEBMAPF_DIRECTIO;
 
+	if (bcs)
+		memcpy(bcs, &b->bcm_corestate, sizeof(*bcs));
  out:
 	mds_bmap_bml_release(bml);
 	bmap_op_done(b);

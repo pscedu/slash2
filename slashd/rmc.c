@@ -261,7 +261,6 @@ int
 slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 {
 	const struct srm_leasebmap_req *mq;
-	struct bmapc_memb *bmap = NULL;
 	struct srm_leasebmap_rep *mp;
 	struct fidc_membh *f;
 	int rc = 0;
@@ -283,11 +282,9 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	mp->flags = mq->flags;
 
 	mp->rc = mds_bmap_load_cli(f, mq->bmapno, mq->flags, mq->rw,
-	    mq->prefios[0], &mp->sbd, rq->rq_export, &bmap);
+	    mq->prefios[0], &mp->sbd, rq->rq_export, &mp->bcs);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
-
-	memcpy(&mp->bcs, &bmap->bcm_corestate, sizeof(mp->bcs));
 
 	if (mp->flags & SRM_LEASEBMAPF_GETREPLTBL) {
 		struct slash_inode_handle *ih;
@@ -524,7 +521,6 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	struct fidc_membh *p = NULL, *c;
 	struct srm_create_rep *mp;
 	struct srm_create_req *mq;
-	struct bmapc_memb *bmap;
 	struct slash_creds cr;
 	void *mdsio_data;
 	slfid_t fid = 0;
@@ -601,9 +597,8 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	/* obtain lease for first bmap as optimization */
 	mp->flags = mq->flags;
 
-	bmap = NULL;
 	mp->rc2 = mds_bmap_load_cli(c, 0, mp->flags, SL_WRITE,
-	    mq->prefios[0], &mp->sbd, rq->rq_export, &bmap);
+	    mq->prefios[0], &mp->sbd, rq->rq_export, NULL);
 
 	fcmh_op_done(c);
 
