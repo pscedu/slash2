@@ -1053,7 +1053,7 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 
 	if (!mds_bmap_exists(f, mq->bmapno))
 		PFL_GOTOERR(out, mp->rc = -SLERR_BMAP_INVALID);
-	mp->rc = mds_bmap_load(f, mq->bmapno, &b);
+	mp->rc = bmap_get(f, mq->bmapno, SL_WRITE, &b);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 

@@ -342,7 +342,7 @@ slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 		return (0);
 	}
 
-	mp->rc = mds_bmap_load(f, mq->bmapno, &b);
+	mp->rc = bmap_get(f, mq->bmapno, SL_WRITE, &b);
 	if (mp->rc)
 		return (0);
 
@@ -363,7 +363,7 @@ slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 	if (bno)
 		bno--;
 	for (;; bno--) {
-		if (mds_bmap_load(f, bno, &b))
+		if (bmap_get(f, bno, SL_WRITE, &b))
 			continue;
 		mds_repl_bmap_walk(b, tract, NULL, 0, &iosidx, 1);
 		mds_bmap_write_repls_rel(b);
@@ -499,7 +499,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	fsiz = mq->sstb.sst_size;
 	for (bno = 0; bno < howmany(mq->sstb.sst_size, SLASH_BMAP_SIZE);
 	    bno++) {
-		rc = mds_bmap_load(c, bno, &b);
+		rc = bmap_get(c, bno, SL_WRITE, &b);
 		if (rc)
 			PFL_GOTOERR(out, mp->rc = rc);
 		for (i = 0; i < SLASH_SLVRS_PER_BMAP &&

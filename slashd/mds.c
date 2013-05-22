@@ -1306,7 +1306,7 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr,
 		PFL_GOTOERR(out, rc);
 	}
 
-	rc = mds_bmap_load(f, bia->bia_bmapno, &b);
+	rc = bmap_get(f, bia->bia_bmapno, SL_WRITE, &b);
 	if (rc) {
 		DEBUG_FCMH(PLL_ERROR, f, "failed to load bmap %u (rc=%d)",
 		    bia->bia_bmapno, rc);
@@ -1562,7 +1562,7 @@ mds_bmap_loadvalid(struct fidc_membh *f, sl_bmapno_t bmapno,
 	*bp = NULL;
 
 	/* BMAP_OP #3 via lookup */
-	rc = mds_bmap_load(f, bmapno, &b);
+	rc = bmap_get(f, bmapno, SL_WRITE, &b);
 	if (rc)
 		return (rc);
 
@@ -1600,7 +1600,7 @@ mds_bmap_load_fg(const struct slash_fidgen *fg, sl_bmapno_t bmapno,
 	if (!f)
 		return (-ENOENT);
 
-	rc = mds_bmap_load(f, bmapno, &b);
+	rc = bmap_get(f, bmapno, SL_WRITE,&b);
 	if (rc == 0)
 		*bp = b;
 
@@ -1658,7 +1658,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 		FCMH_ULOCK(f);
 	}
 
-	rc = mds_bmap_load(f, bmapno, &b);
+	rc = bmap_get(f, bmapno, SL_WRITE, &b);
 	if (rc)
 		return (rc);
 
@@ -1727,7 +1727,7 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	struct sl_resm *resm;
 	int rc;
 
-	rc = mds_bmap_load(f, sbd_in->sbd_bmapno, &b);
+	rc = bmap_get(f, sbd_in->sbd_bmapno, SL_WRITE, &b);
 	if (rc)
 		return (rc);
 
@@ -1830,7 +1830,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	struct bmapc_memb *b;
 	int rc, rw;
 
-	rc = mds_bmap_load(f, sbd_in->sbd_bmapno, &b);
+	rc = bmap_get(f, sbd_in->sbd_bmapno, SL_WRITE, &b);
 	if (rc)
 		return (rc);
 
@@ -2103,7 +2103,7 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 		 * If a bmap sliver was sliced, we must await for a
 		 * sliod to reply with the new CRC.
 		 */
-		if (mds_bmap_load(f, i, &b) == 0) {
+		if (bmap_get(f, i, SL_WRITE, &b) == 0) {
 			mds_repl_bmap_walkcb(b, tract, NULL, 0,
 			    ptrunc_tally_ios, &ios_list);
 			mds_bmap_write_repls_rel(b);

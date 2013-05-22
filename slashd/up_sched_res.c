@@ -744,7 +744,7 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 	rc = slm_fcmh_get(&upg->upg_fg, &f);
 	if (rc)
 		goto out;
-	rc = mds_bmap_load(f, upg->upg_bno, &b);
+	rc = bmap_get(f, upg->upg_bno, SL_WRITE, &b);
 	if (rc)
 		goto out;
 	bmi = bmap_2_bmi(b);
@@ -1060,7 +1060,7 @@ upsch_purge_cb(struct slm_sth *sth, void *p)
 	f = p;
 	if (f) {
 		n = sqlite3_column_int(sth->sth_sth, 0);
-		rc = mds_bmap_load(f, n, &b);
+		rc = bmap_get(f, n, SL_WRITE, &b);
 		if (rc)
 			goto freeit;
 		upd = &bmap_2_bmi(b)->bmi_upd;

@@ -235,8 +235,6 @@ struct bmap_ios_assign {
 /* bia_flags */
 #define BIAF_DIO		(1 << 0)
 
-#define mds_bmap_load(f, n, bp)	bmap_get((f), (n), SL_WRITE, (bp))
-
 int	 mds_bmap_read(struct bmapc_memb *, enum rw, int);
 int	 mds_bmap_write(struct bmapc_memb *, int, void *, void *);
 int	_mds_bmap_write_rel(const struct pfl_callerinfo *, struct bmapc_memb *, void *);

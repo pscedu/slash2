@@ -742,7 +742,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 
 		for (bmapno = 0; bmapno < fcmh_nvalidbmaps(f);
 		    bmapno++) {
-			if (mds_bmap_load(f, bmapno, &b))
+			if (bmap_get(f, bmapno, SL_WRITE, &b))
 				continue;
 
 			BMAP_LOCK(b);
@@ -790,7 +790,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		retifset[BREPLST_GARBAGE] = F_LOG;
 		retifset[BREPLST_GARBAGE_SCHED] = F_LOG;
 
-		rc = -mds_bmap_load(f, bmapno, &b);
+		rc = -bmap_get(f, bmapno, SL_WRITE, &b);
 		if (rc == 0) {
 			BMAP_LOCK(b);
 
@@ -921,7 +921,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		rc = -SLERR_REPL_NOT_ACT;
 		for (bmapno = 0; bmapno < fcmh_nvalidbmaps(f);
 		    bmapno++) {
-			if (mds_bmap_load(f, bmapno, &b))
+			if (bmap_get(f, bmapno, SL_WRITE, &b))
 				continue;
 
 			replv.n = 0;
@@ -948,7 +948,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		retifset[BREPLST_REPL_SCHED] = F_LOG;
 		retifset[BREPLST_VALID] = F_LOG;
 
-		rc = -mds_bmap_load(f, bmapno, &b);
+		rc = -bmap_get(f, bmapno, SL_WRITE, &b);
 		if (rc == 0) {
 			replv.n = 0;
 			mds_repl_bmap_walkcb(b, empty_tract, NULL, 0,
