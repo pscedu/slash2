@@ -1229,7 +1229,6 @@ mds_handle_rls_bmap(struct pscrpc_request *rq, __unusedx int sliod)
 		   "release %"PRId64" nid=%"PRId64" pid=%u bml=%p",
 		   sbd->sbd_seq, sbd->sbd_nid, sbd->sbd_pid, bml);
 		if (bml) {
-			psc_assert(sbd->sbd_seq == bml->bml_seq);
 			BML_LOCK(bml);
 			bml->bml_flags |= BML_FREEING;
 			BML_ULOCK(bml);
