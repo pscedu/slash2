@@ -220,8 +220,7 @@ mds_bmap_ios_restart(struct bmap_mds_lease *bml)
 	bml->bml_bmi->bmi_wr_ion = rmmi;
 	bmap_op_start_type(bml_2_bmap(bml), BMAP_OPCNT_IONASSIGN);
 
-	if (mds_bmap_timeotbl_mdsi(bml, BTE_ADD | BTE_REATTACH) ==
-	    BMAPSEQ_ANY)
+	if (mds_bmap_timeotbl_mdsi(bml, BTE_REATTACH) == BMAPSEQ_ANY)
 		rc = 1;
 
 	bml->bml_bmi->bmi_seq = bml->bml_seq;
