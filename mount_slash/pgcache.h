@@ -141,40 +141,6 @@ SPLAY_HEAD(bmap_pagecachetree, bmap_pagecache_entry);
 SPLAY_PROTOTYPE(bmap_pagecachetree, bmap_pagecache_entry, bmpce_tentry,
 		bmpce_cmp)
 
-struct bmap_pagecache {
-	struct bmap_pagecachetree	 bmpc_tree;		/* tree of entries */
-	struct timespec			 bmpc_oldest;		/* LRU's oldest item */
-	struct psc_lockedlist		 bmpc_lru;		/* cleancnt can be kept here  */
-	/*
-	 * List for new requests minus BIORQ_READ and BIORQ_DIO.  All
-	 * requests are sorted based on their starting offsets to
-	 * facilitate write coalescing.
-	 */
-	struct psc_lockedlist		 bmpc_new_biorqs;
-	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* chain pending I/O requests */
-	struct psc_lockedlist		 bmpc_pndg_ra;		/* RA bmpce's pending comp */
-	int				 bmpc_pndgwr;		/* # pending wr req */
-	psc_spinlock_t			 bmpc_lock;		/* serialize access */
-	struct psclist_head		 bmpc_lentry;		/* chain to global LRU lc */
-};
-
-/*
- * The following four macros are equivalent to PLL_xxx counterparts
- * because of the way we initialize the locked lists in bmap_pagecache.
- */
-#define BMPC_LOCK(b)		spinlock(&(b)->bmpc_lock)
-#define BMPC_ULOCK(b)		freelock(&(b)->bmpc_lock)
-#define BMPC_RLOCK(b)		reqlock(&(b)->bmpc_lock)
-#define BMPC_URLOCK(b, lk)	ureqlock(&(b)->bmpc_lock, (lk))
-
-static __inline int
-bmpc_queued_ios(struct bmap_pagecache *bmpc)
-{
-	return (pll_nitems(&bmpc->bmpc_pndg_biorqs) +
-		pll_nitems(&bmpc->bmpc_pndg_ra) +
-		pll_nitems(&bmpc->bmpc_new_biorqs));
-}
-
 struct bmpc_ioreq {
 	char				*biorq_buf;
 	int32_t				 biorq_ref;
@@ -194,6 +160,7 @@ struct bmpc_ioreq {
 	struct psclist_head		 biorq_mfh_lentry; /* chain on file handle	*/
 	struct psclist_head		 biorq_bwc_lentry;
 	struct psclist_head		 biorq_png_lentry;
+	SPLAY_ENTRY(bmpc_ioreq)		 biorq_tentry;
 	struct bmapc_memb		*biorq_bmap;	/* backpointer to our bmap	*/
 	struct pscrpc_request_set	*biorq_rqset;
 	struct psc_waitq		 biorq_waitq;	/* used by a bmpce */
@@ -254,6 +221,63 @@ struct bmpc_ioreq {
 	    (b)->biorq_retries, (b)->biorq_buf, (b)->biorq_fsrqi,	\
 	    (b)->biorq_last_sliod, psc_dynarray_len(&(b)->biorq_pages),	\
 	    (b)->biorq_bmap, PSCPRI_TIMESPEC_ARGS(&(b)->biorq_expire), ## __VA_ARGS__)
+
+static __inline int
+bmpc_biorq_cmp(const void *x, const void *y)
+{
+	const struct bmpc_ioreq *a = x, *b = y;
+
+	if (a->biorq_off == b->biorq_off)
+		/*
+		 * Larger requests with the same start offset should
+		 * have ordering priority.
+		 */
+		return (CMP(a->biorq_len, b->biorq_len));
+	return (CMP(a->biorq_off, b->biorq_off));
+}
+
+SPLAY_HEAD(bmpc_biorq_tree, bmpc_ioreq);
+SPLAY_PROTOTYPE(bmpc_biorq_tree, bmpc_ioreq, biorq_tentry, bmpc_biorq_cmp)
+
+struct bmap_pagecache {
+	struct bmap_pagecachetree	 bmpc_tree;		/* tree of entries */
+	struct timespec			 bmpc_oldest;		/* LRU's oldest item */
+	struct psc_lockedlist		 bmpc_lru;		/* cleancnt can be kept here  */
+	/*
+	 * List for new requests minus BIORQ_READ and BIORQ_DIO.  All
+	 * requests are sorted based on their starting offsets to
+	 * facilitate write coalescing.
+	 */
+	struct bmpc_biorq_tree		 bmpc_new_biorqs;
+	int				 bmpc_new_nbiorqs;
+	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* chain pending I/O requests */
+	struct psc_lockedlist		 bmpc_pndg_ra;		/* RA bmpce's pending comp */
+	int				 bmpc_pndgwr;		/* # pending wr req */
+	psc_spinlock_t			 bmpc_lock;		/* serialize access */
+	struct psclist_head		 bmpc_lentry;		/* chain to global LRU lc */
+};
+
+/*
+ * The following four macros are equivalent to PLL_xxx counterparts
+ * because of the way we initialize the locked lists in bmap_pagecache.
+ */
+#define BMPC_LOCK(b)		spinlock(&(b)->bmpc_lock)
+#define BMPC_ULOCK(b)		freelock(&(b)->bmpc_lock)
+#define BMPC_RLOCK(b)		reqlock(&(b)->bmpc_lock)
+#define BMPC_URLOCK(b, lk)	ureqlock(&(b)->bmpc_lock, (lk))
+
+static __inline int
+bmpc_queued_ios(struct bmap_pagecache *bmpc)
+{
+	int locked, rc;
+
+	locked = BMPC_RLOCK(bmpc);
+	rc = pll_nitems(&bmpc->bmpc_pndg_biorqs) +
+	    pll_nitems(&bmpc->bmpc_pndg_ra) +
+	    bmpc->bmpc_new_nbiorqs;
+	BMPC_URLOCK(bmpc, locked);
+	return (rc);
+}
 
 struct bmpc_write_coalescer {
 	struct psc_lockedlist		 bwc_pll;
@@ -329,9 +353,6 @@ struct bmpc_ioreq *
 	 bmpc_biorq_new(struct msl_fsrqinfo *, struct bmapc_memb *,
 	    char *, int, uint32_t, uint32_t, int);
 
-inline void
-	 bmpc_biorq_free(struct bmpc_ioreq *);
-
 int	 bmpce_init(struct psc_poolmgr *, void *);
 struct bmap_pagecache_entry *
 	 bmpce_lookup_locked(struct bmap_pagecache *, struct bmpc_ioreq *,
@@ -370,8 +391,7 @@ bmpc_init(struct bmap_pagecache *bmpc)
 	pll_init(&bmpc->bmpc_pndg_biorqs, struct bmpc_ioreq,
 	    biorq_lentry, &bmpc->bmpc_lock);
 
-	pll_init(&bmpc->bmpc_new_biorqs, struct bmpc_ioreq,
-	    biorq_lentry, &bmpc->bmpc_lock);
+	SPLAY_INIT(&bmpc->bmpc_new_biorqs);
 
 	/*
 	 * Add the bmpc to the tail of LRU where it will stay until it's

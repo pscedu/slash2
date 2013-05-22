@@ -281,14 +281,14 @@ msl_bmap_lease_tryreassign(struct bmapc_memb *b)
 	BMPC_LOCK(bmpc);
 
 	/*
-	 * For lease reassignment to take place we must have the the
-	 * full complement of biorq's still in the cache.
+	 * For lease reassignment to take place we must have the full
+	 * complement of biorq's still in the cache.
 	 *
 	 * Additionally, no biorqs may be on the wire since those could
 	 * be committed by the sliod.
 	 */
 	if ((b->bcm_flags & BMAP_CLI_REASSIGNREQ) ||
-	    pll_empty(&bmpc->bmpc_new_biorqs)     ||
+	    SPLAY_EMPTY(&bmpc->bmpc_new_biorqs)   ||
 	    !pll_empty(&bmpc->bmpc_pndg_biorqs)   ||
 	    bci->bci_nreassigns >= SL_MAX_IOSREASSIGN) {
 		BMPC_ULOCK(bmpc);
@@ -801,33 +801,38 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive,
 void
 bmap_biorq_waitempty(struct bmapc_memb *b)
 {
+	struct bmap_pagecache *bmpc;
+
+	bmpc = bmap_2_bmpc(b);
 	BMAP_LOCK(b);
-	bmap_wait_locked(b, (!pll_empty(&bmap_2_bmpc(b)->bmpc_pndg_biorqs) ||
-			     !pll_empty(&bmap_2_bmpc(b)->bmpc_new_biorqs)  ||
-			     !pll_empty(&bmap_2_bmpc(b)->bmpc_pndg_ra)     ||
+	bmap_wait_locked(b, (!pll_empty(&bmpc->bmpc_pndg_biorqs)  ||
+			     !SPLAY_EMPTY(&bmpc->bmpc_new_biorqs) ||
+			     !pll_empty(&bmpc->bmpc_pndg_ra)      ||
 			     (b->bcm_flags & BMAP_DIRTY)));
 
-	psc_assert(pll_empty(&bmap_2_bmpc(b)->bmpc_pndg_biorqs));
-	psc_assert(pll_empty(&bmap_2_bmpc(b)->bmpc_new_biorqs));
-	psc_assert(pll_empty(&bmap_2_bmpc(b)->bmpc_pndg_ra));
+	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
+	psc_assert(SPLAY_EMPTY(&bmpc->bmpc_new_biorqs));
+	psc_assert(pll_empty(&bmpc->bmpc_pndg_ra));
 	BMAP_ULOCK(b);
 }
 
 void
 bmap_biorq_expire(struct bmapc_memb *b)
 {
+	struct bmap_pagecache *bmpc;
 	struct bmpc_ioreq *r;
 
 	/*
 	 * Note that the following two lists and the bmapc_memb
 	 * structure itself all share the same lock.
 	 */
-	BMPC_LOCK(bmap_2_bmpc(b));
-	PLL_FOREACH(r, &bmap_2_bmpc(b)->bmpc_new_biorqs)
+	bmpc = bmap_2_bmpc(b);
+	BMPC_LOCK(bmpc);
+	SPLAY_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_new_biorqs)
 		BIORQ_SETATTR(r, BIORQ_FORCE_EXPIRE);
-	PLL_FOREACH(r, &bmap_2_bmpc(b)->bmpc_pndg_biorqs)
+	PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs)
 		BIORQ_SETATTR(r, BIORQ_FORCE_EXPIRE);
-	BMPC_ULOCK(bmap_2_bmpc(b));
+	BMPC_ULOCK(bmpc);
 
 	/* Minimize biorq scanning via this hint. */
 	BMAP_SETATTR(b, BMAP_CLI_BIORQEXPIRE);
@@ -846,9 +851,9 @@ msl_bmap_final_cleanup(struct bmapc_memb *b)
 	BMAP_LOCK(b);
 	psc_assert(!(b->bcm_flags & BMAP_DIRTY));
 
-	psc_assert(pll_empty(&bmap_2_bmpc(b)->bmpc_pndg_biorqs));
-	psc_assert(pll_empty(&bmap_2_bmpc(b)->bmpc_new_biorqs));
-	psc_assert(pll_empty(&bmap_2_bmpc(b)->bmpc_pndg_ra));
+	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
+	psc_assert(SPLAY_EMPTY(&bmpc->bmpc_new_biorqs));
+	psc_assert(pll_empty(&bmpc->bmpc_pndg_ra));
 
 	DEBUG_BMAP(PLL_DIAG, b, "start freeing");
 

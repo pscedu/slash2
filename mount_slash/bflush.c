@@ -29,6 +29,8 @@
 #include "pfl/fcntl.h"
 #include "psc_ds/dynarray.h"
 #include "psc_ds/listcache.h"
+#include "psc_ds/tree.h"
+#include "psc_ds/treeutil.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"
@@ -288,8 +290,8 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r, struct sl_resm *m)
 	} else
 		timespecsub(&r->biorq_expire, &t, &t);
 
-	DEBUG_BIORQ(old ? PLL_DIAG : PLL_DEBUG, r, "set inflight %s ("
-	    PSCPRI_TIMESPEC")", old ? "expired: -" : "",
+	DEBUG_BIORQ(old ? PLL_DIAG : PLL_DEBUG, r, "set inflight %s "
+	    "("PSCPRI_TIMESPEC")", old ? "expired: -" : "",
 	    PSCPRI_TIMESPEC_ARGS(&t));
 
 	/*
@@ -297,7 +299,8 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r, struct sl_resm *m)
 	 * pending biorqs out of the way.
 	 */
 	r->biorq_flags |= BIORQ_PENDING;
-	pll_remove(&bmpc->bmpc_new_biorqs, r);
+	PSC_SPLAY_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
+	bmpc->bmpc_new_nbiorqs--;
 	pll_addtail(&bmpc->bmpc_pndg_biorqs, r);
 	BIORQ_ULOCK(r);
 	BMPC_ULOCK(bmpc);
@@ -311,8 +314,8 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r, struct sl_resm *m)
 void
 bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 {
-	int delta;
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(r->biorq_bmap);
+	int delta;
 
 	DEBUG_BIORQ(PLL_INFO, r, "resched");
 
@@ -363,14 +366,20 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 	r->biorq_expire.tv_sec += delta;
 
 	/*
-	 * If we were able to connect to an IOS, but the RPC fails somehow,
-	 * try to use a different IOS if possible.
+	 * If we were able to connect to an IOS, but the RPC fails
+	 * somehow, try to use a different IOS if possible.
 	 */
 	if (r->biorq_flags & BIORQ_PENDING) {
 		r->biorq_flags &= ~BIORQ_PENDING;
 		BIORQ_ULOCK(r);
 		pll_remove(&bmpc->bmpc_pndg_biorqs, r);
-		pll_add_sorted(&bmpc->bmpc_new_biorqs, r, bmpc_biorq_cmp);
+
+		BMPC_LOCK(bmpc);
+		PSC_SPLAY_XINSERT(bmpc_biorq_tree,
+		    &bmpc->bmpc_new_biorqs, r);
+		bmpc->bmpc_new_nbiorqs++;
+		BMPC_ULOCK(bmpc);
+
 		msl_bmap_lease_tryreassign(r->biorq_bmap);
 	} else
 		BIORQ_ULOCK(r);
@@ -559,7 +568,11 @@ bmap_flushable(struct bmapc_memb *b, int *ninfl)
 	bmpc = bmap_2_bmpc(b);
 
 	BMPC_LOCK(bmpc);
-	PLL_FOREACH_SAFE(r, tmp, &bmpc->bmpc_new_biorqs) {
+	for (r = SPLAY_MIN(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs); r;
+	    r = tmp) {
+		tmp = SPLAY_NEXT(bmpc_biorq_tree,
+		    &bmpc->bmpc_new_biorqs, r);
+
 		BIORQ_LOCK(r);
 
 		DEBUG_BIORQ(PLL_DIAG, r, "consider for flush");
@@ -1045,7 +1058,7 @@ bmap_flush(void)
 	struct bmpc_ioreq *r, *tmp;
 	struct bmapc_memb *b, *tmpb;
 	struct sl_resm *m;
-	int ninfl, i, j, k, skip = 0;
+	int ninfl, i, j;
 
 	LIST_CACHE_LOCK(&bmapFlushQ);
 	LIST_CACHE_FOREACH_SAFE(b, tmpb, &bmapFlushQ) {
@@ -1086,8 +1099,11 @@ bmap_flush(void)
 		BMAP_LOCK(b);
 		if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED) {
 			BMAP_ULOCK(b);
-			bmpc_biorqs_destroy(bmap_2_bmpc(b),
+
+			BMPC_LOCK(bmpc);
+			bmpc_biorqs_destroy(bmpc,
 			    bmap_2_bci(b)->bci_error);
+			BMPC_ULOCK(bmpc);
 			continue;
 		}
 		BMAP_ULOCK(b);
@@ -1095,7 +1111,11 @@ bmap_flush(void)
 		DEBUG_BMAP(PLL_DIAG, b, "try flush");
 
 		BMPC_LOCK(bmpc);
-		PLL_FOREACH_SAFE(r, tmp, &bmpc->bmpc_new_biorqs) {
+		for (r = SPLAY_MIN(bmpc_biorq_tree,
+		    &bmpc->bmpc_new_biorqs); r; r = tmp) {
+			tmp = SPLAY_NEXT(bmpc_biorq_tree,
+			    &bmpc->bmpc_new_biorqs, r);
+
 			BIORQ_LOCK(r);
 
 			if (!(r->biorq_flags & BIORQ_FLUSHRDY)) {
@@ -1124,16 +1144,14 @@ bmap_flush(void)
 		}
 		BMPC_ULOCK(bmpc);
 
-		j = k = 0;
+		j = 0;
 		while (j < psc_dynarray_len(&reqs) &&
 		    (bwc = bmap_flush_trycoalesce(&reqs, &j))) {
-			k += pll_nitems(&bwc->bwc_pll);
+			pll_nitems(&bwc->bwc_pll);
 			bmap_flush_coalesce_map(bwc);
 			bmap_flush_send_rpcs(bwc);
 			bmap_flush_outstanding_rpcwait(m);
 		}
-		if (k != psc_dynarray_len(&reqs))
-			skip = 1;
 		psc_dynarray_reset(&reqs);
 	}
 

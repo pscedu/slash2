@@ -381,9 +381,11 @@ msl_biorq_del(struct bmpc_ioreq *r)
 	BMAP_LOCK(b);
 	BMPC_LOCK(bmpc);
 
-	if (!(r->biorq_flags & BIORQ_PENDING))
-		pll_remove(&bmpc->bmpc_new_biorqs, r);
-	else {
+	if (!(r->biorq_flags & BIORQ_PENDING)) {
+		PSC_SPLAY_XREMOVE(bmpc_biorq_tree,
+		    &bmpc->bmpc_new_biorqs, r);
+		bmpc->bmpc_new_nbiorqs--;
+	} else {
 		pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 		r->biorq_flags &= ~BIORQ_PENDING;
 	}
@@ -494,8 +496,8 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 		fhent = 0;
 #endif
 
-	DEBUG_BIORQ(PLL_INFO, r, "destroying (nwaiters=%d)",
-		    atomic_read(&r->biorq_waitq.wq_nwaiters));
+	DEBUG_BIORQ(PLL_DIAG, r, "destroying (nwaiters=%d)",
+	    psc_waitq_nwaiters(&r->biorq_waitq));
 
 	msl_biorq_unref(r);
 	msl_biorq_del(r);
@@ -523,13 +525,17 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 		r->biorq_rqset = NULL;
 	}
 
-	while (atomic_read(&r->biorq_waitq.wq_nwaiters))
-		sched_yield();
+	while (psc_waitq_nwaiters(&r->biorq_waitq))
+		usleep(10);
 
 	psc_waitq_destroy(&r->biorq_waitq);
 
 	mfh_decref(r->biorq_mfh);
-	bmpc_biorq_free(r);
+
+//	psc_assert(pll_empty(biorq_pages));
+//	psc_assert(pll_disjoint(biorq_tentry));
+	OPSTAT_INCR(SLC_OPST_BIORQ_DESTROY);
+	psc_pool_return(slc_biorq_pool, r);
 }
 
 struct msl_fhent *
@@ -1312,8 +1318,8 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 		 * writer must be present.
 		 */
 		psc_assert(bmpc->bmpc_pndgwr > 1);
-		psc_assert((pll_nitems(&bmpc->bmpc_pndg_biorqs) +
-			    pll_nitems(&bmpc->bmpc_new_biorqs)) > 1);
+		psc_assert(pll_nitems(&bmpc->bmpc_pndg_biorqs) +
+		    bmpc->bmpc_new_nbiorqs > 1);
 	} else {
 		b->bcm_flags |= BMAP_DIRTY;
 		psc_assert(psclist_disjoint(&b->bcm_lentry));
@@ -1729,9 +1735,8 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 
 		if (!rc) {
 			BIORQ_CLEARATTR(r, BIORQ_RBWLP | BIORQ_RBWFP);
-			DEBUG_BIORQ(PLL_INFO, r, "read cb complete");
+			DEBUG_BIORQ(PLL_DIAG, r, "read cb complete");
 			psc_waitq_wakeall(&r->biorq_waitq);
-
 		}
 		BIORQ_ULOCK(r);
 

@@ -41,7 +41,9 @@ struct psc_poolmgr	*bwcPoolMgr;
 struct psc_listcache	 bmpcLru;
 
 __static SPLAY_GENERATE(bmap_pagecachetree, bmap_pagecache_entry,
-			bmpce_tentry, bmpce_cmp);
+    bmpce_tentry, bmpce_cmp);
+__static SPLAY_GENERATE(bmpc_biorq_tree, bmpc_ioreq,
+    biorq_tentry, bmpc_biorq_cmp);
 
 /**
  * bwc_init - Initialize write coalescer pool entry.
@@ -150,20 +152,6 @@ bmpce_lookup_locked(struct bmap_pagecache *bmpc, struct bmpc_ioreq *r,
 	return (e);
 }
 
-int
-bmpc_biorq_cmp(const void *x, const void *y)
-{
-	const struct bmpc_ioreq *a = x, *b = y;
-
-	if (a->biorq_off == b->biorq_off)
-		/*
-		 * Larger requests with the same start offset should
-		 * have ordering priority.
-		 */
-		return (CMP(a->biorq_len, b->biorq_len));
-	return (CMP(a->biorq_off, b->biorq_off));
-}
-
 void
 bmpce_free(struct bmap_pagecache_entry *e,
     struct bmap_pagecache *bmpc)
@@ -220,10 +208,10 @@ struct bmpc_ioreq *
 bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
     int rqnum, uint32_t off, uint32_t len, int op)
 {
-	struct bmpc_ioreq *r;
+	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 	struct timespec issue;
-	long  inflight;
-
+	struct bmpc_ioreq *r;
+	long inflight;
 
 	r = psc_pool_get(slc_biorq_pool);
 
@@ -262,10 +250,14 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 
 	if (op == BIORQ_READ || (r->biorq_flags & BIORQ_DIO)) {
 		r->biorq_flags |= BIORQ_PENDING;
-		pll_add(&bmap_2_bmpc(b)->bmpc_pndg_biorqs, r);
-	} else
-		pll_add_sorted(&bmap_2_bmpc(b)->bmpc_new_biorqs, r,
-		    bmpc_biorq_cmp);
+		pll_add(&bmpc->bmpc_pndg_biorqs, r);
+	} else {
+		BMPC_LOCK(bmpc);
+		PSC_SPLAY_XINSERT(bmpc_biorq_tree,
+		    &bmpc->bmpc_new_biorqs, r);
+		bmpc->bmpc_new_nbiorqs++;
+		BMPC_ULOCK(bmpc);
+	}
 	BMAP_ULOCK(b);
 
 	OPSTAT_INCR(SLC_OPST_BIORQ_ALLOC);
@@ -276,13 +268,6 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 		OPSTAT_ASSIGN(SLC_OPST_BIORQ_MAX, inflight);
 
 	return (r);
-}
-
-void
-bmpc_biorq_free(struct bmpc_ioreq *r)
-{
-	OPSTAT_INCR(SLC_OPST_BIORQ_DESTROY);
-	psc_pool_return(slc_biorq_pool, r);
 }
 
 /**
@@ -297,7 +282,7 @@ bmpc_freeall_locked(struct bmap_pagecache *bmpc)
 	struct bmap_pagecache_entry *a, *b;
 
 	LOCK_ENSURE(&bmpc->bmpc_lock);
-	psc_assert(pll_empty(&bmpc->bmpc_new_biorqs));
+	psc_assert(SPLAY_EMPTY(&bmpc->bmpc_new_biorqs));
 	psc_assert(pll_empty(&bmpc->bmpc_pndg_ra));
 
 	/* DIO rq's are allowed since no cached pages are involved. */
@@ -350,7 +335,7 @@ bmpc_biorqs_fail(struct bmap_pagecache *bmpc, int err)
 	BMPC_LOCK(bmpc);
 	PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs)
 		bmpc_biorq_seterr(r, err);
-	PLL_FOREACH(r, &bmpc->bmpc_new_biorqs)
+	SPLAY_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_new_biorqs)
 		bmpc_biorq_seterr(r, err);
 	BMPC_ULOCK(bmpc);
 }
@@ -360,7 +345,9 @@ bmpc_biorqs_destroy(struct bmap_pagecache *bmpc, int rc)
 {
 	struct bmpc_ioreq *r, *tmp;
 
-	PLL_FOREACH_SAFE(r, tmp, &bmpc->bmpc_new_biorqs) {
+	for (r = SPLAY_MIN(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs); r;
+	    r = tmp) {
+		tmp = SPLAY_NEXT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
 
 		BIORQ_LOCK(r);
 		if (!(r->biorq_flags & BIORQ_FLUSHRDY)) {
