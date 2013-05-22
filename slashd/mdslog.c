@@ -24,7 +24,7 @@
 
 #include "pfl/fcntl.h"
 #include "pfl/fs.h"
-#include "psc_ds/dynarray.h"
+#include "pfl/dynarray.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/crc.h"

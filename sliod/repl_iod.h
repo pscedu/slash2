@@ -20,9 +20,9 @@
 #ifndef _REPL_IOD_H_
 #define _REPL_IOD_H_
 
-#include "psc_ds/list.h"
-#include "psc_ds/listcache.h"
-#include "psc_ds/lockedlist.h"
+#include "pfl/list.h"
+#include "pfl/listcache.h"
+#include "pfl/lockedlist.h"
 #include "psc_rpc/rpc.h"
 #include "psc_util/lock.h"
 

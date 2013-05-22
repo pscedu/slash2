@@ -17,7 +17,7 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#include "psc_ds/dynarray.h"
+#include "pfl/dynarray.h"
 #include "psc_rpc/rpc.h"
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"

@@ -25,9 +25,9 @@
 #define PSC_SUBSYS SLISS_SLVR
 #include "subsys_iod.h"
 
-#include "psc_ds/listcache.h"
-#include "psc_ds/treeutil.h"
-#include "psc_ds/vbitmap.h"
+#include "pfl/listcache.h"
+#include "pfl/treeutil.h"
+#include "pfl/vbitmap.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/atomic.h"

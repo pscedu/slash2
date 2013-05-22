@@ -31,7 +31,7 @@
 
 #include "pfl/pfl.h"
 #include "pfl/str.h"
-#include "psc_ds/listcache.h"
+#include "pfl/listcache.h"
 #include "psc_util/alloc.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/fault.h"

@@ -22,7 +22,7 @@
 #include <stdio.h>
 
 #include "pfl/str.h"
-#include "psc_ds/tree.h"
+#include "pfl/tree.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"

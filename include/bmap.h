@@ -34,8 +34,8 @@
 #include <inttypes.h>
 #include <time.h>
 
-#include "psc_ds/tree.h"
-#include "psc_ds/list.h"
+#include "pfl/tree.h"
+#include "pfl/list.h"
 #include "psc_util/atomic.h"
 #include "psc_util/crc.h"
 #include "psc_util/lock.h"

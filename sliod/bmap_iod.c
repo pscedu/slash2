@@ -19,8 +19,8 @@
 
 #include <sys/time.h>
 
-#include "psc_ds/dynarray.h"
-#include "psc_ds/listcache.h"
+#include "pfl/dynarray.h"
+#include "pfl/listcache.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/ctlsvr.h"

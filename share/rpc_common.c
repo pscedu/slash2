@@ -23,7 +23,7 @@
 #include <stdio.h>
 
 #include "pfl/time.h"
-#include "psc_ds/list.h"
+#include "pfl/list.h"
 #include "psc_rpc/export.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"

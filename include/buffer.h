@@ -27,8 +27,8 @@
 #define _SL_BUFFER_H_
 
 #include "pfl/cdefs.h"
-#include "psc_ds/list.h"
-#include "psc_ds/listcache.h"
+#include "pfl/list.h"
+#include "pfl/listcache.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 #include "psc_util/pool.h"

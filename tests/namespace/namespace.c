@@ -15,7 +15,7 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
-#include "psc_ds/queue.h"
+#include "pfl/queue.h"
 
 /*
  * This tester does not extensively test boundary conditions on maximum

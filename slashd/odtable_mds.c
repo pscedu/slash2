@@ -27,7 +27,7 @@
 #include "pfl/cdefs.h"
 #include "pfl/str.h"
 #include "pfl/types.h"
-#include "psc_ds/lockedlist.h"
+#include "pfl/lockedlist.h"
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"

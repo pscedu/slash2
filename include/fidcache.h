@@ -28,7 +28,7 @@
 
 #include "pfl/hashtbl.h"
 #include "pfl/time.h"
-#include "psc_ds/tree.h"
+#include "pfl/tree.h"
 #include "psc_util/lock.h"
 #include "psc_util/pool.h"
 

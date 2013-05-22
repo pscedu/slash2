@@ -20,8 +20,8 @@
 #ifndef _SLASHD_H_
 #define _SLASHD_H_
 
-#include "psc_ds/dynarray.h"
-#include "psc_ds/vbitmap.h"
+#include "pfl/dynarray.h"
+#include "pfl/vbitmap.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/service.h"
 #include "psc_util/meter.h"

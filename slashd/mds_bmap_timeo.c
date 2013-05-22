@@ -19,8 +19,8 @@
 
 #include <sys/time.h>
 
-#include "psc_ds/dynarray.h"
-#include "psc_ds/list.h"
+#include "pfl/dynarray.h"
+#include "pfl/list.h"
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"

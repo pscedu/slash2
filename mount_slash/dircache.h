@@ -35,9 +35,9 @@
 #include <time.h>
 
 #include "pfl/str.h"
-#include "psc_ds/dynarray.h"
-#include "psc_ds/list.h"
-#include "psc_ds/listcache.h"
+#include "pfl/dynarray.h"
+#include "pfl/list.h"
+#include "pfl/listcache.h"
 #include "psc_util/lock.h"
 
 #include "sltypes.h"

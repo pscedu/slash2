@@ -22,9 +22,9 @@
 
 #include <time.h>
 
-#include "psc_ds/dynarray.h"
-#include "psc_ds/listcache.h"
-#include "psc_ds/tree.h"
+#include "pfl/dynarray.h"
+#include "pfl/listcache.h"
+#include "pfl/tree.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/alloc.h"

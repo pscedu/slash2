@@ -20,7 +20,7 @@
 #ifndef _FIDC_CLI_H_
 #define _FIDC_CLI_H_
 
-#include "psc_ds/list.h"
+#include "pfl/list.h"
 #include "psc_util/lock.h"
 
 #include "sltypes.h"

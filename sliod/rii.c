@@ -21,8 +21,8 @@
  * Routines for handling RPC requests for ION from ION.
  */
 
-#include "psc_ds/list.h"
-#include "psc_ds/vbitmap.h"
+#include "pfl/list.h"
+#include "pfl/vbitmap.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"

@@ -28,7 +28,7 @@
 #include "pfl/stat.h"
 #include "pfl/str.h"
 #include "pfl/walk.h"
-#include "psc_ds/lockedlist.h"
+#include "pfl/lockedlist.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlsvr.h"

@@ -21,10 +21,10 @@
 #define _SLIOD_SLVR_H_
 
 #include "pfl/aio.h"
-#include "psc_ds/dynarray.h"
-#include "psc_ds/listcache.h"
-#include "psc_ds/tree.h"
-#include "psc_ds/vbitmap.h"
+#include "pfl/dynarray.h"
+#include "pfl/listcache.h"
+#include "pfl/tree.h"
+#include "pfl/vbitmap.h"
 #include "psc_rpc/rpc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/log.h"

@@ -20,7 +20,7 @@
 #ifndef _FIDC_MDS_H_
 #define _FIDC_MDS_H_
 
-#include "psc_ds/dynarray.h"
+#include "pfl/dynarray.h"
 
 #include "fid.h"
 #include "fidcache.h"

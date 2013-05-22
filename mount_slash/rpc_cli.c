@@ -20,7 +20,7 @@
 #include "pfl/cdefs.h"
 #include "pfl/fs.h"
 #include "pfl/str.h"
-#include "psc_ds/list.h"
+#include "pfl/list.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/service.h"

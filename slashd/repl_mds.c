@@ -32,8 +32,8 @@
 #include <string.h>
 
 #include "pfl/str.h"
-#include "psc_ds/tree.h"
-#include "psc_ds/treeutil.h"
+#include "pfl/tree.h"
+#include "pfl/treeutil.h"
 #include "psc_util/alloc.h"
 #include "psc_util/crc.h"
 #include "psc_util/lock.h"

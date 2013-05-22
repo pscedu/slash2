@@ -35,9 +35,9 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/fs.h"
-#include "psc_ds/dynarray.h"
-#include "psc_ds/list.h"
-#include "psc_ds/treeutil.h"
+#include "pfl/dynarray.h"
+#include "pfl/list.h"
+#include "pfl/treeutil.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/ctlsvr.h"

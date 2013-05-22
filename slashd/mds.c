@@ -19,9 +19,9 @@
 
 #include "pfl/fs.h"
 #include "pfl/hashtbl.h"
-#include "psc_ds/lockedlist.h"
-#include "psc_ds/tree.h"
-#include "psc_ds/treeutil.h"
+#include "pfl/lockedlist.h"
+#include "pfl/tree.h"
+#include "pfl/treeutil.h"
 #include "psc_rpc/export.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/alloc.h"

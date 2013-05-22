@@ -18,7 +18,7 @@
  */
 
 #include "pfl/cdefs.h"
-#include "psc_ds/listcache.h"
+#include "pfl/listcache.h"
 #include "psc_util/pool.h"
 #include "psc_util/thread.h"
 

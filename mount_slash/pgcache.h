@@ -28,11 +28,11 @@
 #include <time.h>
 
 #include "pfl/time.h"
-#include "psc_ds/list.h"
-#include "psc_ds/listcache.h"
-#include "psc_ds/lockedlist.h"
-#include "psc_ds/tree.h"
-#include "psc_ds/vbitmap.h"
+#include "pfl/list.h"
+#include "pfl/listcache.h"
+#include "pfl/lockedlist.h"
+#include "pfl/tree.h"
+#include "pfl/vbitmap.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 #include "psc_util/pool.h"

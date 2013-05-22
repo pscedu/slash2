@@ -23,8 +23,8 @@
 #include <time.h>
 
 #include "pfl/fsmod.h"
-#include "psc_ds/lockedlist.h"
-#include "psc_ds/treeutil.h"
+#include "pfl/lockedlist.h"
+#include "pfl/treeutil.h"
 #include "psc_util/atomic.h"
 #include "psc_util/pool.h"
 #include "psc_util/ctlsvr.h"

@@ -20,8 +20,8 @@
 #ifndef _WORKER_H_
 #define _WORKER_H_
 
-#include "psc_ds/list.h"
-#include "psc_ds/listcache.h"
+#include "pfl/list.h"
+#include "pfl/listcache.h"
 
 struct pfl_workrq {
 	int			(*wkrq_cbf)(void *);

@@ -20,7 +20,7 @@
 #ifndef _SL_MDS_REPL_H_
 #define _SL_MDS_REPL_H_
 
-#include "psc_ds/tree.h"
+#include "pfl/tree.h"
 
 #include "fidc_mds.h"
 
