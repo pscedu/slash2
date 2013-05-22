@@ -522,15 +522,13 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	 * An ION has been assigned to the bmap, mark it in the odtable
 	 * so that the assignment may be restored on reboot.
 	 */
-	memset(&bia, 0, sizeof(bia));
-
-	bia.bia_lastcli = bml->bml_cli_nidpid;
 	bia.bia_ios = bml->bml_ios = rmmi->rmmi_resm->resm_res->res_id;
+	bia.bia_lastcli = bml->bml_cli_nidpid;
 	bia.bia_fid = fcmh_2_fid(b->bcm_fcmh);
+	bia.bia_seq = bmi->bmi_seq = mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
 	bia.bia_bmapno = b->bcm_bmapno;
 	bia.bia_start = time(NULL);
 	bia.bia_flags = (b->bcm_flags & BMAP_DIO) ? BIAF_DIO : 0;
-	bmi->bmi_seq = bia.bia_seq = mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
 
 	bmi->bmi_assign = mds_odtable_putitem(mdsBmapAssignTable, &bia,
 	    sizeof(bia));
