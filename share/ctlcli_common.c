@@ -91,11 +91,7 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	char *p, *site, nid[NI_MAXHOST], *res, addrbuf[RESM_ADDRBUF_SZ];
 	const struct slctlmsg_conn *scc = m;
 	const char *addr, *stype, *prid;
-	int type;
 
-	type = scc->scc_type;
-	if (type < 0 || type >= (int)nitems(slconn_restypes))
-		type = nitems(slconn_restypes) - 1;
 	stype = slconn_restypes[scc->scc_type];
 
 	strlcpy(addrbuf, scc->scc_addrbuf, sizeof(addrbuf));
