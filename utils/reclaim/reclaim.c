@@ -157,7 +157,6 @@ main(int argc, char *argv[])
 		}
 
 	argc -= optind;
-	argv += optind;
 	if (argc)
 		usage();
 	if (reclaim_log && reclaim_prog_log)

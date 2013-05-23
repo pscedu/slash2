@@ -73,7 +73,6 @@ main(int argc, char *argv[])
 		}
 
 	argc -= optind;
-	argv += optind;
 	if (argc || !cursor_file)
 		usage();
 
