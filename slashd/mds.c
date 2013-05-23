@@ -149,16 +149,16 @@ mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw, int want_dio,
 		return (0);
 
 	/*
- 	 * We enter into the DIO mode in three cases:
- 	 *
- 	 *  (1) Our caller wants a DIO lease
- 	 *  (2) There is already a write lease out there
- 	 *  (3) We want to a write lease when there are read leases out there.
- 	 *
- 	 * In addition, even if the current lease request does not trigger a
- 	 * DIO by itself, it has to wait if there is a DIO downgrade already
- 	 * in progress.
- 	 */
+	 * We enter into the DIO mode in three cases:
+	 *
+	 *  (1) Our caller wants a DIO lease
+	 *  (2) There is already a write lease out there
+	 *  (3) We want to a write lease when there are read leases out there.
+	 *
+	 * In addition, even if the current lease request does not trigger a
+	 * DIO by itself, it has to wait if there is a DIO downgrade already
+	 * in progress.
+	 */
 	if (!want_dio && (b->bcm_flags & BMAP_DIOCB))
 		want_dio = 1;
 
@@ -809,7 +809,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 	bmap_wait_locked(b, (b->bcm_flags & BMAP_IONASSIGN));
 	bmap_op_start_type(b, BMAP_OPCNT_LEASE);
 
-	rc = mds_bmap_directio_locked(b, rw, bml->bml_flags & BML_DIO, 
+	rc = mds_bmap_directio_locked(b, rw, bml->bml_flags & BML_DIO,
 		&bml->bml_cli_nidpid);
 	if (rc && !(bml->bml_flags & BML_RECOVER))
 		/* 'rc != 0' means that we're waiting on an async cb
