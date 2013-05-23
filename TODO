@@ -432,8 +432,22 @@ reimport
 - Not all items on the flush queue is flushable.  We may want to defer
   putting an item on the queue until it is flushable.  dd-test.sh can
   have thousands of pending biorqs.
+- remove syslog network traffic from psclog()
 - st_blocks is zero on some files
 - write a tool to purge specified IOS's from the garbage reclaim log files
+- examine mps patches for anything that stands out
+- devd rules to change /dev/daXXX to some SCSI ID
+- mount_slash doesn't slconnthr_watch() IOS to wakeup after flush hang
+
+- make illustrations about how the throttling in the replication engines
+- ask paul about difficulty of CRCs
+  - dedup?
+- far to automatically do md5?
+
+- boot senes50 into linux-zfs ?
+- amazon s3 api for sliod backend?
+
+- nqdq activemq ? network scheduling?
 
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
