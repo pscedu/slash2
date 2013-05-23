@@ -773,7 +773,6 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 
 	} else if (flags & CSVCF_NORECON) {
 
-		rc = ENOTCONN;
 		csvc = NULL;
 		goto out;
 
@@ -813,7 +812,6 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 			csvc = NULL;
 		}
 	} else {
-		rc = csvc->csvc_lasterrno;
 		csvc = NULL;
 		goto out;
 	}
