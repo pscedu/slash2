@@ -29,7 +29,7 @@
 #include "pfl/time.h"
 #include "pfl/list.h"
 #include "pfl/listcache.h"
-#include "psc_rpc/rsx.h"
+#include "pfl/rsx.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/ctlsvr.h"

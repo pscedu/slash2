@@ -30,7 +30,7 @@
 
 #include <stdint.h>
 
-#include "psc_rpc/export.h"
+#include "pfl/export.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 #include "psc_util/multiwait.h"

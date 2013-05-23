@@ -23,7 +23,7 @@
 #include <sys/types.h>
 
 #include "pfl/fs.h"
-#include "psc_rpc/service.h"
+#include "pfl/service.h"
 #include "psc_util/atomic.h"
 #include "psc_util/multiwait.h"
 

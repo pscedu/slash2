@@ -23,7 +23,7 @@
 #include "pfl/list.h"
 #include "pfl/listcache.h"
 #include "pfl/lockedlist.h"
-#include "psc_rpc/rpc.h"
+#include "pfl/rpc.h"
 #include "psc_util/lock.h"
 
 #include "fid.h"

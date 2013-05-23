@@ -22,8 +22,8 @@
 
 #include "pfl/dynarray.h"
 #include "pfl/vbitmap.h"
-#include "psc_rpc/rpc.h"
-#include "psc_rpc/service.h"
+#include "pfl/rpc.h"
+#include "pfl/service.h"
 #include "psc_util/meter.h"
 #include "psc_util/multiwait.h"
 

@@ -21,9 +21,9 @@
 #include "pfl/fs.h"
 #include "pfl/str.h"
 #include "pfl/list.h"
-#include "psc_rpc/rpc.h"
-#include "psc_rpc/rsx.h"
-#include "psc_rpc/service.h"
+#include "pfl/rpc.h"
+#include "pfl/rsx.h"
+#include "pfl/service.h"
 
 #include "ctlsvr_cli.h"
 #include "mount_slash.h"

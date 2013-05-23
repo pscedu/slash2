@@ -24,7 +24,7 @@
 #include "lnet/lib-lnet.h"
 
 #include "pfl/str.h"
-#include "psc_rpc/rpc.h"
+#include "pfl/rpc.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/lock.h"

@@ -25,7 +25,7 @@
 #include "pfl/time.h"
 #include "pfl/list.h"
 #include "pfl/listcache.h"
-#include "psc_rpc/rpc.h"
+#include "pfl/rpc.h"
 #include "psc_util/bitflag.h"
 #include "psc_util/lock.h"
 

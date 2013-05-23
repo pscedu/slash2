@@ -20,7 +20,7 @@
 #ifndef _SLASH_BMAP_CLI_H_
 #define _SLASH_BMAP_CLI_H_
 
-#include "psc_rpc/rpc.h"
+#include "pfl/rpc.h"
 #include "psc_util/lock.h"
 
 #include "bmap.h"

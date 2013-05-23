@@ -25,7 +25,7 @@
 #include "psc_util/ctlsvr.h"
 #include "psc_util/iostats.h"
 #include "psc_util/random.h"
-#include "psc_rpc/rpc.h"
+#include "pfl/rpc.h"
 
 #include "slconfig.h"
 #include "bmap_cli.h"

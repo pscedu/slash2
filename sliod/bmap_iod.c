@@ -21,8 +21,8 @@
 
 #include "pfl/dynarray.h"
 #include "pfl/listcache.h"
-#include "psc_rpc/rpc.h"
-#include "psc_rpc/rsx.h"
+#include "pfl/rpc.h"
+#include "pfl/rsx.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"

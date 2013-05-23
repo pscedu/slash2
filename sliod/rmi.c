@@ -26,8 +26,8 @@
 
 #include <stdint.h>
 
-#include "psc_rpc/rpc.h"
-#include "psc_rpc/rsx.h"
+#include "pfl/rpc.h"
+#include "pfl/rsx.h"
 
 #include "bmap_iod.h"
 #include "repl_iod.h"

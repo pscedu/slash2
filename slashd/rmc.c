@@ -35,11 +35,11 @@
 
 #include "pfl/fs.h"
 #include "pfl/str.h"
-#include "psc_rpc/export.h"
-#include "psc_rpc/rpc.h"
-#include "psc_rpc/rpclog.h"
-#include "psc_rpc/rsx.h"
-#include "psc_rpc/service.h"
+#include "pfl/export.h"
+#include "pfl/rpc.h"
+#include "pfl/rpclog.h"
+#include "pfl/rsx.h"
+#include "pfl/service.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/lock.h"
 

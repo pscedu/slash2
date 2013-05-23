@@ -25,7 +25,7 @@
 #include "pfl/listcache.h"
 #include "pfl/tree.h"
 #include "pfl/vbitmap.h"
-#include "psc_rpc/rpc.h"
+#include "pfl/rpc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/log.h"
 

@@ -21,7 +21,7 @@
  * Interface for controlling live operation of a sliod instance.
  */
 
-#include "psc_rpc/rpc.h"
+#include "pfl/rpc.h"
 
 #include "fid.h"
 #include "slconfig.h"

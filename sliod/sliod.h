@@ -21,7 +21,7 @@
 #define _SLIOD_H_
 
 #include "pfl/cdefs.h"
-#include "psc_rpc/service.h"
+#include "pfl/service.h"
 #include "psc_util/thread.h"
 
 #include "fid.h"

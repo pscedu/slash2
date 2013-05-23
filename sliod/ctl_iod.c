@@ -29,7 +29,7 @@
 #include "pfl/str.h"
 #include "pfl/walk.h"
 #include "pfl/lockedlist.h"
-#include "psc_rpc/rsx.h"
+#include "pfl/rsx.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlsvr.h"
 

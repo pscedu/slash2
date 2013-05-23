@@ -23,7 +23,7 @@
 #include <sys/time.h>
 
 #include "pfl/lockedlist.h"
-#include "psc_rpc/rpc.h"
+#include "pfl/rpc.h"
 #include "psc_util/odtable.h"
 #include "psc_util/pthrutil.h"
 

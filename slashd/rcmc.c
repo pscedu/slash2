@@ -27,8 +27,8 @@
 
 #include <dirent.h>
 
-#include "psc_rpc/rpc.h"
-#include "psc_rpc/rsx.h"
+#include "pfl/rpc.h"
+#include "pfl/rsx.h"
 #include "psc_util/bitflag.h"
 #include "psc_util/lock.h"
 #include "psc_util/thread.h"
