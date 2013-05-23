@@ -8,12 +8,6 @@ reminders:
 - do sl_csvc_wantfree() in all to-CLI csvcs
 - ensure reentrancy of 'static' variables in functions
 -----------------------------------------------------------------------
-* Increasing outstanding RPCs
-Instead of using 1 global for all sliods, the client should have a per-sliod
-value so that it may put more rpc's inflight at once.
-This should increase performance!
-
------------------------------------------------------------------------
 * Bmpce Write
 There may be some advantage to maintaining a seq or numeric window id for
 each bmpce being processed for write.  Right before the bmpce is put on the
