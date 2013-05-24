@@ -166,7 +166,6 @@ struct bmpc_ioreq {
 	struct psc_waitq		 biorq_waitq;	/* used by a bmpce */
 	struct msl_fhent		*biorq_mfh;	/* back pointer to msl_fhent */
 	struct msl_fsrqinfo		*biorq_fsrqi;
-	struct sl_resm			*biorq_resm;
 };
 
 #define	BIORQ_READ			(1 <<  0)

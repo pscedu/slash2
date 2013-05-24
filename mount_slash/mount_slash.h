@@ -200,7 +200,6 @@ res2rpci(struct sl_resource *res)
 struct resm_cli_info {
 	struct srm_bmap_release_req	 rmci_bmaprls;
 	struct psc_listcache		 rmci_async_reqs;
-	psc_atomic32_t			 rmci_pndg_rpcs;
 	psc_atomic32_t			 rmci_infl_rpcs;
 };
 
@@ -216,7 +215,7 @@ resm2rmci(struct sl_resm *resm)
 #define msl_biorq_destroy(r)	_msl_biorq_destroy(PFL_CALLERINFOSS(SLSS_BMAP), (r))
 
 struct slashrpc_cservice *
-	 msl_bmap_to_csvc(struct bmapc_memb *, int, struct sl_resm **);
+	 msl_bmap_to_csvc(struct bmapc_memb *, int);
 void	 msl_bmap_reap_init(struct bmapc_memb *, const struct srt_bmapdesc *);
 void	 msl_bmpces_fail(struct bmpc_ioreq *, int);
 void	_msl_biorq_destroy(const struct pfl_callerinfo *, struct bmpc_ioreq *);
@@ -237,7 +236,7 @@ size_t	 msl_pages_copyout(struct bmpc_ioreq *);
 int	 msl_fd_should_retry(struct msl_fhent *, int);
 
 struct slashrpc_cservice *
-	 msl_try_get_replica_res(struct bmapc_memb *, int, struct sl_resm **);
+	 msl_try_get_replica_res(struct bmapc_memb *, int);
 struct msl_fhent *
 	 msl_fhent_new(struct fidc_membh *);
 

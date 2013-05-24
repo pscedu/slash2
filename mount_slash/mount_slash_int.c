@@ -560,8 +560,7 @@ msl_fhent_new(struct fidc_membh *f)
 }
 
 struct slashrpc_cservice *
-msl_try_get_replica_res(struct bmapc_memb *b, int iosidx,
-    struct sl_resm **pm)
+msl_try_get_replica_res(struct bmapc_memb *b, int iosidx)
 {
 	struct slashrpc_cservice *csvc;
 	struct fcmh_cli_info *fci;
@@ -588,14 +587,10 @@ msl_try_get_replica_res(struct bmapc_memb *b, int iosidx,
 	FOREACH_RND(&it, psc_dynarray_len(&res->res_members)) {
 		m = psc_dynarray_getpos(&res->res_members,
 		    it.ri_rnd_idx);
-		if (pm)
-			*pm = m;
 		csvc = slc_geticsvc_nb(m);
 		if (csvc)
 			return (csvc);
 	}
-	if (pm)
-		*pm = NULL;
 	return (NULL);
 }
 
@@ -1162,7 +1157,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 
 	op = r->biorq_flags & BIORQ_WRITE ? SRMT_WRITE : SRMT_READ;
 
-	csvc = msl_bmap_to_csvc(b, op == SRMT_WRITE, &r->biorq_resm);
+	csvc = msl_bmap_to_csvc(b, op == SRMT_WRITE);
 	if (csvc == NULL) {
 		rc = -ENOTCONN;
 		goto error;
@@ -1369,7 +1364,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 		iovs[i].iov_len  = BMPC_BUFSZ;
 	}
 
-	csvc = msl_bmap_to_csvc(b, 0, NULL);
+	csvc = msl_bmap_to_csvc(b, 0);
 	if (csvc == NULL) {
 		rc = -ENOTCONN;
 		goto error;
@@ -1502,7 +1497,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	if (rc)
 		PFL_GOTOERR(error, rc);
 	csvc = msl_bmap_to_csvc(r->biorq_bmap,
-	    r->biorq_bmap->bcm_flags & BMAP_WR, &r->biorq_resm);
+	    r->biorq_bmap->bcm_flags & BMAP_WR);
 	if (csvc == NULL)
 		PFL_GOTOERR(error, rc = -ENOTCONN);
 
