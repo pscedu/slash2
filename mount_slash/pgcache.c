@@ -121,7 +121,7 @@ bmpce_lookup_locked(struct bmap_pagecache *bmpc, struct bmpc_ioreq *r,
 				BMPC_LOCK(bmpc);
 				continue;
 			}
-			DEBUG_BMPCE(PLL_INFO, e, "add reference");
+			DEBUG_BMPCE(PLL_DIAG, e, "add reference");
 			OPSTAT_INCR(SLC_OPST_BMPCE_HIT);
 			psc_atomic32_inc(&e->bmpce_ref);
 			break;
