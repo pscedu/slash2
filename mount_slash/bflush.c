@@ -1050,9 +1050,9 @@ bmap_flush(void)
 	struct bmap_pagecache *bmpc;
 	struct bmpc_ioreq *r, *tmp;
 	struct bmapc_memb *b, *tmpb;
-	struct sl_resm *m;
 	struct resm_cli_info *rmci;
-	int i, j, k, skip = 0;
+	struct sl_resm *m;
+	int i, j, k;
 
 	LIST_CACHE_LOCK(&bmapFlushQ);
 	LIST_CACHE_FOREACH_SAFE(b, tmpb, &bmapFlushQ) {
@@ -1074,11 +1074,11 @@ bmap_flush(void)
 			psc_dynarray_add(&bmaps, b);
 
 		BMAP_ULOCK(b);
-	
+
 		m = libsl_ios2resm(bmap_2_ios(b));
 		rmci = resm2rmci(m);
 
-		if (psc_dynarray_len(&bmaps) + 
+		if (psc_dynarray_len(&bmaps) +
 		    psc_atomic32_read(&rmci->rmci_infl_rpcs) >
 		    MAX_OUTSTANDING_RPCS)
 			break;
