@@ -225,14 +225,17 @@ static __inline int
 bmpc_biorq_cmp(const void *x, const void *y)
 {
 	const struct bmpc_ioreq *a = x, *b = y;
+	uint32_t rc;
 
-	if (a->biorq_off == b->biorq_off)
-		/*
-		 * Larger requests with the same start offset should
-		 * have ordering priority.
-		 */
-		return (CMP(a->biorq_len, b->biorq_len));
-	return (CMP(a->biorq_off, b->biorq_off));
+	rc = CMP(a->biorq_off, b->biorq_off);
+	if (rc)
+		return (rc);
+
+	rc = CMP(a->biorq_len, b->biorq_len);
+	if (rc)
+		return (rc);
+
+	return (CMP(a, b));
 }
 
 SPLAY_HEAD(bmpc_biorq_tree, bmpc_ioreq);
@@ -342,9 +345,7 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
 #define biorq_voff_get(r)	((r)->biorq_off + (r)->biorq_len)
 
 void	 bmpc_global_init(void);
-void	 bmpc_free(void *);
 void	 bmpc_freeall_locked(struct bmap_pagecache *);
-int	 bmpc_biorq_cmp(const void *, const void *);
 void	 bmpc_biorqs_fail(struct bmap_pagecache *, int);
 void	 bmpc_biorqs_destroy(struct bmap_pagecache *, int);
 
