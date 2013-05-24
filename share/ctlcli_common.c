@@ -153,7 +153,7 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 void
 sl_bmap_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	printf("%-16s %6s %-18s %3s "
+	printf("%-16s %6s %-14s %3s "
 	    "%13s %7s\n",
 	    "fid", "bmapno", "flags", "ref",
 	    "ios", "seqno");
