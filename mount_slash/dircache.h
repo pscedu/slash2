@@ -148,7 +148,6 @@ void	dircache_init(struct dircache_mgr *, const char *, size_t);
 slfid_t	dircache_lookup(struct dircache_info *, const char *, int);
 void	dircache_reg_ents(struct dircache_ents *, size_t);
 void	dircache_rls_ents(struct dircache_ents *);
-void	dircache_setfreeable_ents(struct dircache_ents *);
 void	dircache_walk(struct dircache_info *, void (*)(struct dircache_desc *, void *), void *);
 
 void	dircache_free_ents(struct dircache_info *);
