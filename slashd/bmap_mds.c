@@ -315,8 +315,9 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 	f = bmap->bcm_fcmh;
 	ih = fcmh_2_inoh(f);
 
-	if (mdsio_fid_to_vfsid(fcmh_2_fid(f), &vfsid) < 0)
-		return (EINVAL);
+	rc = mdsio_fid_to_vfsid(fcmh_2_fid(f), &vfsid);
+	if (rc)
+		return (rc);
 	if (vfsid != current_vfsid)
 		return (EINVAL);
 
