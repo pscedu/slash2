@@ -1052,7 +1052,7 @@ bmap_flush(void)
 	struct bmapc_memb *b, *tmpb;
 	struct resm_cli_info *rmci;
 	struct sl_resm *m;
-	int i, j, k;
+	int i, j;
 
 	LIST_CACHE_LOCK(&bmapFlushQ);
 	LIST_CACHE_FOREACH_SAFE(b, tmpb, &bmapFlushQ) {
