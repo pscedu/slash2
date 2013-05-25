@@ -1335,7 +1335,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 		RPMI_LOCK(rpmi);
 		/*
 		 * We won't need this if the IOS is actually down.
-		 * But we need to short cut it or testing purpose.
+		 * But we need to short cut it for testing purposes.
 		 */
 		if (iosinfo->si_flags & SIF_DISABLE_GC) {
 			RPMI_ULOCK(rpmi);
@@ -1460,7 +1460,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 
 	/*
 	 * XXX if the log file is never filled to its capacity for some
-	 * reason, then we are stuck! Perhaps We should check for the
+	 * reason, then we are stuck!  Perhaps We should check for the
 	 * existence of the next log file and skip it.  But we must make
 	 * sure all IOS have seen this log file.
 	 */
