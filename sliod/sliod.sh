@@ -33,8 +33,8 @@ export LD_LIBRARY_PATH=/usr/local/lib
 export PSC_SYSLOG=1
 export PSC_LOG_LEVEL=notice
 export PSC_LOG_LEVEL_info=info
-export PSC_LOG_FILE=$base/log/$host.$name/%t
-export PSC_LOG_FILE_LINK=$base/log/$host.$name/latest
+export PSC_LOG_FILE=${PSC_LOG_FILE:-$base/log/$host.$name/%t}
+export PSC_LOG_FILE_LINK=$(dirname $PSC_LOG_FILE)/latest
 export CONFIG_FILE=$base/slcfg
 
 preproc
