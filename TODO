@@ -185,7 +185,8 @@ sliod export
 
 ---------------------------------------------------------
 
-network scheduling
+upsch/network scheduling
+- investigate nqdq, activemq
 - need slash.conf rules to specify link bandwidth
 - preferentiate users/policies
     (o) need classes, always complete a class before moving
@@ -345,6 +346,8 @@ API rename
   file manually to be compatible.
 
   We might want to do the same thing for metadata server.
+   - write a tool to purge specified IOS's from the garbage reclaim log files
+
 - msctl is broken on 32-bit because of ino # compression
 - move msctl sock to $MOUNTPOINT/.slmd/ctlsock and have msctl ascend to
   that on arguments?
@@ -434,23 +437,29 @@ reimport
   have thousands of pending biorqs.
 - remove syslog network traffic from psclog()
 - st_blocks is zero on some files
-- write a tool to purge specified IOS's from the garbage reclaim log files
-- examine mps patches for anything that stands out
-- devd rules to change /dev/daXXX to some SCSI ID
-- mount_slash doesn't slconnthr_watch() IOS to wakeup after flush hang
+- slm_ptrunc_wake_clients() may need to use rpcsets or nbreqsets to deal
+  with large numbers of blocking clients.  Or, the algorithm should be
+  modified so that the clients retry after some brief sleep period.  (I
+  believe this is how DIO works).
+- FID modifications details in docs/supporting_recovery.txt.  Without
+  these changes we'll be forced to modify internal MDS structures
+  manually and will be forced to restart all clients and sliods.
+- imported files should create CRCs
 
 - make illustrations about how the throttling in the replication engines
+- implement dedup in IOS with CRC checking and upsch?
+
 - ask paul about difficulty of CRCs
-  - dedup?
-- far to automatically do md5?
 
-- boot senes50 into linux-zfs ?
 - amazon s3 api for sliod backend?
-
-- nqdq activemq ? network scheduling?
 
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
    (o) attr buf size needs be dynamically sized
    (o) predictive/readahead async READDIR to make large directory
        listings fast
+
+- wrapper scripts:
+   - purge old corefiles
+   - purge long-running psclogs (if no restarts, no opportunity to clear
+     old logs)
