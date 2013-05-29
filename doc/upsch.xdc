@@ -99,7 +99,8 @@
 		The classes include administrator priority levels and user priority
 		levels.
 		Work requests in the same class have the same likelihood of being
-		selected.
+		selected and are selected randomly in accordance with the maximum
+		limits for each IOS imposed by the engine as described above.
 		The class levels are so designed to give administrator priority,
 		which takes first precedence, as well as user priority for enqueued
 		activity.
