@@ -6,114 +6,137 @@
 
 	<oof:header size="1">Overview</oof:header>
 	<oof:p>
-		The purpose of the update scheduler (upsch) is to provide reliable,
-		user-controlled replication between two I/O systems.
+		The update scheduler (upsch) is a scheduling engine that coordinates
+		the transmission of information and instructions to peers on a
+		SLASH2 network.
+		Such activity includes garbage reclamation and replication
+		arrangements.
 	</oof:p>
-	<oof:p>upsch has the following characteristics:</oof:p>
+	<oof:p>upsch has the following features:</oof:p>
 	<oof:list type="LIST_UN">
 		<oof:list-item>
 			Resume automatically after a reboot of the metadata server.
 		</oof:list-item>
 		<oof:list-item>
-			Load balance between available source and destination resources.
+			For replication, load balance between available source and
+			destination resources.
 		</oof:list-item>
 		<oof:list-item>
-			Be able to indicate/track completion status.
+			Be able to indicate/track live replication status.
 		</oof:list-item>
 		<oof:list-item>
-			Must handle unreliable source and destination nodes.
+			Must handle unreliable source and destination nodes during
+			communication.
 		</oof:list-item>
 		<oof:list-item>
-			Update metadata server's block replication tables as individual
-			blocks are replicated.
+			Update metadata as notifications are received from peers.
 		</oof:list-item>
 	</oof:list>
 
 	<oof:header size="1">Implementation</oof:header>
 	<oof:p>
-		Replication requests will be issued serially by the client.
-		This means that for the replication of an entire directory, the
-		client will be responsible for iterating the directory's contents
-		and issuing a request for each file.
+		Replication requests are issued by the client on a per-bmap,
+		per-destination basis.
+		For example, if a user wishes to replicate the contents of all data
+		in all files hierarchically below his directory to another IOS,
+		msctl will recursively examine each file and serially issues
+		requests for each bmap.
+		Short hand notation of bmapno equal to -1 means that the replication
+		operation should apply to all bmaps belonging to the specified file.
 	</oof:p>
 	<oof:p>
-		For each replication request received by the metadata server, a
-		replication object will be created which is based on the FID of the
-		file.
-		While the FID is locked, its metadata structures will be iterated.
-		For each structure or block map (bmap) a replication specific
-		stucture will be created for that bmap.
-		These bmap replication structures will be used to store the
-		transactional replication state for that block.
+		Replication requests received by the MDS are treated like any other
+		update that the engine must process:
+		<oof:list>
+			<oof:list-item>
+				register a new replica in the file's replica table if the
+				destination IOS is not already listed in this table
+			</oof:list-item>
+			<oof:list-item>
+				load the bmap metadata, sanity check, and update its replica
+				table to the QUEUED state
+			</oof:list-item>
+			<oof:list-item>
+				update the upsch database by adding an entry for this piece of
+				work
+			</oof:list-item>
+		</oof:list>
 	</oof:p>
 	<oof:p>
-		Replication objects should be created in a common area so that all
-		pending/processing replications are grouped together.
-		Combing through the entire namespace searching for replication
-		objects will not work.
+		Updates (work items) that the engine will process are specifically
+		not all held in memory simultaneously by design.
+		Instead, work is divided into two priorities:
+		<oof:list>
+			<oof:list-item>
+				critical/operational work, which only stays in memory
+			</oof:list-item>
+			<oof:list-item>
+				regular work, which stays in the database
+			</oof:list-item>
+		</oof:list>
+		The database is rebuilt upon startup or when corruption is detected
+		automatically.
 	</oof:p>
 	<oof:p>
-		After the replication object is created, a request queue consisting
-		of the bmap replication structures is made.
-		At this time the io server(s) at the destination are contacted by
-		the mds with instruction to pull the replication requests from the
-		queue.
-		As the requests are pulled, the mds marks the transactional state in
-		the appropriate bmap replication structure.
+		Critical work items are processed immediately by the engine.
+		These types of work include cleaning up in-memory structures when an
+		IOS connection goes down.
 	</oof:p>
 	<oof:p>
-		When the io server reports completion the MDS does the following
-		tasks:
+		At startup, or when a piece of work comes in (when the system is
+		idle), or when bandwidth becomes available from the reservation
+		system, a request to page-in actual work is triggered by the engine.
+		The page-in operation consults the database looking for any
+		applicable work to perform.
+		For each IOS destined for updates, a maximum number of regular work
+		items may be paged in.
 	</oof:p>
-	<oof:list type="LIST_UN">
-		<oof:list-item>
-			Marks completion in the bmap replication structure (for that
-			bmap).
-		</oof:list-item>
-		<oof:list-item>
-     Updates the file's metadata bmap replication table to signify that
-		 the block has been replicated and is ready for service.
-		</oof:list-item>
-	</oof:list>
+	<oof:p>
+		Regular work is divided into classes to prioritize scheduling.
+		The levels of classes include administrator priority and user
+		priority.
+		Work requests in the same class have the same likelihood of being
+		selected.
+		The class levels are so designed to give administrator priority,
+		which takes first precedence, as well as user priority for enqueued
+		activity.
+	</oof:p>
+	<oof:p>
+		When a piece of work is processed, the IOS is contacted and
+		instructed by the given update.
+		In the case of replication arrangement, he is told where to pull
+		from, as the arrangements provided by the MDS are respectful of any
+		bandwidth reservation policies.
+		Metadata in the MDS is updated so any such operations do not reoccur
+		and remembered in case communication is severed and need to be
+		reissued once the link becomes available once again.
+	</oof:p>
+	<oof:p>
+		When an IOS reports completion the MDS updates any metadata; e.g. a
+		completed replication marks the bmap metadata for this IOS in its
+		replica table from QUEUED to VALID (if the IOS reported success)
+	</oof:p>
 
-	<oof:header size="1">Development Tasks</oof:header>
+	<oof:header size="1">Development tasks</oof:header>
 	<oof:list type="LIST_UN">
 		<oof:list-item>
-			Client Rpc Request (to MDS) for Replication
-			<oof:list type="LIST_UN">
-				<oof:list-item>
-					RPC which handles pathname
-				</oof:list-item>
-			</oof:list>
+			Update work request administrator priority.
+			Not implemented as described above; only user priority is
+			currently implemented.
 		</oof:list-item>
 		<oof:list-item>
-			MDS backend RPC handler (performs what is outlined above)
+			Dynamic bandwidth reservation policy modification.
+			Must have the ability to change the link bandwidth reservations on
+			the fly.
 		</oof:list-item>
 		<oof:list-item>
-			IOS backend RPC handler for pulling in replication requests
+			Source-side load balancing.
+			Currently, source IOS's are selected at random, respectful of any
+			bandwidth reservation policies.
 		</oof:list-item>
 		<oof:list-item>
-			MDS backend RPC handler for processing IOS replication activities.
-		</oof:list-item>
-	</oof:list>
-
-	<oof:header size="1">Outstanding Issues</oof:header>
-	<oof:list type="LIST_UN">
-		<oof:list-item>Source-side load balancing</oof:list-item>
-		<oof:list-item>
-			Replication object cleanup and monitoring
-			<oof:list type="LIST_UN">
-				<oof:list-item>
-					how do we ensure that requests complete
-				</oof:list-item>
-				<oof:list-item>
-					what to do about stalls?
-				</oof:list-item>
-			</oof:list>
-		</oof:list-item>
-		<oof:list-item>
-			Consider the ramifications of ongoing file updates while its
-			blocks are being replicated.
+			Replication object cleanup.
+			Use of fallocate(2) needs to be leveraged to reclaim space.
 		</oof:list-item>
 	</oof:list>
 </xdc>
