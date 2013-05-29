@@ -116,9 +116,10 @@
 		reissued once the link becomes available once again.
 	</oof:p>
 	<oof:p>
-		When an IOS reports completion the MDS updates any metadata; e.g. a
-		completed replication marks the bmap metadata for this IOS in its
-		replica table from QUEUED to VALID (if the IOS reported success)
+		When an IOS reports completion (either success or failure), the MDS
+		updates any metadata; e.g. a completed replication marks the bmap
+		metadata for this IOS in its replica table from QUEUED to VALID (if
+		the IOS reported success).
 	</oof:p>
 
 	<oof:header size="1">Development tasks</oof:header>
