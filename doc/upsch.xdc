@@ -53,8 +53,8 @@
 				destination IOS is not already listed in this table
 			</oof:list-item>
 			<oof:list-item>
-				load the bmap metadata, sanity check, and update its replica
-				table to the QUEUED state
+				load the bmap metadata, sanity check the pending operation, and
+				update the bmap replica table to the QUEUED state for this IOS
 			</oof:list-item>
 			<oof:list-item>
 				update the upsch database by adding an entry for this piece of
@@ -65,17 +65,18 @@
 	<oof:p>
 		Updates (work items) that the engine will process are specifically
 		not all held in memory simultaneously by design.
-		Instead, work is divided into two priorities:
+		Instead, work is divided into two priority groups:
 		<oof:list>
 			<oof:list-item>
-				critical/operational work, which only stays in memory
+				critical/operational work, which do all stay in memory
 			</oof:list-item>
 			<oof:list-item>
-				regular work, which stays in the database
+				regular work, which stays in the database and is periodically
+				paged in
 			</oof:list-item>
 		</oof:list>
-		The database is rebuilt upon startup or when corruption is detected
-		automatically.
+		The upsch database is rebuilt upon startup or when corruption is
+		detected.
 	</oof:p>
 	<oof:p>
 		Critical work items are processed immediately by the engine.
