@@ -83,7 +83,7 @@
 			<oof:list type="LIST_UN">
 				<oof:list-item>
 					RPC which handles pathname
-				<oof:list-item>
+				</oof:list-item>
 			</oof:list>
 		</oof:list-item>
 		<oof:list-item>
