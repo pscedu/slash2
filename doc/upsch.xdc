@@ -66,6 +66,7 @@
 		Updates (work items) that the engine will process are specifically
 		not all held in memory simultaneously by design.
 		Instead, work is divided into two priority groups:
+	</oof:p>
 		<oof:list>
 			<oof:list-item>
 				critical/operational work, which do all stay in memory
@@ -75,6 +76,7 @@
 				paged in
 			</oof:list-item>
 		</oof:list>
+	<oof:p>
 		The upsch database is rebuilt upon startup or when corruption is
 		detected.
 	</oof:p>
@@ -84,7 +86,7 @@
 		IOS connection goes down.
 	</oof:p>
 	<oof:p>
-		At startup, or when a piece of work comes in (when the system is
+		At startup, or when a piece of work comes in (if the system is
 		idle), or when bandwidth becomes available from the reservation
 		system, a request to page-in actual work is triggered by the engine.
 		The page-in operation consults the database looking for any
