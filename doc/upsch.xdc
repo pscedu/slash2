@@ -107,7 +107,7 @@
 	</oof:p>
 	<oof:p>
 		When a piece of work is processed, the IOS is contacted and
-		instructed by the given update.
+		instructed by the given update item.
 		In the case of replication arrangement, he is told where to pull
 		from, as the arrangements provided by the MDS are respectful of any
 		bandwidth reservation policies.
