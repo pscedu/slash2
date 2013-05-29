@@ -96,8 +96,8 @@
 	</oof:p>
 	<oof:p>
 		Regular work is divided into classes to prioritize scheduling.
-		The levels of classes include administrator priority and user
-		priority.
+		The classes include administrator priority levels and user priority
+		levels.
 		Work requests in the same class have the same likelihood of being
 		selected.
 		The class levels are so designed to give administrator priority,
