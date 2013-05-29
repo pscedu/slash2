@@ -187,6 +187,7 @@ sliod export
 
 upsch/network scheduling
 - investigate nqdq, activemq
+   - http://activemq.apache.org/index.html
 - need slash.conf rules to specify link bandwidth
 - preferentiate users/policies
     (o) need classes, always complete a class before moving
