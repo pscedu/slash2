@@ -59,13 +59,11 @@ bim_updateseq(uint64_t seq)
 	if (bimSeq.bim_minseq == BMAPSEQ_ANY ||
 	    (seq >= bimSeq.bim_minseq && seq != BMAPSEQ_ANY)) {
 		bimSeq.bim_minseq = seq;
-		psclog_notice("update min seq to %"PRId64, seq);
+		psclog_info("update min seq to %"PRId64, seq);
 		PFL_GETTIMESPEC(&bimSeq.bim_age);
 	} else
 		/*
- 		 * FixMe:
- 		 *
-		 * If a MDS restarts, we will return 1 and cause
+		 * XXX: If an MDS restarts, we will return 1 and cause
 		 * our caller to retry again.
 		 */
 		invalid = 1;
@@ -122,7 +120,7 @@ bim_getcurseq(void)
 		seqno = mp->seqno;
 
 		rc = bim_updateseq(seqno);
-	out:
+ out:
 		if (rq) {
 			pscrpc_req_finished(rq);
 			rq = NULL;
@@ -506,8 +504,8 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 		DEBUG_BMAP(PLL_INFO, b, "CRC table exists locally");
 		BMAP_ULOCK(b);
 		return (0);
-	} else
-		BMAP_ULOCK(b);
+	}
+	BMAP_ULOCK(b);
 
 	rc = sli_rmi_getcsvc(&csvc);
 	if (rc)
