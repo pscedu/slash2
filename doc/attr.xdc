@@ -1,16 +1,19 @@
 <?xml version="1.0" ?>
+<!DOCTYPE xdc PUBLIC "-//PSC//XDC//EN" "http://www.psc.edu/~yanovich/xml/xdc.dtd">
 <!-- $Id$ -->
 
-<xdc xmlns:oof="http://www.psc.edu/~yanovich/xsl/oof-1.0">
+<xdc
+	xmlns="http://www.psc.edu/~yanovich/xsl/xdc-1.0"
+	xmlns:oof="http://www.psc.edu/~yanovich/xsl/oof-1.0">
 	<title>Attribute (metadata) handling in the MDS</title>
 
 	<oof:header size="1">Overview</oof:header>
 	<oof:p>Currently SLASH2 has two ways of updating attributes:</oof:p>
-	<list>
+	<oof:list>
 		<oof:list-item>the client can issue a setattr RPC to mds.</oof:list-item>
 		<oof:list-item>the i/o server can issue a crc-update RPC,
 			piggybacking size and mtime</oof:list-item>
-	</list>
+	</oof:list>
 	<oof:p>
 		To avoid these two RPCs cross path with each other, we have a
 		utimegen mechanism so that an attribute update is only allowed by
