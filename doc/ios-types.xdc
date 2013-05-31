@@ -27,7 +27,7 @@
 resource lemon {
 	desc	= "Stand-alone I/O server";
 	type	= standalone_fs;
-	id		= 2;
+	id	= 2;
 	nids	= lemon.psc.edu;
 	fsroot	= /local/s2io;
 }
@@ -106,8 +106,8 @@ site PSC {
 	resource ios_cnos {
 		desc	= "cluster no share of ios0-3";
 		type	= cluster_noshare_lfs;
-		id		= 1000;
-		ios			= ios0@PSC, ios1@PSC, ios2@PSC, ios3@PSC;
+		id	= 1000;
+		ios	= ios0@PSC, ios1@PSC, ios2@PSC, ios3@PSC;
 	}
 	...
 }
