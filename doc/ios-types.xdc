@@ -25,10 +25,10 @@
 	</oof:p>
 	<oof:pre>
 resource lemon {
-	desc		= "Stand-alone I/O server";
-	type		= standalone_fs;
-	id			= 2;
-	nids		= lemon.psc.edu;
+	desc	= "Stand-alone I/O server";
+	type	= standalone_fs;
+	id		= 2;
+	nids	= lemon.psc.edu;
 	fsroot	= /local/s2io;
 }
 </oof:pre>
@@ -53,10 +53,10 @@ resource lemon {
 	</oof:p>
 	<oof:pre>
 resource tapearchiver {
-	desc		= "Archival I/O server";
-	type		= archival_fs;
-	id			= 3;
-	nids		= turtle.psc.edu;
+	desc	= "Archival I/O server";
+	type	= archival_fs;
+	id	= 3;
+	nids	= turtle.psc.edu;
 	fsroot	= /tape;
 }
 </oof:pre>
@@ -72,41 +72,41 @@ resource tapearchiver {
 <oof:pre>
 site PSC {
 	resource ios0 {
-		desc		= "I/O server 0";
-		type		= standalone_fs;
-		id			= 100;
-		nids		= ios0.psc.edu;
+		desc	= "I/O server 0";
+		type	= standalone_fs;
+		id	= 100;
+		nids	= ios0.psc.edu;
 		fsroot	= /local;
 	}
 
 	resource ios1 {
-		desc		= "I/O server 1";
-		type		= standalone_fs;
-		id			= 101;
-		nids		= ios1.psc.edu;
+		desc	= "I/O server 1";
+		type	= standalone_fs;
+		id	= 101;
+		nids	= ios1.psc.edu;
 		fsroot	= /local;
 	}
 
 	resource ios2 {
-		desc		= "I/O server 2";
-		type		= standalone_fs;
-		id			= 102;
-		nids		= ios2.psc.edu;
+		desc	= "I/O server 2";
+		type	= standalone_fs;
+		id	= 102;
+		nids	= ios2.psc.edu;
 		fsroot	= /local;
 	}
 
 	resource ios3 {
-		desc		= "I/O server 3";
-		type		= standalone_fs;
-		id			= 103;
-		nids		= ios3.psc.edu;
+		desc	= "I/O server 3";
+		type	= standalone_fs;
+		id	= 103;
+		nids	= ios3.psc.edu;
 		fsroot	= /local;
 	}
 
 	resource ios_cnos {
-		desc		= "cluster no share of ios0-3";
-		type		= cluster_noshare_lfs;
-		id			= 1000;
+		desc	= "cluster no share of ios0-3";
+		type	= cluster_noshare_lfs;
+		id		= 1000;
 		ios			= ios0@PSC, ios1@PSC, ios2@PSC, ios3@PSC;
 	}
 	...
