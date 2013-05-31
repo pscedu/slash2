@@ -22,9 +22,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <sys/types.h>
 #include <dirent.h>
-
+#include <sys/types.h>
 
 #include <gcrypt.h>
 #include <sqlite3.h>
@@ -138,6 +137,11 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 	rc = snprintf(mountpoint, sizeof(mountpoint), "/%s", zpoolname);
 	psc_assert(rc < (int)sizeof(mountpoint) && rc >= 0);
 
+	/* 
+	 * ZFS fuse can create the mount point automatically if it does not exist.
+	 * However, if the mount point exists and is not empty, it does not mount 
+	 * the default file system in the pool for some reason.
+	 */
 	dir = opendir(mountpoint);
 	if (dir != NULL) {
 		i = 0;
