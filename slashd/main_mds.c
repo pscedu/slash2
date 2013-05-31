@@ -119,6 +119,10 @@ append_path(const char *newpath)
 	PSCFREE(p);
 }
 
+/*
+ * Use system() to import pool and mount file systems. Note that the path 
+ * is built in at compile time and added by append_path() at run time.
+ */
 void
 import_zpool(const char *zpoolname, const char *zfspoolcf)
 {
