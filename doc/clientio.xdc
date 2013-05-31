@@ -28,8 +28,8 @@
 		to read).
 		One example would be "3/4 servers are down on the preferred IOS..
 		should we start to forward requests to secondary or tertiary IOS's?"
-		Another could be "fileA is stored on a archiver at local-site and
-		parallel-fs on remote-site - which site is chosen?
+		Another could be "fileA is stored on an archiver at local-site and
+		parallel-fs at remote-site - which site is chosen?
 	</oof:p>
 	<oof:p>
 		Perhaps the IOS's themselves could maintain statistics (long term or
