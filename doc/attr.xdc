@@ -48,3 +48,5 @@
 		We will let client be the only one that can update the attributes.
 		It should work regardless of network delays and service outage.
 	</oof:p>
+</xdc>
+
