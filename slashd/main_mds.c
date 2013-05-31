@@ -22,6 +22,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <dirent.h>
+
 
 #include <gcrypt.h>
 #include <sqlite3.h>
@@ -126,8 +129,25 @@ append_path(const char *newpath)
 void
 import_zpool(const char *zpoolname, const char *zfspoolcf)
 {
+	int i, rc;
+	struct dirent *d;
 	char cmdbuf[BUFSIZ];
-	int rc;
+	char mountpoint[BUFSIZ];
+	DIR *dir;
+
+	rc = snprintf(mountpoint, sizeof(mountpoint), "/%s", zpoolname);
+	psc_assert(rc < (int)sizeof(mountpoint) && rc >= 0);
+
+	dir = opendir(mountpoint);
+	if (dir != NULL) {
+		i = 0;
+		while ((d = readdir(dir)) != NULL) {
+			if (i++ < 2)
+				continue;
+			psc_fatal("Mount point %s is not empty", mountpoint);
+		}
+		closedir(dir);
+	}
 
 	rc = snprintf(cmdbuf, sizeof(cmdbuf),
 		"zpool import -f -c '%s' '%s'", zfspoolcf ? zfspoolcf : "",
