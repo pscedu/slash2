@@ -132,10 +132,8 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 	if (rc >= (int)sizeof(cmdbuf) || rc < 0)
 		psc_fatal("Fail to construct command to import %s", zpoolname);
 
-	/* EEXIST: sometimes import will say pool is already imported */
 	rc = system(cmdbuf);
-	if (rc == -1 || 
-	    (WIFEXITED(rc) && WEXITSTATUS(rc) && errno && errno != EEXIST))
+	if (rc == -1)
 		psc_fatal("Fail to execute command to import %s", zpoolname);
 
 	rc = snprintf(cmdbuf, sizeof(cmdbuf), "zfs mount %s", zpoolname);
@@ -143,18 +141,16 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 		psc_fatal("Fail to construct command to mount %s", zpoolname);
 
 	rc = system(cmdbuf);
-	if (rc == -1 || (WIFEXITED(rc) && WEXITSTATUS(rc)))
+	if (rc == -1)
 		psc_fatal("Fail to execute command to mount %s", zpoolname);
 
 	rc = snprintf(cmdbuf, sizeof(cmdbuf), "zfs mount -a");
 	if (rc >= (int)sizeof(cmdbuf) || rc < 0)
 		psc_fatal("Fail to construct command to mount file systems");
 
-	/* EEXIST: sometimes the above also mount non-default file systems */
 	rc = system(cmdbuf);
-	if (rc == -1 || 
-	    (WIFEXITED(rc) && WEXITSTATUS(rc) && errno && errno != EEXIST))
-		psc_fatal("Fail to exit command to mount file systems");
+	if (rc == -1)
+		psc_fatal("Fail to execute command to mount file systems");
 }
 
 void
