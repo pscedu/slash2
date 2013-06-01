@@ -16,7 +16,7 @@
 	</oof:p>
 	<oof:list type="LIST_UN">
     <oof:list-item>
-			full truncate, i.e. truncate to file offset position 0
+			full truncate, i.e. truncate to file offset position zero
     </oof:list-item>
     <oof:list-item>
 			partial truncate, i.e. truncate to a non-zero file offset position
@@ -69,8 +69,8 @@
 	<oof:p>
 		Next, any leases currently granted to clients for bmaps included
 		within or falling after the partial truncate file offset position
-		(hereby referred to as the 'ptrunc position') are instructed to
-		released.
+		(hereby referred to as the <oof:emph>ptrunc position</oof:emph>) are
+		instructed to released.
 	</oof:p>
 	<oof:p>
 		The MDS then waits for clients to relinquish all said leases,
