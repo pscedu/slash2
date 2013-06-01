@@ -17,13 +17,14 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#include <sys/types.h>
+
+#include <dirent.h>
 #include <err.h>
 #include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <dirent.h>
-#include <sys/types.h>
 
 #include <gcrypt.h>
 #include <sqlite3.h>
@@ -122,8 +123,8 @@ append_path(const char *newpath)
 }
 
 /*
- * Use system() calls to import pool and mount file systems. Note that the paths 
- * needed by the system() is built in at compile time and added by append_path() 
+ * Use system() calls to import pool and mount file systems. Note that the paths
+ * needed by the system() is built in at compile time and added by append_path()
  * at run time.
  */
 void
@@ -138,10 +139,11 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 	rc = snprintf(mountpoint, sizeof(mountpoint), "/%s", zpoolname);
 	psc_assert(rc < (int)sizeof(mountpoint) && rc >= 0);
 
-	/* 
-	 * ZFS fuse can create the mount point automatically if it does not exist.
-	 * However, if the mount point exists and is not empty, it does not mount 
-	 * the default file system in the pool for some reason.
+	/*
+	 * ZFS fuse can create the mount point automatically if it does
+	 * not exist.  However, if the mount point exists and is not
+	 * empty, it does not mount the default file system in the pool
+	 * for some reason.
 	 */
 	dir = opendir(mountpoint);
 	if (dir != NULL) {
@@ -149,37 +151,35 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 		while ((d = readdir(dir)) != NULL) {
 			if (i++ < 2)
 				continue;
-			psc_fatal("Mount point %s is not empty", mountpoint);
+			psc_fatal("Mount point %s is not empty",
+			    mountpoint);
 		}
 		closedir(dir);
 	}
 
 	rc = snprintf(cmdbuf, sizeof(cmdbuf),
-		"zpool import -f -c '%s' '%s'", zfspoolcf ? zfspoolcf : "",
-		zpoolname);
-
+	    "zpool import -f -c '%s' '%s'", zfspoolcf ? zfspoolcf : "",
+	    zpoolname);
 	if (rc >= (int)sizeof(cmdbuf) || rc < 0)
-		psc_fatal("Fail to construct command to import %s", zpoolname);
-
+		psc_fatal("Fail to construct command to import %s",
+		    zpoolname);
 	rc = system(cmdbuf);
 	if (rc == -1)
-		psc_fatal("Fail to execute command to import %s", zpoolname);
+		psc_fatal("Fail to execute command to import %s",
+		    zpoolname);
 
 	/* mount the default file system in the pool */
 	rc = snprintf(cmdbuf, sizeof(cmdbuf), "zfs mount %s", zpoolname);
 	if (rc >= (int)sizeof(cmdbuf) || rc < 0)
-		psc_fatal("Fail to construct command to mount %s", zpoolname);
-
+		psc_fatal("Fail to construct command to mount %s",
+		    zpoolname);
 	rc = system(cmdbuf);
 	if (rc == -1)
-		psc_fatal("Fail to execute command to mount %s", zpoolname);
+		psc_fatal("Fail to execute command to mount %s",
+		    zpoolname);
 
 	/* mount the rest file systems in the pool */
-	rc = snprintf(cmdbuf, sizeof(cmdbuf), "zfs mount -a");
-	if (rc >= (int)sizeof(cmdbuf) || rc < 0)
-		psc_fatal("Fail to construct command to mount file systems");
-
-	rc = system(cmdbuf);
+	rc = system("zfs mount -a");
 	if (rc == -1)
 		psc_fatal("Fail to execute command to mount file systems");
 }
