@@ -119,8 +119,8 @@
 	<oof:p>
 		At earliest convenience (although of higher priority than any
 		replication activity), a randomly selected
-		<oof:tt>TRUNCPNDG</oof:tt> <ref sect='8'>sliod</ref> is asked to
-		perform the CRC recalculation.
+		<oof:tt>TRUNCPNDG</oof:tt> marked <ref sect='8'>sliod</ref> is asked
+		to perform the CRC recalculation.
 		When one finally does, the bmap is marked <oof:tt>TRUNCPNDG</oof:tt>
 		&rarr; <oof:tt>VALID</oof:tt> and other replicas are marked
 		<oof:tt>TRUNCPNDG</oof:tt> &rarr; <oof:tt>GARBAGE</oof:tt>.
