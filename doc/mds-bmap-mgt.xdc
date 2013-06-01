@@ -2,9 +2,7 @@
 <!DOCTYPE xdc PUBLIC "-//PSC//XDC//EN" "http://www.psc.edu/~yanovich/xml/xdc.dtd">
 <!-- $Id$ -->
 
-<xdc 
-	xmlns="http://www.psc.edu/~yanovich/xsl/xdc-1.0"
-	xmlns:oof="http://www.psc.edu/~yanovich/xsl/oof-1.0">
+<xdc xmlns:oof="http://www.psc.edu/~yanovich/xsl/oof-1.0">
 	<title>MDS bmap management</title>
 
 	<oof:header size="1">Overview</oof:header>
@@ -15,13 +13,13 @@
 		replication table against corruption.
 	</oof:p>
 
-	<oof:header size="1">File Pointer Extended Past Filesize</oof:header>
+	<oof:header size="1">File pointer extended past file size</oof:header>
 	<oof:p>
 		In this case we must create a new bmap on-the-fly with the crc table
 		containing SL_NULL_CRC (the CRC of all nulls).
 	</oof:p>
 
-	<oof:header size="1">Passing Hole Information to the Client</oof:header>
+	<oof:header size="1">Passing hole information to the client</oof:header>
 	<oof:p>
 		Since the client does not have access to the crc table, the MDS may
 		communicate hole information by first checking to see if the crc for
@@ -32,7 +30,7 @@
 		retrieved from the ION.
 	</oof:p>
 
-	<oof:header size="1">Bmap Updates</oof:header>
+	<oof:header size="1">Bmap updates</oof:header>
 	<oof:p>Bmaps must be updated at several points:</oof:p>
 	<oof:list type="LIST_UN">
 		<oof:list-item>
