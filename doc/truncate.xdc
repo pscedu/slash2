@@ -3,7 +3,6 @@
 <!-- $Id$ -->
 
 <xdc
-	xmlns="http://www.psc.edu/~yanovich/xsl/xdc-1.0"
 	xmlns:oof="http://www.psc.edu/~yanovich/xsl/oof-1.0">
 	<title>Truncation</title>
 
