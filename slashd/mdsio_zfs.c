@@ -53,14 +53,16 @@ mdsio_fid_to_vfsid(slfid_t fid, int *vfsid)
 {
 	int i, siteid;
 
-#if 0
-	/* our client uses this special fid to contact us
-	 * during mount. */
+	/* 
+ 	 * Our client uses this special fid to contact us
+	 * during mount, at which time it does not know
+	 * the site ID yet.
+	 */
 	if (fid == SLFID_ROOT) {
 		*vfsid = current_vfsid;
 		return (0);
 	}
-#endif
+
 	/* only have default file system in the root */
 	if (mount_index == 1) {
 		*vfsid = current_vfsid;
