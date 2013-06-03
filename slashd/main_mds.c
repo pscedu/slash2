@@ -151,7 +151,8 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 		while ((d = readdir(dir)) != NULL) {
 			if (i++ < 2)
 				continue;
-			psc_fatal("Mount point %s is not empty",
+			errno = ENOTEMPTY;
+			psc_fatal("Please clean up directory %s before mount",
 			    mountpoint);
 		}
 		closedir(dir);
