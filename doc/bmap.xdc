@@ -4,63 +4,74 @@
 
 <xdc xmlns:oof="http://www.psc.edu/~yanovich/xsl/oof-1.0">
 	<title>Bmap metadata and user data CRCs</title>
+	<taglist>
+		<tag>crc</tag>
+		<tag>management</tag>
+		<tag>calculation</tag>
+		<tag>communication</tag>
+		<tag>storage</tag>
+		<tag>retrieval</tag>
+		<tag>generation</tag>
+	</taglist>
 
-	<oof:header size="1">Overview</oof:header>
+	<oof:header size="1">Bmap metadata and user data CRCs</oof:header>
+
+	<oof:header size="2">Bmap generations</oof:header>
 	<oof:p>
-		A bmap has its generation number bumped once it receives a CRC
-		update from a ION, which the MDS has designated as the 'allowable
-		writer', and the bmap has been replicated to other.
-		bumpgen() serves the purpose of nullifying the bmap replicas which
-		have no been made obsolete by the write.
+		A bmap has its generation number bumped:
 	</oof:p>
+	<oof:list>
+		<oof:list-item>
+			<oof:p>
+				when it receives a CRC update from an ION and has at least one
+				other <oof:tt>VALID</oof:tt> state in its replica table.
+				The other replicas made obsolete by the update are marked as
+				<oof:tt>GARBAGE</oof:tt> for reclamation.
+			</oof:p>
+			<oof:p>
+				It should be noted that only one ION may send CRC updates for a
+				bmap.
+				This ION is serially chosen by the MDS, so long as this bmap
+				&harr; ION association is in place, no other IONs may issue CRC
+				updates to the MDS.
+			</oof:p>
+		</oof:list-item>
+		<oof:list-item>
+			all bmaps past the ptrunc position during partial truncation
+			resolution.
+		</oof:list-item>
+	</oof:list>
 	<oof:p>
-		It should be noted that only one ION may perform bumpgen() on a
-		bmap.
-		This ION is serially chosen by the MDS, so long as this MDS -> ION
-		association is in place, no other IONs may issue CRC updates to
-		the MDS.
 	</oof:p>
+<!--
 	<oof:p>
-		Some issues relating to data structures hang in the balance.
 		At this time I feel that decisions pertaining to bandwidth
 		(disk/network) versus metadata capacity are the most critical.
 	</oof:p>
+-->
 
-	<oof:header size="1">MDS Bmap Management</oof:header>
+	<oof:header size="2">Bmap management</oof:header>
 	<oof:p>
-		When a client issues a read or write command, an rpc to the MDS is
-		made requesting the BMAP for the associated file region.
+		When a client issues a read or write command, an RPC to the MDS is
+		made requesting the bmap for the associated file region.
 		This document describes the metadata processes involved when
 		handling a bmap request from the client.
 	</oof:p>
 
-	<oof:header size="1">Bmap Cache Lookup</oof:header>
+	<oof:header size="3">Bmap Cache Lookup</oof:header>
 	<oof:p>
-		Upon receipt of the BMAP request, the MDS verifies that the issuing
-		client actually has an open fd for the given FID.
+		Upon receipt of the <oof:tt>GETBMAP</oof:tt> request, the MDS
+		verifies that the issuing client actually has an open file
+		descriptor for the given FID.
 		This is checked in two places:
 	</oof:p>
 	<oof:p>
-		The fidc_open_object (attached to the fcmh) must be allocated.
-		This denotes that the fid is open.
-	</oof:p>
-	<oof:p>
-		Attached to the CFD must be a struct mexpfcm (this is the per client
-		data structure which tracks which fid's a client is using).
-		mexpfcm contains a tree of mexpbcm, which track which bmaps (on this
-		fid) are in use by the client.
-		The client should not request a bmap for which an mexpbcm already
-		exists unless the mode is changing from read to write or vise versa.
-	</oof:p>
-	<oof:p>
-		Note: Only on read or write should the bmap tracking incur a log
+		Note: only on read or write should the bmap tracking incur a log
 		operation.
 		Otherwise, things like 'touch' will cause an unnecessary log
 		operation.
 	</oof:p>
 	<oof:p>
-		Once the fidc_membh and cfd are determined to be correct, the
-		fidc_membh's open object (fcmh_fcoo) is accessed.
 		The fcmh_fcoo contains a splay tree of cached bmaps (struct
 		bmap_cache fcoo_bmapc).
 		The bmap cache lookup consists of searching the tree
@@ -111,21 +122,177 @@
 		initialized bmap at the respective index.
 	</oof:p>
 
-	<oof:header size="1">Bmap Logging</oof:header>
+	<oof:header size="3">Persistent bmap leases</oof:header>
 	<oof:p>
-		At present, the model for logging all bmap leases will rely on a
-		per-fid collapsible journal.
-		For each fid which has exports accessing it, and its bmaps, the mds
-		must log the bmap lessees for recovery purposes.
-		On recovery, what essentially happens is that these logs are
-		replayed to recreate the MDS's export cache.
+		At present, the model for logging all bmap leases relies on a
+		per-FID collapsible journal.
+		For each bmap lease issued, the MDS records an entry signifying the
+		lease for recovery purposes.
+		On recovery, what these logs are replayed to recreate the MDS's
+		cache.
 	</oof:p>
 
-	<oof:header size="1">Change Logging</oof:header>
+	<oof:header size="3">Bmap metadata change logging</oof:header>
 	<oof:p>
-		XXX this belongs in a different file.
-		All modifications to directory inodes, file inodes, or bmaps, must
-		be recorded in a transaction log for mds replication purposes.
-		This should be done a using sljournal code.
+		All modifications to directory inodes, file inodes, and bmaps are
+		recorded in a transaction log for replay and MDS replication
+		purposes.
 	</oof:p>
+
+
+
+
+
+	<oof:header size="1">Overview</oof:header>
+	<oof:p>
+		In normal read-mode, the bmap is retrieved to give the list of IOS
+		replicas (client) and the CRC table (ION).
+		The bmap has its own CRC (bmap_crc) which protects the CRC table and
+		replication table against corruption.
+	</oof:p>
+
+	<oof:header size="1">File pointer extended past file size</oof:header>
+	<oof:p>
+		In this case we must create a new bmap on-the-fly with the CRC table
+		containing SL_NULL_CRC (the CRC of a sliver filled with all null
+		bytes).
+	</oof:p>
+
+	<oof:header size="1">Passing hole information to the client</oof:header>
+	<oof:p>
+		Since the client does not have access to the CRC table, the MDS may
+		communicate hole information by first checking to see if the crc for
+		a given chunk is == SL_NULL_CRC.
+		If it is then the MDS will set a bit to 0.
+		These bits will be put to the client in the <oof:tt>GETBMAP</oof:tt>
+		reply and will enable the client to know which chunks of the bmap
+		must be retrieved from the ION.
+	</oof:p>
+
+	<oof:header size="1">Bmap updates</oof:header>
+	<oof:p>Bmaps must be updated at several points:</oof:p>
+	<oof:list type="LIST_UN">
+		<oof:list-item>
+			Receipt of a chunk CRC update causes two writes: the store of the
+			chunk crc into its appropriate slot and the recomputing and
+			rewriting of the bmap_crc.
+		<oof:list-item>
+		</oof:list-item>
+			Replica management: upon successful replication of the bmap or
+			when replicas become invalid because of an overwrite.
+			This also causes two writes (rewriting of the bmap_crc).
+		</oof:list-item>
+	</oof:list>
+
+
+
+
+
+
+
+
+
+
+
+
+
+	<oof:header size="2">Storage tradeoffs</oof:header>
+	<oof:p>
+		The dominant issue with CRCs revolves around the data size
+		encompassed by a single 8-byte CRC.
+		This has direct ramifications in the amount of buffering required
+		and the MDS capacity needed to store CRCs.
+		Also, since the MDS stores the CRCs, the system ingest bandwidth is
+		essentially limited to the number of CRCs the MDS can process.
+		Issues regarding the synchronous storing of MDS-side CRCs need to be
+		explored.
+		For our purposes we will assume that the MDS has safely stored the
+		CRCs before acknowledging back to the IOS.
+	</oof:p>
+
+	<oof:header size="3">Capacity</oof:header>
+	<oof:p>
+		The MDS has a fixed size array for CRC storage; the array size is
+		the product of the CRC granularity and the bmap size.
+		For now we assume that the bmap size is 128MB and the granularity is
+		1MB, resluting in an array size of 1K required for CRC storage per
+		bmap.
+		Here we can see that 8 bytes per 1MB provides a reasonable growth
+		path for CRC storage:
+	</oof:p>
+	<oof:pre>
+(1024^2/(1024^2))*8 = 8							# 1MB requires 8B  of CRCs
+(1024^3/(1024^2))*8 = 8192					# 1GB requires 8KB of CRCs
+(1024^4/(1024^2))*8 = 8388608				# 1TB requires 8MB of CRCs
+(1024^5/(1024^2))*8 = 8589934592		# 1PB requires 8GB of CRCs
+(1024^6/(1024^2))*8 = 8796093022208	# 1EB requires 8TB of CRCs
+</oof:pre>
+
+	<oof:header size="3">Communication from IOS</oof:header>
+	<oof:p>
+		As writes are processed by the IOS we must ensure that the CRCs are
+		accurate and take into account any cache coherency issues that may
+		arise.
+		One problem we face with parallel IOSes and CRCs is that we have no
+		way to guarantee which IOS wrote last and therefore which CRCs
+		accurately reflect the state of the file.
+		Therefore, revising the parallel IOS write protocol, the MDS will
+		determine the IOS &harr; bmap association and provide the same IOS to
+		all clients for a given bmap write session.
+		This will ensure that only one source is valid for issuing CRC
+		updates into a bmap region, and that this source is verifiable by
+		the MDS.
+		Some failure ramifications:
+	</oof:p>
+	<oof:p class="padding: 1em">
+		Should the write occur but return with a failure, the IOS must have
+		a way of notifying the MDS that the CRC state on-disk is unknown.
+	</oof:p>
+	<oof:p>
+		The IOS performs a write and then fails before sending the CRC
+		update.
+		The CRC should be calculated and stored before writing or sending to
+		the MDS.
+	</oof:p>
+	<oof:p>
+		Synchronously delivered update RPCs will surely slow down the write
+		process.
+		Perhaps we should be able to batch an entire bmap's worth of
+		updates.
+		Also we should have a journal of client-side CRCs where possible to
+		deal with failures, so that for any unsent CRCs (post-failure) may
+		be verified the buffer-side crcs against the on-disk state and then
+		update the MDS.
+	</oof:p>
+	<oof:p>
+		Need to consider what happens when an IOS fails from the perspective
+		of the client and the MDS.
+		The MDS may have to log/record bmap &harr; IOS associations to
+		protect against updates from a previous IOS ownership.
+	</oof:p>
+
+	<oof:header size="2">Design fallouts:</oof:header>
+	<oof:p>
+		MDS chooses IOS for a given bmap, CRC updates only come from that
+		IOS.
+	</oof:p>
+	<oof:p>
+		This means that we can bulk crc updates up to the size of the bmap
+		(big performance win).
+	</oof:p>
+	<oof:p>
+		Journal buffer-side CRCs (pre-write) to guard against IOS failure.
+		(perhaps not..)
+	</oof:p>
+	<oof:p>
+		MDS RPC to IOS for calculating an entire bmap's worth of CRCs - this
+		would be issued when an MDS detects the failure of an IOS and needs
+		to reassign.
+	</oof:p>
+	<oof:p>
+		When an MDS chooses an ION for write, he should notify other read
+		clients of this.
+	</oof:p>
+
+
 </xdc>

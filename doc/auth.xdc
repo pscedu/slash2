@@ -16,9 +16,9 @@
 
 	<oof:header size="2">Phase 2 - Host based authentication</oof:header>
 	<oof:p>
-		However, with no root squashing, and even if we add it, there is
-		still the problem of compromised/untrusted mount_slash endpoints
-		having full reign over all data in the SLASH2 file system.
+		However, even with root squashing, there is still the problem of
+		compromised/untrusted mount_slash endpoints having full reign over
+		all data in the SLASH2 file system.
 		Host-based authentication solves some of these problems in that it
 		can provide a mechanism to revoke access to the SLASH2 file system
 		in cases of known compromised mount_slash endpoints.
