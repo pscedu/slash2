@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- * %PSC_START_COPYRIGHT%
+ * %PSCGPL_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
  * Copyright (c) 2010-2011, Pittsburgh Supercomputing Center (PSC).
  *
