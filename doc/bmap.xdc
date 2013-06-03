@@ -60,45 +60,48 @@
 
 	<oof:header size="3">Bmap Cache Lookup</oof:header>
 	<oof:p>
-		Upon receipt of the <oof:tt>GETBMAP</oof:tt> request, the MDS
-		verifies that the issuing client actually has an open file
-		descriptor for the given FID.
-		This is checked in two places:
-	</oof:p>
-	<oof:p>
 		Note: only on read or write should the bmap tracking incur a log
 		operation.
-		Otherwise, things like 'touch' will cause an unnecessary log
-		operation.
+		Otherwise, operations such as <oof:tt>touch(1)</oof:tt> will cause
+		an unnecessary log operation.
 	</oof:p>
 	<oof:p>
-		The fcmh_fcoo contains a splay tree of cached bmaps (struct
-		bmap_cache fcoo_bmapc).
-		The bmap cache lookup consists of searching the tree
-		for the bmap number which corresponds to the request.
-		If the bmap is located this means that another client has or is
-		accessing this bmap.
-		Hence, a mexpbcm is allocated and stored in the bmap's struct
-		bmap_mds_info which also has a tree for indexing the exports which
-		access this bmap.
-		Note that upon adding the mexpbcm, an ondisk reference to the bmap
-		lease must be recorded.
-		The purpose of this record serves to rebuild the server lease state
-		upon reboot or failover.
+		Upon receipt of a <oof:tt>GETBMAP</oof:tt> request, the MDS
+		issues a lease to the client used for authenticating I/O activity..
+		The bmap cache lookup consists of searching the bmap tree attached
+		to each open fcmh for the bmap specified (by numerical ID) in the
+		request.
 	</oof:p>
 	<oof:p>
-		Note: the cfd number assigned to the client has to be preserved in
-		the log.
-		Additionally, the restored cfd number must be taken into account for
-		when allocating new cfd's to that export.
+		If the same client is rerequesting a lease for the same bmap,
+		a "duplicate" lease is issued; this is necessary in the protocol for
+		situations when the client loses contact with the MDS but the MDS
+		hasn't discovered this situatoin until the reissued request comes
+		in.
 	</oof:p>
 	<oof:p>
-		If the bmap does not exist in the cache then it must be retrieved
-		from disk but first a placeholder bmap is inserted into the cache to
-		prevent multiple threads from performing the same I/O.
-		Other threads waiting for the bmap block on the placeholder bmap's
-		bcm_waitq.
+		If the bmap already has leases (read or write) to other clients,
+		the bmap is degraded into "direct I/O" mode where all clients
+		accessing the bmap are forced to perform all I/O without local
+		caching to maintain coherency.
 	</oof:p>
+
+	<oof:header size="3">Persistent bmap leases</oof:header>
+	<oof:p>
+		Upon lease issuance, an entry is stored in the MDS persistent
+		operations table signifying the lease to rebuild in recovery
+		scenarios.
+		During recovery (i.e. after failure), these logs are replayed
+		to recreate the MDS's cache.
+	</oof:p>
+
+	<oof:p>
+		While the bmap is being paged in (if it is not already present in the
+		MDS memory cache), a placeholder is allocated to prevent reentrant
+		page-ins and any additional requesting clients are placed on the
+		<oof:tt>bcm_waitq</oof:tt> until the bmap has been loaded.
+	</oof:p>
+
 	<oof:p>
 		bmaps are fixed size structures.
 		To read a specific bmap from an inode's metafile requires the bmap
@@ -122,26 +125,12 @@
 		initialized bmap at the respective index.
 	</oof:p>
 
-	<oof:header size="3">Persistent bmap leases</oof:header>
-	<oof:p>
-		At present, the model for logging all bmap leases relies on a
-		per-FID collapsible journal.
-		For each bmap lease issued, the MDS records an entry signifying the
-		lease for recovery purposes.
-		On recovery, what these logs are replayed to recreate the MDS's
-		cache.
-	</oof:p>
-
 	<oof:header size="3">Bmap metadata change logging</oof:header>
 	<oof:p>
 		All modifications to directory inodes, file inodes, and bmaps are
 		recorded in a transaction log for replay and MDS replication
 		purposes.
 	</oof:p>
-
-
-
-
 
 	<oof:header size="1">Overview</oof:header>
 	<oof:p>
@@ -154,7 +143,7 @@
 	<oof:header size="1">File pointer extended past file size</oof:header>
 	<oof:p>
 		In this case we must create a new bmap on-the-fly with the CRC table
-		containing SL_NULL_CRC (the CRC of a sliver filled with all null
+		containing SL_NULL_CRCs (i.e. the CRC of a sliver filled with all null
 		bytes).
 	</oof:p>
 
@@ -170,7 +159,8 @@
 	</oof:p>
 
 	<oof:header size="1">Bmap updates</oof:header>
-	<oof:p>Bmaps must be updated at several points:</oof:p>
+	<oof:p>Bmap metadata is updated and rewritten as a result of numerous
+		operations:</oof:p>
 	<oof:list type="LIST_UN">
 		<oof:list-item>
 			Receipt of a chunk CRC update causes two writes: the store of the
@@ -184,19 +174,7 @@
 		</oof:list-item>
 	</oof:list>
 
-
-
-
-
-
-
-
-
-
-
-
-
-	<oof:header size="2">Storage tradeoffs</oof:header>
+	<oof:header size="2">CRC storage</oof:header>
 	<oof:p>
 		The dominant issue with CRCs revolves around the data size
 		encompassed by a single 8-byte CRC.
