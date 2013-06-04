@@ -30,8 +30,8 @@
 
 struct slmctlmsg_replpair {
 	char			scrp_addrbuf[2][RESM_ADDRBUF_SZ];
-	uint32_t		scrp_avail;
-	uint32_t		scrp_used;
+	uint64_t		scrp_avail;
+	uint64_t		scrp_used;
 };
 
 struct slmctlmsg_statfs {
