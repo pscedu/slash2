@@ -57,8 +57,8 @@ struct slm_resmlink {
 };
 
 struct bmap_repls_upd_odent {
-	struct slash_fidgen	br_fg;
-	sl_bmapno_t		br_bno;
+	struct slash_fidgen		br_fg;
+	sl_bmapno_t			br_bno;
 };
 
 typedef void (*brepl_walkcb_t)(struct bmapc_memb *, int, int, void *);
