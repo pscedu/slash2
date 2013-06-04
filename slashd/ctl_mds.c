@@ -345,22 +345,22 @@ int
 slmctlrep_getreplpairs(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct slmctlmsg_replpair *scrp = m;
-	struct sl_resm *resm, *resm0;
 	struct sl_resource *r, *r0;
+	struct sl_resm *m, *m0;
 	struct sl_site *s, *s0;
 	int i, j, i0, j0, rc = 1;
 
 	CONF_LOCK();
 	spinlock(&repl_busytable_lock);
-	CONF_FOREACH_RESM(s, r, i, resm, j) {
+	CONF_FOREACH_RESM(s, r, i, m, j) {
 		if (!RES_ISFS(r))
 			continue;
 
 		/* stats between members within this resource */
 		j0 = j + 1;
-		RES_FOREACH_MEMB_CONT(r, resm0, j0) {
-			rc = slmctlrep_replpair_send(fd, mh, scrp, resm,
-			    resm0);
+		RES_FOREACH_MEMB_CONT(r, m0, j0) {
+			rc = slmctlrep_replpair_send(fd, mh, scrp, m,
+			    m0);
 			if (!rc)
 				goto done;
 		}
@@ -370,9 +370,9 @@ slmctlrep_getreplpairs(int fd, struct psc_ctlmsghdr *mh, void *m)
 		SITE_FOREACH_RES_CONT(s, r0, i0) {
 			if (!RES_ISFS(r0))
 				continue;
-			RES_FOREACH_MEMB(r0, resm0, j0) {
+			RES_FOREACH_MEMB(r0, m0, j0) {
 				rc = slmctlrep_replpair_send(fd, mh,
-				    scrp, resm, resm0);
+				    scrp, m, m0);
 				if (!rc)
 					goto done;
 			}
@@ -384,9 +384,9 @@ slmctlrep_getreplpairs(int fd, struct psc_ctlmsghdr *mh, void *m)
 			SITE_FOREACH_RES(s0, r0, i0) {
 				if (!RES_ISFS(r0))
 					continue;
-				RES_FOREACH_MEMB(r0, resm0, j0) {
+				RES_FOREACH_MEMB(r0, m0, j0) {
 					rc = slmctlrep_replpair_send(fd,
-					    mh, scrp, resm, resm0);
+					    mh, scrp, m, m0);
 					if (!rc)
 						goto done;
 				}
