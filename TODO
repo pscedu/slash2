@@ -42,7 +42,7 @@ until the window id for each bmpce is <= than the last processed bmpce window.
 	lack of flow control and aggressive read ahead.
 
 -----------------------------------------------------------------------
-- account metadata overhead in st_blocks
+- account metadata overhead in st_blocks?
 - there should be a slictl/msctl cmd to see other/aggr replicas:
 
 	(o) msctl -s repl-disk-usage:file[,...]
@@ -447,8 +447,8 @@ reimport
   manually and will be forced to restart all clients and sliods.
 - imported files should create CRCs
 - import should utilize fallocate(2) where available
+- replication account in slmctl -srepl doesn't seem to work
 
-- make illustrations about how the throttling in the replication engines
 - implement dedup in IOS with CRC checking and upsch?
 
 - ask paul about difficulty of CRCs
