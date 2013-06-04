@@ -447,7 +447,8 @@ reimport
   manually and will be forced to restart all clients and sliods.
 - imported files should create CRCs
 - import should utilize fallocate(2) where available
-- replication account in slmctl -srepl doesn't seem to work
+- replication activity bandwidth accounting in slmctl -srepl doesn't
+  seem to work
 
 - implement dedup in IOS with CRC checking and upsch?
 
