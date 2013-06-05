@@ -1491,6 +1491,8 @@ slm_rmc_handler(struct pscrpc_request *rq)
 			PFL_GOTOERR(out, rc);
 	}
 
+	mds_note_update(1);
+
 	switch (rq->rq_reqmsg->opc) {
 	/* bmap messages */
 	case SRMT_BMAPCHWRMODE:
@@ -1594,9 +1596,11 @@ slm_rmc_handler(struct pscrpc_request *rq)
 		psclog_errorx("Unexpected opcode %d",
 		    rq->rq_reqmsg->opc);
 		rq->rq_status = -ENOSYS;
+		mds_note_update(-1);
 		return (pscrpc_error(rq));
 	}
  out:
+	mds_note_update(-1);
 	authbuf_sign(rq, PSCRPC_MSG_REPLY);
 	pscrpc_target_send_reply_msg(rq, -(abs(rc)), 0);
 	return (rc);

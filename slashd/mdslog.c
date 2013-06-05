@@ -157,6 +157,12 @@ struct psc_journal_cursor	 mds_cursor;
 
 psc_spinlock_t			 mds_txg_lock = SPINLOCK_INIT;
 
+struct psc_waitq                cursorWaitq = PSC_WAITQ_INIT;
+psc_spinlock_t                  cursorWaitLock = SPINLOCK_INIT;
+
+static int			 cursor_update_inprog = 0;
+static int			 cursor_update_needed = 0;
+
 static int
 mds_open_file(char *fn, int flags, void **handle)
 {
@@ -1119,6 +1125,17 @@ mds_cursor_thread(__unusedx struct psc_thread *thr)
 	int rc;
 
 	while (pscthr_run()) {
+
+		spinlock(&cursorWaitLock);
+		if (!cursor_update_needed) {
+			cursor_update_inprog = 0;
+			psc_waitq_wait(&cursorWaitq, &cursorWaitLock);
+		} else {
+			cursor_update_inprog = 1;
+			freelock(&cursorWaitLock);
+		}
+
+		/* Use SLASH2_CURSOR_FLAG to write cursor file */
 		rc = mdsio_write_cursor(current_vfsid, &mds_cursor,
 		    sizeof(mds_cursor), mds_cursor_handle,
 		    mds_update_cursor);
@@ -1133,6 +1150,15 @@ mds_cursor_thread(__unusedx struct psc_thread *thr)
 			    mds_cursor.pjc_seqno_lwm,
 			    mds_cursor.pjc_seqno_hwm);
 	}
+}
+
+void mds_note_update(int val)
+{
+	spinlock(&cursorWaitLock);
+	cursor_update_needed += val;
+	if (!cursor_update_inprog && cursor_update_needed)
+		psc_waitq_wakeall(&cursorWaitq);
+	freelock(&cursorWaitLock);
 }
 
 void
