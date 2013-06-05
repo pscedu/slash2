@@ -5,10 +5,18 @@ SLASH2 File System
 
 http://www.psc.edu/slash2
 
+Copyright
+-------------
+
+See COPYING-GPL at the top of this distribution.
+
 Documentation
 -------------
 
-For installation documentation, see, doc/build.
-For configuration documentation, see, doc/config.
-For running documentation, see, doc/run.
+For building documentation, run:
 
+  make doc
+
+For installation documentation, see, doc/build.txt
+For configuration documentation, see, doc/config.txt
+For running documentation, see, doc/run.txt
