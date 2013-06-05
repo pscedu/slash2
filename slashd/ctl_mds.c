@@ -342,9 +342,9 @@ slmctlrep_replpair_send(int fd, struct psc_ctlmsghdr *mh,
  * @m: control message to examine and reuse.
  */
 int
-slmctlrep_getreplpairs(int fd, struct psc_ctlmsghdr *mh, void *m)
+slmctlrep_getreplpairs(int fd, struct psc_ctlmsghdr *mh, void *mb)
 {
-	struct slmctlmsg_replpair *scrp = m;
+	struct slmctlmsg_replpair *scrp = mb;
 	struct sl_resource *r, *r0;
 	struct sl_resm *m, *m0;
 	struct sl_site *s, *s0;
