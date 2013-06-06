@@ -266,6 +266,16 @@ read_vfsid(int vfsid, char *fn, uint64_t *id)
 	return (rc);
 }
 
+void
+psc_suspend_filesystem(void)
+{
+}
+
+void
+psc_resume_filesystem(void)
+{
+}
+
 /**
  * psc_register_filesystem -
  *
@@ -526,6 +536,9 @@ main(int argc, char *argv[])
 
 	/* using hook can cause layer violation */
 	zfsslash2_register_hook(psc_register_filesystem);
+
+	zfsslash2_register_resume_hook(psc_resume_filesystem);
+	zfsslash2_register_suspend_hook(psc_suspend_filesystem);
 
 	authbuf_createkeyfile();
 	authbuf_readkeyfile();
