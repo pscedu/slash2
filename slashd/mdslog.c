@@ -157,8 +157,8 @@ struct psc_journal_cursor	 mds_cursor;
 
 psc_spinlock_t			 mds_txg_lock = SPINLOCK_INIT;
 
-struct psc_waitq                cursorWaitq = PSC_WAITQ_INIT;
-psc_spinlock_t                  cursorWaitLock = SPINLOCK_INIT;
+struct psc_waitq		 cursorWaitq = PSC_WAITQ_INIT;
+psc_spinlock_t			 cursorWaitLock = SPINLOCK_INIT;
 
 static int			 cursor_update_inprog = 0;
 static int			 cursor_update_needed = 0;
