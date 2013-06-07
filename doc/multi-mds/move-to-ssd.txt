@@ -1,0 +1,51 @@
+06/07/2013
+----------
+
+Steps used to move the contents in the default file system to a named file system like PSC:
+
+1. While the MDS is running, do the following
+
+bash-4.1# /home/zhihui/projects-orange/zfs/src/cmd/zfs/zfs snapshot zhihui_slash2_orange@`date +%s`
+bash-4.1# /home/zhihui/projects-orange/zfs/src/cmd/zfs/zfs list -t snapshot
+NAME                              USED  AVAIL  REFER  MOUNTPOINT
+zhihui_slash2_orange@1370627028      0      -   361M  -
+bash-4.1# /home/zhihui/projects-orange/zfs/src/cmd/zfs/zfs send zhihui_slash2_orange@1370627028 > /local/zhihui_slash2_orange@1370627028
+
+2. Kill the MDS, use zfs-fuse to recreate the pool
+
+bash-4.1# rm -rf /home/zhihui/zhihui_slash2_orange.cf
+bash-4.1# /home/zhihui/projects-orange/zfs/src/zfs-fuse/zfs-fuse
+bash-4.1# /home/zhihui/projects-orange/zfs/src/cmd/zpool/zpool destroy zhihui_slash2_orange
+bash-4.1# /home/zhihui/projects-orange/zfs/src/cmd/zpool/zpool create -f zhihui_slash2_orange mirror sdc sdd sde sdf
+bash-4.1# /home/zhihui/projects-orange/zfs/src/cmd/zpool/zpool set cachefile=/home/zhihui/zhihui_slash2_orange.cf zhihui_slash2_orange
+
+3. Apply the snapshot with zfs-fuse
+
+Note we apply the snapshot to file system named zhihui_slash2_orange/PSC, which does not exist yet, but will be created.
+
+bash-4.1# /home/zhihui/projects-orange/zfs/src/cmd/zfs/zfs recv zhihui_slash2_orange/PSC < /local/zhihui_slash2_orange@1370627028
+bash-4.1# umount /zhihui_slash2_orange/PSC
+bash-4.1# umount /zhihui_slash2_orange/
+bash-4.1# killall zfs-fuse
+bash-4.1# rm -rf /zhihui_slash2_orange
+
+4. Restart MDS
+
+Things should work at this point.
+
+For the sake of exercise, you can also move the data sets from /PSC back to the default filesystem.  But I hit some weird journal 
+replay messages (redo failed with EEXIST). The MDS comes back fine, though.  Anyway, don't push our luck.
+
+Later I realized that I should re-create the journal file after the application of a snapshot.  Now I still get:
+
+[1370637009:052248 slmctlthr0:7ffff79e87c0:log journal.c pjournal_scan_slots 671] system journal and cursor file mismatch!
+[New Thread 0x7ffe92793700 (LWP 13438)]
+[New Thread 0x7ffe91d92700 (LWP 13439)]
+[1370637009:381935 slmjthr:7ffe92793700:log journal.c pjournal_thr_main 898] Journal txg goes backwards: 91 -> 87
+[New Thread 0x7ffe91391700 (LWP 13440)]
+
+But that is fine based on my current thinking.
+
+5. Next step
+
+Fix mds code, so it can accept snapshot on the fly without resorting to zfs-fuse.
