@@ -50,7 +50,8 @@ struct reclaim_prog_entry {
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-v] [-b batchno] [-i id] [-p reclaim-prog-log] [-r reclaim-log]\n",
+	fprintf(stderr,
+	    "usage: %s [-v] [-b batchno] [-i id] [-p prog-file] [-r reclaim-file]\n",
 	    progname);
 	exit(1);
 }
@@ -87,7 +88,8 @@ dump_reclaim_log(void *buf, int size)
 }
 
 int
-dump_reclaim_prog_log(void *buf, int size, uint64_t batchno, unsigned int id)
+dump_reclaim_prog_log(void *buf, int size, uint64_t batchno,
+    unsigned int id)
 {
 	int i, found, count, modified, entrysize;
 	struct reclaim_prog_entry *prog_entryp;
@@ -169,7 +171,7 @@ main(int argc, char *argv[])
 	if (!reclaim_log && !reclaim_prog_log)
 		usage();
 
-	fd = open(log, O_RDWR);
+	fd = open(log, batchno || id ? O_RDWR : O_RDONLY);
 	if (fd < 0)
 		err(1, "failed to open %s", log);
 	if (fstat(fd, &sbuf) < 0)
@@ -186,7 +188,8 @@ main(int argc, char *argv[])
 	if (reclaim_log)
 		dump_reclaim_log(buf, sbuf.st_size);
 	if (reclaim_prog_log) {
-		modified = dump_reclaim_prog_log(buf, sbuf.st_size, batchno, id);
+		modified = dump_reclaim_prog_log(buf, sbuf.st_size,
+		    batchno, id);
 		if (modified) {
 			lseek(fd, 0, SEEK_SET);
 			nr = write(fd, buf, sbuf.st_size);
