@@ -38,7 +38,7 @@
 #include "slashrpc.h"
 
 const char	*progname;
-int		 verbose = 0;
+int		 delete;
 
 struct reclaim_prog_entry {
 	uint64_t	res_xid;
@@ -59,9 +59,9 @@ usage(void)
 void
 dump_reclaim_log(void *buf, int size)
 {
-	uint64_t xid = 0;
-	struct srt_reclaim_entry *entryp;
 	int i, count, order = 0, entrysize = RECLAIM_ENTRY_SIZE;
+	struct srt_reclaim_entry *entryp;
+	uint64_t xid = 0;
 
 	count = size / sizeof(struct srt_reclaim_entry);
 	entryp = buf;
@@ -72,67 +72,78 @@ dump_reclaim_log(void *buf, int size)
 		entryp = PSC_AGP(entryp, entrysize);
 	}
 	printf("   The entry size is %d bytes, total # of entries is %d\n\n",
-		entrysize, count);
+	    entrysize, count);
 
 	for (i = 0; i < count; i++) {
 		if (entryp->xid < xid) {
 			order++;
 			printf("%4d:   xid = %"PRId64", fg = "SLPRI_FG" * \n",
-				i, entryp->xid, SLPRI_FG_ARGS(&entryp->fg));
+			    i, entryp->xid, SLPRI_FG_ARGS(&entryp->fg));
 		} else
 			printf("%4d:   xid = %"PRId64", fg = "SLPRI_FG"\n",
-				i, entryp->xid, SLPRI_FG_ARGS(&entryp->fg));
+			    i, entryp->xid, SLPRI_FG_ARGS(&entryp->fg));
 		entryp = PSC_AGP(entryp, entrysize);
 	}
 	printf("\n   Total number of out-of-order entries: %d\n", order);
 }
 
 int
-dump_reclaim_prog_log(void *buf, int size, uint64_t batchno,
-    unsigned int id)
+dump_reclaim_prog_log(void *buf, off_t *size, unsigned int id, int op,
+    uint64_t batchno)
 {
-	int i, found, count, modified, entrysize;
-	struct reclaim_prog_entry *prog_entryp;
+	struct reclaim_prog_entry *rpe;
+	int i, found, modified;
+	size_t count;
 
-	entrysize = sizeof(struct reclaim_prog_entry);
 	count = size / sizeof(struct reclaim_prog_entry);
-	prog_entryp = buf;
 
 	found = 0;
 	modified = 0;
-	printf("Current contents of the reclaim progress log are as follows:\n\n");
-	for (i = 0; i < count; i++) {
-		printf("%4d:  xid = %10"PRId64", batchno = %10"PRId64", id = %d\n",
-			i, prog_entryp->res_xid, prog_entryp->res_batchno,
-			prog_entryp->res_id);
-		if (id == prog_entryp->res_id) {
+	if (op == POP_PRINT)
+		printf("%5s  %6s %12s %12s\n", "n", "id", "xid",
+		    "batchno");
+	for (i = 0, rpe = buf; i < count; i++, rpe++) {
+		if (id == rpe->res_id) {
 			found = 1;
-			if (prog_entryp->res_batchno != batchno) {
-				prog_entryp->res_batchno = batchno;
-				modified = 1;
+			switch (op) {
+			case POP_SET_BATCHNO:
+				if (rpe->res_batchno != batchno) {
+					rpe->res_batchno = batchno;
+					modified = 1;
+				}
+				break;
+			case POP_DELETE:
+				memmove(rpe, rpe + entrysize,
+				    count - sizeof(*rpe) * (i + 1));
+				break;
+			case POP_PRINT:
+				printf("%5d: %6d %12"PRId64" %12"PRId64"d\n",
+				    i, rpe->res_id, rpe->res_xid,
+				    rpe->res_batchno, rpe->res_id);
+				break;
 			}
 		}
-		prog_entryp = PSC_AGP(prog_entryp, entrysize);
 	}
 	if (!found && id)
-		printf("\nThe id %d is not found in the table.\n\n", id);
-	if (!modified)
-		return (0);
+		printf("\nThe ID %d is not found in the table.\n\n", id);
+
 	printf("\nNew contents of the reclaim progress log are as follows:\n\n");
-	prog_entryp = buf;
-	for (i = 0; i < count; i++) {
+	for (i = 0, rpe = buf; i < count; i++, rpe++)
 		printf("%4d:  xid = %10"PRId64", batchno = %10"PRId64", id = %d\n",
-			i, prog_entryp->res_xid, prog_entryp->res_batchno,
-			prog_entryp->res_id);
-		prog_entryp = PSC_AGP(prog_entryp, entrysize);
-	}
+		    i, prog_entryp->res_xid, prog_entryp->res_batchno,
+		    prog_entryp->res_id);
 	return (1);
 }
+
+enum {
+	POP_SET_BATCHNO = 1,
+	POP_DELETE
+};
 
 int
 main(int argc, char *argv[])
 {
-	int modified = 0, reclaim_log = 0, reclaim_prog_log = 0, fd;
+	int modified, reclaim_log = 0, reclaim_prog_log = 0, fd, op = 0;
 	char c, *buf = NULL, *log = NULL;
 	uint64_t batchno = 0;
 	struct stat sbuf;
@@ -140,10 +151,14 @@ main(int argc, char *argv[])
 	ssize_t nr;
 
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "b:i:p:r:v")) != -1)
+	while ((c = getopt(argc, argv, "b:Di:p:r:")) != -1)
 		switch (c) {
 		case 'b':
+			op = POP_SET_BATCHNO;
 			batchno = strtol(optarg, NULL, 0);
+			break;
+		case 'D':
+			op = POP_DELETE;
 			break;
 		case 'i':
 			id = strtol(optarg, NULL, 0);
@@ -155,9 +170,6 @@ main(int argc, char *argv[])
 		case 'r':
 			log = optarg;
 			reclaim_log = 1;
-			break;
-		case 'v':
-			verbose = 1;
 			break;
 		default:
 			usage();
@@ -174,7 +186,7 @@ main(int argc, char *argv[])
 	fd = open(log, batchno || id ? O_RDWR : O_RDONLY);
 	if (fd < 0)
 		err(1, "failed to open %s", log);
-	if (fstat(fd, &sbuf) < 0)
+	if (fstat(fd, &sbuf) == -1)
 		err(1, "failed to stat %s", log);
 
 	buf = malloc(sbuf.st_size);
@@ -188,10 +200,11 @@ main(int argc, char *argv[])
 	if (reclaim_log)
 		dump_reclaim_log(buf, sbuf.st_size);
 	if (reclaim_prog_log) {
-		modified = dump_reclaim_prog_log(buf, sbuf.st_size,
-		    batchno, id);
+		modified = dump_reclaim_prog_log(buf, &sbuf.st_size, id,
+		    op, batchno);
 		if (modified) {
-			lseek(fd, 0, SEEK_SET);
+			if (ftruncate(fd, 0) == -1)
+				err(1, "truncate");
 			nr = write(fd, buf, sbuf.st_size);
 			if (nr != sbuf.st_size)
 				err(1, "log file write");
