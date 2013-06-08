@@ -37,6 +37,12 @@
 #include "fid.h"
 #include "slashrpc.h"
 
+enum {
+	POP_PRINT,
+	POP_SET_BATCHNO,
+	POP_DELETE
+};
+
 const char	*progname;
 int		 delete;
 
@@ -51,7 +57,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-v] [-b batchno] [-i id] [-p prog-file] [-r reclaim-file]\n",
+	    "usage: %s [-D] [-b batchno] [-i id] [-p prog-file] [-r reclaim-file]\n",
 	    progname);
 	exit(1);
 }
@@ -87,58 +93,59 @@ dump_reclaim_log(void *buf, int size)
 	printf("\n   Total number of out-of-order entries: %d\n", order);
 }
 
+void
+dump_rpe(size_t n, const struct reclaim_prog_entry *rpe)
+{
+	printf("%5zd: %6d %12"PRId64" %12"PRId64"\n",
+	    n, rpe->res_id, rpe->res_xid, rpe->res_batchno);
+}
+
 int
 dump_reclaim_prog_log(void *buf, off_t *size, unsigned int id, int op,
     uint64_t batchno)
 {
+	int found = 0, modified = 0;
 	struct reclaim_prog_entry *rpe;
-	int i, found, modified;
-	size_t count;
+	size_t count, i;
 
-	count = size / sizeof(struct reclaim_prog_entry);
+	count = *size / sizeof(*rpe);
 
-	found = 0;
-	modified = 0;
-	if (op == POP_PRINT)
-		printf("%5s  %6s %12s %12s\n", "n", "id", "xid",
-		    "batchno");
+	printf("%5s  %6s %12s %12s\n", "n", "id", "xid", "batchno");
 	for (i = 0, rpe = buf; i < count; i++, rpe++) {
 		if (id == rpe->res_id) {
 			found = 1;
 			switch (op) {
 			case POP_SET_BATCHNO:
-				if (rpe->res_batchno != batchno) {
+				if (rpe->res_batchno == batchno) {
+					printf("skipping entry:\n");
+					dump_rpe(i, rpe);
+				} else {
+					printf("modifying entry:\n");
+					dump_rpe(i, rpe);
+					printf("now:\n");
 					rpe->res_batchno = batchno;
+					dump_rpe(i, rpe);
 					modified = 1;
 				}
 				break;
 			case POP_DELETE:
-				memmove(rpe, rpe + entrysize,
-				    count - sizeof(*rpe) * (i + 1));
-				break;
-			case POP_PRINT:
-				printf("%5d: %6d %12"PRId64" %12"PRId64"d\n",
-				    i, rpe->res_id, rpe->res_xid,
-				    rpe->res_batchno, rpe->res_id);
+				printf("deleting entry:\n");
+				dump_rpe(i, rpe);
+				memmove(rpe, rpe + 1,
+				    (count - i - 1) * sizeof(*rpe));
+				*size -= sizeof(*rpe);
+				modified = 1;
+				rpe--;
 				break;
 			}
 		}
+		if (op == POP_PRINT)
+			dump_rpe(i, rpe);
 	}
 	if (!found && id)
-		printf("\nThe ID %d is not found in the table.\n\n", id);
-
-	printf("\nNew contents of the reclaim progress log are as follows:\n\n");
-	for (i = 0, rpe = buf; i < count; i++, rpe++)
-		printf("%4d:  xid = %10"PRId64", batchno = %10"PRId64", id = %d\n",
-		    i, prog_entryp->res_xid, prog_entryp->res_batchno,
-		    prog_entryp->res_id);
-	return (1);
+		printf("\nThe ID %d is not found in the table.\n", id);
+	return (modified);
 }
-
-enum {
-	POP_SET_BATCHNO = 1,
-	POP_DELETE
-};
 
 int
 main(int argc, char *argv[])
@@ -183,8 +190,8 @@ main(int argc, char *argv[])
 	if (!reclaim_log && !reclaim_prog_log)
 		usage();
 
-	fd = open(log, batchno || id ? O_RDWR : O_RDONLY);
-	if (fd < 0)
+	fd = open(log, op == POP_PRINT ? O_RDONLY : O_RDWR);
+	if (fd == -1)
 		err(1, "failed to open %s", log);
 	if (fstat(fd, &sbuf) == -1)
 		err(1, "failed to stat %s", log);
@@ -205,6 +212,7 @@ main(int argc, char *argv[])
 		if (modified) {
 			if (ftruncate(fd, 0) == -1)
 				err(1, "truncate");
+			lseek(fd, 0, SEEK_SET);
 			nr = write(fd, buf, sbuf.st_size);
 			if (nr != sbuf.st_size)
 				err(1, "log file write");
