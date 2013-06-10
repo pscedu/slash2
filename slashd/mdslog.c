@@ -672,8 +672,11 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 		 * We want to reclaim the space taken by the previous
 		 * generation.  Note that changing the attributes of a
 		 * zero-length file should NOT trigger this code.
+		 *
+		 * Add 1000 to differentiate the reason for distilling
+		 * in the log messages.
 		 */
-		distill += 100; // XXX wtf is this?
+		distill += 1000;
 		sjnm->sjnm_flag |= SJ_NAMESPACE_RECLAIM;
 		sjnm->sjnm_target_gen = sstb->sst_gen;
 		if (op == NS_OP_SETSIZE) {
