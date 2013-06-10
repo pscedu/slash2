@@ -35,7 +35,7 @@
 #include "repl_mds.h"
 #include "slerr.h"
 
-#include "zfs_slashlib.h"
+#include "zfs-fuse/zfs_slashlib.h"
 
 #define B_REPLAY_OP_CRC		0
 #define B_REPLAY_OP_REPLS	1
