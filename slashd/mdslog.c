@@ -27,9 +27,9 @@
 #include <inttypes.h>
 #include <string.h>
 
+#include "pfl/dynarray.h"
 #include "pfl/fcntl.h"
 #include "pfl/fs.h"
-#include "pfl/dynarray.h"
 #include "pfl/rpc.h"
 #include "pfl/rsx.h"
 #include "psc_util/crc.h"
@@ -1152,7 +1152,8 @@ mds_cursor_thread(__unusedx struct psc_thread *thr)
 	}
 }
 
-void mds_note_update(int val)
+void
+mds_note_update(int val)
 {
 	spinlock(&cursorWaitLock);
 	cursor_update_needed += val;
@@ -1303,7 +1304,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 
 	version = 0;
 	entrysize = RECLAIM_ENTRY_SIZE;
-	entryp = (struct srt_reclaim_entry *) reclaimbuf;
+	entryp = reclaimbuf;
 	if (entryp->fg.fg_fid == RECLAIM_MAGIC_FID &&
 	    entryp->fg.fg_gen == RECLAIM_MAGIC_GEN) {
 		version = RECLAIM_MAGIC_VER;
@@ -1315,6 +1316,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 		return (didwork);
 	}
 	/*
+	 * XXX XXX XXX XXX hack
 	 * We have seen odd file size (> 600MB) without any clue.
 	 * To avoid confusing other code on the MDS and sliod, pretend
 	 * we have done the job and move on.
@@ -1366,7 +1368,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 		RPMI_LOCK(rpmi);
 		/*
 		 * We won't need this if the IOS is actually down.
-		 * But we need to short cut it for testing purposes.
+		 * But we need to shortcut it for testing purposes.
 		 */
 		if (iosinfo->si_flags & SIF_DISABLE_GC) {
 			RPMI_ULOCK(rpmi);
@@ -1484,19 +1486,17 @@ mds_send_batch_reclaim(uint64_t batchno)
 
 	/*
 	 * Record the progress first before potentially removing old log
-	 * file.
+	 * files.
 	 */
 	if (record)
 		mds_record_reclaim_prog();
 
 	/*
 	 * XXX if the log file is never filled to its capacity for some
-	 * reason, then we are stuck!  Perhaps We should check for the
+	 * reason, then we are stuck!  Perhaps we should check for the
 	 * existence of the next log file and skip it.  But we must make
 	 * sure all IOS have seen this log file.
-	 */
-
-	/*
+	 *
 	 * If this log file is full and all I/O servers have applied its
 	 * contents, remove an old log file (keep the previous one so
 	 * that we can figure out the last distill xid upon recovery).
