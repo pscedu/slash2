@@ -433,7 +433,7 @@ reimport
 - msctl repl-policy read isnt implemented
 - user quotas??
 - atime??
-- Not all items on the flush queue is flushable.  We may want to defer
+- Not all items on the flush queue are flushable.  We may want to defer
   putting an item on the queue until it is flushable.  dd-test.sh can
   have thousands of pending biorqs.
 - remove syslog network traffic from psclog()
@@ -446,6 +446,11 @@ reimport
   these changes we'll be forced to modify internal MDS structures
   manually and will be forced to restart all clients and sliods.
 - imported files should create CRCs
+- stash directory replication settings in dir/.sldir
+- avoid degraded IOS's if replications
+     - bmap_select_ios() factor archiver and degraded on first iteration
+- ensure flush() wakeups are being called from failed/timedout RPC
+  callbacks
 - import should utilize fallocate(2) where available
 - MDS bmap slivers don't seem to account correctly:
     - create a 1GB file and tally up the contents and notice it doesn't sum to 1GB
