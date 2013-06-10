@@ -169,6 +169,8 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 			k = j;
 		}
 
+		FCMH_WAIT_BUSY(f);
+
 		repl[k].bs_id = ios;
 		ih->inoh_ino.ino_nrepls++;
 
@@ -176,6 +178,8 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 		    ios, j);
 
 		mds_inodes_odsync(vfsid, ih->inoh_fcmh, mdslog_ino_repls);
+
+		FCMH_UNBUSY(f);
 
 		rc = j;
 	}
@@ -426,15 +430,16 @@ _mds_repl_inv_except(struct bmapc_memb *b, int iosidx, int defer)
 	tract[BREPLST_INVALID] = BREPLST_VALID;
 	tract[BREPLST_GARBAGE] = BREPLST_VALID;
 
-	brepls_init(retifset, EINVAL);
+	brepls_init_idx(retifset);
 	retifset[BREPLST_INVALID] = 0;
 	retifset[BREPLST_VALID] = 0;
 
 	rc = mds_repl_bmap_walk(b, tract, retifset, 0, &iosidx, 1);
 	if (rc)
-		psclog_errorx("bcs_repls is marked OLD or SCHED for "
-		    "fid "SLPRI_FID" bmap %d iosidx %d",
-		    fcmh_2_fid(b->bcm_fcmh), b->bcm_bmapno, iosidx);
+		psclog_errorx("bcs_repls has active IOS marked in a "
+		    "weird state while invalidating other replicas; "
+		    "fid="SLPRI_FID" bmap=%d iosidx=%d state=%d",
+		    fcmh_2_fid(b->bcm_fcmh), b->bcm_bmapno, iosidx, rc);
 
 	/*
 	 * Invalidate all other replicas.
