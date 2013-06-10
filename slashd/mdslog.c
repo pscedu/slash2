@@ -308,7 +308,7 @@ mds_open_logfile(uint64_t batchno, int update, int readonly,
  *	write into namespace update or garbage reclaim logs.
  *
  *	Writing the information to secondary logs allows us to recycle
- *	the space in the main system log as quick as possible.  The
+ *	the space in the main system log as quickly as possible.  The
  *	distill process is continuous in order to make room for system
  *	logs.  Once in a secondary log, we can process them as we see
  *	fit.  Sometimes these secondary log files can hang over a long
