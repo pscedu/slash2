@@ -447,8 +447,8 @@ reimport
   manually and will be forced to restart all clients and sliods.
 - imported files should create CRCs
 - import should utilize fallocate(2) where available
-- replication activity bandwidth accounting in slmctl -srepl doesn't
-  seem to work
+- MDS bmap slivers don't seem to account correctly:
+    - create a 1GB file and tally up the contents and notice it doesn't sum to 1GB
 
 - implement dedup in IOS with CRC checking and upsch?
 
