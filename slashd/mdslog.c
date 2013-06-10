@@ -1794,8 +1794,9 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		SL_MDS_WALK(resm, npeers++);
 		npeers--;
 		if (npeers > MAX_UPDATE_PROG_ENTRY)
-			psc_fatalx("number of metadata servers exceed %d",
-		    	MAX_UPDATE_PROG_ENTRY);
+			psc_fatalx("number of metadata servers (%d) "
+			    "exceeds %d", npeers,
+			    MAX_UPDATE_PROG_ENTRY);
 	}
 
 	res = nodeResm->resm_res;
