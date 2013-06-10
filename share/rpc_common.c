@@ -335,7 +335,8 @@ slrpc_handle_connect(struct pscrpc_request *rq, uint64_t magic,
 			 * export so this is not a fatal condition but
 			 * should be noted.
 			 */
-			psclog_warnx("duplicate connect msg detected");
+			DEBUG_REQ(PLL_WARN, rq,
+			    "duplicate connect msg detected");
 		expc = sl_exp_getpri_cli(e);
 		expc->stkvers = mq->stkvers;
 		break;
