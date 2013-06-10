@@ -35,6 +35,8 @@
 #include "repl_mds.h"
 #include "slerr.h"
 
+#include "zfs_slashlib.h"
+
 #define B_REPLAY_OP_CRC		0
 #define B_REPLAY_OP_REPLS	1
 
@@ -50,8 +52,6 @@
  * Actually, we can use the FSUUID stored in the log header to do the
  * matching.
  */
-
-extern int current_vfsid;
 
 /**
  * mds_replay_bmap - Replay an operation on a bmap.
@@ -234,6 +234,7 @@ mds_replay_ino(void *jent, int op)
 
 	switch (op) {
 	case I_REPLAY_OP_REPLS:
+		/* sanity check against null buffer */
 		for (j = 0; j < SL_MAX_REPLICAS; j++)
 			if (sjir->sjir_repls[j])
 				break;
