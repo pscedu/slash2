@@ -687,16 +687,15 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 
 	if (name) {
 		sjnm->sjnm_namelen = strlen(name);
-//		psc_assert(sjnm->sjnm_namelen <= sizeof(sjnm->sjnm_name));
 		memcpy(sjnm->sjnm_name, name, sjnm->sjnm_namelen);
 	}
 	if (newname) {
 		sjnm->sjnm_namelen2 = strlen(newname);
-		psc_assert(sjnm->sjnm_namelen + sjnm->sjnm_namelen2 <=
-		    sizeof(sjnm->sjnm_name));
 		memcpy(sjnm->sjnm_name + sjnm->sjnm_namelen, newname,
 		    sjnm->sjnm_namelen2);
 	}
+	psc_assert(sjnm->sjnm_namelen + sjnm->sjnm_namelen2 <=
+	    sizeof(sjnm->sjnm_name));
 
 	pjournal_add_entry(mdsJournal, txg,
 	    MDS_LOG_NAMESPACE, distill, sjnm,
