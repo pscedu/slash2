@@ -1788,14 +1788,13 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 
 	/* Count the number of peer MDSes we have */
 	npeers = 0;
-	SL_MDS_WALK(resm, npeers++);
-	npeers--;
-	if (npeers > MAX_UPDATE_PROG_ENTRY)
-		psc_fatalx("number of metadata servers exceed %d",
-		    MAX_UPDATE_PROG_ENTRY);
-
-	if (disable_propagation)
-		npeers = 0;
+	if (!disable_propagation) {
+		SL_MDS_WALK(resm, npeers++);
+		npeers--;
+		if (npeers > MAX_UPDATE_PROG_ENTRY)
+			psc_fatalx("number of metadata servers exceed %d",
+		    	MAX_UPDATE_PROG_ENTRY);
+	}
 
 	res = nodeResm->resm_res;
 	if (res->res_jrnldev[0] == '\0')
@@ -1846,7 +1845,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	for (i = 0; i < count; i++) {
 		res = libsl_id2res(reclaim_prog_buf[i].res_id);
 		if (res == NULL || !RES_ISFS(res)) {
-			psclog_warnx("Ingore non-FS resource ID %u "
+			psclog_warnx("Ignore non-FS resource ID %u "
 			    "in reclaim file",
 			    reclaim_prog_buf[i].res_id);
 			continue;
