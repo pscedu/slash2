@@ -461,6 +461,7 @@ reimport
    (o) attr buf size needs be dynamically sized
    (o) predictive/readahead async READDIR to make large directory
        listings fast
+   (o) avoid last READDIR signifying EOF between CLI <-> MDS
 
 - wrapper scripts:
    - purge old corefiles
