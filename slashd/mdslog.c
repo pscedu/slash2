@@ -258,7 +258,9 @@ mds_remove_logfile(uint64_t batchno, int update)
 	rc = mdsio_unlink(current_vfsid,
 	    mds_metadir_inum[current_vfsid], NULL, logfn, &rootcreds,
 	    NULL, NULL);
-	psclog_info("removed log file %s, rc=%d", logfn, rc);
+	if (rc)
+		psc_fatalx("Failed to remove log file %s: %s", logfn,
+		    slstrerror(rc));
 	OPSTAT_INCR(SLM_OPST_LOGFILE_REMOVE);
 }
 
@@ -266,19 +268,19 @@ int
 mds_open_logfile(uint64_t batchno, int update, int readonly,
     void **handle)
 {
-	char log_fn[PATH_MAX];
+	char logfn[PATH_MAX];
 	int rc;
 
 	if (update) {
-		xmkfn(log_fn, "%s.%d", SL_FN_UPDATELOG, batchno);
+		xmkfn(logfn, "%s.%d", SL_FN_UPDATELOG, batchno);
 	} else {
-		xmkfn(log_fn, "%s.%d", SL_FN_RECLAIMLOG, batchno);
+		xmkfn(logfn, "%s.%d", SL_FN_RECLAIMLOG, batchno);
 	}
 	if (readonly) {
 		/*
 		 * The caller should check the return value.
 		 */
-		return (mds_open_file(log_fn, O_RDONLY, handle));
+		return (mds_open_file(logfn, O_RDONLY, handle));
 	}
 
 	/*
@@ -287,7 +289,7 @@ mds_open_logfile(uint64_t batchno, int update, int readonly,
 	 * During replay, we need to read the file first to find out
 	 * the right position, so we can't use O_WRONLY.
 	 */
-	rc = mds_open_file(log_fn, O_RDWR, handle);
+	rc = mds_open_file(logfn, O_RDWR, handle);
 	if (rc == 0) {
 		/*
 		 * During replay, the offset will be determined by the
@@ -295,9 +297,9 @@ mds_open_logfile(uint64_t batchno, int update, int readonly,
 		 */
 		return (rc);
 	}
-	rc = mds_open_file(log_fn, O_CREAT | O_TRUNC | O_WRONLY, handle);
+	rc = mds_open_file(logfn, O_CREAT | O_TRUNC | O_WRONLY, handle);
 	if (rc)
-		psc_fatalx("Failed to create log file %s: %s", log_fn,
+		psc_fatalx("Failed to create log file %s: %s", logfn,
 		    slstrerror(rc));
 	OPSTAT_INCR(SLM_OPST_LOGFILE_CREATE);
 	return (rc);
