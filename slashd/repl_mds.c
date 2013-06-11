@@ -152,6 +152,8 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 	 *   specified, else return.
 	 */
 	if (add) {
+		int waslk, wasbusy;
+
 		psc_assert(ih->inoh_ino.ino_nrepls <= SL_MAX_REPLICAS);
 		if (ih->inoh_ino.ino_nrepls == SL_MAX_REPLICAS) {
 			DEBUG_INOH(PLL_WARN, ih, "too many replicas");
@@ -169,7 +171,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 			k = j;
 		}
 
-		FCMH_WAIT_BUSY(ih->inoh_fcmh);
+		wasbusy = FCMH_REQ_BUSY(ih->inoh_fcmh, &waslk);
 
 		repl[k].bs_id = ios;
 		ih->inoh_ino.ino_nrepls++;
@@ -177,9 +179,10 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 		DEBUG_INOH(PLL_INFO, ih, "add IOS(%u) to repls, index %d",
 		    ios, j);
 
-		mds_inodes_odsync(vfsid, ih->inoh_fcmh, mdslog_ino_repls);
+		mds_inodes_odsync(vfsid, ih->inoh_fcmh,
+		    mdslog_ino_repls);
 
-		FCMH_UNBUSY(ih->inoh_fcmh);
+		FCMH_UREQ_BUSY(ih->inoh_fcmh, wasbusy, waslk);
 
 		rc = j;
 	}
