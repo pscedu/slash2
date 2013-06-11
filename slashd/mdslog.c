@@ -169,6 +169,7 @@ mds_open_file(char *fn, int flags, void **handle)
 	mdsio_fid_t mf;
 	int rc;
 
+	mds_note_update(1);
 	rc = mdsio_lookup(current_vfsid,
 	    mds_metadir_inum[current_vfsid], fn, &mf, &rootcreds, NULL);
 	if (rc == ENOENT && (flags & O_CREAT)) {
@@ -180,14 +181,39 @@ mds_open_file(char *fn, int flags, void **handle)
 		rc = mdsio_opencreate(current_vfsid, mf, &rootcreds,
 		    flags, 0, NULL, NULL, NULL, handle, NULL, NULL, 0);
 	}
+	mds_note_update(-1);
 	return (rc);
 }
 
-#define mds_read_file(h, buf, size, nb, off)				\
-	mdsio_read(current_vfsid, &rootcreds, (buf), (size), (nb), (off), (h))
+static inline int
+mds_read_file(void *h, void *buf, uint64_t size, size_t *nb, off_t off)
+{
+	int rc;
+	mds_note_update(1);
+	rc = mdsio_read(current_vfsid, &rootcreds, buf, size, nb, off, h);
+	mds_note_update(-1);
+	return rc;
+}
 
-#define mds_write_file(h, buf, size, nb, off)				\
-	mdsio_write(current_vfsid, &rootcreds, (buf), (size), (nb), (off), 0, (h), NULL, NULL)
+static inline int
+mds_write_file(void *h, void *buf, uint64_t size, size_t *nb, off_t off)
+{
+	int rc;
+	mds_note_update(1);
+	rc = mdsio_write(current_vfsid, &rootcreds, buf, size, nb, off, 0, h, NULL, NULL);
+	mds_note_update(-1);
+	return rc;
+}
+
+static inline int
+mds_release_file(void *handle)
+{
+	int rc;
+	mds_note_update(1);
+	rc = mdsio_release(current_vfsid, &rootcreds, handle);
+	mds_note_update(-1);
+	return rc;
+}
 
 static void
 mds_record_update_prog(void)
@@ -255,9 +281,13 @@ mds_remove_logfile(uint64_t batchno, int update)
 		xmkfn(logfn, "%s.%d", SL_FN_UPDATELOG, batchno);
 	else
 		xmkfn(logfn, "%s.%d", SL_FN_RECLAIMLOG, batchno);
+
+	mds_note_update(1);
 	rc = mdsio_unlink(current_vfsid,
 	    mds_metadir_inum[current_vfsid], NULL, logfn, &rootcreds,
 	    NULL, NULL);
+	mds_note_update(-1);
+
 	if (rc)
 		psc_fatalx("Failed to remove log file %s: %s", logfn,
 		    slstrerror(rc));
@@ -375,8 +405,11 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 		    &reclaim_logfile_handle);
 		psc_assert(rc == 0);
 
+		mds_note_update(1);
 		rc = mdsio_getattr(current_vfsid, 0,
 		    reclaim_logfile_handle, &rootcreds, &sstb);
+		mds_note_update(-1);
+
 		psc_assert(rc == 0);
 
 		reclaim_logfile_offset = 0;
@@ -470,8 +503,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 	if (reclaim_logfile_offset ==
 	    SLM_RECLAIM_BATCH * (off_t)current_reclaim_entrysize) {
 
-		mdsio_release(current_vfsid, &rootcreds,
-		    reclaim_logfile_handle);
+		mds_release_file(reclaim_logfile_handle);
 
 		reclaim_logfile_handle = NULL;
 		current_reclaim_batchno++;
@@ -585,8 +617,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 	if (update_logfile_offset ==
 	    SLM_UPDATE_BATCH * sizeof(struct srt_update_entry)) {
 
-		mdsio_release(current_vfsid, &rootcreds,
-		    update_logfile_handle);
+		mds_release_file(update_logfile_handle);
 
 		update_logfile_handle = NULL;
 		current_update_batchno++;
@@ -924,7 +955,7 @@ mds_send_batch_update(uint64_t batchno)
 	}
 	rc = mds_read_file(handle, updatebuf,
 	    SLM_UPDATE_BATCH * sizeof(struct srt_update_entry), &size, 0);
-	mdsio_release(current_vfsid, &rootcreds, handle);
+	mds_release_file(handle);
 
 	if (size == 0)
 		return (didwork);
@@ -1297,14 +1328,14 @@ mds_send_batch_reclaim(uint64_t batchno)
 	psc_assert(rc == 0);
 
 	if (sstb.sst_size == 0) {
-		mdsio_release(current_vfsid, &rootcreds, handle);
+		mds_release_file(handle);
 		return (didwork);
 	}
 	reclaimbuf = PSCALLOC(sstb.sst_size);
 
 	rc = mds_read_file(handle, reclaimbuf, sstb.sst_size, &size, 0);
 	psc_assert(rc == 0 && sstb.sst_size == size);
-	mdsio_release(current_vfsid, &rootcreds, handle);
+	mds_release_file(handle);
 
 	version = 0;
 	entrysize = RECLAIM_ENTRY_SIZE;
@@ -1875,7 +1906,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 			}
 			break;
 		}
-		mdsio_release(current_vfsid, &rootcreds, handle);
+		mds_release_file(handle);
 		batchno++;
 	}
 	if (rc)
@@ -1931,7 +1962,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 
 	last_distill_xid = last_reclaim_xid;
 
-	mdsio_release(current_vfsid, &rootcreds, handle);
+	mds_release_file(handle);
 
 	/* search for newly-added I/O servers */
 	SITE_FOREACH_RES(nodeSite, res, ri) {
@@ -2009,7 +2040,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 
 	rc = mds_read_file(handle, updatebuf,
 	    SLM_UPDATE_BATCH * sizeof(struct srt_update_entry), &size, 0);
-	mdsio_release(current_vfsid, &rootcreds, handle);
+	mds_release_file(handle);
 
 	psc_assert(rc == 0);
 	psc_assert((size % sizeof(struct srt_update_entry)) == 0);
