@@ -272,7 +272,7 @@ mds_txg_handler(__unusedx uint64_t *txgp, __unusedx void *data, int op)
 }
 
 void
-mds_remove_logfile(uint64_t batchno, int update)
+mds_remove_logfile(uint64_t batchno, int update, int cleanup)
 {
 	char logfn[PATH_MAX];
 	int rc;
@@ -288,10 +288,21 @@ mds_remove_logfile(uint64_t batchno, int update)
 	    NULL, NULL);
 	mds_note_update(-1);
 
-	if (rc)
+	if (rc && (rc != ENOENT || !cleanup))
 		psc_fatalx("Failed to remove log file %s: %s", logfn,
 		    slstrerror(rc));
-	OPSTAT_INCR(SLM_OPST_LOGFILE_REMOVE);
+	if (!rc) {
+		psclog_warnx("Log lile %s has been removed", logfn);
+		OPSTAT_INCR(SLM_OPST_LOGFILE_REMOVE);
+	}
+}
+void
+mds_remove_logfiles(uint64_t batchno, int update)
+{
+	int64_t i;
+
+	for (i = 0; i < (int64_t) batchno - 1; i++) 
+		mds_remove_logfile(i, update, 1);
 }
 
 int
@@ -1086,7 +1097,7 @@ mds_send_batch_update(uint64_t batchno)
 		mds_record_update_prog();
 	if (didwork == npeers && count == SLM_UPDATE_BATCH) {
 		if (batchno >= 1)
-			mds_remove_logfile(batchno - 1, 1);
+			mds_remove_logfile(batchno - 1, 1, 0);
 	}
 	return (didwork);
 }
@@ -1287,7 +1298,7 @@ mds_skip_reclaim_batch(uint batchno)
 		mds_record_reclaim_prog();
 	if (didwork == nios) {
 		if (batchno >= 1)
-			mds_remove_logfile(batchno - 1, 0);
+			mds_remove_logfile(batchno - 1, 0, 0);
 	}
 }
 
@@ -1538,7 +1549,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 	 */
 	if (didwork == nios && count == SLM_RECLAIM_BATCH) {
 		if (batchno >= 1)
-			mds_remove_logfile(batchno - 1, 0);
+			mds_remove_logfile(batchno - 1, 0, 0);
 	}
 	PSCFREE(reclaimbuf);
 	return (didwork);
@@ -1551,7 +1562,7 @@ void
 slmjreclaimthr_main(__unusedx struct psc_thread *thr)
 {
 	uint64_t batchno;
-	int didwork;
+	int didwork, cleanup = 1;
 
 	/*
 	 * Instead of tracking precisely which reclaim log record has
@@ -1560,6 +1571,10 @@ slmjreclaimthr_main(__unusedx struct psc_thread *thr)
 	 */
 	while (pscthr_run()) {
 		batchno = mds_reclaim_lwm(1);
+		if (cleanup) {
+			cleanup = 0;
+			mds_remove_logfiles(batchno, 0);
+		}
 		do {
 			spinlock(&mds_distill_lock);
 			if (!current_reclaim_xid ||
