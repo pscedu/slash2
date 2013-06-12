@@ -1056,7 +1056,7 @@ bmap_flush(void)
 	struct bmpc_ioreq *r, *tmp;
 	struct bmapc_memb *b, *tmpb;
 	struct resm_cli_info *rmci;
-	struct sl_resm *m;
+	struct sl_resm *m = NULL;
 	int i, j;
 
 	LIST_CACHE_LOCK(&bmapFlushQ);
