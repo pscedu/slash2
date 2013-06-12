@@ -118,7 +118,8 @@ mds_inode_read(struct slash_inode_handle *ih)
 }
 
 int
-mds_inode_write(int vfsid, struct slash_inode_handle *ih, void *logf, void *arg)
+mds_inode_write(int vfsid, struct slash_inode_handle *ih, void *logf,
+    void *arg)
 {
 	int rc, wasbusy, waslocked;
 	struct fidc_membh *f;
@@ -142,8 +143,8 @@ mds_inode_write(int vfsid, struct slash_inode_handle *ih, void *logf, void *arg)
 
 	if (logf)
 		mds_reserve_slot(1);
-	rc = mdsio_pwritev(vfsid, &rootcreds, iovs, nitems(iovs), &nb, 0, 0,
-	    inoh_2_mdsio_data(ih), logf, arg);
+	rc = mdsio_pwritev(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
+	    0, 0, inoh_2_mdsio_data(ih), logf, arg);
 	if (logf)
 		mds_unreserve_slot(1);
 
@@ -284,7 +285,7 @@ mds_inodes_odsync(int vfsid, struct fidc_membh *f,
 	locked = INOH_RLOCK(ih);
 	if (ih->inoh_ino.ino_nrepls > SL_DEF_REPLICAS) {
 		/*
-		 * Don't assume the inox have been loaded.  It's
+		 * Don't assume the inox has been loaded.  It's
 		 * possible our caller didn't require them (BZ #258).
 		 */
 		rc = mds_inox_ensure_loaded(ih);
@@ -298,7 +299,8 @@ mds_inodes_odsync(int vfsid, struct fidc_membh *f,
 	if (rc == 0 && ih->inoh_ino.ino_nrepls > SL_DEF_REPLICAS)
 		rc = mds_inox_write(vfsid, ih, NULL, NULL);
 
-	DEBUG_FCMH(PLL_DEBUG, f, "wrote updated ino_repls logf=%p", logf);
+	DEBUG_FCMH(PLL_DEBUG, f, "updated inode logf=%p",
+	    logf);
 	INOH_URLOCK(ih, locked);
 	return (rc);
 }
