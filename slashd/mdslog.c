@@ -301,7 +301,7 @@ mds_remove_logfiles(uint64_t batchno, int update)
 {
 	int64_t i;
 
-	for (i = 0; i < (int64_t) batchno - 1; i++) 
+	for (i = 0; i < (int64_t) batchno - 1; i++)
 		mds_remove_logfile(i, update, 1);
 }
 
