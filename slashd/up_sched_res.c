@@ -1052,31 +1052,48 @@ upd_destroy(struct slm_update_data *upd)
 	memset(upd, 0, sizeof(*upd));
 }
 
+struct purge_arg {
+	sl_bmapno_t		 bno;
+	size_t			 elem;
+	uint64_t		 key;
+};
+
+struct purge_argv {
+	struct psc_dynarray	 da;
+	struct fidc_membh	*f;
+};
+
+void
+purge_receipt(size_t elem, uint64_t key)
+{
+	struct odtable_receipt *odtr;
+
+	odtr = PSCALLOC(sizeof(*odtr));
+	odtr->odtr_elem = elem;
+	odtr->odtr_key = key;
+	mds_odtable_freeitem(slm_repl_odt, odtr);
+}
+
 int
 upsch_purge_cb(struct slm_sth *sth, void *p)
 {
-	struct odtable_receipt *odtr;
-	struct slm_update_data *upd;
-	struct fidc_membh *f;
-	struct bmap *b;
-	sl_bmapno_t n;
-	int rc;
+	struct purge_argv *av = p;
+	struct purge_arg *parg;
 
-	f = p;
-	if (f) {
-		n = sqlite3_column_int(sth->sth_sth, 0);
-		rc = bmap_get(f, n, SL_WRITE, &b);
-		if (rc)
-			goto freeit;
-		upd = &bmap_2_bmi(b)->bmi_upd;
-		upd_tryremove(upd);
-		bmap_op_done(b);
+	if (av->f) {
+		/*
+		 * We can't load directly here because bmap_get() may
+		 * try a dbdo() to SELECT the recpt key.
+		 */
+		parg = PSCALLOC(sizeof(*parg));
+		parg->bno = sqlite3_column_int(sth->sth_sth, 0);
+		parg->elem = sqlite3_column_int(sth->sth_sth, 1);
+		parg->key = sqlite3_column_int(sth->sth_sth, 2);
+		psc_dynarray_add(&av->da, parg);
 	} else {
- freeit:
-		odtr = PSCALLOC(sizeof(*odtr));
-		odtr->odtr_elem = sqlite3_column_int64(sth->sth_sth, 1);
-		odtr->odtr_key = sqlite3_column_int64(sth->sth_sth, 2);
-		mds_odtable_freeitem(slm_repl_odt, odtr);
+		purge_receipt(
+		    sqlite3_column_int64(sth->sth_sth, 1),
+		    sqlite3_column_int64(sth->sth_sth, 2));
 	}
 	return (0);
 }
@@ -1086,13 +1103,19 @@ upsch_purge(slfid_t fid)
 {
 	struct fidc_membh *f = NULL;
 	struct slash_fidgen fg;
+	struct purge_argv av;
+	struct purge_arg *parg;
+	struct bmap *b;
+	int rc, n;
 
 	fg.fg_fid = fid;
 	fg.fg_gen = FGEN_ANY;
 	slm_fcmh_get(&fg, &f);
 	if (f)
 		FCMH_WAIT_BUSY(f);
-	dbdo(upsch_purge_cb, f,
+	av.f = f;
+	psc_dynarray_init(&av.da);
+	dbdo(upsch_purge_cb, &av,
 	    " SELECT"
 	    "	bno,"
 	    "	recpt_elem,"
@@ -1102,6 +1125,20 @@ upsch_purge(slfid_t fid)
 	    " WHERE"
 	    "	fid = ?",
 	    SQLITE_INTEGER64, fid);
+	DYNARRAY_FOREACH(parg, n, &av.da) {
+		rc = bmap_get(f, parg->bno, SL_WRITE, &b);
+		if (rc) {
+			purge_receipt(parg->elem, parg->key);
+		} else {
+			struct slm_update_data *upd;
+
+			upd = &bmap_2_bmi(b)->bmi_upd;
+			upd_tryremove(upd);
+			bmap_op_done(b);
+		}
+		PSCFREE(parg);
+	}
+	psc_dynarray_free(&av.da);
 	if (f) {
 		FCMH_UNBUSY(f);
 		fcmh_op_done(f);
