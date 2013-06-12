@@ -246,6 +246,8 @@ mds_odtable_freeitem(struct odtable *odt, struct odtable_receipt *odtr)
 	    &nb, h->odth_start + odtr->odtr_elem * h->odth_slotsz,
 	    odt->odt_handle);
 	psc_assert(!rc && nb == h->odth_slotsz);
+
+	/* XXX stats should go into specific odtable counter */
 	OPSTAT_INCR(SLM_OPST_ODTABLE_FREE);
 
 	odtf = p + h->odth_elemsz;
