@@ -609,7 +609,11 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 	if (add.nios) {
 		if (!upd->upd_recpt) {
 			slm_repl_upd_odt_read(b);
-			psc_assert(upd->upd_recpt == NULL);
+			if (upd->upd_recpt == NULL) {
+				dump_bmap_repls(bmi->bmi_orepls);
+				DEBUG_BMAPOD(PLL_FATAL, b,
+				    "receipt already exists");
+			}
 
 			memset(&br, 0, sizeof(br));
 			br.br_fg = f->fcmh_fg;
