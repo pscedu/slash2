@@ -292,7 +292,7 @@ mds_remove_logfile(uint64_t batchno, int update, int cleanup)
 		psc_fatalx("Failed to remove log file %s: %s", logfn,
 		    slstrerror(rc));
 	if (!rc) {
-		psclog_warnx("Log lile %s has been removed", logfn);
+		psclog_warnx("Log file %s has been removed", logfn);
 		OPSTAT_INCR(SLM_OPST_LOGFILE_REMOVE);
 	}
 }
