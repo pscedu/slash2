@@ -1894,6 +1894,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	PSCFREE(reclaim_prog_buf);
 	reclaim_prog_buf = PSCALLOC(nios * sizeof(struct reclaim_prog_entry));
 
+	rc = ENOENT;
 	lwm = batchno;
 	while (batchno < UINT64_MAX) {
 		rc = mds_open_logfile(batchno, 0, 1, &handle);
@@ -1910,7 +1911,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		batchno++;
 	}
 	if (rc)
-		psc_fatalx("failed to open reclaim log file, "
+		psc_fatalx("Failed to open reclaim log file, "
 		    "batchno=%"PRId64": %s", batchno, slstrerror(rc));
 
 	rc = mdsio_getattr(current_vfsid, 0, handle, &rootcreds, &sstb);
