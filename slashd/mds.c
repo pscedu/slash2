@@ -247,7 +247,7 @@ mds_sliod_alive(void *arg)
 
 		clock_gettime(CLOCK_MONOTONIC, &a);
 		b = si->si_lastcomm;
-		b.tv_sec += (CSVC_PING_INTV * 2);
+		b.tv_sec += CSVC_PING_INTV * 2;
 
 		if (timespeccmp(&a, &b, <))
 			ok = 1;
@@ -292,14 +292,14 @@ mds_try_sliodresm(struct sl_resm *resm)
 	csvc = slm_geticsvc_nb(resm, NULL);
 	if (!csvc) {
 		/* This sliod hasn't established a connection to us. */
-		psclog_notify("res=%s skipped due to NULL csvc",
+		psclog_info("res=%s skipped due to NULL csvc",
 		    resm->resm_res->res_name);
 		return (0);
 	}
 
 	ok = mds_sliod_alive(si);
 	if (!ok)
-		psclog_notify("res=%s skipped due to lastcomm",
+		psclog_notice("res=%s skipped due to lastcomm",
 		    resm->resm_res->res_name);
 
 	if (csvc)
@@ -526,6 +526,7 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	 * An ION has been assigned to the bmap, mark it in the odtable
 	 * so that the assignment may be restored on reboot.
 	 */
+	memset(&bia, 0, sizeof(bia));
 	bia.bia_ios = bml->bml_ios = rmmi->rmmi_resm->resm_res->res_id;
 	bia.bia_lastcli = bml->bml_cli_nidpid;
 	bia.bia_fid = fcmh_2_fid(b->bcm_fcmh);
