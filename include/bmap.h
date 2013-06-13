@@ -163,7 +163,7 @@ struct bmap {
 #define BMAP_CLEARATTR(b, fl)	CLEARATTR_LOCKED(&(b)->bcm_lock, &(b)->bcm_flags, (fl))
 
 #define _DEBUG_BMAP_FMT		"bmap@%p bno:%u flg:%#x:"		\
-				"%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s " 	\
+				"%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "	\
 				"fid:"SLPRI_FID" opcnt=%d "
 
 #define _DEBUG_BMAP_FMTARGS(b)						\
@@ -348,6 +348,8 @@ struct bmapc_memb *
 	 bmap_lookup_cache(struct fidc_membh *, sl_bmapno_t, int *);
 
 int	 bmapdesc_access_check(struct srt_bmapdesc *, enum rw, sl_ios_id_t);
+
+void	 dump_bmap_repls(uint8_t *);
 
 void	_dump_bmap_flags_common(uint32_t *, int *);
 

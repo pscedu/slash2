@@ -380,7 +380,7 @@ dump_bmap_repls(uint8_t *repls)
 	char rbuf[SL_MAX_REPLICAS + 1];
 
 	DUMP_BMAP_REPLS(repls, rbuf);
-	printf("%s\n", rbuf);
+	fprintf(stderr, "%s\n", rbuf);
 }
 
 void
