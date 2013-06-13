@@ -271,7 +271,7 @@ mds_txg_handler(__unusedx uint64_t *txgp, __unusedx void *data, int op)
 	psc_assert(op == PJRNL_TXG_GET || op == PJRNL_TXG_PUT);
 }
 
-void
+int
 mds_remove_logfile(uint64_t batchno, int update, int cleanup)
 {
 	char logfn[PATH_MAX];
@@ -295,14 +295,27 @@ mds_remove_logfile(uint64_t batchno, int update, int cleanup)
 		psclog_warnx("Log file %s has been removed", logfn);
 		OPSTAT_INCR(SLM_OPST_LOGFILE_REMOVE);
 	}
+	return rc;
 }
 void
 mds_remove_logfiles(uint64_t batchno, int update)
 {
 	int64_t i;
+	int rc, notfound = 0;
+	struct timeval tv1, tv2;
 
-	for (i = 0; i < (int64_t) batchno - 1; i++)
-		mds_remove_logfile(i, update, 1);
+	gettimeofday(&tv1, NULL);
+	for (i = 0; i < (int64_t) batchno - 1; i++) {
+		rc = mds_remove_logfile(i, update, 1);
+		if (rc)
+			notfound++;
+		if (notfound > 10)
+			break;
+	}
+	gettimeofday(&tv2, NULL);
+	psclog_warnx("%"PRId64" log files has been removed in %d seconds", 
+		OPSTAT_CURR(SLM_OPST_LOGFILE_REMOVE),
+		(int)(tv2.tv_sec - tv1.tv_sec));
 }
 
 int
