@@ -862,7 +862,7 @@ msl_bmpce_complete_biorq(struct bmap_pagecache_entry *e0, int rc)
 			if (!(e->bmpce_flags & BMPCE_EIO) &&
 			    !(e->bmpce_flags & BMPCE_DATARDY)) {
 				msl_fsrq_aiowait_tryadd_locked(e, r);
-				DEBUG_BIORQ(PLL_NOTIFY, r,
+				DEBUG_BIORQ(PLL_NOTICE, r,
 				    "still blocked on (bmpce@%p)", e);
 				BMPCE_ULOCK(e);
 				break;
