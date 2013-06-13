@@ -454,6 +454,8 @@ reimport
 - import should utilize fallocate(2) where available
 - MDS bmap slivers don't seem to account correctly:
     - create a 1GB file and tally up the contents and notice it doesn't sum to 1GB
+- because we use cryptography, rely less on peer IP addresses for
+  authentication to allow clients behind internal networks
 
 - implement dedup in IOS with CRC checking and upsch?
 
