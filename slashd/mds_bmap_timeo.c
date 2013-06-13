@@ -211,7 +211,7 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 
 		sjbsq.sjbsq_high_wm = mdsBmapTimeoTbl.btt_maxseq;
 		if (bml->bml_seq < mdsBmapTimeoTbl.btt_minseq) {
-			psclog_notify("bml %p seq (%"PRIx64") is < "
+			psclog_notice("bml %p seq (%"PRIx64") is < "
 			    "mdsBmapTimeoTbl.btt_minseq (%"PRIx64")",
 			    bml, bml->bml_seq,
 			    mdsBmapTimeoTbl.btt_minseq);
