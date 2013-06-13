@@ -305,7 +305,7 @@ mds_remove_logfiles(uint64_t batchno, int update)
 	struct timeval tv1, tv2;
 
 	gettimeofday(&tv1, NULL);
-	for (i = 0; i < (int64_t) batchno - 1; i++) {
+	for (i = (int64_t) batchno - 2; i >= 0; i--) {
 		rc = mds_remove_logfile(i, update, 1);
 		if (rc)
 			notfound++;
