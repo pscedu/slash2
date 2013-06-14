@@ -244,22 +244,32 @@ mds_record_reclaim_prog(void)
 {
 	struct sl_mds_iosinfo *iosinfo;
 	struct sl_resource *res;
-	int ri, rc, nios = 0;
+	int ri, rc, index, lastindex = 0;
 	size_t size;
 
 	SITE_FOREACH_RES(nodeSite, res, ri) {
 		if (!RES_ISFS(res))
 			continue;
 		iosinfo = res2rpmi(res)->rpmi_info;
-		reclaim_prog_buf[nios].res_id = res->res_id;
-		reclaim_prog_buf[nios].res_xid = iosinfo->si_xid;
-		reclaim_prog_buf[nios].res_batchno = iosinfo->si_batchno;
-		nios++;
+
+		index = iosinfo->si_index;
+		if (iosinfo->si_flags & SIF_NEW_PROG_ENTRY) {
+			iosinfo->si_flags &= ~SIF_NEW_PROG_ENTRY;
+			reclaim_prog_buf[index].res_id = res->res_id;
+		}
+		psc_assert(reclaim_prog_buf[index].res_id == res->res_id);
+
+		reclaim_prog_buf[index].res_xid = iosinfo->si_xid;
+		reclaim_prog_buf[index].res_batchno = iosinfo->si_batchno;
+
+		if (lastindex < index)
+			lastindex = index;
 	}
+	lastindex++;
 	rc = mds_write_file(reclaim_progfile_handle, reclaim_prog_buf,
-	    nios * sizeof(struct reclaim_prog_entry), &size, 0);
+	     lastindex * sizeof(struct reclaim_prog_entry), &size, 0);
 	psc_assert(rc == 0);
-	psc_assert(size == (size_t)nios * sizeof(struct reclaim_prog_entry));
+	psc_assert(size == (size_t)lastindex * sizeof(struct reclaim_prog_entry));
 }
 
 /**
@@ -1817,7 +1827,7 @@ void
 mds_journal_init(int disable_propagation, uint64_t fsuuid)
 {
 	uint64_t lwm, batchno, last_reclaim_xid = 0, last_update_xid = 0, last_distill_xid = 0;
-	int i, ri, rc, max, nios, count, total, npeers;
+	int i, ri, rc, max, nios, count, total, index, npeers;
 	struct srt_reclaim_entry *reclaim_entryp;
 	struct srt_update_entry *update_entryp;
 	struct sl_mds_peerinfo *peerinfo;
@@ -1903,24 +1913,25 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	/* Find out the highest reclaim batchno and xid */
 
 	batchno = 0;
-	count = size / sizeof(struct reclaim_prog_entry);
+	count = index = size / sizeof(struct reclaim_prog_entry);
 	for (i = 0; i < count; i++) {
+
 		res = libsl_id2res(reclaim_prog_buf[i].res_id);
 		if (res == NULL || !RES_ISFS(res)) {
-			psclog_warnx("Ignore non-FS resource ID %u "
-			    "in reclaim file",
+			psclog_warnx("Bad or non-FS resource ID %u "
+			    "found in reclaim progress file",
 			    reclaim_prog_buf[i].res_id);
 			continue;
 		}
+
 		iosinfo = res2rpmi(res)->rpmi_info;
 		iosinfo->si_xid = reclaim_prog_buf[i].res_xid;
 		iosinfo->si_batchno = reclaim_prog_buf[i].res_batchno;
 		iosinfo->si_flags &= ~SIF_NEED_JRNL_INIT;
+		iosinfo->si_index = i;
 		if (iosinfo->si_batchno > batchno)
 			batchno = iosinfo->si_batchno;
 	}
-	PSCFREE(reclaim_prog_buf);
-	reclaim_prog_buf = PSCALLOC(nios * sizeof(struct reclaim_prog_entry));
 
 	rc = ENOENT;
 	lwm = batchno;
@@ -2003,9 +2014,11 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		if (!(iosinfo->si_flags & SIF_NEED_JRNL_INIT))
 			continue;
 
+		iosinfo->si_index = index++;
 		iosinfo->si_xid = current_reclaim_xid;
 		iosinfo->si_batchno = current_reclaim_batchno;
 		iosinfo->si_flags &= ~SIF_NEED_JRNL_INIT;
+		iosinfo->si_flags |= SIF_NEW_PROG_ENTRY;
 	}
 
 	psclog_info("current_reclaim_batchno=%"PRId64" "

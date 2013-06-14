@@ -195,6 +195,7 @@ struct sl_mds_iosinfo {
 	uint64_t		  si_xid;		/* garbage reclaim transaction group identifier */
 	struct psc_meter	  si_batchmeter;
 #define si_batchno si_batchmeter.pm_cur
+	int			  si_index;		/* index into the reclaim progress file */
 	struct srt_statfs	  si_ssfb;
 };
 
@@ -203,6 +204,7 @@ struct sl_mds_iosinfo {
 #define SIF_DISABLE_GC		(1 << 2)		/* disable garbage collection temporarily */
 #define SIF_BUSY		(1 << 3)
 #define SIF_UPSCH_PAGING	(1 << 4)
+#define	SIF_NEW_PROG_ENTRY	(1 << 5)		/* new entry in the reclaim prog file */
 
 #define res2iosinfo(res)	((struct sl_mds_iosinfo *)res2rpmi(res)->rpmi_info)
 
