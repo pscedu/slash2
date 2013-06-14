@@ -1903,6 +1903,11 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	rc = mds_open_file(fn, O_RDWR, &reclaim_progfile_handle);
 	psc_assert(rc == 0);
 
+	/*
+ 	 * Allocate maximum amount of memory to avoid dealing with
+ 	 * the coming and going of IOS as compared with the records
+ 	 * in the progress files.
+ 	 */
 	reclaim_prog_buf = PSCALLOC(MAX_RECLAIM_PROG_ENTRY *
 	    sizeof(struct reclaim_prog_entry));
 	rc = mds_read_file(reclaim_progfile_handle, reclaim_prog_buf,
