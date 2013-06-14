@@ -233,6 +233,25 @@ slmctl_resfieldi_xid(int fd, struct psc_ctlmsghdr *mh,
 }
 
 int
+slmctl_resfieldi_batchno(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels, int set,
+    struct sl_resource *r)
+{
+	struct sl_mds_iosinfo *si;
+	char nbuf[20];
+
+	si = res2iosinfo(r);
+	if (set)
+		return (psc_ctlsenderr(fd, mh,
+		    "batcho: field is read-only"));
+	snprintf(nbuf, sizeof(nbuf), "%"PRIu64,
+	    si->si_batchno);
+	return (psc_ctlmsg_param_send(fd, mh, pcp,
+	    PCTHRNAME_EVERYONE, levels, nlevels, nbuf));
+}
+
+
+int
 slmctl_resfieldi_disable_bia(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels, int set,
     struct sl_resource *r)
@@ -291,6 +310,7 @@ const struct slctl_res_field slctl_resios_fields[] = {
 	{ "disable_bia",	slmctl_resfieldi_disable_bia },
 	{ "disable_gc",		slmctl_resfieldi_disable_gc },
 	{ "xid",		slmctl_resfieldi_xid },
+	{ "batchno",		slmctl_resfieldi_batchno },
 	{ NULL, NULL },
 };
 
