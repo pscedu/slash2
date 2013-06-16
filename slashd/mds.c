@@ -1232,8 +1232,8 @@ mds_handle_rls_bmap(struct pscrpc_request *rq, __unusedx int sliod)
 		    sbd->sbd_nid, sbd->sbd_pid);
 
 		DEBUG_BMAP((bml ? PLL_INFO : PLL_WARN), b,
-		   "release %"PRId64" nid=%"PRId64" pid=%u bml=%p",
-		   sbd->sbd_seq, sbd->sbd_nid, sbd->sbd_pid, bml);
+		    "release %"PRId64" nid=%"PRId64" pid=%u bml=%p",
+		    sbd->sbd_seq, sbd->sbd_nid, sbd->sbd_pid, bml);
 		if (bml) {
 			BML_LOCK(bml);
 			bml->bml_flags |= BML_FREEING;
