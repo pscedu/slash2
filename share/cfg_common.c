@@ -159,11 +159,11 @@ libsl_nid2resm(lnet_nid_t nid)
 	struct sl_resm *resm;
 
 	resm = libsl_try_nid2resm(nid);
-	if (resm)
-		return (resm);
-	psc_fatalx("IOS %s not found in slcfg; "
-	    "verify uniformity across all servers",
-	    pscrpc_nid2str(nid, nidbuf));
+	if (resm == NULL)
+		psc_fatalx("IOS %s not found in slcfg; "
+		    "verify uniformity across all servers",
+		    pscrpc_nid2str(nid, nidbuf));
+	return (resm);
 }
 
 struct sl_resource *
