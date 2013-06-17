@@ -1823,7 +1823,7 @@ void
 mds_journal_init(int disable_propagation, uint64_t fsuuid)
 {
 	uint64_t lwm, batchno, last_reclaim_xid = 0, last_update_xid = 0, last_distill_xid = 0;
-	int i, ri, rc, max, nios, count, total, index, npeers;
+	int i, ri, rc, max, nios, count, stale, total, index, npeers;
 	struct srt_reclaim_entry *reclaim_entryp;
 	struct srt_update_entry *update_entryp;
 	struct sl_mds_peerinfo *peerinfo;
@@ -1913,6 +1913,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 
 	/* Find out the highest reclaim batchno and xid */
 
+	stale = 0;
 	batchno = 0;
 	count = index = size / sizeof(struct reclaim_prog_entry);
 	for (i = 0; i < count; i++) {
@@ -1922,6 +1923,11 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 			psclog_warnx("Bad or non-FS resource ID %u "
 			    "found in reclaim progress file",
 			    reclaim_prog_buf[i].res_id);
+
+			stale++;
+			reclaim_prog_buf[i].res_xid = 0;
+			reclaim_prog_buf[i].res_batchno = 0;
+
 			continue;
 		}
 
@@ -1932,6 +1938,13 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		iosinfo->si_index = i;
 		if (iosinfo->si_batchno > batchno)
 			batchno = iosinfo->si_batchno;
+	}
+	if (stale) {
+		rc = mds_write_file(reclaim_progfile_handle, reclaim_prog_buf,
+		    size, &size, 0);
+		psc_assert(rc == 0);
+		psclog_warnx("%d stale entries have been zeroed from the "
+			"reclaim prog log", stale);
 	}
 
 	rc = ENOENT;
@@ -2016,8 +2029,10 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 			continue;
 
 		iosinfo->si_index = index++;
-		iosinfo->si_xid = current_reclaim_xid;
-		iosinfo->si_batchno = current_reclaim_batchno;
+		if (iosinfo->si_xid == 0 && iosinfo->si_batchno == 0) {
+			iosinfo->si_xid = current_reclaim_xid;
+			iosinfo->si_batchno = current_reclaim_batchno;
+		}
 		iosinfo->si_flags &= ~SIF_NEED_JRNL_INIT;
 		iosinfo->si_flags |= SIF_NEW_PROG_ENTRY;
 	}
