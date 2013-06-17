@@ -62,14 +62,6 @@
 #define SLM_CBARG_SLOT_CSVC	0
 #define SLM_CBARG_SLOT_RESPROF	1
 
-/* progress tracker to peers */
-struct prog_entry {
-	uint64_t		 res_xid;
-	uint64_t		 res_batchno;
-	sl_ios_id_t		 res_id;
-	int32_t			 res_flags;			 
-};
-
 struct psc_journal		*mdsJournal;
 
 static psc_spinlock_t		 mds_distill_lock = SPINLOCK_INIT;
