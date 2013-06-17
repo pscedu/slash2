@@ -279,7 +279,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 			SLVR_LOCK(s);
 			if (s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR)) {
-				DEBUG_SLVR(PLL_NOTIFY, s,
+				DEBUG_SLVR(PLL_NOTICE, s,
 				    "aio early ready, rw=%s",
 				    rw == SL_WRITE ? "wr" : "rd");
 				SLVR_ULOCK(s);
