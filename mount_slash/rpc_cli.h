@@ -41,6 +41,11 @@ struct pscrpc_request;
 #define MSL_CBARG_BMAP			6
 #define MSL_CBARG_RESM			7
 
+#define MSL_READDIR_CBARG_CSVC		0
+#define MSL_READDIR_CBARG_FCMH		1
+#define MSL_READDIR_CBARG_IOV		2
+#define MSL_READDIR_CBARG_PAGE		3
+
 /* SLASH RPC channel for CLI from MDS. */
 #define SRCM_NTHREADS			8
 #define SRCM_NBUFS			256

@@ -52,44 +52,19 @@
  *
  */
 
-struct dircache_mgr dircacheMgr;
-
 void
-slc_fcmh_refresh_age(struct fidc_membh *fcmh)
+slc_fcmh_refresh_age(struct fidc_membh *f)
 {
 	struct timeval tmp = { FCMH_ATTR_TIMEO, 0 };
 	struct fcmh_cli_info *fci;
 
-	fci = fcmh_2_fci(fcmh);
+	fci = fcmh_2_fci(f);
 	PFL_GETTIMEVAL(&fci->fci_age);
 	timeradd(&fci->fci_age, &tmp, &fci->fci_age);
 }
 
-void
-slc_fcmh_initdci(struct fidc_membh *fcmh)
-{
-	struct fcmh_cli_info *fci;
-	int locked;
-
-	fci = fcmh_get_pri(fcmh);
-
-	locked = FCMH_RLOCK(fcmh);
-	psc_assert(fcmh_isdir(fcmh));
-
-	if (!(fcmh->fcmh_flags & FCMH_CLI_INITDCI)) {
-		INIT_SPINLOCK(&fci->fci_dci.di_lock);
-		pll_init(&fci->fci_dci.di_list, struct dircache_ents,
-		    de_lentry, &fci->fci_dci.di_lock);
-		fci->fci_dci.di_dcm = &dircacheMgr;
-		fci->fci_dci.di_fcmh = fcmh;
-		fcmh->fcmh_flags |= FCMH_CLI_INITDCI;
-	}
-
-	FCMH_URLOCK(fcmh, locked);
-}
-
 int
-slc_fcmh_ctor(struct fidc_membh *fcmh)
+slc_fcmh_ctor(struct fidc_membh *f)
 {
 	struct fcmh_cli_info *fci;
 	struct sl_resource *res;
@@ -98,17 +73,19 @@ slc_fcmh_ctor(struct fidc_membh *fcmh)
 	int i;
 
 	OPSTAT_INCR(SLC_OPST_SLC_FCMH_CTOR);
-	fci = fcmh_get_pri(fcmh);
-	slc_fcmh_refresh_age(fcmh);
+
+	fci = fcmh_get_pri(f);
+	slc_fcmh_refresh_age(f);
 	INIT_PSC_LISTENTRY(&fci->fci_lentry);
-	siteid = FID_GET_SITEID(fcmh_2_fid(fcmh));
-	if (fcmh_2_fid(fcmh) >= SLFID_MIN &&
+	siteid = FID_GET_SITEID(fcmh_2_fid(f));
+
+	if (fcmh_2_fid(f) >= SLFID_MIN &&
 	    siteid != slc_rmc_resm->resm_siteid) {
 		s = libsl_siteid2site(siteid);
 		if (s == NULL) {
 			psclog_errorx("fid "SLPRI_FID" has "
 			    "invalid site ID %d",
-			    fcmh_2_fid(fcmh), siteid);
+			    fcmh_2_fid(f), siteid);
 			return (ESTALE);
 		}
 		SITE_FOREACH_RES(s, res, i)
@@ -118,22 +95,26 @@ slc_fcmh_ctor(struct fidc_membh *fcmh)
 				return (0);
 			}
 		psclog_errorx("fid "SLPRI_FID" has invalid site ID %d",
-		    fcmh_2_fid(fcmh), siteid);
+		    fcmh_2_fid(f), siteid);
 		return (ESTALE);
 	}
 	fci->fci_resm = slc_rmc_resm;
+
+	if (fcmh_isdir(f))
+		pll_init(&fci->fci_dc_pages, struct dircache_page,
+		    dcp_lentry, &f->fcmh_lock);
+
 	return (0);
 }
 
 void
-slc_fcmh_dtor(struct fidc_membh *fcmh)
+slc_fcmh_dtor(struct fidc_membh *f)
 {
+	/* XXX consolidate into pool stats */
 	OPSTAT_INCR(SLC_OPST_SLC_FCMH_DTOR);
-	if (!fcmh_isdir(fcmh))
-		return;
-	if (!DIRCACHE_INITIALIZED(fcmh))
-		return;
-	dircache_free_ents(fcmh_2_dci(fcmh));
+
+	if (fcmh_isdir(f))
+		dircache_purge(f);
 }
 
 #if PFL_DEBUG > 0

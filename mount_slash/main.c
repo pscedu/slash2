@@ -42,17 +42,18 @@
 #include <gcrypt.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/dynarray.h"
 #include "pfl/fs.h"
 #include "pfl/fsmod.h"
 #include "pfl/pfl.h"
+#include "pfl/rpc.h"
+#include "pfl/rpclog.h"
+#include "pfl/rsx.h"
 #include "pfl/stat.h"
 #include "pfl/str.h"
 #include "pfl/sys.h"
 #include "pfl/time.h"
-#include "pfl/dynarray.h"
 #include "pfl/vbitmap.h"
-#include "pfl/rpc.h"
-#include "pfl/rsx.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/eqpollthr.h"
 #include "psc_util/fault.h"
@@ -441,6 +442,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	c->fcmh_flags |= FCMH_CLI_HAVEREPLTBL;
 	FCMH_ULOCK(c);
 
+	/* XXX this load should be async so we can reply quickly */
 	mp->rc2 = bmap_getf(c, 0, SL_WRITE, BMAPGETF_LOAD |
 	    BMAPGETF_NORETRIEVE, &b);
 	if (mp->rc2)
@@ -977,8 +979,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 		PFL_GOTOERR(out, rc);
 	}
 
-	if (DIRCACHE_INITIALIZED(p))
-		cfid = dircache_lookup(fcmh_2_dci(p), name, DC_LOOKUP);
+	cfid = dircache_lookup(p, name);
 
 	/* It's OK to unref the parent now. */
 	fcmh_op_done(p);
@@ -1125,14 +1126,11 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	uidmap_int_stat(&mp->pattr);
 	uidmap_int_stat(&mp->cattr);
 
-	FCMH_LOCK(p);
-	if (!rc)
+	if (!rc) {
+		FCMH_LOCK(p);
 		fcmh_setattr_locked(p, &mp->pattr);
-	if (DIRCACHE_INITIALIZED(p)) {
-		if (rc == 0 || rc == -ENOENT)
-			dircache_lookup(fcmh_2_dci(p), name, DC_STALE);
+		FCMH_ULOCK(p);
 	}
-	FCMH_ULOCK(p);
 
 	if (rc == 0 && mp->cattr.sst_fid &&
 	    mp->cattr.sst_fid != FID_ANY) {
@@ -1266,26 +1264,184 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 }
 
 void
+msl_readdir_fin(struct slashrpc_cservice *csvc,
+    struct pscrpc_request *rq, struct iovec *iov)
+{
+	PSCFREE(iov[1].iov_base);
+	PSCFREE(iov[0].iov_base);
+	PSCFREE(iov);
+	if (rq)
+		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
+}
+
+int
+msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
+{
+	struct slashrpc_cservice *csvc = av->pointer_arg[MSL_READDIR_CBARG_CSVC];
+	struct dircache_page *p = av->pointer_arg[MSL_READDIR_CBARG_PAGE];
+	struct fidc_membh *d = av->pointer_arg[MSL_READDIR_CBARG_FCMH];
+	struct iovec *iov = av->pointer_arg[MSL_READDIR_CBARG_IOV];
+	struct srm_readdir_req *mq;
+	struct srm_readdir_rep *mp;
+	int rc;
+
+	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_readdir_rep, rc);
+	if (rc == 0)
+		slrpc_rep_in(csvc, rq);
+
+	if (rc) {
+		DEBUG_REQ(PLL_ERROR, rq, "rc=%d", rc);
+
+		FCMH_LOCK(d);
+		p->dcp_flags &= ~DCPF_LOADING;
+		p->dcp_rc = rc;
+		fcmh_wake_locked(d);
+		FCMH_ULOCK(d);
+
+		msl_readdir_fin(csvc, rq, iov);
+		return (0);
+	}
+
+	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
+	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
+
+	/*
+	 * If the directory is small, the data is packed in the RPC
+	 * directly and there is no bulk.
+	 */
+	if (SRM_READDIR_BUFSZ(mp->size, mp->num, mq->nstbpref) <=
+	    sizeof(mp->ents)) {
+		size_t sz;
+
+		sz = MIN(mp->num, mq->nstbpref) *
+		    sizeof(struct srt_stat);
+		memcpy(iov[1].iov_base, mp->ents, sz);
+		memcpy(iov[0].iov_base, mp->ents + sz, mp->size);
+	}
+
+	if (mq->nstbpref) {
+		struct srt_stat *sstb = iov[1].iov_base;
+		struct fidc_membh *f;
+		uint32_t i;
+
+		if (mp->num < mq->nstbpref)
+			mq->nstbpref = mp->num;
+
+		for (i = 0; i < mq->nstbpref; i++, sstb++) {
+			if (sstb->sst_fid == FID_ANY ||
+			    sstb->sst_fid == 0) {
+				psclog_warnx("invalid f+g:"SLPRI_FG", "
+				    "parent: "SLPRI_FID,
+				    SLPRI_FG_ARGS(&sstb->sst_fg),
+				    fcmh_2_fid(d));
+				continue;
+			}
+
+			psclog_dbg("adding f+g:"SLPRI_FG,
+			    SLPRI_FG_ARGS(&sstb->sst_fg));
+
+			uidmap_int_stat(sstb);
+
+			fidc_lookup(&sstb->sst_fg, FIDC_LOOKUP_CREATE,
+			    sstb, FCMH_SETATTRF_SAVELOCAL, &f);
+
+			if (f)
+				fcmh_op_done(f);
+		}
+	}
+	if (mp->eof)
+		p->dcp_flags |= DCPF_EOF;
+	dircache_reg_ents(d, p, mp->num);
+	iov[0].iov_base = NULL;
+	msl_readdir_fin(csvc, rq, iov);
+	return (0);
+}
+
+int
+msl_readdir_issue(struct pscfs_req *pfr, struct fidc_membh *d,
+    off_t off, size_t size)
+{
+	struct slashrpc_cservice *csvc = NULL;
+	struct srm_readdir_req *mq = NULL;
+	struct srm_readdir_rep *mp = NULL;
+	struct pscrpc_request *rq = NULL;
+	struct dircache_page *p;
+	struct iovec *iov;
+	int rc, nstbpref, niov;
+
+	MSL_RMC_NEWREQ(pfr, d, csvc, SRMT_READDIR, rq, mq, mp, rc);
+	if (rc)
+		return (rc);
+
+	niov = 0;
+	iov = PSCALLOC(sizeof(*iov) * 2);
+
+	iov[niov].iov_base = PSCALLOC(size);
+	iov[niov].iov_len = size;
+	niov++;
+
+	/* calculate the max # of attributes that can be prefetched */
+	nstbpref = MIN(nstb_prefetch, (int)howmany(LNET_MTU - size,
+	    sizeof(struct srt_stat)));
+	if (nstbpref) {
+		size_t stprefsz;
+
+		stprefsz = nstbpref * sizeof(struct srt_stat);
+		iov[niov].iov_len = stprefsz;
+		iov[niov].iov_base = PSCALLOC(stprefsz);
+		niov++;
+	}
+
+	p = dircache_new_page(d, size, off, iov[0].iov_base);
+
+	mq->fg = d->fcmh_fg;
+	mq->size = size;
+	mq->offset = off;
+	mq->nstbpref = nstbpref;
+
+	rsx_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, iov, niov);
+
+	/*
+	 * If the dir is small, we avoid a bulk and pack the content
+	 * directly into the reply.
+	 */
+	rq->rq_bulk_abortable = 1;
+
+	rq->rq_interpret_reply = msl_readdir_cb;
+	rq->rq_async_args.pointer_arg[MSL_READDIR_CBARG_CSVC] = csvc;
+	rq->rq_async_args.pointer_arg[MSL_READDIR_CBARG_FCMH] = d;
+	rq->rq_async_args.pointer_arg[MSL_READDIR_CBARG_IOV] = iov;
+	rq->rq_async_args.pointer_arg[MSL_READDIR_CBARG_PAGE] = p;
+	rc = SL_NBRQSET_ADD(csvc, rq);
+	if (rc) {
+		msl_readdir_fin(csvc, rq, iov);
+		dircache_free_page(d, p);
+	}
+	return (rc);
+}
+
+void
 mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
     void *data)
 {
-	int nstbpref, rc = 0, niov = 0;
-	struct slashrpc_cservice *csvc = NULL;
-	struct srm_readdir_rep *mp = NULL;
-	struct pscrpc_request *rq = NULL;
-	struct dircache_ents *e = NULL;
+	int nent, issue, issuenext, rc;
+	struct dircache_page *p, *np;
 	struct msl_fhent *mfh = data;
-	struct fidc_membh *d = NULL;
-	struct srm_readdir_req *mq;
+	struct pfl_timespec expire;
+	struct fcmh_cli_info *fci;
+	struct dircache_ent *e;
 	struct pscfs_creds pcr;
-	struct iovec iov[2];
+	struct fidc_membh *d;
+	off_t adj, nextoff;
 
 	OPSTAT_INCR(SLC_OPST_READDIR);
 
-	iov[0].iov_base = NULL;
-	iov[1].iov_base = NULL;
-
 	msfsthr_ensure();
+
+	if (off < 0 || size > 1024 * 1024)
+		PFL_GOTOERR(out, rc = EINVAL);
 
 	d = mfh->mfh_fcmh;
 	psc_assert(d);
@@ -1305,115 +1461,104 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	PFL_GETPTIMESPEC(&expire);
+	expire.tv_sec -= DIRENT_TIMEO;
+
+	/* compute values for readahead */
+	nextoff = off + size;
+
 	FCMH_LOCK(d);
-	if (!DIRCACHE_INITIALIZED(d))
-		slc_fcmh_initdci(d);
-	FCMH_ULOCK(d);
+	fci = fcmh_2_fci(d);
+ restart:
+	nent = 0;
+	issue = issuenext = 1;
+	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
+		if (DIRCACHE_PAGE_EXPIRED(d, p, &expire)) {
+			dircache_free_page(d, p);
+			continue;
+		}
 
+		/* We found the last page; return EOF. */
+		if (off == p->dcp_off + (off_t)p->dcp_size &&
+		    p->dcp_flags & DCPF_EOF) {
+			FCMH_ULOCK(d);
+			pscfs_reply_readdir(pfr, NULL, 0, rc);
+			return;
+		}
 
-	iov[niov].iov_base = PSCALLOC(size);
-	iov[niov].iov_len = size;
-	niov++;
+		if (p->dcp_off > off + (off_t)size)
+			break;
 
-	/* calculate the max # of attributes that can be prefetched */
-	nstbpref = MIN(nstb_prefetch, (int)howmany(LNET_MTU - size,
-	    sizeof(struct srt_stat)));
-	if (nstbpref) {
-		iov[niov].iov_len = nstbpref *
-		    sizeof(struct srt_stat);
-		iov[niov].iov_base = PSCALLOC(iov[1].iov_len);
-		niov++;
-	}
+		nent += psc_dynarray_len(&p->dcp_dents);
 
- retry:
-	MSL_RMC_NEWREQ(pfr, d, csvc, SRMT_READDIR, rq, mq, mp, rc);
-	if (rc)
-		PFL_GOTOERR(out, rc);
-
-	mq->fg = d->fcmh_fg;
-	mq->size = size;
-	mq->offset = off;
-	mq->nstbpref = nstbpref;
-
-	rsx_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, iov, niov);
-	rq->rq_bulk_abortable = 1;
-	rc = SL_RSX_WAITREP(csvc, rq, mp);
-	if (rc && slc_rmc_retry(pfr, &rc)) {
-		OPSTAT_INCR(SLC_OPST_READDIR_RETRY);
-		goto retry;
-	}
-	if (rc == 0)
-		rc = mp->rc;
-	if (rc)
-		PFL_GOTOERR(out, rc);
-
-	if (SRM_READDIR_BUFSZ(mp->size, mp->num, mq->nstbpref) <=
-	    sizeof(mp->ents)) {
-		size_t sz;
-
-		sz = MIN(mp->num, mq->nstbpref) *
-		    sizeof(struct srt_stat);
-		memcpy(iov[1].iov_base, mp->ents, sz);
-		memcpy(iov[0].iov_base, mp->ents + sz, mp->size);
-	}
-
-	if (mq->nstbpref) {
-		struct srt_stat *attr = iov[1].iov_base;
-		struct fidc_membh *f;
-		uint32_t i;
-
-		if (mp->num < mq->nstbpref)
-			mq->nstbpref = mp->num;
-
-		for (i = 0; i < mq->nstbpref; i++, attr++) {
-			if (attr->sst_fid == FID_ANY ||
-			    attr->sst_fid == 0) {
-				psclog_warnx("invalid f+g:"SLPRI_FG", "
-				    "parent: "SLPRI_FID,
-				    SLPRI_FG_ARGS(&attr->sst_fg),
-				    fcmh_2_fid(d));
-				continue;
+		if (off < p->dcp_off + (off_t)p->dcp_size &&
+		    off + (off_t)size > p->dcp_off) {
+			issue = 1;
+			if (p->dcp_flags & DCPF_LOADING) {
+				fcmh_wait_nocond_locked(d);
+				goto restart;
 			}
-
-			psclog_dbg("adding f+g:"SLPRI_FG,
-			    SLPRI_FG_ARGS(&attr->sst_fg));
-
-			uidmap_int_stat(attr);
-
-			fidc_lookup(&attr->sst_fg, FIDC_LOOKUP_CREATE,
-			    attr, FCMH_SETATTRF_SAVELOCAL, &f);
-
-			if (f)
-				fcmh_op_done(f);
+			adj = p->dcp_off - off;
+			if (p->dcp_rc) {
+				rc = p->dcp_rc;
+				dircache_free_page(d, p);
+				if (!slc_rmc_retry(pfr, &rc)) {
+					FCMH_ULOCK(d);
+					pscfs_reply_readdir(pfr, NULL,
+					    0, rc);
+					return;
+				}
+			} else {
+				pscfs_reply_readdir(pfr,
+				    p->dcp_base + adj,
+				    MIN(size, p->dcp_size - adj),
+				    p->dcp_rc);
+				/*
+				 * We don't return just yet so we can
+				 * issue readahead if applicable.
+				 */
+				issue = 0;
+			}
+		} else if (nextoff < p->dcp_off + (off_t)p->dcp_size &&
+		    nextoff + (off_t)sizeof(*e) > p->dcp_off) {
+			issuenext = 0;
 		}
 	}
-
-	/*
-	 * Establish these dirents in our cache.  Do this before
-	 * replying to pscfs in order to prevent unnecessary lookup
-	 * RPC's.
-	 */
-	if (mp->num > 2) {
-		e = dircache_new_ents(fcmh_2_dci(d), size, iov[0].iov_base);
-		dircache_reg_ents(e, mp->num);
+	if (issue) {
+		rc = msl_readdir_issue(pfr, d, off, size);
+		if (rc && !slc_rmc_retry(pfr, &rc)) {
+			FCMH_ULOCK(d);
+			pscfs_reply_readdir(pfr, NULL, 0, rc);
+			return;
+		}
 	}
+	if (issuenext) {
+		size_t esz;
+		int rem;
 
+		/*
+		 * The next page is not in cache; async request it in.
+		 * Calculate the size by estimating the # of remaining
+		 * ents bound to 500.
+		 */
+		rem = d->fcmh_sstb.sst_size - nent;
+		if (rem < 0)
+			rem = 10;
+		if (rem > 500)
+			rem = 500;
+		esz = sizeof(struct pscfs_dirent) +
+		    sizeof(struct srt_stat);
+		if (esz * rem > LNET_MTU)
+			rem = LNET_MTU / esz;
+		msl_readdir_issue(pfr, d, nextoff, rem * esz);
+	}
+	if (issue)
+		goto restart;
+	FCMH_ULOCK(d);
+
+	if (0)
  out:
-
-	if (niov == 2)
-		PSCFREE(iov[1].iov_base);
-
-	pscfs_reply_readdir(pfr, iov[0].iov_base, mp ? mp->size : 0,
-	    rc);
-
-	if (!e)
-		PSCFREE(iov[0].iov_base);
-
-	if (rq)
-		pscrpc_req_finished(rq);
-	if (csvc)
-		sl_csvc_decref(csvc);
-	OPSTAT_INCR(SLC_OPST_READDIR_DONE);
+		pscfs_reply_readdir(pfr, NULL, 0, rc);
 }
 
 void
@@ -1856,22 +2001,16 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		PFL_GOTOERR(out, rc);
 
 	FCMH_LOCK(op);
-	if (DIRCACHE_INITIALIZED(op))
-		/* we could move the dircache_ent to newparent here */
-		dircache_lookup(fcmh_2_dci(op), oldname, DC_STALE);
 	uidmap_int_stat(&mp->srr_opattr);
 	fcmh_setattr_locked(op, &mp->srr_opattr);
 	FCMH_ULOCK(op);
 
-	FCMH_LOCK(np);
-	if (DIRCACHE_INITIALIZED(np))
-		dircache_lookup(fcmh_2_dci(np), newname, DC_STALE);
-
 	if (np != op) {
+		FCMH_LOCK(np);
 		uidmap_int_stat(&mp->srr_npattr);
 		fcmh_setattr_locked(np, &mp->srr_npattr);
+		FCMH_ULOCK(np);
 	}
-	FCMH_ULOCK(np);
 
 	if (srcfg.fg_fid == FID_ANY) {
 		/* XXX race */
@@ -2052,12 +2191,12 @@ struct msl_dc_inv_entry_data {
 };
 
 void
-msl_dc_inv_entry(struct dircache_desc *d, void *arg)
+msl_dc_inv_entry(struct dircache_ent *d, void *arg)
 {
 	const struct msl_dc_inv_entry_data *mdie = arg;
 
 	pscfs_notify_inval_entry(mdie->mdie_pfr,
-	    mdie->mdie_pinum, d->dd_name, d->dd_namelen);
+	    mdie->mdie_pinum, d->dce_name, d->dce_namelen);
 }
 
 int
@@ -2343,7 +2482,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	DEBUG_SSTB(PLL_INFO, &c->fcmh_sstb, "fcmh %p post setattr", c);
 
 #if 0
-	if (fcmh_isdir(c) && DIRCACHE_INITIALIZED(c)) {
+	if (fcmh_isdir(c)) {
 		struct msl_dc_inv_entry_data mdie;
 
 		mdie.mdie_pfr = pfr;
@@ -2878,7 +3017,7 @@ msl_init(void)
 	fidc_init(sizeof(struct fcmh_cli_info), FIDC_CLI_DEFSZ);
 	bmpc_global_init();
 	bmap_cache_init(sizeof(struct bmap_cli_info));
-	dircache_init(&dircacheMgr, "dircache", 256 * 1024);
+	dircache_mgr_init();
 
 	psc_poolmaster_init(&slc_async_req_poolmaster,
 	    struct slc_async_req, car_lentry, PPMF_AUTO, 64, 64, 0,

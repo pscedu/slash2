@@ -39,101 +39,88 @@
 
 #include <time.h>
 
-#include "pfl/str.h"
 #include "pfl/dynarray.h"
 #include "pfl/list.h"
 #include "pfl/listcache.h"
+#include "pfl/str.h"
+#include "pfl/time.h"
 #include "psc_util/lock.h"
 
 #include "sltypes.h"
+#include "fidc_cli.h"
 
 /*
- * When you do a file listing under a directory, FUSE sends out a readdir RPC
- * on the directory to get a listing of the names, then it looks up each name
- * for its inode, and requests attributes on each inode.  Our code brings in
- * all the name to inode translations and attributes in one go.  This file
- * implements a simple, non-coherent cache to avoid lookup and getattr RPCs on
- * each individual files.
+ * dircache - directory entry (dent) caching layer.
+ *
+ * When readdir(3) is issued, FUSE invokes the READDIR handler to fetch
+ * directory entries.  An RPC is sent that bulks together stat(2)'s in a
+ * READDIR+ fashion as some libraries and applications shortly perform
+ * stat(2) operations on each entry after readdir(3) returns.
+ *
+ * This implementation fosters a compromise between read-ahead for
+ * larger directories as well as memory exhaustion for much larger
+ * directories in the form of a simple, non-coherent cache.
  */
-
-#define DIRENT_TIMEO 4
 
 struct fidc_membh;
 
-/*
- * Single global manager.
- */
-struct dircache_mgr {
-	size_t			 dcm_maxsz;
-	size_t			 dcm_alloc;
-	psc_spinlock_t		 dcm_lock;
-	struct psc_listcache	 dcm_lc;
-};
+#define DIRENT_TIMEO 4
 
 /*
- * This is attached to a directory fcmh and contains all dircache data.
- */
-struct dircache_info {
-	struct dircache_mgr	*di_dcm;
-	struct fidc_membh	*di_fcmh;
-	struct psc_lockedlist	 di_list;
-	psc_spinlock_t		 di_lock;
-};
-
-/*
- * This consitutes a block of 'struct dirent' members (dircache_desc)
- * belonging to a READDIR request, which will be one of many for
+ * This consitutes a block of 'struct dirent' members (dircache_ent)
+ * belonging to a READDIR request, which may be one of many for
  * directories with many entries.
  */
-struct dircache_ents {
-	int			 de_remlookup;
-	int			 de_flags;	/* see DIRCE_* below */
-	size_t			 de_sz;
-	struct timeval		 de_age;
-	struct psc_listentry	 de_lentry;	/* chain on info  */
-	struct psc_listentry	 de_lentry_lc;	/* chain in mgr */
-	struct psc_dynarray	 de_dents;
-	struct dircache_desc	*de_desc;	/* contains dircache_descs */
-	struct dircache_info	*de_info;
-	void			*de_base;	/* contains pscfs_dirents */
+struct dircache_page {
+	int			 dcp_flags;	/* see DCPF_* below */
+	int			 dcp_rc;	/* readdir(2) error */
+	size_t			 dcp_size;
+	off_t			 dcp_off;
+	struct pfl_timespec	 dcp_tm;
+	struct psc_listentry	 dcp_lentry;	/* chain on dci  */
+	struct psc_dynarray	 dcp_dents;
+	void			*dcp_base;
 };
 
-/* de_flags */
-#define DIRCE_FREEING		(1 << 0)
+/* dcp_flags */
+#define DCPF_LOADING		(1 << 0)
+#define DCPF_EOF		(1 << 1)	/* denotes last page */
 
-#define dircache_ent_lock(e)	spinlock(&(e)->de_info->di_lock)
-#define dircache_ent_ulock(e)	freelock(&(e)->de_info->di_lock)
+#define DIRCACHE_PAGE_EXPIRED(d, p, exp)				\
+	(timespeccmp((exp), &(p)->dcp_tm, >) ||				\
+	 timespeccmp(&(d)->fcmh_sstb.sst_mtim, &p->dcp_tm, >) ||		\
+	 (d)->fcmh_sstb.sst_size != fcmh_2_fci(d)->fci_dc_nents)
 
 /* This is synonymous with 'struct dirent'. */
-struct dircache_desc {
-	int			 dd_hash;
-	int			 dd_namelen;
-	int			 dd_offset;
-	int			 dd_flags;	/* see DC_* below */
-	const char		*dd_name;
+struct dircache_ent {
+	int			 dce_hash;
+	int			 dce_namelen;
+	int			 dce_offset;
+	int			 dce_flags;	/* see DCEF_* below */
+	const char		*dce_name;
 };
 
-/* dd_flags */
-#define DC_STALE		(1 << 0)	/* set on rename or unlink */
-#define	DC_LOOKUP		(1 << 1)	/* item was accessed via lookup */
+/* dce_flags */
+#define DCEF_STALE		(1 << 0)	/* set on rename clobber or unlink */
+#define	DCEF_LOOKUP		(1 << 1)	/* item was accessed via lookup */
 
 /*
- * This is also a sort comparison.  We need dirent_cmp() and dirent_sort_cmp()
- * for different interfaces.
+ * This is also a sort comparison.  We need dirent_cmp() and
+ * dirent_sort_cmp() for different interfaces.
  */
 static __inline int
 dirent_cmp(const void *a, const void *b)
 {
-	const struct dircache_desc *x = a, *y = b;
+	const struct dircache_ent *x = a, *y = b;
 	int rc;
 
-	rc = CMP(x->dd_hash, y->dd_hash);
+	rc = CMP(x->dce_hash, y->dce_hash);
 	if (rc)
 		return (rc);
-	rc = CMP(x->dd_namelen, y->dd_namelen);
+	rc = CMP(x->dce_namelen, y->dce_namelen);
 	if (rc)
 		return (rc);
-	return (strncmp(x->dd_name, y->dd_name, y->dd_namelen));
+	return (strncmp(x->dce_name, y->dce_name, y->dce_namelen));
 }
 
 static __inline int
@@ -145,18 +132,15 @@ dirent_sort_cmp(const void *x, const void *y)
 	return (dirent_cmp(a, b));
 }
 
-#define DIRCACHE_INITIALIZED(f)		((f)->fcmh_flags & FCMH_CLI_INITDCI)
-
-struct dircache_ents *
-	dircache_new_ents(struct dircache_info *, size_t, void *);
-void	dircache_init(struct dircache_mgr *, const char *, size_t);
-slfid_t	dircache_lookup(struct dircache_info *, const char *, int);
-void	dircache_reg_ents(struct dircache_ents *, size_t);
-void	dircache_rls_ents(struct dircache_ents *);
-void	dircache_walk(struct dircache_info *, void (*)(struct dircache_desc *, void *), void *);
-
-void	dircache_free_ents(struct dircache_info *);
-
-extern struct dircache_mgr dircacheMgr;
+struct dircache_page *
+	dircache_new_page(struct fidc_membh *, size_t, off_t, void *);
+void	dircache_free_page(struct fidc_membh *, struct dircache_page *);
+void	dircache_init(struct fidc_membh *);
+slfid_t	dircache_lookup(struct fidc_membh *, const char *);
+void	dircache_mgr_init(void);
+void	dircache_purge(struct fidc_membh *);
+void	dircache_reg_ents(struct fidc_membh *, struct dircache_page *, size_t);
+void	dircache_register(struct dircache_page *, size_t);
+void	dircache_walk(struct fidc_membh *, void (*)(struct dircache_ent *, void *), void *);
 
 #endif /* _DIRCACHE_H_ */

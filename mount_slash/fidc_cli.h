@@ -36,21 +36,28 @@ struct pscfs_clientctx;
 
 struct fidc_membh;
 
-struct cli_finfo {
+struct fci_finfo {
 	int			 nrepls;
 	sl_replica_t		 reptbl[SL_MAX_REPLICAS];
+};
+
+struct fci_dinfo {
+	struct psc_lockedlist	 dc_pages;
+	uint64_t		 dc_nents;
 };
 
 struct fcmh_cli_info {
 	struct sl_resm		*fci_resm;
 	struct timeval		 fci_age;
 	union {
-		struct cli_finfo	f;
-		struct dircache_info	d;
+		struct fci_finfo	f;
+		struct fci_dinfo	d;
 	} ford;
 #define fci_nrepls	ford.f.nrepls
 #define fci_reptbl	ford.f.reptbl
-#define fci_dci		ford.d
+
+#define fci_dc_pages	ford.d.dc_pages
+#define fci_dc_nents	ford.d.dc_nents
 	struct psclist_head	 fci_lentry;	/* all fcmhs with dirty attributes */
 	struct timespec		 fci_etime;	/* attr expire time */
 };
@@ -70,8 +77,6 @@ fci_2_fcmh(struct fcmh_cli_info *fci)
 	fcmh = (void *)fci;
 	return (fcmh - 1);
 }
-
-#define fcmh_2_dci(f)		(&fcmh_2_fci(f)->fci_dci)
 
 /* Client-specific fcmh_flags */
 #define FCMH_CLI_HAVEREPLTBL	(_FCMH_FLGSHFT << 0)	/* file replica table present */

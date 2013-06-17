@@ -34,293 +34,289 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "pfl/fs.h"
-#include "pfl/str.h"
 #include "pfl/dynarray.h"
+#include "pfl/fs.h"
 #include "pfl/listcache.h"
+#include "pfl/str.h"
 #include "psc_util/alloc.h"
+#include "psc_util/ctlsvr.h"
 #include "psc_util/lock.h"
 #include "psc_util/pool.h"
-#include "psc_util/ctlsvr.h"
 
 #include "dircache.h"
 #include "fidcache.h"
+#include "mount_slash.h"
 #include "sltypes.h"
 #include "slutil.h"
-#include "mount_slash.h"
 
 struct psc_poolmaster	 dircache_poolmaster;
 struct psc_poolmgr	*dircache_pool;
 
 void
-dircache_init(struct dircache_mgr *m, const char *name, size_t maxsz)
+dircache_mgr_init(void)
 {
-	m->dcm_maxsz = maxsz;
-	m->dcm_alloc = 0;
-
-	INIT_SPINLOCK(&m->dcm_lock);
-	lc_reginit(&m->dcm_lc, struct dircache_ents, de_lentry_lc, "%s",
-	    name);
-
-#define DE_DEF 64
-	psc_poolmaster_init(&dircache_poolmaster, struct dircache_ents,
-	    de_lentry_lc, PPMF_AUTO, DE_DEF, DE_DEF, 0, NULL, NULL,
+	/* XXX have a reclaim cb to force release some pages */
+#define DCP_DEF 64
+	psc_poolmaster_init(&dircache_poolmaster, struct dircache_page,
+	    dcp_lentry, PPMF_AUTO, DCP_DEF, DCP_DEF, 0, NULL, NULL,
 	    NULL, "dircache");
 	dircache_pool = psc_poolmaster_getmgr(&dircache_poolmaster);
 }
 
+/**
+ * dircache_free_page: Release a page of dirents from cache.
+ * @d: directory handle.
+ * @p: page to release.
+ */
 void
-dircache_rls_ents(struct dircache_ents *e)
+dircache_free_page(struct fidc_membh *d, struct dircache_page *p)
 {
-	struct dircache_info *i = e->de_info;
-	struct dircache_mgr *m = i->di_dcm;
-	int locked;
+	struct fcmh_cli_info *fci;
+	struct dircache_ent *dce;
 
-	DEBUG_FCMH(PLL_DEBUG, i->di_fcmh,
-	    "rls dircache_ents %p cachesz=%zu", e, m->dcm_alloc);
-	psc_assert(e->de_flags & DIRCE_FREEING);
+	psc_assert(p->dcp_flags == 0);
 
-	locked = reqlock(&m->dcm_lock);
-	m->dcm_alloc -= e->de_sz;
+	FCMH_LOCK_ENSURE(d);
+	fci = fcmh_2_fci(d);
+	pll_remove(&fci->fci_dc_pages, p);
 
-	lc_remove(&i->di_dcm->dcm_lc, e);
-	pll_remove(&i->di_list, e);
+	dce = psc_dynarray_getpos(&p->dcp_dents, 0);
+	PSCFREE(dce);
+	psc_dynarray_free(&p->dcp_dents);
+	PSCFREE(p->dcp_base);
+	psc_pool_return(dircache_pool, p);
 
-	ureqlock(&m->dcm_lock, locked);
-
-	psc_dynarray_free(&e->de_dents);
-	PSCFREE(e->de_base);
-	PSCFREE(e->de_desc);
-	psc_pool_return(dircache_pool, e);
-
+	/* XXX move this to generic pool stats */
 	OPSTAT_INCR(SLC_OPST_DIRCACHE_REL_ENTRY);
 }
 
+/**
+ * dircache_walk: Perform a batch operation across all cached dirents.
+ * @d: directory handle.
+ * @cbf: callback to run.
+ * @cbarg: callback argument.
+ */
 void
-dircache_walk(struct dircache_info *i,
-    void (*cbf)(struct dircache_desc *, void *), void *cbarg)
+dircache_walk(struct fidc_membh *d,
+    void (*cbf)(struct dircache_ent *, void *), void *cbarg)
 {
-	struct dircache_desc *d;
-	struct dircache_ents *e;
+	struct dircache_page *p, *np;
+	struct fcmh_cli_info *fci;
+	struct dircache_ent *dce;
+	struct pfl_timespec expire;
 	int n;
 
-	PLL_LOCK(&i->di_list);
-	PLL_FOREACH(e, &i->di_list) {
-		DYNARRAY_FOREACH(d, n, &e->de_dents)
-			if ((d->dd_flags & DC_STALE) == 0)
-				cbf(d, cbarg);
-		break;
+	PFL_GETPTIMESPEC(&expire);
+	expire.tv_sec -= DIRENT_TIMEO;
+
+	fci = fcmh_2_fci(d);
+	FCMH_LOCK(d);
+	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
+		if (p->dcp_flags & DCPF_LOADING)
+			continue;
+
+		if (DIRCACHE_PAGE_EXPIRED(d, p, &expire)) {
+			dircache_free_page(d, p);
+			continue;
+		}
+
+		DYNARRAY_FOREACH(dce, n, &p->dcp_dents)
+			cbf(dce, cbarg);
 	}
-	PLL_ULOCK(&i->di_list);
+	FCMH_ULOCK(d);
 }
 
+/**
+ * dircache_lookup: Perform a search across cached pages for a base
+ *	name.
+ * @d: directory handle.
+ * @name: name to lookup.
+ */
 slfid_t
-dircache_lookup(struct dircache_info *i, const char *name, int flag)
+dircache_lookup(struct fidc_membh *d, const char *name)
 {
-	struct psc_dynarray da = DYNARRAY_INIT;
-	struct dircache_desc desc, *d;
+	struct dircache_ent dcent, *dce;
+	struct dircache_page *p, *np;
 	struct pscfs_dirent *dirent;
-	struct dircache_ents *e;
+	struct pfl_timespec expire;
+	struct fcmh_cli_info *fci;
 	slfid_t ino = FID_ANY;
 	int found, pos;
 
-	desc.dd_namelen	= strlen(name);
-	desc.dd_hash	= psc_strn_hashify(name, desc.dd_namelen);
-	desc.dd_name	= name;
+	PFL_GETPTIMESPEC(&expire);
+	expire.tv_sec -= DIRENT_TIMEO;
 
-	/* This lock is equiv to dircache_ent_lock() */
-	PLL_LOCK(&i->di_list);
-	PLL_FOREACH(e, &i->di_list) {
-		if (e->de_flags & DIRCE_FREEING)
+	dcent.dce_namelen = strlen(name);
+	dcent.dce_hash = psc_strn_hashify(name, dcent.dce_namelen);
+	dcent.dce_name = name;
+
+	fci = fcmh_2_fci(d);
+	FCMH_LOCK(d);
+	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
+		if (p->dcp_flags & DCPF_LOADING)
 			continue;
+
+		if (DIRCACHE_PAGE_EXPIRED(d, p, &expire)) {
+			dircache_free_page(d, p);
+			continue;
+		}
+
 		/*
 		 * The return code for psc_dynarray_bsearch() tells us
 		 * the position where our name should be to keep the
-		 * the list sorted.  If it is one after the last item,
-		 * then we know for sure the item is not there.  Otherwise,
+		 * list sorted.  If it is one after the last item, then
+		 * we know for sure the item is not there.  Otherwise,
 		 * we still need one more comparison to be sure.
 		 */
-		pos = psc_dynarray_bsearch(&e->de_dents,
-		    &desc, dirent_cmp);
-		if (pos >= psc_dynarray_len(&e->de_dents))
+		pos = psc_dynarray_bsearch(&p->dcp_dents,
+		    &dcent, dirent_cmp);
+		if (pos >= psc_dynarray_len(&p->dcp_dents))
 			continue;
 
-		/* find first entry with equiv hash then loop through all */
+		/*
+		 * Find the first entry with an equivalent hash then
+		 * loop through all.
+		 */
 		for (; pos > 0; pos--) {
-			d = psc_dynarray_getpos(&e->de_dents, pos - 1);
-			if (d->dd_hash != desc.dd_hash)
+			dce = psc_dynarray_getpos(&p->dcp_dents, pos - 1);
+			if (dce->dce_hash != dcent.dce_hash)
 				break;
 		}
 		found = 0;
-		DYNARRAY_FOREACH_CONT(d, pos, &e->de_dents) {
-			if (d->dd_hash != desc.dd_hash)
+		DYNARRAY_FOREACH_CONT(dce, pos, &p->dcp_dents) {
+			if (dce->dce_hash != dcent.dce_hash)
 				break;
 
-			/* Map the dirent from the desc's offset. */
-			dirent = PSC_AGP(e->de_base, d->dd_offset);
+			/* Map the dirent from the dcent's offset. */
+			dirent = PSC_AGP(p->dcp_base, dce->dce_offset);
 
-			if (d->dd_hash == desc.dd_hash &&
-			    d->dd_namelen == desc.dd_namelen &&
-			    strncmp(d->dd_name, desc.dd_name,
-			    desc.dd_namelen) == 0) {
-				if (!(d->dd_flags & DC_LOOKUP)) {
-					e->de_remlookup--;
-					d->dd_flags |= DC_LOOKUP;
-				}
+			if (dce->dce_hash == dcent.dce_hash &&
+			    dce->dce_namelen == dcent.dce_namelen &&
+			    strncmp(dce->dce_name, dcent.dce_name,
+			    dcent.dce_namelen) == 0) {
+				if (!(dce->dce_flags & DCEF_LOOKUP))
+					dce->dce_flags |= DCEF_LOOKUP;
 
-				if (!(d->dd_flags & DC_STALE))
-					ino = dirent->pfd_ino;
-
-				if (flag & DC_STALE)
-					d->dd_flags |= DC_STALE;
-
+				ino = dirent->pfd_ino;
 				found = 1;
+				OPSTAT_INCR(SLC_OPST_DIRCACHE_HIT);
 			}
 
 			psclog_dbg("fid="SLPRI_FID" off=%"PRId64" nlen=%u "
-			   "type=%#o dname=%.*s lookupname=%s off=%d d=%p "
+			   "type=%#o dname=%.*s lookupname=%s off=%d dce=%p "
 			   "found=%d",
 			   dirent->pfd_ino, dirent->pfd_off,
 			   dirent->pfd_namelen, dirent->pfd_type,
 			   dirent->pfd_namelen, dirent->pfd_name, name,
-			   d->dd_offset, d, found);
+			   dce->dce_offset, dce, found);
 
 			if (found)
 				break;
 		}
-
-		if (!e->de_remlookup && !(e->de_flags & DIRCE_FREEING)) {
-			/*
-			 * If all of the items have been accessed via
-			 * lookup then assume that pscfs has an entry
-			 * cached for each and free the buffer.
-			 */
-			e->de_flags |= DIRCE_FREEING;
-			psc_dynarray_add(&da, e);
-		}
-
-		/*
-		 * Set DC_STALE on every matching entry; otherwise, we
-		 * found our guy, so return.
-		 */
-		if (found && !(flag & DC_STALE)) {
-			OPSTAT_INCR(SLC_OPST_DIRCACHE_HIT);
+		if (found)
 			break;
-		}
 	}
-	PLL_ULOCK(&i->di_list);
-
-	DYNARRAY_FOREACH(e, pos, &da)
-		dircache_rls_ents(e);
-	psc_dynarray_free(&da);
+	FCMH_ULOCK(d);
 
 	return (ino);
 }
 
+/**
+ * dircache_purge: Destroy all dirent pages belonging to a directory.
+ * @d: directory handle.
+ */
 void
-dircache_free_ents(struct dircache_info *i)
+dircache_purge(struct fidc_membh *d)
 {
-	struct dircache_ents *e;
-	struct dircache_mgr *m = i->di_dcm;
+	struct dircache_page *p, *np;
+	struct fcmh_cli_info *fci;
 
-	spinlock(&m->dcm_lock);
-	while ((e = pll_peekhead(&i->di_list))) {
-		e->de_flags |= DIRCE_FREEING;
-		dircache_rls_ents(e);
-	}
-	freelock(&m->dcm_lock);
-}
-
-struct dircache_ents *
-dircache_new_ents(struct dircache_info *i, size_t size, void *base)
-{
-	struct dircache_mgr *m = i->di_dcm;
-	struct dircache_ents *e, *tmp;
-	struct timeval now;
-
-	spinlock(&m->dcm_lock);
-	m->dcm_alloc += size;
-
-	PFL_GETTIMEVAL(&now);
-
-	/* Remove old entries from the top of the list.
-	 */
-	LIST_CACHE_FOREACH_SAFE(e, tmp, &m->dcm_lc) {
-		dircache_ent_lock(e);
-		if (timercmp(&now, &e->de_age, >) &&
-		    !(e->de_flags & DIRCE_FREEING)) {
-			e->de_flags |= DIRCE_FREEING;
-			dircache_ent_ulock(e);
-			dircache_rls_ents(e);
-
-		} else {
-			dircache_ent_ulock(e);
-			break;
-		}
-	}
-
-	/* Clear more space if needed.
-	 */
-	while (m->dcm_alloc > m->dcm_maxsz) {
-		e = lc_peekhead(&m->dcm_lc);
-		if (!e)
-			break;
-
-		dircache_ent_lock(e);
-		if (!(e->de_flags & DIRCE_FREEING)) {
-			e->de_flags |= DIRCE_FREEING;
-			dircache_ent_ulock(e);
-			dircache_rls_ents(e);
-		} else {
-			dircache_ent_ulock(e);
-			/* Give someone else a shot to free some
-			 *   dircache pages.
-			 */
-			break;
-		}
-	}
-	freelock(&m->dcm_lock);
-
-	e = psc_pool_get(dircache_pool);
-	memset(e, 0, sizeof(*e));
-	INIT_PSC_LISTENTRY(&e->de_lentry);
-	INIT_PSC_LISTENTRY(&e->de_lentry_lc);
-	psc_dynarray_init(&e->de_dents);
-	e->de_sz = size;
-	e->de_info = i;
-	e->de_base = base;
-	return (e);
+	fci = fcmh_2_fci(d);
+	FCMH_LOCK(d);
+	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages)
+		dircache_free_page(d, p);
+	FCMH_ULOCK(d);
 }
 
 /**
- * dircache_reg_ents: register directory entries with our cache.
+ * dircache_new_page: Allocate a new page of dirents.
+ * @d: directory handle.
+ * @size: size of buffer for holding dirents.
+ * @off: offset into directory for this slew of dirents.
+ * @base: buffer to write dirents into.
+ */
+struct dircache_page *
+dircache_new_page(struct fidc_membh *d, size_t size, off_t off,
+    void *base)
+{
+	struct dircache_page *p, *np;
+	struct pfl_timespec expire;
+	struct fcmh_cli_info *fci;
+
+	psc_assert(FCMH_HAS_LOCK(d));
+
+	p = psc_pool_get(dircache_pool);
+	memset(p, 0, sizeof(*p));
+	psc_dynarray_init(&p->dcp_dents);
+	INIT_PSC_LISTENTRY(&p->dcp_lentry);
+	p->dcp_flags = DCPF_LOADING;
+	p->dcp_size = size;
+	p->dcp_off = off;
+	p->dcp_base = base;
+
+	PFL_GETPTIMESPEC(&expire);
+	expire.tv_sec -= DIRENT_TIMEO;
+
+	/*
+	 * Release expired pages and any pages that overlap with the new
+	 * contents.
+	 */
+	fci = fcmh_2_fci(d);
+	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages)
+		if (DIRCACHE_PAGE_EXPIRED(d, p, &expire) ||
+		    (off < p->dcp_off + p->dcp_size &&
+		     off + size > p->dcp_off)) {
+			dircache_free_page(d, p);
+			continue;
+		}
+
+	/*
+	 * New entries are considered to be more accurate so place them
+	 * at the beginning of the list.
+	 */
+	pll_addtail(&fci->fci_dc_pages, p);
+
+	return (p);
+}
+
+/**
+ * dircache_reg_ents: Register directory entries with our cache.
+ * @d: directory handle.
+ * @p: buffer of dirent objects.
+ * @nents: number of dirent objects in @p.
  */
 void
-dircache_reg_ents(struct dircache_ents *e, size_t nents)
+dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
+    size_t nents)
 {
-	struct dircache_info *i = e->de_info;
-	struct dircache_mgr  *m = i->di_dcm;
 	struct pscfs_dirent *dirent;
-	struct dircache_desc *c;
+	struct dircache_ent *dce;
 	unsigned char *b;
 	off_t off;
 	int j;
 
-	psc_assert(e->de_sz);
-	psc_assert(e->de_info);
-	psc_assert(!e->de_desc);
-
-	PFL_GETTIMEVAL(&e->de_age);
-	e->de_age.tv_sec += DIRENT_TIMEO;
-	e->de_remlookup = nents - 2; /* subtract "." and ".." */
-	e->de_flags = 0; /* remain '0' until readdir req has completed */
-
 	OPSTAT_INCR(SLC_OPST_DIRCACHE_REG_ENTRY);
 
-	c = e->de_desc = PSCALLOC(sizeof(struct dircache_desc) * nents);
-	psc_dynarray_ensurelen(&e->de_dents, nents);
+	psc_assert(p->dcp_size);
+	psc_assert(psc_dynarray_len(&p->dcp_dents) == 0);
 
-	for (j = 0, b = e->de_base, off = 0; j < (int)nents; j++, c++) {
+	PFL_GETPTIMESPEC(&p->dcp_tm);
+
+	dce = PSCALLOC(nents * sizeof(*dce));
+	psc_dynarray_ensurelen(&p->dcp_dents, nents);
+
+	for (j = 0, b = p->dcp_base, off = 0;
+	    j < (int)nents; j++, dce++) {
 		dirent = PSC_AGP(b, off);
 
 		psclog_dbg("fid="SLPRI_FID" off=%"PRId64" "
@@ -330,26 +326,24 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 		    dirent->pfd_namelen, dirent->pfd_type,
 		    dirent->pfd_namelen, dirent->pfd_name, dirent, off);
 
-		c->dd_namelen	= dirent->pfd_namelen;
-		c->dd_hash	= psc_strn_hashify(dirent->pfd_name,
-					   dirent->pfd_namelen);
-		c->dd_flags	= 0;
-		c->dd_offset	= off;
-		c->dd_name	= dirent->pfd_name;
+		dce->dce_offset = off;
+		dce->dce_namelen = dirent->pfd_namelen;
+		dce->dce_name = dirent->pfd_name;
+		dce->dce_hash = psc_strn_hashify(dirent->pfd_name,
+		    dirent->pfd_namelen);
 
-		psc_dynarray_add(&e->de_dents, c);
+		psc_dynarray_add(&p->dcp_dents, dce);
 		off += PFL_DIRENT_SIZE(dirent->pfd_namelen);
 	}
 
-	psc_dynarray_sort(&e->de_dents, qsort, dirent_sort_cmp);
-	DYNARRAY_FOREACH(c, j, &e->de_dents)
-		psclog_dbg("c=%p hash=%#x namelen=%u name=%.*s",
-		    c, c->dd_hash, c->dd_namelen, c->dd_namelen, c->dd_name);
+	psc_dynarray_sort(&p->dcp_dents, qsort, dirent_sort_cmp);
+	DYNARRAY_FOREACH(dce, j, &p->dcp_dents)
+		psclog_dbg("dce=%p hash=%#x namelen=%u name=%.*s",
+		    dce, dce->dce_hash, dce->dce_namelen,
+		    dce->dce_namelen, dce->dce_name);
 
-	lc_addtail(&m->dcm_lc, e);
-
-	/* New entries are considered to be more accurate so place them
-	 *   at the beginning of the list.
-	 */
-	pll_addhead(&i->di_list, e);
+	FCMH_LOCK(d);
+	p->dcp_flags &= ~DCPF_LOADING;
+	fcmh_wake_locked(d);
+	FCMH_ULOCK(d);
 }
