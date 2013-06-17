@@ -833,7 +833,8 @@ struct srm_readdir_req {
 
 struct srm_readdir_rep {
 	uint64_t		size;		/* XXX make 32-bit */
-	uint32_t		num;		/* #dirents returned */
+	uint32_t		eof:1;		/* #dirents returned */
+	uint32_t		num:31;		/* #dirents returned */
 	 int32_t		rc;
 	unsigned char		ents[848];
 /*
