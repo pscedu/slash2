@@ -1943,6 +1943,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		rc = mds_write_file(reclaim_progfile_handle, reclaim_prog_buf,
 		    size, &size, 0);
 		psc_assert(rc == 0);
+		psc_assert(size == count * sizeof(struct reclaim_prog_entry));
 		psclog_warnx("%d stale entries have been zeroed from the "
 			"reclaim prog log", stale);
 	}
