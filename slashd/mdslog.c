@@ -67,7 +67,7 @@ struct prog_entry {
 	uint64_t		 res_xid;
 	uint64_t		 res_batchno;
 	sl_ios_id_t		 res_id;
-	int32_t			 _pad;
+	int32_t			 res_flags;			 
 };
 
 struct psc_journal		*mdsJournal;
