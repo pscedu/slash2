@@ -143,6 +143,8 @@ dircache_lookup(struct fidc_membh *d, const char *name)
 	slfid_t ino = FID_ANY;
 	int found, pos;
 
+	psc_assert(FCMH_HAS_LOCK(d));
+
 	PFL_GETPTIMESPEC(&expire);
 	expire.tv_sec -= DIRENT_TIMEO;
 
@@ -151,7 +153,6 @@ dircache_lookup(struct fidc_membh *d, const char *name)
 	dcent.dce_name = name;
 
 	fci = fcmh_2_fci(d);
-	FCMH_LOCK(d);
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
 		if (p->dcp_flags & DCPF_LOADING)
 			continue;
@@ -216,7 +217,6 @@ dircache_lookup(struct fidc_membh *d, const char *name)
 		if (found)
 			break;
 	}
-	FCMH_ULOCK(d);
 
 	return (ino);
 }
