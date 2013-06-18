@@ -315,7 +315,7 @@ mds_remove_logfiles(uint64_t batchno, int update)
 			break;
 	}
 	gettimeofday(&tv2, NULL);
-	psclog_warnx("%"PRId64" log files has been removed in %d seconds", 
+	psclog_warnx("%"PRId64" log files have been removed in %d seconds", 
 		OPSTAT_CURR(SLM_OPST_LOGFILE_REMOVE),
 		(int)(tv2.tv_sec - tv1.tv_sec));
 }
@@ -2030,7 +2030,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 			iosinfo->si_xid = current_reclaim_xid;
 			iosinfo->si_batchno = current_reclaim_batchno;
 			psclog_warnx("Fast forward batchno/xid for resource ID %u",
-			    reclaim_prog_buf[i].res_id);
+			    res->res_id);
 		}
 		if (!(iosinfo->si_flags & SIF_NEED_JRNL_INIT))
 			continue;
