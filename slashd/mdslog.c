@@ -2026,14 +2026,14 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		rpmi = res2rpmi(res);
 		iosinfo = rpmi->rpmi_info;
 
-		if (!(iosinfo->si_flags & SIF_NEED_JRNL_INIT))
-			continue;
-
-		iosinfo->si_index = index++;
 		if (iosinfo->si_xid == 0 && iosinfo->si_batchno == 0) {
 			iosinfo->si_xid = current_reclaim_xid;
 			iosinfo->si_batchno = current_reclaim_batchno;
 		}
+		if (!(iosinfo->si_flags & SIF_NEED_JRNL_INIT))
+			continue;
+
+		iosinfo->si_index = index++;
 		iosinfo->si_flags &= ~SIF_NEED_JRNL_INIT;
 		iosinfo->si_flags |= SIF_NEW_PROG_ENTRY;
 	}
