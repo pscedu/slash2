@@ -169,11 +169,10 @@ main(int argc, char *argv[])
 	PRTYPE(struct bmap_timeo_table);
 	PRTYPE(struct bmpc_ioreq);
 	PRTYPE(struct bmpc_write_coalescer);
-	PRTYPE(struct cli_finfo);
-	PRTYPE(struct dircache_desc);
-	PRTYPE(struct dircache_ents);
-	PRTYPE(struct dircache_info);
-	PRTYPE(struct dircache_mgr);
+	PRTYPE(struct dircache_ent);
+	PRTYPE(struct dircache_page);
+	PRTYPE(struct fci_dinfo);
+	PRTYPE(struct fci_finfo);
 	PRTYPE(struct fcmh_cli_info);
 	PRTYPE(struct fcmh_iod_info);
 	PRTYPE(struct fcmh_mds_info);
@@ -417,6 +416,10 @@ main(int argc, char *argv[])
 	PRVAL(MSL_CBARG_BMPCE);
 	PRVAL(MSL_CBARG_CSVC);
 	PRVAL(MSL_CBARG_RESM);
+	PRVAL(MSL_READDIR_CBARG_CSVC);
+	PRVAL(MSL_READDIR_CBARG_FCMH);
+	PRVAL(MSL_READDIR_CBARG_IOV);
+	PRVAL(MSL_READDIR_CBARG_PAGE);
 	PRVAL(MS_READAHEAD_MAXPGS);
 	PRVAL(MS_READAHEAD_MINSEQ);
 	PRVAL(NBREPLST);
