@@ -660,9 +660,9 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	struct fidc_membh *f = NULL;
 	struct srm_readdir_req *mq;
 	struct srm_readdir_rep *mp;
-	size_t outsize, nents;
 	struct iovec iov[2];
-	int niov, vfsid;
+	size_t outsize, nents;
+	int niov, vfsid, eof;
 
 	iov[0].iov_base = NULL;
 	iov[1].iov_base = NULL;
@@ -699,14 +699,16 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	if (mq->fg.fg_fid == SLFID_ROOT)
 		psc_scan_filesystems();
 
+	eof = 0;
 	mp->rc = mdsio_readdir(vfsid, &rootcreds, mq->size, mq->offset,
 	    iov[0].iov_base, &outsize, &nents, iov[1].iov_base,
-	    mq->nstbpref, fcmh_2_mdsio_data(f));
+	    mq->nstbpref, &eof, fcmh_2_mdsio_data(f));
 
 	psclog_info("mdsio_readdir: rc=%d, data=%p", mp->rc,
 	    fcmh_2_mdsio_data(f));
 	mp->size = outsize;
 	mp->num = nents;
+	mp->eof = eof;
 
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
