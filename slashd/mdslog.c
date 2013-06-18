@@ -1945,7 +1945,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		psc_assert(rc == 0);
 		psc_assert(size == count * sizeof(struct reclaim_prog_entry));
 		psclog_warnx("%d stale entries have been zeroed from the "
-			"reclaim prog log", stale);
+			"reclaim progress file", stale);
 	}
 
 	rc = ENOENT;
@@ -2029,6 +2029,8 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		if (iosinfo->si_xid == 0 && iosinfo->si_batchno == 0) {
 			iosinfo->si_xid = current_reclaim_xid;
 			iosinfo->si_batchno = current_reclaim_batchno;
+			psclog_warnx("Fast forward batchno/xid for resource ID %u",
+			    reclaim_prog_buf[i].res_id);
 		}
 		if (!(iosinfo->si_flags & SIF_NEED_JRNL_INIT))
 			continue;
