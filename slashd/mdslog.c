@@ -1343,10 +1343,6 @@ mds_send_batch_reclaim(uint64_t batchno)
 		/*
 		 * It is fine that the distill process hasn't written
 		 * the next log file after closing the old one.
-		 *
-		 * Also, if an IOS was removed from the config file 
-		 * and added back later, it can have a low batchno whose 
-		 * corresponding log file has already been removed.
 		 */
 		if (rc != ENOENT)
 			psc_fatalx("Failed to open reclaim log file, "
