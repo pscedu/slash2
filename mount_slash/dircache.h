@@ -80,7 +80,8 @@ struct dircache_page {
 	struct pfl_timespec	 dcp_tm;
 	struct psc_listentry	 dcp_lentry;	/* chain on dci  */
 	struct psc_dynarray	 dcp_dents;
-	void			*dcp_base;
+	void			*dcp_base;	/* pscfs_dirents */
+	void			*dcp_base0;	/* dircache_ents */
 };
 
 /* dcp_flags */

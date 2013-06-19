@@ -72,7 +72,6 @@ void
 dircache_free_page(struct fidc_membh *d, struct dircache_page *p)
 {
 	struct fcmh_cli_info *fci;
-	struct dircache_ent *dce;
 
 	FCMH_LOCK_ENSURE(d);
 	fci = fcmh_2_fci(d);
@@ -81,13 +80,10 @@ dircache_free_page(struct fidc_membh *d, struct dircache_page *p)
 	    psc_lentry_hd(&fci->fci_dc_pages.pll_listhd)))
 		pll_remove(&fci->fci_dc_pages, p);
 
-	if (psc_dynarray_len(&p->dcp_dents)) {
-		fci->fci_dc_nents -= psc_dynarray_len(&p->dcp_dents);
-		dce = psc_dynarray_getpos(&p->dcp_dents, 0);
-		PSCFREE(dce);
-	}
+	fci->fci_dc_nents -= psc_dynarray_len(&p->dcp_dents);
 	psc_dynarray_free(&p->dcp_dents);
 	PSCFREE(p->dcp_base);
+	PSCFREE(p->dcp_base0);
 	psc_pool_return(dircache_pool, p);
 
 	fcmh_wake_locked(d);
@@ -329,7 +325,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 
 	PFL_GETPTIMESPEC(&p->dcp_tm);
 
-	dce = PSCALLOC(nents * sizeof(*dce));
+	dce = p->dcp_base0 = PSCALLOC(nents * sizeof(*dce));
 	psc_dynarray_ensurelen(&p->dcp_dents, nents);
 
 	for (j = 0, b = p->dcp_base, off = 0;
