@@ -81,7 +81,7 @@ fci_2_fcmh(struct fcmh_cli_info *fci)
 /* Client-specific fcmh_flags */
 #define FCMH_CLI_HAVEREPLTBL	(_FCMH_FLGSHFT << 0)	/* file replica table present */
 #define FCMH_CLI_FETCHREPLTBL	(_FCMH_FLGSHFT << 1)	/* file replica table loading */
-#define FCMH_CLI_INITDCI	(_FCMH_FLGSHFT << 2)	/* dircache initialized */
+#define FCMH_CLI_INITDIRCACHE	(_FCMH_FLGSHFT << 2)	/* dircache initialized */
 #define FCMH_CLI_TRUNC		(_FCMH_FLGSHFT << 3)	/* truncate in progress */
 #define FCMH_CLI_DIRTY_ATTRS	(_FCMH_FLGSHFT << 4)	/* has dirty attributes */
 #define FCMH_CLI_DIRTY_QUEUE	(_FCMH_FLGSHFT << 5)	/* on dirty queue */

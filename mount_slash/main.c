@@ -1264,14 +1264,11 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 }
 
 void
-msl_readdir_fin(struct slashrpc_cservice *csvc,
-    struct pscrpc_request *rq, struct iovec *iov)
+msl_readdir_fin(struct slashrpc_cservice *csvc, struct iovec *iov)
 {
 	PSCFREE(iov[1].iov_base);
 	PSCFREE(iov[0].iov_base);
 	PSCFREE(iov);
-	if (rq)
-		pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
 }
@@ -1300,7 +1297,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 		fcmh_wake_locked(d);
 		FCMH_ULOCK(d);
 
-		msl_readdir_fin(csvc, rq, iov);
+		msl_readdir_fin(csvc, iov);
 		return (0);
 	}
 
@@ -1355,7 +1352,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 		p->dcp_flags |= DCPF_EOF;
 	dircache_reg_ents(d, p, mp->num);
 	iov[0].iov_base = NULL;
-	msl_readdir_fin(csvc, rq, iov);
+	msl_readdir_fin(csvc, iov);
 	return (0);
 }
 
@@ -1416,7 +1413,8 @@ msl_readdir_issue(struct pscfs_req *pfr, struct fidc_membh *d,
 	rq->rq_async_args.pointer_arg[MSL_READDIR_CBARG_PAGE] = p;
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (rc) {
-		msl_readdir_fin(csvc, rq, iov);
+		pscrpc_req_finished(rq);
+		msl_readdir_fin(csvc, iov);
 		dircache_free_page(d, p);
 	}
 	return (rc);
@@ -1426,15 +1424,16 @@ void
 mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
     void *data)
 {
-	int nent, issue, issuenext, rc;
+	int j, nd, nent, issue, issuenext, rc;
 	struct dircache_page *p, *np;
 	struct msl_fhent *mfh = data;
 	struct pfl_timespec expire;
 	struct fcmh_cli_info *fci;
-	struct dircache_ent *e;
+	struct pscfs_dirent *pfd;
 	struct pscfs_creds pcr;
 	struct fidc_membh *d;
 	off_t adj, nextoff;
+	char *c;
 
 	OPSTAT_INCR(SLC_OPST_READDIR);
 
@@ -1464,40 +1463,39 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	PFL_GETPTIMESPEC(&expire);
 	expire.tv_sec -= DIRENT_TIMEO;
 
-	/* compute values for readahead */
-	nextoff = off + size;
-
 	FCMH_LOCK(d);
 	fci = fcmh_2_fci(d);
  restart:
 	nent = 0;
-	issue = issuenext = 1;
+	issue = 1;
+	issuenext = 0;
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
 		if (DIRCACHE_PAGE_EXPIRED(d, p, &expire)) {
 			dircache_free_page(d, p);
 			continue;
 		}
 
+		if (p->dcp_flags & DCPF_LOADING) {
+			/* We don't know dcp_nextoff so we must wait. */
+			if (off >= p->dcp_off) {
+				fcmh_wait_nocond_locked(d);
+				goto restart;
+			}
+			continue;
+		}
+
 		/* We found the last page; return EOF. */
-		if (off == p->dcp_off + (off_t)p->dcp_size &&
+		if (off == p->dcp_nextoff &&
 		    p->dcp_flags & DCPF_EOF) {
 			FCMH_ULOCK(d);
 			pscfs_reply_readdir(pfr, NULL, 0, rc);
 			return;
 		}
 
-		if (p->dcp_off > off + (off_t)size)
-			break;
-
 		nent += psc_dynarray_len(&p->dcp_dents);
 
-		if (off < p->dcp_off + (off_t)p->dcp_size &&
-		    off + (off_t)size > p->dcp_off) {
+		if (off < p->dcp_nextoff && off >= p->dcp_off) {
 			issue = 1;
-			if (p->dcp_flags & DCPF_LOADING) {
-				fcmh_wait_nocond_locked(d);
-				goto restart;
-			}
 			adj = p->dcp_off - off;
 			if (p->dcp_rc) {
 				rc = p->dcp_rc;
@@ -1509,20 +1507,37 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 					return;
 				}
 			} else {
+				nd = psc_dynarray_len(&p->dcp_dents);
+				for (j = 0, c = p->dcp_base;
+				    j < nd; j++, c += PFL_DIRENT_SIZE(
+				    pfd->pfd_namelen)) {
+					pfd = (void *)c;
+					if (pfd->pfd_off == off)
+						break;
+				}
+
 				pscfs_reply_readdir(pfr,
 				    p->dcp_base + adj,
 				    MIN(size, p->dcp_size - adj),
 				    p->dcp_rc);
+
+				issue = 0;
+
 				/*
 				 * We don't return just yet so we can
 				 * issue readahead if applicable.
 				 */
-				issue = 0;
+				if (size >= p->dcp_size - adj)
+					nextoff = p->dcp_nextoff;
 			}
-		} else if (nextoff < p->dcp_off + (off_t)p->dcp_size &&
-		    nextoff + (off_t)sizeof(*e) > p->dcp_off) {
+		} else if (nextoff &&
+		    nextoff < p->dcp_nextoff &&
+		    nextoff >= p->dcp_off) {
 			issuenext = 0;
-		}
+		} else if (nextoff &&
+		    p->dcp_off > nextoff)
+			break;
+
 	}
 	if (issue) {
 		rc = msl_readdir_issue(pfr, d, off, size);
@@ -1532,7 +1547,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 			return;
 		}
 	}
-	if (issuenext) {
+	if (nextoff && issuenext) {
 		size_t esz;
 		int rem;
 

@@ -76,6 +76,7 @@ struct dircache_page {
 	int			 dcp_rc;	/* readdir(2) error */
 	size_t			 dcp_size;
 	off_t			 dcp_off;
+	off_t			 dcp_nextoff;
 	struct pfl_timespec	 dcp_tm;
 	struct psc_listentry	 dcp_lentry;	/* chain on dci  */
 	struct psc_dynarray	 dcp_dents;
@@ -87,15 +88,15 @@ struct dircache_page {
 #define DCPF_EOF		(1 << 1)	/* denotes last page */
 
 #define DIRCACHE_PAGE_EXPIRED(d, p, exp)				\
-	(timespeccmp((exp), &(p)->dcp_tm, >) ||				\
-	 timespeccmp(&(d)->fcmh_sstb.sst_mtim, &p->dcp_tm, >) ||		\
-	 (d)->fcmh_sstb.sst_size != fcmh_2_fci(d)->fci_dc_nents)
+	(((p)->dcp_flags & DCPF_LOADING) == 0 &&			\
+	 (timespeccmp((exp), &(p)->dcp_tm, >) ||			\
+	  timespeccmp(&(d)->fcmh_sstb.sst_mtim, &p->dcp_tm, >)))
 
-/* This is synonymous with 'struct dirent'. */
+/* This is analogous to 'struct dirent'. */
 struct dircache_ent {
 	int			 dce_hash;
 	int			 dce_namelen;
-	int			 dce_offset;
+	off_t			 dce_len;
 	int			 dce_flags;	/* see DCEF_* below */
 	const char		*dce_name;
 };

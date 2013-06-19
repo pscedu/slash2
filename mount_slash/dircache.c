@@ -74,17 +74,23 @@ dircache_free_page(struct fidc_membh *d, struct dircache_page *p)
 	struct fcmh_cli_info *fci;
 	struct dircache_ent *dce;
 
-	psc_assert(p->dcp_flags == 0);
-
 	FCMH_LOCK_ENSURE(d);
 	fci = fcmh_2_fci(d);
-	pll_remove(&fci->fci_dc_pages, p);
 
-	dce = psc_dynarray_getpos(&p->dcp_dents, 0);
-	PSCFREE(dce);
+	if (psclist_conjoint(&p->dcp_lentry,
+	    psc_lentry_hd(&fci->fci_dc_pages.pll_listhd)))
+		pll_remove(&fci->fci_dc_pages, p);
+
+	if (psc_dynarray_len(&p->dcp_dents)) {
+		fci->fci_dc_nents -= psc_dynarray_len(&p->dcp_dents);
+		dce = psc_dynarray_getpos(&p->dcp_dents, 0);
+		PSCFREE(dce);
+	}
 	psc_dynarray_free(&p->dcp_dents);
 	PSCFREE(p->dcp_base);
 	psc_pool_return(dircache_pool, p);
+
+	fcmh_wake_locked(d);
 
 	/* XXX move this to generic pool stats */
 	OPSTAT_INCR(SLC_OPST_DIRCACHE_REL_ENTRY);
@@ -143,7 +149,7 @@ dircache_lookup(struct fidc_membh *d, const char *name)
 	slfid_t ino = FID_ANY;
 	int found, pos;
 
-	psc_assert(FCMH_HAS_LOCK(d));
+	FCMH_LOCK_ENSURE(d);
 
 	PFL_GETPTIMESPEC(&expire);
 	expire.tv_sec -= DIRENT_TIMEO;
@@ -188,8 +194,7 @@ dircache_lookup(struct fidc_membh *d, const char *name)
 			if (dce->dce_hash != dcent.dce_hash)
 				break;
 
-			/* Map the dirent from the dcent's offset. */
-			dirent = PSC_AGP(p->dcp_base, dce->dce_offset);
+			dirent = PSC_AGP(p->dcp_base, dce->dce_len);
 
 			if (dce->dce_hash == dcent.dce_hash &&
 			    dce->dce_namelen == dcent.dce_namelen &&
@@ -203,13 +208,13 @@ dircache_lookup(struct fidc_membh *d, const char *name)
 				OPSTAT_INCR(SLC_OPST_DIRCACHE_HIT);
 			}
 
-			psclog_dbg("fid="SLPRI_FID" off=%"PRId64" nlen=%u "
-			   "type=%#o dname=%.*s lookupname=%s off=%d dce=%p "
-			   "found=%d",
-			   dirent->pfd_ino, dirent->pfd_off,
-			   dirent->pfd_namelen, dirent->pfd_type,
-			   dirent->pfd_namelen, dirent->pfd_name, name,
-			   dce->dce_offset, dce, found);
+			psclog_dbg("fid="SLPRI_FID" off=%"PRId64" "
+			    "nlen=%u type=%#o dname=%.*s lookupname=%s "
+			    "len=%"PSCPRIdOFFT" dce=%p found=%d",
+			    dirent->pfd_ino, dirent->pfd_off,
+			    dirent->pfd_namelen, dirent->pfd_type,
+			    dirent->pfd_namelen, dirent->pfd_name, name,
+			    dce->dce_len, dce, found);
 
 			if (found)
 				break;
@@ -238,6 +243,14 @@ dircache_purge(struct fidc_membh *d)
 	FCMH_ULOCK(d);
 }
 
+int
+dircache_cmp(const void *a, const void *b)
+{
+	const struct dircache_page *pa = a, *pb = b;
+
+	return (CMP(pa->dcp_off, pb->dcp_off));
+}
+
 /**
  * dircache_new_page: Allocate a new page of dirents.
  * @d: directory handle.
@@ -253,16 +266,7 @@ dircache_new_page(struct fidc_membh *d, size_t size, off_t off,
 	struct pfl_timespec expire;
 	struct fcmh_cli_info *fci;
 
-	psc_assert(FCMH_HAS_LOCK(d));
-
-	p = psc_pool_get(dircache_pool);
-	memset(p, 0, sizeof(*p));
-	psc_dynarray_init(&p->dcp_dents);
-	INIT_PSC_LISTENTRY(&p->dcp_lentry);
-	p->dcp_flags = DCPF_LOADING;
-	p->dcp_size = size;
-	p->dcp_off = off;
-	p->dcp_base = base;
+	FCMH_LOCK_ENSURE(d);
 
 	PFL_GETPTIMESPEC(&expire);
 	expire.tv_sec -= DIRENT_TIMEO;
@@ -280,11 +284,16 @@ dircache_new_page(struct fidc_membh *d, size_t size, off_t off,
 			continue;
 		}
 
-	/*
-	 * New entries are considered to be more accurate so place them
-	 * at the beginning of the list.
-	 */
-	pll_addtail(&fci->fci_dc_pages, p);
+	p = psc_pool_get(dircache_pool);
+	memset(p, 0, sizeof(*p));
+	psc_dynarray_init(&p->dcp_dents);
+	INIT_PSC_LISTENTRY(&p->dcp_lentry);
+	p->dcp_flags = DCPF_LOADING;
+	p->dcp_size = size;
+	p->dcp_off = off;
+	p->dcp_base = base;
+
+	pll_add_sorted(&fci->fci_dc_pages, p, dircache_cmp);
 
 	return (p);
 }
@@ -300,6 +309,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
     size_t nents)
 {
 	struct pscfs_dirent *dirent;
+	struct fcmh_cli_info *fci;
 	struct dircache_ent *dce;
 	unsigned char *b;
 	off_t off;
@@ -309,6 +319,13 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 
 	psc_assert(p->dcp_size);
 	psc_assert(psc_dynarray_len(&p->dcp_dents) == 0);
+
+	if (nents == 0) {
+		FCMH_LOCK(d);
+		dircache_free_page(d, p);
+		FCMH_ULOCK(d);
+		return;
+	}
 
 	PFL_GETPTIMESPEC(&p->dcp_tm);
 
@@ -326,7 +343,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		    dirent->pfd_namelen, dirent->pfd_type,
 		    dirent->pfd_namelen, dirent->pfd_name, dirent, off);
 
-		dce->dce_offset = off;
+		dce->dce_len = off;
 		dce->dce_namelen = dirent->pfd_namelen;
 		dce->dce_name = dirent->pfd_name;
 		dce->dce_hash = psc_strn_hashify(dirent->pfd_name,
@@ -334,6 +351,8 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 
 		psc_dynarray_add(&p->dcp_dents, dce);
 		off += PFL_DIRENT_SIZE(dirent->pfd_namelen);
+
+		p->dcp_nextoff = dirent->pfd_off;
 	}
 
 	psc_dynarray_sort(&p->dcp_dents, qsort, dirent_sort_cmp);
@@ -342,8 +361,10 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		    dce, dce->dce_hash, dce->dce_namelen,
 		    dce->dce_namelen, dce->dce_name);
 
+	fci = fcmh_2_fci(d);
 	FCMH_LOCK(d);
 	p->dcp_flags &= ~DCPF_LOADING;
+	fci->fci_dc_nents += nents;
 	fcmh_wake_locked(d);
 	FCMH_ULOCK(d);
 }

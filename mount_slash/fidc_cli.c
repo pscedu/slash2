@@ -61,6 +61,13 @@ slc_fcmh_refresh_age(struct fidc_membh *f)
 	fci = fcmh_2_fci(f);
 	PFL_GETTIMEVAL(&fci->fci_age);
 	timeradd(&fci->fci_age, &tmp, &fci->fci_age);
+
+	if (fcmh_isdir(f) &&
+	    (f->fcmh_flags & FCMH_CLI_INITDIRCACHE) == 0) {
+		pll_init(&fci->fci_dc_pages, struct dircache_page,
+		    dcp_lentry, &f->fcmh_lock);
+		f->fcmh_flags |= FCMH_CLI_INITDIRCACHE;
+	}
 }
 
 int
@@ -100,10 +107,6 @@ slc_fcmh_ctor(struct fidc_membh *f)
 	}
 	fci->fci_resm = slc_rmc_resm;
 
-	if (fcmh_isdir(f))
-		pll_init(&fci->fci_dc_pages, struct dircache_page,
-		    dcp_lentry, &f->fcmh_lock);
-
 	return (0);
 }
 
@@ -113,7 +116,7 @@ slc_fcmh_dtor(struct fidc_membh *f)
 	/* XXX consolidate into pool stats */
 	OPSTAT_INCR(SLC_OPST_SLC_FCMH_DTOR);
 
-	if (fcmh_isdir(f))
+	if (f->fcmh_flags & FCMH_CLI_INITDIRCACHE)
 		dircache_purge(f);
 }
 
@@ -126,7 +129,7 @@ dump_fcmh_flags(int flags)
 	_dump_fcmh_flags_common(&flags, &seq);
 	PFL_PRFLAG(FCMH_CLI_HAVEREPLTBL, &flags, &seq);
 	PFL_PRFLAG(FCMH_CLI_FETCHREPLTBL, &flags, &seq);
-	PFL_PRFLAG(FCMH_CLI_INITDCI, &flags, &seq);
+	PFL_PRFLAG(FCMH_CLI_INITDIRCACHE, &flags, &seq);
 	PFL_PRFLAG(FCMH_CLI_TRUNC, &flags, &seq);
 	PFL_PRFLAG(FCMH_CLI_DIRTY_ATTRS, &flags, &seq);
 	PFL_PRFLAG(FCMH_CLI_DIRTY_QUEUE, &flags, &seq);
