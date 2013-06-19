@@ -22,6 +22,9 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#define PSC_SUBSYS SLSS_FCMH
+#include "slsubsys.h"
+
 #include <sys/types.h>
 #include <sys/stat.h>
 
