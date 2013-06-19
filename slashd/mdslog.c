@@ -1016,14 +1016,6 @@ mds_send_batch_update(uint64_t batchno)
 			psc_fatalx("failed to open update log file, "
 			    "batchno=%"PRId64": %s",
 			    batchno, slstrerror(rc));
-		/*
-		 * However, if the log file is missing for some reason,
-		 * we skip it so that we can make progress.
-		 */
-		if (batchno < current_reclaim_batchno) {
-			didwork = 1;
-			mds_skip_reclaim_batch(batchno);
-		}
 		return (didwork);
 	}
 	rc = mds_read_file(handle, updatebuf,
@@ -1360,6 +1352,14 @@ mds_send_batch_reclaim(uint64_t batchno)
 			psc_fatalx("Failed to open reclaim log file, "
 			    "batchno=%"PRId64": %s",
 			    batchno, slstrerror(rc));
+		/*
+		 * However, if the log file is missing for some reason,
+		 * we skip it so that we can make progress.
+		 */
+		if (batchno < current_reclaim_batchno) {
+			didwork = 1;
+			mds_skip_reclaim_batch(batchno);
+		}
 		return (didwork);
 	}
 	rc = mdsio_getattr(current_vfsid, 0, handle, &rootcreds, &sstb);
