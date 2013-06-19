@@ -259,7 +259,7 @@ mds_record_reclaim_prog(void)
 	}
 	lastindex++;
 	rc = mds_write_file(reclaim_progfile_handle, reclaim_prog_buf,
-	     lastindex * sizeof(struct reclaim_prog_entry), &size, 0);
+	    lastindex * sizeof(struct reclaim_prog_entry), &size, 0);
 	psc_assert(rc == 0);
 	psc_assert(size == (size_t)lastindex * sizeof(struct reclaim_prog_entry));
 }
@@ -315,9 +315,10 @@ mds_remove_logfiles(uint64_t batchno, int update)
 			break;
 	}
 	gettimeofday(&tv2, NULL);
-	psclog_warnx("%"PRId64" log files have been removed in %d seconds", 
-		OPSTAT_CURR(SLM_OPST_LOGFILE_REMOVE),
-		(int)(tv2.tv_sec - tv1.tv_sec));
+	psclog_info("%"PRId64" log file(s) have been removed in %d "
+	    "second(s)",
+	    OPSTAT_CURR(SLM_OPST_LOGFILE_REMOVE),
+	    (int)(tv2.tv_sec - tv1.tv_sec));
 }
 
 int
@@ -1896,10 +1897,10 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	psc_assert(rc == 0);
 
 	/*
- 	 * Allocate maximum amount of memory to avoid dealing with
- 	 * the coming and going of IOS as compared with the records
- 	 * in the progress files.
- 	 */
+	 * Allocate maximum amount of memory to avoid dealing with
+	 * the coming and going of IOS as compared with the records
+	 * in the progress files.
+	 */
 	reclaim_prog_buf = PSCALLOC(MAX_RECLAIM_PROG_ENTRY *
 	    sizeof(struct reclaim_prog_entry));
 	rc = mds_read_file(reclaim_progfile_handle, reclaim_prog_buf,
@@ -2025,8 +2026,8 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		if (iosinfo->si_xid == 0 && iosinfo->si_batchno == 0) {
 			iosinfo->si_xid = current_reclaim_xid;
 			iosinfo->si_batchno = current_reclaim_batchno;
-			psclog_warnx("Fast forward batchno/xid for resource ID %u",
-			    res->res_id);
+			psclog_info("Fast forward batchno/xid for "
+			    "resource ID %u", res->res_id);
 		}
 		if (!(iosinfo->si_flags & SIF_NEED_JRNL_INIT))
 			continue;
