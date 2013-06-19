@@ -1494,7 +1494,8 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 
 		nent += psc_dynarray_len(&p->dcp_dents);
 
-		if (off < p->dcp_nextoff && off >= p->dcp_off) {
+		if (off < p->dcp_nextoff &&
+		    off >= p->dcp_off) {
 			issue = 1;
 			adj = p->dcp_off - off;
 			if (p->dcp_rc) {
@@ -1512,7 +1513,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 				    j < nd; j++, c += PFL_DIRENT_SIZE(
 				    pfd->pfd_namelen)) {
 					pfd = (void *)c;
-					if (pfd->pfd_off == off)
+					if ((off_t)pfd->pfd_off == off)
 						break;
 				}
 
