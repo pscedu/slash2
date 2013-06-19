@@ -274,7 +274,7 @@ mds_txg_handler(__unusedx uint64_t *txgp, __unusedx void *data, int op)
 }
 
 int
-mds_remove_logfile(uint64_t batchno, int update, int cleanup)
+mds_remove_logfile(uint64_t batchno, int update, __unusedx int cleanup)
 {
 	char logfn[PATH_MAX];
 	int rc;
@@ -290,7 +290,7 @@ mds_remove_logfile(uint64_t batchno, int update, int cleanup)
 	    NULL, NULL);
 	mds_note_update(-1);
 
-	if (rc && (rc != ENOENT || !cleanup))
+	if (rc && rc != ENOENT)
 		psc_fatalx("Failed to remove log file %s: %s", logfn,
 		    slstrerror(rc));
 	if (!rc) {
