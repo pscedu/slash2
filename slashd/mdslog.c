@@ -946,6 +946,44 @@ mds_update_hwm(int batchno)
 	return (value);
 }
 
+void
+mds_skip_reclaim_batch(uint batchno)
+{
+	int ri, nios = 0, record = 0, didwork = 0;
+	struct sl_mds_iosinfo *iosinfo;
+	struct resprof_mds_info *rpmi;
+	struct sl_resource *res;
+
+	if (batchno >= current_reclaim_batchno)
+		return;
+
+	SITE_FOREACH_RES(nodeSite, res, ri) {
+		if (!RES_ISFS(res))
+			continue;
+		nios++;
+		rpmi = res2rpmi(res);
+		iosinfo = rpmi->rpmi_info;
+		if (iosinfo->si_batchno < batchno)
+			continue;
+		if (iosinfo->si_batchno > batchno) {
+			didwork++;
+			continue;
+		}
+		record = 1;
+		didwork++;
+		iosinfo->si_batchno++;
+	}
+	if (record)
+		mds_record_reclaim_prog();
+#if 0
+	if (didwork == nios) {
+		if (batchno >= 1)
+			mds_remove_logfile(batchno - 1, 0, 0);
+	}
+#endif
+
+}
+
 /**
  * mds_send_batch_update - Send a batch of updates to peer MDSes
  *	that want them.
@@ -978,6 +1016,14 @@ mds_send_batch_update(uint64_t batchno)
 			psc_fatalx("failed to open update log file, "
 			    "batchno=%"PRId64": %s",
 			    batchno, slstrerror(rc));
+		/*
+		 * However, if the log file is missing for some reason,
+		 * we skip it so that we can make progress.
+		 */
+		if (batchno < current_reclaim_batchno) {
+			didwork = 1;
+			mds_skip_reclaim_batch(batchno);
+		}
 		return (didwork);
 	}
 	rc = mds_read_file(handle, updatebuf,
@@ -1281,41 +1327,6 @@ mds_open_cursor(void)
 		*p = '\0';
 	psclog_info("file system was formatted on %s "
 	    "(%"PSCPRI_TIMET")", tmbuf, tm);
-}
-
-void
-mds_skip_reclaim_batch(uint batchno)
-{
-	int ri, nios = 0, record = 0, didwork = 0;
-	struct sl_mds_iosinfo *iosinfo;
-	struct resprof_mds_info *rpmi;
-	struct sl_resource *res;
-
-	if (batchno >= current_reclaim_batchno)
-		return;
-
-	SITE_FOREACH_RES(nodeSite, res, ri) {
-		if (!RES_ISFS(res))
-			continue;
-		nios++;
-		rpmi = res2rpmi(res);
-		iosinfo = rpmi->rpmi_info;
-		if (iosinfo->si_batchno < batchno)
-			continue;
-		if (iosinfo->si_batchno > batchno) {
-			didwork++;
-			continue;
-		}
-		record = 1;
-		didwork++;
-		iosinfo->si_batchno++;
-	}
-	if (record)
-		mds_record_reclaim_prog();
-	if (didwork == nios) {
-		if (batchno >= 1)
-			mds_remove_logfile(batchno - 1, 0, 0);
-	}
 }
 
 int
