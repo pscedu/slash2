@@ -459,6 +459,7 @@ reimport
 - store sys/usr pri in upsch in odtable for rebuild purposes
 - what happens when a single replica on a write disabled ios tries to
   get modified?  what should happen??
+- replication notification service
 
 - implement dedup in IOS with CRC checking and upsch?
 
