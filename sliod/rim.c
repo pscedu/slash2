@@ -122,15 +122,15 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 		 * progress.
 		 */
 		OPSTAT_INCR(SLI_OPST_RECLAIM_FILE);
-		if (unlink(fidfn) == -1) {
-			OPSTAT_INCR(SLI_OPST_RECLAIM_FILE_FAIL);
-			if (errno != ENOENT) {
-				psclog_errorx("error reclaiming %s "
-				    "xid=%"PRId64" rc=%d",
-				    fidfn, entryp->xid, rc);
-//				mp->rc = -errno;
-			}
-		}
+		if (unlink(fidfn) == -1 && errno != ENOENT) {
+			psclog_errorx("error reclaiming %s "
+			    "xid=%"PRId64" rc=%d",
+			    fidfn, entryp->xid, rc);
+//			mp->rc = -errno;
+		} else
+			psclog_info("reclaimed %s "
+			    "xid=%"PRId64" successfully",
+			    fidfn, entryp->xid);
 
 		entryp = PSC_AGP(entryp, len);
 	}
