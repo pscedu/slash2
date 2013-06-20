@@ -115,13 +115,12 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 		 * won't create a backing file on the I/O server.
 		 *
 		 * Anyway, we don't report an error back to MDS because
-		 * it can do nothing.
+		 * it can do nothing.  Reporting an error can stall mds
+		 * progress.
 		 */
 		OPSTAT_INCR(SLI_OPST_RECLAIM_FILE);
 		rc = unlink(fidfn);
 		if (rc == -1) {
-			if (!mp->rc)
-				mp->rc = -errno;
 			rc = errno;
 			OPSTAT_INCR(SLI_OPST_RECLAIM_FILE_FAIL);
 		}
