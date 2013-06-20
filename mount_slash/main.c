@@ -1498,10 +1498,9 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 
 		nent += psc_dynarray_len(&p->dcp_dents);
 
-		if (off < p->dcp_nextoff &&
-		    off >= p->dcp_off) {
+		if (off < p->dcp_nextoff && off >= p->dcp_off) {
+			/* We already replied to readdir(). */
 			if (pfr == NULL)
-				/* we already replied */
 				break;
 
 			issue = 1;
@@ -1516,22 +1515,26 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 					return;
 				}
 			} else {
+				size_t len;
+
 				adj = 0;
 				if (off != p->dcp_off) {
-					nd = psc_dynarray_len(
-					    &p->dcp_dents);
-					for (j = 0; j < nd;
-					    j++, adj += PFL_DIRENT_SIZE(
-					    pfd->pfd_namelen)) {
-						pfd = PSC_AGP(p->dcp_base, adj);
-						if ((off_t)pfd->pfd_off == off)
+					nd = psc_dynarray_len(&p->dcp_dents);
+					for (j = 0, pfd = p->dcp_base;
+					    j < nd; j++)  {
+						adj += PFL_DIRENT_SIZE(
+						    pfd->pfd_namelen);
+						if (off == (off_t)pfd->pfd_off)
 							break;
+						pfd = PSC_AGP(p->dcp_base, adj);
 					}
 				}
 
+				len = p->dcp_size - adj;
+				psc_assert(len);
 				pscfs_reply_readdir(pfr,
 				    p->dcp_base + adj,
-				    MIN(size, p->dcp_size - adj),
+				    MIN(size, len),
 				    p->dcp_rc);
 				pfr = NULL;
 
