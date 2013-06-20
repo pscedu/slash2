@@ -460,6 +460,10 @@ reimport
 - what happens when a single replica on a write disabled ios tries to
   get modified?  what should happen??
 - replication notification service
+- tuck reclaim/update logs in a subdir in .slmd
+- bump size of reclaim/update logs files to create less
+    - 48K -> 1MB
+- xattrs are killing ls/readdir
 
 - implement dedup in IOS with CRC checking and upsch?
 
