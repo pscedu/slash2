@@ -120,6 +120,8 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 		OPSTAT_INCR(SLI_OPST_RECLAIM_FILE);
 		rc = unlink(fidfn);
 		if (rc == -1) {
+			if (!mp->rc)
+				mp->rc = -errno;
 			rc = errno;
 			OPSTAT_INCR(SLI_OPST_RECLAIM_FILE_FAIL);
 		}
@@ -130,7 +132,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	}
  out:
 	PSCFREE(iov.iov_base);
-	return (mp->rc);
+	return (0);
 }
 
 int
