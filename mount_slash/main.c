@@ -1357,7 +1357,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 }
 
 int
-msl_readdir_issue(struct pscfs_req *pfr, struct fidc_membh *d,
+msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
     off_t off, size_t size)
 {
 	struct slashrpc_cservice *csvc = NULL;
@@ -1368,7 +1368,8 @@ msl_readdir_issue(struct pscfs_req *pfr, struct fidc_membh *d,
 	struct iovec *iov;
 	int rc, nstbpref, niov;
 
-	MSL_RMC_NEWREQ(pfr, d, csvc, SRMT_READDIR, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ_PFCC(pfcc, d, csvc, SRMT_READDIR, rq, mq, mp,
+	    rc);
 	if (rc)
 		return (rc);
 
@@ -1426,6 +1427,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 {
 	int j, nd, nent, issue, issuenext, rc;
 	struct dircache_page *p, *np;
+	struct pscfs_clientctx *pfcc;
 	struct msl_fhent *mfh = data;
 	struct pfl_timespec expire;
 	struct fcmh_cli_info *fci;
@@ -1433,7 +1435,6 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	struct pscfs_creds pcr;
 	struct fidc_membh *d;
 	off_t adj, nextoff;
-	char *c;
 
 	OPSTAT_INCR(SLC_OPST_READDIR);
 
@@ -1441,6 +1442,8 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 
 	if (off < 0 || size > 1024 * 1024)
 		PFL_GOTOERR(out, rc = EINVAL);
+
+	pfcc = pscfs_getclientctx(pfr);
 
 	d = mfh->mfh_fcmh;
 	psc_assert(d);
@@ -1466,6 +1469,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	FCMH_LOCK(d);
 	fci = fcmh_2_fci(d);
  restart:
+	nextoff = 0;
 	nent = 0;
 	issue = 1;
 	issuenext = 0;
@@ -1496,8 +1500,12 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 
 		if (off < p->dcp_nextoff &&
 		    off >= p->dcp_off) {
+			if (pfr == NULL)
+				/* we already replied */
+				break;
+
 			issue = 1;
-			adj = p->dcp_off - off;
+
 			if (p->dcp_rc) {
 				rc = p->dcp_rc;
 				dircache_free_page(d, p);
@@ -1508,19 +1516,24 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 					return;
 				}
 			} else {
-				nd = psc_dynarray_len(&p->dcp_dents);
-				for (j = 0, c = p->dcp_base;
-				    j < nd; j++, c += PFL_DIRENT_SIZE(
-				    pfd->pfd_namelen)) {
-					pfd = (void *)c;
-					if ((off_t)pfd->pfd_off == off)
-						break;
+				adj = 0;
+				if (off != p->dcp_off) {
+					nd = psc_dynarray_len(
+					    &p->dcp_dents);
+					for (j = 0; j < nd;
+					    j++, adj += PFL_DIRENT_SIZE(
+					    pfd->pfd_namelen)) {
+						pfd = PSC_AGP(p->dcp_base, adj);
+						if ((off_t)pfd->pfd_off == off)
+							break;
+					}
 				}
 
 				pscfs_reply_readdir(pfr,
 				    p->dcp_base + adj,
 				    MIN(size, p->dcp_size - adj),
 				    p->dcp_rc);
+				pfr = NULL;
 
 				issue = 0;
 
@@ -1528,20 +1541,21 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 				 * We don't return just yet so we can
 				 * issue readahead if applicable.
 				 */
-				if (size >= p->dcp_size - adj)
+				if (size >= p->dcp_size - adj) {
 					nextoff = p->dcp_nextoff;
+					if ((p->dcp_flags & DCPF_EOF) == 0)
+						issuenext = 1;
+				}
 			}
 		} else if (nextoff &&
 		    nextoff < p->dcp_nextoff &&
 		    nextoff >= p->dcp_off) {
 			issuenext = 0;
-		} else if (nextoff &&
-		    p->dcp_off > nextoff)
+		} else if (nextoff && p->dcp_off > nextoff)
 			break;
-
 	}
 	if (issue) {
-		rc = msl_readdir_issue(pfr, d, off, size);
+		rc = msl_readdir_issue(pfcc, d, off, size);
 		if (rc && !slc_rmc_retry(pfr, &rc)) {
 			FCMH_ULOCK(d);
 			pscfs_reply_readdir(pfr, NULL, 0, rc);
@@ -1560,13 +1574,14 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		rem = d->fcmh_sstb.sst_size - nent;
 		if (rem < 0)
 			rem = 10;
-		if (rem > 500)
-			rem = 500;
-		esz = sizeof(struct pscfs_dirent) +
+		if (rem > 2000)
+			rem = 2000;
+		esz = sizeof(struct pscfs_dirent) + 16 +
 		    sizeof(struct srt_stat);
 		if (esz * rem > LNET_MTU)
 			rem = LNET_MTU / esz;
-		msl_readdir_issue(pfr, d, nextoff, rem * esz);
+		esz = sizeof(struct pscfs_dirent) + 16;
+		msl_readdir_issue(pfcc, d, nextoff, rem * esz);
 	}
 	if (issue)
 		goto restart;
