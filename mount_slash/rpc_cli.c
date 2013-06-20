@@ -133,7 +133,7 @@ slc_rmc_setmds(const char *name)
  *	maximum allowed timeout has been reached for MDS communication.
  */
 int
-slc_rmc_retry_pfcc(__unusedx struct pscfs_clientctx *pfcc, int *rc)
+slc_rmc_retry_pfcc(struct pscfs_clientctx *pfcc, int *rc)
 {
 	int retry = 1;
 
