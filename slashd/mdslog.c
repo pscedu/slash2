@@ -1538,8 +1538,14 @@ mds_send_batch_reclaim(uint64_t batchno)
 			    SRMM_BULK_PORTAL, &iov, 1);
 
 			rc = SL_RSX_WAITREP(csvc, rq, mp);
+#if 0
+			/*
+			 * Ignore potential errors from the IOS as long
+			 * as the RPC itself is sent out successfully.
+			 */
 			if (rc == 0)
 				rc = mp->rc;
+#endif
 
 			pscrpc_req_finished(rq);
 			rq = NULL;
