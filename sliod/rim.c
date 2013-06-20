@@ -51,6 +51,14 @@
 static uint64_t	current_reclaim_xid;
 static uint64_t	current_reclaim_batchno;
 
+#if 0
+int
+sli_rim_handle_preclaim(struct pscrpc_request *rq)
+{
+	fallocate;
+}
+#endif
+
 /**
  * sli_rim_handle_reclaim - Handle RECLAIM RPC from the MDS as a result
  *	of unlink or truncate to zero.  The MDS won't send us a new RPC
@@ -59,13 +67,13 @@ static uint64_t	current_reclaim_batchno;
 int
 sli_rim_handle_reclaim(struct pscrpc_request *rq)
 {
+	int i, rc = 0, len;
 	char fidfn[PATH_MAX];
 	uint64_t crc, xid, batchno;
 	struct srt_reclaim_entry *entryp;
 	struct srm_reclaim_req *mq;
 	struct srm_reclaim_rep *mp;
 	struct iovec iov;
-	int i, rc, len;
 
 	len = offsetof(struct srt_reclaim_entry, _pad);
 
@@ -73,15 +81,10 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	// XXX adjust for RPC overhead in metric?
-	if (mq->size < len || mq->size > LNET_MTU) {
-		mp->rc = -EINVAL;
-		return (mp->rc);
-	}
-
-	if (mq->count != mq->size / len) {
-		mp->rc = -EINVAL;
-		return (mp->rc);
-	}
+	if (mq->size < len || mq->size > LNET_MTU)
+		PFL_GOTOERR(out, rc = mp->rc = -EINVAL);
+	if (mq->count != mq->size / len)
+		PFL_GOTOERR(out, rc = mp->rc = -EINVAL);
 
 	xid = mq->xid;
 	batchno = mq->batchno;
@@ -99,7 +102,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, SRMM_BULK_PORTAL,
 	    &iov, 1);
 	if (mp->rc)
-		goto out;
+		PFL_GOTOERR(out, rc = mp->rc);
 
 	psc_crc64_calc(&crc, iov.iov_base, iov.iov_len);
 	if (crc != mq->crc)
@@ -119,19 +122,21 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 		 * progress.
 		 */
 		OPSTAT_INCR(SLI_OPST_RECLAIM_FILE);
-		rc = unlink(fidfn);
-		if (rc == -1) {
-			rc = errno;
+		if (unlink(fidfn) == -1) {
 			OPSTAT_INCR(SLI_OPST_RECLAIM_FILE_FAIL);
+			if (errno != ENOENT) {
+				psclog_errorx("error reclaiming %s "
+				    "xid=%"PRId64" rc=%d",
+				    fidfn, entryp->xid, rc);
+//				mp->rc = -errno;
+			}
 		}
 
-		psclog_info("reclaim fid="SLPRI_FG", xid=%"PRId64", rc=%d",
-		    SLPRI_FG_ARGS(&entryp->fg), entryp->xid, rc);
 		entryp = PSC_AGP(entryp, len);
 	}
  out:
 	PSCFREE(iov.iov_base);
-	return (0);
+	return (rc);
 }
 
 int
@@ -192,6 +197,9 @@ sli_rim_handler(struct pscrpc_request *rq)
 		return (-ENOTSUP);
 		rc = sli_rim_handle_bmap_ptrunc(rq);
 		break;
+//	case SRMT_PRECLAIM:
+//		rc = sli_rim_handle_preclaim(rq);
+//		break;
 	case SRMT_RECLAIM:
 		rc = sli_rim_handle_reclaim(rq);
 		break;
