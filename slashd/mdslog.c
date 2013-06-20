@@ -1552,7 +1552,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 					iosinfo->si_batchno++;
 				break;
 			}
-			psclog_warn("Reclaim RPC failed: dst=%s rc=%d",
+			psclog_warnx("reclaim RPC failed: dst=%s rc=%d",
 			    dst_resm->resm_name, rc);
 		}
 	}
