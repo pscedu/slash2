@@ -464,6 +464,8 @@ reimport
 - bump size of reclaim/update logs files to create less
     - 48K -> 1MB
 - xattrs are killing ls/readdir
+- either perform CRC checks on all RPCs in the SLRPC layer or none,
+  fully relying on network transport ensuring integrity
 
 - implement dedup in IOS with CRC checking and upsch?
 
