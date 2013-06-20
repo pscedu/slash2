@@ -925,5 +925,7 @@ main(int argc, char *argv[])
 
 	PRVAL(offsetof(struct bmap_mds_info, bmi_upd));
 
+	PRTYPE(struct pscfs_dirent);
+
 	exit(0);
 }
