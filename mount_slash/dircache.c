@@ -319,6 +319,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	if (nents == 0) {
 		FCMH_LOCK(d);
 		dircache_free_page(d, p);
+		fcmh_wake_locked(d);
 		FCMH_ULOCK(d);
 		return;
 	}
