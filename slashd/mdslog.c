@@ -1523,7 +1523,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 					rc = -ENOTCONN;
 				}
 				DYNARRAY_FOREACH(mn, j, &dst_resm->resm_nids)
-					psclog_diag("GC: failed to contact: %s; rc=%d",
+					psclog_warnx("GC: failed to contact: %s; rc=%d",
 					    mn->resmnid_addrbuf, rc);
 				continue;
 			}
@@ -1559,10 +1559,9 @@ mds_send_batch_reclaim(uint64_t batchno)
 					iosinfo->si_batchno++;
 				break;
 			}
-		}
-		if (rc)
 			psclog_warnx("reclaim RPC failed: batchno=%"PRId64", dst=%s, rc=%d",
 			    batchno, dst_resm->resm_name, rc);
+		}
 	}
 
 	/*
