@@ -44,6 +44,36 @@
 #include "zfs-fuse/zfs_slashlib.h"
 
 int
+slfid_to_vfsid(slfid_t fid, int *vfsid)
+{
+	int i, siteid;
+
+	/*
+	 * Our client uses this special fid to contact us during mount,
+	 * at which time it does not know the site ID yet.
+	 */
+	if (fid == SLFID_ROOT) {
+		*vfsid = current_vfsid;
+		return (0);
+	}
+
+	/* only have default file system in the root */
+	if (mount_index == 1) {
+		*vfsid = current_vfsid;
+		return (0);
+	}
+
+	siteid = FID_GET_SITEID(fid);
+	for (i = 0; i < mount_index; i++) {
+		if (zfsMount[i].siteid == (uint64_t)siteid) {
+			*vfsid = i;
+			return (0);
+		}
+	}
+	return (-EINVAL);
+}
+
+int
 _mds_fcmh_setattr(int vfsid, struct fidc_membh *f, int to_set,
     const struct srt_stat *sstb, int log)
 {
@@ -71,9 +101,10 @@ slm_fcmh_ctor(struct fidc_membh *f)
 
 	DEBUG_FCMH(PLL_INFO, f, "ctor");
 
-	if (mdsio_fid_to_vfsid(fcmh_2_fid(f), &vfsid) < 0) {
-		rc = EINVAL;
-		DEBUG_FCMH(PLL_WARN, f, "invalid file system id (rc=%d)", rc);
+	rc = slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
+	if (rc) {
+		DEBUG_FCMH(PLL_WARN, f, "invalid file system id "
+		    "(rc=%d)", rc);
 		return (rc);
 	}
 	fmi = fcmh_2_fmi(f);
@@ -81,7 +112,7 @@ slm_fcmh_ctor(struct fidc_membh *f)
 	psc_dynarray_init(&fmi->fmi_ptrunc_clients);
 
 	rc = mdsio_lookup_slfid(vfsid, fcmh_2_fid(f),
-		&rootcreds, &f->fcmh_sstb, &fcmh_2_mdsio_fid(f));
+	    &rootcreds, &f->fcmh_sstb, &fcmh_2_mdsio_fid(f));
 	if (rc) {
 		fmi->fmi_ctor_rc = rc;
 		DEBUG_FCMH(PLL_WARN, f,
@@ -91,16 +122,18 @@ slm_fcmh_ctor(struct fidc_membh *f)
 
 	if (fcmh_isdir(f)) {
 		rc = mdsio_opendir(vfsid, fcmh_2_mdsio_fid(f),
-			&rootcreds, NULL, &fmi->fmi_mdsio_data);
+		    &rootcreds, NULL, &fmi->fmi_mdsio_data);
 	} else if (fcmh_isreg(f)) {
 		slash_inode_handle_init(&fmi->fmi_inodeh, f);
-		/* 
-		 * We shouldn't need O_LARGEFILE because slash2 metafiles are small.
+		/*
+		 * We shouldn't need O_LARGEFILE because slash2
+		 * metafiles are small.
 		 *
-		 * I created a file with size of 8070450532247928832 using dd by seeking
-		 * to a large offset and writing one byte. Somehow, the ZFS size becomes 
-		 * 5119601018368. Without O_LARGEFILE, I got EOVERFLOW (75) here.  The
-		 * slash2 size is correct though.
+		 * I created a file with size of 8070450532247928832
+		 * using dd by seeking to a large offset and writing one
+		 * byte.  Somehow, the ZFS size becomes 5119601018368.
+		 * Without O_LARGEFILE, I got EOVERFLOW (75) here.  The
+		 * SLASH2 size is correct though.
 		 */
 		rc = mdsio_opencreate(vfsid, fcmh_2_mdsio_fid(f),
 		    &rootcreds, O_RDWR, 0, NULL, NULL, NULL,
@@ -135,7 +168,7 @@ slm_fcmh_dtor(struct fidc_membh *f)
 	    S_ISDIR(f->fcmh_sstb.sst_mode)) {
 		/* XXX Need to worry about other modes here */
 		if (!fmi->fmi_ctor_rc) {
-			mdsio_fid_to_vfsid(fcmh_2_fid(f), &vfsid);
+			slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 			rc = mdsio_release(vfsid, &rootcreds,
 			    fmi->fmi_mdsio_data);
 			psc_assert(rc == 0);

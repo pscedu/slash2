@@ -32,8 +32,8 @@
 
 #include "pfl/fs.h"
 #include "pfl/fsmod.h"
-#include "psc_util/lock.h"
 #include "psc_util/journal.h"
+#include "psc_util/lock.h"
 
 #include "bmap.h"
 #include "bmap_mds.h"
@@ -54,37 +54,6 @@ mdsio_fid_t		 mds_fidnsdir_inum[MAX_FILESYSTEMS];
 mdsio_fid_t		 mds_tmpdir_inum[MAX_FILESYSTEMS];
 
 int
-mdsio_fid_to_vfsid(slfid_t fid, int *vfsid)
-{
-	int i, siteid;
-
-	/* 
- 	 * Our client uses this special fid to contact us
-	 * during mount, at which time it does not know
-	 * the site ID yet.
-	 */
-	if (fid == SLFID_ROOT) {
-		*vfsid = current_vfsid;
-		return (0);
-	}
-
-	/* only have default file system in the root */
-	if (mount_index == 1) {
-		*vfsid = current_vfsid;
-		return (0);
-	}
-
-	siteid = FID_GET_SITEID(fid);
-	for (i = 0; i < mount_index; i++) {
-		if (zfsMount[i].siteid == (uint64_t)siteid) {
-			*vfsid = i;
-			return (0);
-		}
-	}
-	return (-EINVAL);
-}
-
-int
 mdsio_fcmh_refreshattr(struct fidc_membh *f, struct srt_stat *out_sstb)
 {
 	int locked, rc, vfsid;
@@ -94,7 +63,7 @@ mdsio_fcmh_refreshattr(struct fidc_membh *f, struct srt_stat *out_sstb)
 	locked = FCMH_RLOCK(f);
 	fcmh_wait_locked(f, (f->fcmh_flags & FCMH_BUSY) &&
 	    f->fcmh_owner != pthr);
-	rc = mdsio_fid_to_vfsid(fcmh_2_fid(f), &vfsid);
+	rc = slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 	psc_assert(rc == 0);
 	rc = mdsio_getattr(vfsid, fcmh_2_mdsio_fid(f),
 	    fcmh_2_mdsio_data(f), &rootcreds, &f->fcmh_sstb);
