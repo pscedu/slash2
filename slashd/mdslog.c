@@ -315,10 +315,10 @@ mds_remove_logfiles(uint64_t batchno, int update)
 			break;
 	}
 	gettimeofday(&tv2, NULL);
-	psclog_info("%"PRId64" log file(s) have been removed in %d "
-	    "second(s)",
+	psclog_warnx("%"PRId64" log file(s) have been removed in %d "
+	    "second(s), LWM is %"PRId64,
 	    OPSTAT_CURR(SLM_OPST_LOGFILE_REMOVE),
-	    (int)(tv2.tv_sec - tv1.tv_sec));
+	    (int)(tv2.tv_sec - tv1.tv_sec), batchno);
 }
 
 int
