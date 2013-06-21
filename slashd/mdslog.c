@@ -947,7 +947,7 @@ mds_update_hwm(int batchno)
 }
 
 void
-mds_skip_reclaim_batch(uint batchno)
+mds_skip_reclaim_batch(uint64_t batchno)
 {
 	int ri, nios = 0, record = 0, didwork = 0;
 	struct sl_mds_iosinfo *iosinfo;
@@ -976,6 +976,8 @@ mds_skip_reclaim_batch(uint batchno)
 	if (record)
 		mds_record_reclaim_prog();
 
+	psclog_warnx("Skipping reclaim log file, batchno=%"PRId64, 
+		batchno);
 	if (didwork == nios) {
 		if (batchno >= 1)
 			mds_remove_logfile(batchno - 1, 0, 0);
