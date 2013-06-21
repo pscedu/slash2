@@ -150,7 +150,7 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 	iovs[1].iov_base = &od_crc;
 	iovs[1].iov_len = sizeof(od_crc);
 
-	mdsio_fid_to_vfsid(fcmh_2_fid(f), &vfsid);
+	slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
 	    (off_t)BMAP_OD_SZ * b->bcm_bmapno + SL_BMAP_START_OFF,
 	    bmap_2_mdsio_data(b));
@@ -245,7 +245,7 @@ mds_bmap_write(struct bmapc_memb *b, int update_mtime, void *logf,
 	if (logf)
 		mds_reserve_slot(1);
 	f = b->bcm_fcmh;
-	mdsio_fid_to_vfsid(fcmh_2_fid(f), &vfsid);
+	slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 	rc = mdsio_pwritev(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
 	    (off_t)BMAP_OD_SZ * b->bcm_bmapno + SL_BMAP_START_OFF,
 	    update_mtime, bmap_2_mdsio_data(b), logf, logarg);
@@ -320,9 +320,9 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 	f = bmap->bcm_fcmh;
 	ih = fcmh_2_inoh(f);
 
-	rc = mdsio_fid_to_vfsid(fcmh_2_fid(f), &vfsid);
+	rc = slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 	if (rc)
-		return (rc);
+		return (-rc);
 	if (vfsid != current_vfsid)
 		return (EINVAL);
 

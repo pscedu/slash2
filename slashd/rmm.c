@@ -163,7 +163,7 @@ int
 slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 {
 	char *from, *to, *name, *linkname;
-	struct fidc_membh *p, *op, *np;
+	struct fidc_membh *p = NULL, *op = NULL, *np = NULL;
 	struct srm_forward_req *mq;
 	struct srm_forward_rep *mp;
 	struct slash_creds cr;
@@ -187,10 +187,9 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 
 	psclog_info("op=%d, name=%s", mq->op, mq->req.name);
 
-	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid)) {
-		mp->rc = -EINVAL;
+	mp->rc = slfid_to_vfsid(mq->fg.fg_fid, &vfsid);
+	if (mp->rc)
 		return (0);
-	}
 	if (current_vfsid != vfsid) {
 		mp->rc = -EINVAL;
 		return (0);
@@ -346,8 +345,9 @@ slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
 	    op != SLM_FORWARD_SYMLINK)
 		return (-ENOSYS);
 
-	if (mdsio_fid_to_vfsid(fg->fg_fid, &vfsid) < 0)
-		return (EINVAL);
+	rc = slfid_to_vfsid(fg->fg_fid, &vfsid);
+	if (rc)
+		return (rc);
 
 	siteid = FID_GET_SITEID(fg->fg_fid);
 	site = libsl_siteid2site(siteid);

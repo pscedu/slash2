@@ -411,14 +411,11 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	uint32_t i;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mdsio_fid_to_vfsid(mq->pfg.fg_fid, &vfsid) < 0) {
-		mp->rc = -EINVAL;
-		goto out;
-	}
-	if (vfsid != current_vfsid) {
-		mp->rc = -EINVAL;
-		goto out;
-	}
+	mp->rc = slfid_to_vfsid(mq->pfg.fg_fid, &vfsid);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
+	if (vfsid != current_vfsid)
+		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
 	m = libsl_try_nid2resm(rq->rq_export->exp_connection->c_peer.nid);
 	if (m == NULL)
@@ -583,10 +580,9 @@ slm_rmi_handle_mkdir(struct pscrpc_request *rq)
 	int rc, vfsid;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mdsio_fid_to_vfsid(mq->pfg.fg_fid, &vfsid) < 0) {
-		mp->rc = -EINVAL;
+	mp->rc = slfid_to_vfsid(mq->pfg.fg_fid, &vfsid);
+	if (mp->rc)
 		return (0);
-	}
 	if (vfsid != current_vfsid) {
 		mp->rc = -EINVAL;
 		return (0);

@@ -316,7 +316,7 @@ psc_register_filesystem(int vfsid)
 		 * make sure that the newly mounted file system has an
 		 * entry
 		 */
-		mdsio_fid_to_vfsid(SLFID_ROOT, &root_vfsid);
+		slfid_to_vfsid(SLFID_ROOT, &root_vfsid);
 		rc = mdsio_lookup(root_vfsid, MDSIO_FID_ROOT, fsname,
 		    &mfp, &rootcreds, NULL);
 		if (rc == ENOENT) {

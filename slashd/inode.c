@@ -58,8 +58,9 @@ mds_inode_read(struct slash_inode_handle *ih)
 	size_t nb;
 
 	f = ih->inoh_fcmh;
-	if (mdsio_fid_to_vfsid(fcmh_2_fid(f), &vfsid) < 0)
-		return (EINVAL);
+	rc = slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
+	if (rc)
+		return (-rc);
 
 	locked = INOH_RLOCK(ih); /* XXX bad on slow archiver */
 	psc_assert(ih->inoh_flags & INOH_INO_NOTLOADED);
@@ -235,7 +236,7 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 	iovs[1].iov_len = sizeof(od_crc);
 
 	f = ih->inoh_fcmh;
-	mdsio_fid_to_vfsid(fcmh_2_fid(f), &vfsid);
+	slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
 	    SL_EXTRAS_START_OFF, inoh_2_mdsio_data(ih));
 	if (rc == 0 && od_crc == 0 &&

@@ -269,7 +269,7 @@ mds_ino_read_v1(struct slash_inode_handle *ih)
 	iovs[1].iov_len = sizeof(od_crc);
 
 	f = ih->inoh_fcmh;
-	mdsio_fid_to_vfsid(fcmh_2_fid(f), &vfsid);
+	slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb, 0,
 	    inoh_2_mdsio_data(ih));
 
@@ -311,7 +311,7 @@ mds_inox_read_v1(struct slash_inode_handle *ih)
 	iovs[1].iov_len = sizeof(od_crc);
 
 	f = ih->inoh_fcmh;
-	mdsio_fid_to_vfsid(fcmh_2_fid(f), &vfsid);
+	slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
 	    0x400, inoh_2_mdsio_data(ih));
 
@@ -353,7 +353,7 @@ mds_bmap_read_v1(struct bmapc_memb *b, void *readh)
 	iovs[1].iov_base = &od_crc;
 	iovs[1].iov_len = sizeof(od_crc);
 	f = b->bcm_fcmh;
-	mdsio_fid_to_vfsid(fcmh_2_fid(f), &vfsid);
+	slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
 	    bsz * b->bcm_bmapno + 0x1000, readh);
 

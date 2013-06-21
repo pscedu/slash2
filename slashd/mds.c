@@ -1368,7 +1368,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 	struct fidc_membh *f;
 	int rc, vfsid;
 
-	rc = mdsio_fid_to_vfsid(c->fg.fg_fid, &vfsid);
+	rc = slfid_to_vfsid(c->fg.fg_fid, &vfsid);
 	if (rc)
 		return (rc);
 	if (vfsid != current_vfsid)
