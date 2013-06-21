@@ -742,6 +742,7 @@ struct srm_getattr_req {
 
 struct srm_getattr_rep {
 	struct srt_stat		attr;
+	 int64_t		xattrsize;
 	 int32_t		rc;
 	 int32_t		_pad;
 } __packed;
@@ -816,9 +817,14 @@ struct srm_mknod_req {
 
 #define srm_mknod_rep		srm_getattr2_rep
 
+struct srt_readdir_ent {
+	struct srt_stat		sstb;
+	uint64_t		xattrsize;
+};
+
 #define DEF_READDIR_NENTS	128
 #define MAX_READDIR_NENTS	1000
-#define MAX_READDIR_BUFSIZ	(sizeof(struct srt_stat) * MAX_READDIR_NENTS)
+#define MAX_READDIR_BUFSIZ	(sizeof(struct srt_readdir_ent) * MAX_READDIR_NENTS)
 
 struct srm_readdir_req {
 	struct slash_fidgen	fg;
@@ -829,7 +835,7 @@ struct srm_readdir_req {
 } __packed;
 
 #define SRM_READDIR_BUFSZ(siz, nents, nstbpref)				\
-	(sizeof(struct srt_stat) * MIN((nstbpref), (nents)) + (siz))
+	(sizeof(struct srt_readdir_ent) * MIN((nstbpref), (nents)) + (siz))
 
 struct srm_readdir_rep {
 	uint64_t		size;		/* XXX make 32-bit */

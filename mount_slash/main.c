@@ -594,6 +594,7 @@ msl_stat(struct fidc_membh *f, void *arg)
 	struct pscrpc_request *rq = NULL;
 	struct srm_getattr_req *mq;
 	struct srm_getattr_rep *mp;
+	struct fcmh_cli_info *fci;
 	struct timeval now;
 	int rc = 0;
 
@@ -617,12 +618,14 @@ msl_stat(struct fidc_membh *f, void *arg)
 		return (0);
 	}
 
+	fci = fcmh_2_fci(f);
+
 	FCMH_LOCK(f);
-	fcmh_wait_locked(f, (f->fcmh_flags & FCMH_GETTING_ATTRS));
+	fcmh_wait_locked(f, f->fcmh_flags & FCMH_GETTING_ATTRS);
 
 	if (f->fcmh_flags & FCMH_HAVE_ATTRS) {
 		PFL_GETTIMEVAL(&now);
-		if (timercmp(&now, &fcmh_2_fci(f)->fci_age, <)) {
+		if (timercmp(&now, &fci->fci_age, <)) {
 			DEBUG_FCMH(PLL_INFO, f,
 			    "attrs retrieved from local cache");
 			FCMH_ULOCK(f);
@@ -654,9 +657,11 @@ msl_stat(struct fidc_membh *f, void *arg)
 	FCMH_LOCK(f);
 	if (!rc && fcmh_2_fid(f) != mp->attr.sst_fid)
 		rc = EBADF;
-	if (!rc)
+	if (!rc) {
 		fcmh_setattrf(f, &mp->attr,
 		    FCMH_SETATTRF_SAVELOCAL | FCMH_SETATTRF_HAVELOCK);
+		fci->fci_xattrsize = mp->xattrsize;
+	}
 
 	f->fcmh_flags &= ~FCMH_GETTING_ATTRS;
 	fcmh_wake_locked(f);
@@ -1313,39 +1318,44 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 		size_t sz;
 
 		sz = MIN(mp->num, mq->nstbpref) *
-		    sizeof(struct srt_stat);
+		    sizeof(struct srt_readdir_ent);
 		memcpy(iov[1].iov_base, mp->ents, sz);
 		memcpy(iov[0].iov_base, mp->ents + sz, mp->size);
 	}
 
 	if (mq->nstbpref) {
-		struct srt_stat *sstb = iov[1].iov_base;
+		struct srt_readdir_ent *attr = iov[1].iov_base;
 		struct fidc_membh *f;
 		uint32_t i;
 
 		if (mp->num < mq->nstbpref)
 			mq->nstbpref = mp->num;
 
-		for (i = 0; i < mq->nstbpref; i++, sstb++) {
-			if (sstb->sst_fid == FID_ANY ||
-			    sstb->sst_fid == 0) {
+		for (i = 0; i < mq->nstbpref; i++, attr++) {
+			if (attr->sstb.sst_fid == FID_ANY ||
+			    attr->sstb.sst_fid == 0) {
 				psclog_warnx("invalid f+g:"SLPRI_FG", "
 				    "parent: "SLPRI_FID,
-				    SLPRI_FG_ARGS(&sstb->sst_fg),
+				    SLPRI_FG_ARGS(&attr->sstb.sst_fg),
 				    fcmh_2_fid(d));
 				continue;
 			}
 
 			psclog_dbg("adding f+g:"SLPRI_FG,
-			    SLPRI_FG_ARGS(&sstb->sst_fg));
+			    SLPRI_FG_ARGS(&attr->sstb.sst_fg));
 
-			uidmap_int_stat(sstb);
+			uidmap_int_stat(&attr->sstb);
 
-			fidc_lookup(&sstb->sst_fg, FIDC_LOOKUP_CREATE,
-			    sstb, FCMH_SETATTRF_SAVELOCAL, &f);
+			fidc_lookup(&attr->sstb.sst_fg,
+			    FIDC_LOOKUP_CREATE, &attr->sstb,
+			    FCMH_SETATTRF_SAVELOCAL, &f);
 
-			if (f)
+			if (f) {
+				FCMH_LOCK(f);
+				fcmh_2_fci(f)->fci_xattrsize =
+				    attr->xattrsize;
 				fcmh_op_done(f);
+			}
 		}
 	}
 	if (mp->eof)
@@ -1382,11 +1392,11 @@ msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
 
 	/* calculate the max # of attributes that can be prefetched */
 	nstbpref = MIN(nstb_prefetch, (int)howmany(LNET_MTU - size,
-	    sizeof(struct srt_stat)));
+	    sizeof(struct srt_readdir_ent)));
 	if (nstbpref) {
 		size_t stprefsz;
 
-		stprefsz = nstbpref * sizeof(struct srt_stat);
+		stprefsz = nstbpref * sizeof(struct srt_readdir_ent);
 		iov[niov].iov_len = stprefsz;
 		iov[niov].iov_base = PSCALLOC(stprefsz);
 		niov++;
@@ -1580,7 +1590,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		if (rem > 2000)
 			rem = 2000;
 		esz = sizeof(struct pscfs_dirent) + 16 +
-		    sizeof(struct srt_stat);
+		    sizeof(struct srt_readdir_ent);
 		if (esz * rem > LNET_MTU)
 			rem = LNET_MTU / esz;
 		esz = sizeof(struct pscfs_dirent) + 16;
@@ -2720,8 +2730,11 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
-	if (rc == 0)
+	if (rc == 0) {
 		rc = mp->rc;
+		FCMH_LOCK(f);
+		fcmh_2_fci(f)->fci_xattrsize = mp->size;
+	}
 
  out:
 	pscfs_reply_listxattr(pfr, buf, mp ? mp->size : 0, rc);
@@ -2780,8 +2793,12 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
 
-	if (rc == 0)
+	if (rc == 0) {
 		rc = mp->rc;
+		FCMH_LOCK(f);
+		// XXX fix
+		fcmh_2_fci(f)->fci_xattrsize = 1;
+	}
 
  out:
 	pscfs_reply_setxattr(pfr, rc);
@@ -2796,16 +2813,18 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 
 void
 mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
-	size_t size, pscfs_inum_t inum)
+    size_t size, pscfs_inum_t inum)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct srm_getxattr_rep *mp = NULL;
 	struct srm_getxattr_req *mq;
 	struct pscrpc_request *rq = NULL;
 	struct fidc_membh *f = NULL;
+	struct fcmh_cli_info *fci;
 	struct pscfs_creds pcr;
 	struct iovec iov;
 	char *buf = NULL;
+	size_t retsz = 0;
 	int rc;
 
 	iov.iov_base = NULL;
@@ -2819,6 +2838,18 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 	rc = msl_load_fcmh(pfr, inum, &f);
 	if (rc)
 		PFL_GOTOERR(out, rc);
+
+	if (f->fcmh_flags & FCMH_HAVE_ATTRS) {
+		struct timeval now;
+
+		PFL_GETTIMEVAL(&now);
+		fci = fcmh_2_fci(f);
+		FCMH_LOCK(f);
+		if (timercmp(&now, &fci->fci_age, <) &&
+		    fci->fci_xattrsize == 0)
+			PFL_GOTOERR(out, rc = ENODATA);
+		FCMH_ULOCK(f);
+	}
 
 	if (size)
 		buf = PSCALLOC(size);
@@ -2845,20 +2876,23 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc))
 		goto retry;
-
-	if (rc == 0)
+	if (rc == 0) {
 		rc = mp->rc;
+		retsz = mp->valuelen;
+	}
 
  out:
 	/*
 	 * If MDS does not support this, we return no attributes
 	 * successfully.
 	 */
+#if 0
 	if (rc == -ENOSYS) {
 		OPSTAT_INCR(SLC_OPST_GETXATTR_NOSYS);
 		rc = 0;
 	}
-	pscfs_reply_getxattr(pfr, buf, mp ? mp->valuelen : 0, rc);
+#endif
+	pscfs_reply_getxattr(pfr, buf, retsz, rc);
 
 	if (f)
 		fcmh_op_done(f);

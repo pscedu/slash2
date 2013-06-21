@@ -39,6 +39,7 @@ struct fidc_membh;
 struct fci_finfo {
 	int			 nrepls;
 	sl_replica_t		 reptbl[SL_MAX_REPLICAS];
+	uint64_t		 xattrsize;
 };
 
 struct fci_dinfo {
@@ -55,6 +56,7 @@ struct fcmh_cli_info {
 	} ford;
 #define fci_nrepls	ford.f.nrepls
 #define fci_reptbl	ford.f.reptbl
+#define fci_xattrsize	ford.f.xattrsize
 
 #define fci_dc_pages	ford.d.dc_pages
 #define fci_dc_nents	ford.d.dc_nents
