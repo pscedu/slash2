@@ -150,15 +150,24 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	const struct srm_getattr_req *mq;
 	struct srm_getattr_rep *mp;
 	struct fidc_membh *f;
+	size_t xlen;
+	int vfsid;
 
 	OPSTAT_INCR(SLM_OPST_GETATTR);
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
+	mp->rc = slfid_to_vfsid(mq->fg.fg_fid, &vfsid);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
+
+	zfsslash2_listxattr(vfsid, &rootcreds, NULL, 0, &xlen,
+	    fcmh_2_mdsio_fid(f));
 
 	FCMH_LOCK(f);
 	mp->attr = f->fcmh_sstb;
+	mp->xattrsize = xlen;
 
  out:
 	if (f)
@@ -323,7 +332,7 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 
 	OPSTAT_INCR(SLM_OPST_LINK);
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid);
+	mp->rc = slfid_to_vfsid(mq->fg.fg_fid, &vfsid);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
@@ -361,7 +370,7 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 
 	OPSTAT_INCR(SLM_OPST_LOOKUP);
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = mdsio_fid_to_vfsid(mq->pfg.fg_fid, &vfsid);
+	mp->rc = slfid_to_vfsid(mq->pfg.fg_fid, &vfsid);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 	mp->rc = -slm_fcmh_get(&mq->pfg, &p);
@@ -475,7 +484,7 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 
 	OPSTAT_INCR(SLM_OPST_MKDIR);
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = mdsio_fid_to_vfsid(mq->pfg.fg_fid, &vfsid);
+	mp->rc = slfid_to_vfsid(mq->pfg.fg_fid, &vfsid);
 	if (mp->rc)
 		return (0);
 	return (slm_mkdir(vfsid, mq, mp, 0, NULL));
@@ -492,7 +501,7 @@ slm_rmc_handle_mknod(struct pscrpc_request *rq)
 
 	OPSTAT_INCR(SLM_OPST_MKNOD);
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = mdsio_fid_to_vfsid(mq->pfg.fg_fid, &vfsid);
+	mp->rc = slfid_to_vfsid(mq->pfg.fg_fid, &vfsid);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
@@ -533,7 +542,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 	OPSTAT_INCR(SLM_OPST_CREATE);
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = mdsio_fid_to_vfsid(mq->pfg.fg_fid, &vfsid);
+	mp->rc = slfid_to_vfsid(mq->pfg.fg_fid, &vfsid);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 	if (mq->flags & SRM_LEASEBMAPF_GETREPLTBL)
@@ -670,7 +679,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	OPSTAT_INCR(SLM_OPST_READDIR);
 
-	mp->rc = mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid);
+	mp->rc = slfid_to_vfsid(mq->fg.fg_fid, &vfsid);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
@@ -688,7 +697,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	niov = 1;
 	if (mq->nstbpref) {
 		niov++;
-		iov[1].iov_len = mq->nstbpref * sizeof(struct srt_stat);
+		iov[1].iov_len = mq->nstbpref * sizeof(struct srt_readdir_ent);
 		iov[1].iov_base = PSCALLOC(iov[1].iov_len);
 	} else {
 		iov[1].iov_len = 0;
@@ -723,7 +732,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	{
 		/* debugging only */
 		unsigned int i;
-		struct srt_stat *attr;
+		struct srt_readdir_ent *attr;
 		attr = iov[1].iov_base;
 		for (i = 0; i < mq->nstbpref; i++, attr++) {
 			if (!attr->sst_fg.fg_fid)
@@ -740,7 +749,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 		size_t sz;
 
 		sz = MIN(mp->num, mq->nstbpref) *
-		    sizeof(struct srt_stat);
+		    sizeof(struct srt_readdir_ent);
 		memcpy(mp->ents, iov[1].iov_base, sz);
 		memcpy(mp->ents + sz, iov[0].iov_base, mp->size);
 		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
@@ -769,7 +778,7 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 
 	OPSTAT_INCR(SLM_OPST_READLINK);
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid);
+	mp->rc = slfid_to_vfsid(mq->fg.fg_fid, &vfsid);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
@@ -815,23 +824,18 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 
 	OPSTAT_INCR(SLM_OPST_RENAME);
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mdsio_fid_to_vfsid(mq->opfg.fg_fid, &vfsid) < 0) {
-		mp->rc = -EINVAL;
+	mp->rc = slfid_to_vfsid(mq->opfg.fg_fid, &vfsid);
+	if (mp->rc)
 		return (mp->rc);
-	}
 
 	if (mq->fromlen == 0 || mq->tolen == 0 ||
 	    mq->fromlen > SL_NAME_MAX ||
-	    mq->tolen   > SL_NAME_MAX) {
-		mp->rc = -EINVAL;
-		return (mp->rc);
-	}
+	    mq->tolen   > SL_NAME_MAX)
+		return (mp->rc = -EINVAL);
 
 	if (FID_GET_SITEID(mq->opfg.fg_fid) !=
-	    FID_GET_SITEID(mq->npfg.fg_fid)) {
-		mp->rc = -EXDEV;
-		return (mp->rc);
-	}
+	    FID_GET_SITEID(mq->npfg.fg_fid))
+		return (mp->rc = -EXDEV);
 
 	if (mq->fromlen + mq->tolen > SRM_RENAME_NAMEMAX) {
 		iov[0].iov_base = from;
@@ -913,7 +917,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 
 	OPSTAT_INCR(SLM_OPST_SETATTR);
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = mdsio_fid_to_vfsid(mq->attr.sst_fg.fg_fid, &vfsid);
+	mp->rc = slfid_to_vfsid(mq->attr.sst_fg.fg_fid, &vfsid);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
@@ -1015,12 +1019,11 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	if (mq->pol < 0 || mq->pol >= NBRPOL) {
-		mp->rc = -EINVAL;
-		return (0);
-	}
-	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid) < 0)
+	if (mq->pol < 0 || mq->pol >= NBRPOL)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
+	mp->rc = slfid_to_vfsid(mq->fg.fg_fid, &vfsid);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
 	if (vfsid != current_vfsid)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
@@ -1089,10 +1092,9 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 
 	OPSTAT_INCR(SLM_OPST_STATFS);
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mdsio_fid_to_vfsid(mq->fid, &vfsid) < 0) {
-		mp->rc = -EINVAL;
+	mp->rc = slfid_to_vfsid(mq->fid, &vfsid);
+	if (mp->rc)
 		return (0);
-	}
 	mp->rc = mdsio_statfs(vfsid, &sfb);
 	sl_externalize_statfs(&sfb, &mp->ssfb);
 	r = libsl_id2res(mq->iosid);
@@ -1143,10 +1145,9 @@ slm_symlink(struct pscrpc_request *rq, struct srm_symlink_req *mq,
 	slfid_t fid = 0;
 	int vfsid;
 
-	if (mdsio_fid_to_vfsid(mq->pfg.fg_fid, &vfsid) < 0) {
-		mp->rc = -EINVAL;
+	mp->rc = slfid_to_vfsid(mq->pfg.fg_fid, &vfsid);
+	if (mp->rc)
 		return (mp->rc);
-	}
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	if (mq->linklen == 0 || mq->linklen >= SL_PATH_MAX) {
@@ -1217,8 +1218,9 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	OPSTAT_INCR(SLM_OPST_UNLINK);
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->cattr.sst_fid = FID_ANY;
-	if (mdsio_fid_to_vfsid(mq->pfid, &vfsid) < 0)
-		PFL_GOTOERR(out, mp->rc = -EINVAL);
+	mp->rc = slfid_to_vfsid(mq->pfid, &vfsid);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
 
 	fg.fg_fid = mq->pfid;
 	fg.fg_gen = FGEN_ANY;
@@ -1277,8 +1279,9 @@ slm_rmc_handle_listxattr(struct pscrpc_request *rq)
 
 	iov.iov_base = NULL;
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid) < 0)
-		PFL_GOTOERR(out, mp->rc = -EINVAL);
+	mp->rc = slfid_to_vfsid(mq->fg.fg_fid, &vfsid);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
@@ -1326,8 +1329,9 @@ slm_rmc_handle_setxattr(struct pscrpc_request *rq)
 
 	OPSTAT_INCR(SLM_OPST_SETXATTR);
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid) < 0)
-		PFL_GOTOERR(out, mp->rc = -EINVAL);
+	mp->rc = slfid_to_vfsid(mq->fg.fg_fid, &vfsid);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
 	if (mq->namelen  > SL_NAME_MAX ||
 	    mq->valuelen > SL_NAME_MAX)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
@@ -1370,7 +1374,7 @@ slm_rmc_handle_getxattr(struct pscrpc_request *rq)
 
 	OPSTAT_INCR(SLM_OPST_GETXATTR);
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid);
+	mp->rc = slfid_to_vfsid(mq->fg.fg_fid, &vfsid);
 	if (mp->rc) {
 		if (mq->size)
 			abort_bulk = 1;
@@ -1420,8 +1424,9 @@ slm_rmc_handle_removexattr(struct pscrpc_request *rq)
 	int vfsid;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mdsio_fid_to_vfsid(mq->fg.fg_fid, &vfsid) < 0)
-		PFL_GOTOERR(out, mp->rc = -EINVAL);
+	mp->rc = slfid_to_vfsid(mq->fg.fg_fid, &vfsid);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
 	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
