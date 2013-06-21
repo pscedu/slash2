@@ -347,6 +347,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srt_bmapdesc);
 	PRTYPE(struct srt_bmapminseq);
 	PRTYPE(struct srt_creds);
+	PRTYPE(struct srt_readdir_ent);
 	PRTYPE(struct srt_reclaim_entry);
 	PRTYPE(struct srt_stat);
 	PRTYPE(struct srt_statfs);
