@@ -1368,6 +1368,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 
 	if (sstb.sst_size == 0) {
 		mds_release_file(handle);
+		psclog_warnx("Zero size reclaim log file, batchno=%"PRId64, batchno);
 		return (didwork);
 	}
 	reclaimbuf = PSCALLOC(sstb.sst_size);
@@ -1387,6 +1388,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 
 	if (version > 0 && size == entrysize) {
 		PSCFREE(reclaimbuf);
+		psclog_warnx("Empty reclaim log file, batchno=%"PRId64, batchno);
 		return (didwork);
 	}
 	/*
