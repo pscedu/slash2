@@ -2681,7 +2681,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	struct pscrpc_request *rq = NULL;
 	struct srm_listxattr_rep *mp = NULL;
 	struct srm_listxattr_req *mq;
-	struct fidc_membh *c = NULL;
+	struct fidc_membh *f = NULL;
 	struct pscfs_creds pcr;
 	struct iovec iov;
 	char *buf = NULL;
@@ -2693,7 +2693,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 
 	pscfs_getcreds(pfr, &pcr);
 
-	rc = msl_load_fcmh(pfr, inum, &c);
+	rc = msl_load_fcmh(pfr, inum, &f);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -2701,7 +2701,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 		buf = PSCALLOC(size);
 
  retry:
-	MSL_RMC_NEWREQ(pfr, c, csvc, SRMT_LISTXATTR, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(pfr, f, csvc, SRMT_LISTXATTR, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -2726,8 +2726,8 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
  out:
 	pscfs_reply_listxattr(pfr, buf, mp ? mp->size : 0, rc);
 
-	if (c)
-		fcmh_op_done(c);
+	if (f)
+		fcmh_op_done(f);
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
@@ -2743,7 +2743,7 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	struct pscrpc_request *rq = NULL;
 	struct srm_setxattr_rep *mp = NULL;
 	struct srm_setxattr_req *mq;
-	struct fidc_membh *c = NULL;
+	struct fidc_membh *f = NULL;
 	struct pscfs_creds pcr;
 	struct iovec iov;
 	int rc;
@@ -2756,12 +2756,12 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 		PFL_GOTOERR(out, rc = EINVAL);
 
 	pscfs_getcreds(pfr, &pcr);
-	rc = msl_load_fcmh(pfr, inum, &c);
+	rc = msl_load_fcmh(pfr, inum, &f);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
  retry:
-	MSL_RMC_NEWREQ(pfr, c, csvc, SRMT_SETXATTR, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(pfr, f, csvc, SRMT_SETXATTR, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -2786,8 +2786,8 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
  out:
 	pscfs_reply_setxattr(pfr, rc);
 
-	if (c)
-		fcmh_op_done(c);
+	if (f)
+		fcmh_op_done(f);
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
@@ -2802,7 +2802,7 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 	struct srm_getxattr_rep *mp = NULL;
 	struct srm_getxattr_req *mq;
 	struct pscrpc_request *rq = NULL;
-	struct fidc_membh *c = NULL;
+	struct fidc_membh *f = NULL;
 	struct pscfs_creds pcr;
 	struct iovec iov;
 	char *buf = NULL;
@@ -2816,7 +2816,7 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 
 	pscfs_getcreds(pfr, &pcr);
 
-	rc = msl_load_fcmh(pfr, inum, &c);
+	rc = msl_load_fcmh(pfr, inum, &f);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -2824,7 +2824,7 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 		buf = PSCALLOC(size);
 
  retry:
-	MSL_RMC_NEWREQ(pfr, c, csvc, SRMT_GETXATTR, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(pfr, f, csvc, SRMT_GETXATTR, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -2860,8 +2860,8 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 	}
 	pscfs_reply_getxattr(pfr, buf, mp ? mp->valuelen : 0, rc);
 
-	if (c)
-		fcmh_op_done(c);
+	if (f)
+		fcmh_op_done(f);
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
@@ -2878,7 +2878,7 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 	struct srm_removexattr_rep *mp = NULL;
 	struct srm_removexattr_req *mq;
 	struct pscrpc_request *rq = NULL;
-	struct fidc_membh *c = NULL;
+	struct fidc_membh *f = NULL;
 	struct pscfs_creds pcr;
 	int rc;
 
@@ -2888,12 +2888,12 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 
 	pscfs_getcreds(pfr, &pcr);
 
-	rc = msl_load_fcmh(pfr, inum, &c);
+	rc = msl_load_fcmh(pfr, inum, &f);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
  retry:
-	MSL_RMC_NEWREQ(pfr, c, csvc, SRMT_REMOVEXATTR, rq, mq, mp, rc);
+	MSL_RMC_NEWREQ(pfr, f, csvc, SRMT_REMOVEXATTR, rq, mq, mp, rc);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -2912,8 +2912,8 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
  out:
 	pscfs_reply_removexattr(pfr, rc);
 
-	if (c)
-		fcmh_op_done(c);
+	if (f)
+		fcmh_op_done(f);
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
