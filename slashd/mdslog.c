@@ -1521,6 +1521,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 				DYNARRAY_FOREACH(mn, j, &dst_resm->resm_nids)
 					psclog_diag("GC: failed to contact: %s; rc=%d",
 					    mn->resmnid_addrbuf, rc);
+				psc_assert(rc);
 				continue;
 			}
 			rc = SL_RSX_NEWREQ(csvc, SRMT_RECLAIM, rq, mq,
