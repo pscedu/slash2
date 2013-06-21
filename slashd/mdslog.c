@@ -975,12 +975,11 @@ mds_skip_reclaim_batch(uint batchno)
 	}
 	if (record)
 		mds_record_reclaim_prog();
-#if 0
+
 	if (didwork == nios) {
 		if (batchno >= 1)
 			mds_remove_logfile(batchno - 1, 0, 0);
 	}
-#endif
 
 }
 
