@@ -82,9 +82,9 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 
 	// XXX adjust for RPC overhead in metric?
 	if (mq->size < len || mq->size > LNET_MTU)
-		PFL_GOTOERR(out, rc = mp->rc = -EINVAL);
+		PFL_GOTOERR(out, rc = -EINVAL);
 	if (mq->count != mq->size / len)
-		PFL_GOTOERR(out, rc = mp->rc = -EINVAL);
+		PFL_GOTOERR(out, rc = -EINVAL);
 
 	xid = mq->xid;
 	batchno = mq->batchno;
@@ -99,14 +99,14 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	iov.iov_len = mq->size;
 	iov.iov_base = PSCALLOC(mq->size);
 
-	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, SRMM_BULK_PORTAL,
+	rc = rsx_bulkserver(rq, BULK_GET_SINK, SRMM_BULK_PORTAL,
 	    &iov, 1);
-	if (mp->rc)
-		PFL_GOTOERR(out, rc = mp->rc);
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
 	psc_crc64_calc(&crc, iov.iov_base, iov.iov_len);
 	if (crc != mq->crc)
-		PFL_GOTOERR(out, mp->rc = -EINVAL);
+		PFL_GOTOERR(out, rc = -EINVAL);
 
 	entryp = iov.iov_base;
 	for (i = 0; i < mq->count; i++) {
@@ -126,7 +126,6 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 			psclog_errorx("error reclaiming %s "
 			    "xid=%"PRId64" rc=%d",
 			    fidfn, entryp->xid, rc);
-//			mp->rc = -errno;
 		} else
 			psclog_info("reclaimed %s "
 			    "xid=%"PRId64" successfully",
