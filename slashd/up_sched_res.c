@@ -1112,7 +1112,7 @@ upsch_purge(slfid_t fid)
 
 	fg.fg_fid = fid;
 	fg.fg_gen = FGEN_ANY;
-	slm_fcmh_get(&fg, &f);
+	slm_fcmh_get_nolog(&fg, &f);
 	if (f)
 		FCMH_WAIT_BUSY(f);
 	av.f = f;
