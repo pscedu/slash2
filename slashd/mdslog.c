@@ -533,7 +533,9 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 		mds_release_file(reclaim_logfile_handle);
 
 		reclaim_logfile_handle = NULL;
+
 		current_reclaim_batchno++;
+		OPSTAT_INCR(SLM_OPST_RECLAIM_BATCHNO);
 
 		spinlock(&mds_distill_lock);
 		sync_reclaim_xid = pje->pje_xid;
@@ -1978,6 +1980,8 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	psc_assert(rc == 0);
 
 	current_reclaim_batchno = batchno;
+	OPSTAT_INCR(SLM_OPST_RECLAIM_BATCHNO);
+	OPSTAT_ASSIGN(SLM_OPST_RECLAIM_BATCHNO, batchno);
 
 	entrysize = RECLAIM_ENTRY_SIZE;
 	if (sstb.sst_size) {
