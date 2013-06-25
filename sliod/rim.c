@@ -106,7 +106,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 
 	psc_crc64_calc(&crc, iov.iov_base, iov.iov_len);
 	if (crc != mq->crc)
-		PFL_GOTOERR(out, rc = -EINVAL);
+		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
 	entryp = iov.iov_base;
 	for (i = 0; i < mq->count; i++) {
