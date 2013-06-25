@@ -54,7 +54,7 @@ struct psc_hashtbl	  fidcHtable;
 
 /**
  * fcmh_dtor - Destructor for FID cache member handles.
- * @r: fcmh being destroyed.
+ * @f: fcmh being destroyed.
  */
 void
 fcmh_destroy(struct fidc_membh *f)
@@ -82,7 +82,7 @@ fcmh_destroy(struct fidc_membh *f)
 /**
  * fcmh_setattrf - Update the high-level app stat(2)-like attribute
  *	buffer for a FID cache member.
- * @fcmh: FID cache member to update.
+ * @f: FID cache member to update.
  * @sstb: incoming stat attributes.
  * @flags: behavioral flags.
  * Notes:
@@ -92,21 +92,21 @@ fcmh_destroy(struct fidc_membh *f)
  *     (2) This function should only be used by a client.
  */
 void
-fcmh_setattrf(struct fidc_membh *fcmh, struct srt_stat *sstb, int flags)
+fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb, int flags)
 {
 	if (flags & FCMH_SETATTRF_HAVELOCK)
-		FCMH_LOCK_ENSURE(fcmh);
+		FCMH_LOCK_ENSURE(f);
 	else
-		FCMH_LOCK(fcmh);
+		FCMH_LOCK(f);
 
-	if (fcmh_2_gen(fcmh) == FGEN_ANY)
-	    fcmh_2_gen(fcmh) = sstb->sst_gen;
+	if (fcmh_2_gen(f) == FGEN_ANY)
+	    fcmh_2_gen(f) = sstb->sst_gen;
 
-	if (fcmh_2_fid(fcmh) != SLFID_ROOT &&
-	    fcmh_2_gen(fcmh) > sstb->sst_gen) {
-		DEBUG_FCMH(PLL_WARN, fcmh, "attempt to set attr with "
+	if (fcmh_2_fid(f) != SLFID_ROOT &&
+	    fcmh_2_gen(f) > sstb->sst_gen) {
+		DEBUG_FCMH(PLL_WARN, f, "attempt to set attr with "
 		    "gen %"PRIu64" from old gen %"PRIu64,
-		    fcmh_2_gen(fcmh), sstb->sst_gen);
+		    fcmh_2_gen(f), sstb->sst_gen);
 		goto out;
 	}
 
@@ -114,11 +114,11 @@ fcmh_setattrf(struct fidc_membh *fcmh, struct srt_stat *sstb, int flags)
 	 * If we don't have stat attributes, how can we save our local
 	 * updates?
 	 */
-	if ((fcmh->fcmh_flags & FCMH_HAVE_ATTRS) == 0)
+	if ((f->fcmh_flags & FCMH_HAVE_ATTRS) == 0)
 		flags &= ~FCMH_SETATTRF_SAVELOCAL;
 
 	psc_assert(sstb->sst_gen != FGEN_ANY);
-	psc_assert(fcmh->fcmh_fg.fg_fid == sstb->sst_fid);
+	psc_assert(f->fcmh_fg.fg_fid == sstb->sst_fid);
 
 	/*
 	 * If generation numbers match, take the highest of the values.
@@ -126,26 +126,26 @@ fcmh_setattrf(struct fidc_membh *fcmh, struct srt_stat *sstb, int flags)
 	 * the MDS tells us.
 	 */
 	if (flags & FCMH_SETATTRF_SAVELOCAL) {
-		if (fcmh_2_ptruncgen(fcmh) == sstb->sst_ptruncgen &&
-		    fcmh_2_gen(fcmh) == sstb->sst_gen &&
-		    fcmh_2_fsz(fcmh) > sstb->sst_size)
-			sstb->sst_size = fcmh_2_fsz(fcmh);
-		if (fcmh_2_utimgen(fcmh) == sstb->sst_utimgen)
-			sstb->sst_mtim = fcmh->fcmh_sstb.sst_mtim;
+		if (fcmh_2_ptruncgen(f) == sstb->sst_ptruncgen &&
+		    fcmh_2_gen(f) == sstb->sst_gen &&
+		    fcmh_2_fsz(f) > sstb->sst_size)
+			sstb->sst_size = fcmh_2_fsz(f);
+		if (fcmh_2_utimgen(f) == sstb->sst_utimgen)
+			sstb->sst_mtim = f->fcmh_sstb.sst_mtim;
 	}
 
-	COPY_SSTB(sstb, &fcmh->fcmh_sstb);
-	fcmh->fcmh_flags |= FCMH_HAVE_ATTRS;
-	fcmh->fcmh_flags &= ~FCMH_GETTING_ATTRS;
+	COPY_SSTB(sstb, &f->fcmh_sstb);
+	f->fcmh_flags |= FCMH_HAVE_ATTRS;
+	f->fcmh_flags &= ~FCMH_GETTING_ATTRS;
 
 	if (sl_fcmh_ops.sfop_postsetattr)
-		sl_fcmh_ops.sfop_postsetattr(fcmh);
+		sl_fcmh_ops.sfop_postsetattr(f);
 
-	DEBUG_FCMH(PLL_DEBUG, fcmh, "attr set");
+	DEBUG_FCMH(PLL_DEBUG, f, "attr set");
 
  out:
 	if (!(flags & FCMH_SETATTRF_HAVELOCK))
-		FCMH_ULOCK(fcmh);
+		FCMH_ULOCK(f);
 }
 
 /**
@@ -214,11 +214,11 @@ struct fidc_membh *
 _fidc_lookup_fg(const struct pfl_callerinfo *pci,
     const struct slash_fidgen *fg)
 {
-	struct fidc_membh *fcmhp;
+	struct fidc_membh *fp;
 	int rc;
 
-	rc = fidc_lookup(fg, 0, NULL, 0, &fcmhp);
-	return (rc == 0 ? fcmhp : NULL);
+	rc = fidc_lookup(fg, 0, NULL, 0, &fp);
+	return (rc == 0 ? fp : NULL);
 }
 
 /**
@@ -229,11 +229,11 @@ struct fidc_membh *
 _fidc_lookup_fid(const struct pfl_callerinfo *pci, slfid_t f)
 {
 	struct slash_fidgen t = { f, FGEN_ANY };
-	struct fidc_membh *fcmhp;
+	struct fidc_membh *fp;
 	int rc;
 
-	rc = fidc_lookup(&t, 0, NULL, 0, &fcmhp);
-	return (rc == 0 ? fcmhp : NULL);
+	rc = fidc_lookup(&t, 0, NULL, 0, &fp);
+	return (rc == 0 ? fp : NULL);
 }
 
 /**
@@ -245,7 +245,7 @@ _fidc_lookup_fid(const struct pfl_callerinfo *pci, slfid_t f)
  * @sstb: statbuf to use if populating a new entry.
  * @setattrflags: SETATTRF_* flags specifying which statbuf fields are
  *	valid.
- * @fcmhp: value-result fcmh return.
+ * @fp: value-result fcmh return.
  * @arg: argument to GETATTR.
  * Note:  Newly acquired fcmh's are ref'd with FCMH_OPCNT_NEW, reused
  *	ones are ref'd with FCMH_OPCNT_LOOKUP_FIDC.
@@ -254,7 +254,7 @@ _fidc_lookup_fid(const struct pfl_callerinfo *pci, slfid_t f)
 int
 _fidc_lookup(const struct pfl_callerinfo *pci,
     const struct slash_fidgen *fgp, int flags, struct srt_stat *sstb,
-    int setattrflags, struct fidc_membh **fcmhp, void *arg)
+    int setattrflags, struct fidc_membh **fp, void *arg)
 {
 	struct fidc_membh *tmp, *fcmh, *fcmh_new;
 	struct psc_hashbkt *b;
@@ -262,7 +262,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 
 	psclog_dbg("fidc_lookup called for fid "SLPRI_FID, fgp->fg_fid);
 
-	*fcmhp = NULL;
+	*fp = NULL;
 	fcmh_new = NULL; /* gcc */
 
 	/* sanity checks */
@@ -345,7 +345,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 			sl_fcmh_ops.sfop_modify(fcmh, fgp);
 
 		FCMH_ULOCK(fcmh);
-		*fcmhp = fcmh;
+		*fp = fcmh;
 		return (0);
 	}
 
@@ -439,7 +439,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 		fcmh->fcmh_flags |= FCMH_CAC_TOFREE;
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
 	} else {
-		*fcmhp = fcmh;
+		*fp = fcmh;
 		fcmh_op_start_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
 	}
