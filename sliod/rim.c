@@ -123,6 +123,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 		 */
 		OPSTAT_INCR(SLI_OPST_RECLAIM_FILE);
 		if (unlink(fidfn) == -1 && errno != ENOENT) {
+			mp->rc = -errno;
 			psclog_errorx("error reclaiming %s "
 			    "xid=%"PRId64" rc=%d",
 			    fidfn, entryp->xid, rc);
