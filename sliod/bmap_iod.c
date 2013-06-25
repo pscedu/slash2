@@ -76,7 +76,8 @@ bim_updateseq(uint64_t seq)
 	freelock(&bimSeq.bim_lock);
 
 	if (invalid)
-		psclog_notice("seq %"PRId64" is invalid (bim_minseq=%"PRId64")",
+		psclog_notice("seq %"PRId64" is invalid "
+		    "(bim_minseq=%"PRId64")",
 		    seq, bimSeq.bim_minseq);
 	return (invalid);
 }
@@ -84,10 +85,10 @@ bim_updateseq(uint64_t seq)
 uint64_t
 bim_getcurseq(void)
 {
+	uint64_t seqno = BMAPSEQ_ANY;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct timespec crtime;
-	uint64_t seqno = BMAPSEQ_ANY;
 
 	OPSTAT_INCR(SLI_OPST_GET_CUR_SEQ);
  retry:
