@@ -263,14 +263,14 @@ sli_fcmh_reopen(struct fidc_membh *f, const struct slash_fidgen *fg)
 }
 
 int
-sli_fcmh_ctor(struct fidc_membh *f)
+sli_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 {
 	int rc = 0;
 
 	if (f->fcmh_fg.fg_gen == FGEN_ANY) {
 		f->fcmh_flags |= FCMH_NO_BACKFILE;
 		DEBUG_FCMH(PLL_NOTICE, f, "refusing to open backing file "
-		   "with FGEN_ANY");
+		    "with FGEN_ANY");
 
 		/*
 		 * This is not an error, we just don't have enough info

@@ -74,7 +74,7 @@ slc_fcmh_refresh_age(struct fidc_membh *f)
 }
 
 int
-slc_fcmh_ctor(struct fidc_membh *f)
+slc_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 {
 	struct fcmh_cli_info *fci;
 	struct sl_resource *res;
