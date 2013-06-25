@@ -1518,8 +1518,10 @@ mds_send_batch_reclaim(uint64_t batchno)
 		DYNARRAY_FOREACH(dst_resm, i, &res->res_members) {
 			csvc = slm_geticsvcf(dst_resm, CSVCF_NONBLOCK |
 			    CSVCF_NORECON);
-			if (csvc == NULL)
+			if (csvc == NULL) {
+				rc = -ENOTCONN;
 				continue;
+			}
 			rc = SL_RSX_NEWREQ(csvc, SRMT_RECLAIM, rq, mq,
 			    mp);
 			if (rc) {
@@ -1552,9 +1554,15 @@ mds_send_batch_reclaim(uint64_t batchno)
 					iosinfo->si_batchno++;
 				break;
 			}
-			psclog_warnx("reclaim RPC failed: batchno=%"PRId64", dst=%s, rc=%d",
-			    batchno, dst_resm->resm_name, rc);
 		}
+		if (!rc) {
+			psclog_info("Reclaim RPC is sent: batchno=%"PRId64", dst=%s",
+			    batchno, res->res_name);
+			continue;
+		}
+
+		psclog_warnx("Failed to send reclaim RPC: batchno=%"PRId64", dst=%s, rc=%d",
+		    batchno, res->res_name, rc);
 	}
 
 	/*
