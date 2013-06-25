@@ -1327,7 +1327,7 @@ mds_open_cursor(void)
 int
 mds_send_batch_reclaim(uint64_t batchno)
 {
-	int i, j, ri, rc, len, count, nentry, total, nios, didwork = 0,
+	int i, ri, rc, len, count, nentry, total, nios, didwork = 0,
 	    record = 0, version;
 	struct srt_reclaim_entry *entryp, *next_entryp;
 	struct slashrpc_cservice *csvc;
@@ -1338,7 +1338,6 @@ mds_send_batch_reclaim(uint64_t batchno)
 	struct pscrpc_request *rq;
 	struct sl_resm *dst_resm;
 	struct sl_resource *res;
-	struct sl_resm_nid *mn;
 	struct srt_stat sstb;
 	struct iovec iov;
 	uint64_t xid;
