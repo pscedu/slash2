@@ -469,6 +469,7 @@ reimport
 - disallow certain operations such as rename(2) and unlink(2) on
   things in .slfidns/
 - getxattr(2) family should return ENOATTR/ENODATA
+- get rid of XCTL and reuse xattr interface with special .sl prefix
 
 - implement dedup in IOS with CRC checking and upsch?
 
