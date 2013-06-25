@@ -94,7 +94,7 @@ _mds_fcmh_setattr(int vfsid, struct fidc_membh *f, int to_set,
 }
 
 int
-slm_fcmh_ctor(struct fidc_membh *f)
+slm_fcmh_ctor(struct fidc_membh *f, int flags)
 {
 	struct fcmh_mds_info *fmi;
 	int rc, vfsid;
@@ -115,8 +115,9 @@ slm_fcmh_ctor(struct fidc_membh *f)
 	    &rootcreds, &f->fcmh_sstb, &fcmh_2_mdsio_fid(f));
 	if (rc) {
 		fmi->fmi_ctor_rc = rc;
-		DEBUG_FCMH(PLL_WARN, f,
-		    "mdsio_lookup_slfid failed (rc=%d)", rc);
+		if ((flags & FIDC_LOOKUP_NOLOG) == 0)
+			DEBUG_FCMH(PLL_WARN, f,
+			    "mdsio_lookup_slfid failed (rc=%d)", rc);
 		return (rc);
 	}
 

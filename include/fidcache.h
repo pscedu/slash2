@@ -46,7 +46,7 @@
 struct fidc_membh;
 
 struct sl_fcmh_ops {
-	int	(*sfop_ctor)(struct fidc_membh *);
+	int	(*sfop_ctor)(struct fidc_membh *, int);
 	void	(*sfop_dtor)(struct fidc_membh *);
 	int	(*sfop_getattr)(struct fidc_membh *, void *);
 	void	(*sfop_postsetattr)(struct fidc_membh *);
@@ -272,6 +272,7 @@ void	 fcmh_setattrf(struct fidc_membh *, struct srt_stat *, int);
 #define FIDC_LOOKUP_EXCL		(1 << 1)	/* Fail if fcmh is present		*/
 #define FIDC_LOOKUP_LOAD		(1 << 2)	/* Use external fetching mechanism	*/
 #define FIDC_LOOKUP_RLSBMAP		(1 << 3)	/* Release bmap on sliod		*/
+#define FIDC_LOOKUP_NOLOG		(1 << 4)
 
 #define fidc_lookup(fgp, lkfl, sstb, safl, fcmhp)			\
 	_fidc_lookup(PFL_CALLERINFOSS(SLSS_FCMH), (fgp), (lkfl),	\

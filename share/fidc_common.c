@@ -407,12 +407,12 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 		FCMH_LOCK(fcmh);
 		fcmh_setattrf(fcmh, sstb, setattrflags |
 		    FCMH_SETATTRF_HAVELOCK);
-		rc = sl_fcmh_ops.sfop_ctor(fcmh);
+		rc = sl_fcmh_ops.sfop_ctor(fcmh, flags);
 		if (rc)
 			fcmh->fcmh_flags |= FCMH_CTOR_FAILED;
 		goto finish;
 	} else {
-		rc = sl_fcmh_ops.sfop_ctor(fcmh);
+		rc = sl_fcmh_ops.sfop_ctor(fcmh, flags);
 		if (rc) {
 			fcmh->fcmh_flags |= FCMH_CTOR_FAILED;
 			goto finish;
