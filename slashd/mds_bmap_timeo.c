@@ -116,13 +116,13 @@ mds_bmap_timeotbl_getnextseq(void)
 }
 
 /**
- * mds_bmap_timeotbl_mdsi
+ * mds_bmap_timeotbl_mdsi - 
  * Returns bmapseqno.
  */
 uint64_t
 mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 {
-	uint64_t seq=0;
+	uint64_t seq = 0;
 
 	if (flags & BTE_DEL) {
 		bml->bml_flags &= ~BML_TIMEOQ;
@@ -131,20 +131,19 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 	}
 
 	if (flags & BTE_REATTACH) {
-		/* BTE_REATTACH is only called from startup context.
-		 */
+		/* BTE_REATTACH is only called from startup context. */
 		spinlock(&mdsBmapTimeoTbl.btt_lock);
 		if (mdsBmapTimeoTbl.btt_maxseq < bml->bml_seq)
-			/* A lease has been found in odtable whose
-			 *   issuance was after that of the last
-			 *   HWM journal entry.  (HWM's are journaled
-			 *   every BMAP_SEQLOG_FACTOR times.)
+			/*
+			 * A lease has been found in odtable whose
+			 * issuance was after that of the last HWM
+			 * journal entry.  (HWM's are journaled every
+			 * BMAP_SEQLOG_FACTOR times.)
 			 */
 			seq = mdsBmapTimeoTbl.btt_maxseq = bml->bml_seq;
 
 		else if (mdsBmapTimeoTbl.btt_minseq > bml->bml_seq)
-			/* This lease has already expired.
-			 */
+			/* This lease has already expired. */
 			seq = BMAPSEQ_ANY;
 		else
 			seq = bml->bml_seq;
@@ -206,8 +205,8 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 		}
 
 		DEBUG_BMAP(PLL_INFO, bml_2_bmap(bml),
-		   "nsecs=%d bml=%p fl=%d seq=%"
-		   PRId64, nsecs, bml, bml->bml_flags, bml->bml_seq);
+		    "nsecs=%d bml=%p fl=%d seq=%"
+		    PRId64, nsecs, bml, bml->bml_flags, bml->bml_seq);
 
 		sjbsq.sjbsq_high_wm = mdsBmapTimeoTbl.btt_maxseq;
 		if (bml->bml_seq < mdsBmapTimeoTbl.btt_minseq) {
@@ -230,8 +229,8 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 		rc = mds_bmap_bml_release(bml);
 		if (rc) {
 			DEBUG_BMAP(PLL_WARN, bml_2_bmap(bml),
-			   "rc=%d bml=%p fl=%d seq=%"PRId64,
-			   rc, bml, bml->bml_flags, bml->bml_seq);
+			    "rc=%d bml=%p fl=%d seq=%"PRId64,
+			    rc, bml, bml->bml_flags, bml->bml_seq);
 			nsecs = 1;
 		} else
 			nsecs = 0;
