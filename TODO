@@ -463,12 +463,9 @@ reimport
 - tuck reclaim/update logs in a subdir in .slmd
 - bump size of reclaim/update logs files to create less
     - 48K -> 1MB
-- xattrs are killing ls/readdir
 - either perform CRC checks on all RPCs in the SLRPC layer or none,
   fully relying on network transport ensuring integrity
-- disallow certain operations such as rename(2) and unlink(2) on
-  things in .slfidns/
-- getxattr(2) family should return ENOATTR/ENODATA
+- getxattr(2) family (e.g. zfsslash2_getxattr()) should return ENOATTR/ENODATA
 - get rid of XCTL and reuse xattr interface with special .sl prefix
 
 - implement dedup in IOS with CRC checking and upsch?
@@ -480,9 +477,6 @@ reimport
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
    (o) attr buf size needs be dynamically sized
-   (o) predictive/readahead async READDIR to make large directory
-       listings fast
-   (o) avoid last READDIR signifying EOF between CLI <-> MDS
 
 - wrapper scripts:
    - purge old corefiles
