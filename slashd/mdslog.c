@@ -524,6 +524,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 
 	spinlock(&mds_distill_lock);
 	current_reclaim_xid = pje->pje_xid;
+	OPSTAT_ASSIGN(SLM_OPST_RECLAIM_XID, current_reclaim_xid);
 	freelock(&mds_distill_lock);
 
 	reclaim_logfile_offset += current_reclaim_entrysize;
@@ -2032,7 +2033,10 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		PSCFREE(reclaimbuf);
 	}
 	current_reclaim_entrysize = entrysize;
+
 	current_reclaim_xid = last_reclaim_xid;
+	OPSTAT_INCR(SLM_OPST_RECLAIM_XID);
+	OPSTAT_ASSIGN(SLM_OPST_RECLAIM_XID, current_reclaim_xid);
 
 	last_distill_xid = last_reclaim_xid;
 
