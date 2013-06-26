@@ -1345,6 +1345,8 @@ mds_send_batch_reclaim(uint64_t batchno)
 	size_t size, entrysize;
 	void *handle, *reclaimbuf;
 
+	OPSTAT_ASSIGN(SLM_OPST_RECLAIM_CURSOR, batchno);
+
 	rc = mds_open_logfile(batchno, 0, 1, &handle);
 	if (rc) {
 		/*
@@ -1853,6 +1855,8 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	void *handle, *reclaimbuf = NULL;
 	char *jrnldev, fn[PATH_MAX];
 	size_t size, entrysize;
+
+	OPSTAT_INCR(SLM_OPST_RECLAIM_CURSOR);
 
 	psc_assert(_MDS_LOG_LAST_TYPE <= (1 << 15));
 	psc_assert(sizeof(struct srt_update_entry) == 512);
