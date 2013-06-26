@@ -1555,11 +1555,13 @@ mds_send_batch_reclaim(uint64_t batchno)
 			}
 		}
 		if (!rc) {
+			OPSTAT_INCR(SLM_OPST_RECLAIM_RPC_SEND);
 			psclog_info("Reclaim RPC is sent: batchno=%"PRId64", dst=%s",
 			    batchno, res->res_name);
 			continue;
 		}
 
+		OPSTAT_INCR(SLM_OPST_RECLAIM_RPC_FAIL);
 		psclog_warnx("Failed to send reclaim RPC: batchno=%"PRId64", dst=%s, rc=%d",
 		    batchno, res->res_name, rc);
 	}
