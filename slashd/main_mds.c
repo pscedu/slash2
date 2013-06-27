@@ -557,13 +557,22 @@ main(int argc, char *argv[])
 			psc_assert(!found);
 			found = 1;
 			current_vfsid = vfsid;
-			psclog_info("file system %s (id=%d) matches site ID %d",
-			    zfsMount[vfsid].name, vfsid, nodeSite->site_id);
+			psclog_info("file system %s (id=%d) "
+			    "matches site ID %d",
+			    zfsMount[vfsid].name, vfsid,
+			    nodeSite->site_id);
 		}
 	}
-	if (!found)
-		psc_fatalx("site id=%d doesn't match any file system",
+	if (!found) {
+		fprintf(stderr,
+		    "------------------------------------------------\n"
+		    "file systems available:\n");
+		for (vfsid = 0; vfsid < mount_index; vfsid++)
+			fprintf(stderr, "  file system %s (id=%d)\n",
+			    zfsMount[vfsid].name, vfsid);
+		errx(1, "site id=%d doesn't match any file system",
 		    nodeSite->site_id);
+	}
 
 	if (zfsMount[current_vfsid].uuid != globalConfig.gconf_fsuuid)
 		psc_fatalx("FSUUID do not match; "
