@@ -289,6 +289,8 @@ main(int argc, char *argv[])
 	psc_tiosthr_spawn(SLITHRT_TIOS, "slitiosthr");
 	slibmaprlsthr_spawn();
 
+	OPSTAT_INCR(SLI_OPST_MIN_SEQNO);
+
 	slictlthr_main(sfn);
 	/* NOTREACHED */
 }
