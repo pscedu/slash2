@@ -51,13 +51,33 @@
 static uint64_t	current_reclaim_xid;
 static uint64_t	current_reclaim_batchno;
 
-#if 0
 int
 sli_rim_handle_preclaim(struct pscrpc_request *rq)
 {
-	fallocate;
-}
+	int rc;
+
+	OPSTAT_INCR(SLI_OPST_HANDLE_PRECLAIM);
+	SL_RSX_ALLOCREP(rq, mq, mp);
+
+#ifdef HAVE_FALLOC_FL_PUNCH_HOLE
+	struct fidc_membh *f;
+
+	mp->rc = sli_fcmh_get(&mq->fg, &f);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
+
+	if (fallocate(fcmh_2_fd(f), HAVE_FALLOC_FL_PUNCH_HOLE, mq->off,
+	    mq->len) == -1)
+		mp->rc = -errno;
+
+	fcmh_op_done(f);
+
+ out:
+#else
+	mp->rc = -ENOTSUP;
 #endif
+	return (0);
+}
 
 /**
  * sli_rim_handle_reclaim - Handle RECLAIM RPC from the MDS as a result
@@ -197,9 +217,9 @@ sli_rim_handler(struct pscrpc_request *rq)
 		return (-ENOTSUP);
 		rc = sli_rim_handle_bmap_ptrunc(rq);
 		break;
-//	case SRMT_PRECLAIM:
-//		rc = sli_rim_handle_preclaim(rq);
-//		break;
+	case SRMT_PRECLAIM:
+		rc = sli_rim_handle_preclaim(rq);
+		break;
 	case SRMT_RECLAIM:
 		rc = sli_rim_handle_reclaim(rq);
 		break;

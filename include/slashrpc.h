@@ -183,7 +183,9 @@ enum {
 	SRMT_XCTL,				/* 47: ancillary operation */
 
 	/* import/export */
-	SRMT_IMPORT
+	SRMT_IMPORT,
+
+	SRMT_PRECLAIM
 };
 
 /* ----------------------------- BEGIN MESSAGES ----------------------------- */
