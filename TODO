@@ -42,7 +42,6 @@ until the window id for each bmpce is <= than the last processed bmpce window.
 	lack of flow control and aggressive read ahead.
 
 -----------------------------------------------------------------------
-- account metadata overhead in st_blocks?
 - there should be a slictl/msctl cmd to see other/aggr replicas:
 
 	(o) msctl -s repl-disk-usage:file[,...]
@@ -359,6 +358,12 @@ reimport
 
 - debug lnrtd
 - cluster_noshare replication changes
+   - use a random resm
+   - specify degree of multiresidy with
+
+       $ msctl -Q cluster@SITE=3:bnospec:file,
+
+     for 3 copies on the cluster
 
 - replay setattr (not result of SETATTR, but result of another action
   which indirectly issues setattr code) bugs:
@@ -367,11 +372,16 @@ reimport
 
 - watch out for EMFILE on freebsd
 - wolverine/single cpu missed wakeup
-- research holdup in fbsd zio_write_intr
-- file system-level replication controls, e.g.
+- file system-level and/or xattr replication controls, e.g.
 
-    $ cp myfile .sl/foo@BAR
-    $ cat .slrpl/myfile
+    $ cp myfile .slrpl/foo@BAR
+    $ ls .slrpl/myfile
+    foo@BAR
+    bar@FOO
+    $ rm .slrpl/myfile/foo@BAR
+
+    $ setfattr -n .slrpl-ios@SITE:4-8 myfile
+    $ getfattr myfile
 
 - kill -D argument; provide arg/slcfg var for authbuf key
 - add -d arg to daemons to stop daemonization and make that behavior
@@ -379,7 +389,6 @@ reimport
 - directory replica table inheritance, requires ondisk SLASH2 inode
   changes (for directories)
 - test msctl -Q <symlink>
-- journal log ino_repl_nblks modifications
 - fix sliod connection linger bug visible from slmctl
 - fix mount_slash multiple connection bug visible from slmctl
    (o) should be fixed by new connthr diff
@@ -401,9 +410,8 @@ reimport
 - umount /$mp doesn't seem to be killing mount_slash
 - UNLINK is very slow when interspersed with READDIR
 
-   fix round robin among senses when open(O_TRUNC) -- prefer old IOS
-   fix ios_nblks[idx] accounting on open(O_TRUNC)
-   advise upsch.db on SSD or tmpfs in docs
+- fix round robin among senses when open(O_TRUNC) -- prefer old IOS
+- advise upsch.db on SSD or tmpfs in docs
 - make cursor file contents ASCII for debugging
 - do journal logs for SETATTR factor in nlink, nblks, etc??
 - while :; do dmesg > file; done      produces lots of EBADMSG from sliod
@@ -437,7 +445,6 @@ reimport
   putting an item on the queue until it is flushable.  dd-test.sh can
   have thousands of pending biorqs.
 - remove syslog network traffic from psclog()
-- st_blocks is zero on some files
 - slm_ptrunc_wake_clients() may need to use rpcsets or nbreqsets to deal
   with large numbers of blocking clients.  Or, the algorithm should be
   modified so that the clients retry after some brief sleep period.  (I
@@ -452,8 +459,6 @@ reimport
 - ensure flush() wakeups are being called from failed/timedout RPC
   callbacks
 - import should utilize fallocate(2) where available
-- MDS bmap slivers don't seem to account correctly:
-    - create a 1GB file and tally up the contents and notice it doesn't sum to 1GB
 - because we use cryptography, rely less on peer IP addresses for
   authentication to allow clients behind internal networks
 - store sys/usr pri in upsch in odtable for rebuild purposes
@@ -468,11 +473,17 @@ reimport
 - getxattr(2) family (e.g. zfsslash2_getxattr()) should return ENOATTR/ENODATA
 - get rid of XCTL and reuse xattr interface with special .sl prefix
 
+st_blocks is broken
+- account metadata overhead in st_blocks?
+- MDS needs to account for ptrunc/trunc changes in st_blocks
+- fix ios_nblks[idx] accounting on open(O_TRUNC)
+- st_blocks is zero on some files
+- MDS bmap slivers don't seem to account correctly:
+    - create a 1GB file and tally up the contents and notice it doesn't sum to 1GB
+
 - implement dedup in IOS with CRC checking and upsch?
 
 - ask paul about difficulty of CRCs
-
-- amazon s3 api for sliod backend?
 
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
