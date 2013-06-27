@@ -29,11 +29,12 @@
 #include <errno.h>
 #include <stdio.h>
 
-#include "pfl/str.h"
 #include "pfl/rpc.h"
 #include "pfl/rpclog.h"
 #include "pfl/rsx.h"
 #include "pfl/service.h"
+#include "pfl/str.h"
+#include "pfl/time.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/lock.h"
 
@@ -67,11 +68,11 @@ sli_rim_handle_preclaim(struct pscrpc_request *rq)
 		mp->rc = sli_fcmh_get(&mq->fg, &f);
 		if (mp->rc)
 			PFL_GOTOERR(out, mp->rc);
-	
-		if (fallocate(fcmh_2_fd(f), HAVE_FALLOC_FL_PUNCH_HOLE, mq->off,
-	    	mq->len) == -1)
+
+		if (fallocate(fcmh_2_fd(f), HAVE_FALLOC_FL_PUNCH_HOLE,
+		    mq->off, mq->len) == -1)
 			mp->rc = -errno;
-	
+
 		fcmh_op_done(f);
 	}
 
@@ -96,6 +97,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	struct srt_reclaim_entry *entryp;
 	struct srm_reclaim_req *mq;
 	struct srm_reclaim_rep *mp;
+	struct timeval t0, t1, td;
 	struct iovec iov;
 
 	len = offsetof(struct srt_reclaim_entry, _pad);
@@ -118,6 +120,8 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 		    "%"PRId64, current_reclaim_batchno, batchno);
 		current_reclaim_batchno = batchno;
 	}
+
+	PFL_GETTIMEVAL(&t0);
 
 	iov.iov_len = mq->size;
 	iov.iov_base = PSCALLOC(mq->size);
@@ -157,6 +161,13 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 
 		entryp = PSC_AGP(entryp, len);
 	}
+	PFL_GETTIMEVAL(&t1);
+
+	timersub(&t1, &t0, &td);
+	psclogs_info(PSS_TMP,
+	    "reclaim processing took %ld.%03ld second(s)",
+	    (long)td.tv_sec, (long)td.tv_usec / 1000);
+
  out:
 	PSCFREE(iov.iov_base);
 	return (rc);
