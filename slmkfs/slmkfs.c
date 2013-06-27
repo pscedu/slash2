@@ -57,8 +57,8 @@ const char	*progname;
 int		 wipe;
 int		 ion;
 struct passwd	*pw;
-uint64_t         siteid = 0;
-uint64_t         fsuuid = 0;
+uint64_t         siteid;
+uint64_t         fsuuid;
 const char      *datadir = SL_PATH_DATA_DIR;
 
 struct psc_journal_cursor cursor;
@@ -309,7 +309,7 @@ int
 main(int argc, char *argv[])
 {
 	char *cfgfn = NULL, *endp;
-	int c;
+	int c, specsid = 0;
 
 	pfl_init();
 	progname = argv[0];
@@ -338,6 +338,7 @@ main(int argc, char *argv[])
 			if (siteid >= (1 << SLASH_FID_SITE_BITS))
 				errx(1, "%"PRIu64": SITEID too big",
 				    siteid);
+			specsid = 1;
 			break;
 		case 'W':
 			wipe = 1;
@@ -355,7 +356,9 @@ main(int argc, char *argv[])
 
 	/* on ION, we must specify a uuid */
 	if (ion && !fsuuid)
-		usage();
+		errx(1, "fsuuid must be specified for I/O servers");
+	if (!ion && !specsid)
+		errx(1, "site ID must be specified for MDS servers");
 
 	sl_getuserpwent(&pw);
 	if (pw == NULL)
