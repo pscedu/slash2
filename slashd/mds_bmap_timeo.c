@@ -31,6 +31,7 @@
 #include "psc_util/log.h"
 #include "psc_util/pool.h"
 #include "psc_util/waitq.h"
+#include "psc_util/ctlsvr.h"
 
 #include "bmap.h"
 #include "bmap_mds.h"
@@ -73,6 +74,8 @@ mds_bmap_setcurseq(uint64_t maxseq, uint64_t minseq)
 {
 	mdsBmapTimeoTbl.btt_maxseq = maxseq;
 	mdsBmapTimeoTbl.btt_minseq = minseq;
+	OPSTAT_ASSIGN(SLM_OPST_MAX_SEQNO, maxseq);
+	OPSTAT_ASSIGN(SLM_OPST_MIN_SEQNO, minseq);
 }
 
 int
@@ -103,6 +106,8 @@ mds_bmap_timeotbl_getnextseq(void)
 	mdsBmapTimeoTbl.btt_maxseq++;
 	if (mdsBmapTimeoTbl.btt_maxseq == BMAPSEQ_ANY)
 		mdsBmapTimeoTbl.btt_maxseq = 0;
+
+	OPSTAT_ASSIGN(SLM_OPST_MAX_SEQNO, mdsBmapTimeoTbl.btt_maxseq);
 
 	sjbsq.sjbsq_high_wm = mdsBmapTimeoTbl.btt_maxseq;
 	sjbsq.sjbsq_low_wm = mdsBmapTimeoTbl.btt_minseq;
@@ -217,9 +222,11 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 
 			sjbsq.sjbsq_low_wm =
 			    mdsBmapTimeoTbl.btt_minseq;
-		} else
+		} else {
 			sjbsq.sjbsq_low_wm =
 			    mdsBmapTimeoTbl.btt_minseq = bml->bml_seq;
+			OPSTAT_ASSIGN(SLM_OPST_MIN_SEQNO, bml->bml_seq);
+		}
 
 		BML_ULOCK(bml);
 		freelock(&mdsBmapTimeoTbl.btt_lock);
@@ -245,6 +252,8 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 void
 slmbmaptimeothr_spawn(void)
 {
+	OPSTAT_INCR(SLM_OPST_MIN_SEQNO);
+	OPSTAT_INCR(SLM_OPST_MAX_SEQNO);
 	pscthr_init(SLMTHRT_BMAPTIMEO, 0, slmbmaptimeothr_begin,
 	    NULL, 0, "slmbmaptimeothr");
 }
