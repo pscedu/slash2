@@ -569,6 +569,14 @@ struct srm_bmap_wake_req {
 
 /* ------------------------- BEGIN GARBAGE MESSAGES ------------------------- */
 
+struct srm_preclaim_req {
+	struct slash_fidgen	fg;
+	uint64_t		off;
+	uint64_t		len;
+};
+
+#define srm_preclaim_rep	srm_generic_rep
+
 struct srm_reclaim_req {
 	uint64_t		batchno;
 	uint64_t		xid;
