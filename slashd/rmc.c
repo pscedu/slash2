@@ -162,6 +162,10 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
+	/*
+	 * XXX we can cut this out and just lie and return
+	 * xattrsize with a nonzero value.
+	 */
 	zfsslash2_listxattr(vfsid, &rootcreds, NULL, 0, &xlen,
 	    fcmh_2_mdsio_fid(f));
 
