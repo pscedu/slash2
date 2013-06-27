@@ -568,8 +568,10 @@ main(int argc, char *argv[])
 		    "------------------------------------------------\n"
 		    "file systems available:\n");
 		for (vfsid = 0; vfsid < mount_index; vfsid++)
-			fprintf(stderr, "  file system %s (id=%d)\n",
-			    zfsMount[vfsid].name, vfsid);
+			fprintf(stderr,
+			    "  file system %3d: %s\tid=%"PRId64"\n",
+			    vfsid, zfsMount[vfsid].name,
+			    zfsMount[vfsid].siteid);
 		errx(1, "site id=%d doesn't match any file system",
 		    nodeSite->site_id);
 	}
