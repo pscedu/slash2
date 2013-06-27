@@ -230,6 +230,8 @@ mds_replay_ino(void *jent, int op)
 
 	/* It's possible this replay created this inode. */
 	ih = fcmh_2_inoh(f);
+
+	/* XXX ih is only set up for regular files */
 	INOH_LOCK(ih);
 
 	switch (op) {
