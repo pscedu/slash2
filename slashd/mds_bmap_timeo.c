@@ -27,11 +27,11 @@
 #include "pfl/dynarray.h"
 #include "pfl/list.h"
 #include "psc_util/alloc.h"
+#include "psc_util/ctlsvr.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 #include "psc_util/pool.h"
 #include "psc_util/waitq.h"
-#include "psc_util/ctlsvr.h"
 
 #include "bmap.h"
 #include "bmap_mds.h"
@@ -121,7 +121,7 @@ mds_bmap_timeotbl_getnextseq(void)
 }
 
 /**
- * mds_bmap_timeotbl_mdsi - 
+ * mds_bmap_timeotbl_mdsi -
  * Returns bmapseqno.
  */
 uint64_t
