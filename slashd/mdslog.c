@@ -1337,9 +1337,9 @@ mds_send_batch_reclaim(uint64_t batchno)
 	struct srm_reclaim_req *mq;
 	struct srm_reclaim_rep *mp;
 	struct pscrpc_request *rq;
-	struct sl_resm *dst_resm;
 	struct sl_resource *res;
 	struct srt_stat sstb;
+	struct sl_resm *m;
 	struct iovec iov;
 	uint64_t xid;
 	size_t size, entrysize;
@@ -1372,7 +1372,8 @@ mds_send_batch_reclaim(uint64_t batchno)
 
 	if (sstb.sst_size == 0) {
 		mds_release_file(handle);
-		psclog_warnx("Zero size reclaim log file, batchno=%"PRId64, batchno);
+		psclog_warnx("Zero size reclaim log file, "
+		    "batchno=%"PRId64, batchno);
 		return (didwork);
 	}
 	reclaimbuf = PSCALLOC(sstb.sst_size);
@@ -1392,7 +1393,8 @@ mds_send_batch_reclaim(uint64_t batchno)
 
 	if (version > 0 && size == entrysize) {
 		PSCFREE(reclaimbuf);
-		psclog_warnx("Empty reclaim log file, batchno=%"PRId64, batchno);
+		psclog_warnx("Empty reclaim log file, batchno=%"PRId64,
+		    batchno);
 		return (didwork);
 	}
 	/*
@@ -1437,6 +1439,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 		size -= sizeof(struct srt_reclaim_entry);
 	}
 
+	/* XXX use random order */
 	nios = 0;
 	SITE_FOREACH_RES(nodeSite, res, ri) {
 		if (!RES_ISFS(res))
@@ -1503,7 +1506,8 @@ mds_send_batch_reclaim(uint64_t batchno)
 				entryp = PSC_AGP(entryp, len);
 			} while (total);
 		} else
-			psclog_warnx("batch (%"PRId64") versus xids (%"PRId64":%"PRId64")",
+			psclog_warnx("batch (%"PRId64") versus xids "
+			    "(%"PRId64":%"PRId64")",
 			    batchno, iosinfo->si_xid, xid);
 
 		psc_assert(total);
@@ -1512,60 +1516,51 @@ mds_send_batch_reclaim(uint64_t batchno)
 		iov.iov_len = total;
 		iov.iov_base = entryp;
 
-		/*
-		 * Send RPC to the I/O server and wait for it to
-		 * complete.
-		 * XXX use random
-		 */
-		DYNARRAY_FOREACH(dst_resm, i, &res->res_members) {
-			csvc = slm_geticsvcf(dst_resm, CSVCF_NONBLOCK |
-			    CSVCF_NORECON);
-			if (csvc == NULL) {
-				rc = -ENOTCONN;
-				continue;
-			}
-			rc = SL_RSX_NEWREQ(csvc, SRMT_RECLAIM, rq, mq,
-			    mp);
-			if (rc) {
-				sl_csvc_decref(csvc);
-				continue;
-			}
-
-			mq->batchno = iosinfo->si_batchno;
-			mq->xid = xid;
-			mq->size = iov.iov_len;
-			mq->count = nentry;
-			psc_crc64_calc(&mq->crc, iov.iov_base,
-			    iov.iov_len);
-
-			rsx_bulkclient(rq, BULK_GET_SOURCE,
-			    SRMM_BULK_PORTAL, &iov, 1);
-
-			rc = SL_RSX_WAITREP(csvc, rq, mp);
-			if (rc == 0)
-				rc = mp->rc;
-
-			pscrpc_req_finished(rq);
-			rq = NULL;
+		/* XXX use async */
+		m = psc_dynarray_getpos(&res->res_members, 0);
+		csvc = slm_geticsvcf(m, CSVCF_NONBLOCK |
+		    CSVCF_NORECON);
+		if (csvc == NULL)
+			continue;
+		rc = SL_RSX_NEWREQ(csvc, SRMT_RECLAIM, rq, mq, mp);
+		if (rc) {
 			sl_csvc_decref(csvc);
-			if (rc == 0) {
-				record++;
-				didwork++;
-				iosinfo->si_xid = xid + 1;
-				if (count == SLM_RECLAIM_BATCH)
-					iosinfo->si_batchno++;
-				break;
-			}
+			goto fail;
 		}
-		if (!rc) {
+
+		mq->batchno = iosinfo->si_batchno;
+		mq->xid = xid;
+		mq->size = iov.iov_len;
+		mq->count = nentry;
+		psc_crc64_calc(&mq->crc, iov.iov_base, iov.iov_len);
+
+		rsx_bulkclient(rq, BULK_GET_SOURCE, SRMM_BULK_PORTAL,
+		    &iov, 1);
+
+		rc = SL_RSX_WAITREP(csvc, rq, mp);
+		if (rc == 0)
+			rc = mp->rc;
+
+		pscrpc_req_finished(rq);
+		sl_csvc_decref(csvc);
+
+		if (rc == 0) {
+			record++;
+			didwork++;
 			OPSTAT_INCR(SLM_OPST_RECLAIM_RPC_SEND);
-			psclog_info("Reclaim RPC is sent: batchno=%"PRId64", dst=%s",
+			iosinfo->si_xid = xid + 1;
+			if (count == SLM_RECLAIM_BATCH)
+				iosinfo->si_batchno++;
+			psclog_info("Reclaim RPC success: "
+			    "batchno=%"PRId64", dst=%s",
 			    batchno, res->res_name);
 			continue;
 		}
 
+ fail:
 		OPSTAT_INCR(SLM_OPST_RECLAIM_RPC_FAIL);
-		psclog_warnx("Failed to send reclaim RPC: batchno=%"PRId64", dst=%s, rc=%d",
+		psclog_warnx("Reclaim RPC failure: "
+		    "batchno=%"PRId64", dst=%s, rc=%d",
 		    batchno, res->res_name, rc);
 	}
 
@@ -1624,7 +1619,7 @@ slmjreclaimthr_main(__unusedx struct psc_thread *thr)
 			freelock(&mds_distill_lock);
 			didwork = mds_send_batch_reclaim(batchno);
 			batchno++;
-		} while (didwork && (mds_reclaim_hwm(1) >= batchno));
+		} while (didwork && mds_reclaim_hwm(1) >= batchno);
 
 		spinlock(&mds_reclaim_waitqlock);
 		psc_waitq_waitrel_s(&mds_reclaim_waitq,
@@ -1659,7 +1654,7 @@ slmjnsthr_main(__unusedx struct psc_thread *thr)
 			freelock(&mds_distill_lock);
 			didwork = mds_send_batch_update(batchno);
 			batchno++;
-		} while (didwork && (mds_update_hwm(1) >= batchno));
+		} while (didwork && mds_update_hwm(1) >= batchno);
 
 		spinlock(&mds_update_waitqlock);
 		psc_waitq_waitrel_s(&mds_update_waitq,
