@@ -300,7 +300,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-iW] [-c conf] [-D datadir] [-u fsuuid] fsroot\n",
+	    "usage: %s [-iW] [-c conf] [-D datadir] [-I siteid] [-u fsuuid] fsroot\n",
 	    progname);
 	exit(1);
 }
