@@ -98,13 +98,8 @@ struct dircache_ent {
 	int			 dce_hash;
 	int			 dce_namelen;
 	off_t			 dce_len;
-	int			 dce_flags;	/* see DCEF_* below */
 	const char		*dce_name;
 };
-
-/* dce_flags */
-#define DCEF_STALE		(1 << 0)	/* set on rename clobber or unlink */
-#define	DCEF_LOOKUP		(1 << 1)	/* item was accessed via lookup */
 
 /*
  * This is also a sort comparison.  We need dirent_cmp() and
@@ -137,12 +132,10 @@ dirent_sort_cmp(const void *x, const void *y)
 struct dircache_page *
 	dircache_new_page(struct fidc_membh *, size_t, off_t, void *);
 void	dircache_free_page(struct fidc_membh *, struct dircache_page *);
-void	dircache_init(struct fidc_membh *);
 slfid_t	dircache_lookup(struct fidc_membh *, const char *);
 void	dircache_mgr_init(void);
 void	dircache_purge(struct fidc_membh *);
 void	dircache_reg_ents(struct fidc_membh *, struct dircache_page *, size_t);
-void	dircache_register(struct dircache_page *, size_t);
 void	dircache_walk(struct fidc_membh *, void (*)(struct dircache_ent *, void *), void *);
 
 #endif /* _DIRCACHE_H_ */

@@ -196,9 +196,6 @@ dircache_lookup(struct fidc_membh *d, const char *name)
 			    dce->dce_namelen == dcent.dce_namelen &&
 			    strncmp(dce->dce_name, dcent.dce_name,
 			    dcent.dce_namelen) == 0) {
-				if (!(dce->dce_flags & DCEF_LOOKUP))
-					dce->dce_flags |= DCEF_LOOKUP;
-
 				ino = dirent->pfd_ino;
 				found = 1;
 				OPSTAT_INCR(SLC_OPST_DIRCACHE_HIT);
