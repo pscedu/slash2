@@ -120,6 +120,31 @@ mds_bmap_timeotbl_getnextseq(void)
 	return (sjbsq.sjbsq_high_wm);
 }
 
+void
+mds_bmap_timeotbl_remove(struct bmap_mds_lease *bml)
+{
+	int update = 0;
+	struct bmap_mds_lease *tmp;
+
+	spinlock(&mdsBmapTimeoTbl.btt_lock);
+	if (pll_peekhead(&mdsBmapTimeoTbl.btt_leases) == bml)
+		update = 1;
+	pll_remove(&mdsBmapTimeoTbl.btt_leases, bml);
+	if (update) {
+		tmp = pll_peekhead(&mdsBmapTimeoTbl.btt_leases);
+		if (tmp)
+			mdsBmapTimeoTbl.btt_minseq 
+			    = tmp->bml_seq;
+		else
+			mdsBmapTimeoTbl.btt_minseq 
+			    = mdsBmapTimeoTbl.btt_maxseq;
+		OPSTAT_ASSIGN(SLM_OPST_MIN_SEQNO, 
+		    mdsBmapTimeoTbl.btt_minseq);
+	}
+	freelock(&mdsBmapTimeoTbl.btt_lock);
+}
+
+
 /**
  * mds_bmap_timeotbl_mdsi -
  * Returns bmapseqno.
@@ -127,29 +152,11 @@ mds_bmap_timeotbl_getnextseq(void)
 uint64_t
 mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 {
-	int update = 0;
 	uint64_t seq = 0;
 
 	if (flags & BTE_DEL) {
 		bml->bml_flags &= ~BML_TIMEOQ;
-
-		spinlock(&mdsBmapTimeoTbl.btt_lock);
-		if (pll_peekhead(&mdsBmapTimeoTbl.btt_leases) == bml)
-			update = 1;
-		pll_remove(&mdsBmapTimeoTbl.btt_leases, bml);
-		if (update) {
-			bml = pll_peekhead(&mdsBmapTimeoTbl.btt_leases);
-			if (bml)
-				mdsBmapTimeoTbl.btt_minseq 
-				    = bml->bml_seq;
-			else
-				mdsBmapTimeoTbl.btt_minseq 
-				    = mdsBmapTimeoTbl.btt_maxseq;
-			OPSTAT_ASSIGN(SLM_OPST_MIN_SEQNO, 
-			    mdsBmapTimeoTbl.btt_minseq);
-		}
-		freelock(&mdsBmapTimeoTbl.btt_lock);
-
+		mds_bmap_timeotbl_remove(bml);
 		return (BMAPSEQ_ANY);
 	}
 
@@ -178,7 +185,7 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 
 	BML_LOCK(bml);
 	if (bml->bml_flags & BML_TIMEOQ) {
-		pll_remove(&mdsBmapTimeoTbl.btt_leases, bml);
+		mds_bmap_timeotbl_remove(bml);
 		pll_addtail(&mdsBmapTimeoTbl.btt_leases, bml);
 	} else {
 		bml->bml_flags |= BML_TIMEOQ;
