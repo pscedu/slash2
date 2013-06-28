@@ -2360,6 +2360,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			DEBUG_FCMH(PLL_DIAG, c,
 			   "full truncate, free bmaps");
 
+			OPSTAT_INCR(SLC_OPST_TRUNCATE_FULL);
 			bmap_free_all_locked(c);
 			FCMH_ULOCK(c);
 
@@ -2372,6 +2373,8 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 		} else {
 			uint32_t x = stb->st_size / SLASH_BMAP_SIZE;
+
+			OPSTAT_INCR(SLC_OPST_TRUNCATE_PART);
 
 			DEBUG_FCMH(PLL_INFO, c, "partial truncate");
 			/* Partial truncate.  Block and flush. */
