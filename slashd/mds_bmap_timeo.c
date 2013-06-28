@@ -127,11 +127,29 @@ mds_bmap_timeotbl_getnextseq(void)
 uint64_t
 mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 {
+	int update = 0;
 	uint64_t seq = 0;
 
 	if (flags & BTE_DEL) {
 		bml->bml_flags &= ~BML_TIMEOQ;
+
+		spinlock(&mdsBmapTimeoTbl.btt_lock);
+		if (pll_peekhead(&mdsBmapTimeoTbl.btt_leases) == bml)
+			update = 1;
 		pll_remove(&mdsBmapTimeoTbl.btt_leases, bml);
+		if (update) {
+			bml = pll_peekhead(&mdsBmapTimeoTbl.btt_leases);
+			if (bml)
+				mdsBmapTimeoTbl.btt_minseq 
+				    = bml->bml_seq;
+			else
+				mdsBmapTimeoTbl.btt_minseq 
+				    = mdsBmapTimeoTbl.btt_maxseq;
+			OPSTAT_ASSIGN(SLM_OPST_MIN_SEQNO, 
+			    mdsBmapTimeoTbl.btt_minseq);
+		}
+		freelock(&mdsBmapTimeoTbl.btt_lock);
+
 		return (BMAPSEQ_ANY);
 	}
 
@@ -225,7 +243,6 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 		} else {
 			sjbsq.sjbsq_low_wm =
 			    mdsBmapTimeoTbl.btt_minseq = bml->bml_seq;
-			OPSTAT_ASSIGN(SLM_OPST_MIN_SEQNO, bml->bml_seq);
 		}
 
 		BML_ULOCK(bml);
