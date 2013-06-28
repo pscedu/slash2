@@ -178,8 +178,8 @@ struct msl_fsrqinfo {
 	struct bmpc_ioreq		*mfsrq_biorq[MAX_BMAPS_REQ];
 	struct msl_fhent		*mfsrq_mfh;
 	char				*mfsrq_buf;
-	size_t				 mfsrq_size;
-	size_t				 mfsrq_len;	/* I/O result, must be accurate if no error */
+	size_t				 mfsrq_size;	/* incoming request size */
+	size_t				 mfsrq_len;	/* outgoing I/O result, must be accurate if no error */
 	off_t				 mfsrq_off;
 	int				 mfsrq_flags;
 	int				 mfsrq_err;

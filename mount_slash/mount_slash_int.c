@@ -2071,7 +2071,7 @@ msl_update_attributes(struct msl_fsrqinfo *q)
 	PFL_GETTIMESPEC(&ts);
 	f->fcmh_sstb.sst_mtime = ts.tv_sec;
 	f->fcmh_sstb.sst_mtime_ns = ts.tv_nsec;
-	if (q->mfsrq_off + (uint64_t)q->mfsrq_len > fcmh_2_fsz(f)) {
+	if (q->mfsrq_off + q->mfsrq_len > fcmh_2_fsz(f)) {
 		psclog_info("fid: "SLPRI_FID", "
 		    "size from %"PRId64" to %"PRId64,
 		    fcmh_2_fid(f), fcmh_2_fsz(f),
