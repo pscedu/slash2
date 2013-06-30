@@ -123,8 +123,8 @@ mds_bmap_timeotbl_getnextseq(void)
 void
 mds_bmap_timeotbl_remove(struct bmap_mds_lease *bml)
 {
-	int update = 0;
 	struct bmap_mds_lease *tmp;
+	int update = 0;
 
 	spinlock(&mdsBmapTimeoTbl.btt_lock);
 	if (pll_peekhead(&mdsBmapTimeoTbl.btt_leases) == bml)
@@ -133,12 +133,11 @@ mds_bmap_timeotbl_remove(struct bmap_mds_lease *bml)
 	if (update) {
 		tmp = pll_peekhead(&mdsBmapTimeoTbl.btt_leases);
 		if (tmp)
-			mdsBmapTimeoTbl.btt_minseq 
-			    = tmp->bml_seq;
+			mdsBmapTimeoTbl.btt_minseq = tmp->bml_seq;
 		else
-			mdsBmapTimeoTbl.btt_minseq 
-			    = mdsBmapTimeoTbl.btt_maxseq;
-		OPSTAT_ASSIGN(SLM_OPST_MIN_SEQNO, 
+			mdsBmapTimeoTbl.btt_minseq =
+			    mdsBmapTimeoTbl.btt_maxseq;
+		OPSTAT_ASSIGN(SLM_OPST_MIN_SEQNO,
 		    mdsBmapTimeoTbl.btt_minseq);
 	}
 	freelock(&mdsBmapTimeoTbl.btt_lock);
