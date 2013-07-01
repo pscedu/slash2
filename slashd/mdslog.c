@@ -1314,8 +1314,17 @@ mds_open_cursor(void)
 #endif
 
 	slm_set_curr_slashfid(mds_cursor.pjc_fid);
+
 	psclog_info("SLFID prior to replay="SLPRI_FID,
 	    mds_cursor.pjc_fid);
+
+	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm, mds_cursor.pjc_seqno_lwm);
+
+	psclog_info("Last bmap sequence number LWM prior to replay is %"PRId64,
+	    mds_cursor.pjc_seqno_lwm);
+	psclog_info("Last bmap sequence number HWM prior to replay is %"PRId64,
+	    mds_cursor.pjc_seqno_hwm);
+
 	tm = mds_cursor.pjc_timestamp;
 	ctime_r(&tm, tmbuf);
 	p = strchr(tmbuf, '\n');
@@ -1839,7 +1848,7 @@ mdslog_bmap_crc(void *datap, uint64_t txg, __unusedx int flag)
 void
 mds_journal_init(int disable_propagation, uint64_t fsuuid)
 {
-	uint64_t lwm, batchno, last_reclaim_xid = 0, last_update_xid = 0, last_distill_xid = 0;
+	uint64_t lwm, hwm, batchno, last_reclaim_xid = 0, last_update_xid = 0, last_distill_xid = 0;
 	int i, ri, rc, max, nios, count, stale, total, index, npeers;
 	struct srt_reclaim_entry *reclaim_entryp;
 	struct srt_update_entry *update_entryp;
@@ -2182,14 +2191,11 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	psclog_info("Last used SLASH2 transaction ID is %"PRId64,
 	   mdsJournal->pj_lastxid);
 
-	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm,
-	    mds_cursor.pjc_seqno_lwm);
-	psclog_info("Last bmap sequence number low water mark is %"PRIx64,
-	    mds_cursor.pjc_seqno_lwm);
-	psclog_info("Last bmap sequence number high water mark is %"PRIx64,
-	    mds_cursor.pjc_seqno_hwm);
-
 	psclog_info("The next FID will be %"PRId64, slm_get_curr_slashfid());
+
+	mds_bmap_getcurseq(&hwm, &lwm);
+	psclog_info("Last bmap sequence number LWM is %"PRId64, lwm);
+	psclog_info("Last bmap sequence number HWM is %"PRId64, hwm);
 
 	psclog_info("Journal UUID=%"PRIx64" MDS UUID=%"PRIx64,
 	    mdsJournal->pj_hdr->pjh_fsuuid, fsuuid);
