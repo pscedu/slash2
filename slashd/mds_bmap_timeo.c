@@ -95,11 +95,24 @@ mds_bmap_getcurseq(uint64_t *maxseq, uint64_t *minseq)
 	return (0);
 }
 
+inline void
+mds_bmap_timeotbl_journal_seqno(void)
+{
+	struct slmds_jent_bmapseq sjbsq;
+
+	sjbsq.sjbsq_high_wm = mdsBmapTimeoTbl.btt_maxseq;
+	sjbsq.sjbsq_low_wm = mdsBmapTimeoTbl.btt_minseq;
+
+	if (!(sjbsq.sjbsq_high_wm % BMAP_SEQLOG_FACTOR) ||
+	    !(sjbsq.sjbsq_low_wm % BMAP_SEQLOG_FACTOR))
+		mds_bmap_journal_bmapseq(&sjbsq);
+}
+
 uint64_t
 mds_bmap_timeotbl_getnextseq(void)
 {
-	struct slmds_jent_bmapseq sjbsq;
 	int locked;
+	uint64_t hwm;
 
 	locked = reqlock(&mdsBmapTimeoTbl.btt_lock);
 
@@ -107,17 +120,13 @@ mds_bmap_timeotbl_getnextseq(void)
 	if (mdsBmapTimeoTbl.btt_maxseq == BMAPSEQ_ANY)
 		mdsBmapTimeoTbl.btt_maxseq = 0;
 
+	hwm = mdsBmapTimeoTbl.btt_maxseq;
 	OPSTAT_ASSIGN(SLM_OPST_MAX_SEQNO, mdsBmapTimeoTbl.btt_maxseq);
-
-	sjbsq.sjbsq_high_wm = mdsBmapTimeoTbl.btt_maxseq;
-	sjbsq.sjbsq_low_wm = mdsBmapTimeoTbl.btt_minseq;
+	mds_bmap_timeotbl_journal_seqno();
 
 	ureqlock(&mdsBmapTimeoTbl.btt_lock, locked);
 
-	if (!(sjbsq.sjbsq_high_wm % BMAP_SEQLOG_FACTOR))
-		mds_bmap_journal_bmapseq(&sjbsq);
-
-	return (sjbsq.sjbsq_high_wm);
+	return (hwm);
 }
 
 void
@@ -139,6 +148,7 @@ mds_bmap_timeotbl_remove(struct bmap_mds_lease *bml)
 			    mdsBmapTimeoTbl.btt_maxseq;
 		OPSTAT_ASSIGN(SLM_OPST_MIN_SEQNO,
 		    mdsBmapTimeoTbl.btt_minseq);
+		mds_bmap_timeotbl_journal_seqno();
 	}
 	freelock(&mdsBmapTimeoTbl.btt_lock);
 }
@@ -198,7 +208,6 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 void
 slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 {
-	struct slmds_jent_bmapseq sjbsq;
 	struct bmap_mds_lease *bml;
 	int rc, nsecs = 0;
 
@@ -233,28 +242,8 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 			bml->bml_flags |= BML_FREEING;
 		}
 
-		DEBUG_BMAP(PLL_INFO, bml_2_bmap(bml),
-		    "nsecs=%d bml=%p fl=%d seq=%"
-		    PRId64, nsecs, bml, bml->bml_flags, bml->bml_seq);
-
-		sjbsq.sjbsq_high_wm = mdsBmapTimeoTbl.btt_maxseq;
-		if (bml->bml_seq < mdsBmapTimeoTbl.btt_minseq) {
-			psclog_notice("bml %p seq (%"PRIx64") is < "
-			    "mdsBmapTimeoTbl.btt_minseq (%"PRIx64")",
-			    bml, bml->bml_seq,
-			    mdsBmapTimeoTbl.btt_minseq);
-
-			sjbsq.sjbsq_low_wm =
-			    mdsBmapTimeoTbl.btt_minseq;
-		} else {
-			sjbsq.sjbsq_low_wm =
-			    mdsBmapTimeoTbl.btt_minseq = bml->bml_seq;
-		}
-
 		BML_ULOCK(bml);
 		freelock(&mdsBmapTimeoTbl.btt_lock);
-		/* Journal the new low watermark. */
-		mds_bmap_journal_bmapseq(&sjbsq);
 
 		rc = mds_bmap_bml_release(bml);
 		if (rc) {
