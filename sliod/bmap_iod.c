@@ -334,13 +334,14 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 	while (pscthr_run()) {
 		nrls = 0;
 
-		bii = lc_getwait(&bmapRlsQ);
 		if (lc_nitems(&bmapRlsQ) < MAX_BMAP_RELEASE)
-			/* Try to coalesce, wait for others.
-			 *   yes, this is a bit ugly.
+			/*
+			 * Try to coalesce, wait for others.
+			 * XXX use timed waitq
 			 */
 			sleep(SLIOD_BMAP_RLS_WAIT_SECS);
 
+		bii = lc_getwait(&bmapRlsQ);
 		do {
 			b = bii_2_bmap(bii);
 			BII_LOCK(bii);
@@ -371,8 +372,9 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 				psc_pool_return(bmap_rls_pool, brls);
 				i++;
 			}
-			/* The last entry (or entries) did not fit, so
-			 *    reschedule.
+			/*
+			 * The last entry (or entries) did not fit, so
+			 * reschedule.
 			 */
 			if (pll_nitems(&bii->bii_rls))
 				psc_dynarray_add(&a, bii);
@@ -396,7 +398,7 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 		/*
 		 * The system can tolerate the loss of these messages so
-		 *   errors here should not be considered fatal.
+		 * errors here should not be considered fatal.
 		 */
 		rc = sli_rmi_getcsvc(&csvc);
 		if (rc) {
