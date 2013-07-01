@@ -230,6 +230,8 @@ void	sli_aio_aiocbr_release(struct sli_aiocb_reply *);
 void	sli_aio_replreply_setup(struct sli_aiocb_reply *,
 	    struct pscrpc_request *, struct slvr_ref *, struct iovec *);
 
+int	slvr_buffer_reap(struct psc_poolmgr *);
+
 extern struct psc_listcache	lruSlvrs;
 extern struct psc_listcache	crcqSlvrs;
 extern struct psc_waitq		slvrWaitq;
