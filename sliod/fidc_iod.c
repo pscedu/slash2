@@ -105,7 +105,7 @@ sli_fg_makepath(const struct slash_fidgen *fg, char *fid_path)
 static int
 sli_open_backing_file(struct fidc_membh *f)
 {
-	int flags, incr, rc = 0;
+	int lvl = PLL_INFO, flags, incr, rc = 0;
 	char fidfn[PATH_MAX];
 
 	flags = O_CREAT | O_RDWR;
@@ -119,11 +119,13 @@ sli_open_backing_file(struct fidc_membh *f)
 		if (incr)
 			psc_rlim_adj(RLIMIT_NOFILE, -1);
 		OPSTAT_INCR(SLI_OPST_OPEN_FAIL);
+		if (rc != ENOENT ||
+		    (f->fcmh_flags & FCMH_CAC_RLSBMAP) == 0)
+			lvl = PLL_WARN;
 	} else
 		OPSTAT_INCR(SLI_OPST_OPEN_SUCCEED);
-	psclog(rc ? PLL_WARN : PLL_INFO, "opened backing file "
-	    "path=%s fd=%d rc=%d",
-	    strstr(fidfn, "fidns"), fcmh_2_fd(f), rc);
+	psclog(lvl, "opened backing file path=%s fd=%d rc=%d",
+	    strstr(fidfn, SL_RPATH_FIDNS_DIR), fcmh_2_fd(f), rc);
 	return (rc);
 }
 
