@@ -1431,7 +1431,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 		if (slvr_lru_slab_freeable(s)) {
 			/*
 			 * At this point we know that the slab can be
-			 * reclaimed, however the slvr itself may have
+			 * reclaimed; however the slvr itself may have
 			 * to stay.
 			 */
 			psc_dynarray_add(&a, s);
