@@ -654,8 +654,10 @@ msl_bmap_reap_init(struct bmapc_memb *b, const struct srt_bmapdesc *sbd)
 	bmap_op_start_type(b, BMAP_OPCNT_REAPER);
 
 	BMAP_URLOCK(b, locked);
-	/* Add ourselves here, otherwise zero length files
-	 *   will not be removed.
+
+	/*
+	 * Add ourselves here otherwise zero length files will not be
+	 * removed.
 	 */
 	lc_addtail(&bmapTimeoutQ, bci);
 }
