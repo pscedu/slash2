@@ -30,8 +30,8 @@
 #include "pfl/dynarray.h"
 #include "pfl/list.h"
 #include "pfl/listcache.h"
-#include "pfl/vbitmap.h"
 #include "pfl/rpc.h"
+#include "pfl/vbitmap.h"
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
@@ -41,6 +41,7 @@
 #include "cache_params.h"
 #include "fidcache.h"
 #include "sliod.h"
+#include "slvr.h"
 
 struct psc_poolmaster	 sl_bufs_poolmaster;
 struct psc_poolmgr	*sl_bufs_pool;
@@ -109,15 +110,13 @@ slibreapthr_main(__unusedx struct psc_thread *thr)
 		psc_mutex_lock(&sl_bufs_pool->ppm_reclaim_mutex);
 		sl_bufs_pool->ppm_reclaimcb(sl_bufs_pool);
 		psc_mutex_unlock(&sl_bufs_pool->ppm_reclaim_mutex);
-		sleep(30);
+		sleep(10);
 	}
 }
 
 void
 sl_buffer_cache_init(void)
 {
-	int slvr_buffer_reap(struct psc_poolmgr *);
-
 	psc_assert(SLB_SIZE <= LNET_MTU);
 
 	psc_poolmaster_init(&sl_bufs_poolmaster, struct sl_buffer,
