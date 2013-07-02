@@ -878,15 +878,14 @@ slcfg_add_include(const char *fn)
 void
 slcfg_peer2resm(struct sl_resource *r, struct sl_resource *peer)
 {
-	if (r->res_type ==
-	    SLREST_CLUSTER_NOSHARE_LFS)
+	if (r->res_type == SLREST_CLUSTER_NOSHARE_LFS)
 		psc_assert(peer->res_type == SLREST_STANDALONE_FS);
 
 	else if (r->res_type == SLREST_PARALLEL_LFS)
 		psc_assert(peer->res_type == SLREST_PARALLEL_COMPNT);
 
 	else
-		psc_fatalx("Invalid resource type");
+		psc_fatalx("invalid resource type");
 
 	psc_assert(psc_dynarray_len(&peer->res_members) == 1);
 
