@@ -199,13 +199,27 @@ slrpc_newreq(struct slashrpc_cservice *csvc, int op,
 void
 slrpc_req_out(struct slashrpc_cservice *csvc, struct pscrpc_request *rq)
 {
-#if 0
 	if (rq->rq_reqmsg->opc == SRMT_CONNECT) {
-		struct srm_connect_req *mq = *(void **)mqp;
+		struct srm_connect_req *mq;
+		struct pscrpc_msg *m;
+
+		m = rq->rq_reqmsg;
+		if (m == NULL) {
+			DEBUG_REQ(PLL_ERROR, rq, "unable to export fsuuid");
+			return;
+		}
+		if (m->bufcount < 1) {
+			DEBUG_REQ(PLL_ERROR, rq, "unable to export fsuuid");
+			return;
+		}
+		mq = pscrpc_msg_buf(m, 0, sizeof(*mq));
+		if (mq == NULL) {
+			DEBUG_REQ(PLL_ERROR, rq, "unable to export fsuuid");
+			return;
+		}
 
 		mq->fsuuid = zfsMount[current_vfsid].uuid;
 	}
-#endif
 	if (csvc->csvc_peertype == SLCONNT_IOD)
 		slm_rpc_ion_pack_bmapminseq(rq->rq_reqmsg);
 }
