@@ -421,7 +421,6 @@ reimport
 - extattr are broke
 - ENOENT on GETATTR and REPL_RQ_ADD produce ERANGE
 - msl timeout change no longer waits when server offline, EIO immediately
-- convert bmpc_new_biorqs to a tree to cut out pll_add_sorted() CPU
 - client should not psclog ERRORs from SLERR_AIOWAIT on WRITE/READ RPC
 - parse /proc/mounts if it's there for sliod statfs f_fstype
 - during upsch repl PAGEIN, do we do two SQL, one for loading the work
