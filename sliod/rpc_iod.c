@@ -264,12 +264,9 @@ slrpc_req_in(struct pscrpc_request *rq)
 {
 	if (rq->rq_rqbd->rqbd_service == sli_rim_svc.svh_service) {
 		sli_rpc_mds_unpack_bminseq(rq, PSCRPC_MSG_REQUEST);
-#if 0
-		/* See slrpc_req_out() */
 		if (rq->rq_reqmsg->opc == SRMT_CONNECT)
 			sli_rpc_mds_unpack_fsuuid(rq,
 			    PSCRPC_MSG_REQUEST);
-#endif
 		sli_rpc_mds_pack_statfs(rq->rq_repmsg);
 	}
 }
