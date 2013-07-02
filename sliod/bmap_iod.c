@@ -67,7 +67,9 @@ bim_updateseq(uint64_t seq)
 		OPSTAT_ASSIGN(SLI_OPST_MIN_SEQNO, seq);
 		psclog_info("update min seq to %"PRId64, seq);
 		PFL_GETTIMESPEC(&bimSeq.bim_age);
-	} else
+	} else if (seq >= bimSeq.bim_minseq - BMAP_SEQLOG_FACTOR)
+		OPSTAT_INCR(SLI_OPST_SEQNO_IGNORE);
+	else
 		/*
 		 * XXX: If an MDS restarts, we will return 1 and cause
 		 * our caller to retry again.
