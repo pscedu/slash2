@@ -82,6 +82,9 @@ bim_updateseq(uint64_t seq)
 		 * a MDS restart.  Otherwise, the client would have to
 		 * keep trying with a new lease for a while depending on 
 		 * the size of the gap.
+		 *
+		 * To deal out-of-order RPCs, we may need to number our RPCs.
+		 * It is probably not worth the effort in our use cases.
 		 */
 		psclog_warnx("seq reduced from %"PRId64" to %"PRId64,
 		    bimSeq.bim_minseq, seq);
