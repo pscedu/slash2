@@ -98,13 +98,14 @@ mds_bmap_getcurseq(uint64_t *maxseq, uint64_t *minseq)
 inline void
 mds_bmap_timeotbl_journal_seqno(void)
 {
+	static int log = 0;
 	struct slmds_jent_bmapseq sjbsq;
 
 	sjbsq.sjbsq_high_wm = mdsBmapTimeoTbl.btt_maxseq;
 	sjbsq.sjbsq_low_wm = mdsBmapTimeoTbl.btt_minseq;
 
-	if (!(sjbsq.sjbsq_high_wm % BMAP_SEQLOG_FACTOR) ||
-	    !(sjbsq.sjbsq_low_wm % BMAP_SEQLOG_FACTOR))
+	log++;
+	if (!(log % BMAP_SEQLOG_FACTOR))
 		mds_bmap_journal_bmapseq(&sjbsq);
 }
 
