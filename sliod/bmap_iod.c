@@ -61,25 +61,47 @@ bim_updateseq(uint64_t seq)
 
 	spinlock(&bimSeq.bim_lock);
 
-	if (bimSeq.bim_minseq == BMAPSEQ_ANY ||
-	    (seq >= bimSeq.bim_minseq && seq != BMAPSEQ_ANY)) {
+	if (seq == BMAPSEQ_ANY) {
+		invalid = 1;
+		goto done;
+	}
+ 	if (seq == bimSeq.bim_minseq)
+		goto done;
+
+	if ((seq > bimSeq.bim_minseq) || (bimSeq.bim_minseq == BMAPSEQ_ANY)) {
 		bimSeq.bim_minseq = seq;
 		OPSTAT_ASSIGN(SLI_OPST_MIN_SEQNO, seq);
 		psclog_info("update min seq to %"PRId64, seq);
 		PFL_GETTIMESPEC(&bimSeq.bim_age);
-	} else if (seq >= bimSeq.bim_minseq - BMAP_SEQLOG_FACTOR)
-		OPSTAT_INCR(SLI_OPST_SEQNO_IGNORE);
-	else
+		goto done;
+	}
+
+	if (seq >= bimSeq.bim_minseq - BMAP_SEQLOG_FACTOR) {
 		/*
-		 * XXX: If an MDS restarts, we will return 1 and cause
-		 * our caller to retry again.
+		 * This allows newly-acquired leases to be accepted after
+		 * a MDS restart.  Otherwise, the client would have to
+		 * keep trying with a new lease for a while depending on 
+		 * the size of the gap.
 		 */
-		invalid = 1;
+		psclog_warnx("seq reduced from %"PRId64" to %"PRId64,
+		    bimSeq.bim_minseq, seq);
+		bimSeq.bim_minseq = seq;
+		OPSTAT_INCR(SLI_OPST_SEQNO_REDUCE);
+		goto done;
+	}
+
+	/*
+	 * This should never happen. Complain and ask 
+	 * our caller to retry again.
+	 */
+	invalid = 1;
+
+ done:
 
 	freelock(&bimSeq.bim_lock);
 
 	if (invalid)
-		psclog_notice("seq %"PRId64" is invalid "
+		psclog_warnx("Incoming seq %"PRId64" is invalid "
 		    "(bim_minseq=%"PRId64")",
 		    seq, bimSeq.bim_minseq);
 	return (invalid);
