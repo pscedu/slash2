@@ -66,6 +66,8 @@ struct bmap_core_state {
 	uint8_t			bcs_repls[SL_REPLICA_NBYTES];
 };
 
+#define BMAP_SEQLOG_FACTOR	100
+
 /**
  * bmap_extra_state - Additional fields needed by MDS.
  * @bes_crcs: the CRC table, one 8-byte CRC per sliver.
