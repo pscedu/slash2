@@ -126,7 +126,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	iov.iov_len = mq->size;
 	iov.iov_base = PSCALLOC(mq->size);
 
-	rc = rsx_bulkserver(rq, BULK_GET_SINK, SRMM_BULK_PORTAL,
+	rc = rsx_bulkserver(rq, BULK_GET_SINK, SRIM_BULK_PORTAL,
 	    &iov, 1);
 	if (rc)
 		PFL_GOTOERR(out, rc);
