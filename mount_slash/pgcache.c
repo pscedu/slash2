@@ -348,12 +348,16 @@ bmpc_biorqs_fail(struct bmap_pagecache *bmpc, int err)
 void
 bmpc_biorqs_destroy(struct bmap_pagecache *bmpc, int rc)
 {
-	struct bmpc_ioreq *r, *tmp;
+	int i;
+	struct bmpc_ioreq *r;
+	struct psc_dynarray a = DYNARRAY_INIT;
 
-	for (r = SPLAY_MIN(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs); r;
-	    r = tmp) {
-		tmp = SPLAY_NEXT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
+	BMPC_LOCK(bmpc);
+	SPLAY_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_new_biorqs)
+		psc_dynarray_add(&a, r);
+	BMPC_ULOCK(bmpc);
 
+	DYNARRAY_FOREACH(r, i, &a) {
 		BIORQ_LOCK(r);
 		if (!(r->biorq_flags & BIORQ_FLUSHRDY)) {
 			BIORQ_ULOCK(r);
@@ -363,6 +367,7 @@ bmpc_biorqs_destroy(struct bmap_pagecache *bmpc, int rc)
 		msl_bmpces_fail(r, rc);
 		msl_biorq_destroy(r);
 	}
+	psc_dynarray_free(&a);
 }
 
 /**

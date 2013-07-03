@@ -1103,10 +1103,7 @@ bmap_flush(void)
 		if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED) {
 			BMAP_ULOCK(b);
 
-			BMPC_LOCK(bmpc);
-			bmpc_biorqs_destroy(bmpc,
-			    bmap_2_bci(b)->bci_error);
-			BMPC_ULOCK(bmpc);
+			bmpc_biorqs_destroy(bmpc, bmap_2_bci(b)->bci_error);
 			continue;
 		}
 		BMAP_ULOCK(b);
