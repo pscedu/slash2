@@ -514,6 +514,18 @@ sliriithr_get(struct psc_thread *thr, struct psc_ctlmsg_thread *pcst)
 	pcst->pcst_nread = sliriithr(thr)->sirit_st_nread;
 }
 
+void
+slictlparam_reclaim_xid_get(char *val)
+{
+	snprintf(val, PCP_VALUE_MAX, "%"PRIu64, current_reclaim_xid);
+}
+
+void
+slictlparam_reclaim_batchno_get(char *val)
+{
+	snprintf(val, PCP_VALUE_MAX, "%"PRIu64, current_reclaim_batchno);
+}
+
 struct psc_ctlop slictlops[] = {
 	PSC_CTLDEFOPS,
 	{ slictlrep_getreplwkst,	sizeof(struct slictlmsg_replwkst ) },
@@ -560,6 +572,10 @@ slictlthr_main(const char *fn)
 
 	psc_ctlparam_register_simple("version", slctlparam_version_get,
 	    NULL);
+	psc_ctlparam_register_simple("reclaim.xid",
+	    slictlparam_reclaim_xid_get, NULL);
+	psc_ctlparam_register_simple("reclaim.batchno",
+	    slictlparam_reclaim_batchno_get, NULL);
 
 	psc_ctlthr_main(fn, slictlops, nitems(slictlops), SLITHRT_CTLAC);
 }

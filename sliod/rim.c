@@ -49,38 +49,57 @@
 #include "slerr.h"
 #include "sliod.h"
 
-static uint64_t	current_reclaim_xid;
-static uint64_t	current_reclaim_batchno;
+uint64_t	current_reclaim_xid;
+uint64_t	current_reclaim_batchno;
 
 int
 sli_rim_handle_preclaim(struct pscrpc_request *rq)
 {
 	struct srm_preclaim_req *mq;
 	struct srm_preclaim_rep *mp;
+	struct srt_preclaim_ent *pe;
+	int rc, i;
 
 	OPSTAT_INCR(SLI_OPST_HANDLE_PRECLAIM);
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 #ifdef HAVE_FALLOC_FL_PUNCH_HOLE
 	{
-		struct fidc_membh *f;
+		struct iovec iov;
 
-		mp->rc = sli_fcmh_get(&mq->fg, &f);
-		if (mp->rc)
-			PFL_GOTOERR(out, mp->rc);
+		iov.iov_len = mq->nents * sizeof(*pe);
+		iov.iov_base = PSCALLOC(iov.iov_len);
 
-		if (fallocate(fcmh_2_fd(f), HAVE_FALLOC_FL_PUNCH_HOLE,
-		    mq->off, mq->len) == -1)
-			mp->rc = -errno;
+		rc = rsx_bulkserver(rq, BULK_GET_SINK, SRIM_BULK_PORTAL,
+		    &iov, 1);
+		if (rc)
+			PFL_GOTOERR(out, rc);
 
-		fcmh_op_done(f);
+		for (pe = buf, i = 0; i < mq->nents; pe++) {
+			struct fidc_membh *f;
+
+			mp->rc = sli_fcmh_get(&mq->fg, &f);
+			if (mp->rc)
+				PFL_GOTOERR(out, mp->rc);
+
+			/* XXX clear out sliver pages in memory */
+
+			/* XXX lock */
+			if (fallocate(fcmh_2_fd(f),
+			    HAVE_FALLOC_FL_PUNCH_HOLE, pe->off,
+			    pe->len) == -1)
+				mp->rc = -errno;
+
+			fcmh_op_done(f);
+		}
 	}
 
  out:
+	PSCFREE(buf);
 #else
-	mp->rc = -ENOTSUP;
+	rc = -ENOTSUP;
 #endif
-	return (0);
+	return (rc);
 }
 
 /**

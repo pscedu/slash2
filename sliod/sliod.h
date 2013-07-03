@@ -144,4 +144,7 @@ extern struct srt_statfs	 sli_ssfb;
 extern psc_spinlock_t		 sli_ssfb_lock;
 extern struct psc_thread	*sliconnthr;
 
+extern uint64_t			 current_reclaim_xid;
+extern uint64_t			 current_reclaim_batchno;
+
 #endif /* _SLIOD_H_ */
