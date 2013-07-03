@@ -471,6 +471,8 @@ reimport
   fully relying on network transport ensuring integrity
 - getxattr(2) family (e.g. zfsslash2_getxattr()) should return ENOATTR/ENODATA
 - get rid of XCTL and reuse xattr interface with special .sl prefix
+- have sliod persistently track CRC updates in case of failure
+- use bgen to prune batch PRECLAIM
 
 st_blocks is broken
 - account metadata overhead in st_blocks?
