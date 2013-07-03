@@ -57,7 +57,6 @@ struct slm_update_data {
 /* upd_type */
 enum {
 	UPDT_BMAP,
-	UPDT_GARBAGE,
 	UPDT_HLDROP,
 	UPDT_PAGEIN,
 	UPDT_PAGEIN_UNIT

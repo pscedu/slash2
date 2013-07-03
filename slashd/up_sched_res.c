@@ -539,12 +539,6 @@ slmupschedthr_tryptrunc(struct slm_update_data *upd,
 }
 
 void
-upd_proc_garbage(__unusedx struct slm_update_data *tupd)
-{
-	psc_fatal("no");
-}
-
-void
 upd_proc_hldrop(struct slm_update_data *tupd)
 {
 	int rc, tract[NBREPLST], retifset[NBREPLST], iosidx;
@@ -1222,7 +1216,6 @@ dump_upd(struct slm_update_data *upd)
 
 void (*upd_proctab[])(struct slm_update_data *) = {
 	upd_proc_bmap,
-	upd_proc_garbage,
 	upd_proc_hldrop,
 	upd_proc_pagein,
 	upd_proc_pagein_unit
