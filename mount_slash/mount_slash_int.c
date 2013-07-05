@@ -641,6 +641,8 @@ msl_req_aio_add(struct pscrpc_request *rq,
 	m = libsl_nid2resm(rq->rq_peer.nid);
 
 	car = psc_pool_get(slc_async_req_pool);
+	memset(car, 0, sizeof(*car));
+	INIT_LISTENTRY(&car->car_lentry);
 	car->car_id = mp->id;
 	car->car_cbf = cbf;
 
