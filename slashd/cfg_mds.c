@@ -40,6 +40,8 @@ slcfg_init_res(struct sl_resource *res)
 	struct sl_mds_iosinfo *si;
 
 	rpmi = res2rpmi(res);
+	lc_reginit(&rpmi->rpmi_batchrqs, struct pscrpc_request,
+	    rq_lentry, "bchrq-%s", res->res_name);
 	psc_mutex_init(&rpmi->rpmi_mutex);
 	psc_waitq_init(&rpmi->rpmi_waitq);
 
@@ -55,7 +57,7 @@ slcfg_init_res(struct sl_resource *res)
 		psc_meter_init(&si->si_batchmeter, 0, "reclaim-%s",
 		    res->res_name);
 		si->si_batchmeter.pm_maxp = &current_reclaim_batchno;
-		if (res->res_flags & CFGF_DISABLE_BIA)
+		if (res->res_flags & RESF_DISABLE_BIA)
 			si->si_flags |= SIF_DISABLE_BIA;
 	}
 }
@@ -67,7 +69,6 @@ slcfg_init_resm(struct sl_resm *resm)
 
 	rmmi = resm2rmmi(resm);
 	atomic_set(&rmmi->rmmi_refcnt, 0);
-	rmmi->rmmi_resm = resm;
 }
 
 __static void
