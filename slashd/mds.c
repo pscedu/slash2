@@ -22,13 +22,14 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#include "pfl/export.h"
 #include "pfl/fs.h"
 #include "pfl/hashtbl.h"
 #include "pfl/lockedlist.h"
+#include "pfl/rpclog.h"
+#include "pfl/rsx.h"
 #include "pfl/tree.h"
 #include "pfl/treeutil.h"
-#include "pfl/export.h"
-#include "pfl/rsx.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/ctlsvr.h"
@@ -264,7 +265,7 @@ mds_sliod_alive(void *arg)
  *	reassigment requests by the client).
  * @nprev_ios: size of the list.
  * Notes:  Because of logical I/O systems like CNOS, we use
- *	'resm->resm_res->res_id' versus 'res->res_id', since the former
+ *	'resm->resm_res_id' instead of 'res->res_id' since the former
  *	points at the real resm's identifier not the logical identifier.
  */
 __static int
@@ -527,7 +528,7 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	 * so that the assignment may be restored on reboot.
 	 */
 	memset(&bia, 0, sizeof(bia));
-	bia.bia_ios = bml->bml_ios = rmmi->rmmi_resm->resm_res->res_id;
+	bia.bia_ios = bml->bml_ios = rmmi2resm(rmmi)->resm_res_id;
 	bia.bia_lastcli = bml->bml_cli_nidpid;
 	bia.bia_fid = fcmh_2_fid(b->bcm_fcmh);
 	bia.bia_seq = bmi->bmi_seq = mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
@@ -1428,12 +1429,12 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 	psc_assert(bmi);
 
 	if (!bmi->bmi_wr_ion ||
-	    ios != bmi->bmi_wr_ion->rmmi_resm->resm_res_id) {
+	    ios != rmmi2resm(bmi->bmi_wr_ion)->resm_res_id) {
 		/* We recv'd a request from an unexpected NID. */
 		psclog_errorx("CRCUP for/from invalid NID; "
 		    "wr_ion=%s ios=%#x",
 		    bmi->bmi_wr_ion ?
-		    bmi->bmi_wr_ion->rmmi_resm->resm_name : "<NONE>",
+		    rmmi2resm(bmi->bmi_wr_ion)->resm_name : "<NONE>",
 		    ios);
 		rc = -EINVAL;
 		BMAP_ULOCK(bmap);
@@ -1478,7 +1479,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 
 		ih = fcmh_2_inoh(f);
 		iosidx = mds_repl_ios_lookup(vfsid, ih,
-		    bmi->bmi_wr_ion->rmmi_resm->resm_res_id);
+		    rmmi2resm(bmi->bmi_wr_ion)->resm_res_id);
 		if (iosidx < 0)
 			psclog_errorx("ios not found");
 		else {
@@ -1700,8 +1701,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 		struct bmap_mds_info *bmi = bmap_2_bmi(b);
 
 		psc_assert(bmi->bmi_wr_ion);
-		sbd->sbd_ios =
-		    bmi->bmi_wr_ion->rmmi_resm->resm_res->res_id;
+		sbd->sbd_ios = rmmi2resm(bmi->bmi_wr_ion)->resm_res_id;
 	} else
 		sbd->sbd_ios = IOS_ID_ANY;
 
@@ -1784,14 +1784,14 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	 */
 	bia.bia_seq = mds_bmap_timeotbl_mdsi(obml, BTE_ADD);
 	bia.bia_lastcli = obml->bml_cli_nidpid;
-	bia.bia_ios = resm->resm_res->res_id;
+	bia.bia_ios = resm->resm_res_id;
 	bia.bia_start = time(NULL);
 
 	if ((rc = mds_bmap_add_repl(b, &bia)))
 		goto out1;
 
 	bmi->bmi_seq = obml->bml_seq = bia.bia_seq;
-	obml->bml_ios = resm->resm_res->res_id;
+	obml->bml_ios = resm->resm_res_id;
 
 	mds_odtable_replaceitem(mdsBmapAssignTable,
 	    bmi->bmi_assign, &bia, sizeof(bia));
@@ -1875,7 +1875,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 
 		sbd_out->sbd_key = bml->bml_bmi->bmi_assign->odtr_key;
 		sbd_out->sbd_ios =
-		    bmi->bmi_wr_ion->rmmi_resm->resm_res->res_id;
+		    rmmi2resm(bmi->bmi_wr_ion)->resm_res_id;
 	} else {
 		sbd_out->sbd_key = BMAPSEQ_ANY;
 		sbd_out->sbd_ios = IOS_ID_ANY;
@@ -2278,14 +2278,14 @@ slm_ptrunc_odt_startup_cb(void *data, struct odtable_receipt *odtr,
 		struct slash_fidgen fg;
 	} *pt = data;
 	struct fidc_membh *f;
-	sl_bmapno_t bno;
+//	sl_bmapno_t bno;
 	int rc;
 
 	PSCFREE(odtr);
 
 	rc = slm_fcmh_get(&pt->fg, &f);
 	if (rc == 0) {
-		bno = howmany(fcmh_2_fsz(f), SLASH_BMAP_SIZE) - 1;
+//		bno = howmany(fcmh_2_fsz(f), SLASH_BMAP_SIZE) - 1;
 		/* XXX do something */
 		fcmh_op_done(f);
 	}

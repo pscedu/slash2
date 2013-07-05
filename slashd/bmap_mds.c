@@ -327,7 +327,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 		return (EINVAL);
 
 	FCMH_WAIT_BUSY(f);
-	iosid = bmi->bmi_wr_ion->rmmi_resm->resm_res_id;
+	iosid = rmmi2resm(bmi->bmi_wr_ion)->resm_res_id; // XXX use sbd
 	idx = mds_repl_ios_lookup(vfsid, ih, iosid);
 	if (idx < 0)
 		psc_fatal("not found");
