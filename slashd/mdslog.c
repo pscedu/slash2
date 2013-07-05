@@ -455,7 +455,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 				    slstrerror(rc));
 
 			current_reclaim_entrysize = RECLAIM_ENTRY_SIZE;
-			reclaim_entryp = (struct srt_reclaim_entry *) reclaimbuf;
+			reclaim_entryp = (struct srt_reclaim_entry *)reclaimbuf;
 			if (reclaim_entryp->fg.fg_fid == RECLAIM_MAGIC_FID &&
 			    reclaim_entryp->fg.fg_gen == RECLAIM_MAGIC_GEN) {
 				current_reclaim_entrysize = sizeof(struct srt_reclaim_entry);
@@ -465,18 +465,20 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 				reclaim_logfile_offset += current_reclaim_entrysize;
 			}
 			/* this should never happen, but we have seen bitten */
-			if ((size > current_reclaim_entrysize * SLM_RECLAIM_BATCH) ||
+			if (size > current_reclaim_entrysize * SLM_RECLAIM_BATCH ||
 			    ((size % current_reclaim_entrysize) != 0)) {
 				psclog_warnx("Reclaim log corrupted! "
-				    "batch=%"PRIx64" size=%zd",
+				    "batch=%"PRId64" size=%zd",
 				    current_reclaim_batchno, size);
-				size = current_reclaim_entrysize * (SLM_RECLAIM_BATCH - 1);
+				size = current_reclaim_entrysize *
+				    (SLM_RECLAIM_BATCH - 1);
 			}
 			count = 0;
 			total = size / current_reclaim_entrysize;
 			while (count < total) {
 				if (reclaim_entryp->xid == pje->pje_xid) {
-					psclog_warnx("Reclaim xid %"PRId64" already in use! batch = %"PRId64,
+					psclog_warnx("Reclaim xid %"PRId64" "
+					    "already in use! batch = %"PRId64,
 					    pje->pje_xid, current_reclaim_batchno);
 				}
 				reclaim_entryp = PSC_AGP(reclaim_entryp,
@@ -495,7 +497,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 				/*
 				 * This might not give us the correct
 				 * batchno if the machine crashed after
-				 * writing a full log and just came back.
+				 * writing a full log and just came
+				 * back.
 				 */
 				current_reclaim_entrysize = sizeof(struct srt_reclaim_entry);
 				psclog_warnx("Switch to new log format, batchno=%"PRId64,
@@ -1432,7 +1435,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 		 * Trim padding from buffer to reduce RPC traffic.
 		 */
 		entryp = next_entryp = reclaimbuf;
-		len = size = offsetof(struct srt_reclaim_entry, _pad);
+		len = size = sizeof(struct srt_reclaim_entry);
 		for (i = 1; i < count; i++) {
 			if (i < count - 1 && entryp->xid >= xid)
 				psclog_debug("Out of order log entries: "
@@ -1521,23 +1524,20 @@ mds_send_batch_reclaim(uint64_t batchno)
 
 		psc_assert(total);
 
-		nentry = i;
-		iov.iov_len = total;
-		iov.iov_base = entryp;
-
-		/* XXX use async */
 		m = psc_dynarray_getpos(&res->res_members, 0);
 		csvc = slm_geticsvcf(m, CSVCF_NONBLOCK |
 		    CSVCF_NORECON);
-		if (csvc == NULL) {
-			OPSTAT_INCR(SLM_OPST_RECLAIM_RPC_SKIP);
-			continue;
-		}
+		if (csvc == NULL)
+			PFL_GOTOERR(fail, rc = SLERR_ION_OFFLINE);
 		rc = SL_RSX_NEWREQ(csvc, SRMT_RECLAIM, rq, mq, mp);
 		if (rc) {
 			sl_csvc_decref(csvc);
 			goto fail;
 		}
+
+		nentry = i;
+		iov.iov_len = total;
+		iov.iov_base = entryp;
 
 		mq->batchno = iosinfo->si_batchno;
 		mq->xid = xid;
@@ -1548,6 +1548,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 		rsx_bulkclient(rq, BULK_GET_SOURCE, SRIM_BULK_PORTAL,
 		    &iov, 1);
 
+		/* XXX use async */
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc == 0)
 			rc = mp->rc;
@@ -1570,9 +1571,9 @@ mds_send_batch_reclaim(uint64_t batchno)
 
  fail:
 		OPSTAT_INCR(SLM_OPST_RECLAIM_RPC_FAIL);
-		psclog_warnx("Reclaim RPC failure: "
-		    "batchno=%"PRId64", dst=%s, rc=%d",
-		    batchno, res->res_name, rc);
+		psclog(rc == SLERR_ION_OFFLINE ? PLL_INFO : PLL_WARN,
+		    "Reclaim RPC failure: batchno=%"PRId64" dst=%s "
+		    "rc=%d", batchno, res->res_name, rc);
 	}
 
 	/*
@@ -1816,7 +1817,8 @@ mdslog_bmap_crc(void *datap, uint64_t txg, __unusedx int flag)
 
 		sjbc = pjournal_get_buf(mdsJournal, sizeof(*sjbc));
 		sjbc->sjbc_fid = fcmh_2_fid(bmap->bcm_fcmh);
-		sjbc->sjbc_iosid = bmi->bmi_wr_ion->rmmi_resm->resm_res_id;
+		sjbc->sjbc_iosid =
+		    rmmi2resm(bmi->bmi_wr_ion)->resm_res_id;
 		sjbc->sjbc_bmapno = bmap->bcm_bmapno;
 		sjbc->sjbc_ncrcs = n;
 		sjbc->sjbc_fsize = crcup->fsize;		/* largest known size */
