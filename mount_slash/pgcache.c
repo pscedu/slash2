@@ -427,16 +427,14 @@ bmpce_reap(struct psc_poolmgr *m)
 	LIST_CACHE_LOCK(&bmpcLru);
 
 	lc_sort(&bmpcLru, qsort, bmpc_lru_cmp);
-	/* Should be sorted from oldest bmpc to newest.
-	 */
+	/* Should be sorted from oldest bmpc to newest. */
 	LIST_CACHE_FOREACH(bmpc, &bmpcLru) {
 		psclog_dbg("bmpc=%p npages=%d age(%ld:%ld) waiters=%d",
 		    bmpc, pll_nitems(&bmpc->bmpc_lru),
 		    bmpc->bmpc_oldest.tv_sec, bmpc->bmpc_oldest.tv_nsec,
 		    waiters);
 
-		/* First check for LRU items.
-		 */
+		/* First check for LRU items. */
 		if (!pll_nitems(&bmpc->bmpc_lru)) {
 			psclog_debug("skip bmpc=%p, nothing on lru", bmpc);
 			continue;
