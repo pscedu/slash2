@@ -202,7 +202,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 int
 slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 {
-	int rc, tract[NBREPLST], retifset[NBREPLST], iosidx, src_iosidx;
+	int tract[NBREPLST], retifset[NBREPLST], iosidx, src_iosidx;
 	struct sl_resm *dst_resm = NULL, *src_resm = NULL;
 	struct slm_update_data *upd = NULL;
 	struct srm_repl_schedwk_req *mq;
@@ -298,8 +298,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 
 	brepls_init_idx(retifset);
 
-	rc = mds_repl_bmap_walk(b, tract, retifset, 0, &iosidx, 1);
-	// XXX check rc??
+	mds_repl_bmap_walk(b, tract, retifset, 0, &iosidx, 1);
 	mds_bmap_write_logrepls(b);
 
  out:
@@ -732,8 +731,13 @@ slm_rmi_handler(struct pscrpc_request *rq)
 		rc = slm_rmi_handle_symlink(rq);
 		break;
 
+	/* miscellaneous messages */
+	case SRMT_BATCH_RP:
+		rc = batchrq_handle(rq);
+		break;
+
 	default:
-		psclog_errorx("Unexpected opcode %d",
+		psclog_errorx("unexpected opcode %d",
 		    rq->rq_reqmsg->opc);
 		rq->rq_status = -ENOSYS;
 		return (pscrpc_error(rq));
