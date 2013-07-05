@@ -255,9 +255,8 @@ slmupschedthr_tryreplsch_cb(struct pscrpc_request *rq,
  *	between a source and dst IOS pair.
  */
 int
-slmupschedthr_tryreplsch(struct slm_update_data *upd,
-    struct bmapc_memb *b, int off, struct sl_resm *src_resm,
-    struct sl_resource *dst_res, int j)
+slmupschedthr_tryreplsch(struct bmapc_memb *b, int off,
+    struct sl_resm *src_resm, struct sl_resource *dst_res)
 {
 	int tract[NBREPLST], retifset[NBREPLST], rc = 0;
 	struct pscrpc_request *rq = NULL;
@@ -265,13 +264,15 @@ slmupschedthr_tryreplsch(struct slm_update_data *upd,
 	struct srm_repl_schedwk_rep *mp;
 	struct slashrpc_cservice *csvc;
 	struct pscrpc_async_args av;
+	struct slm_update_data *upd;
 	struct sl_resm *dst_resm;
 	struct fidc_membh *f;
 	sl_bmapno_t lastbno;
 	int64_t amt = 0;
 
+	upd = bmap_2_upd(b);
 	f = upd_2_fcmh(upd);
-	dst_resm = psc_dynarray_getpos(&dst_res->res_members, j);
+	dst_resm = res_getmemb(dst_res);
 
 	memset(&av, 0, sizeof(av));
 	av.pointer_arg[IP_DSTRESM] = dst_resm;
@@ -462,9 +463,8 @@ slmupschedthr_tryptrunc_cb(struct pscrpc_request *rq,
  *    1	: Success.
  */
 int
-slmupschedthr_tryptrunc(struct slm_update_data *upd,
-    struct bmapc_memb *b, int off, struct sl_resource *dst_res,
-    int idx)
+slmupschedthr_tryptrunc(struct bmapc_memb *b, int off,
+    struct sl_resource *dst_res)
 {
 	int tract[NBREPLST], retifset[NBREPLST], rc;
 	struct pscrpc_request *rq = NULL;
@@ -472,11 +472,13 @@ slmupschedthr_tryptrunc(struct slm_update_data *upd,
 	struct srm_bmap_ptrunc_req *mq;
 	struct srm_bmap_ptrunc_rep *mp;
 	struct pscrpc_async_args av;
+	struct slm_update_data *upd;
 	struct sl_resm *dst_resm;
 	struct fidc_membh *f;
 
+	upd = bmap_2_upd(b);
 	f = upd_2_fcmh(upd);
-	dst_resm = psc_dynarray_getpos(&dst_res->res_members, idx);
+	dst_resm = res_getmemb(dst_res);
 
 	memset(&av, 0, sizeof(av));
 	av.space[IN_OFF] = off;
@@ -539,6 +541,91 @@ slmupschedthr_tryptrunc(struct slm_update_data *upd,
 }
 
 void
+slmupsch_preclaim_cb(struct batchrq *br, int rc)
+{
+	sl_replica_t repl;
+	int idx, tract[NBREPLST];
+	struct resprof_mds_info *rpmi;
+	struct srt_preclaim_ent *pe;
+	struct fidc_membh *f;
+	struct bmap *b;
+
+	if (rc == -ENOTSUP) {
+		rpmi = res2rpmi(br->br_res);
+		RPMI_LOCK(rpmi);
+		res2iosinfo(br->br_res)->si_flags |= SIF_PRECLAIM_NOTSUP;
+		RPMI_ULOCK(rpmi);
+	}
+	repl.bs_id = br->br_res->res_id;
+
+	brepls_init(tract, -1);
+	tract[BREPLST_GARBAGE_SCHED] = rc ?
+	    BREPLST_GARBAGE : BREPLST_INVALID;
+
+	for (pe = br->br_buf; (char *)pe < (char *)br->br_buf + br->br_len; pe++) {
+		rc = slm_fcmh_get(&pe->fg, &f);
+		if (rc)
+			continue;
+		rc = bmap_get(f, pe->bno, SL_WRITE, &b);
+		if (rc)
+			goto fail;
+		rc = mds_repl_iosv_lookup(current_vfsid, fcmh_2_inoh(f),
+		    &repl, &idx, 1);
+		if (rc >= 0) {
+			mds_repl_bmap_walk(b, tract, NULL, 0, &idx, 1);
+			mds_bmap_write_logrepls(b);
+		}
+ fail:
+		if (b)
+			bmap_op_done(b);
+		fcmh_op_done(f);
+	}
+}
+
+int
+slmupsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
+{
+	int tract[NBREPLST], retifset[NBREPLST], rc;
+	struct slashrpc_cservice *csvc;
+	struct srt_preclaim_ent pe;
+	struct sl_mds_iosinfo *si;
+	struct sl_resm *m;
+
+	si = res2iosinfo(r);
+	if (si->si_flags & SIF_PRECLAIM_NOTSUP)
+		return (0);
+
+	m = res_getmemb(r);
+	csvc = slm_geticsvc(m, NULL, CSVCF_NONBLOCK | CSVCF_NORECON,
+	    &slm_upsch_mw);
+	if (csvc == NULL)
+		PFL_GOTOERR(fail, rc = resm_getcsvcerr(m));
+
+	pe.fg = b->bcm_fcmh->fcmh_fg;
+	pe.bno = b->bcm_bmapno;
+	BHGEN_GET(b, &pe.bgen);
+
+	rc = batchrq_add(r, csvc, SRMT_PRECLAIM, &pe, sizeof(pe),
+	    slmupsch_preclaim_cb, 30);
+
+	if (rc == 0) {
+		brepls_init(tract, -1);
+		tract[BREPLST_GARBAGE] = BREPLST_GARBAGE_SCHED;
+
+		brepls_init_idx(retifset);
+		rc = mds_repl_bmap_apply(b, tract, retifset, off);
+		if (rc != BREPLST_GARBAGE)
+			psclog_error("consistency error");
+
+		rc = mds_bmap_write_logrepls(b);
+	}
+ fail:
+	if (rc)
+		psclog_error("error rc=%d", rc);
+	return (rc ? 0 : 1);
+}
+
+void
 upd_proc_hldrop(struct slm_update_data *tupd)
 {
 	int rc, tract[NBREPLST], retifset[NBREPLST], iosidx;
@@ -598,15 +685,14 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 void
 upd_proc_bmap(struct slm_update_data *upd)
 {
-	int off, val, tryarchival, iosidx;
-	struct rnd_iterator dst_res_i, dst_resm_i;
-	struct rnd_iterator src_res_i, src_resm_i;
+	int rc, off, val, tryarchival, iosidx;
+	struct rnd_iterator dst_res_i, src_res_i;
 	struct sl_resource *dst_res, *src_res;
 	struct slashrpc_cservice *csvc;
 	struct bmap_mds_info *bmi;
-	struct sl_resm *src_resm;
 	struct bmapc_memb *b;
 	struct fidc_membh *f;
+	struct sl_resm *m;
 	sl_ios_id_t iosid;
 
 	bmi = upd_getpriv(upd);
@@ -616,6 +702,8 @@ upd_proc_bmap(struct slm_update_data *upd)
 	/* skip, there is more important work to do */
 	if (b->bcm_flags & BMAP_MDS_REPLMODWR)
 		return;
+
+//	if (IN_PTRUNC)
 
 	UPD_UNBUSY(upd);
 
@@ -663,60 +751,55 @@ upd_proc_bmap(struct slm_update_data *upd)
 			for (tryarchival = 0; tryarchival < 2;
 			    tryarchival++) {
 				FOREACH_RND(&src_res_i, fcmh_2_nrepls(f)) {
-					src_res = libsl_id2res(fcmh_getrepl(f,
+					src_res = libsl_id2res(
+					    fcmh_getrepl(f,
 					    src_res_i.ri_rnd_idx).bs_id);
 
-					/* skip ourself and old/inactive replicas */
+					/*
+					 * Skip ourself and old/inactive
+					 * replicas.
+					 */
 					if (src_res_i.ri_rnd_idx == iosidx ||
 					    SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls,
 					    SL_BITS_PER_REPLICA *
 					    src_res_i.ri_rnd_idx) != BREPLST_VALID)
 						continue;
-
 					if (tryarchival ^
-					    (src_res->res_type == SLREST_ARCHIVAL_FS))
+					    (src_res->res_type ==
+					     SLREST_ARCHIVAL_FS))
 						continue;
 
 					/*
 					 * Search source nodes for an
 					 * idle, online connection.
 					 */
-					FOREACH_RND(&src_resm_i,
-					    psc_dynarray_len(&src_res->res_members)) {
-						src_resm = psc_dynarray_getpos(
-						    &src_res->res_members,
-						    src_resm_i.ri_rnd_idx);
-						csvc = slm_geticsvc(src_resm, NULL,
-						    CSVCF_NONBLOCK | CSVCF_NORECON,
-						    &slm_upsch_mw);
-						if (csvc == NULL)
-							continue;
-						sl_csvc_decref(csvc);
+					m = res_getmemb(src_res);
+					csvc = slm_geticsvc(m, NULL,
+					    CSVCF_NONBLOCK |
+					    CSVCF_NORECON,
+					    &slm_upsch_mw);
+					if (csvc == NULL)
+						continue;
+					sl_csvc_decref(csvc);
 
-						/* scan destination resms */
-						FOREACH_RND(&dst_resm_i,
-						    psc_dynarray_len(&dst_res->res_members))
-							if (slmupschedthr_tryreplsch(upd,
-							    b, off, src_resm, dst_res,
-							    dst_resm_i.ri_rnd_idx))
-								return;
-					}
+					/* scan destination resms */
+					if (slmupschedthr_tryreplsch(b,
+					    off, m, dst_res))
+						return;
 				}
 			}
 			break;
-		case BREPLST_TRUNCPNDG:
-			FOREACH_RND(&dst_resm_i,
-			    psc_dynarray_len(&dst_res->res_members)) {
-				int rv;
 
-				rv = slmupschedthr_tryptrunc(upd, b,
-				    off, dst_res,
-				    dst_resm_i.ri_rnd_idx);
-				if (rv < 0)
-					break;
-				if (rv)
-					return;
-			}
+		case BREPLST_TRUNCPNDG:
+			rc = slmupschedthr_tryptrunc(b, off, dst_res);
+			if (rc > 0)
+				return;
+			break;
+
+		case BREPLST_GARBAGE:
+			rc = slmupsch_trypreclaim(dst_res, b, off);
+			if (rc > 0)
+				return;
 			break;
 		}
 	}
@@ -961,8 +1044,7 @@ slmupschedthr_spawn(void)
 	/* page in initial replrq workload */
 	CONF_FOREACH_RES(s, r, i)
 		if (RES_ISFS(r))
-			upschq_resm(psc_dynarray_getpos(&r->res_members,
-			    0), UPDT_PAGEIN);
+			upschq_resm(res_getmemb(r), UPDT_PAGEIN);
 }
 
 /**
