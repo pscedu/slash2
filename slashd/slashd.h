@@ -46,6 +46,7 @@ struct srt_stat;
 
 /* MDS thread types. */
 enum {
+	SLMTHRT_BATCHRQ,	/* batch RPC reaper */
 	SLMTHRT_BMAPTIMEO,	/* bmap timeout thread */
 	SLMTHRT_COH,		/* coherency thread */
 	SLMTHRT_CONN,		/* peer resource connection monitor */
@@ -215,8 +216,9 @@ struct sl_mds_iosinfo {
 #define SIF_BUSY		(1 << 3)
 #define SIF_UPSCH_PAGING	(1 << 4)
 #define	SIF_NEW_PROG_ENTRY	(1 << 5)		/* new entry in the reclaim prog file */
+#define	SIF_PRECLAIM_NOTSUP	(1 << 6)		/* can punch holes for replica ejection */
 
-#define res2iosinfo(res)	((struct sl_mds_iosinfo *)res2rpmi(res)->rpmi_info)
+#define res2iosinfo(r)		((struct sl_mds_iosinfo *)res2rpmi(r)->rpmi_info)
 
 /* MDS-specific data for struct sl_resource */
 struct resprof_mds_info {
@@ -224,6 +226,7 @@ struct resprof_mds_info {
 	struct pfl_mutex	  rpmi_mutex;
 	struct psc_dynarray	  rpmi_upschq;		/* updates queue */
 	struct psc_waitq	  rpmi_waitq;
+	struct psc_listcache	  rpmi_batchrqs;
 
 	/* sl_mds_peerinfo for peer MDS or sl_mds_iosinfo for IOS */
 	void			 *rpmi_info;
@@ -243,7 +246,6 @@ res2rpmi(struct sl_resource *res)
 /* MDS-specific data for struct sl_resm */
 struct resm_mds_info {
 	int			 rmmi_busyid;
-	struct sl_resm		*rmmi_resm;
 	atomic_t		 rmmi_refcnt;		/* #CLIs using this ion */
 };
 
@@ -251,6 +253,16 @@ static __inline struct resm_mds_info *
 resm2rmmi(struct sl_resm *resm)
 {
 	return (resm_get_pri(resm));
+}
+
+static __inline struct sl_resm *
+rmmi2resm(struct resm_mds_info *rmmi)
+{
+	struct sl_resm *m;
+
+	psc_assert(rmmi);
+	m = (void *)rmmi;
+	return (m - 1);
 }
 
 #define resm2rpmi(resm)		res2rpmi((resm)->resm_res)
@@ -273,14 +285,19 @@ struct slm_wkdata_upsch_purge {
 };
 
 struct slm_wkdata_upsch_cb {
-	struct slashrpc_cservice	*csvc;
-	struct sl_resm			*src_resm;
-	struct sl_resm			*dst_resm;
-	struct bmap			*b;
-	int				 rc;
-	int				 off;
-	int64_t				 amt;
-	int				 undowr;
+	struct slashrpc_cservice *csvc;
+	struct sl_resm		 *src_resm;
+	struct sl_resm		 *dst_resm;
+	struct bmap		 *b;
+	int			  rc;
+	int			  off;
+	int64_t			  amt;
+	int			  undowr;
+};
+
+struct slm_wkdata_batchrq_cb {
+	struct batchrq		*br;
+	int			 rc;
 };
 
 #define SLM_NWORKER_THREADS	4
