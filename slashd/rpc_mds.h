@@ -79,6 +79,22 @@ struct slm_exp_cli {
 	uint32_t			 mexpc_stkvers;		/* must be second field */
 };
 
+struct batchrq {
+	uint64_t			  br_bid;
+	struct pscrpc_request		 *br_rq;
+	struct slashrpc_cservice	 *br_csvc;
+	struct timeval			  br_expire;
+	struct sl_resource		 *br_res;
+	int				  br_ptl;		/* bulk RPC portal */
+	void				 *br_buf;
+	size_t				  br_len;
+	struct psc_listentry		 *br_lentry;
+	struct psc_listentry		 *br_lentry_ml;
+	void				(*br_cbf)(struct batchrq *, int);
+};
+
+#define batchrq_2_lc(br)		(&res2rpmi(br->br_res)->rpmi_batchrqs)
+
 void	slm_rpc_initsvc(void);
 
 int	slm_rmc_handle_lookup(struct pscrpc_request *);
@@ -94,6 +110,12 @@ int	slm_mkdir(int, struct srm_mkdir_req *, struct srm_mkdir_rep *, int,
 	    struct fidc_membh **);
 int	slm_symlink(struct pscrpc_request *, struct srm_symlink_req *,
 	    struct srm_symlink_rep *, int);
+
+int batchrq_add(struct sl_resource *, struct slashrpc_cservice *,
+    int, void *, size_t, void (*)(struct batchrq *, int), int);
+int batchrq_handle(struct pscrpc_request *);
+
+void slmbchrqthr_spawn(void);
 
 /* aliases for connection management */
 #define slm_getmcsvc(resm, exp, fl, mw)					\

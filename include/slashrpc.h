@@ -121,22 +121,22 @@ enum {
 	SLXCTLOP_SET_FILE_NEWBMAP_REPLPOL	/* set file's default new bmap repl policy */
 };
 
-/* SLASH RPC message types. */
+/* SLASH RPC message types and submessage types (for BATCH). */
 enum {
 	/* control operations */
 	SRMT_CONNECT = 1,
-	SRMT_DESTROY,
+	_SRMT_DESTROY,
 	SRMT_PING,
 
 	/* namespace operations */
-	SRMT_NAMESPACE_UPDATE,			/* 4: send a batch of namespace update logs */
-	SRMT_NAMESPACE_FORWARD,			/* 5: a namespace operation request from a peer */
+	SRMT_NAMESPACE_UPDATE,			/*  4: send a batch of namespace update logs */
+	SRMT_NAMESPACE_FORWARD,			/*  5: a namespace operation request from a peer */
 
 	/* bmap operations */
-	SRMT_BMAPCHWRMODE,			/* 6: change read/write access mode */
-	SRMT_BMAPCRCWRT,			/* 7: update bmap data checksums */
-	SRMT_BMAPDIO,				/* 8: request client direct I/O on a bmap */
-	SRMT_BMAP_PTRUNC,			/* 9: partial truncate and redo CRC for bmap */
+	SRMT_BMAPCHWRMODE,			/*  6: change read/write access mode */
+	SRMT_BMAPCRCWRT,			/*  7: update bmap data checksums */
+	SRMT_BMAPDIO,				/*  8: request client direct I/O on a bmap */
+	SRMT_BMAP_PTRUNC,			/*  9: partial truncate and redo CRC for bmap */
 	SRMT_BMAP_WAKE,				/* 10: client work may now progress after EAGAIN */
 	SRMT_GETBMAP,				/* 11: get client lease for bmap access */
 	SRMT_GETBMAPCRCS,			/* 12: get bmap data checksums */
@@ -180,12 +180,14 @@ enum {
 	SRMT_SETXATTR,
 	SRMT_GETXATTR,
 	SRMT_REMOVEXATTR,
-	SRMT_XCTL,				/* 47: ancillary operation */
+	_SRMT_XCTL,				/* 47: ancillary operation */
 
 	/* import/export */
 	SRMT_IMPORT,
 
-	SRMT_PRECLAIM
+	SRMT_PRECLAIM,
+	SRMT_BATCH_RQ,				/* 50: async batch request */
+	SRMT_BATCH_RP				/* 51: async batch reply */
 };
 
 /* ----------------------------- BEGIN MESSAGES ----------------------------- */
@@ -197,8 +199,17 @@ enum {
 
 struct srm_generic_rep {
 	 int32_t		rc;		/* return code, 0 for success or slerrno */
-	 int32_t		_pad;
+	 int32_t		u32_0;		/* overloadable field */
 } __packed;
+
+struct srm_batch_req {
+	uint64_t		bid;
+	 int32_t		opc;
+	 int32_t		nents;		/* acts as 'rc' for BATCH_RP */
+/* bulk data is array */
+};
+
+#define srm_batch_rep		srm_generic_rep
 
 /* ---------------------- BEGIN ENCAPSULATED MESSAGES ----------------------- */
 
@@ -320,12 +331,12 @@ struct srt_statfs {
 
 struct srt_bmapminseq {
 	uint64_t		bminseq;
-};
+} __packed;
 
 struct srt_creds {
 	uint32_t		scr_uid;
 	uint32_t		scr_gid;
-};
+} __packed;
 
 /* ------------------------ BEGIN NAMESPACE MESSAGES ------------------------ */
 
@@ -563,19 +574,18 @@ struct srm_bmap_wake_req {
 	struct slash_fidgen	fg;
 	sl_bmapno_t		bmapno;
 	 int32_t		_pad;
-};
+} __packed;
 
 #define srm_bmap_wake_rep	srm_generic_rep
 
 /* ------------------------- BEGIN GARBAGE MESSAGES ------------------------- */
 
-struct srm_preclaim_req {
+struct srt_preclaim_ent {
+	uint64_t		xid;
 	struct slash_fidgen	fg;
-	uint64_t		off;
-	uint64_t		len;
-};
-
-#define srm_preclaim_rep	srm_generic_rep
+	sl_bmapno_t		bno;
+	sl_bmapgen_t		bgen;
+} __packed;
 
 struct srm_reclaim_req {
 	uint64_t		batchno;
@@ -605,7 +615,6 @@ struct srm_reclaim_rep {
 struct srt_reclaim_entry {
 	uint64_t		xid;
 	struct slash_fidgen	fg;
-	char			_pad[0];	/* 0 for compatibility */
 } __packed;
 
 /* ------------------------- BEGIN CONTROL MESSAGES ------------------------- */
@@ -830,7 +839,7 @@ struct srm_mknod_req {
 struct srt_readdir_ent {
 	struct srt_stat		sstb;
 	uint64_t		xattrsize;
-};
+} __packed;
 
 #define DEF_READDIR_NENTS	128
 #define MAX_READDIR_NENTS	1000

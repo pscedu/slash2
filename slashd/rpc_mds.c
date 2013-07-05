@@ -26,24 +26,30 @@
 
 #include <stdio.h>
 
-#include "pfl/str.h"
-#include "pfl/tree.h"
 #include "pfl/rpc.h"
 #include "pfl/rpclog.h"
 #include "pfl/rsx.h"
 #include "pfl/service.h"
+#include "pfl/str.h"
+#include "pfl/tree.h"
 
 #include "bmap_mds.h"
 #include "repl_mds.h"
 #include "rpc_mds.h"
 #include "slashd.h"
 #include "slashrpc.h"
+#include "worker.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
 
 struct pscrpc_svc_handle slm_rmi_svc;
 struct pscrpc_svc_handle slm_rmm_svc;
 struct pscrpc_svc_handle slm_rmc_svc;
+
+struct psc_poolmaster	 batchrq_pool_master;
+struct psc_poolmgr	*batchrq_pool;
+struct psc_listcache	 batchrqs_pndg;
+struct psc_listcache	 batchrqs_wait;
 
 void
 slm_rpc_initsvc(void)
@@ -263,4 +269,225 @@ slrpc_allocrep(struct pscrpc_request *rq, void *mqp, int qlen,
 		mp->fsuuid = zfsMount[current_vfsid].uuid;
 	}
 	return (rc);
+}
+
+int
+batchrq_cmp(const void *a, const void *b)
+{
+	const struct batchrq *pa = a, *pb = b;
+
+	return (timercmp(&pa->br_expire, &pb->br_expire, <));
+}
+
+void
+batchrq_finish(struct batchrq *br, int rc)
+{
+	br->br_cbf(br, rc);
+	if (br->br_rq)
+		pscrpc_req_finished(br->br_rq);
+	if (br->br_csvc)
+		sl_csvc_decref(br->br_csvc);
+
+	PSCFREE(br->br_buf);
+
+	psc_pool_return(batchrq_pool, br);
+}
+
+int
+batchrq_send_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
+{
+	struct batchrq *br = av->pointer_arg[0];
+	int rc;
+
+	SL_GET_RQ_STATUS_TYPE(br->br_csvc, rq, struct srm_batch_rep,
+	    rc);
+	if (rc == 0)
+		slrpc_rep_in(br->br_csvc, rq);
+	if (rc)
+		batchrq_finish(br, rc);
+	return (0);
+}
+
+void
+batchrq_send(struct batchrq *br)
+{
+	struct psc_listcache *l, *ml;
+	struct pscrpc_request *rq;
+	struct iovec iov;
+	int rc;
+
+	ml = &batchrqs_pndg;
+	l = batchrq_2_lc(br);
+
+	LIST_CACHE_ENSURE_LOCKED(ml);
+
+	lc_remove(l, br);
+	lc_remove(ml, br);
+
+	lc_add(&batchrqs_wait, br);
+
+	rq = br->br_rq;
+
+	iov.iov_base = br->br_buf;
+	iov.iov_len = br->br_len;
+	rc = rsx_bulkclient(rq, BULK_GET_SOURCE, br->br_ptl, &iov, 1);
+	if (rc)
+		goto err;
+
+	rq->rq_interpret_reply = batchrq_send_cb;
+	rq->rq_async_args.pointer_arg[0] = br->br_csvc;
+	rc = SL_NBRQSET_ADD(br->br_csvc, rq);
+	if (rc)
+ err:
+		batchrq_finish(br, rc);
+}
+
+int
+batchrq_handle_wkcb(void *p)
+{
+	struct slm_wkdata_batchrq_cb *wk = p;
+
+	batchrq_finish(wk->br, wk->rc);
+	return (0);
+}
+
+int
+batchrq_handle(struct pscrpc_request *rq)
+{
+	struct slm_wkdata_batchrq_cb *wk;
+	struct psc_listcache *ml;
+	struct srm_batch_req *mq;
+	struct srm_batch_rep *mp;
+	struct batchrq *br, *brn;
+
+	ml = &batchrqs_wait;
+	SL_RSX_ALLOCREP(rq, mq, mp);
+	LIST_CACHE_LOCK(ml);
+	LIST_CACHE_FOREACH_SAFE(br, brn, ml)
+		if (mq->bid == br->br_bid) {
+			wk = pfl_workq_getitem(batchrq_handle_wkcb,
+			    struct slm_wkdata_batchrq_cb);
+			wk->br = br;
+			wk->rc = mq->nents;
+			pfl_workq_putitem(wk);
+			break;
+		}
+	LIST_CACHE_ULOCK(ml);
+	if (br == NULL)
+		mp->rc = -EINVAL;
+	return (0);
+}
+
+int
+batchrq_add(struct sl_resource *r, struct slashrpc_cservice *csvc,
+    int opc, void *buf, size_t len, void (*cbf)(struct batchrq *, int),
+    int expire)
+{
+	static psc_atomic64_t bid = PSC_ATOMIC64_INIT(0);
+	struct psc_listcache *l, *ml;
+	struct pscrpc_request *rq;
+	struct srm_batch_req *mq;
+	struct srm_batch_rep *mp;
+	struct batchrq *br;
+	int rc;
+
+	ml = &batchrqs_pndg;
+	LIST_CACHE_LOCK(ml);
+
+	l = &res2rpmi(r)->rpmi_batchrqs;
+	LIST_CACHE_LOCK(l);
+	LIST_CACHE_FOREACH(br, l)
+		if (rq->rq_reqmsg->opc) {
+			sl_csvc_decref(csvc);
+			goto add;
+		}
+
+	/* not found; create */
+
+	rc = SL_RSX_NEWREQ(csvc, opc, rq, mq, mp);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
+	mq->opc = opc;
+	mq->bid = psc_atomic64_inc_getnew(&bid);
+
+	br = psc_pool_get(batchrq_pool);
+	memset(br, 0, sizeof(*br));
+	br->br_rq = rq;
+	br->br_csvc = csvc;
+	br->br_bid = mq->bid;
+	br->br_res = r;
+	br->br_cbf = cbf;
+
+	PFL_GETTIMEVAL(&br->br_expire);
+	br->br_expire.tv_sec += expire;
+
+	lc_add(l, rq);
+	lc_add_sorted(ml, rq, batchrq_cmp);
+
+ add:
+	memcpy(br->br_buf + br->br_len, buf, len);
+	br->br_len += len;
+	mq->nents++;
+	if (br->br_len + len > LNET_MTU)
+		batchrq_send(br);
+
+	csvc = NULL;
+
+ out:
+	LIST_CACHE_ULOCK(l);
+	LIST_CACHE_LOCK(ml);
+	if (csvc)
+		sl_csvc_decref(csvc);
+	return (rc);
+}
+
+void
+slmbchrqthr_main(__unusedx struct psc_thread *thr)
+{
+	struct timeval now, wait;
+	struct batchrq *br, *brn;
+	struct psc_listcache *ml;
+
+	ml = &batchrqs_pndg;
+
+	wait.tv_sec = 0;
+	wait.tv_usec = 0;
+
+	while (pscthr_run()) {
+		usleep(wait.tv_sec * 1000000 + wait.tv_usec);
+
+		wait.tv_sec = 1;
+		wait.tv_usec = 0;
+
+		PFL_GETTIMEVAL(&now);
+
+		LIST_CACHE_LOCK(ml);
+		LIST_CACHE_FOREACH_SAFE(br, brn, ml) {
+			if (timercmp(&now, &br->br_expire, >)) {
+				batchrq_send(br);
+				continue;
+			}
+			timersub(&br->br_expire, &now, &wait);
+			break;
+		}
+		LIST_CACHE_ULOCK(ml);
+	}
+}
+
+void
+slmbchrqthr_spawn(void)
+{
+	psc_poolmaster_init(&batchrq_pool_master,
+	    struct batchrq, br_lentry_ml, PPMF_AUTO, 64, 64, 0,
+	    NULL, NULL, NULL, "bchrq");
+	batchrq_pool = psc_poolmaster_getmgr(&batchrq_pool_master);
+
+	lc_reginit(&batchrqs_pndg, struct batchrq, br_lentry_ml,
+	    "bchrqpndg");
+	lc_reginit(&batchrqs_wait, struct batchrq, br_lentry_ml,
+	    "bchrqwait");
+
+	pscthr_init(SLMTHRT_BATCHRQ, 0, slmbchrqthr_main, NULL, 0,
+	    "slmbchrqthr");
 }
