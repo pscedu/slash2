@@ -150,6 +150,7 @@ main(int argc, char *argv[])
 	PRTYPE(sl_siteid_t);
 	PRTYPE(slfgen_t);
 	PRTYPE(slfid_t);
+	PRTYPE(struct batchrq);
 	PRTYPE(struct bcrcupd);
 	PRTYPE(struct bmap);
 	PRTYPE(struct bmap_cli_info);
@@ -251,6 +252,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slm_sth);
 	PRTYPE(struct slm_update_data);
 	PRTYPE(struct slm_update_generic);
+	PRTYPE(struct slm_wkdata_batchrq_cb);
 	PRTYPE(struct slm_wkdata_ptrunc);
 	PRTYPE(struct slm_wkdata_upsch_cb);
 	PRTYPE(struct slm_wkdata_upsch_purge);
@@ -270,6 +272,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slmrmi_thread);
 	PRTYPE(struct slmrmm_thread);
 	PRTYPE(struct slvr_ref);
+	PRTYPE(struct srm_batch_req);
 	PRTYPE(struct srm_bmap_chwrmode_rep);
 	PRTYPE(struct srm_bmap_chwrmode_req);
 	PRTYPE(struct srm_bmap_crcup);
@@ -313,7 +316,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_mkdir_req);
 	PRTYPE(struct srm_mknod_req);
 	PRTYPE(struct srm_ping_req);
-	PRTYPE(struct srm_preclaim_req);
 	PRTYPE(struct srm_readdir_rep);
 	PRTYPE(struct srm_readdir_req);
 	PRTYPE(struct srm_readlink_rep);
@@ -348,6 +350,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srt_bmapdesc);
 	PRTYPE(struct srt_bmapminseq);
 	PRTYPE(struct srt_creds);
+	PRTYPE(struct srt_preclaim_ent);
 	PRTYPE(struct srt_readdir_ent);
 	PRTYPE(struct srt_reclaim_entry);
 	PRTYPE(struct srt_stat);
@@ -790,6 +793,7 @@ main(int argc, char *argv[])
 	PRVAL(SLI_OPST_SRMT_RELEASE);
 	PRVAL(SLI_REPLWKOP_PTRUNC);
 	PRVAL(SLI_REPLWKOP_REPL);
+	PRVAL(SLMTHRT_BATCHRQ);
 	PRVAL(SLMTHRT_BMAPTIMEO);
 	PRVAL(SLMTHRT_COH);
 	PRVAL(SLMTHRT_CONN);
@@ -870,6 +874,8 @@ main(int argc, char *argv[])
 	PRVAL(SLXCTLOP_SET_FILE_NEWBMAP_REPLPOL);
 	PRVAL(SL_READ);
 	PRVAL(SL_WRITE);
+	PRVAL(SRMT_BATCH_RP);
+	PRVAL(SRMT_BATCH_RQ);
 	PRVAL(SRMT_BMAPCHWRMODE);
 	PRVAL(SRMT_BMAPCRCWRT);
 	PRVAL(SRMT_BMAPDIO);
@@ -877,7 +883,6 @@ main(int argc, char *argv[])
 	PRVAL(SRMT_BMAP_WAKE);
 	PRVAL(SRMT_CONNECT);
 	PRVAL(SRMT_CREATE);
-	PRVAL(SRMT_DESTROY);
 	PRVAL(SRMT_EXTENDBMAPLS);
 	PRVAL(SRMT_GETATTR);
 	PRVAL(SRMT_GETBMAP);
@@ -918,12 +923,12 @@ main(int argc, char *argv[])
 	PRVAL(SRMT_SYMLINK);
 	PRVAL(SRMT_UNLINK);
 	PRVAL(SRMT_WRITE);
-	PRVAL(SRMT_XCTL);
 	PRVAL(UPDT_BMAP);
-	PRVAL(UPDT_GARBAGE);
 	PRVAL(UPDT_HLDROP);
 	PRVAL(UPDT_PAGEIN);
 	PRVAL(UPDT_PAGEIN_UNIT);
+	PRVAL(_SRMT_DESTROY);
+	PRVAL(_SRMT_XCTL);
 	/* end enums */
 
 	PRVAL(SL_REPLICA_NBYTES);
