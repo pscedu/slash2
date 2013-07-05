@@ -86,8 +86,13 @@ struct sl_resource {
 	struct sl_site		*res_site;
 };
 
+/* res_flags */
+#define RESF_DISABLE_BIA	(1 << 0)	/* disable write assignments */
+
 #define RES_MAXID		((UINT64_C(1) << (sizeof(sl_ios_id_t) * \
 				    NBBY - SLASH_FID_SITE_BITS)) - 1)
+
+#define res_getmemb(r)		psc_dynarray_getpos(&(r)->res_members, 0)
 
 static __inline void *
 resprof_get_pri(struct sl_resource *res)
@@ -190,9 +195,6 @@ struct sl_gconf {
 		pll_init(&(cf)->gconf_sites, struct sl_site,		\
 		    site_lentry, &(cf)->gconf_lock);			\
 	} while (0)
-
-/* configuration flags */
-#define CFGF_DISABLE_BIA		(1 << 0)	/* disable write assignments */
 
 #define CONF_LOCK()			spinlock(&globalConfig.gconf_lock)
 #define CONF_ULOCK()			freelock(&globalConfig.gconf_lock)
