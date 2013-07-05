@@ -53,19 +53,22 @@ uint64_t	current_reclaim_xid;
 uint64_t	current_reclaim_batchno;
 
 int
-sli_rim_handle_preclaim(struct pscrpc_request *rq)
+sli_rim_handle_batch(struct pscrpc_request *rq)
 {
-	struct srm_preclaim_req *mq;
-	struct srm_preclaim_rep *mp;
-	struct srt_preclaim_ent *pe;
-	int rc, i;
+	struct srm_batch_req *mq;
+	struct srm_batch_rep *mp;
+	int rc;
 
-	OPSTAT_INCR(SLI_OPST_HANDLE_PRECLAIM);
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
+	switch (mq->opc) {
 #ifdef HAVE_FALLOC_FL_PUNCH_HOLE
-	{
+	case SRMT_PRECLAIM: {
+		struct srt_preclaim_ent *pe;
 		struct iovec iov;
+		int i;
+
+		OPSTAT_INCR(SLI_OPST_HANDLE_PRECLAIM);
 
 		iov.iov_len = mq->nents * sizeof(*pe);
 		iov.iov_base = PSCALLOC(iov.iov_len);
@@ -73,32 +76,35 @@ sli_rim_handle_preclaim(struct pscrpc_request *rq)
 		rc = rsx_bulkserver(rq, BULK_GET_SINK, SRIM_BULK_PORTAL,
 		    &iov, 1);
 		if (rc)
-			PFL_GOTOERR(out, rc);
+			PFL_GOTOERR(preclaim_out, rc);
 
 		for (pe = buf, i = 0; i < mq->nents; pe++) {
 			struct fidc_membh *f;
 
-			mp->rc = sli_fcmh_get(&mq->fg, &f);
+			mp->rc = sli_fcmh_get(&pe->fg, &f);
 			if (mp->rc)
-				PFL_GOTOERR(out, mp->rc);
+				break;
 
 			/* XXX clear out sliver pages in memory */
 
 			/* XXX lock */
 			if (fallocate(fcmh_2_fd(f),
-			    HAVE_FALLOC_FL_PUNCH_HOLE, pe->off,
-			    pe->len) == -1)
+			    HAVE_FALLOC_FL_PUNCH_HOLE,
+			    pe->bno * SLASH_BMAP_SIZE,
+			    SLASH_BMAP_SIZE) == -1)
 				mp->rc = -errno;
 
 			fcmh_op_done(f);
 		}
-	}
 
- out:
-	PSCFREE(buf);
-#else
-	rc = -ENOTSUP;
+ preclaim_out:
+		PSCFREE(buf);
+	    }
 #endif
+	default:
+		rc = -ENOTSUP;
+		break;
+	}
 	return (rc);
 }
 
@@ -119,7 +125,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	struct timeval t0, t1, td;
 	struct iovec iov;
 
-	len = offsetof(struct srt_reclaim_entry, _pad);
+	len = sizeof(struct srt_reclaim_entry);
 
 	OPSTAT_INCR(SLI_OPST_RECLAIM);
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -250,8 +256,8 @@ sli_rim_handler(struct pscrpc_request *rq)
 		return (-ENOTSUP);
 		rc = sli_rim_handle_bmap_ptrunc(rq);
 		break;
-	case SRMT_PRECLAIM:
-		rc = sli_rim_handle_preclaim(rq);
+	case SRMT_BATCH_RQ:
+		rc = sli_rim_handle_batch(rq);
 		break;
 	case SRMT_RECLAIM:
 		rc = sli_rim_handle_reclaim(rq);
