@@ -900,6 +900,7 @@ slcfg_parse(const char *config_file)
 	struct sl_resource *r, *peer;
 	struct cfg_file *cf, *ncf;
 	struct sl_site *s;
+	struct sl_resm *m;
 	int i, j;
 	char *p;
 
@@ -958,6 +959,8 @@ slcfg_parse(const char *config_file)
 				     SLREST_PARALLEL_LFS))
 					slcfg_peer2resm(r, peer);
 			}
+			DYNARRAY_FOREACH(m, i, &r->res_members)
+				slcfg_init_resm(m);
 		}
 	}
 	CONF_ULOCK();
