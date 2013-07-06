@@ -111,8 +111,8 @@ slm_fcmh_ctor(struct fidc_membh *f, int flags)
 	memset(fmi, 0, sizeof(*fmi));
 	psc_dynarray_init(&fmi->fmi_ptrunc_clients);
 
-	rc = mdsio_lookup_slfid(vfsid, fcmh_2_fid(f),
-	    &rootcreds, &f->fcmh_sstb, &fcmh_2_mdsio_fid(f));
+	rc = mdsio_lookup_slfid(vfsid, fcmh_2_fid(f), &rootcreds,
+	    &f->fcmh_sstb, &fcmh_2_mdsio_fid(f));
 	if (rc) {
 		fmi->fmi_ctor_rc = rc;
 		if ((flags & FIDC_LOOKUP_NOLOG) == 0)
@@ -127,7 +127,7 @@ slm_fcmh_ctor(struct fidc_membh *f, int flags)
 	} else if (fcmh_isreg(f)) {
 		slash_inode_handle_init(&fmi->fmi_inodeh, f);
 		/*
-		 * We shouldn't need O_LARGEFILE because slash2
+		 * We shouldn't need O_LARGEFILE because SLASH2
 		 * metafiles are small.
 		 *
 		 * I created a file with size of 8070450532247928832
@@ -147,7 +147,8 @@ slm_fcmh_ctor(struct fidc_membh *f, int flags)
 		} else {
 			fmi->fmi_ctor_rc = rc;
 			DEBUG_FCMH(PLL_WARN, f,
-			    "mdsio_opencreate failed (rc=%d)", rc);
+			    "mdsio_opencreate failed (mf=%lx rc=%d)", 
+			    fcmh_2_mdsio_fid(f), rc);
 		}
 	} else
 		DEBUG_FCMH(PLL_INFO, f, "special file, no zfs obj");
