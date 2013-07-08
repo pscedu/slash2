@@ -940,8 +940,11 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 
 	BIORQ_CLEARATTR(r, BIORQ_INFL | BIORQ_SCHED);
 
-	if (rc)
+	if (rc) {
+		if (rc == -SLERR_KEYEXPIRED)
+			BMAP_SETATTR(b, BMAP_CLI_LEASEEXPIRED);
 		mfsrq_seterr(r->biorq_fsrqi, rc);
+	}
 
 	msl_biorq_destroy(r);
 

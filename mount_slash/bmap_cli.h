@@ -55,7 +55,8 @@ struct bmap_cli_info {
 /* mount_slash specific bcm_flags */
 #define BMAP_CLI_LEASEEXTREQ	(_BMAP_FLSHFT << 0)	/* requesting a lease ext */
 #define BMAP_CLI_REASSIGNREQ	(_BMAP_FLSHFT << 1)
-#define BMAP_CLI_LEASEFAILED	(_BMAP_FLSHFT << 2)	/* lease has expired, bmap must be released */
+#define BMAP_CLI_LEASEFAILED	(_BMAP_FLSHFT << 2)	/* lease request has failed */
+#define BMAP_CLI_LEASEEXPIRED	(_BMAP_FLSHFT << 3)	/* lease has expired, new one is needed */
 
 #define BMAP_CLI_MAX_LEASE	60 /* seconds */
 #define BMAP_CLI_EXTREQSECS	20
