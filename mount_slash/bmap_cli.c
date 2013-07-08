@@ -414,7 +414,7 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 				unlock = 0;
 			}
 		}
-	} else if (secs > BMAP_CLI_EXTREQSECS) {
+	} else if (secs > BMAP_CLI_EXTREQSECS && !(b->bcm_flags & BMAP_CLI_LEASEEXPIRED)) {
 		timespecadd(&ts, &msl_bmap_timeo_inc,
 		    &bmap_2_bci(b)->bci_etime);
 
@@ -422,7 +422,10 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 		struct slashrpc_cservice *csvc = NULL;
 		struct pscrpc_request *rq = NULL;
 		struct srm_leasebmapext_req *mq;
-		struct srm_leasebmapext_rep *mp;
+			struct srm_leasebmapext_rep *mp;
+
+		if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED)
+			b->bcm_flags &= ~BMAP_CLI_LEASEEXPIRED;
 
 		BMAP_SETATTR(b, BMAP_CLI_LEASEEXTREQ);
 		bmap_op_start_type(b, BMAP_OPCNT_LEASEEXT);

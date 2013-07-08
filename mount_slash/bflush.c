@@ -103,7 +103,7 @@ msl_fd_should_retry(struct msl_fhent *mfh, int rc)
 	    (mfh->mfh_oflags & O_NONBLOCK));
 
 	/* test for retryable error codes */
-	if (rc != -ENOTCONN)
+	if (rc != -ENOTCONN && rc != -SLERR_KEYEXPIRED)
 		retry = 0;
 	else if (mfh->mfh_oflags & O_NONBLOCK)
 		retry = 0;
