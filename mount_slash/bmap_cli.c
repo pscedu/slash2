@@ -900,7 +900,6 @@ dump_bmap_flags(uint32_t flags)
 	PFL_PRFLAG(BMAP_CLI_BIORQEXPIRE, &flags, &seq);
 	PFL_PRFLAG(BMAP_CLI_LEASEEXTREQ, &flags, &seq);
 	PFL_PRFLAG(BMAP_CLI_REASSIGNREQ, &flags, &seq);
-	PFL_PRFLAG(BMAP_CLI_DIOWR, &flags, &seq);
 	PFL_PRFLAG(BMAP_CLI_LEASEEXPIRED, &flags, &seq);
 	if (flags)
 		printf(" unknown: %#x\n", flags);
