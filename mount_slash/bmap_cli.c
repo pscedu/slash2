@@ -234,9 +234,9 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 		 * bmap out of the fid cache so that others don't
 		 * stumble across it while its active I/O's are failed.
 		 */
-		if (!(b->bcm_flags & BMAP_CLI_LEASEEXPIRED)) {
+		if (!(b->bcm_flags & BMAP_CLI_LEASEFAILED)) {
 			BMAP_SETATTR(b, BMAP_TOFREE);
-			BMAP_SETATTR(b, BMAP_CLI_LEASEEXPIRED);
+			BMAP_SETATTR(b, BMAP_CLI_LEASEFAILED);
 			bmpc_biorqs_fail(bmap_2_bmpc(b), rc);
 		}
 		bmap_2_bci(b)->bci_error = rc;
@@ -390,7 +390,7 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
 		DEBUG_BMAP(PLL_WARN, b, "bmap to be freed");
 		rc = -SLERR_BMAP_INVALID;
 
-	} else if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED) {
+	} else if (b->bcm_flags & BMAP_CLI_LEASEFAILED) {
 		/*
 		 * Catch the case where another thread has already
 		 * marked this bmap as expired.
@@ -896,7 +896,7 @@ dump_bmap_flags(uint32_t flags)
 	_dump_bmap_flags_common(&flags, &seq);
 	PFL_PRFLAG(BMAP_CLI_LEASEEXTREQ, &flags, &seq);
 	PFL_PRFLAG(BMAP_CLI_REASSIGNREQ, &flags, &seq);
-	PFL_PRFLAG(BMAP_CLI_LEASEEXPIRED, &flags, &seq);
+	PFL_PRFLAG(BMAP_CLI_LEASEFAILED, &flags, &seq);
 	if (flags)
 		printf(" unknown: %#x\n", flags);
 	printf("\n");

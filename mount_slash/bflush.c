@@ -857,7 +857,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 			psc_assert(b->bcm_flags & BMAP_TIMEOQ);
 
-			if (!(b->bcm_flags & BMAP_CLI_LEASEEXPIRED) &&
+			if (!(b->bcm_flags & BMAP_CLI_LEASEFAILED) &&
 			    timespeccmp(&crtime, &bci->bci_etime, <)) {
 				/*
 				 * Don't spin on expired bmaps while
@@ -1013,7 +1013,7 @@ msbmflwthr_main(__unusedx struct psc_thread *thr)
 			DEBUG_BMAP(PLL_INFO, b, "");
 			if (!(b->bcm_flags & BMAP_TOFREE) &&
 			    ((!(b->bcm_flags &
-				(BMAP_CLI_LEASEEXPIRED | BMAP_CLI_REASSIGNREQ)) &&
+				(BMAP_CLI_LEASEFAILED | BMAP_CLI_REASSIGNREQ)) &&
 			      (((bmap_2_bci(b)->bci_xtime.tv_sec - ts.tv_sec) <
 				BMAP_CLI_EXTREQSECS))) ||
 			     timespeccmp(&ts, &bmap_2_bci(b)->bci_etime, >=))) {
@@ -1075,7 +1075,7 @@ bmap_flush(void)
 		}
 
 		if (bmap_flushable(b) ||
-		    (b->bcm_flags & BMAP_CLI_LEASEEXPIRED))
+		    (b->bcm_flags & BMAP_CLI_LEASEFAILED))
 			psc_dynarray_add(&bmaps, b);
 
 		BMAP_ULOCK(b);
@@ -1100,7 +1100,7 @@ bmap_flush(void)
 		 * processed by the write back flush mechanism.
 		 */
 		BMAP_LOCK(b);
-		if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED) {
+		if (b->bcm_flags & BMAP_CLI_LEASEFAILED) {
 			BMAP_ULOCK(b);
 
 			bmpc_biorqs_destroy(bmpc, bmap_2_bci(b)->bci_error);
