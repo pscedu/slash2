@@ -838,9 +838,6 @@ bmap_biorq_expire(struct bmapc_memb *b)
 		BIORQ_SETATTR(r, BIORQ_FORCE_EXPIRE);
 	BMPC_ULOCK(bmpc);
 
-	/* Minimize biorq scanning via this hint. */
-	BMAP_SETATTR(b, BMAP_CLI_BIORQEXPIRE);
-
 	bmap_flushq_wake(BMAPFLSH_RPCWAIT);
 }
 
@@ -897,7 +894,6 @@ dump_bmap_flags(uint32_t flags)
 	int seq = 0;
 
 	_dump_bmap_flags_common(&flags, &seq);
-	PFL_PRFLAG(BMAP_CLI_BIORQEXPIRE, &flags, &seq);
 	PFL_PRFLAG(BMAP_CLI_LEASEEXTREQ, &flags, &seq);
 	PFL_PRFLAG(BMAP_CLI_REASSIGNREQ, &flags, &seq);
 	PFL_PRFLAG(BMAP_CLI_LEASEEXPIRED, &flags, &seq);
