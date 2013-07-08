@@ -103,7 +103,7 @@ upd_tryremove(struct slm_update_data *upd)
 	    REPL_WALKF_SCIRCUIT) && upd->upd_recpt) {
 		UPD_LOCK(upd);
 		DEBUG_UPD(PLL_DIAG, upd,
-		    "removing odtable entry "
+		    "removing odtable receipt "
 		    "[%zu, %"PSCPRIxCRC64"]",
 		    upd->upd_recpt->odtr_elem,
 		    upd->upd_recpt->odtr_key);
@@ -1149,6 +1149,10 @@ purge_receipt(size_t elem, uint64_t key)
 	odtr = PSCALLOC(sizeof(*odtr));
 	odtr->odtr_elem = elem;
 	odtr->odtr_key = key;
+	DEBUG_UPD(PLL_DIAG, upd, "purging odtable receipt "
+	    "[%zu, %"PSCPRIxCRC64"]",
+	    upd->upd_recpt->odtr_elem,
+	    upd->upd_recpt->odtr_key);
 	mds_odtable_freeitem(slm_repl_odt, odtr);
 }
 
