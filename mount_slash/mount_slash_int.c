@@ -722,7 +722,7 @@ mfsrq_clrerr(struct msl_fsrqinfo *q)
 
 	lk = MFH_RLOCK(q->mfsrq_mfh);
 	if (q->mfsrq_err) {
-		psclog_warn("clearing rqinfo q=%p err=%d", q,
+		psclog_warnx("clearing rqinfo q=%p err=%d", q,
 		    q->mfsrq_err);
 		q->mfsrq_err = 0;
 		OPSTAT_INCR(SLC_OPST_OFFLINE_RETRY_CLEAR_ERR);
