@@ -64,7 +64,7 @@ struct bmap_cli_info {
 #define BMAP_CLI_TIMEO_INC	1
 
 static __inline struct bmap_cli_info *
-bmap_2_bci(struct bmapc_memb *b)
+bmap_2_bci(struct bmap *b)
 {
 	return (bmap_get_pri(b));
 }
@@ -76,21 +76,21 @@ bmap_2_bci(struct bmapc_memb *b)
 #define bmap_2_sbd(b)		(&bmap_2_bci(b)->bci_sbd)
 #define bmap_2_ios(b)		bmap_2_sbd(b)->sbd_ios
 
-void	 msl_bmap_cache_rls(struct bmapc_memb *);
-int	 msl_bmap_lease_secs_remaining(struct bmapc_memb *);
-int	 msl_bmap_lease_tryext(struct bmapc_memb *, int *, int);
-void	 msl_bmap_lease_tryreassign(struct bmapc_memb *);
-int	 msl_bmap_lease_secs_remaining(struct bmapc_memb *);
+void	 msl_bmap_cache_rls(struct bmap *);
+int	 msl_bmap_lease_secs_remaining(struct bmap *);
+int	 msl_bmap_lease_tryext(struct bmap *, int *, int);
+void	 msl_bmap_lease_tryreassign(struct bmap *);
+int	 msl_bmap_lease_secs_remaining(struct bmap *);
 
-void	 bmap_biorq_expire(struct bmapc_memb *);
+void	 bmap_biorq_expire(struct bmap *);
 
 extern struct timespec msl_bmap_max_lease;
 extern struct timespec msl_bmap_timeo_inc;
 
-static __inline struct bmapc_memb *
+static __inline struct bmap *
 bci_2_bmap(struct bmap_cli_info *bci)
 {
-	struct bmapc_memb *b;
+	struct bmap *b;
 
 	psc_assert(bci);
 	b = (void *)bci;

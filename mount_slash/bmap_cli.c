@@ -42,11 +42,11 @@
 #include "slerr.h"
 
 /**
- * bmapc_memb_init - Initialize a bmap substructure.
+ * msl_bmap_init - Initialize CLI-specific data of a bmap structure.
  * @b: the bmap struct
  */
 void
-msl_bmap_init(struct bmapc_memb *b)
+msl_bmap_init(struct bmap *b)
 {
 	struct bmap_cli_info *bci;
 
@@ -63,7 +63,7 @@ msl_bmap_init(struct bmapc_memb *b)
  * @rw: access mode to set the bmap to.
  */
 __static int
-msl_bmap_modeset(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
+msl_bmap_modeset(struct bmap *b, enum rw rw, __unusedx int flags)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -154,7 +154,7 @@ __static int
 msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
-	struct bmapc_memb *b = args->pointer_arg[MSL_CBARG_BMAP];
+	struct bmap *b = args->pointer_arg[MSL_CBARG_BMAP];
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct srm_reassignbmap_rep *mp =
 	    pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
@@ -205,7 +205,7 @@ __static int
 msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
-	struct bmapc_memb *b = args->pointer_arg[MSL_CBARG_BMAP];
+	struct bmap *b = args->pointer_arg[MSL_CBARG_BMAP];
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct srm_leasebmapext_rep *mp =
 	    pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
@@ -257,7 +257,7 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 }
 
 int
-msl_bmap_lease_secs_remaining(struct bmapc_memb *b)
+msl_bmap_lease_secs_remaining(struct bmap *b)
 {
 	struct timespec ts;
 	int secs;
@@ -272,7 +272,7 @@ msl_bmap_lease_secs_remaining(struct bmapc_memb *b)
 }
 
 void
-msl_bmap_lease_tryreassign(struct bmapc_memb *b)
+msl_bmap_lease_tryreassign(struct bmap *b)
 {
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 	struct bmap_cli_info  *bci  = bmap_2_bci(b);
@@ -371,7 +371,7 @@ msl_bmap_lease_tryreassign(struct bmapc_memb *b)
  *	holders of open file descriptors.
  */
 int
-msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
+msl_bmap_lease_tryext(struct bmap *b, int *secs_rem, int blockable)
 {
 	int secs = 0, rc = 0, unlock = 1, extended = 0;
 	struct timespec ts;
@@ -506,7 +506,7 @@ msl_bmap_lease_tryext(struct bmapc_memb *b, int *secs_rem, int blockable)
  * @rw: read or write access
  */
 int
-msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw,
+msl_bmap_retrieve(struct bmap *bmap, enum rw rw,
     __unusedx int flags)
 {
 	struct slashrpc_cservice *csvc = NULL;
@@ -595,7 +595,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw,
  * @b:  the bmap whose cached pages should be released.
  */
 void
-msl_bmap_cache_rls(struct bmapc_memb *b)
+msl_bmap_cache_rls(struct bmap *b)
 {
 	struct bmap_pagecache_entry *e;
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
@@ -611,7 +611,7 @@ msl_bmap_cache_rls(struct bmapc_memb *b)
 }
 
 void
-msl_bmap_reap_init(struct bmapc_memb *b, const struct srt_bmapdesc *sbd)
+msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd)
 {
 	struct bmap_cli_info *bci = bmap_2_bci(b);
 	int locked;
@@ -677,7 +677,7 @@ msl_bmap_reap_init(struct bmapc_memb *b, const struct srt_bmapdesc *sbd)
  *	long as it is recent).
  */
 struct slashrpc_cservice *
-msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
+msl_bmap_to_csvc(struct bmap *b, int exclusive)
 {
 	int i, j, tmp, off, locked;
 	struct slashrpc_cservice *csvc;
@@ -806,7 +806,7 @@ msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 }
 
 void
-bmap_biorq_waitempty(struct bmapc_memb *b)
+bmap_biorq_waitempty(struct bmap *b)
 {
 	struct bmap_pagecache *bmpc;
 
@@ -824,13 +824,13 @@ bmap_biorq_waitempty(struct bmapc_memb *b)
 }
 
 void
-bmap_biorq_expire(struct bmapc_memb *b)
+bmap_biorq_expire(struct bmap *b)
 {
 	struct bmap_pagecache *bmpc;
 	struct bmpc_ioreq *r;
 
 	/*
-	 * Note that the following two lists and the bmapc_memb
+	 * Note that the following two lists and the bmap
 	 * structure itself all share the same lock.
 	 */
 	bmpc = bmap_2_bmpc(b);
@@ -848,7 +848,7 @@ bmap_biorq_expire(struct bmapc_memb *b)
  * msl_bmap_final_cleanup - Implement bmo_final_cleanupf() operation.
  */
 void
-msl_bmap_final_cleanup(struct bmapc_memb *b)
+msl_bmap_final_cleanup(struct bmap *b)
 {
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 

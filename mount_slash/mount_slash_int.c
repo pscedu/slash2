@@ -125,7 +125,7 @@ msl_update_iocounters(int len)
  * Notes: roff is bmap aligned.
  */
 __static void
-msl_biorq_build(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
+msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
     int rqnum, uint32_t roff, uint32_t len, int op)
 {
 	int i, npages = 0, rbw = 0, maxpages, bkwdra = 0;
@@ -380,7 +380,7 @@ mfh_seterr(struct msl_fhent *mfh, int err)
 __static void
 msl_biorq_del(struct bmpc_ioreq *r)
 {
-	struct bmapc_memb *b = r->biorq_bmap;
+	struct bmap *b = r->biorq_bmap;
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 
 	BMAP_LOCK(b);
@@ -565,7 +565,7 @@ msl_fhent_new(struct fidc_membh *f)
 }
 
 struct slashrpc_cservice *
-msl_try_get_replica_res(struct bmapc_memb *b, int iosidx)
+msl_try_get_replica_res(struct bmap *b, int iosidx)
 {
 	struct slashrpc_cservice *csvc;
 	struct fcmh_cli_info *fci;
@@ -916,7 +916,7 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 	struct psc_dynarray *a = args->pointer_arg[MSL_CBARG_BMPCE];
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
 	struct bmap_pagecache_entry *e;
-	struct bmapc_memb *b;
+	struct bmap *b;
 	int i;
 
 	b = r->biorq_bmap;
@@ -990,7 +990,7 @@ msl_readahead_cb(struct pscrpc_request *rq, int rc,
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct bmap_pagecache *bmpc = args->pointer_arg[MSL_CBARG_BMPC];
 	struct psc_waitq *wq = NULL;
-	struct bmapc_memb *b;
+	struct bmap *b;
 	int i;
 
 	if (rq)
@@ -1150,7 +1150,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	struct msl_fsrqinfo *q;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
-	struct bmapc_memb *b;
+	struct bmap *b;
 	struct iovec *iovs;
 	uint64_t *v8;
 
@@ -1300,7 +1300,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 __static void
 msl_pages_schedflush(struct bmpc_ioreq *r)
 {
-	struct bmapc_memb *b = r->biorq_bmap;
+	struct bmap *b = r->biorq_bmap;
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 
 	BMAP_LOCK(b);
@@ -1347,7 +1347,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 	struct bmap_pagecache_entry *e, **bmpces_cbarg;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
-	struct bmapc_memb *b = NULL;
+	struct bmap *b = NULL;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct iovec *iovs;
@@ -2124,7 +2124,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	size_t start, end, tlen, tsize;
 	struct bmap_pagecache_entry *e;
 	struct msl_fsrqinfo *q = NULL;
-	struct bmapc_memb *b;
+	struct bmap *b;
 	struct fidc_membh *f;
 	struct bmpc_ioreq *r;
 	uint64_t fsz;
