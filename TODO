@@ -473,6 +473,7 @@ reimport
 - get rid of XCTL and reuse xattr interface with special .sl prefix
 - have sliod persistently track CRC updates in case of failure
 - use bgen to prune batch PRECLAIM
+- some IOS seem to get reclaim updates when they have never been online
 
 st_blocks is broken
 - account metadata overhead in st_blocks?
