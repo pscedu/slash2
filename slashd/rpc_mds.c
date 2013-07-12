@@ -380,8 +380,8 @@ batchrq_handle(struct pscrpc_request *rq)
 
 int
 batchrq_add(struct sl_resource *r, struct slashrpc_cservice *csvc,
-    int opc, void *buf, size_t len, void (*cbf)(struct batchrq *, int),
-    int expire)
+    int opc, int ptl, void *buf, size_t len,
+    void (*cbf)(struct batchrq *, int), int expire)
 {
 	static psc_atomic64_t bid = PSC_ATOMIC64_INIT(0);
 	struct psc_listcache *l, *ml;
@@ -389,7 +389,7 @@ batchrq_add(struct sl_resource *r, struct slashrpc_cservice *csvc,
 	struct srm_batch_req *mq;
 	struct srm_batch_rep *mp;
 	struct batchrq *br;
-	int rc;
+	int rc = 0;
 
 	ml = &batchrqs_pndg;
 	LIST_CACHE_LOCK(ml);
@@ -397,8 +397,10 @@ batchrq_add(struct sl_resource *r, struct slashrpc_cservice *csvc,
 	l = &res2rpmi(r)->rpmi_batchrqs;
 	LIST_CACHE_LOCK(l);
 	LIST_CACHE_FOREACH(br, l)
-		if (rq->rq_reqmsg->opc) {
+		if (br->br_rq->rq_reqmsg->opc) {
 			sl_csvc_decref(csvc);
+			mq = pscrpc_msg_buf(br->br_rq->rq_reqmsg, 0,
+			    sizeof(*mq));
 			goto add;
 		}
 
@@ -413,17 +415,21 @@ batchrq_add(struct sl_resource *r, struct slashrpc_cservice *csvc,
 
 	br = psc_pool_get(batchrq_pool);
 	memset(br, 0, sizeof(*br));
+	INIT_PSC_LISTENTRY(&br->br_lentry);
+	INIT_PSC_LISTENTRY(&br->br_lentry_ml);
 	br->br_rq = rq;
+	br->br_ptl = ptl;
 	br->br_csvc = csvc;
 	br->br_bid = mq->bid;
 	br->br_res = r;
 	br->br_cbf = cbf;
+	br->br_buf = PSCALLOC(LNET_MTU);
 
 	PFL_GETTIMEVAL(&br->br_expire);
 	br->br_expire.tv_sec += expire;
 
-	lc_add(l, rq);
-	lc_add_sorted(ml, rq, batchrq_cmp);
+	lc_add(l, br);
+	lc_add_sorted(ml, br, batchrq_cmp);
 
  add:
 	memcpy(br->br_buf + br->br_len, buf, len);
@@ -436,7 +442,7 @@ batchrq_add(struct sl_resource *r, struct slashrpc_cservice *csvc,
 
  out:
 	LIST_CACHE_ULOCK(l);
-	LIST_CACHE_LOCK(ml);
+	LIST_CACHE_ULOCK(ml);
 	if (csvc)
 		sl_csvc_decref(csvc);
 	return (rc);
@@ -479,7 +485,7 @@ void
 slmbchrqthr_spawn(void)
 {
 	psc_poolmaster_init(&batchrq_pool_master,
-	    struct batchrq, br_lentry_ml, PPMF_AUTO, 64, 64, 0,
+	    struct batchrq, br_lentry_ml, PPMF_AUTO, 8, 8, 0,
 	    NULL, NULL, NULL, "bchrq");
 	batchrq_pool = psc_poolmaster_getmgr(&batchrq_pool_master);
 
