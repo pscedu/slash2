@@ -213,7 +213,7 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
 	mp->rc = mds_bmap_bml_chwrmode(bml, mq->prefios[0]);
-	if (mp->rc == -EALREADY)
+	if (mp->rc == -PFLERR_ALREADY)
 		mp->rc = 0;
 	else if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
@@ -958,7 +958,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			to_set |= SL_SETATTRF_GEN;
 			unbump = 1;
 		} else if (!flush) {
-PFL_GOTOERR(out, mp->rc = -ENOTSUP);
+PFL_GOTOERR(out, mp->rc = -PFLERR_NOTSUP);
 
 			/* partial truncate */
 			if (f->fcmh_flags & FCMH_IN_PTRUNC)
@@ -971,9 +971,9 @@ PFL_GOTOERR(out, mp->rc = -ENOTSUP);
 
 	if (to_set) {
 		if (IS_REMOTE_FID(mq->attr.sst_fg.fg_fid)) {
-			mp->rc = slm_rmm_forward_namespace(SLM_FORWARD_SETATTR,
-			    &mq->attr.sst_fg, NULL, NULL, NULL, 0, NULL,
-			    &mq->attr, to_set);
+			mp->rc = slm_rmm_forward_namespace(
+			    SLM_FORWARD_SETATTR, &mq->attr.sst_fg, NULL,
+			    NULL, NULL, 0, NULL, &mq->attr, to_set);
 			if (mp->rc)
 				PFL_GOTOERR(out, mp->rc);
 		}
