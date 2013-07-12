@@ -170,6 +170,7 @@ bim_getcurseq(void)
 		if (rc) {
 			psclog_warnx("failed to get bmap seqno rc=%d", rc);
 			freelock(&bimSeq.bim_lock);
+			sleep(1);
 			goto retry;
 		}
 	}
