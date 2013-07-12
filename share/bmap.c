@@ -375,12 +375,18 @@ _dump_bmapod(const struct pfl_callerinfo *pci, int level,
 	} while (0)
 
 void
-dump_bmap_repls(uint8_t *repls)
+_dump_bmap_repls(FILE *fp, uint8_t *repls)
 {
 	char rbuf[SL_MAX_REPLICAS + 1];
 
 	DUMP_BMAP_REPLS(repls, rbuf);
-	fprintf(stderr, "%s\n", rbuf);
+	fprintf(fp, "%s\n", rbuf);
+}
+
+void
+dump_bmap_repls(uint8_t *repls)
+{
+	_dump_bmap_repls(stderr, repls);
 }
 
 void
@@ -425,7 +431,6 @@ _dump_bmap_flags_common(uint32_t *flags, int *seq)
 	PFL_PRFLAG(BMAP_WAITERS, flags, seq);
 	PFL_PRFLAG(BMAP_BUSY, flags, seq);
 	PFL_PRFLAG(BMAP_NEW, flags, seq);
-	PFL_PRFLAG(BMAP_REPLAY, flags, seq);
 }
 
 __weak void

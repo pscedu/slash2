@@ -145,8 +145,7 @@ struct bmap {
 #define BMAP_WAITERS		(1 << 10)	/* has bcm_fcmh waiters */
 #define BMAP_BUSY		(1 << 11)	/* temporary processing lock */
 #define BMAP_NEW		(1 << 12)	/* just created */
-#define BMAP_REPLAY		(1 << 13)	/* during journal replay */
-#define _BMAP_FLSHFT		(1 << 14)
+#define _BMAP_FLSHFT		(1 << 13)
 
 #define bmap_2_fid(b)		fcmh_2_fid((b)->bcm_fcmh)
 
@@ -165,7 +164,7 @@ struct bmap {
 #define BMAP_CLEARATTR(b, fl)	CLEARATTR_LOCKED(&(b)->bcm_lock, &(b)->bcm_flags, (fl))
 
 #define _DEBUG_BMAP_FMT		"bmap@%p bno:%u flg:%#x:"		\
-				"%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s "	\
+				"%s%s%s%s%s%s%s%s%s%s%s%s%s%s "		\
 				"fid:"SLPRI_FID" opcnt=%d "
 
 #define _DEBUG_BMAP_FMTARGS(b)						\
@@ -183,7 +182,6 @@ struct bmap {
 	(b)->bcm_flags & BMAP_WAITERS	? "w" : "",			\
 	(b)->bcm_flags & BMAP_BUSY	? "B" : "",			\
 	(b)->bcm_flags & BMAP_NEW	? "N" : "",			\
-	(b)->bcm_flags & BMAP_REPLAY	? "P" : "",			\
 	(b)->bcm_flags & ~(_BMAP_FLSHFT - 1) ? "+" : "",		\
 	(b)->bcm_fcmh ? fcmh_2_fid((b)->bcm_fcmh) : FID_ANY,		\
 	psc_atomic32_read(&(b)->bcm_opcnt)
@@ -336,7 +334,6 @@ struct bmap {
 #define BMAPGETF_LOAD		(1 << 0)	/* allow loading if not in cache */
 #define BMAPGETF_NORETRIEVE	(1 << 1)	/* when loading, do not invoke retrievef */
 #define BMAPGETF_NOAUTOINST	(1 << 2)	/* do not autoinstantiate */
-#define BMAPGETF_REPLAY		(1 << 3)	/* loading during journal replay */
 
 int	 bmap_cmp(const void *, const void *);
 void	 bmap_cache_init(size_t);
