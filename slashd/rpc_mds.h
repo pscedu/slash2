@@ -88,8 +88,8 @@ struct batchrq {
 	int				  br_ptl;		/* bulk RPC portal */
 	void				 *br_buf;
 	size_t				  br_len;
-	struct psc_listentry		 *br_lentry;
-	struct psc_listentry		 *br_lentry_ml;
+	struct psc_listentry		  br_lentry;
+	struct psc_listentry		  br_lentry_ml;
 	void				(*br_cbf)(struct batchrq *, int);
 };
 
@@ -112,7 +112,7 @@ int	slm_symlink(struct pscrpc_request *, struct srm_symlink_req *,
 	    struct srm_symlink_rep *, int);
 
 int batchrq_add(struct sl_resource *, struct slashrpc_cservice *,
-    int, void *, size_t, void (*)(struct batchrq *, int), int);
+    int, int, void *, size_t, void (*)(struct batchrq *, int), int);
 int batchrq_handle(struct pscrpc_request *);
 
 void slmbchrqthr_spawn(void);
