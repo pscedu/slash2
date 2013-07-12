@@ -29,6 +29,7 @@
 #include "psc_util/multiwait.h"
 
 #include "mdslog.h"
+#include "rpc_mds.h"
 #include "slashd.h"
 #include "slconfig.h"
 
@@ -40,8 +41,8 @@ slcfg_init_res(struct sl_resource *res)
 	struct sl_mds_iosinfo *si;
 
 	rpmi = res2rpmi(res);
-	lc_reginit(&rpmi->rpmi_batchrqs, struct pscrpc_request,
-	    rq_lentry, "bchrq-%s", res->res_name);
+	lc_reginit(&rpmi->rpmi_batchrqs, struct batchrq, br_lentry,
+	    "bchrq-%s", res->res_name);
 	psc_mutex_init(&rpmi->rpmi_mutex);
 	psc_waitq_init(&rpmi->rpmi_waitq);
 
