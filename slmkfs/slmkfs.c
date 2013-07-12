@@ -161,6 +161,7 @@ void
 slnewfs_create(const char *fsroot, uint32_t depth)
 {
 	char metadir[PATH_MAX], fn[PATH_MAX];
+	time_t tm;
 	FILE *fp;
 	int fd;
 
@@ -252,14 +253,12 @@ slnewfs_create(const char *fsroot, uint32_t depth)
 		psc_fatal("open %s", fn);
 	if (fchmod(fileno(fp), 0600) == -1)
 		psclog_warn("chown %u %s", pw->pw_uid, fn);
-	fprintf(fp, "This pool was created %s on %s\n",
-	    ctime((time_t *)&cursor.pjc_timestamp), psc_get_hostname());
+	tm = cursor.pjc_timestamp;
+	fprintf(fp, "This pool was created %s on %s\n", ctime(&tm),
+	    psc_get_hostname());
 	fclose(fp);
 
 	xmkfn(fn, "%s/%s", metadir, SL_FN_BMAP_ODTAB);
-	slnewfs_create_odtable(fn, 0);
-
-	xmkfn(fn, "%s/%s", metadir, SL_FN_REPL_ODTAB);
 	slnewfs_create_odtable(fn, 0);
 
 	xmkfn(fn, "%s/%s", metadir, SL_FN_PTRUNC_ODTAB);
