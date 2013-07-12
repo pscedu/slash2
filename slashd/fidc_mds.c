@@ -147,7 +147,7 @@ slm_fcmh_ctor(struct fidc_membh *f, int flags)
 		} else {
 			fmi->fmi_ctor_rc = rc;
 			DEBUG_FCMH(PLL_WARN, f,
-			    "mdsio_opencreate failed (mf=%lx rc=%d)", 
+			    "mdsio_opencreate failed (mf=%"PRIx64" rc=%d)", 
 			    fcmh_2_mdsio_fid(f), rc);
 		}
 	} else
