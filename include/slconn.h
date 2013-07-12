@@ -216,7 +216,7 @@ struct sl_expcli_ops {
 		 * XXX this horrible hack.  if one side thinks there's	\
 		 * no connection, how can the other side not?		\
 		 */							\
-		if (_rc == 0 && (mp)->rc == SLERR_NOTCONN)		\
+		if (_rc == 0 && (mp)->rc == PFLERR_NOTCONN)		\
 			sl_csvc_disconnect(csvc);			\
 		_rc;							\
 	} _PFL_RVEND
@@ -249,7 +249,7 @@ struct sl_expcli_ops {
 			(error) = authbuf_check((rq), PSCRPC_MSG_REPLY);\
 		if ((error) == 0)					\
 			(error) = (mp) ? (mp)->rc : -ENOMSG;		\
-		if ((error) == -SLERR_NOTCONN && (csvc))		\
+		if ((error) == -PFLERR_NOTCONN && (csvc))		\
 			sl_csvc_disconnect(csvc);			\
 	} while (0)
 

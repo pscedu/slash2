@@ -795,7 +795,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 			slm_repl_bmap_rel(b);
 		}
 		if (bmapno && repl_some_act == 0)
-			rc = -SLERR_ALREADY;
+			rc = -PFLERR_ALREADY;
 		else if (bmapno && repl_all_act)
 			rc = -SLERR_REPL_ALREADY_ACT;
 	} else if (mds_bmap_exists(f, bmapno)) {
@@ -841,7 +841,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 					UPD_UNBUSY(upd);
 					rc = 0;
 				} else if (rc & F_ALREADY)
-					rc = -SLERR_ALREADY;
+					rc = -PFLERR_ALREADY;
 				else
 					rc = -SLERR_REPL_NOT_ACT;
 				slm_repl_bmap_rel(b);

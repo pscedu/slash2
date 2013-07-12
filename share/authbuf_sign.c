@@ -129,7 +129,7 @@ authbuf_check(struct pscrpc_request *rq, int msgtype)
 		m = rq->rq_repmsg;
 
 	if (m->bufcount < 2)
-		return (SLERR_BADMSG);
+		return (PFLERR_BADMSG);
 
 	saf = pscrpc_msg_buf(m, m->bufcount - 1, sizeof(*saf));
 

@@ -1446,7 +1446,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 		 * the bmap CRC table.
 		 * XXX may have to replace this with a waitq
 		 */
-		rc = -SLERR_ALREADY;
+		rc = -PFLERR_ALREADY;
 		BMAP_ULOCK(bmap);
 
 		DEBUG_BMAP(PLL_ERROR, bmap,

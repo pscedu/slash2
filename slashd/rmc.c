@@ -1496,7 +1496,7 @@ slm_rmc_handler(struct pscrpc_request *rq)
 	if (rq->rq_reqmsg->opc != SRMT_CONNECT) {
 		EXPORT_LOCK(rq->rq_export);
 		if (rq->rq_export->exp_private == NULL)
-			rc = -SLERR_NOTCONN;
+			rc = -PFLERR_NOTCONN;
 		EXPORT_ULOCK(rq->rq_export);
 		if (rc)
 			PFL_GOTOERR(out, rc);

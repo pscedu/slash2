@@ -168,7 +168,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		/* Reject old bmapdesc. */
 		psclog_warnx("op: %d, seq %"PRId64" < bim_getcurseq(%"PRId64")",
 		    rw, mq->sbd.sbd_seq, seqno);
-		mp->rc = -SLERR_KEYEXPIRED;
+		mp->rc = -PFLERR_KEYEXPIRED;
 		return (mp->rc);
 	}
 
@@ -492,7 +492,7 @@ sli_ric_handler(struct pscrpc_request *rq)
 	if (rq->rq_reqmsg->opc != SRMT_CONNECT) {
 		EXPORT_LOCK(rq->rq_export);
 		if (rq->rq_export->exp_private == NULL)
-			rc = -SLERR_NOTCONN;
+			rc = -PFLERR_NOTCONN;
 		EXPORT_ULOCK(rq->rq_export);
 		if (rc) {
 			DEBUG_REQ(PLL_ERROR, rq,
