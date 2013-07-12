@@ -689,7 +689,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 	    bml, bmi->bmi_writers, bmi->bmi_readers);
 
 	if (bml->bml_flags & BML_WRITE) {
-		rc = -EALREADY;
+		rc = -PFLERR_ALREADY;
 		goto out;
 	}
 
@@ -735,7 +735,6 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 	OPSTAT_INCR(SLM_OPST_BMAP_CHWRMODE_DONE);
 
   out:
-
 	BMAP_CLEARATTR(b, BMAP_IONASSIGN);
 	bmap_wake_locked(b);
 	return (rc);
@@ -2187,12 +2186,12 @@ _dbdo(const struct pfl_callerinfo *pci,
     int (*cb)(struct slm_sth *, void *), void *arg,
     const char *fmt, ...)
 {
+	char *p, dbuf[LINE_MAX];
+	int dbuf_off, rc, n, j;
 	struct slm_sth *sth;
 	const char *errstr;
-	int rc, n, j;
 	uint64_t key;
 	va_list ap;
-	char *p;
 
 	key = (uint64_t)fmt;
 	sth = psc_hashtbl_search(&slm_sth_hashtbl, NULL, NULL, &key);
@@ -2223,27 +2222,51 @@ _dbdo(const struct pfl_callerinfo *pci,
 	psc_mutex_lock(&sth->sth_mutex);
 	n = sqlite3_bind_parameter_count(sth->sth_sth);
 	va_start(ap, fmt);
+	if (psc_log_getlevel(pci->pci_subsys) >= PLL_DEBUG) {
+		strlcpy(dbuf, fmt, sizeof(dbuf));
+		dbuf_off = strlen(fmt);
+	}
 	for (j = 0; j < n; j++) {
 		int type = va_arg(ap, int);
 		switch (type) {
-		case SQLITE_INTEGER64:
+		case SQLITE_INTEGER64: {
+			int64_t arg;
+
+			arg = va_arg(ap, int64_t);
 			rc = sqlite3_bind_int64(sth->sth_sth, j + 1,
-			    va_arg(ap, int64_t));
+			    arg);
+			if (psc_log_getlevel(pci->pci_subsys) >= PLL_DEBUG)
+				dbuf_off += snprintf(dbuf + dbuf_off,
+				    sizeof(dbuf) - dbuf_off,
+				    "; arg %d: %"PRId64, j + 1, arg);
 			break;
-		case SQLITE_INTEGER:
-			rc = sqlite3_bind_int(sth->sth_sth, j + 1,
-			    va_arg(ap, int32_t));
+		    }
+		case SQLITE_INTEGER: {
+			int32_t arg;
+
+			arg = va_arg(ap, int32_t);
+			rc = sqlite3_bind_int(sth->sth_sth, j + 1, arg);
+			if (psc_log_getlevel(pci->pci_subsys) >= PLL_DEBUG)
+				dbuf_off += snprintf(dbuf + dbuf_off,
+				    sizeof(dbuf) - dbuf_off,
+				    "; arg %d: %d", j + 1, arg);
 			break;
+		    }
 		case SQLITE_TEXT:
 			p = va_arg(ap, char *);
 			rc = sqlite3_bind_text(sth->sth_sth, j + 1, p,
 			    strlen(p), SQLITE_STATIC);
+			if (psc_log_getlevel(pci->pci_subsys) >= PLL_DEBUG)
+				dbuf_off += snprintf(dbuf + dbuf_off,
+				    sizeof(dbuf) - dbuf_off,
+				    "; arg %d: %s", j + 1, p);
 			break;
 		default:
 			psc_fatalx("type");
 		}
 		psc_assert(rc == SQLITE_OK);
 	}
+	psclog_debug("issuing SQL: %s", dbuf);
 	va_end(ap);
 
 	psc_mutex_lock(&slm_dbh_mut);
@@ -2289,5 +2312,13 @@ slm_ptrunc_odt_startup_cb(void *data, struct odtable_receipt *odtr,
 		/* XXX do something */
 		fcmh_op_done(f);
 	}
+
+//	brepls_init(tract, -1);
+//	tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_TRUNCPNDG;
+
+//	brepls_init(retifset, 0);
+//	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
+//	wr = mds_repl_bmap_walk_all(b, tract, retifset, 0);
+
 	return (0);
 }
