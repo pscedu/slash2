@@ -194,10 +194,8 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 
 	DEBUG_BMAPOD(PLL_INFO, b, "successfully loaded from disk");
 
-	if (flags & BMAPGETF_REPLAY) {
-		b->bcm_flags |= BMAP_REPLAY;
+	if (slm_opstate == SLM_OPSTATE_REPLAY)
 		return (0);
-	}
 
 	upd = bmap_2_upd(b);
 

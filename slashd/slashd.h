@@ -302,6 +302,12 @@ struct slm_wkdata_batchrq_cb {
 
 #define SLM_NWORKER_THREADS	4
 
+enum {
+	SLM_OPSTATE_INIT = 0,
+	SLM_OPSTATE_REPLAY,
+	SLM_OPSTATE_NORMAL
+};
+
 int		 mds_handle_rls_bmap(struct pscrpc_request *, int);
 int		 mds_lease_renew(struct fidc_membh *, struct srt_bmapdesc *,
 			struct srt_bmapdesc *, struct pscrpc_export *);
@@ -346,6 +352,8 @@ extern struct sl_mds_nsstats	 slm_nsstats_aggr;	/* aggregate namespace stats */
 extern struct sl_mds_peerinfo	*localinfo;
 
 extern struct psc_thread	*slmconnthr;
+
+extern int			 slm_opstate;
 
 static __inline int
 slm_get_rpmi_idx(struct sl_resource *res)

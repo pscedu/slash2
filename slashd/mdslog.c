@@ -1756,7 +1756,7 @@ mdslog_bmap_repls(void *datap, uint64_t txg, __unusedx int flag)
 	struct slm_wkdata_wr_brepl *wk;
 	struct bmapc_memb *b = datap;
 
-	psc_assert((b->bcm_flags & BMAP_REPLAY) == 0);
+	psc_assert(slm_opstate == SLM_OPSTATE_NORMAL);
 
 	sjbr = pjournal_get_buf(mdsJournal, sizeof(*sjbr));
 	mdslogfill_bmap_repls(b, sjbr);

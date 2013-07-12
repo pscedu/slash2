@@ -66,9 +66,6 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
-/* this table is immutable, at least for now */
-struct psc_hashtbl	 rootHtable;
-
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 int			 allow_root_uid = 1;
@@ -85,6 +82,11 @@ uint32_t		 sys_upnonce;
 
 struct odtable		*slm_repl_odt;
 struct odtable		*slm_ptrunc_odt;
+
+/* this table is immutable, at least for now */
+struct psc_hashtbl	 rootHtable;
+
+int			 slm_opstate;
 
 int
 psc_usklndthr_get_type(const char *namefmt)
@@ -600,6 +602,8 @@ main(int argc, char *argv[])
 	sl_nbrqset = pscrpc_nbreqset_init(NULL, NULL);
 	pscrpc_nbreapthr_spawn(sl_nbrqset, SLMTHRT_NBRQ, "slmnbrqthr");
 
+	slm_opstate = SLM_OPSTATE_REPLAY;
+
 	mds_odtable_load(&mdsBmapAssignTable, SL_FN_BMAP_ODTAB,
 	    "bmapassign");
 	mds_odtable_load(&slm_repl_odt, SL_FN_REPL_ODTAB, "repl");
@@ -621,6 +625,8 @@ main(int argc, char *argv[])
 	mds_odtable_scan(mdsBmapAssignTable, mds_bia_odtable_startup_cb, NULL);
 	mds_odtable_scan(slm_repl_odt, slm_repl_odt_startup_cb, NULL);
 	mds_odtable_scan(slm_ptrunc_odt, slm_ptrunc_odt_startup_cb, NULL);
+
+	slm_opstate = SLM_OPSTATE_NORMAL;
 
 	slmcohthr_spawn();
 	slmbmaptimeothr_spawn();
