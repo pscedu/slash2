@@ -88,8 +88,6 @@ fci_2_fcmh(struct fcmh_cli_info *fci)
 #define FCMH_CLI_DIRTY_ATTRS	(_FCMH_FLGSHFT << 4)	/* has dirty attributes */
 #define FCMH_CLI_DIRTY_QUEUE	(_FCMH_FLGSHFT << 5)	/* on dirty queue */
 
-void	slc_fcmh_initdci(struct fidc_membh *);
-
 int	fcmh_checkcreds(struct fidc_membh *, const struct pscfs_creds *, int);
 
 #define fidc_lookup_load_inode(fid, fcmhp, pfcc)			\
