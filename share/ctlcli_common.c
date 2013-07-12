@@ -170,7 +170,7 @@ sl_bmap_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	const struct slctlmsg_bmap *scb = m;
 
 	printf("%016"SLPRIxFID" %6d "
-	    "%c%c%c%c%c%c%c%c%c%c%c%c%c%c %3u "
+	    "%c%c%c%c%c%c%c%c%c%c%c%c%c %3u "
 	    "%13s %7"PRIu64"\n",
 	    scb->scb_fg.fg_fid, scb->scb_bno,
 	    scb->scb_flags & BMAP_RD		? 'R' : '-',
@@ -186,7 +186,6 @@ sl_bmap_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    scb->scb_flags & BMAP_WAITERS	? 'w' : '-',
 	    scb->scb_flags & BMAP_BUSY		? 'B' : '-',
 	    scb->scb_flags & BMAP_NEW		? 'N' : '-',
-	    scb->scb_flags & BMAP_REPLAY	? 'P' : '-',
 	    scb->scb_opcnt, scb->scb_resname,
 	    scb->scb_seq);
 }
