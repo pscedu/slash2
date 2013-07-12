@@ -145,14 +145,14 @@ mdscoh_req(struct bmap_mds_lease *bml)
 	if (bml->bml_flags & BML_RECOVER) {
 		psc_assert(!bml->bml_exp);
 		BML_ULOCK(bml);
-		return (-ENOTCONN);
+		return (-PFLERR_NOTCONN);
 	}
 	psc_assert(bml->bml_exp);
 
 	csvc = slm_getclcsvc(bml->bml_exp);
 	if (csvc == NULL) {
 		BML_ULOCK(bml);
-		return (-ENOTCONN);
+		return (-PFLERR_NOTCONN);
 	}
 	BML_ULOCK(bml);
 
