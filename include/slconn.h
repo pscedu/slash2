@@ -35,6 +35,7 @@
 
 #include <stdint.h>
 
+#include "pfl/err.h"
 #include "pfl/export.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
