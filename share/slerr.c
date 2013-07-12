@@ -29,6 +29,15 @@
 
 #include "slerr.h"
 
+char *pfl_errstrs[] = {
+/*  0 */ "Bad message",
+/*  1 */ "Key has expired",
+/*  2 */ "No connection to peer",
+/*  3 */ "Operation already in progress",
+/*  4 */ "Operation not supported",
+	  NULL
+};
+
 char *slash_errstrs[] = {
 /*  0 */ "Specified replica(s) already exist",
 /*  1 */ "Specified replica(s) do not exist",
@@ -67,13 +76,17 @@ char *slash_errstrs[] = {
 /* 34 */ "CRC absent",
 /* 35 */ "Bad message",
 /* 36 */ "Key expired",
-	NULL
+	 NULL
 };
 
 char *
 slstrerror(int error)
 {
 	error = abs(error);
+
+	if (error >= _PFLERR_START &&
+	    error < _PFLERR_START + nitems(pfl_errstrs))
+		return (slash_errstrs[error - _PFLERR_START]);
 
 	if (error >= _SLERR_START &&
 	    error < _SLERR_START + nitems(slash_errstrs))
