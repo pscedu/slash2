@@ -112,7 +112,6 @@ struct sl_resm {
 	struct psc_dynarray	 resm_nids;	/* network interfaces */
 	struct sl_resource	*resm_res;
 	uint32_t		 resm_stkvers;	/* peer SLASH2 stack version */
-	uint32_t		 resm_upnonce;	/* tracked peer's system uptime nonce */
 	struct pfl_mutex	 resm_mutex;
 #define resm_site		 resm_res->res_site
 #define resm_siteid		 resm_site->site_id
@@ -291,6 +290,8 @@ extern int		 cfg_resm_pri_sz;
 extern char		 cfg_filename[];
 extern int		 cfg_lineno;
 extern struct psclist_head cfg_lnetif_pairs;
+
+extern uint32_t		 sys_upnonce;
 
 /**
  * sl_global_id_build - Produce a global, unique identifier for a
