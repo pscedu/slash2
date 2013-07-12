@@ -102,7 +102,7 @@ sli_rim_handle_batch(struct pscrpc_request *rq)
 	    }
 #endif
 	default:
-		rc = -ENOTSUP;
+		rc = -PFLERR_NOTSUP;
 		break;
 	}
 	return (rc);
@@ -253,7 +253,7 @@ sli_rim_handler(struct pscrpc_request *rq)
 		rc = sli_rim_handle_repl_schedwk(rq);
 		break;
 	case SRMT_BMAP_PTRUNC:
-		return (-ENOTSUP);
+		return (-PFLERR_NOTSUP);
 		rc = sli_rim_handle_bmap_ptrunc(rq);
 		break;
 	case SRMT_BATCH_RQ:
