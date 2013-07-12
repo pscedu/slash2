@@ -166,7 +166,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct bmap_ops);
 	PRTYPE(struct bmap_pagecache);
 	PRTYPE(struct bmap_pagecache_entry);
-	PRTYPE(struct bmap_repls_upd_odent);
 	PRTYPE(struct bmap_timeo_table);
 	PRTYPE(struct bmpc_ioreq);
 	PRTYPE(struct bmpc_write_coalescer);
@@ -821,6 +820,9 @@ main(int argc, char *argv[])
 	PRVAL(SLM_FORWARD_SETATTR);
 	PRVAL(SLM_FORWARD_SYMLINK);
 	PRVAL(SLM_FORWARD_UNLINK);
+	PRVAL(SLM_OPSTATE_INIT);
+	PRVAL(SLM_OPSTATE_NORMAL);
+	PRVAL(SLM_OPSTATE_REPLAY);
 	PRVAL(SLM_OPST_BMAP_CHWRMODE);
 	PRVAL(SLM_OPST_BMAP_CHWRMODE_DONE);
 	PRVAL(SLM_OPST_BMAP_DIO_CLR);
