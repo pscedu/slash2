@@ -557,7 +557,7 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	bmap_op_start_type(b, BMAP_OPCNT_IONASSIGN);
 
 	if (mds_bmap_add_repl(b, &bia))
-		return (-1);
+		return (-1); // errno
 
 	bml->bml_seq = bia.bia_seq;
 
@@ -587,13 +587,13 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 	    bmi->bmi_assign, &bia, sizeof(bia));
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, b, "odtable_getitem() failed");
-		return (rc);
+		return (rc); // negative errno
 	}
 	if (bia.bia_fid != fcmh_2_fid(b->bcm_fcmh)) {
 		/* XXX release bia? */
 		DEBUG_BMAP(PLL_ERROR, b, "different fid="SLPRI_FID,
 		   bia.bia_fid);
-		return (-1);
+		return (-1); // errno
 	}
 
 	psc_assert(bia.bia_seq == bmi->bmi_seq);
@@ -610,7 +610,7 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 	bml->bml_seq = bia.bia_seq;
 
 	if (mds_bmap_add_repl(b, &bia))
-		return (-1);
+		return (-1); // errno
 
 	DEBUG_FCMH(PLL_INFO, b->bcm_fcmh, "bmap update, elem=%zd",
 	    bmi->bmi_assign->odtr_elem);
