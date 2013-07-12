@@ -31,9 +31,11 @@
 #include "journal_mds.h"
 #include "mdsio.h"
 #include "namespace.h"
+#include "odtable_mds.h"
 #include "pathnames.h"
 #include "repl_mds.h"
 #include "slerr.h"
+#include "up_sched_res.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
 
@@ -59,6 +61,7 @@
 static int
 mds_replay_bmap(void *jent, int op)
 {
+	int resid, off, i, rc, tract[NBREPLST];
 	struct slmds_jent_bmap_repls *sjbr = jent;
 	struct slmds_jent_bmap_crc *sjbc = jent;
 	struct srt_bmap_crcwire *bmap_wire;
@@ -66,11 +69,11 @@ mds_replay_bmap(void *jent, int op)
 	struct bmapc_memb *b = NULL;
 	struct bmap_mds_info *bmi;
 	struct slash_fidgen fg;
-	int i, rc;
 	struct {
 		slfid_t		fid;
 		sl_bmapno_t	bno;
 	} *cp = jent;
+	uint32_t n;
 
 	fg.fg_fid = cp->fid;
 	fg.fg_gen = FGEN_ANY;
@@ -78,13 +81,12 @@ mds_replay_bmap(void *jent, int op)
 	if (rc)
 		goto out;
 
-	rc = bmap_getf(f, cp->bno, SL_WRITE, BMAPGETF_REPLAY |
-	    BMAPGETF_LOAD, &b);
+	rc = bmap_getf(f, cp->bno, SL_WRITE, BMAPGETF_LOAD, &b);
 	if (rc)
 		goto out;
 	bmi = bmap_2_bmi(b);
 
-	DEBUG_BMAPOD(PLL_INFO, b, "before bmap replay op=%d", op);
+	DEBUG_BMAPOD(PLL_DIAG, b, "before bmap replay op=%d", op);
 
 	switch (op) {
 	case B_REPLAY_OP_REPLS:
@@ -92,21 +94,36 @@ mds_replay_bmap(void *jent, int op)
 
 		bmap_op_start_type(b, BMAP_OPCNT_WORK);
 
-		upd_init(bmap_2_upd(b), UPDT_BMAP);
-
-		FCMH_WAIT_BUSY(f);
-		FCMH_ULOCK(f);
-		BMAP_WAIT_BUSY(b);
+		/* a no-op will gather the locks for us */
+		brepls_init(tract, -1);
+		mds_repl_bmap_walk_all(b, tract, NULL, 0);
 
 		memcpy(bmi->bmi_orepls, b->bcm_repls,
 		    sizeof(bmi->bmi_orepls));
-		b->bcm_flags |= BMAP_MDS_REPLMODWR;
 		bmap_2_replpol(b) = sjbr->sjbr_replpol;
 		memcpy(b->bcm_repls, sjbr->sjbr_repls,
 		    SL_REPLICA_NBYTES);
 
-		BMAP_ULOCK(b);
-		slm_repl_upd_odt_write(b);
+		/* revert inflight to reissue */
+		brepls_init(tract, -1);
+		tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+		tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
+		mds_repl_bmap_walk_all(b, tract, NULL, 0);
+
+		b->bcm_flags |= BMAP_MDS_REPLMODWR;
+		slm_repl_upd_write(b);
+
+		for (n = 0, off = 0; n < fcmh_2_nrepls(f);
+		    n++, off += SL_BITS_PER_REPLICA)
+			switch (SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls,
+			    off)) {
+			case BREPLST_REPL_QUEUED:
+			case BREPLST_GARBAGE:
+				resid = fcmh_2_repl(f, n);
+				slm_upsch_insert(b, resid);
+				break;
+			}
+
 		break;
 	case B_REPLAY_OP_CRC: {
 		struct slash_inode_handle *ih;

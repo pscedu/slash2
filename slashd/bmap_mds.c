@@ -97,35 +97,62 @@ mds_bmap_ensure_valid(struct bmapc_memb *b)
 		DEBUG_BMAP(PLL_FATAL, b, "bmap has no valid replicas");
 }
 
-int
-slm_bmap_read_db_cb(struct slm_sth *sth, void *p)
-{
-	struct odtable_receipt *odtr;
-	struct slm_update_data *upd;
-	struct bmapc_memb *b = p;
+struct bmap_nonce_cbarg {
+	struct bmap	*b;
+	int		 update;
+};
 
-	upd = &bmap_2_bmi(b)->bmi_upd;
-	psc_assert(upd->upd_recpt == NULL);
-	upd->upd_recpt = odtr = PSCALLOC(sizeof(*odtr));
-	odtr->odtr_elem = sqlite3_column_int64(sth->sth_sth, 0);
-	odtr->odtr_key = sqlite3_column_int64(sth->sth_sth, 1);
-	DEBUG_BMAP(PLL_DIAG, b,
-	    "upd %p loaded odtr [elem=%zu, key=%"PSCPRIxCRC64"]",
-	    upd, odtr->odtr_elem, odtr->odtr_key);
+int
+slm_bmap_resetnonce_cb(struct slm_sth *sth, void *p)
+{
+	struct bmap_nonce_cbarg *a = p;
+	int idx, tract[NBREPLST];
+	uint32_t nonce;
+
+	nonce = sqlite3_column_int(sth->sth_sth, 0);
+	if (nonce == sys_upnonce)
+		return (0);
+
+	a->update = 1;
+	idx = mds_repl_ios_lookup(current_vfsid,
+	    fcmh_2_inoh(a->b->bcm_fcmh),
+	    sqlite3_column_int(sth->sth_sth, 1));
+	psc_assert(idx >= 0);
+
+	brepls_init(tract, -1);
+	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
+	mds_repl_bmap_walk(a->b, tract, NULL, 0, &idx, 1);
+
 	return (0);
 }
 
 void
-slm_repl_upd_odt_read(struct bmapc_memb *b)
+slm_bmap_resetnonce(struct bmap *b)
 {
-	dbdo(slm_bmap_read_db_cb, b,
-	    " SELECT	recpt_elem, recpt_key"
+	struct bmap_nonce_cbarg a;
+
+	memset(&a, 0, sizeof(a));
+	a.b = b;
+
+	dbdo(slm_bmap_resetnonce_cb, &a,
+	    " SELECT	nonce,"
+	    "		resid"
 	    " FROM	upsch"
 	    " WHERE	fid = ?"
-	    "	AND	bno = ?"
-	    " LIMIT	1",
-	    SQLITE_INTEGER64, fcmh_2_fid(b->bcm_fcmh),
+	    "   AND	bno = ?",
+	    SQLITE_INTEGER64, bmap_2_fid(b),
 	    SQLITE_INTEGER, b->bcm_bmapno);
+
+	if (a.update)
+		dbdo(NULL, NULL,
+		    " UPDATE	upsch "
+		    " SET	nonce = ?"
+		    " WHERE	fid = ?"
+		    "   AND	bno = ?",
+		    SQLITE_INTEGER, sys_upnonce,
+		    SQLITE_INTEGER64, bmap_2_fid(b),
+		    SQLITE_INTEGER, b->bcm_bmapno);
 }
 
 /**
@@ -142,6 +169,10 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 	struct fidc_membh *f;
 	struct iovec iovs[2];
 	size_t nb;
+
+	upd = bmap_2_upd(b);
+	upd_init(upd, UPDT_BMAP);
+	UPD_UNBUSY(upd); 
 
 	f = b->bcm_fcmh;
 
@@ -197,17 +228,12 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 	if (slm_opstate == SLM_OPSTATE_REPLAY)
 		return (0);
 
-	upd = bmap_2_upd(b);
-
-	brepls_init(retifset, 1);
-	retifset[BREPLST_VALID] = 0;
-	retifset[BREPLST_INVALID] = 0;
-	retifset[BREPLST_GARBAGE] = 0;
+	brepls_init(retifset, 0);
+	retifset[BREPLST_REPL_SCHED] = 1;
+	retifset[BREPLST_GARBAGE_SCHED] = 1;
 	if (mds_repl_bmap_walk_all(b, NULL, retifset,
-	    REPL_WALKF_SCIRCUIT)) {
-		upd_init(upd, UPDT_BMAP);
-		UPD_UNBUSY(upd);
-	}
+	    REPL_WALKF_SCIRCUIT))
+		slm_bmap_resetnonce(b);
 	return (0);
 }
 
@@ -292,8 +318,7 @@ mds_bmap_destroy(struct bmapc_memb *b)
 	psc_assert(bmi->bmi_assign == NULL);
 	psc_assert(pll_empty(&bmi->bmi_leases));
 	psc_rwlock_destroy(&bmi->bmi_rwlock);
-	if (pfl_memchk(&bmi->bmi_upd, 0, sizeof(bmi->bmi_upd)) == 0)
-		upd_destroy(&bmi->bmi_upd);
+	upd_destroy(&bmi->bmi_upd);
 }
 
 /**

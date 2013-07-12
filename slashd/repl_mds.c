@@ -62,11 +62,12 @@
 #include "slerr.h"
 #include "up_sched_res.h"
 
+#include "zfs-fuse/zfs_slashlib.h"
+
 struct slm_resmlink	*repl_busytable;
 int			 repl_busytable_nents;
 psc_spinlock_t		 repl_busytable_lock = SPINLOCK_INIT;
-
-extern int current_vfsid;
+struct sl_mds_iosinfo	 slm_null_si;
 
 __static int
 iosidx_cmp(const void *a, const void *b)
@@ -231,6 +232,27 @@ mds_brepls_check(uint8_t *repls, int nr)
 	psc_fatalx("no valid replica states exist");
 }
 
+/**
+ * mds_repl_bmap_apply - Apply a translation matrix of residency states
+ *	to a bmap.
+ * @b: bmap.
+ * @tract: translation actions, indexed by current bmap state with
+ *	corresponding values to the new state that should be assigned.
+ *	For example, index BREPLST_VALID in the array with the value
+ *	BREPLST_INVALID would render a VALID state to an INVALID.
+ * @retifset: return value, indexed in the same manner as @tract.
+ * @flags: behavioral flags.
+ * @off: offset int bmap residency table for IOS intended to be
+ *	changed/queried.
+ * @scircuit: value-result for batch operations.
+ * @cbf: callback routine for more detailed processing.
+ * @cbarg: argument to callback.
+ *
+ * Notes: the locks are acquired in the following order:
+ *	(*) FCMH_BUSY
+ *	(*) BMAP_BUSY
+ *	(*) BMAP_WRLOCK
+ */
 int
 _mds_repl_bmap_apply(struct bmapc_memb *b, const int *tract,
     const int *retifset, int flags, int off, int *scircuit,
@@ -537,17 +559,18 @@ slm_iosv_clearbusy(const sl_replica_t *iosv, int nios)
 	} while (0)
 
 void
-slm_repl_upd_odt_write(struct bmapc_memb *b)
+slm_repl_upd_write(struct bmapc_memb *b)
 {
 	struct {
 		sl_replica_t	iosv[SL_MAX_REPLICAS];
 		unsigned	nios;
 	} add, del, sch, deq;
 	int rm = 1, locked, off, vold, vnew;
-	struct bmap_repls_upd_odent br;
 	struct slm_update_data *upd;
+	struct sl_mds_iosinfo *si;
 	struct bmap_mds_info *bmi;
 	struct fidc_membh *f;
+	struct sl_resource *r;
 	sl_ios_id_t resid;
 	pthread_t pthr;
 	unsigned n;
@@ -574,16 +597,21 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 		    bmi->bmi_orepls, off);
 		vnew = SL_REPL_GET_BMAP_IOS_STAT(
 		    b->bcm_repls, off);
+
+		r = libsl_id2res(resid);
+		si = r ? res2iosinfo(r) : &slm_null_si;
+
 		if (vold == vnew)
 			;
-		else if ((vold != BREPLST_REPL_QUEUED &&
-		    vold != BREPLST_REPL_SCHED) &&
-		    vnew == BREPLST_REPL_QUEUED)
+		else if (vnew == BREPLST_REPL_QUEUED ||
+		    (vnew == BREPLST_GARBAGE &&
+		     (si->si_flags & SIF_PRECLAIM_NOTSUP) == 0))
 			PUSH_IOS(b, &add, resid);
 		else if ((vold == BREPLST_REPL_QUEUED ||
 		     vold == BREPLST_REPL_SCHED ||
 		     vold == BREPLST_TRUNCPNDG_SCHED ||
 		     vold == BREPLST_TRUNCPNDG ||
+		     vold == BREPLST_GARBAGE_SCHED ||
 		     vold == BREPLST_VALID) &&
 		    (vnew == BREPLST_GARBAGE ||
 		     vnew == BREPLST_VALID ||
@@ -606,50 +634,9 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 			rm = 0;
 	}
 
-	if (add.nios) {
-		if (!upd->upd_recpt) {
-			slm_repl_upd_odt_read(b);
-			if (upd->upd_recpt == NULL) {
-				dump_bmap_repls(bmi->bmi_orepls);
-				DEBUG_BMAPOD(PLL_FATAL, b,
-				    "receipt already exists");
-			}
-
-			memset(&br, 0, sizeof(br));
-			br.br_fg = f->fcmh_fg;
-			br.br_bno = b->bcm_bmapno;
-			upd->upd_recpt = mds_odtable_putitem(
-			    slm_repl_odt, &br, sizeof(br));
-			DEBUG_UPD(PLL_DIAG, upd,
-			    "assigned odtable receipt "
-			    "[%zu, %"PSCPRIxCRC64"]",
-			    upd->upd_recpt->odtr_elem,
-			    upd->upd_recpt->odtr_key);
-		}
-
-		for (n = 0; n < add.nios; n++) {
-			struct sl_resource *r;
-
-			dbdo(NULL, NULL,
-			    " INSERT INTO upsch ("
-			    "	resid, fid, bno, uid, gid, status, "
-			    "   recpt_elem, recpt_key"
-			    ") VALUES ("
-			    "	?, ?, ?, ?, ?, 'Q', "
-			    "	?, ?"
-			    ")",
-			    SQLITE_INTEGER, add.iosv[n].bs_id,
-			    SQLITE_INTEGER64, bmap_2_fid(b),
-			    SQLITE_INTEGER, b->bcm_bmapno,
-			    SQLITE_INTEGER, f->fcmh_sstb.sst_uid,
-			    SQLITE_INTEGER, f->fcmh_sstb.sst_gid,
-			    SQLITE_INTEGER64, upd->upd_recpt->odtr_elem,
-			    SQLITE_INTEGER64, upd->upd_recpt->odtr_key);
-			r = libsl_id2res(add.iosv[n].bs_id);
-			upschq_resm(psc_dynarray_getpos(&r->res_members,
-			    0), UPDT_PAGEIN);
-		}
-	}
+	if (add.nios)
+		for (n = 0; n < add.nios; n++)
+			slm_upsch_insert(b, add.iosv[n].bs_id);
 	if (deq.nios)
 		for (n = 0; n < deq.nios; n++)
 			dbdo(NULL, NULL,
@@ -684,8 +671,6 @@ slm_repl_upd_odt_write(struct bmapc_memb *b)
 			    SQLITE_INTEGER, del.iosv[n].bs_id,
 			    SQLITE_INTEGER64, bmap_2_fid(b),
 			    SQLITE_INTEGER, b->bcm_bmapno);
-		if (rm)
-			upd_tryremove(upd);
 	}
 	BMAPOD_READ_DONE(b, locked);
 
@@ -788,8 +773,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 				upd = &bmap_2_bmi(b)->bmi_upd;
 				if (pfl_memchk(upd, 0,
 				    sizeof(*upd)) == 1)
-					upd_initf(upd, UPDT_BMAP,
-					    UPD_INITF_NOKEY);
+					upd_init(upd, UPDT_BMAP);
 				mds_bmap_write_logrepls(b);
 			}
 			slm_repl_bmap_rel(b);
@@ -828,9 +812,8 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 					upd = &bmap_2_bmi(b)->bmi_upd;
 					if (pfl_memchk(upd, 0,
 					    sizeof(*upd)) == 1)
-						upd_initf(upd,
-						    UPDT_BMAP,
-						    UPD_INITF_NOKEY);
+						upd_init(upd,
+						    UPDT_BMAP);
 					else {
 						UPD_WAIT(upd);
 						upd->upd_flags |= UPDF_BUSY;
@@ -1115,6 +1098,8 @@ mds_repl_buildbusytable(void)
 			srl->srl_avail = SLM_RESMLINK_DEF_BANDWIDTH;
 		}
 	freelock(&repl_busytable_lock);
+
+	slm_null_si.si_flags |= SIF_PRECLAIM_NOTSUP;
 }
 
 int

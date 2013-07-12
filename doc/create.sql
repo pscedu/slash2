@@ -12,9 +12,7 @@ CREATE TABLE upsch (
 	status		CHAR(1), -- 'Q' or 'S'
 	sys_pri		INT,
 	usr_pri		INT,
-
-	recpt_elem	BIGINT,
-	recpt_key	CHAR(16),
+	nonce		UNSIGNED INT,
 
 	PRIMARY KEY(id),
 	UNIQUE(resid, fid, bno)

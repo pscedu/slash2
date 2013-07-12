@@ -234,24 +234,23 @@ slmrcmthr_walk_bmaps(struct slm_replst_workreq *rsw,
 }
 
 int
-slmrcmthr_walk(void *data, __unusedx struct odtable_receipt *odtr,
-    void *arg)
+slmrcmthr_walk(struct slm_sth *sth, void *p)
 {
-	struct bmap_repls_upd_odent *br = data;
-	struct slm_replst_workreq *rsw = arg;
+	struct slm_replst_workreq *rsw = p;
+	struct slash_fidgen fg;
 	struct fidc_membh *f;
 	int rc;
 
-	PSCFREE(odtr);
-
-	rc = slm_fcmh_get(&br->br_fg, &f);
+	fg.fg_fid = sqlite3_column_int64(sth->sth_sth, 0);
+	fg.fg_gen = FGEN_ANY;
+	rc = slm_fcmh_get(&fg, &f);
 	if (rc)
 		return (0);
 	UPSCH_ULOCK();
 	rc = slmrcmthr_walk_bmaps(rsw, f);
-	fcmh_op_done(f);
 	UPSCH_LOCK();
-	return (rc);
+	fcmh_op_done(f);
+	return (!rc);
 }
 
 void
@@ -268,9 +267,9 @@ slmrcmthr_main(struct psc_thread *thr)
 
 		if (rsw->rsw_fg.fg_fid == FID_ANY) {
 			UPSCH_LOCK();
-			/* XXX this isn't going to work */
-			mds_odtable_scan(slm_repl_odt, slmrcmthr_walk,
-			    rsw);
+			/* XXX don't hold db lock */
+			dbdo(slmrcmthr_walk, rsw,
+			    "SELECT DISTINCT fid FROM upsch");
 			UPSCH_ULOCK();
 		} else if (slm_fcmh_get(&rsw->rsw_fg, &f) == 0) {
 			slmrcmthr_walk_bmaps(rsw, f);

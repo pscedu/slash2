@@ -39,12 +39,12 @@
 #include <sqlite3.h>
 
 #include "pfl/cdefs.h"
-#include "pfl/fs.h"
 #include "pfl/dynarray.h"
+#include "pfl/fs.h"
 #include "pfl/list.h"
-#include "pfl/treeutil.h"
 #include "pfl/rpclog.h"
 #include "pfl/rsx.h"
+#include "pfl/treeutil.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/mlist.h"
 #include "psc_util/multiwait.h"
@@ -65,7 +65,7 @@
 #include "up_sched_res.h"
 #include "worker.h"
 
-extern int current_vfsid;
+#include "zfs-fuse/zfs_slashlib.h"
 
 /* RPC callback numeric arg indexes */
 #define IN_RC		0
@@ -84,35 +84,7 @@ struct psc_multiwait	 slm_upsch_mw;
 struct psc_poolmaster	 slm_upgen_poolmaster;
 struct psc_poolmgr	*slm_upgen_pool;
 
-extern void (*upd_proctab[])(struct slm_update_data *);
-
-void
-upd_tryremove(struct slm_update_data *upd)
-{
-	struct bmapc_memb *b = upd_2_bmap(upd);
-	struct bmap_mds_info *bmi = bmap_2_bmi(b);
-	int lk, retifset[NBREPLST];
-
-	brepls_init(retifset, 1);
-	retifset[BREPLST_VALID] = 0;
-	retifset[BREPLST_INVALID] = 0;
-	retifset[BREPLST_GARBAGE] = 0;
-
-	lk = BMAPOD_REQRDLOCK(bmi);
-	if (!mds_repl_bmap_walk_all(b, NULL, retifset,
-	    REPL_WALKF_SCIRCUIT) && upd->upd_recpt) {
-		UPD_LOCK(upd);
-		DEBUG_UPD(PLL_DIAG, upd,
-		    "removing odtable receipt "
-		    "[%zu, %"PSCPRIxCRC64"]",
-		    upd->upd_recpt->odtr_elem,
-		    upd->upd_recpt->odtr_key);
-		mds_odtable_freeitem(slm_repl_odt, upd->upd_recpt);
-		upd->upd_recpt = NULL;
-		UPD_ULOCK(upd);
-	}
-	BMAPOD_UREQLOCK(bmi, lk);
-}
+void (*upd_proctab[])(struct slm_update_data *);
 
 void
 upd_rpmi_add(struct resprof_mds_info *rpmi, struct slm_update_data *upd)
@@ -141,7 +113,7 @@ upd_rpmi_remove(struct resprof_mds_info *rpmi,
 }
 
 void
-slmupschedthr_finish_replsch(struct slashrpc_cservice *csvc,
+slm_upsch_finish_repl(struct slashrpc_cservice *csvc,
     struct sl_resm *src_resm, struct sl_resm *dst_resm, struct bmap *b,
     int rc, int off, int64_t amt, int undowr)
 {
@@ -195,7 +167,7 @@ slmupschedthr_finish_replsch(struct slashrpc_cservice *csvc,
 }
 
 int
-slmupschedthr_wk_finish_replsch(void *p)
+slm_upsch_wk_finish_repl(void *p)
 {
 	struct slm_wkdata_upsch_cb *wk = p;
 	struct fidc_membh *f;
@@ -205,8 +177,8 @@ slmupschedthr_wk_finish_replsch(void *p)
 	if (!FCMH_TRYBUSY(f))
 		return (1);
 	fcmh_op_start_type(f, FCMH_OPCNT_UPSCH);
-	slmupschedthr_finish_replsch(wk->csvc, wk->src_resm,
-	    wk->dst_resm, wk->b, wk->rc, wk->off, wk->amt, wk->undowr);
+	slm_upsch_finish_repl(wk->csvc, wk->src_resm, wk->dst_resm,
+	    wk->b, wk->rc, wk->off, wk->amt, wk->undowr);
 	if (FCMH_HAS_BUSY(f))
 		FCMH_UNBUSY(f);
 	fcmh_op_done_type(f, FCMH_OPCNT_UPSCH);
@@ -214,7 +186,7 @@ slmupschedthr_wk_finish_replsch(void *p)
 }
 
 int
-slmupschedthr_tryreplsch_cb(struct pscrpc_request *rq,
+slm_upsch_tryrepl_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *av)
 {
 	struct slashrpc_cservice *csvc = av->pointer_arg[IP_CSVC];
@@ -236,7 +208,7 @@ slmupschedthr_tryreplsch_cb(struct pscrpc_request *rq,
 		    dst_resm->resm_name, src_resm->resm_name,
 		    rc);
 
-	wk = pfl_workq_getitem(slmupschedthr_wk_finish_replsch,
+	wk = pfl_workq_getitem(slm_upsch_wk_finish_repl,
 	    struct slm_wkdata_upsch_cb);
 	wk->csvc = csvc;
 	wk->src_resm = src_resm;
@@ -251,11 +223,11 @@ slmupschedthr_tryreplsch_cb(struct pscrpc_request *rq,
 }
 
 /**
- * slmupschedthr_tryreplsch - Try arranging a REPL_SCHEDWK for a bmap
+ * slm_upsch_tryrepl - Try arranging a REPL_SCHEDWK for a bmap
  *	between a source and dst IOS pair.
  */
 int
-slmupschedthr_tryreplsch(struct bmapc_memb *b, int off,
+slm_upsch_tryrepl(struct bmapc_memb *b, int off,
     struct sl_resm *src_resm, struct sl_resource *dst_res)
 {
 	int tract[NBREPLST], retifset[NBREPLST], rc = 0;
@@ -363,7 +335,7 @@ slmupschedthr_tryreplsch(struct bmapc_memb *b, int off,
 		 * It is OK if repl sched is resent across reboots
 		 * idempotently.
 		 */
-		rq->rq_interpret_reply = slmupschedthr_tryreplsch_cb;
+		rq->rq_interpret_reply = slm_upsch_tryrepl_cb;
 		rq->rq_async_args = av;
 		rc = SL_NBRQSET_ADD(csvc, rq);
 		if (rc == 0)
@@ -374,14 +346,14 @@ slmupschedthr_tryreplsch(struct bmapc_memb *b, int off,
  fail:
 	if (rq)
 		pscrpc_req_finished(rq);
-	slmupschedthr_finish_replsch(av.pointer_arg[IP_CSVC],
+	slm_upsch_finish_repl(av.pointer_arg[IP_CSVC],
 	    src_resm, dst_resm, av.pointer_arg[IP_BMAP], rc, off,
 	    av.space[IN_AMT], av.space[IN_UNDO_WR]);
 	return (0);
 }
 
 void
-slmupschedthr_finish_ptrunc(struct slashrpc_cservice *csvc,
+slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
     struct bmap *b, int rc, int off, int undowr)
 {
 	int tract[NBREPLST];
@@ -409,7 +381,7 @@ slmupschedthr_finish_ptrunc(struct slashrpc_cservice *csvc,
 }
 
 int
-slmupschedthr_wk_finish_ptrunc(void *p)
+slm_upsch_wk_finish_ptrunc(void *p)
 {
 	struct slm_wkdata_upsch_cb *wk = p;
 	struct fidc_membh *f;
@@ -419,7 +391,7 @@ slmupschedthr_wk_finish_ptrunc(void *p)
 	if (!FCMH_TRYBUSY(f))
 		return (1);
 	fcmh_op_start_type(f, FCMH_OPCNT_UPSCH);
-	slmupschedthr_finish_ptrunc(wk->csvc, wk->b, wk->rc, wk->off,
+	slm_upsch_finish_ptrunc(wk->csvc, wk->b, wk->rc, wk->off,
 	    wk->undowr);
 	if (FCMH_HAS_BUSY(f))
 		FCMH_UNBUSY(f);
@@ -428,7 +400,7 @@ slmupschedthr_wk_finish_ptrunc(void *p)
 }
 
 int
-slmupschedthr_tryptrunc_cb(struct pscrpc_request *rq,
+slm_upsch_tryptrunc_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *av)
 {
 	struct slashrpc_cservice *csvc = av->pointer_arg[IP_CSVC];
@@ -444,7 +416,7 @@ slmupschedthr_tryptrunc_cb(struct pscrpc_request *rq,
 	if (rc)
 		DEBUG_REQ(PLL_ERROR, rq, "rc=%d", rc);
 
-	wk = pfl_workq_getitem(slmupschedthr_wk_finish_ptrunc,
+	wk = pfl_workq_getitem(slm_upsch_wk_finish_ptrunc,
 	    struct slm_wkdata_upsch_cb);
 	wk->csvc = csvc;
 	wk->b = av->pointer_arg[IP_BMAP];
@@ -456,14 +428,14 @@ slmupschedthr_tryptrunc_cb(struct pscrpc_request *rq,
 }
 
 /**
- * slmupschedthr_tryptrunc - Try to issue a PTRUNC resolution to an ION.
+ * slm_upsch_tryptrunc - Try to issue a PTRUNC resolution to an ION.
  * Returns:
  *   -1	: The activity can never happen; give up.
  *    0	: Unsuccessful.
  *    1	: Success.
  */
 int
-slmupschedthr_tryptrunc(struct bmapc_memb *b, int off,
+slm_upsch_tryptrunc(struct bmapc_memb *b, int off,
     struct sl_resource *dst_res)
 {
 	int tract[NBREPLST], retifset[NBREPLST], rc;
@@ -523,7 +495,7 @@ slmupschedthr_tryptrunc(struct bmapc_memb *b, int off,
 		if (rc)
 			PFL_GOTOERR(fail, rc);
 
-		rq->rq_interpret_reply = slmupschedthr_tryptrunc_cb;
+		rq->rq_interpret_reply = slm_upsch_tryptrunc_cb;
 		rq->rq_async_args = av;
 		rc = SL_NBRQSET_ADD(csvc, rq);
 		if (rc == 0)
@@ -534,14 +506,14 @@ slmupschedthr_tryptrunc(struct bmapc_memb *b, int off,
  fail:
 	if (rq)
 		pscrpc_req_finished(rq);
-	slmupschedthr_finish_ptrunc(av.pointer_arg[IP_CSVC],
+	slm_upsch_finish_ptrunc(av.pointer_arg[IP_CSVC],
 	    av.pointer_arg[IP_BMAP], rc, off,
 	    av.space[IN_UNDO_WR]);
 	return (0);
 }
 
 void
-slmupsch_preclaim_cb(struct batchrq *br, int rc)
+slm_upsch_preclaim_cb(struct batchrq *br, int rc)
 {
 	sl_replica_t repl;
 	int idx, tract[NBREPLST];
@@ -550,7 +522,7 @@ slmupsch_preclaim_cb(struct batchrq *br, int rc)
 	struct fidc_membh *f;
 	struct bmap *b;
 
-	if (rc == -ENOTSUP) {
+	if (rc == -PFLERR_NOTSUP) {
 		rpmi = res2rpmi(br->br_res);
 		RPMI_LOCK(rpmi);
 		res2iosinfo(br->br_res)->si_flags |= SIF_PRECLAIM_NOTSUP;
@@ -583,7 +555,7 @@ slmupsch_preclaim_cb(struct batchrq *br, int rc)
 }
 
 int
-slmupsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
+slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 {
 	int tract[NBREPLST], retifset[NBREPLST], rc;
 	struct slashrpc_cservice *csvc;
@@ -605,8 +577,8 @@ slmupsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 	pe.bno = b->bcm_bmapno;
 	BHGEN_GET(b, &pe.bgen);
 
-	rc = batchrq_add(r, csvc, SRMT_PRECLAIM, &pe, sizeof(pe),
-	    slmupsch_preclaim_cb, 30);
+	rc = batchrq_add(r, csvc, SRMT_PRECLAIM, SRIM_BULK_PORTAL, &pe,
+	    sizeof(pe), slm_upsch_preclaim_cb, 30);
 
 	if (rc == 0) {
 		brepls_init(tract, -1);
@@ -615,13 +587,13 @@ slmupsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 		brepls_init_idx(retifset);
 		rc = mds_repl_bmap_apply(b, tract, retifset, off);
 		if (rc != BREPLST_GARBAGE)
-			psclog_error("consistency error");
+			psclog_errorx("consistency error");
 
 		rc = mds_bmap_write_logrepls(b);
 	}
  fail:
-	if (rc)
-		psclog_error("error rc=%d", rc);
+	if (rc && rc != -PFLERR_NOTCONN)
+		psclog_errorx("error rc=%d", rc);
 	return (rc ? 0 : 1);
 }
 
@@ -783,21 +755,21 @@ upd_proc_bmap(struct slm_update_data *upd)
 					sl_csvc_decref(csvc);
 
 					/* scan destination resms */
-					if (slmupschedthr_tryreplsch(b,
-					    off, m, dst_res))
+					if (slm_upsch_tryrepl(b, off, m,
+					    dst_res))
 						return;
 				}
 			}
 			break;
 
 		case BREPLST_TRUNCPNDG:
-			rc = slmupschedthr_tryptrunc(b, off, dst_res);
+			rc = slm_upsch_tryptrunc(b, off, dst_res);
 			if (rc > 0)
 				return;
 			break;
 
 		case BREPLST_GARBAGE:
-			rc = slmupsch_trypreclaim(dst_res, b, off);
+			rc = slm_upsch_trypreclaim(dst_res, b, off);
 			if (rc > 0)
 				return;
 			break;
@@ -809,18 +781,14 @@ upd_proc_bmap(struct slm_update_data *upd)
 	FCMH_UNBUSY(f);
 }
 
-#define DBF_RESID		1
-#define DBF_FID			2
-#define DBF_BNO			5
-
 void
 upd_proc_pagein_unit(struct slm_update_data *upd)
 {
-	int rel = 0, rc, retifset[NBREPLST];
 	struct bmap_mds_info *bmi = NULL;
 	struct slm_update_generic *upg;
 	struct fidc_membh *f = NULL;
 	struct bmapc_memb *b = NULL;
+	int rc, retifset[NBREPLST];
 
 	upg = upd_getpriv(upd);
 	rc = slm_fcmh_get(&upg->upg_fg, &f);
@@ -836,17 +804,17 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 
 	brepls_init(retifset, 0);
 	retifset[BREPLST_REPL_QUEUED] = 1;
+//	retifset[BREPLST_GARBAGE_QUEUED] = 1;
 	retifset[BREPLST_TRUNCPNDG] = 1;
 
 	BMAP_WAIT_BUSY(b);
 	BMAPOD_WRLOCK(bmi);
-	rel = 1;
 
 	rc = mds_repl_bmap_walk_all(b, NULL, retifset,
 	    REPL_WALKF_SCIRCUIT);
 	if (rc)
 		upsch_enqueue(bmap_2_upd(b));
-	if (rc == 0)
+	else
 		rc = ENOENT;
 
  out:
@@ -856,20 +824,15 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 		wk = pfl_workq_getitem(slm_wk_upsch_purge,
 		    struct slm_wkdata_upsch_purge);
 		wk->fid = upg->upg_fg.fg_fid;
-		wk->b = b;
-		if (b) {
-			bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
-			BMAPOD_ULOCK(bmi);
-			b->bcm_owner = 0;
-		}
+		if (b)
+			wk->bno = b->bcm_bmapno;
+		else
+			wk->bno = BMAPNO_ANY;
 		pfl_workq_putitem(wk);
-		rel = 0;
 	}
 	if (b) {
-		if (rel) {
-			BMAPOD_ULOCK(bmi);
-			BMAP_UNBUSY(b);
-		}
+		BMAPOD_ULOCK(bmi);
+		BMAP_UNBUSY(b);
 		bmap_op_done(b);
 	}
 	if (f)
@@ -885,10 +848,9 @@ upd_proc_pagein_cb(struct slm_sth *sth, __unusedx void *p)
 	memset(upg, 0, sizeof(*upg));
 	INIT_PSC_LISTENTRY(&upg->upg_lentry);
 	upd_init(&upg->upg_upd, UPDT_PAGEIN_UNIT);
-	upg->upg_fg.fg_fid = sqlite3_column_int64(sth->sth_sth,
-	    DBF_FID);
+	upg->upg_fg.fg_fid = sqlite3_column_int64(sth->sth_sth, 0);
 	upg->upg_fg.fg_gen = FGEN_ANY;
-	upg->upg_bno = sqlite3_column_int(sth->sth_sth, DBF_BNO);
+	upg->upg_bno = sqlite3_column_int(sth->sth_sth, 1);
 	upsch_enqueue(&upg->upg_upd);
 	UPD_UNBUSY(&upg->upg_upd);
 	return (0);
@@ -917,7 +879,9 @@ upd_proc_pagein(struct slm_update_data *upd)
 
 		if (n > 0)
 			dbdo(upd_proc_pagein_cb, NULL,
-			    " SELECT	*"
+			    " SELECT	fid,"
+			    "		bno,"
+			    "		nonce"
 			    " FROM	upsch"
 			    " WHERE	resid = ?"
 			    "   AND	status = 'Q'"
@@ -929,7 +893,9 @@ upd_proc_pagein(struct slm_update_data *upd)
 			    SQLITE_INTEGER, n);
 	} else {
 		dbdo(upd_proc_pagein_cb, NULL,
-		    " SELECT	*"
+		    " SELECT	fid,"
+		    "		bno,"
+		    "		nonce"
 		    " FROM	upsch"
 		    " WHERE	status = 'Q'"
 		    " ORDER BY	sys_pri DESC,"
@@ -963,7 +929,6 @@ upd_proc(struct slm_update_data *upd)
 
 	switch (upd->upd_type) {
 	case UPDT_BMAP:
-		upd_tryremove(upd);
 		UPD_DECREF(upd);
 		break;
 	case UPDT_HLDROP:
@@ -975,8 +940,73 @@ upd_proc(struct slm_update_data *upd)
 	}
 }
 
+int
+slm_upsch_revert_cb(struct slm_sth *sth, __unusedx void *p)
+{
+	int rc, tract[NBREPLST], retifset[NBREPLST];
+	struct fidc_membh *f = NULL;
+	struct slash_fidgen fg;
+	struct bmap *b = NULL;
+	sl_bmapno_t bno;
+
+	fg.fg_fid = sqlite3_column_int64(sth->sth_sth, 0);
+	fg.fg_gen = FGEN_ANY;
+	bno = sqlite3_column_int(sth->sth_sth, 1);
+
+	rc = slm_fcmh_get(&fg, &f);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+	rc = bmap_getf(f, bno, SL_WRITE, BMAPGETF_LOAD, &b);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
+	brepls_init(tract, -1);
+	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
+
+	brepls_init(retifset, 0);
+	retifset[BREPLST_REPL_SCHED] = 1;
+	retifset[BREPLST_GARBAGE_SCHED] = 1;
+	rc = mds_repl_bmap_walk_all(b, tract, retifset, 0);
+	if (rc) {
+		mds_bmap_write_logrepls(b);
+	} else {
+		BMAPOD_MODIFY_DONE(b, 0);
+		BMAP_UNBUSY(b);
+		FCMH_UNBUSY(f);
+	}
+
+ out:
+	if (b)
+		bmap_op_done(b);
+	if (f)
+		fcmh_op_done(f);
+	return (0);
+}
+
 void
-slmupschedthr_main(__unusedx struct psc_thread *thr)
+slm_upsch_insert(struct bmap *b, sl_ios_id_t resid)
+{
+	struct sl_resource *r;
+
+	dbdo(NULL, NULL,
+	    " INSERT INTO upsch ("
+	    "	resid, fid, bno, uid, gid, status, nonce "
+	    ") VALUES ("
+	    "	?,     ?,   ?,   ?,   ?,   'Q',    ?"
+	    ")",
+	    SQLITE_INTEGER, resid,
+	    SQLITE_INTEGER64, bmap_2_fid(b),
+	    SQLITE_INTEGER, b->bcm_bmapno,
+	    SQLITE_INTEGER, b->bcm_fcmh->fcmh_sstb.sst_uid,
+	    SQLITE_INTEGER, b->bcm_fcmh->fcmh_sstb.sst_gid,
+	    SQLITE_INTEGER, sys_upnonce);
+	r = libsl_id2res(resid);
+	upschq_resm(res_getmemb(r), UPDT_PAGEIN);
+}
+
+void
+slmupschthr_main(__unusedx struct psc_thread *thr)
 {
 	struct slm_update_data *upd;
 	struct sl_resource *r;
@@ -1021,7 +1051,7 @@ slm_upsch_init(void)
 }
 
 void
-slmupschedthr_spawn(void)
+slmupschthr_spawn(void)
 {
 	struct sl_resource *r;
 	struct sl_site *s;
@@ -1038,8 +1068,8 @@ slmupschedthr_spawn(void)
 			psc_multiwait_addcond(&slm_upsch_mw,
 			    &m->resm_csvc->csvc_mwc);
 
-	pscthr_init(SLMTHRT_UPSCHED, 0, slmupschedthr_main, NULL, 0,
-	    "slmupschedthr");
+	pscthr_init(SLMTHRT_UPSCHED, 0, slmupschthr_main, NULL, 0,
+	    "slmupschthr");
 
 	/* page in initial replrq workload */
 	CONF_FOREACH_RES(s, r, i)
@@ -1090,7 +1120,7 @@ upschq_resm(struct sl_resm *m, int type)
  * @flags: operation flags.
  */
 void
-upd_initf(struct slm_update_data *upd, int type, int flags)
+upd_initf(struct slm_update_data *upd, int type, __unusedx int flags)
 {
 	psc_assert(pfl_memchk(upd, 0, sizeof(*upd)) == 1);
 	INIT_PSC_LISTENTRY(&upd->upd_lentry);
@@ -1107,153 +1137,43 @@ upd_initf(struct slm_update_data *upd, int type, int flags)
 
 		bmi = upd_getpriv(upd);
 		b = bmi_2_bmap(bmi);
-		DEBUG_UPD(PLL_DIAG, upd, "init fid="SLPRI_FID" bno=%u",
+		DPRINTF_UPD(PLL_DIAG, upd, "init fid="SLPRI_FID" bno=%u",
 		    b->bcm_fcmh->fcmh_fg.fg_fid, b->bcm_bmapno);
-		if ((flags & UPD_INITF_NOKEY) == 0)
-			slm_repl_upd_odt_read(b);
 		break;
 	    }
 	default:
-		DEBUG_UPD(PLL_DEBUG, upd, "init");
+		DPRINTF_UPD(PLL_DIAG, upd, "init");
 	}
 }
 
 void
 upd_destroy(struct slm_update_data *upd)
 {
-	DEBUG_UPD(PLL_DEBUG, upd, "destroy");
+	DPRINTF_UPD(PLL_DIAG, upd, "destroy");
 	psc_assert(psclist_disjoint(&upd->upd_lentry));
 	psc_assert(!(upd->upd_flags & UPDF_BUSY));
 	psc_mutex_destroy(&upd->upd_mutex);
 	psc_multiwaitcond_destroy(&upd->upd_mwc);
-	PSCFREE(upd->upd_recpt);
 	memset(upd, 0, sizeof(*upd));
-}
-
-struct purge_arg {
-	sl_bmapno_t		 bno;
-	size_t			 elem;
-	uint64_t		 key;
-};
-
-struct purge_argv {
-	struct psc_dynarray	 da;
-	struct fidc_membh	*f;
-};
-
-void
-purge_receipt(size_t elem, uint64_t key)
-{
-	struct odtable_receipt *odtr;
-
-	odtr = PSCALLOC(sizeof(*odtr));
-	odtr->odtr_elem = elem;
-	odtr->odtr_key = key;
-	DEBUG_UPD(PLL_DIAG, upd, "purging odtable receipt "
-	    "[%zu, %"PSCPRIxCRC64"]",
-	    upd->upd_recpt->odtr_elem,
-	    upd->upd_recpt->odtr_key);
-	mds_odtable_freeitem(slm_repl_odt, odtr);
-}
-
-int
-upsch_purge_cb(struct slm_sth *sth, void *p)
-{
-	struct purge_argv *av = p;
-	struct purge_arg *parg;
-
-	if (av->f) {
-		/*
-		 * We can't load directly here because bmap_get() may
-		 * try a dbdo() to SELECT the recpt key.
-		 */
-		parg = PSCALLOC(sizeof(*parg));
-		parg->bno = sqlite3_column_int(sth->sth_sth, 0);
-		parg->elem = sqlite3_column_int(sth->sth_sth, 1);
-		parg->key = sqlite3_column_int(sth->sth_sth, 2);
-		psc_dynarray_add(&av->da, parg);
-	} else {
-		purge_receipt(
-		    sqlite3_column_int64(sth->sth_sth, 1),
-		    sqlite3_column_int64(sth->sth_sth, 2));
-	}
-	return (0);
-}
-
-void
-upsch_purge(slfid_t fid)
-{
-	struct fidc_membh *f = NULL;
-	struct slash_fidgen fg;
-	struct purge_argv av;
-	struct purge_arg *parg;
-	struct bmap *b;
-	int rc, n;
-
-	fg.fg_fid = fid;
-	fg.fg_gen = FGEN_ANY;
-	slm_fcmh_get_nolog(&fg, &f);
-	if (f)
-		FCMH_WAIT_BUSY(f);
-	av.f = f;
-	psc_dynarray_init(&av.da);
-	dbdo(upsch_purge_cb, &av,
-	    " SELECT"
-	    "	bno,"
-	    "	recpt_elem,"
-	    "	recpt_key"
-	    " FROM"
-	    "	upsch"
-	    " WHERE"
-	    "	fid = ?",
-	    SQLITE_INTEGER64, fid);
-	DYNARRAY_FOREACH(parg, n, &av.da) {
-		rc = bmap_get(f, parg->bno, SL_WRITE, &b);
-		if (rc) {
-			purge_receipt(parg->elem, parg->key);
-		} else {
-			struct slm_update_data *upd;
-
-			upd = &bmap_2_bmi(b)->bmi_upd;
-			upd_tryremove(upd);
-			bmap_op_done(b);
-		}
-		PSCFREE(parg);
-	}
-	psc_dynarray_free(&av.da);
-	if (f) {
-		FCMH_UNBUSY(f);
-		fcmh_op_done(f);
-	}
-	dbdo(NULL, NULL,
-	    " DELETE FROM "
-	    "	upsch"
-	    " WHERE"
-	    "	fid = ?",
-	    SQLITE_INTEGER64, fid);
 }
 
 int
 slm_wk_upsch_purge(void *p)
 {
 	struct slm_wkdata_upsch_purge *wk = p;
-	struct slm_update_data *upd;
-	struct bmap_mds_info *bmi;
 
-	if (wk->b) {
-		bmi = bmap_2_bmi(wk->b);
-		wk->b->bcm_owner = pthread_self();
-		BMAPOD_WRLOCK(bmi);
-
-		upd = &bmap_2_bmi(wk->b)->bmi_upd;
-		if (pfl_memchk(upd, 0, sizeof(*upd)))
-			upd_tryremove(upd);
-// else upsch_purge()
-		BMAPOD_ULOCK(bmi);
-		BMAP_UNBUSY(wk->b);
-		bmap_op_done_type(wk->b, BMAP_OPCNT_UPSCH);
-	} else
-		upsch_purge(wk->fid);
+	if (wk->bno == BMAPNO_ANY)
+		dbdo(NULL, NULL,
+		    " DELETE FROM	upsch"
+		    " WHERE		fid = ?",
+		    SQLITE_INTEGER64, wk->fid);
+	else
+		dbdo(NULL, NULL,
+		    " DELETE FROM	upsch"
+		    " WHERE		fid = ?"
+		    "	AND		bno = ?",
+		    SQLITE_INTEGER64, wk->fid,
+		    SQLITE_INTEGER, wk->bno);
 	return (0);
 }
 
@@ -1296,7 +1216,7 @@ upd_getpriv(struct slm_update_data *upd)
 void
 dump_upd(struct slm_update_data *upd)
 {
-	DEBUG_UPD(PLL_MAX, upd, "");
+	DPRINTF_UPD(PLL_MAX, upd, "");
 }
 #endif
 

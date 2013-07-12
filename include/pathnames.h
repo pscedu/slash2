@@ -51,10 +51,9 @@
 #define SL_PATH_CONF		SL_PATH_ETC_DIR"/slcfg"
 
 /*
- * SLASH2 internal files and directories that enable us to
+ * SLASH2 internal files and directories that enable us to:
  *	(1) find out the last ZFS commit transaction group number;
- *	(2) register the replication work that needs to be done;
- *	(3) access SLASH2 files by SLASH2 FIDs.
+ *	(2) access SLASH2 files by SLASH2 FIDs.
  */
 #define SL_RPATH_META_DIR	".slmd"
 
@@ -62,7 +61,6 @@
 #define SL_RPATH_TMP_DIR	"tmp"
 
 #define SL_FN_BMAP_ODTAB	"bmap.odtab"
-#define SL_FN_REPL_ODTAB	"repl.odt"
 #define SL_FN_PTRUNC_ODTAB	"ptrunc.odt"
 
 #define SL_FN_UPDATELOG		"op-update"

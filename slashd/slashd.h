@@ -26,11 +26,12 @@
 #define _SLASHD_H_
 
 #include "pfl/dynarray.h"
-#include "pfl/vbitmap.h"
 #include "pfl/rpc.h"
 #include "pfl/service.h"
+#include "pfl/vbitmap.h"
 #include "psc_util/meter.h"
 #include "psc_util/multiwait.h"
+#include "psc_util/odtable.h"
 
 #include "inode.h"
 #include "namespace.h"
@@ -281,7 +282,7 @@ struct slm_wkdata_ptrunc {
 
 struct slm_wkdata_upsch_purge {
 	slfid_t			 fid;
-	struct bmap		*b;
+	sl_bmapno_t		 bno;
 };
 
 struct slm_wkdata_upsch_cb {
@@ -331,10 +332,8 @@ int		 slm_get_next_slashfid(slfid_t *);
 int		 slm_ptrunc_prepare(void *);
 void		 slm_ptrunc_apply(struct slm_wkdata_ptrunc *);
 int		 slm_ptrunc_wake_clients(void *);
+int		 slm_ptrunc_odt_startup_cb(void *, struct odtable_receipt *, void *);
 void		 slm_setattr_core(struct fidc_membh *, struct srt_stat *, int);
-
-void		 slm_upsch_init(void);
-void		 slmupschedthr_spawn(void);
 
 void		 psc_scan_filesystems(void);
 void		 mds_note_update(int);
@@ -346,7 +345,6 @@ void		 _dbdo(const struct pfl_callerinfo *,
 
 extern struct slash_creds	 rootcreds;
 extern struct odtable		*mdsBmapAssignTable;
-extern struct odtable		*slm_repl_odt;
 extern struct odtable		*slm_ptrunc_odt;
 extern struct sl_mds_nsstats	 slm_nsstats_aggr;	/* aggregate namespace stats */
 extern struct sl_mds_peerinfo	*localinfo;

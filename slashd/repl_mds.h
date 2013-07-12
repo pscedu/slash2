@@ -56,11 +56,6 @@ struct slm_resmlink {
 	int64_t				 srl_used;
 };
 
-struct bmap_repls_upd_odent {
-	struct slash_fidgen		br_fg;
-	sl_bmapno_t			br_bno;
-};
-
 typedef void (*brepl_walkcb_t)(struct bmapc_memb *, int, int, void *);
 
 #define mds_repl_inv_except(b, idx)	_mds_repl_inv_except((b), (idx), 0)
@@ -81,8 +76,7 @@ void	 slm_iosv_clearbusy(const sl_replica_t *, int);
 #define slm_repl_bmap_rel(b)		 slm_repl_bmap_rel_type((b), BMAP_OPCNT_LOOKUP)
 #define slm_repl_bmap_rel_type(b, type) _slm_repl_bmap_rel_type((b), (type))
 
-void	 slm_repl_upd_odt_read(struct bmapc_memb *);
-void	 slm_repl_upd_odt_write(struct bmapc_memb *);
+void	 slm_repl_upd_write(struct bmapc_memb *);
 void	_slm_repl_bmap_rel_type(struct bmapc_memb *, int);
 
 void	 mds_brepls_check(uint8_t *, int);

@@ -249,7 +249,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	if (mq->rc == 0 && mq->bgen != gen)
 		mq->rc = SLERR_GEN_OLD;
 	if (mq->rc) {
-		DEBUG_UPD(PLL_WARN, upd, "rc=%d", mq->rc);
+		DPRINTF_UPD(PLL_WARN, upd, "rc=%d", mq->rc);
 
 		if (mq->rc == SLERR_BADCRC) {
 			/*
@@ -448,7 +448,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 			PFL_GOTOERR(out, mp->rc = -rc2);
 
 		if (IS_REMOTE_FID(sstb.sst_fid))
-			PFL_GOTOERR(out, mp->rc = -ENOTSUP);
+			PFL_GOTOERR(out, mp->rc = -PFLERR_NOTSUP);
 	} else
 		mdsio_release(current_vfsid, &cr, mdsio_data);
 

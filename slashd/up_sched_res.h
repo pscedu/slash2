@@ -48,7 +48,6 @@ struct slm_update_data {
 	struct pfl_mutex		 upd_mutex;
 	struct psc_multiwaitcond	 upd_mwc;
 	struct psc_listentry		 upd_lentry;
-	struct odtable_receipt		*upd_recpt;
 };
 
 /* upd_flags */
@@ -145,7 +144,7 @@ struct slm_update_generic {
 		}							\
 	} while (0)
 
-#define DEBUG_UPD(level, upd, msg, ...)					\
+#define DPRINTF_UPD(level, upd, msg, ...)				\
 	psclogs((level), SLMSS_UPSCH,					\
 	    "upd@%p %s=%p type=%d flags=%u:%s " msg,			\
 	    (upd),							\
@@ -156,8 +155,6 @@ struct slm_update_generic {
 	    (upd)->upd_flags & UPDF_BUSY	? "b" : "",		\
 	    ## __VA_ARGS__)
 
-#define UPD_INITF_NOKEY		(1 << 0)	/* don't consult upsch db for odt key  */
-
 #define upd_init(upd, type)	upd_initf((upd), (type), 0)
 
 void	 upsch_enqueue(struct slm_update_data *);
@@ -166,14 +163,16 @@ void	 upschq_resm(struct sl_resm *, int);
 
 int	 slm_wk_upsch_purge(void *);
 
+void	 slm_upsch_init(void);
+void	 slmupschthr_spawn(void); 
+
+void	 slm_upsch_insert(struct bmap *, sl_ios_id_t);
+int	 slm_upsch_revert_cb(struct slm_sth *, void *);
+
 void	 upd_initf(struct slm_update_data *, int, int);
 void	 upd_destroy(struct slm_update_data *);
 void	*upd_getpriv(struct slm_update_data *);
-void	 upd_tryremove(struct slm_update_data *);
 void	 upd_rpmi_remove(struct resprof_mds_info *, struct slm_update_data *);
-
-int	 slm_ptrunc_odt_startup_cb(void *, struct odtable_receipt *, void *);
-int	 slm_repl_odt_startup_cb(void *, struct odtable_receipt *, void *);
 
 #define UPSCH_LOCK()		MLIST_LOCK(&slm_upschq)
 #define UPSCH_ULOCK()		MLIST_ULOCK(&slm_upschq)

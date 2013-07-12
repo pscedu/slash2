@@ -1739,7 +1739,7 @@ slm_wkcb_wr_brepl(void *p)
 {
 	struct slm_wkdata_wr_brepl *wk = p;
 
-	slm_repl_upd_odt_write(wk->b);
+	slm_repl_upd_write(wk->b);
 	return (0);
 }
 

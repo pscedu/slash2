@@ -80,7 +80,6 @@ struct pscfs		 pscfs;
 struct psc_thread	*slmconnthr;
 uint32_t		 sys_upnonce;
 
-struct odtable		*slm_repl_odt;
 struct odtable		*slm_ptrunc_odt;
 
 /* this table is immutable, at least for now */
@@ -606,7 +605,6 @@ main(int argc, char *argv[])
 
 	mds_odtable_load(&mdsBmapAssignTable, SL_FN_BMAP_ODTAB,
 	    "bmapassign");
-	mds_odtable_load(&slm_repl_odt, SL_FN_REPL_ODTAB, "repl");
 	mds_odtable_load(&slm_ptrunc_odt, SL_FN_PTRUNC_ODTAB, "ptrunc");
 
 	mds_bmap_timeotbl_init();
@@ -617,23 +615,29 @@ main(int argc, char *argv[])
 	    "slmwkthr%d");
 	pfl_workq_waitempty();
 
+	dbdo(slm_upsch_revert_cb, NULL,
+	    " SELECT	fid,"
+	    "		bno"
+	    " FROM	upsch"
+	    " WHERE	status = 'S'");
+
 	dbdo(NULL, NULL,
 	    " UPDATE	upsch"
 	    " SET	status = 'Q'"
 	    " WHERE	status = 'S'");
 
 	mds_odtable_scan(mdsBmapAssignTable, mds_bia_odtable_startup_cb, NULL);
-	mds_odtable_scan(slm_repl_odt, slm_repl_odt_startup_cb, NULL);
 	mds_odtable_scan(slm_ptrunc_odt, slm_ptrunc_odt_startup_cb, NULL);
 
 	slm_opstate = SLM_OPSTATE_NORMAL;
 
 	slmcohthr_spawn();
 	slmbmaptimeothr_spawn();
-	slmconnthr_spawn();
-	slmupschedthr_spawn();
 	slmtimerthr_spawn();
 	slm_rpc_initsvc();
+	slmconnthr_spawn();
+	slmbchrqthr_spawn();
+	slmupschthr_spawn();
 
 	slmctlthr_main(sfn);
 	/* NOTREACHED */
