@@ -565,7 +565,7 @@ slm_repl_upd_write(struct bmapc_memb *b)
 		sl_replica_t	iosv[SL_MAX_REPLICAS];
 		unsigned	nios;
 	} add, del, sch, deq;
-	int rm = 1, locked, off, vold, vnew;
+	int locked, off, vold, vnew;
 	struct slm_update_data *upd;
 	struct sl_mds_iosinfo *si;
 	struct bmap_mds_info *bmi;
@@ -627,11 +627,6 @@ slm_repl_upd_write(struct bmapc_memb *b)
 		     (vold != BREPLST_TRUNCPNDG &&
 		      vnew == BREPLST_TRUNCPNDG))
 			PUSH_IOS(b, &sch, resid);
-
-		if (vnew != BREPLST_VALID &&
-		    vnew != BREPLST_INVALID &&
-		    vnew != BREPLST_GARBAGE)
-			rm = 0;
 	}
 
 	if (add.nios)
@@ -1100,106 +1095,4 @@ mds_repl_buildbusytable(void)
 	freelock(&repl_busytable_lock);
 
 	slm_null_si.si_flags |= SIF_PRECLAIM_NOTSUP;
-}
-
-int
-slm_repl_odt_startup_cb(void *data, struct odtable_receipt *odtr,
-    __unusedx void *arg)
-{
-	int rm = 1, wr, rc, off, tract[NBREPLST], retifset[NBREPLST];
-	struct bmap_repls_upd_odent *br = data;
-	struct slm_update_data *upd;
-	struct fidc_membh *f = NULL;
-	struct bmapc_memb *b = NULL;
-	struct sl_resource *r;
-	sl_ios_id_t resid;
-	uint32_t n;
-
-	rc = slm_fcmh_get(&br->br_fg, &f);
-	if (rc)
-		PFL_GOTOERR(out, rc);
-	rc = bmap_getf(f, br->br_bno, SL_READ, BMAPGETF_LOAD |
-	    BMAPGETF_REPLAY, &b);
-	if (rc)
-		PFL_GOTOERR(out, rc);
-
-	BMAP_LOCK(b);
-	b->bcm_flags &= ~BMAP_REPLAY; /* hack */
-	BMAP_ULOCK(b);
-
-	upd = bmap_2_upd(b);
-	if (pfl_memchk(upd, 0, sizeof(*upd)) == 1) {
-		upd_initf(upd, UPDT_BMAP, UPD_INITF_NOKEY);
-		UPD_UNBUSY(upd);
-	}
-	psc_assert(upd->upd_recpt == NULL);
-	upd->upd_recpt = odtr;
-
-	/*
-	 * Revert all inflight SCHED'ed bmaps so they get resent.
-	 *
-	 * Because only a portion of replication work is held in memory
-	 * at any time, whenever a new bmap gets loaded we must take
-	 * care to reidentify such work to prevent inconsistency.
-	 */
-	brepls_init(tract, -1);
-	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
-	tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_TRUNCPNDG;
-	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
-
-	brepls_init(retifset, 0);
-	retifset[BREPLST_REPL_SCHED] = 1;
-	retifset[BREPLST_TRUNCPNDG_SCHED] = 1;
-	retifset[BREPLST_GARBAGE_SCHED] = 1;
-	wr = mds_repl_bmap_walk_all(b, tract, retifset, 0);
-
-	for (n = 0, off = 0; n < fcmh_2_nrepls(f);
-	    n++, off += SL_BITS_PER_REPLICA)
-		switch (SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls, off)) {
-		case BREPLST_REPL_QUEUED:
-		case BREPLST_TRUNCPNDG:
-			resid = fcmh_2_repl(f, n);
-			dbdo(NULL, NULL,
-			    " INSERT INTO upsch ("
-			    "	resid, fid, bno, uid, gid, status, "
-			    "   recpt_elem, recpt_key"
-			    ") VALUES ("
-			    "	?, ?, ?, ?, ?, 'Q', "
-			    "	?, ?"
-			    ")",
-			    SQLITE_INTEGER, resid,
-			    SQLITE_INTEGER64, bmap_2_fid(b),
-			    SQLITE_INTEGER, b->bcm_bmapno,
-			    SQLITE_INTEGER, f->fcmh_sstb.sst_uid,
-			    SQLITE_INTEGER, f->fcmh_sstb.sst_gid,
-			    SQLITE_INTEGER64, odtr->odtr_elem,
-			    SQLITE_INTEGER64, odtr->odtr_key);
-			r = libsl_id2res(resid);
-			upschq_resm(psc_dynarray_getpos(&r->res_members,
-			    0), UPDT_PAGEIN);
-			rm = 0;
-			break;
-		}
-
-	if (wr) {
-		mds_bmap_write_logrepls(b);
-	} else {
-		BMAPOD_MODIFY_DONE(b, 0);
-		BMAP_UNBUSY(b);
-		FCMH_UNBUSY(f);
-	}
-
-	if (rm)
-		upd_tryremove(upd);
-	odtr = upd->upd_recpt;
-	upd->upd_recpt = NULL;
-
- out:
-	PSCFREE(odtr);
-
-	if (b)
-		bmap_op_done(b);
-	if (f)
-		fcmh_op_done(f);
-	return (0);
 }
