@@ -57,7 +57,7 @@ char *slstrerror(int);
 #define SLERR_BADCRC			(_SLERR_START + 19)
 #define SLERR_GEN_OLD			(_SLERR_START + 20)
 #define SLERR_GEN_INVALID		(_SLERR_START + 21)
-#define SLERR_NOTCONN			(_SLERR_START + 22)
+/* 22 - reuse */
 #define SLERR_BMAP_IN_PTRUNC		(_SLERR_START + 23)
 #define SLERR_BMAP_PTRUNC_STARTED	(_SLERR_START + 24)
 #define SLERR_AIOWAIT			(_SLERR_START + 25)
@@ -66,11 +66,11 @@ char *slstrerror(int);
 /* 28 - reuse */
 /* 29 - reuse */
 #define SLERR_RES_BADTYPE		(_SLERR_START + 30)
-#define SLERR_ALREADY			(_SLERR_START + 31)
+/* 31 - reuse me */
 /* 32 - reuse me */
 /* 33 - reuse me */
 #define SLERR_CRCABSENT			(_SLERR_START + 34)
-#define SLERR_BADMSG			(_SLERR_START + 35)
-#define SLERR_KEYEXPIRED		(_SLERR_START + 36)
+/* 35 - reuse me */
+/* 36 - reuse me */
 
 #endif /* _SLERR_H_ */

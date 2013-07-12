@@ -71,17 +71,13 @@ main(int argc, char *argv[])
 	printf("%4d [SLERR_BADCRC]: %s\n", SLERR_BADCRC, slstrerror(SLERR_BADCRC));
 	printf("%4d [SLERR_GEN_OLD]: %s\n", SLERR_GEN_OLD, slstrerror(SLERR_GEN_OLD));
 	printf("%4d [SLERR_GEN_INVALID]: %s\n", SLERR_GEN_INVALID, slstrerror(SLERR_GEN_INVALID));
-	printf("%4d [SLERR_NOTCONN]: %s\n", SLERR_NOTCONN, slstrerror(SLERR_NOTCONN));
 	printf("%4d [SLERR_BMAP_IN_PTRUNC]: %s\n", SLERR_BMAP_IN_PTRUNC, slstrerror(SLERR_BMAP_IN_PTRUNC));
 	printf("%4d [SLERR_BMAP_PTRUNC_STARTED]: %s\n", SLERR_BMAP_PTRUNC_STARTED, slstrerror(SLERR_BMAP_PTRUNC_STARTED));
 	printf("%4d [SLERR_AIOWAIT]: %s\n", SLERR_AIOWAIT, slstrerror(SLERR_AIOWAIT));
 	printf("%4d [SLERR_REIMPORT_OLD]: %s\n", SLERR_REIMPORT_OLD, slstrerror(SLERR_REIMPORT_OLD));
 	printf("%4d [SLERR_IMPORT_XREPL_DIFF]: %s\n", SLERR_IMPORT_XREPL_DIFF, slstrerror(SLERR_IMPORT_XREPL_DIFF));
 	printf("%4d [SLERR_RES_BADTYPE]: %s\n", SLERR_RES_BADTYPE, slstrerror(SLERR_RES_BADTYPE));
-	printf("%4d [SLERR_ALREADY]: %s\n", SLERR_ALREADY, slstrerror(SLERR_ALREADY));
 	printf("%4d [SLERR_CRCABSENT]: %s\n", SLERR_CRCABSENT, slstrerror(SLERR_CRCABSENT));
-	printf("%4d [SLERR_BADMSG]: %s\n", SLERR_BADMSG, slstrerror(SLERR_BADMSG));
-	printf("%4d [SLERR_KEYEXPIRED]: %s\n", SLERR_KEYEXPIRED, slstrerror(SLERR_KEYEXPIRED));
 	/* end custom errnos */
 	exit(0);
 }
