@@ -26,22 +26,21 @@
 
 #include <string.h>
 
-#include "mdsio.h"
-#include "slashd.h"
-
 #include "pfl/cdefs.h"
+#include "pfl/lockedlist.h"
 #include "pfl/str.h"
 #include "pfl/types.h"
-#include "pfl/lockedlist.h"
 #include "psc_util/alloc.h"
+#include "psc_util/ctlsvr.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 #include "psc_util/odtable.h"
-#include "psc_util/ctlsvr.h"
 
+#include "mdsio.h"
 #include "odtable_mds.h"
+#include "slashd.h"
 
-extern int current_vfsid;
+#include "zfs-fuse/zfs_slashlib.h"
 
 struct psc_lockedlist psc_odtables =
     PLL_INIT(&psc_odtables, struct odtable, odt_lentry);
@@ -262,8 +261,8 @@ mds_odtable_freeitem(struct odtable *odt, struct odtable_receipt *odtr)
 	freelock(&odt->odt_lock);
 
 	rc = mdsio_write(current_vfsid, &rootcreds, p, h->odth_slotsz,
-	    &nb, h->odth_start + odtr->odtr_elem *
-	    h->odth_slotsz, 0, odt->odt_handle, NULL, NULL);
+	    &nb, h->odth_start + odtr->odtr_elem * h->odth_slotsz, 0,
+	    odt->odt_handle, NULL, NULL);
 	psc_assert(!rc && nb == h->odth_slotsz);
 
 	if (h->odth_options & ODTBL_OPT_SYNC)
@@ -277,6 +276,22 @@ mds_odtable_freeitem(struct odtable *odt, struct odtable_receipt *odtr)
 	PSCFREE(p);
 	PSCFREE(odtr);
 	return (rc);
+}
+
+void
+mds_odtable_getfooter(const struct odtable *odt, size_t elem,
+    struct odtable_entftr *odtf)
+{
+	struct odtable_hdr *h;
+	size_t nb;
+	int rc;
+
+	h = odt->odt_hdr;
+
+	rc = mdsio_read(current_vfsid, &rootcreds, odtf, sizeof(*odtf),
+	    &nb, h->odth_start + elem * h->odth_slotsz + h->odth_elemsz,
+	    odt->odt_handle);
+	psc_assert(rc == 0 && nb == sizeof(*odtf));
 }
 
 void
@@ -313,8 +328,8 @@ mds_odtable_load(struct odtable **t, const char *fn, const char *fmt, ...)
 	odt->odt_hdr = odth;
 	psc_assert(rc == 0 && nb == sizeof(*odth));
 
-	psc_assert((odth->odth_magic == ODTBL_MAGIC) &&
-		   (odth->odth_version == ODTBL_VERS));
+	psc_assert(odth->odth_magic == ODTBL_MAGIC &&
+	    odth->odth_version == ODTBL_VERS);
 
 	/*
 	 * We used to do mmap() to allow easy indexing.  However, we now
