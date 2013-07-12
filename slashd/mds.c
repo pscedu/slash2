@@ -1518,7 +1518,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 		    struct slm_wkdata_ptrunc);
 		fcmh_op_start_type(f, FCMH_OPCNT_WORKER);
 		wk->f = f;
-		slm_ptrunc_wake_clients(wk);
+		pfl_workq_putitem(wk);
 	}
 
 	if (f->fcmh_sstb.sst_mode & (S_ISGID | S_ISUID)) {
