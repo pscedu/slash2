@@ -27,6 +27,8 @@
 
 #include <sys/errno.h>
 
+#include "pfl/err.h"
+
 char *slstrerror(int);
 
 #define _SLERR_START			1000		/* must be >max errno */
