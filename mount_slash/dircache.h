@@ -73,7 +73,7 @@ struct fidc_membh;
  */
 struct dircache_page {
 	int			 dcp_flags;	/* see DCPF_* below */
-	int			 dcp_rc;
+	int			 dcp_rc;	/* readdir(2) error */
 	size_t			 dcp_size;
 	off_t			 dcp_off;
 	off_t			 dcp_nextoff;
@@ -87,7 +87,7 @@ struct dircache_page {
 /* dcp_flags */
 #define DCPF_LOADING		(1 << 0)
 #define DCPF_EOF		(1 << 1)	/* denotes last page */
-#define DCPF_WAITING		(1 << 2)	/* some one is waiting */
+#define DCPF_WAITING		(1 << 2)	/* synchronous load */
 
 #define DIRCACHE_PAGE_EXPIRED(d, p, exp)				\
 	(((p)->dcp_flags & DCPF_LOADING) == 0 &&			\
