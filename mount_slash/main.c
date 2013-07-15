@@ -1287,24 +1287,16 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	struct iovec *iov = av->pointer_arg[MSL_READDIR_CBARG_IOV];
 	struct srm_readdir_req *mq;
 	struct srm_readdir_rep *mp;
-	int rc;
+	int rc, wait;
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_readdir_rep, rc);
-	if (rc == 0)
-		slrpc_rep_in(csvc, rq);
 
 	if (rc) {
 		DEBUG_REQ(PLL_ERROR, rq, "rc=%d", rc);
-
-		FCMH_LOCK(d);
-		p->dcp_flags &= ~DCPF_LOADING;
-		p->dcp_rc = rc;
-		fcmh_wake_locked(d);
-		FCMH_ULOCK(d);
-
-		msl_readdir_fin(csvc, iov);
-		return (0);
+		goto done;
 	}
+
+	slrpc_rep_in(csvc, rq);
 
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
@@ -1358,9 +1350,27 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 			}
 		}
 	}
+
+ done:
+
+	FCMH_LOCK(d);
+
+	p->dcp_rc = rc;
 	if (mp->eof)
 		p->dcp_flags |= DCPF_EOF;
-	dircache_reg_ents(d, p, mp->num);
+	wait = p->dcp_flags & DCPF_WAITING;
+	p->dcp_flags &= ~(DCPF_LOADING | DCPF_WAITING);
+
+	PFL_GETPTIMESPEC(&p->dcp_tm);
+
+	if (!rc)
+		dircache_reg_ents(d, p, mp->num);
+	else if (!wait)
+		dircache_free_page(d, p);
+
+	fcmh_wake_locked(d);
+	FCMH_ULOCK(d);
+
 	iov[0].iov_base = NULL;
 	msl_readdir_fin(csvc, iov);
 	return (0);
@@ -1368,7 +1378,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 
 int
 msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
-    off_t off, size_t size)
+    off_t off, size_t size, int readahead)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct srm_readdir_req *mq = NULL;
@@ -1402,7 +1412,7 @@ msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
 		niov++;
 	}
 
-	p = dircache_new_page(d, size, off, iov[0].iov_base);
+	p = dircache_new_page(d, size, off, iov[0].iov_base, readahead);
 
 	mq->fg = d->fcmh_fg;
 	mq->size = size;
@@ -1425,8 +1435,13 @@ msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (rc) {
 		pscrpc_req_finished(rq);
-		msl_readdir_fin(csvc, iov);
+
+		FCMH_LOCK(d);
 		dircache_free_page(d, p);
+		FCMH_ULOCK(d);
+
+		iov[0].iov_base = NULL;
+		msl_readdir_fin(csvc, iov);
 	}
 	return (rc);
 }
@@ -1473,37 +1488,54 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+
+	fci = fcmh_2_fci(d);
+
+ restart:
+
 	PFL_GETPTIMESPEC(&expire);
 	expire.tv_sec -= DIRENT_TIMEO;
 
-	FCMH_LOCK(d);
-	fci = fcmh_2_fci(d);
- restart:
 	nextoff = 0;
 	nent = 0;
 	issue = 1;
 	issuenext = 0;
+	FCMH_LOCK(d);
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
-		if (DIRCACHE_PAGE_EXPIRED(d, p, &expire)) {
-			dircache_free_page(d, p);
-			continue;
-		}
 
 		if (p->dcp_flags & DCPF_LOADING) {
 			/* We don't know dcp_nextoff so we must wait. */
 			if (off >= p->dcp_off) {
 				fcmh_wait_nocond_locked(d);
+				FCMH_ULOCK(d);
 				goto restart;
 			}
 			continue;
 		}
 
-		/* We found the last page; return EOF. */
-		if (off == p->dcp_nextoff &&
+		if (DIRCACHE_PAGE_EXPIRED(d, p, &expire)) {
+			dircache_free_page(d, p);
+			continue;
+		}
+		if (off == p->dcp_off && !psc_dynarray_len(&p->dcp_dents) &&
 		    p->dcp_flags & DCPF_EOF) {
+			OPSTAT_INCR(SLC_OPST_DIRCACHE_EMPTY_PAGE);
 			FCMH_ULOCK(d);
 			pscfs_reply_readdir(pfr, NULL, 0, rc);
 			return;
+		}
+		/* We found the last page; return EOF. */
+		if (off == p->dcp_nextoff && p->dcp_flags & DCPF_EOF) {
+			FCMH_ULOCK(d);
+			pscfs_reply_readdir(pfr, NULL, 0, rc);
+			return;
+		}
+
+		if (!psc_dynarray_len(&p->dcp_dents)) {
+			psclog_warnx("Empty dircache entry at offset %ld.\n", 
+			    p->dcp_off);
+			dircache_free_page(d, p);
+			continue;
 		}
 
 		nent += psc_dynarray_len(&p->dcp_dents);
@@ -1567,13 +1599,16 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		} else if (nextoff && p->dcp_off > nextoff)
 			break;
 	}
+
 	if (issue) {
-		rc = msl_readdir_issue(pfcc, d, off, size);
+		FCMH_ULOCK(d);
+		rc = msl_readdir_issue(pfcc, d, off, size, 0);
 		if (rc && !slc_rmc_retry(pfr, &rc)) {
 			FCMH_ULOCK(d);
 			pscfs_reply_readdir(pfr, NULL, 0, rc);
 			return;
 		}
+		goto restart;
 	}
 	if (nextoff && issuenext) {
 		size_t esz;
@@ -1594,11 +1629,10 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		if (esz * rem > LNET_MTU)
 			rem = LNET_MTU / esz;
 		esz = sizeof(struct pscfs_dirent) + 16;
-		msl_readdir_issue(pfcc, d, nextoff, rem * esz);
-	}
-	if (issue)
-		goto restart;
-	FCMH_ULOCK(d);
+		FCMH_ULOCK(d);
+		(void)msl_readdir_issue(pfcc, d, nextoff, rem * esz, 1);
+	} else
+		FCMH_ULOCK(d);
 
 	if (0)
  out:

@@ -73,7 +73,7 @@ struct fidc_membh;
  */
 struct dircache_page {
 	int			 dcp_flags;	/* see DCPF_* below */
-	int			 dcp_rc;	/* readdir(2) error */
+	int			 dcp_rc;
 	size_t			 dcp_size;
 	off_t			 dcp_off;
 	off_t			 dcp_nextoff;
@@ -87,6 +87,7 @@ struct dircache_page {
 /* dcp_flags */
 #define DCPF_LOADING		(1 << 0)
 #define DCPF_EOF		(1 << 1)	/* denotes last page */
+#define DCPF_WAITING		(1 << 2)	/* some one is waiting */
 
 #define DIRCACHE_PAGE_EXPIRED(d, p, exp)				\
 	(((p)->dcp_flags & DCPF_LOADING) == 0 &&			\
@@ -130,7 +131,7 @@ dirent_sort_cmp(const void *x, const void *y)
 }
 
 struct dircache_page *
-	dircache_new_page(struct fidc_membh *, size_t, off_t, void *);
+	dircache_new_page(struct fidc_membh *, size_t, off_t, void *, int);
 void	dircache_free_page(struct fidc_membh *, struct dircache_page *);
 slfid_t	dircache_lookup(struct fidc_membh *, const char *);
 void	dircache_mgr_init(void);
