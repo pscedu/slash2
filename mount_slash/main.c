@@ -1486,6 +1486,10 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	issue = 1;
 	issuenext = 0;
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
+		/*
+		 * XXX: the timestamp of a page is set only after 
+		 * the loading is done.
+		 */
 		if (DIRCACHE_PAGE_EXPIRED(d, p, &expire)) {
 			dircache_free_page(d, p);
 			continue;
