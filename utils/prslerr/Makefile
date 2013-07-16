@@ -11,5 +11,6 @@ MODULES+=	pfl
 
 include ${SLASHMK}
 
-prslerr.c: ${SLASH_BASE}/include/slerr.h
-	${ECHORUN} perl regen.pl prslerr.c ${SLASH_BASE}/include/slerr.h
+prslerr.c: ${PFL_BASE}/err.h ${SLASH_BASE}/include/slerr.h
+	${ECHORUN} perl regen.pl prslerr.c ${PFL_BASE}/err.h $( \
+	    ) ${SLASH_BASE}/include/slerr.h

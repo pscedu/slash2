@@ -5,7 +5,7 @@ use strict;
 use warnings;
 
 sub usage {
-	die "usage: $0 src hdr\n";
+	die "usage: $0 src hdr ...\n";
 }
 
 sub slurp {
@@ -20,11 +20,14 @@ sub slurp {
 	return ($data);
 }
 
-usage unless @ARGV == 2;
-my ($src, $hdr) = @ARGV;
+usage unless @ARGV >= 2;
+my ($src) = shift;
 
-my $hdat = slurp $hdr;
-my @err = $hdat =~ /\b(SLERR_\w+)/g;
+my @err;
+for my $hdr (@ARGV) {
+	my $hdat = slurp $hdr;
+	push @err, $hdat =~ /\b((?:PF|S)LERR_\w+)/g;
+}
 
 my $ndat = join '', map { qq{\tprintf("%4d [$_]: %s\\n", $_, slstrerror($_));\n} } @err;
 
