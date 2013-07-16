@@ -313,14 +313,6 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	psc_assert(p->dcp_size);
 	psc_assert(psc_dynarray_len(&p->dcp_dents) == 0);
 
-	if (nents == 0) {
-		FCMH_LOCK(d);
-		dircache_free_page(d, p);
-		fcmh_wake_locked(d);
-		FCMH_ULOCK(d);
-		return;
-	}
-
 	PFL_GETPTIMESPEC(&p->dcp_tm);
 
 	dce = p->dcp_base0 = PSCALLOC(nents * sizeof(*dce));
@@ -345,9 +337,11 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 
 		psc_dynarray_add(&p->dcp_dents, dce);
 		off += PFL_DIRENT_SIZE(dirent->pfd_namelen);
-
-		p->dcp_nextoff = dirent->pfd_off;
 	}
+	if (dirent)
+		p->dcp_nextoff = dirent->pfd_off;
+	else
+		p->dcp_nextoff = p->dcp_off;
 
 	psc_dynarray_sort(&p->dcp_dents, qsort, dirent_sort_cmp);
 	DYNARRAY_FOREACH(dce, j, &p->dcp_dents)
