@@ -1361,7 +1361,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	if (mp->eof)
 		p->dcp_flags |= DCPF_EOF;
 	DPRINTF_DCP(PLL_DEBUG, p, "registering");
-	dircache_reg_ents(d, p, mp->num);
+	dircache_reg_ents(d, p, mp->num, iov[0].iov_base);
 	iov[0].iov_base = NULL;
 	msl_readdir_fin(csvc, iov);
 	return (0);
@@ -1403,7 +1403,7 @@ msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
 		niov++;
 	}
 
-	p = dircache_new_page(d, size, off, iov[0].iov_base);
+	p = dircache_new_page(d, size, off);
 
 	mq->fg = d->fcmh_fg;
 	mq->size = size;
@@ -1486,10 +1486,6 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	issue = 1;
 	issuenext = 0;
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
-		/*
-		 * XXX: the timestamp of a page is set only after 
-		 * the loading is done.
-		 */
 		if (DIRCACHE_PAGE_EXPIRED(d, p, &expire)) {
 			dircache_free_page(d, p);
 			continue;

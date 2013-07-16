@@ -252,8 +252,7 @@ dircache_cmp(const void *a, const void *b)
  * @base: buffer to write dirents into.
  */
 struct dircache_page *
-dircache_new_page(struct fidc_membh *d, size_t size, off_t off,
-    void *base)
+dircache_new_page(struct fidc_membh *d, size_t size, off_t off)
 {
 	struct dircache_page *p, *np;
 	struct pfl_timespec expire;
@@ -284,7 +283,6 @@ dircache_new_page(struct fidc_membh *d, size_t size, off_t off,
 	p->dcp_flags = DCPF_LOADING;
 	p->dcp_size = size;
 	p->dcp_off = off;
-	p->dcp_base = base;
 
 	pll_add_sorted(&fci->fci_dc_pages, p, dircache_cmp);
 
@@ -299,7 +297,7 @@ dircache_new_page(struct fidc_membh *d, size_t size, off_t off,
  */
 void
 dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
-    size_t nents)
+    size_t nents, void *base)
 {
 	struct pscfs_dirent *dirent;
 	struct fcmh_cli_info *fci;
@@ -338,10 +336,6 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		psc_dynarray_add(&p->dcp_dents, dce);
 		off += PFL_DIRENT_SIZE(dirent->pfd_namelen);
 	}
-	if (dirent)
-		p->dcp_nextoff = dirent->pfd_off;
-	else
-		p->dcp_nextoff = p->dcp_off;
 
 	psc_dynarray_sort(&p->dcp_dents, qsort, dirent_sort_cmp);
 	DYNARRAY_FOREACH(dce, j, &p->dcp_dents)
@@ -351,6 +345,11 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 
 	fci = fcmh_2_fci(d);
 	FCMH_LOCK(d);
+	if (dirent)
+		p->dcp_nextoff = dirent->pfd_off;
+	else
+		p->dcp_nextoff = p->dcp_off;
+	p->dcp_base = base;
 	p->dcp_flags &= ~DCPF_LOADING;
 	fci->fci_dc_nents += nents;
 	fcmh_wake_locked(d);

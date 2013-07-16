@@ -73,7 +73,7 @@ struct fidc_membh;
  */
 struct dircache_page {
 	int			 dcp_flags;	/* see DCPF_* below */
-	int			 dcp_rc;	/* readdir(2) error */
+	int			 dcp_rc;	/* readdir(3) error */
 	size_t			 dcp_size;
 	off_t			 dcp_off;
 	off_t			 dcp_nextoff;
@@ -94,7 +94,8 @@ struct dircache_page {
 	  timespeccmp(&(d)->fcmh_sstb.sst_mtim, &p->dcp_tm, >)))
 
 #define DPRINTF_DCP(lvl, dcp, fmt, ...)					\
-	psclog((lvl), "dcp@%p off %ld sz %zu fl %#x nextoff %ld: " fmt,	\
+	psclog((lvl), "dcp@%p off %"PSCPRIdOFFT" sz %zu fl %#x "	\
+	    "nextoff %"PSCPRIdOFFT": " fmt,				\
 	    (dcp), (dcp)->dcp_off, (dcp)->dcp_size, (dcp)->dcp_flags,	\
 	    (dcp)->dcp_nextoff, ## __VA_ARGS__)
 
@@ -135,12 +136,12 @@ dirent_sort_cmp(const void *x, const void *y)
 }
 
 struct dircache_page *
-	dircache_new_page(struct fidc_membh *, size_t, off_t, void *);
+	dircache_new_page(struct fidc_membh *, size_t, off_t);
 void	dircache_free_page(struct fidc_membh *, struct dircache_page *);
 slfid_t	dircache_lookup(struct fidc_membh *, const char *);
 void	dircache_mgr_init(void);
 void	dircache_purge(struct fidc_membh *);
-void	dircache_reg_ents(struct fidc_membh *, struct dircache_page *, size_t);
+void	dircache_reg_ents(struct fidc_membh *, struct dircache_page *, size_t, void *);
 void	dircache_walk(struct fidc_membh *, void (*)(struct dircache_ent *, void *), void *);
 
 #endif /* _DIRCACHE_H_ */
