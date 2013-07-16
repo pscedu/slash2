@@ -489,7 +489,6 @@ st_blocks is broken
 
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
-   (o) attr buf size needs be dynamically sized
 
 - wrapper scripts:
    - purge old corefiles
