@@ -93,6 +93,11 @@ struct dircache_page {
 	 (timespeccmp((exp), &(p)->dcp_tm, >) ||			\
 	  timespeccmp(&(d)->fcmh_sstb.sst_mtim, &p->dcp_tm, >)))
 
+#define DPRINTF_DCP(lvl, dcp, fmt, ...)					\
+	psclog((lvl), "dcp@%p off %ld sz %zu fl %#x nextoff %ld: " fmt,	\
+	    (dcp), (dcp)->dcp_off, (dcp)->dcp_size, (dcp)->dcp_flags,	\
+	    (dcp)->dcp_nextoff, ## __VA_ARGS__)
+
 /* This is analogous to 'struct dirent'. */
 struct dircache_ent {
 	int			 dce_hash;

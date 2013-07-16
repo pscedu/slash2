@@ -1360,6 +1360,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	}
 	if (mp->eof)
 		p->dcp_flags |= DCPF_EOF;
+	DPRINTF_DCP(PLL_DEBUG, p, "registering");
 	dircache_reg_ents(d, p, mp->num);
 	iov[0].iov_base = NULL;
 	msl_readdir_fin(csvc, iov);
@@ -1422,6 +1423,7 @@ msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
 	rq->rq_async_args.pointer_arg[MSL_READDIR_CBARG_FCMH] = d;
 	rq->rq_async_args.pointer_arg[MSL_READDIR_CBARG_IOV] = iov;
 	rq->rq_async_args.pointer_arg[MSL_READDIR_CBARG_PAGE] = p;
+	DPRINTF_DCP(PLL_DEBUG, p, "issuing");
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (rc) {
 		pscrpc_req_finished(rq);
