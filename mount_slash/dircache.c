@@ -76,19 +76,17 @@ dircache_free_page(struct fidc_membh *d, struct dircache_page *p)
 	FCMH_LOCK_ENSURE(d);
 	fci = fcmh_2_fci(d);
 
-	psclog_info("Free dircache page %p, off = %ld, next_off = %ld", 
-		p, p->dcp_off, p->dcp_nextoff);
-
 	if (psclist_conjoint(&p->dcp_lentry,
 	    psc_lentry_hd(&fci->fci_dc_pages.pll_listhd)))
 		pll_remove(&fci->fci_dc_pages, p);
 
 	fci->fci_dc_nents -= psc_dynarray_len(&p->dcp_dents);
-
 	psc_dynarray_free(&p->dcp_dents);
 	PSCFREE(p->dcp_base);
 	PSCFREE(p->dcp_base0);
 	psc_pool_return(dircache_pool, p);
+
+	fcmh_wake_locked(d);
 
 	/* XXX move this to generic pool stats */
 	OPSTAT_INCR(SLC_OPST_DIRCACHE_REL_ENTRY);
@@ -255,13 +253,14 @@ dircache_cmp(const void *a, const void *b)
  */
 struct dircache_page *
 dircache_new_page(struct fidc_membh *d, size_t size, off_t off,
-    void *base, int readahead)
+    void *base)
 {
 	struct dircache_page *p, *np;
 	struct pfl_timespec expire;
 	struct fcmh_cli_info *fci;
 
-	FCMH_LOCK(d);
+	FCMH_LOCK_ENSURE(d);
+
 	PFL_GETPTIMESPEC(&expire);
 	expire.tv_sec -= DIRENT_TIMEO;
 
@@ -282,19 +281,12 @@ dircache_new_page(struct fidc_membh *d, size_t size, off_t off,
 	memset(p, 0, sizeof(*p));
 	psc_dynarray_init(&p->dcp_dents);
 	INIT_PSC_LISTENTRY(&p->dcp_lentry);
-
 	p->dcp_flags = DCPF_LOADING;
-	if (!readahead)
-		p->dcp_flags |= DCPF_WAITING;
-
 	p->dcp_size = size;
 	p->dcp_off = off;
 	p->dcp_base = base;
 
 	pll_add_sorted(&fci->fci_dc_pages, p, dircache_cmp);
-	FCMH_ULOCK(d);
-
-	psclog_info("Allocate dircache page %p, off = %ld\n", p, p->dcp_off);
 
 	return (p);
 }
@@ -321,9 +313,15 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	psc_assert(p->dcp_size);
 	psc_assert(psc_dynarray_len(&p->dcp_dents) == 0);
 
-	PFL_GETPTIMESPEC(&p->dcp_tm);
-	if (nents == 0)
+	if (nents == 0) {
+		FCMH_LOCK(d);
+		dircache_free_page(d, p);
+		fcmh_wake_locked(d);
+		FCMH_ULOCK(d);
 		return;
+	}
+
+	PFL_GETPTIMESPEC(&p->dcp_tm);
 
 	dce = p->dcp_base0 = PSCALLOC(nents * sizeof(*dce));
 	psc_dynarray_ensurelen(&p->dcp_dents, nents);
@@ -358,5 +356,9 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		    dce->dce_namelen, dce->dce_name);
 
 	fci = fcmh_2_fci(d);
+	FCMH_LOCK(d);
+	p->dcp_flags &= ~DCPF_LOADING;
 	fci->fci_dc_nents += nents;
+	fcmh_wake_locked(d);
+	FCMH_ULOCK(d);
 }
