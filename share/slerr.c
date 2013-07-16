@@ -86,7 +86,7 @@ slstrerror(int error)
 
 	if (error >= _PFLERR_START &&
 	    error < _PFLERR_START + nitems(pfl_errstrs))
-		return (slash_errstrs[error - _PFLERR_START]);
+		return (pfl_errstrs[error - _PFLERR_START]);
 
 	if (error >= _SLERR_START &&
 	    error < _SLERR_START + nitems(slash_errstrs))
