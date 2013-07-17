@@ -935,6 +935,7 @@ main(int argc, char *argv[])
 
 	PRVAL(SL_REPLICA_NBYTES);
 
+	PRVAL(LNET_MTU);
 	PRVAL(BMAP_OD_SZ);
 	PRVAL(BMAP_OD_CRCSZ);
 
