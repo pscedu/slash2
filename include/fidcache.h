@@ -79,8 +79,8 @@ struct fidc_membh {
 
 /* fcmh_flags (cache) */
 #define	FCMH_CAC_FREE		(1 <<  0)	/* totally free item */
-#define	FCMH_CAC_IDLE		(1 <<  1)	/* not being used, in clean cache */
-#define	FCMH_CAC_BUSY		(1 <<  2)	/* being used, not reapable */
+#define	FCMH_CAC_IDLE		(1 <<  1)	/* on idle list */
+#define	FCMH_CAC_BUSY		(1 <<  2)	/* on busy list */
 #define	FCMH_CAC_INITING	(1 <<  3)	/* initializing */
 #define	FCMH_CAC_WAITING	(1 <<  4)	/* being waited on */
 #define	FCMH_CAC_TOFREE		(1 <<  5)	/* ctor failure or memory pressure */
@@ -244,16 +244,16 @@ struct fidc_membh {
 	    (f)->fcmh_refcnt, fcmh_2_fsz(f), (f)->fcmh_sstb.sst_blksize,\
 	    (f)->fcmh_sstb.sst_mode, ## __VA_ARGS__)
 
-/* debugging aid: spit out the reason for the reference count taking/dropping */
-
-#define	FCMH_OPCNT_BMAP		0x0001	/* bcm_fcmh */
-#define	FCMH_OPCNT_LOOKUP_FIDC	0x0004	/* fidc_lookup() */
-#define	FCMH_OPCNT_NEW		0x0008
-#define	FCMH_OPCNT_OPEN		0x0010	/* mount_slash pscfs file info */
-#define	FCMH_OPCNT_WAIT		0x0020	/* dup ref during initialization */
-#define	FCMH_OPCNT_WORKER	0x0040	/* MDS worker */
-#define	FCMH_OPCNT_DIRTY_QUEUE	0x0080
-#define	FCMH_OPCNT_UPSCH	0x0100	/* temporarily held by upsch engine */
+/* types of references */
+#define	FCMH_OPCNT_BMAP			(1 << 0)	/* bcm_fcmh backpointer */
+#define	FCMH_OPCNT_LOOKUP_FIDC		(1 << 1)	/* fidc_lookup() */
+#define	FCMH_OPCNT_NEW			(1 << 2)
+#define	FCMH_OPCNT_OPEN			(1 << 3)	/* CLI: pscfs file info */
+#define	FCMH_OPCNT_WAIT			(1 << 4)	/* dup ref during initialization */
+#define	FCMH_OPCNT_WORKER		(1 << 5)	/* MDS: generic worker */
+#define	FCMH_OPCNT_DIRTY_QUEUE		(1 << 6)	/* CLI: attribute flushing */
+#define	FCMH_OPCNT_UPSCH		(1 << 7)	/* MDS: temporarily held by upsch engine */
+#define	FCMH_OPCNT_READDIR		(1 << 8)	/* CLI: readahead readdir RPC */
 
 /* fcmh_setattr() flags */
 #define FCMH_SETATTRF_NONE		0
