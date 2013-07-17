@@ -34,61 +34,62 @@
 #include "slconfig.h"
 
 void
-slcfg_init_res(struct sl_resource *res)
+slcfg_init_res(struct sl_resource *r)
 {
 	struct resprof_mds_info *rpmi;
 	struct sl_mds_peerinfo *sp;
 	struct sl_mds_iosinfo *si;
 
-	rpmi = res2rpmi(res);
-	lc_reginit(&rpmi->rpmi_batchrqs, struct batchrq, br_lentry,
-	    "bchrq-%s", res->res_name);
+	rpmi = res2rpmi(r);
 	psc_mutex_init(&rpmi->rpmi_mutex);
 	psc_waitq_init(&rpmi->rpmi_waitq);
 
-	if (res->res_type == SLREST_MDS) {
+	if (r->res_type == SLREST_MDS) {
 		rpmi->rpmi_info = sp = PSCALLOC(sizeof(*sp));
 		sp->sp_flags = SPF_NEED_JRNL_INIT;
 		psc_meter_init(&sp->sp_batchmeter, 0, "nsupd-%s",
-		    res->res_name);
+		    r->res_name);
 		sp->sp_batchmeter.pm_maxp = &current_update_batchno;
 	} else {
 		rpmi->rpmi_info = si = PSCALLOC(sizeof(*si));
 		si->si_flags = SIF_NEED_JRNL_INIT;
 		psc_meter_init(&si->si_batchmeter, 0, "reclaim-%s",
-		    res->res_name);
+		    r->res_name);
 		si->si_batchmeter.pm_maxp = &current_reclaim_batchno;
-		if (res->res_flags & RESF_DISABLE_BIA)
+		if (r->res_flags & RESF_DISABLE_BIA)
 			si->si_flags |= SIF_DISABLE_BIA;
 	}
+	if (RES_ISFS(r))
+		lc_reginit(&rpmi->rpmi_batchrqs, struct batchrq,
+		    br_lentry, "bchrq-%s", r->res_name);
 }
 
 void
-slcfg_init_resm(struct sl_resm *resm)
+slcfg_init_resm(struct sl_resm *m)
 {
 	struct resm_mds_info *rmmi;
 
-	rmmi = resm2rmmi(resm);
+	rmmi = resm2rmmi(m);
 	atomic_set(&rmmi->rmmi_refcnt, 0);
 }
 
 __static void
-slcfg_resm_roundrobin(struct sl_resource *res, struct psc_dynarray *a)
+slcfg_resm_roundrobin(struct sl_resource *r, struct psc_dynarray *a)
 {
+	struct resprof_mds_info *rpmi = res2rpmi(r);
+	struct sl_resm *m;
 	int i, idx;
-	struct resprof_mds_info *rpmi = res2rpmi(res);
-	struct sl_resm *resm;
 
 	RPMI_LOCK(rpmi);
-	idx = slm_get_rpmi_idx(res);
+	idx = slm_get_rpmi_idx(r);
 	RPMI_ULOCK(rpmi);
 
-	for (i = 0; i < psc_dynarray_len(&res->res_members); i++, idx++) {
-		if (idx >= psc_dynarray_len(&res->res_members))
+	for (i = 0; i < psc_dynarray_len(&r->res_members); i++, idx++) {
+		if (idx >= psc_dynarray_len(&r->res_members))
 		    idx = 0;
 
-		resm = psc_dynarray_getpos(&res->res_members, idx);
-		psc_dynarray_add_ifdne(a, resm);
+		m = psc_dynarray_getpos(&r->res_members, idx);
+		psc_dynarray_add_ifdne(a, m);
 	}
 }
 
@@ -96,7 +97,7 @@ int
 slcfg_get_ioslist(sl_ios_id_t piosid, struct psc_dynarray *a,
     int use_archival)
 {
-	struct sl_resource *pios, *res;
+	struct sl_resource *pios, *r;
 	int i;
 
 	pios = libsl_id2res(piosid);
@@ -108,13 +109,13 @@ slcfg_get_ioslist(sl_ios_id_t piosid, struct psc_dynarray *a,
 	 */
 	slcfg_resm_roundrobin(pios, a);
 
-	DYNARRAY_FOREACH(res, i, &nodeSite->site_resources) {
-		if (!RES_ISFS(res) || (res == pios) ||
-		    ((res->res_type == SLREST_ARCHIVAL_FS) &&
+	DYNARRAY_FOREACH(r, i, &nodeSite->site_resources) {
+		if (!RES_ISFS(r) || r == pios ||
+		    (r->res_type == SLREST_ARCHIVAL_FS &&
 		     !use_archival))
 			continue;
 
-		slcfg_resm_roundrobin(res, a);
+		slcfg_resm_roundrobin(r, a);
 	}
 
 	return (psc_dynarray_len(a));
