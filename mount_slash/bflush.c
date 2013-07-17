@@ -728,19 +728,18 @@ msl_bmap_release_cb(struct pscrpc_request *rq,
 
 	// SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_release_rep, rc);
 
-	if (!mp)
-		rc = -1;
+	rc = mp ? mp->rc : -ENOBUFS;
 
 	for (i = 0; i < mq->nbmaps; i++) {
 		psclog((rc || mp->rc) ? PLL_ERROR : PLL_INFO,
 		    "fid="SLPRI_FID" bmap=%u key=%"PRId64" "
 		    "seq=%"PRId64" rc=%d", mq->sbd[i].sbd_fg.fg_fid,
 		    mq->sbd[i].sbd_bmapno, mq->sbd[i].sbd_key,
-		    mq->sbd[i].sbd_seq, (mp) ? mp->rc : rc);
+		    mq->sbd[i].sbd_seq, rc);
 	}
 
 	sl_csvc_decref(csvc);
-	return (rc | ((mp) ? mp->rc : 0));
+	return (rc);
 }
 
 static void
