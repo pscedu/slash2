@@ -304,7 +304,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	struct dircache_ent *dce;
 	unsigned char *b;
 	off_t off;
-	int j;
+	int i;
 
 	OPSTAT_INCR(SLC_OPST_DIRCACHE_REG_ENTRY);
 
@@ -316,7 +316,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	dce = p->dcp_base0 = PSCALLOC(nents * sizeof(*dce));
 	psc_dynarray_ensurelen(&p->dcp_dents, nents);
 
-	for (j = 0, b = base, off = 0; j < (int)nents; j++, dce++) {
+	for (i = 0, b = base, off = 0; i < (int)nents; i++, dce++) {
 		dirent = PSC_AGP(b, off);
 
 		psclog_dbg("fid="SLPRI_FID" off=%"PRId64" "
@@ -337,7 +337,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	}
 
 	psc_dynarray_sort(&p->dcp_dents, qsort, dirent_sort_cmp);
-	DYNARRAY_FOREACH(dce, j, &p->dcp_dents)
+	DYNARRAY_FOREACH(dce, i, &p->dcp_dents)
 		psclog_dbg("dce=%p hash=%#x namelen=%u name=%.*s",
 		    dce, dce->dce_hash, dce->dce_namelen,
 		    dce->dce_namelen, dce->dce_name);
