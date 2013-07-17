@@ -27,12 +27,12 @@
 
 #include <stdio.h>
 
-#include "pfl/time.h"
-#include "pfl/list.h"
 #include "pfl/export.h"
+#include "pfl/list.h"
 #include "pfl/rpc.h"
 #include "pfl/rpclog.h"
 #include "pfl/rsx.h"
+#include "pfl/time.h"
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
 #include "psc_util/multiwait.h"
