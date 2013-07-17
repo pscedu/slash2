@@ -489,7 +489,7 @@ fcmh_getsize(struct fidc_membh *h)
  */
 void
 _fcmh_op_start_type(const struct pfl_callerinfo *pci,
-    struct fidc_membh *f, int flag)
+    struct fidc_membh *f, int type)
 {
 	int locked;
 
@@ -497,34 +497,33 @@ _fcmh_op_start_type(const struct pfl_callerinfo *pci,
 	psc_assert(f->fcmh_refcnt >= 0);
 	f->fcmh_refcnt++;
 
-	DEBUG_FCMH(PLL_DEBUG, f, "took ref (flag=%d)", flag);
+	DEBUG_FCMH(PLL_DEBUG, f, "took ref (type=%d)", type);
 
 	/*
 	 * Only 2 types of references may be long standing,
 	 * FCMH_OPCNT_OPEN and FCMH_OPCNT_BMAP.  Other ref types should
 	 * not move the fcmh to the busy list.
 	 */
-	if (flag == FCMH_OPCNT_OPEN || flag == FCMH_OPCNT_BMAP) {
-		if (f->fcmh_flags & FCMH_CAC_IDLE) {
-			f->fcmh_flags &= ~FCMH_CAC_IDLE;
-			f->fcmh_flags |= FCMH_CAC_BUSY;
-			lc_remove(&fidcIdleList, f);
-			lc_add(&fidcBusyList, f);
-		}
+	if ((type == FCMH_OPCNT_OPEN || type == FCMH_OPCNT_BMAP) &&
+	    f->fcmh_flags & FCMH_CAC_IDLE) {
+		f->fcmh_flags &= ~FCMH_CAC_IDLE;
+		f->fcmh_flags |= FCMH_CAC_BUSY;
+		lc_remove(&fidcIdleList, f);
+		lc_add(&fidcBusyList, f);
 	}
 	FCMH_URLOCK(f, locked);
 }
 
 void
 _fcmh_op_done_type(const struct pfl_callerinfo *pci,
-    struct fidc_membh *f, int flag)
+    struct fidc_membh *f, int type)
 {
 	int rc;
 
 	(void)FCMH_RLOCK(f);
 	rc = f->fcmh_refcnt--;
 	psc_assert(rc > 0);
-	DEBUG_FCMH(PLL_DEBUG, f, "release ref (flag=%d)", flag);
+	DEBUG_FCMH(PLL_DEBUG, f, "release ref (type=%d)", type);
 	if (rc == 1) {
 		psc_assert(!FCMH_HAS_BUSY(f));
 
@@ -552,6 +551,7 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pci,
 			fcmh_destroy(f);
 			return;
 		}
+
 		if (f->fcmh_flags & FCMH_CAC_BUSY) {
 			f->fcmh_flags &= ~FCMH_CAC_BUSY;
 			f->fcmh_flags |= FCMH_CAC_IDLE;
