@@ -1765,7 +1765,7 @@ mfh_decref(struct msl_fhent *mfh)
 	(void)MFH_RLOCK(mfh);
 	psc_assert(mfh->mfh_refcnt > 0);
 	if (--mfh->mfh_refcnt == 0) {
-		fcmh_op_done_type(c, FCMH_OPCNT_OPEN);
+		fcmh_op_done_type(mfh->mfh_fcmh, FCMH_OPCNT_OPEN);
 		psc_pool_return(mfh_pool, mfh);
 	} else
 		MFH_ULOCK(mfh);
