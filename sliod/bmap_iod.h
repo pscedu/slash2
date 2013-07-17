@@ -143,7 +143,7 @@ struct bmap_iod_info {
 
 uint64_t	bim_getcurseq(void);
 void		bim_init(void);
-int		bim_updateseq(uint64_t);
+int		bim_updateseq(uint64_t, int);
 
 void	bcr_finalize(struct bcrcupd *);
 void	bcr_hold_2_ready(struct bcrcupd *);

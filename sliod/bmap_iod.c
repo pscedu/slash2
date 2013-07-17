@@ -55,7 +55,7 @@ bim_init(void)
 }
 
 int
-bim_updateseq(uint64_t seq)
+bim_updateseq(uint64_t seq, int piggyback)
 {
 	int invalid = 0;
 
@@ -104,8 +104,9 @@ bim_updateseq(uint64_t seq)
 	freelock(&bimSeq.bim_lock);
 
 	if (invalid)
-		psclog_warnx("Incoming seq %"PRId64" is invalid "
+		psclog_warnx("%s seq %"PRId64" is invalid "
 		    "(bim_minseq=%"PRId64")",
+		    piggyback ? "Piggybacked" : "Requested", 
 		    seq, bimSeq.bim_minseq);
 	return (invalid);
 }
@@ -153,7 +154,7 @@ bim_getcurseq(void)
 
 		seqno = mp->seqno;
 
-		rc = bim_updateseq(seqno);
+		rc = bim_updateseq(seqno, 0);
  out:
 		if (rq) {
 			pscrpc_req_finished(rq);
