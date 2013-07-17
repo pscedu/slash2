@@ -1483,12 +1483,14 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	FCMH_LOCK(d);
+	fci = fcmh_2_fci(d);
+
+ restart:
+
 	PFL_GETPTIMESPEC(&expire);
 	expire.tv_sec -= DIRENT_TIMEO;
 
-	FCMH_LOCK(d);
-	fci = fcmh_2_fci(d);
- restart:
 	nextoff = 0;
 	nent = 0;
 	issue = 1;
