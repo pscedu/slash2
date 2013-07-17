@@ -721,7 +721,7 @@ msl_bmap_release_cb(struct pscrpc_request *rq,
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
 	uint32_t i;
-	int rc = 0;
+	int rc;
 
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
@@ -731,7 +731,7 @@ msl_bmap_release_cb(struct pscrpc_request *rq,
 	rc = mp ? mp->rc : -ENOBUFS;
 
 	for (i = 0; i < mq->nbmaps; i++) {
-		psclog((rc || mp->rc) ? PLL_ERROR : PLL_INFO,
+		psclog(rc ? PLL_ERROR : PLL_INFO,
 		    "fid="SLPRI_FID" bmap=%u key=%"PRId64" "
 		    "seq=%"PRId64" rc=%d", mq->sbd[i].sbd_fg.fg_fid,
 		    mq->sbd[i].sbd_bmapno, mq->sbd[i].sbd_key,
