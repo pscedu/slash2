@@ -316,8 +316,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	dce = p->dcp_base0 = PSCALLOC(nents * sizeof(*dce));
 	psc_dynarray_ensurelen(&p->dcp_dents, nents);
 
-	for (j = 0, b = p->dcp_base, off = 0;
-	    j < (int)nents; j++, dce++) {
+	for (j = 0, b = base, off = 0; j < (int)nents; j++, dce++) {
 		dirent = PSC_AGP(b, off);
 
 		psclog_dbg("fid="SLPRI_FID" off=%"PRId64" "
