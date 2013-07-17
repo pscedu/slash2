@@ -1574,7 +1574,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 			}
 		} else if (nextoff &&
 		    nextoff >= p->dcp_off &&
-		    nextoff < p->dcp_nextoff)
+		    nextoff < p->dcp_nextoff) {
 			issuenext = 0;
 		} else if (nextoff && p->dcp_off > nextoff)
 			break;
