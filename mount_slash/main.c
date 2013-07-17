@@ -1364,6 +1364,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	dircache_reg_ents(d, p, mp->num, iov[0].iov_base);
 	iov[0].iov_base = NULL;
 	msl_readdir_fin(csvc, iov);
+	fcmh_op_done_type(d, FCMH_OPCNT_READDIR);
 	return (0);
 }
 
@@ -1379,10 +1380,15 @@ msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
 	struct iovec *iov;
 	int rc, nstbpref, niov;
 
+	p = dircache_new_page(d, size, off);
+
+	fcmh_op_start_type(d, FCMH_OPCNT_READDIR);
+	FCMH_ULOCK(d);
+
 	MSL_RMC_NEWREQ_PFCC(pfcc, d, csvc, SRMT_READDIR, rq, mq, mp,
 	    rc);
 	if (rc)
-		return (rc);
+		PFL_GOTOERR(out, rc);
 
 	niov = 0;
 	iov = PSCALLOC(sizeof(*iov) * 2);
@@ -1402,8 +1408,6 @@ msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
 		iov[niov].iov_base = PSCALLOC(stprefsz);
 		niov++;
 	}
-
-	p = dircache_new_page(d, size, off);
 
 	mq->fg = d->fcmh_fg;
 	mq->size = size;
@@ -1428,8 +1432,12 @@ msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
 	if (rc) {
 		pscrpc_req_finished(rq);
 		msl_readdir_fin(csvc, iov);
+ out:
+		FCMH_LOCK(d);
 		dircache_free_page(d, p);
+		fcmh_op_done_type(d, FCMH_OPCNT_READDIR);
 	}
+	FCMH_LOCK(d);
 	return (rc);
 }
 
