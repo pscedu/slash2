@@ -1703,8 +1703,9 @@ msl_flush_int_locked(struct msl_fhent *mfh, int wait)
 		rc = mfh->mfh_flush_rc;
 		mfh->mfh_flush_rc = 0;
 		return (rc);
+	}
 
-	} else if (pll_empty(&mfh->mfh_biorqs)) {
+	if (pll_empty(&mfh->mfh_biorqs)) {
 		mfh->mfh_flush_rc = 0;
 		return (0);
 	}
@@ -1763,9 +1764,10 @@ mfh_decref(struct msl_fhent *mfh)
 {
 	(void)MFH_RLOCK(mfh);
 	psc_assert(mfh->mfh_refcnt > 0);
-	if (--mfh->mfh_refcnt == 0)
+	if (--mfh->mfh_refcnt == 0) {
+		fcmh_op_done_type(c, FCMH_OPCNT_OPEN);
 		psc_pool_return(mfh_pool, mfh);
-	else
+	} else
 		MFH_ULOCK(mfh);
 }
 
@@ -1883,7 +1885,6 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 		    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr);
 
 	FCMH_UNBUSY(c);
-	fcmh_op_done_type(c, FCMH_OPCNT_OPEN);
 	mfh_decref(mfh);
 	OPSTAT_INCR(SLC_OPST_CLOSE_DONE);
 }
