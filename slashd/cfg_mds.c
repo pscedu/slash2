@@ -59,7 +59,7 @@ slcfg_init_res(struct sl_resource *r)
 		if (r->res_flags & RESF_DISABLE_BIA)
 			si->si_flags |= SIF_DISABLE_BIA;
 	}
-	if (RES_ISFS(r))
+	if (RES_ISFS(r) || r->res_type == SLREST_MDS)
 		lc_reginit(&rpmi->rpmi_batchrqs, struct batchrq,
 		    br_lentry, "bchrq-%s", r->res_name);
 }
