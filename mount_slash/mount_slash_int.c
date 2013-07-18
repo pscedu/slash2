@@ -1070,7 +1070,7 @@ msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_io_rep, rc);
 
-	DEBUG_REQ(rc ? PLL_ERROR : PLL_DIAG, rq, "cb");
+	DEBUG_REQ(rc ? PLL_ERROR : PLL_DIAG, rq, "cb, rc=%d", rc);
 
 	while ((r = pll_get(&bwc->bwc_pll))) {
 		if (rc) {
