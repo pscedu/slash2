@@ -299,7 +299,7 @@ void
 dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
     size_t nents, void *base)
 {
-	struct pscfs_dirent *dirent;
+	struct pscfs_dirent *dirent = NULL;
 	struct fcmh_cli_info *fci;
 	struct dircache_ent *dce;
 	unsigned char *b;
