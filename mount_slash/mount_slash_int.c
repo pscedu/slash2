@@ -738,7 +738,7 @@ mfsrq_seterr(struct msl_fsrqinfo *q, int rc)
 	lk = MFH_RLOCK(q->mfsrq_mfh);
 	if (q->mfsrq_err == 0 && rc) {
 		q->mfsrq_err = rc;
-		psclog_diag("setting rqinfo q=%p err=%d", q, rc);
+		psclog_warnx("setting rqinfo q=%p err=%d", q, rc);
 	}
 	MFH_URLOCK(q->mfsrq_mfh, lk);
 }
