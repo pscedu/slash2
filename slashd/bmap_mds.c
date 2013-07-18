@@ -172,7 +172,7 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
 
 	upd = bmap_2_upd(b);
 	upd_init(upd, UPDT_BMAP);
-	UPD_UNBUSY(upd); 
+	UPD_UNBUSY(upd);
 
 	f = b->bcm_fcmh;
 
