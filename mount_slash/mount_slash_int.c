@@ -275,6 +275,10 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 			    biorq_is_my_bmpce(r, e), mfh->mfh_ra.mra_raoff,
 			    (off_t)(bmpce_off + bmap_foff(b)));
 
+			/*
+			 * XXX A failure to prefetch a page should not mark the associated
+			 * request as failure because it is not part of the original request.
+			 */
 			if (biorq_is_my_bmpce(r, e)) {
 				/*
 				 * Other threads will block on the reada
