@@ -715,7 +715,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 
 int
 msl_bmap_release_cb(struct pscrpc_request *rq,
-		    struct pscrpc_async_args *args)
+    struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct srm_bmap_release_req *mq;
