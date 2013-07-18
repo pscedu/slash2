@@ -47,12 +47,12 @@ slcfg_init_res(struct sl_resource *r)
 	if (r->res_type == SLREST_MDS) {
 		rpmi->rpmi_info = sp = PSCALLOC(sizeof(*sp));
 		sp->sp_flags = SPF_NEED_JRNL_INIT;
-		if (r != nodeResProf) {
+//		if (r != nodeResProf) {
 			psc_meter_init(&sp->sp_batchmeter, 0,
 			    "nsupd-%s", r->res_name);
 			sp->sp_batchmeter.pm_maxp =
 			    &current_update_batchno;
-		}
+//		}
 	} else {
 		rpmi->rpmi_info = si = PSCALLOC(sizeof(*si));
 		si->si_flags = SIF_NEED_JRNL_INIT;
