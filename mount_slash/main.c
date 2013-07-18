@@ -1521,9 +1521,6 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		nent += psc_dynarray_len(&p->dcp_dents);
 
 		if (off >= p->dcp_off && off < p->dcp_nextoff) {
-			/* We already replied to readdir(). */
-			if (pfr == NULL)
-				break;
 
 			issue = 1;
 
@@ -1558,7 +1555,6 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 				    p->dcp_base + adj,
 				    MIN(size, len),
 				    p->dcp_rc);
-				pfr = NULL;
 
 				issue = 0;
 
