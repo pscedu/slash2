@@ -53,9 +53,12 @@ slcfg_init_res(struct sl_resource *r)
 	} else {
 		rpmi->rpmi_info = si = PSCALLOC(sizeof(*si));
 		si->si_flags = SIF_NEED_JRNL_INIT;
-		psc_meter_init(&si->si_batchmeter, 0, "reclaim-%s",
-		    r->res_name);
-		si->si_batchmeter.pm_maxp = &current_reclaim_batchno;
+		if (RES_ISFS(r)) {
+			psc_meter_init(&si->si_batchmeter, 0,
+			    "reclaim-%s", r->res_name);
+			si->si_batchmeter.pm_maxp =
+			    &current_reclaim_batchno;
+		}
 		if (r->res_flags & RESF_DISABLE_BIA)
 			si->si_flags |= SIF_DISABLE_BIA;
 	}
