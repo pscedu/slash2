@@ -52,7 +52,7 @@ struct srt_bmapdesc;
  *   counts are used to determine the number of both and hence the caching
  *   mode used at the clients.   bmi_wr_ion is a shortcut pointer used
  *   only when the bmap has client writers - all writers (and readers) are
- *   directed to this ion once a client has invoked write mode on the bmap.
+ *   directed to this ION once a client has invoked write mode on the bmap.
  */
 struct bmap_mds_info {
 	/*
