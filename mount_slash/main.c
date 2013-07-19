@@ -1504,6 +1504,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		if (p->dcp_flags & DCPF_LOADING) {
 			/* We don't know dcp_nextoff so we must wait. */
 			if (off >= p->dcp_off) {
+				OPSTAT_INCR(SLC_OPST_DIRCACHE_WAIT);
 				fcmh_wait_nocond_locked(d);
 				goto restart;
 			}
@@ -1514,6 +1515,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		if (off == p->dcp_nextoff &&
 		    p->dcp_flags & DCPF_EOF) {
 			FCMH_ULOCK(d);
+			OPSTAT_INCR(SLC_OPST_DIRCACHE_HIT_EOF);
 			pscfs_reply_readdir(pfr, NULL, 0, rc);
 			return;
 		}
@@ -1555,6 +1557,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 				    p->dcp_base + adj,
 				    MIN(size, len),
 				    p->dcp_rc);
+				OPSTAT_INCR(SLC_OPST_DIRCACHE_HIT);
 
 				issue = 0;
 

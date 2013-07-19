@@ -198,7 +198,7 @@ dircache_lookup(struct fidc_membh *d, const char *name)
 			    dcent.dce_namelen) == 0) {
 				ino = dirent->pfd_ino;
 				found = 1;
-				OPSTAT_INCR(SLC_OPST_DIRCACHE_HIT);
+				OPSTAT_INCR(SLC_OPST_DIRCACHE_LOOKUP_HIT);
 			}
 
 			psclog_dbg("fid="SLPRI_FID" off=%"PRId64" "
