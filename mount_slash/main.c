@@ -1505,6 +1505,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 			/* We don't know dcp_nextoff so we must wait. */
 			if (off >= p->dcp_off) {
 				OPSTAT_INCR(SLC_OPST_DIRCACHE_WAIT);
+				psc_assert(issue);
 				fcmh_wait_nocond_locked(d);
 				goto restart;
 			}
