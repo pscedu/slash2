@@ -1582,6 +1582,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 			pscfs_reply_readdir(pfr, NULL, 0, rc);
 			return;
 		}
+		goto restart;
 	}
 	if (nextoff && issuenext) {
 		size_t esz;
@@ -1604,8 +1605,6 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		esz = sizeof(struct pscfs_dirent) + 16;
 		msl_readdir_issue(pfcc, d, nextoff, rem * esz);
 	}
-	if (issue)
-		goto restart;
 	FCMH_ULOCK(d);
 
 	if (0)
