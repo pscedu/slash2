@@ -334,6 +334,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 		msl_biorq_destroy(r);
 		return;
 	}
+	OPSTAT_INCR(SLC_OPST_BMAP_FLUSH_RESCHED);
 
 	if (r->biorq_last_sliod == bmap_2_ios(r->biorq_bmap) ||
 	    r->biorq_last_sliod == IOS_ID_ANY)
