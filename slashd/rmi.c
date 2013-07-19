@@ -146,7 +146,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 		goto out;
 	}
 
-	/* Check the CRC the CRC's! */
+	/* Check the CRC of the CRCs! */
 	psc_crc64_calc(&crc, buf, len);
 	if (crc != mq->crc) {
 		psclog_errorx("CRC verification of crcwrt payload failed");
