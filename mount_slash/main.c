@@ -1523,9 +1523,6 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		nent += psc_dynarray_len(&p->dcp_dents);
 
 		if (off >= p->dcp_off && off < p->dcp_nextoff) {
-
-			issue = 1;
-
 			if (p->dcp_rc) {
 				rc = p->dcp_rc;
 				dircache_free_page(d, p);
@@ -1535,6 +1532,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 					    0, rc);
 					return;
 				}
+				issue = 1;
 			} else {
 				size_t len;
 
@@ -1559,8 +1557,6 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 				    p->dcp_rc);
 				OPSTAT_INCR(SLC_OPST_DIRCACHE_HIT);
 
-				issue = 0;
-
 				/*
 				 * We don't return just yet so we can
 				 * issue readahead if applicable.
@@ -1570,6 +1566,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 					if ((p->dcp_flags & DCPF_EOF) == 0)
 						issuenext = 1;
 				}
+				issue = 0;
 			}
 		} else if (nextoff &&
 		    nextoff >= p->dcp_off &&
