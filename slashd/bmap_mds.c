@@ -349,6 +349,9 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 	if (vfsid != current_vfsid)
 		return (EINVAL);
 
+	if (bmi->bmi_wr_ion == NULL)
+		return (PFLERR_KEYEXPIRED);
+
 	FCMH_WAIT_BUSY(f);
 	iosid = rmmi2resm(bmi->bmi_wr_ion)->resm_res_id; // XXX use sbd
 	idx = mds_repl_ios_lookup(vfsid, ih, iosid);

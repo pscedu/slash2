@@ -1468,7 +1468,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 	BMAP_ULOCK(bmap);
 
 	/* Call the journal and update the in-memory CRCs. */
-	mds_bmap_crc_update(bmap, c);
+	rc = mds_bmap_crc_update(bmap, c);
 
 	if (mq->flags & SRM_BMAPCRCWRT_PTRUNC) {
 		struct slash_inode_handle *ih;
