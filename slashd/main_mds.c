@@ -514,7 +514,7 @@ main(int argc, char *argv[])
 	else if (globalConfig.gconf_zpname[0])
 		zpname = globalConfig.gconf_zpname;
 	else {
-		warn("no ZFS pool specified");
+		warnx("no ZFS pool specified");
 		usage();
 	}
 
@@ -523,10 +523,7 @@ main(int argc, char *argv[])
 	fidc_init(sizeof(struct fcmh_mds_info), FIDC_MDS_DEFSZ);
 	bmap_cache_init(sizeof(struct bmap_mds_info));
 
-	/*
-	 * Initialize the mdsio layer.  There is where ZFS threads
-	 * are started and the given ZFS pool is imported.
-	 */
+	/* Start up ZFS threads and import the MDS zpool. */
 	mdsio_init();
 	import_zpool(zpname, zpcachefn);
 
@@ -547,6 +544,7 @@ main(int argc, char *argv[])
 	sl_drop_privs(allow_root_uid);
 
 	libsl_init(2 * (SLM_RMM_NBUFS + SLM_RMI_NBUFS + SLM_RMC_NBUFS));
+	psc_meter_destroy(&res2mdsinfo(nodeResProf)->sp_batchmeter);
 
 	for (vfsid = 0; vfsid < mount_index; vfsid++)
 		psc_register_filesystem(vfsid);
