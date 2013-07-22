@@ -314,6 +314,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		sli_aio_aiocbr_release(aiocbr);
 	}
 
+	/*
+ 	 * We must return an error code to the RPC itself if we don't call
+ 	 * rsx_bulkserver() or rsx_bulkclient() as expected.
+ 	 */
 	rc = rsx_bulkserver(rq,
 	    (rw == SL_WRITE ? BULK_GET_SINK : BULK_PUT_SOURCE),
 	    SRIC_BULK_PORTAL, iovs, nslvrs);
