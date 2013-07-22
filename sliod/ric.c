@@ -96,8 +96,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (mq->size <= 0 || mq->size > LNET_MTU) {
 		psclog_errorx("invalid size %u, fid:"SLPRI_FG,
 		    mq->size, SLPRI_FG_ARGS(fgp));
-		mp->rc = -EINVAL;
-		return (mp->rc);
+		return (-EINVAL);
 	}
 
 	if (mq->size < 1024)
@@ -148,7 +147,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (mp->rc) {
 		psclog_warnx("bmapdesc_access_check failed for fid "SLPRI_FG,
 		    SLPRI_FG_ARGS(fgp));
-		return (mp->rc);
+		return (0);
 	}
 
 	/*
@@ -162,7 +161,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		    "address range off=%u len=%u",
 		    mq->offset, mq->size);
 		mp->rc = -ERANGE;
-		return (mp->rc);
+		return (0);
 	}
 
 	seqno = bim_getcurseq();
@@ -171,7 +170,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		psclog_warnx("op: %d, seq %"PRId64" < bim_getcurseq(%"PRId64")",
 		    rw, mq->sbd.sbd_seq, seqno);
 		mp->rc = -PFLERR_KEYEXPIRED;
-		return (mp->rc);
+		return (0);
 	}
 
 	/*
@@ -188,8 +187,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	FCMH_ULOCK(f);
 
 	/* ATM, not much to do here for write operations. */
-	rc = bmap_get(f, bmapno, rw, &bmap);
-	if (rc) {
+	mp->rc = bmap_get(f, bmapno, rw, &bmap);
+	if (mp->rc) {
 		psclog_errorx("failed to load bmap %u", bmapno);
 		goto out;
 	}
@@ -317,10 +316,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	mp->rc = rsx_bulkserver(rq,
 	    (rw == SL_WRITE ? BULK_GET_SINK : BULK_PUT_SOURCE),
 	    SRIC_BULK_PORTAL, iovs, nslvrs);
-	if (mp->rc) {
-		rc = mp->rc;
+	if (mp->rc)
 		goto out;
-	}
 
 	/*
 	 * Write the sliver back to the filesystem, but only the blocks
@@ -362,7 +359,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		psc_assert(!tsize);
 
  out:
-	if (rc) {
+	if (mp->rc) {
 		for (i = 0; i < nslvrs; i++) {
 			if (slvr_ref[i] == NULL)
 				continue;
@@ -378,9 +375,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			SLVR_ULOCK(slvr_ref[i]);
 
 			DEBUG_SLVR(PLL_WARN, slvr_ref[i],
-			    "unwind ref due to bulk error (rw=%s, rc = %d)",
-			    rw == SL_WRITE ? "wr" : "rd", rc);
+			    "unwind slvr %d due to bulk error", i); 
 		}
+		psclog_warnx("%s error, rc = %d", 
+		    rw == SL_WRITE ? "write" : "read", mp->rc);
 	}
 	if (bmap)
 		bmap_op_done(bmap);
@@ -391,7 +389,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 * threads blocked on DATARDY.
 	 */
 	fcmh_op_done(f);
-	return (rc);
+	return (0);
 }
 
 static int
