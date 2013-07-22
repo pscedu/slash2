@@ -1358,6 +1358,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 			}
 		}
 	}
+	p->dcp_size = mp->size;
 	if (mp->eof)
 		p->dcp_flags |= DCPF_EOF;
 	p->dcp_size = mp->size;

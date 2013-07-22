@@ -281,7 +281,6 @@ dircache_new_page(struct fidc_membh *d, size_t size, off_t off)
 	psc_dynarray_init(&p->dcp_dents);
 	INIT_PSC_LISTENTRY(&p->dcp_lentry);
 	p->dcp_flags = DCPF_LOADING;
-	p->dcp_size = size;
 	p->dcp_off = off;
 
 	pll_add_sorted(&fci->fci_dc_pages, p, dircache_cmp);
@@ -308,7 +307,6 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 
 	OPSTAT_INCR(SLC_OPST_DIRCACHE_REG_ENTRY);
 
-	psc_assert(p->dcp_size);
 	psc_assert(psc_dynarray_len(&p->dcp_dents) == 0);
 
 	PFL_GETPTIMESPEC(&p->dcp_tm);
