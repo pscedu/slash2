@@ -385,7 +385,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			    "unwind slvr %d due to bulk error", i);
 		}
 		psclog_warnx("%s error, rc = %d",
-		    rw == SL_WRITE ? "write" : "read", mp->rc);
+		    rw == SL_WRITE ? "write" : "read", rc);
 	}
 	if (bmap)
 		bmap_op_done(bmap);
