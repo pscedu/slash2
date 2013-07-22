@@ -1360,6 +1360,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	}
 	if (mp->eof)
 		p->dcp_flags |= DCPF_EOF;
+	p->dcp_size = mp->size;
 	DPRINTF_DCP(PLL_DEBUG, p, "registering");
 	dircache_reg_ents(d, p, mp->num, iov[0].iov_base);
 	iov[0].iov_base = NULL;
