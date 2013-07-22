@@ -305,7 +305,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 		if (i != nslvrs) {
 			mp->rc = SLERR_AIOWAIT;
-
 			pscrpc_msg_add_flags(rq->rq_repmsg,
 			    MSG_ABORT_BULK);
 			goto out;
@@ -315,16 +314,14 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	}
 
 	/*
- 	 * We must return an error code to the RPC itself if we don't call
- 	 * rsx_bulkserver() or rsx_bulkclient() as expected.
- 	 */
+	 * We must return an error code to the RPC itself if we don't call
+	 * rsx_bulkserver() or rsx_bulkclient() as expected.
+	 */
 	rc = rsx_bulkserver(rq,
 	    (rw == SL_WRITE ? BULK_GET_SINK : BULK_PUT_SOURCE),
 	    SRIC_BULK_PORTAL, iovs, nslvrs);
-	if (mp->rc) {
-		rc = mp->rc;
+	if (rc) 
 		goto out;
-	}
 
 	/*
 	 * Write the sliver back to the filesystem, but only the blocks
