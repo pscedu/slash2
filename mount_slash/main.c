@@ -1358,7 +1358,6 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 			}
 		}
 	}
-	p->dcp_size = mp->size;
 	if (mp->eof)
 		p->dcp_flags |= DCPF_EOF;
 	p->dcp_size = mp->size;
@@ -1382,7 +1381,7 @@ msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
 	struct iovec *iov;
 	int rc, nstbpref, niov;
 
-	p = dircache_new_page(d, size, off);
+	p = dircache_new_page(d, off);
 
 	fcmh_op_start_type(d, FCMH_OPCNT_READDIR);
 	FCMH_ULOCK(d);

@@ -136,7 +136,7 @@ dirent_sort_cmp(const void *x, const void *y)
 }
 
 struct dircache_page *
-	dircache_new_page(struct fidc_membh *, size_t, off_t);
+	dircache_new_page(struct fidc_membh *, off_t);
 void	dircache_free_page(struct fidc_membh *, struct dircache_page *);
 slfid_t	dircache_lookup(struct fidc_membh *, const char *);
 void	dircache_mgr_init(void);

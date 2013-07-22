@@ -247,12 +247,11 @@ dircache_cmp(const void *a, const void *b)
 /**
  * dircache_new_page: Allocate a new page of dirents.
  * @d: directory handle.
- * @size: size of buffer for holding dirents.
  * @off: offset into directory for this slew of dirents.
  * @base: buffer to write dirents into.
  */
 struct dircache_page *
-dircache_new_page(struct fidc_membh *d, size_t size, off_t off)
+dircache_new_page(struct fidc_membh *d, off_t off)
 {
 	struct dircache_page *p, *np;
 	struct pfl_timespec expire;
