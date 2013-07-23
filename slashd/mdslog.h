@@ -27,6 +27,8 @@
 
 #include "psc_util/journal.h"
 
+#include "sltypes.h"
+
 struct bmapc_memb;
 struct fidc_membh;
 struct slash_inode_handle;
@@ -38,11 +40,12 @@ struct srt_stat;
 
 /*
  * Keep track of the bmap associated with a CRC update
- * to save fid and bmap lookups.
+ * to save FID and bmap lookups.
  */
 struct sl_mds_crc_log {
 	struct bmapc_memb	*scl_bmap;
 	struct srm_bmap_crcup	*scl_crcup;
+	sl_ios_id_t		 scl_iosid;
 };
 
 #define MDS_LOG_BMAP_REPLS	(_PJE_FLSHFT << 0)
@@ -77,7 +80,7 @@ void	mdslogfill_ino_repls(struct fidc_membh *, struct slmds_jent_ino_repls *);
 
 void	mds_journal_init(int, uint64_t);
 
-int	mds_bmap_crc_update(struct bmapc_memb *, struct srm_bmap_crcup *);
+int	mds_bmap_crc_update(struct bmapc_memb *, sl_ios_id_t, struct srm_bmap_crcup *);
 
 void	mds_reserve_slot(int);
 void	mds_unreserve_slot(int);

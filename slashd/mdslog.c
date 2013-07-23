@@ -1799,7 +1799,6 @@ mdslog_bmap_crc(void *datap, uint64_t txg, __unusedx int flag)
 	struct sl_mds_crc_log *crclog = datap;
 	struct bmapc_memb *bmap = crclog->scl_bmap;
 	struct srm_bmap_crcup *crcup = crclog->scl_crcup;
-	struct bmap_mds_info *bmi = bmap_2_bmi(bmap);
 	struct slmds_jent_bmap_crc *sjbc;
 	uint32_t n, t, distill;
 
@@ -1817,8 +1816,7 @@ mdslog_bmap_crc(void *datap, uint64_t txg, __unusedx int flag)
 
 		sjbc = pjournal_get_buf(mdsJournal, sizeof(*sjbc));
 		sjbc->sjbc_fid = fcmh_2_fid(bmap->bcm_fcmh);
-		sjbc->sjbc_iosid =
-		    rmmi2resm(bmi->bmi_wr_ion)->resm_res_id;
+		sjbc->sjbc_iosid = crclog->scl_iosid;
 		sjbc->sjbc_bmapno = bmap->bcm_bmapno;
 		sjbc->sjbc_ncrcs = n;
 		sjbc->sjbc_fsize = crcup->fsize;		/* largest known size */

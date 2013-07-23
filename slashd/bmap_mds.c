@@ -326,7 +326,7 @@ mds_bmap_destroy(struct bmapc_memb *b)
  *	the updates to ZFS and then log it.
  */
 int
-mds_bmap_crc_update(struct bmapc_memb *bmap,
+mds_bmap_crc_update(struct bmapc_memb *bmap, sl_ios_id_t iosid,
     struct srm_bmap_crcup *crcup)
 {
 	struct bmap_mds_info *bmi = bmap_2_bmi(bmap);
@@ -335,7 +335,6 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 	struct fidc_membh *f;
 	struct srt_stat sstb;
 	int rc, fl, idx, vfsid;
-	sl_ios_id_t iosid;
 	uint32_t i;
 
 	psc_assert(bmap->bcm_flags & BMAP_MDS_CRC_UP);
@@ -349,11 +348,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 	if (vfsid != current_vfsid)
 		return (EINVAL);
 
-	if (bmi->bmi_wr_ion == NULL)
-		return (PFLERR_KEYEXPIRED);
-
 	FCMH_WAIT_BUSY(f);
-	iosid = rmmi2resm(bmi->bmi_wr_ion)->resm_res_id; // XXX use sbd
 	idx = mds_repl_ios_lookup(vfsid, ih, iosid);
 	if (idx < 0)
 		psc_fatal("not found");
@@ -385,6 +380,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap,
 
 	crclog.scl_bmap = bmap;
 	crclog.scl_crcup = crcup;
+	crclog.scl_iosid = iosid;
 
 	BMAPOD_REQWRLOCK(bmi);
 	for (i = 0; i < crcup->nups; i++) {

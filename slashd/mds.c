@@ -1355,14 +1355,14 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr,
 /**
  * mds_bmap_crc_write - Process a CRC update request from an ION.
  * @c: the RPC request containing the FID, bmapno, and chunk ID (cid).
- * @ios:  the IOS ID of the I/O node which sent the request.  It is
+ * @iosid:  the IOS ID of the I/O node which sent the request.  It is
  *	compared against the ID stored in the bml
  */
 int
-mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
+mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t iosid,
     const struct srm_bmap_crcwrt_req *mq)
 {
-	struct sl_resource *res = libsl_id2res(ios);
+	struct sl_resource *res = libsl_id2res(iosid);
 	struct bmapc_memb *bmap = NULL;
 	struct bmap_mds_info *bmi;
 	struct fidc_membh *f;
@@ -1428,25 +1428,24 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 	psc_assert(bmi);
 
 	if (!bmi->bmi_wr_ion ||
-	    ios != rmmi2resm(bmi->bmi_wr_ion)->resm_res_id) {
+	    iosid != rmmi2resm(bmi->bmi_wr_ion)->resm_res_id) {
 		/* We recv'd a request from an unexpected NID. */
 		psclog_errorx("CRCUP for/from invalid NID; "
 		    "wr_ion=%s ios=%#x",
 		    bmi->bmi_wr_ion ?
 		    rmmi2resm(bmi->bmi_wr_ion)->resm_name : "<NONE>",
-		    ios);
-		rc = -EINVAL;
-		BMAP_ULOCK(bmap);
-		goto out;
+		    iosid);
 
-	} else if (bmap->bcm_flags & BMAP_MDS_CRC_UP) {
+		BMAP_ULOCK(bmap);
+		PFL_GOTOERR(out, rc = -EINVAL);
+	}
+
+	if (bmap->bcm_flags & BMAP_MDS_CRC_UP) {
 		/*
 		 * Ensure that this thread is the only thread updating
 		 * the bmap CRC table.
 		 * XXX may have to replace this with a waitq
 		 */
-		rc = -PFLERR_ALREADY;
-		BMAP_ULOCK(bmap);
 
 		DEBUG_BMAP(PLL_ERROR, bmap,
 		    "EALREADY blkno=%u sz=%"PRId64" ios(%s)",
@@ -1455,20 +1454,21 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 		DEBUG_FCMH(PLL_ERROR, f,
 		    "EALREADY blkno=%u sz=%"PRId64" ios(%s)",
 		    c->blkno, c->fsize, res->res_name);
-		goto out;
 
-	} else {
-		/*
-		 * Mark that bmap is undergoing CRC updates - this is
-		 * non-reentrant so the ION must know better than to
-		 * send multiple requests for the same bmap.
-		 */
-		bmap->bcm_flags |= BMAP_MDS_CRC_UP;
+		BMAP_ULOCK(bmap);
+		PFL_GOTOERR(out, rc = -PFLERR_ALREADY);
 	}
+
+	/*
+	 * Mark that bmap is undergoing CRC updates - this is
+	 * non-reentrant so the ION must know better than to
+	 * send multiple requests for the same bmap.
+	 */
+	bmap->bcm_flags |= BMAP_MDS_CRC_UP;
 	BMAP_ULOCK(bmap);
 
 	/* Call the journal and update the in-memory CRCs. */
-	rc = mds_bmap_crc_update(bmap, c);
+	rc = mds_bmap_crc_update(bmap, iosid, c);
 
 	if (mq->flags & SRM_BMAPCRCWRT_PTRUNC) {
 		struct slash_inode_handle *ih;
@@ -1477,8 +1477,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t ios,
 		uint32_t bpol;
 
 		ih = fcmh_2_inoh(f);
-		iosidx = mds_repl_ios_lookup(vfsid, ih,
-		    rmmi2resm(bmi->bmi_wr_ion)->resm_res_id);
+		iosidx = mds_repl_ios_lookup(vfsid, ih, iosid);
 		if (iosidx < 0)
 			psclog_errorx("ios not found");
 		else {
@@ -2193,7 +2192,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 	uint64_t key;
 	va_list ap;
 
-	key = (uint64_t)fmt;
+	key = (uint64_t)(void *)fmt;
 	sth = psc_hashtbl_search(&slm_sth_hashtbl, NULL, NULL, &key);
 	if (sth == NULL) {
 		struct psc_hashbkt *hb;
