@@ -273,13 +273,13 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 		bcr = psc_dynarray_getpos(a, i);
 		bii = bcr->bcr_bii;
 
-		DEBUG_BCR(((rq->rq_status || !mp || mp->rc) ?
-		    PLL_ERROR : PLL_INFO), bcr, "rq_status=%d rc=%d%s",
+		DEBUG_BCR(rq->rq_status || !mp || mp->rc ?
+		    PLL_ERROR : PLL_INFO, bcr, "rq_status=%d rc=%d%s",
 		    rq->rq_status, mp ? mp->rc : -4096,
 		    mp ? "" : " (unknown, no buf)");
 
 		psc_assert(bii_2_bmap(bii)->bcm_flags &
-		    (BMAP_IOD_INFLIGHT|BMAP_IOD_BCRSCHED));
+		    (BMAP_IOD_INFLIGHT | BMAP_IOD_BCRSCHED));
 
 		if (rq->rq_status) {
 			/*
@@ -302,6 +302,16 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 			 */
 			bcr_finalize(bcr);
 	}
+
+	/*
+	 * If there were errors, log them but obviously the MDS will
+	 * make the master choice about what our residency validity is.
+	 */
+	for (i = 0; i < mq->ncrc_updates; i++)
+		if (mp->crcup_rc[i])
+			psclog_errorx("MDS rejected our CRC update; "
+			    "rc=%d", mp->crcup_rc[i]);
+
 	psc_dynarray_free(a);
 	PSCFREE(a);
 
