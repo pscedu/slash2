@@ -510,7 +510,7 @@ struct srm_bmap_crcup {				/* a batch of CRC updates for the same file */
 	uint64_t		fsize;		/* largest known size applied in mds_bmap_crc_update() */
 	uint64_t		nblks;		/* st_blocks for us */
 	uint32_t		blkno;		/* bmap block number */
-	 int32_t		nups;		/* number of CRC updates */
+	uint32_t		nups;		/* number of CRC updates */
 	uint32_t		utimgen;
 	 int32_t		extend;
 	struct srt_bmap_crcwire	crcs[0];	/* see above, MAX_BMAP_INODE_PAIRS max */
@@ -521,7 +521,7 @@ struct srm_bmap_crcup {				/* a batch of CRC updates for the same file */
 struct srm_bmap_crcwrt_req {
 	uint64_t		crc;		/* yes, a CRC of the CRC's */
 	uint8_t			ncrcs_per_update[MAX_BMAP_NCRC_UPDATES];
-	int32_t			ncrc_updates;
+	uint32_t		ncrc_updates;
 	uint32_t		flags;
 } __packed;
 

@@ -74,7 +74,7 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 	struct bcrcupd *bcr;
 	struct iovec *iovs;
 	size_t len;
-	int32_t i;
+	uint32_t i;
 	int rc;
 
 	if (psc_fault_here_rc(SLI_FAULT_CRCUP_FAIL, &rc, EHOSTDOWN))
@@ -258,6 +258,7 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 	struct bmap_iod_info *bii;
 	struct psc_dynarray *a;
 	struct bcrcupd *bcr;
+	uint32_t j;
 	int i;
 
 	OPSTAT_INCR(SLI_OPST_CRC_UPDATE_CB);
@@ -309,10 +310,10 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 	 * If there were errors, log them but obviously the MDS will
 	 * make the master choice about what our residency validity is.
 	 */
-	for (i = 0; i < mq->ncrc_updates; i++)
-		if (mp->crcup_rc[i])
+	for (j = 0; j < mq->ncrc_updates; j++)
+		if (mp->crcup_rc[j])
 			psclog_errorx("MDS rejected our CRC update; "
-			    "rc=%d", mp->crcup_rc[i]);
+			    "rc=%d", mp->crcup_rc[j]);
 
 	psc_dynarray_free(a);
 	PSCFREE(a);
@@ -480,7 +481,8 @@ slvr_worker_int(void)
 	bcr = bii->bii_bcr;
 
 	if (bcr) {
-		int32_t i, found;
+		uint32_t i;
+		int found;
 
 		psc_assert(bcr->bcr_crcup.blkno == b->bcm_bmapno);
 		psc_assert(bcr->bcr_crcup.fg.fg_fid ==
