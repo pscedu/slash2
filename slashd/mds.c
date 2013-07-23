@@ -2192,7 +2192,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 	uint64_t key;
 	va_list ap;
 
-	key = (uint64_t)(void *)fmt;
+	key = (uint64_t)fmt;
 	sth = psc_hashtbl_search(&slm_sth_hashtbl, NULL, NULL, &key);
 	if (sth == NULL) {
 		struct psc_hashbkt *hb;
