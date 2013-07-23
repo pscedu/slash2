@@ -269,8 +269,8 @@ dircache_new_page(struct fidc_membh *d, off_t off)
 	fci = fcmh_2_fci(d);
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages)
 		if (DIRCACHE_PAGE_EXPIRED(d, p, &expire) ||
-		    (off < p->dcp_nextoff &&
-		     off >= p->dcp_off)) {
+		    (off >= p->dcp_off &&
+		     off < p->dcp_nextoff)) {
 			dircache_free_page(d, p);
 			continue;
 		}
