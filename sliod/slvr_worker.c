@@ -253,6 +253,7 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
 	struct srm_bmap_crcwrt_rep *mp;
+	struct srm_bmap_crcwrt_req *mq;
 	struct slashrpc_cservice *csvc;
 	struct bmap_iod_info *bii;
 	struct psc_dynarray *a;
@@ -267,6 +268,7 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 
 	sli_rpc_mds_unpack_bminseq(rq, PSCRPC_MSG_REPLY);
 
+	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 
 	for (i = 0; i < psc_dynarray_len(a); i++) {
