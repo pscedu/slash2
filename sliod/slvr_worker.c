@@ -74,7 +74,7 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 	struct bcrcupd *bcr;
 	struct iovec *iovs;
 	size_t len;
-	uint32_t i;
+	int32_t i;
 	int rc;
 
 	if (psc_fault_here_rc(SLI_FAULT_CRCUP_FAIL, &rc, EHOSTDOWN))
@@ -480,7 +480,7 @@ slvr_worker_int(void)
 	bcr = bii->bii_bcr;
 
 	if (bcr) {
-		uint32_t i, found;
+		int32_t i, found;
 
 		psc_assert(bcr->bcr_crcup.blkno == b->bcm_bmapno);
 		psc_assert(bcr->bcr_crcup.fg.fg_fid ==
