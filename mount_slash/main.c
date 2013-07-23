@@ -1290,8 +1290,6 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	int rc;
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_readdir_rep, rc);
-	if (rc == 0)
-		slrpc_rep_in(csvc, rq);
 
 	if (rc) {
 		DEBUG_REQ(PLL_ERROR, rq, "rc=%d", rc);
@@ -1306,6 +1304,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 		return (0);
 	}
 
+	slrpc_rep_in(csvc, rq);
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 
