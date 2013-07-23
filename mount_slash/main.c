@@ -1300,8 +1300,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 		fcmh_wake_locked(d);
 		FCMH_ULOCK(d);
 
-		msl_readdir_fin(csvc, iov);
-		return (0);
+		goto out;
 	}
 
 	slrpc_rep_in(csvc, rq);
@@ -1363,6 +1362,9 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	DPRINTF_DCP(PLL_DEBUG, p, "registering");
 	dircache_reg_ents(d, p, mp->num, iov[0].iov_base);
 	iov[0].iov_base = NULL;
+
+ out:
+
 	msl_readdir_fin(csvc, iov);
 	fcmh_op_done_type(d, FCMH_OPCNT_READDIR);
 	return (0);
