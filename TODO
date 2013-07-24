@@ -423,8 +423,6 @@ reimport
 - msl timeout change no longer waits when server offline, EIO immediately
 - client should not psclog ERRORs from SLERR_AIOWAIT on WRITE/READ RPC
 - parse /proc/mounts if it's there for sliod statfs f_fstype
-- during upsch repl PAGEIN, do we do two SQL, one for loading the work
-  then one for loading the recpt?  optimize this if so
 - fix bug when src ION comes online and upsch doesn't know he should now
   try to schedule some new work
     -- upsch_multiwait should be getting woken, needs a PAGEIN for dst though...
@@ -460,7 +458,6 @@ reimport
 - import should utilize fallocate(2) where available
 - because we use cryptography, rely less on peer IP addresses for
   authentication to allow clients behind internal networks
-- store sys/usr pri in upsch in odtable for rebuild purposes
 - what happens when a single replica on a write disabled ios tries to
   get modified?  what should happen??
 - replication notification service
@@ -477,11 +474,7 @@ reimport
 
 st_blocks is broken
 - account metadata overhead in st_blocks?
-- MDS needs to account for ptrunc/trunc changes in st_blocks
-- fix ios_nblks[idx] accounting on open(O_TRUNC)
-- st_blocks is zero on some files
-- MDS bmap slivers don't seem to account correctly:
-    - create a 1GB file and tally up the contents and notice it doesn't sum to 1GB
+- fix ios_nblks[idx] and aggr accounting on setsize0 and ptrunc
 
 - implement dedup in IOS with CRC checking and upsch?
 
