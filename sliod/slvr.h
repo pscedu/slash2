@@ -43,12 +43,12 @@
 struct bmap_iod_info;
 
 /**
- * slvr_ref - sliver reference used for scheduling dirty slivers to be
- *	CRC'd and sent to the mds.
- * Note: slivers are locked through their bmap_iod_info lock.  A slab
- *       is an in-memory representation of a sliver.
+ * slvr - Bmap "sliver" used for scheduling dirty slivers to be CRC'd
+ *	and sent to the mds.
+ * Note: slivers are locked through their bmap_iod_info lock.  A slab is
+ *	the in-memory data represented by the sliver.
  */
-struct slvr_ref {
+struct slvr {
 	uint16_t		 slvr_num;	/* bmap slvr offset */
 	uint32_t		 slvr_pndgwrts;	/* # writes in progess, XXX track AIO reference */
 	uint32_t		 slvr_pndgreads;/* # reads in progress */
@@ -59,14 +59,16 @@ struct slvr_ref {
 	int32_t			 slvr_err;
 	int32_t			 slvr_dirty_cnt;
 	psc_spinlock_t		 slvr_lock;
-	void			*slvr_pri;	/* backptr (bmap_iod_info) */
+	struct bmap_iod_info	*slvr_bii;
 	struct timespec		 slvr_ts;
 	struct sli_iocb		*slvr_iocb;
 	struct sl_buffer	*slvr_slab;
 	struct psc_lockedlist	 slvr_pndgaios;
 	struct psclist_head	 slvr_lentry;	/* dirty queue */
-	SPLAY_ENTRY(slvr_ref)	 slvr_tentry;	/* bmap tree entry */
+	SPLAY_ENTRY(slvr)	 slvr_tentry;	/* bmap tree entry */
 };
+
+#define slvr_ref slvr
 
 /* slvr_flags */
 #define	SLVR_NEW		(1 <<  0)	/* newly initialized */
@@ -115,7 +117,7 @@ struct slvr_ref {
 		}							\
 	} while (0)
 
-#define slvr_2_bii(s)		((struct bmap_iod_info *)(s)->slvr_pri)
+#define slvr_2_bii(s)		((s)->slvr_bii)
 #define slvr_2_bmap(s)		bii_2_bmap(slvr_2_bii(s))
 #define slvr_2_fcmh(s)		slvr_2_bmap(s)->bcm_fcmh
 #define slvr_2_fii(s)		fcmh_2_fii(slvr_2_fcmh(s))
@@ -140,15 +142,15 @@ struct slvr_ref {
 	psclogs((level), SLISS_SLVR, "slvr@%p num=%hu pw=%u "		\
 	    "pr=%u cw=%u "						\
 	    "ncrc=%u dc=%d ts="PSCPRI_TIMESPEC" "			\
-	    "pri@%p slab@%p bmap@%p fid:"SLPRI_FID" iocb@%p flgs:"	\
+	    "bii@%p slab@%p bmap@%p fid:"SLPRI_FID" iocb@%p flgs:"	\
 	    "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s :: " fmt,		\
 	    (s), (s)->slvr_num, (s)->slvr_pndgwrts,			\
 	    (s)->slvr_pndgreads, (s)->slvr_compwrts,			\
 	    (s)->slvr_ncrc, (s)->slvr_dirty_cnt,			\
 	    PSCPRI_TIMESPEC_ARGS(&(s)->slvr_ts),			\
-	    (s)->slvr_pri, (s)->slvr_slab,				\
-	    (s)->slvr_pri ? slvr_2_bmap(s) : NULL,			\
-	    (s)->slvr_pri ?						\
+	    (s)->slvr_bii, (s)->slvr_slab,				\
+	    (s)->slvr_bii ? slvr_2_bmap(s) : NULL,			\
+	    (s)->slvr_bii ?						\
 	      fcmh_2_fid(slvr_2_bmap(s)->bcm_fcmh) : FID_ANY,		\
 	    (s)->slvr_iocb,						\
 	    (s)->slvr_flags & SLVR_NEW		? "n" : "-",		\
@@ -234,7 +236,7 @@ int	slvr_buffer_reap(struct psc_poolmgr *);
 
 extern struct psc_listcache	lruSlvrs;
 extern struct psc_listcache	crcqSlvrs;
-extern struct psc_waitq		slvrWaitq;
+extern struct psc_waitq		sli_slvr_waitq;
 
 static __inline int
 slvr_cmp(const void *x, const void *y)
@@ -244,7 +246,7 @@ slvr_cmp(const void *x, const void *y)
 	return (CMP(a->slvr_num, b->slvr_num));
 }
 
-SPLAY_PROTOTYPE(biod_slvrtree, slvr_ref, slvr_tentry, slvr_cmp)
+SPLAY_PROTOTYPE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp)
 
 static __inline int
 slvr_lru_slab_freeable(struct slvr_ref *s)

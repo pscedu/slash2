@@ -38,7 +38,7 @@
 #include "slashrpc.h"
 
 struct bmap_iod_info;
-struct slvr_ref;
+struct slvr;
 
 struct bcrcupd {
 	uint64_t		 bcr_xid;
@@ -88,7 +88,7 @@ struct bmap_iod_rls {
 	    (bcr)->bcr_bii->bii_bcr_xid,				\
 	    (bcr)->bcr_bii->bii_bcr_xid_last, ## __VA_ARGS__)
 
-SPLAY_HEAD(biod_slvrtree, slvr_ref);
+SPLAY_HEAD(biod_slvrtree, slvr);
 
 /**
  * bmap_iod_info - the bmap_get_pri() data structure for the I/O server.
@@ -139,7 +139,8 @@ struct bmap_iod_info {
 #define BII_TRYLOCK(bii)	BMAP_TRYLOCK(bii_2_bmap(bii))
 #define BII_LOCK_ENSURE(bii)	BMAP_LOCK_ENSURE(bii_2_bmap(bii))
 
-#define BCR_MAX_AGE		1			/* in seconds */
+#define BCR_MIN_AGE		3			/* in seconds */
+#define BCR_MAX_AGE		6			/* in seconds */
 
 uint64_t	bim_getcurseq(void);
 void		bim_init(void);

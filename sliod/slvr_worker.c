@@ -54,8 +54,8 @@ struct psc_poolmgr		*bmap_crcupd_pool;
 struct psc_listcache		 bcr_ready;
 struct psc_listcache		 bcr_hold;
 struct pscrpc_nbreqset		*sl_nbrqset;
-struct timespec			 slvrCrcDelay = { 0, 50000000L }; /* 50 milliseconds */
-struct psc_waitq		 slvrWaitq = PSC_WAITQ_INIT;
+struct timespec			 sli_bcr_pause = { 0, 200000L };
+struct psc_waitq		 sli_slvr_waitq = PSC_WAITQ_INIT;
 
 /**
  * slvr_worker_crcup_genrq - Send an RPC containing CRC updates for
@@ -323,93 +323,29 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 	return (1);
 }
 
+/**
+ * slislvrthr_proc - Attempt to setup a bmap CRC update RPC for dirty
+ *	part(s) of a sliver.
+ */
 __static void
-slvr_worker_int(void)
+slislvrthr_proc(struct slvr *s)
 {
-	struct bcrcupd *bcr = NULL;
-	struct timespec ts, slvr_ts;
 	struct bmap_iod_info *bii;
-	struct bmapc_memb *b;
-	struct slvr_ref	*s;
+	struct bcrcupd *bcr;
+	struct bmap *b;
 	uint16_t slvr_num;
 	uint64_t crc;
 
-#define SLVR_MIN_FREE 8
-
- start:
-	PFL_GETTIMESPEC(&ts);
-	s = NULL;
-	if ((psc_pool_nfree(sl_bufs_pool) > SLVR_MIN_FREE) ||
-	    lc_nitems(&lruSlvrs) > SLVR_MIN_FREE) {
-		LIST_CACHE_LOCK(&crcqSlvrs);
-
-		if ((s = lc_peekhead(&crcqSlvrs))) {
-			DEBUG_SLVR(PLL_INFO, s, "peek");
-			slvr_ts = s->slvr_ts;
-			timespecadd(&slvr_ts, &slvrCrcDelay, &slvr_ts);
-
-			if (timespeccmp(&ts, &slvr_ts, >))
-				lc_remove(&crcqSlvrs, s);
-			else {
-				ts = slvr_ts;
-				s = NULL;
-			}
-		} else
-			ts.tv_sec += BCR_MAX_AGE;
-
-		LIST_CACHE_ULOCK(&crcqSlvrs);
-
-		if (!s) {
-			int n;
-
-			if ((n = atomic_read(&slvrWaitq.wq_nwaiters))) {
-				struct timespec tmp = { 0, 200000L };
-
-				tmp.tv_nsec *= n;
-				timespecadd(&ts, &tmp, &ts);
-			}
-
-			psc_waitq_timedwait(&slvrWaitq, NULL, &ts);
-			slvr_worker_push_crcups();
-			goto start;
-
-		} else {
-			slvr_ts = s->slvr_ts;
-			timespecadd(&slvr_ts, &slvrCrcDelay, &slvr_ts);
-
-			if (timespeccmp(&ts, &slvr_ts, <)) {
-				/*
-				 * The case where a new write updated
-				 * the ts between list removal and now.
-				 */
-				lc_addtail(&crcqSlvrs, s);
-				goto start;
-			}
-		}
-
-		DEBUG_SLVR(PLL_INFO, s, "crc0");
-
-	} else {
-		ts.tv_sec += BCR_MAX_AGE;
-		s = lc_gettimed(&crcqSlvrs, &ts);
-
-		if (!s) {
-			slvr_worker_push_crcups();
-			return;
-		}
-
-		DEBUG_SLVR(PLL_INFO, s, "crc1");
-	}
-
 	SLVR_LOCK(s);
-	DEBUG_SLVR(PLL_INFO, s, "slvr_worker");
+	DEBUG_SLVR(PLL_DEBUG, s, "got sliver");
 
-	/* Sliver assertions:
+	/*
+	 * Sliver assertions:
 	 *  CRCING - only one slvr_worker thread may handle a sliver.
 	 *  !LRU - ensure that slvr is in the right state.
 	 *  CRCDIRTY - must have work to do.
 	 *  PINNED - slab must not move from beneath us because the
-	 *           contents must be crc'd.
+	 *           contents must be CRC'd.
 	 */
 	psc_assert(!(s->slvr_flags & (SLVR_CRCING | SLVR_LRU)));
 	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
@@ -417,8 +353,8 @@ slvr_worker_int(void)
 	psc_assert(s->slvr_flags & SLVR_DATARDY);
 
 	/*
-	 * Try our best to determine whether or we should hold off the
-	 * CRC operation strivonly crc slivers which have no pending
+	 * Try our best to determine whether we should hold off the
+	 * CRC operation strivonly CRC slivers which have no pending
 	 * writes.  This section directly below may race with
 	 * slvr_wio_done().
 	 */
@@ -426,10 +362,10 @@ slvr_worker_int(void)
 		s->slvr_flags |= SLVR_LRU;
 		lc_addqueue(&lruSlvrs, s);
 
-		DEBUG_SLVR(PLL_INFO, s, "descheduled due to pndg writes");
+		DEBUG_SLVR(PLL_DIAG, s, "descheduled due to pndg writes");
 
 		SLVR_ULOCK(s);
-		goto start;
+		return;
 	}
 
 	/*
@@ -438,8 +374,9 @@ slvr_worker_int(void)
 	 */
 	s->slvr_flags |= SLVR_CRCING;
 
-	/* 'completed writes' signifier can be reset, the upcoming
-	 *    instantiation of slvr_do_crc() will cover those writes.
+	/*
+	 * 'completed writes' signifier can be reset, the upcoming
+	 * instantiation of slvr_do_crc() will cover those writes.
 	 */
 	s->slvr_compwrts = 0;
 	s->slvr_ncrc++;
@@ -455,11 +392,11 @@ slvr_worker_int(void)
 	if ((s->slvr_flags & SLVR_CRCDIRTY || s->slvr_compwrts) &&
 	    !s->slvr_pndgwrts) {
 		/* The slvr will be CRC'd again due to pending write. */
-		SLVR_ULOCK(s);
-		DEBUG_SLVR(PLL_INFO, s, "replace onto crcSlvrs");
-		lc_addtail(&crcqSlvrs, s);
 		s->slvr_flags &= ~SLVR_CRCING;
-		goto start;
+		DEBUG_SLVR(PLL_DIAG, s, "replace onto crcSlvrs");
+		SLVR_ULOCK(s);
+		lc_addtail(&crcqSlvrs, s);
+		return;
 	}
 
 	/* Copy the accumulator to the tmp variable. */
@@ -538,7 +475,7 @@ slvr_worker_int(void)
 		bcr->bcr_crcup.nups = 1;
 
 		psclog_info("new bcr@%p xid=%"PRIu64" bii@%p xid=%"PRIu64" bmap=%p",
-			bcr, bcr->bcr_xid, bii, bii->bii_bcr_xid, b);
+		    bcr, bcr->bcr_xid, bii, bii->bii_bcr_xid, b);
 		DEBUG_BCR(PLL_DIAG, bcr,
 		    "newly added (bcr_bklog=%d) (sched=%d)",
 		    pll_nitems(&bii->bii_bklog_bcrs),
@@ -576,11 +513,66 @@ slvr_worker_int(void)
 	slvr_worker_push_crcups();
 }
 
+/**
+ * slislvrthr_main - Guts of the sliver bmap CRC update RPC generator
+ *	thread.  RPCs are constructed from slivers on the queue after
+ *	the minimal expiration is reached and shipped off to the MDS.
+ */
 void
 slislvrthr_main(__unusedx struct psc_thread *thr)
 {
-	while (pscthr_run())
-		slvr_worker_int();
+	struct timespec expire, ts;
+	struct slvr *s;
+
+	while (pscthr_run()) {
+		PFL_GETTIMESPEC(&expire);
+		expire.tv_sec += BCR_MIN_AGE;
+
+		LIST_CACHE_LOCK(&crcqSlvrs);
+
+		s = lc_peekhead(&crcqSlvrs);
+		if (s) {
+			DEBUG_SLVR(PLL_DEBUG, s, "peek");
+
+			if (timespeccmp(&expire, &s->slvr_ts, >))
+				lc_remove(&crcqSlvrs, s);
+			else {
+				expire = ts;
+				s = NULL;
+			}
+		} else
+			expire.tv_sec += BCR_MAX_AGE - BCR_MIN_AGE;
+
+		LIST_CACHE_ULOCK(&crcqSlvrs);
+
+		if (!s) {
+			int n;
+
+			n = psc_waitq_nwaiters(&sli_slvr_waitq);
+			if (n) {
+				struct timespec tmp = sli_bcr_pause;
+
+				tmp.tv_nsec *= n;
+				timespecadd(&expire, &tmp, &expire);
+			}
+
+			psc_waitq_timedwait(&sli_slvr_waitq, NULL,
+			    &expire);
+			slvr_worker_push_crcups();
+			continue;
+		}
+
+		if (timespeccmp(&expire, &s->slvr_ts, <)) {
+			/*
+			 * The case where a new write updated the expire
+			 * between list removal and now.
+			 */
+			lc_addtail(&crcqSlvrs, s);
+			continue;
+		}
+
+		slislvrthr_proc(s);
+	}
 }
 
 void

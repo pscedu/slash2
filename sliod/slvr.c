@@ -1327,7 +1327,7 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 		memset(s, 0, sizeof(*s));
 		s->slvr_num = num;
 		s->slvr_flags = SLVR_NEW | SLVR_SPLAYTREE | SLVR_PINNED;
-		s->slvr_pri = bii;
+		s->slvr_bii = bii;
 		INIT_PSC_LISTENTRY(&s->slvr_lentry);
 		INIT_SPINLOCK(&s->slvr_lock);
 		pll_init(&s->slvr_pndgaios, struct sli_aiocb_reply,
@@ -1470,7 +1470,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 	psc_dynarray_free(&a);
 
 	if (!n || n < atomic_read(&m->ppm_nwaiters))
-		psc_waitq_wakeone(&slvrWaitq);
+		psc_waitq_wakeone(&sli_slvr_waitq);
 
 	return (n);
 }
