@@ -606,6 +606,7 @@ msl_stat(struct fidc_membh *f, void *arg)
 		struct srt_stat sstb;
 
 		memset(&sstb, 0, sizeof(sstb));
+		sstb.sst_fid = SLFID_NS;
 		sstb.sst_gen = 0;
 		sstb.sst_mode = S_IFDIR | 0111;
 		sstb.sst_nlink = 2;
@@ -1022,6 +1023,8 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	if (pinum == SLFID_ROOT && strcmp(name, MSL_FIDNS_RPATH) == 0) {
 		struct fidc_membh f;
 
+		memset(&f, 0, sizeof(f));
+		INIT_SPINLOCK(&f.fcmh_lock);
 		fcmh_2_fid(&f) = SLFID_NS;
 		msl_stat(&f, NULL);
 		if (fgp) {
