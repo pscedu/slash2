@@ -2015,6 +2015,7 @@ slm_ptrunc_prepare(void *p)
 			mds_fcmh_setattr_nolog(current_vfsid, f,
 			    PSCFS_SETATTRF_DATASIZE, &sstb);
 		}
+		FCMH_LOCK(f);
 		f->fcmh_flags &= ~FCMH_IN_PTRUNC;
 		FCMH_UNBUSY(f);
 		slm_ptrunc_wake_clients(wk);
@@ -2066,10 +2067,12 @@ slm_ptrunc_prepare(void *p)
 	to_set = PSCFS_SETATTRF_DATASIZE | SL_SETATTRF_PTRUNCGEN;
 	fcmh_2_ptruncgen(f)++;
 	f->fcmh_sstb.sst_size = fmi->fmi_ptrunc_size;
+	// grab busy
+	// ulock
 
 	mds_reserve_slot(1);
 	rc = mdsio_setattr(current_vfsid, fcmh_2_mdsio_fid(f),
-	    &f->fcmh_sstb, to_set, &rootcreds, &f->fcmh_sstb,
+	    &f->fcmh_sstb, to_set, &rootcreds, &f->fcmh_sstb, // outbuf
 	    fcmh_2_mdsio_data(f), mdslog_namespace);
 	mds_unreserve_slot(1);
 
