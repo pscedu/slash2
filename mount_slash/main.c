@@ -603,18 +603,22 @@ msl_stat(struct fidc_membh *f, void *arg)
 	 * /$mountpoint/.slfidns/<fid>
 	 */
 	if (fcmh_2_fid(f) == SLFID_NS) {
-		f->fcmh_sstb.sst_gen = 0;
-		f->fcmh_sstb.sst_mode = S_IFDIR | 0111;
-		f->fcmh_sstb.sst_nlink = 2;
-		f->fcmh_sstb.sst_uid = 0;
-		f->fcmh_sstb.sst_gid = 0;
-		f->fcmh_sstb.sst_dev = 0;
-		f->fcmh_sstb.sst_rdev = 0;
-		f->fcmh_sstb.sstd_freplpol = 0;
-		f->fcmh_sstb.sst_utimgen = 0;
-		f->fcmh_sstb.sst_size = 2;
-		f->fcmh_sstb.sst_blksize = MSL_FS_BLKSIZ;
-		f->fcmh_sstb.sst_blocks = 4;
+		struct srt_stat sstb;
+
+		memset(&sstb, 0, sizeof(sstb));
+		sstb.sst_gen = 0;
+		sstb.sst_mode = S_IFDIR | 0111;
+		sstb.sst_nlink = 2;
+		sstb.sst_uid = 0;
+		sstb.sst_gid = 0;
+		sstb.sst_dev = 0;
+		sstb.sst_rdev = 0;
+		sstb.sstd_freplpol = 0;
+		sstb.sst_utimgen = 0;
+		sstb.sst_size = 2;
+		sstb.sst_blksize = MSL_FS_BLKSIZ;
+		sstb.sst_blocks = 4;
+		fcmh_setattrf(f, &sstb, 0);
 		return (0);
 	}
 
