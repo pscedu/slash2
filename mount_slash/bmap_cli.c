@@ -262,9 +262,8 @@ msl_bmap_lease_secs_remaining(struct bmap *b)
 	struct timespec ts;
 	int secs;
 
-	PFL_GETTIMESPEC(&ts);
-
 	BMAP_LOCK(b);
+	PFL_GETTIMESPEC(&ts);
 	secs = bmap_2_bci(b)->bci_xtime.tv_sec - ts.tv_sec;
 	BMAP_ULOCK(b);
 
