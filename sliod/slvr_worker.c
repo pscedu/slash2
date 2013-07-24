@@ -146,7 +146,7 @@ slvr_worker_push_crcups(void)
 	static atomic_t busy = ATOMIC_INIT(0);
 	struct bcrcupd *bcr, *tmp;
 	struct psc_dynarray *bcrs;
-	struct timespec now;
+	struct timespec now, diff;
 	int i, rc;
 
 	if (atomic_xchg(&busy, 1))
@@ -162,7 +162,7 @@ slvr_worker_push_crcups(void)
 
 	/*
 	 * Leave scheduled bcr's on the list so that in case of a
-	 * failure ordering will be maintained.
+	 * failure, ordering will be maintained.
 	 */
 	LIST_CACHE_LOCK(&bcr_ready);
 	LIST_CACHE_FOREACH(bcr, &bcr_ready) {
@@ -197,16 +197,16 @@ slvr_worker_push_crcups(void)
 	}
 	LIST_CACHE_ULOCK(&bcr_ready);
 
-	PFL_GETTIMESPEC(&now);
 	/* Now scan for old bcr's hanging about. */
 	LIST_CACHE_LOCK(&bcr_hold);
+	PFL_GETTIMESPEC(&now);
 	LIST_CACHE_FOREACH_SAFE(bcr, tmp, &bcr_hold) {
 		/* Use trylock here to avoid deadlock. */
 		if (!BII_TRYLOCK(bcr->bcr_bii))
 			continue;
 
-		if (now.tv_sec <
-		    (bcr->bcr_age.tv_sec + BCR_MAX_AGE)) {
+		timersub(&now, &bcr->bcr_age, &diff);
+		if (diff.tv_sec < BCR_MAX_AGE) {
 			BII_ULOCK(bcr->bcr_bii);
 			continue;
 		}
@@ -223,9 +223,9 @@ slvr_worker_push_crcups(void)
 		rc = slvr_worker_crcup_genrq(bcrs);
 		/*
 		 * If we fail to send an RPC, we must leave the
-		 * reference in the tree for future attempt.  Otherwise,
-		 * the callback function (i.e. slvr_nbreqset_cb())
-		 * should remove them from the tree.
+		 * reference in the tree for future attempt(s).
+		 * Otherwise, the callback function (i.e.
+		 * slvr_nbreqset_cb()) should remove them from the tree.
 		 */
 		if (rc) {
 			for (i = 0; i < psc_dynarray_len(bcrs); i++) {
