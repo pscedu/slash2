@@ -205,7 +205,7 @@ slvr_worker_push_crcups(void)
 		if (!BII_TRYLOCK(bcr->bcr_bii))
 			continue;
 
-		timersub(&now, &bcr->bcr_age, &diff);
+		timespecsub(&now, &bcr->bcr_age, &diff);
 		if (diff.tv_sec < BCR_MAX_AGE) {
 			BII_ULOCK(bcr->bcr_bii);
 			continue;
