@@ -1594,7 +1594,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		}
 		goto restart;
 	}
-	if (nextoff && issuenext) {
+	if (issuenext) {
 		size_t esz;
 		int rem;
 
