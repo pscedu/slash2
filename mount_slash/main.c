@@ -2546,17 +2546,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 	DEBUG_SSTB(PLL_INFO, &c->fcmh_sstb, "fcmh %p post setattr", c);
 
-#if 0
-	if (fcmh_isdir(c)) {
-		struct msl_dc_inv_entry_data mdie;
-
-		mdie.mdie_pfr = pfr;
-		mdie.mdie_pinum = fcmh_2_fid(c);
-		/* XXX this currently crashes fuse.ko but needs to happen */
-		dircache_walk(fcmh_2_dci(c), msl_dc_inv_entry, &mdie);
-	}
-#endif
-
  out:
 	if (c) {
 		(void)FCMH_RLOCK(c);
