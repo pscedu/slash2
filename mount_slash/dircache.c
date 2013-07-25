@@ -93,6 +93,42 @@ dircache_free_page(struct fidc_membh *d, struct dircache_page *p)
 }
 
 /**
+ * dircache_walk: Perform a batch operation across all cached dirents.
+ * @d: directory handle.
+ * @cbf: callback to run.
+ * @cbarg: callback argument.
+ */
+void
+dircache_walk(struct fidc_membh *d,
+    void (*cbf)(struct dircache_ent *, void *), void *cbarg)
+{
+	struct dircache_page *p, *np;
+	struct fcmh_cli_info *fci;
+	struct dircache_ent *dce;
+	struct pfl_timespec expire;
+	int n;
+
+	PFL_GETPTIMESPEC(&expire);
+	expire.tv_sec -= DIRENT_TIMEO;
+
+	fci = fcmh_2_fci(d);
+	FCMH_LOCK(d);
+	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
+		if (p->dcp_flags & DCPF_LOADING)
+			continue;
+
+		if (DIRCACHE_PAGE_EXPIRED(d, p, &expire)) {
+			dircache_free_page(d, p);
+			continue;
+		}
+
+		DYNARRAY_FOREACH(dce, n, &p->dcp_dents)
+			cbf(dce, cbarg);
+	}
+	FCMH_ULOCK(d);
+}
+
+/**
  * dircache_lookup: Perform a search across cached pages for a base
  *	name.
  * @d: directory handle.
