@@ -270,7 +270,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slmrmc_thread);
 	PRTYPE(struct slmrmi_thread);
 	PRTYPE(struct slmrmm_thread);
-	PRTYPE(struct slvr_ref);
+	PRTYPE(struct slvr);
 	PRTYPE(struct srm_batch_req);
 	PRTYPE(struct srm_bmap_chwrmode_rep);
 	PRTYPE(struct srm_bmap_chwrmode_req);
@@ -362,6 +362,7 @@ main(int argc, char *argv[])
 	PRVAL(AUTHBUF_KEYSIZE);
 	PRVAL(AUTHBUF_REPRLEN);
 	PRVAL(BCR_MAX_AGE);
+	PRVAL(BCR_MIN_AGE);
 	PRVAL(BIM_MINAGE);
 	PRVAL(BIM_RETRIEVE_SEQ);
 	PRVAL(BMAP_CLI_EXTREQSECS);
