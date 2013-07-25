@@ -264,6 +264,7 @@ dircache_new_page(struct fidc_membh *d, off_t off)
 		if (off == p->dcp_off)
 			break;
 	if (p) {
+		OPSTAT_INCR(SLC_OPST_DIRCACHE_RACE);
 		psc_pool_return(dircache_pool, newp);
 		newp = NULL;	
 	} else {
