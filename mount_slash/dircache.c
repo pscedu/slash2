@@ -253,38 +253,30 @@ dircache_cmp(const void *a, const void *b)
 struct dircache_page *
 dircache_new_page(struct fidc_membh *d, off_t off)
 {
-	struct dircache_page *p, *np;
-	struct pfl_timespec expire;
+	struct dircache_page *p, *np, *newp;
 	struct fcmh_cli_info *fci;
 
-	FCMH_LOCK_ENSURE(d);
+	newp = psc_pool_get(dircache_pool);
 
-	PFL_GETPTIMESPEC(&expire);
-	expire.tv_sec -= DIRENT_TIMEO;
-
-	/*
-	 * Release expired pages and any pages that overlap with the new
-	 * contents.
-	 */
+	FCMH_LOCK(d);
 	fci = fcmh_2_fci(d);
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages)
-		if (DIRCACHE_PAGE_EXPIRED(d, p, &expire) ||
-		    (off >= p->dcp_off &&
-		     off < p->dcp_nextoff)) {
-			dircache_free_page(d, p);
-			continue;
-		}
+		if (off == p->dcp_off)
+			break;
+	if (p) {
+		psc_pool_return(dircache_pool, newp);
+		newp = NULL;	
+	} else {
+		memset(newp, 0, sizeof(*p));
+		psc_dynarray_init(&newp->dcp_dents);
+		INIT_PSC_LISTENTRY(&newp->dcp_lentry);
+		newp->dcp_flags = DCPF_LOADING;
+		newp->dcp_off = off;
+		pll_add_sorted(&fci->fci_dc_pages, newp, dircache_cmp);
+	}
+	FCMH_ULOCK(d);
 
-	p = psc_pool_get(dircache_pool);
-	memset(p, 0, sizeof(*p));
-	psc_dynarray_init(&p->dcp_dents);
-	INIT_PSC_LISTENTRY(&p->dcp_lentry);
-	p->dcp_flags = DCPF_LOADING;
-	p->dcp_off = off;
-
-	pll_add_sorted(&fci->fci_dc_pages, p, dircache_cmp);
-
-	return (p);
+	return (newp);
 }
 
 /**

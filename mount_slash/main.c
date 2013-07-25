@@ -1390,9 +1390,10 @@ msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
 	int rc, nstbpref, niov;
 
 	p = dircache_new_page(d, off);
+	if (p == NULL)
+		return (0);
 
 	fcmh_op_start_type(d, FCMH_OPCNT_READDIR);
-	FCMH_ULOCK(d);
 
 	MSL_RMC_NEWREQ_PFCC(pfcc, d, csvc, SRMT_READDIR, rq, mq, mp,
 	    rc);
@@ -1446,7 +1447,6 @@ msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
 		dircache_free_page(d, p);
 		fcmh_op_done_type(d, FCMH_OPCNT_READDIR);
 	}
-	FCMH_LOCK(d);
 	return (rc);
 }
 
@@ -1585,15 +1585,17 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		} else if (nextoff && p->dcp_off > nextoff)
 			break;
 	}
+	FCMH_ULOCK(d);
 	if (issue) {
 		rc = msl_readdir_issue(pfcc, d, off, size);
 		if (rc && !slc_rmc_retry(pfr, &rc)) {
-			FCMH_ULOCK(d);
 			pscfs_reply_readdir(pfr, NULL, 0, rc);
 			return;
 		}
+		FCMH_LOCK(d);
 		goto restart;
 	}
+
 	if (issuenext) {
 		size_t esz;
 		int rem;
@@ -1615,7 +1617,6 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		esz = sizeof(struct pscfs_dirent) + 16;
 		msl_readdir_issue(pfcc, d, nextoff, rem * esz);
 	}
-	FCMH_ULOCK(d);
 
 	if (0)
  out:
