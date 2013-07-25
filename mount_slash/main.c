@@ -1543,7 +1543,6 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 					    0, rc);
 					return;
 				}
-				issue = 1;
 			} else {
 				size_t len;
 
@@ -1564,8 +1563,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 				psc_assert(len);
 				pscfs_reply_readdir(pfr,
 				    p->dcp_base + adj,
-				    MIN(size, len),
-				    p->dcp_rc);
+				    MIN(size, len), 0);
 				OPSTAT_INCR(SLC_OPST_DIRCACHE_HIT);
 
 				/*
