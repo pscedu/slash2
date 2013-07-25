@@ -1439,14 +1439,15 @@ msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
 	rq->rq_async_args.pointer_arg[MSL_READDIR_CBARG_PAGE] = p;
 	DPRINTF_DCP(PLL_DEBUG, p, "issuing");
 	rc = SL_NBRQSET_ADD(csvc, rq);
-	if (rc) {
-		pscrpc_req_finished(rq);
-		msl_readdir_fin(csvc, iov);
+	if (!rc)
+		return (0);
+
+	pscrpc_req_finished(rq);
+	msl_readdir_fin(csvc, iov);
  out:
-		FCMH_LOCK(d);
-		dircache_free_page(d, p);
-		fcmh_op_done_type(d, FCMH_OPCNT_READDIR);
-	}
+	FCMH_LOCK(d);
+	dircache_free_page(d, p);
+	fcmh_op_done_type(d, FCMH_OPCNT_READDIR);
 	return (rc);
 }
 
