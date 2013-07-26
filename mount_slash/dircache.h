@@ -87,13 +87,14 @@ struct dircache_page {
 /* dcp_flags */
 #define DCPF_LOADING		(1 << 0)
 #define DCPF_EOF		(1 << 1)	/* denotes last page */
+#define DCPF_READAHEAD		(1 << 2)	/* was loaded by readahead */
 
 #define DIRCACHE_PAGE_EXPIRED(d, p, exp)				\
 	(((p)->dcp_flags & DCPF_LOADING) == 0 &&			\
 	 (timespeccmp((exp), &(p)->dcp_tm, >) ||			\
 	  timespeccmp(&(d)->fcmh_sstb.sst_mtim, &p->dcp_tm, >)))
 
-#define DPRINTF_DCP(lvl, dcp, fmt, ...)					\
+#define DPRINTF_DIRCACHEPG(lvl, dcp, fmt, ...)				\
 	psclog((lvl), "dcp@%p off %"PSCPRIdOFFT" sz %zu fl %#x "	\
 	    "nextoff %"PSCPRIdOFFT": " fmt,				\
 	    (dcp), (dcp)->dcp_off, (dcp)->dcp_size, (dcp)->dcp_flags,	\
@@ -136,12 +137,13 @@ dirent_sort_cmp(const void *x, const void *y)
 }
 
 struct dircache_page *
-	dircache_new_page(struct fidc_membh *, off_t);
+	dircache_new_page(struct fidc_membh *, off_t, int);
 void	dircache_free_page(struct fidc_membh *, struct dircache_page *);
 slfid_t	dircache_lookup(struct fidc_membh *, const char *);
 void	dircache_mgr_init(void);
 void	dircache_purge(struct fidc_membh *);
 void	dircache_reg_ents(struct fidc_membh *, struct dircache_page *, size_t, void *);
-void	dircache_walk(struct fidc_membh *, void (*)(struct dircache_ent *, void *), void *);
+void	dircache_walk(struct fidc_membh *, void (*)(struct dircache_page *,
+    	    struct dircache_ent *, void *), void *);
 
 #endif /* _DIRCACHE_H_ */

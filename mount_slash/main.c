@@ -1366,7 +1366,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	if (mp->eof)
 		p->dcp_flags |= DCPF_EOF;
 	p->dcp_size = mp->size;
-	DPRINTF_DCP(PLL_DEBUG, p, "registering");
+	DPRINTF_DIRCACHEPG(PLL_DEBUG, p, "registering");
 	dircache_reg_ents(d, p, mp->num, iov[0].iov_base);
 	iov[0].iov_base = NULL;
 
@@ -1379,7 +1379,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 
 int
 msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
-    off_t off, size_t size)
+    off_t off, size_t size, int ra)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct srm_readdir_req *mq = NULL;
@@ -1389,7 +1389,7 @@ msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
 	struct iovec *iov;
 	int rc, nstbpref, niov;
 
-	p = dircache_new_page(d, off);
+	p = dircache_new_page(d, off, ra);
 	if (p == NULL)
 		return (0);
 
@@ -1437,7 +1437,7 @@ msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
 	rq->rq_async_args.pointer_arg[MSL_READDIR_CBARG_FCMH] = d;
 	rq->rq_async_args.pointer_arg[MSL_READDIR_CBARG_IOV] = iov;
 	rq->rq_async_args.pointer_arg[MSL_READDIR_CBARG_PAGE] = p;
-	DPRINTF_DCP(PLL_DEBUG, p, "issuing");
+	DPRINTF_DIRCACHEPG(PLL_DEBUG, p, "issuing");
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (!rc)
 		return (0);
@@ -1496,8 +1496,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	FCMH_LOCK(d);
 	fci = fcmh_2_fci(d);
 
- restart:
-
+ restart: 
 	PFL_GETPTIMESPEC(&expire);
 	expire.tv_sec -= DIRENT_TIMEO;
 
@@ -1561,10 +1560,12 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 
 				len = p->dcp_size - adj;
 				psc_assert(len);
+				psc_assert(pfr);
 				pscfs_reply_readdir(pfr,
 				    p->dcp_base + adj,
 				    MIN(size, len), 0);
 				OPSTAT_INCR(SLC_OPST_DIRCACHE_HIT);
+				pfr = NULL;
 
 				/*
 				 * We don't return just yet so we can
@@ -1586,7 +1587,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	}
 	FCMH_ULOCK(d);
 	if (issue) {
-		rc = msl_readdir_issue(pfcc, d, off, size);
+		rc = msl_readdir_issue(pfcc, d, off, size, 0);
 		if (rc && !slc_rmc_retry(pfr, &rc)) {
 			pscfs_reply_readdir(pfr, NULL, 0, rc);
 			return;
@@ -1614,7 +1615,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		if (esz * rem > LNET_MTU)
 			rem = LNET_MTU / esz;
 		esz = sizeof(struct pscfs_dirent) + 16;
-		msl_readdir_issue(pfcc, d, nextoff, rem * esz);
+		msl_readdir_issue(pfcc, d, nextoff, rem * esz, 1);
 	}
 
 	if (0)
@@ -2253,7 +2254,8 @@ struct msl_dc_inv_entry_data {
 };
 
 void
-msl_dc_inv_entry(struct dircache_ent *d, void *arg)
+msl_dc_inv_entry(__unusedx struct dircache_page *p,
+    struct dircache_ent *d, void *arg)
 {
 	const struct msl_dc_inv_entry_data *mdie = arg;
 

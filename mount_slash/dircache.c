@@ -99,33 +99,28 @@ dircache_free_page(struct fidc_membh *d, struct dircache_page *p)
  * @cbarg: callback argument.
  */
 void
-dircache_walk(struct fidc_membh *d,
-    void (*cbf)(struct dircache_ent *, void *), void *cbarg)
+dircache_walk(struct fidc_membh *d, void (*cbf)(struct dircache_page *p,
+    struct dircache_ent *, void *), void *cbarg)
 {
 	struct dircache_page *p, *np;
 	struct fcmh_cli_info *fci;
 	struct dircache_ent *dce;
 	struct pfl_timespec expire;
-	int n;
+	int lk, n;
 
 	PFL_GETPTIMESPEC(&expire);
 	expire.tv_sec -= DIRENT_TIMEO;
 
 	fci = fcmh_2_fci(d);
-	FCMH_LOCK(d);
+	lk = FCMH_RLOCK(d);
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
 		if (p->dcp_flags & DCPF_LOADING)
 			continue;
 
-		if (DIRCACHE_PAGE_EXPIRED(d, p, &expire)) {
-			dircache_free_page(d, p);
-			continue;
-		}
-
 		DYNARRAY_FOREACH(dce, n, &p->dcp_dents)
-			cbf(dce, cbarg);
+			cbf(p, dce, cbarg);
 	}
-	FCMH_ULOCK(d);
+	FCMH_URLOCK(d, lk);
 }
 
 /**
@@ -248,35 +243,42 @@ dircache_cmp(const void *a, const void *b)
  * dircache_new_page: Allocate a new page of dirents.
  * @d: directory handle.
  * @off: offset into directory for this slew of dirents.
- * @base: buffer to write dirents into.
  */
 struct dircache_page *
-dircache_new_page(struct fidc_membh *d, off_t off)
+dircache_new_page(struct fidc_membh *d, off_t off, int ra)
 {
 	struct dircache_page *p, *np, *newp;
 	struct fcmh_cli_info *fci;
+	struct pfl_timespec expire;
 
 	newp = psc_pool_get(dircache_pool);
 
 	FCMH_LOCK(d);
+	PFL_GETPTIMESPEC(&expire);
+	expire.tv_sec -= DIRENT_TIMEO;
 	fci = fcmh_2_fci(d);
-	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages)
-		if (off == p->dcp_off)
-			break;
-	if (p) {
-		OPSTAT_INCR(SLC_OPST_DIRCACHE_RACE);
-		psc_pool_return(dircache_pool, newp);
-		newp = NULL;	
-	} else {
-		memset(newp, 0, sizeof(*p));
-		psc_dynarray_init(&newp->dcp_dents);
-		INIT_PSC_LISTENTRY(&newp->dcp_lentry);
-		newp->dcp_flags = DCPF_LOADING;
-		newp->dcp_off = off;
-		pll_add_sorted(&fci->fci_dc_pages, newp, dircache_cmp);
+	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
+		if (p->dcp_flags & DCPF_LOADING) {
+			FCMH_ULOCK(d);
+			OPSTAT_INCR(SLC_OPST_DIRCACHE_RACE);
+			psc_pool_return(dircache_pool, newp);
+			return (NULL);
+		}
+		if (DIRCACHE_PAGE_EXPIRED(d, p, &expire) ||
+		    (off >= p->dcp_off &&
+		     off < p->dcp_nextoff))
+			dircache_free_page(d, p);
 	}
-	FCMH_ULOCK(d);
 
+	memset(newp, 0, sizeof(*newp));
+	psc_dynarray_init(&newp->dcp_dents);
+	INIT_PSC_LISTENTRY(&newp->dcp_lentry);
+	newp->dcp_flags = DCPF_LOADING;
+	newp->dcp_off = off;
+	if (ra)
+		newp->dcp_flags = DCPF_READAHEAD;
+	pll_add_sorted(&fci->fci_dc_pages, newp, dircache_cmp);
+	FCMH_ULOCK(d);
 	return (newp);
 }
 
@@ -343,4 +345,26 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	fci->fci_dc_nents += nents;
 	fcmh_wake_locked(d);
 	FCMH_ULOCK(d);
+}
+
+void
+dircache_ent_dprintf(struct dircache_page *p, struct dircache_ent *e,
+    void *a)
+{
+	struct dircache_page **pp = a;
+
+	if (*pp != p) {
+		DPRINTF_DIRCACHEPG(PLL_MAX, p, "");
+		*pp = p;
+	}
+
+	printf("   ent %*s\n", e->dce_namelen, e->dce_name);
+}
+
+void
+dircache_dprintf(struct fidc_membh *d)
+{
+	void *p = NULL;
+
+	dircache_walk(d, dircache_ent_dprintf, &p);
 }
