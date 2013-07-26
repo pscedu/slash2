@@ -276,7 +276,7 @@ dircache_new_page(struct fidc_membh *d, off_t off, int ra)
 	newp->dcp_flags = DCPF_LOADING;
 	newp->dcp_off = off;
 	if (ra)
-		newp->dcp_flags = DCPF_READAHEAD;
+		newp->dcp_flags |= DCPF_READAHEAD;
 	pll_add_sorted(&fci->fci_dc_pages, newp, dircache_cmp);
 	FCMH_ULOCK(d);
 	return (newp);
