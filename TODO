@@ -7,6 +7,9 @@ reminders:
 	(o) iod - the sliod daemon
 - do sl_csvc_wantfree() in all to-CLI csvcs
 - ensure reentrancy of 'static' variables in functions
+- variable prefix notation:
+    - sl_ for shared globals
+    - sl[imc]_ for app-specific globals
 -----------------------------------------------------------------------
 * Bmpce Write
 There may be some advantage to maintaining a seq or numeric window id for
