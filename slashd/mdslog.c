@@ -454,16 +454,19 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 				    current_reclaim_batchno,
 				    slstrerror(rc));
 
-			current_reclaim_entrysize = RECLAIM_ENTRY_SIZE;
 			reclaim_entryp = (struct srt_reclaim_entry *)reclaimbuf;
-			if (reclaim_entryp->fg.fg_fid == RECLAIM_MAGIC_FID &&
-			    reclaim_entryp->fg.fg_gen == RECLAIM_MAGIC_GEN) {
-				current_reclaim_entrysize = sizeof(struct srt_reclaim_entry);
-				size -= current_reclaim_entrysize;
-				reclaim_entryp = PSC_AGP(reclaim_entryp,
-				    current_reclaim_entrysize);
-				reclaim_logfile_offset += current_reclaim_entrysize;
-			}
+			if (reclaim_entryp->xid != RECLAIM_MAGIC_VER ||
+			    reclaim_entryp->fg.fg_gen != RECLAIM_MAGIC_GEN ||
+			    reclaim_entryp->fg.fg_fid != RECLAIM_MAGIC_FID)
+				psc_fatalx("Reclaim log corrupted, batchno=%"PRId64,
+				    current_reclaim_batchno);
+
+			current_reclaim_entrysize = sizeof(struct srt_reclaim_entry);
+			size -= current_reclaim_entrysize;
+			reclaim_entryp = PSC_AGP(reclaim_entryp,
+			    current_reclaim_entrysize);
+			reclaim_logfile_offset += current_reclaim_entrysize;
+
 			/* this should never happen, but we have seen bitten */
 			if (size > current_reclaim_entrysize * SLM_RECLAIM_BATCH ||
 			    ((size % current_reclaim_entrysize) != 0)) {
