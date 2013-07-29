@@ -1344,8 +1344,8 @@ int
 mds_send_batch_reclaim(uint64_t batchno)
 {
 	int i, ri, rc, len, count, nentry, total, nios, didwork = 0,
-	    record = 0, version;
-	struct srt_reclaim_entry *entryp, *next_entryp;
+	    record = 0;
+	struct srt_reclaim_entry *entryp;
 	struct slashrpc_cservice *csvc;
 	struct sl_mds_iosinfo *iosinfo;
 	struct resprof_mds_info *rpmi;
@@ -1397,16 +1397,10 @@ mds_send_batch_reclaim(uint64_t batchno)
 	psc_assert(rc == 0 && sstb.sst_size == size);
 	mds_release_file(handle);
 
-	version = 0;
-	entrysize = RECLAIM_ENTRY_SIZE;
 	entryp = reclaimbuf;
-	if (entryp->fg.fg_fid == RECLAIM_MAGIC_FID &&
-	    entryp->fg.fg_gen == RECLAIM_MAGIC_GEN) {
-		version = RECLAIM_MAGIC_VER;
-		entrysize = sizeof(struct srt_reclaim_entry);
-	}
+	entrysize = sizeof(struct srt_reclaim_entry);
 
-	if (version > 0 && size == entrysize) {
+	if (size == entrysize) {
 		PSCFREE(reclaimbuf);
 		psclog_warnx("Empty reclaim log file, batchno=%"PRId64,
 		    batchno);
@@ -1433,26 +1427,8 @@ mds_send_batch_reclaim(uint64_t batchno)
 	entryp = PSC_AGP(reclaimbuf, (count - 1) * entrysize);
 	xid = entryp->xid;
 
-	if (version == 0) {
-		/*
-		 * Trim padding from buffer to reduce RPC traffic.
-		 */
-		entryp = next_entryp = reclaimbuf;
-		len = size = sizeof(struct srt_reclaim_entry);
-		for (i = 1; i < count; i++) {
-			if (i < count - 1 && entryp->xid >= xid)
-				psclog_debug("Out of order log entries: "
-				    "%d, %d, %"PRIx64", %"PRIx64", %"PRIx64,
-				    i, count, xid, entryp->xid, batchno);
-			entryp = PSC_AGP(entryp, entrysize);
-			next_entryp = PSC_AGP(next_entryp, len);
-			memmove(next_entryp, entryp, len);
-			size += len;
-		}
-	} else {
-		len = sizeof(struct srt_reclaim_entry);
-		size -= sizeof(struct srt_reclaim_entry);
-	}
+	len = sizeof(struct srt_reclaim_entry);
+	size -= sizeof(struct srt_reclaim_entry);
 
 	/* XXX use random order */
 	nios = 0;
@@ -1501,10 +1477,8 @@ mds_send_batch_reclaim(uint64_t batchno)
 		i = count;
 		total = size;
 		entryp = reclaimbuf;
-		if (version > 0) {
-			i--;
-			entryp = PSC_AGP(entryp, len);
-		}
+		i--;
+		entryp = PSC_AGP(entryp, len);
 
 		/*
 		 * In a perfect world, iosinfo->si_xid <= xid is always true.
