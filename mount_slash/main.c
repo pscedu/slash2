@@ -1586,6 +1586,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 			break;
 	}
 	FCMH_ULOCK(d);
+
 	if (issue) {
 		rc = msl_readdir_issue(pfcc, d, off, size, 0);
 		if (rc && !slc_rmc_retry(pfr, &rc)) {
@@ -1605,7 +1606,9 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		 * Calculate the size by estimating the # of remaining
 		 * ents bound to 500.
 		 */
+		FCMH_LOCK(d);
 		rem = d->fcmh_sstb.sst_size - nent;
+		FCMH_ULOCK(d);
 		if (rem < 0)
 			rem = 10;
 		if (rem > 2000)
