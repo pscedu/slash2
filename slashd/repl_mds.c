@@ -459,6 +459,12 @@ _mds_repl_inv_except(struct bmapc_memb *b, int iosidx, int defer)
 	retifset[BREPLST_INVALID] = 0;
 	retifset[BREPLST_VALID] = 0;
 
+	/*
+	 * XXX on full truncate, the metafile will exist, which means
+	 * the bmap states will exist, which means a new IOS will be
+	 * selected which will probably be GARBAGE after truncate
+	 * happens a few times.
+	 */
 	rc = mds_repl_bmap_walk(b, tract, retifset, 0, &iosidx, 1);
 	if (rc)
 		psclog_errorx("bcs_repls has active IOS marked in a "
