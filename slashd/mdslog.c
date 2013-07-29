@@ -1474,10 +1474,9 @@ mds_send_batch_reclaim(uint64_t batchno)
 		RPMI_ULOCK(rpmi);
 
 		/* Find out which part of the buffer should be sent out */
-		i = count;
+		i = count - 1;
 		total = size;
 		entryp = reclaimbuf;
-		i--;
 		entryp = PSC_AGP(entryp, len);
 
 		/*
