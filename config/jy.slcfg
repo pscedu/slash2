@@ -36,13 +36,6 @@ site @JY {
 		nids	= kaminari;
 	}
 
-	resource cyclops {
-		type	= standalone_fs;
-		id	= 104;
-		fsroot	= /usr/slio-jy;
-		nids	= cyclops;
-	}
-
 	resource citron {
 #		type	= standalone_fs;
 		type	= archival_fs;
