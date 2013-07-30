@@ -1989,13 +1989,17 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 
 		max = SLM_RECLAIM_BATCH;
 		reclaim_entryp = reclaimbuf;
-		if (reclaim_entryp->fg.fg_fid == RECLAIM_MAGIC_FID &&
-		    reclaim_entryp->fg.fg_gen == RECLAIM_MAGIC_GEN) {
-			entrysize = sizeof(struct srt_reclaim_entry);
-			size -= entrysize;
-			max = SLM_RECLAIM_BATCH - 1;
-			reclaim_entryp = PSC_AGP(reclaim_entryp, entrysize);
-		}
+
+		if (reclaim_entryp->xid != RECLAIM_MAGIC_VER ||
+		    reclaim_entryp->fg.fg_gen != RECLAIM_MAGIC_GEN ||
+		    reclaim_entryp->fg.fg_fid != RECLAIM_MAGIC_FID)
+			psc_fatalx("Reclaim log corrupted, batchno=%"PRId64,
+				    current_reclaim_batchno);
+
+		entrysize = sizeof(struct srt_reclaim_entry);
+		size -= entrysize;
+		max = SLM_RECLAIM_BATCH - 1;
+		reclaim_entryp = PSC_AGP(reclaim_entryp, entrysize);
 
 		psc_assert((size % entrysize) == 0);
 
