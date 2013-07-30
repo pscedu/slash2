@@ -881,7 +881,6 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 			    bml->bml_ios != IOS_ID_ANY);
 			BMAP_ULOCK(b);
 			rc = mds_bmap_ios_restart(bml);
-			bml->bml_flags &= ~BML_RECOVER;
 
 		} else if (!wlease && bmi->bmi_writers == 1) {
 			/* No duplicate lease detected and this client
