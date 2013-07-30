@@ -141,7 +141,7 @@ mdscoh_req(struct bmap_mds_lease *bml)
 
 	DEBUG_BMAP(PLL_INFO, bml_2_bmap(bml), "bml=%p", bml);
 
-	BML_LOCK(bml);
+	BML_LOCK_ENSURE(bml);
 	if (bml->bml_flags & BML_RECOVER) {
 		psc_assert(!bml->bml_exp);
 		BML_ULOCK(bml);

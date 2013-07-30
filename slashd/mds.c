@@ -195,7 +195,6 @@ mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw, int want_dio,
 				if (!(bml->bml_flags & BML_DIOCB)) {
 					bml->bml_flags |= BML_DIOCB;
 					b->bcm_flags |= BMAP_DIOCB;
-					BML_ULOCK(bml);
 					mdscoh_req(bml);
 				} else
 					BML_ULOCK(bml);
