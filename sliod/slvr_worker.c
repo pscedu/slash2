@@ -311,7 +311,7 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 	 * make the master choice about what our residency validity is.
 	 */
 	for (j = 0; j < mq->ncrc_updates; j++)
-		if (mp->crcup_rc[j])
+		if (mp && mp->crcup_rc[j])
 			psclog_errorx("MDS rejected our CRC update; "
 			    "rc=%d", mp->crcup_rc[j]);
 
