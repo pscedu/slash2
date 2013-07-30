@@ -496,17 +496,6 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 			reclaim_entry.xid = RECLAIM_MAGIC_VER;
 			reclaim_entry.fg.fg_fid = RECLAIM_MAGIC_FID;
 			reclaim_entry.fg.fg_gen = RECLAIM_MAGIC_GEN;
-			if (current_reclaim_entrysize == RECLAIM_ENTRY_SIZE) {
-				/*
-				 * This might not give us the correct
-				 * batchno if the machine crashed after
-				 * writing a full log and just came
-				 * back.
-				 */
-				current_reclaim_entrysize = sizeof(struct srt_reclaim_entry);
-				psclog_warnx("Switch to new log format, batchno=%"PRId64,
-				    current_reclaim_batchno);
-			}
 
 			rc = mds_write_file(reclaim_logfile_handle,
 			    &reclaim_entry, current_reclaim_entrysize,
