@@ -65,18 +65,21 @@ usage(void)
 void
 dump_reclaim_log(void *buf, int size)
 {
-	int i, count, order = 0, entrysize = RECLAIM_ENTRY_SIZE;
+	int i, count, order = 0, entrysize;
 	struct srt_reclaim_entry *entryp;
 	uint64_t xid = 0;
 
 	count = size / sizeof(struct srt_reclaim_entry);
 	entryp = buf;
-	if (entryp->fg.fg_fid == RECLAIM_MAGIC_FID &&
-	    entryp->fg.fg_gen == RECLAIM_MAGIC_GEN) {
-		count--;
-		entrysize = sizeof(struct srt_reclaim_entry);
-		entryp = PSC_AGP(entryp, entrysize);
+	if (entryp->xid != RECLAIM_MAGIC_VER ||
+	    entryp->fg.fg_fid != RECLAIM_MAGIC_FID ||
+	    entryp->fg.fg_gen != RECLAIM_MAGIC_GEN) {
+		fprintf(stderr, "Reclaim log corrupted, invalid header.\n");
+		exit(1);
 	}
+	count--;
+	entrysize = sizeof(struct srt_reclaim_entry);
+	entryp = PSC_AGP(entryp, entrysize);
 	printf("   The entry size is %d bytes, total # of entries is %d\n\n",
 	    entrysize, count);
 

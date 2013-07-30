@@ -1831,7 +1831,6 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 
 	psc_assert(_MDS_LOG_LAST_TYPE <= (1 << 15));
 	psc_assert(sizeof(struct srt_update_entry) == 512);
-	psc_assert(sizeof(struct srt_reclaim_entry) <= RECLAIM_ENTRY_SIZE);
 
 	/* Make sure we have some I/O servers to work with */
 	nios = 0;
@@ -1968,7 +1967,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	OPSTAT_INCR(SLM_OPST_RECLAIM_BATCHNO);
 	OPSTAT_ASSIGN(SLM_OPST_RECLAIM_BATCHNO, batchno);
 
-	entrysize = RECLAIM_ENTRY_SIZE;
+	entrysize = sizeof(struct srt_reclaim_entry);
 	if (sstb.sst_size) {
 		reclaimbuf = PSCALLOC(sstb.sst_size);
 
@@ -1985,7 +1984,6 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 			psc_fatalx("Reclaim log corrupted, batchno=%"PRId64,
 				    current_reclaim_batchno);
 
-		entrysize = sizeof(struct srt_reclaim_entry);
 		size -= entrysize;
 		max = SLM_RECLAIM_BATCH - 1;
 		reclaim_entryp = PSC_AGP(reclaim_entryp, entrysize);
