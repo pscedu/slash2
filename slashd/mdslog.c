@@ -69,13 +69,6 @@ static psc_spinlock_t		 mds_distill_lock = SPINLOCK_INIT;
 uint64_t			 current_update_batchno;
 uint64_t			 current_reclaim_batchno;
 
-/*
- * The entry size must be the same for the same batch of log entries.
- * In version 0, the size is RECLAIM_ENTRY_SIZE (512).  The next version
- * will be the size of the reclaim log entry.
- */
-size_t				 current_reclaim_entrysize;
-
 uint64_t			 current_update_xid;
 uint64_t			 current_reclaim_xid;
 
@@ -461,23 +454,22 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 				psc_fatalx("Reclaim log corrupted, batchno=%"PRId64,
 				    current_reclaim_batchno);
 
-			current_reclaim_entrysize = sizeof(struct srt_reclaim_entry);
-			size -= current_reclaim_entrysize;
+			size -= sizeof(struct srt_reclaim_entry);
 			reclaim_entryp = PSC_AGP(reclaim_entryp,
-			    current_reclaim_entrysize);
-			reclaim_logfile_offset += current_reclaim_entrysize;
+			    sizeof(struct srt_reclaim_entry));
+			reclaim_logfile_offset += sizeof(struct srt_reclaim_entry);
 
 			/* this should never happen, but we have seen bitten */
-			if (size > current_reclaim_entrysize * SLM_RECLAIM_BATCH ||
-			    ((size % current_reclaim_entrysize) != 0)) {
+			if (size > sizeof(struct srt_reclaim_entry) * SLM_RECLAIM_BATCH ||
+			    ((size % sizeof(struct srt_reclaim_entry)) != 0)) {
 				psclog_warnx("Reclaim log corrupted! "
 				    "batch=%"PRId64" size=%zd",
 				    current_reclaim_batchno, size);
-				size = current_reclaim_entrysize *
+				size = sizeof(struct srt_reclaim_entry) *
 				    (SLM_RECLAIM_BATCH - 1);
 			}
 			count = 0;
-			total = size / current_reclaim_entrysize;
+			total = size / sizeof(struct srt_reclaim_entry);
 			while (count < total) {
 				if (reclaim_entryp->xid == pje->pje_xid) {
 					psclog_warnx("Reclaim xid %"PRId64" "
@@ -485,9 +477,9 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 					    pje->pje_xid, current_reclaim_batchno);
 				}
 				reclaim_entryp = PSC_AGP(reclaim_entryp,
-				    current_reclaim_entrysize);
+				    sizeof(struct srt_reclaim_entry));
 				count++;
-				reclaim_logfile_offset += current_reclaim_entrysize;
+				reclaim_logfile_offset += sizeof(struct srt_reclaim_entry);
 			}
 			PSCFREE(reclaimbuf);
 			reclaimbuf = NULL;
@@ -498,12 +490,12 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 			reclaim_entry.fg.fg_gen = RECLAIM_MAGIC_GEN;
 
 			rc = mds_write_file(reclaim_logfile_handle,
-			    &reclaim_entry, current_reclaim_entrysize,
+			    &reclaim_entry, sizeof(struct srt_reclaim_entry),
 			    &size, reclaim_logfile_offset);
-			if (rc || size != current_reclaim_entrysize)
+			if (rc || size != sizeof(struct srt_reclaim_entry))
 				psc_fatal("Failed to write reclaim log file, batchno=%"PRId64,
 				    current_reclaim_batchno);
-			reclaim_logfile_offset += current_reclaim_entrysize;
+			reclaim_logfile_offset += sizeof(struct srt_reclaim_entry);
 		}
 	}
 
@@ -512,8 +504,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 	reclaim_entry.fg.fg_gen = sjnm->sjnm_target_gen;
 
 	rc = mds_write_file(reclaim_logfile_handle, &reclaim_entry,
-	    current_reclaim_entrysize, &size, reclaim_logfile_offset);
-	if (size != current_reclaim_entrysize)
+	    sizeof(struct srt_reclaim_entry), &size, reclaim_logfile_offset);
+	if (size != sizeof(struct srt_reclaim_entry))
 		psc_fatal("Failed to write reclaim log file, batchno=%"PRId64,
 		    current_reclaim_batchno);
 
@@ -522,9 +514,9 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 	OPSTAT_ASSIGN(SLM_OPST_RECLAIM_XID, current_reclaim_xid);
 	freelock(&mds_distill_lock);
 
-	reclaim_logfile_offset += current_reclaim_entrysize;
+	reclaim_logfile_offset += sizeof(struct srt_reclaim_entry); 
 	if (reclaim_logfile_offset ==
-	    SLM_RECLAIM_BATCH * (off_t)current_reclaim_entrysize) {
+	    SLM_RECLAIM_BATCH * (off_t)sizeof(struct srt_reclaim_entry)) {
 
 		mds_release_file(reclaim_logfile_handle);
 
@@ -545,7 +537,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 		    current_reclaim_batchno, current_reclaim_xid);
 	}
 	psc_assert(reclaim_logfile_offset <=
-	    SLM_RECLAIM_BATCH * (off_t)current_reclaim_entrysize);
+	    SLM_RECLAIM_BATCH * (off_t)sizeof(struct srt_reclaim_entry));
 
 	psclog_diag("current_reclaim_xid=%"PRIu64" batchno=%"PRIu64" "
 	    "fg="SLPRI_FG,
@@ -2009,7 +2001,6 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 			current_reclaim_batchno++;
 		PSCFREE(reclaimbuf);
 	}
-	current_reclaim_entrysize = entrysize;
 
 	current_reclaim_xid = last_reclaim_xid;
 	OPSTAT_INCR(SLM_OPST_RECLAIM_XID);
