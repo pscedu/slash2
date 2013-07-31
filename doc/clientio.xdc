@@ -106,7 +106,7 @@ resource bessemer {
 	<oof:p>
 		An example case would be where a client issues a write to IOS_a0 and
 		then to IOS_a1 for regions which fall into the same bmap.
-		Upon the first write into the bmap, the IOS notifies the mds that
+		Upon the first write into the bmap, the IOS notifies the MDS that
 		the generation number must be bumped, denoting that the bmap chunk
 		has been modified (and therefore outdating the other replicas).
 		The client, being fickle, issues a subsequent write to a peer IOS
@@ -116,7 +116,7 @@ resource bessemer {
 		Since the IOS's do not explicitly communicate, the client must
 		inform IOS_a1 that the bmap he's accessing has already been bumped
 		and therefore the IOS should process the write without communication
-		to the mds (for the purpose of bump gen - crc related communications
+		to the MDS (for the purpose of bump gen - CRC related communications
 		will still persist).
 	</oof:p>
 	<oof:p>
@@ -130,7 +130,7 @@ resource bessemer {
 	<oof:p>
 		In the case where we have a set of stand-alone nodes, such as the
 		lcn cluster, these must be treated differently since they are not
-		backed by a shared fs.
+		backed by a shared file system.
 		The result being that clients cannot update bmaps on different IOS's
 		without bumping the generation number and, in essence, canceling out
 		writes to peer IOS's.
@@ -142,16 +142,16 @@ resource bessemer {
 		client, the IOS must ensure its buffers are written.
 	</oof:p>
 	<oof:p>
-		Bmap first write token - this token should originate at the mds (via
+		Bmap first write token - this token should originate at the MDS (via
 		the shared-secret mechanism) and be verifiable by the IOS.
 		This way the IOS does not trust the client.
 	</oof:p>
 	<oof:p>
-		After thinking about CrcManagement a bit more, I've concluded that
+		After thinking about CRC management a bit more, I've concluded that
 		parallel IOS will do more harm than good.
 		This is because there is no way to serialize/synchronize the CRC
 		state on disk with that on the MDS.
-		Therefore the approach described in CrcManagement will be taken.
+		Therefore the approach described in CRC management will be taken.
 		The basic idea is that the MDS binds a bmap to an IOS and redirects
 		all other nodes to that IOS.
 		Hence, that IOS is the only one who make update the CRC tables for
@@ -162,6 +162,6 @@ resource bessemer {
 		being that the write token is no longer shareable.
 	</oof:p>
 	<oof:p>
-		Note that this does not apply to read().
+		Note that this does not apply to <oof:tt>read(2)</oof:tt>.
 	</oof:p>
 </xdc>

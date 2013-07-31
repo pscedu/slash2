@@ -137,12 +137,13 @@
 		</oof:list-item>
 		<oof:list-item>
 			Source-side load balancing.
-			Currently, source IOS's are selected at random, respectful of any
-			bandwidth reservation policies.
+			Currently, source IOS's are selected at random, disrespectful of
+			any bandwidth reservation policies.
 		</oof:list-item>
 		<oof:list-item>
 			Replication object cleanup.
-			Use of fallocate(2) needs to be leveraged to reclaim space.
+			Use of <oof:tt>fallocate(2)</oof:tt> needs to be leveraged to
+			reclaim space.
 		</oof:list-item>
 	</oof:list>
 </xdc>

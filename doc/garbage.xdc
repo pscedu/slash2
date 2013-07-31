@@ -5,22 +5,27 @@
 <xdc xmlns:oof="http://www.psc.edu/~yanovich/xsl/oof-1.0">
 	<title>Garbage collection and reclamation</title>
 
+	<oof:header size='1'>Steps</oof:header>
+	<oof:list>
+		<oof:list-item>
+			Write each unlink operation into the system log before replying
+			the unlink RPC.
+		</oof:list-item>
+		<oof:list-item>
+			Distill the log entry from the tile and write into the one of the
+			unlink log files.
 
+	Each unlink entry consists of the following information:
 
-(1) Write each unlink operation into the system log before replying the unlink RPC.
-
-(2) Distill the log entry from the tile and write into the one of the unlink log files.
-
-    Each unlink entry consists of the following information:
-
-	* The identity of the file: SLASH FID and generation number
-	* The identities of the I/O servers that have a copy of the file at the moment.
-
-(3) Read the unlink log files and send RPCs to I/O servers.  An unlink log file will be removed when
-    all relevant I/O servers have responded.
-
-06/16/2010
-----------
+			* The identity of the file: SLASH FID and generation number
+			* The identities of the I/O servers that have a copy of the file at the moment.
+		</oof:list-item>
+		<oof:list-item>
+			Read the unlink log files and send RPCs to I/O servers.
+			An unlink log file will be removed when all relevant I/O servers
+			have responded.
+		</oof:list-item>
+	</oof:list>
 
 Currently, we use tiling code to distill some log entries (those related to namespace
 update and truncation) from the system journal for further processing.  Every log
@@ -46,8 +51,6 @@ Bmap sequence numbers are used to time out old bmaps on the I/O servers.
 We don't do time syncronization amoung clients and servers.  So it is
 entirely up to the MDS to decide when to time out bmaps it has issued.
 
-01/05/2011
-----------
 
 Today Paul found a problem in which the mds have 30MB/s I/O every 1 minute.
 This slows down the readdir performance a lot.

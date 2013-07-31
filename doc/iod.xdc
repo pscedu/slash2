@@ -5,6 +5,7 @@
 <xdc xmlns:oof="http://www.psc.edu/~yanovich/xsl/oof-1.0">
 	<title>I/O server write request processing</title>
 
+	<oof:header size='1'>Overview</oof:header>
 	<oof:p>
 		For both read and write requests the CRC is the dominant activity
 		around which decisions regarding buffering and disk I/O must be
@@ -13,7 +14,7 @@
 		<oof:tt>LNET_MTU</oof:tt>, the IOD must read an entire 'sliver' of
 		data so that a CRC may be taken.
 		A sliver is a sub-unit of the bmap.
-		Presently we assume that all slivers are aligned, 1MB chunks.
+		Presently we assume that all slivers are aligned 1MB chunks.
 		The process should be the same for DIO and non-DIO bmaps.
 	</oof:p>
 	<oof:p>

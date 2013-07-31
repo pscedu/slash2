@@ -37,8 +37,10 @@
 			</oof:p>
 		</oof:list-item>
 		<oof:list-item>
-			all bmaps past the ptrunc position during partial truncation
-			resolution.
+			<oof:p>
+				all bmaps past the ptrunc position during partial truncation
+				resolution.
+			</oof:p>
 		</oof:list-item>
 	</oof:list>
 	<oof:p>
@@ -136,7 +138,7 @@
 	<oof:p>
 		In normal read-mode, the bmap is retrieved to give the list of IOS
 		replicas (client) and the CRC table (ION).
-		The bmap has its own CRC (bmap_crc) which protects the CRC table and
+		The bmap has its own CRC which protects the CRC table and
 		replication table against corruption.
 	</oof:p>
 
@@ -151,7 +153,7 @@
 	<oof:p>
 		Since the client does not have access to the CRC table, the MDS may
 		communicate hole information by first checking to see if the crc for
-		a given chunk is == SL_NULL_CRC.
+		a given chunk is equal to <oof:tt>SL_NULL_CRC</oof:tt>.
 		If it is then the MDS will set a bit to 0.
 		These bits will be put to the client in the <oof:tt>GETBMAP</oof:tt>
 		reply and will enable the client to know which chunks of the bmap
@@ -165,12 +167,12 @@
 		<oof:list-item>
 			Receipt of a chunk CRC update causes two writes: the store of the
 			chunk crc into its appropriate slot and the recomputing and
-			rewriting of the bmap_crc.
+			rewriting of the bmap CRC.
 		<oof:list-item>
 		</oof:list-item>
 			Replica management: upon successful replication of the bmap or
 			when replicas become invalid because of an overwrite.
-			This also causes two writes (rewriting of the bmap_crc).
+			This also causes two writes (rewriting of the bmap CRC).
 		</oof:list-item>
 	</oof:list>
 
@@ -199,10 +201,10 @@
 		path for CRC storage:
 	</oof:p>
 	<oof:pre>
-(1024^2/(1024^2))*8 = 8							# 1MB requires 8B  of CRCs
-(1024^3/(1024^2))*8 = 8192					# 1GB requires 8KB of CRCs
-(1024^4/(1024^2))*8 = 8388608				# 1TB requires 8MB of CRCs
-(1024^5/(1024^2))*8 = 8589934592		# 1PB requires 8GB of CRCs
+(1024^2/(1024^2))*8 = 8			# 1MB requires 8B  of CRCs
+(1024^3/(1024^2))*8 = 8192		# 1GB requires 8KB of CRCs
+(1024^4/(1024^2))*8 = 8388608		# 1TB requires 8MB of CRCs
+(1024^5/(1024^2))*8 = 8589934592	# 1PB requires 8GB of CRCs
 (1024^6/(1024^2))*8 = 8796093022208	# 1EB requires 8TB of CRCs
 </oof:pre>
 

@@ -140,7 +140,7 @@
 		In either case, after any bmaps have been marked as
 		<oof:tt>GARBAGE</oof:tt>, <ref sect='p'>upsch</ref> should schedule
 		work to reclaim space for file holes created for any sliods that
-		support operations such as fallocate(2).
+		support operations such as <oof:tt>fallocate(2)</oof:tt>.
 		After notifications, the MDS can free any such bmaps.
 	</oof:p>
 </xdc>

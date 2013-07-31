@@ -89,7 +89,7 @@
 		<oof:list-item>may be coupled with a slash kerberos deployment</oof:list-item>
 	</oof:list>
 
-	<oof:header size="3">Example</oof:header>
+	<oof:header size="1">Example</oof:header>
 	<oof:list type="LIST_UN">
 		<oof:list-item>assume a kerb realm "SITE.ORG"</oof:list-item>
 		<oof:list-item>assume a compute cluster "cluster.org" with nodes
@@ -125,7 +125,7 @@ $ slauth_init rbudden@SITE.ORG --slashuser=rmbudden --grant="node*.cluster.org" 
 		<oof:list-item>I/O proceeds accordingly</oof:list-item>
 	</ol>
 
-	<oof:p>Other ideas:</oof:p>
+	<oof:header size='2'>Other ideas:</oof:p>
 	<oof:list type="LIST_UN">
 		<oof:list-item>Having a way to request auth from a client, say in the job
 			script, then revoke auth after the job has finished.</oof:list-item>

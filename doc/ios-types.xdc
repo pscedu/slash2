@@ -36,8 +36,8 @@ resource lemon {
 		storage which is to be exported into the SLASH2 filesystem.
 		The SLASH2 I/O daemon will expect to find its private internal
 		directory hierarchy at this location.
-		Currently, the SLASH2 I/O service sliod(8) operates on a single file
-		system root.
+		Currently, the SLASH2 I/O service <ref sect='8'>sliod</ref> operates
+		on a single file system root.
 	</oof:p>
 
 	<oof:header size='1'>Archival I/O system</oof:header>
