@@ -869,7 +869,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 
 			if (rlease)
 				/*
-				 * Remove the read cnt, it has been
+				 * Remove the read cnt; it has been
 				 * superseded by the write.
 				 */
 				bmi->bmi_readers--;
@@ -2015,7 +2015,7 @@ slm_ptrunc_prepare(void *p)
 			mds_fcmh_setattr_nolog(current_vfsid, f,
 			    PSCFS_SETATTRF_DATASIZE, &sstb);
 		}
-		FCMH_LOCK(f);
+		FCMH_RLOCK(f);
 		f->fcmh_flags &= ~FCMH_IN_PTRUNC;
 		FCMH_UNBUSY(f);
 		slm_ptrunc_wake_clients(wk);
