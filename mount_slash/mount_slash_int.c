@@ -541,8 +541,6 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 
 	mfh_decref(r->biorq_mfh);
 
-//	psc_assert(pll_empty(biorq_pages));
-//	psc_assert(pll_disjoint(biorq_tentry));
 	OPSTAT_INCR(SLC_OPST_BIORQ_DESTROY);
 	psc_pool_return(slc_biorq_pool, r);
 }
