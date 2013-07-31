@@ -474,6 +474,10 @@ reimport
 - have sliod persistently track CRC updates in case of failure
 - use bgen to prune batch PRECLAIM
 - some IOS seem to get reclaim updates when they have never been online
+- does IOS need to send REPLSCHED back to MDS?  won't crcupd suffice?
+- merge PFLERR_NOTCONN with SLERR_ION_OFFLINE
+- respect ION_WR_DISABLED during ios selection for read if we can
+
 
 st_blocks is broken
 - account metadata overhead in st_blocks?
