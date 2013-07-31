@@ -77,6 +77,7 @@ int
 _mds_fcmh_setattr(int vfsid, struct fidc_membh *f, int to_set,
     const struct srt_stat *sstb, int log)
 {
+	struct srt_stat outbuf;
 	int rc;
 
 	FCMH_LOCK_ENSURE(f);
@@ -86,10 +87,15 @@ _mds_fcmh_setattr(int vfsid, struct fidc_membh *f, int to_set,
 	if (log)
 		mds_reserve_slot(1);
 	rc = mdsio_setattr(vfsid, fcmh_2_mdsio_fid(f), sstb, to_set,
-	    &rootcreds, &f->fcmh_sstb, fcmh_2_mdsio_data(f),
+	    &rootcreds, &outbuf, fcmh_2_mdsio_data(f),
 	    log ? mdslog_namespace : NULL);
 	if (log)
 		mds_unreserve_slot(1);
+
+	FCMH_LOCK(f);
+	f->fcmh_sstb = outbuf;
+	FCMH_ULOCK(f);
+
 	return (rc);
 }
 
