@@ -65,7 +65,7 @@ usage(void)
 void
 dump_reclaim_log(void *buf, int size)
 {
-	int i, count, order = 0, entrysize;
+	int i, count, order = 0;
 	struct srt_reclaim_entry *entryp;
 	uint64_t xid = 0;
 
@@ -78,10 +78,9 @@ dump_reclaim_log(void *buf, int size)
 		exit(1);
 	}
 	count--;
-	entrysize = sizeof(struct srt_reclaim_entry);
-	entryp = PSC_AGP(entryp, entrysize);
+	entryp = PSC_AGP(entryp, sizeof(struct srt_reclaim_entry));
 	printf("   The entry size is %d bytes, total # of entries is %d\n\n",
-	    entrysize, count);
+	    (int)sizeof(struct srt_reclaim_entry), count);
 
 	for (i = 0; i < count; i++) {
 		if (entryp->xid < xid) {
@@ -91,7 +90,7 @@ dump_reclaim_log(void *buf, int size)
 		} else
 			printf("%4d:   xid = %"PRId64", fg = "SLPRI_FG"\n",
 			    i, entryp->xid, SLPRI_FG_ARGS(&entryp->fg));
-		entryp = PSC_AGP(entryp, entrysize);
+		entryp = PSC_AGP(entryp, sizeof(struct srt_reclaim_entry));
 	}
 	printf("\n   Total number of out-of-order entries: %d\n", order);
 }
