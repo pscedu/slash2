@@ -943,7 +943,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 #endif
 		/* our client should really do this on its own */
 		if (!(to_set & PSCFS_SETATTRF_MTIME)) {
-			psclog_warn("missing MTIME flag in RPC request");
+			psclog_warnx("missing MTIME flag in RPC request");
 			to_set |= PSCFS_SETATTRF_MTIME;
 			PFL_GETPTIMESPEC(&mq->attr.sst_mtim);
 		}
@@ -955,7 +955,10 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			 * this generation.
 			 */
 			mq->attr.sst_fg.fg_gen = fcmh_2_gen(f) + 1;
-			to_set |= SL_SETATTRF_GEN;
+			mq->attr.sst_blocks = 0;
+			for (n = 0; n < fcmh_2_nrepls(f); n++)
+				fcmh_set_repl_nblks(f, n, 0);
+			to_set |= SL_SETATTRF_GEN | SL_SETATTR_NBLKS;
 			unbump = 1;
 		} else if (!flush) {
 PFL_GOTOERR(out, mp->rc = -PFLERR_NOTSUP);
