@@ -421,7 +421,7 @@ mds_bmap_add_repl(struct bmapc_memb *b, struct bmap_ios_assign *bia)
 	struct slash_inode_handle *ih;
 	struct fidc_membh *f;
 	uint32_t nrepls;
-	int iosidx;
+	int rc, iosidx;
 
 	f = b->bcm_fcmh;
 	ih = fcmh_2_inoh(f);
@@ -439,11 +439,12 @@ mds_bmap_add_repl(struct bmapc_memb *b, struct bmap_ios_assign *bia)
 
 	BMAP_WAIT_BUSY(b);
 
-	if (mds_repl_inv_except(b, iosidx)) {
+	rc = mds_repl_inv_except(b, iosidx);
+	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, b, "mds_repl_inv_except() failed");
 		BMAP_UNBUSY(b);
 		FCMH_UNBUSY(f);
-		return (-1);
+		return (rc);
 	}
 	mds_reserve_slot(1);
 	logentry = pjournal_get_buf(mdsJournal, sizeof(*logentry));
@@ -608,8 +609,9 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 	bml->bml_ios = bia.bia_ios;
 	bml->bml_seq = bia.bia_seq;
 
-	if (mds_bmap_add_repl(b, &bia))
-		return (-1); // errno
+	rc = mds_bmap_add_repl(b, &bia);
+	if (rc)
+		return (rc);
 
 	DEBUG_FCMH(PLL_INFO, b->bcm_fcmh, "bmap update, elem=%zd",
 	    bmi->bmi_assign->odtr_elem);
