@@ -840,7 +840,7 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 }
 
 int
-upd_proc_pagein_wk(void *p)
+upd_pagein_wk(void *p)
 {
 	struct slm_wkdata_upschq *wk = p;
 	struct slm_update_generic *upg;
@@ -862,8 +862,7 @@ upd_proc_pagein_cb(struct slm_sth *sth, __unusedx void *p)
 {
 	struct slm_wkdata_upschq *wk;
 
-	wk = pfl_workq_getitem(slm_upsch_wk_finish_repl,
-	    struct slm_wkdata_upsch_cb);
+	wk = pfl_workq_getitem(upd_pagein_wk, struct slm_wkdata_upschq);
 	wk->fg.fg_fid = sqlite3_column_int64(sth->sth_sth, 0);
 	wk->bno = sqlite3_column_int(sth->sth_sth, 1);
 	pfl_workq_putitem(wk);
