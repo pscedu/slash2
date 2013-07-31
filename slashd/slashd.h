@@ -301,6 +301,11 @@ struct slm_wkdata_batchrq_cb {
 	int			 rc;
 };
 
+struct slm_wkdata_upschq {
+	struct slash_fidgen	 fg;
+	sl_bmapno_t		 bno;
+};
+
 #define SLM_NWORKER_THREADS	4
 
 enum {

@@ -840,19 +840,33 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 }
 
 int
-upd_proc_pagein_cb(struct slm_sth *sth, __unusedx void *p)
+upd_proc_pagein_wk(void *p)
 {
+	struct slm_wkdata_upschq *wk = p;
 	struct slm_update_generic *upg;
 
 	upg = psc_pool_get(slm_upgen_pool);
 	memset(upg, 0, sizeof(*upg));
 	INIT_PSC_LISTENTRY(&upg->upg_lentry);
 	upd_init(&upg->upg_upd, UPDT_PAGEIN_UNIT);
-	upg->upg_fg.fg_fid = sqlite3_column_int64(sth->sth_sth, 0);
+	upg->upg_fg.fg_fid = wk->fg.fg_fid;
 	upg->upg_fg.fg_gen = FGEN_ANY;
-	upg->upg_bno = sqlite3_column_int(sth->sth_sth, 1);
+	upg->upg_bno = wk->bno;
 	upsch_enqueue(&upg->upg_upd);
 	UPD_UNBUSY(&upg->upg_upd);
+	return (0);
+}
+
+int
+upd_proc_pagein_cb(struct slm_sth *sth, __unusedx void *p)
+{
+	struct slm_wkdata_upschq *wk;
+
+	wk = pfl_workq_getitem(slm_upsch_wk_finish_repl,
+	    struct slm_wkdata_upsch_cb);
+	wk->fg.fg_fid = sqlite3_column_int64(sth->sth_sth, 0);
+	wk->bno = sqlite3_column_int(sth->sth_sth, 1);
+	pfl_workq_putitem(wk);
 	return (0);
 }
 
