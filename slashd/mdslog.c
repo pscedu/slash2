@@ -1338,7 +1338,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 	struct sl_resm *m;
 	struct iovec iov;
 	uint64_t xid;
-	size_t size, entrysize;
+	size_t size;
 	void *handle, *reclaimbuf;
 
 	OPSTAT_ASSIGN(SLM_OPST_RECLAIM_CURSOR, batchno);
@@ -1379,9 +1379,8 @@ mds_send_batch_reclaim(uint64_t batchno)
 	mds_release_file(handle);
 
 	entryp = reclaimbuf;
-	entrysize = sizeof(struct srt_reclaim_entry);
 
-	if (size == entrysize) {
+	if (size == sizeof(struct srt_reclaim_entry)) {
 		PSCFREE(reclaimbuf);
 		psclog_warnx("Empty reclaim log file, batchno=%"PRId64,
 		    batchno);
@@ -1393,8 +1392,8 @@ mds_send_batch_reclaim(uint64_t batchno)
 	 * To avoid confusing other code on the MDS and sliod, pretend
 	 * we have done the job and move on.
 	 */
-	if ((size > entrysize * SLM_RECLAIM_BATCH) ||
-	    ((size % entrysize) != 0)) {
+	if ((size > sizeof(struct srt_reclaim_entry) * SLM_RECLAIM_BATCH) ||
+	    ((size % sizeof(struct srt_reclaim_entry)) != 0)) {
 		psclog_warnx("Reclaim log corrupted! "
 		    "batch=%"PRIx64" size=%zd",
 		    batchno, size);
@@ -1402,10 +1401,11 @@ mds_send_batch_reclaim(uint64_t batchno)
 		PSCFREE(reclaimbuf);
 		return (1);
 	}
-	count = (int)size / entrysize;
+	count = (int)size / sizeof(struct srt_reclaim_entry);
 
 	/* find the xid associated with the last log entry */
-	entryp = PSC_AGP(reclaimbuf, (count - 1) * entrysize);
+	entryp = PSC_AGP(reclaimbuf, 
+	    (count - 1) * sizeof(struct srt_reclaim_entry));
 	xid = entryp->xid;
 
 	len = sizeof(struct srt_reclaim_entry);
@@ -1817,7 +1817,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	struct srt_stat	sstb;
 	void *handle, *reclaimbuf = NULL;
 	char *jrnldev, fn[PATH_MAX];
-	size_t size, entrysize;
+	size_t size;
 
 	OPSTAT_INCR(SLM_OPST_RECLAIM_CURSOR);
 
@@ -1959,7 +1959,6 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	OPSTAT_INCR(SLM_OPST_RECLAIM_BATCHNO);
 	OPSTAT_ASSIGN(SLM_OPST_RECLAIM_BATCHNO, batchno);
 
-	entrysize = sizeof(struct srt_reclaim_entry);
 	if (sstb.sst_size) {
 		reclaimbuf = PSCALLOC(sstb.sst_size);
 
@@ -1976,19 +1975,21 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 			psc_fatalx("Reclaim log corrupted, batchno=%"PRId64,
 				    current_reclaim_batchno);
 
-		size -= entrysize;
+		size -= sizeof(struct srt_reclaim_entry);;
 		max = SLM_RECLAIM_BATCH - 1;
-		reclaim_entryp = PSC_AGP(reclaim_entryp, entrysize);
+		reclaim_entryp = PSC_AGP(reclaim_entryp, 
+		    sizeof(struct srt_reclaim_entry));
 
-		psc_assert((size % entrysize) == 0);
+		psc_assert((size % sizeof(struct srt_reclaim_entry)) == 0);
 
-		total = size / entrysize;
+		total = size / sizeof(struct srt_reclaim_entry);
 		count = 0;
 		psclog_info("scanning the last reclaim log, batchno=%"PRId64,
 		    current_reclaim_batchno);
 		while (count < total) {
 			last_reclaim_xid = reclaim_entryp->xid;
-			reclaim_entryp = PSC_AGP(reclaim_entryp, entrysize);
+			reclaim_entryp = PSC_AGP(reclaim_entryp, 
+			    sizeof(struct srt_reclaim_entry));
 			count++;
 		}
 		if (total > max) {
