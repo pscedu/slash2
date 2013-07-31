@@ -477,6 +477,7 @@ reimport
 - does IOS need to send REPLSCHED back to MDS?  won't crcupd suffice?
 - merge PFLERR_NOTCONN with SLERR_ION_OFFLINE
 - respect ION_WR_DISABLED during ios selection for read if we can
+     - xxx hard because this is chosen by the client
 
 
 st_blocks is broken
