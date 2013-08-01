@@ -126,32 +126,23 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 }
 
 /**
- * sli_rii_handle_replread - Handler for sliver replication read request.
- * @rq: request.
- * @aio:  this argument signifies that the peer has completed an async I/O
- *    of a previously requested sliver and that sliver has been posted for
- *    GET.  In essence, this flag causes the internals of the RPC handler
- *    to be reversed.
+ * sli_rii_handle_repl_read - Handler for sliver replication read request.
  */
 __static int
-sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
+sli_rii_handle_repl_read(struct pscrpc_request *rq)
 {
 	const struct srm_repl_read_req *mq;
 	struct sli_aiocb_reply *aiocbr = NULL;
-	struct sli_repl_workrq *w = NULL;
 	struct srm_repl_read_rep *mp;
 	struct bmapc_memb *b = NULL;
 	struct fidc_membh *f;
 	struct slvr_ref *s;
 	struct iovec iov;
-	int rv, slvridx = 0;
+	int rv;
 
 	sliriithr(pscthr_get())->sirit_st_nread++;
 
-	if (aio)
-		OPSTAT_INCR(SLI_OPST_HANDLE_REPLREAD_AIO);
-	else
-		OPSTAT_INCR(SLI_OPST_HANDLE_REPLREAD);
+	OPSTAT_INCR(SLI_OPST_HANDLE_REPLREAD);
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fg.fg_fid == FID_ANY) {
@@ -177,48 +168,16 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 		 * XXX abort bulk here, otherwise all future RPCs will
 		 * fail
 		 */
-		psclog_errorx("failed to load fid = "SLPRI_FID" bmap = %u aio = %d: %s",
-		    mq->fg.fg_fid, mq->bmapno, aio, slstrerror(mp->rc));
+		psclog_errorx("failed to load fid = "SLPRI_FID" bmap = %u: %s",
+		    mq->fg.fg_fid, mq->bmapno, slstrerror(mp->rc));
 		goto out;
 	}
 
-	s = slvr_lookup(mq->slvrno, bmap_2_bii(b), aio ?
-	    SL_WRITE : SL_READ);
+	s = slvr_lookup(mq->slvrno, bmap_2_bii(b), SL_READ);
 
-	if (aio) {
-		SLVR_LOCK(s);
-		/* Block until the callback handler has finished. */
-		SLVR_WAIT(s, (s->slvr_flags & SLVR_REPLWIRE));
-		SLVR_ULOCK(s);
-
-		/*
-		 * Lookup the workrq.  It should have already been
-		 * created.
-		 */
-		w = sli_repl_findwq(&mq->fg, mq->bmapno);
-		if (!w) {
-			DEBUG_SLVR(PLL_ERROR, s,
-			   "sli_repl_findwq() failed to find wq");
-			//XXX cleanup the sliver ref
-			PFL_GOTOERR(out, mp->rc = -ENOENT);
-		}
-
-		/* Ensure the sliver is found in the work item's array. */
-		for (slvridx = 0; slvridx < (int)nitems(w->srw_slvr_refs);
-		     slvridx++)
-			if (w->srw_slvr_refs[slvridx] == s)
-				break;
-
-		if (slvridx == (int)nitems(w->srw_slvr_refs)) {
-			DEBUG_SLVR(PLL_ERROR, s,
-			   "failed to find slvr in wq=%p", w);
-			PFL_GOTOERR(out, mp->rc = -ENOENT);
-		}
-	}
-
-	slvr_slab_prep(s, aio ? SL_WRITE : SL_READ);
-	slvr_repl_prep(s, aio ? SLVR_REPLDST : 0);
-	rv = slvr_io_prep(s, 0, mq->len, aio ? SL_WRITE : SL_READ, &aiocbr);
+	slvr_slab_prep(s, SL_READ);
+	slvr_repl_prep(s, 0);
+	rv = slvr_io_prep(s, 0, mq->len, SL_READ, &aiocbr);
 	if (rv && rv != -SLERR_AIOWAIT)
 		PFL_GOTOERR(out, mp->rc = rv);
 
@@ -249,13 +208,9 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 		rv = 0;
 	}
 
-	mp->rc = rsx_bulkserver(rq, aio ? BULK_GET_SINK :
-	    BULK_PUT_SOURCE, SRII_BULK_PORTAL, &iov, 1);
+	mp->rc = rsx_bulkserver(rq, BULK_PUT_SOURCE, SRII_BULK_PORTAL, &iov, 1);
 
-	if (aio)
-		sli_rii_replread_release_sliver(w, slvridx, mp->rc);
-	else
-		slvr_rio_done(s);
+	slvr_rio_done(s);
 
  out:
 	if (b)
@@ -263,6 +218,135 @@ sli_rii_handle_replread(struct pscrpc_request *rq, int aio)
 	fcmh_op_done(f);
 	return (mp->rc);
 }
+
+
+/**
+ * sli_rii_handle_repl_read_aio - Handler for sliver replication aio read request.
+ *
+ *    The peer has completed an async I/O of a previously requested sliver and that 
+ *    sliver has been posted for GET.
+ */
+__static int
+sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
+{
+	const struct srm_repl_read_req *mq;
+	struct sli_aiocb_reply *aiocbr = NULL;
+	struct sli_repl_workrq *w = NULL;
+	struct srm_repl_read_rep *mp;
+	struct bmapc_memb *b = NULL;
+	struct fidc_membh *f;
+	struct slvr_ref *s;
+	struct iovec iov;
+	int rv, slvridx = 0;
+
+	sliriithr(pscthr_get())->sirit_st_nread++;
+
+	OPSTAT_INCR(SLI_OPST_HANDLE_REPLREAD_AIO);
+
+	SL_RSX_ALLOCREP(rq, mq, mp);
+	if (mq->fg.fg_fid == FID_ANY) {
+		mp->rc = -EINVAL;
+		return (mp->rc);
+	}
+	if (mq->len <= 0 || mq->len > SLASH_SLVR_SIZE) {
+		mp->rc = -EINVAL;
+		return (mp->rc);
+	}
+	if (mq->slvrno < 0 || mq->slvrno >= SLASH_SLVRS_PER_BMAP) {
+		mp->rc = -EINVAL;
+		return (mp->rc);
+	}
+
+	mp->rc = sli_fcmh_get(&mq->fg, &f);
+	if (mp->rc)
+		goto out;
+
+	mp->rc = bmap_get(f, mq->bmapno, SL_READ, &b);
+	if (mp->rc) {
+		/*
+		 * XXX abort bulk here, otherwise all future RPCs will
+		 * fail
+		 */
+		psclog_errorx("failed to load fid = "SLPRI_FID" bmap = %u: %s",
+		    mq->fg.fg_fid, mq->bmapno, slstrerror(mp->rc));
+		goto out;
+	}
+
+	s = slvr_lookup(mq->slvrno, bmap_2_bii(b), SL_WRITE);
+
+	SLVR_LOCK(s);
+	/* Block until the callback handler has finished. */
+	SLVR_WAIT(s, (s->slvr_flags & SLVR_REPLWIRE));
+	SLVR_ULOCK(s);
+
+	/*
+	 * Lookup the workrq.  It should have already been
+	 * created.
+	 */
+	w = sli_repl_findwq(&mq->fg, mq->bmapno);
+	if (!w) {
+		DEBUG_SLVR(PLL_ERROR, s,
+		   "sli_repl_findwq() failed to find wq");
+		//XXX cleanup the sliver ref
+		PFL_GOTOERR(out, mp->rc = -ENOENT);
+	}
+
+	/* Ensure the sliver is found in the work item's array. */
+	for (slvridx = 0; slvridx < (int)nitems(w->srw_slvr_refs);
+	     slvridx++)
+		if (w->srw_slvr_refs[slvridx] == s)
+			break;
+
+	if (slvridx == (int)nitems(w->srw_slvr_refs)) {
+		DEBUG_SLVR(PLL_ERROR, s,
+		   "failed to find slvr in wq=%p", w);
+		PFL_GOTOERR(out, mp->rc = -ENOENT);
+	}
+
+	slvr_slab_prep(s, SL_WRITE);
+	slvr_repl_prep(s, SLVR_REPLDST);
+	rv = slvr_io_prep(s, 0, mq->len, SL_WRITE, &aiocbr);
+	if (rv && rv != -SLERR_AIOWAIT)
+		PFL_GOTOERR(out, mp->rc = rv);
+
+	iov.iov_base = s->slvr_slab->slb_base;
+	iov.iov_len = mq->len;
+
+	if (aiocbr) {
+		/*
+		 * Ran into an async I/O.  We may have already issued
+		 * the AIO.  So the sliver may be already ready at this
+		 * point.
+		 */
+		psc_assert(!(s->slvr_flags & SLVR_REPLDST));
+
+		SLVR_LOCK(s);
+		if (!(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR))) {
+			pll_add(&s->slvr_pndgaios, aiocbr);
+			SLVR_ULOCK(s);
+			sli_aio_replreply_setup(aiocbr, rq, s, &iov);
+			pscrpc_msg_add_flags(rq->rq_repmsg,
+			    MSG_ABORT_BULK);
+			OPSTAT_INCR(SLI_OPST_HANDLE_REPLREAD_INSERT);
+			PFL_GOTOERR(out, mp->rc = rv);
+		}
+		SLVR_ULOCK(s);
+		sli_aio_aiocbr_release(aiocbr);
+		/* XXX: SLVR_DATAERR */
+		rv = 0;
+	}
+
+	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, SRII_BULK_PORTAL, &iov, 1);
+
+	sli_rii_replread_release_sliver(w, slvridx, mp->rc);
+
+ out:
+	if (b)
+		bmap_op_done(b);
+	fcmh_op_done(f);
+	return (mp->rc);
+}
+
 
 /**
  * sli_rii_replread_cb - Callback triggered when an SRMT_REPL_READ request
@@ -394,10 +478,10 @@ sli_rii_handler(struct pscrpc_request *rq)
 		    SLCONNT_IOD);
 		break;
 	case SRMT_REPL_READ:
-		rc = sli_rii_handle_replread(rq, 0);
+		rc = sli_rii_handle_repl_read(rq);
 		break;
 	case SRMT_REPL_READAIO:
-		rc = sli_rii_handle_replread(rq, 1);
+		rc = sli_rii_handle_repl_read_aio(rq);
 		break;
 	default:
 		psclog_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
