@@ -1978,7 +1978,6 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 			PFL_GOTOERR(out, rc);
 
 		if (sticky) {
-			/* XXX race */
 			rc = msl_lookup_fidcache(pfr, &pcr, opinum,
 			    oldname, &srcfg, &srcsstb, &child);
 			if (rc)
@@ -2029,7 +2028,6 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 
 	if (pcr.pcr_uid) {
 		if (srcfg.fg_fid == FID_ANY) {
-			/* XXX race */
 			rc = msl_lookup_fidcache(pfr, &pcr, opinum,
 			    oldname, &srcfg, &srcsstb, &child);
 			if (rc)
@@ -2089,24 +2087,22 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		FCMH_ULOCK(np);
 	}
 
-	if (srcfg.fg_fid == FID_ANY) {
-		/* XXX race */
 		rc = msl_lookup_fidcache(pfr, &pcr, npinum, newname,
 		    &srcfg, &srcsstb, &child);
-		if (rc)
-			PFL_GOTOERR(out, rc);
-	}
 	if (mp->srr_cattr.sst_fid) {
-		uidmap_int_stat(&mp->srr_cattr);
-		fcmh_setattrf(child, &mp->srr_cattr,
-		    FCMH_SETATTRF_SAVELOCAL);
+		if (child)
+			fcmh_op_done(child);
+		child = fidc_lookup_fg(&mp->srr_cattr.sst_fg);
+		if (child) {
+			uidmap_int_stat(&mp->srr_cattr);
+			fcmh_setattrf(child, &mp->srr_cattr,
+		    	    FCMH_SETATTRF_SAVELOCAL);
+		}
 	}
-	DEBUG_FCMH(PLL_INFO, child, "newname=%s, setattr=%s",
-	    newname, mp->srr_cattr.sst_fid ? "yes" : "no");
 
 	/*
 	 * XXX we do not update dstsstb in our cache if the dst was
-	 * nlinks>1 and the inode was not removed from the filesystem
+	 * nlinks > 1 and the inode was not removed from the file system
 	 * outright as a result of this rename op.
 	 */
 
