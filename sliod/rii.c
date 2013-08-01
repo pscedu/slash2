@@ -309,32 +309,10 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 	if (rv && rv != -SLERR_AIOWAIT)
 		PFL_GOTOERR(out, mp->rc = rv);
 
+	psc_assert(aiocbr == NULL);
+
 	iov.iov_base = s->slvr_slab->slb_base;
 	iov.iov_len = mq->len;
-
-	if (aiocbr) {
-		/*
-		 * Ran into an async I/O.  We may have already issued
-		 * the AIO.  So the sliver may be already ready at this
-		 * point.
-		 */
-		psc_assert(!(s->slvr_flags & SLVR_REPLDST));
-
-		SLVR_LOCK(s);
-		if (!(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR))) {
-			pll_add(&s->slvr_pndgaios, aiocbr);
-			SLVR_ULOCK(s);
-			sli_aio_replreply_setup(aiocbr, rq, s, &iov);
-			pscrpc_msg_add_flags(rq->rq_repmsg,
-			    MSG_ABORT_BULK);
-			OPSTAT_INCR(SLI_OPST_HANDLE_REPLREAD_INSERT);
-			PFL_GOTOERR(out, mp->rc = rv);
-		}
-		SLVR_ULOCK(s);
-		sli_aio_aiocbr_release(aiocbr);
-		/* XXX: SLVR_DATAERR */
-		rv = 0;
-	}
 
 	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, SRII_BULK_PORTAL, &iov, 1);
 
