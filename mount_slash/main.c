@@ -1629,6 +1629,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 			rem = LNET_MTU / esz;
 		esz = sizeof(struct pscfs_dirent) + 16;
 		msl_readdir_issue(pfcc, d, nextoff, rem * esz, 1);
+		OPSTAT_INCR(SLC_OPST_DIRCACHE_RAISSUE);
 	}
 
 	if (0)
