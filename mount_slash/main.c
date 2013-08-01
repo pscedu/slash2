@@ -1496,7 +1496,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	FCMH_LOCK(d);
 	fci = fcmh_2_fci(d);
 
- restart: 
+ restart:
 	PFL_GETPTIMESPEC(&expire);
 	expire.tv_sec -= DIRENT_TIMEO;
 
@@ -1516,6 +1516,16 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 				OPSTAT_INCR(SLC_OPST_DIRCACHE_WAIT);
 				psc_assert(issue);
 				fcmh_wait_nocond_locked(d);
+
+				/*
+				 * We already replied; since a page is
+				 * loading after the requested page,
+				 * assume readahead is already in gear.
+				 */
+				if (pfr == NULL) {
+					FCMH_ULOCK(d);
+					return;
+				}
 				goto restart;
 			}
 			continue;
