@@ -995,7 +995,6 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 		 * Ensure proper setup has occurred.
 		 */
 		psc_assert(!off);
-		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
 		psc_assert(s->slvr_flags & SLVR_FAULTING);
 		psc_assert(s->slvr_pndgreads == 0 &&
 		    s->slvr_pndgwrts == 1);
