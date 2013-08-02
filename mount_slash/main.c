@@ -1455,7 +1455,7 @@ void
 mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
     void *data)
 {
-	int j, nd, nent, issue, issuenext, rc;
+	int hit = 1, j, nd, nent, issue, rc;
 	struct dircache_page *p, *np;
 	struct pscfs_clientctx *pfcc;
 	struct msl_fhent *mfh = data;
@@ -1464,7 +1464,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	struct pscfs_dirent *pfd;
 	struct pscfs_creds pcr;
 	struct fidc_membh *d;
-	off_t adj, nextoff;
+	off_t nextoff;
 
 	OPSTAT_INCR(SLC_OPST_READDIR);
 
@@ -1503,7 +1503,6 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	nextoff = 0;
 	nent = 0;
 	issue = 1;
-	issuenext = 0;
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
 		if (DIRCACHE_PAGE_EXPIRED(d, p, &expire)) {
 			dircache_free_page(d, p);
@@ -1516,16 +1515,6 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 				OPSTAT_INCR(SLC_OPST_DIRCACHE_WAIT);
 				psc_assert(issue);
 				fcmh_wait_nocond_locked(d);
-
-				/*
-				 * We already replied; since a page is
-				 * loading after the requested page,
-				 * assume readahead is already in gear.
-				 */
-				if (pfr == NULL) {
-					FCMH_ULOCK(d);
-					return;
-				}
 				goto restart;
 			}
 			continue;
@@ -1553,52 +1542,61 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 					return;
 				}
 			} else {
-				size_t len;
+				off_t poff, thisoff = p->dcp_off;
+				size_t len, tlen;
 
-				adj = 0;
-				if (off != p->dcp_off) {
-					nd = psc_dynarray_len(&p->dcp_dents);
-					for (j = 0, pfd = p->dcp_base;
-					    j < nd; j++)  {
-						adj += PFL_DIRENT_SIZE(
-						    pfd->pfd_namelen);
-						if (off == (off_t)pfd->pfd_off)
-							break;
-						pfd = PSC_AGP(p->dcp_base, adj);
-					}
+				/* find starting page */
+				poff = 0;
+				nd = psc_dynarray_len(&p->dcp_dents);
+				for (j = 0, pfd = p->dcp_base;
+				    j < nd; j++) {
+					if (off == thisoff)
+						break;
+					poff += PFL_DIRENT_SIZE(
+					    pfd->pfd_namelen);
+					thisoff = pfd->pfd_off;
+					pfd = PSC_AGP(p->dcp_base, poff);
 				}
 
-				len = p->dcp_size - adj;
+				/* determine size */
+				for (len = 0; j < nd; j++)  {
+					tlen = PFL_DIRENT_SIZE(
+					    pfd->pfd_namelen);
+					if (tlen + len > size)
+						break;
+					len += tlen;
+					pfd = PSC_AGP(p->dcp_base, poff + len);
+				}
+
 				psc_assert(len);
-				psc_assert(pfr);
 				pscfs_reply_readdir(pfr,
-				    p->dcp_base + adj,
-				    MIN(size, len), 0);
-				OPSTAT_INCR(SLC_OPST_DIRCACHE_HIT);
-				pfr = NULL;
+				    p->dcp_base + poff, len, 0);
+				if (hit)
+					OPSTAT_INCR(SLC_OPST_DIRCACHE_HIT);
 
 				/*
-				 * We don't return just yet so we can
-				 * issue readahead if applicable.
+				 * (1) If we are at the end of this
+				 *     page,
+				 * (2) this page is not EOF, and
+				 * (3) the next page is not nextoff,
+				 * then issue readahead.
 				 */
-				if (size >= p->dcp_size - adj) {
+				if (j == nd &&
+				    ((p->dcp_flags & DCPF_EOF) == 0) &&
+				    (np == NULL ||
+				     np->dcp_off != p->dcp_nextoff))
 					nextoff = p->dcp_nextoff;
-					if ((p->dcp_flags & DCPF_EOF) == 0)
-						issuenext = 1;
-				}
 				issue = 0;
+				break;
 			}
-		} else if (nextoff &&
-		    nextoff >= p->dcp_off &&
-		    nextoff < p->dcp_nextoff) {
-			issuenext = 0;
-		} else if (nextoff && p->dcp_off > nextoff)
-			break;
+		}
 	}
 	FCMH_ULOCK(d);
 
 	if (issue) {
+		hit = 0;
 		rc = msl_readdir_issue(pfcc, d, off, size, 0);
+		OPSTAT_INCR(SLC_OPST_DIRCACHE_ISSUE);
 		if (rc && !slc_rmc_retry(pfr, &rc)) {
 			pscfs_reply_readdir(pfr, NULL, 0, rc);
 			return;
@@ -1607,7 +1605,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		goto restart;
 	}
 
-	if (issuenext) {
+	if (nextoff) {
 		size_t esz;
 		int rem;
 
@@ -1621,6 +1619,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		FCMH_ULOCK(d);
 		if (rem < 0)
 			rem = 10;
+		/* 2000 * (dirent 24 + avgnamlen 24) = 95KB */
 		if (rem > 2000)
 			rem = 2000;
 		esz = sizeof(struct pscfs_dirent) + 16 +
@@ -2096,7 +2095,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		if (child) {
 			uidmap_int_stat(&mp->srr_cattr);
 			fcmh_setattrf(child, &mp->srr_cattr,
-		    	    FCMH_SETATTRF_SAVELOCAL);
+			    FCMH_SETATTRF_SAVELOCAL);
 		}
 	}
 
