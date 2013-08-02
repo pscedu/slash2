@@ -85,12 +85,17 @@ packshow_conns(__unusedx char *conn)
 }
 
 void
-packshow_fcmhs(__unusedx char *fid)
+packshow_fcmhs(char *fid)
 {
 	struct slctlmsg_fcmh *scf;
 
 	scf = psc_ctlmsg_push(SLMCMT_GETFCMHS, sizeof(struct slctlmsg_fcmh));
 	scf->scf_fg.fg_fid = FID_ANY;
+
+	if (strcmp(fid, "busy") == 0)
+		scf->scf_fg.fg_gen = SLCTL_FCL_BUSY;
+	else
+		psclog_errorx("unrecognized fidcache class: %s", fid);
 }
 
 void

@@ -164,6 +164,9 @@ slctlrep_getfcmh(int fd, struct psc_ctlmsghdr *mh, void *m)
 		PSC_HASHTBL_FOREACH_BUCKET(b, &fidcHtable) {
 			psc_hashbkt_lock(b);
 			PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, f, b) {
+				if (scf->scf_fg.fg_gen == SLCTL_FCL_BUSY &&
+				    (f->fcmh_flags & FCMH_CAC_BUSY) == 0)
+					continue;
 				rc = slctlmsg_fcmh_send(fd, mh, scf, f);
 				if (!rc)
 					break;

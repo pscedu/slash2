@@ -52,6 +52,10 @@ struct slctlmsg_fcmh {
 	int32_t			scf_refcnt;
 };
 
+/* fcmh classes, tucked in scf_fg.fg_gen */
+#define SLCTL_FCL_ALL		0	/* everything */
+#define SLCTL_FCL_BUSY		1	/* only FCMH_CAC_BUSY */
+
 struct slctlmsg_bmap {
 	struct slash_fidgen	scb_fg;
 	uint32_t		scb_bno;
