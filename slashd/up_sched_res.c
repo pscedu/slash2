@@ -227,7 +227,7 @@ slm_upsch_tryrepl_cb(struct pscrpc_request *rq,
  *	between a source and dst IOS pair.
  */
 int
-slm_upsch_tryrepl(struct bmapc_memb *b, int off,
+slm_upsch_tryrepl(struct bmap *b, int off,
     struct sl_resm *src_resm, struct sl_resource *dst_res)
 {
 	int tract[NBREPLST], retifset[NBREPLST], rc = 0;
@@ -435,7 +435,7 @@ slm_upsch_tryptrunc_cb(struct pscrpc_request *rq,
  *    1	: Success.
  */
 int
-slm_upsch_tryptrunc(struct bmapc_memb *b, int off,
+slm_upsch_tryptrunc(struct bmap *b, int off,
     struct sl_resource *dst_res)
 {
 	int tract[NBREPLST], retifset[NBREPLST], rc;
@@ -605,7 +605,7 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 	struct resprof_mds_info *rpmi;
 	struct slm_update_data *upd;
 	struct bmap_mds_info *bmi;
-	struct bmapc_memb *b;
+	struct bmap *b;
 	sl_replica_t repl;
 
 	upg = upd_getpriv(tupd);
@@ -662,7 +662,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 	struct sl_resource *dst_res, *src_res;
 	struct slashrpc_cservice *csvc;
 	struct bmap_mds_info *bmi;
-	struct bmapc_memb *b;
+	struct bmap *b;
 	struct fidc_membh *f;
 	struct sl_resm *m;
 	sl_ios_id_t iosid;
@@ -787,7 +787,7 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 	struct bmap_mds_info *bmi = NULL;
 	struct slm_update_generic *upg;
 	struct fidc_membh *f = NULL;
-	struct bmapc_memb *b = NULL;
+	struct bmap *b = NULL;
 	int rc, retifset[NBREPLST];
 
 	upg = upd_getpriv(upd);
@@ -1146,7 +1146,7 @@ upd_initf(struct slm_update_data *upd, int type, __unusedx int flags)
 	switch (type) {
 	case UPDT_BMAP: {
 		struct bmap_mds_info *bmi;
-		struct bmapc_memb *b;
+		struct bmap *b;
 
 		bmi = upd_getpriv(upd);
 		b = bmi_2_bmap(bmi);

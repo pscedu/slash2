@@ -39,7 +39,7 @@
 #include "zfs-fuse/zfs_slashlib.h"
 
 static __inline void *
-bmap_2_mdsio_data(struct bmapc_memb *b)
+bmap_2_mdsio_data(struct bmap *b)
 {
 	struct fcmh_mds_info *fmi;
 
@@ -61,7 +61,7 @@ bmap_2_mdsio_data(struct bmapc_memb *b)
  *	writes something to it.
  */
 __static void
-mds_bmap_initnew(struct bmapc_memb *b)
+mds_bmap_initnew(struct bmap *b)
 {
 	struct bmap_ondisk *bod = bmap_2_ondisk(b);
 	struct fidc_membh *f = b->bcm_fcmh;
@@ -81,7 +81,7 @@ mds_bmap_initnew(struct bmapc_memb *b)
 }
 
 void
-mds_bmap_ensure_valid(struct bmapc_memb *b)
+mds_bmap_ensure_valid(struct bmap *b)
 {
 	int rc, retifset[NBREPLST];
 
@@ -161,7 +161,7 @@ slm_bmap_resetnonce(struct bmap *b)
  * Returns zero on success, negative errno code on failure.
  */
 int
-mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
+mds_bmap_read(struct bmap *b, __unusedx enum rw rw, int flags)
 {
 	int rc, vfsid, retifset[NBREPLST];
 	uint64_t crc, od_crc = 0;
@@ -247,7 +247,7 @@ mds_bmap_read(struct bmapc_memb *b, __unusedx enum rw rw, int flags)
  *	stabilized.
  */
 int
-mds_bmap_write(struct bmapc_memb *b, int update_mtime, void *logf,
+mds_bmap_write(struct bmap *b, int update_mtime, void *logf,
     void *logarg)
 {
 	struct fidc_membh *f;
@@ -298,7 +298,7 @@ mds_bmap_write(struct bmapc_memb *b, int update_mtime, void *logf,
 }
 
 void
-mds_bmap_init(struct bmapc_memb *b)
+mds_bmap_init(struct bmap *b)
 {
 	struct bmap_mds_info *bmi;
 
@@ -309,7 +309,7 @@ mds_bmap_init(struct bmapc_memb *b)
 }
 
 void
-mds_bmap_destroy(struct bmapc_memb *b)
+mds_bmap_destroy(struct bmap *b)
 {
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 
@@ -326,7 +326,7 @@ mds_bmap_destroy(struct bmapc_memb *b)
  *	the updates to ZFS and then log it.
  */
 int
-mds_bmap_crc_update(struct bmapc_memb *bmap, sl_ios_id_t iosid,
+mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
     struct srm_bmap_crcup *crcup)
 {
 	struct bmap_mds_info *bmi = bmap_2_bmi(bmap);
@@ -400,7 +400,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, sl_ios_id_t iosid,
  */
 int
 _mds_bmap_write_rel(const struct pfl_callerinfo *pci,
-    struct bmapc_memb *b, void *logf)
+    struct bmap *b, void *logf)
 {
 	int rc;
 

@@ -87,7 +87,7 @@ mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
 }
 
 int64_t
-slm_bmap_calc_repltraffic(struct bmapc_memb *b)
+slm_bmap_calc_repltraffic(struct bmap *b)
 {
 	struct fidc_membh *f;
 	int i, locked[2];
@@ -142,7 +142,7 @@ slm_bmap_calc_repltraffic(struct bmapc_memb *b)
  * Note: the new bml has yet to be added.
  */
 __static int
-mds_bmap_directio_locked(struct bmapc_memb *b, enum rw rw, int want_dio,
+mds_bmap_directio_locked(struct bmap *b, enum rw rw, int want_dio,
     lnet_process_id_t *np)
 {
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
@@ -320,7 +320,7 @@ mds_try_sliodresm(struct sl_resm *resm)
  *	marked as BREPLST_VALID.
  */
 __static struct sl_resm *
-mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios,
+mds_resm_select(struct bmap *b, sl_ios_id_t pios,
     sl_ios_id_t *to_skip, int nskip)
 {
 	int i, j, skip, off, val, nr, repls = 0;
@@ -414,7 +414,7 @@ mds_resm_select(struct bmapc_memb *b, sl_ios_id_t pios,
 }
 
 __static int
-mds_bmap_add_repl(struct bmapc_memb *b, struct bmap_ios_assign *bia)
+mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 {
 	struct slmds_jent_bmap_assign *sjba;
 	struct slmds_jent_assign_rep *logentry;
@@ -493,7 +493,7 @@ mds_bmap_add_repl(struct bmapc_memb *b, struct bmap_ios_assign *bia)
 __static int
 mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 {
-	struct bmapc_memb *b = bml_2_bmap(bml);
+	struct bmap *b = bml_2_bmap(bml);
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct resm_mds_info *rmmi;
 	struct bmap_ios_assign bia;
@@ -573,7 +573,7 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 __static int
 mds_bmap_ios_update(struct bmap_mds_lease *bml)
 {
-	struct bmapc_memb *b = bml_2_bmap(bml);
+	struct bmap *b = bml_2_bmap(bml);
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct bmap_ios_assign bia;
 	int rc, dio;
@@ -678,7 +678,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 {
 	int rc, wlease, rlease;
 	struct bmap_mds_info *bmi;
-	struct bmapc_memb *b;
+	struct bmap *b;
 
 	bmi = bml->bml_bmi;
 	b = bmi_2_bmap(bmi);
@@ -750,7 +750,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
  * @seq: lease sequence.
  */
 struct bmap_mds_lease *
-mds_bmap_getbml_locked(struct bmapc_memb *b, uint64_t seq, uint64_t nid,
+mds_bmap_getbml_locked(struct bmap *b, uint64_t seq, uint64_t nid,
     uint32_t pid)
 {
 	struct bmap_mds_lease *bml, *bml1, *bml2;
@@ -802,7 +802,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
     sl_ios_id_t prefios)
 {
 	struct bmap_mds_info *bmi = bml->bml_bmi;
-	struct bmapc_memb *b = bmi_2_bmap(bmi);
+	struct bmap *b = bmi_2_bmap(bmi);
 	struct bmap_mds_lease *obml;
 	int rlease, wlease, rc = 0;
 
@@ -1016,7 +1016,7 @@ mds_bmap_bml_del_locked(struct bmap_mds_lease *bml)
 int
 mds_bmap_bml_release(struct bmap_mds_lease *bml)
 {
-	struct bmapc_memb *b = bml_2_bmap(bml);
+	struct bmap *b = bml_2_bmap(bml);
 	struct bmap_mds_info *bmi = bml->bml_bmi;
 	struct slmds_jent_assign_rep *logentry;
 	struct odtable_receipt *odtr = NULL;
@@ -1204,7 +1204,7 @@ mds_handle_rls_bmap(struct pscrpc_request *rq, __unusedx int sliod)
 	struct srt_bmapdesc *sbd;
 	struct slash_fidgen fg;
 	struct fidc_membh *f;
-	struct bmapc_memb *b;
+	struct bmap *b;
 	uint32_t i;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -1248,7 +1248,7 @@ mds_handle_rls_bmap(struct pscrpc_request *rq, __unusedx int sliod)
 }
 
 static struct bmap_mds_lease *
-mds_bml_new(struct bmapc_memb *b, struct pscrpc_export *e, int flags,
+mds_bml_new(struct bmap *b, struct pscrpc_export *e, int flags,
     lnet_process_id_t *cnp)
 {
 	struct bmap_mds_lease *bml;
@@ -1277,7 +1277,7 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr,
 {
 	struct bmap_ios_assign *bia = data;
 	struct fidc_membh *f = NULL;
-	struct bmapc_memb *b = NULL;
+	struct bmap *b = NULL;
 	struct bmap_mds_lease *bml;
 	struct slash_fidgen fg;
 	struct sl_resm *resm;
@@ -1363,7 +1363,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t iosid,
     const struct srm_bmap_crcwrt_req *mq)
 {
 	struct sl_resource *res = libsl_id2res(iosid);
-	struct bmapc_memb *bmap = NULL;
+	struct bmap *bmap = NULL;
 	struct bmap_mds_info *bmi;
 	struct fidc_membh *f;
 	int rc, vfsid;
@@ -1555,9 +1555,9 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t iosid,
  */
 int
 mds_bmap_loadvalid(struct fidc_membh *f, sl_bmapno_t bmapno,
-    struct bmapc_memb **bp)
+    struct bmap **bp)
 {
-	struct bmapc_memb *b;
+	struct bmap *b;
 	int n, rc;
 
 	*bp = NULL;
@@ -1589,10 +1589,10 @@ mds_bmap_loadvalid(struct fidc_membh *f, sl_bmapno_t bmapno,
 
 int
 mds_bmap_load_fg(const struct slash_fidgen *fg, sl_bmapno_t bmapno,
-    struct bmapc_memb **bp)
+    struct bmap **bp)
 {
 	struct fidc_membh *f;
-	struct bmapc_memb *b;
+	struct bmap *b;
 	int rc = 0;
 
 	psc_assert(*bp == NULL);
@@ -1640,7 +1640,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 {
 	struct slashrpc_cservice *csvc;
 	struct bmap_mds_lease *bml;
-	struct bmapc_memb *b;
+	struct bmap *b;
 	int rc;
 
 	FCMH_LOCK(f);
@@ -1720,7 +1720,7 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
     sl_ios_id_t pios, sl_ios_id_t *prev_ios, int nprev_ios,
     struct srt_bmapdesc *sbd_out, struct pscrpc_export *exp)
 {
-	struct bmapc_memb *b;
+	struct bmap *b;
 	struct bmap_mds_lease *obml;
 	struct bmap_mds_info *bmi;
 	struct bmap_ios_assign bia;
@@ -1827,7 +1827,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
     struct srt_bmapdesc *sbd_out, struct pscrpc_export *exp)
 {
 	struct bmap_mds_lease *bml = NULL, *obml;
-	struct bmapc_memb *b;
+	struct bmap *b;
 	int rc, rw;
 
 	rc = bmap_get(f, sbd_in->sbd_bmapno, SL_WRITE, &b);
@@ -1952,7 +1952,7 @@ struct ios_list {
 };
 
 __static void
-ptrunc_tally_ios(struct bmapc_memb *b, int iosidx, int val, void *arg)
+ptrunc_tally_ios(struct bmap *b, int iosidx, int val, void *arg)
 {
 	struct ios_list *ios_list = arg;
 	sl_ios_id_t ios_id;
@@ -1989,7 +1989,7 @@ slm_ptrunc_prepare(void *p)
 	struct fcmh_mds_info *fmi;
 	struct psc_dynarray *da;
 	struct fidc_membh *f;
-	struct bmapc_memb *b;
+	struct bmap *b;
 	sl_bmapno_t i;
 
 	f = wk->f;
@@ -2090,7 +2090,7 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 	int done = 0, tract[NBREPLST];
 	struct ios_list ios_list;
 	struct fidc_membh *f;
-	struct bmapc_memb *b;
+	struct bmap *b;
 	sl_bmapno_t i;
 
 	f = wk->f;
