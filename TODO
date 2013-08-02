@@ -478,7 +478,6 @@ reimport
 - merge PFLERR_NOTCONN with SLERR_ION_OFFLINE
 - respect ION_WR_DISABLED during ios selection for read if we can
      - xxx hard because this is chosen by the client
-- make sure two IOS's don't have the same NID/PID in slcfg
 - get rid of FIDC_LOOKUP_LOAD
 
 st_blocks is broken
