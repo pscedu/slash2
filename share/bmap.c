@@ -41,20 +41,20 @@
 #include "slashrpc.h"
 #include "slerr.h"
 
-__static SPLAY_GENERATE(bmap_cache, bmapc_memb, bcm_tentry, bmap_cmp);
+__static SPLAY_GENERATE(bmap_cache, bmap, bcm_tentry, bmap_cmp);
 
 struct psc_poolmaster	 bmap_poolmaster;
 struct psc_poolmgr	*bmap_pool;
 
 /**
- * bmap_cmp - comparator for bmapc_membs in the splay cache.
- * @a: a bmapc_memb
- * @b: another bmapc_memb
+ * bmap_cmp - comparator for bmaps in the splay cache.
+ * @a: a bmap
+ * @b: another bmap
  */
 int
 bmap_cmp(const void *x, const void *y)
 {
-	const struct bmapc_memb *a = x, *b = y;
+	const struct bmap *a = x, *b = y;
 
 	return (CMP(a->bcm_bmapno, b->bcm_bmapno));
 }
@@ -62,7 +62,7 @@ bmap_cmp(const void *x, const void *y)
 void
 bmap_free_all_locked(struct fidc_membh *f)
 {
-	struct bmapc_memb *a, *b;
+	struct bmap *a, *b;
 
 	FCMH_LOCK_ENSURE(f);
 
@@ -74,7 +74,7 @@ bmap_free_all_locked(struct fidc_membh *f)
 }
 
 void
-bmap_remove(struct bmapc_memb *b)
+bmap_remove(struct bmap *b)
 {
 	struct fidc_membh *f = b->bcm_fcmh;
 
@@ -93,7 +93,7 @@ bmap_remove(struct bmapc_memb *b)
 }
 
 void
-_bmap_op_done(const struct pfl_callerinfo *pci, struct bmapc_memb *b,
+_bmap_op_done(const struct pfl_callerinfo *pci, struct bmap *b,
     const char *fmt, ...)
 {
 	va_list ap;
@@ -129,11 +129,11 @@ _bmap_op_done(const struct pfl_callerinfo *pci, struct bmapc_memb *b,
  *	structure.
  * @new_bmap: whether to allow creation and also value-result of status.
  */
-struct bmapc_memb *
+struct bmap *
 bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n,
     int *new_bmap)
 {
-	struct bmapc_memb lb, *b, *b2 = NULL;
+	struct bmap lb, *b, *b2 = NULL;
 	int locked, doalloc;
 
 	doalloc = *new_bmap;
@@ -214,10 +214,10 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n,
  */
 int
 _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
-    sl_bmapno_t n, enum rw rw, int flags, struct bmapc_memb **bp)
+    sl_bmapno_t n, enum rw rw, int flags, struct bmap **bp)
 {
-	int rc = 0, new_bmap,  bmaprw = 0;
-	struct bmapc_memb *b;
+	int rc = 0, new_bmap, bmaprw = 0;
+	struct bmap *b;
 
 	*bp = NULL;
 
@@ -309,8 +309,8 @@ void
 bmap_cache_init(size_t priv_size)
 {
 	_psc_poolmaster_init(&bmap_poolmaster,
-	    sizeof(struct bmapc_memb) + priv_size,
-	    offsetof(struct bmapc_memb, bcm_lentry),
+	    sizeof(struct bmap) + priv_size,
+	    offsetof(struct bmap, bcm_lentry),
 	    PPMF_AUTO, 64, 64, 0, NULL, NULL, NULL, NULL, "bmap");
 	bmap_pool = psc_poolmaster_getmgr(&bmap_poolmaster);
 }
@@ -336,14 +336,14 @@ bmapdesc_access_check(struct srt_bmapdesc *sbd, enum rw rw,
 }
 
 void
-dump_bmapod(struct bmapc_memb *bmap)
+dump_bmapod(struct bmap *bmap)
 {
 	DEBUG_BMAPOD(PLL_MAX, bmap, "");
 }
 
 void
 _dump_bmapod(const struct pfl_callerinfo *pci, int level,
-    struct bmapc_memb *bmap, const char *fmt, ...)
+    struct bmap *bmap, const char *fmt, ...)
 {
 	va_list ap;
 
@@ -391,7 +391,7 @@ dump_bmap_repls(uint8_t *repls)
 
 void
 _dump_bmapodv(const struct pfl_callerinfo *pci, int level,
-    struct bmapc_memb *bmap, const char *fmt, va_list ap)
+    struct bmap *bmap, const char *fmt, va_list ap)
 {
 	char mbuf[LINE_MAX], rbuf[SL_MAX_REPLICAS + 1],
 	     cbuf[SLASH_CRCS_PER_BMAP + 1];
@@ -445,13 +445,13 @@ dump_bmap_flags(uint32_t flags)
 }
 
 void
-_dump_bmap_common(struct bmapc_memb *b)
+_dump_bmap_common(struct bmap *b)
 {
 	DEBUG_BMAP(PLL_MAX, b, "");
 }
 
 __weak void
-dump_bmap(struct bmapc_memb *b)
+dump_bmap(struct bmap *b)
 {
 	_dump_bmap_common(b);
 }
