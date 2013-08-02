@@ -193,7 +193,10 @@ void	msl_fsrqinfo_biorq_add(struct msl_fsrqinfo *, struct bmpc_ioreq *,int);
 
 struct resprof_cli_info {
 	struct psc_dynarray		 rpci_pinned_bmaps;
+	int				 rcpi_flags;
 };
+
+#define RCPIF_AVOID			(1 << 0)
 
 static __inline struct resprof_cli_info *
 res2rpci(struct sl_resource *res)
@@ -259,28 +262,6 @@ void	  bmap_flush_resched(struct bmpc_ioreq *, int);
 #define BMAPFLSH_RPCWAIT	(1 << 0)
 #define BMAPFLSH_EXPIRE		(1 << 1)
 #define BMAPFLSH_TIMEOA		(1 << 2)
-
-extern const char		*ctlsockfn;
-extern sl_ios_id_t		 prefIOS;
-extern struct psc_listcache	 bmapFlushQ;
-extern struct sl_resm		*slc_rmc_resm;
-extern char			 mountpoint[];
-
-extern struct psc_waitq		 msl_fhent_flush_waitq;
-
-extern struct psc_iostats	 msl_diord_stat;
-extern struct psc_iostats	 msl_diowr_stat;
-extern struct psc_iostats	 msl_rdcache_stat;
-extern struct psc_iostats	 msl_racache_stat;
-
-extern struct psc_iostats	 msl_io_1b_stat;
-extern struct psc_iostats	 msl_io_1k_stat;
-extern struct psc_iostats	 msl_io_4k_stat;
-extern struct psc_iostats	 msl_io_16k_stat;
-extern struct psc_iostats	 msl_io_64k_stat;
-extern struct psc_iostats	 msl_io_128k_stat;
-extern struct psc_iostats	 msl_io_512k_stat;
-extern struct psc_iostats	 msl_io_1m_stat;
 
 enum {
 	SLC_OPST_AIO_PLACED,
@@ -398,6 +379,28 @@ enum {
 	SLC_FAULT_READ_CB_EIO,
 	SLC_FAULT_REQUEST_TIMEOUT
 };
+
+extern const char		*ctlsockfn;
+extern sl_ios_id_t		 prefIOS;
+extern struct psc_listcache	 bmapFlushQ;
+extern struct sl_resm		*slc_rmc_resm;
+extern char			 mountpoint[];
+
+extern struct psc_waitq		 msl_fhent_flush_waitq;
+
+extern struct psc_iostats	 msl_diord_stat;
+extern struct psc_iostats	 msl_diowr_stat;
+extern struct psc_iostats	 msl_rdcache_stat;
+extern struct psc_iostats	 msl_racache_stat;
+
+extern struct psc_iostats	 msl_io_1b_stat;
+extern struct psc_iostats	 msl_io_1k_stat;
+extern struct psc_iostats	 msl_io_4k_stat;
+extern struct psc_iostats	 msl_io_16k_stat;
+extern struct psc_iostats	 msl_io_64k_stat;
+extern struct psc_iostats	 msl_io_128k_stat;
+extern struct psc_iostats	 msl_io_512k_stat;
+extern struct psc_iostats	 msl_io_1m_stat;
 
 extern struct psc_listcache	 bmapTimeoutQ;
 extern struct psc_waitq		 bmapFlushWaitq;
