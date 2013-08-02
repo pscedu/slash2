@@ -252,14 +252,14 @@ struct bmap {
 		    "took reference (type=%u)", (type));		\
 	} while (0)
 
-#define bmap_op_done_type(b, flag)					\
+#define bmap_op_done_type(b, type)					\
 	do {								\
 		(void)BMAP_RLOCK(b);					\
 		psc_assert(psc_atomic32_read(&(b)->bcm_opcnt) > 0);	\
 		psc_atomic32_dec(&(b)->bcm_opcnt);			\
 		_bmap_op_done(PFL_CALLERINFOSS(SLSS_BMAP), (b),		\
-		    _DEBUG_BMAP_FMT "released reference (flag=%u)",	\
-		    _DEBUG_BMAP_FMTARGS(b), (flag));			\
+		    _DEBUG_BMAP_FMT "released reference (type=%u)",	\
+		    _DEBUG_BMAP_FMTARGS(b), (type));			\
 	} while (0)
 
 #define bmap_op_done(b)		bmap_op_done_type((b), BMAP_OPCNT_LOOKUP)
@@ -286,7 +286,6 @@ struct bmap {
 /* bcs_crcstates flags */
 #define BMAP_SLVR_DATA		(1 << 0)	/* Data present, otherwise slvr is hole */
 #define BMAP_SLVR_CRC		(1 << 1)	/* Has valid CRC */
-#define BMAP_SLVR_CRCDIRTY	(1 << 2)
 #define BMAP_SLVR_CRCABSENT	(1 << 3)
 #define _BMAP_SLVR_FLSHFT	(1 << 4)
 
