@@ -553,9 +553,9 @@ void
 slcfg_resm_addaddr(char *addr, const char *lnetname)
 {
 	static int init;
-	char ifn[IFNAMSIZ], *ifv[1], *sp, *tnam;
+	char nidbuf[PSCRPC_NIDSTR_SIZE], ifn[IFNAMSIZ], *ifv[1], *sp, *tnam;
+	struct sl_resm *m = currentResm, *dupm;
 	struct addrinfo hints, *res, *res0;
-	struct sl_resm *m = currentResm;
 	struct sl_resm_nid *resm_nidp;
 	union pfl_sockaddr_ptr sa;
 	uint32_t lnet;
@@ -622,8 +622,12 @@ slcfg_resm_addaddr(char *addr, const char *lnetname)
 
 		resm_nidp = PSCALLOC(sizeof(*resm_nidp));
 		resm_nidp->resmnid_nid = LNET_MKNID(lnet, ip);
-		if (libsl_try_nid2resm(resm_nidp->resmnid_nid))
-			yyerror("NID already registered");
+		dupm = libsl_try_nid2resm(resm_nidp->resmnid_nid);
+		if (dupm)
+			yyerror("%s NID %s already registered for %s",
+			    currentRes->res_name,
+			    pscrpc_nid2str(resm_nidp->resmnid_nid,
+			    nidbuf), dupm->resm_name);
 
 		rc = snprintf(resm_nidp->resmnid_addrbuf,
 		    sizeof(resm_nidp->resmnid_addrbuf),
