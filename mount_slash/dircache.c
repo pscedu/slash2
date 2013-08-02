@@ -358,7 +358,7 @@ dircache_ent_dprintf(struct dircache_page *p, struct dircache_ent *e,
 		*pp = p;
 	}
 
-	printf("   ent %*s\n", e->dce_namelen, e->dce_name);
+	printf("   ent %.*s\n", e->dce_namelen, e->dce_name);
 }
 
 void
