@@ -51,8 +51,7 @@ struct sl_resm;
 enum slconn_type {
 	SLCONNT_CLI,
 	SLCONNT_IOD,
-	SLCONNT_MDS,
-	SLNCONNT
+	SLCONNT_MDS
 };
 
 struct slconn_params {

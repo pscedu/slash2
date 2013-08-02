@@ -46,14 +46,7 @@ struct psc_vbitmap;
 #define SLB_SIZE	(SLB_BLKSZ * SLB_NBLK)
 
 enum {
-	SLB_DIRTY	= 0x01, /* have dirty data		*/
-	SLB_INFLIGHT	= 0x02, /* data faulting in or out	*/
-	SLB_FREEING	= 0x04,
-	SLB_PINNED	= 0x08, /* not freeable			*/
-	SLB_LRU		= 0x10, /* on the lru, nothing pinned or dirty */
-	SLB_FREE	= 0x20,
-	SLB_INIT	= 0x40,
-	SLB_FRESH	= 0x80
+	SLB_FRESH	= 0x01
 };
 
 /**
@@ -89,7 +82,7 @@ struct sl_buffer {
 #define DEBUG_SLB(level, slb, fmt, ...)					\
 	psclogs((level), PSS_DEF,					\
 	    "slb@%p b:%p sz(%d/%d) bsz:%u"				\
-	    " ref:%d umref:%d inf:%d infp:%d fl:%s%s%s%s%s%s%s%s"	\
+	    " ref:%d umref:%d inf:%d infp:%d fl:%s"			\
 	    " fcmh:%p lco:%p "fmt,					\
 	    (slb), (slb)->slb_base, (slb)->slb_nblks,			\
 	    psc_vbitmap_nfree((slb)->slb_inuse),			\
@@ -98,13 +91,6 @@ struct sl_buffer {
 	    atomic_read(&(slb)->slb_unmapd_ref),			\
 	    atomic_read(&(slb)->slb_inflight),				\
 	    atomic_read(&(slb)->slb_inflpndg),				\
-	    ATTR_TEST((slb)->slb_flags, SLB_DIRTY)	? "d" : "",	\
-	    ATTR_TEST((slb)->slb_flags, SLB_INFLIGHT)	? "I" : "",	\
-	    ATTR_TEST((slb)->slb_flags, SLB_FREEING)	? "F" : "",	\
-	    ATTR_TEST((slb)->slb_flags, SLB_PINNED)	? "P" : "",	\
-	    ATTR_TEST((slb)->slb_flags, SLB_LRU)	? "L" : "",	\
-	    ATTR_TEST((slb)->slb_flags, SLB_FREE)	? "f" : "",	\
-	    ATTR_TEST((slb)->slb_flags, SLB_INIT)	? "i" : "",	\
 	    ATTR_TEST((slb)->slb_flags, SLB_FRESH)	? "r" : "",	\
 	    (slb)->slb_lc_fcmh, (slb)->slb_lc_owner,			\
 	    ## __VA_ARGS__)
