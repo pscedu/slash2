@@ -335,7 +335,7 @@ batchrq_send(struct batchrq *br)
 		goto err;
 
 	rq->rq_interpret_reply = batchrq_send_cb;
-	rq->rq_async_args.pointer_arg[0] = br->br_csvc;
+	rq->rq_async_args.pointer_arg[0] = br;
 	rc = SL_NBRQSET_ADD(br->br_csvc, rq);
 	if (rc)
  err:
