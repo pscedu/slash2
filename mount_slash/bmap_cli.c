@@ -158,8 +158,8 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct srm_reassignbmap_rep *mp =
 	    pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
-	int rc;
 	struct bmap_cli_info  *bci = bmap_2_bci(b);
+	int rc;
 
 	psc_assert(&rq->rq_async_args == args);
 
@@ -664,6 +664,54 @@ msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd)
 	lc_addtail(&bmapTimeoutQ, bci);
 }
 
+struct reptbl_lookup {
+	sl_ios_id_t		 id;
+	struct sl_resource	*r;
+};
+
+int
+slc_reptbl_cmp(const void *a, const void *b)
+{
+	struct reptbl_lookup * const *pa = a, *x = *pa;
+	struct reptbl_lookup * const *pb = b, *y = *pb;
+	struct resprof_cli_info *xi, *yi;
+	struct sl_resource *r;
+	struct sl_resm *m;
+	int rc, xv, yv, i;
+
+	/* try preferred IOS */
+	r = libsl_id2res(prefIOS);
+	xv = yv = 1;
+	DYNARRAY_FOREACH(m, i, &r->res_members) {
+		if (x->id == m->resm_res_id) {
+			xv = -1;
+			if (yv == -1)
+				break;
+		} else if (y->id == m->resm_res_id) {
+			yv = -1;
+			if (xv == -1)
+				break;
+		}
+	}
+	rc = CMP(xv, yv);
+	if (rc)
+		return (rc);
+
+	/* try non-archival and non-degraded IOS */
+	xv = x->r->res_type == SLREST_ARCHIVAL_FS ? 1 : -1;
+	yv = y->r->res_type == SLREST_ARCHIVAL_FS ? 1 : -1;
+	rc = CMP(xv, yv);
+	if (rc)
+		return (rc);
+
+	/* try degraded IOS */
+	xi = res2rpci(x->r);
+	yi = res2rpci(y->r);
+	xv = xi->rcpi_flags & RCPIF_AVOID ? 1 : -1;
+	yv = yi->rcpi_flags & RCPIF_AVOID ? 1 : -1;
+	return (CMP(xv, yv));
+}
+
 /**
  * msl_bmap_to_csvc - Given a bmap, perform a series of lookups to
  *	locate the ION csvc.  The ION was chosen by the MDS and
@@ -678,14 +726,13 @@ msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd)
 struct slashrpc_cservice *
 msl_bmap_to_csvc(struct bmap *b, int exclusive)
 {
-	int i, j, tmp, off, locked;
+	int n, i, j, off, locked;
+	struct reptbl_lookup order[SL_MAX_REPLICAS], *lk;
 	struct slashrpc_cservice *csvc;
-	struct sl_resource *res, *r;
 	struct fcmh_cli_info *fci;
 	struct psc_multiwait *mw;
 	struct rnd_iterator it;
 	struct sl_resm *m;
-	uint64_t repls; // XXX 1 bit per repl, SL_MAX_REPLICAS
 	void *p;
 
 	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
@@ -699,98 +746,42 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive)
 		return (slc_geticsvc(m));
 	}
 
-	res = libsl_id2res(prefIOS);
-	psc_assert(res);
-
 	fci = fcmh_get_pri(b->bcm_fcmh);
 	mw = msl_getmw();
-	for (i = 0; i < 2; i++) {
-		/*
-		 * Do two iterations:
-		 *
-		 *   (o) first time through we consider non-archival
-		 *	 resources only, to prioritize faster resources,
-		 *	 even if we have to wait a few moments for
-		 *	 connections to get established.
-		 *
-		 *   (o) second time through, ALL types of resources
-		 *       are considered.
-		 */
+
+	for (j = 0, off = 0; j < fci->fci_nrepls;
+	    j++, off += SL_BITS_PER_REPLICA)
+		if (SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls,
+		    off))
+			break;
+	if (j == fci->fci_nrepls) {
+		DEBUG_BMAP(PLL_ERROR, b,
+		    "corrupt bmap!  no valid replicas!");
+		return (NULL);
+	}
+
+	n = 0;
+	FOREACH_RND(&it, fci->fci_nrepls) {
+		lk = &order[n++];
+		lk->id = fci->fci_reptbl[it.ri_rnd_idx].bs_id;
+		lk->r = libsl_id2res(lk->id);
+		if (lk->r == NULL) {
+			DEBUG_FCMH(PLL_ERROR, b->bcm_fcmh,
+			    "unknown resource %#x", lk->id);
+			n--;
+		}
+	}
+	qsort(order, n, sizeof(order[0]), slc_reptbl_cmp);
+
+	for (j = 0; j < 2; j++) {
 		psc_multiwait_reset(mw);
 		psc_multiwait_entercritsect(mw);
-
-		if (fci->fci_nrepls == 1) {
-			csvc = msl_try_get_replica_res(b, 0);
+		for (i = 0; i < n; i++) {
+			csvc = msl_try_get_replica_res(b, order[i].id);
 			if (csvc) {
 				psc_multiwait_leavecritsect(mw);
 				return (csvc);
 			}
-			goto block;
-		}
-
-		repls = 0;
-
-		/* first, try preferred IOS */
-		FOREACH_RND(&it, fci->fci_nrepls) {
-			/* scan through the members */
-			DYNARRAY_FOREACH(m, tmp, &res->res_members) {
-				if (fci->fci_reptbl[it.ri_rnd_idx].bs_id !=
-				    m->resm_res_id)
-					continue;
-
-				csvc = msl_try_get_replica_res(b,
-				    it.ri_rnd_idx);
-				if (csvc) {
-					psc_multiwait_leavecritsect(mw);
-					return (csvc);
-				}
-
-				repls |= (1 << it.ri_rnd_idx);
-			}
-		}
-
-		/* rats, not available; try anyone available now */
-		FOREACH_RND(&it, fci->fci_nrepls) {
-			if (repls & (1 << it.ri_rnd_idx))
-				continue;
-
-			sl_ios_id_t id;
-
-			id = fci->fci_reptbl[it.ri_rnd_idx].bs_id;
-			r = libsl_id2res(id);
-			if (r == NULL) {
-				DEBUG_FCMH(PLL_ERROR, b->bcm_fcmh,
-				    "unknown resource %#x", id);
-				continue;
-			}
-			if (i == 0 &&
-			    r->res_type != SLREST_PARALLEL_COMPNT &&
-			    r->res_type != SLREST_STANDALONE_FS)
-				continue;
-
-			csvc = msl_try_get_replica_res(b, it.ri_rnd_idx);
-			if (csvc) {
-				psc_multiwait_leavecritsect(mw);
-				return (csvc);
-			}
-
-			repls |= (1 << it.ri_rnd_idx);
-		}
-
- block:
-		if (!psc_dynarray_len(&mw->mw_conds))
-			break;
-
-		for (j = 0, off = 0;
-		    j < fcmh_2_fci(b->bcm_fcmh)->fci_nrepls;
-		    j++, off += SL_BITS_PER_REPLICA)
-			if (SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls,
-			    off))
-				break;
-		if (j == fcmh_2_fci(b->bcm_fcmh)->fci_nrepls) {
-			DEBUG_BMAP(PLL_ERROR, b,
-			    "corrupt bmap!  no valid replicas!");
-			return (NULL);
 		}
 
 		/*
@@ -798,6 +789,8 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive)
 		 * amount of time for any to finish connection
 		 * (re)establishment.
 		 */
+		if (!psc_dynarray_len(&mw->mw_conds))
+			break;
 		psc_multiwait_secs(mw, &p, BMAP_CLI_MAX_LEASE);
 	}
 	psc_multiwait_leavecritsect(mw);
