@@ -111,7 +111,7 @@ slm_fcmh_ctor(struct fidc_membh *f, int flags)
 
 	rc = slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 	if (rc) {
-		DEBUG_FCMH(PLL_WARN, f, "invalid file system id "
+		DEBUG_FCMH(PLL_WARN, f, "invalid file system ID "
 		    "(rc=%d)", rc);
 		return (rc);
 	}
@@ -155,7 +155,7 @@ slm_fcmh_ctor(struct fidc_membh *f, int flags)
 		} else {
 			fmi->fmi_ctor_rc = rc;
 			DEBUG_FCMH(PLL_WARN, f,
-			    "mdsio_opencreate failed (mf=%"PRIx64" rc=%d)", 
+			    "mdsio_opencreate failed (mf=%"PRIx64" rc=%d)",
 			    fcmh_2_mdsio_fid(f), rc);
 		}
 	} else

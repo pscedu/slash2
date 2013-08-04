@@ -255,7 +255,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 
 	/* Do we need this inc/dec combo for biorq reference? */
 	psc_atomic32_inc(&rmci->rmci_infl_rpcs);
-	psclog_info("Inflight write RPC for %d: %d", 
+	psclog_info("Inflight write RPC for %d: %d",
 	    m->resm_res_id, psc_atomic32_read(&rmci->rmci_infl_rpcs));
 
 	/* biorqs will be freed by the nbreqset callback msl_write_rpc_cb() */
