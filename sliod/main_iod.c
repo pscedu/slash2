@@ -26,6 +26,7 @@
 #include <sys/statvfs.h>
 #include <sys/mount.h>
 #include <sys/wait.h>
+#include <sys/time.h>
 
 #include <err.h>
 #include <stdio.h>
@@ -64,6 +65,7 @@
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
+int			 sli_selftest_rc;
 struct srt_statfs	 sli_ssfb;
 psc_spinlock_t		 sli_ssfb_lock = SPINLOCK_INIT;
 struct psc_thread	*sliconnthr;
@@ -152,15 +154,16 @@ slistatfsthr_main(__unusedx struct psc_thread *thr)
  * 2	degraded, avoid
  */
 void
-slihealththr_main(__unusex struct psc_thread *thr)
+slihealththr_main(__unusedx struct psc_thread *thr)
 {
 	struct itimerval itv;
+	int rc;
 
 	signal(SIGALRM, SIG_IGN);
 	while (pscthr_run()) {
 		memset(&itv, 0, sizeof(itv));
-		PFL_GETTIMEVAL(&itv.itv_value);
-		itv.itv_value.tv_sec += 30;
+		PFL_GETTIMEVAL(&itv.it_value);
+		itv.it_value.tv_sec += 30;
 		setitimer(ITIMER_REAL, &itv, NULL);
 		rc = system(nodeResm->resm_res->res_selftest);
 		memset(&itv, 0, sizeof(itv));
