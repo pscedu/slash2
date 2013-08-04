@@ -661,10 +661,11 @@ upd_proc_bmap(struct slm_update_data *upd)
 	struct rnd_iterator dst_res_i, src_res_i;
 	struct sl_resource *dst_res, *src_res;
 	struct slashrpc_cservice *csvc;
+	struct sl_mds_iosinfo *si;
 	struct bmap_mds_info *bmi;
-	struct bmap *b;
 	struct fidc_membh *f;
 	struct sl_resm *m;
+	struct bmap *b;
 	sl_ios_id_t iosid;
 
 	bmi = upd_getpriv(upd);
@@ -739,6 +740,11 @@ upd_proc_bmap(struct slm_update_data *upd)
 					if (tryarchival ^
 					    (src_res->res_type ==
 					     SLREST_ARCHIVAL_FS))
+						continue;
+					si = res2iosinfo(src_res);
+					if (tryarchival ^
+					    (si->si_flags &
+					     SIF_DISABLE_BIA))
 						continue;
 
 					/*
