@@ -1371,7 +1371,6 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	iov[0].iov_base = NULL;
 
  out:
-
 	msl_readdir_fin(csvc, iov);
 	fcmh_op_done_type(d, FCMH_OPCNT_READDIR);
 	return (0);
