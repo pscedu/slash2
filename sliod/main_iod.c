@@ -145,15 +145,35 @@ slistatfsthr_main(__unusedx struct psc_thread *thr)
 	}
 }
 
+/**
+ * slihealththr_main -
+ * 0	OK
+ * 1	serious error, do not use
+ * 2	degraded, avoid
+ */
+void
+slihealththr_main(__unusex struct psc_thread *thr)
+{
+	struct itimerval itv;
+
+	signal(SIGALRM, SIG_IGN);
+	while (pscthr_run()) {
+		memset(&itv, 0, sizeof(itv));
+		PFL_GETTIMEVAL(&itv.itv_value);
+		itv.itv_value.tv_sec += 30;
+		setitimer(ITIMER_REAL, &itv, NULL);
+		rc = system(nodeResm->resm_res->res_selftest);
+		memset(&itv, 0, sizeof(itv));
+		setitimer(ITIMER_REAL, &itv, NULL);
+		sli_selftest_rc = WIFSIGNALED(rc) ? 1 : WEXITSTATUS(rc);
+		sleep(30);
+	}
+}
+
 int
 slirmiconnthr_upcall(__unusedx void *arg)
 {
-	int rc;
-
-	if (nodeResm->resm_res->res_selftest[0] == '\0')
-		return (0);
-	rc = system(nodeResm->resm_res->res_selftest);
-	return (WEXITSTATUS(rc));
+	return (sli_selftest_rc);
 }
 
 __dead void
@@ -269,8 +289,12 @@ main(int argc, char *argv[])
 	pscthr_init(SLITHRT_STATFS, 0, slistatfsthr_main, NULL, 0,
 	    "slistatfsthr");
 
+	pscthr_init(SLITHRT_HEALTH, 0, slihealththr_main, NULL, 0,
+	    "slihealththr");
+
 	sliconnthr = slconnthr_spawn(SLITHRT_CONN, "sli",
-	    slirmiconnthr_upcall, NULL);
+	    nodeResm->resm_res->res_selftest[0] ?
+	    slirmiconnthr_upcall : NULL, NULL);
 
 	prefmds = globalConfig.gconf_prefmds;
 	if (argc)
