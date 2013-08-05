@@ -27,10 +27,10 @@
 
 #include <stddef.h>
 
+#include "pfl/rpc.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/iostats.h"
 #include "psc_util/random.h"
-#include "pfl/rpc.h"
 
 #include "slconfig.h"
 #include "bmap_cli.h"
@@ -666,6 +666,7 @@ msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd)
 
 struct reptbl_lookup {
 	sl_ios_id_t		 id;
+	int			 idx;
 	struct sl_resource	*r;
 };
 
@@ -764,6 +765,7 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive)
 	FOREACH_RND(&it, fci->fci_nrepls) {
 		lk = &order[n++];
 		lk->id = fci->fci_reptbl[it.ri_rnd_idx].bs_id;
+		lk->idx = it.ri_rnd_idx;
 		lk->r = libsl_id2res(lk->id);
 		if (lk->r == NULL) {
 			DEBUG_FCMH(PLL_ERROR, b->bcm_fcmh,
@@ -777,7 +779,7 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive)
 		psc_multiwait_reset(mw);
 		psc_multiwait_entercritsect(mw);
 		for (i = 0; i < n; i++) {
-			csvc = msl_try_get_replica_res(b, order[i].id);
+			csvc = msl_try_get_replica_res(b, order[i].idx);
 			if (csvc) {
 				psc_multiwait_leavecritsect(mw);
 				return (csvc);
