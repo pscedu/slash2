@@ -43,7 +43,11 @@
 int
 slc_rci_handle_ctl(struct pscrpc_request *rq)
 {
+	struct srm_ctl_req *mq;
+	struct srm_ctl_rep *mp;
+
 	SL_RSX_ALLOCREP(rq, mq, mp);
+	return (0);
 }
 
 /**
