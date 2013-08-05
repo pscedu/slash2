@@ -40,6 +40,12 @@
 #define RCI_AIO_READ_WAIT_NS	1000000
 #define CAR_LOOKUP_MAX		10000
 
+int
+slc_rci_handle_ctl(struct pscrpc_request *rq)
+{
+	SL_RSX_ALLOCREP(rq, mq, mp);
+}
+
 /**
  * slc_rci_handle_io - Handle a READ or WRITE completion for CLI from
  *	ION.
@@ -233,6 +239,9 @@ slc_rci_handler(struct pscrpc_request *rq)
 	case SRMT_READ:
 	case SRMT_WRITE:
 		rc = slc_rci_handle_io(rq);
+		break;
+	case SRMT_CTL:
+		rc = slc_rci_handle_ctl(rq);
 		break;
 	default:
 		psclog_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
