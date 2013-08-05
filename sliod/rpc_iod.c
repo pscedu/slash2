@@ -108,6 +108,46 @@ sl_resm_hldrop(__unusedx struct sl_resm *resm)
 {
 }
 
+int
+sli_rci_ctl_cb(struct pscrpc_request *rq,
+    struct pscrpc_async_args *args)
+{
+	struct slashrpc_cservice *csvc = args->pointer_arg[0];
+	int rc;
+
+	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_ctl_rep, rc);
+	if (rc == 0)
+		slrpc_rep_in(csvc, rq);
+	sl_csvc_decref(csvc);
+	return (0);
+}
+
+void
+sli_rci_ctl_health_send(struct slashrpc_cservice *csvc)
+{
+	struct pscrpc_request *rq;
+	struct srt_ctlsetopt *c;
+	struct srm_ctl_rep *mp;
+	struct srm_ctl_req *mq;
+	int rc;
+
+	rc = SL_RSX_NEWREQ(csvc, SRMT_CTL, rq, mq, mp);
+	if (rc)
+		return;
+	mq->opc = SRM_CTLOP_SETOPT;
+	c = (void *)mq->buf;
+	c->opt = SRMCTL_OPT_HEALTH;
+	c->opv = rc;
+
+	rq->rq_interpret_reply = sli_rci_ctl_cb;
+	rq->rq_async_args.pointer_arg[0] = csvc;
+	rc = SL_NBRQSET_ADD(csvc, rq);
+	if (rc) {
+		pscrpc_req_finished(rq);
+		sl_csvc_decref(csvc);
+	}
+}
+
 void
 sli_rpc_mds_unpack_bminseq(struct pscrpc_request *rq, int msgtype)
 {

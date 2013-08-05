@@ -320,7 +320,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	rc = rsx_bulkserver(rq,
 	    (rw == SL_WRITE ? BULK_GET_SINK : BULK_PUT_SOURCE),
 	    SRIC_BULK_PORTAL, iovs, nslvrs);
-	if (rc) 
+	if (rc)
 		goto out;
 
 	/*
@@ -509,6 +509,12 @@ sli_ric_handler(struct pscrpc_request *rq)
 	case SRMT_CONNECT:
 		rc = slrpc_handle_connect(rq, SRIC_MAGIC, SRIC_VERSION,
 		    SLCONNT_CLI);
+		if (sli_selftest_rc) {
+			struct slashrpc_cservice *csvc;
+
+			csvc = sli_getclcsvc(rq->rq_export);
+			sli_rci_ctl_health_send(csvc);
+		}
 		break;
 	case SRMT_READ:
 		rc = sli_ric_handle_read(rq);
@@ -520,7 +526,7 @@ sli_ric_handler(struct pscrpc_request *rq)
 		rc = sli_ric_handle_rlsbmap(rq);
 		break;
 	default:
-		psclog_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
+		psclog_errorx("unexpected opcode %d", rq->rq_reqmsg->opc);
 		rq->rq_status = -ENOSYS;
 		return (pscrpc_error(rq));
 	}

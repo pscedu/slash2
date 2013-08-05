@@ -147,20 +147,6 @@ slistatfsthr_main(__unusedx struct psc_thread *thr)
 	}
 }
 
-int
-sli_rci_ctl_cb(struct pscrpc_request *rq,
-    struct pscrpc_async_args *args)
-{
-	struct slashrpc_cservice *csvc = args->pointer_arg[0];
-	int rc;
-
-	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_ctl_rep, rc);
-	if (rc == 0)
-		slrpc_rep_in(csvc, rq);
-	sl_csvc_decref(csvc);
-	return (0);
-}
-
 /**
  * slihealththr_main - Occassionally run the self health test.
  * @thr: our thread.
@@ -169,10 +155,6 @@ void
 slihealththr_main(__unusedx struct psc_thread *thr)
 {
 	struct slashrpc_cservice *csvc;
-	struct pscrpc_request *rq;
-	struct srt_ctlsetopt *c;
-	struct srm_ctl_rep *mp;
-	struct srm_ctl_req *mq;
 	struct itimerval itv;
 	int rc;
 
@@ -199,24 +181,8 @@ slihealththr_main(__unusedx struct psc_thread *thr)
 			    sli_selftest_rc, rc);
 
 			PLL_LOCK(&client_csvcs);
-			PLL_FOREACH(csvc, &client_csvcs) {
-				rc = SL_RSX_NEWREQ(csvc, SRMT_CTL, rq,
-				    mq, mp);
-				if (rc)
-					continue;
-				mq->opc = SRM_CTLOP_SETOPT;
-				c = (void *)mq->buf;
-				c->opt = SRMCTL_OPT_HEALTH;
-				c->opv = rc;
-
-				rq->rq_interpret_reply = sli_rci_ctl_cb;
-				rq->rq_async_args.pointer_arg[0] = csvc;
-				rc = SL_NBRQSET_ADD(csvc, rq);
-				if (rc) {
-					pscrpc_req_finished(rq);
-					sl_csvc_decref(csvc);
-				}
-			}
+			PLL_FOREACH(csvc, &client_csvcs)
+				sli_rci_ctl_health_send(csvc);
 			PLL_ULOCK(&client_csvcs);
 		}
 		sli_selftest_rc = rc;

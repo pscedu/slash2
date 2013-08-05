@@ -342,6 +342,7 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 	w = args->pointer_arg[SRII_REPLREAD_CBARG_WKRQ];
 	s = args->pointer_arg[SRII_REPLREAD_CBARG_SLVR];
 
+	// XXX  SL_GET_RQ_STATUS_TYPE
 	rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
 	if (rc)
 		goto out;
