@@ -187,13 +187,14 @@ enum {
 
 	SRMT_PRECLAIM,
 	SRMT_BATCH_RQ,				/* 50: async batch request */
-	SRMT_BATCH_RP				/* 51: async batch reply */
+	SRMT_BATCH_RP,				/* 51: async batch reply */
+	SRMT_CTL				/* 52: generic control */
 };
 
 /* ----------------------------- BEGIN MESSAGES ----------------------------- */
 
 /*
- * Note: Member ordering within structures must always follow 64-bit boundaries
+ * Note: member ordering within structures must always follow 64-bit boundaries
  * to preserve compatibility between 32-bit and 64-bit machines.
  */
 
@@ -210,6 +211,22 @@ struct srm_batch_req {
 };
 
 #define srm_batch_rep		srm_generic_rep
+
+struct srm_ctl_req {
+	uint32_t		opc;		/* operation */
+	char			buf[128];
+};
+
+#define SRM_CTLOP_SETOPT	0
+
+#define srm_ctl_rep		srm_generic_rep
+
+struct srt_ctlsetopt {
+	uint32_t		opt;		/* option */
+	uint64_t		opv;		/* value */
+};
+
+#define SRMCTL_OPT_HEALTH	0
 
 /* ---------------------- BEGIN ENCAPSULATED MESSAGES ----------------------- */
 
@@ -618,7 +635,7 @@ struct srm_connect_req {
 	uint64_t		magic;
 	uint32_t		version;
 	 int32_t		nnids;
-	uint64_t		nids[8];
+	uint64_t		_pad[8];
 	uint64_t		fsuuid;		/* file system unique ID */
 	uint32_t		stkvers;	/* software stack version */
 	uint32_t		upnonce;	/* uptime instance */
