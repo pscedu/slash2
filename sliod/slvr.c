@@ -738,10 +738,11 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
  * @s: the sliver.
  */
 ssize_t
-slvr_fsbytes_rio(struct slvr_ref *s, struct sli_aiocb_reply **aiocbr)
+slvr_fsbytes_rio(struct slvr_ref *s, uint32_t off, uint32_t len, 
+	struct sli_aiocb_reply **aiocbr)
 {
-	int i, blk, nblks;
-	ssize_t rc;
+	int blk;
+	ssize_t rc = 0;
 
 	psclog_debug("psc_vbitmap_nfree() = %d",
 	    psc_vbitmap_nfree(s->slvr_slab->slb_inuse));
@@ -751,31 +752,32 @@ slvr_fsbytes_rio(struct slvr_ref *s, struct sli_aiocb_reply **aiocbr)
 
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 
-	rc = 0;
-	blk = 0; /* gcc */
-	for (i = 0, nblks = 0; i < SLASH_BLKS_PER_SLVR; i++) {
-		if (psc_vbitmap_get(s->slvr_slab->slb_inuse, i)) {
-			if (nblks == 0)
-				blk = i;
-
-			nblks++;
-			continue;
-		}
-		if (nblks) {
-			rc = slvr_fsio(s, blk, nblks * SLASH_SLVR_BLKSZ,
-			    SL_READ, aiocbr);
-			/* XXX should continue to issue I/O in AIO case */
-			if (rc)
-				goto out;
-
-			/* reset nblks so we won't do it again later */
-			nblks = 0;
-		}
+	if (!(s->slvr_flags & SLVR_RDMODWR)) {
+		rc = slvr_fsio(s, 0, SLASH_SLVR_SIZE, 
+		    SL_READ, aiocbr);
+		goto out;
 	}
 
-	if (nblks)
-		rc = slvr_fsio(s, blk, nblks * SLASH_SLVR_BLKSZ,
+	if (off) {
+		blk = (off / SLASH_SLVR_BLKSZ);
+		if (off & SLASH_SLVR_BLKMASK)
+			blk++;
+		rc = slvr_fsio(s, 0, blk * SLASH_SLVR_BLKSZ, 
 		    SL_READ, aiocbr);
+		/* XXX should continue to issue I/O in AIO case */
+		if (rc)
+			goto out;
+	}
+	if (off + len < SLASH_SLVR_SIZE) {
+		blk = (off + len) / SLASH_SLVR_BLKSZ;
+		rc = slvr_fsio(s, blk, 
+		    (SLASH_BLKS_PER_SLVR - blk) * SLASH_SLVR_BLKSZ,
+		    SL_READ, aiocbr);
+		/* XXX should continue to issue I/O in AIO case */
+		if (rc)
+			goto out;
+	}
+		
  out:
 	if (rc == -SLERR_AIOWAIT)
 		return (rc);
@@ -1065,7 +1067,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 	/* Execute read to fault in needed blocks after dropping
 	 *   the lock.  All should be protected by the FAULTING bit.
 	 */
-	if ((rc = slvr_fsbytes_rio(s, aiocbr)))
+	if ((rc = slvr_fsbytes_rio(s, off, len, aiocbr)))
 		return (rc);
 
 	if (rw == SL_READ) {
