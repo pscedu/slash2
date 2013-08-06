@@ -200,17 +200,6 @@ slvr_do_crc(struct slvr_ref *s)
 	return (-1);
 }
 
-void
-slvr_clear_inuse(struct slvr_ref *s, __unusedx int sblk, uint32_t size)
-{
-	int locked, nblks;
-
-	/* XXX trim startoff from size?? */
-	nblks = howmany(size, SLASH_SLVR_BLKSZ);
-	locked = SLVR_RLOCK(s);
-	SLVR_URLOCK(s, locked);
-}
-
 __static struct sli_aiocb_reply *
 sli_aio_aiocbr_new(void)
 {

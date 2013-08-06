@@ -368,7 +368,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			if (slvr_ref[i] == NULL)
 				continue;
 			SLVR_LOCK(slvr_ref[i]);
-			slvr_clear_inuse(slvr_ref[i], 0, SLASH_SLVR_SIZE);
 			if (rw == SL_READ) {
 				slvr_ref[i]->slvr_pndgreads--;
 				slvr_lru_tryunpin_locked(slvr_ref[i]);
