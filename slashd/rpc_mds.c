@@ -293,6 +293,8 @@ batchrq_finish(struct batchrq *br, int rc)
 	if (br->br_csvc)
 		sl_csvc_decref(br->br_csvc);
 
+	lc_remove(l, br);
+
 	PSCFREE(br->br_buf);
 
 	psc_pool_return(batchrq_pool, br);
