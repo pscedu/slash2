@@ -169,6 +169,11 @@ slm_rpc_ion_unpack_statfs(struct pscrpc_request *rq, int type)
 		psclog_errorx("unknown peer");
 		return;
 	}
+	if (f->sf_bsize == 0) {
+		DEBUG_REQ(PLL_MAX, rq, "%s sent bogus STATFS",
+		    resm->resm_name);
+		return;
+	}
 	si = res2iosinfo(resm->resm_res);
 	rpmi = res2rpmi(resm->resm_res);
 	locked = RPMI_RLOCK(rpmi);
@@ -303,6 +308,8 @@ batchrq_send_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	    rc);
 	if (rc == 0)
 		slrpc_rep_in(br->br_csvc, rq);
+	/* nbrqset clears this for us */
+	br->br_rq = NULL;
 	if (rc)
 		batchrq_finish(br, rc);
 	return (0);
