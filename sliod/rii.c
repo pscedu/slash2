@@ -27,7 +27,6 @@
  */
 
 #include "pfl/list.h"
-#include "pfl/vbitmap.h"
 #include "pfl/rpc.h"
 #include "pfl/rpclog.h"
 #include "pfl/rsx.h"
@@ -101,7 +100,6 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 
 			SLVR_WAKEUP(s);
 		} else {
-			psc_vbitmap_clearall(s->slvr_slab->slb_inuse);
 			s->slvr_flags |= SLVR_REPLFAIL;
 		}
 		SLVR_ULOCK(s);

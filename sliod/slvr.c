@@ -130,13 +130,14 @@ slvr_do_crc(struct slvr_ref *s)
 		 */
 		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
 
-		if (!(s->slvr_flags & SLVR_REPLDST))
+		if (!(s->slvr_flags & SLVR_REPLDST)) {
 			/*
 			 *  For now we assume that all blocks are being
 			 *  processed, otherwise there's no guarantee
 			 *  that the entire slvr was read.
 			 */
-			psc_assert(!psc_vbitmap_nfree(s->slvr_slab->slb_inuse));
+			;
+		}
 
 		if ((slvr_2_crcbits(s) & BMAP_SLVR_DATA) &&
 		    (slvr_2_crcbits(s) & BMAP_SLVR_CRC)) {
@@ -200,14 +201,13 @@ slvr_do_crc(struct slvr_ref *s)
 }
 
 void
-slvr_clear_inuse(struct slvr_ref *s, int sblk, uint32_t size)
+slvr_clear_inuse(struct slvr_ref *s, __unusedx int sblk, uint32_t size)
 {
 	int locked, nblks;
 
 	/* XXX trim startoff from size?? */
 	nblks = howmany(size, SLASH_SLVR_BLKSZ);
 	locked = SLVR_RLOCK(s);
-	psc_vbitmap_unsetrange(s->slvr_slab->slb_inuse, sblk, nblks);
 	SLVR_URLOCK(s, locked);
 }
 
@@ -478,7 +478,6 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 		s->slvr_flags |= SLVR_DATARDY;
 		DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
 	}
-	psc_vbitmap_invert(s->slvr_slab->slb_inuse);
 	SLVR_WAKEUP(s);
 	SLVR_ULOCK(s);
 
@@ -630,7 +629,7 @@ __static ssize_t
 slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
     struct sli_aiocb_reply **aiocbr)
 {
-	int i, nblks, save_errno = 0;
+	int nblks, save_errno = 0;
 	uint64_t *v8;
 	ssize_t	rc;
 	size_t off;
@@ -690,9 +689,6 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 		}
 	} else {
 		OPSTAT_INCR(SLI_OPST_FSIO_WRITE);
-		for (i = 0; i < nblks; i++)
-			psc_vbitmap_unset(s->slvr_slab->slb_inuse,
-			    sblk + i);
 
 		errno = 0;
 		SLVR_ULOCK(s);
@@ -727,8 +723,6 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 		rc = 0;
 	}
 
-	//psc_vbitmap_printbin1(s->slvr_slab->slb_inuse);
-
 	return (rc < 0 ? -save_errno : 0);
 }
 
@@ -744,8 +738,6 @@ slvr_fsbytes_rio(struct slvr_ref *s, uint32_t off, uint32_t len,
 	int blk;
 	ssize_t rc = 0;
 
-	psclog_debug("psc_vbitmap_nfree() = %d",
-	    psc_vbitmap_nfree(s->slvr_slab->slb_inuse));
 
 	if (!(s->slvr_flags & SLVR_DATARDY))
 		psc_assert(s->slvr_flags & SLVR_FAULTING);
@@ -932,7 +924,7 @@ ssize_t
 slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
     struct sli_aiocb_reply **aiocbr)
 {
-	int i, blks, unaligned[2] = { -1, -1 };
+	int blks;
 	ssize_t rc = 0;
 
 	SLVR_LOCK(s);
@@ -987,7 +979,6 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 		 */
 		s->slvr_flags |= SLVR_FAULTING;
 		if (rw == SL_READ) {
-			psc_vbitmap_setall(s->slvr_slab->slb_inuse);
 			goto do_read;
 		}
 
@@ -1004,8 +995,6 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 		blks = len / SLASH_SLVR_BLKSZ +
 		    (len & SLASH_SLVR_BLKMASK) ? 1 : 0;
 
-		/* XXX - no needed based on experiment and code review */
-		psc_vbitmap_setrange(s->slvr_slab->slb_inuse, 0, blks);
 		SLVR_ULOCK(s);
 
 		return (0);
@@ -1019,46 +1008,14 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 		 * All blocks will be dirtied by the incoming network
 		 * IO.
 		 */
-		psc_vbitmap_setall(s->slvr_slab->slb_inuse);
 		goto out;
 	}
 
 	/* FixMe: Check the underlying file size to avoid useless RMW */
 	OPSTAT_INCR(SLI_OPST_IO_PREP_RMW);
 
-	/*
-	 * Prepare the sliver for a read-modify-write.  Mark the blocks
-	 * that need to be read as 1 so that they can be faulted in by
-	 * slvr_fsbytes_io().  We can have at most two unaligned writes.
-	 */
-	if (off) {
-		blks = (off / SLASH_SLVR_BLKSZ);
-		if (off & SLASH_SLVR_BLKMASK)
-			unaligned[0] = blks;
-
-		for (i=0; i <= blks; i++)
-			psc_vbitmap_set(s->slvr_slab->slb_inuse, i);
-	}
-	if ((off + len) < SLASH_SLVR_SIZE) {
-		blks = (off + len) / SLASH_SLVR_BLKSZ;
-		if ((off + len) & SLASH_SLVR_BLKMASK)
-			unaligned[1] = blks;
-
-		/* XXX use psc_vbitmap_setrange() */
-		for (i = blks; i < SLASH_BLKS_PER_SLVR; i++)
-			psc_vbitmap_set(s->slvr_slab->slb_inuse, i);
-	}
-
-	//psc_vbitmap_printbin1(s->slvr_slab->slb_inuse);
-	psclog_info("psc_vbitmap_nfree()=%d",
-	    psc_vbitmap_nfree(s->slvr_slab->slb_inuse));
-
-	/* We must have found some work to do. */
-	psc_assert(psc_vbitmap_nfree(s->slvr_slab->slb_inuse) <
-		   SLASH_BLKS_PER_SLVR);
-
 	if (s->slvr_flags & SLVR_DATARDY)
-		goto invert;
+		goto out;
 
 	s->slvr_flags |= SLVR_RDMODWR;
 
@@ -1077,8 +1034,6 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 		s->slvr_flags |= SLVR_DATARDY;
 		s->slvr_flags &= ~SLVR_FAULTING;
 
-		psc_vbitmap_invert(s->slvr_slab->slb_inuse);
-		//psc_vbitmap_printbin1(s->slvr_slab->slb_inuse);
 		DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
 		SLVR_WAKEUP(s);
 		SLVR_ULOCK(s);
@@ -1086,22 +1041,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 		return (0);
 	}
 
-	/*
-	 * Above, the bits were set for the RMW blocks, now that they
-	 * have been read, invert the bitmap so that it properly
-	 * represents the blocks to be dirtied by the RPC.
-	 */
 	SLVR_LOCK(s);
-
- invert:
-	psc_vbitmap_invert(s->slvr_slab->slb_inuse);
-	if (unaligned[0] >= 0)
-		psc_vbitmap_set(s->slvr_slab->slb_inuse, unaligned[0]);
-
-	if (unaligned[1] >= 0)
-		psc_vbitmap_set(s->slvr_slab->slb_inuse, unaligned[1]);
-
-//	psc_vbitmap_printbin1(s->slvr_slab->slb_inuse);
 
  out:
 	if (!rc && s->slvr_flags & SLVR_FAULTING) {

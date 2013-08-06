@@ -50,8 +50,6 @@ void
 sl_buffer_fresh_assertions(struct sl_buffer *b)
 {
 	psc_assert(b->slb_flags == SLB_FRESH);
-	psc_vbitmap_printbin1(b->slb_inuse);
-	psc_assert(psc_vbitmap_nfree(b->slb_inuse) == b->slb_nblks);
 	psc_assert(psc_listhd_empty(&b->slb_iov_list));
 	psc_assert(!b->slb_lc_owner); /* Not on any cache mgmt lists */
 	psc_assert(psc_listhd_empty(&b->slb_iov_list));
@@ -73,7 +71,6 @@ sl_buffer_init(__unusedx struct psc_poolmgr *m, void *pri)
 {
 	struct sl_buffer *slb = pri;
 
-	slb->slb_inuse = psc_vbitmap_new(SLB_NBLK);
 	slb->slb_blksz = SLB_BLKSZ;
 	slb->slb_nblks = SLB_NBLK;
 	slb->slb_base  = PSCALLOC(SLB_NBLK * SLB_BLKSZ);
@@ -100,7 +97,6 @@ sl_buffer_destroy(void *pri)
 //	psc_assert(psclist_disjoint(&slb->slb_fcmh_lentry));
 
 	PSCFREE(slb->slb_base);
-	psc_vbitmap_free(slb->slb_inuse);
 }
 
 void
