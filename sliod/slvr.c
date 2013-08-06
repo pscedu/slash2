@@ -130,15 +130,6 @@ slvr_do_crc(struct slvr_ref *s)
 		 */
 		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
 
-		if (!(s->slvr_flags & SLVR_REPLDST)) {
-			/*
-			 *  For now we assume that all blocks are being
-			 *  processed, otherwise there's no guarantee
-			 *  that the entire slvr was read.
-			 */
-			;
-		}
-
 		if ((slvr_2_crcbits(s) & BMAP_SLVR_DATA) &&
 		    (slvr_2_crcbits(s) & BMAP_SLVR_CRC)) {
 			SLVR_ULOCK(s);
