@@ -82,7 +82,6 @@ sl_buffer_init(__unusedx struct psc_poolmgr *m, void *pri)
 	slb->slb_flags = SLB_FRESH;
 	INIT_LISTHEAD(&slb->slb_iov_list);
 	INIT_LISTENTRY(&slb->slb_mgmt_lentry);
-	INIT_LISTENTRY(&slb->slb_fcmh_lentry);
 
 	DEBUG_SLB(PLL_TRACE, slb, "new slb");
 	return (0);
