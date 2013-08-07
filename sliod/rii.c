@@ -49,11 +49,11 @@
 #define SRII_REPLREAD_CBARG_SLVR	1
 
 /**
- * sli_rii_replread_release_sliver - We call this function in three
- * cases:
- *  (1) When we fail to issue a request for a replication of a sliver;
- *  (2) When the request for a replication of a sliver has completed;
- *  (3) When the asynchronous I/O for a replication of a sliver has
+ * sli_rii_replread_release_sliver - We call this function in the 
+ * following two cases:
+ *
+ *  (1) When the request for a replication of a sliver has completed;
+ *  (2) When the asynchronous I/O for a replication of a sliver has
  *	completed.
  */
 __static int
@@ -397,6 +397,7 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	mq->bmapno = w->srw_bmapno;
 	mq->slvrno = slvrno;
 
+	psc_atomic32_inc(&w->srw_refcnt);
 	psc_assert(w->srw_slvr_refs[slvridx] == SLI_REPL_SLVR_SCHED);
 	w->srw_slvr_refs[slvridx] = s =
 	    slvr_lookup(slvrno, bmap_2_bii(w->srw_bcm), SL_WRITE);
@@ -420,7 +421,6 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_WKRQ] = w;
 	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_SLVR] = s;
 
-	psc_atomic32_inc(&w->srw_refcnt);
 	DEBUG_SRW(w, PLL_DEBUG, "incref");
 
 	rc = SL_NBRQSET_ADD(csvc, rq);
@@ -429,7 +429,18 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 
  out:
 	if (rc) {
-		sli_rii_replread_release_sliver(w, slvridx, rc);
+		SLVR_LOCK(s);
+		s->slvr_flags |= SLVR_REPLFAIL;
+		SLVR_ULOCK(s);
+		slvr_wio_done(s);
+
+		spinlock(&w->srw_lock);
+		w->srw_nslvr_cur++;
+		w->srw_slvr_refs[slvridx] = NULL;
+		freelock(&w->srw_lock);
+
+		replwk_queue(w);
+		sli_replwkrq_decref(w, rc);
 		OPSTAT_INCR(SLI_OPST_ISSUE_REPLREAD_ERROR);
 	} else {
 		OPSTAT_INCR(SLI_OPST_ISSUE_REPLREAD);
