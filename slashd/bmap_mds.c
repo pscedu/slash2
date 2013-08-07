@@ -144,7 +144,7 @@ slm_bmap_resetnonce(struct bmap *b)
 	    SQLITE_INTEGER64, bmap_2_fid(b),
 	    SQLITE_INTEGER, b->bcm_bmapno);
 
-	if (a.update)
+	if (a.update) {
 		dbdo(NULL, NULL,
 		    " UPDATE	upsch "
 		    " SET	nonce = ?"
@@ -153,6 +153,8 @@ slm_bmap_resetnonce(struct bmap *b)
 		    SQLITE_INTEGER, sys_upnonce,
 		    SQLITE_INTEGER64, bmap_2_fid(b),
 		    SQLITE_INTEGER, b->bcm_bmapno);
+		mds_bmap_write_logrepls(b);
+	}
 }
 
 /**
