@@ -119,8 +119,12 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (!S_ISREG(f->fcmh_sstb.sst_mode) &&
 	    !S_ISDIR(f->fcmh_sstb.sst_mode))
 		rc = ENOTSUP;
-	else if (pcr.pcr_uid && pcr.pcr_uid != f->fcmh_sstb.sst_uid)
-		rc = EACCES;
+	else {
+		rc = fcmh_checkcreds(f, &pcr, W_OK);
+		if (rc == EACCES &&
+		    f->fcmh_sstb.sst_uid == pcr.pcr_uid)
+			rc = 0;
+	}
 	fg = f->fcmh_fg;
 	fcmh_op_done(f);
 
