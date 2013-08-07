@@ -1144,10 +1144,6 @@ slvr_wio_done(struct slvr_ref *s)
 		 * This was a replication dest slvr.  Adjust the slvr
 		 * flags so that the slvr may be freed on demand.
 		 */
-		if (s->slvr_flags & SLVR_REPLFAIL)
-			DEBUG_SLVR(PLL_ERROR, s, "replication failure");
-		else
-			DEBUG_SLVR(PLL_INFO, s, "replication complete");
 
 		psc_assert(s->slvr_pndgwrts == 1);
 		psc_assert(s->slvr_flags & SLVR_PINNED);
@@ -1158,6 +1154,7 @@ slvr_wio_done(struct slvr_ref *s)
 		    SLVR_FAULTING | SLVR_REPLDST);
 
 		if (s->slvr_flags & SLVR_REPLFAIL) {
+			DEBUG_SLVR(PLL_ERROR, s, "replication failure");
 			/*
 			 * Perhaps this should block for any readers?
 			 * Technically it should be impossible since
@@ -1169,6 +1166,7 @@ slvr_wio_done(struct slvr_ref *s)
 			s->slvr_flags &= ~SLVR_REPLFAIL;
 
 		} else {
+			DEBUG_SLVR(PLL_INFO, s, "replication complete");
 			s->slvr_flags |= SLVR_DATARDY;
 			SLVR_WAKEUP(s);
 		}
