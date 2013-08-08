@@ -45,21 +45,9 @@ struct psc_vbitmap;
 #define SLB_BLKSZ	SLASH_SLVR_BLKSZ
 #define SLB_SIZE	(SLB_BLKSZ * SLB_NBLK)
 
-enum {
-	SLB_FRESH	= 0x01
-};
-
 /**
  * sl_buffer - Used for both read caching and write
- *   aggregation.  The buffer is split into N subsections where N is
- *   the size of the vbitmap structure.
- * @slb_ref is maintained for every offtree entry which accesses this
- *     buffer.
- * @slb_iov_list is used to hold a sorted list of offtree_memb pointers
- *    (sorted by floff).  This is used when the LRU tells us to free
- *    our segments.
- * @slb_mgmt_lentry is used for the global free list, global LRU, and
- *    the dirty list.
+ *   aggregation.
  */
 struct sl_buffer {
 	int			 slb_nblks;		/* num blocks, XXX: always 32		*/
