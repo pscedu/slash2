@@ -66,7 +66,6 @@ struct sl_buffer {
 	uint32_t		 slb_blksz;		/* blocksize				*/
 	void			*slb_base;		/* point to the data buffer		*/
 	atomic_t		 slb_ref;
-	atomic_t		 slb_inflight;
 	atomic_t		 slb_inflpndg;
 	psc_spinlock_t		 slb_lock;
 	uint32_t		 slb_flags;
@@ -77,12 +76,11 @@ struct sl_buffer {
 #define DEBUG_SLB(level, slb, fmt, ...)					\
 	psclogs((level), PSS_DEF,					\
 	    "slb@%p b:%p sz:%d bsz:%u"					\
-	    " ref:%d inf:%d infp:%d fl:%s"				\
+	    " ref:%d infp:%d fl:%s"					\
 	    " fcmh:%p "fmt,						\
 	    (slb), (slb)->slb_base, (slb)->slb_nblks,			\
 	    (slb)->slb_blksz,						\
 	    atomic_read(&(slb)->slb_ref),				\
-	    atomic_read(&(slb)->slb_inflight),				\
 	    atomic_read(&(slb)->slb_inflpndg),				\
 	    ATTR_TEST((slb)->slb_flags, SLB_FRESH)	? "r" : "",	\
 	    (slb)->slb_lc_fcmh,						\
