@@ -66,7 +66,6 @@ struct sl_buffer {
 	uint32_t		 slb_blksz;		/* blocksize				*/
 	void			*slb_base;		/* point to the data buffer		*/
 	atomic_t		 slb_ref;
-	psc_spinlock_t		 slb_lock;
 	uint32_t		 slb_flags;
 	struct psclist_head	 slb_mgmt_lentry;	/* chain lru or outgoing q  */
 };
