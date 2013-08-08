@@ -71,7 +71,6 @@ struct sl_buffer {
 	atomic_t		 slb_inflpndg;
 	psc_spinlock_t		 slb_lock;
 	uint32_t		 slb_flags;
-	struct psc_listcache	*slb_lc_owner;
 	struct psc_lockedlist	*slb_lc_fcmh;
 	struct psclist_head	 slb_mgmt_lentry;	/* chain lru or outgoing q  */
 };
@@ -80,7 +79,7 @@ struct sl_buffer {
 	psclogs((level), PSS_DEF,					\
 	    "slb@%p b:%p sz:%d bsz:%u"					\
 	    " ref:%d umref:%d inf:%d infp:%d fl:%s"			\
-	    " fcmh:%p lco:%p "fmt,					\
+	    " fcmh:%p "fmt,						\
 	    (slb), (slb)->slb_base, (slb)->slb_nblks,			\
 	    (slb)->slb_blksz,						\
 	    atomic_read(&(slb)->slb_ref),				\
@@ -88,7 +87,7 @@ struct sl_buffer {
 	    atomic_read(&(slb)->slb_inflight),				\
 	    atomic_read(&(slb)->slb_inflpndg),				\
 	    ATTR_TEST((slb)->slb_flags, SLB_FRESH)	? "r" : "",	\
-	    (slb)->slb_lc_fcmh, (slb)->slb_lc_owner,			\
+	    (slb)->slb_lc_fcmh,						\
 	    ## __VA_ARGS__)
 
 void sl_buffer_cache_init(void);
