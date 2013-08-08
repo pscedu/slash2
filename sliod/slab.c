@@ -52,7 +52,6 @@ sl_buffer_fresh_assertions(struct sl_buffer *b)
 	psc_assert(b->slb_flags == SLB_FRESH);
 	psc_assert(b->slb_base);
 	psc_assert(!atomic_read(&b->slb_ref));
-	psc_assert(!atomic_read(&b->slb_inflpndg));
 }
 
 void
