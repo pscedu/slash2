@@ -65,17 +65,14 @@ struct sl_buffer {
 	int			 slb_nblks;		/* num blocks, XXX: always 32		*/
 	uint32_t		 slb_blksz;		/* blocksize				*/
 	void			*slb_base;		/* point to the data buffer		*/
-	uint32_t		 slb_flags;
 	struct psclist_head	 slb_mgmt_lentry;	/* chain lru or outgoing q  */
 };
 
 #define DEBUG_SLB(level, slb, fmt, ...)					\
 	psclogs((level), PSS_DEF,					\
-	    "slb@%p b:%p sz:%d bsz:%u"					\
-	    " fl:%s "fmt,						\
+	    "slb@%p b:%p sz:%d bsz:%u "fmt,				\
 	    (slb), (slb)->slb_base, (slb)->slb_nblks,			\
 	    (slb)->slb_blksz,						\
-	    ATTR_TEST((slb)->slb_flags, SLB_FRESH)	? "r" : "",	\
 	    ## __VA_ARGS__)
 
 void sl_buffer_cache_init(void);

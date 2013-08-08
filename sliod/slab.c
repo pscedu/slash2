@@ -47,13 +47,6 @@ struct psc_poolmaster	 sl_bufs_poolmaster;
 struct psc_poolmgr	*sl_bufs_pool;
 
 void
-sl_buffer_fresh_assertions(struct sl_buffer *b)
-{
-	psc_assert(b->slb_flags == SLB_FRESH);
-	psc_assert(b->slb_base);
-}
-
-void
 sl_buffer_clear(struct sl_buffer *b, size_t size)
 {
 	memset(b->slb_base, 0, size);
@@ -68,7 +61,6 @@ sl_buffer_init(__unusedx struct psc_poolmgr *m, void *pri)
 	slb->slb_nblks = SLB_NBLK;
 	slb->slb_base  = PSCALLOC(SLB_NBLK * SLB_BLKSZ);
 
-	slb->slb_flags = SLB_FRESH;
 	INIT_LISTENTRY(&slb->slb_mgmt_lentry);
 
 	DEBUG_SLB(PLL_TRACE, slb, "new slb");
