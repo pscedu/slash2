@@ -51,7 +51,6 @@ sl_buffer_fresh_assertions(struct sl_buffer *b)
 {
 	psc_assert(b->slb_flags == SLB_FRESH);
 	psc_assert(b->slb_base);
-	psc_assert(!atomic_read(&b->slb_ref));
 }
 
 void
@@ -68,7 +67,6 @@ sl_buffer_init(__unusedx struct psc_poolmgr *m, void *pri)
 	slb->slb_blksz = SLB_BLKSZ;
 	slb->slb_nblks = SLB_NBLK;
 	slb->slb_base  = PSCALLOC(SLB_NBLK * SLB_BLKSZ);
-	atomic_set(&slb->slb_ref, 0);
 
 	slb->slb_flags = SLB_FRESH;
 	INIT_LISTENTRY(&slb->slb_mgmt_lentry);

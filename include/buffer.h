@@ -65,7 +65,6 @@ struct sl_buffer {
 	int			 slb_nblks;		/* num blocks, XXX: always 32		*/
 	uint32_t		 slb_blksz;		/* blocksize				*/
 	void			*slb_base;		/* point to the data buffer		*/
-	atomic_t		 slb_ref;
 	uint32_t		 slb_flags;
 	struct psclist_head	 slb_mgmt_lentry;	/* chain lru or outgoing q  */
 };
@@ -73,10 +72,9 @@ struct sl_buffer {
 #define DEBUG_SLB(level, slb, fmt, ...)					\
 	psclogs((level), PSS_DEF,					\
 	    "slb@%p b:%p sz:%d bsz:%u"					\
-	    " ref:%d fl:%s "fmt,					\
+	    " fl:%s "fmt,						\
 	    (slb), (slb)->slb_base, (slb)->slb_nblks,			\
 	    (slb)->slb_blksz,						\
-	    atomic_read(&(slb)->slb_ref),				\
 	    ATTR_TEST((slb)->slb_flags, SLB_FRESH)	? "r" : "",	\
 	    ## __VA_ARGS__)
 
