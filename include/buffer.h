@@ -56,13 +56,6 @@ struct sl_buffer {
 	struct psclist_head	 slb_mgmt_lentry;	/* chain lru or outgoing q  */
 };
 
-#define DEBUG_SLB(level, slb, fmt, ...)					\
-	psclogs((level), PSS_DEF,					\
-	    "slb@%p b:%p sz:%d bsz:%u "fmt,				\
-	    (slb), (slb)->slb_base, (slb)->slb_nblks,			\
-	    (slb)->slb_blksz,						\
-	    ## __VA_ARGS__)
-
 void sl_buffer_cache_init(void);
 void sl_buffer_fresh_assertions(struct sl_buffer *);
 void sl_buffer_clear(struct sl_buffer *, size_t);

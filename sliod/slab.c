@@ -63,7 +63,6 @@ sl_buffer_init(__unusedx struct psc_poolmgr *m, void *pri)
 
 	INIT_LISTENTRY(&slb->slb_mgmt_lentry);
 
-	DEBUG_SLB(PLL_TRACE, slb, "new slb");
 	return (0);
 }
 
@@ -96,9 +95,6 @@ sl_buffer_cache_init(void)
 	    sl_buffer_init, sl_buffer_destroy, slvr_buffer_reap, "slab",
 	    NULL);
 	sl_bufs_pool = psc_poolmaster_getmgr(&sl_bufs_poolmaster);
-
-//	lc_reginit(&slBufsLru,  struct sl_buffer, slb_mgmt_lentry, "slabBufLru");
-//	lc_reginit(&slBufsPin,  struct sl_buffer, slb_mgmt_lentry, "slabBufPin");
 
 	pscthr_init(SLITHRT_BREAP, 0, slibreapthr_main, NULL, 0,
 	    "slibreapthr");
