@@ -850,7 +850,7 @@ slvr_slab_prep(struct slvr_ref *s, enum rw rw)
 			SLVR_ULOCK(s);
 
 			tmp = psc_pool_get(sl_bufs_pool);
-			sl_buffer_clear(tmp, tmp->slb_blksz *
+			memset(tmp->slb_base, 0, tmp->slb_blksz * 
 			    tmp->slb_nblks);
 			SLVR_LOCK(s);
 			goto newbuf;

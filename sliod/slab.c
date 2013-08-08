@@ -46,12 +46,6 @@
 struct psc_poolmaster	 sl_bufs_poolmaster;
 struct psc_poolmgr	*sl_bufs_pool;
 
-void
-sl_buffer_clear(struct sl_buffer *b, size_t size)
-{
-	memset(b->slb_base, 0, size);
-}
-
 int
 sl_buffer_init(__unusedx struct psc_poolmgr *m, void *pri)
 {
