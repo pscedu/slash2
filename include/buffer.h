@@ -73,7 +73,6 @@ struct sl_buffer {
 	uint32_t		 slb_flags;
 	struct psc_listcache	*slb_lc_owner;
 	struct psc_lockedlist	*slb_lc_fcmh;
-	struct psclist_head	 slb_iov_list;		/* list iovref backpointers */
 	struct psclist_head	 slb_mgmt_lentry;	/* chain lru or outgoing q  */
 };
 

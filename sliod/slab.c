@@ -50,9 +50,7 @@ void
 sl_buffer_fresh_assertions(struct sl_buffer *b)
 {
 	psc_assert(b->slb_flags == SLB_FRESH);
-	psc_assert(psc_listhd_empty(&b->slb_iov_list));
 	psc_assert(!b->slb_lc_owner); /* Not on any cache mgmt lists */
-	psc_assert(psc_listhd_empty(&b->slb_iov_list));
 	psc_assert(b->slb_base);
 	psc_assert(!atomic_read(&b->slb_ref));
 	psc_assert(!atomic_read(&b->slb_unmapd_ref));
@@ -80,7 +78,6 @@ sl_buffer_init(__unusedx struct psc_poolmgr *m, void *pri)
 	INIT_SPINLOCK(&slb->slb_lock);
 	//ATTR_SET  (slb->slb_flags, SLB_FREEING);
 	slb->slb_flags = SLB_FRESH;
-	INIT_LISTHEAD(&slb->slb_iov_list);
 	INIT_LISTENTRY(&slb->slb_mgmt_lentry);
 
 	DEBUG_SLB(PLL_TRACE, slb, "new slb");
@@ -91,9 +88,6 @@ void
 sl_buffer_destroy(void *pri)
 {
 	struct sl_buffer *slb = pri;
-
-//	psc_assert(psc_listhd_empty(&slb->slb_iov_list));
-//	psc_assert(psclist_disjoint(&slb->slb_fcmh_lentry));
 
 	PSCFREE(slb->slb_base);
 }
