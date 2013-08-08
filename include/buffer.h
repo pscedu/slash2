@@ -68,20 +68,17 @@ struct sl_buffer {
 	atomic_t		 slb_ref;
 	psc_spinlock_t		 slb_lock;
 	uint32_t		 slb_flags;
-	struct psc_lockedlist	*slb_lc_fcmh;
 	struct psclist_head	 slb_mgmt_lentry;	/* chain lru or outgoing q  */
 };
 
 #define DEBUG_SLB(level, slb, fmt, ...)					\
 	psclogs((level), PSS_DEF,					\
 	    "slb@%p b:%p sz:%d bsz:%u"					\
-	    " ref:%d fl:%s"						\
-	    " fcmh:%p "fmt,						\
+	    " ref:%d fl:%s "fmt,					\
 	    (slb), (slb)->slb_base, (slb)->slb_nblks,			\
 	    (slb)->slb_blksz,						\
 	    atomic_read(&(slb)->slb_ref),				\
 	    ATTR_TEST((slb)->slb_flags, SLB_FRESH)	? "r" : "",	\
-	    (slb)->slb_lc_fcmh,						\
 	    ## __VA_ARGS__)
 
 void sl_buffer_cache_init(void);
