@@ -1242,7 +1242,7 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 		s = tmp;
 		memset(s, 0, sizeof(*s));
 		s->slvr_num = num;
-		s->slvr_flags = SLVR_NEW | SLVR_SPLAYTREE | SLVR_PINNED;
+		s->slvr_flags = SLVR_NEW | SLVR_PINNED;
 		s->slvr_bii = bii;
 		INIT_PSC_LISTENTRY(&s->slvr_lentry);
 		INIT_SPINLOCK(&s->slvr_lock);
@@ -1271,7 +1271,6 @@ slvr_remove(struct slvr_ref *s)
 
 	/* Slvr should be detached from any listheads. */
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
-	psc_assert(!(s->slvr_flags & SLVR_SPLAYTREE));
 	psc_assert(s->slvr_flags & SLVR_FREEING);
 
 	bii = slvr_2_bii(s);
@@ -1375,12 +1374,8 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 			psc_assert(!(s->slvr_flags & SLVR_PINNED));
 			psc_assert(!s->slvr_slab);
 
-			if (s->slvr_flags & SLVR_SPLAYTREE) {
-				s->slvr_flags &= ~SLVR_SPLAYTREE;
-				SLVR_ULOCK(s);
-				slvr_remove(s);
-			} else
-				SLVR_URLOCK(s, locked);
+			SLVR_ULOCK(s);
+			slvr_remove(s);
 		}
 	}
 	psc_dynarray_free(&a);
@@ -1478,7 +1473,6 @@ dump_sliver_flags(int fl)
 	int seq = 0;
 
 	PFL_PRFLAG(SLVR_NEW, &fl, &seq);
-	PFL_PRFLAG(SLVR_SPLAYTREE, &fl, &seq);
 	PFL_PRFLAG(SLVR_FAULTING, &fl, &seq);
 	PFL_PRFLAG(SLVR_GETSLAB, &fl, &seq);
 	PFL_PRFLAG(SLVR_PINNED, &fl, &seq);

@@ -72,22 +72,21 @@ struct slvr {
 
 /* slvr_flags */
 #define	SLVR_NEW		(1 <<  0)	/* newly initialized */
-#define	SLVR_SPLAYTREE		(1 <<  1)	/* registered in the splay tree */
-#define	SLVR_FAULTING		(1 <<  2)	/* contents loading from disk or net */
-#define	SLVR_GETSLAB		(1 <<  3)	/* assigning memory buffer to slvr */
-#define	SLVR_PINNED		(1 <<  4)	/* slab cannot be removed from cache */
-#define	SLVR_DATARDY		(1 <<  5)	/* ready for read / write activity */
-#define	SLVR_DATAERR		(1 <<  6)
-#define	SLVR_LRU		(1 <<  7)	/* cached but not dirty */
-#define	SLVR_CRCDIRTY		(1 <<  8)	/* crc does not match cached buffer */
-#define	SLVR_CRCING		(1 <<  9)	/* unfinalized crc accumulator */
-#define	SLVR_FREEING		(1 << 10)	/* sliver is being reaped */
-#define	SLVR_SLBFREEING		(1 << 11)	/* slvr's slab is being reaped */
-#define	SLVR_REPLDST		(1 << 12)	/* slvr is replication destination */
-#define SLVR_REPLFAIL		(1 << 13)	/* replication op failed */
-#define SLVR_AIOWAIT		(1 << 14)	/* early return for AIO (for both local and remote) */
-#define SLVR_RDMODWR		(1 << 15)	/* read modify write */
-#define SLVR_REPLWIRE		(1 << 16)	/* prevent aio race */
+#define	SLVR_FAULTING		(1 <<  1)	/* contents loading from disk or net */
+#define	SLVR_GETSLAB		(1 <<  2)	/* assigning memory buffer to slvr */
+#define	SLVR_PINNED		(1 <<  3)	/* slab cannot be removed from cache */
+#define	SLVR_DATARDY		(1 <<  4)	/* ready for read / write activity */
+#define	SLVR_DATAERR		(1 <<  5)
+#define	SLVR_LRU		(1 <<  6)	/* cached but not dirty */
+#define	SLVR_CRCDIRTY		(1 <<  7)	/* crc does not match cached buffer */
+#define	SLVR_CRCING		(1 <<  8)	/* unfinalized crc accumulator */
+#define	SLVR_FREEING		(1 <<  9)	/* sliver is being reaped */
+#define	SLVR_SLBFREEING		(1 << 10)	/* slvr's slab is being reaped */
+#define	SLVR_REPLDST		(1 << 11)	/* slvr is replication destination */
+#define SLVR_REPLFAIL		(1 << 12)	/* replication op failed */
+#define SLVR_AIOWAIT		(1 << 13)	/* early return for AIO (for both local and remote) */
+#define SLVR_RDMODWR		(1 << 14)	/* read modify write */
+#define SLVR_REPLWIRE		(1 << 15)	/* prevent aio race */
 
 #define SLVR_2_BLK(s)		((s)->slvr_num *			\
 				 (SLASH_BMAP_SIZE / SLASH_SLVR_BLKSZ))
@@ -143,7 +142,7 @@ struct slvr {
 	    "pr=%u cw=%u "						\
 	    "ncrc=%u dc=%d ts="PSCPRI_TIMESPEC" "			\
 	    "bii@%p slab@%p bmap@%p fid:"SLPRI_FID" iocb@%p flgs:"	\
-	    "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s :: " fmt,		\
+	    "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s :: " fmt,			\
 	    (s), (s)->slvr_num, (s)->slvr_pndgwrts,			\
 	    (s)->slvr_pndgreads, (s)->slvr_compwrts,			\
 	    (s)->slvr_ncrc, (s)->slvr_dirty_cnt,			\
@@ -154,7 +153,6 @@ struct slvr {
 	      fcmh_2_fid(slvr_2_bmap(s)->bcm_fcmh) : FID_ANY,		\
 	    (s)->slvr_iocb,						\
 	    (s)->slvr_flags & SLVR_NEW		? "n" : "-",		\
-	    (s)->slvr_flags & SLVR_SPLAYTREE	? "t" : "-",		\
 	    (s)->slvr_flags & SLVR_FAULTING	? "f" : "-",		\
 	    (s)->slvr_flags & SLVR_GETSLAB	? "G" : "-",		\
 	    (s)->slvr_flags & SLVR_PINNED	? "p" : "-",		\
