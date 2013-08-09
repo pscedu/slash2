@@ -301,9 +301,19 @@ batchrq_finish(struct batchrq *br, int rc)
 }
 
 int
+batchrq_handle_wkcb(void *p)
+{
+	struct slm_wkdata_batchrq_cb *wk = p;
+
+	batchrq_finish(wk->br, wk->rc);
+	return (0);
+}
+
+int
 batchrq_send_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 {
 	struct batchrq *br = av->pointer_arg[0];
+	struct slm_wkdata_batchrq_cb *wk;
 	int rc;
 
 	SL_GET_RQ_STATUS_TYPE(br->br_csvc, rq, struct srm_batch_rep,
@@ -354,15 +364,6 @@ batchrq_send(struct batchrq *br)
 	if (rc)
  err:
 		batchrq_finish(br, rc);
-}
-
-int
-batchrq_handle_wkcb(void *p)
-{
-	struct slm_wkdata_batchrq_cb *wk = p;
-
-	batchrq_finish(wk->br, wk->rc);
-	return (0);
 }
 
 int
