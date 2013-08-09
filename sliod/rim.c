@@ -189,9 +189,10 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	PFL_GETTIMEVAL(&t1);
 
 	timersub(&t1, &t0, &td);
-	psclogs_info(PSS_TMP,
-	    "reclaim processing took %ld.%03ld second(s)",
-	    (long)td.tv_sec, (long)td.tv_usec / 1000);
+	if (td.tv_sec > 1)
+		psclogs_notice(PSS_TMP,
+		    "reclaim processing took %ld.%03ld second(s)",
+		    (long)td.tv_sec, (long)td.tv_usec / 1000);
 
  out:
 	PSCFREE(iov.iov_base);
