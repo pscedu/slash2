@@ -50,7 +50,7 @@ struct psc_vbitmap;
  *   aggregation.
  */
 struct sl_buffer {
-	void			*slb_base;		/* point to the data buffer		*/
+	void			*slb_base;		/* point to the data buffer */
 	struct psclist_head	 slb_mgmt_lentry;	/* chain lru or outgoing q  */
 };
 
