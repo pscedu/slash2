@@ -288,6 +288,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_connect_req);
 	PRTYPE(struct srm_create_rep);
 	PRTYPE(struct srm_create_req);
+	PRTYPE(struct srm_ctl_req);
 	PRTYPE(struct srm_destroy_req);
 	PRTYPE(struct srm_forward_rep);
 	PRTYPE(struct srm_forward_req);
@@ -350,6 +351,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srt_bmapdesc);
 	PRTYPE(struct srt_bmapminseq);
 	PRTYPE(struct srt_creds);
+	PRTYPE(struct srt_ctlsetopt);
 	PRTYPE(struct srt_preclaim_ent);
 	PRTYPE(struct srt_readdir_ent);
 	PRTYPE(struct srt_reclaim_entry);
@@ -546,6 +548,7 @@ main(int argc, char *argv[])
 	PRVAL(SRIM_REP_PORTAL);
 	PRVAL(SRIM_REQ_PORTAL);
 	PRVAL(SRIM_VERSION);
+	PRVAL(SRMCTL_OPT_HEALTH);
 	PRVAL(SRMC_BULK_PORTAL);
 	PRVAL(SRMC_CTL_PORTAL);
 	PRVAL(SRMC_REP_PORTAL);
@@ -563,6 +566,7 @@ main(int argc, char *argv[])
 	PRVAL(SRMM_REP_PORTAL);
 	PRVAL(SRMM_REQ_PORTAL);
 	PRVAL(SRMM_VERSION);
+	PRVAL(SRM_CTLOP_SETOPT);
 	PRVAL(SRM_RENAME_NAMEMAX);
 	PRVAL(UPSCH_MAX_ITEMS);
 	PRVAL(UPSCH_MAX_ITEMS_RES);
@@ -735,6 +739,7 @@ main(int argc, char *argv[])
 	PRVAL(SLITHRT_CONN);
 	PRVAL(SLITHRT_CTL);
 	PRVAL(SLITHRT_CTLAC);
+	PRVAL(SLITHRT_HEALTH);
 	PRVAL(SLITHRT_LNETAC);
 	PRVAL(SLITHRT_NBRQ);
 	PRVAL(SLITHRT_REPLPND);
@@ -879,6 +884,7 @@ main(int argc, char *argv[])
 	PRVAL(SRMT_BMAP_WAKE);
 	PRVAL(SRMT_CONNECT);
 	PRVAL(SRMT_CREATE);
+	PRVAL(SRMT_CTL);
 	PRVAL(SRMT_EXTENDBMAPLS);
 	PRVAL(SRMT_GETATTR);
 	PRVAL(SRMT_GETBMAP);
