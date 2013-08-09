@@ -312,8 +312,13 @@ batchrq_send_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 		slrpc_rep_in(br->br_csvc, rq);
 	/* nbrqset clears this for us */
 	br->br_rq = NULL;
-	if (rc)
-		batchrq_finish(br, rc);
+	if (rc) {
+		wk = pfl_workq_getitem(batchrq_handle_wkcb,
+		    struct slm_wkdata_batchrq_cb);
+		wk->br = br;
+		wk->rc = rc;
+		pfl_workq_putitem(wk);
+	}
 	return (0);
 }
 
