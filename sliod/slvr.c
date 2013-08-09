@@ -1200,8 +1200,6 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 {
 	struct slvr_ref *s, *tmp = NULL, ts;
 
-	psc_assert(rw == SL_WRITE || rw == SL_READ);
-
 	ts.slvr_num = num;
 
  retry:
