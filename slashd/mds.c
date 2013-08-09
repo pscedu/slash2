@@ -2272,21 +2272,19 @@ _dbdo(const struct pfl_callerinfo *pci,
 	va_end(ap);
 
 	psc_mutex_lock(&slm_dbh_mut);
- next:
+	do {
+		rc = sqlite3_step(sth->sth_sth);
+		if (rc == SQLITE_ROW)
+			cb(sth, arg);
+	} while (rc == SQLITE_ROW);
 
-	rc = sqlite3_step(sth->sth_sth);
-	if (rc == SQLITE_ROW) {
-		cb(sth, arg);
-		psc_mutex_unlock(&slm_dbh_mut);
-		goto next;
-	} else if (rc != SQLITE_DONE) {
+	if (rc != SQLITE_DONE) {
 		errstr = sqlite3_errmsg(slm_dbh);
 		psclog_errorx("SQL error: rc=%d query=%s; msg=%s", rc,
 		    fmt, errstr);
 		/* XXX rebuild db? */
-		psc_mutex_unlock(&slm_dbh_mut);
-	} else
-		psc_mutex_unlock(&slm_dbh_mut);
+	}
+	psc_mutex_unlock(&slm_dbh_mut);
 	sqlite3_reset(sth->sth_sth);
 	if (n) {
 		rc = sqlite3_clear_bindings(sth->sth_sth);

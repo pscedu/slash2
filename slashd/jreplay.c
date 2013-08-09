@@ -22,6 +22,10 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * jreplay - journal transaction replay.
+ */
+
 #include <errno.h>
 
 #include "pfl/fs.h"
@@ -129,6 +133,8 @@ mds_replay_bmap(void *jent, int op)
 		struct slash_inode_handle *ih;
 		struct srt_stat sstb;
 		int fl, idx;
+
+		// if bmap is newly initialized, we have a problem
 
 		FCMH_WAIT_BUSY(f);
 		ih = fcmh_2_inoh(f);
@@ -244,6 +250,12 @@ mds_replay_ino(void *jent, int op)
 	rc = slm_fcmh_get(&fg, &f);
 	if (rc)
 		goto out;
+
+	if (fcmh_isdir(f)) {
+		DEBUG_FCMH(PLL_ERROR, f, "file/directory corruption");
+		rc = EINVAL;
+		goto out;
+	}
 
 	/* It's possible this replay created this inode. */
 	ih = fcmh_2_inoh(f);

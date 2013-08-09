@@ -240,7 +240,7 @@ slmrcmthr_walk(struct slm_sth *sth, void *p)
 	slfid_t fid;
 
 	fid = sqlite3_column_int64(sth->sth_sth, 0);
-	psc_dynarray_add(da, fid);
+	psc_dynarray_add(da, (void *)fid);
 	return (0);
 }
 
