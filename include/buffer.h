@@ -50,8 +50,6 @@ struct psc_vbitmap;
  *   aggregation.
  */
 struct sl_buffer {
-	int			 slb_nblks;		/* num blocks, XXX: always 32		*/
-	uint32_t		 slb_blksz;		/* blocksize				*/
 	void			*slb_base;		/* point to the data buffer		*/
 	struct psclist_head	 slb_mgmt_lentry;	/* chain lru or outgoing q  */
 };

@@ -51,8 +51,6 @@ sl_buffer_init(__unusedx struct psc_poolmgr *m, void *pri)
 {
 	struct sl_buffer *slb = pri;
 
-	slb->slb_blksz = SLB_BLKSZ;
-	slb->slb_nblks = SLB_NBLK;
 	slb->slb_base  = PSCALLOC(SLB_NBLK * SLB_BLKSZ);
 
 	INIT_LISTENTRY(&slb->slb_mgmt_lentry);
