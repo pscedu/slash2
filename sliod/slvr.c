@@ -712,7 +712,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
  * @s: the sliver.
  */
 ssize_t
-slvr_fsbytes_rio(struct slvr_ref *s, uint32_t off, uint32_t len, 
+slvr_fsbytes_rio(struct slvr_ref *s, uint32_t off, uint32_t len,
 	struct sli_aiocb_reply **aiocbr)
 {
 	int blk;
@@ -725,7 +725,7 @@ slvr_fsbytes_rio(struct slvr_ref *s, uint32_t off, uint32_t len,
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 
 	if (!(s->slvr_flags & SLVR_RDMODWR)) {
-		rc = slvr_fsio(s, 0, SLASH_SLVR_SIZE, 
+		rc = slvr_fsio(s, 0, SLASH_SLVR_SIZE,
 		    SL_READ, aiocbr);
 		goto out;
 	}
@@ -734,7 +734,7 @@ slvr_fsbytes_rio(struct slvr_ref *s, uint32_t off, uint32_t len,
 		blk = (off / SLASH_SLVR_BLKSZ);
 		if (off & SLASH_SLVR_BLKMASK)
 			blk++;
-		rc = slvr_fsio(s, 0, blk * SLASH_SLVR_BLKSZ, 
+		rc = slvr_fsio(s, 0, blk * SLASH_SLVR_BLKSZ,
 		    SL_READ, aiocbr);
 		/* XXX should continue to issue I/O in AIO case */
 		if (rc)
@@ -742,14 +742,14 @@ slvr_fsbytes_rio(struct slvr_ref *s, uint32_t off, uint32_t len,
 	}
 	if (off + len < SLASH_SLVR_SIZE) {
 		blk = (off + len) / SLASH_SLVR_BLKSZ;
-		rc = slvr_fsio(s, blk, 
+		rc = slvr_fsio(s, blk,
 		    (SLASH_BLKS_PER_SLVR - blk) * SLASH_SLVR_BLKSZ,
 		    SL_READ, aiocbr);
 		/* XXX should continue to issue I/O in AIO case */
 		if (rc)
 			goto out;
 	}
-		
+
  out:
 	if (rc == -SLERR_AIOWAIT)
 		return (rc);
@@ -850,7 +850,7 @@ slvr_slab_prep(struct slvr_ref *s, enum rw rw)
 			SLVR_ULOCK(s);
 
 			tmp = psc_pool_get(sl_bufs_pool);
-			memset(tmp->slb_base, 0, tmp->slb_blksz * 
+			memset(tmp->slb_base, 0, tmp->slb_blksz *
 			    tmp->slb_nblks);
 			SLVR_LOCK(s);
 			goto newbuf;
