@@ -88,9 +88,6 @@ struct slvr {
 #define SLVR_RDMODWR		(1 << 14)	/* read modify write */
 #define SLVR_REPLWIRE		(1 << 15)	/* prevent aio race */
 
-#define SLVR_2_BLK(s)		((s)->slvr_num *			\
-				 (SLASH_BMAP_SIZE / SLASH_SLVR_BLKSZ))
-
 #define SLVR_LOCK(s)		spinlock(&(s)->slvr_lock)
 #define SLVR_ULOCK(s)		freelock(&(s)->slvr_lock)
 #define SLVR_RLOCK(s)		reqlock(&(s)->slvr_lock)
