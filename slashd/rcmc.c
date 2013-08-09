@@ -236,21 +236,12 @@ slmrcmthr_walk_bmaps(struct slm_replst_workreq *rsw,
 int
 slmrcmthr_walk(struct slm_sth *sth, void *p)
 {
-	struct slm_replst_workreq *rsw = p;
-	struct slash_fidgen fg;
-	struct fidc_membh *f;
-	int rc;
+	struct psc_dynarray *da = p;
+	slfid_t fid;
 
-	fg.fg_fid = sqlite3_column_int64(sth->sth_sth, 0);
-	fg.fg_gen = FGEN_ANY;
-	rc = slm_fcmh_get(&fg, &f);
-	if (rc)
-		return (0);
-	UPSCH_ULOCK();
-	rc = slmrcmthr_walk_bmaps(rsw, f);
-	UPSCH_LOCK();
-	fcmh_op_done(f);
-	return (!rc);
+	fid = sqlite3_column_int64(sth->sth_sth, 0);
+	psc_dynarray_add(da, fid);
+	return (0);
 }
 
 void
@@ -258,7 +249,13 @@ slmrcmthr_main(struct psc_thread *thr)
 {
 	struct slm_replst_workreq *rsw;
 	struct slmrcm_thread *srcm;
+	struct psc_dynarray da;
+	struct slash_fidgen fg;
 	struct fidc_membh *f;
+	int n, rc;
+	void *p;
+
+	psc_dynarray_init(&da);
 
 	srcm = slmrcmthr(thr);
 	while (pscthr_run()) {
@@ -267,10 +264,20 @@ slmrcmthr_main(struct psc_thread *thr)
 
 		if (rsw->rsw_fg.fg_fid == FID_ANY) {
 			UPSCH_LOCK();
-			/* XXX don't hold db lock */
-			dbdo(slmrcmthr_walk, rsw,
+			dbdo(slmrcmthr_walk, &da,
 			    "SELECT DISTINCT fid FROM upsch");
 			UPSCH_ULOCK();
+
+			DYNARRAY_FOREACH(p, n, &da) {
+				fg.fg_fid = (slfid_t)p;
+				fg.fg_gen = FGEN_ANY;
+				rc = slm_fcmh_get(&fg, &f);
+				if (rc)
+					break;
+				rc = slmrcmthr_walk_bmaps(rsw, f);
+				fcmh_op_done(f);
+			}
+
 		} else if (slm_fcmh_get(&rsw->rsw_fg, &f) == 0) {
 			slmrcmthr_walk_bmaps(rsw, f);
 			fcmh_op_done(f);
@@ -281,5 +288,6 @@ slmrcmthr_main(struct psc_thread *thr)
 
 		sl_csvc_decref(rsw->rsw_csvc);
 		PSCFREE(rsw);
+		psc_dynarray_reset(&da);
 	}
 }
