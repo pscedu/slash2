@@ -123,7 +123,7 @@ INST_BASE=/usr/local		# defaults to /usr/psc
 		</oof:list-item>
 	</oof:list>
 
-	pickle
+	<oof:header size="4">Building instructions</oof:header>
 
 	<oof:p>
 		Finally, build the SLASH2 software with <oof:tt>gmake</oof:tt>:
@@ -153,6 +153,24 @@ INST_BASE=/usr/local		# defaults to /usr/psc
 		details and operating system information and version, to the
 		<oof:link href='/contact.pwl#mlist'>development mailing
 			list</oof:link>.
+	</oof:p>
+
+	<oof:header size="4">System reconfiguration</oof:header>
+	<oof:p>
+		SLASH2 uses a compatibility discovery system similar to
+		<oof:tt>autoconf</oof:tt> and the <oof:tt>./configure</oof:tt>
+		scripts offered by many common open source software projects.
+		This configuration is automatically generated before the first
+		compilation and regenerated subsequently based on heuristics when
+		something on the build host has changed.
+	</oof:p>
+	<oof:p>
+		In the case of missing system packages, or updated system packages,
+		etc. when it is necessary to reperform this configuration probe
+		(such as when <oof:tt>./configure</oof:tt> would need to be rerun),
+		this configuration can be cleared so that it will be redone by
+		removing the file
+		<oof:tt>mk/gen-localdefs-${hostname}-pickle.mk</oof:tt>.
 	</oof:p>
 
 	<oof:header size="3">Recompiling/Upgrading</oof:header>
