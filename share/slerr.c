@@ -35,6 +35,7 @@ char *pfl_errstrs[] = {
 /*  2 */ "No connection to peer",
 /*  3 */ "Operation already in progress",
 /*  4 */ "Operation not supported",
+/*  5 */ "Function not implemented",
 	  NULL
 };
 
