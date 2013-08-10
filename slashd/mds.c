@@ -2188,7 +2188,7 @@ _dbdo(const struct pfl_callerinfo *pci,
     int (*cb)(struct slm_sth *, void *), void *arg,
     const char *fmt, ...)
 {
-	char *p, dbuf[LINE_MAX];
+	char *p, dbuf[LINE_MAX] = "";
 	int dbuf_off = 0, rc, n, j;
 	struct slm_sth *sth;
 	const char *errstr;
