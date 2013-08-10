@@ -708,8 +708,8 @@ slc_reptbl_cmp(const void *a, const void *b)
 	/* try degraded IOS */
 	xi = res2rpci(x->r);
 	yi = res2rpci(y->r);
-	xv = xi->rcpi_flags & RCPIF_AVOID ? 1 : -1;
-	yv = yi->rcpi_flags & RCPIF_AVOID ? 1 : -1;
+	xv = xi->rpci_flags & RPCIF_AVOID ? 1 : -1;
+	yv = yi->rpci_flags & RPCIF_AVOID ? 1 : -1;
 	return (CMP(xv, yv));
 }
 

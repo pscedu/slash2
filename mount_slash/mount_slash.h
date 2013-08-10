@@ -193,10 +193,10 @@ void	msl_fsrqinfo_biorq_add(struct msl_fsrqinfo *, struct bmpc_ioreq *,int);
 
 struct resprof_cli_info {
 	struct psc_dynarray		 rpci_pinned_bmaps;
-	int				 rcpi_flags;
+	int				 rpci_flags;
 };
 
-#define RCPIF_AVOID			(1 << 0)
+#define RPCIF_AVOID			(1 << 0)
 
 static __inline struct resprof_cli_info *
 res2rpci(struct sl_resource *res)

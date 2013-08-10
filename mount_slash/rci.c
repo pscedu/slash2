@@ -43,10 +43,39 @@
 int
 slc_rci_handle_ctl(struct pscrpc_request *rq)
 {
+	struct srt_ctlsetopt *c;
 	struct srm_ctl_req *mq;
 	struct srm_ctl_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
+	switch (mq->opc) {
+	case SRM_CTLOP_SETOPT: 
+		c = (void *)mq->buf;
+		switch (c->opt) {
+		case SRMCTL_OPT_HEALTH: {
+			struct resprof_cli_info *rpci;
+			struct sl_resm *m;
+
+			m = libsl_try_nid2resm(rq->rq_peer.nid);
+			rpci = res2rpci(m->resm_res);
+			rpci->rpci_flags &= ~RPCIF_AVOID;
+			switch (c->opv) {
+			case 2: /* degraded: avoid */
+				rpci->rpci_flags |= RPCIF_AVOID;
+				break;
+			}
+			break;
+		default:
+			break;
+		    }
+		}
+		break;
+	default:
+		psclog_errorx("unrecognized control action; opc=%d",
+		    mq->opc);
+		mp->rc = -ENOSYS;
+		break;
+	}
 	return (0);
 }
 
