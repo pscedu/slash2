@@ -816,12 +816,11 @@ upd_proc_pagein_unit(struct slm_update_data *upd)
 	BMAP_WAIT_BUSY(b);
 	BMAPOD_WRLOCK(bmi);
 
-	rc = mds_repl_bmap_walk_all(b, NULL, retifset,
-	    REPL_WALKF_SCIRCUIT);
-	if (rc)
+	if (mds_repl_bmap_walk_all(b, NULL, retifset,
+	    REPL_WALKF_SCIRCUIT))
 		upsch_enqueue(bmap_2_upd(b));
 	else
-		rc = ENOENT;
+		rc = 1;
 
  out:
 	if (rc) {
