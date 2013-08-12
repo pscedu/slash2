@@ -83,7 +83,7 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 	saf->saf_secret.sas_nonce =
 	    psc_atomic64_inc_getnew(&authbuf_nonce);
 
-	pscrpc_req_getprids(&lnet_prids, rq, &self_prid, &peer_prid);
+	pscrpc_req_getprids(&sl_lnet_prids, rq, &self_prid, &peer_prid);
 	saf->saf_secret.sas_src_nid = self_prid.nid;
 	saf->saf_secret.sas_src_pid = self_prid.pid;
 	saf->saf_secret.sas_dst_nid = peer_prid.nid;
@@ -143,7 +143,7 @@ authbuf_check(struct pscrpc_request *rq, int msgtype)
 		return (SLERR_AUTHBUF_BADMAGIC);
 	}
 
-	pscrpc_req_getprids(&lnet_prids, rq, &self_prid, &peer_prid);
+	pscrpc_req_getprids(&sl_lnet_prids, rq, &self_prid, &peer_prid);
 	if (saf->saf_secret.sas_src_nid != peer_prid.nid ||
 	    saf->saf_secret.sas_src_pid != peer_prid.pid ||
 	    saf->saf_secret.sas_dst_nid != self_prid.nid ||

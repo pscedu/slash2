@@ -210,7 +210,7 @@ slrpc_issue_connect(lnet_nid_t server, struct slashrpc_cservice *csvc,
 	struct pscrpc_import *imp;
 	int rc;
 
-	pscrpc_getpridforpeer(&prid, &lnet_prids, server);
+	pscrpc_getpridforpeer(&prid, &sl_lnet_prids, server);
 	if (prid.nid == LNET_NID_ANY)
 		return (ENETUNREACH);
 
@@ -564,7 +564,7 @@ slrpc_getpeernid(struct pscrpc_export *exp,
 		peernid = LNET_NID_ANY;
 		/* prefer directly connected NIDs */
 		DYNARRAY_FOREACH(nr, i, peernids) {
-			DYNARRAY_FOREACH(pp, j, &lnet_prids) {
+			DYNARRAY_FOREACH(pp, j, &sl_lnet_prids) {
 				if (LNET_NIDNET(nr->resmnid_nid) ==
 				    LNET_NIDNET(pp->nid)) {
 					peernid = nr->resmnid_nid;

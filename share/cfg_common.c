@@ -40,7 +40,7 @@
 #include "slconfig.h"
 #include "slerr.h"
 
-struct psc_dynarray	lnet_prids = DYNARRAY_INIT;
+struct psc_dynarray	sl_lnet_prids = DYNARRAY_INIT;
 
 /**
  * libsl_resm_lookup - Sanity check this node's resource membership.
@@ -55,7 +55,7 @@ libsl_resm_lookup(void)
 	lnet_process_id_t *pp;
 	int i;
 
-	DYNARRAY_FOREACH(pp, i, &lnet_prids) {
+	DYNARRAY_FOREACH(pp, i, &sl_lnet_prids) {
 		if (LNET_NETTYP(LNET_NIDNET(pp->nid)) == LOLND)
 			continue;
 
@@ -291,7 +291,7 @@ libsl_init(int nmsgs)
 	mode = PSCNET_CLIENT;
 #endif
 	pscrpc_init_portals(mode, nmsgs);
-	pscrpc_getlocalprids(&lnet_prids);
+	pscrpc_getlocalprids(&sl_lnet_prids);
 
 #ifdef _SLASH_CLIENT
 	setenv("SLASH2_PIOS_ID", globalConfig.gconf_prefios, 0);

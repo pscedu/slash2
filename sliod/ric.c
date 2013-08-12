@@ -135,7 +135,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 * A RBW (read-before-write) request from the client may have a
 	 *   write enabled bmapdesc which he uses to fault in his page.
 	 */
-	DYNARRAY_FOREACH(pp, i, &lnet_prids) {
+	DYNARRAY_FOREACH(pp, i, &sl_lnet_prids) {
 		mp->rc = bmapdesc_access_check(&mq->sbd, rw,
 		    nodeResm->resm_res->res_id);
 		if (mp->rc == 0) {
