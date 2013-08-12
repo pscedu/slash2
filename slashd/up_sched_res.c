@@ -717,8 +717,11 @@ upd_proc_bmap(struct slm_update_data *upd)
 			 * XXX: mask mwc off and make sure lease
 			 * relinquishment masks us back on and wakes up.
 			 */
-			if (bmap_2_bmi(b)->bmi_wr_ion)
+			if (bmap_2_bmi(b)->bmi_wr_ion) {
+				psclog_debug("skipping because write "
+				    "lease still active");
 				break;
+			}
 
 			/* look for a repl source */
 			for (tryarchival = 0; tryarchival < 2;
@@ -747,6 +750,10 @@ upd_proc_bmap(struct slm_update_data *upd)
 					     SIF_DISABLE_BIA))
 						continue;
 
+					psclog_debug("trying to arrange "
+					    "repl with %s",
+					    src_res->res_name);
+
 					/*
 					 * Search source nodes for an
 					 * idle, online connection.
@@ -760,7 +767,6 @@ upd_proc_bmap(struct slm_update_data *upd)
 						continue;
 					sl_csvc_decref(csvc);
 
-					/* scan destination resms */
 					if (slm_upsch_tryrepl(b, off, m,
 					    dst_res))
 						return;
