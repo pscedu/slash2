@@ -56,6 +56,7 @@ main(int argc, char *argv[])
 	printf("%4d [PFLERR_NOTCONN]: %s\n", PFLERR_NOTCONN, slstrerror(PFLERR_NOTCONN));
 	printf("%4d [PFLERR_ALREADY]: %s\n", PFLERR_ALREADY, slstrerror(PFLERR_ALREADY));
 	printf("%4d [PFLERR_NOTSUP]: %s\n", PFLERR_NOTSUP, slstrerror(PFLERR_NOTSUP));
+	printf("%4d [PFLERR_NOSYS]: %s\n", PFLERR_NOSYS, slstrerror(PFLERR_NOSYS));
 	printf("%4d [SLERR_REPL_ALREADY_ACT]: %s\n", SLERR_REPL_ALREADY_ACT, slstrerror(SLERR_REPL_ALREADY_ACT));
 	printf("%4d [SLERR_REPL_NOT_ACT]: %s\n", SLERR_REPL_NOT_ACT, slstrerror(SLERR_REPL_NOT_ACT));
 	printf("%4d [SLERR_BMAP_INVALID]: %s\n", SLERR_BMAP_INVALID, slstrerror(SLERR_BMAP_INVALID));
