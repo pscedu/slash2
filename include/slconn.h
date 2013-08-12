@@ -248,7 +248,7 @@ struct sl_expcli_ops {
 		if ((error) == 0)					\
 			(error) = authbuf_check((rq), PSCRPC_MSG_REPLY);\
 		if ((error) == 0)					\
-			(error) = (mp) ? (mp)->rc : -ENOMSG;		\
+			(error) = (mp) ? (mp)->rc : -PFLERR_BADMSG;	\
 		if ((error) == -PFLERR_NOTCONN && (csvc))		\
 			sl_csvc_disconnect(csvc);			\
 	} while (0)
