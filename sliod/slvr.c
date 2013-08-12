@@ -818,7 +818,7 @@ slvr_repl_prep(struct slvr_ref *s, int src_or_dst)
 }
 
 void
-slvr_slab_prep(struct slvr_ref *s, enum rw rw)
+slvr_slab_prep(struct slvr_ref *s, __unusedx enum rw rw)
 {
 	struct sl_buffer *tmp = NULL;
 
@@ -826,16 +826,6 @@ slvr_slab_prep(struct slvr_ref *s, enum rw rw)
 	SLVR_LOCK(s);
 
  restart:
-	/*
-	 * slvr_lookup() must pin all slvrs to avoid racing with the
-	 * reaper.
-	 */
-	psc_assert(s->slvr_flags & SLVR_PINNED);
-
-	if (rw == SL_WRITE)
-		psc_assert(s->slvr_pndgwrts > 0);
-	else
-		psc_assert(s->slvr_pndgreads > 0);
 
  newbuf:
 	if (s->slvr_flags & SLVR_NEW) {
