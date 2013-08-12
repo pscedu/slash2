@@ -142,6 +142,8 @@ uint32_t			 sl_sys_upnonce;
 struct psc_hashtbl		 slc_uidmap_ext;
 struct psc_hashtbl		 slc_uidmap_int;
 
+int				 slc_posix_mkgrps;
+
 int
 uidmap_ext_cred(struct srt_creds *cr)
 {
@@ -383,7 +385,8 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mq->pfg.fg_gen = FGEN_ANY;
 	mq->prefios[0] = prefIOS;
 	mq->creds.scr_uid = pcr.pcr_uid;
-	mq->creds.scr_gid = pcr.pcr_gid;
+	mq->creds.scr_gid = slc_posix_mkgrps ?
+	    p->fcmh_sstb.sst_gid : pcr.pcr_gid;
 	rc = uidmap_ext_cred(&mq->creds);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -852,7 +855,8 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = FGEN_ANY;
 	mq->sstb.sst_uid = pcr.pcr_uid;
-	mq->sstb.sst_gid = pcr.pcr_gid;
+	mq->sstb.sst_gid = slc_posix_mkgrps ?
+	    p->fcmh_sstb.sst_gid : pcr.pcr_gid;
 	rc = uidmap_ext_stat(&mq->sstb);
 	if (rc)
 		PFL_GOTOERR(out, rc);
