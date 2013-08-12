@@ -173,8 +173,6 @@ slvr_do_crc(struct slvr_ref *s)
 
 		DEBUG_SLVR(PLL_DIAG, s, "crc=%"PSCPRIxCRC64, crc);
 
-		if (!s->slvr_pndgwrts && !s->slvr_compwrts)
-			s->slvr_flags &= ~SLVR_CRCDIRTY;
 		slvr_2_crc(s) = crc;
 		slvr_2_crcbits(s) |= BMAP_SLVR_DATA | BMAP_SLVR_CRC;
 	} else {
