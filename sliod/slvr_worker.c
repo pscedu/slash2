@@ -379,7 +379,6 @@ slislvrthr_proc(struct slvr *s)
 	 * instantiation of slvr_do_crc() will cover those writes.
 	 */
 	s->slvr_compwrts = 0;
-	s->slvr_ncrc++;
 	SLVR_ULOCK(s);
 
 	psc_assert(psclist_disjoint(&s->slvr_lentry));

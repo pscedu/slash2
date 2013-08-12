@@ -55,7 +55,6 @@ struct slvr {
 	uint32_t		 slvr_compwrts;	/* # compltd wrts when !LRU */
 	uint32_t		 slvr_flags;	/* see SLVR_* flags */
 	uint64_t		 slvr_crc;	/* accumulator  */
-	uint32_t		 slvr_ncrc;	/* n times slvr was crc'd */
 	int32_t			 slvr_err;
 	int32_t			 slvr_dirty_cnt;
 	psc_spinlock_t		 slvr_lock;
@@ -137,12 +136,12 @@ struct slvr {
 #define DEBUG_SLVR(level, s, fmt, ...)					\
 	psclogs((level), SLISS_SLVR, "slvr@%p num=%hu pw=%u "		\
 	    "pr=%u cw=%u "						\
-	    "ncrc=%u dc=%d ts="PSCPRI_TIMESPEC" "			\
+	    "dc=%d ts="PSCPRI_TIMESPEC" "				\
 	    "bii@%p slab@%p bmap@%p fid:"SLPRI_FID" iocb@%p flgs:"	\
 	    "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s :: " fmt,			\
 	    (s), (s)->slvr_num, (s)->slvr_pndgwrts,			\
 	    (s)->slvr_pndgreads, (s)->slvr_compwrts,			\
-	    (s)->slvr_ncrc, (s)->slvr_dirty_cnt,			\
+	    (s)->slvr_dirty_cnt,					\
 	    PSCPRI_TIMESPEC_ARGS(&(s)->slvr_ts),			\
 	    (s)->slvr_bii, (s)->slvr_slab,				\
 	    (s)->slvr_bii ? slvr_2_bmap(s) : NULL,			\
