@@ -98,14 +98,13 @@ slvr_do_crc(struct slvr_ref *s)
 {
 	uint64_t crc;
 
-	SLVR_LOCK(s);
+	SLVR_LOCK_ENSURE(s);
 	psc_assert((s->slvr_flags & SLVR_PINNED) &&
 		   (s->slvr_flags & SLVR_FAULTING ||
 		    s->slvr_flags & SLVR_CRCDIRTY));
 
 	if (s->slvr_flags & SLVR_FAULTING) {
 		if (slvr_2_crcbits(s) & BMAP_SLVR_CRCABSENT) {
-			SLVR_ULOCK(s);
 			return (SLERR_CRCABSENT);
 		}
 		/*
@@ -119,7 +118,6 @@ slvr_do_crc(struct slvr_ref *s)
 			 *    be taken here.
 			 */
 			psc_assert(s->slvr_pndgwrts);
-			SLVR_ULOCK(s);
 			return (-1);
 		}
 
@@ -132,7 +130,6 @@ slvr_do_crc(struct slvr_ref *s)
 
 		if ((slvr_2_crcbits(s) & BMAP_SLVR_DATA) &&
 		    (slvr_2_crcbits(s) & BMAP_SLVR_CRC)) {
-			SLVR_ULOCK(s);
 
 			psc_crc64_calc(&crc, slvr_2_buf(s, 0),
 			    SLASH_SLVR_SIZE);
@@ -149,7 +146,6 @@ slvr_do_crc(struct slvr_ref *s)
 			}
 
 		} else {
-			SLVR_ULOCK(s);
 			return (0);
 		}
 
@@ -161,7 +157,6 @@ slvr_do_crc(struct slvr_ref *s)
 		 */
 		DEBUG_SLVR(PLL_DIAG, s, "crc");
 		PSC_CRC64_INIT(&s->slvr_crc);
-		SLVR_ULOCK(s);
 
 #ifdef ADLERCRC32
 		// XXX not a running CRC?  double check for correctness
@@ -178,12 +173,10 @@ slvr_do_crc(struct slvr_ref *s)
 
 		DEBUG_SLVR(PLL_DIAG, s, "crc=%"PSCPRIxCRC64, crc);
 
-		SLVR_LOCK(s);
 		if (!s->slvr_pndgwrts && !s->slvr_compwrts)
 			s->slvr_flags &= ~SLVR_CRCDIRTY;
 		slvr_2_crc(s) = crc;
 		slvr_2_crcbits(s) |= BMAP_SLVR_DATA | BMAP_SLVR_CRC;
-		SLVR_ULOCK(s);
 	} else {
 		psc_fatal("FAULTING or CRCDIRTY is not set");
 	}

@@ -379,13 +379,11 @@ slislvrthr_proc(struct slvr *s)
 	 * instantiation of slvr_do_crc() will cover those writes.
 	 */
 	s->slvr_compwrts = 0;
-	SLVR_ULOCK(s);
 
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
 	psc_assert(slvr_do_crc(s));
 
 	/* Be paranoid, ensure the sliver is not queued anywhere. */
-	SLVR_LOCK(s);
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
 
 	if ((s->slvr_flags & SLVR_CRCDIRTY || s->slvr_compwrts) &&
