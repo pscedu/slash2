@@ -213,7 +213,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	sl_bmapgen_t gen;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = slm_fcmh_get(&mq->fg, &f);
+	mp->rc = -slm_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
@@ -247,7 +247,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 
 	BHGEN_GET(b, &gen);
 	if (mq->rc == 0 && mq->bgen != gen)
-		mq->rc = SLERR_GEN_OLD;
+		mq->rc = -SLERR_GEN_OLD;
 	if (mq->rc) {
 		DPRINTF_UPD(PLL_WARN, upd, "rc=%d", mq->rc);
 
@@ -276,10 +276,12 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 
 				/* Try from another replica. */
 				brepls_init(tract, -1);
-				tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+				tract[BREPLST_REPL_SCHED] =
+				    BREPLST_REPL_QUEUED;
 			} else {
 				/* No other replicas exist. */
-				tract[BREPLST_REPL_SCHED] = BREPLST_INVALID;
+				tract[BREPLST_REPL_SCHED] =
+				    BREPLST_INVALID;
 			}
 		} else if (mq->rc == SLERR_ION_OFFLINE)
 			tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
@@ -302,6 +304,13 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	mds_bmap_write_logrepls(b);
 
  out:
+	if (mq->rc || mp->rc)
+		psclog_warnx("reply from replication arrangement; "
+		    "src=%s dst=%s qrc=%d prc=%d",
+		    src_resm ? src_resm->resm_name : NULL,
+		    dst_resm ? dst_resm->resm_name : NULL,
+		    mq->rc, mp->rc);
+
 	if (src_resm && dst_resm && b) {
 		upd_rpmi_remove(res2rpmi(dst_resm->resm_res), upd);
 		mds_repl_nodes_adjbusy(src_resm, dst_resm,
@@ -424,7 +433,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	 * Lookup the parent directory in the cache so that the SLASH2
 	 * inode can be translated into the inode for the underlying fs.
 	 */
-	mp->rc = slm_fcmh_get(&mq->pfg, &p);
+	mp->rc = -slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
@@ -456,7 +465,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	if (S_ISDIR(sstb.sst_mode))
 		PFL_GOTOERR(out, mp->rc = -EISDIR);
 
-	rc2 = slm_fcmh_get(&sstb.sst_fg, &c);
+	rc2 = -slm_fcmh_get(&sstb.sst_fg, &c);
 	if (rc2)
 		PFL_GOTOERR(out, mp->rc = rc2);
 
