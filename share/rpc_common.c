@@ -43,7 +43,7 @@
 
 struct pscrpc_nbreqset	*sl_nbrqset;
 
-struct psc_lockedlist	 client_csvcs = PLL_INIT(&client_csvcs,
+struct psc_lockedlist	 sl_clients = PLL_INIT(&sl_clients,
     struct slashrpc_cservice, csvc_lentry);
 
 int
@@ -440,7 +440,7 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 		 */
 		pscrpc_import_put(csvc->csvc_import);
 		if (csvc->csvc_peertype == SLCONNT_CLI)
-			pll_remove(&client_csvcs, csvc);
+			pll_remove(&sl_clients, csvc);
 		DEBUG_CSVC(PLL_INFO, csvc, "freed");
 		// XXX assert(mutex.nwaiters == 0)
 		psc_mutex_unlock(&csvc->csvc_mutex);
@@ -827,7 +827,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	CSVC_WAKE(*csvcp);
 
 	if (addlist)
-		pll_add_sorted(&client_csvcs, csvc, csvc_cli_cmp);
+		pll_add_sorted(&sl_clients, csvc, csvc_cli_cmp);
 
  out:
 	if (csvc)

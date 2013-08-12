@@ -180,10 +180,10 @@ slihealththr_main(__unusedx struct psc_thread *thr)
 			psclog_notice("health changed from %d to %d",
 			    sli_selftest_rc, rc);
 
-			PLL_LOCK(&client_csvcs);
-			PLL_FOREACH(csvc, &client_csvcs)
+			PLL_LOCK(&sl_clients);
+			PLL_FOREACH(csvc, &sl_clients)
 				sli_rci_ctl_health_send(csvc);
-			PLL_ULOCK(&client_csvcs);
+			PLL_ULOCK(&sl_clients);
 		}
 		sli_selftest_rc = rc;
 		sleep(30);
