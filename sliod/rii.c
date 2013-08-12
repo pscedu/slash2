@@ -330,7 +330,6 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc;
-	struct srm_repl_read_rep *mp;
 	struct sli_repl_workrq *w;
 	struct slvr_ref *s;
 	int rc, slvridx;
