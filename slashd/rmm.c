@@ -312,8 +312,9 @@ slm_rmm_handler(struct pscrpc_request *rq)
 		rc = slm_rmm_handle_namespace_forward(rq);
 		break;
 	default:
-		psclog_errorx("unexpected opcode %d", rq->rq_reqmsg->opc);
-		rq->rq_status = -ENOSYS;
+		psclog_errorx("unexpected opcode %d",
+		    rq->rq_reqmsg->opc);
+		rq->rq_status = -PFLERR_NOSYS;
 		return (pscrpc_error(rq));
 	}
 	authbuf_sign(rq, PSCRPC_MSG_REPLY);
@@ -346,7 +347,7 @@ slm_rmm_forward_namespace(int op, struct slash_fidgen *fg,
 	    op != SLM_FORWARD_CREATE && op != SLM_FORWARD_UNLINK &&
 	    op != SLM_FORWARD_RENAME && op != SLM_FORWARD_SETATTR &&
 	    op != SLM_FORWARD_SYMLINK)
-		return (-ENOSYS);
+		return (-PFLERR_NOSYS);
 
 	rc = slfid_to_vfsid(fg->fg_fid, &vfsid);
 	if (rc)

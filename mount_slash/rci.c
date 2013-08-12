@@ -73,7 +73,7 @@ slc_rci_handle_ctl(struct pscrpc_request *rq)
 	default:
 		psclog_errorx("unrecognized control action; opc=%d",
 		    mq->opc);
-		mp->rc = -ENOSYS;
+		mp->rc = -PFLERR_NOSYS;
 		break;
 	}
 	return (0);
@@ -277,8 +277,9 @@ slc_rci_handler(struct pscrpc_request *rq)
 		rc = slc_rci_handle_ctl(rq);
 		break;
 	default:
-		psclog_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
-		rq->rq_status = -ENOSYS;
+		psclog_errorx("unexpected opcode %d",
+		    rq->rq_reqmsg->opc);
+		rq->rq_status = -PFLERR_NOSYS;
 		return (pscrpc_error(rq));
 	}
 	authbuf_sign(rq, PSCRPC_MSG_REPLY);

@@ -525,8 +525,9 @@ sli_ric_handler(struct pscrpc_request *rq)
 		rc = sli_ric_handle_rlsbmap(rq);
 		break;
 	default:
-		psclog_errorx("unexpected opcode %d", rq->rq_reqmsg->opc);
-		rq->rq_status = -ENOSYS;
+		psclog_errorx("unexpected opcode %d",
+		    rq->rq_reqmsg->opc);
+		rq->rq_status = -PFLERR_NOSYS;
 		return (pscrpc_error(rq));
 	}
  out:

@@ -268,8 +268,9 @@ sli_rim_handler(struct pscrpc_request *rq)
 		    SLCONNT_MDS);
 		break;
 	default:
-		psclog_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
-		rq->rq_status = -ENOSYS;
+		psclog_errorx("unexpected opcode %d",
+		    rq->rq_reqmsg->opc);
+		rq->rq_status = -PFLERR_NOSYS;
 		return (pscrpc_error(rq));
 	}
 	authbuf_sign(rq, PSCRPC_MSG_REPLY);

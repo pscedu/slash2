@@ -938,7 +938,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
 #if 0
 		if (IS_REMOTE_FID(mq->attr.sst_fg.fg_fid)) {
-			mp->rc = -ENOSYS;
+			mp->rc = -PFLERR_NOSYS;
 			goto out;
 		}
 #endif
@@ -1608,9 +1608,9 @@ slm_rmc_handler(struct pscrpc_request *rq)
 		rc = slm_rmc_handle_removexattr(rq);
 		break;
 	default:
-		psclog_errorx("Unexpected opcode %d",
+		psclog_errorx("unexpected opcode %d",
 		    rq->rq_reqmsg->opc);
-		rq->rq_status = -ENOSYS;
+		rq->rq_status = -PFLERR_NOSYS;
 		mds_note_update(-1);
 		return (pscrpc_error(rq));
 	}
