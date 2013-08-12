@@ -70,15 +70,11 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		slvrsiz = w->srw_len % SLASH_SLVR_SIZE;
 
 	if (rc == 0) {
-		rc = slvr_do_crc(s);
 
-		/* XXX check this return code */
-//		if (!rc)
-		if (1)
-			/* SLVR_DATARDY is set in wio_done
-			 *    when the slvr lock is taken again.
-			 */
-			rc = slvr_fsbytes_wio(s, slvrsiz, 0);
+		/* SLVR_DATARDY is set in wio_done
+		 *    when the slvr lock is taken again.
+		 */
+		rc = slvr_fsbytes_wio(s, slvrsiz, 0);
 	}
 
 	if (rc) {
