@@ -291,7 +291,7 @@ extern char		 cfg_filename[];
 extern int		 cfg_lineno;
 extern struct psclist_head cfg_lnetif_pairs;
 
-extern uint32_t		 sys_upnonce;
+extern uint32_t		 sl_sys_upnonce;
 
 /**
  * sl_global_id_build - Produce a global, unique identifier for a

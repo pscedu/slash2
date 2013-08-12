@@ -137,7 +137,7 @@ struct psc_poolmgr		*mfh_pool;
 struct psc_poolmaster		 mfsrq_poolmaster;
 struct psc_poolmgr		*mfsrq_pool;
 
-uint32_t			 sys_upnonce;
+uint32_t			 sl_sys_upnonce;
 
 struct psc_hashtbl		 slc_uidmap_ext;
 struct psc_hashtbl		 slc_uidmap_int;
@@ -3454,7 +3454,7 @@ main(int argc, char *argv[])
 
 	pscthr_init(MSTHRT_FSMGR, 0, NULL, NULL, 0, "msfsmgrthr");
 
-	sys_upnonce = psc_random32();
+	sl_sys_upnonce = psc_random32();
 
 	noncanon_mp = argv[0];
 	if (unmount_first)

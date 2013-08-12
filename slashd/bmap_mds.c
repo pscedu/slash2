@@ -110,7 +110,7 @@ slm_bmap_resetnonce_cb(struct slm_sth *sth, void *p)
 	uint32_t nonce;
 
 	nonce = sqlite3_column_int(sth->sth_sth, 0);
-	if (nonce == sys_upnonce)
+	if (nonce == sl_sys_upnonce)
 		return (0);
 
 	a->update = 1;
@@ -150,7 +150,7 @@ slm_bmap_resetnonce(struct bmap *b)
 		    " SET	nonce = ?"
 		    " WHERE	fid = ?"
 		    "   AND	bno = ?",
-		    SQLITE_INTEGER, sys_upnonce,
+		    SQLITE_INTEGER, sl_sys_upnonce,
 		    SQLITE_INTEGER64, bmap_2_fid(b),
 		    SQLITE_INTEGER, b->bcm_bmapno);
 		mds_bmap_write_logrepls(b);

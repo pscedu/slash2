@@ -1018,7 +1018,7 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid)
 	    SQLITE_INTEGER, b->bcm_bmapno,
 	    SQLITE_INTEGER, b->bcm_fcmh->fcmh_sstb.sst_uid,
 	    SQLITE_INTEGER, b->bcm_fcmh->fcmh_sstb.sst_gid,
-	    SQLITE_INTEGER, sys_upnonce);
+	    SQLITE_INTEGER, sl_sys_upnonce);
 	r = libsl_id2res(resid);
 	upschq_resm(res_getmemb(r), UPDT_PAGEIN);
 }

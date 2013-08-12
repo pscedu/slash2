@@ -70,7 +70,7 @@ struct srt_statfs	 sli_ssfb;
 psc_spinlock_t		 sli_ssfb_lock = SPINLOCK_INIT;
 struct psc_thread	*sliconnthr;
 
-uint32_t		 sys_upnonce;
+uint32_t		 sl_sys_upnonce;
 int			 allow_root_uid = 1;
 const char		*progname;
 
@@ -267,7 +267,7 @@ main(int argc, char *argv[])
 	pscthr_init(SLITHRT_CTL, 0, NULL, NULL,
 	    sizeof(struct psc_ctlthr), "slictlthr0");
 
-	sys_upnonce = psc_random32();
+	sl_sys_upnonce = psc_random32();
 
 	slcfg_parse(cfn);
 	authbuf_checkkeyfile();

@@ -297,7 +297,7 @@ slrpc_issue_ping(struct slashrpc_cservice *csvc, int st_rc)
 	if (rc)
 		return (rc);
 	mq->rc = st_rc;
-	mq->upnonce = sys_upnonce;
+	mq->upnonce = sl_sys_upnonce;
 	rq->rq_timeoutable = 1;
 	rq->rq_interpret_reply = slrpc_ping_cb;
 	rq->rq_async_args.pointer_arg[0] = csvc;

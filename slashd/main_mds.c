@@ -78,7 +78,7 @@ const char		*progname;
 struct slash_creds	 rootcreds = { 0, 0 };
 struct pscfs		 pscfs;
 struct psc_thread	*slmconnthr;
-uint32_t		 sys_upnonce;
+uint32_t		 sl_sys_upnonce;
 
 struct odtable		*slm_ptrunc_odt;
 
@@ -503,7 +503,7 @@ main(int argc, char *argv[])
 	pscthr_init(SLMTHRT_CTL, 0, NULL, NULL,
 	    sizeof(struct psc_ctlthr), "slmctlthr0");
 
-	sys_upnonce = psc_random32();
+	sl_sys_upnonce = psc_random32();
 
 	slcfg_parse(cfn);
 
