@@ -120,6 +120,7 @@ slc_rmc_setmds(const char *name)
 	/* XXX kill any old MDS and purge any bmap updates being held */
 //	sl_csvc_disable(old->resm_csvc);
 #if 0
+	slconnthr_watch(slc_rmc_resm, SRMC_REQ_PORTAL, SRMC_REP_PORTAL,
 	slconnthr_spawn(slc_rmc_resm, SRMC_REQ_PORTAL, SRMC_REP_PORTAL,
 	    SRMC_MAGIC, SRMC_VERSION, 0,
 	    &resm2rmci(slc_rmc_resm)->rmci_mwc,
