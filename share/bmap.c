@@ -114,8 +114,8 @@ _bmap_op_done(const struct pfl_callerinfo *pci, struct bmap *b,
 		 * mds_bmap_destroy(), iod_bmap_finalcleanup(), and
 		 * msl_bmap_final_cleanup().
 		 */
-		if (bmap_ops.bmo_final_cleanupf)
-			bmap_ops.bmo_final_cleanupf(b);
+		if (sl_bmap_ops.bmo_final_cleanupf)
+			sl_bmap_ops.bmo_final_cleanupf(b);
 
 		bmap_remove(b);
 	} else {
@@ -191,7 +191,7 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n,
 	bmap_op_start_type(b, BMAP_OPCNT_LOOKUP);
 
 	/* Perform app-specific substructure initialization. */
-	bmap_ops.bmo_init_privatef(b);
+	sl_bmap_ops.bmo_init_privatef(b);
 
 	BMAP_LOCK(b);
 
@@ -236,7 +236,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 
 		/* msl_bmap_retrieve(),  mds_bmap_read(), iod_bmap_retrieve() */
 		if ((flags & BMAPGETF_NORETRIEVE) == 0)
-			rc = bmap_ops.bmo_retrievef(b, rw, flags);
+			rc = sl_bmap_ops.bmo_retrievef(b, rw, flags);
 
 		BMAP_LOCK(b);
 		b->bcm_flags &= ~BMAP_INIT;
@@ -255,11 +255,11 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		 *   changing the bmap mode.  bmap_lookup() does not
 		 *   specify a rw value.
 		 *
-		 * bmap_ops.bmo_mode_chngf is either iod_bmap_retrieve()
+		 * sl_bmap_ops.bmo_mode_chngf is either iod_bmap_retrieve()
 		 * or msl_bmap_modeset().
 		 */
 		if (bmaprw && !(bmaprw & b->bcm_flags) &&
-		    bmap_ops.bmo_mode_chngf) {
+		    sl_bmap_ops.bmo_mode_chngf) {
 			/*
 			 * Others wishing to access this bmap in the
 			 *   same mode must wait until MDCHNG ops have
@@ -280,7 +280,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 				DEBUG_BMAP(PLL_INFO, b,
 				   "about to mode change (rw=%d)", rw);
 
-				rc = bmap_ops.bmo_mode_chngf(b, rw, 0);
+				rc = sl_bmap_ops.bmo_mode_chngf(b, rw, 0);
 				BMAP_LOCK(b);
 				b->bcm_flags &= ~BMAP_MDCHNG;
 				if (!rc)

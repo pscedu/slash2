@@ -393,7 +393,7 @@ struct bmap_ops {
 	void	(*bmo_final_cleanupf)(struct bmapc_memb *);
 };
 
-extern struct bmap_ops bmap_ops;
+extern struct bmap_ops sl_bmap_ops;
 
 static __inline void *
 bmap_get_pri(struct bmapc_memb *b)

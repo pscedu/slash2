@@ -900,7 +900,7 @@ dump_bmap_flags(uint32_t flags)
 }
 #endif
 
-struct bmap_ops bmap_ops = {
+struct bmap_ops sl_bmap_ops = {
 	msl_bmap_init,
 	msl_bmap_retrieve,
 	msl_bmap_modeset,
