@@ -260,7 +260,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	struct psc_hashbkt *b;
 	int rc = 0, try_create = 0;
 
-	psclog_dbg("fidc_lookup called for fid "SLPRI_FID, fgp->fg_fid);
+	psclog_debug("fidc_lookup called for fid "SLPRI_FID, fgp->fg_fid);
 
 	*fp = NULL;
 	fcmh_new = NULL; /* gcc */

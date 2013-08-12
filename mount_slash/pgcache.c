@@ -429,7 +429,7 @@ bmpce_reap(struct psc_poolmgr *m)
 	lc_sort(&bmpcLru, qsort, bmpc_lru_cmp);
 	/* Should be sorted from oldest bmpc to newest. */
 	LIST_CACHE_FOREACH(bmpc, &bmpcLru) {
-		psclog_dbg("bmpc=%p npages=%d age(%ld:%ld) waiters=%d",
+		psclog_debug("bmpc=%p npages=%d age=(%ld:%ld) waiters=%d",
 		    bmpc, pll_nitems(&bmpc->bmpc_lru),
 		    bmpc->bmpc_oldest.tv_sec, bmpc->bmpc_oldest.tv_nsec,
 		    waiters);

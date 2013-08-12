@@ -1350,7 +1350,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 				continue;
 			}
 
-			psclog_dbg("adding f+g:"SLPRI_FG,
+			psclog_debug("adding f+g:"SLPRI_FG,
 			    SLPRI_FG_ARGS(&attr->sstb.sst_fg));
 
 			uidmap_int_stat(&attr->sstb);
@@ -2496,7 +2496,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	DEBUG_SSTB(PLL_INFO, &c->fcmh_sstb,
 	    "fcmh %p pre setattr, set = %#x", c, to_set);
 
-	psclog_dbg("fcmh %p setattr%s%s%s%s%s%s%s", c,
+	psclog_debug("fcmh %p setattr%s%s%s%s%s%s%s", c,
 	    to_set & PSCFS_SETATTRF_MODE ? " mode" : "",
 	    to_set & PSCFS_SETATTRF_UID ? " uid" : "",
 	    to_set & PSCFS_SETATTRF_GID ? " gid" : "",

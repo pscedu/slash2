@@ -196,7 +196,7 @@ dircache_lookup(struct fidc_membh *d, const char *name)
 				OPSTAT_INCR(SLC_OPST_DIRCACHE_LOOKUP_HIT);
 			}
 
-			psclog_dbg("fid="SLPRI_FID" off=%"PRId64" "
+			psclog_debug("fid="SLPRI_FID" off=%"PRId64" "
 			    "nlen=%u type=%#o dname=%.*s lookupname=%s "
 			    "len=%"PSCPRIdOFFT" dce=%p found=%d",
 			    dirent->pfd_ino, dirent->pfd_off,
@@ -311,7 +311,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	for (i = 0, b = base, off = 0; i < (int)nents; i++, dce++) {
 		dirent = PSC_AGP(b, off);
 
-		psclog_dbg("fid="SLPRI_FID" off=%"PRId64" "
+		psclog_debug("fid="SLPRI_FID" off=%"PRId64" "
 		    "nlen=%u type=%#o "
 		    "name=%.*s dirent=%p off=%"PRId64,
 		    dirent->pfd_ino, dirent->pfd_off,
@@ -330,7 +330,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 
 	psc_dynarray_sort(&p->dcp_dents, qsort, dirent_sort_cmp);
 	DYNARRAY_FOREACH(dce, i, &p->dcp_dents)
-		psclog_dbg("dce=%p hash=%#x namelen=%u name=%.*s",
+		psclog_debug("dce=%p hash=%#x namelen=%u name=%.*s",
 		    dce, dce->dce_hash, dce->dce_namelen,
 		    dce->dce_namelen, dce->dce_name);
 

@@ -99,7 +99,7 @@ sli_fg_makepath(const struct slash_fidgen *fg, char *fid_path)
 	    globalConfig.gconf_fsuuid, SL_RPATH_FIDNS_DIR,
 	    str, fg->fg_fid, fg->fg_gen);
 
-	psclog_dbg("fid="SLPRI_FID" fidpath=%s", fg->fg_fid, fid_path);
+	psclog_debug("fid="SLPRI_FID" fidpath=%s", fg->fg_fid, fid_path);
 }
 
 static int
