@@ -2033,6 +2033,9 @@ slm_ptrunc_prepare(void *p)
 		BMAP_FOREACH_LEASE(b, bml) {
 			BMAP_ULOCK(b);
 
+			/* we are recovering after restart */
+			if (bml->bml_exp == NULL)
+				continue;
 			csvc = slm_getclcsvc(bml->bml_exp);
 			if (csvc == NULL)
 				continue;
