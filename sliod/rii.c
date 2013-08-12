@@ -47,6 +47,7 @@
 
 #define SRII_REPLREAD_CBARG_WKRQ	0
 #define SRII_REPLREAD_CBARG_SLVR	1
+#define SRII_REPLREAD_CBARG_CSVC	2
 
 /**
  * sli_rii_replread_release_sliver - We call this function in the 
@@ -217,7 +218,7 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 /**
  * sli_rii_handle_repl_read_aio - Handler for sliver replication aio read request.
  *
- *    The peer has completed an async I/O of a previously requested sliver and that 
+ *    The peer has completed an async I/O of a previously requested sliver and that
  *    sliver has been posted for GET.
  */
 __static int
@@ -328,29 +329,18 @@ __static int
 sli_rii_replread_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
+	struct slashrpc_cservice *csvc;
+	struct srm_repl_read_rep *mp;
 	struct sli_repl_workrq *w;
-	struct srm_io_rep *mp;
 	struct slvr_ref *s;
 	int rc, slvridx;
 
 	w = args->pointer_arg[SRII_REPLREAD_CBARG_WKRQ];
 	s = args->pointer_arg[SRII_REPLREAD_CBARG_SLVR];
+	csvc = args->pointer_arg[SRII_REPLREAD_CBARG_CSVC];
 
-	// XXX  SL_GET_RQ_STATUS_TYPE
-	rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
-	if (rc)
-		goto out;
+	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_repl_read_rep, rc);
 
-	rc = rq->rq_status;
-	if (rc)
-		goto out;
-	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
-	if (mp)
-		rc = mp->rc;
-	else
-		rc = PFLERR_BADMSG;
-
- out:
 	for (slvridx = 0; slvridx < (int)nitems(w->srw_slvr_refs);
 	    slvridx++)
 		if (w->srw_slvr_refs[slvridx] == s)
@@ -416,6 +406,7 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	rq->rq_interpret_reply = sli_rii_replread_cb;
 	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_WKRQ] = w;
 	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_SLVR] = s;
+	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_CSVC] = csvc;
 
 	DEBUG_SRW(w, PLL_DEBUG, "incref");
 
