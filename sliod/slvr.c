@@ -652,7 +652,9 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 		if (rc > 0 && nblks == SLASH_BLKS_PER_SLVR) {
 			int crc_rc;
 
+			SLVR_LOCK(s);
 			crc_rc = slvr_do_crc(s);
+			SLVR_ULOCK(s);
 			if (crc_rc == SLERR_BADCRC)
 				DEBUG_SLVR(PLL_ERROR, s,
 				    "bad crc blks=%d off=%zu",
