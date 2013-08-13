@@ -1049,7 +1049,7 @@ void slvr_slb_free_locked(struct slvr_ref *, struct psc_poolmgr *);
 void
 slvr_try_crcsched_locked(struct slvr_ref *s)
 {
-	if ((s->slvr_flags & SLVR_LRU) && s->slvr_pndgwrts > 1)
+	if ((s->slvr_flags & SLVR_LRU) && s->slvr_pndgwrts)
 		slvr_lru_requeue(s, 1);
 
 	/*
@@ -1058,7 +1058,6 @@ slvr_try_crcsched_locked(struct slvr_ref *s)
 	 * skipped which can happen due to the release of the slvr lock
 	 * being released prior to the CRC of the buffer.
 	 */
-	s->slvr_pndgwrts--;
 	s->slvr_compwrts++;
 
 	DEBUG_SLVR(PLL_DEBUG, s, "decref");
@@ -1113,6 +1112,7 @@ slvr_wio_done(struct slvr_ref *s)
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	psc_assert(s->slvr_pndgwrts > 0);
 
+	s->slvr_pndgwrts--;
 	if (s->slvr_flags & SLVR_REPLDST) {
 		/*
 		 * This was a replication dest slvr.  Adjust the slvr
@@ -1123,7 +1123,6 @@ slvr_wio_done(struct slvr_ref *s)
 		psc_assert(s->slvr_flags & SLVR_PINNED);
 		psc_assert(s->slvr_flags & SLVR_FAULTING);
 		psc_assert(!(s->slvr_flags & SLVR_CRCDIRTY));
-		s->slvr_pndgwrts--;
 		s->slvr_flags &= ~(SLVR_PINNED | SLVR_AIOWAIT |
 		    SLVR_FAULTING | SLVR_REPLDST);
 
