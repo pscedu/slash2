@@ -165,7 +165,7 @@ struct bmap {
 
 #define _DEBUG_BMAP_FMT		"bmap@%p bno:%u flg:%#x:"		\
 				"%s%s%s%s%s%s%s%s%s%s%s%s%s%s "		\
-				"fid:"SLPRI_FID" opcnt=%d "
+				"fid:"SLPRI_FID" opcnt=%d : "
 
 #define _DEBUG_BMAP_FMTARGS(b)						\
 	(b), (b)->bcm_bmapno, (b)->bcm_flags,				\
