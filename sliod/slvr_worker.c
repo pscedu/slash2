@@ -386,8 +386,7 @@ slislvrthr_proc(struct slvr *s)
 	/* Be paranoid, ensure the sliver is not queued anywhere. */
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
 
-	if ((s->slvr_flags & SLVR_CRCDIRTY || s->slvr_compwrts) &&
-	    !s->slvr_pndgwrts) {
+	if (s->slvr_compwrts && !s->slvr_pndgwrts) {
 		/* The slvr will be CRC'd again due to pending write. */
 		s->slvr_flags &= ~SLVR_CRCING;
 		DEBUG_SLVR(PLL_DIAG, s, "replace onto crcSlvrs");

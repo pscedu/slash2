@@ -1163,7 +1163,6 @@ slvr_wio_done(struct slvr_ref *s)
 
 	PFL_GETTIMESPEC(&s->slvr_ts);
 
-	s->slvr_flags |= SLVR_CRCDIRTY;
 	s->slvr_flags &= ~SLVR_RDMODWR;
 
 	if (!(s->slvr_flags & SLVR_DATARDY))
