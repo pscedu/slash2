@@ -171,6 +171,7 @@ slvr_do_crc(struct slvr_ref *s)
 		PSC_CRC64_FIN(&crc);
 #endif
 
+		s->slvr_flags &= ~SLVR_CRCDIRTY;
 		DEBUG_SLVR(PLL_DIAG, s, "crc=%"PSCPRIxCRC64, crc);
 
 		slvr_2_crc(s) = crc;
@@ -1164,6 +1165,7 @@ slvr_wio_done(struct slvr_ref *s)
 	PFL_GETTIMESPEC(&s->slvr_ts);
 
 	s->slvr_flags &= ~SLVR_RDMODWR;
+	s->slvr_flags |= SLVR_CRCDIRTY;
 
 	if (!(s->slvr_flags & SLVR_DATARDY))
 		DEBUG_SLVR(PLL_FATAL, s, "invalid state");
