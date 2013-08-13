@@ -316,8 +316,8 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 	rc = SL_RSX_WAITREP(a->aiocbr_csvc, rq, mp);
 	pscrpc_req_finished(rq);
 
- out:
 	sl_csvc_decref(a->aiocbr_csvc);
+ out:
 
 	if (a->aiocbr_rw == SL_READ) {
 		for (i = 0; i < a->aiocbr_nslvrs; i++)
