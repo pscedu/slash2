@@ -1813,11 +1813,11 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	if (obml)
 		mds_bmap_bml_release(obml);
 	DEBUG_BMAP(rc ? PLL_WARN : PLL_INFO, b,
-	    "rc=%d renew oseq=%"PRIu64" nseq=%"PRIu64" "
-	    "nid=%"PRIu64" pid=%u",
-	    rc, sbd_in->sbd_seq, (obml ? obml->bml_seq : 0),
+	    "reassign oseq=%"PRIu64" nseq=%"PRIu64" "
+	    "nid=%"PRIu64" pid=%u rc=%d",
+	    sbd_in->sbd_seq, (obml ? obml->bml_seq : 0),
 	    exp->exp_connection->c_peer.nid,
-	    exp->exp_connection->c_peer.pid);
+	    exp->exp_connection->c_peer.pid, rc);
 	bmap_op_done(b);
 	return (rc);
 }
