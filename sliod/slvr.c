@@ -319,20 +319,11 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 	sl_csvc_decref(a->aiocbr_csvc);
  out:
 
-	if (a->aiocbr_rw == SL_READ) {
-		for (i = 0; i < a->aiocbr_nslvrs; i++)
+	for (i = 0; i < a->aiocbr_nslvrs; i++) {
+		if (a->aiocbr_rw == SL_READ)
 			slvr_rio_done(a->aiocbr_slvrs[i]);
-	} else {
-		struct slvr_ref *s;
-		for (i = 0; i < a->aiocbr_nslvrs; i++) {
-			s = a->aiocbr_slvrs[i];
-
-			SLVR_LOCK(s);
-			psc_assert(s->slvr_pndgwrts > 0);
-			s->slvr_flags &= ~SLVR_RDMODWR;
-			slvr_try_crcsched_locked(s);
-			SLVR_ULOCK(s);
-		}
+		else
+			slvr_wio_done(a->aiocbr_slvrs[i]);
 	}
 
 	sli_aio_aiocbr_release(a);
