@@ -444,7 +444,6 @@ reimport
 - Not all items on the flush queue are flushable.  We may want to defer
   putting an item on the queue until it is flushable.  dd-test.sh can
   have thousands of pending biorqs.
-- remove syslog network traffic from psclog()
 - slm_ptrunc_wake_clients() may need to use rpcsets or nbreqsets to deal
   with large numbers of blocking clients.  Or, the algorithm should be
   modified so that the clients retry after some brief sleep period.  (I
@@ -477,6 +476,8 @@ reimport
 - does IOS need to send REPLSCHED back to MDS?  won't crcupd suffice?
 - merge PFLERR_NOTCONN with SLERR_ION_OFFLINE
 - get rid of FIDC_LOOKUP_LOAD
+- are these messages from successful replication?
+[1376505142:641367 slmrmithr17:10079:rpc slm_rmi_handle_bmap_crcwrt rmi.c 186] mds_bmap_crc_write() failed: fid=0x0000000011dfd0ba, rc=-22
 
 st_blocks is broken
 - account metadata overhead in st_blocks?
