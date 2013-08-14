@@ -31,10 +31,10 @@
 #include "subsys_iod.h"
 
 #include "pfl/listcache.h"
-#include "pfl/treeutil.h"
-#include "pfl/vbitmap.h"
 #include "pfl/rpc.h"
 #include "pfl/rsx.h"
+#include "pfl/treeutil.h"
+#include "pfl/vbitmap.h"
 #include "psc_util/atomic.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/fault.h"
@@ -42,9 +42,9 @@
 #include "psc_util/pthrutil.h"
 
 #include "bmap_iod.h"
-#include "buffer.h"
 #include "fidc_iod.h"
 #include "rpc_iod.h"
+#include "slab.h"
 #include "slerr.h"
 #include "sltypes.h"
 #include "slvr.h"

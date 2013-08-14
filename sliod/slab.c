@@ -37,9 +37,9 @@
 #include "psc_util/log.h"
 #include "psc_util/pool.h"
 
-#include "buffer.h"
 #include "cache_params.h"
 #include "fidcache.h"
+#include "slab.h"
 #include "sliod.h"
 #include "slvr.h"
 

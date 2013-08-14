@@ -28,15 +28,15 @@
 #include "pfl/aio.h"
 #include "pfl/dynarray.h"
 #include "pfl/listcache.h"
+#include "pfl/rpc.h"
 #include "pfl/tree.h"
 #include "pfl/vbitmap.h"
-#include "pfl/rpc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/log.h"
 
 #include "bmap.h"
 #include "bmap_iod.h"
-#include "buffer.h"
+#include "slab.h"
 #include "slashrpc.h"
 #include "subsys_iod.h"
 
