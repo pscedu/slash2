@@ -50,7 +50,7 @@
 #define SRII_REPLREAD_CBARG_CSVC	2
 
 /**
- * sli_rii_replread_release_sliver - We call this function in the 
+ * sli_rii_replread_release_sliver - We call this function in the
  * following two cases:
  *
  *  (1) When the request for a replication of a sliver has completed;
@@ -71,9 +71,9 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		slvrsiz = w->srw_len % SLASH_SLVR_SIZE;
 
 	if (rc == 0) {
-
-		/* SLVR_DATARDY is set in wio_done
-		 *    when the slvr lock is taken again.
+		/*
+		 * SLVR_DATARDY is set in wio_done when the slvr lock is
+		 * taken again.
 		 */
 		rc = slvr_fsbytes_wio(s, slvrsiz, 0);
 	}
@@ -262,7 +262,8 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 		 * XXX abort bulk here, otherwise all future RPCs will
 		 * fail
 		 */
-		psclog_errorx("failed to load fid = "SLPRI_FID" bmap = %u: %s",
+		psclog_errorx("failed to load fid="SLPRI_FID" "
+		    "bmap=%u: %s",
 		    mq->fg.fg_fid, mq->bmapno, slstrerror(mp->rc));
 		goto out;
 	}
@@ -309,7 +310,8 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 	iov.iov_base = s->slvr_slab->slb_base;
 	iov.iov_len = mq->len;
 
-	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, SRII_BULK_PORTAL, &iov, 1);
+	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, SRII_BULK_PORTAL,
+	    &iov, 1);
 
 	sli_rii_replread_release_sliver(w, slvridx, mp->rc);
 
@@ -320,10 +322,10 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 	return (mp->rc);
 }
 
-
 /**
  * sli_rii_replread_cb - Callback triggered when an SRMT_REPL_READ request
- *	issued finishes.
+ *	finishes.  This means a replication destination is running this
+ *	code.
  */
 __static int
 sli_rii_replread_cb(struct pscrpc_request *rq,
