@@ -918,12 +918,12 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 	if (s->slvr_flags & SLVR_DATAERR) {
 		rc = -1;
 		goto out;
+	}
 
-	} else if (s->slvr_flags & SLVR_DATARDY) {
-		if (rw == SL_READ)
-			goto out;
+	if (s->slvr_flags & SLVR_DATARDY)
+		goto out;
 
-	} else if (!(s->slvr_flags & SLVR_REPLDST)) {
+	if (!(s->slvr_flags & SLVR_REPLDST)) {
 		/*
 		 * Importing data into the sliver is now our
 		 * responsibility, other I/O into this region will block
@@ -934,7 +934,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 			goto do_read;
 		}
 
-	} else if (s->slvr_flags & SLVR_REPLDST) {
+	} else {
 		/*
 		 * The sliver is going to be used for replication.
 		 * Ensure proper setup has occurred.
@@ -966,12 +966,10 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 	/* FixMe: Check the underlying file size to avoid useless RMW */
 	OPSTAT_INCR(SLI_OPST_IO_PREP_RMW);
 
-	if (s->slvr_flags & SLVR_DATARDY)
-		goto out;
-
 	s->slvr_flags |= SLVR_RDMODWR;
 
  do_read:
+
 	SLVR_ULOCK(s);
 	/* Execute read to fault in needed blocks after dropping
 	 *   the lock.  All should be protected by the FAULTING bit.
