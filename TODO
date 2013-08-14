@@ -216,7 +216,6 @@ MDS must do this for scheduling traffic between sliods
 
 ------------------------------
 
-- add SSL transport for anytime cleartext is untrusted
 - convert authbuf to pki, put hash back inside bdbuf fdbuf
   reasoning: if authbuf succeeded, we trust anything, so there is no
   point in having extra provisions such as src ION
@@ -239,7 +238,6 @@ utime
 	took place
 
 tree
-- rename include/buffer.h as sliod/slab.h
 - rename the zfs_init() alias, it is already a routine in ZFS
 - rename slconfig.h to slcfg.h to disambiguate slco prefix
 
@@ -301,9 +299,8 @@ API rename
 - on MDS resm failure inside msl, clear a bit on all fcmh's pinned by ptrunc
   whenever we check this flag, if the bit is not set, issue an RPC so
   that we get registered with the MDS to be notified when ptrunc resolves
-- upsched only needs to be spawned for our own site
-  - need way to specify in slash.conf other sites without MDS which MDS
-    should be responsible for replications to resources at that site
+- need way to specify in slash.conf other sites without MDS which MDS
+  should be responsible for replications to resources at that site
 
       global pref_mds=md@PSC
 
@@ -401,7 +398,7 @@ reimport
 
 - convert MDS rcmc.c to async RPCs
 - add du(1) functionality in dumpfid via extattr
-- add slmctl -ss fstypes (use statfs(2) on fbsd/linux and f_type)
+- add slmctl -ss fstypes for linux with f_type
 - make macro version of accessors for speed in gdb (e.g. bmap_2_bmi())
   inline are for debugging/gdb
 - expose SLASH2 non-POSIX (e.g. repl) interface through extattr magic
