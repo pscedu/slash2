@@ -662,7 +662,7 @@ slm_repl_upd_write(struct bmapc_memb *b)
 			    SQLITE_INTEGER, sch.iosv[n].bs_id,
 			    SQLITE_INTEGER64, bmap_2_fid(b),
 			    SQLITE_INTEGER, b->bcm_bmapno);
-	if (del.nios) {
+	if (del.nios)
 		for (n = 0; n < del.nios; n++)
 			dbdo(NULL, NULL,
 			    " DELETE FROM upsch"
@@ -672,7 +672,6 @@ slm_repl_upd_write(struct bmapc_memb *b)
 			    SQLITE_INTEGER, del.iosv[n].bs_id,
 			    SQLITE_INTEGER64, bmap_2_fid(b),
 			    SQLITE_INTEGER, b->bcm_bmapno);
-	}
 	BMAPOD_READ_DONE(b, locked);
 
 	FCMH_UNBUSY(b->bcm_fcmh);
