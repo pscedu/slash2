@@ -54,7 +54,6 @@
 #include "bmap.h"
 #include "bmap_cli.h"
 #include "pgcache.h"
-#include "buffer.h"
 #include "fidc_cli.h"
 #include "fidcache.h"
 #include "mount_slash.h"

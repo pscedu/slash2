@@ -45,7 +45,6 @@
 
 #include "cache_params.h"
 #include "bmap.h"
-#include "buffer.h"
 
 struct msl_fhent;
 struct msl_fsrqinfo;

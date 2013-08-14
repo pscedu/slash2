@@ -64,7 +64,6 @@
 #include "psc_util/usklndthr.h"
 
 #include "bmap_cli.h"
-#include "buffer.h"
 #include "cache_params.h"
 #include "ctl_cli.h"
 #include "fidc_cli.h"
