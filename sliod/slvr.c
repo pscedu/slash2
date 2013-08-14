@@ -881,7 +881,6 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 	ssize_t rc = 0;
 
 	SLVR_LOCK(s);
-	psc_assert(s->slvr_flags & SLVR_PINNED);
 
 	/*
 	 * Note we have taken our read or write references, so the
