@@ -657,7 +657,7 @@ upd_proc_hldrop(struct slm_update_data *tupd)
 void
 upd_proc_bmap(struct slm_update_data *upd)
 {
-	int rc, off, val, tryarchival, iosidx;
+	int rc, off, val, pass, iosidx;
 	struct rnd_iterator dst_res_i, src_res_i;
 	struct sl_resource *dst_res, *src_res;
 	struct slashrpc_cservice *csvc;
@@ -722,10 +722,11 @@ upd_proc_bmap(struct slm_update_data *upd)
 				    "lease still active");
 				break;
 			}
+			psclog_debug("trying to arrange repl dst=%s",
+			    dst_res->res_name);
 
 			/* look for a repl source */
-			for (tryarchival = 0; tryarchival < 2;
-			    tryarchival++) {
+			for (pass = 0; pass < 2; pass++) {
 				FOREACH_RND(&src_res_i, fcmh_2_nrepls(f)) {
 					src_res = libsl_id2res(
 					    fcmh_getrepl(f,
@@ -740,19 +741,28 @@ upd_proc_bmap(struct slm_update_data *upd)
 					    SL_BITS_PER_REPLICA *
 					    src_res_i.ri_rnd_idx) != BREPLST_VALID)
 						continue;
-					if (tryarchival ^
-					    (src_res->res_type ==
-					     SLREST_ARCHIVAL_FS))
-						continue;
+
 					si = res2iosinfo(src_res);
-					if (tryarchival ^
-					    (si->si_flags &
-					     SIF_DISABLE_BIA))
+
+					psclog_debug("shall i attempt to "
+					    "arrange repl with %s -> %s; "
+					    "pass=%d siflg=%d",
+					    src_res->res_name,
+					    dst_res->res_name,
+					    pass, !!(si->si_flags
+					    & SIF_DISABLE_BIA));
+
+					if (pass ^
+					    (src_res->res_type ==
+					     SLREST_ARCHIVAL_FS ||
+					     !!(si->si_flags &
+					     SIF_DISABLE_BIA)))
 						continue;
 
 					psclog_debug("trying to arrange "
-					    "repl with %s",
-					    src_res->res_name);
+					    "repl with %s -> %s",
+					    src_res->res_name,
+					    dst_res->res_name);
 
 					/*
 					 * Search source nodes for an
