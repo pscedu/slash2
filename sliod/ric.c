@@ -335,10 +335,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 		if (roff & SLASH_SLVR_BLKMASK)
 			tsize += roff & SLASH_SLVR_BLKMASK;
-	}
 
-	for (i = 0; i < nslvrs; i++) {
-		if (rw == SL_WRITE) {
+		for (i = 0; i < nslvrs; i++) {
 			uint32_t tsz = MIN((SLASH_BLKS_PER_SLVR - sblk) *
 			    SLASH_SLVR_BLKSZ, tsize);
 
@@ -351,31 +349,23 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 			/* Only the first sliver may use a blk offset. */
 			sblk = 0;
-			slvr_wio_done(slvr_ref[i]);
-		} else
-			slvr_rio_done(slvr_ref[i]);
-
-		slvr_ref[i] = NULL;
+		}
+		psc_assert(!tsize);
 	}
 
-	if (rw == SL_WRITE)
-		psc_assert(!tsize);
 
  out:
-	if (rc) {
-		for (i = 0; i < nslvrs; i++) {
-			if (slvr_ref[i] == NULL)
-				continue;
-			if (rw == SL_READ)
-				slvr_rio_done(slvr_ref[i]);
-			else 
-				slvr_wio_done(slvr_ref[i]);
-			DEBUG_SLVR(PLL_WARN, slvr_ref[i],
-			    "unwind slvr %d due to bulk error", i);
-		}
+	for (i = 0; i < nslvrs; i++) {
+		if (slvr_ref[i] == NULL)
+			continue;
+		if (rw == SL_READ)
+			slvr_rio_done(slvr_ref[i]);
+		else 
+			slvr_wio_done(slvr_ref[i]);
+	}
+	if (rc)
 		psclog_warnx("%s error, rc = %d",
 		    rw == SL_WRITE ? "write" : "read", rc);
-	}
 	if (bmap)
 		bmap_op_done(bmap);
 
