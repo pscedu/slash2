@@ -673,8 +673,7 @@ struct reptbl_lookup {
 int
 slc_reptbl_cmp(const void *a, const void *b)
 {
-	struct reptbl_lookup * const *pa = a, *x = *pa;
-	struct reptbl_lookup * const *pb = b, *y = *pb;
+	const struct reptbl_lookup *x = a, *y = b;
 	struct resprof_cli_info *xi, *yi;
 	struct sl_resource *r;
 	struct sl_resm *m;
