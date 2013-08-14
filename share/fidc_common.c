@@ -37,7 +37,6 @@
 #include "psc_util/pool.h"
 
 #include "bmap.h"
-#include "buffer.h"
 #include "cache_params.h"
 #include "fid.h"
 #include "fidcache.h"
