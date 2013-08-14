@@ -262,10 +262,21 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 		 * XXX abort bulk here, otherwise all future RPCs will
 		 * fail
 		 */
-		psclog_errorx("failed to load fid="SLPRI_FID" "
+		psclog_errorx("failed to load bmap: fid="SLPRI_FID" "
 		    "bmap=%u: %s",
 		    mq->fg.fg_fid, mq->bmapno, slstrerror(mp->rc));
 		goto out;
+	}
+	/*
+	 * Lookup the workrq.  It should have already been
+	 * created.
+	 */
+	w = sli_repl_findwq(&mq->fg, mq->bmapno);
+	if (!w) {
+		psclog_errorx("failed to find work: fid="SLPRI_FID" "
+		    "bmap=%u",
+		    mq->fg.fg_fid, mq->bmapno);
+		PFL_GOTOERR(out, mp->rc = -ENOENT);
 	}
 
 	s = slvr_lookup(mq->slvrno, bmap_2_bii(b), SL_WRITE);
@@ -275,17 +286,6 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 	SLVR_WAIT(s, (s->slvr_flags & SLVR_REPLWIRE));
 	SLVR_ULOCK(s);
 
-	/*
-	 * Lookup the workrq.  It should have already been
-	 * created.
-	 */
-	w = sli_repl_findwq(&mq->fg, mq->bmapno);
-	if (!w) {
-		DEBUG_SLVR(PLL_ERROR, s,
-		   "sli_repl_findwq() failed to find wq");
-		//XXX cleanup the sliver ref
-		PFL_GOTOERR(out, mp->rc = -ENOENT);
-	}
 
 	/* Ensure the sliver is found in the work item's array. */
 	for (slvridx = 0; slvridx < (int)nitems(w->srw_slvr_refs);
