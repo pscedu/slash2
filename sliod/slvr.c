@@ -86,9 +86,8 @@ slvr_lru_requeue(struct slvr_ref *s, int tail)
 }
 
 /**
- * slvr_do_crc - Given a sliver reference, Take the CRC of the
- *	respective data and attach the ref to an srm_bmap_crcup
-	structure.
+ * slvr_do_crc - Take the CRC of the data contained within a sliver
+ *	add the update to a bcr.
  * @s: the sliver reference.
  * Notes:  Don't hold the lock while taking the CRC.
  * Returns: errno on failure, 0 on success, -1 on not applicable.
