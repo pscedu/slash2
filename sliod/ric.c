@@ -87,7 +87,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	sblk = 0; /* gcc */
 
 	OPSTAT_INCR(SLI_OPST_HANDLE_IO);
-	psc_assert(rw == SL_READ || rw == SL_WRITE);
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	fgp = &mq->sbd.sbd_fg;
