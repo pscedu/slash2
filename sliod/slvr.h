@@ -204,7 +204,6 @@ struct slvr_ref *
 	_slvr_lookup(const struct pfl_callerinfo *pci, uint32_t,
 	    struct bmap_iod_info *, enum rw);
 void	slvr_cache_init(void);
-void	slvr_clear_inuse(struct slvr_ref *, int, uint32_t);
 int	slvr_do_crc(struct slvr_ref *);
 ssize_t	slvr_fsbytes_wio(struct slvr_ref *, uint32_t, uint32_t);
 ssize_t	slvr_io_prep(struct slvr_ref *, uint32_t, uint32_t, enum rw,
