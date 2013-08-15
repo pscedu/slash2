@@ -1109,13 +1109,15 @@ slvr_wio_done(struct slvr_ref *s)
 	psc_assert(s->slvr_pndgwrts > 0);
 
 	s->slvr_pndgwrts--;
+	DEBUG_SLVR(PLL_DEBUG, s, "decref");
+
 	if (s->slvr_flags & SLVR_REPLDST) {
 		/*
 		 * This was a replication dest slvr.  Adjust the slvr
 		 * flags so that the slvr may be freed on demand.
 		 */
 
-		psc_assert(s->slvr_pndgwrts == 1);
+		psc_assert(s->slvr_pndgwrts == 0);
 		psc_assert(s->slvr_flags & SLVR_PINNED);
 		psc_assert(s->slvr_flags & SLVR_FAULTING);
 		psc_assert(!(s->slvr_flags & SLVR_CRCDIRTY));
@@ -1139,8 +1141,6 @@ slvr_wio_done(struct slvr_ref *s)
 			s->slvr_flags |= SLVR_DATARDY;
 			SLVR_WAKEUP(s);
 		}
-
-		DEBUG_SLVR(PLL_DEBUG, s, "decref");
 
 		slvr_lru_requeue(s, 0);
 		SLVR_ULOCK(s);
