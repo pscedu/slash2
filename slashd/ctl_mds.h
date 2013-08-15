@@ -34,6 +34,8 @@ struct slmctlmsg_replpair {
 	uint64_t		scrp_used;
 };
 
+#define SLMC_RP_ADDRCLASS_BUSY	":busy"
+
 struct slmctlmsg_statfs {
 	char			scsf_resname[RES_NAME_MAX];
 	int32_t			scsf_flags;

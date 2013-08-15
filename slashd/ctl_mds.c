@@ -332,7 +332,7 @@ slmctlcmd_stop(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 __static int
 slmctlrep_replpair_send(int fd, struct psc_ctlmsghdr *mh,
     struct slmctlmsg_replpair *scrp, struct sl_resm *m0,
-    struct sl_resm *m1)
+    struct sl_resm *m1, int busyonly)
 {
 	struct resm_mds_info *rmmi0, *rmmi1;
 	struct slm_resmlink *srl;
@@ -342,6 +342,9 @@ slmctlrep_replpair_send(int fd, struct psc_ctlmsghdr *mh,
 	srl = repl_busytable + MDS_REPL_BUSYNODES(
 	    MIN(rmmi0->rmmi_busyid, rmmi1->rmmi_busyid),
 	    MAX(rmmi0->rmmi_busyid, rmmi1->rmmi_busyid));
+
+	if (busyonly && srl->srl_used == 0)
+		return;
 
 	memset(scrp, 0, sizeof(*scrp));
 	strlcpy(scrp->scrp_addrbuf[0], m0->resm_res->res_name,
@@ -362,11 +365,14 @@ slmctlrep_replpair_send(int fd, struct psc_ctlmsghdr *mh,
 int
 slmctlrep_getreplpairs(int fd, struct psc_ctlmsghdr *mh, void *mb)
 {
+	int busyonly = 0, i, j, i0, j0, rc = 1;
 	struct slmctlmsg_replpair *scrp = mb;
 	struct sl_resource *r, *r0;
 	struct sl_resm *m, *m0;
 	struct sl_site *s, *s0;
-	int i, j, i0, j0, rc = 1;
+
+	if (strcmp(scrp->scrp_addrbuf, SLMC_RP_ADDRCLASS_BUSY) == 0)
+		busyonly = 1;
 
 	CONF_LOCK();
 	spinlock(&repl_busytable_lock);
@@ -378,7 +384,7 @@ slmctlrep_getreplpairs(int fd, struct psc_ctlmsghdr *mh, void *mb)
 		j0 = j + 1;
 		RES_FOREACH_MEMB_CONT(r, m0, j0) {
 			rc = slmctlrep_replpair_send(fd, mh, scrp, m,
-			    m0);
+			    m0, busyonly);
 			if (!rc)
 				goto done;
 		}
@@ -390,7 +396,7 @@ slmctlrep_getreplpairs(int fd, struct psc_ctlmsghdr *mh, void *mb)
 				continue;
 			RES_FOREACH_MEMB(r0, m0, j0) {
 				rc = slmctlrep_replpair_send(fd, mh,
-				    scrp, m, m0);
+				    scrp, m, m0, busyonly);
 				if (!rc)
 					goto done;
 			}
@@ -404,7 +410,7 @@ slmctlrep_getreplpairs(int fd, struct psc_ctlmsghdr *mh, void *mb)
 					continue;
 				RES_FOREACH_MEMB(r0, m0, j0) {
 					rc = slmctlrep_replpair_send(fd,
-					    mh, scrp, m, m0);
+					    mh, scrp, m, m0, busyonly);
 					if (!rc)
 						goto done;
 				}

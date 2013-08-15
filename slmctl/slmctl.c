@@ -99,10 +99,14 @@ packshow_fcmhs(char *fid)
 }
 
 void
-packshow_replpairs(__unusedx char *pair)
+packshow_replpairs(char *pair)
 {
-	psc_ctlmsg_push(SLMCMT_GETREPLPAIRS,
-	    sizeof(struct slmctlmsg_replpair));
+	struct slmctlmsg_replpair *scrp;
+
+	scrp = psc_ctlmsg_push(SLMCMT_GETREPLPAIRS, sizeof(*scrp));
+	if (strcasecmp(pair, "busy") == 0)
+		strlcpy(scrp->scrp_addrbuf, SLMC_RP_ADDRCLASS_BUSY,
+		    sizeof(scrp->scrp_addrbuf));
 }
 
 void
