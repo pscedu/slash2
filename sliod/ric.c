@@ -339,7 +339,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 			tsize -= tsz;
 			rv = slvr_fsbytes_wio(slvr_ref[i], tsz, sblk);
-			if (rv && rv != -SLERR_AIOWAIT) {
+			if (rv) {
+				psc_assert(rv != -SLERR_AIOWAIT);
 				rc = rv;
 				goto out;
 			}
