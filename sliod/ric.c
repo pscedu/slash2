@@ -330,11 +330,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (rw == SL_WRITE) {
 		roff = mq->offset - (slvrno * SLASH_SLVR_SIZE);
 
-		tsize = mq->size;
 		sblk  = roff / SLASH_SLVR_BLKSZ;
-
-		if (roff & SLASH_SLVR_BLKMASK)
-			tsize += roff & SLASH_SLVR_BLKMASK;
+		tsize = mq->size + (roff & SLASH_SLVR_BLKMASK);
 
 		for (i = 0; i < nslvrs; i++) {
 			uint32_t tsz = MIN((SLASH_BLKS_PER_SLVR - sblk) *
