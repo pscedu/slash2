@@ -306,7 +306,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			mp->rc = SLERR_AIOWAIT;
 			pscrpc_msg_add_flags(rq->rq_repmsg,
 			    MSG_ABORT_BULK);
-			goto out;
+			goto aio_out;
 		}
 		/* All slvrs are ready. */
 		sli_aio_aiocbr_release(aiocbr);
@@ -363,6 +363,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (rc)
 		psclog_warnx("%s error, rc = %d",
 		    rw == SL_WRITE ? "write" : "read", rc);
+ aio_out:
+
 	if (bmap)
 		bmap_op_done(bmap);
 
