@@ -344,7 +344,7 @@ slmctlrep_replpair_send(int fd, struct psc_ctlmsghdr *mh,
 	    MAX(rmmi0->rmmi_busyid, rmmi1->rmmi_busyid));
 
 	if (busyonly && srl->srl_used == 0)
-		return;
+		return (1);
 
 	memset(scrp, 0, sizeof(*scrp));
 	strlcpy(scrp->scrp_addrbuf[0], m0->resm_res->res_name,
@@ -371,7 +371,7 @@ slmctlrep_getreplpairs(int fd, struct psc_ctlmsghdr *mh, void *mb)
 	struct sl_resm *m, *m0;
 	struct sl_site *s, *s0;
 
-	if (strcmp(scrp->scrp_addrbuf, SLMC_RP_ADDRCLASS_BUSY) == 0)
+	if (strcasecmp(scrp->scrp_addrbuf[0], SLMC_RP_ADDRCLASS_BUSY) == 0)
 		busyonly = 1;
 
 	CONF_LOCK();
