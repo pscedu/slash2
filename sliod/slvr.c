@@ -1010,6 +1010,7 @@ slvr_rio_done(struct slvr_ref *s)
 	SLVR_LOCK(s);
 
 	s->slvr_pndgreads--;
+	DEBUG_SLVR(PLL_INFO, s, "read decref");
 	if (slvr_lru_tryunpin_locked(s)) {
 		slvr_lru_requeue(s, 1);
 		DEBUG_SLVR(PLL_INFO, s, "decref, unpinned");
@@ -1228,6 +1229,8 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 	}
 	if (rw == SL_WRITE)
 		DEBUG_SLVR(PLL_INFO, s, "write incref");
+	else
+		DEBUG_SLVR(PLL_INFO, s, "read incref");
 	return (s);
 }
 
