@@ -93,7 +93,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 			s->slvr_pndgwrts--;
 			s->slvr_flags &= ~(SLVR_REPLDST | SLVR_REPLWIRE);
 
-			DEBUG_SLVR(PLL_DEBUG, s, "decref");
+			DEBUG_SLVR(PLL_INFO, s, "write decref");
 
 			SLVR_WAKEUP(s);
 		} else {

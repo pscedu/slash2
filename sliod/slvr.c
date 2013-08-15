@@ -1056,8 +1056,6 @@ slvr_try_crcsched_locked(struct slvr_ref *s)
 	 */
 	s->slvr_compwrts++;
 
-	DEBUG_SLVR(PLL_DEBUG, s, "decref");
-
 	if (!s->slvr_pndgwrts && (s->slvr_flags & SLVR_LRU)) {
 		if (s->slvr_flags & SLVR_CRCDIRTY)
 			slvr_schedule_crc_locked(s);
@@ -1109,7 +1107,7 @@ slvr_wio_done(struct slvr_ref *s)
 	psc_assert(s->slvr_pndgwrts > 0);
 
 	s->slvr_pndgwrts--;
-	DEBUG_SLVR(PLL_DEBUG, s, "decref");
+	DEBUG_SLVR(PLL_INFO, s, "write decref");
 
 	if (s->slvr_flags & SLVR_REPLDST) {
 		/*
@@ -1228,7 +1226,8 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 		bmap_op_start_type(bii_2_bmap(bii), BMAP_OPCNT_SLVR);
 		BII_ULOCK(bii);
 	}
-	DEBUG_SLVR(PLL_DEBUG, s, "incref");
+	if (rw == SL_WRITE)
+		DEBUG_SLVR(PLL_INFO, s, "write incref");
 	return (s);
 }
 
