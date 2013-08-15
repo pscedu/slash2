@@ -34,7 +34,6 @@
 /* start includes */
 #include "authbuf.h"
 #include "bmap.h"
-#include "buffer.h"
 #include "cache_params.h"
 #include "creds.h"
 #include "ctl.h"
@@ -81,6 +80,7 @@
 #include "sliod/fidc_iod.h"
 #include "sliod/repl_iod.h"
 #include "sliod/rpc_iod.h"
+#include "sliod/slab.h"
 #include "sliod/sliod.h"
 #include "sliod/slvr.h"
 #include "sliod/subsys_iod.h"
