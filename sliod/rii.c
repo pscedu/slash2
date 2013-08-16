@@ -357,6 +357,9 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 	return (sli_rii_replread_release_sliver(w, slvridx, rc));
 }
 
+/*
+ * Process a replication request initiated by a SLASH2 client.
+ */
 int
 sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
     int slvridx, struct sli_repl_workrq *w)
