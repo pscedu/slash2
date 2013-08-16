@@ -225,14 +225,13 @@ __static int
 sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 {
 	const struct srm_repl_read_req *mq;
-	struct sli_aiocb_reply *aiocbr = NULL;
 	struct sli_repl_workrq *w = NULL;
 	struct srm_repl_read_rep *mp;
 	struct bmapc_memb *b = NULL;
 	struct fidc_membh *f;
 	struct slvr_ref *s;
 	struct iovec iov;
-	int rv, slvridx = 0;
+	int slvridx = 0;
 
 	sliriithr(pscthr_get())->sirit_st_nread++;
 
@@ -299,19 +298,20 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, mp->rc = -ENOENT);
 	}
 
-	slvr_slab_prep(s, SL_WRITE);
-	slvr_repl_prep(s, SLVR_REPLDST);
-	rv = slvr_io_prep(s, 0, mq->len, SL_WRITE, &aiocbr);
-	if (rv && rv != -SLERR_AIOWAIT)
-		PFL_GOTOERR(out, mp->rc = rv);
-
-	psc_assert(aiocbr == NULL);
-
 	iov.iov_base = s->slvr_slab->slb_base;
 	iov.iov_len = mq->len;
 
 	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, SRII_BULK_PORTAL,
 	    &iov, 1);
+
+	if (!mp->rc) {
+		SLVR_LOCK(s);
+		s->slvr_flags |= SLVR_DATARDY;
+		s->slvr_flags &= ~SLVR_FAULTING;
+		DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
+		SLVR_WAKEUP(s);
+		SLVR_ULOCK(s);
+	}
 
 	sli_rii_replread_release_sliver(w, slvridx, mp->rc);
 
