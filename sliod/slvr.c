@@ -877,7 +877,6 @@ ssize_t
 slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
     struct sli_aiocb_reply **aiocbr)
 {
-	int blks;
 	ssize_t rc = 0;
 
 	SLVR_LOCK(s);
@@ -932,11 +931,8 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 	 * until SLVR_FAULTING is released.
 	 */
 	s->slvr_flags |= SLVR_FAULTING;
-	if (rw == SL_READ) {
+	if (rw == SL_READ)
 		goto do_read;
-	}
-
-	psc_assert(rw != SL_READ);
 
 	if (!off && len == SLASH_SLVR_SIZE) {
 		/*
