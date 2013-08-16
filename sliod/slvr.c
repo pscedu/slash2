@@ -881,13 +881,16 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 	ssize_t rc = 0;
 
 	SLVR_LOCK(s);
+	if (s->slvr_flags & SLVR_REPLDST) {
+		SLVR_ULOCK(s);
+		return 0;
+	}
 
 	/*
 	 * Note we have taken our read or write references, so the
 	 * sliver won't be freed from under us.
 	 */
-	if (s->slvr_flags & SLVR_FAULTING &&
-	    !(s->slvr_flags & SLVR_REPLDST)) {
+	if (s->slvr_flags & SLVR_FAULTING) {
 		/*
 		 * Common courtesy requires us to wait for another
 		 * thread's work FIRST.  Otherwise, we could bail out
@@ -923,33 +926,14 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 	if (s->slvr_flags & SLVR_DATARDY)
 		goto out;
 
-	if (!(s->slvr_flags & SLVR_REPLDST)) {
-		/*
-		 * Importing data into the sliver is now our
-		 * responsibility, other I/O into this region will block
-		 * until SLVR_FAULTING is released.
-		 */
-		s->slvr_flags |= SLVR_FAULTING;
-		if (rw == SL_READ) {
-			goto do_read;
-		}
-
-	} else {
-		/*
-		 * The sliver is going to be used for replication.
-		 * Ensure proper setup has occurred.
-		 */
-		psc_assert(!off);
-		psc_assert(s->slvr_flags & SLVR_FAULTING);
-		psc_assert(s->slvr_pndgreads == 0 &&
-		    s->slvr_pndgwrts == 1);
-
-		blks = len / SLASH_SLVR_BLKSZ +
-		    (len & SLASH_SLVR_BLKMASK) ? 1 : 0;
-
-		SLVR_ULOCK(s);
-
-		return (0);
+	/*
+	 * Importing data into the sliver is now our
+	 * responsibility, other I/O into this region will block
+	 * until SLVR_FAULTING is released.
+	 */
+	s->slvr_flags |= SLVR_FAULTING;
+	if (rw == SL_READ) {
+		goto do_read;
 	}
 
 	psc_assert(rw != SL_READ);
