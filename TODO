@@ -389,9 +389,6 @@ reimport
 - directory replica table inheritance, requires ondisk SLASH2 inode
   changes (for directories)
 - test msctl -Q <symlink>
-- fix sliod connection linger bug visible from slmctl
-- fix mount_slash multiple connection bug visible from slmctl
-   (o) should be fixed by new connthr diff
 - uptime instance nonce variable that allows msl to dump data if it
   changes while communicating with sliod
    (o) mark new flag on msl csvc when upnonce changes in CONNECT
@@ -437,6 +434,8 @@ reimport
      will not treat ENOSTR as an RPC error
 - msctl repl-policy read isnt implemented
 - user quotas??
+   - track user database when crc updates come in with st_blocks
+     and fail new write assignments when over quota
 - atime??
 - Not all items on the flush queue are flushable.  We may want to defer
   putting an item on the queue until it is flushable.  dd-test.sh can
@@ -450,8 +449,7 @@ reimport
   manually and will be forced to restart all clients and sliods.
 - imported files should create CRCs
 - stash directory replication settings in dir/.sldir
-- avoid degraded IOS's if replications
-     - bmap_select_ios() factor archiver and degraded on first iteration
+- avoid degraded IOS's for writes
 - ensure flush() wakeups are being called from failed/timedout RPC
   callbacks
 - import should utilize fallocate(2) where available
