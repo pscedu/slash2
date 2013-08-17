@@ -1,5 +1,5 @@
 .\" $Id$
-.\" %PSC_START_COPYRIGHT%
+.\" %PSCGPL_START_COPYRIGHT%
 .\" -----------------------------------------------------------------------------
 .\" Copyright (c) 2009-2012, Pittsburgh Supercomputing Center (PSC).
 .\"
@@ -16,15 +16,15 @@
 .\" %PSC_END_COPYRIGHT%
 .Dd October 15, 2012
 .Dt SLADM 7
-.ds volume PSC \- SLASH Administrator's Manual
+.ds volume PSC \- SLASH2 Administrator's Manual
 .Os http://www.psc.edu/
 .Sh NAME
 .Nm sladm
 .Nd
-.Tn SLASH
+.Tn SLASH2
 administration guide
 .Sh DESCRIPTION
-.Tn SLASH
+.Tn SLASH2
 is a distributed network file system featuring:
 .Pp
 .Bl -bullet -compact -offset indent
@@ -37,10 +37,10 @@ inline checksum verification
 .El
 .Pp
 This document describes the steps involving in creating and deploying a
-.Tn SLASH
+.Tn SLASH2
 file system.
-.Ss Creating a File System for SLASH Metadata
-.Tn SLASH
+.Ss Creating a File System for SLASH2 Metadata
+.Tn SLASH2
 uses
 .Tn ZFS
 for its backend metadata file system.
@@ -58,7 +58,7 @@ Next, create a
 pool with
 .Xr zpool 8
 for the backing file system used by the
-.Tn SLASH
+.Tn SLASH2
 metadata server.
 For example:
 .Bd -literal -offset indent
@@ -74,7 +74,7 @@ to load this file system, create a cache dump file:
 .Ed
 .Pp
 Before this file system can be used by the
-.Tn SLASH
+.Tn SLASH2
 metadata server, it must be initialized by
 .Xr slmkfs 8 :
 .Bd -literal -offset indent
@@ -96,7 +96,7 @@ must match the ID the file system has been formatted with.
 Now that the metadata file system has been set up,
 .Xr zfs-fuse 8
 must be terminated before the
-.Tn SLASH
+.Tn SLASH2
 metadata server can access it:
 .Bd -literal -offset indent
 # umount /mypool
@@ -138,7 +138,7 @@ The
 server
 .Xr sliod 8
 writes files resident in a
-.Tn SLASH
+.Tn SLASH2
 network to the root of the directory specified by the
 .Ic fsroot
 .Xr slcfg 5
@@ -150,7 +150,7 @@ This directory must be initialized for use with
 .Ed
 .Pp
 Next, ensure that the shared
-.Tn SLASH
+.Tn SLASH2
 network daemon communication key has been installed on the machine.
 The file defaults to
 .Pa /var/lib/slash/authbuf.key
@@ -174,7 +174,7 @@ can be used to control live operation of the
 server once it is online.
 .Ss Client Mount Daemon
 To communicate on a
-.Tn SLASH
+.Tn SLASH2
 network, the shared network daemon communication key must be installed
 on the machine.
 The file defaults to
@@ -190,7 +190,7 @@ or manually with
 Now
 .Xr mount_slash 8
 may be used to mount a
-.Tn SLASH
+.Tn SLASH2
 file system under a directory node on the local system:
 .Bd -literal -offset indent
 # mount_slash -U /myfs
@@ -224,7 +224,7 @@ ports cannot be used for each of
 and
 .Xr sliod 8 ,
 as
-.Tn SLASH
+.Tn SLASH2
 utilizes the Lustre networking stack which does not easily
 permit applications from connecting to multiple peers on differing
 .Tn TCP
