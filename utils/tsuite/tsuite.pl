@@ -1,6 +1,6 @@
 #!/usr/bin/perl -W
 # $Id$
-# %PSC_START_COPYRIGHT%
+# %PSCGPL_START_COPYRIGHT%
 # -----------------------------------------------------------------------------
 # Copyright (c) 2009-2012, Pittsburgh Supercomputing Center (PSC).
 #
