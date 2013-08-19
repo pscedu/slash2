@@ -84,8 +84,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	uint64_t seqno;
 	ssize_t rv;
 
-	sblk = 0; /* gcc */
-
 	OPSTAT_INCR(SLI_OPST_HANDLE_IO);
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
