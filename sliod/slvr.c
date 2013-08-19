@@ -908,7 +908,10 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 			SLVR_ULOCK(s);
 			psc_assert(globalConfig.gconf_async_io);
 
-			return (sli_aio_register(s, aiocbr, 0));
+			if (!(*aiocbr))
+			    *aiocbr = sli_aio_aiocbr_new();
+
+			return (-SLERR_AIOWAIT);
 		}
 	}
 
