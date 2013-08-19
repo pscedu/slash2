@@ -529,8 +529,7 @@ sli_aio_reply_setup(struct sli_aiocb_reply *a, struct pscrpc_request *rq,
 }
 
 int
-sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp,
-    int issue)
+sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp)
 {
 	struct sli_aiocb_reply *a;
 	struct sli_iocb *iocb;
@@ -541,13 +540,6 @@ sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp,
 
 	if (!a)
 		a = *aiocbrp = sli_aio_aiocbr_new();
-
-	DEBUG_SLVR(PLL_DIAG, s, "issue=%d *aiocbrp=%p", issue,
-	    *aiocbrp);
-
-	if (!issue)
-		/* Not called from slvr_fsio(). */
-		goto out;
 
 	iocb = sli_aio_iocb_new(s);
 
@@ -583,7 +575,7 @@ sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp,
 		lc_remove(&sli_iocb_pndg, iocb);
 		slvr_iocb_release(iocb);
 	}
- out:
+
 	return (-error);
 }
 
@@ -614,7 +606,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 			SLVR_WAKEUP(s);
 			SLVR_ULOCK(s);
 
-			return (sli_aio_register(s, aiocbr, 1));
+			return (sli_aio_register(s, aiocbr));
 		}
 		SLVR_ULOCK(s);
 
