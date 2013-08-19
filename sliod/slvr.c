@@ -819,9 +819,7 @@ slvr_slab_prep(struct slvr_ref *s, __unusedx enum rw rw)
 			SLVR_LOCK(s);
 
 			goto restart;
-
-		} else
-			psc_assert(tmp);
+		}
 
 		psc_assert(psclist_disjoint(&s->slvr_lentry));
 		s->slvr_flags &= ~SLVR_NEW;
