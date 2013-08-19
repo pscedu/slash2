@@ -66,12 +66,13 @@ sli_rim_handle_batch(struct pscrpc_request *rq)
 	case SRMT_PRECLAIM: {
 		struct srt_preclaim_ent *pe;
 		struct iovec iov;
+		char *buf;
 		int i;
 
 		OPSTAT_INCR(SLI_OPST_HANDLE_PRECLAIM);
 
 		iov.iov_len = mq->nents * sizeof(*pe);
-		iov.iov_base = PSCALLOC(iov.iov_len);
+		iov.iov_base = buf = PSCALLOC(iov.iov_len);
 
 		rc = rsx_bulkserver(rq, BULK_GET_SINK, SRIM_BULK_PORTAL,
 		    &iov, 1);
