@@ -846,8 +846,6 @@ slvr_slab_prep(struct slvr_ref *s, __unusedx enum rw rw)
 		goto restart;
 	}
 
-	DEBUG_SLVR(PLL_INFO, s, "should have slab");
-	psc_assert(s->slvr_slab);
 	SLVR_ULOCK(s);
 
 	if (tmp)
