@@ -534,7 +534,7 @@ sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp)
 	struct sli_aiocb_reply *a;
 	struct sli_iocb *iocb;
 	struct aiocb *aio;
-	int error = SLERR_AIOWAIT;
+	int error;
 
 	a = *aiocbrp;
 
@@ -803,7 +803,6 @@ slvr_slab_prep(struct slvr_ref *s, __unusedx enum rw rw)
 
  restart:
 
- newbuf:
 	if (s->slvr_flags & SLVR_NEW) {
 		if (!tmp) {
 			/*
@@ -819,7 +818,7 @@ slvr_slab_prep(struct slvr_ref *s, __unusedx enum rw rw)
 			memset(tmp->slb_base, 0, SLB_SIZE);
 			SLVR_LOCK(s);
 
-			goto newbuf;
+			goto restart;
 
 		} else
 			psc_assert(tmp);
