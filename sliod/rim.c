@@ -66,7 +66,7 @@ sli_rim_handle_batch(struct pscrpc_request *rq)
 	case SRMT_PRECLAIM: {
 		struct srt_preclaim_ent *pe;
 		struct iovec iov;
-		char *buf;
+		void *buf;
 		int i;
 
 		OPSTAT_INCR(SLI_OPST_HANDLE_PRECLAIM);
