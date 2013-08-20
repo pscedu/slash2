@@ -253,17 +253,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (aiocbr) {
 		struct slvr_ref *s;
 
-		/*
-		 * Setup first since this aiocb needs to be attached to
-		 * an aio'd sliver ASAP.
-		 */
 		sli_aio_reply_setup(aiocbr, rq, mq->size, mq->offset,
 		    slvr_ref, nslvrs, iovs, nslvrs, rw);
-
-		/*
-		 * XXX The aiocbr could be freed at this point.  Need
-		 * reference.
-		 */
 
 		/*
 		 * Now check for early completion.  If all slvrs are
