@@ -736,6 +736,7 @@ slvr_fsbytes_rio(struct slvr_ref *s, uint32_t off, uint32_t len,
 		 * them the bad news.
 		 */
 		SLVR_LOCK(s);
+		s->slvr_err = rc;
 		s->slvr_flags |= SLVR_DATAERR;
 		s->slvr_flags &= ~SLVR_FAULTING;
 		DEBUG_SLVR(PLL_ERROR, s, "slvr_fsio() error, rc=%zd", rc);
@@ -905,7 +906,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 	    s->slvr_num, off, len, rw);
 
 	if (s->slvr_flags & SLVR_DATAERR) {
-		rc = -1;
+		rc = s->slvr_err;
 		goto out;
 	}
 
