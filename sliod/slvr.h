@@ -176,7 +176,6 @@ struct sli_aiocb_reply {
 	int			  aiocbr_flags;
 	int			  aiocbr_nslvrs;
 	int			  aiocbr_niov;
-	int			  aiocbr_rc;
 	struct slashrpc_cservice *aiocbr_csvc;
 	struct srt_bmapdesc	  aiocbr_sbd;
 	uint64_t		  aiocbr_id;
