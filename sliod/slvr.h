@@ -211,7 +211,7 @@ int	slvr_lru_tryunpin_locked(struct slvr_ref *);
 void	slvr_repl_prep(struct slvr_ref *, int);
 void	slvr_rio_done(struct slvr_ref *);
 void	slvr_schedule_crc(struct slvr_ref *);
-void	slvr_slab_prep(struct slvr_ref *, enum rw);
+void	slvr_slab_prep(struct slvr_ref *);
 void	slvr_try_crcsched_locked(struct slvr_ref *);
 void	slvr_wio_done(struct slvr_ref *);
 void	slvr_worker_init(void);

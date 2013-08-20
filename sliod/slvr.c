@@ -795,11 +795,10 @@ slvr_repl_prep(struct slvr_ref *s, int src_or_dst)
 }
 
 void
-slvr_slab_prep(struct slvr_ref *s, __unusedx enum rw rw)
+slvr_slab_prep(struct slvr_ref *s)
 {
 	struct sl_buffer *tmp = NULL;
 
-	//XXX may have to lock bmap instead..
 	SLVR_LOCK(s);
 
  restart:
