@@ -186,12 +186,12 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 		 * point.
 		 */
 		psc_assert(!(s->slvr_flags & SLVR_REPLDST));
+		sli_aio_replreply_setup(aiocbr, rq, s, &iov);
 
 		SLVR_LOCK(s);
 		if (!(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR))) {
 			pll_add(&s->slvr_pndgaios, aiocbr);
 			SLVR_ULOCK(s);
-			sli_aio_replreply_setup(aiocbr, rq, s, &iov);
 			pscrpc_msg_add_flags(rq->rq_repmsg,
 			    MSG_ABORT_BULK);
 			OPSTAT_INCR(SLI_OPST_HANDLE_REPLREAD_INSERT);

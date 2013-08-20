@@ -201,6 +201,8 @@ sli_aio_aiocbr_release(struct sli_aiocb_reply *a)
 {
 	psc_assert(psclist_disjoint(&a->aiocbr_lentry));
 
+	if (a->aiocbr_csvc)
+		sl_csvc_decref(a->aiocbr_csvc);
 	psc_pool_return(sli_aiocbr_pool, a);
 }
 
@@ -267,8 +269,6 @@ slvr_aio_replreply(struct sli_aiocb_reply *a)
 	if (s)
 		slvr_rio_done(s);
 
-	if (a->aiocbr_csvc)
-		sl_csvc_decref(a->aiocbr_csvc);
 
 	sli_aio_aiocbr_release(a);
 }
@@ -315,7 +315,6 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 	rc = SL_RSX_WAITREP(a->aiocbr_csvc, rq, mp);
 	pscrpc_req_finished(rq);
 
-	sl_csvc_decref(a->aiocbr_csvc);
  out:
 
 	for (i = 0; i < a->aiocbr_nslvrs; i++) {
