@@ -109,9 +109,9 @@ struct bmap_ondisk {
  */
 struct bmap {
 	sl_bmapno_t		 bcm_bmapno;	/* bmap index number */
+	uint32_t		 bcm_flags;	/* see BMAP_* below */
 	struct fidc_membh	*bcm_fcmh;	/* pointer to fid info */
 	psc_atomic32_t		 bcm_opcnt;	/* pending opcnt (# refs) */
-	uint32_t		 bcm_flags;	/* see BMAP_* below */
 	psc_spinlock_t		 bcm_lock;
 	SPLAY_ENTRY(bmap)	 bcm_tentry;	/* bmap_cache splay tree entry */
 	struct psc_listentry	 bcm_lentry;	/* free pool */
