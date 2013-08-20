@@ -888,9 +888,6 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 		SLVR_WAIT(s, !(s->slvr_flags &
 		    (SLVR_DATARDY | SLVR_DATAERR | SLVR_AIOWAIT)));
 
-		psc_assert((s->slvr_flags &
-		    (SLVR_DATARDY | SLVR_DATAERR | SLVR_AIOWAIT)));
-
 		if (s->slvr_flags & SLVR_AIOWAIT) {
 			SLVR_ULOCK(s);
 			psc_assert(globalConfig.gconf_async_io);
