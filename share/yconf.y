@@ -106,7 +106,7 @@ int		 yyparse(void);
  * Define a table macro for each structure type filled in by the config
  */
 #define TABENT_VAR(name, type, max, field, handler)				\
-	{ name, SL_STRUCT_VAR, type, max, offsetof(struct sl_gconf, field), handler }
+	{ name, SL_STRUCT_VAR, type, max, offsetof(struct sl_config, field), handler }
 
 #define TABENT_SITE(name, type, max, field, handler)				\
 	{ name, SL_STRUCT_SITE, type, max, offsetof(struct sl_site, field), handler }
@@ -143,7 +143,7 @@ struct slconf_symbol sym_table[] = {
 	{ NULL, SL_STRUCT_NONE, SL_TYPE_NONE, 0, 0, NULL }
 };
 
-struct sl_gconf		   globalConfig;
+struct sl_config	   globalConfig;
 struct sl_resm		  *nodeResm;
 
 int			   cfg_errors;

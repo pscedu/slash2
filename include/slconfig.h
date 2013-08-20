@@ -166,7 +166,7 @@ struct lnetif_pair {
 #define LPF_NOACCEPTOR		(1 << 0)
 #define LPF_SKIP		(1 << 1)
 
-struct sl_gconf {
+struct sl_config {
 	char			 gconf_allowexe[BUFSIZ];
 	char			 gconf_routes[NAME_MAX];
 	char			 gconf_lnets[LNETS_MAX];
@@ -281,7 +281,7 @@ extern struct sl_resm	*nodeResm;
 #define nodeSite	nodeResm->resm_site
 #define nodeResProf	nodeResm->resm_res
 
-extern struct sl_gconf	 globalConfig;
+extern struct sl_config	 globalConfig;
 
 extern int		 cfg_site_pri_sz;
 extern int		 cfg_res_pri_sz;
