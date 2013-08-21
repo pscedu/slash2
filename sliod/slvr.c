@@ -190,7 +190,6 @@ sli_aio_aiocbr_new(void)
 	a = psc_pool_get(sli_aiocbr_pool);
 	memset(a, 0, sizeof(*a));
 
-	INIT_SPINLOCK(&a->aiocbr_lock);
 	INIT_PSC_LISTENTRY(&a->aiocbr_lentry);
 
 	return (a);
@@ -333,13 +332,6 @@ slvr_aio_tryreply(struct sli_aiocb_reply *a)
 	struct slvr_ref *s;
 	int i, ready, replsrc = 0;
 
- retry:
-	spinlock(&a->aiocbr_lock);
-	while (!(a->aiocbr_flags & SLI_AIOCBSF_READY)) {
-		freelock(&a->aiocbr_lock);
-		sched_yield();
-		goto retry;
-	}
 
 	for (ready = 0, i = 0; i < a->aiocbr_nslvrs; i++) {
 		s = a->aiocbr_slvrs[i];
@@ -369,7 +361,6 @@ slvr_aio_tryreply(struct sli_aiocb_reply *a)
 		}
 		SLVR_ULOCK(s);
 	}
-	freelock(&a->aiocbr_lock);
 
 	if (ready == a->aiocbr_nslvrs)
 		replsrc ? slvr_aio_replreply(a) : slvr_aio_reply(a);
@@ -480,9 +471,7 @@ sli_aio_replreply_setup(struct sli_aiocb_reply *a,
 	a->aiocbr_csvc = sli_geticsvcx(libsl_try_nid2resm(
 	    rq->rq_peer.nid), rq->rq_export);
 
-	spinlock(&a->aiocbr_lock);
-	a->aiocbr_flags |= SLI_AIOCBSF_REPL | SLI_AIOCBSF_READY;
-	freelock(&a->aiocbr_lock);
+	a->aiocbr_flags = SLI_AIOCBSF_REPL;
 }
 
 void
@@ -514,9 +503,7 @@ sli_aio_reply_setup(struct sli_aiocb_reply *a, struct pscrpc_request *rq,
 	a->aiocbr_rw = rw;
 	a->aiocbr_csvc = sli_getclcsvc(rq->rq_export);
 
-	spinlock(&a->aiocbr_lock);
-	a->aiocbr_flags |= SLI_AIOCBSF_READY;
-	freelock(&a->aiocbr_lock);
+	a->aiocbr_flags = SLI_AIOCBSF_NONE;
 }
 
 int

@@ -262,7 +262,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		 * Otherwise, we'll never be woken since the aio cb(s)
 		 * have been run.
 		 */
-		spinlock(&aiocbr->aiocbr_lock);
 
 		for (i = 0; i < nslvrs; i++) {
 			s = slvr_ref[i];
@@ -289,7 +288,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 				break;
 			}
 		}
-		freelock(&aiocbr->aiocbr_lock);
 
 		if (i != nslvrs) {
 			mp->rc = SLERR_AIOWAIT;
