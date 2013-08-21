@@ -68,13 +68,13 @@ struct sl_fcmh_ops {
 struct fidc_membh {
 	struct srt_stat		 fcmh_sstb;	/* higher-level stat(2) buffer */
 	int			 fcmh_flags;	/* see FCMH_* below */
-	psc_spinlock_t		 fcmh_lock;
 	int			 fcmh_refcnt;	/* threads referencing us */
+	psc_spinlock_t		 fcmh_lock;
+	pthread_t		 fcmh_owner;	/* holds BUSY */
 	struct psc_hashent	 fcmh_hentry;	/* hash table membership for lookups */
 	struct psclist_head	 fcmh_lentry;	/* busy or idle list */
 	struct psc_waitq	 fcmh_waitq;	/* wait here for operations */
 	struct bmap_cache	 fcmh_bmaptree;	/* bmap cache splay */
-	pthread_t		 fcmh_owner;	/* holds BUSY */
 };
 
 /* fcmh_flags (cache) */
