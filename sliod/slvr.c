@@ -330,17 +330,11 @@ __static void
 slvr_aio_tryreply(struct sli_aiocb_reply *a)
 {
 	struct slvr_ref *s;
-	int i, ready, replsrc = 0;
-
+	int i, ready;
 
 	for (ready = 0, i = 0; i < a->aiocbr_nslvrs; i++) {
 		s = a->aiocbr_slvrs[i];
 		SLVR_LOCK(s);
-
-		if (a->aiocbr_flags & SLI_AIOCBSF_REPL) {
-			psc_assert(a->aiocbr_nslvrs == 1);
-			replsrc = 1;
-		}
 
 		/*
 		 * FixMe: What if the sliver get reused for another purpose?
@@ -361,9 +355,13 @@ slvr_aio_tryreply(struct sli_aiocb_reply *a)
 		}
 		SLVR_ULOCK(s);
 	}
+	if (ready != a->aiocbr_nslvrs)
+		return;
 
-	if (ready == a->aiocbr_nslvrs)
-		replsrc ? slvr_aio_replreply(a) : slvr_aio_reply(a);
+	if (a->aiocbr_flags & SLI_AIOCBSF_REPL)
+		slvr_aio_replreply(a);
+	else
+		slvr_aio_reply(a);
 }
 
 /**
