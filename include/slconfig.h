@@ -73,17 +73,17 @@ enum sl_res_type {
 
 /* Resource (I/O system, MDS) */
 struct sl_resource {
-	char			 res_name[RES_NAME_MAX];
-	char			*res_desc;
 	sl_ios_id_t		 res_id;
+	int			 res_flags;
+	struct sl_site		*res_site;
 	enum sl_res_type	 res_type;
 	struct psc_dynarray	 res_peers;
 	struct psc_dynarray	 res_members;
+	char			 res_name[RES_NAME_MAX];
 	char			 res_fsroot[PATH_MAX];
 	char			 res_jrnldev[PATH_MAX];
 	char			 res_selftest[BUFSIZ];
-	int			 res_flags;
-	struct sl_site		*res_site;
+	char			*res_desc;
 };
 
 /* res_flags */
