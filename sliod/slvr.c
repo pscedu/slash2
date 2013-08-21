@@ -494,17 +494,9 @@ sli_aio_reply_setup(struct sli_aiocb_reply *a, struct pscrpc_request *rq,
 	struct srm_io_rep *mp;
 	int i;
 
-	spinlock(&a->aiocbr_lock);
 	a->aiocbr_nslvrs = nslvrs;
-	for (i = 0; i < nslvrs; i++) {
+	for (i = 0; i < nslvrs; i++) 
 		a->aiocbr_slvrs[i] = slvrs[i];
-
-		if (rw == SL_WRITE)
-			psc_assert(slvrs[i]->slvr_pndgwrts > 0);
-		else
-			psc_assert(slvrs[i]->slvr_pndgreads > 0);
-	}
-	freelock(&a->aiocbr_lock);
 
 	psc_assert(niovs == a->aiocbr_nslvrs);
 
