@@ -212,7 +212,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct sl_buffer);
 	PRTYPE(struct sl_expcli_ops);
 	PRTYPE(struct sl_fcmh_ops);
-	PRTYPE(struct sl_gconf);
 	PRTYPE(struct sl_ino_compat);
 	PRTYPE(struct sl_lnetrt);
 	PRTYPE(struct sl_mds_crc_log);
