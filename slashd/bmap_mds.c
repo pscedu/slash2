@@ -136,7 +136,7 @@ slm_bmap_resetnonce(struct bmap *b)
 	a.b = b;
 
 	dbdo(slm_bmap_resetnonce_cb, &a,
-	    " SELECT	nonce,"
+	    " SELECT	nonce," // XX nonce != sys_upnonce
 	    "		resid"
 	    " FROM	upsch"
 	    " WHERE	fid = ?"
