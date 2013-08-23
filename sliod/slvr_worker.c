@@ -492,8 +492,8 @@ slislvrthr_proc(struct slvr *s)
 	    psc_atomic32_read(&bii->bii_crcdrty_slvrs));
 
 	s->slvr_flags |= SLVR_LRU;
-	slvr_lru_tryunpin_locked(s);
 	lc_addqueue(&lruSlvrs, s);
+	slvr_lru_tryunpin_locked(s);
 
 	SLVR_ULOCK(s);
 
