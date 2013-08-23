@@ -373,12 +373,6 @@ slislvrthr_proc(struct slvr *s)
 	 * set to inflight, the slvr_lentry should be disjointed.
 	 */
 
-	/*
-	 * 'completed writes' signifier can be reset, the upcoming
-	 * instantiation of slvr_do_crc() will cover those writes.
-	 */
-	s->slvr_compwrts = 0;
-
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
 	psc_assert(slvr_do_crc(s));
 

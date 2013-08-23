@@ -992,14 +992,6 @@ slvr_try_crcsched_locked(struct slvr_ref *s)
 	if ((s->slvr_flags & SLVR_LRU) && s->slvr_pndgwrts)
 		slvr_lru_requeue(s, 1);
 
-	/*
-	 * If there are no more pending writes, schedule a CRC op.
-	 * Increment slvr_compwrts to prevent a CRC op from being
-	 * skipped which can happen due to the release of the slvr lock
-	 * being released prior to the CRC of the buffer.
-	 */
-	s->slvr_compwrts++;
-
 	if (!s->slvr_pndgwrts && (s->slvr_flags & SLVR_LRU)) {
 		if (s->slvr_flags & SLVR_CRCDIRTY)
 			slvr_schedule_crc_locked(s);
