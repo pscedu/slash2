@@ -992,12 +992,8 @@ slvr_try_crcsched_locked(struct slvr_ref *s)
 	if ((s->slvr_flags & SLVR_LRU) && s->slvr_pndgwrts)
 		slvr_lru_requeue(s, 1);
 
-	if (!s->slvr_pndgwrts && (s->slvr_flags & SLVR_LRU)) {
-		if (s->slvr_flags & SLVR_CRCDIRTY)
-			slvr_schedule_crc_locked(s);
-		else
-			slvr_lru_tryunpin_locked(s);
-	}
+	if (!s->slvr_pndgwrts && (s->slvr_flags & SLVR_LRU)) 
+		slvr_schedule_crc_locked(s);
 }
 
 int
