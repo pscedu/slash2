@@ -1014,7 +1014,7 @@ slvr_lru_tryunpin_locked(struct slvr_ref *s)
 	SLVR_LOCK_ENSURE(s);
 	psc_assert(s->slvr_slab);
 	if (s->slvr_pndgwrts || s->slvr_pndgreads ||
-	    s->slvr_flags & SLVR_CRCDIRTY || s->slvr_flags & SLVR_CRCING)
+	    s->slvr_flags & SLVR_CRCDIRTY)
 		return (0);
 
 	psc_assert(s->slvr_flags & SLVR_LRU);
@@ -1395,7 +1395,6 @@ dump_sliver_flags(int fl)
 	PFL_PRFLAG(SLVR_DATAERR, &fl, &seq);
 	PFL_PRFLAG(SLVR_LRU, &fl, &seq);
 	PFL_PRFLAG(SLVR_CRCDIRTY, &fl, &seq);
-	PFL_PRFLAG(SLVR_CRCING, &fl, &seq);
 	PFL_PRFLAG(SLVR_FREEING, &fl, &seq);
 	PFL_PRFLAG(SLVR_SLBFREEING, &fl, &seq);
 	PFL_PRFLAG(SLVR_REPLDST, &fl, &seq);

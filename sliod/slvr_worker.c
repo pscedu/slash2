@@ -347,7 +347,7 @@ slislvrthr_proc(struct slvr *s)
 	 *  PINNED - slab must not move from beneath us because the
 	 *           contents must be CRC'd.
 	 */
-	psc_assert(!(s->slvr_flags & (SLVR_CRCING | SLVR_LRU)));
+	psc_assert(!(s->slvr_flags & SLVR_LRU));
 	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	psc_assert(s->slvr_flags & SLVR_DATARDY);
@@ -372,7 +372,6 @@ slislvrthr_proc(struct slvr *s)
 	 * OK, we've got a sliver to work on.  From this point until we
 	 * set to inflight, the slvr_lentry should be disjointed.
 	 */
-	s->slvr_flags |= SLVR_CRCING;
 
 	/*
 	 * 'completed writes' signifier can be reset, the upcoming
@@ -398,7 +397,6 @@ slislvrthr_proc(struct slvr *s)
 
 	slvr_num = s->slvr_num;
 
-	s->slvr_flags &= ~SLVR_CRCING;
 	DEBUG_SLVR(PLL_INFO, s, "prep for move to LRU (ndirty=%u)",
 	    psc_atomic32_read(&bii->bii_crcdrty_slvrs));
 

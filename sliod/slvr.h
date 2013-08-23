@@ -78,14 +78,13 @@ struct slvr {
 #define	SLVR_DATAERR		(1 <<  5)
 #define	SLVR_LRU		(1 <<  6)	/* cached but not dirty */
 #define	SLVR_CRCDIRTY		(1 <<  7)	/* crc does not match cached buffer */
-#define	SLVR_CRCING		(1 <<  8)	/* unfinalized crc accumulator */
-#define	SLVR_FREEING		(1 <<  9)	/* sliver is being reaped */
-#define	SLVR_SLBFREEING		(1 << 10)	/* slvr's slab is being reaped */
-#define	SLVR_REPLDST		(1 << 11)	/* slvr is replication destination */
-#define SLVR_REPLFAIL		(1 << 12)	/* replication op failed */
-#define SLVR_AIOWAIT		(1 << 13)	/* early return for AIO (for both local and remote) */
-#define SLVR_RDMODWR		(1 << 14)	/* read modify write */
-#define SLVR_REPLWIRE		(1 << 15)	/* prevent aio race */
+#define	SLVR_FREEING		(1 <<  8)	/* sliver is being reaped */
+#define	SLVR_SLBFREEING		(1 <<  9)	/* slvr's slab is being reaped */
+#define	SLVR_REPLDST		(1 << 10)	/* slvr is replication destination */
+#define SLVR_REPLFAIL		(1 << 11)	/* replication op failed */
+#define SLVR_AIOWAIT		(1 << 12)	/* early return for AIO (for both local and remote) */
+#define SLVR_RDMODWR		(1 << 13)	/* read modify write */
+#define SLVR_REPLWIRE		(1 << 14)	/* prevent aio race */
 
 #define SLVR_LOCK(s)		spinlock(&(s)->slvr_lock)
 #define SLVR_ULOCK(s)		freelock(&(s)->slvr_lock)
@@ -138,7 +137,7 @@ struct slvr {
 	    "pr=%u cw=%u "						\
 	    "dc=%d ts="PSCPRI_TIMESPEC" "				\
 	    "bii@%p slab@%p bmap@%p fid:"SLPRI_FID" iocb@%p flgs:"	\
-	    "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s :: " fmt,			\
+	    "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s :: " fmt,			\
 	    (s), (s)->slvr_num, (s)->slvr_pndgwrts,			\
 	    (s)->slvr_pndgreads, (s)->slvr_compwrts,			\
 	    (s)->slvr_dirty_cnt,					\
@@ -156,7 +155,6 @@ struct slvr {
 	    (s)->slvr_flags & SLVR_DATAERR	? "E" : "-",		\
 	    (s)->slvr_flags & SLVR_LRU		? "l" : "-",		\
 	    (s)->slvr_flags & SLVR_CRCDIRTY	? "D" : "-",		\
-	    (s)->slvr_flags & SLVR_CRCING	? "c" : "-",		\
 	    (s)->slvr_flags & SLVR_FREEING	? "F" : "-",		\
 	    (s)->slvr_flags & SLVR_SLBFREEING	? "b" : "-",		\
 	    (s)->slvr_flags & SLVR_REPLDST	? "T" : "-",		\
