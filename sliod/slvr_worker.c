@@ -398,6 +398,14 @@ slislvrthr_proc(struct slvr *s)
 
 	slvr_num = s->slvr_num;
 
+	s->slvr_flags &= ~SLVR_CRCING;
+	DEBUG_SLVR(PLL_INFO, s, "prep for move to LRU (ndirty=%u)",
+	    psc_atomic32_read(&bii->bii_crcdrty_slvrs));
+
+	s->slvr_flags |= SLVR_LRU;
+	lc_addqueue(&lruSlvrs, s);
+	slvr_lru_tryunpin_locked(s);
+
 	SLVR_ULOCK(s);
 
 	LIST_CACHE_LOCK(&bcr_hold);
@@ -484,18 +492,6 @@ slislvrthr_proc(struct slvr *s)
 
 	BII_ULOCK(bii);
 	LIST_CACHE_ULOCK(&bcr_hold);
-
-	SLVR_LOCK(s);
-
-	s->slvr_flags &= ~SLVR_CRCING;
-	DEBUG_SLVR(PLL_INFO, s, "prep for move to LRU (ndirty=%u)",
-	    psc_atomic32_read(&bii->bii_crcdrty_slvrs));
-
-	s->slvr_flags |= SLVR_LRU;
-	lc_addqueue(&lruSlvrs, s);
-	slvr_lru_tryunpin_locked(s);
-
-	SLVR_ULOCK(s);
 
 	slvr_worker_push_crcups();
 }
