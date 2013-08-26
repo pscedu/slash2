@@ -97,7 +97,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 
 			SLVR_WAKEUP(s);
 		} else {
-			s->slvr_flags |= SLVR_REPLFAIL;
+			s->slvr_flags |= SLVR_DATAERR;
 		}
 		SLVR_ULOCK(s);
 	}
@@ -421,7 +421,7 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
  out:
 	if (rc) {
 		SLVR_LOCK(s);
-		s->slvr_flags |= SLVR_REPLFAIL;
+		s->slvr_flags |= SLVR_DATAERR;
 		SLVR_ULOCK(s);
 		slvr_wio_done(s);
 

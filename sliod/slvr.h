@@ -80,10 +80,9 @@ struct slvr {
 #define	SLVR_FREEING		(1 <<  8)	/* sliver is being reaped */
 #define	SLVR_SLBFREEING		(1 <<  9)	/* slvr's slab is being reaped */
 #define	SLVR_REPLDST		(1 << 10)	/* slvr is replication destination */
-#define SLVR_REPLFAIL		(1 << 11)	/* replication op failed */
-#define SLVR_AIOWAIT		(1 << 12)	/* early return for AIO (for both local and remote) */
-#define SLVR_RDMODWR		(1 << 13)	/* read modify write */
-#define SLVR_REPLWIRE		(1 << 14)	/* prevent aio race */
+#define SLVR_AIOWAIT		(1 << 11)	/* early return for AIO (for both local and remote) */
+#define SLVR_RDMODWR		(1 << 12)	/* read modify write */
+#define SLVR_REPLWIRE		(1 << 13)	/* prevent aio race */
 
 #define SLVR_LOCK(s)		spinlock(&(s)->slvr_lock)
 #define SLVR_ULOCK(s)		freelock(&(s)->slvr_lock)
@@ -136,7 +135,7 @@ struct slvr {
 	    "pr=%u "							\
 	    "dc=%d ts="PSCPRI_TIMESPEC" "				\
 	    "bii@%p slab@%p bmap@%p fid:"SLPRI_FID" iocb@%p flgs:"	\
-	    "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s :: " fmt,			\
+	    "%s%s%s%s%s%s%s%s%s%s%s%s%s%s :: " fmt,			\
 	    (s), (s)->slvr_num, (s)->slvr_pndgwrts,			\
 	    (s)->slvr_pndgreads,					\
 	    (s)->slvr_dirty_cnt,					\
@@ -157,7 +156,6 @@ struct slvr {
 	    (s)->slvr_flags & SLVR_FREEING	? "F" : "-",		\
 	    (s)->slvr_flags & SLVR_SLBFREEING	? "b" : "-",		\
 	    (s)->slvr_flags & SLVR_REPLDST	? "T" : "-",		\
-	    (s)->slvr_flags & SLVR_REPLFAIL	? "x" : "-",		\
 	    (s)->slvr_flags & SLVR_REPLWIRE	? "w" : "-",		\
 	    (s)->slvr_flags & SLVR_AIOWAIT	? "a" : "-",		\
 	    (s)->slvr_flags & SLVR_RDMODWR	? "m" : "-",		\

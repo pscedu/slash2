@@ -1013,7 +1013,7 @@ slvr_lru_tryunpin_locked(struct slvr_ref *s)
 
 	s->slvr_flags &= ~SLVR_PINNED;
 
-	if (s->slvr_flags & (SLVR_DATAERR | SLVR_REPLFAIL)) {
+	if (s->slvr_flags & SLVR_DATAERR) {
 		s->slvr_flags |= SLVR_SLBFREEING;
 		slvr_slb_free_locked(s, sl_bufs_pool);
 	}
@@ -1051,7 +1051,7 @@ slvr_wio_done(struct slvr_ref *s)
 		s->slvr_flags &= ~(SLVR_PINNED | SLVR_AIOWAIT |
 		    SLVR_FAULTING | SLVR_REPLDST);
 
-		if (s->slvr_flags & SLVR_REPLFAIL) {
+		if (s->slvr_flags & SLVR_DATAERR) {
 			DEBUG_SLVR(PLL_ERROR, s, "replication failure");
 			/*
 			 * Perhaps this should block for any readers?
@@ -1061,7 +1061,7 @@ slvr_wio_done(struct slvr_ref *s)
 			 */
 			s->slvr_flags |= SLVR_SLBFREEING;
 			slvr_slb_free_locked(s, sl_bufs_pool);
-			s->slvr_flags &= ~SLVR_REPLFAIL;
+			s->slvr_flags &= ~SLVR_DATAERR;
 
 		} else {
 			DEBUG_SLVR(PLL_INFO, s, "replication complete");
@@ -1383,7 +1383,6 @@ dump_sliver_flags(int fl)
 	PFL_PRFLAG(SLVR_FREEING, &fl, &seq);
 	PFL_PRFLAG(SLVR_SLBFREEING, &fl, &seq);
 	PFL_PRFLAG(SLVR_REPLDST, &fl, &seq);
-	PFL_PRFLAG(SLVR_REPLFAIL, &fl, &seq);
 	PFL_PRFLAG(SLVR_AIOWAIT, &fl, &seq);
 	PFL_PRFLAG(SLVR_RDMODWR, &fl, &seq);
 	PFL_PRFLAG(SLVR_REPLWIRE, &fl, &seq);
