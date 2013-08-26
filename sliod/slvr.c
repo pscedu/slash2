@@ -520,11 +520,9 @@ sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp)
 	iocb = sli_aio_iocb_new(s);
 
 	SLVR_LOCK(s);
-	psc_assert(!(s->slvr_flags & SLVR_DATARDY));
-	psc_assert(s->slvr_flags & SLVR_AIOWAIT);
-	psc_assert(!s->slvr_iocb);
-
+	s->slvr_flags |= SLVR_AIOWAIT;
 	s->slvr_iocb = iocb;
+	SLVR_WAKEUP(s);
 	SLVR_ULOCK(s);
 
 	aio = &iocb->iocb_aiocb;
@@ -574,15 +572,9 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 
 	if (rw == SL_READ) {
 		OPSTAT_INCR(SLI_OPST_FSIO_READ);
-		if (globalConfig.gconf_async_io) {
 
-			SLVR_LOCK(s);
-			s->slvr_flags |= SLVR_AIOWAIT;
-			SLVR_WAKEUP(s);
-			SLVR_ULOCK(s);
-
+		if (globalConfig.gconf_async_io) 
 			return (sli_aio_register(s, aiocbr));
-		}
 
 		rc = pread(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
 		    off);
