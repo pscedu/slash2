@@ -676,7 +676,7 @@ slvr_fsbytes_rio(struct slvr_ref *s, uint32_t off, uint32_t len,
 
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 
-	if (!(s->slvr_flags & SLVR_RDMODWR)) {
+	if (!(s->slvr_flags & SLVR_RDMODWR) || globalConfig.gconf_async_io) {
 		rc = slvr_fsio(s, 0, SLASH_SLVR_SIZE,
 		    SL_READ, aiocbr);
 		goto out;
@@ -688,7 +688,6 @@ slvr_fsbytes_rio(struct slvr_ref *s, uint32_t off, uint32_t len,
 			blk++;
 		rc = slvr_fsio(s, 0, blk * SLASH_SLVR_BLKSZ,
 		    SL_READ, aiocbr);
-		/* XXX should continue to issue I/O in AIO case */
 		if (rc)
 			goto out;
 	}
@@ -697,9 +696,6 @@ slvr_fsbytes_rio(struct slvr_ref *s, uint32_t off, uint32_t len,
 		rc = slvr_fsio(s, blk,
 		    (SLASH_BLKS_PER_SLVR - blk) * SLASH_SLVR_BLKSZ,
 		    SL_READ, aiocbr);
-		/* XXX should continue to issue I/O in AIO case */
-		if (rc)
-			goto out;
 	}
 
  out:
