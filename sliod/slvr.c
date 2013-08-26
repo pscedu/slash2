@@ -569,22 +569,20 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 	nblks = (size + SLASH_SLVR_BLKSZ - 1) / SLASH_SLVR_BLKSZ;
 	psc_assert(sblk + nblks <= SLASH_BLKS_PER_SLVR);
 
-	SLVR_LOCK(s);
-	psc_assert(s->slvr_flags & SLVR_PINNED);
+	errno = 0;
 	off = slvr_2_fileoff(s, sblk);
 
 	if (rw == SL_READ) {
 		OPSTAT_INCR(SLI_OPST_FSIO_READ);
-		psc_assert(s->slvr_flags & SLVR_FAULTING);
-		errno = 0;
 		if (globalConfig.gconf_async_io) {
+
+			SLVR_LOCK(s);
 			s->slvr_flags |= SLVR_AIOWAIT;
 			SLVR_WAKEUP(s);
 			SLVR_ULOCK(s);
 
 			return (sli_aio_register(s, aiocbr));
 		}
-		SLVR_ULOCK(s);
 
 		rc = pread(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
 		    off);
@@ -621,9 +619,6 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 		}
 	} else {
 		OPSTAT_INCR(SLI_OPST_FSIO_WRITE);
-
-		errno = 0;
-		SLVR_ULOCK(s);
 
 		rc = pwrite(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
 		    off);
