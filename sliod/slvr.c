@@ -364,21 +364,6 @@ slvr_aio_tryreply(struct sli_aiocb_reply *a)
 		slvr_aio_reply(a);
 }
 
-/**
- * slvr_aio_process - Given a slvr, scan the list of pndg aio's for those
- *   ready for completion.
- */
-void
-slvr_aio_process(struct slvr_ref *s)
-{
-	struct sli_aiocb_reply *a;
-
-	while ((a = pll_get(&s->slvr_pndgaios))) {
-		OPSTAT_INCR(SLI_OPST_HANDLE_REPLREAD_REMOVE);
-		slvr_aio_tryreply(a);
-	}
-}
-
 __static void
 slvr_iocb_release(struct sli_iocb *iocb)
 {
@@ -390,6 +375,7 @@ __static void
 slvr_fsaio_done(struct sli_iocb *iocb)
 {
 	struct slvr_ref *s;
+	struct sli_aiocb_reply *a;
 	int rc;
 
 	s = iocb->iocb_slvr;
@@ -426,7 +412,13 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 	SLVR_WAKEUP(s);
 	SLVR_ULOCK(s);
 
-	slvr_aio_process(s);
+	/*
+	 * Scan the list of pndg aio's for those ready for completion.
+	 */
+	while ((a = pll_get(&s->slvr_pndgaios))) {
+		OPSTAT_INCR(SLI_OPST_HANDLE_REPLREAD_REMOVE);
+		slvr_aio_tryreply(a);
+	}
 }
 
 __static struct sli_iocb *
