@@ -1050,9 +1050,6 @@ slvr_wio_done(struct slvr_ref *s)
 	s->slvr_flags &= ~SLVR_RDMODWR;
 	s->slvr_flags |= SLVR_CRCDIRTY;
 
-	if (!(s->slvr_flags & SLVR_DATARDY))
-		DEBUG_SLVR(PLL_FATAL, s, "invalid state");
-
 	slvr_try_crcsched_locked(s);
 	SLVR_ULOCK(s);
 }
