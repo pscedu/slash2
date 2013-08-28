@@ -264,10 +264,8 @@ slvr_aio_replreply(struct sli_aiocb_reply *a)
 	if (rc)
 		DEBUG_SLVR(PLL_ERROR, s, "rc=%d", rc);
 
+	slvr_rio_done(s);
  out:
-	if (s)
-		slvr_rio_done(s);
-
 
 	sli_aio_aiocbr_release(a);
 }
