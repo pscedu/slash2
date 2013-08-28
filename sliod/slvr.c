@@ -1049,7 +1049,8 @@ slvr_wio_done(struct slvr_ref *s)
 
 	s->slvr_flags &= ~SLVR_RDMODWR;
 
-	if (s->slvr_flags & SLVR_DATAERR) {
+	if (s->slvr_flags & SLVR_DATAERR ||
+	    s->slvr_flags & SLVR_REPLDST) {
 		s->slvr_flags &= ~SLVR_CRCDIRTY;
 		slvr_lru_tryunpin_locked(s);
 	} else {
