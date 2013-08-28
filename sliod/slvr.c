@@ -373,11 +373,6 @@ slvr_aio_process(struct slvr_ref *s)
 {
 	struct sli_aiocb_reply *a;
 
-	SLVR_LOCK(s);
-	psc_assert(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR));
-	psc_assert(!(s->slvr_flags & SLVR_AIOWAIT));
-	SLVR_ULOCK(s);
-
 	while ((a = pll_get(&s->slvr_pndgaios))) {
 		OPSTAT_INCR(SLI_OPST_HANDLE_REPLREAD_REMOVE);
 		slvr_aio_tryreply(a);
