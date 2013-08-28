@@ -62,7 +62,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
     int rc)
 {
 	struct slvr_ref *s;
-	int slvrsiz, aio = 0;
+	int slvrsiz;
 
 	s = w->srw_slvr_refs[slvridx];
 
@@ -71,7 +71,6 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 	if (rc == -SLERR_AIOWAIT) {
 		SLVR_LOCK(s);
 		s->slvr_flags |= SLVR_AIOWAIT;
-		aio = 1;
 		/*
 		 * It should be either 1 or 2 (when aio replies
 		 * early), but just be paranoid in case peer
@@ -105,17 +104,15 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		SLVR_ULOCK(s);
 	}
 
-	if (!aio) {
-		slvr_wio_done(s);
+	slvr_wio_done(s);
 
-		spinlock(&w->srw_lock);
-		w->srw_nslvr_cur++;
-		w->srw_slvr_refs[slvridx] = NULL;
-		freelock(&w->srw_lock);
+	spinlock(&w->srw_lock);
+	w->srw_nslvr_cur++;
+	w->srw_slvr_refs[slvridx] = NULL;
+	freelock(&w->srw_lock);
 
-		replwk_queue(w);
-		sli_replwkrq_decref(w, rc);
-	}
+	replwk_queue(w);
+	sli_replwkrq_decref(w, rc);
 
 	return (rc);
 }
