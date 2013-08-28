@@ -1291,9 +1291,6 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 			if (iocb->iocb_rc == EINPROGRESS)
 				continue;
 			psc_assert(iocb->iocb_rc != ECANCELED);
-			if (iocb->iocb_rc == 0)
-				iocb->iocb_len =
-				    aio_return(&iocb->iocb_aiocb);
 
 			(void)psc_fault_here_rc(SLI_FAULT_AIO_FAIL,
 			    &iocb->iocb_rc, EIO);

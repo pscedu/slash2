@@ -183,7 +183,6 @@ struct sli_iocb {
 	struct psc_listentry	  iocb_lentry;
 	struct slvr_ref		 *iocb_slvr;
 	struct aiocb		  iocb_aiocb;
-	ssize_t			  iocb_len;
 	void			(*iocb_cbf)(struct sli_iocb *);
 	int			  iocb_rc;
 };
