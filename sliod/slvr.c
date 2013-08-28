@@ -1048,9 +1048,15 @@ slvr_wio_done(struct slvr_ref *s)
 	PFL_GETTIMESPEC(&s->slvr_ts);
 
 	s->slvr_flags &= ~SLVR_RDMODWR;
-	s->slvr_flags |= SLVR_CRCDIRTY;
 
-	slvr_try_crcsched_locked(s);
+	if (s->slvr_flags & SLVR_DATAERR) {
+		s->slvr_flags &= ~SLVR_CRCDIRTY;
+		slvr_lru_tryunpin_locked(s);
+	} else {
+		s->slvr_flags |= SLVR_CRCDIRTY;
+		slvr_try_crcsched_locked(s);
+	}
+
 	SLVR_ULOCK(s);
 }
 
