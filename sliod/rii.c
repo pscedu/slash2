@@ -98,11 +98,12 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		rc = slvr_fsbytes_wio(s, slvrsiz, 0);
 	}
 
-	if (rc) {
-		SLVR_LOCK(s);
+	SLVR_LOCK(s);
+	if (rc) 
 		s->slvr_flags |= SLVR_DATAERR;
-		SLVR_ULOCK(s);
-	}
+	else
+		s->slvr_flags |= SLVR_DATARDY;
+	SLVR_ULOCK(s);
 
 	slvr_wio_done(s);
 
