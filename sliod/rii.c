@@ -66,6 +66,28 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 
 	s = w->srw_slvr_refs[slvridx];
 
+	DEBUG_SLVR(rc ? PLL_ERROR : PLL_INFO, s, "replread rc=%d", rc);
+
+	if (rc == -SLERR_AIOWAIT) {
+		SLVR_LOCK(s);
+		s->slvr_flags |= SLVR_AIOWAIT;
+		aio = 1;
+		/*
+		 * It should be either 1 or 2 (when aio replies
+		 * early), but just be paranoid in case peer
+		 * will resend.
+		 */
+		psc_assert(s->slvr_pndgwrts > 0);
+		psc_assert(s->slvr_flags & SLVR_REPLDST);
+		s->slvr_pndgwrts--;
+		s->slvr_flags &= ~(SLVR_REPLDST | SLVR_REPLWIRE);
+
+		DEBUG_SLVR(PLL_INFO, s, "write decref");
+		SLVR_WAKEUP(s);
+		SLVR_ULOCK(s);
+		return (rc);
+	}
+
 	if (rc == 0) {
 		slvrsiz = SLASH_SLVR_SIZE;
 		if (s->slvr_num == w->srw_len / SLASH_SLVR_SIZE)
@@ -79,30 +101,9 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 
 	if (rc) {
 		SLVR_LOCK(s);
-		if (rc == -SLERR_AIOWAIT) {
-			s->slvr_flags |= SLVR_AIOWAIT;
-			aio = 1;
-			/*
-			 * It should be either 1 or 2 (when aio replies
-			 * early), but just be paranoid in case peer
-			 * will resend.
-			 */
-			psc_assert(s->slvr_pndgwrts > 0);
-			psc_assert(s->slvr_flags & SLVR_REPLDST);
-			s->slvr_pndgwrts--;
-			s->slvr_flags &= ~(SLVR_REPLDST | SLVR_REPLWIRE);
-
-			DEBUG_SLVR(PLL_INFO, s, "write decref");
-
-			SLVR_WAKEUP(s);
-		} else {
-			s->slvr_flags |= SLVR_DATAERR;
-		}
+		s->slvr_flags |= SLVR_DATAERR;
 		SLVR_ULOCK(s);
 	}
-
-	DEBUG_SLVR(rc ? PLL_ERROR : PLL_INFO, s, "replread %s rc=%d",
-	    aio ? "aiowait" : "complete", rc);
 
 	if (!aio) {
 		slvr_wio_done(s);
