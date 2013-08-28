@@ -66,11 +66,10 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 
 	s = w->srw_slvr_refs[slvridx];
 
-	slvrsiz = SLASH_SLVR_SIZE;
-	if (s->slvr_num == w->srw_len / SLASH_SLVR_SIZE)
-		slvrsiz = w->srw_len % SLASH_SLVR_SIZE;
-
 	if (rc == 0) {
+		slvrsiz = SLASH_SLVR_SIZE;
+		if (s->slvr_num == w->srw_len / SLASH_SLVR_SIZE)
+			slvrsiz = w->srw_len % SLASH_SLVR_SIZE;
 		/*
 		 * SLVR_DATARDY is set in wio_done when the slvr lock is
 		 * taken again.
