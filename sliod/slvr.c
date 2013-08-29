@@ -1006,43 +1006,6 @@ slvr_wio_done(struct slvr_ref *s)
 	s->slvr_pndgwrts--;
 	DEBUG_SLVR(PLL_INFO, s, "write decref");
 
-	if (s->slvr_flags & SLVR_REPLDST) {
-		/*
-		 * This was a replication dest slvr.  Adjust the slvr
-		 * flags so that the slvr may be freed on demand.
-		 */
-
-		psc_assert(s->slvr_pndgwrts == 0);
-		psc_assert(s->slvr_flags & SLVR_PINNED);
-		psc_assert(s->slvr_flags & SLVR_FAULTING);
-		psc_assert(!(s->slvr_flags & SLVR_CRCDIRTY));
-		s->slvr_flags &= ~(SLVR_PINNED | SLVR_AIOWAIT |
-		    SLVR_FAULTING | SLVR_REPLDST);
-
-		if (s->slvr_flags & SLVR_DATAERR) {
-			DEBUG_SLVR(PLL_ERROR, s, "replication failure");
-			/*
-			 * Perhaps this should block for any readers?
-			 * Technically it should be impossible since
-			 * this replica has yet to be registered with
-			 * the MDS.
-			 */
-			s->slvr_flags |= SLVR_SLBFREEING;
-			slvr_slb_free_locked(s, sl_bufs_pool);
-			s->slvr_flags &= ~SLVR_DATAERR;
-
-		} else {
-			DEBUG_SLVR(PLL_INFO, s, "replication complete");
-			s->slvr_flags |= SLVR_DATARDY;
-			SLVR_WAKEUP(s);
-		}
-
-		slvr_lru_requeue(s, 0);
-		SLVR_ULOCK(s);
-
-		return;
-	}
-
 	PFL_GETTIMESPEC(&s->slvr_ts);
 
 	s->slvr_flags &= ~SLVR_RDMODWR;
