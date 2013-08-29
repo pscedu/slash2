@@ -915,25 +915,6 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 	return (rc);
 }
 
-/*
- * slvr_rio_done - Called after a read on the given sliver has completed.
- */
-void
-slvr_rio_done(struct slvr_ref *s)
-{
-	SLVR_LOCK(s);
-
-	s->slvr_pndgreads--;
-	DEBUG_SLVR(PLL_INFO, s, "read decref");
-	if (slvr_lru_tryunpin_locked(s)) {
-		slvr_lru_requeue(s, 1);
-		DEBUG_SLVR(PLL_INFO, s, "decref, unpinned");
-	} else
-		DEBUG_SLVR(PLL_INFO, s, "decref, ops still pending or dirty");
-
-	SLVR_ULOCK(s);
-}
-
 __static void
 slvr_schedule_crc_locked(struct slvr_ref *s)
 {
@@ -991,6 +972,26 @@ slvr_lru_tryunpin_locked(struct slvr_ref *s)
 
 	return (1);
 }
+
+/*
+ * slvr_rio_done - Called after a read on the given sliver has completed.
+ */
+void
+slvr_rio_done(struct slvr_ref *s)
+{
+	SLVR_LOCK(s);
+
+	s->slvr_pndgreads--;
+	DEBUG_SLVR(PLL_INFO, s, "read decref");
+	if (slvr_lru_tryunpin_locked(s)) {
+		slvr_lru_requeue(s, 1);
+		DEBUG_SLVR(PLL_INFO, s, "decref, unpinned");
+	} else
+		DEBUG_SLVR(PLL_INFO, s, "decref, ops still pending or dirty");
+
+	SLVR_ULOCK(s);
+}
+
 
 /**
  * slvr_wio_done - Called after a write on the given sliver has completed.
