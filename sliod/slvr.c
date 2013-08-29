@@ -915,6 +915,9 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 	return (rc);
 }
 
+/*
+ * slvr_rio_done - Called after a read on the given sliver has completed.
+ */
 void
 slvr_rio_done(struct slvr_ref *s)
 {
@@ -990,11 +993,7 @@ slvr_lru_tryunpin_locked(struct slvr_ref *s)
 }
 
 /**
- * slvr_wio_done - Called after a write RPC has completed.  The sliver
- *	may be FAULTING which is handled separately from DATARDY.  If
- *	FAULTING, this thread must wake up sleepers on the bmap waitq.
- * Notes: conforming with standard lock ordering, this routine drops
- *    the sliver lock prior to performing list operations.
+ * slvr_wio_done - Called after a write on the given sliver has completed.
  */
 void
 slvr_wio_done(struct slvr_ref *s)
