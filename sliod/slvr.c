@@ -1047,6 +1047,7 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 			 * from being freed before we release the lock.
 			 */
 			BII_ULOCK(bii);
+			sched_yield();
 			goto retry;
 
 		} else {
