@@ -1106,7 +1106,6 @@ slvr_remove(struct slvr_ref *s)
 
 	/* Slvr should be detached from any listheads. */
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
-	psc_assert(s->slvr_flags & SLVR_FREEING);
 
 	bii = slvr_2_bii(s);
 
