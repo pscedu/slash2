@@ -77,11 +77,10 @@ struct slvr {
 #define	SLVR_LRU		(1 <<  5)	/* cached but not dirty */
 #define	SLVR_CRCDIRTY		(1 <<  6)	/* crc does not match cached buffer */
 #define	SLVR_FREEING		(1 <<  7)	/* sliver is being reaped */
-#define	SLVR_SLBFREEING		(1 <<  8)	/* slvr's slab is being reaped */
-#define	SLVR_REPLDST		(1 <<  9)	/* slvr is replication destination */
-#define SLVR_AIOWAIT		(1 << 10)	/* early return for AIO (for both local and remote) */
-#define SLVR_RDMODWR		(1 << 11)	/* read modify write */
-#define SLVR_REPLWIRE		(1 << 12)	/* prevent aio race */
+#define	SLVR_REPLDST		(1 <<  8)	/* slvr is replication destination */
+#define SLVR_AIOWAIT		(1 <<  9)	/* early return for AIO (for both local and remote) */
+#define SLVR_RDMODWR		(1 << 10)	/* read modify write */
+#define SLVR_REPLWIRE		(1 << 11)	/* prevent aio race */
 
 #define SLVR_LOCK(s)		spinlock(&(s)->slvr_lock)
 #define SLVR_ULOCK(s)		freelock(&(s)->slvr_lock)
@@ -134,7 +133,7 @@ struct slvr {
 	    "pr=%u "							\
 	    "dc=%d ts="PSCPRI_TIMESPEC" "				\
 	    "bii@%p slab@%p bmap@%p fid:"SLPRI_FID" iocb@%p flgs:"	\
-	    "%s%s%s%s%s%s%s%s%s%s%s%s%s :: " fmt,			\
+	    "%s%s%s%s%s%s%s%s%s%s%s%s :: " fmt,				\
 	    (s), (s)->slvr_num, (s)->slvr_pndgwrts,			\
 	    (s)->slvr_pndgreads,					\
 	    (s)->slvr_dirty_cnt,					\
@@ -152,7 +151,6 @@ struct slvr {
 	    (s)->slvr_flags & SLVR_LRU		? "l" : "-",		\
 	    (s)->slvr_flags & SLVR_CRCDIRTY	? "D" : "-",		\
 	    (s)->slvr_flags & SLVR_FREEING	? "F" : "-",		\
-	    (s)->slvr_flags & SLVR_SLBFREEING	? "b" : "-",		\
 	    (s)->slvr_flags & SLVR_REPLDST	? "T" : "-",		\
 	    (s)->slvr_flags & SLVR_REPLWIRE	? "w" : "-",		\
 	    (s)->slvr_flags & SLVR_AIOWAIT	? "a" : "-",		\
@@ -232,43 +230,13 @@ slvr_cmp(const void *x, const void *y)
 SPLAY_PROTOTYPE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp)
 
 static __inline int
-slvr_lru_slab_freeable(struct slvr_ref *s)
-{
-	int freeable = 1;
-
-	SLVR_LOCK_ENSURE(s);
-
-	psc_assert(s->slvr_flags & SLVR_LRU);
-
-	if (s->slvr_flags & SLVR_DATARDY)
-		psc_assert(!(s->slvr_flags & (SLVR_NEW | SLVR_FAULTING)));
-
-	if (!s->slvr_slab)
-		psc_assert(!(s->slvr_flags &
-			     (SLVR_NEW | SLVR_FAULTING | SLVR_DATARDY)));
-
-	if (s->slvr_flags & SLVR_PINNED)
-		freeable = 0;
-
-	if (s->slvr_iocb)
-		freeable = 0;
-
-	DEBUG_SLVR(PLL_INFO, s, "freeable=%d", freeable);
-
-	return (freeable);
-}
-
-static __inline int
 slvr_lru_freeable(struct slvr_ref *s)
 {
 	int freeable = 0;
 
-	if (s->slvr_slab ||
-	    (s->slvr_flags & SLVR_PINNED) ||
+	if ((s->slvr_flags & SLVR_PINNED) ||
 	    (s->slvr_flags & SLVR_CRCDIRTY))
 		goto out;
-
-	psc_assert(slvr_lru_slab_freeable(s));
 
 	freeable = 1;
  out:

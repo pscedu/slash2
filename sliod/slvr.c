@@ -783,11 +783,6 @@ slvr_slab_prep(struct slvr_ref *s)
 			goto getbuf;
 		s->slvr_slab = tmp;
 		tmp = NULL;
-
-	} else if (s->slvr_flags & SLVR_SLBFREEING) {
-		DEBUG_SLVR(PLL_INFO, s, "caught slbfreeing");
-		SLVR_WAIT(s, (s->slvr_flags & SLVR_SLBFREEING));
-		goto restart;
 	}
 
 	SLVR_ULOCK(s);
@@ -965,11 +960,6 @@ slvr_lru_tryunpin_locked(struct slvr_ref *s)
 
 	s->slvr_flags &= ~SLVR_PINNED;
 
-	if (s->slvr_flags & SLVR_DATAERR) {
-		s->slvr_flags |= SLVR_SLBFREEING;
-		slvr_slb_free_locked(s, sl_bufs_pool);
-	}
-
 	return (1);
 }
 
@@ -1102,6 +1092,7 @@ __static void
 slvr_remove(struct slvr_ref *s)
 {
 	struct bmap_iod_info *bii;
+	struct sl_buffer *tmp = s->slvr_slab;
 
 	DEBUG_SLVR(PLL_DEBUG, s, "freeing slvr");
 
@@ -1114,26 +1105,12 @@ slvr_remove(struct slvr_ref *s)
 	PSC_SPLAY_XREMOVE(biod_slvrtree, &bii->bii_slvrs, s);
 	bmap_op_done_type(bii_2_bmap(bii), BMAP_OPCNT_SLVR);
 
+	if (tmp) {
+		s->slvr_slab = NULL;
+		psc_pool_return(sl_bufs_pool, tmp);
+	}
+
 	psc_pool_return(slvr_pool, s);
-}
-
-void
-slvr_slb_free_locked(struct slvr_ref *s, struct psc_poolmgr *m)
-{
-	struct sl_buffer *tmp = s->slvr_slab;
-
-	SLVR_LOCK_ENSURE(s);
-	psc_assert(s->slvr_flags & SLVR_SLBFREEING);
-	psc_assert(!(s->slvr_flags & SLVR_FREEING));
-	psc_assert(s->slvr_slab);
-
-	s->slvr_flags &= ~(SLVR_SLBFREEING | SLVR_DATARDY | SLVR_DATAERR);
-
-	DEBUG_SLVR(PLL_INFO, s, "freeing slvr slab=%p", s->slvr_slab);
-	s->slvr_slab = NULL;
-	SLVR_WAKEUP(s);
-
-	psc_pool_return(m, tmp);
 }
 
 /**
@@ -1146,7 +1123,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 {
 	static struct psc_dynarray a;
 	struct slvr_ref *s, *dummy;
-	int i, n, locked;
+	int i, n;
 
 	n = 0;
 	psc_dynarray_init(&a);
@@ -1163,7 +1140,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 		 * use the lock of the bii.  So if this thread tries to
 		 * free a slvr from the same bii trylock will abort.
 		 */
-		if (!SLVR_TRYRLOCK(s, &locked))
+		if (!SLVR_TRYLOCK(s))
 			continue;
 
 		/*
@@ -1175,21 +1152,8 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 			psc_dynarray_add(&a, s);
 			s->slvr_flags |= SLVR_FREEING;
 			lc_remove(&lruSlvrs, s);
-			goto next;
 		}
-
-		if (slvr_lru_slab_freeable(s)) {
-			/*
-			 * At this point we know that the slab can be
-			 * reclaimed; however the slvr itself may have
-			 * to stay.
-			 */
-			psc_dynarray_add(&a, s);
-			s->slvr_flags |= SLVR_SLBFREEING;
-			n++;
-		}
- next:
-		SLVR_URLOCK(s, locked);
+		SLVR_ULOCK(s);
 		if (n >= atomic_read(&m->ppm_nwaiters))
 			break;
 	}
@@ -1198,20 +1162,8 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 	for (i = 0; i < psc_dynarray_len(&a); i++) {
 		s = psc_dynarray_getpos(&a, i);
 
-		locked = SLVR_RLOCK(s);
-
-		if (s->slvr_flags & SLVR_SLBFREEING) {
-			slvr_slb_free_locked(s, m);
-			SLVR_URLOCK(s, locked);
-
-		} else if (s->slvr_flags & SLVR_FREEING) {
-			psc_assert(!(s->slvr_flags & SLVR_SLBFREEING));
-			psc_assert(!(s->slvr_flags & SLVR_PINNED));
-			psc_assert(!s->slvr_slab);
-
-			SLVR_ULOCK(s);
-			slvr_remove(s);
-		}
+		psc_assert(!(s->slvr_flags & SLVR_PINNED));
+		slvr_remove(s);
 	}
 	psc_dynarray_free(&a);
 
@@ -1312,7 +1264,6 @@ dump_sliver_flags(int fl)
 	PFL_PRFLAG(SLVR_LRU, &fl, &seq);
 	PFL_PRFLAG(SLVR_CRCDIRTY, &fl, &seq);
 	PFL_PRFLAG(SLVR_FREEING, &fl, &seq);
-	PFL_PRFLAG(SLVR_SLBFREEING, &fl, &seq);
 	PFL_PRFLAG(SLVR_REPLDST, &fl, &seq);
 	PFL_PRFLAG(SLVR_AIOWAIT, &fl, &seq);
 	PFL_PRFLAG(SLVR_RDMODWR, &fl, &seq);
