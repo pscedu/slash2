@@ -738,59 +738,6 @@ slvr_repl_prep(struct slvr_ref *s, int src_or_dst)
 	SLVR_ULOCK(s);
 }
 
-void
-slvr_slab_prep(struct slvr_ref *s)
-{
-	struct sl_buffer *tmp = NULL;
-
-	SLVR_LOCK(s);
-
- restart:
-
-	if (s->slvr_flags & SLVR_NEW) {
-		if (!tmp) {
-			/*
-			 * Drop the lock before potentially blocking in
-			 * the pool reaper.  To do this we must first
-			 * allocate to a tmp pointer.
-			 */
-
- getbuf:
-			SLVR_ULOCK(s);
-
-			tmp = psc_pool_get(sl_bufs_pool);
-			memset(tmp->slb_base, 0, SLB_SIZE);
-			SLVR_LOCK(s);
-
-			goto restart;
-		}
-
-		psc_assert(psclist_disjoint(&s->slvr_lentry));
-		s->slvr_flags &= ~SLVR_NEW;
-		s->slvr_slab = tmp;
-		tmp = NULL;
-		/*
-		 * Until the slab is added to the sliver, the sliver is
-		 * private to the bmap's biod_slvrtree.
-		 */
-		s->slvr_flags |= SLVR_LRU;
-		/* note: lc_addtail() will grab the list lock itself */
-		lc_addtail(&lruSlvrs, s);
-
-	} else if ((s->slvr_flags & SLVR_LRU) && !s->slvr_slab) {
-		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
-		if (!tmp)
-			goto getbuf;
-		s->slvr_slab = tmp;
-		tmp = NULL;
-	}
-
-	SLVR_ULOCK(s);
-
-	if (tmp)
-		psc_pool_return(sl_bufs_pool, tmp);
-}
-
 /**
  * slvr_io_prep - Prepare a sliver for an incoming I/O.  This may entail
  *   faulting 32k aligned regions in from the underlying fs.
@@ -1020,7 +967,9 @@ struct slvr_ref *
 _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
     struct bmap_iod_info *bii, enum rw rw)
 {
-	struct slvr_ref *s, *tmp = NULL, ts;
+	int alloc = 0;
+	struct slvr_ref *s, *tmp1, ts;
+	struct sl_buffer *tmp2;
 
 	ts.slvr_num = num;
 
@@ -1041,8 +990,6 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 			goto retry;
 
 		} else {
-			BII_ULOCK(bii);
-
 			s->slvr_flags |= SLVR_PINNED;
 
 			if (rw == SL_WRITE)
@@ -1051,24 +998,31 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 				s->slvr_pndgreads++;
 		}
 		SLVR_ULOCK(s);
+		BII_ULOCK(bii);
 
 	} else {
-		if (!tmp) {
+		if (!alloc) {
+			alloc = 1;
 			BII_ULOCK(bii);
-			tmp = psc_pool_get(slvr_pool);
+			tmp1 = psc_pool_get(slvr_pool);
+			tmp2 = psc_pool_get(sl_bufs_pool);
 			goto retry;
 		}
 
-		s = tmp;
-		tmp = NULL;
+		alloc = 0;
+
+		s = tmp1;
 		memset(s, 0, sizeof(*s));
 		s->slvr_num = num;
-		s->slvr_flags = SLVR_NEW | SLVR_PINNED;
+		s->slvr_flags = SLVR_PINNED;
 		s->slvr_bii = bii;
 		INIT_PSC_LISTENTRY(&s->slvr_lentry);
 		INIT_SPINLOCK(&s->slvr_lock);
 		pll_init(&s->slvr_pndgaios, struct sli_aiocb_reply,
 		    aiocbr_lentry, &s->slvr_lock);
+
+		memset(tmp2->slb_base, 0, SLB_SIZE);
+		s->slvr_slab = tmp2;
 
 		if (rw == SL_WRITE)
 			s->slvr_pndgwrts = 1;
@@ -1077,6 +1031,16 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 
 		PSC_SPLAY_XINSERT(biod_slvrtree, &bii->bii_slvrs, s);
 		bmap_op_start_type(bii_2_bmap(bii), BMAP_OPCNT_SLVR);
+
+
+		/*
+		 * Until the slab is added to the sliver, the sliver is
+		 * private to the bmap's biod_slvrtree.
+		 */
+		s->slvr_flags |= SLVR_LRU;
+		/* note: lc_addtail() will grab the list lock itself */
+		lc_addtail(&lruSlvrs, s);
+
 		BII_ULOCK(bii);
 	}
 	if (rw == SL_WRITE)
@@ -1084,8 +1048,10 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 	else
 		DEBUG_SLVR(PLL_INFO, s, "read incref");
 
-	if (tmp)
-		psc_pool_return(slvr_pool, tmp);
+	if (alloc) {
+		psc_pool_return(slvr_pool, tmp1);
+		psc_pool_return(sl_bufs_pool, tmp2);
+	}
 	return (s);
 }
 
