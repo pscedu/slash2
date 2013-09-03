@@ -1052,9 +1052,6 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 		}
 		SLVR_ULOCK(s);
 
-		if (tmp)
-			psc_pool_return(slvr_pool, tmp);
-
 	} else {
 		if (!tmp) {
 			BII_ULOCK(bii);
@@ -1063,6 +1060,7 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 		}
 
 		s = tmp;
+		tmp = NULL;
 		memset(s, 0, sizeof(*s));
 		s->slvr_num = num;
 		s->slvr_flags = SLVR_NEW | SLVR_PINNED;
@@ -1085,6 +1083,9 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 		DEBUG_SLVR(PLL_INFO, s, "write incref");
 	else
 		DEBUG_SLVR(PLL_INFO, s, "read incref");
+
+	if (tmp)
+		psc_pool_return(slvr_pool, tmp);
 	return (s);
 }
 
