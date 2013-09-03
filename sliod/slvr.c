@@ -1110,17 +1110,17 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 		if (!SLVR_TRYLOCK(s))
 			continue;
 
-		/*
-		 * Look for slvrs which can be freed;
-		 * slvr_lru_freeable() returning true means that no slab
-		 * is attached.
-		 */
-		if (slvr_lru_freeable(s)) {
-			psc_dynarray_add(&a, s);
-			s->slvr_flags |= SLVR_FREEING;
-			lc_remove(&lruSlvrs, s);
+		if ((s->slvr_flags & SLVR_PINNED) || 
+		    (s->slvr_flags & SLVR_CRCDIRTY)) {
+			SLVR_ULOCK(s);
+			continue;
 		}
+
+		psc_dynarray_add(&a, s);
+		s->slvr_flags |= SLVR_FREEING;
+		lc_remove(&lruSlvrs, s);
 		SLVR_ULOCK(s);
+
 		if (n >= atomic_read(&m->ppm_nwaiters))
 			break;
 	}

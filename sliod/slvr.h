@@ -229,18 +229,4 @@ slvr_cmp(const void *x, const void *y)
 
 SPLAY_PROTOTYPE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp)
 
-static __inline int
-slvr_lru_freeable(struct slvr_ref *s)
-{
-	int freeable = 0;
-
-	if ((s->slvr_flags & SLVR_PINNED) ||
-	    (s->slvr_flags & SLVR_CRCDIRTY))
-		goto out;
-
-	freeable = 1;
- out:
-	return (freeable);
-}
-
 #endif /* _SLIOD_SLVR_H_ */
