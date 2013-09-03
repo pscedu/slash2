@@ -347,7 +347,7 @@ slvr_aio_tryreply(struct sli_aiocb_reply *a)
 			 * been removed from the pending list of previous slvr.
 			 */
 			pll_add(&s->slvr_pndgaios, a);
-			OPSTAT_INCR(SLI_OPST_HANDLE_REPLREAD_INSERT);
+			OPSTAT_INCR(SLI_OPST_AIO_INSERT);
 			SLVR_ULOCK(s);
 			break;
 		}

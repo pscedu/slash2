@@ -282,7 +282,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 				psc_assert(s->slvr_flags & SLVR_AIOWAIT);
 				SLVR_ULOCK(s);
 
-				OPSTAT_INCR(SLI_OPST_HANDLE_REPLREAD_INSERT);
+				OPSTAT_INCR(SLI_OPST_AIO_INSERT);
 				DEBUG_SLVR(PLL_DIAG, s, "aio wait");
 				break;
 			}
