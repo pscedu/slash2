@@ -280,20 +280,17 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 				 */
 				pll_add(&s->slvr_pndgaios, aiocbr);
 				psc_assert(s->slvr_flags & SLVR_AIOWAIT);
+				OPSTAT_INCR(SLI_OPST_AIO_INSERT);
 				SLVR_ULOCK(s);
 
-				OPSTAT_INCR(SLI_OPST_AIO_INSERT);
 				DEBUG_SLVR(PLL_DIAG, s, "aio wait");
-				break;
+				mp->rc = SLERR_AIOWAIT;
+				pscrpc_msg_add_flags(rq->rq_repmsg,
+				    MSG_ABORT_BULK);
+				goto aio_out;
 			}
 		}
 
-		if (i != nslvrs) {
-			mp->rc = SLERR_AIOWAIT;
-			pscrpc_msg_add_flags(rq->rq_repmsg,
-			    MSG_ABORT_BULK);
-			goto aio_out;
-		}
 		/* All slvrs are ready. */
 		sli_aio_aiocbr_release(aiocbr);
 	}

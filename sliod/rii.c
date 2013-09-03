@@ -190,10 +190,10 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 		SLVR_LOCK(s);
 		if (!(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR))) {
 			pll_add(&s->slvr_pndgaios, aiocbr);
+			OPSTAT_INCR(SLI_OPST_AIO_INSERT);
 			SLVR_ULOCK(s);
 			pscrpc_msg_add_flags(rq->rq_repmsg,
 			    MSG_ABORT_BULK);
-			OPSTAT_INCR(SLI_OPST_AIO_INSERT);
 			PFL_GOTOERR(out, mp->rc = rv);
 		}
 		SLVR_ULOCK(s);
