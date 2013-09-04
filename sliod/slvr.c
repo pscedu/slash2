@@ -384,10 +384,6 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 	psc_assert(s->slvr_flags & SLVR_FAULTING);
 	psc_assert(s->slvr_flags & SLVR_AIOWAIT);
 	psc_assert(!(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR)));
-	if (s->slvr_flags & SLVR_RDMODWR)
-		psc_assert(s->slvr_pndgwrts > 0);
-	else
-		psc_assert(s->slvr_pndgreads > 0);
 
 	/* Prevent additions from new requests. */
 	s->slvr_flags &= ~(SLVR_AIOWAIT | SLVR_FAULTING);
@@ -637,7 +633,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
  */
 ssize_t
 slvr_fsbytes_rio(struct slvr_ref *s, uint32_t off, uint32_t len,
-	struct sli_aiocb_reply **aiocbr)
+	int rbw, struct sli_aiocb_reply **aiocbr)
 {
 	int blk;
 	ssize_t rc = 0;
@@ -648,7 +644,7 @@ slvr_fsbytes_rio(struct slvr_ref *s, uint32_t off, uint32_t len,
 
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 
-	if (!(s->slvr_flags & SLVR_RDMODWR) || globalConfig.gconf_async_io) {
+	if (!rbw || globalConfig.gconf_async_io) {
 		rc = slvr_fsio(s, 0, SLASH_SLVR_SIZE,
 		    SL_READ, aiocbr);
 		goto out;
@@ -750,6 +746,7 @@ ssize_t
 slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
     struct sli_aiocb_reply **aiocbr)
 {
+	int rbw = 0; 
 	ssize_t rc = 0;
 
 	SLVR_LOCK(s);
@@ -816,10 +813,9 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 		goto out;
 	}
 
+	rbw = 1;
 	/* FixMe: Check the underlying file size to avoid useless RMW */
 	OPSTAT_INCR(SLI_OPST_IO_PREP_RMW);
-
-	s->slvr_flags |= SLVR_RDMODWR;
 
  do_read:
 
@@ -827,7 +823,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 	/* Execute read to fault in needed blocks after dropping
 	 *   the lock.  All should be protected by the FAULTING bit.
 	 */
-	if ((rc = slvr_fsbytes_rio(s, off, len, aiocbr)))
+	if ((rc = slvr_fsbytes_rio(s, off, len, rbw, aiocbr)))
 		return (rc);
 
 	if (rw == SL_READ) {
@@ -944,8 +940,6 @@ slvr_wio_done(struct slvr_ref *s)
 	DEBUG_SLVR(PLL_INFO, s, "write decref");
 
 	PFL_GETTIMESPEC(&s->slvr_ts);
-
-	s->slvr_flags &= ~SLVR_RDMODWR;
 
 	if (s->slvr_flags & SLVR_DATAERR ||
 	    s->slvr_flags & SLVR_REPLDST) {
@@ -1232,7 +1226,6 @@ dump_sliver_flags(int fl)
 	PFL_PRFLAG(SLVR_FREEING, &fl, &seq);
 	PFL_PRFLAG(SLVR_REPLDST, &fl, &seq);
 	PFL_PRFLAG(SLVR_AIOWAIT, &fl, &seq);
-	PFL_PRFLAG(SLVR_RDMODWR, &fl, &seq);
 	PFL_PRFLAG(SLVR_REPLWIRE, &fl, &seq);
 	if (fl)
 		printf(" unknown: %x", fl);
