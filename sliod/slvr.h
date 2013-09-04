@@ -71,7 +71,7 @@ struct slvr {
 /* slvr_flags */
 #define	SLVR_NEW		(1 <<  0)	/* newly initialized */
 #define	SLVR_FAULTING		(1 <<  1)	/* contents loading from disk or net */
-#define	SLVR_PINNED		(1 <<  2)	/* slab cannot be removed from cache */
+#define	SLVR_PINNED		(1 <<  2)	/* read/write in progress or CRC dirty */
 #define	SLVR_DATARDY		(1 <<  3)	/* ready for read / write activity */
 #define	SLVR_DATAERR		(1 <<  4)
 #define	SLVR_LRU		(1 <<  5)	/* cached but not dirty */

@@ -339,14 +339,6 @@ slislvrthr_proc(struct slvr *s)
 	SLVR_LOCK(s);
 	DEBUG_SLVR(PLL_DEBUG, s, "got sliver");
 
-	/*
-	 * Sliver assertions:
-	 *  CRCING - only one slvr_worker thread may handle a sliver.
-	 *  !LRU - ensure that slvr is in the right state.
-	 *  CRCDIRTY - must have work to do.
-	 *  PINNED - slab must not move from beneath us because the
-	 *           contents must be CRC'd.
-	 */
 	psc_assert(!(s->slvr_flags & SLVR_LRU));
 	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
 	psc_assert(s->slvr_flags & SLVR_PINNED);

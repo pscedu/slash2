@@ -1110,8 +1110,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 		if (!SLVR_TRYLOCK(s))
 			continue;
 
-		if ((s->slvr_flags & SLVR_PINNED) || 
-		    (s->slvr_flags & SLVR_CRCDIRTY)) {
+		if (s->slvr_flags & SLVR_PINNED) {
 			SLVR_ULOCK(s);
 			continue;
 		}
