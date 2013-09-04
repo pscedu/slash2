@@ -899,7 +899,6 @@ slvr_lru_tryunpin_locked(struct slvr_ref *s)
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 
 	psc_assert(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR));
-	psc_assert(!(s->slvr_flags & SLVR_NEW));
 
 	s->slvr_flags &= ~SLVR_PINNED;
 
@@ -1216,7 +1215,6 @@ dump_sliver_flags(int fl)
 {
 	int seq = 0;
 
-	PFL_PRFLAG(SLVR_NEW, &fl, &seq);
 	PFL_PRFLAG(SLVR_FAULTING, &fl, &seq);
 	PFL_PRFLAG(SLVR_PINNED, &fl, &seq);
 	PFL_PRFLAG(SLVR_DATARDY, &fl, &seq);
