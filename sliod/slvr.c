@@ -1056,8 +1056,7 @@ slvr_remove(struct slvr_ref *s)
 
 	DEBUG_SLVR(PLL_DEBUG, s, "freeing slvr");
 
-	/* Slvr should be detached from any listheads. */
-	psc_assert(psclist_disjoint(&s->slvr_lentry));
+	lc_remove(&lruSlvrs, s);
 
 	bii = slvr_2_bii(s);
 
@@ -1110,7 +1109,6 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 
 		psc_dynarray_add(&a, s);
 		s->slvr_flags |= SLVR_FREEING;
-		lc_remove(&lruSlvrs, s);
 		SLVR_ULOCK(s);
 
 		if (n >= atomic_read(&m->ppm_nwaiters))
@@ -1121,7 +1119,6 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 	for (i = 0; i < psc_dynarray_len(&a); i++) {
 		s = psc_dynarray_getpos(&a, i);
 
-		psc_assert(!(s->slvr_flags & SLVR_PINNED));
 		slvr_remove(s);
 	}
 	psc_dynarray_free(&a);
