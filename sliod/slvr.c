@@ -874,7 +874,29 @@ slvr_schedule_crc_locked(struct slvr_ref *s)
 	lc_addqueue(&crcqSlvrs, s);
 }
 
-void slvr_slb_free_locked(struct slvr_ref *, struct psc_poolmgr *);
+__static void
+slvr_remove(struct slvr_ref *s)
+{
+	struct bmap_iod_info *bii;
+	struct sl_buffer *tmp = s->slvr_slab;
+
+	DEBUG_SLVR(PLL_DEBUG, s, "freeing slvr");
+
+	lc_remove(&lruSlvrs, s);
+
+	bii = slvr_2_bii(s);
+
+	BII_LOCK(bii);
+	PSC_SPLAY_XREMOVE(biod_slvrtree, &bii->bii_slvrs, s);
+	bmap_op_done_type(bii_2_bmap(bii), BMAP_OPCNT_SLVR);
+
+	if (tmp) {
+		s->slvr_slab = NULL;
+		psc_pool_return(sl_bufs_pool, tmp);
+	}
+
+	psc_pool_return(slvr_pool, s);
+}
 
 void
 slvr_try_crcsched_locked(struct slvr_ref *s)
@@ -1046,30 +1068,6 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 		psc_pool_return(sl_bufs_pool, tmp2);
 	}
 	return (s);
-}
-
-__static void
-slvr_remove(struct slvr_ref *s)
-{
-	struct bmap_iod_info *bii;
-	struct sl_buffer *tmp = s->slvr_slab;
-
-	DEBUG_SLVR(PLL_DEBUG, s, "freeing slvr");
-
-	lc_remove(&lruSlvrs, s);
-
-	bii = slvr_2_bii(s);
-
-	BII_LOCK(bii);
-	PSC_SPLAY_XREMOVE(biod_slvrtree, &bii->bii_slvrs, s);
-	bmap_op_done_type(bii_2_bmap(bii), BMAP_OPCNT_SLVR);
-
-	if (tmp) {
-		s->slvr_slab = NULL;
-		psc_pool_return(sl_bufs_pool, tmp);
-	}
-
-	psc_pool_return(slvr_pool, s);
 }
 
 /**
