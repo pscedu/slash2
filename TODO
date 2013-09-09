@@ -449,7 +449,6 @@ reimport
   manually and will be forced to restart all clients and sliods.
 - imported files should create CRCs
 - stash directory replication settings in dir/.sldir
-- avoid degraded IOS's for writes
 - ensure flush() wakeups are being called from failed/timedout RPC
   callbacks
 - import should utilize fallocate(2) where available
