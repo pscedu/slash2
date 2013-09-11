@@ -683,15 +683,10 @@ msl_req_aio_add(struct pscrpc_request *rq,
 		if (!naio)
 			psc_fatalx("biorq %p has no AIO pages", r);
 
-		/*
-		 * XXX do we need this?
-		 */
-		//msl_biorq_aio_prep(r);
 		car->car_fsrqinfo = r->biorq_fsrqi;
 
 	} else if (cbf == msl_dio_cb) {
 		OPSTAT_INCR(SLC_OPST_DIO_CB_ADD);
-		//msl_biorq_aio_prep(r);
 		if (r->biorq_flags & BIORQ_WRITE)
 			av->pointer_arg[MSL_CBARG_BIORQ] = NULL;
 
