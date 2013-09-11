@@ -1003,7 +1003,7 @@ msl_readahead_cb(struct pscrpc_request *rq, int rc,
 			DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b,
 			    "sbd_seq=%"PRId64, bmap_2_sbd(b)->sbd_seq);
 
-		DEBUG_BMPCE(rc ? PLL_ERROR : PLL_INFO, e, "rc=%d", rc);
+		DEBUG_BMPCE(rc ? PLL_ERROR : PLL_INFO, e, "readahead rc=%d", rc);
 
 		BMPCE_LOCK(e);
 		if (rc)
