@@ -514,7 +514,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje,
 	OPSTAT_ASSIGN(SLM_OPST_RECLAIM_XID, current_reclaim_xid);
 	freelock(&mds_distill_lock);
 
-	reclaim_logfile_offset += sizeof(struct srt_reclaim_entry); 
+	reclaim_logfile_offset += sizeof(struct srt_reclaim_entry);
 	if (reclaim_logfile_offset ==
 	    SLM_RECLAIM_BATCH * (off_t)sizeof(struct srt_reclaim_entry)) {
 
@@ -1404,7 +1404,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 	count = (int)size / sizeof(struct srt_reclaim_entry);
 
 	/* find the xid associated with the last log entry */
-	entryp = PSC_AGP(reclaimbuf, 
+	entryp = PSC_AGP(reclaimbuf,
 	    (count - 1) * sizeof(struct srt_reclaim_entry));
 	xid = entryp->xid;
 
@@ -1977,7 +1977,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 
 		size -= sizeof(struct srt_reclaim_entry);;
 		max = SLM_RECLAIM_BATCH - 1;
-		reclaim_entryp = PSC_AGP(reclaim_entryp, 
+		reclaim_entryp = PSC_AGP(reclaim_entryp,
 		    sizeof(struct srt_reclaim_entry));
 
 		psc_assert((size % sizeof(struct srt_reclaim_entry)) == 0);
@@ -1988,7 +1988,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		    current_reclaim_batchno);
 		while (count < total) {
 			last_reclaim_xid = reclaim_entryp->xid;
-			reclaim_entryp = PSC_AGP(reclaim_entryp, 
+			reclaim_entryp = PSC_AGP(reclaim_entryp,
 			    sizeof(struct srt_reclaim_entry));
 			count++;
 		}
