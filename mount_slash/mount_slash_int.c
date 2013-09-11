@@ -1011,6 +1011,7 @@ msl_readahead_cb(struct pscrpc_request *rq, int rc,
 		else
 			e->bmpce_flags |= BMPCE_DATARDY;
 
+		e->bmpce_flags &= ~BMPCE_AIOWAIT;
 		e->bmpce_owner = NULL;
 		BMPCE_WAKE(e);
 		BMPCE_ULOCK(e);
