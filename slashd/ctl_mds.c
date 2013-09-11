@@ -319,13 +319,9 @@ __dead int
 slmctlcmd_stop(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
     __unusedx void *m)
 {
-	sqlite3 *dbh = slm_dbh;
-
 	mdsio_exit();
 	/* XXX journal_close */
-	psc_mutex_lock(&slm_dbh_mut);
-	slm_dbh = NULL;
-	sqlite3_close(dbh);
+	/* kill all threads and wait */
 	exit(0);
 }
 

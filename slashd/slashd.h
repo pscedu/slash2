@@ -25,6 +25,8 @@
 #ifndef _SLASHD_H_
 #define _SLASHD_H_
 
+#include <sqlite3.h>
+
 #include "pfl/dynarray.h"
 #include "pfl/rpc.h"
 #include "pfl/service.h"
@@ -115,6 +117,11 @@ enum {
 	SLM_OPST_UNLINK
 };
 
+struct slmthr_dbh {
+	sqlite3			 *dbh;
+	struct psc_hashtbl	  dbh_sth_hashtbl;
+};
+
 struct slmrmc_thread {
 	struct pscrpc_thread	  smrct_prt;
 };
@@ -132,10 +139,28 @@ struct slmrmm_thread {
 	struct pscrpc_thread	  smrmt_prt;
 };
 
+struct slmwk_thread {
+	struct slmthr_dbh	  smwk_dbh;
+};
+
 PSCTHR_MKCAST(slmrcmthr, slmrcm_thread, SLMTHRT_RCM)
 PSCTHR_MKCAST(slmrmcthr, slmrmc_thread, SLMTHRT_RMC)
 PSCTHR_MKCAST(slmrmithr, slmrmi_thread, SLMTHRT_RMI)
 PSCTHR_MKCAST(slmrmmthr, slmrmm_thread, SLMTHRT_RMM)
+PSCTHR_MKCAST(slmwkthr, slmwk_thread, SLMTHRT_WORKER)
+
+static __inline struct slmthr_dbh *
+slmthr_getdbh(void)
+{
+	struct psc_thread *thr;
+
+	thr = pscthr_get();
+	switch (thr->pscthr_type) {
+	case SLMTHRT_WORKER:
+		return (&slmwkthr(thr)->smwk_dbh);
+	}
+	psc_fatalx("unknown thread type");
+}
 
 struct site_mds_info {
 };

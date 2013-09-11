@@ -32,7 +32,6 @@
 #include <unistd.h>
 
 #include <gcrypt.h>
-#include <sqlite3.h>
 
 #include "pfl/fs.h"
 #include "pfl/pfl.h"
@@ -51,7 +50,6 @@
 #include "fidcache.h"
 #include "mdscoh.h"
 #include "mdsio.h"
-#include "mkfn.h"
 #include "odtable_mds.h"
 #include "pathnames.h"
 #include "repl_mds.h"
@@ -136,10 +134,9 @@ append_path(const char *newpath)
 void
 import_zpool(const char *zpoolname, const char *zfspoolcf)
 {
-	int i, rc;
+	char cmdbuf[BUFSIZ], mountpoint[BUFSIZ];
 	struct dirent *d;
-	char cmdbuf[BUFSIZ];
-	char mountpoint[BUFSIZ];
+	int i, rc;
 	DIR *dir;
 
 	rc = snprintf(mountpoint, sizeof(mountpoint), "/%s", zpoolname);
@@ -439,9 +436,9 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	char *zpcachefn = NULL, *zpname, fn[PATH_MAX];
-	int vfsid, rc, c, found;
+	char *zpcachefn = NULL, *zpname;
 	const char *cfn, *sfn, *p;
+	int vfsid, c, found;
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -529,8 +526,6 @@ main(int argc, char *argv[])
 
 	psc_hashtbl_init(&rootHtable, PHTF_STR, struct rootNames,
 	    rn_name, rn_hentry, 1024, NULL, "rootnames");
-	psc_hashtbl_init(&slm_sth_hashtbl, 0, struct slm_sth, sth_fmt,
-	    sth_hentry, 8, NULL, "sth");
 
 	/* using hook can cause layer violation */
 	zfsslash2_register_hook(psc_register_filesystem);
@@ -580,11 +575,6 @@ main(int argc, char *argv[])
 		    "ZFS=%"PRIx64" slcfg=%"PRIx64,
 		    zfsMount[current_vfsid].uuid,
 		    globalConfig.gconf_fsuuid);
-
-	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_UPSCHDB);
-	rc = sqlite3_open(fn, &slm_dbh);
-	if (rc)
-		psc_fatal("%s: %s", fn, sqlite3_errmsg(slm_dbh));
 
 	lc_reginit(&slm_replst_workq, struct slm_replst_workreq,
 	    rsw_lentry, "replstwkq");

@@ -46,7 +46,9 @@
 #include "mdscoh.h"
 #include "mdsio.h"
 #include "mdslog.h"
+#include "mkfn.h"
 #include "odtable_mds.h"
+#include "pathnames.h"
 #include "repl_mds.h"
 #include "rpc_mds.h"
 #include "slashd.h"
@@ -58,10 +60,6 @@
 #include "zfs-fuse/zfs_slashlib.h"
 
 struct odtable		*mdsBmapAssignTable;
-
-sqlite3			*slm_dbh;
-struct pfl_mutex	 slm_dbh_mut = PSC_MUTEX_INIT;
-struct psc_hashtbl	 slm_sth_hashtbl;
 
 int
 mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
@@ -2015,7 +2013,7 @@ slm_ptrunc_prepare(void *p)
 			mds_fcmh_setattr_nolog(current_vfsid, f,
 			    PSCFS_SETATTRF_DATASIZE, &sstb);
 		}
-		FCMH_RLOCK(f);
+		(void)FCMH_RLOCK(f);
 		f->fcmh_flags &= ~FCMH_IN_PTRUNC;
 		FCMH_UNBUSY(f);
 		slm_ptrunc_wake_clients(wk);
@@ -2186,6 +2184,12 @@ slm_ptrunc_wake_clients(void *p)
 	return (0);
 }
 
+/*
+	psc_mutex_lock(&slm_dbh_mut);
+	slm_dbh = NULL;
+	sqlite3_close(dbh);
+*/
+
 void
 _dbdo(const struct pfl_callerinfo *pci,
     int (*cb)(struct slm_sth *, void *), void *arg,
@@ -2193,38 +2197,43 @@ _dbdo(const struct pfl_callerinfo *pci,
 {
 	char *p, dbuf[LINE_MAX] = "";
 	int dbuf_off = 0, rc, n, j;
+	struct slmthr_dbh *dbh;
 	struct slm_sth *sth;
 	const char *errstr;
 	uint64_t key;
 	va_list ap;
 
-	key = (uint64_t)fmt;
-	sth = psc_hashtbl_search(&slm_sth_hashtbl, NULL, NULL, &key);
-	if (sth == NULL) {
-		struct psc_hashbkt *hb;
+	dbh = slmthr_getdbh();
 
-		hb = psc_hashbkt_get(&slm_sth_hashtbl, &key);
-		psc_hashbkt_lock(hb);
-		sth = psc_hashbkt_search(&slm_sth_hashtbl, hb, NULL,
-		    NULL, &key);
-		if (sth == NULL) {
-			sth = PSCALLOC(sizeof(*sth));
-			psc_hashent_init(&slm_sth_hashtbl, sth);
-			psc_mutex_init(&sth->sth_mutex);
-			sth->sth_fmt = fmt;
+	if (dbh->dbh == NULL) {
+		char fn[PATH_MAX];
 
-			psc_mutex_lock(&slm_dbh_mut);
-			rc = sqlite3_prepare_v2(slm_dbh, fmt, -1,
-			    &sth->sth_sth, NULL);
-			psc_mutex_unlock(&slm_dbh_mut);
-			psc_assert(rc == SQLITE_OK);
+		xmkfn(fn, "%s/%s", sl_datadir, SL_FN_UPSCHDB);
+		rc = sqlite3_open(fn, &dbh->dbh);
+		if (rc)
+			psc_fatal("%s: %s", fn,
+			    sqlite3_errmsg(dbh->dbh));
 
-			psc_hashbkt_add_item(&slm_sth_hashtbl, hb, sth);
-		}
-		psc_hashbkt_unlock(hb);
+		psc_hashtbl_init(&dbh->dbh_sth_hashtbl, 0,
+		    struct slm_sth, sth_fmt, sth_hentry, 16, NULL,
+		    "sth-%s", pscthr_get()->pscthr_name);
 	}
 
-	psc_mutex_lock(&sth->sth_mutex);
+	key = (uint64_t)fmt;
+	sth = psc_hashtbl_search(&dbh->dbh_sth_hashtbl, NULL, NULL,
+	    &key);
+	if (sth == NULL) {
+		sth = PSCALLOC(sizeof(*sth));
+		psc_hashent_init(&dbh->dbh_sth_hashtbl, sth);
+		sth->sth_fmt = fmt;
+
+		rc = sqlite3_prepare_v2(dbh->dbh, fmt, -1,
+		    &sth->sth_sth, NULL);
+		psc_assert(rc == SQLITE_OK);
+
+		psc_hashtbl_add_item(&dbh->dbh_sth_hashtbl, sth);
+	}
+
 	n = sqlite3_bind_parameter_count(sth->sth_sth);
 	va_start(ap, fmt);
 	if (psc_log_getlevel(pci->pci_subsys) >= PLL_DEBUG) {
@@ -2274,26 +2283,22 @@ _dbdo(const struct pfl_callerinfo *pci,
 	psclog_debug("issuing SQL: %s", dbuf);
 	va_end(ap);
 
-	psc_mutex_lock(&slm_dbh_mut);
 	do {
 		rc = sqlite3_step(sth->sth_sth);
 		if (rc == SQLITE_ROW)
 			cb(sth, arg);
-	} while (rc == SQLITE_ROW);
+		if (rc != SQLITE_DONE)
+			sched_yield();
+	} while (rc == SQLITE_ROW || rc == SQLITE_BUSY);
 
 	if (rc != SQLITE_DONE) {
-		errstr = sqlite3_errmsg(slm_dbh);
+		errstr = sqlite3_errmsg(dbh->dbh);
 		psclog_errorx("SQL error: rc=%d query=%s; msg=%s", rc,
 		    fmt, errstr);
 		/* XXX rebuild db? */
 	}
-	psc_mutex_unlock(&slm_dbh_mut);
 	sqlite3_reset(sth->sth_sth);
-	if (n) {
-		rc = sqlite3_clear_bindings(sth->sth_sth);
-		psc_assert(rc == SQLITE_OK);
-	}
-	psc_mutex_unlock(&sth->sth_mutex);
+//	rc = sqlite3_clear_bindings(sth->sth_sth);
 }
 
 int

@@ -164,7 +164,7 @@ void	 upschq_resm(struct sl_resm *, int);
 int	 slm_wk_upsch_purge(void *);
 
 void	 slm_upsch_init(void);
-void	 slmupschthr_spawn(void); 
+void	 slmupschthr_spawn(void);
 
 void	 slm_upsch_insert(struct bmap *, sl_ios_id_t);
 int	 slm_upsch_revert_cb(struct slm_sth *, void *);
@@ -183,9 +183,6 @@ void	 upd_rpmi_remove(struct resprof_mds_info *, struct slm_update_data *);
 #define UPSCH_WAKE()		psc_multiwaitcond_wakeup(&slm_upschq.pml_mwcond_empty)
 
 extern struct psc_mlist		 slm_upschq;
-extern sqlite3			*slm_dbh;
-extern struct pfl_mutex		 slm_dbh_mut;
-extern struct psc_hashtbl	 slm_sth_hashtbl;
 
 struct slm_sth {
 	struct psc_hashent	 sth_hentry;
