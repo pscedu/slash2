@@ -17,3 +17,7 @@ CREATE TABLE upsch (
 	PRIMARY KEY(id),
 	UNIQUE(resid, fid, bno)
 );
+
+CREATE INDEX 'upsch_resid_idx' ON 'upsch' ('resid');
+CREATE INDEX 'upsch_fid_idx' ON 'upsch' ('fid');
+CREATE INDEX 'upsch_bno_idx' ON 'upsch' ('bno');
