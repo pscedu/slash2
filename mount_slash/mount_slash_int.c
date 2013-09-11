@@ -610,7 +610,6 @@ _msl_fsrq_aiowait_tryadd_locked(const struct pfl_callerinfo *pci,
 	int locked;
 
 	LOCK_ENSURE(&e->bmpce_lock);
-	psc_assert(!(e->bmpce_flags & BMPCE_DATARDY));
 
 	locked = MFH_RLOCK(r->biorq_mfh);
 
