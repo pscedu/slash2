@@ -31,6 +31,7 @@
 #include "pfl/rpc.h"
 #include "pfl/service.h"
 #include "pfl/vbitmap.h"
+#include "psc_util/ctlsvr.h"
 #include "psc_util/meter.h"
 #include "psc_util/multiwait.h"
 #include "psc_util/odtable.h"
@@ -143,6 +144,11 @@ struct slmwk_thread {
 	struct slmthr_dbh	  smwk_dbh;
 };
 
+struct slmctl_thread {
+	struct slmthr_dbh	  smct_dbh;
+};
+
+PSCTHR_MKCAST(slmctlthr, psc_ctlthr, SLMTHRT_CTL)
 PSCTHR_MKCAST(slmrcmthr, slmrcm_thread, SLMTHRT_RCM)
 PSCTHR_MKCAST(slmrmcthr, slmrmc_thread, SLMTHRT_RMC)
 PSCTHR_MKCAST(slmrmithr, slmrmi_thread, SLMTHRT_RMI)
@@ -156,6 +162,12 @@ slmthr_getdbh(void)
 
 	thr = pscthr_get();
 	switch (thr->pscthr_type) {
+	case SLMTHRT_CTL: {
+		struct slmctl_thread *smct;
+
+		smct = (void *)(slmctlthr(thr) + 1);
+		return (&smct->smct_dbh);
+	    }
 	case SLMTHRT_WORKER:
 		return (&slmwkthr(thr)->smwk_dbh);
 	}
