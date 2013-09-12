@@ -34,6 +34,8 @@
 # define SL_PATH_ETC_DIR	"/etc/slash"
 #endif
 
+#define SL_PATH_DEV_SHM		"/dev/shm"
+
 #define SL_PATH_SLMCTLSOCK	SL_PATH_RUNTIME_DIR"/slashd.%h.sock"
 #define SL_PATH_SLICTLSOCK	SL_PATH_RUNTIME_DIR"/sliod.%h.sock"
 #define SL_PATH_MSCTLSOCK	SL_PATH_RUNTIME_DIR"/mount_slash.%h.sock"

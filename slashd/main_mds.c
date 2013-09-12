@@ -596,7 +596,16 @@ main(int argc, char *argv[])
 	mds_odtable_load(&slm_ptrunc_odt, SL_FN_PTRUNC_ODTAB, "ptrunc");
 
 	mds_bmap_timeotbl_init();
-	mds_journal_init(disable_propagation, zfsMount[current_vfsid].uuid);
+
+	sqlite3_enable_shared_cache();
+	dbdo("PRAGMA page_size=");
+	dbdo("PRAGMA synchronous=OFF");
+	dbdo("PRAGMA journal_mode=WAL");
+
+	dbdo("BEGIN TRANSACTION");
+	mds_journal_init(disable_propagation,
+	    zfsMount[current_vfsid].uuid);
+	dbdo("END TRANSACTION");
 
 	pfl_workq_lock();
 	pfl_wkthr_spawn(SLMTHRT_WORKER, SLM_NWORKER_THREADS,

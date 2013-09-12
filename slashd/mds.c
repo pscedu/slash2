@@ -2190,11 +2190,46 @@ slm_ptrunc_wake_clients(void *p)
 	sqlite3_close(dbh);
 */
 
+int
+str_escmeta(const char in[PATH_MAX], char out[PATH_MAX])
+{
+	const char *i, *o;
+
+	for (i = in, o = out; *i && o < out + PATH_MAX - 1; i++, o++) {
+		if (*i == '\\' || *i == '\'')
+			*o++ = '\\';
+		*o = *i;
+	}
+	out[PATH_MAX - 1] = '\0';
+	return (0);
+}
+
+void
+slmbkdbthr_main(struct psc_thread *thr)
+{
+	char dbfn[PATH_MAX], qdbfn[PATH_MAX],
+	     bkfn[PATH_MAX], qbkfn[PATH_MAX],
+	     cmd[LINE_MAX];
+
+	xmkfn(dbfn, "%s/%s", sl_datadir, SL_FN_UPSCHDB);
+	str_escmeta(dbfn, qdbfn);
+	xmkfn(dbfn, "%s/%s", sl_datadir, SL_FN_UPSCHDB);
+	str_escmeta(bkfn, qbkfn);
+
+	snprintf(cmd, sizeof(cmd),
+	    "echo .dump | sqlite3 '%s' > %s", qdbfn, qbkfn);
+	while (pscthr_run(thr)) {
+		sleep(intv);
+		system(cmd);
+	}
+}
+
 void
 _dbdo(const struct pfl_callerinfo *pci,
     int (*cb)(struct slm_sth *, void *), void *arg,
     const char *fmt, ...)
 {
+	static int check;
 	char *p, dbuf[LINE_MAX] = "";
 	int dbuf_off = 0, rc, n, j;
 	struct slmthr_dbh *dbh;
@@ -2206,13 +2241,61 @@ _dbdo(const struct pfl_callerinfo *pci,
 	dbh = slmthr_getdbh();
 
 	if (dbh->dbh == NULL) {
-		char fn[PATH_MAX];
+		char dbfn[PATH_MAX], qdbfn[PATH_MAX],
+		     bkfn[PATH_MAX], qbkfn[PATH_MAX],
+		     tmpfn[PATH_MAX], qtmpfn[PATH_MAX];
+		const char *tdir;
+		struct stat stb;
 
-		xmkfn(fn, "%s/%s", sl_datadir, SL_FN_UPSCHDB);
-		rc = sqlite3_open(fn, &dbh->dbh);
-		if (rc)
-			psc_fatal("%s: %s", fn,
-			    sqlite3_errmsg(dbh->dbh));
+		xmkfn(dbfn, "%s/%s", SL_PATH_DEV_SHM, SL_FN_UPSCHDB);
+		rc = sqlite3_open(dbfn, &dbh->dbh);
+		if (rc == SQLITE_OK && !check) {
+			rc = sqlite3_exec(dbh->dbh,
+			    "PRAGMA integrity_check", NULL, NULL,
+			    &errstr);
+			check = 1;
+		}
+
+		if (rc != SQLITE_OK) {
+			psc_assert(slm_opstate == SLM_OPSTATE_REPLAY);
+
+			psclog_errorx("upsch database not found or "
+			    "corrupted; rebuilding");
+
+			tdir = getenv("TMPDIR");
+			if (tdir == NULL)
+				tdir = _PATH_TMP;
+			snprintf(tmpfn, sizeof(tmpfn),
+			    "%s/upsch.tmp.XXXXXXXX", tdir);
+			mktemp(tmpfn);
+
+			xmkfn(bkfn, "%s/%s", sl_datadir, SL_FN_UPSCHDB);
+
+			str_escmeta(dbfn, qdbfn);
+			str_escmeta(bkfn, qbkfn);
+			str_escmeta(tmpfn, qtmpfn);
+
+			unlink(tmpfn);
+
+			if (stat(dbfn, &stb) == 0) {
+				/* salvage anything from current db */
+				snprintf("echo .dump | sqlite3 '%s' > "
+				    "'%s'", qdbfn, qtmpfn);
+				system(cmd);
+
+				unlink(dbfn);
+			}
+
+			/* rollback to backup */
+			snprintf(cmd, sizeof(cmd),
+			    "sqlite3 '%s' < '%s'", qdbfn, qbkfn);
+			system(cmd);
+
+			rc = sqlite3_open(dbfn, &dbh->dbh);
+			if (rc)
+				psc_fatal("%s: %s", dbfn,
+				    sqlite3_errmsg(dbh->dbh));
+		}
 
 		psc_hashtbl_init(&dbh->dbh_sth_hashtbl, 0,
 		    struct slm_sth, sth_fmt, sth_hentry, 16, NULL,
