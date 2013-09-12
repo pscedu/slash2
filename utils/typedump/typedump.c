@@ -271,6 +271,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct slmrmc_thread);
 	PRTYPE(struct slmrmi_thread);
 	PRTYPE(struct slmrmm_thread);
+	PRTYPE(struct slmthr_dbh);
+	PRTYPE(struct slmwk_thread);
 	PRTYPE(struct slvr);
 	PRTYPE(struct srm_batch_req);
 	PRTYPE(struct srm_bmap_chwrmode_rep);
