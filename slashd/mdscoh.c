@@ -178,9 +178,9 @@ mdscoh_req(struct bmap_mds_lease *bml)
 }
 
 void
-slmcohthr_begin(__unusedx struct psc_thread *thr)
+slmcohthr_begin(struct psc_thread *thr)
 {
-	while (pscthr_run()) {
+	while (pscthr_run(thr)) {
 		psc_compl_waitrel_s(&mdsCohCompl, 1);
 		pscrpc_nbreqset_reap(&bmapCbSet);
 	}

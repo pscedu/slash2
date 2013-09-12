@@ -258,7 +258,7 @@ slmrcmthr_main(struct psc_thread *thr)
 	psc_dynarray_init(&da);
 
 	srcm = slmrcmthr(thr);
-	while (pscthr_run()) {
+	while (pscthr_run(thr)) {
 		rsw = lc_getwait(&slm_replst_workq);
 		srcm->srcm_page_bitpos = SRM_REPLST_PAGESIZ * NBBY;
 

@@ -2989,14 +2989,14 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 }
 
 void
-msattrflushthr_main(__unusedx struct psc_thread *thr)
+msattrflushthr_main(struct psc_thread *thr)
 {
 	struct fcmh_cli_info *fci, *tmp_fci;
 	struct timespec ts, nexttimeo;
 	struct fidc_membh *f;
 	int rc, did_work;
 
-	while (pscthr_run()) {
+	while (pscthr_run(thr)) {
 
 		lc_peekheadwait(&attrTimeoutQ);
 

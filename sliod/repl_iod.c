@@ -190,7 +190,7 @@ replwk_queue(struct sli_repl_workrq *w)
 }
 
 void
-slireplpndthr_main(__unusedx struct psc_thread *thr)
+slireplpndthr_main(struct psc_thread *thr)
 {
 	struct sli_repl_workrq *w, *wrap;
 	struct slashrpc_cservice *csvc;
@@ -198,7 +198,7 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 	int rc, slvridx, slvrno;
 
 	wrap = NULL;
-	while (pscthr_run()) {
+	while (pscthr_run(thr)) {
 		slvrno = 0;
 		w = lc_getwait(&sli_replwkq_pending);
 		spinlock(&w->srw_lock);

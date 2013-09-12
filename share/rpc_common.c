@@ -864,7 +864,7 @@ slconnthr_main(struct psc_thread *thr)
 
 	sct = thr->pscthr_private;
 	memset(&ts0, 0, sizeof(ts0));
-	while (pscthr_run()) {
+	while (pscthr_run(thr)) {
 		clock_gettime(CLOCK_MONOTONIC, &ts1);
 		if (sct->sct_pingupc) {
 			timespecsub(&ts1, &ts0, &diff);

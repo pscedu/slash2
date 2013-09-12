@@ -67,9 +67,9 @@ sl_buffer_destroy(void *pri)
 }
 
 void
-slibreapthr_main(__unusedx struct psc_thread *thr)
+slibreapthr_main(struct psc_thread *thr)
 {
-	while (pscthr_run()) {
+	while (pscthr_run(thr)) {
 		psc_mutex_lock(&sl_bufs_pool->ppm_reclaim_mutex);
 		sl_bufs_pool->ppm_reclaimcb(sl_bufs_pool);
 		psc_mutex_unlock(&sl_bufs_pool->ppm_reclaim_mutex);

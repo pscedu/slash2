@@ -464,7 +464,7 @@ batchrq_add(struct sl_resource *r, struct slashrpc_cservice *csvc,
 }
 
 void
-slmbchrqthr_main(__unusedx struct psc_thread *thr)
+slmbchrqthr_main(struct psc_thread *thr)
 {
 	struct timeval now, wait;
 	struct batchrq *br, *brn;
@@ -475,7 +475,7 @@ slmbchrqthr_main(__unusedx struct psc_thread *thr)
 	wait.tv_sec = 0;
 	wait.tv_usec = 0;
 
-	while (pscthr_run()) {
+	while (pscthr_run(thr)) {
 		usleep(wait.tv_sec * 1000000 + wait.tv_usec);
 
 		wait.tv_sec = 1;

@@ -1040,7 +1040,7 @@ slm_upsch_insert(struct bmap *b, sl_ios_id_t resid)
 }
 
 void
-slmupschthr_main(__unusedx struct psc_thread *thr)
+slmupschthr_main(struct psc_thread *thr)
 {
 	struct slm_update_data *upd;
 	struct sl_resource *r;
@@ -1048,7 +1048,7 @@ slmupschthr_main(__unusedx struct psc_thread *thr)
 	struct sl_site *s;
 	int i, j, rc;
 
-	while (pscthr_run()) {
+	while (pscthr_run(thr)) {
 		CONF_FOREACH_RESM(s, r, i, m, j)
 			if (RES_ISFS(r))
 				psc_multiwait_setcondwakeable(&slm_upsch_mw,

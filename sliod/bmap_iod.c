@@ -346,7 +346,7 @@ bcr_finalize(struct bcrcupd *bcr)
 }
 
 void
-slibmaprlsthr_main(__unusedx struct psc_thread *thr)
+slibmaprlsthr_main(struct psc_thread *thr)
 {
 	struct psc_dynarray a = DYNARRAY_INIT;
 	struct srm_bmap_release_req *brr, *mq;
@@ -360,7 +360,7 @@ slibmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 	brr = PSCALLOC(sizeof(struct srm_bmap_release_req));
 
-	while (pscthr_run()) {
+	while (pscthr_run(thr)) {
 		nrls = 0;
 
 		if (lc_nitems(&bmapRlsQ) < MAX_BMAP_RELEASE)

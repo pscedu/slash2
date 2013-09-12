@@ -805,7 +805,7 @@ msl_bmap_release(struct sl_resm *resm)
 }
 
 void
-msbmaprlsthr_main(__unusedx struct psc_thread *thr)
+msbmaprlsthr_main(struct psc_thread *thr)
 {
 	int i, sortbypass = 0, sawnew;
 	struct psc_dynarray rels = DYNARRAY_INIT;
@@ -823,7 +823,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 	 * XXX: just put the resm's in the dynarray.  When pushing out
 	 * the bid's, assume an ion unless resm == slc_rmc_resm.
 	 */
-	while (pscthr_run()) {
+	while (pscthr_run(thr)) {
 
 		lc_peekheadwait(&bmapTimeoutQ);
 
@@ -989,14 +989,14 @@ bmap_flush_outstanding_rpcwait(struct sl_resm *m)
  * msbmflwthr_main - Lease watcher thread.
  */
 __static void
-msbmflwthr_main(__unusedx struct psc_thread *thr)
+msbmflwthr_main(struct psc_thread *thr)
 {
 	struct psc_dynarray bmaps = DYNARRAY_INIT_NOLOG;
 	struct bmapc_memb *b, *tmpb;
 	struct timespec ts;
 	int i, rc, secs;
 
-	while (pscthr_run()) {
+	while (pscthr_run(thr)) {
 
 		lc_peekheadwait(&bmapFlushQ);
 
@@ -1160,12 +1160,12 @@ bmap_flush(void)
 }
 
 void
-msbmapflushthr_main(__unusedx struct psc_thread *thr)
+msbmapflushthr_main(struct psc_thread *thr)
 {
 	struct timespec flush, rpcwait, tmp1, tmp2;
 	int rc;
 
-	while (pscthr_run()) {
+	while (pscthr_run(thr)) {
 		msbmflthr(pscthr_get())->mbft_failcnt = 1;
 
 		lc_peekheadwait(&bmapFlushQ);
@@ -1203,9 +1203,9 @@ msbmapflushthr_main(__unusedx struct psc_thread *thr)
 }
 
 void
-msbmapflushrpcthr_main(__unusedx struct psc_thread *thr)
+msbmapflushrpcthr_main(struct psc_thread *thr)
 {
-	while (pscthr_run()) {
+	while (pscthr_run(thr)) {
 		psc_compl_waitrel_s(&rpcComp, 1);
 		pscrpc_nbreqset_reap(pndgWrtReqs);
 		pscrpc_nbreqset_reap(pndgReadaReqs);
@@ -1215,14 +1215,14 @@ msbmapflushrpcthr_main(__unusedx struct psc_thread *thr)
 }
 
 void
-msbmaprathr_main(__unusedx struct psc_thread *thr)
+msbmaprathr_main(struct psc_thread *thr)
 {
 #define MAX_BMPCES_PER_RPC 32
 	struct bmap_pagecache_entry *bmpces[MAX_BMPCES_PER_RPC], *tmp, *bmpce;
 	struct msl_fhent *mfh;
 	int nbmpces;
 
-	while (pscthr_run()) {
+	while (pscthr_run(thr)) {
 
 		OPSTAT_INCR(SLC_OPST_READ_AHEAD);
 		nbmpces = 0;

@@ -113,12 +113,12 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
 }
 
 void
-slistatfsthr_main(__unusedx struct psc_thread *thr)
+slistatfsthr_main(struct psc_thread *thr)
 {
 	struct statvfs sfb;
 	int rc;
 
-	while (pscthr_run()) {
+	while (pscthr_run(thr)) {
 #ifdef HAVE_STATFS_FSTYPE
 		struct statfs b;
 
@@ -152,14 +152,14 @@ slistatfsthr_main(__unusedx struct psc_thread *thr)
  * @thr: our thread.
  */
 void
-slihealththr_main(__unusedx struct psc_thread *thr)
+slihealththr_main(struct psc_thread *thr)
 {
 	struct slashrpc_cservice *csvc;
 	struct itimerval itv;
 	int rc;
 
 	signal(SIGALRM, SIG_IGN);
-	while (pscthr_run()) {
+	while (pscthr_run(thr)) {
 		memset(&itv, 0, sizeof(itv));
 		PFL_GETTIMEVAL(&itv.it_value);
 		itv.it_value.tv_sec += 30;

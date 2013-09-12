@@ -207,12 +207,12 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 }
 
 void
-slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
+slmbmaptimeothr_begin(struct psc_thread *thr)
 {
 	struct bmap_mds_lease *bml;
 	int rc, nsecs = 0;
 
-	while (pscthr_run()) {
+	while (pscthr_run(thr)) {
 		spinlock(&mdsBmapTimeoTbl.btt_lock);
 		bml = pll_peekhead(&mdsBmapTimeoTbl.btt_leases);
 		if (!bml) {
