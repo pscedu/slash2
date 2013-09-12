@@ -2193,7 +2193,8 @@ slm_ptrunc_wake_clients(void *p)
 int
 str_escmeta(const char in[PATH_MAX], char out[PATH_MAX])
 {
-	const char *i, *o;
+	const char *i;
+	char *o;
 
 	for (i = in, o = out; *i && o < out + PATH_MAX - 1; i++, o++) {
 		if (*i == '\\' || *i == '\'')
@@ -2219,7 +2220,7 @@ slmbkdbthr_main(struct psc_thread *thr)
 	snprintf(cmd, sizeof(cmd),
 	    "echo .dump | sqlite3 '%s' > %s", qdbfn, qbkfn);
 	while (pscthr_run(thr)) {
-		sleep(intv);
+		sleep(120);
 		system(cmd);
 	}
 }
@@ -2243,7 +2244,8 @@ _dbdo(const struct pfl_callerinfo *pci,
 	if (dbh->dbh == NULL) {
 		char dbfn[PATH_MAX], qdbfn[PATH_MAX],
 		     bkfn[PATH_MAX], qbkfn[PATH_MAX],
-		     tmpfn[PATH_MAX], qtmpfn[PATH_MAX];
+		     tmpfn[PATH_MAX], qtmpfn[PATH_MAX],
+		     cmd[LINE_MAX], *estr;
 		const char *tdir;
 		struct stat stb;
 
@@ -2252,7 +2254,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 		if (rc == SQLITE_OK && !check) {
 			rc = sqlite3_exec(dbh->dbh,
 			    "PRAGMA integrity_check", NULL, NULL,
-			    &errstr);
+			    &estr);
 			check = 1;
 		}
 
@@ -2267,7 +2269,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 				tdir = _PATH_TMP;
 			snprintf(tmpfn, sizeof(tmpfn),
 			    "%s/upsch.tmp.XXXXXXXX", tdir);
-			mktemp(tmpfn);
+			mkstemp(tmpfn);
 
 			xmkfn(bkfn, "%s/%s", sl_datadir, SL_FN_UPSCHDB);
 
@@ -2279,8 +2281,9 @@ _dbdo(const struct pfl_callerinfo *pci,
 
 			if (stat(dbfn, &stb) == 0) {
 				/* salvage anything from current db */
-				snprintf("echo .dump | sqlite3 '%s' > "
-				    "'%s'", qdbfn, qtmpfn);
+				snprintf(cmd, sizeof(cmd),
+				    "echo .dump | sqlite3 '%s' > '%s'",
+				    qdbfn, qtmpfn);
 				system(cmd);
 
 				unlink(dbfn);

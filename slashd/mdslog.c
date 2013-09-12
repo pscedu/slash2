@@ -1211,11 +1211,11 @@ mds_update_cursor(void *buf, uint64_t txg, int flag)
  *	lifetime of the transaction group.
  */
 void
-mds_cursor_thread(__unusedx struct psc_thread *thr)
+mds_cursor_thread(struct psc_thread *thr)
 {
 	int rc;
 
-	while (pscthr_run()) {
+	while (pscthr_run(thr)) {
 
 		spinlock(&cursorWaitLock);
 		if (!cursor_update_needed) {
@@ -1562,7 +1562,7 @@ mds_send_batch_reclaim(uint64_t batchno)
  * slmjreclaimthr_main - Send garbage collection to I/O servers.
  */
 void
-slmjreclaimthr_main(__unusedx struct psc_thread *thr)
+slmjreclaimthr_main(struct psc_thread *thr)
 {
 	uint64_t batchno;
 	int didwork, cleanup = 1;
@@ -1572,7 +1572,7 @@ slmjreclaimthr_main(__unusedx struct psc_thread *thr)
 	 * been sent to an I/O node, we track the batch number.  A
 	 * receiving I/O node can safely ignore any resent records.
 	 */
-	while (pscthr_run()) {
+	while (pscthr_run(thr)) {
 		batchno = mds_reclaim_lwm(1);
 		if (cleanup) {
 			cleanup = 0;
@@ -1600,7 +1600,7 @@ slmjreclaimthr_main(__unusedx struct psc_thread *thr)
  * slmjnsthr_main - Send local namespace updates to peer MDSes.
  */
 void
-slmjnsthr_main(__unusedx struct psc_thread *thr)
+slmjnsthr_main(struct psc_thread *thr)
 {
 	uint64_t batchno;
 	int didwork;
@@ -1611,7 +1611,7 @@ slmjnsthr_main(__unusedx struct psc_thread *thr)
 	 * different MDSes have different paces, we send updates in
 	 * order within one MDS.
 	 */
-	while (pscthr_run()) {
+	while (pscthr_run(thr)) {
 		batchno = mds_update_lwm(1);
 		do {
 			spinlock(&mds_distill_lock);

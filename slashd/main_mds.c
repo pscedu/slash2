@@ -597,15 +597,15 @@ main(int argc, char *argv[])
 
 	mds_bmap_timeotbl_init();
 
-	sqlite3_enable_shared_cache();
-	dbdo("PRAGMA page_size=");
-	dbdo("PRAGMA synchronous=OFF");
-	dbdo("PRAGMA journal_mode=WAL");
+	sqlite3_enable_shared_cache(1);
+	//dbdo(NULL, NULL, "PRAGMA page_size=");
+	dbdo(NULL, NULL, "PRAGMA synchronous=OFF");
+	dbdo(NULL, NULL, "PRAGMA journal_mode=WAL");
 
-	dbdo("BEGIN TRANSACTION");
+	dbdo(NULL, NULL, "BEGIN TRANSACTION");
 	mds_journal_init(disable_propagation,
 	    zfsMount[current_vfsid].uuid);
-	dbdo("END TRANSACTION");
+	dbdo(NULL, NULL, "END TRANSACTION");
 
 	pfl_workq_lock();
 	pfl_wkthr_spawn(SLMTHRT_WORKER, SLM_NWORKER_THREADS,
