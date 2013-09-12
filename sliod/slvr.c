@@ -667,10 +667,8 @@ slvr_fsbytes_rio(struct slvr_ref *s, uint32_t off, uint32_t len,
 	}
 
  out:
-	if (rc == -SLERR_AIOWAIT)
-		return (rc);
 
-	if (rc) {
+	if (rc && rc != -SLERR_AIOWAIT) {
 		/*
 		 * There was a problem; unblock any waiters and tell
 		 * them the bad news.
