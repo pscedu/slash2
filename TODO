@@ -472,7 +472,11 @@ reimport
 - get rid of FIDC_LOOKUP_LOAD
 - are these messages from successful replication?
 [1376505142:641367 slmrmithr17:10079:rpc slm_rmi_handle_bmap_crcwrt rmi.c 186] mds_bmap_crc_write() failed: fid=0x0000000011dfd0ba, rc=-22
-
+- pahole(1)
+- port slash2 openstack
+- discover which JOB or physical characteristics from sense3 errors
+- vtune license for profiling
+   
 st_blocks is broken
 - account metadata overhead in st_blocks?
 - fix ios_nblks[idx] and aggr accounting on setsize0 and ptrunc
