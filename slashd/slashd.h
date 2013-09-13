@@ -155,6 +155,12 @@ PSCTHR_MKCAST(slmrmithr, slmrmi_thread, SLMTHRT_RMI)
 PSCTHR_MKCAST(slmrmmthr, slmrmm_thread, SLMTHRT_RMM)
 PSCTHR_MKCAST(slmwkthr, slmwk_thread, SLMTHRT_WORKER)
 
+static __inline struct slmctl_thread *
+slmctlthr_getpri(struct psc_thread *thr)
+{
+	return ((void *)(slmctlthr(thr) + 1));
+}
+
 static __inline struct slmthr_dbh *
 slmthr_getdbh(void)
 {
@@ -162,12 +168,8 @@ slmthr_getdbh(void)
 
 	thr = pscthr_get();
 	switch (thr->pscthr_type) {
-	case SLMTHRT_CTL: {
-		struct slmctl_thread *smct;
-
-		smct = (void *)(slmctlthr(thr) + 1);
-		return (&smct->smct_dbh);
-	    }
+	case SLMTHRT_CTL:
+		return (&slmctlthr_getpri(thr)->smct_dbh);
 	case SLMTHRT_WORKER:
 		return (&slmwkthr(thr)->smwk_dbh);
 	}

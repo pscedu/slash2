@@ -2371,7 +2371,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 
 	do {
 		rc = sqlite3_step(sth->sth_sth);
-		if (rc == SQLITE_ROW)
+		if (rc == SQLITE_ROW && cb)
 			cb(sth, arg);
 		if (rc != SQLITE_DONE)
 			sched_yield();
@@ -2381,10 +2381,8 @@ _dbdo(const struct pfl_callerinfo *pci,
 		errstr = sqlite3_errmsg(dbh->dbh);
 		psclog_errorx("SQL error: rc=%d query=%s; msg=%s", rc,
 		    fmt, errstr);
-		/* XXX rebuild db? */
 	}
 	sqlite3_reset(sth->sth_sth);
-//	rc = sqlite3_clear_bindings(sth->sth_sth);
 }
 
 int

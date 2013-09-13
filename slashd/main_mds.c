@@ -436,9 +436,9 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	char *zpcachefn = NULL, *zpname;
+	char *zpcachefn = NULL, *zpname, *estr;
 	const char *cfn, *sfn, *p;
-	int vfsid, c, found;
+	int rc, vfsid, c, found;
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -602,6 +602,37 @@ main(int argc, char *argv[])
 	//dbdo(NULL, NULL, "PRAGMA page_size=");
 	dbdo(NULL, NULL, "PRAGMA synchronous=OFF");
 	dbdo(NULL, NULL, "PRAGMA journal_mode=WAL");
+
+	rc = sqlite3_exec(slmctlthr_getpri(pscthr_get())->smct_dbh.dbh,
+	    " UPDATE	upsch"
+	    "	SET	id=0"
+	    " WHERE	id=0", NULL,
+	    NULL, &estr);
+	if (rc == SQLITE_ERROR) {
+		dbdo(NULL, NULL,
+		    "CREATE TABLE upsch ("
+		    "	id		INT PRIMARY KEY,"
+		    "	resid		UNSIGNED INT,"
+		    "	fid		UNSIGNED BIGINT,"
+		    "	uid		UNSIGNED INT,"
+		    "	gid		UNSIGNED INT,"
+		    "	bno		UNSIGNED INT,"
+		    "	status		CHAR(1), -- 'Q' or 'S'"
+		    "	sys_pri		INT,"
+		    "	usr_pri		INT,"
+		    "	nonce		UNSIGNED INT,"
+		    "	UNIQUE(resid, fid, bno)"
+		    ")");
+		dbdo(NULL, NULL,
+		    "CREATE INDEX 'upsch_resid_idx'"
+		    " ON 'upsch' ('resid')");
+		dbdo(NULL, NULL,
+		    "CREATE INDEX 'upsch_fid_idx'"
+		    " ON 'upsch' ('fid')");
+		dbdo(NULL, NULL,
+		    "CREATE INDEX 'upsch_bno_idx'"
+		    "ON 'upsch' ('bno')");
+	}
 
 	dbdo(NULL, NULL, "BEGIN TRANSACTION");
 	mds_journal_init(disable_propagation,
