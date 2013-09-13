@@ -868,6 +868,7 @@ msl_bmpce_complete_biorq(struct bmap_pagecache_entry *e0, int rc)
 			}
 			BMPCE_ULOCK(e);
 		}
+		DEBUG_BIORQ(PLL_NOTICE, r, "unblocked by (bmpce@%p)", e);
 		msl_biorq_destroy(r);
 	}
 }
