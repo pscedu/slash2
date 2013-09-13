@@ -308,7 +308,7 @@ mds_remove_logfiles(uint64_t batchno, int update)
 			break;
 	}
 	gettimeofday(&tv2, NULL);
-	psclog_warnx("%"PRId64" log file(s) have been removed in %d "
+	psclog_info("%"PRId64" log file(s) have been removed in %d "
 	    "second(s), LWM is %"PRId64,
 	    OPSTAT_CURR(SLM_OPST_LOGFILE_REMOVE),
 	    (int)(tv2.tv_sec - tv1.tv_sec), batchno);
@@ -1928,7 +1928,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		    size, &size, 0);
 		psc_assert(rc == 0);
 		psc_assert(size == count * sizeof(struct reclaim_prog_entry));
-		psclog_warnx("%d stale entries have been zeroed from the "
+		psclog_warnx("%d stale entry(s) have been zeroed from the "
 			"reclaim progress file", stale);
 	}
 
@@ -1994,7 +1994,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		}
 		if (total > max) {
 			psclog_warnx("the last reclaim log has %d "
-			    "entries - more than it should have!",
+			    "entry(s) - more than it should have!",
 			    total);
 			total = max;
 		}
@@ -2058,7 +2058,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	for (i = 0; i < count; i++) {
 		res = libsl_id2res(update_prog_buf[i].res_id);
 		if (res->res_type != SLREST_MDS) {
-			psclog_warnx("Non-MDS resource ID %u "
+			psclog_warnx("non-MDS resource ID %u "
 			    "in update file", res->res_id);
 			continue;
 		}
