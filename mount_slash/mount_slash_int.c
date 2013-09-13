@@ -854,18 +854,19 @@ msl_bmpce_complete_biorq(struct bmap_pagecache_entry *e0, int rc)
 		mfsrq_seterr(r->biorq_fsrqi, rc);
 		BIORQ_ULOCK(r);
 		DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
-			if (e == e0)
-				continue;
 			BMPCE_LOCK(e);
+			if (biorq_is_my_bmpce(r, e)) {
+				BMPCE_ULOCK(e);
+				continue;
+			}
 			if (!(e->bmpce_flags & BMPCE_EIO) &&
 			    !(e->bmpce_flags & BMPCE_DATARDY)) {
+				psc_assert(e != e0);
 				msl_fsrq_aiowait_tryadd_locked(e, r);
 				DEBUG_BIORQ(PLL_NOTICE, r,
 				    "still blocked on (bmpce@%p)", e);
-				BMPCE_ULOCK(e);
-				break;
-			} else
-				BMPCE_ULOCK(e);
+			}
+			BMPCE_ULOCK(e);
 		}
 		msl_biorq_destroy(r);
 	}
