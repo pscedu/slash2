@@ -486,12 +486,12 @@ slislvrthr_proc(struct slvr *s)
  *	the minimal expiration is reached and shipped off to the MDS.
  */
 void
-slislvrthr_main(__unusedx struct psc_thread *thr)
+slislvrthr_main(struct psc_thread *thr)
 {
 	struct timespec expire, ts;
 	struct slvr *s;
 
-	while (pscthr_run()) {
+	while (pscthr_run(thr)) {
 		PFL_GETTIMESPEC(&expire);
 		expire.tv_sec += BCR_MIN_AGE;
 
