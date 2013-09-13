@@ -27,6 +27,7 @@
 #include "psc_util/pool.h"
 #include "psc_util/thread.h"
 
+#include "slashd.h"
 #include "worker.h"
 
 struct psc_poolmaster	 pfl_workrq_poolmaster;
@@ -98,9 +99,12 @@ pfl_workq_init(size_t bufsiz)
 void
 pfl_wkthr_spawn(int thrtype, int nthr, const char *thrname)
 {
+	struct psc_thread *thr;
 	int i;
 
-	for (i = 0; i < nthr; i++)
-		pscthr_init(thrtype, 0, pfl_wkthr_main, NULL, 0,
-		    thrname, i);
+	for (i = 0; i < nthr; i++) {
+		thr = pscthr_init(thrtype, 0, pfl_wkthr_main, NULL,
+		    sizeof(struct slmwk_thread), thrname, i);
+		pscthr_setready(thr);
+	}
 }

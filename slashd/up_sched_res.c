@@ -1089,6 +1089,7 @@ slm_upsch_init(void)
 void
 slmupschthr_spawn(void)
 {
+	struct psc_thread *thr;
 	struct sl_resource *r;
 	struct sl_site *s;
 	struct sl_resm *m;
@@ -1104,8 +1105,9 @@ slmupschthr_spawn(void)
 			psc_multiwait_addcond(&slm_upsch_mw,
 			    &m->resm_csvc->csvc_mwc);
 
-	pscthr_init(SLMTHRT_UPSCHED, 0, slmupschthr_main, NULL,
+	thr = pscthr_init(SLMTHRT_UPSCHED, 0, slmupschthr_main, NULL,
 	    sizeof(struct slmupsch_thread), "slmupschthr");
+	pscthr_setready(thr);
 
 	/* page in initial replrq workload */
 	CONF_FOREACH_RES(s, r, i)
