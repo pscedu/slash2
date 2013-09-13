@@ -57,6 +57,7 @@ enum {
 	SLMTHRT_CTL,		/* control processor */
 	SLMTHRT_CTLAC,		/* control acceptor */
 	SLMTHRT_CURSOR,		/* cursor update thread */
+	SLMTHRT_BKDB,		/* upsch database backup */
 	SLMTHRT_JNAMESPACE,	/* namespace propagating thread */
 	SLMTHRT_JRECLAIM,	/* garbage reclamation thread */
 	SLMTHRT_JRNL,		/* journal distill thread */
@@ -148,11 +149,16 @@ struct slmctl_thread {
 	struct slmthr_dbh	  smct_dbh;
 };
 
+struct slmupsch_thread {
+	struct slmthr_dbh	  sus_dbh;
+};
+
 PSCTHR_MKCAST(slmctlthr, psc_ctlthr, SLMTHRT_CTL)
 PSCTHR_MKCAST(slmrcmthr, slmrcm_thread, SLMTHRT_RCM)
 PSCTHR_MKCAST(slmrmcthr, slmrmc_thread, SLMTHRT_RMC)
 PSCTHR_MKCAST(slmrmithr, slmrmi_thread, SLMTHRT_RMI)
 PSCTHR_MKCAST(slmrmmthr, slmrmm_thread, SLMTHRT_RMM)
+PSCTHR_MKCAST(slmupschthr, slmupsch_thread, SLMTHRT_UPSCHED)
 PSCTHR_MKCAST(slmwkthr, slmwk_thread, SLMTHRT_WORKER)
 
 static __inline struct slmctl_thread *
@@ -170,6 +176,8 @@ slmthr_getdbh(void)
 	switch (thr->pscthr_type) {
 	case SLMTHRT_CTL:
 		return (&slmctlthr_getpri(thr)->smct_dbh);
+	case SLMTHRT_UPSCHED:
+		return (&slmupschthr(thr)->sus_dbh);
 	case SLMTHRT_WORKER:
 		return (&slmwkthr(thr)->smwk_dbh);
 	}
@@ -363,8 +371,9 @@ int		 mds_sliod_alive(void *);
 
 void		 slm_iosv_setbusy(sl_replica_t *, int);
 
-__dead void	 slmctlthr_main(const char *);
+void		 slmbkdbthr_main(struct psc_thread *);
 void		 slmbmaptimeothr_spawn(void);
+__dead void	 slmctlthr_main(const char *);
 void		 slmrcmthr_main(struct psc_thread *);
 void		 slmtimerthr_spawn(void);
 

@@ -617,7 +617,7 @@ main(int argc, char *argv[])
 		    "	uid		UNSIGNED INT,"
 		    "	gid		UNSIGNED INT,"
 		    "	bno		UNSIGNED INT,"
-		    "	status		CHAR(1), -- 'Q' or 'S'"
+		    "	status		CHAR(1),"
 		    "	sys_pri		INT,"
 		    "	usr_pri		INT,"
 		    "	nonce		UNSIGNED INT,"
@@ -654,6 +654,9 @@ main(int argc, char *argv[])
 	    " UPDATE	upsch"
 	    " SET	status = 'Q'"
 	    " WHERE	status = 'S'");
+
+	pscthr_init(SLMTHRT_BKDB, 0, slmbkdbthr_main, NULL, 0,
+	    "slmbkdbthr");
 
 	mds_odtable_scan(mdsBmapAssignTable, mds_bia_odtable_startup_cb, NULL);
 	mds_odtable_scan(slm_ptrunc_odt, slm_ptrunc_odt_startup_cb, NULL);

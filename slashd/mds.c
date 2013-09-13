@@ -2212,9 +2212,10 @@ slmbkdbthr_main(struct psc_thread *thr)
 	     bkfn[PATH_MAX], qbkfn[PATH_MAX],
 	     cmd[LINE_MAX];
 
-	xmkfn(dbfn, "%s/%s", sl_datadir, SL_FN_UPSCHDB);
+	xmkfn(dbfn, "%s/%s", SL_PATH_DEV_SHM, SL_FN_UPSCHDB);
 	str_escmeta(dbfn, qdbfn);
-	xmkfn(dbfn, "%s/%s", sl_datadir, SL_FN_UPSCHDB);
+
+	xmkfn(bkfn, "%s/%s", sl_datadir, SL_FN_UPSCHDB);
 	str_escmeta(bkfn, qbkfn);
 
 	snprintf(cmd, sizeof(cmd),

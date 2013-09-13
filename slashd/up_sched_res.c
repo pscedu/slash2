@@ -525,7 +525,8 @@ slm_upsch_preclaim_cb(struct batchrq *br, int rc)
 	if (rc == -PFLERR_NOTSUP) {
 		rpmi = res2rpmi(br->br_res);
 		RPMI_LOCK(rpmi);
-		res2iosinfo(br->br_res)->si_flags |= SIF_PRECLAIM_NOTSUP;
+		res2iosinfo(br->br_res)->si_flags |=
+		    SIF_PRECLAIM_NOTSUP;
 		RPMI_ULOCK(rpmi);
 	}
 	repl.bs_id = br->br_res->res_id;
@@ -534,7 +535,8 @@ slm_upsch_preclaim_cb(struct batchrq *br, int rc)
 	tract[BREPLST_GARBAGE_SCHED] = rc ?
 	    BREPLST_GARBAGE : BREPLST_INVALID;
 
-	for (pe = br->br_buf; (char *)pe < (char *)br->br_buf + br->br_len; pe++) {
+	for (pe = br->br_buf; (char *)pe <
+	    (char *)br->br_buf + br->br_len; pe++) {
 		rc = slm_fcmh_get(&pe->fg, &f);
 		if (rc)
 			continue;
@@ -1102,8 +1104,8 @@ slmupschthr_spawn(void)
 			psc_multiwait_addcond(&slm_upsch_mw,
 			    &m->resm_csvc->csvc_mwc);
 
-	pscthr_init(SLMTHRT_UPSCHED, 0, slmupschthr_main, NULL, 0,
-	    "slmupschthr");
+	pscthr_init(SLMTHRT_UPSCHED, 0, slmupschthr_main, NULL,
+	    sizeof(struct slmupsch_thread), "slmupschthr");
 
 	/* page in initial replrq workload */
 	CONF_FOREACH_RES(s, r, i)
