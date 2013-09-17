@@ -460,8 +460,6 @@ reimport
 - tuck reclaim/update logs in a subdir in .slmd
 - bump size of reclaim/update logs files to create less
     - 48K -> 1MB
-- either perform CRC checks on all RPCs in the SLRPC layer or none,
-  fully relying on network transport ensuring integrity
 - getxattr(2) family (e.g. zfsslash2_getxattr()) should return ENOATTR/ENODATA
 - get rid of XCTL and reuse xattr interface with special .sl prefix
 - have sliod persistently track CRC updates in case of failure
@@ -472,11 +470,16 @@ reimport
 - get rid of FIDC_LOOKUP_LOAD
 - are these messages from successful replication?
 [1376505142:641367 slmrmithr17:10079:rpc slm_rmi_handle_bmap_crcwrt rmi.c 186] mds_bmap_crc_write() failed: fid=0x0000000011dfd0ba, rc=-22
+- survey all threads and to ensure clean shutdown
+
 - pahole(1)
 - port slash2 openstack
 - discover which JOB or physical characteristics from sense3 errors
 - vtune license for profiling
-   
+
+upsch
+- optimize queries by reordering SELECT verbs
+
 st_blocks is broken
 - account metadata overhead in st_blocks?
 - fix ios_nblks[idx] and aggr accounting on setsize0 and ptrunc
@@ -492,3 +495,24 @@ st_blocks is broken
    - purge old corefiles
    - purge long-running psclogs (if no restarts, no opportunity to clear
      old logs)
+
+
+- caching exploration
+   (*) read caching for clients to serve other local clients
+   (*) read-ahead to improve performance through locality exploitation
+       ("pre-replication")
+   (*) write push-through caching for efficient remote I/O staging
+- networking scheduling:
+   (*) knowledge of topological intrinsics, especially important in the WAN,
+   (*) dynamic adjustment to live conditions,
+   (*) honor local (system and user) prioritization,
+   (*) interplay with other network services in a reasonable yet (likely)
+       advisory fashion,
+   (*) integration of this knowledge into the selection of POSIX I/O
+       arrangements
+- cryptographic authentication integration (Kerberos/X.509/etc.)
+- replication notification service, informing users when workloads have
+  finished, launching a job, etc.
+- utilization of cloud storage services for, e.g. cheap storage across a unified
+  namespace
+
