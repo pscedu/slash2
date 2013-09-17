@@ -187,13 +187,6 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 
 			iovs[i].iov_base = e->bmpce_base;
 			iovs[i].iov_len = BMPC_BUFSZ;
-			if (mq->rc) {
-				BMPCE_LOCK(e);
-				e->bmpce_flags |= BMPCE_EIO;
-				DEBUG_BMPCE(PLL_WARN, e,
-				    "set BMPCE_EIO");
-				BMPCE_ULOCK(e);
-			}
 		}
 		if (mq->rc == 0)
 			mq->rc = rsx_bulkserver(rq, BULK_GET_SINK,
