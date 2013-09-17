@@ -1312,7 +1312,6 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	r->biorq_ref++;
 	BIORQ_SETATTR(r, BIORQ_FLUSHRDY);
 	psc_assert(psclist_disjoint(&r->biorq_lentry));
-//	psc_assert(PSC_SPLAY_ENTRY_CONJOINT(bmpc_biorq_tree, r));
 	BIORQ_ULOCK(r);
 
 	bmpc->bmpc_pndgwr++;
