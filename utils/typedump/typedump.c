@@ -257,6 +257,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slm_wkdata_upsch_purge);
 	PRTYPE(struct slm_wkdata_upschq);
 	PRTYPE(struct slm_wkdata_wr_brepl);
+	PRTYPE(struct slmctl_thread);
 	PRTYPE(struct slmctlmsg_bml);
 	PRTYPE(struct slmctlmsg_replpair);
 	PRTYPE(struct slmctlmsg_statfs);
@@ -272,6 +273,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slmrmi_thread);
 	PRTYPE(struct slmrmm_thread);
 	PRTYPE(struct slmthr_dbh);
+	PRTYPE(struct slmupsch_thread);
 	PRTYPE(struct slmwk_thread);
 	PRTYPE(struct slvr);
 	PRTYPE(struct srm_batch_req);
@@ -795,6 +797,7 @@ main(int argc, char *argv[])
 	PRVAL(SLI_REPLWKOP_PTRUNC);
 	PRVAL(SLI_REPLWKOP_REPL);
 	PRVAL(SLMTHRT_BATCHRQ);
+	PRVAL(SLMTHRT_BKDB);
 	PRVAL(SLMTHRT_BMAPTIMEO);
 	PRVAL(SLMTHRT_COH);
 	PRVAL(SLMTHRT_CONN);
