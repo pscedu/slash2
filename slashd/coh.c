@@ -119,7 +119,7 @@ mdscoh_cb(struct pscrpc_request *rq,
 
  out:
 	if (b) {
-		DEBUG_BMAP(rc ? PLL_WARN : PLL_INFO, b,
+		DEBUG_BMAP(rc ? PLL_WARN : PLL_DIAG, b,
 		    "cli=%s seq=%"PRId64" rq_status=%d mp->rc=%d",
 		    libcfs_id2str(rq->rq_import->imp_connection->c_peer),
 		    mq->seq, rq->rq_status, mp ? mp->rc : -1);
@@ -144,7 +144,7 @@ mdscoh_req(struct bmap_mds_lease *bml)
 	struct srm_bmap_dio_rep *mp;
 	int rc;
 
-	DEBUG_BMAP(PLL_INFO, bml_2_bmap(bml), "bml=%p", bml);
+	DEBUG_BMAP(PLL_DIAG, bml_2_bmap(bml), "bml=%p", bml);
 
 	BML_LOCK_ENSURE(bml);
 	if (bml->bml_flags & BML_RECOVER) {
