@@ -1823,8 +1823,6 @@ msl_pages_copyin(struct bmpc_ioreq *r)
 		 * bmpce must still be valid in order for this check to
 		 * work.
 		 */
-		BMPCE_LOCK(e);
-
 		/*
 		 * Set the starting buffer pointer into our cache
 		 * vector.
@@ -1849,7 +1847,6 @@ msl_pages_copyin(struct bmpc_ioreq *r)
 		DEBUG_BMPCE(PLL_DEBUG, e, "tsize=%u nbytes=%u toff=%u",
 			    tsize, nbytes, toff);
 
-		BMPCE_ULOCK(e);
 		/* Do the deed. */
 		memcpy(dest, src, nbytes);
 
