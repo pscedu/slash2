@@ -30,8 +30,8 @@
 #include "pfl/rsx.h"
 #include "psc_util/atomic.h"
 #include "psc_util/completion.h"
-#include "psc_util/log.h"
 #include "psc_util/ctlsvr.h"
+#include "psc_util/log.h"
 
 #include "bmap.h"
 #include "bmap_mds.h"
@@ -47,7 +47,7 @@ struct pscrpc_nbreqset	bmapCbSet =
 
 #define SLM_CBARG_SLOT_CSVC	0
 
-struct psc_compl mdsCohCompl = PSC_COMPL_INIT;
+struct psc_compl slm_coh_compl = PSC_COMPL_INIT;
 
 int
 mdscoh_cb(struct pscrpc_request *req,
@@ -162,7 +162,7 @@ mdscoh_req(struct bmap_mds_lease *bml)
 		return (rc);
 	}
 
-	rq->rq_compl = &mdsCohCompl;
+	rq->rq_compl = &mds_coh_compl;
 	rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = csvc;
 
 	mq->fid = fcmh_2_fid(bml_2_bmap(bml)->bcm_fcmh);
@@ -181,7 +181,7 @@ void
 slmcohthr_begin(struct psc_thread *thr)
 {
 	while (pscthr_run(thr)) {
-		psc_compl_waitrel_s(&mdsCohCompl, 1);
+		psc_compl_waitrel_s(&mds_coh_compl, 1);
 		pscrpc_nbreqset_reap(&bmapCbSet);
 	}
 }
