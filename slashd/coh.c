@@ -46,6 +46,7 @@
 #include "rpc_mds.h"
 #include "slashd.h"
 #include "slashrpc.h"
+#include "worker.h"
 
 struct pscrpc_nbreqset	slm_bmap_cbset=
     PSCRPC_NBREQSET_INIT(slm_bmap_cbset, NULL, mdscoh_cb);
@@ -54,60 +55,34 @@ struct pscrpc_nbreqset	slm_bmap_cbset=
 
 struct psc_compl slm_coh_compl = PSC_COMPL_INIT;
 
+struct slm_wkdata_coh_releasebml {
+	slfid_t			fid;
+	sl_bmapno_t		bno;
+	uint64_t		seq;
+	lnet_process_id_t	peer;
+};
+
 int
-mdscoh_cb(struct pscrpc_request *rq,
-    __unusedx struct pscrpc_async_args *a)
+slmcoh_releasebml(void *p)
 {
-	struct slashrpc_cservice *csvc;
-	struct srm_bmap_dio_req *mq;
-	struct srm_bmap_dio_rep *mp;
+	int rc = 0, new_bmap = 0;
+	char buf[PSCRPC_NIDSTR_SIZE];
+	struct slm_wkdata_coh_releasebml *wk = p;
 	struct bmapc_memb *b = NULL;
 	struct bmap_mds_lease *bml;
 	struct fidc_membh *f;
-	int rc = 0, new_bmap = 0;
-
-	OPSTAT_INCR(SLM_OPST_COHERENT_CB);
-	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
-	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
-	csvc = rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC];
-
-	if (rq->rq_err)
-		rc = rq->rq_err;
-
-	else if (rq->rq_status)
-		rc = rq->rq_status;
-
-	if (rc) {
-		psclog_warnx("cli=%s seq=%"PRId64" rq_status=%d mp->rc=%d",
-		    libcfs_id2str(rq->rq_import->imp_connection->c_peer),
-		    mq->seq, rq->rq_status, mp ? mp->rc : -1);
-		goto out;
-	}
-
-	if (mp && mp->rc)
-		rc = mp->rc;
-
-	/*
-	 * XXX if the client has given up the lease then we shouldn't
-	 * consider that an error and should proceed.
-	 */
 
 	/* Leases can come and go regardless of pending coh cb's. */
-	f = fidc_lookup_fid(mq->fid);
+	f = fidc_lookup_fid(wk->fid);
 	if (!f)
 		PFL_GOTOERR(out, rc = -ENOENT);
 
-	b = bmap_lookup_cache(f, mq->blkno, &new_bmap);
-
-	FCMH_LOCK(f);
-	fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
-
+	b = bmap_lookup_cache(f, wk->bno, &new_bmap);
 	if (!b)
 		PFL_GOTOERR(out, rc = -ENOENT);
 
-	bml = mds_bmap_getbml_locked(b, mq->seq, rq->rq_peer.nid,
-	    rq->rq_peer.pid);
-
+	bml = mds_bmap_getbml_locked(b, wk->seq, wk->peer.nid,
+	    wk->peer.pid);
 	if (!bml)
 		PFL_GOTOERR(out, rc = -ENOENT);
 
@@ -120,12 +95,54 @@ mdscoh_cb(struct pscrpc_request *rq,
  out:
 	if (b) {
 		DEBUG_BMAP(rc ? PLL_WARN : PLL_DIAG, b,
-		    "cli=%s seq=%"PRId64" rq_status=%d mp->rc=%d",
-		    libcfs_id2str(rq->rq_import->imp_connection->c_peer),
-		    mq->seq, rq->rq_status, mp ? mp->rc : -1);
-
+		    "cli=%s seq=%"PRId64" rc=%d",
+		    pscrpc_id2str(wk->peer, buf), wk->seq, rc);
 		bmap_op_done(b);
+	} else
+		psclog_warnx("cli=%s seq=%"PRId64" rc=%d",
+		    pscrpc_id2str(wk->peer, buf), wk->seq, rc);
+	if (f)
+		fcmh_op_done(f);
+	return (0);
+}
+
+int
+mdscoh_cb(struct pscrpc_request *rq,
+    __unusedx struct pscrpc_async_args *a)
+{
+	struct slm_wkdata_coh_releasebml *wk;
+	struct slashrpc_cservice *csvc;
+	struct srm_bmap_dio_req *mq;
+	char buf[PSCRPC_NIDSTR_SIZE];
+	int rc;
+
+	OPSTAT_INCR(SLM_OPST_COHERENT_CB);
+
+	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
+	csvc = rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC];
+
+	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_dio_rep, rc);
+	if (rc) {
+		psclog_warnx("cli=%s seq=%"PRId64" rc=%d",
+		    pscrpc_id2str(rq->rq_import->imp_connection->c_peer,
+		    buf), mq->seq, rc);
+		goto out;
 	}
+
+	/*
+	 * XXX if the client has given up the lease then we shouldn't
+	 * consider that an error and should proceed.
+	 */
+
+	wk = pfl_workq_getitem(slmcoh_releasebml,
+	    struct slm_wkdata_coh_releasebml);
+	wk->fid = mq->fid;
+	wk->bno = mq->blkno;
+	wk->seq = mq->seq;
+	wk->peer = rq->rq_peer;
+	pfl_workq_putitem(wk);
+
+ out:
 	sl_csvc_decref(csvc);
 
 	return (rc);
