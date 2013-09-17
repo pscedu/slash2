@@ -137,7 +137,7 @@ mdscoh_req(struct bmap_mds_lease *bml)
 	struct pscrpc_request *rq = NULL;
 	struct srm_bmap_dio_req *mq;
 	struct srm_bmap_dio_rep *mp;
-	int rc = 0;
+	int rc;
 
 	DEBUG_BMAP(PLL_INFO, bml_2_bmap(bml), "bml=%p", bml);
 
