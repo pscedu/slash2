@@ -235,8 +235,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 	 * The callback needs to be run even if the RPC failed so
 	 * cleanup can happen.
 	 */
-	if (car->car_cbf)
-		car->car_cbf(rq, mq->rc, &car->car_argv);
+	car->car_cbf(rq, mq->rc, &car->car_argv);
 
 	psclog_info("return car=%p car_id=%"PRIx64" q=%p, r=%p", car,
 	    car->car_id, car->car_fsrqinfo, r);
