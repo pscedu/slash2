@@ -57,6 +57,7 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 {
 	lnet_process_id_t self_prid, peer_prid;
 	struct srt_authbuf_footer *saf;
+	struct pscrpc_bulk_desc *bd;
 	struct pscrpc_msg *m;
 	char ebuf[BUFSIZ];
 	gcry_error_t gerr;
@@ -98,6 +99,13 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 	for (i = 0; i < m->bufcount - 1; i++)
 		gcry_md_write(hd, pscrpc_msg_buf(m, i, 0),
 		    pscrpc_msg_buflen(m, i));
+
+	bd = rq->rq_bulk;
+	if (bd)
+		for (i = 0; i < (uint32_t)bd->bd_iov_count; i++)
+			gcry_md_write(hd, bd->bd_iov[i].iov_base,
+			    bd->bd_iov[i].iov_len);
+
 	gcry_md_write(hd, &saf->saf_secret,
 	    sizeof(saf->saf_secret));
 
