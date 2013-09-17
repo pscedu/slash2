@@ -55,32 +55,32 @@ struct pscrpc_nbreqset	slm_bmap_cbset=
 struct psc_compl slm_coh_compl = PSC_COMPL_INIT;
 
 int
-mdscoh_cb(struct pscrpc_request *req,
+mdscoh_cb(struct pscrpc_request *rq,
     __unusedx struct pscrpc_async_args *a)
 {
 	struct slashrpc_cservice *csvc;
 	struct srm_bmap_dio_req *mq;
 	struct srm_bmap_dio_rep *mp;
-	struct fidc_membh *f;
 	struct bmapc_memb *b = NULL;
 	struct bmap_mds_lease *bml;
+	struct fidc_membh *f;
 	int rc = 0, new_bmap = 0;
 
 	OPSTAT_INCR(SLM_OPST_COHERENT_CB);
-	mq = pscrpc_msg_buf(req->rq_reqmsg, 0, sizeof(*mq));
-	mp = pscrpc_msg_buf(req->rq_repmsg, 0, sizeof(*mp));
-	csvc = req->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC];
+	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
+	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
+	csvc = rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC];
 
-	if (req->rq_err)
-		rc = req->rq_err;
+	if (rq->rq_err)
+		rc = rq->rq_err;
 
-	else if (req->rq_status)
-		rc = req->rq_status;
+	else if (rq->rq_status)
+		rc = rq->rq_status;
 
 	if (rc) {
 		psclog_warnx("cli=%s seq=%"PRId64" rq_status=%d mp->rc=%d",
-		    libcfs_id2str(req->rq_import->imp_connection->c_peer),
-		    mq->seq, req->rq_status, mp ? mp->rc : -1);
+		    libcfs_id2str(rq->rq_import->imp_connection->c_peer),
+		    mq->seq, rq->rq_status, mp ? mp->rc : -1);
 		goto out;
 	}
 
@@ -105,8 +105,8 @@ mdscoh_cb(struct pscrpc_request *req,
 	if (!b)
 		PFL_GOTOERR(out, rc = -ENOENT);
 
-	bml = mds_bmap_getbml_locked(b, mq->seq, req->rq_peer.nid,
-	    req->rq_peer.pid);
+	bml = mds_bmap_getbml_locked(b, mq->seq, rq->rq_peer.nid,
+	    rq->rq_peer.pid);
 
 	if (!bml)
 		PFL_GOTOERR(out, rc = -ENOENT);
@@ -121,8 +121,8 @@ mdscoh_cb(struct pscrpc_request *req,
 	if (b) {
 		DEBUG_BMAP(rc ? PLL_WARN : PLL_INFO, b,
 		    "cli=%s seq=%"PRId64" rq_status=%d mp->rc=%d",
-		    libcfs_id2str(req->rq_import->imp_connection->c_peer),
-		    mq->seq, req->rq_status, mp ? mp->rc : -1);
+		    libcfs_id2str(rq->rq_import->imp_connection->c_peer),
+		    mq->seq, rq->rq_status, mp ? mp->rc : -1);
 
 		bmap_op_done(b);
 	}
