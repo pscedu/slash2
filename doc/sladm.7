@@ -121,11 +121,9 @@ utility:
 The MDS server also maintains an
 .Tn SQLite
 database for managing some workloads.
-This can be created with
-.Xr sqlite3 1 :
-.Bd -literal -offset indent
-# sqlite3 /var/lib/slash/upsch.db < doc/create.sql
-.Ed
+This is created automatically by
+.Xr slashd 8
+as necessary for operation.
 .Pp
 Now launch
 .Xr slashd 8 :
