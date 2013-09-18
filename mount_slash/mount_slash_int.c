@@ -1765,7 +1765,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 			continue;
 		}
 		while (!(e->bmpce_flags & waitflag)) {
-			DEBUG_BMPCE(PLL_INFO, e, "waiting");
+			DEBUG_BMPCE(PLL_DIAG, e, "waiting");
 			BMPCE_WAIT(e);
 			BMPCE_LOCK(e);
 		}
