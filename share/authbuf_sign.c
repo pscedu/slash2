@@ -88,7 +88,7 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 	saf->saf_secret.sas_dst_nid = peer_prid.nid;
 	saf->saf_secret.sas_dst_pid = peer_prid.pid;
 
-	gerr = gcry_md_copy(&hd, authbuf_hd);
+	gerr = gcry_md_copy(&hd, sl_authbuf_hd);
 	if (gerr) {
 		gpg_strerror_r(gerr, ebuf, sizeof(ebuf));
 		psc_fatalx("gcry_md_copy: %s [%d]", ebuf, gerr);
@@ -101,13 +101,13 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 	gcry_md_write(hd, &saf->saf_secret, sizeof(saf->saf_secret));
 
 	psc_base64_encode(gcry_md_read(hd, 0), saf->saf_hash,
-	    authbuf_alglen);
+	    sl_authbuf_alglen);
 
 	gcry_md_close(hd);
 
 	bd = rq->rq_bulk;
 	if (bd) {
-		gerr = gcry_md_copy(&hd, authbuf_hd);
+		gerr = gcry_md_copy(&hd, sl_authbuf_hd);
 		if (gerr) {
 			gpg_strerror_r(gerr, ebuf, sizeof(ebuf));
 			psc_fatalx("gcry_md_copy: %s [%d]", ebuf, gerr);
@@ -120,7 +120,7 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 			    bd->bd_iov[i].iov_len);
 
 		memcpy(bd->bd_iov[i].iov_base,
-		    gcry_md_read(hd, 0), authbuf_alglen);
+		    gcry_md_read(hd, 0), sl_authbuf_alglen);
 	}
 }
 
@@ -168,7 +168,7 @@ authbuf_check(struct pscrpc_request *rq, int msgtype)
 	    saf->saf_secret.sas_dst_pid != self_prid.pid)
 		return (SLERR_AUTHBUF_BADPEER);
 
-	gerr = gcry_md_copy(&hd, authbuf_hd);
+	gerr = gcry_md_copy(&hd, sl_authbuf_hd);
 	if (gerr) {
 		gpg_strerror_r(gerr, ebuf, sizeof(ebuf));
 		psc_fatalx("gcry_md_copy: %s [%d]", ebuf, gerr);
@@ -180,7 +180,7 @@ authbuf_check(struct pscrpc_request *rq, int msgtype)
 
 	gcry_md_write(hd, &saf->saf_secret, sizeof(saf->saf_secret));
 
-	psc_base64_encode(gcry_md_read(hd, 0), buf, authbuf_alglen);
+	psc_base64_encode(gcry_md_read(hd, 0), buf, sl_authbuf_alglen);
 	gcry_md_close(hd);
 
 	if (strcmp(buf, saf->saf_hash)) {
@@ -194,7 +194,7 @@ authbuf_check(struct pscrpc_request *rq, int msgtype)
 		int n;
 
 		bd = rq->rq_bulk;
-		gerr = gcry_md_copy(&hd, authbuf_hd);
+		gerr = gcry_md_copy(&hd, sl_authbuf_hd);
 		if (gerr) {
 			gpg_strerror_r(gerr, ebuf, sizeof(ebuf));
 			psc_fatalx("gcry_md_copy: %s [%d]", ebuf, gerr);
@@ -204,7 +204,7 @@ authbuf_check(struct pscrpc_request *rq, int msgtype)
 			gcry_md_write(hd, bd->bd_iov[n].iov_base,
 			    bd->bd_iov[n].iov_len);
 		if (memcmp(gcry_md_read(hd, 0), bd->bd_iov[n].iov_base,
-		    authbuf_alglen)) {
+		    sl_authbuf_alglen)) {
 			psclog_errorx("authbuf did not hash correctly -- "
 			    "ensure key files are synced");
 			rc = SLERR_AUTHBUF_BADHASH;
