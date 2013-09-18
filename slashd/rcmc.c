@@ -98,7 +98,7 @@ slmrmcthr_replst_slave_waitrep(struct slashrpc_cservice *csvc,
 	if (nb > sizeof(mq->buf)) {
 		iov.iov_base = srcm->srcm_page;
 		iov.iov_len = nb;
-		rc = rsx_bulkclient(rq, BULK_GET_SOURCE,
+		rc = slrpc_bulkclient(rq, BULK_GET_SOURCE,
 		    SRCM_BULK_PORTAL, &iov, 1);
 	} else
 		memcpy(mq->buf, srcm->srcm_page, nb);

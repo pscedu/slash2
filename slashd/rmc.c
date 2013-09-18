@@ -758,7 +758,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 		memcpy(mp->ents + sz, iov[0].iov_base, mp->size);
 		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
 	} else {
-		mp->rc = rsx_bulkserver(rq, BULK_PUT_SOURCE,
+		mp->rc = slrpc_bulkserver(rq, BULK_PUT_SOURCE,
 		    SRMC_BULK_PORTAL, iov, niov);
 	}
 
@@ -797,7 +797,7 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 
 	iov.iov_base = buf;
 	iov.iov_len = sizeof(buf);
-	mp->rc = rsx_bulkserver(rq, BULK_PUT_SOURCE, SRMC_BULK_PORTAL,
+	mp->rc = slrpc_bulkserver(rq, BULK_PUT_SOURCE, SRMC_BULK_PORTAL,
 	    &iov, 1);
 
  out:
@@ -846,7 +846,7 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 		iov[0].iov_len = mq->fromlen;
 		iov[1].iov_base = to;
 		iov[1].iov_len = mq->tolen;
-		mp->rc = rsx_bulkserver(rq, BULK_GET_SINK,
+		mp->rc = slrpc_bulkserver(rq, BULK_GET_SINK,
 		    SRMC_BULK_PORTAL, iov, 2);
 		if (mp->rc)
 			return (mp->rc);
@@ -1165,7 +1165,7 @@ slm_symlink(struct pscrpc_request *rq, struct srm_symlink_req *mq,
 
 	iov.iov_base = linkname;
 	iov.iov_len = mq->linklen;
-	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, ptl, &iov, 1);
+	mp->rc = slrpc_bulkserver(rq, BULK_GET_SINK, ptl, &iov, 1);
 	if (mp->rc)
 		return (mp->rc);
 
@@ -1314,7 +1314,7 @@ slm_rmc_handle_listxattr(struct pscrpc_request *rq)
 
 	mp->size = outsize;
 	if (mq->size)
-		mp->rc = rsx_bulkserver(rq, BULK_PUT_SOURCE,
+		mp->rc = slrpc_bulkserver(rq, BULK_PUT_SOURCE,
 		    SRMC_BULK_PORTAL, &iov, 1);
 
  out:
@@ -1353,7 +1353,7 @@ slm_rmc_handle_setxattr(struct pscrpc_request *rq)
 
 	iov.iov_base = value;
 	iov.iov_len = mq->valuelen;
-	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, SRMC_BULK_PORTAL,
+	mp->rc = slrpc_bulkserver(rq, BULK_GET_SINK, SRMC_BULK_PORTAL,
 	    &iov, 1);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
@@ -1412,7 +1412,7 @@ slm_rmc_handle_getxattr(struct pscrpc_request *rq)
 	iov.iov_base = value;
 	iov.iov_len = outsize;
 	if (mq->size)
-		mp->rc = rsx_bulkserver(rq, BULK_PUT_SOURCE,
+		mp->rc = slrpc_bulkserver(rq, BULK_PUT_SOURCE,
 		    SRMC_BULK_PORTAL, &iov, 1);
 
  out:

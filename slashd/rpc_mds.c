@@ -354,7 +354,7 @@ batchrq_send(struct batchrq *br)
 
 	iov.iov_base = br->br_buf;
 	iov.iov_len = br->br_len;
-	rc = rsx_bulkclient(rq, BULK_GET_SOURCE, br->br_ptl, &iov, 1);
+	rc = slrpc_bulkclient(rq, BULK_GET_SOURCE, br->br_ptl, &iov, 1);
 	if (rc)
 		goto err;
 

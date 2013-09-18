@@ -1111,7 +1111,7 @@ mds_send_batch_update(uint64_t batchno)
 		mq->siteid = nodeSite->site_id;
 		psc_crc64_calc(&mq->crc, iov.iov_base, iov.iov_len);
 
-		rsx_bulkclient(rq, BULK_GET_SOURCE, SRMM_BULK_PORTAL,
+		slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMM_BULK_PORTAL,
 		    &iov, 1);
 
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
@@ -1502,7 +1502,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 		mq->count = nentry;
 		psc_crc64_calc(&mq->crc, iov.iov_base, iov.iov_len);
 
-		rsx_bulkclient(rq, BULK_GET_SOURCE, SRIM_BULK_PORTAL,
+		slrpc_bulkclient(rq, BULK_GET_SOURCE, SRIM_BULK_PORTAL,
 		    &iov, 1);
 
 		/* XXX use async */
