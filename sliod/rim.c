@@ -74,7 +74,7 @@ sli_rim_handle_batch(struct pscrpc_request *rq)
 		iov.iov_len = mq->nents * sizeof(*pe);
 		iov.iov_base = buf = PSCALLOC(iov.iov_len);
 
-		rc = rsx_bulkserver(rq, BULK_GET_SINK, SRIM_BULK_PORTAL,
+		rc = slrpc_bulkserver(rq, BULK_GET_SINK, SRIM_BULK_PORTAL,
 		    &iov, 1);
 		if (rc)
 			PFL_GOTOERR(preclaim_out, rc);
@@ -152,7 +152,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	iov.iov_len = mq->size;
 	iov.iov_base = PSCALLOC(mq->size);
 
-	rc = rsx_bulkserver(rq, BULK_GET_SINK, SRIM_BULK_PORTAL,
+	rc = slrpc_bulkserver(rq, BULK_GET_SINK, SRIM_BULK_PORTAL,
 	    &iov, 1);
 	if (rc)
 		PFL_GOTOERR(out, rc);

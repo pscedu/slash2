@@ -202,7 +202,7 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 		rv = 0;
 	}
 
-	mp->rc = rsx_bulkserver(rq, BULK_PUT_SOURCE, SRII_BULK_PORTAL, &iov, 1);
+	mp->rc = slrpc_bulkserver(rq, BULK_PUT_SOURCE, SRII_BULK_PORTAL, &iov, 1);
 
 	slvr_rio_done(s);
 
@@ -300,7 +300,7 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 	iov.iov_base = s->slvr_slab->slb_base;
 	iov.iov_len = mq->len;
 
-	mp->rc = rsx_bulkserver(rq, BULK_GET_SINK, SRII_BULK_PORTAL,
+	mp->rc = slrpc_bulkserver(rq, BULK_GET_SINK, SRII_BULK_PORTAL,
 	    &iov, 1);
 
 	if (!mp->rc) {
@@ -399,7 +399,7 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	iov.iov_base = s->slvr_slab->slb_base;
 	iov.iov_len = mq->len;
 
-	rc = rsx_bulkclient(rq, BULK_PUT_SINK, SRII_BULK_PORTAL, &iov,
+	rc = slrpc_bulkclient(rq, BULK_PUT_SINK, SRII_BULK_PORTAL, &iov,
 	    1);
 	if (rc)
 		goto out;

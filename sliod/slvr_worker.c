@@ -127,7 +127,7 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 
 	PSC_CRC64_FIN(&mq->crc);
 
-	rc = rsx_bulkclient(rq, BULK_GET_SOURCE, SRMI_BULK_PORTAL, iovs,
+	rc = slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMI_BULK_PORTAL, iovs,
 	    mq->ncrc_updates);
 	PSCFREE(iovs);
 

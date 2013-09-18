@@ -255,7 +255,7 @@ slvr_aio_replreply(struct sli_aiocb_reply *a)
 	if (mq->rc)
 		pscrpc_msg_add_flags(rq->rq_reqmsg, MSG_ABORT_BULK);
 	else
-		mq->rc = rsx_bulkclient(rq, BULK_GET_SOURCE,
+		mq->rc = slrpc_bulkclient(rq, BULK_GET_SOURCE,
 		    SRII_BULK_PORTAL, a->aiocbr_iovs, a->aiocbr_niov);
 
 	rc = SL_RSX_WAITREP(a->aiocbr_csvc, rq, mp);
@@ -304,7 +304,7 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 			pscrpc_msg_add_flags(rq->rq_reqmsg,
 			    MSG_ABORT_BULK);
 		else
-			mq->rc = rsx_bulkclient(rq, BULK_GET_SOURCE,
+			mq->rc = slrpc_bulkclient(rq, BULK_GET_SOURCE,
 			    SRCI_BULK_PORTAL, a->aiocbr_iovs,
 			    a->aiocbr_niov);
 	}

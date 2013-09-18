@@ -297,9 +297,9 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 	/*
 	 * We must return an error code to the RPC itself if we don't call
-	 * rsx_bulkserver() or rsx_bulkclient() as expected.
+	 * slrpc_bulkserver() or slrpc_bulkclient() as expected.
 	 */
-	rc = rsx_bulkserver(rq,
+	rc = slrpc_bulkserver(rq,
 	    (rw == SL_WRITE ? BULK_GET_SINK : BULK_PUT_SOURCE),
 	    SRIC_BULK_PORTAL, iovs, nslvrs);
 	if (rc)

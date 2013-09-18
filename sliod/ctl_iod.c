@@ -292,7 +292,7 @@ sli_import(const char *fn, const struct pfl_stat *pst,
 		iov.iov_base = target;
 		iov.iov_len = mq->linklen;
 
-		rsx_bulkclient(rq, BULK_GET_SOURCE, SRMI_BULK_PORTAL,
+		slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMI_BULK_PORTAL,
 		    &iov, 1);
 
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
