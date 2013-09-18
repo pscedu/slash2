@@ -48,10 +48,10 @@
 #include "slashrpc.h"
 #include "slerr.h"
 
-psc_atomic64_t	authbuf_nonce = PSC_ATOMIC64_INIT(0);
-unsigned char	authbuf_key[AUTHBUF_KEYSIZE];
-gcry_md_hd_t	authbuf_hd;
-int		authbuf_alglen;
+psc_atomic64_t	sl_authbuf_nonce = PSC_ATOMIC64_INIT(0);
+unsigned char	sl_authbuf_key[AUTHBUF_KEYSIZE];
+gcry_md_hd_t	sl_authbuf_hd;
+int		sl_authbuf_alglen;
 
 /*
  * authbuf_readkeyfile - Read the contents of a secret key file into
@@ -71,25 +71,26 @@ authbuf_readkeyfile(void)
 	if (fstat(fd, &stb) == -1)
 		psc_fatal("fstat %s", keyfn);
 	authbuf_checkkey(keyfn, &stb);
-	if (read(fd, authbuf_key, sizeof(authbuf_key)) !=
-	    (ssize_t)sizeof(authbuf_key))
+	if (read(fd, sl_authbuf_key, sizeof(sl_authbuf_key)) !=
+	    (ssize_t)sizeof(sl_authbuf_key))
 		psc_fatal("read %s", keyfn);
 	close(fd);
 
 	alg = GCRY_MD_SHA256;
-	gerr = gcry_md_open(&authbuf_hd, alg, 0);
+	gerr = gcry_md_open(&sl_authbuf_hd, alg, 0);
 	if (gerr)
 		psc_fatalx("gcry_md_open: %d", gerr);
-	gcry_md_write(authbuf_hd, authbuf_key, sizeof(authbuf_key));
+	gcry_md_write(sl_authbuf_hd, sl_authbuf_key,
+	    sizeof(sl_authbuf_key));
 
 	/* base64 is len*4/3 + 1 for integer truncation + 1 for NUL byte */
-	authbuf_alglen = gcry_md_get_algo_dlen(alg);
-	if (authbuf_alglen * 4 / 3 + 2 >= AUTHBUF_REPRLEN)
+	sl_authbuf_alglen = gcry_md_get_algo_dlen(alg);
+	if (sl_authbuf_alglen * 4 / 3 + 2 >= AUTHBUF_REPRLEN)
 		psc_fatal("bad alg/base64 size: alg=%d need=%d want=%d",
-		    authbuf_alglen, authbuf_alglen * 4 / 3 + 2,
+		    sl_authbuf_alglen, sl_authbuf_alglen * 4 / 3 + 2,
 		    AUTHBUF_REPRLEN);
 
-	psc_atomic64_set(&authbuf_nonce, psc_random64());
+	psc_atomic64_set(&sl_authbuf_nonce, psc_random64());
 }
 
 /*
@@ -115,9 +116,9 @@ authbuf_checkkeyfile(void)
 void
 authbuf_checkkey(const char *fn, struct stat *stb)
 {
-	if (stb->st_size != sizeof(authbuf_key))
+	if (stb->st_size != sizeof(sl_authbuf_key))
 		psc_fatalx("key file %s is wrong size, should be %zu",
-		    fn, sizeof(authbuf_key));
+		    fn, sizeof(sl_authbuf_key));
 	if (!S_ISREG(stb->st_mode))
 		psc_fatalx("key file %s: not a file", fn);
 	if ((stb->st_mode & (ALLPERMS & ~S_IWUSR)) != S_IRUSR)
@@ -145,14 +146,14 @@ authbuf_createkeyfile(void)
 		}
 		psc_fatal("open %s", keyfn);
 	}
-	for (i = 0; i < (int)sizeof(authbuf_key); ) {
+	for (i = 0; i < (int)sizeof(sl_authbuf_key); ) {
 		r = psc_random32();
 		for (j = 0; j < 4 &&
-		    i < (int)sizeof(authbuf_key); j++, i++)
-			authbuf_key[i] = (r >> (8 * j)) & 0xff;
+		    i < (int)sizeof(sl_authbuf_key); j++, i++)
+			sl_authbuf_key[i] = (r >> (8 * j)) & 0xff;
 	}
-	if (write(fd, authbuf_key, sizeof(authbuf_key)) !=
-	    (ssize_t)sizeof(authbuf_key))
+	if (write(fd, sl_authbuf_key, sizeof(sl_authbuf_key)) !=
+	    (ssize_t)sizeof(sl_authbuf_key))
 		psc_fatal("write %s", keyfn);
 	close(fd);
 }
