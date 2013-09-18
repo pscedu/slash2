@@ -488,7 +488,7 @@ slislvrthr_proc(struct slvr *s)
 void
 slislvrthr_main(struct psc_thread *thr)
 {
-	struct timespec expire, ts;
+	struct timespec expire;
 	struct slvr *s;
 
 	while (pscthr_run(thr)) {
