@@ -504,7 +504,7 @@ slislvrthr_main(struct psc_thread *thr)
 			if (timespeccmp(&expire, &s->slvr_ts, >))
 				lc_remove(&crcqSlvrs, s);
 			else {
-				expire = ts;
+				expire = s->slvr_ts;
 				s = NULL;
 			}
 		} else
