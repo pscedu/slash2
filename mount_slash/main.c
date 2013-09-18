@@ -1426,7 +1426,7 @@ msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
 	mq->offset = off;
 	mq->nstbpref = nstbpref;
 
-	rsx_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, iov, niov);
+	slrpc_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, iov, niov);
 
 	/*
 	 * If the dir is small, we avoid a bulk and pack the content
@@ -1696,7 +1696,7 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 
 	iov.iov_base = buf;
 	iov.iov_len = sizeof(buf);
-	rsx_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, &iov, 1);
+	slrpc_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, &iov, 1);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc))
@@ -2057,7 +2057,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		iov[1].iov_base = (char *)newname;
 		iov[1].iov_len = mq->tolen;
 
-		rsx_bulkclient(rq, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
+		slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
 		    iov, 2);
 	} else {
 		memcpy(mq->buf, oldname, mq->fromlen);
@@ -2225,7 +2225,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	iov.iov_base = (char *)buf;
 	iov.iov_len = mq->linklen;
 
-	rsx_bulkclient(rq, BULK_GET_SOURCE, SRMC_BULK_PORTAL, &iov, 1);
+	slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMC_BULK_PORTAL, &iov, 1);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc))
@@ -2756,7 +2756,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	if (size) {
 		iov.iov_base = buf;
 		iov.iov_len = size;
-		rsx_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL,
+		slrpc_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL,
 		    &iov, 1);
 		rq->rq_bulk_abortable = 1;
 	}
@@ -2821,7 +2821,7 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	iov.iov_base = (char *)value;
 	iov.iov_len = mq->valuelen;
 
-	rsx_bulkclient(rq, BULK_GET_SOURCE, SRMC_BULK_PORTAL, &iov, 1);
+	slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMC_BULK_PORTAL, &iov, 1);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc))
@@ -2902,7 +2902,7 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 	if (size) {
 		iov.iov_base = buf;
 		iov.iov_len = size;
-		rsx_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL,
+		slrpc_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL,
 		    &iov, 1);
 		rq->rq_bulk_abortable = 1;
 	}

@@ -165,7 +165,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		}
 
 		if (!mq->rc)
-			mq->rc = rsx_bulkserver(rq, BULK_GET_SINK,
+			mq->rc = slrpc_bulkserver(rq, BULK_GET_SINK,
 			    SRCI_BULK_PORTAL, iovs,
 			    psc_dynarray_len(a));
 
@@ -189,7 +189,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 			iovs[i].iov_len = BMPC_BUFSZ;
 		}
 		if (mq->rc == 0)
-			mq->rc = rsx_bulkserver(rq, BULK_GET_SINK,
+			mq->rc = slrpc_bulkserver(rq, BULK_GET_SINK,
 			    SRCI_BULK_PORTAL, iovs, i);
 
 		PSCFREE(iovs);
@@ -210,7 +210,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 			iov.iov_base = r->biorq_buf;
 			iov.iov_len = r->biorq_len;
 
-			mq->rc = rsx_bulkserver(rq, BULK_GET_SINK,
+			mq->rc = slrpc_bulkserver(rq, BULK_GET_SINK,
 			    SRCI_BULK_PORTAL, &iov, 1);
 		}
 

@@ -1193,7 +1193,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		iovs[i].iov_base = r->biorq_buf + nbytes;
 		iovs[i].iov_len  = len;
 
-		rc = rsx_bulkclient(rq, (op == SRMT_WRITE ?
+		rc = slrpc_bulkclient(rq, (op == SRMT_WRITE ?
 		    BULK_GET_SOURCE : BULK_PUT_SINK), SRIC_BULK_PORTAL,
 		    &iovs[i], 1);
 		if (rc)
@@ -1382,7 +1382,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 	if (rc)
 		goto error;
 
-	rc = rsx_bulkclient(rq, BULK_PUT_SINK, SRIC_BULK_PORTAL, iovs,
+	rc = slrpc_bulkclient(rq, BULK_PUT_SINK, SRIC_BULK_PORTAL, iovs,
 	    nbmpce);
 	if (rc)
 		goto error;
@@ -1514,7 +1514,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 		goto error;
 
 	rq->rq_bulk_abortable = 1;
-	rc = rsx_bulkclient(rq, BULK_PUT_SINK, SRIC_BULK_PORTAL, iovs,
+	rc = slrpc_bulkclient(rq, BULK_PUT_SINK, SRIC_BULK_PORTAL, iovs,
 	    npages);
 	if (rc)
 		goto error;

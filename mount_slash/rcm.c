@@ -169,7 +169,7 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	if (mq->len > (int)sizeof(mq->buf)) {
 		iov.iov_base = mrsl->mrsl_data;
 		iov.iov_len = mq->len;
-		mp->rc = rsx_bulkserver(rq, BULK_GET_SINK,
+		mp->rc = slrpc_bulkserver(rq, BULK_GET_SINK,
 		    SRCM_BULK_PORTAL, &iov, 1);
 	} else if (mq->len)
 		memcpy(mrsl->mrsl_data, mq->buf, mq->len);

@@ -221,7 +221,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	if (rc)
 		goto error;
 
-	rc = rsx_bulkclient(rq, BULK_GET_SOURCE, SRIC_BULK_PORTAL,
+	rc = slrpc_bulkclient(rq, BULK_GET_SOURCE, SRIC_BULK_PORTAL,
 	    bwc->bwc_iovs, bwc->bwc_niovs);
 	if (rc)
 		goto error;
