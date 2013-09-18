@@ -25,6 +25,7 @@
 #include <sys/types.h>
 #include <sys/statvfs.h>
 
+#include <gcrypt.h>
 #include <stdio.h>
 
 #include "pfl/export.h"
@@ -37,6 +38,7 @@
 #include "psc_util/lock.h"
 #include "psc_util/multiwait.h"
 
+#include "authbuf.h"
 #include "slashrpc.h"
 #include "slconfig.h"
 #include "slconn.h"
@@ -1047,4 +1049,81 @@ sl_exp_getpri_cli(struct pscrpc_export *exp)
 	p = exp->exp_private;
 	EXPORT_URLOCK(exp, locked);
 	return (p);
+}
+
+/**
+ * slrpc_bulkserver - Perform high level SLASH2 bulk RPC setup.
+ * Notes:
+ *	This entails performing the "authbuf" message hashing to ensure
+ *	integrity.  Bulk RPCs contain an additional hash comprised of:
+ *
+ *	  field 0               field 1                  nfields-1
+ *	  [RPC request struct 1][RPC request struct 2]...[authbuf][bulk]
+ *
+ *	The hash is made over the authbuf struct (nfields - 1) itself
+ *	contained in the last section of the RPC itself then over the
+ *	bulk contents.
+ */
+int
+slrpc_bulkserver(struct pscrpc_request *rq, int type, int chan,
+    struct iovec *oiov, int niov)
+{
+	char *hashbuf, ebuf[BUFSIZ];
+	struct srt_authbuf_footer *saf;
+	struct pscrpc_msg *m;
+	struct iovec *iov;
+	gcry_error_t gerr;
+	gcry_md_hd_t hd;
+	int rc, n;
+
+	iov = PSCALLOC(sizeof(*oiov) * (niov + 1));
+	hashbuf = PSCALLOC(authbuf_alglen);
+	memcpy(iov, oiov, sizeof(*oiov) * niov);
+	iov[niov].iov_base = hashbuf;
+	iov[niov].iov_len = authbuf_alglen;
+	rc = rsx_bulkserver(rq, type, chan, iov, niov + 1);
+	if (rc)
+		goto out;
+
+	gerr = gcry_md_copy(&hd, authbuf_hd);
+	if (gerr) {
+		gpg_strerror_r(gerr, ebuf, sizeof(ebuf));
+		psc_fatalx("gcry_md_open: %d", gerr);
+	}
+
+	m = rq->rq_reqmsg;
+	saf = pscrpc_msg_buf(m, m->bufcount - 1, sizeof(*saf));
+	gcry_md_write(hd, saf, sizeof(*saf));
+
+	for (n = 0; n < niov; n++)
+		gcry_md_write(hd, oiov[n].iov_base,
+		    oiov[n].iov_len);
+
+	if (memcmp(gcry_md_read(hd, 0), hashbuf, authbuf_alglen)) {
+		psclog_errorx("authbuf did not hash correctly -- "
+		    "ensure key files are synced");
+		rc = SLERR_AUTHBUF_BADHASH;
+	}
+	gcry_md_close(hd);
+
+ out:
+	PSCFREE(hashbuf);
+	PSCFREE(iov);
+	return (rc);
+}
+
+int
+slrpc_bulkclient(struct pscrpc_request *rq, int type, int chan,
+    struct iovec *oiov, int n)
+{
+	struct iovec *iov;
+	int rc;
+
+	iov = PSCALLOC(sizeof(*oiov) * (n + 1));
+	memcpy(iov, oiov, sizeof(*oiov) * n);
+	iov[n].iov_base = PSCALLOC(authbuf_alglen);
+	iov[n].iov_len = authbuf_alglen;
+	rc = rsx_bulkclient(rq, type, chan, iov, n + 1);
+	PSCFREE(iov);
+	return (rc);
 }

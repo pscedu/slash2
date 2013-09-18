@@ -31,6 +31,8 @@
 #ifndef _SL_AUTHBUF_H_
 #define _SL_AUTHBUF_H_
 
+#include <gcrypt.h>
+
 #include "psc_util/atomic.h"
 
 struct stat;
@@ -49,5 +51,6 @@ void	authbuf_readkeyfile(void);
 extern psc_atomic64_t	authbuf_nonce;
 extern unsigned char	authbuf_key[AUTHBUF_KEYSIZE];
 extern int		authbuf_alglen;
+extern gcry_md_hd_t	authbuf_hd;
 
 #endif /* _SL_AUTHBUF_H_ */

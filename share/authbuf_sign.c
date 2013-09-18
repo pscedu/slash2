@@ -45,8 +45,6 @@
 #include "slconn.h"
 #include "slerr.h"
 
-extern gcry_md_hd_t	authbuf_hd;
-
 /**
  * authbuf_sign - Sign a message with the secret key.
  * @rq: request structure to sign.
@@ -100,19 +98,30 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 		gcry_md_write(hd, pscrpc_msg_buf(m, i, 0),
 		    pscrpc_msg_buflen(m, i));
 
+	gcry_md_write(hd, &saf->saf_secret, sizeof(saf->saf_secret));
+
+	psc_base64_encode(gcry_md_read(hd, 0), saf->saf_hash,
+	    authbuf_alglen);
+
+	gcry_md_close(hd);
+
 	bd = rq->rq_bulk;
-	if (bd)
-		for (i = 0; i < (uint32_t)bd->bd_iov_count; i++)
+	if (bd) {
+		gerr = gcry_md_copy(&hd, authbuf_hd);
+		if (gerr) {
+			gpg_strerror_r(gerr, ebuf, sizeof(ebuf));
+			psc_fatalx("gcry_md_copy: %s [%d]", ebuf, gerr);
+		}
+
+		gcry_md_write(hd, saf, sizeof(*saf));
+
+		for (i = 0; i < (uint32_t)bd->bd_iov_count - 1; i++)
 			gcry_md_write(hd, bd->bd_iov[i].iov_base,
 			    bd->bd_iov[i].iov_len);
 
-	gcry_md_write(hd, &saf->saf_secret,
-	    sizeof(saf->saf_secret));
-
-	psc_base64_encode(gcry_md_read(hd, 0),
-	    saf->saf_hash, authbuf_alglen);
-
-	gcry_md_close(hd);
+		memcpy(bd->bd_iov[i].iov_base,
+		    gcry_md_read(hd, 0), authbuf_alglen);
+	}
 }
 
 /**
@@ -131,6 +140,7 @@ authbuf_check(struct pscrpc_request *rq, int msgtype)
 	gcry_error_t gerr;
 	gcry_md_hd_t hd;
 	uint32_t i;
+	int rc = 0;
 
 	if (msgtype == PSCRPC_MSG_REQUEST)
 		m = rq->rq_reqmsg;
@@ -185,5 +195,29 @@ authbuf_check(struct pscrpc_request *rq, int msgtype)
 		    "ensure key files are synced");
 		return (SLERR_AUTHBUF_BADHASH);
 	}
-	return (0);
+
+	if (rq->rq_bulk) {
+		struct pscrpc_bulk_desc *bd;
+		int n;
+
+		bd = rq->rq_bulk;
+		gerr = gcry_md_copy(&hd, authbuf_hd);
+		if (gerr) {
+			gpg_strerror_r(gerr, ebuf, sizeof(ebuf));
+			psc_fatalx("gcry_md_copy: %s [%d]", ebuf, gerr);
+		}
+		gcry_md_write(hd, saf, sizeof(*saf));
+		for (n = 0; n < bd->bd_iov_count - 1; n++)
+			gcry_md_write(hd, bd->bd_iov[n].iov_base,
+			    bd->bd_iov[n].iov_len);
+		if (memcmp(gcry_md_read(hd, 0), bd->bd_iov[n].iov_base,
+		    authbuf_alglen)) {
+			psclog_errorx("authbuf did not hash correctly -- "
+			    "ensure key files are synced");
+			rc = SLERR_AUTHBUF_BADHASH;
+		}
+		gcry_md_close(hd);
+	}
+
+	return (rc);
 }
