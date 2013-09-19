@@ -106,7 +106,7 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 	gcry_md_close(hd);
 
 	bd = rq->rq_bulk;
-	if (bd && msgtype == PSCRPC_MSG_REPLY) {
+	if (bd) { // && msgtype == PSCRPC_MSG_REPLY) {
 		psc_assert(bd->bd_iov_count > 1);
 		slrpc_bulk_sign(bd->bd_iov[
 		    bd->bd_iov_count - 1].iov_base, m,
