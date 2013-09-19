@@ -80,7 +80,7 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 	saf = pscrpc_msg_buf(m, m->bufcount - 1, sizeof(*saf));
 	saf->saf_secret.sas_magic = AUTHBUF_MAGIC;
 	saf->saf_secret.sas_nonce =
-	    psc_atomic64_inc_getnew(&authbuf_nonce);
+	    psc_atomic64_inc_getnew(&sl_authbuf_nonce);
 
 	pscrpc_req_getprids(&sl_lnet_prids, rq, &self_prid, &peer_prid);
 	saf->saf_secret.sas_src_nid = self_prid.nid;
@@ -107,20 +107,10 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 
 	bd = rq->rq_bulk;
 	if (bd) {
-		gerr = gcry_md_copy(&hd, sl_authbuf_hd);
-		if (gerr) {
-			gpg_strerror_r(gerr, ebuf, sizeof(ebuf));
-			psc_fatalx("gcry_md_copy: %s [%d]", ebuf, gerr);
-		}
-
-		gcry_md_write(hd, saf, sizeof(*saf));
-
-		for (i = 0; i < (uint32_t)bd->bd_iov_count - 1; i++)
-			gcry_md_write(hd, bd->bd_iov[i].iov_base,
-			    bd->bd_iov[i].iov_len);
-
-		memcpy(bd->bd_iov[i].iov_base,
-		    gcry_md_read(hd, 0), sl_authbuf_alglen);
+		psc_assert(bd->bd_iov_count > 1);
+		slrpc_bulk_sign(bd->bd_iov[
+		    bd->bd_iov_count - 1].iov_base, m,
+		    bd->bd_iov, bd->bd_iov_count - 1);
 	}
 }
 
@@ -135,6 +125,7 @@ authbuf_check(struct pscrpc_request *rq, int msgtype)
 	char buf[AUTHBUF_REPRLEN], ebuf[BUFSIZ];
 	lnet_process_id_t self_prid, peer_prid;
 	struct srt_authbuf_footer *saf;
+	struct pscrpc_bulk_desc *bd;
 	struct pscrpc_msg *m;
 	gcry_error_t gerr;
 	gcry_md_hd_t hd;
@@ -189,28 +180,11 @@ authbuf_check(struct pscrpc_request *rq, int msgtype)
 		return (SLERR_AUTHBUF_BADHASH);
 	}
 
-	if (rq->rq_bulk) {
-		struct pscrpc_bulk_desc *bd;
-		int n;
-
-		bd = rq->rq_bulk;
-		gerr = gcry_md_copy(&hd, sl_authbuf_hd);
-		if (gerr) {
-			gpg_strerror_r(gerr, ebuf, sizeof(ebuf));
-			psc_fatalx("gcry_md_copy: %s [%d]", ebuf, gerr);
-		}
-		gcry_md_write(hd, saf, sizeof(*saf));
-		for (n = 0; n < bd->bd_iov_count - 1; n++)
-			gcry_md_write(hd, bd->bd_iov[n].iov_base,
-			    bd->bd_iov[n].iov_len);
-		if (memcmp(gcry_md_read(hd, 0), bd->bd_iov[n].iov_base,
-		    sl_authbuf_alglen)) {
-			psclog_errorx("authbuf did not hash correctly -- "
-			    "ensure key files are synced");
-			rc = SLERR_AUTHBUF_BADHASH;
-		}
-		gcry_md_close(hd);
-	}
+	bd = rq->rq_bulk;
+	if (bd && msgtype == PSCRPC_MSG_REPLY)
+		rc = slrpc_bulk_check(bd->bd_iov[
+		    bd->bd_iov_count - 1].iov_base, m, bd->bd_iov,
+		    bd->bd_iov_count - 1);
 
 	return (rc);
 }

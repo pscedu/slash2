@@ -1051,6 +1051,50 @@ sl_exp_getpri_cli(struct pscrpc_export *exp)
 	return (p);
 }
 
+void
+slrpc_bulk_sign(void *buf, struct pscrpc_msg *m,
+    struct iovec *iov, int n)
+{
+	struct srt_authbuf_footer *saf;
+	char ebuf[BUFSIZ];
+	gcry_error_t gerr;
+	gcry_md_hd_t hd;
+	int i;
+
+	gerr = gcry_md_copy(&hd, sl_authbuf_hd);
+	if (gerr) {
+		gpg_strerror_r(gerr, ebuf, sizeof(ebuf));
+		psc_fatalx("gcry_md_copy: %s [%d]", ebuf, gerr);
+	}
+
+	saf = pscrpc_msg_buf(m, m->bufcount - 1, sizeof(*saf));
+	gcry_md_write(hd, saf, sizeof(*saf));
+
+	for (i = 0; i < n; i++)
+		gcry_md_write(hd, iov[i].iov_base, iov[i].iov_len);
+
+	memcpy(buf, gcry_md_read(hd, 0), sl_authbuf_alglen);
+	gcry_md_close(hd);
+}
+
+int
+slrpc_bulk_check(void *hbuf, struct pscrpc_msg *m,
+    struct iovec *iov, int n)
+{
+	char *tbuf;
+	int rc = 0;
+
+	tbuf = PSCALLOC(sl_authbuf_alglen);
+	slrpc_bulk_sign(tbuf, m, iov, n);
+	if (memcmp(tbuf, hbuf, sl_authbuf_alglen)) {
+		psclog_errorx("authbuf did not hash correctly -- "
+		    "ensure key files are synced");
+		rc = SLERR_AUTHBUF_BADHASH;
+	}
+	PSCFREE(tbuf);
+	return (rc);
+}
+
 /**
  * slrpc_bulkserver - Perform high level SLASH2 bulk RPC setup.
  * Notes:
@@ -1068,46 +1112,27 @@ int
 slrpc_bulkserver(struct pscrpc_request *rq, int type, int chan,
     struct iovec *oiov, int niov)
 {
-	char *hashbuf, ebuf[BUFSIZ];
-	struct srt_authbuf_footer *saf;
-	struct pscrpc_msg *m;
 	struct iovec *iov;
-	gcry_error_t gerr;
-	gcry_md_hd_t hd;
-	int rc, n;
+	char *hbuf;
+	int rc;
 
 	iov = PSCALLOC(sizeof(*oiov) * (niov + 1));
-	hashbuf = PSCALLOC(authbuf_alglen);
+	hbuf = PSCALLOC(sl_authbuf_alglen);
 	memcpy(iov, oiov, sizeof(*oiov) * niov);
-	iov[niov].iov_base = hashbuf;
-	iov[niov].iov_len = authbuf_alglen;
+	iov[niov].iov_base = hbuf;
+	iov[niov].iov_len = sl_authbuf_alglen;
 	rc = rsx_bulkserver(rq, type, chan, iov, niov + 1);
 	if (rc)
 		goto out;
 
-	gerr = gcry_md_copy(&hd, authbuf_hd);
-	if (gerr) {
-		gpg_strerror_r(gerr, ebuf, sizeof(ebuf));
-		psc_fatalx("gcry_md_open: %d", gerr);
+	if (type == BULK_GET_SINK) {
+		rc = slrpc_bulk_check(hbuf, rq->rq_reqmsg, oiov, niov);
+	} else {
+		slrpc_bulk_sign(hbuf, rq->rq_repmsg, oiov, niov);
 	}
-
-	m = rq->rq_reqmsg;
-	saf = pscrpc_msg_buf(m, m->bufcount - 1, sizeof(*saf));
-	gcry_md_write(hd, saf, sizeof(*saf));
-
-	for (n = 0; n < niov; n++)
-		gcry_md_write(hd, oiov[n].iov_base,
-		    oiov[n].iov_len);
-
-	if (memcmp(gcry_md_read(hd, 0), hashbuf, authbuf_alglen)) {
-		psclog_errorx("authbuf did not hash correctly -- "
-		    "ensure key files are synced");
-		rc = SLERR_AUTHBUF_BADHASH;
-	}
-	gcry_md_close(hd);
 
  out:
-	PSCFREE(hashbuf);
+	PSCFREE(hbuf);
 	PSCFREE(iov);
 	return (rc);
 }
@@ -1121,8 +1146,8 @@ slrpc_bulkclient(struct pscrpc_request *rq, int type, int chan,
 
 	iov = PSCALLOC(sizeof(*oiov) * (n + 1));
 	memcpy(iov, oiov, sizeof(*oiov) * n);
-	iov[n].iov_base = PSCALLOC(authbuf_alglen);
-	iov[n].iov_len = authbuf_alglen;
+	iov[n].iov_base = PSCALLOC(sl_authbuf_alglen);
+	iov[n].iov_len = sl_authbuf_alglen;
 	rc = rsx_bulkclient(rq, type, chan, iov, n + 1);
 	PSCFREE(iov);
 	return (rc);

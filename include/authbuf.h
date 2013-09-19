@@ -51,6 +51,6 @@ void	authbuf_readkeyfile(void);
 extern psc_atomic64_t	sl_authbuf_nonce;
 extern unsigned char	sl_authbuf_key[AUTHBUF_KEYSIZE];
 extern int		sl_authbuf_alglen;
-extern gcry_md_hd_t	authbuf_hd;
+extern gcry_md_hd_t	sl_authbuf_hd;
 
 #endif /* _SL_AUTHBUF_H_ */
