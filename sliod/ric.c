@@ -370,7 +370,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 	struct bmap_iod_info *bii;
 	struct fidc_membh *f;
 	struct bmapc_memb *b;
-	int rc, fsync_time = 0;
+	int rc, new, fsync_time = 0;
 	uint32_t i;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -414,39 +414,36 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 			fcmh_op_done(f);
 			continue;
 		}
-		fcmh_op_done(f);
 
-		newsbd = psc_pool_get(bmap_rls_pool);
-		memcpy(newsbd, sbd, sizeof(*sbd));
-
+		new = 1;
 		bii = bmap_2_bii(b);
 		BII_LOCK(bii);
 		PLL_FOREACH(p, &bii->bii_rls) {
 			if (!memcmp(p, sbd, sizeof(*p))) {
-				BII_ULOCK(bii);
-				bmap_op_done(b);
-				psc_pool_return(bmap_rls_pool, newsbd);
-				newsbd = NULL;
+				new = 0;
 				break;
 			}
 		}
-		if (!newsbd)
-			continue;
+		if (new) {
+			newsbd = psc_pool_get(bmap_rls_pool);
+			memcpy(newsbd, sbd, sizeof(*sbd));
 
-		DEBUG_FCMH(PLL_DIAG, f,
-		    "bmapno=%d seq=%"PRId64" key=%"PRId64" (brls=%p)",
-		    b->bcm_bmapno, sbd->sbd_seq, sbd->sbd_key, newsbd);
+			DEBUG_FCMH(PLL_DIAG, f,
+			    "bmapno=%d seq=%"PRId64" key=%"PRId64" (brls=%p)",
+			    b->bcm_bmapno, sbd->sbd_seq, sbd->sbd_key, newsbd);
 
-		bmap_op_start_type(bii_2_bmap(bii), BMAP_OPCNT_RLSSCHED);
+			bmap_op_start_type(bii_2_bmap(bii), BMAP_OPCNT_RLSSCHED);
 
-		pll_add(&bii->bii_rls, newsbd);
-		BMAP_SETATTR(b, BMAP_IOD_RLSSEQ);
+			pll_add(&bii->bii_rls, newsbd);
+			BMAP_SETATTR(b, BMAP_IOD_RLSSEQ);
 
-		/* put it on the bmapRlsQ */
-		biod_rlssched_locked(bii);
+			/* put it on the bmapRlsQ */
+			biod_rlssched_locked(bii);
+		}
+
 		BII_ULOCK(bii);
-
 		bmap_op_done(b);
+		fcmh_op_done(f);
 	}
  out:
 	return (0);
