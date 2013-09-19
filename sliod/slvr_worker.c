@@ -390,6 +390,7 @@ slislvrthr_proc(struct slvr *s)
 	lc_addqueue(&lruSlvrs, s);
 	slvr_lru_tryunpin_locked(s);
 
+	bmap_op_start_type(b, BMAP_OPCNT_BCRSCHED);
 	SLVR_ULOCK(s);
 
 	LIST_CACHE_LOCK(&bcr_hold);
@@ -477,6 +478,8 @@ slislvrthr_proc(struct slvr *s)
 	BII_ULOCK(bii);
 	LIST_CACHE_ULOCK(&bcr_hold);
 
+	bmap_op_done_type(b, BMAP_OPCNT_BCRSCHED);
+
 	slvr_worker_push_crcups();
 }
 
@@ -488,58 +491,43 @@ slislvrthr_proc(struct slvr *s)
 void
 slislvrthr_main(struct psc_thread *thr)
 {
+	int i;
 	struct timespec expire;
-	struct slvr *s;
+	struct slvr *s, *dummy;
+	struct psc_dynarray ss = DYNARRAY_INIT_NOLOG;
 
 	while (pscthr_run(thr)) {
-		PFL_GETTIMESPEC(&expire);
-		expire.tv_sec += BCR_MIN_AGE;
 
 		LIST_CACHE_LOCK(&crcqSlvrs);
 
-		s = lc_peekhead(&crcqSlvrs);
-		if (s) {
-			DEBUG_SLVR(PLL_DEBUG, s, "peek");
+		PFL_GETTIMESPEC(&expire);
+		expire.tv_sec -= BCR_MIN_AGE;
 
-			if (timespeccmp(&expire, &s->slvr_ts, >))
+		LIST_CACHE_FOREACH_SAFE(s, dummy, &crcqSlvrs) {
+			if (!SLVR_TRYLOCK(s))
+				continue;
+			if (timespeccmp(&expire, &s->slvr_ts, >)) {
 				lc_remove(&crcqSlvrs, s);
-			else {
-				expire = s->slvr_ts;
-				s = NULL;
+				psc_dynarray_add(&ss, s);
 			}
-		} else
-			expire.tv_sec += BCR_MAX_AGE - BCR_MIN_AGE;
-
+			SLVR_ULOCK(s);
+			if (psc_dynarray_len(&ss) >= MAX_BMAP_NCRC_UPDATES)
+				break;
+		}
 		LIST_CACHE_ULOCK(&crcqSlvrs);
 
-		if (!s) {
-			int n;
-
-			n = psc_waitq_nwaiters(&sli_slvr_waitq);
-			if (n) {
-				struct timespec tmp = sli_bcr_pause;
-
-				tmp.tv_nsec *= n;
-				timespecadd(&expire, &tmp, &expire);
-			}
-
-			psc_waitq_timedwait(&sli_slvr_waitq, NULL,
-			    &expire);
-			slvr_worker_push_crcups();
-			continue;
+		DYNARRAY_FOREACH(s, i, &ss) {
+			slislvrthr_proc(s);
 		}
+		slvr_worker_push_crcups();
 
-		if (timespeccmp(&expire, &s->slvr_ts, <)) {
-			/*
-			 * The case where a new write updated the expire
-			 * between list removal and now.
-			 */
-			lc_addtail(&crcqSlvrs, s);
-			continue;
-		}
+		PFL_GETTIMESPEC(&expire);
+		expire.tv_sec += BCR_MIN_AGE;
+		psc_waitq_timedwait(&sli_slvr_waitq, NULL, &expire);
 
-		slislvrthr_proc(s);
+		psc_dynarray_reset(&ss);
 	}
+	psc_dynarray_free(&ss);
 }
 
 void
