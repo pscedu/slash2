@@ -370,7 +370,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 	struct bmap_iod_info *bii;
 	struct fidc_membh *f;
 	struct bmapc_memb *b;
-	int rc, sync, fsync_time = 0;
+	int rc, fsync_time = 0;
 	uint32_t i;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -379,7 +379,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 	if (mq->nbmaps > MAX_BMAP_RELEASE)
 		PFL_GOTOERR(out, mp->rc = -E2BIG);
 
-	for (i = 0, sync = 0; i < mq->nbmaps; i++, sync = 0) {
+	for (i = 0; i < mq->nbmaps; i++) {
 		sbd = &mq->sbd[i];
 		rc = sli_fcmh_get_rlsbmap(&sbd->sbd_fg, &f);
 		psc_assert(rc == 0);
@@ -390,10 +390,8 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		 * this bmap.
 		 */
 		FCMH_LOCK(f);
-		if (!(f->fcmh_flags & FCMH_NO_BACKFILE))
-			sync = 1;
-		FCMH_ULOCK(f);
-		if (sync) {
+		if (!(f->fcmh_flags & FCMH_NO_BACKFILE)) {
+			FCMH_ULOCK(f);
 			fsync_time = CURRENT_SECONDS;
 			rc = fsync(fcmh_2_fd(f));
 			fsync_time = CURRENT_SECONDS - fsync_time;
@@ -406,7 +404,8 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 				DEBUG_FCMH(PLL_ERROR, f,
 				    "fsync failure rc=%d fd=%d errno=%d",
 				    rc, fcmh_2_fd(f), errno);
-		}
+		} else
+			FCMH_ULOCK(f);
 
 		rc = bmap_get(f, sbd->sbd_bmapno, SL_WRITE, &b);
 		if (rc) {
