@@ -1068,7 +1068,7 @@ slrpc_bulk_sign(void *buf, struct pscrpc_msg *m,
 	}
 
 	saf = pscrpc_msg_buf(m, m->bufcount - 1, sizeof(*saf));
-	gcry_md_write(hd, saf, sizeof(*saf));
+//	gcry_md_write(hd, saf, sizeof(*saf));
 
 	for (i = 0; i < n; i++)
 		gcry_md_write(hd, iov[i].iov_base, iov[i].iov_len);
@@ -1087,7 +1087,7 @@ slrpc_bulk_check(void *hbuf, struct pscrpc_msg *m,
 	tbuf = PSCALLOC(sl_authbuf_alglen);
 	slrpc_bulk_sign(tbuf, m, iov, n);
 	if (memcmp(tbuf, hbuf, sl_authbuf_alglen)) {
-		psclog_errorx("authbuf did not hash correctly -- "
+		psc_fatalx("authbuf did not hash correctly -- "
 		    "ensure key files are synced");
 		rc = SLERR_AUTHBUF_BADHASH;
 	}
@@ -1121,15 +1121,14 @@ slrpc_bulkserver(struct pscrpc_request *rq, int type, int chan,
 	memcpy(iov, oiov, sizeof(*oiov) * niov);
 	iov[niov].iov_base = hbuf;
 	iov[niov].iov_len = sl_authbuf_alglen;
+	if (type == BULK_PUT_SOURCE)
+		slrpc_bulk_sign(hbuf, rq->rq_repmsg, oiov, niov);
 	rc = rsx_bulkserver(rq, type, chan, iov, niov + 1);
 	if (rc)
 		goto out;
 
-	if (type == BULK_GET_SINK) {
+	if (type == BULK_GET_SINK)
 		rc = slrpc_bulk_check(hbuf, rq->rq_reqmsg, oiov, niov);
-	} else {
-		slrpc_bulk_sign(hbuf, rq->rq_repmsg, oiov, niov);
-	}
 
  out:
 	PSCFREE(hbuf);
