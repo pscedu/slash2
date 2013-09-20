@@ -244,7 +244,6 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 	}
 
 	BMAP_CLEARATTR(b, BMAP_CLI_LEASEEXTREQ);
-	bmap_wake_locked(b);
 
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
 	    "lease extension (rc=%d) nseq=%"PRId64, rc,
