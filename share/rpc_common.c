@@ -1067,7 +1067,7 @@ slrpc_bulk_sign(void *buf, struct pscrpc_msg *m,
 		psc_fatalx("gcry_md_copy: %s [%d]", ebuf, gerr);
 	}
 
-	saf = pscrpc_msg_buf(m, m->bufcount - 1, sizeof(*saf));
+//	saf = pscrpc_msg_buf(m, m->bufcount - 1, sizeof(*saf));
 //	gcry_md_write(hd, saf, sizeof(*saf));
 
 	for (i = 0; i < n; i++)
@@ -1110,25 +1110,28 @@ slrpc_bulk_check(void *hbuf, struct pscrpc_msg *m,
  */
 int
 slrpc_bulkserver(struct pscrpc_request *rq, int type, int chan,
-    struct iovec *oiov, int niov)
+    struct iovec *oiov, int n)
 {
 	struct iovec *iov;
 	char *hbuf;
 	int rc;
+return rsx_bulkserver(rq, type, chan, oiov, n);
+printf("bulkserver(%d)\n", n+1);
+sleep(1);
 
-	iov = PSCALLOC(sizeof(*oiov) * (niov + 1));
+	iov = PSCALLOC(sizeof(*oiov) * (n + 1));
 	hbuf = PSCALLOC(sl_authbuf_alglen);
-	memcpy(iov, oiov, sizeof(*oiov) * niov);
-	iov[niov].iov_base = hbuf;
-	iov[niov].iov_len = sl_authbuf_alglen;
+	memcpy(iov, oiov, sizeof(*oiov) * n);
+	iov[n].iov_base = hbuf;
+	iov[n].iov_len = sl_authbuf_alglen;
 	if (type == BULK_PUT_SOURCE)
-		slrpc_bulk_sign(hbuf, rq->rq_repmsg, oiov, niov);
-	rc = rsx_bulkserver(rq, type, chan, iov, niov + 1);
+		slrpc_bulk_sign(hbuf, rq->rq_repmsg, oiov, n);
+	rc = rsx_bulkserver(rq, type, chan, iov, n + 1);
 	if (rc)
 		goto out;
 
 	if (type == BULK_GET_SINK)
-		rc = slrpc_bulk_check(hbuf, rq->rq_reqmsg, oiov, niov);
+		rc = slrpc_bulk_check(hbuf, rq->rq_reqmsg, oiov, n);
 
  out:
 	PSCFREE(hbuf);
@@ -1142,11 +1145,14 @@ slrpc_bulkclient(struct pscrpc_request *rq, int type, int chan,
 {
 	struct iovec *iov;
 	int rc;
+return rsx_bulkclient(rq, type, chan, oiov, n);
 
 	iov = PSCALLOC(sizeof(*oiov) * (n + 1));
 	memcpy(iov, oiov, sizeof(*oiov) * n);
 	iov[n].iov_base = PSCALLOC(sl_authbuf_alglen);
 	iov[n].iov_len = sl_authbuf_alglen;
+printf("bulkclient(%d)\n", n+1);
+sleep(1);
 	rc = rsx_bulkclient(rq, type, chan, iov, n + 1);
 	PSCFREE(iov);
 	return (rc);
