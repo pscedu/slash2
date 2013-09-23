@@ -246,10 +246,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 			i++;
 			continue;
 		}
-		psclog_info("i=%d npages=%d raoff=%"PRIx64
-		    " bmpce_foff=%"PRIx64, i, npages,
-		    mfh->mfh_ra.mra_raoff, (off_t)(bmpce_off +
-		    bmap_foff(b)));
 		MFH_ULOCK(mfh);
 
 		e = bmpce_lookup_locked(bmpc, r, bmpce_off,
@@ -258,9 +254,11 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 
 		BMPCE_LOCK(e);
 
-		DEBUG_BMPCE(PLL_INFO, e,
-		    "i=%d, npages=%d maxpages=%d aoff=%u aoff_search=%u",
-		    i, npages, maxpages, aoff, bmpce_off);
+		psclog_info("biorq = %p, bmpce = %p, i = %d, npages = %d, "
+		    "raoff = %"PRIx64", bmpce_foff = %"PRIx64, 
+		    r, e, i, npages,
+		    mfh->mfh_ra.mra_raoff, 
+		    (off_t)(bmpce_off + bmap_foff(b)));
 
 		if (i < npages) {
 			psc_dynarray_add(&r->biorq_pages, e);
