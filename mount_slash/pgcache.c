@@ -385,7 +385,8 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 	/* same lock used to protect bmap page cache */
 	PLL_LOCK(&bmpc->bmpc_lru);
 	PLL_FOREACH_SAFE(e, tmp, &bmpc->bmpc_lru) {
-		BMPCE_LOCK(e);
+		if (!BMPCE_TRYLOCK(e))
+			continue;
 
 		psc_assert(e->bmpce_flags & BMPCE_LRU);
 		if (psc_atomic32_read(&e->bmpce_ref)) {

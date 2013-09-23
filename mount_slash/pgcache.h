@@ -87,6 +87,7 @@ struct bmap_pagecache_entry {
 #define BMPCE_LOCK(b)		spinlock(&(b)->bmpce_lock)
 #define BMPCE_ULOCK(b)		freelock(&(b)->bmpce_lock)
 #define BMPCE_RLOCK(b)		reqlock(&(b)->bmpce_lock)
+#define BMPCE_TRYLOCK(b)	trylock(&(b)->bmpce_lock)
 #define BMPCE_URLOCK(b, lk)	ureqlock(&(b)->bmpce_lock, (lk))
 #define BMPCE_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bmpce_lock)
 
