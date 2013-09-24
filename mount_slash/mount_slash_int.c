@@ -2236,9 +2236,9 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 				}
 				BMPCE_ULOCK(e);
 			}
+			bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
 			bmap_op_done_type(r->biorq_bmap, BMAP_OPCNT_BIORQ);
 			r->biorq_bmap = b;
-			bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
 		} else {
 			msl_biorq_build(q, b, bufp, i,
 			    roff - (i * SLASH_BMAP_SIZE), tlen,
