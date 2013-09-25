@@ -181,20 +181,33 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
+	struct bmpc_write_coalescer *bwc =
+		args->pointer_arg[MSL_CBARG_BIORQS];
 	struct sl_resm *m = args->pointer_arg[MSL_CBARG_RESM];
-	int rc;
+	struct bmpc_ioreq *r;
+	int rc = 0;
+	struct resm_cli_info *rmci = resm2rmci(m);
 
+	psc_atomic32_dec(&rmci->rmci_infl_rpcs);
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_io_rep, rc);
 
-	bmap_flush_rpccnt_dec(m);
+	psclog_info("Reply to write RPC from %d: %d",
+	    m->resm_res_id, psc_atomic32_read(&rmci->rmci_infl_rpcs));
 
-	DEBUG_REQ(rq->rq_err ? PLL_ERROR : PLL_INFO, rq, "done rc=%d",
-	    rc);
+	OPSTAT_INCR(SLC_OPST_SRMT_WRITE_CALLBACK);
 
-//	sl_csvc_decref(csvc);
-//	args->pointer_arg[MSL_CBARG_CSVC] = NULL;
+	while ((r = pll_get(&bwc->bwc_pll))) {
+		if (rc) {
+			bmap_flush_resched(r, rc);
+		} else {
+			BIORQ_CLEARATTR(r, BIORQ_INFL | BIORQ_SCHED);
+			msl_biorq_destroy(r);
+		}
+	}
 
-	return (rc);
+	bwc_release(bwc);
+	sl_csvc_decref(csvc);
+	return (0);
 }
 
 __static int
@@ -216,7 +229,6 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	sl_csvc_incref(csvc);
 	CSVC_ULOCK(csvc);
 
-	OPSTAT_INCR(SLC_OPST_SRMT_WRITE);
 	rc = SL_RSX_NEWREQ(csvc, SRMT_WRITE, rq, mq, mp);
 	if (rc)
 		goto error;
@@ -254,7 +266,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 
 	/* Do we need this inc/dec combo for biorq reference? */
 	psc_atomic32_inc(&rmci->rmci_infl_rpcs);
-	psclog_info("Inflight write RPC for %d: %d",
+	psclog_info("Send write RPC to %d: %d",
 	    m->resm_res_id, psc_atomic32_read(&rmci->rmci_infl_rpcs));
 
 	/* biorqs will be freed by the nbreqset callback msl_write_rpc_cb() */
@@ -265,6 +277,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	}
 
 	*rqp = rq;
+	OPSTAT_INCR(SLC_OPST_SRMT_WRITE);
 	return (0);
 
  error:
@@ -975,8 +988,7 @@ bmap_flush_outstanding_rpcwait(struct sl_resm *m)
 	 */
 	spinlock(&bmapFlushLock);
 	while ((m && atomic_read(&rmci->rmci_infl_rpcs) >=
-	    MAX_OUTSTANDING_RPCS) ||
-	    bmapFlushTimeoFlags & BMAPFLSH_RPCWAIT) {
+	    MAX_OUTSTANDING_RPCS)) {
 		bmapFlushTimeoFlags |= BMAPFLSH_RPCWAIT;
 		/* RPC completion will wake us up. */
 		psc_waitq_waitrel(&bmapFlushWaitq, &bmapFlushLock,

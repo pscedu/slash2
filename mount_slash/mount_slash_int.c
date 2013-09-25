@@ -1051,27 +1051,6 @@ msl_readahead_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 int
 msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
-	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
-	struct bmpc_write_coalescer *bwc =
-		args->pointer_arg[MSL_CBARG_BIORQS];
-	struct bmpc_ioreq *r;
-	int rc = 0;
-
-	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_io_rep, rc);
-
-	DEBUG_REQ(rc ? PLL_ERROR : PLL_DIAG, rq, "cb, rc=%d", rc);
-
-	while ((r = pll_get(&bwc->bwc_pll))) {
-		if (rc) {
-			bmap_flush_resched(r, rc);
-		} else {
-			BIORQ_CLEARATTR(r, BIORQ_INFL | BIORQ_SCHED);
-			msl_biorq_destroy(r);
-		}
-	}
-
-	bwc_release(bwc);
-	sl_csvc_decref(csvc);
 	return (0);
 }
 
