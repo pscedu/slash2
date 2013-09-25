@@ -105,13 +105,13 @@ bmpce_destroy(void *p)
 }
 
 struct bmap_pagecache_entry *
-bmpce_lookup_locked(struct bmap_pagecache *bmpc, struct bmpc_ioreq *r,
+bmpce_lookup_locked(struct bmapc_memb *b, struct bmpc_ioreq *r,
     uint32_t off, struct psc_waitq *wq)
 {
+	struct bmap_pagecache *bmpc;
 	struct bmap_pagecache_entry search, *e = NULL, *e2 = NULL;
 
-	LOCK_ENSURE(&bmpc->bmpc_lock);
-
+	bmpc = bmap_2_bmpc(b);
 	search.bmpce_off = off;
 
 	while (1) {
@@ -120,10 +120,10 @@ bmpce_lookup_locked(struct bmap_pagecache *bmpc, struct bmpc_ioreq *r,
 		if (e) {
 			if (e->bmpce_flags & BMPCE_EIO) {
 				DEBUG_BMPCE(PLL_WARN, e, "skip an EIO page");
-				BMPC_ULOCK(bmpc);
+				BMAP_ULOCK(b);
 				sched_yield();
 				OPSTAT_INCR(SLC_OPST_BMPCE_EIO);
-				BMPC_LOCK(bmpc);
+				BMAP_LOCK(b);
 				continue;
 			}
 			DEBUG_BMPCE(PLL_DIAG, e, "add reference");
@@ -133,10 +133,10 @@ bmpce_lookup_locked(struct bmap_pagecache *bmpc, struct bmpc_ioreq *r,
 		}
 
 		if (e2 == NULL) {
-			BMPC_ULOCK(bmpc);
+			BMAP_ULOCK(b);
 			e2 = psc_pool_get(bmpcePoolMgr);
 			OPSTAT_INCR(SLC_OPST_BMPCE_GET);
-			BMPC_LOCK(bmpc);
+			BMAP_LOCK(b);
 			continue;
 		} else {
 			e = e2;
@@ -161,7 +161,6 @@ void
 bmpce_free(struct bmap_pagecache_entry *e,
     struct bmap_pagecache *bmpc)
 {
-	LOCK_ENSURE(&bmpc->bmpc_lock);
 	DEBUG_BMPCE(PLL_INFO, e, "freeing");
 
 	PSC_SPLAY_XREMOVE(bmap_pagecachetree, &bmpc->bmpc_tree, e);
@@ -177,7 +176,6 @@ bmpce_release_locked(struct bmap_pagecache_entry *e,
 {
 	int rc;
 
-	LOCK_ENSURE(&bmpc->bmpc_lock);
 	LOCK_ENSURE(&e->bmpce_lock);
 
 	rc = psc_atomic32_read(&e->bmpce_ref);
@@ -257,11 +255,9 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 		r->biorq_flags |= BIORQ_PENDING;
 		pll_add(&bmpc->bmpc_pndg_biorqs, r);
 	} else {
-		BMPC_LOCK(bmpc);
 		PSC_SPLAY_XINSERT(bmpc_biorq_tree,
 		    &bmpc->bmpc_new_biorqs, r);
 		bmpc->bmpc_new_nbiorqs++;
-		BMPC_ULOCK(bmpc);
 	}
 	BMAP_ULOCK(b);
 
@@ -286,7 +282,6 @@ bmpc_freeall_locked(struct bmap_pagecache *bmpc)
 {
 	struct bmap_pagecache_entry *a, *b;
 
-	LOCK_ENSURE(&bmpc->bmpc_lock);
 	psc_assert(SPLAY_EMPTY(&bmpc->bmpc_new_biorqs));
 	psc_assert(pll_empty(&bmpc->bmpc_pndg_ra));
 
@@ -337,25 +332,25 @@ bmpc_biorqs_fail(struct bmap_pagecache *bmpc, int err)
 {
 	struct bmpc_ioreq *r;
 
-	BMPC_LOCK(bmpc);
 	PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs)
 		bmpc_biorq_seterr(r, err);
 	SPLAY_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_new_biorqs)
 		bmpc_biorq_seterr(r, err);
-	BMPC_ULOCK(bmpc);
 }
 
 void
-bmpc_biorqs_destroy(struct bmap_pagecache *bmpc, int rc)
+bmpc_biorqs_destroy(struct bmapc_memb *b, int rc)
 {
 	int i;
 	struct bmpc_ioreq *r;
 	struct psc_dynarray a = DYNARRAY_INIT;
+	struct bmap_pagecache *bmpc;
 
-	BMPC_LOCK(bmpc);
+	bmpc = bmap_2_bmpc(b);
+
 	SPLAY_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_new_biorqs)
 		psc_dynarray_add(&a, r);
-	BMPC_ULOCK(bmpc);
+	BMAP_ULOCK(b);
 
 	DYNARRAY_FOREACH(r, i, &a) {
 		BIORQ_LOCK(r);
@@ -382,8 +377,6 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 	struct bmap_pagecache_entry *e, *tmp;
 	int freed = 0;
 
-	/* same lock used to protect bmap page cache */
-	PLL_LOCK(&bmpc->bmpc_lru);
 	PLL_FOREACH_SAFE(e, tmp, &bmpc->bmpc_lru) {
 		if (!BMPCE_TRYLOCK(e))
 			continue;
@@ -410,7 +403,6 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 		memcpy(&bmpc->bmpc_oldest, &e->bmpce_laccess,
 		    sizeof(struct timespec));
 	}
-	PLL_ULOCK(&bmpc->bmpc_lru);
 
 	return (freed);
 }
@@ -422,27 +414,32 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 __static int
 bmpce_reap(struct psc_poolmgr *m)
 {
+	struct bmap *b;
 	struct bmap_pagecache *bmpc;
 	int nfreed = 0, waiters = atomic_read(&m->ppm_nwaiters);
 
-	LIST_CACHE_LOCK(&bmpcLru);
-
-	lc_sort(&bmpcLru, qsort, bmpc_lru_cmp);
 	/* Should be sorted from oldest bmpc to newest. */
+	lc_sort(&bmpcLru, qsort, bmpc_lru_cmp);
+
+	LIST_CACHE_LOCK(&bmpcLru);
 	LIST_CACHE_FOREACH(bmpc, &bmpcLru) {
 		psclog_debug("bmpc=%p npages=%d age=(%ld:%ld) waiters=%d",
 		    bmpc, pll_nitems(&bmpc->bmpc_lru),
 		    bmpc->bmpc_oldest.tv_sec, bmpc->bmpc_oldest.tv_nsec,
 		    waiters);
 
-		/* First check for LRU items. */
-		if (!pll_nitems(&bmpc->bmpc_lru)) {
-			psclog_debug("skip bmpc=%p, nothing on lru", bmpc);
+		b = (struct bmap *)bmpc - 1;
+		psc_assert(bmap_2_bmpc(b) == bmpc);
+		if (!BMAP_TRYLOCK(b))
 			continue;
-		}
 
-		nfreed += bmpc_lru_tryfree(bmpc, waiters);
+		/* First check for LRU items. */
+		if (pll_nitems(&bmpc->bmpc_lru))
+			nfreed += bmpc_lru_tryfree(bmpc, waiters);
+		else
+			psclog_debug("skip bmpc=%p, nothing on lru", bmpc);
 
+		BMAP_ULOCK(b);
 		if (nfreed >= waiters)
 			break;
 	}

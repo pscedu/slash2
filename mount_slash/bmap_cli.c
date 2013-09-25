@@ -281,7 +281,6 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 	int rc;
 
 	BMAP_LOCK(b);
-	BMPC_LOCK(bmpc);
 
 	/*
 	 * For lease reassignment to take place we must have the full
@@ -294,7 +293,6 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 	    SPLAY_EMPTY(&bmpc->bmpc_new_biorqs)   ||
 	    !pll_empty(&bmpc->bmpc_pndg_biorqs)   ||
 	    bci->bci_nreassigns >= SL_MAX_IOSREASSIGN) {
-		BMPC_ULOCK(bmpc);
 		BMAP_ULOCK(b);
 		OPSTAT_INCR(SLC_OPST_BMAP_REASSIGN_BAIL);
 		return;
@@ -312,7 +310,6 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 
 	bmap_op_start_type(b, BMAP_OPCNT_REASSIGN);
 
-	BMPC_ULOCK(bmpc);
 	BMAP_ULOCK(b);
 
 	rc = slc_rmc_getcsvc1(&csvc, fcmh_2_fci(b->bcm_fcmh)->fci_resm);
@@ -598,14 +595,14 @@ msl_bmap_cache_rls(struct bmap *b)
 	struct bmap_pagecache_entry *e;
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 
-	BMPC_LOCK(bmpc);
+	BMAP_LOCK(b);
 	for (e = SPLAY_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); e;) {
 		BMPCE_LOCK(e);
 		e->bmpce_flags |= BMPCE_DISCARD;
 		BMPCE_ULOCK(e);
 		e = SPLAY_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree, e);
 	}
-	BMPC_ULOCK(bmpc);
+	BMAP_ULOCK(b);
 }
 
 void
@@ -826,12 +823,12 @@ bmap_biorq_expire(struct bmap *b)
 	 * structure itself all share the same lock.
 	 */
 	bmpc = bmap_2_bmpc(b);
-	BMPC_LOCK(bmpc);
+	BMAP_LOCK(b);
 	SPLAY_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_new_biorqs)
 		BIORQ_SETATTR(r, BIORQ_FORCE_EXPIRE);
 	PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs)
 		BIORQ_SETATTR(r, BIORQ_FORCE_EXPIRE);
-	BMPC_ULOCK(bmpc);
+	BMAP_ULOCK(b);
 
 	bmap_flushq_wake(BMAPFLSH_RPCWAIT);
 }
@@ -873,11 +870,9 @@ msl_bmap_final_cleanup(struct bmap *b)
 	 * reaper (it was lc_remove'd above by bmpc_lru_del()).
 	 */
 	psc_assert(psclist_disjoint(&bmpc->bmpc_lentry));
-	BMAP_ULOCK(b);
 
-	BMPC_LOCK(bmpc);
 	bmpc_freeall_locked(bmpc);
-	BMPC_ULOCK(bmpc);
+	BMAP_ULOCK(b);
 
 	DEBUG_BMAP(PLL_DIAG, b, "done freeing");
 }

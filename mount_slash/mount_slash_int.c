@@ -231,7 +231,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	 * which correspond to this request.
 	 */
 	i = 0;
-	BMPC_LOCK(bmpc);
+	BMAP_LOCK(b);
 	while (i < maxpages) {
 		if (bkwdra)
 			bmpce_off = aoff + ((npages - 1 - i) * BMPC_BUFSZ);
@@ -248,7 +248,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 		}
 		MFH_ULOCK(mfh);
 
-		e = bmpce_lookup_locked(bmpc, r, bmpce_off,
+		e = bmpce_lookup_locked(b, r, bmpce_off,
 		    (i < npages) ? NULL :
 		    &r->biorq_bmap->bcm_fcmh->fcmh_waitq);
 
@@ -325,7 +325,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 		if (bkwdra && !bmpce_off)
 			break;
 	}
-	BMPC_ULOCK(bmpc);
+	BMAP_ULOCK(b);
 
 	psc_assert(psc_dynarray_len(&r->biorq_pages) == npages);
 
@@ -385,7 +385,6 @@ msl_biorq_del(struct bmpc_ioreq *r)
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 
 	BMAP_LOCK(b);
-	BMPC_LOCK(bmpc);
 
 	if (!(r->biorq_flags & BIORQ_PENDING)) {
 		PSC_SPLAY_XREMOVE(bmpc_biorq_tree,
@@ -403,8 +402,6 @@ msl_biorq_del(struct bmpc_ioreq *r)
 			bmap_op_done_type(b, BMAP_OPCNT_FLUSHQ);
 		}
 	}
-
-	BMPC_ULOCK(bmpc);
 
 	DEBUG_BMAP(PLL_INFO, b, "remove biorq=%p nitems_pndg(%d)",
 		   r, pll_nitems(&bmpc->bmpc_pndg_biorqs));
@@ -436,7 +433,7 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 	struct bmap_pagecache_entry *e;
 	int i;
 
-	BMPC_LOCK(bmpc);
+	BMAP_LOCK(r->biorq_bmap);
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 		BMPCE_LOCK(e);
 		if (biorq_is_my_bmpce(r, e)) {
@@ -446,7 +443,7 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 		}
 		bmpce_release_locked(e, bmpc);
 	}
-	BMPC_ULOCK(bmpc);
+	BMAP_ULOCK(r->biorq_bmap);
 }
 
 void
@@ -1018,12 +1015,12 @@ msl_readahead_cb(struct pscrpc_request *rq, int rc,
 
 		msl_bmpce_complete_biorq(e, rc);
 
-		BMPC_LOCK(bmpc);
+		BMAP_LOCK(b);
 		pll_remove(&bmpc->bmpc_pndg_ra, e);
 
 		BMPCE_LOCK(e);
 		bmpce_release_locked(e, bmpc);
-		BMPC_ULOCK(bmpc);
+
 		bmap_op_done_type(b, BMAP_OPCNT_READA);
 	}
 
@@ -1300,7 +1297,6 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 
 	BMAP_LOCK(b);
-	BMPC_LOCK(bmpc);
 	/*
 	 * This req must already be attached to the cache.
 	 * The BIORQ_FLUSHRDY bit prevents the request from being
@@ -1332,7 +1328,6 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 
 	DEBUG_BMAP(PLL_DIAG, b, "biorq=%p list_empty=%d",
 	    r, pll_empty(&bmpc->bmpc_pndg_biorqs));
-	BMPC_ULOCK(bmpc);
 	BMAP_ULOCK(b);
 }
 
@@ -1425,10 +1420,10 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 	PSCFREE(bmpces_cbarg);
 
 	/* Deal with errored read ahead bmpce's. */
-	BMPC_LOCK(bmap_2_bmpc(b));
 	for (i = 0; i < nbmpce; i++) {
 		e = bmpces[i];
 
+		BMAP_LOCK(b);
 		BMPCE_LOCK(e);
 		if (added)
 			pll_remove(&bmap_2_bmpc(b)->bmpc_pndg_ra, e);
@@ -1439,7 +1434,6 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 
 		bmap_op_done_type(b, BMAP_OPCNT_READA);
 	}
-	BMPC_ULOCK(bmap_2_bmpc(b));
 
 	if (rq) {
 		DEBUG_REQ(PLL_ERROR, rq, "req failed");
@@ -1581,7 +1575,6 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	 * Two pass page cleanup.  First mark as EIO and wake up our
 	 * waiters.  Then remove the pages from the bmpc.
 	 */
-	BMPC_LOCK(bmap_2_bmpc(r->biorq_bmap));
 	for (i = 0; i < npages; i++) {
 		e = psc_dynarray_getpos(&r->biorq_pages, i + startpage);
 		/* Didn't get far enough for the waitq to be removed. */
@@ -1596,7 +1589,6 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 		 */
 		BMPCE_ULOCK(e);
 	}
-	BMPC_ULOCK(bmap_2_bmpc(r->biorq_bmap));
 
 	DEBUG_BIORQ(PLL_INFO, r, "rpc launch failed (rc=%d)", rc);
 	return (rc);

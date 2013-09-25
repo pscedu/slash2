@@ -352,7 +352,7 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
 void	 bmpc_global_init(void);
 void	 bmpc_freeall_locked(struct bmap_pagecache *);
 void	 bmpc_biorqs_fail(struct bmap_pagecache *, int);
-void	 bmpc_biorqs_destroy(struct bmap_pagecache *, int);
+void	 bmpc_biorqs_destroy(struct bmapc_memb *, int);
 
 struct bmpc_ioreq *
 	 bmpc_biorq_new(struct msl_fsrqinfo *, struct bmapc_memb *,
@@ -360,7 +360,7 @@ struct bmpc_ioreq *
 
 int	 bmpce_init(struct psc_poolmgr *, void *);
 struct bmap_pagecache_entry *
-	 bmpce_lookup_locked(struct bmap_pagecache *, struct bmpc_ioreq *,
+	 bmpce_lookup_locked(struct bmapc_memb *, struct bmpc_ioreq *,
 	    uint32_t, struct psc_waitq *);
 
 void	 bmpce_release_locked(struct bmap_pagecache_entry *,

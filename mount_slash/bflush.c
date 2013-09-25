@@ -277,14 +277,15 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 __static void
 bmap_flush_inflight_set(struct bmpc_ioreq *r)
 {
-	struct bmap_pagecache *bmpc;
 	struct timespec t;
 	int old = 0;
+	struct bmap_pagecache *bmpc;
+ 
+	bmpc = bmap_2_bmpc(r->biorq_bmap);
 
 	PFL_GETTIMESPEC(&t);
 
-	bmpc = bmap_2_bmpc(r->biorq_bmap);
-	BMPC_LOCK(bmpc);
+	BMAP_LOCK(r->biorq_bmap);
 	BIORQ_LOCK(r);
 	psc_assert(r->biorq_flags & BIORQ_SCHED);
 
@@ -310,7 +311,7 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r)
 	bmpc->bmpc_new_nbiorqs--;
 	pll_addtail(&bmpc->bmpc_pndg_biorqs, r);
 	BIORQ_ULOCK(r);
-	BMPC_ULOCK(bmpc);
+	BMAP_ULOCK(r->biorq_bmap);
 }
 
 /**
@@ -380,13 +381,15 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 	if (r->biorq_flags & BIORQ_PENDING) {
 		r->biorq_flags &= ~BIORQ_PENDING;
 		BIORQ_ULOCK(r);
-		pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 
-		BMPC_LOCK(bmpc);
+		BMAP_LOCK(r->biorq_bmap);
+
+		pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 		PSC_SPLAY_XINSERT(bmpc_biorq_tree,
 		    &bmpc->bmpc_new_biorqs, r);
 		bmpc->bmpc_new_nbiorqs++;
-		BMPC_ULOCK(bmpc);
+
+		BMAP_ULOCK(r->biorq_bmap);
 
 		msl_bmap_lease_tryreassign(r->biorq_bmap);
 	} else
@@ -571,7 +574,6 @@ bmap_flushable(struct bmapc_memb *b)
 
 	bmpc = bmap_2_bmpc(b);
 
-	BMPC_LOCK(bmpc);
 	for (r = SPLAY_MIN(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs); r;
 	    r = tmp) {
 		tmp = SPLAY_NEXT(bmpc_biorq_tree,
@@ -597,7 +599,6 @@ bmap_flushable(struct bmapc_memb *b)
 		flush = 1;
 		break;
 	}
-	BMPC_ULOCK(bmpc);
 	return (flush);
 }
 
@@ -1102,16 +1103,12 @@ bmap_flush(void)
 		 */
 		BMAP_LOCK(b);
 		if (b->bcm_flags & BMAP_CLI_LEASEFAILED) {
-			BMAP_ULOCK(b);
-
-			bmpc_biorqs_destroy(bmpc, bmap_2_bci(b)->bci_error);
+			bmpc_biorqs_destroy(b, bmap_2_bci(b)->bci_error);
 			continue;
 		}
-		BMAP_ULOCK(b);
 
 		DEBUG_BMAP(PLL_DIAG, b, "try flush");
 
-		BMPC_LOCK(bmpc);
 		for (r = SPLAY_MIN(bmpc_biorq_tree,
 		    &bmpc->bmpc_new_biorqs); r; r = tmp) {
 			tmp = SPLAY_NEXT(bmpc_biorq_tree,
@@ -1142,7 +1139,7 @@ bmap_flush(void)
 			DEBUG_BIORQ(PLL_DEBUG, r, "flushable");
 			psc_dynarray_add(&reqs, r);
 		}
-		BMPC_ULOCK(bmpc);
+		BMAP_ULOCK(b);
 
 		j = 0;
 		while (j < psc_dynarray_len(&reqs) &&
