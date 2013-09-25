@@ -160,22 +160,6 @@ _bmap_flushq_wake(const struct pfl_callerinfo *pci, int mode)
 	psclog_diag("mode=%x wake=%d flags=%x", mode, wake, tmp);
 }
 
-#define bmap_flush_rpccnt_dec(m)					\
-	_bmap_flush_rpccnt_dec(PFL_CALLERINFOSS(SLSS_BMAP), (m))
-
-__static void
-_bmap_flush_rpccnt_dec(const struct pfl_callerinfo *pci,
-    struct sl_resm *m)
-{
-	struct resm_cli_info *rmci;
-
-	rmci = resm2rmci(m);
-	psc_assert(psc_atomic32_read(&rmci->rmci_infl_rpcs) > 0);
-	if (atomic_dec_return(&rmci->rmci_infl_rpcs) <
-	    MAX_OUTSTANDING_RPCS)
-		_bmap_flushq_wake(pci, BMAPFLSH_RPCWAIT);
-}
-
 __static int
 bmap_flush_rpc_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
