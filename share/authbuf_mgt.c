@@ -37,7 +37,6 @@
 #include "pfl/cdefs.h"
 #include "pfl/stat.h"
 #include "psc_util/atomic.h"
-#include "psc_util/base64.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 #include "psc_util/random.h"
@@ -51,7 +50,6 @@
 psc_atomic64_t	sl_authbuf_nonce = PSC_ATOMIC64_INIT(0);
 unsigned char	sl_authbuf_key[AUTHBUF_KEYSIZE];
 gcry_md_hd_t	sl_authbuf_hd;
-int		sl_authbuf_alglen;
 
 /*
  * authbuf_readkeyfile - Read the contents of a secret key file into
@@ -64,6 +62,9 @@ authbuf_readkeyfile(void)
 	gcry_error_t gerr;
 	struct stat stb;
 	int alg, fd;
+
+	psc_assert(gcry_md_get_algo_dlen(GCRY_MD_SHA256) ==
+	    AUTHBUF_ALGLEN);
 
 	xmkfn(keyfn, "%s/%s", sl_datadir, SL_FN_AUTHBUFKEY);
 	if ((fd = open(keyfn, O_RDONLY)) == -1)
@@ -82,13 +83,6 @@ authbuf_readkeyfile(void)
 		psc_fatalx("gcry_md_open: %d", gerr);
 	gcry_md_write(sl_authbuf_hd, sl_authbuf_key,
 	    sizeof(sl_authbuf_key));
-
-	/* base64 is len*4/3 + 1 for integer truncation + 1 for NUL byte */
-	sl_authbuf_alglen = gcry_md_get_algo_dlen(alg);
-	if (sl_authbuf_alglen * 4 / 3 + 2 >= AUTHBUF_REPRLEN)
-		psc_fatal("bad alg/base64 size: alg=%d need=%d want=%d",
-		    sl_authbuf_alglen, sl_authbuf_alglen * 4 / 3 + 2,
-		    AUTHBUF_REPRLEN);
 
 	psc_atomic64_set(&sl_authbuf_nonce, psc_random64());
 }

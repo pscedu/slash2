@@ -312,7 +312,7 @@ int	 slrpc_bulkserver(struct pscrpc_request *, int, int, struct iovec *, int);
 struct pscrpc_msg;
 
 void	 slrpc_bulk_sign(void *, struct pscrpc_msg *, struct iovec *, int);
-int	 slrpc_bulk_check(void *, struct pscrpc_msg *, struct iovec *, int);
+int	 slrpc_bulk_check(const void *, struct pscrpc_msg *, struct iovec *, int);
 
 extern struct psc_dynarray	 sl_lnet_prids;
 extern struct psc_lockedlist	 sl_clients;

@@ -235,7 +235,6 @@ struct srt_ctlsetopt {
  * end on 64-bit boundaries.
  */
 
-#define AUTHBUF_REPRLEN		45		/* strlen(base64(SHA256(secret)) + NUL */
 #define AUTHBUF_MAGIC		UINT64_C(0x4321432143214321)
 
 struct srt_authbuf_secret {
@@ -250,8 +249,8 @@ struct srt_authbuf_secret {
 /* this is appended after every RPC message */
 struct srt_authbuf_footer {
 	struct srt_authbuf_secret saf_secret;
-	char			saf_hash[AUTHBUF_REPRLEN];
-	char			saf__pad[PSC_ALIGN(AUTHBUF_REPRLEN, 8) - AUTHBUF_REPRLEN];
+	char			saf_hash[AUTHBUF_ALGLEN];
+	char			saf_bulkhash[AUTHBUF_ALGLEN];
 } __packed;
 
 struct srt_bmapdesc {
@@ -873,7 +872,7 @@ struct srm_readdir_rep {
 	uint32_t		eof:1;		/* #dirents returned */
 	uint32_t		num:31;		/* #dirents returned */
 	 int32_t		rc;
-	unsigned char		ents[848];
+	unsigned char		ents[832];
 /*
  * XXX accompanied bulk data is (but should not be) in fuse dirent format
  *	and must be 64-bit aligned if it cannot fit in `buf'.

@@ -43,8 +43,9 @@
 #include "psc_util/pool.h"
 #include "psc_util/waitq.h"
 
-#include "cache_params.h"
 #include "bmap.h"
+#include "cache_params.h"
+#include "slconn.h"
 
 struct msl_fhent;
 struct msl_fsrqinfo;
@@ -53,7 +54,7 @@ struct msl_fsrqinfo;
 #define BMPC_BLKSZ		BMPC_BUFSZ
 #define BMPC_BUFMASK		(BMPC_BLKSZ - 1)
 #define BMPC_IOMAXBLKS		64
-#define BMPC_MAXBUFSRPC		(1024 * 1024 / BMPC_BUFSZ)	/* same as LNET_MTU / BMPC_BUFSZ */
+#define BMPC_MAXBUFSRPC		(LNET_MTU / BMPC_BUFSZ)
 
 /* plus one because the offset in the first request might not be page aligned */
 #define BMPC_COALESCE_MAX_IOV	(BMPC_MAXBUFSRPC + 1)

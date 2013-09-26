@@ -31,11 +31,9 @@
  */
 
 #include <gcrypt.h>
-#include <string.h>
 
 #include "pfl/rpc.h"
 #include "psc_util/atomic.h"
-#include "psc_util/base64.h"
 #include "psc_util/log.h"
 
 #include "lnet/lib-lnet.h"
@@ -100,19 +98,14 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 
 	gcry_md_write(hd, &saf->saf_secret, sizeof(saf->saf_secret));
 
-	psc_base64_encode(gcry_md_read(hd, 0), saf->saf_hash,
-	    sl_authbuf_alglen);
+	memcpy(saf->saf_hash, gcry_md_read(hd, 0), AUTHBUF_ALGLEN);
 
 	gcry_md_close(hd);
 
 	bd = rq->rq_bulk;
-	if (bd && 0) {
-		psc_assert(bd->bd_iov_count > 1);
-		slrpc_bulk_sign(bd->bd_iov[
-		    bd->bd_iov_count - 1].iov_base, m,
-		    bd->bd_iov, bd->bd_iov_count - 1);
-		PSCFREE(bd->bd_iov[bd->bd_iov_count - 1].iov_base);
-	}
+	if (bd)
+		slrpc_bulk_sign(saf->saf_bulkhash, m, bd->bd_iov,
+		    bd->bd_iov_count);
 }
 
 /**
@@ -123,11 +116,11 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 int
 authbuf_check(struct pscrpc_request *rq, int msgtype)
 {
-	char buf[AUTHBUF_REPRLEN], ebuf[BUFSIZ];
 	lnet_process_id_t self_prid, peer_prid;
 	struct srt_authbuf_footer *saf;
 	struct pscrpc_bulk_desc *bd;
 	struct pscrpc_msg *m;
+	char ebuf[BUFSIZ];
 	gcry_error_t gerr;
 	gcry_md_hd_t hd;
 	uint32_t i;
@@ -172,23 +165,20 @@ authbuf_check(struct pscrpc_request *rq, int msgtype)
 
 	gcry_md_write(hd, &saf->saf_secret, sizeof(saf->saf_secret));
 
-	psc_base64_encode(gcry_md_read(hd, 0), buf, sl_authbuf_alglen);
-	gcry_md_close(hd);
-
-	if (strcmp(buf, saf->saf_hash)) {
+	if (memcmp(gcry_md_read(hd, 0), saf->saf_hash, AUTHBUF_ALGLEN)) {
 		psc_fatalx("authbuf did not hash correctly -- "
 		    "ensure key files are synced");
-		return (SLERR_AUTHBUF_BADHASH);
+		rc = SLERR_AUTHBUF_BADHASH;
 	}
+	gcry_md_close(hd);
+	if (rc)
+		return (rc);
 
 	bd = rq->rq_bulk;
 	if (bd && msgtype == PSCRPC_MSG_REPLY &&
-	    (m->flags & MSG_ABORT_BULK) == 0 && 0) {
-		psc_assert(bd->bd_iov_count > 1);
-		rc = slrpc_bulk_check(bd->bd_iov[
-		    bd->bd_iov_count - 1].iov_base, m, bd->bd_iov,
-		    bd->bd_iov_count - 1);
-	}
+	    (m->flags & MSG_ABORT_BULK) == 0)
+		rc = slrpc_bulk_check(saf->saf_bulkhash, m, bd->bd_iov,
+		    bd->bd_iov_count);
 
 	return (rc);
 }
