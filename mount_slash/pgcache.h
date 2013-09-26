@@ -388,13 +388,13 @@ bmpc_init(struct bmap_pagecache *bmpc)
 	/* Double check the exclusivity of these lists... */
 
 	pll_init(&bmpc->bmpc_lru, struct bmap_pagecache_entry,
-	    bmpce_lentry, &bmpc->bmpc_lock);
+	    bmpce_lentry, NULL);
 
 	pll_init(&bmpc->bmpc_pndg_ra, struct bmap_pagecache_entry,
-	    bmpce_lentry, &bmpc->bmpc_lock);
+	    bmpce_lentry, NULL);
 
 	pll_init(&bmpc->bmpc_pndg_biorqs, struct bmpc_ioreq,
-	    biorq_lentry, &bmpc->bmpc_lock);
+	    biorq_lentry, NULL);
 
 	SPLAY_INIT(&bmpc->bmpc_new_biorqs);
 
