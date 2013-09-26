@@ -65,10 +65,11 @@ bim_updateseq(uint64_t seq, int piggyback)
 		invalid = 1;
 		goto done;
 	}
- 	if (seq == bimSeq.bim_minseq)
+	if (seq == bimSeq.bim_minseq)
 		goto done;
 
-	if ((seq > bimSeq.bim_minseq) || (bimSeq.bim_minseq == BMAPSEQ_ANY)) {
+	if (seq > bimSeq.bim_minseq ||
+	    bimSeq.bim_minseq == BMAPSEQ_ANY) {
 		bimSeq.bim_minseq = seq;
 		OPSTAT_ASSIGN(SLI_OPST_MIN_SEQNO, seq);
 		psclog_info("update min seq to %"PRId64, seq);
@@ -78,13 +79,14 @@ bim_updateseq(uint64_t seq, int piggyback)
 
 	if (seq >= bimSeq.bim_minseq - BMAP_SEQLOG_FACTOR) {
 		/*
-		 * This allows newly-acquired leases to be accepted after
-		 * a MDS restart.  Otherwise, the client would have to
-		 * keep trying with a new lease for a while depending on 
-		 * the size of the gap.
+		 * This allows newly-acquired leases to be accepted
+		 * after a MDS restart.  Otherwise, the client would
+		 * have to keep trying with a new lease for a while
+		 * depending on the size of the gap.
 		 *
-		 * To deal out-of-order RPCs, we may need to number our RPCs.
-		 * It is probably not worth the effort in our use cases.
+		 * To deal out-of-order RPCs, we may need to number our
+		 * RPCs.  It is probably not worth the effort in our use
+		 *  cases.
 		 */
 		psclog_warnx("seq reduced from %"PRId64" to %"PRId64,
 		    bimSeq.bim_minseq, seq);
@@ -94,19 +96,18 @@ bim_updateseq(uint64_t seq, int piggyback)
 	}
 
 	/*
-	 * This should never happen. Complain and ask 
+	 * This should never happen. Complain and ask
 	 * our caller to retry again.
 	 */
 	invalid = 1;
 
  done:
-
 	freelock(&bimSeq.bim_lock);
 
 	if (invalid)
 		psclog_warnx("%s seq %"PRId64" is invalid "
 		    "(bim_minseq=%"PRId64")",
-		    piggyback ? "Piggybacked" : "Requested", 
+		    piggyback ? "Piggybacked" : "Requested",
 		    seq, bimSeq.bim_minseq);
 	return (invalid);
 }
@@ -120,6 +121,7 @@ bim_getcurseq(void)
 	struct timespec crtime;
 
 	OPSTAT_INCR(SLI_OPST_GET_CUR_SEQ);
+
  retry:
 	PFL_GETTIMESPEC(&crtime);
 	timespecsub(&crtime, &bim_timeo, &crtime);
@@ -144,7 +146,8 @@ bim_getcurseq(void)
 		if (rc)
 			goto out;
 
-		rc = SL_RSX_NEWREQ(csvc, SRMT_GETBMAPMINSEQ, rq, mq, mp);
+		rc = SL_RSX_NEWREQ(csvc, SRMT_GETBMAPMINSEQ, rq, mq,
+		    mp);
 		if (rc)
 			goto out;
 
@@ -169,7 +172,8 @@ bim_getcurseq(void)
 		bimSeq.bim_flags &= ~BIM_RETRIEVE_SEQ;
 		psc_waitq_wakeall(&bimSeq.bim_waitq);
 		if (rc) {
-			psclog_warnx("failed to get bmap seqno rc=%d", rc);
+			psclog_warnx("failed to get bmap seqno rc=%d",
+			    rc);
 			freelock(&bimSeq.bim_lock);
 			sleep(1);
 			goto retry;
@@ -396,8 +400,9 @@ slibmaprlsthr_main(struct psc_thread *thr)
 			i = 0;
 			while (nrls < MAX_BMAP_RELEASE &&
 			    (brls = pll_get(&bii->bii_rls))) {
-				memcpy(&brr->sbd[nrls++], &brls->bir_sbd,
-				    sizeof(struct srt_bmapdesc));
+				memcpy(&brr->sbd[nrls++],
+				    &brls->bir_sbd, sizeof(struct
+				    srt_bmapdesc));
 				psc_pool_return(bmap_rls_pool, brls);
 				i++;
 			}
@@ -431,13 +436,15 @@ slibmaprlsthr_main(struct psc_thread *thr)
 		 */
 		rc = sli_rmi_getcsvc(&csvc);
 		if (rc) {
-			psclog_errorx("failed to get MDS import rc=%d", rc);
+			psclog_errorx("failed to get MDS import rc=%d",
+			    rc);
 			goto end;
 		}
 
 		rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq, mq, mp);
 		if (rc) {
-			psclog_errorx("failed to generate new req rc=%d", rc);
+			psclog_errorx("failed to generate new req "
+			    "rc=%d", rc);
 			sl_csvc_decref(csvc);
 			goto end;
 		}
@@ -445,7 +452,8 @@ slibmaprlsthr_main(struct psc_thread *thr)
 		memcpy(mq, brr, sizeof(*mq));
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc)
-			psclog_errorx("RELEASEBMAP req failed rc=%d", rc);
+			psclog_errorx("RELEASEBMAP req failed rc=%d",
+			    rc);
 
 		pscrpc_req_finished(rq);
 		sl_csvc_decref(csvc);
