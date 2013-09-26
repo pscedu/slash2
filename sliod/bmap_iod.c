@@ -80,13 +80,13 @@ bim_updateseq(uint64_t seq, int piggyback)
 	if (seq >= bimSeq.bim_minseq - BMAP_SEQLOG_FACTOR) {
 		/*
 		 * This allows newly-acquired leases to be accepted
-		 * after a MDS restart.  Otherwise, the client would
+		 * after an MDS restart.  Otherwise, the client would
 		 * have to keep trying with a new lease for a while
 		 * depending on the size of the gap.
 		 *
 		 * To deal out-of-order RPCs, we may need to number our
 		 * RPCs.  It is probably not worth the effort in our use
-		 *  cases.
+		 * cases.
 		 */
 		psclog_warnx("seq reduced from %"PRId64" to %"PRId64,
 		    bimSeq.bim_minseq, seq);
@@ -96,8 +96,8 @@ bim_updateseq(uint64_t seq, int piggyback)
 	}
 
 	/*
-	 * This should never happen. Complain and ask
-	 * our caller to retry again.
+	 * This should never happen.  Complain and ask our caller to
+	 * retry again.
 	 */
 	invalid = 1;
 
