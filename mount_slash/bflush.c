@@ -1140,7 +1140,6 @@ bmap_flush(void)
 		j = 0;
 		while (j < psc_dynarray_len(&reqs) &&
 		    (bwc = bmap_flush_trycoalesce(&reqs, &j))) {
-			pll_nitems(&bwc->bwc_pll);
 			bmap_flush_coalesce_map(bwc);
 			bmap_flush_send_rpcs(bwc);
 			bmap_flush_outstanding_rpcwait(m);
