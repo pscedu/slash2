@@ -341,7 +341,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			continue;
 		if (rw == SL_READ)
 			slvr_rio_done(slvr_ref[i]);
-		else 
+		else
 			slvr_wio_done(slvr_ref[i]);
 	}
 	if (rc)
