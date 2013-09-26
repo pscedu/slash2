@@ -499,6 +499,7 @@ msctlmsg_biorq_send(int fd, struct psc_ctlmsghdr *mh,
 {
 	sl_ios_id_t id = r->biorq_last_sliod;
 
+	BIORQ_LOCK(r);
 	memset(msr, 0, sizeof(*msr));
 	msr->msr_fid = r->biorq_bmap->bcm_fcmh->fcmh_sstb.sst_fid;
 	msr->msr_bno = r->biorq_bmap->bcm_bmapno;
@@ -512,6 +513,8 @@ msctlmsg_biorq_send(int fd, struct psc_ctlmsghdr *mh,
 	msr->msr_expire.tv_sec = r->biorq_expire.tv_sec;
 	msr->msr_expire.tv_nsec = r->biorq_expire.tv_nsec;
 	msr->msr_npages = psc_dynarray_len(&r->biorq_pages);
+	BIORQ_ULOCK(r);
+
 	return (psc_ctlmsg_sendv(fd, mh, msr));
 }
 
@@ -520,7 +523,6 @@ msctlrep_getbiorq(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct msctlmsg_biorq *msr = m;
 	struct bmap_pagecache *bmpc;
-	struct psc_lockedlist *pll;
 	struct psc_hashbkt *hb;
 	struct fidc_membh *f;
 	struct bmpc_ioreq *r;
@@ -532,33 +534,29 @@ msctlrep_getbiorq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, f, hb) {
 			FCMH_LOCK(f);
 			SPLAY_FOREACH(b, bmap_cache, &f->fcmh_bmaptree) {
-				bmpc = bmap_2_bmpc(b);
 
-				pll = &bmpc->bmpc_pndg_biorqs;
-				PLL_LOCK(pll);
-				PLL_FOREACH(r, pll) {
-					BIORQ_LOCK(r);
+				BMAP_LOCK(b);
+
+				bmpc = bmap_2_bmpc(b);
+				PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs) {
 					rc = msctlmsg_biorq_send(fd, mh,
 					    msr, r);
-					BIORQ_ULOCK(r);
 					if (!rc)
 						break;
 				}
 				if (!rc) {
-					PLL_ULOCK(pll);
+					BMAP_ULOCK(b);
 					break;
 				}
 
 				SPLAY_FOREACH(r, bmpc_biorq_tree,
 				    &bmpc->bmpc_new_biorqs) {
-					BIORQ_LOCK(r);
 					rc = msctlmsg_biorq_send(fd, mh,
 					    msr, r);
-					BIORQ_ULOCK(r);
 					if (!rc)
 						break;
 				}
-				BMPC_ULOCK(bmpc);
+				BMAP_ULOCK(b);
 				if (!rc)
 					break;
 			}
