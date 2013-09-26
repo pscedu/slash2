@@ -1067,8 +1067,8 @@ slrpc_bulk_sign(void *buf, struct pscrpc_msg *m,
 		psc_fatalx("gcry_md_copy: %s [%d]", ebuf, gerr);
 	}
 
-//	saf = pscrpc_msg_buf(m, m->bufcount - 1, sizeof(*saf));
-//	gcry_md_write(hd, saf, sizeof(*saf));
+	saf = pscrpc_msg_buf(m, m->bufcount - 1, sizeof(*saf));
+	gcry_md_write(hd, saf, sizeof(*saf));
 
 	for (i = 0; i < n; i++)
 		gcry_md_write(hd, iov[i].iov_base, iov[i].iov_len);
