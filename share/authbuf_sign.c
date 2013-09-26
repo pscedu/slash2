@@ -175,7 +175,8 @@ authbuf_check(struct pscrpc_request *rq, int msgtype)
 		return (rc);
 
 	bd = rq->rq_bulk;
-	if (bd && msgtype == PSCRPC_MSG_REPLY &&
+	if (bd && bd->bd_type == BULK_PUT_SINK &&
+	    msgtype == PSCRPC_MSG_REPLY &&
 	    (m->flags & MSG_ABORT_BULK) == 0)
 		rc = slrpc_bulk_check(saf->saf_bulkhash, m, bd->bd_iov,
 		    bd->bd_iov_count);
