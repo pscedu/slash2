@@ -260,7 +260,6 @@ struct bmap_pagecache {
 	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* chain pending I/O requests */
 	struct psc_lockedlist		 bmpc_pndg_ra;		/* RA bmpce's pending comp */
 	int				 bmpc_pndgwr;		/* # pending wr req */
-	psc_spinlock_t			 bmpc_lock;		/* serialize access */
 	struct psclist_head		 bmpc_lentry;		/* chain to global LRU lc */
 };
 
@@ -372,7 +371,6 @@ bmpc_init(struct bmap_pagecache *bmpc)
 {
 	memset(bmpc, 0, sizeof(*bmpc));
 	INIT_PSC_LISTENTRY(&bmpc->bmpc_lentry);
-	INIT_SPINLOCK(&bmpc->bmpc_lock);
 
 	/* Double check the exclusivity of these lists... */
 
