@@ -264,25 +264,14 @@ struct bmap_pagecache {
 	struct psclist_head		 bmpc_lentry;		/* chain to global LRU lc */
 };
 
-/*
- * The following four macros are equivalent to PLL_xxx counterparts
- * because of the way we initialize the locked lists in bmap_pagecache.
- */
-#define BMPC_LOCK(b)		spinlock(&(b)->bmpc_lock)
-#define BMPC_ULOCK(b)		freelock(&(b)->bmpc_lock)
-#define BMPC_RLOCK(b)		reqlock(&(b)->bmpc_lock)
-#define BMPC_URLOCK(b, lk)	ureqlock(&(b)->bmpc_lock, (lk))
-
 static __inline int
 bmpc_queued_ios(struct bmap_pagecache *bmpc)
 {
-	int locked, rc;
+	int rc;
 
-	locked = BMPC_RLOCK(bmpc);
 	rc = pll_nitems(&bmpc->bmpc_pndg_biorqs) +
 	    pll_nitems(&bmpc->bmpc_pndg_ra) +
 	    bmpc->bmpc_new_nbiorqs;
-	BMPC_URLOCK(bmpc, locked);
 	return (rc);
 }
 
