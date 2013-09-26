@@ -1109,7 +1109,6 @@ mds_send_batch_update(uint64_t batchno)
 		mq->count = i;
 		mq->size = iov.iov_len;
 		mq->siteid = nodeSite->site_id;
-		psc_crc64_calc(&mq->crc, iov.iov_base, iov.iov_len);
 
 		slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMM_BULK_PORTAL,
 		    &iov, 1);
@@ -1500,7 +1499,6 @@ mds_send_batch_reclaim(uint64_t batchno)
 		mq->xid = xid;
 		mq->size = iov.iov_len;
 		mq->count = nentry;
-		psc_crc64_calc(&mq->crc, iov.iov_base, iov.iov_len);
 
 		slrpc_bulkclient(rq, BULK_GET_SOURCE, SRIM_BULK_PORTAL,
 		    &iov, 1);

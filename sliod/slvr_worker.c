@@ -89,8 +89,6 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 		return (rc);
 	}
 
-	PSC_CRC64_INIT(&mq->crc);
-
 	mq->ncrc_updates = psc_dynarray_len(bcrs);
 	rq->rq_interpret_reply = slvr_nbreqset_cb;
 	rq->rq_async_args.pointer_arg[0] = (void *)bcrs;
@@ -120,15 +118,11 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 		len += iovs[i].iov_len = sizeof(struct srm_bmap_crcup) +
 		    (mq->ncrcs_per_update[i] *
 		     sizeof(struct srt_bmap_crcwire));
-
-		psc_crc64_add(&mq->crc, iovs[i].iov_base, iovs[i].iov_len);
 	}
 	psc_assert(len <= LNET_MTU);
 
-	PSC_CRC64_FIN(&mq->crc);
-
-	rc = slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMI_BULK_PORTAL, iovs,
-	    mq->ncrc_updates);
+	rc = slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMI_BULK_PORTAL,
+	    iovs, mq->ncrc_updates);
 	PSCFREE(iovs);
 
 	psc_assert(rc == 0);

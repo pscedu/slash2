@@ -119,7 +119,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 {
 	int i, rc = 0, len;
 	char fidfn[PATH_MAX];
-	uint64_t crc, xid, batchno;
+	uint64_t xid, batchno;
 	struct srt_reclaim_entry *entryp;
 	struct srm_reclaim_req *mq;
 	struct srm_reclaim_rep *mp;
@@ -156,10 +156,6 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	    &iov, 1);
 	if (rc)
 		PFL_GOTOERR(out, rc);
-
-	psc_crc64_calc(&crc, iov.iov_base, iov.iov_len);
-	if (crc != mq->crc)
-		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
 	entryp = iov.iov_base;
 	for (i = 0; i < mq->count; i++) {

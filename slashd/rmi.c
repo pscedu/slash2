@@ -109,7 +109,6 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 	struct srm_bmap_crcwrt_rep *mp;
 	struct iovec *iovs;
 	size_t len = 0;
-	uint64_t crc;
 	uint32_t i;
 	off_t off;
 	void *buf;
@@ -144,13 +143,6 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 	if (mp->rc) {
 		psclog_errorx("slrpc_bulkserver() rc=%d", mp->rc);
 		goto out;
-	}
-
-	/* Check the CRC of the CRCs! */
-	psc_crc64_calc(&crc, buf, len);
-	if (crc != mq->crc) {
-		psclog_errorx("CRC verification of crcwrt payload failed");
-		PFL_GOTOERR(out, mp->rc = -SLERR_BADCRC);
 	}
 
 	for (i = 0, off = 0; i < mq->ncrc_updates; i++) {

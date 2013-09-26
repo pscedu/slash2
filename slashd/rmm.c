@@ -101,7 +101,6 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 	struct sl_site *site;
 	struct iovec iov;
 	int i, len, count;
-	uint64_t crc;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -118,10 +117,6 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 	    &iov, 1);
 	if (mp->rc)
 		goto out;
-
-	psc_crc64_calc(&crc, iov.iov_base, iov.iov_len);
-	if (crc != mq->crc)
-		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
 	/* Search for the peer information by the given site ID. */
 	site = libsl_siteid2site(mq->siteid);

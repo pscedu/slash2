@@ -359,7 +359,6 @@ struct srt_creds {
 /* namespace update */
 struct srm_update_req {
 	uint64_t		seqno;
-	uint64_t		crc;		/* CRC of the bulk data */
 	 int32_t		size;		/* size of the bulk data to follow */
 	 int16_t		count;		/* # of entries to follow */
 	 int16_t		siteid;		/* site ID for tracking purpose */
@@ -535,7 +534,6 @@ struct srm_bmap_crcup {				/* a batch of CRC updates for the same file */
 #define MAX_BMAP_NCRC_UPDATES	64		/* max number of CRC update batches in a RPC */
 
 struct srm_bmap_crcwrt_req {
-	uint64_t		crc;		/* yes, a CRC of the CRC's */
 	uint8_t			ncrcs_per_update[MAX_BMAP_NCRC_UPDATES];
 	uint32_t		ncrc_updates;
 	uint32_t		flags;
@@ -606,7 +604,6 @@ struct srt_preclaim_ent {
 struct srm_reclaim_req {
 	uint64_t		batchno;
 	uint64_t		xid;
-	uint64_t		crc;		/* CRC of the bulk data */
 	 int32_t		size;		/* size of the bulk data to follow */
 	 int16_t		count;		/* # of entries to follow */
 	 int16_t		ios;		/* ID of the IOS */
