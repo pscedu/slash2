@@ -122,42 +122,19 @@ msl_fd_should_retry(struct msl_fhent *mfh, int rc)
 }
 
 void
-_bmap_flushq_wake(const struct pfl_callerinfo *pci, int mode)
+_bmap_flushq_wake(const struct pfl_callerinfo *pci, int reason) 
 {
-	int wake = 0, tmp;
+	int wake = 0;
 
 	spinlock(&bmapFlushLock);
-
-	switch (mode) {
-	case BMAPFLSH_EXPIRE:
-		if (!(bmapFlushTimeoFlags & BMAPFLSH_RPCWAIT)) {
-			bmapFlushTimeoFlags |= BMAPFLSH_EXPIRE;
-			wake = 1;
-		}
-		break;
-
-	case BMAPFLSH_RPCWAIT:
-		if (bmapFlushTimeoFlags & BMAPFLSH_RPCWAIT) {
-			bmapFlushTimeoFlags &= ~BMAPFLSH_RPCWAIT;
-			wake = 1;
-		}
-		break;
-
-	case BMAPFLSH_TIMEOA:
-		if (!(bmapFlushTimeoFlags & BMAPFLSH_RPCWAIT))
-			wake = 1;
-		break;
-
-	default:
-		psc_fatalx("invalid mode %d", mode);
-	}
-	tmp = bmapFlushTimeoFlags;
-	if (wake)
+	if (bmapFlushTimeoFlags & BMAPFLSH_RPCWAIT) {
+		wake = 1;
 		psc_waitq_wakeall(&bmapFlushWaitq);
+	}
 
 	freelock(&bmapFlushLock);
 
-	psclog_diag("mode=%x wake=%d flags=%x", mode, wake, tmp);
+	psclog_diag("wakeup flusher: reason=%x wake=%d.", reason, wake);
 }
 
 __static int
@@ -979,6 +956,7 @@ bmap_flush_outstanding_rpcwait(struct sl_resm *m)
 		    &bmapFlushWaitSecs);
 		spinlock(&bmapFlushLock);
 	}
+	bmapFlushTimeoFlags &= ~BMAPFLSH_RPCWAIT;
 	freelock(&bmapFlushLock);
 }
 
@@ -1141,8 +1119,8 @@ bmap_flush(void)
 		while (j < psc_dynarray_len(&reqs) &&
 		    (bwc = bmap_flush_trycoalesce(&reqs, &j))) {
 			bmap_flush_coalesce_map(bwc);
-			bmap_flush_send_rpcs(bwc);
 			bmap_flush_outstanding_rpcwait(m);
+			bmap_flush_send_rpcs(bwc);
 		}
 		psc_dynarray_reset(&reqs);
 	}
@@ -1154,43 +1132,37 @@ bmap_flush(void)
 void
 msbmapflushthr_main(struct psc_thread *thr)
 {
-	struct timespec flush, rpcwait, tmp1, tmp2;
-	int rc;
+	struct timespec work, wait, tmp1, tmp2;
 
 	while (pscthr_run(thr)) {
 		msbmflthr(pscthr_get())->mbft_failcnt = 1;
 
 		lc_peekheadwait(&bmapFlushQ);
 
-		PFL_GETTIMESPEC(&tmp1);
-		bmap_flush_outstanding_rpcwait(NULL);
-		PFL_GETTIMESPEC(&tmp2);
-		timespecsub(&tmp2, &tmp1, &rpcwait);
-
 		OPSTAT_INCR(SLC_OPST_BMAP_FLUSH);
 
 		PFL_GETTIMESPEC(&tmp1);
 		bmap_flush();
 		PFL_GETTIMESPEC(&tmp2);
-		timespecsub(&tmp2, &tmp1, &flush);
+		timespecsub(&tmp2, &tmp1, &work);
 
-		rc = 0;
+		PFL_GETTIMESPEC(&tmp1);
+
 		spinlock(&bmapFlushLock);
-		while (!rc && !bmapFlushTimeoFlags) {
-			rc = psc_waitq_waitrel_s(&bmapFlushWaitq,
-			    &bmapFlushLock, 1);
-			spinlock(&bmapFlushLock);
-		}
-		bmapFlushTimeoFlags = 0;
+		bmapFlushTimeoFlags |= BMAPFLSH_RPCWAIT;
+		psc_waitq_waitrel(&bmapFlushWaitq, 
+		    &bmapFlushLock, &bmapFlushWaitSecs);
+		spinlock(&bmapFlushLock);
+		bmapFlushTimeoFlags &= ~BMAPFLSH_RPCWAIT;
 		freelock(&bmapFlushLock);
 
-		psclogs_debug(SLSS_BMAP, "flush ("PSCPRI_TIMESPEC"), "
-		    "rpcwait ("PSCPRI_TIMESPEC"), "
-		    "bmapFlushTimeoFlags=%d, "
-		    "rc=%d",
-		    PSCPRI_TIMESPEC_ARGS(&flush),
-		    PSCPRI_TIMESPEC_ARGS(&rpcwait),
-		    bmapFlushTimeoFlags, rc);
+		PFL_GETTIMESPEC(&tmp2);
+		timespecsub(&tmp2, &tmp1, &wait);
+
+		psclogs_debug(SLSS_BMAP, "work time ("PSCPRI_TIMESPEC"),"
+		    "wait time ("PSCPRI_TIMESPEC")",
+		    PSCPRI_TIMESPEC_ARGS(&work),
+		    PSCPRI_TIMESPEC_ARGS(&wait));
 	}
 }
 

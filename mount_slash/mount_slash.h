@@ -252,8 +252,8 @@ void	 msbmapflushthr_spawn(void);
 void	 msctlthr_spawn(void);
 void	 mstimerthr_spawn(void);
 
-#define bmap_flushq_wake(mode)						\
-	_bmap_flushq_wake(PFL_CALLERINFOSS(SLSS_BMAP), (mode))
+#define bmap_flushq_wake(reason)						\
+	_bmap_flushq_wake(PFL_CALLERINFOSS(SLSS_BMAP), (reason))
 
 void	 _bmap_flushq_wake(const struct pfl_callerinfo *, int);
 void	  bmap_flush_resched(struct bmpc_ioreq *, int);
