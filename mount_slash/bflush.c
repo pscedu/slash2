@@ -173,8 +173,7 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 
 __static int
 bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
-    struct slashrpc_cservice *csvc, struct bmapc_memb *b,
-    struct pscrpc_request **rqp)
+    struct slashrpc_cservice *csvc, struct bmapc_memb *b)
 {
 	struct pscrpc_request *rq = NULL;
 	struct sl_resm *m;
@@ -217,7 +216,6 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	mq->offset = bwc->bwc_soff;
 	mq->size = bwc->bwc_size;
 	mq->op = SRMIOP_WR;
-	//XXX mq->wseqno = GETSEQNO;
 
 	DEBUG_REQ(PLL_INFO, rq, "off=%u sz=%u",
 	    mq->offset, mq->size);
@@ -230,14 +228,12 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	psclog_info("Send write RPC to %d: %d",
 	    m->resm_res_id, psc_atomic32_read(&rmci->rmci_infl_rpcs));
 
-	/* biorqs will be freed by the nbreqset callback msl_write_rpc_cb() */
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQS] = bwc;
 	if (pscrpc_nbreqset_add(pndgWrtReqs, rq)) {
 		psc_atomic32_dec(&rmci->rmci_infl_rpcs);
 		goto error;
 	}
 
-	*rqp = rq;
 	OPSTAT_INCR(SLC_OPST_SRMT_WRITE);
 	return (0);
 
@@ -374,7 +370,6 @@ __static void
 bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 {
 	struct slashrpc_cservice *csvc;
-	struct pscrpc_request *rq;
 	struct bmpc_ioreq *r;
 	struct bmapc_memb *b;
 	int rc;
@@ -399,7 +394,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	psclog_info("bwc cb arg (%p) size=%zu nbiorqs=%d",
 	    bwc, bwc->bwc_size, pll_nitems(&bwc->bwc_pll));
 
-	rc = bmap_flush_create_rpc(bwc, csvc, b, &rq);
+	rc = bmap_flush_create_rpc(bwc, csvc, b);
 	if (rc)
 		goto error;
 
@@ -1238,7 +1233,7 @@ msbmapflushthr_spawn(void)
 
 	pndgBmapRlsReqs = pscrpc_nbreqset_init(NULL, msl_bmap_release_cb);
 	pndgBmaplsReqs = pscrpc_nbreqset_init(NULL, NULL);
-	pndgWrtReqs = pscrpc_nbreqset_init(NULL, msl_write_rpc_cb);
+	pndgWrtReqs = pscrpc_nbreqset_init(NULL, NULL);
 
 	psc_waitq_init(&bmapFlushWaitq);
 

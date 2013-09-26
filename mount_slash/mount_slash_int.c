@@ -1049,12 +1049,6 @@ msl_readahead_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 }
 
 int
-msl_write_rpc_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
-{
-	return (0);
-}
-
-int
 msl_dio_cb(struct pscrpc_request *rq, int rc, struct pscrpc_async_args *args)
 {
 	//struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
