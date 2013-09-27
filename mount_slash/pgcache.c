@@ -245,9 +245,8 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	/* Add the biorq to the fsrq. */
 	msl_fsrqinfo_biorq_add(q, r, rqnum);
 
-	bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
-
 	BMAP_LOCK(b);
+	bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
 	if (b->bcm_flags & BMAP_DIO)
 		r->biorq_flags |= BIORQ_DIO;
 
