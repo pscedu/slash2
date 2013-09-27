@@ -389,7 +389,6 @@ msl_biorq_del(struct bmpc_ioreq *r)
 	if (!(r->biorq_flags & BIORQ_PENDING)) {
 		PSC_SPLAY_XREMOVE(bmpc_biorq_tree,
 		    &bmpc->bmpc_new_biorqs, r);
-		bmpc->bmpc_new_nbiorqs--;
 	} else {
 		pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 		r->biorq_flags &= ~BIORQ_PENDING;
@@ -1288,8 +1287,6 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 		 * writer must be present.
 		 */
 		psc_assert(bmpc->bmpc_pndgwr > 1);
-		psc_assert(pll_nitems(&bmpc->bmpc_pndg_biorqs) +
-		    bmpc->bmpc_new_nbiorqs > 1);
 	} else {
 		b->bcm_flags |= BMAP_DIRTY;
 		psc_assert(psclist_disjoint(&b->bcm_lentry));

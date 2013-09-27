@@ -257,23 +257,11 @@ struct bmap_pagecache {
 	 * facilitate write coalescing.
 	 */
 	struct bmpc_biorq_tree		 bmpc_new_biorqs;
-	int				 bmpc_new_nbiorqs;
 	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* chain pending I/O requests */
 	struct psc_lockedlist		 bmpc_pndg_ra;		/* RA bmpce's pending comp */
 	int				 bmpc_pndgwr;		/* # pending wr req */
 	struct psclist_head		 bmpc_lentry;		/* chain to global LRU lc */
 };
-
-static __inline int
-bmpc_queued_ios(struct bmap_pagecache *bmpc)
-{
-	int rc;
-
-	rc = pll_nitems(&bmpc->bmpc_pndg_biorqs) +
-	    pll_nitems(&bmpc->bmpc_pndg_ra) +
-	    bmpc->bmpc_new_nbiorqs;
-	return (rc);
-}
 
 struct bmpc_write_coalescer {
 	struct psc_lockedlist		 bwc_pll;

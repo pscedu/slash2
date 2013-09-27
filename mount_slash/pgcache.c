@@ -256,7 +256,6 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	} else {
 		PSC_SPLAY_XINSERT(bmpc_biorq_tree,
 		    &bmpc->bmpc_new_biorqs, r);
-		bmpc->bmpc_new_nbiorqs++;
 	}
 	BMAP_ULOCK(b);
 

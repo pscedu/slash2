@@ -278,7 +278,6 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r)
 	 */
 	r->biorq_flags |= BIORQ_PENDING;
 	PSC_SPLAY_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
-	bmpc->bmpc_new_nbiorqs--;
 	pll_addtail(&bmpc->bmpc_pndg_biorqs, r);
 	BIORQ_ULOCK(r);
 	BMAP_ULOCK(r->biorq_bmap);
@@ -357,7 +356,6 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 		pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 		PSC_SPLAY_XINSERT(bmpc_biorq_tree,
 		    &bmpc->bmpc_new_biorqs, r);
-		bmpc->bmpc_new_nbiorqs++;
 
 		BMAP_ULOCK(r->biorq_bmap);
 
@@ -868,14 +866,6 @@ msbmaprlsthr_main(struct psc_thread *thr)
 
 			b->bcm_flags &= ~BMAP_TIMEOQ;
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) == 1);
-
-			/*
-			 * Note that only this thread calls
-			 * msl_bmap_release() so no reentrancy issues
-			 * can exist unless another rls thr is
-			 * introduced.
-			 */
-			psc_assert(!bmpc_queued_ios(&bci->bci_bmpc));
 
 			if (b->bcm_flags & BMAP_WR) {
 				/* Setup a msg to an ION. */
