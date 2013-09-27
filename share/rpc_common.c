@@ -1084,6 +1084,7 @@ slrpc_bulk_check(const void *hbuf, struct iovec *iov, int n)
 		    "ensure key files are synced");
 		rc = SLERR_AUTHBUF_BADHASH;
 	}
+	rc = 0;		/* disable for now */
 	return (rc);
 }
 
