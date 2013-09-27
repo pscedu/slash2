@@ -937,6 +937,7 @@ bmap_flush_outstanding_rpcwait(struct sl_resm *m)
 	    MAX_OUTSTANDING_RPCS)) {
 		bmapFlushTimeoFlags |= BMAPFLSH_RPCWAIT;
 		/* RPC completion will wake us up. */
+		OPSTAT_INCR(SLC_OPST_BMAP_FLUSH_RPCWAIT);
 		psc_waitq_waitrel(&bmapFlushWaitq, &bmapFlushLock,
 		    &bmapFlushWaitSecs);
 		spinlock(&bmapFlushLock);
