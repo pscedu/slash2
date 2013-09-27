@@ -244,7 +244,9 @@ struct bmap {
 		psc_assert((b)->bcm_owner == pthread_self());		\
 	} while (0)
 
-// XXX ensure locked???
+/*
+ * TODO: Convert all callers to lock the bmap before start or done type.
+ */
 #define bmap_op_start_type(b, type)					\
 	do {								\
 		DEBUG_BMAP(PLL_DEBUG, (b),				\
