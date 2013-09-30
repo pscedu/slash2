@@ -934,8 +934,6 @@ main(int argc, char *argv[])
 	PRVAL(UPDT_HLDROP);
 	PRVAL(UPDT_PAGEIN);
 	PRVAL(UPDT_PAGEIN_UNIT);
-	PRVAL(_SRMT_DESTROY);
-	PRVAL(_SRMT_XCTL);
 	/* end enums */
 
 	PRVAL(SL_REPLICA_NBYTES);
