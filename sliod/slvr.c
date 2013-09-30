@@ -103,9 +103,9 @@ slvr_do_crc(struct slvr_ref *s)
 		    s->slvr_flags & SLVR_CRCDIRTY));
 
 	if (s->slvr_flags & SLVR_FAULTING) {
-		if (slvr_2_crcbits(s) & BMAP_SLVR_CRCABSENT) {
+		if (slvr_2_crcbits(s) & BMAP_SLVR_CRCABSENT)
 			return (SLERR_CRCABSENT);
-		}
+
 		/*
 		 * SLVR_FAULTING implies that we're bringing this data
 		 * buffer in from the filesystem.
@@ -463,7 +463,7 @@ sli_aio_reply_setup(struct sli_aiocb_reply *a, struct pscrpc_request *rq,
 	int i;
 
 	a->aiocbr_nslvrs = nslvrs;
-	for (i = 0; i < nslvrs; i++) 
+	for (i = 0; i < nslvrs; i++)
 		a->aiocbr_slvrs[i] = slvrs[i];
 
 	psc_assert(niovs == a->aiocbr_nslvrs);
@@ -554,7 +554,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 	if (rw == SL_READ) {
 		OPSTAT_INCR(SLI_OPST_FSIO_READ);
 
-		if (globalConfig.gconf_async_io) 
+		if (globalConfig.gconf_async_io)
 			return (sli_aio_register(s, aiocbr));
 
 		rc = pread(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
@@ -744,7 +744,7 @@ ssize_t
 slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
     struct sli_aiocb_reply **aiocbr)
 {
-	int rbw = 0; 
+	int rbw = 0;
 	ssize_t rc = 0;
 
 	SLVR_LOCK(s);
@@ -902,7 +902,7 @@ slvr_try_crcsched_locked(struct slvr_ref *s)
 	if ((s->slvr_flags & SLVR_LRU) && s->slvr_pndgwrts)
 		slvr_lru_requeue(s, 1);
 
-	if (!s->slvr_pndgwrts && (s->slvr_flags & SLVR_LRU)) 
+	if (!s->slvr_pndgwrts && (s->slvr_flags & SLVR_LRU))
 		slvr_schedule_crc_locked(s);
 }
 
