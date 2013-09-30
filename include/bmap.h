@@ -369,22 +369,21 @@ void	_dump_bmapod(const struct pfl_callerinfo *, int,
 					    BMAPGETF_LOAD, (bp))
 
 enum bmap_opcnt_types {
-/*  0 */ BMAP_OPCNT_LOOKUP,		/* bmap_get */
-/*  1 */ BMAP_OPCNT_IONASSIGN,
-/*  2 */ BMAP_OPCNT_LEASE,
-/*  3 */ BMAP_OPCNT_FLUSHQ,
-/*  4 */ BMAP_OPCNT_BIORQ,
-/*  5 */ BMAP_OPCNT_REPLWK,		/* repl work inside ION */
-/*  6 */ BMAP_OPCNT_REAPER,		/* client bmap timeout */
-/*  7 */ BMAP_OPCNT_SLVR,
-/*  8 */ BMAP_OPCNT_BCRSCHED,
-/*  9 */ BMAP_OPCNT_RLSSCHED,
-/* 10 */ BMAP_OPCNT_TRUNCWAIT,
-/* 11 */ BMAP_OPCNT_READA,
-/* 12 */ BMAP_OPCNT_LEASEEXT,
-/* 13 */ BMAP_OPCNT_REASSIGN,
-/* 14 */ BMAP_OPCNT_UPSCH,		/* peer update scheduler */
-/* 15 */ BMAP_OPCNT_WORK		/* generic worker thread */
+	BMAP_OPCNT_LOOKUP,		/*  0: bmap_get */
+	BMAP_OPCNT_IONASSIGN,
+	BMAP_OPCNT_LEASE,
+	BMAP_OPCNT_BIORQ,
+	BMAP_OPCNT_REPLWK,		/*  4: repl work inside ION */
+	BMAP_OPCNT_REAPER,		/*  5: client bmap timeout */
+	BMAP_OPCNT_SLVR,
+	BMAP_OPCNT_BCRSCHED,
+	BMAP_OPCNT_RLSSCHED,
+	BMAP_OPCNT_TRUNCWAIT,
+	BMAP_OPCNT_READA,
+	BMAP_OPCNT_LEASEEXT,
+	BMAP_OPCNT_REASSIGN,
+	BMAP_OPCNT_UPSCH,		/* 13: peer update scheduler */
+	BMAP_OPCNT_WORK			/* 14: generic worker thread */
 };
 
 SPLAY_HEAD(bmap_cache, bmapc_memb);
