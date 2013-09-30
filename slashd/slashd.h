@@ -129,6 +129,7 @@ struct slmrmc_thread {
 };
 
 struct slmrcm_thread {
+	struct slmthr_dbh	  smrct_dbh;
 	char			 *srcm_page;
 	int			  srcm_page_bitpos;
 };
@@ -176,6 +177,8 @@ slmthr_getdbh(void)
 	switch (thr->pscthr_type) {
 	case SLMTHRT_CTL:
 		return (&slmctlthr_getpri(thr)->smct_dbh);
+	case SLMTHRT_RCM:
+		return (&slmrcmthr(thr)->smrct_dbh);
 	case SLMTHRT_UPSCHED:
 		return (&slmupschthr(thr)->sus_dbh);
 	case SLMTHRT_WORKER:
