@@ -121,74 +121,75 @@ enum {
 	SLXCTLOP_SET_FILE_NEWBMAP_REPLPOL	/* set file's default new bmap repl policy */
 };
 
+/* sizeof(authbuf_footer) + sizeof(pscrpc_msg) + 8 */
+#define SLRPC_MSGADJ		(176)
+
 /* SLASH RPC message types and submessage types (for BATCH). */
 enum {
 	/* control operations */
-	SRMT_CONNECT = 1,
-	_SRMT_DESTROY,
-	SRMT_PING,
+	SRMT_CONNECT = 1,			/*  1: connect */
+	SRMT_PING,				/*  2: ping */
 
 	/* namespace operations */
-	SRMT_NAMESPACE_UPDATE,			/*  4: send a batch of namespace update logs */
-	SRMT_NAMESPACE_FORWARD,			/*  5: a namespace operation request from a peer */
+	SRMT_NAMESPACE_UPDATE,			/*  3: send a batch of namespace update logs */
+	SRMT_NAMESPACE_FORWARD,			/*  4: a namespace operation request from a peer */
 
 	/* bmap operations */
-	SRMT_BMAPCHWRMODE,			/*  6: change read/write access mode */
-	SRMT_BMAPCRCWRT,			/*  7: update bmap data checksums */
-	SRMT_BMAPDIO,				/*  8: request client direct I/O on a bmap */
-	SRMT_BMAP_PTRUNC,			/*  9: partial truncate and redo CRC for bmap */
-	SRMT_BMAP_WAKE,				/* 10: client work may now progress after EAGAIN */
-	SRMT_GETBMAP,				/* 11: get client lease for bmap access */
-	SRMT_GETBMAPCRCS,			/* 12: get bmap data checksums */
-	SRMT_GETBMAPMINSEQ,
-	SRMT_RELEASEBMAP,			/* 14: relinquish a client's bmap access lease */
-	SRMT_EXTENDBMAPLS,			/* 15: bmap lease extension request */
-	SRMT_REASSIGNBMAPLS,
+	SRMT_BMAPCHWRMODE,			/*  5: change read/write access mode */
+	SRMT_BMAPCRCWRT,			/*  6: update bmap data checksums */
+	SRMT_BMAPDIO,				/*  7: request client direct I/O on a bmap */
+	SRMT_BMAP_PTRUNC,			/*  8: partial truncate and redo CRC for bmap */
+	SRMT_BMAP_WAKE,				/*  9: client work may now progress after EAGAIN */
+	SRMT_GETBMAP,				/* 10: get client lease for bmap access */
+	SRMT_GETBMAPCRCS,			/* 11: get bmap data checksums */
+	SRMT_GETBMAPMINSEQ,			/* 12: get minimum sequence # */
+	SRMT_RELEASEBMAP,			/* 13: relinquish a client's bmap access lease */
+	SRMT_EXTENDBMAPLS,			/* 14: bmap lease extension request */
+	SRMT_REASSIGNBMAPLS,			/* 15: reassign lease */
 
 	/* garbage operations */
-	SRMT_RECLAIM,				/* 17: trash storage space for a given FID+GEN */
+	SRMT_RECLAIM,				/* 16: trash storage space for a given FID+GEN */
 
 	/* replication operations */
-	SRMT_REPL_ADDRQ,
-	SRMT_REPL_DELRQ,
-	SRMT_REPL_GETST,			/* 20: get replication request status */
-	SRMT_REPL_GETST_SLAVE,			/* 21: all bmap repl info for a file */
-	SRMT_REPL_READ,				/* 22: ION to ION replicate */
-	SRMT_REPL_READAIO,			/* 23: ION aio response */
-	SRMT_REPL_SCHEDWK,			/* 24: MDS to ION replication staging */
-	SRMT_SET_BMAPREPLPOL,			/* 25: bmap replication policy */
-	SRMT_SET_NEWREPLPOL,			/* 26: file new bmap repl policy */
+	SRMT_REPL_ADDRQ,			/* 17: add replication */
+	SRMT_REPL_DELRQ,			/* 18: eject replication */
+	SRMT_REPL_GETST,			/* 19: get replication request status */
+	SRMT_REPL_GETST_SLAVE,			/* 20: all bmap repl info for a file */
+	SRMT_REPL_READ,				/* 21: ION to ION replicate */
+	SRMT_REPL_READAIO,			/* 22: ION aio response */
+	SRMT_REPL_SCHEDWK,			/* 23: MDS to ION replication staging */
+	SRMT_SET_BMAPREPLPOL,			/* 24: bmap replication policy */
+	SRMT_SET_NEWREPLPOL,			/* 25: file new bmap repl policy */
 
 	/* file system operations */
-	SRMT_CREATE,				/* 27: creat(2) */
-	SRMT_GETATTR,				/* 28: stat(2) */
-	SRMT_LINK,				/* 29: link(2) */
-	SRMT_LOOKUP,
-	SRMT_MKDIR,				/* 31: mkdir(2) */
-	SRMT_MKNOD,				/* 32: mknod(2) */
-	SRMT_READ,				/* 33: read(2) */
-	SRMT_READDIR,				/* 34: readdir(2) */
-	SRMT_READLINK,				/* 35: readlink(2) */
-	SRMT_RENAME,				/* 36: rename(2) */
-	SRMT_RMDIR,				/* 37: rmdir(2) */
-	SRMT_SETATTR,				/* 38: chmod(2), chown(2), utimes(2) */
-	SRMT_STATFS,				/* 39: statvfs(2) */
-	SRMT_SYMLINK,				/* 40: symlink(2) */
-	SRMT_UNLINK,				/* 41: unlink(2) */
-	SRMT_WRITE,				/* 42: write(2) */
-	SRMT_LISTXATTR,
-	SRMT_SETXATTR,
-	SRMT_GETXATTR,
-	SRMT_REMOVEXATTR,
-	_SRMT_XCTL,				/* 47: ancillary operation */
+	SRMT_CREATE,				/* 26: creat(2) */
+	SRMT_GETATTR,				/* 27: stat(2) */
+	SRMT_LINK,				/* 28: link(2) */
+	SRMT_LOOKUP,				/* 29: lookup (namei) */
+	SRMT_MKDIR,				/* 30: mkdir(2) */
+	SRMT_MKNOD,				/* 31: mknod(2) */
+	SRMT_READ,				/* 32: read(2) */
+	SRMT_READDIR,				/* 33: readdir(2) */
+	SRMT_READLINK,				/* 34: readlink(2) */
+	SRMT_RENAME,				/* 35: rename(2) */
+	SRMT_RMDIR,				/* 36: rmdir(2) */
+	SRMT_SETATTR,				/* 37: chmod(2), chown(2), utimes(2) */
+	SRMT_STATFS,				/* 38: statvfs(2) */
+	SRMT_SYMLINK,				/* 39: symlink(2) */
+	SRMT_UNLINK,				/* 40: unlink(2) */
+	SRMT_WRITE,				/* 41: write(2) */
+	SRMT_LISTXATTR,				/* 42: listxattr(2) */
+	SRMT_SETXATTR,				/* 43: setxattr(2) */
+	SRMT_GETXATTR,				/* 44: getxattr(2) */
+	SRMT_REMOVEXATTR,			/* 45: removexattr(2) */
 
 	/* import/export */
-	SRMT_IMPORT,
+	SRMT_IMPORT,				/* 46: import */
 
-	SRMT_PRECLAIM,
-	SRMT_BATCH_RQ,				/* 50: async batch request */
-	SRMT_BATCH_RP,				/* 51: async batch reply */
-	SRMT_CTL				/* 52: generic control */
+	SRMT_PRECLAIM,				/* 47: partial file reclaim */
+	SRMT_BATCH_RQ,				/* 48: async batch request */
+	SRMT_BATCH_RP,				/* 49: async batch reply */
+	SRMT_CTL				/* 50: generic control */
 };
 
 /* ----------------------------- BEGIN MESSAGES ----------------------------- */
@@ -631,7 +632,6 @@ struct srm_connect_req {
 	uint64_t		magic;
 	uint32_t		version;
 	 int32_t		nnids;
-	uint64_t		_pad[8];
 	uint64_t		fsuuid;		/* file system unique ID */
 	uint32_t		stkvers;	/* software stack version */
 	uint32_t		upnonce;	/* uptime instance */
@@ -660,7 +660,7 @@ struct srm_replst_master_req {
 	 int32_t		rc;		/* or EOF */
 	uint32_t		newreplpol;	/* default replication policy */
 	uint32_t		nrepls;		/* # of I/O systems in 'repls' */
-	unsigned char		data[56];	/* slave data here if it fits */
+	unsigned char		data[48];	/* slave data here if it fits */
 } __packed;
 
 #define srm_replst_master_rep	srm_replst_master_req
@@ -677,7 +677,7 @@ struct srm_replst_slave_req {
 	uint32_t		nbmaps;		/* # of bmaps in this chunk */
 	sl_bmapno_t		boff;		/* offset into inode of first bmap in bulk */
 	 int32_t		_pad;
-	char			buf[312];
+	char			buf[296];
 /* bulk data is sections of bcs_repls data */
 } __packed;
 
@@ -688,7 +688,7 @@ struct srsm_replst_bhdr {
 
 #define SL_NBITS_REPLST_BHDR	8
 
-#define SRM_REPLST_PAGESIZ	(1024 * 1024)	/* should be network MSS */
+#define SRM_REPLST_PAGESIZ	LNET_MTU
 
 #define srm_replst_slave_rep	srm_replst_slave_req
 
@@ -851,6 +851,7 @@ struct srt_readdir_ent {
 
 #define DEF_READDIR_NENTS	128
 #define MAX_READDIR_NENTS	1000
+				/* XXX make relative to LNET_MTU */
 #define MAX_READDIR_BUFSIZ	(sizeof(struct srt_readdir_ent) * MAX_READDIR_NENTS)
 
 struct srm_readdir_req {
@@ -869,7 +870,7 @@ struct srm_readdir_rep {
 	uint32_t		eof:1;		/* #dirents returned */
 	uint32_t		num:31;		/* #dirents returned */
 	 int32_t		rc;
-	unsigned char		ents[832];
+	unsigned char		ents[824];
 /*
  * XXX accompanied bulk data is (but should not be) in fuse dirent format
  *	and must be 64-bit aligned if it cannot fit in `buf'.
