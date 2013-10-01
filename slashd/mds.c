@@ -2376,7 +2376,8 @@ _dbdo(const struct pfl_callerinfo *pci,
 			cb(sth, arg);
 		if (rc != SQLITE_DONE)
 			sched_yield();
-	} while (rc == SQLITE_ROW || rc == SQLITE_BUSY);
+	} while (rc == SQLITE_ROW || rc == SQLITE_BUSY ||
+	    rc == SQLITE_LOCKED);
 
 	if (rc != SQLITE_DONE) {
 		errstr = sqlite3_errmsg(dbh->dbh);
