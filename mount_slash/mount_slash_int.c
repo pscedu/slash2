@@ -2085,9 +2085,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	off_t roff;
 	char *bufp;
 
-	psc_assert(mfh);
-	psc_assert(mfh->mfh_fcmh);
-
 	psc_assert(size);
 	f = mfh->mfh_fcmh;
 
