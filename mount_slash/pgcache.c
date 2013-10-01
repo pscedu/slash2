@@ -89,7 +89,6 @@ bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *p)
 	INIT_SPINLOCK(&e->bmpce_lock);
 	pll_init(&e->bmpce_pndgaios, struct bmpc_ioreq,
 	    biorq_png_lentry, &e->bmpce_lock);
-	e->bmpce_flags = BMPCE_INIT;
 	e->bmpce_base = base;
 	if (!e->bmpce_base)
 		e->bmpce_base = psc_alloc(BMPC_BUFSZ, PAF_PAGEALIGN);
@@ -476,7 +475,6 @@ dump_bmpce_flags(uint32_t flags)
 {
 	int seq = 0;
 
-	PFL_PRFLAG(BMPCE_INIT, &flags, &seq);
 	PFL_PRFLAG(BMPCE_DATARDY, &flags, &seq);
 	PFL_PRFLAG(BMPCE_LRU, &flags, &seq);
 	PFL_PRFLAG(BMPCE_TOFREE, &flags, &seq);
