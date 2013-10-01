@@ -299,6 +299,24 @@ slmctl_resfieldi_disable_gc(int fd, struct psc_ctlmsghdr *mh,
 	    levels, nlevels, nbuf));
 }
 
+int
+slmctl_resfieldi_preclaim(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels, int set,
+    struct sl_resource *r)
+{
+	struct sl_mds_iosinfo *si;
+	char nbuf[20];
+
+	si = res2iosinfo(r);
+	if (set)
+		return (psc_ctlsenderr(fd, mh,
+		    "preclaim: field is read-only"));
+	snprintf(nbuf, sizeof(nbuf), "%d",
+	    si->si_flags & SIF_PRECLAIM_NOTSUP ? 0 : 1);
+	return (psc_ctlmsg_param_send(fd, mh, pcp, PCTHRNAME_EVERYONE,
+	    levels, nlevels, nbuf));
+}
+
 const struct slctl_res_field slctl_resmds_fields[] = {
 	{ "xid",		slmctl_resfieldm_xid },
 	{ NULL, NULL },
@@ -308,6 +326,7 @@ const struct slctl_res_field slctl_resios_fields[] = {
 	{ "batchno",		slmctl_resfieldi_batchno },
 	{ "disable_bia",	slmctl_resfieldi_disable_bia },
 	{ "disable_gc",		slmctl_resfieldi_disable_gc },
+	{ "preclaim",		slmctl_resfieldi_preclaim },
 	{ "xid",		slmctl_resfieldi_xid },
 	{ NULL, NULL },
 };
