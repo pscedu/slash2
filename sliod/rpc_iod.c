@@ -168,7 +168,6 @@ sli_rpc_mds_unpack_bminseq(struct pscrpc_request *rq, int msgtype)
 	sbms = pscrpc_msg_buf(m, m->bufcount - 2, sizeof(*sbms));
 	if (sbms == NULL)
 		goto error;
-	bim_updateseq(sbms->bminseq, 1);
 	return;
 
  error:

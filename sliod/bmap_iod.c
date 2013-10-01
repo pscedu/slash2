@@ -55,7 +55,7 @@ bim_init(void)
 }
 
 int
-bim_updateseq(uint64_t seq, int piggyback)
+bim_updateseq(uint64_t seq)
 {
 	int invalid = 0;
 
@@ -100,43 +100,42 @@ bim_updateseq(uint64_t seq, int piggyback)
 	 * retry again.
 	 */
 	invalid = 1;
+	psclog_warnx("Seqno %"PRId64" is invalid "
+	    "(bim_minseq=%"PRId64")",
+	    seq, bimSeq.bim_minseq);
+	OPSTAT_INCR(SLI_OPST_SEQNO_INVALID);
 
  done:
 	freelock(&bimSeq.bim_lock);
 
-	if (invalid)
-		psclog_warnx("%s seq %"PRId64" is invalid "
-		    "(bim_minseq=%"PRId64")",
-		    piggyback ? "Piggybacked" : "Requested",
-		    seq, bimSeq.bim_minseq);
 	return (invalid);
 }
 
 uint64_t
 bim_getcurseq(void)
 {
+	int rc;
 	uint64_t seqno = BMAPSEQ_ANY;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct timespec crtime;
+	struct srm_getbmapminseq_req *mq;
+	struct srm_getbmapminseq_rep *mp;
 
 	OPSTAT_INCR(SLI_OPST_GET_CUR_SEQ);
 
  retry:
+	spinlock(&bimSeq.bim_lock);
+	while (bimSeq.bim_flags & BIM_RETRIEVE_SEQ) {
+		psc_waitq_wait(&bimSeq.bim_waitq, &bimSeq.bim_lock);
+		spinlock(&bimSeq.bim_lock);
+	}
+
 	PFL_GETTIMESPEC(&crtime);
 	timespecsub(&crtime, &bim_timeo, &crtime);
 
-	spinlock(&bimSeq.bim_lock);
-	if (bimSeq.bim_flags & BIM_RETRIEVE_SEQ) {
-		psc_waitq_wait(&bimSeq.bim_waitq, &bimSeq.bim_lock);
-		goto retry;
-	}
-
 	if (timespeccmp(&crtime, &bimSeq.bim_age, >) ||
 	    bimSeq.bim_minseq == BMAPSEQ_ANY) {
-		struct srm_getbmapminseq_req *mq;
-		struct srm_getbmapminseq_rep *mp;
-		int rc;
 
 		bimSeq.bim_flags |= BIM_RETRIEVE_SEQ;
 		freelock(&bimSeq.bim_lock);
@@ -157,7 +156,7 @@ bim_getcurseq(void)
 
 		seqno = mp->seqno;
 
-		rc = bim_updateseq(seqno, 0);
+		rc = bim_updateseq(seqno);
  out:
 		if (rq) {
 			pscrpc_req_finished(rq);
