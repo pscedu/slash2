@@ -370,7 +370,6 @@ void	_dump_bmapod(const struct pfl_callerinfo *, int,
 
 enum bmap_opcnt_types {
 	BMAP_OPCNT_LOOKUP,		/*  0: bmap_get */
-	BMAP_OPCNT_IONASSIGN,
 	BMAP_OPCNT_LEASE,
 	BMAP_OPCNT_BIORQ,
 	BMAP_OPCNT_REPLWK,		/*  4: repl work inside ION */

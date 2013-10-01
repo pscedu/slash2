@@ -221,7 +221,6 @@ mds_bmap_ios_restart(struct bmap_mds_lease *bml)
 
 	psc_assert(bml->bml_bmi->bmi_assign);
 	bml->bml_bmi->bmi_wr_ion = rmmi;
-	bmap_op_start_type(bml_2_bmap(bml), BMAP_OPCNT_IONASSIGN);
 
 	if (mds_bmap_timeotbl_mdsi(bml, BTE_REATTACH) == BMAPSEQ_ANY)
 		rc = 1;
@@ -546,13 +545,6 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 		return (-SLERR_XACT_FAIL);
 	}
 	BMAP_CLEARATTR(b, BMAP_MDS_NOION);
-
-	/*
-	 * Signify that a ION has been assigned to this bmap.  This
-	 * opcnt ref will stay in place until the bmap has been released
-	 * by the last client or has been timed out.
-	 */
-	bmap_op_start_type(b, BMAP_OPCNT_IONASSIGN);
 
 	if (mds_bmap_add_repl(b, &bia))
 		return (-1); // errno
@@ -1161,17 +1153,12 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	}
 
  out:
-	b->bcm_flags &= ~BMAP_IONASSIGN;
-	bmap_wake_locked(b);
-	bmap_op_done_type(b, BMAP_OPCNT_LEASE);
-
 	if (odtr) {
 		key = odtr->odtr_key;
 		elem = odtr->odtr_elem;
 		rc = mds_odtable_freeitem(mdsBmapAssignTable, odtr);
 		DEBUG_BMAP(PLL_DIAG, b, "odtable remove seq=%"PRId64" "
 		    "key=%#"PRIx64" rc=%d", bml->bml_seq, key, rc);
-		bmap_op_done_type(b, BMAP_OPCNT_IONASSIGN);
 
 		mds_reserve_slot(1);
 		logentry = pjournal_get_buf(mdsJournal,
@@ -1183,6 +1170,9 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		pjournal_put_buf(mdsJournal, logentry);
 		mds_unreserve_slot(1);
 	}
+	b->bcm_flags &= ~BMAP_IONASSIGN;
+	bmap_wake_locked(b);
+	bmap_op_done_type(b, BMAP_OPCNT_LEASE);
 
 	psc_pool_return(bmapMdsLeasePool, bml);
 
