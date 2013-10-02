@@ -238,7 +238,6 @@ int	 msl_read_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 void	 msl_reada_rpc_launch(struct bmap_pagecache_entry **, int);
 int	 msl_readahead_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 int	 msl_stat(struct fidc_membh *, void *);
-int	 msl_write_rpc_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 
 size_t	 msl_pages_copyout(struct bmpc_ioreq *);
 int	 msl_fd_should_retry(struct msl_fhent *, int);
