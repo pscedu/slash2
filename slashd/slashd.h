@@ -41,6 +41,7 @@
 #include "slashrpc.h"
 #include "slconfig.h"
 #include "sltypes.h"
+#include "worker.h"
 
 struct odtable;
 
@@ -51,13 +52,14 @@ struct srt_stat;
 /* MDS thread types. */
 enum {
 	SLMTHRT_BATCHRQ,	/* batch RPC reaper */
+	SLMTHRT_BKDB,		/* upsch database backup */
 	SLMTHRT_BMAPTIMEO,	/* bmap timeout thread */
 	SLMTHRT_COH,		/* coherency thread */
 	SLMTHRT_CONN,		/* peer resource connection monitor */
 	SLMTHRT_CTL,		/* control processor */
 	SLMTHRT_CTLAC,		/* control acceptor */
 	SLMTHRT_CURSOR,		/* cursor update thread */
-	SLMTHRT_BKDB,		/* upsch database backup */
+	SLMTHRT_DBWORKER,	/* database worker */
 	SLMTHRT_JNAMESPACE,	/* namespace propagating thread */
 	SLMTHRT_JRECLAIM,	/* garbage reclamation thread */
 	SLMTHRT_JRNL,		/* journal distill thread */
@@ -144,7 +146,12 @@ struct slmrmm_thread {
 };
 
 struct slmwk_thread {
-	struct slmthr_dbh	  smwk_dbh;
+	struct pfl_wk_thread	  smwk_wkthr;
+};
+
+struct slmdbwk_thread {
+	struct pfl_wk_thread	  smdw_wkthr;
+	struct slmthr_dbh	  smdw_dbh;
 };
 
 struct slmctl_thread {
@@ -156,6 +163,7 @@ struct slmupsch_thread {
 };
 
 PSCTHR_MKCAST(slmctlthr, psc_ctlthr, SLMTHRT_CTL)
+PSCTHR_MKCAST(slmdbwkthr, slmdbwk_thread, SLMTHRT_DBWORKER)
 PSCTHR_MKCAST(slmrcmthr, slmrcm_thread, SLMTHRT_RCM)
 PSCTHR_MKCAST(slmrmcthr, slmrmc_thread, SLMTHRT_RMC)
 PSCTHR_MKCAST(slmrmithr, slmrmi_thread, SLMTHRT_RMI)
@@ -184,8 +192,8 @@ slmthr_getdbh(void)
 		return (&slmrmcthr(thr)->smrct_dbh);
 	case SLMTHRT_UPSCHED:
 		return (&slmupschthr(thr)->sus_dbh);
-	case SLMTHRT_WORKER:
-		return (&slmwkthr(thr)->smwk_dbh);
+	case SLMTHRT_DBWORKER:
+		return (&slmdbwkthr(thr)->smdw_dbh);
 	}
 	psc_fatalx("unknown thread type");
 }
@@ -406,6 +414,7 @@ extern struct odtable		*mdsBmapAssignTable;
 extern struct odtable		*slm_ptrunc_odt;
 extern struct sl_mds_nsstats	 slm_nsstats_aggr;	/* aggregate namespace stats */
 extern struct sl_mds_peerinfo	*localinfo;
+extern struct psc_listcache	 slm_db_workq;
 
 extern struct psc_thread	*slmconnthr;
 

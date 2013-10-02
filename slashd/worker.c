@@ -49,37 +49,38 @@ _pfl_workq_getitem(int (*cb)(void *), size_t len)
 }
 
 void
-_pfl_workq_putitem(void *p, int tails)
+_pfl_workq_putitemq(struct psc_listcache *lc, void *p, int tails)
 {
 	struct pfl_workrq *wk;
 
 	psc_assert(p);
 	wk = PSC_AGP(p, -sizeof(*wk));
-	psclog_debug("placing work %p on queue", wk);
+	psclog_debug("placing work %p on queue %p", wk, lc);
 	if (tails)
-		lc_addtail(&pfl_workq, wk);
+		lc_addtail(lc, wk);
 	else
-		lc_addhead(&pfl_workq, wk);
+		lc_addhead(lc, wk);
 }
 
 void
 pfl_wkthr_main(__unusedx struct psc_thread *thr)
 {
+	struct psc_listcache *lc;
 	struct pfl_workrq *wkrq;
 	void *p;
 
+	lc = pfl_wkthr(thr)->wkt_workq;
 	for (;;) {
-		wkrq = lc_getwait(&pfl_workq);
+		wkrq = lc_getwait(lc);
 		p = PSC_AGP(wkrq, sizeof(*wkrq));
 		if (wkrq->wkrq_cbf(p)) {
-			LIST_CACHE_LOCK(&pfl_workq);
-			lc_addtail(&pfl_workq, wkrq);
-			if (lc_nitems(&pfl_workq) == 1)
-				psc_waitq_waitrel_us(
-				    &pfl_workq.plc_wq_empty,
-				    &pfl_workq.plc_lock, 1);
+			LIST_CACHE_LOCK(lc);
+			lc_addtail(lc, wkrq);
+			if (lc_nitems(lc) == 1)
+				psc_waitq_waitrel_us( &lc->plc_wq_empty,
+				    &lc->plc_lock, 1);
 			else
-				LIST_CACHE_ULOCK(&pfl_workq);
+				LIST_CACHE_ULOCK(lc);
 		} else
 			psc_pool_return(pfl_workrq_pool, wkrq);
 	}
@@ -105,6 +106,7 @@ pfl_wkthr_spawn(int thrtype, int nthr, const char *thrname)
 	for (i = 0; i < nthr; i++) {
 		thr = pscthr_init(thrtype, 0, pfl_wkthr_main, NULL,
 		    sizeof(struct slmwk_thread), thrname, i);
+		pfl_wkthr(thr)->wkt_workq = &pfl_workq;
 		pscthr_setready(thr);
 	}
 }

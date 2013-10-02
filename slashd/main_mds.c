@@ -83,6 +83,7 @@ struct odtable		*slm_ptrunc_odt;
 /* this table is immutable, at least for now */
 struct psc_hashtbl	 rootHtable;
 
+struct psc_listcache	 slm_db_workq;
 int			 slm_opstate;
 
 int
@@ -439,6 +440,7 @@ main(int argc, char *argv[])
 	char *zpcachefn = NULL, *zpname, *estr;
 	const char *cfn, *sfn, *p;
 	int rc, vfsid, c, found;
+	struct psc_thread *thr;
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -603,6 +605,7 @@ main(int argc, char *argv[])
 	dbdo(NULL, NULL, "PRAGMA synchronous=OFF");
 	dbdo(NULL, NULL, "PRAGMA journal_mode=WAL");
 
+	/* no-op to test integrity */
 	rc = sqlite3_exec(slmctlthr_getpri(pscthr_get())->smct_dbh.dbh,
 	    " UPDATE	upsch"
 	    "	SET	id=0"
@@ -644,6 +647,16 @@ main(int argc, char *argv[])
 	    "slmwkthr%d");
 	pfl_workq_waitempty();
 
+	lc_reginit(&slm_db_workq, struct pfl_workrq, wkrq_lentry,
+	    "dbworkq");
+	LIST_CACHE_LOCK(&slm_db_workq);
+	thr = pscthr_init(SLMTHRT_DBWORKER, 0, pfl_wkthr_main, NULL,
+	    sizeof(struct slmdbwk_thread), "slmdbwkthr");
+	slmdbwkthr(thr)->smdw_wkthr.wkt_workq = &slm_db_workq;
+	pscthr_setready(thr);
+	psc_waitq_wait(&slm_db_workq.plc_wq_want,
+	    &slm_db_workq.plc_lock);
+
 	dbdo(slm_upsch_revert_cb, NULL,
 	    " SELECT	fid,"
 	    "		bno"
@@ -658,8 +671,10 @@ main(int argc, char *argv[])
 	pscthr_init(SLMTHRT_BKDB, 0, slmbkdbthr_main, NULL, 0,
 	    "slmbkdbthr");
 
-	mds_odtable_scan(mdsBmapAssignTable, mds_bia_odtable_startup_cb, NULL);
-	mds_odtable_scan(slm_ptrunc_odt, slm_ptrunc_odt_startup_cb, NULL);
+	mds_odtable_scan(mdsBmapAssignTable, mds_bia_odtable_startup_cb,
+	    NULL);
+	mds_odtable_scan(slm_ptrunc_odt, slm_ptrunc_odt_startup_cb,
+	    NULL);
 
 	slm_opstate = SLM_OPSTATE_NORMAL;
 

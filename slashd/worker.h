@@ -33,6 +33,12 @@ struct pfl_workrq {
 	struct psc_listentry	  wkrq_lentry;
 };
 
+struct pfl_wk_thread {
+	struct psc_listcache	 *wkt_workq;
+};
+
+#define pfl_wkthr(thr)			((struct pfl_wk_thread *)(thr)->pscthr_private)
+
 #define pfl_workq_getitem(cb, type)	_pfl_workq_getitem((cb), sizeof(type))
 
 #define	pfl_workq_lock()		LIST_CACHE_LOCK(&pfl_workq)
@@ -40,14 +46,18 @@ struct pfl_workrq {
 #define	pfl_workq_waitempty()		psc_waitq_wait(&pfl_workq.plc_wq_want,	\
 					    &pfl_workq.plc_lock)
 
+void   pfl_wkthr_main(struct psc_thread *);
 void   pfl_wkthr_spawn(int, int, const char *);
 void *_pfl_workq_getitem(int (*)(void *), size_t);
 void   pfl_workq_init(size_t);
-void  _pfl_workq_putitem(void *, int);
+void  _pfl_workq_putitemq(struct psc_listcache *, void *, int);
 
+#define _pfl_workq_putitem(p, tail)	_pfl_workq_putitemq(&pfl_workq, (p), (tail))
 #define pfl_workq_putitem_head(p)	_pfl_workq_putitem((p), 0)
 #define pfl_workq_putitem_tail(p)	_pfl_workq_putitem((p), 1)
 #define pfl_workq_putitem(p)		_pfl_workq_putitem((p), 1)
+#define pfl_workq_putitemq(lc, p)	_pfl_workq_putitemq((lc), (p), 1)
+#define pfl_workq_putitemq_head(lc, p)	_pfl_workq_putitemq((lc), (p), 0)
 
 extern struct psc_listcache	pfl_workq;
 
