@@ -136,7 +136,7 @@ slm_bmap_resetnonce(struct bmap *b)
 	a.b = b;
 
 	dbdo(slm_bmap_resetnonce_cb, &a,
-	    " SELECT	nonce," // XX nonce != sys_upnonce
+	    " SELECT	nonce,"
 	    "		resid"
 	    " FROM	upsch"
 	    " WHERE	fid = ?"
@@ -146,7 +146,7 @@ slm_bmap_resetnonce(struct bmap *b)
 
 	if (a.update) {
 		dbdo(NULL, NULL,
-		    " UPDATE	upsch "
+		    " UPDATE	upsch"
 		    " SET	nonce = ?"
 		    " WHERE	fid = ?"
 		    "   AND	bno = ?",
@@ -401,8 +401,8 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
  * mds_bmap_write_rel - Release a bmap after use.
  */
 int
-_mds_bmap_write_rel(const struct pfl_callerinfo *pci,
-    struct bmap *b, void *logf)
+_mds_bmap_write_rel(const struct pfl_callerinfo *pci, struct bmap *b,
+    void *logf)
 {
 	int rc;
 
