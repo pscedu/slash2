@@ -58,7 +58,7 @@ __static const char *slconn_restypes[] = {
 void
 sl_conn_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	printf("%-10s %37s %-8s %6s %5s %4s %4s\n",
+	printf("%-11s %37s %-8s %5s %5s %4s %4s\n",
 	    "resource", "host", "type", "flags", "stvrs", "txcr", "#ref");
 }
 
