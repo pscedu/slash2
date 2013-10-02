@@ -40,11 +40,6 @@
 
 #include "cache_params.h"
 
-struct psc_vbitmap;
-
-#define SLB_BLKSZ	SLASH_SLVR_BLKSZ
-#define SLB_SIZE	(SLB_BLKSZ * SLB_NBLK)
-
 /**
  * sl_buffer - Used for both read caching and write
  *   aggregation.

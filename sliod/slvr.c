@@ -1034,7 +1034,7 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 		pll_init(&s->slvr_pndgaios, struct sli_aiocb_reply,
 		    aiocbr_lentry, &s->slvr_lock);
 
-		memset(tmp2->slb_base, 0, SLB_SIZE);
+		memset(tmp2->slb_base, 0, SLASH_SLVR_SIZE);
 		s->slvr_slab = tmp2;
 
 		if (rw == SL_WRITE)

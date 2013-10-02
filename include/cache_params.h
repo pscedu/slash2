@@ -35,8 +35,7 @@
 #define SLASH_SLVR_SIZE		(1024 * (off_t)1024)
 #define SLASH_SLVR_BLKSZ	(32 * 1024)
 
-#define SLB_NBLK		32
-#define SLB_NDEF		64
+#define SLB_DEF			64
 #define SLB_MIN			64
 #define SLB_MAX			128
 
