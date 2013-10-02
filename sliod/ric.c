@@ -250,7 +250,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	psc_assert(!tsize);
 
 	if (aiocbr) {
-		struct slvr_ref *s;
 
 		sli_aio_reply_setup(aiocbr, rq, mq->size, mq->offset,
 		    slvr_ref, nslvrs, iovs, nslvrs, rw);
@@ -261,16 +260,14 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		 * Otherwise, we'll never be woken since the aio cb(s)
 		 * have been run.
 		 */
-
 		for (i = 0; i < nslvrs; i++) {
-			s = slvr_ref[i];
 
-			SLVR_LOCK(s);
-			if (s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR)) {
-				DEBUG_SLVR(PLL_NOTICE, s,
+			SLVR_LOCK(slvr_ref[i]);
+			if (slvr_ref[i]->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR)) {
+				DEBUG_SLVR(PLL_NOTICE, slvr_ref[i],
 				    "aio early ready, rw=%s",
 				    rw == SL_WRITE ? "wr" : "rd");
-				SLVR_ULOCK(s);
+				SLVR_ULOCK(slvr_ref[i]);
 
 			} else {
 				/*
@@ -278,12 +275,12 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 				 * waiting for aio and return AIOWAIT to
 				 * client later.
 				 */
-				pll_add(&s->slvr_pndgaios, aiocbr);
-				psc_assert(s->slvr_flags & SLVR_AIOWAIT);
+				pll_add(&slvr_ref[i]->slvr_pndgaios, aiocbr);
+				psc_assert(slvr_ref[i]->slvr_flags & SLVR_AIOWAIT);
 				OPSTAT_INCR(SLI_OPST_AIO_INSERT);
-				SLVR_ULOCK(s);
+				SLVR_ULOCK(slvr_ref[i]);
 
-				DEBUG_SLVR(PLL_DIAG, s, "aio wait");
+				DEBUG_SLVR(PLL_DIAG, slvr_ref[i], "aio wait");
 				mp->rc = SLERR_AIOWAIT;
 				pscrpc_msg_add_flags(rq->rq_repmsg,
 				    MSG_ABORT_BULK);
@@ -333,7 +330,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		}
 		psc_assert(!tsize);
 	}
-
 
  out:
 	for (i = 0; i < nslvrs; i++) {
