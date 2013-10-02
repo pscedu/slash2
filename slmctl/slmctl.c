@@ -104,7 +104,7 @@ packshow_replpairs(char *pair)
 	struct slmctlmsg_replpair *scrp;
 
 	scrp = psc_ctlmsg_push(SLMCMT_GETREPLPAIRS, sizeof(*scrp));
-	if (strcasecmp(pair, "busy") == 0)
+	if (pair && strcasecmp(pair, "busy") == 0)
 		strlcpy(scrp->scrp_addrbuf[0], SLMC_RP_ADDRCLASS_BUSY,
 		    sizeof(scrp->scrp_addrbuf[0]));
 }
