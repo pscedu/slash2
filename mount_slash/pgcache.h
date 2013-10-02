@@ -164,7 +164,7 @@ struct bmpc_ioreq {
 	struct psclist_head		 biorq_mfh_lentry; /* chain on file handle	*/
 	struct psclist_head		 biorq_bwc_lentry;
 	struct psclist_head		 biorq_png_lentry;
-	SPLAY_ENTRY(bmpc_ioreq)		 biorq_tentry;
+	SPLAY_ENTRY(bmpc_ioreq)		 biorq_tentry;	/* splay tree */
 	struct bmapc_memb		*biorq_bmap;	/* backpointer to our bmap	*/
 	struct pscrpc_request_set	*biorq_rqset;
 	struct psc_waitq		 biorq_waitq;	/* used by a bmpce */
