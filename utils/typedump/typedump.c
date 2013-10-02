@@ -200,6 +200,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct msl_ra);
 	PRTYPE(struct msrci_thread);
 	PRTYPE(struct msrcm_thread);
+	PRTYPE(struct pfl_wk_thread);
 	PRTYPE(struct pfl_workrq);
 	PRTYPE(struct resm_cli_info);
 	PRTYPE(struct resm_iod_info);
@@ -261,6 +262,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slmctlmsg_bml);
 	PRTYPE(struct slmctlmsg_replpair);
 	PRTYPE(struct slmctlmsg_statfs);
+	PRTYPE(struct slmdbwk_thread);
 	PRTYPE(struct slmds_jent_assign_rep);
 	PRTYPE(struct slmds_jent_bmap_assign);
 	PRTYPE(struct slmds_jent_bmap_crc);
@@ -791,6 +793,7 @@ main(int argc, char *argv[])
 	PRVAL(SLI_OPST_RELEASE_BMAP);
 	PRVAL(SLI_OPST_REOPEN);
 	PRVAL(SLI_OPST_REPL_READAIO);
+	PRVAL(SLI_OPST_SEQNO_INVALID);
 	PRVAL(SLI_OPST_SEQNO_REDUCE);
 	PRVAL(SLI_OPST_SLVR_AIO_REPLY);
 	PRVAL(SLI_OPST_SRMT_RELEASE);
@@ -804,6 +807,7 @@ main(int argc, char *argv[])
 	PRVAL(SLMTHRT_CTL);
 	PRVAL(SLMTHRT_CTLAC);
 	PRVAL(SLMTHRT_CURSOR);
+	PRVAL(SLMTHRT_DBWORKER);
 	PRVAL(SLMTHRT_JNAMESPACE);
 	PRVAL(SLMTHRT_JRECLAIM);
 	PRVAL(SLMTHRT_JRNL);
