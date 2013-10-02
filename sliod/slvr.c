@@ -627,8 +627,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
 }
 
 /**
- * slvr_fsbytes_get - Read in the blocks which have their respective
- *	bits set in slab bitmap, trying to coalesce where possible.
+ * slvr_fsbytes_rio - Read in a sliver or a portion of it.
  * @s: the sliver.
  */
 ssize_t
