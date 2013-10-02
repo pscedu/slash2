@@ -637,7 +637,7 @@ main(int argc, char *argv[])
 	dbdo(NULL, NULL, "BEGIN TRANSACTION");
 	mds_journal_init(disable_propagation,
 	    zfsMount[current_vfsid].uuid);
-	dbdo(NULL, NULL, "END TRANSACTION");
+	dbdo(NULL, NULL, "COMMIT");
 
 	pfl_workq_lock();
 	pfl_wkthr_spawn(SLMTHRT_WORKER, SLM_NWORKER_THREADS,
