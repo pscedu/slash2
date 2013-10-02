@@ -579,12 +579,15 @@ struct psc_ctlop slmctlops[] = {
 };
 
 psc_ctl_thrget_t psc_ctl_thrgets[] = {
+/* BATCHRQ	*/ NULL,
+/* BKDB		*/ NULL,
 /* BMAPTIMEO	*/ NULL,
 /* COH		*/ NULL,
 /* CONN		*/ NULL,
 /* CTL		*/ psc_ctlthr_get,
 /* CTLAC	*/ psc_ctlacthr_get,
 /* CURSOR	*/ NULL,
+/* DBWORKER	*/ NULL,
 /* JNAMESPACE	*/ NULL,
 /* JRECLAIM	*/ NULL,
 /* JRNL		*/ NULL,
