@@ -804,7 +804,7 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 		wk = pfl_workq_getitem(slm_wk_upsch_purge,
 		    struct slm_wkdata_upsch_purge);
 		wk->fid = sstb->sst_fid;
-		pfl_workq_putitem(wk);
+		pfl_workq_putitemq(&slm_db_workq, wk);
 	}
 }
 
@@ -1734,7 +1734,7 @@ mdslog_bmap_repls(void *datap, uint64_t txg, __unusedx int flag)
 	    struct slm_wkdata_wr_brepl);
 	wk->b = b;
 	bmap_op_start_type(b, BMAP_OPCNT_WORK);
-	pfl_workq_putitem_head(wk);
+	pfl_workq_putitemq_head(&slm_db_workq, wk);
 }
 
 /**
