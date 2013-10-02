@@ -538,14 +538,16 @@ may also be specified to display a list of recognized values.
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/thr.mdoc {
 .\"	thrs => {
 .\"		"slmbchrqthr"			=> "Batch\n.Tn RPC\ntimeout monitor",
+.\"		"slmbkdbthr"			=> "",
 .\"		"slmbmaptimeothr"		=> "Bmap lease timeout monitor",
 .\"		"slmcohthr"			=> "Bmap data coherency thread",
 .\"		"slmconnthr"			=> "Peer resource connection monitor",
 .\"		"slmctlacthr"			=> ".Nm\nconnection acceptor",
 .\"		"slmctlthr"			=> ".Nm\nconnection processor",
+.\"		"slmdbwkthr"			=> "",
 .\"		"slmjcursorthr"			=> "Journal cursor updater thread",
-.\"		"slmjreclaimthr"		=> "Peer\n.Pq Tn IOS\ngarbage collection notifier",
 .\"		"slmjnsthr"			=> "Peer\n.Pq Tn MDS\nnamespace updater",
+.\"		"slmjreclaimthr"		=> "Peer\n.Pq Tn IOS\ngarbage collection notifier",
 .\"		"slmjthr"			=> "Master journal thread",
 .\"		"slmlnacthr- Ns Ar %s"		=> ".Tn LNET\nnetwork acceptor thread",
 .\"		"slmnbrqthr"			=> "Non-blocking\n.Tn RPC\nreply handler",
@@ -556,7 +558,7 @@ may also be specified to display a list of recognized values.
 .\"		"slmtiosthr"			=> "Timed\n.Tn I/O\nstats updater thread",
 .\"		"slmupschedthr"			=> "Peer update scheduler thread",
 .\"		"slmusklndplthr Ns Ar %d"	=> ".Tn LNET\nuserland socket poll thread",
-.\"		"slmwkr Ns Ar %d"		=> "Generic worker",
+.\"		"slmwkthr Ns Ar %d"		=> "Generic worker",
 .\"		"slmzfskstatmthr"		=> ".Tn ZFS\nstat mount thread",
 .\"	}
 .Ss Thread Specification
