@@ -1845,7 +1845,7 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 	struct fcmh_cli_info *fci;
 	struct fidc_membh *c;
 	int rc, flush_attrs = 0;
-	pid_t sid;
+	pid_t pid, sid;
 
 	msfsthr_ensure();
 	OPSTAT_INCR(SLC_OPST_CLOSE);
@@ -1895,10 +1895,17 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 		}
 	}
 
-	sid = getsid(pscfs_getclientctx(pfr)->pfcc_pid);
+	pid = pscfs_getclientctx(pfr)->pfcc_pid;
+	sid = getsid(pid);
 	pscfs_reply_close(pfr, rc);
 
-	if (!fcmh_isdir(c) && (mfh->mfh_nbytes_rd || mfh->mfh_nbytes_wr))
+	if (!fcmh_isdir(c) && (mfh->mfh_nbytes_rd ||
+	    mfh->mfh_nbytes_wr)) {
+		char fn[PATH_MAX], exe[PATH_MAX];
+
+		snprintf(fn, sizeof(fn), "/proc/%d/exe", pid);
+		if (readlink(fn, exe, sizeof(exe)) == -1)
+			exe[0] = '\0';
 		psclogs(PLL_INFO, SLCSS_INFO,
 		    "file closed fid="SLPRI_FID" "
 		    "uid=%u gid=%u "
@@ -1906,14 +1913,15 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 		    "oatime="PFLPRI_PTIMESPEC" "
 		    "mtime="PFLPRI_PTIMESPEC" sessid=%d "
 		    "otime="PSCPRI_TIMESPEC" "
-		    "rd=%"PSCPRIdOFFT" wr=%"PSCPRIdOFFT,
+		    "rd=%"PSCPRIdOFFT" wr=%"PSCPRIdOFFT" prog=%s",
 		    fcmh_2_fid(c),
 		    c->fcmh_sstb.sst_uid, c->fcmh_sstb.sst_gid,
 		    c->fcmh_sstb.sst_size,
 		    PFLPRI_PTIMESPEC_ARGS(&mfh->mfh_open_atime),
 		    PFLPRI_PTIMESPEC_ARGS(&c->fcmh_sstb.sst_mtim), sid,
 		    PSCPRI_TIMESPEC_ARGS(&mfh->mfh_open_time),
-		    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr);
+		    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr, exe);
+	}
 
 	FCMH_UNBUSY(c);
 	mfh_decref(mfh);
