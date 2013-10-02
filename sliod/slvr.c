@@ -638,12 +638,6 @@ slvr_fsbytes_rio(struct slvr_ref *s, uint32_t off, uint32_t len,
 	int blk;
 	ssize_t rc = 0;
 
-
-	if (!(s->slvr_flags & SLVR_DATARDY))
-		psc_assert(s->slvr_flags & SLVR_FAULTING);
-
-	psc_assert(s->slvr_flags & SLVR_PINNED);
-
 	if (!rbw || globalConfig.gconf_async_io) {
 		rc = slvr_fsio(s, 0, SLASH_SLVR_SIZE,
 		    SL_READ, aiocbr);
