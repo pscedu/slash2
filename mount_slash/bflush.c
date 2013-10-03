@@ -276,9 +276,8 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r)
 	 * Limit the amount of scanning done by this thread.  Move
 	 * pending biorqs out of the way.
 	 */
-	r->biorq_flags |= BIORQ_PENDING;
+	r->biorq_flags &= ~BIORQ_SPLAY;
 	PSC_SPLAY_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
-	pll_addtail(&bmpc->bmpc_pndg_biorqs, r);
 	BIORQ_ULOCK(r);
 	BMAP_ULOCK(r->biorq_bmap);
 }
@@ -296,11 +295,13 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 
 	DEBUG_BIORQ(PLL_INFO, r, "resched");
 
+	BMAP_LOCK(r->biorq_bmap);
 	BIORQ_LOCK(r);
 	r->biorq_flags &= ~(BIORQ_INFL | BIORQ_SCHED);
 
 	if (r->biorq_retries >= SL_MAX_BMAPFLSH_RETRIES) {
 		BIORQ_ULOCK(r);
+		BMAP_ULOCK(r->biorq_bmap);
 		msl_bmpces_fail(r, rc);
 		msl_biorq_destroy(r);
 		return;
@@ -343,25 +344,19 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 
 	r->biorq_expire.tv_sec += delta;
 
+	if (!(r->biorq_flags & BIORQ_SPLAY)) {
+		r->biorq_flags |= BIORQ_SPLAY;
+		PSC_SPLAY_XINSERT(bmpc_biorq_tree,
+		    &bmpc->bmpc_new_biorqs, r);
+	}
+
+	BIORQ_ULOCK(r);
+	BMAP_ULOCK(r->biorq_bmap);
 	/*
 	 * If we were able to connect to an IOS, but the RPC fails
 	 * somehow, try to use a different IOS if possible.
 	 */
-	if (r->biorq_flags & BIORQ_PENDING) {
-		r->biorq_flags &= ~BIORQ_PENDING;
-		BIORQ_ULOCK(r);
-
-		BMAP_LOCK(r->biorq_bmap);
-
-		pll_remove(&bmpc->bmpc_pndg_biorqs, r);
-		PSC_SPLAY_XINSERT(bmpc_biorq_tree,
-		    &bmpc->bmpc_new_biorqs, r);
-
-		BMAP_ULOCK(r->biorq_bmap);
-
-		msl_bmap_lease_tryreassign(r->biorq_bmap);
-	} else
-		BIORQ_ULOCK(r);
+	msl_bmap_lease_tryreassign(r->biorq_bmap);
 }
 
 __static void

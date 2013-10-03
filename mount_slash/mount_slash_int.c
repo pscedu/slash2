@@ -386,10 +386,13 @@ msl_biorq_del(struct bmpc_ioreq *r)
 
 	BMAP_LOCK(b);
 
-	if (!(r->biorq_flags & BIORQ_PENDING)) {
+	if (r->biorq_flags & BIORQ_SPLAY) {
 		PSC_SPLAY_XREMOVE(bmpc_biorq_tree,
 		    &bmpc->bmpc_new_biorqs, r);
-	} else {
+		r->biorq_flags &= ~BIORQ_SPLAY;
+	}
+
+	if (r->biorq_flags & BIORQ_PENDING) {
 		pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 		r->biorq_flags &= ~BIORQ_PENDING;
 	}
@@ -1269,15 +1272,15 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 
 	BMAP_LOCK(b);
 	/*
-	 * This req must already be attached to the cache.
 	 * The BIORQ_FLUSHRDY bit prevents the request from being
 	 * processed prematurely.
 	 */
 	BIORQ_LOCK(r);
 	r->biorq_ref++;
-	BIORQ_SETATTR(r, BIORQ_FLUSHRDY);
-	psc_assert(psclist_disjoint(&r->biorq_lentry));
+	r->biorq_flags |= BIORQ_FLUSHRDY | BIORQ_SPLAY;
+	PSC_SPLAY_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
 	BIORQ_ULOCK(r);
+
 
 	bmpc->bmpc_pndgwr++;
 	if (b->bcm_flags & BMAP_DIRTY) {

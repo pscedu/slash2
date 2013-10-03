@@ -185,8 +185,9 @@ struct bmpc_ioreq {
 #define	BIORQ_NOFHENT			(1 << 10)	/* release a file handle before flush is complete */
 #define BIORQ_AIOWAIT			(1 << 11)
 #define BIORQ_PENDING			(1 << 12)
-#define BIORQ_WAIT			(1 << 13)
-#define BIORQ_MFHLIST			(1 << 14)
+#define BIORQ_SPLAY			(1 << 13)
+#define BIORQ_WAIT			(1 << 14)
+#define BIORQ_MFHLIST			(1 << 15)
 
 #define BIORQ_LOCK(r)			spinlock(&(r)->biorq_lock)
 #define BIORQ_ULOCK(r)			freelock(&(r)->biorq_lock)
