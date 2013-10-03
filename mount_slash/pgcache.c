@@ -249,7 +249,6 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	if (b->bcm_flags & BMAP_DIO)
 		r->biorq_flags |= BIORQ_DIO;
 
-	r->biorq_flags |= BIORQ_PENDING;
 	pll_add(&bmpc->bmpc_pndg_biorqs, r);
 
 	BMAP_ULOCK(b);
@@ -326,8 +325,6 @@ bmpc_biorqs_fail(struct bmap_pagecache *bmpc, int err)
 	struct bmpc_ioreq *r;
 
 	PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs)
-		bmpc_biorq_seterr(r, err);
-	SPLAY_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_new_biorqs)
 		bmpc_biorq_seterr(r, err);
 }
 
@@ -500,7 +497,6 @@ dump_biorq_flags(uint32_t flags)
 	PFL_PRFLAG(BIORQ_FLUSHRDY, &flags, &seq);
 	PFL_PRFLAG(BIORQ_NOFHENT, &flags, &seq);
 	PFL_PRFLAG(BIORQ_AIOWAIT, &flags, &seq);
-	PFL_PRFLAG(BIORQ_PENDING, &flags, &seq);
 	PFL_PRFLAG(BIORQ_WAIT, &flags, &seq);
 	PFL_PRFLAG(BIORQ_MFHLIST, &flags, &seq);
 	if (flags)
