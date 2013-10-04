@@ -545,14 +545,9 @@ bmap_flushable(struct bmapc_memb *b)
 
 		DEBUG_BIORQ(PLL_DIAG, r, "consider for flush");
 
-		psc_assert(!(r->biorq_flags & BIORQ_READ));
+		psc_assert(r->biorq_flags & BIORQ_FLUSHRDY);
 
-		if (!(r->biorq_flags & BIORQ_FLUSHRDY)) {
-			DEBUG_BIORQ(PLL_DIAG, r, "data not ready");
-			BIORQ_ULOCK(r);
-			continue;
-
-		} else if (r->biorq_flags & BIORQ_SCHED) {
+		if (r->biorq_flags & BIORQ_SCHED) {
 			DEBUG_BIORQ(PLL_WARN, r, "already sched");
 			BIORQ_ULOCK(r);
 			continue;
@@ -1071,12 +1066,7 @@ bmap_flush(void)
 
 			BIORQ_LOCK(r);
 
-			if (!(r->biorq_flags & BIORQ_FLUSHRDY)) {
-				DEBUG_BIORQ(PLL_DIAG, r, "data not ready");
-				BIORQ_ULOCK(r);
-				continue;
-
-			} else if (r->biorq_flags & BIORQ_SCHED) {
+			if (r->biorq_flags & BIORQ_SCHED) {
 				DEBUG_BIORQ(PLL_WARN, r, "already sched");
 				BIORQ_ULOCK(r);
 				continue;
