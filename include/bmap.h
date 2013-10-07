@@ -138,7 +138,7 @@ struct bmap {
 #define BMAP_DIO		(1 <<  3)	/* direct I/O, no client caching */
 #define BMAP_DIOCB		(1 <<  4)
 #define BMAP_TOFREE		(1 <<  5)	/* refcnt dropped to zero, removing */
-#define BMAP_DIRTY		(1 <<  6)
+#define BMAP_FLUSHQ		(1 <<  6)
 #define BMAP_TIMEOQ		(1 <<  7)	/* on timeout queue */
 #define BMAP_IONASSIGN		(1 <<  8)	/* has been assigned to an ION for writes */
 #define BMAP_MDCHNG		(1 <<  9)	/* op mode changing (e.g. READ -> WRITE) */
@@ -175,7 +175,7 @@ struct bmap {
 	(b)->bcm_flags & BMAP_DIO	? "D" : "",			\
 	(b)->bcm_flags & BMAP_DIOCB	? "C" : "",			\
 	(b)->bcm_flags & BMAP_TOFREE	? "F" : "",			\
-	(b)->bcm_flags & BMAP_DIRTY	? "d" : "",			\
+	(b)->bcm_flags & BMAP_FLUSHQ	? "f" : "",			\
 	(b)->bcm_flags & BMAP_TIMEOQ	? "T" : "",			\
 	(b)->bcm_flags & BMAP_IONASSIGN	? "A" : "",			\
 	(b)->bcm_flags & BMAP_MDCHNG	? "G" : "",			\

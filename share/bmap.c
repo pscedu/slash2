@@ -81,7 +81,7 @@ bmap_remove(struct bmap *b)
 	DEBUG_BMAP(PLL_INFO, b, "removing");
 
 	psc_assert(b->bcm_flags & BMAP_TOFREE);
-	psc_assert(!(b->bcm_flags & BMAP_DIRTY));
+	psc_assert(!(b->bcm_flags & BMAP_FLUSHQ));
 	psc_assert(!atomic_read(&b->bcm_opcnt));
 
 	(void)FCMH_RLOCK(f);
@@ -424,7 +424,7 @@ _dump_bmap_flags_common(uint32_t *flags, int *seq)
 	PFL_PRFLAG(BMAP_DIO, flags, seq);
 	PFL_PRFLAG(BMAP_DIOCB, flags, seq);
 	PFL_PRFLAG(BMAP_TOFREE, flags, seq);
-	PFL_PRFLAG(BMAP_DIRTY, flags, seq);
+	PFL_PRFLAG(BMAP_FLUSHQ, flags, seq);
 	PFL_PRFLAG(BMAP_TIMEOQ, flags, seq);
 	PFL_PRFLAG(BMAP_IONASSIGN, flags, seq);
 	PFL_PRFLAG(BMAP_MDCHNG, flags, seq);

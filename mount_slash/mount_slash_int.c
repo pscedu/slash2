@@ -396,7 +396,7 @@ msl_biorq_del(struct bmpc_ioreq *r)
 	if (r->biorq_flags & BIORQ_FLUSHRDY) {
 		bmpc->bmpc_pndgwr--;
 		if (!bmpc->bmpc_pndgwr) {
-			b->bcm_flags &= ~BMAP_DIRTY;
+			b->bcm_flags &= ~BMAP_FLUSHQ;
 			lc_remove(&bmapFlushQ, b);
 		}
 	}
@@ -1280,14 +1280,14 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 
 
 	bmpc->bmpc_pndgwr++;
-	if (b->bcm_flags & BMAP_DIRTY) {
+	if (b->bcm_flags & BMAP_FLUSHQ) {
 		/*
 		 * If the bmap is already dirty then at least one other
 		 * writer must be present.
 		 */
 		psc_assert(bmpc->bmpc_pndgwr > 1);
 	} else {
-		b->bcm_flags |= BMAP_DIRTY;
+		b->bcm_flags |= BMAP_FLUSHQ;
 		psc_assert(psclist_disjoint(&b->bcm_lentry));
 		DEBUG_BMAP(PLL_DIAG, b, "add to bmapFlushQ");
 		lc_addtail(&bmapFlushQ, b);

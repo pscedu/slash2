@@ -1019,7 +1019,7 @@ bmap_flush(void)
 		if (!BMAP_TRYLOCK(b))
 			continue;
 
-		psc_assert(b->bcm_flags & BMAP_DIRTY);
+		psc_assert(b->bcm_flags & BMAP_FLUSHQ);
 
 		if (b->bcm_flags & BMAP_CLI_REASSIGNREQ) {
 			BMAP_ULOCK(b);

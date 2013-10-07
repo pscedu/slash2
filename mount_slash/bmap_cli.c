@@ -804,7 +804,7 @@ bmap_biorq_waitempty(struct bmap *b)
 	bmap_wait_locked(b, (!pll_empty(&bmpc->bmpc_pndg_biorqs)  ||
 			     !SPLAY_EMPTY(&bmpc->bmpc_new_biorqs) ||
 			     !pll_empty(&bmpc->bmpc_pndg_ra)      ||
-			     (b->bcm_flags & BMAP_DIRTY)));
+			     (b->bcm_flags & BMAP_FLUSHQ)));
 
 	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
 	psc_assert(SPLAY_EMPTY(&bmpc->bmpc_new_biorqs));
@@ -840,7 +840,7 @@ msl_bmap_final_cleanup(struct bmap *b)
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 
 	BMAP_LOCK(b);
-	psc_assert(!(b->bcm_flags & BMAP_DIRTY));
+	psc_assert(!(b->bcm_flags & BMAP_FLUSHQ));
 
 	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
 	psc_assert(SPLAY_EMPTY(&bmpc->bmpc_new_biorqs));
