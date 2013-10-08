@@ -194,7 +194,7 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b,
 	    "lease reassign: rc=%d, nseq=%"PRId64", "
 	    "xtime="PSCPRI_TIMESPEC"", rc, bci->bci_sbd.sbd_seq, 
-	    PFLPRI_PTIMESPEC_ARGS(&bmap_2_bci(b)->bci_xtime));
+	    PFLPRI_PTIMESPEC_ARGS(&bci->bci_xtime));
 
 	bmap_op_done_type(b, BMAP_OPCNT_REASSIGN);
 
@@ -250,7 +250,7 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b,
 	    "lease extension: rc=%d, nseq=%"PRId64", "
 	    "xtime="PSCPRI_TIMESPEC"", rc, bci->bci_sbd.sbd_seq, 
-	    PFLPRI_PTIMESPEC_ARGS(&bmap_2_bci(b)->bci_xtime));
+	    PFLPRI_PTIMESPEC_ARGS(&bci->bci_xtime));
 
 	bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
 
@@ -660,7 +660,7 @@ msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd)
 	DEBUG_BMAP(PLL_INFO, b,
 	    "reap init: nseq=%"PRId64", "
 	    "xtime="PSCPRI_TIMESPEC"", bci->bci_sbd.sbd_seq, 
-	    PFLPRI_PTIMESPEC_ARGS(&bmap_2_bci(b)->bci_xtime));
+	    PFLPRI_PTIMESPEC_ARGS(&bci->bci_xtime));
 
 	/*
 	 * Add ourselves here otherwise zero length files will not be
