@@ -952,7 +952,6 @@ msbmflwthr_main(struct psc_thread *thr)
 		lc_peekheadwait(&bmapFlushQ);
 
 		OPSTAT_INCR(SLC_OPST_LEASE_REFRESH);
-		PFL_GETTIMESPEC(&ts);
 		/*
 		 * A bmap can be on both bmapFlushQ and bmapTimeoutQ.
 		 * Even if we take it off bmapTimeoutQ, it can still
@@ -963,12 +962,16 @@ msbmflwthr_main(struct psc_thread *thr)
 			if (!BMAP_TRYLOCK(b))
 				continue;
 			DEBUG_BMAP(PLL_INFO, b, "");
-			if (!(b->bcm_flags & BMAP_TOFREE) &&
-			    ((!(b->bcm_flags &
-				(BMAP_CLI_LEASEFAILED | BMAP_CLI_REASSIGNREQ)) &&
-			      (((bmap_2_bci(b)->bci_xtime.tv_sec - ts.tv_sec) <
-				BMAP_CLI_EXTREQSECS))) ||
-			     timespeccmp(&ts, &bmap_2_bci(b)->bci_etime, >=))) {
+			if ((b->bcm_flags & BMAP_TOFREE) || 
+			    (b->bcm_flags & BMAP_CLI_LEASEFAILED) || 
+			    (b->bcm_flags & BMAP_CLI_REASSIGNREQ)) {
+				BMAP_ULOCK(b);
+				continue;
+			}
+			PFL_GETTIMESPEC(&ts);
+			if ((bmap_2_bci(b)->bci_xtime.tv_sec - ts.tv_sec <
+				BMAP_CLI_EXTREQSECS) ||
+			     timespeccmp(&ts, &bmap_2_bci(b)->bci_etime, >=)) {
 				psc_dynarray_add(&bmaps, b);
 			}
 			BMAP_ULOCK(b);
