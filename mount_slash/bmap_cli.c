@@ -191,9 +191,11 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 
 	BMAP_CLEARATTR(b, BMAP_CLI_REASSIGNREQ);
 
-	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
-	    "lease reassign (rc=%d) nseq=%"PRId64, rc,
-	     bci->bci_sbd.sbd_seq);
+	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b,
+	    "lease reassign: rc=%d, nseq=%"PRId64", "
+	    "xtime="PSCPRI_TIMESPEC"", rc, bci->bci_sbd.sbd_seq, 
+	    PFLPRI_PTIMESPEC_ARGS(&bmap_2_bci(b)->bci_xtime));
+
 	bmap_op_done_type(b, BMAP_OPCNT_REASSIGN);
 
 	sl_csvc_decref(csvc);
