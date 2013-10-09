@@ -570,12 +570,14 @@ slictlthr_main(const char *fn)
 	psc_ctlparam_register("rlim", psc_ctlparam_rlim);
 	psc_ctlparam_register("run", psc_ctlparam_run);
 
-	psc_ctlparam_register_simple("version", slctlparam_version_get,
-	    NULL);
 	psc_ctlparam_register_simple("reclaim.xid",
 	    slictlparam_reclaim_xid_get, NULL);
 	psc_ctlparam_register_simple("reclaim.batchno",
 	    slictlparam_reclaim_batchno_get, NULL);
+	psc_ctlparam_register_simple("uptime", slctlparam_uptime_get,
+	    NULL);
+	psc_ctlparam_register_simple("version", slctlparam_version_get,
+	    NULL);
 
 	psc_ctlthr_main(fn, slictlops, nitems(slictlops), SLITHRT_CTLAC);
 }
