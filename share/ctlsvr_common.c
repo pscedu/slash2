@@ -28,8 +28,8 @@
 #include "lnet/lib-types.h"
 #include "lnet/lib-lnet.h"
 
-#include "pfl/str.h"
 #include "pfl/rpc.h"
+#include "pfl/str.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/lock.h"
@@ -309,4 +309,18 @@ void
 slctlparam_version_get(char *val)
 {
 	snprintf(val, PCP_VALUE_MAX, "%d", SL_STK_VERSION);
+}
+
+void
+slctlparam_uptime_get(char *val)
+{
+	extern struct timespec pfl_uptime;
+	struct timespec tv, delta;
+
+	_PFL_GETTIMESPEC(CLOCK_MONOTONIC, &tv);
+	timespecsub(&tv, &pfl_uptime, &delta);
+	snprintf(val, PCP_VALUE_MAX, "%ldd%ldh%ldm",
+	    delta.tv_sec / (60 * 60 * 24),
+	    (delta.tv_sec % (60 * 60 * 24)) / (60 * 60),
+	    (delta.tv_sec % (60 * 60)) / 60);
 }
