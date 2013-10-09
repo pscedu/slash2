@@ -61,10 +61,10 @@ __static int
 sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
     int rc)
 {
-	struct slvr_ref *s;
+	struct slvr *s;
 	int slvrsiz;
 
-	s = w->srw_slvr_refs[slvridx];
+	s = w->srw_slvr[slvridx];
 
 	DEBUG_SLVR(rc ? PLL_ERROR : PLL_INFO, s, "replread rc=%d", rc);
 
@@ -111,7 +111,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 
 	spinlock(&w->srw_lock);
 	w->srw_nslvr_cur++;
-	w->srw_slvr_refs[slvridx] = NULL;
+	w->srw_slvr[slvridx] = NULL;
 	freelock(&w->srw_lock);
 
 	replwk_queue(w);
@@ -131,8 +131,8 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 	struct srm_repl_read_rep *mp;
 	struct bmapc_memb *b = NULL;
 	struct fidc_membh *f;
-	struct slvr_ref *s;
 	struct iovec iov;
+	struct slvr *s;
 	int rv;
 
 	sliriithr(pscthr_get())->sirit_st_nread++;
@@ -228,8 +228,8 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 	struct srm_repl_read_rep *mp;
 	struct bmapc_memb *b = NULL;
 	struct fidc_membh *f;
-	struct slvr_ref *s;
 	struct iovec iov;
+	struct slvr *s;
 	int slvridx = 0;
 
 	sliriithr(pscthr_get())->sirit_st_nread++;
@@ -286,12 +286,12 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 
 
 	/* Ensure the sliver is found in the work item's array. */
-	for (slvridx = 0; slvridx < (int)nitems(w->srw_slvr_refs);
+	for (slvridx = 0; slvridx < (int)nitems(w->srw_slvr);
 	     slvridx++)
-		if (w->srw_slvr_refs[slvridx] == s)
+		if (w->srw_slvr[slvridx] == s)
 			break;
 
-	if (slvridx == (int)nitems(w->srw_slvr_refs)) {
+	if (slvridx == (int)nitems(w->srw_slvr)) {
 		DEBUG_SLVR(PLL_ERROR, s,
 		   "failed to find slvr in wq=%p", w);
 		PFL_GOTOERR(out, mp->rc = -ENOENT);
@@ -332,7 +332,7 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 {
 	struct slashrpc_cservice *csvc;
 	struct sli_repl_workrq *w;
-	struct slvr_ref *s;
+	struct slvr *s;
 	int rc, slvridx;
 
 	w = args->pointer_arg[SRII_REPLREAD_CBARG_WKRQ];
@@ -341,11 +341,11 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_repl_read_rep, rc);
 
-	for (slvridx = 0; slvridx < (int)nitems(w->srw_slvr_refs);
+	for (slvridx = 0; slvridx < (int)nitems(w->srw_slvr);
 	    slvridx++)
-		if (w->srw_slvr_refs[slvridx] == s)
+		if (w->srw_slvr[slvridx] == s)
 			break;
-	psc_assert(slvridx < (int)nitems(w->srw_slvr_refs));
+	psc_assert(slvridx < (int)nitems(w->srw_slvr));
 
 	if (rc == -SLERR_AIOWAIT)
 		OPSTAT_INCR(SLI_OPST_ISSUE_REPLREAD_CB_AIO);
@@ -366,8 +366,8 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	const struct srm_repl_read_rep *mp;
 	struct srm_repl_read_req *mq;
 	struct pscrpc_request *rq;
-	struct slvr_ref *s;
 	struct iovec iov;
+	struct slvr *s;
 	int rc;
 
 	psclog_info("srw %p fg "SLPRI_FID" bmapno %d slvrno %d idx "
@@ -387,8 +387,8 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	mq->slvrno = slvrno;
 
 	psc_atomic32_inc(&w->srw_refcnt);
-	psc_assert(w->srw_slvr_refs[slvridx] == SLI_REPL_SLVR_SCHED);
-	w->srw_slvr_refs[slvridx] = s =
+	psc_assert(w->srw_slvr[slvridx] == SLI_REPL_SLVR_SCHED);
+	w->srw_slvr[slvridx] = s =
 	    slvr_lookup(slvrno, bmap_2_bii(w->srw_bcm), SL_WRITE);
 
 	slvr_repl_prep(s, SLVR_REPLDST | SLVR_REPLWIRE);
@@ -425,7 +425,7 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 
 		spinlock(&w->srw_lock);
 		w->srw_nslvr_cur++;
-		w->srw_slvr_refs[slvridx] = NULL;
+		w->srw_slvr[slvridx] = NULL;
 		freelock(&w->srw_lock);
 
 		replwk_queue(w);
