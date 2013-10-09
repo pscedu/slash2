@@ -122,7 +122,7 @@ msl_fd_should_retry(struct msl_fhent *mfh, int rc)
 }
 
 void
-_bmap_flushq_wake(const struct pfl_callerinfo *pci, int reason) 
+_bmap_flushq_wake(const struct pfl_callerinfo *pci, int reason)
 {
 	int wake = 0;
 
@@ -250,7 +250,7 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r)
 	struct timespec t;
 	int old = 0;
 	struct bmap_pagecache *bmpc;
- 
+
 	bmpc = bmap_2_bmpc(r->biorq_bmap);
 
 	PFL_GETTIMESPEC(&t);
@@ -962,8 +962,8 @@ msbmflwthr_main(struct psc_thread *thr)
 			if (!BMAP_TRYLOCK(b))
 				continue;
 			DEBUG_BMAP(PLL_INFO, b, "");
-			if ((b->bcm_flags & BMAP_TOFREE) || 
-			    (b->bcm_flags & BMAP_CLI_LEASEFAILED) || 
+			if ((b->bcm_flags & BMAP_TOFREE) ||
+			    (b->bcm_flags & BMAP_CLI_LEASEFAILED) ||
 			    (b->bcm_flags & BMAP_CLI_REASSIGNREQ)) {
 				BMAP_ULOCK(b);
 				continue;
@@ -1124,7 +1124,7 @@ msbmapflushthr_main(struct psc_thread *thr)
 
 		spinlock(&bmapFlushLock);
 		bmapFlushTimeoFlags |= BMAPFLSH_RPCWAIT;
-		psc_waitq_waitrel(&bmapFlushWaitq, 
+		psc_waitq_waitrel(&bmapFlushWaitq,
 		    &bmapFlushLock, &bmapFlushWaitSecs);
 		spinlock(&bmapFlushLock);
 		bmapFlushTimeoFlags &= ~BMAPFLSH_RPCWAIT;
@@ -1255,8 +1255,8 @@ msbmapflushthr_spawn(void)
 
 	for (i=0; i < NUM_READAHEAD_THREADS; i++) {
 		thr = pscthr_init(MSTHRT_BMAPREADAHEAD, 0,
-		    msbmaprathr_main, NULL, sizeof(struct
-		    msbmflra_thread), "msbrathr%d", i);
+		    msbmaprathr_main, NULL,
+		    sizeof(struct msbmflra_thread), "msbrathr%d", i);
 		psc_multiwait_init(&msbmfrathr(thr)->mbfra_mw, "%s",
 		    thr->pscthr_name);
 		pscthr_setready(thr);
