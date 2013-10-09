@@ -65,10 +65,10 @@ struct psc_listcache	 lruSlvrs;   /* LRU list of clean slivers which may be reap
 struct psc_listcache	 crcqSlvrs;  /* Slivers ready to be CRC'd and have their
 				      * CRCs shipped to the MDS. */
 
-__static SPLAY_GENERATE(biod_slvrtree, slvr_ref, slvr_tentry, slvr_cmp);
+__static SPLAY_GENERATE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp);
 
 __static void
-slvr_lru_requeue(struct slvr_ref *s, int tail)
+slvr_lru_requeue(struct slvr *s, int tail)
 {
 	/*
 	 * Locking convention: it is legal to request for a list lock
@@ -93,7 +93,7 @@ slvr_lru_requeue(struct slvr_ref *s, int tail)
  * Returns: errno on failure, 0 on success, -1 on not applicable.
  */
 int
-slvr_do_crc(struct slvr_ref *s)
+slvr_do_crc(struct slvr *s)
 {
 	uint64_t crc;
 
@@ -208,7 +208,7 @@ sli_aio_aiocbr_release(struct sli_aiocb_reply *a)
 __static int
 slvr_aio_chkslvrs(const struct sli_aiocb_reply *a)
 {
-	struct slvr_ref *s;
+	struct slvr *s;
 	int i, rc = 0;
 
 	for (i = 0; i < a->aiocbr_nslvrs; i++) {
@@ -231,7 +231,7 @@ slvr_aio_replreply(struct sli_aiocb_reply *a)
 	struct pscrpc_request *rq = NULL;
 	struct srm_repl_read_req *mq;
 	struct srm_repl_read_rep *mp;
-	struct slvr_ref *s = NULL;
+	struct slvr *s = NULL;
 	int rc;
 
 	psc_assert(a->aiocbr_nslvrs == 1);
@@ -327,7 +327,7 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 __static void
 slvr_aio_tryreply(struct sli_aiocb_reply *a)
 {
-	struct slvr_ref *s;
+	struct slvr *s;
 	int i, ready;
 
 	for (ready = 0, i = 0; i < a->aiocbr_nslvrs; i++) {
@@ -372,8 +372,8 @@ slvr_iocb_release(struct sli_iocb *iocb)
 __static void
 slvr_fsaio_done(struct sli_iocb *iocb)
 {
-	struct slvr_ref *s;
 	struct sli_aiocb_reply *a;
+	struct slvr *s;
 	int rc;
 
 	s = iocb->iocb_slvr;
@@ -416,7 +416,7 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 }
 
 __static struct sli_iocb *
-sli_aio_iocb_new(struct slvr_ref *s)
+sli_aio_iocb_new(struct slvr *s)
 {
 	struct sli_iocb *iocb;
 
@@ -432,7 +432,7 @@ sli_aio_iocb_new(struct slvr_ref *s)
 
 void
 sli_aio_replreply_setup(struct sli_aiocb_reply *a,
-    struct pscrpc_request *rq, struct slvr_ref *s, struct iovec *iov)
+    struct pscrpc_request *rq, struct slvr *s, struct iovec *iov)
 {
 	//const struct srm_repl_read_req *mq;
 	struct srm_repl_read_rep *mp;
@@ -455,7 +455,7 @@ sli_aio_replreply_setup(struct sli_aiocb_reply *a,
 
 void
 sli_aio_reply_setup(struct sli_aiocb_reply *a, struct pscrpc_request *rq,
-    uint32_t len, uint32_t off, struct slvr_ref **slvrs, int nslvrs,
+    uint32_t len, uint32_t off, struct slvr **slvrs, int nslvrs,
     struct iovec *iovs, int niovs, enum rw rw)
 {
 	struct srm_io_req *mq;
@@ -486,7 +486,7 @@ sli_aio_reply_setup(struct sli_aiocb_reply *a, struct pscrpc_request *rq,
 }
 
 int
-sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp)
+sli_aio_register(struct slvr *s, struct sli_aiocb_reply **aiocbrp)
 {
 	struct sli_aiocb_reply *a;
 	struct sli_iocb *iocb;
@@ -535,7 +535,7 @@ sli_aio_register(struct slvr_ref *s, struct sli_aiocb_reply **aiocbrp)
 }
 
 __static ssize_t
-slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
+slvr_fsio(struct slvr *s, int sblk, uint32_t size, enum rw rw,
     struct sli_aiocb_reply **aiocbr)
 {
 	int nblks, save_errno = 0;
@@ -631,11 +631,11 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw,
  * @s: the sliver.
  */
 ssize_t
-slvr_fsbytes_rio(struct slvr_ref *s, uint32_t off, uint32_t len,
+slvr_fsbytes_rio(struct slvr *s, uint32_t off, uint32_t len,
 	int rbw, struct sli_aiocb_reply **aiocbr)
 {
-	int blk;
 	ssize_t rc = 0;
+	int blk;
 
 	if (!rbw || globalConfig.gconf_async_io) {
 		rc = slvr_fsio(s, 0, SLASH_SLVR_SIZE,
@@ -679,7 +679,7 @@ slvr_fsbytes_rio(struct slvr_ref *s, uint32_t off, uint32_t len,
 }
 
 ssize_t
-slvr_fsbytes_wio(struct slvr_ref *s, uint32_t size, uint32_t sblk)
+slvr_fsbytes_wio(struct slvr *s, uint32_t size, uint32_t sblk)
 {
 	DEBUG_SLVR(PLL_INFO, s, "sblk=%u size=%u", sblk, size);
 
@@ -687,7 +687,7 @@ slvr_fsbytes_wio(struct slvr_ref *s, uint32_t size, uint32_t sblk)
 }
 
 void
-slvr_repl_prep(struct slvr_ref *s, int src_or_dst)
+slvr_repl_prep(struct slvr *s, int src_or_dst)
 {
 	SLVR_LOCK(s);
 
@@ -734,7 +734,7 @@ slvr_repl_prep(struct slvr_ref *s, int src_or_dst)
  * @rw: read or write op
  */
 ssize_t
-slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
+slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
     struct sli_aiocb_reply **aiocbr)
 {
 	int rbw = 0;
@@ -845,7 +845,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw,
 }
 
 __static void
-slvr_schedule_crc_locked(struct slvr_ref *s)
+slvr_schedule_crc_locked(struct slvr *s)
 {
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
@@ -866,7 +866,7 @@ slvr_schedule_crc_locked(struct slvr_ref *s)
 }
 
 __static void
-slvr_remove(struct slvr_ref *s)
+slvr_remove(struct slvr *s)
 {
 	struct bmap_iod_info *bii;
 	struct sl_buffer *tmp = s->slvr_slab;
@@ -890,7 +890,7 @@ slvr_remove(struct slvr_ref *s)
 }
 
 void
-slvr_try_crcsched_locked(struct slvr_ref *s)
+slvr_try_crcsched_locked(struct slvr *s)
 {
 	if ((s->slvr_flags & SLVR_LRU) && s->slvr_pndgwrts)
 		slvr_lru_requeue(s, 1);
@@ -900,7 +900,7 @@ slvr_try_crcsched_locked(struct slvr_ref *s)
 }
 
 int
-slvr_lru_tryunpin_locked(struct slvr_ref *s)
+slvr_lru_tryunpin_locked(struct slvr *s)
 {
 	SLVR_LOCK_ENSURE(s);
 	psc_assert(s->slvr_slab);
@@ -922,7 +922,7 @@ slvr_lru_tryunpin_locked(struct slvr_ref *s)
  * slvr_rio_done - Called after a read on the given sliver has completed.
  */
 void
-slvr_rio_done(struct slvr_ref *s)
+slvr_rio_done(struct slvr *s)
 {
 	SLVR_LOCK(s);
 
@@ -942,7 +942,7 @@ slvr_rio_done(struct slvr_ref *s)
  * slvr_wio_done - Called after a write on the given sliver has completed.
  */
 void
-slvr_wio_done(struct slvr_ref *s)
+slvr_wio_done(struct slvr *s)
 {
 	SLVR_LOCK(s);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
@@ -969,13 +969,13 @@ slvr_wio_done(struct slvr_ref *s)
  * slvr_lookup - Lookup or create a sliver reference, ignoring one that
  *	is being freed.
  */
-struct slvr_ref *
+struct slvr *
 _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
     struct bmap_iod_info *bii, enum rw rw)
 {
-	int alloc = 0;
-	struct slvr_ref *s, *tmp1, ts;
+	struct slvr *s, *tmp1, ts;
 	struct sl_buffer *tmp2;
+	int alloc = 0;
 
 	ts.slvr_num = num;
 
@@ -1070,7 +1070,7 @@ int
 slvr_buffer_reap(struct psc_poolmgr *m)
 {
 	static struct psc_dynarray a;
-	struct slvr_ref *s, *dummy;
+	struct slvr *s, *dummy;
 	int i, n;
 
 	n = 0;
@@ -1158,12 +1158,12 @@ void
 slvr_cache_init(void)
 {
 	psc_poolmaster_init(&slvr_poolmaster,
-	    struct slvr_ref, slvr_lentry, PPMF_AUTO, 64, 64, 0,
+	    struct slvr, slvr_lentry, PPMF_AUTO, 64, 64, 0,
 	    NULL, NULL, NULL, "slvr");
 	slvr_pool = psc_poolmaster_getmgr(&slvr_poolmaster);
 
-	lc_reginit(&lruSlvrs, struct slvr_ref, slvr_lentry, "lruslvrs");
-	lc_reginit(&crcqSlvrs, struct slvr_ref, slvr_lentry, "crcqslvrs");
+	lc_reginit(&lruSlvrs, struct slvr, slvr_lentry, "lruslvrs");
+	lc_reginit(&crcqSlvrs, struct slvr, slvr_lentry, "crcqslvrs");
 
 	if (globalConfig.gconf_async_io) {
 
@@ -1191,7 +1191,7 @@ slvr_cache_init(void)
 
 #if PFL_DEBUG > 0
 void
-dump_sliver(struct slvr_ref *s)
+dump_sliver(struct slvr *s)
 {
 	DEBUG_SLVR(PLL_MAX, s, "");
 }

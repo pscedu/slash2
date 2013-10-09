@@ -70,7 +70,7 @@ __static int
 sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 {
 	uint32_t tsize, sblk, roff, len[RIC_MAX_SLVRS_PER_IO];
-	struct slvr_ref *slvr_ref[RIC_MAX_SLVRS_PER_IO];
+	struct slvr *slvr[RIC_MAX_SLVRS_PER_IO];
 	struct iovec iovs[RIC_MAX_SLVRS_PER_IO];
 	struct sli_aiocb_reply *aiocbr = NULL;
 	struct slash_fidgen *fgp;
@@ -205,7 +205,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		nslvrs++;
 
 	for (i = 0; i < nslvrs; i++)
-		slvr_ref[i] = NULL;
+		slvr[i] = NULL;
 
 	/*
 	 * This loop assumes that nslvrs is always no larger than
@@ -216,17 +216,16 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	roff = mq->offset - slvrno * SLASH_SLVR_SIZE;
 	for (i = 0, tsize = mq->size; i < nslvrs; i++, roff = 0) {
 
-		slvr_ref[i] = slvr_lookup(slvrno + i, bmap_2_bii(bmap),
+		slvr[i] = slvr_lookup(slvrno + i, bmap_2_bii(bmap),
 		    rw);
 
 		/* Fault in pages either for read or RBW. */
 		len[i] = MIN(tsize, SLASH_SLVR_SIZE - roff);
-		rv = slvr_io_prep(slvr_ref[i], roff, len[i], rw,
-		    &aiocbr);
+		rv = slvr_io_prep(slvr[i], roff, len[i], rw, &aiocbr);
 
 		DEBUG_SLVR(((rv && rv != -SLERR_AIOWAIT) ?
-		    PLL_WARN : PLL_INFO),
-		    slvr_ref[i], "post io_prep rw=%s rv=%zd",
+		    PLL_WARN : PLL_INFO), slvr[i],
+		    "post io_prep rw=%s rv=%zd",
 		    rw == SL_WRITE ? "wr" : "rd", rv);
 		if (rv && rv != -SLERR_AIOWAIT) {
 			rc = rv;
@@ -237,7 +236,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		 * mq->offset is the offset into the bmap, here we must
 		 * translate it into the offset of the sliver.
 		 */
-		iovs[i].iov_base = slvr_ref[i]->slvr_slab->slb_base + roff;
+		iovs[i].iov_base = slvr[i]->slvr_slab->slb_base + roff;
 		tsize -= iovs[i].iov_len = len[i];
 
 		/*
@@ -252,7 +251,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (aiocbr) {
 
 		sli_aio_reply_setup(aiocbr, rq, mq->size, mq->offset,
-		    slvr_ref, nslvrs, iovs, nslvrs, rw);
+		    slvr, nslvrs, iovs, nslvrs, rw);
 
 		/*
 		 * Now check for early completion.  If all slvrs are
@@ -262,12 +261,12 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		 */
 		for (i = 0; i < nslvrs; i++) {
 
-			SLVR_LOCK(slvr_ref[i]);
-			if (slvr_ref[i]->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR)) {
-				DEBUG_SLVR(PLL_NOTICE, slvr_ref[i],
+			SLVR_LOCK(slvr[i]);
+			if (slvr[i]->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR)) {
+				DEBUG_SLVR(PLL_NOTICE, slvr[i],
 				    "aio early ready, rw=%s",
 				    rw == SL_WRITE ? "wr" : "rd");
-				SLVR_ULOCK(slvr_ref[i]);
+				SLVR_ULOCK(slvr[i]);
 
 			} else {
 				/*
@@ -275,12 +274,12 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 				 * waiting for aio and return AIOWAIT to
 				 * client later.
 				 */
-				pll_add(&slvr_ref[i]->slvr_pndgaios, aiocbr);
-				psc_assert(slvr_ref[i]->slvr_flags & SLVR_AIOWAIT);
+				pll_add(&slvr[i]->slvr_pndgaios, aiocbr);
+				psc_assert(slvr[i]->slvr_flags & SLVR_AIOWAIT);
 				OPSTAT_INCR(SLI_OPST_AIO_INSERT);
-				SLVR_ULOCK(slvr_ref[i]);
+				SLVR_ULOCK(slvr[i]);
 
-				DEBUG_SLVR(PLL_DIAG, slvr_ref[i], "aio wait");
+				DEBUG_SLVR(PLL_DIAG, slvr[i], "aio wait");
 				mp->rc = SLERR_AIOWAIT;
 				pscrpc_msg_add_flags(rq->rq_repmsg,
 				    MSG_ABORT_BULK);
@@ -318,7 +317,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			    SLASH_SLVR_BLKSZ, tsize);
 
 			tsize -= tsz;
-			rv = slvr_fsbytes_wio(slvr_ref[i], tsz, sblk);
+			rv = slvr_fsbytes_wio(slvr[i], tsz, sblk);
 			if (rv) {
 				psc_assert(rv != -SLERR_AIOWAIT);
 				rc = rv;
@@ -333,12 +332,12 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
  out:
 	for (i = 0; i < nslvrs; i++) {
-		if (slvr_ref[i] == NULL)
+		if (slvr[i] == NULL)
 			continue;
 		if (rw == SL_READ)
-			slvr_rio_done(slvr_ref[i]);
+			slvr_rio_done(slvr[i]);
 		else
-			slvr_wio_done(slvr_ref[i]);
+			slvr_wio_done(slvr[i]);
 	}
 	if (rc)
 		psclog_warnx("%s error, rc = %d",
