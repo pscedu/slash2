@@ -66,8 +66,6 @@ struct slvr {
 	SPLAY_ENTRY(slvr)	 slvr_tentry;	/* bmap tree entry */
 };
 
-#define slvr_ref slvr
-
 /* slvr_flags */
 #define	SLVR_FAULTING		(1 <<  0)	/* contents loading from disk or net */
 #define	SLVR_PINNED		(1 <<  1)	/* read/write in progress or CRC dirty */
@@ -158,7 +156,7 @@ struct slvr {
 struct sli_aiocb_reply {
 	struct psc_listentry	  aiocbr_lentry;
 	struct iovec		  aiocbr_iovs[RIC_MAX_SLVRS_PER_IO];
-	struct slvr_ref		 *aiocbr_slvrs[RIC_MAX_SLVRS_PER_IO];
+	struct slvr		 *aiocbr_slvrs[RIC_MAX_SLVRS_PER_IO];
 	int			  aiocbr_flags;
 	int			  aiocbr_nslvrs;
 	int			  aiocbr_niov;
@@ -175,7 +173,7 @@ struct sli_aiocb_reply {
 
 struct sli_iocb {
 	struct psc_listentry	  iocb_lentry;
-	struct slvr_ref		 *iocb_slvr;
+	struct slvr		 *iocb_slvr;
 	struct aiocb		  iocb_aiocb;
 	void			(*iocb_cbf)(struct sli_iocb *);
 	int			  iocb_rc;
@@ -184,29 +182,29 @@ struct sli_iocb {
 #define slvr_lookup(n, bii, rw)						\
 	_slvr_lookup(PFL_CALLERINFO(), (n), (bii), (rw))
 
-struct slvr_ref *
+struct slvr *
 	_slvr_lookup(const struct pfl_callerinfo *pci, uint32_t,
 	    struct bmap_iod_info *, enum rw);
 void	slvr_cache_init(void);
-int	slvr_do_crc(struct slvr_ref *);
-ssize_t	slvr_fsbytes_wio(struct slvr_ref *, uint32_t, uint32_t);
-ssize_t	slvr_io_prep(struct slvr_ref *, uint32_t, uint32_t, enum rw,
+int	slvr_do_crc(struct slvr *);
+ssize_t	slvr_fsbytes_wio(struct slvr *, uint32_t, uint32_t);
+ssize_t	slvr_io_prep(struct slvr *, uint32_t, uint32_t, enum rw,
 	    struct sli_aiocb_reply **);
-int	slvr_lru_tryunpin_locked(struct slvr_ref *);
-void	slvr_repl_prep(struct slvr_ref *, int);
-void	slvr_rio_done(struct slvr_ref *);
-void	slvr_schedule_crc(struct slvr_ref *);
-void	slvr_try_crcsched_locked(struct slvr_ref *);
-void	slvr_wio_done(struct slvr_ref *);
+int	slvr_lru_tryunpin_locked(struct slvr *);
+void	slvr_repl_prep(struct slvr *, int);
+void	slvr_rio_done(struct slvr *);
+void	slvr_schedule_crc(struct slvr *);
+void	slvr_try_crcsched_locked(struct slvr *);
+void	slvr_wio_done(struct slvr *);
 void	slvr_worker_init(void);
 
 void	sli_aio_reply_setup(struct sli_aiocb_reply *,
 	    struct pscrpc_request *, uint32_t, uint32_t,
-	    struct slvr_ref **, int, struct iovec *, int, enum rw);
+	    struct slvr **, int, struct iovec *, int, enum rw);
 
 void	sli_aio_aiocbr_release(struct sli_aiocb_reply *);
 void	sli_aio_replreply_setup(struct sli_aiocb_reply *,
-	    struct pscrpc_request *, struct slvr_ref *, struct iovec *);
+	    struct pscrpc_request *, struct slvr *, struct iovec *);
 
 int	slvr_buffer_reap(struct psc_poolmgr *);
 
@@ -217,7 +215,7 @@ extern struct psc_waitq		sli_slvr_waitq;
 static __inline int
 slvr_cmp(const void *x, const void *y)
 {
-	const struct slvr_ref *a = x, *b = y;
+	const struct slvr *a = x, *b = y;
 
 	return (CMP(a->slvr_num, b->slvr_num));
 }
