@@ -62,7 +62,7 @@ struct sli_repl_workrq {
 	struct psclist_head	 srw_active_lentry;	/* entry in the active list */
 	struct psclist_head	 srw_pending_lentry;	/* entry in the pending list */
 
-	struct slvr		*srw_slvr_refs[REPL_MAX_INFLIGHT_SLVRS];
+	struct slvr		*srw_slvr[REPL_MAX_INFLIGHT_SLVRS];
 };
 
 enum {

@@ -234,7 +234,7 @@ slireplpndthr_main(struct psc_thread *thr)
 		/* find a pointer slot we can use to transmit the sliver */
 		for (slvridx = 0; slvridx < REPL_MAX_INFLIGHT_SLVRS;
 		    slvridx++)
-			if (w->srw_slvr_refs[slvridx] == NULL)
+			if (w->srw_slvr[slvridx] == NULL)
 				break;
 
 		if (slvridx == REPL_MAX_INFLIGHT_SLVRS) {
@@ -259,7 +259,7 @@ slireplpndthr_main(struct psc_thread *thr)
 		BMAP_ULOCK(w->srw_bcm);
 
 		/* mark slot as occupied */
-		w->srw_slvr_refs[slvridx] = SLI_REPL_SLVR_SCHED;
+		w->srw_slvr[slvridx] = SLI_REPL_SLVR_SCHED;
 		freelock(&w->srw_lock);
 
 		/* acquire connection to replication source & issue READ */
@@ -278,7 +278,7 @@ slireplpndthr_main(struct psc_thread *thr)
 		}
 		if (rc) {
 			spinlock(&w->srw_lock);
-			w->srw_slvr_refs[slvridx] = NULL;
+			w->srw_slvr[slvridx] = NULL;
 			BMAP_LOCK(w->srw_bcm);
 			w->srw_bcm->bcm_crcstates[slvrno] |=
 			    BMAP_SLVR_WANTREPL;
