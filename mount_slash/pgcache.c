@@ -343,6 +343,16 @@ bmpc_biorqs_destroy(struct bmapc_memb *b, int rc)
 	BMAP_ULOCK(b);
 
 	DYNARRAY_FOREACH(r, i, &a) {
+		/*
+ 		 * A read request can use a write bmap. Plus, it is
+ 		 * the reader's responsibility to destroy its requests.
+ 		 */
+		BIORQ_LOCK(r);
+		if (!(r->biorq_flags & BIORQ_FLUSHRDY)) {
+			BIORQ_ULOCK(r);
+			continue;
+		}
+		BIORQ_ULOCK(r);
 		msl_bmpces_fail(r, rc);
 		msl_biorq_destroy(r);
 	}
