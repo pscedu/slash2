@@ -799,6 +799,7 @@ msbmaprlsthr_main(struct psc_thread *thr)
 		nto.tv_sec += BMAP_CLI_TIMEO_INC;
 
 		wrapdetect = NULL;
+		/* XXX busy loop when one bmap left on the list */
 		while ((bci = lc_getnb(&bmapTimeoutQ))) {
 			b = bci_2_bmap(bci);
 			if (bci == wrapdetect) {
