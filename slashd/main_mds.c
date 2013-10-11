@@ -687,5 +687,5 @@ main(int argc, char *argv[])
 	slmupschthr_spawn();
 
 	slmctlthr_main(sfn);
-	/* NOTREACHED */
+	exit(0);
 }

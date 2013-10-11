@@ -387,7 +387,7 @@ void		 slm_iosv_setbusy(sl_replica_t *, int);
 
 void		 slmbkdbthr_main(struct psc_thread *);
 void		 slmbmaptimeothr_spawn(void);
-__dead void	 slmctlthr_main(const char *);
+void		 slmctlthr_main(const char *);
 void		 slmrcmthr_main(struct psc_thread *);
 void		 slmtimerthr_spawn(void);
 
