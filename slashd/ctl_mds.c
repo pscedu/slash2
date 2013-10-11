@@ -340,7 +340,9 @@ slmctlcmd_stop(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 {
 	mdsio_exit();
 	/* XXX journal_close */
-	/* kill all threads and wait */
+	pscthr_killall();
+	/* XXX wait */
+	pscrpc_exit_portals();
 	exit(0);
 }
 

@@ -2636,6 +2636,9 @@ mslfsop_fsync(struct pscfs_req *pfr, __unusedx int datasync, void *data)
 void
 mslfsop_umount(void)
 {
+	pscthr_killall();
+	pscrpc_exit_portals();
+	/* XXX wait */
 //	unmount_mp();
 	exit(0);
 }

@@ -505,6 +505,10 @@ __dead int
 slictlcmd_stop(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
     __unusedx void *m)
 {
+	/* XXX sync buffers on disk */
+	pscthr_killall();
+	pscrpc_exit_portals();
+	/* XXX wait */
 	exit(0);
 }
 
