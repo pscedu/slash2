@@ -260,6 +260,8 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	if (inflight > OPSTAT_CURR(SLC_OPST_BIORQ_MAX))
 		OPSTAT_ASSIGN(SLC_OPST_BIORQ_MAX, inflight);
 
+	DEBUG_BIORQ(PLL_INFO, r, "creating");
+
 	return (r);
 }
 

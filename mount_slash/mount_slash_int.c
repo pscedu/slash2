@@ -459,7 +459,7 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 	BIORQ_LOCK(r);
 	psc_assert(r->biorq_ref > 0);
 	r->biorq_ref--;
-	DEBUG_BIORQ(PLL_INFO, r, "destroying (ref=%d)", r->biorq_ref);
+	DEBUG_BIORQ(PLL_INFO, r, "destroying");
 	if (r->biorq_ref) {
 		BIORQ_ULOCK(r);
 		return;
@@ -1972,7 +1972,6 @@ msl_fsrqinfo_biorq_add(struct msl_fsrqinfo *q, struct bmpc_ioreq *r,
 	psc_assert(q->mfsrq_mfh == r->biorq_mfh);
 
 	MFH_LOCK(r->biorq_mfh);
-	DEBUG_BIORQ(PLL_INFO, r, "q=%p pos=%d", q, biorq_num);
 	psc_assert(!q->mfsrq_biorq[biorq_num]);
 	q->mfsrq_biorq[biorq_num] = r;
 	q->mfsrq_ref++;
