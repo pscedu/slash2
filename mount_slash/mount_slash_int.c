@@ -1811,7 +1811,6 @@ msl_pages_copyin(struct bmpc_ioreq *r)
 
 		BMPCE_LOCK(e);
 		e->bmpce_flags |= BMPCE_DATARDY;
-		BMPCE_WAKE(e);
 		BMPCE_ULOCK(e);
 
 		toff  += nbytes;
