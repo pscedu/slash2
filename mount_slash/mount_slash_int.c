@@ -887,6 +887,7 @@ _msl_bmpce_rpc_done(const struct pfl_callerinfo *pci,
 	/* AIOWAIT is removed no matter what. */
 	e->bmpce_flags &= ~BMPCE_AIOWAIT;
 
+	BMPCE_WAKE(e);
 	BMPCE_ULOCK(e);
 	msl_bmpce_complete_biorq(e, rc);
 }
@@ -1810,6 +1811,7 @@ msl_pages_copyin(struct bmpc_ioreq *r)
 
 		BMPCE_LOCK(e);
 		e->bmpce_flags |= BMPCE_DATARDY;
+		BMPCE_WAKE(e);
 		BMPCE_ULOCK(e);
 
 		toff  += nbytes;
