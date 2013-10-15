@@ -151,6 +151,7 @@ struct msl_fhent {
 	struct psclist_head		 mfh_lentry;
 	int				 mfh_flags;
 	int				 mfh_refcnt;
+	pid_t				 mfh_pid;
 
 	int				 mfh_retries;
 	int				 mfh_oflags;	/* open(2) flags */
@@ -245,7 +246,7 @@ int	 msl_fd_should_retry(struct msl_fhent *, int);
 struct slashrpc_cservice *
 	 msl_try_get_replica_res(struct bmapc_memb *, int);
 struct msl_fhent *
-	 msl_fhent_new(struct fidc_membh *);
+	 msl_fhent_new(struct pscfs_req *, struct fidc_membh *);
 
 void	 msbmapflushthr_spawn(void);
 void	 msctlthr_spawn(void);
