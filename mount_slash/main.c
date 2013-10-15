@@ -426,7 +426,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	}
 #endif
 
-	mfh = msl_fhent_new(c);
+	mfh = msl_fhent_new(pfr, c);
 	mfh->mfh_oflags = oflags;
 	PFL_GETTIMESPEC(&mfh->mfh_open_time);
 	memcpy(&mfh->mfh_open_atime, &c->fcmh_sstb.sst_atime,
@@ -526,7 +526,7 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 			PFL_GOTOERR(out, rc = ENOTDIR);
 	}
 
-	*mfhp = msl_fhent_new(c);
+	*mfhp = msl_fhent_new(pfr, c);
 	(*mfhp)->mfh_oflags = oflags;
 	PFL_GETTIMESPEC(&(*mfhp)->mfh_open_time);
 	memcpy(&(*mfhp)->mfh_open_atime, &c->fcmh_sstb.sst_atime,
@@ -536,9 +536,9 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 		*rflags |= PSCFS_OPENF_KEEPCACHE;
 
 	/*
-	 * PSCFS direct_io does not work with mmap(), which is what the
-	 * kernel uses under the hood when running executables, so
-	 * disable it for this case.
+	 * PSCFS direct_io does not work with mmap(MAP_SHARED), which is
+	 * what the kernel uses under the hood when running executables,
+	 * so disable it for this case.
 	 */
 	if ((c->fcmh_sstb.sst_mode &
 	    (S_IXUSR | S_IXGRP | S_IXOTH)) == 0)
@@ -1233,7 +1233,8 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		PFL_GOTOERR(out, rc);
 
 	mq->creds.scr_uid = pcr.pcr_uid;
-	mq->creds.scr_gid = pcr.pcr_gid;
+	mq->creds.scr_gid = slc_posix_mkgrps ?
+	    p->fcmh_sstb.sst_gid : pcr.pcr_gid;
 	rc = uidmap_ext_cred(&mq->creds);
 	if (rc)
 		PFL_GOTOERR(out, rc);
@@ -1649,6 +1650,7 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	int rc;
 
 	msfsthr_ensure();
+	memset(&sstb, 0, sizeof(sstb));
 
 	pscfs_getcreds(pfr, &pcr);
 	rc = msl_lookup_fidcache(pfr, &pcr, pinum, name, &fg, &sstb,
@@ -1835,6 +1837,16 @@ msl_flush_attr(struct fidc_membh *f)
 	return (rc);
 }
 
+void
+slc_getprog(pid_t pid, char fn[])
+{
+	char buf[PATH_MAX];
+
+	fn[0] = '\0';
+	snprintf(buf, sizeof(buf), "/proc/%d/exe", pid);
+	readlink(buf, fn, PATH_MAX);
+}
+
 /**
  * mslfsop_close - This is not the same as close(2).
  */
@@ -1845,7 +1857,6 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 	struct fcmh_cli_info *fci;
 	struct fidc_membh *c;
 	int rc, flush_attrs = 0;
-	pid_t pid, sid;
 
 	msfsthr_ensure();
 	OPSTAT_INCR(SLC_OPST_CLOSE);
@@ -1895,17 +1906,11 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 		}
 	}
 
-	pid = pscfs_getclientctx(pfr)->pfcc_pid;
-	sid = getsid(pid);
-	pscfs_reply_close(pfr, rc);
-
 	if (!fcmh_isdir(c) && (mfh->mfh_nbytes_rd ||
 	    mfh->mfh_nbytes_wr)) {
-		char fn[PATH_MAX], exe[PATH_MAX];
+		char fn[PATH_MAX];
 
-		snprintf(fn, sizeof(fn), "/proc/%d/exe", pid);
-		if (readlink(fn, exe, sizeof(exe)) == -1)
-			exe[0] = '\0';
+		slc_getprog(mfh->mfh_pid, fn);
 		psclogs(PLL_INFO, SLCSS_INFO,
 		    "file closed fid="SLPRI_FID" "
 		    "uid=%u gid=%u "
@@ -1918,10 +1923,13 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 		    c->fcmh_sstb.sst_uid, c->fcmh_sstb.sst_gid,
 		    c->fcmh_sstb.sst_size,
 		    PFLPRI_PTIMESPEC_ARGS(&mfh->mfh_open_atime),
-		    PFLPRI_PTIMESPEC_ARGS(&c->fcmh_sstb.sst_mtim), sid,
+		    PFLPRI_PTIMESPEC_ARGS(&c->fcmh_sstb.sst_mtim),
+		    getsid(mfh->mfh_pid),
 		    PSCPRI_TIMESPEC_ARGS(&mfh->mfh_open_time),
-		    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr, exe);
+		    mfh->mfh_nbytes_rd, mfh->mfh_nbytes_wr, fn);
 	}
+
+	pscfs_reply_close(pfr, rc);
 
 	FCMH_UNBUSY(c);
 	mfh_decref(mfh);
