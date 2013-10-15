@@ -336,5 +336,5 @@ main(int argc, char *argv[])
 	OPSTAT_INCR(SLI_OPST_MIN_SEQNO);
 
 	slictlthr_main(sfn);
-	/* NOTREACHED */
+	exit(0);
 }
