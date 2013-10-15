@@ -538,7 +538,7 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 }
 
 struct msl_fhent *
-msl_fhent_new(struct fidc_membh *f)
+msl_fhent_new(struct pscfs_req *pfr, struct fidc_membh *f)
 {
 	struct msl_fhent *mfh;
 
@@ -548,6 +548,7 @@ msl_fhent_new(struct fidc_membh *f)
 	memset(mfh, 0, sizeof(*mfh));
 	mfh->mfh_refcnt = 1;
 	mfh->mfh_fcmh = f;
+	mfh->mfh_pid = pscfs_getclientctx(pfr)->pfcc_pid;
 	INIT_SPINLOCK(&mfh->mfh_lock);
 	pll_init(&mfh->mfh_biorqs, struct bmpc_ioreq, biorq_mfh_lentry,
 	    &mfh->mfh_lock);
