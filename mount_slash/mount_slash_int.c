@@ -419,6 +419,7 @@ msl_bmpces_fail(struct bmpc_ioreq *r, int rc)
 		if (biorq_is_my_bmpce(r, e)) {
 			e->bmpce_flags |= BMPCE_EIO;
 			DEBUG_BMPCE(PLL_INFO, e, "set BMPCE_EIO");
+			BMPCE_WAKE(e);
 		}
 		BMPCE_ULOCK(e);
 	}
@@ -1558,6 +1559,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 		 * XXX XXX could this cause a potential dangling
 		 * reference problem?
 		 */
+		BMPCE_WAKE(e);
 		BMPCE_ULOCK(e);
 	}
 
