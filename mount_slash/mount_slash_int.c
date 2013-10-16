@@ -1399,6 +1399,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 			pll_remove(&bmap_2_bmpc(b)->bmpc_pndg_ra, e);
 
 		e->bmpce_flags |= BMPCE_EIO;
+		BMPCE_WAKE(e);
 		DEBUG_BMPCE(PLL_INFO, e, "set BMPCE_EIO");
 		bmpce_release_locked(e, bmap_2_bmpc(b));
 
