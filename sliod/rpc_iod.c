@@ -149,33 +149,6 @@ sli_rci_ctl_health_send(struct slashrpc_cservice *csvc)
 }
 
 void
-sli_rpc_mds_unpack_bminseq(struct pscrpc_request *rq, int msgtype)
-{
-	struct srt_bmapminseq *sbms;
-	struct pscrpc_msg *m;
-
-	if (rq->rq_status)
-		return;
-
-	if (msgtype == PSCRPC_MSG_REQUEST)
-		m = rq->rq_reqmsg;
-	else
-		m = rq->rq_repmsg;
-	if (m == NULL)
-		goto error;
-	if (m->bufcount < 3)
-		goto error;
-	sbms = pscrpc_msg_buf(m, m->bufcount - 2, sizeof(*sbms));
-	if (sbms == NULL)
-		goto error;
-	return;
-
- error:
-	psclog_errorx("no message; msg=%p opc=%d bufc=%d",
-	    m, m ? (int)m->opc : -1, m ? (int)m->bufcount : -1);
-}
-
-void
 sli_rpc_mds_unpack_fsuuid(struct pscrpc_request *rq, int msgtype)
 {
 	struct srm_connect_rep *mp;
@@ -284,7 +257,8 @@ slrpc_newreq(struct slashrpc_cservice *csvc, int op,
 void
 slrpc_req_out(struct slashrpc_cservice *csvc, struct pscrpc_request *rq)
 {
-	if (csvc->csvc_peertype == SLCONNT_MDS)
+	if (csvc->csvc_peertype == SLCONNT_MDS &&
+	    rq->rq_reqmsg->opc == SRMT_PING)
 		sli_rpc_mds_pack_statfs(rq->rq_reqmsg);
 }
 
@@ -292,7 +266,6 @@ void
 slrpc_rep_in(struct slashrpc_cservice *csvc, struct pscrpc_request *rq)
 {
 	if (csvc->csvc_peertype == SLCONNT_MDS) {
-		sli_rpc_mds_unpack_bminseq(rq, PSCRPC_MSG_REPLY);
 		if (rq->rq_reqmsg->opc == SRMT_CONNECT)
 			sli_rpc_mds_unpack_fsuuid(rq, PSCRPC_MSG_REPLY);
 	}
@@ -302,11 +275,11 @@ void
 slrpc_req_in(struct pscrpc_request *rq)
 {
 	if (rq->rq_rqbd->rqbd_service == sli_rim_svc.svh_service) {
-		sli_rpc_mds_unpack_bminseq(rq, PSCRPC_MSG_REQUEST);
 		if (rq->rq_reqmsg->opc == SRMT_CONNECT)
 			sli_rpc_mds_unpack_fsuuid(rq,
 			    PSCRPC_MSG_REQUEST);
-		sli_rpc_mds_pack_statfs(rq->rq_repmsg);
+		if (rq->rq_reqmsg->opc == SRMT_PING)
+			sli_rpc_mds_pack_statfs(rq->rq_repmsg);
 	}
 }
 

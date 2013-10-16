@@ -124,23 +124,6 @@ sl_resm_hldrop(struct sl_resm *resm)
 }
 
 void
-slm_rpc_ion_pack_bmapminseq(struct pscrpc_msg *m)
-{
-	struct srt_bmapminseq *sbms;
-
-	if (m == NULL) {
-		psclog_errorx("unable to export bmapminseq");
-		return;
-	}
-	sbms = pscrpc_msg_buf(m, m->bufcount - 2, sizeof(*sbms));
-	if (sbms == NULL) {
-		psclog_errorx("unable to export bmapminseq");
-		return;
-	}
-	mds_bmap_getcurseq(NULL, &sbms->bminseq);
-}
-
-void
 slm_rpc_ion_unpack_statfs(struct pscrpc_request *rq, int type)
 {
 	struct resprof_mds_info *rpmi;
@@ -187,10 +170,10 @@ slrpc_newreq(struct slashrpc_cservice *csvc, int op,
 {
 	int rc;
 
-	if (csvc->csvc_peertype == SLCONNT_IOD) {
+	if (csvc->csvc_peertype == SLCONNT_IOD &&
+	    op == SRMT_PING) {
 		int qlens[] = {
 			qlen,
-			sizeof(struct srt_bmapminseq),
 			sizeof(struct srt_authbuf_footer)
 		};
 		int plens[] = {
@@ -231,23 +214,22 @@ slrpc_req_out(struct slashrpc_cservice *csvc, struct pscrpc_request *rq)
 
 		mq->fsuuid = zfsMount[current_vfsid].uuid;
 	}
-	if (csvc->csvc_peertype == SLCONNT_IOD)
-		slm_rpc_ion_pack_bmapminseq(rq->rq_reqmsg);
 }
 
 void
 slrpc_rep_in(struct slashrpc_cservice *csvc, struct pscrpc_request *rq)
 {
-	if (csvc->csvc_peertype == SLCONNT_IOD)
+	if (csvc->csvc_peertype == SLCONNT_IOD &&
+	    rq->rq_reqmsg->opc == SRMT_PING)
 		slm_rpc_ion_unpack_statfs(rq, PSCRPC_MSG_REPLY);
 }
 
 void
 slrpc_req_in(struct pscrpc_request *rq)
 {
-	if (rq->rq_rqbd->rqbd_service == slm_rmi_svc.svh_service) {
+	if (rq->rq_rqbd->rqbd_service == slm_rmi_svc.svh_service &&
+	    rq->rq_reqmsg->opc == SRMT_PING) {
 		slm_rpc_ion_unpack_statfs(rq, PSCRPC_MSG_REQUEST);
-		slm_rpc_ion_pack_bmapminseq(rq->rq_repmsg);
 	}
 }
 
@@ -260,7 +242,6 @@ slrpc_allocrep(struct pscrpc_request *rq, void *mqp, int qlen,
 	if (rq->rq_rqbd->rqbd_service == slm_rmi_svc.svh_service) {
 		int plens[] = {
 			plen,
-			sizeof(struct srt_bmapminseq),
 			sizeof(struct srt_authbuf_footer)
 		};
 

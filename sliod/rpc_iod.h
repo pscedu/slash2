@@ -76,8 +76,6 @@ struct sli_exp_cli {
 
 void	sli_rpc_initsvc(void);
 
-void	sli_rpc_mds_unpack_bminseq(struct pscrpc_request *, int);
-
 int	sli_rim_handler(struct pscrpc_request *);
 int	sli_ric_handler(struct pscrpc_request *);
 int	sli_rii_handler(struct pscrpc_request *);
