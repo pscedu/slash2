@@ -249,7 +249,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 		MFH_ULOCK(mfh);
 
 		e = bmpce_lookup_locked(b, r, bmpce_off,
-		    (i < npages) ? NULL :
 		    &r->biorq_bmap->bcm_fcmh->fcmh_waitq);
 
 		BMPCE_LOCK(e);
@@ -265,6 +264,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 			BMPCE_ULOCK(e);
 
 		} else {
+			e->bmpce_flags |= BMPCE_READA;
 			DEBUG_BMPCE(PLL_INFO, e, "ra (npndg=%d) i=%d "
 			    "biorq_is_my_bmpce=%d raoff=%"PRIx64
 			    " bmpce_foff=%"PRIx64,
@@ -1812,6 +1812,7 @@ msl_pages_copyin(struct bmpc_ioreq *r)
 
 		BMPCE_LOCK(e);
 		e->bmpce_flags |= BMPCE_DATARDY;
+		BMPCE_WAKE(e);
 		BMPCE_ULOCK(e);
 
 		toff  += nbytes;
