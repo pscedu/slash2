@@ -143,7 +143,7 @@ slistatfsthr_main(struct psc_thread *thr)
 #endif
 			freelock(&sli_ssfb_lock);
 		}
-		sleep(5);
+		sleep(30);
 	}
 }
 
