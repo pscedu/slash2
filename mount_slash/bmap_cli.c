@@ -375,9 +375,8 @@ msl_bmap_lease_tryext(struct bmap *b, int *secs_rem, int blockable)
 	int secs = 0, rc = 0, unlock = 1, extended = 0;
 	struct timespec ts;
 
-	PFL_GETTIMESPEC(&ts);
-
 	BMAP_LOCK(b);
+	PFL_GETTIMESPEC(&ts);
 
 	secs = (int)(bmap_2_bci(b)->bci_xtime.tv_sec - ts.tv_sec);
 
