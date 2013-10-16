@@ -191,7 +191,8 @@ slrpc_newreq(struct slashrpc_cservice *csvc, int op,
 }
 
 void
-slrpc_req_out(struct slashrpc_cservice *csvc, struct pscrpc_request *rq)
+slrpc_req_out(__unusedx struct slashrpc_cservice *csvc,
+    struct pscrpc_request *rq)
 {
 	if (rq->rq_reqmsg->opc == SRMT_CONNECT) {
 		struct srm_connect_req *mq;
