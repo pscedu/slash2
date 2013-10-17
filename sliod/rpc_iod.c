@@ -236,19 +236,36 @@ slrpc_newreq(struct slashrpc_cservice *csvc, int op,
     struct pscrpc_request **rqp, int qlen, int plen, void *mqp)
 {
 	if (csvc->csvc_peertype == SLCONNT_MDS) {
-		int qlens[] = {
-			qlen,
-			sizeof(struct srt_statfs),
-			sizeof(struct srt_authbuf_footer)
-		};
-		int plens[] = {
-			plen,
-			sizeof(struct srt_authbuf_footer)
-		};
+		if (op == SRMT_PING) {
+			int qlens[] = {
+				qlen,
+				sizeof(struct srt_authbuf_footer)
+			};
+			int plens[] = {
+				plen,
+				sizeof(struct srt_authbuf_footer)
+			};
 
-		return (RSX_NEWREQN(csvc->csvc_import,
-		    csvc->csvc_version, op, *rqp, nitems(qlens), qlens,
-		    nitems(plens), plens, *(void **)mqp));
+			return (RSX_NEWREQN(csvc->csvc_import,
+			    csvc->csvc_version, op, *rqp, nitems(qlens),
+			    qlens, nitems(plens), plens,
+			    *(void **)mqp));
+		} else {
+			int qlens[] = {
+				qlen,
+				sizeof(struct srt_statfs),
+				sizeof(struct srt_authbuf_footer)
+			};
+			int plens[] = {
+				plen,
+				sizeof(struct srt_authbuf_footer)
+			};
+
+			return (RSX_NEWREQN(csvc->csvc_import,
+			    csvc->csvc_version, op, *rqp, nitems(qlens),
+			    qlens, nitems(plens), plens,
+			    *(void **)mqp));
+		}
 	}
 	return (slrpc_newgenreq(csvc, op, rqp, qlen, plen, mqp));
 }
@@ -287,15 +304,26 @@ slrpc_allocrep(struct pscrpc_request *rq, void *mqp, int qlen,
     void *mpp, int plen, int rcoff)
 {
 	if (rq->rq_rqbd->rqbd_service == sli_rim_svc.svh_service) {
-		int rc, plens[] = {
-			plen,
-			sizeof(struct srt_statfs),
-			sizeof(struct srt_authbuf_footer)
-		};
+		if (rq->rq_reqmsg->opc == SRMT_PING) {
+			int rc, plens[] = {
+				plen,
+				sizeof(struct srt_statfs),
+				sizeof(struct srt_authbuf_footer)
+			};
 
-		rc = slrpc_allocrepn(rq, mqp, qlen, mpp, nitems(plens),
-		    plens, rcoff);
-		return (rc);
+			rc = slrpc_allocrepn(rq, mqp, qlen, mpp,
+			    nitems(plens), plens, rcoff);
+			return (rc);
+		} else {
+			int rc, plens[] = {
+				plen,
+				sizeof(struct srt_authbuf_footer)
+			};
+
+			rc = slrpc_allocrepn(rq, mqp, qlen, mpp,
+			    nitems(plens), plens, rcoff);
+			return (rc);
+		}
 	}
 	return (slrpc_allocgenrep(rq, mqp, qlen, mpp, plen, rcoff));
 }

@@ -229,9 +229,8 @@ void
 slrpc_req_in(struct pscrpc_request *rq)
 {
 	if (rq->rq_rqbd->rqbd_service == slm_rmi_svc.svh_service &&
-	    rq->rq_reqmsg->opc == SRMT_PING) {
+	    rq->rq_reqmsg->opc == SRMT_PING)
 		slm_rpc_ion_unpack_statfs(rq, PSCRPC_MSG_REQUEST);
-	}
 }
 
 int
@@ -246,8 +245,8 @@ slrpc_allocrep(struct pscrpc_request *rq, void *mqp, int qlen,
 			sizeof(struct srt_authbuf_footer)
 		};
 
-		rc = slrpc_allocrepn(rq, mqp, qlen, mpp, nitems(plens),
-		    plens, rcoff);
+		rc = slrpc_allocrepn(rq, mqp, qlen, mpp,
+		    nitems(plens), plens, rcoff);
 	} else
 		rc = slrpc_allocgenrep(rq, mqp, qlen, mpp, plen, rcoff);
 	if (rc == 0 && rq->rq_reqmsg->opc == SRMT_CONNECT) {
