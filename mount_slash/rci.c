@@ -139,7 +139,7 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 		OPSTAT_ASSIGN(SLC_OPST_READ_AIO_WAIT_MAX, nwait);
 
 	if (!found) {
-		psclog_warn("could not find async req id=%"PRIx64,
+		psclog_warnx("could not find async req id=%"PRIx64,
 		    mp->id);
 		OPSTAT_INCR(SLC_OPST_READ_AIO_NOT_FOUND);
 		mp->rc = -ENOENT;
