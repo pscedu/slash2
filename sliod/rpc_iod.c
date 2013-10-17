@@ -243,7 +243,6 @@ slrpc_newreq(struct slashrpc_cservice *csvc, int op,
 		};
 		int plens[] = {
 			plen,
-			sizeof(struct srt_bmapminseq),
 			sizeof(struct srt_authbuf_footer)
 		};
 
