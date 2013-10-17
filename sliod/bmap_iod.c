@@ -114,13 +114,13 @@ bim_updateseq(uint64_t seq)
 uint64_t
 bim_getcurseq(void)
 {
-	int rc;
 	uint64_t seqno = BMAPSEQ_ANY;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
-	struct timespec crtime;
 	struct srm_getbmapminseq_req *mq;
 	struct srm_getbmapminseq_rep *mp;
+	struct timespec crtime;
+	int rc;
 
 	OPSTAT_INCR(SLI_OPST_GET_CUR_SEQ);
 
