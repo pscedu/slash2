@@ -239,6 +239,7 @@ slrpc_newreq(struct slashrpc_cservice *csvc, int op,
 		if (op == SRMT_PING) {
 			int qlens[] = {
 				qlen,
+				sizeof(struct srt_statfs),
 				sizeof(struct srt_authbuf_footer)
 			};
 			int plens[] = {
@@ -253,7 +254,6 @@ slrpc_newreq(struct slashrpc_cservice *csvc, int op,
 		} else {
 			int qlens[] = {
 				qlen,
-				sizeof(struct srt_statfs),
 				sizeof(struct srt_authbuf_footer)
 			};
 			int plens[] = {
