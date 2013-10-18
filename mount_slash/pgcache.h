@@ -271,18 +271,6 @@ struct bmpc_write_coalescer {
 };
 
 static __inline void
-bmpce_useprep(struct bmap_pagecache_entry *bmpce,
-    struct bmpc_ioreq *biorq, struct psc_waitq *wq)
-{
-	psc_assert(!bmpce->bmpce_waitq);
-
-	psc_atomic32_set(&bmpce->bmpce_ref, 1);
-	bmpce->bmpce_owner = biorq;
-
-	bmpce->bmpce_waitq = wq;
-}
-
-static __inline void
 bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
 {
 	int locked;

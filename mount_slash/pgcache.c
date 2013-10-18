@@ -141,7 +141,10 @@ bmpce_lookup_locked(struct bmapc_memb *b, struct bmpc_ioreq *r,
 			e = e2;
 			e2 = NULL;
 			e->bmpce_off = search.bmpce_off;
-			bmpce_useprep(e, r, wq);
+
+			psc_atomic32_set(&e->bmpce_ref, 1);
+			e->bmpce_owner = r;
+			e->bmpce_waitq = wq;
 
 			OPSTAT_INCR(SLC_OPST_BMPCE_INSERT);
 			PSC_SPLAY_XINSERT(bmap_pagecachetree,
