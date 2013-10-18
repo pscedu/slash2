@@ -498,9 +498,6 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 		fhent = 0;
 #endif
 
-	DEBUG_BIORQ(PLL_DIAG, r, "destroying (nwaiters=%d)",
-	    psc_waitq_nwaiters(&r->biorq_waitq));
-
 	msl_biorq_unref(r);
 	msl_biorq_del(r);
 
@@ -526,11 +523,6 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 		pscrpc_set_destroy(r->biorq_rqset);
 		r->biorq_rqset = NULL;
 	}
-
-	while (psc_waitq_nwaiters(&r->biorq_waitq))
-		usleep(10);
-
-	psc_waitq_destroy(&r->biorq_waitq);
 
 	mfh_decref(r->biorq_mfh);
 
@@ -1702,7 +1694,6 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 		if (!rc) {
 			BIORQ_CLEARATTR(r, BIORQ_RBWLP | BIORQ_RBWFP);
 			DEBUG_BIORQ(PLL_DIAG, r, "read cb complete");
-			psc_waitq_wakeall(&r->biorq_waitq);
 		}
 		BIORQ_ULOCK(r);
 

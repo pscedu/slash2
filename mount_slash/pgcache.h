@@ -167,7 +167,6 @@ struct bmpc_ioreq {
 	SPLAY_ENTRY(bmpc_ioreq)		 biorq_tentry;	/* splay tree */
 	struct bmapc_memb		*biorq_bmap;	/* backpointer to our bmap	*/
 	struct pscrpc_request_set	*biorq_rqset;
-	struct psc_waitq		 biorq_waitq;	/* used by a bmpce */
 	struct msl_fhent		*biorq_mfh;	/* back pointer to msl_fhent */
 	struct msl_fsrqinfo		*biorq_fsrqi;
 };
@@ -285,12 +284,8 @@ bmpce_useprep(struct bmap_pagecache_entry *bmpce,
 	 * allocated, so we need this field to remember who owns it.
 	 * Alternatively, we could use locking.
 	 */
-	if (!wq)
-		bmpce->bmpce_waitq = &biorq->biorq_waitq;
-	else {
-		bmpce->bmpce_flags |= BMPCE_READA;
-		bmpce->bmpce_waitq = wq;
-	}
+	bmpce->bmpce_flags |= BMPCE_READA;
+	bmpce->bmpce_waitq = wq;
 }
 
 static __inline void

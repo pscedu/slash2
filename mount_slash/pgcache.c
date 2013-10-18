@@ -219,7 +219,6 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 
 	memset(r, 0, sizeof(*r));
 
-	psc_waitq_init(&r->biorq_waitq);
 	INIT_PSC_LISTENTRY(&r->biorq_lentry);
 	INIT_PSC_LISTENTRY(&r->biorq_mfh_lentry);
 	INIT_PSC_LISTENTRY(&r->biorq_bwc_lentry);
