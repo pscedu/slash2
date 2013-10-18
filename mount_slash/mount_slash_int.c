@@ -264,7 +264,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 			BMPCE_ULOCK(e);
 
 		} else {
-			e->bmpce_flags |= BMPCE_READA;
 			DEBUG_BMPCE(PLL_INFO, e, "ra (npndg=%d) i=%d "
 			    "biorq_is_my_bmpce=%d raoff=%"PRIx64
 			    " bmpce_foff=%"PRIx64,
@@ -282,6 +281,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 				 * completion.  The cb handler will
 				 * decref the bmpce.
 				 */
+				e->bmpce_flags |= BMPCE_READA;
 				psc_assert(!(e->bmpce_flags & BMPCE_EIO));
 
 				/*
