@@ -189,7 +189,8 @@ dumpfid(const char *fn)
 			    inox.inox_repl_nblks[j - SL_DEF_REPLICAS]);
 		printf("\n");
 	}
-	if (show & K_BMAPS) {
+	if (show & K_BMAPS &&
+	    stb.st_size > SL_BMAP_START_OFF) {
 		printf("  bmaps %"PSCPRIdOFFT"\n",
 		    (stb.st_size - SL_BMAP_START_OFF) / BMAP_OD_SZ);
 		if (lseek(fd, SL_BMAP_START_OFF, SEEK_SET) == -1)
