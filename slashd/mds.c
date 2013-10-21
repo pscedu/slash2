@@ -59,7 +59,7 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
-struct odtable		*mdsBmapAssignTable;
+struct odtable		*slm_bia_odt;
 
 int
 mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
@@ -533,7 +533,7 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	bia.bia_start = time(NULL);
 	bia.bia_flags = (b->bcm_flags & BMAP_DIO) ? BIAF_DIO : 0;
 
-	bmi->bmi_assign = mds_odtable_putitem(mdsBmapAssignTable, &bia,
+	bmi->bmi_assign = mds_odtable_putitem(slm_bia_odt, &bia,
 	    sizeof(bia));
 
 	if (!bmi->bmi_assign) {
@@ -573,8 +573,8 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 	dio = (b->bcm_flags & BMAP_DIO);
 	BMAP_ULOCK(b);
 
-	rc = mds_odtable_getitem(mdsBmapAssignTable,
-	    bmi->bmi_assign, &bia, sizeof(bia));
+	rc = mds_odtable_getitem(slm_bia_odt, bmi->bmi_assign, &bia,
+	    sizeof(bia));
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, b, "odtable_getitem() failed");
 		return (rc); // negative errno
@@ -593,8 +593,8 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 	bia.bia_lastcli = bml->bml_cli_nidpid;
 	bia.bia_flags = dio ? BIAF_DIO : 0;
 
-	mds_odtable_replaceitem(mdsBmapAssignTable,
-	    bmi->bmi_assign, &bia, sizeof(bia));
+	mds_odtable_replaceitem(slm_bia_odt, bmi->bmi_assign, &bia,
+	    sizeof(bia));
 
 	bml->bml_ios = bia.bia_ios;
 	bml->bml_seq = bia.bia_seq;
@@ -1101,7 +1101,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		if (!(bml->bml_flags & BML_RECOVERFAIL)) {
 			struct bmap_ios_assign bia;
 
-			rc = mds_odtable_getitem(mdsBmapAssignTable,
+			rc = mds_odtable_getitem(slm_bia_odt,
 			    bmi->bmi_assign, &bia, sizeof(bia));
 			psc_assert(!rc && bia.bia_seq == bmi->bmi_seq);
 			psc_assert(bia.bia_bmapno == b->bcm_bmapno);
@@ -1156,7 +1156,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	if (odtr) {
 		key = odtr->odtr_key;
 		elem = odtr->odtr_elem;
-		rc = mds_odtable_freeitem(mdsBmapAssignTable, odtr);
+		rc = mds_odtable_freeitem(slm_bia_odt, odtr);
 		DEBUG_BMAP(PLL_DIAG, b, "odtable remove seq=%"PRId64" "
 		    "key=%#"PRIx64" rc=%d", bml->bml_seq, key, rc);
 
@@ -1332,7 +1332,7 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr,
 
  out:
 	if (rc)
-		mds_odtable_freeitem(mdsBmapAssignTable, odtr);
+		mds_odtable_freeitem(slm_bia_odt, odtr);
 	if (b)
 		bmap_op_done(b);
 	if (f)
@@ -1751,8 +1751,8 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	psc_assert(!(b->bcm_flags & BMAP_DIO));
 	BMAP_ULOCK(b);
 
-	rc = mds_odtable_getitem(mdsBmapAssignTable,
-	    bmi->bmi_assign, &bia, sizeof(bia));
+	rc = mds_odtable_getitem(slm_bia_odt, bmi->bmi_assign, &bia,
+	    sizeof(bia));
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, b, "odtable_getitem() failed");
 		goto out1;
@@ -1779,8 +1779,8 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	bmi->bmi_seq = obml->bml_seq = bia.bia_seq;
 	obml->bml_ios = resm->resm_res_id;
 
-	mds_odtable_replaceitem(mdsBmapAssignTable,
-	    bmi->bmi_assign, &bia, sizeof(bia));
+	mds_odtable_replaceitem(slm_bia_odt, bmi->bmi_assign, &bia,
+	    sizeof(bia));
 
 	/* Do some post setup on the modified lease. */
 	sbd_out->sbd_seq = obml->bml_seq;

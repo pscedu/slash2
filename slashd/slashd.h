@@ -410,7 +410,7 @@ void		 _dbdo(const struct pfl_callerinfo *,
 			const char *, ...);
 
 extern struct slash_creds	 rootcreds;
-extern struct odtable		*mdsBmapAssignTable;
+extern struct odtable		*slm_bia_odt;
 extern struct odtable		*slm_ptrunc_odt;
 extern struct sl_mds_nsstats	 slm_nsstats_aggr;	/* aggregate namespace stats */
 extern struct sl_mds_peerinfo	*localinfo;
