@@ -32,8 +32,8 @@
 #include "pfl/fs.h"
 #include "pfl/pfl.h"
 #include "pfl/str.h"
-#include "psc_util/journal.h"
-#include "psc_util/log.h"
+#include "pfl/journal.h"
+#include "pfl/log.h"
 
 #include "mkfn.h"
 #include "pathnames.h"

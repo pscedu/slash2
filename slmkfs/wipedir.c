@@ -33,7 +33,7 @@
 #include <unistd.h>
 
 #include "pfl/walk.h"
-#include "psc_util/log.h"
+#include "pfl/log.h"
 
 #include "pathnames.h"
 #include "mkfn.h"

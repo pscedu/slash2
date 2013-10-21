@@ -29,7 +29,7 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
-#include "psc_util/ctl.h"
+#include "pfl/ctl.h"
 
 /* start includes */
 #include "authbuf.h"

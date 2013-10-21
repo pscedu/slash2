@@ -33,8 +33,8 @@
 #include "pfl/rpclog.h"
 #include "pfl/rsx.h"
 #include "pfl/service.h"
-#include "psc_util/ctlsvr.h"
-#include "psc_util/iostats.h"
+#include "pfl/ctlsvr.h"
+#include "pfl/iostats.h"
 
 #include "authbuf.h"
 #include "bmap_iod.h"

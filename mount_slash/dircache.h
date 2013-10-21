@@ -44,7 +44,7 @@
 #include "pfl/listcache.h"
 #include "pfl/str.h"
 #include "pfl/time.h"
-#include "psc_util/lock.h"
+#include "pfl/lock.h"
 
 #include "sltypes.h"
 #include "fidc_cli.h"

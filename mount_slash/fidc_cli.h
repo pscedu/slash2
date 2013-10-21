@@ -26,7 +26,7 @@
 #define _FIDC_CLI_H_
 
 #include "pfl/list.h"
-#include "psc_util/lock.h"
+#include "pfl/lock.h"
 
 #include "sltypes.h"
 #include "fidcache.h"

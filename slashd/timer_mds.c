@@ -22,8 +22,8 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#include "psc_util/thread.h"
-#include "psc_util/timerthr.h"
+#include "pfl/thread.h"
+#include "pfl/timerthr.h"
 
 #include "slashd.h"
 

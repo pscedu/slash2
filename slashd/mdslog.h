@@ -25,7 +25,7 @@
 #ifndef _SLASHD_MDSLOG_H_
 #define _SLASHD_MDSLOG_H_
 
-#include "psc_util/journal.h"
+#include "pfl/journal.h"
 
 #include "sltypes.h"
 

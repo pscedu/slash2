@@ -31,8 +31,8 @@
 #include "pfl/rpc.h"
 #include "pfl/tree.h"
 #include "pfl/vbitmap.h"
-#include "psc_util/atomic.h"
-#include "psc_util/log.h"
+#include "pfl/atomic.h"
+#include "pfl/log.h"
 
 #include "bmap.h"
 #include "bmap_iod.h"

@@ -29,8 +29,8 @@
 
 #include "pfl/fs.h"
 #include "pfl/service.h"
-#include "psc_util/atomic.h"
-#include "psc_util/multiwait.h"
+#include "pfl/atomic.h"
+#include "pfl/multiwait.h"
 
 #include "bmap.h"
 #include "fidcache.h"

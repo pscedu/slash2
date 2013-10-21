@@ -37,9 +37,9 @@
 
 #include "pfl/err.h"
 #include "pfl/export.h"
-#include "psc_util/atomic.h"
-#include "psc_util/lock.h"
-#include "psc_util/multiwait.h"
+#include "pfl/atomic.h"
+#include "pfl/lock.h"
+#include "pfl/multiwait.h"
 
 #include "slerr.h"
 

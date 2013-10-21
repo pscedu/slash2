@@ -37,7 +37,7 @@
 #include <limits.h>
 
 #include "pfl/str.h"
-#include "psc_util/lock.h"
+#include "pfl/lock.h"
 
 #include "cache_params.h"
 #include "fid.h"

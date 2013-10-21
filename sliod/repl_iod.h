@@ -29,7 +29,7 @@
 #include "pfl/listcache.h"
 #include "pfl/lockedlist.h"
 #include "pfl/rpc.h"
-#include "psc_util/lock.h"
+#include "pfl/lock.h"
 
 #include "fid.h"
 #include "sltypes.h"

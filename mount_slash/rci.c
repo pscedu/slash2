@@ -27,7 +27,7 @@
 #include "pfl/fs.h"
 #include "pfl/rpc.h"
 #include "pfl/rsx.h"
-#include "psc_util/ctlsvr.h"
+#include "pfl/ctlsvr.h"
 
 #include "pgcache.h"
 #include "rpc_cli.h"

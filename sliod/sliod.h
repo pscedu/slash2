@@ -27,7 +27,7 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/service.h"
-#include "psc_util/thread.h"
+#include "pfl/thread.h"
 
 #include "fid.h"
 #include "slconfig.h"

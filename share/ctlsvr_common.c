@@ -30,9 +30,9 @@
 
 #include "pfl/rpc.h"
 #include "pfl/str.h"
-#include "psc_util/ctl.h"
-#include "psc_util/ctlsvr.h"
-#include "psc_util/lock.h"
+#include "pfl/ctl.h"
+#include "pfl/ctlsvr.h"
+#include "pfl/lock.h"
 
 #include "ctl.h"
 #include "ctlsvr.h"

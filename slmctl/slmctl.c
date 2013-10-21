@@ -31,10 +31,10 @@
 
 #include "pfl/pfl.h"
 #include "pfl/cdefs.h"
-#include "psc_util/ctl.h"
-#include "psc_util/ctlcli.h"
-#include "psc_util/fmt.h"
-#include "psc_util/log.h"
+#include "pfl/ctl.h"
+#include "pfl/ctlcli.h"
+#include "pfl/fmt.h"
+#include "pfl/log.h"
 
 #include "ctl.h"
 #include "ctlcli.h"

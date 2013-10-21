@@ -34,9 +34,9 @@
 #include "pfl/cdefs.h"
 #include "pfl/list.h"
 #include "pfl/listcache.h"
-#include "psc_util/atomic.h"
-#include "psc_util/lock.h"
-#include "psc_util/pool.h"
+#include "pfl/atomic.h"
+#include "pfl/lock.h"
+#include "pfl/pool.h"
 
 #include "cache_params.h"
 

@@ -27,8 +27,8 @@
 #include "pfl/listcache.h"
 #include "pfl/vbitmap.h"
 #include "pfl/rpc.h"
-#include "psc_util/atomic.h"
-#include "psc_util/pool.h"
+#include "pfl/atomic.h"
+#include "pfl/pool.h"
 
 #include "bmap.h"
 #include "bmap_iod.h"

@@ -33,7 +33,7 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
-#include "psc_util/journal.h"
+#include "pfl/journal.h"
 
 #include "fid.h"
 

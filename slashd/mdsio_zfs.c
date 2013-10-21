@@ -32,8 +32,8 @@
 
 #include "pfl/fs.h"
 #include "pfl/fsmod.h"
-#include "psc_util/journal.h"
-#include "psc_util/lock.h"
+#include "pfl/journal.h"
+#include "pfl/lock.h"
 
 #include "bmap.h"
 #include "bmap_mds.h"

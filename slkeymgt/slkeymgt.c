@@ -28,7 +28,7 @@
 #include <unistd.h>
 
 #include "pfl/pfl.h"
-#include "psc_util/log.h"
+#include "pfl/log.h"
 
 #include "authbuf.h"
 #include "pathnames.h"

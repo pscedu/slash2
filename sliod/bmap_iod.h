@@ -31,8 +31,8 @@
 #include "pfl/list.h"
 #include "pfl/listcache.h"
 #include "pfl/rpc.h"
-#include "psc_util/bitflag.h"
-#include "psc_util/lock.h"
+#include "pfl/bitflag.h"
+#include "pfl/lock.h"
 
 #include "bmap.h"
 #include "slashrpc.h"

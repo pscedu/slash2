@@ -38,9 +38,9 @@
 #include "pfl/list.h"
 #include "pfl/listcache.h"
 #include "pfl/rsx.h"
-#include "psc_util/alloc.h"
-#include "psc_util/atomic.h"
-#include "psc_util/ctlsvr.h"
+#include "pfl/alloc.h"
+#include "pfl/atomic.h"
+#include "pfl/ctlsvr.h"
 
 #include "cache_params.h"
 #include "dircache.h"

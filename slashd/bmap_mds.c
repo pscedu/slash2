@@ -27,7 +27,7 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/fs.h"
-#include "psc_util/log.h"
+#include "pfl/log.h"
 
 #include "bmap_mds.h"
 #include "fidc_mds.h"

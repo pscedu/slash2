@@ -29,8 +29,8 @@
 
 #include "pfl/lockedlist.h"
 #include "pfl/rpc.h"
-#include "psc_util/odtable.h"
-#include "psc_util/pthrutil.h"
+#include "pfl/odtable.h"
+#include "pfl/pthrutil.h"
 
 #include "bmap.h"
 #include "inode.h"

@@ -28,9 +28,9 @@
 #include <stddef.h>
 
 #include "pfl/rpc.h"
-#include "psc_util/ctlsvr.h"
-#include "psc_util/iostats.h"
-#include "psc_util/random.h"
+#include "pfl/ctlsvr.h"
+#include "pfl/iostats.h"
+#include "pfl/random.h"
 
 #include "slconfig.h"
 #include "bmap_cli.h"

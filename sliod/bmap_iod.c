@@ -28,9 +28,9 @@
 #include "pfl/listcache.h"
 #include "pfl/rpc.h"
 #include "pfl/rsx.h"
-#include "psc_util/ctlsvr.h"
-#include "psc_util/lock.h"
-#include "psc_util/log.h"
+#include "pfl/ctlsvr.h"
+#include "pfl/lock.h"
+#include "pfl/log.h"
 
 #include "bmap_iod.h"
 #include "fidcache.h"

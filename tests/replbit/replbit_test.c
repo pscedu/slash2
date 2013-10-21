@@ -29,7 +29,7 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
-#include "psc_util/log.h"
+#include "pfl/log.h"
 
 #include "bmap.h"
 

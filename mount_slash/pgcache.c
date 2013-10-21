@@ -30,9 +30,9 @@
 #include "pfl/fsmod.h"
 #include "pfl/lockedlist.h"
 #include "pfl/treeutil.h"
-#include "psc_util/atomic.h"
-#include "psc_util/pool.h"
-#include "psc_util/ctlsvr.h"
+#include "pfl/atomic.h"
+#include "pfl/pool.h"
+#include "pfl/ctlsvr.h"
 
 #include "pgcache.h"
 #include "bmap_cli.h"

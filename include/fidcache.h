@@ -34,8 +34,8 @@
 #include "pfl/hashtbl.h"
 #include "pfl/time.h"
 #include "pfl/tree.h"
-#include "psc_util/lock.h"
-#include "psc_util/pool.h"
+#include "pfl/lock.h"
+#include "pfl/pool.h"
 
 #include "bmap.h"
 #include "cache_params.h"

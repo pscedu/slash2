@@ -34,9 +34,9 @@
 #include "pfl/rpclog.h"
 #include "pfl/rsx.h"
 #include "pfl/time.h"
-#include "psc_util/alloc.h"
-#include "psc_util/lock.h"
-#include "psc_util/multiwait.h"
+#include "pfl/alloc.h"
+#include "pfl/lock.h"
+#include "pfl/multiwait.h"
 
 #include "authbuf.h"
 #include "slashrpc.h"

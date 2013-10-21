@@ -24,8 +24,8 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/listcache.h"
-#include "psc_util/alloc.h"
-#include "psc_util/lock.h"
+#include "pfl/alloc.h"
+#include "pfl/lock.h"
 
 #include "bmap_cli.h"
 #include "mount_slash.h"

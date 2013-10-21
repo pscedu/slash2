@@ -30,9 +30,9 @@
 #include "pfl/cdefs.h"
 #include "pfl/tree.h"
 #include "pfl/treeutil.h"
-#include "psc_util/alloc.h"
-#include "psc_util/lock.h"
-#include "psc_util/log.h"
+#include "pfl/alloc.h"
+#include "pfl/lock.h"
+#include "pfl/log.h"
 
 #include "lnet/types.h"
 

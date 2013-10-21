@@ -50,9 +50,9 @@
 
 #include "pfl/str.h"
 #include "pfl/rpc.h"
-#include "psc_util/alloc.h"
-#include "psc_util/bitflag.h"
-#include "psc_util/log.h"
+#include "pfl/alloc.h"
+#include "pfl/bitflag.h"
+#include "pfl/log.h"
 
 #include "fid.h"
 #include "slconfig.h"

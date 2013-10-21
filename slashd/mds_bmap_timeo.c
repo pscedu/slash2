@@ -26,12 +26,12 @@
 
 #include "pfl/dynarray.h"
 #include "pfl/list.h"
-#include "psc_util/alloc.h"
-#include "psc_util/ctlsvr.h"
-#include "psc_util/lock.h"
-#include "psc_util/log.h"
-#include "psc_util/pool.h"
-#include "psc_util/waitq.h"
+#include "pfl/alloc.h"
+#include "pfl/ctlsvr.h"
+#include "pfl/lock.h"
+#include "pfl/log.h"
+#include "pfl/pool.h"
+#include "pfl/waitq.h"
 
 #include "bmap.h"
 #include "bmap_mds.h"

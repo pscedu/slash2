@@ -24,8 +24,8 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/listcache.h"
-#include "psc_util/pool.h"
-#include "psc_util/thread.h"
+#include "pfl/pool.h"
+#include "pfl/thread.h"
 
 #include "slashd.h"
 #include "worker.h"

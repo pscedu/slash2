@@ -26,7 +26,7 @@
 #define _SLASH_BMAP_CLI_H_
 
 #include "pfl/rpc.h"
-#include "psc_util/lock.h"
+#include "pfl/lock.h"
 
 #include "bmap.h"
 #include "pgcache.h"

@@ -33,9 +33,9 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/str.h"
-#include "psc_util/ctl.h"
-#include "psc_util/ctlcli.h"
-#include "psc_util/fmt.h"
+#include "pfl/ctl.h"
+#include "pfl/ctlcli.h"
+#include "pfl/fmt.h"
 
 #include "ctl.h"
 #include "ctlcli.h"

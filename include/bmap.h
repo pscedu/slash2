@@ -41,9 +41,9 @@
 
 #include "pfl/tree.h"
 #include "pfl/list.h"
-#include "psc_util/atomic.h"
-#include "psc_util/crc.h"
-#include "psc_util/lock.h"
+#include "pfl/atomic.h"
+#include "pfl/crc.h"
+#include "pfl/lock.h"
 
 #include "cache_params.h"
 #include "fid.h"

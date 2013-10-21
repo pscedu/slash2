@@ -33,8 +33,8 @@
 #include <gcrypt.h>
 
 #include "pfl/rpc.h"
-#include "psc_util/atomic.h"
-#include "psc_util/log.h"
+#include "pfl/atomic.h"
+#include "pfl/log.h"
 
 #include "lnet/lib-lnet.h"
 

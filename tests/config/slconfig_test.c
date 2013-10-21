@@ -37,7 +37,7 @@
 #include "pfl/cdefs.h"
 #include "pfl/str.h"
 #include "pfl/rpc.h"
-#include "psc_util/log.h"
+#include "pfl/log.h"
 
 #include "slconfig.h"
 

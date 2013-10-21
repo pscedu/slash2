@@ -34,9 +34,9 @@
 #include "pfl/str.h"
 #include "pfl/rpc.h"
 #include "pfl/rsx.h"
-#include "psc_util/ctl.h"
-#include "psc_util/ctlsvr.h"
-#include "psc_util/net.h"
+#include "pfl/ctl.h"
+#include "pfl/ctlsvr.h"
+#include "pfl/net.h"
 
 #include "bmap.h"
 #include "bmap_cli.h"

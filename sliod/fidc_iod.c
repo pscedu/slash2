@@ -27,8 +27,8 @@
 
 #include "pfl/rlimit.h"
 #include "pfl/str.h"
-#include "psc_util/ctlsvr.h"
-#include "psc_util/log.h"
+#include "pfl/ctlsvr.h"
+#include "pfl/log.h"
 
 #include "fidc_iod.h"
 #include "fidcache.h"

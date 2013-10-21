@@ -30,9 +30,9 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/fs.h"
-#include "psc_util/atomic.h"
-#include "psc_util/lock.h"
-#include "psc_util/log.h"
+#include "pfl/atomic.h"
+#include "pfl/lock.h"
+#include "pfl/log.h"
 
 #include "cache_params.h"
 #include "fid.h"

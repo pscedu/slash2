@@ -34,8 +34,8 @@
 #include "pfl/str.h"
 #include "pfl/dynarray.h"
 #include "pfl/list.h"
-#include "psc_util/log.h"
-#include "psc_util/net.h"
+#include "pfl/log.h"
+#include "pfl/net.h"
 
 #include "slconfig.h"
 #include "slerr.h"

@@ -29,7 +29,7 @@
 #include <unistd.h>
 
 #include "pfl/setresuid.h"
-#include "psc_util/log.h"
+#include "pfl/log.h"
 
 #include "creds.h"
 #include "slerr.h"

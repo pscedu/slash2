@@ -36,7 +36,7 @@
 #include "pfl/rpclog.h"
 #include "pfl/rsx.h"
 #include "pfl/service.h"
-#include "psc_util/lock.h"
+#include "pfl/lock.h"
 
 #include "fid.h"
 #include "fidc_mds.h"

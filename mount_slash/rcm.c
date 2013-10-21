@@ -29,9 +29,9 @@
 #include "pfl/str.h"
 #include "pfl/rpc.h"
 #include "pfl/rsx.h"
-#include "psc_util/ctl.h"
-#include "psc_util/ctlsvr.h"
-#include "psc_util/log.h"
+#include "pfl/ctl.h"
+#include "pfl/ctlsvr.h"
+#include "pfl/log.h"
 
 #include "authbuf.h"
 #include "bmap.h"

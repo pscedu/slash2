@@ -36,10 +36,10 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/stat.h"
-#include "psc_util/atomic.h"
-#include "psc_util/lock.h"
-#include "psc_util/log.h"
-#include "psc_util/random.h"
+#include "pfl/atomic.h"
+#include "pfl/lock.h"
+#include "pfl/log.h"
+#include "pfl/random.h"
 
 #include "authbuf.h"
 #include "mkfn.h"

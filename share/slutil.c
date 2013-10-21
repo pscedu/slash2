@@ -38,7 +38,7 @@
 #include "pfl/stat.h"
 #include "pfl/str.h"
 #include "pfl/types.h"
-#include "psc_util/log.h"
+#include "pfl/log.h"
 
 #include "creds.h"
 #include "fid.h"

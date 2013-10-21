@@ -31,8 +31,8 @@
 #include "pfl/rpclog.h"
 #include "pfl/rsx.h"
 #include "pfl/service.h"
-#include "psc_util/ctlsvr.h"
-#include "psc_util/pool.h"
+#include "pfl/ctlsvr.h"
+#include "pfl/pool.h"
 
 #include "authbuf.h"
 #include "bmap.h"

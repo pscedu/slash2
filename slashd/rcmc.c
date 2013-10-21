@@ -34,9 +34,9 @@
 
 #include "pfl/rpc.h"
 #include "pfl/rsx.h"
-#include "psc_util/bitflag.h"
-#include "psc_util/lock.h"
-#include "psc_util/thread.h"
+#include "pfl/bitflag.h"
+#include "pfl/lock.h"
+#include "pfl/thread.h"
 
 #include "bmap_mds.h"
 #include "fid.h"

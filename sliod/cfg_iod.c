@@ -23,7 +23,7 @@
  */
 
 #include "pfl/cdefs.h"
-#include "psc_util/alloc.h"
+#include "pfl/alloc.h"
 
 #include "slconfig.h"
 #include "sliod.h"

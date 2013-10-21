@@ -27,8 +27,8 @@
 
 #include "pfl/list.h"
 #include "pfl/lockedlist.h"
-#include "psc_util/lock.h"
-#include "psc_util/waitq.h"
+#include "pfl/lock.h"
+#include "pfl/waitq.h"
 
 #include "mount_slash/ctl_cli.h"
 

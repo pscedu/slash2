@@ -33,7 +33,7 @@
 
 #include <gcrypt.h>
 
-#include "psc_util/atomic.h"
+#include "pfl/atomic.h"
 
 struct stat;
 struct pscrpc_request;

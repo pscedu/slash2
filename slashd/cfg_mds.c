@@ -24,9 +24,9 @@
 
 #include "pfl/dynarray.h"
 #include "pfl/rpc.h"
-#include "psc_util/alloc.h"
-#include "psc_util/lock.h"
-#include "psc_util/multiwait.h"
+#include "pfl/alloc.h"
+#include "pfl/lock.h"
+#include "pfl/multiwait.h"
 
 #include "mdslog.h"
 #include "rpc_mds.h"

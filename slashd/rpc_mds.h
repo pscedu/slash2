@@ -25,7 +25,7 @@
 #ifndef _RPC_MDS_H_
 #define _RPC_MDS_H_
 
-#include "psc_util/multiwait.h"
+#include "pfl/multiwait.h"
 
 #include "slconn.h"
 #include "slashrpc.h"

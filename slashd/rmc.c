@@ -45,8 +45,8 @@
 #include "pfl/rpclog.h"
 #include "pfl/rsx.h"
 #include "pfl/service.h"
-#include "psc_util/ctlsvr.h"
-#include "psc_util/lock.h"
+#include "pfl/ctlsvr.h"
+#include "pfl/lock.h"
 
 #include "authbuf.h"
 #include "bmap_mds.h"

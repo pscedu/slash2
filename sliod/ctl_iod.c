@@ -35,8 +35,8 @@
 #include "pfl/walk.h"
 #include "pfl/lockedlist.h"
 #include "pfl/rsx.h"
-#include "psc_util/ctl.h"
-#include "psc_util/ctlsvr.h"
+#include "pfl/ctl.h"
+#include "pfl/ctlsvr.h"
 
 #include "ctl.h"
 #include "ctl_iod.h"
