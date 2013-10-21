@@ -1174,7 +1174,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	bmap_wake_locked(b);
 	bmap_op_done_type(b, BMAP_OPCNT_LEASE);
 
-	psc_pool_return(bmapMdsLeasePool, bml);
+	psc_pool_return(slm_bml_pool, bml);
 
 	return (rc);
 }
@@ -1241,7 +1241,7 @@ mds_bml_new(struct bmap *b, struct pscrpc_export *e, int flags,
 {
 	struct bmap_mds_lease *bml;
 
-	bml = psc_pool_get(bmapMdsLeasePool);
+	bml = psc_pool_get(slm_bml_pool);
 	memset(bml, 0, sizeof(*bml));
 
 	INIT_PSC_LISTENTRY(&bml->bml_bmi_lentry);

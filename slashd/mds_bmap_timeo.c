@@ -39,8 +39,6 @@
 #include "mdslog.h"
 
 struct bmap_timeo_table	 mdsBmapTimeoTbl;
-struct psc_poolmaster	 bmapMdsLeasePoolMaster;
-struct psc_poolmgr	*bmapMdsLeasePool;
 
 void
 mds_bmap_timeotbl_init(void)

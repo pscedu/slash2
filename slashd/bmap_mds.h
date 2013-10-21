@@ -276,8 +276,8 @@ int64_t	 slm_bmap_calc_repltraffic(struct bmapc_memb *);
 
 int	 mds_bia_odtable_startup_cb(void *, struct odtable_receipt *, void *);
 
-extern struct psc_poolmaster	 bmapMdsLeasePoolMaster;
-extern struct psc_poolmgr	*bmapMdsLeasePool;
+extern struct psc_poolmaster	 slm_bml_poolmaster;
+extern struct psc_poolmgr	*slm_bml_pool;
 extern struct bmap_timeo_table	 mdsBmapTimeoTbl;
 
 static __inline struct bmapc_memb *

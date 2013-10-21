@@ -86,6 +86,9 @@ struct psc_hashtbl	 rootHtable;
 struct psc_listcache	 slm_db_workq;
 int			 slm_opstate;
 
+struct psc_poolmaster	 slm_bml_poolmaster;
+struct psc_poolmgr	*slm_bml_pool;
+
 int
 psc_usklndthr_get_type(const char *namefmt)
 {
@@ -584,10 +587,10 @@ main(int argc, char *argv[])
 	pfl_workq_init(128);
 	slm_upsch_init();
 
-	psc_poolmaster_init(&bmapMdsLeasePoolMaster,
+	psc_poolmaster_init(&slm_bml_poolmaster,
 	    struct bmap_mds_lease, bml_bmi_lentry, PPMF_AUTO, 256,
 	    256, 0, NULL, NULL, NULL, "bmplease");
-	bmapMdsLeasePool = psc_poolmaster_getmgr(&bmapMdsLeasePoolMaster);
+	slm_bml_pool = psc_poolmaster_getmgr(&slm_bml_poolmaster);
 
 	sl_nbrqset = pscrpc_nbreqset_init(NULL, NULL);
 	pscrpc_nbreapthr_spawn(sl_nbrqset, SLMTHRT_NBRQ, "slmnbrqthr");
