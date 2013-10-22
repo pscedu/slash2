@@ -324,4 +324,13 @@ fcmh_from_pri(void *p)
 	return (f - 1);
 }
 
+static __inline const struct fidc_membh *
+fcmh_from_pri_const(const void *p)
+{
+	const struct fidc_membh *f = p;
+
+	psc_assert(f);
+	return (f - 1);
+}
+
 #endif /* _SL_FIDCACHE_H_ */
