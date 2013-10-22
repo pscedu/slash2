@@ -258,8 +258,10 @@ struct srt_bmapdesc {
 	struct slash_fidgen	sbd_fg;
 	uint64_t		sbd_seq;
 	uint64_t		sbd_key;
-	uint64_t		sbd_nid;
-	uint32_t		sbd_pid;
+
+	uint64_t		sbd_nid;	/* XXX go away */
+	uint32_t		sbd_pid;	/* XXX go away */
+
 	sl_ios_id_t		sbd_ios;
 	sl_bmapno_t		sbd_bmapno;
 	uint32_t		sbd_flags;	/* SRM_LEASEBMAPF_* */
