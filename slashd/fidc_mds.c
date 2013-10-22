@@ -133,7 +133,11 @@ slm_fcmh_ctor(struct fidc_membh *f, int flags)
 		rc = mdsio_opendir(vfsid, fcmh_2_mdsio_fid(f),
 		    &rootcreds, NULL, &fmi->fmi_mdsio_data);
 	} else if (fcmh_isreg(f)) {
-		slash_inode_handle_init(&fmi->fmi_inodeh, f);
+		struct slash_inode_handle *ih;
+
+		ih = &fmi->fmi_inodeh;
+		ih->inoh_flags = INOH_INO_NOTLOADED;
+
 		/*
 		 * We shouldn't need O_LARGEFILE because SLASH2
 		 * metafiles are small.

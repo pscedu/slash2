@@ -36,6 +36,7 @@
 #include <inttypes.h>
 #include <limits.h>
 
+#include "pfl/cdefs.h"
 #include "pfl/str.h"
 #include "pfl/lock.h"
 
@@ -99,23 +100,24 @@ struct slash_inode_extras_od {
 struct slash_inode_handle {
 	struct slash_inode_od	 inoh_ino;
 	struct slash_inode_extras_od *inoh_extras;
-	struct fidc_membh	*inoh_fcmh;
 	int			 inoh_flags;
 };
 
 #define	INOH_INO_NEW		(1 << 0)			/* not yet written to disk */
 #define	INOH_INO_NOTLOADED	(1 << 1)
 
-#define INOH_GETLOCK(ih)	(&(ih)->inoh_fcmh->fcmh_lock)
+#define INOH_GETLOCK(ih)	(&inoh_2_fcmh(ih)->fcmh_lock)
 #define INOH_LOCK(ih)		spinlock(INOH_GETLOCK(ih))
 #define INOH_ULOCK(ih)		freelock(INOH_GETLOCK(ih))
 #define INOH_RLOCK(ih)		reqlock(INOH_GETLOCK(ih))
 #define INOH_URLOCK(ih, lk)	ureqlock(INOH_GETLOCK(ih), (lk))
 #define INOH_LOCK_ENSURE(ih)	LOCK_ENSURE(INOH_GETLOCK(ih))
 
-#define inoh_2_mdsio_data(ih)	fcmh_2_mdsio_data((ih)->inoh_fcmh)
-#define inoh_2_fsz(ih)		fcmh_2_fsz((ih)->inoh_fcmh)
-#define inoh_2_fid(ih)		fcmh_2_fid((ih)->inoh_fcmh)
+#define inoh_2_mdsio_data(ih)	fcmh_2_mdsio_data(inoh_2_fcmh(ih))
+#define inoh_2_fsz(ih)		fcmh_2_fsz(inoh_2_fcmh(ih))
+#define inoh_2_fid(ih)		fcmh_2_fid(inoh_2_fcmh(ih))
+#define inoh_2_fcmh(ih)		fmi_2_fcmh(inoh_2_fmi(ih))
+#define inoh_2_fcmh_const(ih)	fmi_2_fcmh_const(inoh_2_fmi_const(ih))
 
 #define DEBUG_INOH(level, ih, fmt, ...)					\
 	do {								\
@@ -123,8 +125,8 @@ struct slash_inode_handle {
 									\
 		psclog((level), "inoh@%p fcmh=%p f+g="SLPRI_FG" "	\
 		    "fl:%#x:%s%s %s :: " fmt,				\
-		    (ih), (ih)->inoh_fcmh,				\
-		    SLPRI_FG_ARGS(&(ih)->inoh_fcmh->fcmh_fg),		\
+		    (ih), inoh_2_fcmh_const(ih),			\
+		    SLPRI_FG_ARGS(&inoh_2_fcmh_const(ih)->fcmh_fg),	\
 		    (ih)->inoh_flags,					\
 		    (ih)->inoh_flags & INOH_INO_NEW	  ? "N" : "",	\
 		    (ih)->inoh_flags & INOH_INO_NOTLOADED ? "L" : "",	\
@@ -152,13 +154,5 @@ int	mds_inodes_odsync(int, struct fidc_membh *, void (*logf)(void *, uint64_t, i
 char	*_dump_ino(char *, size_t, const struct slash_inode_od *);
 
 extern struct sl_ino_compat sl_ino_compat_table[];
-
-static __inline void
-slash_inode_handle_init(struct slash_inode_handle *ih,
-    struct fidc_membh *f)
-{
-	ih->inoh_fcmh = f;
-	ih->inoh_flags = INOH_INO_NOTLOADED;
-}
 
 #endif /* _SLASHD_INODE_H_ */

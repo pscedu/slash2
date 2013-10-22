@@ -57,7 +57,7 @@ mds_inode_read(struct slash_inode_handle *ih)
 	uint16_t vers;
 	size_t nb;
 
-	f = ih->inoh_fcmh;
+	f = inoh_2_fcmh(ih);
 	rc = slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 	if (rc)
 		return (-rc);
@@ -130,7 +130,7 @@ mds_inode_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 
 	INOH_LOCK_ENSURE(ih);
 
-	f = ih->inoh_fcmh;
+	f = inoh_2_fcmh(ih);
 	wasbusy = FCMH_REQ_BUSY(f, &waslocked);
 
 	psc_crc64_calc(&crc, &ih->inoh_ino, sizeof(ih->inoh_ino));
@@ -184,7 +184,7 @@ mds_inox_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 
 	psc_assert(ih->inoh_extras);
 
-	f = ih->inoh_fcmh;
+	f = inoh_2_fcmh(ih);
 	wasbusy = FCMH_REQ_BUSY(f, &waslocked);
 
 	psc_crc64_calc(&crc, ih->inoh_extras, INOX_SZ);
@@ -235,7 +235,7 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 	iovs[1].iov_base = &od_crc;
 	iovs[1].iov_len = sizeof(od_crc);
 
-	f = ih->inoh_fcmh;
+	f = inoh_2_fcmh(ih);
 	slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
 	    SL_EXTRAS_START_OFF, inoh_2_mdsio_data(ih));

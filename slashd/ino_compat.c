@@ -49,7 +49,7 @@ mds_inode_dump(int vfsid, struct sl_ino_compat *sic,
 	int rc, fl;
 	void *th;
 
-	f = ih->inoh_fcmh;
+	f = inoh_2_fcmh(ih);
 	th = inoh_2_mdsio_data(ih);
 
 	fl = BMAPGETF_LOAD | BMAPGETF_NOAUTOINST;
@@ -117,7 +117,7 @@ mds_inode_update(int vfsid, struct slash_inode_handle *ih,
 	DEBUG_INOH(PLL_INFO, ih, "updating old inode (v %d)",
 	    old_version);
 
-	f = ih->inoh_fcmh;
+	f = inoh_2_fcmh(ih);
 	snprintf(fn, sizeof(fn), "%016"PRIx64".update", fcmh_2_fid(f));
 	rc = mdsio_opencreatef(vfsid, mds_tmpdir_inum[vfsid],
 	    &rootcreds, O_RDWR | O_CREAT | O_TRUNC,
@@ -184,7 +184,7 @@ mds_inode_update_interrupted(int vfsid, struct slash_inode_handle *ih,
 	th = inoh_2_mdsio_data(ih);
 
 	snprintf(fn, sizeof(fn), "%016"PRIx64".update",
-	    fcmh_2_fid(ih->inoh_fcmh));
+	    inoh_2_fid(ih));
 
 	*rc = mdsio_lookup(vfsid, mds_tmpdir_inum[vfsid], fn, &inum,
 	    &rootcreds, NULL);
@@ -268,7 +268,7 @@ mds_ino_read_v1(struct slash_inode_handle *ih)
 	iovs[1].iov_base = &od_crc;
 	iovs[1].iov_len = sizeof(od_crc);
 
-	f = ih->inoh_fcmh;
+	f = inoh_2_fcmh(ih);
 	slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb, 0,
 	    inoh_2_mdsio_data(ih));
@@ -310,7 +310,7 @@ mds_inox_read_v1(struct slash_inode_handle *ih)
 	iovs[1].iov_base = &od_crc;
 	iovs[1].iov_len = sizeof(od_crc);
 
-	f = ih->inoh_fcmh;
+	f = inoh_2_fcmh(ih);
 	slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
 	    0x400, inoh_2_mdsio_data(ih));
