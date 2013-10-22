@@ -31,16 +31,16 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "pfl/alloc.h"
+#include "pfl/atomic.h"
 #include "pfl/cdefs.h"
+#include "pfl/ctlsvr.h"
 #include "pfl/hashtbl.h"
-#include "pfl/str.h"
-#include "pfl/time.h"
 #include "pfl/list.h"
 #include "pfl/listcache.h"
 #include "pfl/rsx.h"
-#include "pfl/alloc.h"
-#include "pfl/atomic.h"
-#include "pfl/ctlsvr.h"
+#include "pfl/str.h"
+#include "pfl/time.h"
 
 #include "cache_params.h"
 #include "dircache.h"
