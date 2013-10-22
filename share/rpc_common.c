@@ -430,7 +430,7 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 {
 	int rc;
 
-	CSVC_RLOCK(csvc);
+	(void)CSVC_RLOCK(csvc);
 	rc = psc_atomic32_dec_getnew(&csvc->csvc_refcnt);
 	psc_assert(rc >= 0);
 	DEBUG_CSVC(PLL_INFO, csvc, "decref");
@@ -1023,7 +1023,7 @@ sl_exp_hldrop_cli(struct pscrpc_export *exp)
 
 	if (sl_expcli_ops.secop_destroy)
 		sl_expcli_ops.secop_destroy(exp->exp_private);
-	CSVC_RLOCK(*csvcp);
+	(void)CSVC_RLOCK(*csvcp);
 	sl_csvc_markfree(*csvcp);
 	sl_csvc_disconnect(*csvcp);
 	sl_csvc_decref(*csvcp);
