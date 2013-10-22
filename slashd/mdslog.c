@@ -747,9 +747,8 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 	psc_assert(sjnm->sjnm_namelen + sjnm->sjnm_namelen2 <=
 	    sizeof(sjnm->sjnm_name));
 
-	pjournal_add_entry(mdsJournal, txg,
-	    MDS_LOG_NAMESPACE, distill, sjnm,
-	    offsetof(struct slmds_jent_namespace, sjnm_name) +
+	pjournal_add_entry(mdsJournal, txg, MDS_LOG_NAMESPACE, distill,
+	    sjnm, offsetof(struct slmds_jent_namespace, sjnm_name) +
 	    sjnm->sjnm_namelen + sjnm->sjnm_namelen2);
 
 	if (!distill)
@@ -2125,7 +2124,8 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		peerinfo->sp_flags &= ~SPF_NEED_JRNL_INIT;
 	);
 
-	psclog_info("current_update_batchno = %"PRId64", current_update_xid = %"PRId64,
+	psclog_info("current_update_batchno = %"PRId64", "
+	    "current_update_xid = %"PRId64,
 	    current_update_batchno, current_update_xid);
 
  replay_log:
