@@ -172,7 +172,7 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 			k = j;
 		}
 
-		wasbusy = FCMH_REQ_BUSY(ih->inoh_fcmh, &waslk);
+		wasbusy = FCMH_REQ_BUSY(inoh_2_fcmh(ih), &waslk);
 
 		repl[k].bs_id = ios;
 		ih->inoh_ino.ino_nrepls++;
@@ -180,10 +180,10 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 		DEBUG_INOH(PLL_INFO, ih, "add IOS(%u) to repls, index %d",
 		    ios, j);
 
-		mds_inodes_odsync(vfsid, ih->inoh_fcmh,
+		mds_inodes_odsync(vfsid, inoh_2_fcmh(ih),
 		    mdslog_ino_repls);
 
-		FCMH_UREQ_BUSY(ih->inoh_fcmh, wasbusy, waslk);
+		FCMH_UREQ_BUSY(inoh_2_fcmh(ih), wasbusy, waslk);
 
 		rc = j;
 	}
