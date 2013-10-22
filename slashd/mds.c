@@ -1153,12 +1153,15 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	}
 
  out:
+	b->bcm_flags &= ~BMAP_IONASSIGN;
+	bmap_wake_locked(b);
+	bmap_op_done_type(b, BMAP_OPCNT_LEASE);
+
+	psc_pool_return(slm_bml_pool, bml);
+
 	if (odtr) {
 		key = odtr->odtr_key;
 		elem = odtr->odtr_elem;
-		rc = mds_odtable_freeitem(slm_bia_odt, odtr);
-		DEBUG_BMAP(PLL_DIAG, b, "odtable remove seq=%"PRId64" "
-		    "key=%#"PRIx64" rc=%d", bml->bml_seq, key, rc);
 
 		mds_reserve_slot(1);
 		logentry = pjournal_get_buf(mdsJournal,
@@ -1169,12 +1172,9 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		    0, logentry, sizeof(*logentry));
 		pjournal_put_buf(mdsJournal, logentry);
 		mds_unreserve_slot(1);
-	}
-	b->bcm_flags &= ~BMAP_IONASSIGN;
-	bmap_wake_locked(b);
-	bmap_op_done_type(b, BMAP_OPCNT_LEASE);
 
-	psc_pool_return(slm_bml_pool, bml);
+		rc = mds_odtable_freeitem(slm_bia_odt, odtr);
+	}
 
 	return (rc);
 }
@@ -1773,14 +1773,20 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	bia.bia_ios = resm->resm_res_id;
 	bia.bia_start = time(NULL);
 
-	if ((rc = mds_bmap_add_repl(b, &bia)))
+	rc = mds_bmap_add_repl(b, &bia);
+	if (rc)
 		goto out1;
 
 	bmi->bmi_seq = obml->bml_seq = bia.bia_seq;
 	obml->bml_ios = resm->resm_res_id;
 
+<<<<<<< .mine
+	mds_odtable_replaceitem(mdsBmapAssignTable, bmi->bmi_assign,
+	    &bia, sizeof(bia));
+=======
 	mds_odtable_replaceitem(slm_bia_odt, bmi->bmi_assign, &bia,
 	    sizeof(bia));
+>>>>>>> .r22499
 
 	/* Do some post setup on the modified lease. */
 	sbd_out->sbd_seq = obml->bml_seq;
