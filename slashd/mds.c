@@ -1780,13 +1780,8 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	bmi->bmi_seq = obml->bml_seq = bia.bia_seq;
 	obml->bml_ios = resm->resm_res_id;
 
-<<<<<<< .mine
-	mds_odtable_replaceitem(mdsBmapAssignTable, bmi->bmi_assign,
-	    &bia, sizeof(bia));
-=======
 	mds_odtable_replaceitem(slm_bia_odt, bmi->bmi_assign, &bia,
 	    sizeof(bia));
->>>>>>> .r22499
 
 	/* Do some post setup on the modified lease. */
 	sbd_out->sbd_seq = obml->bml_seq;
