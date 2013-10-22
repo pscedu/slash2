@@ -128,7 +128,8 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 			 * The first few replicas are in the inode
 			 * itself, the rest are in the extras block.
 			 */
-			if ((inox_rc = mds_inox_ensure_loaded(ih)))
+			inox_rc = mds_inox_ensure_loaded(ih);
+			if (inox_rc)
 				goto out;
 
 			repl = ih->inoh_extras->inox_repls;
@@ -161,7 +162,8 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 			PFL_GOTOERR(out, rc = -ENOSPC);
 
 		} else if (ih->inoh_ino.ino_nrepls >= SL_DEF_REPLICAS) {
-			if ((inox_rc = mds_inox_ensure_loaded(ih)))
+			inox_rc = mds_inox_ensure_loaded(ih);
+			if (inox_rc)
 				goto out;
 
 			repl = ih->inoh_extras->inox_repls;
