@@ -71,7 +71,7 @@ enum slm_fwd_op {
  * file must be less than LNET_MTU so it can always be transmitted in
  * a single RPC bulk.
  *
- * These two numbers were determined when the size of each entry was 
+ * These two numbers were determined when the size of each entry was
  * 512 bytes.
  */
 #define SLM_UPDATE_BATCH		2048			/* namespace updates */
