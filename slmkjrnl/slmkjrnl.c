@@ -30,10 +30,10 @@
 
 #include "pfl/fcntl.h"
 #include "pfl/fs.h"
+#include "psc_util/journal.h"
+#include "psc_util/log.h"
 #include "pfl/pfl.h"
 #include "pfl/str.h"
-#include "pfl/journal.h"
-#include "pfl/log.h"
 
 #include "mkfn.h"
 #include "pathnames.h"
@@ -71,7 +71,7 @@ usage(void)
  */
 void
 pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
-	uint32_t rs, uint64_t uuid)
+    uint32_t rs, uint64_t uuid)
 {
 	struct psc_journal_enthdr *pje;
 	struct psc_journal pj;
@@ -96,13 +96,15 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 		psc_fatal("stat %s", fn);
 
 	pj.pj_fd = fd;
-	pj.pj_hdr = PSCALLOC(PSC_ALIGN(sizeof(struct psc_journal_hdr), stb.st_blksize));
+	pj.pj_hdr = PSCALLOC(PSC_ALIGN(sizeof(struct psc_journal_hdr),
+	    stb.st_blksize));
 
 	pj.pj_hdr->pjh_entsz = entsz;
 	pj.pj_hdr->pjh_nents = nents;
 	pj.pj_hdr->pjh_version = PJH_VERSION;
 	pj.pj_hdr->pjh_readsize = rs;
-	pj.pj_hdr->pjh_iolen = PSC_ALIGN(sizeof(struct psc_journal_hdr), stb.st_blksize);
+	pj.pj_hdr->pjh_iolen = PSC_ALIGN(sizeof(struct psc_journal_hdr),
+	    stb.st_blksize);
 	pj.pj_hdr->pjh_magic = PJH_MAGIC;
 	pj.pj_hdr->pjh_timestamp = time(NULL);
 	pj.pj_hdr->pjh_fsuuid = uuid;
@@ -142,7 +144,7 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 		if ((size_t)nb != PJ_PJESZ(&pj) * rs)
 			psc_fatal("failed to write slot %u (%zd)",
 			    slot, nb);
-		if (verbose && ((slot % 262144 == 0))) {
+		if (verbose && slot % 262144 == 0) {
 			printf(".");
 			fflush(stdout);
 			fsync(pj.pj_fd);
@@ -164,115 +166,96 @@ pjournal_format(const char *fn, uint32_t nents, uint32_t entsz,
 void
 pjournal_dump_entry(uint32_t slot, struct psc_journal_enthdr *pje)
 {
-	char name[SL_NAME_MAX + 1], newname[SL_NAME_MAX + 1];
-	struct slmds_jent_assign_rep *logentry;
-	struct slmds_jent_bmap_assign *sjba;
-	struct slmds_jent_bmap_repls *sjbr;
-	struct slmds_jent_bmap_crc *sjbc;
-	struct slmds_jent_ino_repls *sjir;
-	struct slmds_jent_namespace *sjnm;
-	struct slmds_jent_bmapseq *sjsq;
-	int type;
+	union {
+		struct slmds_jent_assign_rep *logentry;
+		struct slmds_jent_bmap_assign *sjba;
+		struct slmds_jent_bmap_repls *sjbr;
+		struct slmds_jent_ino_repls *sjir;
+		struct slmds_jent_namespace *sjnm;
+		struct slmds_jent_bmap_crc *sjbc;
+		struct slmds_jent_bmapseq *sjsq;
+		void *p;
+	} u;
+	int type, nlen, n2len;
+	const char *n, *n2;
+
+	u.p = PJE_DATA(pje);
 
 	type = pje->pje_type & ~(_PJE_FLSHFT - 1);
-	printf("%6d: ", slot);
+	printf("%6d: %3x %4"PRIx64" %4"PRIx64" ",
+	    slot, type, pje->pje_xid, pje->pje_txg);
 	switch (type) {
-	    case MDS_LOG_BMAP_REPLS:
-		sjbr = PJE_DATA(pje);
-		printf("type=%3d, xid=%#"PRIx64", txg=%#"PRIx64", fid="SLPRI_FID,
-			type, pje->pje_xid, pje->pje_txg, sjbr->sjbr_fid);
+	case MDS_LOG_BMAP_REPLS:
+		printf("fid=%016"PRIx64" bmap_repls", u.sjbr->sjbr_fid);
 		break;
-	    case MDS_LOG_BMAP_CRC:
-		sjbc = PJE_DATA(pje);
-		printf("type=%3d, xid=%#"PRIx64", txg=%#"PRIx64", fid="SLPRI_FID,
-			type, pje->pje_xid, pje->pje_txg, sjbc->sjbc_fid);
+	case MDS_LOG_BMAP_CRC:
+		printf("fid=%016"PRIx64" bmap_crc", u.sjbc->sjbc_fid);
 		break;
-	    case MDS_LOG_BMAP_SEQ:
-		sjsq = PJE_DATA(pje);
-		printf("type=%3d, xid=%#"PRIx64", txg=%#"PRIx64", "
-		       "LWM=%#"PRIx64", HWM=%#"PRIx64,
-			type, pje->pje_xid, pje->pje_txg,
-			sjsq->sjbsq_low_wm,
-			sjsq->sjbsq_high_wm);
+	case MDS_LOG_BMAP_SEQ:
+		printf("lwm=%"PRIx64" hwm=%"PRIx64,
+		    u.sjsq->sjbsq_low_wm,
+		    u.sjsq->sjbsq_high_wm);
 		break;
-	    case MDS_LOG_INO_REPLS:
-		sjir = PJE_DATA(pje);
-		printf("type=%3d, xid=%#"PRIx64", txg=%#"PRIx64", fid="SLPRI_FID,
-			type, pje->pje_xid, pje->pje_txg, sjir->sjir_fid);
+	case MDS_LOG_INO_REPLS:
+		printf("fid=%016"PRIx64" ino_repls", u.sjir->sjir_fid);
 		break;
-	    case MDS_LOG_BMAP_ASSIGN:
-		logentry = PJE_DATA(pje);
-		if (logentry->sjar_flags & SLJ_ASSIGN_REP_FREE)
-			printf("type=%3d, xid=%#"PRIx64", "
-			    "txg=%#"PRIx64", item=%d",
-			    type, pje->pje_xid,
-			    pje->pje_txg, logentry->sjar_elem);
+	case MDS_LOG_BMAP_ASSIGN:
+		if (u.logentry->sjar_flags & SLJ_ASSIGN_REP_FREE)
+			printf("item=%d", u.logentry->sjar_elem);
 		else {
-			sjba = &logentry->sjar_bmap;
-			printf("type=%3d, xid=%#"PRIx64", "
-			    "txg=%#"PRIx64", fid="SLPRI_FID", flags=%x",
-			    type, pje->pje_xid, pje->pje_txg,
-			    sjba->sjba_fid, logentry->sjar_flags);
+			printf("fid=%016"PRIx64" flags=%x",
+			    u.logentry->sjar_bmap.sjba_fid,
+			    u.logentry->sjar_flags);
 		}
 		break;
-	    case MDS_LOG_NAMESPACE:
-		sjnm = PJE_DATA(pje);
-		printf("type=%3d, xid=%#"PRIx64", txg=%#"PRIx64", "
-		    "fid="SLPRI_FID", ",
-		    type, pje->pje_xid, pje->pje_txg,
-		    sjnm->sjnm_target_fid);
+	case MDS_LOG_NAMESPACE:
+		printf("fid=%016"PRIx64" ", u.sjnm->sjnm_target_fid);
 
-		name[0]='\0';
-		if (sjnm->sjnm_namelen) {
-			memcpy(name, sjnm->sjnm_name, sjnm->sjnm_namelen);
-			name[sjnm->sjnm_namelen] = '\0';
-		}
-		newname[0]='\0';
-		if (sjnm->sjnm_namelen2) {
-			memcpy(newname, sjnm->sjnm_name +
-			    sjnm->sjnm_namelen,
-			    sjnm->sjnm_namelen2);
-			newname[sjnm->sjnm_namelen2] = '\0';
-		}
+		n = u.sjnm->sjnm_name;
+		nlen = u.sjnm->sjnm_namelen;
+		n2len = u.sjnm->sjnm_namelen2;
+		n2 = n + nlen;
 
-		switch (sjnm->sjnm_op) {
-		    case NS_OP_RECLAIM:
+		switch (u.sjnm->sjnm_op) {
+		case NS_OP_RECLAIM:
 			printf("op=reclaim");
 			break;
-		    case NS_OP_CREATE:
-			printf("op=create, name=%s", name);
+		case NS_OP_CREATE:
+			printf("op=create name=%.*s", nlen, n);
 			break;
-		    case NS_OP_MKDIR:
-			printf("op=mkdir, name=%s", name);
+		case NS_OP_MKDIR:
+			printf("op=mkdir name=%.*s", nlen, n);
 			break;
-		    case NS_OP_LINK:
-			printf("op=link, name=%s", name);
+		case NS_OP_LINK:
+			printf("op=link name=%.*s", nlen, n);
 			break;
-		    case NS_OP_SYMLINK:
-			printf("op=symlink, name=%s", name);
+		case NS_OP_SYMLINK:
+			printf("op=symlink name=%.*s", nlen, n);
 			break;
-		    case NS_OP_RENAME:
-			printf("op=rename, old name=%s, new name=%s",
-			    name, newname);
+		case NS_OP_RENAME:
+			printf("op=rename oldname=%.*s newname=%.*s",
+			    nlen, n, n2len, n2);
 			break;
-		    case NS_OP_UNLINK:
-			printf("op=unlink, name=%s", name);
+		case NS_OP_UNLINK:
+			printf("op=unlink name=%.*s", nlen, n);
 			break;
-		    case NS_OP_RMDIR:
-			printf("op=rmdir, name=%s", name);
+		case NS_OP_RMDIR:
+			printf("op=rmdir name=%.*s", nlen, n);
 			break;
-		    case NS_OP_SETSIZE:
+		case NS_OP_SETSIZE:
 			printf("op=setsize");
 			break;
-		    case NS_OP_SETATTR:
-			printf("op=setattr, mask=%#x", sjnm->sjnm_mask);
+		case NS_OP_SETATTR:
+			printf("op=setattr mask=%#x",
+			    u.sjnm->sjnm_mask);
 			break;
-		    default:
-			psc_fatalx("invalid namespace op %d", sjnm->sjnm_op);
+		default:
+			psclog_errorx("op=INVALID (%d)",
+			    u.sjnm->sjnm_op);
 		}
 		break;
-	    default:
-		psc_fatalx("invalid type %d", type);
+	default:
+		psclog_errorx("invalid type");
 		break;
 	}
 	printf("\n");
@@ -299,6 +282,7 @@ pjournal_dump(const char *fn, int verbose)
 	struct stat statbuf;
 	unsigned char *jbuf;
 	ssize_t nb, pjhlen;
+	time_t ts;
 
 	ntotal = nmagic = nchksum = nformat = ndump = 0;
 
@@ -351,62 +335,69 @@ pjournal_dump(const char *fn, int verbose)
 		psc_fatalx("number of entries %d is not a multiple of the "
 		    "readsize %d", pjh->pjh_nents, pjh->pjh_readsize);
 
-	printf("Journal header info for %s:\n"
-	    "  Version: %u\n"
-	    "  Entry size: %u\n"
-	    "  Number of entries: %u\n"
-	    "  Batch read size: %u\n"
-	    "  Entry start offset: %"PRId64"\n"
-	    "  Format time: %s"
-	    "  UUID: %"PRIx64"\n",
+	ts = pjh->pjh_timestamp;
+
+	printf("%s:\n"
+	    "  version: %u\n"
+	    "  entry size: %u\n"
+	    "  number of entries: %u\n"
+	    "  batch read size: %u\n"
+	    "  entry start offset: %"PRId64"\n"
+	    "  format time: %s"
+	    "  uuid: %"PRIx64"\n"
+	    "  %4s  %3s %4s %4s %s\n",
 	    fn, pjh->pjh_version, PJ_PJESZ(pj), pjh->pjh_nents,
 	    pjh->pjh_readsize, pjh->pjh_start_off,
-	    ctime((time_t *)&pjh->pjh_timestamp), pjh->pjh_fsuuid);
+	    ctime(&ts), pjh->pjh_fsuuid,
+	    "idx", "typ", "xid", "txg", "details");
 
 	jbuf = psc_alloc(PJ_PJESZ(pj) * pj->pj_hdr->pjh_readsize,
-			 PAF_PAGEALIGN);
-	for (slot = 0; slot < pjh->pjh_nents; slot += pjh->pjh_readsize) {
-
+	    PAF_PAGEALIGN);
+	for (slot = 0; slot < pjh->pjh_nents;
+	    slot += pjh->pjh_readsize) {
 		nb = pread(pj->pj_fd, jbuf, PJ_PJESZ(pj) *
 		    pjh->pjh_readsize, PJ_GETENTOFF(pj, slot));
-		if (nb !=  PJ_PJESZ(pj) * pjh->pjh_readsize)
-			printf("Failed to read %d log entries at slot %d.\n",
-				pjh->pjh_readsize, slot);
+		if (nb != PJ_PJESZ(pj) * pjh->pjh_readsize)
+			warn("failed to read %d log entries at slot %d",
+			    pjh->pjh_readsize, slot);
 
 		for (i = 0; i < pjh->pjh_readsize; i++) {
 			ntotal++;
 			pje = (void *)&jbuf[PJ_PJESZ(pj) * i];
 			if (pje->pje_magic != PJE_MAGIC) {
 				nmagic++;
-				printf("Journal slot %d has a bad magic number.\n",
-					slot + i);
+				warnx("journal slot %d has a bad magic"
+				    "number", slot + i);
 				continue;
 			}
+
 			/*
-			 * If we hit a new entry that is never used, we assume that
-			 * the rest of the journal is never used.
+			 * If we hit a new entry that is never used, we
+			 * assume that the rest of the journal is never
+			 * used.
 			 */
 			if (pje->pje_type == PJE_FORMAT) {
-				nformat = nformat + pjh->pjh_nents - (slot + i);
+				nformat = nformat + pjh->pjh_nents -
+				    (slot + i);
 				goto done;
 			}
 
 			PSC_CRC64_INIT(&chksum);
-			psc_crc64_add(&chksum, pje,
-			    offsetof(struct psc_journal_enthdr, pje_chksum));
-			psc_crc64_add(&chksum, pje->pje_data, pje->pje_len);
+			psc_crc64_add(&chksum, pje, offsetof(
+			    struct psc_journal_enthdr, pje_chksum));
+			psc_crc64_add(&chksum, pje->pje_data,
+			    pje->pje_len);
 			PSC_CRC64_FIN(&chksum);
 
 			if (pje->pje_chksum != chksum) {
 				nchksum++;
-				printf("Journal slot %d has a corrupt checksum, bail out.\n",
-					slot + i);
+				warnx("journal slot %d has a corrupt "
+				    "checksum", slot + i);
 				goto done;
 			}
 			ndump++;
-			if (verbose) {
-				pjournal_dump_entry(slot+i, pje);
-			}
+			if (verbose)
+				pjournal_dump_entry(slot + i, pje);
 			if (first) {
 				first = 0;
 				highest_xid = lowest_xid = pje->pje_xid;
@@ -432,12 +423,16 @@ pjournal_dump(const char *fn, int verbose)
 	psc_free(jbuf, PAF_PAGEALIGN, PJ_PJESZ(pj));
 	PSCFREE(pj);
 
-	printf("\n%d slot(s) scanned, %d in use, %d formatted, "
-	    "%d bad magic, %d bad checksum(s)\n",
-	    ntotal, ndump, nformat, nmagic, nchksum);
-	printf("\nLowest transaction ID=%#"PRIx64", slot=%d",
-	    lowest_xid, lowest_slot);
-	printf("\nHighest transaction ID=%#"PRIx64", slot=%d\n",
+	printf("----------------------------------------------\n"
+	    "%8d slot(s) scanned\n"
+	    "%8d in use\n"
+	    "%8d formatted\n"
+	    "%8d bad magic\n"
+	    "%8d bad checksum(s)\n"
+	    "lowest transaction ID=%#"PRIx64" (slot=%d)\n"
+	    "highest transaction ID=%#"PRIx64" (slot=%d)\n",
+	    ntotal, ndump, nformat, nmagic, nchksum,
+	    lowest_xid, lowest_slot,
 	    highest_xid, highest_slot);
 }
 
@@ -446,8 +441,8 @@ main(int argc, char *argv[])
 {
 	ssize_t nents = SLJ_MDS_JNENTS;
 	char *endp, c, fn[PATH_MAX];
-	long l;
 	uint64_t uuid = 0;
+	long l;
 
 	pfl_init();
 	sl_subsys_register();
