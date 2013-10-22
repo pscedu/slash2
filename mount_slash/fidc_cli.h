@@ -98,6 +98,7 @@ int	fcmh_checkcreds(struct fidc_membh *, const struct pscfs_creds *, int);
  * fidc_lookup_load_inode - Create the inode if it doesn't exist,
  *	loading its attributes from the MDS.
  */
+#define _pfl_callerinfo pci
 static __inline int
 _fidc_lookup_load_inode(const struct pfl_callerinfo *pci, slfid_t fid,
     struct fidc_membh **fcmhp, struct pscfs_clientctx *pfcc)
@@ -107,5 +108,6 @@ _fidc_lookup_load_inode(const struct pfl_callerinfo *pci, slfid_t fid,
 	return (_fidc_lookup(pci, &fg, FIDC_LOOKUP_CREATE |
 	    FIDC_LOOKUP_LOAD, NULL, 0, fcmhp, pfcc));
 }
+#undef _pfl_callerinfo
 
 #endif /* _FIDC_CLI_H_ */
