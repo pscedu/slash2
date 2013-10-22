@@ -570,7 +570,7 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_flags & BMAP_IONASSIGN);
-	dio = (b->bcm_flags & BMAP_DIO);
+	dio = b->bcm_flags & BMAP_DIO;
 	BMAP_ULOCK(b);
 
 	rc = mds_odtable_getitem(slm_bia_odt, bmi->bmi_assign, &bia,
@@ -1018,8 +1018,8 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	/* On the last release, BML_FREEING must be set. */
 	psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
-	DEBUG_BMAP(PLL_INFO, b, "bml=%p fl=%d seq=%"PRId64, bml,
-		   bml->bml_flags, bml->bml_seq);
+	DEBUG_BMAP(PLL_DIAG, b, "bml=%p fl=%d seq=%"PRId64, bml,
+	    bml->bml_flags, bml->bml_seq);
 
 	/*
 	 * BMAP_IONASSIGN acts as a barrier for operations which may
@@ -1219,7 +1219,7 @@ mds_handle_rls_bmap(struct pscrpc_request *rq, __unusedx int sliod)
 		bml = mds_bmap_getbml_locked(b, sbd->sbd_seq,
 		    sbd->sbd_nid, sbd->sbd_pid);
 
-		DEBUG_BMAP((bml ? PLL_INFO : PLL_WARN), b,
+		DEBUG_BMAP(bml ? PLL_DIAG : PLL_WARN, b,
 		    "release %"PRId64" nid=%"PRId64" pid=%u bml=%p",
 		    sbd->sbd_seq, sbd->sbd_nid, sbd->sbd_pid, bml);
 		if (bml) {
@@ -1319,6 +1319,7 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr,
 	bml->bml_expire = time(NULL) + BMAP_RECOVERY_TIMEO_EXT;
 
 	if (bia->bia_flags & BIAF_DIO)
+		// XXX BMAP_LOCK(b)
 		b->bcm_flags |= BMAP_DIO;
 
 	bmap_2_bmi(b)->bmi_assign = odtr;
@@ -1326,7 +1327,7 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr,
 	rc = mds_bmap_bml_add(bml, SL_WRITE, IOS_ID_ANY);
 	if (rc) {
 		bmap_2_bmi(b)->bmi_assign = NULL;
-		bml->bml_flags |= (BML_FREEING | BML_RECOVERFAIL);
+		bml->bml_flags |= BML_FREEING | BML_RECOVERFAIL;
 	}
 	mds_bmap_bml_release(bml);
 
@@ -1775,7 +1776,7 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 
 	rc = mds_bmap_add_repl(b, &bia);
 	if (rc)
-		goto out1;
+		PFL_GOTOERR(out1, rc);
 
 	bmi->bmi_seq = obml->bml_seq = bia.bia_seq;
 	obml->bml_ios = resm->resm_res_id;
