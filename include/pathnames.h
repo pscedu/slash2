@@ -25,6 +25,8 @@
 #ifndef _SL_PATHNAMES_H_
 #define _SL_PATHNAMES_H_
 
+#include <paths.h>
+
 /* configuration/control socket paths */
 #if DEVELPATHS
 # define SL_PATH_RUNTIME_DIR	".."
