@@ -30,8 +30,8 @@
 
 #include "pfl/fcntl.h"
 #include "pfl/fs.h"
-#include "psc_util/journal.h"
-#include "psc_util/log.h"
+#include "pfl/journal.h"
+#include "pfl/log.h"
 #include "pfl/pfl.h"
 #include "pfl/str.h"
 
