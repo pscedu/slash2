@@ -717,13 +717,6 @@ msl_bmap_release(struct sl_resm *resm)
 	csvc = (resm == slc_rmc_resm) ?
 	    slc_getmcsvc(resm) : slc_geticsvc(resm);
 	if (csvc == NULL) {
-		/*
-		 * Per bug 136.  If the csvc is not available then nuke
-		 * any pending bmap releases.  For now, this op is
-		 * single threaded so resetting nbmaps here should not
-		 * be racy.
-		 */
-		rmci->rmci_bmaprls.nbmaps = 0;
 		if (resm->resm_csvc)
 			rc = resm->resm_csvc->csvc_lasterrno; /* XXX race */
 		else
@@ -742,8 +735,8 @@ msl_bmap_release(struct sl_resm *resm)
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 	rc = pscrpc_nbreqset_add(pndgBmapRlsReqs, rq);
 
-	rmci->rmci_bmaprls.nbmaps = 0;
  out:
+	rmci->rmci_bmaprls.nbmaps = 0;
 	if (rc) {
 		/*
 		 * At this point the bmaps have already been purged from
