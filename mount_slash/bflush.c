@@ -785,6 +785,7 @@ msbmaprlsthr_main(struct psc_thread *thr)
 
 		i = 0;
 		didwork = 0;
+		OPSTAT_INCR(SLC_OPST_BMAP_RELEASE);
 		LIST_CACHE_LOCK(&bmapTimeoutQ);
 		LIST_CACHE_FOREACH(bci, &bmapTimeoutQ) {
 
@@ -836,8 +837,6 @@ msbmaprlsthr_main(struct psc_thread *thr)
 		LIST_CACHE_ULOCK(&bmapTimeoutQ);
 		DYNARRAY_FOREACH(bci, i, &bcis) {
 
-			OPSTAT_INCR(SLC_OPST_BMAP_RELEASE);
-
 			b = bci_2_bmap(bci);
 			b->bcm_flags &= ~BMAP_TIMEOQ;
 			lc_remove(&bmapTimeoutQ, bci);
@@ -851,9 +850,11 @@ msbmaprlsthr_main(struct psc_thread *thr)
 
 				DEBUG_BMAP(PLL_INFO, b, "res(%s)",
 				    resm->resm_res->res_name);
+				OPSTAT_INCR(SLC_OPST_BMAP_RELEASE_WRITE);
 			} else {
 				resm = slc_rmc_resm;
 				rmci = resm2rmci(slc_rmc_resm);
+				OPSTAT_INCR(SLC_OPST_BMAP_RELEASE_READ);
 			}
 
 			memcpy(&rmci->rmci_bmaprls.sbd[rmci->rmci_bmaprls.nbmaps],
