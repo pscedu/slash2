@@ -146,7 +146,12 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n,
 
 	b = SPLAY_FIND(bmap_cache, &f->fcmh_bmaptree, &lb);
 	if (b) {
-		BMAP_LOCK(b);
+		if (!BMAP_TRYLOCK(b)) {
+			FCMH_ULOCK(f);
+			sched_yield();
+			goto restart;
+		}
+
 		if (b->bcm_flags & BMAP_TOFREE) {
 			/*
 			 * This bmap is going away; wait for it so we
