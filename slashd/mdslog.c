@@ -62,7 +62,7 @@
 #define SLM_CBARG_SLOT_CSVC	0
 #define SLM_CBARG_SLOT_RESPROF	1
 
-struct psc_journal		*mdsJournal;
+struct psc_journal		*slm_journal;
 
 static psc_spinlock_t		 mds_distill_lock = SPINLOCK_INIT;
 
@@ -688,7 +688,7 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 	if (op == NS_OP_CREATE || op == NS_OP_MKDIR)
 		psc_assert(sstb->sst_fid);
 
-	sjnm = pjournal_get_buf(mdsJournal, sizeof(*sjnm));
+	sjnm = pjournal_get_buf(slm_journal, sizeof(*sjnm));
 	memset(sjnm, 0, sizeof(*sjnm));
 	sjnm->sjnm_magic = SJ_NAMESPACE_MAGIC;
 	sjnm->sjnm_op = op;
@@ -714,7 +714,7 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 	 * We need distill if we have a peer MDS or we need to do
 	 * garbage reclamation.
 	 */
-	distill = pjournal_has_peers(mdsJournal);
+	distill = pjournal_has_peers(slm_journal);
 	if ((op == NS_OP_RECLAIM) ||
 	    (op == NS_OP_UNLINK && sstb->sst_nlink == 1) ||
 	    (op == NS_OP_SETSIZE && sstb->sst_size == 0)) {
@@ -747,12 +747,12 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 	psc_assert(sjnm->sjnm_namelen + sjnm->sjnm_namelen2 <=
 	    sizeof(sjnm->sjnm_name));
 
-	pjournal_add_entry(mdsJournal, txg, MDS_LOG_NAMESPACE, distill,
+	pjournal_add_entry(slm_journal, txg, MDS_LOG_NAMESPACE, distill,
 	    sjnm, offsetof(struct slmds_jent_namespace, sjnm_name) +
 	    sjnm->sjnm_namelen + sjnm->sjnm_namelen2);
 
 	if (!distill)
-		pjournal_put_buf(mdsJournal, sjnm);
+		pjournal_put_buf(slm_journal, sjnm);
 
 	psclog_info("namespace op %s (%d): distill=%d "
 	    "fid="SLPRI_FID" name='%s%s%s' mask=%#x size=%"PRId64" "
@@ -1158,7 +1158,7 @@ mds_update_cursor(void *buf, uint64_t txg, int flag)
 
 	if (flag == 1) {
 		start_txg = txg;
-		pjournal_update_txg(mdsJournal, txg);
+		pjournal_update_txg(slm_journal, txg);
 		return;
 	}
 	psc_assert(start_txg == txg);
@@ -1169,7 +1169,7 @@ mds_update_cursor(void *buf, uint64_t txg, int flag)
 	 * middle of a relay, we can miss replaying some entries if we
 	 * update the txg at this point.
 	 */
-	if ((mdsJournal->pj_flags & PJF_REPLAYINPROG) == 0) {
+	if ((slm_journal->pj_flags & PJF_REPLAYINPROG) == 0) {
 		spinlock(&mds_txg_lock);
 		cursor->pjc_commit_txg = txg;
 		freelock(&mds_txg_lock);
@@ -1180,7 +1180,8 @@ mds_update_cursor(void *buf, uint64_t txg, int flag)
 		 * replay thread has updated the replay xid.
 		 */
 		sleep(1);
-		cursor->pjc_replay_xid = pjournal_next_replay(mdsJournal);
+		cursor->pjc_replay_xid = pjournal_next_replay(
+		    slm_journal);
 	}
 
 	/*
@@ -1660,11 +1661,11 @@ mdslog_ino_repls(void *datap, uint64_t txg, __unusedx int flag)
 	struct slmds_jent_ino_repls *sjir;
 	struct fidc_membh *f = datap;
 
-	sjir = pjournal_get_buf(mdsJournal, sizeof(*sjir));
+	sjir = pjournal_get_buf(slm_journal, sizeof(*sjir));
 	mdslogfill_ino_repls(f, sjir);
-	pjournal_add_entry(mdsJournal, txg, MDS_LOG_INO_REPLS, 0,
-	    sjir, sizeof(*sjir));
-	pjournal_put_buf(mdsJournal, sjir);
+	pjournal_add_entry(slm_journal, txg, MDS_LOG_INO_REPLS, 0, sjir,
+	    sizeof(*sjir));
+	pjournal_put_buf(slm_journal, sjir);
 }
 
 void
@@ -1712,11 +1713,11 @@ mdslog_bmap_repls(void *datap, uint64_t txg, __unusedx int flag)
 
 	psc_assert(slm_opstate == SLM_OPSTATE_NORMAL);
 
-	sjbr = pjournal_get_buf(mdsJournal, sizeof(*sjbr));
+	sjbr = pjournal_get_buf(slm_journal, sizeof(*sjbr));
 	mdslogfill_bmap_repls(b, sjbr);
-	pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_REPLS, 0, sjbr,
-	    sizeof(*sjbr));
-	pjournal_put_buf(mdsJournal, sjbr);
+	pjournal_add_entry(slm_journal, txg, MDS_LOG_BMAP_REPLS, 0,
+	    sjbr, sizeof(*sjbr));
+	pjournal_put_buf(slm_journal, sjbr);
 
 	/*
 	 * Relinquish ownership, which was asserted in
@@ -1768,7 +1769,7 @@ mdslog_bmap_crc(void *datap, uint64_t txg, __unusedx int flag)
 
 		n = MIN(SLJ_MDS_NCRCS, crcup->nups - t);
 
-		sjbc = pjournal_get_buf(mdsJournal, sizeof(*sjbc));
+		sjbc = pjournal_get_buf(slm_journal, sizeof(*sjbc));
 		sjbc->sjbc_fid = fcmh_2_fid(bmap->bcm_fcmh);
 		sjbc->sjbc_iosid = crclog->scl_iosid;
 		sjbc->sjbc_bmapno = bmap->bcm_bmapno;
@@ -1782,11 +1783,11 @@ mdslog_bmap_crc(void *datap, uint64_t txg, __unusedx int flag)
 		memcpy(sjbc->sjbc_crc, &crcup->crcs[t],
 		    n * sizeof(struct srt_bmap_crcwire));
 
-		pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_CRC,
+		pjournal_add_entry(slm_journal, txg, MDS_LOG_BMAP_CRC,
 		    distill, sjbc, sizeof(*sjbc));
 
 		if (!distill)
-			pjournal_put_buf(mdsJournal, sjbc);
+			pjournal_put_buf(slm_journal, sjbc);
 		else
 			distill = 0;
 	}
@@ -1850,19 +1851,20 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		xmkfn(res->res_jrnldev, "%s/%s", sl_datadir,
 		    SL_FN_OPJOURNAL);
 
-	mdsJournal = pjournal_open(res->res_jrnldev);
-	if (mdsJournal == NULL)
-		psc_fatalx("failed to open log file %s", res->res_jrnldev);
+	slm_journal = pjournal_open(res->res_jrnldev);
+	if (slm_journal == NULL)
+		psc_fatalx("failed to open log file %s",
+		    res->res_jrnldev);
 
 #if 0
 	/*
 	 * We should specify the uuid in the journal when creating it.
 	 * Currently, we allow a random number to be used.
 	 */
-	if (fsuuid && (mdsJournal->pj_hdr->pjh_fsuuid != fsuuid))
+	if (fsuuid && slm_journal->pj_hdr->pjh_fsuuid != fsuuid)
 		psc_fatalx("UUID mismatch FS=%"PRIx64" JRNL=%"PRIx64".  "
 		    "The journal needs to be reinitialized.",
-		  fsuuid, mdsJournal->pj_hdr->pjh_fsuuid);
+		  fsuuid, slm_journal->pj_hdr->pjh_fsuuid);
 #endif
 
 	jrnldev = res->res_jrnldev;
@@ -2129,24 +2131,23 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	    current_update_batchno, current_update_xid);
 
  replay_log:
-
-	mdsJournal->pj_npeers = npeers;
-	mdsJournal->pj_distill_xid = last_distill_xid;
-	mdsJournal->pj_commit_txg = mds_cursor.pjc_commit_txg;
-	mdsJournal->pj_replay_xid = mds_cursor.pjc_replay_xid;
+	slm_journal->pj_npeers = npeers;
+	slm_journal->pj_distill_xid = last_distill_xid;
+	slm_journal->pj_commit_txg = mds_cursor.pjc_commit_txg;
+	slm_journal->pj_replay_xid = mds_cursor.pjc_replay_xid;
 
 	psclog_info("Journal device is %s", jrnldev);
 	psclog_info("Last SLASH FID is "SLPRI_FID, mds_cursor.pjc_fid);
 	psclog_info("Last synced ZFS transaction group number is %"PRId64,
-	    mdsJournal->pj_commit_txg);
+	    slm_journal->pj_commit_txg);
 	psclog_info("Last replayed SLASH2 transaction ID is %"PRId64,
-	    mdsJournal->pj_replay_xid);
+	    slm_journal->pj_replay_xid);
 
-	pjournal_replay(mdsJournal, SLMTHRT_JRNL, "slmjthr",
+	pjournal_replay(slm_journal, SLMTHRT_JRNL, "slmjthr",
 	    mds_replay_handler, mds_distill_handler);
 
 	psclog_info("Last used SLASH2 transaction ID is %"PRId64,
-	   mdsJournal->pj_lastxid);
+	   slm_journal->pj_lastxid);
 
 	psclog_info("The next FID will be %"PRId64, slm_get_curr_slashfid());
 
@@ -2155,7 +2156,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	psclog_info("Last bmap sequence number HWM is %"PRId64, hwm);
 
 	psclog_info("Journal UUID=%"PRIx64" MDS UUID=%"PRIx64,
-	    mdsJournal->pj_hdr->pjh_fsuuid, fsuuid);
+	    slm_journal->pj_hdr->pjh_fsuuid, fsuuid);
 
 	/* Always start a thread to send reclaim updates. */
 	pscthr_init(SLMTHRT_JRECLAIM, 0, slmjreclaimthr_main, NULL, 0,
@@ -2176,11 +2177,11 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 void
 mds_reserve_slot(int count)
 {
-	pjournal_reserve_slot(mdsJournal, count);
+	pjournal_reserve_slot(slm_journal, count);
 }
 
 void
 mds_unreserve_slot(int count)
 {
-	pjournal_unreserve_slot(mdsJournal, count);
+	pjournal_unreserve_slot(slm_journal, count);
 }

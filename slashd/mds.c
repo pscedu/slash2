@@ -444,7 +444,7 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 		return (rc);
 	}
 	mds_reserve_slot(1);
-	logentry = pjournal_get_buf(mdsJournal, sizeof(*logentry));
+	logentry = pjournal_get_buf(slm_journal, sizeof(*logentry));
 
 	logentry->sjar_flags = SLJ_ASSIGN_REP_NONE;
 	if (nrepls != ih->inoh_ino.ino_nrepls) {
@@ -471,9 +471,9 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 	logentry->sjar_flags |= SLJ_ASSIGN_REP_BMAP;
 	logentry->sjar_elem = bmap_2_bmi(b)->bmi_assign->odtr_elem;
 
-	pjournal_add_entry(mdsJournal, 0, MDS_LOG_BMAP_ASSIGN, 0,
+	pjournal_add_entry(slm_journal, 0, MDS_LOG_BMAP_ASSIGN, 0,
 	    logentry, sizeof(*logentry));
-	pjournal_put_buf(mdsJournal, logentry);
+	pjournal_put_buf(slm_journal, logentry);
 	mds_unreserve_slot(1);
 
 	return (0);
@@ -1164,13 +1164,13 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		elem = odtr->odtr_elem;
 
 		mds_reserve_slot(1);
-		logentry = pjournal_get_buf(mdsJournal,
+		logentry = pjournal_get_buf(slm_journal,
 		    sizeof(*logentry));
 		logentry->sjar_elem = elem;
 		logentry->sjar_flags = SLJ_ASSIGN_REP_FREE;
-		pjournal_add_entry(mdsJournal, 0, MDS_LOG_BMAP_ASSIGN,
+		pjournal_add_entry(slm_journal, 0, MDS_LOG_BMAP_ASSIGN,
 		    0, logentry, sizeof(*logentry));
-		pjournal_put_buf(mdsJournal, logentry);
+		pjournal_put_buf(slm_journal, logentry);
 		mds_unreserve_slot(1);
 
 		rc = mds_odtable_freeitem(slm_bia_odt, odtr);

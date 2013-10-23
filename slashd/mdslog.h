@@ -88,7 +88,7 @@ void	mds_unreserve_slot(int);
 int	mds_replay_namespace(struct slmds_jent_namespace *, int);
 int	mds_replay_handler(struct psc_journal_enthdr *);
 
-extern struct psc_journal		*mdsJournal;
+extern struct psc_journal		*slm_journal;
 extern struct psc_journal_cursor	 mds_cursor;
 
 extern uint64_t				 current_update_batchno;
