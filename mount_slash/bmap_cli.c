@@ -212,21 +212,21 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 	struct srm_leasebmapext_rep *mp =
 	    pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 	int rc;
+	struct timespec ts;
 	struct bmap_cli_info  *bci = bmap_2_bci(b);
 
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_flags & BMAP_CLI_LEASEEXTREQ);
 
+	PFL_GETTIMESPEC(&ts);
 	SL_GET_RQ_STATUS(csvc, rq, mp, rc);
 	if (!rc) {
 		memcpy(&bmap_2_bci(b)->bci_sbd, &mp->sbd,
 		    sizeof(struct srt_bmapdesc));
 
-		PFL_GETTIMESPEC(&bmap_2_bci(b)->bci_xtime);
-
-		timespecadd(&bmap_2_bci(b)->bci_xtime,
+		timespecadd(&ts,
 		    &msl_bmap_timeo_inc, &bmap_2_bci(b)->bci_etime);
-		timespecadd(&bmap_2_bci(b)->bci_xtime,
+		timespecadd(&ts,
 		    &msl_bmap_max_lease, &bmap_2_bci(b)->bci_xtime);
 
 		OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_DONE);
@@ -241,6 +241,7 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 			BMAP_SETATTR(b, BMAP_CLI_LEASEFAILED);
 			bmpc_biorqs_fail(bmap_2_bmpc(b), rc);
 		}
+		bci->bci_etime = ts;
 		bmap_2_bci(b)->bci_error = rc;
 		OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_FAIL);
 	}
