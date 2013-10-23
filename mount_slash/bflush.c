@@ -762,7 +762,7 @@ msbmaprlsthr_main(struct psc_thread *thr)
 	struct psc_dynarray rels = DYNARRAY_INIT;
 	struct psc_waitq waitq = PSC_WAITQ_INIT;
 	struct bmap_cli_info *bci;
-	struct timespec crtime, nto = { 0, 0 };
+	struct timespec crtime, nto;
 	struct resm_cli_info *rmci;
 	struct bmapc_memb *b;
 	struct sl_resm *resm;
