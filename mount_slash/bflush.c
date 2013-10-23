@@ -779,6 +779,7 @@ msbmaprlsthr_main(struct psc_thread *thr)
 	 * XXX: just put the resm's in the dynarray.  When pushing out
 	 * the bid's, assume an ion unless resm == slc_rmc_resm.
 	 */
+	psc_dynarray_ensurelen(&rels, MAX_BMAP_RELEASE);
 	psc_dynarray_ensurelen(&bcis, MAX_BMAP_RELEASE);
 	while (pscthr_run(thr)) {
 
