@@ -4,8 +4,6 @@
 
 # Archiver configuration
 set port=1302;
-
-# firehose1, firehose2, firehose3, firehose4
 set routes="
   sdp11 [128.182.100.128,128.182.100.127,128.182.100.126,128.182.100.159]@tcp12;
   tcp12 [10.10.101.128,10.10.101.129,10.10.101.54,10.10.101.62]@sdp11
