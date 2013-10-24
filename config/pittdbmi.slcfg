@@ -1,0 +1,56 @@
+# $Id$
+
+# See slcfg(5) for more information.
+
+# send notes about why/when to run multi-MDS
+# explain caching/staging
+# jar7@pitt.edu
+
+set port=4078;
+set routes="
+  sdp7 [128.182.100.128,128.182.100.127,128.182.100.126,128.182.100.159]@tcp12;
+  tcp8 [10.10.101.128,10.10.101.129,10.10.101.54,10.10.101.62]@sdp11
+";
+set nets="sdp7 10.10.101.*; tcp8 *.*.*.*";
+
+set pref_mds="md0@PITTDBMI";
+set pref_ios="io0@PITTDBMI";
+set fsuuid="a1409fb20bfa0b5b";
+set zpool_name="pittdbmi_s2mds";
+set zpool_cache="/local/pittdbmi.s2/var/zcf";
+
+site @PITT {
+	site_desc	= "University of Pittsburgh DBMI";
+	site_id		= 0;
+
+	resource md {
+		desc	= "";
+		type	= mds;
+		id	= 1;
+		nids	= .pitt.edu;
+		jrnldev	= /dev/disk/by-id/ata-ST3750640AS_3QD04P64;
+	}
+
+	resource io0 {
+		desc	= "";
+		type	= standalone_fs;
+		id	= 10;
+		nids	= .pitt.edu;
+		fsroot	= /local/pittdbmi_slio/0;
+		selftest = "/local/sbin/st /arc_sliod/0";
+	}
+}
+
+site @PSC {
+	site_desc	= "Pittsburgh Supercomputing Center";
+	site_id		= 1;
+
+	resource sense51 {
+		desc	= "";
+		type	= standalone_fs;
+		id	= 10;
+		nids	= sense51.psc.edu;
+		fsroot	= /local/pittdbmi_slio/0;
+		selftest = "/local/sbin/st /arc_sliod/0";
+	}
+}
