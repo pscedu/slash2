@@ -242,7 +242,7 @@ slm_rmc_handle_extendbmapls(struct pscrpc_request *rq)
 	struct srm_leasebmapext_rep *mp;
 	struct fidc_membh *f;
 
-	OPSTAT_INCR(SLM_OPST_EXTEND_BMAP_LEASE);
+	OPSTAT_INCR(SLM_OPST_LEASE_RENEW);
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	mp->rc = -slm_fcmh_get(&mq->sbd.sbd_fg, &f);
@@ -262,7 +262,6 @@ slm_rmc_handle_reassignbmapls(struct pscrpc_request *rq)
 	struct fidc_membh *f;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	OPSTAT_INCR(SLM_OPST_REASSIGN_BMAP_LEASE);
 
 	mp->rc = -slm_fcmh_get(&mq->sbd.sbd_fg, &f);
 	if (mp->rc)

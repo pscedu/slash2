@@ -1820,6 +1820,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	struct bmap *b;
 	int rc, rw;
 
+	OPSTAT_INCR(SLM_OPST_LEASE_RENEW);
 	rc = bmap_get(f, sbd_in->sbd_bmapno, SL_WRITE, &b);
 	if (rc)
 		return (rc);
@@ -1830,10 +1831,8 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	    sbd_in->sbd_nid, sbd_in->sbd_pid);
 	BMAP_ULOCK(b);
 
-	if (!obml) {
-		rc = ENOENT;
-		goto out;
-	}
+	if (!obml)
+		OPSTAT_INCR(SLM_OPST_LEASE_RENEW_ENOENT);
 
 	rw = (sbd_in->sbd_ios == IOS_ID_ANY) ? BML_READ : BML_WRITE;
 	bml = mds_bml_new(b, exp, rw, &exp->exp_connection->c_peer);
@@ -1879,9 +1878,11 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	 * mds_bmap_bml_release() since a new lease has already been
 	 * issued.
 	 */
-	BML_LOCK(obml);
-	obml->bml_flags |= BML_FREEING;
-	BML_ULOCK(obml);
+	if (obml) {
+		BML_LOCK(obml);
+		obml->bml_flags |= BML_FREEING;
+		BML_ULOCK(obml);
+	}
 
  out:
 	if (bml)
