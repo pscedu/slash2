@@ -41,7 +41,6 @@
 
 #include "slashd/journal_mds.h"
 #include "slashd/mdsio.h"
-#include "slashd/mdslog.h"
 #include "slashd/namespace.h"
 #include "slashd/subsys_mds.h"
 
