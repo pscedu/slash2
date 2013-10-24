@@ -372,6 +372,7 @@ enum {
 	SLM_OPSTATE_INIT = 0,
 	SLM_OPSTATE_REPLAY,
 	SLM_OPSTATE_NORMAL
+//	SLM_OPSTATE_EXITING
 };
 
 int		 mds_handle_rls_bmap(struct pscrpc_request *, int);
@@ -413,7 +414,6 @@ extern struct slash_creds	 rootcreds;
 extern struct odtable		*slm_bia_odt;
 extern struct odtable		*slm_ptrunc_odt;
 extern struct sl_mds_nsstats	 slm_nsstats_aggr;	/* aggregate namespace stats */
-extern struct sl_mds_peerinfo	*localinfo;
 extern struct psc_listcache	 slm_db_workq;
 
 extern struct psc_thread	*slmconnthr;
