@@ -34,7 +34,7 @@
 
 #include "bmap.h"
 #include "inode.h"
-#include "mdslog.h"
+#include "journal_mds.h"
 #include "slashd.h"
 #include "up_sched_res.h"
 

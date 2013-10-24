@@ -36,15 +36,15 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "pfl/str.h"
-#include "pfl/tree.h"
-#include "pfl/treeutil.h"
 #include "pfl/alloc.h"
 #include "pfl/crc.h"
 #include "pfl/lock.h"
 #include "pfl/log.h"
 #include "pfl/pool.h"
 #include "pfl/pthrutil.h"
+#include "pfl/str.h"
+#include "pfl/tree.h"
+#include "pfl/treeutil.h"
 #include "pfl/waitq.h"
 
 #include "bmap_mds.h"
@@ -52,8 +52,8 @@
 #include "fidc_mds.h"
 #include "fidcache.h"
 #include "inode.h"
+#include "journal_mds.h"
 #include "mdsio.h"
-#include "mdslog.h"
 #include "odtable_mds.h"
 #include "pathnames.h"
 #include "repl_mds.h"

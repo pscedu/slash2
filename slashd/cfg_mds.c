@@ -22,13 +22,13 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#include "pfl/dynarray.h"
-#include "pfl/rpc.h"
 #include "pfl/alloc.h"
+#include "pfl/dynarray.h"
 #include "pfl/lock.h"
 #include "pfl/multiwait.h"
+#include "pfl/rpc.h"
 
-#include "mdslog.h"
+#include "journal_mds.h"
 #include "rpc_mds.h"
 #include "slashd.h"
 #include "slconfig.h"

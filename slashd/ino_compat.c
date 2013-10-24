@@ -33,7 +33,6 @@
 #include "inode.h"
 #include "journal_mds.h"
 #include "mdsio.h"
-#include "mdslog.h"
 #include "slashd.h"
 #include "slerr.h"
 

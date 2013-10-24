@@ -27,17 +27,17 @@
 #include <inttypes.h>
 #include <string.h>
 
+#include "pfl/crc.h"
+#include "pfl/ctlsvr.h"
 #include "pfl/dynarray.h"
 #include "pfl/fcntl.h"
 #include "pfl/fs.h"
-#include "pfl/rpc.h"
-#include "pfl/rsx.h"
-#include "pfl/crc.h"
-#include "pfl/ctlsvr.h"
 #include "pfl/hostname.h"
 #include "pfl/journal.h"
 #include "pfl/lock.h"
 #include "pfl/log.h"
+#include "pfl/rpc.h"
+#include "pfl/rsx.h"
 
 #include "bmap.h"
 #include "bmap_mds.h"
@@ -46,7 +46,6 @@
 #include "inode.h"
 #include "journal_mds.h"
 #include "mdsio.h"
-#include "mdslog.h"
 #include "mkfn.h"
 #include "pathnames.h"
 #include "repl_mds.h"

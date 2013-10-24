@@ -24,10 +24,10 @@
 
 #include <sys/time.h>
 
-#include "pfl/dynarray.h"
-#include "pfl/list.h"
 #include "pfl/alloc.h"
 #include "pfl/ctlsvr.h"
+#include "pfl/dynarray.h"
+#include "pfl/list.h"
 #include "pfl/lock.h"
 #include "pfl/log.h"
 #include "pfl/pool.h"
@@ -36,7 +36,6 @@
 #include "bmap.h"
 #include "bmap_mds.h"
 #include "journal_mds.h"
-#include "mdslog.h"
 
 struct bmap_timeo_table	 mdsBmapTimeoTbl;
 
