@@ -139,6 +139,7 @@ struct slmrcm_thread {
 
 struct slmrmi_thread {
 	struct pscrpc_thread	  smrit_prt;
+	struct slmthr_dbh	  smrit_dbh;
 };
 
 struct slmrmm_thread {
@@ -190,6 +191,8 @@ slmthr_getdbh(void)
 		return (&slmrcmthr(thr)->srcm_dbh);
 	case SLMTHRT_RMC:
 		return (&slmrmcthr(thr)->smrct_dbh);
+	case SLMTHRT_RMI:
+		return (&slmrmithr(thr)->smrit_dbh);
 	case SLMTHRT_UPSCHED:
 		return (&slmupschthr(thr)->sus_dbh);
 	case SLMTHRT_DBWORKER:
