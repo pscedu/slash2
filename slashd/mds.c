@@ -22,19 +22,19 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#include "pfl/alloc.h"
-#include "pfl/atomic.h"
-#include "pfl/ctlsvr.h"
 #include "pfl/export.h"
 #include "pfl/fs.h"
 #include "pfl/hashtbl.h"
 #include "pfl/lockedlist.h"
-#include "pfl/log.h"
-#include "pfl/odtable.h"
 #include "pfl/rpclog.h"
 #include "pfl/rsx.h"
 #include "pfl/tree.h"
 #include "pfl/treeutil.h"
+#include "pfl/alloc.h"
+#include "pfl/atomic.h"
+#include "pfl/ctlsvr.h"
+#include "pfl/log.h"
+#include "pfl/odtable.h"
 
 #include "bmap.h"
 #include "bmap_mds.h"
@@ -45,6 +45,7 @@
 #include "journal_mds.h"
 #include "mdscoh.h"
 #include "mdsio.h"
+#include "journal_mds.h"
 #include "mkfn.h"
 #include "odtable_mds.h"
 #include "pathnames.h"
@@ -499,19 +500,19 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	psc_assert(!bmi->bmi_assign);
 	psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
+	resm = mds_resm_select(b, pios, NULL, 0);
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_flags & BMAP_IONASSIGN);
-	BMAP_ULOCK(b);
-
-	resm = mds_resm_select(b, pios, NULL, 0);
 	if (!resm) {
-		BMAP_SETATTR(b, BMAP_MDS_NOION);
+		b->bcm_flags |= BMAP_MDS_NOION;
+		BMAP_ULOCK(b);
 		bml->bml_flags |= BML_ASSFAIL;
 
 		psclog_warnx("unable to contact ION %#x for lease", pios);
 
 		return (-SLERR_ION_OFFLINE);
-	}
+	} else
+		BMAP_ULOCK(b);
 
 	bmi->bmi_wr_ion = rmmi = resm2rmmi(resm);
 	atomic_inc(&rmmi->rmmi_refcnt);
@@ -535,15 +536,18 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	bmi->bmi_assign = mds_odtable_putitem(slm_bia_odt, &bia,
 	    sizeof(bia));
 
+	BMAP_LOCK(b);
 	if (!bmi->bmi_assign) {
-		BMAP_SETATTR(b, BMAP_MDS_NOION);
+		b->bcm_flags |= BMAP_MDS_NOION;
+		BMAP_ULOCK(b);
 		bml->bml_flags |= BML_ASSFAIL;
 
 		DEBUG_BMAP(PLL_ERROR, b, "failed odtable_putitem()");
 		// XXX fix me - dont leak the journal buf!
 		return (-SLERR_XACT_FAIL);
 	}
-	BMAP_CLEARATTR(b, BMAP_MDS_NOION);
+	b->bcm_flags &= ~BMAP_MDS_NOION;
+	BMAP_ULOCK(b);
 
 	if (mds_bmap_add_repl(b, &bia))
 		return (-1); // errno
@@ -673,7 +677,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 	b = bmi_2_bmap(bmi);
 
 	bmap_wait_locked(b, b->bcm_flags & BMAP_IONASSIGN);
-	BMAP_SETATTR(b, BMAP_IONASSIGN);
+	b->bcm_flags |= BMAP_IONASSIGN;
 
 	DEBUG_BMAP(PLL_INFO, b, "bml=%p bmi_writers=%d bmi_readers=%d",
 	    bml, bmi->bmi_writers, bmi->bmi_readers);
@@ -725,7 +729,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 	OPSTAT_INCR(SLM_OPST_BMAP_CHWRMODE_DONE);
 
   out:
-	BMAP_CLEARATTR(b, BMAP_IONASSIGN);
+	b->bcm_flags &= ~BMAP_IONASSIGN;
 	bmap_wake_locked(b);
 	return (rc);
 }
@@ -1737,7 +1741,7 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	 * removals
 	 *   - including the removal this lease's odtable entry.
 	 */
-	BMAP_SETATTR(b, BMAP_IONASSIGN);
+	b->bcm_flags |= BMAP_IONASSIGN;
 
 	bmi = bmap_2_bmi(b);
 	if (bmi->bmi_writers > 1 || bmi->bmi_readers) {
