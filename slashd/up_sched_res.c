@@ -338,6 +338,7 @@ slm_upsch_tryrepl(struct bmap *b, int off,
 		rq->rq_interpret_reply = slm_upsch_tryrepl_cb;
 		rq->rq_async_args = av;
 		rc = SL_NBRQSET_ADD(csvc, rq);
+		// XXX reacquire BMAP_BUSY in case of RPC failure
 		if (rc == 0)
 			return (1);
 	} else
@@ -498,6 +499,7 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 		rq->rq_interpret_reply = slm_upsch_tryptrunc_cb;
 		rq->rq_async_args = av;
 		rc = SL_NBRQSET_ADD(csvc, rq);
+		// XXX reacquire BMAP_BUSY in case of RPC failure
 		if (rc == 0)
 			return (1);
 	} else
@@ -581,18 +583,19 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 
 	rc = batchrq_add(r, csvc, SRMT_PRECLAIM, SRIM_BULK_PORTAL, &pe,
 	    sizeof(pe), slm_upsch_preclaim_cb, 30);
+	if (rc)
+		PFL_GOTOERR(fail, rc);
 
-	if (rc == 0) {
-		brepls_init(tract, -1);
-		tract[BREPLST_GARBAGE] = BREPLST_GARBAGE_SCHED;
+	brepls_init(tract, -1);
+	tract[BREPLST_GARBAGE] = BREPLST_GARBAGE_SCHED;
 
-		brepls_init_idx(retifset);
-		rc = mds_repl_bmap_apply(b, tract, retifset, off);
-		if (rc != BREPLST_GARBAGE)
-			psclog_errorx("consistency error");
+	brepls_init_idx(retifset);
+	rc = mds_repl_bmap_apply(b, tract, retifset, off);
+	if (rc != BREPLST_GARBAGE)
+		psclog_errorx("consistency error");
 
-		rc = mds_bmap_write_logrepls(b);
-	}
+	rc = mds_bmap_write_logrepls(b);
+
  fail:
 	if (rc && rc != -PFLERR_NOTCONN)
 		psclog_errorx("error rc=%d", rc);
