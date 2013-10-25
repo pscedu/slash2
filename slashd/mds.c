@@ -44,7 +44,6 @@
 #include "journal_mds.h"
 #include "mdscoh.h"
 #include "mdsio.h"
-#include "journal_mds.h"
 #include "mkfn.h"
 #include "odtable_mds.h"
 #include "pathnames.h"
