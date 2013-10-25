@@ -1743,6 +1743,7 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 
 	bmi = bmap_2_bmi(b);
 	if (bmi->bmi_writers > 1 || bmi->bmi_readers) {
+		BMAP_ULOCK(b);
 		/*
 		 * Other clients have been assigned this sliod.
 		 * Therefore the sliod may not be reassigned.
@@ -1795,9 +1796,9 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	sbd_out->sbd_ios = obml->bml_ios;
 
  out1:
-	(void)BMAP_RLOCK(b);
+	BMAP_LOCK(b);
 	psc_assert(b->bcm_flags & BMAP_IONASSIGN);
-	BMAP_CLEARATTR(b, BMAP_IONASSIGN);
+	b->bcm_flags &= ~BMAP_IONASSIGN;
 	bmap_wake_locked(b);
 
  out2:

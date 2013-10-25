@@ -160,9 +160,6 @@ struct bmap {
 #define BMAP_URLOCK(b, lk)	ureqlock(&(b)->bcm_lock, (lk))
 #define BMAP_TRYLOCK(b)		trylock(&(b)->bcm_lock)
 
-#define BMAP_SETATTR(b, fl)	SETATTR_LOCKED(&(b)->bcm_lock, &(b)->bcm_flags, (fl))
-#define BMAP_CLEARATTR(b, fl)	CLEARATTR_LOCKED(&(b)->bcm_lock, &(b)->bcm_flags, (fl))
-
 #define _DEBUG_BMAP_FMT		"bmap@%p bno:%u flg:%#x:"		\
 				"%s%s%s%s%s%s%s%s%s%s%s%s%s%s "		\
 				"fid:"SLPRI_FID" opcnt=%d : "
