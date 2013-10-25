@@ -189,7 +189,7 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 		OPSTAT_INCR(SLC_OPST_BMAP_REASSIGN_DONE);
 	}
 
-	BMAP_CLEARATTR(b, BMAP_CLI_REASSIGNREQ);
+	b->bcm_flags &= ~BMAP_CLI_REASSIGNREQ;
 
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b,
 	    "lease reassign: rc=%d, nseq=%"PRId64", "
@@ -237,8 +237,8 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 		 * stumble across it while its active I/O's are failed.
 		 */
 		if (!(b->bcm_flags & BMAP_CLI_LEASEFAILED)) {
-			BMAP_SETATTR(b, BMAP_TOFREE);
-			BMAP_SETATTR(b, BMAP_CLI_LEASEFAILED);
+			b->bcm_flags |= BMAP_TOFREE;
+			b->bcm_flags |= BMAP_CLI_LEASEFAILED;
 			bmpc_biorqs_fail(bmap_2_bmpc(b), rc);
 		}
 		bci->bci_etime = ts;
@@ -246,7 +246,7 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 		OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_FAIL);
 	}
 
-	BMAP_CLEARATTR(b, BMAP_CLI_LEASEEXTREQ);
+	b->bcm_flags &= ~BMAP_CLI_LEASEEXTREQ;
 
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b,
 	    "lease extension: rc=%d, nseq=%"PRId64", "
@@ -307,7 +307,7 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 	    bci->bci_sbd.sbd_ios;
 	bci->bci_nreassigns++;
 
-	BMAP_SETATTR(b, BMAP_CLI_REASSIGNREQ);
+	b->bcm_flags |= BMAP_CLI_REASSIGNREQ;
 
 	DEBUG_BMAP(PLL_WARN, b, "reassign from ios=%u "
 	    "(nreassigns=%d)", bci->bci_sbd.sbd_ios,
@@ -345,7 +345,8 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
 	    "lease reassign req (rc=%d)", rc);
 	if (rc) {
-		BMAP_CLEARATTR(b, BMAP_CLI_REASSIGNREQ);
+		BMAP_LOCK(b);
+		b->bcm_flags &= ~BMAP_CLI_REASSIGNREQ;
 		bmap_op_done_type(b, BMAP_OPCNT_REASSIGN);
 
 		if (rq)
@@ -426,7 +427,7 @@ msl_bmap_lease_tryext(struct bmap *b, int *secs_rem, int blockable)
 		if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED)
 			b->bcm_flags &= ~BMAP_CLI_LEASEEXPIRED;
 
-		BMAP_SETATTR(b, BMAP_CLI_LEASEEXTREQ);
+		b->bcm_flags |= BMAP_CLI_LEASEEXTREQ;
 		bmap_op_start_type(b, BMAP_OPCNT_LEASEEXT);
 		/* Yield the remaining time. */
 		bmap_2_bci(b)->bci_etime = bmap_2_bci(b)->bci_xtime;
@@ -465,7 +466,7 @@ msl_bmap_lease_tryext(struct bmap *b, int *secs_rem, int blockable)
 				sl_csvc_decref(csvc);
 
 			bmap_2_bci(b)->bci_error = rc;
-			BMAP_CLEARATTR(b, BMAP_CLI_LEASEEXTREQ);
+			b->bcm_flags &= ~BMAP_CLI_LEASEEXTREQ;
 
 			bmap_wake_locked(b);
 			bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
