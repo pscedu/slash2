@@ -235,7 +235,6 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	INIT_PSC_LISTENTRY(&mrsq.mrsq_lentry);
 	INIT_SPINLOCK(&mrsq.mrsq_lock);
 	psc_waitq_init(&mrsq.mrsq_waitq);
-	spinlock(&mrsq.mrsq_lock);
 	mrsq.mrsq_id = mq->id;
 	mrsq.mrsq_fd = fd;
 	mrsq.mrsq_fid = mrq->mrq_fid;
@@ -253,6 +252,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		goto out;
 	}
 
+	spinlock(&mrsq.mrsq_lock);
 	while (mrsq.mrsq_rc == 0) {
 		psc_waitq_wait(&mrsq.mrsq_waitq, &mrsq.mrsq_lock);
 		spinlock(&mrsq.mrsq_lock);
