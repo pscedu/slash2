@@ -252,7 +252,7 @@ biod_rlssched_locked(struct bmap_iod_info *bii)
 		if (!psc_atomic32_read(&bii->bii_crcdrty_slvrs) &&
 		    (bii_2_bmap(bii)->bcm_flags & BMAP_IOD_RLSSEQ) &&
 		    (bii->bii_bcr_xid == bii->bii_bcr_xid_last)) {
-			BMAP_SETATTR(bii_2_bmap(bii), BMAP_IOD_RLSSCHED);
+			bii_2_bmap(bii)->bcm_flags |= BMAP_IOD_RLSSCHED;
 			lc_addtail(&bmapRlsQ, bii);
 		}
 	}
@@ -278,7 +278,7 @@ bcr_ready_remove(struct bcrcupd *bcr)
 		/* This was the last bcr. */
 		psc_assert(pll_empty(&bii->bii_bklog_bcrs));
 		psc_assert(!bii->bii_bcr);
-		BMAP_CLEARATTR(bii_2_bmap(bii), BMAP_IOD_BCRSCHED);
+		bii_2_bmap(bii)->bcm_flags &= ~BMAP_IOD_BCRSCHED;
 
 		DEBUG_BMAP(PLL_INFO, bii_2_bmap(bii),
 		   "descheduling drtyslvrs=%u",
@@ -412,8 +412,8 @@ slibmaprlsthr_main(struct psc_thread *thr)
 			if (pll_nitems(&bii->bii_rls))
 				psc_dynarray_add(&a, bii);
 			else
-				BMAP_CLEARATTR(bii_2_bmap(bii),
-				    BMAP_IOD_RLSSEQ | BMAP_IOD_RLSSCHED);
+				bii_2_bmap(bii)->bcm_flags &=
+				    ~(BMAP_IOD_RLSSEQ | BMAP_IOD_RLSSCHED);
 			BII_ULOCK(bii);
 
 			while (i--)

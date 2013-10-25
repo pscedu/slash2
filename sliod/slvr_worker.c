@@ -283,7 +283,7 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 			 */
 			BII_LOCK(bii);
 			bcr->bcr_flags &= ~BCR_SCHEDULED;
-			BMAP_CLEARATTR(bii_2_bmap(bii), BMAP_IOD_INFLIGHT);
+			bii_2_bmap(bii)->bcm_flags &= ~BMAP_IOD_INFLIGHT;
 			bcr_xid_check(bcr);
 			BII_ULOCK(bii);
 
@@ -461,7 +461,7 @@ slislvrthr_proc(struct slvr *s)
 			OPSTAT_INCR(SLI_OPST_CRC_UPDATE_BACKLOG);
 			pll_addtail(&bii->bii_bklog_bcrs, bcr);
 		} else {
-			BMAP_SETATTR(b, BMAP_IOD_BCRSCHED);
+			b->bcm_flags |= BMAP_IOD_BCRSCHED;
 			bcr_hold_add(bcr);
 		}
 		PFL_GETTIMESPEC(&bcr->bcr_age);
