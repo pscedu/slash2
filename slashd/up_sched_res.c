@@ -305,7 +305,6 @@ slm_upsch_tryrepl(struct bmap *b, int off,
 	mq->bmapno = b->bcm_bmapno;
 	BHGEN_GET(b, &mq->bgen);
 
-	/* Mark as SCHED here in case the RPC finishes quickly. */
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_QUEUED] = BREPLST_REPL_SCHED;
 	brepls_init_idx(retifset);
@@ -316,29 +315,20 @@ slm_upsch_tryrepl(struct bmap *b, int off,
 		DEBUG_BMAP(PLL_FATAL, b,
 		    "invalid bmap replica state [off %d]: %d", off, rc);
 
-	av.pointer_arg[IP_BMAP] = b;
-	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
-
 	/*
 	 * If it was still QUEUED, which means we marked it SCHED, then
 	 * proceed; otherwise, bail: perhaps the user dequeued the
 	 * replication request or something.
 	 */
 	if (rc == BREPLST_REPL_QUEUED) {
-		rc = mds_bmap_write_logrepls(b);
-		av.space[IN_UNDO_WR] = 1;
-		if (rc)
-			PFL_GOTOERR(fail, rc);
+		av.pointer_arg[IP_BMAP] = b;
+		bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
+
 		upd_rpmi_add(res2rpmi(dst_resm->resm_res), upd);
 
-		/*
-		 * It is OK if repl sched is resent across reboots
-		 * idempotently.
-		 */
 		rq->rq_interpret_reply = slm_upsch_tryrepl_cb;
 		rq->rq_async_args = av;
 		rc = SL_NBRQSET_ADD(csvc, rq);
-		// XXX reacquire BMAP_BUSY in case of RPC failure
 		if (rc == 0)
 			return (1);
 	} else
@@ -480,26 +470,20 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	BHGEN_GET(b, &mq->bgen);
 	mq->offset = fcmh_2_fsz(f) % SLASH_BMAP_SIZE;
 
-	/* Mark as SCHED here in case the RPC finishes quickly. */
 	brepls_init(tract, -1);
-	tract[BREPLST_TRUNCPNDG] = BREPLST_TRUNCPNDG;
-
+	tract[BREPLST_TRUNCPNDG] = BREPLST_TRUNCPNDG_SCHED;
 	brepls_init_idx(retifset);
 	rc = mds_repl_bmap_apply(b, tract, retifset, off);
 
-	av.pointer_arg[IP_BMAP] = b;
-	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
-
 	if (rc == BREPLST_TRUNCPNDG) {
-		rc = mds_bmap_write_logrepls(b);
-		av.space[IN_UNDO_WR] = 1;
-		if (rc)
-			PFL_GOTOERR(fail, rc);
+		av.pointer_arg[IP_BMAP] = b;
+		bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
+
+		upd_rpmi_add(res2rpmi(dst_resm->resm_res), upd);
 
 		rq->rq_interpret_reply = slm_upsch_tryptrunc_cb;
 		rq->rq_async_args = av;
 		rc = SL_NBRQSET_ADD(csvc, rq);
-		// XXX reacquire BMAP_BUSY in case of RPC failure
 		if (rc == 0)
 			return (1);
 	} else
@@ -509,8 +493,7 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	if (rq)
 		pscrpc_req_finished(rq);
 	slm_upsch_finish_ptrunc(av.pointer_arg[IP_CSVC],
-	    av.pointer_arg[IP_BMAP], rc, off,
-	    av.space[IN_UNDO_WR]);
+	    av.pointer_arg[IP_BMAP], rc, off, av.space[IN_UNDO_WR]);
 	return (0);
 }
 
@@ -588,9 +571,9 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 
 	brepls_init(tract, -1);
 	tract[BREPLST_GARBAGE] = BREPLST_GARBAGE_SCHED;
-
 	brepls_init_idx(retifset);
 	rc = mds_repl_bmap_apply(b, tract, retifset, off);
+
 	if (rc != BREPLST_GARBAGE)
 		psclog_errorx("consistency error");
 
