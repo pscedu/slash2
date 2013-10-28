@@ -1276,19 +1276,11 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	PSC_SPLAY_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
 	BIORQ_ULOCK(r);
 
-
 	bmpc->bmpc_pndgwr++;
-	if (b->bcm_flags & BMAP_FLUSHQ) {
-		/*
-		 * If the bmap is already dirty then at least one other
-		 * writer must be present.
-		 */
-		psc_assert(bmpc->bmpc_pndgwr > 1);
-	} else {
+	if (!(b->bcm_flags & BMAP_FLUSHQ)) {
 		b->bcm_flags |= BMAP_FLUSHQ;
-		psc_assert(psclist_disjoint(&b->bcm_lentry));
-		DEBUG_BMAP(PLL_DIAG, b, "add to bmapFlushQ");
 		lc_addtail(&bmapFlushQ, b);
+		DEBUG_BMAP(PLL_DIAG, b, "add to bmapFlushQ");
 	}
 	bmap_flushq_wake(BMAPFLSH_TIMEOA);
 
