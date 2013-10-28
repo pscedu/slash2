@@ -786,6 +786,7 @@ msbmaprlsthr_main(struct psc_thread *thr)
 			if (!BMAP_TRYLOCK(b))
 				continue;
 
+			psc_assert(b->bcm_flags & BMAP_TIMEOQ);
 			if (b->bcm_flags & BMAP_CLI_LEASEFAILED) {
 				didwork = 1;
 				bmpc_biorqs_destroy(b, bci->bci_error);
@@ -797,7 +798,6 @@ msbmaprlsthr_main(struct psc_thread *thr)
 			    lc_nitems(&bmapTimeoutQ),
 			    PSCPRI_TIMESPEC_ARGS(&bci->bci_etime));
 
-			psc_assert(b->bcm_flags & BMAP_TIMEOQ);
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
 			PFL_GETTIMESPEC(&crtime);
