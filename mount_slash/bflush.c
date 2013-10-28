@@ -91,6 +91,24 @@ bmap_flush_biorq_expired(const struct bmpc_ioreq *a, struct timespec *t)
 	return (0);
 }
 
+ 
+void
+bmap_free_all_locked(struct fidc_membh *f)
+{
+	struct bmap *a, *b;
+
+	FCMH_LOCK_ENSURE(f);
+
+	for (a = SPLAY_MIN(bmap_cache, &f->fcmh_bmaptree); a; a = b) {
+		b = SPLAY_NEXT(bmap_cache, &f->fcmh_bmaptree, a);
+		DEBUG_BMAP(PLL_INFO, a, "mark bmap free");
+		BMAP_LOCK(a);
+		a->bcm_flags |= BMAP_TOFREE;
+		BMAP_ULOCK(a);
+	}
+}
+
+
 int
 msl_fd_should_retry(struct msl_fhent *mfh, int rc)
 {

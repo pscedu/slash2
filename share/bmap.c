@@ -60,22 +60,6 @@ bmap_cmp(const void *x, const void *y)
 }
 
 void
-bmap_free_all_locked(struct fidc_membh *f)
-{
-	struct bmap *a, *b;
-
-	FCMH_LOCK_ENSURE(f);
-
-	for (a = SPLAY_MIN(bmap_cache, &f->fcmh_bmaptree); a; a = b) {
-		b = SPLAY_NEXT(bmap_cache, &f->fcmh_bmaptree, a);
-		DEBUG_BMAP(PLL_INFO, a, "mark bmap free");
-		BMAP_LOCK(a);
-		a->bcm_flags |= BMAP_TOFREE;
-		BMAP_ULOCK(a);
-	}
-}
-
-void
 bmap_remove(struct bmap *b)
 {
 	struct fidc_membh *f = b->bcm_fcmh;
