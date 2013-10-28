@@ -236,13 +236,10 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 		 * bmap out of the fid cache so that others don't
 		 * stumble across it while its active I/O's are failed.
 		 */
-		if (!(b->bcm_flags & BMAP_CLI_LEASEFAILED)) {
-			b->bcm_flags |= BMAP_TOFREE;
-			b->bcm_flags |= BMAP_CLI_LEASEFAILED;
-			bmpc_biorqs_fail(bmap_2_bmpc(b), rc);
-		}
+		psc_assert(!(b->bcm_flags & BMAP_CLI_LEASEFAILED));
 		bci->bci_etime = ts;
 		bmap_2_bci(b)->bci_error = rc;
+		b->bcm_flags |= BMAP_CLI_LEASEFAILED;
 		OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_FAIL);
 	}
 

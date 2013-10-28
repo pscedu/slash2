@@ -318,20 +318,6 @@ bmpc_biorq_seterr(struct bmpc_ioreq *r, int err)
 	mfh_seterr(r->biorq_mfh, err);
 }
 
-/**
- * bmpc_biorqs_fail - Set the flushrc so that fuse calls blocked in
- *	flush() will awake.
- * Notes: Pending RA pages should fail on their own via RPC callback.
- */
-void
-bmpc_biorqs_fail(struct bmap_pagecache *bmpc, int err)
-{
-	struct bmpc_ioreq *r;
-
-	PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs)
-		bmpc_biorq_seterr(r, err);
-}
-
 void
 bmpc_biorqs_destroy(struct bmapc_memb *b, int rc)
 {
@@ -342,7 +328,7 @@ bmpc_biorqs_destroy(struct bmapc_memb *b, int rc)
 
 	bmpc = bmap_2_bmpc(b);
 
-	SPLAY_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_new_biorqs)
+	PLL_FOREACH(r, &bmpc->bmpc_pndg_biorqs)
 		psc_dynarray_add(&a, r);
 	BMAP_ULOCK(b);
 
