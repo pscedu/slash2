@@ -805,41 +805,27 @@ msbmaprlsthr_main(struct psc_thread *thr)
 				continue;
 
 			psc_assert(b->bcm_flags & BMAP_TIMEOQ);
-			if (b->bcm_flags & BMAP_CLI_LEASEFAILED) {
-				didwork = 1;
-				bmpc_biorqs_destroy(b, bci->bci_error);
-				continue;
-			}
-
-			DEBUG_BMAP(PLL_DEBUG, b, "timeoq try reap"
-			    " (nbmaps=%d) etime("PSCPRI_TIMESPEC")",
-			    lc_nitems(&bmapTimeoutQ),
-			    PSCPRI_TIMESPEC_ARGS(&bci->bci_etime));
-
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
 			PFL_GETTIMESPEC(&crtime);
 
 			if (timespeccmp(&crtime, &bci->bci_etime, <)) {
+				DEBUG_BMAP(PLL_INFO, b, "skip due to expire");
 				BMAP_ULOCK(b);
 				continue;
 
 			}
 			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
-				int expired = 0;
-
-				if (timespeccmp(&crtime,
-				    &bci->bci_xtime, >))
-					expired = 1;
-
-				DEBUG_BMAP(expired ?
-				    PLL_DIAG : PLL_DEBUG, b,
-				    "skip due to ref (expired=%d)",
-				    expired);
-
+				DEBUG_BMAP(PLL_INFO, b, "skip due to refcnt");
 				BMAP_ULOCK(b);
 				continue;
 			}
+			/*
+			 * A bmap should be taken off the flush queue after all 
+			 * its biorq are finished.
+			 */
+			psc_assert(!(b->bcm_flags & BMAP_FLUSHQ));
+
 			didwork = 1;
 			psc_dynarray_add(&bcis, bci);
 			if (++i >= MAX_BMAP_RELEASE)
