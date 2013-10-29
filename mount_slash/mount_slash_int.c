@@ -1038,6 +1038,8 @@ msl_readahead_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	psc_assert(rq->rq_reqmsg->opc == SRMT_READ);
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_io_rep, rc);
+
+	/* XXX should be negative errno */
 	if (rc == SLERR_AIOWAIT)
 		return (msl_req_aio_add(rq, msl_readahead_cb, args));
 
@@ -1095,6 +1097,8 @@ msl_dio_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 	OPSTAT_INCR(SLC_OPST_DIO_CB0);
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_io_rep, rc);
+
+	/* XXX should be negative errno */
 	if (rc == SLERR_AIOWAIT)
 		return (msl_req_aio_add(rq, msl_dio_cb, args));
 
