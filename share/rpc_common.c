@@ -1079,14 +1079,11 @@ slrpc_bulk_check(const void *hbuf, struct iovec *iov, int n)
 	int rc = 0;
 
 	slrpc_bulk_sign(tbuf, iov, n);
-#if 0
-	/* disable for now */
 	if (memcmp(tbuf, hbuf, AUTHBUF_ALGLEN)) {
 		psc_fatalx("authbuf did not hash correctly -- "
 		    "ensure key files are synced");
 		rc = SLERR_AUTHBUF_BADHASH;
 	}
-#endif
 	return (rc);
 }
 
