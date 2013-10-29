@@ -243,6 +243,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	if (mq->rc) {
 		DPRINTF_UPD(PLL_WARN, upd, "rc=%d", mq->rc);
 
+		// XXX impossible
 		if (mq->rc == SLERR_BADCRC) {
 			/*
 			 * Bad CRC, media error perhaps.
