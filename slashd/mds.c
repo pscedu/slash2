@@ -65,9 +65,13 @@ mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
 	sl_bmapno_t nb;
 	int locked;
 
+	if (n == 0)
+		return (1);
+
 	locked = FCMH_RLOCK(f);
 #if 0
-	if ((rc = mds_stat_refresh_locked(f)))
+	rc = mds_stat_refresh_locked(f);
+	if (rc)
 		return (rc);
 #endif
 
