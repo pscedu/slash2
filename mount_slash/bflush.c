@@ -892,8 +892,7 @@ bmap_flush_outstanding_rpcwait(struct sl_resm *m)
 	 * sliod basis using multiwait instead of a single global value.
 	 */
 	spinlock(&bmapFlushLock);
-	while (atomic_read(&rmci->rmci_infl_rpcs) >=
-	    MAX_OUTSTANDING_RPCS) {
+	while (atomic_read(&rmci->rmci_infl_rpcs) >= MAX_OUTSTANDING_RPCS) {
 		bmapFlushTimeoFlags |= BMAPFLSH_RPCWAIT;
 		/* RPC completion will wake us up. */
 		OPSTAT_INCR(SLC_OPST_BMAP_FLUSH_RPCWAIT);
