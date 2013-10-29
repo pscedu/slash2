@@ -922,8 +922,8 @@ msbmflwthr_main(struct psc_thread *thr)
 		OPSTAT_INCR(SLC_OPST_LEASE_REFRESH);
 		/*
 		 * A bmap can be on both bmapFlushQ and bmapTimeoutQ.
-		 * Even if we take it off bmapTimeoutQ, it can still
-		 * be on the bmapFlushQ.  This is odd.
+		 * It is taken off the bmapFlushQ after all its biorqs
+		 * are flushed if any.
 		 */
 		LIST_CACHE_LOCK(&bmapFlushQ);
 		LIST_CACHE_FOREACH_SAFE(b, tmpb, &bmapFlushQ) {
