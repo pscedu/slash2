@@ -329,8 +329,11 @@ slm_upsch_tryrepl(struct bmap *b, int off,
 		rq->rq_interpret_reply = slm_upsch_tryrepl_cb;
 		rq->rq_async_args = av;
 		rc = SL_NBRQSET_ADD(csvc, rq);
-		if (rc == 0)
+		if (rc == 0) {
+			bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
+			slm_repl_bmap_rel_type(b, BMAP_OPCNT_UPSCH);
 			return (1);
+		}
 	} else
 		rc = ENODEV;
 
@@ -484,8 +487,11 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 		rq->rq_interpret_reply = slm_upsch_tryptrunc_cb;
 		rq->rq_async_args = av;
 		rc = SL_NBRQSET_ADD(csvc, rq);
-		if (rc == 0)
+		if (rc == 0) {
+			bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
+			slm_repl_bmap_rel_type(b, BMAP_OPCNT_UPSCH);
 			return (1);
+		}
 	} else
 		rc = ENODEV;
 
