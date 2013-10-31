@@ -716,6 +716,26 @@ slc_reptbl_cmp(const void *a, const void *b)
 	return (CMP(xv, yv));
 }
 
+static int
+msl_bmap_check_replica(struct bmap *b)
+{
+	int i, off;
+	struct fcmh_cli_info *fci;
+
+	fci = fcmh_get_pri(b->bcm_fcmh);
+	for (i = 0, off = 0; i < fci->fci_nrepls;
+	    i++, off += SL_BITS_PER_REPLICA)
+		if (SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls,
+		    off))
+			break;
+	if (i == fci->fci_nrepls) {
+		DEBUG_BMAP(PLL_ERROR, b,
+		    "corrupt bmap!  no valid replicas!");
+		return (1);
+	}
+	return 0;
+}
+
 /**
  * msl_bmap_to_csvc - Given a bmap, perform a series of lookups to
  *	locate the ION csvc.  The ION was chosen by the MDS and
@@ -730,7 +750,7 @@ slc_reptbl_cmp(const void *a, const void *b)
 struct slashrpc_cservice *
 msl_bmap_to_csvc(struct bmap *b, int exclusive)
 {
-	int n, i, j, off, locked;
+	int n, i, j, locked;
 	struct reptbl_lookup order[SL_MAX_REPLICAS], *lk;
 	struct slashrpc_cservice *csvc;
 	struct fcmh_cli_info *fci;
@@ -753,16 +773,8 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive)
 	fci = fcmh_get_pri(b->bcm_fcmh);
 	mw = msl_getmw();
 
-	for (j = 0, off = 0; j < fci->fci_nrepls;
-	    j++, off += SL_BITS_PER_REPLICA)
-		if (SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls,
-		    off))
-			break;
-	if (j == fci->fci_nrepls) {
-		DEBUG_BMAP(PLL_ERROR, b,
-		    "corrupt bmap!  no valid replicas!");
-		return (NULL);
-	}
+	if (msl_bmap_check_replica(b))
+		return NULL;
 
 	n = 0;
 	FOREACH_RND(&it, fci->fci_nrepls) {
