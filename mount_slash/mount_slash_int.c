@@ -604,7 +604,8 @@ _msl_fsrq_aiowait_tryadd_locked(const struct pfl_callerinfo *pci,
 	if (!(r->biorq_flags & BIORQ_WAIT)) {
 		r->biorq_ref++;
 		r->biorq_flags |= BIORQ_WAIT;
-		DEBUG_BIORQ(PLL_NOTICE, r, "blocked by (bmpce@%p)", e);
+		DEBUG_BIORQ(PLL_INFO, r, "blocked by %p (ref=%d)", 
+		    e, r->biorq_ref);
 		pll_add(&e->bmpce_pndgaios, r);
 	}
 	BIORQ_ULOCK(r);
@@ -1279,6 +1280,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	r->biorq_flags |= BIORQ_FLUSHRDY | BIORQ_SPLAY;
 	PSC_SPLAY_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
 	BIORQ_ULOCK(r);
+	DEBUG_BIORQ(PLL_INFO, r, "sched flush (ref=%d)", r->biorq_ref);
 
 	bmpc->bmpc_pndgwr++;
 	if (!(b->bcm_flags & BMAP_FLUSHQ)) {
