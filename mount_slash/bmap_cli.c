@@ -549,13 +549,14 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw,
 
 	msl_bmap_reap_init(bmap, &mp->sbd);
 
-	DEBUG_BMAP(PLL_DIAG, bmap, "rw=%d ios=%#x sbd_seq=%"PRId64, rw,
-	    mp->sbd.sbd_ios, mp->sbd.sbd_seq);
-
 	fci->fci_nrepls = mp->nrepls;
 	memcpy(&fci->fci_reptbl, &mp->reptbl,
 	    sizeof(sl_replica_t) * SL_MAX_REPLICAS);
 	f->fcmh_flags |= FCMH_CLI_HAVEREPLTBL;
+
+	DEBUG_BMAP(PLL_INFO, bmap, "rw=%d, repls=%d, ios=%#x, seq=%"PRId64, 
+	    rw, mp->nrepls, mp->sbd.sbd_ios, mp->sbd.sbd_seq);
+
 
 	/*
 	 * XXX not sure if this is really needed since nothing blocks on
