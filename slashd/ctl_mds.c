@@ -317,6 +317,24 @@ slmctl_resfieldi_preclaim(int fd, struct psc_ctlmsghdr *mh,
 	    levels, nlevels, nbuf));
 }
 
+int
+slmctl_resfieldi_upschq(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels, int set,
+    struct sl_resource *r)
+{
+	struct resprof_mds_info *rpmi;
+	char nbuf[20];
+
+	if (set)
+		return (psc_ctlsenderr(fd, mh,
+		    "upschq: field is read-only"));
+	rpmi = res2rpmi(r);
+	snprintf(nbuf, sizeof(nbuf), "%d",
+	    psc_dynarray_len(&rpmi->rpmi_upschq));
+	return (psc_ctlmsg_param_send(fd, mh, pcp,
+	    PCTHRNAME_EVERYONE, levels, nlevels, nbuf));
+}
+
 const struct slctl_res_field slctl_resmds_fields[] = {
 	{ "xid",		slmctl_resfieldm_xid },
 	{ NULL, NULL },
@@ -327,6 +345,7 @@ const struct slctl_res_field slctl_resios_fields[] = {
 	{ "disable_bia",	slmctl_resfieldi_disable_bia },
 	{ "disable_gc",		slmctl_resfieldi_disable_gc },
 	{ "preclaim",		slmctl_resfieldi_preclaim },
+	{ "upschq",		slmctl_resfieldi_upschq },
 	{ "xid",		slmctl_resfieldi_xid },
 	{ NULL, NULL },
 };
