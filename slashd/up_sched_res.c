@@ -264,6 +264,20 @@ slm_upsch_tryrepl(struct bmap *b, int off,
 	 */
 	amt = slm_bmap_calc_repltraffic(b);
 
+	if (amt == 0) {
+		/*
+		 * There is no data.  Someone requested a replication of
+		 * a bmap that is zeroes.  Since there is no data it
+		 * doesn't really matter what we do.
+		 */
+		brepls_init(tract, -1);
+		tract[BREPLST_REPL_QUEUED] = BREPLST_VALID;
+		mds_repl_bmap_apply(b, tract, NULL, off);
+		mds_bmap_write_logrepls(b);
+		sl_csvc_decref(csvc);
+		return (1);
+	}
+
 	spinlock(&repl_busytable_lock);
 	amt = mds_repl_nodes_adjbusy(src_resm, dst_resm, amt);
 	if (amt == 0) {
