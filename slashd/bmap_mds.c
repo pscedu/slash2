@@ -202,7 +202,7 @@ mds_bmap_read(struct bmap *b, __unusedx enum rw rw, int flags)
 		    pfl_memchk(bmap_2_ondisk(b), 0, BMAP_OD_CRCSZ))) {
 			    mds_bmap_initnew(b);
 			    DEBUG_BMAPOD(PLL_INFO, b,
-				"initialized new bmap");
+				"initialized new bmap, nb=%d", nb);
 			    return (0);
 		    }
 
