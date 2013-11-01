@@ -162,6 +162,7 @@ slm_upsch_finish_repl(struct slashrpc_cservice *csvc,
 	if (csvc)
 		sl_csvc_decref(csvc);
 	if (b)
+		// XXX wrong api
 		slm_repl_bmap_rel_type(b, BMAP_OPCNT_UPSCH);
 	UPSCH_WAKE();
 }
@@ -344,7 +345,6 @@ slm_upsch_tryrepl(struct bmap *b, int off,
 		rq->rq_async_args = av;
 		rc = SL_NBRQSET_ADD(csvc, rq);
 		if (rc == 0) {
-			bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
 			slm_repl_bmap_rel_type(b, BMAP_OPCNT_UPSCH);
 			return (1);
 		}
@@ -502,7 +502,6 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 		rq->rq_async_args = av;
 		rc = SL_NBRQSET_ADD(csvc, rq);
 		if (rc == 0) {
-			bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
 			slm_repl_bmap_rel_type(b, BMAP_OPCNT_UPSCH);
 			return (1);
 		}
@@ -698,8 +697,6 @@ upd_proc_bmap(struct slm_update_data *upd)
 	upd->upd_flags |= UPDF_BUSY;
 	upd->upd_owner = pthread_self();
 
-	BMAPOD_MODIFY_START(b);
-
 	DEBUG_BMAPOD(PLL_DEBUG, b, "processing");
 
 	/*
@@ -805,10 +802,8 @@ upd_proc_bmap(struct slm_update_data *upd)
 			break;
 		}
 	}
-	if (BMAPOD_HASWRLOCK(bmap_2_bmi(b)))
-		BMAPOD_MODIFY_DONE(b, 0);
-	BMAP_UNBUSY(b);
-	FCMH_UNBUSY(f);
+	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
+	slm_repl_bmap_rel_type(b);
 }
 
 void
