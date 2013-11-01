@@ -1475,7 +1475,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t iosid,
 		if (iosidx < 0)
 			psclog_errorx("ios not found");
 		else {
-			BMAPOD_MODIFY_START(bmap);
+//			BMAPOD_MODIFY_START(bmap);
 
 			brepls_init(tract, -1);
 			tract[BREPLST_TRUNCPNDG] = BREPLST_VALID;
