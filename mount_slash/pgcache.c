@@ -342,6 +342,10 @@ bmpc_biorqs_destroy(struct bmapc_memb *b, int rc)
 			BIORQ_ULOCK(r);
 			continue;
 		}
+		if (r->biorq_flags & BIORQ_INFL) {
+			BIORQ_ULOCK(r);
+			continue;
+		}
 		BIORQ_ULOCK(r);
 		msl_bmpces_fail(r, rc);
 		msl_biorq_destroy(r);
