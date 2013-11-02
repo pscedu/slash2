@@ -356,7 +356,6 @@ struct slm_wkdata_upsch_cb {
 	int			  rc;
 	int			  off;
 	int64_t			  amt;
-	int			  undowr;
 };
 
 struct slm_wkdata_batchrq_cb {

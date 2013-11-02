@@ -69,9 +69,8 @@
 
 /* RPC callback numeric arg indexes */
 #define IN_RC		0
-#define IN_UNDO_WR	1
-#define IN_OFF		2
-#define IN_AMT		3
+#define IN_OFF		1
+#define IN_AMT		2
 
 /* RPC callback pointer arg indexes */
 #define IP_CSVC		0
@@ -115,55 +114,45 @@ upd_rpmi_remove(struct resprof_mds_info *rpmi,
 void
 slm_upsch_finish_repl(struct slashrpc_cservice *csvc,
     struct sl_resm *src_resm, struct sl_resm *dst_resm, struct bmap *b,
-    int rc, int off, int64_t amt, int undowr)
+    int rc, int off, int64_t amt)
 {
 	struct resprof_mds_info *rpmi;
 	struct slm_update_data *upd;
 	int tract[NBREPLST];
 
-	if (rc) {
-		if (b) {
-			/* undo brepls change */
-			brepls_init(tract, -1);
-			tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
-			mds_repl_bmap_apply(b, tract, NULL, off);
-			if (undowr)
-				mds_bmap_write_logrepls(b);
-
-			DEBUG_BMAP(PLL_ERROR, b,
-			    "dst_resm=%s src_resm=%s rc=%d",
-			    dst_resm->resm_name, src_resm->resm_name,
-			    rc);
-		}
-	} else {
-		/*
-		 * Bandwidth adjustment was already made; do not undo it
-		 * because it should be getting used right now.
-		 */
-		amt = 0;
-	}
-
-	/*
-	 * Remove update from queue.
-	 *   (1) if successful, we are done.
-	 *   (2) if network failure, this will will be paged back in and
-	 *	 tried again when the connection is reestablished.
-	 *   (3) if other failure, don't want to keep it in the system.
-	 */
 	if (rc && b) {
+		/* undo brepls change */
+		brepls_init(tract, -1);
+		tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+		mds_repl_bmap_apply(b, tract, NULL, off);
+
+		/*
+		 * Remove update from queue.
+		 *   (1) if successful, we are done.
+		 *   (2) if network failure, this will will be paged
+		 *	 back in and tried again when the connection is
+		 *	 reestablished.
+		 *   (3) if other failure, don't want to keep it in the
+		 *	 system.
+		 */
 		rpmi = res2rpmi(dst_resm->resm_res);
 		upd = bmap_2_upd(b);
 		upd_rpmi_remove(rpmi, upd);
 	}
 
-	/* XXX can we race here?? */
-	if (amt)
+	DEBUG_BMAP(PLL_DIAG, b,
+	    "dst_resm=%s src_resm=%s rc=%d",
+	    dst_resm->resm_name, src_resm->resm_name, rc);
+
+	if (rc && amt)
 		mds_repl_nodes_adjbusy(src_resm, dst_resm, -amt);
+
+	/* XXX can we race here?? */
 	if (csvc)
 		sl_csvc_decref(csvc);
 	if (b)
-		// XXX wrong api
-		slm_repl_bmap_rel_type(b, BMAP_OPCNT_UPSCH);
+		bmap_op_done_type(b, BMAP_OPCNT_UPSCH);
+
 	UPSCH_WAKE();
 }
 
@@ -179,7 +168,7 @@ slm_upsch_wk_finish_repl(void *p)
 		return (1);
 	fcmh_op_start_type(f, FCMH_OPCNT_UPSCH);
 	slm_upsch_finish_repl(wk->csvc, wk->src_resm, wk->dst_resm,
-	    wk->b, wk->rc, wk->off, wk->amt, wk->undowr);
+	    wk->b, wk->rc, wk->off, wk->amt);
 	if (FCMH_HAS_BUSY(f))
 		FCMH_UNBUSY(f);
 	fcmh_op_done_type(f, FCMH_OPCNT_UPSCH);
@@ -218,7 +207,6 @@ slm_upsch_tryrepl_cb(struct pscrpc_request *rq,
 	wk->rc = rc;
 	wk->off = av->space[IN_OFF];
 	wk->amt = av->space[IN_AMT];
-	wk->undowr = av->space[IN_UNDO_WR];
 	pfl_workq_putitemq(&slm_db_workq, wk);
 	return (0);
 }
@@ -228,8 +216,8 @@ slm_upsch_tryrepl_cb(struct pscrpc_request *rq,
  *	between a source and dst IOS pair.
  */
 int
-slm_upsch_tryrepl(struct bmap *b, int off,
-    struct sl_resm *src_resm, struct sl_resource *dst_res)
+slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
+    struct sl_resource *dst_res)
 {
 	int tract[NBREPLST], retifset[NBREPLST], rc = 0;
 	struct pscrpc_request *rq = NULL;
@@ -252,19 +240,12 @@ slm_upsch_tryrepl(struct bmap *b, int off,
 	av.pointer_arg[IP_SRCRESM] = src_resm;
 	av.space[IN_OFF] = off;
 
-	csvc = slm_geticsvc(dst_resm, NULL, CSVCF_NONBLOCK |
-	    CSVCF_NORECON, &slm_upsch_mw);
-	if (csvc == NULL)
-		PFL_GOTOERR(fail, rc = resm_getcsvcerr(dst_resm));
-	av.pointer_arg[IP_CSVC] = csvc;
-
 	/*
 	 * If upsch is still processing, we retain the lock.
 	 * Otherwise, it would have been released while it waits for the
 	 * callback to be issued.
 	 */
 	amt = slm_bmap_calc_repltraffic(b);
-
 	if (amt == 0) {
 		/*
 		 * There is no data.  Someone requested a replication of
@@ -275,9 +256,14 @@ slm_upsch_tryrepl(struct bmap *b, int off,
 		tract[BREPLST_REPL_QUEUED] = BREPLST_VALID;
 		mds_repl_bmap_apply(b, tract, NULL, off);
 		mds_bmap_write_logrepls(b);
-		sl_csvc_decref(csvc);
 		return (1);
 	}
+
+	csvc = slm_geticsvc(dst_resm, NULL, CSVCF_NONBLOCK |
+	    CSVCF_NORECON, &slm_upsch_mw);
+	if (csvc == NULL)
+		PFL_GOTOERR(fail, rc = resm_getcsvcerr(dst_resm));
+	av.pointer_arg[IP_CSVC] = csvc;
 
 	spinlock(&repl_busytable_lock);
 	amt = mds_repl_nodes_adjbusy(src_resm, dst_resm, amt);
@@ -345,6 +331,7 @@ slm_upsch_tryrepl(struct bmap *b, int off,
 		rq->rq_async_args = av;
 		rc = SL_NBRQSET_ADD(csvc, rq);
 		if (rc == 0) {
+			bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
 			slm_repl_bmap_rel_type(b, BMAP_OPCNT_UPSCH);
 			return (1);
 		}
@@ -356,35 +343,36 @@ slm_upsch_tryrepl(struct bmap *b, int off,
 		pscrpc_req_finished(rq);
 	slm_upsch_finish_repl(av.pointer_arg[IP_CSVC],
 	    src_resm, dst_resm, av.pointer_arg[IP_BMAP], rc, off,
-	    av.space[IN_AMT], av.space[IN_UNDO_WR]);
+	    av.space[IN_AMT]);
 	return (0);
 }
 
 void
 slm_upsch_finish_ptrunc(struct slashrpc_cservice *csvc,
-    struct bmap *b, int rc, int off, int undowr)
+    struct sl_resm *dst_resm, struct bmap *b, int rc, int off)
 {
+	struct resprof_mds_info *rpmi;
+	struct slm_update_data *upd;
 	int tract[NBREPLST];
 
-	if (rc) {
-		if (b) {
-			/* undo brepls changes */
-			brepls_init(tract, -1);
-			tract[BREPLST_TRUNCPNDG_SCHED] =
-			    BREPLST_TRUNCPNDG;
-			mds_repl_bmap_apply(b, tract, NULL, off);
-			if (undowr)
-				mds_bmap_write_logrepls(b);
-		}
+	if (rc && b) {
+		/* undo brepls changes */
+		brepls_init(tract, -1);
+		tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_TRUNCPNDG;
+		mds_repl_bmap_apply(b, tract, NULL, off);
 
-		psclog_warnx("partial truncation resolution failed "
-		    "rc=%d", rc);
+		rpmi = res2rpmi(dst_resm->resm_res);
+		upd = bmap_2_upd(b);
+		upd_rpmi_remove(rpmi, upd);
 	}
+
+	psclog(rc ? PLL_WARN: PLL_DIAG,
+	    "partial truncation resolution failed rc=%d", rc);
 
 	if (csvc)
 		sl_csvc_decref(csvc);
 	if (b)
-		slm_repl_bmap_rel_type(b, BMAP_OPCNT_UPSCH);
+		bmap_op_done_type(b, BMAP_OPCNT_UPSCH);
 	UPSCH_WAKE();
 }
 
@@ -399,8 +387,8 @@ slm_upsch_wk_finish_ptrunc(void *p)
 	if (!FCMH_TRYBUSY(f))
 		return (1);
 	fcmh_op_start_type(f, FCMH_OPCNT_UPSCH);
-	slm_upsch_finish_ptrunc(wk->csvc, wk->b, wk->rc, wk->off,
-	    wk->undowr);
+	slm_upsch_finish_ptrunc(wk->csvc, wk->dst_resm, wk->b, wk->rc,
+	    wk->off);
 	if (FCMH_HAS_BUSY(f))
 		FCMH_UNBUSY(f);
 	fcmh_op_done_type(f, FCMH_OPCNT_UPSCH);
@@ -426,11 +414,11 @@ slm_upsch_tryptrunc_cb(struct pscrpc_request *rq,
 
 	wk = pfl_workq_getitem(slm_upsch_wk_finish_ptrunc,
 	    struct slm_wkdata_upsch_cb);
+	wk->rc = rc;
 	wk->csvc = csvc;
 	wk->b = av->pointer_arg[IP_BMAP];
-	wk->rc = rc;
 	wk->off = av->space[IN_OFF];
-	wk->undowr = av->space[IN_UNDO_WR];
+	wk->dst_resm = av->pointer_arg[IP_DSTRESM];
 	pfl_workq_putitemq(&slm_db_workq, wk);
 	return (0);
 }
@@ -461,6 +449,7 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	dst_resm = res_getmemb(dst_res);
 
 	memset(&av, 0, sizeof(av));
+	av.pointer_arg[IP_DSTRESM] = dst_resm;
 	av.space[IN_OFF] = off;
 
 	/*
@@ -502,6 +491,7 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 		rq->rq_async_args = av;
 		rc = SL_NBRQSET_ADD(csvc, rq);
 		if (rc == 0) {
+			bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
 			slm_repl_bmap_rel_type(b, BMAP_OPCNT_UPSCH);
 			return (1);
 		}
@@ -512,7 +502,7 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 	if (rq)
 		pscrpc_req_finished(rq);
 	slm_upsch_finish_ptrunc(av.pointer_arg[IP_CSVC],
-	    av.pointer_arg[IP_BMAP], rc, off, av.space[IN_UNDO_WR]);
+	    dst_resm, av.pointer_arg[IP_BMAP], rc, off);
 	return (0);
 }
 
@@ -749,8 +739,8 @@ upd_proc_bmap(struct slm_update_data *upd)
 
 					si = res2iosinfo(src_res);
 
-					psclog_debug("shall i attempt to "
-					    "arrange repl with %s -> %s; "
+					psclog_debug("attempt to "
+					    "arrange repl with %s -> %s? "
 					    "pass=%d siflg=%d",
 					    src_res->res_name,
 					    dst_res->res_name,
@@ -802,8 +792,10 @@ upd_proc_bmap(struct slm_update_data *upd)
 			break;
 		}
 	}
-	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
-	slm_repl_bmap_rel_type(b);
+	if (BMAPOD_HASWRLOCK(bmap_2_bmi(b)))
+		BMAPOD_MODIFY_DONE(b, 0);
+	BMAP_UNBUSY(b);
+	FCMH_UNBUSY(f);
 }
 
 void
