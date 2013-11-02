@@ -243,14 +243,20 @@ packshow_biorqs(__unusedx char *spec)
 }
 
 void
-parse_replrq(int opcode, const char *fn, char *replrqspec,
+parse_replrq(int opcode, const char *fn, const char *oreplrqspec,
     int (*packf)(const char *, const struct pfl_stat *, int, int, void *))
 {
+	char replrqspec[LINE_MAX];
 	char *endp, *bmapnos, *bmapno, *next, *bend, *iosv, *ios;
 	struct replrq_arg ra;
 	int bmax;
 	long l;
 
+	if (strlcpy(replrqspec, oreplrqspec, sizeof(replrqspec)) >=
+	    sizeof(replrqspec)) {
+		errno = ENAMETOOLONG;
+		errx(1, "%s", oreplrqspec);
+	}
 	iosv = replrqspec;
 	ra.opcode = opcode;
 
