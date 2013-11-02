@@ -34,12 +34,12 @@
 #include <gcrypt.h>
 #include <unistd.h>
 
-#include "pfl/cdefs.h"
-#include "pfl/stat.h"
 #include "pfl/atomic.h"
+#include "pfl/cdefs.h"
 #include "pfl/lock.h"
 #include "pfl/log.h"
 #include "pfl/random.h"
+#include "pfl/stat.h"
 
 #include "authbuf.h"
 #include "mkfn.h"
