@@ -1052,7 +1052,7 @@ sl_exp_getpri_cli(struct pscrpc_export *exp)
 }
 
 void
-slrpc_bulk_sign(void *buf, struct iovec *iov, int n)
+slrpc_bulk_sign(struct pscrpc_request *rq, void *buf, struct iovec *iov, int n)
 {
 	char ebuf[BUFSIZ];
 	gcry_error_t gerr;
@@ -1069,16 +1069,25 @@ slrpc_bulk_sign(void *buf, struct iovec *iov, int n)
 		gcry_md_write(hd, iov[i].iov_base, iov[i].iov_len);
 
 	memcpy(buf, gcry_md_read(hd, 0), AUTHBUF_ALGLEN);
+
+ {
+  char tbuf[65];
+  pfl_unpack_hex(buf, AUTHBUF_ALGLEN, tbuf);
+  psclog_max("bulk ph=%s xid=%"PRIx64": sig=%s", pscrpc_rqphase2str(rq),
+      rq->rq_xid, tbuf);
+ }
+
 	gcry_md_close(hd);
 }
 
 int
-slrpc_bulk_check(const void *hbuf, struct iovec *iov, int n)
+slrpc_bulk_check(struct pscrpc_request *rq, const void *hbuf,
+    struct iovec *iov, int n)
 {
 	char tbuf[AUTHBUF_ALGLEN];
 	int rc = 0;
 
-	slrpc_bulk_sign(tbuf, iov, n);
+	slrpc_bulk_sign(rq, tbuf, iov, n);
 	if (memcmp(tbuf, hbuf, AUTHBUF_ALGLEN)) {
 		psc_fatalx("authbuf did not hash correctly -- "
 		    "ensure key files are synced");
@@ -1112,13 +1121,13 @@ slrpc_bulkserver(struct pscrpc_request *rq, int type, int chan,
 	saf = pscrpc_msg_buf(m, m->bufcount - 1, sizeof(*saf));
 
 	if (type == BULK_PUT_SOURCE)
-		slrpc_bulk_sign(saf->saf_bulkhash, iov, n);
+		slrpc_bulk_sign(rq, saf->saf_bulkhash, iov, n);
 	rc = rsx_bulkserver(rq, type, chan, iov, n);
 	if (rc)
 		goto out;
 
 	if (type == BULK_GET_SINK)
-		rc = slrpc_bulk_check(saf->saf_bulkhash, iov, n);
+		rc = slrpc_bulk_check(rq, saf->saf_bulkhash, iov, n);
 
  out:
 	return (rc);

@@ -104,7 +104,7 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 
 	bd = rq->rq_bulk;
 	if (bd)
-		slrpc_bulk_sign(saf->saf_bulkhash, bd->bd_iov,
+		slrpc_bulk_sign(rq, saf->saf_bulkhash, bd->bd_iov,
 		    bd->bd_iov_count);
 }
 
@@ -178,7 +178,7 @@ authbuf_check(struct pscrpc_request *rq, int msgtype)
 	if (bd && bd->bd_type == BULK_PUT_SINK &&
 	    msgtype == PSCRPC_MSG_REPLY &&
 	    (m->flags & MSG_ABORT_BULK) == 0)
-		rc = slrpc_bulk_check(saf->saf_bulkhash, bd->bd_iov,
+		rc = slrpc_bulk_check(rq, saf->saf_bulkhash, bd->bd_iov,
 		    bd->bd_iov_count);
 
 	return (rc);
