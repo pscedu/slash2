@@ -158,7 +158,7 @@ slm_bmap_resetnonce(struct bmap *b)
 }
 
 /**
- * mds_bmap_read - Retrieve a bmap from the ondisk inode file.
+ * mds_bmap_read - Retrieve a bmap from the on-disk inode file.
  * @b: bmap.
  * Returns zero on success, negative errno code on failure.
  */
@@ -184,6 +184,10 @@ mds_bmap_read(struct bmap *b, __unusedx enum rw rw, int flags)
 	iovs[1].iov_len = sizeof(od_crc);
 
 	slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
+
+	psclog_info("Read bmap: handle = %p, fid="SLPRI_FID", bmapno = %d",
+	    bmap_2_mdsio_data(b), f->fcmh_sstb.sst_fg.fg_fid, b->bcm_bmapno);
+
 	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
 	    (off_t)BMAP_OD_SZ * b->bcm_bmapno + SL_BMAP_START_OFF,
 	    bmap_2_mdsio_data(b));
@@ -268,10 +272,14 @@ mds_bmap_write(struct bmap *b, int update_mtime, void *logf,
 	iovs[1].iov_base = &crc;
 	iovs[1].iov_len = sizeof(crc);
 
-	if (logf)
-		mds_reserve_slot(1);
 	f = b->bcm_fcmh;
 	slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
+
+	psclog_info("Write bmap: handle = %p, fid="SLPRI_FID", bmapno = %d",
+	    bmap_2_mdsio_data(b), f->fcmh_sstb.sst_fg.fg_fid, b->bcm_bmapno);
+
+	if (logf)
+		mds_reserve_slot(1);
 	rc = mdsio_pwritev(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
 	    (off_t)BMAP_OD_SZ * b->bcm_bmapno + SL_BMAP_START_OFF,
 	    update_mtime, bmap_2_mdsio_data(b), logf, logarg);
