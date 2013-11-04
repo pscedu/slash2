@@ -314,12 +314,17 @@ bmapdesc_access_check(struct srt_bmapdesc *sbd, enum rw rw,
 	if (rw == SL_READ) {
 		/* Read requests can get by with looser authentication. */
 		if (sbd->sbd_ios != ios_id &&
-		    sbd->sbd_ios != IOS_ID_ANY)
+		    sbd->sbd_ios != IOS_ID_ANY) {
+			psclog_errorx("rd ios %#x != %#x", sbd->sbd_ios,
+			    ios_id);
 			return (EBADF);
-
+		}
 	} else if (rw == SL_WRITE) {
-		if (sbd->sbd_ios != ios_id)
+		if (sbd->sbd_ios != ios_id) {
+			psclog_errorx("wr ios %#x != %#x", sbd->sbd_ios,
+			    ios_id);
 			return (EBADF);
+		}
 	} else {
 		psclog_errorx("invalid rw mode: %d", rw);
 		return (EBADF);
