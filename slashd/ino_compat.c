@@ -49,16 +49,16 @@ mds_inode_dump(int vfsid, struct sl_ino_compat *sic,
 	void *th;
 
 	f = inoh_2_fcmh(ih);
-	th = inoh_2_mio_ino_fh(ih);
+	th = inoh_2_mio_fh(ih);
 
 	fl = BMAPGETF_LOAD | BMAPGETF_NOAUTOINST;
 	if (sic)
 		fl |= BMAPGETF_NORETRIEVE;
 
 	for (i = 0; ; i++) {
-		inoh_2_mio_ino_fh(ih) = readh;
+		inoh_2_mio_fh(ih) = readh;
 		rc = bmap_getf(f, i, SL_WRITE, fl, &b);
-		inoh_2_mio_ino_fh(ih) = th;
+		inoh_2_mio_fh(ih) = th;
 
 		if (rc == SLERR_BMAP_INVALID) {
 			(void)INOH_RLOCK(ih);
@@ -133,10 +133,10 @@ mds_inode_update(int vfsid, struct slash_inode_handle *ih,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	th = inoh_2_mio_ino_fh(ih);
-	inoh_2_mio_ino_fh(ih) = h;
+	th = inoh_2_mio_fh(ih);
+	inoh_2_mio_fh(ih) = h;
 	rc = mds_inode_dump(vfsid, sic, ih, th);
-	inoh_2_mio_ino_fh(ih) = th;
+	inoh_2_mio_fh(ih) = th;
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -180,7 +180,7 @@ mds_inode_update_interrupted(int vfsid, struct slash_inode_handle *ih,
 	int exists = 0;
 	size_t nb;
 
-	th = inoh_2_mio_ino_fh(ih);
+	th = inoh_2_mio_fh(ih);
 
 	snprintf(fn, sizeof(fn), "%016"PRIx64".update",
 	    inoh_2_fid(ih));
@@ -215,12 +215,12 @@ mds_inode_update_interrupted(int vfsid, struct slash_inode_handle *ih,
 	psc_assert(ih->inoh_extras == NULL);
 	ih->inoh_extras = PSCALLOC(INOX_SZ);
 
-	inoh_2_mio_ino_fh(ih) = h;
+	inoh_2_mio_fh(ih) = h;
 	*rc = mds_inox_ensure_loaded(ih);
 	if (*rc)
 		PFL_GOTOERR(out, *rc);
 
-	inoh_2_mio_ino_fh(ih) = th;
+	inoh_2_mio_fh(ih) = th;
 
 	memset(&sstb, 0, sizeof(sstb));
 	*rc = mdsio_setattr(vfsid, 0, &sstb, SL_SETATTRF_METASIZE,
@@ -241,7 +241,7 @@ mds_inode_update_interrupted(int vfsid, struct slash_inode_handle *ih,
 	if (*rc)
 		mdsio_unlink(vfsid, mds_tmpdir_inum[vfsid], NULL, fn,
 		    &rootcreds, NULL, NULL);
-	inoh_2_mio_ino_fh(ih) = th;
+	inoh_2_mio_fh(ih) = th;
 	return (exists);
 }
 
@@ -270,7 +270,7 @@ mds_ino_read_v1(struct slash_inode_handle *ih)
 	f = inoh_2_fcmh(ih);
 	slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb, 0,
-	    inoh_2_mio_ino_fh(ih));
+	    inoh_2_mio_fh(ih));
 
 	if (rc)
 		return (rc);
@@ -312,7 +312,7 @@ mds_inox_read_v1(struct slash_inode_handle *ih)
 	f = inoh_2_fcmh(ih);
 	slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
-	    0x400, inoh_2_mio_ino_fh(ih));
+	    0x400, inoh_2_mio_fh(ih));
 
 	if (rc)
 		return (rc);

@@ -120,7 +120,7 @@ struct slm_inoh {
 #define INOH_URLOCK(ih, lk)	ureqlock(INOH_GETLOCK(ih), (lk))
 #define INOH_LOCK_ENSURE(ih)	LOCK_ENSURE(INOH_GETLOCK(ih))
 
-#define inoh_2_mio_ino_fh(ih)	fcmh_2_mio_ino_fh(inoh_2_fcmh(ih))
+#define inoh_2_mio_fh(ih)	fcmh_2_mio_ino_fh(inoh_2_fcmh(ih))
 #define inoh_2_fsz(ih)		fcmh_2_fsz(inoh_2_fcmh(ih))
 #define inoh_2_fid(ih)		fcmh_2_fid(inoh_2_fcmh(ih))
 #define inoh_2_fcmh(ih)		fmi_2_fcmh(inoh_2_fmi(ih))
