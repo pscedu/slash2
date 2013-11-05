@@ -68,9 +68,9 @@ typedef void (*sl_log_update_t)(int, uint64_t, uint64_t, uint64_t,
 #define MDSIO_OPENCRF_NOMTIM	(1 << 1)	/* do not update st_mtim */
 
 #define mdsio_opencreate(vfs, pino, crp, fflags, mode, fn, mfp, sstb,	\
-	    mio_fhp, logfunc, getslfid, slfid)				\
+	    mfhp, logfunc, getslfid, slfid)				\
 	mdsio_opencreatef((vfs), (pino), (crp), (fflags), 0, (mode),	\
-	    (fn), (mfp), (sstb), (mio_fhp), (logfunc), (getslfid), (slfid))
+	    (fn), (mfp), (sstb), (mfhp), (logfunc), (getslfid), (slfid))
 
 #define MDSIO_FOREACH_DIRENT(dh, credp, buf, bufsiz, ip, d, rc)		\
 	for ((ip)->mdi_off = 0; ((rc) = mdsio_readdir((credp),		\
