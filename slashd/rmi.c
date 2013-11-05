@@ -433,7 +433,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	mq->cpn[sizeof(mq->cpn) - 1] = '\0';
 
 	mds_reserve_slot(1);
-	rc = mdsio_opencreatef(current_vfsid, fcmh_2_mio_ino_fid(p),
+	rc = mdsio_opencreatef(current_vfsid, fcmh_2_mio_fid(p),
 	    &rootcreds, O_CREAT | O_EXCL | O_RDWR, MDSIO_OPENCRF_NOMTIM,
 	    mq->sstb.sst_mode, mq->cpn, NULL, &sstb, &mio_fh,
 	    mdslog_namespace, slm_get_next_slashfid, 0);
@@ -444,7 +444,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, mp->rc);
 
 	if (rc == EEXIST) {
-		rc2 = mdsio_lookup(current_vfsid, fcmh_2_mio_ino_fid(p),
+		rc2 = mdsio_lookup(current_vfsid, fcmh_2_mio_fid(p),
 		    mq->cpn, NULL, &rootcreds, &sstb);
 		if (rc2)
 			PFL_GOTOERR(out, mp->rc = -rc2);
