@@ -72,7 +72,7 @@ mds_inode_read(struct slash_inode_handle *ih)
 	iovs[1].iov_len = sizeof(od_crc);
 
 	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb, 0,
-	    inoh_2_mdsio_data(ih));
+	    inoh_2_mio_ino_fh(ih));
 
 	if (rc == 0 && nb != sizeof(ih->inoh_ino) + sizeof(od_crc))
 		rc = SLERR_SHORTIO;
@@ -144,7 +144,7 @@ mds_inode_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 	if (logf)
 		mds_reserve_slot(1);
 	rc = mdsio_pwritev(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
-	    0, 0, inoh_2_mdsio_data(ih), logf, arg);
+	    0, 0, inoh_2_mio_ino_fh(ih), logf, arg);
 	if (logf)
 		mds_unreserve_slot(1);
 
@@ -161,7 +161,7 @@ mds_inode_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 		DEBUG_INOH(PLL_INFO, ih, "wrote inode, "
 		    "flags=%x size=%"PRIu64" data=%p",
 		    ih->inoh_flags, inoh_2_fsz(ih),
-		    inoh_2_mdsio_data(ih));
+		    inoh_2_mio_ino_fh(ih));
 		if (ih->inoh_flags & INOH_INO_NEW)
 			ih->inoh_flags &= ~INOH_INO_NEW;
 	}
@@ -198,7 +198,7 @@ mds_inox_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 	if (logf)
 		mds_reserve_slot(1);
 	rc = mdsio_pwritev(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
-	    SL_EXTRAS_START_OFF, 0, inoh_2_mdsio_data(ih), logf, arg);
+	    SL_EXTRAS_START_OFF, 0, inoh_2_mio_ino_fh(ih), logf, arg);
 	if (logf)
 		mds_unreserve_slot(1);
 
@@ -237,7 +237,7 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 	f = inoh_2_fcmh(ih);
 	slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
-	    SL_EXTRAS_START_OFF, inoh_2_mdsio_data(ih));
+	    SL_EXTRAS_START_OFF, inoh_2_mio_ino_fh(ih));
 	if (rc == 0 && od_crc == 0 &&
 	    pfl_memchk(ih->inoh_extras, 0, INOX_SZ)) {
 		rc = 0;
