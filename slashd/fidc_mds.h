@@ -49,8 +49,8 @@ struct fcmh_mds_info {
 #define fcmh_2_inoh(f)		(&fcmh_2_fmi(f)->fmi_inodeh)
 #define fcmh_2_ino(f)		(&fcmh_2_inoh(f)->inoh_ino)
 #define fcmh_2_inox(f)		fcmh_2_inoh(f)->inoh_extras
-#define fcmh_2_mdsio_data(f)	fcmh_2_fmi(f)->fmi_mio_ino_fh.fh
-#define fcmh_2_mdsio_fid(f)	fcmh_2_fmi(f)->fmi_mio_ino_fid
+#define fcmh_2_mio_ino_fh(f)	fcmh_2_fmi(f)->fmi_mio_ino_fh.fh
+#define fcmh_2_mio_ino_fid(f)	fcmh_2_fmi(f)->fmi_mio_ino_fid
 #define fcmh_2_nrepls(f)	fcmh_2_ino(f)->ino_nrepls
 #define fcmh_2_replpol(f)	fcmh_2_ino(f)->ino_replpol
 #define fcmh_2_metafsize(f)	(f)->fcmh_sstb.sst_blksize

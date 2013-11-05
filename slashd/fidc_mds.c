@@ -86,8 +86,8 @@ _mds_fcmh_setattr(int vfsid, struct fidc_membh *f, int to_set,
 
 	if (log)
 		mds_reserve_slot(1);
-	rc = mdsio_setattr(vfsid, fcmh_2_mdsio_fid(f), sstb, to_set,
-	    &rootcreds, &sstb_out, fcmh_2_mdsio_data(f),
+	rc = mdsio_setattr(vfsid, fcmh_2_mio_ino_fid(f), sstb, to_set,
+	    &rootcreds, &sstb_out, fcmh_2_mio_ino_fh(f),
 	    log ? mdslog_namespace : NULL);
 	if (log)
 		mds_unreserve_slot(1);
@@ -120,7 +120,7 @@ slm_fcmh_ctor(struct fidc_membh *f, int flags)
 	psc_dynarray_init(&fmi->fmi_ptrunc_clients);
 
 	rc = mdsio_lookup_slfid(vfsid, fcmh_2_fid(f), &rootcreds,
-	    &f->fcmh_sstb, &fcmh_2_mdsio_fid(f));
+	    &f->fcmh_sstb, &fcmh_2_mio_ino_fid(f));
 	if (rc) {
 		fmi->fmi_ctor_rc = rc;
 		if ((flags & FIDC_LOOKUP_NOLOG) == 0)
@@ -130,7 +130,7 @@ slm_fcmh_ctor(struct fidc_membh *f, int flags)
 	}
 
 	if (fcmh_isdir(f)) {
-		rc = mdsio_opendir(vfsid, fcmh_2_mdsio_fid(f),
+		rc = mdsio_opendir(vfsid, fcmh_2_mio_ino_fid(f),
 		    &rootcreds, NULL, &fmi->fmi_mio_ino_fh.fh);
 	} else if (fcmh_isreg(f)) {
 		struct slash_inode_handle *ih;
@@ -148,9 +148,9 @@ slm_fcmh_ctor(struct fidc_membh *f, int flags)
 		 * Without O_LARGEFILE, I got EOVERFLOW (75) here.  The
 		 * SLASH2 size is correct though.
 		 */
-		rc = mdsio_opencreate(vfsid, fcmh_2_mdsio_fid(f),
+		rc = mdsio_opencreate(vfsid, fcmh_2_mio_ino_fid(f),
 		    &rootcreds, O_RDWR, 0, NULL, NULL, NULL,
-		    &fcmh_2_mdsio_data(f), NULL, NULL, 0);
+		    &fcmh_2_mio_ino_fh(f), NULL, NULL, 0);
 		if (rc == 0) {
 			rc = mds_inode_read(&fmi->fmi_inodeh);
 			if (rc)
@@ -160,7 +160,7 @@ slm_fcmh_ctor(struct fidc_membh *f, int flags)
 			fmi->fmi_ctor_rc = rc;
 			DEBUG_FCMH(PLL_WARN, f,
 			    "mdsio_opencreate failed (mf=%"PRIx64" rc=%d)",
-			    fcmh_2_mdsio_fid(f), rc);
+			    fcmh_2_mio_ino_fid(f), rc);
 		}
 	} else
 		DEBUG_FCMH(PLL_INFO, f, "special file, no zfs obj");
