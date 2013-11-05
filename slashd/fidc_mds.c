@@ -86,8 +86,8 @@ _mds_fcmh_setattr(int vfsid, struct fidc_membh *f, int to_set,
 
 	if (log)
 		mds_reserve_slot(1);
-	rc = mdsio_setattr(vfsid, fcmh_2_mio_ino_fid(f), sstb, to_set,
-	    &rootcreds, &sstb_out, fcmh_2_mio_ino_fh(f),
+	rc = mdsio_setattr(vfsid, fcmh_2_mfid(f), sstb, to_set,
+	    &rootcreds, &sstb_out, fcmh_2_mfh(f),
 	    log ? mdslog_namespace : NULL);
 	if (log)
 		mds_unreserve_slot(1);
@@ -105,39 +105,97 @@ int
 slm_fcmh_ctor(struct fidc_membh *f, int flags)
 {
 	struct fcmh_mds_info *fmi;
+	struct mio_fh *ino_mfh;
+	struct slm_inoh *ih;
+	mio_fid_t ino_mfid;
 	int rc, vfsid;
 
-	DEBUG_FCMH(PLL_INFO, f, "ctor");
+	DEBUG_FCMH(PLL_DIAG, f, "ctor");
 
 	rc = slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 	if (rc) {
-		DEBUG_FCMH(PLL_WARN, f, "invalid file system ID "
-		    "(rc=%d)", rc);
+		DEBUG_FCMH(PLL_WARN, f, "invalid file system ID; "
+		    "rc=%d", rc);
 		return (rc);
 	}
 	fmi = fcmh_2_fmi(f);
 	memset(fmi, 0, sizeof(*fmi));
-	psc_dynarray_init(&fmi->fmi_ptrunc_clients);
 
 	rc = mdsio_lookup_slfid(vfsid, fcmh_2_fid(f), &rootcreds,
-	    &f->fcmh_sstb, &fcmh_2_mio_ino_fid(f));
+	    &f->fcmh_sstb, &fcmh_2_mfid(f));
 	if (rc) {
 		fmi->fmi_ctor_rc = rc;
 		if ((flags & FIDC_LOOKUP_NOLOG) == 0)
 			DEBUG_FCMH(PLL_WARN, f,
-			    "mdsio_lookup_slfid failed (rc=%d)", rc);
+			    "mdsio_lookup_slfid failed; "
+			    "fid="SLPRI_FID" rc=%d",
+			    fcmh_2_fid(f), rc);
 		return (rc);
 	}
 
+	ih = &fmi->fmi_inodeh;
+	ih->inoh_flags = INOH_INO_NOTLOADED;
+
+	ino_mfid = fcmh_2_mfid(f);
+	ino_mfh = fcmh_2_mfh(f);
+
 	if (fcmh_isdir(f)) {
-		rc = mdsio_opendir(vfsid, fcmh_2_mio_ino_fid(f),
-		    &rootcreds, NULL, &fmi->fmi_mio_ino_fh.fh);
-	} else if (fcmh_isreg(f)) {
-		struct slash_inode_handle *ih;
+		extern uint64_t *immnsIdCache[];
+		extern uint64_t immnsIdMask;
+		mio_fid_t pmfid;
+		char fn[25];
 
-		ih = &fmi->fmi_inodeh;
-		ih->inoh_flags = INOH_INO_NOTLOADED;
+		rc = mdsio_opendir(vfsid, fcmh_2_mfid(f), &rootcreds,
+		    NULL, &fcmh_2_mfh(f));
+		DEBUG_FCMH(PLL_WARN, f,
+		    "mdsio_lookup_slfid failed; mio_fid=%"PRIx64" rc=%d",
+		    fcmh_2_mfid(f), rc);
 
+		snprintf(fn, sizeof(fn), "%016"PRIx64".ino",
+		    fcmh_2_fid(f));
+
+		pmfid = immnsIdCache[vfsid][
+		    (fcmh_2_fid(f) & immnsIdMask) >>
+		    (BPHXC * FID_PATH_START)];
+		rc = mdsio_lookup(vfsid, pmfid, fn,
+		    &fcmh_2_dino_mfid(f), &rootcreds, NULL);
+		if (rc == ENOENT) {
+			struct slm_inox_od inox;
+			void *fh;
+
+			rc = mdsio_opencreate(vfsid, pmfid, &rootcreds,
+			    O_CREAT | O_EXCL | O_RDWR, 0644, fn, NULL,
+			    NULL, &fh, NULL, NULL, 0);
+			rc = mds_inode_write(vfsid, ih, NULL, NULL);
+
+			memset(&inox, 0, sizeof(inox));
+			ih->inoh_extras = &inox;
+			rc = mds_inox_write(vfsid, ih, NULL, NULL);
+			ih->inoh_extras = NULL;
+
+			if (rc == 0)
+				mdsio_release(vfsid, &rootcreds, fh);
+			else if ((flags & FIDC_LOOKUP_NOLOG) == 0)
+				DEBUG_FCMH(PLL_WARN, f,
+				    "mdsio_opencreate failed; rc=%d",
+				    rc);
+		} else if (rc) {
+			fmi->fmi_ctor_rc = rc;
+			if ((flags & FIDC_LOOKUP_NOLOG) == 0)
+				DEBUG_FCMH(PLL_WARN, f,
+				    "mdsio_lookup_slfid failed; rc=%d",
+				    rc);
+			return (rc);
+		}
+
+		ino_mfid = fcmh_2_dino_mfid(f);
+		ino_mfh = fcmh_2_dino_mfh(f);
+	}
+
+	if (fcmh_isreg(f))
+		psc_dynarray_init(&fmi->fmi_ptrunc_clients);
+
+	if (fcmh_isdir(f) || fcmh_isreg(f)) {
 		/*
 		 * We shouldn't need O_LARGEFILE because SLASH2
 		 * metafiles are small.
@@ -148,22 +206,25 @@ slm_fcmh_ctor(struct fidc_membh *f, int flags)
 		 * Without O_LARGEFILE, I got EOVERFLOW (75) here.  The
 		 * SLASH2 size is correct though.
 		 */
-		rc = mdsio_opencreate(vfsid, fcmh_2_mio_ino_fid(f),
-		    &rootcreds, O_RDWR, 0, NULL, NULL, NULL,
-		    &fcmh_2_mio_ino_fh(f), NULL, NULL, 0);
+		rc = mdsio_opencreate(vfsid, ino_mfid, &rootcreds,
+		    O_RDWR, 0, NULL, NULL, NULL, &ino_mfh->fh, NULL,
+		    NULL, 0);
 		if (rc == 0) {
 			rc = mds_inode_read(&fmi->fmi_inodeh);
 			if (rc)
 				DEBUG_FCMH(PLL_WARN, f,
-				    "could not load inode; rc=%d", rc);
+				    "could not load inode; "
+				    "mfid=%"PRIx64" rc=%d",
+				    ino_mfid, rc);
 		} else {
 			fmi->fmi_ctor_rc = rc;
 			DEBUG_FCMH(PLL_WARN, f,
-			    "mdsio_opencreate failed (mf=%"PRIx64" rc=%d)",
-			    fcmh_2_mio_ino_fid(f), rc);
+			    "mdsio_opencreate failed; "
+			    "mfid=%"PRIx64" rc=%d",
+			    ino_mfid, rc);
 		}
 	} else
-		DEBUG_FCMH(PLL_INFO, f, "special file, no zfs obj");
+		DEBUG_FCMH(PLL_DIAG, f, "special file, no zfs obj");
 
 	return (rc);
 }
@@ -184,7 +245,7 @@ slm_fcmh_dtor(struct fidc_membh *f)
 		if (!fmi->fmi_ctor_rc) {
 			slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 			rc = mdsio_release(vfsid, &rootcreds,
-			    fmi->fmi_mio_ino_fh.fh);
+			    fmi->fmi_mfh.fh);
 			psc_assert(rc == 0);
 		}
 	}
