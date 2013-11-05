@@ -39,13 +39,13 @@
 #include "zfs-fuse/zfs_slashlib.h"
 
 static __inline void *
-bmap_2_mio_ino_fh(struct bmap *b)
+bmap_2_mio_fh(struct bmap *b)
 {
 	struct fcmh_mds_info *fmi;
 	void *fh;
 
 	fmi = fcmh_2_fmi(b->bcm_fcmh);
-	fh = fmi->fmi_mio_ino_fh.fh;
+	fh = fmi->fmi_mio_fh.fh;
 	psc_assert(fh);
 	return (fh);
 }
@@ -188,11 +188,11 @@ mds_bmap_read(struct bmap *b, __unusedx enum rw rw, int flags)
 	slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 
 	psclog_info("Read bmap: handle = %p, fid="SLPRI_FID", bmapno = %d",
-	    bmap_2_mio_ino_fh(b), f->fcmh_sstb.sst_fg.fg_fid, b->bcm_bmapno);
+	    bmap_2_mio_fh(b), f->fcmh_sstb.sst_fg.fg_fid, b->bcm_bmapno);
 
 	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
 	    (off_t)BMAP_OD_SZ * b->bcm_bmapno + SL_BMAP_START_OFF,
-	    bmap_2_mio_ino_fh(b));
+	    bmap_2_mio_fh(b));
 
 	if (rc == 0 && nb == 0 && (flags & BMAPGETF_NOAUTOINST))
 		return (SLERR_BMAP_INVALID);
@@ -278,13 +278,13 @@ mds_bmap_write(struct bmap *b, int update_mtime, void *logf,
 	slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 
 	psclog_info("Write bmap: handle = %p, fid="SLPRI_FID", bmapno = %d",
-	    bmap_2_mio_ino_fh(b), f->fcmh_sstb.sst_fg.fg_fid, b->bcm_bmapno);
+	    bmap_2_mio_fh(b), f->fcmh_sstb.sst_fg.fg_fid, b->bcm_bmapno);
 
 	if (logf)
 		mds_reserve_slot(1);
 	rc = mdsio_pwritev(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
 	    (off_t)BMAP_OD_SZ * b->bcm_bmapno + SL_BMAP_START_OFF,
-	    update_mtime, bmap_2_mio_ino_fh(b), logf, logarg);
+	    update_mtime, bmap_2_mio_fh(b), logf, logarg);
 	if (logf)
 		mds_unreserve_slot(1);
 
