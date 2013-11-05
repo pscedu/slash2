@@ -256,7 +256,7 @@ mds_sliod_alive(void *arg)
 }
 
 /**
- * mds_try_sliodresm - Given an I/O resource, iterate through its
+ * slm_try_sliodresm - Given an I/O resource, iterate through its
  *	members looking for one which is suitable for assignment.
  * @res: the resource
  * @prev_ios:  list of previously assigned resources (used for
@@ -267,7 +267,7 @@ mds_sliod_alive(void *arg)
  *	points at the real resm's identifier not the logical identifier.
  */
 __static int
-mds_try_sliodresm(struct sl_resm *resm)
+slm_try_sliodresm(struct sl_resm *resm)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct sl_mds_iosinfo *si;
@@ -307,20 +307,82 @@ mds_try_sliodresm(struct sl_resm *resm)
 	return (ok);
 }
 
+__static void
+slm_resm_roundrobin(struct sl_resource *r, struct psc_dynarray *a)
+{
+	struct resprof_mds_info *rpmi = res2rpmi(r);
+	struct sl_resm *m;
+	int i, idx;
+
+	RPMI_LOCK(rpmi);
+	idx = slm_get_rpmi_idx(r);
+	RPMI_ULOCK(rpmi);
+
+	for (i = 0; i < psc_dynarray_len(&r->res_members); i++, idx++) {
+		if (idx >= psc_dynarray_len(&r->res_members))
+		    idx = 0;
+
+		m = psc_dynarray_getpos(&r->res_members, idx);
+		psc_dynarray_add_ifdne(a, m);
+	}
+}
+
 /**
- * mds_resm_select - Choose an I/O resource member for write bmap lease
+ * slm_get_ioslist
+ */
+int
+slm_get_ioslist(struct fidc_membh *f, sl_ios_id_t piosid,
+    struct psc_dynarray *a)
+{
+	struct sl_resource *pios, *r;
+	int i;
+
+	pios = libsl_id2res(piosid);
+	if (!pios || (!RES_ISFS(pios) && !RES_ISCLUSTER(pios)))
+		return (0);
+
+	/* If affinity, prefer the first resm from the reptbl. */
+	if (fcmh_2_inoh(f)->inoh_flags & INO_BMAP_AFFINITY) {
+		r = libsl_id2res(fcmh_getrepl(f, 0).bs_id);
+		if (r)
+			slm_resm_roundrobin(r, a);
+	}
+
+	/*
+	 * Add the preferred IOS member(s) next.  Note that PIOS may be
+	 * a CNOS, parallel IOS, or stand-alone.
+	 */
+	slm_resm_roundrobin(pios, a);
+
+	/*
+	 * Add everything else.  Archival are not considered and must be
+	 * specifically set via PREF_IOS to obtain write leases.
+	 */
+	DYNARRAY_FOREACH(r, i, &nodeSite->site_resources) {
+		if (!RES_ISFS(r) || r == pios ||
+		    r->res_type == SLREST_ARCHIVAL_FS)
+			continue;
+
+		slm_resm_roundrobin(r, a);
+	}
+
+	return (psc_dynarray_len(a));
+}
+
+/**
+ * slm_resm_select - Choose an I/O resource member for write bmap lease
  *	assignment.
  * @b: The bmap which is being leased.
  * @pios: The preferred I/O resource specified by the client.
  * @to_skip: IONs to skip
  * @nskip: # IONS in @to_skip.
  * Notes:  This call accounts for the existence of existing replicas.
- *	When found, mds_resm_select() must choose a replica which is
+ *	When found, slm_resm_select() must choose a replica which is
  *	marked as BREPLST_VALID.
  */
 __static struct sl_resm *
-mds_resm_select(struct bmap *b, sl_ios_id_t pios,
-    sl_ios_id_t *to_skip, int nskip)
+slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
+    int nskip)
 {
 	int i, j, skip, off, val, nr, repls = 0;
 	struct slash_inode_od *ino = fcmh_2_ino(b->bcm_fcmh);
@@ -392,19 +454,18 @@ mds_resm_select(struct bmap *b, sl_ios_id_t pios,
 		return (NULL);
 	}
 
-	slcfg_get_ioslist(pios, &a, 0);
+	slm_get_ioslist(b->bcm_fcmh, pios, &a);
 
 	DYNARRAY_FOREACH(resm, i, &a) {
 		for (j = 0, skip = 0; j < nskip; j++)
-			if (resm->resm_res->res_id == to_skip[j]) {
+			if (resm->resm_res_id == to_skip[j]) {
 				skip = 1;
 				psclog_notice("res=%s skipped due being a "
-				    "prev_ios",
-				    resm->resm_res->res_name);
+				    "prev_ios", resm->resm_name);
 				break;
 			}
 
-		if (!skip && mds_try_sliodresm(resm))
+		if (!skip && slm_try_sliodresm(resm))
 			break;
 	}
  out:
@@ -415,8 +476,8 @@ mds_resm_select(struct bmap *b, sl_ios_id_t pios,
 __static int
 mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 {
-	struct slmds_jent_bmap_assign *sjba;
 	struct slmds_jent_assign_rep *logentry;
+	struct slmds_jent_bmap_assign *sjba;
 	struct slash_inode_handle *ih;
 	struct fidc_membh *f;
 	uint32_t nrepls;
@@ -502,7 +563,7 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	psc_assert(!bmi->bmi_assign);
 	psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
-	resm = mds_resm_select(b, pios, NULL, 0);
+	resm = slm_resm_select(b, pios, NULL, 0);
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_flags & BMAP_IONASSIGN);
 	if (!resm) {
@@ -1766,7 +1827,7 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	}
 	psc_assert(bia.bia_seq == bmi->bmi_seq);
 
-	resm = mds_resm_select(b, pios, prev_ios, nprev_ios);
+	resm = slm_resm_select(b, pios, prev_ios, nprev_ios);
 	if (!resm)
 		PFL_GOTOERR(out1, rc = -SLERR_ION_OFFLINE);
 
