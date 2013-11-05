@@ -406,8 +406,8 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	struct bmapc_memb *b;
 	struct srt_stat sstb;
 	struct sl_resm *m;
-	void *mdsio_data;
 	sl_bmapno_t bno;
+	void *mio_fh;
 	int64_t fsiz;
 	uint32_t i;
 
@@ -435,7 +435,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	mds_reserve_slot(1);
 	rc = mdsio_opencreatef(current_vfsid, fcmh_2_mio_ino_fid(p),
 	    &rootcreds, O_CREAT | O_EXCL | O_RDWR, MDSIO_OPENCRF_NOMTIM,
-	    mq->sstb.sst_mode, mq->cpn, NULL, &sstb, &mdsio_data,
+	    mq->sstb.sst_mode, mq->cpn, NULL, &sstb, &mio_fh,
 	    mdslog_namespace, slm_get_next_slashfid, 0);
 	mds_unreserve_slot(1);
 	mp->rc = -rc;
@@ -452,7 +452,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 		if (IS_REMOTE_FID(sstb.sst_fid))
 			PFL_GOTOERR(out, mp->rc = -PFLERR_NOTSUP);
 	} else
-		mdsio_release(current_vfsid, &cr, mdsio_data);
+		mdsio_release(current_vfsid, &cr, mio_fh);
 
 	mp->fg = sstb.sst_fg;
 	if (S_ISDIR(sstb.sst_mode))

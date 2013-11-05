@@ -163,7 +163,7 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 	struct srm_forward_rep *mp;
 	struct slash_creds cr;
 	struct srt_stat sstb;
-	void *mdsio_data;
+	void *mio_fh;
 	int vfsid;
 
 	p = op = np = NULL;
@@ -212,10 +212,10 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 			break;
 		mp->rc = mdsio_opencreate(vfsid, fcmh_2_mio_ino_fid(p),
 		    &cr, O_CREAT | O_EXCL | O_RDWR, mq->mode,
-		    mq->req.name, NULL, &mp->attr, &mdsio_data,
+		    mq->req.name, NULL, &mp->attr, &mio_fh,
 		    mdslog_namespace, slm_get_next_slashfid, 0);
 		if (!mp->rc)
-			mdsio_release(vfsid, &rootcreds, mdsio_data);
+			mdsio_release(vfsid, &rootcreds, mio_fh);
 		break;
 	    case SLM_FORWARD_RMDIR:
 		mp->rc = slm_fcmh_get(&mq->fg, &p);
