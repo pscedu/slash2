@@ -28,15 +28,15 @@
 #include <gcrypt.h>
 #include <stdio.h>
 
+#include "pfl/alloc.h"
 #include "pfl/export.h"
 #include "pfl/list.h"
+#include "pfl/lock.h"
+#include "pfl/multiwait.h"
 #include "pfl/rpc.h"
 #include "pfl/rpclog.h"
 #include "pfl/rsx.h"
 #include "pfl/time.h"
-#include "pfl/alloc.h"
-#include "pfl/lock.h"
-#include "pfl/multiwait.h"
 
 #include "authbuf.h"
 #include "slashrpc.h"
@@ -1052,7 +1052,8 @@ sl_exp_getpri_cli(struct pscrpc_export *exp)
 }
 
 void
-slrpc_bulk_sign(struct pscrpc_request *rq, void *buf, struct iovec *iov, int n)
+slrpc_bulk_sign(struct pscrpc_request *rq, void *buf, struct iovec *iov,
+    int n)
 {
 	char ebuf[BUFSIZ];
 	gcry_error_t gerr;
@@ -1073,8 +1074,7 @@ slrpc_bulk_sign(struct pscrpc_request *rq, void *buf, struct iovec *iov, int n)
  {
   char tbuf[65];
   pfl_unpack_hex(buf, AUTHBUF_ALGLEN, tbuf);
-  psclog_max("bulk ph=%s xid=%"PRIx64": sig=%s", pscrpc_rqphase2str(rq),
-      rq->rq_xid, tbuf);
+  DEBUG_REQ(PLL_MAX, rq, "bulk sig=%s", tbuf);
  }
 
 	gcry_md_close(hd);
