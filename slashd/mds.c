@@ -2132,9 +2132,9 @@ slm_ptrunc_prepare(void *p)
 	// ulock
 
 	mds_reserve_slot(1);
-	rc = mdsio_setattr(current_vfsid, fcmh_2_mio_fid(f),
+	rc = mdsio_setattr(current_vfsid, fcmh_2_mfid(f),
 	    &f->fcmh_sstb, to_set, &rootcreds, &f->fcmh_sstb, // outbuf
-	    fcmh_2_mio_fh(f), mdslog_namespace);
+	    fcmh_2_mfh(f), mdslog_namespace);
 	mds_unreserve_slot(1);
 
 	if (rc)

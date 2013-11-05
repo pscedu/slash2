@@ -167,7 +167,7 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	 * xattrsize with a nonzero value.
 	 */
 	zfsslash2_listxattr(vfsid, &rootcreds, NULL, 0, &xlen,
-	    fcmh_2_mio_fid(f));
+	    fcmh_2_mfid(f));
 
 	FCMH_LOCK(f);
 	mp->attr = f->fcmh_sstb;
@@ -348,8 +348,8 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mds_reserve_slot(1);
-	mp->rc = mdsio_link(vfsid, fcmh_2_mio_fid(c),
-	    fcmh_2_mio_fid(p), mq->name, &rootcreds, &mp->cattr,
+	mp->rc = mdsio_link(vfsid, fcmh_2_mfid(c),
+	    fcmh_2_mfid(p), mq->name, &rootcreds, &mp->cattr,
 	    mdslog_namespace);
 	mds_unreserve_slot(1);
 
@@ -381,10 +381,10 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, mp->rc);
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
-	if (fcmh_2_mio_fid(p) == SLFID_ROOT &&
+	if (fcmh_2_mfid(p) == SLFID_ROOT &&
 	    strcmp(mq->name, SL_RPATH_META_DIR) == 0)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
-	mp->rc = mdsio_lookup(vfsid, fcmh_2_mio_fid(p), mq->name,
+	mp->rc = mdsio_lookup(vfsid, fcmh_2_mfid(p), mq->name,
 	    NULL, &rootcreds, &mp->attr);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
@@ -447,7 +447,7 @@ slm_mkdir(int vfsid, struct srm_mkdir_req *mq, struct srm_mkdir_rep *mp,
 		PFL_GOTOERR(out, mp->rc);
 
 	mds_reserve_slot(1);
-	mp->rc = -mdsio_mkdir(vfsid, fcmh_2_mio_fid(p), mq->name,
+	mp->rc = -mdsio_mkdir(vfsid, fcmh_2_mfid(p), mq->name,
 	    &mq->sstb, 0, opflags, &mp->cattr, NULL, fid ? NULL :
 	    mdslog_namespace, fid ? 0 : slm_get_next_slashfid, fid);
 	mds_unreserve_slot(1);
@@ -465,7 +465,7 @@ slm_mkdir(int vfsid, struct srm_mkdir_req *mq, struct srm_mkdir_rep *mp,
 
 	if (dp) {
 		if (mp->rc == -EEXIST &&
-		    mdsio_lookup(vfsid, fcmh_2_mio_fid(p), mq->name, NULL,
+		    mdsio_lookup(vfsid, fcmh_2_mfid(p), mq->name, NULL,
 		    &rootcreds, &mp->cattr) == 0)
 			slm_fcmh_get(&mp->cattr.sst_fg, &c);
 		*dp = c;
@@ -516,7 +516,7 @@ slm_rmc_handle_mknod(struct pscrpc_request *rq)
 	mds_reserve_slot(1);
 	cr.scr_uid = mq->creds.scr_uid;
 	cr.scr_gid = mq->creds.scr_gid;
-	mp->rc = mdsio_mknod(vfsid, fcmh_2_mio_fid(p), mq->name,
+	mp->rc = mdsio_mknod(vfsid, fcmh_2_mfid(p), mq->name,
 	    mq->mode, &cr, &mp->cattr, NULL, mdslog_namespace,
 	    slm_get_next_slashfid);
 	mds_unreserve_slot(1);
@@ -576,7 +576,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	DEBUG_FCMH(PLL_DEBUG, p, "create op start for %s", mq->name);
 
 	mds_reserve_slot(1);
-	mp->rc = mdsio_opencreate(vfsid, fcmh_2_mio_fid(p), &cr,
+	mp->rc = mdsio_opencreate(vfsid, fcmh_2_mfid(p), &cr,
 	    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->name, NULL,
 	    &mp->cattr, &mio_fh, fid ? NULL : mdslog_namespace,
 	    fid ? 0 : slm_get_next_slashfid, fid);
@@ -714,10 +714,10 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	eof = 0;
 	mp->rc = mdsio_readdir(vfsid, &rootcreds, mq->size, mq->offset,
 	    iov[0].iov_base, &outsize, &nents, iov[1].iov_base,
-	    mq->nstbpref, &eof, fcmh_2_mio_fh(f));
+	    mq->nstbpref, &eof, fcmh_2_mfh(f));
 
 	psclog_info("mdsio_readdir: rc=%d, data=%p", mp->rc,
-	    fcmh_2_mio_fh(f));
+	    fcmh_2_mfh(f));
 	mp->size = outsize;
 	mp->num = nents;
 	mp->eof = eof;
@@ -789,7 +789,7 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	mp->rc = mdsio_readlink(vfsid, fcmh_2_mio_fid(f), buf,
+	mp->rc = mdsio_readlink(vfsid, fcmh_2_mfid(f), buf,
 	    &rootcreds);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
@@ -879,8 +879,8 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 
 	/* if we get here, op and np must be owned by the current MDS */
 	mds_reserve_slot(2);
-	mp->rc = mdsio_rename(vfsid, fcmh_2_mio_fid(op), from,
-	    fcmh_2_mio_fid(np), to, &rootcreds, mdslog_namespace,
+	mp->rc = mdsio_rename(vfsid, fcmh_2_mfid(op), from,
+	    fcmh_2_mfid(np), to, &rootcreds, mdslog_namespace,
 	    &chfg);
 	mds_unreserve_slot(2);
 
@@ -1187,7 +1187,7 @@ slm_symlink(struct pscrpc_request *rq, struct srm_symlink_req *mq,
 		PFL_GOTOERR(out, mp->rc);
 
 	mds_reserve_slot(1);
-	mp->rc = mdsio_symlink(vfsid, linkname, fcmh_2_mio_fid(p),
+	mp->rc = mdsio_symlink(vfsid, linkname, fcmh_2_mfid(p),
 	    mq->name, &cr, &mp->cattr, NULL, fid ? NULL :
 	    mdslog_namespace, fid ? 0 : slm_get_next_slashfid, fid);
 	mds_unreserve_slot(1);
@@ -1247,10 +1247,10 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 
 	mds_reserve_slot(1);
 	if (isfile)
-		mp->rc = mdsio_unlink(vfsid, fcmh_2_mio_fid(p), NULL,
+		mp->rc = mdsio_unlink(vfsid, fcmh_2_mfid(p), NULL,
 		    mq->name, &rootcreds, mdslog_namespace, &chfg);
 	else
-		mp->rc = mdsio_rmdir(vfsid, fcmh_2_mio_fid(p), NULL,
+		mp->rc = mdsio_rmdir(vfsid, fcmh_2_mfid(p), NULL,
 		    mq->name, &rootcreds, mdslog_namespace);
 	mds_unreserve_slot(1);
 
@@ -1302,7 +1302,7 @@ slm_rmc_handle_listxattr(struct pscrpc_request *rq)
 	/* even a list can create the xaddr directory */
 	mds_reserve_slot(1);
 	mp->rc = mdsio_listxattr(vfsid, &rootcreds,
-	    iov.iov_base, mq->size, &outsize, fcmh_2_mio_fid(f));
+	    iov.iov_base, mq->size, &outsize, fcmh_2_mfid(f));
 	mds_unreserve_slot(1);
 	if (mp->rc) {
 		if (mq->size)
@@ -1359,7 +1359,7 @@ slm_rmc_handle_setxattr(struct pscrpc_request *rq)
 
 	mds_reserve_slot(1);
 	mp->rc = mdsio_setxattr(vfsid, &rootcreds, name, value,
-	    mq->valuelen,  fcmh_2_mio_fid(f));
+	    mq->valuelen,  fcmh_2_mfid(f));
 	mds_unreserve_slot(1);
 
  out:
@@ -1397,7 +1397,7 @@ slm_rmc_handle_getxattr(struct pscrpc_request *rq)
 	mp->valuelen = 0;
 	mds_reserve_slot(1);
 	mp->rc = mdsio_getxattr(vfsid, &rootcreds, mq->name, value,
-	    mq->size, &outsize, fcmh_2_mio_fid(f));
+	    mq->size, &outsize, fcmh_2_mfid(f));
 	mds_unreserve_slot(1);
 	if (mp->rc) {
 		if (mp->rc == ENOATTR)
@@ -1441,7 +1441,7 @@ slm_rmc_handle_removexattr(struct pscrpc_request *rq)
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mds_reserve_slot(1);
 	mp->rc = mdsio_removexattr(vfsid, &rootcreds, mq->name,
-	    fcmh_2_mio_fid(f));
+	    fcmh_2_mfid(f));
 	mds_unreserve_slot(1);
 
  out:

@@ -202,7 +202,7 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		sstb.sst_mode = mq->mode;
 		sstb.sst_uid = mq->creds.scr_uid;
 		sstb.sst_gid = mq->creds.scr_gid;
-		mp->rc = -mdsio_mkdir(vfsid, fcmh_2_mio_fid(p),
+		mp->rc = -mdsio_mkdir(vfsid, fcmh_2_mfid(p),
 		    mq->req.name, &sstb, 0, 0, &mp->attr, NULL,
 		    mdslog_namespace, slm_get_next_slashfid, 0);
 		break;
@@ -210,7 +210,7 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		mp->rc = slm_fcmh_get(&mq->fg, &p);
 		if (mp->rc)
 			break;
-		mp->rc = mdsio_opencreate(vfsid, fcmh_2_mio_fid(p),
+		mp->rc = mdsio_opencreate(vfsid, fcmh_2_mfid(p),
 		    &cr, O_CREAT | O_EXCL | O_RDWR, mq->mode,
 		    mq->req.name, NULL, &mp->attr, &mio_fh,
 		    mdslog_namespace, slm_get_next_slashfid, 0);
@@ -221,14 +221,14 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		mp->rc = slm_fcmh_get(&mq->fg, &p);
 		if (mp->rc)
 			break;
-		mp->rc = mdsio_rmdir(vfsid, fcmh_2_mio_fid(p), NULL,
+		mp->rc = mdsio_rmdir(vfsid, fcmh_2_mfid(p), NULL,
 		    mq->req.name, &rootcreds, mdslog_namespace);
 		break;
 	    case SLM_FORWARD_UNLINK:
 		mp->rc = slm_fcmh_get(&mq->fg, &p);
 		if (mp->rc)
 			break;
-		mp->rc = -mdsio_unlink(vfsid, fcmh_2_mio_fid(p), NULL,
+		mp->rc = -mdsio_unlink(vfsid, fcmh_2_mfid(p), NULL,
 		    mq->req.name, &rootcreds, mdslog_namespace,
 		    &mp->attr);
 		break;
@@ -241,8 +241,8 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 			break;
 		from = mq->req.name;
 		to = mq->req.name + strlen(mq->req.name) + 1;
-		mp->rc = mdsio_rename(vfsid, fcmh_2_mio_fid(op), from,
-		    fcmh_2_mio_fid(np), to, &rootcreds,
+		mp->rc = mdsio_rename(vfsid, fcmh_2_mfid(op), from,
+		    fcmh_2_mfid(np), to, &rootcreds,
 		    mdslog_namespace, &mp->attr);
 		break;
 	    case SLM_FORWARD_SETATTR:
@@ -254,9 +254,9 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		mp->rc = slm_fcmh_get(&mq->fg, &p);
 		if (mp->rc)
 			break;
-		mp->rc = -mdsio_setattr(vfsid, fcmh_2_mio_fid(p),
+		mp->rc = -mdsio_setattr(vfsid, fcmh_2_mfid(p),
 		    &mq->req.sstb, mq->to_set, &rootcreds, &mp->attr,
-		    fcmh_2_mio_fh(p), mdslog_namespace);
+		    fcmh_2_mfh(p), mdslog_namespace);
 		break;
 	    case SLM_FORWARD_SYMLINK:
 		mp->rc = slm_fcmh_get(&mq->fg, &p);
@@ -265,7 +265,7 @@ slm_rmm_handle_namespace_forward(struct pscrpc_request *rq)
 		name = mq->req.name;
 		linkname = mq->req.name + strlen(mq->req.name) + 1;
 		mp->rc = mdsio_symlink(vfsid, linkname,
-		    fcmh_2_mio_fid(p), name, &cr, &mp->attr, NULL,
+		    fcmh_2_mfid(p), name, &cr, &mp->attr, NULL,
 		    NULL, slm_get_next_slashfid, 0);
 		break;
 	}

@@ -37,22 +37,22 @@
 
 /**
  * fcmh_mds_info - MDS-specific fcmh data.
- * @fmi_mio_fid - backing object MIO FID.  This is used to access the
+ * @fmi_mfid - backing object MIO FID.  This is used to access the
  *	backing object (for files: the SLASH2 inode; for directories:
  *	the directory itself).  For the directory SLASH2 inode, see
- *	@fmi_mio_dino_f*.
- * @fmi_mio_fh - file descriptor for backing object.
+ *	@fmi_dino_mf*.
+ * @fmi_mfh - file descriptor for backing object.
  */
 struct fcmh_mds_info {
 	struct slash_inode_handle fmi_inodeh;
-	mio_fid_t		  fmi_mio_fid;		/* backing object inum */
-	struct mio_fh		  fmi_mio_fh;		/* file descriptor */
+	mio_fid_t		  fmi_mfid;		/* backing object inum */
+	struct mio_fh		  fmi_mfh;		/* file descriptor */
 	int			  fmi_ctor_rc;		/* constructor return code */
 	union {
 		struct {
-			mio_fid_t fmid_mio_dino_fid;	/* for inode */
+			mio_fid_t fmid_dino_mfid;	/* for inode */
 			struct mio_fh
-				  fmid_mio_dino_fh;
+				  fmid_dino_mfh;
 		} d;
 		struct {
 			uint64_t  fmif_ptrunc_size;	/* new truncate(2) size */
@@ -60,8 +60,8 @@ struct fcmh_mds_info {
 				  fmif_ptrunc_clients;	/* clients awaiting CRC recalc */
 		} f;
 	} u;
-#define fmi_mio_dino_fid	u.d.fmid_mio_dino_fid
-#define fmi_mio_dino_fh		u.d.fmid_mio_dino_fh
+#define fmi_dino_mfid		u.d.fmid_dino_mfid
+#define fmi_dino_mfh		u.d.fmid_dino_mfh
 
 #define fmi_ptrunc_size		u.f.fmif_ptrunc_size
 #define fmi_ptrunc_clients	u.f.fmif_ptrunc_clients
@@ -72,10 +72,10 @@ struct fcmh_mds_info {
 #define fcmh_2_inoh(f)		(&fcmh_2_fmi(f)->fmi_inodeh)
 #define fcmh_2_ino(f)		(&fcmh_2_inoh(f)->inoh_ino)
 #define fcmh_2_inox(f)		fcmh_2_inoh(f)->inoh_extras
-#define fcmh_2_mio_fh(f)	(fcmh_2_fmi(f)->fmi_mio_fh.fh)
-#define fcmh_2_mio_fid(f)	(fcmh_2_fmi(f)->fmi_mio_fid)
-#define fcmh_2_mio_dino_fh(f)	(fcmh_2_fmi(f)->fmi_mio_dino_fh.fh)
-#define fcmh_2_mio_dino_fid(f)	(fcmh_2_fmi(f)->fmi_mio_dino_fid)
+#define fcmh_2_mfh(f)		(fcmh_2_fmi(f)->fmi_mfh.fh)
+#define fcmh_2_mfid(f)		(fcmh_2_fmi(f)->fmi_mfid)
+#define fcmh_2_dino_mfh(f)	(fcmh_2_fmi(f)->fmi_dino_mfh.fh)
+#define fcmh_2_dino_mfid(f)	(fcmh_2_fmi(f)->fmi_dino_mfid)
 #define fcmh_2_nrepls(f)	fcmh_2_ino(f)->ino_nrepls
 #define fcmh_2_replpol(f)	fcmh_2_ino(f)->ino_replpol
 #define fcmh_2_metafsize(f)	(f)->fcmh_sstb.sst_blksize
