@@ -74,34 +74,41 @@ typedef struct {
  *
  * A 64-bit checksum follows this structure on disk.
  */
-struct slash_inode_od {
+struct slm_ino_od {
 	uint16_t		 ino_version;
 	uint16_t		 ino_flags;			/* immutable, etc. */
 	uint32_t		 ino_bsz;			/* bmap size */
 	uint32_t		 ino_nrepls;			/* number of replicas */
 	uint32_t		 ino_replpol;			/* BRPOL_* policies */
 	sl_replica_t		 ino_repls[SL_DEF_REPLICAS];	/* embed a few replicas	*/
-	uint64_t		 ino_repl_nblks[SL_DEF_REPLICAS];/* embed a few replicas */
+	uint64_t		 ino_repl_nblks[SL_DEF_REPLICAS];/* st_blocks constituents */
 };
 
-#define INO_BMAP_AFFINITY	(1 << 0)	/* Try to assign new bmaps to existing backing objects */
+#define slash_inode_od slm_ino_od
+
+#define INO_BMAP_AFFINITY	(1 << 0)			/* Prefer existing IOS for new bmaps */
 
 /*
  * A 64-bit checksum follows this structure on disk.
  */
-struct slash_inode_extras_od {
+struct slm_inox_od {
 	sl_snap_t		 inox_snaps[SL_DEF_SNAPSHOTS];	/* snapshot pointers */
 	sl_replica_t		 inox_repls[SL_INOX_NREPLICAS];
 	uint64_t		 inox_repl_nblks[SL_INOX_NREPLICAS];
 };
 
-#define INOX_SZ			sizeof(struct slash_inode_extras_od)
+#define slash_inode_extras_od slm_inox_od
 
-struct slash_inode_handle {
-	struct slash_inode_od	 inoh_ino;
-	struct slash_inode_extras_od *inoh_extras;
+#define INOX_SZ			sizeof(struct slm_inox_od)
+
+/* in memory handle */
+struct slm_inoh {
+	struct slm_ino_od	 inoh_ino;
+	struct slm_inox_od	*inoh_extras;
 	int			 inoh_flags;
 };
+
+#define slash_inode_handle slm_inoh
 
 #define	INOH_INO_NEW		(1 << 0)			/* not yet written to disk */
 #define	INOH_INO_NOTLOADED	(1 << 1)
