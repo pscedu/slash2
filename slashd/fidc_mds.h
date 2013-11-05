@@ -36,12 +36,27 @@
 #include "up_sched_res.h"
 
 struct fcmh_mds_info {
-	struct slash_inode_handle fmi_inodeh;		/* MDS sl_inodeh_t goes here */
-	mdsio_fid_t		  fmi_mio_ino_fid;	/* underlying mdsio file ID */
-	struct mio_fh		  fmi_mio_ino_fh;	/* mdsio descriptor */
+	struct slash_inode_handle fmi_inodeh;
+	mio_fid_t		  fmi_mio_ino_fid;	/* backing inode's inum */
+	struct mio_fh		  fmi_mio_ino_fh;	/* ino file descriptor */
 	int			  fmi_ctor_rc;		/* constructor return code */
-	uint64_t		  fmi_ptrunc_size;	/* new truncate(2) size */
-	struct psc_dynarray	  fmi_ptrunc_clients;	/* clients awaiting CRC recalc */
+	union {
+		struct {
+			mio_fid_t fmid_mio_dir_fid;	/* for inode */
+			struct mio_fh
+				  fmid_mio_dir_fh;
+		} d;
+		struct {
+			uint64_t  fmif_ptrunc_size;	/* new truncate(2) size */
+			struct psc_dynarray
+				  fmif_ptrunc_clients;	/* clients awaiting CRC recalc */
+		} f;
+	} u;
+#define fmi_mio_dir_fid		u.d.fmid_mio_dir_fid
+#define fmi_mio_dir_fh		u.d.fmid_mio_dir_fh
+
+#define fmi_ptrunc_size		u.f.fmif_ptrunc_size
+#define fmi_ptrunc_clients	u.f.fmif_ptrunc_clients
 };
 
 #define FCMH_IN_PTRUNC		(_FCMH_FLGSHFT << 0)
