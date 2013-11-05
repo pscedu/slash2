@@ -540,7 +540,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	struct srm_create_req *mq;
 	struct slash_creds cr;
 	slfid_t fid = 0;
-	void *mio_fh;
+	void *mfh;
 	int vfsid;
 
 	OPSTAT_INCR(SLM_OPST_CREATE);
@@ -578,7 +578,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	mds_reserve_slot(1);
 	mp->rc = mdsio_opencreate(vfsid, fcmh_2_mfid(p), &cr,
 	    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->name, NULL,
-	    &mp->cattr, &mio_fh, fid ? NULL : mdslog_namespace,
+	    &mp->cattr, &mfh, fid ? NULL : mdslog_namespace,
 	    fid ? 0 : slm_get_next_slashfid, fid);
 	mds_unreserve_slot(1);
 
@@ -597,7 +597,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	 * This release may be the sanest thing actually, unless EXCL is
 	 * used.
 	 */
-	mdsio_release(vfsid, &rootcreds, mio_fh);
+	mdsio_release(vfsid, &rootcreds, mfh);
 
 	DEBUG_FCMH(PLL_DEBUG, p, "mdsio_release() done for %s",
 	    mq->name);
@@ -981,7 +981,7 @@ PFL_GOTOERR(out, mp->rc = -PFLERR_NOTSUP);
 				PFL_GOTOERR(out, mp->rc);
 		}
 		/*
-		 * If the file is open, mio_fh will be valid and used.
+		 * If the file is open, mfh will be valid and used.
 		 * Otherwise, it will be NULL, and we'll use the
 		 * mio_fid.
 		 */
