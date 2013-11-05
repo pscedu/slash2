@@ -92,7 +92,7 @@ mds_bmap_getcurseq(uint64_t *maxseq, uint64_t *minseq)
 	return (0);
 }
 
-inline void
+void
 mds_bmap_timeotbl_journal_seqno(void)
 {
 	static int log = 0;
