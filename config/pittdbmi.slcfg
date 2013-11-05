@@ -24,20 +24,45 @@ site @PITT {
 	site_id		= 0;
 
 	resource md {
-		desc	= "";
+		desc	= "SAM metadata";
 		type	= mds;
 		id	= 1;
-		nids	= .pitt.edu;
+		nids	= s-gscratch0-dev.francis.sam.pitt.edu;
 		jrnldev	= /dev/disk/by-id/ata-ST3750640AS_3QD04P64;
 	}
 
 	resource io0 {
-		desc	= "";
+		desc	= "SAM cache node 0";
 		type	= standalone_fs;
 		id	= 10;
-		nids	= .pitt.edu;
-		fsroot	= /local/pittdbmi_slio/0;
-		selftest = "/local/sbin/st /arc_sliod/0";
+		nids	= s-gscratch2-dev.francis.sam.pitt.edu;
+		fsroot	= /samfs_slio;
+		selftest = "/local/sbin/st /samfs_slio";
+	}
+
+	resource io1 {
+		desc	= "SAM cache node 1";
+		type	= standalone_fs;
+		id	= 11;
+		nids	= s-gscratch3-dev.francis.sam.pitt.edu;
+		fsroot	= /samfs_slio;
+		selftest = "/local/sbin/st /samfs_slio";
+	}
+
+	resource io2 {
+		desc	= "SAM cache node 2";
+		type	= standalone_fs;
+		id	= 12;
+		nids	= s-gscratch4-dev.francis.sam.pitt.edu;
+		fsroot	= /samfs_slio;
+		selftest = "/local/sbin/st /samfs_slio";
+	}
+
+	resource io {
+		desc	= "SAM cache";
+		type	= cluster_noshare_lfs;
+		id	= 100;
+		ios	= io0@PITT, io1@PITT, io2@PITT;
 	}
 }
 
@@ -50,7 +75,7 @@ site @PSC {
 		type	= standalone_fs;
 		id	= 10;
 		nids	= sense51.psc.edu;
-		fsroot	= /local/pittdbmi_slio/0;
-		selftest = "/local/sbin/st /arc_sliod/0";
+		fsroot	= /local/samfs_slio;
+		selftest = "/local/sbin/st /local/samfs_slio";
 	}
 }
