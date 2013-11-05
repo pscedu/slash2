@@ -72,10 +72,15 @@ struct fcmh_mds_info {
 #define fcmh_2_inoh(f)		(&fcmh_2_fmi(f)->fmi_inodeh)
 #define fcmh_2_ino(f)		(&fcmh_2_inoh(f)->inoh_ino)
 #define fcmh_2_inox(f)		fcmh_2_inoh(f)->inoh_extras
-#define fcmh_2_mfh(f)		(fcmh_2_fmi(f)->fmi_mfh.fh)
-#define fcmh_2_mfid(f)		(fcmh_2_fmi(f)->fmi_mfid)
-#define fcmh_2_dino_mfh(f)	(fcmh_2_fmi(f)->fmi_dino_mfh.fh)
-#define fcmh_2_dino_mfid(f)	(fcmh_2_fmi(f)->fmi_dino_mfid)
+
+#define fcmh_2_mfhp(f)		(&fcmh_2_fmi(f)->fmi_mfh)
+#define fcmh_2_mfh(f)		fcmh_2_mfhp(f)->fh
+#define fcmh_2_mfid(f)		fcmh_2_fmi(f)->fmi_mfid
+
+#define fcmh_2_dino_mfhp(f)	(&fcmh_2_fmi(f)->fmi_dino_mfh)
+#define fcmh_2_dino_mfh(f)	fcmh_2_dino_mfhp(f)->fh
+#define fcmh_2_dino_mfid(f)	fcmh_2_fmi(f)->fmi_dino_mfid
+
 #define fcmh_2_nrepls(f)	fcmh_2_ino(f)->ino_nrepls
 #define fcmh_2_replpol(f)	fcmh_2_ino(f)->ino_replpol
 #define fcmh_2_metafsize(f)	(f)->fcmh_sstb.sst_blksize
