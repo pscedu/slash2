@@ -43,7 +43,8 @@ struct slash_creds;
 struct slash_inode_handle;
 struct srt_stat;
 
-typedef uint64_t mdsio_fid_t;
+typedef uint64_t mio_fid_t;
+typedef mio_fid_t mdsio_fid_t;
 
 struct mio_fh {
 	void *fh;
@@ -67,9 +68,9 @@ typedef void (*sl_log_update_t)(int, uint64_t, uint64_t, uint64_t,
 #define MDSIO_OPENCRF_NOMTIM	(1 << 1)	/* do not update st_mtim */
 
 #define mdsio_opencreate(vfs, pino, crp, fflags, mode, fn, mfp, sstb,	\
-	    mdsio_datap, logfunc, getslfid, slfid)			\
+	    mio_fhp, logfunc, getslfid, slfid)				\
 	mdsio_opencreatef((vfs), (pino), (crp), (fflags), 0, (mode),	\
-	    (fn), (mfp), (sstb), (mdsio_datap), (logfunc), (getslfid), (slfid))
+	    (fn), (mfp), (sstb), (mio_fhp), (logfunc), (getslfid), (slfid))
 
 #define MDSIO_FOREACH_DIRENT(dh, credp, buf, bufsiz, ip, d, rc)		\
 	for ((ip)->mdi_off = 0; ((rc) = mdsio_readdir((credp),		\
