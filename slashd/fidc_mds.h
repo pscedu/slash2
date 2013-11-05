@@ -37,8 +37,8 @@
 
 struct fcmh_mds_info {
 	struct slash_inode_handle fmi_inodeh;		/* MDS sl_inodeh_t goes here */
-	mdsio_fid_t		  fmi_mdsio_fid;	/* underlying mdsio file ID */
-	void			 *fmi_mdsio_data;	/* mdsio descriptor */
+	mdsio_fid_t		  fmi_mio_ino_fid;	/* underlying mdsio file ID */
+	struct mio_fh		  fmi_mio_ino_fh;	/* mdsio descriptor */
 	int			  fmi_ctor_rc;		/* constructor return code */
 	uint64_t		  fmi_ptrunc_size;	/* new truncate(2) size */
 	struct psc_dynarray	  fmi_ptrunc_clients;	/* clients awaiting CRC recalc */
@@ -49,8 +49,8 @@ struct fcmh_mds_info {
 #define fcmh_2_inoh(f)		(&fcmh_2_fmi(f)->fmi_inodeh)
 #define fcmh_2_ino(f)		(&fcmh_2_inoh(f)->inoh_ino)
 #define fcmh_2_inox(f)		fcmh_2_inoh(f)->inoh_extras
-#define fcmh_2_mdsio_data(f)	fcmh_2_fmi(f)->fmi_mdsio_data
-#define fcmh_2_mdsio_fid(f)	fcmh_2_fmi(f)->fmi_mdsio_fid
+#define fcmh_2_mdsio_data(f)	fcmh_2_fmi(f)->fmi_mio_ino_fh.fh
+#define fcmh_2_mdsio_fid(f)	fcmh_2_fmi(f)->fmi_mio_ino_fid
 #define fcmh_2_nrepls(f)	fcmh_2_ino(f)->ino_nrepls
 #define fcmh_2_replpol(f)	fcmh_2_ino(f)->ino_replpol
 #define fcmh_2_metafsize(f)	(f)->fcmh_sstb.sst_blksize

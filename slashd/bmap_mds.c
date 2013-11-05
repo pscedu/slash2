@@ -42,10 +42,12 @@ static __inline void *
 bmap_2_mdsio_data(struct bmap *b)
 {
 	struct fcmh_mds_info *fmi;
+	void *fh;
 
 	fmi = fcmh_2_fmi(b->bcm_fcmh);
-	psc_assert(fmi->fmi_mdsio_data);
-	return (fmi->fmi_mdsio_data);
+	fh = fmi->fmi_mio_ino_fh.fh;
+	psc_assert(fh);
+	return (fh);
 }
 
 /**

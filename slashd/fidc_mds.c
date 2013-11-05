@@ -131,7 +131,7 @@ slm_fcmh_ctor(struct fidc_membh *f, int flags)
 
 	if (fcmh_isdir(f)) {
 		rc = mdsio_opendir(vfsid, fcmh_2_mdsio_fid(f),
-		    &rootcreds, NULL, &fmi->fmi_mdsio_data);
+		    &rootcreds, NULL, &fmi->fmi_mio_ino_fh.fh);
 	} else if (fcmh_isreg(f)) {
 		struct slash_inode_handle *ih;
 
@@ -184,7 +184,7 @@ slm_fcmh_dtor(struct fidc_membh *f)
 		if (!fmi->fmi_ctor_rc) {
 			slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 			rc = mdsio_release(vfsid, &rootcreds,
-			    fmi->fmi_mdsio_data);
+			    fmi->fmi_mio_ino_fh.fh);
 			psc_assert(rc == 0);
 		}
 	}

@@ -45,7 +45,7 @@ struct srt_stat;
 
 typedef uint64_t mdsio_fid_t;
 
-struct mdsio_fh {
+struct mio_fh {
 	void *fh;
 };
 
