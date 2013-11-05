@@ -44,21 +44,23 @@ mds_inode_dump(int vfsid, struct sl_ino_compat *sic,
 {
 	struct fidc_membh *f;
 	struct bmapc_memb *b;
+	struct mio_fh *fh;
 	sl_bmapno_t i;
 	int rc, fl;
 	void *th;
 
 	f = inoh_2_fcmh(ih);
 	th = inoh_2_mfh(ih);
+	fh = inoh_2_mfh(ih);
 
 	fl = BMAPGETF_LOAD | BMAPGETF_NOAUTOINST;
 	if (sic)
 		fl |= BMAPGETF_NORETRIEVE;
 
 	for (i = 0; ; i++) {
-		inoh_2_mfh(ih) = readh;
+		fh->fh = readh;
 		rc = bmap_getf(f, i, SL_WRITE, fl, &b);
-		inoh_2_mfh(ih) = th;
+		fh->fh = th;
 
 		if (rc == SLERR_BMAP_INVALID) {
 			(void)INOH_RLOCK(ih);
@@ -133,10 +135,10 @@ mds_inode_update(int vfsid, struct slash_inode_handle *ih,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	th = inoh_2_mfh(ih);
-	inoh_2_mfh(ih) = h;
+	th = inoh_2_mfhp(ih)->fh;
+	inoh_2_mfhp(ih)->fh = h;
 	rc = mds_inode_dump(vfsid, sic, ih, th);
-	inoh_2_mfh(ih) = th;
+	inoh_2_mfhp(ih)->fh = th;
 	if (rc)
 		PFL_GOTOERR(out, rc);
 

@@ -105,11 +105,12 @@ struct slm_inox_od {
 struct slm_inoh {
 	struct slm_ino_od	 inoh_ino;
 	struct slm_inox_od	*inoh_extras;
-	int			 inoh_flags;
+	int			 inoh_flags;			/* see INOH_* */
 };
 
 #define slash_inode_handle slm_inoh
 
+/* inoh_flags */
 #define	INOH_INO_NEW		(1 << 0)			/* not yet written to disk */
 #define	INOH_INO_NOTLOADED	(1 << 1)
 
@@ -120,7 +121,12 @@ struct slm_inoh {
 #define INOH_URLOCK(ih, lk)	ureqlock(INOH_GETLOCK(ih), (lk))
 #define INOH_LOCK_ENSURE(ih)	LOCK_ENSURE(INOH_GETLOCK(ih))
 
-#define inoh_2_mfh(ih)	fcmh_2_mio_ino_fh(inoh_2_fcmh(ih))
+#define inoh_2_mfhp(ih)		(fcmh_isdir(inoh_2_fcmh(ih)) ?		\
+				 fcmh_2_dino_mfhp(inoh_2_fcmh(ih)) :	\
+				 fcmh_2_mfhp(inoh_2_fcmh(ih)))
+
+#define inoh_2_mfh(ih)		inoh_2_mfhp(ih)->fh
+
 #define inoh_2_fsz(ih)		fcmh_2_fsz(inoh_2_fcmh(ih))
 #define inoh_2_fid(ih)		fcmh_2_fid(inoh_2_fcmh(ih))
 #define inoh_2_fcmh(ih)		fmi_2_fcmh(inoh_2_fmi(ih))
