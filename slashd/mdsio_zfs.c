@@ -144,6 +144,7 @@ struct mdsio_ops mdsio_ops = {
 
 	zfsslash2_setattrmask_2_slflags,
 	zfsslash2_slflags_2_setattrmask,
+	zfsslash2_getfidlinkdir,
 
 	zfsslash2_access,
 	zfsslash2_fsync,

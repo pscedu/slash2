@@ -95,6 +95,8 @@ struct mdsio_ops {
 	/* utility interface */
 	int	(*mio_setattrmask_2_slflags)(uint);
 	uint	(*mio_slflags_2_setattrmask)(int);
+	mdsio_fid_t
+		(*mio_getfidlinkdir)(slfid_t);
 
 	/* low-level file system interface */
 	int	(*mio_access)(int, mdsio_fid_t, int, const struct slash_creds *);
@@ -154,6 +156,7 @@ struct mdsio_ops {
 
 #define mdsio_setattrmask_2_slflags mdsio_ops.mio_setattrmask_2_slflags	/* zfsslash2_setattrmask_2_slflags() */
 #define mdsio_slflags_2_setattrmask mdsio_ops.mio_slflags_2_setattrmask	/* zfsslash2_slflags_2_setattrmask() */
+#define mdsio_getfidlinkdir	    mdsio_ops.mio_getfidlinkdir		/* zfsslash2_getfidlinkdir() */
 
 #define mdsio_fsync		mdsio_ops.mio_fsync			/* zfsslash2_fsync() */
 #define mdsio_getattr		mdsio_ops.mio_getattr			/* zfsslash2_getattr() */
