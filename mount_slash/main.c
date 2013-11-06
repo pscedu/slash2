@@ -1306,8 +1306,10 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 		DEBUG_REQ(PLL_ERROR, rq, "rc=%d", rc);
 
 		FCMH_LOCK(d);
+		p->dcp_nextoff = p->dcp_off + 1;
 		p->dcp_flags &= ~DCPF_LOADING;
 		p->dcp_rc = rc;
+		PFL_GETPTIMESPEC(&p->dcp_tm);
 		fcmh_wake_locked(d);
 		FCMH_ULOCK(d);
 
