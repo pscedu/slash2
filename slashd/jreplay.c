@@ -495,6 +495,13 @@ mds_replay_namespace(struct slmds_jent_namespace *sjnm, int replay)
 	    case NS_OP_RMDIR:
 		rc = mdsio_redo_rmdir(current_vfsid,
 		    sjnm->sjnm_parent_fid, sjnm->sjnm_target_fid, name);
+
+		snprintf(name, sizeof(name), "%016"PRIx64".ino",
+		    sjnm->sjnm_target_fid);
+		mdsio_unlink(current_vfsid, mdsio_getfidlinkdir(
+		    sjnm->sjnm_target_fid), NULL, name, &rootcreds,
+		    NULL, NULL);
+
 		break;
 	    case NS_OP_SETSIZE:
 	    case NS_OP_SETATTR:

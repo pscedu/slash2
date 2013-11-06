@@ -783,9 +783,9 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 	}
 
 	if (chg ||
-	    ((op == NS_OP_RECLAIM) ||
-	     (op == NS_OP_UNLINK && sstb->sst_nlink == 1) ||
-	     (op == NS_OP_SETSIZE && sstb->sst_size == 0)))
+	    op == NS_OP_RECLAIM ||
+	    (op == NS_OP_UNLINK && sstb->sst_nlink == 1) ||
+	    (op == NS_OP_SETSIZE && sstb->sst_size == 0))
 		psclogs(PLL_INFO, SLMSS_INFO,
 		    "file data %s fid="SLPRI_FID" "
 		    "uid=%u gid=%u "
@@ -795,8 +795,8 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 		    sstb->sst_uid, sstb->sst_gid,
 		    siz, op);
 
-	if (((op == NS_OP_RECLAIM) ||
-	     (op == NS_OP_UNLINK && sstb->sst_nlink == 1))) {
+	if (op == NS_OP_RECLAIM ||
+	    (op == NS_OP_UNLINK && sstb->sst_nlink == 1)) {
 		struct slm_wkdata_upsch_purge *wk;
 
 		wk = pfl_workq_getitem(slm_wk_upsch_purge,
@@ -804,10 +804,20 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 		wk->fid = sstb->sst_fid;
 		pfl_workq_putitemq(&slm_db_workq, wk);
 	}
+
+	if (op == NS_OP_RMDIR) {
+		char name[24];
+
+		snprintf(name, sizeof(name), "%016"PRIx64".ino",
+		    sstb->sst_fid);
+		mdsio_unlink(current_vfsid,
+		    mdsio_getfidlinkdir(sstb->sst_fid), NULL, name,
+		    &rootcreds, NULL, NULL);
+	}
 }
 
 /**
- * mds_reclaim_lwm - Find the lowest garbage reclamation water mark of
+ * mds_reclaim_lwm - Find the lowest garbage reclamation watermark of
  *	all IOSes.
  */
 __static uint64_t
@@ -876,7 +886,7 @@ mds_reclaim_hwm(int batchno)
 }
 
 /**
- * mds_update_lwm - Find the lowest namespace update water mark of all
+ * mds_update_lwm - Find the lowest namespace update watermark of all
  *	peer MDSes.
  */
 __static uint64_t
