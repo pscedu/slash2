@@ -137,7 +137,7 @@ slm_fcmh_ctor(struct fidc_membh *f, int flags)
 	ih->inoh_flags = INOH_INO_NOTLOADED;
 
 	ino_mfid = fcmh_2_mfid(f);
-	ino_mfh = fcmh_2_mfh(f);
+	ino_mfh = fcmh_2_mfhp(f);
 
 	if (fcmh_isdir(f)) {
 		extern uint64_t *immnsIdCache[];
@@ -147,9 +147,12 @@ slm_fcmh_ctor(struct fidc_membh *f, int flags)
 
 		rc = mdsio_opendir(vfsid, fcmh_2_mfid(f), &rootcreds,
 		    NULL, &fcmh_2_mfh(f));
-		DEBUG_FCMH(PLL_WARN, f,
-		    "mdsio_lookup_slfid failed; mio_fid=%"PRIx64" rc=%d",
-		    fcmh_2_mfid(f), rc);
+		if (rc) {
+			DEBUG_FCMH(PLL_WARN, f, "mdsio_opendir failed; "
+			    "mio_fid=%"PRIx64" rc=%d", fcmh_2_mfid(f),
+			    rc);
+			return (rc);
+		}
 
 		snprintf(fn, sizeof(fn), "%016"PRIx64".ino",
 		    fcmh_2_fid(f));
@@ -161,24 +164,30 @@ slm_fcmh_ctor(struct fidc_membh *f, int flags)
 		    &fcmh_2_dino_mfid(f), &rootcreds, NULL);
 		if (rc == ENOENT) {
 			struct slm_inox_od inox;
-			void *fh;
 
-			rc = mdsio_opencreate(vfsid, pmfid, &rootcreds,
-			    O_CREAT | O_EXCL | O_RDWR, 0644, fn, NULL,
-			    NULL, &fh, NULL, NULL, 0);
+			rc = mdsio_opencreatef(vfsid, pmfid, &rootcreds,
+			    O_CREAT | O_EXCL | O_RDWR,
+			    MDSIO_OPENCRF_NOLINK, 0644, fn,
+			    &fcmh_2_dino_mfid(f), NULL,
+			    &fcmh_2_dino_mfh(f), NULL, NULL, 0);
+			psc_assert(rc == 0);
+
+			INOH_LOCK(ih);
+
 			rc = mds_inode_write(vfsid, ih, NULL, NULL);
+			psc_assert(rc == 0);
 
 			memset(&inox, 0, sizeof(inox));
 			ih->inoh_extras = &inox;
 			rc = mds_inox_write(vfsid, ih, NULL, NULL);
 			ih->inoh_extras = NULL;
 
-			if (rc == 0)
-				mdsio_release(vfsid, &rootcreds, fh);
-			else if ((flags & FIDC_LOOKUP_NOLOG) == 0)
-				DEBUG_FCMH(PLL_WARN, f,
-				    "mdsio_opencreate failed; rc=%d",
-				    rc);
+			INOH_ULOCK(ih);
+
+			psc_assert(rc == 0);
+
+			mdsio_release(vfsid, &rootcreds,
+			    fcmh_2_dino_mfh(f));
 		} else if (rc) {
 			fmi->fmi_ctor_rc = rc;
 			if ((flags & FIDC_LOOKUP_NOLOG) == 0)
@@ -189,7 +198,7 @@ slm_fcmh_ctor(struct fidc_membh *f, int flags)
 		}
 
 		ino_mfid = fcmh_2_dino_mfid(f);
-		ino_mfh = fcmh_2_dino_mfh(f);
+		ino_mfh = fcmh_2_dino_mfhp(f);
 	}
 
 	if (fcmh_isreg(f))
