@@ -140,10 +140,8 @@ slm_fcmh_ctor(struct fidc_membh *f, int flags)
 	ino_mfh = fcmh_2_mfhp(f);
 
 	if (fcmh_isdir(f)) {
-		extern uint64_t *immnsIdCache[];
-		extern uint64_t immnsIdMask;
 		mio_fid_t pmfid;
-		char fn[25];
+		char fn[24];
 
 		rc = mdsio_opendir(vfsid, fcmh_2_mfid(f), &rootcreds,
 		    NULL, &fcmh_2_mfh(f));
@@ -157,9 +155,7 @@ slm_fcmh_ctor(struct fidc_membh *f, int flags)
 		snprintf(fn, sizeof(fn), "%016"PRIx64".ino",
 		    fcmh_2_fid(f));
 
-		pmfid = immnsIdCache[vfsid][
-		    (fcmh_2_fid(f) & immnsIdMask) >>
-		    (BPHXC * FID_PATH_START)];
+		pmfid = mdsio_getfidlinkdir(fcmh_2_fid(f));
 		rc = mdsio_lookup(vfsid, pmfid, fn,
 		    &fcmh_2_dino_mfid(f), &rootcreds, NULL);
 		if (rc == ENOENT) {
