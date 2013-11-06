@@ -192,7 +192,7 @@ slm_fcmh_ctor(struct fidc_membh *f, int flags)
 			fmi->fmi_ctor_rc = rc;
 			if ((flags & FIDC_LOOKUP_NOLOG) == 0)
 				DEBUG_FCMH(PLL_WARN, f,
-				    "mdsio_lookup_slfid failed; rc=%d",
+				    "mdsio_lookup failed; rc=%d",
 				    rc);
 			return (rc);
 		}
@@ -245,19 +245,29 @@ slm_fcmh_dtor(struct fidc_membh *f)
 	int rc, vfsid;
 
 	fmi = fcmh_2_fmi(f);
-	psc_assert(psc_dynarray_len(&fmi->fmi_ptrunc_clients) == 0);
-	psc_dynarray_free(&fmi->fmi_ptrunc_clients);
 
-	if (S_ISREG(f->fcmh_sstb.sst_mode) ||
-	    S_ISDIR(f->fcmh_sstb.sst_mode)) {
+	if (fcmh_isreg(f)) {
+		psc_assert(psc_dynarray_len(&fmi->fmi_ptrunc_clients) == 0);
+		psc_dynarray_free(&fmi->fmi_ptrunc_clients);
+	}
+
+	if (fcmh_isreg(f) || fcmh_isdir(f)) {
 		/* XXX Need to worry about other modes here */
 		if (!fmi->fmi_ctor_rc) {
 			slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 			rc = mdsio_release(vfsid, &rootcreds,
-			    fmi->fmi_mfh.fh);
+			    fcmh_2_mfh(f));
 			psc_assert(rc == 0);
 		}
 	}
+
+	if (fcmh_isdir(f)) {
+		slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
+		rc = mdsio_release(vfsid, &rootcreds,
+		    fcmh_2_dino_mfh(f));
+		psc_assert(rc == 0);
+	}
+
 	if (fmi->fmi_inodeh.inoh_extras)
 		PSCFREE(fmi->fmi_inodeh.inoh_extras);
 }
