@@ -166,6 +166,7 @@ in release but I don't see good performance for 'ls -al'.
 - removing the persistence policy on a bmap should mds_repl_delrq()
   for that bmap
 - merge set_bmapreplpol and friends into a single slfattr interface
+- add ability to get at INO_BMAP_AFFINITY and dir replpol
 - push O_APPEND writes always to EOF instead of the the client-sent offset
 
 - allow multiple preferred IOS servers
@@ -188,13 +189,10 @@ sliod export
 ---------------------------------------------------------
 
 upsch/network scheduling
-- investigate nqdq, activemq
+- investigate activemq
    - http://activemq.apache.org/index.html
-- need slash.conf rules to specify link bandwidth
-- preferentiate users/policies
-    (o) need classes, always complete a class before moving
-	to next one, files in the same class have same fairness
-- add network topology descriptions to slash.conf
+- need slcfg rules to specify link bandwidth/topology?
+- fix starvation problem denying fairness to data in same priority class
 
 netsched/libnetsch - universal interface, kinda like Grand Central
   Dispatch for net
@@ -386,8 +384,6 @@ reimport
 - kill -D argument; provide arg/slcfg var for authbuf key
 - add -d arg to daemons to stop daemonization and make that behavior
   default in developer builds
-- directory replica table inheritance, requires ondisk SLASH2 inode
-  changes (for directories)
 - test msctl -Q <symlink>
 - uptime instance nonce variable that allows msl to dump data if it
   changes while communicating with sliod
@@ -490,6 +486,9 @@ st_blocks is broken
 
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
+   (o) register a runner in MDS when one comes in that arranges
+       subsequent READDIR pages before even waiting for the next async
+       requests to come in
 
 - wrapper scripts:
    - purge old corefiles
