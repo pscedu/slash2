@@ -143,6 +143,7 @@ main(int argc, char *argv[])
 	/* start structs */
 	printf("structures:\n");
 	PRTYPE(mdsio_fid_t);
+	PRTYPE(mio_fid_t);
 	PRTYPE(sl_bmapgen_t);
 	PRTYPE(sl_bmapno_t);
 	PRTYPE(sl_ios_id_t);
@@ -177,8 +178,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct fcmh_mds_info);
 	PRTYPE(struct fidc_membh);
 	PRTYPE(struct lnetif_pair);
-	PRTYPE(struct mdsio_fh);
 	PRTYPE(struct mdsio_ops);
+	PRTYPE(struct mio_fh);
 	PRTYPE(struct msattrfl_thread);
 	PRTYPE(struct msbmfl_thread);
 	PRTYPE(struct msbmflra_thread);
@@ -225,9 +226,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct sl_site);
 	PRTYPE(struct slash_creds);
 	PRTYPE(struct slash_fidgen);
-	PRTYPE(struct slash_inode_extras_od);
-	PRTYPE(struct slash_inode_handle);
-	PRTYPE(struct slash_inode_od);
 	PRTYPE(struct slashrpc_cservice);
 	PRTYPE(struct slc_async_req);
 	PRTYPE(struct slconn_params);
@@ -246,6 +244,9 @@ main(int argc, char *argv[])
 	PRTYPE(struct slirii_thread);
 	PRTYPE(struct slirim_thread);
 	PRTYPE(struct slm_exp_cli);
+	PRTYPE(struct slm_ino_od);
+	PRTYPE(struct slm_inoh);
+	PRTYPE(struct slm_inox_od);
 	PRTYPE(struct slm_replst_workreq);
 	PRTYPE(struct slm_resmlink);
 	PRTYPE(struct slm_sth);
