@@ -35,15 +35,15 @@
 #include <term.h>
 #include <unistd.h>
 
-#include "pfl/cdefs.h"
-#include "pfl/pfl.h"
-#include "pfl/str.h"
-#include "pfl/walk.h"
 #include "pfl/bitflag.h"
+#include "pfl/cdefs.h"
 #include "pfl/ctl.h"
 #include "pfl/ctlcli.h"
 #include "pfl/fmt.h"
 #include "pfl/log.h"
+#include "pfl/pfl.h"
+#include "pfl/str.h"
+#include "pfl/walk.h"
 
 #include "mount_slash/ctl_cli.h"
 #include "mount_slash/pgcache.h"
@@ -92,6 +92,12 @@ struct bmap_range {
 	struct psc_listentry	 lentry;
 };
 
+struct fattr_arg {
+	int			 opcode;
+	int			 attrid;
+	int			 val;
+};
+
 struct repl_policy_arg {
 	int			 opcode;
 	int			 replpol;
@@ -106,9 +112,21 @@ struct fnfidpair {
 };
 
 /* keep in sync with BRPOL_* constants */
-const char *repl_policies[] = {
+const char *replpol_tab[] = {
 	"one-time",
 	"persist",
+	NULL
+};
+
+const char *fattr_tab[] = {
+	"ios-aff",
+	"repl-pol",
+	NULL
+};
+
+const char *bool_tab[] = {
+	"off",
+	"on",
 	NULL
 };
 
@@ -317,48 +335,69 @@ parse_replrq(int opcode, const char *fn, const char *oreplrqspec,
 }
 
 int
-lookup_repl_policy(const char *name)
+lookup(const char **tbl, int n, const char *name)
 {
-	int n;
+	int i;
 
-	for (n = 0; n < NBRPOL; n++)
-		if (strcmp(name, repl_policies[n]) == 0)
-			return (n);
-	errx(1, "%s: invalid replication policy", name);
+	for (i = 0; i < n; i++)
+		if (strcasecmp(name, tbl[i]) == 0)
+			return (i);
+	return (-1);
 }
 
 int
-cmd_new_bmap_repl_policy_one(const char *fn,
+cmd_fattr1(const char *fn,
     __unusedx const struct pfl_stat *pst, __unusedx int info,
     __unusedx int level, void *arg)
 {
-	struct msctlmsg_newreplpol *mfnrp;
-	struct repl_policy_arg *a = arg;
+	struct msctlmsg_fattr *mfa;
+	struct fattr_arg *a = arg;
 
-	mfnrp = psc_ctlmsg_push(a->opcode, sizeof(*mfnrp));
-	mfnrp->mfnrp_pol = a->replpol;
-	mfnrp->mfnrp_fid = fn2fid(fn);
+	mfa = psc_ctlmsg_push(a->opcode, sizeof(*mfa));
+	mfa->mfa_fid = fn2fid(fn);
+	mfa->mfa_attrid = a->attrid;
+	mfa->mfa_val = a->val;
 	return (0);
 }
 
 void
-cmd_new_bmap_repl_policy(int ac, char **av)
+cmd_fattr(int ac, char **av)
 {
-	struct repl_policy_arg arg;
+	struct fattr_arg arg;
 	const char *s;
 	int i;
 
-	s = strchr(av[0], '=');
+	s = strchr(av[0], ':');
+	psc_assert(s);
+	s++;
+	arg.attrid = lookup(fattr_tab, nitems(fattr_tab), s);
+	if (arg.attrid == -1)
+		errx(1, "fattr: unknown attribute %s", s);
+
+	s = strchr(s, '=');
 	if (s) {
-		arg.opcode = MSCMT_SET_NEWREPLPOL;
-		arg.replpol = lookup_repl_policy(s + 1);
+		s++;
+		arg.opcode = MSCMT_SET_FATTR;
+		switch (arg.attrid) {
+		case SL_FATTR_IOS_AFFINITY:
+			arg.val = lookup(bool_tab, nitems(bool_tab), s);
+			if (arg.val == -1)
+				errx(1, "fattr: %s: invalid value", s);
+			break;
+		case SL_FATTR_REPLPOL:
+			arg.val = lookup(replpol_tab,
+			    nitems(replpol_tab), s);
+			if (arg.val == -1)
+				errx(1, "fattr: %s: invalid value", s);
+			break;
+		}
 	} else
-		arg.opcode = MSCMT_GET_NEWREPLPOL;
+		arg.opcode = MSCMT_GET_FATTR;
 
 	if (ac < 2)
-		errx(1, "new-bmap-repl-policy: no file(s) specified");
+		errx(1, "fattr: no file(s) specified");
 	for (i = 1; i < ac; i++)
-		walk(av[i], cmd_new_bmap_repl_policy_one, &arg);
+		walk(av[i], cmd_fattr1, &arg);
 }
 
 int
@@ -399,7 +438,12 @@ cmd_bmap_repl_policy(int ac, char **av)
 	*bmapspec++ = '\0';
 
 	if (val) {
-		arg.replpol = lookup_repl_policy(val + 1);
+		val++;
+		arg.replpol = lookup(replpol_tab, nitems(replpol_tab),
+		    val);
+		if (arg.replpol == -1)
+			errx(1, "bmap-repl-policy: %s: unknown policy",
+			    val);
 		arg.opcode = MSCMT_SET_BMAPREPLPOL;
 	} else
 		arg.opcode = MSCMT_GET_BMAPREPLPOL;
@@ -441,14 +485,6 @@ cmd_replrq_one(const char *fn, const struct pfl_stat *pst,
 	struct msctlmsg_replrq *mrq;
 	struct replrq_arg *ra = arg;
 	int n;
-
-	if (S_ISDIR(pst->st_mode)) {
-		if (!recursive) {
-			errno = EISDIR;
-			warn("%s", fn);
-		}
-		return (0);
-	}
 
 	if (S_ISLNK(pst->st_mode)) {
 		if (!recursive) {
@@ -626,11 +662,11 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	} else
 		label = " new-bmap-repl-policy: ";
 	dlen = PSC_CTL_DISPLAY_WIDTH - strlen(label) -
-	    strlen(repl_policies[BRPOL_ONETIME]);
-	if (n + strlen(label) + strlen(repl_policies[BRPOL_ONETIME]) >
+	    strlen(replpol_tab[BRPOL_ONETIME]);
+	if (n + strlen(label) + strlen(replpol_tab[BRPOL_ONETIME]) >
 	    PSC_CTL_DISPLAY_WIDTH)
 		dlen = maxwidth - strlen(label) -
-		    strlen(repl_policies[BRPOL_ONETIME]);
+		    strlen(replpol_tab[BRPOL_ONETIME]);
 	if (n > dlen)
 		printf("\n%*s", dlen, "");
 	else
@@ -639,7 +675,7 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	if (current_mrs.mrs_newreplpol >= NBRPOL)
 		printf("<unknown: %d>\n", current_mrs.mrs_newreplpol);
 	else
-		printf("%s\n", repl_policies[current_mrs.mrs_newreplpol]);
+		printf("%s\n", replpol_tab[current_mrs.mrs_newreplpol]);
 
 	for (iosidx = 0; iosidx < current_mrs.mrs_nios; iosidx++) {
 		nbw = 0;
@@ -838,7 +874,7 @@ psc_ctl_prthr_t psc_ctl_prthrs[] = {
 
 struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {
 	{ "bmap-repl-policy:",		cmd_bmap_repl_policy },
-	{ "new-bmap-repl-policy:",	cmd_new_bmap_repl_policy },
+	{ "fattr:",			cmd_fattr },
 //	{ "reconfig",			cmd_reconfig },
 	{ "repl-add:",			cmd_replrq },
 	{ "repl-remove:",		cmd_replrq },

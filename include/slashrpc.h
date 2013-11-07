@@ -116,11 +116,6 @@ struct statvfs;
 #define SRCI_VERSION		1
 #define SRCI_MAGIC		UINT64_C(0xaabbccddeeff0099)
 
-enum {
-	SLXCTLOP_SET_BMAP_REPLPOL,		/* set replication policy on bmap */
-	SLXCTLOP_SET_FILE_NEWBMAP_REPLPOL	/* set file's default new bmap repl policy */
-};
-
 /* sizeof(authbuf_footer) + sizeof(pscrpc_msg) + 8 */
 #define SLRPC_MSGADJ		(176)
 
@@ -159,9 +154,11 @@ enum {
 	SRMT_REPL_READAIO,			/* 22: ION aio response */
 	SRMT_REPL_SCHEDWK,			/* 23: MDS to ION replication staging */
 	SRMT_SET_BMAPREPLPOL,			/* 24: bmap replication policy */
-	SRMT_SET_NEWREPLPOL,			/* 25: file new bmap repl policy */
 
-	/* file system operations */
+	/* other SLASH2-specific operations */
+	SRMT_SET_FATTR,				/* 25: set file attribute */
+
+	/* standard file system operations */
 	SRMT_CREATE,				/* 26: creat(2) */
 	SRMT_GETATTR,				/* 27: stat(2) */
 	SRMT_LINK,				/* 28: link(2) */
@@ -717,13 +714,16 @@ struct srm_repl_read_req {
 
 #define srm_repl_read_rep	srm_io_rep
 
-struct srm_set_newreplpol_req {
+struct srm_set_fattr_req {
 	struct slash_fidgen	fg;
-	 int32_t		pol;
-	 int32_t		_pad;
+	 int32_t		attrid;
+	 int32_t		val;
 } __packed;
 
-#define srm_set_newreplpol_rep	srm_generic_rep
+#define SL_FATTR_IOS_AFFINITY	0
+#define SL_FATTR_REPLPOL	1
+
+#define srm_set_fattr_rep	srm_generic_rep
 
 struct srm_set_bmapreplpol_req {
 	struct slash_fidgen	fg;

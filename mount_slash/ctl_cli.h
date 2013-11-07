@@ -59,9 +59,10 @@ struct msctlmsg_replrq {
 	sl_bmapno_t		mrq_bmapno;
 };
 
-struct msctlmsg_newreplpol {
-	slfid_t			mfnrp_fid;
-	int32_t			mfnrp_pol;
+struct msctlmsg_fattr {
+	slfid_t			mfa_fid;
+	int32_t			mfa_attrid;
+	int32_t			mfa_val;
 };
 
 struct msctlmsg_bmapreplpol {
@@ -72,10 +73,6 @@ struct msctlmsg_bmapreplpol {
 };
 
 #define REPLRQ_BMAPNO_ALL	(-1)
-
-struct msctlmsg_fncmd {
-	slfid_t			mfc_fid;
-};
 
 struct msctlmsg_biorq {
 	slfid_t			msr_fid;
@@ -99,9 +96,9 @@ struct msctlmsg_biorq {
 #define MSCMT_GETREPLST		(NPCMT +  4)
 #define MSCMT_GETREPLST_SLAVE	(NPCMT +  5)
 #define MSCMT_GET_BMAPREPLPOL	(NPCMT +  6)
-#define MSCMT_GET_NEWREPLPOL	(NPCMT +  7)
+#define MSCMT_GET_FATTR		(NPCMT +  7)
 #define MSCMT_SET_BMAPREPLPOL	(NPCMT +  8)
-#define MSCMT_SET_NEWREPLPOL	(NPCMT +  9)
+#define MSCMT_SET_FATTR		(NPCMT +  9)
 #define MSCMT_GETBMAP		(NPCMT + 10)
 #define MSCMT_GETBIORQ		(NPCMT + 11)
 

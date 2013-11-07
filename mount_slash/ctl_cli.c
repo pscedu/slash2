@@ -289,13 +289,13 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 }
 
 int
-msctlhnd_set_newreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
+msctlhnd_set_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
-	struct msctlmsg_newreplpol *mfnrp = m;
 	struct slashrpc_cservice *csvc = NULL;
-	struct srm_set_newreplpol_req *mq;
-	struct srm_set_newreplpol_rep *mp;
 	struct pscrpc_request *rq = NULL;
+	struct msctlmsg_fattr *mfa = m;
+	struct srm_set_fattr_req *mq;
+	struct srm_set_fattr_rep *mp;
 	struct pscfs_clientctx pfcc;
 	struct slash_fidgen fg;
 	struct pscfs_creds pcr;
@@ -306,17 +306,17 @@ msctlhnd_set_newreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
 		    SLPRI_FID": unable to obtain credentials: %s",
-		    mfnrp->mfnrp_fid, slstrerror(rc)));
+		    mfa->mfa_fid, slstrerror(rc)));
 	rc = msctl_getclientctx(fd, &pfcc);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
 		    SLPRI_FID": unable to obtain client context: %s",
-		    mfnrp->mfnrp_fid, slstrerror(rc)));
+		    mfa->mfa_fid, slstrerror(rc)));
 
-	rc = fidc_lookup_load_inode(mfnrp->mfnrp_fid, &f, &pfcc);
+	rc = fidc_lookup_load_inode(mfa->mfa_fid, &f, &pfcc);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
-		    mfnrp->mfnrp_fid, slstrerror(rc)));
+		    mfa->mfa_fid, slstrerror(rc)));
 
 	FCMH_LOCK(f);
 	if (!S_ISREG(f->fcmh_sstb.sst_mode) &&
@@ -329,23 +329,24 @@ msctlhnd_set_newreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
-		    mfnrp->mfnrp_fid, slstrerror(rc)));
+		    mfa->mfa_fid, slstrerror(rc)));
 
-	MSL_RMC_NEWREQ_PFCC(&pfcc, f, csvc, SRMT_SET_NEWREPLPOL, rq, mq,
-	    mp, rc);
+	MSL_RMC_NEWREQ_PFCC(&pfcc, f, csvc, SRMT_SET_FATTR, rq, mq, mp,
+	    rc);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
-		    mfnrp->mfnrp_fid, slstrerror(rc));
+		    mfa->mfa_fid, slstrerror(rc));
 		goto out;
 	}
-	mq->pol = mfnrp->mfnrp_pol;
+	mq->attrid = mfa->mfa_attrid;
+	mq->val = mfa->mfa_val;
 	mq->fg = fg;
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
 		rc = psc_ctlsenderr(fd, mh, "%s: %s",
-		    mfnrp->mfnrp_fid, slstrerror(rc));
+		    mfa->mfa_fid, slstrerror(rc));
 
  out:
 	if (rq)
@@ -583,9 +584,9 @@ struct psc_ctlop msctlops[] = {
 /* GETREPLST		*/ , { msctlrep_getreplst,	sizeof(struct msctlmsg_replst) }
 /* GETREPLST_SLAVE	*/ , { NULL,			0 }
 /* GET_BMAPREPLPOL	*/ , { NULL,			0 }
-/* GET_NEWREPLPOL	*/ , { NULL,			0 }
+/* GET_FATTR		*/ , { NULL,			0 }
 /* SET_BMAPREPLPOL	*/ , { msctlhnd_set_bmapreplpol,sizeof(struct msctlmsg_bmapreplpol) }
-/* SET_NEWREPLPOL	*/ , { msctlhnd_set_newreplpol,	sizeof(struct msctlmsg_newreplpol) }
+/* SET_FATTR		*/ , { msctlhnd_set_fattr,	sizeof(struct msctlmsg_fattr) }
 /* GETBMAP		*/ , { slctlrep_getbmap,	sizeof(struct slctlmsg_bmap) }
 /* GETBIORQ		*/ , { msctlrep_getbiorq,	sizeof(struct msctlmsg_biorq) }
 };
