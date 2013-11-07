@@ -137,6 +137,9 @@ behavior.
 .\"			.Tn I/O
 .\"			systems specified.
 .\"			.Pp
+.\"			If specified on a directory, all new files and subdirectories
+.\"			created thereafter under the directory will inherit the settings.
+.\"			.Pp
 .\"			.Ar replrqspec
 .\"			has the following format:
 .\"			.Bd -unfilled -offset 3n
@@ -165,6 +168,10 @@ behavior.
 .\"		"repl-remove Ns : Ns Ar replrqspec file ..." => <<'EOF',
 .\"			Cancel ongoing file replication requests as specified by
 .\"			.Ar replrqspec .
+.\"			.Pp
+.\"			If specified on a directory, this will clear the default settings
+.\"			inherited by all files and subdirectories created under the directory.
+.\"			.Pp
 .\"			See
 .\"			.Cm repl-add
 .\"			for details on the format of
@@ -304,6 +311,9 @@ to all other
 .Tn I/O
 systems specified.
 .Pp
+If specified on a directory, all new files and subdirectories
+created thereafter under the directory will inherit the settings.
+.Pp
 .Ar replrqspec
 has the following format:
 .Bd -unfilled -offset 3n
@@ -331,6 +341,10 @@ for information on modifying the replication policy.
 .It Cm repl-remove Ns : Ns Ar replrqspec file ...
 Cancel ongoing file replication requests as specified by
 .Ar replrqspec .
+.Pp
+If specified on a directory, this will clear the default settings
+inherited by all files and subdirectories created under the directory.
+.Pp
 See
 .Cm repl-add
 for details on the format of
