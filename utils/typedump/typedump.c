@@ -189,8 +189,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct msctl_replstq);
 	PRTYPE(struct msctlmsg_biorq);
 	PRTYPE(struct msctlmsg_bmapreplpol);
-	PRTYPE(struct msctlmsg_fncmd);
-	PRTYPE(struct msctlmsg_newreplpol);
+	PRTYPE(struct msctlmsg_fattr);
 	PRTYPE(struct msctlmsg_replrq);
 	PRTYPE(struct msctlmsg_replst);
 	PRTYPE(struct msctlmsg_replst_slave);
@@ -340,7 +339,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_replst_master_req);
 	PRTYPE(struct srm_replst_slave_req);
 	PRTYPE(struct srm_set_bmapreplpol_req);
-	PRTYPE(struct srm_set_newreplpol_req);
+	PRTYPE(struct srm_set_fattr_req);
 	PRTYPE(struct srm_setattr_req);
 	PRTYPE(struct srm_setxattr_rep);
 	PRTYPE(struct srm_setxattr_req);
@@ -420,9 +419,9 @@ main(int argc, char *argv[])
 	PRVAL(MSCMT_GETREPLST);
 	PRVAL(MSCMT_GETREPLST_SLAVE);
 	PRVAL(MSCMT_GET_BMAPREPLPOL);
-	PRVAL(MSCMT_GET_NEWREPLPOL);
+	PRVAL(MSCMT_GET_FATTR);
 	PRVAL(MSCMT_SET_BMAPREPLPOL);
-	PRVAL(MSCMT_SET_NEWREPLPOL);
+	PRVAL(MSCMT_SET_FATTR);
 	PRVAL(MSL_CBARG_BIORQ);
 	PRVAL(MSL_CBARG_BIORQS);
 	PRVAL(MSL_CBARG_BMAP);
@@ -510,6 +509,8 @@ main(int argc, char *argv[])
 	PRVAL(SL_BITS_PER_REPLICA);
 	PRVAL(SL_DEF_REPLICAS);
 	PRVAL(SL_DEF_SNAPSHOTS);
+	PRVAL(SL_FATTR_IOS_AFFINITY);
+	PRVAL(SL_FATTR_REPLPOL);
 	PRVAL(SL_MAX_BMAPFLSH_RETRIES);
 	PRVAL(SL_MAX_IOSREASSIGN);
 	PRVAL(SL_MAX_REPLICAS);
@@ -880,8 +881,6 @@ main(int argc, char *argv[])
 	PRVAL(SLREST_PARALLEL_COMPNT);
 	PRVAL(SLREST_PARALLEL_LFS);
 	PRVAL(SLREST_STANDALONE_FS);
-	PRVAL(SLXCTLOP_SET_BMAP_REPLPOL);
-	PRVAL(SLXCTLOP_SET_FILE_NEWBMAP_REPLPOL);
 	PRVAL(SL_READ);
 	PRVAL(SL_WRITE);
 	PRVAL(SRMT_BATCH_RP);
@@ -929,7 +928,7 @@ main(int argc, char *argv[])
 	PRVAL(SRMT_SETATTR);
 	PRVAL(SRMT_SETXATTR);
 	PRVAL(SRMT_SET_BMAPREPLPOL);
-	PRVAL(SRMT_SET_NEWREPLPOL);
+	PRVAL(SRMT_SET_FATTR);
 	PRVAL(SRMT_STATFS);
 	PRVAL(SRMT_SYMLINK);
 	PRVAL(SRMT_UNLINK);
