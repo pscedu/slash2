@@ -430,13 +430,12 @@ cmd_bmap_repl_policy(int ac, char **av)
 
 	pll_init(&arg.branges, struct bmap_range, lentry, NULL);
 
-	val = strchr(av[0], '=');
-
 	bmapspec = strchr(av[0], ':');
 	if (bmapspec == NULL)
 		errx(1, "bmap-repl-policy: no bmapspec specified");
 	*bmapspec++ = '\0';
 
+	val = strchr(bmapspec, '=');
 	if (val) {
 		val++;
 		arg.replpol = lookup(replpol_tab, nitems(replpol_tab),
