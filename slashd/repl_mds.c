@@ -450,8 +450,6 @@ _mds_repl_inv_except(struct bmapc_memb *b, int iosidx, int defer)
 	struct iosidv qv;
 	uint32_t policy;
 
-	BHREPL_POLICY_GET(b, &policy);
-
 	/* Ensure replica on active IOS is marked valid. */
 	brepls_init(tract, -1);
 	tract[BREPLST_INVALID] = BREPLST_VALID;
@@ -473,6 +471,8 @@ _mds_repl_inv_except(struct bmapc_memb *b, int iosidx, int defer)
 		    "weird state while invalidating other replicas; "
 		    "fid="SLPRI_FID" bmap=%d iosidx=%d state=%d",
 		    fcmh_2_fid(b->bcm_fcmh), b->bcm_bmapno, iosidx, rc);
+
+	BHREPL_POLICY_GET(b, &policy);
 
 	/*
 	 * Invalidate all other replicas.
@@ -710,6 +710,9 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	    iosv, iosidx, nios);
 	if (rc)
 		PFL_GOTOERR(out, rc);
+
+	if (fcmh_isdir(f)) 
+		PFL_GOTOERR(out, 0);
 
 	/*
 	 * Check inode's bmap state.  INVALID and VALID states become
