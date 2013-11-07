@@ -20,7 +20,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES ctl fuse rpc %
-.Dd February 27, 2013
+.Dd November 7, 2013
 .Dt MSCTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -47,11 +47,14 @@ behavior.
 .\"	daemon => "mount_slash",
 .\"	cmds	=> {
 .\" #		reconfig => "Reload configuration",
-.\"		"bmap-repl-policy Op = Ar repl-policy\n" .
-.\"		q{.Cm : Ar "bmapspec fn ..."} => <<'EOF',
-.\"			Get or set the replication policy for the bmaps specified by
-.\"			.Ar bmapspec
-.\"			for the specified files.
+.\"		"bmap-repl-policy Cm : Ar bmapspec\n" .
+.\"		qq{.Oo = Ar repl-policy Oc " " Ar} => <<'EOF',
+.\"			Get or set the replication policy for the specified bmaps
+.\"			.Po
+.\"			.Dq block maps ,
+.\"			or file regions
+.\"			.Pc
+.\"			of the specified files.
 .\"			.Pp
 .\"			The following replication policies are recognized:
 .\"			.Bl -tag -width one-time
@@ -90,22 +93,40 @@ behavior.
 .\"			will affect all bmaps currently residing in the file.
 .\"			.Pp
 .\"			See
+.\"			.Cm fattr
+.\"			for accessing a file's default
+.\"			.Pq i.e.\& new
+.\"			bmap replication policy.
+.\"			.Pp
+.\"			See
 .\"			.Cm repl-status
 .\"			for inspecting the replication policy of bmaps.
 .\"			EOF
-.\"		"new-bmap-repl-policy Ns Oo = Ns Ar repl-policy Oc Ar fn ..." => <<'EOF',
-.\"			Set the default replication policy for new bmaps
-.\"			.Po
-.\"			.Dq block maps ,
-.\"			or file data chunks
-.\"			.Pc
-.\"			allocated to the specified file
-.\"			.Ar fn .
+.\"		"fattr : Ar attr\n" .
+.\"		qq{.Oo = Ar value Oc " " Ar} => <<'EOF',
+.\"			Set attributes on the specified files.
+.\"			.Pp
+.\"			The attributes are as follows:
+.\"			.Bl -tag -width 3n
+.\"			.It Cm ios-aff Ns Op = Ns Ar on|off
+.\"			Set IOS affinity.
+.\"			This will prefer the first IOS in the file's residency table for
+.\"			all bmaps that would be allocated by growing the file.
+.\"			Defaults to
+.\"			.Cm off .
+.\"			.It Cm repl-pol Ns Op = Ns Ar pol
+.\"			Set default replication policy for any new bmaps
+.\"			that would be allocated by growing the file.
+.\"			.Pp
+.\"			If specified on a directory, all new files and subdirectories
+.\"			created thereafter under the directory will inherit the policy.
+.\"			.Pp
 .\"			See
 .\"			.Cm bmap-repl-policy
 .\"			for more information about replication policies.
+.\"			.El
 .\"			EOF
-.\"		"repl-add Ns : Ns Ar replrqspec fn ..." => <<'EOF',
+.\"		"repl-add Ns : Ns Ar replrqspec file ..." => <<'EOF',
 .\"			Enqueue data replication as specified by
 .\"			.Ar replrqspec
 .\"			to the specified files.
@@ -141,7 +162,7 @@ behavior.
 .\"			.Cm bmap-repl-policy
 .\"			for information on modifying the replication policy.
 .\"			EOF
-.\"		"repl-remove Ns : Ns Ar replrqspec fn ..." => <<'EOF',
+.\"		"repl-remove Ns : Ns Ar replrqspec file ..." => <<'EOF',
 .\"			Cancel ongoing file replication requests as specified by
 .\"			.Ar replrqspec .
 .\"			See
@@ -149,9 +170,9 @@ behavior.
 .\"			for details on the format of
 .\"			.Ar replrqspec .
 .\"			EOF
-.\"		"repl-status Op Ar fn ..." => <<'EOF',
-.\"			List the status of all replicas of the specified file
-.\"			.Ar fn .
+.\"		"repl-status Op Ar" => <<'EOF',
+.\"			List the status of all replicas of the specified
+.\"			.Ar file .
 .\"			Information about every bmap
 .\"			.Po Dq block map ,
 .\"			or file data chunks
@@ -162,7 +183,7 @@ behavior.
 .\"			is displayed.
 .\"			.Pp
 .\"			If no
-.\"			.Ar fn
+.\"			.Ar file
 .\"			arguments are specified all pending replications will be queried.
 .\"			Note that file names are unavailable in this mode.
 .\"			.Pp
@@ -189,13 +210,16 @@ The supported commands are as follows:
 .Bl -tag -width 3n
 .It Xo
 .Sm off
-.Cm bmap-repl-policy Op = Ar repl-policy
-.Cm : Ar "bmapspec fn ..."
+.Cm bmap-repl-policy Cm : Ar bmapspec
+.Oo = Ar repl-policy Oc " " Ar
 .Sm on
 .Xc
-Get or set the replication policy for the bmaps specified by
-.Ar bmapspec
-for the specified files.
+Get or set the replication policy for the specified bmaps
+.Po
+.Dq block maps ,
+or file regions
+.Pc
+of the specified files.
 .Pp
 The following replication policies are recognized:
 .Bl -tag -width one-time
@@ -234,20 +258,42 @@ The value
 will affect all bmaps currently residing in the file.
 .Pp
 See
+.Cm fattr
+for accessing a file's default
+.Pq i.e.\& new
+bmap replication policy.
+.Pp
+See
 .Cm repl-status
 for inspecting the replication policy of bmaps.
-.It Cm new-bmap-repl-policy Ns Oo = Ns Ar repl-policy Oc Ar fn ...
-Set the default replication policy for new bmaps
-.Po
-.Dq block maps ,
-or file data chunks
-.Pc
-allocated to the specified file
-.Ar fn .
+.It Xo
+.Sm off
+.Cm fattr : Ar attr
+.Oo = Ar value Oc " " Ar
+.Sm on
+.Xc
+Set attributes on the specified files.
+.Pp
+The attributes are as follows:
+.Bl -tag -width 3n
+.It Cm ios-aff Ns Op = Ns Ar on|off
+Set IOS affinity.
+This will prefer the first IOS in the file's residency table for
+all bmaps that would be allocated by growing the file.
+Defaults to
+.Cm off .
+.It Cm repl-pol Ns Op = Ns Ar pol
+Set default replication policy for any new bmaps
+that would be allocated by growing the file.
+.Pp
+If specified on a directory, all new files and subdirectories
+created thereafter under the directory will inherit the policy.
+.Pp
 See
 .Cm bmap-repl-policy
 for more information about replication policies.
-.It Cm repl-add Ns : Ns Ar replrqspec fn ...
+.El
+.It Cm repl-add Ns : Ns Ar replrqspec file ...
 Enqueue data replication as specified by
 .Ar replrqspec
 to the specified files.
@@ -282,16 +328,16 @@ is done.
 See
 .Cm bmap-repl-policy
 for information on modifying the replication policy.
-.It Cm repl-remove Ns : Ns Ar replrqspec fn ...
+.It Cm repl-remove Ns : Ns Ar replrqspec file ...
 Cancel ongoing file replication requests as specified by
 .Ar replrqspec .
 See
 .Cm repl-add
 for details on the format of
 .Ar replrqspec .
-.It Cm repl-status Op Ar fn ...
-List the status of all replicas of the specified file
-.Ar fn .
+.It Cm repl-status Op Ar
+List the status of all replicas of the specified
+.Ar file .
 Information about every bmap
 .Po Dq block map ,
 or file data chunks
@@ -302,7 +348,7 @@ systems where they have been registered for replication and their status
 is displayed.
 .Pp
 If no
-.Ar fn
+.Ar file
 arguments are specified all pending replications will be queried.
 Note that file names are unavailable in this mode.
 .Pp
