@@ -79,14 +79,14 @@ struct slm_ino_od {
 	uint16_t		 ino_flags;			/* immutable, etc. */
 	uint32_t		 ino_bsz;			/* bmap size */
 	uint32_t		 ino_nrepls;			/* number of replicas */
-	uint32_t		 ino_replpol;			/* BRPOL_* policies */
+	uint32_t		 ino_replpol;			/* new bmap BRPOL_* policy */
 	sl_replica_t		 ino_repls[SL_DEF_REPLICAS];	/* embed a few replicas	*/
 	uint64_t		 ino_repl_nblks[SL_DEF_REPLICAS];/* st_blocks constituents */
 };
 
 #define slash_inode_od slm_ino_od
 
-#define INO_BMAP_AFFINITY	(1 << 0)			/* Prefer existing IOS for new bmaps */
+#define INOF_IOS_AFFINITY	(1 << 0)			/* Prefer existing IOS for new bmaps */
 
 /*
  * A 64-bit checksum follows this structure on disk.

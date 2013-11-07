@@ -342,7 +342,7 @@ slm_get_ioslist(struct fidc_membh *f, sl_ios_id_t piosid,
 		return (0);
 
 	/* If affinity, prefer the first resm from the reptbl. */
-	if (fcmh_2_inoh(f)->inoh_flags & INO_BMAP_AFFINITY) {
+	if (fcmh_2_inoh(f)->inoh_flags & INOF_IOS_AFFINITY) {
 		r = libsl_id2res(fcmh_getrepl(f, 0).bs_id);
 		if (r)
 			slm_resm_roundrobin(r, a);
