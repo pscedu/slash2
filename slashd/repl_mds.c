@@ -109,20 +109,24 @@ _slm_repl_bmap_rel_type(struct bmapc_memb *b, int type)
 
 int
 _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
-    sl_ios_id_t ios, int add)
+    sl_ios_id_t ios, int flags)
 {
 	int locked, rc = -SLERR_REPL_NOT_ACT, inox_rc = 0;
 	struct sl_resource *res;
+	struct slm_inox_od *ix;
+	struct fidc_membh *f;
 	sl_replica_t *repl;
-	uint32_t j, k;
+	uint32_t j, k, *nr;
 
+	f = inoh_2_fcmh(ih);
+	nr = &ih->inoh_ino.ino_nrepls;
 	locked = INOH_RLOCK(ih);
 	/*
 	 * Search the existing replicas to see if the given IOS is
 	 * already there.
 	 */
 	for (j = 0, k = 0, repl = ih->inoh_ino.ino_repls;
-	    j < ih->inoh_ino.ino_nrepls; j++, k++) {
+	    j < *nr; j++, k++) {
 		if (j == SL_DEF_REPLICAS) {
 			/*
 			 * The first few replicas are in the inode
@@ -131,8 +135,8 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 			inox_rc = mds_inox_ensure_loaded(ih);
 			if (inox_rc)
 				goto out;
-
-			repl = ih->inoh_extras->inox_repls;
+			ix = ih->inoh_extras;
+			repl = ix->inox_repls;
 			k = 0;
 		}
 
@@ -140,6 +144,32 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 		    k, repl[k].bs_id, ios);
 
 		if (repl[k].bs_id == ios) {
+			if (flags == IOSV_LOOKUPF_DEL) {
+				if (*nr > SL_DEF_REPLICAS) {
+					mds_inox_ensure_loaded(ih);
+					ix = ih->inoh_extras;
+				}
+				if (j < SL_DEF_REPLICAS - 1) {
+					memmove(&repl[k], &repl[k + 1],
+					    (SL_DEF_REPLICAS - k - 1) *
+					    sizeof(*repl));
+					if (*nr > SL_DEF_REPLICAS)
+						repl[SL_DEF_REPLICAS - 1].bs_id =
+						    ix->inox_repls[0].bs_id;
+				}
+				if (j < SL_DEF_REPLICAS)
+					k = 0;
+				if (*nr > SL_DEF_REPLICAS &&
+				    j < SL_MAX_REPLICAS - 1) {
+					repl = ix->inox_repls;
+					memmove(&repl[k], &repl[k + 1],
+					    (SL_INOX_NREPLICAS - k - 1) *
+					    sizeof(*repl));
+				}
+				--*nr;
+				mds_inodes_odsync(vfsid, f,
+				    mdslog_ino_repls);
+			}
 			rc = j;
 			goto out;
 		}
@@ -149,19 +179,16 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 	if (res == NULL || !RES_ISFS(res))
 		PFL_GOTOERR(out, rc = -SLERR_RES_BADTYPE);
 
-	/*
-	 * It does not exist; add the replica to the inode if 'add' was
-	 *   specified, else return.
-	 */
-	if (add) {
+	/* It doesn't exist; add to inode replica table if requested. */
+	if (flags == IOSV_LOOKUPF_ADD) {
 		int waslk, wasbusy;
 
-		psc_assert(ih->inoh_ino.ino_nrepls <= SL_MAX_REPLICAS);
-		if (ih->inoh_ino.ino_nrepls == SL_MAX_REPLICAS) {
+		psc_assert(*nr <= SL_MAX_REPLICAS);
+		if (*nr == SL_MAX_REPLICAS) {
 			DEBUG_INOH(PLL_WARN, ih, "too many replicas");
 			PFL_GOTOERR(out, rc = -ENOSPC);
 
-		} else if (ih->inoh_ino.ino_nrepls >= SL_DEF_REPLICAS) {
+		} else if (*nr >= SL_DEF_REPLICAS) {
 			inox_rc = mds_inox_ensure_loaded(ih);
 			if (inox_rc)
 				goto out;
@@ -174,18 +201,17 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 			k = j;
 		}
 
-		wasbusy = FCMH_REQ_BUSY(inoh_2_fcmh(ih), &waslk);
+		wasbusy = FCMH_REQ_BUSY(f, &waslk);
 
 		repl[k].bs_id = ios;
-		ih->inoh_ino.ino_nrepls++;
+		++*nr;
 
 		DEBUG_INOH(PLL_INFO, ih, "add IOS(%u) to repls, index %d",
 		    ios, j);
 
-		mds_inodes_odsync(vfsid, inoh_2_fcmh(ih),
-		    mdslog_ino_repls);
+		mds_inodes_odsync(vfsid, f, mdslog_ino_repls);
 
-		FCMH_UREQ_BUSY(inoh_2_fcmh(ih), wasbusy, waslk);
+		FCMH_UREQ_BUSY(f, wasbusy, waslk);
 
 		rc = j;
 	}
@@ -196,13 +222,13 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 
 int
 _mds_repl_iosv_lookup(int vfsid, struct slash_inode_handle *ih,
-    const sl_replica_t iosv[], int iosidx[], int nios, int add)
+    const sl_replica_t iosv[], int iosidx[], int nios, int flags)
 {
 	int k, last;
 
 	for (k = 0; k < nios; k++)
 		if ((iosidx[k] = _mds_repl_ios_lookup(vfsid, ih,
-		    iosv[k].bs_id, add)) < 0)
+		    iosv[k].bs_id, flags)) < 0)
 			return (-iosidx[k]);
 
 	qsort(iosidx, nios, sizeof(iosidx[0]), iosidx_cmp);
@@ -369,7 +395,7 @@ _mds_repl_bmap_walk(struct bmapc_memb *b, const int *tract,
 	int scircuit, nr, off, k, rc, trc;
 
 	scircuit = rc = 0;
-	nr = fcmh_2_inoh(b->bcm_fcmh)->inoh_ino.ino_nrepls;
+	nr = fcmh_2_nrepls(b->bcm_fcmh);
 
 	if (nios == 0)
 		/* no one specified; apply to all */
@@ -711,7 +737,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	if (fcmh_isdir(f)) 
+	if (fcmh_isdir(f))
 		PFL_GOTOERR(out, 0);
 
 	/*
@@ -884,7 +910,7 @@ int
 mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
     sl_replica_t *iosv, int nios)
 {
-	int rc, empty_tract[NBREPLST], tract[NBREPLST],
+	int rc, flags, empty_tract[NBREPLST], tract[NBREPLST],
 	    retifset[NBREPLST], iosidx[SL_MAX_REPLICAS];
 	struct slm_repl_valid replv;
 	struct fidc_membh *f = NULL;
@@ -899,11 +925,18 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 
 	slm_iosv_setbusy(iosv, nios);
 
+	flags = 0;
+	if (fcmh_isdir(f))
+		flags = IOSV_LOOKUPF_DEL;
+
 	/* Find replica IOS indexes */
-	rc = -mds_repl_iosv_lookup(current_vfsid, fcmh_2_inoh(f), iosv,
-	    iosidx, nios);
+	rc = -_mds_repl_iosv_lookup(current_vfsid, fcmh_2_inoh(f), iosv,
+	    iosidx, nios, flags);
 	if (rc)
 		PFL_GOTOERR(out, rc);
+
+	if (fcmh_isdir(f))
+		PFL_GOTOERR(out, 0);
 
 	replv.nios = nios;
 	replv.idx = iosidx;

@@ -123,10 +123,14 @@ void	 mds_brepls_check(uint8_t *, int);
 
 #define mds_repl_nodes_clearbusy(a, b)			mds_repl_nodes_adjbusy((a), (b), INT64_MIN)
 
-#define mds_repl_ios_lookup_add(vfsid, ih, iosid)		_mds_repl_ios_lookup((vfsid), (ih), (iosid), 1)
+#define IOSV_LOOKUPF_ADD	1
+#define IOSV_LOOKUPF_DEL	2
+
+#define mds_repl_ios_lookup_add(vfsid, ih, iosid)		_mds_repl_ios_lookup((vfsid), (ih), (iosid), IOSV_LOOKUPF_ADD)
 #define mds_repl_ios_lookup(vfsid, ih, iosid)			_mds_repl_ios_lookup((vfsid), (ih), (iosid), 0)
 #define mds_repl_iosv_lookup(vfsid, ih, ios, idx, nios)		_mds_repl_iosv_lookup((vfsid), (ih), (ios), (idx), (nios), 0)
-#define mds_repl_iosv_lookup_add(vfsid, ih, ios, idx, nios)	_mds_repl_iosv_lookup((vfsid), (ih), (ios), (idx), (nios), 1)
+#define mds_repl_iosv_lookup_add(vfsid, ih, ios, idx, nios)	_mds_repl_iosv_lookup((vfsid), (ih), (ios), (idx), (nios), IOSV_LOOKUPF_ADD)
+#define mds_repl_iosv_remove(vfsid, ih, ios, idx, nios)		_mds_repl_iosv_lookup((vfsid), (ih), (ios), (idx), (nios), IOSV_LOOKUPF_DEL)
 
 extern struct psc_listcache	 slm_replst_workq;
 
