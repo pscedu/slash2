@@ -248,9 +248,6 @@ void			 slcfg_init_res(struct sl_resource *);
 void			 slcfg_init_resm(struct sl_resm *);
 void			 slcfg_init_site(struct sl_site *);
 
-int			 slcfg_get_ioslist(sl_ios_id_t,
-				   struct psc_dynarray *, int);
-
 int			 slcfg_res_cmp(const void *, const void *);
 int			 slcfg_site_cmp(const void *, const void *);
 
