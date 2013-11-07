@@ -1017,17 +1017,15 @@ PFL_GOTOERR(out, mp->rc = -PFLERR_NOTSUP);
 }
 
 int
-slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
+slm_rmc_handle_set_fattr(struct pscrpc_request *rq)
 {
-	struct srm_set_newreplpol_req *mq;
-	struct srm_set_newreplpol_rep *mp;
+	struct srm_set_fattr_req *mq;
+	struct srm_set_fattr_rep *mp;
 	struct fidc_membh *f = NULL;
 	int vfsid;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	if (mq->pol < 0 || mq->pol >= NBRPOL)
-		PFL_GOTOERR(out, mp->rc = -EINVAL);
 	mp->rc = slfid_to_vfsid(mq->fg.fg_fid, &vfsid);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
@@ -1039,9 +1037,26 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, mp->rc);
 
 	FCMH_LOCK(f);
-	fcmh_2_replpol(f) = mq->pol;
-	mp->rc = mds_inode_write(vfsid, fcmh_2_inoh(f),
-	    mdslog_ino_repls, f);
+	switch (mq->attrid) {
+	case SL_FATTR_IOS_AFFINITY:
+		if (mq->val)
+			fcmh_2_ino(f)->ino_flags |= INOF_IOS_AFFINITY;
+		else
+			fcmh_2_ino(f)->ino_flags &= ~INOF_IOS_AFFINITY;
+		break;
+	case SL_FATTR_REPLPOL:
+		if (mq->val < 0 || mq->val >= NBRPOL)
+			mp->rc = -EINVAL;
+		else
+			fcmh_2_replpol(f) = mq->val;
+		break;
+	default:
+		mp->rc = -EINVAL;
+		break;
+	}
+	if (mp->rc == 0)
+		mp->rc = mds_inode_write(vfsid, fcmh_2_inoh(f),
+		    mdslog_ino_repls, f);
 
  out:
 	if (f)
@@ -1526,8 +1541,8 @@ slm_rmc_handler(struct pscrpc_request *rq)
 		break;
 
 	/* replication messages */
-	case SRMT_SET_NEWREPLPOL:
-		rc = slm_rmc_handle_set_newreplpol(rq);
+	case SRMT_SET_FATTR:
+		rc = slm_rmc_handle_set_fattr(rq);
 		break;
 	case SRMT_SET_BMAPREPLPOL:
 		rc = slm_rmc_handle_set_bmapreplpol(rq);
