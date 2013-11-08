@@ -467,6 +467,7 @@ reimport
 - are these messages from successful replication?
 [1376505142:641367 slmrmithr17:10079:rpc slm_rmi_handle_bmap_crcwrt rmi.c 186] mds_bmap_crc_write() failed: fid=0x0000000011dfd0ba, rc=-22
 - survey all threads and to ensure clean shutdown
+- add interface for changing user/sys replication priority
 
 - pahole(1)
 - port slash2 openstack
