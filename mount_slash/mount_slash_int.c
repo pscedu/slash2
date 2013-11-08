@@ -36,20 +36,20 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/ctlsvr.h"
+#include "pfl/dynarray.h"
+#include "pfl/fault.h"
 #include "pfl/fs.h"
 #include "pfl/fsmod.h"
-#include "pfl/pfl.h"
-#include "pfl/dynarray.h"
+#include "pfl/iostats.h"
 #include "pfl/listcache.h"
-#include "pfl/treeutil.h"
+#include "pfl/log.h"
+#include "pfl/pfl.h"
+#include "pfl/random.h"
 #include "pfl/rpc.h"
 #include "pfl/rpclog.h"
 #include "pfl/rsx.h"
-#include "pfl/ctlsvr.h"
-#include "pfl/fault.h"
-#include "pfl/iostats.h"
-#include "pfl/log.h"
-#include "pfl/random.h"
+#include "pfl/treeutil.h"
 
 #include "bmap.h"
 #include "bmap_cli.h"
@@ -69,9 +69,9 @@ struct psc_waitq	msl_fhent_flush_waitq = PSC_WAITQ_INIT;
 struct timespec		msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
 struct timespec		msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
 
-__static size_t msl_pages_copyin(struct bmpc_ioreq *);
-__static int msl_biorq_complete_fsrq(struct bmpc_ioreq *);
-__static void msl_pages_schedflush(struct bmpc_ioreq *r);
+__static size_t	msl_pages_copyin(struct bmpc_ioreq *);
+__static int	msl_biorq_complete_fsrq(struct bmpc_ioreq *);
+__static void	msl_pages_schedflush(struct bmpc_ioreq *);
 void mfsrq_seterr(struct msl_fsrqinfo *, int);
 
 struct pscrpc_nbreqset *pndgReadaReqs; /* non-blocking set for RA's */
@@ -254,9 +254,9 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 		BMPCE_LOCK(e);
 
 		psclog_info("biorq = %p, bmpce = %p, i = %d, npages = %d, "
-		    "raoff = %"PRIx64", bmpce_foff = %"PRIx64, 
+		    "raoff = %"PRIx64", bmpce_foff = %"PRIx64,
 		    r, e, i, npages,
-		    mfh->mfh_ra.mra_raoff, 
+		    mfh->mfh_ra.mra_raoff,
 		    (off_t)(bmpce_off + bmap_foff(b)));
 
 		if (i < npages) {
@@ -604,7 +604,7 @@ _msl_fsrq_aiowait_tryadd_locked(const struct pfl_callerinfo *pci,
 	if (!(r->biorq_flags & BIORQ_WAIT)) {
 		r->biorq_ref++;
 		r->biorq_flags |= BIORQ_WAIT;
-		DEBUG_BIORQ(PLL_INFO, r, "blocked by %p (ref=%d)", 
+		DEBUG_BIORQ(PLL_INFO, r, "blocked by %p (ref=%d)",
 		    e, r->biorq_ref);
 		pll_add(&e->bmpce_pndgaios, r);
 	}
@@ -1145,8 +1145,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		r->biorq_rqset = pscrpc_prep_set();
 
 	/*
-	 * This buffer hasn't been segmented into LNET MTU sized
-	 *  chunks.  Set up buffers into 1MB chunks or smaller.
+	 * This buffer hasn't been segmented into LNET_MTU sized chunks.
+	 * Set up buffers into LNET_MTU chunks or smaller.
 	 */
 	for (i = 0, nbytes = 0; i < n; i++, nbytes += len) {
 		len = MIN(LNET_MTU, size - nbytes);
