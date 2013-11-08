@@ -1648,7 +1648,8 @@ mdslogfill_ino_repls(struct fidc_membh *f,
 	locked = FCMH_RLOCK(f);
 	ih = fcmh_2_inoh(f);
 
-	psc_assert(fcmh_2_nrepls(f));
+	if (!fcmh_isdir(f))
+		psc_assert(fcmh_2_nrepls(f));
 
 	sjir->sjir_fid = fcmh_2_fid(f);
 	sjir->sjir_nrepls = fcmh_2_nrepls(f);
