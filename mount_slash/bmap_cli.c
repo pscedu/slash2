@@ -549,12 +549,12 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw,
 
 	msl_bmap_reap_init(bmap, &mp->sbd);
 
+	fci->fci_ino_flags = mp->ino_flags;
 	fci->fci_nrepls = mp->nrepls;
-	memcpy(&fci->fci_reptbl, &mp->reptbl,
-	    sizeof(sl_replica_t) * SL_MAX_REPLICAS);
+	memcpy(&fci->fci_reptbl, &mp->reptbl, sizeof(fci->fci_reptbl));
 	f->fcmh_flags |= FCMH_CLI_HAVEREPLTBL;
 
-	DEBUG_BMAP(PLL_INFO, bmap, "rw=%d, repls=%d, ios=%#x, seq=%"PRId64,
+	DEBUG_BMAP(PLL_DIAG, bmap, "rw=%d repls=%d ios=%#x seq=%"PRId64,
 	    rw, mp->nrepls, mp->sbd.sbd_ios, mp->sbd.sbd_seq);
 
 	/*
@@ -563,6 +563,7 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw,
 	 */
 	psc_waitq_wakeall(&f->fcmh_waitq);
 	FCMH_ULOCK(f);
+
  out:
 	if (rq) {
 		pscrpc_req_finished(rq);

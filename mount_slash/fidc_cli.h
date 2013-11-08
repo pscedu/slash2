@@ -37,7 +37,8 @@ struct pscfs_clientctx;
 struct fidc_membh;
 
 struct fci_finfo {
-	int			 nrepls;
+	int			 nrepls:16;
+	int			 newreplpol:16;
 	int			 ino_flags;
 	sl_replica_t		 reptbl[SL_MAX_REPLICAS];
 	uint64_t		 xattrsize;
@@ -59,6 +60,7 @@ struct fcmh_cli_info {
 #define fci_reptbl	u.f.reptbl
 #define fci_xattrsize	u.f.xattrsize
 #define fci_ino_flags	u.f.ino_flags
+#define fci_newreplpol	u.f.newreplpol
 
 #define fci_dc_pages	u.d.dc_pages
 #define fci_dc_nents	u.d.dc_nents

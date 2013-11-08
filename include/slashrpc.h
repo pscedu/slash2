@@ -444,7 +444,7 @@ struct srm_leasebmap_rep {
 	struct srt_bmapdesc	sbd;		/* descriptor for bmap */
 	struct bmap_core_state	bcs;
 	 int32_t		rc;		/* 0 for success or slerrno */
-	 int32_t		_pad;
+	 int32_t		ino_flags;
 	uint32_t		flags;		/* return SRM_LEASEBMAPF_* success */
 
 	/* fetch fcmh repl table if SRM_LEASEBMAPF_GETREPLTBL */
@@ -677,12 +677,14 @@ struct srm_replst_slave_req {
 	sl_bmapno_t		boff;		/* offset into inode of first bmap in bulk */
 	 int32_t		_pad;
 	char			buf[296];
-/* bulk data is sections of bcs_repls data */
+/* bulk data is sections of (srt_replst_bhdr,bcs_repls) data */
 } __packed;
 
-/* per-bmap header submessage, prepended before each bcs_repls content */
-struct srsm_replst_bhdr {
-	uint8_t			srsb_replpol;
+/* per-bmap header, prepended before each bcs_repls content */
+struct srt_replst_bhdr {
+	uint32_t		srsb_replpol:1;
+	uint32_t		srsb_usr_pri:31;
+	uint32_t		srsb_sys_pri;
 } __packed;
 
 #define SL_NBITS_REPLST_BHDR	8
@@ -914,6 +916,8 @@ struct srm_replrq_req {
 	struct slash_fidgen	fg;
 	sl_replica_t		repls[SL_MAX_REPLICAS];
 	uint32_t		nrepls;
+	uint32_t		usr_pri;
+	uint32_t		sys_pri;
 	sl_bmapno_t		bmapno;		/* bmap to access or -1 for all */
 } __packed;
 

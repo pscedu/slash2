@@ -554,7 +554,7 @@ int
 replst_slave_check(struct psc_ctlmsghdr *mh, const void *m)
 {
 	const struct msctlmsg_replst_slave *mrsl = m;
-	__unusedx struct srsm_replst_bhdr *srsb;
+	__unusedx struct srt_replst_bhdr *srsb;
 	struct replst_slave_bdata *rsb;
 	uint32_t nbytes, len;
 
@@ -587,6 +587,36 @@ replst_slave_check(struct psc_ctlmsghdr *mh, const void *m)
 	if (!current_mrs_eof || !rsb_isfull())
 		return (-1);
 	return (0);
+}
+
+void
+fattr_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
+{
+	printf("%-59s %9s %6s\n",
+	    "file", "attribute", "value");
+}
+
+void
+fattr_prdat(__unusedx const struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
+{
+	const struct msctlmsg_fattr *mfa = m;
+	const char *attrname = "?", *val;
+
+	if (mfa->mfa_attrid >= 0 && mfa->mfa_attrid < nitems(fattr_tab))
+		attrname = fattr_tab[mfa->mfa_attrid];
+	switch (mfa->mfa_attrid) {
+	case SL_FATTR_IOS_AFFINITY:
+		val = mfa->mfa_val ? "on" : "off";
+		break;
+	case SL_FATTR_REPLPOL:
+		val = mfa->mfa_val >= 0 && mfa->mfa_val <
+		    nitems(replpol_tab) ? replpol_tab[mfa->mfa_val] :
+		    "?";
+		break;
+	}
+	printf("%-59s %9s %6s\n", fid2fn(mfa->mfa_fid, NULL), attrname,
+	    val);
 }
 
 void
@@ -623,7 +653,7 @@ fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	int val, n, nbw, off, dlen, cmap[NBREPLST], maxwidth;
 	char *label, map[NBREPLST], pmap[NBREPLST], rbuf[PSCFMT_RATIO_BUFSIZ];
 	struct replst_slave_bdata *rsb, *nrsb;
-	struct srsm_replst_bhdr bhdr;
+	struct srt_replst_bhdr bhdr;
 	struct stat stb;
 	uint32_t iosidx;
 
@@ -844,9 +874,9 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 /* GETREPLST		*/ , { NULL,		NULL,		0,				replst_savdat }
 /* GETREPLST_SLAVE	*/ , { fnstat_prhdr,	fnstat_prdat,	0,				replst_slave_check }
 /* GET_BMAPREPLPOL	*/ , { fnstat_prhdr,	fnstat_prdat,	0,				NULL }
-/* GET_NEWREPLPOL	*/ , { fnstat_prhdr,	fnstat_prdat,	0,				NULL }
+/* GET_FATTR		*/ , { fattr_prhdr,	fattr_prdat,	sizeof(struct msctlmsg_fattr),	NULL }
 /* SET_BMAPREPLPOL	*/ , { NULL,		NULL,		0,				NULL }
-/* SET_NEWREPLPOL	*/ , { NULL,		NULL,		0,				NULL }
+/* SET_FATTR		*/ , { NULL,		NULL,		0,				NULL }
 /* GETBMAP		*/ , { sl_bmap_prhdr,	sl_bmap_prdat,	sizeof(struct slctlmsg_bmap),	NULL }
 /* GETBIORQ		*/ , { ms_biorq_prhdr,	ms_biorq_prdat,	sizeof(struct msctlmsg_biorq),	NULL }
 };

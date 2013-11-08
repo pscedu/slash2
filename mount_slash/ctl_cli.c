@@ -50,6 +50,8 @@
 #include "slashrpc.h"
 #include "slerr.h"
 
+#include "slashd/inode.h"
+
 struct psc_lockedlist	 psc_odtables;
 
 psc_atomic32_t		 msctl_id = PSC_ATOMIC32_INIT(0);
@@ -116,15 +118,13 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    mrq->mrq_fid, slstrerror(rc)));
 
 	FCMH_LOCK(f);
-	if (!S_ISREG(f->fcmh_sstb.sst_mode) &&
-	    !S_ISDIR(f->fcmh_sstb.sst_mode))
-		rc = ENOTSUP;
-	else {
+	if (fcmh_isreg(f) || fcmh_isdir(f)) {
 		rc = fcmh_checkcreds(f, &pcr, W_OK);
 		if (rc == EACCES &&
 		    f->fcmh_sstb.sst_uid == pcr.pcr_uid)
 			rc = 0;
-	}
+	} else
+		rc = ENOTSUP;
 	fg = f->fcmh_fg;
 	fcmh_op_done(f);
 
@@ -207,11 +207,10 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    mrq->mrq_fid, slstrerror(rc)));
 
 	FCMH_LOCK(f);
-	if (!S_ISREG(f->fcmh_sstb.sst_mode) &&
-	    !S_ISDIR(f->fcmh_sstb.sst_mode))
-		rc = ENOTSUP;
-	else
+	if (fcmh_isreg(f) || fcmh_isdir(f))
 		rc = fcmh_checkcreds(f, &pcr, R_OK);
+	else
+		rc = ENOTSUP;
 	fg = f->fcmh_fg;
 	fcmh_op_done(f);
 
@@ -289,6 +288,67 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 }
 
 int
+msctlhnd_get_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
+{
+	struct msctlmsg_fattr *mfa = m;
+	struct pscfs_clientctx pfcc;
+	struct slash_fidgen fg;
+	struct pscfs_creds pcr;
+	struct fidc_membh *f = NULL;
+	int rc;
+
+	rc = msctl_getcreds(fd, &pcr);
+	if (rc)
+		return (psc_ctlsenderr(fd, mh,
+		    SLPRI_FID": unable to obtain credentials: %s",
+		    mfa->mfa_fid, slstrerror(rc)));
+	rc = msctl_getclientctx(fd, &pfcc);
+	if (rc)
+		return (psc_ctlsenderr(fd, mh,
+		    SLPRI_FID": unable to obtain client context: %s",
+		    mfa->mfa_fid, slstrerror(rc)));
+
+	rc = fidc_lookup_load_inode(mfa->mfa_fid, &f, &pfcc);
+	if (rc)
+		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
+		    mfa->mfa_fid, slstrerror(rc)));
+
+	FCMH_LOCK(f);
+	if (fcmh_isreg(f) || fcmh_isdir(f))
+		rc = fcmh_checkcreds(f, &pcr, R_OK);
+	else
+		rc = ENOTSUP;
+	fg = f->fcmh_fg;
+
+	if (rc) {
+		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
+		    mfa->mfa_fid, slstrerror(rc));
+		goto out;
+	}
+
+	switch (mfa->mfa_attrid) {
+	case SL_FATTR_IOS_AFFINITY:
+		mfa->mfa_val = !!(fcmh_2_fci(f)->fci_ino_flags &
+		    INOF_IOS_AFFINITY);
+		break;
+	case SL_FATTR_REPLPOL:
+		mfa->mfa_val = fcmh_2_fci(f)->fci_newreplpol;
+		break;
+	default:
+		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
+		    mfa->mfa_fid, slstrerror(rc));
+		goto out;
+	}
+
+	rc = psc_ctlmsg_sendv(fd, mh, mfa);
+
+ out:
+	if (f)
+		fcmh_op_done(f);
+	return (rc);
+}
+
+int
 msctlhnd_set_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct slashrpc_cservice *csvc = NULL;
@@ -319,11 +379,10 @@ msctlhnd_set_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    mfa->mfa_fid, slstrerror(rc)));
 
 	FCMH_LOCK(f);
-	if (!S_ISREG(f->fcmh_sstb.sst_mode) &&
-	    !S_ISDIR(f->fcmh_sstb.sst_mode))
-		rc = ENOTSUP;
-	else
+	if (fcmh_isreg(f) || fcmh_isdir(f))
 		rc = fcmh_checkcreds(f, &pcr, W_OK);
+	else
+		rc = ENOTSUP;
 	fg = f->fcmh_fg;
 	fcmh_op_done(f);
 
@@ -387,10 +446,10 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    mfbrp->mfbrp_fid, slstrerror(rc)));
 
 	FCMH_LOCK(f);
-	if (!S_ISREG(f->fcmh_sstb.sst_mode))
-		rc = ENOTSUP;
-	else
+	if (fcmh_isreg(f))
 		rc = fcmh_checkcreds(f, &pcr, W_OK);
+	else
+		rc = ENOTSUP;
 	fg = f->fcmh_fg;
 	fcmh_op_done(f);
 
@@ -584,7 +643,7 @@ struct psc_ctlop msctlops[] = {
 /* GETREPLST		*/ , { msctlrep_getreplst,	sizeof(struct msctlmsg_replst) }
 /* GETREPLST_SLAVE	*/ , { NULL,			0 }
 /* GET_BMAPREPLPOL	*/ , { NULL,			0 }
-/* GET_FATTR		*/ , { NULL,			0 }
+/* GET_FATTR		*/ , { msctlhnd_get_fattr,	sizeof(struct msctlmsg_fattr) }
 /* SET_BMAPREPLPOL	*/ , { msctlhnd_set_bmapreplpol,sizeof(struct msctlmsg_bmapreplpol) }
 /* SET_FATTR		*/ , { msctlhnd_set_fattr,	sizeof(struct msctlmsg_fattr) }
 /* GETBMAP		*/ , { slctlrep_getbmap,	sizeof(struct slctlmsg_bmap) }
