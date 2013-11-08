@@ -114,20 +114,17 @@ struct fnfidpair {
 /* keep in sync with BRPOL_* constants */
 const char *replpol_tab[] = {
 	"one-time",
-	"persist",
-	NULL
+	"persist"
 };
 
 const char *fattr_tab[] = {
 	"ios-aff",
-	"repl-pol",
-	NULL
+	"repl-pol"
 };
 
 const char *bool_tab[] = {
 	"off",
-	"on",
-	NULL
+	"on"
 };
 
 struct psc_hashtbl fnfidpairs;
@@ -364,31 +361,37 @@ void
 cmd_fattr(int ac, char **av)
 {
 	struct fattr_arg arg;
-	const char *s;
+	char *nam, *val;
 	int i;
 
-	s = strchr(av[0], ':');
-	psc_assert(s);
-	s++;
-	arg.attrid = lookup(fattr_tab, nitems(fattr_tab), s);
-	if (arg.attrid == -1)
-		errx(1, "fattr: unknown attribute %s", s);
+	nam = strchr(av[0], ':');
+	if (nam == NULL)
+		errx(1, "fattr: no attribute specified");
+	nam++;
 
-	s = strchr(s, '=');
-	if (s) {
-		s++;
+	val = strchr(nam, '=');
+	if (val)
+		*val++ = '\0';
+
+	arg.attrid = lookup(fattr_tab, nitems(fattr_tab), nam);
+	if (arg.attrid == -1)
+		errx(1, "fattr: unknown attribute %s", nam);
+
+	if (val) {
 		arg.opcode = MSCMT_SET_FATTR;
 		switch (arg.attrid) {
 		case SL_FATTR_IOS_AFFINITY:
-			arg.val = lookup(bool_tab, nitems(bool_tab), s);
+			arg.val = lookup(bool_tab, nitems(bool_tab),
+			    val);
 			if (arg.val == -1)
-				errx(1, "fattr: %s: invalid value", s);
+				errx(1, "fattr: %s: invalid value",
+				    val);
 			break;
 		case SL_FATTR_REPLPOL:
 			arg.val = lookup(replpol_tab,
-			    nitems(replpol_tab), s);
+			    nitems(replpol_tab), val);
 			if (arg.val == -1)
-				errx(1, "fattr: %s: invalid value", s);
+				errx(1, "fattr: %s: invalid value", val);
 			break;
 		}
 	} else
