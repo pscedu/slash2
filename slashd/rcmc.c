@@ -121,7 +121,7 @@ slmrcmthr_walk_brepls(struct slm_replst_workreq *rsw,
 {
 	struct srm_replst_slave_req *mq;
 	struct srm_replst_slave_rep *mp;
-	struct srsm_replst_bhdr bhdr;
+	struct srt_replst_bhdr bhdr;
 	struct slmrcm_thread *srcm;
 	struct psc_thread *thr;
 	int nbits, rc;
