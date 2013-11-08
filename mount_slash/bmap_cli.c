@@ -193,7 +193,7 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b,
 	    "lease reassign: rc=%d, nseq=%"PRId64", "
-	    "xtime="PSCPRI_TIMESPEC"", rc, bci->bci_sbd.sbd_seq, 
+	    "xtime="PSCPRI_TIMESPEC"", rc, bci->bci_sbd.sbd_seq,
 	    PFLPRI_PTIMESPEC_ARGS(&bci->bci_xtime));
 
 	bmap_op_done_type(b, BMAP_OPCNT_REASSIGN);
@@ -247,7 +247,7 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b,
 	    "lease extension: rc=%d, nseq=%"PRId64", "
-	    "xtime="PSCPRI_TIMESPEC"", rc, bci->bci_sbd.sbd_seq, 
+	    "xtime="PSCPRI_TIMESPEC"", rc, bci->bci_sbd.sbd_seq,
 	    PFLPRI_PTIMESPEC_ARGS(&bci->bci_xtime));
 
 	bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
@@ -554,9 +554,8 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw,
 	    sizeof(sl_replica_t) * SL_MAX_REPLICAS);
 	f->fcmh_flags |= FCMH_CLI_HAVEREPLTBL;
 
-	DEBUG_BMAP(PLL_INFO, bmap, "rw=%d, repls=%d, ios=%#x, seq=%"PRId64, 
+	DEBUG_BMAP(PLL_INFO, bmap, "rw=%d, repls=%d, ios=%#x, seq=%"PRId64,
 	    rw, mp->nrepls, mp->sbd.sbd_ios, mp->sbd.sbd_seq);
-
 
 	/*
 	 * XXX not sure if this is really needed since nothing blocks on
@@ -658,7 +657,7 @@ msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd)
 
 	DEBUG_BMAP(PLL_INFO, b,
 	    "reap init: nseq=%"PRId64", "
-	    "xtime="PSCPRI_TIMESPEC"", bci->bci_sbd.sbd_seq, 
+	    "xtime="PSCPRI_TIMESPEC"", bci->bci_sbd.sbd_seq,
 	    PFLPRI_PTIMESPEC_ARGS(&bci->bci_xtime));
 
 	/*
