@@ -349,7 +349,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_unlink_req);
 	PRTYPE(struct srm_update_rep);
 	PRTYPE(struct srm_update_req);
-	PRTYPE(struct srsm_replst_bhdr);
 	PRTYPE(struct srt_authbuf_footer);
 	PRTYPE(struct srt_authbuf_secret);
 	PRTYPE(struct srt_bmap_crcwire);
@@ -360,6 +359,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srt_preclaim_ent);
 	PRTYPE(struct srt_readdir_ent);
 	PRTYPE(struct srt_reclaim_entry);
+	PRTYPE(struct srt_replst_bhdr);
 	PRTYPE(struct srt_stat);
 	PRTYPE(struct srt_statfs);
 	PRTYPE(struct srt_update_entry);
@@ -402,6 +402,8 @@ main(int argc, char *argv[])
 	PRVAL(FID_PATH_START);
 	PRVAL(FSID_LEN);
 	PRVAL(INTRES_NAME_MAX);
+	PRVAL(IOSV_LOOKUPF_ADD);
+	PRVAL(IOSV_LOOKUPF_DEL);
 	PRVAL(LNET_NAME_MAX);
 	PRVAL(MAX_BMAPS_REQ);
 	PRVAL(MAX_BMAP_INODE_PAIRS);
