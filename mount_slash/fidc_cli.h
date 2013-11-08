@@ -38,6 +38,7 @@ struct fidc_membh;
 
 struct fci_finfo {
 	int			 nrepls;
+	int			 ino_flags;
 	sl_replica_t		 reptbl[SL_MAX_REPLICAS];
 	uint64_t		 xattrsize;
 };
@@ -53,13 +54,14 @@ struct fcmh_cli_info {
 	union {
 		struct fci_finfo	f;
 		struct fci_dinfo	d;
-	} ford;
-#define fci_nrepls	ford.f.nrepls
-#define fci_reptbl	ford.f.reptbl
-#define fci_xattrsize	ford.f.xattrsize
+	} u;
+#define fci_nrepls	u.f.nrepls
+#define fci_reptbl	u.f.reptbl
+#define fci_xattrsize	u.f.xattrsize
+#define fci_ino_flags	u.f.ino_flags
 
-#define fci_dc_pages	ford.d.dc_pages
-#define fci_dc_nents	ford.d.dc_nents
+#define fci_dc_pages	u.d.dc_pages
+#define fci_dc_nents	u.d.dc_nents
 	struct psclist_head	 fci_lentry;	/* all fcmhs with dirty attributes */
 	struct timespec		 fci_etime;	/* attr expire time */
 };
