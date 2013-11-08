@@ -153,12 +153,13 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
 					memmove(&repl[k], &repl[k + 1],
 					    (SL_DEF_REPLICAS - k - 1) *
 					    sizeof(*repl));
+				}
+				if (j < SL_DEF_REPLICAS) {
 					if (*nr > SL_DEF_REPLICAS)
 						repl[SL_DEF_REPLICAS - 1].bs_id =
 						    ix->inox_repls[0].bs_id;
-				}
-				if (j < SL_DEF_REPLICAS)
 					k = 0;
+				}
 				if (*nr > SL_DEF_REPLICAS &&
 				    j < SL_MAX_REPLICAS - 1) {
 					repl = ix->inox_repls;
