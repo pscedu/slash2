@@ -287,19 +287,23 @@ _slm_fcmh_endow(int vfsid, struct fidc_membh *p, struct fidc_membh *c,
 	nr = fcmh_2_nrepls(p);
 	memcpy(repls, fcmh_2_ino(p)->ino_repls, sizeof(repls[0]) *
 	    SL_DEF_REPLICAS);
-	if (nr > SL_DEF_REPLICAS)
+	if (nr > SL_DEF_REPLICAS) {
+		mds_inox_ensure_loaded(fcmh_2_inoh(p));
 		memcpy(&repls[SL_DEF_REPLICAS],
 		    fcmh_2_inox(p)->inox_repls, sizeof(repls[0]) *
 		    SL_INOX_NREPLICAS);
+	}
 	FCMH_ULOCK(p);
 
 	FCMH_WAIT_BUSY(c);
 	memcpy(fcmh_2_ino(c)->ino_repls, repls, sizeof(repls[0]) *
 	    SL_DEF_REPLICAS);
-	if (nr > SL_DEF_REPLICAS)
+	if (nr > SL_DEF_REPLICAS) {
+		mds_inox_ensure_loaded(fcmh_2_inoh(c));
 		memcpy(fcmh_2_inox(c)->inox_repls,
 		    &repls[SL_DEF_REPLICAS], sizeof(repls[0]) *
 		    SL_INOX_NREPLICAS);
+	}
 	if (fcmh_isdir(c)) {
 		struct srt_stat sstb;
 
@@ -308,9 +312,9 @@ _slm_fcmh_endow(int vfsid, struct fidc_membh *p, struct fidc_membh *c,
 	} else {
 		fcmh_2_replpol(c) = pol;
 		FCMH_ULOCK(c);
-		if (wr)
-			mds_inodes_odsync(vfsid, c, mdslog_ino_repls);
 	}
+	if (wr)
+		mds_inodes_odsync(vfsid, c, mdslog_ino_repls);
 	FCMH_UNBUSY(c);
 	return (rc);
 }
