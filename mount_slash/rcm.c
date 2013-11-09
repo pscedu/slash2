@@ -213,7 +213,7 @@ msrcm_handle_bmap_wake(struct pscrpc_request *rq)
 	struct fidc_membh *c = NULL;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = fidc_lookup_load_inode(mq->fg.fg_fid, &c, NULL);
+	mp->rc = fidc_lookup_load(mq->fg.fg_fid, &c, NULL);
 	if (mp->rc)
 		goto out;
 	if (c->fcmh_flags & FCMH_CLI_TRUNC) {
@@ -222,6 +222,7 @@ msrcm_handle_bmap_wake(struct pscrpc_request *rq)
 		fcmh_wake_locked(c);
 		FCMH_ULOCK(c);
 	}
+
  out:
 	if (c)
 		fcmh_op_done(c);

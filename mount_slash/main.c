@@ -89,7 +89,7 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #define MSL_FS_BLKSIZ		(256 * 1024)
 
 #define msl_load_fcmh(pfr, inum, fp)					\
-	fidc_lookup_load_inode((inum), (fp), pscfs_getclientctx(pfr))
+	fidc_lookup_load((inum), (fp), pscfs_getclientctx(pfr))
 
 #define mfh_getfid(mfh)		fcmh_2_fid((mfh)->mfh_fcmh)
 #define mfh_getfg(mfh)		(mfh)->mfh_fcmh->fcmh_fg
@@ -611,15 +611,8 @@ msl_stat(struct fidc_membh *f, void *arg)
 
 		memset(&sstb, 0, sizeof(sstb));
 		sstb.sst_fid = SLFID_NS;
-		sstb.sst_gen = 0;
 		sstb.sst_mode = S_IFDIR | 0111;
 		sstb.sst_nlink = 2;
-		sstb.sst_uid = 0;
-		sstb.sst_gid = 0;
-		sstb.sst_dev = 0;
-		sstb.sst_rdev = 0;
-		sstb.sstd_freplpol = 0;
-		sstb.sst_utimgen = 0;
 		sstb.sst_size = 2;
 		sstb.sst_blksize = MSL_FS_BLKSIZ;
 		sstb.sst_blocks = 4;

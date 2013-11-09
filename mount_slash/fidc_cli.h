@@ -87,17 +87,19 @@ fci_2_fcmh(struct fcmh_cli_info *fci)
 
 int	fcmh_checkcreds(struct fidc_membh *, const struct pscfs_creds *, int);
 
-#define fidc_lookup_load_inode(fid, fcmhp, pfcc)			\
-	_fidc_lookup_load_inode(PFL_CALLERINFOSS(SLSS_FCMH), (fid),	\
+int	slc_fcmh_load_inode(struct fidc_membh *);
+
+#define fidc_lookup_load(fid, fcmhp, pfcc)				\
+	_fidc_lookup_load(PFL_CALLERINFOSS(SLSS_FCMH), (fid),		\
 	    (fcmhp), (pfcc))
 
 /**
- * fidc_lookup_load_inode - Create the inode if it doesn't exist,
+ * fidc_lookup_load - Create the fcmh if it doesn't exist,
  *	loading its attributes from the MDS.
  */
 #define _pfl_callerinfo pci
 static __inline int
-_fidc_lookup_load_inode(const struct pfl_callerinfo *pci, slfid_t fid,
+_fidc_lookup_load(const struct pfl_callerinfo *pci, slfid_t fid,
     struct fidc_membh **fcmhp, struct pscfs_clientctx *pfcc)
 {
 	struct slash_fidgen fg = { fid, FGEN_ANY };
