@@ -298,6 +298,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_forward_rep);
 	PRTYPE(struct srm_forward_req);
 	PRTYPE(struct srm_generic_rep);
+	PRTYPE(struct srm_get_inode_rep);
+	PRTYPE(struct srm_get_inode_req);
 	PRTYPE(struct srm_getattr2_rep);
 	PRTYPE(struct srm_getattr_rep);
 	PRTYPE(struct srm_getattr_req);
@@ -356,6 +358,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srt_bmapminseq);
 	PRTYPE(struct srt_creds);
 	PRTYPE(struct srt_ctlsetopt);
+	PRTYPE(struct srt_inode);
 	PRTYPE(struct srt_preclaim_ent);
 	PRTYPE(struct srt_readdir_ent);
 	PRTYPE(struct srt_reclaim_entry);
@@ -901,6 +904,7 @@ main(int argc, char *argv[])
 	PRVAL(SRMT_GETBMAPCRCS);
 	PRVAL(SRMT_GETBMAPMINSEQ);
 	PRVAL(SRMT_GETXATTR);
+	PRVAL(SRMT_GET_INODE);
 	PRVAL(SRMT_IMPORT);
 	PRVAL(SRMT_LINK);
 	PRVAL(SRMT_LISTXATTR);
