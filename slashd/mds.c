@@ -134,7 +134,7 @@ slm_bmap_calc_repltraffic(struct bmap *b)
 
 /**
  * mds_bmap_directio_locked - Called when a new read or write lease is
- *	added to the bmap.  Maintains the DIRECTIO status of the bmap
+ *	added to the bmap.  Maintains the DIO status of the bmap
  *	based on the numbers of readers and writers present.
  * @b: the bmap
  * @rw: read / write op
@@ -497,7 +497,7 @@ mds_bmap_add_repl(struct bmap *b, struct bmap_ios_assign *bia)
 		psc_fatalx("ios_lookup_add %d: %s", bia->bia_ios,
 		    slstrerror(iosidx));
 
-	BMAP_WAIT_BUSY(b);
+//	BMAP_WAIT_BUSY(b);
 
 	rc = mds_repl_inv_except(b, iosidx);
 	if (rc) {
@@ -1192,6 +1192,9 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 			struct slm_update_data *upd;
 			int retifset[NBREPLST];
 
+			if (fcmh_2_nrepls(f) > SL_DEF_REPLICAS)
+				mds_inox_ensure_loaded(fcmh_2_inoh(f));
+
 			if (!FCMH_HAS_BUSY(f))
 				BMAP_ULOCK(b);
 			FCMH_WAIT_BUSY(f);
@@ -1204,8 +1207,6 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 
 			upd = &bmi->bmi_upd;
 			UPD_WAIT(upd);
-			if (fcmh_2_nrepls(f) > SL_DEF_REPLICAS)
-				mds_inox_ensure_loaded(fcmh_2_inoh(f));
 			if (mds_repl_bmap_walk_all(b, NULL, retifset,
 			    REPL_WALKF_SCIRCUIT))
 				upsch_enqueue(upd);
@@ -1536,8 +1537,6 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t iosid,
 		if (iosidx < 0)
 			psclog_errorx("ios not found");
 		else {
-//			BMAPOD_MODIFY_START(bmap);
-
 			brepls_init(tract, -1);
 			tract[BREPLST_TRUNCPNDG] = BREPLST_VALID;
 			tract[BREPLST_TRUNCPNDG_SCHED] = BREPLST_VALID;
@@ -1720,7 +1719,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 
 	bml = mds_bml_new(b, exp,
 	    ((rw == SL_WRITE ? BML_WRITE : BML_READ) |
-	     (flags & SRM_LEASEBMAPF_DIRECTIO ? BML_DIO : 0)),
+	     (flags & SRM_LEASEBMAPF_DIO ? BML_DIO : 0)),
 	    &exp->exp_connection->c_peer);
 
 	rc = mds_bmap_bml_add(bml, rw, prefios);
@@ -1760,10 +1759,11 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 
 	sbd->sbd_bmapno = bmapno;
 	if (b->bcm_flags & BMAP_DIO)
-		sbd->sbd_flags |= SRM_LEASEBMAPF_DIRECTIO;
+		sbd->sbd_flags |= SRM_LEASEBMAPF_DIO;
 
 	if (bcs)
 		memcpy(bcs, &b->bcm_corestate, sizeof(*bcs));
+
  out:
 	mds_bmap_bml_release(bml);
 	bmap_op_done(b);
@@ -1937,7 +1937,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 
 	BMAP_LOCK(b);
 	if (b->bcm_flags & BMAP_DIO)
-		sbd_out->sbd_flags |= SRM_LEASEBMAPF_DIRECTIO;
+		sbd_out->sbd_flags |= SRM_LEASEBMAPF_DIO;
 	BMAP_ULOCK(b);
 
 	/*
