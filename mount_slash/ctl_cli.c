@@ -112,7 +112,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    SLPRI_FID": unable to obtain client context: %s",
 		    mrq->mrq_fid, slstrerror(rc)));
 
-	rc = fidc_lookup_load_inode(mrq->mrq_fid, &f, &pfcc);
+	rc = fidc_lookup_load(mrq->mrq_fid, &f, &pfcc);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mrq->mrq_fid, slstrerror(rc)));
@@ -201,7 +201,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    SLPRI_FID": unable to obtain client context: %s",
 		    mrq->mrq_fid, slstrerror(rc)));
 
-	rc = fidc_lookup_load_inode(mrq->mrq_fid, &f, &pfcc);
+	rc = fidc_lookup_load(mrq->mrq_fid, &f, &pfcc);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mrq->mrq_fid, slstrerror(rc)));
@@ -308,7 +308,7 @@ msctlhnd_get_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    SLPRI_FID": unable to obtain client context: %s",
 		    mfa->mfa_fid, slstrerror(rc)));
 
-	rc = fidc_lookup_load_inode(mfa->mfa_fid, &f, &pfcc);
+	rc = fidc_lookup_load(mfa->mfa_fid, &f, &pfcc);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfa->mfa_fid, slstrerror(rc)));
@@ -319,6 +319,10 @@ msctlhnd_get_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
 	else
 		rc = ENOTSUP;
 	fg = f->fcmh_fg;
+	FCMH_ULOCK(f);
+
+	if (rc == 0)
+		rc = slc_fcmh_load_inode(f);
 
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
@@ -326,6 +330,7 @@ msctlhnd_get_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
 		goto out;
 	}
 
+	FCMH_LOCK(f);
 	switch (mfa->mfa_attrid) {
 	case SL_FATTR_IOS_AFFINITY:
 		mfa->mfa_val = !!(fcmh_2_fci(f)->fci_inode.flags &
@@ -339,6 +344,7 @@ msctlhnd_get_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    mfa->mfa_fid, slstrerror(rc));
 		goto out;
 	}
+	FCMH_ULOCK(f);
 
 	rc = psc_ctlmsg_sendv(fd, mh, mfa);
 
@@ -373,7 +379,7 @@ msctlhnd_set_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    SLPRI_FID": unable to obtain client context: %s",
 		    mfa->mfa_fid, slstrerror(rc)));
 
-	rc = fidc_lookup_load_inode(mfa->mfa_fid, &f, &pfcc);
+	rc = fidc_lookup_load(mfa->mfa_fid, &f, &pfcc);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfa->mfa_fid, slstrerror(rc)));
@@ -440,7 +446,7 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    SLPRI_FID": unable to obtain client context: %s",
 		    mfbrp->mfbrp_fid, slstrerror(rc)));
 
-	rc = fidc_lookup_load_inode(mfbrp->mfbrp_fid, &f, &pfcc);
+	rc = fidc_lookup_load(mfbrp->mfbrp_fid, &f, &pfcc);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
 		    mfbrp->mfbrp_fid, slstrerror(rc)));
