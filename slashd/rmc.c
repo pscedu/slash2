@@ -274,6 +274,42 @@ slm_rmc_handle_reassignbmapls(struct pscrpc_request *rq)
 	return (0);
 }
 
+void
+slm_pack_inode(struct fidc_membh *f, struct srt_inode *in)
+{
+	struct slash_inode_handle *ih;
+	int rc;
+
+	ih = fcmh_2_inoh(f);
+	in->nrepls = ih->inoh_ino.ino_nrepls;
+	memcpy(in->reptbl, &ih->inoh_ino.ino_repls,
+	    sizeof(ih->inoh_ino.ino_repls));
+
+	if (in->nrepls > SL_DEF_REPLICAS) {
+		rc = mds_inox_ensure_loaded(ih);
+		if (!rc)
+			memcpy(&in->reptbl[SL_DEF_REPLICAS],
+			    &ih->inoh_extras->inox_repls,
+			    sizeof(ih->inoh_extras->inox_repls));
+	}
+}
+
+int
+slm_rmc_handle_getinode(struct pscrpc_request *rq)
+{
+	const struct srm_get_inode_req *mq;
+	struct srm_get_inode_rep *mp;
+	struct fidc_membh *f;
+
+	SL_RSX_ALLOCREP(rq, mq, mp);
+	mp->rc = -slm_fcmh_get(&mq->fg, &f);
+	if (mp->rc)
+		return (0);
+	slm_pack_inode(f, &mp->ino);
+	fcmh_op_done(f);
+	return (0);
+}
+
 int
 slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 {
@@ -303,22 +339,8 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	if (mp->flags & SRM_LEASEBMAPF_GETINODE) {
-		struct slash_inode_handle *ih;
-
-		ih = fcmh_2_inoh(f);
-		mp->ino.nrepls = ih->inoh_ino.ino_nrepls;
-		memcpy(&mp->ino.reptbl[0], &ih->inoh_ino.ino_repls,
-		    sizeof(ih->inoh_ino.ino_repls));
-
-		if (mp->ino.nrepls > SL_DEF_REPLICAS) {
-			rc = mds_inox_ensure_loaded(ih);
-			if (!rc)
-				memcpy(&mp->ino.reptbl[SL_DEF_REPLICAS],
-				    &ih->inoh_extras->inox_repls,
-				    sizeof(ih->inoh_extras->inox_repls));
-		}
-	}
+	if (mp->flags & SRM_LEASEBMAPF_GETINODE)
+		slm_pack_inode(f, &mp->ino);
 
  out:
 	fcmh_op_done(f);
@@ -1539,6 +1561,9 @@ slm_rmc_handler(struct pscrpc_request *rq)
 		break;
 	case SRMT_RELEASEBMAP:
 		rc = slm_rmc_handle_rls_bmap(rq);
+		break;
+	case SRMT_GET_INODE:
+		rc = slm_rmc_handle_getinode(rq);
 		break;
 
 	/* replication messages */
