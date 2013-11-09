@@ -281,6 +281,7 @@ slm_pack_inode(struct fidc_membh *f, struct srt_inode *in)
 	int rc;
 
 	ih = fcmh_2_inoh(f);
+	in->newreplpol = ih->inoh_ino.ino_replpol;
 	in->nrepls = ih->inoh_ino.ino_nrepls;
 	memcpy(in->reptbl, &ih->inoh_ino.ino_repls,
 	    sizeof(ih->inoh_ino.ino_repls));
