@@ -461,7 +461,7 @@ slm_mkdir(int vfsid, struct srm_mkdir_req *mq, struct srm_mkdir_rep *mp,
 	 * parent dir.
 	 */
 	if (mp->rc == 0 && slm_fcmh_get(&mp->cattr.sst_fg, &c) == 0)
-		slm_fcmh_endow_nolog(vfsid, p, c);
+		slm_fcmh_endow(vfsid, p, c);
 
 	if (dp) {
 		if (mp->rc == -EEXIST &&
@@ -609,7 +609,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	slm_fcmh_endow_nolog(vfsid, p, c);
+	slm_fcmh_endow(vfsid, p, c);
 
 	/* obtain lease for first bmap as optimization */
 	mp->flags = mq->flags;
@@ -621,6 +621,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 	if (mp->rc2)
 		PFL_GOTOERR(out, mp->rc2);
+
  out:
 	if (p)
 		fcmh_op_done(p);
