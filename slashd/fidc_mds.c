@@ -283,7 +283,7 @@ _slm_fcmh_endow(int vfsid, struct fidc_membh *p, struct fidc_membh *c,
 	uint32_t pol;
 
 	FCMH_LOCK(p);
-	pol = p->fcmh_sstb.sstd_freplpol;
+	pol = fcmh_2_ino(p)->ino_replpol;
 	nr = fcmh_2_nrepls(p);
 	memcpy(repls, fcmh_2_ino(p)->ino_repls, sizeof(repls[0]) *
 	    SL_DEF_REPLICAS);
@@ -296,6 +296,8 @@ _slm_fcmh_endow(int vfsid, struct fidc_membh *p, struct fidc_membh *c,
 	FCMH_ULOCK(p);
 
 	FCMH_WAIT_BUSY(c);
+	fcmh_2_replpol(c) = pol;
+	fcmh_2_ino(c)->ino_nrepls = nr;
 	memcpy(fcmh_2_ino(c)->ino_repls, repls, sizeof(repls[0]) *
 	    SL_DEF_REPLICAS);
 	if (nr > SL_DEF_REPLICAS) {
@@ -303,15 +305,6 @@ _slm_fcmh_endow(int vfsid, struct fidc_membh *p, struct fidc_membh *c,
 		memcpy(fcmh_2_inox(c)->inox_repls,
 		    &repls[SL_DEF_REPLICAS], sizeof(repls[0]) *
 		    SL_INOX_NREPLICAS);
-	}
-	if (fcmh_isdir(c)) {
-		struct srt_stat sstb;
-
-		sstb.sstd_freplpol = pol;
-		mds_fcmh_setattr(vfsid, c, SL_SETATTRF_FREPLPOL, &sstb);
-	} else {
-		fcmh_2_replpol(c) = pol;
-		FCMH_ULOCK(c);
 	}
 	if (wr)
 		mds_inodes_odsync(vfsid, c, mdslog_ino_repls);

@@ -291,9 +291,6 @@ struct srt_stat {
 #define sst_mtime_ns	sst_mtim.tv_nsec
 #define sst_ctime	sst_ctim.tv_sec
 #define sst_ctime_ns	sst_ctim.tv_nsec
-
-/* reappropriated fields specific to directories */
-#define sstd_freplpol	sst_ptruncgen		/* dir's new file replication policy */
 } __packed;
 
 #define DEBUG_SSTB(level, sstb, fmt, ...)				\
