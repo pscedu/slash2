@@ -165,11 +165,11 @@ in release but I don't see good performance for 'ls -al'.
 ------------------------------------------------------------------------
 - removing the persistence policy on a bmap should mds_repl_delrq()
   for that bmap
-- merge set_bmapreplpol and friends into a single slfattr interface
-- add ability to get at INO_BMAP_AFFINITY and dir replpol
+- merge set_bmapreplpol into fattr interface
 - push O_APPEND writes always to EOF instead of the the client-sent offset
 
-- allow multiple preferred IOS servers
+- allow multiple preferred IOS servers to get rid of necessity of making
+  subsets of IOS (sense345 e.g.)
 
 -------------------------------------------------------------------------
 
@@ -219,6 +219,7 @@ MDS must do this for scheduling traffic between sliods
   point in having extra provisions such as src ION
 
   consequence: kill authbuf
+- in the meantime, expand slkeymgt to make per-client authbufs with uid
 - sprinkle some iostats on zfs, namespace changelog
 - add journal I/O test mode to slashd
 
@@ -240,12 +241,11 @@ tree
 - rename slconfig.h to slcfg.h to disambiguate slco prefix
 
 API rename
-- rename FCMH_CREATE to POPULATE?
+- rename FCMH_CREATE to LOAD?
 - mdsio_fid_t -> mdsio_inum_t
-- mdsio_data -> mdsio_fh_t
 
 - ensure PINGs only happen every 30 seconds
-- GETATTR should never return nlinks=0
+- ensure GETATTR should never return nlinks=0
 - replace FCMH_CTOR_FAILED with fmi_ctor_rc
 - slmkfs -W should instead should rename the top-level its contents in
   the (forked) background after returning quickly to admin
@@ -290,8 +290,6 @@ API rename
 - for -s connections, we arguably do not need to show members of the
   same resource we are part of since we will never connect to them
 - patch fuse.ko since fuse_notify_entry_inval() causes segfault
-- add zfs SPA version to slashd ctlparam
-   - is this needed?  /zfs-kstat
 - client needs to track when MDS goes down and recheck pinned ptrunc
   bmaps for resolvement
 - on MDS resm failure inside msl, clear a bit on all fcmh's pinned by ptrunc
@@ -347,6 +345,7 @@ API rename
    - write a tool to purge specified IOS's from the garbage reclaim log files
 
 - msctl is broken on 32-bit because of ino # compression
+- have msctl access a special $DIR/.slctlsock file?
 - move msctl sock to $MOUNTPOINT/.slmd/ctlsock and have msctl ascend to
   that on arguments?
 - add authbuf file path to slcfg
@@ -356,8 +355,8 @@ reimport
 
 - debug lnrtd
 - cluster_noshare replication changes
-   - use a random resm
-   - specify degree of multiresidy with
+   - use a random resm, just like regular I/O
+   - specify degree of multiresidency with
 
        $ msctl -Q cluster@SITE=3:bnospec:file,
 
@@ -392,6 +391,7 @@ reimport
 - convert MDS rcmc.c to async RPCs
 - add du(1) functionality in dumpfid via extattr
 - add slmctl -ss fstypes for linux with f_type
+   - parse /proc/mounts if it's there for sliod statfs f_fstype
 - make macro version of accessors for speed in gdb (e.g. bmap_2_bmi())
   inline are for debugging/gdb
 - expose SLASH2 non-POSIX (e.g. repl) interface through extattr magic
@@ -400,11 +400,10 @@ reimport
      - box
      - amazon S3/glacier
 - fix bug when no IODs are online yet CLI writes are somehow successful
-- umount /$mp doesn't seem to be killing mount_slash
 - UNLINK is very slow when interspersed with READDIR
 
+- TRUNCATE should wipe out the inode reptbl
 - fix round robin among senses when open(O_TRUNC) -- prefer old IOS
-- advise upsch.db on SSD or tmpfs in docs
 - make cursor file contents ASCII for debugging
 - do journal logs for SETATTR factor in nlink, nblks, etc??
 - while :; do dmesg > file; done      produces lots of EBADMSG from sliod
@@ -415,7 +414,6 @@ reimport
 - ENOENT on GETATTR and REPL_RQ_ADD produce ERANGE
 - msl timeout change no longer waits when server offline, EIO immediately
 - client should not psclog ERRORs from SLERR_AIOWAIT on WRITE/READ RPC
-- parse /proc/mounts if it's there for sliod statfs f_fstype
 - fix bug when src ION comes online and upsch doesn't know he should now
   try to schedule some new work
     -- upsch_multiwait should be getting woken, needs a PAGEIN for dst though...
