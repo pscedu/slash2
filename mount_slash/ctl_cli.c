@@ -328,11 +328,11 @@ msctlhnd_get_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 	switch (mfa->mfa_attrid) {
 	case SL_FATTR_IOS_AFFINITY:
-		mfa->mfa_val = !!(fcmh_2_fci(f)->fci_ino_flags &
+		mfa->mfa_val = !!(fcmh_2_fci(f)->fci_inode.flags &
 		    INOF_IOS_AFFINITY);
 		break;
 	case SL_FATTR_REPLPOL:
-		mfa->mfa_val = fcmh_2_fci(f)->fci_newreplpol;
+		mfa->mfa_val = fcmh_2_fci(f)->fci_inode.newreplpol;
 		break;
 	default:
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",

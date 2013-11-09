@@ -303,18 +303,18 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	if (mp->flags & SRM_LEASEBMAPF_GETREPLTBL) {
+	if (mp->flags & SRM_LEASEBMAPF_GETINODE) {
 		struct slash_inode_handle *ih;
 
 		ih = fcmh_2_inoh(f);
-		mp->nrepls = ih->inoh_ino.ino_nrepls;
-		memcpy(&mp->reptbl[0], &ih->inoh_ino.ino_repls,
+		mp->ino.nrepls = ih->inoh_ino.ino_nrepls;
+		memcpy(&mp->ino.reptbl[0], &ih->inoh_ino.ino_repls,
 		    sizeof(ih->inoh_ino.ino_repls));
 
-		if (mp->nrepls > SL_DEF_REPLICAS) {
+		if (mp->ino.nrepls > SL_DEF_REPLICAS) {
 			rc = mds_inox_ensure_loaded(ih);
 			if (!rc)
-				memcpy(&mp->reptbl[SL_DEF_REPLICAS],
+				memcpy(&mp->ino.reptbl[SL_DEF_REPLICAS],
 				    &ih->inoh_extras->inox_repls,
 				    sizeof(ih->inoh_extras->inox_repls));
 		}
@@ -548,7 +548,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	mp->rc = slfid_to_vfsid(mq->pfg.fg_fid, &vfsid);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
-	if (mq->flags & SRM_LEASEBMAPF_GETREPLTBL)
+	if (mq->flags & SRM_LEASEBMAPF_GETINODE)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
 	mq->name[sizeof(mq->name) - 1] = '\0';

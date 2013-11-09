@@ -439,9 +439,11 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		PFL_GOTOERR(out, mp->rc2);
 
 	fci = fcmh_2_fci(c);
-	fci->fci_reptbl[0].bs_id = mp->sbd.sbd_ios;
-	fci->fci_nrepls = 1;
-	c->fcmh_flags |= FCMH_CLI_HAVEREPLTBL;
+	fci->fci_inode.reptbl[0].bs_id = mp->sbd.sbd_ios;
+	fci->fci_inode.nrepls = 1;
+	c->fcmh_flags |= FCMH_CLI_HAVEINODE;
+	// XXX bug fci->fci_inode.flags inherited?
+	// XXX bug fci->fci_inode.newreplpol inherited?
 	FCMH_ULOCK(c);
 
 	/* XXX this load should be async so we can reply quickly */

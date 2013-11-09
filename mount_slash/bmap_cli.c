@@ -533,7 +533,7 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw,
 	mq->prefios[0] = prefIOS; /* Tell MDS of our preferred ION */
 	mq->bmapno = bmap->bcm_bmapno;
 	mq->rw = rw;
-	mq->flags |= SRM_LEASEBMAPF_GETREPLTBL;
+	mq->flags |= SRM_LEASEBMAPF_GETINODE;
 
 	DEBUG_FCMH(PLL_DIAG, f, "retrieving bmap (bmapno=%u) (rw=%s)",
 	    bmap->bcm_bmapno, (rw == SL_READ) ? "read" : "write");
@@ -549,18 +549,12 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw,
 
 	msl_bmap_reap_init(bmap, &mp->sbd);
 
-	fci->fci_ino_flags = mp->ino_flags;
-	fci->fci_nrepls = mp->nrepls;
-	memcpy(&fci->fci_reptbl, &mp->reptbl, sizeof(fci->fci_reptbl));
-	f->fcmh_flags |= FCMH_CLI_HAVEREPLTBL;
+	fci->fci_inode = mp->ino;
+	f->fcmh_flags |= FCMH_CLI_HAVEINODE;
 
 	DEBUG_BMAP(PLL_DIAG, bmap, "rw=%d repls=%d ios=%#x seq=%"PRId64,
-	    rw, mp->nrepls, mp->sbd.sbd_ios, mp->sbd.sbd_seq);
+	    rw, mp->ino.nrepls, mp->sbd.sbd_ios, mp->sbd.sbd_seq);
 
-	/*
-	 * XXX not sure if this is really needed since nothing blocks on
-	 * FCMH_CLI_HAVEREPLTBL
-	 */
 	psc_waitq_wakeall(&f->fcmh_waitq);
 	FCMH_ULOCK(f);
 
@@ -636,7 +630,7 @@ msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd)
 	 * reap list
 	 */
 	b->bcm_flags |= BMAP_TIMEOQ;
-	if (sbd->sbd_flags & SRM_LEASEBMAPF_DIRECTIO)
+	if (sbd->sbd_flags & SRM_LEASEBMAPF_DIO)
 		b->bcm_flags |= BMAP_DIO;
 
 	/*
@@ -723,12 +717,12 @@ msl_bmap_check_replica(struct bmap *b)
 	struct fcmh_cli_info *fci;
 
 	fci = fcmh_get_pri(b->bcm_fcmh);
-	for (i = 0, off = 0; i < fci->fci_nrepls;
+	for (i = 0, off = 0; i < fci->fci_inode.nrepls;
 	    i++, off += SL_BITS_PER_REPLICA)
 		if (SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls,
 		    off))
 			break;
-	if (i == fci->fci_nrepls) {
+	if (i == fci->fci_inode.nrepls) {
 		DEBUG_BMAP(PLL_ERROR, b,
 		    "corrupt bmap!  no valid replicas!");
 		return (1);
@@ -777,9 +771,9 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive)
 		return NULL;
 
 	n = 0;
-	FOREACH_RND(&it, fci->fci_nrepls) {
+	FOREACH_RND(&it, fci->fci_inode.nrepls) {
 		lk = &order[n++];
-		lk->id = fci->fci_reptbl[it.ri_rnd_idx].bs_id;
+		lk->id = fci->fci_inode.reptbl[it.ri_rnd_idx].bs_id;
 		lk->idx = it.ri_rnd_idx;
 		lk->r = libsl_id2res(lk->id);
 		if (lk->r == NULL) {

@@ -569,11 +569,11 @@ msl_try_get_replica_res(struct bmap *b, int iosidx)
 	    iosidx * SL_BITS_PER_REPLICA) != BREPLST_VALID)
 		return (NULL);
 
-	res = libsl_id2res(fci->fci_reptbl[iosidx].bs_id);
+	res = libsl_id2res(fci->fci_inode.reptbl[iosidx].bs_id);
 	if (res == NULL) {
 		DEBUG_FCMH(PLL_ERROR, b->bcm_fcmh,
 		    "unknown IOS in reptbl: %#x",
-		    fci->fci_reptbl[iosidx].bs_id);
+		    fci->fci_inode.reptbl[iosidx].bs_id);
 		return (NULL);
 	}
 

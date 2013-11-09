@@ -146,7 +146,7 @@ enum {
 	SRMT_RECLAIM,				/* 16: trash storage space for a given FID+GEN */
 
 	/* replication operations */
-	SRMT_REPL_ADDRQ,			/* 17: add replication */
+	SRMT_REPL_ADDRQ,			/* 17: add/refresh replication */
 	SRMT_REPL_DELRQ,			/* 18: eject replication */
 	SRMT_REPL_GETST,			/* 19: get replication request status */
 	SRMT_REPL_GETST_SLAVE,			/* 20: all bmap repl info for a file */
@@ -157,36 +157,37 @@ enum {
 
 	/* other SLASH2-specific operations */
 	SRMT_SET_FATTR,				/* 25: set file attribute */
+	SRMT_GET_INODE,				/* 26: get file attributes  */
 
 	/* standard file system operations */
-	SRMT_CREATE,				/* 26: creat(2) */
-	SRMT_GETATTR,				/* 27: stat(2) */
-	SRMT_LINK,				/* 28: link(2) */
-	SRMT_LOOKUP,				/* 29: lookup (namei) */
-	SRMT_MKDIR,				/* 30: mkdir(2) */
-	SRMT_MKNOD,				/* 31: mknod(2) */
-	SRMT_READ,				/* 32: read(2) */
-	SRMT_READDIR,				/* 33: readdir(2) */
-	SRMT_READLINK,				/* 34: readlink(2) */
-	SRMT_RENAME,				/* 35: rename(2) */
-	SRMT_RMDIR,				/* 36: rmdir(2) */
-	SRMT_SETATTR,				/* 37: chmod(2), chown(2), utimes(2) */
-	SRMT_STATFS,				/* 38: statvfs(2) */
-	SRMT_SYMLINK,				/* 39: symlink(2) */
-	SRMT_UNLINK,				/* 40: unlink(2) */
-	SRMT_WRITE,				/* 41: write(2) */
-	SRMT_LISTXATTR,				/* 42: listxattr(2) */
-	SRMT_SETXATTR,				/* 43: setxattr(2) */
-	SRMT_GETXATTR,				/* 44: getxattr(2) */
-	SRMT_REMOVEXATTR,			/* 45: removexattr(2) */
+	SRMT_CREATE,				/* 27: creat(2) */
+	SRMT_GETATTR,				/* 28: stat(2) */
+	SRMT_LINK,				/* 29: link(2) */
+	SRMT_LOOKUP,				/* 30: lookup (namei) */
+	SRMT_MKDIR,				/* 31: mkdir(2) */
+	SRMT_MKNOD,				/* 32: mknod(2) */
+	SRMT_READ,				/* 33: read(2) */
+	SRMT_READDIR,				/* 34: readdir(2) */
+	SRMT_READLINK,				/* 35: readlink(2) */
+	SRMT_RENAME,				/* 36: rename(2) */
+	SRMT_RMDIR,				/* 37: rmdir(2) */
+	SRMT_SETATTR,				/* 38: chmod(2), chown(2), utimes(2) */
+	SRMT_STATFS,				/* 39: statvfs(2) */
+	SRMT_SYMLINK,				/* 40: symlink(2) */
+	SRMT_UNLINK,				/* 41: unlink(2) */
+	SRMT_WRITE,				/* 42: write(2) */
+	SRMT_LISTXATTR,				/* 43: listxattr(2) */
+	SRMT_SETXATTR,				/* 44: setxattr(2) */
+	SRMT_GETXATTR,				/* 45: getxattr(2) */
+	SRMT_REMOVEXATTR,			/* 46: removexattr(2) */
 
 	/* import/export */
-	SRMT_IMPORT,				/* 46: import */
+	SRMT_IMPORT,				/* 47: import */
 
-	SRMT_PRECLAIM,				/* 47: partial file reclaim */
-	SRMT_BATCH_RQ,				/* 48: async batch request */
-	SRMT_BATCH_RP,				/* 49: async batch reply */
-	SRMT_CTL				/* 50: generic control */
+	SRMT_PRECLAIM,				/* 48: partial file reclaim */
+	SRMT_BATCH_RQ,				/* 49: async batch request */
+	SRMT_BATCH_RP,				/* 50: async batch reply */
+	SRMT_CTL				/* 51: generic control */
 };
 
 /* ----------------------------- BEGIN MESSAGES ----------------------------- */
@@ -354,6 +355,13 @@ struct srt_creds {
 	uint32_t		scr_gid;
 } __packed;
 
+struct srt_inode {
+	uint32_t		flags;
+	uint16_t		newreplpol;
+	uint16_t		nrepls;
+	sl_replica_t		reptbl[SL_MAX_REPLICAS];
+};
+
 /* ------------------------ BEGIN NAMESPACE MESSAGES ------------------------ */
 
 /* namespace update */
@@ -437,19 +445,15 @@ struct srm_leasebmap_req {
 	uint32_t		flags;		/* see SRM_LEASEBMAPF_* below */
 } __packed;
 
-#define SRM_LEASEBMAPF_DIRECTIO		(1 << 0)	/* client wants direct I/O */
-#define SRM_LEASEBMAPF_GETREPLTBL	(1 << 1)	/* fetch inode replica table */
+#define SRM_LEASEBMAPF_DIO	(1 << 0)	/* client wants direct I/O */
+#define SRM_LEASEBMAPF_GETINODE	(1 << 1)	/* fetch inode (replica table, etc.) */
 
 struct srm_leasebmap_rep {
 	struct srt_bmapdesc	sbd;		/* descriptor for bmap */
 	struct bmap_core_state	bcs;
 	 int32_t		rc;		/* 0 for success or slerrno */
-	 int32_t		ino_flags;
 	uint32_t		flags;		/* return SRM_LEASEBMAPF_* success */
-
-	/* fetch fcmh repl table if SRM_LEASEBMAPF_GETREPLTBL */
-	uint32_t		nrepls;
-	sl_replica_t		reptbl[SL_MAX_REPLICAS];
+	struct srt_inode	ino;		/* if SRM_LEASEBMAPF_GETINODE */
 } __packed;
 
 struct srm_leasebmapext_req {
@@ -735,6 +739,16 @@ struct srm_set_bmapreplpol_req {
 } __packed;
 
 #define srm_set_bmapreplpol_rep	srm_generic_rep
+
+struct srm_get_inode_req {
+	struct slash_fidgen	fg;
+};
+
+struct srm_get_inode_rep {
+	struct srt_inode	ino;
+	int32_t			rc;
+	int32_t			_pad;
+};
 
 /* ----------------------- BEGIN FILE SYSTEM MESSAGES ----------------------- */
 

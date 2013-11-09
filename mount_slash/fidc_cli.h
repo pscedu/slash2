@@ -37,16 +37,13 @@ struct pscfs_clientctx;
 struct fidc_membh;
 
 struct fci_finfo {
-	int			 nrepls:16;
-	int			 newreplpol:16;
-	int			 ino_flags;
-	sl_replica_t		 reptbl[SL_MAX_REPLICAS];
+	struct srt_inode	 inode;
 	uint64_t		 xattrsize;
 };
 
 struct fci_dinfo {
-	struct psc_lockedlist	 dc_pages;
-	uint64_t		 dc_nents;
+	struct psc_lockedlist	 pages;
+	uint64_t		 nents;
 };
 
 struct fcmh_cli_info {
@@ -56,14 +53,11 @@ struct fcmh_cli_info {
 		struct fci_finfo	f;
 		struct fci_dinfo	d;
 	} u;
-#define fci_nrepls	u.f.nrepls
-#define fci_reptbl	u.f.reptbl
 #define fci_xattrsize	u.f.xattrsize
-#define fci_ino_flags	u.f.ino_flags
-#define fci_newreplpol	u.f.newreplpol
+#define fci_inode	u.f.inode
 
-#define fci_dc_pages	u.d.dc_pages
-#define fci_dc_nents	u.d.dc_nents
+#define fci_dc_pages	u.d.pages
+#define fci_dc_nents	u.d.nents
 	struct psclist_head	 fci_lentry;	/* all fcmhs with dirty attributes */
 	struct timespec		 fci_etime;	/* attr expire time */
 };
@@ -85,12 +79,11 @@ fci_2_fcmh(struct fcmh_cli_info *fci)
 }
 
 /* Client-specific fcmh_flags */
-#define FCMH_CLI_HAVEREPLTBL	(_FCMH_FLGSHFT << 0)	/* file replica table present */
-#define FCMH_CLI_FETCHREPLTBL	(_FCMH_FLGSHFT << 1)	/* file replica table loading */
-#define FCMH_CLI_INITDIRCACHE	(_FCMH_FLGSHFT << 2)	/* dircache initialized */
-#define FCMH_CLI_TRUNC		(_FCMH_FLGSHFT << 3)	/* truncate in progress */
-#define FCMH_CLI_DIRTY_ATTRS	(_FCMH_FLGSHFT << 4)	/* has dirty attributes */
-#define FCMH_CLI_DIRTY_QUEUE	(_FCMH_FLGSHFT << 5)	/* on dirty queue */
+#define FCMH_CLI_HAVEINODE	(_FCMH_FLGSHFT << 0)	/* file inode present */
+#define FCMH_CLI_INITDIRCACHE	(_FCMH_FLGSHFT << 1)	/* dircache initialized */
+#define FCMH_CLI_TRUNC		(_FCMH_FLGSHFT << 2)	/* truncate in progress */
+#define FCMH_CLI_DIRTY_ATTRS	(_FCMH_FLGSHFT << 3)	/* has dirty attributes */
+#define FCMH_CLI_DIRTY_QUEUE	(_FCMH_FLGSHFT << 4)	/* on dirty queue */
 
 int	fcmh_checkcreds(struct fidc_membh *, const struct pscfs_creds *, int);
 

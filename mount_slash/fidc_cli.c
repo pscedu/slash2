@@ -74,6 +74,47 @@ slc_fcmh_refresh_age(struct fidc_membh *f)
 }
 
 int
+slc_fcmh_load_inode(struct fidc_membh *f)
+{
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
+	struct srm_get_inode_req *mq;
+	struct srm_get_inode_rep *mp;
+	struct fcmh_cli_info *fci;
+	int rc;
+
+	fci = fcmh_2_fci(f);
+	rc = slc_rmc_getcsvc1(&csvc, fci->fci_resm);
+	if (rc)
+		goto out;
+	rc = SL_RSX_NEWREQ(csvc, SRMT_GET_INODE, rq, mq, mp);
+	if (rc)
+		goto out;
+
+	FCMH_LOCK(f);
+	mq->fg = f->fcmh_fg;
+	FCMH_ULOCK(f);
+
+	rc = SL_RSX_WAITREP(csvc, rq, mp);
+	if (rc == 0)
+		rc = mp->rc;
+	if (rc)
+		goto out;
+
+	FCMH_LOCK(f);
+	fci->fci_inode = mp->ino;
+	f->fcmh_flags |= FCMH_CLI_HAVEINODE;
+	FCMH_ULOCK(f);
+
+ out:
+	if (rq)
+		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
+	return (rc);
+}
+
+int
 slc_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 {
 	struct fcmh_cli_info *fci;
@@ -130,8 +171,7 @@ dump_fcmh_flags(int flags)
 	int seq = 0;
 
 	_dump_fcmh_flags_common(&flags, &seq);
-	PFL_PRFLAG(FCMH_CLI_HAVEREPLTBL, &flags, &seq);
-	PFL_PRFLAG(FCMH_CLI_FETCHREPLTBL, &flags, &seq);
+	PFL_PRFLAG(FCMH_CLI_HAVEINODE, &flags, &seq);
 	PFL_PRFLAG(FCMH_CLI_INITDIRCACHE, &flags, &seq);
 	PFL_PRFLAG(FCMH_CLI_TRUNC, &flags, &seq);
 	PFL_PRFLAG(FCMH_CLI_DIRTY_ATTRS, &flags, &seq);
