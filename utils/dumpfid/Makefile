@@ -9,6 +9,7 @@ SRCS+=		dumpfid.c
 SRCS+=		${PFL_BASE}/crc.c
 SRCS+=		${PFL_BASE}/init.c
 SRCS+=		${PFL_BASE}/log.c
+SRCS+=		${PFL_BASE}/walk.c
 
 MODULES+=	lnet-hdrs pfl fuse-hdrs
 

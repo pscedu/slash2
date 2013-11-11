@@ -33,11 +33,20 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/lockedlist.h"
 #include "pfl/pfl.h"
+#include "pfl/walk.h"
 
 #include "slashd/inode.h"
 
-int	show;
+struct path {
+	const char		*fn;
+	struct psc_listentry	 lentry;
+};
+
+int			show;
+int			recurse;
+struct psc_lockedlist	excludes = PLL_INIT(&excludes, struct path, lentry);
 
 const char *progname;
 
@@ -73,33 +82,52 @@ const char *repl_states = "-sq+tpgx";
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-u] [-o keys] file ...\n", progname);
+	fprintf(stderr,
+	    "usage: %s [-R] [-o keys] [-x exclude] file ...\n",
+	    progname);
 	exit(1);
 }
 
-void
-dumpfid(const char *fn)
+struct path *
+searchpaths(struct psc_lockedlist *pll, const char *fn)
+{
+	struct path *p;
+
+	PLL_FOREACH(p, pll) {
+		if (strcmp(p->fn, fn) == 0)
+			return (p);
+	}
+	return (NULL);
+}
+
+int
+dumpfid(const char *fn, const struct pfl_stat *stb, int ftyp,
+    __unusedx int level, __unusedx void *arg)
 {
 	struct slash_inode_extras_od inox;
 	struct slash_inode_od ino;
 	struct iovec iovs[2];
-	struct stat stb;
-	uint64_t crc, od_crc;
-	int64_t s2usz;
-	uint32_t nr, j;
+	struct path *p;
 	sl_bmapno_t bno;
+	uint64_t crc, od_crc;
+	uint32_t nr, j;
+	int64_t s2usz;
 	ssize_t rc;
 	int fd;
+
+	p = searchpaths(&excludes, fn);
+	if (p) {
+		pll_remove(&excludes, p);
+		return (PFL_FILEWALK_RC_SKIP);
+	}
+
+	if (ftyp != PFWT_F)
+		return (0);
 
 	fd = open(fn, O_RDONLY);
 	if (fd == -1) {
 		warn("%s", fn);
-		return;
-	}
-
-	if (fstat(fd, &stb) == -1) {
-		warn("%s", fn);
-		return;
+		return (0);
 	}
 
 	iovs[0].iov_base = &ino;
@@ -126,7 +154,7 @@ dumpfid(const char *fn)
 		s2usz = strtoull(fsize, NULL, 10);
 	}
 #else
-	s2usz = stb.st_rdev;
+	s2usz = stb->st_rdev;
 #endif
 
 	psc_crc64_calc(&crc, &ino, sizeof(ino));
@@ -190,9 +218,9 @@ dumpfid(const char *fn)
 		printf("\n");
 	}
 	if (show & K_BMAPS &&
-	    stb.st_size > SL_BMAP_START_OFF) {
+	    stb->st_size > SL_BMAP_START_OFF) {
 		printf("  bmaps %"PSCPRIdOFFT"\n",
-		    (stb.st_size - SL_BMAP_START_OFF) / BMAP_OD_SZ);
+		    (stb->st_size - SL_BMAP_START_OFF) / BMAP_OD_SZ);
 		if (lseek(fd, SL_BMAP_START_OFF, SEEK_SET) == -1)
 			warn("seek");
 		for (bno = 0; ; bno++) {
@@ -229,6 +257,7 @@ dumpfid(const char *fn)
 
  out:
 	close(fd);
+	return (0);
 }
 
 void
@@ -246,17 +275,34 @@ lookupshow(const char *flg)
 	errx(1, "unknown show field: %s", flg);
 }
 
+void
+addexclude(const char *fn)
+{
+	struct path *p;
+
+	p = PSCALLOC(sizeof(*p));
+	INIT_PSC_LISTENTRY(&p->lentry);
+	p->fn = fn;
+	pll_add(&excludes, p);
+}
+
 int
 main(int argc, char *argv[])
 {
-	int c;
+	int walkflags = 0, c;
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "o:")) != -1) {
+	while ((c = getopt(argc, argv, "o:Rx:")) != -1) {
 		switch (c) {
 		case 'o':
 			lookupshow(optarg);
+			break;
+		case 'R':
+			walkflags |= PFL_FILEWALKF_RECURSIVE;
+			break;
+		case 'x':
+			addexclude(optarg);
 			break;
 		default:
 			usage();
@@ -269,6 +315,6 @@ main(int argc, char *argv[])
 	if (!show)
 		show = K_ALL;
 	for (; *argv; argv++)
-		dumpfid(*argv);
+		pfl_filewalk(*argv, walkflags, dumpfid, NULL);
 	exit(0);
 }
