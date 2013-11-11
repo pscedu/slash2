@@ -632,7 +632,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	slm_fcmh_endow(vfsid, p, c);
+	slm_fcmh_endow_nolog(vfsid, p, c);
 
 	/* obtain lease for first bmap as optimization */
 	mp->flags = mq->flags;
