@@ -248,15 +248,9 @@ mds_bmap_read(struct bmap *b, __unusedx enum rw rw, int flags)
 /**
  * mds_bmap_write - Update the on-disk data of bmap.  Note we must
  *	reserve journal log space if logf is given.
- * @update_mtime: we used to allow CRC update code path to update mtime
- *	if the generation number it carries matches what we have.  This
- *	is no longer used.  Now, only the client can update the mtime.
- *	The code will be removed after things are proven to be
- *	stabilized.
  */
 int
-mds_bmap_write(struct bmap *b, int update_mtime, void *logf,
-    void *logarg)
+mds_bmap_write(struct bmap *b, void *logf, void *logarg)
 {
 	struct fidc_membh *f;
 	struct iovec iovs[2];
@@ -284,7 +278,7 @@ mds_bmap_write(struct bmap *b, int update_mtime, void *logf,
 		mds_reserve_slot(1);
 	rc = mdsio_pwritev(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
 	    (off_t)BMAP_OD_SZ * b->bcm_bmapno + SL_BMAP_START_OFF,
-	    update_mtime, bmap_2_mfh(b), logf, logarg);
+	    0, bmap_2_mfh(b), logf, logarg);
 	if (logf)
 		mds_unreserve_slot(1);
 
@@ -404,7 +398,7 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 		DEBUG_BMAP(PLL_DIAG, bmap, "slot=%d crc=%"PSCPRIxCRC64,
 		    crcup->crcs[i].slot, crcup->crcs[i].crc);
 	}
-	return (mds_bmap_write(bmap, 0, mdslog_bmap_crc, &crclog));
+	return (mds_bmap_write(bmap, mdslog_bmap_crc, &crclog));
 }
 
 /**
@@ -416,7 +410,7 @@ _mds_bmap_write_rel(const struct pfl_callerinfo *pci, struct bmap *b,
 {
 	int rc;
 
-	rc = mds_bmap_write(b, 0, logf, b);
+	rc = mds_bmap_write(b, logf, b);
 	bmap_op_done(b);
 	return (rc);
 }

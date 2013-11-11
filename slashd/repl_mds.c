@@ -523,7 +523,7 @@ _mds_repl_inv_except(struct bmapc_memb *b, int iosidx, int defer)
 	if (defer)
 		return (rc);
 
-	rc = mds_bmap_write(b, 0, NULL, NULL);
+	rc = mds_bmap_write(b, NULL, NULL);
 
 	/*
 	 * If this bmap is marked for persistent replication, the repl

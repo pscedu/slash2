@@ -240,14 +240,14 @@ struct bmap_ios_assign {
 #define BIAF_DIO		(1 << 0)
 
 int	 mds_bmap_read(struct bmapc_memb *, enum rw, int);
-int	 mds_bmap_write(struct bmapc_memb *, int, void *, void *);
+int	 mds_bmap_write(struct bmapc_memb *, void *, void *);
 int	_mds_bmap_write_rel(const struct pfl_callerinfo *, struct bmapc_memb *, void *);
 
 #define mds_bmap_write_rel(b, logf)	_mds_bmap_write_rel(PFL_CALLERINFOSS(SLSS_BMAP), (b), (logf))
 
 #define mds_bmap_write_repls_rel(b)	mds_bmap_write_rel((b), mdslog_bmap_repls)
 
-#define mds_bmap_write_logrepls(b)	mds_bmap_write((b), 0, mdslog_bmap_repls, (b))
+#define mds_bmap_write_logrepls(b)	mds_bmap_write((b), mdslog_bmap_repls, (b))
 
 int	 mds_bmap_crc_write(struct srm_bmap_crcup *, sl_ios_id_t,
 	    const struct srm_bmap_crcwrt_req *);

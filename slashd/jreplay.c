@@ -175,7 +175,7 @@ mds_replay_bmap(void *jent, int op)
 
 	DEBUG_BMAPOD(PLL_INFO, b, "replayed bmap op=%d", op);
 
-	rc = mds_bmap_write(b, 0, NULL, NULL);
+	rc = mds_bmap_write(b, NULL, NULL);
 
 	if (0)
  unbusy:

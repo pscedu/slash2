@@ -81,7 +81,7 @@ mds_inode_dump(int vfsid, struct sl_ino_compat *sic,
 			}
 		}
 
-		rc = mds_bmap_write(b, 0, NULL, NULL);
+		rc = mds_bmap_write(b, NULL, NULL);
 		bmap_op_done(b);
 		(void)INOH_RLOCK(ih);
 		if (rc)
