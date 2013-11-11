@@ -90,24 +90,37 @@ bmap_flush_biorq_expired(const struct bmpc_ioreq *a, struct timespec *t)
 
 	return (0);
 }
-
  
 void
 bmap_free_all_locked(struct fidc_membh *f)
 {
 	struct bmap *a, *b;
+	struct bmap_cli_info *bci;
 
 	FCMH_LOCK_ENSURE(f);
 
 	for (a = SPLAY_MIN(bmap_cache, &f->fcmh_bmaptree); a; a = b) {
 		b = SPLAY_NEXT(bmap_cache, &f->fcmh_bmaptree, a);
 		DEBUG_BMAP(PLL_INFO, a, "mark bmap free");
+		/*
+ 		 * The MDS truncates the slash2 metafile on a full truncate.
+ 		 * We need to throw away leases and request a new lease later, 
+ 		 * so that the MDS has a chance to update its metadate file
+ 		 * on-disk.  Otherwise, we can use an existing lease to write
+ 		 * the file and can not update the metadata file even if the
+ 		 * bmap is still cached at the MDS because the generation # 
+ 		 * has been bumped for the full truncate. Finally, a read 
+ 		 * comes in, we request a read bmap.  At this point, all bmaps
+ 		 * of the file have been freed at both MDS and client. And the
+ 		 * MDS can not find a replica for a bmap in the metafile.
+ 		 */
 		BMAP_LOCK(a);
+		bci = bmap_2_bci(a);
+		PFL_GETTIMESPEC(&bci->bci_etime);
 		a->bcm_flags |= BMAP_TOFREE;
 		BMAP_ULOCK(a);
 	}
 }
-
 
 int
 msl_fd_should_retry(struct msl_fhent *mfh, int rc)
