@@ -253,11 +253,13 @@ mds_replay_ino(void *jent, int op)
 
 	switch (op) {
 	case I_REPLAY_OP_REPLS:
-		/* sanity check against null buffer */
-		for (j = 0; j < SL_MAX_REPLICAS; j++)
-			if (sjir->sjir_repls[j])
-				break;
-		psc_assert(j != SL_MAX_REPLICAS);
+		if (!fcmh_isdir(f)) {
+			/* sanity check against null buffer */
+			for (j = 0; j < SL_MAX_REPLICAS; j++)
+				if (sjir->sjir_repls[j])
+					break;
+			psc_assert(j != SL_MAX_REPLICAS);
+		}
 
 		/*
 		 * We always update the inode itself because the number
@@ -315,9 +317,9 @@ mds_replay_ino_repls(struct psc_journal_enthdr *pje)
 	int rc;
 
 	sjir = PJE_DATA(pje);
-	rc = mdsio_redo_fidlink(current_vfsid, sjir->sjir_fid,
-	    &rootcreds);
-	if (!rc)
+//	rc = mdsio_redo_fidlink(current_vfsid, sjir->sjir_fid,
+//	    &rootcreds);
+//	if (!rc)
 		rc = mds_replay_ino(sjir, I_REPLAY_OP_REPLS);
 	return (rc);
 }
