@@ -265,7 +265,7 @@ msl_bmap_lease_secs_remaining(struct bmap *b)
 
 	BMAP_LOCK(b);
 	PFL_GETTIMESPEC(&ts);
-	secs = bmap_2_bci(b)->bci_xtime.tv_sec - ts.tv_sec;
+	secs = bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec;
 	BMAP_ULOCK(b);
 
 	return (secs);
@@ -377,7 +377,7 @@ msl_bmap_lease_tryext(struct bmap *b, int *secs_rem, int blockable)
 	BMAP_LOCK(b);
 	PFL_GETTIMESPEC(&ts);
 
-	secs = (int)(bmap_2_bci(b)->bci_xtime.tv_sec - ts.tv_sec);
+	secs = (int)(bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec);
 
 	if (b->bcm_flags & BMAP_TOFREE) {
 		/*
@@ -395,27 +395,22 @@ msl_bmap_lease_tryext(struct bmap *b, int *secs_rem, int blockable)
 		rc = bmap_2_bci(b)->bci_error;
 
 	} else if (b->bcm_flags & BMAP_CLI_LEASEEXTREQ) {
-		if (secs < BMAP_CLI_EXTREQSECSBLOCK) {
-			if (!blockable)
-				rc = -EAGAIN;
-			else {
-				DEBUG_BMAP(PLL_ERROR, b,
-				    "blocking on lease renewal");
-				bmap_op_start_type(b, BMAP_OPCNT_LEASEEXT);
-				bmap_wait_locked(b, (b->bcm_flags &
-				    BMAP_CLI_LEASEEXTREQ));
+		if (!blockable)
+			rc = -EAGAIN;
+		else {
+			DEBUG_BMAP(PLL_ERROR, b,
+			    "blocking on lease renewal");
+			bmap_op_start_type(b, BMAP_OPCNT_LEASEEXT);
+			bmap_wait_locked(b, (b->bcm_flags &
+			    BMAP_CLI_LEASEEXTREQ));
 
-				rc = bmap_2_bci(b)->bci_error;
+			rc = bmap_2_bci(b)->bci_error;
 
-				bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
-				unlock = 0;
-			}
+			bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
+			unlock = 0;
 		}
-	} else if (secs > BMAP_CLI_EXTREQSECS && !(b->bcm_flags & BMAP_CLI_LEASEEXPIRED)) {
-		timespecadd(&ts, &msl_bmap_timeo_inc,
-		    &bmap_2_bci(b)->bci_etime);
+	} else if (secs < BMAP_CLI_EXTREQSECS || (b->bcm_flags & BMAP_CLI_LEASEEXPIRED)) {
 
-	} else {
 		struct slashrpc_cservice *csvc = NULL;
 		struct pscrpc_request *rq = NULL;
 		struct srm_leasebmapext_req *mq;
@@ -427,7 +422,7 @@ msl_bmap_lease_tryext(struct bmap *b, int *secs_rem, int blockable)
 		b->bcm_flags |= BMAP_CLI_LEASEEXTREQ;
 		bmap_op_start_type(b, BMAP_OPCNT_LEASEEXT);
 		/* Yield the remaining time. */
-		bmap_2_bci(b)->bci_etime = bmap_2_bci(b)->bci_xtime;
+		//bmap_2_bci(b)->bci_etime = bmap_2_bci(b)->bci_xtime;
 
 		/* Unlock no matter what. */
 		BMAP_ULOCK(b);
