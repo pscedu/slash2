@@ -460,7 +460,6 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 	BIORQ_LOCK(r);
 	psc_assert(r->biorq_ref > 0);
 	r->biorq_ref--;
-	DEBUG_BIORQ(PLL_INFO, r, "destroying");
 	if (r->biorq_ref) {
 		BIORQ_ULOCK(r);
 		return;
@@ -527,6 +526,7 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 	mfh_decref(r->biorq_mfh);
 
 	OPSTAT_INCR(SLC_OPST_BIORQ_DESTROY);
+	DEBUG_BIORQ(PLL_INFO, r, "destroying");
 	psc_pool_return(slc_biorq_pool, r);
 }
 
