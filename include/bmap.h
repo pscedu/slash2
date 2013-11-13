@@ -386,6 +386,7 @@ SPLAY_HEAD(bmap_cache, bmapc_memb);
 SPLAY_PROTOTYPE(bmap_cache, bmapc_memb, bcm_tentry, bmap_cmp);
 
 struct bmap_ops {
+	void	(*bmo_free)(void);
 	void	(*bmo_init_privatef)(struct bmapc_memb *);
 	int	(*bmo_retrievef)(struct bmapc_memb *, enum rw, int);
 	int	(*bmo_mode_chngf)(struct bmapc_memb *, enum rw, int);

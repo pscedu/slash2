@@ -72,6 +72,9 @@ struct psc_waitq		bmapFlushWaitq = PSC_WAITQ_INIT;
 psc_spinlock_t			bmapFlushLock = SPINLOCK_INIT;
 int				bmapFlushTimeoFlags = 0;
 
+psc_spinlock_t			bmapTimeoutLock  = SPINLOCK_INIT;
+struct psc_waitq		bmapTimeoutWaitq = PSC_WAITQ_INIT;
+
 __static int
 bmap_flush_biorq_expired(const struct bmpc_ioreq *a, struct timespec *t)
 {
@@ -94,6 +97,7 @@ bmap_flush_biorq_expired(const struct bmpc_ioreq *a, struct timespec *t)
 void
 bmap_free_all_locked(struct fidc_membh *f)
 {
+	int wake = 0;
 	struct bmap *a, *b;
 	struct bmap_cli_info *bci;
 
@@ -119,6 +123,7 @@ bmap_free_all_locked(struct fidc_membh *f)
 		PFL_GETTIMESPEC(&bci->bci_etime);
 		a->bcm_flags |= BMAP_TOFREE;
 		BMAP_ULOCK(a);
+		wake = 1;
 	}
 }
 
@@ -791,7 +796,6 @@ msbmaprlsthr_main(struct psc_thread *thr)
 {
 	int i, didwork;
 	struct psc_dynarray rels = DYNARRAY_INIT;
-	struct psc_waitq waitq = PSC_WAITQ_INIT;
 	struct bmap_cli_info *bci;
 	struct timespec crtime, nto;
 	struct resm_cli_info *rmci;
@@ -887,7 +891,8 @@ msbmaprlsthr_main(struct psc_thread *thr)
 			PFL_GETTIMESPEC(&crtime);
 			nto = crtime;
 			nto.tv_sec += BMAP_CLI_TIMEO_INC;
-			psc_waitq_waitabs(&waitq, NULL, &nto);
+			spinlock(&bmapTimeoutLock);
+			psc_waitq_waitrel(&bmapTimeoutWaitq, &bmapTimeoutLock, &nto);
 		}
 	}
 	psc_dynarray_free(&rels);
@@ -1009,6 +1014,7 @@ bmap_flush(void)
 		}
 
 		if (bmap_flushable(b) ||
+		    (b->bcm_flags & BMAP_TOFREE) ||
 		    (b->bcm_flags & BMAP_CLI_LEASEFAILED))
 			psc_dynarray_add(&bmaps, b);
 
@@ -1029,7 +1035,7 @@ bmap_flush(void)
 		 * processed by the write back flush mechanism.
 		 */
 		BMAP_LOCK(b);
-		if (b->bcm_flags & BMAP_CLI_LEASEFAILED) {
+		if (b->bcm_flags & (BMAP_TOFREE | BMAP_CLI_LEASEFAILED)) {
 			bmpc_biorqs_destroy(b, bmap_2_bci(b)->bci_error);
 			continue;
 		}

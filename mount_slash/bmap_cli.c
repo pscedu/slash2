@@ -41,6 +41,17 @@
 #include "slashrpc.h"
 #include "slerr.h"
 
+extern psc_spinlock_t		bmapTimeoutLock;
+extern struct psc_waitq		bmapTimeoutWaitq;
+
+void
+msl_bmap_free(void)
+{
+	spinlock(&bmapTimeoutLock);
+	psc_waitq_wakeall(&bmapTimeoutWaitq);
+	freelock(&bmapTimeoutLock);
+}
+
 /**
  * msl_bmap_init - Initialize CLI-specific data of a bmap structure.
  * @b: the bmap struct
@@ -180,12 +191,9 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 		memcpy(&bmap_2_bci(b)->bci_sbd, &mp->sbd,
 		    sizeof(struct srt_bmapdesc));
 
-		PFL_GETTIMESPEC(&bmap_2_bci(b)->bci_xtime);
-
-		timespecadd(&bmap_2_bci(b)->bci_xtime, &msl_bmap_timeo_inc,
+		PFL_GETTIMESPEC(&bmap_2_bci(b)->bci_etime);
+		timespecadd(&bmap_2_bci(b)->bci_etime, &msl_bmap_max_lease,
 		    &bmap_2_bci(b)->bci_etime);
-		timespecadd(&bmap_2_bci(b)->bci_xtime, &msl_bmap_max_lease,
-		    &bmap_2_bci(b)->bci_xtime);
 		OPSTAT_INCR(SLC_OPST_BMAP_REASSIGN_DONE);
 	}
 
@@ -193,8 +201,8 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b,
 	    "lease reassign: rc=%d, nseq=%"PRId64", "
-	    "xtime="PSCPRI_TIMESPEC"", rc, bci->bci_sbd.sbd_seq,
-	    PFLPRI_PTIMESPEC_ARGS(&bci->bci_xtime));
+	    "etime="PSCPRI_TIMESPEC"", rc, bci->bci_sbd.sbd_seq,
+	    PFLPRI_PTIMESPEC_ARGS(&bci->bci_etime));
 
 	bmap_op_done_type(b, BMAP_OPCNT_REASSIGN);
 
@@ -225,9 +233,7 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 		    sizeof(struct srt_bmapdesc));
 
 		timespecadd(&ts,
-		    &msl_bmap_timeo_inc, &bmap_2_bci(b)->bci_etime);
-		timespecadd(&ts,
-		    &msl_bmap_max_lease, &bmap_2_bci(b)->bci_xtime);
+		    &msl_bmap_max_lease, &bmap_2_bci(b)->bci_etime);
 
 		OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_DONE);
 	} else {
@@ -247,8 +253,8 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b,
 	    "lease extension: rc=%d, nseq=%"PRId64", "
-	    "xtime="PSCPRI_TIMESPEC"", rc, bci->bci_sbd.sbd_seq,
-	    PFLPRI_PTIMESPEC_ARGS(&bci->bci_xtime));
+	    "etime="PSCPRI_TIMESPEC"", rc, bci->bci_sbd.sbd_seq,
+	    PFLPRI_PTIMESPEC_ARGS(&bci->bci_etime));
 
 	bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
 
@@ -421,8 +427,6 @@ msl_bmap_lease_tryext(struct bmap *b, int *secs_rem, int blockable)
 
 		b->bcm_flags |= BMAP_CLI_LEASEEXTREQ;
 		bmap_op_start_type(b, BMAP_OPCNT_LEASEEXT);
-		/* Yield the remaining time. */
-		//bmap_2_bci(b)->bci_etime = bmap_2_bci(b)->bci_xtime;
 
 		/* Unlock no matter what. */
 		BMAP_ULOCK(b);
@@ -480,7 +484,7 @@ msl_bmap_lease_tryext(struct bmap *b, int *secs_rem, int blockable)
 
 	if (secs_rem) {
 		if (!secs || extended)
-			secs = bmap_2_bci(b)->bci_xtime.tv_sec -
+			secs = bmap_2_bci(b)->bci_etime.tv_sec -
 			    CURRENT_SECONDS;
 		*secs_rem = secs;
 	}
@@ -613,12 +617,10 @@ msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd)
 	 *  XXX the directio status of the bmap needs to be returned by
 	 *	the MDS so we can set the proper expiration time.
 	 */
-	PFL_GETTIMESPEC(&bci->bci_xtime);
+	PFL_GETTIMESPEC(&bci->bci_etime);
 
-	timespecadd(&bci->bci_xtime, &msl_bmap_timeo_inc,
+	timespecadd(&bci->bci_etime, &msl_bmap_max_lease,
 	    &bci->bci_etime);
-	timespecadd(&bci->bci_xtime, &msl_bmap_max_lease,
-	    &bci->bci_xtime);
 
 	/*
 	 * Take the reaper ref cnt early and place the bmap onto the
@@ -647,8 +649,8 @@ msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd)
 
 	DEBUG_BMAP(PLL_INFO, b,
 	    "reap init: nseq=%"PRId64", "
-	    "xtime="PSCPRI_TIMESPEC"", bci->bci_sbd.sbd_seq,
-	    PFLPRI_PTIMESPEC_ARGS(&bci->bci_xtime));
+	    "etime="PSCPRI_TIMESPEC"", bci->bci_sbd.sbd_seq,
+	    PFLPRI_PTIMESPEC_ARGS(&bci->bci_etime));
 
 	/*
 	 * Add ourselves here otherwise zero length files will not be
@@ -901,6 +903,7 @@ dump_bmap_flags(uint32_t flags)
 #endif
 
 struct bmap_ops sl_bmap_ops = {
+	msl_bmap_free,
 	msl_bmap_init,
 	msl_bmap_retrieve,
 	msl_bmap_modeset,

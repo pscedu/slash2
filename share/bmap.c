@@ -146,6 +146,8 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n,
 			DEBUG_BMAP(PLL_INFO, b, "wait on to-free bmap");
 			BMAP_ULOCK(b);
 			FCMH_ULOCK(f);
+			if (sl_bmap_ops.bmo_free)
+			    sl_bmap_ops.bmo_free();
 			sched_yield();
 			goto restart;
 		}

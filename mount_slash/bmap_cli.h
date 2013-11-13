@@ -44,7 +44,6 @@
 struct bmap_cli_info {
 	struct bmap_pagecache	 bci_bmpc;
 	struct srt_bmapdesc	 bci_sbd;		/* open bmap descriptor */
-	struct timespec		 bci_xtime;		/* max time */
 	struct timespec		 bci_etime;		/* current expire time */
 	int			 bci_error;		/* lease request error */
 	int			 bci_nreassigns;	/* number of reassigns */
