@@ -1234,7 +1234,7 @@ mds_cursor_thread(struct psc_thread *thr)
 			freelock(&cursorWaitLock);
 		}
 
-		/* Use SLASH2_CURSOR_FLAG to write cursor file */
+		/* Use SLASH2_CURSOR_UPDATE to write cursor file */
 		rc = mdsio_write_cursor(current_vfsid, &mds_cursor,
 		    sizeof(mds_cursor), mds_cursor_handle,
 		    mds_update_cursor);
