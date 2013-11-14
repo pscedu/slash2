@@ -15,12 +15,12 @@ set nets="sdp7 10.10.101.*; tcp8 *.*.*.*";
 
 set pref_mds="md0@PITTDBMI";
 set pref_ios="io0@PITTDBMI";
-set fsuuid="a1409fb20bfa0b5b";
+set fsuuid="2541b7b4e37d6010";
 set zpool_name="pittdbmi_s2mds";
 set zpool_cache="/local/pittdbmi.s2/var/zcf";
 
 site @PITT {
-	site_desc	= "University of Pittsburgh DBMI";
+	site_desc	= "Pitt SaM SuperCell";
 	site_id		= 0;
 
 	resource md {
@@ -36,7 +36,7 @@ site @PITT {
 		type	= standalone_fs;
 		id	= 10;
 		nids	= s-gscratch2-dev.francis.sam.pitt.edu;
-		fsroot	= /samfs_slio;
+		fsroot	= /data/gscratch2;
 		selftest = "/local/sbin/st /samfs_slio";
 	}
 
@@ -45,7 +45,7 @@ site @PITT {
 		type	= standalone_fs;
 		id	= 11;
 		nids	= s-gscratch3-dev.francis.sam.pitt.edu;
-		fsroot	= /samfs_slio;
+		fsroot	= /data/gscratch3;
 		selftest = "/local/sbin/st /samfs_slio";
 	}
 
@@ -54,7 +54,7 @@ site @PITT {
 		type	= standalone_fs;
 		id	= 12;
 		nids	= s-gscratch4-dev.francis.sam.pitt.edu;
-		fsroot	= /samfs_slio;
+		fsroot	= /data/gscratch4;
 		selftest = "/local/sbin/st /samfs_slio";
 	}
 
