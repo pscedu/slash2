@@ -97,7 +97,6 @@ bmap_flush_biorq_expired(const struct bmpc_ioreq *a, struct timespec *t)
 void
 bmap_free_all_locked(struct fidc_membh *f)
 {
-	int wake = 0;
 	struct bmap *a, *b;
 	struct bmap_cli_info *bci;
 
@@ -123,7 +122,6 @@ bmap_free_all_locked(struct fidc_membh *f)
 		PFL_GETTIMESPEC(&bci->bci_etime);
 		a->bcm_flags |= BMAP_TOFREE;
 		BMAP_ULOCK(a);
-		wake = 1;
 	}
 }
 
