@@ -119,16 +119,18 @@ struct bmap *
 bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n,
     int *new_bmap)
 {
+	int doalloc;
 	struct bmap lb, *b, *b2 = NULL;
-	int locked, doalloc;
 
 	doalloc = *new_bmap;
 	lb.bcm_bmapno = n;
 
-	locked = FCMH_RLOCK(f);
-	if (0)
  restart:
-		(void)FCMH_RLOCK(f);
+
+	if (sl_bmap_ops.bmo_free)
+	    sl_bmap_ops.bmo_free();
+
+	FCMH_LOCK(f);
 
 	b = SPLAY_FIND(bmap_cache, &f->fcmh_bmaptree, &lb);
 	if (b) {
@@ -146,15 +148,12 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n,
 			DEBUG_BMAP(PLL_INFO, b, "wait on to-free bmap");
 			BMAP_ULOCK(b);
 			FCMH_ULOCK(f);
-			if (sl_bmap_ops.bmo_free)
-				sl_bmap_ops.bmo_free();
-			sched_yield();
 			goto restart;
 		}
 		bmap_op_start_type(b, BMAP_OPCNT_LOOKUP);
 	}
 	if ((doalloc == 0) || b) {
-		FCMH_URLOCK(f, locked);
+		FCMH_ULOCK(f);
 		if (b2)
 			psc_pool_return(bmap_pool, b2);
 		*new_bmap = 0;
@@ -193,7 +192,7 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n,
 	PSC_SPLAY_XINSERT(bmap_cache, &f->fcmh_bmaptree, b);
 	fcmh_op_start_type(f, FCMH_OPCNT_BMAP);
 
-	FCMH_URLOCK(f, locked);
+	FCMH_ULOCK(f);
 	return (b);
 }
 

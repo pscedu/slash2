@@ -47,9 +47,13 @@ extern struct psc_waitq		bmapTimeoutWaitq;
 void
 msl_bmap_free(void)
 {
-	spinlock(&bmapTimeoutLock);
-	psc_waitq_wakeall(&bmapTimeoutWaitq);
-	freelock(&bmapTimeoutLock);
+	while (lc_nitems(&bmapTimeoutQ) > BMAP_CACHE_MAX) { 
+		spinlock(&bmapTimeoutLock);
+		psc_waitq_wakeall(&bmapTimeoutWaitq);
+		freelock(&bmapTimeoutLock);
+		OPSTAT_INCR(SLC_OPST_BMAP_ALLOC_STALL);
+		sleep(1);
+	}
 }
 
 /**

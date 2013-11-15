@@ -792,7 +792,7 @@ msl_bmap_release(struct sl_resm *resm)
 void
 msbmaprlsthr_main(struct psc_thread *thr)
 {
-	int i, didwork;
+	int i, nitems, didwork;
 	struct psc_dynarray rels = DYNARRAY_INIT;
 	struct bmap_cli_info *bci;
 	struct timespec crtime, nto;
@@ -812,6 +812,7 @@ msbmaprlsthr_main(struct psc_thread *thr)
 		i = 0;
 		didwork = 0;
 		OPSTAT_INCR(SLC_OPST_BMAP_RELEASE);
+		nitems = lc_nitems(&bmapTimeoutQ);
 		LIST_CACHE_LOCK(&bmapTimeoutQ);
 		LIST_CACHE_FOREACH(bci, &bmapTimeoutQ) {
 
@@ -824,16 +825,17 @@ msbmaprlsthr_main(struct psc_thread *thr)
 
 			PFL_GETTIMESPEC(&crtime);
 
-			if (timespeccmp(&crtime, &bci->bci_etime, <)) {
-				DEBUG_BMAP(PLL_INFO, b, "skip due to expire");
-				BMAP_ULOCK(b);
-				continue;
-
-			}
 			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
 				DEBUG_BMAP(PLL_INFO, b, "skip due to refcnt");
 				BMAP_ULOCK(b);
 				continue;
+			}
+			if (nitems - i <= BMAP_CACHE_MAX/4 && 
+			    timespeccmp(&crtime, &bci->bci_etime, <)) {
+				DEBUG_BMAP(PLL_INFO, b, "skip due to expire");
+				BMAP_ULOCK(b);
+				continue;
+
 			}
 			/*
 			 * A bmap should be taken off the flush queue after all 

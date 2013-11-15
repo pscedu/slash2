@@ -32,6 +32,8 @@
 #include "pgcache.h"
 #include "slashrpc.h"
 
+#define	BMAP_CACHE_MAX			1024	
+
 /* number of bmap flush threads */
 /* XXX I don't think bmap_flush is thread safe, so keep this at '1'
  * - Paul
