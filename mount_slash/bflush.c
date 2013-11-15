@@ -795,7 +795,7 @@ msbmaprlsthr_main(struct psc_thread *thr)
 	int i, nitems, didwork;
 	struct psc_dynarray rels = DYNARRAY_INIT;
 	struct bmap_cli_info *bci;
-	struct timespec crtime, nto;
+	struct timespec crtime, nto = { BMAP_CLI_TIMEO_INC, 0 };
 	struct resm_cli_info *rmci;
 	struct bmapc_memb *b;
 	struct sl_resm *resm;
@@ -888,9 +888,6 @@ msbmaprlsthr_main(struct psc_thread *thr)
 		psc_dynarray_reset(&bcis);
 
 		if (!didwork) {
-			PFL_GETTIMESPEC(&crtime);
-			nto = crtime;
-			nto.tv_sec += BMAP_CLI_TIMEO_INC;
 			spinlock(&bmapTimeoutLock);
 			psc_waitq_waitrel(&bmapTimeoutWaitq, &bmapTimeoutLock, &nto);
 		}
