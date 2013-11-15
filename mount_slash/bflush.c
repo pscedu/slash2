@@ -93,7 +93,7 @@ bmap_flush_biorq_expired(const struct bmpc_ioreq *a, struct timespec *t)
 
 	return (0);
 }
- 
+
 void
 bmap_free_all_locked(struct fidc_membh *f)
 {
@@ -106,17 +106,20 @@ bmap_free_all_locked(struct fidc_membh *f)
 		b = SPLAY_NEXT(bmap_cache, &f->fcmh_bmaptree, a);
 		DEBUG_BMAP(PLL_INFO, a, "mark bmap free");
 		/*
- 		 * The MDS truncates the slash2 metafile on a full truncate.
- 		 * We need to throw away leases and request a new lease later, 
- 		 * so that the MDS has a chance to update its metadate file
- 		 * on-disk.  Otherwise, we can use an existing lease to write
- 		 * the file and can not update the metadata file even if the
- 		 * bmap is still cached at the MDS because the generation # 
- 		 * has been bumped for the full truncate. Finally, a read 
- 		 * comes in, we request a read bmap.  At this point, all bmaps
- 		 * of the file have been freed at both MDS and client. And the
- 		 * MDS can not find a replica for a bmap in the metafile.
- 		 */
+		 * The MDS truncates the SLASH2 metafile on a full
+		 * truncate.  We need to throw away leases and request a
+		 * new lease later, so that the MDS has a chance to
+		 * update its metadate file on-disk.  Otherwise, we can
+		 * use an existing lease to write the file and can not
+		 * update the metadata file even if the bmap is still
+		 * cached at the MDS because the generation # has been
+		 * bumped for the full truncate.
+		 *
+		 * Finally, a read comes in, we request a read bmap.  At
+		 * this point, all bmaps of the file have been freed at
+		 * both MDS and client. And the MDS can not find a
+		 * replica for a bmap in the metafile.
+		 */
 		BMAP_LOCK(a);
 		bci = bmap_2_bci(a);
 		PFL_GETTIMESPEC(&bci->bci_etime);
@@ -628,7 +631,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 		t = psc_dynarray_getpos(biorqs, idx + *indexp);
 
 		psc_assert((t->biorq_flags & BIORQ_SCHED) &&
-			   !(t->biorq_flags & BIORQ_INFL));
+			  !(t->biorq_flags & BIORQ_INFL));
 
 		/*
 		 * If any member is expired then we'll push everything
@@ -830,15 +833,16 @@ msbmaprlsthr_main(struct psc_thread *thr)
 				BMAP_ULOCK(b);
 				continue;
 			}
-			if (nitems - i <= BMAP_CACHE_MAX/4 && 
+			if (nitems - i <= BMAP_CACHE_MAX/4 &&
 			    timespeccmp(&crtime, &bci->bci_etime, <)) {
 				DEBUG_BMAP(PLL_INFO, b, "skip due to expire");
 				BMAP_ULOCK(b);
 				continue;
 
 			}
+
 			/*
-			 * A bmap should be taken off the flush queue after all 
+			 * A bmap should be taken off the flush queue after all
 			 * its biorq are finished.
 			 */
 			psc_assert(!(b->bcm_flags & BMAP_FLUSHQ));
@@ -889,7 +893,8 @@ msbmaprlsthr_main(struct psc_thread *thr)
 
 		if (!didwork) {
 			spinlock(&bmapTimeoutLock);
-			psc_waitq_waitrel(&bmapTimeoutWaitq, &bmapTimeoutLock, &nto);
+			psc_waitq_waitrel(&bmapTimeoutWaitq,
+			    &bmapTimeoutLock, &nto);
 		}
 	}
 	psc_dynarray_free(&rels);
