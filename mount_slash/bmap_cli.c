@@ -44,6 +44,9 @@
 extern psc_spinlock_t		bmapTimeoutLock;
 extern struct psc_waitq		bmapTimeoutWaitq;
 
+/*
+ * msl_bmap_free(): avoid ENOMEM and clean up TOFREE bmap to avoid stalls.
+ */
 void
 msl_bmap_free(void)
 {
