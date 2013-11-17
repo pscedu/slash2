@@ -138,11 +138,10 @@ slm_upsch_finish_repl(struct slashrpc_cservice *csvc,
 		rpmi = res2rpmi(dst_resm->resm_res);
 		upd = bmap_2_upd(b);
 		upd_rpmi_remove(rpmi, upd);
-	}
 
-	DEBUG_BMAP(PLL_DIAG, b,
-	    "dst_resm=%s src_resm=%s rc=%d",
-	    dst_resm->resm_name, src_resm->resm_name, rc);
+		DEBUG_BMAP(PLL_DIAG, b, "dst_resm=%s src_resm=%s rc=%d",
+		    dst_resm->resm_name, src_resm->resm_name, rc);
+	}
 
 	if (rc && amt)
 		mds_repl_nodes_adjbusy(src_resm, dst_resm, -amt);
