@@ -234,8 +234,6 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		BMAP_LOCK(b);
 		b->bcm_flags &= ~BMAP_INIT;
 		bmap_wake_locked(b);
-		if (rc)
-			goto out;
 
 	} else {
 
@@ -291,8 +289,8 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		if (rc)
 			bmap_op_done(b);
 		else {
-			BMAP_ULOCK(b);
 			*bp = b;
+			BMAP_ULOCK(b);
 		}
 	}
 	return (rc);
