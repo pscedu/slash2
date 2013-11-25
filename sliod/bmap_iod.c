@@ -534,23 +534,10 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 	struct srm_getbmap_full_req *mq;
 	struct srm_getbmap_full_rep *mp;
 	struct slashrpc_cservice *csvc;
-	int rc, i, n;
+	int rc, i;
 
 	if (rw != SL_READ)
 		return (0);
-
-	BMAP_LOCK(b);
-	for (i = 0, n = BMAP_SLVR_DATA; i < SLASH_SLVRS_PER_BMAP; i++) {
-		if (b->bcm_crcstates[i] & BMAP_SLVR_DATA)
-			n--;
-	}
-
-	if (!n) {
-		DEBUG_BMAP(PLL_INFO, b, "CRC table exists locally");
-		BMAP_ULOCK(b);
-		return (0);
-	}
-	BMAP_ULOCK(b);
 
 	rc = sli_rmi_getcsvc(&csvc);
 	if (rc)
