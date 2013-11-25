@@ -357,13 +357,15 @@ void	_dump_bmapodv(const struct pfl_callerinfo *, int,
 void	_dump_bmapod(const struct pfl_callerinfo *, int,
 	    struct bmapc_memb *, const char *, ...);
 
-#define bmap_getf(f, n, rw, fl, bp)	_bmap_get(			\
-					    PFL_CALLERINFOSS(SLSS_BMAP),\
-					    (f), (n), (rw), (fl), (bp))
 
-#define bmap_lookup(f, n, bp)		bmap_getf((f), (n), 0, 0, (bp))
-#define bmap_get(f, n, rw, bp)		bmap_getf((f), (n), (rw),	\
-					    BMAPGETF_LOAD, (bp))
+#define bmap_getf(f, n, rw, fl, bp)	_bmap_get(PFL_CALLERINFOSS(SLSS_BMAP),\
+					(f), (n), (rw), (fl), (bp))
+
+#define bmap_lookup(f, n, bp)		_bmap_get(PFL_CALLERINFOSS(SLSS_BMAP), \
+					(f), (n), 0, 0, (bp))
+
+#define bmap_get(f, n, rw, bp)		_bmap_get(PFL_CALLERINFOSS(SLSS_BMAP), \
+					(f), (n), (rw), BMAPGETF_LOAD, (bp))
 
 enum bmap_opcnt_types {
 	BMAP_OPCNT_LOOKUP,		/*  0: bmap_get */
