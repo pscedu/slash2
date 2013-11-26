@@ -371,7 +371,6 @@ msl_bmap_lease_tryreassign(struct bmap *b)
  * msl_bmap_lease_tryext - Attempt to extend the lease time on a bmap.
  *	If successful, this will result in the creation and assignment
  *	of a new lease sequence number from the MDS.
- * @secs_rem:  return the number of seconds remaining on the lease.
  * @blockable:  means the caller will not block if a renew RPC is
  *	outstanding.  Currently, only fsthreads which try lease
  *	extension prior to initiating I/O are 'blockable'.  This is so
@@ -382,7 +381,7 @@ msl_bmap_lease_tryreassign(struct bmap *b)
  *	holders of open file descriptors.
  */
 int
-msl_bmap_lease_tryext(struct bmap *b, int *secs_rem, int blockable)
+msl_bmap_lease_tryext(struct bmap *b, int blockable)
 {
 	int secs = 0, rc = 0, unlock = 1;
 	struct timespec ts;
@@ -487,13 +486,6 @@ msl_bmap_lease_tryext(struct bmap *b, int *secs_rem, int blockable)
 			rc = bmap_2_bci(b)->bci_error;
 #endif
 		}
-	}
-
-	if (secs_rem) {
-		if (!secs)
-			secs = bmap_2_bci(b)->bci_etime.tv_sec -
-			    CURRENT_SECONDS;
-		*secs_rem = secs;
 	}
 
 	if (unlock)

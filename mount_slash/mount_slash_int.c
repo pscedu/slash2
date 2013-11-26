@@ -2160,7 +2160,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		if (rc)
 			break;
 
-		rc = msl_bmap_lease_tryext(b, NULL, 1);
+		rc = msl_bmap_lease_tryext(b, 1);
 		if (rc) {
 			bmap_op_done(b);
 			goto out;

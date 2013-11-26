@@ -79,7 +79,7 @@ bmap_2_bci(struct bmap *b)
 
 void	 msl_bmap_cache_rls(struct bmap *);
 int	 msl_bmap_lease_secs_remaining(struct bmap *);
-int	 msl_bmap_lease_tryext(struct bmap *, int *, int);
+int	 msl_bmap_lease_tryext(struct bmap *, int);
 void	 msl_bmap_lease_tryreassign(struct bmap *);
 int	 msl_bmap_lease_secs_remaining(struct bmap *);
 
