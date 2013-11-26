@@ -29,8 +29,6 @@
 
 #include <stdint.h>
 
-#include "pfl/hashtbl.h"
-
 #include "fid.h"
 #include "sltypes.h"
 
@@ -204,11 +202,5 @@ extern struct mdsio_ops		mdsio_ops;
 extern mdsio_fid_t		mds_metadir_inum[];
 extern mdsio_fid_t		mds_fidnsdir_inum[];
 extern mdsio_fid_t		mds_tmpdir_inum[];
-
-struct mio_rootnames {
-	char			rn_name[PATH_MAX];
-	int			rn_vfsid;
-	struct psc_hashent	rn_hentry;
-};
 
 #endif /* _SLASHD_MDSIO_H_ */
