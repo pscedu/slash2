@@ -197,15 +197,18 @@ struct mdsio_ops {
 #define mdsio_redo_setxattr	mdsio_ops.mio_redo_setxattr		/* zfsslash2_replay_setxattr() */
 #define mdsio_redo_removexattr	mdsio_ops.mio_redo_removexattr		/* zfsslash2_replay_removexattr() */
 
-extern struct mdsio_ops	mdsio_ops;
-extern mdsio_fid_t	mds_metadir_inum[];
-extern mdsio_fid_t	mds_fidnsdir_inum[];
-extern mdsio_fid_t	mds_tmpdir_inum[];
+#define SLXAT_FID		".sl2-fid"
+#define SLXAT_FSIZE		".sl2-fsize"
 
-struct rootNames {
-	char			 rn_name[PATH_MAX];
-	int			 rn_vfsid;
-	struct psc_hashent	 rn_hentry;
+extern struct mdsio_ops		mdsio_ops;
+extern mdsio_fid_t		mds_metadir_inum[];
+extern mdsio_fid_t		mds_fidnsdir_inum[];
+extern mdsio_fid_t		mds_tmpdir_inum[];
+
+struct mio_rootnames {
+	char			rn_name[PATH_MAX];
+	int			rn_vfsid;
+	struct psc_hashent	rn_hentry;
 };
 
 #endif /* _SLASHD_MDSIO_H_ */
