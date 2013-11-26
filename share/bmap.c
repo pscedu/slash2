@@ -227,7 +227,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		b->bcm_flags |= bmaprw;
 		BMAP_ULOCK(b);
 
-		/* msl_bmap_retrieve(),  mds_bmap_read(), iod_bmap_retrieve() */
+		/* mds_bmap_read(), iod_bmap_retrieve(), msl_bmap_retrieve() */
 		if ((flags & BMAPGETF_NORETRIEVE) == 0)
 			rc = sl_bmap_ops.bmo_retrievef(b, rw, flags);
 

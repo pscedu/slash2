@@ -178,6 +178,11 @@ mds_bmap_read(struct bmap *b, __unusedx enum rw rw, int flags)
 	upd_init(upd, UPDT_BMAP);
 	UPD_UNBUSY(upd);
 
+	if (flags & BMAPGETF_NODISKREAD) {
+		mds_bmap_initnew(b);
+		goto out;
+	}
+
 	f = b->bcm_fcmh;
 
 	iovs[0].iov_base = bmap_2_ondisk(b);
@@ -208,7 +213,7 @@ mds_bmap_read(struct bmap *b, __unusedx enum rw rw, int flags)
 		    pfl_memchk(bmap_2_ondisk(b), 0, BMAP_OD_CRCSZ))) {
 			    mds_bmap_initnew(b);
 			    DEBUG_BMAPOD(PLL_INFO, b,
-				"initialized new bmap, nb=%d", nb);
+				"initialized new bmap unexpectedly, nb=%d", nb);
 			    return (0);
 		    }
 
@@ -233,6 +238,7 @@ mds_bmap_read(struct bmap *b, __unusedx enum rw rw, int flags)
 
 	DEBUG_BMAPOD(PLL_INFO, b, "successfully loaded from disk");
 
+ out:
 	if (slm_opstate == SLM_OPSTATE_REPLAY)
 		return (0);
 

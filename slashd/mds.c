@@ -1690,12 +1690,12 @@ mds_bmap_load_fg(const struct slash_fidgen *fg, sl_bmapno_t bmapno,
 int
 mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
     enum rw rw, sl_ios_id_t prefios, struct srt_bmapdesc *sbd,
-    struct pscrpc_export *exp, struct bmap_core_state *bcs)
+    struct pscrpc_export *exp, struct bmap_core_state *bcs, int new)
 {
 	struct slashrpc_cservice *csvc;
 	struct bmap_mds_lease *bml;
 	struct bmap *b;
-	int rc;
+	int rc, flag;
 
 	FCMH_LOCK(f);
 	rc = (f->fcmh_flags & FCMH_IN_PTRUNC) &&
@@ -1713,7 +1713,8 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 		FCMH_ULOCK(f);
 	}
 
-	rc = bmap_get(f, bmapno, SL_WRITE, &b);
+	flag = BMAPGETF_LOAD | (new ? BMAPGETF_NODISKREAD : 0);
+	rc = bmap_getf(f, bmapno, SL_WRITE, flag, &b);
 	if (rc)
 		return (rc);
 

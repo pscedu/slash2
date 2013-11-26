@@ -336,7 +336,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	mp->flags = mq->flags;
 
 	mp->rc = mds_bmap_load_cli(f, mq->bmapno, mq->flags, mq->rw,
-	    mq->prefios[0], &mp->sbd, rq->rq_export, &mp->bcs);
+	    mq->prefios[0], &mp->sbd, rq->rq_export, &mp->bcs, 0);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
@@ -638,7 +638,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	mp->flags = mq->flags;
 
 	mp->rc2 = mds_bmap_load_cli(c, 0, mp->flags, SL_WRITE,
-	    mq->prefios[0], &mp->sbd, rq->rq_export, NULL);
+	    mq->prefios[0], &mp->sbd, rq->rq_export, NULL, 1);
 
 	fcmh_op_done(c);
 
