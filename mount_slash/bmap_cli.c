@@ -384,7 +384,7 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 int
 msl_bmap_lease_tryext(struct bmap *b, int *secs_rem, int blockable)
 {
-	int secs = 0, rc = 0, unlock = 1, extended = 0;
+	int secs = 0, rc = 0, unlock = 1;
 	struct timespec ts;
 
 	BMAP_LOCK(b);
@@ -490,7 +490,7 @@ msl_bmap_lease_tryext(struct bmap *b, int *secs_rem, int blockable)
 	}
 
 	if (secs_rem) {
-		if (!secs || extended)
+		if (!secs)
 			secs = bmap_2_bci(b)->bci_etime.tv_sec -
 			    CURRENT_SECONDS;
 		*secs_rem = secs;
