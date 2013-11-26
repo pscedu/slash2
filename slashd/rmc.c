@@ -411,21 +411,21 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 	    NULL, &rootcreds, &mp->attr);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
-	if (mq->pfg.fg_fid == SLFID_ROOT) {
 
-		int error;
-		uint64_t fid;
-		struct rootNames *p;
+	if (mq->pfg.fg_fid == SLFID_ROOT) {
 		mount_info_t *mountinfo;
 		struct srt_stat tmpattr;
+		struct mio_rootnames *rn;
+		uint64_t fid;
+		int error;
 
-		p = slm_rmc_search_roots(mq->name);
-		if (p) {
-			mountinfo = &zfsMount[p->rn_vfsid];
+		rn = slm_rmc_search_roots(mq->name);
+		if (rn) {
+			mountinfo = &zfsMount[rn->rn_vfsid];
 			fid = SLFID_ROOT;
 			FID_SET_SITEID(fid, mountinfo->siteid);
 
-			error = mdsio_getattr(p->rn_vfsid,
+			error = mdsio_getattr(rn->rn_vfsid,
 			    mountinfo->rootid, mountinfo->rootinfo,
 			    &rootcreds, &tmpattr);
 			if (!error) {
