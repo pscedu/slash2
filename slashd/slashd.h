@@ -368,6 +368,12 @@ struct slm_wkdata_upschq {
 	sl_bmapno_t		 bno;
 };
 
+struct mio_rootnames {
+	char			 rn_name[PATH_MAX];
+	int			 rn_vfsid;
+	struct psc_hashent	 rn_hentry;
+};
+
 #define SLM_NWORKER_THREADS	4
 
 enum {

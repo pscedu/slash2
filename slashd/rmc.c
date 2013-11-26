@@ -657,7 +657,7 @@ slm_rmc_handle_readdir_roots(struct iovec *iov0, struct iovec *iov1,
 {
 	struct srt_stat tmpattr, *attr;
 	struct pscfs_dirent *dirent;
-	struct rootNames *p;
+	struct mio_rootnames *rn;
 	mount_info_t *mountinfo;
 	size_t i, entsize;
 	uint64_t fid;
@@ -667,14 +667,14 @@ slm_rmc_handle_readdir_roots(struct iovec *iov0, struct iovec *iov1,
 	dirent = iov0->iov_base;
 	for (i = 0; i < nents; i++) {
 
-		p = slm_rmc_search_roots(dirent->pfd_name);
-		if (p) {
-			mountinfo = &zfsMount[p->rn_vfsid];
+		rn = slm_rmc_search_roots(dirent->pfd_name);
+		if (rn) {
+			mountinfo = &zfsMount[rn->rn_vfsid];
 			fid = SLFID_ROOT;
 			FID_SET_SITEID(fid, mountinfo->siteid);
 			dirent->pfd_ino = fid;
 
-			error = mdsio_getattr(p->rn_vfsid,
+			error = mdsio_getattr(rn->rn_vfsid,
 			    mountinfo->rootid, mountinfo->rootinfo,
 			    &rootcreds, &tmpattr);
 			if (!error) {
