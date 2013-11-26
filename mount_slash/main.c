@@ -2278,13 +2278,16 @@ struct msl_dc_inv_entry_data {
 };
 
 void
-msl_dc_inv_entry(__unusedx struct dircache_page *p,
-    struct dircache_ent *d, void *arg)
+msl_dc_inv_entry(struct dircache_page *p, struct dircache_ent *d,
+    void *arg)
 {
 	const struct msl_dc_inv_entry_data *mdie = arg;
 
-	pscfs_notify_inval_entry(mdie->mdie_pfr,
-	    mdie->mdie_pinum, d->dce_name, d->dce_namelen);
+	if (p->dcp_flags & DCPF_LOADING)
+		return;
+
+	pscfs_notify_inval_entry(mdie->mdie_pfr, mdie->mdie_pinum,
+	    d->dce_name, d->dce_namelen);
 }
 
 int

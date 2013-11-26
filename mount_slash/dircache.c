@@ -99,7 +99,7 @@ dircache_free_page(struct fidc_membh *d, struct dircache_page *p)
  * @cbarg: callback argument.
  */
 void
-dircache_walk(struct fidc_membh *d, void (*cbf)(struct dircache_page *p,
+dircache_walk(struct fidc_membh *d, void (*cbf)(struct dircache_page *,
     struct dircache_ent *, void *), void *cbarg)
 {
 	struct dircache_page *p, *np;
@@ -114,9 +114,6 @@ dircache_walk(struct fidc_membh *d, void (*cbf)(struct dircache_page *p,
 	fci = fcmh_2_fci(d);
 	lk = FCMH_RLOCK(d);
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
-		if (p->dcp_flags & DCPF_LOADING)
-			continue;
-
 		DYNARRAY_FOREACH(dce, n, &p->dcp_dents)
 			cbf(p, dce, cbarg);
 	}
@@ -366,5 +363,6 @@ dircache_dprintf(struct fidc_membh *d)
 {
 	void *p = NULL;
 
+	printf("pages %d\n", pll_nitems(&fcmh_2_fci(d)->fci_dc_pages));
 	dircache_walk(d, dircache_ent_dprintf, &p);
 }

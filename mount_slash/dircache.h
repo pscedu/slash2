@@ -100,7 +100,7 @@ struct dircache_page {
 	    (dcp), (dcp)->dcp_off, (dcp)->dcp_size, (dcp)->dcp_flags,	\
 	    (dcp)->dcp_nextoff, ## __VA_ARGS__)
 
-/* This is analogous to 'struct dirent'. */
+/* This is analogous to 'struct dirent' many of which reside in a page. */
 struct dircache_ent {
 	int			 dce_hash;
 	int			 dce_namelen;
@@ -144,6 +144,6 @@ void	dircache_mgr_init(void);
 void	dircache_purge(struct fidc_membh *);
 void	dircache_reg_ents(struct fidc_membh *, struct dircache_page *, size_t, void *);
 void	dircache_walk(struct fidc_membh *, void (*)(struct dircache_page *,
-    	    struct dircache_ent *, void *), void *);
+	    struct dircache_ent *, void *), void *);
 
 #endif /* _DIRCACHE_H_ */
