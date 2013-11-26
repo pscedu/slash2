@@ -66,9 +66,7 @@ bmap_remove(struct bmap *b)
 
 	DEBUG_BMAP(PLL_INFO, b, "removing");
 
-	psc_assert(b->bcm_flags & BMAP_TOFREE);
 	psc_assert(!(b->bcm_flags & BMAP_FLUSHQ));
-	psc_assert(!atomic_read(&b->bcm_opcnt));
 
 	(void)FCMH_RLOCK(f);
 
