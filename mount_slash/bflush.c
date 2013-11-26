@@ -828,17 +828,20 @@ msbmaprlsthr_main(struct psc_thread *thr)
 
 			PFL_GETTIMESPEC(&crtime);
 
-			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
-				DEBUG_BMAP(PLL_INFO, b, "skip due to refcnt");
+			/*
+			 * ref 0: lookup
+			 * ref 1: reaper
+			 */
+			if (psc_atomic32_read(&b->bcm_opcnt) > 2) {
+				DEBUG_BMAP(PLL_DIAG, b, "skip due to refcnt");
 				BMAP_ULOCK(b);
 				continue;
 			}
-			if (nitems - i <= BMAP_CACHE_MAX/4 &&
+			if (nitems - i <= BMAP_CACHE_MAX / 4 &&
 			    timespeccmp(&crtime, &bci->bci_etime, <)) {
-				DEBUG_BMAP(PLL_INFO, b, "skip due to expire");
+				DEBUG_BMAP(PLL_DIAG, b, "skip due to expire");
 				BMAP_ULOCK(b);
 				continue;
-
 			}
 
 			/*
