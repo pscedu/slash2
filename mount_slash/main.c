@@ -121,6 +121,9 @@ struct psc_dynarray		 allow_exe = DYNARRAY_INIT;
 struct psc_vbitmap		 msfsthr_uniqidmap = VBITMAP_INIT_AUTO;
 psc_spinlock_t			 msfsthr_uniqidmap_lock = SPINLOCK_INIT;
 
+/* number of attribute prefetch in readdir() */
+int				 nstb_prefetch = DEF_READDIR_NENTS;
+
 struct psc_poolmaster		 slc_async_req_poolmaster;
 struct psc_poolmgr		*slc_async_req_pool;
 
@@ -1272,54 +1275,13 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 }
 
 void
-msl_readdir_error(struct fidc_membh *d, struct dircache_page *p, int rc)
+msl_readdir_fin(struct slashrpc_cservice *csvc, struct iovec *iov)
 {
-	FCMH_LOCK(d);
-	p->dcp_flags &= ~DIRCACHEPGF_LOADING;
-	p->dcp_rc = rc;
-	PFL_GETPTIMESPEC(&p->dcp_tm);
-	fcmh_wake_locked(d);
-	FCMH_ULOCK(d);
-}
-
-void
-msl_readdir(struct fidc_membh *d, struct dircache_page *p, int eof,
-    int nents, int size, struct iovec *iov)
-{
-	struct srt_readdir_ent *e;
-	struct fidc_membh *f;
-	int i;
-
-	for (i = 0, e = iov[1].iov_base; i < nents; i++, e++) {
-		if (e->sstb.sst_fid == FID_ANY ||
-		    e->sstb.sst_fid == 0) {
-			psclog_warnx("invalid f+g:"SLPRI_FG", "
-			    "parent: "SLPRI_FID,
-			    SLPRI_FG_ARGS(&e->sstb.sst_fg),
-			    fcmh_2_fid(d));
-			continue;
-		}
-
-		psclog_debug("adding f+g:"SLPRI_FG,
-		    SLPRI_FG_ARGS(&e->sstb.sst_fg));
-
-		uidmap_int_stat(&e->sstb);
-
-		fidc_lookup(&e->sstb.sst_fg, FIDC_LOOKUP_CREATE,
-		    &e->sstb, FCMH_SETATTRF_SAVELOCAL, &f);
-
-		if (f) {
-			FCMH_LOCK(f);
-			fcmh_2_fci(f)->fci_xattrsize =
-			    e->xattrsize;
-			fcmh_op_done(f);
-		}
-	}
-	if (eof)
-		p->dcp_flags |= DIRCACHEPGF_EOF;
-	p->dcp_size = size;
-	DBGPR_DIRCACHEPG(PLL_DEBUG, p, "registering");
-	dircache_reg_ents(d, p, nents, iov[0].iov_base);
+	PSCFREE(iov[1].iov_base);
+	PSCFREE(iov[0].iov_base);
+	PSCFREE(iov);
+	if (csvc)
+		sl_csvc_decref(csvc);
 }
 
 int
@@ -1328,6 +1290,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 	struct slashrpc_cservice *csvc = av->pointer_arg[MSL_READDIR_CBARG_CSVC];
 	struct dircache_page *p = av->pointer_arg[MSL_READDIR_CBARG_PAGE];
 	struct fidc_membh *d = av->pointer_arg[MSL_READDIR_CBARG_FCMH];
+	struct iovec *iov = av->pointer_arg[MSL_READDIR_CBARG_IOV];
 	struct srm_readdir_req *mq;
 	struct srm_readdir_rep *mp;
 	int rc;
@@ -1336,39 +1299,97 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 
 	if (rc) {
 		DEBUG_REQ(PLL_ERROR, rq, "rc=%d", rc);
-		msl_readdir_error(d, p, rc);
-	} else {
-		slrpc_rep_in(csvc, rq);
-		mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
-		mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
-		if (SRM_READDIR_BUFSZ(mp->size, mp->num) <=
-		    sizeof(mp->ents)) {
-			struct iovec iov[2];
 
-			iov[0].iov_base = PSCALLOC(mp->size);
-			memcpy(iov[0].iov_base, mp->ents, mp->size);
-			iov[1].iov_base = mp->ents + mp->size;
-			msl_readdir(d, p, mp->eof, mp->num, mp->size,
-			    iov);
+		FCMH_LOCK(d);
+		p->dcp_nextoff = p->dcp_off + 1;
+		p->dcp_flags &= ~DCPF_LOADING;
+		p->dcp_rc = rc;
+		PFL_GETPTIMESPEC(&p->dcp_tm);
+		fcmh_wake_locked(d);
+		FCMH_ULOCK(d);
+
+		goto out;
+	}
+
+	slrpc_rep_in(csvc, rq);
+	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
+	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
+
+	/*
+	 * If the directory is small, the data is packed in the RPC
+	 * directly and there is no bulk.
+	 */
+	if (SRM_READDIR_BUFSZ(mp->size, mp->num, mq->nstbpref) <=
+	    sizeof(mp->ents)) {
+		size_t sz;
+
+		sz = MIN(mp->num, mq->nstbpref) *
+		    sizeof(struct srt_readdir_ent);
+		memcpy(iov[1].iov_base, mp->ents, sz);
+		memcpy(iov[0].iov_base, mp->ents + sz, mp->size);
+	}
+
+	if (mq->nstbpref) {
+		struct srt_readdir_ent *attr = iov[1].iov_base;
+		struct fidc_membh *f;
+		uint32_t i;
+
+		if (mp->num < mq->nstbpref)
+			mq->nstbpref = mp->num;
+
+		for (i = 0; i < mq->nstbpref; i++, attr++) {
+			if (attr->sstb.sst_fid == FID_ANY ||
+			    attr->sstb.sst_fid == 0) {
+				psclog_warnx("invalid f+g:"SLPRI_FG", "
+				    "parent: "SLPRI_FID,
+				    SLPRI_FG_ARGS(&attr->sstb.sst_fg),
+				    fcmh_2_fid(d));
+				continue;
+			}
+
+			psclog_debug("adding f+g:"SLPRI_FG,
+			    SLPRI_FG_ARGS(&attr->sstb.sst_fg));
+
+			uidmap_int_stat(&attr->sstb);
+
+			fidc_lookup(&attr->sstb.sst_fg,
+			    FIDC_LOOKUP_CREATE, &attr->sstb,
+			    FCMH_SETATTRF_SAVELOCAL, &f);
+
+			if (f) {
+				FCMH_LOCK(f);
+				fcmh_2_fci(f)->fci_xattrsize =
+				    attr->xattrsize;
+				fcmh_op_done(f);
+			}
 		}
 	}
+	if (mp->eof)
+		p->dcp_flags |= DCPF_EOF;
+	p->dcp_size = mp->size;
+	DPRINTF_DIRCACHEPG(PLL_DEBUG, p, "registering");
+	dircache_reg_ents(d, p, mp->num, iov[0].iov_base);
+	iov[0].iov_base = NULL;
+
+ out:
+	msl_readdir_fin(csvc, iov);
 	fcmh_op_done_type(d, FCMH_OPCNT_READDIR);
-	sl_csvc_decref(csvc);
 	return (0);
 }
 
 int
 msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
-    off_t off, size_t size)
+    off_t off, size_t size, int ra)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct srm_readdir_req *mq = NULL;
 	struct srm_readdir_rep *mp = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct dircache_page *p;
-	int rc;
+	struct iovec *iov;
+	int rc, nstbpref, niov;
 
-	p = dircache_new_page(d, off);
+	p = dircache_new_page(d, off, ra);
 	if (p == NULL)
 		return (0);
 
@@ -1379,22 +1400,50 @@ msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	niov = 0;
+	iov = PSCALLOC(sizeof(*iov) * 2);
+
+	iov[niov].iov_base = PSCALLOC(size);
+	iov[niov].iov_len = size;
+	niov++;
+
+	/* calculate the max # of attributes that can be prefetched */
+	nstbpref = MIN(nstb_prefetch, (int)howmany(LNET_MTU - size,
+	    sizeof(struct srt_readdir_ent)));
+	if (nstbpref) {
+		size_t stprefsz;
+
+		stprefsz = nstbpref * sizeof(struct srt_readdir_ent);
+		iov[niov].iov_len = stprefsz;
+		iov[niov].iov_base = PSCALLOC(stprefsz);
+		niov++;
+	}
+
 	mq->fg = d->fcmh_fg;
 	mq->size = size;
 	mq->offset = off;
+	mq->nstbpref = nstbpref;
+
+	slrpc_bulkclient(rq, BULK_PUT_SINK, SRMC_BULK_PORTAL, iov, niov);
+
+	/*
+	 * If the dir is small, we avoid a bulk and pack the content
+	 * directly into the reply.
+	 */
+	rq->rq_bulk_abortable = 1;
 
 	rq->rq_interpret_reply = msl_readdir_cb;
 	rq->rq_async_args.pointer_arg[MSL_READDIR_CBARG_CSVC] = csvc;
 	rq->rq_async_args.pointer_arg[MSL_READDIR_CBARG_FCMH] = d;
+	rq->rq_async_args.pointer_arg[MSL_READDIR_CBARG_IOV] = iov;
 	rq->rq_async_args.pointer_arg[MSL_READDIR_CBARG_PAGE] = p;
-	DBGPR_DIRCACHEPG(PLL_DEBUG, p, "issuing");
+	DPRINTF_DIRCACHEPG(PLL_DEBUG, p, "issuing");
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (!rc)
 		return (0);
 
 	pscrpc_req_finished(rq);
-	sl_csvc_decref(csvc);
-
+	msl_readdir_fin(csvc, iov);
  out:
 	FCMH_LOCK(d);
 	dircache_free_page(d, p);
@@ -1410,11 +1459,12 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	struct dircache_page *p, *np;
 	struct pscfs_clientctx *pfcc;
 	struct msl_fhent *mfh = data;
-	struct dircache_expire dexp;
+	struct pfl_timespec expire;
 	struct fcmh_cli_info *fci;
 	struct pscfs_dirent *pfd;
 	struct pscfs_creds pcr;
 	struct fidc_membh *d;
+	off_t nextoff;
 
 	OPSTAT_INCR(SLC_OPST_READDIR);
 
@@ -1447,17 +1497,19 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	fci = fcmh_2_fci(d);
 
  restart:
-	DIRCACHEPG_INITEXP(&dexp);
+	PFL_GETPTIMESPEC(&expire);
+	expire.tv_sec -= DIRENT_TIMEO;
 
+	nextoff = 0;
 	nent = 0;
 	issue = 1;
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
-		if (DIRCACHEPG_EXPIRED(d, p, &dexp)) {
+		if (DIRCACHE_PAGE_EXPIRED(d, p, &expire)) {
 			dircache_free_page(d, p);
 			continue;
 		}
 
-		if (p->dcp_flags & DIRCACHEPGF_LOADING) {
+		if (p->dcp_flags & DCPF_LOADING) {
 			/* We don't know dcp_nextoff so we must wait. */
 			if (off >= p->dcp_off) {
 				OPSTAT_INCR(SLC_OPST_DIRCACHE_WAIT);
@@ -1470,16 +1522,16 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 
 		/* We found the last page; return EOF. */
 		if (off == p->dcp_nextoff &&
-		    p->dcp_flags & DIRCACHEPGF_EOF) {
+		    p->dcp_flags & DCPF_EOF) {
 			FCMH_ULOCK(d);
 			OPSTAT_INCR(SLC_OPST_DIRCACHE_HIT_EOF);
 			pscfs_reply_readdir(pfr, NULL, 0, rc);
 			return;
 		}
 
-		nent += psc_dynarray_len(&p->dcp_dents_name);
+		nent += psc_dynarray_len(&p->dcp_dents);
 
-		if (dircache_hasoff(p, off)) {
+		if (off >= p->dcp_off && off < p->dcp_nextoff) {
 			if (p->dcp_rc) {
 				rc = p->dcp_rc;
 				dircache_free_page(d, p);
@@ -1495,7 +1547,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 
 				/* find starting page */
 				poff = 0;
-				nd = psc_dynarray_len(&p->dcp_dents_name);
+				nd = psc_dynarray_len(&p->dcp_dents);
 				for (j = 0, pfd = p->dcp_base;
 				    j < nd; j++) {
 					if (off == thisoff)
@@ -1513,17 +1565,27 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 					if (tlen + len > size)
 						break;
 					len += tlen;
-					pfd = PSC_AGP(p->dcp_base,
-					    poff + len);
+					pfd = PSC_AGP(p->dcp_base, poff + len);
 				}
 
 				psc_assert(len);
 				pscfs_reply_readdir(pfr,
 				    p->dcp_base + poff, len, 0);
-				p->dcp_flags |= DIRCACHEPGF_USED;
 				if (hit)
 					OPSTAT_INCR(SLC_OPST_DIRCACHE_HIT);
 
+				/*
+				 * (1) If we are at the end of this
+				 *     page,
+				 * (2) this page is not EOF, and
+				 * (3) the next page is not nextoff,
+				 * then issue readahead.
+				 */
+				if (j == nd &&
+				    ((p->dcp_flags & DCPF_EOF) == 0) &&
+				    (np == NULL ||
+				     np->dcp_off != p->dcp_nextoff))
+					nextoff = p->dcp_nextoff;
 				issue = 0;
 				break;
 			}
@@ -1533,7 +1595,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 
 	if (issue) {
 		hit = 0;
-		rc = msl_readdir_issue(pfcc, d, off, size);
+		rc = msl_readdir_issue(pfcc, d, off, size, 0);
 		OPSTAT_INCR(SLC_OPST_DIRCACHE_ISSUE);
 		if (rc && !slc_rmc_retry(pfr, &rc)) {
 			pscfs_reply_readdir(pfr, NULL, 0, rc);
@@ -1541,6 +1603,32 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 		}
 		FCMH_LOCK(d);
 		goto restart;
+	}
+
+	if (nextoff) {
+		size_t esz;
+		int rem;
+
+		/*
+		 * The next page is not in cache; async request it in.
+		 * Calculate the size by estimating the # of remaining
+		 * ents bound to 500.
+		 */
+		FCMH_LOCK(d);
+		rem = d->fcmh_sstb.sst_size - nent;
+		FCMH_ULOCK(d);
+		if (rem < 0)
+			rem = 10;
+		/* 2000 * (dirent 24 + avgnamlen 24) = 95KB */
+		if (rem > 2000)
+			rem = 2000;
+		esz = sizeof(struct pscfs_dirent) + 16 +
+		    sizeof(struct srt_readdir_ent);
+		if (esz * rem > LNET_MTU)
+			rem = LNET_MTU / esz;
+		esz = sizeof(struct pscfs_dirent) + 16;
+		msl_readdir_issue(pfcc, d, nextoff, rem * esz, 1);
+		OPSTAT_INCR(SLC_OPST_DIRCACHE_RAISSUE);
 	}
 
 	if (0)
@@ -2195,7 +2283,7 @@ msl_dc_inv_entry(struct dircache_page *p, struct dircache_ent *d,
 {
 	const struct msl_dc_inv_entry_data *mdie = arg;
 
-	if (p->dcp_flags & DIRCACHEPGF_LOADING)
+	if (p->dcp_flags & DCPF_LOADING)
 		return;
 
 	pscfs_notify_inval_entry(mdie->mdie_pfr, mdie->mdie_pinum,
@@ -3291,7 +3379,7 @@ usage(void)
 {
 	fprintf(stderr,
 	    "usage: %s [-dQUVX] [-D datadir] [-f conf] [-I iosystem] [-M mds]\n"
-	    "\t[-o mountopt] [-S socket] node\n",
+	    "\t[-o mountopt] [-p #prefetch] [-S socket] node\n",
 	    progname);
 	exit(1);
 }
@@ -3302,6 +3390,7 @@ main(int argc, char *argv[])
 	struct pscfs_args args = PSCFS_ARGS_INIT(0, NULL);
 	char c, *p, *noncanon_mp, *cfg = SL_PATH_CONF;
 	int unmount_first = 0;
+	long l;
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -3331,7 +3420,7 @@ main(int argc, char *argv[])
 	if (p)
 		cfg = p;
 
-	while ((c = getopt(argc, argv, "D:df:I:M:o:QS:UVX")) != -1)
+	while ((c = getopt(argc, argv, "D:df:I:M:o:p:QS:UVX")) != -1)
 		switch (c) {
 		case 'D':
 			sl_datadir = optarg;
@@ -3353,6 +3442,15 @@ main(int argc, char *argv[])
 				pscfs_addarg(&args, "-o");
 				pscfs_addarg(&args, optarg);
 			}
+			break;
+		case 'p':
+			l = strtol(optarg, &p, 10);
+			if (p == optarg || *p != '\0' ||
+			    l < 0 || l > MAX_READDIR_NENTS)
+				errx(1, "invalid readdir statbuf "
+				    "#prefetch (max %d): %s",
+				    MAX_READDIR_NENTS, optarg);
+			nstb_prefetch = (int)l;
 			break;
 		case 'Q':
 			globalConfig.gconf_root_squash = 1;

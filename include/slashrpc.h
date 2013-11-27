@@ -859,46 +859,38 @@ struct srm_mknod_req {
 
 #define srm_mknod_rep		srm_getattr2_rep
 
-/* must be 64-bit aligned */
 struct srt_readdir_ent {
 	struct srt_stat		sstb;
 	uint64_t		xattrsize;
 } __packed;
 
-#define SRM_READDIR_BUFSZ(siz, nents)					\
-	(sizeof(struct srt_readdir_ent) * (nents) + (siz))
+#define DEF_READDIR_NENTS	128
+#define MAX_READDIR_NENTS	1000
+				/* XXX make relative to LNET_MTU */
+#define MAX_READDIR_BUFSIZ	(sizeof(struct srt_readdir_ent) * MAX_READDIR_NENTS)
 
 struct srm_readdir_req {
 	struct slash_fidgen	fg;
-	 int64_t		offset;
+	uint64_t		offset;
 	uint64_t		size;		/* XXX make 32-bit */
+	uint32_t		nstbpref;	/* max prefetched attributes */
+	 int32_t		_pad;
 } __packed;
 
-#define srm_replrq_rep		srm_generic_rep
+#define SRM_READDIR_BUFSZ(siz, nents, nstbpref)				\
+	(sizeof(struct srt_readdir_ent) * MIN((nstbpref), (nents)) + (siz))
 
 struct srm_readdir_rep {
 	uint64_t		size;		/* XXX make 32-bit */
-	uint32_t		eof:1;		/* flag: directory read EOF */
+	uint32_t		eof:1;		/* #dirents returned */
 	uint32_t		num:31;		/* #dirents returned */
 	 int32_t		rc;
 	unsigned char		ents[824];
-/* XXX ents should be in a portable format, not fuse_dirent */
-/* XXX ents is (fuse_dirent * N, 64-bit align, srt_readdir_ent * N) */
+/*
+ * XXX accompanied bulk data is (but should not be) in fuse dirent format
+ *	and must be 64-bit aligned if it cannot fit in `buf'.
+ */
 } __packed;
-
-struct srm_readdir_ra_req {
-	struct slash_fidgen	fg;
-	 int64_t		offset;		// XXX rename cookie
-	uint32_t		size;
-	uint32_t		eof:1;		/* flag: directory read EOF */
-	uint32_t		num:31;		/* #dirents returned */
-	 int32_t		rc;
-	 int32_t		_pad;
-/* XXX bulk data should be in a portable format, not fuse_dirent */
-/* XXX bulk data is (fuse_dirent * N, 64-bit align, srt_readdir_ent * N) */
-};
-
-#define srm_readdir_ra_rep	srm_generic_rep
 
 struct srm_readlink_req {
 	struct slash_fidgen	fg;
@@ -935,8 +927,8 @@ struct srm_replrq_req {
 	struct slash_fidgen	fg;
 	sl_replica_t		repls[SL_MAX_REPLICAS];
 	uint32_t		nrepls;
-	uint32_t		usr_prio;
-	uint32_t		sys_prio;
+	uint32_t		usr_pri;
+	uint32_t		sys_pri;
 	sl_bmapno_t		bmapno;		/* bmap to access or -1 for all */
 } __packed;
 

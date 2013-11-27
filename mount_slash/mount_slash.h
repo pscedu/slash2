@@ -42,7 +42,6 @@ struct pscrpc_request;
 
 struct bmap_pagecache_entry;
 struct bmpc_ioreq;
-struct dircache_page;
 
 /* mount_slash thread types */
 enum {
@@ -240,10 +239,6 @@ int	 msl_read_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 void	 msl_reada_rpc_launch(struct bmap_pagecache_entry **, int);
 int	 msl_readahead_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 int	 msl_stat(struct fidc_membh *, void *);
-
-void	 msl_readdir_error(struct fidc_membh *, struct dircache_page *, int);
-void	 msl_readdir(struct fidc_membh *, struct dircache_page *, int,
-	    int, int, struct iovec *);
 
 size_t	 msl_pages_copyout(struct bmpc_ioreq *);
 int	 msl_fd_should_retry(struct msl_fhent *, int);
