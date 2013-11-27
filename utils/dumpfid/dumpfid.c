@@ -50,31 +50,37 @@ struct psc_lockedlist	excludes = PLL_INIT(&excludes, struct path, lentry);
 
 const char *progname;
 
+#define KEYW(w)
+
 #define	K_BMAPS		(1 <<  0)
 #define	K_BSZ		(1 <<  1)
 #define	K_CRC		(1 <<  2)
 #define	K_FLAGS		(1 <<  3)
-#define	K_FSIZE		(1 <<  4)
-#define	K_NBLKS		(1 <<  5)
-#define	K_NREPLS	(1 <<  6)
-#define	K_REPLPOL	(1 <<  7)
-#define	K_REPLS		(1 <<  8)
-#define	K_VERSION	(1 <<  9)
-#define	K_XCRC		(1 << 10)
-#define	K_ALL		((~0) & ~K_BMAPS)
+#define	K_FID		(1 <<  4)
+#define	K_FSIZE		(1 <<  5)
+#define	K_NBLKS		(1 <<  6)
+#define	K_NREPLS	(1 <<  7)
+#define	K_REPLPOL	(1 <<  8)
+#define	K_REPLS		(1 <<  9)
+#define	K_UID		(1 << 10)
+#define	K_VERSION	(1 << 11)
+#define	K_XCRC		(1 << 12)
+#define	K_DEF		((~0) & ~K_BMAPS)
 
 const char *show_keywords[] = {
 	"bmaps",
 	"bsz",
 	"crc",
+	"fid",
 	"flags",
 	"fsize",
 	"nblks",
 	"nrepls",
 	"replpol",
 	"repls",
+	"uid",
 	"version",
-	"xcrc",
+	"xcrc"
 };
 
 const char *repl_states = "-sq+tpgx";
@@ -108,10 +114,10 @@ dumpfid(const char *fn, const struct pfl_stat *stb, int ftyp,
 	struct slash_inode_od ino;
 	struct iovec iovs[2];
 	struct path *p;
+	char tbuf[32];
 	sl_bmapno_t bno;
 	uint64_t crc, od_crc;
 	uint32_t nr, j;
-	int64_t s2usz;
 	ssize_t rc;
 	int fd;
 
@@ -145,18 +151,6 @@ dumpfid(const char *fn, const struct pfl_stat *stb, int ftyp,
 		goto out;
 	}
 
-#ifdef SL2_SIZE_EXTATTR
-	{
-		char fsize[64];
-
-#define SLXAT_SIZE	".sl2-fsize"
-		rc = fgetxattr(fd, SLXAT_SIZE, fsize, sizeof(fsize));
-		s2usz = strtoull(fsize, NULL, 10);
-	}
-#else
-	s2usz = stb->st_rdev;
-#endif
-
 	psc_crc64_calc(&crc, &ino, sizeof(ino));
 	printf("%s:\n", fn);
 	if (show & K_CRC)
@@ -172,8 +166,24 @@ dumpfid(const char *fn, const struct pfl_stat *stb, int ftyp,
 		printf("  nrepls %u\n", ino.ino_nrepls);
 	if (show & K_REPLPOL)
 		printf("  replpol %u\n", ino.ino_replpol);
-	if (show & K_FSIZE && rc > 0)
-		printf("  fsize %"PRId64"\n", s2usz);
+	if (show & K_FSIZE && rc > 0) {
+		rc = fgetxattr(fd, SLXAT_FSIZE, tbuf, sizeof(tbuf));
+		if (rc)
+			warnx("%s: getxattr %s: %s", fn, SLXAT_FSIZE,
+			    strerror(rc))
+		else
+			printf("  fsize %s\n", tbuf);
+	}
+	if (show & K_FID) {
+		rc = fgetxattr(fd, SLXAT_FID, tbuf, sizeof(tbuf));
+		if (rc)
+			warnx("%s: getxattr %s: %s", fn, SLXAT_FID,
+			    strerror(rc))
+		else
+			printf("  fid %s\n", tbuf);
+	}
+	if (show & K_UID)
+		printf("  usr %d\n", stb.st_uid);
 
 	nr = ino.ino_nrepls;
 	if (nr > SL_DEF_REPLICAS) {
@@ -313,7 +323,7 @@ main(int argc, char *argv[])
 	if (!argc)
 		usage();
 	if (!show)
-		show = K_ALL;
+		show = K_DEF;
 	for (; *argv; argv++)
 		pfl_filewalk(*argv, walkflags, dumpfid, NULL);
 	exit(0);
