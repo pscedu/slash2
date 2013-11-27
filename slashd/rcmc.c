@@ -69,13 +69,13 @@ slmrmcthr_replst_slave_eof(struct slm_replst_workreq *rsw,
 	mq->fg = f->fcmh_fg;
 	mq->id = rsw->rsw_cid;
 	mq->rc = EOF;
-	rc = SL_RSX_WAITREP(rsw->rsw_csvc, rq, mp);
+	rc = SL_RSX_WAITREP(rsw->rsw_csvc, rq, mp); // async
 	pscrpc_req_finished(rq);
 	return (rc);
 }
 
 int
-slmrmcthr_replst_slave_waitrep(struct slashrpc_cservice *csvc,
+slmrmcthr_replst_slave_fin(struct slashrpc_cservice *csvc,
     struct pscrpc_request *rq, struct fidc_membh *f)
 {
 	struct srm_replst_slave_req *mq;
@@ -103,7 +103,7 @@ slmrmcthr_replst_slave_waitrep(struct slashrpc_cservice *csvc,
 	} else
 		memcpy(mq->buf, srcm->srcm_page, nb);
 	if (rc == 0) {
-		rc = SL_RSX_WAITREP(csvc, rq, mp);
+		rc = SL_RSX_WAITREP(csvc, rq, mp); // async
 		if (rc == 0)
 			rc = mp->rc;
 	}
@@ -133,7 +133,7 @@ slmrcmthr_walk_brepls(struct slm_replst_workreq *rsw,
 	if (howmany(srcm->srcm_page_bitpos + nbits,
 	    NBBY) > SRM_REPLST_PAGESIZ || *rqp == NULL) {
 		if (*rqp) {
-			rc = slmrmcthr_replst_slave_waitrep(
+			rc = slmrmcthr_replst_slave_fin(
 			    rsw->rsw_csvc, *rqp, f);
 			*rqp = NULL;
 			if (rc)
@@ -195,7 +195,7 @@ slm_rcm_issue_getreplst(struct slm_replst_workreq *rsw,
 	if (is_eof)
 		mq->rc = EOF;
 
-	rc = SL_RSX_WAITREP(rsw->rsw_csvc, rq, mp);
+	rc = SL_RSX_WAITREP(rsw->rsw_csvc, rq, mp); // async
 	pscrpc_req_finished(rq);
 	return (rc);
 }
@@ -221,7 +221,7 @@ slmrcmthr_walk_bmaps(struct slm_replst_workreq *rsw,
 			bmap_op_done(b);
 		}
 		if (rq) {
-			rc2 = slmrmcthr_replst_slave_waitrep(
+			rc2 = slmrmcthr_replst_slave_fin(
 			    rsw->rsw_csvc, rq, f);
 			if (rc == 0)
 				rc = rc2;
