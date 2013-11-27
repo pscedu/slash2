@@ -463,6 +463,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 
 			bmap_2_bci(b)->bci_error = rc;
 			b->bcm_flags &= ~BMAP_CLI_LEASEEXTREQ;
+			b->bcm_flags |= BMAP_CLI_LEASEFAILED;
 
 			bmap_wake_locked(b);
 			bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
