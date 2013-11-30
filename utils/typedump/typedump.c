@@ -170,6 +170,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct bmpc_ioreq);
 	PRTYPE(struct bmpc_write_coalescer);
 	PRTYPE(struct dircache_ent);
+	PRTYPE(struct dircache_expire);
 	PRTYPE(struct dircache_page);
 	PRTYPE(struct fci_dinfo);
 	PRTYPE(struct fci_finfo);
@@ -180,6 +181,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct lnetif_pair);
 	PRTYPE(struct mdsio_ops);
 	PRTYPE(struct mio_fh);
+	PRTYPE(struct mio_rootnames);
 	PRTYPE(struct msattrfl_thread);
 	PRTYPE(struct msbmfl_thread);
 	PRTYPE(struct msbmflra_thread);
@@ -206,13 +208,13 @@ main(int argc, char *argv[])
 	PRTYPE(struct resm_mds_info);
 	PRTYPE(struct resprof_cli_info);
 	PRTYPE(struct resprof_mds_info);
-	PRTYPE(struct rootNames);
 	PRTYPE(struct site_mds_info);
 	PRTYPE(struct site_progress);
 	PRTYPE(struct sl_buffer);
 	PRTYPE(struct sl_config);
 	PRTYPE(struct sl_expcli_ops);
 	PRTYPE(struct sl_fcmh_ops);
+	PRTYPE(struct sl_fidgen);
 	PRTYPE(struct sl_ino_compat);
 	PRTYPE(struct sl_lnetrt);
 	PRTYPE(struct sl_mds_crc_log);
@@ -224,8 +226,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct sl_resource);
 	PRTYPE(struct sl_site);
 	PRTYPE(struct slash_creds);
-	PRTYPE(struct slash_fidgen);
-	PRTYPE(struct slashrpc_cservice);
 	PRTYPE(struct slc_async_req);
 	PRTYPE(struct slconn_params);
 	PRTYPE(struct slconn_thread);
@@ -253,6 +253,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slm_update_generic);
 	PRTYPE(struct slm_wkdata_batchrq_cb);
 	PRTYPE(struct slm_wkdata_ptrunc);
+	PRTYPE(struct slm_wkdata_readdir);
 	PRTYPE(struct slm_wkdata_upsch_cb);
 	PRTYPE(struct slm_wkdata_upsch_purge);
 	PRTYPE(struct slm_wkdata_upschq);
@@ -276,6 +277,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slmthr_dbh);
 	PRTYPE(struct slmupsch_thread);
 	PRTYPE(struct slmwk_thread);
+	PRTYPE(struct slrpc_cservice);
 	PRTYPE(struct slvr);
 	PRTYPE(struct srm_batch_req);
 	PRTYPE(struct srm_bmap_chwrmode_rep);
@@ -324,6 +326,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_mkdir_req);
 	PRTYPE(struct srm_mknod_req);
 	PRTYPE(struct srm_ping_req);
+	PRTYPE(struct srm_readdir_ra_req);
 	PRTYPE(struct srm_readdir_rep);
 	PRTYPE(struct srm_readdir_req);
 	PRTYPE(struct srm_readlink_rep);
@@ -396,8 +399,8 @@ main(int argc, char *argv[])
 	PRVAL(BRPOL_PERSIST);
 	PRVAL(CSVC_PING_INTV);
 	PRVAL(CSVC_RECONNECT_INTV);
-	PRVAL(DEF_READDIR_NENTS);
-	PRVAL(DIRENT_TIMEO);
+	PRVAL(DIRCACHEPG_MAXTIMEO);
+	PRVAL(DIRCACHEPG_TIMEO);
 	PRVAL(FCMH_ATTR_TIMEO);
 	PRVAL(FCMH_SETATTRF_NONE);
 	PRVAL(FIDC_CLI_DEFSZ);
@@ -413,7 +416,6 @@ main(int argc, char *argv[])
 	PRVAL(MAX_BMAP_INODE_PAIRS);
 	PRVAL(MAX_BMAP_NCRC_UPDATES);
 	PRVAL(MAX_BMAP_RELEASE);
-	PRVAL(MAX_READDIR_NENTS);
 	PRVAL(MDSIO_FID_ROOT);
 	PRVAL(MRSLF_EOF);
 	PRVAL(MSCMT_ADDREPLRQ);
@@ -497,6 +499,7 @@ main(int argc, char *argv[])
 	PRVAL(SLI_RIM_REPSZ);
 	PRVAL(SLJ_MDS_ENTSIZE);
 	PRVAL(SLJ_MDS_READSZ);
+	PRVAL(SLM_EXPC_READDIR_MAXNRA);
 	PRVAL(SLM_NWORKER_THREADS);
 	PRVAL(SLM_RECLAIM_BATCH);
 	PRVAL(SLM_RMC_BUFSZ);
