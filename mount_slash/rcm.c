@@ -288,6 +288,56 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 	return (0);
 }
 
+int
+slc_rcm_handle_readdir(struct pscrpc_request *rq)
+{
+	struct srm_readdir_ra_req *mq;
+	struct srm_readdir_ra_rep *mp;
+	struct dircache_page *p;
+	struct fidc_membh *d;
+	struct iovec iov[2];
+
+	memset(iov, 0, sizeof(iov));
+
+	SL_RSX_ALLOCREP(rq, mq, mp);
+
+//	if (mq->num >=  || mq->size >= )
+//		PFL_GOTOERR(out, mp->rc = -EINVAL);
+
+	mp->rc = fidc_lookup(&mq->fg, FIDC_LOOKUP_CREATE |
+	    FIDC_LOOKUP_LOAD, NULL, 0, &d);
+	if (mp->rc)
+		return (mp->rc);
+
+	if (mq->rc)
+		PFL_GOTOERR(error, mq->rc);
+
+	iov[0].iov_base = PSCALLOC(mq->size);
+	iov[0].iov_len = mq->size;
+
+	iov[1].iov_len = mq->num * sizeof(struct srt_readdir_ent);
+	iov[1].iov_base = PSCALLOC(iov[1].iov_len);
+
+	mp->rc = slrpc_bulkserver(rq, BULK_GET_SINK, SRCM_BULK_PORTAL,
+	    iov, nitems(iov));
+	if (mq->rc == 0)
+		mq->rc = mp->rc;
+
+ error:
+	p = dircache_new_page(d, mq->offset); 
+
+	if (mq->rc) {
+		msl_readdir_error(d, p, mq->rc);
+		PSCFREE(iov[0].iov_base);
+	} else
+		msl_readdir(d, p, mq->eof, mq->num, mq->size, iov);
+
+	PSCFREE(iov[1].iov_base);
+
+	fcmh_op_done(d);
+	return (mp->rc);
+}
+
 /**
  * slc_rcm_handler - Handle a request for CLI from MDS.
  * @rq: request.
@@ -313,6 +363,10 @@ slc_rcm_handler(struct pscrpc_request *rq)
 		break;
 	case SRMT_REPL_GETST_SLAVE:
 		rc = msrcm_handle_getreplst_slave(rq);
+		break;
+
+	case SRMT_READDIR:
+		rc = slc_rcm_handle_readdir(rq);
 		break;
 
 	case SRMT_RELEASEBMAP:

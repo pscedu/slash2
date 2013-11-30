@@ -40,11 +40,12 @@
 #include <time.h>
 
 #include "pfl/dynarray.h"
+#include "pfl/fs.h"
 #include "pfl/list.h"
 #include "pfl/listcache.h"
+#include "pfl/lock.h"
 #include "pfl/str.h"
 #include "pfl/time.h"
-#include "pfl/lock.h"
 
 #include "sltypes.h"
 #include "fidc_cli.h"
@@ -64,7 +65,8 @@
 
 struct fidc_membh;
 
-#define DIRENT_TIMEO 4
+#define DIRCACHEPG_TIMEO	4	/* expiration after page read */
+#define DIRCACHEPG_MAXTIMEO	30	/* expiration regardless if read */
 
 /*
  * This consitutes a block of 'struct dirent' members (dircache_ent)
@@ -72,29 +74,45 @@ struct fidc_membh;
  * directories with many entries.
  */
 struct dircache_page {
-	int			 dcp_flags;	/* see DCPF_* below */
+	int			 dcp_flags;	/* see DIRCACHEPGF_* below */
 	int			 dcp_rc;	/* readdir(3) error */
 	size_t			 dcp_size;
 	off_t			 dcp_off;
 	off_t			 dcp_nextoff;
 	struct pfl_timespec	 dcp_tm;
 	struct psc_listentry	 dcp_lentry;	/* chain on dci  */
-	struct psc_dynarray	 dcp_dents;
+	struct psc_dynarray	*dcp_dents_name;/* dircache_ents sorted by hash(basename) */
+	struct psc_dynarray	*dcp_dents_off;	/* dircache_ents sorted by d_off */
 	void			*dcp_base;	/* pscfs_dirents */
 	void			*dcp_base0;	/* dircache_ents */
 };
 
 /* dcp_flags */
-#define DCPF_LOADING		(1 << 0)
-#define DCPF_EOF		(1 << 1)	/* denotes last page */
-#define DCPF_READAHEAD		(1 << 2)	/* was loaded by readahead */
+#define DIRCACHEPGF_LOADING	(1 << 0)	/* stub is waiting for network load */
+#define DIRCACHEPGF_EOF		(1 << 1)	/* denotes last page */
+#define DIRCACHEPGF_USED	(1 << 2)	/* page has been read */
 
-#define DIRCACHE_PAGE_EXPIRED(d, p, exp)				\
-	(((p)->dcp_flags & DCPF_LOADING) == 0 &&			\
-	 (timespeccmp((exp), &(p)->dcp_tm, >) ||			\
+struct dircache_expire {
+	struct pfl_timespec	 dexp_def;
+	struct pfl_timespec	 dexp_max;
+};
+
+#define DIRCACHEPG_EXPIRED(d, p, dexp)					\
+	(((p)->dcp_flags & DIRCACHEPGF_LOADING) == 0 &&			\
+	 ((timespeccmp(&(dexp)->dexp_def, &(p)->dcp_tm, >) &&		\
+	    (p)->dcp_flags & DIRCACHEPGF_USED) ||			\
+	  timespeccmp(&(dexp)->dexp_max, &(p)->dcp_tm, >) ||		\
 	  timespeccmp(&(d)->fcmh_sstb.sst_mtim, &p->dcp_tm, >)))
 
-#define DPRINTF_DIRCACHEPG(lvl, dcp, fmt, ...)				\
+#define DIRCACHEPG_INITEXP(dexp)					\
+	do {								\
+		PFL_GETPTIMESPEC(&(dexp)->dexp_def);			\
+		(dexp)->dexp_max = (dexp)->dexp_def;			\
+		(dexp)->dexp_def.tv_sec -= DIRCACHEPG_TIMEO;		\
+		(dexp)->dexp_max.tv_sec -= DIRCACHEPG_MAXTIMEO;		\
+	} while (0)
+
+#define DBGPR_DIRCACHEPG(lvl, dcp, fmt, ...)				\
 	psclog((lvl), "dcp@%p off %"PSCPRIdOFFT" sz %zu fl %#x "	\
 	    "nextoff %"PSCPRIdOFFT": " fmt,				\
 	    (dcp), (dcp)->dcp_off, (dcp)->dcp_size, (dcp)->dcp_flags,	\
@@ -106,14 +124,12 @@ struct dircache_ent {
 	int			 dce_namelen;
 	off_t			 dce_len;
 	const char		*dce_name;
+	int64_t			 dce_off;
 };
 
-/*
- * This is also a sort comparison.  We need dirent_cmp() and
- * dirent_sort_cmp() for different interfaces.
- */
+/* The different interfaces below are used for searching and sorting. */
 static __inline int
-dirent_cmp(const void *a, const void *b)
+dce_cmp_name(const void *a, const void *b)
 {
 	const struct dircache_ent *x = a, *y = b;
 	int rc;
@@ -128,16 +144,35 @@ dirent_cmp(const void *a, const void *b)
 }
 
 static __inline int
-dirent_sort_cmp(const void *x, const void *y)
+dce_sort_cmp_name(const void *x, const void *y)
 {
 	const void * const *pa = x, *a = *pa;
 	const void * const *pb = y, *b = *pb;
 
-	return (dirent_cmp(a, b));
+	return (dce_cmp_name(a, b));
+}
+
+/* The different interfaces below are used for searching and sorting. */
+static __inline int
+dce_cmp_off(const void *a, const void *b)
+{
+	const struct dircache_ent *x = a, *y = b;
+
+	return (CMP(x->dce_off, y->dce_off));
+}
+
+static __inline int
+dce_sort_cmp_off(const void *x, const void *y)
+{
+	const void * const *pa = x, *a = *pa;
+	const void * const *pb = y, *b = *pb;
+
+	return (dce_cmp_off(a, b));
 }
 
 struct dircache_page *
-	dircache_new_page(struct fidc_membh *, off_t, int);
+	dircache_new_page(struct fidc_membh *, off_t);
+int	dircache_hasoff(struct dircache_page *, off_t);
 void	dircache_free_page(struct fidc_membh *, struct dircache_page *);
 slfid_t	dircache_lookup(struct fidc_membh *, const char *);
 void	dircache_mgr_init(void);
