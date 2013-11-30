@@ -38,6 +38,7 @@
 #include "pfl/walk.h"
 
 #include "slashd/inode.h"
+#include "slashd/mdsio.h"
 
 struct path {
 	const char		*fn;
@@ -170,7 +171,7 @@ dumpfid(const char *fn, const struct pfl_stat *stb, int ftyp,
 		rc = fgetxattr(fd, SLXAT_FSIZE, tbuf, sizeof(tbuf));
 		if (rc)
 			warnx("%s: getxattr %s: %s", fn, SLXAT_FSIZE,
-			    strerror(rc))
+			    strerror(rc));
 		else
 			printf("  fsize %s\n", tbuf);
 	}
@@ -178,12 +179,12 @@ dumpfid(const char *fn, const struct pfl_stat *stb, int ftyp,
 		rc = fgetxattr(fd, SLXAT_FID, tbuf, sizeof(tbuf));
 		if (rc)
 			warnx("%s: getxattr %s: %s", fn, SLXAT_FID,
-			    strerror(rc))
+			    strerror(rc));
 		else
 			printf("  fid %s\n", tbuf);
 	}
 	if (show & K_UID)
-		printf("  usr %d\n", stb.st_uid);
+		printf("  usr %d\n", stb->st_uid);
 
 	nr = ino.ino_nrepls;
 	if (nr > SL_DEF_REPLICAS) {
