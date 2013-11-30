@@ -55,7 +55,7 @@ enum slconn_type {
 };
 
 struct slconn_params {
-	struct slashrpc_cservice**scp_csvcp;
+	struct slrpc_cservice	**scp_csvcp;
 	psc_atomic32_t		  scp_flags;
 	struct psc_dynarray	 *scp_peernids;
 	enum slconn_type	  scp_peertype;
@@ -78,10 +78,10 @@ struct slconn_thread {
 };
 
 /**
- * @slashrpc_cservice - Structure for client to connect to a remote
+ * @slrpc_cservice - Structure for client to connect to a remote
  *	server.
  */
-struct slashrpc_cservice {
+struct slrpc_cservice {
 	struct slconn_params	 csvc_params;
 	struct pscrpc_import	*csvc_import;
 	int			 csvc_lasterrno;
@@ -98,6 +98,7 @@ struct slashrpc_cservice {
 #define csvc_rqptl	csvc_params.scp_rqptl
 #define csvc_rpptl	csvc_params.scp_rpptl
 };
+#define slashrpc_cservice slrpc_cservice
 
 /* csvc_flags */
 #define CSVCF_CONNECTING	(1 << 0)		/* conn attempt in progress */
@@ -265,7 +266,7 @@ struct sl_expcli_ops {
 
 struct slashrpc_cservice *
 	 _sl_csvc_get(const struct pfl_callerinfo *,
-	     struct slashrpc_cservice **, int, struct pscrpc_export *,
+	     struct slrpc_cservice **, int, struct pscrpc_export *,
 	     struct psc_dynarray *, uint32_t, uint32_t, uint64_t,
 	     uint32_t, enum slconn_type, struct psc_multiwait *);
 void	_sl_csvc_decref(const struct pfl_callerinfo *, struct slashrpc_cservice *);

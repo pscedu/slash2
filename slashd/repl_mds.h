@@ -32,7 +32,7 @@
 struct resm_mds_info;
 
 struct slm_replst_workreq {
-	struct slashrpc_cservice	*rsw_csvc;
+	struct slrpc_cservice		*rsw_csvc;
 	struct slash_fidgen		 rsw_fg;
 	int				 rsw_cid;		/* client-issued ID */
 	struct psclist_head		 rsw_lentry;

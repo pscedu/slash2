@@ -32,6 +32,8 @@ struct pscfs_clientctx;
 struct pscrpc_import;
 struct pscrpc_request;
 
+struct slrpc_cservice;
+
 /* async RPC pointers */
 #define MSL_CBARG_BMPCE			0
 #define MSL_CBARG_CSVC			1
@@ -107,8 +109,8 @@ struct pscrpc_request;
 void	slc_rpc_initsvc(void);
 
 int	slc_rmc_getcsvc(struct pscfs_clientctx *, struct sl_resm *,
-	    struct slashrpc_cservice **);
-int	slc_rmc_getcsvc1(struct slashrpc_cservice **, struct sl_resm *);
+	    struct slrpc_cservice **);
+int	slc_rmc_getcsvc1(struct slrpc_cservice **, struct sl_resm *);
 int	slc_rmc_retry_pfcc(struct pscfs_clientctx *, int *);
 int	slc_rmc_setmds(const char *);
 

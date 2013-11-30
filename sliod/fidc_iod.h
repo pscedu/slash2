@@ -27,6 +27,7 @@
 
 #include "fid.h"
 #include "fidcache.h"
+#include "slconn.h"
 #include "sliod.h"
 #include "sltypes.h"
 

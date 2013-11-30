@@ -44,7 +44,7 @@
 #include "sltypes.h"
 
 struct sl_site;
-struct slashrpc_cservice;
+struct slrpc_cservice;
 
 #define SITE_NAME_MAX		32
 #define INTRES_NAME_MAX		32
@@ -108,7 +108,7 @@ struct sl_resm_nid {
 
 /* Resource member (a machine in an I/O system) */
 struct sl_resm {
-	struct slashrpc_cservice*resm_csvc;	/* client RPC service - must be first */
+	struct slrpc_cservice	*resm_csvc;	/* client RPC service - must be first */
 	struct psc_dynarray	 resm_nids;	/* network interfaces */
 	struct sl_resource	*resm_res;
 	uint32_t		 resm_stkvers;	/* peer SLASH2 stack version */
