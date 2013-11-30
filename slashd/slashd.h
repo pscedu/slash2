@@ -349,13 +349,13 @@ struct slm_wkdata_upsch_purge {
 };
 
 struct slm_wkdata_upsch_cb {
-	struct slashrpc_cservice *csvc;
-	struct sl_resm		 *src_resm;
-	struct sl_resm		 *dst_resm;
-	struct bmap		 *b;
-	int			  rc;
-	int			  off;
-	int64_t			  amt;
+	struct slrpc_cservice	*csvc;
+	struct sl_resm		*src_resm;
+	struct sl_resm		*dst_resm;
+	struct bmap		*b;
+	int			 rc;
+	int			 off;
+	int64_t			 amt;
 };
 
 struct slm_wkdata_batchrq_cb {
@@ -366,6 +366,27 @@ struct slm_wkdata_batchrq_cb {
 struct slm_wkdata_upschq {
 	struct slash_fidgen	 fg;
 	sl_bmapno_t		 bno;
+};
+
+/* this is used for two different calling interfaces */
+struct slm_wkdata_readdir {
+	struct pscrpc_export	*exp;
+	struct slrpc_cservice	*csvc;
+
+	/* for running mdsio_readdir() */
+	struct slash_fidgen	 fg;
+	off_t			 off;
+	size_t			 size;
+
+	/* for sending async RPC */
+	struct iovec		 iov[2];
+	int			 num;
+	int			 rc;
+	int			 eof;
+
+	/* for readahead */
+	int			 ra;
+	off_t			 nextoff;
 };
 
 struct mio_rootnames {

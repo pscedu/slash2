@@ -75,9 +75,12 @@ enum slm_fwd_op {
 #define SLM_UPDATE_BATCH		2048			/* namespace updates */
 #define SLM_RECLAIM_BATCH		2048			/* garbage reclamation */
 
+#define SLM_EXPC_READDIR_MAXNRA		4
+
 struct slm_exp_cli {
-	struct slashrpc_cservice	*mexpc_csvc;		/* must be first field */
-	uint32_t			 mexpc_stkvers;		/* must be second field */
+	struct slashrpc_cservice	 *mexpc_csvc;		/* must be first field */
+	uint32_t			  mexpc_stkvers;	/* must be second field */
+	int				  mexpc_readdir_nra;
 };
 
 struct batchrq {
@@ -112,11 +115,11 @@ int	slm_mkdir(int, struct srm_mkdir_req *, struct srm_mkdir_rep *, int,
 int	slm_symlink(struct pscrpc_request *, struct srm_symlink_req *,
 	    struct srm_symlink_rep *, int);
 
-int batchrq_add(struct sl_resource *, struct slashrpc_cservice *,
-    int, int, void *, size_t, void (*)(struct batchrq *, int), int);
-int batchrq_handle(struct pscrpc_request *);
+int	batchrq_add(struct sl_resource *, struct slashrpc_cservice *,
+	    int, int, void *, size_t, void (*)(struct batchrq *, int), int);
+int	batchrq_handle(struct pscrpc_request *);
 
-void slmbchrqthr_spawn(void);
+void	slmbchrqthr_spawn(void);
 
 /* aliases for connection management */
 #define slm_getmcsvc(resm, exp, fl, mw)					\

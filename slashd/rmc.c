@@ -690,99 +690,236 @@ slm_rmc_handle_readdir_roots(struct iovec *iov0, struct iovec *iov1,
 	}
 }
 
+#define RCM_READDIR_CBARGP_CSVC		0
+#define RCM_READDIR_CBARGP_EXP		1
+#define RCM_READDIR_CBARGP_IOV		2
+#define RCM_READDIR_CBARGI_NEXTOFF	0
+#define RCM_READDIR_CBARGI_DECR		1
+
+int  slm_rcmc_readdir_cb(struct pscrpc_request *, struct pscrpc_async_args *);
+void slm_rcm_try_readdir_ra(struct pscrpc_export *, struct sl_fidgen *, int, int, off_t, size_t);
+int  slm_readdir_issue(struct pscrpc_export *, struct sl_fidgen *, size_t, off_t, size_t *, int *,
+	int *, unsigned char *, size_t, int);
+
+/**
+ * Special case routine for processing READDIR request (non readahead).
+ */
 int
-slm_rmc_handle_readdir(struct pscrpc_request *rq)
+slm_rcm_issue_readdir_wk(void *p)
+{
+	struct slm_wkdata_readdir *wk = p;
+	struct srm_readdir_ra_req *mq;
+	struct srm_readdir_ra_rep *mp;
+	struct pscrpc_request *rq;
+	int rc;
+
+	rc = SL_RSX_NEWREQ(wk->csvc, SRMT_READDIR, rq, mq, mp);
+	if (rc) {
+		sl_csvc_decref(wk->csvc);
+		goto out;
+	}
+	mq->fg = wk->fg;
+	mq->offset = wk->off;
+	mq->size = wk->size;
+	mq->eof = wk->eof;
+	mq->num = wk->num;
+	mq->rc = wk->rc;
+
+	rq->rq_interpret_reply = slm_rcmc_readdir_cb;
+	rq->rq_async_args.pointer_arg[RCM_READDIR_CBARGP_CSVC] = wk->csvc;
+	rq->rq_async_args.pointer_arg[RCM_READDIR_CBARGP_IOV] = wk->iov;
+	rq->rq_async_args.pointer_arg[RCM_READDIR_CBARGP_EXP] =
+	    pscrpc_export_get(wk->exp);
+	rq->rq_async_args.space[RCM_READDIR_CBARGI_NEXTOFF] = wk->nextoff;
+	rq->rq_async_args.space[RCM_READDIR_CBARGI_DECR] = wk->ra;
+	rc = slrpc_bulkclient(rq, BULK_GET_SOURCE, SRCM_BULK_PORTAL,
+	    wk->iov, nitems(wk->iov));
+	rc = SL_NBRQSET_ADD(wk->csvc, rq);
+	if (rc) {
+		pscrpc_req_finished(rq);
+		sl_csvc_decref(wk->csvc);
+		pscrpc_export_put(wk->exp);
+	} else {
+		slm_rcm_try_readdir_ra(wk->exp, &wk->fg,
+		    wk->rc ? wk->rc : rc, wk->eof, wk->nextoff,
+		    wk->size);
+	}
+
+ out:
+	pscrpc_export_put(wk->exp);
+	return (0);
+}
+
+/**
+ * Special interface routine for issuing a READDIR bulk reply from work
+ * context.
+ */
+int
+slm_readdir_ra_issue(void *p)
+{
+	struct slm_wkdata_readdir *wk = p;
+	size_t outsize;
+	int nents, eof;
+
+	slm_readdir_issue(wk->exp, &wk->fg, wk->size, wk->off, &outsize,
+	    &nents, &eof, NULL, 0, 1);
+	pscrpc_export_put(wk->exp);
+	return (0);
+}
+
+/**
+ * Determine if another READDIR (for readahead) should be done and setup
+ * an async RPC to get it moving.
+ *
+ * This routine is called in a number of places:
+ *  (o) after a READDIR completes, immediately schedule a readahead if
+ *	within limits;
+ *  (o) when client acknowledges READDIR received;
+ */
+void
+slm_rcm_try_readdir_ra(struct pscrpc_export *exp, struct sl_fidgen *fgp,
+    int rc, int eof, off_t off, size_t size)
+{
+	struct slm_wkdata_readdir *wk;
+	struct slm_exp_cli *mexpc;
+	int done = 1;
+
+	if (eof || rc)
+		return;
+
+	EXPORT_LOCK(exp);
+	mexpc = sl_exp_getpri_cli(exp);
+	if (mexpc->mexpc_readdir_nra < SLM_EXPC_READDIR_MAXNRA) {
+		done = 0;
+		mexpc->mexpc_readdir_nra++;
+	}
+
+	EXPORT_ULOCK(exp);
+
+	if (done)
+		return;
+
+	wk = pfl_workq_getitem(slm_readdir_ra_issue,
+	    struct slm_wkdata_readdir);
+	wk->exp = pscrpc_export_get(exp);
+	wk->fg = *fgp;
+	wk->off = off;
+	wk->size = size;
+	pfl_workq_putitem(wk);
+}
+
+/**
+ * Callback run signifying client completion of receiving a bulk READDIR.
+ */
+int
+slm_rcmc_readdir_cb(struct pscrpc_request *rq,
+    struct pscrpc_async_args *av)
+{
+	int decr = av->space[RCM_READDIR_CBARGI_DECR];
+	off_t nextoff = av->space[RCM_READDIR_CBARGI_NEXTOFF];
+	struct slashrpc_cservice *csvc = av->pointer_arg[RCM_READDIR_CBARGP_CSVC];
+	struct pscrpc_export *exp = av->pointer_arg[RCM_READDIR_CBARGP_EXP];
+	struct iovec *iov = av->pointer_arg[RCM_READDIR_CBARGP_IOV];
+	struct srm_readdir_ra_req *mq;
+	struct slm_exp_cli *mexpc;
+	int rc;
+
+	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_readdir_ra_rep, rc);
+	if (rc == 0) {
+		mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
+		slrpc_rep_in(csvc, rq);
+
+		// XXX this has position problems when past RPCs finish
+		slm_rcm_try_readdir_ra(exp, &mq->fg, mq->rc, mq->eof,
+		    nextoff, mq->size);
+	}
+
+	if (decr) {
+		EXPORT_LOCK(exp);
+		mexpc = sl_exp_getpri_cli(exp);
+		mexpc->mexpc_readdir_nra--;
+		EXPORT_ULOCK(exp);
+	}
+
+	PSCFREE(iov[0].iov_base);
+	PSCFREE(iov[1].iov_base);
+	sl_csvc_decref(csvc);
+	return (0);
+}
+
+/**
+ * Perform a READDIR and setup an async RPC to send it to a client.
+ */
+int
+slm_readdir_issue(struct pscrpc_export *exp, struct sl_fidgen *fgp,
+    size_t size, off_t off, size_t *outsize, int *nents, int *eof,
+    unsigned char *piggybuf, size_t piggysize, int ra)
 {
 	struct fidc_membh *f = NULL;
-	struct srm_readdir_req *mq;
-	struct srm_readdir_rep *mp;
 	struct iovec iov[2];
-	size_t outsize, nents;
-	int niov, vfsid, eof;
+	off_t nextoff;
+	int rc, vfsid;
 
-	iov[0].iov_base = NULL;
-	iov[1].iov_base = NULL;
+	memset(iov, 0, sizeof(iov));
 
-	SL_RSX_ALLOCREP(rq, mq, mp);
-	OPSTAT_INCR(SLM_OPST_READDIR);
+	rc = slfid_to_vfsid(fgp->fg_fid, &vfsid);
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
-	mp->rc = slfid_to_vfsid(mq->fg.fg_fid, &vfsid);
-	if (mp->rc)
-		PFL_GOTOERR(out, mp->rc);
+	rc = -slm_fcmh_get(fgp, &f);
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
-	mp->rc = -slm_fcmh_get(&mq->fg, &f);
-	if (mp->rc)
-		PFL_GOTOERR(out, mp->rc);
-
-	if (mq->size > MAX_READDIR_BUFSIZ ||
-	    mq->nstbpref > MAX_READDIR_NENTS)
-		PFL_GOTOERR(out, mp->rc = -EINVAL);
-
-	iov[0].iov_base = PSCALLOC(mq->size);
-	iov[0].iov_len = mq->size;
-
-	niov = 1;
-	if (mq->nstbpref) {
-		niov++;
-		iov[1].iov_len = mq->nstbpref * sizeof(struct srt_readdir_ent);
-		iov[1].iov_base = PSCALLOC(iov[1].iov_len);
-	} else {
-		iov[1].iov_len = 0;
-		iov[1].iov_base = NULL;
-	}
-
-	/* make sure things are populated under the root before readdir() */
-	if (mq->fg.fg_fid == SLFID_ROOT)
-		psc_scan_filesystems();
-
-	eof = 0;
-	mp->rc = mdsio_readdir(vfsid, &rootcreds, mq->size, mq->offset,
-	    iov[0].iov_base, &outsize, &nents, iov[1].iov_base,
-	    mq->nstbpref, &eof, fcmh_2_mfh(f));
-
-	psclog_info("mdsio_readdir: rc=%d, data=%p", mp->rc,
-	    fcmh_2_mfh(f));
-	mp->size = outsize;
-	mp->num = nents;
-	mp->eof = eof;
-
-	if (mp->rc)
-		PFL_GOTOERR(out, mp->rc);
+	iov[0].iov_base = PSCALLOC(size);
 
 	/*
-	 * If this is the root, we fake part of readdir contents by
-	 * return the file system names here.
+	 * Ensure things are populated under the root before handling
+	 * subdirs.
 	 */
-	if (mq->fg.fg_fid == SLFID_ROOT)
-		slm_rmc_handle_readdir_roots(&iov[0], &iov[1], nents);
-#if 0
-	{
-		/* debugging only */
-		unsigned int i;
-		struct srt_readdir_ent *attr;
-		attr = iov[1].iov_base;
-		for (i = 0; i < mq->nstbpref; i++, attr++) {
-			if (!attr->sst_fg.fg_fid)
-				break;
-			psclog_info("reply: f+g:"SLPRI_FG", mode=%#o",
-				SLPRI_FG_ARGS(&attr->sst_fg),
-				attr->sst_mode);
-		}
-	}
-#endif
+	if (fgp->fg_fid == SLFID_ROOT)
+		psc_scan_filesystems();
 
-	if (SRM_READDIR_BUFSZ(mp->size, mp->num, mq->nstbpref) <=
-	    sizeof(mp->ents)) {
-		size_t sz;
+	rc = mdsio_readdir(vfsid, &rootcreds, size, off,
+	    iov[0].iov_base, outsize, nents, &iov[1], eof, &nextoff,
+	    fcmh_2_mfh(f));
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
-		sz = MIN(mp->num, mq->nstbpref) *
-		    sizeof(struct srt_readdir_ent);
-		memcpy(mp->ents, iov[1].iov_base, sz);
-		memcpy(mp->ents + sz, iov[0].iov_base, mp->size);
-		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
+	iov[0].iov_len = *outsize;
+
+	/*
+	 * If this is a request for the root, we fake part of the
+	 * readdir contents by returning the file system names here.
+	 */
+	if (fgp->fg_fid == SLFID_ROOT)
+		slm_rmc_handle_readdir_roots(&iov[0], &iov[1], *nents);
+
+	if (piggybuf &&
+	    SRM_READDIR_BUFSZ(*outsize, *nents) <= piggysize) {
+		memcpy(piggybuf, iov[0].iov_base, *outsize);
+		memcpy(piggybuf + *outsize, iov[1].iov_base,
+		    *nents * sizeof(struct srt_readdir_ent));
 	} else {
-		mp->rc = slrpc_bulkserver(rq, BULK_PUT_SOURCE,
-		    SRMC_BULK_PORTAL, iov, niov);
+		struct slm_wkdata_readdir *wk;
+
+		wk = pfl_workq_getitem(slm_rcm_issue_readdir_wk,
+		    struct slm_wkdata_readdir);
+		wk->exp = pscrpc_export_get(exp);
+		wk->csvc = slm_getclcsvc(exp);
+		wk->fg = *fgp;
+		wk->off = off;
+		wk->size = *outsize;
+		wk->nextoff = nextoff;
+		wk->num = *nents;
+		wk->ra = ra;
+		memcpy(wk->iov, iov, sizeof(iov));
+		wk->eof = *eof;
+		iov[0].iov_base = NULL;
+		iov[1].iov_base = NULL;
+		pfl_workq_putitem(wk);
+
+		slm_rcm_try_readdir_ra(exp, fgp, rc, *eof, nextoff,
+		    size);
 	}
 
  out:
@@ -790,6 +927,29 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	PSCFREE(iov[1].iov_base);
 	if (f)
 		fcmh_op_done(f);
+	return (rc);
+}
+
+int
+slm_rmc_handle_readdir(struct pscrpc_request *rq)
+{
+	struct srm_readdir_req *mq;
+	struct srm_readdir_rep *mp;
+	int eof, num;
+
+	OPSTAT_INCR(SLM_OPST_READDIR);
+
+	SL_RSX_ALLOCREP(rq, mq, mp);
+	if (mq->size > LNET_MTU)
+		PFL_GOTOERR(out, mp->rc = -EINVAL);
+
+	mp->rc = slm_readdir_issue(rq->rq_export, &mq->fg, mq->size,
+	    mq->offset, &mp->size, &num, &eof, mp->ents,
+	    sizeof(mp->ents), 0);
+	mp->num = num;
+	mp->eof = eof;
+
+ out:
 	return (mp->rc);
 }
 
