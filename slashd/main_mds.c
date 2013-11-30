@@ -638,6 +638,9 @@ main(int argc, char *argv[])
 		    "CREATE INDEX 'upsch_bno_idx'"
 		    " ON 'upsch' ('bno')");
 		dbdo(NULL, NULL,
+		    "CREATE INDEX 'upsch_uid_idx'"
+		    " ON 'upsch' ('uid')");
+		dbdo(NULL, NULL,
 		    "CREATE INDEX 'upsch_gid_idx'"
 		    " ON 'upsch' ('gid')");
 	}
