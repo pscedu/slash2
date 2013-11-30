@@ -103,7 +103,7 @@ struct mdsio_ops {
 	int	(*mio_pwritev)(int, const struct slash_creds *, const struct iovec *, int, size_t *, off_t, int, void *,
 			sl_log_write_t, void *);
 	int	(*mio_read)(int, const struct slash_creds *, void *, size_t, size_t *, off_t, void *);
-	int	(*mio_readdir)(int, const struct slash_creds *, size_t, off_t, void *, size_t *, size_t *, void *, int, int *, void *);
+	int	(*mio_readdir)(int, const struct slash_creds *, size_t, off_t, void *, size_t *, int *, struct iovec *, int *, off_t *, void *); 
 	int	(*mio_readlink)(int, mdsio_fid_t, char *, const struct slash_creds *);
 	int	(*mio_release)(int, const struct slash_creds *, void *);
 	int	(*mio_rename)(int, mdsio_fid_t, const char *, mdsio_fid_t, const char *, const struct slash_creds *,
