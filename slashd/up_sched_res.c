@@ -900,63 +900,66 @@ upd_proc_pagein(struct slm_update_data *upd)
     struct resprof_mds_info *rpmi;
     struct sl_mds_iosinfo *si;
     struct sl_resource *r;
+    struct gid_table gidtbl;
     int n, lim, i;
-    struct gid_table gidtbl = {};
+
+    memset(&gidtbl, 0, sizeof(gidtbl));
 
     upg = upd_getpriv(upd);
     if (upg->upg_resm) {
-        r = upg->upg_resm->resm_res;
-        rpmi = res2rpmi(r);
-        si = res2iosinfo(r);
+	r = upg->upg_resm->resm_res;
+	rpmi = res2rpmi(r);
+	si = res2iosinfo(r);
 
-        RPMI_LOCK(rpmi);
-        n = UPSCH_MAX_ITEMS_RES -
-            psc_dynarray_len(&rpmi->rpmi_upschq);
-        si->si_flags &= ~SIF_UPSCH_PAGING;
-        RPMI_ULOCK(rpmi);
+	RPMI_LOCK(rpmi);
+	n = UPSCH_MAX_ITEMS_RES -
+	    psc_dynarray_len(&rpmi->rpmi_upschq);
+	si->si_flags &= ~SIF_UPSCH_PAGING;
+	RPMI_ULOCK(rpmi);
 
-        if (n > 0){
-            dbdo(fill_gid_cb, &gidtbl,
-                    "SELECT DISTINCT(gid)"
-                    " FROM upsch "
-                    " WHERE resid=?"
-                    "   AND status='Q'"
-                    " ORDER BY RANDOM()"
-                    " LIMIT ?",
-                    r->res_id, n);
+	if (n > 0){
+	    dbdo(fill_gid_cb, &gidtbl,
+		    "SELECT DISTINCT(gid)"
+		    " FROM upsch "
+		    " WHERE resid=?"
+		    "   AND status='Q'"
+		    " ORDER BY RANDOM()"
+		    " LIMIT ?",
+		    SQLITE_INTEGER, r->res_id,
+		    SQLITE_INTEGER, n);
 
-            if(gidtbl.rows){
-                lim = n / gidtbl.rows;
-                for(i = 0; i < gidtbl.rows; i++)
-                    dbdo(upd_proc_pagein_cb, NULL,
-                            " SELECT    fid,"
-                            "       bno,"
-                            "       nonce"
-                            " FROM  upsch"
-                            " WHERE resid = ?"
-                            "   AND status = 'Q'"
-                            "   AND gid = ?"
-                            " ORDER BY  sys_pri DESC,"
-                            "       usr_pri DESC,"
-                            "       RANDOM()"
-                            " LIMIT ?",
-                            SQLITE_INTEGER, r->res_id,
-                            SQLITE_INTEGER, gidtbl.gids[i],
-                            SQLITE_INTEGER, lim);
-            }
-        }
+	    if(gidtbl.rows){
+		lim = n / gidtbl.rows;
+		for(i = 0; i < gidtbl.rows; i++)
+		    dbdo(upd_proc_pagein_cb, NULL,
+			    " SELECT    fid,"
+			    "       bno,"
+			    "       nonce"
+			    " FROM  upsch"
+			    " WHERE resid = ?"
+			    "   AND status = 'Q'"
+			    "   AND gid = ?"
+			    " ORDER BY  sys_pri DESC,"
+			    "       usr_pri DESC,"
+			    "       RANDOM()"
+			    " LIMIT ?",
+			    SQLITE_INTEGER, r->res_id,
+			    SQLITE_INTEGER, gidtbl.gids[i],
+			    SQLITE_INTEGER, lim);
+	    }
+	}
 
     } else {
-        dbdo(upd_proc_pagein_cb, NULL,
-            " SELECT    fid,"
-            "       bno,"
-            "       nonce"
-            " FROM  upsch"
-            " WHERE status = 'Q'"
-            " ORDER BY  sys_pri DESC,"
-            "       usr_pri DESC,"
-            "       RANDOM()"
-            " LIMIT 1");
+	dbdo(upd_proc_pagein_cb, NULL,
+	    " SELECT    fid,"
+	    "       bno,"
+	    "       nonce"
+	    " FROM  upsch"
+	    " WHERE status = 'Q'"
+	    " ORDER BY  sys_pri DESC,"
+	    "       usr_pri DESC,"
+	    "       RANDOM()"
+	    " LIMIT 1");
     }
 }
 
