@@ -828,11 +828,7 @@ msbmaprlsthr_main(struct psc_thread *thr)
 
 			PFL_GETTIMESPEC(&crtime);
 
-			/*
-			 * ref 0: lookup
-			 * ref 1: reaper
-			 */
-			if (psc_atomic32_read(&b->bcm_opcnt) > 2) {
+			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
 				DEBUG_BMAP(PLL_DIAG, b, "skip due to refcnt");
 				BMAP_ULOCK(b);
 				continue;
