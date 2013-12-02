@@ -84,6 +84,8 @@ struct replrq_arg {
 	int			 nios;
 	int			 opcode;
 	int			 bmapno;
+	int			 sys_prio;
+	int			 usr_prio;
 };
 
 struct bmap_range {
@@ -261,8 +263,8 @@ void
 parse_replrq(int opcode, const char *fn, const char *oreplrqspec,
     int (*packf)(const char *, const struct pfl_stat *, int, int, void *))
 {
-	char replrqspec[LINE_MAX];
-	char *endp, *bmapnos, *bmapno, *next, *bend, *iosv, *ios;
+	char *sprio, *uprio, *bmapno, *next, *bend, *iosv, *ios;
+	char replrqspec[LINE_MAX], *endp, *bmapnos;
 	struct replrq_arg ra;
 	int bmax;
 	long l;
@@ -282,6 +284,37 @@ parse_replrq(int opcode, const char *fn, const char *oreplrqspec,
 		return;
 	}
 	*bmapnos++ = '\0';
+
+	ra.usr_prio = -1;
+	ra.sys_prio = -1;
+
+	uprio = strchr(bmapnos, ':');
+	if (uprio) {
+		*uprio++ = '\0';
+
+		sprio = strchr(uprio, 's');
+		if (sprio)
+			*sprio++ = '\0';
+
+		if (uprio) {
+			l = strtol(uprio, &endp, 10);
+			if (l < 0 || l > INT_MAX ||
+			    uprio == endp || *endp)
+				errx(1, "invalid user priority: %s",
+				    uprio);
+			else
+				ra.usr_prio = l;
+		}
+		if (sprio) {
+			l = strtol(sprio, &endp, 10);
+			if (l < 0 || l > INT_MAX ||
+			    sprio == endp || *endp)
+				errx(1, "invalid user priority: %s",
+				    sprio);
+			else
+				ra.sys_prio = l;
+		}
+	}
 
 	/* parse I/O systems */
 	ra.nios = 0;
