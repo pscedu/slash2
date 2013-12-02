@@ -391,7 +391,11 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 
 	secs = (int)(bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec);
 
-	psc_assert(!(b->bcm_flags & BMAP_TOFREE));
+	if (b->bcm_flags & BMAP_TOFREE) {
+		psc_assert(!blockable);
+		BMAP_ULOCK(b);
+		return 0;
+	}
 
 	if (b->bcm_flags & BMAP_CLI_LEASEFAILED) {
 		/*
