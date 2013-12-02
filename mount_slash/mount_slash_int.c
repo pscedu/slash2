@@ -2159,7 +2159,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 		rc = bmap_get(f, start + i, rw, &b);
 		if (rc)
-			break;
+			goto out;
 
 		rc = msl_bmap_lease_tryext(b, 1);
 		if (rc) {
@@ -2206,8 +2206,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		bufp += tlen;
 		tlen  = MIN(SLASH_BMAP_SIZE, tsize);
 	}
-	if (rc)
-		goto out;
 
 	/*
 	 * Step 2: launch biorqs if necessary
