@@ -532,6 +532,8 @@ cmd_replrq_one(const char *fn, const struct pfl_stat *pst,
 	mrq = psc_ctlmsg_push(ra->opcode, sizeof(*mrq));
 	mrq->mrq_bmapno = ra->bmapno;
 	mrq->mrq_nios = ra->nios;
+	mrq->mrq_sys_prio = ra->sys_prio;
+	mrq->mrq_usr_prio = ra->usr_prio;
 	for (n = 0; n < ra->nios; n++)
 		strlcpy(mrq->mrq_iosv[n], ra->iosv[n],
 		    sizeof(mrq->mrq_iosv[0]));

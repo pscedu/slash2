@@ -57,6 +57,8 @@ struct msctlmsg_replrq {
 	char			mrq_iosv[SL_MAX_REPLICAS][RES_NAME_MAX];
 	uint32_t		mrq_nios;
 	sl_bmapno_t		mrq_bmapno;
+	int32_t			mrq_sys_prio;
+	int32_t			mrq_usr_prio;
 };
 
 struct msctlmsg_fattr {
