@@ -732,11 +732,11 @@ slm_rcm_issue_readdir_wk(void *p)
 	    pscrpc_export_get(wk->exp);
 	rq->rq_async_args.space[RCM_READDIR_CBARGI_NEXTOFF] = wk->nextoff;
 	rq->rq_async_args.space[RCM_READDIR_CBARGI_DECR] = wk->ra;
-	if (wk->iov[0]->iov_len) {
-		psc_assert(wk->eof);
+	if (wk->iov[0].iov_len)
 		rc = slrpc_bulkclient(rq, BULK_GET_SOURCE,
 		    SRCM_BULK_PORTAL, wk->iov, nitems(wk->iov));
-	}
+	else
+		psc_assert(wk->eof);
 	rc = SL_NBRQSET_ADD(wk->csvc, rq);
 	if (rc) {
 		pscrpc_req_finished(rq);
