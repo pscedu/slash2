@@ -486,7 +486,8 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 		bmap_wait_locked(b, (b->bcm_flags & BMAP_CLI_LEASEEXTREQ));
 		rc = bmap_2_bci(b)->bci_error;
 		BMAP_ULOCK(b);
-	}
+	} else
+		BMAP_ULOCK(b);
 
 	return (rc);
 }
