@@ -901,9 +901,9 @@ dump_bmap_flags(uint32_t flags)
 #endif
 
 struct bmap_ops sl_bmap_ops = {
-	msl_bmap_free,
-	msl_bmap_init,
-	msl_bmap_retrieve,
-	msl_bmap_modeset,
+	msl_bmap_free,			/* bmo_free() */
+	msl_bmap_init,			/* bmo_init_privatef() */
+	msl_bmap_retrieve,		/* bmo_retrievef() */
+	msl_bmap_modeset,		/* bmo_mode_chngf() */
 	msl_bmap_final_cleanup		/* bmo_final_cleanupf() */
 };
