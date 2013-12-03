@@ -212,7 +212,7 @@ mds_bmap_read(struct bmap *b, __unusedx enum rw rw, int flags)
 		if (nb == 0 || (nb == BMAP_OD_SZ && od_crc == 0 &&
 		    pfl_memchk(bmap_2_ondisk(b), 0, BMAP_OD_CRCSZ))) {
 			    mds_bmap_initnew(b);
-			    DEBUG_BMAPOD(PLL_INFO, b,
+			    DEBUG_BMAPOD(PLL_ERROR, b,
 				"initialized new bmap unexpectedly, nb=%d", nb);
 			    return (0);
 		    }
