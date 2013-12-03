@@ -20,7 +20,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES ctl fuse rpc %
-.Dd November 8, 2013
+.Dd December 3, 2013
 .Dt MSCTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -127,7 +127,8 @@ behavior.
 .\"			.El
 .\"			EOF
 .\"		"repl-add Ns : Ns Ar replrqspec\n" .
-.\"		qq{.Oo : Ns Ar pri Oc " " Ar} => <<'EOF',
+.\"		qq{.Op : Ns Ar uprio Op Cm s Ar prio\n} .
+.\"		qq{.No " " Ar} => <<'EOF',
 .\"			Enqueue data replication as specified by
 .\"			.Ar replrqspec
 .\"			to the specified files.
@@ -158,16 +159,20 @@ behavior.
 .\"			will be replicated;
 .\"			otherwise, only the bmaps with the given indexes will be replicated.
 .\"			.Pp
-.\"			A positive integer priority value
-.\"			.Ar pri
-.\"			may be specified to give higher precedence on the workload.
-.\"			.Pp
 .\"			The default replication policy is to arrange a one time replica.
 .\"			At any time after obtaining residency, other replicas will be
 .\"			invalidated if any replica is modified.
 .\"			See
 .\"			.Cm bmap-repl-policy
 .\"			for information on modifying the replication policy.
+.\"			.Pp
+.\"			A positive integer priority value
+.\"			.Ar uprio
+.\"			may be specified to assign higher user-level precedence on the workload.
+.\"			A higher precedent system-level priority value may be specified via
+.\"			.Ar prio .
+.\"			The level of either priority can be changed by reissuing the request
+.\"			with the desired value(s) specified.
 .\"			EOF
 .\"		"repl-remove Ns : Ns Ar replrqspec file ..." => <<'EOF',
 .\"			Cancel ongoing file replication requests as specified by
@@ -307,7 +312,8 @@ for more information about replication policies.
 .It Xo
 .Sm off
 .Cm repl-add Ns : Ns Ar replrqspec
-.Oo : Ns Ar pri Oc " " Ar
+.Op : Ns Ar uprio Op Cm s Ar prio
+.No " " Ar
 .Sm on
 .Xc
 Enqueue data replication as specified by
@@ -340,16 +346,20 @@ is supplied as the bmap specification, all present bmaps in the file
 will be replicated;
 otherwise, only the bmaps with the given indexes will be replicated.
 .Pp
-A positive integer priority value
-.Ar pri
-may be specified to give higher precedence on the workload.
-.Pp
 The default replication policy is to arrange a one time replica.
 At any time after obtaining residency, other replicas will be
 invalidated if any replica is modified.
 See
 .Cm bmap-repl-policy
 for information on modifying the replication policy.
+.Pp
+A positive integer priority value
+.Ar uprio
+may be specified to assign higher user-level precedence on the workload.
+A higher precedent system-level priority value may be specified via
+.Ar prio .
+The level of either priority can be changed by reissuing the request
+with the desired value(s) specified.
 .It Cm repl-remove Ns : Ns Ar replrqspec file ...
 Cancel ongoing file replication requests as specified by
 .Ar replrqspec .
