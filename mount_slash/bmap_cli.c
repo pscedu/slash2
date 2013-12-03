@@ -383,14 +383,14 @@ msl_bmap_lease_tryreassign(struct bmap *b)
 int
 msl_bmap_lease_tryext(struct bmap *b, int blockable)
 {
-	int secs = 0, rc = 0, unlock = 1;
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
+	struct srm_leasebmapext_req *mq;
+	struct srm_leasebmapext_rep *mp;
+	int secs, rc;
 	struct timespec ts;
 
 	BMAP_LOCK(b);
-	PFL_GETTIMESPEC(&ts);
-
-	secs = (int)(bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec);
-
 	if (b->bcm_flags & BMAP_TOFREE) {
 		psc_assert(!blockable);
 		BMAP_ULOCK(b);
@@ -403,92 +403,91 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 		 * marked this bmap as expired.
 		 */
 		rc = bmap_2_bci(b)->bci_error;
-
-	} else if (b->bcm_flags & BMAP_CLI_LEASEEXTREQ) {
-		if (!blockable)
-			rc = -EAGAIN;
-		else {
-			DEBUG_BMAP(PLL_ERROR, b,
-			    "blocking on lease renewal");
-			bmap_op_start_type(b, BMAP_OPCNT_LEASEEXT);
-			bmap_wait_locked(b, (b->bcm_flags &
-			    BMAP_CLI_LEASEEXTREQ));
-
-			rc = bmap_2_bci(b)->bci_error;
-
-			bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
-			unlock = 0;
-		}
-	} else if (secs < BMAP_CLI_EXTREQSECS || (b->bcm_flags & BMAP_CLI_LEASEEXPIRED)) {
-
-		struct slashrpc_cservice *csvc = NULL;
-		struct pscrpc_request *rq = NULL;
-		struct srm_leasebmapext_req *mq;
-			struct srm_leasebmapext_rep *mp;
-
-		if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED)
-			b->bcm_flags &= ~BMAP_CLI_LEASEEXPIRED;
-
-		b->bcm_flags |= BMAP_CLI_LEASEEXTREQ;
-		bmap_op_start_type(b, BMAP_OPCNT_LEASEEXT);
-
-		/* Unlock no matter what. */
 		BMAP_ULOCK(b);
-
-		rc = slc_rmc_getcsvc1(&csvc,
-		    fcmh_2_fci(b->bcm_fcmh)->fci_resm);
-		if (rc)
-			goto out;
-		rc = SL_RSX_NEWREQ(csvc, SRMT_EXTENDBMAPLS, rq, mq, mp);
-		if (rc)
-			goto out;
-
-		memcpy(&mq->sbd, &bmap_2_bci(b)->bci_sbd,
-		    sizeof(struct srt_bmapdesc));
-		authbuf_sign(rq, PSCRPC_MSG_REQUEST);
-
-		rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
-		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
-		rq->rq_interpret_reply = msl_bmap_lease_tryext_cb;
-		pscrpc_req_setcompl(rq, &rpcComp);
-
-		rc = pscrpc_nbreqset_add(pndgBmaplsReqs, rq);
-		if (!rc)
-			OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_SEND);
- out:
-		DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
-		    "lease extension req (rc=%d) (secs=%d)", rc, secs);
-		BMAP_LOCK(b);
-		if (rc) {
-			if (rq)
-				pscrpc_req_finished(rq);
-			if (csvc)
-				sl_csvc_decref(csvc);
-
-			bmap_2_bci(b)->bci_error = rc;
-			b->bcm_flags &= ~BMAP_CLI_LEASEEXTREQ;
-			b->bcm_flags |= BMAP_CLI_LEASEFAILED;
-
-			bmap_wake_locked(b);
-			bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
-			OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_ABRT);
-			unlock = 0;
-		} else if (blockable) {
-#if 0
-			/*
-			 * We should never cache data without a lease.
-			 * However, let us turn off this for now until
-			 * we fix the performance dip.
-			 */
-			bmap_wait_locked(b, (b->bcm_flags &
-			    BMAP_CLI_LEASEEXTREQ));
-			rc = bmap_2_bci(b)->bci_error;
-#endif
-		}
+		return rc;
 	}
 
-	if (unlock)
+	if (b->bcm_flags & BMAP_CLI_LEASEEXTREQ) {
+		if (!blockable) {
+			BMAP_ULOCK(b);
+			return 0;
+		}
+		DEBUG_BMAP(PLL_ERROR, b,
+		    "blocking on lease renewal");
+		bmap_op_start_type(b, BMAP_OPCNT_LEASEEXT);
+		bmap_wait_locked(b, (b->bcm_flags & BMAP_CLI_LEASEEXTREQ));
+
+		rc = bmap_2_bci(b)->bci_error;
+
+		bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
+		return rc;
+	}
+
+	PFL_GETTIMESPEC(&ts);
+	secs = (int)(bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec);
+	if (secs >= BMAP_CLI_EXTREQSECS && !(b->bcm_flags & BMAP_CLI_LEASEEXPIRED)) {
+		if (blockable)
+			OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_HIT);
 		BMAP_ULOCK(b);
+		return 0;
+	}
+
+	if (b->bcm_flags & BMAP_CLI_LEASEEXPIRED)
+		b->bcm_flags &= ~BMAP_CLI_LEASEEXPIRED;
+
+	b->bcm_flags |= BMAP_CLI_LEASEEXTREQ;
+	bmap_op_start_type(b, BMAP_OPCNT_LEASEEXT);
+
+	BMAP_ULOCK(b);
+
+	rc = slc_rmc_getcsvc1(&csvc,
+	    fcmh_2_fci(b->bcm_fcmh)->fci_resm);
+	if (rc)
+		goto out;
+	rc = SL_RSX_NEWREQ(csvc, SRMT_EXTENDBMAPLS, rq, mq, mp);
+	if (rc)
+		goto out;
+
+	memcpy(&mq->sbd, &bmap_2_bci(b)->bci_sbd, sizeof(struct srt_bmapdesc));
+	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
+
+	rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
+	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
+	rq->rq_interpret_reply = msl_bmap_lease_tryext_cb;
+	pscrpc_req_setcompl(rq, &rpcComp);
+
+	rc = pscrpc_nbreqset_add(pndgBmaplsReqs, rq);
+	if (!rc)
+		OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_SEND);
+ out:
+	BMAP_LOCK(b);
+	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
+	    "lease extension req (rc=%d) (secs=%d)", rc, secs);
+	if (rc) {
+		if (rq)
+			pscrpc_req_finished(rq);
+		if (csvc)
+			sl_csvc_decref(csvc);
+
+		bmap_2_bci(b)->bci_error = rc;
+		b->bcm_flags &= ~BMAP_CLI_LEASEEXTREQ;
+		b->bcm_flags |= BMAP_CLI_LEASEFAILED;
+
+		bmap_wake_locked(b);
+		bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
+		OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_ABRT);
+	} else if (blockable) {
+#if 0
+		/*
+		 * We should never cache data without a lease.
+		 * However, let us turn off this for now until
+		 * we fix the performance dip.
+		 */
+		bmap_wait_locked(b, (b->bcm_flags & BMAP_CLI_LEASEEXTREQ));
+		rc = bmap_2_bci(b)->bci_error;
+#endif
+		BMAP_ULOCK(b);
+	}
 
 	return (rc);
 }
