@@ -479,8 +479,6 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 	} else if (blockable) {
 		/*
 		 * We should never cache data without a lease.
-		 * However, let us turn off this for now until
-		 * we fix the performance dip.
 		 */
 		OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_WAIT);
 		bmap_wait_locked(b, (b->bcm_flags & BMAP_CLI_LEASEEXTREQ));
