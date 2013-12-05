@@ -176,7 +176,6 @@ struct mdsio_ops mdsio_ops = {
 	zfsslash2_removexattr,
 
 	zfsslash2_replay_create,
-	zfsslash2_replay_fidlink,
 	zfsslash2_replay_link,
 	zfsslash2_replay_mkdir,
 	zfsslash2_replay_rename,

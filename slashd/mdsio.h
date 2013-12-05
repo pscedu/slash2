@@ -125,7 +125,6 @@ struct mdsio_ops {
 
 	/* replay interface */
 	int	(*mio_redo_create)(int, slfid_t, char *, struct srt_stat *);
-	int	(*mio_redo_fidlink)(int,slfid_t, const struct slash_creds *);
 	int	(*mio_redo_link)(int, slfid_t, slfid_t, char *, struct srt_stat *);
 	int	(*mio_redo_mkdir)(int, slfid_t, char *, struct srt_stat *);
 	int	(*mio_redo_rename)(int, slfid_t, const char *, slfid_t, const char *, struct srt_stat *);
@@ -173,7 +172,6 @@ struct mdsio_ops {
 #define mdsio_removexattr	mdsio_ops.mio_removexattr		/* zfsslash2_removexattr() */
 
 #define mdsio_redo_create	mdsio_ops.mio_redo_create		/* zfsslash2_replay_create() */
-#define mdsio_redo_fidlink	mdsio_ops.mio_redo_fidlink		/* zfsslash2_replay_fidlink() */
 #define mdsio_redo_link		mdsio_ops.mio_redo_link			/* zfsslash2_replay_link() */
 #define mdsio_redo_mkdir	mdsio_ops.mio_redo_mkdir		/* zfsslash2_replay_mkdir() */
 #define mdsio_redo_rename	mdsio_ops.mio_redo_rename		/* zfsslash2_replay_rename() */
