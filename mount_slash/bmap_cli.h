@@ -113,4 +113,7 @@ bmap_cli_timeo_cmp(const void *x, const void *y)
 	return (0);
 }
 
+void msbmaprlsthr_main(struct psc_thread *);
+int msl_bmap_release_cb(struct pscrpc_request *, struct pscrpc_async_args *);
+
 #endif /* _SLASH_BMAP_CLI_H_ */

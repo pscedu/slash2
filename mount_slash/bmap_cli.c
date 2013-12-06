@@ -43,6 +43,7 @@
 
 extern psc_spinlock_t		bmapTimeoutLock;
 extern struct psc_waitq		bmapTimeoutWaitq;
+struct pscrpc_nbreqset	       *pndgBmapRlsReqs;	/* bmap release */
 
 /*
  * msl_bmap_free(): avoid ENOMEM and clean up TOFREE bmap to avoid stalls.
@@ -652,6 +653,197 @@ msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd)
 	 * removed.
 	 */
 	lc_addtail(&bmapTimeoutQ, bci);
+}
+
+
+int
+msl_bmap_release_cb(struct pscrpc_request *rq,
+    struct pscrpc_async_args *args)
+{
+	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
+	struct srm_bmap_release_req *mq;
+	struct srm_bmap_release_rep *mp;
+	uint32_t i;
+	int rc;
+
+	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
+	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
+
+	// SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_release_rep, rc);
+
+	rc = mp ? mp->rc : -ENOBUFS;
+
+	for (i = 0; i < mq->nbmaps; i++) {
+		psclog(rc ? PLL_ERROR : PLL_INFO,
+		    "fid="SLPRI_FID" bmap=%u key=%"PRId64" "
+		    "seq=%"PRId64" rc=%d", mq->sbd[i].sbd_fg.fg_fid,
+		    mq->sbd[i].sbd_bmapno, mq->sbd[i].sbd_key,
+		    mq->sbd[i].sbd_seq, rc);
+	}
+
+	sl_csvc_decref(csvc);
+	return (rc);
+}
+
+static void
+msl_bmap_release(struct sl_resm *resm)
+{
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
+	struct srm_bmap_release_req *mq;
+	struct srm_bmap_release_rep *mp;
+	struct resm_cli_info *rmci;
+	int rc;
+
+	rmci = resm2rmci(resm);
+
+	csvc = (resm == slc_rmc_resm) ?
+	    slc_getmcsvc(resm) : slc_geticsvc(resm);
+	if (csvc == NULL) {
+		if (resm->resm_csvc)
+			rc = resm->resm_csvc->csvc_lasterrno; /* XXX race */
+		else
+			rc = -ENOTCONN;
+		goto out;
+	}
+
+	psc_assert(rmci->rmci_bmaprls.nbmaps);
+
+	rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq, mq, mp);
+	if (rc)
+		goto out;
+
+	memcpy(mq, &rmci->rmci_bmaprls, sizeof(*mq));
+	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
+	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
+	rc = pscrpc_nbreqset_add(pndgBmapRlsReqs, rq);
+
+ out:
+	rmci->rmci_bmaprls.nbmaps = 0;
+	if (rc) {
+		/*
+		 * At this point the bmaps have already been purged from
+		 * our cache.  If the MDS RLS request fails then the MDS
+		 * should time them out on his own.  In any case, the
+		 * client must reacquire leases to perform further I/O
+		 * on any bmap in this set.
+		 */
+		psclog_errorx("failed res=%s (rc=%d)", resm->resm_name,
+		    rc);
+
+		if (rq)
+			pscrpc_req_finished(rq);
+		if (csvc)
+			sl_csvc_decref(csvc);
+	}
+}
+
+void
+msbmaprlsthr_main(struct psc_thread *thr)
+{
+	int i, nitems, didwork;
+	struct psc_dynarray rels = DYNARRAY_INIT;
+	struct bmap_cli_info *bci;
+	struct timespec crtime, nto = { BMAP_CLI_TIMEO_INC, 0 };
+	struct resm_cli_info *rmci;
+	struct bmapc_memb *b;
+	struct sl_resm *resm;
+	struct psc_dynarray bcis = DYNARRAY_INIT_NOLOG;
+
+	/*
+	 * XXX: just put the resm's in the dynarray.  When pushing out
+	 * the bid's, assume an ion unless resm == slc_rmc_resm.
+	 */
+	psc_dynarray_ensurelen(&rels, MAX_BMAP_RELEASE);
+	psc_dynarray_ensurelen(&bcis, MAX_BMAP_RELEASE);
+	while (pscthr_run(thr)) {
+
+		i = 0;
+		didwork = 0;
+		OPSTAT_INCR(SLC_OPST_BMAP_RELEASE);
+		nitems = lc_nitems(&bmapTimeoutQ);
+		LIST_CACHE_LOCK(&bmapTimeoutQ);
+		LIST_CACHE_FOREACH(bci, &bmapTimeoutQ) {
+
+			b = bci_2_bmap(bci);
+			if (!BMAP_TRYLOCK(b))
+				continue;
+
+			psc_assert(b->bcm_flags & BMAP_TIMEOQ);
+			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
+
+			PFL_GETTIMESPEC(&crtime);
+
+			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
+				DEBUG_BMAP(PLL_DIAG, b, "skip due to refcnt");
+				BMAP_ULOCK(b);
+				continue;
+			}
+			if (nitems - i <= BMAP_CACHE_MAX / 4 &&
+			    timespeccmp(&crtime, &bci->bci_etime, <)) {
+				DEBUG_BMAP(PLL_DIAG, b, "skip due to expire");
+				BMAP_ULOCK(b);
+				continue;
+			}
+
+			/*
+			 * A bmap should be taken off the flush queue after all
+			 * its biorq are finished.
+			 */
+			psc_assert(!(b->bcm_flags & BMAP_FLUSHQ));
+
+			didwork = 1;
+			psc_dynarray_add(&bcis, bci);
+			if (++i >= MAX_BMAP_RELEASE)
+				break;
+		}
+		LIST_CACHE_ULOCK(&bmapTimeoutQ);
+		DYNARRAY_FOREACH(bci, i, &bcis) {
+
+			b = bci_2_bmap(bci);
+			b->bcm_flags &= ~BMAP_TIMEOQ;
+			lc_remove(&bmapTimeoutQ, bci);
+
+			if (b->bcm_flags & BMAP_WR) {
+				/* Setup a msg to an ION. */
+				psc_assert(bmap_2_ios(b) != IOS_ID_ANY);
+
+				resm = libsl_ios2resm(bmap_2_ios(b));
+				rmci = resm2rmci(resm);
+
+				DEBUG_BMAP(PLL_INFO, b, "res(%s)",
+				    resm->resm_res->res_name);
+				OPSTAT_INCR(SLC_OPST_BMAP_RELEASE_WRITE);
+			} else {
+				resm = slc_rmc_resm;
+				rmci = resm2rmci(slc_rmc_resm);
+				OPSTAT_INCR(SLC_OPST_BMAP_RELEASE_READ);
+			}
+
+			memcpy(&rmci->rmci_bmaprls.sbd[rmci->rmci_bmaprls.nbmaps],
+			    &bci->bci_sbd, sizeof(bci->bci_sbd));
+
+			rmci->rmci_bmaprls.nbmaps++;
+			psc_dynarray_add_ifdne(&rels, resm);
+
+			DEBUG_BMAP(PLL_DEBUG, b, "release");
+			bmap_op_done_type(b, BMAP_OPCNT_REAPER);
+		}
+
+		DYNARRAY_FOREACH(resm, i, &rels)
+			msl_bmap_release(resm);
+
+		psc_dynarray_reset(&rels);
+		psc_dynarray_reset(&bcis);
+
+		if (!didwork) {
+			spinlock(&bmapTimeoutLock);
+			psc_waitq_waitrel(&bmapTimeoutWaitq,
+			    &bmapTimeoutLock, &nto);
+		}
+	}
+	psc_dynarray_free(&rels);
+	psc_dynarray_free(&bcis);
 }
 
 struct reptbl_lookup {
