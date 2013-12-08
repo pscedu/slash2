@@ -707,7 +707,6 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 
 	FCMH_LOCK(f);
 	sl_internalize_stat(&f->fcmh_sstb, &stb);
-	FCMH_ULOCK(f);
 
  out:
 	if (f)
@@ -1275,7 +1274,11 @@ void
 msl_readdir_error(struct fidc_membh *d, struct dircache_page *p, int rc)
 {
 	FCMH_LOCK(d);
+	psc_assert(p->dcp_flags & DIRCACHEPGF_LOADING);
 	p->dcp_flags &= ~DIRCACHEPGF_LOADING;
+	p->dcp_flags |= DIRCACHEPGF_LOADED;
+	p->dcp_refcnt--;
+	DBGPR_DIRCACHEPG(PLL_DEBUG, p, "error rc=%d", rc);
 	p->dcp_rc = rc;
 	PFL_GETPTIMESPEC(&p->dcp_tm);
 	fcmh_wake_locked(d);
@@ -1293,15 +1296,14 @@ msl_readdir(struct fidc_membh *d, struct dircache_page *p, int eof,
 	for (i = 0, e = iov[1].iov_base; i < nents; i++, e++) {
 		if (e->sstb.sst_fid == FID_ANY ||
 		    e->sstb.sst_fid == 0) {
-			psclog_warnx("invalid f+g:"SLPRI_FG", "
-			    "parent: "SLPRI_FID,
-			    SLPRI_FG_ARGS(&e->sstb.sst_fg),
-			    fcmh_2_fid(d));
+			DEBUG_SSTB(PLL_WARN, &e->sstb,
+			    "invalid readdir prefetch FID parent@%p="
+			    SLPRI_FID,
+			    d, fcmh_2_fid(d));
 			continue;
 		}
 
-		psclog_debug("adding f+g:"SLPRI_FG,
-		    SLPRI_FG_ARGS(&e->sstb.sst_fg));
+		DEBUG_SSTB(PLL_DEBUG, &e->sstb, "prefetched");
 
 		uidmap_int_stat(&e->sstb);
 
@@ -1315,11 +1317,8 @@ msl_readdir(struct fidc_membh *d, struct dircache_page *p, int eof,
 			fcmh_op_done(f);
 		}
 	}
-	if (eof)
-		p->dcp_flags |= DIRCACHEPGF_EOF;
-	p->dcp_size = size;
-	DBGPR_DIRCACHEPG(PLL_DEBUG, p, "registering");
-	dircache_reg_ents(d, p, nents, iov[0].iov_base);
+	DBGPR_DIRCACHEPG(PLL_MAX, p, "registering");
+	dircache_reg_ents(d, p, nents, iov[0].iov_base, size, eof);
 }
 
 int
@@ -1350,6 +1349,10 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 			iov[1].iov_base = mp->ents + mp->size;
 			msl_readdir(d, p, mp->eof, mp->num, mp->size,
 			    iov);
+		} else {
+			FCMH_LOCK(d);
+			p->dcp_refcnt--;
+			DBGPR_DIRCACHEPG(PLL_DEBUG, p, "decr");
 		}
 	}
 	fcmh_op_done_type(d, FCMH_OPCNT_READDIR);
@@ -1452,7 +1455,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
 		if (DIRCACHEPG_EXPIRED(d, p, &dexp)) {
 			dircache_free_page(d, p);
-			break;
+			continue;
 		}
 
 		if (p->dcp_flags & DIRCACHEPGF_LOADING) {
@@ -1514,7 +1517,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 				// XXX I/O: remove from lock
 				pscfs_reply_readdir(pfr,
 				    p->dcp_base + poff, len, 0);
-				p->dcp_flags |= DIRCACHEPGF_USED;
+				p->dcp_flags |= DIRCACHEPGF_READ;
 				if (hit)
 					OPSTAT_INCR(SLC_OPST_DIRCACHE_HIT);
 

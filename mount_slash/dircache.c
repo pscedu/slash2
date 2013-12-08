@@ -65,38 +65,44 @@ dircache_mgr_init(void)
 
 /**
  * dircache_free_page: Release a page of dirents from cache.
- *	Because of the cookie/offset doesn't have any positional
- *	meaning, we have to clear everything after our page.
  * @d: directory handle.
  * @p: page to release.
  */
 void
-dircache_free_page(struct fidc_membh *d, struct dircache_page *p)
+_dircache_free_page(const struct pfl_callerinfo *pci,
+    struct fidc_membh *d, struct dircache_page *p)
 {
 	struct fcmh_cli_info *fci;
-	struct dircache_page *np;
 
 	FCMH_LOCK_ENSURE(d);
 	fci = fcmh_2_fci(d);
 
-	for (np = NULL; p; p = np, np = NULL) {
-		if (psclist_conjoint(&p->dcp_lentry,
-		    psc_lentry_hd(&fci->fci_dc_pages.pll_listhd))) {
-			np = pll_next_item(&fci->fci_dc_pages, p);
-			pll_remove(&fci->fci_dc_pages, p);
-		}
-		if (p->dcp_dents_name) {
-			fci->fci_dc_nents -= psc_dynarray_len(
-			    p->dcp_dents_name);
-			psc_dynarray_free(p->dcp_dents_name);
-			psc_dynarray_free(p->dcp_dents_off);
-		}
-		PSCFREE(p->dcp_dents_name);
-		PSCFREE(p->dcp_dents_off);
-		PSCFREE(p->dcp_base);
-		PSCFREE(p->dcp_base0);
-		psc_pool_return(dircache_pool, p);
+	psc_assert((p->dcp_flags & DIRCACHEPGF_LOADING) == 0);
+
+	if (p->dcp_flags & DIRCACHEPGF_FREEING)
+		return;
+	p->dcp_flags |= DIRCACHEPGF_FREEING;
+
+	while (p->dcp_refcnt)
+		fcmh_wait_nocond_locked(d);
+
+	if (psclist_conjoint(&p->dcp_lentry,
+	    psc_lentry_hd(&fci->fci_dc_pages.pll_listhd)))
+		pll_remove(&fci->fci_dc_pages, p);
+
+	if (p->dcp_dents_name) {
+		fci->fci_dc_nents -= psc_dynarray_len(
+		    p->dcp_dents_name);
+		psc_dynarray_free(p->dcp_dents_name);
+		psc_dynarray_free(p->dcp_dents_off);
 	}
+	PSCFREE(p->dcp_dents_name);
+	PSCFREE(p->dcp_dents_off);
+	PSCFREE(p->dcp_base);
+	PSCFREE(p->dcp_base0);
+	DBGPR_DIRCACHEPG(PLL_DEBUG, p, "free");
+	psc_pool_return(dircache_pool, p);
+
 	fcmh_wake_locked(d);
 }
 
@@ -117,7 +123,6 @@ dircache_walk(struct fidc_membh *d, void (*cbf)(struct dircache_page *,
 
 	fci = fcmh_2_fci(d);
 	lk = FCMH_RLOCK(d);
-
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages)
 		DYNARRAY_FOREACH(dce, n, p->dcp_dents_name)
 			cbf(p, dce, cbarg);
@@ -161,7 +166,7 @@ dircache_lookup(struct fidc_membh *d, const char *name)
 
 		if (DIRCACHEPG_EXPIRED(d, p, &dexp)) {
 			dircache_free_page(d, p);
-			break;
+			continue;
 		}
 
 		/*
@@ -227,13 +232,13 @@ dircache_lookup(struct fidc_membh *d, const char *name)
 void
 dircache_purge(struct fidc_membh *d)
 {
+	struct dircache_page *p, *np;
 	struct fcmh_cli_info *fci;
-	struct dircache_page *p;
 
 	fci = fcmh_2_fci(d);
 	FCMH_LOCK(d);
-	p = pll_peekhead(&fci->fci_dc_pages);
-	dircache_free_page(d, p);
+	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages)
+		dircache_free_page(d, p);
 	FCMH_ULOCK(d);
 }
 
@@ -283,19 +288,24 @@ dircache_new_page(struct fidc_membh *d, off_t off)
 
 	FCMH_LOCK(d);
 
+ restart:
 	DIRCACHEPG_INITEXP(&dexp);
 
 	fci = fcmh_2_fci(d);
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
 		if (DIRCACHEPG_EXPIRED(d, p, &dexp)) {
 			dircache_free_page(d, p);
-			p = NULL;
-			break;
+			continue;
 		}
 		if (p->dcp_flags & DIRCACHEPGF_LOADING) {
 			/* Page is waiting for us. */
-			if (p->dcp_off == off)
+			if (p->dcp_off == off) {
+				p->dcp_flags &= ~DIRCACHEPGF_LOADING;
 				break;
+			}
+
+			fcmh_wait_nocond_locked(d);
+			goto restart;
 		} else if (dircache_hasoff(p, off)) {
 			/* Stale page in cache -- purge and refresh. */
 			dircache_free_page(d, p);
@@ -307,12 +317,15 @@ dircache_new_page(struct fidc_membh *d, off_t off)
 	if (p == NULL) {
 		memset(newp, 0, sizeof(*newp));
 		INIT_PSC_LISTENTRY(&newp->dcp_lentry);
-		newp->dcp_flags = DIRCACHEPGF_LOADING;
 		newp->dcp_off = off;
 		pll_addtail(&fci->fci_dc_pages, newp);
 		p = newp;
 		newp = NULL;
 	}
+	psc_assert((p->dcp_flags & DIRCACHEPGF_LOADING) == 0);
+	p->dcp_flags |= DIRCACHEPGF_LOADING;
+	p->dcp_refcnt++;
+	DBGPR_DIRCACHEPG(PLL_DEBUG, p, "incref");
 	FCMH_ULOCK(d);
 
 	if (newp)
@@ -330,20 +343,17 @@ dircache_new_page(struct fidc_membh *d, off_t off)
  */
 void
 dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
-    size_t nents, void *base)
+    size_t nents, void *base, size_t size, int eof)
 {
 	struct psc_dynarray *da_name, *da_off;
 	struct pscfs_dirent *dirent = NULL;
 	struct fcmh_cli_info *fci;
 	struct dircache_ent *dce;
-	struct pfl_timespec tm;
 	void *base0;
 	off_t adj;
 	int i;
 
 	OPSTAT_INCR(SLC_OPST_DIRCACHE_REG_ENTRY);
-
-	PFL_GETPTIMESPEC(&tm);
 
 	dce = base0 = PSCALLOC(nents * sizeof(*dce));
 
@@ -384,13 +394,17 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	fci = fcmh_2_fci(d);
 	FCMH_LOCK(d);
 
-	if ((p->dcp_flags & DIRCACHEPGF_LOADING) == 0) {
+	if ((p->dcp_flags & DIRCACHEPGF_LOADED) ||
+	    (p->dcp_flags & DIRCACHEPGF_LOADING) == 0) {
 		psc_dynarray_free(da_name);
 		psc_dynarray_free(da_off);
 		PSCFREE(da_name);
 		PSCFREE(da_off);
 		PSCFREE(base0);
 		PSCFREE(base);
+		p->dcp_refcnt--;
+		DBGPR_DIRCACHEPG(PLL_MAX, p, "already loaded");
+		FCMH_ULOCK(d);
 		return;
 	}
 
@@ -402,10 +416,17 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		p->dcp_nextoff = p->dcp_off;
 	p->dcp_dents_name = da_name;
 	p->dcp_dents_off = da_off;
-	p->dcp_base = base;
-	p->dcp_tm = tm;
 	p->dcp_base0 = base0;
+	p->dcp_base = base;
+	p->dcp_size = size;
+	PFL_GETPTIMESPEC(&p->dcp_tm);
+	psc_assert(p->dcp_flags & DIRCACHEPGF_LOADING);
 	p->dcp_flags &= ~DIRCACHEPGF_LOADING;
+	p->dcp_flags |= DIRCACHEPGF_LOADED;
+	if (eof)
+		p->dcp_flags |= DIRCACHEPGF_EOF;
+	p->dcp_refcnt--;
+	DBGPR_DIRCACHEPG(PLL_DEBUG, p, "decref");
 	fci->fci_dc_nents += nents;
 	fcmh_wake_locked(d);
 	FCMH_ULOCK(d);

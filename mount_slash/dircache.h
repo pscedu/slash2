@@ -85,12 +85,15 @@ struct dircache_page {
 	struct psc_dynarray	*dcp_dents_off;	/* dircache_ents sorted by d_off */
 	void			*dcp_base;	/* pscfs_dirents */
 	void			*dcp_base0;	/* dircache_ents */
+	int			 dcp_refcnt;
 };
 
 /* dcp_flags */
 #define DIRCACHEPGF_LOADING	(1 << 0)	/* stub is waiting for network load */
-#define DIRCACHEPGF_EOF		(1 << 1)	/* denotes last page */
-#define DIRCACHEPGF_USED	(1 << 2)	/* page has been read */
+#define DIRCACHEPGF_LOADED	(1 << 1)
+#define DIRCACHEPGF_EOF		(1 << 2)	/* denotes last page */
+#define DIRCACHEPGF_READ	(1 << 3)	/* page has been used */
+#define DIRCACHEPGF_FREEING	(1 << 4)	/* a thread is trying to free */
 
 struct dircache_expire {
 	struct pfl_timespec	 dexp_def;
@@ -98,9 +101,10 @@ struct dircache_expire {
 };
 
 #define DIRCACHEPG_EXPIRED(d, p, dexp)					\
-	(((p)->dcp_flags & DIRCACHEPGF_LOADING) == 0 &&			\
+	((p)->dcp_refcnt == 0 &&					\
+	 ((p)->dcp_flags & DIRCACHEPGF_LOADING) == 0 &&			\
 	 ((timespeccmp(&(dexp)->dexp_def, &(p)->dcp_tm, >) &&		\
-	    (p)->dcp_flags & DIRCACHEPGF_USED) ||			\
+	    (p)->dcp_flags & DIRCACHEPGF_READ) ||			\
 	  timespeccmp(&(dexp)->dexp_max, &(p)->dcp_tm, >) ||		\
 	  timespeccmp(&(d)->fcmh_sstb.sst_mtim, &p->dcp_tm, >)))
 
@@ -113,10 +117,10 @@ struct dircache_expire {
 	} while (0)
 
 #define DBGPR_DIRCACHEPG(lvl, dcp, fmt, ...)				\
-	psclog((lvl), "dcp@%p off %"PSCPRIdOFFT" sz %zu fl %#x "	\
-	    "nextoff %"PSCPRIdOFFT": " fmt,				\
-	    (dcp), (dcp)->dcp_off, (dcp)->dcp_size, (dcp)->dcp_flags,	\
-	    (dcp)->dcp_nextoff, ## __VA_ARGS__)
+	psclog((lvl), "dcp@%p off %"PSCPRIdOFFT" rf %d sz %zu "		\
+	    "fl %#x nextoff %"PSCPRIdOFFT": " fmt,			\
+	    (dcp), (dcp)->dcp_off, (dcp)->dcp_refcnt, (dcp)->dcp_size,	\
+	    (dcp)->dcp_flags, (dcp)->dcp_nextoff, ## __VA_ARGS__)
 
 /* This is analogous to 'struct dirent' many of which reside in a page. */
 struct dircache_ent {
@@ -170,14 +174,18 @@ dce_sort_cmp_off(const void *x, const void *y)
 	return (dce_cmp_off(a, b));
 }
 
+#define dircache_free_page(d, p)	_dircache_free_page(PFL_CALLERINFO(), (d), (p))
+
 struct dircache_page *
 	dircache_new_page(struct fidc_membh *, off_t);
 int	dircache_hasoff(struct dircache_page *, off_t);
-void	dircache_free_page(struct fidc_membh *, struct dircache_page *);
+void	_dircache_free_page(const struct pfl_callerinfo *,
+	    struct fidc_membh *, struct dircache_page *);
 slfid_t	dircache_lookup(struct fidc_membh *, const char *);
 void	dircache_mgr_init(void);
 void	dircache_purge(struct fidc_membh *);
-void	dircache_reg_ents(struct fidc_membh *, struct dircache_page *, size_t, void *);
+void	dircache_reg_ents(struct fidc_membh *, struct dircache_page *,
+    	    size_t, void *, size_t, int);
 void	dircache_walk(struct fidc_membh *, void (*)(struct dircache_page *,
 	    struct dircache_ent *, void *), void *);
 
