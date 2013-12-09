@@ -75,7 +75,7 @@ enum slm_fwd_op {
 #define SLM_UPDATE_BATCH		2048			/* namespace updates */
 #define SLM_RECLAIM_BATCH		2048			/* garbage reclamation */
 
-#define SLM_EXPC_READDIR_MAXNRA		4
+#define SLM_EXPC_READDIR_MAXNRA		3
 
 struct slm_exp_cli {
 	struct slashrpc_cservice	 *mexpc_csvc;		/* must be first field */
