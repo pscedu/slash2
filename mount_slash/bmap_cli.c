@@ -51,7 +51,7 @@ struct pscrpc_nbreqset	       *pndgBmapRlsReqs;	/* bmap release */
 void
 msl_bmap_free(void)
 {
-	while (lc_nitems(&bmapTimeoutQ) > BMAP_CACHE_MAX) { 
+	while (lc_nitems(&bmapTimeoutQ) > BMAP_CACHE_MAX) {
 		spinlock(&bmapTimeoutLock);
 		psc_waitq_wakeall(&bmapTimeoutWaitq);
 		freelock(&bmapTimeoutLock);
@@ -413,8 +413,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 			BMAP_ULOCK(b);
 			return 0;
 		}
-		DEBUG_BMAP(PLL_ERROR, b,
-		    "blocking on lease renewal");
+		DEBUG_BMAP(PLL_ERROR, b, "blocking on lease renewal");
 		bmap_op_start_type(b, BMAP_OPCNT_LEASEEXT);
 		bmap_wait_locked(b, (b->bcm_flags & BMAP_CLI_LEASEEXTREQ));
 
