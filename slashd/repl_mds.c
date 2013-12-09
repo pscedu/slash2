@@ -112,8 +112,8 @@ _mds_repl_ios_lookup(int vfsid, struct slash_inode_handle *ih,
     sl_ios_id_t ios, int flags)
 {
 	int locked, rc = -SLERR_REPL_NOT_ACT, inox_rc = 0;
+	struct slm_inox_od *ix = NULL;
 	struct sl_resource *res;
-	struct slm_inox_od *ix;
 	struct fidc_membh *f;
 	sl_replica_t *repl;
 	uint32_t j, k, *nr;
