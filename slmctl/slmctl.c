@@ -79,6 +79,12 @@ slmrmmthr_pr(const struct psc_ctlmsg_thread *pcst)
 }
 
 void
+packshow_bmaps(__unusedx char *bmaps)
+{
+	psc_ctlmsg_push(SLMCMT_GETBMAP, sizeof(struct slctlmsg_bmap));
+}
+
+void
 packshow_conns(__unusedx char *conn)
 {
 	psc_ctlmsg_push(SLMCMT_GETCONNS, sizeof(struct slctlmsg_conn));
@@ -274,6 +280,7 @@ slm_bml_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 	PSC_CTLSHOW_DEFS,
+	{ "bmaps",		packshow_bmaps },
 	{ "bml",		packshow_bml },
 	{ "connections",	packshow_conns },
 	{ "fcmhs",		packshow_fcmhs },
