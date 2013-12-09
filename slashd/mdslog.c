@@ -286,17 +286,17 @@ mds_remove_logfile(uint64_t batchno, int update, __unusedx int cleanup)
 		psc_fatalx("Failed to remove log file %s: %s", logfn,
 		    slstrerror(rc));
 	if (!rc) {
-		psclog_warnx("Log file %s has been removed", logfn);
+		psclog_info("Log file %s has been removed", logfn);
 		OPSTAT_INCR(SLM_OPST_LOGFILE_REMOVE);
 	}
-	return rc;
+	return (rc);
 }
 void
 mds_remove_logfiles(uint64_t batchno, int update)
 {
-	int64_t i;
-	int rc, notfound = 0;
 	struct timeval tv1, tv2;
+	int rc, notfound = 0;
+	int64_t i;
 
 	gettimeofday(&tv1, NULL);
 	for (i = (int64_t) batchno - 2; i >= 0; i--) {
