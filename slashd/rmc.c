@@ -976,8 +976,7 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	mp->rc = mdsio_readlink(vfsid, fcmh_2_mfid(f), buf,
-	    &rootcreds);
+	mp->rc = mdsio_readlink(vfsid, fcmh_2_mfid(f), buf, &rootcreds);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
