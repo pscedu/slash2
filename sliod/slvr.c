@@ -973,8 +973,8 @@ struct slvr *
 _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
     struct bmap_iod_info *bii, enum rw rw)
 {
-	struct slvr *s, *tmp1, ts;
-	struct sl_buffer *tmp2;
+	struct slvr *s, *tmp1 = NULL, ts;
+	struct sl_buffer *tmp2 = NULL;
 	int alloc = 0;
 
 	ts.slvr_num = num;
