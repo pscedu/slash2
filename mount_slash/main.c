@@ -1317,7 +1317,7 @@ msl_readdir(struct fidc_membh *d, struct dircache_page *p, int eof,
 			fcmh_op_done(f);
 		}
 	}
-	DBGPR_DIRCACHEPG(PLL_MAX, p, "registering");
+	DBGPR_DIRCACHEPG(PLL_DEBUG, p, "registering");
 	dircache_reg_ents(d, p, nents, iov[0].iov_base, size, eof);
 }
 

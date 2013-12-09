@@ -403,7 +403,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		PSCFREE(base0);
 		PSCFREE(base);
 		p->dcp_refcnt--;
-		DBGPR_DIRCACHEPG(PLL_MAX, p, "already loaded");
+		DBGPR_DIRCACHEPG(PLL_DEBUG, p, "already loaded");
 		FCMH_ULOCK(d);
 		return;
 	}
