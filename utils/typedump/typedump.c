@@ -178,6 +178,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct fcmh_iod_info);
 	PRTYPE(struct fcmh_mds_info);
 	PRTYPE(struct fidc_membh);
+	PRTYPE(struct gid_table);
 	PRTYPE(struct lnetif_pair);
 	PRTYPE(struct mdsio_ops);
 	PRTYPE(struct mio_fh);
@@ -658,6 +659,7 @@ main(int argc, char *argv[])
 	PRVAL(SLC_OPST_BMAP_LEASE_EXT_ABRT);
 	PRVAL(SLC_OPST_BMAP_LEASE_EXT_DONE);
 	PRVAL(SLC_OPST_BMAP_LEASE_EXT_FAIL);
+	PRVAL(SLC_OPST_BMAP_LEASE_EXT_HIT);
 	PRVAL(SLC_OPST_BMAP_LEASE_EXT_SEND);
 	PRVAL(SLC_OPST_BMAP_REASSIGN_ABRT);
 	PRVAL(SLC_OPST_BMAP_REASSIGN_BAIL);
