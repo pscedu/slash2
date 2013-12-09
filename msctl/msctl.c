@@ -639,7 +639,7 @@ fattr_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
 	const struct msctlmsg_fattr *mfa = m;
-	const char *attrname = "?", *val;
+	const char *attrname = "?", *val = "?";
 
 	if (mfa->mfa_attrid >= 0 && mfa->mfa_attrid < nitems(fattr_tab))
 		attrname = fattr_tab[mfa->mfa_attrid];
