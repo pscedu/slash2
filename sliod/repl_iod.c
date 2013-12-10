@@ -74,6 +74,7 @@ sli_repl_addwk(int op, struct sl_resource *res,
 {
 	struct sli_repl_workrq *w;
 	int rc, i;
+	struct bmap_iod_info *bii;
 
 	/*
 	 * Check if this work is already queued, e.g. from before the
@@ -118,7 +119,9 @@ sli_repl_addwk(int op, struct sl_resource *res,
 			    i < SLASH_SLVRS_PER_BMAP &&
 			    len < (int)w->srw_len;
 			    i++, len += SLASH_SLVR_SIZE) {
-				w->srw_bcm->bcm_crcstates[i] |=
+
+				bii = bmap_2_bii(w->srw_bcm);
+				bii->bii_crcstates[i] |=
 				    BMAP_SLVR_WANTREPL;
 				w->srw_nslvr_tot++;
 			}
@@ -196,6 +199,7 @@ slireplpndthr_main(struct psc_thread *thr)
 	struct slashrpc_cservice *csvc;
 	struct sl_resm *src_resm;
 	int rc, slvridx, slvrno;
+	struct bmap_iod_info *bii;
 
 	wrap = NULL;
 	while (pscthr_run(thr)) {
@@ -218,8 +222,9 @@ slireplpndthr_main(struct psc_thread *thr)
 
 		/* find a sliver to transmit */
 		BMAP_LOCK(w->srw_bcm);
+		bii = bmap_2_bii(w->srw_bcm);
 		while (slvrno < SLASH_SLVRS_PER_BMAP) {
-			if (w->srw_bcm->bcm_crcstates[slvrno] &
+			if (bii->bii_crcstates[slvrno] &
 			    BMAP_SLVR_WANTREPL)
 				break;
 			slvrno++;
@@ -255,7 +260,7 @@ slireplpndthr_main(struct psc_thread *thr)
 		}
 		wrap = NULL;
 
-		w->srw_bcm->bcm_crcstates[slvrno] &= ~BMAP_SLVR_WANTREPL;
+		bii->bii_crcstates[slvrno] &= ~BMAP_SLVR_WANTREPL;
 		BMAP_ULOCK(w->srw_bcm);
 
 		/* mark slot as occupied */
@@ -280,7 +285,8 @@ slireplpndthr_main(struct psc_thread *thr)
 			spinlock(&w->srw_lock);
 			w->srw_slvr[slvridx] = NULL;
 			BMAP_LOCK(w->srw_bcm);
-			w->srw_bcm->bcm_crcstates[slvrno] |=
+			bii = bmap_2_bii(w->srw_bcm);
+			bii->bii_crcstates[slvrno] |=
 			    BMAP_SLVR_WANTREPL;
 			BMAP_ULOCK(w->srw_bcm);
 			freelock(&w->srw_lock);

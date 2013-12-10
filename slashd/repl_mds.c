@@ -321,7 +321,7 @@ _mds_repl_bmap_apply(struct bmapc_memb *b, const int *tract,
 			    BMAP_MDS_REPLMODWR) == 0);
 			BMAP_ULOCK(b);
 			BMAPOD_MODIFY_START(b);
-			memcpy(bmi->bmi_orepls, b->bcm_repls,
+			memcpy(bmi->bmi_orepls, bmi->bmi_repls,
 			    sizeof(bmi->bmi_orepls));
 		}
 	} else if (!BMAPOD_HASWRLOCK(bmi) && !BMAPOD_HASRDLOCK(bmi)) {
@@ -338,7 +338,7 @@ _mds_repl_bmap_apply(struct bmapc_memb *b, const int *tract,
 		psc_assert((flags & REPL_WALKF_SCIRCUIT) == 0);
 
 	/* retrieve IOS status given a bit offset into the map */
-	val = SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls, off);
+	val = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls, off);
 
 	if (val >= NBREPLST)
 		psc_fatalx("corrupt bmap");
@@ -358,7 +358,7 @@ _mds_repl_bmap_apply(struct bmapc_memb *b, const int *tract,
 	/* apply any translations */
 	if (tract && tract[val] != -1) {
 		DEBUG_BMAPOD(PLL_DIAG, b, "before modification");
-		SL_REPL_SET_BMAP_IOS_STAT(b->bcm_repls, off,
+		SL_REPL_SET_BMAP_IOS_STAT(bmi->bmi_repls, off,
 		    tract[val]);
 		DEBUG_BMAPOD(PLL_DIAG, b, "after modification");
 	}
@@ -631,7 +631,7 @@ slm_repl_upd_write(struct bmapc_memb *b)
 		vold = SL_REPL_GET_BMAP_IOS_STAT(
 		    bmi->bmi_orepls, off);
 		vnew = SL_REPL_GET_BMAP_IOS_STAT(
-		    b->bcm_repls, off);
+		    bmi->bmi_repls, off);
 
 		r = libsl_id2res(resid);
 		si = r ? res2iosinfo(r) : &slm_null_si;

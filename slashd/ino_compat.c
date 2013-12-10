@@ -346,6 +346,7 @@ mds_bmap_read_v1(struct bmapc_memb *b, void *readh)
 	uint64_t crc, od_crc;
 	int i, rc, vfsid;
 	size_t nb, bsz;
+	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 
 	bsz = sizeof(bod) + sizeof(crc);
 
@@ -369,9 +370,9 @@ mds_bmap_read_v1(struct bmapc_memb *b, void *readh)
 	if (crc != od_crc)
 		return (SLERR_BADCRC);
 	for (i = 0; i < 128; i++)
-		b->bcm_crcstates[i] = bod.crcstates[i];
+		bmi->bmi_crcstates[i] = bod.crcstates[i];
 	for (i = 0; i < 24; i++)
-		b->bcm_repls[i] = bod.repls[i];
+		bmi->bmi_repls[i] = bod.repls[i];
 	for (i = 0; i < 128; i++)
 		bmap_2_crcs(b, i) = bod.crcs[i];
 	bmap_2_bgen(b) = bod.gen;

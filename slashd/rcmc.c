@@ -125,6 +125,7 @@ slmrcmthr_walk_brepls(struct slm_replst_workreq *rsw,
 	struct slmrcm_thread *srcm;
 	struct psc_thread *thr;
 	int nbits, rc;
+	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 
 	thr = pscthr_get();
 	srcm = slmrcmthr(thr);
@@ -155,7 +156,7 @@ slmrcmthr_walk_brepls(struct slm_replst_workreq *rsw,
 	pfl_bitstr_copy(srcm->srcm_page, srcm->srcm_page_bitpos,
 	    &bhdr, 0, SL_NBITS_REPLST_BHDR);
 	pfl_bitstr_copy(srcm->srcm_page, srcm->srcm_page_bitpos +
-	    SL_NBITS_REPLST_BHDR, b->bcm_repls, 0,
+	    SL_NBITS_REPLST_BHDR, bmi->bmi_repls, 0,
 	    fcmh_2_nrepls(f) * SL_BITS_PER_REPLICA);
 	srcm->srcm_page_bitpos += nbits;
 	return (0);

@@ -342,6 +342,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct bmapc_memb *b;
 	struct stat stb;
 	int rc = 0;
+	struct bmap_cli_info *bci;
 
 	msfsthr_ensure();
 
@@ -454,7 +455,8 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	DEBUG_BMAP(PLL_INFO, b, "ios(%s) sbd_seq=%"PRId64,
 	    libsl_ios2name(mp->sbd.sbd_ios), mp->sbd.sbd_seq);
 
-	SL_REPL_SET_BMAP_IOS_STAT(b->bcm_repls, 0, BREPLST_VALID);
+	bci = bmap_2_bci(b);
+	SL_REPL_SET_BMAP_IOS_STAT(bci->bci_repls, 0, BREPLST_VALID);
 
 	bmap_op_done(b);
 

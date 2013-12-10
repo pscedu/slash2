@@ -61,6 +61,7 @@ struct bmap_mds_info {
 	 * bmap_ondisk will be laid contiguously in memory for I/O over
 	 * the network and with ZFS.
 	 */
+	struct bmap_core_state   bmi_corestate __attribute__((aligned(8)));
 	struct bmap_extra_state	 bmi_extrastate;
 
 	struct resm_mds_info	*bmi_wr_ion;		/* pointer to write ION */
@@ -80,6 +81,12 @@ struct bmap_mds_info {
 	uint8_t			 bmi_orepls[SL_REPLICA_NBYTES];
 };
 
+#define bmi_crcstates   bmi_corestate.bcs_crcstates
+#define bmi_repls       bmi_corestate.bcs_repls
+
+#define bmi_2_fcmh(bmi)		bmi_2_bmap(bmi)->bcm_fcmh
+#define bmi_2_ondisk(bmi)	((struct bmap_ondisk *)&(bmi)->bmi_corestate)
+
 /* MDS-specific bcm_flags */
 #define BMAP_MDS_CRC_UP		(_BMAP_FLSHFT << 0)	/* CRC update in progress */
 #define BMAP_MDS_CRCWRT		(_BMAP_FLSHFT << 1)
@@ -88,14 +95,11 @@ struct bmap_mds_info {
 #define BMAP_MDS_SEQWRAP	(_BMAP_FLSHFT << 4)	/* sequence number wrapped */
 #define BMAP_MDS_REPLMODWR	(_BMAP_FLSHFT << 5)	/* res state changes have been written */
 
-#define bmi_2_fcmh(bmi)		bmi_2_bmap(bmi)->bcm_fcmh
-
 #define bmap_2_xstate(b)	(&bmap_2_bmi(b)->bmi_extrastate)
 #define bmap_2_bgen(b)		bmap_2_xstate(b)->bes_gen
 #define bmap_2_replpol(b)	bmap_2_xstate(b)->bes_replpol
 #define bmap_2_repl(b, i)	fcmh_2_repl((b)->bcm_fcmh, (i))
 #define bmap_2_crcs(b, n)	bmap_2_xstate(b)->bes_crcs[n]
-#define bmap_2_ondisk(b)	((struct bmap_ondisk *)&(b)->bcm_corestate)
 #define bmap_2_upd(b)		(&bmap_2_bmi(b)->bmi_upd)
 #define bmap_2_ino(b)		fcmh_2_ino((b)->bcm_fcmh)
 #define bmap_2_inoh(b)		fcmh_2_inoh((b)->bcm_fcmh)

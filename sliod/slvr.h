@@ -108,7 +108,6 @@ struct slvr {
 #define slvr_2_fcmh(s)		slvr_2_bmap(s)->bcm_fcmh
 #define slvr_2_fii(s)		fcmh_2_fii(slvr_2_fcmh(s))
 #define slvr_2_fd(s)		slvr_2_fii(s)->fii_fd
-#define slvr_2_bmap_ondisk(s)	bmap_2_ondisk(slvr_2_bmap(s))
 
 #define slvr_2_buf(s, blk)						\
 	((void *)(((s)->slvr_slab->slb_base) + ((blk) * SLASH_SLVR_BLKSZ)))
@@ -119,10 +118,10 @@ struct slvr {
 		((blk) * SLASH_SLVR_BLKSZ)))
 
 #define slvr_2_crcbits(s)						\
-	slvr_2_bmap_ondisk(s)->bod_crcstates[(s)->slvr_num]
+	slvr_2_bii(s)->bii_crcstates[(s)->slvr_num]
 
 #define slvr_2_crc(s)							\
-	slvr_2_bmap_ondisk(s)->bod_crcs[(s)->slvr_num]
+	slvr_2_bii(s)->bii_crcs[(s)->slvr_num]
 
 #define DEBUG_SLVR(level, s, fmt, ...)					\
 	psclogs((level), SLISS_SLVR, "slvr@%p num=%hu pw=%u "		\

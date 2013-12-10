@@ -507,6 +507,8 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw,
 	struct fcmh_cli_info *fci;
 	struct fidc_membh *f;
 	int rc, nretries = 0;
+	struct bmap_cli_info *bci = bmap_2_bci(bmap);
+	struct bmap_core_state corestate;
 
 	psc_assert(bmap->bcm_flags & BMAP_INIT);
 	psc_assert(bmap->bcm_fcmh);
@@ -537,7 +539,8 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw,
 		rc = mp->rc;
 	if (rc)
 		goto out;
-	memcpy(&bmap->bcm_corestate, &mp->bcs, sizeof(mp->bcs));
+	memcpy(&corestate, &mp->bcs, sizeof(mp->bcs));
+	memcpy(&bci->bci_repls, corestate.bcs_repls, sizeof(corestate.bcs_repls));
 
 	FCMH_LOCK(f);
 
@@ -898,11 +901,12 @@ msl_bmap_check_replica(struct bmap *b)
 {
 	int i, off;
 	struct fcmh_cli_info *fci;
+	struct bmap_cli_info *bci = bmap_2_bci(b);
 
 	fci = fcmh_get_pri(b->bcm_fcmh);
 	for (i = 0, off = 0; i < fci->fci_inode.nrepls;
 	    i++, off += SL_BITS_PER_REPLICA)
-		if (SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls,
+		if (SL_REPL_GET_BMAP_IOS_STAT(bci->bci_repls,
 		    off))
 			break;
 	if (i == fci->fci_inode.nrepls) {

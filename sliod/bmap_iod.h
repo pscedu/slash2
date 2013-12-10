@@ -94,14 +94,9 @@ SPLAY_HEAD(biod_slvrtree, slvr);
  * bmap_iod_info - the bmap_get_pri() data structure for the I/O server.
  */
 struct bmap_iod_info {
-	/*
-	 * This structure must start with the continuation of
-	 * bmap_ondisk from where bmapc_memb left off so an entire
-	 * bmap_ondisk will be laid contiguously in memory for I/O over
-	 * the network and with ZFS.
-	 */
-	struct bmap_extra_state	 bii_extrastate;
 
+	uint8_t			 bii_crcstates[SLASH_CRCS_PER_BMAP];
+	uint64_t                 bii_crcs[SLASH_CRCS_PER_BMAP];
 	/*
 	 * Accumulate CRC updates here until its associated bcrcupd
 	 * structure is full, at which point it is set to NULL then
@@ -128,7 +123,6 @@ struct bmap_iod_info {
 
 #define bmap_2_bii(b)		((struct bmap_iod_info *)bmap_get_pri(b))
 #define bmap_2_bii_slvrs(b)	(&bmap_2_bii(b)->bii_slvrs)
-#define bmap_2_ondisk(b)	((struct bmap_ondisk *)&(b)->bcm_corestate)
 
 #define BMAP_SLVR_WANTREPL	_BMAP_SLVR_FLSHFT	/* Queued for replication */
 

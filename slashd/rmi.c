@@ -65,6 +65,7 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 	struct srm_getbmap_full_req *mq;
 	struct srm_getbmap_full_rep *mp;
 	struct bmapc_memb *b = NULL;
+	struct bmap_mds_info *bmi;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 #if 0
@@ -88,7 +89,8 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 
 	DEBUG_BMAP(PLL_INFO, b, "sending to sliod");
 
-	memcpy(&mp->bod, bmap_2_ondisk(b), sizeof(mp->bod));
+	bmi = bmap_2_bmi(b);
+	memcpy(&mp->bod, bmi_2_ondisk(bmi), sizeof(mp->bod));
 	bmap_op_done(b);
 	return (0);
 }
@@ -410,6 +412,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 	void *mfh;
 	int64_t fsiz;
 	uint32_t i;
+	struct bmap_mds_info *bmi;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slfid_to_vfsid(mq->pfg.fg_fid, &vfsid);
@@ -505,14 +508,16 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 		rc = bmap_get(c, bno, SL_WRITE, &b);
 		if (rc)
 			PFL_GOTOERR(out, mp->rc = rc);
+		
+		bmi = bmap_2_bmi(b);
 		for (i = 0; i < SLASH_SLVRS_PER_BMAP &&
 		    fsiz > 0; fsiz -= SLASH_SLVR_SIZE, i++)
 			/*
 			 * Mark that data exists but no CRCs are
 			 * available.
 			 */
-			if ((b->bcm_crcstates[i] & BMAP_SLVR_DATA) == 0)
-				b->bcm_crcstates[i] |= BMAP_SLVR_DATA |
+			if ((bmi->bmi_crcstates[i] & BMAP_SLVR_DATA) == 0)
+				bmi->bmi_crcstates[i] |= BMAP_SLVR_DATA |
 				    BMAP_SLVR_CRCABSENT;
 
 		if (mq->flags & SRM_IMPORTF_XREPL) {

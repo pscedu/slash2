@@ -44,13 +44,14 @@
  * bmap_cli_data - private data associated with a bmap used by a SLASH2 client
  */
 struct bmap_cli_info {
-	struct bmap_pagecache	 bci_bmpc;
+	struct bmap_pagecache	 bci_bmpc;		/* must be first */
 	struct srt_bmapdesc	 bci_sbd;		/* open bmap descriptor */
 	struct timespec		 bci_etime;		/* current expire time */
 	int			 bci_error;		/* lease request error */
 	int			 bci_nreassigns;	/* number of reassigns */
 	sl_ios_id_t		 bci_prev_sliods[SL_MAX_IOSREASSIGN];
 	struct psc_listentry	 bci_lentry;		/* bmap flushq */
+	uint8_t			 bci_repls[SL_REPLICA_NBYTES];
 };
 
 /* mount_slash specific bcm_flags */

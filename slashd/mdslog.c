@@ -1683,6 +1683,7 @@ mdslogfill_bmap_repls(struct bmapc_memb *b,
     struct slmds_jent_bmap_repls *sjbr)
 {
 	struct fidc_membh *f = b->bcm_fcmh;
+	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 
 	FCMH_BUSY_ENSURE(f);
 	BMAP_BUSY_ENSURE(b);
@@ -1694,7 +1695,7 @@ mdslogfill_bmap_repls(struct bmapc_memb *b,
 	sjbr->sjbr_nrepls = fcmh_2_nrepls(f);
 	sjbr->sjbr_replpol = fcmh_2_replpol(f);
 
-	memcpy(sjbr->sjbr_repls, b->bcm_repls, SL_REPLICA_NBYTES);
+	memcpy(sjbr->sjbr_repls, bmi->bmi_repls, SL_REPLICA_NBYTES);
 
 	DEBUG_BMAPOD(PLL_DEBUG, b, "filled bmap_repls journal log entry");
 }

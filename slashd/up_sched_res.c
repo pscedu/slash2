@@ -703,7 +703,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 			continue;
 		}
 		off = SL_BITS_PER_REPLICA * dst_res_i.ri_rnd_idx;
-		val = SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls, off);
+		val = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls, off);
 		switch (val) {
 		case BREPLST_REPL_QUEUED:
 			/*
@@ -733,7 +733,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 					 * replicas.
 					 */
 					if (src_res_i.ri_rnd_idx == iosidx ||
-					    SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls,
+					    SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls,
 					    SL_BITS_PER_REPLICA *
 					    src_res_i.ri_rnd_idx) != BREPLST_VALID)
 						continue;

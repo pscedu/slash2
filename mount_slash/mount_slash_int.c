@@ -561,12 +561,11 @@ msl_try_get_replica_res(struct bmap *b, int iosidx)
 	struct sl_resource *res;
 	struct rnd_iterator it;
 	struct sl_resm *m;
+	struct bmap_cli_info *bci = bmap_2_bci(b);
 
 	fci = fcmh_2_fci(b->bcm_fcmh);
 
-	DEBUG_BMAPOD(PLL_INFO, b, "iosidx=%d", iosidx);
-
-	if (SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls,
+	if (SL_REPL_GET_BMAP_IOS_STAT(bci->bci_repls,
 	    iosidx * SL_BITS_PER_REPLICA) != BREPLST_VALID)
 		return (NULL);
 

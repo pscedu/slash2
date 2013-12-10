@@ -98,10 +98,10 @@ mds_replay_bmap(void *jent, int op)
 		brepls_init(tract, -1);
 		mds_repl_bmap_walk_all(b, tract, NULL, 0);
 
-		memcpy(bmi->bmi_orepls, b->bcm_repls,
+		memcpy(bmi->bmi_orepls, bmi->bmi_repls,
 		    sizeof(bmi->bmi_orepls));
 		bmap_2_replpol(b) = sjbr->sjbr_replpol;
-		memcpy(b->bcm_repls, sjbr->sjbr_repls,
+		memcpy(bmi->bmi_repls, sjbr->sjbr_repls,
 		    SL_REPLICA_NBYTES);
 
 		/* revert inflight to reissue */
@@ -115,7 +115,7 @@ mds_replay_bmap(void *jent, int op)
 
 		for (n = 0, off = 0; n < fcmh_2_nrepls(f);
 		    n++, off += SL_BITS_PER_REPLICA)
-			switch (SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls,
+			switch (SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls,
 			    off)) {
 			case BREPLST_REPL_QUEUED:
 			case BREPLST_GARBAGE:
@@ -166,7 +166,7 @@ mds_replay_bmap(void *jent, int op)
 		for (i = 0; i < sjbc->sjbc_ncrcs; i++) {
 			bmap_wire = &sjbc->sjbc_crc[i];
 			bmap_2_crcs(b, bmap_wire->slot) = bmap_wire->crc;
-			b->bcm_crcstates[bmap_wire->slot] |=
+			bmi->bmi_crcstates[bmap_wire->slot] |=
 			    BMAP_SLVR_DATA | BMAP_SLVR_CRC;
 		}
 		break;

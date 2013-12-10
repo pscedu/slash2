@@ -535,6 +535,7 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 	struct srm_getbmap_full_rep *mp;
 	struct slashrpc_cservice *csvc;
 	int rc, i;
+	struct bmap_iod_info *bii = bmap_2_bii(b);
 
 	if (rw != SL_READ)
 		return (0);
@@ -568,14 +569,13 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 	for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++) {
 		//XXX set BMAP_SLVR_DATA before do_crc()
 		//XXX  shoudln't retrieve if all slvrs are BMAP_SLVR_DATA
-		if (b->bcm_crcstates[i] & BMAP_SLVR_DATA)
+		if (bii->bii_crcstates[i] & BMAP_SLVR_DATA)
 			continue;
 
-		b->bcm_crcstates[i] = mp->bod.bod_crcstates[i];
-		bmap_2_ondisk(b)->bod_crcs[i] = mp->bod.bod_crcs[i];
+		bii->bii_crcstates[i] = mp->bod.bod_crcstates[i];
+		bii->bii_crcs[i] = mp->bod.bod_crcs[i];
 	}
 
-	DEBUG_BMAPOD(PLL_INFO, b, "retrieved");
 	BMAP_ULOCK(b);
  out:
 	/* Unblock threads no matter what.

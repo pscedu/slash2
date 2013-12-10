@@ -65,11 +65,14 @@ bmap_2_mfh(struct bmap *b)
 __static void
 mds_bmap_initnew(struct bmap *b)
 {
-	struct bmap_ondisk *bod = bmap_2_ondisk(b);
+	struct bmap_mds_info * bmi;
+	struct bmap_ondisk *bod;
 	struct fidc_membh *f = b->bcm_fcmh;
 	uint32_t pol;
 	int i;
 
+	bmi = bmap_2_bmi(b);
+	bod = bmi_2_ondisk(bmi);
 	for (i = 0; i < SLASH_CRCS_PER_BMAP; i++)
 		bod->bod_crcs[i] = BMAP_NULL_CRC;
 
@@ -174,6 +177,8 @@ mds_bmap_read(struct bmap *b, __unusedx enum rw rw, int flags)
 	struct iovec iovs[2];
 	size_t nb;
 
+	struct bmap_mds_info *bmi = bmap_2_bmi(b);
+
 	upd = bmap_2_upd(b);
 	upd_init(upd, UPDT_BMAP);
 	UPD_UNBUSY(upd);
@@ -185,7 +190,7 @@ mds_bmap_read(struct bmap *b, __unusedx enum rw rw, int flags)
 
 	f = b->bcm_fcmh;
 
-	iovs[0].iov_base = bmap_2_ondisk(b);
+	iovs[0].iov_base = bmi_2_ondisk(bmi);
 	iovs[0].iov_len = BMAP_OD_CRCSZ;
 	iovs[1].iov_base = &od_crc;
 	iovs[1].iov_len = sizeof(od_crc);
@@ -210,7 +215,7 @@ mds_bmap_read(struct bmap *b, __unusedx enum rw rw, int flags)
 	 */
 	if (rc == 0) {
 		if (nb == 0 || (nb == BMAP_OD_SZ && od_crc == 0 &&
-		    pfl_memchk(bmap_2_ondisk(b), 0, BMAP_OD_CRCSZ))) {
+		    pfl_memchk(bmi_2_ondisk(bmi), 0, BMAP_OD_CRCSZ))) {
 			    mds_bmap_initnew(b);
 			    DEBUG_BMAPOD(PLL_ERROR, b,
 				"initialized new bmap unexpectedly, nb=%d", nb);
@@ -218,7 +223,7 @@ mds_bmap_read(struct bmap *b, __unusedx enum rw rw, int flags)
 		    }
 
 		if (nb == BMAP_OD_SZ) {
-			psc_crc64_calc(&crc, bmap_2_ondisk(b),
+			psc_crc64_calc(&crc, bmi_2_ondisk(bmi),
 			    BMAP_OD_CRCSZ);
 			if (od_crc != crc)
 				rc = SLERR_BADCRC;
@@ -263,13 +268,14 @@ mds_bmap_write(struct bmap *b, void *logf, void *logarg)
 	int rc, new, vfsid;
 	uint64_t crc;
 	size_t nb;
+	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 
-	BMAPOD_REQRDLOCK(bmap_2_bmi(b));
+	BMAPOD_REQRDLOCK(bmi);
 	mds_bmap_ensure_valid(b);
 
-	psc_crc64_calc(&crc, bmap_2_ondisk(b), BMAP_OD_CRCSZ);
+	psc_crc64_calc(&crc, bmi_2_ondisk(bmi), BMAP_OD_CRCSZ);
 
-	iovs[0].iov_base = bmap_2_ondisk(b);
+	iovs[0].iov_base = bmi_2_ondisk(bmi);
 	iovs[0].iov_len = BMAP_OD_CRCSZ;
 	iovs[1].iov_base = &crc;
 	iovs[1].iov_len = sizeof(crc);
@@ -398,7 +404,7 @@ mds_bmap_crc_update(struct bmap *bmap, sl_ios_id_t iosid,
 	for (i = 0; i < crcup->nups; i++) {
 		bmap_2_crcs(bmap, crcup->crcs[i].slot) =
 		    crcup->crcs[i].crc;
-		bmap->bcm_crcstates[crcup->crcs[i].slot] =
+		bmi->bmi_crcstates[crcup->crcs[i].slot] =
 		    BMAP_SLVR_DATA | BMAP_SLVR_CRC;
 
 		DEBUG_BMAP(PLL_DIAG, bmap, "slot=%d crc=%"PSCPRIxCRC64,
@@ -419,6 +425,86 @@ _mds_bmap_write_rel(const struct pfl_callerinfo *pci, struct bmap *b,
 	rc = mds_bmap_write(b, logf, b);
 	bmap_op_done(b);
 	return (rc);
+}
+
+void
+dump_bmapod(struct bmap *bmap)
+{
+	DEBUG_BMAPOD(PLL_MAX, bmap, "");
+}
+
+void
+_dump_bmapod(const struct pfl_callerinfo *pci, int level,
+    struct bmap *bmap, const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	_dump_bmapodv(pci, level, bmap, fmt, ap);
+	va_end(ap);
+}
+
+#define DUMP_BMAP_REPLS(repls, buf)					\
+	do {								\
+		int _k, off, ch[NBREPLST];				\
+									\
+		ch[BREPLST_INVALID] = '-';				\
+		ch[BREPLST_REPL_SCHED] = 's';				\
+		ch[BREPLST_REPL_QUEUED] = 'q';				\
+		ch[BREPLST_VALID] = '+';				\
+		ch[BREPLST_TRUNCPNDG] = 't';				\
+		ch[BREPLST_TRUNCPNDG_SCHED] = 'p';			\
+		ch[BREPLST_GARBAGE] = 'g';				\
+		ch[BREPLST_GARBAGE_SCHED] = 'x';			\
+									\
+		for (_k = 0, off = 0; _k < SL_MAX_REPLICAS;		\
+		    _k++, off += SL_BITS_PER_REPLICA)			\
+			(buf)[_k] = ch[SL_REPL_GET_BMAP_IOS_STAT(repls,	\
+			    off)];					\
+		while (_k > 1 && (buf)[_k - 1] == '-')			\
+			_k--;						\
+		(buf)[_k] = '\0';					\
+	} while (0)
+
+void
+_dump_bmap_repls(FILE *fp, uint8_t *repls)
+{
+	char rbuf[SL_MAX_REPLICAS + 1];
+
+	DUMP_BMAP_REPLS(repls, rbuf);
+	fprintf(fp, "%s\n", rbuf);
+}
+
+void
+dump_bmap_repls(uint8_t *repls)
+{
+	_dump_bmap_repls(stderr, repls);
+}
+
+void
+_dump_bmapodv(const struct pfl_callerinfo *pci, int level,
+    struct bmap *bmap, const char *fmt, va_list ap)
+{
+	char mbuf[LINE_MAX], rbuf[SL_MAX_REPLICAS + 1],
+	     cbuf[SLASH_CRCS_PER_BMAP + 1];
+	int k;
+	struct bmap_mds_info *bmi = bmap_2_bmi(bmap);
+
+	vsnprintf(mbuf, sizeof(mbuf), fmt, ap);
+
+	DUMP_BMAP_REPLS(bmi->bmi_repls, rbuf);
+
+	for (k = 0; k < SLASH_CRCS_PER_BMAP; k++)
+		if (bmi->bmi_crcstates[k] > 9)
+			cbuf[k] = 'a' + bmi->bmi_crcstates[k] - 10;
+		else
+			cbuf[k] = '0' + bmi->bmi_crcstates[k];
+	while (k > 1 && cbuf[k - 1] == '0')
+		k--;
+	cbuf[k] = '\0';
+
+	_DEBUG_BMAP(pci, level, bmap, "repls={%s} crcstates=[0x%s] %s",
+	    rbuf, cbuf, mbuf);
 }
 
 #if PFL_DEBUG > 0

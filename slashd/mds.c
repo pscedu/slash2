@@ -93,6 +93,7 @@ slm_bmap_calc_repltraffic(struct bmap *b)
 	int i, locked[2];
 	int64_t amt = 0;
 	off_t bsiz, sz;
+	struct bmap_mds_info *bmi;
 
 	locked[1] = 0; /* gcc */
 
@@ -102,8 +103,10 @@ slm_bmap_calc_repltraffic(struct bmap *b)
 		locked[1] = BMAP_RLOCK(b);
 	else
 		BMAP_LOCK(b);
+
+	bmi = bmap_2_bmi(b);
 	for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++) {
-		if (b->bcm_crcstates[i] & BMAP_SLVR_DATA) {
+		if (bmi->bmi_crcstates[i] & BMAP_SLVR_DATA) {
 			/*
 			 * If this is the last bmap, tally only the
 			 * portion of data that exists.  This is needed
@@ -390,6 +393,7 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 	struct psc_dynarray a = DYNARRAY_INIT;
 	struct sl_resm *resm = NULL;
 	sl_ios_id_t ios;
+	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 
 	FCMH_LOCK(b->bcm_fcmh);
 	nr = fcmh_2_nrepls(b->bcm_fcmh);
@@ -401,7 +405,7 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 	}
 
 	for (i = 0, off = 0; i < nr; i++, off += SL_BITS_PER_REPLICA) {
-		val = SL_REPL_GET_BMAP_IOS_STAT(b->bcm_repls, off);
+		val = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls, off);
 		if (val != BREPLST_INVALID)
 			/* Determine if there are any active replicas. */
 			repls++;
@@ -1613,6 +1617,7 @@ mds_bmap_loadvalid(struct fidc_membh *f, sl_bmapno_t bmapno,
 {
 	struct bmap *b;
 	int n, rc;
+	struct bmap_mds_info *bmi;
 
 	*bp = NULL;
 
@@ -1622,13 +1627,14 @@ mds_bmap_loadvalid(struct fidc_membh *f, sl_bmapno_t bmapno,
 		return (rc);
 
 	BMAP_LOCK(b);
+	bmi = bmap_2_bmi(b);
 	for (n = 0; n < SLASH_CRCS_PER_BMAP; n++)
 		/*
 		 * XXX need a bitmap to see which CRCs are
 		 * actually uninitialized and not just happen
 		 * to be zero.
 		 */
-		if (b->bcm_crcstates[n]) {
+		if (bmi->bmi_crcstates[n]) {
 			BMAP_ULOCK(b);
 			*bp = b;
 			return (0);
@@ -1696,6 +1702,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	struct bmap_mds_lease *bml;
 	struct bmap *b;
 	int rc, flag;
+	struct bmap_mds_info *bmi;
 
 	FCMH_LOCK(f);
 	rc = (f->fcmh_flags & FCMH_IN_PTRUNC) &&
@@ -1762,8 +1769,10 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	if (b->bcm_flags & BMAP_DIO)
 		sbd->sbd_flags |= SRM_LEASEBMAPF_DIO;
 
-	if (bcs)
-		memcpy(bcs, &b->bcm_corestate, sizeof(*bcs));
+	if (bcs) {
+		bmi = bmap_2_bmi(b);
+		memcpy(bcs, &bmi->bmi_corestate, sizeof(*bcs));
+	}
 
  out:
 	mds_bmap_bml_release(bml);

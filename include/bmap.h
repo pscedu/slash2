@@ -116,17 +116,6 @@ struct bmap {
 	SPLAY_ENTRY(bmap)	 bcm_tentry;	/* bmap_cache splay tree entry */
 	struct psc_listentry	 bcm_lentry;	/* free pool */
 	pthread_t		 bcm_owner;	/* temporary processor */
-
-	/*
-	 * This must start on a 64-bit boundary, and must lay at the end
-	 * of this structure as the bmap_{mds,iod}_info begin with the
-	 * next segment of the bmap_ondisk, which must lay contiguous in
-	 * memory for I/O over the network and with ZFS.
-	 */
-	struct bmap_core_state	 bcm_corestate __attribute__((aligned(8)));
-
-#define bcm_crcstates	bcm_corestate.bcs_crcstates
-#define bcm_repls	bcm_corestate.bcs_repls
 };
 
 #define bmapc_memb bmap
