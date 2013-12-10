@@ -61,14 +61,16 @@ struct bmap_mds_info {
 	 * bmap_ondisk will be laid contiguously in memory for I/O over
 	 * the network and with ZFS.
 	 */
-	struct bmap_core_state   bmi_corestate __attribute__((aligned(8)));
+	struct bmap_core_state   bmi_corestate;
+#define bmi_crcstates		bmi_corestate.bcs_crcstates
+#define bmi_repls		bmi_corestate.bcs_repls
 	struct bmap_extra_state	 bmi_extrastate;
 
 	struct resm_mds_info	*bmi_wr_ion;		/* pointer to write ION */
 	struct psc_lockedlist	 bmi_leases;		/* tracked bmap leases */
 	struct odtable_receipt	*bmi_assign;
 	uint64_t		 bmi_seq;		/* Largest write bml seq # */
-	uint32_t		 bmi_xid;		/* last op recv'd from ION */
+
 	/*
 	 * The following track the number of clients that have a
 	 * write or read lease.  Each client can have more than
@@ -80,9 +82,6 @@ struct bmap_mds_info {
 	struct slm_update_data	 bmi_upd;
 	uint8_t			 bmi_orepls[SL_REPLICA_NBYTES];
 };
-
-#define bmi_crcstates   bmi_corestate.bcs_crcstates
-#define bmi_repls       bmi_corestate.bcs_repls
 
 #define bmi_2_fcmh(bmi)		bmi_2_bmap(bmi)->bcm_fcmh
 #define bmi_2_ondisk(bmi)	((struct bmap_ondisk *)&(bmi)->bmi_corestate)
