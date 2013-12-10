@@ -420,6 +420,7 @@ extern struct psc_waitq		 bmapFlushWaitq;
 extern struct psc_listcache	 bmapReadAheadQ;
 extern struct pscrpc_nbreqset	*pndgReadaReqs;
 extern struct pscrpc_nbreqset	*pndgBmaplsReqs;
+extern struct pscrpc_nbreqset	*pndgBmapRlsReqs;
 
 extern struct psc_poolmgr	*slc_async_req_pool;
 extern struct psc_poolmgr	*slc_biorq_pool;

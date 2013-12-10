@@ -41,9 +41,8 @@
 #include "slashrpc.h"
 #include "slerr.h"
 
-extern psc_spinlock_t		bmapTimeoutLock;
-extern struct psc_waitq		bmapTimeoutWaitq;
-struct pscrpc_nbreqset	       *pndgBmapRlsReqs;	/* bmap release */
+psc_spinlock_t			bmapTimeoutLock  = SPINLOCK_INIT;
+struct psc_waitq		bmapTimeoutWaitq = PSC_WAITQ_INIT;
 
 /**
  * Avoid ENOMEM and clean up TOFREE bmap to avoid stalls.

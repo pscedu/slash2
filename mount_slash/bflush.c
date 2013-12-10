@@ -60,20 +60,17 @@ struct psc_listcache		 bmapTimeoutQ;
 struct psc_compl		 rpcComp = PSC_COMPL_INIT;
 
 struct pscrpc_nbreqset		*pndgBmaplsReqs;	/* bmap lease */
-__static struct pscrpc_nbreqset	*pndgBmapRlsReqs;	/* bmap release */
+struct pscrpc_nbreqset		*pndgBmapRlsReqs;	/* bmap release */
 __static struct pscrpc_nbreqset	*pndgWrtReqs;
 psc_atomic32_t			 max_nretries = PSC_ATOMIC32_INIT(256);
 
 #define MAX_OUTSTANDING_RPCS	40
-#define MIN_COALESCE_RPC_SZ	LNET_MTU /* Try for big RPC's */
+#define MIN_COALESCE_RPC_SZ	LNET_MTU
 #define NUM_READAHEAD_THREADS	4
 
 struct psc_waitq		bmapFlushWaitq = PSC_WAITQ_INIT;
 psc_spinlock_t			bmapFlushLock = SPINLOCK_INIT;
 int				bmapFlushTimeoFlags = 0;
-
-psc_spinlock_t			bmapTimeoutLock  = SPINLOCK_INIT;
-struct psc_waitq		bmapTimeoutWaitq = PSC_WAITQ_INIT;
 
 __static int
 bmap_flush_biorq_expired(const struct bmpc_ioreq *a, struct timespec *t)
