@@ -45,8 +45,8 @@ extern psc_spinlock_t		bmapTimeoutLock;
 extern struct psc_waitq		bmapTimeoutWaitq;
 struct pscrpc_nbreqset	       *pndgBmapRlsReqs;	/* bmap release */
 
-/*
- * msl_bmap_free(): avoid ENOMEM and clean up TOFREE bmap to avoid stalls.
+/**
+ * Avoid ENOMEM and clean up TOFREE bmap to avoid stalls.
  */
 void
 msl_bmap_free(void)
@@ -227,9 +227,9 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct srm_leasebmapext_rep *mp =
 	    pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
-	int rc;
+	struct bmap_cli_info *bci = bmap_2_bci(b);
 	struct timespec ts;
-	struct bmap_cli_info  *bci = bmap_2_bci(b);
+	int rc;
 
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_flags & BMAP_CLI_LEASEEXTREQ);
@@ -388,8 +388,8 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 	struct pscrpc_request *rq = NULL;
 	struct srm_leasebmapext_req *mq;
 	struct srm_leasebmapext_rep *mp;
-	int secs, rc;
 	struct timespec ts;
+	int secs, rc;
 
 	BMAP_LOCK(b);
 	if (b->bcm_flags & BMAP_TOFREE) {
@@ -413,7 +413,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 			BMAP_ULOCK(b);
 			return 0;
 		}
-		DEBUG_BMAP(PLL_ERROR, b, "blocking on lease renewal");
+		DEBUG_BMAP(PLL_INFO, b, "blocking on lease renewal");
 		bmap_op_start_type(b, BMAP_OPCNT_LEASEEXT);
 		bmap_wait_locked(b, (b->bcm_flags & BMAP_CLI_LEASEEXTREQ));
 
@@ -425,7 +425,8 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 
 	PFL_GETTIMESPEC(&ts);
 	secs = (int)(bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec);
-	if (secs >= BMAP_CLI_EXTREQSECS && !(b->bcm_flags & BMAP_CLI_LEASEEXPIRED)) {
+	if (secs >= BMAP_CLI_EXTREQSECS &&
+	    !(b->bcm_flags & BMAP_CLI_LEASEEXPIRED)) {
 		if (blockable)
 			OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_HIT);
 		BMAP_ULOCK(b);
@@ -440,15 +441,15 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 
 	BMAP_ULOCK(b);
 
-	rc = slc_rmc_getcsvc1(&csvc,
-	    fcmh_2_fci(b->bcm_fcmh)->fci_resm);
+	rc = slc_rmc_getcsvc1(&csvc, fcmh_2_fci(b->bcm_fcmh)->fci_resm);
 	if (rc)
 		goto out;
 	rc = SL_RSX_NEWREQ(csvc, SRMT_EXTENDBMAPLS, rq, mq, mp);
 	if (rc)
 		goto out;
 
-	memcpy(&mq->sbd, &bmap_2_bci(b)->bci_sbd, sizeof(struct srt_bmapdesc));
+	memcpy(&mq->sbd, &bmap_2_bci(b)->bci_sbd,
+	    sizeof(struct srt_bmapdesc));
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
@@ -587,7 +588,7 @@ msl_bmap_cache_rls(struct bmap *b)
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 
 	BMAP_LOCK(b);
-	for (e = SPLAY_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); e;) {
+	for (e = SPLAY_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); e; ) {
 		BMPCE_LOCK(e);
 		e->bmpce_flags |= BMPCE_DISCARD;
 		BMPCE_ULOCK(e);
@@ -786,8 +787,8 @@ msbmaprlsthr_main(struct psc_thread *thr)
 			}
 
 			/*
-			 * A bmap should be taken off the flush queue after all
-			 * its biorq are finished.
+			 * A bmap should be taken off the flush queue
+			 * after all its biorq are finished.
 			 */
 			psc_assert(!(b->bcm_flags & BMAP_FLUSHQ));
 
