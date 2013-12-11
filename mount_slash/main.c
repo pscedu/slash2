@@ -1409,7 +1409,7 @@ void
 mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
     void *data)
 {
-	int hit = 1, j, nd, nent, issue, rc;
+	int hit = 1, j, nd, issue, rc;
 	struct dircache_page *p, *np;
 	struct pscfs_clientctx *pfcc;
 	struct msl_fhent *mfh = data;
@@ -1452,7 +1452,6 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
  restart:
 	DIRCACHEPG_INITEXP(&dexp);
 
-	nent = 0;
 	issue = 1;
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
 		if (DIRCACHEPG_EXPIRED(d, p, &dexp)) {
@@ -1474,10 +1473,6 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 			pscfs_reply_readdir(pfr, NULL, 0, rc);
 			return;
 		}
-
-		/* error pages (dcp_rc) won't have this initialized */
-		if (p->dcp_dents_name)
-			nent += psc_dynarray_len(p->dcp_dents_name);
 
 		if (dircache_hasoff(p, off)) {
 			if (p->dcp_rc) {
