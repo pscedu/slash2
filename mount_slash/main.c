@@ -1475,7 +1475,9 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 			return;
 		}
 
-		nent += psc_dynarray_len(p->dcp_dents_name);
+		/* error pages (dcp_rc) won't have this initialized */
+		if (p->dcp_dents_name)
+			nent += psc_dynarray_len(p->dcp_dents_name);
 
 		if (dircache_hasoff(p, off)) {
 			if (p->dcp_rc) {
