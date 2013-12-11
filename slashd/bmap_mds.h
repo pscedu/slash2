@@ -55,12 +55,7 @@ struct srt_bmapdesc;
  *   directed to this ION once a client has invoked write mode on the bmap.
  */
 struct bmap_mds_info {
-	/*
-	 * This structure must start with the continuation of
-	 * bmap_ondisk from where bmapc_memb left off so an entire
-	 * bmap_ondisk will be laid contiguously in memory for I/O over
-	 * the network and with ZFS.
-	 */
+
 	struct bmap_core_state   bmi_corestate;
 #define bmi_crcstates		bmi_corestate.bcs_crcstates
 #define bmi_repls		bmi_corestate.bcs_repls
