@@ -104,8 +104,6 @@ struct bmap_ondisk {
  *	in bmap_cache_init().
  *
  * bmap sits in the middle of the GFC stratum.
- * XXX some of these elements may need to be moved into the bcm_info_pri
- *     area (as part of new structures?) so save space on the mds.
  */
 struct bmap {
 	sl_bmapno_t		 bcm_bmapno;	/* bmap index number */
