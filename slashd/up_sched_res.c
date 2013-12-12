@@ -942,8 +942,8 @@ upd_proc_pagein(struct slm_update_data *upd)
 					    " WHERE	resid = ?"
 					    "   AND	status = 'Q'"
 					    "   AND	gid = ?"
-					    " ORDER BY	sys_pri DESC,"
-					    "		usr_pri DESC,"
+					    " ORDER BY	sys_prio DESC,"
+					    "		usr_prio DESC,"
 					    "		RANDOM()"
 					    " LIMIT	?",
 					    SQLITE_INTEGER, r->res_id,
@@ -959,8 +959,8 @@ upd_proc_pagein(struct slm_update_data *upd)
 		    "		nonce"
 		    " FROM	upsch"
 		    " WHERE	status = 'Q'"
-		    " ORDER BY	sys_pri DESC,"
-		    "		usr_pri DESC,"
+		    " ORDER BY	sys_prio DESC,"
+		    "		usr_prio DESC,"
 		    "		RANDOM()"
 		    " LIMIT 1");
 	}
