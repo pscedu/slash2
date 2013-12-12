@@ -197,7 +197,7 @@ mds_bmap_read(struct bmap *b, __unusedx enum rw rw, int flags)
 
 	slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 
-	psclog_info("Read bmap: handle = %p, fid="SLPRI_FID", bmapno = %d",
+	psclog_diag("read bmap: handle=%p fid="SLPRI_FID" bmapno=%d",
 	    bmap_2_mfh(b), f->fcmh_sstb.sst_fg.fg_fid, b->bcm_bmapno);
 
 	rc = mdsio_preadv(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
@@ -241,7 +241,7 @@ mds_bmap_read(struct bmap *b, __unusedx enum rw rw, int flags)
 
 	mds_bmap_ensure_valid(b);
 
-	DEBUG_BMAPOD(PLL_INFO, b, "successfully loaded from disk");
+	DEBUG_BMAPOD(PLL_DIAG, b, "successfully loaded from disk");
 
  out:
 	if (slm_opstate == SLM_OPSTATE_REPLAY)
@@ -283,7 +283,7 @@ mds_bmap_write(struct bmap *b, void *logf, void *logarg)
 	f = b->bcm_fcmh;
 	slfid_to_vfsid(fcmh_2_fid(f), &vfsid);
 
-	psclog_info("Write bmap: handle = %p, fid="SLPRI_FID", bmapno = %d",
+	psclog_diag("write bmap: handle=%p fid="SLPRI_FID" bmapno=%d",
 	    bmap_2_mfh(b), f->fcmh_sstb.sst_fg.fg_fid, b->bcm_bmapno);
 
 	if (logf)
@@ -300,7 +300,7 @@ mds_bmap_write(struct bmap *b, void *logf, void *logarg)
 		DEBUG_BMAP(PLL_ERROR, b,
 		    "mdsio_write: error (rc=%d)", rc);
 	else
-		DEBUG_BMAP(PLL_INFO, b, "written successfully");
+		DEBUG_BMAP(PLL_DIAG, b, "written successfully");
 	if (BMAPOD_HASRDLOCK(bmap_2_bmi(b)))
 		BMAPOD_READ_DONE(b, 0);
 
