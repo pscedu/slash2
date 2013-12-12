@@ -28,7 +28,7 @@ site @PITT {
 		type	= mds;
 		id	= 1;
 		nids	= s-gscratch0-dev.francis.sam.pitt.edu;
-		jrnldev	= /dev/disk/by-id/ata-ST3750640AS_3QD04P64;
+		jrnldev	= /dev/disk/by-id/scsi-20010b9fc080c0b62;
 	}
 
 	resource io0 {
