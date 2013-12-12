@@ -13,11 +13,11 @@ set routes="
 ";
 set nets="sdp7 10.10.101.*; tcp8 *.*.*.*";
 
-set pref_mds="md0@PITTDBMI";
-set pref_ios="io0@PITTDBMI";
-set fsuuid="2541b7b4e37d6010";
-set zpool_name="pittdbmi_s2mds";
-set zpool_cache="/local/pittdbmi.s2/var/zcf";
+set pref_mds="md0@PITTSAM";
+set pref_ios="io0@PITTSAM";
+set fsuuid="98bb0e98163f7745";
+set zpool_name="pittsam_s2mds";
+set zpool_cache="/opt/pittsam_slash2/pittsam_s2md.zcf";
 
 site @PITT {
 	site_desc	= "Pitt SaM SuperCell";
