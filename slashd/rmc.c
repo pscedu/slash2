@@ -692,7 +692,8 @@ slm_rmc_handle_readdir_roots(struct iovec *iov0, struct iovec *iov1,
 
 #define RCM_READDIR_CBARGP_CSVC		0
 #define RCM_READDIR_CBARGP_EXP		1
-#define RCM_READDIR_CBARGP_IOV		2
+#define RCM_READDIR_CBARGP_BASE_DENTS	2
+#define RCM_READDIR_CBARGP_BASE_ATTR	3
 #define RCM_READDIR_CBARGI_NEXTOFF	0
 #define RCM_READDIR_CBARGI_DECR		1
 
@@ -727,18 +728,22 @@ slm_rcm_issue_readdir_wk(void *p)
 
 	rq->rq_interpret_reply = slm_rcmc_readdir_cb;
 	rq->rq_async_args.pointer_arg[RCM_READDIR_CBARGP_CSVC] = wk->csvc;
-	rq->rq_async_args.pointer_arg[RCM_READDIR_CBARGP_IOV] = wk->iov;
+	rq->rq_async_args.pointer_arg[RCM_READDIR_CBARGP_BASE_DENTS] = wk->iov[0].iov_base;
+	rq->rq_async_args.pointer_arg[RCM_READDIR_CBARGP_BASE_ATTR] = wk->iov[1].iov_base;
 	rq->rq_async_args.pointer_arg[RCM_READDIR_CBARGP_EXP] =
 	    pscrpc_export_get(wk->exp);
 	rq->rq_async_args.space[RCM_READDIR_CBARGI_NEXTOFF] = wk->nextoff;
 	rq->rq_async_args.space[RCM_READDIR_CBARGI_DECR] = wk->ra;
 	if (wk->iov[0].iov_len)
 		rc = slrpc_bulkclient(rq, BULK_GET_SOURCE,
-		    SRCM_BULK_PORTAL, wk->iov, 2);
+		    SRCM_BULK_PORTAL, wk->iov, nitems(wk->iov));
 	else
 		psc_assert(wk->eof);
-	rc = SL_NBRQSET_ADD(wk->csvc, rq);
+	if (rc == 0)
+		rc = SL_NBRQSET_ADD(wk->csvc, rq);
 	if (rc) {
+		PSCFREE(wk->iov[0].iov_base);
+		PSCFREE(wk->iov[1].iov_base);
 		pscrpc_req_finished(rq);
 		sl_csvc_decref(wk->csvc);
 		pscrpc_export_put(wk->exp);
@@ -820,9 +825,10 @@ slm_rcmc_readdir_cb(struct pscrpc_request *rq,
 {
 	int decr = av->space[RCM_READDIR_CBARGI_DECR];
 	off_t nextoff = av->space[RCM_READDIR_CBARGI_NEXTOFF];
+	void *base_attr = av->pointer_arg[RCM_READDIR_CBARGP_BASE_ATTR];
+	void *base_dents = av->pointer_arg[RCM_READDIR_CBARGP_BASE_DENTS];
 	struct slashrpc_cservice *csvc = av->pointer_arg[RCM_READDIR_CBARGP_CSVC];
 	struct pscrpc_export *exp = av->pointer_arg[RCM_READDIR_CBARGP_EXP];
-	struct iovec *iov = av->pointer_arg[RCM_READDIR_CBARGP_IOV];
 	struct srm_readdir_ra_req *mq;
 	struct slm_exp_cli *mexpc;
 	int rc;
@@ -844,9 +850,8 @@ slm_rcmc_readdir_cb(struct pscrpc_request *rq,
 		EXPORT_ULOCK(exp);
 	}
 
-	PSCFREE(iov[0].iov_base);
-	PSCFREE(iov[1].iov_base);
-	PSCFREE(iov);
+	PSCFREE(base_dents);
+	PSCFREE(base_attr);
 	sl_csvc_decref(csvc);
 	return (0);
 }
@@ -916,7 +921,6 @@ slm_readdir_issue(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 		wk->nextoff = nextoff;
 		wk->num = *nents;
 		wk->ra = ra;
-		wk->iov = PSCALLOC(sizeof(iov));
 		memcpy(wk->iov, iov, sizeof(iov));
 		wk->eof = *eof;
 		iov[0].iov_base = NULL;

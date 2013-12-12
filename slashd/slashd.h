@@ -379,7 +379,7 @@ struct slm_wkdata_readdir {
 	size_t			 size;
 
 	/* for sending async RPC */
-	struct iovec		*iov;
+	struct iovec		 iov[2];
 	int			 num;
 	int			 rc;
 	int			 eof;
