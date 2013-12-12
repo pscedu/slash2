@@ -233,10 +233,10 @@ biod_rlssched_locked(struct bmap_iod_info *bii)
 	BII_LOCK_ENSURE(bii);
 
 	DEBUG_BMAP(PLL_INFO, bii_2_bmap(bii), "crcdrty_slvrs=%d "
-	   "BMAP_IOD_RLSSEQ=(%d) bcr_xid=%"PRId64" bcr_xid_last=%"
-	   PRId64, psc_atomic32_read(&bii->bii_crcdrty_slvrs),
-	   !!(bii_2_flags(bii) & BMAP_IOD_RLSSEQ), bii->bii_bcr_xid,
-	   bii->bii_bcr_xid_last);
+	    "BMAP_IOD_RLSSEQ=(%d) bcr_xid=%"PRId64" bcr_xid_last=%"
+	    PRId64, psc_atomic32_read(&bii->bii_crcdrty_slvrs),
+	    !!(bii_2_flags(bii) & BMAP_IOD_RLSSEQ), bii->bii_bcr_xid,
+	    bii->bii_bcr_xid_last);
 
 	if (bii_2_bmap(bii)->bcm_flags & BMAP_IOD_RLSSCHED)
 		/*
@@ -281,8 +281,8 @@ bcr_ready_remove(struct bcrcupd *bcr)
 		bii_2_bmap(bii)->bcm_flags &= ~BMAP_IOD_BCRSCHED;
 
 		DEBUG_BMAP(PLL_INFO, bii_2_bmap(bii),
-		   "descheduling drtyslvrs=%u",
-		   psc_atomic32_read(&bii->bii_crcdrty_slvrs));
+		    "descheduling drtyslvrs=%u",
+		    psc_atomic32_read(&bii->bii_crcdrty_slvrs));
 
 		biod_rlssched_locked(bii);
 	}
