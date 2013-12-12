@@ -195,7 +195,8 @@ upsch/network scheduling
 - fix starvation problem denying fairness to data in same priority class
 
 netsched/libnetsch - universal interface, kinda like Grand Central
-  Dispatch for net
+  - interface with kernel
+  grand central dispatch for net
    (o) LD_PRELOAD?
    (o) intercept for recompiling
    (o) API
@@ -211,6 +212,23 @@ tracks endpoint connections
 - must consider multiple interfaces
 
 MDS must do this for scheduling traffic between sliods
+
+- networking scheduling:
+   (*) knowledge of topological intrinsics, especially important in the WAN,
+   (*) dynamic adjustment to live conditions,
+   (*) honor local (system and user) prioritization,
+   (*) interplay with other network services in a reasonable yet (likely)
+       advisory fashion,
+   (*) integration of this knowledge into the selection of POSIX I/O
+       arrangements
+networking exploration
+- interface/link rates bandwidth
+- remote site link path
+- specification for reservation policies
+
+
+
+
 
 ------------------------------
 
@@ -395,10 +413,6 @@ reimport
 - make macro version of accessors for speed in gdb (e.g. bmap_2_bmi())
   inline are for debugging/gdb
 - expose SLASH2 non-POSIX (e.g. repl) interface through extattr magic
-- sliod backend for
-     - google drive
-     - box
-     - amazon S3/glacier
 - fix bug when no IODs are online yet CLI writes are somehow successful
 - UNLINK is very slow when interspersed with READDIR
 
@@ -464,12 +478,15 @@ reimport
 - get rid of FIDC_LOOKUP_LOAD
 - are these messages from successful replication?
 [1376505142:641367 slmrmithr17:10079:rpc slm_rmi_handle_bmap_crcwrt rmi.c 186] mds_bmap_crc_write() failed: fid=0x0000000011dfd0ba, rc=-22
-- survey all threads and to ensure clean shutdown
-- add interface for changing user/sys replication priority
+- survey all threads loops to ensure clean shutdown (pscthr_run() can
+  exit on slmctl stop)
+- EIO is not being delivered to app when IOS is down
 
 - pahole(1)
 - port slash2 openstack
-- discover which JOB or physical characteristics from sense3 errors
+    - make a file system driver that intercepts calls and issues libsl2 APIs
+- discover which JBOD/physical characteristics from sense3 errors
+    - write generic archiver visual monitor
 - vtune license for profiling
 
 upsch
@@ -485,32 +502,25 @@ st_blocks is broken
 
 - readdir optimizations
    (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
-   (o) register a runner in MDS when one comes in that arranges
-       subsequent READDIR pages before even waiting for the next async
-       requests to come in
 
 - wrapper scripts:
    - purge old corefiles
    - purge long-running psclogs (if no restarts, no opportunity to clear
      old logs)
 
-
 - caching exploration
    (*) read caching for clients to serve other local clients
    (*) read-ahead to improve performance through locality exploitation
        ("pre-replication")
    (*) write push-through caching for efficient remote I/O staging
-- networking scheduling:
-   (*) knowledge of topological intrinsics, especially important in the WAN,
-   (*) dynamic adjustment to live conditions,
-   (*) honor local (system and user) prioritization,
-   (*) interplay with other network services in a reasonable yet (likely)
-       advisory fashion,
-   (*) integration of this knowledge into the selection of POSIX I/O
-       arrangements
+
 - cryptographic authentication integration (Kerberos/X.509/etc.)
 - replication notification service, informing users when workloads have
   finished, launching a job, etc.
-- utilization of cloud storage services for, e.g. cheap storage across a unified
-  namespace
 
+sliod backends
+- NFSv3
+- CIFS
+- S3/REST
+- google drive
+- box (dropbox?)
