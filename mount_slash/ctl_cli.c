@@ -292,7 +292,6 @@ msctlhnd_get_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct msctlmsg_fattr *mfa = m;
 	struct pscfs_clientctx pfcc;
-	struct slash_fidgen fg;
 	struct pscfs_creds pcr;
 	struct fidc_membh *f = NULL;
 	int rc;
@@ -318,7 +317,6 @@ msctlhnd_get_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
 		rc = fcmh_checkcreds(f, &pcr, R_OK);
 	else
 		rc = ENOTSUP;
-	fg = f->fcmh_fg;
 	FCMH_ULOCK(f);
 
 	if (rc == 0)
