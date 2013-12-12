@@ -734,7 +734,7 @@ slm_rcm_issue_readdir_wk(void *p)
 	rq->rq_async_args.space[RCM_READDIR_CBARGI_DECR] = wk->ra;
 	if (wk->iov[0].iov_len)
 		rc = slrpc_bulkclient(rq, BULK_GET_SOURCE,
-		    SRCM_BULK_PORTAL, wk->iov, nitems(wk->iov));
+		    SRCM_BULK_PORTAL, wk->iov, 2);
 	else
 		psc_assert(wk->eof);
 	rc = SL_NBRQSET_ADD(wk->csvc, rq);
@@ -846,6 +846,7 @@ slm_rcmc_readdir_cb(struct pscrpc_request *rq,
 
 	PSCFREE(iov[0].iov_base);
 	PSCFREE(iov[1].iov_base);
+	PSCFREE(iov);
 	sl_csvc_decref(csvc);
 	return (0);
 }
@@ -915,6 +916,7 @@ slm_readdir_issue(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 		wk->nextoff = nextoff;
 		wk->num = *nents;
 		wk->ra = ra;
+		wk->iov = PSCALLOC(sizeof(iov));
 		memcpy(wk->iov, iov, sizeof(iov));
 		wk->eof = *eof;
 		iov[0].iov_base = NULL;
