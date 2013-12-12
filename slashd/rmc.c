@@ -742,8 +742,6 @@ slm_rcm_issue_readdir_wk(void *p)
 	if (rc == 0)
 		rc = SL_NBRQSET_ADD(wk->csvc, rq);
 	if (rc) {
-		PSCFREE(wk->iov[0].iov_base);
-		PSCFREE(wk->iov[1].iov_base);
 		pscrpc_req_finished(rq);
 		sl_csvc_decref(wk->csvc);
 		pscrpc_export_put(wk->exp);
@@ -754,6 +752,10 @@ slm_rcm_issue_readdir_wk(void *p)
 	}
 
  out:
+	if (rc) {
+		PSCFREE(wk->iov[0].iov_base);
+		PSCFREE(wk->iov[1].iov_base);
+	}
 	pscrpc_export_put(wk->exp);
 	return (0);
 }
