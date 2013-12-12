@@ -104,7 +104,7 @@ arc_s2mds    379G  3.26T    493     70  2.52M   351K
 <oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> zfs-fuse &amp;&amp; sleep 3
 <oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> zpool create -f s2mds_pool mirror /dev/sdX1 /dev/sdX2
 <oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> zfs set compression=on s2mds_pool
-<oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> slmkfs -i $site_id /s2mds_pool
+<oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> slmkfs -I $site_id /s2mds_pool
 The UUID of the pool is 0x2a8ae931a776366e
 <oof:span class='prompt_hostname'>mds</oof:span><oof:span class='prompt_meta'>#</oof:span> pkill zfs-fuse
 
@@ -169,7 +169,7 @@ The UUID of the pool is 0x2a8ae931a776366e
 <oof:span class='syn_keyword'>set</oof:span> fsuuid=<oof:span class='syn_val'>"2a8ae931a776366e"</oof:span>;
 <oof:span class='syn_keyword'>set</oof:span> port=989;
 <oof:span class='syn_keyword'>set</oof:span> nets=<oof:span class='syn_val'>"tcp0 192.168.*.*; sdp0 10.0.0.*"</oof:span>;
-<oof:span class='syn_keyword'>set</oof:span> pref_mds=<oof:span class='syn_val'>"mds@MYSITE"</oof:span>;
+<oof:span class='syn_keyword'>set</oof:span> pref_mds=<oof:span class='syn_val'>"mds1@MYSITE"</oof:span>;
 <oof:span class='syn_keyword'>set</oof:span> pref_ios=<oof:span class='syn_val'>"ion1@MYSITE"</oof:span>;
 
 <oof:span class='syn_keyword'>site</oof:span> @MYSITE {
@@ -177,7 +177,7 @@ The UUID of the pool is 0x2a8ae931a776366e
      <oof:span class='syn_keyword'>site_id</oof:span>   = 1;
 
      <oof:span class='syn_comment'># MDS resource</oof:span> #
-     <oof:span class='syn_keyword'>resource</oof:span> mds {
+     <oof:span class='syn_keyword'>resource</oof:span> mds1 {
 	     <oof:span class='syn_keyword'>desc</oof:span> = <oof:span class='syn_val'>"my metadata server"</oof:span>;
 	     <oof:span class='syn_keyword'>type</oof:span> = mds;
 	     <oof:span class='syn_keyword'>id</oof:span>   = 0;
