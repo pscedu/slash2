@@ -688,8 +688,8 @@ main(int argc, char *argv[])
 	slmcohthr_spawn();
 	slmbmaptimeothr_spawn();
 	slmtimerthr_spawn();
-	slm_rpc_initsvc();
 	slmconnthr_spawn();
+	slm_rpc_initsvc();
 	slmbchrqthr_spawn();
 	slmupschthr_spawn();
 
