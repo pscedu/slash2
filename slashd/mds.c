@@ -1081,7 +1081,6 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	struct slmds_jent_assign_rep *logentry;
 	struct odtable_receipt *odtr = NULL;
 	struct fidc_membh *f = b->bcm_fcmh;
-	uint64_t key;
 	size_t elem;
 	int rc = 0;
 
@@ -1231,7 +1230,6 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	psc_pool_return(slm_bml_pool, bml);
 
 	if (odtr) {
-		key = odtr->odtr_key;
 		elem = odtr->odtr_elem;
 
 		mds_reserve_slot(1);
