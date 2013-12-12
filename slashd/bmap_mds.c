@@ -83,6 +83,8 @@ mds_bmap_initnew(struct bmap *b)
 	BHREPL_POLICY_SET(b, pol);
 
 	b->bcm_flags |= BMAP_NEW;
+	bmi->bmi_sys_prio = -1;
+	bmi->bmi_usr_prio = -1;
 }
 
 void

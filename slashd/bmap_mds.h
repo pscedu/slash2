@@ -75,7 +75,14 @@ struct bmap_mds_info {
 	int32_t			 bmi_readers;
 	struct psc_rwlock	 bmi_rwlock;
 	struct slm_update_data	 bmi_upd;
+
+	/*
+	 * These fields are used when writing changes to bmap in-memory
+	 * before they hit persistent store.
+	 */
 	uint8_t			 bmi_orepls[SL_REPLICA_NBYTES];
+	int			 bmi_sys_prio;
+	int			 bmi_usr_prio;
 };
 
 #define bmi_2_fcmh(bmi)		bmi_2_bmap(bmi)->bcm_fcmh

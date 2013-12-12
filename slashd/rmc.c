@@ -1659,7 +1659,7 @@ slm_rmc_handle_addreplrq(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = mds_repl_addrq(&mq->fg, mq->bmapno, mq->repls,
-	    mq->nrepls);
+	    mq->nrepls, mq->sys_prio, mq->usr_prio);
 	return (0);
 }
 

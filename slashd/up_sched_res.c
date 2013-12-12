@@ -1046,21 +1046,24 @@ slm_upsch_revert_cb(struct slm_sth *sth, __unusedx void *p)
 }
 
 void
-slm_upsch_insert(struct bmap *b, sl_ios_id_t resid)
+slm_upsch_insert(struct bmap *b, sl_ios_id_t resid, int sys_prio,
+    int usr_prio)
 {
 	struct sl_resource *r;
 
 	dbdo(NULL, NULL,
 	    " INSERT INTO upsch ("
-	    "	resid, fid, bno, uid, gid, status, nonce "
+	    "	resid, fid, bno, uid, gid, status, sys_prio, usr_prio, nonce "
 	    ") VALUES ("
-	    "	?,     ?,   ?,   ?,   ?,   'Q',    ?"
+	    "	?,     ?,   ?,   ?,   ?,   'Q',    ?,        ?,        ?"
 	    ")",
 	    SQLITE_INTEGER, resid,
 	    SQLITE_INTEGER64, bmap_2_fid(b),
 	    SQLITE_INTEGER, b->bcm_bmapno,
 	    SQLITE_INTEGER, b->bcm_fcmh->fcmh_sstb.sst_uid,
 	    SQLITE_INTEGER, b->bcm_fcmh->fcmh_sstb.sst_gid,
+	    SQLITE_INTEGER, sys_prio,
+	    SQLITE_INTEGER, usr_prio,
 	    SQLITE_INTEGER, sl_sys_upnonce);
 	r = libsl_id2res(resid);
 	upschq_resm(res_getmemb(r), UPDT_PAGEIN);

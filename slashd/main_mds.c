@@ -623,8 +623,8 @@ main(int argc, char *argv[])
 		    "	gid		UNSIGNED INT,"
 		    "	bno		UNSIGNED INT,"
 		    "	status		CHAR(1),"
-		    "	sys_pri		INT,"
-		    "	usr_pri		INT,"
+		    "	sys_prio	INT,"
+		    "	usr_prio	INT,"
 		    "	nonce		UNSIGNED INT,"
 		    "	UNIQUE(resid, fid, bno)"
 		    ")");

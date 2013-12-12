@@ -111,6 +111,8 @@ mds_replay_bmap(void *jent, int op)
 		mds_repl_bmap_walk_all(b, tract, NULL, 0);
 
 		b->bcm_flags |= BMAP_MDS_REPLMODWR;
+		// bmi_sys_prio =
+		// bmi_usr_prio =
 		slm_repl_upd_write(b);
 
 		for (n = 0, off = 0; n < fcmh_2_nrepls(f);
@@ -120,7 +122,9 @@ mds_replay_bmap(void *jent, int op)
 			case BREPLST_REPL_QUEUED:
 			case BREPLST_GARBAGE:
 				resid = fcmh_2_repl(f, n);
-				slm_upsch_insert(b, resid);
+
+				// XXX sys/usr prio
+				slm_upsch_insert(b, resid, 0, 0);
 				break;
 			}
 

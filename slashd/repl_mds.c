@@ -586,8 +586,9 @@ slm_iosv_clearbusy(const sl_replica_t *iosv, int nios)
 	}
 }
 
-#define PUSH_IOS(b, a, id)						\
+#define PUSH_IOS(b, a, id, st)						\
 	do {								\
+		(a)->stat[(a)->nios] = (st);				\
 		(a)->iosv[(a)->nios++].bs_id = (id);			\
 		DEBUG_BMAP(PLL_DEBUG, (b),				\
 		    "registering resid %d with %s", (id), #a);		\
@@ -597,10 +598,11 @@ void
 slm_repl_upd_write(struct bmapc_memb *b)
 {
 	struct {
-		sl_replica_t	iosv[SL_MAX_REPLICAS];
-		unsigned	nios;
-	} add, del, sch, deq;
-	int locked, off, vold, vnew;
+		sl_replica_t	 iosv[SL_MAX_REPLICAS];
+		char		*stat[SL_MAX_REPLICAS];
+		unsigned	 nios;
+	} add, del, chg;
+	int locked, off, vold, vnew, sprio, uprio;
 	struct slm_update_data *upd;
 	struct sl_mds_iosinfo *si;
 	struct bmap_mds_info *bmi;
@@ -613,6 +615,8 @@ slm_repl_upd_write(struct bmapc_memb *b)
 	bmi = bmap_2_bmi(b);
 	upd = &bmi->bmi_upd;
 	f = b->bcm_fcmh;
+	sprio = bmi->bmi_sys_prio;
+	uprio = bmi->bmi_usr_prio;
 
 	/* Transfer ownership to us. */
 	pthr = pthread_self();
@@ -621,17 +625,16 @@ slm_repl_upd_write(struct bmapc_memb *b)
 
 	locked = BMAPOD_READ_START(b);
 
+	memset(&chg, 0, sizeof(chg));
+
 	add.nios = 0;
 	del.nios = 0;
-	sch.nios = 0;
-	deq.nios = 0;
+	chg.nios = 0;
 	for (n = 0, off = 0; n < fcmh_2_nrepls(f);
 	    n++, off += SL_BITS_PER_REPLICA) {
 		resid = fcmh_2_repl(f, n);
-		vold = SL_REPL_GET_BMAP_IOS_STAT(
-		    bmi->bmi_orepls, off);
-		vnew = SL_REPL_GET_BMAP_IOS_STAT(
-		    bmi->bmi_repls, off);
+		vold = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_orepls, off);
+		vnew = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls, off);
 
 		r = libsl_id2res(resid);
 		si = r ? res2iosinfo(r) : &slm_null_si;
@@ -641,7 +644,7 @@ slm_repl_upd_write(struct bmapc_memb *b)
 		else if (vnew == BREPLST_REPL_QUEUED ||
 		    (vnew == BREPLST_GARBAGE &&
 		     (si->si_flags & SIF_PRECLAIM_NOTSUP) == 0))
-			PUSH_IOS(b, &add, resid);
+			PUSH_IOS(b, &add, resid, NULL);
 		else if ((vold == BREPLST_REPL_QUEUED ||
 		     vold == BREPLST_REPL_SCHED ||
 		     vold == BREPLST_TRUNCPNDG_SCHED ||
@@ -651,56 +654,56 @@ slm_repl_upd_write(struct bmapc_memb *b)
 		    (vnew == BREPLST_GARBAGE ||
 		     vnew == BREPLST_VALID ||
 		     vnew == BREPLST_INVALID))
-			PUSH_IOS(b, &del, resid);
+			PUSH_IOS(b, &del, resid, NULL);
 		else if ((vold == BREPLST_REPL_SCHED &&
 		     vnew != BREPLST_REPL_SCHED) ||
 		    (vold == BREPLST_TRUNCPNDG_SCHED &&
 		     vnew != BREPLST_TRUNCPNDG_SCHED))
-			PUSH_IOS(b, &deq, resid);
+			PUSH_IOS(b, &chg, resid, "Q");
 		else if ((vold != BREPLST_REPL_QUEUED &&
 		      vnew == BREPLST_REPL_QUEUED) ||
 		     (vold != BREPLST_TRUNCPNDG &&
 		      vnew == BREPLST_TRUNCPNDG))
-			PUSH_IOS(b, &sch, resid);
+			PUSH_IOS(b, &chg, resid, "S");
+		else if (sprio != -1 || uprio != -1)
+			PUSH_IOS(b, &chg, resid, NULL);
 	}
 
-	if (add.nios)
-		for (n = 0; n < add.nios; n++)
-			slm_upsch_insert(b, add.iosv[n].bs_id);
-	if (deq.nios)
-		for (n = 0; n < deq.nios; n++)
-			dbdo(NULL, NULL,
-			    " UPDATE	upsch"
-			    " SET	status = ?"
-			    " WHERE	resid = ?"
-			    "	AND	fid = ?"
-			    "	AND	bno = ?",
-			    SQLITE3_TEXT, "Q",
-			    SQLITE_INTEGER, deq.iosv[n].bs_id,
-			    SQLITE_INTEGER64, bmap_2_fid(b),
-			    SQLITE_INTEGER, b->bcm_bmapno);
-	if (sch.nios)
-		for (n = 0; n < sch.nios; n++)
-			dbdo(NULL, NULL,
-			    " UPDATE	upsch"
-			    " SET	status = ?"
-			    " WHERE	resid = ?"
-			    "	AND	fid = ?"
-			    "	AND	bno = ?",
-			    SQLITE3_TEXT, "S",
-			    SQLITE_INTEGER, sch.iosv[n].bs_id,
-			    SQLITE_INTEGER64, bmap_2_fid(b),
-			    SQLITE_INTEGER, b->bcm_bmapno);
-	if (del.nios)
-		for (n = 0; n < del.nios; n++)
-			dbdo(NULL, NULL,
-			    " DELETE FROM upsch"
-			    " WHERE	resid = ?"
-			    "   AND	fid = ?"
-			    "   AND	bno = ?",
-			    SQLITE_INTEGER, del.iosv[n].bs_id,
-			    SQLITE_INTEGER64, bmap_2_fid(b),
-			    SQLITE_INTEGER, b->bcm_bmapno);
+	for (n = 0; n < add.nios; n++)
+		slm_upsch_insert(b, add.iosv[n].bs_id, sprio, uprio);
+
+	for (n = 0; n < del.nios; n++)
+		dbdo(NULL, NULL,
+		    " DELETE FROM upsch"
+		    " WHERE	resid = ?"
+		    "   AND	fid = ?"
+		    "   AND	bno = ?",
+		    SQLITE_INTEGER, del.iosv[n].bs_id,
+		    SQLITE_INTEGER64, bmap_2_fid(b),
+		    SQLITE_INTEGER, b->bcm_bmapno);
+
+	for (n = 0; n < chg.nios; n++)
+		dbdo(NULL, NULL,
+		    " UPDATE	upsch"
+		    " SET	status = IFNULL(?, status),"
+		    "		sys_prio = IFNULL(?, sys_prio),"
+		    "		usr_prio = IFNULL(?, usr_prio)"
+		    " WHERE	resid = ?"
+		    "	AND	fid = ?"
+		    "	AND	bno = ?",
+		    chg.stat[n] ? SQLITE_TEXT : SQLITE_NULL,
+		    chg.stat[n] ? chg.stat[n] : 0,
+		    sprio == -1 ? SQLITE_NULL : SQLITE_INTEGER,
+		    sprio == -1 ? 0 : sprio,
+		    uprio == -1 ? SQLITE_NULL : SQLITE_INTEGER,
+		    uprio == -1 ? 0 : uprio,
+		    SQLITE_INTEGER, chg.iosv[n].bs_id,
+		    SQLITE_INTEGER64, bmap_2_fid(b),
+		    SQLITE_INTEGER, b->bcm_bmapno);
+
+	bmap_2_bmi(b)->bmi_sys_prio = -1;
+	bmap_2_bmi(b)->bmi_usr_prio = -1;
+
 	BMAPOD_READ_DONE(b, locked);
 
 	FCMH_UNBUSY(b->bcm_fcmh);
@@ -714,9 +717,14 @@ slm_repl_upd_write(struct bmapc_memb *b)
 	bmap_op_done_type(b, BMAP_OPCNT_WORK);
 }
 
+/**
+ * mds_repl_addrq - Handle a request to do replication from a client.
+ *	May also reinitialize some parameters of the replication, such
+ *	as priority, if the request already exists.
+ */
 int
 mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
-    sl_replica_t *iosv, int nios)
+    sl_replica_t *iosv, int nios, int sys_prio, int usr_prio)
 {
 	int tract[NBREPLST], retifset[NBREPLST], retifzero[NBREPLST];
 	int iosidx[SL_MAX_REPLICAS], rc, i;
@@ -799,6 +807,8 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 			    ret_if_inact, REPL_WALKF_SCIRCUIT, iosidx,
 			    nios))
 				repl_all_act = 0;
+			bmap_2_bmi(b)->bmi_sys_prio = sys_prio;
+			bmap_2_bmi(b)->bmi_usr_prio = usr_prio;
 			if (i & F_LOG) {
 				struct slm_update_data *upd;
 
@@ -807,7 +817,8 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 				    sizeof(*upd)) == 1)
 					upd_init(upd, UPDT_BMAP);
 				mds_bmap_write_logrepls(b);
-			}
+			} else if (sys_prio != -1 || usr_prio != -1)
+				slm_repl_upd_write(b);
 			slm_repl_bmap_rel(b);
 		}
 		if (bmapno && repl_some_act == 0)
@@ -838,6 +849,8 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 			} else {
 				rc = mds_repl_bmap_walk(b, tract,
 				    retifset, 0, iosidx, nios);
+				bmap_2_bmi(b)->bmi_sys_prio = sys_prio;
+				bmap_2_bmi(b)->bmi_usr_prio = usr_prio;
 				if (rc & F_LOG) {
 					struct slm_update_data *upd;
 
@@ -848,17 +861,24 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 						    UPDT_BMAP);
 					else {
 						UPD_WAIT(upd);
-						upd->upd_flags |= UPDF_BUSY;
-						upd->upd_owner = pthread_self();
+						upd->upd_flags |=
+						    UPDF_BUSY;
+						upd->upd_owner =
+						    pthread_self();
 						UPD_ULOCK(upd);
 					}
 					mds_bmap_write_logrepls(b);
 					UPD_UNBUSY(upd);
 					rc = 0;
-				} else if (rc & F_ALREADY)
-					rc = -PFLERR_ALREADY;
-				else
-					rc = -SLERR_REPL_NOT_ACT;
+				} else {
+					if (sys_prio != -1 ||
+					    usr_prio != -1)
+						slm_repl_upd_write(b);
+					if (rc & F_ALREADY)
+						rc = -PFLERR_ALREADY;
+					else
+						rc = -SLERR_REPL_NOT_ACT;
+				}
 				slm_repl_bmap_rel(b);
 			}
 		}

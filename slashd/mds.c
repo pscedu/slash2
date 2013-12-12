@@ -2437,6 +2437,13 @@ _dbdo(const struct pfl_callerinfo *pci,
 				    sizeof(dbuf) - dbuf_off,
 				    "; arg %d: %s", j + 1, p);
 			break;
+		case SQLITE_NULL:
+			(void)va_arg(ap, int);
+			rc = sqlite3_bind_null(sth->sth_sth, j + 1);
+			if (log)
+				dbuf_off += snprintf(dbuf + dbuf_off,
+				    sizeof(dbuf) - dbuf_off,
+				    "; arg %d: NULL", j + 1);
 		default:
 			psc_fatalx("type");
 		}
