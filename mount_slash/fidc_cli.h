@@ -42,7 +42,7 @@ struct fci_finfo {
 };
 
 struct fci_dinfo {
-	struct psc_lockedlist	 pages;
+	struct psc_lockedlist	 pages; // XXX tree?
 	uint64_t		 nents;
 };
 
