@@ -1705,7 +1705,7 @@ slm_wkcb_wr_brepl(void *p)
 {
 	struct slm_wkdata_wr_brepl *wk = p;
 
-	slm_repl_upd_write(wk->b);
+	slm_repl_upd_write(wk->b, 1);
 	return (0);
 }
 
@@ -1720,7 +1720,7 @@ mdslog_bmap_repls(void *datap, uint64_t txg, __unusedx int flag)
 {
 	struct slmds_jent_bmap_repls *sjbr;
 	struct slm_wkdata_wr_brepl *wk;
-	struct bmapc_memb *b = datap;
+	struct bmap *b = datap;
 
 	psc_assert(slm_opstate == SLM_OPSTATE_NORMAL);
 
