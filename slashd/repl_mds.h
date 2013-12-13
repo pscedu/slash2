@@ -76,7 +76,7 @@ void	 slm_iosv_clearbusy(const sl_replica_t *, int);
 #define slm_repl_bmap_rel(b)		 slm_repl_bmap_rel_type((b), BMAP_OPCNT_LOOKUP)
 #define slm_repl_bmap_rel_type(b, type) _slm_repl_bmap_rel_type((b), (type))
 
-void	 slm_repl_upd_write(struct bmapc_memb *);
+void	 slm_repl_upd_write(struct bmapc_memb *, int);
 void	_slm_repl_bmap_rel_type(struct bmapc_memb *, int);
 
 void	 mds_brepls_check(uint8_t *, int);

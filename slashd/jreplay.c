@@ -113,7 +113,7 @@ mds_replay_bmap(void *jent, int op)
 		b->bcm_flags |= BMAP_MDS_REPLMODWR;
 		// bmi_sys_prio =
 		// bmi_usr_prio =
-		slm_repl_upd_write(b);
+		slm_repl_upd_write(b, 1);
 
 		for (n = 0, off = 0; n < fcmh_2_nrepls(f);
 		    n++, off += SL_BITS_PER_REPLICA)

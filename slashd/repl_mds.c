@@ -595,7 +595,7 @@ slm_iosv_clearbusy(const sl_replica_t *iosv, int nios)
 	} while (0)
 
 void
-slm_repl_upd_write(struct bmapc_memb *b)
+slm_repl_upd_write(struct bmapc_memb *b, int rel)
 {
 	struct {
 		sl_replica_t	 iosv[SL_MAX_REPLICAS];
@@ -704,17 +704,19 @@ slm_repl_upd_write(struct bmapc_memb *b)
 	bmap_2_bmi(b)->bmi_sys_prio = -1;
 	bmap_2_bmi(b)->bmi_usr_prio = -1;
 
-	BMAPOD_READ_DONE(b, locked);
+	if (rel) {
+		BMAPOD_READ_DONE(b, locked);
 
-	FCMH_UNBUSY(b->bcm_fcmh);
+		FCMH_UNBUSY(b->bcm_fcmh);
 
-	BMAP_LOCK(b);
-	b->bcm_flags &= ~BMAP_MDS_REPLMODWR;
-	BMAP_UNBUSY(b);
+		BMAP_LOCK(b);
+		b->bcm_flags &= ~BMAP_MDS_REPLMODWR;
+		BMAP_UNBUSY(b);
 
-	UPD_UNBUSY(upd);
+		UPD_UNBUSY(upd);
 
-	bmap_op_done_type(b, BMAP_OPCNT_WORK);
+		bmap_op_done_type(b, BMAP_OPCNT_WORK);
+	}
 }
 
 /**
@@ -818,7 +820,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 					upd_init(upd, UPDT_BMAP);
 				mds_bmap_write_logrepls(b);
 			} else if (sys_prio != -1 || usr_prio != -1)
-				slm_repl_upd_write(b);
+				slm_repl_upd_write(b, 0);
 			slm_repl_bmap_rel(b);
 		}
 		if (bmapno && repl_some_act == 0)
@@ -873,7 +875,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 				} else {
 					if (sys_prio != -1 ||
 					    usr_prio != -1)
-						slm_repl_upd_write(b);
+						slm_repl_upd_write(b, 0);
 					if (rc & F_ALREADY)
 						rc = -PFLERR_ALREADY;
 					else

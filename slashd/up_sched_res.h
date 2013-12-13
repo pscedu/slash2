@@ -74,12 +74,6 @@ struct slm_update_generic {
 	struct psc_listentry		 upg_lentry;
 };
 
-
-struct gid_table{
-    gid_t gids[UPSCH_MAX_ITEMS_RES];
-    int rows;
-};
-
 #define UPD_CALLERINFO()		PFL_CALLERINFOSS(SLMSS_UPSCH)
 
 #define UPD_LOCK(upd)			_psc_mutex_lock(UPD_CALLERINFO(), &(upd)->upd_mutex)
