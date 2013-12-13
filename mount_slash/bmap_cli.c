@@ -508,7 +508,6 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw,
 	struct fidc_membh *f;
 	int rc, nretries = 0;
 	struct bmap_cli_info *bci = bmap_2_bci(bmap);
-	struct bmap_core_state corestate;
 
 	psc_assert(bmap->bcm_flags & BMAP_INIT);
 	psc_assert(bmap->bcm_fcmh);
@@ -539,8 +538,7 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw,
 		rc = mp->rc;
 	if (rc)
 		goto out;
-	memcpy(&corestate, &mp->bcs, sizeof(mp->bcs));
-	memcpy(&bci->bci_repls, corestate.bcs_repls, sizeof(corestate.bcs_repls));
+	memcpy(bci->bci_repls, mp->repls, sizeof(mp->repls));
 
 	FCMH_LOCK(f);
 

@@ -1694,7 +1694,7 @@ mds_bmap_load_fg(const struct slash_fidgen *fg, sl_bmapno_t bmapno,
 int
 mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
     enum rw rw, sl_ios_id_t prefios, struct srt_bmapdesc *sbd,
-    struct pscrpc_export *exp, struct bmap_core_state *bcs, int new)
+    struct pscrpc_export *exp, uint8_t *repls, int new)
 {
 	struct slashrpc_cservice *csvc;
 	struct bmap_mds_lease *bml;
@@ -1767,9 +1767,9 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	if (b->bcm_flags & BMAP_DIO)
 		sbd->sbd_flags |= SRM_LEASEBMAPF_DIO;
 
-	if (bcs) {
+	if (repls) {
 		bmi = bmap_2_bmi(b);
-		memcpy(bcs, &bmi->bmi_corestate, sizeof(*bcs));
+		memcpy(repls, bmi->bmi_repls, sizeof(bmi->bmi_repls));
 	}
 
  out:

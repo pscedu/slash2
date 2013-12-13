@@ -447,7 +447,7 @@ struct srm_leasebmap_req {
 
 struct srm_leasebmap_rep {
 	struct srt_bmapdesc	sbd;		/* descriptor for bmap */
-	struct bmap_core_state	bcs;
+	uint8_t			repls[SL_REPLICA_NBYTES];
 	 int32_t		rc;		/* 0 for success or slerrno */
 	uint32_t		flags;		/* return SRM_LEASEBMAPF_* success */
 	struct srt_inode	ino;		/* if SRM_LEASEBMAPF_GETINODE */
