@@ -178,7 +178,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct fcmh_iod_info);
 	PRTYPE(struct fcmh_mds_info);
 	PRTYPE(struct fidc_membh);
-	PRTYPE(struct gid_table);
 	PRTYPE(struct lnetif_pair);
 	PRTYPE(struct mdsio_ops);
 	PRTYPE(struct mio_fh);
