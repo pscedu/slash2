@@ -394,6 +394,24 @@ restype_stmt	: NAME '=' RESOURCE_TYPE ';' {
 			slcfg_store_tok_val($1, $3);
 			PSCFREE($1);
 			PSCFREE($3);
+
+			switch (currentRes->res_type) {
+			case SLREST_PARALLEL_COMPNT:
+			case SLREST_STANDALONE_FS:
+			case SLREST_ARCHIVAL_FS:
+			case SLREST_MDS:
+				psc_assert(!currentResm);
+				currentResm = PSCALLOC(
+				    sizeof(struct sl_resm) +
+				    cfg_resm_pri_sz);
+				currentResm->resm_res = currentRes;
+				slcfg_init_resm(currentResm);
+				psc_dynarray_add(&currentRes->res_members,
+				    currentResm);
+				break;
+			default:
+				break;
+			}
 		}
 		;
 
