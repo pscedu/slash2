@@ -56,8 +56,8 @@ const char *progname;
 #define	K_BMAPS		(1 <<  0)
 #define	K_BSZ		(1 <<  1)
 #define	K_CRC		(1 <<  2)
-#define	K_FLAGS		(1 <<  3)
-#define	K_FID		(1 <<  4)
+#define	K_FID		(1 <<  3)
+#define	K_FLAGS		(1 <<  4)
 #define	K_FSIZE		(1 <<  5)
 #define	K_NBLKS		(1 <<  6)
 #define	K_NREPLS	(1 <<  7)
@@ -100,10 +100,9 @@ searchpaths(struct psc_lockedlist *pll, const char *fn)
 {
 	struct path *p;
 
-	PLL_FOREACH(p, pll) {
+	PLL_FOREACH(p, pll)
 		if (strcmp(p->fn, fn) == 0)
 			return (p);
-	}
 	return (NULL);
 }
 
@@ -169,17 +168,15 @@ dumpfid(const char *fn, const struct pfl_stat *stb, int ftyp,
 		printf("  replpol %u\n", ino.ino_replpol);
 	if (show & K_FSIZE && rc > 0) {
 		rc = fgetxattr(fd, SLXAT_FSIZE, tbuf, sizeof(tbuf));
-		if (rc)
-			warnx("%s: getxattr %s: %s", fn, SLXAT_FSIZE,
-			    strerror(rc));
+		if (rc == -1)
+			warn("%s: getxattr %s", fn, SLXAT_FSIZE);
 		else
 			printf("  fsize %s\n", tbuf);
 	}
 	if (show & K_FID) {
 		rc = fgetxattr(fd, SLXAT_FID, tbuf, sizeof(tbuf));
-		if (rc)
-			warnx("%s: getxattr %s: %s", fn, SLXAT_FID,
-			    strerror(rc));
+		if (rc == -1)
+			warn("%s: getxattr %s", fn, SLXAT_FID);
 		else
 			printf("  fid %s\n", tbuf);
 	}
