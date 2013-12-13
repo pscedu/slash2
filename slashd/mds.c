@@ -2444,6 +2444,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 				dbuf_off += snprintf(dbuf + dbuf_off,
 				    sizeof(dbuf) - dbuf_off,
 				    "; arg %d: NULL", j + 1);
+			break;
 		default:
 			psc_fatalx("type");
 		}
