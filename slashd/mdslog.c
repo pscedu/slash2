@@ -1224,23 +1224,24 @@ mds_update_cursor(void *buf, uint64_t txg, int flag)
 }
 
 /**
- * mds_cursor_thread - Update the cursor file in the ZFS that records
+ * slmjcursorthr_main - Update the cursor file in the ZFS that records
  *	the current transaction group number and other system log
  *	status.  If there is no activity in system other that this write
  *	to update the cursor, our customized ZFS will extend the
  *	lifetime of the transaction group.
  */
 void
-mds_cursor_thread(struct psc_thread *thr)
+slmjcursorthr_main(struct psc_thread *thr)
 {
 	int rc;
 
 	while (pscthr_run(thr)) {
-
 		spinlock(&cursorWaitLock);
 		if (!cursor_update_needed) {
 			cursor_update_inprog = 0;
 			psc_waitq_wait(&cursorWaitq, &cursorWaitLock);
+//			psc_waitq_waitrel_s(&cursorWaitq,
+//			    &cursorWaitLock, 30);
 		} else {
 			cursor_update_inprog = 1;
 			freelock(&cursorWaitLock);
@@ -1898,7 +1899,7 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 	 * Also, without this thread, we can't write anything into ZFS.
 	 * We can't even read from ZFS because a read changes atime.
 	 */
-	pscthr_init(SLMTHRT_CURSOR, 0, mds_cursor_thread, NULL, 0,
+	pscthr_init(SLMTHRT_CURSOR, 0, slmjcursorthr_main, NULL, 0,
 	    "slmjcursorthr");
 
 	xmkfn(fn, "%s", SL_FN_RECLAIMPROG);
