@@ -59,7 +59,9 @@ struct bmap_mds_info {
 	struct bmap_core_state   bmi_corestate;
 #define bmi_crcstates		bmi_corestate.bcs_crcstates
 #define bmi_repls		bmi_corestate.bcs_repls
+
 	struct bmap_extra_state	 bmi_extrastate;
+#define bmi_crcs		bmi_extrastate.bes_crcs
 
 	struct resm_mds_info	*bmi_wr_ion;		/* pointer to write ION */
 	struct psc_lockedlist	 bmi_leases;		/* tracked bmap leases */

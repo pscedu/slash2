@@ -572,8 +572,8 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 		if (bii->bii_crcstates[i] & BMAP_SLVR_DATA)
 			continue;
 
-		bii->bii_crcstates[i] = mp->bod.bod_crcstates[i];
-		bii->bii_crcs[i] = mp->bod.bod_crcs[i];
+		bii->bii_crcstates[i] = mp->crcstates[i];
+		bii->bii_crcs[i] = mp->crcs[i];
 	}
 
 	BMAP_ULOCK(b);
