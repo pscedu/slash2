@@ -172,11 +172,10 @@ __static int
 msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
-	struct bmap *b = args->pointer_arg[MSL_CBARG_BMAP];
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
-	struct srm_reassignbmap_rep *mp =
-	    pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
-	struct bmap_cli_info  *bci = bmap_2_bci(b);
+	struct bmap *b = args->pointer_arg[MSL_CBARG_BMAP];
+	struct bmap_cli_info *bci = bmap_2_bci(b);
+	struct srm_reassignbmap_rep *mp;
 	int rc;
 
 	psc_assert(&rq->rq_async_args == args);
@@ -206,9 +205,9 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 
 	b->bcm_flags &= ~BMAP_CLI_REASSIGNREQ;
 
-	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b,
-	    "lease reassign: rc=%d, nseq=%"PRId64", "
-	    "etime="PSCPRI_TIMESPEC"", rc, bci->bci_sbd.sbd_seq,
+	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
+	    "lease reassign: rc=%d nseq=%"PRId64" "
+	    "etime="PSCPRI_TIMESPEC, rc, bci->bci_sbd.sbd_seq,
 	    PFLPRI_PTIMESPEC_ARGS(&bci->bci_etime));
 
 	bmap_op_done_type(b, BMAP_OPCNT_REASSIGN);
@@ -222,11 +221,10 @@ __static int
 msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
-	struct bmap *b = args->pointer_arg[MSL_CBARG_BMAP];
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
-	struct srm_leasebmapext_rep *mp =
-	    pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
+	struct bmap *b = args->pointer_arg[MSL_CBARG_BMAP];
 	struct bmap_cli_info *bci = bmap_2_bci(b);
+	struct srm_leasebmapext_rep *mp;
 	struct timespec ts;
 	int rc;
 
@@ -239,8 +237,8 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 		memcpy(&bmap_2_bci(b)->bci_sbd, &mp->sbd,
 		    sizeof(struct srt_bmapdesc));
 
-		timespecadd(&ts,
-		    &msl_bmap_max_lease, &bmap_2_bci(b)->bci_etime);
+		timespecadd(&ts, &msl_bmap_max_lease,
+		    &bmap_2_bci(b)->bci_etime);
 
 		OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_DONE);
 	} else {
@@ -669,7 +667,7 @@ msl_bmap_release_cb(struct pscrpc_request *rq,
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 
-	// SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_release_rep, rc);
+//	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_release_rep, rc);
 
 	rc = mp ? mp->rc : -ENOBUFS;
 
