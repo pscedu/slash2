@@ -368,6 +368,10 @@ struct slm_wkdata_upschq {
 	sl_bmapno_t		 bno;
 };
 
+struct slm_wkdata_rmdir_ino {
+	slfid_t			 fid;
+};
+
 /* this is used for two different calling interfaces */
 struct slm_wkdata_readdir {
 	struct pscrpc_export	*exp;

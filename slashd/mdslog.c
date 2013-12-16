@@ -667,6 +667,18 @@ const char *slm_ns_opnames[] = {
 	"reclaim"
 };
 
+int
+slm_wk_rmdir_ino(void *p)
+{
+	struct slm_wkdata_rmdir_ino *wk = p;
+	char name[24];
+
+	snprintf(name, sizeof(name), "%016"PRIx64".ino", wk->fid);
+	mdsio_unlink(current_vfsid, mdsio_getfidlinkdir(wk->fid),
+	    NULL, name, &rootcreds, NULL, NULL);
+	return (0);
+}
+
 /**
  * mdslog_namespace - Log a namespace operation before we attempt it.
  *	This makes sure that it will be propagated towards other MDSes
@@ -802,17 +814,17 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 		wk = pfl_workq_getitem(slm_wk_upsch_purge,
 		    struct slm_wkdata_upsch_purge);
 		wk->fid = sstb->sst_fid;
+		wk->bno = BMAPNO_ANY;
 		pfl_workq_putitemq(&slm_db_workq, wk);
 	}
 
 	if (op == NS_OP_RMDIR) {
-		char name[24];
+		struct slm_wkdata_upsch_purge *wk;
 
-		snprintf(name, sizeof(name), "%016"PRIx64".ino",
-		    sstb->sst_fid);
-		mdsio_unlink(current_vfsid,
-		    mdsio_getfidlinkdir(sstb->sst_fid), NULL, name,
-		    &rootcreds, NULL, NULL);
+		wk = pfl_workq_getitem(slm_wk_rmdir_ino,
+		    struct slm_wkdata_rmdir_ino);
+		wk->fid = sstb->sst_fid;
+		pfl_workq_putitem(wk);
 	}
 }
 
