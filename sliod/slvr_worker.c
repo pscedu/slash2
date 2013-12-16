@@ -252,7 +252,6 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 	struct bmap_iod_info *bii;
 	struct psc_dynarray *a;
 	struct bcrcupd *bcr;
-	uint32_t j;
 	int i;
 
 	OPSTAT_INCR(SLI_OPST_CRC_UPDATE_CB);
@@ -302,10 +301,10 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 	 * If there were errors, log them but obviously the MDS will
 	 * make the master choice about what our residency validity is.
 	 */
-	for (j = 0; j < mq->ncrc_updates; j++)
-		if (mp && mp->crcup_rc[j])
+	for (i = 0; i < (int)mq->ncrc_updates; i++)
+		if (mp && mp->crcup_rc[i])
 			psclog_errorx("MDS rejected our CRC update; "
-			    "rc=%d", mp->crcup_rc[j]);
+			    "rc=%d", mp->crcup_rc[i]);
 
 	psc_dynarray_free(a);
 	PSCFREE(a);
