@@ -168,7 +168,7 @@ _bmap_flushq_wake(const struct pfl_callerinfo *pci, int reason)
 
 	freelock(&bmapFlushLock);
 
-	psclog_diag("wakeup flusher: reason=%x wake=%d.", reason, wake);
+	psclog_diag("wakeup flusher: reason=%x wake=%d", reason, wake);
 }
 
 __static int
@@ -177,16 +177,17 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct bmpc_write_coalescer *bwc =
-		args->pointer_arg[MSL_CBARG_BIORQS];
+	    args->pointer_arg[MSL_CBARG_BIORQS];
 	struct sl_resm *m = args->pointer_arg[MSL_CBARG_RESM];
-	struct bmpc_ioreq *r;
-	int rc = 0;
 	struct resm_cli_info *rmci = resm2rmci(m);
+	struct bmpc_ioreq *r;
+	int rc;
 
 	psc_atomic32_dec(&rmci->rmci_infl_rpcs);
+
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_io_rep, rc);
 
-	psclog_info("Reply to write RPC from %d: %d",
+	psclog_diag("Reply to write RPC from %d: %d",
 	    m->resm_res_id, psc_atomic32_read(&rmci->rmci_infl_rpcs));
 
 	OPSTAT_INCR(SLC_OPST_SRMT_WRITE_CALLBACK);
