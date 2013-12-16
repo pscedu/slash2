@@ -243,15 +243,20 @@ struct sl_expcli_ops {
 
 #define SL_GET_RQ_STATUS(csvc, rq, mp, error)				\
 	do {								\
+		(mp) = NULL;						\
 		(error) = (rq)->rq_err;					\
 		if ((error) == 0)					\
 			(error) = (rq)->rq_repmsg->status;		\
 		if ((error) == 0)					\
 			(error) = (rq)->rq_status;			\
 		if ((error) == 0)					\
-			(error) = authbuf_check((rq), PSCRPC_MSG_REPLY);\
-		if ((error) == 0)					\
+			(error) = authbuf_check((rq),			\
+			    PSCRPC_MSG_REPLY);				\
+		if ((error) == 0) {					\
+			(mp) = pscrpc_msg_buf((rq)->rq_repmsg, 0,	\
+			    sizeof(*(mp)));				\
 			(error) = (mp) ? (mp)->rc : -PFLERR_BADMSG;	\
+		}							\
 		if ((error) == -PFLERR_NOTCONN && (csvc))		\
 			sl_csvc_disconnect(csvc);			\
 	} while (0)
@@ -260,7 +265,6 @@ struct sl_expcli_ops {
 	do {								\
 		type *_mp;						\
 									\
-		_mp = pscrpc_msg_buf((rq)->rq_repmsg, 0, sizeof(*_mp));	\
 		SL_GET_RQ_STATUS((csvc), (rq), _mp, (rc));		\
 	} while (0)
 
