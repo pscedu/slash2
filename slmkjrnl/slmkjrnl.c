@@ -468,15 +468,15 @@ main(int argc, char *argv[])
 				    optarg);
 			nents = (ssize_t)l;
 			break;
+		case 'q':
+			query = 1;
+			break;
 		case 'u':
 			endp = NULL;
 			uuid = (uint64_t)strtoull(optarg, &endp, 16);
 			if (endp == optarg || *endp)
 				errx(1, "invalid -u fsuuid: %s",
 				    optarg);
-			break;
-		case 'q':
-			query = 1;
 			break;
 		case 'v':
 			verbose = 1;
