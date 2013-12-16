@@ -110,8 +110,9 @@ int
 mdscoh_cb(struct pscrpc_request *rq,
     __unusedx struct pscrpc_async_args *a)
 {
+	struct slashrpc_cservice *csvc =
+	    rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC];
 	struct slm_wkdata_coh_releasebml *wk;
-	struct slashrpc_cservice *csvc;
 	struct srm_bmap_dio_req *mq;
 	char buf[PSCRPC_NIDSTR_SIZE];
 	int rc;
@@ -119,7 +120,6 @@ mdscoh_cb(struct pscrpc_request *rq,
 	OPSTAT_INCR(SLM_OPST_COHERENT_CB);
 
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
-	csvc = rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC];
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_bmap_dio_rep, rc);
 	if (rc) {
