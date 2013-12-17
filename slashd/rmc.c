@@ -698,7 +698,7 @@ slm_rmc_handle_readdir_roots(struct iovec *iov0, struct iovec *iov1,
 #define RCM_READDIR_CBARGI_DECR		1
 
 int  slm_rcmc_readdir_cb(struct pscrpc_request *, struct pscrpc_async_args *);
-void slm_rcm_try_readdir_ra(struct pscrpc_export *, struct sl_fidgen *, int, int, off_t, size_t);
+void slm_rcm_try_readdir_ra(struct pscrpc_export *, struct sl_fidgen *, int, off_t, size_t);
 int  slm_readdir_issue(struct pscrpc_export *, struct sl_fidgen *, size_t, off_t, size_t *, int *,
 	int *, unsigned char *, size_t, int);
 
@@ -724,7 +724,6 @@ slm_rcm_issue_readdir_wk(void *p)
 	mq->size = wk->size;
 	mq->eof = wk->eof;
 	mq->num = wk->num;
-	mq->rc = wk->rc;
 
 	rq->rq_interpret_reply = slm_rcmc_readdir_cb;
 	rq->rq_async_args.pointer_arg[RCM_READDIR_CBARGP_CSVC] = wk->csvc;
@@ -747,7 +746,7 @@ slm_rcm_issue_readdir_wk(void *p)
 		pscrpc_export_put(wk->exp);
 	} else {
 		slm_rcm_try_readdir_ra(wk->exp, &wk->fg,
-		    wk->rc ? wk->rc : rc, wk->eof, wk->nextoff,
+		    wk->eof, wk->nextoff,
 		    wk->size);
 	}
 
@@ -788,13 +787,13 @@ slm_readdir_ra_issue(void *p)
  */
 void
 slm_rcm_try_readdir_ra(struct pscrpc_export *exp, struct sl_fidgen *fgp,
-    int rc, int eof, off_t off, size_t size)
+    int eof, off_t off, size_t size)
 {
 	struct slm_wkdata_readdir *wk;
 	struct slm_exp_cli *mexpc;
 	int done = 1;
 
-	if (eof || rc)
+	if (eof)
 		return;
 
 	EXPORT_LOCK(exp);
@@ -841,7 +840,7 @@ slm_rcmc_readdir_cb(struct pscrpc_request *rq,
 		slrpc_rep_in(csvc, rq);
 
 		// XXX this has position problems when past RPCs finish
-		slm_rcm_try_readdir_ra(exp, &mq->fg, mq->rc, mq->eof,
+		slm_rcm_try_readdir_ra(exp, &mq->fg, mq->eof,
 		    nextoff, mq->size);
 	}
 
@@ -929,7 +928,7 @@ slm_readdir_issue(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 		iov[1].iov_base = NULL;
 		pfl_workq_putitem(wk);
 
-		slm_rcm_try_readdir_ra(exp, fgp, rc, *eof, nextoff,
+		slm_rcm_try_readdir_ra(exp, fgp, *eof, nextoff,
 		    size);
 	}
 

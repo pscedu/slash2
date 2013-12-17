@@ -309,9 +309,6 @@ slc_rcm_handle_readdir(struct pscrpc_request *rq)
 	if (mp->rc)
 		return (mp->rc);
 
-	if (mq->rc)
-		PFL_GOTOERR(error, mq->rc);
-
 	iov[0].iov_base = PSCALLOC(mq->size);
 	iov[0].iov_len = mq->size;
 
@@ -321,14 +318,11 @@ slc_rcm_handle_readdir(struct pscrpc_request *rq)
 	if (mq->size)
 		mp->rc = slrpc_bulkserver(rq, BULK_GET_SINK,
 		    SRCM_BULK_PORTAL, iov, nitems(iov));
-	if (mq->rc == 0)
-		mq->rc = mp->rc;
 
- error:
 	p = dircache_new_page(d, mq->offset);
 
-	if (mq->rc) {
-		msl_readdir_error(d, p, mq->rc);
+	if (mp->rc) {
+		msl_readdir_error(d, p, mp->rc);
 		PSCFREE(iov[0].iov_base);
 	} else
 		msl_readdir(d, p, mq->eof, mq->num, mq->size, iov);

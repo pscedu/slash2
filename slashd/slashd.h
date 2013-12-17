@@ -385,7 +385,6 @@ struct slm_wkdata_readdir {
 	/* for sending async RPC */
 	struct iovec		 iov[2];
 	int			 num;
-	int			 rc;
 	int			 eof;
 
 	/* for readahead */

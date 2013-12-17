@@ -893,7 +893,6 @@ struct srm_readdir_ra_req {
 	uint32_t		size;
 	uint32_t		eof:1;		/* flag: directory read EOF */
 	uint32_t		num:31;		/* #dirents returned */
-	 int32_t		rc;
 	 int32_t		_pad;
 /* XXX bulk data should be in a portable format, not fuse_dirent */
 /* XXX bulk data is (fuse_dirent * N, 64-bit align, srt_readdir_ent * N) */
