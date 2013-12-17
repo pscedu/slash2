@@ -895,8 +895,6 @@ upd_proc_pagein(struct slm_update_data *upd)
 	struct sl_resource *r;
 	int n;
 
-	n = UPSCH_MAX_ITEMS_RES;
-
 	upg = upd_getpriv(upd);
 	if (upg->upg_resm) {
 		r = upg->upg_resm->resm_res;
@@ -904,13 +902,9 @@ upd_proc_pagein(struct slm_update_data *upd)
 		si = res2iosinfo(r);
 
 		RPMI_LOCK(rpmi);
-		n -= psc_dynarray_len(&rpmi->rpmi_upschq);
 		si->si_flags &= ~SIF_UPSCH_PAGING;
 		RPMI_ULOCK(rpmi);
 	}
-
-	if (n <= 0)
-		return;
 
 	dbdo(upd_proc_pagein_cb, NULL,
 	    " SELECT    fid,"

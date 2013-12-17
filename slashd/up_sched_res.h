@@ -38,9 +38,6 @@
 
 struct odtable_receipt;
 
-#define UPSCH_MAX_ITEMS			1024
-#define UPSCH_MAX_ITEMS_RES		256
-
 struct slm_update_data {
 	int				 upd_type:4;
 	int				 upd_flags;
