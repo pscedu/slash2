@@ -791,22 +791,19 @@ slm_rcm_try_readdir_ra(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 {
 	struct slm_wkdata_readdir *wk;
 	struct slm_exp_cli *mexpc;
-	int done = 1;
 
 	if (eof)
 		return;
 
 	EXPORT_LOCK(exp);
 	mexpc = sl_exp_getpri_cli(exp);
-	if (mexpc->mexpc_readdir_nra < SLM_EXPC_READDIR_MAXNRA) {
-		done = 0;
-		mexpc->mexpc_readdir_nra++;
-	}
-
-	EXPORT_ULOCK(exp);
-
-	if (done)
+	if (mexpc->mexpc_readdir_nra >= SLM_EXPC_READDIR_MAXNRA) {
+		EXPORT_ULOCK(exp);
 		return;
+	} else{
+		mexpc->mexpc_readdir_nra++;
+		EXPORT_ULOCK(exp);
+	}
 
 	wk = pfl_workq_getitem(slm_readdir_ra_issue,
 	    struct slm_wkdata_readdir);
