@@ -1071,11 +1071,13 @@ slrpc_bulk_sign(struct pscrpc_request *rq, void *buf, struct iovec *iov,
 
 	memcpy(buf, gcry_md_read(hd, 0), AUTHBUF_ALGLEN);
 
+#if 0
  {
   char tbuf[65];
   pfl_unpack_hex(buf, AUTHBUF_ALGLEN, tbuf);
   DEBUG_REQ(PLL_MAX, rq, "bulk sig=%s", tbuf);
  }
+#endif
 
 	gcry_md_close(hd);
 }
