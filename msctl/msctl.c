@@ -58,7 +58,7 @@
 #define walk(f, func, arg)						\
 	pfl_filewalk((f),						\
 	    (verbose   ? PFL_FILEWALKF_VERBOSE : 0) |			\
-	    (recursive ? PFL_FILEWALKF_RECURSIVE : 0) , (func), (arg))
+	    (recursive ? PFL_FILEWALKF_RECURSIVE : 0), NULL, (func), (arg))
 
 int				 verbose;
 int				 has_col;

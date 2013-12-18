@@ -30,13 +30,13 @@
  */
 
 #include "pfl/cdefs.h"
+#include "pfl/ctl.h"
+#include "pfl/ctlsvr.h"
+#include "pfl/lockedlist.h"
+#include "pfl/rsx.h"
 #include "pfl/stat.h"
 #include "pfl/str.h"
 #include "pfl/walk.h"
-#include "pfl/lockedlist.h"
-#include "pfl/rsx.h"
-#include "pfl/ctl.h"
-#include "pfl/ctlsvr.h"
 
 #include "ctl.h"
 #include "ctl_iod.h"
@@ -80,7 +80,7 @@ slictlcmd_export(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 
 	if (sfop->sfop_flags & SLI_CTL_FOPF_RECURSIVE)
 		fl |= PFL_FILEWALKF_RECURSIVE;
-	return (pfl_filewalk(sfop->sfop_fn, fl, sli_export, sfop));
+	return (pfl_filewalk(sfop->sfop_fn, fl, NULL, sli_export, sfop));
 }
 
 struct sli_import_arg {
@@ -451,7 +451,7 @@ slictlcmd_import(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    sfop->sfop_fn, slstrerror(errno)));
 	strlcpy(sfop->sfop_fn, buf, sizeof(sfop->sfop_fn));
-	pfl_filewalk(sfop->sfop_fn, fl, sli_import, &a);
+	pfl_filewalk(sfop->sfop_fn, fl, NULL, sli_import, &a);
 	return (a.rc);
 }
 
