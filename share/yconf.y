@@ -981,8 +981,6 @@ slcfg_parse(const char *config_file)
 				     SLREST_PARALLEL_LFS))
 					slcfg_peer2resm(r, peer);
 			}
-			DYNARRAY_FOREACH(m, i, &r->res_members)
-				slcfg_init_resm(m);
 		}
 	}
 	CONF_ULOCK();
