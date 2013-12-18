@@ -28,13 +28,16 @@
 
 #include <err.h>
 #include <fcntl.h>
+#include <fts.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/listcache.h"
 #include "pfl/lockedlist.h"
 #include "pfl/pfl.h"
+#include "pfl/thread.h"
 #include "pfl/walk.h"
 
 #include "slashd/inode.h"
@@ -45,9 +48,12 @@ struct path {
 	struct psc_listentry	 lentry;
 };
 
+int			setid = 0;
+int			setsize = 1;
 int			show;
 int			recurse;
 struct psc_lockedlist	excludes = PLL_INIT(&excludes, struct path, lentry);
+struct psc_listcache	files;
 
 const char *progname;
 
@@ -100,40 +106,37 @@ searchpaths(struct psc_lockedlist *pll, const char *fn)
 {
 	struct path *p;
 
+	/* XXX use bsearch */
 	PLL_FOREACH(p, pll)
 		if (strcmp(p->fn, fn) == 0)
 			return (p);
 	return (NULL);
 }
 
+struct f {
+	char			*fn;
+	struct pfl_stat		 stb;
+	struct psc_listentry	 lentry;
+	int			 ftyp;
+};
+
 int
-dumpfid(const char *fn, const struct pfl_stat *stb, int ftyp,
-    __unusedx int level, __unusedx void *arg)
+dumpfid(struct f *f)
 {
+	char tbuf[32];
+	sl_bmapno_t bno;
 	struct slash_inode_extras_od inox;
 	struct slash_inode_od ino;
 	struct iovec iovs[2];
-	struct path *p;
-	char tbuf[32];
-	sl_bmapno_t bno;
 	uint64_t crc, od_crc;
 	uint32_t nr, j;
 	ssize_t rc;
-	int fd;
+	int fd = -1;
 
-	p = searchpaths(&excludes, fn);
-	if (p) {
-		pll_remove(&excludes, p);
-		return (PFL_FILEWALK_RC_SKIP);
-	}
-
-	if (ftyp != PFWT_F)
-		return (0);
-
-	fd = open(fn, O_RDONLY);
+	fd = open(f->fn, O_RDONLY);
 	if (fd == -1) {
-		warn("%s", fn);
-		return (0);
+		warn("%s", f->fn);
+		goto out;
 	}
 
 	iovs[0].iov_base = &ino;
@@ -142,17 +145,17 @@ dumpfid(const char *fn, const struct pfl_stat *stb, int ftyp,
 	iovs[1].iov_len = sizeof(od_crc);
 	rc = readv(fd, iovs, nitems(iovs));
 	if (rc == -1) {
-		warn("%s", fn);
+		warn("%s", f->fn);
 		goto out;
 	}
 	if (rc != sizeof(ino) + sizeof(od_crc)) {
 		warnx("%s: short I/O, want %zd got %zd",
-		    fn, sizeof(ino) + sizeof(od_crc), rc);
+		    f->fn, sizeof(ino) + sizeof(od_crc), rc);
 		goto out;
 	}
 
 	psc_crc64_calc(&crc, &ino, sizeof(ino));
-	printf("%s:\n", fn);
+	printf("%s:\n", f->fn);
 	if (show & K_CRC)
 		printf("  crc: %s %"PSCPRIxCRC64" %"PSCPRIxCRC64"\n",
 		    crc == od_crc ? "OK" : "BAD", crc, od_crc);
@@ -169,19 +172,19 @@ dumpfid(const char *fn, const struct pfl_stat *stb, int ftyp,
 	if (show & K_FSIZE && rc > 0) {
 		rc = fgetxattr(fd, SLXAT_FSIZE, tbuf, sizeof(tbuf));
 		if (rc == -1)
-			warn("%s: getxattr %s", fn, SLXAT_FSIZE);
+			warn("%s: getxattr %s", f->fn, SLXAT_FSIZE);
 		else
 			printf("  fsize %s\n", tbuf);
 	}
 	if (show & K_FID) {
 		rc = fgetxattr(fd, SLXAT_FID, tbuf, sizeof(tbuf));
 		if (rc == -1)
-			warn("%s: getxattr %s", fn, SLXAT_FID);
+			warn("%s: getxattr %s", f->fn, SLXAT_FID);
 		else
 			printf("  fid %s\n", tbuf);
 	}
 	if (show & K_UID)
-		printf("  usr %d\n", stb->st_uid);
+		printf("  usr %d\n", f->stb.st_uid);
 
 	nr = ino.ino_nrepls;
 	if (nr > SL_DEF_REPLICAS) {
@@ -194,12 +197,12 @@ dumpfid(const char *fn, const struct pfl_stat *stb, int ftyp,
 		iovs[1].iov_len = sizeof(od_crc);
 		rc = readv(fd, iovs, nitems(iovs));
 		if (rc == -1) {
-			warn("%s", fn);
+			warn("%s", f->fn);
 			goto out;
 		}
 		if (rc != sizeof(inox) + sizeof(od_crc)) {
 			warnx("%s: short I/O, want %zd got %zd",
-			    fn, sizeof(inox) + sizeof(od_crc), rc);
+			    f->fn, sizeof(inox) + sizeof(od_crc), rc);
 			goto out;
 		}
 		psc_crc64_calc(&crc, &inox, sizeof(inox));
@@ -226,9 +229,9 @@ dumpfid(const char *fn, const struct pfl_stat *stb, int ftyp,
 		printf("\n");
 	}
 	if (show & K_BMAPS &&
-	    stb->st_size > SL_BMAP_START_OFF) {
+	    f->stb.st_size > SL_BMAP_START_OFF) {
 		printf("  bmaps %"PSCPRIdOFFT"\n",
-		    (stb->st_size - SL_BMAP_START_OFF) / BMAP_OD_SZ);
+		    (f->stb.st_size - SL_BMAP_START_OFF) / BMAP_OD_SZ);
 		if (lseek(fd, SL_BMAP_START_OFF, SEEK_SET) == -1)
 			warn("seek");
 		for (bno = 0; ; bno++) {
@@ -264,7 +267,41 @@ dumpfid(const char *fn, const struct pfl_stat *stb, int ftyp,
 	}
 
  out:
-	close(fd);
+	if (fd != -1)
+		close(fd);
+	PSCFREE(f->fn);
+	PSCFREE(f);
+	return (0);
+}
+
+int
+queue(const char *fn, const struct pfl_stat *stb, int ftyp,
+    __unusedx int level, __unusedx void *arg)
+{
+	static int cnt;
+	struct path *p;
+	struct f *f;
+
+	p = searchpaths(&excludes, f->fn);
+	if (p) {
+		pll_remove(&excludes, p);
+		return (PFL_FILEWALK_RC_SKIP);
+	}
+
+	if (f->ftyp != PFWT_F)
+		return (0);
+
+	if (cnt++ > setsize)
+		cnt = 0;
+	if (cnt != setid)
+		return (0);
+
+	f = PSCALLOC(sizeof(*f));
+	INIT_PSC_LISTENTRY(&p->lentry);
+	f->fn = pfl_strdup(fn);
+	f->stb = *stb;
+	f->ftyp = ftyp;
+	lc_add(&files, f);
 	return (0);
 }
 
@@ -295,19 +332,67 @@ addexclude(const char *fn)
 }
 
 int
+cmp(const FTSENT **a, const FTSENT **b)
+{
+	return (CMP((*a)->fts_statp->st_ino,
+	    (*b)->fts_statp->st_ino));
+}
+
+void
+thrmain(__unusedx struct psc_thread *thr)
+{
+	struct f *f;
+
+	while ((f = lc_getwait(&files)))
+		dumpfid(f);
+}
+
+int
 main(int argc, char *argv[])
 {
-	int walkflags = 0, c;
+	int walkflags = 0, c, n, nthr = 1;
+	struct psc_thread *thr;
+	pthread_t *tid;
+	char *endp, *p, *id;
+	long l;
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "o:Rx:")) != -1) {
+	while ((c = getopt(argc, argv, "o:RS:t:x:")) != -1) {
 		switch (c) {
 		case 'o':
 			lookupshow(optarg);
 			break;
 		case 'R':
 			walkflags |= PFL_FILEWALKF_RECURSIVE;
+			break;
+		case 'S':
+			id = optarg;
+			p = strchr(optarg, ':');
+			if (p == NULL)
+				errx(1, "invalid -S format: %s",
+				    optarg);
+			*p++ = '\0';
+
+			l = strtol(id, &endp, 10);
+			if (l < 0 || l > 256 ||
+			    id == endp || *endp)
+				errx(1, "invalid -S id: %s", id);
+			setid = l;
+
+			l = strtol(p, &endp, 10);
+			if (l < 1 || l > 256 ||
+			    p == endp || *endp)
+				errx(1, "invalid -S setsize: %s", p);
+			setsize = l;
+
+			break;
+		case 't':
+			l = strtol(optarg, &endp, 10);
+			if (l < 1 || l > 256 ||
+			    optarg == endp || *endp)
+				errx(1, "invalid -t value: %s", optarg);
+			nthr = l;
 			break;
 		case 'x':
 			addexclude(optarg);
@@ -322,7 +407,16 @@ main(int argc, char *argv[])
 		usage();
 	if (!show)
 		show = K_DEF;
+	lc_init(&files, struct f, lentry);
+	tid = PSCALLOC(nthr * sizeof(*tid));
+	for (n = 0; n < nthr; n++) {
+		thr = pscthr_init(0, 0, thrmain, NULL, 0, "thr%d", n);
+		tid[n] = thr->pscthr_pthread;
+	}
 	for (; *argv; argv++)
-		pfl_filewalk(*argv, walkflags, dumpfid, NULL);
+		pfl_filewalk(*argv, walkflags, cmp, queue, NULL);
+	lc_kill(&files);
+	for (n = 0; n < nthr; n++)
+		pthread_join(tid[n], NULL);
 	exit(0);
 }
