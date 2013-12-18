@@ -302,13 +302,9 @@ queue(const char *fn, const struct pfl_stat *stb, int ftyp,
 	f->fn = pfl_strdup(fn);
 	f->stb = *stb;
 	f->ftyp = ftyp;
-	LIST_CACHE_LOCK(&files);
-	if (lc_nitems(&files) > 256) {
-		psc_waitq_wait(&files.plc_wq_empty, &files.plc_lock);
-		LIST_CACHE_LOCK(&files);
-	}
+	while (lc_nitems(&files) > 256)
+		sleep(1);
 	lc_add(&files, f);
-	LIST_CACHE_ULOCK(&files);
 	return (0);
 }
 
