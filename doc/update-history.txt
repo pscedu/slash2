@@ -30,3 +30,9 @@ client: 21174 (sampled firehose3)
 ----------
 
 mds: 21573 (illusion2)
+
+12/18/2013
+----------
+
+Everything is at 22852, barring some last minute fix to some issues related to
+parsing config file.
