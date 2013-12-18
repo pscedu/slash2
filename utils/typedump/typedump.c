@@ -254,6 +254,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slm_wkdata_batchrq_cb);
 	PRTYPE(struct slm_wkdata_ptrunc);
 	PRTYPE(struct slm_wkdata_readdir);
+	PRTYPE(struct slm_wkdata_rmdir_ino);
 	PRTYPE(struct slm_wkdata_upsch_cb);
 	PRTYPE(struct slm_wkdata_upsch_purge);
 	PRTYPE(struct slm_wkdata_upschq);
@@ -581,8 +582,6 @@ main(int argc, char *argv[])
 	PRVAL(SRMM_VERSION);
 	PRVAL(SRM_CTLOP_SETOPT);
 	PRVAL(SRM_RENAME_NAMEMAX);
-	PRVAL(UPSCH_MAX_ITEMS);
-	PRVAL(UPSCH_MAX_ITEMS_RES);
 	PRVAL(_SLERR_START);
 	/* end constants */
 
