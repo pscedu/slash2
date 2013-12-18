@@ -33,6 +33,7 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/fmtstr.h"
 #include "pfl/listcache.h"
 #include "pfl/lockedlist.h"
 #include "pfl/pfl.h"
@@ -47,12 +48,13 @@ struct path {
 	struct psc_listentry	 lentry;
 };
 
-int			setid = 0;
-int			setsize = 1;
-int			show;
-int			recurse;
-struct psc_lockedlist	excludes = PLL_INIT(&excludes, struct path, lentry);
-struct psc_listcache	files;
+int			 setid = 0;
+int			 setsize = 1;
+int			 show;
+int			 recurse;
+struct psc_lockedlist	 excludes = PLL_INIT(&excludes, struct path, lentry);
+struct psc_listcache	 files;
+const char		*outfn;
 
 const char *progname;
 
@@ -90,15 +92,6 @@ const char *show_keywords[] = {
 };
 
 const char *repl_states = "-sq+tpgx";
-
-__dead void
-usage(void)
-{
-	fprintf(stderr,
-	    "usage: %s [-R] [-o keys] [-x exclude] file ...\n",
-	    progname);
-	exit(1);
-}
 
 struct path *
 searchpaths(struct psc_lockedlist *pll, const char *fn)
@@ -296,11 +289,17 @@ queue(const char *fn, const struct pfl_stat *stb, int ftyp,
 		return (0);
 
 	f = PSCALLOC(sizeof(*f));
-	INIT_PSC_LISTENTRY(&p->lentry);
+	INIT_PSC_LISTENTRY(&f->lentry);
 	f->fn = pfl_strdup(fn);
 	f->stb = *stb;
 	f->ftyp = ftyp;
+	LIST_CACHE_LOCK(&files);
+	if (lc_nitems(&files) > 256) {
+		psc_waitq_wait(&files.plc_wq_empty, &files.plc_lock);
+		LIST_CACHE_LOCK(&files);
+	}
 	lc_add(&files, f);
+	LIST_CACHE_ULOCK(&files);
 	return (0);
 }
 
@@ -331,18 +330,39 @@ addexclude(const char *fn)
 }
 
 void
-thrmain(__unusedx struct psc_thread *thr)
+thrmain(struct psc_thread *thr)
 {
 	struct f *f;
+
+	if (outfn) {
+		char fn[PATH_MAX];
+
+		(void)FMTSTR(fn, sizeof(fn), outfn,
+		    FMTSTRCASE('n', "s", thr->pscthr_name +
+			strcspn(thr->pscthr_name, "012345679"))
+		);
+		if (freopen(fn, "w", stdout) == NULL)
+			err(1, "%s", fn);
+	}
 
 	while ((f = lc_getwait(&files)))
 		dumpfid(f);
 }
 
+__dead void
+usage(void)
+{
+	fprintf(stderr,
+	    "usage: %s [-R] [-O file] [-o keys] [-S id:size] "
+	    "[-t nthr] [-x exclude] file ...\n",
+	    progname);
+	exit(1);
+}
+
 int
 main(int argc, char *argv[])
 {
-	extern void *cmp;
+	extern void *cmpf;
 	int walkflags = 0, c, n, nthr = 1;
 	struct psc_thread *thr;
 	char *endp, *p, *id;
@@ -351,8 +371,11 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "o:RS:t:x:")) != -1) {
+	while ((c = getopt(argc, argv, "O:o:RS:t:x:")) != -1) {
 		switch (c) {
+		case 'O':
+			outfn = optarg;
+			break;
 		case 'o':
 			lookupshow(optarg);
 			break;
@@ -407,7 +430,7 @@ main(int argc, char *argv[])
 		tid[n] = thr->pscthr_pthread;
 	}
 	for (; *argv; argv++)
-		pfl_filewalk(*argv, walkflags, cmp, queue, NULL);
+		pfl_filewalk(*argv, walkflags, cmpf, queue, NULL);
 	lc_kill(&files);
 	for (n = 0; n < nthr; n++)
 		pthread_join(tid[n], NULL);

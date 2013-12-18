@@ -13,7 +13,9 @@
 #include "pfl/cdefs.h"
 
 int
-cmp(const FTSENT **a, const FTSENT **b)
+f_inocmp(const FTSENT **a, const FTSENT **b)
 {
 	return (CMP((*a)->fts_statp->st_ino, (*b)->fts_statp->st_ino));
 }
+
+void *cmpf = f_inocmp;
