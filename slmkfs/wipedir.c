@@ -111,11 +111,18 @@ void
 wipefs(const char *dir)
 {
 	char fn[PATH_MAX];
+	struct stat stb;
 
-	/* remove the user namespace */
-	pfl_filewalk(dir, PFL_FILEWALKF_RECURSIVE, wipefs_user, NULL);
+	/*
+	 * Remove the user namespace.  We do this separately because we
+	 * skip fidns because of loops.
+	 */
+	pfl_filewalk(dir, PFL_FILEWALKF_RECURSIVE, NULL, wipefs_user,
+	    NULL);
 
 	/* remove the SLASH fid namespace */
 	xmkfn(fn, "%s/%s", dir, SL_RPATH_META_DIR, SL_RPATH_FIDNS_DIR);
-	pfl_filewalk(fn, PFL_FILEWALKF_RECURSIVE, wipefs_fidns, NULL);
+	if (stat(fn, &stb) == 0 || errno != ENOENT)
+		pfl_filewalk(fn, PFL_FILEWALKF_RECURSIVE, NULL,
+		    wipefs_fidns, NULL);
 }
