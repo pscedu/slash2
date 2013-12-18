@@ -800,10 +800,10 @@ slm_rcm_try_readdir_ra(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 	if (mexpc->mexpc_readdir_nra >= SLM_EXPC_READDIR_MAXNRA) {
 		EXPORT_ULOCK(exp);
 		return;
-	} else{
-		mexpc->mexpc_readdir_nra++;
-		EXPORT_ULOCK(exp);
 	}
+
+	mexpc->mexpc_readdir_nra++;
+	EXPORT_ULOCK(exp);
 
 	wk = pfl_workq_getitem(slm_readdir_ra_issue,
 	    struct slm_wkdata_readdir);
