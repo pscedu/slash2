@@ -28,7 +28,6 @@
 
 #include <err.h>
 #include <fcntl.h>
-#include <fts.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -282,13 +281,13 @@ queue(const char *fn, const struct pfl_stat *stb, int ftyp,
 	struct path *p;
 	struct f *f;
 
-	p = searchpaths(&excludes, f->fn);
+	p = searchpaths(&excludes, fn);
 	if (p) {
 		pll_remove(&excludes, p);
 		return (PFL_FILEWALK_RC_SKIP);
 	}
 
-	if (f->ftyp != PFWT_F)
+	if (ftyp != PFWT_F)
 		return (0);
 
 	if (cnt++ > setsize)
@@ -331,13 +330,6 @@ addexclude(const char *fn)
 	pll_add(&excludes, p);
 }
 
-int
-cmp(const FTSENT **a, const FTSENT **b)
-{
-	return (CMP((*a)->fts_statp->st_ino,
-	    (*b)->fts_statp->st_ino));
-}
-
 void
 thrmain(__unusedx struct psc_thread *thr)
 {
@@ -350,10 +342,11 @@ thrmain(__unusedx struct psc_thread *thr)
 int
 main(int argc, char *argv[])
 {
+	extern void *cmp;
 	int walkflags = 0, c, n, nthr = 1;
 	struct psc_thread *thr;
-	pthread_t *tid;
 	char *endp, *p, *id;
+	pthread_t *tid;
 	long l;
 
 	pfl_init();
