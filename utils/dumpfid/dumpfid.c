@@ -283,10 +283,11 @@ queue(const char *fn, const struct pfl_stat *stb, int ftyp,
 	if (ftyp != PFWT_F)
 		return (0);
 
-	if (cnt++ > setsize)
+	if (cnt >= setsize)
 		cnt = 0;
 	if (cnt != setid)
 		return (0);
+	cnt++;
 
 	f = PSCALLOC(sizeof(*f));
 	INIT_PSC_LISTENTRY(&f->lentry);
