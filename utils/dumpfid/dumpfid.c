@@ -303,7 +303,7 @@ queue(const char *fn, const struct pfl_stat *stb, int ftyp,
 	f->stb = *stb;
 	f->ftyp = ftyp;
 	while (lc_nitems(&files) > 256)
-		sleep(1);
+		usleep(1000);
 	lc_add(&files, f);
 	return (0);
 }
