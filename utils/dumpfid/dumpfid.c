@@ -370,7 +370,7 @@ int
 main(int argc, char *argv[])
 {
 	extern void *cmpf;
-	int walkflags = 0, c, n, nthr = 1;
+	int walkflags = PFL_FILEWALKF_RELPATH, c, n, nthr = 1;
 	struct psc_thread *thr;
 	char *endp, *p, *id;
 	pthread_t *tid;
