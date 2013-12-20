@@ -144,7 +144,7 @@ slm_upsch_finish_repl(struct slashrpc_cservice *csvc,
 	}
 
 	if (rc && amt)
-		mds_repl_nodes_adjbusy(src_resm, dst_resm, -amt);
+		mds_repl_nodes_adjbusy(src_resm, dst_resm, -amt, NULL);
 
 	/* XXX can we race here?? */
 	if (csvc)
@@ -218,6 +218,7 @@ int
 slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
     struct sl_resource *dst_res)
 {
+	int64_t amt = 0, moreamt = 0;
 	int tract[NBREPLST], retifset[NBREPLST], rc = 0;
 	struct pscrpc_request *rq = NULL;
 	struct srm_repl_schedwk_req *mq;
@@ -228,7 +229,6 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	struct sl_resm *dst_resm;
 	struct fidc_membh *f;
 	sl_bmapno_t lastbno;
-	int64_t amt = 0;
 
 	upd = bmap_2_upd(b);
 	f = upd_2_fcmh(upd);
@@ -267,7 +267,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	av.pointer_arg[IP_CSVC] = csvc;
 
 	spinlock(&repl_busytable_lock);
-	amt = mds_repl_nodes_adjbusy(src_resm, dst_resm, amt);
+	amt = mds_repl_nodes_adjbusy(src_resm, dst_resm, amt, &moreamt);
 	if (amt == 0) {
 		/* add "src to become unbusy" condition to multiwait */
 		psc_multiwait_setcondwakeable(&slm_upsch_mw,
@@ -334,6 +334,13 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		if (rc == 0) {
 			bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
 			slm_repl_bmap_rel_type(b, BMAP_OPCNT_UPSCH);
+
+			/*
+			 * We succesfully scheduled some work; if there
+			 * is more bandwidth available, schedule more.
+			 */
+			if (moreamt)
+				upschq_resm(dst_resm, UPDT_PAGEIN);
 			return (1);
 		}
 	} else
@@ -893,7 +900,6 @@ upd_proc_pagein(struct slm_update_data *upd)
 	struct resprof_mds_info *rpmi;
 	struct sl_mds_iosinfo *si;
 	struct sl_resource *r;
-	int n;
 
 	upg = upd_getpriv(upd);
 	if (upg->upg_resm) {
@@ -906,21 +912,57 @@ upd_proc_pagein(struct slm_update_data *upd)
 		RPMI_ULOCK(rpmi);
 	}
 
+	/*
+	 * Page some work in.  We make a heuristic here to avoid a large
+	 * number of operations inside the database callback.
+	 *
+	 * This algorithm suffers because each piece of work pulled in
+	 * is not technically fair.  But each invocation of this routine
+	 * selects a different user at random, so over time, no users
+	 * will starve.
+	 */
 	dbdo(upd_proc_pagein_cb, NULL,
-	    " SELECT    fid,"
+	    " SELECT	fid,"
 	    "		bno,"
 	    "		nonce"
-	    " FROM	upsch"
-	    " WHERE	resid = IFNULL(?, resid) "
+	    " FROM	upsch u,"
+	    "		gsort gs,"
+	    "		usort us,"
+	    " WHERE	resid = IFNULL(?, resid)"
 	    "   AND	status = 'Q'"
-	    "   AND	gid = (SELECT DISTINCT gid FROM upsch ORDER BY RANDOM()) "
-//	    "   AND	uid = (SELECT DISTINCT uid FROM upsch ORDER BY RANDOM()) "
+	    "	AND	gs.gid = u.gid"
+	    "	AND	us.uid = u.uid"
 	    " ORDER BY	sys_prio DESC,"
-	    "		usr_prio DESC"
-	    " LIMIT	1",
+	    "		gs.rnd,"
+	    "		us.rnd,"
+	    "		usr_prio DESC,"
+	    "		RANDOM()"
+	    " LIMIT	32",
 	    upg->upg_resm ? SQLITE_INTEGER : SQLITE_NULL,
 	    upg->upg_resm ? r->res_id : 0);
 }
+
+#if 0
+
+#define UPSCH_MAX_ITEMS_RES 32
+
+	dbdo(upd_proc_pagein_cb, NULL,
+	    " SELECT	fid,"
+	    "		bno,"
+	    "		nonce"
+	    " FROM	upsch,"
+	    " WHERE	resid = IFNULL(?, resid)"
+	    "   AND	status = 'Q'"
+	    "   AND	gid = (SELECT gid FROM gsort ORDER BY RANDOM())"
+	    " ORDER BY	sys_pri DESC,"
+	    "		usr_pri DESC,"
+	    "		RANDOM()"
+	    " LIMIT	?",
+	    upg->upg_resm ? SQLITE_INTEGER : SQLITE_NULL,
+	    upg->upg_resm ? r->res_id : 0,
+	    SQLITE_INTEGER, UPSCH_MAX_ITEMS_RES);
+
+#endif
 
 void
 upd_proc(struct slm_update_data *upd)
