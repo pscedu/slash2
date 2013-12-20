@@ -310,8 +310,9 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	if (src_resm && dst_resm && b) {
 		upd_rpmi_remove(res2rpmi(dst_resm->resm_res), upd);
 		mds_repl_nodes_adjbusy(src_resm, dst_resm,
-		    -slm_bmap_calc_repltraffic(b));
+		    -slm_bmap_calc_repltraffic(b), NULL);
 		upschq_resm(dst_resm, UPDT_PAGEIN);
+		//upschq_resm(src_resm, UPDT_PAGEIN);
 	}
 	if (b)
 		slm_repl_bmap_rel(b);
