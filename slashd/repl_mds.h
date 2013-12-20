@@ -69,7 +69,7 @@ int	_mds_repl_inv_except(struct bmapc_memb *, int, int);
 int	_mds_repl_ios_lookup(int, struct slash_inode_handle *, sl_ios_id_t, int);
 int	_mds_repl_iosv_lookup(int, struct slash_inode_handle *, const sl_replica_t [], int [], int, int);
 void	 mds_repl_node_clearallbusy(struct sl_resm *);
-int64_t	 mds_repl_nodes_adjbusy(struct sl_resm *, struct sl_resm *, int64_t);
+int64_t	 mds_repl_nodes_adjbusy(struct sl_resm *, struct sl_resm *, int64_t, int64_t *);
 
 void	 slm_iosv_clearbusy(const sl_replica_t *, int);
 
@@ -121,7 +121,7 @@ void	 mds_brepls_check(uint8_t *, int);
 #define mds_repl_bmap_walkcb(b, t, r, fl, cbf, arg)	_mds_repl_bmap_walk((b), (t), (r), (fl), NULL, 0, (cbf), (arg))
 #define mds_repl_bmap_apply(b, tract, retifset, off)	_mds_repl_bmap_apply((b), (tract), (retifset), 0, (off), NULL, NULL, NULL)
 
-#define mds_repl_nodes_clearbusy(a, b)			mds_repl_nodes_adjbusy((a), (b), INT64_MIN)
+#define mds_repl_nodes_clearbusy(a, b)			mds_repl_nodes_adjbusy((a), (b), INT64_MIN, NULL)
 
 #define IOSV_LOOKUPF_ADD	1
 #define IOSV_LOOKUPF_DEL	2

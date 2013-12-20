@@ -1044,16 +1044,20 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
  * @ma: resm #1.
  * @mb: resm #2.
  * @amt: adjustment amount.
+ * @moreamt: whether there is still bandwidth left after reservation.
  * Returns: if @amt is positive, return value is the amount that has
  *	been reserved or zero if none could be allocated.
  */
 int64_t
 mds_repl_nodes_adjbusy(struct sl_resm *rma, struct sl_resm *rmb,
-    int64_t amt)
+    int64_t amt, int64_t *moreamt)
 {
 	int wake = 0, minid, maxid, locked;
 	struct resm_mds_info *ma, *mb;
 	struct slm_resmlink *srl;
+
+	if (moreamt)
+		*moreamt = 0;
 
 	ma = resm2rmmi(rma);
 	mb = resm2rmmi(rmb);
@@ -1064,21 +1068,35 @@ mds_repl_nodes_adjbusy(struct sl_resm *rma, struct sl_resm *rmb,
 
 	locked = reqlock(&repl_busytable_lock);
 	srl = repl_busytable + MDS_REPL_BUSYNODES(minid, maxid);
-/*
+
+#if 0
 	if (psc_dynarray_len(&a->rpmi_upschq) == 0 &&
 	    psc_dynarray_len(&b->rpmi_upschq) == 0 && srl->srl_used)
 		srl->srl_used = 0;
-*/
+#endif
+
 	if (srl->srl_used + amt >= srl->srl_avail) {
+		/*
+		 * Requested amount was *greater* than available
+		 * bandwidth.  Give everything we have.
+		 */
 		amt = srl->srl_avail - srl->srl_used;
 		srl->srl_used = srl->srl_avail;
 	} else {
+		/*
+		 * Amount requested fits in available bandwidth (or we
+		 * are deallocating if amt < 0).  Satisfy request and
+		 * adjust.
+		 */
 		srl->srl_used += amt;
 		if (srl->srl_used < 0) {
 			srl->srl_used = 0;
 			wake = 1;
 		}
 		amt = srl->srl_used;
+
+		if (moreamt)
+			*moreamt = srl->srl_avail - srl->srl_used;
 	}
 	ureqlock(&repl_busytable_lock, locked);
 
