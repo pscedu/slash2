@@ -567,28 +567,27 @@ slvr_fsio(struct slvr *s, int sblk, uint32_t size, enum rw rw,
 		if (rc == -1) {
 			save_errno = errno;
 			OPSTAT_INCR(SLI_OPST_FSIO_READ_FAIL);
-		}
+		} else {
 
-		/*
-		 * XXX this is a bit of a hack.  Here we'll check CRCs
-		 *  only when nblks == an entire sliver.  Only RMW will
-		 *  have their checks bypassed.  This should probably be
-		 *  handled more cleanly, like checking for RMW and then
-		 *  grabbing the CRC table; we use the 1MB buffer in
-		 *  either case.
-		 */
-
-		/* XXX do the right thing when EOF is reached. */
-		if (rc > 0 && nblks == SLASH_BLKS_PER_SLVR) {
 			int crc_rc;
 
 			SLVR_LOCK(s);
 			crc_rc = slvr_do_crc(s);
 			SLVR_ULOCK(s);
-			if (crc_rc == SLERR_BADCRC)
+			if (crc_rc == SLERR_BADCRC) {
+				if (nblks == SLASH_BLKS_PER_SLVR)
+					OPSTAT_INCR(SLI_OPST_FSIO_READ_CRC_BAD1);
+				else
+					OPSTAT_INCR(SLI_OPST_FSIO_READ_CRC_BAD2);
 				DEBUG_SLVR(PLL_ERROR, s,
 				    "bad crc blks=%d off=%zu",
 				    nblks, off);
+			} else {
+				if (nblks == SLASH_BLKS_PER_SLVR)
+					OPSTAT_INCR(SLI_OPST_FSIO_READ_CRC_GOOD1);
+				else
+					OPSTAT_INCR(SLI_OPST_FSIO_READ_CRC_GOOD2);
+			}
 		}
 	} else {
 		OPSTAT_INCR(SLI_OPST_FSIO_WRITE);
@@ -637,29 +636,7 @@ slvr_fsbytes_rio(struct slvr *s, uint32_t off, uint32_t len,
 	ssize_t rc = 0;
 	int blk;
 
-	if (!rbw || globalConfig.gconf_async_io) {
-		rc = slvr_fsio(s, 0, SLASH_SLVR_SIZE,
-		    SL_READ, aiocbr);
-		goto out;
-	}
-
-	if (off) {
-		blk = (off / SLASH_SLVR_BLKSZ);
-		if (off & SLASH_SLVR_BLKMASK)
-			blk++;
-		rc = slvr_fsio(s, 0, blk * SLASH_SLVR_BLKSZ,
-		    SL_READ, aiocbr);
-		if (rc)
-			goto out;
-	}
-	if (off + len < SLASH_SLVR_SIZE) {
-		blk = (off + len) / SLASH_SLVR_BLKSZ;
-		rc = slvr_fsio(s, blk,
-		    (SLASH_BLKS_PER_SLVR - blk) * SLASH_SLVR_BLKSZ,
-		    SL_READ, aiocbr);
-	}
-
- out:
+	rc = slvr_fsio(s, 0, SLASH_SLVR_SIZE, SL_READ, aiocbr);
 
 	if (rc && rc != -SLERR_AIOWAIT) {
 		/*
