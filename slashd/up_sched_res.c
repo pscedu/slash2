@@ -927,7 +927,7 @@ upd_proc_pagein(struct slm_update_data *upd)
 	    "		nonce"
 	    " FROM	upsch u,"
 	    "		gsort gs,"
-	    "		usort us,"
+	    "		usort us"
 	    " WHERE	resid = IFNULL(?, resid)"
 	    "   AND	status = 'Q'"
 	    "	AND	gs.gid = u.gid"
