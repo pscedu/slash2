@@ -628,6 +628,7 @@ main(int argc, char *argv[])
 		    "	nonce		UNSIGNED INT,"
 		    "	UNIQUE(resid, fid, bno)"
 		    ")");
+
 		dbdo(NULL, NULL,
 		    "CREATE INDEX 'upsch_resid_idx'"
 		    " ON 'upsch' ('resid')");
@@ -643,6 +644,17 @@ main(int argc, char *argv[])
 		dbdo(NULL, NULL,
 		    "CREATE INDEX 'upsch_gid_idx'"
 		    " ON 'upsch' ('gid')");
+
+		dbdo(NULL, NULL, "CREATE VIEW gsort AS"
+		    " SELECT	gid,"
+		    "		RANDOM() AS rnd"
+		    " FROM	upsch"
+		    " GROUP BY	gid");
+		dbdo(NULL, NULL, "CREATE VIEW usort AS"
+		    " SELECT	uid,"
+		    "		RANDOM() AS rnd"
+		    " FROM	upsch"
+		    " GROUP BY uid");
 	}
 
 	dbdo(NULL, NULL, "BEGIN TRANSACTION");
