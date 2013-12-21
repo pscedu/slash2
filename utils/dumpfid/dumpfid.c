@@ -37,6 +37,7 @@
 #include "pfl/listcache.h"
 #include "pfl/lockedlist.h"
 #include "pfl/pfl.h"
+#include "pfl/pthrutil.h"
 #include "pfl/thread.h"
 #include "pfl/walk.h"
 
@@ -50,12 +51,16 @@ struct path {
 
 struct thr {
 	FILE			*fp;
+	char			 lastfn[PATH_MAX];
 };
 
-int			 setid = 0;
+int			 resume;
+int			 setid;
 int			 setsize = 1;
 int			 show;
 int			 recurse;
+pthread_barrier_t	 barrier;
+struct psc_dynarray	 checkpoints;
 struct psc_lockedlist	 excludes = PLL_INIT(&excludes, struct path, lentry);
 struct psc_listcache	 files;
 const char		*outfn;
@@ -276,6 +281,14 @@ dumpfid(struct f *f)
 }
 
 int
+fcmp(const void *a, const void *b)
+{
+	char * const *fa = a, * const *fb = b;
+
+	return (strcmp(*fa, *fb));
+}
+
+int
 queue(const char *fn, const struct pfl_stat *stb, int ftyp,
     __unusedx int level, __unusedx void *arg)
 {
@@ -296,6 +309,25 @@ queue(const char *fn, const struct pfl_stat *stb, int ftyp,
 		cnt = 0;
 	if (cnt++ != setid)
 		return (0);
+
+	if (psc_dynarray_len(&checkpoints)) {
+		static struct psc_spinlock lock = SPINLOCK_INIT;
+		size_t n;
+
+		spinlock(&lock);
+		n = psc_dynarray_bsearch(&checkpoints, fn, fcmp);
+		if (n) {
+			char *fn = psc_dynarray_getpos(&checkpoints, n);
+
+			PSCFREE(fn);
+			psc_dynarray_splice(&checkpoints, n, 1, NULL,
+			    0);
+		}
+		freelock(&lock);
+
+		if (psc_dynarray_len(&checkpoints))
+			return (0);
+	}
 
 	f = PSCALLOC(sizeof(*f));
 	INIT_PSC_LISTENTRY(&f->lentry);
@@ -348,10 +380,49 @@ thrmain(struct psc_thread *thr)
 		    FMTSTRCASE('n', "s", thr->pscthr_name +
 			strcspn(thr->pscthr_name, "012345679"))
 		);
-		t->fp = fopen(fn, "w");
+		t->fp = fopen(fn, "w+");
 		if (t->fp == NULL)
 			err(1, "%s", fn);
+
+		if (resume) {
+			char *p, *s, *end;
+			struct stat stb;
+			size_t len;
+
+			if (fstat(fileno(t->fp), &stb) == -1)
+				err(1, "%s", fn);
+
+			if (stb.st_size == 0)
+				goto ready;
+
+			/* find last position */
+			p = mmap(NULL, stb.st_size, PROT_READ,
+			    MAP_PRIVATE, fileno(t->fp), 0);
+			if (p == MAP_FAILED)
+				err(1, "%s", fn);
+			end = p + stb.st_size - 1;
+
+			for (s = end; s >= p; s--) {
+				if (*s == '\n' && s < end &&
+				    s[1] != ' ') {
+					for (len = 0; s + len < end &&
+					    s[len] != '\n'; len++)
+					if (s[len] != '\n')
+						goto next;
+					psc_dynarray_add(&checkpoints,
+					    pfl_strndup(s, len - 2));
+					break;
+				}
+ next:
+				;
+			}
+
+			munmap(p, stb.st_size);
+		}
 	}
+
+ ready:
+	pthread_barrier_wait(&barrier);
 	while ((f = lc_getwait(&files)))
 		dumpfid(f);
 }
@@ -360,7 +431,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-R] [-O file] [-o keys] [-S id:size] "
+	    "usage: %s [-PR] [-O file] [-o keys] [-S id:size] "
 	    "[-t nthr] [-x exclude] file ...\n",
 	    progname);
 	exit(1);
@@ -371,20 +442,23 @@ main(int argc, char *argv[])
 {
 	extern void *cmpf;
 	int walkflags = PFL_FILEWALKF_RELPATH, c, n, nthr = 1;
-	struct psc_thread *thr;
+	struct psc_thread **thrv;
 	char *endp, *p, *id;
 	pthread_t *tid;
 	long l;
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "O:o:RS:t:x:")) != -1) {
+	while ((c = getopt(argc, argv, "O:o:PRS:t:x:")) != -1) {
 		switch (c) {
 		case 'O':
 			outfn = optarg;
 			break;
 		case 'o':
 			lookupshow(optarg);
+			break;
+		case 'P':
+			resume = 1;
 			break;
 		case 'R':
 			walkflags |= PFL_FILEWALKF_RECURSIVE;
@@ -430,18 +504,23 @@ main(int argc, char *argv[])
 		usage();
 	if (!show)
 		show = K_DEF;
+	if (resume && outfn == NULL)
+		errx(1, "resume specified but not output file to restore state from");
+
+	pthread_barrier_init(&barrier, NULL, nthr + 1);
 	lc_init(&files, struct f, lentry);
-	tid = PSCALLOC(nthr * sizeof(*tid));
+	thrv = PSCALLOC(nthr * sizeof(*tid));
 	for (n = 0; n < nthr; n++) {
-		thr = pscthr_init(0, 0, thrmain, NULL,
+		thrv[n] = pscthr_init(0, 0, thrmain, NULL,
 		    sizeof(struct thr), "thr%d", n);
-		tid[n] = thr->pscthr_pthread;
-		pscthr_setready(thr);
+		pscthr_setready(thrv[n]);
 	}
+	pthread_barrier_wait(&barrier);
+	psc_dynarray_sort(&checkpoints, qsort, fcmp);
 	for (; *argv; argv++)
 		pfl_filewalk(*argv, walkflags, cmpf, queue, NULL);
 	lc_kill(&files);
 	for (n = 0; n < nthr; n++)
-		pthread_join(tid[n], NULL);
+		pthread_join(thrv[n]->pscthr_pthread, NULL);
 	exit(0);
 }
