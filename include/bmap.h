@@ -274,7 +274,6 @@ struct bmap {
 /* bcs_crcstates flags */
 #define BMAP_SLVR_DATA		(1 << 0)	/* Data present, otherwise slvr is hole */
 #define BMAP_SLVR_CRC		(1 << 1)	/* Has valid CRC */
-//				(1 << 2)	// unused
 #define BMAP_SLVR_CRCABSENT	(1 << 3)
 #define _BMAP_SLVR_FLSHFT	(1 << 4)
 
