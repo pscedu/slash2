@@ -341,6 +341,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 
 		if (biorq_is_my_bmpce(r, e)) {
 			uint32_t rfsz = fsz - bmap_foff(b);
+
 			/*
 			 * Increase the rdref cnt in preparation for any
 			 * RBW ops but only on new pages owned by this
@@ -646,7 +647,7 @@ msl_req_aio_add(struct pscrpc_request *rq,
 		bmpces = av->pointer_arg[MSL_CBARG_BMPCE];
 		OPSTAT_INCR(SLC_OPST_READ_AHEAD_CB_ADD);
 
-		for (i = 0;; i++) {
+		for (i = 0; ; i++) {
 			e = bmpces[i];
 			if (!e)
 				break;
@@ -1534,8 +1535,10 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 		csvc = NULL;
 	}
 
+	psc_dynarray_free(a);
 	PSCFREE(a);
 	PSCFREE(iovs);
+
 	/*
 	 * Two pass page cleanup.  First mark as EIO and wake up our
 	 * waiters.  Then remove the pages from the bmpc.
