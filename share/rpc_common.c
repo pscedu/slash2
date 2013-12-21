@@ -532,6 +532,7 @@ sl_csvc_create(uint32_t rqptl, uint32_t rpptl)
 	struct slashrpc_cservice *csvc;
 	struct pscrpc_import *imp;
 
+//	pool
 	csvc = PSCALLOC(sizeof(*csvc));
 	psc_mutex_init(&csvc->csvc_mutex);
 	INIT_PSC_LISTENTRY(&csvc->csvc_lentry);

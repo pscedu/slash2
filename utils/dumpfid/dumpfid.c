@@ -312,17 +312,16 @@ queue(const char *fn, const struct pfl_stat *stb, int ftyp,
 
 	if (psc_dynarray_len(&checkpoints)) {
 		static struct psc_spinlock lock = SPINLOCK_INIT;
+		char *t;
 		size_t n;
 
 		spinlock(&lock);
 		n = psc_dynarray_bsearch(&checkpoints, fn, fcmp);
-		if (n) {
-			char *fn = psc_dynarray_getpos(&checkpoints, n);
-
-			PSCFREE(fn);
-			psc_dynarray_splice(&checkpoints, n, 1, NULL,
-			    0);
-		}
+		t = psc_dynarray_getpos(&checkpoints, n);
+		if (strcmp(fn, t) == 0) 
+			// XXX leak paths
+			psc_dynarray_reset(&checkpoints);
+		
 		freelock(&lock);
 
 		if (psc_dynarray_len(&checkpoints))
