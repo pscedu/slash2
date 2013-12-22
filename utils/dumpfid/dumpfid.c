@@ -283,9 +283,16 @@ dumpfid(struct f *f)
 int
 fcmp(const void *a, const void *b)
 {
-	char * const *fa = a, * const *fb = b;
+	char * const *fa = a;
+	char * const *fb = b;
 
 	return (strcmp(*fa, *fb));
+}
+
+int
+fcmp0(const void *a, const void *b)
+{
+	return (strcmp(a, b));
 }
 
 int
@@ -313,15 +320,16 @@ queue(const char *fn, const struct pfl_stat *stb, int ftyp,
 	if (psc_dynarray_len(&checkpoints)) {
 		static struct psc_spinlock lock = SPINLOCK_INIT;
 		char *t;
-		size_t n;
+		int n;
 
 		spinlock(&lock);
-		n = psc_dynarray_bsearch(&checkpoints, fn, fcmp);
-		t = psc_dynarray_getpos(&checkpoints, n);
-		if (strcmp(fn, t) == 0) 
-			// XXX leak paths
-			psc_dynarray_reset(&checkpoints);
-		
+		n = psc_dynarray_bsearch(&checkpoints, fn, fcmp0);
+		if (n >= 0 && n < psc_dynarray_len(&checkpoints)) {
+			t = psc_dynarray_getpos(&checkpoints, n);
+			if (strcmp(fn, t) == 0)
+				// XXX leak paths
+				psc_dynarray_reset(&checkpoints);
+		}
 		freelock(&lock);
 
 		if (psc_dynarray_len(&checkpoints))
@@ -379,7 +387,7 @@ thrmain(struct psc_thread *thr)
 		    FMTSTRCASE('n', "s", thr->pscthr_name +
 			strcspn(thr->pscthr_name, "012345679"))
 		);
-		t->fp = fopen(fn, "w+");
+		t->fp = fopen(fn, resume ? "r+" : "w");
 		if (t->fp == NULL)
 			err(1, "%s", fn);
 
@@ -404,12 +412,13 @@ thrmain(struct psc_thread *thr)
 			for (s = end; s >= p; s--) {
 				if (*s == '\n' && s < end &&
 				    s[1] != ' ') {
-					for (len = 0; s + len < end &&
+					for (len = 1; s + len < end &&
 					    s[len] != '\n'; len++)
+						;
 					if (s[len] != '\n')
 						goto next;
 					psc_dynarray_add(&checkpoints,
-					    pfl_strndup(s, len - 2));
+					    pfl_strndup(s + 1, len - 1));
 					break;
 				}
  next:
@@ -419,7 +428,6 @@ thrmain(struct psc_thread *thr)
 			munmap(p, stb.st_size);
 		}
 	}
-
  ready:
 	pthread_barrier_wait(&barrier);
 	while ((f = lc_getwait(&files)))
