@@ -625,7 +625,7 @@ slvr_fsio(struct slvr *s, int sblk, uint32_t size, enum rw rw,
  */
 ssize_t
 slvr_fsbytes_rio(struct slvr *s, uint32_t off, uint32_t len,
-	int rbw, struct sli_aiocb_reply **aiocbr)
+	struct sli_aiocb_reply **aiocbr)
 {
 	ssize_t rc = 0;
 	int blk;
@@ -708,7 +708,6 @@ ssize_t
 slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
     struct sli_aiocb_reply **aiocbr)
 {
-	int rbw = 0;
 	ssize_t rc = 0;
 
 	SLVR_LOCK(s);
@@ -775,9 +774,6 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 		goto out;
 	}
 
-	rbw = 1;
-	/* FixMe: Check the underlying file size to avoid useless RMW */
-	OPSTAT_INCR(SLI_OPST_IO_PREP_RMW);
 
  do_read:
 
@@ -785,7 +781,7 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 	/* Execute read to fault in needed blocks after dropping
 	 *   the lock.  All should be protected by the FAULTING bit.
 	 */
-	if ((rc = slvr_fsbytes_rio(s, off, len, rbw, aiocbr)))
+	if ((rc = slvr_fsbytes_rio(s, off, len, aiocbr)))
 		return (rc);
 
 	if (rw == SL_READ) {
