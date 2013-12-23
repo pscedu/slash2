@@ -175,8 +175,6 @@ slvr_do_crc(struct slvr *s)
 
 		slvr_2_crc(s) = crc;
 		slvr_2_crcbits(s) |= BMAP_SLVR_DATA | BMAP_SLVR_CRC;
-	} else {
-		psc_fatal("FAULTING or CRCDIRTY is not set");
 	}
 
 	return (-1);
