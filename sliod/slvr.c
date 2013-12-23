@@ -575,18 +575,12 @@ slvr_fsio(struct slvr *s, int sblk, uint32_t size, enum rw rw,
 			crc_rc = slvr_do_crc(s);
 			SLVR_ULOCK(s);
 			if (crc_rc == SLERR_BADCRC) {
-				if (nblks == SLASH_BLKS_PER_SLVR)
-					OPSTAT_INCR(SLI_OPST_FSIO_READ_CRC_BAD1);
-				else
-					OPSTAT_INCR(SLI_OPST_FSIO_READ_CRC_BAD2);
+				OPSTAT_INCR(SLI_OPST_FSIO_READ_CRC_BAD);
 				DEBUG_SLVR(PLL_ERROR, s,
 				    "bad crc blks=%d off=%zu",
 				    nblks, off);
 			} else {
-				if (nblks == SLASH_BLKS_PER_SLVR)
-					OPSTAT_INCR(SLI_OPST_FSIO_READ_CRC_GOOD1);
-				else
-					OPSTAT_INCR(SLI_OPST_FSIO_READ_CRC_GOOD2);
+				OPSTAT_INCR(SLI_OPST_FSIO_READ_CRC_GOOD);
 			}
 		}
 	} else {
