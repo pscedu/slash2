@@ -254,8 +254,7 @@ dumpfid(struct f *f)
 				break;
 			}
 			fprintf(fp, "   %5u: gen %5u pol %u res ",
-			    bno, bd.bod.bod_gen,
-			    bd.bod.bod_replpol);
+			    bno, bd.bod.bod_gen, bd.bod.bod_replpol);
 
 			for (j = 0, off = 0; j < nr;
 			    j++, off += SL_BITS_PER_REPLICA)
@@ -306,6 +305,7 @@ queue(const char *fn, const struct pfl_stat *stb, int ftyp,
 	p = searchpaths(&excludes, fn);
 	if (p) {
 		pll_remove(&excludes, p);
+		PSCFREE(p);
 		return (PFL_FILEWALK_RC_SKIP);
 	}
 
