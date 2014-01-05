@@ -129,6 +129,7 @@ dumpfid(struct f *f)
 	struct slash_inode_extras_od inox;
 	struct slash_inode_od ino;
 	struct iovec iovs[2];
+	struct thr *t;
 	uint64_t crc, od_crc;
 	uint32_t nr, j;
 	char tbuf[32];
@@ -136,7 +137,8 @@ dumpfid(struct f *f)
 	ssize_t rc;
 	FILE *fp;
 
-	fp = ((struct thr *)(thr + 1))->fp;
+	t = thr->pscthr_private;
+	fp = t->fp;
 
 	fd = open(f->fn, O_RDONLY);
 	if (fd == -1) {
@@ -379,7 +381,7 @@ thrmain(struct psc_thread *thr)
 	struct thr *t;
 	struct f *f;
 
-	t = (void *)(thr + 1);
+	t = thr->pscthr_private;
 	if (outfn) {
 		char fn[PATH_MAX];
 
