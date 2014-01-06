@@ -175,8 +175,9 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 * Lookup inode and fetch bmap, don't forget to decref bmap on
 	 * failure.
 	 */
-	rc = sli_fcmh_get(fgp, &f);
-	psc_assert(rc == 0);
+	mp->rc = sli_fcmh_get(fgp, &f);
+	if (mp->rc)
+		return (mp->rc);
 
 	FCMH_LOCK(f);
 	/* Update the utimegen if necessary. */
