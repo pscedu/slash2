@@ -278,8 +278,6 @@ void	 fcmh_setattrf(struct fidc_membh *, struct srt_stat *, int);
 	_fidc_lookup(PFL_CALLERINFOSS(SLSS_FCMH), (fgp), (lkfl),	\
 	    (sstb), (safl), (fcmhp), NULL)
 
-#define fidc_lookup_fg(fgp)		_fidc_lookup_fg(PFL_CALLERINFOSS(SLSS_FCMH), (fgp))
-
 int	 _fidc_lookup(const struct pfl_callerinfo *,
 	    const struct slash_fidgen *, int, struct srt_stat *, int,
 	    struct fidc_membh **, void *);
