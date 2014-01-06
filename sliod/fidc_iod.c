@@ -44,10 +44,11 @@ int
 iod_inode_getinfo(struct slash_fidgen *fg, uint64_t *size,
     uint64_t *nblks, uint32_t *utimgen)
 {
+	int rc;
 	struct fidc_membh *f;
 	struct stat stb;
 
-	f = fidc_lookup_fg(fg);
+	rc = fidc_lookup(fg, 0, NULL, 0, &f);
 	psc_assert(f);
 
 	if (fstat(fcmh_2_fd(f), &stb) == -1)

@@ -2575,7 +2575,7 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 	OPSTAT_INCR(SLC_OPST_WRITE);
 
 	f = mfh->mfh_fcmh;
-	ftmp = fidc_lookup_fg(&f->fcmh_fg);
+	rc = fidc_lookup(&f->fcmh_fg, 0, NULL, 0, &ftmp);
 	if (ftmp != f)
 		rc = EBADF;
 	if (ftmp)
@@ -2616,7 +2616,7 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	OPSTAT_INCR(SLC_OPST_READ);
 
 	f = mfh->mfh_fcmh;
-	ftmp = fidc_lookup_fg(&f->fcmh_fg);
+	rc = fidc_lookup(&f->fcmh_fg, 0, NULL, 0, &ftmp);
 	if (ftmp != f)
 		rc = EBADF;
 	if (ftmp)
