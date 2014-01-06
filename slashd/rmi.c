@@ -337,7 +337,7 @@ slm_rmi_handle_rls_bmap(struct pscrpc_request *rq)
 int
 slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 {
-	int iosidx, tract[NBREPLST];
+	int rc, iosidx, tract[NBREPLST];
 	struct srm_bmap_ptrunc_req *mq;
 	struct srm_bmap_ptrunc_rep *mp;
 	struct bmapc_memb *b = NULL;
@@ -346,9 +346,9 @@ slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	f = fidc_lookup_fg(&mq->fg);
-	if (f == NULL) {
-		mp->rc = -ENOENT;
+	rc = fidc_lookup(&mq->fg, 0, NULL, 0, &f);
+	if (rc) {
+		mp->rc = rc; 
 		return (0);
 	}
 
