@@ -75,7 +75,7 @@ slmcoh_releasebml(void *p)
 
 	/* Leases can come and go regardless of pending coh cb's. */
 	rc = fidc_lookup(&t, 0, NULL, 0, &f);
-	if (!rc)
+	if (rc)
 		PFL_GOTOERR(out, rc);
 
 	b = bmap_lookup_cache(f, wk->bno, &new_bmap);
