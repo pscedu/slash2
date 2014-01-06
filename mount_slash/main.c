@@ -2017,8 +2017,8 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	if (mp->srr_cattr.sst_fid) {
 		if (child)
 			fcmh_op_done(child);
-		child = fidc_lookup_fg(&mp->srr_cattr.sst_fg);
-		if (child) {
+		rc = fidc_lookup(&mp->srr_cattr.sst_fg, 0, NULL, 0, &child);
+		if (!rc) {
 			uidmap_int_stat(&mp->srr_cattr);
 			fcmh_setattrf(child, &mp->srr_cattr,
 			    FCMH_SETATTRF_SAVELOCAL);
