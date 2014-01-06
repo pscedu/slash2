@@ -282,10 +282,6 @@ int	 _fidc_lookup(const struct pfl_callerinfo *,
 	    const struct slash_fidgen *, int, struct srt_stat *, int,
 	    struct fidc_membh **, void *);
 
-/* these fidc_lookup() wrappers are used for simple lookups (no flags) */
-struct fidc_membh	*_fidc_lookup_fid(const struct pfl_callerinfo *, slfid_t);
-struct fidc_membh	*_fidc_lookup_fg(const struct pfl_callerinfo *, const struct slash_fidgen *);
-
 ssize_t	 fcmh_getsize(struct fidc_membh *);
 
 void	_fcmh_op_start_type(const struct pfl_callerinfo *, struct fidc_membh *, int);

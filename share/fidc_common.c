@@ -206,36 +206,6 @@ fidc_reap(struct psc_poolmgr *m)
 }
 
 /**
- * fidc_lookup_fg - Wrapper for fidc_lookup().  Called when the
- *	generation number is known.
- */
-struct fidc_membh *
-_fidc_lookup_fg(const struct pfl_callerinfo *pci,
-    const struct slash_fidgen *fg)
-{
-	struct fidc_membh *fp;
-	int rc;
-
-	rc = fidc_lookup(fg, 0, NULL, 0, &fp);
-	return (rc == 0 ? fp : NULL);
-}
-
-/**
- * fidc_lookup_fid - Wrapper for fidc_lookup().  Called when the
- *	generation number is not known.
- */
-struct fidc_membh *
-_fidc_lookup_fid(const struct pfl_callerinfo *pci, slfid_t f)
-{
-	struct slash_fidgen t = { f, FGEN_ANY };
-	struct fidc_membh *fp;
-	int rc;
-
-	rc = fidc_lookup(&t, 0, NULL, 0, &fp);
-	return (rc == 0 ? fp : NULL);
-}
-
-/**
  * _fidc_lookup - Search the FID cache for a member by its FID,
  *	optionally creating it.
  * @pci: thread caller information.
