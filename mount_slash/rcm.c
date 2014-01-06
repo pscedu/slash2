@@ -257,8 +257,8 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 	t.fg_gen = mq->fid;
 	t.fg_gen = FGEN_ANY;
 	rc = fidc_lookup(&t, 0, NULL, 0, &f);
-	if (!rc)
-		PFL_GOTOERR(out, mp->rc = -ENOENT);
+	if (rc)
+		PFL_GOTOERR(out, mp->rc = rc);
 
 	DEBUG_FCMH(PLL_INFO, f, "bmapno=%u seq=%"PRId64,
 	    mq->blkno, mq->seq);

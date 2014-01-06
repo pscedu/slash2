@@ -997,7 +997,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	t.fg_fid = cfid;
 	t.fg_gen = FGEN_ANY;
 	rc = fidc_lookup(&t, 0, NULL, 0, &c);
-	if (!rc)
+	if (rc)
 		goto remote;
 
 	/*
