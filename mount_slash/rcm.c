@@ -236,12 +236,11 @@ msrcm_handle_bmap_wake(struct pscrpc_request *rq)
 int
 msrcm_handle_bmapdio(struct pscrpc_request *rq)
 {
-	int rc;
 	struct srm_bmap_dio_req *mq;
 	struct srm_bmap_dio_rep *mp;
 	struct bmapc_memb *b = NULL;
+	struct fidc_membh *f = NULL;
 	struct bmap_cli_info *bci;
-	struct fidc_membh *f;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -253,18 +252,18 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 	 * XXX it is possible this fcmh won't be in the cache -- force a
 	 * load?
 	 */
-	rc = fidc_lookup_fid(mq->fid, &f);
-	if (rc)
-		PFL_GOTOERR(out, mp->rc = rc);
+	mp->rc = fidc_lookup_fid(mq->fid, &f);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
 
-	DEBUG_FCMH(PLL_INFO, f, "bmapno=%u seq=%"PRId64,
+	DEBUG_FCMH(PLL_DEBUG, f, "bmapno=%u seq=%"PRId64,
 	    mq->blkno, mq->seq);
 
 	mp->rc = bmap_lookup(f, mq->blkno, &b);
 	if (mp->rc)
 		goto out;
 
-	DEBUG_BMAP(PLL_INFO, b, "seq=%"PRId64, mq->seq);
+	DEBUG_BMAP(PLL_DEBUG, b, "seq=%"PRId64, mq->seq);
 
 	BMAP_LOCK(b);
 	if (b->bcm_flags & BMAP_DIO)
