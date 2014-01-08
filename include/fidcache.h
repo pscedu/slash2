@@ -278,21 +278,19 @@ int	_fidc_lookup(const struct pfl_callerinfo *,
 	    const struct slash_fidgen *, int, struct srt_stat *, int,
 	    struct fidc_membh **, void *);
 
-int	_fidc_lookup_fg(const struct pfl_callerinfo *,
-	    const struct slash_fidgen *, struct fidc_membh **);
-
-int	_fidc_lookup_fid(const struct pfl_callerinfo *, slfid_t, 
-	    struct fidc_membh **);
-
 #define fidc_lookup(fgp, lkfl, sstb, safl, fcmhp)			\
 	_fidc_lookup(PFL_CALLERINFOSS(SLSS_FCMH), (fgp), (lkfl),	\
 	    (sstb), (safl), (fcmhp), NULL)
 
-#define fidc_lookup_fid(fid, fp)					\
-	_fidc_lookup_fid(PFL_CALLERINFOSS(SLSS_FCMH), (fid), (fp));
+#define fidc_lookup_fg(fgp, fp)						\
+	fidc_lookup((fgp), 0, NULL, 0, (fp))
 
-#define fidc_lookup_fg(fg, fp)						\
-	_fidc_lookup_fg(PFL_CALLERINFOSS(SLSS_FCMH), (fg), (fp));
+#define fidc_lookup_fid(fid, fp)					\
+	_PFL_RVSTART {							\
+		struct slash_fidgen _fg = { (fid), FGEN_ANY };		\
+									\
+		fidc_lookup_fg(&_fg, (fp));				\
+	} _PFL_RVEND
 
 ssize_t	 fcmh_getsize(struct fidc_membh *);
 
