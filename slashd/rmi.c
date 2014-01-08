@@ -341,20 +341,18 @@ slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 	struct srm_bmap_ptrunc_req *mq;
 	struct srm_bmap_ptrunc_rep *mp;
 	struct bmapc_memb *b = NULL;
-	struct fidc_membh *f;
+	struct fidc_membh *f = NULL;
 	sl_bmapno_t bno;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	rc = fidc_lookup_fg(&mq->fg, &f);
-	if (rc) {
-		mp->rc = rc; 
-		return (0);
-	}
+	mp->rc = fidc_lookup_fg(&mq->fg, &f);
+	if (mp->rc)
+		PFL_GOTOERR(out, mp->rc);
 
 	mp->rc = bmap_get(f, mq->bmapno, SL_WRITE, &b);
 	if (mp->rc)
-		return (0);
+		PFL_GOTOERR(out, mp->rc);
 
 	iosidx = mds_repl_ios_lookup(current_vfsid,
 	    fcmh_2_inoh(b->bcm_fcmh),
@@ -385,7 +383,10 @@ slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 	/* truncate metafile to remove garbage collected bmap */
 //	mdsio_setattr(METASIZE)
 //	fcmh_set_repl_nblks(f, idx, sjbc->sjbc_repl_nblks);
-	fcmh_op_done(f);
+
+ out:
+	if (f)
+		fcmh_op_done(f);
 	return (0);
 }
 
@@ -510,7 +511,7 @@ slm_rmi_handle_import(struct pscrpc_request *rq)
 		rc = bmap_get(c, bno, SL_WRITE, &b);
 		if (rc)
 			PFL_GOTOERR(out, mp->rc = rc);
-		
+
 		bmi = bmap_2_bmi(b);
 		for (i = 0; i < SLASH_SLVRS_PER_BMAP &&
 		    fsiz > 0; fsiz -= SLASH_SLVR_SIZE, i++)
