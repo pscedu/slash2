@@ -1845,7 +1845,7 @@ void
 mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
     const char *oldname, pscfs_inum_t npinum, const char *newname)
 {
-	struct fidc_membh *child = NULL, *np = NULL, *op = NULL;
+	struct fidc_membh *child = NULL, *np = NULL, *op = NULL, *ch;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srt_stat srcsstb, dstsstb;
@@ -1997,29 +1997,40 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	/* refresh old parent attributes */
 	FCMH_LOCK(op);
 	uidmap_int_stat(&mp->srr_opattr);
 	fcmh_setattr_locked(op, &mp->srr_opattr);
 	FCMH_ULOCK(op);
 
 	if (np != op) {
+		/* refresh new parent attributes */
 		FCMH_LOCK(np);
 		uidmap_int_stat(&mp->srr_npattr);
 		fcmh_setattr_locked(np, &mp->srr_npattr);
 		FCMH_ULOCK(np);
 	}
 
-		rc = msl_lookup_fidcache(pfr, &pcr, npinum, newname,
-		    &srcfg, &srcsstb, &child);
-	if (mp->srr_cattr.sst_fid) {
-		if (child)
-			fcmh_op_done(child);
-		rc = fidc_lookup(&mp->srr_cattr.sst_fg, 0, NULL, 0, &child);
-		if (!rc) {
-			uidmap_int_stat(&mp->srr_cattr);
-			fcmh_setattrf(child, &mp->srr_cattr,
-			    FCMH_SETATTRF_SAVELOCAL);
-		}
+	/* refresh moved file's attributes */
+	if (mp->srr_cattr.sst_fid != FID_ANY &&
+	    fidc_lookup_fg(&mp->srr_cattr.sst_fg, &ch) == 0) {
+		uidmap_int_stat(&mp->srr_cattr);
+		fcmh_setattrf(ch, &mp->srr_cattr,
+		    FCMH_SETATTRF_SAVELOCAL);
+		fcmh_op_done(ch);
+	}
+
+	/*
+	 * Refresh clobbered file's attributes.  This file might have
+	 * additional links and may not be completely destroyed so don't
+	 * evict.
+	 */
+	if (mp->srr_clattr.sst_fid != FID_ANY &&
+	    fidc_lookup_fg(&mp->srr_clattr.sst_fg, &ch) == 0) {
+		uidmap_int_stat(&mp->srr_clattr);
+		fcmh_setattrf(ch, &mp->srr_clattr,
+		    FCMH_SETATTRF_SAVELOCAL);
+		fcmh_op_done(ch);
 	}
 
 	/*
