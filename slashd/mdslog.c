@@ -777,9 +777,17 @@ mdslog_namespace(int op, uint64_t txg, uint64_t pfid,
 		if (sstb->sst_nlink > 1)
 			COPYFG((struct slash_fidgen *)arg, &sstb->sst_fg);
 		break;
-	case NS_OP_RENAME:
-		COPYFG((struct slash_fidgen *)arg, &sstb->sst_fg);
+	case NS_OP_RENAME: {
+		struct {
+			struct slash_fidgen clfg;
+			struct slash_fidgen *fgp;
+		} *aa;
+
+		aa = arg;
+		COPYFG(&aa->fgp[0], &sstb->sst_fg);
+		COPYFG(&aa->fgp[1], &aa->clfg);
 		break;
+	    }
 	case NS_OP_SETSIZE:
 		siz = *(size_t *)arg;
 		break;

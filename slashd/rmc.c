@@ -1006,14 +1006,15 @@ int
 slm_rmc_handle_rename(struct pscrpc_request *rq)
 {
 	char from[SL_NAME_MAX + 1], to[SL_NAME_MAX + 1];
-	struct fidc_membh *op = NULL, *np = NULL;
+	struct fidc_membh *c, *op = NULL, *np = NULL;
 	struct srm_rename_req *mq;
 	struct srm_rename_rep *mp;
-	struct slash_fidgen chfg;
+	struct slash_fidgen chfg[2];
 	struct iovec iov[2];
 	int vfsid;
 
-	chfg.fg_fid = FID_ANY;
+	chfg[0].fg_fid = FID_ANY;
+	chfg[1].fg_fid = FID_ANY;
 
 	OPSTAT_INCR(SLM_OPST_RENAME);
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -1071,7 +1072,7 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	mds_reserve_slot(2);
 	mp->rc = mdsio_rename(vfsid, fcmh_2_mfid(op), from,
 	    fcmh_2_mfid(np), to, &rootcreds, mdslog_namespace,
-	    &chfg);
+	    chfg);
 	mds_unreserve_slot(2);
 
  out:
@@ -1080,15 +1081,21 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 		if (op != np)
 			mdsio_fcmh_refreshattr(np, &mp->srr_npattr);
 
-		if (chfg.fg_fid != FID_ANY) {
-			struct fidc_membh *c;
+		if (chfg[0].fg_fid != FID_ANY &&
+		    slm_fcmh_get(&chfg[0], &c) == 0) {
+			mdsio_fcmh_refreshattr(c,
+			    &mp->srr_cattr);
+			fcmh_op_done(c);
+		} else
+			mp->srr_cattr.sst_fid = FID_ANY;
 
-			if (slm_fcmh_get(&chfg, &c) == 0) {
-				mdsio_fcmh_refreshattr(c,
-				    &mp->srr_cattr);
-				fcmh_op_done(c);
-			}
-		}
+		if (chfg[1].fg_fid != FID_ANY &&
+		    slm_fcmh_get(&chfg[1], &c) == 0) {
+			mdsio_fcmh_refreshattr(c,
+			    &mp->srr_clattr);
+			fcmh_op_done(c);
+		} else
+			mp->srr_clattr.sst_fid = FID_ANY;
 	}
 
 	if (np)
