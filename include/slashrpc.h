@@ -926,6 +926,7 @@ struct srm_rename_rep {
 	struct srt_stat		srr_npattr;	/* new parent */
 	struct srt_stat		srr_opattr;	/* old parent */
 	struct srt_stat		srr_cattr;	/* child node */
+	struct srt_stat		srr_clattr;	/* clobbered node */
 	 int32_t		rc;
 	 int32_t		_pad;
 } __packed;
