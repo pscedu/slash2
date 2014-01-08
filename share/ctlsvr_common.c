@@ -176,8 +176,7 @@ slctlrep_getfcmh(int fd, struct psc_ctlmsghdr *mh, void *m)
 				break;
 		}
 	} else {
-		struct slash_fidgen t = { scf->scf_fg.fg_fid, FGEN_ANY };
-		rc = fidc_lookup(&t, 0, NULL, 0, &f);
+		rc = fidc_lookup_fid(scf->scf_fg.fg_fid, &f);
 		if (!rc) {
 			rc = slctlmsg_fcmh_send(fd, mh, scf, f);
 			fcmh_op_done(f);

@@ -48,8 +48,9 @@ iod_inode_getinfo(struct slash_fidgen *fg, uint64_t *size,
 	struct fidc_membh *f;
 	struct stat stb;
 
-	rc = fidc_lookup(fg, 0, NULL, 0, &f);
-	psc_assert(f);
+	rc = fidc_lookup_fg(fg, &f);
+	if (rc)
+		return (rc);
 
 	if (fstat(fcmh_2_fd(f), &stb) == -1)
 		return (-errno);
