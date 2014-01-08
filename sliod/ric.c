@@ -203,7 +203,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 */
 	nslvrs = 1;
 	slvrno = mq->offset / SLASH_SLVR_SIZE;
-	if (((mq->offset + (mq->size-1)) / SLASH_SLVR_SIZE) > slvrno)
+	if ((mq->offset + mq->size - 1) / SLASH_SLVR_SIZE > slvrno)
 		nslvrs++;
 
 	for (i = 0; i < nslvrs; i++)
@@ -251,7 +251,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	psc_assert(!tsize);
 
 	if (aiocbr) {
-
 		sli_aio_reply_setup(aiocbr, rq, mq->size, mq->offset,
 		    slvr, nslvrs, iovs, nslvrs, rw);
 
@@ -294,8 +293,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	}
 
 	/*
-	 * We must return an error code to the RPC itself if we don't call
-	 * slrpc_bulkserver() or slrpc_bulkclient() as expected.
+	 * We must return an error code to the RPC itself if we don't
+	 * call slrpc_bulkserver() or slrpc_bulkclient() as expected.
 	 */
 	rc = slrpc_bulkserver(rq,
 	    (rw == SL_WRITE ? BULK_GET_SINK : BULK_PUT_SOURCE),
