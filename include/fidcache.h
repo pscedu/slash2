@@ -274,18 +274,25 @@ void	 fcmh_setattrf(struct fidc_membh *, struct srt_stat *, int);
 #define FIDC_LOOKUP_RLSBMAP		(1 << 3)	/* Release bmap on sliod		*/
 #define FIDC_LOOKUP_NOLOG		(1 << 4)
 
+int	_fidc_lookup(const struct pfl_callerinfo *,
+	    const struct slash_fidgen *, int, struct srt_stat *, int,
+	    struct fidc_membh **, void *);
+
+int	_fidc_lookup_fg(const struct pfl_callerinfo *,
+	    const struct slash_fidgen *, struct fidc_membh **);
+
+int	_fidc_lookup_fid(const struct pfl_callerinfo *, slfid_t, 
+	    struct fidc_membh **);
+
 #define fidc_lookup(fgp, lkfl, sstb, safl, fcmhp)			\
 	_fidc_lookup(PFL_CALLERINFOSS(SLSS_FCMH), (fgp), (lkfl),	\
 	    (sstb), (safl), (fcmhp), NULL)
 
-int	 _fidc_lookup(const struct pfl_callerinfo *,
-	    const struct slash_fidgen *, int, struct srt_stat *, int,
-	    struct fidc_membh **, void *);
+#define fidc_lookup_fid(fid, fp)					\
+	_fidc_lookup_fid(PFL_CALLERINFOSS(SLSS_FCMH), (fid), (fp));
 
-/* these fidc_lookup() wrappers are used for simple lookups (no flags) */
-
-int 	fidc_lookup_fid(const struct pfl_callerinfo *, slfid_t, struct fidc_membh **);
-int	fidc_lookup_fg(const struct pfl_callerinfo *, const struct slash_fidgen *, struct fidc_membh **);
+#define fidc_lookup_fg(fg, fp)						\
+	_fidc_lookup_fg(PFL_CALLERINFOSS(SLSS_FCMH), (fg), (fp));
 
 ssize_t	 fcmh_getsize(struct fidc_membh *);
 

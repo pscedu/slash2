@@ -210,7 +210,7 @@ fidc_reap(struct psc_poolmgr *m)
  *	generation number is known.
  */
 int
-fidc_lookup_fg(const struct pfl_callerinfo *pci,
+_fidc_lookup_fg(const struct pfl_callerinfo *pci,
     const struct slash_fidgen *fg, struct fidc_membh **fp)
 {
 	int rc;
@@ -224,7 +224,7 @@ fidc_lookup_fg(const struct pfl_callerinfo *pci,
  *	generation number is not known.
  */
 int
-fidc_lookup_fid(const struct pfl_callerinfo *pci, slfid_t fid, 
+_fidc_lookup_fid(const struct pfl_callerinfo *pci, slfid_t fid, 
     struct fidc_membh **fp)
 {
 	int rc;
