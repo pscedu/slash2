@@ -622,11 +622,9 @@ slvr_fsio(struct slvr *s, int sblk, uint32_t size, enum rw rw,
  * @s: the sliver.
  */
 ssize_t
-slvr_fsbytes_rio(struct slvr *s, uint32_t off, uint32_t len,
-	struct sli_aiocb_reply **aiocbr)
+slvr_fsbytes_rio(struct slvr *s, struct sli_aiocb_reply **aiocbr)
 {
 	ssize_t rc = 0;
-	int blk;
 
 	rc = slvr_fsio(s, 0, SLASH_SLVR_SIZE, SL_READ, aiocbr);
 
@@ -779,7 +777,7 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 	/* Execute read to fault in needed blocks after dropping
 	 *   the lock.  All should be protected by the FAULTING bit.
 	 */
-	if ((rc = slvr_fsbytes_rio(s, off, len, aiocbr)))
+	if ((rc = slvr_fsbytes_rio(s, aiocbr)))
 		return (rc);
 
 	if (rw == SL_READ) {
