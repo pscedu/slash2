@@ -2564,7 +2564,7 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
     off_t off, void *data)
 {
 	struct msl_fhent *mfh = data;
-	struct fidc_membh *f, *ftmp;
+	struct fidc_membh *f;
 	int rc = 0;
 
 	msfsthr_ensure();
@@ -2572,13 +2572,6 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 	OPSTAT_INCR(SLC_OPST_WRITE);
 
 	f = mfh->mfh_fcmh;
-	rc = fidc_lookup(&f->fcmh_fg, 0, NULL, 0, &ftmp);
-	if (ftmp != f)
-		rc = EBADF;
-	if (ftmp)
-		fcmh_op_done(ftmp);
-	if (rc)
-		PFL_GOTOERR(out, rc);
 
 	/* XXX EBADF if fd is not open for writing */
 	if (fcmh_isdir(f))
@@ -2603,7 +2596,7 @@ void
 mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 {
 	struct msl_fhent *mfh = data;
-	struct fidc_membh *f, *ftmp;
+	struct fidc_membh *f;
 	void *buf = pfr->pfr_buf;
 	ssize_t len = 0;
 	int rc = 0;
@@ -2613,13 +2606,6 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	OPSTAT_INCR(SLC_OPST_READ);
 
 	f = mfh->mfh_fcmh;
-	rc = fidc_lookup(&f->fcmh_fg, 0, NULL, 0, &ftmp);
-	if (ftmp != f)
-		rc = EBADF;
-	if (ftmp)
-		fcmh_op_done(ftmp);
-	if (rc)
-		PFL_GOTOERR(out, rc);
 
 	DEBUG_FCMH(PLL_INFO, f, "read (start): buf=%p rc=%d sz=%zu "
 	    "len=%zd off=%"PSCPRIdOFFT, buf, rc, size, len, off);
