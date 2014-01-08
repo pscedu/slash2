@@ -44,9 +44,9 @@ int
 iod_inode_getinfo(struct slash_fidgen *fg, uint64_t *size,
     uint64_t *nblks, uint32_t *utimgen)
 {
-	int rc;
 	struct fidc_membh *f;
 	struct stat stb;
+	int rc;
 
 	rc = fidc_lookup_fg(fg, &f);
 	if (rc)
