@@ -346,7 +346,7 @@ slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	rc = fidc_lookup(&mq->fg, 0, NULL, 0, &f);
+	rc = fidc_lookup_fg(&mq->fg, &f);
 	if (rc) {
 		mp->rc = rc; 
 		return (0);

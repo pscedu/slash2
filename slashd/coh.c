@@ -71,10 +71,9 @@ slmcoh_releasebml(void *p)
 	struct bmapc_memb *b = NULL;
 	struct bmap_mds_lease *bml;
 	struct fidc_membh *f;
-	struct slash_fidgen t = { wk->fid, FGEN_ANY };
 
 	/* Leases can come and go regardless of pending coh cb's. */
-	rc = fidc_lookup(&t, 0, NULL, 0, &f);
+	rc = fidc_lookup_fid(wk->fid, &f);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
