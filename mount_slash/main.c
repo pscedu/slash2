@@ -970,7 +970,6 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	struct fidc_membh *p, *c = NULL;
 	slfid_t cfid = FID_ANY;
 	int rc;
-	struct slash_fidgen t;
 
 	if (fp)
 		*fp = NULL;
@@ -994,9 +993,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	if (cfid == FID_ANY)
 		goto remote;
 
-	t.fg_fid = cfid;
-	t.fg_gen = FGEN_ANY;
-	rc = fidc_lookup(&t, 0, NULL, 0, &c);
+	rc = fidc_lookup_fid(cfid, &c);
 	if (rc)
 		goto remote;
 

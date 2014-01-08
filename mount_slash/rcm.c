@@ -242,7 +242,6 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 	struct bmapc_memb *b = NULL;
 	struct bmap_cli_info *bci;
 	struct fidc_membh *f;
-	struct slash_fidgen t;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -254,9 +253,7 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 	 * XXX it is possible this fcmh won't be in the cache -- force a
 	 * load?
 	 */
-	t.fg_gen = mq->fid;
-	t.fg_gen = FGEN_ANY;
-	rc = fidc_lookup(&t, 0, NULL, 0, &f);
+	rc = fidc_lookup_fid(mq->fid, &f);
 	if (rc)
 		PFL_GOTOERR(out, mp->rc = rc);
 
