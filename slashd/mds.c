@@ -1613,9 +1613,9 @@ int
 mds_bmap_loadvalid(struct fidc_membh *f, sl_bmapno_t bmapno,
     struct bmap **bp)
 {
+	struct bmap_mds_info *bmi;
 	struct bmap *b;
 	int n, rc;
-	struct bmap_mds_info *bmi;
 
 	*bp = NULL;
 
@@ -1638,8 +1638,9 @@ mds_bmap_loadvalid(struct fidc_membh *f, sl_bmapno_t bmapno,
 			return (0);
 		}
 
-	/* BMAP_OP #3, unref if bmap is empty.
-	 *    NOTE that our callers must drop this ref.
+	/*
+	 * BMAP_OP #3, unref if bmap is empty.
+	 * NOTE: our callers must drop this ref.
 	 */
 	bmap_op_done(b);
 	return (SLERR_BMAP_ZERO);
@@ -1659,7 +1660,7 @@ mds_bmap_load_fg(const struct slash_fidgen *fg, sl_bmapno_t bmapno,
 	if (rc)
 		return (rc);
 
-	rc = bmap_get(f, bmapno, SL_WRITE,&b);
+	rc = bmap_get(f, bmapno, SL_WRITE, &b);
 	if (rc == 0)
 		*bp = b;
 
