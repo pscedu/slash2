@@ -337,7 +337,7 @@ slm_rmi_handle_rls_bmap(struct pscrpc_request *rq)
 int
 slm_rmi_handle_bmap_ptrunc(struct pscrpc_request *rq)
 {
-	int rc, iosidx, tract[NBREPLST];
+	int iosidx, tract[NBREPLST];
 	struct srm_bmap_ptrunc_req *mq;
 	struct srm_bmap_ptrunc_rep *mp;
 	struct bmapc_memb *b = NULL;
