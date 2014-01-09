@@ -72,7 +72,7 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 	struct srm_bmap_crcwrt_rep *mp;
 	struct pscrpc_request *rq;
 	struct bcrcupd *bcr;
-	struct iovec *iovs;
+	struct iovec *iovs = NULL;
 	size_t len;
 	uint32_t i;
 	int rc;
@@ -84,10 +84,8 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 	if (rc)
 		return (rc);
 	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAPCRCWRT, rq, mq, mp);
-	if (rc) {
-		sl_csvc_decref(csvc);
-		return (rc);
-	}
+	if (rc) 
+	    goto out;
 
 	mq->ncrc_updates = psc_dynarray_len(bcrs);
 	rq->rq_interpret_reply = slvr_nbreqset_cb;
@@ -104,8 +102,8 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 		    &bcr->bcr_crcup.fsize, &bcr->bcr_crcup.nblks,
 		    &bcr->bcr_crcup.utimgen);
 
-		/* Bail for now if we can't stat() our file objects. */
-		psc_assert(!rc);
+		if (rc)
+		    goto out;
 
 		DEBUG_BCR(PLL_DIAG, bcr, "bcrs pos=%d fsz=%"PRId64, i,
 		    bcr->bcr_crcup.fsize);
@@ -123,14 +121,21 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 
 	rc = slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMI_BULK_PORTAL,
 	    iovs, mq->ncrc_updates);
-	PSCFREE(iovs);
 
-	psc_assert(rc == 0);
-
-	OPSTAT_INCR(SLI_OPST_CRC_UPDATE);
+	if (rc)
+	    goto out;
 
 	rc = SL_NBRQSET_ADD(csvc, rq);
-	psc_assert(rc == 0);
+
+  out:
+
+	if (iovs)
+	    PSCFREE(iovs);
+
+	if (rc)
+		sl_csvc_decref(csvc);
+	else
+		OPSTAT_INCR(SLI_OPST_CRC_UPDATE);
 	return (rc);
 }
 
