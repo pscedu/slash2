@@ -68,7 +68,7 @@ struct psc_listcache	 crcqSlvrs;  /* Slivers ready to be CRC'd and have their
 __static SPLAY_GENERATE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp);
 
 __static void
-slvr_lru_requeue(struct slvr *s, int tail)
+slvr_lru_requeue(struct slvr *s)
 {
 	/*
 	 * Locking convention: it is legal to request for a list lock
@@ -77,12 +77,7 @@ slvr_lru_requeue(struct slvr *s, int tail)
 	 * first before asking for the sliver lock or you should use
 	 * trylock().
 	 */
-	LIST_CACHE_LOCK(&lruSlvrs);
-	if (tail)
-		lc_move2tail(&lruSlvrs, s);
-	else
-		lc_move2head(&lruSlvrs, s);
-	LIST_CACHE_ULOCK(&lruSlvrs);
+	lc_move2tail(&lruSlvrs, s);
 }
 
 /**
@@ -856,7 +851,7 @@ void
 slvr_try_crcsched_locked(struct slvr *s)
 {
 	if ((s->slvr_flags & SLVR_LRU) && s->slvr_pndgwrts)
-		slvr_lru_requeue(s, 1);
+		slvr_lru_requeue(s);
 
 	if (!s->slvr_pndgwrts && (s->slvr_flags & SLVR_LRU))
 		slvr_schedule_crc_locked(s);
@@ -892,7 +887,7 @@ slvr_rio_done(struct slvr *s)
 	s->slvr_pndgreads--;
 	DEBUG_SLVR(PLL_INFO, s, "read decref");
 	if (slvr_lru_tryunpin_locked(s)) {
-		slvr_lru_requeue(s, 1);
+		slvr_lru_requeue(s);
 		DEBUG_SLVR(PLL_INFO, s, "decref, unpinned");
 	} else
 		DEBUG_SLVR(PLL_INFO, s, "decref, ops still pending or dirty");
