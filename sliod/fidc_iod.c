@@ -62,7 +62,7 @@ iod_inode_getinfo(struct slash_fidgen *fg, uint64_t *size,
 	*nblks = stb.st_blocks;
 	*utimgen = f->fcmh_sstb.sst_utimgen;
 
-	FCMH_LOCK(f);
+	fcmh_op_done(f);
 	return (0);
 }
 
