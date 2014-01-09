@@ -84,8 +84,8 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 	if (rc)
 		return (rc);
 	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAPCRCWRT, rq, mq, mp);
-	if (rc) 
-	    goto out;
+	if (rc)
+		goto out;
 
 	mq->ncrc_updates = psc_dynarray_len(bcrs);
 	rq->rq_interpret_reply = slvr_nbreqset_cb;
@@ -103,7 +103,7 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 		    &bcr->bcr_crcup.utimgen);
 
 		if (rc)
-		    goto out;
+			goto out;
 
 		DEBUG_BCR(PLL_DIAG, bcr, "bcrs pos=%d fsz=%"PRId64, i,
 		    bcr->bcr_crcup.fsize);
@@ -123,14 +123,12 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 	    iovs, mq->ncrc_updates);
 
 	if (rc)
-	    goto out;
+		goto out;
 
 	rc = SL_NBRQSET_ADD(csvc, rq);
 
   out:
-
-	if (iovs)
-	    PSCFREE(iovs);
+	PSCFREE(iovs);
 
 	if (rc)
 		sl_csvc_decref(csvc);
