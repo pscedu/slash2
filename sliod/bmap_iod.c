@@ -553,7 +553,6 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 	mq->rw = rw;
 	mq->bmapno = b->bcm_bmapno;
 	memcpy(&mq->fg, &b->bcm_fcmh->fcmh_fg, sizeof(mq->fg));
-	//memcpy(&mq->sbdb, sbdb, sizeof(*sbdb));
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
@@ -607,9 +606,9 @@ dump_bmap_flags(uint32_t flags)
 #endif
 
 struct bmap_ops sl_bmap_ops = {
-	NULL,
-	iod_bmap_init,
-	iod_bmap_retrieve,
-	iod_bmap_retrieve,
-	iod_bmap_finalcleanup
+	NULL,				/* bmo_free() */
+	iod_bmap_init,			/* bmo_init_privatef() */
+	iod_bmap_retrieve,		/* bmo_retrievef() */
+	iod_bmap_retrieve,		/* bmo_mode_chngf() */
+	iod_bmap_finalcleanup		/* bmo_final_cleanupf() */
 };
