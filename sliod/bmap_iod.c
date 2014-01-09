@@ -458,15 +458,14 @@ slibmaprlsthr_main(struct psc_thread *thr)
 		sl_csvc_decref(csvc);
  end:
 		/* put any unreapable biods back to the list */
-		rc = lc_nitems(&bmapRlsQ);
+		i = lc_nitems(&bmapRlsQ);
 
 		DYNARRAY_FOREACH(bii, nrls, &a)
 			lc_addtail(&bmapRlsQ, bii);
-
-		if (!rc)
-			sleep(SLIOD_BMAP_RLS_WAIT_SECS);
-
 		psc_dynarray_free(&a);
+
+		if (!i)
+			sleep(SLIOD_BMAP_RLS_WAIT_SECS);
 	}
 }
 
