@@ -110,7 +110,7 @@ struct bmap_iod_info {
 	struct psc_lockedlist	 bii_rls;
 	uint64_t		 bii_bcr_xid;
 	uint64_t		 bii_bcr_xid_last;
-	psc_atomic32_t		 bii_crcdrty_slvrs;
+	psc_atomic32_t		 bii_crcdirty_slvrs;
 };
 
 /* sliod-specific bcm_flags */
