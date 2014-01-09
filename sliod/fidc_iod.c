@@ -52,15 +52,17 @@ iod_inode_getinfo(struct slash_fidgen *fg, uint64_t *size,
 	if (rc)
 		return (rc);
 
-	if (fstat(fcmh_2_fd(f), &stb) == -1)
+	FCMH_LOCK(f);
+	if (fstat(fcmh_2_fd(f), &stb) == -1) {
+		fcmh_op_done(f);
 		return (-errno);
+	}
 
 	*size = stb.st_size;
 	*nblks = stb.st_blocks;
+	*utimgen = f->fcmh_sstb.sst_utimgen;
 
 	FCMH_LOCK(f);
-	*utimgen = f->fcmh_sstb.sst_utimgen;
-	fcmh_op_done(f);
 	return (0);
 }
 
