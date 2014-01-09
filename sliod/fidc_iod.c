@@ -54,8 +54,9 @@ iod_inode_getinfo(struct slash_fidgen *fg, uint64_t *size,
 
 	FCMH_LOCK(f);
 	if (fstat(fcmh_2_fd(f), &stb) == -1) {
+		rc = -errno;
 		fcmh_op_done(f);
-		return (-errno);
+		return (rc);
 	}
 
 	*size = stb.st_size;
