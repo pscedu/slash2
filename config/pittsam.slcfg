@@ -74,7 +74,7 @@ site @PSC {
 		desc	= "";
 		type	= standalone_fs;
 		id	= 10;
-		nids	= sense51.psc.edu;
+		nids	= sense51-66.psc.edu;
 		fsroot	= /local/samfs_slio;
 		selftest = "/local/sbin/st /local/samfs_slio";
 	}
