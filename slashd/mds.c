@@ -2372,7 +2372,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 		}
 
 		psc_hashtbl_init(&dbh->dbh_sth_hashtbl, 0,
-		    struct slm_sth, sth_fmt, sth_hentry, 16, NULL,
+		    struct slm_sth, sth_fmt, sth_hentry, 11, NULL,
 		    "sth-%s", pscthr_get()->pscthr_name);
 	}
 
