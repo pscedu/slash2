@@ -694,6 +694,7 @@ slm_rmc_handle_readdir_roots(struct iovec *iov0, struct iovec *iov1,
 #define RCM_READDIR_CBARGP_EXP		1
 #define RCM_READDIR_CBARGP_BASE_DENTS	2
 #define RCM_READDIR_CBARGP_BASE_ATTR	3
+
 #define RCM_READDIR_CBARGI_NEXTOFF	0
 #define RCM_READDIR_CBARGI_DECR		1
 
@@ -789,20 +790,53 @@ void
 slm_rcm_try_readdir_ra(struct pscrpc_export *exp, struct sl_fidgen *fgp,
     int eof, off_t off, size_t size)
 {
+	struct timespec now, exp = { READDIR_RA_PAST_TIMEO, 0 };
+	struct slm_readdir_ra_past *inact, *act = NULL, *cv;
 	struct slm_wkdata_readdir *wk;
 	struct slm_exp_cli *mexpc;
+	int i;
 
 	if (eof)
 		return;
 
 	EXPORT_LOCK(exp);
+	PFL_GETTIMESPEC(&now);
 	mexpc = sl_exp_getpri_cli(exp);
-	if (mexpc->mexpc_readdir_nra >= SLM_EXPC_READDIR_MAXNRA) {
+	for (i = 0, cv = mexpc->mexpc_readdir_past;
+	    i < nitems(mexpc->mexpc_readdir_past) || (cv = NULL);
+	    i++, cv++) {
+		/* expire old entries */
+		if (timespeccmp(&cv->crap_exp, &now))
+			cv->crap_fid = FID_ANY;
+
+		/*
+		 * Found an inactive slot; save in case we can't find an
+		 * empty slot.
+		 */
+		if (!CRAP_GET_ACTIVE(cv))
+			inact = cv;
+
+		/* found an unused entry; use it */
+		if (cv->crap_fid == FID_ANY)
+			act = cv;
+
+		/* found our request; cancel */
+		if (cv->crap_fid == fgp->fg_fid &&
+		    cv->crap_off == off)
+			break;
+	}
+	/* use an inactive slot if we must */
+	if (!act && inact)
+		act = inact;
+	if (cv || !act) {
 		EXPORT_ULOCK(exp);
 		return;
 	}
-
-	mexpc->mexpc_readdir_nra++;
+	act->crap_fid = fgp->fg_fid;
+	act->crap_off = fgp->fg_off;
+	timespecadd(&now, &exp, &act->crap_exp);
+	PFL_GETTIMESPEC(&act->crap_exp);
+	CRAP_SET_ACTIVE(act);
 	EXPORT_ULOCK(exp);
 
 	wk = pfl_workq_getitem(slm_readdir_ra_issue,
@@ -827,26 +861,31 @@ slm_rcmc_readdir_cb(struct pscrpc_request *rq,
 	void *base_dents = av->pointer_arg[RCM_READDIR_CBARGP_BASE_DENTS];
 	struct slashrpc_cservice *csvc = av->pointer_arg[RCM_READDIR_CBARGP_CSVC];
 	struct pscrpc_export *exp = av->pointer_arg[RCM_READDIR_CBARGP_EXP];
+	struct slm_readdir_ra_past *crap;
 	struct srm_readdir_ra_req *mq;
 	struct slm_exp_cli *mexpc;
-	int rc;
+	int i, rc;
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_readdir_ra_rep, rc);
 	if (rc == 0) {
 		mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 		slrpc_rep_in(csvc, rq);
-
-		// XXX this has position problems when past RPCs finish
-		slm_rcm_try_readdir_ra(exp, &mq->fg, mq->eof,
-		    nextoff, mq->size);
 	}
 
 	if (decr) {
 		EXPORT_LOCK(exp);
 		mexpc = sl_exp_getpri_cli(exp);
-		mexpc->mexpc_readdir_nra--;
+		for (i = 0, crap = mexpc->mexpc_readdir_past;
+		    i < nitems(mexpc->mexpc_readdir_past); i++, cr++)
+			if (crap->crap_fid == mq->fg.fg_fid &&
+			    crap->crap_off == mq->offset)
+				CRAP_CLR_ACTIVE(crap);
 		EXPORT_ULOCK(exp);
 	}
+
+	if (rc == 0)
+		slm_rcm_try_readdir_ra(exp, &mq->fg, mq->eof,
+		    nextoff, mq->size);
 
 	PSCFREE(base_dents);
 	PSCFREE(base_attr);
@@ -1839,9 +1878,12 @@ void
 mexpc_allocpri(struct pscrpc_export *exp)
 {
 	struct slm_exp_cli *mexpc;
+	int i;
 
 	mexpc = exp->exp_private = PSCALLOC(sizeof(*mexpc));
 	slm_getclcsvc(exp);
+	for (i = 0; i < nitems(mexpc->mexpc_readdir_past); i++)
+		mexpc->mexpc_readdir_past[i].crap_fid = FID_ANY;
 }
 
 struct sl_expcli_ops sl_expcli_ops = {
