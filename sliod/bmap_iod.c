@@ -536,9 +536,6 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 	int rc, i;
 	struct bmap_iod_info *bii = bmap_2_bii(b);
 
-	if (rw != SL_READ)
-		return (0);
-
 	rc = sli_rmi_getcsvc(&csvc);
 	if (rc)
 		goto out;
@@ -565,11 +562,6 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 	BMAP_LOCK(b); /* equivalent to BII_LOCK() */
 
 	for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++) {
-		//XXX set BMAP_SLVR_DATA before do_crc()
-		//XXX  shoudln't retrieve if all slvrs are BMAP_SLVR_DATA
-		if (bii->bii_crcstates[i] & BMAP_SLVR_DATA)
-			continue;
-
 		bii->bii_crcstates[i] = mp->crcstates[i];
 		bii->bii_crcs[i] = mp->crcs[i];
 	}
@@ -609,6 +601,6 @@ struct bmap_ops sl_bmap_ops = {
 	NULL,				/* bmo_free() */
 	iod_bmap_init,			/* bmo_init_privatef() */
 	iod_bmap_retrieve,		/* bmo_retrievef() */
-	iod_bmap_retrieve,		/* bmo_mode_chngf() */
+	NULL,				/* bmo_mode_chngf() */
 	iod_bmap_finalcleanup		/* bmo_final_cleanupf() */
 };
