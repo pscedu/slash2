@@ -80,7 +80,7 @@ enum slm_fwd_op {
  * READDIR readahead activity.
  */
 struct slm_readdir_ra_past {
-	sl_fid_t			  crap_fid;
+	slfid_t				  crap_fid;
 	 int64_t			  crap_offset;		/* d_off */
 	struct timeval			  crap_exp;		/* when to expire this entry */
 };
