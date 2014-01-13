@@ -246,6 +246,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slm_ino_od);
 	PRTYPE(struct slm_inoh);
 	PRTYPE(struct slm_inox_od);
+	PRTYPE(struct slm_readdir_ra_past);
 	PRTYPE(struct slm_replst_workreq);
 	PRTYPE(struct slm_resmlink);
 	PRTYPE(struct slm_sth);
@@ -499,7 +500,6 @@ main(int argc, char *argv[])
 	PRVAL(SLI_RIM_REPSZ);
 	PRVAL(SLJ_MDS_ENTSIZE);
 	PRVAL(SLJ_MDS_READSZ);
-	PRVAL(SLM_EXPC_READDIR_MAXNRA);
 	PRVAL(SLM_NWORKER_THREADS);
 	PRVAL(SLM_RECLAIM_BATCH);
 	PRVAL(SLM_RMC_BUFSZ);
@@ -777,6 +777,8 @@ main(int argc, char *argv[])
 	PRVAL(SLI_OPST_CRC_UPDATE_CB);
 	PRVAL(SLI_OPST_CRC_UPDATE_CB_FAILURE);
 	PRVAL(SLI_OPST_FSIO_READ);
+	PRVAL(SLI_OPST_FSIO_READ_CRC_BAD);
+	PRVAL(SLI_OPST_FSIO_READ_CRC_GOOD);
 	PRVAL(SLI_OPST_FSIO_READ_FAIL);
 	PRVAL(SLI_OPST_FSIO_WRITE);
 	PRVAL(SLI_OPST_FSIO_WRITE_FAIL);
