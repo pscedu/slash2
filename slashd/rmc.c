@@ -38,15 +38,16 @@
 #include <inttypes.h>
 #include <unistd.h>
 
-#include "pfl/fs.h"
-#include "pfl/str.h"
+#include "pfl/ctlsvr.h"
 #include "pfl/export.h"
+#include "pfl/fs.h"
+#include "pfl/lock.h"
 #include "pfl/rpc.h"
 #include "pfl/rpclog.h"
 #include "pfl/rsx.h"
 #include "pfl/service.h"
-#include "pfl/ctlsvr.h"
-#include "pfl/lock.h"
+#include "pfl/str.h"
+#include "pfl/time.h"
 
 #include "authbuf.h"
 #include "bmap_mds.h"
@@ -700,8 +701,9 @@ slm_rmc_handle_readdir_roots(struct iovec *iov0, struct iovec *iov1,
 
 int  slm_rcmc_readdir_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 void slm_rcm_try_readdir_ra(struct pscrpc_export *, struct sl_fidgen *, int, off_t, size_t);
-int  slm_readdir_issue(struct pscrpc_export *, struct sl_fidgen *, size_t, off_t, size_t *, int *,
-	int *, unsigned char *, size_t, int);
+int  slm_readdir_issue(struct pscrpc_export *, struct sl_fidgen *,
+	size_t, off_t, size_t *, int *, int *, unsigned char *, size_t,
+	int);
 
 /**
  * Special case routine for processing READDIR request (non readahead).
@@ -746,9 +748,8 @@ slm_rcm_issue_readdir_wk(void *p)
 		sl_csvc_decref(wk->csvc);
 		pscrpc_export_put(wk->exp);
 	} else {
-		slm_rcm_try_readdir_ra(wk->exp, &wk->fg,
-		    wk->eof, wk->nextoff,
-		    wk->size);
+		slm_rcm_try_readdir_ra(wk->exp, &wk->fg, wk->eof,
+		    wk->nextoff, wk->size);
 	}
 
  out:
@@ -790,7 +791,8 @@ void
 slm_rcm_try_readdir_ra(struct pscrpc_export *exp, struct sl_fidgen *fgp,
     int eof, off_t off, size_t size)
 {
-	struct timespec now, exp = { READDIR_RA_PAST_TIMEO, 0 };
+#define READDIR_RA_PAST_TIMEO 3
+	struct timespec now, expire = { READDIR_RA_PAST_TIMEO, 0 };
 	struct slm_readdir_ra_past *inact, *act = NULL, *cv;
 	struct slm_wkdata_readdir *wk;
 	struct slm_exp_cli *mexpc;
@@ -806,7 +808,7 @@ slm_rcm_try_readdir_ra(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 	    i < nitems(mexpc->mexpc_readdir_past) || (cv = NULL);
 	    i++, cv++) {
 		/* expire old entries */
-		if (timespeccmp(&cv->crap_exp, &now))
+		if (timespeccmp(&cv->crap_exp, &now, <))
 			cv->crap_fid = FID_ANY;
 
 		/*
@@ -833,8 +835,8 @@ slm_rcm_try_readdir_ra(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 		return;
 	}
 	act->crap_fid = fgp->fg_fid;
-	act->crap_off = fgp->fg_off;
-	timespecadd(&now, &exp, &act->crap_exp);
+	act->crap_off = off;
+	timespecadd(&now, &expire, &act->crap_exp);
 	PFL_GETTIMESPEC(&act->crap_exp);
 	CRAP_SET_ACTIVE(act);
 	EXPORT_ULOCK(exp);
@@ -876,10 +878,12 @@ slm_rcmc_readdir_cb(struct pscrpc_request *rq,
 		EXPORT_LOCK(exp);
 		mexpc = sl_exp_getpri_cli(exp);
 		for (i = 0, crap = mexpc->mexpc_readdir_past;
-		    i < nitems(mexpc->mexpc_readdir_past); i++, cr++)
+		    i < nitems(mexpc->mexpc_readdir_past); i++, crap++)
 			if (crap->crap_fid == mq->fg.fg_fid &&
-			    crap->crap_off == mq->offset)
+			    crap->crap_off == mq->offset) {
 				CRAP_CLR_ACTIVE(crap);
+				break;
+			}
 		EXPORT_ULOCK(exp);
 	}
 
@@ -988,6 +992,10 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->size > LNET_MTU)
 		PFL_GOTOERR(out, mp->rc = -EINVAL);
+
+	/*
+	 * XXX Check if currently being processed (on workq) and wait.
+	 */
 
 	mp->rc = slm_readdir_issue(rq->rq_export, &mq->fg, mq->size,
 	    mq->offset, &mp->size, &num, &eof, mp->ents,

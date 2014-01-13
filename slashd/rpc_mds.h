@@ -81,8 +81,8 @@ enum slm_fwd_op {
  */
 struct slm_readdir_ra_past {
 	slfid_t				  crap_fid;
-	 int64_t			  crap_offset;		/* d_off */
-	struct timeval			  crap_exp;		/* when to expire this entry */
+	 int64_t			  crap_off;		/* d_off */
+	struct timespec			  crap_exp;		/* when to expire this entry */
 };
 
 #define CRAP_CLR_ACTIVE(crap)		((crap)->crap_exp.tv_nsec &= ~1)
