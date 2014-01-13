@@ -103,7 +103,7 @@ struct bmap_iod_info {
 	 * moved to a ready/hold list for transmission, and a new
 	 * bcrcupd structure must be allocated for future CRC updates.
 	 */
-	struct bcrcupd		*bii_bcr;
+	struct bcrcupd		*bii_bcr;		/* current bcr in use */
 	struct biod_slvrtree	 bii_slvrs;
 	struct psclist_head	 bii_lentry;
 	struct psc_lockedlist	 bii_bklog_bcrs;	/* at most one CRC update RPC per bmap */
