@@ -149,6 +149,8 @@ slvr_worker_push_crcups(void)
 	if (atomic_xchg(&busy, 1))
 		return;
 
+	OPSTAT_INCR(SLI_OPST_CRC_UPDATE_PUSH);
+
 	pscrpc_nbreqset_reap(sl_nbrqset);
 
 	/*
@@ -473,8 +475,6 @@ slislvrthr_proc(struct slvr *s)
 	LIST_CACHE_ULOCK(&bcr_hold);
 
 	bmap_op_done_type(b, BMAP_OPCNT_BCRSCHED);
-
-	slvr_worker_push_crcups();
 }
 
 /**
