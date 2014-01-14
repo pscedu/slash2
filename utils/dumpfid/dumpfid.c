@@ -177,18 +177,22 @@ dumpfid(struct f *f)
 	if (show & K_REPLPOL)
 		fprintf(fp, "  replpol %u\n", ino.ino_replpol);
 	if (show & K_FSIZE && rc > 0) {
-		rc = fgetxattr(fd, SLXAT_FSIZE, tbuf, sizeof(tbuf));
+		rc = fgetxattr(fd, SLXAT_FSIZE, tbuf, sizeof(tbuf) - 1);
 		if (rc == -1)
 			warn("%s: getxattr %s", f->fn, SLXAT_FSIZE);
-		else
+		else {
+			tbuf[rc] = '\0';
 			fprintf(fp, "  fsize %s\n", tbuf);
+		}
 	}
 	if (show & K_FID) {
-		rc = fgetxattr(fd, SLXAT_FID, tbuf, sizeof(tbuf));
+		rc = fgetxattr(fd, SLXAT_FID, tbuf, sizeof(tbuf) - 1);
 		if (rc == -1)
 			warn("%s: getxattr %s", f->fn, SLXAT_FID);
-		else
+		else {
+			tbuf[rc] = '\0';
 			fprintf(fp, "  fid %s\n", tbuf);
+		}
 	}
 	if (show & K_UID)
 		fprintf(fp, "  usr %d\n", f->stb.st_uid);
@@ -328,9 +332,12 @@ queue(const char *fn, const struct pfl_stat *stb, int ftyp,
 		n = psc_dynarray_bsearch(&checkpoints, fn, fcmp0);
 		if (n >= 0 && n < psc_dynarray_len(&checkpoints)) {
 			t = psc_dynarray_getpos(&checkpoints, n);
-			if (strcmp(fn, t) == 0)
+			if (strcmp(fn, t) == 0) {
 				// XXX leak paths
+				DYNARRAY_FOREACH(t, n, &checkpoints)
+					PSCFREE(t);
 				psc_dynarray_reset(&checkpoints);
+			}
 		}
 		freelock(&lock);
 
@@ -429,7 +436,9 @@ thrmain(struct psc_thread *thr)
 
 			munmap(p, stb.st_size);
 		}
-	}
+	} else
+		t->fp = stdout;
+
  ready:
 	pthread_barrier_wait(&barrier);
 	while ((f = lc_getwait(&files)))
