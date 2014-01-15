@@ -427,7 +427,7 @@ slislvrthr_proc(struct slvr *s)
 			if (pll_nitems(&bii->bii_bklog_bcrs))
 				/*
 				 * This is a backlogged bcr, cap it and
-				 * move on.
+				 * leave it on the backlog list only.
 				 */
 				bcr->bcr_bii->bii_bcr = NULL;
 			else
