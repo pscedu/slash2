@@ -247,13 +247,10 @@ biod_rlssched_locked(struct bmap_iod_info *bii)
 		psc_assert(bii_2_bmap(bii)->bcm_flags & BMAP_IOD_RLSSEQ);
 
 	else {
-		psc_assert(psclist_disjoint(&bii->bii_lentry));
-
 		if (!psc_atomic32_read(&bii->bii_crcdirty_slvrs) &&
 		    (bii_2_bmap(bii)->bcm_flags & BMAP_IOD_RLSSEQ) &&
 		    (bii->bii_bcr_xid == bii->bii_bcr_xid_last)) {
 			bii_2_bmap(bii)->bcm_flags |= BMAP_IOD_RLSSCHED;
-			lc_addtail(&bmapRlsQ, bii);
 		}
 	}
 }
@@ -356,79 +353,66 @@ slibmaprlsthr_main(struct psc_thread *thr)
 	struct srm_bmap_release_rep *mp;
 	struct pscrpc_request *rq = NULL;
 	struct slashrpc_cservice *csvc;
-	struct bmap_iod_info *bii;
+	struct bmap_iod_info *bii, *tmp;
 	struct bmap_iod_rls *brls;
 	struct bmapc_memb *b;
 	int nrls, rc, i;
 
+	psc_dynarray_ensurelen(&a, MAX_BMAP_RELEASE);
 	brr = PSCALLOC(sizeof(struct srm_bmap_release_req));
 
 	while (pscthr_run(thr)) {
+
 		nrls = 0;
+		LIST_CACHE_LOCK(&bmapRlsQ);
+		LIST_CACHE_FOREACH_SAFE(bii, tmp, &bmapRlsQ) {
 
-		if (lc_nitems(&bmapRlsQ) < MAX_BMAP_RELEASE)
-			/*
-			 * Try to coalesce, wait for others.
-			 * XXX use timed waitq
-			 */
-			sleep(SLIOD_BMAP_RLS_WAIT_SECS);
-
-		bii = lc_getwait(&bmapRlsQ);
-		do {
 			b = bii_2_bmap(bii);
-			BII_LOCK(bii);
-			psc_assert(pll_nitems(&bii->bii_rls));
+			if (!BMAP_TRYLOCK(b))
+				continue;
 
-			DEBUG_BMAP(PLL_DIAG, b, "ndrty=%u nrls=%d "
-			    "xid=%"PRIu64" xid_last=%"PRIu64,
-			    psc_atomic32_read(&bii->bii_crcdirty_slvrs),
-			    pll_nitems(&bii->bii_rls), bii->bii_bcr_xid,
-			    bii->bii_bcr_xid_last);
-
-			psc_assert(bii_2_flags(bii) & BMAP_IOD_RLSSEQ);
-			psc_assert(bii_2_flags(bii) & BMAP_IOD_RLSSCHED);
-
-			if (psc_atomic32_read(&bii->bii_crcdirty_slvrs) ||
-			    (bii->bii_bcr_xid != bii->bii_bcr_xid_last)) {
-				/* Temporarily remove unreapable bii's */
-				psc_dynarray_add(&a, bii);
-				BII_ULOCK(bii);
+			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
+				DEBUG_BMAP(PLL_DIAG, b, "skip due to refcnt");
+				BMAP_ULOCK(b);
 				continue;
 			}
-
-			i = 0;
-			while (nrls < MAX_BMAP_RELEASE &&
-			    (brls = pll_get(&bii->bii_rls))) {
+			i = pll_nitems(&bii->bii_rls);
+			DEBUG_BMAP(PLL_INFO, b, "returning %d bmap leases", i);
+			while ((brls = pll_get(&bii->bii_rls))) {
 				memcpy(&brr->sbd[nrls++],
 				    &brls->bir_sbd, sizeof(struct
 				    srt_bmapdesc));
 				psc_pool_return(bmap_rls_pool, brls);
-				i++;
+				if (nrls >= MAX_BMAP_RELEASE)
+					break;
 			}
 			/*
 			 * The last entry (or entries) did not fit, so
 			 * reschedule.
 			 */
-			if (pll_nitems(&bii->bii_rls))
-				psc_dynarray_add(&a, bii);
-			else
-				bii_2_bmap(bii)->bcm_flags &=
-				    ~(BMAP_IOD_RLSSEQ | BMAP_IOD_RLSSCHED);
-			BII_ULOCK(bii);
+			if (!pll_nitems(&bii->bii_rls)) {
+				lc_remove(&bmapRlsQ, bii);
+				psc_dynarray_add(&a, b);
+				break;
+			} else
+				BMAP_ULOCK(b);
 
-			while (i--)
-				bmap_op_done_type(b, BMAP_OPCNT_RLSSCHED);
+		}
+		LIST_CACHE_ULOCK(&bmapRlsQ);
 
-		} while ((nrls < MAX_BMAP_RELEASE) &&
-		    (bii = lc_getnb(&bmapRlsQ)));
+		DYNARRAY_FOREACH(b, i, &a)
+			bmap_op_done_type(b, BMAP_OPCNT_REAPER);
+		
+		psc_dynarray_reset(&a);
 
-		if (!nrls)
-			goto end;
-
-		brr->nbmaps = nrls;
+		if (!nrls) {
+			sleep(SLIOD_BMAP_RLS_WAIT_SECS);
+			continue;
+		}
 
 		OPSTAT_INCR(SLI_OPST_SRMT_RELEASE);
 
+		brr->nbmaps = nrls;
 		/*
 		 * The system can tolerate the loss of these messages so
 		 * errors here should not be considered fatal.
@@ -437,7 +421,7 @@ slibmaprlsthr_main(struct psc_thread *thr)
 		if (rc) {
 			psclog_errorx("failed to get MDS import rc=%d",
 			    rc);
-			goto end;
+			continue;
 		}
 
 		rc = SL_RSX_NEWREQ(csvc, SRMT_RELEASEBMAP, rq, mq, mp);
@@ -445,7 +429,7 @@ slibmaprlsthr_main(struct psc_thread *thr)
 			psclog_errorx("failed to generate new req "
 			    "rc=%d", rc);
 			sl_csvc_decref(csvc);
-			goto end;
+			continue;
 		}
 
 		memcpy(mq, brr, sizeof(*mq));
@@ -456,17 +440,8 @@ slibmaprlsthr_main(struct psc_thread *thr)
 
 		pscrpc_req_finished(rq);
 		sl_csvc_decref(csvc);
- end:
-		/* put any unreapable biods back to the list */
-		i = lc_nitems(&bmapRlsQ);
-
-		DYNARRAY_FOREACH(bii, nrls, &a)
-			lc_addtail(&bmapRlsQ, bii);
-		psc_dynarray_free(&a);
-
-		if (!i)
-			sleep(SLIOD_BMAP_RLS_WAIT_SECS);
 	}
+	psc_dynarray_free(&a);
 }
 
 void
@@ -500,8 +475,8 @@ iod_bmap_init(struct bmapc_memb *b)
 	 * XXX At some point we'll want to let bmaps hang around in the
 	 * cache to prevent extra reads and CRC table fetches.
 	 */
-//	bmap_op_start_type(b, BMAP_OPCNT_REAPER);
-//	lc_addtail(b, &bmapReapQ);
+	bmap_op_start_type(b, BMAP_OPCNT_REAPER);
+	lc_addtail(&bmapRlsQ, bii);
 }
 
 void

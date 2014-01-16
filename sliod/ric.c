@@ -428,8 +428,6 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 			    "bmapno=%d seq=%"PRId64" key=%"PRId64" (brls=%p)",
 			    b->bcm_bmapno, sbd->sbd_seq, sbd->sbd_key, newsbd);
 
-			bmap_op_start_type(bii_2_bmap(bii), BMAP_OPCNT_RLSSCHED);
-
 			pll_add(&bii->bii_rls, newsbd);
 			b->bcm_flags |= BMAP_IOD_RLSSEQ;
 

@@ -233,7 +233,7 @@ struct bmap {
  */
 #define bmap_op_start_type(b, type)					\
 	do {								\
-		DEBUG_BMAP(PLL_DEBUG, (b),				\
+		DEBUG_BMAP(PLL_INFO, (b),				\
 		    "took reference (type=%u)", (type));		\
 		psc_atomic32_inc(&(b)->bcm_opcnt);			\
 	} while (0)
@@ -241,7 +241,7 @@ struct bmap {
 #define bmap_op_done_type(b, type)					\
 	do {								\
 		(void)BMAP_RLOCK(b);					\
-		DEBUG_BMAP(PLL_DEBUG, (b),				\
+		DEBUG_BMAP(PLL_INFO, (b),				\
 		    "drop reference (type=%u)", (type));		\
 		psc_assert(psc_atomic32_read(&(b)->bcm_opcnt) > 0);	\
 		psc_atomic32_dec(&(b)->bcm_opcnt);			\
