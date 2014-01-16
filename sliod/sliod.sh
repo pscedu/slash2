@@ -8,12 +8,13 @@ ctl=slictl
 
 usage()
 {
-	echo "usage: $0 [-P profile] [-gsv] [instance]" >&2
+	echo "usage: $0 [-P profile] [-Ggsv] [instance]" >&2
 	exit 1
 }
 
-while getopts "gP:sv" c; do
+while getopts "GgP:sv" c; do
 	case $c in
+	G) mygprof='mygprof'	;;
 	g) mygdb='mygdb'	;;
 	P) prof=$OPTARG		;;
 	s) mystrace='strace'	;;
@@ -39,7 +40,7 @@ export PSC_LOG_FILE_LINK=$(dirname $PSC_LOG_FILE)/latest
 export CONFIG_FILE=$base/slcfg
 
 preproc
-$mystrace $mygdb $prog -D $base/var
+$mystrace $mygprof $mygdb $prog -D $base/var
 postproc $?
 
 sleep 10
