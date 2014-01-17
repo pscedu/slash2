@@ -517,7 +517,7 @@ slislvrthr_main(struct psc_thread *thr)
 
 		PFL_GETTIMESPEC(&expire);
 		expire.tv_sec += BCR_MIN_AGE;
-		psc_waitq_timedwait(&sli_slvr_waitq, NULL, &expire);
+		psc_waitq_waitabs(&sli_slvr_waitq, NULL, &expire);
 
 		psc_dynarray_reset(&ss);
 	}
