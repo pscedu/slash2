@@ -28,7 +28,6 @@ SRCS+=		rmm.c
 SRCS+=		rpc_mds.c
 SRCS+=		timer_mds.c
 SRCS+=		up_sched_res.c
-SRCS+=		worker.c
 SRCS+=		${SLASH_BASE}/share/authbuf_mgt.c
 SRCS+=		${SLASH_BASE}/share/authbuf_sign.c
 SRCS+=		${SLASH_BASE}/share/bmap.c
@@ -71,6 +70,7 @@ SRCS+=		${PFL_BASE}/timerthr.c
 SRCS+=		${PFL_BASE}/usklndthr.c
 SRCS+=		${PFL_BASE}/vbitmap.c
 SRCS+=		${PFL_BASE}/waitq.c
+SRCS+=		${PFL_BASE}/workthr.c
 
 SRCS+=		${SETRESUID_SRC}
 

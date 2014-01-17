@@ -29,14 +29,15 @@
 
 #include <time.h>
 
-#include "pfl/cdefs.h"
-#include "pfl/listcache.h"
-#include "pfl/rpc.h"
-#include "pfl/rsx.h"
 #include "pfl/atomic.h"
+#include "pfl/cdefs.h"
 #include "pfl/completion.h"
 #include "pfl/ctlsvr.h"
+#include "pfl/listcache.h"
 #include "pfl/log.h"
+#include "pfl/rpc.h"
+#include "pfl/rsx.h"
+#include "pfl/workthr.h"
 
 #include "bmap.h"
 #include "bmap_mds.h"
@@ -46,7 +47,6 @@
 #include "rpc_mds.h"
 #include "slashd.h"
 #include "slashrpc.h"
-#include "worker.h"
 
 struct pscrpc_nbreqset	slm_bmap_cbset=
     PSCRPC_NBREQSET_INIT(slm_bmap_cbset, NULL, mdscoh_cb);
