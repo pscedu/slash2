@@ -412,8 +412,8 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		}
 
 		new = 1;
+		BMAP_LOCK(b);
 		bii = bmap_2_bii(b);
-		BII_LOCK(bii);
 		PLL_FOREACH(p, &bii->bii_rls) {
 			if (!memcmp(p, sbd, sizeof(*p))) {
 				new = 0;
@@ -435,7 +435,6 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 			biod_rlssched_locked(bii);
 		}
 
-		BII_ULOCK(bii);
 		bmap_op_done(b);
 		fcmh_op_done(f);
 	}
