@@ -561,7 +561,6 @@ slvr_fsio(struct slvr *s, int sblk, uint32_t size, enum rw rw,
 			save_errno = errno;
 			OPSTAT_INCR(SLI_OPST_FSIO_READ_FAIL);
 		} else {
-
 			int crc_rc;
 
 			SLVR_LOCK(s);
@@ -606,7 +605,6 @@ slvr_fsio(struct slvr *s, int sblk, uint32_t size, enum rw rw,
 		    " rc=%zd nblks=%d v8(%"PRIx64")",
 		    (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
 		    size, off, rc, nblks, *v8);
-		rc = 0;
 	}
 
 	return (rc < 0 ? -save_errno : 0);
@@ -632,7 +630,8 @@ slvr_fsbytes_rio(struct slvr *s, struct sli_aiocb_reply **aiocbr)
 		s->slvr_err = rc;
 		s->slvr_flags |= SLVR_DATAERR;
 		s->slvr_flags &= ~SLVR_FAULTING;
-		DEBUG_SLVR(PLL_ERROR, s, "slvr_fsio() error, rc=%zd", rc);
+		DEBUG_SLVR(PLL_ERROR, s, "slvr_fsio() error, rc=%zd",
+		    rc);
 		SLVR_WAKEUP(s);
 		SLVR_ULOCK(s);
 	}
@@ -735,7 +734,7 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 	}
 
 	DEBUG_SLVR(s->slvr_flags & SLVR_DATAERR ?
-	    PLL_ERROR : PLL_INFO, s,
+	    PLL_ERROR : PLL_DIAG, s,
 	    "slvrno=%hu off=%u len=%u rw=%d",
 	    s->slvr_num, off, len, rw);
 
@@ -767,12 +766,13 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 
 
  do_read:
-
 	SLVR_ULOCK(s);
-	/* Execute read to fault in needed blocks after dropping
-	 *   the lock.  All should be protected by the FAULTING bit.
+	/*
+	 * Execute read to fault in needed blocks after dropping the
+	 * lock.  All should be protected by the FAULTING bit.
 	 */
-	if ((rc = slvr_fsbytes_rio(s, aiocbr)))
+	rc = slvr_fsbytes_rio(s, aiocbr);
+	if (rc)
 		return (rc);
 
 	if (rw == SL_READ) {
@@ -782,7 +782,7 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 		s->slvr_flags |= SLVR_DATARDY;
 		s->slvr_flags &= ~SLVR_FAULTING;
 
-		DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
+		DEBUG_SLVR(PLL_DIAG, s, "FAULTING -> DATARDY");
 		SLVR_WAKEUP(s);
 		SLVR_ULOCK(s);
 
@@ -795,7 +795,7 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 	if (!rc && s->slvr_flags & SLVR_FAULTING) {
 		s->slvr_flags |= SLVR_DATARDY;
 		s->slvr_flags &= ~SLVR_FAULTING;
-		DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
+		DEBUG_SLVR(PLL_DIAG, s, "FAULTING -> DATARDY");
 		SLVR_WAKEUP(s);
 	}
 	SLVR_ULOCK(s);
