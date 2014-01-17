@@ -73,7 +73,6 @@
 #include "slashd/slashd.h"
 #include "slashd/subsys_mds.h"
 #include "slashd/up_sched_res.h"
-#include "slashd/worker.h"
 #include "sliod/bmap_iod.h"
 #include "sliod/ctl_iod.h"
 #include "sliod/fidc_iod.h"
@@ -201,8 +200,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct msl_ra);
 	PRTYPE(struct msrci_thread);
 	PRTYPE(struct msrcm_thread);
-	PRTYPE(struct pfl_wk_thread);
-	PRTYPE(struct pfl_workrq);
 	PRTYPE(struct resm_cli_info);
 	PRTYPE(struct resm_iod_info);
 	PRTYPE(struct resm_mds_info);
@@ -776,6 +773,7 @@ main(int argc, char *argv[])
 	PRVAL(SLI_OPST_CRC_UPDATE_BACKLOG_CLEAR);
 	PRVAL(SLI_OPST_CRC_UPDATE_CB);
 	PRVAL(SLI_OPST_CRC_UPDATE_CB_FAILURE);
+	PRVAL(SLI_OPST_CRC_UPDATE_PUSH);
 	PRVAL(SLI_OPST_FSIO_READ);
 	PRVAL(SLI_OPST_FSIO_READ_CRC_BAD);
 	PRVAL(SLI_OPST_FSIO_READ_CRC_GOOD);
