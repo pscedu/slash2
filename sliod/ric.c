@@ -429,7 +429,6 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 			    b->bcm_bmapno, sbd->sbd_seq, sbd->sbd_key, newsbd);
 
 			pll_add(&bii->bii_rls, newsbd);
-			b->bcm_flags |= BMAP_IOD_RLSSEQ;
 		}
 
 		bmap_op_done(b);
