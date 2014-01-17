@@ -38,6 +38,7 @@
 #include "pfl/log.h"
 #include "pfl/rpc.h"
 #include "pfl/rsx.h"
+#include "pfl/workthr.h"
 
 #include "bmap.h"
 #include "bmap_mds.h"
@@ -54,7 +55,6 @@
 #include "slashrpc.h"
 #include "slerr.h"
 #include "subsys_mds.h"
-#include "worker.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
 

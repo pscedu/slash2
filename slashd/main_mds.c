@@ -33,16 +33,17 @@
 
 #include <gcrypt.h>
 
-#include "pfl/fs.h"
-#include "pfl/pfl.h"
-#include "pfl/str.h"
 #include "pfl/alloc.h"
 #include "pfl/ctlsvr.h"
+#include "pfl/fs.h"
 #include "pfl/log.h"
 #include "pfl/odtable.h"
+#include "pfl/pfl.h"
 #include "pfl/random.h"
+#include "pfl/str.h"
 #include "pfl/thread.h"
 #include "pfl/usklndthr.h"
+#include "pfl/workthr.h"
 
 #include "authbuf.h"
 #include "bmap_mds.h"
@@ -60,7 +61,6 @@
 #include "slsubsys.h"
 #include "subsys_mds.h"
 #include "up_sched_res.h"
-#include "worker.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
 
