@@ -117,7 +117,6 @@ struct bmap_iod_info {
 #define	BMAP_IOD_INFLIGHT	(_BMAP_FLSHFT << 0)
 #define	BMAP_IOD_RLSSEQ		(_BMAP_FLSHFT << 1)
 #define	BMAP_IOD_BCRSCHED	(_BMAP_FLSHFT << 2)
-#define	BMAP_IOD_RLSSCHED	(_BMAP_FLSHFT << 3)
 
 #define bii_2_flags(b)		bii_2_bmap(b)->bcm_flags
 

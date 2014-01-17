@@ -533,7 +533,6 @@ dump_bmap_flags(uint32_t flags)
 	PFL_PRFLAG(BMAP_IOD_INFLIGHT, &flags, &seq);
 	PFL_PRFLAG(BMAP_IOD_RLSSEQ, &flags, &seq);
 	PFL_PRFLAG(BMAP_IOD_BCRSCHED, &flags, &seq);
-	PFL_PRFLAG(BMAP_IOD_RLSSCHED, &flags, &seq);
 	if (flags)
 		printf(" unknown: %#x", flags);
 	printf("\n");
