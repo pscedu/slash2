@@ -386,17 +386,14 @@ slibmaprlsthr_main(struct psc_thread *thr)
 				if (nrls >= MAX_BMAP_RELEASE)
 					break;
 			}
-			/*
-			 * The last entry (or entries) did not fit, so
-			 * reschedule.
-			 */
 			if (!pll_nitems(&bii->bii_rls)) {
 				lc_remove(&bmapRlsQ, bii);
 				psc_dynarray_add(&a, b);
-				break;
 			} else
 				BMAP_ULOCK(b);
 
+			if (nrls >= MAX_BMAP_RELEASE)
+				break;
 		}
 		LIST_CACHE_ULOCK(&bmapRlsQ);
 
