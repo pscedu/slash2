@@ -39,18 +39,19 @@
 #include <sqlite3.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/ctlsvr.h"
 #include "pfl/dynarray.h"
 #include "pfl/fs.h"
 #include "pfl/list.h"
-#include "pfl/rpclog.h"
-#include "pfl/rsx.h"
-#include "pfl/treeutil.h"
-#include "pfl/ctlsvr.h"
 #include "pfl/mlist.h"
 #include "pfl/multiwait.h"
 #include "pfl/pthrutil.h"
 #include "pfl/random.h"
+#include "pfl/rpclog.h"
+#include "pfl/rsx.h"
 #include "pfl/thread.h"
+#include "pfl/treeutil.h"
+#include "pfl/workthr.h"
 
 #include "bmap_mds.h"
 #include "mdsio.h"
@@ -63,7 +64,6 @@
 #include "slerr.h"
 #include "slutil.h"
 #include "up_sched_res.h"
-#include "worker.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
 

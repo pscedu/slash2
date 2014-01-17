@@ -34,6 +34,7 @@
 #include "pfl/rsx.h"
 #include "pfl/tree.h"
 #include "pfl/treeutil.h"
+#include "pfl/workthr.h"
 
 #include "bmap.h"
 #include "bmap_mds.h"
@@ -53,7 +54,6 @@
 #include "slashrpc.h"
 #include "slerr.h"
 #include "up_sched_res.h"
-#include "worker.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
 
