@@ -227,34 +227,6 @@ bcr_xid_check(struct bcrcupd *bcr)
 	BII_URLOCK(bcr->bcr_bii, locked);
 }
 
-void
-biod_rlssched_locked(struct bmap_iod_info *bii)
-{
-	BII_LOCK_ENSURE(bii);
-
-	DEBUG_BMAP(PLL_INFO, bii_2_bmap(bii), "crcdirty_slvrs=%d "
-	    "BMAP_IOD_RLSSEQ=(%d) bcr_xid=%"PRId64" bcr_xid_last=%"
-	    PRId64, psc_atomic32_read(&bii->bii_crcdirty_slvrs),
-	    !!(bii_2_flags(bii) & BMAP_IOD_RLSSEQ), bii->bii_bcr_xid,
-	    bii->bii_bcr_xid_last);
-
-	if (bii_2_bmap(bii)->bcm_flags & BMAP_IOD_RLSSCHED)
-		/*
-		 * Don't test for list membership, the bmaprlsthr may
-		 * have already removed the bii in preparation for
-		 * release.
-		 */
-		psc_assert(bii_2_bmap(bii)->bcm_flags & BMAP_IOD_RLSSEQ);
-
-	else {
-		if (!psc_atomic32_read(&bii->bii_crcdirty_slvrs) &&
-		    (bii_2_bmap(bii)->bcm_flags & BMAP_IOD_RLSSEQ) &&
-		    (bii->bii_bcr_xid == bii->bii_bcr_xid_last)) {
-			bii_2_bmap(bii)->bcm_flags |= BMAP_IOD_RLSSCHED;
-		}
-	}
-}
-
 /**
  * bcr_ready_remove - We are done with this batch of CRC updates.   Drop
  *	its reference to the bmap and free the CRC update structure.
@@ -281,7 +253,6 @@ bcr_ready_remove(struct bcrcupd *bcr)
 		    "descheduling drtyslvrs=%u",
 		    psc_atomic32_read(&bii->bii_crcdirty_slvrs));
 
-		biod_rlssched_locked(bii);
 	}
 	BII_ULOCK(bcr->bcr_bii);
 
