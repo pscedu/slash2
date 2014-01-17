@@ -1725,8 +1725,8 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 		return (rc);
 
 	bml = mds_bml_new(b, exp,
-	    ((rw == SL_WRITE ? BML_WRITE : BML_READ) |
-	     (flags & SRM_LEASEBMAPF_DIO ? BML_DIO : 0)),
+	    (rw == SL_WRITE ? BML_WRITE : BML_READ) |
+	     (flags & SRM_LEASEBMAPF_DIO ? BML_DIO : 0),
 	    &exp->exp_connection->c_peer);
 
 	rc = mds_bmap_bml_add(bml, rw, prefios);
