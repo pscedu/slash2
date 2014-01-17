@@ -27,21 +27,21 @@
 
 #include <sqlite3.h>
 
-#include "pfl/dynarray.h"
-#include "pfl/rpc.h"
-#include "pfl/service.h"
-#include "pfl/vbitmap.h"
 #include "pfl/ctlsvr.h"
+#include "pfl/dynarray.h"
 #include "pfl/meter.h"
 #include "pfl/multiwait.h"
 #include "pfl/odtable.h"
+#include "pfl/rpc.h"
+#include "pfl/service.h"
+#include "pfl/vbitmap.h"
+#include "pfl/workthr.h"
 
 #include "inode.h"
 #include "namespace.h"
 #include "slashrpc.h"
 #include "slconfig.h"
 #include "sltypes.h"
-#include "worker.h"
 
 struct odtable;
 

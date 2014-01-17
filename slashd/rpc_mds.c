@@ -32,13 +32,13 @@
 #include "pfl/service.h"
 #include "pfl/str.h"
 #include "pfl/tree.h"
+#include "pfl/workthr.h"
 
 #include "bmap_mds.h"
 #include "repl_mds.h"
 #include "rpc_mds.h"
 #include "slashd.h"
 #include "slashrpc.h"
-#include "worker.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
 
