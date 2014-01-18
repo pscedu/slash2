@@ -793,7 +793,7 @@ slm_rcm_try_readdir_ra(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 {
 #define READDIR_RA_PAST_TIMEO 3
 	struct timespec now, expire = { READDIR_RA_PAST_TIMEO, 0 };
-	struct slm_readdir_ra_past *inact, *act = NULL, *cv;
+	struct slm_readdir_ra_past *inact = NULL, *act = NULL, *cv;
 	struct slm_wkdata_readdir *wk;
 	struct slm_exp_cli *mexpc;
 	int i;
@@ -868,10 +868,9 @@ slm_rcmc_readdir_cb(struct pscrpc_request *rq,
 	int i, rc;
 
 	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_readdir_ra_rep, rc);
-	if (rc == 0) {
-		mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
+	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
+	if (rc == 0)
 		slrpc_rep_in(csvc, rq);
-	}
 
 	if (decr) {
 		EXPORT_LOCK(exp);
@@ -967,8 +966,8 @@ slm_readdir_issue(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 		iov[1].iov_base = NULL;
 		pfl_workq_putitem(wk);
 
-		slm_rcm_try_readdir_ra(exp, fgp, *eof, nextoff,
-		    size);
+//		slm_rcm_try_readdir_ra(exp, fgp, *eof, nextoff,
+//		    size);
 	}
 
  out:
