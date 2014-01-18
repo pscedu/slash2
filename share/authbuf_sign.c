@@ -103,7 +103,7 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 	gcry_md_close(hd);
 
 	bd = rq->rq_bulk;
-	if (bd)
+	if (bd && bd->bd_type == BULK_GET_SOURCE)
 		slrpc_bulk_sign(rq, saf->saf_bulkhash, bd->bd_iov,
 		    bd->bd_iov_count);
 }
