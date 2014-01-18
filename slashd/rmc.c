@@ -837,7 +837,6 @@ slm_rcm_try_readdir_ra(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 	act->crap_fid = fgp->fg_fid;
 	act->crap_off = off;
 	timespecadd(&now, &expire, &act->crap_exp);
-	PFL_GETTIMESPEC(&act->crap_exp);
 	CRAP_SET_ACTIVE(act);
 	EXPORT_ULOCK(exp);
 
