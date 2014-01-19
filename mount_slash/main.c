@@ -1373,7 +1373,7 @@ msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
 	struct dircache_page *p;
 	int rc;
 
-	p = dircache_new_page(d, off);
+	p = dircache_new_page(d, off, 0);
 
 	fcmh_op_start_type(d, FCMH_OPCNT_READDIR);
 
