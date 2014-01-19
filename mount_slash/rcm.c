@@ -319,7 +319,7 @@ slc_rcm_handle_readdir(struct pscrpc_request *rq)
 		mp->rc = slrpc_bulkserver(rq, BULK_GET_SINK,
 		    SRCM_BULK_PORTAL, iov, nitems(iov));
 
-	p = dircache_new_page(d, mq->offset);
+	p = dircache_new_page(d, mq->offset, 1);
 
 	if (mp->rc) {
 		msl_readdir_error(d, p, mp->rc);

@@ -177,7 +177,7 @@ dce_sort_cmp_off(const void *x, const void *y)
 #define dircache_free_page(d, p)	_dircache_free_page(PFL_CALLERINFO(), (d), (p))
 
 struct dircache_page *
-	dircache_new_page(struct fidc_membh *, off_t);
+	dircache_new_page(struct fidc_membh *, off_t, int);
 int	dircache_hasoff(struct dircache_page *, off_t);
 void	_dircache_free_page(const struct pfl_callerinfo *,
 	    struct fidc_membh *, struct dircache_page *);

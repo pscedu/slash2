@@ -81,6 +81,7 @@ _dircache_free_page(const struct pfl_callerinfo *pci,
 
 	if (p->dcp_flags & DIRCACHEPGF_FREEING)
 		return;
+
 	p->dcp_flags |= DIRCACHEPGF_FREEING;
 
 	while (p->dcp_refcnt)
@@ -100,7 +101,7 @@ _dircache_free_page(const struct pfl_callerinfo *pci,
 	PSCFREE(p->dcp_dents_off);
 	PSCFREE(p->dcp_base);
 	PSCFREE(p->dcp_base0);
-	DBGPR_DIRCACHEPG(PLL_DEBUG, p, "free");
+	DBGPR_DIRCACHEPG(PLL_ERROR, p, "free dir=%p fid=%lx", d);
 	psc_pool_return(dircache_pool, p);
 
 	fcmh_wake_locked(d);
@@ -278,7 +279,7 @@ dircache_hasoff(struct dircache_page *p, off_t off)
  * @off: offset into directory for this slew of dirents.
  */
 struct dircache_page *
-dircache_new_page(struct fidc_membh *d, off_t off)
+dircache_new_page(struct fidc_membh *d, off_t off, int loading)
 {
 	struct dircache_page *p, *np, *newp;
 	struct dircache_expire dexp;
@@ -304,8 +305,10 @@ dircache_new_page(struct fidc_membh *d, off_t off)
 				break;
 			}
 
-			fcmh_wait_nocond_locked(d);
-			goto restart;
+			if (!loading) {
+				fcmh_wait_nocond_locked(d);
+				goto restart;
+			}
 		} else if (dircache_hasoff(p, off)) {
 			/* Stale page in cache -- purge and refresh. */
 			dircache_free_page(d, p);
@@ -381,6 +384,8 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		dce->dce_off = dirent->pfd_off;
 		dce->dce_hash = psc_strn_hashify(dirent->pfd_name,
 		    dirent->pfd_namelen);
+
+		/* XXX ensure this off doesnt show up in another page? */
 
 		psc_dynarray_add(da_name, dce);
 		psc_dynarray_add(da_off, dce);
