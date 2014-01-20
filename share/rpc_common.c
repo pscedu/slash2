@@ -539,12 +539,13 @@ sl_csvc_create(uint32_t rqptl, uint32_t rpptl)
 	csvc->csvc_rqptl = rqptl;
 	csvc->csvc_rpptl = rpptl;
 
-	if ((imp = pscrpc_new_import()) == NULL)
+	imp = pscrpc_new_import();
+	if (imp == NULL)
 		psc_fatalx("pscrpc_new_import");
 	csvc->csvc_import = imp;
 
-	imp->imp_client->cli_request_portal = rqptl;
-	imp->imp_client->cli_reply_portal = rpptl;
+	imp->imp_cli_request_portal = rqptl;
+	imp->imp_cli_reply_portal = rpptl;
 	imp->imp_max_retries = 2;
 //	imp->imp_igntimeout = 1;	/* XXX only if archiver */
 	imp->imp_igntimeout = 0;
