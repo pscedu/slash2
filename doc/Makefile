@@ -3,23 +3,23 @@
 ROOTDIR=../..
 include ${ROOTDIR}/Makefile.path
 
-DOC+= attribute-handling.txt
-DOC+= auth.txt
-DOC+= bmap.xdc
-DOC+= clientio.xdc
-DOC+= config-example.xdc
-DOC+= config.xdc
-DOC+= crc.xdc
-DOC+= failure.xdc
-DOC+= garbage-collection.txt
-DOC+= iod.xdc
-DOC+= lease.xdc
-DOC+= lustre-networks.txt
-DOC+= mds-bmap-mgt.xdc
-DOC+= run.xdc
-DOC+= slccd.txt
-DOC+= stat_blocks.txt
-DOC+= truncate.txt
-DOC+= upsch.txt
+DOC+=	attr.xdc
+DOC+=	auth.xdc
+DOC+=	bmap.xdc
+DOC+=	build.xdc
+DOC+=	clientio.xdc
+DOC+=	config.xdc
+DOC+=	failure.xdc
+DOC+=	garbage.xdc
+DOC+=	iod.xdc
+DOC+=	ios-types.xdc
+DOC+=	lease.xdc
+DOC+=	mds-fs-recovery.xdc
+DOC+=	net.xdc
+DOC+=	run.xdc
+DOC+=	slccd.xdc
+DOC+=	st_blocks.xdc
+DOC+=	truncate.xdc
+DOC+=	upsch.xdc
 
 include ${SLASHMK}
