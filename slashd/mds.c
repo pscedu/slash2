@@ -291,10 +291,11 @@ slm_try_sliodresm(struct sl_resm *resm)
 		return (0);
 	}
 
-	csvc = slm_geticsvc_nb(resm, NULL);
+	csvc = slm_geticsvc(resm, NULL, CSVCF_NONBLOCK | CSVCF_NORECON,
+	    NULL);
 	if (!csvc) {
 		/* This sliod hasn't established a connection to us. */
-		psclog_info("res=%s skipped due to NULL csvc",
+		psclog_diag("res=%s skipped due to NULL csvc",
 		    resm->resm_res->res_name);
 		return (0);
 	}
