@@ -101,7 +101,7 @@ _dircache_free_page(const struct pfl_callerinfo *pci,
 	PSCFREE(p->dcp_dents_off);
 	PSCFREE(p->dcp_base);
 	PSCFREE(p->dcp_base0);
-	DBGPR_DIRCACHEPG(PLL_ERROR, p, "free dir=%p fid=%lx", d);
+	DBGPR_DIRCACHEPG(PLL_DEBUG, p, "free dir=%p fid=%lx", d);
 	psc_pool_return(dircache_pool, p);
 
 	fcmh_wake_locked(d);
