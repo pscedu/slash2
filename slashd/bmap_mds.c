@@ -173,13 +173,12 @@ int
 mds_bmap_read(struct bmap *b, __unusedx enum rw rw, int flags)
 {
 	int rc, vfsid, retifset[NBREPLST];
-	uint64_t crc, od_crc = 0;
+	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct slm_update_data *upd;
 	struct fidc_membh *f;
 	struct iovec iovs[2];
+	uint64_t crc, od_crc = 0;
 	size_t nb;
-
-	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 
 	upd = bmap_2_upd(b);
 	upd_init(upd, UPDT_BMAP);
@@ -209,27 +208,27 @@ mds_bmap_read(struct bmap *b, __unusedx enum rw rw, int flags)
 	if (rc == 0 && nb == 0 && (flags & BMAPGETF_NOAUTOINST))
 		return (SLERR_BMAP_INVALID);
 
+	if (rc)
+		goto error;
+
 	/*
 	 * Check for a NULL CRC if we had a good read.  NULL CRC can
 	 * happen when bmaps are gaps that have not been written yet.
 	 * Note that a short read is tolerated as long as the bmap is
 	 * zeroed.
 	 */
-	if (rc == 0) {
-		if (nb == 0 || (nb == BMAP_OD_SZ && od_crc == 0 &&
-		    pfl_memchk(bmi_2_ondisk(bmi), 0, BMAP_OD_CRCSZ))) {
-			mds_bmap_initnew(b);
-			DEBUG_BMAPOD(PLL_ERROR, b,
-			    "initialized new bmap unexpectedly, nb=%d", nb);
-			return (0);
-		}
+	if (nb == 0 || (nb == BMAP_OD_SZ && od_crc == 0 &&
+	    pfl_memchk(bmi_2_ondisk(bmi), 0, BMAP_OD_CRCSZ))) {
+		mds_bmap_initnew(b);
+		DEBUG_BMAPOD(PLL_DIAG, b, "initialized new bmap, nb=%d",
+		    nb);
+		return (0);
+	}
 
-		if (nb == BMAP_OD_SZ) {
-			psc_crc64_calc(&crc, bmi_2_ondisk(bmi),
-			    BMAP_OD_CRCSZ);
-			if (od_crc != crc)
-				rc = SLERR_BADCRC;
-		}
+	if (nb == BMAP_OD_SZ) {
+		psc_crc64_calc(&crc, bmi_2_ondisk(bmi), BMAP_OD_CRCSZ);
+		if (od_crc != crc)
+			rc = SLERR_BADCRC;
 	}
 
 	/*
@@ -237,6 +236,7 @@ mds_bmap_read(struct bmap *b, __unusedx enum rw rw, int flags)
 	 * zeros.
 	 */
 	if (rc) {
+ error:
 		DEBUG_BMAP(PLL_ERROR, b, "mdsio_read: rc=%d", rc);
 		return (rc);
 	}
