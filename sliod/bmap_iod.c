@@ -208,7 +208,6 @@ void
 bcr_ready_add(struct bcrcupd *bcr)
 {
 	BII_LOCK_ENSURE(bcr->bcr_bii);
-	psc_assert((bcr_2_bmap(bcr)->bcm_flags & BMAP_IOD_INFLIGHT) == 0);
 	lc_addtail(&bcr_ready, bcr);
 }
 
@@ -219,10 +218,6 @@ bcr_xid_check(struct bcrcupd *bcr)
 
 	locked = BII_RLOCK(bcr->bcr_bii);
 	psc_assert(bcr->bcr_xid < bcr->bcr_bii->bii_bcr_xid);
-	psc_assert(bcr->bcr_xid == bcr->bcr_bii->bii_bcr_xid_last);
-	/* bcr_xid_check() must be called prior to bumping xid_last. */
-	psc_assert(bcr->bcr_bii->bii_bcr_xid >
-		   bcr->bcr_bii->bii_bcr_xid_last);
 
 	BII_URLOCK(bcr->bcr_bii, locked);
 }
@@ -243,17 +238,6 @@ bcr_ready_remove(struct bcrcupd *bcr)
 	bcr_xid_check(bcr);
 	bcr->bcr_bii->bii_bcr_xid_last++;
 
-	if (bii->bii_bcr_xid == bii->bii_bcr_xid_last) {
-		/* This was the last bcr. */
-		psc_assert(pll_empty(&bii->bii_bklog_bcrs));
-		psc_assert(!bii->bii_bcr);
-		bii_2_bmap(bii)->bcm_flags &= ~BMAP_IOD_BCRSCHED;
-
-		DEBUG_BMAP(PLL_INFO, bii_2_bmap(bii),
-		    "descheduling drtyslvrs=%u",
-		    psc_atomic32_read(&bii->bii_crcdirty_slvrs));
-
-	}
 	BII_ULOCK(bcr->bcr_bii);
 
 	bmap_op_done_type(bcr_2_bmap(bcr), BMAP_OPCNT_BCRSCHED);
@@ -275,43 +259,6 @@ bcr_finalize(struct bcrcupd *bcr)
 	psc_assert(b->bcm_flags & BMAP_IOD_INFLIGHT);
 	b->bcm_flags &= ~BMAP_IOD_INFLIGHT;
 
-	/*
-	 * bii->bii_bcr_xid_last is bumped in bcr_ready_remove().
-	 * bcr_ready_remove() may release the bmap so it must be issued
-	 * at the end of this call.
-	 */
-
-	tmp = pll_gethead(&bii->bii_bklog_bcrs);
-	if (tmp) {
-		DEBUG_BCR(PLL_INFO, tmp,
-		    "backlogged bcr, n_bklog=%d",
-		    pll_nitems(&bii->bii_bklog_bcrs));
-
-		if (pll_empty(&bii->bii_bklog_bcrs)) {
-			/*
-			 * I am the only one on the backlog list
-			 * of the bmap.  A NULL bii_bcr is OK
-			 * as long as the bcr has been filled.
-			 */
-			psc_assert(bii->bii_bcr == tmp ||
-				   !bii->bii_bcr);
-			if (tmp->bcr_crcup.nups ==
-			    MAX_BMAP_INODE_PAIRS) {
-				bii->bii_bcr = NULL;
-				bcr_ready_add(tmp);
-			} else
-				bcr_hold_add(tmp);
-
-		} else {
-			/*
-			 * Only the tail of the bklog may be the
-			 * active bcr.
-			 */
-			psc_assert(bii->bii_bcr != tmp);
-			bcr_ready_add(tmp);
-		}
-		OPSTAT_INCR(SLI_OPST_CRC_UPDATE_BACKLOG_CLEAR);
-	}
 	bcr_ready_remove(bcr);
 	LIST_CACHE_ULOCK(&bcr_ready);
 }

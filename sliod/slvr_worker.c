@@ -141,13 +141,14 @@ __static void
 slvr_worker_push_crcups(void)
 {
 	static atomic_t busy = ATOMIC_INIT(0);
-	struct bcrcupd *bcr, *tmp;
+	struct bcrcupd *bcr;
 	struct psc_dynarray *bcrs;
 	struct timespec now, diff;
-	int i, rc;
+	int i, rc, didwork = 0;
 
 	if (atomic_xchg(&busy, 1))
 		return;
+ again:
 
 	OPSTAT_INCR(SLI_OPST_CRC_UPDATE_PUSH);
 
@@ -158,32 +159,31 @@ slvr_worker_push_crcups(void)
 	 * one is still inflight, we won't be able to initiate a new one.
 	 */
 	bcrs = PSCALLOC(sizeof(struct psc_dynarray));
-
 	/*
 	 * Leave scheduled bcr's on the list so that in case of a
 	 * failure, ordering will be maintained.
 	 */
 	LIST_CACHE_LOCK(&bcr_ready);
+	PFL_GETTIMESPEC(&now);
 	LIST_CACHE_FOREACH(bcr, &bcr_ready) {
 		psc_assert(bcr->bcr_crcup.nups > 0);
 
 		if (!BII_TRYLOCK(bcr->bcr_bii))
 			continue;
 
-		if (bcr->bcr_flags & BCR_SCHEDULED) {
+		if (bcr_2_bmap(bcr)->bcm_flags & BMAP_IOD_INFLIGHT) {
 			BII_ULOCK(bcr->bcr_bii);
 			continue;
 		}
 
-		if (bcr_2_bmap(bcr)->bcm_flags & BMAP_IOD_INFLIGHT)
-			DEBUG_BCR(PLL_FATAL, bcr, "tried to schedule "
-			    "multiple bcr's xid=%"PRIu64,
-			    bcr->bcr_bii->bii_bcr_xid_last);
-
-		bcr_2_bmap(bcr)->bcm_flags |= BMAP_IOD_INFLIGHT;
-
-		psc_dynarray_add(bcrs, bcr);
-		bcr->bcr_flags |= BCR_SCHEDULED;
+		timespecsub(&now, &bcr->bcr_age, &diff);
+		if ((bcr->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS) ||
+		    (diff.tv_sec >= BCR_MAX_AGE)) {
+			psc_dynarray_add(bcrs, bcr);
+			bcr->bcr_bii->bii_bcr = NULL;
+			bcr->bcr_flags |= BCR_SCHEDULED;
+			bcr_2_bmap(bcr)->bcm_flags |= BMAP_IOD_INFLIGHT;
+		}
 
 		BII_ULOCK(bcr->bcr_bii);
 
@@ -196,29 +196,8 @@ slvr_worker_push_crcups(void)
 	}
 	LIST_CACHE_ULOCK(&bcr_ready);
 
-	/* Now scan for old bcr's hanging about. */
-	LIST_CACHE_LOCK(&bcr_hold);
-	PFL_GETTIMESPEC(&now);
-	LIST_CACHE_FOREACH_SAFE(bcr, tmp, &bcr_hold) {
-		/* Use trylock here to avoid deadlock. */
-		if (!BII_TRYLOCK(bcr->bcr_bii))
-			continue;
-
-		timespecsub(&now, &bcr->bcr_age, &diff);
-		if (diff.tv_sec < BCR_MAX_AGE) {
-			BII_ULOCK(bcr->bcr_bii);
-			continue;
-		}
-
-		bcr_hold_2_ready(bcr);
-		DEBUG_BCR(PLL_INFO, bcr, "old, moved to ready");
-		BII_ULOCK(bcr->bcr_bii);
-	}
-	LIST_CACHE_ULOCK(&bcr_hold);
-
-	if (!psc_dynarray_len(bcrs))
-		PSCFREE(bcrs);
-	else {
+	if (psc_dynarray_len(bcrs)) {
+		didwork = 1;
 		rc = slvr_worker_crcup_genrq(bcrs);
 		/*
 		 * If we fail to send an RPC, we must leave the
@@ -244,6 +223,12 @@ slvr_worker_push_crcups(void)
 		}
 	}
 
+	if (didwork) {
+		didwork = 0;
+		goto again;
+	}
+
+	PSCFREE(bcrs);
 	atomic_set(&busy, 0);
 }
 
@@ -423,17 +408,9 @@ slislvrthr_proc(struct slvr *s)
 		DEBUG_BCR(PLL_DIAG, bcr, "add to existing bcr slot=%d "
 		    "nups=%d", i, bcr->bcr_crcup.nups);
 
-		if (bcr->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS) {
-			if (pll_nitems(&bii->bii_bklog_bcrs))
-				/*
-				 * This is a backlogged bcr, cap it and
-				 * leave it on the backlog list only.
-				 */
-				bcr->bcr_bii->bii_bcr = NULL;
-			else
-				/* The bcr is full; push it out now. */
-				bcr_hold_2_ready(bcr);
-		}
+		if (bcr->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS)
+			bcr->bcr_bii->bii_bcr = NULL;
+
 	} else {
 		bmap_op_start_type(b, BMAP_OPCNT_BCRSCHED);
 
@@ -457,17 +434,9 @@ slislvrthr_proc(struct slvr *s)
 		    pll_nitems(&bii->bii_bklog_bcrs),
 		    !!(b->bcm_flags & BMAP_IOD_BCRSCHED));
 
-		if (b->bcm_flags & BMAP_IOD_BCRSCHED) {
-			/*
-			 * The bklog may be empty but a pending bcr may
-			 * be present on the ready list.
-			 */
-			OPSTAT_INCR(SLI_OPST_CRC_UPDATE_BACKLOG);
-			pll_addtail(&bii->bii_bklog_bcrs, bcr);
-		} else {
-			b->bcm_flags |= BMAP_IOD_BCRSCHED;
-			bcr_hold_add(bcr);
-		}
+		b->bcm_flags |= BMAP_IOD_BCRSCHED;
+
+		bcr_ready_add(bcr);
 		PFL_GETTIMESPEC(&bcr->bcr_age);
 	}
 
