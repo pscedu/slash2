@@ -203,8 +203,6 @@ bcr_ready_remove(struct bcrcupd *bcr)
 
 	psc_assert(bcr->bcr_flags & BCR_SCHEDULED);
 
-	bcr->bcr_bii->bii_bcr_xid_last++;
-
 	BII_ULOCK(bcr->bcr_bii);
 
 	bmap_op_done_type(bcr_2_bmap(bcr), BMAP_OPCNT_BCRSCHED);
