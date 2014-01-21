@@ -343,8 +343,6 @@ iod_bmap_init(struct bmapc_memb *b)
 	memset(bii, 0, sizeof(*bii));
 	INIT_PSC_LISTENTRY(&bii->bii_lentry);
 	SPLAY_INIT(&bii->bii_slvrs);
-	pll_init(&bii->bii_bklog_bcrs, struct bcrcupd, bcr_lentry,
-	    NULL);
 
 	pll_init(&bii->bii_rls, struct bmap_iod_rls, bir_lentry, NULL);
 

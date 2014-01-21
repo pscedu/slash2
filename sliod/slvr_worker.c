@@ -422,8 +422,7 @@ slislvrthr_proc(struct slvr *s)
 		bcr->bcr_crcup.nups = 1;
 
 		DEBUG_BCR(PLL_DIAG, bcr,
-		    "newly added (bcr_bklog=%d) (sched=%d)",
-		    pll_nitems(&bii->bii_bklog_bcrs),
+		    "newly added (sched=%d)",
 		    !!(b->bcm_flags & BMAP_IOD_BCRSCHED));
 
 		b->bcm_flags |= BMAP_IOD_BCRSCHED;

@@ -104,7 +104,6 @@ struct bmap_iod_info {
 	struct bcrcupd		*bii_bcr;		/* current bcr in use */
 	struct biod_slvrtree	 bii_slvrs;
 	struct psclist_head	 bii_lentry;
-	struct psc_lockedlist	 bii_bklog_bcrs;	/* at most one CRC update RPC per bmap */
 	struct psc_lockedlist	 bii_rls;
 	uint64_t		 bii_bcr_xid;
 	psc_atomic32_t		 bii_crcdirty_slvrs;
