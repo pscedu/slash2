@@ -107,8 +107,6 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 		DEBUG_BCR(PLL_DIAG, bcr, "bcrs pos=%d fsz=%"PRId64, i,
 		    bcr->bcr_crcup.fsize);
 
-		bcr_xid_check(bcr);
-
 		mq->ncrcs_per_update[i] = bcr->bcr_crcup.nups;
 
 		iovs[i].iov_base = &bcr->bcr_crcup;
@@ -271,7 +269,6 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 			BII_LOCK(bii);
 			bcr->bcr_flags &= ~BCR_SCHEDULED;
 			bii_2_bmap(bii)->bcm_flags &= ~BMAP_IOD_INFLIGHT;
-			bcr_xid_check(bcr);
 			BII_ULOCK(bii);
 
 			DEBUG_BCR(PLL_ERROR, bcr, "rescheduling");

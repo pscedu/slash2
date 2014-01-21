@@ -192,17 +192,6 @@ bcr_ready_add(struct bcrcupd *bcr)
 	lc_addtail(&bcr_ready, bcr);
 }
 
-void
-bcr_xid_check(struct bcrcupd *bcr)
-{
-	int locked;
-
-	locked = BII_RLOCK(bcr->bcr_bii);
-	psc_assert(bcr->bcr_xid < bcr->bcr_bii->bii_bcr_xid);
-
-	BII_URLOCK(bcr->bcr_bii, locked);
-}
-
 /**
  * bcr_ready_remove - We are done with this batch of CRC updates.   Drop
  *	its reference to the bmap and free the CRC update structure.
@@ -214,7 +203,6 @@ bcr_ready_remove(struct bcrcupd *bcr)
 
 	psc_assert(bcr->bcr_flags & BCR_SCHEDULED);
 
-	bcr_xid_check(bcr);
 	bcr->bcr_bii->bii_bcr_xid_last++;
 
 	BII_ULOCK(bcr->bcr_bii);
