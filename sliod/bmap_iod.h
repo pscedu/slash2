@@ -41,7 +41,6 @@ struct bmap_iod_info;
 struct slvr;
 
 struct bcrcupd {
-	uint64_t		 bcr_xid;
 	uint16_t		 bcr_flags;
 	struct timespec		 bcr_age;
 	struct bmap_iod_info	*bcr_bii;
@@ -75,17 +74,17 @@ struct bmap_iod_rls {
 /* time to wait for more bmap releases from the client */
 #define SLIOD_BMAP_RLS_WAIT_SECS 1	/* seconds */
 
-#define DEBUG_BCR(level, bcr, fmt, ...)					\
-	psclogs((level), SLSS_BMAP,					\
-	    "bcr@%p fid="SLPRI_FG" xid=%"PRIu64" nups=%d fl=%d "	\
-	    "age=%"PSCPRI_TIMET" "					\
-	    "bmap@%p:%u bcr_xid=%"PRId64" "				\
-	    " :: " fmt,							\
-	    (bcr), SLPRI_FG_ARGS(&(bcr)->bcr_crcup.fg), (bcr)->bcr_xid,	\
-	    (bcr)->bcr_crcup.nups, (bcr)->bcr_flags,			\
-	    (bcr)->bcr_age.tv_sec,					\
-	    bcr_2_bmap(bcr), bcr_2_bmap(bcr)->bcm_bmapno,		\
-	    (bcr)->bcr_bii->bii_bcr_xid, ## __VA_ARGS__)
+#define DEBUG_BCR(level, bcr, fmt, ...)				\
+	psclogs((level), SLSS_BMAP,				\
+	    "bcr@%p fid="SLPRI_FG" nups=%d fl=%d "		\
+	    "age=%"PSCPRI_TIMET" "				\
+	    "bmap@%p:%u"					\
+	    " :: " fmt,						\
+	    (bcr), SLPRI_FG_ARGS(&(bcr)->bcr_crcup.fg),		\
+	    (bcr)->bcr_crcup.nups, (bcr)->bcr_flags,		\
+	    (bcr)->bcr_age.tv_sec,				\
+	    bcr_2_bmap(bcr), bcr_2_bmap(bcr)->bcm_bmapno,	\
+	    ## __VA_ARGS__)
 
 SPLAY_HEAD(biod_slvrtree, slvr);
 

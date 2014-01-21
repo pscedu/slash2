@@ -416,14 +416,11 @@ slislvrthr_proc(struct slvr *s)
 		COPYFG(&bcr->bcr_crcup.fg, &b->bcm_fcmh->fcmh_fg);
 
 		bcr->bcr_bii = bii;
-		bcr->bcr_xid = bii->bii_bcr_xid++;
 		bcr->bcr_crcup.blkno = b->bcm_bmapno;
 		bcr->bcr_crcup.crcs[0].crc = crc;
 		bcr->bcr_crcup.crcs[0].slot = slvr_num;
 		bcr->bcr_crcup.nups = 1;
 
-		psclog_info("new bcr@%p xid=%"PRIu64" bii@%p xid=%"PRIu64" bmap=%p",
-		    bcr, bcr->bcr_xid, bii, bii->bii_bcr_xid, b);
 		DEBUG_BCR(PLL_DIAG, bcr,
 		    "newly added (bcr_bklog=%d) (sched=%d)",
 		    pll_nitems(&bii->bii_bklog_bcrs),
