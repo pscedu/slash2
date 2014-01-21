@@ -52,7 +52,6 @@ struct psc_poolmaster		 bmap_crcupd_poolmaster;
 struct psc_poolmgr		*bmap_crcupd_pool;
 
 struct psc_listcache		 bcr_ready;
-struct psc_listcache		 bcr_hold;
 struct pscrpc_nbreqset		*sl_nbrqset;
 struct timespec			 sli_bcr_pause = { 0, 200000L };
 struct psc_waitq		 sli_slvr_waitq = PSC_WAITQ_INIT;
@@ -188,8 +187,7 @@ slvr_worker_push_crcups(void)
 		BII_ULOCK(bcr->bcr_bii);
 
 		DEBUG_BCR(PLL_INFO, bcr, "scheduled nbcrs=%d total_bcrs=%d",
-		    psc_dynarray_len(bcrs),
-		    lc_nitems(&bcr_ready) + lc_nitems(&bcr_hold));
+		    psc_dynarray_len(bcrs), lc_nitems(&bcr_ready));
 
 		if (psc_dynarray_len(bcrs) == MAX_BMAP_NCRC_UPDATES)
 			break;
@@ -374,7 +372,7 @@ slislvrthr_proc(struct slvr *s)
 	bmap_op_start_type(b, BMAP_OPCNT_BCRSCHED);
 	SLVR_ULOCK(s);
 
-	LIST_CACHE_LOCK(&bcr_hold);
+	LIST_CACHE_LOCK(&bcr_ready);
 	BII_LOCK(bii);
 	bcr = bii->bii_bcr;
 
@@ -441,7 +439,7 @@ slislvrthr_proc(struct slvr *s)
 	}
 
 	BII_ULOCK(bii);
-	LIST_CACHE_ULOCK(&bcr_hold);
+	LIST_CACHE_ULOCK(&bcr_ready);
 
 	bmap_op_done_type(b, BMAP_OPCNT_BCRSCHED);
 }
@@ -499,9 +497,6 @@ slvr_worker_init(void)
 	int i;
 
 	lc_reginit(&bcr_ready, struct bcrcupd, bcr_lentry, "bcr_ready");
-	lc_reginit(&bcr_hold, struct bcrcupd, bcr_lentry, "bcr_hold");
-	bcr_hold.plc_flags |= PLLF_EXTLOCK;
-	bcr_hold.plc_lockp = &bcr_ready.plc_lock;
 
 	_psc_poolmaster_init(&bmap_crcupd_poolmaster,
 	    sizeof(struct bcrcupd) +

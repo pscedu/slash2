@@ -186,25 +186,6 @@ bim_getcurseq(void)
 }
 
 void
-bcr_hold_2_ready(struct bcrcupd *bcr)
-{
-	BII_LOCK_ENSURE(bcr->bcr_bii);
-
-	psc_assert((bcr_2_bmap(bcr)->bcm_flags & BMAP_IOD_INFLIGHT) == 0);
-
-	lc_remove(&bcr_hold, bcr);
-	lc_add(&bcr_ready, bcr);
-
-	bcr->bcr_bii->bii_bcr = NULL;
-}
-
-void
-bcr_hold_add(struct bcrcupd *bcr)
-{
-	lc_addtail(&bcr_hold, bcr);
-}
-
-void
 bcr_ready_add(struct bcrcupd *bcr)
 {
 	BII_LOCK_ENSURE(bcr->bcr_bii);
@@ -229,8 +210,6 @@ bcr_xid_check(struct bcrcupd *bcr)
 __static void
 bcr_ready_remove(struct bcrcupd *bcr)
 {
-	struct bmap_iod_info *bii = bcr->bcr_bii;
-
 	lc_remove(&bcr_ready, bcr);
 
 	psc_assert(bcr->bcr_flags & BCR_SCHEDULED);
@@ -249,7 +228,6 @@ bcr_finalize(struct bcrcupd *bcr)
 {
 	struct bmap_iod_info *bii = bcr->bcr_bii;
 	struct bmapc_memb *b = bii_2_bmap(bii);
-	struct bcrcupd *tmp;
 
 	DEBUG_BCR(PLL_INFO, bcr, "finalize");
 
