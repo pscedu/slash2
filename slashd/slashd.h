@@ -146,10 +146,6 @@ struct slmrmm_thread {
 	struct pscrpc_thread	  smrmt_prt;
 };
 
-struct slmwk_thread {
-	struct pfl_wk_thread	  smwk_wkthr;
-};
-
 struct slmdbwk_thread {
 	struct pfl_wk_thread	  smdw_wkthr;
 	struct slmthr_dbh	  smdw_dbh;
@@ -170,7 +166,6 @@ PSCTHR_MKCAST(slmrmcthr, slmrmc_thread, SLMTHRT_RMC)
 PSCTHR_MKCAST(slmrmithr, slmrmi_thread, SLMTHRT_RMI)
 PSCTHR_MKCAST(slmrmmthr, slmrmm_thread, SLMTHRT_RMM)
 PSCTHR_MKCAST(slmupschthr, slmupsch_thread, SLMTHRT_UPSCHED)
-PSCTHR_MKCAST(slmwkthr, slmwk_thread, SLMTHRT_WORKER)
 
 static __inline struct slmctl_thread *
 slmctlthr_getpri(struct psc_thread *thr)

@@ -357,19 +357,18 @@ void	_dump_bmapod(const struct pfl_callerinfo *, int,
 
 enum bmap_opcnt_types {
 	BMAP_OPCNT_LOOKUP,		/*  0: bmap_get */
-	BMAP_OPCNT_LEASE,
-	BMAP_OPCNT_BIORQ,
-	BMAP_OPCNT_REPLWK,		/*  4: repl work inside ION */
-	BMAP_OPCNT_REAPER,		/*  5: client bmap timeout */
-	BMAP_OPCNT_SLVR,
-	BMAP_OPCNT_BCRSCHED,
-	BMAP_OPCNT_RLSSCHED,
-	BMAP_OPCNT_TRUNCWAIT,
-	BMAP_OPCNT_READA,
-	BMAP_OPCNT_LEASEEXT,
-	BMAP_OPCNT_REASSIGN,
-	BMAP_OPCNT_UPSCH,		/* 13: peer update scheduler */
-	BMAP_OPCNT_WORK			/* 14: generic worker thread */
+	BMAP_OPCNT_LEASE,		/*  1: */
+	BMAP_OPCNT_BIORQ,		/*  2: */
+	BMAP_OPCNT_REPLWK,		/*  3: repl work inside ION */
+	BMAP_OPCNT_REAPER,		/*  4: client bmap timeout */
+	BMAP_OPCNT_SLVR,		/*  5: */
+	BMAP_OPCNT_BCRSCHED,		/*  6: */
+	BMAP_OPCNT_TRUNCWAIT,		/*  7: */
+	BMAP_OPCNT_READA,		/*  8: */
+	BMAP_OPCNT_LEASEEXT,		/*  9: */
+	BMAP_OPCNT_REASSIGN,		/* 10: */
+	BMAP_OPCNT_UPSCH,		/* 11: peer update scheduler */
+	BMAP_OPCNT_WORK			/* 12: generic worker thread */
 };
 
 SPLAY_HEAD(bmap_cache, bmapc_memb);
