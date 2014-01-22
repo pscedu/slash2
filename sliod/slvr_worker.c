@@ -354,13 +354,9 @@ slislvrthr_proc(struct slvr *s)
 	/* Put the slvr back to the LRU so it may have its slab reaped. */
 	bii = slvr_2_bii(s);
 	b = bii_2_bmap(bii);
-	psc_atomic32_dec(&bii->bii_crcdirty_slvrs);
 	s->slvr_dirty_cnt--;
 
 	slvr_num = s->slvr_num;
-
-	DEBUG_SLVR(PLL_INFO, s, "prep for move to LRU (ndirty=%u)",
-	    psc_atomic32_read(&bii->bii_crcdirty_slvrs));
 
 	s->slvr_flags |= SLVR_LRU;
 	lc_addqueue(&lruSlvrs, s);

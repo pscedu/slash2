@@ -105,7 +105,6 @@ struct bmap_iod_info {
 	struct biod_slvrtree	 bii_slvrs;
 	struct psclist_head	 bii_lentry;
 	struct psc_lockedlist	 bii_rls;
-	psc_atomic32_t		 bii_crcdirty_slvrs;
 };
 
 /* sliod-specific bcm_flags */

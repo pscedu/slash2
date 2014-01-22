@@ -809,13 +809,8 @@ slvr_schedule_crc_locked(struct slvr *s)
 	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
 	psc_assert(s->slvr_flags & SLVR_LRU);
 
-	if (!s->slvr_dirty_cnt) {
-		psc_atomic32_inc(&slvr_2_bii(s)->bii_crcdirty_slvrs);
+	if (!s->slvr_dirty_cnt)
 		s->slvr_dirty_cnt++;
-	}
-
-	DEBUG_SLVR(PLL_INFO, s, "crc sched (ndirty slvrs=%u)",
-	    psc_atomic32_read(&slvr_2_bii(s)->bii_crcdirty_slvrs));
 
 	s->slvr_flags &= ~SLVR_LRU;
 

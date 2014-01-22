@@ -346,8 +346,6 @@ iod_bmap_init(struct bmapc_memb *b)
 
 	pll_init(&bii->bii_rls, struct bmap_iod_rls, bir_lentry, NULL);
 
-	psc_atomic32_set(&bii->bii_crcdirty_slvrs, 0);
-
 	/*
 	 * XXX At some point we'll want to let bmaps hang around in the
 	 * cache to prevent extra reads and CRC table fetches.
@@ -365,7 +363,6 @@ iod_bmap_finalcleanup(struct bmapc_memb *b)
 	psc_assert(pll_empty(&bii->bii_rls));
 	psc_assert(SPLAY_EMPTY(&bii->bii_slvrs));
 	psc_assert(psclist_disjoint(&bii->bii_lentry));
-	psc_assert(!psc_atomic32_read(&bii->bii_crcdirty_slvrs));
 }
 
 /**
