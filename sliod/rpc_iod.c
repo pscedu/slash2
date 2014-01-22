@@ -193,8 +193,7 @@ sli_rpc_mds_unpack_fsuuid(struct pscrpc_request *rq, int msgtype)
 		      fsuuid, SL_RPATH_FIDNS_DIR);
 
 		if (stat(fn, &stb) || !S_ISDIR(stb.st_mode))
-			psc_fatalx("sliod directories have not been created "
-			   "(uuid=%"PRIx64")", fsuuid);
+			psc_fatalx("Directory (%s) does not exist", fn);
 
 		globalConfig.gconf_fsuuid = sli_fsuuid = fsuuid;
 	}
