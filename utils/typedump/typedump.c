@@ -275,7 +275,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct slmrmm_thread);
 	PRTYPE(struct slmthr_dbh);
 	PRTYPE(struct slmupsch_thread);
-	PRTYPE(struct slmwk_thread);
 	PRTYPE(struct slrpc_cservice);
 	PRTYPE(struct slvr);
 	PRTYPE(struct srm_batch_req);
@@ -593,7 +592,6 @@ main(int argc, char *argv[])
 	PRVAL(BMAP_OPCNT_REAPER);
 	PRVAL(BMAP_OPCNT_REASSIGN);
 	PRVAL(BMAP_OPCNT_REPLWK);
-	PRVAL(BMAP_OPCNT_RLSSCHED);
 	PRVAL(BMAP_OPCNT_SLVR);
 	PRVAL(BMAP_OPCNT_TRUNCWAIT);
 	PRVAL(BMAP_OPCNT_UPSCH);
@@ -769,8 +767,6 @@ main(int argc, char *argv[])
 	PRVAL(SLI_OPST_CLOSE_FAIL);
 	PRVAL(SLI_OPST_CLOSE_SUCCEED);
 	PRVAL(SLI_OPST_CRC_UPDATE);
-	PRVAL(SLI_OPST_CRC_UPDATE_BACKLOG);
-	PRVAL(SLI_OPST_CRC_UPDATE_BACKLOG_CLEAR);
 	PRVAL(SLI_OPST_CRC_UPDATE_CB);
 	PRVAL(SLI_OPST_CRC_UPDATE_CB_FAILURE);
 	PRVAL(SLI_OPST_CRC_UPDATE_PUSH);
