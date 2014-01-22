@@ -133,14 +133,11 @@ uint64_t	bim_getcurseq(void);
 void		bim_init(void);
 int		bim_updateseq(uint64_t);
 
-void	bcr_finalize(struct bcrcupd *);
-void	bcr_ready_add(struct bcrcupd *);
-void	bcr_ready_remove(struct bcrcupd *);
-void	bcr_xid_check(struct bcrcupd *);
+void		bcr_finalize(struct bcrcupd *);
+void		bcr_ready_add(struct bcrcupd *);
+void		bcr_ready_remove(struct bcrcupd *);
 
-void	biod_rlssched_locked(struct bmap_iod_info *);
-
-void	slibmaprlsthr_spawn(void);
+void		slibmaprlsthr_spawn(void);
 
 extern struct psc_listcache	 bmapRlsQ;
 extern struct psc_poolmaster	 bmap_rls_poolmaster;

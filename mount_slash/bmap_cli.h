@@ -25,14 +25,14 @@
 #ifndef _SLASH_BMAP_CLI_H_
 #define _SLASH_BMAP_CLI_H_
 
-#include "pfl/rpc.h"
 #include "pfl/lock.h"
+#include "pfl/rpc.h"
 
 #include "bmap.h"
 #include "pgcache.h"
 #include "slashrpc.h"
 
-#define	BMAP_CACHE_MAX			1024	
+#define	BMAP_CACHE_MAX			1024
 
 /* number of bmap flush threads */
 /* XXX I don't think bmap_flush is thread safe, so keep this at '1'
@@ -62,7 +62,6 @@ struct bmap_cli_info {
 
 #define BMAP_CLI_MAX_LEASE	60 /* seconds */
 #define BMAP_CLI_EXTREQSECS	20
-#define BMAP_CLI_EXTREQSECSBLOCK (BMAP_CLI_EXTREQSECS/2)
 #define BMAP_CLI_TIMEO_INC	1
 
 static __inline struct bmap_cli_info *
@@ -86,6 +85,9 @@ int	 msl_bmap_lease_secs_remaining(struct bmap *);
 
 void	 bmap_biorq_expire(struct bmap *);
 
+void	 msbmaprlsthr_main(struct psc_thread *);
+int	 msl_bmap_release_cb(struct pscrpc_request *, struct pscrpc_async_args *);
+
 extern struct timespec msl_bmap_max_lease;
 extern struct timespec msl_bmap_timeo_inc;
 
@@ -98,23 +100,5 @@ bci_2_bmap(struct bmap_cli_info *bci)
 	b = (void *)bci;
 	return (b - 1);
 }
-
-static __inline int
-bmap_cli_timeo_cmp(const void *x, const void *y)
-{
-	const struct bmap_cli_info * const *pa = x, *a = *pa;
-	const struct bmap_cli_info * const *pb = y, *b = *pb;
-
-	if (timespeccmp(&a->bci_etime, &b->bci_etime, <))
-		return (-1);
-
-	if (timespeccmp(&a->bci_etime, &b->bci_etime, >))
-		return (1);
-
-	return (0);
-}
-
-void msbmaprlsthr_main(struct psc_thread *);
-int msl_bmap_release_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 
 #endif /* _SLASH_BMAP_CLI_H_ */
