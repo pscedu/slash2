@@ -192,8 +192,12 @@ sli_rpc_mds_unpack_fsuuid(struct pscrpc_request *rq, int msgtype)
 		      globalConfig.gconf_fsroot, SL_RPATH_META_DIR,
 		      fsuuid, SL_RPATH_FIDNS_DIR);
 
-		if (stat(fn, &stb) || !S_ISDIR(stb.st_mode))
-			psc_fatalx("Directory (%s) does not exist", fn);
+		if (stat(fn, &stb))
+			psc_fatal("stat %s", fn);
+		if (!S_ISDIR(stb.st_mode)) {
+			errno = ENOTDIR;
+			psc_fatal("%s", fn);
+		}
 
 		globalConfig.gconf_fsuuid = sli_fsuuid = fsuuid;
 	}
