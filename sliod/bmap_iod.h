@@ -95,12 +95,7 @@ struct bmap_iod_info {
 
 	uint8_t			 bii_crcstates[SLASH_CRCS_PER_BMAP];
 	uint64_t                 bii_crcs[SLASH_CRCS_PER_BMAP];
-	/*
-	 * Accumulate CRC updates here until its associated bcrcupd
-	 * structure is full, at which point it is set to NULL then
-	 * moved to a ready/hold list for transmission, and a new
-	 * bcrcupd structure must be allocated for future CRC updates.
-	 */
+
 	struct bcrcupd		*bii_bcr;		/* current bcr in use */
 	struct biod_slvrtree	 bii_slvrs;
 	struct psclist_head	 bii_lentry;
