@@ -77,6 +77,10 @@ Dump the contents of the reclaim progress log file and update the batchno
 of the IOS with ID 802345:
 .Pp
 .D1 $ reclaim -p /slmdfs/slmd/op-reclaim-prog -i 802345 -b 3478
+.Pp
+Remove the entry for the IOS whose ID is 19071001 from file op-reclaim-prog:
+.Pp
+.D1 $ reclaim -D -i 19071001 -p op-reclaim-prog
 .Sh SEE ALSO
 .Xr sladm 7 ,
 .Xr slashd 8
