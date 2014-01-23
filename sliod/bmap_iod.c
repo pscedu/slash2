@@ -219,7 +219,6 @@ bcr_finalize(struct bcrcupd *bcr)
 
 	LIST_CACHE_LOCK(&bcr_ready);
 	BII_LOCK(bii);
-	psc_assert(b->bcm_flags & BMAP_IOD_BCRSCHED);
 	psc_assert(b->bcm_flags & BMAP_IOD_INFLIGHT);
 	b->bcm_flags &= ~BMAP_IOD_INFLIGHT;
 
@@ -437,7 +436,6 @@ dump_bmap_flags(uint32_t flags)
 
 	_dump_bmap_flags_common(&flags, &seq);
 	PFL_PRFLAG(BMAP_IOD_INFLIGHT, &flags, &seq);
-	PFL_PRFLAG(BMAP_IOD_BCRSCHED, &flags, &seq);
 	if (flags)
 		printf(" unknown: %#x", flags);
 	printf("\n");

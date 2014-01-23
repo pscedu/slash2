@@ -258,8 +258,7 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 		    rq->rq_status, mp ? mp->rc : -4096,
 		    mp ? "" : " (unknown, no buf)");
 
-		psc_assert(bii_2_bmap(bii)->bcm_flags &
-		    (BMAP_IOD_INFLIGHT | BMAP_IOD_BCRSCHED));
+		psc_assert(bii_2_bmap(bii)->bcm_flags & BMAP_IOD_INFLIGHT);
 
 		if (rq->rq_status) {
 			/*
@@ -377,7 +376,6 @@ slislvrthr_proc(struct slvr *s)
 		psc_assert(bcr->bcr_crcup.fg.fg_fid ==
 		    b->bcm_fcmh->fcmh_fg.fg_fid);
 		psc_assert(bcr->bcr_crcup.nups < MAX_BMAP_INODE_PAIRS);
-		psc_assert(b->bcm_flags & BMAP_IOD_BCRSCHED);
 
 		/*
 		 * If we already have a slot for our slvr_num then reuse
@@ -417,11 +415,7 @@ slislvrthr_proc(struct slvr *s)
 		bcr->bcr_crcup.crcs[0].slot = slvr_num;
 		bcr->bcr_crcup.nups = 1;
 
-		DEBUG_BCR(PLL_DIAG, bcr,
-		    "newly added (sched=%d)",
-		    !!(b->bcm_flags & BMAP_IOD_BCRSCHED));
-
-		b->bcm_flags |= BMAP_IOD_BCRSCHED;
+		DEBUG_BCR(PLL_DIAG, bcr, "newly added");
 
 		bcr_ready_add(bcr);
 		PFL_GETTIMESPEC(&bcr->bcr_age);
