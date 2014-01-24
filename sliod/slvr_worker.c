@@ -178,7 +178,6 @@ slvr_worker_push_crcups(void)
 		    (diff.tv_sec >= BCR_MAX_AGE)) {
 			psc_dynarray_add(bcrs, bcr);
 			bcr->bcr_bii->bii_bcr = NULL;
-			bcr->bcr_flags |= BCR_SCHEDULED;
 			bcr_2_bmap(bcr)->bcm_flags |= BMAP_IOD_INFLIGHT;
 		}
 
@@ -206,7 +205,6 @@ slvr_worker_push_crcups(void)
 				bcr = psc_dynarray_getpos(bcrs, i);
 
 				BII_LOCK(bcr->bcr_bii);
-				bcr->bcr_flags &= ~BCR_SCHEDULED;
 				bcr_2_bmap(bcr)->bcm_flags &=
 				    ~BMAP_IOD_INFLIGHT;
 				BII_ULOCK(bcr->bcr_bii);
@@ -266,7 +264,6 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 			 * bcr_xid_last_bump() will not be called.
 			 */
 			BII_LOCK(bii);
-			bcr->bcr_flags &= ~BCR_SCHEDULED;
 			bii_2_bmap(bii)->bcm_flags &= ~BMAP_IOD_INFLIGHT;
 			BII_ULOCK(bii);
 

@@ -201,8 +201,6 @@ bcr_ready_remove(struct bcrcupd *bcr)
 {
 	lc_remove(&bcr_ready, bcr);
 
-	psc_assert(bcr->bcr_flags & BCR_SCHEDULED);
-
 	BII_ULOCK(bcr->bcr_bii);
 
 	bmap_op_done_type(bcr_2_bmap(bcr), BMAP_OPCNT_BCRSCHED);

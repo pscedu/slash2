@@ -41,16 +41,11 @@ struct bmap_iod_info;
 struct slvr;
 
 struct bcrcupd {
-	uint16_t		 bcr_flags;
 	struct timespec		 bcr_age;
 	struct bmap_iod_info	*bcr_bii;
 	struct psclist_head	 bcr_lentry;
 	struct srm_bmap_crcup	 bcr_crcup;
 };
-
-/* bcr_flags */
-#define	BCR_NONE		0x00
-#define BCR_SCHEDULED		0x01
 
 #define bcr_2_bmap(bcr)		bii_2_bmap((bcr)->bcr_bii)
 
@@ -76,13 +71,12 @@ struct bmap_iod_rls {
 
 #define DEBUG_BCR(level, bcr, fmt, ...)				\
 	psclogs((level), SLSS_BMAP,				\
-	    "bcr@%p fid="SLPRI_FG" nups=%d fl=%d "		\
+	    "bcr@%p fid="SLPRI_FG" nups=%d "			\
 	    "age=%"PSCPRI_TIMET" "				\
 	    "bmap@%p:%u"					\
 	    " :: " fmt,						\
 	    (bcr), SLPRI_FG_ARGS(&(bcr)->bcr_crcup.fg),		\
-	    (bcr)->bcr_crcup.nups, (bcr)->bcr_flags,		\
-	    (bcr)->bcr_age.tv_sec,				\
+	    (bcr)->bcr_crcup.nups, (bcr)->bcr_age.tv_sec,	\
 	    bcr_2_bmap(bcr), bcr_2_bmap(bcr)->bcm_bmapno,	\
 	    ## __VA_ARGS__)
 
