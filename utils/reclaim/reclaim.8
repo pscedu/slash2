@@ -27,7 +27,7 @@
 .Nm reclaim
 .Nd display or manipulate a
 .Tn SLASH2
-metadata reclaim log or progress log
+metadata reclaim log or reclaim progress log
 .Sh SYNOPSIS
 .Nm reclaim
 .Op Fl b Ar batchno
@@ -43,7 +43,7 @@ utility can be used for two purposes regarding SLASH2 metadata log files:
 .It
 display the contents of a reclaim log file
 .It
-modify a reclaim progress log file
+display and optionally modify a reclaim progress log file
 .El
 .Pp
 The log file must be accessible via the system's native file system interface, meaning the
@@ -58,8 +58,12 @@ The value the batch number will be updated to in the reclaim progress log file.
 Default is 0.
 .It Fl i Ar id
 The ID of the IOS whose progress entry in the progress log file will be updated.
+.It Fl D
+Delete the progress entry whose ID is specified by -i above.  Note: If the system
+configuration file still has the IOS listed, an entry will be re-created for it when
+slashd is started as if a new IOS has been added from the perspective of garbage reclamation.
 .It Fl p Ar reclaim-prog-log
-Reclaim progress log file to dump and optionally update if
+Reclaim progress log file to dump and optionally update an entry in it if
 .Fl i
 is also specified.
 .It Fl r Ar reclaim-log
