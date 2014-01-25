@@ -19,7 +19,7 @@
 .\" Pittsburgh, PA 15213			web: http://www.psc.edu/
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
-.Dd February 28, 2012
+.Dd January 25, 2014
 .Dt RECLAIM 8
 .ds volume PSC \- SLASH2 Administrator's Manual
 .Os http://www.psc.edu/
@@ -30,6 +30,7 @@
 metadata reclaim log or reclaim progress log
 .Sh SYNOPSIS
 .Nm reclaim
+.Op Fl D
 .Op Fl b Ar batchno
 .Op Fl i Ar id
 .Op Fl p Ar reclaim-prog-log
@@ -37,7 +38,8 @@ metadata reclaim log or reclaim progress log
 .Sh DESCRIPTION
 The
 .Nm
-utility can be used for two purposes regarding SLASH2 metadata log files:
+utility can be used for two purposes regarding SLASH2 metadata log
+files:
 .Pp
 .Bl -enum -compact -offset 3n
 .It
@@ -46,45 +48,57 @@ display the contents of a reclaim log file
 display and optionally modify a reclaim progress log file
 .El
 .Pp
-The log file must be accessible via the system's native file system interface, meaning the
-.Tn MDS
-backing file system must be directly mounted via
+The log file must be accessible via the system's native file system
+interface, meaning the MDS backing file system must be directly mounted
+via
 .Xr zfs-fuse 8 .
 .Pp
 The following options are available:
 .Bl -tag -width Ds
 .It Fl b Ar batchno
-The value the batch number will be updated to in the reclaim progress log file.
-Default is 0.
+Update the batch number to
+.Ar batchno
+for the given IOS
+.Pq see Fl i
+in the specified reclaim progress log file
+.Pq see Fl p .
 .It Fl i Ar id
-The ID of the IOS whose progress entry in the progress log file will be updated.
+Specify the ID of the IOS to update from the specified reclaim progress
+log file.
 .It Fl D
-Delete the progress entry whose ID is specified by -i above.  Note: If the system
-configuration file still has the IOS listed, an entry will be re-created for it when
-slashd is started as if a new IOS has been added from the perspective of garbage reclamation.
-.It Fl p Ar reclaim-prog-log
-Reclaim progress log file to dump and optionally update an entry in it if
+Delete the progress entry whose ID is specified by
 .Fl i
-is also specified.
+above.
+Note: if the system configuration file still has the IOS listed, an
+entry will be re-created for it when
+.Xr slashd 8
+is started as if a new IOS has been added from the perspective of
+garbage reclamation.
+.It Fl p Ar reclaim-prog-log
+Display the contents of the given file
+.Ar reclaim-prog-log .
+With the
+.Fl i
+option, also update the file as specified.
 .It Fl r Ar reclaim-log
 Reclaim log file to dump.
 .Sh EXAMPLES
 Dump the contents of a reclaim log file:
 .Pp
-.D1 $ reclaim -r /slmdfs/slmd/op-reclaim.43
+.D1 $ reclaim -r /slmdfs/.slmd/op-reclaim.43
 .Pp
-Dump the contents of the reclaim progress log file:
+Dump the contents of a reclaim progress log file:
 .Pp
-.D1 $ reclaim -p /slmdfs/slmd/op-reclaim-prog
+.D1 $ reclaim -p /slmdfs/.slmd/op-reclaim-prog
 .Pp
-Dump the contents of the reclaim progress log file and update the batchno
-of the IOS with ID 802345:
+Dump the contents of a reclaim progress log file and update the
+batchno of the IOS with ID 802345:
 .Pp
-.D1 $ reclaim -p /slmdfs/slmd/op-reclaim-prog -i 802345 -b 3478
+.D1 $ reclaim -p /slmdfs/.slmd/op-reclaim-prog -i 802345 -b 3478
 .Pp
-Remove the entry for the IOS whose ID is 19071001 from file op-reclaim-prog:
+Remove the entry for the IOS whose ID is 19071001:
 .Pp
-.D1 $ reclaim -D -i 19071001 -p op-reclaim-prog
+.D1 $ reclaim -D -i 19071001 -p /slmdfs/.slmd/op-reclaim-prog
 .Sh SEE ALSO
 .Xr sladm 7 ,
 .Xr slashd 8
