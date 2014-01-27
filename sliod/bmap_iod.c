@@ -197,13 +197,11 @@ bcr_ready_add(struct bcrcupd *bcr)
 void
 bcr_ready_remove(struct bcrcupd *bcr)
 {
-	struct bmap_iod_info *bii = bcr->bcr_bii;
 
 	DEBUG_BCR(PLL_INFO, bcr, "remove");
 
 	lc_remove(&bcr_ready, bcr);
 
-	BII_LOCK(bii);
 	bmap_op_done_type(bcr_2_bmap(bcr), BMAP_OPCNT_BCRSCHED);
 	psc_pool_return(bmap_crcupd_pool, bcr);
 }

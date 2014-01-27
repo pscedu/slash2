@@ -259,9 +259,9 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 		BII_LOCK(bii);
 		psc_assert(bii_2_bmap(bii)->bcm_flags & BMAP_IOD_INFLIGHT);
 		bii_2_bmap(bii)->bcm_flags &= ~BMAP_IOD_INFLIGHT;
-		BII_ULOCK(bii);
 
 		if (rq->rq_status) {
+			BII_ULOCK(bii);
 			DEBUG_BCR(PLL_ERROR, bcr, "rescheduling");
 			OPSTAT_INCR(SLI_OPST_CRC_UPDATE_CB_FAILURE);
 			continue;
