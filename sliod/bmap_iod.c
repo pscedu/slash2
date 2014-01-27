@@ -215,13 +215,11 @@ bcr_finalize(struct bcrcupd *bcr)
 
 	DEBUG_BCR(PLL_INFO, bcr, "finalize");
 
-	LIST_CACHE_LOCK(&bcr_ready);
 	BII_LOCK(bii);
 	psc_assert(b->bcm_flags & BMAP_IOD_INFLIGHT);
 	b->bcm_flags &= ~BMAP_IOD_INFLIGHT;
 
 	bcr_ready_remove(bcr);
-	LIST_CACHE_ULOCK(&bcr_ready);
 }
 
 void
