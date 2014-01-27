@@ -211,13 +211,10 @@ void
 bcr_finalize(struct bcrcupd *bcr)
 {
 	struct bmap_iod_info *bii = bcr->bcr_bii;
-	struct bmapc_memb *b = bii_2_bmap(bii);
 
 	DEBUG_BCR(PLL_INFO, bcr, "finalize");
 
 	BII_LOCK(bii);
-	psc_assert(b->bcm_flags & BMAP_IOD_INFLIGHT);
-	b->bcm_flags &= ~BMAP_IOD_INFLIGHT;
 
 	bcr_ready_remove(bcr);
 }

@@ -256,26 +256,22 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 		    rq->rq_status, mp ? mp->rc : -4096,
 		    mp ? "" : " (unknown, no buf)");
 
+		BII_LOCK(bii);
 		psc_assert(bii_2_bmap(bii)->bcm_flags & BMAP_IOD_INFLIGHT);
+		bii_2_bmap(bii)->bcm_flags &= ~BMAP_IOD_INFLIGHT;
+		BII_ULOCK(bii);
 
 		if (rq->rq_status) {
-			/*
-			 * Unset the inflight bit on the bii since
-			 * bcr_xid_last_bump() will not be called.
-			 */
-			BII_LOCK(bii);
-			bii_2_bmap(bii)->bcm_flags &= ~BMAP_IOD_INFLIGHT;
-			BII_ULOCK(bii);
-
 			DEBUG_BCR(PLL_ERROR, bcr, "rescheduling");
 			OPSTAT_INCR(SLI_OPST_CRC_UPDATE_CB_FAILURE);
-		} else
-			/*
-			 * bcr will be freed, so no need to clear
-			 * BCR_SCHEDULED in this case, but we do clear
-			 * BMAP_IOD_INFLIGHT.
-			 */
-			bcr_finalize(bcr);
+			continue;
+		}	
+		/*
+		 * bcr will be freed, so no need to clear
+		 * BCR_SCHEDULED in this case, but we do clear
+		 * BMAP_IOD_INFLIGHT.
+		 */
+		bcr_finalize(bcr);
 	}
 
 	/*
