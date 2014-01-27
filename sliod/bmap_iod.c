@@ -193,7 +193,7 @@ bcr_ready_add(struct bcrcupd *bcr)
 }
 
 void
-bcr_finalize(struct bcrcupd *bcr)
+bcr_ready_remove(struct bcrcupd *bcr)
 {
 	struct bmap_iod_info *bii = bcr->bcr_bii;
 

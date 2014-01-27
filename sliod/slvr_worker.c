@@ -266,12 +266,7 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 			OPSTAT_INCR(SLI_OPST_CRC_UPDATE_CB_FAILURE);
 			continue;
 		}	
-		/*
-		 * bcr will be freed, so no need to clear
-		 * BCR_SCHEDULED in this case, but we do clear
-		 * BMAP_IOD_INFLIGHT.
-		 */
-		bcr_finalize(bcr);
+		bcr_ready_remove(bcr);
 	}
 
 	/*
