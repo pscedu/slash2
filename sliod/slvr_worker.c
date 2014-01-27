@@ -403,8 +403,6 @@ slislvrthr_proc(struct slvr *s)
 		bcr->bcr_crcup.crcs[0].slot = slvr_num;
 		bcr->bcr_crcup.nups = 1;
 
-		DEBUG_BCR(PLL_DIAG, bcr, "newly added");
-
 		bcr_ready_add(bcr);
 		PFL_GETTIMESPEC(&bcr->bcr_age);
 	}

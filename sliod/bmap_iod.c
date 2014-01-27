@@ -188,6 +188,8 @@ bim_getcurseq(void)
 void
 bcr_ready_add(struct bcrcupd *bcr)
 {
+	DEBUG_BCR(PLL_INFO, bcr, "add");
+
 	BII_LOCK_ENSURE(bcr->bcr_bii);
 	lc_addtail(&bcr_ready, bcr);
 }
@@ -197,14 +199,11 @@ bcr_ready_remove(struct bcrcupd *bcr)
 {
 	struct bmap_iod_info *bii = bcr->bcr_bii;
 
-	DEBUG_BCR(PLL_INFO, bcr, "finalize");
-
-	BII_LOCK(bii);
+	DEBUG_BCR(PLL_INFO, bcr, "remove");
 
 	lc_remove(&bcr_ready, bcr);
 
-	BII_ULOCK(bcr->bcr_bii);
-
+	BII_LOCK(bii);
 	bmap_op_done_type(bcr_2_bmap(bcr), BMAP_OPCNT_BCRSCHED);
 	psc_pool_return(bmap_crcupd_pool, bcr);
 }
