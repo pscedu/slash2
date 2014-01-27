@@ -27,18 +27,18 @@
 
 #include <stddef.h>
 
-#include "pfl/rpc.h"
 #include "pfl/ctlsvr.h"
 #include "pfl/iostats.h"
 #include "pfl/random.h"
+#include "pfl/rpc.h"
 
-#include "slconfig.h"
 #include "bmap_cli.h"
-#include "pgcache.h"
 #include "fidc_cli.h"
 #include "mount_slash.h"
+#include "pgcache.h"
 #include "rpc_cli.h"
 #include "slashrpc.h"
+#include "slconfig.h"
 #include "slerr.h"
 
 psc_spinlock_t			bmapTimeoutLock  = SPINLOCK_INIT;
