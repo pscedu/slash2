@@ -192,21 +192,6 @@ bcr_ready_add(struct bcrcupd *bcr)
 	lc_addtail(&bcr_ready, bcr);
 }
 
-/**
- * bcr_ready_remove - We are done with this batch of CRC updates.   Drop
- *	its reference to the bmap and free the CRC update structure.
- */
-__static void
-bcr_ready_remove(struct bcrcupd *bcr)
-{
-	lc_remove(&bcr_ready, bcr);
-
-	BII_ULOCK(bcr->bcr_bii);
-
-	bmap_op_done_type(bcr_2_bmap(bcr), BMAP_OPCNT_BCRSCHED);
-	psc_pool_return(bmap_crcupd_pool, bcr);
-}
-
 void
 bcr_finalize(struct bcrcupd *bcr)
 {
@@ -216,7 +201,12 @@ bcr_finalize(struct bcrcupd *bcr)
 
 	BII_LOCK(bii);
 
-	bcr_ready_remove(bcr);
+	lc_remove(&bcr_ready, bcr);
+
+	BII_ULOCK(bcr->bcr_bii);
+
+	bmap_op_done_type(bcr_2_bmap(bcr), BMAP_OPCNT_BCRSCHED);
+	psc_pool_return(bmap_crcupd_pool, bcr);
 }
 
 void

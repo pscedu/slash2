@@ -122,7 +122,6 @@ int		bim_updateseq(uint64_t);
 
 void		bcr_finalize(struct bcrcupd *);
 void		bcr_ready_add(struct bcrcupd *);
-void		bcr_ready_remove(struct bcrcupd *);
 
 void		slibmaprlsthr_spawn(void);
 
