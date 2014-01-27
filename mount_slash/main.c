@@ -149,7 +149,7 @@ uidmap_ext_cred(struct srt_creds *cr)
 		return (0);
 
 	q.um_key = cr->scr_uid;
-	um = psc_hashtbl_search(&slc_uidmap_ext, NULL, NULL, &q);
+	um = psc_hashtbl_search(&slc_uidmap_ext, NULL, NULL, &q.um_key);
 	if (um == NULL)
 		return (ENOENT);
 	cr->scr_uid = um->um_val;
@@ -165,7 +165,7 @@ uidmap_ext_stat(struct srt_stat *sstb)
 		return (0);
 
 	q.um_key = sstb->sst_uid;
-	um = psc_hashtbl_search(&slc_uidmap_ext, NULL, NULL, &q);
+	um = psc_hashtbl_search(&slc_uidmap_ext, NULL, NULL, &q.um_key);
 	if (um == NULL)
 		return (ENOENT);
 	sstb->sst_uid = um->um_val;
@@ -181,7 +181,7 @@ uidmap_int_stat(struct srt_stat *sstb)
 		return (0);
 
 	q.um_key = sstb->sst_uid;
-	um = psc_hashtbl_search(&slc_uidmap_int, NULL, NULL, &q);
+	um = psc_hashtbl_search(&slc_uidmap_int, NULL, NULL, &q.um_key);
 	if (um == NULL)
 		return (ENOENT);
 	sstb->sst_uid = um->um_val;
