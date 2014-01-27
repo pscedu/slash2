@@ -366,8 +366,8 @@ nidsep		: ','
 
 nid		: IPADDR '@' LNETNAME	{ slcfg_resm_addaddr($1, $3); PSCFREE($3); }
 		| IPADDR		{ slcfg_resm_addaddr($1, NULL); }
-		| NAME '@' LNETNAME	{ slcfg_resm_addaddr($1, $3); PSCFREE($3); }
-		| NAME			{ slcfg_resm_addaddr($1, NULL); }
+		| NAME '@' LNETNAME	{ slcfg_resm_addaddr($1, $3); PSCFREE($1); PSCFREE($3); }
+		| NAME			{ slcfg_resm_addaddr($1, NULL); PSCFREE($1); }
 		;
 
 statements	: /* nothing */
