@@ -188,7 +188,7 @@ bim_getcurseq(void)
 void
 bcr_ready_add(struct bcrcupd *bcr)
 {
-	DEBUG_BCR(PLL_INFO, bcr, "add");
+	DEBUG_BCR(PLL_INFO, bcr, "bcr add");
 
 	BII_LOCK_ENSURE(bcr->bcr_bii);
 	lc_addtail(&bcr_ready, bcr);
@@ -198,7 +198,7 @@ void
 bcr_ready_remove(struct bcrcupd *bcr)
 {
 
-	DEBUG_BCR(PLL_INFO, bcr, "remove");
+	DEBUG_BCR(PLL_INFO, bcr, "bcr remove");
 
 	lc_remove(&bcr_ready, bcr);
 
