@@ -312,23 +312,24 @@ slm_try_sliodresm(struct sl_resm *resm)
 }
 
 __static void
-slm_resm_roundrobin(struct sl_resource *r, struct psc_dynarray *a)
+slm_res_fillmembers(struct sl_resource *r, struct psc_dynarray *a)
 {
-	struct resprof_mds_info *rpmi = res2rpmi(r);
 	struct sl_resm *m;
-	int i, idx;
+	int begin, i;
 
-	RPMI_LOCK(rpmi);
-	idx = slm_get_rpmi_idx(r);
-	RPMI_ULOCK(rpmi);
-
-	for (i = 0; i < psc_dynarray_len(&r->res_members); i++, idx++) {
-		if (idx >= psc_dynarray_len(&r->res_members))
-		    idx = 0;
-
-		m = psc_dynarray_getpos(&r->res_members, idx);
+	begin = psc_dynarray_len(a);
+	DYNARRAY_FOREACH(m, i, &r->res_members)
 		psc_dynarray_add_ifdne(a, m);
-	}
+
+	/*
+	 * Do proper shuffling to avoid statistical bias when some IOS
+	 * are offline, which would give unfair advantage to the first
+	 * IOS that was online if we simply filled this list in
+	 * sequentially.
+	 */
+	for (i = 1; i < psc_dynarray_len(a) - begin; i++)
+		psc_dynarray_swap(a, begin + i, begin +
+		    psc_random32u(i + 1));
 }
 
 /**
@@ -349,14 +350,14 @@ slm_get_ioslist(struct fidc_membh *f, sl_ios_id_t piosid,
 	if (fcmh_2_inoh(f)->inoh_flags & INOF_IOS_AFFINITY) {
 		r = libsl_id2res(fcmh_getrepl(f, 0).bs_id);
 		if (r)
-			slm_resm_roundrobin(r, a);
+			slm_res_fillmembers(r, a);
 	}
 
 	/*
 	 * Add the preferred IOS member(s) next.  Note that PIOS may be
 	 * a CNOS, parallel IOS, or stand-alone.
 	 */
-	slm_resm_roundrobin(pios, a);
+	slm_res_fillmembers(pios, a);
 
 	/*
 	 * Add everything else.  Archival are not considered and must be
@@ -367,7 +368,7 @@ slm_get_ioslist(struct fidc_membh *f, sl_ios_id_t piosid,
 		    r->res_type == SLREST_ARCHIVAL_FS)
 			continue;
 
-		slm_resm_roundrobin(r, a);
+		slm_res_fillmembers(r, a);
 	}
 
 	return (psc_dynarray_len(a));
@@ -392,9 +393,9 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 	struct slash_inode_od *ino = fcmh_2_ino(b->bcm_fcmh);
 	struct slash_inode_extras_od *inox = NULL;
 	struct psc_dynarray a = DYNARRAY_INIT;
+	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 	struct sl_resm *resm = NULL;
 	sl_ios_id_t ios;
-	struct bmap_mds_info *bmi = bmap_2_bmi(b);
 
 	FCMH_LOCK(b->bcm_fcmh);
 	nr = fcmh_2_nrepls(b->bcm_fcmh);
@@ -407,8 +408,9 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 
 	for (i = 0, off = 0; i < nr; i++, off += SL_BITS_PER_REPLICA) {
 		val = SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls, off);
+
+		/* Determine if there are any active replicas. */
 		if (val != BREPLST_INVALID)
-			/* Determine if there are any active replicas. */
 			repls++;
 
 		if (val != BREPLST_VALID)
@@ -878,7 +880,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 	bmap_op_start_type(b, BMAP_OPCNT_LEASE);
 
 	rc = mds_bmap_directio_locked(b, rw, bml->bml_flags & BML_DIO,
-		&bml->bml_cli_nidpid);
+	    &bml->bml_cli_nidpid);
 	if (rc && !(bml->bml_flags & BML_RECOVER))
 		/* 'rc != 0' means that we're waiting on an async cb
 		 *    completion.
@@ -1700,9 +1702,9 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 {
 	struct slashrpc_cservice *csvc;
 	struct bmap_mds_lease *bml;
+	struct bmap_mds_info *bmi;
 	struct bmap *b;
 	int rc, flag;
-	struct bmap_mds_info *bmi;
 
 	FCMH_LOCK(f);
 	rc = (f->fcmh_flags & FCMH_IN_PTRUNC) &&
