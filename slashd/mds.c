@@ -30,6 +30,7 @@
 #include "pfl/hashtbl.h"
 #include "pfl/lockedlist.h"
 #include "pfl/log.h"
+#include "pfl/random.h"
 #include "pfl/rpclog.h"
 #include "pfl/rsx.h"
 #include "pfl/tree.h"
