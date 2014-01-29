@@ -168,6 +168,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		psclog_warnx("op: %d, seq %"PRId64" < bim_getcurseq(%"PRId64")",
 		    rw, mq->sbd.sbd_seq, seqno);
 		mp->rc = -PFLERR_KEYEXPIRED;
+		OPSTAT_INCR(SLI_OPST_KEY_EXPIRE);
 		return (mp->rc);
 	}
 
