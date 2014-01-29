@@ -262,7 +262,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 		if (i < npages) {
 			psc_dynarray_add(&r->biorq_pages, e);
 			BMPCE_ULOCK(e);
-
 		} else {
 			DEBUG_BMPCE(PLL_INFO, e, "ra (npndg=%d) i=%d "
 			    "biorq_is_my_bmpce=%d raoff=%"PRIx64
@@ -272,8 +271,10 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 			    (off_t)(bmpce_off + bmap_foff(b)));
 
 			/*
-			 * XXX A failure to prefetch a page should not mark the associated
-			 * request as failure because it is not part of the original request.
+			 * XXX A failure to prefetch a page should not
+			 * mark the associated request as failure
+			 * because it is not part of the original
+			 * request.
 			 */
 			if (biorq_is_my_bmpce(r, e)) {
 				/*
@@ -984,7 +985,7 @@ msl_readahead_cb(struct pscrpc_request *rq, int rc,
 	int i;
 
 	if (rq)
-		DEBUG_REQ(PLL_INFO, rq, "bmpces=%p", bmpces);
+		DEBUG_REQ(PLL_DIAG, rq, "bmpces=%p", bmpces);
 
 	(void)psc_fault_here_rc(SLC_FAULT_READAHEAD_CB_EIO, &rc, EIO);
 
@@ -995,10 +996,11 @@ msl_readahead_cb(struct pscrpc_request *rq, int rc,
 		OPSTAT_INCR(SLC_OPST_READ_AHEAD_CB_PAGES);
 
 		if (!i)
-			DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b,
+			DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
 			    "sbd_seq=%"PRId64, bmap_2_sbd(b)->sbd_seq);
 
-		DEBUG_BMPCE(rc ? PLL_ERROR : PLL_INFO, e, "readahead rc=%d", rc);
+		DEBUG_BMPCE(rc ? PLL_ERROR : PLL_DIAG, e,
+		    "readahead rc=%d", rc);
 
 		BMPCE_LOCK(e);
 		if (rc)
@@ -1779,20 +1781,19 @@ msl_pages_copyin(struct bmpc_ioreq *r)
 		 * Re-check RBW sanity.  The waitq pointer within the
 		 * bmpce must still be valid in order for this check to
 		 * work.
-		 */
-		/*
+		 *
 		 * Set the starting buffer pointer into our cache
 		 * vector.
 		 */
 		dest = e->bmpce_base;
-		if (!i && (toff > e->bmpce_off)) {
+		if (!i && toff > e->bmpce_off) {
 			/*
 			 * The first cache buffer pointer may need a
 			 * bump if the request offset is unaligned.
 			 */
 			bmpce_usecheck(e, BIORQ_WRITE,
 			    (toff & ~BMPC_BUFMASK));
-			psc_assert((toff - e->bmpce_off) < BMPC_BUFSZ);
+			psc_assert(toff - e->bmpce_off < BMPC_BUFSZ);
 			dest += toff - e->bmpce_off;
 			nbytes = MIN(BMPC_BUFSZ - (toff - e->bmpce_off),
 			    tsize);
@@ -1802,7 +1803,7 @@ msl_pages_copyin(struct bmpc_ioreq *r)
 		}
 
 		DEBUG_BMPCE(PLL_DEBUG, e, "tsize=%u nbytes=%u toff=%u",
-			    tsize, nbytes, toff);
+		    tsize, nbytes, toff);
 
 		/* Do the deed. */
 		memcpy(dest, src, nbytes);
@@ -2105,6 +2106,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		return (rc);
 	}
 	mfh->mfh_retries = 0;
+
 	/*
 	 * Initialize some state in the pfr to help with aio requests.
 	 */
@@ -2215,7 +2217,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 * offsets into the buffer.
 	 */
 	for (i = 0; i < nr; i++) {
-
 		r = q->mfsrq_biorq[i];
 		if (!(r->biorq_flags & BIORQ_MFHLIST)) {
 			r->biorq_flags |= BIORQ_MFHLIST;
@@ -2232,6 +2233,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			if (rc)
 				break;
 		}
+
 		/*
 		 * If this is a complete overwrite, we don't need to
 		 * launch a RPC to satisfy the write request at least
