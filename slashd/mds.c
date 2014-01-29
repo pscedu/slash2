@@ -457,6 +457,7 @@ slm_resm_select(struct bmap *b, sl_ios_id_t pios, sl_ios_id_t *to_skip,
 	}
 
 	if (repls && !psc_dynarray_len(&a)) {
+		psc_dynarray_free(&a);
 		DEBUG_BMAPOD(PLL_ERROR, b, "no replicas marked valid we "
 		    "can use; repls=%d nskip=%d", repls, nskip);
 		return (NULL);
