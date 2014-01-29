@@ -27,6 +27,9 @@
  * accessed by FID (global SLASH2 file identifier).
  */
 
+#define PSC_SUBSYS SLSS_FCMH
+#include "slsubsys.h"
+
 #include <pthread.h>
 #include <stdio.h>
 
@@ -182,7 +185,7 @@ fidc_reap(struct psc_poolmgr *m)
 		/* already victimized */
 		if (f->fcmh_flags & FCMH_CAC_REAPED)
 			goto end;
-		DEBUG_FCMH(PLL_INFO, f, "reaped");
+		DEBUG_FCMH(PLL_DEBUG, f, "reaped");
 
 		/*
 		 * Consult the context-specific callback handler before
@@ -197,8 +200,9 @@ fidc_reap(struct psc_poolmgr *m)
 	}
 	LIST_CACHE_ULOCK(&fidcIdleList);
 
+	psclog_debug("reaped %d fcmhs", nreap);
+
 	for (i = 0; i < nreap; i++) {
-		DEBUG_FCMH(PLL_DEBUG, reap[i], "moving to free list");
 		psc_hashent_remove(&fidcHtable, reap[i]);
 		fcmh_destroy(reap[i]);
 	}
