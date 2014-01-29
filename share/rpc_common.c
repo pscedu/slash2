@@ -37,6 +37,7 @@
 #include "pfl/rpclog.h"
 #include "pfl/rsx.h"
 #include "pfl/time.h"
+#include "pfl/str.h"
 
 #include "authbuf.h"
 #include "slashrpc.h"
@@ -1072,14 +1073,6 @@ slrpc_bulk_sign(struct pscrpc_request *rq, void *buf, struct iovec *iov,
 
 	memcpy(buf, gcry_md_read(hd, 0), AUTHBUF_ALGLEN);
 
-#if 0
- {
-  char tbuf[65];
-  pfl_unpack_hex(buf, AUTHBUF_ALGLEN, tbuf);
-  DEBUG_REQ(PLL_MAX, rq, "bulk sig=%s", tbuf);
- }
-#endif
-
 	gcry_md_close(hd);
 }
 
@@ -1090,14 +1083,12 @@ slrpc_bulk_check(struct pscrpc_request *rq, const void *hbuf,
 	char tbuf[AUTHBUF_ALGLEN];
 	int rc = 0;
 
-#if 0
 	slrpc_bulk_sign(rq, tbuf, iov, n);
 	if (memcmp(tbuf, hbuf, AUTHBUF_ALGLEN)) {
 		psc_fatalx("authbuf did not hash correctly -- "
 		    "ensure key files are synced");
 		rc = SLERR_AUTHBUF_BADHASH;
 	}
-#endif
 	return (rc);
 }
 
