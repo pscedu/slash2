@@ -281,7 +281,6 @@ struct sl_mds_iosinfo {
 
 /* MDS-specific data for struct sl_resource */
 struct resprof_mds_info {
-	int			  rpmi_cnt;		/* IOS round-robin assigner */
 	struct pfl_mutex	  rpmi_mutex;
 	struct psc_dynarray	  rpmi_upschq;		/* updates queue */
 	struct psc_waitq	  rpmi_waitq;
@@ -446,20 +445,5 @@ extern struct psc_listcache	 slm_db_workq;
 extern struct psc_thread	*slmconnthr;
 
 extern int			 slm_opstate;
-
-static __inline int
-slm_get_rpmi_idx(struct sl_resource *res)
-{
-	struct resprof_mds_info *rpmi;
-	int locked, n;
-
-	rpmi = res2rpmi(res);
-	locked = RPMI_RLOCK(rpmi);
-	if (rpmi->rpmi_cnt >= psc_dynarray_len(&res->res_members))
-		rpmi->rpmi_cnt = 0;
-	n = rpmi->rpmi_cnt++;
-	RPMI_URLOCK(rpmi, locked);
-	return (n);
-}
 
 #endif /* _SLASHD_H_ */
