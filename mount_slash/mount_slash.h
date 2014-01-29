@@ -268,6 +268,7 @@ void	  bmap_flush_resched(struct bmpc_ioreq *, int);
 #define BMAPFLSH_RPCWAIT	(1 << 0)
 #define BMAPFLSH_EXPIRE		(1 << 1)
 #define BMAPFLSH_TIMEOA		(1 << 2)
+#define BMAPFLSH_TRUNCATE	(1 << 3)
 
 enum {
 	SLC_OPST_AIO_PLACED,

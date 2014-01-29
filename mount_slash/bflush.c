@@ -123,6 +123,7 @@ bmap_free_all_locked(struct fidc_membh *f)
 		a->bcm_flags |= BMAP_TOFREE;
 		BMAP_ULOCK(a);
 	}
+	bmap_flushq_wake(BMAPFLSH_TRUNCATE);
 }
 
 int
