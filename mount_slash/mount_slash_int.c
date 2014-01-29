@@ -1526,9 +1526,8 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 
  error:
 	if (rq) {
-		DEBUG_REQ(PLL_ERROR, rq, "req failed");
+		DEBUG_REQ(PLL_ERROR, rq, "req failed, rc = %d", rc);
 		pscrpc_req_finished(rq);
-		rq = NULL;
 	}
 	if (csvc) {
 		sl_csvc_decref(csvc);

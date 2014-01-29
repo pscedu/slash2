@@ -328,7 +328,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(r->biorq_bmap);
 	int delta;
 
-	DEBUG_BIORQ(PLL_INFO, r, "resched");
+	DEBUG_BIORQ(PLL_INFO, r, "resched, rc = %d", rc);
 
 	BMAP_LOCK(r->biorq_bmap);
 	BIORQ_LOCK(r);
@@ -404,7 +404,6 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 
 	r = pll_peekhead(&bwc->bwc_pll);
 
-	/* XXX return error here? */
 	csvc = msl_bmap_to_csvc(r->biorq_bmap, 1);
 	if (csvc == NULL) {
 		rc = -ENOTCONN;
