@@ -193,7 +193,6 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 			bmap_2_bci(b)->bci_nreassigns = SLERR_ION_OFFLINE;
 		OPSTAT_INCR(SLC_OPST_BMAP_REASSIGN_FAIL);
 	} else {
-
 		memcpy(&bmap_2_bci(b)->bci_sbd, &mp->sbd,
 		    sizeof(struct srt_bmapdesc));
 
@@ -258,7 +257,7 @@ msl_bmap_lease_tryext_cb(struct pscrpc_request *rq,
 
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b,
 	    "lease extension: rc=%d, nseq=%"PRId64", "
-	    "etime="PSCPRI_TIMESPEC"", rc, bci->bci_sbd.sbd_seq,
+	    "etime="PSCPRI_TIMESPEC, rc, bci->bci_sbd.sbd_seq,
 	    PFLPRI_PTIMESPEC_ARGS(&bci->bci_etime));
 
 	bmap_op_done_type(b, BMAP_OPCNT_LEASEEXT);
@@ -457,6 +456,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 	rc = pscrpc_nbreqset_add(pndgBmaplsReqs, rq);
 	if (!rc)
 		OPSTAT_INCR(SLC_OPST_BMAP_LEASE_EXT_SEND);
+
  out:
 	BMAP_LOCK(b);
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b,
@@ -586,6 +586,7 @@ msl_bmap_cache_rls(struct bmap *b)
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 
 	BMAP_LOCK(b);
+//	SPLAY_FOREACH()
 	for (e = SPLAY_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); e; ) {
 		BMPCE_LOCK(e);
 		e->bmpce_flags |= BMPCE_DISCARD;
@@ -642,8 +643,8 @@ msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd)
 	BMAP_URLOCK(b, locked);
 
 	DEBUG_BMAP(PLL_INFO, b,
-	    "reap init: nseq=%"PRId64", "
-	    "etime="PSCPRI_TIMESPEC"", bci->bci_sbd.sbd_seq,
+	    "reap init: nseq=%"PRId64", etime="PSCPRI_TIMESPEC,
+	    bci->bci_sbd.sbd_seq,
 	    PFLPRI_PTIMESPEC_ARGS(&bci->bci_etime));
 
 	/*
@@ -951,7 +952,7 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive)
 	mw = msl_getmw();
 
 	if (msl_bmap_check_replica(b))
-		return NULL;
+		return (NULL);
 
 	n = 0;
 	FOREACH_RND(&it, fci->fci_inode.nrepls) {
