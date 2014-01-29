@@ -543,6 +543,7 @@ slctlmsg_bmap_send(int fd, struct psc_ctlmsghdr *mh,
     struct slctlmsg_bmap *scb, struct bmap *b)
 {
 	struct bmap_cli_info *bci;
+	const char *res;
 	sl_ios_id_t id;
 
 	bci = bmap_2_bci(b);
@@ -552,8 +553,13 @@ slctlmsg_bmap_send(int fd, struct psc_ctlmsghdr *mh,
 	scb->scb_flags = b->bcm_flags;
 
 	id = bci->bci_sbd.sbd_ios;
-	strlcpy(scb->scb_resname, id == IOS_ID_ANY ? "<any>" :
-	    libsl_id2res(id)->res_name, sizeof(scb->scb_resname));
+	if (pfl_memchk(&bci->bci_sbd, 0, sizeof(bci->bci_sbd)))
+		res = "<init>";
+	else if (id == IOS_ID_ANY)
+		res = "<any>";
+	else
+		res = libsl_id2res(id)->res_name;
+	strlcpy(scb->scb_resname, res, sizeof(scb->scb_resname));
 	return (psc_ctlmsg_sendv(fd, mh, scb));
 }
 
