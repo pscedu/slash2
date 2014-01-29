@@ -2227,8 +2227,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			rc = msl_pages_dio_getput(r);
 			if (rc)
 				break;
-		} else if (r->biorq_flags &
-		    (BIORQ_READ | BIORQ_RBWFP | BIORQ_RBWLP)) {
+		} else {
 			rc = msl_pages_prefetch(r);
 			if (rc)
 				break;
