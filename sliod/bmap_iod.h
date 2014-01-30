@@ -133,7 +133,6 @@ extern struct psc_poolmaster	 bmap_crcupd_poolmaster;
 extern struct psc_poolmgr	*bmap_crcupd_pool;
 
 extern struct psc_listcache	 bcr_ready;
-extern struct psc_listcache	 bcr_hold;
 
 static __inline struct bmapc_memb *
 bii_2_bmap(struct bmap_iod_info *bii)
