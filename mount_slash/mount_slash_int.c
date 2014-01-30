@@ -2223,21 +2223,12 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			pll_addtail(&mfh->mfh_biorqs, r);
 		}
 
-		if (r->biorq_flags & BIORQ_DIO) {
+		if (r->biorq_flags & BIORQ_DIO)
 			rc = msl_pages_dio_getput(r);
-			if (rc)
-				break;
-		} else {
+		else
 			rc = msl_pages_prefetch(r);
-			if (rc)
-				break;
-		}
-
-		/*
-		 * If this is a complete overwrite, we don't need to
-		 * launch a RPC to satisfy the write request at least
-		 * for now.
-		 */
+		if (rc)
+			break;
 	}
 	if (r->biorq_flags & BIORQ_DIO && rc == -EAGAIN) {
 		OPSTAT_INCR(SLC_OPST_BIORQ_RESTART);
