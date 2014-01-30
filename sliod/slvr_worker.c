@@ -389,7 +389,6 @@ slislvrthr_proc(struct slvr *s)
 			bcr->bcr_bii->bii_bcr = NULL;
 
 	} else {
-		bmap_op_start_type(b, BMAP_OPCNT_BCRSCHED);
 
 		bii->bii_bcr = bcr = psc_pool_get(bmap_crcupd_pool);
 		memset(bcr, 0, bmap_crcupd_pool->ppm_entsize);

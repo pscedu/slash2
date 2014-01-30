@@ -192,6 +192,7 @@ bcr_ready_add(struct bcrcupd *bcr)
 
 	BII_LOCK_ENSURE(bcr->bcr_bii);
 	lc_addtail(&bcr_ready, bcr);
+	bmap_op_start_type(bcr_2_bmap(bcr), BMAP_OPCNT_BCRSCHED);
 }
 
 void
