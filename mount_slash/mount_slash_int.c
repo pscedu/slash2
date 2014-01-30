@@ -1540,10 +1540,6 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	PSCFREE(a);
 	PSCFREE(iovs);
 
-	/*
-	 * Two pass page cleanup.  First mark as EIO and wake up our
-	 * waiters.  Then remove the pages from the bmpc.
-	 */
 	for (i = 0; i < npages; i++) {
 		e = psc_dynarray_getpos(&r->biorq_pages, i + startpage);
 		/* Didn't get far enough for the waitq to be removed. */
@@ -1552,10 +1548,6 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 		BMPCE_LOCK(e);
 		e->bmpce_flags |= BMPCE_EIO;
 		DEBUG_BMPCE(PLL_WARN, e, "set BMPCE_EIO");
-		/*
-		 * XXX XXX could this cause a potential dangling
-		 * reference problem?
-		 */
 		BMPCE_WAKE(e);
 		BMPCE_ULOCK(e);
 	}
