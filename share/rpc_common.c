@@ -1054,8 +1054,8 @@ sl_exp_getpri_cli(struct pscrpc_export *exp)
 }
 
 void
-slrpc_bulk_sign(struct pscrpc_request *rq, void *buf, struct iovec *iov,
-    int n)
+slrpc_bulk_sign(__unusedx struct pscrpc_request *rq, void *buf,
+    struct iovec *iov, int n)
 {
 	char ebuf[BUFSIZ];
 	gcry_error_t gerr;
