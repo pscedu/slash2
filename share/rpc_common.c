@@ -1085,8 +1085,8 @@ slrpc_bulk_check(struct pscrpc_request *rq, const void *hbuf,
 
 	slrpc_bulk_sign(rq, tbuf, iov, n);
 	if (memcmp(tbuf, hbuf, AUTHBUF_ALGLEN)) {
-		psc_fatalx("authbuf did not hash correctly -- "
-		    "ensure key files are synced");
+		DEBUG_REQ(PLL_FATAL, rq, "authbuf did not hash "
+		    "correctly -- ensure key files are synced");
 		rc = SLERR_AUTHBUF_BADHASH;
 	}
 	return (rc);
