@@ -1621,7 +1621,8 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r, int *psched)
 /**
  * msl_pages_prefetch - Launch read RPCs for pages that are owned by the
  *	given I/O request.  This function is called to perform a pure
- *	read request or a read-before-write for a write request.
+ *	read request or a read-before-write for a write request.  It is
+ *	also used to wait for read-ahead pages to complete.
  */
 __static int
 msl_pages_prefetch(struct bmpc_ioreq *r)
