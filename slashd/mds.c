@@ -306,8 +306,7 @@ slm_try_sliodresm(struct sl_resm *resm)
 		psclog_notice("res=%s skipped due to lastcomm",
 		    resm->resm_res->res_name);
 
-	if (csvc)
-		sl_csvc_decref(csvc);
+	sl_csvc_decref(csvc);
 
 	return (ok);
 }
