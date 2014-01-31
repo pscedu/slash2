@@ -336,7 +336,7 @@ slm_res_fillmembers(struct sl_resource *r, struct psc_dynarray *a)
 /**
  * slm_get_ioslist
  */
-int
+void
 slm_get_ioslist(struct fidc_membh *f, sl_ios_id_t piosid,
     struct psc_dynarray *a)
 {
@@ -345,7 +345,7 @@ slm_get_ioslist(struct fidc_membh *f, sl_ios_id_t piosid,
 
 	pios = libsl_id2res(piosid);
 	if (!pios || (!RES_ISFS(pios) && !RES_ISCLUSTER(pios)))
-		return (0);
+		return;
 
 	/* If affinity, prefer the first resm from the reptbl. */
 	if (fcmh_2_inoh(f)->inoh_flags & INOF_IOS_AFFINITY) {
@@ -371,8 +371,6 @@ slm_get_ioslist(struct fidc_membh *f, sl_ios_id_t piosid,
 
 		slm_res_fillmembers(r, a);
 	}
-
-	return (psc_dynarray_len(a));
 }
 
 /**
