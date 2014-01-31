@@ -254,8 +254,6 @@ mds_sliod_alive(void *arg)
 
 		if (timespeccmp(&a, &b, <))
 			ok = 1;
-		else
-			OPSTAT_INCR(SLM_OPST_SLIOD_PING_FAIL);
 	}
 
 	return (ok);
@@ -304,9 +302,11 @@ slm_try_sliodresm(struct sl_resm *resm)
 	}
 
 	ok = mds_sliod_alive(si);
-	if (!ok)
+	if (!ok) {
+		OPSTAT_INCR(SLM_OPST_SLIOD_PING_FAIL);
 		psclog_notice("res=%s skipped due to lastcomm",
 		    resm->resm_res->res_name);
+	}
 
 	sl_csvc_decref(csvc);
 
