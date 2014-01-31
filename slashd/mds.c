@@ -254,6 +254,8 @@ mds_sliod_alive(void *arg)
 
 		if (timespeccmp(&a, &b, <))
 			ok = 1;
+		else
+			OPSTAT_INCR(SLM_OPST_SLIOD_PING_FAIL);
 	}
 
 	return (ok);
