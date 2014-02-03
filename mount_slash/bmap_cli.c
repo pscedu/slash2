@@ -50,6 +50,7 @@ struct psc_waitq		bmapTimeoutWaitq = PSC_WAITQ_INIT;
 void
 msl_bmap_free(void)
 {
+	bmap_flushq_wake(BMAPFLSH_TRUNCATE);
 	while (lc_nitems(&bmapTimeoutQ) > BMAP_CACHE_MAX) {
 		spinlock(&bmapTimeoutLock);
 		psc_waitq_wakeall(&bmapTimeoutWaitq);
