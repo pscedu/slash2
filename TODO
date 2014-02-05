@@ -481,6 +481,7 @@ reimport
 - survey all threads loops to ensure clean shutdown (pscthr_run() can
   exit on slmctl stop)
 - EIO is not being delivered to app when IOS is down
+- convert msbrathr to wkthr
 
 - pahole(1)
 - port slash2 openstack
