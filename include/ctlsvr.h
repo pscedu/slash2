@@ -45,6 +45,7 @@ int slctlparam_resources(int, struct psc_ctlmsghdr *,
     struct psc_ctlmsg_param *, char **, int,
     struct psc_ctlparam_node *);
 
+void slctlparam_nbrq_outstanding_get(char *);
 void slctlparam_uptime_get(char *);
 void slctlparam_version_get(char *);
 

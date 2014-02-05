@@ -28,11 +28,11 @@
 #include "lnet/lib-types.h"
 #include "lnet/lib-lnet.h"
 
-#include "pfl/rpc.h"
-#include "pfl/str.h"
 #include "pfl/ctl.h"
 #include "pfl/ctlsvr.h"
 #include "pfl/lock.h"
+#include "pfl/rpc.h"
+#include "pfl/str.h"
 
 #include "ctl.h"
 #include "ctlsvr.h"
@@ -324,4 +324,11 @@ slctlparam_uptime_get(char *val)
 	    delta.tv_sec / (60 * 60 * 24),
 	    (delta.tv_sec % (60 * 60 * 24)) / (60 * 60),
 	    (delta.tv_sec % (60 * 60)) / 60);
+}
+
+void
+slctlparam_nbrq_outstanding_get(char *val)
+{
+	snprintf(val, PCP_VALUE_MAX, "%d",
+	    atomic_read(&sl_nbrqset->nb_outstanding));
 }
