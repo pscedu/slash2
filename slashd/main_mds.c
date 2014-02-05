@@ -645,12 +645,14 @@ main(int argc, char *argv[])
 		    "CREATE INDEX 'upsch_gid_idx'"
 		    " ON 'upsch' ('gid')");
 
-		dbdo(NULL, NULL, "CREATE VIEW gsort AS"
+		dbdo(NULL, NULL,
+		    "CREATE VIEW gsort AS"
 		    " SELECT	gid,"
 		    "		RANDOM() AS rnd"
 		    " FROM	upsch"
 		    " GROUP BY	gid");
-		dbdo(NULL, NULL, "CREATE VIEW usort AS"
+		dbdo(NULL, NULL,
+		    "CREATE VIEW usort AS"
 		    " SELECT	uid,"
 		    "		RANDOM() AS rnd"
 		    " FROM	upsch"
