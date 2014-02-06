@@ -171,8 +171,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct dircache_ent);
 	PRTYPE(struct dircache_expire);
 	PRTYPE(struct dircache_page);
-	PRTYPE(struct fci_dinfo);
-	PRTYPE(struct fci_finfo);
 	PRTYPE(struct fcmh_cli_info);
 	PRTYPE(struct fcmh_iod_info);
 	PRTYPE(struct fcmh_mds_info);
@@ -224,6 +222,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct sl_site);
 	PRTYPE(struct slash_creds);
 	PRTYPE(struct slc_async_req);
+	PRTYPE(struct slc_wkdata_readdir);
 	PRTYPE(struct slconn_params);
 	PRTYPE(struct slconn_thread);
 	PRTYPE(struct slctl_res_field);
@@ -399,6 +398,8 @@ main(int argc, char *argv[])
 	PRVAL(CSVC_RECONNECT_INTV);
 	PRVAL(DIRCACHEPG_MAXTIMEO);
 	PRVAL(DIRCACHEPG_TIMEO);
+	PRVAL(DIR_LOOKUP_MISSES_INCR);
+	PRVAL(DIR_LOOKUP_MISSES_THRES);
 	PRVAL(FCMH_ATTR_TIMEO);
 	PRVAL(FCMH_SETATTRF_NONE);
 	PRVAL(FIDC_CLI_DEFSZ);
@@ -613,6 +614,7 @@ main(int argc, char *argv[])
 	PRVAL(MSTHRT_RCM);
 	PRVAL(MSTHRT_TIOS);
 	PRVAL(MSTHRT_USKLNDPL);
+	PRVAL(MSTHRT_WORKER);
 	PRVAL(NS_DIR_RECV);
 	PRVAL(NS_DIR_SEND);
 	PRVAL(NS_NDIRS);
@@ -682,8 +684,8 @@ main(int argc, char *argv[])
 	PRVAL(SLC_OPST_DIRCACHE_HIT_EOF);
 	PRVAL(SLC_OPST_DIRCACHE_ISSUE);
 	PRVAL(SLC_OPST_DIRCACHE_LOOKUP_HIT);
+	PRVAL(SLC_OPST_DIRCACHE_LOOKUP_MISS);
 	PRVAL(SLC_OPST_DIRCACHE_REG_ENTRY);
-	PRVAL(SLC_OPST_DIRCACHE_REL_ENTRY);
 	PRVAL(SLC_OPST_DIRCACHE_WAIT);
 	PRVAL(SLC_OPST_FLUSH);
 	PRVAL(SLC_OPST_FLUSH_ATTR);
@@ -790,6 +792,7 @@ main(int argc, char *argv[])
 	PRVAL(SLI_OPST_ISSUE_REPLREAD_CB);
 	PRVAL(SLI_OPST_ISSUE_REPLREAD_CB_AIO);
 	PRVAL(SLI_OPST_ISSUE_REPLREAD_ERROR);
+	PRVAL(SLI_OPST_KEY_EXPIRE);
 	PRVAL(SLI_OPST_MIN_SEQNO);
 	PRVAL(SLI_OPST_OPEN_FAIL);
 	PRVAL(SLI_OPST_OPEN_SUCCEED);
@@ -874,6 +877,7 @@ main(int argc, char *argv[])
 	PRVAL(SLM_OPST_REPL_SCHEDWK);
 	PRVAL(SLM_OPST_SETATTR);
 	PRVAL(SLM_OPST_SETXATTR);
+	PRVAL(SLM_OPST_SLIOD_PING_FAIL);
 	PRVAL(SLM_OPST_STATFS);
 	PRVAL(SLM_OPST_SYMLINK);
 	PRVAL(SLM_OPST_UNLINK);
