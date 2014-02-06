@@ -677,7 +677,8 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* RCI		*/ NULL,
 /* RCM		*/ NULL,
 /* TIOS		*/ NULL,
-/* USKLNDPL	*/ NULL
+/* USKLNDPL	*/ NULL,
+/* WORKER	*/ NULL
 };
 
 PFLCTL_SVR_DEFS;
@@ -704,6 +705,8 @@ msctlthr_spawn(void)
 	psc_ctlparam_register("rlim", psc_ctlparam_rlim);
 	psc_ctlparam_register("run", psc_ctlparam_run);
 
+	psc_ctlparam_register_simple("nbrq.outstanding",
+	    slctlparam_nbrq_outstanding_get, NULL); 
 	psc_ctlparam_register_simple("uptime", slctlparam_uptime_get,
 	    NULL);
 	psc_ctlparam_register_simple("version", slctlparam_version_get,

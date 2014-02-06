@@ -20,7 +20,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES ctl fuse rpc %
-.Dd December 3, 2013
+.Dd February 5, 2014
 .Dt MSCTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -818,12 +818,12 @@ display additional information about each operation being performed.
 .\"		q{msattrflushthr}		=> qq{File attribute flusher},
 .\"		q{msbflushrpcthr}		=> qq{Bmap flusher asynchronous\n.Tn RPC\nreplier},
 .\"		q{msbflushthr Ns Ar %d}		=> qq{Bmap flusher},
-.\"		q{msbmflwthr}			=> qq{Bmap flush queue lease watcher},
+.\"		q{msbmlwthr}			=> qq{Bmap lease watcher},
 .\"		q{msbrathr}			=> qq{Bmap read-ahead queuer},
 .\"		q{msbrlsthr}			=> qq{Bmap timed releaser},
+.\"		q{msconnthr}			=> qq{Peer resource connection monitor},
 .\"		q{msctlacthr}			=> qq{.Nm\nconnection acceptor/multiplexor},
 .\"		q{msctlthr}			=> qq{.Nm\nconnection processor},
-.\"		q{msconnthr}			=> qq{Peer resource connection monitor},
 .\"		q{mseqpollthr}			=> qq{Lustre\n.Fn LNetEQPoll\nissuer},
 .\"		q{msfsmgrthr}			=> qq{Userland file system manager\n.Pq e.g. FUSE},
 .\"		q{msfsthr Ns Ar %d}		=> qq{File system syscall handler},
@@ -832,6 +832,7 @@ display additional information about each operation being performed.
 .\"		q{msrcmthr Ns Ar %02d}		=> qq{.Tn MDS RPC\nrequest service},
 .\"		q{mstiosthr}			=> qq{Timed\n.Tn I/O\nstats updater},
 .\"		q{msusklndplthr Ns Ar %d}	=> qq{Lustre userland socket poll},
+.\"		q{mswkthr Ns Ar %d}		=> qq{Generic worker},
 .\"	}
 .Ss Thread Specification
 Options which take
@@ -848,8 +849,8 @@ Bmap flusher asynchronous
 replier
 .It Cm msbflushthr Ns Ar %d
 Bmap flusher
-.It Cm msbmflwthr
-Bmap flush queue lease watcher
+.It Cm msbmlwthr
+Bmap lease watcher
 .It Cm msbrathr
 Bmap read-ahead queuer
 .It Cm msbrlsthr
@@ -887,6 +888,8 @@ Timed
 stats updater
 .It Cm msusklndplthr Ns Ar %d
 Lustre userland socket poll
+.It Cm mswkthr Ns Ar %d
+Generic worker
 .It Cm everyone
 All threads
 .Pq default, where applicable

@@ -936,7 +936,8 @@ psc_ctl_prthr_t psc_ctl_prthrs[] = {
 /* RCI		*/ NULL,
 /* RCM		*/ NULL,
 /* TIOS		*/ NULL,
-/* USKLNDPL	*/ NULL
+/* USKLNDPL	*/ NULL,
+/* WORKER	*/ NULL
 };
 
 struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {
@@ -1031,7 +1032,7 @@ main(int argc, char *argv[])
 	pfl_init();
 	progname = argv[0];
 	psc_hashtbl_init(&fnfidpairs, 0, struct fnfidpair, ffp_fid,
-	    ffp_hentry, 1024, NULL, "fnfidpairs");
+	    ffp_hentry, 97, NULL, "fnfidpairs");
 
 	setupterm(NULL, STDOUT_FILENO, &rc);
 	start_color();

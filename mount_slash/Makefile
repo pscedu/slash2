@@ -62,6 +62,7 @@ SRCS+=		${PFL_BASE}/timerthr.c
 SRCS+=		${PFL_BASE}/usklndthr.c
 SRCS+=		${PFL_BASE}/vbitmap.c
 SRCS+=		${PFL_BASE}/waitq.c
+SRCS+=		${PFL_BASE}/workthr.c
 
 SRCS+=		${SETRESUID_SRC}
 
