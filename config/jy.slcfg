@@ -22,40 +22,48 @@ site @JY {
 		jrnldev	= /dev/sdl;
 	}
 
-	resource io {
-		type	= parallel_lfs_compnt;
-		id	= 102;
-		fsroot	= /home/slio-jy;
-		nids	= wolverine;
-	}
+#	resource io {
+#		type	= parallel_lfs_compnt;
+#		id	= 102;
+#		fsroot	= /home/slio-jy;
+#		nids	= wolverine;
+#	}
 
-	resource kam {
-		type	= standalone_fs;
-		id	= 103;
-		fsroot	= /slio-jy;
-		nids	= kaminari;
-	}
+#	resource kam {
+#		type	= standalone_fs;
+#		id	= 103;
+#		fsroot	= /slio-jy;
+#		nids	= kaminari;
+#	}
 
 	resource citron {
-#		type	= standalone_fs;
-		type	= archival_fs;
+		type	= standalone_fs;
+#		type	= archival_fs;
 		id	= 105;
 		fsroot	= /local/jy.s2/io;
 		nids	= citron;
 	}
 
 	resource orange {
-#		type	= standalone_fs;
-		type	= archival_fs;
+		type	= standalone_fs;
+#		type	= archival_fs;
 		id	= 106;
 		fsroot	= /local/jy.s2/io;
 		nids	= orange;
 	}
 
-	resource peel0 {
+	resource lemon {
 		type	= standalone_fs;
+#		type	= archival_fs;
 		id	= 107;
-		fsroot	= /slio0;
-		nids	= peel0;
+		fsroot	= /local/jy.s2/io;
+		nids	= lemon;
+	}
+
+	resource io {
+		desc	= "sliods";
+		type	= cluster_noshare_lfs;
+		id	= 1000;
+		ios	= lemon@JY, orange@JY, citron@JY;
 	}
 }
