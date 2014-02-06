@@ -165,8 +165,7 @@ fidc_reap(struct psc_poolmgr *m)
 	LIST_CACHE_LOCK(&fidcIdleList);
 	LIST_CACHE_FOREACH_SAFE(f, tmp, &fidcIdleList) {
 		if (nreap == FCMH_MAX_REAP ||
-		    m->ppm_nfree + nreap >=
-		    atomic_read(&m->ppm_nwaiters) + 1)
+		    nreap > atomic_read(&m->ppm_nwaiters))
 			break;
 
 		/* skip the root right now, no need for locking */
