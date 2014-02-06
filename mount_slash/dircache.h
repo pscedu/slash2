@@ -174,18 +174,22 @@ dce_sort_cmp_off(const void *x, const void *y)
 	return (dce_cmp_off(a, b));
 }
 
-#define dircache_free_page(d, p)	_dircache_free_page(PFL_CALLERINFO(), (d), (p))
+#define dircache_free_page(d, p)					\
+	_dircache_free_page(PFL_CALLERINFO(), (d), (p), 1)
+
+#define dircache_free_page_nowait(d, p)					\
+	_dircache_free_page(PFL_CALLERINFO(), (d), (p), 0)
 
 struct dircache_page *
 	dircache_new_page(struct fidc_membh *, off_t, int);
 int	dircache_hasoff(struct dircache_page *, off_t);
-void	_dircache_free_page(const struct pfl_callerinfo *,
-	    struct fidc_membh *, struct dircache_page *);
-slfid_t	dircache_lookup(struct fidc_membh *, const char *);
+int	_dircache_free_page(const struct pfl_callerinfo *,
+	    struct fidc_membh *, struct dircache_page *, int);
+slfid_t	dircache_lookup(struct fidc_membh *, const char *, off_t *);
 void	dircache_mgr_init(void);
 void	dircache_purge(struct fidc_membh *);
 void	dircache_reg_ents(struct fidc_membh *, struct dircache_page *,
-    	    size_t, void *, size_t, int);
+	    size_t, void *, size_t, int);
 void	dircache_walk(struct fidc_membh *, void (*)(struct dircache_page *,
 	    struct dircache_ent *, void *), void *);
 

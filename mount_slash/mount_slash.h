@@ -63,7 +63,8 @@ enum {
 	MSTHRT_RCI,			/* service RPC reqs for CLI from ION */
 	MSTHRT_RCM,			/* service RPC reqs for CLI from MDS */
 	MSTHRT_TIOS,			/* timer iostat updater */
-	MSTHRT_USKLNDPL			/* userland socket lustre net dev poll thr */
+	MSTHRT_USKLNDPL,		/* userland socket lustre net dev poll thr */
+	MSTHRT_WORKER			/* generic worker */
 };
 
 struct msrcm_thread {
@@ -145,6 +146,13 @@ struct slc_async_req {
 					    struct pscrpc_async_args *);
 	uint64_t			  car_id;
 	struct msl_fsrqinfo		 *car_fsrqinfo;
+};
+
+struct slc_wkdata_readdir {
+	struct fidc_membh		*d;
+	struct dircache_page		*pg;
+	off_t				 off;
+	size_t				 size;
 };
 
 struct msl_fhent {
@@ -243,7 +251,7 @@ int	 msl_readahead_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 int	 msl_stat(struct fidc_membh *, void *);
 
 void	 msl_readdir_error(struct fidc_membh *, struct dircache_page *, int);
-void	 msl_readdir(struct fidc_membh *, struct dircache_page *, int,
+void	 msl_readdir_finish(struct fidc_membh *, struct dircache_page *, int,
 	    int, int, struct iovec *);
 
 size_t	 msl_pages_copyout(struct bmpc_ioreq *);
@@ -322,8 +330,9 @@ enum {
 	SLC_OPST_DIRCACHE_HIT_EOF,
 	SLC_OPST_DIRCACHE_ISSUE,
 	SLC_OPST_DIRCACHE_LOOKUP_HIT,
+	SLC_OPST_DIRCACHE_LOOKUP_MISS,
 	SLC_OPST_DIRCACHE_REG_ENTRY,
-	SLC_OPST_DIRCACHE_REL_ENTRY,
+	SLC_OPST_DIRCACHE_UNUSED,
 	SLC_OPST_DIRCACHE_WAIT,
 
 	SLC_OPST_FLUSH,

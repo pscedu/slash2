@@ -293,8 +293,8 @@ slc_rcm_handle_readdir(struct pscrpc_request *rq)
 {
 	struct srm_readdir_ra_req *mq;
 	struct srm_readdir_ra_rep *mp;
+	struct fidc_membh *d = NULL;
 	struct dircache_page *p;
-	struct fidc_membh *d;
 	struct iovec iov[2];
 
 	memset(iov, 0, sizeof(iov));
@@ -304,10 +304,13 @@ slc_rcm_handle_readdir(struct pscrpc_request *rq)
 //	if (mq->num >=  || mq->size >= )
 //		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
-	mp->rc = fidc_lookup(&mq->fg, FIDC_LOOKUP_CREATE |
-	    FIDC_LOOKUP_LOAD, NULL, 0, &d);
+	mp->rc = fidc_lookup_fg(&mq->fg, &d);
 	if (mp->rc)
-		return (mp->rc);
+		PFL_GOTOERR(out, mp->rc);
+
+	p = dircache_new_page(d, mq->offset, 0);
+	if (p == NULL)
+		PFL_GOTOERR(out, mp->rc = -ECANCELED);
 
 	iov[0].iov_base = PSCALLOC(mq->size);
 	iov[0].iov_len = mq->size;
@@ -319,17 +322,20 @@ slc_rcm_handle_readdir(struct pscrpc_request *rq)
 		mp->rc = slrpc_bulkserver(rq, BULK_GET_SINK,
 		    SRCM_BULK_PORTAL, iov, nitems(iov));
 
-	p = dircache_new_page(d, mq->offset, 1);
-
 	if (mp->rc) {
 		msl_readdir_error(d, p, mp->rc);
 		PSCFREE(iov[0].iov_base);
 	} else
-		msl_readdir(d, p, mq->eof, mq->num, mq->size, iov);
+		msl_readdir_finish(d, p, mq->eof, mq->num, mq->size,
+		    iov);
 
 	PSCFREE(iov[1].iov_base);
 
-	fcmh_op_done(d);
+ out:
+	if (d)
+		fcmh_op_done(d);
+	if (mp->rc)
+		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
 	return (mp->rc);
 }
 

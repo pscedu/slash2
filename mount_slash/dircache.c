@@ -34,14 +34,14 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "pfl/alloc.h"
+#include "pfl/ctlsvr.h"
 #include "pfl/dynarray.h"
 #include "pfl/fs.h"
 #include "pfl/listcache.h"
-#include "pfl/str.h"
-#include "pfl/alloc.h"
-#include "pfl/ctlsvr.h"
 #include "pfl/lock.h"
 #include "pfl/pool.h"
+#include "pfl/str.h"
 
 #include "dircache.h"
 #include "fidcache.h"
@@ -68,21 +68,27 @@ dircache_mgr_init(void)
  * @d: directory handle.
  * @p: page to release.
  */
-void
+int
 _dircache_free_page(const struct pfl_callerinfo *pci,
-    struct fidc_membh *d, struct dircache_page *p)
+    struct fidc_membh *d, struct dircache_page *p, int wait)
 {
 	struct fcmh_cli_info *fci;
 
 	FCMH_LOCK_ENSURE(d);
 	fci = fcmh_2_fci(d);
 
-	psc_assert((p->dcp_flags & DIRCACHEPGF_LOADING) == 0);
+//	psc_assert((p->dcp_flags & DIRCACHEPGF_LOADING) == 0);
 
 	if (p->dcp_flags & DIRCACHEPGF_FREEING)
-		return;
+		return (0);
+
+	if (p->dcp_refcnt && !wait)
+		return (0);
 
 	p->dcp_flags |= DIRCACHEPGF_FREEING;
+
+	if ((p->dcp_flags & DIRCACHEPGF_READ) == 0)
+		OPSTAT_INCR(SLC_OPST_DIRCACHE_UNUSED);
 
 	while (p->dcp_refcnt)
 		fcmh_wait_nocond_locked(d);
@@ -92,8 +98,6 @@ _dircache_free_page(const struct pfl_callerinfo *pci,
 		pll_remove(&fci->fci_dc_pages, p);
 
 	if (p->dcp_dents_name) {
-		fci->fci_dc_nents -= psc_dynarray_len(
-		    p->dcp_dents_name);
 		psc_dynarray_free(p->dcp_dents_name);
 		psc_dynarray_free(p->dcp_dents_off);
 	}
@@ -105,6 +109,8 @@ _dircache_free_page(const struct pfl_callerinfo *pci,
 	psc_pool_return(dircache_pool, p);
 
 	fcmh_wake_locked(d);
+
+	return (1);
 }
 
 /**
@@ -142,7 +148,7 @@ dircache_walk(struct fidc_membh *d, void (*cbf)(struct dircache_page *,
  * @name: name to lookup.
  */
 slfid_t
-dircache_lookup(struct fidc_membh *d, const char *name)
+dircache_lookup(struct fidc_membh *d, const char *name, off_t *nextoffp)
 {
 	struct dircache_page *p, *np;
 	struct dircache_ent q, *dce;
@@ -160,6 +166,9 @@ dircache_lookup(struct fidc_membh *d, const char *name)
 	q.dce_hash = psc_strn_hashify(name, q.dce_namelen);
 	q.dce_name = name;
 
+	if (nextoffp)
+		*nextoffp = 0;
+
 	fci = fcmh_2_fci(d);
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
 		if (p->dcp_flags & DIRCACHEPGF_LOADING)
@@ -169,6 +178,12 @@ dircache_lookup(struct fidc_membh *d, const char *name)
 			dircache_free_page(d, p);
 			continue;
 		}
+
+		if (p->dcp_rc)
+			continue;
+
+		if (nextoffp)
+			*nextoffp = p->dcp_nextoff;
 
 		/*
 		 * The return code for psc_dynarray_bsearch() tells us
@@ -274,12 +289,12 @@ dircache_hasoff(struct dircache_page *p, off_t off)
 }
 
 /**
- * dircache_new_page: Allocate a new page of dirents.
+ * Allocate a new page of dirents.
  * @d: directory handle.
  * @off: offset into directory for this slew of dirents.
  */
 struct dircache_page *
-dircache_new_page(struct fidc_membh *d, off_t off, int loading)
+dircache_new_page(struct fidc_membh *d, off_t off, int wait)
 {
 	struct dircache_page *p, *np, *newp;
 	struct dircache_expire dexp;
@@ -299,19 +314,24 @@ dircache_new_page(struct fidc_membh *d, off_t off, int loading)
 			continue;
 		}
 		if (p->dcp_flags & DIRCACHEPGF_LOADING) {
-			/* Page is waiting for us. */
 			if (p->dcp_off == off) {
+				/* Page is waiting for us; use it. */
 				p->dcp_flags &= ~DIRCACHEPGF_LOADING;
 				break;
 			}
 
-			if (!loading) {
+			if (wait) {
 				fcmh_wait_nocond_locked(d);
 				goto restart;
 			}
 		} else if (dircache_hasoff(p, off)) {
-			/* Stale page in cache -- purge and refresh. */
-			dircache_free_page(d, p);
+			/* Stale page in cache; purge and refresh. */
+			if (wait)
+				dircache_free_page(d, p);
+			else if (!dircache_free_page_nowait(d, p)) {
+				p = NULL;
+				goto out;
+			}
 			p = NULL;
 			break;
 		}
@@ -329,6 +349,8 @@ dircache_new_page(struct fidc_membh *d, off_t off, int loading)
 	p->dcp_flags |= DIRCACHEPGF_LOADING;
 	p->dcp_refcnt++;
 	DBGPR_DIRCACHEPG(PLL_DEBUG, p, "incref");
+
+ out:
 	FCMH_ULOCK(d);
 
 	if (newp)
@@ -432,7 +454,6 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		p->dcp_flags |= DIRCACHEPGF_EOF;
 	p->dcp_refcnt--;
 	DBGPR_DIRCACHEPG(PLL_DEBUG, p, "decref");
-	fci->fci_dc_nents += nents;
 	fcmh_wake_locked(d);
 	FCMH_ULOCK(d);
 }

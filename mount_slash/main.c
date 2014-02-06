@@ -42,26 +42,27 @@
 #include <gcrypt.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/ctlsvr.h"
 #include "pfl/dynarray.h"
+#include "pfl/eqpollthr.h"
+#include "pfl/fault.h"
 #include "pfl/fs.h"
 #include "pfl/fsmod.h"
+#include "pfl/iostats.h"
+#include "pfl/log.h"
 #include "pfl/pfl.h"
+#include "pfl/random.h"
 #include "pfl/rpc.h"
 #include "pfl/rpclog.h"
 #include "pfl/rsx.h"
 #include "pfl/stat.h"
 #include "pfl/str.h"
 #include "pfl/sys.h"
-#include "pfl/time.h"
-#include "pfl/vbitmap.h"
-#include "pfl/ctlsvr.h"
-#include "pfl/eqpollthr.h"
-#include "pfl/fault.h"
-#include "pfl/iostats.h"
-#include "pfl/log.h"
-#include "pfl/random.h"
 #include "pfl/thread.h"
+#include "pfl/time.h"
 #include "pfl/usklndthr.h"
+#include "pfl/vbitmap.h"
+#include "pfl/workthr.h"
 
 #include "bmap_cli.h"
 #include "cache_params.h"
@@ -947,6 +948,8 @@ msl_lookuprpc(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		FCMH_ULOCK(m);
 	}
 
+	// XXX add to dircache
+
  out:
 	psclog_diag("pfid="SLPRI_FID" name='%s' cfid="SLPRI_FID" rc=%d",
 	    pinum, name, m ? m->fcmh_sstb.sst_fid : FID_ANY, rc);
@@ -961,6 +964,67 @@ msl_lookuprpc(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	return (rc);
 }
 
+int
+msl_readdir_issue(struct pscfs_clientctx *, struct fidc_membh *, off_t,
+    size_t, int);
+
+int
+slc_wk_issue_readdir(void *p)
+{
+	struct slc_wkdata_readdir *wk = p;
+	int rc;
+
+	rc = msl_readdir_issue(NULL, wk->d, wk->off, wk->size, 0);
+	FCMH_LOCK(wk->d);
+	wk->pg->dcp_refcnt--;
+	fcmh_op_done_type(wk->d, FCMH_OPCNT_WORKER);
+	return (0);
+}
+
+/**
+ * Register a 'miss' in the FID namespace lookup cache.
+ * If we reach a threshold, we issue an asynchronous READDIR in hopes
+ * that we will hit subsequent requests.
+ */
+void
+lookup_cache_tally_miss(struct fidc_membh *p, off_t off)
+{
+	struct fcmh_cli_info *pi = fcmh_2_fci(p);
+	struct slc_wkdata_readdir *wk = NULL;
+	struct timeval ts, delta;
+	struct dircache_page *np;
+	int ra = 0;
+
+	FCMH_LOCK(p);
+	PFL_GETTIMEVAL(&ts);
+	timersub(&ts, &pi->fcid_lookup_age, &delta);
+	if (delta.tv_sec > 1) {
+		pi->fcid_lookup_age = ts;
+		pi->fcid_lookup_misses = pi->fcid_lookup_misses >>
+		    delta.tv_sec;
+	}
+	pi->fcid_lookup_misses += DIR_LOOKUP_MISSES_INCR;
+	if (pi->fcid_lookup_misses >= DIR_LOOKUP_MISSES_THRES)
+		ra = 1;
+	FCMH_ULOCK(p);
+
+	if (!ra)
+		return;
+
+	np = dircache_new_page(p, off, 0);
+	if (np == NULL)
+		return;
+
+	wk = pfl_workq_getitem(slc_wk_issue_readdir,
+	    struct slc_wkdata_readdir);
+	fcmh_op_start_type(p, FCMH_OPCNT_WORKER);
+	wk->d = p;
+	wk->pg = np;
+	wk->off = off;
+	wk->size = 32 * 1024;
+	pfl_workq_putitem(wk);
+}
+
 __static int
 msl_lookup_fidcache(struct pscfs_req *pfr,
     const struct pscfs_creds *pcrp, pscfs_inum_t pinum,
@@ -969,7 +1033,8 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 {
 	struct fidc_membh *p, *c = NULL;
 	slfid_t cfid = FID_ANY;
-	int rc;
+	int remote = 0, rc;
+	off_t nextoff;
 
 	if (fp)
 		*fp = NULL;
@@ -985,36 +1050,6 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 		PFL_GOTOERR(out, rc);
 	}
 
-	cfid = dircache_lookup(p, name);
-
-	/* It's OK to unref the parent now. */
-	fcmh_op_done(p);
-
-	if (cfid == FID_ANY)
-		goto remote;
-
-	rc = fidc_lookup_fid(cfid, &c);
-	if (rc)
-		goto remote;
-
-	/*
-	 * We should do a lookup based on name here because a rename
-	 * does not change the file ID and we would get a success in a
-	 * stat RPC.  Note the call is looking based on a name here, not
-	 * based on FID.
-	 */
-	rc = msl_stat(c, pfr);
-	if (!rc) {
-		FCMH_LOCK(c);
-		if (fgp)
-			*fgp = c->fcmh_fg;
-		if (sstb)
-			*sstb = c->fcmh_sstb;
-		FCMH_ULOCK(c);
-	}
-	PFL_GOTOERR(out, rc);
-
- remote:
 #define MSL_FIDNS_RPATH	".slfidns"
 	if (pinum == SLFID_ROOT && strcmp(name, MSL_FIDNS_RPATH) == 0) {
 		struct fidc_membh f;
@@ -1049,7 +1084,35 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 		}
 		PFL_GOTOERR(out, rc);
 	}
-	return (msl_lookuprpc(pfr, pinum, name, fgp, sstb, fp));
+
+	cfid = dircache_lookup(p, name, &nextoff);
+	FCMH_ULOCK(p);
+	if (cfid == FID_ANY || fidc_lookup_fid(cfid, &c)) {
+		OPSTAT_INCR(SLC_OPST_DIRCACHE_LOOKUP_MISS);
+		lookup_cache_tally_miss(p, nextoff);
+		remote = 1;
+	}
+
+	fcmh_op_done(p);
+
+	if (remote)
+		return (msl_lookuprpc(pfr, pinum, name, fgp, sstb, fp));
+
+	/*
+	 * We should do a lookup based on name here because a rename
+	 * does not change the file ID and we would get a success in a
+	 * stat RPC.  Note the call is looking based on a name here, not
+	 * based on FID.
+	 */
+	rc = msl_stat(c, pfr);
+	if (!rc) {
+		FCMH_LOCK(c);
+		if (fgp)
+			*fgp = c->fcmh_fg;
+		if (sstb)
+			*sstb = c->fcmh_sstb;
+		FCMH_ULOCK(c);
+	}
 
  out:
 	if (rc == 0 && fp)
@@ -1057,7 +1120,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	else if (c)
 		fcmh_op_done(c);
 
-	psclog_info("look for file: %s under inode: "SLPRI_FID ", rc=%d",
+	psclog_info("look for file: %s under inode: "SLPRI_FID" rc=%d",
 	    name, pinum, rc);
 
 	return (rc);
@@ -1276,20 +1339,21 @@ void
 msl_readdir_error(struct fidc_membh *d, struct dircache_page *p, int rc)
 {
 	FCMH_LOCK(d);
-	psc_assert(p->dcp_flags & DIRCACHEPGF_LOADING);
-	p->dcp_flags &= ~DIRCACHEPGF_LOADING;
-	p->dcp_flags |= DIRCACHEPGF_LOADED;
 	p->dcp_refcnt--;
 	DBGPR_DIRCACHEPG(PLL_DEBUG, p, "error rc=%d", rc);
-	p->dcp_rc = rc;
-	PFL_GETPTIMESPEC(&p->dcp_tm);
-	fcmh_wake_locked(d);
+	if (p->dcp_flags & DIRCACHEPGF_LOADING) {
+		p->dcp_flags &= ~DIRCACHEPGF_LOADING;
+		p->dcp_flags |= DIRCACHEPGF_LOADED;
+		p->dcp_rc = rc;
+		PFL_GETPTIMESPEC(&p->dcp_tm);
+		fcmh_wake_locked(d);
+	}
 	FCMH_ULOCK(d);
 }
 
 void
-msl_readdir(struct fidc_membh *d, struct dircache_page *p, int eof,
-    int nents, int size, struct iovec *iov)
+msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
+    int eof, int nents, int size, struct iovec *iov)
 {
 	struct srt_readdir_ent *e;
 	struct fidc_membh *f;
@@ -1299,9 +1363,8 @@ msl_readdir(struct fidc_membh *d, struct dircache_page *p, int eof,
 		if (e->sstb.sst_fid == FID_ANY ||
 		    e->sstb.sst_fid == 0) {
 			DEBUG_SSTB(PLL_WARN, &e->sstb,
-			    "invalid readdir prefetch FID parent@%p="
-			    SLPRI_FID,
-			    d, fcmh_2_fid(d));
+			    "invalid readdir prefetch FID "
+			    "parent@%p="SLPRI_FID, d, fcmh_2_fid(d));
 			continue;
 		}
 
@@ -1349,8 +1412,8 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 			iov[0].iov_base = PSCALLOC(mp->size);
 			memcpy(iov[0].iov_base, mp->ents, mp->size);
 			iov[1].iov_base = mp->ents + mp->size;
-			msl_readdir(d, p, mp->eof, mp->num, mp->size,
-			    iov);
+			msl_readdir_finish(d, p, mp->eof, mp->num,
+			    mp->size, iov);
 		} else {
 			FCMH_LOCK(d);
 			p->dcp_refcnt--;
@@ -1364,7 +1427,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 
 int
 msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
-    off_t off, size_t size)
+    off_t off, size_t size, int wait)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct srm_readdir_req *mq = NULL;
@@ -1373,7 +1436,9 @@ msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
 	struct dircache_page *p;
 	int rc;
 
-	p = dircache_new_page(d, off, 0);
+	p = dircache_new_page(d, off, wait);
+	if (p == NULL)
+		return (-ESRCH);
 
 	fcmh_op_start_type(d, FCMH_OPCNT_READDIR);
 
@@ -1461,6 +1526,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 
 		if (p->dcp_flags & DIRCACHEPGF_LOADING) {
 			/// XXX need to wake up if csvc fails
+			OPSTAT_INCR(SLC_OPST_DIRCACHE_WAIT);
 			fcmh_wait_nocond_locked(d);
 			goto restart;
 		}
@@ -1499,7 +1565,8 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 					poff += PFL_DIRENT_SIZE(
 					    pfd->pfd_namelen);
 					thisoff = pfd->pfd_off;
-					pfd = PSC_AGP(p->dcp_base, poff);
+					pfd = PSC_AGP(p->dcp_base,
+					    poff);
 				}
 
 				/* determine size */
@@ -1529,7 +1596,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 
 	if (issue) {
 		hit = 0;
-		rc = msl_readdir_issue(pfcc, d, off, size);
+		rc = msl_readdir_issue(pfcc, d, off, size, 1);
 		OPSTAT_INCR(SLC_OPST_DIRCACHE_ISSUE);
 		if (rc && !slc_rmc_retry(pfr, &rc)) {
 			pscfs_reply_readdir(pfr, NULL, 0, rc);
@@ -1600,6 +1667,8 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 		PFL_GOTOERR(out, rc);
 
 	mq->fg = c->fcmh_fg;
+
+	memset(buf, 0, sizeof(buf));
 
 	iov.iov_base = buf;
 	iov.iov_len = sizeof(buf);
@@ -2996,8 +3065,7 @@ msattrflushthr_spawn(void)
 	lc_reginit(&attrTimeoutQ, struct fcmh_cli_info,
 	    fci_lentry, "attrtimeout");
 
-	thr = pscthr_init(MSTHRT_ATTRFLSH, 0,
-	    msattrflushthr_main, NULL,
+	thr = pscthr_init(MSTHRT_ATTRFLSH, 0, msattrflushthr_main, NULL,
 	    sizeof(struct msattrfl_thread), "msattrflushthr");
 	mattrft = msattrflthr(thr);
 	psc_multiwait_init(&mattrft->maft_mw, "%s",
@@ -3060,6 +3128,9 @@ msl_init(void)
 	mfh_pool = psc_poolmaster_getmgr(&mfh_poolmaster);
 
 	pndgReadaReqs = pscrpc_nbreqset_init(NULL, NULL);
+
+	pfl_workq_init(128);
+	pfl_wkthr_spawn(MSTHRT_WORKER, 4, "mswkthr%d");
 
 	slc_rpc_initsvc();
 

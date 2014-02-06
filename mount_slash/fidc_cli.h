@@ -36,31 +36,37 @@ struct pscfs_clientctx;
 
 struct fidc_membh;
 
-struct fci_finfo {
-	struct srt_inode	 inode;
-	uint64_t		 xattrsize;
-};
-
-struct fci_dinfo {
-	struct psc_lockedlist	 pages; // XXX tree?
-	uint64_t		 nents;
-};
-
 struct fcmh_cli_info {
-	struct sl_resm		*fci_resm;
-	struct timeval		 fci_age;
+	struct sl_resm			*fci_resm;
+	struct timeval			 fci_age;
 	union {
-		struct fci_finfo	f;
-		struct fci_dinfo	d;
-	} u;
-#define fci_xattrsize	u.f.xattrsize
-#define fci_inode	u.f.inode
+		struct {
+			struct srt_inode inode;
+			uint64_t	 xattrsize;
+		} f;
+#define fci_xattrsize		u.f.xattrsize
+#define fci_inode		u.f.inode
+		struct {
+			struct psc_lockedlist
+					 pages; // XXX tree?
 
-#define fci_dc_pages	u.d.pages
-#define fci_dc_nents	u.d.nents
-	struct psclist_head	 fci_lentry;	/* all fcmhs with dirty attributes */
-	struct timespec		 fci_etime;	/* attr expire time */
+			/*
+			 * Predictive readdir when LOOKUPs aren't
+			 * hitting dircache.
+			 */
+			struct timeval	 lookup_age;	/* async readdir  */
+			uint64_t	 lookup_misses;
+		} d;
+#define fci_dc_pages		u.d.pages
+#define fcid_lookup_age		u.d.lookup_age
+#define fcid_lookup_misses	u.d.lookup_misses
+	} u;
+	struct psclist_head		 fci_lentry;	/* all fcmhs with dirty attributes */
+	struct timespec			 fci_etime;	/* attr expire time */
 };
+
+#define DIR_LOOKUP_MISSES_INCR		1000
+#define DIR_LOOKUP_MISSES_THRES		3001
 
 static __inline struct fcmh_cli_info *
 fcmh_2_fci(struct fidc_membh *f)
