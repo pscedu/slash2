@@ -736,10 +736,11 @@ slm_rcm_issue_readdir_wk(void *p)
 	    pscrpc_export_get(wk->exp);
 	rq->rq_async_args.space[RCM_READDIR_CBARGI_NEXTOFF] = wk->nextoff;
 	rq->rq_async_args.space[RCM_READDIR_CBARGI_DECR] = wk->ra;
-	if (wk->iov[0].iov_len)
+	if (wk->iov[0].iov_len) {
+		rq->rq_bulk_abortable = 1;
 		rc = slrpc_bulkclient(rq, BULK_GET_SOURCE,
 		    SRCM_BULK_PORTAL, wk->iov, nitems(wk->iov));
-	else
+	} else
 		psc_assert(wk->eof);
 	if (rc == 0)
 		rc = SL_NBRQSET_ADD(wk->csvc, rq);
@@ -1025,6 +1026,7 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
+	memset(buf, 0, sizeof(buf));
 	mp->rc = mdsio_readlink(vfsid, fcmh_2_mfid(f), buf, &rootcreds);
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
