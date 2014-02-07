@@ -66,7 +66,7 @@ struct fcmh_cli_info {
 };
 
 #define DIR_LOOKUP_MISSES_INCR		1000
-#define DIR_LOOKUP_MISSES_THRES		3001
+#define DIR_LOOKUP_MISSES_THRES		400001
 
 static __inline struct fcmh_cli_info *
 fcmh_2_fci(struct fidc_membh *f)
