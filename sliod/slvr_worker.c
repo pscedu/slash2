@@ -27,17 +27,17 @@
 
 #include <time.h>
 
-#include "pfl/dynarray.h"
-#include "pfl/listcache.h"
-#include "pfl/tree.h"
-#include "pfl/rpc.h"
-#include "pfl/rsx.h"
 #include "pfl/alloc.h"
 #include "pfl/atomic.h"
 #include "pfl/ctlsvr.h"
+#include "pfl/dynarray.h"
 #include "pfl/fault.h"
+#include "pfl/listcache.h"
 #include "pfl/lock.h"
 #include "pfl/log.h"
+#include "pfl/rpc.h"
+#include "pfl/rsx.h"
+#include "pfl/tree.h"
 
 #include "bmap_iod.h"
 #include "fid.h"
@@ -265,7 +265,7 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 			DEBUG_BCR(PLL_ERROR, bcr, "rescheduling");
 			OPSTAT_INCR(SLI_OPST_CRC_UPDATE_CB_FAILURE);
 			continue;
-		}	
+		}
 		bcr_ready_remove(bcr);
 	}
 
@@ -438,14 +438,14 @@ slislvrthr_main(struct psc_thread *thr)
 				psc_dynarray_add(&ss, s);
 			}
 			SLVR_ULOCK(s);
-			if (psc_dynarray_len(&ss) >= MAX_BMAP_NCRC_UPDATES)
+			if (psc_dynarray_len(&ss) >=
+			    MAX_BMAP_NCRC_UPDATES)
 				break;
 		}
 		LIST_CACHE_ULOCK(&crcqSlvrs);
 
-		DYNARRAY_FOREACH(s, i, &ss) {
+		DYNARRAY_FOREACH(s, i, &ss)
 			slislvrthr_proc(s);
-		}
 		slvr_worker_push_crcups();
 
 		PFL_GETTIMESPEC(&expire);
