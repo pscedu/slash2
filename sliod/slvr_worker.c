@@ -352,7 +352,6 @@ slislvrthr_proc(struct slvr *s)
 	bmap_op_start_type(b, BMAP_OPCNT_BCRSCHED);
 	SLVR_ULOCK(s);
 
-	LIST_CACHE_LOCK(&bcr_ready);
 	BII_LOCK(bii);
 	bcr = bii->bii_bcr;
 
@@ -407,7 +406,6 @@ slislvrthr_proc(struct slvr *s)
 	}
 
 	BII_ULOCK(bii);
-	LIST_CACHE_ULOCK(&bcr_ready);
 
 	bmap_op_done_type(b, BMAP_OPCNT_BCRSCHED);
 }
