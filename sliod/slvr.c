@@ -102,20 +102,6 @@ slvr_do_crc(struct slvr *s)
 			return (SLERR_CRCABSENT);
 
 		/*
-		 * SLVR_FAULTING implies that we're bringing this data
-		 * buffer in from the filesystem.
-		 */
-		if (!s->slvr_pndgreads && !(s->slvr_flags & SLVR_REPLDST)) {
-			/*
-			 * Small RMW workaround.
-			 *  XXX needs to be rectified, the CRC should
-			 *    be taken here.
-			 */
-			psc_assert(s->slvr_pndgwrts);
-			return (-1);
-		}
-
-		/*
 		 * This thread holds faulting status so all others are
 		 *  waiting on us which means that exclusive access to
 		 *  slvr contents is ours until we set SLVR_DATARDY.
