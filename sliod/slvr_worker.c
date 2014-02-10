@@ -208,9 +208,6 @@ slvr_worker_push_crcups(void)
 				bcr_2_bmap(bcr)->bcm_flags &=
 				    ~BMAP_IOD_INFLIGHT;
 				BII_ULOCK(bcr->bcr_bii);
-
-				DEBUG_BCR(PLL_INFO, bcr,
-				    "unsetting BCR_SCHEDULED");
 			}
 			psc_dynarray_free(bcrs);
 			PSCFREE(bcrs);
