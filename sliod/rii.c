@@ -170,7 +170,6 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 
 	s = slvr_lookup(mq->slvrno, bmap_2_bii(b), SL_READ);
 
-	slvr_repl_prep(s, 0);
 	rv = slvr_io_prep(s, 0, mq->len, SL_READ, &aiocbr);
 	if (rv && rv != -SLERR_AIOWAIT)
 		PFL_GOTOERR(out, mp->rc = rv);
@@ -391,7 +390,7 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	w->srw_slvr[slvridx] = s =
 	    slvr_lookup(slvrno, bmap_2_bii(w->srw_bcm), SL_WRITE);
 
-	slvr_repl_prep(s, SLVR_REPLDST | SLVR_REPLWIRE);
+	slvr_repl_prep(s);
 	rc = slvr_io_prep(s, 0, mq->len, SL_WRITE, NULL);
 	if (rc)
 		goto out;

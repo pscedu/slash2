@@ -648,40 +648,25 @@ slvr_fsbytes_wio(struct slvr *s, uint32_t size, uint32_t sblk)
 }
 
 void
-slvr_repl_prep(struct slvr *s, int src_or_dst)
+slvr_repl_prep(struct slvr *s)
 {
 	SLVR_LOCK(s);
 
-	/*
-	 * XXX Setting flags while the sliver is in transit is risky.
-	 * And this is compounded by the fact we have same code fragment
-	 * handling different cases.
-	 */
-	if (src_or_dst & SLVR_REPLDST) {
-		psc_assert(s->slvr_pndgwrts > 0);
-
-		if (s->slvr_flags & SLVR_DATARDY) {
-			/*
-			 * The slvr is about to be overwritten by this
-			 * replication request.  For sanity's sake, wait
-			 * for pending IO competion and set 'faulting'
-			 * before proceeding.
-			 */
-			DEBUG_SLVR(PLL_WARN, s,
-			    "MDS requested repldst of active slvr");
-			SLVR_WAIT(s, ((s->slvr_pndgwrts > 1) ||
-				      s->slvr_pndgreads));
-			s->slvr_flags &= ~SLVR_DATARDY;
-		}
-
-		s->slvr_flags |= (SLVR_FAULTING | src_or_dst);
-
-	} else {
-		psc_assert(s->slvr_pndgreads > 0);
+	if (s->slvr_flags & SLVR_DATARDY) {
+		/*
+		 * The slvr is about to be overwritten by this
+		 * replication request.  For sanity's sake, wait
+		 * for pending IO competion and set 'faulting'
+		 * before proceeding.
+		 */
+		DEBUG_SLVR(PLL_WARN, s,
+		    "MDS requested repldst of active slvr");
+		SLVR_WAIT(s, ((s->slvr_pndgwrts > 1) ||
+			      s->slvr_pndgreads));
+		s->slvr_flags &= ~SLVR_DATARDY;
 	}
 
-	DEBUG_SLVR(PLL_INFO, s, "replica_%s",
-	    (src_or_dst & SLVR_REPLDST) ? "dst" : "src");
+	s->slvr_flags |= SLVR_FAULTING | SLVR_REPLDST | SLVR_REPLWIRE;
 
 	SLVR_ULOCK(s);
 }
