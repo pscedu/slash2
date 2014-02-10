@@ -413,9 +413,8 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	DEBUG_SRW(w, PLL_DEBUG, "incref");
 
 	rc = SL_NBRQSET_ADD(csvc, rq);
-	psc_assert(rc == 0);
-	rq = NULL;
-
+	if (rc == 0)
+		rq = NULL;
  out:
 	if (rc) {
 		SLVR_LOCK(s);
