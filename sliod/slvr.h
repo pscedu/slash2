@@ -194,7 +194,7 @@ void	slvr_repl_prep(struct slvr *);
 void	slvr_rio_done(struct slvr *);
 void	slvr_schedule_crc(struct slvr *);
 void	slvr_try_crcsched_locked(struct slvr *);
-void	slvr_wio_done(struct slvr *);
+void	slvr_wio_done(struct slvr *, int);
 void	slvr_worker_init(void);
 
 void	sli_aio_reply_setup(struct sli_aiocb_reply *,

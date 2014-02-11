@@ -297,7 +297,7 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 		if (a->aiocbr_rw == SL_READ)
 			slvr_rio_done(a->aiocbr_slvrs[i]);
 		else
-			slvr_wio_done(a->aiocbr_slvrs[i]);
+			slvr_wio_done(a->aiocbr_slvrs[i], 0);
 	}
 
 	sli_aio_aiocbr_release(a);
@@ -863,7 +863,7 @@ slvr_rio_done(struct slvr *s)
  * slvr_wio_done - Called after a write on the given sliver has completed.
  */
 void
-slvr_wio_done(struct slvr *s)
+slvr_wio_done(struct slvr *s, int repl)
 {
 	SLVR_LOCK(s);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
@@ -874,8 +874,7 @@ slvr_wio_done(struct slvr *s)
 
 	PFL_GETTIMESPEC(&s->slvr_ts);
 
-	if (s->slvr_flags & SLVR_DATAERR ||
-	    s->slvr_flags & SLVR_REPLDST) {
+	if (s->slvr_flags & SLVR_DATAERR || repl) {
 		s->slvr_flags &= ~SLVR_CRCDIRTY;
 		slvr_lru_tryunpin_locked(s);
 	} else {
