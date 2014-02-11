@@ -1,0 +1,11 @@
+$Id$
+
+reminders:
+- be consistent with I/O software terminology
+	(o) ion - an I/O node (resm)
+	(o) ios - an I/O system (res)
+	(o) iod - the sliod daemon
+- do sl_csvc_wantfree() in all to-CLI csvcs
+- variable prefix notation:
+    - sl_ for shared globals
+    - sl[imc]_ for app-specific globals
