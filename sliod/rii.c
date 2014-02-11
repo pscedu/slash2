@@ -77,9 +77,8 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		 * will resend.
 		 */
 		psc_assert(s->slvr_pndgwrts > 0);
-		psc_assert(s->slvr_flags & SLVR_REPLDST);
 		s->slvr_pndgwrts--;
-		s->slvr_flags &= ~(SLVR_REPLDST | SLVR_REPLWIRE);
+		s->slvr_flags &= ~SLVR_REPLWIRE;
 
 		DEBUG_SLVR(PLL_INFO, s, "write decref");
 		SLVR_WAKEUP(s);
@@ -183,7 +182,6 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 		 * the AIO.  So the sliver may be already ready at this
 		 * point.
 		 */
-		psc_assert(!(s->slvr_flags & SLVR_REPLDST));
 		sli_aio_replreply_setup(aiocbr, rq, s, &iov);
 
 		SLVR_LOCK(s);

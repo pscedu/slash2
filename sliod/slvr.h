@@ -74,9 +74,8 @@ struct slvr {
 #define	SLVR_LRU		(1 <<  4)	/* cached but not dirty */
 #define	SLVR_CRCDIRTY		(1 <<  5)	/* crc does not match cached buffer */
 #define	SLVR_FREEING		(1 <<  6)	/* sliver is being reaped */
-#define	SLVR_REPLDST		(1 <<  7)	/* slvr is replication destination */
-#define SLVR_AIOWAIT		(1 <<  8)	/* early return for AIO (for both local and remote) */
-#define SLVR_REPLWIRE		(1 <<  9)	/* prevent aio race */
+#define SLVR_AIOWAIT		(1 <<  7)	/* early return for AIO (for both local and remote) */
+#define SLVR_REPLWIRE		(1 <<  8)	/* prevent aio race */
 
 #define SLVR_LOCK(s)		spinlock(&(s)->slvr_lock)
 #define SLVR_ULOCK(s)		freelock(&(s)->slvr_lock)
@@ -128,7 +127,7 @@ struct slvr {
 	    "pr=%u "							\
 	    "dc=%d ts="PSCPRI_TIMESPEC" "				\
 	    "bii@%p slab@%p bmap@%p fid:"SLPRI_FID" iocb@%p flgs:"	\
-	    "%s%s%s%s%s%s%s%s%s%s :: " fmt,				\
+	    "%s%s%s%s%s%s%s%s%s :: " fmt,				\
 	    (s), (s)->slvr_num, (s)->slvr_pndgwrts,			\
 	    (s)->slvr_pndgreads,					\
 	    (s)->slvr_dirty_cnt,					\
@@ -145,7 +144,6 @@ struct slvr {
 	    (s)->slvr_flags & SLVR_LRU		? "l" : "-",		\
 	    (s)->slvr_flags & SLVR_CRCDIRTY	? "D" : "-",		\
 	    (s)->slvr_flags & SLVR_FREEING	? "F" : "-",		\
-	    (s)->slvr_flags & SLVR_REPLDST	? "T" : "-",		\
 	    (s)->slvr_flags & SLVR_REPLWIRE	? "w" : "-",		\
 	    (s)->slvr_flags & SLVR_AIOWAIT	? "a" : "-",		\
 	    ##__VA_ARGS__)

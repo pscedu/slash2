@@ -652,7 +652,7 @@ slvr_repl_prep(struct slvr *s)
 		s->slvr_flags &= ~SLVR_DATARDY;
 	}
 
-	s->slvr_flags |= SLVR_FAULTING | SLVR_REPLDST | SLVR_REPLWIRE;
+	s->slvr_flags |= SLVR_FAULTING | SLVR_REPLWIRE;
 
 	SLVR_ULOCK(s);
 }
@@ -672,7 +672,6 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 	ssize_t rc = 0;
 
 	SLVR_LOCK(s);
-	psc_assert(!(s->slvr_flags & SLVR_REPLDST));
 
 	/*
 	 * Note we have taken our read or write references, so the
@@ -1128,7 +1127,6 @@ dump_sliver_flags(int fl)
 	PFL_PRFLAG(SLVR_LRU, &fl, &seq);
 	PFL_PRFLAG(SLVR_CRCDIRTY, &fl, &seq);
 	PFL_PRFLAG(SLVR_FREEING, &fl, &seq);
-	PFL_PRFLAG(SLVR_REPLDST, &fl, &seq);
 	PFL_PRFLAG(SLVR_AIOWAIT, &fl, &seq);
 	PFL_PRFLAG(SLVR_REPLWIRE, &fl, &seq);
 	if (fl)
