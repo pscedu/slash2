@@ -174,8 +174,8 @@ slvr_worker_push_crcups(void)
 		}
 
 		timespecsub(&now, &bcr->bcr_age, &diff);
-		if ((bcr->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS) ||
-		    (diff.tv_sec >= BCR_MAX_AGE)) {
+		if (bcr->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS ||
+		    diff.tv_sec >= BCR_MAX_AGE) {
 			psc_dynarray_add(bcrs, bcr);
 			bcr->bcr_bii->bii_bcr = NULL;
 			bcr_2_bmap(bcr)->bcm_flags |= BMAP_IOD_INFLIGHT;
@@ -415,12 +415,15 @@ slislvrthr_proc(struct slvr *s)
 void
 slislvrthr_main(struct psc_thread *thr)
 {
-	int i;
+	struct psc_dynarray ss = DYNARRAY_INIT_NOLOG;
+	struct pfl_mutex mtx = PSC_MUTEX_INIT;
 	struct timespec expire;
 	struct slvr *s, *dummy;
-	struct psc_dynarray ss = DYNARRAY_INIT_NOLOG;
+	int i;
 
 	while (pscthr_run(thr)) {
+
+		psc_mutex_lock(&mtx);
 
 		LIST_CACHE_LOCK(&crcqSlvrs);
 
@@ -440,6 +443,8 @@ slislvrthr_main(struct psc_thread *thr)
 				break;
 		}
 		LIST_CACHE_ULOCK(&crcqSlvrs);
+
+		psc_mutex_unlock(&mtx);
 
 		DYNARRAY_FOREACH(s, i, &ss)
 			slislvrthr_proc(s);
