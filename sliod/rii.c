@@ -104,6 +104,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		s->slvr_flags |= SLVR_DATAERR;
 	} else
 		s->slvr_flags |= SLVR_DATARDY;
+	SLVR_WAKEUP(s);
 	SLVR_ULOCK(s);
 
 	slvr_wio_done(s, 1);
@@ -299,15 +300,6 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 
 	mp->rc = slrpc_bulkserver(rq, BULK_GET_SINK, SRII_BULK_PORTAL,
 	    &iov, 1);
-
-	if (!mp->rc) {
-		SLVR_LOCK(s);
-		s->slvr_flags |= SLVR_DATARDY;
-		s->slvr_flags &= ~SLVR_FAULTING;
-		DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
-		SLVR_WAKEUP(s);
-		SLVR_ULOCK(s);
-	}
 
 	sli_rii_replread_release_sliver(w, slvridx, mp->rc);
 
