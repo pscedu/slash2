@@ -238,6 +238,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct sliric_thread);
 	PRTYPE(struct slirii_thread);
 	PRTYPE(struct slirim_thread);
+	PRTYPE(struct slm_batchscratch_repl);
 	PRTYPE(struct slm_exp_cli);
 	PRTYPE(struct slm_ino_od);
 	PRTYPE(struct slm_inoh);
@@ -336,7 +337,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_rename_rep);
 	PRTYPE(struct srm_rename_req);
 	PRTYPE(struct srm_repl_read_req);
-	PRTYPE(struct srm_repl_schedwk_req);
 	PRTYPE(struct srm_replrq_req);
 	PRTYPE(struct srm_replst_master_req);
 	PRTYPE(struct srm_replst_slave_req);
@@ -359,10 +359,13 @@ main(int argc, char *argv[])
 	PRTYPE(struct srt_creds);
 	PRTYPE(struct srt_ctlsetopt);
 	PRTYPE(struct srt_inode);
-	PRTYPE(struct srt_preclaim_ent);
+	PRTYPE(struct srt_preclaim_repent);
+	PRTYPE(struct srt_preclaim_reqent);
 	PRTYPE(struct srt_readdir_ent);
 	PRTYPE(struct srt_reclaim_entry);
 	PRTYPE(struct srt_replst_bhdr);
+	PRTYPE(struct srt_replwk_repent);
+	PRTYPE(struct srt_replwk_reqent);
 	PRTYPE(struct srt_stat);
 	PRTYPE(struct srt_statfs);
 	PRTYPE(struct srt_update_entry);
