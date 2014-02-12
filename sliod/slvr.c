@@ -677,27 +677,16 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 	 * Note we have taken our read or write references, so the
 	 * sliver won't be freed from under us.
 	 */
-	if (s->slvr_flags & SLVR_FAULTING) {
-		/*
-		 * Common courtesy requires us to wait for another
-		 * thread's work FIRST.  Otherwise, we could bail out
-		 * prematurely when the data is ready without
-		 * considering the range we want to write.
-		 */
-		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
+	SLVR_WAIT(s, (s->slvr_flags & SLVR_FAULTING));
 
-		SLVR_WAIT(s, !(s->slvr_flags &
-		    (SLVR_DATARDY | SLVR_DATAERR | SLVR_AIOWAIT)));
+	if (s->slvr_flags & SLVR_AIOWAIT) {
+		SLVR_ULOCK(s);
+		psc_assert(globalConfig.gconf_async_io);
 
-		if (s->slvr_flags & SLVR_AIOWAIT) {
-			SLVR_ULOCK(s);
-			psc_assert(globalConfig.gconf_async_io);
+		if (!(*aiocbr))
+		    *aiocbr = sli_aio_aiocbr_new();
 
-			if (!(*aiocbr))
-			    *aiocbr = sli_aio_aiocbr_new();
-
-			return (-SLERR_AIOWAIT);
-		}
+		return (-SLERR_AIOWAIT);
 	}
 
 	DEBUG_SLVR(s->slvr_flags & SLVR_DATAERR ?
