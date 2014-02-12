@@ -2,10 +2,6 @@
 
 # See slcfg(5) for more information.
 
-# send notes about why/when to run multi-MDS
-# explain caching/staging
-# jar7@pitt.edu
-
 set port=4078;
 set routes="
   sdp7 [128.182.100.128,128.182.100.127,128.182.100.126,128.182.100.159]@tcp12;
@@ -20,7 +16,7 @@ set zpool_name="pittsam_s2mds";
 set zpool_cache="/opt/pittsam_slash2/pittsam_s2md.zcf";
 
 site @PITT {
-	site_desc	= "Pitt SaM SuperCell";
+	site_desc	= "Pitt SAM SuperCell";
 	site_id		= 0;
 
 	resource md0 {
@@ -37,7 +33,7 @@ site @PITT {
 		id	= 10;
 		nids	= s-gscratch2-dev.francis.sam.pitt.edu;
 		fsroot	= /data/gscratch2;
-		selftest = "/local/sbin/st /samfs_slio";
+#		selftest = "/local/sbin/st /samfs_slio";
 	}
 
 	resource io1 {
@@ -46,7 +42,7 @@ site @PITT {
 		id	= 11;
 		nids	= s-gscratch3-dev.francis.sam.pitt.edu;
 		fsroot	= /data/gscratch3;
-		selftest = "/local/sbin/st /samfs_slio";
+#		selftest = "/local/sbin/st /samfs_slio";
 	}
 
 	resource io2 {
@@ -55,7 +51,7 @@ site @PITT {
 		id	= 12;
 		nids	= s-gscratch4-dev.francis.sam.pitt.edu;
 		fsroot	= /data/gscratch4;
-		selftest = "/local/sbin/st /samfs_slio";
+#		selftest = "/local/sbin/st /samfs_slio";
 	}
 
 	resource io {
