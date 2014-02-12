@@ -111,160 +111,127 @@ upd_rpmi_remove(struct resprof_mds_info *rpmi,
 		UPD_DECREF(upd);
 }
 
+/**
+ * Handle batch replication finish/error.  If success, we update the
+ * bmap to the new residency states.  If error, we revert all changes
+ * and set things back to a virgin state for future processing.
+ */
 void
-slm_upsch_finish_repl(struct slashrpc_cservice *csvc,
-    struct sl_resm *src_resm, struct sl_resm *dst_resm, struct bmap *b,
-    int rc, int off, int64_t amt)
+slm_batch_repl_cb(struct batchrq *br, int ecode)
 {
-	struct resprof_mds_info *rpmi;
-	struct slm_update_data *upd;
-	int tract[NBREPLST];
-
-	if (rc && b) {
-		/* undo brepls change */
-		brepls_init(tract, -1);
-		tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
-		mds_repl_bmap_apply(b, tract, NULL, off);
-
-		/*
-		 * Remove update from queue.
-		 *   (1) if successful, we are done.
-		 *   (2) if network failure, this will will be paged
-		 *	 back in and tried again when the connection is
-		 *	 reestablished.
-		 *   (3) if other failure, don't want to keep it in the
-		 *	 system.
-		 */
-		rpmi = res2rpmi(dst_resm->resm_res);
-		upd = bmap_2_upd(b);
-		upd_rpmi_remove(rpmi, upd);
-
-		DEBUG_BMAP(PLL_DIAG, b, "dst_resm=%s src_resm=%s rc=%d",
-		    dst_resm->resm_name, src_resm->resm_name, rc);
-	}
-
-	if (rc && amt)
-		mds_repl_nodes_adjbusy(src_resm, dst_resm, -amt, NULL);
-
-	/* XXX can we race here?? */
-	if (csvc)
-		sl_csvc_decref(csvc);
-	if (b)
-		bmap_op_done_type(b, BMAP_OPCNT_UPSCH);
-
-	UPSCH_WAKE();
-}
-
-int
-slm_upsch_wk_finish_repl(void *p)
-{
-	struct slm_wkdata_upsch_cb *wk = p;
+	sl_bmapgen_t bgen;
+	int rc, idx, tract[NBREPLST], retifset[NBREPLST];
+	struct sl_resm *dst_resm, *src_resm;
+	struct slm_batchscratch_repl *bsr;
+	struct srt_replwk_reqent *bq;
+	struct srt_replwk_repent *bp;
 	struct fidc_membh *f;
+	struct bmap *b;
 
-	f = wk->b->bcm_fcmh;
-	/* skip; there is more important work to do */
-	if (!FCMH_TRYBUSY(f))
-		return (1);
-	fcmh_op_start_type(f, FCMH_OPCNT_UPSCH);
-	slm_upsch_finish_repl(wk->csvc, wk->src_resm, wk->dst_resm,
-	    wk->b, wk->rc, wk->off, wk->amt);
-	if (FCMH_HAS_BUSY(f))
-		FCMH_UNBUSY(f);
-	fcmh_op_done_type(f, FCMH_OPCNT_UPSCH);
-	return (0);
-}
+	dst_resm = res_getmemb(br->br_res);
 
-int
-slm_upsch_tryrepl_cb(struct pscrpc_request *rq,
-    struct pscrpc_async_args *av)
-{
-	struct slashrpc_cservice *csvc = av->pointer_arg[IP_CSVC];
-	struct sl_resm *src_resm = av->pointer_arg[IP_SRCRESM],
-		       *dst_resm = av->pointer_arg[IP_DSTRESM];
-	struct slm_wkdata_upsch_cb *wk;
-	int rc = 0;
+	brepls_init(tract, -1);
+	brepls_init(retifset, 0);
 
-	SL_GET_RQ_STATUS_TYPE(csvc, rq, struct srm_repl_schedwk_rep,
-	    rc);
-	if (rc == 0)
-		rc = av->space[IN_RC];
-	if (rc == 0)
-		slrpc_rep_in(csvc, rq);
+	for (bq = br->br_buf, bp = br->br_reply, idx = 0;
+	    (char *)bq < (char *)br->br_buf + br->br_len;
+	    bq++, bp++, idx++) {
+		b = NULL;
+		f = NULL;
+		bsr = psc_dynarray_getpos(&br->br_scratch, idx);
+		src_resm = libsl_ios2resm(bq->src_resid);
 
-	if (rc)
-		DEBUG_REQ(PLL_ERROR, rq,
-		    "dst_resm=%s src_resm=%s rc=%d",
-		    dst_resm->resm_name, src_resm->resm_name,
-		    rc);
+		rc = slm_fcmh_get(&bq->fg, &f);
+		if (rc)
+			goto skip;
+		rc = bmap_get(f, bq->bno, SL_WRITE, &b);
+		if (rc)
+			goto skip;
 
-	wk = pfl_workq_getitem(slm_upsch_wk_finish_repl,
-	    struct slm_wkdata_upsch_cb);
-	wk->csvc = csvc;
-	wk->src_resm = src_resm;
-	wk->dst_resm = dst_resm;
-	wk->b = av->pointer_arg[IP_BMAP];
-	wk->rc = rc;
-	wk->off = av->space[IN_OFF];
-	wk->amt = av->space[IN_AMT];
-	pfl_workq_putitemq(&slm_db_workq, wk);
-	return (0);
+		// XXX check fgen
+
+		BHGEN_GET(b, &bgen);
+		if (bp->rc == 0 && bq->bgen != bgen)
+			bp->rc = SLERR_GEN_OLD;
+
+		if (ecode == 0 && (char *)bp <
+		    (char *)br->br_reply + br->br_replen &&
+		    bp->rc == 0) {
+			tract[BREPLST_REPL_SCHED] = BREPLST_VALID;
+			tract[BREPLST_REPL_QUEUED] = BREPLST_VALID;
+			retifset[BREPLST_REPL_SCHED] = 1;
+			retifset[BREPLST_REPL_QUEUED] = 1;
+		} else {
+			tract[BREPLST_REPL_QUEUED] =
+			    BREPLST_REPL_QUEUED;
+			tract[BREPLST_REPL_SCHED] =
+			    bp->rc == SLERR_ION_OFFLINE ?
+			    BREPLST_REPL_QUEUED : BREPLST_GARBAGE;
+			retifset[BREPLST_REPL_SCHED] = 1;
+			retifset[BREPLST_REPL_QUEUED] = 0;
+
+			psclog_warnx("reply from replication arrangement; "
+			    "src=%s dst=%s rc=%d",
+			    src_resm ? src_resm->resm_name : NULL,
+			    dst_resm ? dst_resm->resm_name : NULL,
+			    bp->rc);
+		}
+
+		if (mds_repl_bmap_apply(b, tract, retifset,
+		    bsr->bsr_off))
+			mds_bmap_write_logrepls(b);
+		slm_repl_bmap_rel(b);
+		b = NULL;
+
+ skip:
+		if (b)
+			bmap_op_done(b);
+		if (f)
+			fcmh_op_done(f);
+
+		mds_repl_nodes_adjbusy(src_resm, dst_resm,
+		    -bsr->bsr_amt, NULL);
+		upschq_resm(dst_resm, UPDT_PAGEIN);
+//		upschq_resm(src_resm, UPDT_PAGEIN);
+
+		PSCFREE(bsr);
+	}
 }
 
 /**
- * slm_upsch_tryrepl - Try arranging a REPL_SCHEDWK for a bmap
- *	between a source and dst IOS pair.
+ * Try arranging a REPL_SCHEDWK for a bmap between a source and dst IOS
+ * pair.  We estimate the data to reserve bandwidth then add the entry
+ * to a batch RPC for the destination.  We mark the bmap residency table
+ * and update the upsch database to avoid reprocessing until we receive
+ * success or failure status from the destination IOS.
  */
 int
 slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
     struct sl_resource *dst_res)
 {
-	int64_t amt = 0, moreamt = 0;
-	int tract[NBREPLST], retifset[NBREPLST], rc = 0;
-	struct pscrpc_request *rq = NULL;
-	struct srm_repl_schedwk_req *mq;
-	struct srm_repl_schedwk_rep *mp;
-	struct slashrpc_cservice *csvc;
-	struct pscrpc_async_args av;
-	struct slm_update_data *upd;
+	int chg = 0, tract[NBREPLST], retifset[NBREPLST], rc;
+	struct slashrpc_cservice *csvc = NULL;
+	struct slm_batchscratch_repl *bsr;
+	struct srt_replwk_reqent pe;
 	struct sl_resm *dst_resm;
 	struct fidc_membh *f;
+	int64_t amt, moreamt;
 	sl_bmapno_t lastbno;
 
-	upd = bmap_2_upd(b);
-	f = upd_2_fcmh(upd);
 	dst_resm = res_getmemb(dst_res);
+	f = b->bcm_fcmh;
 
-	memset(&av, 0, sizeof(av));
-	av.pointer_arg[IP_DSTRESM] = dst_resm;
-	av.pointer_arg[IP_SRCRESM] = src_resm;
-	av.space[IN_OFF] = off;
-
-	/*
-	 * If upsch is still processing, we retain the lock.
-	 * Otherwise, it would have been released while it waits for the
-	 * callback to be issued.
-	 */
 	amt = slm_bmap_calc_repltraffic(b);
 	if (amt == 0) {
-		/*
-		 * There is no data.  Someone requested a replication of
-		 * a bmap that is zeroes.  Since there is no data it
-		 * doesn't really matter what we do.
-		 */
+		/* No data in this bmap; simply mark as replicated. */
 		brepls_init(tract, -1);
 		tract[BREPLST_REPL_QUEUED] = BREPLST_VALID;
 		mds_repl_bmap_apply(b, tract, NULL, off);
 		mds_bmap_write_logrepls(b);
 		upschq_resm(dst_resm, UPDT_PAGEIN);
-		//upschq_resm(src_resm, UPDT_PAGEIN);
+//		upschq_resm(src_resm, UPDT_PAGEIN);
 		return (1);
 	}
-
-	csvc = slm_geticsvc(dst_resm, NULL, CSVCF_NONBLOCK |
-	    CSVCF_NORECON, &slm_upsch_mw);
-	if (csvc == NULL)
-		PFL_GOTOERR(fail, rc = resm_getcsvcerr(dst_resm));
-	av.pointer_arg[IP_CSVC] = csvc;
 
 	spinlock(&repl_busytable_lock);
 	amt = mds_repl_nodes_adjbusy(src_resm, dst_resm, amt, &moreamt);
@@ -277,21 +244,27 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	}
 	freelock(&repl_busytable_lock);
 	if (amt == 0)
-		PFL_GOTOERR(fail, rc = -EBUSY);
+		return (1);
 
-	av.space[IN_AMT] = amt;
+	bsr = PSCALLOC(sizeof(*bsr));
+	bsr->bsr_off = off;
+	bsr->bsr_amt = amt;
 
-	/* Issue replication work request */
-	rc = SL_RSX_NEWREQ(csvc, SRMT_REPL_SCHEDWK, rq, mq, mp);
-	if (rc)
-		PFL_GOTOERR(fail, rc);
-	OPSTAT_INCR(SLM_OPST_REPL_SCHEDWK);
+	csvc = slm_geticsvc(dst_resm, NULL, CSVCF_NONBLOCK |
+	    CSVCF_NORECON, &slm_upsch_mw);
+	if (csvc == NULL)
+		PFL_GOTOERR(fail, rc = resm_getcsvcerr(dst_resm));
 
-	mq->src_resid = src_resm->resm_res_id;
-	mq->len = SLASH_BMAP_SIZE;
+	pe.fg = b->bcm_fcmh->fcmh_fg;
+	pe.bno = b->bcm_bmapno;
+	BHGEN_GET(b, &pe.bgen);
+	pe.src_resid = src_resm->resm_res_id;
+	pe.len = SLASH_BMAP_SIZE;
 	lastbno = fcmh_nvalidbmaps(f);
 	if (lastbno > 0)
 		lastbno--;
+
+	/* shorten length if this is the last bmap */
 	if (b->bcm_bmapno == lastbno) {
 		uint64_t sz;
 
@@ -299,18 +272,16 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 		if (sz > b->bcm_bmapno * (uint64_t)SLASH_BMAP_SIZE)
 			sz -= b->bcm_bmapno * SLASH_BMAP_SIZE;
 		if (sz == 0)
-			PFL_GOTOERR(fail, rc = ENODATA);
+			PFL_GOTOERR(fail, rc = -ENODATA);
 
-		mq->len = MIN(sz, SLASH_BMAP_SIZE);
+		pe.len = MIN(sz, SLASH_BMAP_SIZE);
 	}
-	mq->fg = f->fcmh_fg;
-	mq->bmapno = b->bcm_bmapno;
-	BHGEN_GET(b, &mq->bgen);
 
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_QUEUED] = BREPLST_REPL_SCHED;
 	brepls_init_idx(retifset);
 	rc = mds_repl_bmap_apply(b, tract, retifset, off);
+	chg = 1;
 
 	if (rc == BREPLST_VALID ||
 	    rc == BREPLST_REPL_SCHED)
@@ -322,36 +293,65 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	 * proceed; otherwise, bail: perhaps the user dequeued the
 	 * replication request or something.
 	 */
-	if (rc == BREPLST_REPL_QUEUED) {
-		av.pointer_arg[IP_BMAP] = b;
-		bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
+	if (rc != BREPLST_REPL_QUEUED)
+		PFL_GOTOERR(fail, rc = -ENODEV);
 
-		upd_rpmi_add(res2rpmi(dst_resm->resm_res), upd);
+	rc = batchrq_add(dst_res, csvc, SRMT_REPL_SCHEDWK,
+	    SRMI_BULK_PORTAL, SRIM_BULK_PORTAL, &pe, sizeof(pe), bsr,
+	    slm_batch_repl_cb, 30);
+	if (rc)
+		PFL_GOTOERR(fail, rc);
 
-		rq->rq_interpret_reply = slm_upsch_tryrepl_cb;
-		rq->rq_async_args = av;
-		rc = SL_NBRQSET_ADD(csvc, rq);
-		if (rc == 0) {
-			bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
-			slm_repl_bmap_rel_type(b, BMAP_OPCNT_UPSCH);
+	dbdo(NULL, NULL,
+	    " UPDATE	upsch"
+	    " SET	status = 'S'"
+	    " WHERE	resid = ?"
+	    "   AND	fid = ?"
+	    "   AND	bno = ?",
+	    SQLITE_INTEGER, dst_res->res_id,
+	    SQLITE_INTEGER64, bmap_2_fid(b),
+	    SQLITE_INTEGER, b->bcm_bmapno);
 
-			/*
-			 * We succesfully scheduled some work; if there
-			 * is more bandwidth available, schedule more.
-			 */
-			if (moreamt)
-				upschq_resm(dst_resm, UPDT_PAGEIN);
-			return (1);
-		}
-	} else
-		rc = ENODEV;
+	/*
+	 * We use this release API because mds_repl_bmap_apply() grabbed
+	 * the necessary write locks that we must relinquish because we
+	 * do not write changes to disk.
+	 */
+	bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
+	slm_repl_bmap_rel_type(b, BMAP_OPCNT_UPSCH);
+
+	/*
+	 * We succesfully scheduled some work; if there is more
+	 * bandwidth available, schedule more.
+	 */
+	if (moreamt)
+		upschq_resm(dst_resm, UPDT_PAGEIN);
+
+	return (1);
 
  fail:
-	if (rq)
-		pscrpc_req_finished(rq);
-	slm_upsch_finish_repl(av.pointer_arg[IP_CSVC],
-	    src_resm, dst_resm, av.pointer_arg[IP_BMAP], rc, off,
-	    av.space[IN_AMT]);
+	DEBUG_BMAP(PLL_DIAG, b, "dst_resm=%s src_resm=%s rc=%d",
+	    dst_resm->resm_name, src_resm->resm_name, rc);
+
+	if (chg) {
+		/* undo brepls change */
+		brepls_init(tract, -1);
+		tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+		mds_repl_bmap_apply(b, tract, NULL, off);
+		bmap_op_start_type(b, BMAP_OPCNT_UPSCH);
+		slm_repl_bmap_rel_type(b, BMAP_OPCNT_UPSCH);
+	}
+
+	if (bsr->bsr_amt)
+		mds_repl_nodes_adjbusy(src_resm, dst_resm,
+		    -bsr->bsr_amt, NULL);
+
+	UPSCH_WAKE();
+
+	PSCFREE(bsr);
+
+	if (csvc)
+		sl_csvc_decref(csvc);
 	return (0);
 }
 
@@ -432,7 +432,7 @@ slm_upsch_tryptrunc_cb(struct pscrpc_request *rq,
 }
 
 /**
- * slm_upsch_tryptrunc - Try to issue a PTRUNC resolution to an ION.
+ * Try to issue a PTRUNC resolution to an ION.
  * Returns:
  *   -1	: The activity can never happen; give up.
  *    0	: Unsuccessful.
@@ -504,7 +504,7 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 			return (1);
 		}
 	} else
-		rc = ENODEV;
+		rc = -ENODEV;
 
  fail:
 	if (rq)
@@ -515,12 +515,12 @@ slm_upsch_tryptrunc(struct bmap *b, int off,
 }
 
 void
-slm_upsch_preclaim_cb(struct batchrq *br, int rc)
+slm_batch_preclaim_cb(struct batchrq *br, int rc)
 {
 	sl_replica_t repl;
 	int idx, tract[NBREPLST];
 	struct resprof_mds_info *rpmi;
-	struct srt_preclaim_ent *pe;
+	struct srt_preclaim_reqent *pe;
 	struct fidc_membh *f;
 	struct bmap *b;
 
@@ -563,7 +563,7 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 {
 	int tract[NBREPLST], retifset[NBREPLST], rc;
 	struct slashrpc_cservice *csvc;
-	struct srt_preclaim_ent pe;
+	struct srt_preclaim_reqent pe;
 	struct sl_mds_iosinfo *si;
 	struct sl_resm *m;
 
@@ -581,8 +581,9 @@ slm_upsch_trypreclaim(struct sl_resource *r, struct bmap *b, int off)
 	pe.bno = b->bcm_bmapno;
 	BHGEN_GET(b, &pe.bgen);
 
-	rc = batchrq_add(r, csvc, SRMT_PRECLAIM, SRIM_BULK_PORTAL, &pe,
-	    sizeof(pe), slm_upsch_preclaim_cb, 30);
+	rc = batchrq_add(r, csvc, SRMT_PRECLAIM, SRIM_BULK_PORTAL,
+	    SRIM_BULK_PORTAL, &pe, sizeof(pe), NULL,
+	    slm_batch_preclaim_cb, 30);
 	if (rc)
 		PFL_GOTOERR(fail, rc);
 

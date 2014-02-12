@@ -389,6 +389,11 @@ struct slm_wkdata_readdir {
 	off_t			 nextoff;
 };
 
+struct slm_batchscratch_repl {
+	int64_t			 bsr_amt;
+	int			 bsr_off;
+};
+
 struct mio_rootnames {
 	char			 rn_name[PATH_MAX];
 	int			 rn_vfsid;

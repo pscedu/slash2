@@ -96,16 +96,24 @@ struct slm_exp_cli {
 };
 
 struct batchrq {
-	uint64_t			  br_bid;
-	struct pscrpc_request		 *br_rq;
-	struct slashrpc_cservice	 *br_csvc;
-	struct timeval			  br_expire;
-	struct sl_resource		 *br_res;
-	int				  br_ptl;		/* bulk RPC portal */
-	void				 *br_buf;
-	size_t				  br_len;
+	uint64_t			  br_bid;		/* batch RPC ID */
 	struct psc_listentry		  br_lentry;
 	struct psc_listentry		  br_lentry_ml;
+	struct timeval			  br_expire;
+	struct sl_resource		 *br_res;
+
+	struct pscrpc_request		 *br_rq;
+	struct slashrpc_cservice	 *br_csvc;
+	int				  br_snd_ptl;		/* bulk RPC portal */
+	int				  br_rcv_ptl;		/* bulk RPC portal */
+
+	void				 *br_buf;
+	size_t				  br_len;
+
+	void				 *br_reply;
+	size_t				  br_replen;
+
+	struct psc_dynarray		  br_scratch;
 	void				(*br_cbf)(struct batchrq *, int);
 };
 
@@ -122,13 +130,14 @@ int	slm_rmm_forward_namespace(int, struct slash_fidgen *,
 	    struct slash_fidgen *, char *, char *, uint32_t,
 	    const struct slash_creds *, struct srt_stat *, int32_t);
 
-int	slm_mkdir(int, struct srm_mkdir_req *, struct srm_mkdir_rep *, int,
-	    struct fidc_membh **);
+int	slm_mkdir(int, struct srm_mkdir_req *, struct srm_mkdir_rep *,
+	    int, struct fidc_membh **);
 int	slm_symlink(struct pscrpc_request *, struct srm_symlink_req *,
 	    struct srm_symlink_rep *, int);
 
 int	batchrq_add(struct sl_resource *, struct slashrpc_cservice *,
-	    int, int, void *, size_t, void (*)(struct batchrq *, int), int);
+	    int, int, int, void *, size_t, void *,
+	    void (*)(struct batchrq *, int), int);
 int	batchrq_handle(struct pscrpc_request *);
 
 void	slmbchrqthr_spawn(void);

@@ -205,8 +205,10 @@ struct srm_generic_rep {
 struct srm_batch_req {
 	uint64_t		bid;
 	 int32_t		opc;
-	 int32_t		nents;		/* acts as 'rc' for BATCH_RP */
-/* bulk data is array */
+	 int32_t		rc;		/* for BATCH_RP */
+	 int32_t		len;
+	 int32_t		_pad;
+/* bulk data is array of user-defined entries */
 };
 
 #define srm_batch_rep		srm_generic_rep
@@ -596,11 +598,16 @@ struct srm_bmap_wake_req {
 
 /* ------------------------- BEGIN GARBAGE MESSAGES ------------------------- */
 
-struct srt_preclaim_ent {
+struct srt_preclaim_reqent {
 	uint64_t		xid;
 	struct slash_fidgen	fg;
 	sl_bmapno_t		bno;
 	sl_bmapgen_t		bgen;
+} __packed;
+
+struct srt_preclaim_repent {
+	int32_t			rc;
+	int32_t			_pad;
 } __packed;
 
 struct srm_reclaim_req {
@@ -695,17 +702,19 @@ struct srt_replst_bhdr {
 
 #define srm_replst_slave_rep	srm_replst_slave_req
 
-struct srm_repl_schedwk_req {
+struct srt_replwk_reqent {
 	struct slash_fidgen	fg;
+	sl_bmapno_t		bno;
+	sl_bmapgen_t		bgen;
 	sl_ios_id_t		src_resid;
 	 int32_t		_pad;
-	sl_bmapno_t		bmapno;
-	sl_bmapgen_t		bgen;
 	uint32_t		len;
-	 int32_t		rc;
 } __packed;
 
-#define srm_repl_schedwk_rep	srm_generic_rep
+struct srt_replwk_repent {
+	int32_t			rc;
+	int32_t			_pad;
+} __packed;
 
 struct srm_repl_read_req {
 	struct slash_fidgen	fg;

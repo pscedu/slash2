@@ -277,6 +277,8 @@ batchrq_finish(struct batchrq *br, int rc)
 	lc_remove(&batchrqs_wait, br);
 
 	PSCFREE(br->br_buf);
+	PSCFREE(br->br_reply);
+	psc_dynarray_free(&br->br_scratch);
 
 	psc_pool_return(batchrq_pool, br);
 }
@@ -335,7 +337,8 @@ batchrq_send(struct batchrq *br)
 
 	iov.iov_base = br->br_buf;
 	iov.iov_len = br->br_len;
-	rc = slrpc_bulkclient(rq, BULK_GET_SOURCE, br->br_ptl, &iov, 1);
+	rc = slrpc_bulkclient(rq, BULK_GET_SOURCE, br->br_snd_ptl, &iov,
+	    1);
 	if (rc)
 		goto err;
 
@@ -351,33 +354,54 @@ int
 batchrq_handle(struct pscrpc_request *rq)
 {
 	struct slm_wkdata_batchrq_cb *wk;
-	struct psc_listcache *ml;
+	struct psc_listcache *lc;
 	struct srm_batch_req *mq;
 	struct srm_batch_rep *mp;
 	struct batchrq *br, *brn;
+	struct iovec iov;
 
-	ml = &batchrqs_wait;
+	memset(&iov, 0, sizeof(iov));
+
+	lc = &batchrqs_wait;
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	LIST_CACHE_LOCK(ml);
-	LIST_CACHE_FOREACH_SAFE(br, brn, ml)
+
+	if (mq->len < 0 || mq->len > LNET_MTU) {
+		mp->rc = -EINVAL;
+		pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
+	} else
+		iov.iov_base = PSCALLOC(mq->len);
+
+	LIST_CACHE_LOCK(lc);
+	LIST_CACHE_FOREACH_SAFE(br, brn, lc)
 		if (mq->bid == br->br_bid) {
+			if (!mp->rc) {
+				br->br_reply = iov.iov_base;
+				iov.iov_len = br->br_replen = mq->len;
+				slrpc_bulkclient(rq, BULK_GET_SOURCE,
+				    br->br_rcv_ptl, &iov, 1);
+			}
+
 			wk = pfl_workq_getitem(batchrq_handle_wkcb,
 			    struct slm_wkdata_batchrq_cb);
 			wk->br = br;
-			wk->rc = mq->nents;
+			wk->rc = mq->rc;
 			pfl_workq_putitem(wk);
+
+			iov.iov_base = NULL;
+
 			break;
 		}
-	LIST_CACHE_ULOCK(ml);
+	LIST_CACHE_ULOCK(lc);
 	if (br == NULL)
 		mp->rc = -EINVAL;
-	return (0);
+	PSCFREE(iov.iov_base);
+	return (mp->rc);
 }
 
 int
 batchrq_add(struct sl_resource *r, struct slashrpc_cservice *csvc,
-    int opc, int ptl, void *buf, size_t len,
-    void (*cbf)(struct batchrq *, int), int expire)
+    int opc, int rcvptl, int sndptl, void *buf, size_t len,
+    void *scratch, void (*cbf)(struct batchrq *, int), int expire)
 {
 	static psc_atomic64_t bid = PSC_ATOMIC64_INIT(0);
 	struct psc_listcache *l, *ml;
@@ -411,10 +435,12 @@ batchrq_add(struct sl_resource *r, struct slashrpc_cservice *csvc,
 
 	br = psc_pool_get(batchrq_pool);
 	memset(br, 0, sizeof(*br));
+	psc_dynarray_init(&br->br_scratch);
 	INIT_PSC_LISTENTRY(&br->br_lentry);
 	INIT_PSC_LISTENTRY(&br->br_lentry_ml);
 	br->br_rq = rq;
-	br->br_ptl = ptl;
+	br->br_rcv_ptl = rcvptl;
+	br->br_snd_ptl = sndptl;
 	br->br_csvc = csvc;
 	br->br_bid = mq->bid;
 	br->br_res = r;
@@ -430,7 +456,13 @@ batchrq_add(struct sl_resource *r, struct slashrpc_cservice *csvc,
  add:
 	memcpy(br->br_buf + br->br_len, buf, len);
 	br->br_len += len;
-	mq->nents++;
+	if (scratch)
+		psc_dynarray_add(&br->br_scratch, scratch);
+
+	/*
+	 * OK, the requested entry has been added.  If the next
+	 * batch_add() would overflow, send out what we have now.
+	 */
 	if (br->br_len + len > LNET_MTU)
 		batchrq_send(br);
 
