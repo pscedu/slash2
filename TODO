@@ -1,16 +1,5 @@
 $Id$
 
-reminders:
-- be consistent with I/O software terminology
-	(o) ion - an I/O node (resm)
-	(o) ios - an I/O system (res)
-	(o) iod - the sliod daemon
-- do sl_csvc_wantfree() in all to-CLI csvcs
-- ensure reentrancy of 'static' variables in functions
-- variable prefix notation:
-    - sl_ for shared globals
-    - sl[imc]_ for app-specific globals
------------------------------------------------------------------------
 * Bmpce Write
 There may be some advantage to maintaining a seq or numeric window id for
 each bmpce being processed for write.  Right before the bmpce is put on the
@@ -129,6 +118,8 @@ in release but I don't see good performance for 'ls -al'.
 	[1233201864:695906 msfsthr9:__fidc_lookup_fg:320] [assert] fcmh_2_gen(tmp) != FID_ANY
 
 	Not seeing the above on the server..
+
+------------------------------------------------------
 
 - add some high-level aliases to the replication interface for users:
 
@@ -471,7 +462,6 @@ reimport
 - getxattr(2) family (e.g. zfsslash2_getxattr()) should return ENOATTR/ENODATA
 - get rid of XCTL and reuse xattr interface with special .sl prefix
 - have sliod persistently track CRC updates in case of failure
-- use bgen to prune batch PRECLAIM
 - some IOS seem to get reclaim updates when they have never been online
 - does IOS need to send REPLSCHED back to MDS?  won't crcupd suffice?
 - merge PFLERR_NOTCONN with SLERR_ION_OFFLINE
@@ -481,6 +471,7 @@ reimport
 - survey all threads loops to ensure clean shutdown (pscthr_run() can
   exit on slmctl stop)
 - EIO is not being delivered to app when IOS is down
+- slash2root /var should be root 0700 so users can't see authbuf.key size
 - convert msbrathr to wkthr
 
 - pahole(1)
@@ -489,11 +480,14 @@ reimport
 - discover which JBOD/physical characteristics from sense3 errors
     - write generic archiver visual monitor
 - vtune license for profiling
+- illusion2 can use more RAM?
+
+
 
 upsch
 - optimize queries by reordering SELECT verbs
 
-st_blocks is broken
+st_blocks
 - account metadata overhead in st_blocks?
 - fix ios_nblks[idx] and aggr accounting on setsize0 and ptrunc
 
@@ -502,7 +496,7 @@ st_blocks is broken
 - ask paul about difficulty of CRCs
 
 - readdir optimizations
-   (o) can we avoid an rpc when st_size==2?  This involves knowing the ino # for ".."
+   (o) can we avoid an rpc when st_size==2?  This involves knowing the inum for ".."
 
 - wrapper scripts:
    - purge old corefiles
@@ -516,6 +510,9 @@ st_blocks is broken
    (*) write push-through caching for efficient remote I/O staging
 
 - cryptographic authentication integration (Kerberos/X.509/etc.)
+- per-client authbuf.key with uid= to control untrusted clients
+   slkeymgt to manage/issue keys
+
 - replication notification service, informing users when workloads have
   finished, launching a job, etc.
 
@@ -524,4 +521,6 @@ sliod backends
 - CIFS
 - S3/REST
 - google drive
-- box (dropbox?)
+- box ?
+- dropbox
+- openstack
