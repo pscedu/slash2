@@ -764,10 +764,6 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 __static void
 slvr_schedule_crc_locked(struct slvr *s)
 {
-	psc_assert(s->slvr_flags & SLVR_PINNED);
-	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
-	psc_assert(s->slvr_flags & SLVR_LRU);
-
 	if (!s->slvr_dirty_cnt)
 		s->slvr_dirty_cnt++;
 
