@@ -68,22 +68,36 @@ sli_repl_findwq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno)
 }
 
 int
-sli_repl_addwk(int op, struct sl_resource *res,
+sli_repl_addwk(int op, sl_ios_id_t resid,
     const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
-    sl_bmapgen_t bgen, int len)
+    sl_bmapgen_t bgen, int len, struct sli_batch_reply *bchrp,
+    struct srt_replwk_repent *pp)
 {
-	struct sli_repl_workrq *w;
-	int rc, i;
+	struct sli_repl_workrq *w = NULL;
+	struct sl_resource *res = NULL;
 	struct bmap_iod_info *bii;
+	int rc, i;
+
+	if (fgp->fg_fid == FID_ANY)
+		PFL_GOTOERR(out, rc = -EINVAL);
+
+	if (len < 1 || len > SLASH_BMAP_SIZE)
+		PFL_GOTOERR(out, rc = -EINVAL);
+
+	if (resid != IOS_ID_ANY) {
+		res = libsl_id2res(resid);
+		if (res == NULL)
+			PFL_GOTOERR(out, rc = -SLERR_ION_UNKNOWN);
+	}
 
 	/*
 	 * Check if this work is already queued, e.g. from before the
-	 * MDS crashes, comes back online, and assigns gratitious
+	 * MDS crashes, comes back online, and assigns gratuitous
 	 * requeue work.
 	 */
 	w = sli_repl_findwq(fgp, bmapno);
 	if (w)
-		return (-PFLERR_ALREADY);
+		PFL_GOTOERR(out, rc = -PFLERR_ALREADY);
 
 	w = psc_pool_get(sli_replwkrq_pool);
 	memset(w, 0, sizeof(*w));
@@ -133,10 +147,21 @@ sli_repl_addwk(int op, struct sl_resource *res,
 
  out:
 	if (rc) {
-		if (w->srw_fcmh)
-			fcmh_op_done(w->srw_fcmh);
+		if (pp) {
+			struct sli_repl_workrq wk;
 
-		psc_pool_return(sli_replwkrq_pool, w);
+			wk.srw_status = rc;
+			wk.srw_bchrp = bchrp;
+			wk.srw_op = SLI_REPLWKOP_REPL;
+			wk.srw_pp = pp;
+			sli_rmi_issue_repl_schedwk(&wk);
+		}
+
+		if (w) {
+			if (w->srw_fcmh)
+				fcmh_op_done(w->srw_fcmh);
+			psc_pool_return(sli_replwkrq_pool, w);
+		}
 	} else {
 		/* add to current processing list */
 		pll_add(&sli_replwkq_active, w);

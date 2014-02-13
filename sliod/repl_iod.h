@@ -27,9 +27,9 @@
 
 #include "pfl/list.h"
 #include "pfl/listcache.h"
+#include "pfl/lock.h"
 #include "pfl/lockedlist.h"
 #include "pfl/rpc.h"
-#include "pfl/lock.h"
 
 #include "fid.h"
 #include "sltypes.h"
@@ -42,6 +42,13 @@ struct slvr;
 #define REPL_MAX_INFLIGHT_SLVRS	4			/* maximum # inflight slivers between IONs */
 
 #define SLI_REPL_SLVR_SCHED	((void *)0x1)
+
+struct sli_batch_reply {
+	uint64_t		 id;
+	void			*buf;
+	int			 total;
+	psc_atomic32_t		 ndone;
+};
 
 struct sli_repl_workrq {
 	struct slash_fidgen	 srw_fg;
@@ -56,6 +63,9 @@ struct sli_repl_workrq {
 	psc_atomic32_t		 srw_refcnt;		/* number of inflight slivers */
 	int			 srw_nslvr_tot;
 	int			 srw_nslvr_cur;
+
+	struct sli_batch_reply	*srw_bchrp;
+	struct srt_replwk_repent*srw_pp;
 
 	struct bmapc_memb	*srw_bcm;
 	struct fidc_membh	*srw_fcmh;
@@ -77,8 +87,9 @@ enum {
 struct sli_repl_workrq *
 	sli_repl_findwq(const struct slash_fidgen *, sl_bmapno_t);
 
-int	sli_repl_addwk(int, struct sl_resource *,
-	    const struct slash_fidgen *, sl_bmapno_t, sl_bmapgen_t, int);
+int	sli_repl_addwk(int, sl_ios_id_t, const struct slash_fidgen *,
+	    sl_bmapno_t, sl_bmapgen_t, int, struct sli_batch_reply *,
+	    struct srt_replwk_repent *);
 void	sli_repl_init(void);
 
 void	sli_replwkrq_decref(struct sli_repl_workrq *, int);

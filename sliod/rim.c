@@ -57,56 +57,77 @@ sli_rim_handle_batch(struct pscrpc_request *rq)
 {
 	struct srm_batch_req *mq;
 	struct srm_batch_rep *mp;
-	int rc;
+	struct iovec iov;
+	void *buf;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
+	if (mq->len < 1 || mq->len > LNET_MTU)
+		return (mp->rc = -EINVAL);
+
+	iov.iov_len = mq->len;
+	iov.iov_base = buf = PSCALLOC(mq->len);
+	mp->rc = slrpc_bulkserver(rq, BULK_GET_SINK, SRIM_BULK_PORTAL,
+	    &iov, 1);
+	if (mp->rc)
+		return (mp->rc);
+
 	switch (mq->opc) {
+	case SRMT_REPL_SCHEDWK: {
+		struct sli_batch_reply *bchrp;
+		struct srt_replwk_reqent *pq;
+		struct srt_replwk_repent *pp;
+
+		OPSTAT_INCR(SLI_OPST_HANDLE_REPL_SCHED);
+
+		bchrp = PSCALLOC(sizeof(*bchrp));
+		bchrp->total = mq->len / sizeof(*pq);
+		bchrp->buf = pp = PSCALLOC(bchrp->total * sizeof(*pp));
+		bchrp->id = mq->bid;
+
+		for (pq = buf;
+		    (char *)pq < (char *)buf + mq->len;
+		    pq++, pp++)
+			sli_repl_addwk(SLI_REPLWKOP_REPL, pq->src_resid,
+			    &pq->fg, pq->bno, pq->bgen, pq->len, bchrp,
+			    pp);
+		break;
+	    }
+
 #ifdef HAVE_FALLOC_FL_PUNCH_HOLE
 	case SRMT_PRECLAIM: {
-		struct srt_preclaim_ent *pe;
-		struct iovec iov;
-		void *buf;
-		int i;
+		struct srt_preclaim_reqent *pq;
 
 		OPSTAT_INCR(SLI_OPST_HANDLE_PRECLAIM);
 
-		iov.iov_len = mq->nents * sizeof(*pe);
-		iov.iov_base = buf = PSCALLOC(iov.iov_len);
-
-		rc = slrpc_bulkserver(rq, BULK_GET_SINK, SRIM_BULK_PORTAL,
-		    &iov, 1);
-		if (rc)
-			PFL_GOTOERR(preclaim_out, rc);
-
-		for (pe = buf, i = 0; i < mq->nents; pe++) {
+		for (pq = buf;
+		    (char *)pq < (char *)buf + mq->len;
+		    pq++) {
 			struct fidc_membh *f;
 
-			mp->rc = sli_fcmh_get(&pe->fg, &f);
+			mp->rc = sli_fcmh_get(&pq->fg, &f);
 			if (mp->rc)
-				break;
+				continue;
 
 			/* XXX clear out sliver pages in memory */
 
 			/* XXX lock */
 			if (fallocate(fcmh_2_fd(f),
 			    HAVE_FALLOC_FL_PUNCH_HOLE,
-			    pe->bno * SLASH_BMAP_SIZE,
+			    pq->bno * SLASH_BMAP_SIZE,
 			    SLASH_BMAP_SIZE) == -1)
 				mp->rc = -errno;
 
 			fcmh_op_done(f);
 		}
-
- preclaim_out:
-		PSCFREE(buf);
 	    }
 #endif
 	default:
-		rc = -PFLERR_NOTSUP;
+		mp->rc = -PFLERR_NOTSUP;
 		break;
 	}
-	return (rc);
+	PSCFREE(buf);
+	return (mp->rc);
 }
 
 /**
@@ -197,30 +218,6 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 }
 
 int
-sli_rim_handle_repl_schedwk(struct pscrpc_request *rq)
-{
-	const struct srm_repl_schedwk_req *mq;
-	struct srm_repl_schedwk_rep *mp;
-	struct sl_resource *res;
-
-	OPSTAT_INCR(SLI_OPST_HANDLE_REPL_SCHED);
-	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mq->fg.fg_fid == FID_ANY)
-		mp->rc = -EINVAL;
-	else if (mq->len < 1 || mq->len > SLASH_BMAP_SIZE)
-		mp->rc = -EINVAL;
-	else {
-		res = libsl_id2res(mq->src_resid);
-		if (res == NULL)
-			mp->rc = -SLERR_ION_UNKNOWN;
-		else
-			mp->rc = sli_repl_addwk(SLI_REPLWKOP_REPL, res,
-			    &mq->fg, mq->bmapno, mq->bgen, mq->len);
-	}
-	return (0);
-}
-
-int
 sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
 {
 	const struct srm_bmap_ptrunc_req *mq;
@@ -231,8 +228,8 @@ sli_rim_handle_bmap_ptrunc(struct pscrpc_request *rq)
 		mp->rc = -EINVAL;
 		return (0);
 	}
-	mp->rc = sli_repl_addwk(SLI_REPLWKOP_PTRUNC, NULL, &mq->fg,
-	    mq->bmapno, mq->bgen, mq->offset);
+	mp->rc = sli_repl_addwk(SLI_REPLWKOP_PTRUNC, IOS_ID_ANY,
+	    &mq->fg, mq->bmapno, mq->bgen, mq->offset, NULL, NULL);
 	return (0);
 }
 
@@ -247,9 +244,6 @@ sli_rim_handler(struct pscrpc_request *rq)
 		return (pscrpc_error(rq));
 
 	switch (rq->rq_reqmsg->opc) {
-	case SRMT_REPL_SCHEDWK:
-		rc = sli_rim_handle_repl_schedwk(rq);
-		break;
 	case SRMT_BMAP_PTRUNC:
 		return (-PFLERR_NOTSUP);
 		rc = sli_rim_handle_bmap_ptrunc(rq);

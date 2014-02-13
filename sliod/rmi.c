@@ -104,38 +104,52 @@ sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *w)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
-	struct srm_bmap_ptrunc_req *p_mq;
-	struct srm_bmap_ptrunc_rep *p_mp;
-	struct srm_repl_schedwk_req *mq;
-	struct srm_repl_schedwk_rep *mp;
 	int rc;
+
+	if (w->srw_op == SLI_REPLWKOP_REPL) {
+		w->srw_pp->rc = w->srw_status;
+		if (psc_atomic32_inc_getnew(&w->srw_bchrp->ndone) ==
+		    w->srw_bchrp->total) 
+			return (0);
+	}
 
 	rc = sli_rmi_getcsvc(&csvc);
 	if (rc)
 		goto out;
 
 	if (w->srw_op == SLI_REPLWKOP_PTRUNC) {
-		rc = SL_RSX_NEWREQ(csvc, SRMT_BMAP_PTRUNC, rq, p_mq,
-		    p_mp);
+		struct srm_bmap_ptrunc_req *mq;
+		struct srm_bmap_ptrunc_rep *mp;
+
+		rc = SL_RSX_NEWREQ(csvc, SRMT_BMAP_PTRUNC, rq, mq,
+		    mp);
 		if (rc)
 			goto out;
-		p_mq->fg = w->srw_fg;
-		p_mq->bmapno = w->srw_bmapno;
-		p_mq->bgen = w->srw_bgen;
-		p_mq->rc = w->srw_status;
-		rc = SL_RSX_WAITREP(csvc, rq, p_mp);
-		if (rc == 0)
-			rc = p_mp->rc;
-	} else {
-		rc = SL_RSX_NEWREQ(csvc, SRMT_REPL_SCHEDWK, rq, mq, mp);
-		if (rc)
-			goto out;
-		mq->src_resid = w->srw_src_res->res_id;
-		mq->fg = w->srw_fg;
 		mq->bmapno = w->srw_bmapno;
 		mq->bgen = w->srw_bgen;
 		mq->rc = w->srw_status;
+		mq->fg = w->srw_fg;
 		rc = SL_RSX_WAITREP(csvc, rq, mp);
+		if (rc == 0)
+			rc = mp->rc;
+	} else {
+		struct srm_batch_req *mq;
+		struct srm_batch_rep *mp;
+		struct iovec iov;
+
+		rc = SL_RSX_NEWREQ(csvc, SRMT_BATCH_RP, rq, mq, mp);
+		if (rc)
+			goto out;
+		mq->opc = SRMT_REPL_SCHEDWK;
+		mq->len = w->srw_bchrp->total * sizeof(*w->srw_pp);
+		mq->bid = w->srw_bchrp->id;
+
+		iov.iov_base = w->srw_bchrp->buf;
+		iov.iov_len = mq->len;
+		mp->rc = slrpc_bulkserver(rq, BULK_PUT_SINK,
+		    SRMI_BULK_PORTAL, &iov, 1);
+		if (rc == 0)
+			rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc == 0)
 			rc = mp->rc;
 	}
