@@ -1,0 +1,1172 @@
+[
+ {
+  "failed_tests": 0, 
+  "tests": [
+   {
+    "msg": "", 
+    "elapsed": 10, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "basic_read"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 10, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "basic_write"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 40, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "batch_insert"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 20, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "complex_read"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 5, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "dev_zero"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 30, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_file"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 15, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_seek"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 20, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "multi_write"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 20, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "scatter"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 20, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "test_test"
+   }
+  ], 
+  "total_tests": 10, 
+  "tsid": 1, 
+  "tset_name": "#1"
+ }, 
+ {
+  "failed_tests": 0, 
+  "tests": [
+   {
+    "msg": "", 
+    "elapsed": 10.10743531399531, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "basic_read"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 11.205603789652908, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "basic_write"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 40.60221994625111, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "batch_insert"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 17.582683783594458, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "complex_read"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 5.136920629112575, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "dev_zero"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 29.63962915402214, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_file"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 14.952238401277352, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_seek"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 16.10227602958831, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "multi_write"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 23.853148978184507, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "scatter"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 19.59789133741061, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "test_test"
+   }
+  ], 
+  "total_tests": 10, 
+  "tsid": 2, 
+  "tset_name": "#2"
+ }, 
+ {
+  "failed_tests": 0, 
+  "tests": [
+   {
+    "msg": "", 
+    "elapsed": 10.027229116584138, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "basic_read"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 11.508094345292985, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "basic_write"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 40.76638303415496, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "batch_insert"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 17.935280983196087, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "complex_read"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 5.305539515618549, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "dev_zero"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 28.161655333656434, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_file"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 15.64616460277005, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_seek"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 15.70140863953046, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "multi_write"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 24.685599580410017, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "scatter"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 19.49870188401817, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "test_test"
+   }
+  ], 
+  "total_tests": 10, 
+  "tsid": 3, 
+  "tset_name": "#3"
+ }, 
+ {
+  "failed_tests": 3, 
+  "tests": [
+   {
+    "msg": "problem!", 
+    "elapsed": 9.673770277970059, 
+    "desc": "generated test.", 
+    "pass": false, 
+    "test_name": "basic_read"
+   }, 
+   {
+    "msg": "problem!", 
+    "elapsed": 11.930299046303658, 
+    "desc": "generated test.", 
+    "pass": false, 
+    "test_name": "basic_write"
+   }, 
+   {
+    "msg": "problem!", 
+    "elapsed": 37.25444942237888, 
+    "desc": "generated test.", 
+    "pass": false, 
+    "test_name": "batch_insert"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 17.329619415996515, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "complex_read"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 5.527786522715699, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "dev_zero"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 27.404298359252973, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_file"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 16.028142931014145, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_seek"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 15.138952351422338, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "multi_write"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 25.39651896143895, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "scatter"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 18.624916557888366, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "test_test"
+   }
+  ], 
+  "total_tests": 10, 
+  "tsid": 4, 
+  "tset_name": "#4"
+ }, 
+ {
+  "failed_tests": 0, 
+  "tests": [
+   {
+    "msg": "", 
+    "elapsed": 9.93575028251659, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "basic_read"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 11.889694228791363, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "basic_write"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 34.253873449489845, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "batch_insert"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 16.777701651102614, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "complex_read"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 5.260979787758447, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "dev_zero"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 26.110846984468385, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_file"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 15.568435256159457, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_seek"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 16.116097141841102, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "multi_write"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 25.89153980742202, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "scatter"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 19.19246559255508, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "test_test"
+   }
+  ], 
+  "total_tests": 10, 
+  "tsid": 5, 
+  "tset_name": "#5"
+ }, 
+ {
+  "failed_tests": 0, 
+  "tests": [
+   {
+    "msg": "", 
+    "elapsed": 10.12110325529338, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "basic_read"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 13.27999286939275, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "basic_write"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 34.90560844172126, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "batch_insert"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 16.904862472405117, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "complex_read"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 5.98906381867466, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "dev_zero"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 26.33955097795334, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_file"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 15.666586149395311, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_seek"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 16.622864260705892, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "multi_write"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 25.227246963950112, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "scatter"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 17.205536374664238, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "test_test"
+   }
+  ], 
+  "total_tests": 10, 
+  "tsid": 6, 
+  "tset_name": "#6"
+ }, 
+ {
+  "failed_tests": 0, 
+  "tests": [
+   {
+    "msg": "", 
+    "elapsed": 10.199965035108765, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "basic_read"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 13.591867825592896, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "basic_write"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 36.48411726407418, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "batch_insert"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 17.643460286371003, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "complex_read"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 5.8867049370599505, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "dev_zero"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 26.21381473370186, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_file"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 12.73003925726555, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_seek"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 16.467108668758367, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "multi_write"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 24.350721026929676, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "scatter"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 16.371152312552347, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "test_test"
+   }
+  ], 
+  "total_tests": 10, 
+  "tsid": 7, 
+  "tset_name": "#7"
+ }, 
+ {
+  "failed_tests": 0, 
+  "tests": [
+   {
+    "msg": "", 
+    "elapsed": 10.46829754821092, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "basic_read"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 14.018944625951091, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "basic_write"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 34.73064735246645, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "batch_insert"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 17.97794002327495, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "complex_read"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 5.980616511288698, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "dev_zero"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 26.41526662070868, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_file"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 12.855746461547982, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_seek"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 16.96813541918791, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "multi_write"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 25.375853576429982, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "scatter"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 15.492173710047895, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "test_test"
+   }
+  ], 
+  "total_tests": 10, 
+  "tsid": 8, 
+  "tset_name": "#8"
+ }, 
+ {
+  "failed_tests": 0, 
+  "tests": [
+   {
+    "msg": "", 
+    "elapsed": 10.98233431469928, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "basic_read"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 14.488030694590233, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "basic_write"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 33.060014106688115, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "batch_insert"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 17.395977195716487, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "complex_read"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 5.886202737037251, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "dev_zero"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 31.283933823886134, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_file"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 13.089248749643758, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_seek"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 17.411334429297355, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "multi_write"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 24.736927878398017, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "scatter"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 16.033913583128392, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "test_test"
+   }
+  ], 
+  "total_tests": 10, 
+  "tsid": 9, 
+  "tset_name": "#9"
+ }, 
+ {
+  "failed_tests": 0, 
+  "tests": [
+   {
+    "msg": "", 
+    "elapsed": 10.439714814638553, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "basic_read"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 14.143077194542983, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "basic_write"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 32.82240191539518, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "batch_insert"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 16.964517382097007, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "complex_read"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 5.809323882911585, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "dev_zero"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 32.223459159070494, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_file"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 12.881269740958315, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_seek"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 17.493231203436547, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "multi_write"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 24.869909760161384, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "scatter"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 15.440808465753799, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "test_test"
+   }
+  ], 
+  "total_tests": 10, 
+  "tsid": 10, 
+  "tset_name": "#10"
+ }, 
+ {
+  "failed_tests": 0, 
+  "tests": [
+   {
+    "msg": "", 
+    "elapsed": 10.9510215164056, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "basic_read"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 14.911095084162929, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "basic_write"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 33.05583806526881, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "batch_insert"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 20.262477140481696, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "complex_read"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 5.5323692805695845, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "dev_zero"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 32.820902723054644, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_file"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 10.377491626332182, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_seek"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 17.65577505870979, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "multi_write"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 20.736551893556182, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "scatter"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 15.423547674573905, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "test_test"
+   }
+  ], 
+  "total_tests": 10, 
+  "tsid": 11, 
+  "tset_name": "#11"
+ }, 
+ {
+  "failed_tests": 0, 
+  "tests": [
+   {
+    "msg": "", 
+    "elapsed": 10.935597320301989, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "basic_read"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 15.594522728294734, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "basic_write"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 32.08891001951582, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "batch_insert"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 20.9626605983929, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "complex_read"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 4.962254154585544, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "dev_zero"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 31.602103261488217, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_file"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 10.100385634598002, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_seek"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 18.241525170354823, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "multi_write"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 21.154660417820118, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "scatter"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 15.83644822483063, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "test_test"
+   }
+  ], 
+  "total_tests": 10, 
+  "tsid": 12, 
+  "tset_name": "#12"
+ }, 
+ {
+  "failed_tests": 0, 
+  "tests": [
+   {
+    "msg": "", 
+    "elapsed": 10.582612336397322, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "basic_read"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 15.86178855433619, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "basic_write"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 32.921303553235425, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "batch_insert"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 21.79335230314773, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "complex_read"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 5.138585273834257, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "dev_zero"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 25.821022431642, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_file"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 10.866497442244022, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_seek"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 20.094262952285835, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "multi_write"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 20.099101194339294, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "scatter"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 15.409407770231805, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "test_test"
+   }
+  ], 
+  "total_tests": 10, 
+  "tsid": 13, 
+  "tset_name": "#13"
+ }, 
+ {
+  "failed_tests": 0, 
+  "tests": [
+   {
+    "msg": "", 
+    "elapsed": 10.498252014877327, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "basic_read"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 16.41851096816626, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "basic_write"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 31.552956603669273, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "batch_insert"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 21.95658128636577, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "complex_read"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 5.3366916877127775, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "dev_zero"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 26.496631844622115, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_file"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 11.110762619349796, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_seek"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 20.116975886509813, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "multi_write"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 19.277297496315256, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "scatter"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 14.838930653797146, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "test_test"
+   }
+  ], 
+  "total_tests": 10, 
+  "tsid": 14, 
+  "tset_name": "#14"
+ }, 
+ {
+  "failed_tests": 0, 
+  "tests": [
+   {
+    "msg": "", 
+    "elapsed": 10.59706101283399, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "basic_read"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 16.018936347594263, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "basic_write"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 30.541841968570385, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "batch_insert"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 21.272499270420646, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "complex_read"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 5.92294623750266, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "dev_zero"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 22.237765131213234, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_file"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 10.694529751833988, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "huge_seek"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 19.442732996582993, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "multi_write"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 18.38738464540149, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "scatter"
+   }, 
+   {
+    "msg": "", 
+    "elapsed": 14.870715667719308, 
+    "desc": "generated test.", 
+    "pass": true, 
+    "test_name": "test_test"
+   }
+  ], 
+  "total_tests": 10, 
+  "tsid": 15, 
+  "tset_name": "#15"
+ }
+]

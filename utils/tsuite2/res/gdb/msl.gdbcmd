@@ -1,0 +1,5 @@
+# $Id: msl.gdbcmd 17061 2011-06-15 20:40:26Z yanovich $
+
+set confirm off
+set height 0
+run -f %base%/slash.conf -S %base%/ctl/msl.%h.sock -D %datadir% mp

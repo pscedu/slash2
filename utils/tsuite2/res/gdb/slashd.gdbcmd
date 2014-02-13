@@ -1,0 +1,5 @@
+# $Id: slashd.gdbcmd 17046 2011-06-14 23:44:55Z yanovich $
+
+set confirm off
+set height 0
+run -S %base%/ctl/slashd.%h.sock -f %base%/slash.conf -D %datadir% -p %zpool_cache% %zpool_name%

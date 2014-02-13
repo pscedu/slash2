@@ -1,0 +1,5 @@
+# $Id: sliod.gdbcmd 11691 2010-05-06 17:04:12Z yanovich $
+
+set confirm off
+set height 0
+run -S %base%/ctl/sliod.%h.sock -f %base%/slash.conf -D %datadir% %prefmds%
