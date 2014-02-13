@@ -148,7 +148,7 @@ sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *w)
 		iov.iov_len = mq->len;
 		mp->rc = slrpc_bulkserver(rq, BULK_PUT_SINK,
 		    SRMI_BULK_PORTAL, &iov, 1);
-		if (rc == 0)
+		if (mp->rc == 0)
 			rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc == 0)
 			rc = mp->rc;
