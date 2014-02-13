@@ -690,7 +690,7 @@ struct srm_replst_slave_req {
 } __packed;
 
 /* per-bmap header, prepended before each bcs_repls content */
-struct srt_replst_bhdr {
+struct srt_replst_bhdr {		
 	uint32_t		srsb_replpol:1;
 	uint32_t		srsb_usr_pri:31;
 	uint32_t		srsb_sys_pri;
@@ -702,7 +702,7 @@ struct srt_replst_bhdr {
 
 #define srm_replst_slave_rep	srm_replst_slave_req
 
-struct srt_replwk_reqent {
+struct srt_replwk_reqent {			/* batch arrangement request MDS -> IOS */
 	struct slash_fidgen	fg;
 	sl_bmapno_t		bno;
 	sl_bmapgen_t		bgen;
@@ -711,12 +711,12 @@ struct srt_replwk_reqent {
 	uint32_t		len;
 } __packed;
 
-struct srt_replwk_repent {
+struct srt_replwk_repent {			/* batch arrangement success/failure IOS -> MDS */
 	int32_t			rc;
 	int32_t			_pad;
 } __packed;
 
-struct srm_repl_read_req {
+struct srm_repl_read_req {			/* data pull IOS -> IOS */
 	struct slash_fidgen	fg;
 	uint64_t		len;		/* #bytes in this message, to find #slivers */
 	sl_bmapno_t		bmapno;
@@ -727,7 +727,7 @@ struct srm_repl_read_req {
 
 #define srm_repl_read_rep	srm_io_rep
 
-struct srm_set_fattr_req {
+struct srm_set_fattr_req {			/* set non-POSIX file attribute CLI -> MDS */
 	struct slash_fidgen	fg;
 	 int32_t		attrid;
 	 int32_t		val;
