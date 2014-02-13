@@ -377,7 +377,7 @@ batchrq_handle(struct pscrpc_request *rq)
 			if (!mp->rc) {
 				br->br_reply = iov.iov_base;
 				iov.iov_len = br->br_replen = mq->len;
-				slrpc_bulkclient(rq, BULK_GET_SOURCE,
+				slrpc_bulkclient(rq, BULK_PUT_SINK,
 				    br->br_rcv_ptl, &iov, 1);
 			}
 
