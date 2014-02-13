@@ -633,6 +633,9 @@ slvr_fsbytes_wio(struct slvr *s, uint32_t size, uint32_t sblk)
 	return (slvr_fsio(s, sblk, size, SL_WRITE, NULL));
 }
 
+/**
+ * slvr_repl_prep - Prepare a sliver as a replication target.
+ */
 void
 slvr_repl_prep(struct slvr *s)
 {
