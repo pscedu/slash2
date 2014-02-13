@@ -236,10 +236,17 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 
 	} else {
 
-		/* Wait while BMAP_INIT is set. */
-		bmap_wait_locked(b, (b->bcm_flags & BMAP_INIT));
+		/* Wait while BMAP_INIT is set.
+		 *
+		 * Others wishing to access this bmap in the
+		 *   same mode must wait until MDCHNG ops have
+		 *   completed.  If the desired mode is present
+		 *   then a thread may proceed without blocking
+		 *   here so long as it only accesses structures
+		 *   which pertain to its mode.
+		 */
+		bmap_wait_locked(b, (b->bcm_flags & (BMAP_INIT|BMAP_MDCHNG)));
 
- retry:
 		/*
 		 * Not all lookups are done with the intent of
 		 *   changing the bmap mode.  bmap_lookup() does not
@@ -250,33 +257,19 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		 */
 		if (bmaprw && !(bmaprw & b->bcm_flags) &&
 		    sl_bmap_ops.bmo_mode_chngf) {
-			/*
-			 * Others wishing to access this bmap in the
-			 *   same mode must wait until MDCHNG ops have
-			 *   completed.  If the desired mode is present
-			 *   then a thread may proceed without blocking
-			 *   here so long as it only accesses structures
-			 *   which pertain to its mode.
-			 */
-			if (b->bcm_flags & BMAP_MDCHNG) {
-				bmap_wait_locked(b,
-				    b->bcm_flags & BMAP_MDCHNG);
-				goto retry;
 
-			} else {
-				b->bcm_flags |= BMAP_MDCHNG;
-				BMAP_ULOCK(b);
+			b->bcm_flags |= BMAP_MDCHNG;
+			BMAP_ULOCK(b);
 
-				DEBUG_BMAP(PLL_INFO, b,
-				   "about to mode change (rw=%d)", rw);
+			DEBUG_BMAP(PLL_INFO, b,
+			   "about to mode change (rw=%d)", rw);
 
-				rc = sl_bmap_ops.bmo_mode_chngf(b, rw, 0);
-				BMAP_LOCK(b);
-				b->bcm_flags &= ~BMAP_MDCHNG;
-				if (!rc)
-					b->bcm_flags |= bmaprw;
-				bmap_wake_locked(b);
-			}
+			rc = sl_bmap_ops.bmo_mode_chngf(b, rw, 0);
+			BMAP_LOCK(b);
+			b->bcm_flags &= ~BMAP_MDCHNG;
+			if (!rc)
+				b->bcm_flags |= bmaprw;
+			bmap_wake_locked(b);
 		}
 	}
 
