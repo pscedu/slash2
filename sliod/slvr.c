@@ -67,19 +67,6 @@ struct psc_listcache	 crcqSlvrs;  /* Slivers ready to be CRC'd and have their
 
 __static SPLAY_GENERATE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp);
 
-__static void
-slvr_lru_requeue(struct slvr *s)
-{
-	/*
-	 * Locking convention: it is legal to request for a list lock
-	 * while holding the sliver lock.  On the other hand, when you
-	 * already hold the list lock, you should drop the list lock
-	 * first before asking for the sliver lock or you should use
-	 * trylock().
-	 */
-	lc_move2tail(&lruSlvrs, s);
-}
-
 /**
  * slvr_do_crc - Take the CRC of the data contained within a sliver
  *	add the update to a bcr.
@@ -800,9 +787,6 @@ slvr_remove(struct slvr *s)
 void
 slvr_try_crcsched_locked(struct slvr *s)
 {
-	if ((s->slvr_flags & SLVR_LRU) && s->slvr_pndgwrts)
-		slvr_lru_requeue(s);
-
 	if (!s->slvr_pndgwrts && (s->slvr_flags & SLVR_LRU))
 		slvr_schedule_crc_locked(s);
 }
@@ -823,6 +807,14 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 
 	s->slvr_flags &= ~SLVR_PINNED;
 
+	/*
+	 * Locking convention: it is legal to request for a list lock
+	 * while holding the sliver lock.  On the other hand, when you
+	 * already hold the list lock, you should drop the list lock
+	 * first before asking for the sliver lock or you should use
+	 * trylock().
+	 */
+	lc_move2tail(&lruSlvrs, s);
 	return (1);
 }
 
@@ -837,7 +829,6 @@ slvr_rio_done(struct slvr *s)
 	s->slvr_pndgreads--;
 	DEBUG_SLVR(PLL_INFO, s, "read decref");
 	if (slvr_lru_tryunpin_locked(s)) {
-		slvr_lru_requeue(s);
 		DEBUG_SLVR(PLL_INFO, s, "decref, unpinned");
 	} else
 		DEBUG_SLVR(PLL_INFO, s, "decref, ops still pending or dirty");
