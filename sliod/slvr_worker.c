@@ -338,7 +338,6 @@ slislvrthr_proc(struct slvr *s)
 	/* Put the slvr back to the LRU so it may have its slab reaped. */
 	bii = slvr_2_bii(s);
 	b = bii_2_bmap(bii);
-	s->slvr_dirty_cnt--;
 
 	slvr_num = s->slvr_num;
 
