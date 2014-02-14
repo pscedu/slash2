@@ -784,13 +784,6 @@ slvr_remove(struct slvr *s)
 	psc_pool_return(slvr_pool, s);
 }
 
-void
-slvr_try_crcsched_locked(struct slvr *s)
-{
-	if (!s->slvr_pndgwrts && (s->slvr_flags & SLVR_LRU))
-		slvr_schedule_crc_locked(s);
-}
-
 int
 slvr_lru_tryunpin_locked(struct slvr *s)
 {
@@ -857,7 +850,8 @@ slvr_wio_done(struct slvr *s, int repl)
 		slvr_lru_tryunpin_locked(s);
 	} else {
 		s->slvr_flags |= SLVR_CRCDIRTY;
-		slvr_try_crcsched_locked(s);
+		if (!s->slvr_pndgwrts && (s->slvr_flags & SLVR_LRU))
+			slvr_schedule_crc_locked(s);
 	}
 
 	SLVR_ULOCK(s);
