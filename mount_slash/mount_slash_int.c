@@ -138,11 +138,11 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	uint32_t alen = len + (roff & BMPC_BUFMASK);
 	uint32_t bmpce_off;
 
-	DEBUG_BMAP(PLL_INFO, b,
+	DEBUG_BMAP(PLL_DIAG, b,
 	    "adding req for (off=%u) (size=%u) (nbmpce=%d)", roff, len,
 	    pll_nitems(&bmap_2_bmpc(b)->bmpc_lru));
 
-	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh,
+	DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh,
 	    "adding req for (off=%u) (size=%u)", roff, len);
 
 	psc_assert(len);
@@ -218,7 +218,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 			if (maxpages < npages)
 				maxpages = npages;
 
-			DEBUG_BMAP(PLL_INFO, b, "maxpages=%d npages=%d "
+			DEBUG_BMAP(PLL_DIAG, b, "maxpages=%d npages=%d "
 			    "bkwdra=%d", maxpages, npages, bkwdra);
 		} else {
 			maxpages = npages;
@@ -263,7 +263,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 			psc_dynarray_add(&r->biorq_pages, e);
 			BMPCE_ULOCK(e);
 		} else {
-			DEBUG_BMPCE(PLL_INFO, e, "ra (npndg=%d) i=%d "
+			DEBUG_BMPCE(PLL_DIAG, e, "ra (npndg=%d) i=%d "
 			    "biorq_is_my_bmpce=%d raoff=%"PRIx64
 			    " bmpce_foff=%"PRIx64,
 			    pll_nitems(&mfh->mfh_ra_bmpces), i,
@@ -400,11 +400,11 @@ msl_biorq_del(struct bmpc_ioreq *r)
 		if (!bmpc->bmpc_pndgwr) {
 			b->bcm_flags &= ~BMAP_FLUSHQ;
 			lc_remove(&bmapFlushQ, b);
-			DEBUG_BMAP(PLL_INFO, b, "remove from bmapFlushQ");
+			DEBUG_BMAP(PLL_DIAG, b, "remove from bmapFlushQ");
 		}
 	}
 
-	DEBUG_BMAP(PLL_INFO, b, "remove biorq=%p nitems_pndg(%d)",
+	DEBUG_BMAP(PLL_DIAG, b, "remove biorq=%p nitems_pndg(%d)",
 		   r, pll_nitems(&bmpc->bmpc_pndg_biorqs));
 
 	bmap_op_done_type(b, BMAP_OPCNT_BIORQ);
@@ -420,7 +420,7 @@ msl_bmpces_fail(struct bmpc_ioreq *r, int rc)
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 		BMPCE_LOCK(e);
 		if (biorq_is_my_bmpce(r, e)) {
-			DEBUG_BMPCE(PLL_INFO, e, "set BMPCE_EIO");
+			DEBUG_BMPCE(PLL_DIAG, e, "set BMPCE_EIO");
 			e->bmpce_flags |= BMPCE_EIO;
 			BMPCE_WAKE(e);
 		}
@@ -439,7 +439,7 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 		BMPCE_LOCK(e);
 		if (biorq_is_my_bmpce(r, e)) {
-			DEBUG_BMPCE(PLL_INFO, e, "disown");
+			DEBUG_BMPCE(PLL_DIAG, e, "disown");
 			/* avoid reuse trouble */
 			e->bmpce_owner = NULL;
 		}
@@ -529,7 +529,7 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 	mfh_decref(r->biorq_mfh);
 
 	OPSTAT_INCR(SLC_OPST_BIORQ_DESTROY);
-	DEBUG_BIORQ(PLL_INFO, r, "destroying");
+	DEBUG_BIORQ(PLL_DIAG, r, "destroying");
 	psc_pool_return(slc_biorq_pool, r);
 }
 
@@ -606,7 +606,7 @@ _msl_fsrq_aiowait_tryadd_locked(const struct pfl_callerinfo *pci,
 	if (!(r->biorq_flags & BIORQ_WAIT)) {
 		r->biorq_ref++;
 		r->biorq_flags |= BIORQ_WAIT;
-		DEBUG_BIORQ(PLL_INFO, r, "blocked by %p (ref=%d)",
+		DEBUG_BIORQ(PLL_DIAG, r, "blocked by %p (ref=%d)",
 		    e, r->biorq_ref);
 		pll_add(&e->bmpce_pndgaios, r);
 	}
@@ -684,7 +684,7 @@ msl_req_aio_add(struct pscrpc_request *rq,
 		BIORQ_LOCK(r);
 		if (r->biorq_flags & BIORQ_WRITE) {
 			r->biorq_flags |= BIORQ_AIOWAIT;
-			DEBUG_BIORQ(PLL_INFO, r, "aiowait mark, q=%p",
+			DEBUG_BIORQ(PLL_DIAG, r, "aiowait mark, q=%p",
 			    car->car_fsrqinfo);
 		}
 		BIORQ_ULOCK(r);
@@ -875,11 +875,11 @@ _msl_bmpce_rpc_done(const struct pfl_callerinfo *pci,
 
 	if (rc) {
 		e->bmpce_flags |= BMPCE_EIO;
-		DEBUG_BMPCE(PLL_INFO, e, "set BMPCE_EIO");
+		DEBUG_BMPCE(PLL_DIAG, e, "set BMPCE_EIO");
 
 	} else {
 		e->bmpce_flags |= BMPCE_DATARDY;
-		DEBUG_BMPCE(PLL_INFO, e, "datardy via read_cb");
+		DEBUG_BMPCE(PLL_DIAG, e, "datardy via read_cb");
 	}
 	/* AIOWAIT is removed no matter what. */
 	e->bmpce_flags &= ~BMPCE_AIOWAIT;
@@ -913,15 +913,15 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 	psc_assert(b);
 
 	if (rq)
-		DEBUG_REQ(rc ? PLL_ERROR : PLL_INFO, rq,
+		DEBUG_REQ(rc ? PLL_ERROR : PLL_DIAG, rq,
 		    "bmap=%p biorq=%p", b, r);
 
 	(void)psc_fault_here_rc(SLC_FAULT_READ_CB_EIO, &rc, EIO);
 
-	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b, "sbd_seq=%"PRId64,
+	DEBUG_BMAP(rc ? PLL_ERROR : PLL_DIAG, b, "sbd_seq=%"PRId64,
 	    bmap_2_sbd(b)->sbd_seq);
 
-	DEBUG_BIORQ(rc ? PLL_ERROR : PLL_INFO, r, "rc=%d", rc);
+	DEBUG_BIORQ(rc ? PLL_ERROR : PLL_DIAG, r, "rc=%d", rc);
 
 	DYNARRAY_FOREACH(e, i, a)
 		msl_bmpce_rpc_done(e, rc);
@@ -1061,7 +1061,7 @@ msl_dio_cb(struct pscrpc_request *rq, int rc, struct pscrpc_async_args *args)
 
 	/* rq is NULL it we are called from sl_resm_hldrop() */
 	if (rq) {
-		DEBUG_REQ(PLL_INFO, rq, "cb");
+		DEBUG_REQ(PLL_DIAG, rq, "cb");
 
 		op = rq->rq_reqmsg->opc;
 		psc_assert(op == SRMT_READ || op == SRMT_WRITE);
@@ -1069,7 +1069,7 @@ msl_dio_cb(struct pscrpc_request *rq, int rc, struct pscrpc_async_args *args)
 		mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 		psc_assert(mq);
 
-		DEBUG_BIORQ(PLL_INFO, r,
+		DEBUG_BIORQ(PLL_DIAG, r,
 		    "dio complete (op=%d) off=%u sz=%u rc=%d",
 		    op, mq->offset, mq->size, rc);
 	}
@@ -1080,7 +1080,7 @@ msl_dio_cb(struct pscrpc_request *rq, int rc, struct pscrpc_async_args *args)
 	r->biorq_flags &= ~BIORQ_AIOWAIT;
 	if (q->mfsrq_flags & MFSRQ_AIOWAIT) {
 		q->mfsrq_flags &= ~MFSRQ_AIOWAIT;
-		DEBUG_BIORQ(PLL_INFO, r, "aiowait wakeup, q=%p", q);
+		DEBUG_BIORQ(PLL_DIAG, r, "aiowait wakeup, q=%p", q);
 		psc_waitq_wakeall(&msl_fhent_flush_waitq);
 	}
 	BIORQ_ULOCK(r);
@@ -1188,7 +1188,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		}
 		BIORQ_LOCK(r);
 		r->biorq_ref++;
-		DEBUG_BIORQ(PLL_INFO, r, "dio launch (ref=%d)", r->biorq_ref);
+		DEBUG_BIORQ(PLL_DIAG, r, "dio launch (ref=%d)",
+		    r->biorq_ref);
 		BIORQ_ULOCK(r);
 	}
 
@@ -1206,14 +1207,14 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	 * notification from him when it is ready.
 	 */
 	if (rc == 0)
-		psc_iostats_intv_add((op == SRMT_WRITE ?
-		    &msl_diowr_stat : &msl_diord_stat), size);
+		psc_iostats_intv_add(op == SRMT_WRITE ?
+		    &msl_diowr_stat : &msl_diord_stat, size);
 
 	PSCFREE(iovs);
 	sl_csvc_decref(csvc);
 
 	if (rc == -SLERR_AIOWAIT) {
-		DEBUG_BIORQ(PLL_INFO, r, "aio op=%d", op);
+		DEBUG_BIORQ(PLL_DIAG, r, "aio op=%d", op);
 		rc = 0;
 		if (op == SRMT_WRITE) {
 			q = r->biorq_fsrqi;
@@ -1221,7 +1222,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 			 * The waitq of biorq is used for bmpce, so this
 			 * hackery.
 			 */
-			while (1) {
+			for (;;) {
 				locked = MFH_RLOCK(q->mfsrq_mfh);
 				BIORQ_LOCK(r);
 				if (!(r->biorq_flags & BIORQ_AIOWAIT)) {
@@ -1231,7 +1232,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 				}
 				BIORQ_ULOCK(r);
 				q->mfsrq_flags |= MFSRQ_AIOWAIT;
-				DEBUG_BIORQ(PLL_INFO, r,
+				DEBUG_BIORQ(PLL_DIAG, r,
 				    "aiowait sleep, q=%p", q);
 				psc_waitq_wait(&msl_fhent_flush_waitq,
 				    &q->mfsrq_mfh->mfh_lock);
@@ -1283,13 +1284,13 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	r->biorq_flags |= BIORQ_FLUSHRDY | BIORQ_SPLAY;
 	PSC_SPLAY_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
 	BIORQ_ULOCK(r);
-	DEBUG_BIORQ(PLL_INFO, r, "sched flush (ref=%d)", r->biorq_ref);
+	DEBUG_BIORQ(PLL_DIAG, r, "sched flush (ref=%d)", r->biorq_ref);
 
 	bmpc->bmpc_pndgwr++;
 	if (!(b->bcm_flags & BMAP_FLUSHQ)) {
 		b->bcm_flags |= BMAP_FLUSHQ;
 		lc_addtail(&bmapFlushQ, b);
-		DEBUG_BMAP(PLL_INFO, b, "add to bmapFlushQ");
+		DEBUG_BMAP(PLL_DIAG, b, "add to bmapFlushQ");
 	}
 	bmap_flushq_wake(BMAPFLSH_TIMEOA);
 
@@ -1397,7 +1398,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 
 		e->bmpce_flags |= BMPCE_EIO;
 		BMPCE_WAKE(e);
-		DEBUG_BMPCE(PLL_INFO, e, "set BMPCE_EIO");
+		DEBUG_BMPCE(PLL_DIAG, e, "set BMPCE_EIO");
 		bmpce_release_locked(e, bmap_2_bmpc(b));
 
 		bmap_op_done_type(b, BMAP_OPCNT_READA);
@@ -1521,7 +1522,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 
 	BIORQ_LOCK(r);
 	r->biorq_ref++;
-	DEBUG_BIORQ(PLL_INFO, r, "rpc launch (ref=%d)", r->biorq_ref);
+	DEBUG_BIORQ(PLL_DIAG, r, "rpc launch (ref=%d)", r->biorq_ref);
 	BIORQ_ULOCK(r);
 
 	return (0);
@@ -1552,7 +1553,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 		BMPCE_ULOCK(e);
 	}
 
-	DEBUG_BIORQ(PLL_INFO, r, "rpc launch failed (rc=%d)", rc);
+	DEBUG_BIORQ(PLL_DIAG, r, "rpc launch failed (rc=%d)", rc);
 	return (rc);
 }
 
@@ -1741,7 +1742,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 		break;
 	}
  out:
-	DEBUG_BIORQ(PLL_INFO, r, "sched=%d wait=%#x aio=%d rc=%d",
+	DEBUG_BIORQ(PLL_DIAG, r, "sched=%d wait=%#x aio=%d rc=%d",
 	    sched, waitflag, aiowait, rc);
 	return (rc);
 }
@@ -1838,7 +1839,7 @@ msl_pages_copyout(struct bmpc_ioreq *r)
 	} else
 		tsize = r->biorq_len;
 
-	DEBUG_BIORQ(PLL_INFO, r, "tsize=%d biorq_len=%u biorq_off=%u",
+	DEBUG_BIORQ(PLL_DIAG, r, "tsize=%d biorq_len=%u biorq_off=%u",
 		    tsize, r->biorq_len, r->biorq_off);
 
 	if (!tsize || tsize < 0)
@@ -1865,7 +1866,7 @@ msl_pages_copyout(struct bmpc_ioreq *r)
 		} else
 			nbytes = MIN(BMPC_BUFSZ, tsize);
 
-		DEBUG_BMPCE(PLL_INFO, e, "tsize=%u nbytes=%zu toff=%"
+		DEBUG_BMPCE(PLL_DIAG, e, "tsize=%u nbytes=%zu toff=%"
 		    PSCPRIdOFFT, tsize, nbytes, toff);
 
 		psc_assert(e->bmpce_flags & BMPCE_DATARDY);
@@ -1907,7 +1908,7 @@ msl_getra(struct msl_fhent *mfh, int npages, int *bkwd)
 
 	*bkwd = mfh->mfh_ra.mra_bkwd;
 
-	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "rapages=%d bkwd=%d",
+	DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh, "rapages=%d bkwd=%d",
 		   rapages, *bkwd);
 
 	MFH_ULOCK(mfh);
@@ -2081,7 +2082,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	psc_assert(size);
 	f = mfh->mfh_fcmh;
 
-	DEBUG_FCMH(PLL_INFO, f, "buf=%p size=%zu off=%"PRId64" rw=%s",
+	DEBUG_FCMH(PLL_DIAG, f, "buf=%p size=%zu off=%"PRId64" rw=%s",
 	    buf, size, off, (rw == SL_READ) ? "read" : "write");
 
 	if (rw == SL_READ)
@@ -2147,7 +2148,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 */
 	for (i = 0, bufp = buf; i < nr; i++) {
 
-		DEBUG_FCMH(PLL_INFO, f, "sz=%zu tlen=%zu off=%"PSCPRIdOFFT" "
+		DEBUG_FCMH(PLL_DIAG, f, "sz=%zu tlen=%zu off=%"PSCPRIdOFFT" "
 		    "roff=%"PSCPRIdOFFT" rw=%s", tsize, tlen, off, roff,
 		    (rw == SL_READ) ? "read" : "write");
 
@@ -2182,7 +2183,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 				if (biorq_is_my_bmpce(r, e)) {
 					e->bmpce_flags &= ~(BMPCE_EIO |
 					    BMPCE_DATARDY);
-					DEBUG_BMPCE(PLL_INFO, e,
+					DEBUG_BMPCE(PLL_DIAG, e,
 					    "clear BMPCE_EIO/DATARDY");
 				}
 				BMPCE_ULOCK(e);
