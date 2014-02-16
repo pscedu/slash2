@@ -38,8 +38,8 @@
 #include "bmap_cli.h"
 #include "mount_slash.h"
 
-struct psc_poolmaster	 bmpcePoolMaster;
-struct psc_poolmgr	*bmpcePoolMgr;
+struct psc_poolmaster	 bmpce_poolmaster;
+struct psc_poolmgr	*bmpce_pool;
 struct psc_poolmaster    bwc_poolmaster;
 struct psc_poolmgr	*bwc_pool;
 
@@ -133,7 +133,7 @@ bmpce_lookup_locked(struct bmapc_memb *b, struct bmpc_ioreq *r,
 
 		if (e2 == NULL) {
 			BMAP_ULOCK(b);
-			e2 = psc_pool_get(bmpcePoolMgr);
+			e2 = psc_pool_get(bmpce_pool);
 			OPSTAT_INCR(SLC_OPST_BMPCE_GET);
 			BMAP_LOCK(b);
 			continue;
@@ -154,7 +154,7 @@ bmpce_lookup_locked(struct bmapc_memb *b, struct bmpc_ioreq *r,
 	}
 	if (e2) {
 		OPSTAT_INCR(SLC_OPST_BMPCE_PUT);
-		psc_pool_return(bmpcePoolMgr, e2);
+		psc_pool_return(bmpce_pool, e2);
 	}
 	return (e);
 }
@@ -168,8 +168,8 @@ bmpce_free(struct bmap_pagecache_entry *e,
 	PSC_SPLAY_XREMOVE(bmap_pagecachetree, &bmpc->bmpc_tree, e);
 
 	OPSTAT_INCR(SLC_OPST_BMPCE_PUT);
-	bmpce_init(bmpcePoolMgr, e);
-	psc_pool_return(bmpcePoolMgr, e);
+	bmpce_init(bmpce_pool, e);
+	psc_pool_return(bmpce_pool, e);
 }
 
 void
@@ -441,11 +441,11 @@ bmpce_reap(struct psc_poolmgr *m)
 void
 bmpc_global_init(void)
 {
-	psc_poolmaster_init(&bmpcePoolMaster,
+	psc_poolmaster_init(&bmpce_poolmaster,
 	    struct bmap_pagecache_entry, bmpce_lentry, PPMF_AUTO, 512,
 	    512, 16384, bmpce_init, bmpce_destroy, bmpce_reap, "bmpce");
 
-	bmpcePoolMgr = psc_poolmaster_getmgr(&bmpcePoolMaster);
+	bmpce_pool = psc_poolmaster_getmgr(&bmpce_poolmaster);
 
 	psc_poolmaster_init(&bwc_poolmaster,
 	    struct bmpc_write_coalescer, bwc_lentry, PPMF_AUTO, 64,

@@ -317,7 +317,7 @@ void	 bmpce_release_locked(struct bmap_pagecache_entry *,
 
 void	 bwc_release(struct bmpc_write_coalescer *);
 
-extern struct psc_poolmgr	*bmpcePoolMgr;
+extern struct psc_poolmgr	*bmpce_pool;
 extern struct psc_poolmgr	*bwc_pool;
 extern struct psc_listcache	 bmpcLru;
 
