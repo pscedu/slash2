@@ -377,7 +377,7 @@ batchrq_handle(struct pscrpc_request *rq)
 			if (!mp->rc) {
 				br->br_reply = iov.iov_base;
 				iov.iov_len = br->br_replen = mq->len;
-				slrpc_bulkclient(rq, BULK_PUT_SINK,
+				slrpc_bulkclient(rq, BULK_GET_SINK,
 				    br->br_rcv_ptl, &iov, 1);
 			}
 
@@ -426,7 +426,7 @@ batchrq_add(struct sl_resource *r, struct slashrpc_cservice *csvc,
 
 	/* not found; create */
 
-	rc = SL_RSX_NEWREQ(csvc, opc, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc, SRMT_BATCH_RQ, rq, mq, mp);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -456,6 +456,7 @@ batchrq_add(struct sl_resource *r, struct slashrpc_cservice *csvc,
  add:
 	memcpy(br->br_buf + br->br_len, buf, len);
 	br->br_len += len;
+	mq->len += len;
 	if (scratch)
 		psc_dynarray_add(&br->br_scratch, scratch);
 
