@@ -622,7 +622,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 
 	psc_assert(psc_dynarray_len(biorqs) > *indexp);
 
-	bwc = psc_pool_get(bwcPoolMgr);
+	bwc = psc_pool_get(bwc_pool);
 
 	for (idx = 0; idx + *indexp < psc_dynarray_len(biorqs);
 	    idx++, e = t) {

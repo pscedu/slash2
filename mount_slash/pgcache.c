@@ -40,8 +40,8 @@
 
 struct psc_poolmaster	 bmpcePoolMaster;
 struct psc_poolmgr	*bmpcePoolMgr;
-struct psc_poolmaster    bwcPoolMaster;
-struct psc_poolmgr	*bwcPoolMgr;
+struct psc_poolmaster    bwc_poolmaster;
+struct psc_poolmgr	*bwc_pool;
 
 struct psc_listcache	 bmpcLru;
 
@@ -69,8 +69,8 @@ void
 bwc_release(struct bmpc_write_coalescer *bwc)
 {
 	psc_assert(pll_empty(&bwc->bwc_pll));
-	bwc_init(bwcPoolMgr, bwc);
-	psc_pool_return(bwcPoolMgr, bwc);
+	bwc_init(bwc_pool, bwc);
+	psc_pool_return(bwc_pool, bwc);
 }
 
 /**
@@ -447,11 +447,11 @@ bmpc_global_init(void)
 
 	bmpcePoolMgr = psc_poolmaster_getmgr(&bmpcePoolMaster);
 
-	psc_poolmaster_init(&bwcPoolMaster,
+	psc_poolmaster_init(&bwc_poolmaster,
 	    struct bmpc_write_coalescer, bwc_lentry, PPMF_AUTO, 64,
 	    64, 0, bwc_init, NULL, NULL, "bwc");
 
-	bwcPoolMgr = psc_poolmaster_getmgr(&bwcPoolMaster);
+	bwc_pool = psc_poolmaster_getmgr(&bwc_poolmaster);
 
 	lc_reginit(&bmpcLru, struct bmap_pagecache, bmpc_lentry,
 	    "bmpclru");
