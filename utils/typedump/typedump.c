@@ -230,6 +230,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slctlmsg_conn);
 	PRTYPE(struct slctlmsg_fcmh);
 	PRTYPE(struct sli_aiocb_reply);
+	PRTYPE(struct sli_batch_reply);
 	PRTYPE(struct sli_exp_cli);
 	PRTYPE(struct sli_iocb);
 	PRTYPE(struct sli_repl_workrq);
