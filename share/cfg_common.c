@@ -91,6 +91,7 @@ libsl_siteid2site(sl_siteid_t siteid)
 	struct sl_site *s;
 
 	CONF_LOCK();
+	/* XXX hashtable or tree */
 	CONF_FOREACH_SITE(s)
 		if (s->site_id == siteid)
 			break;
@@ -113,6 +114,7 @@ libsl_id2res(sl_ios_id_t id)
 
 	if ((s = libsl_resid2site(id)) == NULL)
 		return (NULL);
+	/* XXX hashtable or tree */
 	DYNARRAY_FOREACH(r, n, &s->site_resources)
 		if (id == r->res_id)
 			return (r);
