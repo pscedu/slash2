@@ -353,6 +353,18 @@ bmpc_biorqs_destroy(struct bmapc_memb *b, int rc)
 	psc_dynarray_free(&a);
 }
 
+static __inline int
+bmpc_lru_cmp(const void *x, const void *y)
+{
+	const struct bmap_pagecache *a = x, *b = y;
+
+	if (timespeccmp(&a->bmpc_oldest, &b->bmpc_oldest, <))
+		return (-1);
+	if (timespeccmp(&a->bmpc_oldest, &b->bmpc_oldest, >))
+		return (1);
+	return (0);
+}
+
 /**
  * bmpc_lru_tryfree - Attempt to free 'nfree' blocks from the provided
  *    bmap_pagecache structure.

@@ -350,19 +350,4 @@ bmpc_init(struct bmap_pagecache *bmpc)
 	lc_addtail(&bmpcLru, bmpc);
 }
 
-static __inline int
-bmpc_lru_cmp(const void *x, const void *y)
-{
-	const struct bmap_pagecache * const *pa = x, *a = *pa;
-	const struct bmap_pagecache * const *pb = y, *b = *pb;
-
-	if (timespeccmp(&a->bmpc_oldest, &b->bmpc_oldest, <))
-		return (-1);
-
-	if (timespeccmp(&a->bmpc_oldest, &b->bmpc_oldest, >))
-		return (1);
-
-	return (0);
-}
-
 #endif /* _SL_BMPC_H_ */
