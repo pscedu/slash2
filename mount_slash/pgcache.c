@@ -388,12 +388,10 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 	 */
 	if (pll_nitems(&bmpc->bmpc_lru) > 0) {
 		e = pll_peekhead(&bmpc->bmpc_lru);
-		LIST_CACHE_LOCK(&bmpcLru);
 		memcpy(&bmpc->bmpc_oldest, &e->bmpce_laccess,
 		    sizeof(struct timespec));
 		lc_remove(&bmpcLru, bmpc);
 		lc_add_sorted(&bmpcLru, bmpc, bmpc_lru_cmp);
-		LIST_CACHE_ULOCK(&bmpcLru);
 	}
 
 	return (freed);
