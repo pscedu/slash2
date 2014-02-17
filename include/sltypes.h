@@ -58,6 +58,9 @@ typedef uint32_t sl_ios_id_t;
 
 /* thread local storage */
 #define SL_TLSIDX_FIDBUF	(PFL_TLSIDX_LASTRESERVED)
+#define SL_TLSIDX_INOBUF	(PFL_TLSIDX_LASTRESERVED + 1)
+#define SL_TLSIDX_REPLBUF	(PFL_TLSIDX_LASTRESERVED + 2)
+#define SL_TLSIDX_CRCSTBUF	(PFL_TLSIDX_LASTRESERVED + 3)
 
 #define SL_NAME_MAX		255		/* file name component length */
 #define SL_PATH_MAX		4096		/* file path name length */
@@ -66,8 +69,8 @@ typedef uint32_t sl_ios_id_t;
 
 /* I/O flags */
 enum rw {
-	SL_READ			= 42,
-	SL_WRITE		= 43
+	SL_READ			= 42,		/* use arbitrary values */
+	SL_WRITE		= 43		/* to check against 0 */
 };
 
 /*
