@@ -45,10 +45,10 @@ struct psc_poolmgr	*bwc_pool;
 
 struct psc_listcache	 bmpcLru;
 
-__static SPLAY_GENERATE(bmap_pagecachetree, bmap_pagecache_entry,
-    bmpce_tentry, bmpce_cmp);
-__static SPLAY_GENERATE(bmpc_biorq_tree, bmpc_ioreq,
-    biorq_tentry, bmpc_biorq_cmp);
+SPLAY_GENERATE(bmap_pagecachetree, bmap_pagecache_entry, bmpce_tentry,
+    bmpce_cmp)
+SPLAY_GENERATE(bmpc_biorq_tree, bmpc_ioreq, biorq_tentry,
+    bmpc_biorq_cmp)
 
 /**
  * bwc_init - Initialize write coalescer pool entry.
@@ -334,9 +334,9 @@ bmpc_biorqs_destroy(struct bmapc_memb *b, int rc)
 
 	DYNARRAY_FOREACH(r, i, &a) {
 		/*
- 		 * A read request can use a write bmap. Plus, it is
- 		 * the reader's responsibility to destroy its requests.
- 		 */
+		 * A read request can use a write bmap.  Plus, it is
+		 * the reader's responsibility to destroy its requests.
+		 */
 		BIORQ_LOCK(r);
 		if (!(r->biorq_flags & BIORQ_FLUSHRDY)) {
 			BIORQ_ULOCK(r);
@@ -388,8 +388,10 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 	 */
 	if (pll_nitems(&bmpc->bmpc_lru) > 0) {
 		e = pll_peekhead(&bmpc->bmpc_lru);
+		LIST_CACHE_LOCK(&bmpc->bmpc_oldest);
 		memcpy(&bmpc->bmpc_oldest, &e->bmpce_laccess,
 		    sizeof(struct timespec));
+		LIST_CACHE_ULOCK(&bmpc->bmpc_oldest);
 	}
 
 	return (freed);
@@ -405,9 +407,6 @@ bmpce_reap(struct psc_poolmgr *m)
 	struct bmap *b;
 	struct bmap_pagecache *bmpc;
 	int nfreed = 0, waiters = atomic_read(&m->ppm_nwaiters);
-
-	/* Should be sorted from oldest bmpc to newest. */
-	lc_sort(&bmpcLru, qsort, bmpc_lru_cmp);
 
 	LIST_CACHE_LOCK(&bmpcLru);
 	LIST_CACHE_FOREACH(bmpc, &bmpcLru) {

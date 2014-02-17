@@ -65,7 +65,7 @@ struct psc_listcache	 lruSlvrs;   /* LRU list of clean slivers which may be reap
 struct psc_listcache	 crcqSlvrs;  /* Slivers ready to be CRC'd and have their
 				      * CRCs shipped to the MDS. */
 
-__static SPLAY_GENERATE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp);
+SPLAY_GENERATE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp)
 
 /**
  * slvr_do_crc - Take the CRC of the data contained within a sliver

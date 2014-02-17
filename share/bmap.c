@@ -41,7 +41,7 @@
 #include "slashrpc.h"
 #include "slerr.h"
 
-__static SPLAY_GENERATE(bmap_cache, bmap, bcm_tentry, bmap_cmp);
+SPLAY_GENERATE(bmap_cache, bmap, bcm_tentry, bmap_cmp)
 
 struct psc_poolmaster	 bmap_poolmaster;
 struct psc_poolmgr	*bmap_pool;
