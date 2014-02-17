@@ -316,6 +316,9 @@ resource_start	: RESOURCE_PROFILE NAME '{' {
 			    cfg_res_pri_sz);
 			currentRes->res_site = currentSite;
 			currentResm = NULL;
+
+			psc_hashent_init(&globalConfig.gconf_reshtable,
+			    currentRes);
 			psc_dynarray_init(&currentRes->res_peers);
 			psc_dynarray_init(&currentRes->res_members);
 			rc = snprintf(currentRes->res_name,
