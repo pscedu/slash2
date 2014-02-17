@@ -24,11 +24,11 @@
 
 #include <stdio.h>
 
-#include "pfl/listcache.h"
-#include "pfl/vbitmap.h"
-#include "pfl/rpc.h"
 #include "pfl/atomic.h"
+#include "pfl/listcache.h"
 #include "pfl/pool.h"
+#include "pfl/rpc.h"
+#include "pfl/vbitmap.h"
 
 #include "bmap.h"
 #include "bmap_iod.h"
@@ -110,6 +110,8 @@ sli_repl_addwk(int op, sl_ios_id_t resid,
 	w->srw_bgen = bgen;
 	w->srw_len = len;
 	w->srw_op = op;
+	w->srw_bchrp = bchrp;
+	w->srw_pp = pp;
 
 	/* get an fcmh for the file */
 	rc = sli_fcmh_get(&w->srw_fg, &w->srw_fcmh);
@@ -176,7 +178,7 @@ sli_replwkrq_decref(struct sli_repl_workrq *w, int rc)
 	(void)reqlock(&w->srw_lock);
 
 	/*
-	 * This keeps the very first error and cause our thread to drop
+	 * This keeps the very first error and causes our thread to drop
 	 * its reference to us.
 	 */
 	if (rc && w->srw_status == 0)
