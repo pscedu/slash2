@@ -48,11 +48,12 @@
 #include "libcfs/kp30.h"
 #include "lnet/lib-lnet.h"
 
-#include "pfl/str.h"
-#include "pfl/rpc.h"
 #include "pfl/alloc.h"
 #include "pfl/bitflag.h"
+#include "pfl/hashtbl.h"
 #include "pfl/log.h"
+#include "pfl/rpc.h"
+#include "pfl/str.h"
 
 #include "fid.h"
 #include "slconfig.h"
@@ -300,7 +301,7 @@ site_resource	: resource_start resource_def '}' {
 					    "one metadata server",
 					    currentSite->site_name);
 
-			psc_hashtbl_dynarray_add(&globalConfig.gconf_reshtable,
+			psc_hashtbl_add_item(&globalConfig.gconf_reshtable,
 			    currentRes);
 
 			slcfg_init_res(currentRes);
