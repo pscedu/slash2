@@ -290,7 +290,8 @@ site_resource	: resource_start resource_def '}' {
 					    currentSite->site_name);
 			}
 
-			psc_dynarray_add(&currentSite->site_resources, currentRes);
+			psc_dynarray_add(&currentSite->site_resources,
+			    currentRes);
 
 			DYNARRAY_FOREACH(r, j, &currentSite->site_resources)
 				if (r->res_type == SLREST_MDS &&
@@ -298,6 +299,9 @@ site_resource	: resource_start resource_def '}' {
 					yyerror("site %s has more than "
 					    "one metadata server",
 					    currentSite->site_name);
+
+			psc_hashtbl_dynarray_add(&globalConfig.gconf_reshtable,
+			    currentRes);
 
 			slcfg_init_res(currentRes);
 		}

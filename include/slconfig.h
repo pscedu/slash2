@@ -73,6 +73,9 @@ enum sl_res_type {
 
 /* Resource (I/O system, MDS) */
 struct sl_resource {
+	uint64_t		 res_hashkey;
+	struct psc_hashent	 res_hentry;
+
 	sl_ios_id_t		 res_id;
 	int			 res_flags;
 	struct sl_site		*res_site;
@@ -185,6 +188,7 @@ struct sl_config {
 	struct psc_lockedlist	 gconf_sites;
 	psc_spinlock_t		 gconf_lock;
 	uint64_t		 gconf_fsuuid;
+	struct psc_hashtbl	 gconf_reshtable;
 };
 
 #define INIT_GCONF(cf)							\
@@ -193,6 +197,9 @@ struct sl_config {
 		INIT_SPINLOCK(&(cf)->gconf_lock);			\
 		pll_init(&(cf)->gconf_sites, struct sl_site,		\
 		    site_lentry, &(cf)->gconf_lock);			\
+		psc_hashtbl_init(&(cf)->gconf_reshtable, 0,		\
+		    struct sl_resource, res_hashkey, res_hentry, 191,	\
+		    NULL, "res");					\
 	} while (0)
 
 #define CONF_LOCK()			spinlock(&globalConfig.gconf_lock)

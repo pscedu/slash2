@@ -108,17 +108,10 @@ libsl_resid2site(sl_ios_id_t id)
 struct sl_resource *
 libsl_id2res(sl_ios_id_t id)
 {
-	struct sl_resource *r;
-	struct sl_site *s;
-	int n;
+	uint64_t resid = id;
 
-	if ((s = libsl_resid2site(id)) == NULL)
-		return (NULL);
-	/* XXX hashtable or tree */
-	DYNARRAY_FOREACH(r, n, &s->site_resources)
-		if (id == r->res_id)
-			return (r);
-	return (NULL);
+	return (psc_hashtbl_search(&globalConfig.gconf_reshtable, NULL,
+	    NULL, &id));
 }
 
 struct sl_resm *
