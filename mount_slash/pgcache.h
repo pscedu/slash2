@@ -287,7 +287,7 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
 }
 
 /**
- * biorq_is_my_bmpce - Informs the caller that biorq, r, owns the the
+ * biorq_is_my_bmpce - Informs the caller that biorq, r, owns the
  *	page cache entry, b.  This state implies that the thread
  *	processing 'r' is responsible for allocating a memory page and
  *	possible faulting in that page from the ION.
