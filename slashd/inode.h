@@ -133,19 +133,15 @@ struct slm_inoh {
 #define inoh_2_fcmh_const(ih)	fmi_2_fcmh_const(inoh_2_fmi_const(ih))
 
 #define DEBUG_INOH(level, ih, fmt, ...)					\
-	do {								\
-		char _buf[LINE_MAX];					\
-									\
-		psclog((level), "inoh@%p fcmh=%p f+g="SLPRI_FG" "	\
-		    "fl:%#x:%s%s %s :: " fmt,				\
-		    (ih), inoh_2_fcmh_const(ih),			\
-		    SLPRI_FG_ARGS(&inoh_2_fcmh_const(ih)->fcmh_fg),	\
-		    (ih)->inoh_flags,					\
-		    (ih)->inoh_flags & INOH_INO_NEW	  ? "N" : "",	\
-		    (ih)->inoh_flags & INOH_INO_NOTLOADED ? "L" : "",	\
-		    _dump_ino(_buf, sizeof(_buf), &(ih)->inoh_ino),	\
-		    ## __VA_ARGS__);					\
-	} while (0)
+	psclog((level), "inoh@%p fcmh=%p f+g="SLPRI_FG" "		\
+	    "fl:%#x:%s%s %s :: " fmt,					\
+	    (ih), inoh_2_fcmh_const(ih),				\
+	    SLPRI_FG_ARGS(&inoh_2_fcmh_const(ih)->fcmh_fg),		\
+	    (ih)->inoh_flags,						\
+	    (ih)->inoh_flags & INOH_INO_NEW	  ? "N" : "",		\
+	    (ih)->inoh_flags & INOH_INO_NOTLOADED ? "L" : "",		\
+	    _dump_ino(pfl_tls_get(SL_TLSIDX_INOBUF, LINE_MAX),		\
+	      LINE_MAX, &(ih)->inoh_ino), ## __VA_ARGS__)
 
 struct sl_ino_compat {
 	int			(*sic_read_ino)(struct slash_inode_handle *);
