@@ -1039,17 +1039,6 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	if (fp)
 		*fp = NULL;
 
-	rc = msl_load_fcmh(pfr, pinum, &p);
-	if (rc)
-		PFL_GOTOERR(out, rc);
-
-	FCMH_LOCK(p);
-	rc = fcmh_checkcreds(p, pcrp, X_OK);
-	if (rc) {
-		fcmh_op_done(p);
-		PFL_GOTOERR(out, rc);
-	}
-
 #define MSL_FIDNS_RPATH	".slfidns"
 	if (pinum == SLFID_ROOT && strcmp(name, MSL_FIDNS_RPATH) == 0) {
 		struct fidc_membh f;
@@ -1082,6 +1071,17 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 			FCMH_LOCK(c);
 			*sstb = c->fcmh_sstb;
 		}
+		PFL_GOTOERR(out, rc);
+	}
+
+	rc = msl_load_fcmh(pfr, pinum, &p);
+	if (rc)
+		PFL_GOTOERR(out, rc);
+
+	FCMH_LOCK(p);
+	rc = fcmh_checkcreds(p, pcrp, X_OK);
+	if (rc) {
+		fcmh_op_done(p);
 		PFL_GOTOERR(out, rc);
 	}
 
