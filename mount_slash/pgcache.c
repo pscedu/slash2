@@ -383,15 +383,17 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 	}
 
 	/*
-	 * Save CPU, assume that the head of the list is the oldest
+	 * Save CPU: assume that the head of the list is the oldest
 	 * entry.
 	 */
 	if (pll_nitems(&bmpc->bmpc_lru) > 0) {
 		e = pll_peekhead(&bmpc->bmpc_lru);
-		LIST_CACHE_LOCK(&bmpc->bmpc_oldest);
+		LIST_CACHE_LOCK(&bmpcLru);
 		memcpy(&bmpc->bmpc_oldest, &e->bmpce_laccess,
 		    sizeof(struct timespec));
-		LIST_CACHE_ULOCK(&bmpc->bmpc_oldest);
+		lc_remove(&bmpcLru, p);
+		lc_add_sorted(&bmpcLru, p);
+		LIST_CACHE_ULOCK(&bmpcLru);
 	}
 
 	return (freed);
