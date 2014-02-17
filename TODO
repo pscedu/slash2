@@ -157,7 +157,7 @@ in release but I don't see good performance for 'ls -al'.
 - removing the persistence policy on a bmap should mds_repl_delrq()
   for that bmap
 - merge set_bmapreplpol into fattr interface
-- push O_APPEND writes always to EOF instead of the the client-sent offset
+- push O_APPEND writes always to EOF instead of the client-sent offset
 
 - allow multiple preferred IOS servers to get rid of necessity of making
   subsets of IOS (sense345 e.g.)
