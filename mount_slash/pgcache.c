@@ -27,12 +27,12 @@
 
 #include <time.h>
 
+#include "pfl/atomic.h"
+#include "pfl/ctlsvr.h"
 #include "pfl/fsmod.h"
 #include "pfl/lockedlist.h"
-#include "pfl/treeutil.h"
-#include "pfl/atomic.h"
 #include "pfl/pool.h"
-#include "pfl/ctlsvr.h"
+#include "pfl/treeutil.h"
 
 #include "pgcache.h"
 #include "bmap_cli.h"
