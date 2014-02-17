@@ -346,11 +346,8 @@ bmpc_init(struct bmap_pagecache *bmpc)
 
 	SPLAY_INIT(&bmpc->bmpc_new_biorqs);
 
-	/*
-	 * Add the bmpc to the tail of LRU where it will stay until it's
-	 * freed.
-	 */
-	lc_add(&bmpcLru, bmpc);
+	PFL_GETTIMESPEC(&bmpc->bmpc_oldest);
+	lc_addtail(&bmpcLru, bmpc);
 }
 
 static __inline int
