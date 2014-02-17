@@ -263,10 +263,8 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 		    mq->fg.fg_fid, mq->bmapno, slstrerror(mp->rc));
 		goto out;
 	}
-	/*
-	 * Lookup the workrq.  It should have already been
-	 * created.
-	 */
+
+	/* Lookup the workrq.  It should have already been created. */
 	w = sli_repl_findwq(&mq->fg, mq->bmapno);
 	if (!w) {
 		psclog_errorx("failed to find work: fid="SLPRI_FID" "
@@ -281,7 +279,6 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 	/* Block until the callback handler has finished. */
 	SLVR_WAIT(s, (s->slvr_flags & SLVR_REPLWIRE));
 	SLVR_ULOCK(s);
-
 
 	/* Ensure the sliver is found in the work item's array. */
 	for (slvridx = 0; slvridx < (int)nitems(w->srw_slvr);
