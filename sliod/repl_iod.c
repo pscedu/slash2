@@ -95,8 +95,7 @@ sli_repl_addwk(int op, sl_ios_id_t resid,
 	 * MDS crashes, comes back online, and assigns gratuitous
 	 * requeue work.
 	 */
-	w = sli_repl_findwq(fgp, bmapno);
-	if (w)
+	if (sli_repl_findwq(fgp, bmapno))
 		PFL_GOTOERR(out, rc = -PFLERR_ALREADY);
 
 	w = psc_pool_get(sli_replwkrq_pool);
