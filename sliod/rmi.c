@@ -108,8 +108,8 @@ sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *w)
 
 	if (w->srw_op == SLI_REPLWKOP_REPL) {
 		w->srw_pp->rc = w->srw_status;
-		if (psc_atomic32_inc_getnew(&w->srw_bchrp->ndone) ==
-		    w->srw_bchrp->total) 
+		if (psc_atomic32_inc_getnew(&w->srw_bchrp->ndone) <
+		    w->srw_bchrp->total)
 			return (0);
 	}
 
@@ -146,9 +146,9 @@ sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *w)
 
 		iov.iov_base = w->srw_bchrp->buf;
 		iov.iov_len = mq->len;
-		mp->rc = slrpc_bulkserver(rq, BULK_PUT_SINK,
-		    SRMI_BULK_PORTAL, &iov, 1);
-		if (mp->rc == 0)
+		rc = slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMI_BULK_PORTAL,
+		    &iov, 1);
+		if (rc == 0)
 			rc = SL_RSX_WAITREP(csvc, rq, mp);
 		if (rc == 0)
 			rc = mp->rc;
