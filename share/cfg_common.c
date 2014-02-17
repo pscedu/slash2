@@ -111,7 +111,7 @@ libsl_id2res(sl_ios_id_t id)
 	uint64_t resid = id;
 
 	return (psc_hashtbl_search(&globalConfig.gconf_reshtable, NULL,
-	    NULL, &id));
+	    NULL, &resid));
 }
 
 struct sl_resm *
