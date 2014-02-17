@@ -120,6 +120,8 @@ sl_resm_hldrop(struct sl_resm *resm)
 		repl.bs_id = resm->resm_res_id;
 		slm_iosv_setbusy(&repl, 1);
 		upschq_resm(resm, UPDT_HLDROP);
+
+		/* XXX run batch callback with failure code */
 	}
 }
 
@@ -377,8 +379,9 @@ batchrq_handle(struct pscrpc_request *rq)
 			if (!mp->rc) {
 				br->br_reply = iov.iov_base;
 				iov.iov_len = br->br_replen = mq->len;
-				slrpc_bulkclient(rq, BULK_GET_SINK,
-				    br->br_rcv_ptl, &iov, 1);
+				mp->rc = slrpc_bulkserver(rq,
+				    BULK_GET_SINK, br->br_rcv_ptl,
+				    &iov, 1);
 			}
 
 			wk = pfl_workq_getitem(batchrq_handle_wkcb,

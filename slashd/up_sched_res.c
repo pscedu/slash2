@@ -135,7 +135,7 @@ slm_batch_repl_cb(struct batchrq *br, int ecode)
 
 	for (bq = br->br_buf, bp = br->br_reply, idx = 0;
 	    (char *)bq < (char *)br->br_buf + br->br_len;
-	    bq++, bp++, idx++) {
+	    bq++, bp ? bp++ : 0, idx++) {
 		b = NULL;
 		f = NULL;
 		bsr = psc_dynarray_getpos(&br->br_scratch, idx);
@@ -151,12 +151,12 @@ slm_batch_repl_cb(struct batchrq *br, int ecode)
 		// XXX check fgen
 
 		BHGEN_GET(b, &bgen);
-		if (bp->rc == 0 && bq->bgen != bgen)
+		if (bp && bp->rc == 0 && bq->bgen != bgen)
 			bp->rc = SLERR_GEN_OLD;
 
 		if (ecode == 0 && (char *)bp <
 		    (char *)br->br_reply + br->br_replen &&
-		    bp->rc == 0) {
+		    bp && bp->rc == 0) {
 			tract[BREPLST_REPL_SCHED] = BREPLST_VALID;
 			tract[BREPLST_REPL_QUEUED] = BREPLST_VALID;
 			retifset[BREPLST_REPL_SCHED] = 1;
@@ -165,7 +165,7 @@ slm_batch_repl_cb(struct batchrq *br, int ecode)
 			tract[BREPLST_REPL_QUEUED] =
 			    BREPLST_REPL_QUEUED;
 			tract[BREPLST_REPL_SCHED] =
-			    bp->rc == SLERR_ION_OFFLINE ?
+			    bp == NULL || bp->rc == SLERR_ION_OFFLINE ?
 			    BREPLST_REPL_QUEUED : BREPLST_GARBAGE;
 			retifset[BREPLST_REPL_SCHED] = 1;
 			retifset[BREPLST_REPL_QUEUED] = 0;
@@ -174,7 +174,7 @@ slm_batch_repl_cb(struct batchrq *br, int ecode)
 			    "src=%s dst=%s rc=%d",
 			    src_resm ? src_resm->resm_name : NULL,
 			    dst_resm ? dst_resm->resm_name : NULL,
-			    bp->rc);
+			    ecode ? ecode : bp ? bp->rc : -999);
 		}
 
 		if (mds_repl_bmap_apply(b, tract, retifset,
@@ -236,11 +236,16 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	spinlock(&repl_busytable_lock);
 	amt = mds_repl_nodes_adjbusy(src_resm, dst_resm, amt, &moreamt);
 	if (amt == 0) {
-		/* add "src to become unbusy" condition to multiwait */
+		/*
+		 * No bandwidth available.
+		 * Add "src to become unbusy" condition to multiwait.
+		 */
 		psc_multiwait_setcondwakeable(&slm_upsch_mw,
 		    &src_resm->resm_csvc->csvc_mwc, 1);
 		psc_multiwait_setcondwakeable(&slm_upsch_mw,
 		    &dst_resm->resm_csvc->csvc_mwc, 1);
+
+		/* push batch out immediately */
 	}
 	freelock(&repl_busytable_lock);
 	if (amt == 0)
