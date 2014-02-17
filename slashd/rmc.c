@@ -801,6 +801,7 @@ slm_rcm_try_readdir_ra(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 
 	if (eof)
 		return;
+	psc_assert(size);
 
 	EXPORT_LOCK(exp);
 	PFL_GETTIMESPEC(&now);
@@ -966,9 +967,6 @@ slm_readdir_issue(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 		iov[0].iov_base = NULL;
 		iov[1].iov_base = NULL;
 		pfl_workq_putitem(wk);
-
-//		slm_rcm_try_readdir_ra(exp, fgp, *eof, nextoff,
-//		    size);
 	}
 
  out:
