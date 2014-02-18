@@ -301,6 +301,7 @@ site_resource	: resource_start resource_def '}' {
 					    "one metadata server",
 					    currentSite->site_name);
 
+			currentRes->res_hashkey = currentRes->res_id;
 			psc_hashtbl_add_item(&globalConfig.gconf_reshtable,
 			    currentRes);
 
