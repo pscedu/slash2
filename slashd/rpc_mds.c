@@ -111,21 +111,6 @@ slm_rpc_initsvc(void)
 }
 
 void
-sl_resm_hldrop(struct sl_resm *resm)
-{
-	if (resm->resm_type == SLREST_MDS) {
-	} else {
-		sl_replica_t repl;
-
-		repl.bs_id = resm->resm_res_id;
-		slm_iosv_setbusy(&repl, 1);
-		upschq_resm(resm, UPDT_HLDROP);
-
-		/* XXX run batch callback with failure code */
-	}
-}
-
-void
 slm_rpc_ion_unpack_statfs(struct pscrpc_request *rq, int type)
 {
 	struct resprof_mds_info *rpmi;
@@ -270,6 +255,8 @@ batchrq_cmp(const void *a, const void *b)
 void
 batchrq_finish(struct batchrq *br, int rc)
 {
+	struct psc_listcache *l;
+
 	br->br_cbf(br, rc);
 	if (br->br_rq)
 		pscrpc_req_finished(br->br_rq);
@@ -277,6 +264,8 @@ batchrq_finish(struct batchrq *br, int rc)
 		sl_csvc_decref(br->br_csvc);
 
 	lc_remove(&batchrqs_wait, br);
+	l = batchrq_2_lc(br);
+	lc_remove(l, br);
 
 	PSCFREE(br->br_buf);
 	PSCFREE(br->br_reply);
@@ -320,17 +309,16 @@ batchrq_send_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 void
 batchrq_send(struct batchrq *br)
 {
-	struct psc_listcache *l, *ml;
+	struct psc_listcache *ml;
 	struct pscrpc_request *rq;
 	struct iovec iov;
 	int rc;
 
 	ml = &batchrqs_pndg;
-	l = batchrq_2_lc(br);
 
 	LIST_CACHE_ENSURE_LOCKED(ml);
 
-	lc_remove(l, br);
+	br->br_flags |= BATCHF_PNDG;
 	lc_remove(ml, br);
 
 	lc_add(&batchrqs_wait, br);
@@ -388,6 +376,8 @@ batchrq_handle(struct pscrpc_request *rq)
 			    struct slm_wkdata_batchrq_cb);
 			wk->br = br;
 			wk->rc = mq->rc;
+			if (wk->rc == 0)
+				wk->rc = mp->rc;
 			pfl_workq_putitem(wk);
 
 			iov.iov_base = NULL;
@@ -420,7 +410,8 @@ batchrq_add(struct sl_resource *r, struct slashrpc_cservice *csvc,
 	l = &res2rpmi(r)->rpmi_batchrqs;
 	LIST_CACHE_LOCK(l);
 	LIST_CACHE_FOREACH(br, l)
-		if (br->br_rq->rq_reqmsg->opc) {
+		if ((br->br_flags & BATCHF_PNDG) == 0 &&
+		    br->br_rq->rq_reqmsg->opc) {
 			sl_csvc_decref(csvc);
 			mq = pscrpc_msg_buf(br->br_rq->rq_reqmsg, 0,
 			    sizeof(*mq));
@@ -528,4 +519,32 @@ slmbchrqthr_spawn(void)
 
 	pscthr_init(SLMTHRT_BATCHRQ, 0, slmbchrqthr_main, NULL, 0,
 	    "slmbchrqthr");
+}
+
+void
+sl_resm_hldrop(struct sl_resm *resm)
+{
+	if (resm->resm_type == SLREST_MDS) {
+	} else {
+		struct slm_wkdata_batchrq_cb *wk;
+		struct psc_listcache *l;
+		struct batchrq *br;
+		sl_replica_t repl;
+
+		repl.bs_id = resm->resm_res_id;
+		slm_iosv_setbusy(&repl, 1);
+		upschq_resm(resm, UPDT_HLDROP);
+
+		l = &res2rpmi(resm->resm_res)->rpmi_batchrqs;
+		LIST_CACHE_LOCK(l);
+		LIST_CACHE_FOREACH(br, l)
+			if (br->br_flags & BATCHF_PNDG) {
+				wk = pfl_workq_getitem(batchrq_handle_wkcb,
+				    struct slm_wkdata_batchrq_cb);
+				wk->br = br;
+				wk->rc = -ECONNRESET;
+				pfl_workq_putitem(wk);
+			}
+		LIST_CACHE_ULOCK(l);
+	}
 }
