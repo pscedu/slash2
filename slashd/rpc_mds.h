@@ -104,8 +104,9 @@ struct batchrq {
 
 	struct pscrpc_request		 *br_rq;
 	struct slashrpc_cservice	 *br_csvc;
-	int				  br_snd_ptl;		/* bulk RPC portal */
-	int				  br_rcv_ptl;		/* bulk RPC portal */
+	int				  br_snd_ptl:16;	/* bulk RPC portal */
+	int				  br_rcv_ptl:16;	/* bulk RPC portal */
+	int				  br_flags;
 
 	void				 *br_buf;
 	size_t				  br_len;
@@ -116,6 +117,8 @@ struct batchrq {
 	struct psc_dynarray		  br_scratch;
 	void				(*br_cbf)(struct batchrq *, int);
 };
+
+#define BATCHF_PNDG			(1 << 0)
 
 #define batchrq_2_lc(br)		(&res2rpmi(br->br_res)->rpmi_batchrqs)
 
