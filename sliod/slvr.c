@@ -533,9 +533,15 @@ slvr_fsio(struct slvr *s, int sblk, uint32_t size, enum rw rw,
 		if (rc == -1) {
 			save_errno = errno;
 			OPSTAT_INCR(SLI_OPST_FSIO_READ_FAIL);
-		} else {
+		} else if (rc) {
 			int crc_rc;
 
+			/*
+			 * When a file is truncated, the generation number
+			 * increments and all CRCs should be invalid. Luckily
+			 * we can use a simple check here without resorting
+			 * to a complicated protocol.
+			 */
 			SLVR_LOCK(s);
 			crc_rc = slvr_do_crc(s);
 			SLVR_ULOCK(s);
