@@ -102,13 +102,10 @@ slvr_do_crc(struct slvr *s)
 			    SLASH_SLVR_SIZE);
 
 			if (crc != slvr_2_crc(s)) {
-				DEBUG_SLVR(PLL_ERROR, s, "CRC failed "
-				    "want=%"PSCPRIxCRC64" "
-				    "got=%"PSCPRIxCRC64, slvr_2_crc(s), crc);
 
-				DEBUG_BMAP(PLL_ERROR, slvr_2_bmap(s),
-				   "CRC failed slvrnum=%hu", s->slvr_num);
-
+				DEBUG_BMAP(PLL_INFO, slvr_2_bmap(s),
+				    "CRC failure: slvr=%hu, crc=%"PSCPRIxCRC64,
+				    s->slvr_num, slvr_2_crc(s));
 				return (SLERR_BADCRC);
 			}
 
@@ -143,6 +140,10 @@ slvr_do_crc(struct slvr *s)
 
 		slvr_2_crc(s) = crc;
 		slvr_2_crcbits(s) |= BMAP_SLVR_DATA | BMAP_SLVR_CRC;
+
+		DEBUG_BMAP(PLL_INFO, slvr_2_bmap(s),
+		    "CRC update: slvr=%hu, crc=%"PSCPRIxCRC64,
+		    s->slvr_num, slvr_2_crc(s));
 	}
 
 	return (-1);
