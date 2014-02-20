@@ -293,7 +293,6 @@ slislvrthr_proc(struct slvr *s)
 	struct bmap_iod_info *bii;
 	struct bcrcupd *bcr;
 	struct bmap *b;
-	uint16_t slvr_num;
 	uint64_t crc;
 
 	SLVR_LOCK(s);
@@ -335,8 +334,6 @@ slislvrthr_proc(struct slvr *s)
 	bii = slvr_2_bii(s);
 	b = bii_2_bmap(bii);
 
-	slvr_num = s->slvr_num;
-
 	s->slvr_flags |= SLVR_LRU;
 	lc_addqueue(&lruSlvrs, s);
 	slvr_lru_tryunpin_locked(s);
@@ -361,7 +358,7 @@ slislvrthr_proc(struct slvr *s)
 		 * it.
 		 */
 		for (i = 0, found = 0; i < bcr->bcr_crcup.nups; i++) {
-			if (bcr->bcr_crcup.crcs[i].slot == slvr_num) {
+			if (bcr->bcr_crcup.crcs[i].slot == s->slvr_num) {
 				found = 1;
 				break;
 			}
@@ -370,7 +367,7 @@ slislvrthr_proc(struct slvr *s)
 		bcr->bcr_crcup.crcs[i].crc = crc;
 		if (!found) {
 			bcr->bcr_crcup.nups++;
-			bcr->bcr_crcup.crcs[i].slot = slvr_num;
+			bcr->bcr_crcup.crcs[i].slot = s->slvr_num;
 		}
 
 		DEBUG_BCR(PLL_DIAG, bcr, "add to existing bcr slot=%d "
@@ -390,7 +387,7 @@ slislvrthr_proc(struct slvr *s)
 		bcr->bcr_bii = bii;
 		bcr->bcr_crcup.blkno = b->bcm_bmapno;
 		bcr->bcr_crcup.crcs[0].crc = crc;
-		bcr->bcr_crcup.crcs[0].slot = slvr_num;
+		bcr->bcr_crcup.crcs[0].slot = s->slvr_num;
 		bcr->bcr_crcup.nups = 1;
 
 		bcr_ready_add(bcr);
