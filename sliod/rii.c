@@ -130,7 +130,7 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 	struct sli_aiocb_reply *aiocbr = NULL;
 	struct srm_repl_read_rep *mp;
 	struct bmapc_memb *b = NULL;
-	struct fidc_membh *f;
+	struct fidc_membh *f = NULL;
 	struct iovec iov;
 	struct slvr *s;
 	int rv;
@@ -142,15 +142,15 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fg.fg_fid == FID_ANY) {
 		mp->rc = -EINVAL;
-		return (mp->rc);
+		goto out;
 	}
 	if (mq->len <= 0 || mq->len > SLASH_SLVR_SIZE) {
 		mp->rc = -EINVAL;
-		return (mp->rc);
+		goto out;
 	}
 	if (mq->slvrno < 0 || mq->slvrno >= SLASH_SLVRS_PER_BMAP) {
 		mp->rc = -EINVAL;
-		return (mp->rc);
+		goto out;
 	}
 
 	mp->rc = sli_fcmh_get(&mq->fg, &f);
@@ -207,7 +207,8 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
  out:
 	if (b)
 		bmap_op_done(b);
-	fcmh_op_done(f);
+	if (f)
+		fcmh_op_done(f);
 	return (mp->rc);
 }
 
