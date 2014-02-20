@@ -97,37 +97,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		return (mp->rc);
 	}
 
-	if (mq->size < 1024)
-		psc_iostats_intv_add((rw == SL_WRITE) ?
-		    &sliod_wr_1b_stat : &sliod_rd_1b_stat, 1);
-
-	else if (mq->size < 4096)
-		psc_iostats_intv_add((rw == SL_WRITE) ?
-		    &sliod_wr_1k_stat : &sliod_rd_1k_stat, 1);
-
-	else if (mq->size < 16386)
-		psc_iostats_intv_add((rw == SL_WRITE) ?
-		    &sliod_wr_4k_stat : &sliod_rd_4k_stat, 1);
-
-	else if (mq->size < 65536)
-		psc_iostats_intv_add((rw == SL_WRITE) ?
-		    &sliod_wr_16k_stat : &sliod_rd_16k_stat, 1);
-
-	else if (mq->size < 131072)
-		psc_iostats_intv_add((rw == SL_WRITE) ?
-		    &sliod_wr_64k_stat : &sliod_rd_64k_stat, 1);
-
-	else if (mq->size < 524288)
-		psc_iostats_intv_add((rw == SL_WRITE) ?
-		    &sliod_wr_128k_stat : &sliod_rd_128k_stat, 1);
-
-	else if (mq->size < 1048576)
-		psc_iostats_intv_add((rw == SL_WRITE) ?
-		    &sliod_wr_512k_stat : &sliod_rd_512k_stat, 1);
-	else
-		psc_iostats_intv_add((rw == SL_WRITE) ?
-		    &sliod_wr_1m_stat : &sliod_rd_1m_stat, 1);
-
 	/*
 	 * A RBW (read-before-write) request from the client may have a
 	 *   write enabled bmapdesc which he uses to fault in his page.
@@ -171,6 +140,37 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		OPSTAT_INCR(SLI_OPST_KEY_EXPIRE);
 		return (mp->rc);
 	}
+
+	if (mq->size < 1024)
+		psc_iostats_intv_add((rw == SL_WRITE) ?
+		    &sliod_wr_1b_stat : &sliod_rd_1b_stat, 1);
+
+	else if (mq->size < 4096)
+		psc_iostats_intv_add((rw == SL_WRITE) ?
+		    &sliod_wr_1k_stat : &sliod_rd_1k_stat, 1);
+
+	else if (mq->size < 16386)
+		psc_iostats_intv_add((rw == SL_WRITE) ?
+		    &sliod_wr_4k_stat : &sliod_rd_4k_stat, 1);
+
+	else if (mq->size < 65536)
+		psc_iostats_intv_add((rw == SL_WRITE) ?
+		    &sliod_wr_16k_stat : &sliod_rd_16k_stat, 1);
+
+	else if (mq->size < 131072)
+		psc_iostats_intv_add((rw == SL_WRITE) ?
+		    &sliod_wr_64k_stat : &sliod_rd_64k_stat, 1);
+
+	else if (mq->size < 524288)
+		psc_iostats_intv_add((rw == SL_WRITE) ?
+		    &sliod_wr_128k_stat : &sliod_rd_128k_stat, 1);
+
+	else if (mq->size < 1048576)
+		psc_iostats_intv_add((rw == SL_WRITE) ?
+		    &sliod_wr_512k_stat : &sliod_rd_512k_stat, 1);
+	else
+		psc_iostats_intv_add((rw == SL_WRITE) ?
+		    &sliod_wr_1m_stat : &sliod_rd_1m_stat, 1);
 
 	/*
 	 * Lookup inode and fetch bmap, don't forget to decref bmap on
