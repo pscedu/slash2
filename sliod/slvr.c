@@ -75,7 +75,7 @@ SPLAY_GENERATE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp)
  * Returns: errno on failure, 0 on success, -1 on not applicable.
  */
 int
-slvr_do_crc(struct slvr *s)
+slvr_do_crc(struct slvr *s, uint64_t *crcp)
 {
 	uint64_t crc;
 
@@ -120,24 +120,23 @@ slvr_do_crc(struct slvr *s)
 		 * CRC.
 		 */
 		DEBUG_SLVR(PLL_DIAG, s, "crc");
-		PSC_CRC64_INIT(&s->slvr_crc);
+		PSC_CRC64_INIT(&crc);
 
 #ifdef ADLERCRC32
 		// XXX not a running CRC?  double check for correctness
-		s->slvr_crc = adler32(s->slvr_crc, slvr_2_buf(s, 0) +
+		crc = adler32(crc, slvr_2_buf(s, 0) +
 		    soff, (int)(eoff - soff));
-		crc = s->slvr_crc;
 #else
-		psc_crc64_add(&s->slvr_crc, slvr_2_buf(s, 0),
+		psc_crc64_add(&crc, slvr_2_buf(s, 0),
 		    SLASH_SLVR_SIZE);
 
-		crc = s->slvr_crc;
 		PSC_CRC64_FIN(&crc);
 #endif
 
 		s->slvr_flags &= ~SLVR_CRCDIRTY;
 		DEBUG_SLVR(PLL_DIAG, s, "crc=%"PSCPRIxCRC64, crc);
 
+		*crcp = crc;
 		slvr_2_crc(s) = crc;
 		slvr_2_crcbits(s) |= BMAP_SLVR_DATA | BMAP_SLVR_CRC;
 
@@ -544,7 +543,7 @@ slvr_fsio(struct slvr *s, int sblk, uint32_t size, enum rw rw,
 			 * to a complicated protocol.
 			 */
 			SLVR_LOCK(s);
-			crc_rc = slvr_do_crc(s);
+			crc_rc = slvr_do_crc(s, NULL);
 			SLVR_ULOCK(s);
 			if (crc_rc == SLERR_BADCRC) {
 				OPSTAT_INCR(SLI_OPST_FSIO_READ_CRC_BAD);

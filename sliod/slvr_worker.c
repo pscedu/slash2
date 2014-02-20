@@ -326,14 +326,10 @@ slislvrthr_proc(struct slvr *s)
 	 */
 
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
-	psc_assert(slvr_do_crc(s));
+	psc_assert(slvr_do_crc(s, &crc));
 
 	/* Be paranoid, ensure the sliver is not queued anywhere. */
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
-
-	/* Copy the accumulator to the tmp variable. */
-	crc = s->slvr_crc;
-	PSC_CRC64_FIN(&crc);
 
 	/* Put the slvr back to the LRU so it may have its slab reaped. */
 	bii = slvr_2_bii(s);

@@ -53,7 +53,6 @@ struct slvr {
 	uint32_t		 slvr_pndgwrts;	/* # writes in progess, XXX track AIO reference */
 	uint32_t		 slvr_pndgreads;/* # reads in progress */
 	uint32_t		 slvr_flags;	/* see SLVR_* flags */
-	uint64_t		 slvr_crc;	/* accumulator  */
 	int32_t			 slvr_err;
 	psc_spinlock_t		 slvr_lock;
 	struct bmap_iod_info	*slvr_bii;
@@ -181,7 +180,7 @@ struct slvr *
 	_slvr_lookup(const struct pfl_callerinfo *pci, uint32_t,
 	    struct bmap_iod_info *, enum rw);
 void	slvr_cache_init(void);
-int	slvr_do_crc(struct slvr *);
+int	slvr_do_crc(struct slvr *, uint64_t *);
 ssize_t	slvr_fsbytes_wio(struct slvr *, uint32_t, uint32_t);
 ssize_t	slvr_io_prep(struct slvr *, uint32_t, uint32_t, enum rw,
 	    struct sli_aiocb_reply **);
