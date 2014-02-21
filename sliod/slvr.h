@@ -182,8 +182,7 @@ struct slvr *
 void	slvr_cache_init(void);
 int	slvr_do_crc(struct slvr *, uint64_t *);
 ssize_t	slvr_fsbytes_wio(struct slvr *, uint32_t, uint32_t);
-ssize_t	slvr_io_prep(struct slvr *, uint32_t, uint32_t, enum rw,
-	    struct sli_aiocb_reply **);
+ssize_t	slvr_io_prep(struct slvr *, uint32_t, uint32_t, enum rw);
 int	slvr_lru_tryunpin_locked(struct slvr *);
 void	slvr_repl_prep(struct slvr *);
 void	slvr_rio_done(struct slvr *);

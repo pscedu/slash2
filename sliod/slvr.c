@@ -452,17 +452,11 @@ sli_aio_reply_setup(struct sli_aiocb_reply *a, struct pscrpc_request *rq,
 }
 
 int
-sli_aio_register(struct slvr *s, struct sli_aiocb_reply **aiocbrp)
+sli_aio_register(struct slvr *s)
 {
-	struct sli_aiocb_reply *a;
 	struct sli_iocb *iocb;
 	struct aiocb *aio;
 	int error;
-
-	a = *aiocbrp;
-
-	if (!a)
-		a = *aiocbrp = sli_aio_aiocbr_new();
 
 	iocb = sli_aio_iocb_new(s);
 
@@ -501,8 +495,7 @@ sli_aio_register(struct slvr *s, struct sli_aiocb_reply **aiocbrp)
 }
 
 __static ssize_t
-slvr_fsio(struct slvr *s, int sblk, uint32_t size, enum rw rw,
-    struct sli_aiocb_reply **aiocbr)
+slvr_fsio(struct slvr *s, int sblk, uint32_t size, enum rw rw)
 {
 	int nblks, save_errno = 0;
 	uint64_t *v8;
@@ -521,7 +514,7 @@ slvr_fsio(struct slvr *s, int sblk, uint32_t size, enum rw rw,
 		OPSTAT_INCR(SLI_OPST_FSIO_READ);
 
 		if (globalConfig.gconf_async_io)
-			return (sli_aio_register(s, aiocbr));
+			return (sli_aio_register(s));
 
 		rc = pread(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
 		    off);
@@ -594,11 +587,11 @@ slvr_fsio(struct slvr *s, int sblk, uint32_t size, enum rw rw,
  * @s: the sliver.
  */
 ssize_t
-slvr_fsbytes_rio(struct slvr *s, struct sli_aiocb_reply **aiocbr)
+slvr_fsbytes_rio(struct slvr *s)
 {
 	ssize_t rc = 0;
 
-	rc = slvr_fsio(s, 0, SLASH_SLVR_SIZE, SL_READ, aiocbr);
+	rc = slvr_fsio(s, 0, SLASH_SLVR_SIZE, SL_READ);
 
 	if (rc && rc != -SLERR_AIOWAIT) {
 		/*
@@ -623,7 +616,7 @@ slvr_fsbytes_wio(struct slvr *s, uint32_t size, uint32_t sblk)
 {
 	DEBUG_SLVR(PLL_INFO, s, "sblk=%u size=%u", sblk, size);
 
-	return (slvr_fsio(s, sblk, size, SL_WRITE, NULL));
+	return (slvr_fsio(s, sblk, size, SL_WRITE));
 }
 
 /**
@@ -662,8 +655,7 @@ slvr_repl_prep(struct slvr *s)
  * @rw: read or write op
  */
 ssize_t
-slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
-    struct sli_aiocb_reply **aiocbr)
+slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw)
 {
 	ssize_t rc = 0;
 
@@ -683,9 +675,6 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 	if (s->slvr_flags & SLVR_AIOWAIT) {
 		SLVR_ULOCK(s);
 		psc_assert(globalConfig.gconf_async_io);
-
-		if (!(*aiocbr))
-		    *aiocbr = sli_aio_aiocbr_new();
 
 		return (-SLERR_AIOWAIT);
 	}
@@ -723,7 +712,7 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
 	 * Execute read to fault in needed blocks after dropping the
 	 * lock.  All should be protected by the FAULTING bit.
 	 */
-	rc = slvr_fsbytes_rio(s, aiocbr);
+	rc = slvr_fsbytes_rio(s);
 	if (rc)
 		return (rc);
 

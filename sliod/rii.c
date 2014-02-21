@@ -170,19 +170,20 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 
 	s = slvr_lookup(mq->slvrno, bmap_2_bii(b), SL_READ);
 
-	rv = slvr_io_prep(s, 0, mq->len, SL_READ, &aiocbr);
+	rv = slvr_io_prep(s, 0, mq->len, SL_READ);
 	if (rv && rv != -SLERR_AIOWAIT)
 		PFL_GOTOERR(out, mp->rc = rv);
 
 	iov.iov_base = s->slvr_slab->slb_base;
 	iov.iov_len = mq->len;
 
-	if (aiocbr) {
+	if (rv == -SLERR_AIOWAIT) {
 		/*
 		 * Ran into an async I/O.  We may have already issued
 		 * the AIO.  So the sliver may be already ready at this
 		 * point.
 		 */
+		aiocbr = sli_aio_aiocbr_new();
 		sli_aio_replreply_setup(aiocbr, rq, s, &iov);
 
 		SLVR_LOCK(s);

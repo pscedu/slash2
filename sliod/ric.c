@@ -79,7 +79,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	struct srm_io_rep *mp;
 	struct fidc_membh *f;
 	sl_bmapno_t bmapno, slvrno;
-	int rc, nslvrs = 0, i;
+	int rc, nslvrs = 0, i, needaio = 0;
 	lnet_process_id_t *pp;
 	uint64_t seqno;
 	ssize_t rv;
@@ -224,15 +224,19 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 		/* Fault in pages either for read or RBW. */
 		len[i] = MIN(tsize, SLASH_SLVR_SIZE - roff);
-		rv = slvr_io_prep(slvr[i], roff, len[i], rw, &aiocbr);
+		rv = slvr_io_prep(slvr[i], roff, len[i], rw);
 
 		DEBUG_SLVR(((rv && rv != -SLERR_AIOWAIT) ?
 		    PLL_WARN : PLL_INFO), slvr[i],
 		    "post io_prep rw=%s rv=%zd",
 		    rw == SL_WRITE ? "wr" : "rd", rv);
-		if (rv && rv != -SLERR_AIOWAIT) {
-			rc = rv;
-			goto out;
+		if (rv) {
+			if (rv == -SLERR_AIOWAIT)
+				needaio = 1;
+			else {
+				rc = rv;
+				goto out;
+			}
 		}
 
 		/*
@@ -251,7 +255,9 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 	psc_assert(!tsize);
 
-	if (aiocbr) {
+	if (needaio) {
+	
+		aiocbr = sli_aio_aiocbr_new();
 		sli_aio_reply_setup(aiocbr, rq, mq->size, mq->offset,
 		    slvr, nslvrs, iovs, nslvrs, rw);
 
@@ -265,7 +271,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 			SLVR_LOCK(slvr[i]);
 			if (slvr[i]->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR)) {
-				DEBUG_SLVR(PLL_NOTICE, slvr[i],
+				DEBUG_SLVR(PLL_INFO, slvr[i],
 				    "aio early ready, rw=%s",
 				    rw == SL_WRITE ? "wr" : "rd");
 				SLVR_ULOCK(slvr[i]);
@@ -281,7 +287,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 				OPSTAT_INCR(SLI_OPST_AIO_INSERT);
 				SLVR_ULOCK(slvr[i]);
 
-				DEBUG_SLVR(PLL_DIAG, slvr[i], "aio wait");
+				DEBUG_SLVR(PLL_INFO, slvr[i], "aio wait");
 				mp->rc = SLERR_AIOWAIT;
 				pscrpc_msg_add_flags(rq->rq_repmsg,
 				    MSG_ABORT_BULK);
