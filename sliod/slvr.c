@@ -393,8 +393,6 @@ sli_aio_replreply_setup(
 	a = psc_pool_get(sli_aiocbr_pool);
 	memset(a, 0, sizeof(*a));
 
-	INIT_PSC_LISTENTRY(&a->aiocbr_lentry);
-
 	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 	mp->id = a->aiocbr_id = psc_atomic64_inc_getnew(&sli_aio_id);
 
@@ -409,6 +407,7 @@ sli_aio_replreply_setup(
 	    rq->rq_peer.nid), rq->rq_export);
 
 	a->aiocbr_flags = SLI_AIOCBSF_REPL;
+	INIT_PSC_LISTENTRY(&a->aiocbr_lentry);
 
 	return (a);
 }
@@ -425,9 +424,6 @@ sli_aio_reply_setup(struct pscrpc_request *rq,
 
 	a = psc_pool_get(sli_aiocbr_pool);
 	memset(a, 0, sizeof(*a));
-
-	INIT_PSC_LISTENTRY(&a->aiocbr_lentry);
-
 
 	for (i = 0; i < nslvrs; i++)
 		a->aiocbr_slvrs[i] = slvrs[i];
@@ -450,6 +446,8 @@ sli_aio_reply_setup(struct pscrpc_request *rq,
 	a->aiocbr_csvc = sli_getclcsvc(rq->rq_export);
 
 	a->aiocbr_flags = SLI_AIOCBSF_NONE;
+	INIT_PSC_LISTENTRY(&a->aiocbr_lentry);
+
 	return (a);
 }
 
