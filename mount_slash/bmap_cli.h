@@ -35,10 +35,7 @@
 #define	BMAP_CACHE_MAX			1024
 
 /* number of bmap flush threads */
-/* XXX I don't think bmap_flush is thread safe, so keep this at '1'
- * - Paul
- */
-#define NUM_BMAP_FLUSH_THREADS		1
+#define NUM_BMAP_FLUSH_THREADS		2
 
 /**
  * bmap_cli_data - private data associated with a bmap used by a SLASH2 client

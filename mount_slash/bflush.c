@@ -577,13 +577,9 @@ bmap_flushable(struct bmapc_memb *b)
 		    &bmpc->bmpc_new_biorqs, r);
 
 		BIORQ_LOCK(r);
-
-		DEBUG_BIORQ(PLL_DIAG, r, "consider for flush");
-
 		psc_assert(r->biorq_flags & BIORQ_FLUSHRDY);
 
 		if (r->biorq_flags & BIORQ_SCHED) {
-			DEBUG_BIORQ(PLL_WARN, r, "already sched");
 			BIORQ_ULOCK(r);
 			continue;
 		}
