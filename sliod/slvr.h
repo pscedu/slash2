@@ -191,13 +191,15 @@ void	slvr_try_crcsched_locked(struct slvr *);
 void	slvr_wio_done(struct slvr *, int);
 void	slvr_worker_init(void);
 
-void	sli_aio_reply_setup(struct sli_aiocb_reply *,
-	    struct pscrpc_request *, uint32_t, uint32_t,
+struct sli_aiocb_reply *
+	sli_aio_reply_setup(struct pscrpc_request *, uint32_t, uint32_t,
 	    struct slvr **, int, struct iovec *, int, enum rw);
 
+struct sli_aiocb_reply *
+	sli_aio_replreply_setup(struct pscrpc_request *, struct slvr *, 
+	    struct iovec *);
+
 void	sli_aio_aiocbr_release(struct sli_aiocb_reply *);
-void	sli_aio_replreply_setup(struct sli_aiocb_reply *,
-	    struct pscrpc_request *, struct slvr *, struct iovec *);
 
 int	slvr_buffer_reap(struct psc_poolmgr *);
 

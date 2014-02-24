@@ -183,8 +183,7 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 		 * the AIO.  So the sliver may be already ready at this
 		 * point.
 		 */
-		aiocbr = sli_aio_aiocbr_new();
-		sli_aio_replreply_setup(aiocbr, rq, s, &iov);
+		aiocbr = sli_aio_replreply_setup(rq, s, &iov);
 
 		SLVR_LOCK(s);
 		if (!(s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR))) {

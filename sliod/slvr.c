@@ -148,19 +148,6 @@ slvr_do_crc(struct slvr *s, uint64_t *crcp)
 	return (-1);
 }
 
-__static struct sli_aiocb_reply *
-sli_aio_aiocbr_new(void)
-{
-	struct sli_aiocb_reply *a;
-
-	a = psc_pool_get(sli_aiocbr_pool);
-	memset(a, 0, sizeof(*a));
-
-	INIT_PSC_LISTENTRY(&a->aiocbr_lentry);
-
-	return (a);
-}
-
 void
 sli_aio_aiocbr_release(struct sli_aiocb_reply *a)
 {
@@ -396,12 +383,17 @@ sli_aio_iocb_new(struct slvr *s)
 	return (iocb);
 }
 
-void
-sli_aio_replreply_setup(struct sli_aiocb_reply *a,
+struct sli_aiocb_reply *
+sli_aio_replreply_setup(
     struct pscrpc_request *rq, struct slvr *s, struct iovec *iov)
 {
-	//const struct srm_repl_read_req *mq;
 	struct srm_repl_read_rep *mp;
+	struct sli_aiocb_reply *a;
+
+	a = psc_pool_get(sli_aiocbr_pool);
+	memset(a, 0, sizeof(*a));
+
+	INIT_PSC_LISTENTRY(&a->aiocbr_lentry);
 
 	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 	mp->id = a->aiocbr_id = psc_atomic64_inc_getnew(&sli_aio_id);
@@ -417,21 +409,30 @@ sli_aio_replreply_setup(struct sli_aiocb_reply *a,
 	    rq->rq_peer.nid), rq->rq_export);
 
 	a->aiocbr_flags = SLI_AIOCBSF_REPL;
+
+	return (a);
 }
 
-void
-sli_aio_reply_setup(struct sli_aiocb_reply *a, struct pscrpc_request *rq,
+struct sli_aiocb_reply *
+sli_aio_reply_setup(struct pscrpc_request *rq,
     uint32_t len, uint32_t off, struct slvr **slvrs, int nslvrs,
     struct iovec *iovs, int niovs, enum rw rw)
 {
+	int i;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
-	int i;
+	struct sli_aiocb_reply *a;
 
-	a->aiocbr_nslvrs = nslvrs;
+	a = psc_pool_get(sli_aiocbr_pool);
+	memset(a, 0, sizeof(*a));
+
+	INIT_PSC_LISTENTRY(&a->aiocbr_lentry);
+
+
 	for (i = 0; i < nslvrs; i++)
 		a->aiocbr_slvrs[i] = slvrs[i];
 
+	a->aiocbr_nslvrs = nslvrs;
 	psc_assert(niovs == a->aiocbr_nslvrs);
 
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
@@ -449,6 +450,7 @@ sli_aio_reply_setup(struct sli_aiocb_reply *a, struct pscrpc_request *rq,
 	a->aiocbr_csvc = sli_getclcsvc(rq->rq_export);
 
 	a->aiocbr_flags = SLI_AIOCBSF_NONE;
+	return (a);
 }
 
 int

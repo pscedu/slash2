@@ -257,8 +257,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 	if (needaio) {
 	
-		aiocbr = sli_aio_aiocbr_new();
-		sli_aio_reply_setup(aiocbr, rq, mq->size, mq->offset,
+		aiocbr = sli_aio_reply_setup(rq, mq->size, mq->offset,
 		    slvr, nslvrs, iovs, nslvrs, rw);
 
 		/*
