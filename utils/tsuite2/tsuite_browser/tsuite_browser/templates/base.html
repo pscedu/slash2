@@ -15,6 +15,9 @@
 
     <!-- SB Admin CSS - Include with every page -->
     <link href="/s/css/sb-admin.css" rel="stylesheet">
+    {% for css in css_deps %}
+      <link href="/s/css/{{ css }}" rel="stylesheet"> 
+    {% endfor %}
   </head>
   <body>
     <div id="wrapper">

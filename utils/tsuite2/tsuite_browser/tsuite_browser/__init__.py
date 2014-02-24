@@ -30,11 +30,6 @@ def return_json(f):
         return json.dumps(f(*args, **kwds), cls=MongoJsonEncoder)
     return wrapper
 
-@app.route("/f")
-@return_json
-def test():
-    return api.get_tset_display(3)
-
 @app.route("/api/tsets", methods=["GET"])
 @return_json
 def get_tsets():
@@ -56,7 +51,13 @@ def dashboard(tsid = None):
         session["active_tsid"] = tsid
 
     return render_template("dashboard.html",
-        js_deps = ["dashboard.js"],
+        js_deps = ["dashboard.js",
+        "jquery.jqplot.min.js",
+        "plugins/jqplot/jqplot.barRenderer.min.js",
+        "plugins/jqplot/jqplot.categoryAxisRenderer.min.js",
+        "plugins/jqplot/jqplot.pointLabels.min.js",
+        "dashboard_chart.js"],
+        css_deps = ["jquery.jqplot.min.css"],
         tsets = api.get_tsets(20),
         display_tset = api.get_tset_display(session["active_tsid"])
     )

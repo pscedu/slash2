@@ -75,9 +75,9 @@
                                       </thead>
                                       <tbody>
                                       {% for test in display_tset.tests %}
-                                        <tr>
+                                        <tr class="test-result">
                                           <td>{{loop.index}}</td>
-                                          <td class="text-info">{{ test.test_name }}</td>
+                                          <td class="text-info test-name">{{ test.test_name }}</td>
                                           {% if test.pass %}
                                             <td class="text-primary">{{ test.elapsed | round(3) }}</td>
                                             {% if test.change_delta -%}
@@ -89,15 +89,15 @@
                                                           {%- endif -%}
                                                         {%else%}
                                                           text-default
-                                                        {%endif%}">
+                                                        {%endif%} change-delta">
                                                 <em class="text-left">{{test.change_percent}}%</em> <em class="text-right"><a href="/{{test.change_tsid}}/{{test.test_name}}">#{{test.change_tsid}}</a></em>
                                               </td>
                                             {% else %}
                                               <td>Not available</td>
                                             {% endif %}
                                           {% else %}
-                                            <td class = "text-danger">{{ test.msg }}</td>
-                                            <td class = "text-warning">N/A</td>
+                                            <td class = "text-danger test-msg">{{ test.msg }}</td>
+                                            <td class = "text-warning test-msg">N/A</td>
                                           {% endif %}
                                         </tr>
                                       {% endfor %}
@@ -108,7 +108,7 @@
                           </div>
                           <!-- /.col-lg-4 (nested) -->
                           <div class="col-lg-8">
-                              <div id="morris-bar-chart"></div>
+                              <div id="change-chart"></div>
                           </div>
                           <!-- /.col-lg-8 (nested) -->
                       </div>
