@@ -385,8 +385,20 @@ msl_biorq_del(struct bmpc_ioreq *r)
 {
 	struct bmap *b = r->biorq_bmap;
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
+	struct bmap_pagecache_entry *e;
+	int i;
 
 	BMAP_LOCK(b);
+
+	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
+		BMPCE_LOCK(e);
+		if (biorq_is_my_bmpce(r, e)) {
+			DEBUG_BMPCE(PLL_DIAG, e, "disown");
+			/* avoid reuse trouble */
+			e->bmpce_owner = NULL;
+		}
+		bmpce_release_locked(e, bmpc);
+	}
 
 	if (r->biorq_flags & BIORQ_SPLAY) {
 		PSC_SPLAY_XREMOVE(bmpc_biorq_tree,
@@ -429,26 +441,6 @@ msl_bmpces_fail(struct bmpc_ioreq *r, int rc)
 		}
 		BMPCE_ULOCK(e);
 	}
-}
-
-__static void
-msl_biorq_unref(struct bmpc_ioreq *r)
-{
-	struct bmap_pagecache *bmpc = bmap_2_bmpc(r->biorq_bmap);
-	struct bmap_pagecache_entry *e;
-	int i;
-
-	BMAP_LOCK(r->biorq_bmap);
-	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
-		BMPCE_LOCK(e);
-		if (biorq_is_my_bmpce(r, e)) {
-			DEBUG_BMPCE(PLL_DIAG, e, "disown");
-			/* avoid reuse trouble */
-			e->bmpce_owner = NULL;
-		}
-		bmpce_release_locked(e, bmpc);
-	}
-	BMAP_ULOCK(r->biorq_bmap);
 }
 
 void
@@ -504,7 +496,6 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 		fhent = 0;
 #endif
 
-	msl_biorq_unref(r);
 	msl_biorq_del(r);
 
 #if FHENT_EARLY_RELEASE
