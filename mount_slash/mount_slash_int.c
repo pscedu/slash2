@@ -466,6 +466,7 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 	BIORQ_LOCK(r);
 	psc_assert(r->biorq_ref > 0);
 	r->biorq_ref--;
+	DEBUG_BIORQ(PLL_DIAG, r, "destroying");
 	if (r->biorq_ref) {
 		BIORQ_ULOCK(r);
 		return;
@@ -609,8 +610,7 @@ _msl_fsrq_aiowait_tryadd_locked(const struct pfl_callerinfo *pci,
 	if (!(r->biorq_flags & BIORQ_WAIT)) {
 		r->biorq_ref++;
 		r->biorq_flags |= BIORQ_WAIT;
-		DEBUG_BIORQ(PLL_DIAG, r, "blocked by %p (ref=%d)",
-		    e, r->biorq_ref);
+		DEBUG_BIORQ(PLL_DIAG, r, "blocked by %p", e);
 		pll_add(&e->bmpce_pndgaios, r);
 	}
 	BIORQ_ULOCK(r);
@@ -1191,8 +1191,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		}
 		BIORQ_LOCK(r);
 		r->biorq_ref++;
-		DEBUG_BIORQ(PLL_DIAG, r, "dio launch (ref=%d)",
-		    r->biorq_ref);
+		DEBUG_BIORQ(PLL_DIAG, r, "dio launch");
 		BIORQ_ULOCK(r);
 	}
 
@@ -1286,8 +1285,8 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	r->biorq_ref++;
 	r->biorq_flags |= BIORQ_FLUSHRDY | BIORQ_SPLAY;
 	PSC_SPLAY_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
+	DEBUG_BIORQ(PLL_DIAG, r, "sched flush");
 	BIORQ_ULOCK(r);
-	DEBUG_BIORQ(PLL_DIAG, r, "sched flush (ref=%d)", r->biorq_ref);
 
 	bmpc->bmpc_pndgwr++;
 	if (!(b->bcm_flags & BMAP_FLUSHQ)) {
@@ -1525,7 +1524,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 
 	BIORQ_LOCK(r);
 	r->biorq_ref++;
-	DEBUG_BIORQ(PLL_DIAG, r, "rpc launch (ref=%d)", r->biorq_ref);
+	DEBUG_BIORQ(PLL_DIAG, r, "rpc launch");
 	BIORQ_ULOCK(r);
 
 	return (0);
