@@ -858,7 +858,6 @@ bmap_flush(void)
 			BIORQ_LOCK(r);
 
 			if (r->biorq_flags & BIORQ_SCHED) {
-				DEBUG_BIORQ(PLL_WARN, r, "already sched");
 				BIORQ_ULOCK(r);
 				continue;
 			}
