@@ -667,6 +667,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 				} else {
 					bwc->bwc_size += sz;
 				}
+				OPSTAT_INCR(SLC_OPST_BMAP_FLUSH_COALESCE_CONTIG);
 			}
 			pll_addtail(&bwc->bwc_pll, t);
 
@@ -680,6 +681,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 			 * If the current set is expired send it out
 			 * now.
 			 */
+			OPSTAT_INCR(SLC_OPST_BMAP_FLUSH_COALESCE_EXPIRE);
 			break;
 
 		} else {
@@ -691,6 +693,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 			bwc->bwc_size = t->biorq_len;
 			bwc->bwc_soff = t->biorq_off;
 			pll_add(&bwc->bwc_pll, t);
+			OPSTAT_INCR(SLC_OPST_BMAP_FLUSH_COALESCE_RESTART);
 		}
 	}
 
