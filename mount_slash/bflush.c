@@ -204,6 +204,8 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 
 	bwc_release(bwc);
 	sl_csvc_decref(csvc);
+	bmap_flushq_wake(BMAPFLSH_RPCDONE);
+
 	return (0);
 }
 

@@ -1027,7 +1027,7 @@ bmap_biorq_expire(struct bmap *b)
 		BIORQ_SETATTR(r, BIORQ_FORCE_EXPIRE);
 	BMAP_ULOCK(b);
 
-	bmap_flushq_wake(BMAPFLSH_RPCWAIT);
+	bmap_flushq_wake(BMAPFLSH_EXPIRE);
 }
 
 /**
