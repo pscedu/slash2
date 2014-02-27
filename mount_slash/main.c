@@ -453,7 +453,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	msl_bmap_reap_init(b, &mp->sbd);
 
-	DEBUG_BMAP(PLL_INFO, b, "ios(%s) sbd_seq=%"PRId64,
+	DEBUG_BMAP(PLL_DIAG, b, "ios(%s) sbd_seq=%"PRId64,
 	    libsl_ios2name(mp->sbd.sbd_ios), mp->sbd.sbd_seq);
 
 	bci = bmap_2_bci(b);
@@ -561,7 +561,7 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 
  out:
 	if (c) {
-		DEBUG_FCMH(PLL_INFO, c, "new mfh=%p dir=%s rc=%d oflags=%#o",
+		DEBUG_FCMH(PLL_DIAG, c, "new mfh=%p dir=%s rc=%d oflags=%#o",
 		    *mfhp, (oflags & O_DIRECTORY) ? "yes" : "no", rc, oflags);
 		fcmh_op_done(c);
 	}
@@ -1721,7 +1721,7 @@ msl_flush_int_locked(struct msl_fhent *mfh, int wait)
 		BIORQ_LOCK(r);
 		if (!r->biorq_ref)
 			r->biorq_flags |= BIORQ_FORCE_EXPIRE;
-		DEBUG_BIORQ(PLL_INFO, r, "force expire");
+		DEBUG_BIORQ(PLL_DIAG, r, "force expire");
 		BIORQ_ULOCK(r);
 	}
 	bmap_flushq_wake(BMAPFLSH_EXPIRE);
@@ -1743,13 +1743,13 @@ mslfsop_flush(struct pscfs_req *pfr, void *data)
 	int rc;
 
 	OPSTAT_INCR(SLC_OPST_FLUSH);
-	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "flushing (mfh=%p)", mfh);
+	DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh, "flushing (mfh=%p)", mfh);
 
 	spinlock(&mfh->mfh_lock);
 	rc = msl_flush_int_locked(mfh, 0);
 	freelock(&mfh->mfh_lock);
 
-	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh,
+	DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh,
 	    "done flushing (mfh=%p, rc=%d)", mfh, rc);
 
 	pscfs_reply_flush(pfr, rc);
@@ -1804,7 +1804,7 @@ msl_flush_attr(struct fidc_membh *f)
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
-	DEBUG_SSTB(PLL_INFO, &f->fcmh_sstb, "attr flush, set=%x, rc=%d",
+	DEBUG_SSTB(PLL_DIAG, &f->fcmh_sstb, "attr flush, set=%x, rc=%d",
 	    mq->to_set, rc);
 	pscrpc_req_finished(rq);
 	sl_csvc_decref(csvc);
@@ -2411,7 +2411,8 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 			OPSTAT_INCR(SLC_OPST_TRUNCATE_PART);
 
-			DEBUG_FCMH(PLL_INFO, c, "partial truncate");
+			DEBUG_FCMH(PLL_DIAG, c, "partial truncate");
+
 			/* Partial truncate.  Block and flush. */
 			SPLAY_FOREACH(b, bmap_cache, &c->fcmh_bmaptree) {
 				if (b->bcm_bmapno < x)
@@ -2496,7 +2497,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	sl_externalize_stat(stb, &mq->attr);
 	uidmap_ext_stat(&mq->attr);
 
-	DEBUG_SSTB(PLL_INFO, &c->fcmh_sstb,
+	DEBUG_SSTB(PLL_DIAG, &c->fcmh_sstb,
 	    "fcmh %p pre setattr, set = %#x", c, to_set);
 
 	psclog_debug("fcmh %p setattr%s%s%s%s%s%s%s", c,
@@ -2561,7 +2562,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	fcmh_setattrf(c, &mp->attr, FCMH_SETATTRF_SAVELOCAL |
 	    FCMH_SETATTRF_HAVELOCK);
 
-	DEBUG_SSTB(PLL_INFO, &c->fcmh_sstb, "fcmh %p post setattr", c);
+	DEBUG_SSTB(PLL_DIAG, &c->fcmh_sstb, "fcmh %p post setattr", c);
 
 #if 0
 	if (fcmh_isdir(c)) {
@@ -2619,7 +2620,7 @@ mslfsop_fsync(struct pscfs_req *pfr, __unusedx int datasync, void *data)
 	mfh = data;
 	OPSTAT_INCR(SLC_OPST_FSYNC);
 
-	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "fsyncing via flush");
+	DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh, "fsyncing via flush");
 
 	spinlock(&mfh->mfh_lock);
 	rc = msl_flush_int_locked(mfh, 1);
@@ -2666,7 +2667,7 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 		pscfs_reply_write(pfr, size, rc);
 		OPSTAT_INCR(SLC_OPST_FSRQ_WRITE_FREE);
 	}
-	DEBUG_FCMH(PLL_INFO, f, "write: buf=%p rc=%d sz=%zu "
+	DEBUG_FCMH(PLL_DIAG, f, "write: buf=%p rc=%d sz=%zu "
 	    "off=%"PSCPRIdOFFT, buf, rc, size, off);
 
 	OPSTAT_INCR(SLC_OPST_WRITE_DONE);
@@ -2687,7 +2688,7 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 
 	f = mfh->mfh_fcmh;
 
-	DEBUG_FCMH(PLL_INFO, f, "read (start): buf=%p rc=%d sz=%zu "
+	DEBUG_FCMH(PLL_DIAG, f, "read (start): buf=%p rc=%d sz=%zu "
 	    "len=%zd off=%"PSCPRIdOFFT, buf, rc, size, len, off);
 
 	if (fcmh_isdir(f)) {
@@ -2705,7 +2706,7 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 		OPSTAT_INCR(SLC_OPST_FSRQ_READ_FREE);
 	}
 
-	DEBUG_FCMH(PLL_INFO, f, "read (end): buf=%p rc=%d sz=%zu "
+	DEBUG_FCMH(PLL_DIAG, f, "read (end): buf=%p rc=%d sz=%zu "
 	    "len=%zd off=%"PSCPRIdOFFT, buf, rc, size, len, off);
 
 	OPSTAT_INCR(SLC_OPST_READ_DONE);
