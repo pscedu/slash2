@@ -312,6 +312,8 @@ main(int argc, char *argv[])
 	pscthr_init(SLITHRT_HEALTH, 0, slihealththr_main, NULL, 0,
 	    "slihealththr");
 
+	slrpc_initcli();
+
 	sliconnthr = slconnthr_spawn(SLITHRT_CONN, "sli",
 	    nodeResm->resm_res->res_selftest[0] ?
 	    slirmiconnthr_upcall : NULL, NULL);
@@ -329,7 +331,6 @@ main(int argc, char *argv[])
 
 	pscrpc_nbreapthr_spawn(sl_nbrqset, SLITHRT_NBRQ, "slinbrqthr");
 
-	slrpc_initcli();
 	sli_rpc_initsvc();
 	psc_tiosthr_spawn(SLITHRT_TIOS, "slitiosthr");
 	slibmaprlsthr_spawn();
