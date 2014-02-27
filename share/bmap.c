@@ -64,7 +64,7 @@ bmap_remove(struct bmap *b)
 {
 	struct fidc_membh *f = b->bcm_fcmh;
 
-	DEBUG_BMAP(PLL_INFO, b, "removing");
+	DEBUG_BMAP(PLL_DIAG, b, "removing");
 
 	psc_assert(!(b->bcm_flags & BMAP_FLUSHQ));
 
@@ -90,7 +90,7 @@ _bmap_op_done(const struct pfl_callerinfo *pci, struct bmap *b,
 
 	if (!psc_atomic32_read(&b->bcm_opcnt)) {
 		b->bcm_flags |= BMAP_TOFREE;
-		DEBUG_BMAP(PLL_INFO, b, "free bmap now");
+		DEBUG_BMAP(PLL_DIAG, b, "free bmap now");
 		BMAP_ULOCK(b);
 
 		/*
@@ -143,7 +143,7 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n,
 			 * This bmap is going away; wait for it so we
 			 * can reload it back.
 			 */
-			DEBUG_BMAP(PLL_INFO, b, "wait on to-free bmap");
+			DEBUG_BMAP(PLL_DIAG, b, "wait on to-free bmap");
 			BMAP_ULOCK(b);
 			FCMH_ULOCK(f);
 			sched_yield();
@@ -276,7 +276,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 	if (b) {
 		DEBUG_BMAP(rc && (rc != SLERR_BMAP_INVALID ||
 		    (flags & BMAPGETF_NOAUTOINST) == 0) ?
-		    PLL_ERROR : PLL_INFO, b, "grabbed rc=%d", rc);
+		    PLL_ERROR : PLL_DIAG, b, "grabbed rc=%d", rc);
 		if (rc)
 			bmap_op_done(b);
 		else {
