@@ -741,7 +741,7 @@ msbmflwthr_main(struct psc_thread *thr)
 	struct psc_dynarray bmaps = DYNARRAY_INIT_NOLOG;
 	struct bmapc_memb *b, *tmpb;
 	struct timespec ts;
-	int i, rc;
+	int i;
 
 	while (pscthr_run(thr)) {
 
@@ -781,7 +781,7 @@ msbmflwthr_main(struct psc_thread *thr)
 			 * not being zero.  And this has been seen
 			 * although with a different patch.
 			 */
-			rc = msl_bmap_lease_tryext(b, 0);
+			msl_bmap_lease_tryext(b, 0);
 		}
 		if (!psc_dynarray_len(&bmaps))
 			usleep(1000000);
