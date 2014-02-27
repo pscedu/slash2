@@ -398,7 +398,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	psclog_info("pfid="SLPRI_FID" fid="SLPRI_FID" "
+	psclog_diag("pfid="SLPRI_FID" fid="SLPRI_FID" "
 	    "mode=%#o name='%s' rc=%d", pinum,
 	    mp->cattr.sst_fg.fg_fid, mode, name, rc);
 
@@ -865,7 +865,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
-	psclog_info("pfid="SLPRI_FID" mode=%#o name='%s' rc=%d mp->rc=%d",
+	psclog_diag("pfid="SLPRI_FID" mode=%#o name='%s' rc=%d mp->rc=%d",
 	    mq->pfg.fg_fid, mode, name, rc, mp->rc);
 
 	uidmap_int_stat(&mp->pattr);

@@ -253,7 +253,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 
 		BMPCE_LOCK(e);
 
-		psclog_info("biorq = %p, bmpce = %p, i = %d, npages = %d, "
+		psclog_diag("biorq = %p, bmpce = %p, i = %d, npages = %d, "
 		    "raoff = %"PRIx64", bmpce_foff = %"PRIx64,
 		    r, e, i, npages,
 		    mfh->mfh_ra.mra_raoff,
@@ -686,7 +686,7 @@ msl_req_aio_add(struct pscrpc_request *rq,
 	} else
 		psc_fatalx("unknown callback");
 
-	psclog_info("get car=%p car_id=%"PRIx64" q=%p, r=%p",
+	psclog_diag("get car=%p car_id=%"PRIx64" q=%p, r=%p",
 	    car, car->car_id, car->car_fsrqinfo, r);
 
 	lc_add(&resm2rmci(m)->rmci_async_reqs, car);
@@ -778,7 +778,7 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r0)
 	rc = q->mfsrq_err;
 	MFH_ULOCK(q->mfsrq_mfh);
 
-	psclog_info("biorq=%p fsrq=%p pfr=%p", r0, q,
+	psclog_diag("biorq=%p fsrq=%p pfr=%p", r0, q,
 	    (char *)q - sizeof(struct pscfs_req));
 
 	for (i = 0; i < MAX_BMAPS_REQ; i++) {
@@ -1993,7 +1993,7 @@ msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
 	else
 		OPSTAT_INCR(SLC_OPST_FSRQ_WRITE);
 
-	psclog_info("fsrq=%p pfr=%p rw=%d", q, pfr, rw);
+	psclog_diag("fsrq=%p pfr=%p rw=%d", q, pfr, rw);
 	return (q);
 }
 
