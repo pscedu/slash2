@@ -263,7 +263,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 
 	/* Do we need this inc/dec combo for biorq reference? */
 	psc_atomic32_inc(&rmci->rmci_infl_rpcs);
-	psclog_info("Send write RPC to %d: %d",
+	psclog_diag("Send write RPC to %d: %d",
 	    m->resm_res_id, psc_atomic32_read(&rmci->rmci_infl_rpcs));
 
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQS] = bwc;
@@ -421,7 +421,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 		bmap_flush_inflight_set(r);
 	}
 
-	psclog_info("bwc cb arg (%p) size=%zu nbiorqs=%d",
+	psclog_diag("bwc cb arg (%p) size=%zu nbiorqs=%d",
 	    bwc, bwc->bwc_size, pll_nitems(&bwc->bwc_pll));
 
 	rc = bmap_flush_create_rpc(bwc, csvc, b);
@@ -530,7 +530,7 @@ bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
 
 	bmap_flush_coalesce_prep(bwc);
 
-	psclog_info("tot_reqsz=%u nitems=%d nbmpces=%d", tot_reqsz,
+	psclog_diag("tot_reqsz=%u nitems=%d nbmpces=%d", tot_reqsz,
 		     pll_nitems(&bwc->bwc_pll), bwc->bwc_nbmpces);
 
 	psc_assert(!bwc->bwc_niovs);
