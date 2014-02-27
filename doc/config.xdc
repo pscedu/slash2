@@ -142,10 +142,10 @@ The UUID of the pool is 0x2a8ae931a776366e
 		As configured here, the port used by the file system's TCP
 		connections will be 989 (non-priviledged ports are allowed).
 		The LNet network identifier for the TCP network is
-		<oof:tt>tcp0</oof:tt>.
+		<oof:tt>tcp1</oof:tt>.
 		Any clients or servers with interfaces on the 192.168 network will
 		match the rule '192.168.*.*' and be configured on the
-		<oof:tt>tcp0</oof:tt> network.
+		<oof:tt>tcp1</oof:tt> network.
 		Hosts with infininband interfaces on the 10.0.0.* network will be
 		configured on the <oof:tt>sdp0</oof:tt> network.
 	</oof:p>
@@ -153,7 +153,7 @@ The UUID of the pool is 0x2a8ae931a776366e
 <oof:span class='syn_keyword'>set</oof:span> zpool_name=<oof:span class='syn_val'>"s2mds_pool"</oof:span>;
 <oof:span class='syn_keyword'>set</oof:span> fsuuid=<oof:span class='syn_val'>"2a8ae931a776366e"</oof:span>;
 <oof:span class='syn_keyword'>set</oof:span> port=<oof:span class='syn_val'>989</oof:span>;
-<oof:span class='syn_keyword'>set</oof:span> nets=<oof:span class='syn_val'>"tcp0 192.168.*.*; sdp0 10.0.0.*"</oof:span>;
+<oof:span class='syn_keyword'>set</oof:span> nets=<oof:span class='syn_val'>"tcp1 192.168.*.*; sdp0 10.0.0.*"</oof:span>;
 </oof:pre>
 
 	<oof:header size="3">Configuring a SLASH2 site</oof:header>
@@ -168,7 +168,7 @@ The UUID of the pool is 0x2a8ae931a776366e
 <oof:span class='syn_keyword'>set</oof:span> zpool_name=<oof:span class='syn_val'>"s2mds_pool"</oof:span>;
 <oof:span class='syn_keyword'>set</oof:span> fsuuid=<oof:span class='syn_val'>"2a8ae931a776366e"</oof:span>;
 <oof:span class='syn_keyword'>set</oof:span> port=989;
-<oof:span class='syn_keyword'>set</oof:span> nets=<oof:span class='syn_val'>"tcp0 192.168.*.*; sdp0 10.0.0.*"</oof:span>;
+<oof:span class='syn_keyword'>set</oof:span> nets=<oof:span class='syn_val'>"tcp1 192.168.*.*; sdp0 10.0.0.*"</oof:span>;
 <oof:span class='syn_keyword'>set</oof:span> pref_mds=<oof:span class='syn_val'>"mds1@MYSITE"</oof:span>;
 <oof:span class='syn_keyword'>set</oof:span> pref_ios=<oof:span class='syn_val'>"ion1@MYSITE"</oof:span>;
 
