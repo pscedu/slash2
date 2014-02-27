@@ -329,6 +329,7 @@ main(int argc, char *argv[])
 
 	pscrpc_nbreapthr_spawn(sl_nbrqset, SLITHRT_NBRQ, "slinbrqthr");
 
+	slrpc_initcli();
 	sli_rpc_initsvc();
 	psc_tiosthr_spawn(SLITHRT_TIOS, "slitiosthr");
 	slibmaprlsthr_spawn();

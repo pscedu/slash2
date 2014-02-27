@@ -290,6 +290,8 @@ struct psc_thread
 void	 slconnthr_watch(struct psc_thread *, struct slashrpc_cservice *,
 	    int, int (*)(void *), void *);
 
+void	 slrpc_initcli(void);
+
 int	 slrpc_handle_connect(struct pscrpc_request *, uint64_t, uint32_t, enum slconn_type);
 
 int	 slrpc_newgenreq(struct slashrpc_cservice *, int,

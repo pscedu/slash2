@@ -703,6 +703,7 @@ main(int argc, char *argv[])
 	slmbmaptimeothr_spawn();
 	slmtimerthr_spawn();
 	slmconnthr_spawn();
+	slrpc_initcli();
 	slm_rpc_initsvc();
 	slmbchrqthr_spawn();
 	slmupschthr_spawn();

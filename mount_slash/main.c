@@ -3133,6 +3133,7 @@ msl_init(void)
 	pfl_workq_init(128);
 	pfl_wkthr_spawn(MSTHRT_WORKER, 4, "mswkthr%d");
 
+	slrpc_initcli();
 	slc_rpc_initsvc();
 
 	/* Start up service threads. */

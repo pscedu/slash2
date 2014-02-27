@@ -46,6 +46,9 @@
 
 struct pscrpc_nbreqset	*sl_nbrqset;
 
+struct psc_poolmaster	 sl_csvc_poolmaster;
+struct psc_poolmgr	*sl_csvc_pool;
+
 struct psc_lockedlist	 sl_clients = PLL_INIT(&sl_clients,
     struct slashrpc_cservice, csvc_lentry);
 
@@ -434,7 +437,7 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 	(void)CSVC_RLOCK(csvc);
 	rc = psc_atomic32_dec_getnew(&csvc->csvc_refcnt);
 	psc_assert(rc >= 0);
-	DEBUG_CSVC(PLL_INFO, csvc, "decref");
+	DEBUG_CSVC(PLL_DIAG, csvc, "decref");
 	if (rc == 0 && psc_atomic32_read(&csvc->csvc_flags) &
 	    CSVCF_WANTFREE) {
 		/*
@@ -444,11 +447,11 @@ _sl_csvc_decref(const struct pfl_callerinfo *pci,
 		pscrpc_import_put(csvc->csvc_import);
 		if (csvc->csvc_peertype == SLCONNT_CLI)
 			pll_remove(&sl_clients, csvc);
-		DEBUG_CSVC(PLL_INFO, csvc, "freed");
+		DEBUG_CSVC(PLL_DIAG, csvc, "freed");
 		// XXX assert(mutex.nwaiters == 0)
 		psc_mutex_unlock(&csvc->csvc_mutex);
 		psc_mutex_destroy(&csvc->csvc_mutex);
-		PSCFREE(csvc);
+		psc_pool_return(sl_csvc_pool, csvc);
 		return;
 	}
 	CSVC_ULOCK(csvc);
@@ -465,7 +468,7 @@ sl_csvc_incref(struct slashrpc_cservice *csvc)
 {
 	CSVC_LOCK_ENSURE(csvc);
 	psc_atomic32_inc(&csvc->csvc_refcnt);
-	DEBUG_CSVC(PLL_INFO, csvc, "incref");
+	DEBUG_CSVC(PLL_DIAG, csvc, "incref");
 }
 
 /**
@@ -533,7 +536,8 @@ sl_csvc_create(uint32_t rqptl, uint32_t rpptl)
 	struct slashrpc_cservice *csvc;
 	struct pscrpc_import *imp;
 
-	csvc = PSCALLOC(sizeof(*csvc));
+	csvc = psc_pool_get(sl_csvc_pool);
+	memset(csvc, 0, sizeof(*csvc));
 	psc_mutex_init(&csvc->csvc_mutex);
 	INIT_PSC_LISTENTRY(&csvc->csvc_lentry);
 
@@ -1136,4 +1140,13 @@ slrpc_bulkclient(struct pscrpc_request *rq, int type, int chan,
     struct iovec *iov, int n)
 {
 	return (rsx_bulkclient(rq, type, chan, iov, n));
+}
+
+void
+slrpc_initcli(void)
+{
+	psc_poolmaster_init(&sl_csvc_poolmaster,
+	    struct slashrpc_cservice, csvc_lentry, PPMF_AUTO, 64, 64, 0,
+	    NULL, NULL, NULL, "csvc");
+	slc_csvc_pool = psc_poolmaster_getmgr(&sl_csvc_poolmaster);
 }
