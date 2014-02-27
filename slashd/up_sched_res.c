@@ -170,8 +170,8 @@ slm_batch_repl_cb(struct batchrq *br, int ecode)
 			retifset[BREPLST_REPL_SCHED] = 1;
 			retifset[BREPLST_REPL_QUEUED] = 0;
 
-			psclog_warnx("reply from replication arrangement; "
-			    "src=%s dst=%s rc=%d",
+			DEBUG_BMAP(PLL_WARN, b, "replication "
+			    "arrangement failure; src=%s dst=%s rc=%d",
 			    src_resm ? src_resm->resm_name : NULL,
 			    dst_resm ? dst_resm->resm_name : NULL,
 			    ecode ? ecode : bp ? bp->rc : -999);
