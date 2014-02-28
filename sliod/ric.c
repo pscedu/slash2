@@ -100,6 +100,20 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	}
 
 	/*
+	 * Ensure that this request fits into the bmap's address range.
+	 *
+	 * XXX this check assumes that mq->offset has not been made
+	 *     bmap relative (i.e. it's filewise).
+	 */
+	if ((mq->offset + mq->size) > SLASH_BMAP_SIZE) {
+		psclog_errorx("req offset / size outside of the bmap's "
+		    "address range off=%u len=%u",
+		    mq->offset, mq->size);
+		mp->rc = -ERANGE;
+		return (mp->rc);
+	}
+
+	/*
 	 * A RBW (read-before-write) request from the client may have a
 	 *   write enabled bmapdesc which he uses to fault in his page.
 	 */
@@ -119,19 +133,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		return (mp->rc);
 	}
 
-	/*
-	 * Ensure that this request fits into the bmap's address range.
-	 *
-	 * XXX this check assumes that mq->offset has not been made
-	 *     bmap relative (i.e. it's filewise).
-	 */
-	if ((mq->offset + mq->size) > SLASH_BMAP_SIZE) {
-		psclog_errorx("req offset / size outside of the bmap's "
-		    "address range off=%u len=%u",
-		    mq->offset, mq->size);
-		mp->rc = -ERANGE;
-		return (mp->rc);
-	}
 
 	seqno = bim_getcurseq();
 	if (mq->sbd.sbd_seq < seqno) {
