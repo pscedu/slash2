@@ -1887,6 +1887,7 @@ mexpc_allocpri(struct pscrpc_export *exp)
 	int i;
 
 	mexpc = exp->exp_private = PSCALLOC(sizeof(*mexpc));
+	psc_mutex_init(&mexpc->mexpc_csvc);
 	slm_getclcsvc(exp);
 	for (i = 0; i < nitems(mexpc->mexpc_readdir_past); i++)
 		mexpc->mexpc_readdir_past[i].crap_fid = FID_ANY;
