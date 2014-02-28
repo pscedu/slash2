@@ -66,6 +66,8 @@ extern struct psc_iostats sliod_rd_128k_stat;
 extern struct psc_iostats sliod_rd_512k_stat;
 extern struct psc_iostats sliod_rd_1m_stat;
 
+#define NOTIFY_FSYNC_TIMEOUT	10		/* seconds */
+
 __static int
 sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 {
@@ -398,7 +400,6 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 			rc = fsync(fcmh_2_fd(f));
 			fsync_time = CURRENT_SECONDS - fsync_time;
 
-#define NOTIFY_FSYNC_TIMEOUT 10 /* seconds */
 			if (fsync_time > NOTIFY_FSYNC_TIMEOUT)
 				DEBUG_FCMH(PLL_NOTICE, f,
 				    "long fsync %d", fsync_time);
