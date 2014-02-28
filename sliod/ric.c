@@ -406,6 +406,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 				DEBUG_FCMH(PLL_ERROR, f,
 				    "fsync failure rc=%d fd=%d errno=%d",
 				    rc, fcmh_2_fd(f), errno);
+			OPSTAT_INCR(SLI_OPST_FSYNC);
 		} else
 			FCMH_ULOCK(f);
 
