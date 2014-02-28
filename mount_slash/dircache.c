@@ -372,7 +372,6 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 {
 	struct psc_dynarray *da_name, *da_off;
 	struct pscfs_dirent *dirent = NULL;
-	struct fcmh_cli_info *fci;
 	struct dircache_ent *dce;
 	void *base0;
 	off_t adj;
@@ -418,7 +417,6 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	psc_dynarray_sort(da_name, qsort, dce_sort_cmp_name);
 	psc_dynarray_sort(da_off, qsort, dce_sort_cmp_off);
 
-	fci = fcmh_2_fci(d);
 	FCMH_LOCK(d);
 
 	if ((p->dcp_flags & DIRCACHEPGF_LOADED) ||
