@@ -20,8 +20,11 @@ class TSuite(object):
     "mp"   : "%base%/mp",
     "datadir": "%base%/data",
     "ctl"  : "%base%/ctl",
-    "fs"   : "%base%/fs"
+    "fs"   : "%base%/fs",
+    "authbuf" : "%base%/authbuf.key"
   }
+
+  authbuf_key = None
 
   src_dirs = {
     # "src" populated in init
@@ -176,8 +179,26 @@ def build_mds(self):
     gdbcmd_path = self.conf["slash2"]["mds_gdb"]
     self.__launch_gdb_sl("slashd", self.sl2objects["mds"], "slashd", gdbcmd_path)
 
+  def __get_authbuf(self, ssh):
+    """Trys to acquire the authbuf key from the data dir. Will cache it for subsequent calls.
+
+    Args:
+      ssh: ssh connection to get/transfer authbuf to."""
+
+    if not self.authbuf_key:
+      sh = """if [[ -a {0} ]]; then; cat {0}; fi;""".format(self.build_dirs["authbuf"])
+      result = ssh.run(sh)
+      if result["exit"] == 0:
+        #Hacky way of converting it to a safe hex string
+        self.authbuf_key = "\\x" + "\\x".join([c.encode("hex") for c in "".join(result["out"])])
+        log.debug("Found authbuf key.")
+      else: return
+    sh = 'echo "{}" > {}'.format(self.authbuf_key, self.build_dirs["authbuf"])
+    result = ssh.run(sh)
+    log.debug("Written authbuf key successfully!" if result["error"] == 0 else "Failed to write authbuf key")
+
   def __launch_gdb_sl(self, sock_name, sl2objects, res_bin_type, gdbcmd_path):
-    """Generic slash2 launch service in screen+gdb.
+    """Generic slash2 launch service in screen+gdb. Will also copy over authbuf keys.
 
     Args:
       sock_name: name of sl2 sock.
@@ -200,6 +221,9 @@ def build_mds(self):
       user, host = os.getenv("USER"), sl2object["host"]
       log.debug("Connecting to {}@{}".format(user, host))
       ssh = SSH(user, host)
+
+      #Acquire and deploy authbuf key
+      self.__get_authbuf(ssh)
 
       #Create monolithic reference/replace dict
       repl_dict = dict(self.src_dirs, **self.build_dirs)
