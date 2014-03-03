@@ -1000,10 +1000,8 @@ bmap_biorq_waitempty(struct bmap *b)
 
 	bmpc = bmap_2_bmpc(b);
 	BMAP_LOCK(b);
-	bmap_wait_locked(b, (!pll_empty(&bmpc->bmpc_pndg_biorqs)  ||
-			     !SPLAY_EMPTY(&bmpc->bmpc_new_biorqs) ||
-			     !pll_empty(&bmpc->bmpc_pndg_ra)      ||
-			     (b->bcm_flags & BMAP_FLUSHQ)));
+	OPSTAT_INCR(SLC_OPST_BMAP_WAIT_EMPTY);
+	bmap_wait_locked(b, (atomic_read(&b->bcm_opcnt) > 1));
 
 	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
 	psc_assert(SPLAY_EMPTY(&bmpc->bmpc_new_biorqs));

@@ -2441,7 +2441,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 			DYNARRAY_FOREACH(b, j, &a) {
 				bmap_biorq_waitempty(b);
-				psc_assert(atomic_read(&b->bcm_opcnt) > 1);
+				psc_assert(atomic_read(&b->bcm_opcnt) == 1);
 				bmap_op_done_type(b, BMAP_OPCNT_TRUNCWAIT);
 			}
 		}
