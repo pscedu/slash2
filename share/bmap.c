@@ -27,12 +27,13 @@
 
 #include <limits.h>
 
-#include "pfl/cdefs.h"
-#include "pfl/tree.h"
-#include "pfl/treeutil.h"
 #include "pfl/alloc.h"
+#include "pfl/cdefs.h"
 #include "pfl/lock.h"
 #include "pfl/log.h"
+#include "pfl/thread.h"
+#include "pfl/tree.h"
+#include "pfl/treeutil.h"
 
 #include "lnet/types.h"
 
