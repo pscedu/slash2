@@ -690,7 +690,7 @@ struct srm_replst_slave_req {
 } __packed;
 
 /* per-bmap header, prepended before each bcs_repls content */
-struct srt_replst_bhdr {		
+struct srt_replst_bhdr {
 	uint32_t		srsb_replpol:1;
 	uint32_t		srsb_usr_pri:31;
 	uint32_t		srsb_sys_pri;
@@ -826,6 +826,7 @@ struct srm_io_req {
 /* I/O flags */
 #define SRM_IOF_APPEND		(1 << 0)	/* ignore offset, send WRITE to EOF */
 #define SRM_IOF_DIO		(1 << 1)	/* direct I/O; no caching */
+#define SRM_IOF_BENCH		(1 << 2)	/* for benchmarking only; junk data */
 
 struct srm_io_rep {
 	uint64_t		id;		/* async I/O identifier */
