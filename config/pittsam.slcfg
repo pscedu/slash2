@@ -27,7 +27,7 @@ site @PITT {
 		jrnldev	= /dev/disk/by-id/scsi-20010b9fc080c0b62;
 	}
 
-	resource io0 {
+	resource test0 {
 		desc	= "SAM cache node 0";
 		type	= standalone_fs;
 		id	= 10;
@@ -36,7 +36,7 @@ site @PITT {
 #		selftest = "/local/sbin/st /samfs_slio";
 	}
 
-	resource io1 {
+	resource test1 {
 		desc	= "SAM cache node 1";
 		type	= standalone_fs;
 		id	= 11;
@@ -45,7 +45,7 @@ site @PITT {
 #		selftest = "/local/sbin/st /samfs_slio";
 	}
 
-	resource io2 {
+	resource test2 {
 		desc	= "SAM cache node 2";
 		type	= standalone_fs;
 		id	= 12;
@@ -54,11 +54,20 @@ site @PITT {
 #		selftest = "/local/sbin/st /samfs_slio";
 	}
 
-	resource io {
-		desc	= "SAM cache";
+	resource test {
+		desc	= "SAM test cache";
 		type	= cluster_noshare_lfs;
 		id	= 100;
-		ios	= io0@PITT, io1@PITT, io2@PITT;
+		ios	= test0@PITT, test1@PITT, test2@PITT;
+	}
+
+	resource ice {
+		desc	= "SAM IceBreaker";
+		type	= standalone_fs;
+		id	= 201;
+		nids	= supercell0.frank.sam.pitt.edu;
+		fsroot	= /data/gscratch4;
+#		selftest = "/local/sbin/st /samfs_slio";
 	}
 }
 
