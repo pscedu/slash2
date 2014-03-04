@@ -88,7 +88,7 @@ class TSuite(object):
     ]
     log.debug("Found: {}".format(", ".join(objs_disp)))
 
-def build_mds(self):
+  def build_mds(self):
     """Initialize MDS resources for testing."""
 
     #Create the MDS systems
@@ -278,21 +278,21 @@ def build_mds(self):
       cmd: command to run remotely
       screen_name: name of screen sock to wait for."""
 
-      #Run command string in screen
-      if not ssh.run_screen(cmd, screen_name, self.conf["slash2"]["timeout"]):
-        log.fatal("Screen session {0} already exists in some form! Attach and deal with it.")
-        sys.exit(1)
+    #Run command string in screen
+    if not ssh.run_screen(cmd, screen_name, self.conf["slash2"]["timeout"]):
+      log.fatal("Screen session {0} already exists in some form! Attach and deal with it.")
+      sys.exit(1)
 
-      wait = ssh.wait_for_screen(screen_name)
+    wait = ssh.wait_for_screen(screen_name)
 
-      if wait["timedout"]:
-        log.critical("{0} timed out! screen -r {0}-timed and check it out."\
-            .format(screen_name))
-        sys.exit(1)
-      elif wait["errored"]:
-        log.critical("{0} exited with a nonzero return code. screen -r {0}-error and check it out."\
-            .format(screen_name))
-        sys.exit(1)
+    if wait["timedout"]:
+      log.critical("{0} timed out! screen -r {0}-timed and check it out."\
+          .format(screen_name))
+      sys.exit(1)
+    elif wait["errored"]:
+      log.critical("{0} exited with a nonzero return code. screen -r {0}-error and check it out."\
+          .format(screen_name))
+      sys.exit(1)
 
   def parse_slash2_conf(self):
     """Reads and parses slash2 conf for tokens.

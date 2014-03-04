@@ -1,4 +1,4 @@
-import logging, sys
+import logging, sys, os
 
 from colorama import init, Fore
 from argparse import ArgumentParser
@@ -112,12 +112,34 @@ def main():
 
   log.info("Configuration file loaded successfully!")
 
-  #Initialize the test suite
-  t = TSuite(conf._sections)
-  t.build_mds()
-  t.launch_mds()
-  t.build_ion()
-  t.launch_ion()
+  testdir = conf._sections["tests"]["testdir"]
+  tests = []
+  try:
+    #Consider all directories in test_dir to have tests to be ran
+
+    tests = [test for test in os.listdir(testdir) if os.path.isdir(os.path.join(testdir, test))]
+  except OSError, e:
+    log.critical("Unable to gather test sets from the testing directory!")
+    sys.exit(1)
+
+  for test in tests:
+    runtime_testdir = os.path.join(conf._sections["tests"]["testdir"], test)
+    slash_conf = os.path.join(runtime_testdir, "slash.conf")
+    print slash_conf
+    if os.path.isfile(slash_conf):
+      log.debug("Replaced default slash config with {} for this test set".format(slash_conf))
+      conf._sections["slash2"]["conf"] = slash_conf
+
+    conf._sections["tests"]["runtime_testdir"] = runtime_testdir
+
+    sys.exit(1)
+
+    #Initialize the test suite
+    t = TSuite(conf._sections)
+    t.build_mds()
+    t.launch_mds()
+    t.build_ion()
+    t.launch_ion()
 
 
 if __name__=="__main__":
