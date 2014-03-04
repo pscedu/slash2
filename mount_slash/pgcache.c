@@ -280,7 +280,6 @@ bmpc_freeall_locked(struct bmap_pagecache *bmpc)
 	struct bmap_pagecache_entry *a, *b;
 
 	psc_assert(SPLAY_EMPTY(&bmpc->bmpc_new_biorqs));
-	psc_assert(pll_empty(&bmpc->bmpc_pndg_ra));
 
 	/* DIO rq's are allowed since no cached pages are involved. */
 	if (!pll_empty(&bmpc->bmpc_pndg_biorqs)) {

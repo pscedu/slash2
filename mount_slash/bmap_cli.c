@@ -1005,7 +1005,6 @@ bmap_biorq_waitempty(struct bmap *b)
 
 	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
 	psc_assert(SPLAY_EMPTY(&bmpc->bmpc_new_biorqs));
-	psc_assert(pll_empty(&bmpc->bmpc_pndg_ra));
 	BMAP_ULOCK(b);
 }
 
@@ -1041,7 +1040,6 @@ msl_bmap_final_cleanup(struct bmap *b)
 
 	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
 	psc_assert(SPLAY_EMPTY(&bmpc->bmpc_new_biorqs));
-	psc_assert(pll_empty(&bmpc->bmpc_pndg_ra));
 
 	DEBUG_BMAP(PLL_DIAG, b, "start freeing");
 

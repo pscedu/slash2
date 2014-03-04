@@ -1010,7 +1010,6 @@ msl_readahead_cb(struct pscrpc_request *rq, int rc,
 		msl_bmpce_complete_biorq(e, rc);
 
 		BMAP_LOCK(b);
-		pll_remove(&bmpc->bmpc_pndg_ra, e);
 
 		BMPCE_LOCK(e);
 		bmpce_release_locked(e, bmpc);
@@ -1303,7 +1302,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 	struct srm_io_rep *mp;
 	struct iovec *iovs;
 	uint32_t off = 0;
-	int rc, i, added = 0;
+	int rc, i;
 
 	psc_assert(nbmpce > 0);
 	psc_assert(nbmpce <= BMPC_MAXBUFSRPC);
@@ -1362,16 +1361,6 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 	rq->rq_interpret_reply = msl_readahead_cb0;
 	pscrpc_req_setcompl(rq, &rpcComp);
 
-	for (i = 0; i < nbmpce; i++)
-		/*
-		 * bmpce_ralentry is available at this point, add the ra
-		 * to the pndg list before pushing it out the door.
-		 */
-		pll_addtail(&bmap_2_bmpc(b)->bmpc_pndg_ra, bmpces[i]);
-
-
-	added = 1;
-
 	rc = pscrpc_nbreqset_add(pndgReadaReqs, rq);
 	if (!rc)
 		return;
@@ -1386,8 +1375,6 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 
 		BMAP_LOCK(b);
 		BMPCE_LOCK(e);
-		if (added)
-			pll_remove(&bmap_2_bmpc(b)->bmpc_pndg_ra, e);
 
 		e->bmpce_flags |= BMPCE_EIO;
 		BMPCE_WAKE(e);
