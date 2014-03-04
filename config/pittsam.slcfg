@@ -10,7 +10,7 @@ set routes="
 set nets="sdp7 10.10.101.*; tcp8 *.*.*.*";
 
 set pref_mds="md0@PITT";
-set pref_ios="io@PITT";
+set pref_ios="ice@PITT";
 set fsuuid="98bb0e98163f7745";
 set zpool_name="pittsam_s2mds";
 set zpool_cache="/opt/pittsam_slash2/pittsam_s2md.zcf";
