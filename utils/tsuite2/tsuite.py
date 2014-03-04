@@ -13,38 +13,7 @@ log = logging.getLogger("slash2")
 class TSuite(object):
   """SLASH2 File System Test Suite."""
 
-  #Test suite directories
-  #Relative paths, replaced in init
-  build_dirs = {
-    # "base" populated in init
-    "mp"   : "%base%/mp",
-    "datadir": "%base%/data",
-    "ctl"  : "%base%/ctl",
-    "fs"   : "%base%/fs",
-    "authbuf" : "%base%/authbuf.key"
-  }
 
-  authbuf_key = None
-
-  src_dirs = {
-    # "src" populated in init
-    "slbase"  : "%src%/slash_nara",
-    "tsbase"  : "%slbase%/../tsuite",
-    "clicmd"  : "%base%/cli_cmd.sh",
-    "zpool"   : "%slbase%/utils/zpool.sh",
-    "zfs_fuse": "%slbase%/utils/zfs-fuse.sh",
-    "slmkjrnl": "%slbase%/slmkjrnl/slmkjrnl",
-    "slmctl"  : "%slbase%/slmctl/slmctl",
-    "slictl"  : "%slbase%/slictl/slictl",
-    "slashd"  : "%slbase%/slashd/slashd",
-    "slkeymgt": "%slbase%/slkeymgt/slkeymgt",
-    "slmkfs"  : "%slbase%/slmkfs/slmkfs"
-  }
-
-  tsid = None
-  rootdir = None
-
-  sl2objects = {}
 
   def __init__(self, conf):
     """Initialization of the TSuite.
@@ -52,6 +21,38 @@ class TSuite(object):
     Args:
       conf: configuration dict from configparser."""
 
+    #Test suite directories
+    #Relative paths, replaced in init
+    self.build_dirs = {
+      # "base" populated in init
+      "mp"   : "%base%/mp",
+      "datadir": "%base%/data",
+      "ctl"  : "%base%/ctl",
+      "fs"   : "%base%/fs",
+      "authbuf" : "%base%/authbuf.key"
+    }
+
+    self.authbuf_key = None
+
+    self.src_dirs = {
+      # "src" populated in init
+      "slbase"  : "%src%/slash_nara",
+      "tsbase"  : "%slbase%/../tsuite",
+      "clicmd"  : "%base%/cli_cmd.sh",
+      "zpool"   : "%slbase%/utils/zpool.sh",
+      "zfs_fuse": "%slbase%/utils/zfs-fuse.sh",
+      "slmkjrnl": "%slbase%/slmkjrnl/slmkjrnl",
+      "slmctl"  : "%slbase%/slmctl/slmctl",
+      "slictl"  : "%slbase%/slictl/slictl",
+      "slashd"  : "%slbase%/slashd/slashd",
+      "slkeymgt": "%slbase%/slkeymgt/slkeymgt",
+      "slmkfs"  : "%slbase%/slmkfs/slmkfs"
+    }
+
+    self.tsid = None
+    self.rootdir = None
+
+    self.sl2objects = {}
     self.conf = conf
 
     #TODO: Rename rootdir in src_dir fashion
@@ -88,6 +89,58 @@ class TSuite(object):
     ]
     log.debug("Found: {}".format(", ".join(objs_disp)))
 
+  def check_status(self):
+    """Generate general status report for all sl2 objects.
+
+    Returns: {
+      "type":[ {"host": ..., "reports": ... } ],
+      ...
+    }"""
+    report = {}
+
+    #Operations based on type
+    ops = {
+        "all": {
+          "load": "cat /proc/loadavg | cut -d' ' -f1,2,3",
+          "mem_total": "cat /proc/meminfo | head -n1",
+          "mem_free": "sed -n 2,2p /proc/meminfo",
+          "uptime": "cat /proc/uptime | head -d' ' -f1",
+          "disk_stats": "df -hl"
+        },
+        "mds": {
+          "connections":"{slmctl} -sconnections",
+          "iostats":"{slmctl} -siostats"
+        },
+        "ion": {
+          "connections": "{slictl} -sconnections",
+          "iostats": "{slictl} -siostats"
+        }
+    }
+
+    for sl2_restype in self.sl2objects.keys():
+
+      report[sl2_restype] = []
+
+      obj_ops = ops["all"]
+      if sl2_obj[sl2_restype] in ops:
+        obj_ops = dict(ops["all"].items() + ops[sl2_restype].items())
+
+      for sl2_obj in self.sl2objects[sl2_restype]:
+        obj_report = {
+          "host": sl2_obj["host"],
+          "id": sl2_obj["id"],
+          "reports": {}
+        }
+        user, host = os.getenv("USER"), sl2_obj["host"]
+        log.debug("Connecting to {}@{}".format(user, host))
+        ssh = SSH(user, host)
+        for op, cmd in obj_ops.items():
+          obj_report["reports"][op] = ssh.run(cmd, timeout=2)
+
+        report[sl2_restype].append(obj_report)
+        log.debug("Status check completed for {} [{}]".format(host, sl2_restype))
+    return report
+
   def build_mds(self):
     """Initialize MDS resources for testing."""
 
@@ -100,6 +153,7 @@ class TSuite(object):
 
       #Create remote connection to server
       try:
+        #Can probably avoid doing user, host everytime
         user, host = os.getenv("USER"), mds["host"]
         log.debug("Connecting to {}@{}".format(user, host))
         ssh = SSH(user, host)

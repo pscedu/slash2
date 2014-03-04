@@ -63,6 +63,9 @@ class SL2Res(dict):
           .format(sl2res_name))
       return False
 
+    if sl2res_type in  ["standalone_fs", "archival_fs"]:
+        sl2res_type = "ion"
+
     #Lookup necessary fields for object type
     necessary_fields = self.necessary[sl2res_type]\
         if sl2res_type in self.necessary else []

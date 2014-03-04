@@ -125,7 +125,6 @@ def main():
   for test in tests:
     runtime_testdir = os.path.join(conf._sections["tests"]["testdir"], test)
     slash_conf = os.path.join(runtime_testdir, "slash.conf")
-    print slash_conf
     if os.path.isfile(slash_conf):
       log.debug("Replaced default slash config with {} for this test set".format(slash_conf))
       conf._sections["slash2"]["conf"] = slash_conf
