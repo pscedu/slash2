@@ -33,11 +33,12 @@
 #include <pthread.h>
 #include <stdio.h>
 
+#include "pfl/atomic.h"
 #include "pfl/cdefs.h"
 #include "pfl/list.h"
 #include "pfl/listcache.h"
-#include "pfl/atomic.h"
 #include "pfl/pool.h"
+#include "pfl/thread.h"
 
 #include "bmap.h"
 #include "cache_params.h"
