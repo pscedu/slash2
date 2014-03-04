@@ -2393,7 +2393,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 			rc = sqlite3_prepare_v2(dbh->dbh, fmt, -1,
 			    &sth->sth_sth, NULL);
 			if (rc == SQLITE_BUSY)
-				sched_yield();
+				pscthr_yield();
 		} while (rc == SQLITE_BUSY);
 		psc_assert(rc == SQLITE_OK);
 
@@ -2463,7 +2463,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 		if (rc == SQLITE_ROW && cb)
 			cb(sth, arg);
 		if (rc != SQLITE_DONE)
-			sched_yield();
+			pscthr_yield();
 		if (rc == SQLITE_LOCKED)
 			sqlite3_reset(sth->sth_sth);
 	} while (rc == SQLITE_ROW || rc == SQLITE_BUSY ||

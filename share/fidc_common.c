@@ -267,7 +267,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 		/* if the item is being freed, ignore it */
 		if (tmp->fcmh_flags & FCMH_CAC_TOFREE) {
 			FCMH_ULOCK(tmp);
-			sched_yield();
+			pscthr_yield();
 			continue;
 		}
 

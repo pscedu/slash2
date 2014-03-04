@@ -120,7 +120,7 @@ bmpce_lookup_locked(struct bmapc_memb *b, struct bmpc_ioreq *r,
 			if (e->bmpce_flags & BMPCE_EIO) {
 				DEBUG_BMPCE(PLL_WARN, e, "skip an EIO page");
 				BMAP_ULOCK(b);
-				sched_yield();
+				pscthr_yield();
 				OPSTAT_INCR(SLC_OPST_BMPCE_EIO);
 				BMAP_LOCK(b);
 				continue;
