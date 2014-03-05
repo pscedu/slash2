@@ -1551,10 +1551,9 @@ slm_rmc_handle_listxattr(struct pscrpc_request *rq)
 	if (mp->rc)
 		PFL_GOTOERR(out, mp->rc);
 
-	if (mq->size) {
+	if (mq->size)
 		iov.iov_base = PSCALLOC(mq->size);
-		iov.iov_len = mq->size;
-	}
+
 	mp->size = 0;
 
 	/* even a list can create the xaddr directory */
@@ -1570,6 +1569,7 @@ slm_rmc_handle_listxattr(struct pscrpc_request *rq)
 	}
 
 	mp->size = outsize;
+	iov.iov_len = outsize;
 	if (mq->size)
 		mp->rc = slrpc_bulkserver(rq, BULK_PUT_SOURCE,
 		    SRMC_BULK_PORTAL, &iov, 1);
