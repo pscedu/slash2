@@ -93,7 +93,7 @@ enum {
 	SLI_OPST_ISSUE_REPLREAD_CB,
 	SLI_OPST_ISSUE_REPLREAD_CB_AIO,
 	SLI_OPST_ISSUE_REPLREAD_ERROR,
-	
+
 	SLI_OPST_KEY_EXPIRE,
 	SLI_OPST_MIN_SEQNO,
 
@@ -141,6 +141,12 @@ resm2rmii(struct sl_resm *resm)
 {
 	return (resm_get_pri(resm));
 }
+
+extern struct sli_rdwrstats {
+	int64_t			size;
+	struct psc_iostats	rd;
+	struct psc_iostats	wr;
+} sli_rdwrstats[];
 
 void		slictlthr_main(const char *);
 

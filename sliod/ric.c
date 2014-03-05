@@ -48,49 +48,33 @@
 #include "sliod.h"
 #include "slvr.h"
 
-extern struct psc_iostats sliod_wr_1b_stat;
-extern struct psc_iostats sliod_wr_1k_stat;
-extern struct psc_iostats sliod_wr_4k_stat;
-extern struct psc_iostats sliod_wr_16k_stat;
-extern struct psc_iostats sliod_wr_64k_stat;
-extern struct psc_iostats sliod_wr_128k_stat;
-extern struct psc_iostats sliod_wr_512k_stat;
-extern struct psc_iostats sliod_wr_1m_stat;
-extern struct psc_iostats sliod_rd_1m_stat;
-extern struct psc_iostats sliod_rd_1b_stat;
-extern struct psc_iostats sliod_rd_1k_stat;
-extern struct psc_iostats sliod_rd_4k_stat;
-extern struct psc_iostats sliod_rd_16k_stat;
-extern struct psc_iostats sliod_rd_64k_stat;
-extern struct psc_iostats sliod_rd_128k_stat;
-extern struct psc_iostats sliod_rd_512k_stat;
-extern struct psc_iostats sliod_rd_1m_stat;
+void	*sli_benchmark_buf;
+int	 sli_benchmark_bufsiz;
 
 #define NOTIFY_FSYNC_TIMEOUT	10		/* seconds */
 
 __static int
 sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 {
+	lnet_process_id_t *pp;
+	sl_bmapno_t bmapno, slvrno;
+	int rc, nslvrs = 0, i, needaio = 0;
 	uint32_t tsize, sblk, roff, len[RIC_MAX_SLVRS_PER_IO];
 	struct slvr *slvr[RIC_MAX_SLVRS_PER_IO];
 	struct iovec iovs[RIC_MAX_SLVRS_PER_IO];
 	struct sli_aiocb_reply *aiocbr = NULL;
+	struct sli_rdwrstats *rwst;
 	struct slash_fidgen *fgp;
 	struct bmapc_memb *bmap;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct fidc_membh *f;
-	sl_bmapno_t bmapno, slvrno;
-	int rc, nslvrs = 0, i, needaio = 0;
-	lnet_process_id_t *pp;
 	uint64_t seqno;
 	ssize_t rv;
 
 	OPSTAT_INCR(SLI_OPST_HANDLE_IO);
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	fgp = &mq->sbd.sbd_fg;
-	bmapno = mq->sbd.sbd_bmapno;
 
 	if (mq->size <= 0 || mq->size > LNET_MTU) {
 		psclog_errorx("invalid size %u, fid:"SLPRI_FG,
@@ -99,14 +83,32 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		return (mp->rc);
 	}
 
+	/* test/benchmarking mode */
+	if (mq->flags & SRM_IOF_BENCH) {
+		if (mq->size > sli_benchmark_bufsiz) {
+			sli_benchmark_buf = psc_realloc(
+			    sli_benchmark_buf, mq->size, 0);
+			sli_benchmark_bufsiz = mq->size;
+		}
+		iovs[0].iov_base = sli_benchmark_buf;
+		iovs[0].iov_len = mq->size;
+		mp->rc = slrpc_bulkserver(rq, rw == SL_WRITE ?
+		    BULK_GET_SINK : BULK_PUT_SOURCE, SRIC_BULK_PORTAL,
+		    iovs, 1);
+		return (mp->rc);
+	}
+
+	fgp = &mq->sbd.sbd_fg;
+	bmapno = mq->sbd.sbd_bmapno;
+
 	/*
 	 * Ensure that this request fits into the bmap's address range.
 	 *
 	 * XXX this check assumes that mq->offset has not been made
 	 *     bmap relative (i.e. it's filewise).
 	 */
-	if ((mq->offset + mq->size) > SLASH_BMAP_SIZE) {
-		psclog_errorx("req offset / size outside of the bmap's "
+	if (mq->offset + mq->size > SLASH_BMAP_SIZE) {
+		psclog_errorx("req offset/size outside of the bmap's "
 		    "address range off=%u len=%u",
 		    mq->offset, mq->size);
 		mp->rc = -ERANGE;
@@ -115,7 +117,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 	/*
 	 * A RBW (read-before-write) request from the client may have a
-	 *   write enabled bmapdesc which he uses to fault in his page.
+	 * write enabled bmapdesc which he uses to fault in his page.
 	 */
 	DYNARRAY_FOREACH(pp, i, &sl_lnet_prids) {
 		mp->rc = bmapdesc_access_check(&mq->sbd, rw,
@@ -133,7 +135,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		return (mp->rc);
 	}
 
-
 	seqno = bim_getcurseq();
 	if (mq->sbd.sbd_seq < seqno) {
 		/* Reject old bmapdesc. */
@@ -144,41 +145,11 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		return (mp->rc);
 	}
 
-	if (mq->size < 1024)
-		psc_iostats_intv_add((rw == SL_WRITE) ?
-		    &sliod_wr_1b_stat : &sliod_rd_1b_stat, 1);
+	for (rwst = sli_rdwrstats; (rwst + 1)->size; i++) {
+		if (mq->size < rwst->size)
+			break;
+	psc_iostats_intv_add(rw == SL_WRITE ? &rwst->wr : &rwst->rd, 1);
 
-	else if (mq->size < 4096)
-		psc_iostats_intv_add((rw == SL_WRITE) ?
-		    &sliod_wr_1k_stat : &sliod_rd_1k_stat, 1);
-
-	else if (mq->size < 16386)
-		psc_iostats_intv_add((rw == SL_WRITE) ?
-		    &sliod_wr_4k_stat : &sliod_rd_4k_stat, 1);
-
-	else if (mq->size < 65536)
-		psc_iostats_intv_add((rw == SL_WRITE) ?
-		    &sliod_wr_16k_stat : &sliod_rd_16k_stat, 1);
-
-	else if (mq->size < 131072)
-		psc_iostats_intv_add((rw == SL_WRITE) ?
-		    &sliod_wr_64k_stat : &sliod_rd_64k_stat, 1);
-
-	else if (mq->size < 524288)
-		psc_iostats_intv_add((rw == SL_WRITE) ?
-		    &sliod_wr_128k_stat : &sliod_rd_128k_stat, 1);
-
-	else if (mq->size < 1048576)
-		psc_iostats_intv_add((rw == SL_WRITE) ?
-		    &sliod_wr_512k_stat : &sliod_rd_512k_stat, 1);
-	else
-		psc_iostats_intv_add((rw == SL_WRITE) ?
-		    &sliod_wr_1m_stat : &sliod_rd_1m_stat, 1);
-
-	/*
-	 * Lookup inode and fetch bmap, don't forget to decref bmap on
-	 * failure.
-	 */
 	mp->rc = sli_fcmh_get(fgp, &f);
 	if (mp->rc)
 		return (mp->rc);
@@ -189,7 +160,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		f->fcmh_sstb.sst_utimgen = mq->utimgen;
 	FCMH_ULOCK(f);
 
-	/* ATM, not much to do here for write operations. */
 	rc = bmap_get(f, bmapno, rw, &bmap);
 	if (rc) {
 		mp->rc = rc;
@@ -197,7 +167,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		goto out;
 	}
 
-	DEBUG_FCMH(PLL_INFO, f, "bmapno=%u size=%u off=%u rw=%s "
+	DEBUG_FCMH(PLL_DIAG, f, "bmapno=%u size=%u off=%u rw=%s "
 	    "sbd_seq=%"PRId64, bmap->bcm_bmapno, mq->size, mq->offset,
 	    rw == SL_WRITE ? "wr" : "rd", mq->sbd.sbd_seq);
 
@@ -222,15 +192,26 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	roff = mq->offset - slvrno * SLASH_SLVR_SIZE;
 	for (i = 0, tsize = mq->size; i < nslvrs; i++, roff = 0) {
 
-		slvr[i] = slvr_lookup(slvrno + i, bmap_2_bii(bmap),
-		    rw);
+		slvr[i] = slvr_lookup(slvrno + i, bmap_2_bii(bmap), rw);
 
 		/* Fault in pages either for read or RBW. */
 		len[i] = MIN(tsize, SLASH_SLVR_SIZE - roff);
 		rv = slvr_io_prep(slvr[i], roff, len[i], rw);
 
-		DEBUG_SLVR(((rv && rv != -SLERR_AIOWAIT) ?
-		    PLL_WARN : PLL_INFO), slvr[i],
+#if 0
+		/* if last sliver, bound to EOF */
+		if (bmapno == f->fcmh_sstb.sst_size / SLASH_BMAP_SIZE &&
+		    slvrno == SLASH_SLVRS_PER_BMAP - 1) {
+			size_t adj;
+
+			adj = f->fcmh_sstb.sst_size % SLASH_SLVR_SIZE;
+			if (adj > len[i])
+				len[i] -= adj;
+		}
+#endif
+
+		DEBUG_SLVR(rv && rv != -SLERR_AIOWAIT ?
+		    PLL_WARN : PLL_DIAG, slvr[i],
 		    "post io_prep rw=%s rv=%zd",
 		    rw == SL_WRITE ? "wr" : "rd", rv);
 		if (rv) {
@@ -259,7 +240,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	psc_assert(!tsize);
 
 	if (needaio) {
-	
+
 		aiocbr = sli_aio_reply_setup(rq, mq->size, mq->offset,
 		    slvr, nslvrs, iovs, nslvrs, rw);
 

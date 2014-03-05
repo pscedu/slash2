@@ -35,14 +35,14 @@
 
 #include <gcrypt.h>
 
-#include "pfl/listcache.h"
-#include "pfl/pfl.h"
-#include "pfl/str.h"
 #include "pfl/alloc.h"
 #include "pfl/ctlsvr.h"
 #include "pfl/fault.h"
 #include "pfl/iostats.h"
+#include "pfl/listcache.h"
+#include "pfl/pfl.h"
 #include "pfl/random.h"
+#include "pfl/str.h"
 #include "pfl/thread.h"
 #include "pfl/timerthr.h"
 #include "pfl/usklndthr.h"
@@ -74,24 +74,16 @@ uint32_t		 sl_sys_upnonce;
 int			 allow_root_uid = 1;
 const char		*progname;
 
-/* XXX put these in an array */
-struct psc_iostats	sliod_wr_1b_stat;
-struct psc_iostats	sliod_wr_1k_stat;
-struct psc_iostats	sliod_wr_4k_stat;
-struct psc_iostats	sliod_wr_16k_stat;
-struct psc_iostats	sliod_wr_64k_stat;
-struct psc_iostats	sliod_wr_128k_stat;
-struct psc_iostats	sliod_wr_512k_stat;
-struct psc_iostats	sliod_wr_1m_stat;
-
-struct psc_iostats	sliod_rd_1b_stat;
-struct psc_iostats	sliod_rd_1k_stat;
-struct psc_iostats	sliod_rd_4k_stat;
-struct psc_iostats	sliod_rd_16k_stat;
-struct psc_iostats	sliod_rd_64k_stat;
-struct psc_iostats	sliod_rd_128k_stat;
-struct psc_iostats	sliod_rd_512k_stat;
-struct psc_iostats	sliod_rd_1m_stat;
+struct sli_rdwrstats sli_rdwrstats[] = {
+	{        1024, { 0 }, { 0 } },
+	{    4 * 1024, { 0 }, { 0 } },
+	{   16 * 1024, { 0 }, { 0 } },
+	{   64 * 1024, { 0 }, { 0 } },
+	{  128 * 1024, { 0 }, { 0 } },
+	{  512 * 1024, { 0 }, { 0 } },
+	{ 1024 * 1024, { 0 }, { 0 } },
+	{	    0, { 0 }, { 0 } }
+};
 
 int
 psc_usklndthr_get_type(const char *namefmt)
@@ -210,7 +202,7 @@ main(int argc, char *argv[])
 {
 	const char *cfn, *sfn, *p, *prefmds;
 	sigset_t signal_set;
-	int rc, c;
+	int sz, nsz, i, rc, c;
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -283,22 +275,11 @@ main(int argc, char *argv[])
 	sl_nbrqset = pscrpc_nbreqset_init(NULL, NULL);
 	slvr_cache_init();
 
-	psc_iostats_init(&sliod_wr_1b_stat,   "wr: < 1k");
-	psc_iostats_init(&sliod_rd_1b_stat,   "rd: < 1k");
-	psc_iostats_init(&sliod_wr_1k_stat,   "wr: 1k-4k");
-	psc_iostats_init(&sliod_rd_1k_stat,   "rd: 1k-4k");
-	psc_iostats_init(&sliod_wr_4k_stat,   "wr: 4k-16k");
-	psc_iostats_init(&sliod_rd_4k_stat,   "rd: 4k-16k");
-	psc_iostats_init(&sliod_wr_16k_stat,  "wr: 16k-64k");
-	psc_iostats_init(&sliod_rd_16k_stat,  "rd: 16k-64k");
-	psc_iostats_init(&sliod_wr_64k_stat,  "wr: 64k-128k");
-	psc_iostats_init(&sliod_rd_64k_stat,  "rd: 64k-128k");
-	psc_iostats_init(&sliod_wr_128k_stat, "wr: 128k-512k");
-	psc_iostats_init(&sliod_rd_128k_stat, "rd: 128k-512k");
-	psc_iostats_init(&sliod_wr_512k_stat, "wr: 512k-1m");
-	psc_iostats_init(&sliod_rd_512k_stat, "rd: 512k-1m");
-	psc_iostats_init(&sliod_wr_1m_stat,   "wr: >= 1m");
-	psc_iostats_init(&sliod_rd_1m_stat,   "rd: >= 1m");
+	for (sz = i = 0; sli_rdwrstats[i].size; i++, sz = nsz) {
+		nsz = sli_rdwrstats[i].size / 1024;
+		psc_iostats_init(&sli_rdwrstats[i].rd, "rd:%dk-%dk", sz, nsz);
+		psc_iostats_init(&sli_rdwrstats[i].wr, "wr:%dk-%dk", sz, nsz);
+	}
 
 	psc_poolmaster_init(&bmap_rls_poolmaster, struct bmap_iod_rls,
 	    bir_lentry, PPMF_AUTO, 64, 64, 0, NULL, NULL, NULL,
