@@ -57,8 +57,8 @@ struct msctlmsg_replrq {
 	char			mrq_iosv[SL_MAX_REPLICAS][RES_NAME_MAX];
 	uint32_t		mrq_nios;
 	sl_bmapno_t		mrq_bmapno;
-	int32_t			mrq_sys_prio;
-	int32_t			mrq_usr_prio;
+	 int32_t		mrq_sys_prio;
+	 int32_t		mrq_usr_prio;
 };
 
 struct msctlmsg_fattr {
@@ -79,15 +79,27 @@ struct msctlmsg_bmapreplpol {
 struct msctlmsg_biorq {
 	slfid_t			msr_fid;
 	sl_bmapno_t		msr_bno;
-	int32_t			msr_ref;
+	 int32_t		msr_ref;
 	uint32_t		msr_off;
 	uint32_t		msr_len;
 	uint32_t		msr_flags;
 	uint32_t		msr_retries;
 	char			msr_last_sliod[RES_NAME_MAX];
 	struct pfl_timespec	msr_expire;
-	int32_t			msr_npages;
-	int32_t			msr_nrq;
+	 int32_t		msr_npages;
+	 int32_t		msr_nrq;
+};
+
+struct msctlmsg_bmpce {
+	slfid_t			mpce_fid;
+	sl_bmapno_t		mpce_bno;
+	 int32_t		mpce_ref;
+	uint32_t		mpce_flags;
+	uint32_t		mpce_off;
+//	void			*bmpce_owner;
+	struct pfl_timespec	mpce_laccess;
+	 int32_t		mpce_nwaiters;
+	 int32_t		mpce_npndgaios;
 };
 
 /* mount_slash message types */
@@ -103,6 +115,7 @@ struct msctlmsg_biorq {
 #define MSCMT_SET_FATTR		(NPCMT +  9)
 #define MSCMT_GETBMAP		(NPCMT + 10)
 #define MSCMT_GETBIORQ		(NPCMT + 11)
+#define MSCMT_GETBMPCE		(NPCMT + 12)
 
 #define SLASH_FSID		0x51a54
 

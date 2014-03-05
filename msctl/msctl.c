@@ -260,6 +260,12 @@ packshow_biorqs(__unusedx char *spec)
 }
 
 void
+packshow_bmpces(__unusedx char *spec)
+{
+	psc_ctlmsg_push(MSCMT_GETBMPCE, sizeof(struct msctlmsg_bmpce));
+}
+
+void
 parse_replrq(int opcode, const char *fn, const char *oreplrqspec,
     int (*packf)(const char *, const struct pfl_stat *, int, int, void *))
 {
@@ -854,6 +860,37 @@ ms_biorq_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 }
 
 void
+ms_bmpce_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
+{
+	printf("%-16s %6s %3s %9s "
+	    "%7s %4s %4s %10s\n",
+	    "fid", "bno", "ref", "off",
+	    "flags", "nwtr", "naio", "lastacc");
+}
+
+void
+ms_bmpce_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
+{
+	const struct msctlmsg_bmpce *mpce = m;
+
+	printf("%016"SLPRIxFID" %6d %3d %9d "
+	    "%c%c%c%c%c%c%c "
+	    "%4d %4d "
+	    "%10"PRId64"\n",
+	    mpce->mpce_fid, mpce->mpce_bno, mpce->mpce_ref,
+	    mpce->mpce_off,
+	    mpce->mpce_flags & BMPCE_DATARDY	? 'd' : '-',
+	    mpce->mpce_flags & BMPCE_LRU	? 'l' : '-',
+	    mpce->mpce_flags & BMPCE_TOFREE	? 'T' : '-',
+	    mpce->mpce_flags & BMPCE_EIO	? 'E' : '-',
+	    mpce->mpce_flags & BMPCE_READA	? 'a' : '-',
+	    mpce->mpce_flags & BMPCE_AIOWAIT	? 'w' : '-',
+	    mpce->mpce_flags & BMPCE_DISCARD	? 'D' : '-',
+	    mpce->mpce_nwaiters, mpce->mpce_npndgaios,
+	    mpce->mpce_laccess.tv_sec);
+}
+
+void
 ms_ctlmsg_error_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     const void *m)
 {
@@ -890,10 +927,11 @@ ms_ctlmsg_error_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 	PSC_CTLSHOW_DEFS,
+	{ "biorqs",		packshow_biorqs },
+	{ "bmaps",		packshow_bmaps },
+	{ "bmpces",		packshow_bmpces },
 	{ "connections",	packshow_conns },
 	{ "fcmhs",		packshow_fcmhs },
-	{ "bmaps",		packshow_bmaps },
-	{ "requests",		packshow_biorqs },
 
 	/* aliases */
 	{ "conns",		packshow_conns },
@@ -917,6 +955,7 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 /* SET_FATTR		*/ , { NULL,		NULL,		0,				NULL }
 /* GETBMAP		*/ , { sl_bmap_prhdr,	sl_bmap_prdat,	sizeof(struct slctlmsg_bmap),	NULL }
 /* GETBIORQ		*/ , { ms_biorq_prhdr,	ms_biorq_prdat,	sizeof(struct msctlmsg_biorq),	NULL }
+/* GETBMPCE		*/ , { ms_bmpce_prhdr,	ms_bmpce_prdat,	sizeof(struct msctlmsg_bmpce),	NULL }
 };
 
 psc_ctl_prthr_t psc_ctl_prthrs[] = {
