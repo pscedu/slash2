@@ -373,10 +373,11 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mds_reserve_slot(1);
 	mp->rc = mdsio_link(vfsid, fcmh_2_mfid(c),
-	    fcmh_2_mfid(p), mq->name, &rootcreds, &mp->cattr,
+	    fcmh_2_mfid(p), mq->name, &rootcreds, NULL,
 	    mdslog_namespace);
 	mds_unreserve_slot(1);
 
+	mdsio_fcmh_refreshattr(c, &mp->cattr);
 	mdsio_fcmh_refreshattr(p, &mp->pattr);
 
  out:
