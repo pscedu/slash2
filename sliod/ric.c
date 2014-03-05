@@ -49,7 +49,7 @@
 #include "slvr.h"
 
 void	*sli_benchmark_buf;
-int	 sli_benchmark_bufsiz;
+uint32_t sli_benchmark_bufsiz;
 
 #define NOTIFY_FSYNC_TIMEOUT	10		/* seconds */
 
@@ -76,6 +76,9 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
+	fgp = &mq->sbd.sbd_fg;
+	bmapno = mq->sbd.sbd_bmapno;
+
 	if (mq->size <= 0 || mq->size > LNET_MTU) {
 		psclog_errorx("invalid size %u, fid:"SLPRI_FG,
 		    mq->size, SLPRI_FG_ARGS(fgp));
@@ -97,9 +100,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		    iovs, 1);
 		return (mp->rc);
 	}
-
-	fgp = &mq->sbd.sbd_fg;
-	bmapno = mq->sbd.sbd_bmapno;
 
 	/*
 	 * Ensure that this request fits into the bmap's address range.
@@ -145,7 +145,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		return (mp->rc);
 	}
 
-	for (rwst = sli_rdwrstats; (rwst + 1)->size; i++) {
+	for (rwst = sli_rdwrstats; (rwst + 1)->size; i++) 
 		if (mq->size < rwst->size)
 			break;
 	psc_iostats_intv_add(rw == SL_WRITE ? &rwst->wr : &rwst->rd, 1);

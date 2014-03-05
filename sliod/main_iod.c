@@ -74,16 +74,7 @@ uint32_t		 sl_sys_upnonce;
 int			 allow_root_uid = 1;
 const char		*progname;
 
-struct sli_rdwrstats sli_rdwrstats[] = {
-	{        1024, { 0 }, { 0 } },
-	{    4 * 1024, { 0 }, { 0 } },
-	{   16 * 1024, { 0 }, { 0 } },
-	{   64 * 1024, { 0 }, { 0 } },
-	{  128 * 1024, { 0 }, { 0 } },
-	{  512 * 1024, { 0 }, { 0 } },
-	{ 1024 * 1024, { 0 }, { 0 } },
-	{	    0, { 0 }, { 0 } }
-};
+struct sli_rdwrstats	 sli_rdwrstats[8];
 
 int
 psc_usklndthr_get_type(const char *namefmt)
@@ -274,6 +265,15 @@ main(int argc, char *argv[])
 	bim_init();
 	sl_nbrqset = pscrpc_nbreqset_init(NULL, NULL);
 	slvr_cache_init();
+
+	sli_rdwrstats[0].size =        1024;
+	sli_rdwrstats[1].size =    4 * 1024;
+	sli_rdwrstats[2].size =   16 * 1024;
+	sli_rdwrstats[3].size =   64 * 1024;
+	sli_rdwrstats[4].size =  128 * 1024;
+	sli_rdwrstats[5].size =  512 * 1024;
+	sli_rdwrstats[6].size = 1024 * 1024;
+	sli_rdwrstats[7].size = 0;
 
 	for (sz = i = 0; sli_rdwrstats[i].size; i++, sz = nsz) {
 		nsz = sli_rdwrstats[i].size / 1024;
