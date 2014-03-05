@@ -32,15 +32,15 @@
 
 #include <time.h>
 
-#include "pfl/time.h"
+#include "pfl/atomic.h"
 #include "pfl/list.h"
 #include "pfl/listcache.h"
+#include "pfl/lock.h"
 #include "pfl/lockedlist.h"
+#include "pfl/pool.h"
+#include "pfl/time.h"
 #include "pfl/tree.h"
 #include "pfl/vbitmap.h"
-#include "pfl/atomic.h"
-#include "pfl/lock.h"
-#include "pfl/pool.h"
 #include "pfl/waitq.h"
 
 #include "bmap.h"
@@ -59,8 +59,6 @@ struct msl_fsrqinfo;
 /* plus one because the offset in the first request might not be page aligned */
 #define BMPC_COALESCE_MAX_IOV	(BMPC_MAXBUFSRPC + 1)
 
-struct timespec			bmapFlushDefMaxAge;
-
 struct bmap_pagecache_entry {
 	psc_atomic32_t		 bmpce_ref;	/* biorq and readahead refs	*/
 	uint32_t		 bmpce_flags;	/* BMPCE_* flag bits		*/
@@ -76,6 +74,7 @@ struct bmap_pagecache_entry {
 	struct psc_listentry	 bmpce_lentry;	/* chain on bmap LRU		*/
 };
 
+/* bmpce_flags */
 #define BMPCE_DATARDY		(1 <<  0)
 #define BMPCE_LRU		(1 <<  1)
 #define BMPCE_TOFREE		(1 <<  2)
@@ -320,6 +319,8 @@ void	 bwc_release(struct bmpc_write_coalescer *);
 extern struct psc_poolmgr	*bmpce_pool;
 extern struct psc_poolmgr	*bwc_pool;
 extern struct psc_listcache	 bmpcLru;
+
+extern struct timespec		bmapFlushDefMaxAge;
 
 static __inline void
 bmpc_lru_del(struct bmap_pagecache *bmpc)
