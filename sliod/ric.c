@@ -145,7 +145,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		return (mp->rc);
 	}
 
-	for (rwst = sli_rdwrstats; (rwst + 1)->size; i++) 
+	for (rwst = sli_rdwrstats; (rwst + 1)->size; rwst++) 
 		if (mq->size < rwst->size)
 			break;
 	psc_iostats_intv_add(rw == SL_WRITE ? &rwst->wr : &rwst->rd, 1);
