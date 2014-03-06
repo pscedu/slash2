@@ -188,6 +188,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct msctl_replstq);
 	PRTYPE(struct msctlmsg_biorq);
 	PRTYPE(struct msctlmsg_bmapreplpol);
+	PRTYPE(struct msctlmsg_bmpce);
 	PRTYPE(struct msctlmsg_fattr);
 	PRTYPE(struct msctlmsg_replrq);
 	PRTYPE(struct msctlmsg_replst);
@@ -425,6 +426,7 @@ main(int argc, char *argv[])
 	PRVAL(MSCMT_DELREPLRQ);
 	PRVAL(MSCMT_GETBIORQ);
 	PRVAL(MSCMT_GETBMAP);
+	PRVAL(MSCMT_GETBMPCE);
 	PRVAL(MSCMT_GETCONNS);
 	PRVAL(MSCMT_GETFCMH);
 	PRVAL(MSCMT_GETREPLST);
