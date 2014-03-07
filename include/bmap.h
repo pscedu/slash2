@@ -131,8 +131,7 @@ struct bmap {
 #define BMAP_MDCHNG		(1 <<  9)	/* op mode changing (e.g. READ -> WRITE) */
 #define BMAP_WAITERS		(1 << 10)	/* has bcm_fcmh waiters */
 #define BMAP_BUSY		(1 << 11)	/* temporary processing lock */
-#define BMAP_NEW		(1 << 12)	/* just created */
-#define _BMAP_FLSHFT		(1 << 13)
+#define _BMAP_FLSHFT		(1 << 12)
 
 #define bmap_2_fid(b)		fcmh_2_fid((b)->bcm_fcmh)
 
@@ -148,7 +147,7 @@ struct bmap {
 #define BMAP_TRYLOCK(b)		trylock(&(b)->bcm_lock)
 
 #define _DEBUG_BMAP_FMT		"bmap@%p bno:%u flg:%#x:"		\
-				"%s%s%s%s%s%s%s%s%s%s%s%s%s%s "		\
+				"%s%s%s%s%s%s%s%s%s%s%s%s%s "		\
 				"fid:"SLPRI_FID" opcnt=%d : "
 
 #define _DEBUG_BMAP_FMTARGS(b)						\
@@ -165,7 +164,6 @@ struct bmap {
 	(b)->bcm_flags & BMAP_MDCHNG	? "G" : "",			\
 	(b)->bcm_flags & BMAP_WAITERS	? "w" : "",			\
 	(b)->bcm_flags & BMAP_BUSY	? "B" : "",			\
-	(b)->bcm_flags & BMAP_NEW	? "N" : "",			\
 	(b)->bcm_flags & ~(_BMAP_FLSHFT - 1) ? "+" : "",		\
 	(b)->bcm_fcmh ? fcmh_2_fid((b)->bcm_fcmh) : FID_ANY,		\
 	psc_atomic32_read(&(b)->bcm_opcnt)

@@ -82,7 +82,6 @@ mds_bmap_initnew(struct bmap *b)
 
 	BHREPL_POLICY_SET(b, pol);
 
-	b->bcm_flags |= BMAP_NEW;
 	bmi->bmi_sys_prio = -1;
 	bmi->bmi_usr_prio = -1;
 }
@@ -267,7 +266,7 @@ mds_bmap_write(struct bmap *b, void *logf, void *logarg)
 {
 	struct fidc_membh *f;
 	struct iovec iovs[2];
-	int rc, new, vfsid;
+	int rc, vfsid;
 	uint64_t crc;
 	size_t nb;
 	struct bmap_mds_info *bmi = bmap_2_bmi(b);
@@ -306,14 +305,6 @@ mds_bmap_write(struct bmap *b, void *logf, void *logarg)
 	if (BMAPOD_HASRDLOCK(bmap_2_bmi(b)))
 		BMAPOD_READ_DONE(b, 0);
 
-	BMAP_LOCK(b);
-//	psc_assert(b->bcm_flags & BMAP_BUSY);
-	new = b->bcm_flags & BMAP_NEW;
-	b->bcm_flags &= ~BMAP_NEW;
-	BMAP_ULOCK(b);
-
-	if (new)
-		mdsio_fcmh_refreshattr(b->bcm_fcmh, NULL);
 	return (rc);
 }
 

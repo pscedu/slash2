@@ -183,7 +183,6 @@ sl_bmap_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    scb->scb_flags & BMAP_MDCHNG	? 'G' : '-',
 	    scb->scb_flags & BMAP_WAITERS	? 'w' : '-',
 	    scb->scb_flags & BMAP_BUSY		? 'B' : '-',
-	    scb->scb_flags & BMAP_NEW		? 'N' : '-',
 	    scb->scb_opcnt, scb->scb_resname, scb->scb_seq);
 }
 
