@@ -89,7 +89,7 @@ struct mdsio_ops {
 	int	(*mio_access)(int, mdsio_fid_t, int, const struct slash_creds *);
 	int	(*mio_fsync)(int, const struct slash_creds *, int, void *);
 	int	(*mio_getattr)(int, mdsio_fid_t, void *, const struct slash_creds *, struct srt_stat *);
-	int	(*mio_link)(int, mdsio_fid_t, mdsio_fid_t, const char *, const struct slash_creds *, struct srt_stat *, sl_log_update_t);
+	int	(*mio_link)(int, mdsio_fid_t, mdsio_fid_t, const char *, const struct slash_creds *, sl_log_update_t);
 	int	(*mio_lookup)(int, mdsio_fid_t, const char *, mdsio_fid_t *, const struct slash_creds *, struct srt_stat *);
 	int	(*mio_lookup_slfid)(int, slfid_t, const struct slash_creds *, struct srt_stat *, mdsio_fid_t *);
 	int	(*mio_mkdir)(int, mdsio_fid_t, const char *, const struct srt_stat *, int, int, struct srt_stat *, mdsio_fid_t *,
