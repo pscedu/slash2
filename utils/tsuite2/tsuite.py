@@ -317,7 +317,7 @@ class TSuite(object):
     socks = 0
     total_sl2object = len(sl2objects)
 
-    log.debug("Waiting for all slashd socks to appear.")
+    log.debug("Waiting for all socks to appear.")
 
     while socks < present_socks + total_sl2object:
       socks = len(glob.glob(self.build_dirs["ctl"] + "/{}.*.sock".format(res_bin_type)))
