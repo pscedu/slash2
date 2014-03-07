@@ -73,20 +73,18 @@ psc_spinlock_t			bmapFlushLock = SPINLOCK_INIT;
 int				bmapFlushTimeoFlags = 0;
 
 __static int
-bmap_flush_biorq_expired(const struct bmpc_ioreq *a, struct timespec *t)
+bmap_flush_biorq_expired(const struct bmpc_ioreq *a)
 {
 	struct timespec ts;
 
-	PFL_GETTIMESPEC(&ts);
-
-	if ((a->biorq_flags & BIORQ_FORCE_EXPIRE) ||
-	    (a->biorq_expire.tv_sec < ts.tv_sec   ||
-	     (a->biorq_expire.tv_sec == ts.tv_sec &&
-	      a->biorq_expire.tv_nsec <= ts.tv_nsec)))
+	if (a->biorq_flags & BIORQ_FORCE_EXPIRE)
 		return (1);
 
-	if (t)
-		*t = a->biorq_expire;
+	PFL_GETTIMESPEC(&ts);
+	if ((a->biorq_expire.tv_sec < ts.tv_sec ||
+	    (a->biorq_expire.tv_sec == ts.tv_sec &&
+	     a->biorq_expire.tv_nsec <= ts.tv_nsec)))
+		return (1);
 
 	return (0);
 }
@@ -634,7 +632,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 		 * out.
 		 */
 		if (!expired)
-			expired = bmap_flush_biorq_expired(t, NULL);
+			expired = bmap_flush_biorq_expired(t);
 
 		DEBUG_BIORQ(PLL_DIAG, t, "biorq #%d (expired=%d)", idx,
 		    expired);
