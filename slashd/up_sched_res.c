@@ -121,19 +121,24 @@ slm_batch_repl_cb(struct batchrq *br, int ecode)
 {
 	sl_bmapgen_t bgen;
 	int rc, idx, tract[NBREPLST], retifset[NBREPLST];
+	struct srt_replwk_repent *bp = br->br_reply;
 	struct sl_resm *dst_resm, *src_resm;
 	struct slm_batchscratch_repl *bsr;
 	struct srt_replwk_reqent *bq;
-	struct srt_replwk_repent *bp;
 	struct fidc_membh *f;
 	struct bmap *b;
+
+	if (bp && bp->rc == 0)
+		OPSTAT_INCR(SLM_OPST_REPL_SCHEDWK);
+	else
+		OPSTAT_INCR(SLM_OPST_REPL_SCHEDWK_FAIL);
 
 	dst_resm = res_getmemb(br->br_res);
 
 	brepls_init(tract, -1);
 	brepls_init(retifset, 0);
 
-	for (bq = br->br_buf, bp = br->br_reply, idx = 0;
+	for (bq = br->br_buf, idx = 0;
 	    (char *)bq < (char *)br->br_buf + br->br_len;
 	    bq++, bp ? bp++ : 0, idx++) {
 		b = NULL;
