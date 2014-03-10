@@ -56,7 +56,9 @@ struct bmap_cli_info {
 #define BMAP_CLI_REASSIGNREQ	(_BMAP_FLSHFT << 1)
 #define BMAP_CLI_LEASEFAILED	(_BMAP_FLSHFT << 2)	/* lease request has failed */
 #define BMAP_CLI_LEASEEXPIRED	(_BMAP_FLSHFT << 3)	/* lease has expired, new one is needed */
+#define BMAP_CLI_BENCH		(_BMAP_FLSHFT << 4)
 
+/* XXX change horribly named flags */
 #define BMAP_CLI_MAX_LEASE	60 /* seconds */
 #define BMAP_CLI_EXTREQSECS	20
 #define BMAP_CLI_TIMEO_INC	1
@@ -79,11 +81,11 @@ int	 msl_bmap_lease_secs_remaining(struct bmap *);
 int	 msl_bmap_lease_tryext(struct bmap *, int);
 void	 msl_bmap_lease_tryreassign(struct bmap *);
 int	 msl_bmap_lease_secs_remaining(struct bmap *);
+int	 msl_bmap_release_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 
 void	 bmap_biorq_expire(struct bmap *);
 
 void	 msbmaprlsthr_main(struct psc_thread *);
-int	 msl_bmap_release_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 
 extern struct timespec msl_bmap_max_lease;
 extern struct timespec msl_bmap_timeo_inc;

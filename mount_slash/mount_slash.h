@@ -48,6 +48,7 @@ struct dircache_page;
 /* mount_slash thread types */
 enum {
 	MSTHRT_ATTRFLSH,		/* attr write data flush thread */
+	MSTHRT_BENCH,			/* I/O benchmarking thread */
 	MSTHRT_BMAPFLSH,		/* bmap write data flush thread */
 	MSTHRT_BMAPFLSHRLS,		/* bmap lease releaser */
 	MSTHRT_BMAPFLSHRPC,		/* async buffer thread for RPC reaping */

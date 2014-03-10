@@ -31,18 +31,18 @@
 #include <stdlib.h>
 
 #include "pfl/cdefs.h"
-#include "pfl/fcntl.h"
+#include "pfl/completion.h"
+#include "pfl/ctlsvr.h"
 #include "pfl/dynarray.h"
+#include "pfl/fault.h"
+#include "pfl/fcntl.h"
 #include "pfl/listcache.h"
-#include "pfl/tree.h"
-#include "pfl/treeutil.h"
+#include "pfl/log.h"
 #include "pfl/rpc.h"
 #include "pfl/rpclog.h"
 #include "pfl/rsx.h"
-#include "pfl/completion.h"
-#include "pfl/ctlsvr.h"
-#include "pfl/fault.h"
-#include "pfl/log.h"
+#include "pfl/tree.h"
+#include "pfl/treeutil.h"
 
 #include "bmap.h"
 #include "bmap_cli.h"
@@ -212,10 +212,10 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
     struct slashrpc_cservice *csvc, struct bmapc_memb *b)
 {
 	struct pscrpc_request *rq = NULL;
-	struct sl_resm *m;
 	struct resm_cli_info *rmci;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
+	struct sl_resm *m;
 	int rc;
 
 	m = libsl_ios2resm(bmap_2_ios(b));
@@ -234,9 +234,11 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	if (rc)
 		goto error;
 
+	// XXX why 2 ?
 	rq->rq_timeout = msl_bmap_lease_secs_remaining(b) / 2;
 
-	(void)psc_fault_here_rc(SLC_FAULT_REQUEST_TIMEOUT, &rq->rq_timeout, -1);
+	(void)psc_fault_here_rc(SLC_FAULT_REQUEST_TIMEOUT,
+	    &rq->rq_timeout, -1);
 
 	if (rq->rq_timeout < 0) {
 		DEBUG_REQ(PLL_ERROR, rq, "off=%u sz=%u op=%u",
@@ -252,6 +254,9 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	mq->offset = bwc->bwc_soff;
 	mq->size = bwc->bwc_size;
 	mq->op = SRMIOP_WR;
+
+	if (b->bcm_flags & BMAP_CLI_BENCH)
+		mq->flags |= SRM_IOF_BENCH;
 
 	DEBUG_REQ(PLL_INFO, rq, "off=%u sz=%u",
 	    mq->offset, mq->size);
@@ -989,6 +994,22 @@ msbmaprathr_main(struct psc_thread *thr)
 }
 
 void
+msbenchthr_main(struct psc_thread *thr)
+{
+	struct bmap_pagecache_entry *e;
+	struct bmpc_ioreq *r;
+
+	pscthr_setpause(thr, 1);
+	while (pscthr_run(thr)) {
+#if 0
+		e = psc_pool_get(bmpce_pool);
+		r = bmpc_biorq_new(q, b, buf, rqnum, off, len, op); {
+		msl_pages_schedflush(r);
+#endif
+	}
+}
+
+void
 msbmapflushthr_spawn(void)
 {
 	struct msbmfl_thread *mbft;
@@ -1038,7 +1059,10 @@ msbmapflushthr_spawn(void)
 	    thr->pscthr_name);
 	pscthr_setready(thr);
 
-	for (i=0; i < NUM_READAHEAD_THREADS; i++) {
+	pscthr_init(MSTHRT_BENCH, 0, msbenchthr_main, NULL, 0,
+	    "msbenchthr");
+
+	for (i = 0; i < NUM_READAHEAD_THREADS; i++) {
 		thr = pscthr_init(MSTHRT_BMAPREADAHEAD, 0,
 		    msbmaprathr_main, NULL,
 		    sizeof(struct msbmflra_thread), "msbrathr%d", i);
