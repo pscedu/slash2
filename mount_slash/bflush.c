@@ -947,7 +947,7 @@ msbmaprathr_main(struct psc_thread *thr)
 {
 #define MAX_BMPCES_PER_RPC 32
 	struct bmap_pagecache_entry *bmpces[MAX_BMPCES_PER_RPC], *tmp, *bmpce;
-	struct msl_fhent *mfh;
+	struct msl_fhent *mfh = NULL;
 	int nbmpces;
 
 	while (pscthr_run(thr)) {
@@ -984,8 +984,8 @@ msbmaprathr_main(struct psc_thread *thr)
 			if (mfh->mfh_flags & MSL_FHENT_CLOSING)
 				psc_waitq_wakeall(&mfh->mfh_fcmh->fcmh_waitq);
 			mfh_decref(mfh);
+			mfh = NULL;
 		} else {
-			lc_addtail(&bmapReadAheadQ, mfh);
 			freelock(&mfh->mfh_lock);
 		}
 

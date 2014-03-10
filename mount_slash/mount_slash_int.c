@@ -1460,7 +1460,6 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	if (rc)
 		goto error;
 
-	PSCFREE(iovs);
 
 	mq->offset = off;
 	mq->size = npages * BMPC_BUFSZ;
@@ -1505,6 +1504,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	DEBUG_BIORQ(PLL_DIAG, r, "rpc launch");
 	BIORQ_ULOCK(r);
 
+	PSCFREE(iovs);
 	return (0);
 
  error:
