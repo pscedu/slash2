@@ -852,6 +852,17 @@ struct reptbl_lookup {
 	struct sl_resource	*r;
 };
 
+/**
+ * Compare entries in a file's replica table for ordering purposes:
+ * - replicas on any member of our preferred IOS(es).
+ * - replicas on non-archival resources.
+ * - replicas on non-degraded resources.
+ * - anything else.
+ * XXX this logic is probably backwards and -1 should be returned
+ * for the first resource that meets *all* of these criteria, not
+ * bailing after the first one (e.g. a degraded resource is probably
+ * still better than archival).
+ */
 int
 slc_reptbl_cmp(const void *a, const void *b)
 {
