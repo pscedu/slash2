@@ -12,6 +12,7 @@ usage()
 	exit 1
 }
 
+bkav=("$@")
 while getopts "gP:sv" c; do
 	case $c in
 	g) mygdb='mygdb'	;;
@@ -45,4 +46,4 @@ $mystrace $mygdb $prog -D $base/var
 postproc $?
 
 sleep 10
-exec $0 "$@"
+exec $0 "${bkav[@]}"
