@@ -999,14 +999,14 @@ msbenchthr_main(struct psc_thread *thr)
 	struct bmap_pagecache_entry *e;
 	struct bmpc_ioreq *r;
 
+#if 0
 	pscthr_setpause(thr, 1);
 	while (pscthr_run(thr)) {
-#if 0
 		e = psc_pool_get(bmpce_pool);
 		r = bmpc_biorq_new(q, b, buf, rqnum, off, len, op); {
 		msl_pages_schedflush(r);
-#endif
 	}
+#endif
 }
 
 void
