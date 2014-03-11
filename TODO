@@ -473,6 +473,16 @@ reimport
 - EIO is not being delivered to app when IOS is down
 - slash2root /var should be root 0700 so users can't see authbuf.key size
 - convert msbrathr to wkthr
+- mds_inode_update_interrupted is slowing CREATE
+- make READDIR as fast as possible and return the prefetch attrs OOB
+
+- we are getting slammed in mount_slash:
+2421912  21.3297  slc_reptbl_cmp
+823267    7.2505  psc_dynarray_getpos
+618705    5.4489  _psc_hashbkt_search
+481901    4.2441  psc_atomic32_read
+287557    2.5325  pfl_tls_get
+
 
 - pahole(1)
 - port slash2 openstack
