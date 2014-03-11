@@ -36,7 +36,8 @@ SUBDIRS+=	slkeymgt
 SUBDIRS+=	tests
 SUBDIRS+=	utils
 
-ifdef SLCFG
 install-hook:
-	cp -f ${SLCFG} ${SLCFG_DST}
-endif
+	@IFS=';' V="${SLCFGV}"; for i in $$V; do			\
+		IFS=':' set -- $$i;					\
+		${ECHORUN} cp -f $$1 $$2;				\
+	done
