@@ -438,7 +438,7 @@ fidc_init(int privsiz, int nobj)
 	    fcmh_lentry, "fcmhidle");
 
 	psc_hashtbl_init(&fidcHtable, 0, struct fidc_membh,
-	    fcmh_fg, fcmh_hentry, nobj * 2, NULL, "fidc");
+	    fcmh_fg, fcmh_hentry, nobj, NULL, "fidc");
 }
 
 ssize_t
