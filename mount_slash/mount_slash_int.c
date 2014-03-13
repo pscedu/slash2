@@ -1650,6 +1650,9 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 	/*
 	 * Wait for all read activities (include RBW) associated with the
 	 * bioreq to complete.
+	 *
+	 * This set wait makes sure that pages belong to the current request
+	 * are faulted in.
 	 */
 	if (r->biorq_rqset) {
 		/*
