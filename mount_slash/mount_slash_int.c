@@ -646,7 +646,10 @@ msl_req_aio_add(struct pscrpc_request *rq,
 			e = bmpces[i];
 			if (!e)
 				break;
-			BMPCE_SETATTR(e, BMPCE_AIOWAIT, "set aio");
+			BMPCE_LOCK(e);
+			e->bmpce_flags |= BMPCE_AIOWAIT;
+			DEBUG_BMPCE(PLL_INFO, e, "set aio");
+			BMPCE_ULOCK(e);
 		}
 
 	} else if (cbf == msl_read_cb) {
@@ -657,7 +660,8 @@ msl_req_aio_add(struct pscrpc_request *rq,
 			BMPCE_LOCK(e);
 			if (biorq_is_my_bmpce(r, e)) {
 				naio++;
-				BMPCE_SETATTR(e, BMPCE_AIOWAIT,
+				e->bmpce_flags |= BMPCE_AIOWAIT;
+				DEBUG_BMPCE(PLL_INFO, e, 
 				    "set aio, r=%p", r);
 			}
 			BMPCE_ULOCK(e);
