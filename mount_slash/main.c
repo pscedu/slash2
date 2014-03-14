@@ -1830,7 +1830,7 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 	struct msl_fhent *mfh = data;
 	struct fcmh_cli_info *fci;
 	struct fidc_membh *c;
-	int rc, flush_attrs = 0;
+	int rc = 0, flush_attrs = 0;
 
 	msfsthr_ensure();
 	OPSTAT_INCR(SLC_OPST_CLOSE);
