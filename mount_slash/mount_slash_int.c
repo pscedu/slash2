@@ -335,6 +335,9 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	if (bkwdra)
 		psc_dynarray_reverse(&r->biorq_pages);
 
+	if (op == BIORQ_READ)
+		return;
+
 	/* Deal with RBW pages. */
 	for (i = 0; i < npages; i++) {
 		e = psc_dynarray_getpos(&r->biorq_pages, i);
