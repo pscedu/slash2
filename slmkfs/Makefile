@@ -13,21 +13,7 @@ SRCS+=		${SLASH_BASE}/share/mkfn.c
 SRCS+=		${SLASH_BASE}/share/priv.c
 SRCS+=		${SLASH_BASE}/share/slerr.c
 SRCS+=		${SLASH_BASE}/share/yconf.y
-SRCS+=		${PFL_BASE}/alloc.c
-SRCS+=		${PFL_BASE}/dynarray.c
-SRCS+=		${PFL_BASE}/hashtbl.c
-SRCS+=		${PFL_BASE}/hostname.c
-SRCS+=		${PFL_BASE}/init.c
-SRCS+=		${PFL_BASE}/log.c
-SRCS+=		${PFL_BASE}/netutil.c
-SRCS+=		${PFL_BASE}/pthrutil.c
-SRCS+=		${PFL_BASE}/random.c
-SRCS+=		${PFL_BASE}/thread.c
-SRCS+=		${PFL_BASE}/usklndthr.c
-SRCS+=		${PFL_BASE}/waitq.c
-SRCS+=		${PFL_BASE}/walk.c
-SRCS+=		${SETRESUID_SRC}
 
-MODULES+=	lnet pthread rpc
+MODULES+=	lnet pthread rpc pfl
 
 include ${SLASHMK}
