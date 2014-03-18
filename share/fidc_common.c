@@ -294,7 +294,8 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	 * bucket lock in case we need to insert a new item.
 	 */
 	if (fcmh) {
-		psc_hashbkt_put(b);
+		psc_hashbkt_put(&fidcHtable, b);
+
 		/*
 		 * Test to see if we jumped here from fidcFreeList.
 		 * Note an unlucky thread could find that the fid does
@@ -335,7 +336,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 		 * FIDC_LOOKUP_CREATE was not specified and the fcmh is
 		 * not present.
 		 */
-		psc_hashbkt_put(b);
+		psc_hashbkt_put(&fidcHtable, b);
 		return (ENOENT);
 	}
 
@@ -367,7 +368,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	if (flags & FIDC_LOOKUP_RLSBMAP)
 		fcmh->fcmh_flags |= FCMH_CAC_RLSBMAP;
 	psc_hashbkt_add_item(&fidcHtable, b, fcmh);
-	psc_hashbkt_put(b);
+	psc_hashbkt_put(&fidcHtable, b);
 
 	/*
 	 * Call service specific constructor slm_fcmh_ctor(),
