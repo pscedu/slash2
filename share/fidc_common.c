@@ -255,7 +255,6 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	b = psc_hashbkt_get(&fidcHtable, &fgp->fg_fid);
  restart:
 	fcmh = NULL;
-	psc_hashbkt_lock(b);
 	PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, tmp, b) {
 		/*
 		 * Note that generation number is only used to track
@@ -278,10 +277,13 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 		 */
 		if (tmp->fcmh_flags & FCMH_CAC_INITING) {
 			psc_hashbkt_unlock(b);
+
 			tmp->fcmh_flags |= FCMH_CAC_WAITING;
 			fcmh_op_start_type(tmp, FCMH_OPCNT_WAIT);
 			fcmh_wait_nocond_locked(tmp);
 			fcmh_op_done_type(tmp, FCMH_OPCNT_WAIT);
+
+			psc_hashbkt_lock(b);
 			goto restart;
 		}
 		fcmh = tmp;
@@ -327,8 +329,11 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	if (flags & FIDC_LOOKUP_CREATE) {
 		if (!try_create) {
 			psc_hashbkt_unlock(b);
+
 			fcmh_new = fcmh_get();
 			try_create = 1;
+
+			psc_hashbkt_lock(b);
 			goto restart;
 		}
 	} else {
