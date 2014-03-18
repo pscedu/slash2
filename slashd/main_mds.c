@@ -290,7 +290,6 @@ psc_register_filesystem(int vfsid)
 	int i, rc, found1, found2, root_vfsid;
 	uint64_t siteid, uuid;
 	struct mio_rootnames *rn;
-	struct psc_hashbkt *b;
 	struct srt_stat sstb;
 	mdsio_fid_t mfp;
 	char *fsname;
@@ -402,8 +401,7 @@ psc_register_filesystem(int vfsid)
 	    sizeof(rn->rn_name));
 	rn->rn_vfsid = vfsid;
 	psc_hashent_init(&rootHtable, rn);
-	b = psc_hashbkt_get(&rootHtable, rn->rn_name);
-	psc_hashbkt_add_item(&rootHtable, b, rn);
+	psc_hashtbl_add_item(&rootHtable, rn);
 
 	zfsMount[vfsid].flag |= ZFS_SLASH2_READY;
 	psclog_info("file system %s registered (site=%"PRIx64" uuid=%"PRIx64")",
