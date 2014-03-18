@@ -6,6 +6,7 @@ include ${ROOTDIR}/Makefile.path
 PROG=		slashd
 BIN=		slashd.sh
 MAN+=		slashd.8
+DEPLIST+=	${ZFS_BASE}:
 SRCS+=		bmap_mds.c
 SRCS+=		cfg_mds.c
 SRCS+=		coh.c
