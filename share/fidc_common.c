@@ -292,14 +292,14 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 
 	/*
 	 * If the above lookup is a success, we hold the lock, but we
-	 * haven't take a reference yet.  Also, we need to keep the
+	 * haven't taken a reference yet.  Also, we need to keep the
 	 * bucket lock in case we need to insert a new item.
 	 */
 	if (fcmh) {
 		psc_hashbkt_put(&fidcHtable, b);
 
 		/*
-		 * Test to see if we jumped here from fidcFreeList.
+		 * Test to see if we jumped here from fidcIdleList.
 		 * Note an unlucky thread could find that the fid does
 		 * not exist before allocation and exist after that.
 		 */
