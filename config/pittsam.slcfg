@@ -16,53 +16,19 @@ set zpool_name="pittsam_s2mds";
 set zpool_cache="/opt/pittsam_slash2/pittsam_s2md.zcf";
 
 site @PITT {
-	site_desc	= "Pitt SAM SuperCell";
+	site_desc	= "Pitt SaM SuperCell";
 	site_id		= 0;
 
 	resource md0 {
 		desc	= "SAM metadata";
 		type	= mds;
 		id	= 1;
-		nids	= s-gscratch0-dev.francis.sam.pitt.edu;
-		jrnldev	= /dev/disk/by-id/scsi-20010b9fc080c0b62;
-	}
-
-	resource test0 {
-		desc	= "SAM cache node 0";
-		type	= standalone_fs;
-		id	= 10;
-		nids	= s-gscratch2-dev.francis.sam.pitt.edu;
-		fsroot	= /data/gscratch2;
-#		selftest = "/local/sbin/st /samfs_slio";
-	}
-
-	resource test1 {
-		desc	= "SAM cache node 1";
-		type	= standalone_fs;
-		id	= 11;
-		nids	= s-gscratch3-dev.francis.sam.pitt.edu;
-		fsroot	= /data/gscratch3;
-#		selftest = "/local/sbin/st /samfs_slio";
-	}
-
-	resource test2 {
-		desc	= "SAM cache node 2";
-		type	= standalone_fs;
-		id	= 12;
-		nids	= s-gscratch4-dev.francis.sam.pitt.edu;
-		fsroot	= /data/gscratch4;
-#		selftest = "/local/sbin/st /samfs_slio";
-	}
-
-	resource test {
-		desc	= "SAM test cache";
-		type	= cluster_noshare_lfs;
-		id	= 100;
-		ios	= test0@PITT, test1@PITT, test2@PITT;
+		nids	= app0.frank.sam.pitt.edu;
+		jrnldev	= /dev/disk/by-id/dm-name-vg_head0-lv_data;
 	}
 
 	resource ice {
-		desc	= "SAM IceBreaker";
+		desc	= "SAM IceBreaker cache";
 		type	= standalone_fs;
 		id	= 201;
 		nids	= supercell0.frank.sam.pitt.edu;
