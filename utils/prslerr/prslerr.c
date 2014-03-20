@@ -59,6 +59,7 @@ main(int argc, char *argv[])
 	printf("%4d [PFLERR_NOSYS]: %s\n", PFLERR_NOSYS, slstrerror(PFLERR_NOSYS));
 	printf("%4d [SLERR_REPL_ALREADY_ACT]: %s\n", SLERR_REPL_ALREADY_ACT, slstrerror(SLERR_REPL_ALREADY_ACT));
 	printf("%4d [SLERR_REPL_NOT_ACT]: %s\n", SLERR_REPL_NOT_ACT, slstrerror(SLERR_REPL_NOT_ACT));
+	printf("%4d [SLERR_RPCIO]: %s\n", SLERR_RPCIO, slstrerror(SLERR_RPCIO));
 	printf("%4d [SLERR_BMAP_INVALID]: %s\n", SLERR_BMAP_INVALID, slstrerror(SLERR_BMAP_INVALID));
 	printf("%4d [SLERR_BMAP_DIOWAIT]: %s\n", SLERR_BMAP_DIOWAIT, slstrerror(SLERR_BMAP_DIOWAIT));
 	printf("%4d [SLERR_BMAP_ZERO]: %s\n", SLERR_BMAP_ZERO, slstrerror(SLERR_BMAP_ZERO));
