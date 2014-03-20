@@ -181,8 +181,8 @@ INST_BASE=/usr/local		# defaults to /usr/psc
 </oof:pre>
 
 	<oof:p>
-		After source modifications have been made, whether manually or via
-		Subversion, recompile the suite:
+		After source modifications have been made, whether manually or after
+		pulling updates, recompile the suite:
 	</oof:p>
 	<oof:pre class='code'>
 <oof:span class='prompt_meta'>$</oof:span> make
