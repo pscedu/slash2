@@ -25,9 +25,9 @@ done
 shift $(($OPTIND - 1))
 
 xargs=
-mp=/$prof
 apply_host_prefs "$@"
 
+: ${mp:=/$prof}
 mkdir -p $mp
 base=$dir/$prof.s2
 # Initialization/configuration
