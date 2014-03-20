@@ -972,9 +972,8 @@ int
 slc_wk_issue_readdir(void *p)
 {
 	struct slc_wkdata_readdir *wk = p;
-	int rc;
 
-	rc = msl_readdir_issue(NULL, wk->d, wk->off, wk->size, 0);
+	msl_readdir_issue(NULL, wk->d, wk->off, wk->size, 0);
 	FCMH_LOCK(wk->d);
 	wk->pg->dcp_refcnt--;
 	fcmh_op_done_type(wk->d, FCMH_OPCNT_WORKER);
