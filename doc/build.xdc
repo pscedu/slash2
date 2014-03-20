@@ -84,12 +84,8 @@ INST_BASE=/usr/local		# defaults to /usr/psc
 		<oof:list-item>sqlite3 is required.</oof:list-item>
 		<oof:list-item>
 			<oof:link href='http://zfs-fuse.net/'>zfs-fuse</oof:link>
-			is packaged within our repository and is built with our
-			<oof:tt>gmake</oof:tt> framework <oof:strong>only
-			after</oof:strong> it is specifically enabled:
-			<oof:pre class='code'>
-<oof:span class='prompt_meta'>$</oof:span> echo '_ZFS_BASE:=zfs' > $PROJ_ROOT/local.mk
-</oof:pre>
+			is packaged within our repository and is built through our
+			framework when the MDS component is enabled.
 			</oof:list-item>
 	</oof:list>
 
