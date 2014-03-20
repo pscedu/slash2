@@ -42,7 +42,7 @@ char *pfl_errstrs[] = {
 char *slash_errstrs[] = {
 /*  0 */ "Specified replica(s) already exist",
 /*  1 */ "Specified replica(s) do not exist",
-/*  2 */ "",
+/*  2 */ "Generic RPC error",
 /*  3 */ "",
 /*  4 */ "Invalid bmap",
 /*  5 */ "Bmap direct I/O must wait",

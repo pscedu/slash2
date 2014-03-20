@@ -39,7 +39,7 @@ char *slstrerror(int);
 
 #define SLERR_REPL_ALREADY_ACT		(_SLERR_START +  0)
 #define SLERR_REPL_NOT_ACT		(_SLERR_START +  1)
-/* 2 - reuse */
+#define SLERR_RPCIO			(_SLERR_START +  2)
 /* 3 - reuse */
 #define SLERR_BMAP_INVALID		(_SLERR_START +  4)
 #define SLERR_BMAP_DIOWAIT		(_SLERR_START +  5)
