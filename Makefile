@@ -36,6 +36,10 @@ SUBDIRS+=	slkeymgt
 SUBDIRS+=	tests
 SUBDIRS+=	utils
 
+ifdef SLCFG
+  SLCFGV=	${SLCFG}:${SLCFG_DST}
+endif
+
 install-hook:
 	@IFS=';' V="${SLCFGV}"; for i in $$V; do			\
 		IFS=':' set -- $$i;					\
