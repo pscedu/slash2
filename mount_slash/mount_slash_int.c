@@ -664,7 +664,7 @@ msl_req_aio_add(struct pscrpc_request *rq,
 			if (biorq_is_my_bmpce(r, e)) {
 				naio++;
 				e->bmpce_flags |= BMPCE_AIOWAIT;
-				DEBUG_BMPCE(PLL_INFO, e, 
+				DEBUG_BMPCE(PLL_DIAG, e,
 				    "set aio, r=%p", r);
 			}
 			BMPCE_ULOCK(e);
@@ -723,6 +723,7 @@ mfsrq_seterr(struct msl_fsrqinfo *q, int rc)
 
 	lk = MFH_RLOCK(q->mfsrq_mfh);
 	if (q->mfsrq_err == 0 && rc) {
+psc_assert(rc != 1);
 		q->mfsrq_err = rc;
 		psclog_warnx("setting rqinfo q=%p err=%d", q, rc);
 	}
@@ -738,8 +739,7 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, int rc, size_t len)
 
 	MFH_LOCK(q->mfsrq_mfh);
 	if (!q->mfsrq_err) {
-		if (rc)
-			q->mfsrq_err = rc;
+		mfsrq_seterr(q, rc);
 		q->mfsrq_len += len;
 		if (q->mfsrq_rw == SL_READ)
 			q->mfsrq_mfh->mfh_nbytes_rd += len;
@@ -1084,8 +1084,7 @@ msl_dio_cb(struct pscrpc_request *rq, int rc, struct pscrpc_async_args *args)
 		psc_waitq_wakeall(&msl_fhent_flush_waitq);
 	}
 	BIORQ_ULOCK(r);
-	if (!q->mfsrq_err && rc)
-		q->mfsrq_err = rc;
+	mfsrq_seterr(q, rc);
 	MFH_URLOCK(q->mfsrq_mfh, locked);
 
 	msl_biorq_destroy(r);

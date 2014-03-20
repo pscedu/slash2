@@ -2664,6 +2664,7 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 
  out:
 	if (rc) {
+psc_assert(rc != 1);
 		pscfs_reply_write(pfr, size, rc);
 		OPSTAT_INCR(SLC_OPST_FSRQ_WRITE_FREE);
 	}
