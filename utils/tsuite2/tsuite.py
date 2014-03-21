@@ -164,7 +164,7 @@ class TSuite(object):
         {zpool} destroy {zpool_name} || true
         {zpool} create -f {zpool_name} {zpool_args}
         {zpool} set cachefile={zpool_cache} {zpool_name}
-        {slmkfs} -u {fsuuid} -I {site_id} /{zpool_name}
+        {slmkfs} -u {fsuuid} -I {site_id} {zpool_path}
         sync
         sync
         umount /{zpool_name}
@@ -293,7 +293,7 @@ class TSuite(object):
         present_socks = 0
       else:
         present_socks = len(result['out'])
-      
+
       if present_socks >= 1:
         log.warning("There are already {0} {1} socks in {2} on {3}?"\
             .format(present_socks, sock_name, self.build_dirs["ctl"], host))
@@ -387,7 +387,7 @@ class TSuite(object):
       cmd = "{0} -S {1}/{2}.{3}.sock stop".format(res_bin_type, self.build_dirs["ctl"], sock_name, host)
       log.debug(cmd)
       ssh.run(cmd)
-      
+
 
   def parse_slash2_conf(self):
     """Reads and parses slash2 conf for tokens.
@@ -415,6 +415,9 @@ class TSuite(object):
           ),
           "zpool"  : re.compile(
             r"^\s*?#\s*?zfspool\s*?=\s*?(\w+?)\s+?(.*?)\s*$"
+          ),
+          "zpool_path"  : re.compile(
+            r"^\s*?#\s*?zfspath\s*?=\s*?(.+?)\s*$"
           ),
           "prefmds": re.compile(
             r"\s*?#\s*?prefmds\s*?=\s*?(\w+?@\w+?)\s*$"
@@ -475,6 +478,9 @@ class TSuite(object):
 
                 elif name == "id":
                   res["id"] = groups[0]
+
+                elif name == "zpool_path":
+                  res["zpool_path"] = groups[0]
 
                 elif name == "zpool":
                   res["zpool_name"] = groups[0]

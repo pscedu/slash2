@@ -28,7 +28,8 @@ class SL2Res(dict):
       "zpool_args",
       "fsuuid",
       "host",
-      "site_id"
+      "site_id",
+      "zpool_path"
     ],
     "all_but_mds": [
       "prefmds",
