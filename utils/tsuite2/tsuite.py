@@ -183,7 +183,7 @@ class TSuite(object):
             .format(mds["host"], mds["name"]))
         sys.exit(1)
 
-  def run_tests():
+  def run_tests(self):
     """Uploads and runs each test on each client."""
 
 
