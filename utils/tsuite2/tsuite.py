@@ -53,7 +53,7 @@ class TSuite(object):
     self.conf = conf
     self.clients = {}
 
-    self.user = os.getenv("USER")
+    self.user = self.user
 
     #TODO: Rename rootdir in src_dir fashion
     self.rootdir = self.conf["tsuite"]["rootdir"]
@@ -89,12 +89,19 @@ class TSuite(object):
     ]
     log.debug("Found: {0}".format(", ".join(objs_disp)))
 
-    for sl2_obj in self.sl2objects.all_objects():
+    for sl2_obj in self.all_objects():
       ssh = ssh.SSH(user, sl2_obj["host"])
       log.debug("Creating build directories on {0}@{1}".format(sl2_obj["name"], sl2_obj["host"]))
       for d in self.build_dirs.values():
         ssh.make_dirs(d)
       ssh.close()
+
+  def all_objects(self):
+    """Returns all sl2objects in a list."""
+    objects = []
+    for res, res_list in self.sl2objects.items():
+      objects.extend(res_list)
+    return objects
 
   def check_status(self):
     """Generate general status report for all sl2 objects.
@@ -138,7 +145,7 @@ class TSuite(object):
           "id": sl2_obj["id"],
           "reports": {}
         }
-        user, host = os.getenv("USER"), sl2_obj["host"]
+        user, host = self.user, sl2_obj["host"]
         log.debug("Connecting to {0}@{1}".format(user, host))
         ssh = SSH(user, host)
         for op, cmd in obj_ops.items():
@@ -162,7 +169,7 @@ class TSuite(object):
       #Create remote connection to server
       try:
         #Can probably avoid doing user, host everytime
-        user, host = os.getenv("USER"), mds["host"]
+        user, host = self.user, mds["host"]
         log.debug("Connecting to {0}@{1}".format(user, host))
         ssh = SSH(user, host)
 
@@ -209,7 +216,7 @@ class TSuite(object):
 
       #Create remote connection to server
       try:
-        user, host = os.getenv("USER"), ion["host"]
+        user, host = self.user, ion["host"]
         log.debug("Connecting to {0}@{1}".format(user, host))
         ssh = SSH(user, host)
 
@@ -290,7 +297,7 @@ class TSuite(object):
       log.debug("Initializing environment > {0} @ {1}".format(sl2object["name"], sl2object["host"]))
 
       #Remote connection
-      user, host = os.getenv("USER"), sl2object["host"]
+      user, host = self.user, sl2object["host"]
       log.debug("Connecting to {0}@{1}".format(user, host))
       ssh = SSH(user, host)
 
@@ -394,7 +401,7 @@ class TSuite(object):
       log.debug("Initializing environment > {0} @ {1}".format(sl2object["name"], sl2object["host"]))
 
       #Remote connection
-      user, host = os.getenv("USER"), sl2object["host"]
+      user, host = self.user, sl2object["host"]
       log.debug("Connecting to {0}@{1}".format(user, host))
       ssh = SSH(user, host)
       #ssh.kill_screens()
@@ -552,9 +559,9 @@ class TSuite(object):
             new_conf_file.write(new_conf)
             log.debug("Successfully wrote build slash2 conf at {0}"\
                 .format(new_conf_path))
-            for sl2_obj in self.sl2objs.all_objects():
-              ssh = ssh.SSH(self.user, sl2_obj["host")
-              log.debug("Copying new config to {0}".format(sl2_obj["host"])
+            for sl2_obj in self.all_objects():
+              ssh = ssh.SSH(self.user, sl2_obj["host"])
+              log.debug("Copying new config to {0}".format(sl2_obj["host"]))
               ssh.copy_file(new_conf_path, new_conf_path)
               ssh.close()
         except IOError, e:

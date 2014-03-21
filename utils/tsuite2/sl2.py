@@ -49,13 +49,6 @@ class SL2Res(dict):
     dict.__setitem__(self, "name", name)
     dict.__setitem__(self, "site", site)
 
-  def all_objects():
-    """Returns all sl2objects in a list."""
-    objects = []
-    for res, res_list in dict.items(self):
-      objects.extend(res_list)
-    return objects
-
   def finalize(self, sl2objects):
     """Check for missing fields and add to sl2objects.
 
