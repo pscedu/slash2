@@ -57,14 +57,17 @@ class SSH(object):
       src: local path.
       dst: remote path."""
 
-    self.make_dir(dst)
+    self.make_dirs(dst)
+    src = src.rstrip(os.sep)
+    dst = dst.rstrip(os.sep)
     for root, dirs, files in os.walk(src):
+      dst_root = dst + root[len(src):]
       for d in dirs:
         path = os.path.join(root, d)
-        print "mkdir " + d
+        print path
       for f in files:
         path = os.path.join(root, f)
-        print "touch " + f
+        print "touch " + path
 
   def copy_file(self, src, dst):
     """Copy local file to remote server. Will not be elevated. :(
@@ -144,7 +147,7 @@ class SSH(object):
 
     new_cmd = ""
     for cmd_line in cmd.split(";"):
-      new_cmd += self.__wrap_cmd(cmd_line) + ";"
+      new_cmd += self.__wrap_cmd(cmd_line) + "; "
     cmd = new_cmd
 
     #Add return code catch to each command
@@ -153,8 +156,10 @@ class SSH(object):
     #Wrap the command with a bash condition to rename and keep the screen session open
     shell_script = "ck(){{ c=$?; echo $c; if [[ $c != 0 ]]; then screen -S {0} -X zombie kr; if [[ $c == 137 ]]; then screen -S {0} -X sessionname {0}-timed; else screen -S {0} -X sessionname {0}-error; fi; exit; fi; }}".format(sock_name)
 
-    cmd = self.__wrap_cmd("screen -S {0} -d -L -m $SHELL -c '{2}; {1}'"\
-        .format(sock_name, cmd, shell_script))
+    cmd = "screen -S {0} -d -L -m $SHELL -c '{2}; {1}'"\
+        .format(sock_name, cmd, shell_script)
+
+    print cmd
 
     chan = self.ssh.get_transport().open_session()
     chan.exec_command(cmd)
