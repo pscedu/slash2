@@ -490,6 +490,55 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 }
 
 /**
+ * Compare entries in a file's replica table for ordering purposes:
+ * - replicas on any member of our preferred IOS(es).
+ * - replicas on non-archival resources.
+ * - replicas on non-degraded resources.
+ * - anything else.
+ */
+int
+slc_reptbl_cmp(const void *a, const void *b)
+{
+	const sl_replica_t *x = a, *y = b;
+	struct sl_resource *r, *xr, *yr;
+	struct sl_resm *m;
+	int rc, i, xv, yv;
+
+	/* try preferred IOS */
+	xv = yv = 1;
+	r = libsl_id2res(prefIOS);
+	DYNARRAY_FOREACH(m, i, &r->res_members) {
+		if (x->bs_id == m->resm_res_id) {
+			xv = -1;
+			if (yv == -1)
+				break;
+		} else if (y->bs_id == m->resm_res_id) {
+			yv = -1;
+			if (xv == -1)
+				break;
+		}
+	}
+	rc = CMP(xv, yv);
+	if (rc)
+		return (rc);
+
+	xr = libsl_id2res(x->bs_id);
+	yr = libsl_id2res(y->bs_id);
+
+	/* try non-archival and non-degraded IOS */
+	xv = xr->res_type == SLREST_ARCHIVAL_FS ? 1 : -1;
+	yv = yr->res_type == SLREST_ARCHIVAL_FS ? 1 : -1;
+	rc = CMP(xv, yv);
+	if (rc)
+		return (rc);
+
+	/* try degraded IOS */
+	xv = res2rpci(xr)->rpci_flags & RPCIF_AVOID ? 1 : -1;
+	yv = res2rpci(yr)->rpci_flags & RPCIF_AVOID ? 1 : -1;
+	return (CMP(xv, yv));
+}
+
+/**
  * msl_bmap_retrieve - Perform a blocking 'LEASEBMAP' operation to
  *	retrieve one or more bmaps from the MDS.
  * @b: the bmap ID to retrieve.
@@ -544,6 +593,8 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw,
 	msl_bmap_reap_init(bmap, &mp->sbd);
 
 	fci->fci_inode = mp->ino;
+	qsort(fci->fci_inode.reptbl, fci->fci_inode.nrepls,
+	    sizeof(fci->fci_inode.reptbl[0]), slc_reptbl_cmp);
 	f->fcmh_flags |= FCMH_CLI_HAVEINODE;
 
 	DEBUG_BMAP(PLL_DIAG, bmap, "rw=%d repls=%d ios=%#x seq=%"PRId64,
@@ -846,65 +897,6 @@ msbmaprlsthr_main(struct psc_thread *thr)
 	psc_dynarray_free(&bcis);
 }
 
-struct reptbl_lookup {
-	sl_ios_id_t		 id;
-	int			 idx;
-	struct sl_resource	*r;
-};
-
-/**
- * Compare entries in a file's replica table for ordering purposes:
- * - replicas on any member of our preferred IOS(es).
- * - replicas on non-archival resources.
- * - replicas on non-degraded resources.
- * - anything else.
- * XXX this logic is probably backwards and -1 should be returned
- * for the first resource that meets *all* of these criteria, not
- * bailing after the first one (e.g. a degraded resource is probably
- * still better than archival).
- */
-int
-slc_reptbl_cmp(const void *a, const void *b)
-{
-	const struct reptbl_lookup *x = a, *y = b;
-	struct resprof_cli_info *xi, *yi;
-	struct sl_resource *r;
-	struct sl_resm *m;
-	int rc, xv, yv, i;
-
-	/* try preferred IOS */
-	r = libsl_id2res(prefIOS);
-	xv = yv = 1;
-	DYNARRAY_FOREACH(m, i, &r->res_members) {
-		if (x->id == m->resm_res_id) {
-			xv = -1;
-			if (yv == -1)
-				break;
-		} else if (y->id == m->resm_res_id) {
-			yv = -1;
-			if (xv == -1)
-				break;
-		}
-	}
-	rc = CMP(xv, yv);
-	if (rc)
-		return (rc);
-
-	/* try non-archival and non-degraded IOS */
-	xv = x->r->res_type == SLREST_ARCHIVAL_FS ? 1 : -1;
-	yv = y->r->res_type == SLREST_ARCHIVAL_FS ? 1 : -1;
-	rc = CMP(xv, yv);
-	if (rc)
-		return (rc);
-
-	/* try degraded IOS */
-	xi = res2rpci(x->r);
-	yi = res2rpci(y->r);
-	xv = xi->rpci_flags & RPCIF_AVOID ? 1 : -1;
-	yv = yi->rpci_flags & RPCIF_AVOID ? 1 : -1;
-	return (CMP(xv, yv));
-}
-
 static int
 msl_bmap_check_replica(struct bmap *b)
 {
@@ -940,13 +932,11 @@ msl_bmap_check_replica(struct bmap *b)
 struct slashrpc_cservice *
 msl_bmap_to_csvc(struct bmap *b, int exclusive)
 {
-	int n, i, j, locked;
-	struct reptbl_lookup order[SL_MAX_REPLICAS], *lk;
 	struct slashrpc_cservice *csvc;
 	struct fcmh_cli_info *fci;
 	struct psc_multiwait *mw;
-	struct rnd_iterator it;
 	struct sl_resm *m;
+	int i, j, locked;
 	void *p;
 
 	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
@@ -966,25 +956,11 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive)
 	if (msl_bmap_check_replica(b))
 		return (NULL);
 
-	n = 0;
-	FOREACH_RND(&it, fci->fci_inode.nrepls) {
-		lk = &order[n++];
-		lk->id = fci->fci_inode.reptbl[it.ri_rnd_idx].bs_id;
-		lk->idx = it.ri_rnd_idx;
-		lk->r = libsl_id2res(lk->id);
-		if (lk->r == NULL) {
-			DEBUG_FCMH(PLL_ERROR, b->bcm_fcmh,
-			    "unknown resource %#x", lk->id);
-			n--;
-		}
-	}
-	qsort(order, n, sizeof(order[0]), slc_reptbl_cmp);
-
 	for (j = 0; j < 2; j++) {
 		psc_multiwait_reset(mw);
 		psc_multiwait_entercritsect(mw);
-		for (i = 0; i < n; i++) {
-			csvc = msl_try_get_replica_res(b, order[i].idx);
+		for (i = 0; i < fci->fci_inode.nrepls; i++) {
+			csvc = msl_try_get_replica_res(b, i);
 			if (csvc) {
 				psc_multiwait_leavecritsect(mw);
 				return (csvc);
