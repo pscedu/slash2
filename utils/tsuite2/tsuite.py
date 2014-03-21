@@ -221,7 +221,6 @@ class TSuite(object):
 
   def launch_mnt(self):
     """Launch mount slash."""
-    for 
 
   def launch_ion(self):
     """Launch ION daemons."""
@@ -287,11 +286,14 @@ class TSuite(object):
       self.__get_authbuf(ssh)
 
 
-      ls_cmd = "ls {}/{}.*.sock".format(self.build_dirs["ctl"], sock_name)
+      ls_cmd = "ls {0}/{1}.*.sock".format(self.build_dirs["ctl"], sock_name)
       result = ssh.run(ls_cmd)
-      print result
 
-      present_socks = len(result['out'].split("\n"))
+      if len(result['err']) > 0:
+	present_socks = 0
+      else:
+        present_socks = len(result['out'])
+      
       if present_socks >= 1:
         log.warning("There are already {0} {1} socks in {2} on {3}?"\
             .format(present_socks, sock_name, self.build_dirs["ctl"], host))
@@ -344,6 +346,7 @@ class TSuite(object):
       screen_name: name of screen sock to wait for."""
 
     #Run command string in screen
+    if not ssh.run_screen(cmd, screen_name, self.conf["slash2"]["timeout"]):
       log.fatal("Screen session {0} already exists in some form! Attach and deal with it.".format(screen_name))
       sys.exit(1)
 
@@ -360,7 +363,7 @@ class TSuite(object):
 
   def __stop_slash2_socks(self, sock_name, sl2objects, res_bin_type):
     """ Terminates all slash2 socks and screen socks on a generic host """
-   """ 
+    """ 
     Args:
       sock_name: name of sl2 sock.
       sl2objects: list of objects to be launched.
