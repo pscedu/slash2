@@ -8,7 +8,7 @@ log = logging.getLogger("slash2")
 class SSH(object):
   """Helpful SSH abstractions for executing remote applications."""
 
-  def __init__(self, user, host, password=None, port=22):
+  def __init__(self, user, host, password=None, elevated=False, port=22):
     """Initialize SSH object.
 
       Args:
@@ -16,11 +16,13 @@ class SSH(object):
         host: hostname of connection.
         password: user's password. If None, stdin will be prompted for pass.
                   If the user is using auth_keys, an empty string will work.
+        elevated: run commands with sudo.
         port: port of destination's sshd.
       Raises: SSHException."""
 
     self.user = user
     self.host = host
+    self.elevated = elevated
     self.ssh = paramiko.SSHClient()
     self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
@@ -33,6 +35,20 @@ class SSH(object):
         self.ssh.connect(host, username=user, password=password, port=port)
     except Exception:
         raise paramiko.SSHException
+
+  def test(self, cmd):
+    print self.__wrap_cmd(cmd)
+
+  def __wrap_cmd(self, cmd):
+    """Command preprocessor.
+
+    Args:
+      cmd: command to run.
+    Returns:
+      processed command."""
+
+    if self.elevated:
+      return "sudo {0}".format(cmd)
 
   def list_screen_socks(self):
     """Return a list of open screen sockets."""
@@ -75,12 +91,20 @@ class SSH(object):
     #Debug -- log the cmds being run
     [log.debug(c) for c in cmd.split(";")]
 
+    #Need to refactor the timeout code and the pre-processor code.
+    #Could be combined.
+
     if timeout:
       timed_cmd = ""
       for line in cmd.split(";"):
         if len(line) > 0:
-          timed_cmd += "sudo timeout --signal=9 {0} {1}; ".format(timeout, line)
+          timed_cmd += "timeout --signal=9 {0} {1}; ".format(timeout, line)
       cmd = timed_cmd
+
+    new_cmd = ""
+    for cmd_line in cmd.split(";"):
+      new_cmd += self.__wrap_cmd(cmd_line) + ";"
+    cmd = new_cmd
 
     #Add return code catch to each command
     cmd = cmd.replace(";", "; ck; ")
@@ -88,15 +112,32 @@ class SSH(object):
     #Wrap the command with a bash condition to rename and keep the screen session open
     shell_script = "ck(){{ c=$?; echo $c; if [[ $c != 0 ]]; then screen -S {0} -X zombie kr; if [[ $c == 137 ]]; then screen -S {0} -X sessionname {0}-timed; else screen -S {0} -X sessionname {0}-error; fi; exit; fi; }}".format(sock_name)
 
-    cmd = "screen -S {0} -d -L -m $SHELL -c '{2}; {1}'"\
-        .format(sock_name, cmd, shell_script)
+    cmd = self.__wrap_cmd("screen -S {0} -d -L -m $SHELL -c '{2}; {1}'"\
+        .format(sock_name, cmd, shell_script))
 
     chan = self.ssh.get_transport().open_session()
     chan.exec_command(cmd)
 
-    print cmd
-
     return True
+
+  def kill_screens(self, sock_name_prefix, exact_sock=False, quiet=False):
+    """Kills a remote sock.
+
+    Args:
+      sock_name_prefix: prefix of any socks to kill.
+      exact_sock: Consider the prefix to be the exact name.
+      quiet: Silent output.
+    Returns: number of socks killed."""
+
+    sock_list = self.list_screen_socks()
+
+    check = lambda sock: sock == sock_name_prefix if exact_sock else\
+            lambda sock: sock.startswith(sock_name_prefix)
+    targeted_socks = filter(check, sock_list)
+    for sock in targeted_socks:
+      self.run("screen -X -S {0} quit".format(sock), quiet)
+
+    return len(targeted_socks)
 
   def wait_for_screen(self, sock_name, sleep_duration=3):
     """Blocks until a screen sock is removed or timesout.
@@ -164,6 +205,8 @@ class SSH(object):
 
     if timeout:
       cmd = "timeout --signal=9 {0} {1}".format(timeout, cmd)
+
+    cmd = self.__wrap_cmd(cmd)
 
     chan = self.ssh.get_transport().open_session()
     chan.exec_command(cmd)
