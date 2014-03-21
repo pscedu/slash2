@@ -36,7 +36,7 @@ class SSH(object):
 
     self.sftp = self.ssh.open_sftp()
 
-  def close():
+  def close(self):
     self.sftp.close()
     self.ssh.close()
 

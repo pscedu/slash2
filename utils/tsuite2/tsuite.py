@@ -53,7 +53,7 @@ class TSuite(object):
     self.conf = conf
     self.clients = {}
 
-    self.user = self.user
+    self.user = os.getenv("USER") 
 
     #TODO: Rename rootdir in src_dir fashion
     self.rootdir = self.conf["tsuite"]["rootdir"]
@@ -90,7 +90,7 @@ class TSuite(object):
     log.debug("Found: {0}".format(", ".join(objs_disp)))
 
     for sl2_obj in self.all_objects():
-      ssh = ssh.SSH(user, sl2_obj["host"])
+      ssh = SSH(self.user, sl2_obj["host"])
       log.debug("Creating build directories on {0}@{1}".format(sl2_obj["name"], sl2_obj["host"]))
       for d in self.build_dirs.values():
         ssh.make_dirs(d)
@@ -560,7 +560,7 @@ class TSuite(object):
             log.debug("Successfully wrote build slash2 conf at {0}"\
                 .format(new_conf_path))
             for sl2_obj in self.all_objects():
-              ssh = ssh.SSH(self.user, sl2_obj["host"])
+              ssh = SSH(self.user, sl2_obj["host"])
               log.debug("Copying new config to {0}".format(sl2_obj["host"]))
               ssh.copy_file(new_conf_path, new_conf_path)
               ssh.close()
