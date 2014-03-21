@@ -154,7 +154,7 @@ class TSuite(object):
         #Can probably avoid doing user, host everytime
         user, host = os.getenv("USER"), mds["host"]
         log.debug("Connecting to {0}@{1}".format(user, host))
-        ssh = SSH(user, host)
+        ssh = SSH(user, host, elevated=True)
 
         cmd = """
         $SHELL -c "cd {src} && make printvar-CC >/dev/null"
@@ -200,7 +200,7 @@ class TSuite(object):
       try:
         user, host = os.getenv("USER"), ion["host"]
         log.debug("Connecting to {0}@{1}".format(user, host))
-        ssh = SSH(user, host)
+        ssh = SSH(user, host, elevated=True)
 
         cmd = """
         mkdir -p {datadir}
@@ -280,7 +280,7 @@ class TSuite(object):
       #Remote connection
       user, host = os.getenv("USER"), sl2object["host"]
       log.debug("Connecting to {0}@{1}".format(user, host))
-      ssh = SSH(user, host)
+      ssh = SSH(user, host, elevated=True)
 
       #Acquire and deploy authbuf key
       self.__get_authbuf(ssh)
@@ -333,8 +333,11 @@ class TSuite(object):
         sys.exit(1)
 
       log.debug("Waiting for {0} sock on {1} to appear.".format(sock_name, host))
-#      while len(ssh.run(ls_cmd)["out"]) != 1:
-#          time.sleep(1)
+      while True:
+        result = ssh.run(ls_cmd)
+	if len(result["out"]) > 1:
+	  break
+        time.sleep(1)
 
   def __sl_screen_and_wait(self, ssh, cmd, screen_name):
     """Common slash2 screen functionality.
