@@ -27,12 +27,12 @@ class SL2Res(dict):
     "mds"    : [
       "zpool_args",
       "fsuuid",
-      "ifs",
+      "nids",
       "site_id"
     ],
     "all_but_mds": [
       "prefmds",
-      "ifs",
+      "nids",
       "site_id"
     ]
   }
