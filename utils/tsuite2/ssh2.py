@@ -8,7 +8,7 @@ log = logging.getLogger("slash2")
 class SSH(object):
   """Helpful SSH abstractions for executing remote applications."""
 
-  def __init__(self, user, host, password=None, port=22):
+  def __init__(self, user, host, password=None, elevated=False, port=22):
     """Initialize SSH object.
 
       Args:
@@ -16,11 +16,13 @@ class SSH(object):
         host: hostname of connection.
         password: user's password. If None, stdin will be prompted for pass.
                   If the user is using auth_keys, an empty string will work.
+        elevated: run commands with sudo.
         port: port of destination's sshd.
       Raises: SSHException."""
 
     self.user = user
     self.host = host
+    self.elevated = elevated
     self.ssh = paramiko.SSHClient()
     self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
@@ -36,6 +38,18 @@ class SSH(object):
 
     self.sftp = self.ssh.open_sftp()
 
+  def __wrap_cmd(self, cmd):
+    """Command preprocessor.
+
+    Args:
+      cmd: command to run.
+    Returns:
+      processed command."""
+
+    if self.elevated:
+      return "sudo {0}".format(cmd)
+    return cmd
+
   def recursive_copy(self, src, dst):
     """Recursively copy local path to remote path. Not elevated.
 
@@ -47,17 +61,13 @@ class SSH(object):
     src = src.rstrip(os.sep)
     dst = dst.rstrip(os.sep)
     for root, dirs, files in os.walk(src):
-
       dst_root = dst + root[len(src):]
-
       for d in dirs:
-        remote_path = os.path.join(dst_root, d)
-        self.make_dirs(remote_path)
-
+        path = os.path.join(root, d)
+        print path
       for f in files:
         path = os.path.join(root, f)
-        remote_path = os.path.join(dst_root, f)
-        self.copy_file(path, remote_path)
+        print "touch " + path
 
   def copy_file(self, src, dst):
     """Copy local file to remote server. Will not be elevated. :(
@@ -97,26 +107,6 @@ class SSH(object):
 
     return socks
 
-  def kill_screens(self, sock_name_prefix, exact_sock=False, quiet=False):
-    """Kills a remote sock.
-
-    Args:
-      sock_name_prefix: prefix of any socks to kill.
-      exact_sock: Consider the prefix to be the exact name.
-      quiet: Silent output.
-    Returns: number of socks killed."""
-
-    sock_list = self.list_screen_socks()
-
-    check = lambda sock: sock == sock_name_prefix if exact_sock else\
-            lambda sock: sock.startswith(sock_name_prefix)
-
-    targeted_socks = filter(check, sock_list)
-    for sock in targeted_socks:
-      self.run("screen -X -S {0} quit".format(sock), quiet)
-
-    return len(targeted_socks)
-
   def run_screen(self, cmd, sock_name, timeout=None):
     """Remotely execute a command in a screen session. If timeout is reached, screen will be renamed and kept open.
 
@@ -137,20 +127,30 @@ class SSH(object):
     #Sanitize newlines
     cmd = cmd.strip("\t\n ;")
     sane_cmd = ""
-    for line in cmd.splitlines():
-      sane_cmd += line.strip() + ";"
+    for i, line in enumerate(cmd.splitlines()):
+        sane_cmd += line.strip()
+        if i < len(cmd.splitlines()) - 1:
+          sane_cmd += ";"
 
     cmd = sane_cmd
 
     #Debug -- log the cmds being run
     [log.debug(c) for c in cmd.split(";")]
 
+    #Need to refactor the timeout code and the pre-processor code.
+    #Could be combined.
+
     if timeout:
       timed_cmd = ""
       for line in cmd.split(";"):
         if len(line) > 0:
-          timed_cmd += "sudo timeout --signal=9 {0} {1}; ".format(timeout, line)
+          timed_cmd += "timeout --signal=9 {0} {1}; ".format(timeout, line)
       cmd = timed_cmd
+
+    new_cmd = ""
+    for cmd_line in cmd.split(";"):
+      new_cmd += self.__wrap_cmd(cmd_line) + "; "
+    cmd = new_cmd
 
     #Add return code catch to each command
     cmd = cmd.replace(";", "; ck; ")
@@ -161,12 +161,32 @@ class SSH(object):
     cmd = "screen -S {0} -d -L -m $SHELL -c '{2}; {1}'"\
         .format(sock_name, cmd, shell_script)
 
+    print cmd
+
     chan = self.ssh.get_transport().open_session()
     chan.exec_command(cmd)
 
-    print cmd
-
     return True
+
+  def kill_screens(self, sock_name_prefix, exact_sock=False, quiet=False):
+    """Kills a remote sock.
+
+    Args:
+      sock_name_prefix: prefix of any socks to kill.
+      exact_sock: Consider the prefix to be the exact name.
+      quiet: Silent output.
+    Returns: number of socks killed."""
+
+    sock_list = self.list_screen_socks()
+
+    check = lambda sock: sock == sock_name_prefix if exact_sock else\
+            lambda sock: sock.startswith(sock_name_prefix)
+
+    targeted_socks = filter(check, sock_list)
+    for sock in targeted_socks:
+      self.run("screen -X -S {0} quit".format(sock), quiet)
+
+    return len(targeted_socks)
 
   def wait_for_screen(self, sock_name, sleep_duration=3):
     """Blocks until a screen sock is removed or timesout.
@@ -234,6 +254,8 @@ class SSH(object):
 
     if timeout:
       cmd = "timeout --signal=9 {0} {1}".format(timeout, cmd)
+
+    cmd = self.__wrap_cmd(cmd)
 
     chan = self.ssh.get_transport().open_session()
     chan.exec_command(cmd)
