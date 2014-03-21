@@ -153,7 +153,7 @@ class SSH(object):
     cmd = new_cmd
 
     #Add return code catch to each command
-    cmd = cmd.replace(";", "; ck; ")
+    cmd = cmd.replace(";", "; {0}; ".format(self.__wrap_cmd("ck")))
 
     #Wrap the command with a bash condition to rename and keep the screen session open
     shell_script = "ck(){{ c=$?; echo $c; if [[ $c != 0 ]]; then screen -S {0} -X zombie kr; if [[ $c == 137 ]]; then screen -S {0} -X sessionname {0}-timed; else screen -S {0} -X sessionname {0}-error; fi; exit; fi; }}".format(sock_name)
