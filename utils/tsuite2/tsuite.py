@@ -26,8 +26,7 @@ class TSuite(object):
       "mp"   : "%base%/mp",
       "datadir": "%base%/data",
       "ctl"  : "%base%/ctl",
-      "fs"   : "%base%/fs",
-      "authbuf" : "%base%/authbuf.key"
+      "fs"   : "%base%/fs"
     }
 
     self.authbuf_key = None
@@ -240,15 +239,17 @@ class TSuite(object):
     Args:
       ssh: ssh connection to get/transfer authbuf to."""
 
+    authbuf = path.join(self.build_dirs["base"], "authbuf.key")
+
     if not self.authbuf_key:
-      sh = """if [[ -a {0} ]]; then; cat {0}; fi;""".format(self.build_dirs["authbuf"])
+      sh = """if [[ -a {0} ]]; then; cat {0}; fi;""".format(authbuf)
       result = ssh.run(sh)
       if result["exit"] == 0:
         #Hacky way of converting it to a safe hex string
         self.authbuf_key = "\\x" + "\\x".join([c.encode("hex") for c in "".join(result["out"])])
         log.debug("Found authbuf key.")
       else: return
-    sh = 'echo "{0}" > {1}'.format(self.authbuf_key, self.build_dirs["authbuf"])
+    sh = 'echo "{0}" > {1}'.format(self.authbuf_key, authbuf)
     result = ssh.run(sh)
     log.debug("Written authbuf key successfully!" if result["error"] == 0 else "Failed to write authbuf key")
 
@@ -335,7 +336,7 @@ class TSuite(object):
 
     #Run command string in screen
     if not ssh.run_screen(cmd, screen_name, self.conf["slash2"]["timeout"]):
-      log.fatal("Screen session {0} already exists in some form! Attach and deal with it.")
+      log.fatal("Screen session {0} already exists in some form! Attach and deal with it.".format(screen_name))
       sys.exit(1)
 
     wait = ssh.wait_for_screen(screen_name)
