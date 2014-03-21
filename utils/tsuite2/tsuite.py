@@ -221,9 +221,10 @@ class TSuite(object):
 
   def launch_mnt(self):
     """Launch mount slash."""
+    for 
 
   def launch_ion(self):
-    """Launch ION daemonds."""
+    """Launch ION daemons."""
 
     gdbcmd_path = self.conf["slash2"]["ion_gdb"]
     self.__launch_gdb_sl("ion", self.sl2objects["ion"], "sliod", gdbcmd_path)
@@ -233,6 +234,14 @@ class TSuite(object):
 
     gdbcmd_path = self.conf["slash2"]["mds_gdb"]
     self.__launch_gdb_sl("slashd", self.sl2objects["mds"], "slashd", gdbcmd_path)
+
+  def kill_mds(self):
+    """Kill MDS/slashd daemons."""
+    self.__stop_slash2_socks("slashd", self.sl2objects["mds"], "slmctl")
+
+  def kill_ion(self):
+    """Kill ION daemons."""
+    self.__stop_slash2_socks("sliod", self.sl2objects["ion"], "slictl")
 
   def __get_authbuf(self, ssh):
     """Trys to acquire the authbuf key from the data dir. Will cache it for subsequent calls.
@@ -302,18 +311,18 @@ class TSuite(object):
         sys.exit(1)
 
       cmd = "sudo gdb -f -x {0} {1}".format(gdbcmd_build_path, self.src_dirs[res_bin_type])
-      sock_name = "sl.{0}.{1}".format(res_bin_type, sl2object["id"])
+      screen_sock_name = "sl.{0}.{1}".format(res_bin_type, sl2object["id"])
 
       #Launch slashd in gdb within a screen session
-      ssh.run_screen(cmd, sock_name)
+      ssh.run_screen(cmd, screen_sock_name)
 
       #Wait two seconds to make sure slashd launched without errors
       time.sleep(2)
 
       screen_socks = ssh.list_screen_socks()
-      if sock_name + "-error" in screen_socks or sock_name not in screen_socks:
+      if screen_sock_name + "-error" in screen_socks or screen_sock_name not in screen_socks:
         log.fatal("sl2object {0}:{1} launched with an error. Resume to {2} and resolve it."\
-            .format(sl2object["name"], sl2object["id"], sock_name+"-error"))
+            .format(sl2object["name"], sl2object["id"], screen_sock_name+"-error"))
         sys.exit(1)
 
     #Wait for all socks to appear
@@ -323,7 +332,7 @@ class TSuite(object):
     log.debug("Waiting for all socks to appear.")
 
     while socks < present_socks + total_sl2object:
-      socks = len(glob.glob(self.build_dirs["ctl"] + "/{0}.*.sock".format(res_bin_type)))
+      socks = len(glob.glob(self.build_dirs["ctl"] + "/{0}.*.sock".format(sock_name)))
       time.sleep(1)
 
   def __sl_screen_and_wait(self, ssh, cmd, screen_name):
@@ -336,7 +345,6 @@ class TSuite(object):
       screen_name: name of screen sock to wait for."""
 
     #Run command string in screen
-    if not ssh.run_screen(cmd, screen_name, self.conf["slash2"]["timeout"]):
       log.fatal("Screen session {0} already exists in some form! Attach and deal with it.".format(screen_name))
       sys.exit(1)
 
@@ -350,6 +358,37 @@ class TSuite(object):
       log.critical("{0} exited with a nonzero return code. screen -r {0}-error and check it out."\
           .format(screen_name))
       sys.exit(1)
+
+  def __stop_slash2_socks(self, sock_name, sl2objects, res_bin_type):
+    """ Terminates all slash2 socks and screen socks on a generic host """
+   """ 
+    Args:
+      sock_name: name of sl2 sock.
+      sl2objects: list of objects to be launched.
+      res_bin_type: key to bin path in src_dirs.
+      gdbcmd_path: path to gdbcmd file."""
+
+    #res_bin_type NEEDS to be a path in src_dirs
+    assert(res_bin_type in self.src_dirs)
+
+    present_socks = len(glob.glob(self.build_dirs["ctl"] + "/{0}.*.sock".format(sock_name)))
+    if present_socks >= 1:
+      log.warning("There are already {0} {1} socks in {2}?"\
+          .format(present_socks, sock_name, self.build_dirs["ctl"]))
+
+    for sl2object in sl2objects:
+      log.debug("Initializing environment > {0} @ {1}".format(sl2object["name"], sl2object["host"]))
+
+      #Remote connection
+      user, host = os.getenv("USER"), sl2object["host"]
+      log.debug("Connecting to {0}@{1}".format(user, host))
+      ssh = SSH(user, host)
+#      ssh.destroy_screens()
+
+      cmd = "{0} -S {1}/{2}.{3}.sock stop".format(res_bin_type, self.build_dirs["ctl"], sock_name, host)
+      log.debug(cmd)
+      ssh.run(cmd)
+      
 
   def parse_slash2_conf(self):
     """Reads and parses slash2 conf for tokens.
