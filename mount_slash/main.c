@@ -3173,7 +3173,7 @@ msl_init(void)
 		prefIOS = libsl_str2id(name);
 		if (prefIOS == IOS_ID_ANY)
 			psclog_warnx("SLASH2_PIOS_ID (%s) does not resolve to "
-			    "a valid IOS, defaulting to IOS_ID_ANY", name);
+			    "a valid IOS; defaulting to IOS_ID_ANY", name);
 	}
 	atexit(unmount_mp);
 }
