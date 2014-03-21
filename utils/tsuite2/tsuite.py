@@ -386,7 +386,7 @@ class TSuite(object):
             "^\s*?fsroot\s*?=\s*?(\S+?)\s*?;\s*$"
           ),
           "nids"    : re.compile(
-            "^\s*?#\s*?nids\s*?=\s*?(.*)$"
+            "^\s*?nids\s*?=\s*?(.*)$"
           ),
           "new_res": re.compile(
             "^\s*resource\s+(\w+)\s*{\s*$"
@@ -450,7 +450,7 @@ class TSuite(object):
                 elif name == "fsroot":
                   res["fsroot"] = groups[0].strip('"')
 
-                elif name == "ifs":
+                elif name == "nids":
                   #Read subsequent lines and get the first host
 
                   tmp = groups[0]
