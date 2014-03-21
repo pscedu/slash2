@@ -36,8 +36,7 @@ class SSH(object):
     except Exception:
         raise paramiko.SSHException
 
-  def test(self, cmd):
-    print self.__wrap_cmd(cmd)
+    self.sftp = self.ssh.open_sftp()
 
   def __wrap_cmd(self, cmd):
     """Command preprocessor.
@@ -49,6 +48,48 @@ class SSH(object):
 
     if self.elevated:
       return "sudo {0}".format(cmd)
+    return cmd
+
+  def recursive_copy(self, src, dst):
+    """Recursively copy local path to remote path. Not elevated.
+
+    Args:
+      src: local path.
+      dst: remote path."""
+
+    self.make_dir(dst)
+    for root, dirs, files in os.walk(src):
+      for d in dirs:
+        path = os.path.join(root, d)
+        print "mkdir " + d
+      for f in files:
+        path = os.path.join(root, f)
+        print "touch " + f
+
+  def copy_file(self, src, dst):
+    """Copy local file to remote server. Will not be elevated. :(
+
+    Args:
+      src: path to local file.
+      dst: path to copy to on remote server."""
+
+    if os.path.isfile(src):
+      self.sftp.put(src, dst)
+
+  def make_dirs(self, dirs_path):
+    """Create remote directories.
+
+    Args:
+      dirs_path: directory path."""
+
+    levels = dirs_path.split(os.sep)
+    for level in range(len(levels)):
+      try:
+        path = os.sep.join(levels[:level+1])
+        self.sftp.mkdir(path)
+      except IOError:
+        #Directory may already exist.
+        pass
 
   def list_screen_socks(self):
     """Return a list of open screen sockets."""
@@ -133,6 +174,7 @@ class SSH(object):
 
     check = lambda sock: sock == sock_name_prefix if exact_sock else\
             lambda sock: sock.startswith(sock_name_prefix)
+
     targeted_socks = filter(check, sock_list)
     for sock in targeted_socks:
       self.run("screen -X -S {0} quit".format(sock), quiet)
