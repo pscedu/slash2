@@ -275,11 +275,6 @@ class TSuite(object):
     #res_bin_type NEEDS to be a path in src_dirs
     assert(res_bin_type in self.src_dirs)
 
-    present_socks = len(glob.glob(self.build_dirs["ctl"] + "/{0}.*.sock".format(sock_name)))
-    if present_socks >= 1:
-      log.warning("There are already {0} {1} socks in {2}?"\
-          .format(present_socks, sock_name, self.build_dirs["ctl"]))
-
     for sl2object in sl2objects:
       log.debug("Initializing environment > {0} @ {1}".format(sl2object["name"], sl2object["host"]))
 
@@ -290,6 +285,16 @@ class TSuite(object):
 
       #Acquire and deploy authbuf key
       self.__get_authbuf(ssh)
+
+
+      ls_cmd = "ls {}/{}.*.sock".format(self.build_dirs["ctl"], sock_name)
+      result = ssh.run(ls_cmd)
+      print result
+
+      present_socks = len(result['out'].split("\n"))
+      if present_socks >= 1:
+        log.warning("There are already {0} {1} socks in {2} on {3}?"\
+            .format(present_socks, sock_name, self.build_dirs["ctl"], host))
 
       #Create monolithic reference/replace dict
       repl_dict = dict(self.src_dirs, **self.build_dirs)
@@ -313,10 +318,10 @@ class TSuite(object):
       cmd = "sudo gdb -f -x {0} {1}".format(gdbcmd_build_path, self.src_dirs[res_bin_type])
       screen_sock_name = "sl.{0}.{1}".format(res_bin_type, sl2object["id"])
 
-      #Launch slashd in gdb within a screen session
+      #Launch slash2 in gdb within a screen session
       ssh.run_screen(cmd, screen_sock_name)
 
-      #Wait two seconds to make sure slashd launched without errors
+      #Wait two seconds to make sure slash2 launched without errors
       time.sleep(2)
 
       screen_socks = ssh.list_screen_socks()
@@ -325,15 +330,9 @@ class TSuite(object):
             .format(sl2object["name"], sl2object["id"], screen_sock_name+"-error"))
         sys.exit(1)
 
-    #Wait for all socks to appear
-    socks = 0
-    total_sl2object = len(sl2objects)
-
-    log.debug("Waiting for all socks to appear.")
-
-    while socks < present_socks + total_sl2object:
-      socks = len(glob.glob(self.build_dirs["ctl"] + "/{0}.*.sock".format(sock_name)))
-      time.sleep(1)
+      log.debug("Waiting for {0} sock on {1} to appear.".format(sock_name, host))
+#      while len(ssh.run(ls_cmd)["out"]) != 1:
+#          time.sleep(1)
 
   def __sl_screen_and_wait(self, ssh, cmd, screen_name):
     """Common slash2 screen functionality.
