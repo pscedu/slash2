@@ -82,7 +82,7 @@ class TSuite(object):
 
     #Show the resources parsed
     objs_disp = [
-      "{}:{}".format(res, len(res_list))\
+      "{0}:{1}".format(res, len(res_list))\
           for res, res_list in self.sl2objects.items()
     ]
     log.debug("Found: {0}".format(", ".join(objs_disp)))
@@ -176,7 +176,7 @@ class TSuite(object):
 
         self.__sl_screen_and_wait(ssh, cmd, screen_name)
 
-        log.info("Finished creating {}".format(mds["name"]))
+        log.info("Finished creating {0}".format(mds["name"]))
 
       except SSHException, e:
         log.fatal("Error with remote connection to {0} with res {1}!"\
@@ -212,7 +212,7 @@ class TSuite(object):
 
         self.__sl_screen_and_wait(ssh, cmd, screen_name)
 
-        log.info("Finished creating {}!".format(ion["name"]))
+        log.info("Finished creating {0}!".format(ion["name"]))
 
       except SSHException, e:
         log.fatal("Error with remote connection to {0} with res {1}!"\
@@ -248,7 +248,7 @@ class TSuite(object):
         self.authbuf_key = "\\x" + "\\x".join([c.encode("hex") for c in "".join(result["out"])])
         log.debug("Found authbuf key.")
       else: return
-    sh = 'echo "{}" > {}'.format(self.authbuf_key, self.build_dirs["authbuf"])
+    sh = 'echo "{0}" > {1}'.format(self.authbuf_key, self.build_dirs["authbuf"])
     result = ssh.run(sh)
     log.debug("Written authbuf key successfully!" if result["error"] == 0 else "Failed to write authbuf key")
 
@@ -264,7 +264,7 @@ class TSuite(object):
     #res_bin_type NEEDS to be a path in src_dirs
     assert(res_bin_type in self.src_dirs)
 
-    present_socks = len(glob.glob(self.build_dirs["ctl"] + "/{}.*.sock".format(sock_name)))
+    present_socks = len(glob.glob(self.build_dirs["ctl"] + "/{0}.*.sock".format(sock_name)))
     if len(socks) >= 1:
       log.warning("There are already {0} {1} socks in {2}?"\
           .format(present_socks, sock_name, self.build_dirs["ctl"]))
@@ -385,8 +385,8 @@ class TSuite(object):
           "fsroot" : re.compile(
             "^\s*?fsroot\s*?=\s*?(\S+?)\s*?;\s*$"
           ),
-          "ifs"    : re.compile(
-            "^\s*?#\s*?ifs\s*?=\s*?(.*)$"
+          "nids"    : re.compile(
+            "^\s*?#\s*?nids\s*?=\s*?(.*)$"
           ),
           "new_res": re.compile(
             "^\s*resource\s+(\w+)\s*{\s*$"
@@ -439,7 +439,7 @@ class TSuite(object):
                 elif name == "zpool":
                   res["zpool_name"] = groups[0]
                   res["zpool_cache"] = path.join(
-                    self.build_dirs["base"], "{}.zcf".format(groups[0])
+                    self.build_dirs["base"], "{0}.zcf".format(groups[0])
                   )
                   res["zpool_args"] = groups[1]
 
