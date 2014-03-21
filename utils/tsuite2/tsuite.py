@@ -187,7 +187,7 @@ class TSuite(object):
     """Uploads and runs each test on each client."""
 
 
-  def build_ion():
+  def build_ion(self):
     """Create ION file systems."""
 
     for ion in self.sl2objects["ion"]:
@@ -210,7 +210,7 @@ class TSuite(object):
 
         sock_name = "ts.ion."+ion["id"]
 
-        self.__sl_screen_and_wait(ssh, cmd, screen_name)
+        self.__sl_screen_and_wait(ssh, cmd, sock_name)
 
         log.info("Finished creating {0}!".format(ion["name"]))
 
@@ -265,7 +265,7 @@ class TSuite(object):
     assert(res_bin_type in self.src_dirs)
 
     present_socks = len(glob.glob(self.build_dirs["ctl"] + "/{0}.*.sock".format(sock_name)))
-    if len(socks) >= 1:
+    if present_socks >= 1:
       log.warning("There are already {0} {1} socks in {2}?"\
           .format(present_socks, sock_name, self.build_dirs["ctl"]))
 
@@ -299,7 +299,7 @@ class TSuite(object):
         log.fatal("Unable to parse gdb cmd at {1}!".format(gdbcmd_path))
         sys.exit(1)
 
-      cmd = "gdb -f -x {0} {1}".format(gdbcmd_build_path, self.src_dirs[res_bin_type])
+      cmd = "sudo gdb -f -x {0} {1}".format(gdbcmd_build_path, self.src_dirs[res_bin_type])
       sock_name = "sl.{0}.{1}".format(res_bin_type, sl2object["id"])
 
       #Launch slashd in gdb within a screen session

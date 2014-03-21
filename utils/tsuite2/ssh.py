@@ -26,7 +26,7 @@ class SSH(object):
 
     #Get password from stdin
     if password is None:
-      password = getpass.getpass("{}'s password: ".format(user))
+      password = getpass.getpass("{0}'s password: ".format(user))
 
     #Initialize connection
     try:
@@ -62,7 +62,7 @@ class SSH(object):
     if exists:
       return False
 
-    log.debug("Launching screen: {} at {}".format(sock_name, self.host))
+    log.debug("Launching screen: {0} at {1}".format(sock_name, self.host))
 
     #Sanitize newlines
     cmd = cmd.strip("\t\n ;")
@@ -79,7 +79,7 @@ class SSH(object):
       timed_cmd = ""
       for line in cmd.split(";"):
         if len(line) > 0:
-          timed_cmd += "timeout --signal=9 {} {}; ".format(timeout, line)
+          timed_cmd += "sudo timeout --signal=9 {0} {1}; ".format(timeout, line)
       cmd = timed_cmd
 
     #Add return code catch to each command
@@ -163,7 +163,7 @@ class SSH(object):
       [log.debug(c) for c in cmd.split(";")]
 
     if timeout:
-      cmd = "timeout --signal=9 {} {}".format(timeout, cmd)
+      cmd = "timeout --signal=9 {0} {1}".format(timeout, cmd)
 
     chan = self.ssh.get_transport().open_session()
     chan.exec_command(cmd)
