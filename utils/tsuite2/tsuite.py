@@ -53,6 +53,8 @@ class TSuite(object):
     self.conf = conf
     self.clients = {}
 
+    self.user = os.getenv("USER")
+
     #TODO: Rename rootdir in src_dir fashion
     self.rootdir = self.conf["tsuite"]["rootdir"]
     self.src_dirs["src"] = self.conf["source"]["srcroot"]
@@ -86,6 +88,13 @@ class TSuite(object):
           for res, res_list in self.sl2objects.items()
     ]
     log.debug("Found: {0}".format(", ".join(objs_disp)))
+
+    for sl2_obj in self.sl2objects.all_objects():
+      ssh = ssh.SSH(user, sl2_obj["host"])
+      log.debug("Creating build directories on {0}@{1}".format(sl2_obj["name"], sl2_obj["host"]))
+      for d in self.build_dirs.values():
+        ssh.make_dirs(d)
+      ssh.close()
 
   def check_status(self):
     """Generate general status report for all sl2 objects.
@@ -316,6 +325,8 @@ class TSuite(object):
           f.write(new_gdbcmd)
           f.close()
           log.debug("Wrote gdb cmd to {0}".format(gdbcmd_build_path))
+          log.debug("Remote copying gdbcmd.")
+          ssh.copy_file(gdbcmd_build_path, gdbcmd_build_path)
       else:
         log.fatal("Unable to parse gdb cmd at {1}!".format(gdbcmd_path))
         sys.exit(1)
@@ -541,6 +552,11 @@ class TSuite(object):
             new_conf_file.write(new_conf)
             log.debug("Successfully wrote build slash2 conf at {0}"\
                 .format(new_conf_path))
+            for sl2_obj in self.sl2objs.all_objects():
+              ssh = ssh.SSH(self.user, sl2_obj["host")
+              log.debug("Copying new config to {0}".format(sl2_obj["host"])
+              ssh.copy_file(new_conf_path, new_conf_path)
+              ssh.close()
         except IOError, e:
           log.fatal("Unable to write new conf to build directory!")
           log.fatal(new_conf_path)

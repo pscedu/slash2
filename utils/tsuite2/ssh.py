@@ -36,6 +36,10 @@ class SSH(object):
 
     self.sftp = self.ssh.open_sftp()
 
+  def close():
+    self.sftp.close()
+    self.ssh.close()
+
   def recursive_copy(self, src, dst):
     """Recursively copy local path to remote path. Not elevated.
 
