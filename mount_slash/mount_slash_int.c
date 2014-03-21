@@ -199,8 +199,8 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 			int n;
 
 			psc_assert(bkwdra == 0 || bkwdra == 1);
-			n = bkwdra ? (aoff / BMPC_BLKSZ) :
-			    (SLASH_BMAP_SIZE - aoff) / BMPC_BLKSZ;
+			n = bkwdra ? (aoff / BMPC_BUFSZ) :
+			    (SLASH_BMAP_SIZE - aoff) / BMPC_BUFSZ;
 
 			/*
 			 * Read ahead must be contained within this
@@ -210,8 +210,8 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 			if (!bkwdra) {
 				/* Don't prefetch past EOF. */
 				n = ((fsz - (bmap_foff(b) + roff)) /
-				    BMPC_BLKSZ) +
-					((fsz % BMPC_BLKSZ) ? 1 : 0);
+				    BMPC_BUFSZ) +
+					((fsz % BMPC_BUFSZ) ? 1 : 0);
 
 				maxpages = MIN(maxpages, n);
 			}
@@ -355,14 +355,14 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 			    (fsz > foff ||
 			     /* If file ends in this page then fetch */
 			     (rfsz > e->bmpce_off &&
-			      rfsz < e->bmpce_off + BMPC_BLKSZ))) {
+			      rfsz < e->bmpce_off + BMPC_BUFSZ))) {
 				    r->biorq_flags |= BIORQ_RBWFP;
 
 			} else if ((i == (npages - 1) &&
 				    (rbw & BIORQ_RBWLP)) &&
 				   (fsz > (foff + len) ||
 				    (rfsz > e->bmpce_off &&
-				     rfsz < e->bmpce_off + BMPC_BLKSZ))) {
+				     rfsz < e->bmpce_off + BMPC_BUFSZ))) {
 				r->biorq_flags |= BIORQ_RBWLP;
 			}
 		}
