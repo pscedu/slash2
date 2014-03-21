@@ -37,6 +37,7 @@ class TSuite(object):
       "tsbase"  : "%slbase%/../tsuite",
       "zpool"   : "%slbase%/utils/zpool.sh",
       "zfs_fuse": "%slbase%/utils/zfs-fuse.sh",
+      "sliod"   : "%slbase%/sliod/sliod",
       "slmkjrnl": "%slbase%/slmkjrnl/slmkjrnl",
       "slmctl"  : "%slbase%/slmctl/slmctl",
       "slictl"  : "%slbase%/slictl/slictl",
@@ -225,7 +226,7 @@ class TSuite(object):
     """Launch ION daemonds."""
 
     gdbcmd_path = self.conf["slash2"]["ion_gdb"]
-    self.__launch_gdb_sl("ion", self.s2objects["mds"], "sliod", gdbcmd_path)
+    self.__launch_gdb_sl("ion", self.sl2objects["ion"], "sliod", gdbcmd_path)
 
   def launch_mds(self):
     """Launch MDS/slashd daemons."""
