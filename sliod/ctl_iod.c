@@ -56,8 +56,6 @@
 			*_p = '\0';					\
 	} while (0)
 
-struct psc_lockedlist psc_odtables;
-
 int
 sli_export(__unusedx const char *fn,
     __unusedx const struct pfl_stat *pst, __unusedx int info,
