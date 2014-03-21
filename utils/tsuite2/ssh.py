@@ -127,8 +127,10 @@ class SSH(object):
     #Sanitize newlines
     cmd = cmd.strip("\t\n ;")
     sane_cmd = ""
-    for line in cmd.splitlines():
-      sane_cmd += line.strip() + ";"
+    for i, line in enumerate(cmd.splitlines()):
+        sane_cmd += line.strip()
+        if i < len(cmd.splitlines()) - 1:
+          sane_cmd += ";"
 
     cmd = sane_cmd
 
