@@ -52,8 +52,6 @@
 
 #include "slashd/inode.h"
 
-struct psc_lockedlist	 psc_odtables;
-
 psc_atomic32_t		 msctl_id = PSC_ATOMIC32_INIT(0);
 struct psc_lockedlist	 msctl_replsts = PLL_INIT(&msctl_replsts,
     struct msctl_replstq, mrsq_lentry);
