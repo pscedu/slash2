@@ -86,11 +86,17 @@ SPLAY_HEAD(biod_slvrtree, slvr);
  * bmap_iod_info - the bmap_get_pri() data structure for the I/O server.
  */
 struct bmap_iod_info {
-
 	uint8_t			 bii_crcstates[SLASH_CRCS_PER_BMAP];
 	uint64_t                 bii_crcs[SLASH_CRCS_PER_BMAP];
 
-	struct bcrcupd		*bii_bcr;		/* current bcr in use */
+	/*
+	 * Accumulate CRC updates here until its associated bcrcupd
+	 * structure is full, at which point it is set to NULL then
+	 * moved to a ready/hold list for transmission, and a new
+	 * bcrcupd structure must be allocated for future CRC updates.
+	 */
+	struct bcrcupd		*bii_bcr;
+
 	struct biod_slvrtree	 bii_slvrs;
 	struct psclist_head	 bii_lentry;
 	struct psc_lockedlist	 bii_rls;
@@ -103,6 +109,8 @@ struct bmap_iod_info {
 
 #define bmap_2_bii(b)		((struct bmap_iod_info *)bmap_get_pri(b))
 #define bmap_2_bii_slvrs(b)	(&bmap_2_bii(b)->bii_slvrs)
+#define bmap_2_crcstates(b)	bmap_2_bii(b)->bii_crcstates
+#define bmap_2_crcs(b)		bmap_2_bii(b)->bii_crcs
 
 #define BMAP_SLVR_WANTREPL	_BMAP_SLVR_FLSHFT	/* Queued for replication */
 
