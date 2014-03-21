@@ -132,8 +132,6 @@ def main():
 
     conf._sections["tests"]["runtime_testdir"] = runtime_testdir
 
-    sys.exit(1)
-
     #Initialize the test suite
     t = TSuite(conf._sections)
     t.build_mds()

@@ -220,6 +220,8 @@ class TSuite(object):
 
   def launch_mnt(self):
     """Launch mount slash."""
+    gdbcmd_path = self.conf["slash2"]["mnt_gdb"]
+    self.__launch_gdb_sl("mnt", self.s2objects["mnt"], "sliod", gdbcmd_path)
 
   def launch_ion(self):
     """Launch ION daemonds."""
