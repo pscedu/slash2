@@ -154,7 +154,7 @@ class TSuite(object):
         #Can probably avoid doing user, host everytime
         user, host = os.getenv("USER"), mds["host"]
         log.debug("Connecting to {0}@{1}".format(user, host))
-        ssh = SSH(user, host, elevated=True)
+        ssh = SSH(user, host)
 
         cmd = """
         $SHELL -c "cd {src} && make printvar-CC >/dev/null"
@@ -200,7 +200,7 @@ class TSuite(object):
       try:
         user, host = os.getenv("USER"), ion["host"]
         log.debug("Connecting to {0}@{1}".format(user, host))
-        ssh = SSH(user, host, elevated=True)
+        ssh = SSH(user, host)
 
         cmd = """
         mkdir -p {datadir}
@@ -280,17 +280,17 @@ class TSuite(object):
       #Remote connection
       user, host = os.getenv("USER"), sl2object["host"]
       log.debug("Connecting to {0}@{1}".format(user, host))
-      ssh = SSH(user, host, elevated=True)
+      ssh = SSH(user, host)
 
       #Acquire and deploy authbuf key
       self.__get_authbuf(ssh)
 
 
-      ls_cmd = "ls {0}/{1}.*.sock".format(self.build_dirs["ctl"], sock_name)
+      ls_cmd = "ls {0}/{1}*.sock".format(self.build_dirs["ctl"], sock_name)
       result = ssh.run(ls_cmd)
 
       if len(result['err']) > 0:
-	present_socks = 0
+        present_socks = 0
       else:
         present_socks = len(result['out'])
       
@@ -335,8 +335,8 @@ class TSuite(object):
       log.debug("Waiting for {0} sock on {1} to appear.".format(sock_name, host))
       while True:
         result = ssh.run(ls_cmd)
-	if len(result["out"]) > 1:
-	  break
+        if len(result["out"]) > 1:
+          break
         time.sleep(1)
 
   def __sl_screen_and_wait(self, ssh, cmd, screen_name):
@@ -365,8 +365,7 @@ class TSuite(object):
       sys.exit(1)
 
   def __stop_slash2_socks(self, sock_name, sl2objects, res_bin_type):
-    """ Terminates all slash2 socks and screen socks on a generic host """
-    """ 
+    """ Terminates all slash2 socks and screen socks on a generic host.
     Args:
       sock_name: name of sl2 sock.
       sl2objects: list of objects to be launched.
@@ -376,11 +375,6 @@ class TSuite(object):
     #res_bin_type NEEDS to be a path in src_dirs
     assert(res_bin_type in self.src_dirs)
 
-    present_socks = len(glob.glob(self.build_dirs["ctl"] + "/{0}.*.sock".format(sock_name)))
-    if present_socks >= 1:
-      log.warning("There are already {0} {1} socks in {2}?"\
-          .format(present_socks, sock_name, self.build_dirs["ctl"]))
-
     for sl2object in sl2objects:
       log.debug("Initializing environment > {0} @ {1}".format(sl2object["name"], sl2object["host"]))
 
@@ -388,7 +382,7 @@ class TSuite(object):
       user, host = os.getenv("USER"), sl2object["host"]
       log.debug("Connecting to {0}@{1}".format(user, host))
       ssh = SSH(user, host)
-#      ssh.destroy_screens()
+      #ssh.kill_screens()
 
       cmd = "{0} -S {1}/{2}.{3}.sock stop".format(res_bin_type, self.build_dirs["ctl"], sock_name, host)
       log.debug(cmd)
