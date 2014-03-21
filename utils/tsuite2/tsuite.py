@@ -13,8 +13,6 @@ log = logging.getLogger("slash2")
 class TSuite(object):
   """SLASH2 File System Test Suite."""
 
-
-
   def __init__(self, conf):
     """Initialization of the TSuite.
 
@@ -38,7 +36,6 @@ class TSuite(object):
       # "src" populated in init
       "slbase"  : "%src%/slash_nara",
       "tsbase"  : "%slbase%/../tsuite",
-      "clicmd"  : "%base%/cli_cmd.sh",
       "zpool"   : "%slbase%/utils/zpool.sh",
       "zfs_fuse": "%slbase%/utils/zfs-fuse.sh",
       "slmkjrnl": "%slbase%/slmkjrnl/slmkjrnl",
@@ -54,6 +51,7 @@ class TSuite(object):
 
     self.sl2objects = {}
     self.conf = conf
+    self.clients = {}
 
     #TODO: Rename rootdir in src_dir fashion
     self.rootdir = self.conf["tsuite"]["rootdir"]
@@ -61,7 +59,7 @@ class TSuite(object):
 
     #Necessary to compute relative paths
     self.build_base_dir()
-    log.debug("Base directory: {}".format(self.build_dirs["base"]))
+    log.debug("Base directory: {0}".format(self.build_dirs["base"]))
 
     self.replace_rel_dirs(self.build_dirs)
 
@@ -87,7 +85,7 @@ class TSuite(object):
       "{}:{}".format(res, len(res_list))\
           for res, res_list in self.sl2objects.items()
     ]
-    log.debug("Found: {}".format(", ".join(objs_disp)))
+    log.debug("Found: {0}".format(", ".join(objs_disp)))
 
   def check_status(self):
     """Generate general status report for all sl2 objects.
@@ -132,13 +130,13 @@ class TSuite(object):
           "reports": {}
         }
         user, host = os.getenv("USER"), sl2_obj["host"]
-        log.debug("Connecting to {}@{}".format(user, host))
+        log.debug("Connecting to {0}@{1}".format(user, host))
         ssh = SSH(user, host)
         for op, cmd in obj_ops.items():
           obj_report["reports"][op] = ssh.run(cmd, timeout=2)
 
         report[sl2_restype].append(obj_report)
-        log.debug("Status check completed for {} [{}]".format(host, sl2_restype))
+        log.debug("Status check completed for {0} [{1}]".format(host, sl2_restype))
     return report
 
   def build_mds(self):
@@ -155,7 +153,7 @@ class TSuite(object):
       try:
         #Can probably avoid doing user, host everytime
         user, host = os.getenv("USER"), mds["host"]
-        log.debug("Connecting to {}@{}".format(user, host))
+        log.debug("Connecting to {0}@{1}".format(user, host))
         ssh = SSH(user, host)
 
         cmd = """
@@ -181,9 +179,12 @@ class TSuite(object):
         log.info("Finished creating {}".format(mds["name"]))
 
       except SSHException, e:
-        log.fatal("Error with remote connection to {} with res {}!"\
+        log.fatal("Error with remote connection to {0} with res {1}!"\
             .format(mds["host"], mds["name"]))
         sys.exit(1)
+
+  def run_tests():
+    """Uploads and runs each test on each client."""
 
 
   def build_ion():
@@ -198,7 +199,7 @@ class TSuite(object):
       #Create remote connection to server
       try:
         user, host = os.getenv("USER"), ion["host"]
-        log.debug("Connecting to {}@{}".format(user, host))
+        log.debug("Connecting to {0}@{1}".format(user, host))
         ssh = SSH(user, host)
 
         cmd = """
@@ -214,14 +215,12 @@ class TSuite(object):
         log.info("Finished creating {}!".format(ion["name"]))
 
       except SSHException, e:
-        log.fatal("Error with remote connection to {} with res {}!"\
+        log.fatal("Error with remote connection to {0} with res {1}!"\
             .format(ion["host"], ion["name"]))
         sys.exit(1)
 
   def launch_mnt(self):
     """Launch mount slash."""
-    gdbcmd_path = self.conf["slash2"]["mnt_gdb"]
-    self.__launch_gdb_sl("mnt", self.s2objects["mnt"], "sliod", gdbcmd_path)
 
   def launch_ion(self):
     """Launch ION daemonds."""
@@ -267,15 +266,15 @@ class TSuite(object):
 
     present_socks = len(glob.glob(self.build_dirs["ctl"] + "/{}.*.sock".format(sock_name)))
     if len(socks) >= 1:
-      log.warning("There are already {} {} socks in {}?"\
+      log.warning("There are already {0} {1} socks in {2}?"\
           .format(present_socks, sock_name, self.build_dirs["ctl"]))
 
     for sl2object in sl2objects:
-      log.debug("Initializing environment > {} @ {}".format(sl2object["name"], sl2object["host"]))
+      log.debug("Initializing environment > {0} @ {1}".format(sl2object["name"], sl2object["host"]))
 
       #Remote connection
       user, host = os.getenv("USER"), sl2object["host"]
-      log.debug("Connecting to {}@{}".format(user, host))
+      log.debug("Connecting to {0}@{1}".format(user, host))
       ssh = SSH(user, host)
 
       #Acquire and deploy authbuf key
@@ -287,7 +286,7 @@ class TSuite(object):
 
       #Create gdbcmd from template
       gdbcmd_build_path = path.join(self.build_dirs["base"],
-          "{}.{}.gdbcmd".format(res_bin_type, sl2object["id"]))
+          "{0}.{1}.gdbcmd".format(res_bin_type, sl2object["id"]))
 
       new_gdbcmd = repl_file(repl_dict, gdbcmd_path)
 
@@ -295,13 +294,13 @@ class TSuite(object):
         with open(gdbcmd_build_path, "w") as f:
           f.write(new_gdbcmd)
           f.close()
-          log.debug("Wrote gdb cmd to {}".format(gdbcmd_build_path))
+          log.debug("Wrote gdb cmd to {0}".format(gdbcmd_build_path))
       else:
-        log.fatal("Unable to parse gdb cmd at {}!".format(gdbcmd_path))
+        log.fatal("Unable to parse gdb cmd at {1}!".format(gdbcmd_path))
         sys.exit(1)
 
-      cmd = "gdb -f -x {} {}".format(gdbcmd_build_path, self.src_dirs[res_bin_type])
-      sock_name = "sl.{}.{}".format(res_bin_type, sl2object["id"])
+      cmd = "gdb -f -x {0} {1}".format(gdbcmd_build_path, self.src_dirs[res_bin_type])
+      sock_name = "sl.{0}.{1}".format(res_bin_type, sl2object["id"])
 
       #Launch slashd in gdb within a screen session
       ssh.run_screen(cmd, sock_name)
@@ -311,7 +310,7 @@ class TSuite(object):
 
       screen_socks = ssh.list_screen_socks()
       if sock_name + "-error" in screen_socks or sock_name not in screen_socks:
-        log.fatal("sl2object {}:{} launched with an error. Resume to {} and resolve it."\
+        log.fatal("sl2object {0}:{1} launched with an error. Resume to {2} and resolve it."\
             .format(sl2object["name"], sl2object["id"], sock_name+"-error"))
         sys.exit(1)
 
@@ -322,7 +321,7 @@ class TSuite(object):
     log.debug("Waiting for all socks to appear.")
 
     while socks < present_socks + total_sl2object:
-      socks = len(glob.glob(self.build_dirs["ctl"] + "/{}.*.sock".format(res_bin_type)))
+      socks = len(glob.glob(self.build_dirs["ctl"] + "/{0}.*.sock".format(res_bin_type)))
       time.sleep(1)
 
   def __sl_screen_and_wait(self, ssh, cmd, screen_name):
@@ -361,9 +360,13 @@ class TSuite(object):
         res, site_name = None, None
         in_site = False
         site_id, fsuuid = -1, -1
+        client = None
 
         #Regex config parsing for sl2objects
         reg = {
+          "client" : re.compile(
+            "^#client\s*=\s*(.+?)\s*;\s*$"
+          ),
           "type"   : re.compile(
             "^\s*?type\s*?=\s*?(\S+?)\s*?;\s*$"
           ),
@@ -469,6 +472,9 @@ class TSuite(object):
                 if name == "new_res":
                   res =  SL2Res(groups[0], site_name)
             else:
+              if name == "client":
+                self.clients = groups[0].split(",")
+
               if name == "site":
                 site_name = groups[0]
                 in_site = True
@@ -482,7 +488,7 @@ class TSuite(object):
         try:
           with open(new_conf_path, "w") as new_conf_file:
             new_conf_file.write(new_conf)
-            log.debug("Successfully wrote build slash2 conf at {}"\
+            log.debug("Successfully wrote build slash2 conf at {0}"\
                 .format(new_conf_path))
         except IOError, e:
           log.fatal("Unable to write new conf to build directory!")
@@ -490,7 +496,7 @@ class TSuite(object):
           log.fatal(e)
           return False
     except IOError, e:
-      log.fatal("Unable to read conf file at {}"\
+      log.fatal("Unable to read conf file at {0}"\
           .format(self.conf["slash2"]["conf"]))
       log.fatal(e)
       return False
@@ -517,7 +523,7 @@ class TSuite(object):
         #does not have a guarnteed ordering
 
         if e.errno != 17:
-          log.fatal("Unable to create: {}".format(d))
+          log.fatal("Unable to create: {0}".format(d))
           log.fatal(e)
           return False
     return True
@@ -544,7 +550,7 @@ class TSuite(object):
 
     #Assemble a random test directory base
     tsid = randrange(1, 1 << 24)
-    random_build = "sltest.{}".format(tsid)
+    random_build = "sltest.{0}".format(tsid)
     base = path.join(self.rootdir, random_build)
 
     #Call until the directory doesn't exist
@@ -569,7 +575,7 @@ def repl(lookup, string):
       if
         m.group(1) in lookup
       else
-        "%{}%".format(m.group(1)),
+        "%{0}%".format(m.group(1)),
     string)
 
 def repl_file(lookup, text):

@@ -59,7 +59,7 @@ class SL2Res(dict):
     try:
       sl2res_type = dict.__getitem__(self, "type")
     except KeyError:
-      log.fatal("Resource named: {} is missing a type!"\
+      log.fatal("Resource named: {0} is missing a type!"\
           .format(sl2res_name))
       return False
 
@@ -75,9 +75,9 @@ class SL2Res(dict):
 
     missing = check_subset(necessary_fields, dict.keys(self))
     if len(missing) != 0:
-      log.fatal("Missing fields from {} res named {}!"\
+      log.fatal("Missing fields from {0} res named {1}!"\
           .format(sl2res_type, sl2res_name))
-      log.fatal("Missing: {}".format(", ".join(missing)))
+      log.fatal("Missing: {0}".format(", ".join(missing)))
       return False
 
     #Create/append the resource type to sl2objects
