@@ -137,7 +137,7 @@ def main():
     t.build_mds()
     t.launch_mds()
     t.build_ion()
-    t.launch_ion()
+    #t.launch_ion()
 
     #Run tests...
     t.kill_mds()

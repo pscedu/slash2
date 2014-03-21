@@ -137,6 +137,7 @@ class TSuite(object):
 
         report[sl2_restype].append(obj_report)
         log.debug("Status check completed for {0} [{1}]".format(host, sl2_restype))
+        ssh.close()
     return report
 
   def build_mds(self):
@@ -177,6 +178,7 @@ class TSuite(object):
         self.__sl_screen_and_wait(ssh, cmd, screen_name)
 
         log.info("Finished creating {0}".format(mds["name"]))
+        ssh.close()
 
       except SSHException, e:
         log.fatal("Error with remote connection to {0} with res {1}!"\
@@ -213,6 +215,7 @@ class TSuite(object):
         self.__sl_screen_and_wait(ssh, cmd, sock_name)
 
         log.info("Finished creating {0}!".format(ion["name"]))
+        ssh.close()
 
       except SSHException, e:
         log.fatal("Error with remote connection to {0} with res {1}!"\
@@ -338,6 +341,7 @@ class TSuite(object):
         if len(result["out"]) > 1:
           break
         time.sleep(1)
+      ssh.close()
 
   def __sl_screen_and_wait(self, ssh, cmd, screen_name):
     """Common slash2 screen functionality.
@@ -387,6 +391,7 @@ class TSuite(object):
       cmd = "{0} -S {1}/{2}.{3}.sock stop".format(res_bin_type, self.build_dirs["ctl"], sock_name, host)
       log.debug(cmd)
       ssh.run(cmd)
+      ssh.close()
 
 
   def parse_slash2_conf(self):

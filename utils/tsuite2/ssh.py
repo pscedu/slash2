@@ -164,8 +164,6 @@ class SSH(object):
     chan = self.ssh.get_transport().open_session()
     chan.exec_command(cmd)
 
-    print cmd
-
     return True
 
   def wait_for_screen(self, sock_name, sleep_duration=3):
