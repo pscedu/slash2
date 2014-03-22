@@ -524,6 +524,11 @@ slc_reptbl_cmp(const void *a, const void *b)
 
 	xr = libsl_id2res(x->bs_id);
 	yr = libsl_id2res(y->bs_id);
+	xv = xr == NULL ? 1 : -1;
+	yv = yr == NULL ? 1 : -1;
+	rc = CMP(xv, yv);
+	if (rc || (xr == NULL && yr == NULL))
+		return (rc);
 
 	/* try non-archival and non-degraded IOS */
 	xv = xr->res_type == SLREST_ARCHIVAL_FS ? 1 : -1;
