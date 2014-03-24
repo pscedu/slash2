@@ -234,10 +234,8 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	i = 0;
 	BMAP_LOCK(b);
 	while (i < maxpages) {
-		if (bkwdra)
-			bmpce_off = aoff + ((npages - 1 - i) * BMPC_BUFSZ);
-		else
-			bmpce_off = aoff + (i * BMPC_BUFSZ);
+
+		bmpce_off = aoff + (i * BMPC_BUFSZ);
 
 		// XXX make work for backward ra!
 		MFH_LOCK(mfh);
@@ -323,18 +321,12 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 		}
 
 		i++;
-
-		if (bkwdra && !bmpce_off)
-			break;
 	}
 	BMAP_ULOCK(b);
 
 	psc_assert(psc_dynarray_len(&r->biorq_pages) == npages);
 
 	maxpages = psc_dynarray_len(&r->biorq_pages);
-
-	if (bkwdra == 1)
-		psc_dynarray_reverse(&r->biorq_pages);
 
 	if (op == BIORQ_READ)
 		return;
