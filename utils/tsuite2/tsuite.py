@@ -53,7 +53,7 @@ class TSuite(object):
     self.conf = conf
     self.clients = {}
 
-    self.user = os.getenv("USER") 
+    self.user = os.getenv("USER")
 
     #TODO: Rename rootdir in src_dir fashion
     self.rootdir = self.conf["tsuite"]["rootdir"]
@@ -184,7 +184,7 @@ class TSuite(object):
         {slmkfs} -u {fsuuid} -I {site_id} {zpool_path}
         sync
         sync
-        umount /{zpool_name}
+        umount {zpool_path}
         pkill zfs-fuse
         mkdir -p {datadir}
         {slmkjrnl} -D {datadir} -u {fsuuid} -f""".format(**repl_dict)
