@@ -35,7 +35,7 @@ class TSuite(object):
       # "src" populated in init
       "slbase"  : "%src%/slash_nara",
       "tsbase"  : "%slbase%/../tsuite",
-      "zpool"   : "%slbase%/utils/zpool.sh",
+      "zpool"   : "%src%/zfs/src/cmd/zpool/zpool",
       "zfs_fuse": "%slbase%/utils/zfs-fuse.sh",
       "sliod"   : "%slbase%/sliod/sliod",
       "slmkjrnl": "%slbase%/slmkjrnl/slmkjrnl",
@@ -90,7 +90,7 @@ class TSuite(object):
     log.debug("Found: {0}".format(", ".join(objs_disp)))
 
     for sl2_obj in self.all_objects():
-      ssh = SSH(self.user, sl2_obj["host"], '')
+      ssh = SS≡jedi=1, H(self.user, sl2_obj["ho≡ (*msg*, *args, **kwargs) ≡jedi≡"st"], '')
       log.debug("Creating build directories on {0}@{1}".format(sl2_obj["name"], sl2_obj["host"]))
       for d in self.build_dirs.values():
         ssh.make_dirs(d)

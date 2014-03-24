@@ -70,7 +70,11 @@ class SSH(object):
       dst: path to copy to on remote server."""
 
     if os.path.isfile(src):
-      self.sftp.put(src, dst)
+        s = open(src, "rb")
+        f = self.sftp.open(dst, "wb")
+        f.write(s.read())
+        s.close()
+        f.close()
 
   def make_dirs(self, dirs_path):
     """Create remote directories.
