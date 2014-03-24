@@ -3,8 +3,6 @@ import os, re
 
 from time import sleep
 
-log = logging.getLogger("slash2")
-
 class SSH(object):
   """Helpful SSH abstractions for executing remote applications."""
 
@@ -25,8 +23,8 @@ class SSH(object):
     self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
     #Get password from stdin
-    if password is None:
-      password = getpass.getpass("{0}'s password: ".format(user))
+#    if password is None:
+ #     password = getpass.getpass("{0}'s password: ".format(user))
 
     #Initialize connection
     try:
@@ -166,7 +164,10 @@ class SSH(object):
         .format(sock_name, cmd, shell_script)
 
     chan = self.ssh.get_transport().open_session()
+    print cmd
+
     chan.exec_command(cmd)
+
 
     return True
 
