@@ -179,7 +179,7 @@ class TSuite(object):
         $SHELL -c "{zfs_fuse} &"
         sleep 2
         {zpool} destroy {zpool_name} || true
-        {zpool} create -f {zpool_name} {zpool_args}
+        {zpool} create -f {zpool_name} {zpool_args} -m {zpool_path}
         {zpool} set cachefile={zpool_cache} {zpool_name}
         {slmkfs} -u {fsuuid} -I {site_id} {zpool_path}
         sync

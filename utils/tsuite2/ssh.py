@@ -3,6 +3,7 @@ import os, re
 
 from time import sleep
 
+log = logging.getLogger('slash2')
 class SSH(object):
   """Helpful SSH abstractions for executing remote applications."""
 
@@ -167,8 +168,6 @@ class SSH(object):
     print cmd
 
     chan.exec_command(cmd)
-
-
     return True
 
   def wait_for_screen(self, sock_name, sleep_duration=3):

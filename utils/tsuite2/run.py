@@ -127,17 +127,17 @@ def main():
     runtime_testdir = os.path.join(conf._sections["tests"]["testdir"], test)
     slash_conf = os.path.join(runtime_testdir, "slash.conf")
     if os.path.isfile(slash_conf):
-      log.debug("Replaced default slash config with {1} for this test set".format(slash_conf))
+      log.debug("Replaced default slash config with {0} for this test set".format(slash_conf))
       conf._sections["slash2"]["conf"] = slash_conf
 
     conf._sections["tests"]["runtime_testdir"] = runtime_testdir
 
     #Initialize the test suite
     t = TSuite(conf._sections)
-   # t.build_mds()
-   # t.launch_mds()
+    t.build_mds()
+    t.launch_mds()
     t.build_ion()
-    #t.launch_ion()
+    t.launch_ion()
 
     #Run tests...
     t.kill_mds()
