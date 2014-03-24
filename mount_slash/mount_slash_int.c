@@ -195,6 +195,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 		 * obtain rapages and ra direction.
 		 */
 		rapages = msl_getra(mfh, npages, &bkwdra);
+		psc_assert(bkwdra != 1);
 		if (rapages) {
 			int n;
 
@@ -332,7 +333,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 
 	maxpages = psc_dynarray_len(&r->biorq_pages);
 
-	if (bkwdra)
+	if (bkwdra == 1)
 		psc_dynarray_reverse(&r->biorq_pages);
 
 	if (op == BIORQ_READ)
@@ -1912,11 +1913,8 @@ msl_setra(struct msl_fhent *mfh, size_t size, off_t off)
 	if (mfh->mfh_ra.mra_nrios) {
 		switch (mfh->mfh_ra.mra_bkwd) {
 		case -1: /* not yet determined */
-			if (mfh->mfh_ra.mra_loff == (off_t)(off + size)) {
-				mfh->mfh_ra.mra_bkwd = 1;
-				mfh->mfh_ra.mra_nseq++;
 
-			} else if ((mfh->mfh_ra.mra_loff +
+			if ((mfh->mfh_ra.mra_loff +
 			    mfh->mfh_ra.mra_lsz) == off) {
 				mfh->mfh_ra.mra_bkwd = 0;
 				mfh->mfh_ra.mra_nseq++;
