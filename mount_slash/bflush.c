@@ -836,6 +836,10 @@ bmap_flush(void)
 
 	LIST_CACHE_ULOCK(&bmapFlushQ);
 
+	/*
+	 * FixMe: A biorq could be destroyed twice if two threads
+	 * are looking at the same bmap.
+	 */
 	for (i = 0; i < psc_dynarray_len(&bmaps); i++) {
 		b = psc_dynarray_getpos(&bmaps, i);
 		bmpc = bmap_2_bmpc(b);
