@@ -1893,28 +1893,11 @@ msl_setra(struct msl_fhent *mfh, size_t size, off_t off)
 {
 	spinlock(&mfh->mfh_lock);
 
-	switch (mfh->mfh_ra.mra_bkwd) {
-	    case -1: /* not yet determined */
-
-		if ((mfh->mfh_ra.mra_loff +
-		    mfh->mfh_ra.mra_lsz) == off) {
-			mfh->mfh_ra.mra_bkwd = 0;
-			mfh->mfh_ra.mra_nseq++;
-		}
-		break;
-
-	    case 0: /* forward read mode */
-		if ((mfh->mfh_ra.mra_loff +
-		    mfh->mfh_ra.mra_lsz) == off)
-			mfh->mfh_ra.mra_nseq++;
-		else
-			MSL_RA_RESET(&mfh->mfh_ra);
-		break;
-
-	    default:
-		psc_fatalx("invalid value (%d)",
-		    mfh->mfh_ra.mra_bkwd);
-	}
+	if ((mfh->mfh_ra.mra_loff + mfh->mfh_ra.mra_lsz) == off) {
+		mfh->mfh_ra.mra_bkwd = 0;
+		mfh->mfh_ra.mra_nseq++;
+	} else
+		mfh->mfh_ra.mra_nseq = 0;
 
 	mfh->mfh_ra.mra_loff = off;
 	mfh->mfh_ra.mra_lsz = size;
