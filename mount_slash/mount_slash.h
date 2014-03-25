@@ -122,19 +122,11 @@ PSCTHR_MKCAST(msrcmthr, msrcm_thread, MSTHRT_RCM);
 #define MS_READAHEAD_MAXPGS		256
 #define MS_READAHEAD_DIRUNK		(-1)
 
-#define MSL_RA_RESET(ra)						\
-	do {								\
-		(ra)->mra_nseq = -MS_READAHEAD_MINSEQ;			\
-		(ra)->mra_bkwd = MS_READAHEAD_DIRUNK;			\
-		(ra)->mra_raoff = 0;					\
-	} while (0)
-
 struct msl_ra {
 	off_t				 mra_loff;	/* last offset */
 	off_t				 mra_raoff;	/* current read ahead offset */
 	off_t				 mra_lsz;	/* last size */
 	int				 mra_nseq;	/* num sequential io's */
-	int				 mra_bkwd;	/* reverse access io */
 };
 
 #define MAX_BMAPS_REQ			2

@@ -536,7 +536,6 @@ msl_fhent_new(struct pscfs_req *pfr, struct fidc_membh *f)
 	pll_init(&mfh->mfh_ra_bmpces, struct bmap_pagecache_entry,
 	    bmpce_ralentry, &mfh->mfh_lock);
 	INIT_PSC_LISTENTRY(&mfh->mfh_lentry);
-	MSL_RA_RESET(&mfh->mfh_ra);
 	return (mfh);
 }
 
@@ -1876,8 +1875,6 @@ msl_getra(struct msl_fhent *mfh, int npages)
 	MFH_LOCK(mfh);
 
 	if (mfh->mfh_ra.mra_nseq > 0) {
-		psc_assert(mfh->mfh_ra.mra_bkwd == 0 ||
-			   mfh->mfh_ra.mra_bkwd == 1);
 		rapages = MIN(npages * mfh->mfh_ra.mra_nseq,
 		    MS_READAHEAD_MAXPGS);
 	}
@@ -1893,10 +1890,9 @@ msl_setra(struct msl_fhent *mfh, size_t size, off_t off)
 {
 	spinlock(&mfh->mfh_lock);
 
-	if ((mfh->mfh_ra.mra_loff + mfh->mfh_ra.mra_lsz) == off) {
-		mfh->mfh_ra.mra_bkwd = 0;
+	if ((mfh->mfh_ra.mra_loff + mfh->mfh_ra.mra_lsz) == off)
 		mfh->mfh_ra.mra_nseq++;
-	} else
+	else
 		mfh->mfh_ra.mra_nseq = 0;
 
 	mfh->mfh_ra.mra_loff = off;
