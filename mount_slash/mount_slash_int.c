@@ -93,7 +93,7 @@ struct psc_iostats	msl_io_1m_stat;
 extern struct psc_listcache	attrTimeoutQ;
 
 void msl_update_attributes(struct msl_fsrqinfo *);
-static int msl_getra(struct msl_fhent *, int, int *);
+static int msl_getra(struct msl_fhent *, int);
 
 #define MS_DEF_READAHEAD_PAGES 8
 
@@ -127,7 +127,7 @@ __static void
 msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
     int rqnum, uint32_t roff, uint32_t len, int op)
 {
-	int i, npages = 0, rbw = 0, maxpages, bkwdra = 0;
+	int i, npages = 0, rbw = 0, maxpages;
 	struct msl_fhent *mfh = q->mfsrq_mfh;
 	struct bmap_pagecache_entry *e;
 	struct bmap_pagecache *bmpc;
@@ -194,36 +194,30 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 		 * First, query the read ahead struct in the mfh to
 		 * obtain rapages and ra direction.
 		 */
-		rapages = msl_getra(mfh, npages, &bkwdra);
-		psc_assert(bkwdra != 1);
+		rapages = msl_getra(mfh, npages);
 		if (rapages) {
 			int n;
 
-			psc_assert(bkwdra == 0 || bkwdra == 1);
-			n = bkwdra ? (aoff / BMPC_BUFSZ) :
-			    (SLASH_BMAP_SIZE - aoff) / BMPC_BUFSZ;
+			n = (SLASH_BMAP_SIZE - aoff) / BMPC_BUFSZ;
 
 			/*
 			 * Read ahead must be contained within this
 			 * bmap.
 			 */
 			maxpages = MIN(rapages, n);
-			if (!bkwdra) {
-				/* Don't prefetch past EOF. */
-				n = ((fsz - (bmap_foff(b) + roff)) /
-				    BMPC_BUFSZ) +
-					((fsz % BMPC_BUFSZ) ? 1 : 0);
+			/* Don't prefetch past EOF. */
+			n = ((fsz - (bmap_foff(b) + roff)) /
+			    BMPC_BUFSZ) +
+				((fsz % BMPC_BUFSZ) ? 1 : 0);
 
-				maxpages = MIN(maxpages, n);
-			}
+			maxpages = MIN(maxpages, n);
 			if (maxpages < npages)
 				maxpages = npages;
 
-			DEBUG_BMAP(PLL_DIAG, b, "maxpages=%d npages=%d "
-			    "bkwdra=%d", maxpages, npages, bkwdra);
+			DEBUG_BMAP(PLL_DIAG, b, "maxpages=%d npages=%d ", 
+			    maxpages, npages);
 		} else {
 			maxpages = npages;
-			bkwdra = 0;
 		}
 	}
 
@@ -1875,7 +1869,7 @@ msl_pages_copyout(struct bmpc_ioreq *r)
 }
 
 static int
-msl_getra(struct msl_fhent *mfh, int npages, int *bkwd)
+msl_getra(struct msl_fhent *mfh, int npages)
 {
 	int rapages = 0;
 
@@ -1888,10 +1882,7 @@ msl_getra(struct msl_fhent *mfh, int npages, int *bkwd)
 		    MS_READAHEAD_MAXPGS);
 	}
 
-	*bkwd = mfh->mfh_ra.mra_bkwd;
-
-	DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh, "rapages=%d bkwd=%d",
-		   rapages, *bkwd);
+	DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh, "rapages=%d", rapages);
 
 	MFH_ULOCK(mfh);
 	return (rapages);
