@@ -1912,12 +1912,6 @@ msl_setra(struct msl_fhent *mfh, size_t size, off_t off)
 				MSL_RA_RESET(&mfh->mfh_ra);
 			break;
 
-		case 1:
-			if (mfh->mfh_ra.mra_loff == (off_t)(off + size))
-				mfh->mfh_ra.mra_nseq++;
-			else
-				MSL_RA_RESET(&mfh->mfh_ra);
-			break;
 		default:
 			psc_fatalx("invalid value (%d)",
 			    mfh->mfh_ra.mra_bkwd);
