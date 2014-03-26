@@ -525,12 +525,3 @@ st_blocks
 
 - replication notification service, informing users when workloads have
   finished, launching a job, etc.
-
-sliod backends
-- NFSv3
-- CIFS
-- S3/REST
-- google drive
-- box ?
-- dropbox
-- openstack
