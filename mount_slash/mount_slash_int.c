@@ -1890,6 +1890,10 @@ msl_setra(struct msl_fhent *mfh, size_t size, off_t off)
 {
 	spinlock(&mfh->mfh_lock);
 
+	/*
+	 * If the first read starts from offset 0, the following
+	 * will trigger a read-ahead.
+	 */ 	
 	if ((mfh->mfh_ra.mra_loff + mfh->mfh_ra.mra_lsz) == off)
 		mfh->mfh_ra.mra_nseq++;
 	else

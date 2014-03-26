@@ -120,7 +120,6 @@ PSCTHR_MKCAST(msrcmthr, msrcm_thread, MSTHRT_RCM);
 
 #define MS_READAHEAD_MINSEQ		2
 #define MS_READAHEAD_MAXPGS		256
-#define MS_READAHEAD_DIRUNK		(-1)
 
 struct msl_ra {
 	off_t				 mra_loff;	/* last offset */
