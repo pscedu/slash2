@@ -125,9 +125,8 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n,
 	lb.bcm_bmapno = n;
 
  restart:
-
 	if (sl_bmap_ops.bmo_free)
-	    sl_bmap_ops.bmo_free();
+		sl_bmap_ops.bmo_free();
 
 	FCMH_LOCK(f);
 
@@ -148,6 +147,12 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n,
 			BMAP_ULOCK(b);
 			FCMH_ULOCK(f);
 			pscthr_yield();
+
+			/*
+			 * We don't want to spin if we are waiting for a
+			 * flush to clear.
+			 */
+			usleep(100);
 			goto restart;
 		}
 		bmap_op_start_type(b, BMAP_OPCNT_LOOKUP);
