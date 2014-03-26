@@ -231,7 +231,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 
 		bmpce_off = aoff + (i * BMPC_BUFSZ);
 
-		// XXX make work for backward ra!
 		MFH_LOCK(mfh);
 		if (i >= npages && bmap_foff(b) +
 		    bmpce_off <= mfh->mfh_ra.mra_raoff) {
