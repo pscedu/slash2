@@ -118,7 +118,6 @@ PSCTHR_MKCAST(msfsthr, msfs_thread, MSTHRT_FS);
 PSCTHR_MKCAST(msrcithr, msrci_thread, MSTHRT_RCI);
 PSCTHR_MKCAST(msrcmthr, msrcm_thread, MSTHRT_RCM);
 
-#define MS_READAHEAD_MINSEQ		2
 #define MS_READAHEAD_MAXPGS		256
 
 struct msl_ra {
