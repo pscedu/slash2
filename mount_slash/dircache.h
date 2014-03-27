@@ -95,6 +95,10 @@ struct dircache_page {
 #define DIRCACHEPGF_READ	(1 << 3)	/* page has been used */
 #define DIRCACHEPGF_FREEING	(1 << 4)	/* a thread is trying to free */
 
+/*
+ * This is NOT the expire timestamp of a cache page. It is used to calculate 
+ * the largest timestamp that a cache page should have in order to expire right now.
+ */
 struct dircache_expire {
 	struct pfl_timespec	 dexp_def;
 	struct pfl_timespec	 dexp_max;
