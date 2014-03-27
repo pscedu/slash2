@@ -71,9 +71,11 @@ class SSH(object):
 
     if os.path.isfile(src):
         s = open(src, "rb")
-        f = self.sftp.open(dst, "wb")
-        f.write(s.read())
+        contents = s.read()
         s.close()
+
+        f = self.sftp.open(dst, "wb")
+        f.write(contents)
         f.close()
 
   def make_dirs(self, dirs_path):

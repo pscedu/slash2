@@ -2,4 +2,4 @@
 
 set confirm off
 set height 0
-run -S %base%/ctl/slashd.%h.sock -f %base%/slash.conf -D %datadir% -p %zpool_cache% %zpool_name%
+run -S %base%/ctl/slashd.%h.sock -f %base%/slash.conf -D %datadir% -p %zpool_cache% %zpool_path%
