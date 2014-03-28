@@ -97,7 +97,7 @@ struct dircache_page {
 
 /*
  * This is NOT the expire timestamp of a cache page. It is used to calculate 
- * the largest timestamp that a cache page should have in order to expire right now.
+ * the largest timestamp that a cache page can have in order to expire right now.
  */
 struct dircache_expire {
 	struct pfl_timespec	 dexp_def;
