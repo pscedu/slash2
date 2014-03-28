@@ -1,15 +1,15 @@
+import sys, json
 
 class TestHandler(object):
   """Object used to set up testing environment and passed along to tests for runtime information."""
 
-  cli_list = []
+  def __init__(self, json_constants):
+    self.runtime = json.loads(json_constants)
 
-  def __init__(self):
-    pass
+  def run_tests(self):
+    """Run all tests from the tests directory."""
 
-  def add_cli(self, host, env = {}):
-    """Add test endpoint.
+if __name__ == "__main__":
+  #Ran from script
+  TestHandler(sys.argv[1])
 
-    Args:
-      host: Hostname of test site.
-      env: dictionary of environment variables."""

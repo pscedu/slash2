@@ -179,7 +179,7 @@ class TSuite(object):
         $SHELL -c "{zfs_fuse} &"
         sleep 2
         {zpool} destroy {zpool_name} || true
-        {zpool} create -m {zpool_path} -f {zpool_name} {zpool_args}
+        {zpool} create -f {zpool_name} {zpool_args} -m {zpool_path}
         {zpool} set cachefile={zpool_cache} {zpool_name}
         {slmkfs} -u {fsuuid} -I {site_id} {zpool_path}
         sync
@@ -203,7 +203,14 @@ class TSuite(object):
 
   def run_tests(self):
     """Uploads and runs each test on each client."""
-
+    test_dir = self.conf["tests"]["testdir"]
+    ssh_clients = [SSH(self.user, host) for host in self.clients]
+    map(lambda ssh: ssh.make_dirs("modules"), ssh_clients)
+    for test in os.listdir(test_dir):
+      if test.endswith(".py"):
+        test_path = path.join(test_dir, test)
+        log.debug("Found {0} test".format(test))
+        map(lambda ssh: ssh.copy_file(test_path, path.join("modules", test))
 
   def build_ion(self):
     """Create ION file systems."""
@@ -305,7 +312,7 @@ class TSuite(object):
       self.__get_authbuf(ssh)
 
 
-      ls_cmd = "ls {0}/".format(self.build_dirs["ctl"])#"{1}*.sock".format(self.build_dirs["ctl"], sock_name)
+      ls_cmd = "ls {0}/{1}*.sock".format(self.build_dirs["ctl"], sock_name)
       result = ssh.run(ls_cmd)
 
       if len(result['err']) > 0:
@@ -332,10 +339,8 @@ class TSuite(object):
           f.write(new_gdbcmd)
           f.close()
           log.debug("Wrote gdb cmd to {0}".format(gdbcmd_build_path))
-          print open(gdbcmd_build_path, "r").read()
           log.debug("Remote copying gdbcmd.")
           ssh.copy_file(gdbcmd_build_path, gdbcmd_build_path)
-          print open(gdbcmd_build_path, "r").read()
       else:
         log.fatal("Unable to parse gdb cmd at {1}!".format(gdbcmd_path))
         sys.exit(1)
@@ -358,7 +363,6 @@ class TSuite(object):
       log.debug("Waiting for {0} sock on {1} to appear.".format(sock_name, host))
       while True:
         result = ssh.run(ls_cmd)
-        print result
         if len(result["out"]) > 1:
           break
         time.sleep(1)
@@ -506,7 +510,7 @@ class TSuite(object):
                   res["id"] = groups[0]
 
                 elif name == "zpool_path":
-                  res["zpool_path"] = groups[0].strip()
+                  res["zpool_path"] = groups[0]
 
                 elif name == "zpool":
                   res["zpool_name"] = groups[0]
@@ -545,8 +549,7 @@ class TSuite(object):
                   res =  SL2Res(groups[0], site_name)
             else:
               if name == "client":
-                self.clients = groups[0].split(",")
-
+                self.clients = [g.strip() for g in groups[0].split(",")]
               if name == "site":
                 site_name = groups[0]
                 in_site = True
