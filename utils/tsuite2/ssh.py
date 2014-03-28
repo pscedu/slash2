@@ -151,6 +151,7 @@ class SSH(object):
 
     cmd = sane_cmd
 
+    print cmd
     #Debug -- log the cmds being run
     [log.debug(c) for c in cmd.split(";")]
 
