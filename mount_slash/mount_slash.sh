@@ -34,7 +34,7 @@ base=$dir/$prof.s2
 ulimit -n 100000
 ulimit -c $((1024 * 1024 * 1024 * 50))
 export LD_LIBRARY_PATH=/usr/local/lib
-export PSC_SYSLOG=1
+export PSC_SYSLOG_info=1
 export PSC_LOG_LEVEL=${PSC_LOG_LEVEL:-notice}
 export PSC_LOG_LEVEL_info=info
 export PSC_LOG_FILE=${PSC_LOG_FILE:-$base/log/$host.$name/%t}
