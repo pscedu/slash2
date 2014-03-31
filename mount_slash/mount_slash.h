@@ -145,7 +145,7 @@ struct slc_wkdata_readdir {
 	size_t				 size;
 };
 
-struct msl_fhent {
+struct msl_fhent {					/* file handle in struct fuse_file_info */
 	psc_spinlock_t			 mfh_lock;
 	struct fidc_membh		*mfh_fcmh;
 	struct psclist_head		 mfh_lentry;
