@@ -328,29 +328,24 @@ bmpc_biorqs_destroy(struct bmapc_memb *b, int rc)
 
 	bmpc = bmap_2_bmpc(b);
 
-	/* prevent my peer flushers from destroying me again */
-	PLL_FOREACH_SAFE(r, tmp, &bmpc->bmpc_pndg_biorqs) {
+	/*
+	 * Inflight biorqs are off the splay tree.  So we shouldn't race
+	 * to destroy the same biorq.
+	 */
+	for (r = SPLAY_MIN(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs); r; 
+	    r = tmp) {
+		tmp = SPLAY_NEXT(bmpc_biorq_tree,
+		    &bmpc->bmpc_new_biorqs, r);
+		PSC_SPLAY_XREMOVE(bmpc_biorq_tree,
+		    &bmpc->bmpc_new_biorqs, r);
+		BIORQ_LOCK(r);
+		r->biorq_flags &= ~BIORQ_SPLAY;
+		BIORQ_ULOCK(r);
 		psc_dynarray_add(&a, r);
-		r->biorq_flags &= ~BIORQ_PENDING;
-		pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 	}
 	BMAP_ULOCK(b);
 
 	DYNARRAY_FOREACH(r, i, &a) {
-		/*
-		 * A read request can use a write bmap.  Plus, it is
-		 * the reader's responsibility to destroy its requests.
-		 */
-		BIORQ_LOCK(r);
-		if (!(r->biorq_flags & BIORQ_FLUSHRDY)) {
-			BIORQ_ULOCK(r);
-			continue;
-		}
-		if (r->biorq_flags & BIORQ_INFL) {
-			BIORQ_ULOCK(r);
-			continue;
-		}
-		BIORQ_ULOCK(r);
 		msl_bmpces_fail(r, rc);
 		msl_biorq_destroy(r);
 	}
