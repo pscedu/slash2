@@ -986,10 +986,10 @@ msbmaprathr_main(struct psc_thread *thr)
 void
 msbenchthr_main(struct psc_thread *thr)
 {
+#if 0
 	struct bmap_pagecache_entry *e;
 	struct bmpc_ioreq *r;
 
-#if 0
 	pscthr_setpause(thr, 1);
 	while (pscthr_run(thr)) {
 		e = psc_pool_get(bmpce_pool);
