@@ -825,7 +825,7 @@ void
 ms_biorq_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	printf("%-16s %5s %3s %9s %6s "
-	    "%15s %3s %10s %10s %2s %2s\n",
+	    "%14s %3s %10s %10s %2s %2s\n",
 	    "fid", "bno", "ref", "off", "len",
 	    "flags", "try", "sliod", "expire", "np", "nr");
 }
@@ -836,7 +836,7 @@ ms_biorq_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	const struct msctlmsg_biorq *msr = m;
 
 	printf("%016"SLPRIxFID" %5d %3d %9d %6d "
-	    "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c "
+	    "%c%c%c%c%c%c%c%c%c%c%c%c%c%c "
 	    "%3d %10s %10"PRId64" %2d %2d\n",
 	    msr->msr_fid, msr->msr_bno, msr->msr_ref, msr->msr_off,
 	    msr->msr_len,
@@ -845,7 +845,6 @@ ms_biorq_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    msr->msr_flags & BIORQ_RBWFP		? 'f' : '-',
 	    msr->msr_flags & BIORQ_RBWLP		? 'l' : '-',
 	    msr->msr_flags & BIORQ_SCHED		? 's' : '-',
-	    msr->msr_flags & BIORQ_INFL			? 'i' : '-',
 	    msr->msr_flags & BIORQ_DIO			? 'd' : '-',
 	    msr->msr_flags & BIORQ_FORCE_EXPIRE		? 'x' : '-',
 	    msr->msr_flags & BIORQ_DESTROY		? 'D' : '-',
