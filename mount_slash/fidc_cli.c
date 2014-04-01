@@ -183,9 +183,9 @@ dump_fcmh_flags(int flags)
 #endif
 
 struct sl_fcmh_ops sl_fcmh_ops = {
-/* ctor */		slc_fcmh_ctor,
-/* dtor */		slc_fcmh_dtor,
-/* getattr */		msl_stat,
-/* postsetattr */	slc_fcmh_refresh_age,
-/* modify */		NULL
+	slc_fcmh_ctor,		/* sfop_ctor */		
+	slc_fcmh_dtor,		/* sfop_dtor */		
+	msl_stat,		/* sfop_getattr */		
+	slc_fcmh_refresh_age,	/* sfop_postsetattr */	
+	NULL			/* sfop_modify */		
 };
