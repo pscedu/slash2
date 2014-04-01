@@ -506,7 +506,6 @@ dump_biorq_flags(uint32_t flags)
 	PFL_PRFLAG(BIORQ_RBWFP, &flags, &seq);
 	PFL_PRFLAG(BIORQ_RBWLP, &flags, &seq);
 	PFL_PRFLAG(BIORQ_SCHED, &flags, &seq);
-	PFL_PRFLAG(BIORQ_INFL, &flags, &seq);
 	PFL_PRFLAG(BIORQ_DIO, &flags, &seq);
 	PFL_PRFLAG(BIORQ_FORCE_EXPIRE, &flags, &seq);
 	PFL_PRFLAG(BIORQ_DESTROY, &flags, &seq);

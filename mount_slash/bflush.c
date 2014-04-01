@@ -195,7 +195,7 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 		if (rc) {
 			bmap_flush_resched(r, rc);
 		} else {
-			BIORQ_CLEARATTR(r, BIORQ_INFL | BIORQ_SCHED);
+			BIORQ_CLEARATTR(r, BIORQ_SCHED);
 			msl_biorq_destroy(r);
 		}
 	}
@@ -301,7 +301,6 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r)
 	psc_assert(r->biorq_flags & BIORQ_SCHED);
 
 	r->biorq_last_sliod = bmap_2_ios(r->biorq_bmap);
-	r->biorq_flags |= BIORQ_INFL;
 
 	if (timespeccmp(&r->biorq_expire, &t, <)) {
 		old = 1;
@@ -338,7 +337,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 
 	BMAP_LOCK(r->biorq_bmap);
 	BIORQ_LOCK(r);
-	r->biorq_flags &= ~(BIORQ_INFL | BIORQ_SCHED);
+	r->biorq_flags &= ~BIORQ_SCHED;
 
 	if (r->biorq_retries >= SL_MAX_BMAPFLSH_RETRIES) {
 		BIORQ_ULOCK(r);
@@ -629,9 +628,6 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 	    idx++, e = t) {
 		t = psc_dynarray_getpos(biorqs, idx + *indexp);
 
-		psc_assert((t->biorq_flags & BIORQ_SCHED) &&
-			  !(t->biorq_flags & BIORQ_INFL));
-
 		/*
 		 * If any member is expired then we'll push everything
 		 * out.
@@ -869,12 +865,6 @@ bmap_flush(void)
 				continue;
 			}
 
-			/*
-			 * Don't assert !BIORQ_INFL until ensuring that
-			 * we can actually work on this biorq.  A RBW
-			 * process may be working on it.
-			 */
-			psc_assert(!(r->biorq_flags & BIORQ_INFL));
 			r->biorq_flags |= BIORQ_SCHED;
 			BIORQ_ULOCK(r);
 

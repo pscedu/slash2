@@ -478,7 +478,7 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 	psc_assert(!(r->biorq_flags & BIORQ_DESTROY));
 	r->biorq_flags |= BIORQ_DESTROY;
 
-	psc_assert(!(r->biorq_flags & (BIORQ_INFL | BIORQ_SCHED)));
+	psc_assert(!(r->biorq_flags & BIORQ_SCHED));
 
 #if FHENT_EARLY_RELEASE
 	if (r->biorq_flags & BIORQ_NOFHENT)
@@ -912,7 +912,7 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 	DYNARRAY_FOREACH(e, i, a)
 		msl_bmpce_rpc_done(e, rc);
 
-	BIORQ_CLEARATTR(r, BIORQ_INFL | BIORQ_SCHED);
+	BIORQ_CLEARATTR(r, BIORQ_SCHED);
 
 	if (rc) {
 		if (rc == -PFLERR_KEYEXPIRED) {
@@ -1457,14 +1457,6 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	mq->op = SRMIOP_RD;
 	memcpy(&mq->sbd, bmap_2_sbd(r->biorq_bmap), sizeof(mq->sbd));
 
-	/*
-	 * Only this fsthr has access to the biorq so locking should not
-	 * be necessary.  BIORQ_INFL can't be set in the caller since
-	 * it's possible that no RPCs will be sent on behalf this biorq.
-	 */
-	if (!(r->biorq_flags & BIORQ_INFL))
-		r->biorq_flags |= BIORQ_INFL;
-
 	DEBUG_BIORQ(PLL_DEBUG, r, "launching read req");
 
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
@@ -1662,7 +1654,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 		 * requests.
 		 */
 		if (rc != -SLERR_AIOWAIT)
-			BIORQ_CLEARATTR(r, BIORQ_INFL | BIORQ_SCHED);
+			BIORQ_CLEARATTR(r, BIORQ_SCHED);
 
 		if (!rc) {
 			BIORQ_CLEARATTR(r, BIORQ_RBWLP | BIORQ_RBWFP);
