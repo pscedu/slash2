@@ -251,7 +251,6 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	if (b->bcm_flags & BMAP_DIO)
 		r->biorq_flags |= BIORQ_DIO;
 
-	r->biorq_flags |= BIORQ_PENDING;
 	pll_add(&bmpc->bmpc_pndg_biorqs, r);
 
 	BMAP_ULOCK(b);

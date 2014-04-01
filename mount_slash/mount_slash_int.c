@@ -394,10 +394,7 @@ msl_biorq_del(struct bmpc_ioreq *r)
 		    &bmpc->bmpc_new_biorqs, r);
 		r->biorq_flags &= ~BIORQ_SPLAY;
 	}
-	if (r->biorq_flags & BIORQ_PENDING) {
-		r->biorq_flags &= ~BIORQ_PENDING;
-		pll_remove(&bmpc->bmpc_pndg_biorqs, r);
-	}
+	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 
 	if (r->biorq_flags & BIORQ_FLUSHRDY) {
 		bmpc->bmpc_pndgwr--;
