@@ -334,11 +334,18 @@ bmpc_biorqs_destroy(struct bmapc_memb *b, int rc)
 	 */
 	for (r = SPLAY_MIN(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs); r; 
 	    r = tmp) {
+
 		tmp = SPLAY_NEXT(bmpc_biorq_tree,
 		    &bmpc->bmpc_new_biorqs, r);
+
+		BIORQ_LOCK(r);
+		if (r->biorq_flags & BIORQ_SCHED) {
+			BIORQ_ULOCK(r);
+			continue;
+		}
+
 		PSC_SPLAY_XREMOVE(bmpc_biorq_tree,
 		    &bmpc->bmpc_new_biorqs, r);
-		BIORQ_LOCK(r);
 		r->biorq_flags &= ~BIORQ_SPLAY;
 		BIORQ_ULOCK(r);
 		psc_dynarray_add(&a, r);
@@ -349,6 +356,7 @@ bmpc_biorqs_destroy(struct bmapc_memb *b, int rc)
 		msl_bmpces_fail(r, rc);
 		msl_biorq_destroy(r);
 	}
+	OPSTAT_INCR(SLC_OPST_BIORQ_DESTROY_BATCH);
 	psc_dynarray_free(&a);
 }
 
