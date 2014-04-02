@@ -180,6 +180,18 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 
 	entryp = iov.iov_base;
 	for (i = 0; i < mq->count; i++) {
+		struct fidc_membh *f;
+
+		rc = sli_fcmh_peek(&entryp->fg, &f);
+		if (!rc) {
+			if (!(f->fcmh_flags & FCMH_NO_BACKFILE)) {
+				close(fcmh_2_fd(f));
+				f->fcmh_flags |= FCMH_NO_BACKFILE;
+				OPSTAT_INCR(SLI_OPST_RECLAIM_CLOSE);
+			}
+			fcmh_op_done(f);
+		}
+
 		sli_fg_makepath(&entryp->fg, fidfn);
 
 		/*

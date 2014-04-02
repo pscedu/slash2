@@ -47,6 +47,8 @@ fcmh_2_fii(struct fidc_membh *f)
 
 #define sli_fcmh_get(fgp, fp)	fidc_lookup((fgp), FIDC_LOOKUP_CREATE, NULL, 0, (fp))
 
+#define sli_fcmh_peek(fgp, fp)  fidc_lookup((fgp), FIDC_LOOKUP_NONE, NULL, 0, (fp))
+
 #define sli_fcmh_get_rlsbmap(fgp, fp)						\
 				fidc_lookup((fgp), FIDC_LOOKUP_CREATE |		\
 				    FIDC_LOOKUP_RLSBMAP, NULL, 0, (fp))
