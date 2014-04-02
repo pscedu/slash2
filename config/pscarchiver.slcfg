@@ -56,23 +56,25 @@ site @PSCARCH {
 	#	0x200	peel0
 	#	0x201	lime
 
-	resource uo {
-		desc	= "tape archiver";
-		type	= archival_fs;
-		id	= 0x100;
-		nids	= tahini-99o;
-		fsroot	= /usr/uo;
-		flags	= "disable_bia";
-	}
-
-	resource ue {
-		desc	= "tape archiver";
-		type	= archival_fs;
-		id	= 0x101;
-		nids	= tahini-99e;
-		fsroot	= /usr/ue;
-		flags	= "disable_bia";
-	}
+# 	04/02/2014: Remove tahini from the PSC archive, so that old reclaim logs can be removed.
+#
+#	resource uo {
+#		desc	= "tape archiver";
+#		type	= archival_fs;
+#		id	= 0x100;
+#		nids	= tahini-99o;
+#		fsroot	= /usr/uo;
+#		flags	= "disable_bia";
+#	}
+#
+#	resource ue {
+#		desc	= "tape archiver";
+#		type	= archival_fs;
+#		id	= 0x101;
+#		nids	= tahini-99e;
+#		fsroot	= /usr/ue;
+#		flags	= "disable_bia";
+#	}
 
 	resource sense0s0 { desc = "disk-based archiver unit 0 sliod 0"; type = standalone_fs; id = 0x1000; nids = sense0-sliod0; selftest = "/usr/local/psc/sbin/st /arc_sliod/0"; fsroot = /arc_sliod/0; }
 	resource sense0s1 { desc = "disk-based archiver unit 0 sliod 1"; type = standalone_fs; id = 0x1001; nids = sense0-sliod1; selftest = "/usr/local/psc/sbin/st /arc_sliod/1"; fsroot = /arc_sliod/1; }
