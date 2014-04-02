@@ -28,7 +28,7 @@ xargs=
 apply_host_prefs "$@"
 
 : ${mp:=/$prof}
-mkdir -p $mp
+[ -d $mp ] || mkdir -p $mp
 base=$dir/$prof.s2
 # Initialization/configuration
 ulimit -n 100000
