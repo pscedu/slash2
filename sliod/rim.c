@@ -182,10 +182,11 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	for (i = 0; i < mq->count; i++) {
 		struct fidc_membh *f;
 
-		rc = sli_fcmh_peek(&entryp->fg, &f);
-		if (!rc) {
+		if (sli_fcmh_peek(&entryp->fg, &f) == 0) {
+			FCMH_LOCK(f);
 			if (!(f->fcmh_flags & FCMH_NO_BACKFILE)) {
 				close(fcmh_2_fd(f));
+				fcmh_2_fd(f) = -1;
 				f->fcmh_flags |= FCMH_NO_BACKFILE;
 				OPSTAT_INCR(SLI_OPST_RECLAIM_CLOSE);
 			}
