@@ -723,7 +723,7 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, int rc, size_t len)
 	if (!q->mfsrq_err) {
 		mfsrq_seterr(q, rc);
 		q->mfsrq_len += len;
-		if (q->mfsrq_rw == SL_READ)
+		if (q->mfsrq_flags & MFSRQ_READ)
 			q->mfsrq_mfh->mfh_nbytes_rd += len;
 		else
 			q->mfsrq_mfh->mfh_nbytes_wr += len;
@@ -741,7 +741,7 @@ msl_complete_fsrq(struct msl_fsrqinfo *q, int rc, size_t len)
 
 	mfh_decref(q->mfsrq_mfh);
 
-	if (q->mfsrq_rw == SL_READ) {
+	if (q->mfsrq_flags & MFSRQ_READ) {
 		pscfs_reply_read(pfr, q->mfsrq_buf,
 		    q->mfsrq_len, abs(q->mfsrq_err));
 		OPSTAT_INCR(SLC_OPST_FSRQ_READ_FREE);
@@ -790,7 +790,7 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r0)
 			 */
 			len = r->biorq_len;
 		} else {
-			if (q->mfsrq_rw == SL_READ)
+			if (q->mfsrq_flags & MFSRQ_READ)
 				len = msl_pages_copyout(r);
 			else {
 				len = msl_pages_copyin(r);
@@ -1921,10 +1921,9 @@ msl_fsrqinfo_init(struct pscfs_req *pfr, struct msl_fhent *mfh,
 	q->mfsrq_size = size;
 	q->mfsrq_len = 0;
 	q->mfsrq_off = off;
-	q->mfsrq_flags = 0;
 	q->mfsrq_err = 0;
 	q->mfsrq_ref = 1;
-	q->mfsrq_rw = rw;
+	q->mfsrq_flags = (rw == SL_READ) ? MFSRQ_READ : MFSRQ_NONE;
 
 	mfh_incref(q->mfsrq_mfh);
 

@@ -185,10 +185,11 @@ struct msl_fsrqinfo {
 	int				 mfsrq_flags;
 	int				 mfsrq_err;
 	int				 mfsrq_ref;	/* taken by biorq and the thread that does the I/O */
-	enum rw				 mfsrq_rw;
 };
 
-#define MFSRQ_AIOWAIT			(1 << 0)
+#define MFSRQ_NONE			(0 << 0)
+#define MFSRQ_READ			(1 << 0)
+#define MFSRQ_AIOWAIT			(1 << 1)
 
 void	msl_fsrqinfo_biorq_add(struct msl_fsrqinfo *, struct bmpc_ioreq *,int);
 
