@@ -23,7 +23,8 @@ site @PITT {
 		desc	= "SAM metadata";
 		type	= mds;
 		id	= 1;
-		nids	= app0.frank.sam.pitt.edu;
+		nids	= app0-priv.frank.sam.pitt.edu,
+			  app0.frank.sam.pitt.edu;
 		jrnldev	= /dev/disk/by-id/dm-name-vg_head0-lv_data;
 	}
 
@@ -31,7 +32,8 @@ site @PITT {
 		desc	= "SAM IceBreaker cache";
 		type	= standalone_fs;
 		id	= 201;
-		nids	= supercell0.frank.sam.pitt.edu;
+		nids	= supercell0-priv.frank.sam.pitt.edu,
+			  supercell0.frank.sam.pitt.edu;
 		fsroot	= /data/supercell0;
 #		selftest = "/local/sbin/st /samfs_slio";
 	}
