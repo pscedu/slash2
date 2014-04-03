@@ -1,12 +1,17 @@
 import sys, json, pkgutil, time
+import shutil
 
 class TestHandler(object):
   """Object used to set up testing environment and passed along to tests for runtime information."""
 
-  def __init__(self, json_constants, modules):
+  result_file = "results.json"
+
+  def __init__(self, json_constants, modules_folder):
     self.runtime = json.loads(json_constants)
-    self.modules = modules
+    self.modules_folder = modules_folder
+    self.modules = load_all_modules_from_dir(modules_folder)
     self.run_tests()
+    self.cleanup()
 
   def run_tests(self):
     """Run all tests from the tests directory and print results"""
@@ -24,7 +29,13 @@ class TestHandler(object):
       test["cleanup"]=module.cleanup()
 
       tset_results["tests"].append(test)
-    print json.dumps(tset_results)
+      f = open(self.result_file, "w")
+      f.write(json.dumps(tset_results))
+      f.close()
+
+  def cleanup(self):
+    shutil.rmtree(self.modules_folder)
+
 
 def load_all_modules_from_dir(dirname):
   modules = []
@@ -37,6 +48,5 @@ def load_all_modules_from_dir(dirname):
 
 if __name__ == "__main__":
   #Ran from script
-  modules = load_all_modules_from_dir("modules")
-  TestHandler(sys.argv[1], modules)
+  TestHandler(sys.argv[1], "./modules")
 

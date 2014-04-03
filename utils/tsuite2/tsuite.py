@@ -23,11 +23,17 @@ class TSuite(object):
     #Relative paths, replaced in init
     self.build_dirs = {
       # "base" populated in init
+
+      #TODO: bring this into the configuration file
+      # Or, on a per reosurce basis
       "mp"   : "%base%/mp",
+
       "datadir": "%base%/data",
       "ctl"  : "%base%/ctl",
       "fs"   : "%base%/fs"
     }
+
+    self.cwd = path.realpath(__file__)
 
     self.authbuf_key = None
 
@@ -205,12 +211,27 @@ class TSuite(object):
     """Uploads and runs each test on each client."""
     test_dir = self.conf["tests"]["testdir"]
     ssh_clients = [SSH(self.user, host) for host in self.clients]
-    map(lambda ssh: ssh.make_dirs("modules"), ssh_clients)
+    remote_modules_path = path.join(self.src_dirs["mp"], "modules")
+    map(lambda ssh: ssh.make_dirs(remote_modules_path), ssh_clients)
     for test in os.listdir(test_dir):
       if test.endswith(".py"):
         test_path = path.join(test_dir, test)
         log.debug("Found {0} test".format(test))
-        map(lambda ssh: ssh.copy_file(test_path, path.join("modules", test))
+        map(lambda ssh: ssh.copy_file(test_path, path.join(remote_modules_path, test))
+
+    log.debug("Copying over test handlers.")
+    map(lambda ssh: ssh.copy_file(path.join(self.cwd, "test_handler.py"), self.src_dirs["mp"]), ssh_clients)
+
+    killed_clients = sum(map(lambda ssh: ssh.kill_screens("sl2.tset"), ssh_clients))
+    log.debug("Killed {0} stagnant tset sessions. Please take care of them next time.".format(killed_clients))
+
+    log.debug("Running tests on clients.")
+    map(lambda ssh: ssh.run_screen("python test_handle.py", "sl2.tset"), ssh_clients)
+
+    log.debug("Waiting for screen sessions to finish.")
+    if not all(map(lambda ssh: ssh.wait_for_screen("sl2.tset")["finished"], ssh_clients)):
+      log.error("Some of the screen sessions running the tset encountered errors! Please check out the clients and rectify the issue.")
+
 
   def build_ion(self):
     """Create ION file systems."""
