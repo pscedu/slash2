@@ -226,12 +226,15 @@ class TSuite(object):
     log.debug("Killed {0} stagnant tset sessions. Please take care of them next time.".format(killed_clients))
 
     log.debug("Running tests on clients.")
+
+    #TODO: Pass in constants/runtime stuff
     map(lambda ssh: ssh.run_screen("python test_handle.py", "sl2.tset"), ssh_clients)
 
     log.debug("Waiting for screen sessions to finish.")
     if not all(map(lambda ssh: ssh.wait_for_screen("sl2.tset")["finished"], ssh_clients)):
       log.error("Some of the screen sessions running the tset encountered errors! Please check out the clients and rectify the issue.")
 
+    results = map(lambda ssh: (ssh.host, ssh.run("cat results.json")), ssh_clients)
 
   def build_ion(self):
     """Create ION file systems."""
