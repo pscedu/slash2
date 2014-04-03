@@ -75,7 +75,7 @@ class TSuite(object):
       log.fatal("Unable to create some necessary directory!")
       sys.exit(1)
     log.info("Successfully created build directories")
-    os.system("chmod -R 666 \"{0}\"".format(self.build_dirs["base"]))
+    os.system("chmod -R 777 \"{0}\"".format(self.build_dirs["base"]))
 
     #Compute relative paths for source dirs
     self.replace_rel_dirs(self.src_dirs)
@@ -102,7 +102,7 @@ class TSuite(object):
         log.debug("Creating build directories on {0}@{1}".format(sl2_obj["name"], sl2_obj["host"]))
         for d in self.build_dirs.values():
           ssh.make_dirs(d)
-          ssh.run("sudo chmod -R 666 \"{0}\"".format(d))
+          ssh.run("sudo chmod -R 777 \"{0}\"".format(d))
         ssh.close()
       except SSHException:
         log.error("Unable to connect to {0} to create build directories!".format(sl2_obj["host"]))
@@ -198,16 +198,15 @@ class TSuite(object):
         {slmkfs} -u {fsuuid} -I {site_id} {zpool_path}
         sleep 2
         sync
-        sleep 2
         umount {zpool_path}
-        sleep 2
         pkill zfs-fuse || true
-        sleep 3
+        sleep 2
         $SHELL -c "{zfs_fuse} &"
-        sleep 4
+        sleep 2
         {zpool} import {zpool_name} || true
         sleep 2
         pkill zfs-fuse || true
+        sleep 2
         mkdir -p {datadir}
         {slmkjrnl} -D {datadir} -u {fsuuid} -f""".format(**repl_dict)
 
@@ -309,7 +308,7 @@ class TSuite(object):
     """Launch MDS/slashd daemons."""
 
     gdbcmd_path = self.conf["slash2"]["mds_gdb"]
-    self.__launch_gdb_sl("slashd", self.sl2objects["mds"], "slashd", gdbcmd_path)
+    self.__launch_gdb_sl("mds", self.sl2objects["mds"], "slashd", gdbcmd_path)
 
   def kill_mds(self):
     """Kill MDS/slashd daemons."""
@@ -319,25 +318,50 @@ class TSuite(object):
     """Kill ION daemons."""
     self.__stop_slash2_socks("sliod", self.sl2objects["ion"], "slictl")
 
-  def __get_authbuf(self, ssh):
-    """Trys to acquire the authbuf key from the data dir. Will cache it for subsequent calls.
+  def __handle_authbuf(self, ssh, res_type):
+    """Deals with the transfer of authbuf keys. Returns True if the authbuf key needs
+        to be pulled after lauching this object
 
     Args:
-      ssh: ssh connection to get/transfer authbuf to."""
+      ssh: remote server connection
+      res_type: slash2 resource type."""
 
-    authbuf = path.join(self.build_dirs["base"], "authbuf.key")
+    if not hasattr(self, "authbuf_obtained"):
+      self.authbuf_obtained = False
 
-    if not self.authbuf_key:
-      sh = """if [[ -a {0} ]]; then; cat {0}; fi;""".format(authbuf)
-      result = ssh.run(sh)
-      if result["exit"] == 0:
-        #Hacky way of converting it to a safe hex string
-        self.authbuf_key = "\\x" + "\\x".join([c.encode("hex") for c in "".join(result["out"])])
-        log.debug("Found authbuf key.")
-      else: return
-    sh = 'echo "{0}" > {1}'.format(self.authbuf_key, authbuf)
-    result = ssh.run(sh)
-    log.debug("Written authbuf key successfully!" if result["error"] == 0 else "Failed to write authbuf key")
+    if res_type == "mds" and not self.authbuf_obtained:
+      log.debug("First MDS found at {0}; Copying authbuf key after launch".format(ssh.host))
+      return True
+    else:
+      assert(self.authbuf_key_set != False)
+      log.debug("Authbuf key already obtained. Copying to {0}".format(ssh.host))
+      location = path.join(self.build_dirs["datadir"], "authbuf.key")
+      try:
+        ssh.copy_file(location, location)
+      except IOException:
+        log.critical("Failed copying authbuf key to {0}".format(ssh.host))
+        sys.exit(1)
+
+      return False
+  
+  def __pull_authbuf(self, ssh):
+    """Pulls the authbuf key from the remote connection and stores it locally
+    
+    Args:
+      ssh: remote server connection
+      res_type: slash2 resource type."""
+
+    location = path.join(self.build_dirs["datadir"], "authbuf.key")
+    assert(not self.authbuf_obtained)
+    assert(not path.is_file(location))
+
+    try:
+      ssh.pull_file(location, location)
+      self.authbuf_obtained = True
+    except IOExcetion:
+      log.critical("Failed pulling the authbuf key from {0}.".format(ssh.host))
+      sys.exit(1)
+
 
   def __launch_gdb_sl(self, sock_name, sl2objects, res_bin_type, gdbcmd_path):
     """Generic slash2 launch service in screen+gdb. Will also copy over authbuf keys.
@@ -360,8 +384,7 @@ class TSuite(object):
       ssh = SSH(user, host, '')
 
       #Acquire and deploy authbuf key
-      self.__get_authbuf(ssh)
-
+      need_authbuf = self.__handle_authbuf(ssh, sl2object["type"])
 
       ls_cmd = "ls {0}/".format(self.build_dirs["ctl"])
       result = ssh.run(ls_cmd)
@@ -419,7 +442,11 @@ class TSuite(object):
           sys.exit(1)
 
 
+      if need_authbuf:
+        __pull_authbuf(ssh)
+
       ssh.close()
+
 
   def __sl_screen_and_wait(self, ssh, cmd, screen_name):
     """Common slash2 screen functionality.
