@@ -333,11 +333,13 @@ class TSuite(object):
       log.debug("First MDS found at {0}; Copying authbuf key after launch".format(ssh.host))
       return True
     else:
-      assert(self.authbuf_key_set != False)
+      assert(self.authbuf_obtained != False)
       log.debug("Authbuf key already obtained. Copying to {0}".format(ssh.host))
       location = path.join(self.build_dirs["datadir"], "authbuf.key")
       try:
+        chmod(location, "0666")
         ssh.copy_file(location, location)
+        chmod(location, "0400")
       except IOException:
         log.critical("Failed copying authbuf key to {0}".format(ssh.host))
         sys.exit(1)
@@ -353,12 +355,13 @@ class TSuite(object):
 
     location = path.join(self.build_dirs["datadir"], "authbuf.key")
     assert(not self.authbuf_obtained)
-    assert(not path.is_file(location))
 
     try:
+      ssh.run("sudo chmod 666 {0}".format(location))
       ssh.pull_file(location, location)
+      ssh.run("sudo chmod 400 {0}".format(location))
       self.authbuf_obtained = True
-    except IOExcetion:
+    except IOError:
       log.critical("Failed pulling the authbuf key from {0}.".format(ssh.host))
       sys.exit(1)
 
@@ -431,7 +434,6 @@ class TSuite(object):
       count = 0
       while True:
         result = ssh.run(ls_cmd, quiet=True)
-        print result
         if not all(res_bin_type not in sock for sock in result["out"]):
           break
         time.sleep(1)
@@ -443,7 +445,7 @@ class TSuite(object):
 
 
       if need_authbuf:
-        __pull_authbuf(ssh)
+       self. __pull_authbuf(ssh)
 
       ssh.close()
 
