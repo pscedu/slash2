@@ -57,7 +57,7 @@ class TSuite(object):
 
     self.sl2objects = {}
     self.conf = conf
-    self.clients = {}
+    self.clients = []
 
     self.user = os.getenv("USER")
 
@@ -96,11 +96,14 @@ class TSuite(object):
     log.debug("Found: {0}".format(", ".join(objs_disp)))
 
     for sl2_obj in self.all_objects():
-      ssh = SSH(self.user, sl2_obj["host"], '')
-      log.debug("Creating build directories on {0}@{1}".format(sl2_obj["name"], sl2_obj["host"]))
-      for d in self.build_dirs.values():
-        ssh.make_dirs(d)
-      ssh.close()
+      try:
+        ssh = SSH(self.user, sl2_obj["host"], '')
+        log.debug("Creating build directories on {0}@{1}".format(sl2_obj["name"], sl2_obj["host"]))
+        for d in self.build_dirs.values():
+          ssh.make_dirs(d)
+        ssh.close()
+      except SSHException:
+        log.error("Unable to connect to {0} to create build directories!".format(sl2_obj["host"]))
 
   def all_objects(self):
     """Returns all sl2objects in a list."""
@@ -210,25 +213,32 @@ class TSuite(object):
   def run_tests(self):
     """Uploads and runs each test on each client."""
     test_dir = self.conf["tests"]["testdir"]
+    print "!",self.clients
+    if len(self.clients) == 0:
+      log.error("No test clients?")
+      return
     ssh_clients = [SSH(self.user, host) for host in self.clients]
-    remote_modules_path = path.join(self.src_dirs["mp"], "modules")
+    remote_modules_path = path.join(self.build_dirs["mp"], "modules")
     map(lambda ssh: ssh.make_dirs(remote_modules_path), ssh_clients)
     for test in os.listdir(test_dir):
       if test.endswith(".py"):
         test_path = path.join(test_dir, test)
         log.debug("Found {0} test".format(test))
-        map(lambda ssh: ssh.copy_file(test_path, path.join(remote_modules_path, test))
+        map(lambda ssh: ssh.copy_file(test_path, path.join(remote_modules_path, test)))
 
     log.debug("Copying over test handlers.")
-    map(lambda ssh: ssh.copy_file(path.join(self.cwd, "test_handler.py"), self.src_dirs["mp"]), ssh_clients)
+    test_handler_path = path.join(self.cwd, "test_handler.py")
+    map(lambda ssh: ssh.copy_file(test_handler_path, self.build_dirs["mp"]), ssh_clients)
 
     killed_clients = sum(map(lambda ssh: ssh.kill_screens("sl2.tset"), ssh_clients))
-    log.debug("Killed {0} stagnant tset sessions. Please take care of them next time.".format(killed_clients))
+    if killed_clients > 0:
+      log.debug("Killed {0} stagnant tset sessions. Please take care of them next time.".format(killed_clients))
 
     log.debug("Running tests on clients.")
 
     #TODO: Pass in constants/runtime stuff
-    map(lambda ssh: ssh.run_screen("python test_handle.py", "sl2.tset"), ssh_clients)
+    #This is wrong and bad v
+    map(lambda ssh: ssh.run_screen("python {0}".format(test_handler_path), "sl2.tset"), ssh_clients)
 
     log.debug("Waiting for screen sessions to finish.")
     if not all(map(lambda ssh: ssh.wait_for_screen("sl2.tset")["finished"], ssh_clients)):
@@ -458,8 +468,8 @@ class TSuite(object):
 
         #Regex config parsing for sl2objects
         reg = {
-          "client" : re.compile(
-            "^#client\s*=\s*(.+?)\s*;\s*$"
+          "clients" : re.compile(
+            "^\s*?#\s*clients\s*=\s*(.+?)\s*;\s*$"
           ),
           "type"   : re.compile(
             "^\s*?type\s*?=\s*?(\S+?)\s*?;\s*$"
@@ -572,9 +582,10 @@ class TSuite(object):
                 if name == "new_res":
                   res =  SL2Res(groups[0], site_name)
             else:
-              if name == "client":
+              if name == "clients":
+                print "clients"
                 self.clients = [g.strip() for g in groups[0].split(",")]
-              if name == "site":
+              elif name == "site":
                 site_name = groups[0]
                 in_site = True
               elif name == "fsuuid":
@@ -590,10 +601,13 @@ class TSuite(object):
             log.debug("Successfully wrote build slash2 conf at {0}"\
                 .format(new_conf_path))
             for sl2_obj in self.all_objects():
-              ssh = SSH(self.user, sl2_obj["host"], '')
-              log.debug("Copying new config to {0}".format(sl2_obj["host"]))
-              ssh.copy_file(new_conf_path, new_conf_path)
-              ssh.close()
+              try:
+                ssh = SSH(self.user, sl2_obj["host"], "")
+                log.debug("Copying new config to {0}".format(sl2_obj["host"]))
+                ssh.copy_file(new_conf_path, new_conf_path)
+                ssh.close()
+              except SSHException:
+                log.error("Unable to copy config file to {0}!".format(sl2_obj["host"]))
         except IOError, e:
           log.fatal("Unable to write new conf to build directory!")
           log.fatal(new_conf_path)

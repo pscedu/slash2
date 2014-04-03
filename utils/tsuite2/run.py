@@ -123,6 +123,9 @@ def main():
     log.critical("Unable to gather test sets from the testing directory!")
     sys.exit(1)
 
+  if len(tests) == 0:
+    log.critical("No test sets found.")
+
   for test in tests:
     runtime_testdir = os.path.join(conf._sections["tests"]["testdir"], test)
     slash_conf = os.path.join(runtime_testdir, "slash.conf")
@@ -134,14 +137,15 @@ def main():
 
     #Initialize the test suite
     t = TSuite(conf._sections)
-    t.build_mds()
-    t.launch_mds()
-    t.build_ion()
-    t.launch_ion()
+    #t.build_mds()
+    #t.launch_mds()
+    #t.build_ion()
+    #t.launch_ion()
+    t.run_tests()
 
     #Run tests...
-    t.kill_mds()
-    t.kill_ion()
+    #t.kill_mds()
+    #t.kill_ion()
 
 
 if __name__=="__main__":
