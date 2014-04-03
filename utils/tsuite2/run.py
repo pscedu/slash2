@@ -128,19 +128,25 @@ def main():
 
   for test in tests:
     runtime_testdir = os.path.join(conf._sections["tests"]["testdir"], test)
+    ignore_file = os.path.join(runtime_testdir, ".ignore")
     slash_conf = os.path.join(runtime_testdir, "slash.conf")
-    if os.path.isfile(slash_conf):
+    if os.path.isfile(ignore_file):
+      log.debug("Ignoring {0}".format(runtime_testdir))
+      continue
+    elif os.path.isfile(slash_conf):
       log.debug("Replaced default slash config with {0} for this test set".format(slash_conf))
       conf._sections["slash2"]["conf"] = slash_conf
 
     conf._sections["tests"]["runtime_testdir"] = runtime_testdir
+    conf._sections["tests"]["runtime_testname"] = test
 
     #Initialize the test suite
     t = TSuite(conf._sections)
     #t.build_mds()
-    t.launch_mds()
-    t.build_ion()
-    t.launch_ion()
+    #t.launch_mds()
+    #t.build_ion()
+    #t.launch_ion()
+
     #t.run_tests()
 
     #Run tests...

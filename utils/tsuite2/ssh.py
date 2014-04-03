@@ -148,7 +148,7 @@ class SSH(object):
 
     return len(targeted_socks)
 
-  def run_screen(self, cmd, sock_name, timeout=None):
+  def run_screen(self, cmd, sock_name, timeout=None, quiet=False):
     """Remotely execute a command in a screen session. If timeout is reached, screen will be renamed and kept open.
 
       Args:
@@ -173,9 +173,9 @@ class SSH(object):
 
     cmd = sane_cmd
 
-    print cmd
-    #Debug -- log the cmds being run
-    [log.debug(c) for c in cmd.split(";")]
+    if quiet:
+      #Debug -- log the cmds being run
+      [log.debug(c) for c in cmd.split(";")]
 
     if timeout:
       timed_cmd = ""
@@ -194,7 +194,6 @@ class SSH(object):
         .format(sock_name, cmd, shell_script)
 
     chan = self.ssh.get_transport().open_session()
-    print cmd
 
     chan.exec_command(cmd)
     return True
