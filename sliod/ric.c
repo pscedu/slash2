@@ -289,8 +289,11 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	rc = slrpc_bulkserver(rq,
 	    (rw == SL_WRITE ? BULK_GET_SINK : BULK_PUT_SOURCE),
 	    SRIC_BULK_PORTAL, iovs, nslvrs);
-	if (rc)
+	if (rc) {
+		psclog_warnx("bulkserver %s error, rc = %d", 
+		    rw == SL_WRITE ? "get" : "put", rc);
 		goto out;
+	}
 
 	/*
 	 * Write the sliver back to the filesystem, but only the blocks
@@ -311,6 +314,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			rv = slvr_fsbytes_wio(slvr[i], tsz, sblk);
 			if (rv) {
 				psc_assert(rv != -SLERR_AIOWAIT);
+				psclog_warnx("write error, rc = %d", rc);
 				rc = rv;
 				goto out;
 			}
@@ -328,9 +332,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		else
 			slvr_wio_done(slvr[i], 0);
 	}
-	if (rc)
-		psclog_warnx("%s error, rc = %d",
-		    rw == SL_WRITE ? "write" : "read", rc);
+
  aio_out:
 
 	if (bmap)
