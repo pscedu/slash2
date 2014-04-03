@@ -75,6 +75,7 @@ class TSuite(object):
       log.fatal("Unable to create some necessary directory!")
       sys.exit(1)
     log.info("Successfully created build directories")
+    os.system("chmod -R 666 \"{0}\"".format(self.build_dirs["base"]))
 
     #Compute relative paths for source dirs
     self.replace_rel_dirs(self.src_dirs)
@@ -101,6 +102,7 @@ class TSuite(object):
         log.debug("Creating build directories on {0}@{1}".format(sl2_obj["name"], sl2_obj["host"]))
         for d in self.build_dirs.values():
           ssh.make_dirs(d)
+          ssh.run("sudo chmod -R 666 \"{0}\"".format(d))
         ssh.close()
       except SSHException:
         log.error("Unable to connect to {0} to create build directories!".format(sl2_obj["host"]))

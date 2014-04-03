@@ -24,8 +24,8 @@ class SSH(object):
     self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
     #Get password from stdin
-#    if password is None:
- #     password = getpass.getpass("{0}'s password: ".format(user))
+    #    if password is None:
+    #     password = getpass.getpass("{0}'s password: ".format(user))
 
     #Initialize connection
     try:
@@ -67,16 +67,38 @@ class SSH(object):
 
     Args:
       src: path to local file.
-      dst: path to copy to on remote server."""
+      dst: path to copy to on remote server.
+    Returns:
+      True if it copied successfully, False if the src file does not exist.
+      Can also throw an IOException"""
 
     if os.path.isfile(src):
-        s = open(src, "rb")
-        contents = s.read()
-        s.close()
+      s = open(src, "rb")
+      contents = s.read()
+      s.close()
+      f = self.sftp.open(dst, "wb")
+      f.write(contents)
+      f.close()
+      return True
+    else:
+      log.error(src + " does not exist locally!")
+      return False
 
-        f = self.sftp.open(dst, "wb")
-        f.write(contents)
-        f.close()
+  def pull_file(self, rmt, local):
+    """Download remote file. Not elevated.
+
+    Args:
+      rmt: path to file on the remote machine.
+      local: path to store remote file on local machine."""
+
+    r = self.sftp.open(rmt, "rb")
+    contents = r.read()
+    r.close()
+    l = open(local, "wb")
+    l.write(contents)
+    l.close()
+
+    return True
 
   def make_dirs(self, dirs_path):
     """Create remote directories.
