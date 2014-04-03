@@ -6,12 +6,14 @@ class TestHandler(object):
   def __init__(self, json_constants, modules):
     self.runtime = json.loads(json_constants)
     self.modules = modules
+    self.run_tests()
 
   def run_tests(self):
     """Run all tests from the tests directory and print results"""
-    tset_results = []
+    tset_results = {"tests": []}
     for module in self.modules:
-      test = {"name": module.__name__[:-3]}
+      test = {"name": module.__name__}
+
       test["setup"]=module.setup()
 
       start = time.time()
@@ -22,7 +24,7 @@ class TestHandler(object):
       test["cleanup"]=module.cleanup()
 
       tset_results["tests"].append(test)
-    print json.loads(tset_result)
+    print json.dumps(tset_results)
 
 def load_all_modules_from_dir(dirname):
   modules = []
@@ -35,6 +37,6 @@ def load_all_modules_from_dir(dirname):
 
 if __name__ == "__main__":
   #Ran from script
-  modules = load_all_modules_from_dir("./modules")
+  modules = load_all_modules_from_dir("modules")
   TestHandler(sys.argv[1], modules)
 

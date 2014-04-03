@@ -179,7 +179,7 @@ class TSuite(object):
         $SHELL -c "{zfs_fuse} &"
         sleep 2
         {zpool} destroy {zpool_name} || true
-        {zpool} create -f {zpool_name} {zpool_args} -m {zpool_path}
+        {zpool} create -m {zpool_path} -f {zpool_name} {zpool_args}
         {zpool} set cachefile={zpool_cache} {zpool_name}
         {slmkfs} -u {fsuuid} -I {site_id} {zpool_path}
         sync
@@ -510,7 +510,7 @@ class TSuite(object):
                   res["id"] = groups[0]
 
                 elif name == "zpool_path":
-                  res["zpool_path"] = groups[0]
+                  res["zpool_path"] = groups[0].strip()
 
                 elif name == "zpool":
                   res["zpool_name"] = groups[0]
