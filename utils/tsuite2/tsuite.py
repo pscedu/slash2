@@ -188,13 +188,24 @@ class TSuite(object):
         $SHELL -c "{zfs_fuse} &"
         sleep 2
         {zpool} destroy {zpool_name} || true
+        sleep 2
         {zpool} create -m {zpool_path} -f {zpool_name} {zpool_args}
+        sleep 2
         {zpool} set cachefile={zpool_cache} {zpool_name}
+        sleep 2
         {slmkfs} -u {fsuuid} -I {site_id} {zpool_path}
+        sleep 2
         sync
-        sync
+        sleep 2
         umount {zpool_path}
-        pkill zfs-fuse
+        sleep 2
+        pkill zfs-fuse || true
+        sleep 3
+        $SHELL -c "{zfs_fuse} &"
+        sleep 4
+        {zpool} import {zpool_name} || true
+        sleep 2
+        pkill zfs-fuse || true
         mkdir -p {datadir}
         {slmkjrnl} -D {datadir} -u {fsuuid} -f""".format(**repl_dict)
 
@@ -350,17 +361,10 @@ class TSuite(object):
       self.__get_authbuf(ssh)
 
 
-      ls_cmd = "ls {0}/{1}*.sock".format(self.build_dirs["ctl"], sock_name)
+      ls_cmd = "ls {0}/".format(self.build_dirs["ctl"])
       result = ssh.run(ls_cmd)
 
-      if len(result['err']) > 0:
-        present_socks = 0
-      else:
-        present_socks = len(result['out'])
-
-      if present_socks >= 1:
-        log.warning("There are already {0} {1} socks in {2} on {3}?"\
-            .format(present_socks, sock_name, self.build_dirs["ctl"], host))
+      present_socks = [res_bin_type in sock for sock in result["out"]].count(True)
 
       #Create monolithic reference/replace dict
       repl_dict = dict(self.src_dirs, **self.build_dirs)
@@ -399,11 +403,20 @@ class TSuite(object):
         sys.exit(1)
 
       log.debug("Waiting for {0} sock on {1} to appear.".format(sock_name, host))
+      count = 0
       while True:
-        result = ssh.run(ls_cmd)
-        if len(result["out"]) > 1:
+        result = ssh.run(ls_cmd, quiet=True)
+        print result
+        if not all(res_bin_type not in sock for sock in result["out"]):
           break
         time.sleep(1)
+        count += 1
+        if count == int(self.conf["slash2"]["timeout"]):
+          log.fatal("Cannot find {0} sock on {1}. Resume to {2} and resolve it. "\
+            .format(res_bin_type, sl2object["id"], screen_sock_name))
+          sys.exit(1)
+
+
       ssh.close()
 
   def __sl_screen_and_wait(self, ssh, cmd, screen_name):

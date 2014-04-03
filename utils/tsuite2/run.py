@@ -139,9 +139,9 @@ def main():
     t = TSuite(conf._sections)
     #t.build_mds()
     #t.launch_mds()
-    #t.build_ion()
-    #t.launch_ion()
-    t.run_tests()
+    t.build_ion()
+    t.launch_ion()
+    #t.run_tests()
 
     #Run tests...
     #t.kill_mds()
