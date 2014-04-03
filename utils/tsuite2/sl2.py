@@ -67,14 +67,16 @@ class SL2Res(dict):
       return False
 
     if sl2res_type in  ["standalone_fs", "archival_fs"]:
-        sl2res_type = "ion"
+      sl2res_type = "ion"
 
     #Lookup necessary fields for object type
     necessary_fields = self.necessary[sl2res_type]\
         if sl2res_type in self.necessary else []
 
     if sl2res_type != "mds":
-      necessary_fields += self.necessary["all_but_mds"]
+      #TODO: evaluate the necessity of this...
+      #necessary_fields += self.necessary["all_but_mds"]
+      pass
 
     missing = check_subset(necessary_fields, dict.keys(self))
     if len(missing) != 0:

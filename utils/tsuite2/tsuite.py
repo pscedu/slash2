@@ -33,7 +33,8 @@ class TSuite(object):
       "fs"   : "%base%/fs"
     }
 
-    self.cwd = path.realpath(__file__)
+    self.cwd = path.realpath(__file__).split(os.sep)[:-1]
+    self.cwd = os.sep.join(self.cwd)
 
     self.authbuf_key = None
 
@@ -57,7 +58,6 @@ class TSuite(object):
 
     self.sl2objects = {}
     self.conf = conf
-    self.clients = []
 
     self.user = os.getenv("USER")
 
@@ -213,21 +213,24 @@ class TSuite(object):
   def run_tests(self):
     """Uploads and runs each test on each client."""
     test_dir = self.conf["tests"]["testdir"]
-    print "!",self.clients
-    if len(self.clients) == 0:
+    if len(self.sl2objects["client"]) == 0:
       log.error("No test clients?")
       return
-    ssh_clients = [SSH(self.user, host) for host in self.clients]
+    client_hosts = [client["host"] for client in self.sl2objects["client"]]
+    ssh_clients = [SSH(self.user, host) for host in client_hosts]
     remote_modules_path = path.join(self.build_dirs["mp"], "modules")
     map(lambda ssh: ssh.make_dirs(remote_modules_path), ssh_clients)
     for test in os.listdir(test_dir):
+      #Needs to look into `citrus_tests`
       if test.endswith(".py"):
         test_path = path.join(test_dir, test)
         log.debug("Found {0} test".format(test))
         map(lambda ssh: ssh.copy_file(test_path, path.join(remote_modules_path, test)))
 
     log.debug("Copying over test handlers.")
-    test_handler_path = path.join(self.cwd, "test_handler.py")
+    test_handler_path = path.join(self.cwd, "test_handle.py")
+    remote_test_handler_path = path.join(self.build_dirs["mp"], "test_handle.py")
+    print test_handler_path, remote_test_handler_path
     map(lambda ssh: ssh.copy_file(test_handler_path, self.build_dirs["mp"]), ssh_clients)
 
     killed_clients = sum(map(lambda ssh: ssh.kill_screens("sl2.tset"), ssh_clients))
@@ -238,13 +241,14 @@ class TSuite(object):
 
     #TODO: Pass in constants/runtime stuff
     #This is wrong and bad v
-    map(lambda ssh: ssh.run_screen("python {0}".format(test_handler_path), "sl2.tset"), ssh_clients)
+    map(lambda ssh: ssh.run_screen("python {0}".format(remote_test_handler_path), "sl2.tset"), ssh_clients)
 
     log.debug("Waiting for screen sessions to finish.")
     if not all(map(lambda ssh: ssh.wait_for_screen("sl2.tset")["finished"], ssh_clients)):
       log.error("Some of the screen sessions running the tset encountered errors! Please check out the clients and rectify the issue.")
 
-    results = map(lambda ssh: (ssh.host, ssh.run("cat results.json")), ssh_clients)
+    result_path = path.join(self.build_dirs["mp"], "results.json")
+    results = map(lambda ssh: (ssh.host, ssh.run("cat "+result_path)), ssh_clients)
 
   def build_ion(self):
     """Create ION file systems."""
@@ -583,8 +587,11 @@ class TSuite(object):
                   res =  SL2Res(groups[0], site_name)
             else:
               if name == "clients":
-                print "clients"
-                self.clients = [g.strip() for g in groups[0].split(",")]
+                for client in [g.strip() for g in groups[0].split(",")]:
+                  client_res = SL2Res(client, None)
+                  client_res["type"] = "client"
+                  client_res["host"] = client
+                  client_res.finalize(self.sl2objects)
               elif name == "site":
                 site_name = groups[0]
                 in_site = True

@@ -34,7 +34,7 @@ class TestHandler(object):
       f.close()
 
   def cleanup(self):
-    shutil.rmtree(self.modules_folder)
+    #shutil.rmtree(self.modules_folder)
 
 
 def load_all_modules_from_dir(dirname):
