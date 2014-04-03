@@ -290,8 +290,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	    (rw == SL_WRITE ? BULK_GET_SINK : BULK_PUT_SOURCE),
 	    SRIC_BULK_PORTAL, iovs, nslvrs);
 	if (rc) {
-		psclog_warnx("bulkserver %s error, rc = %d", 
-		    rw == SL_WRITE ? "get" : "put", rc);
+		psclog_warnx("bulkserver error on %s, rc = %d", 
+		    rw == SL_WRITE ? "write" : "read", rc);
 		goto out;
 	}
 
