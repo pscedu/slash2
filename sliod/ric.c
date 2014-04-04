@@ -367,7 +367,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 
 	for (i = 0; i < mq->nbmaps; i++) {
 		sbd = &mq->sbd[i];
-		rc = sli_fcmh_get_rlsbmap(&sbd->sbd_fg, &f);
+		rc = sli_fcmh_get(&sbd->sbd_fg, &f);
 		psc_assert(rc == 0);
 
 		/*
