@@ -114,8 +114,6 @@ sli_open_backing_file(struct fidc_membh *f)
 	char fidfn[PATH_MAX];
 
 	flags = O_CREAT | O_RDWR;
-	if (f->fcmh_flags & FCMH_CAC_RLSBMAP)
-		flags &= ~O_CREAT;
 	incr = psc_rlim_adj(RLIMIT_NOFILE, 1);
 	sli_fg_makepath(&f->fcmh_fg, fidfn);
 	fcmh_2_fd(f) = open(fidfn, flags, 0600);
@@ -124,9 +122,7 @@ sli_open_backing_file(struct fidc_membh *f)
 		if (incr)
 			psc_rlim_adj(RLIMIT_NOFILE, -1);
 		OPSTAT_INCR(SLI_OPST_OPEN_FAIL);
-		if (rc != ENOENT ||
-		    (f->fcmh_flags & FCMH_CAC_RLSBMAP) == 0)
-			lvl = PLL_WARN;
+		lvl = PLL_WARN;
 	} else
 		OPSTAT_INCR(SLI_OPST_OPEN_SUCCEED);
 	psclog(lvl, "opened backing file path=%s fd=%d rc=%d",
@@ -291,7 +287,7 @@ sli_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 			DEBUG_FCMH(PLL_WARN, f, "error during "
 			    "getattr backing file rc=%d", rc);
 	}
-	if (rc == ENOENT && (f->fcmh_flags & FCMH_CAC_RLSBMAP)) {
+	if (rc == ENOENT) {
 		f->fcmh_flags |= FCMH_NO_BACKFILE;
 		rc = 0;
 	}

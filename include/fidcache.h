@@ -85,13 +85,12 @@ struct fidc_membh {
 #define	FCMH_CAC_WAITING	(1 <<  4)	/* being waited on */
 #define	FCMH_CAC_TOFREE		(1 <<  5)	/* ctor failure or memory pressure */
 #define	FCMH_CAC_REAPED		(1 <<  6)	/* has been reaped */
-#define	FCMH_CAC_RLSBMAP	(1 <<  7)	/* lookup due to releasing bmap */
-#define	FCMH_HAVE_ATTRS		(1 <<  8)	/* has valid stat(2) info */
-#define	FCMH_GETTING_ATTRS	(1 <<  9)	/* fetching stat(2) info */
-#define	FCMH_CTOR_FAILED	(1 << 10)	/* constructor func failed */
-#define	FCMH_NO_BACKFILE	(1 << 11)	/* fcmh does not have a backing file (sliod) */
-#define	FCMH_BUSY		(1 << 12)	/* fcmh being processed */
-#define	_FCMH_FLGSHFT		(1 << 13)
+#define	FCMH_HAVE_ATTRS		(1 <<  7)	/* has valid stat(2) info */
+#define	FCMH_GETTING_ATTRS	(1 <<  8)	/* fetching stat(2) info */
+#define	FCMH_CTOR_FAILED	(1 <<  9)	/* constructor func failed */
+#define	FCMH_NO_BACKFILE	(1 << 10)	/* fcmh does not have a backing file (sliod) */
+#define	FCMH_BUSY		(1 << 11)	/* fcmh being processed */
+#define	_FCMH_FLGSHFT		(1 << 12)
 
 /* number of seconds in which attribute times out */
 #define FCMH_ATTR_TIMEO		8
@@ -223,7 +222,7 @@ struct fidc_membh {
 #define DEBUG_FCMH(level, f, fmt, ...)					\
 	psclogs((level), SLSS_FCMH,					\
 	    "fcmh@%p f+g="SLPRI_FG" "					\
-	    "flg=%#x:%s%s%s%s%s%s%s%s%s%s%s%s%s%s "			\
+	    "flg=%#x:%s%s%s%s%s%s%s%s%s%s%s%s%s "			\
 	    "ref=%d sz=%"PRId64" "DEBUG_FCMH_BLKSIZE_LABEL"=%"PRId64" "	\
 	    "mode=%#o : "fmt,						\
 	    (f), SLPRI_FG_ARGS(&(f)->fcmh_fg), (f)->fcmh_flags,		\
@@ -234,7 +233,6 @@ struct fidc_membh {
 	    (f)->fcmh_flags & FCMH_CAC_WAITING		? "W" : "",	\
 	    (f)->fcmh_flags & FCMH_CAC_TOFREE		? "T" : "",	\
 	    (f)->fcmh_flags & FCMH_CAC_REAPED		? "R" : "",	\
-	    (f)->fcmh_flags & FCMH_CAC_RLSBMAP		? "L" : "",	\
 	    (f)->fcmh_flags & FCMH_HAVE_ATTRS		? "A" : "",	\
 	    (f)->fcmh_flags & FCMH_GETTING_ATTRS	? "G" : "",	\
 	    (f)->fcmh_flags & FCMH_CTOR_FAILED		? "f" : "",	\
@@ -271,8 +269,7 @@ void	 fcmh_setattrf(struct fidc_membh *, struct srt_stat *, int);
 #define FIDC_LOOKUP_CREATE		(1 << 0)	/* Create if not present		*/
 #define FIDC_LOOKUP_EXCL		(1 << 1)	/* Fail if fcmh is present		*/
 #define FIDC_LOOKUP_LOAD		(1 << 2)	/* Use external fetching mechanism	*/
-#define FIDC_LOOKUP_RLSBMAP		(1 << 3)	/* Release bmap on sliod		*/
-#define FIDC_LOOKUP_NOLOG		(1 << 4)
+#define FIDC_LOOKUP_NOLOG		(1 << 3)
 
 int	_fidc_lookup(const struct pfl_callerinfo *,
 	    const struct slash_fidgen *, int, struct srt_stat *, int,

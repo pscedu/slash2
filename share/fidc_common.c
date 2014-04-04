@@ -370,8 +370,6 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	 * item is not on any list yet.
 	 */
 	fcmh->fcmh_flags |= FCMH_CAC_INITING;
-	if (flags & FIDC_LOOKUP_RLSBMAP)
-		fcmh->fcmh_flags |= FCMH_CAC_RLSBMAP;
 	psc_hashbkt_add_item(&fidcHtable, b, fcmh);
 	psc_hashbkt_put(&fidcHtable, b);
 
@@ -405,7 +403,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 
  finish:
 	(void)FCMH_RLOCK(fcmh);
-	fcmh->fcmh_flags &= ~(FCMH_CAC_INITING | FCMH_CAC_RLSBMAP);
+	fcmh->fcmh_flags &= ~FCMH_CAC_INITING;
 	if (fcmh->fcmh_flags & FCMH_CAC_WAITING) {
 		fcmh->fcmh_flags &= ~FCMH_CAC_WAITING;
 		psc_waitq_wakeall(&fcmh->fcmh_waitq);
@@ -576,7 +574,6 @@ _dump_fcmh_flags_common(int *flags, int *seq)
 	PFL_PRFLAG(FCMH_CAC_WAITING, flags, seq);
 	PFL_PRFLAG(FCMH_CAC_TOFREE, flags, seq);
 	PFL_PRFLAG(FCMH_CAC_REAPED, flags, seq);
-	PFL_PRFLAG(FCMH_CAC_RLSBMAP, flags, seq);
 	PFL_PRFLAG(FCMH_HAVE_ATTRS, flags, seq);
 	PFL_PRFLAG(FCMH_GETTING_ATTRS, flags, seq);
 	PFL_PRFLAG(FCMH_CTOR_FAILED, flags, seq);
