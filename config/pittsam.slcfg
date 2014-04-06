@@ -3,11 +3,11 @@
 # See slcfg(5) for more information.
 
 set port=4078;
-set routes="
-  tcp7 [136.142.217.126]@tcp8;
-  tcp8 [10.201.0.44]@sdp7
-";
-set nets="tcp7 10.201.0.*; tcp8 *.*.*.*";
+#set routes="
+#  tcp7 [136.142.217.126]@tcp8;
+#  tcp8 [10.201.0.44]@sdp7
+#";
+set nets="tcp7 10.201.*.*; tcp8 *.*.*.*";
 
 set pref_mds="md0@PITT";
 set pref_ios="ice@PITT";
@@ -43,12 +43,28 @@ site @PSC {
 	site_desc	= "Pittsburgh Supercomputing Center";
 	site_id		= 1;
 
-	resource sense51 {
+	resource sense51s0 {
 		desc	= "";
 		type	= standalone_fs;
 		id	= 10;
 		nids	= sense51-66.psc.edu;
-		fsroot	= /local/samfs_slio;
+		fsroot	= /sense51_pool0/slio;
 #		selftest = "/local/sbin/st /local/samfs_slio";
+	}
+
+	resource sense51s1 {
+		desc	= "";
+		type	= standalone_fs;
+		id	= 11;
+		nids	= sense51-66-io1.psc.edu;
+		fsroot	= /sense51_pool1/slio;
+#		selftest = "/local/sbin/st /local/samfs_slio";
+	}
+
+	resource sense51 {
+		desc	= "";
+		type	= cluster_noshare_lfs;
+		id	= 100;
+		ios	= sense51s0@PSCARCH, sense51s1@PSCARCH;
 	}
 }
