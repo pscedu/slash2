@@ -132,8 +132,10 @@ sli_rci_ctl_health_send(struct slashrpc_cservice *csvc)
 	int rc;
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_CTL, rq, mq, mp);
-	if (rc)
+	if (rc) {
+		sl_csvc_decref(csvc);
 		return;
+	}
 	mq->opc = SRM_CTLOP_SETOPT;
 	c = (void *)mq->buf;
 	c->opt = SRMCTL_OPT_HEALTH;
