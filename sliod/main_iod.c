@@ -164,8 +164,10 @@ slihealththr_main(struct psc_thread *thr)
 			    sli_selftest_rc, rc);
 
 			PLL_LOCK(&sl_clients);
-			PLL_FOREACH(csvc, &sl_clients)
+			PLL_FOREACH(csvc, &sl_clients) {
+				sl_csvc_incref(csvc);
 				sli_rci_ctl_health_send(csvc);
+			}
 			PLL_ULOCK(&sl_clients);
 		}
 		sli_selftest_rc = rc;
@@ -290,8 +292,9 @@ main(int argc, char *argv[])
 	pscthr_init(SLITHRT_STATFS, 0, slistatfsthr_main, NULL, 0,
 	    "slistatfsthr");
 
-	pscthr_init(SLITHRT_HEALTH, 0, slihealththr_main, NULL, 0,
-	    "slihealththr");
+	if (nodeResm->resm_res->res_selftest[0] || 1)
+		pscthr_init(SLITHRT_HEALTH, 0, slihealththr_main, NULL,
+		    0, "slihealththr");
 
 	slrpc_initcli();
 
