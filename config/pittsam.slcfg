@@ -65,6 +65,6 @@ site @PSC {
 		desc	= "";
 		type	= cluster_noshare_lfs;
 		id	= 100;
-		ios	= sense51s0@PSCARCH, sense51s1@PSCARCH;
+		ios	= sense51s0@PSC, sense51s1@PSC;
 	}
 }
