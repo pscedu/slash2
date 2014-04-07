@@ -988,7 +988,12 @@ struct srm_unlink_req {
 	char			name[SL_NAME_MAX + 1];
 } __packed;
 
-#define srm_unlink_rep		srm_getattr2_rep
+struct srm_unlink_rep {
+	struct srt_stat		pattr;		/* parent dir */
+	struct slash_fidgen	chfg;		/* child fg */
+	 int32_t		rc;
+	 int32_t		_pad;
+} __packed;
 
 struct srm_listxattr_req {
 	struct slash_fidgen	fg;
