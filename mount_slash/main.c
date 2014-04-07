@@ -1194,7 +1194,6 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		rc = mp->rc;
 
 	uidmap_int_stat(&mp->pattr);
-	uidmap_int_stat(&mp->cattr);
 
 	if (!rc) {
 		FCMH_LOCK(p);
@@ -1202,17 +1201,9 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		FCMH_ULOCK(p);
 	}
 
-	if (rc == 0 && mp->cattr.sst_fid &&
-	    mp->cattr.sst_fid != FID_ANY) {
-		rc = msl_load_fcmh(pfr, mp->cattr.sst_fid, &c);
-		if (!rc)
-			fcmh_setattrf(c, &mp->cattr,
-			    FCMH_SETATTRF_SAVELOCAL);
-	}
-
  out:
-	psclog_info("pfid="SLPRI_FID" name='%s' isfile=%d rc=%d",
-	    pinum, name, isfile, rc);
+	psclog_warnx("delete: fid="SLPRI_FG" name='%s' isfile=%d rc=%d",
+	    SLPRI_FG_ARGS(&mp->chfg), name, isfile, rc);
 
 	if (c)
 		fcmh_op_done(c);
