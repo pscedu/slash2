@@ -1202,7 +1202,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	}
 
  out:
-	psclog_warnx("delete: fid="SLPRI_FG" name='%s' isfile=%d rc=%d",
+	psclog_info("delete: fid="SLPRI_FG" name='%s' isfile=%d rc=%d",
 	    SLPRI_FG_ARGS(&mp->chfg), name, isfile, rc);
 
 	if (c)
