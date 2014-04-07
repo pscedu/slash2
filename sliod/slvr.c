@@ -502,6 +502,15 @@ slvr_fsio(struct slvr *s, int sblk, uint32_t size, enum rw rw)
 	ssize_t	rc;
 	size_t off;
 
+	struct fidc_membh *f;
+
+	f = slvr_2_fcmh(s);
+	if (f->fcmh_flags & FCMH_NO_BACKFILE) {
+		psclog_warnx("No backing file: "SLPRI_FG", fd = %d",
+		    SLPRI_FG_ARGS(&f->fcmh_fg), slvr_2_fd(s));
+		return -EBADF;
+	}
+
 	psc_assert(rw == SL_READ || rw == SL_WRITE);
 
 	nblks = (size + SLASH_SLVR_BLKSZ - 1) / SLASH_SLVR_BLKSZ;
