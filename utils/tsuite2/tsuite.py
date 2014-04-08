@@ -6,8 +6,11 @@ from random import randrange
 from os import path
 from paramiko import SSHException
 
-from sl2 import SL2Res
-from ssh import SSH
+from utils.sl2 import SL2Res
+from utils.ssh import SSH
+
+from managers import sl2gen
+
 
 log = logging.getLogger("slash2")
 
@@ -67,47 +70,8 @@ class TSuite(object):
     self.rootdir = self.conf["tsuite"]["rootdir"]
     self.src_dirs["src"] = self.conf["source"]["srcroot"]
 
-    #Necessary to compute relative paths
-    self.build_base_dir()
-    log.debug("Base directory: {0}".format(self.build_dirs["base"]))
-
-    self.replace_rel_dirs(self.build_dirs)
-
-    if not self.mk_dirs(self.build_dirs.values()):
-      log.fatal("Unable to create some necessary directory!")
-      sys.exit(1)
-    log.info("Successfully created build directories")
-    os.system("chmod -R 777 \"{0}\"".format(self.build_dirs["base"]))
-
-    #Compute relative paths for source dirs
-    self.replace_rel_dirs(self.src_dirs)
-
-    #Also check for embedded build paths
-    self.replace_rel_dirs(self.src_dirs, self.build_dirs)
-
-    if not self.parse_slash2_conf():
-      log.critical("Error parsing slash2 configuration file!")
-      sys.exit(1)
-
-    log.info("slash2 configuration parsed successfully.")
-
-    #Show the resources parsed
-    objs_disp = [
-      "{0}:{1}".format(res, len(res_list))\
-          for res, res_list in self.sl2objects.items()
-    ]
-    log.debug("Found: {0}".format(", ".join(objs_disp)))
-
-    for sl2_obj in self.all_objects():
-      try:
-        ssh = SSH(self.user, sl2_obj["host"], '')
-        log.debug("Creating build directories on {0}@{1}".format(sl2_obj["name"], sl2_obj["host"]))
-        for d in self.build_dirs.values():
-          ssh.make_dirs(d)
-          ssh.run("sudo chmod -R 777 \"{0}\"".format(d), quiet=True)
-        ssh.close()
-      except SSHException:
-        log.error("Unable to connect to {0} to create build directories!".format(sl2_obj["host"]))
+    self.local_setup()
+    self.create_remote_setups()
 
   def all_objects(self):
     """Returns all sl2objects in a list."""
@@ -169,60 +133,53 @@ class TSuite(object):
         ssh.close()
     return report
 
-  def build_mds(self):
-    """Initialize MDS resources for testing."""
+  def local_setup(self):
+    """Create the local build directories and parse the slash2 config."""
 
-    #Create the MDS systems
-    for mds in self.sl2objects["mds"]:
+    #Necessary to compute relative paths
+    self.build_base_dir()
+    log.debug("Base directory: {0}".format(self.build_dirs["base"]))
 
-      #Create monolithic reference/replace dict
-      repl_dict = dict(self.src_dirs, **self.build_dirs)
-      repl_dict = dict(repl_dict, **mds)
+    self.replace_rel_dirs(self.build_dirs)
 
-      #Create remote connection to server
+    if not self.mk_dirs(self.build_dirs.values()):
+      log.fatal("Unable to create some necessary directory!")
+      sys.exit(1)
+    log.info("Successfully created build directories")
+    os.system("chmod -R 777 \"{0}\"".format(self.build_dirs["base"]))
+
+    #Compute relative paths for source dirs
+    self.replace_rel_dirs(self.src_dirs)
+
+    #Also check for embedded build paths
+    self.replace_rel_dirs(self.src_dirs, self.build_dirs)
+
+    if not self.parse_slash2_conf():
+      log.critical("Error parsing slash2 configuration file!")
+      sys.exit(1)
+
+    log.info("slash2 configuration parsed successfully.")
+
+    #Show the resources parsed
+    objs_disp = [
+      "{0}:{1}".format(res, len(res_list))\
+          for res, res_list in self.sl2objects.items()
+    ]
+    log.debug("Found: {0}".format(", ".join(objs_disp)))
+
+  def create_remote_setups(self):
+    """Create the necessary build directories on all slash2 objects."""
+
+    for sl2_obj in self.all_objects():
       try:
-        #Can probably avoid doing user, host everytime
-        user, host = self.user, mds["host"]
-        log.debug("Connecting to {0}@{1}".format(user, host))
-        ssh = SSH(user, host, '')
-
-        cmd = """
-        $SHELL -c "cd {src} && make printvar-CC >/dev/null"
-        pkill zfs-fuse || true
-        $SHELL -c "{zfs_fuse} &"
-        sleep 2
-        {zpool} destroy {zpool_name} || true
-        sleep 2
-        {zpool} create -m {zpool_path} -f {zpool_name} {zpool_args}
-        sleep 2
-        {zpool} set cachefile={zpool_cache} {zpool_name}
-        sleep 2
-        {slmkfs} -u {fsuuid} -I {site_id} {zpool_path}
-        sleep 2
-        sync
-        umount {zpool_path}
-        pkill zfs-fuse || true
-        sleep 2
-        $SHELL -c "{zfs_fuse} &"
-        sleep 2
-        {zpool} import {zpool_name} || true
-        sleep 2
-        pkill zfs-fuse || true
-        sleep 2
-        mkdir -p {datadir}
-        {slmkjrnl} -D {datadir} -u {fsuuid} -f""".format(**repl_dict)
-
-        screen_name = "ts.mds."+mds["id"]
-
-        self.__sl_screen_and_wait(ssh, cmd, screen_name)
-
-        log.info("Finished creating {0}".format(mds["name"]))
+        ssh = SSH(self.user, sl2_obj["host"], '')
+        log.debug("Creating build directories on {0}@{1}".format(sl2_obj["name"], sl2_obj["host"]))
+        for d in self.build_dirs.values():
+          ssh.make_dirs(d)
+          ssh.run("sudo chmod -R 777 \"{0}\"".format(d), quiet=True)
         ssh.close()
-
-      except SSHException, e:
-        log.fatal("Error with remote connection to {0} with res {1}!"\
-            .format(mds["host"], mds["name"]))
-        sys.exit(1)
+      except SSHException:
+        log.error("Unable to connect to {0} to create build directories!".format(sl2_obj["host"]))
 
   def run_tests(self):
     """Uploads and runs each test on each client."""
@@ -316,201 +273,13 @@ class TSuite(object):
     gdbcmd_path = self.conf["slash2"]["ion_gdb"]
     self.__launch_gdb_sl("ion", self.sl2objects["ion"], "sliod", gdbcmd_path)
 
-  def launch_mds(self):
-    """Launch MDS/slashd daemons."""
-
-    gdbcmd_path = self.conf["slash2"]["mds_gdb"]
-    self.__launch_gdb_sl("mds", self.sl2objects["mds"], "slashd", gdbcmd_path)
-
-  def kill_mds(self):
-    """Kill MDS/slashd daemons."""
-    self.__stop_slash2_socks("slashd", self.sl2objects["mds"], "slmctl")
 
   def kill_ion(self):
     """Kill ION daemons."""
     self.__stop_slash2_socks("sliod", self.sl2objects["ion"], "slictl")
 
-  def __handle_authbuf(self, ssh, res_type):
-    """Deals with the transfer of authbuf keys. Returns True if the authbuf key needs
-        to be pulled after lauching this object
-
-    Args:
-      ssh: remote server connection
-      res_type: slash2 resource type."""
-
-    if not hasattr(self, "authbuf_obtained"):
-      self.authbuf_obtained = False
-
-    if res_type == "mds" and not self.authbuf_obtained:
-      log.debug("First MDS found at {0}; Copying authbuf key after launch".format(ssh.host))
-      return True
-    else:
-      assert(self.authbuf_obtained != False)
-      log.debug("Authbuf key already obtained. Copying to {0}".format(ssh.host))
-      location = path.join(self.build_dirs["datadir"], "authbuf.key")
-      try:
-        chmod(location, "0666")
-        ssh.copy_file(location, location)
-        chmod(location, "0400")
-      except IOException:
-        log.critical("Failed copying authbuf key to {0}".format(ssh.host))
-        sys.exit(1)
-
-      return False
-
-  def __pull_authbuf(self, ssh):
-    """Pulls the authbuf key from the remote connection and stores it locally
-
-    Args:
-      ssh: remote server connection
-      res_type: slash2 resource type."""
-
-    location = path.join(self.build_dirs["datadir"], "authbuf.key")
-    assert(not self.authbuf_obtained)
-
-    try:
-      ssh.run("sudo chmod 666 {0}".format(location))
-      ssh.pull_file(location, location)
-      ssh.run("sudo chmod 400 {0}".format(location))
-      self.authbuf_obtained = True
-    except IOError:
-      log.critical("Failed pulling the authbuf key from {0}.".format(ssh.host))
-      sys.exit(1)
 
 
-  def __launch_gdb_sl(self, sock_name, sl2objects, res_bin_type, gdbcmd_path):
-    """Generic slash2 launch service in screen+gdb. Will also copy over authbuf keys.
-
-    Args:
-      sock_name: name of sl2 sock.
-      sl2objects: list of objects to be launched.
-      res_bin_type: key to bin path in src_dirs.
-      gdbcmd_path: path to gdbcmd file."""
-
-    #res_bin_type NEEDS to be a path in src_dirs
-    assert(res_bin_type in self.src_dirs)
-
-    for sl2object in sl2objects:
-      log.debug("Initializing environment > {0} @ {1}".format(sl2object["name"], sl2object["host"]))
-
-      #Remote connection
-      user, host = self.user, sl2object["host"]
-      log.debug("Connecting to {0}@{1}".format(user, host))
-      ssh = SSH(user, host, '')
-
-      #Acquire and deploy authbuf key
-      need_authbuf = self.__handle_authbuf(ssh, sl2object["type"])
-
-      ls_cmd = "ls {0}/".format(self.build_dirs["ctl"])
-      result = ssh.run(ls_cmd)
-
-      present_socks = [res_bin_type in sock for sock in result["out"]].count(True)
-
-      #Create monolithic reference/replace dict
-      repl_dict = dict(self.src_dirs, **self.build_dirs)
-      repl_dict = dict(repl_dict, **sl2object)
-
-      #Create gdbcmd from template
-      gdbcmd_build_path = path.join(self.build_dirs["base"],
-          "{0}.{1}.gdbcmd".format(res_bin_type, sl2object["id"]))
-
-      new_gdbcmd = repl_file(repl_dict, gdbcmd_path)
-
-      if new_gdbcmd:
-        with open(gdbcmd_build_path, "w") as f:
-          f.write(new_gdbcmd)
-          f.close()
-          log.debug("Wrote gdb cmd to {0}".format(gdbcmd_build_path))
-          log.debug("Remote copying gdbcmd.")
-          ssh.copy_file(gdbcmd_build_path, gdbcmd_build_path)
-      else:
-        log.fatal("Unable to parse gdb cmd at {1}!".format(gdbcmd_path))
-        sys.exit(1)
-
-      cmd = "sudo gdb -f -x {0} {1}".format(gdbcmd_build_path, self.src_dirs[res_bin_type])
-      screen_sock_name = "sl.{0}.{1}".format(res_bin_type, sl2object["id"])
-
-      #Launch slash2 in gdb within a screen session
-      ssh.run_screen(cmd, screen_sock_name)
-
-      #Wait two seconds to make sure slash2 launched without errors
-      time.sleep(2)
-
-      screen_socks = ssh.list_screen_socks()
-      if screen_sock_name + "-error" in screen_socks or screen_sock_name not in screen_socks:
-        log.fatal("sl2object {0}:{1} launched with an error. Resume to {2} and resolve it."\
-            .format(sl2object["name"], sl2object["id"], screen_sock_name+"-error"))
-        sys.exit(1)
-
-      log.debug("Waiting for {0} sock on {1} to appear.".format(sock_name, host))
-      count = 0
-      while True:
-        result = ssh.run(ls_cmd, quiet=True)
-        if not all(res_bin_type not in sock for sock in result["out"]):
-          break
-        time.sleep(1)
-        count += 1
-        if count == int(self.conf["slash2"]["timeout"]):
-          log.fatal("Cannot find {0} sock on {1}. Resume to {2} and resolve it. "\
-            .format(res_bin_type, sl2object["id"], screen_sock_name))
-          sys.exit(1)
-
-
-      if need_authbuf:
-       self. __pull_authbuf(ssh)
-
-      ssh.close()
-
-
-  def __sl_screen_and_wait(self, ssh, cmd, screen_name):
-    """Common slash2 screen functionality.
-    Check for existing sock, run the cmd, and wait to see if it timed out or executed successfully.
-
-    Args:
-      ssh: remote server connection.
-      cmd: command to run remotely
-      screen_name: name of screen sock to wait for."""
-
-    #Run command string in screen
-    if not ssh.run_screen(cmd, screen_name, self.conf["slash2"]["timeout"]):
-      log.fatal("Screen session {0} already exists in some form! Attach and deal with it.".format(screen_name))
-      sys.exit(1)
-
-    wait = ssh.wait_for_screen(screen_name)
-
-    if wait["timedout"]:
-      log.critical("{0} timed out! screen -r {0}-timed and check it out."\
-          .format(screen_name))
-      sys.exit(1)
-    elif wait["errored"]:
-      log.critical("{0} exited with a nonzero return code. screen -r {0}-error and check it out."\
-          .format(screen_name))
-      sys.exit(1)
-
-  def __stop_slash2_socks(self, sock_name, sl2objects, res_bin_type):
-    """ Terminates all slash2 socks and screen socks on a generic host.
-    Args:
-      sock_name: name of sl2 sock.
-      sl2objects: list of objects to be launched.
-      res_bin_type: key to bin path in src_dirs.
-      gdbcmd_path: path to gdbcmd file."""
-
-    #res_bin_type NEEDS to be a path in src_dirs
-    assert(res_bin_type in self.src_dirs)
-
-    for sl2object in sl2objects:
-      log.debug("Initializing environment > {0} @ {1}".format(sl2object["name"], sl2object["host"]))
-
-      #Remote connection
-      user, host = self.user, sl2object["host"]
-      log.debug("Connecting to {0}@{1}".format(user, host))
-      ssh = SSH(user, host, '')
-      #ssh.kill_screens()
-
-      cmd = "{0} -S {1}/{2}.{3}.sock stop".format(res_bin_type, self.build_dirs["ctl"], sock_name, host)
-      log.debug(cmd)
-      ssh.run(cmd)
-      ssh.close()
 
 
   def parse_slash2_conf(self):
