@@ -10,7 +10,6 @@ from utils.sl2 import SL2Res
 from utils.ssh import SSH
 
 from managers import sl2gen
-from managers import mds, ion
 
 log = logging.getLogger("slash2")
 
@@ -183,6 +182,7 @@ class TSuite(object):
 
   def run_tests(self):
     """Uploads and runs each test on each client."""
+
     test_dir = self.conf["tests"]["runtime_testdir"]
     if len(self.sl2objects["client"]) == 0:
       log.error("No test clients?")
@@ -194,14 +194,13 @@ class TSuite(object):
 
     tests = []
     for test in os.listdir(test_dir):
-      #Needs to look into `citrus_tests`
       if test.endswith(".py"):
         test_path = path.join(test_dir, test)
         tests.append(test)
         map(lambda ssh: ssh.copy_file(test_path, path.join(remote_modules_path, test)), ssh_clients)
     log.debug("Found tests: {0}".format(",".join(tests)))
 
-    test_handler_path = path.join(self.cwd, "test_handle.py")
+    test_handler_path = path.join(self.cwd, "handlers", "test_handle.py")
     remote_test_handler_path = path.join(self.build_dirs["mp"], "test_handle.py")
     map(lambda ssh: ssh.copy_file(test_handler_path, remote_test_handler_path), ssh_clients)
 
@@ -213,7 +212,6 @@ class TSuite(object):
 
     log.debug("Running tests on clients.")
 
-    #What else is necessary?
     runtime = self.build_dirs
     runtime_arg = base64.b64encode(json.dumps(runtime))
 
@@ -230,10 +228,6 @@ class TSuite(object):
     map(lambda ssh: ssh.close(), ssh_clients)
 
     return results
-
-
-  def launch_mnt(self):
-    """Launch mount slash."""
 
   def parse_slash2_conf(self):
     """Reads and parses slash2 conf for tokens.

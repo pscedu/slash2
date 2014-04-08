@@ -1,5 +1,6 @@
 from managers import sl2gen
 from utils import ssh
+from paramiko import SSHException
 
 def launch_ion(tsuite):
   """Launch ION daemons.

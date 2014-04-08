@@ -6,6 +6,10 @@ from ConfigParser import ConfigParser
 
 from tsuite import TSuite, check_subset
 
+from managers.mds import *
+from managers.ion import *
+from managers.mnt import *
+
 log = logging.getLogger("slash2")
 
 def main():
@@ -13,7 +17,7 @@ def main():
   Deals with argument parsing and main configuration."""
 
   #Reset colorama after prints
-#  init(autoreset=True)
+  #  init(autoreset=True)
 
   parser = ArgumentParser(description="SLASH2 Test Suite")
   parser.add_argument("-v", "--verbose", action="count",
@@ -35,10 +39,10 @@ def main():
   log.setLevel(level)
 
   #Setup stream log (console)
-#  fmt_string = "{2}%(asctime)s{0} [{1}%(levelname)s{0}] {2}%(message)s"\
-#    .format(Fore.RESET, Fore.CYAN, Fore.WHITE)
+  #  fmt_string = "{2}%(asctime)s{0} [{1}%(levelname)s{0}] {2}%(message)s"\
+  #    .format(Fore.RESET, Fore.CYAN, Fore.WHITE)
 
-  fmt_string = "%(asctime)s} [%(levelname)s] %(message)s"
+  fmt_string = ":%(levelname)s %(message)s"
   ch = logging.StreamHandler()
   ch.setLevel(level)
   ch.setFormatter(logging.Formatter(fmt_string))
@@ -142,12 +146,11 @@ def main():
 
     #Initialize the test suite
     t = TSuite(conf._sections)
-    #t.build_mds()
-    #t.launch_mds()
-    #t.build_ion()
-    #t.launch_ion()
 
-    #t.run_tests()
+    build_mds(t)
+    launch_mds(t)
+
+    t.run_tests()
 
     #Run tests...
     #t.kill_mds()

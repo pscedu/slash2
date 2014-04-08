@@ -1,5 +1,6 @@
 from managers import sl2gen
 from utils import ssh
+from paramiko import SSHException
 
 def build_mds(tsuite):
   """Initialize MDS resources for testing.

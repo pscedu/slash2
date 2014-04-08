@@ -51,7 +51,7 @@ def launch_gdb_sl(tsuite, sock_name, sl2objects, res_bin_type, gdbcmd_path):
     ssh = SSH(user, host, '')
 
     #Acquire and deploy authbuf key
-    need_authbuf = tsuite.__handle_authbuf(ssh, sl2object["type"])
+    need_authbuf = tsuite.handle_authbuf(tsuite, ssh, sl2object["type"])
 
     ls_cmd = "ls {0}/".format(tsuite.build_dirs["ctl"])
     result = ssh.run(ls_cmd)
