@@ -1471,7 +1471,7 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 int
 slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 {
-	struct slash_fidgen fg, chfg;
+	struct slash_fidgen fg, oldfg, chfg;
 	struct fidc_membh *p = NULL;
 	struct srm_unlink_req *mq;
 	struct srm_unlink_rep *mp;
@@ -1503,10 +1503,10 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 
 	mds_reserve_slot(1);
 	if (isfile)
-		mp->rc = mdsio_unlink(vfsid, fcmh_2_mfid(p), &mp->chfg,
+		mp->rc = mdsio_unlink(vfsid, fcmh_2_mfid(p), &oldfg,
 		    mq->name, &rootcreds, mdslog_namespace, &chfg);
 	else
-		mp->rc = mdsio_rmdir(vfsid, fcmh_2_mfid(p), &mp->chfg,
+		mp->rc = mdsio_rmdir(vfsid, fcmh_2_mfid(p), &oldfg,
 		    mq->name, &rootcreds, mdslog_namespace);
 	mds_unreserve_slot(1);
 
@@ -1515,6 +1515,18 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 		mdsio_fcmh_refreshattr(p, &mp->pattr);
 	if (p)
 		fcmh_op_done(p);
+
+	mp->flag = 0;
+	if (chfg.fg_fid != FID_ANY) {
+		struct fidc_membh *c;
+		if (slm_fcmh_get(&chfg, &c) == 0) {
+			mp->flag = 1;
+			mdsio_fcmh_refreshattr(c, &mp->cattr);
+			fcmh_op_done(c);
+		}
+	}
+	if (!mp->flag)
+		mp->cattr.sst_fg = oldfg;
 
 	psclog_info("%s parent="SLPRI_FID" name=%s rc=%d",
 	    isfile ? "unlink" : "rmdir", mq->pfid, mq->name, mp->rc);

@@ -989,10 +989,10 @@ struct srm_unlink_req {
 } __packed;
 
 struct srm_unlink_rep {
+	struct srt_stat		cattr;		/* child node */
 	struct srt_stat		pattr;		/* parent dir */
-	struct slash_fidgen	chfg;		/* child fg */
+	 int32_t		flag;		/* e.g., if child still exist */
 	 int32_t		rc;
-	 int32_t		_pad;
 } __packed;
 
 struct srm_listxattr_req {
