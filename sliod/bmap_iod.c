@@ -24,13 +24,13 @@
 
 #include <sys/time.h>
 
+#include "pfl/ctlsvr.h"
 #include "pfl/dynarray.h"
 #include "pfl/listcache.h"
-#include "pfl/rpc.h"
-#include "pfl/rsx.h"
-#include "pfl/ctlsvr.h"
 #include "pfl/lock.h"
 #include "pfl/log.h"
+#include "pfl/rpc.h"
+#include "pfl/rsx.h"
 
 #include "bmap_iod.h"
 #include "fidcache.h"
@@ -261,7 +261,7 @@ slibmaprlsthr_main(struct psc_thread *thr)
 
 		DYNARRAY_FOREACH(b, i, &a)
 			bmap_op_done_type(b, BMAP_OPCNT_REAPER);
-		
+
 		psc_dynarray_reset(&a);
 
 		if (!nrls) {
