@@ -3,7 +3,7 @@ import os, re
 
 from time import sleep
 
-log = logging.getLogger('slash2')
+log = logging.getLogger('ssh')
 class SSH(object):
   """Helpful SSH abstractions for executing remote applications."""
 

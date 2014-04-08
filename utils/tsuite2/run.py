@@ -10,7 +10,7 @@ from managers.mds import *
 from managers.ion import *
 from managers.mnt import *
 
-log = logging.getLogger("slash2")
+log = logging.getLogger("sl2")
 
 def main():
   """Entry point into the SLASH2 Test Suite.
@@ -42,12 +42,10 @@ def main():
   #  fmt_string = "{2}%(asctime)s{0} [{1}%(levelname)s{0}] {2}%(message)s"\
   #    .format(Fore.RESET, Fore.CYAN, Fore.WHITE)
 
-  fmt_string = ":%(levelname)s %(message)s"
-  ch = logging.StreamHandler()
-  ch.setLevel(level)
-  ch.setFormatter(logging.Formatter(fmt_string))
-
-  log.addHandler(ch)
+  logging.basicConfig(level=level,
+    format='%(asctime)s %(name)-8s %(levelname)-8s %(message)s',
+    datefmt='%H:%M'
+  )
 
   #Setup file log
   if args.log_file:

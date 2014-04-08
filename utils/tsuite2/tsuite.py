@@ -11,7 +11,7 @@ from utils.ssh import SSH
 
 from managers import sl2gen
 
-log = logging.getLogger("slash2")
+log = logging.getLogger("sl2.ts")
 
 class TSuite(object):
   """SLASH2 File System Test Suite."""

@@ -1,6 +1,6 @@
 import logging
 
-log = logging.getLogger("slash2")
+log = logging.getLogger("sl2.res")
 
 #TODO: Already defined in tsuite
 def check_subset(necessary, check):
