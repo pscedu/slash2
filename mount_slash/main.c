@@ -1193,17 +1193,25 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc == 0)
 		rc = mp->rc;
 
-	uidmap_int_stat(&mp->pattr);
-
 	if (!rc) {
 		FCMH_LOCK(p);
+		uidmap_int_stat(&mp->pattr);
 		fcmh_setattr_locked(p, &mp->pattr);
 		FCMH_ULOCK(p);
 	}
 
+	if (!rc && mp->flag == 1) {
+		uidmap_int_stat(&mp->cattr);
+		rc = msl_load_fcmh(pfr, mp->cattr.sst_fid, &c);
+		if (!rc)
+			fcmh_setattrf(c, &mp->cattr,
+			    FCMH_SETATTRF_SAVELOCAL);
+	}
+
+	psclog_info("delete: fid="SLPRI_FG" flag = %d,  name='%s' isfile=%d rc=%d",
+	    SLPRI_FG_ARGS(&mp->cattr.sst_fg), mp->flag, name, isfile, rc);
+
  out:
-	psclog_info("delete: fid="SLPRI_FG" name='%s' isfile=%d rc=%d",
-	    SLPRI_FG_ARGS(&mp->chfg), name, isfile, rc);
 
 	if (c)
 		fcmh_op_done(c);
