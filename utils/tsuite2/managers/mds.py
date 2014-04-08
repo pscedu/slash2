@@ -64,8 +64,8 @@ def launch_mds():
   """Launch MDS/slashd daemons."""
 
   gdbcmd_path = tsuite.conf["slash2"]["mds_gdb"]
-  sl2gen.launch_gdb_sl("mds", tsuite.sl2objects["mds"], "slashd", gdbcmd_path)
+  sl2gen.launch_gdb_sl(tsuite, "mds", tsuite.sl2objects["mds"], "slashd", gdbcmd_path)
 
 def kill_mds(tsuite):
   """Kill MDS/slashd daemons."""
-  sl2gen.stop_slash2_socks("slashd", tsuite.sl2objects["mds"], "slmctl")
+  sl2gen.stop_slash2_socks(tsuite, "slashd", tsuite.sl2objects["mds"], "slmctl")

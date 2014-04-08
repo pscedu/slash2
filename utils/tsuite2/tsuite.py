@@ -10,7 +10,7 @@ from utils.sl2 import SL2Res
 from utils.ssh import SSH
 
 from managers import sl2gen
-
+from managers import mds, ion
 
 log = logging.getLogger("slash2")
 
@@ -231,56 +231,9 @@ class TSuite(object):
 
     return results
 
-  def build_ion(self):
-    """Create ION file systems."""
-
-    for ion in self.sl2objects["ion"]:
-
-      #Create monolithic reference/replace dict
-      repl_dict = dict(self.src_dirs, **self.build_dirs)
-      repl_dict = dict(repl_dict, **ion)
-
-      #Create remote connection to server
-      try:
-        user, host = self.user, ion["host"]
-        log.debug("Connecting to {0}@{1}".format(user, host))
-        ssh = SSH(user, host, '')
-
-        cmd = """
-        mkdir -p {datadir}
-        mkdir -p {fsroot}
-        {slmkfs} -Wi -u {fsuuid} -I {site_id} {fsroot}"""\
-        .format(**repl_dict)
-
-        sock_name = "ts.ion."+ion["id"]
-
-        self.__sl_screen_and_wait(ssh, cmd, sock_name)
-
-        log.info("Finished creating {0}!".format(ion["name"]))
-        ssh.close()
-
-      except SSHException, e:
-        log.fatal("Error with remote connection to {0} with res {1}!"\
-            .format(ion["host"], ion["name"]))
-        sys.exit(1)
 
   def launch_mnt(self):
     """Launch mount slash."""
-
-  def launch_ion(self):
-    """Launch ION daemons."""
-
-    gdbcmd_path = self.conf["slash2"]["ion_gdb"]
-    self.__launch_gdb_sl("ion", self.sl2objects["ion"], "sliod", gdbcmd_path)
-
-
-  def kill_ion(self):
-    """Kill ION daemons."""
-    self.__stop_slash2_socks("sliod", self.sl2objects["ion"], "slictl")
-
-
-
-
 
   def parse_slash2_conf(self):
     """Reads and parses slash2 conf for tokens.
