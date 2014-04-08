@@ -491,6 +491,8 @@ reimport
     - write generic archiver visual monitor
 - vtune license for profiling
 - illusion2 can use more RAM?
+- MDS: the first available IOS is always used when pref IOS is not available
+  - should shuffle all available IOS
 
 
 
