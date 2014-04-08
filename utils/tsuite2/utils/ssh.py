@@ -4,6 +4,8 @@ import os, re
 from time import sleep
 
 log = logging.getLogger('ssh')
+logging.getLogger("paramiko").setLevel(logging.WARNING)
+
 class SSH(object):
   """Helpful SSH abstractions for executing remote applications."""
 

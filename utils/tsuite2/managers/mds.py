@@ -54,7 +54,7 @@ def build_mds(tsuite):
 
       screen_name = "ts.mds."+mds["id"]
 
-      sl2gen.screen_and_wait(tsuite, ssh, cmd, screen_name)
+      sl2gen.sl_screen_and_wait(tsuite, ssh, cmd, screen_name)
 
       log.info("Finished creating {0}".format(mds["name"]))
       ssh.close()
@@ -65,7 +65,7 @@ def build_mds(tsuite):
       sys.exit(1)
 
 
-def launch_mds():
+def launch_mds(tsuite):
   """Launch MDS/slashd daemons."""
 
   gdbcmd_path = tsuite.conf["slash2"]["mds_gdb"]

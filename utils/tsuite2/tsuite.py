@@ -4,10 +4,12 @@ import json
 
 from random import randrange
 from os import path
+from os import chmod
 from paramiko import SSHException
 
 from utils.sl2 import SL2Res
 from utils.ssh import SSH
+from managers.sl2gen import repl, repl_file
 
 from managers import sl2gen
 
@@ -383,7 +385,11 @@ class TSuite(object):
               try:
                 ssh = SSH(self.user, sl2_obj["host"], "")
                 log.debug("Copying new config to {0}".format(sl2_obj["host"]))
-                ssh.copy_file(new_conf_path, new_conf_path)
+                try:
+                  ssh.copy_file(new_conf_path, new_conf_path)
+                except IOError:
+                  log.critical("Error copying config file to {0}".format(ssh.host))
+                  sys.exit(1)
                 ssh.close()
               except SSHException:
                 log.error("Unable to copy config file to {0}!".format(sl2_obj["host"]))
@@ -457,39 +463,6 @@ class TSuite(object):
       self.tsid = tsid
       self.build_dirs["base"] = base
 
-def repl(lookup, string):
-  """Replaces keywords within a string.
-
-  Args:
-    lookup: dict in which to look up keywords.
-    string: string with embedded keywords. Ex. %key%.
-  Return:
-    String containing the replacements."""
-
-  return re.sub("%([\w_]+)%",
-    #If it is not in the lookup, leave it alone
-    lambda m: lookup[m.group(1)]
-      if
-        m.group(1) in lookup
-      else
-        "%{0}%".format(m.group(1)),
-    string)
-
-def repl_file(lookup, text):
-  """Reads a file and returns an array with keywords replaced.
-
-  Args:
-    lookup: dict in which to look up keywords.
-    text: file containing strings with embedded keywords. Ex. %key%.
-  Return:
-    String containing all replacements. Returns none if not able to parse."""
-
-  try:
-    with open(text, "r") as f:
-     return "".join([repl(lookup, line) for line in f.readlines()])
-  except IOError, e:
-    return None
-
 def check_subset(necessary, check):
   """Determines missing elements from necessary list.
 
@@ -505,3 +478,4 @@ def check_subset(necessary, check):
     map(necessary.remove, present)
     return necessary
   return []
+

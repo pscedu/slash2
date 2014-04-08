@@ -1,6 +1,44 @@
-import time
+import time, logging, sys
+
+from os import path
 
 from utils.ssh import SSH
+from tsuite import *
+
+log = logging.getLogger("sl2")
+
+def repl(lookup, string):
+  """Replaces keywords within a string.
+
+  Args:
+    lookup: dict in which to look up keywords.
+    string: string with embedded keywords. Ex. %key%.
+  Return:
+    String containing the replacements."""
+
+  return re.sub("%([\w_]+)%",
+    #If it is not in the lookup, leave it alone
+    lambda m: lookup[m.group(1)]
+      if
+        m.group(1) in lookup
+      else
+        "%{0}%".format(m.group(1)),
+    string)
+
+def repl_file(lookup, text):
+  """Reads a file and returns an array with keywords replaced.
+
+  Args:
+    lookup: dict in which to look up keywords.
+    text: file containing strings with embedded keywords. Ex. %key%.
+  Return:
+    String containing all replacements. Returns none if not able to parse."""
+
+  try:
+    with open(text, "r") as f:
+     return "".join([repl(lookup, line) for line in f.readlines()])
+  except IOError, e:
+    return None
 
 def sl_screen_and_wait(tsuite, ssh, cmd, screen_name):
   """Common slash2 screen functionality.
@@ -28,6 +66,52 @@ def sl_screen_and_wait(tsuite, ssh, cmd, screen_name):
         .format(screen_name))
     sys.exit(1)
 
+def handle_authbuf(tsuite, ssh, res_type):
+  """Deals with the transfer of authbuf keys. Returns True if the authbuf key needs
+      to be pulled after lauching this object
+
+  Args:
+    tsuite: tsuite runtime.
+    ssh: remote server connection
+    res_type: slash2 resource type."""
+
+  if not hasattr(tsuite, "authbuf_obtained"):
+    tsuite.authbuf_obtained = False
+
+  if res_type == "mds" and not tsuite.authbuf_obtained:
+    log.debug("First MDS found at {0}; Copying authbuf key after launch".format(ssh.host))
+    return True
+  else:
+    assert(tsuite.authbuf_obtained != False)
+    log.debug("Authbuf key already obtained. Copying to {0}".format(ssh.host))
+    location = path.join(tsuite.build_dirs["datadir"], "authbuf.key")
+    try:
+      chmod(location, "0666")
+      ssh.copy_file(location, location)
+      chmod(location, "0400")
+    except IOException:
+      log.critical("Failed copying authbuf key to {0}".format(ssh.host))
+      sys.exit(1)
+
+    return False
+
+def pull_authbuf(tsuite, ssh):
+  """Pulls the authbuf key from the remote connection and stores it locally
+
+  Args:
+    ssh: remote server connection """
+
+  location = path.join(tsuite.build_dirs["datadir"], "authbuf.key")
+  assert(not tsuite.authbuf_obtained)
+
+  try:
+    ssh.run("sudo chmod 666 {0}".format(location))
+    ssh.pull_file(location, location)
+    ssh.run("sudo chmod 400 {0}".format(location))
+    tsuite.authbuf_obtained = True
+  except IOError:
+    log.critical("Failed pulling the authbuf key from {0}.".format(ssh.host))
+    sys.exit(1)
 
 def launch_gdb_sl(tsuite, sock_name, sl2objects, res_bin_type, gdbcmd_path):
   """Generic slash2 launch service in screen+gdb. Will also copy over authbuf keys.
@@ -51,7 +135,7 @@ def launch_gdb_sl(tsuite, sock_name, sl2objects, res_bin_type, gdbcmd_path):
     ssh = SSH(user, host, '')
 
     #Acquire and deploy authbuf key
-    need_authbuf = tsuite.handle_authbuf(tsuite, ssh, sl2object["type"])
+    need_authbuf = handle_authbuf(tsuite, ssh, sl2object["type"])
 
     ls_cmd = "ls {0}/".format(tsuite.build_dirs["ctl"])
     result = ssh.run(ls_cmd)
@@ -109,7 +193,7 @@ def launch_gdb_sl(tsuite, sock_name, sl2objects, res_bin_type, gdbcmd_path):
 
 
     if need_authbuf:
-      tsuite.pull_authbuf(tsuite, ssh)
+      pull_authbuf(tsuite, ssh)
 
     ssh.close()
 
@@ -138,53 +222,3 @@ def stop_slash2_socks(tsuite, sock_name, sl2objects, res_bin_type):
     log.debug(cmd)
     ssh.run(cmd)
     ssh.close()
-
-
-  def handle_authbuf(tsuite, ssh, res_type):
-    """Deals with the transfer of authbuf keys. Returns True if the authbuf key needs
-        to be pulled after lauching this object
-
-    Args:
-      tsuite: tsuite runtime.
-      ssh: remote server connection
-      res_type: slash2 resource type."""
-
-    if not hasattr(tsuite, "authbuf_obtained"):
-      tsuite.authbuf_obtained = False
-
-    if res_type == "mds" and not tsuite.authbuf_obtained:
-      log.debug("First MDS found at {0}; Copying authbuf key after launch".format(ssh.host))
-      return True
-    else:
-      assert(tsuite.authbuf_obtained != False)
-      log.debug("Authbuf key already obtained. Copying to {0}".format(ssh.host))
-      location = path.join(tsuite.build_dirs["datadir"], "authbuf.key")
-      try:
-        chmod(location, "0666")
-        ssh.copy_file(location, location)
-        chmod(location, "0400")
-      except IOException:
-        log.critical("Failed copying authbuf key to {0}".format(ssh.host))
-        sys.exit(1)
-
-      return False
-
-  #Why is res_type in doc but not in params
-  def pull_authbuf(ssh):
-    """Pulls the authbuf key from the remote connection and stores it locally
-
-    Args:
-      ssh: remote server connection
-      res_type: slash2 resource type."""
-
-    location = path.join(tsuite.build_dirs["datadir"], "authbuf.key")
-    assert(not tsuite.authbuf_obtained)
-
-    try:
-      ssh.run("sudo chmod 666 {0}".format(location))
-      ssh.pull_file(location, location)
-      ssh.run("sudo chmod 400 {0}".format(location))
-      tsuite.authbuf_obtained = True
-    except IOError:
-      log.critical("Failed pulling the authbuf key from {0}.".format(ssh.host))
-      sys.exit(1)
