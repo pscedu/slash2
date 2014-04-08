@@ -1,4 +1,4 @@
-import logging, sys, os
+import logging, sys, os, re
 
 #from colorama import init, Fore
 from argparse import ArgumentParser
@@ -29,6 +29,8 @@ def main():
     default="tsuite.conf")
   parser.add_argument("-b", "--build", choices=["src", "svn"],
     help="build from src or svn", default="src")
+  parser.add_argument("-s", "--override", help="Override value in config. -s section:value=something",
+    nargs="+")
 
   args = parser.parse_args()
 
@@ -90,6 +92,18 @@ def main():
     sections["source"] = [
       "srcroot"
     ]
+
+  #Apply configuration overrides
+  if args.override:
+    overreg = re.compile(r"^(\w+):(\w+)=(.+?)$")
+    for override in args.override:
+      match = overreg.match(override)
+      if match:
+        section, key, value = match.groups()
+        if section not in conf._sections or key not in conf._sections[section]:
+          print "Override {0} does not override an existing config value!".format(override)
+          sys.exit(1)
+        conf._sections[section][key] = value
 
   #Check that the required sections exist
   missing = check_subset(list(sections), list(conf._sections))
