@@ -6,7 +6,7 @@ import sys
 import logging
 log = logging.getLogger("sl2.mds")
 
-def build_mds(tsuite):
+def create_mds(tsuite):
   """Initialize MDS resources for testing.
 
     Args:

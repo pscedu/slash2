@@ -15,7 +15,7 @@ def launch_ion(tsuite):
   gdbcmd_path = tsuite.conf["slash2"]["ion_gdb"]
   sl2gen.launch_gdb_sl(tsuite, "ion", tsuite.sl2objects["ion"], "sliod", gdbcmd_path)
 
-def build_ion(tsuite):
+def create_ion(tsuite):
   """Create ION file systems.
 
   Args:

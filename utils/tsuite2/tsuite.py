@@ -186,11 +186,20 @@ class TSuite(object):
     """Uploads and runs each test on each client."""
 
     test_dir = self.conf["tests"]["runtime_testdir"]
+
     if len(self.sl2objects["client"]) == 0:
       log.error("No test clients?")
       return
+
     client_hosts = [client["host"] for client in self.sl2objects["client"]]
-    ssh_clients = [SSH(self.user, host) for host in client_hosts]
+
+    ssh_clients = []
+    for host in client_hosts:
+      try:
+        ssh_clients.append(SSH(self.user, host))
+      except SSHException:
+        log.error("Unable to connect to %s@%s", self.user, host)
+
     remote_modules_path = path.join(self.build_dirs["mp"], "modules")
     map(lambda ssh: ssh.make_dirs(remote_modules_path), ssh_clients)
 
@@ -200,7 +209,7 @@ class TSuite(object):
         test_path = path.join(test_dir, test)
         tests.append(test)
         map(lambda ssh: ssh.copy_file(test_path, path.join(remote_modules_path, test)), ssh_clients)
-    log.debug("Found tests: {0}".format(",".join(tests)))
+    log.debug("Found tests: {0}".format(", ".join(tests)))
 
     test_handler_path = path.join(self.cwd, "handlers", "test_handle.py")
     remote_test_handler_path = path.join(self.build_dirs["mp"], "test_handle.py")
@@ -226,6 +235,10 @@ class TSuite(object):
 
     result_path = path.join(self.build_dirs["mp"], "results.json")
     results = map(lambda ssh: (ssh.host, ssh.run("cat "+result_path, quiet=True)), ssh_clients)
+
+    log.debug("Retrieved results from tests.")
+
+    #TODO: do something useful
 
     map(lambda ssh: ssh.close(), ssh_clients)
 

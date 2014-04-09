@@ -27,9 +27,12 @@ def main():
   parser.add_argument("-c", "--config-file",
     help="path to slash2 test suite config",
     default="tsuite.conf")
-  parser.add_argument("-b", "--build", choices=["src", "svn"],
+  parser.add_argument("-s", "--source", choices=["src", "svn"],
     help="build from src or svn", default="src")
-  parser.add_argument("-s", "--override", help="Override value in config. -s section:value=something",
+  parser.add_argument("-x", "--ignore-tests", help="ignore a test set, folder name", default=[], nargs="*")
+  parser.add_argument("-i", "--ignore", help="list of processes to ignore. Defaults to none.", default=[], nargs="*")
+  parser.add_argument("-a", "--only",   help="list of processes to perform. Defaults to all.", default=[], nargs="*")
+  parser.add_argument("-o", "--overrides", help="Override value in config. -s section:value=something ...",
     nargs="+")
 
   args = parser.parse_args()
@@ -39,10 +42,6 @@ def main():
       [2 if args.verbose > 2 else args.verbose]
 
   log.setLevel(level)
-
-  #Setup stream log (console)
-  #  fmt_string = "{2}%(asctime)s{0} [{1}%(levelname)s{0}] {2}%(message)s"\
-  #    .format(Fore.RESET, Fore.CYAN, Fore.WHITE)
 
   logging.basicConfig(level=level,
     format='%(asctime)s %(name)-8s %(levelname)-8s %(message)s',
@@ -84,7 +83,7 @@ def main():
 
   #Building from source or svn
 
-  if args.build == "svn":
+  if args.source == "svn":
     sections["svn"] = [
       "svnroot"
     ]
@@ -94,9 +93,9 @@ def main():
     ]
 
   #Apply configuration overrides
-  if args.override:
+  if args.overrides:
     overreg = re.compile(r"^(\w+):(\w+)=(.+?)$")
-    for override in args.override:
+    for override in args.overrides:
       match = overreg.match(override)
       if match:
         section, key, value = match.groups()
@@ -146,7 +145,7 @@ def main():
     runtime_testdir = os.path.join(conf._sections["tests"]["testdir"], test)
     ignore_file = os.path.join(runtime_testdir, ".ignore")
     slash_conf = os.path.join(runtime_testdir, "slash.conf")
-    if os.path.isfile(ignore_file):
+    if os.path.isfile(ignore_file) or test in args.ignore_tests:
       log.debug("Ignoring {0}".format(runtime_testdir))
       continue
     elif os.path.isfile(slash_conf):
@@ -156,18 +155,85 @@ def main():
     conf._sections["tests"]["runtime_testdir"] = runtime_testdir
     conf._sections["tests"]["runtime_testname"] = test
 
+    condition = True
+
+    #Only will enumerate the only items to do
+    if args.only:
+      condition = False
+
+    processes = {
+      "create": {
+        "mds": condition,
+        "ion": condition
+      },
+      "launch": {
+        "mds": condition,
+        "ion": condition,
+        "mnt": condition
+      },
+      "kill": {
+        "mds": condition,
+        "ion": condition,
+        "mnt": condition
+      },
+      "run": {
+        "tests": condition
+      }
+    }
+
+    change_items(True, processes, args.only)
+    change_items(False, processes, args.ignore)
+
     #Initialize the test suite
     t = TSuite(conf._sections)
 
-    build_mds(t)
-    launch_mds(t)
+    for parent in processes.keys():
+      for item, state in processes[parent].items():
+        if state:
+          if item == "mds":
+            if parent == "create":
+              create_mds(t)
+            elif parent == "launch":
+              launch_mds(t)
+            elif parent == "kill":
+              kill_mds(t)
+          elif item == "ion":
+            if parent == "create":
+              create_ion(t)
+            elif parent == "launch":
+              launch_ion(t)
+            elif parent == "kill":
+              kill_ion(t)
+          elif item == "mnt":
+            if parent == "launch":
+              launch_mnt(t)
+            elif parent == "kill":
+              kill_mnt(t)
+          elif item == "tests" and parent == "run":
+            t.run_tests()
 
-    t.run_tests()
 
-    #Run tests...
-    #t.kill_mds()
-    #t.kill_ion()
+def change_items(condition, processes, items):
+  """Changes the state of the processes.
 
+  Args:
+    condition: true or false to set on processes
+    processes: dict containing processes.
+    items: list of key:value pairs."""
+
+  itemreg = re.compile(r"^(\w+):(\w+)$")
+
+  for item in items:
+    match = itemreg.match(item)
+    if match:
+      parent, key = match.groups()
+      if parent not in processes or key not in processes[parent]:
+        log.critical("%s does not refer to a valid process to perform.", item)
+        sys.exit(1)
+      processes[parent][key] = condition
+    else:
+      log.critical("%s is not of the valid parent:key form.", item)
+      sys.exit(1)
 
 if __name__=="__main__":
   main()
