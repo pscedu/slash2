@@ -350,6 +350,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_statfs_rep);
 	PRTYPE(struct srm_statfs_req);
 	PRTYPE(struct srm_symlink_req);
+	PRTYPE(struct srm_unlink_rep);
 	PRTYPE(struct srm_unlink_req);
 	PRTYPE(struct srm_update_rep);
 	PRTYPE(struct srm_update_req);
@@ -651,6 +652,7 @@ main(int argc, char *argv[])
 	PRVAL(SLC_OPST_AIO_PLACED);
 	PRVAL(SLC_OPST_BIORQ_ALLOC);
 	PRVAL(SLC_OPST_BIORQ_DESTROY);
+	PRVAL(SLC_OPST_BIORQ_DESTROY_BATCH);
 	PRVAL(SLC_OPST_BIORQ_MAX);
 	PRVAL(SLC_OPST_BIORQ_RESTART);
 	PRVAL(SLC_OPST_BMAP_ALLOC_STALL);
@@ -811,6 +813,7 @@ main(int argc, char *argv[])
 	PRVAL(SLI_OPST_OPEN_FAIL);
 	PRVAL(SLI_OPST_OPEN_SUCCEED);
 	PRVAL(SLI_OPST_RECLAIM);
+	PRVAL(SLI_OPST_RECLAIM_CLOSE);
 	PRVAL(SLI_OPST_RECLAIM_FILE);
 	PRVAL(SLI_OPST_RELEASE_BMAP);
 	PRVAL(SLI_OPST_REOPEN);
