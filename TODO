@@ -493,6 +493,8 @@ reimport
 - illusion2 can use more RAM?
 - MDS: the first available IOS is always used when pref IOS is not available
   - should shuffle all available IOS
+- open file descriptors after UNLINK run into risk of accessing
+  reclaimed data on the IOS
 
 
 
