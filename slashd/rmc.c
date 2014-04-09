@@ -617,7 +617,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 	DEBUG_FCMH(PLL_DEBUG, p, "create op done for %s", mq->name);
 	/*
-	 * XXX enter this into the fcmh cache instead of doing it again
+	 * XXX enter this into the fidcache instead of doing it again
 	 * This release may be the sanest thing actually, unless EXCL is
 	 * used.
 	 */
@@ -1476,7 +1476,7 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	struct srm_unlink_req *mq;
 	struct srm_unlink_rep *mp;
 	int vfsid;
- 
+
 	chfg.fg_fid = FID_ANY;
 
 	OPSTAT_INCR(SLM_OPST_UNLINK);
