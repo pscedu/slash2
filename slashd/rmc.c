@@ -1638,8 +1638,12 @@ slm_rmc_handle_getxattr(struct pscrpc_request *rq)
 	struct iovec iov;
 	size_t outsize;
 
+	memset(value, 0, sizeof(value));
+
 	OPSTAT_INCR(SLM_OPST_GETXATTR);
 	SL_RSX_ALLOCREP(rq, mq, mp);
+	if (mq->size > LNET_MTU)
+		PFL_GOTOERR(out, mp->rc = -EINVAL);
 	mp->rc = slfid_to_vfsid(mq->fg.fg_fid, &vfsid);
 	if (mp->rc) {
 		if (mq->size)
@@ -1668,7 +1672,7 @@ slm_rmc_handle_getxattr(struct pscrpc_request *rq)
 	mp->valuelen = outsize;
 
 	iov.iov_base = value;
-	iov.iov_len = outsize;
+	iov.iov_len = mq->size;
 	if (mq->size)
 		mp->rc = slrpc_bulkserver(rq, BULK_PUT_SOURCE,
 		    SRMC_BULK_PORTAL, &iov, 1);
