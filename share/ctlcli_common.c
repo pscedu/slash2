@@ -198,7 +198,7 @@ sl_fcmh_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 	int w;
 
 	w = psc_ctl_get_display_maxwidth() - PSC_CTL_DISPLAY_WIDTH;
-	printf("%-16s %11s %6s %5s %5s "
+	printf("%-16s %12s %6s %5s %5s "
 	    "%7s %3s %7s %4s %6s",
 	    "fid", "flags", "mode", "uid", "gid",
 	    "size", "ref", "fgen", "pgen", "ugen");
@@ -216,7 +216,7 @@ sl_fcmh_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 
 	w = psc_ctl_get_display_maxwidth() - PSC_CTL_DISPLAY_WIDTH;
 	psc_fmt_human(buf, scf->scf_size);
-	printf("%016"SLPRIxFID" %c%c%c%c%c%c%c%c%c%c%c "
+	printf("%016"SLPRIxFID" %c%c%c%c%c%c%c%c%c%c%c%c "
 	    "%6o %5u %5u %7s "
 	    "%3d %7s "
 	    "%4u %6u",
@@ -232,6 +232,7 @@ sl_fcmh_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    scf->scf_flags & FCMH_CTOR_FAILED	? 'f' : '-',
 	    scf->scf_flags & FCMH_NO_BACKFILE	? 'N' : '-',
 	    scf->scf_flags & FCMH_BUSY		? 'S' : '-',
+	    scf->scf_flags & FCMH_DELETING	? 'D' : '-',
 	    scf->scf_st_mode, scf->scf_uid, scf->scf_gid, buf,
 	    scf->scf_refcnt, sl_sprinta_fgen(scf->scf_fg.fg_gen),
 	    scf->scf_ptruncgen, scf->scf_utimgen);
