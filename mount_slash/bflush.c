@@ -258,11 +258,11 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	if (b->bcm_flags & BMAP_CLI_BENCH)
 		mq->flags |= SRM_IOF_BENCH;
 
-	DEBUG_REQ(PLL_INFO, rq, "off=%u sz=%u",
-	    mq->offset, mq->size);
-
 	memcpy(&mq->sbd, &bmap_2_bci(b)->bci_sbd, sizeof(mq->sbd));
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
+
+	DEBUG_REQ(PLL_INFO, rq, "fid="SLPRI_FG" off=%u sz=%u",
+	    SLPRI_FG_ARGS(&mq->sbd.sbd_fg), mq->offset, mq->size);
 
 	/* Do we need this inc/dec combo for biorq reference? */
 	psc_atomic32_inc(&rmci->rmci_infl_rpcs);
