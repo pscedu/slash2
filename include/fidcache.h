@@ -90,7 +90,8 @@ struct fidc_membh {
 #define	FCMH_CTOR_FAILED	(1 <<  9)	/* constructor func failed */
 #define	FCMH_NO_BACKFILE	(1 << 10)	/* fcmh does not have a backing file (sliod) */
 #define	FCMH_BUSY		(1 << 11)	/* fcmh being processed */
-#define	_FCMH_FLGSHFT		(1 << 12)
+#define	FCMH_DELETED		(1 << 12)	/* debug: fcmh is deleted */
+#define	_FCMH_FLGSHFT		(1 << 13)
 
 /* number of seconds in which attribute times out */
 #define FCMH_ATTR_TIMEO		8

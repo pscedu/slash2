@@ -92,6 +92,9 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #define msl_load_fcmh(pfr, inum, fp)					\
 	fidc_lookup_load((inum), (fp), pscfs_getclientctx(pfr))
 
+#define msl_peek_fcmh(pfr, inum, fp)					\
+	fidc_lookup_peek((inum), (fp), pscfs_getclientctx(pfr))
+
 #define mfh_getfid(mfh)		fcmh_2_fid((mfh)->mfh_fcmh)
 #define mfh_getfg(mfh)		(mfh)->mfh_fcmh->fcmh_fg
 
@@ -1200,15 +1203,25 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		FCMH_ULOCK(p);
 	}
 
-	if (!rc && mp->flag == 1) {
-		uidmap_int_stat(&mp->cattr);
-		rc = msl_load_fcmh(pfr, mp->cattr.sst_fid, &c);
-		if (!rc)
-			fcmh_setattrf(c, &mp->cattr,
-			    FCMH_SETATTRF_SAVELOCAL);
+	if (!rc) {
+		int tmprc;
+
+		tmprc = msl_peek_fcmh(pfr, mp->cattr.sst_fid, &c);
+		if (!tmprc) {
+			if (mp->flag == 1) {
+				uidmap_int_stat(&mp->cattr);
+				fcmh_setattrf(c, &mp->cattr,
+				    FCMH_SETATTRF_SAVELOCAL);
+			} else {
+				FCMH_LOCK(c);
+				c->fcmh_flags |= FCMH_DELETED;
+				OPSTAT_INCR(SLC_OPST_DELETE_MARKED);
+			}
+		} else
+			OPSTAT_INCR(SLC_OPST_DELETE_SKIPPED);
 	}
 
-	psclog_info("delete: fid="SLPRI_FG" flag = %d,  name='%s' isfile=%d rc=%d",
+	psclog_info("delete: fid="SLPRI_FG" flag = %d name='%s' isfile=%d rc=%d",
 	    SLPRI_FG_ARGS(&mp->cattr.sst_fg), mp->flag, name, isfile, rc);
 
  out:
