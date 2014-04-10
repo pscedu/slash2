@@ -90,7 +90,7 @@ struct fidc_membh {
 #define	FCMH_CTOR_FAILED	(1 <<  9)	/* constructor func failed */
 #define	FCMH_NO_BACKFILE	(1 << 10)	/* fcmh does not have a backing file (sliod) */
 #define	FCMH_BUSY		(1 << 11)	/* fcmh being processed */
-#define	FCMH_DELETED		(1 << 12)	/* debug: fcmh is deleted */
+#define	FCMH_DELETED		(1 << 12)	/* fcmh has been deleted */
 #define	_FCMH_FLGSHFT		(1 << 13)
 
 /* number of seconds in which attribute times out */
@@ -223,7 +223,7 @@ struct fidc_membh {
 #define DEBUG_FCMH(level, f, fmt, ...)					\
 	psclogs((level), SLSS_FCMH,					\
 	    "fcmh@%p f+g="SLPRI_FG" "					\
-	    "flg=%#x:%s%s%s%s%s%s%s%s%s%s%s%s%s "			\
+	    "flg=%#x:%s%s%s%s%s%s%s%s%s%s%s%s%s%s "			\
 	    "ref=%d sz=%"PRId64" "DEBUG_FCMH_BLKSIZE_LABEL"=%"PRId64" "	\
 	    "mode=%#o : "fmt,						\
 	    (f), SLPRI_FG_ARGS(&(f)->fcmh_fg), (f)->fcmh_flags,		\
@@ -239,6 +239,7 @@ struct fidc_membh {
 	    (f)->fcmh_flags & FCMH_CTOR_FAILED		? "f" : "",	\
 	    (f)->fcmh_flags & FCMH_NO_BACKFILE		? "N" : "",	\
 	    (f)->fcmh_flags & FCMH_BUSY			? "S" : "",	\
+	    (f)->fcmh_flags & FCMH_DELETED		? "D" : "",	\
 	    (f)->fcmh_flags & ~(_FCMH_FLGSHFT - 1)	? "+" : "",	\
 	    (f)->fcmh_refcnt, fcmh_2_fsz(f), (f)->fcmh_sstb.sst_blksize,\
 	    (f)->fcmh_sstb.sst_mode, ## __VA_ARGS__)
