@@ -63,7 +63,6 @@ class API(object):
             if len(most_recent_tests) == 0:
                 test["change_percent"] = None
             else:
-                print most_recent_tests
                 recent_test = most_recent_tests[0]["tests"][0]
                 test["change_delta"] = test["elapsed"] - recent_test["elapsed"]
                 test["change_percent"] = round(test["change_delta"] / recent_test["elapsed"], 3) * 100
