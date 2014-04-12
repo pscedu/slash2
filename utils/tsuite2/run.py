@@ -162,22 +162,22 @@ def main():
       condition = False
 
     processes = {
-      "create": {
-        "mds": condition,
-        "ion": condition
+      (1, "create"): {
+        (1, "mds"): condition,
+        (2, "ion"): condition
       },
-      "launch": {
-        "mds": condition,
-        "ion": condition,
-        "mnt": condition
+      (2, "launch"): {
+        (1, "mds"): condition,
+        (2, "ion"): condition,
+        (3, "mnt"): condition
       },
-      "kill": {
-        "mds": condition,
-        "ion": condition,
-        "mnt": condition
+      (3, "run"): {
+        (1, "tests"): condition
       },
-      "run": {
-        "tests": condition
+      (4, "kill"): {
+        (3, "mds"): condition,
+        (2, "ion"): condition,
+        (1, "mnt"): condition
       }
     }
 
@@ -187,31 +187,49 @@ def main():
     #Initialize the test suite
     t = TSuite(conf._sections)
 
-    for parent in processes.keys():
-      for item, state in processes[parent].items():
+    for parent in sorted(processes.keys(), key=lambda x: x[0]):
+      for item in sorted(processes[parent].keys(), key=lambda x: x[0]):
+        state = processes[parent][item]
         if state:
-          if item == "mds":
-            if parent == "create":
+          parent_lookup = parent[1]
+          item_lookup = item[1]
+
+          if item_lookup == "mds":
+            if parent_lookup == "create":
               create_mds(t)
-            elif parent == "launch":
+            elif parent_lookup == "launch":
               launch_mds(t)
-            elif parent == "kill":
+            elif parent_lookup == "kill":
               kill_mds(t)
-          elif item == "ion":
-            if parent == "create":
+          elif item_lookup == "ion":
+            if parent_lookup == "create":
               create_ion(t)
-            elif parent == "launch":
+            elif parent_lookup == "launch":
               launch_ion(t)
-            elif parent == "kill":
+            elif parent_lookup == "kill":
               kill_ion(t)
-          elif item == "mnt":
-            if parent == "launch":
+          elif item_lookup == "mnt":
+            if parent_lookup == "launch":
               launch_mnt(t)
-            elif parent == "kill":
+            elif parent_lookup == "kill":
               kill_mnt(t)
-          elif item == "tests" and parent == "run":
+          elif item_lookup == "tests" and parent_lookup == "run":
             t.run_tests()
 
+
+def get_parent_tuple(value, items):
+  """Find the parent tuple of a value in a list.
+
+  Args:
+    value: value to lookup.
+    items: dict to look up in.
+
+  Returns: tuple key."""
+
+  for (priority, key) in items:
+    if key == value:
+      return (priority, key)
+  return
 
 def change_items(condition, processes, items):
   """Changes the state of the processes.
@@ -227,10 +245,15 @@ def change_items(condition, processes, items):
     match = itemreg.match(item)
     if match:
       parent, key = match.groups()
-      if parent not in processes or key not in processes[parent]:
-        log.critical("%s does not refer to a valid process to perform.", item)
+      parent_tuple = get_parent_tuple(parent, processes.keys())
+      if parent_tuple not in processes:
+        log.critical("%s does not refer to a valid parent action.", parent)
         sys.exit(1)
-      processes[parent][key] = condition
+      key_tuple = get_parent_tuple(key, processes[parent_tuple].keys())
+      if key_tuple not in processes[parent_tuple]:
+        log.critical("%s does not refer to a valid process to perform.", key)
+        sys.exit(1)
+      processes[parent_tuple][key_tuple] = condition
     else:
       log.critical("%s is not of the valid parent:key form.", item)
       sys.exit(1)
