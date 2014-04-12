@@ -8,10 +8,11 @@ import sys
 import logging
 log = logging.getLogger("sl2.mnt")
 
-def launch_mnt(self):
+def launch_mnt(tsuite):
   """Launch mount slash."""
-  pass
 
-def kill_mnt(self):
-  """Unmount mount slash."""
-  pass
+  gdbcmd_path = tsuite.conf["slash2"]["mds_gdb"]
+  sl2gen.launch_gdb_sl(tsuite, "client", tsuite.sl2objects["client"], "mount_slash", gdbcmd_path)
+
+def kill_mnt(tsuite):
+  sl2gen.stop_slash2_socks(tsuite, "mount_slash", tsuite.sl2objects["mds"], "msctl")
