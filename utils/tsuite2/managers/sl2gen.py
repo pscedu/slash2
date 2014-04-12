@@ -89,7 +89,7 @@ def handle_authbuf(tsuite, ssh, res_type):
       chmod(location, "0666")
       ssh.copy_file(location, location)
       chmod(location, "0400")
-    except IOException:
+    except IOError:
       log.critical("Failed copying authbuf key to {0}".format(ssh.host))
       sys.exit(1)
 
