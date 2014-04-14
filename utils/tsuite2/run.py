@@ -43,10 +43,56 @@ def main():
 
   log.setLevel(level)
 
-  logging.basicConfig(level=level,
-    format='%(asctime)s %(name)-8s %(levelname)-8s %(message)s',
-    datefmt='%H:%M'
-  )
+  fmtstr = '%(asctime)s %(name)-8s %(levelname)-8s %(message)s'
+
+  #Pretty output if colorama is installed
+  try:
+    from colorama import init, Fore, Style
+    fmtstr = '{0}%(asctime)s{1} {2}%(name)-8s{1} {4}{3}%(levelname)-8s{1}{5} {0}%(message)s{1}'.format(
+              Fore.WHITE, Fore.RESET, Fore.BLUE, Fore.CYAN, Style.BRIGHT, Style.RESET_ALL
+            )
+
+    class ColorFormatter(logging.Formatter):
+
+      colors = {
+        logging.INFO     : (Fore.GREEN, Fore.WHITE),
+        logging.DEBUG    : (Fore.MAGENTA, Fore.WHITE),
+        logging.ERROR    : (Fore.RED, Fore.YELLOW),
+        logging.CRITICAL : (Fore.RED, Fore.RED)
+      }
+
+      def __init__(self, fmt="%(levelno)s: %(msg)s"):
+        logging.Formatter.__init__(self, fmt, "%H:%M")
+
+      def format(self, record):
+
+        format_orig = self._fmt
+
+        color, text = self.colors[logging.DEBUG]
+        if record.levelno in self.colors:
+          color, text = self.colors[record.levelno]
+
+        self._fmt = '%(asctime)s %(name)-8s {4}{3}%(levelname)-8s{1}{5} {6}%(message)s{1}'.format(
+          Fore.WHITE, Fore.RESET, Fore.WHITE, color, Style.NORMAL, Style.RESET_ALL, text
+        )
+
+        result = logging.Formatter.format(self, record)
+
+        self._fmt = format_orig
+        return result
+
+    fmt = ColorFormatter()
+    hdlr = logging.StreamHandler(sys.stdout)
+
+    hdlr.setFormatter(fmt)
+    logging.root.addHandler(hdlr)
+    logging.root.setLevel(level)
+  except ImportError:
+    logging.basicConfig(level=level,
+      format=fmtstr,
+      datefmt='%H:%M'
+    )
+
 
   #Setup file log
   if args.log_file:
