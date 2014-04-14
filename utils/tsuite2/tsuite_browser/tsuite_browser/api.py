@@ -40,6 +40,87 @@ class API(object):
         tset = self.mongo.db.tsets.find().sort([("_id", -1),])
         return None if tset.count() == 0 else tset[0]
 
+    def get_neighboring_tests(self, tsid, positions):
+        """Get neighboring test results n positions away from tsid.
+
+        Args:
+            tsid: test set id to serve as center.
+            test_name: test to be found.
+            positions: how many spaces away relative to tsid.
+
+        Returns:
+            list of relevant tsets."""
+        tsets = self.get_tsets()
+        tsid -= 1
+
+        lower, higher, adj_tests = {}, {}, {}
+
+        for test in tsets[tsid]["tests"]:
+            test_name = test["test_name"]
+
+            lower[test_name] = []
+            higher[test_name] = []
+            adj_tests[test_name] = []
+
+        i = tsid - 1
+        for test_name in lower.keys():
+            while i >= 0 and i < tsid and len(lower[test_name]) < positions:
+                for test in tsets[i]["tests"]:
+                    if test["test_name"] == test_name:
+                        lower[test_name].append(tsets[i])
+                i -= 1
+
+        i = tsid
+        for test_name in higher.keys():
+            while i < len(tsets) and len(higher[test_name]) < positions:
+                for test in tsets[i]["tests"]:
+                    if test["test_name"] == test_name:
+                        higher[test_name].append(tsets[i])
+                i += 1
+
+        for test_name in higher.keys():
+            higher_stake = float(len(higher[test_name]))/len(lower[test_name])
+
+            hindex = int(higher_stake * len(higher[test_name]))
+            lindex = int(positions - hindex)
+
+            for l in range(lindex):
+                adj_tests[test_name].append(lower[test_name][l])
+            for h in range(hindex):
+                adj_tests[test_name].append(higher[test_name][h])
+        return adj_tests
+
+    #TODO: Probably broken, but that's okay.
+    def get_neighboring_test(self, tsid, test_name, positions):
+        """Get neighboring test results n positions away from tsid.
+
+        Args:
+            tsid: test set id to serve as center.
+            test_name: test to be found.
+            positions: how many spaces away relative to tsid.
+
+        Returns:
+            list of relevant tsets."""
+        tsets = self.get_tsets()
+        adj_tsets = []
+
+        hit = []
+        i = tsid - 1 - positions
+        while i < tsid - 1 + positions:
+            if i not in hit:
+                tests = tsets[i]["tests"]
+                found = False
+                for test in tests:
+                    if test["test_name"] == test_name:
+                        adj_tsets.append(tsets[i])
+                        found = True
+                        hit.append(i)
+                if not found and i > 0:
+                    i  -= 1
+            i += 1
+        return adj_tsets
+
+
     def get_tset_display(self, tsid):
         """Get tset ready for display with simple statistics.
 

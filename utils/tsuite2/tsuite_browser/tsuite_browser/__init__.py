@@ -51,9 +51,12 @@ def dashboard(tsid = None):
     else:
         session["active_tsid"] = tsid
 
+
+
     return render_template("new.html",
         tsets = api.get_tsets(100),
-        display_tset = api.get_tset_display(session["active_tsid"])
+        display_tset = api.get_tset_display(session["active_tsid"]),
+        adj_tests = api.get_neighboring_tests(session["active_tsid"], 5)
     )
 
 @app.route('/s/<path:filename>')

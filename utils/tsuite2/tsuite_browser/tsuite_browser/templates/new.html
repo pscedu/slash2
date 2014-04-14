@@ -6,7 +6,7 @@
     <title>{{site_title}}</title>
     <meta name="generator" content="Bootply" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <link href="http://bootswatch.com/yeti/bootstrap.min.css" rel="stylesheet">
+    <link href="http://netdna.bootstrapcdn.com/bootswatch/3.1.1/yeti/bootstrap.min.css" rel="stylesheet">
     <!--[if lt IE 9]>
     <script src="//html5shim.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
@@ -130,9 +130,10 @@
                   <span class="pull-right small">
                     {% if tset.failed_tests != 0 %}
                       <em class="text-danger">Failed: {{ tset.failed_tests }}</em>
+                    {% else %}
+                      {{tset.total_time}}s 
                     {% endif %}
-                    {{tset.total_time}}s 
-                    <em>{{ tset._id }}</em>
+                    <!--<em>{{ tset._id }}</em>-->
                   </span>
                 </a>
               </li>
@@ -161,9 +162,9 @@
                       {% for test in display_tset.tests %}
                         <tr class="test-result">
                           <td>{{loop.index}}</td>
-                          <td class="text-info test-name"><a href="#{{test.test_name}}">{{test.test_name}}</a></td>
+                          <td class="text-info"><a class="test-name" href="#{{test.test_name}}">{{test.test_name}}</a></td>
                           {% if test.pass %}
-                            <td class="text-primary">{{ test.elapsed | round(3) }}</td>
+                            <td class="text-default">{{ test.elapsed | round(3) }}</td>
                             {% if test.change_delta -%}
                             <td class="{% if (test.change_percent | abs) > 5 -%}
                                           {%- if test.change_delta <= 0 -%}
@@ -173,8 +174,8 @@
                                           {%- endif -%}
                                         {%else%}
                                           text-default
-                                        {%endif%} change-delta">
-                                <em class="text-left">{{test.change_percent}}%</em> <em class="text-right"><a href="/{{test.change_tsid}}#{{test.test_name}}">#{{test.change_tsid}}</a></em>
+                                        {%endif%}">
+                                <em class="text-left change-delta">{{test.change_percent}}%</em> <em class="text-right"><a href="/{{test.change_tsid}}#{{test.test_name}}">#{{test.change_tsid}}</a></em>
                               </td>
                             {% else %}
                               <td>Not available</td>
@@ -190,36 +191,19 @@
               </div>
             </div>
             <div class="col-md-8">
-              <p>graphy</p>
+              <div id="chart_div"></div>
             </div>
           </div>
           <div class="row">
-            {% for test in display_tset.tests %}
-              <div class="col-md-4" id="{{test.test_name}}">
+            {% for test_name, tsets in adj_tests.iteritems() %}
+              <div class="col-md-4" class="test" id="{{test_name}}">
                 <div class="panel panel-default">
-                  <div class="panel-heading test-name">{{loop.index}}. {{ test.test_name }}</div>
+                  <div class="panel-heading test-name">{{loop.index}}. {{test_name}}</div>
                   <div class="panel-body">
-                    {% if test.pass %}
-                      <p class="text-primary">{{ test.elapsed | round(3) }}</p>
-                      {% if test.change_delta -%}
-                      <p class="{% if (test.change_percent | abs) > 5 -%}
-                                    {%- if test.change_delta <= 0 -%}
-                                      text-success
-                                    {%-else-%}
-                                      text-warning
-                                    {%- endif -%}
-                                  {%-else-%}
-                                    text-default
-                                  {%-endif-%} change-delta">
-                          <em class="text-left">{{test.change_percent}}%</em> <em class="text-right"><a href="/{{test.change_tsid}}/{{test.test_name}}">#{{test.change_tsid}}</a></em>
-                        </p>
-                      {% else %}
-                        <p>Not available</p>
-                      {% endif %}
-                    {% else %}
-                      <p class = "text-danger test-msg">{{ test.msg }}</p>
-                      <p class = "text-warning test-msg">N/A</p>
-                    {% endif %}
+                    {% for tset in tsets %}
+                      <div id="{{test_name}}-chart"></div>
+                      <div class="test-data" tsid="{{tset.tsid}}" tset-name="{{tset.tset_name}}" data="{{tset.total_time}}"></div>
+                    {% endfor %}
                   </div>
                 </div>
               </div>
@@ -228,7 +212,9 @@
         </div>
       </div>
     </div>
-    <script type='text/javascript' src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-    <script type='text/javascript' src="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
   </body>
+    <script type='text/javascript' src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <script type="text/javascript" src="http://www.google.com/jsapi"></script>
+    <script type='text/javascript' src="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+    <script type='text/javascript' src="/s/js/visualization.js"></script>
 </html>
