@@ -291,7 +291,7 @@ mds_bmap_write(struct bmap *b, void *logf, void *logarg)
 		mds_reserve_slot(1);
 	rc = mdsio_pwritev(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
 	    (off_t)BMAP_OD_SZ * b->bcm_bmapno + SL_BMAP_START_OFF,
-	    0, bmap_2_mfh(b), logf, logarg);
+	    bmap_2_mfh(b), logf, logarg);
 	if (logf)
 		mds_unreserve_slot(1);
 

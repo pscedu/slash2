@@ -100,7 +100,7 @@ struct mdsio_ops {
 			struct srt_stat *, void *, sl_log_update_t, sl_getslfid_cb_t, slfid_t);
 	int	(*mio_opendir)(int, mdsio_fid_t, const struct slash_creds *, struct slash_fidgen *, void *);
 	int	(*mio_preadv)(int, const struct slash_creds *, struct iovec *, int, size_t *, off_t, void *);
-	int	(*mio_pwritev)(int, const struct slash_creds *, const struct iovec *, int, size_t *, off_t, int, void *,
+	int	(*mio_pwritev)(int, const struct slash_creds *, const struct iovec *, int, size_t *, off_t, void *,
 			sl_log_write_t, void *);
 	int	(*mio_read)(int, const struct slash_creds *, void *, size_t, size_t *, off_t, void *);
 	int	(*mio_readdir)(int, const struct slash_creds *, size_t, off_t, void *, size_t *, int *, struct iovec *, int *, off_t *, void *); 

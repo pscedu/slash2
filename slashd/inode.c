@@ -144,7 +144,7 @@ mds_inode_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 	if (logf)
 		mds_reserve_slot(1);
 	rc = mdsio_pwritev(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
-	    0, 0, inoh_2_mfh(ih), logf, arg);
+	    0, inoh_2_mfh(ih), logf, arg);
 	if (logf)
 		mds_unreserve_slot(1);
 
@@ -198,7 +198,7 @@ mds_inox_write(int vfsid, struct slash_inode_handle *ih, void *logf,
 	if (logf)
 		mds_reserve_slot(1);
 	rc = mdsio_pwritev(vfsid, &rootcreds, iovs, nitems(iovs), &nb,
-	    SL_EXTRAS_START_OFF, 0, inoh_2_mfh(ih), logf, arg);
+	    SL_EXTRAS_START_OFF, inoh_2_mfh(ih), logf, arg);
 	if (logf)
 		mds_unreserve_slot(1);
 
