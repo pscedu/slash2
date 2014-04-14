@@ -195,15 +195,17 @@
             </div>
           </div>
           <div class="row">
-            {% for test_name, tsets in adj_tests.iteritems() %}
-              <div class="col-md-4" class="test" id="{{test_name}}">
+            {% for test_name, tests in adj_tests.iteritems() %}
+              <div class="col-md-4">
                 <div class="panel panel-default">
                   <div class="panel-heading test-name">{{loop.index}}. {{test_name}}</div>
                   <div class="panel-body">
-                    {% for tset in tsets %}
-                      <div id="{{test_name}}-chart"></div>
-                      <div class="test-data" tsid="{{tset.tsid}}" tset-name="{{tset.tset_name}}" data="{{tset.total_time}}"></div>
-                    {% endfor %}
+                    <div class="test" name="{{test_name}}">
+                      <div id="{{test_name}}"></div>
+                      {% for test in tests %}
+                        <div class="test-data" tsid="{{test.tsid}}" data="{{test.elapsed}}"></div>
+                      {% endfor %}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -217,4 +219,5 @@
     <script type="text/javascript" src="http://www.google.com/jsapi"></script>
     <script type='text/javascript' src="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
     <script type='text/javascript' src="/s/js/visualization.js"></script>
+    <script type='text/javascript' src="/s/js/test_visual.js"></script>
 </html>

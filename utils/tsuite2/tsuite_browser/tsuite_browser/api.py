@@ -62,20 +62,22 @@ class API(object):
             higher[test_name] = []
             adj_tests[test_name] = []
 
-        i = tsid - 1
         for test_name in lower.keys():
+            i = tsid - 1
             while i >= 0 and i < tsid and len(lower[test_name]) < positions:
                 for test in tsets[i]["tests"]:
                     if test["test_name"] == test_name:
-                        lower[test_name].append(tsets[i])
+                        test["tsid"] = i+1
+                        lower[test_name].append(test)
                 i -= 1
 
-        i = tsid
         for test_name in higher.keys():
+            i = tsid
             while i < len(tsets) and len(higher[test_name]) < positions:
                 for test in tsets[i]["tests"]:
                     if test["test_name"] == test_name:
-                        higher[test_name].append(tsets[i])
+                        test["tsid"] = i+1
+                        higher[test_name].append(test)
                 i += 1
 
         for test_name in higher.keys():
