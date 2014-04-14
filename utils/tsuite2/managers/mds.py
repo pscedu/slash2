@@ -62,7 +62,7 @@ def create_mds(tsuite):
     except SSHException, e:
       log.fatal("Error with remote connection to {0} with res {1}!"\
           .format(mds["host"], mds["name"]))
-      sys.exit(1)
+      tsuite.shutdown()
 
 
 def launch_mds(tsuite):

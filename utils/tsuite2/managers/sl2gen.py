@@ -53,18 +53,18 @@ def sl_screen_and_wait(tsuite, ssh, cmd, screen_name):
   #Run command string in screen
   if not ssh.run_screen(cmd, screen_name, tsuite.conf["slash2"]["timeout"]):
     log.fatal("Screen session {0} already exists in some form! Attach and deal with it.".format(screen_name))
-    sys.exit(1)
+    tsuite.shutdown()
 
   wait = ssh.wait_for_screen(screen_name)
 
   if wait["timedout"]:
     log.critical("{0} timed out! screen -r {0}-timed and check it out."\
         .format(screen_name))
-    sys.exit(1)
+    tsuite.shutdown()
   elif wait["errored"]:
     log.critical("{0} exited with a nonzero return code. screen -r {0}-error and check it out."\
         .format(screen_name))
-    sys.exit(1)
+    tsuite.shutdown()
 
 def handle_authbuf(tsuite, ssh, res_type):
   """Deals with the transfer of authbuf keys. Returns True if the authbuf key needs
@@ -86,12 +86,13 @@ def handle_authbuf(tsuite, ssh, res_type):
     log.debug("Authbuf key already obtained. Copying to {0}".format(ssh.host))
     location = path.join(tsuite.build_dirs["datadir"], "authbuf.key")
     try:
-      chmod(location, "0666")
+      os.system("sudo chmod 0666 {0}".format(location))
       ssh.copy_file(location, location)
-      chmod(location, "0400")
+      os.system("sudo chmod 0400 {0}".format(location))
+      ssh.run("sudo chmod 0400 {0}".format(location))
     except IOError:
       log.critical("Failed copying authbuf key to {0}".format(ssh.host))
-      sys.exit(1)
+      tsuite.shutdown()
 
     return False
 
@@ -111,7 +112,7 @@ def pull_authbuf(tsuite, ssh):
     tsuite.authbuf_obtained = True
   except IOError:
     log.critical("Failed pulling the authbuf key from {0}.".format(ssh.host))
-    sys.exit(1)
+    tsuite.shutdown()
 
 def launch_gdb_sl(tsuite, sock_name, sl2objects, res_bin_type, gdbcmd_path):
   """Generic slash2 launch service in screen+gdb. Will also copy over authbuf keys.
@@ -146,6 +147,9 @@ def launch_gdb_sl(tsuite, sock_name, sl2objects, res_bin_type, gdbcmd_path):
     repl_dict = dict(tsuite.src_dirs, **tsuite.build_dirs)
     repl_dict = dict(repl_dict, **sl2object)
 
+    if "id" not in sl2object.keys():
+      sl2object["id"] = 0
+
     #Create gdbcmd from template
     gdbcmd_build_path = path.join(tsuite.build_dirs["base"],
         "{0}.{1}.gdbcmd".format(res_bin_type, sl2object["id"]))
@@ -160,8 +164,8 @@ def launch_gdb_sl(tsuite, sock_name, sl2objects, res_bin_type, gdbcmd_path):
         log.debug("Remote copying gdbcmd.")
         ssh.copy_file(gdbcmd_build_path, gdbcmd_build_path)
     else:
-      log.fatal("Unable to parse gdb cmd at {1}!".format(gdbcmd_path))
-      sys.exit(1)
+      log.fatal("Unable to parse gdb cmd at {0}!".format(gdbcmd_path))
+      tsuite.shutdown()
 
     cmd = "sudo gdb -f -x {0} {1}".format(gdbcmd_build_path, tsuite.src_dirs[res_bin_type])
     screen_sock_name = "sl.{0}.{1}".format(res_bin_type, sl2object["id"])
@@ -176,20 +180,21 @@ def launch_gdb_sl(tsuite, sock_name, sl2objects, res_bin_type, gdbcmd_path):
     if screen_sock_name + "-error" in screen_socks or screen_sock_name not in screen_socks:
       log.fatal("sl2object {0}:{1} launched with an error. Resume to {2} and resolve it."\
           .format(sl2object["name"], sl2object["id"], screen_sock_name+"-error"))
-      sys.exit(1)
+      tsuite.shutdown()
 
-    log.debug("Waiting for {0} sock on {1} to appear.".format(sock_name, host))
-    count = 0
-    while True:
-      result = ssh.run(ls_cmd, quiet=True)
-      if not all(res_bin_type not in sock for sock in result["out"]):
-        break
-      time.sleep(1)
-      count += 1
-      if count == int(tsuite.conf["slash2"]["timeout"]):
-        log.fatal("Cannot find {0} sock on {1}. Resume to {2} and resolve it. "\
-          .format(res_bin_type, sl2object["id"], screen_sock_name))
-        sys.exit(1)
+    if sock_name != "client":
+      log.debug("Waiting for {0} sock on {1} to appear.".format(sock_name, host))
+      count = 0
+      while True:
+        result = ssh.run(ls_cmd, quiet=True)
+        if not all(res_bin_type not in sock for sock in result["out"]):
+          break
+        time.sleep(1)
+        count += 1
+        if count == int(tsuite.conf["slash2"]["timeout"]):
+          log.fatal("Cannot find {0} sock on {1}. Resume to {2} and resolve it. "\
+            .format(res_bin_type, sl2object["id"], screen_sock_name))
+          tsuite.shutdown()
 
 
     if need_authbuf:
@@ -216,9 +221,8 @@ def stop_slash2_socks(tsuite, sock_name, sl2objects, res_bin_type):
     user, host = tsuite.user, sl2object["host"]
     log.debug("Connecting to {0}@{1}".format(user, host))
     ssh = SSH(user, host, '')
-    #ssh.kill_screens()
+    ssh.kill_screens(res_bin_type)
 
     cmd = "{0} -S {1}/{2}.{3}.sock stop".format(res_bin_type, tsuite.build_dirs["ctl"], sock_name, host)
-    log.debug(cmd)
     ssh.run(cmd)
     ssh.close()

@@ -11,7 +11,7 @@ from utils.sl2 import SL2Res
 from utils.ssh import SSH
 from managers.sl2gen import repl, repl_file
 
-from managers import sl2gen
+from managers import sl2gen, mds, ion, mnt
 
 log = logging.getLogger("sl2.ts")
 
@@ -56,7 +56,9 @@ class TSuite(object):
       "slictl"  : "%slbase%/slictl/slictl",
       "slashd"  : "%slbase%/slashd/slashd",
       "slkeymgt": "%slbase%/slkeymgt/slkeymgt",
-      "slmkfs"  : "%slbase%/slmkfs/slmkfs"
+      "slmkfs"  : "%slbase%/slmkfs/slmkfs",
+      "mount_slash" : "%slbase%/mount_slash/mount_slash",
+      "msctl" : "%slbase%/msctl/msctl"
     }
 
     self.tsid = None
@@ -145,7 +147,7 @@ class TSuite(object):
 
     if not self.mk_dirs(self.build_dirs.values()):
       log.fatal("Unable to create some necessary directory!")
-      sys.exit(1)
+      self.shutdown()
     log.info("Successfully created build directories")
     os.system("chmod -R 777 \"{0}\"".format(self.build_dirs["base"]))
 
@@ -157,7 +159,7 @@ class TSuite(object):
 
     if not self.parse_slash2_conf():
       log.critical("Error parsing slash2 configuration file!")
-      sys.exit(1)
+      self.shutdown()
 
     log.info("slash2 configuration parsed successfully.")
 
@@ -368,7 +370,7 @@ class TSuite(object):
                   res["fsuuid"] = fsuuid
 
                   if not res.finalize(self.sl2objects):
-                    sys.exit(1)
+                    self.shutdown()
                   res = None
               else:
                 if name == "new_res":
@@ -403,7 +405,7 @@ class TSuite(object):
                   ssh.copy_file(new_conf_path, new_conf_path)
                 except IOError:
                   log.critical("Error copying config file to {0}".format(ssh.host))
-                  sys.exit(1)
+                  self.shutdown()
                 ssh.close()
               except SSHException:
                 log.error("Unable to copy config file to {0}!".format(sl2_obj["host"]))
@@ -476,6 +478,17 @@ class TSuite(object):
     else:
       self.tsid = tsid
       self.build_dirs["base"] = base
+
+  def shutdown(self):
+    """Shuts down test suite process, stops all sl2 objects and exits"""
+
+    mnt.kill_mnt(self)
+    mds.kill_mds(self)
+    ion.kill_ion(self)
+
+    log.debug("Exiting tsuite.")
+    sys.exit(1)
+
 
 def check_subset(necessary, check):
   """Determines missing elements from necessary list.

@@ -49,7 +49,7 @@ def create_ion(tsuite):
     except SSHException, e:
       log.fatal("Error with remote connection to {0} with res {1}!"\
           .format(ion["host"], ion["name"]))
-      sys.exit(1)
+      tsuite.shutdown()
 
 def kill_ion(tsuite):
   """Kill ION daemons.

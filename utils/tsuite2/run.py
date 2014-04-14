@@ -175,9 +175,10 @@ def main():
         (1, "tests"): condition
       },
       (4, "kill"): {
-        (3, "mds"): condition,
-        (2, "ion"): condition,
-        (1, "mnt"): condition
+        (3, "mds"): False,
+        (2, "ion"): False,
+        (1, "mnt"): False,
+        (4, "all"): condition
       }
     }
 
@@ -215,6 +216,8 @@ def main():
               kill_mnt(t)
           elif item_lookup == "tests" and parent_lookup == "run":
             t.run_tests()
+          elif item_lookup == "all" and parent_lookup == "kill":
+            t.shutdown()
 
 
 def get_parent_tuple(value, items):
