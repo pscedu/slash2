@@ -392,6 +392,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	strlcpy(mq->name, name, sizeof(mq->name));
+	PFL_GETPTIMESPEC(&mq->time);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc))

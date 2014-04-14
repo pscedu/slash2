@@ -761,6 +761,7 @@ struct srm_get_inode_rep {
 
 struct srm_create_req {
 	struct slash_fidgen	pfg;		/* parent dir's file ID + generation */
+	struct pfl_timespec	time;		/* time of request */
 	struct srt_creds	creds;		/* st_uid owner for new file */
 	char			name[SL_NAME_MAX + 1];
 	uint32_t		mode;		/* mode_t permission for new file */
