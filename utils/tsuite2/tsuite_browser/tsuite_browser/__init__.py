@@ -46,19 +46,13 @@ def logout():
 @app.route("/<int:tsid>")
 def dashboard(tsid = None):
     if not tsid:
-        session["active_tsid"] = api.get_latest_tset()["tsid"]
+        latest = api.get_latest_tset()
+        session["active_tsid"] = latest["tsid"]
     else:
         session["active_tsid"] = tsid
 
-    return render_template("dashboard.html",
-        js_deps = ["dashboard.js",
-        "jquery.jqplot.min.js",
-        "plugins/jqplot/jqplot.barRenderer.min.js",
-        "plugins/jqplot/jqplot.categoryAxisRenderer.min.js",
-        "plugins/jqplot/jqplot.pointLabels.min.js",
-        "dashboard_chart.js"],
-        css_deps = ["jquery.jqplot.min.css"],
-        tsets = api.get_tsets(20),
+    return render_template("new.html",
+        tsets = api.get_tsets(100),
         display_tset = api.get_tset_display(session["active_tsid"])
     )
 

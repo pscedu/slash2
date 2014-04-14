@@ -24,10 +24,12 @@ class API(object):
 
         return self.mongo.db.tsets.find_one({"tsid": tsid})
 
-    def get_tsets(self, lim):
+    def get_tsets(self, limit=None):
         """List all tsets."""
-
-        return list(self.mongo.db.tsets.find().sort([("_id", -1),]).limit(lim))
+        result = self.mongo.db.tsets.find().sort([("_id", -1),])
+        if limit:
+           result = result.limit(limit)
+        return list(result)
 
     def get_latest_tset(self):
         """Get last slash2 test set.

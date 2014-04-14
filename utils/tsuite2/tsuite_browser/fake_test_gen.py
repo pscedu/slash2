@@ -1,6 +1,6 @@
 import json, random
 
-tsets = 15
+tsets = 100
 tests = [
     ["basic_read", 10],
     ["basic_write", 10],
@@ -32,6 +32,7 @@ for i in range(tsets):
     tset["failed_tests"] = failed
     tset["total_tests"] = len(tests)
     tset["tests"] = []
+    tset["total_time"] = 0.0
 
     for j in range(len(tests)):
         test_name = tests[j][0]
@@ -49,6 +50,7 @@ for i in range(tsets):
             "msg": "" if j >= failed else "problem!",
             "elapsed": time
         }
+        tset["total_time"] += round(time, 2)
         tset["tests"].append(test)
     tset["tests"] = sorted(tset["tests"], key = lambda k: k["test_name"])
     db.append(tset)
