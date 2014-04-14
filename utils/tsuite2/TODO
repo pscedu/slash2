@@ -1,0 +1,5 @@
+- compile slash2 before starting
+- re-add colorama support
+- add more intense tests
+- finish web UI
+- collect resource usage (of tests and slash2)
