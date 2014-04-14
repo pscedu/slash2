@@ -1208,7 +1208,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 		tmprc = msl_peek_fcmh(pfr, mp->cattr.sst_fid, &c);
 		if (!tmprc) {
-			if (mp->flag == 1) {
+			if (mp->valid) {
 				uidmap_int_stat(&mp->cattr);
 				fcmh_setattrf(c, &mp->cattr,
 				    FCMH_SETATTRF_SAVELOCAL);
@@ -1221,8 +1221,8 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 			OPSTAT_INCR(SLC_OPST_DELETE_SKIPPED);
 	}
 
-	psclog_info("delete: fid="SLPRI_FG" flag = %d name='%s' isfile=%d rc=%d",
-	    SLPRI_FG_ARGS(&mp->cattr.sst_fg), mp->flag, name, isfile, rc);
+	psclog_info("delete: fid="SLPRI_FG" valid = %d name='%s' isfile=%d rc=%d",
+	    SLPRI_FG_ARGS(&mp->cattr.sst_fg), mp->valid, name, isfile, rc);
 
  out:
 

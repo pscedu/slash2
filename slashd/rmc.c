@@ -1516,16 +1516,16 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	if (p)
 		fcmh_op_done(p);
 
-	mp->flag = 0;
+	mp->valid = 0;
 	if (chfg.fg_fid != FID_ANY) {
 		struct fidc_membh *c;
 		if (slm_fcmh_get(&chfg, &c) == 0) {
-			mp->flag = 1;
+			mp->valid = 1;
 			mdsio_fcmh_refreshattr(c, &mp->cattr);
 			fcmh_op_done(c);
 		}
 	}
-	if (!mp->flag)
+	if (!mp->valid)
 		mp->cattr.sst_fg = oldfg;
 
 	psclog_info("%s parent="SLPRI_FID" name=%s rc=%d",

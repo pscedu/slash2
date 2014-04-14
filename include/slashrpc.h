@@ -989,9 +989,9 @@ struct srm_unlink_req {
 } __packed;
 
 struct srm_unlink_rep {
-	struct srt_stat		cattr;		/* child node */
+	struct srt_stat		cattr;		/* child node - FID always valid */
 	struct srt_stat		pattr;		/* parent dir */
-	 int32_t		flag;		/* e.g., if child still exist */
+	 int32_t		valid;		/* child attr valid */
 	 int32_t		rc;
 } __packed;
 
