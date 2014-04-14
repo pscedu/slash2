@@ -76,7 +76,7 @@ def main():
       "mds_gdb", "ion_gdb", "mnt_gdb"
     ],
     "tests": [
-      "testdir",
+      "tsetdir",
       "excluded"
     ]
   }
@@ -128,32 +128,35 @@ def main():
 
   log.info("Configuration file loaded successfully!")
 
-  testdir = conf._sections["tests"]["testdir"]
-  tests = []
+  tsetdir = conf._sections["tests"]["tsetdir"]
+  tsets = []
   try:
-    #Consider all directories in test_dir to have tests to be ran
+    #Consider all directories in tset_dir to have tsets to be ran
 
-    tests = [test for test in os.listdir(testdir) if os.path.isdir(os.path.join(testdir, test))]
+    tsets = [tset for tset in os.listdir(tsetdir) \
+            if os.path.isdir(os.path.join(tsetdir, tset)) and not tset.startswith(".")]
   except OSError, e:
-    log.critical("Unable to gather test sets from the testing directory!")
+    log.critical("Unable to gather tset sets from the tseting directory!")
     sys.exit(1)
 
-  if len(tests) == 0:
-    log.critical("No test sets found.")
+  if len(tsets) == 0:
+    log.critical("No tset sets found.")
 
-  for test in tests:
-    runtime_testdir = os.path.join(conf._sections["tests"]["testdir"], test)
-    ignore_file = os.path.join(runtime_testdir, ".ignore")
-    slash_conf = os.path.join(runtime_testdir, "slash.conf")
-    if os.path.isfile(ignore_file) or test in args.ignore_tests:
-      log.debug("Ignoring {0}".format(runtime_testdir))
+  for tset in tsets:
+    runtime_tsetdir = os.path.join(conf._sections["tests"]["tsetdir"], tset)
+    ignore_file = os.path.join(runtime_tsetdir, ".ignore")
+    slash_conf = os.path.join(runtime_tsetdir, "slash.conf")
+
+    if os.path.isfile(ignore_file) or tset in args.ignore_tests:
+      log.debug("Ignoring {0}".format(runtime_tsetdir))
       continue
+
     elif os.path.isfile(slash_conf):
-      log.debug("Replaced default slash config with {0} for this test set".format(slash_conf))
+      log.debug("Replaced default slash config with {0} for this tset".format(slash_conf))
       conf._sections["slash2"]["conf"] = slash_conf
 
-    conf._sections["tests"]["runtime_testdir"] = runtime_testdir
-    conf._sections["tests"]["runtime_testname"] = test
+    conf._sections["tests"]["runtime_tsetdir"] = runtime_tsetdir
+    conf._sections["tests"]["runtime_tsetname"] = tset
 
     condition = True
 

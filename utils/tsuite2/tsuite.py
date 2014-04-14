@@ -187,7 +187,7 @@ class TSuite(object):
   def run_tests(self):
     """Uploads and runs each test on each client."""
 
-    test_dir = self.conf["tests"]["runtime_testdir"]
+    tset_dir = self.conf["tests"]["runtime_tsetdir"]
 
     if len(self.sl2objects["client"]) == 0:
       log.error("No test clients?")
@@ -206,9 +206,9 @@ class TSuite(object):
     map(lambda ssh: ssh.make_dirs(remote_modules_path), ssh_clients)
 
     tests = []
-    for test in os.listdir(test_dir):
+    for test in os.listdir(tset_dir):
       if test.endswith(".py"):
-        test_path = path.join(test_dir, test)
+        test_path = path.join(tset_dir, test)
         if not test.startswith(".") and test != "__init__.py":
           tests.append(test)
         map(lambda ssh: ssh.copy_file(test_path, path.join(remote_modules_path, test)), ssh_clients)
@@ -218,7 +218,7 @@ class TSuite(object):
     remote_test_handler_path = path.join(self.build_dirs["mp"], "test_handle.py")
     map(lambda ssh: ssh.copy_file(test_handler_path, remote_test_handler_path), ssh_clients)
 
-    sock_name = "sl2.{0}.tset".format(self.conf["tests"]["runtime_testname"])
+    sock_name = "sl2.{0}.tset".format(self.conf["tests"]["runtime_tsetname"])
 
     killed_clients = sum(map(lambda ssh: ssh.kill_screens(sock_name), ssh_clients))
     if killed_clients > 0:
