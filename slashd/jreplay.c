@@ -401,7 +401,7 @@ mds_replay_bmap_assign(struct psc_journal_enthdr *pje)
 		odtf->odtf_inuse = ODTBL_FREE;
 
 	rc = mdsio_write(current_vfsid, &rootcreds, p, odth.odth_slotsz,
-	    &nb, odth.odth_start + elem * odth.odth_slotsz, 0, handle,
+	    &nb, odth.odth_start + elem * odth.odth_slotsz, handle,
 	    NULL, NULL);
 	psc_assert(!rc && nb == odth.odth_slotsz);
 

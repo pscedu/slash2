@@ -184,7 +184,7 @@ mds_write_file(void *h, void *buf, uint64_t size, size_t *nb, off_t off)
 {
 	int rc;
 	mds_note_update(1);
-	rc = mdsio_write(current_vfsid, &rootcreds, buf, size, nb, off, 0, h, NULL, NULL);
+	rc = mdsio_write(current_vfsid, &rootcreds, buf, size, nb, off, h, NULL, NULL);
 	mds_note_update(-1);
 	return rc;
 }

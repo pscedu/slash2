@@ -75,7 +75,7 @@ mds_odtable_putitem(struct odtable *odt, void *data, size_t len)
 		 */
 		h->odth_nelems = psc_vbitmap_getsize(odt->odt_bitmap);
 		rc = mdsio_write(current_vfsid, &rootcreds, h,
-		    sizeof(struct odtable_hdr), &nb, 0, 0,
+		    sizeof(struct odtable_hdr), &nb, 0,
 		    odt->odt_handle, NULL, NULL);
 		psc_assert(!rc && nb == sizeof(struct odtable_hdr));
 
@@ -110,7 +110,7 @@ mds_odtable_putitem(struct odtable *odt, void *data, size_t len)
 	odtr->odtr_key = crc;
 
 	rc = mdsio_write(current_vfsid, &rootcreds, p, h->odth_slotsz,
-	    &nb, h->odth_start + elem * h->odth_slotsz, 0,
+	    &nb, h->odth_start + elem * h->odth_slotsz,
 	    odt->odt_handle, NULL, NULL);
 	psc_assert(!rc && nb == h->odth_slotsz);
 
@@ -217,7 +217,7 @@ mds_odtable_replaceitem(struct odtable *odt,
 
 	rc = mdsio_write(current_vfsid, &rootcreds, p,
 	    h->odth_slotsz, &nb, h->odth_start +
-	    odtr->odtr_elem * h->odth_slotsz, 0,
+	    odtr->odtr_elem * h->odth_slotsz,
 	    odt->odt_handle, NULL, NULL);
 	psc_assert(!rc && nb == h->odth_slotsz);
 
@@ -261,7 +261,7 @@ mds_odtable_freeitem(struct odtable *odt, struct odtable_receipt *odtr)
 	freelock(&odt->odt_lock);
 
 	rc = mdsio_write(current_vfsid, &rootcreds, p, h->odth_slotsz,
-	    &nb, h->odth_start + odtr->odtr_elem * h->odth_slotsz, 0,
+	    &nb, h->odth_start + odtr->odtr_elem * h->odth_slotsz,
 	    odt->odt_handle, NULL, NULL);
 	psc_assert(!rc && nb == h->odth_slotsz);
 
