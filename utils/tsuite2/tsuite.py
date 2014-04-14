@@ -209,7 +209,7 @@ class TSuite(object):
     for test in os.listdir(test_dir):
       if test.endswith(".py"):
         test_path = path.join(test_dir, test)
-        if test != "__init__.py":
+        if not test.startswith(".") and test != "__init__.py":
           tests.append(test)
         map(lambda ssh: ssh.copy_file(test_path, path.join(remote_modules_path, test)), ssh_clients)
     log.debug("Found tests: {0}".format(", ".join(tests)))
