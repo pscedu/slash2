@@ -599,6 +599,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 	DEBUG_FCMH(PLL_DEBUG, p, "create op start for %s", mq->name);
 
+	mp->cattr.sst_ctim = mq->time;
 	mds_reserve_slot(1);
 	mp->rc = mdsio_opencreate(vfsid, fcmh_2_mfid(p), &cr,
 	    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->name, NULL,
