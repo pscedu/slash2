@@ -2361,6 +2361,15 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	if ((to_set & (PSCFS_SETATTRF_ATIME | PSCFS_SETATTRF_MTIME)) &&
 	    pcr.pcr_uid && pcr.pcr_uid != c->fcmh_sstb.sst_uid)
 		PFL_GOTOERR(out, rc = EPERM);
+
+	if (to_set & PSCFS_SETATTRF_ATIME_NOW)
+	    stb->st_ctim = stb->st_atim;
+	else if (to_set & PSCFS_SETATTRF_MTIME_NOW)
+	    stb->st_ctim = stb->st_mtim;
+	else
+	    PFL_GETPTIMESPEC(&stb->st_ctim);
+	to_set |= PSCFS_SETATTRF_CTIME;
+
 	if (to_set & PSCFS_SETATTRF_UID) {
 		if (pcr.pcr_uid &&
 		    (pcr.pcr_uid != c->fcmh_sstb.sst_uid ||
