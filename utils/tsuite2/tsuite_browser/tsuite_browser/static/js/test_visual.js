@@ -10,6 +10,9 @@ $(function() {
     var data = google.visualization.arrayToDataTable(test_data);
     var options = {
       title: null,
+      vAxis: {
+        minValue: 0
+      },
       legend: {
         "position": "none"
       }

@@ -35,8 +35,6 @@ def return_json(f):
 def get_tsets():
     return list(api.get_tsets())
 
-
-
 @app.route("/l")
 def logout():
     session.clear()
@@ -56,7 +54,7 @@ def dashboard(tsid = None):
     return render_template("new.html",
         tsets = api.get_tsets(100),
         display_tset = api.get_tset_display(session["active_tsid"]),
-        adj_tests = api.get_neighboring_tests(session["active_tsid"], 5)
+        adj_tests = api.get_neighboring_tests(session["active_tsid"], 20)
     )
 
 @app.route('/s/<path:filename>')

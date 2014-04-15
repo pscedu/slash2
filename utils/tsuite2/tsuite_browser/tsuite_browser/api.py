@@ -68,10 +68,8 @@ class API(object):
                 for test in tsets[i]["tests"]:
                     if test["test_name"] == test_name:
                         test["tsid"] = i+1
-                        lower[test_name].append(test)
+                        lower[test_name] = [test] + lower[test_name]
                 i -= 1
-
-        for test_name in higher.keys():
             i = tsid
             while i < len(tsets) and len(higher[test_name]) < positions:
                 for test in tsets[i]["tests"]:
@@ -81,15 +79,25 @@ class API(object):
                 i += 1
 
         for test_name in higher.keys():
-            higher_stake = float(len(higher[test_name]))/len(lower[test_name])
+          llen, hlen = len(lower[test_name]), len(higher[test_name])
 
-            hindex = int(higher_stake * len(higher[test_name]))
-            lindex = int(positions - hindex)
+          m = min(llen, hlen)
 
-            for l in range(lindex):
-                adj_tests[test_name].append(lower[test_name][l])
-            for h in range(hindex):
-                adj_tests[test_name].append(higher[test_name][h])
+          lindex = m
+          hindex = m
+
+          if llen > hindex:
+            lindex = max(positions - 2*m, llen)
+          else:
+            hindex = max(positions - 2*m, hlen)
+
+          print lindex, hindex
+
+          for l in range(lindex):
+              adj_tests[test_name].append(lower[test_name][l])
+          for h in range(hindex):
+              adj_tests[test_name].append(higher[test_name][h])
+
         return adj_tests
 
     #TODO: Probably broken, but that's okay.
