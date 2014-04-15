@@ -1,7 +1,7 @@
 google.load("visualization", "1", {packages:["corechart"]});
 
 $(function() {
-  var change_thresh = 5.0;
+  var change_thresh = 10.0;
 
   var test_names = [];
   var test_change_data = [];
@@ -42,6 +42,10 @@ $(function() {
     height: 350,
     legend: {
       position: "none"
+    },
+    vAxis: {
+      minValue: -100,
+      maxValue: 100
     }
   };
 

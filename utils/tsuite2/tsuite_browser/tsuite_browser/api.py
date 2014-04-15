@@ -24,9 +24,9 @@ class API(object):
 
         return self.mongo.db.tsets.find_one({"tsid": tsid})
 
-    def get_tsets(self, limit=None):
+    def get_tsets(self, limit=None, sort=-1):
         """List all tsets."""
-        result = self.mongo.db.tsets.find().sort([("_id", -1),])
+        result = self.mongo.db.tsets.find().sort([("_id", sort),])
         if limit:
            result = result.limit(limit)
         return list(result)
@@ -50,7 +50,7 @@ class API(object):
 
         Returns:
             list of relevant tsets."""
-        tsets = self.get_tsets()
+        tsets = self.get_tsets(sort=1)
         tsid -= 1
 
         lower, higher, adj_tests = {}, {}, {}
@@ -68,6 +68,7 @@ class API(object):
                 for test in tsets[i]["tests"]:
                     if test["test_name"] == test_name:
                         test["tsid"] = i+1
+                        assert(i+1 == test["tsid"])
                         lower[test_name] = [test] + lower[test_name]
                 i -= 1
             i = tsid
@@ -86,7 +87,7 @@ class API(object):
           lindex = m
           hindex = m
 
-          if llen > hindex:
+          if llen >= hindex:
             lindex = max(positions - 2*m, llen)
           else:
             hindex = max(positions - 2*m, hlen)
