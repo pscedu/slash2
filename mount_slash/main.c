@@ -439,7 +439,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	sl_internalize_stat(&c->fcmh_sstb, &stb);
 
 	if (mp->rc2)
-		PFL_GOTOERR(out, mp->rc2);
+		PFL_GOTOERR(out, rc = mp->rc2);
 
 	fci = fcmh_2_fci(c);
 	fci->fci_inode.reptbl[0].bs_id = mp->sbd.sbd_ios;
@@ -453,7 +453,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mp->rc2 = bmap_getf(c, 0, SL_WRITE, BMAPGETF_LOAD |
 	    BMAPGETF_NORETRIEVE, &b);
 	if (mp->rc2)
-		PFL_GOTOERR(out, mp->rc2);
+		PFL_GOTOERR(out, rc = mp->rc2);
 
 	msl_bmap_reap_init(b, &mp->sbd);
 
@@ -466,15 +466,11 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	bmap_op_done(b);
 
  out:
-	if (mp && rc == 0 && mp->rc == 0 && mp->rc2)
-		DEBUG_FCMH(PLL_WARN, c, "error loading bmap rc=%d",
-		    mp->rc2);
-	if (c) {
-		DEBUG_FCMH(PLL_DEBUG, c, "new mfh=%p rc=%d name=(%s) "
-		    "oflags=%#o", mfh, rc, name, oflags);
-		fcmh_op_done(c);
-	}
+	psclog_info("create: pfid="SLPRI_FID" name='%s' mode=%#x flag=%#o rc=%d",
+	    pinum, name, mode, oflags, rc);
 
+	if (c)
+		fcmh_op_done(c);
 	if (p)
 		fcmh_op_done(p);
 
