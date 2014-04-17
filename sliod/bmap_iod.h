@@ -107,6 +107,8 @@ struct bmap_iod_info {
 
 #define bii_2_flags(b)		bii_2_bmap(b)->bcm_flags
 
+#undef bmap_2_crcs
+
 #define bmap_2_bii(b)		((struct bmap_iod_info *)bmap_get_pri(b))
 #define bmap_2_bii_slvrs(b)	(&bmap_2_bii(b)->bii_slvrs)
 #define bmap_2_crcstates(b)	bmap_2_bii(b)->bii_crcstates
