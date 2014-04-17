@@ -9,6 +9,7 @@ from paramiko import SSHException
 
 from utils.sl2 import SL2Res
 from utils.ssh import SSH
+from utils.mongohelper import MongoHelper
 from managers.sl2gen import repl, repl_file
 
 from managers import sl2gen, mds, ion, mnt
@@ -61,6 +62,8 @@ class TSuite(object):
       "msctl" : "%slbase%/msctl/msctl"
     }
 
+    self.test_report = {}
+
     self.tsid = None
     self.rootdir = None
 
@@ -76,8 +79,11 @@ class TSuite(object):
     self.local_setup()
     self.create_remote_setups()
 
+
+
   def all_objects(self):
     """Returns all sl2objects in a list."""
+
     objects = []
     for res, res_list in self.sl2objects.items():
       objects.extend(res_list)
@@ -184,6 +190,48 @@ class TSuite(object):
       except SSHException:
         log.error("Unable to connect to {0} to create build directories!".format(sl2_obj["host"]))
 
+  def store_report(self):
+    """Populates test report with initial/available information.
+    Must be ran after run_tests"""
+
+    try:
+      self.mongo = MongoHelper(self.conf)
+    except Exception:
+      log.critical("Unable to connect to mongodb.")
+      self.shutdown()
+
+    self.test_report["total_time"] = 0.0
+    self.test_report["total_tests"] = 0
+    self.test_report["failed_tests"] = 0
+    self.test_report["tests"] = []
+
+    latest_tset = self.mongo.get_latest_tset()
+    self.test_report["tsid"] = latest_tset["tsid"]+1 if latest_tset else 1
+    self.test_report["tset_name"] = "#" + str(self.test_report["tsid"])
+
+    #log.info(self.test_report)
+    #log.info(self.test_results)
+
+    #TODO: Currently assuming we only have one client
+    results = [self.test_results[0][1]]
+    for result in results:
+      for test in result["tests"]:
+        mongo_test = {
+          "elapsed": test["operate"]["elapsed"],
+          "desc": "generic description",
+          "test_name": test["name"],
+          "pass": test["operate"]["pass"] and test["cleanup"]["pass"] and test["setup"]["pass"]
+        }
+
+        self.test_report["total_tests"] += 1
+        if not mongo_test["pass"]:
+          self.test_report["failed_tests"] += 1
+
+        self.test_report["tests"].append(mongo_test)
+        self.test_report["total_time"] += test["operate"]["elapsed"]
+
+    self.mongo.col.save(self.test_report)
+
   def run_tests(self):
     """Uploads and runs each test on each client."""
 
@@ -232,20 +280,20 @@ class TSuite(object):
     map(lambda ssh: ssh.run_screen("python {0} {1}".format(remote_test_handler_path, runtime_arg),
         sock_name, quiet=True), ssh_clients)
 
-    log.debug("Waiting for screen sessions to finish.")
     if not all(map(lambda ssh: ssh.wait_for_screen(sock_name)["finished"], ssh_clients)):
       log.error("Some of the screen sessions running the tset encountered errors! Please check out the clients and rectify the issue.")
 
     result_path = path.join(self.build_dirs["mp"], "results.json")
-    results = map(lambda ssh: (ssh.host, ssh.run("cat "+result_path, quiet=True)), ssh_clients)
+
+    get_results = lambda ssh: (ssh.host,
+        json.loads(ssh.run("cat "+result_path, quiet=True)["out"][0])
+      )
+
+    self.test_results = map(get_results, ssh_clients)
 
     log.debug("Retrieved results from tests.")
 
-    #TODO: do something useful
-
     map(lambda ssh: ssh.close(), ssh_clients)
-
-    return results
 
   def parse_slash2_conf(self):
     """Reads and parses slash2 conf for tokens.

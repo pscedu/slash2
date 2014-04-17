@@ -6,7 +6,6 @@ from os import path
 class TestHandler(object):
   """Object used to set up testing environment and passed along to tests for runtime information."""
 
-
   def __init__(self, json_constants):
     self.runtime = json.loads(base64.b64decode(json_constants))
 
@@ -24,7 +23,7 @@ class TestHandler(object):
     """Run all tests from the tests directory and print results"""
     tset_results = {"tests": []}
     for module in self.modules:
-      test = {"name": module.__name__}
+      test = {"name": module.__name__.split(".")[-1]}
       print "Running", test["name"]
       test["setup"]=module.setup()
 

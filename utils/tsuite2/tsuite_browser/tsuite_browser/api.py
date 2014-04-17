@@ -101,37 +101,6 @@ class API(object):
 
         return adj_tests
 
-    #TODO: Probably broken, but that's okay.
-    def get_neighboring_test(self, tsid, test_name, positions):
-        """Get neighboring test results n positions away from tsid.
-
-        Args:
-            tsid: test set id to serve as center.
-            test_name: test to be found.
-            positions: how many spaces away relative to tsid.
-
-        Returns:
-            list of relevant tsets."""
-        tsets = self.get_tsets()
-        adj_tsets = []
-
-        hit = []
-        i = tsid - 1 - positions
-        while i < tsid - 1 + positions:
-            if i not in hit:
-                tests = tsets[i]["tests"]
-                found = False
-                for test in tests:
-                    if test["test_name"] == test_name:
-                        adj_tsets.append(tsets[i])
-                        found = True
-                        hit.append(i)
-                if not found and i > 0:
-                    i  -= 1
-            i += 1
-        return adj_tsets
-
-
     def get_tset_display(self, tsid):
         """Get tset ready for display with simple statistics.
 

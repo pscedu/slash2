@@ -124,6 +124,9 @@ def main():
     "tests": [
       "tsetdir",
       "excluded"
+    ],
+    "mongo": [
+      "host"
     ]
   }
 
@@ -223,7 +226,10 @@ def main():
       (3, "run"): {
         (1, "tests"): condition
       },
-      (4, "kill"): {
+      (4, "store"): {
+        (1, "mongo"): condition
+      },
+      (5, "kill"): {
         (3, "mds"): False,
         (2, "ion"): False,
         (1, "mnt"): False,
@@ -265,6 +271,8 @@ def main():
               kill_mnt(t)
           elif item_lookup == "tests" and parent_lookup == "run":
             t.run_tests()
+          elif item_lookup == "mongo" and parent_lookup == "store":
+            t.store_report()
           elif item_lookup == "all" and parent_lookup == "kill":
             t.shutdown()
 

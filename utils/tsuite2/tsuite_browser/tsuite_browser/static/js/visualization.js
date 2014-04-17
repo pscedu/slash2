@@ -44,8 +44,8 @@ $(function() {
       position: "none"
     },
     vAxis: {
-      minValue: -100,
-      maxValue: 100
+      minValue: -10,
+      maxValue: 10
     }
   };
 
