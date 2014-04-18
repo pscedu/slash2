@@ -530,9 +530,12 @@ class TSuite(object):
   def shutdown(self):
     """Shuts down test suite process, stops all sl2 objects and exits"""
 
-    mnt.kill_mnt(self)
-    mds.kill_mds(self)
-    ion.kill_ion(self)
+    if "client" in self.sl2objects:
+      mnt.kill_mnt(self)
+    if "mds" in self.sl2objects:
+      mds.kill_mds(self)
+    if "ion" in self.sl2objects:
+      ion.kill_ion(self)
 
     log.debug("Exiting tsuite.")
     sys.exit(1)
