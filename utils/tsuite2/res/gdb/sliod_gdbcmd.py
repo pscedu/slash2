@@ -10,6 +10,6 @@ def check_resource_usage(event):
 gdb.execute("set confirm off")
 gdb.execute("set height 0")
 gdb.execute("handle SIGUSR1 ignore")
-gdb.execute("run -S %base%/ctl/slashd.%h.sock -f %base%/slash.conf -D %datadir% -p %zpool_cache% %zpool_name%")
+gdb.execute("run -S %base%/ctl/sliod.%h.sock -f %base%/slash.conf -D %datadir% %prefmds%")
 
 gdb.events.stop.connect(check_resource_usage)
