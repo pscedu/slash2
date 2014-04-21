@@ -59,13 +59,13 @@
 int
 sli_export(__unusedx const char *fn,
     __unusedx const struct pfl_stat *pst, __unusedx int info,
-    __unusedx int level, void *arg)
+    __unusedx int level, __unusedx void *arg)
 {
+#if 0
 	struct slictlmsg_fileop *sfop = arg;
 	char fidfn[PATH_MAX], exfn[PATH_MAX];
 	int rc;
 
-#if 0
 	sli_fg_makepath(&fg, fidfn);
 	snprintf("%s/%s", dst_base, dst);
 
@@ -74,8 +74,9 @@ sli_export(__unusedx const char *fn,
 		rc = mkdir();
 	}
 	rc = link(fidfn, exfn);
-#endif
 	return (rc);
+#endif
+	return (0);
 }
 
 int
@@ -88,7 +89,7 @@ slictlcmd_export(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 	if (sfop->sfop_flags & SLI_CTL_FOPF_RECURSIVE)
 		fl |= PFL_FILEWALKF_RECURSIVE;
 if (fl & PFL_FILEWALKF_RECURSIVE)
- errx(1, "-R not supported");
+ psc_fatalx("-R not supported");
 	return (pfl_filewalk(sfop->sfop_fn, fl, NULL, sli_export, sfop));
 }
 
