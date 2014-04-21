@@ -408,14 +408,13 @@ psc_register_filesystem(int vfsid)
 	    basename(zfsMount[vfsid].name), siteid, uuid);
 }
 
-psc_spinlock_t  scan_lock = SPINLOCK_INIT;
-
 /**
  * psc_scan_filesystems - Scan for newly added file systems in the pool.
  */
 void
 psc_scan_filesystems(void)
 {
+	static psc_spinlock_t scan_lock = SPINLOCK_INIT;
 	int i;
 
 	spinlock(&scan_lock);
