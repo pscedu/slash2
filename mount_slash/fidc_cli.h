@@ -65,6 +65,8 @@ struct fcmh_cli_info {
 	struct timespec			 fci_etime;	/* attr expire time */
 };
 
+#define fcmh_2_nrepls(f)	fcmh_2_fci(f)->fci_inode.nrepls
+
 #define DIR_LOOKUP_MISSES_INCR		1000
 #define DIR_LOOKUP_MISSES_THRES		400001
 
