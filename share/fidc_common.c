@@ -189,7 +189,7 @@ fidc_reap(struct psc_poolmgr *m)
 
 		/*
 		 * Consult the context-specific callback handler before
-		 *    freeing.
+		 * freeing.
 		 */
 		f->fcmh_flags |= FCMH_CAC_REAPED | FCMH_CAC_TOFREE;
 		lc_remove(&fidcIdleList, f);
