@@ -1,40 +1,7 @@
-Slash2 Devel  – 02/03/2010
-
-
-FCOO / mexpfcm Reworking
-Is it feasible to authenticate our open() calls on the client side?
-	int checkcreds(const struct stat *stb, const struct slash_creds *cr, int mode)
-
-First, the mds should never open an fd more than once.  In fact, it should be opened in RW mode upon receiving the first open request from the server.  At that time fidc_fcoo_start_locked() should be run (similar to the workings on the client).
-
-What does this mean for fdbuf's?  Are they still required if the mds-side open() is not affected by user level permissions?
-	→ fdbuf's should be maintained to protect against on-wire tampering of packets.
-		. while it may be preferable to somehow track fdbufs, for the time being they are managed statelessly.
-
-Is it possible to open-on-demand?
-
-What happens with create?  It was already noted that the slash2 metadata should only be written or created upon receiving a write call.
-
-Create (require mds rpc)
-	1.	cache fcmh w/ local zfs fd
-	2.	→ problem in that clean inodes can't have an fcoo, the fcoo is where we store the zfs fd.
-	3.	immediately close zfs fd
-	4.	→ no problem w/ fcoo but maybe inefficient since the file had just been opened on create.
-
-	Note:  that it may be possible in the future to have the client execute unassisted creates
-		→ requires that the client has a pre-assigned portion of the inode # space
-		→ need some sort of directory locking to handle O_EXCL						→ write enabled lookup intent of the directory would be very useful
-
-Open RD or WR (no rpc)
-	→ Is there a way to obtain an fdbuf without an rpc?
-
-Slash2 Fuse attributes
-	→ Create-on-write
-	→ Replica table, bmap repl bits are managed upon acquisition of a write-enabled bmap.
-
-Client fcoo doesn't close until all mfh's have been released
-	→ The bmap tree may be empty
-	→ fdbuf is stored in the fcoo
+Alternative CREAT strategy
+- requires that the client has a pre-assigned portion of the inode # space
+- need some sort of directory locking to handle O_EXCL
+- write enabled lookup intent of the directory would be very useful
 
 MDS fcoo is open or closed upon arrival of first bmap or release of last bmap.
 
@@ -72,9 +39,16 @@ Most stateful operations now hinge on SRMT_GETBMAP
 		Mds returns fdbuf
 
 MDS FCMH Cache Modifications
-To prevent excessive 'by-id' lookups in the mds namespace, it will be necessary for us to maintain fcmh's on the server which can translate between slash inode numbers and their local zfs counterparts.  The current version of the client fidcache caches the zfs inode which is later presented to the mds, whose zfs layer has the inode cached.  Since we'll be moving from zfs inode numbers to self-managed inodes in slash2 the mds-side fcmh cache will have to be provisioned differently.
+To prevent excessive 'by-id' lookups in the mds namespace, it will be
+necessary for us to maintain fcmh's on the server which can translate
+between slash inode numbers and their local zfs counterparts.  The
+current version of the client fidcache caches the zfs inode which is
+later presented to the mds, whose zfs layer has the inode cached.  Since
+we'll be moving from zfs inode numbers to self-managed inodes in slash2
+the mds-side fcmh cache will have to be provisioned differently.
 
-'Clean' fcmh denomination should be modified to support fcmh's with open fd's.  This will be useful on sliod and slashd.
+'Clean' fcmh denomination should be modified to support fcmh's with open
+fd's.  This will be useful on sliod and slashd.
 
 
 Bmap Release Code (Paul)
@@ -96,28 +70,65 @@ Bmap Release Code (Paul)
 
 	◦	An alternate plan could involve sliod being able to timeout his own bmaps, notifying slashd that he would like to do so.  This method could be sloppy because the client isn't aware that his bdbuf's have been invalidated.
 
-Inode Allocation Managed By Slash2 (Jared)
-
-Customized Directory Structure (Zhihui)
-
 File size Handling for Open Files (Paul)
-	The mds recv's asynchronous updates from the sliod which update the s2size in zfs.  While this method prevents stat()'s of the file object on the ION, the file size is susceptible to 'shrinking' should the cached size attributes time out prior to the mds receiving a size update from the ION.  In certain instances the file size must come from the ION which is handling the file.  This is only for clients who wish to do IO on the file.  For instance, open(.., O_APPEND) requires an accurate file size.
+	The mds recv's asynchronous updates from the sliod which update
+	the s2size in zfs.  While this method prevents stat()'s of the
+	file object on the ION, the file size is susceptible to
+	'shrinking' should the cached size attributes time out prior to
+	the mds receiving a size update from the ION.  In certain
+	instances the file size must come from the ION which is handling
+	the file.  This is only for clients who wish to do IO on the
+	file.  For instance, open(.., O_APPEND) requires an accurate
+	file size.
 
-Can logical clocks be used here?  It seems that the sliod could maintain a logical clock which would be passed between the client and mds.  The value could be sent to the client by piggybacked with the reply of a write rpc.  The current design already sends size data to slashd via the crc update path.  The client could use the clock number to determine whose values were more current, his or those reported by slashd.  Issues surrounding the failure of an mds or sliod remain.  Sliod counters would be reset upon reboot, while the mds could track these counters in logs and/or odtable.
+Can logical clocks be used here?  It seems that the sliod could maintain
+a logical clock which would be passed between the client and mds.  The
+value could be sent to the client by piggybacked with the reply of a
+write rpc.  The current design already sends size data to slashd via the
+crc update path.  The client could use the clock number to determine
+whose values were more current, his or those reported by slashd.  Issues
+surrounding the failure of an mds or sliod remain.  Sliod counters would
+be reset upon reboot, while the mds could track these counters in logs
+and/or odtable.
 
-On sliod reboot, the mds is going to connect to him and ask for the status of his leased bmaps.  At that time the mds could provide him the last known sequence number.   The problem is that the client may be holding a higher number which neither the freshly booted sliod or mds know of once slashd recv's updated info from newly booted sliod for a given bmap.   We need a way to inform clients that their sequence numbers are irrelevant and that the mds has the most recent version of the attributes.
+On sliod reboot, the mds is going to connect to him and ask for the
+status of his leased bmaps.  At that time the mds could provide him the
+last known sequence number.   The problem is that the client may be
+holding a higher number which neither the freshly booted sliod or mds
+know of once slashd recv's updated info from newly booted sliod for a
+given bmap.   We need a way to inform clients that their sequence
+numbers are irrelevant and that the mds has the most recent version of
+the attributes.
 
 02/12/10
-Jared suggests using a partial truncate sequence number and truncate operations administered between the client and sliod.  Sliod then informs slashd via crc update rpc's or some similar mechanism.  Are there issues when the sliod doesn't have the full set of bmaps resident on his local storage.  What happens when bmaps past the truncation point are in use by other clients and/or sliods?
+Jared suggests using a partial truncate sequence number and truncate
+operations administered between the client and sliod.  Sliod then
+informs slashd via crc update rpc's or some similar mechanism.  Are
+there issues when the sliod doesn't have the full set of bmaps resident
+on his local storage.  What happens when bmaps past the truncation point
+are in use by other clients and/or sliods?
 
-For the moment we will pursue Jared's strategy which uses a persistent counter which is increased upon each partial truncate operation (PTRUNC).  With this strategy, the client always assumes the highest file size unless he encounters a PTRUNC value which is greater than the value he holds in memory.
+For the moment we will pursue Jared's strategy which uses a persistent
+counter which is increased upon each partial truncate operation
+(PTRUNC).  With this strategy, the client always assumes the highest
+file size unless he encounters a PTRUNC value which is greater than the
+value he holds in memory.
 
-Some important realizations regarding design of O_APPEND were made.  Write RPC's to sliod on behalf of O_APPEND fd's should be handled differently than standard writes which being at offset 0.  O_APPEND writes do not require the client to send the offset to the sliod.  Instead, sliod applies the write to the current EOF for that object.  This model relieves us from requiring strict file size correctness between clients using O_APPEND.  Additionally we noted that file size and PTRUNC value should be piggybacked onto the write RPC reply so that the client can learn the new file size.
+Some important realizations regarding design of O_APPEND were made.
+Write RPC's to sliod on behalf of O_APPEND fd's should be handled
+differently than standard writes which being at offset 0.  O_APPEND
+writes do not require the client to send the offset to the sliod.
+Instead, sliod applies the write to the current EOF for that object.
+This model relieves us from requiring strict file size correctness
+between clients using O_APPEND.  Additionally we noted that file size
+and PTRUNC value should be piggybacked onto the write RPC reply so that
+the client can learn the new file size.
 
 Garbage Collection (Paul)
 
 Notes on truncate()
-	. fuse implements truncate via setattr which means the file must be open for write			VOP_SPACE()
+	. fuse implements truncate via setattr which means the file must
+	be open for write			VOP_SPACE()
 	. truncates via open(O_CREAT) are done with VOP_CREATE()
 
 Asynchronous truncates vs. Synchronous
@@ -153,49 +164,29 @@ Client
 	1.	On success, return to the application
 	2.	Otherwise fail the truncate operation.
 
-	•	should the client or the MDS perform the synchronous truncate rpc?  Should the mds perform the operation he would be aware of the return code.  Otherwise the client will somehow need to communicate to the mds that the operation failed.  The protocol above assumes success but has the advantage that the client and IOS are more likely to be in close proximity to one another.
+	•	should the client or the MDS perform the synchronous
+	truncate rpc?  Should the mds perform the operation he would be
+	aware of the return code.  Otherwise the client will somehow
+	need to communicate to the mds that the operation failed.  The
+	protocol above assumes success but has the advantage that the
+	client and IOS are more likely to be in close proximity to one
+	another.
 	•	As of 02/03/10, I'm leaning toward having the mds negotiate the operation.
 	1.
 
 
-Create / Open Procedures for Mount_slash and Slashd
-
-Client
-	1.	Lock parent directory fcmh
-	2.	Process local permissions check on parent directory, fail on error.
-	3.	Create namespace entry inside parent fcmh to stave off local competing create requests.
-	4.	Issue RPC request to mds
-
-	MDS
-	1.	Get sl_inum – Uses window system to allocate inum
-	2.	Journal the pending create w/ sl_pinum, sl_inum, name, flags (O_TRUNC, O_EXCL, etc).
-	3.	Execute the zfs create call.  On failure return the sl_inum to the window'd pool. Note:  on O_TRUNC zfs will issue a callback into slash2 to journal the replication table and inode information.  Additionally, the sl_gen will be bumped and applied to the zfs inode.
-	4.	Create a 'clean' fcmh which uses the sl_inum and sl_gen as keys and has the zfs fd for the newly created (or opened) file.  Note:  the clean inode reaper will need to destroy zfs fd's.
-	5.	At this time an fdbuf will be created and stored in the fcmh_fcoo.
-	6.	On success reply with an fdbuf, otherwise just an error code.
-	1.
-	1.	Get reply, on success store fdbuf
-	2.	Close fcoo
-	3.	Reply to fuse
-
 Development Laundry List
 	1.	Journal Shadowing
-	1.	Processing or distilling of shadow entries for mds replication logging and garbage collection.
+	1.	Processing or distilling of shadow entries for mds replication logging and garbage collection.
 	2.	FCMH Cache Changes (see MDS FCMH Cache Modifications)
 	1.	fcmh must handle slash inode changes
 	2.	slashd and sliod fcmh reaping needs to work with fcmh's who have open fcoo's but reside on the clean list.
 	3.	ZFS Callback table
-	1.	Dealing with O_TRUNC creates
-	4.	Slash Inode Allocation
 	1.	Model after stream id's in zest
-	2.	Use wndmap.c api for replacement of unneeded items.
-	5.	Client-side fcoo mgmt
 	1.	Closeable once all fuse references are gone and all bmaps are gone
-	2.	Checkcreds on open()
 	3.	Maintain fdbuf's
 	4.	Fcoo doesn't close until all mfh's are released
 	5.
-	6.	Slashd and sliod fcoo mgmt
 	1.	The fcoo is closeable once all bmaps have been released
 	2.	posix and zfs file descriptors are closed on destroy
 	3.	This change may require modifications to the fcoo structure
