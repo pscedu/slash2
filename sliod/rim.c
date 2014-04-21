@@ -221,8 +221,8 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 
 	timersub(&t1, &t0, &td);
 	if (td.tv_sec > 1)
-		psclogs_notice(PSS_TMP,
-		    "reclaim processing took %ld.%03ld second(s)",
+		psclogs_notice(PSS_TMP, "reclaim processing %d files "
+		    "took %ld.%01ld second(s)", mq->count,
 		    (long)td.tv_sec, (long)td.tv_usec / 1000);
 
  out:
