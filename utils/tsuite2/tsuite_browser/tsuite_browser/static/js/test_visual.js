@@ -7,6 +7,10 @@ $(function() {
       test_data.push([$(e).attr("tsid"), parseFloat($(e).attr("data"))]);
     });
 
+    if(test_data.length == 1) {
+      test_data.push(["", 0]);
+    }
+
     var data = google.visualization.arrayToDataTable(test_data);
     var options = {
       title: null,

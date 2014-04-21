@@ -62,7 +62,9 @@ class TSuite(object):
       "msctl" : "%slbase%/msctl/msctl"
     }
 
-    self.test_report = {}
+    self.test_report = {
+      "build": {}
+    }
 
     self.tsid = None
     self.rootdir = None
@@ -80,7 +82,6 @@ class TSuite(object):
     self.create_remote_setups()
 
 
-
   def all_objects(self):
     """Returns all sl2objects in a list."""
 
@@ -89,6 +90,7 @@ class TSuite(object):
       objects.extend(res_list)
     return objects
 
+  #TODO: proc fs doesn't exist in BSD :(
   def check_status(self):
     """Generate general status report for all sl2 objects.
 

@@ -190,21 +190,23 @@
                 </div>
               </div>
               <div class="row">
-                {% for test_name, tests in adj_tests.iteritems() %}
-                  <div class="col-md-4">
-                    <div class="panel panel-default">
-                      <div class="panel-heading test-name">{{loop.index}}. {{test_name}}</div>
-                      <div class="panel-body">
-                        <div class="test" name="{{test_name}}">
-                          <div id="{{test_name}}"></div>
-                          {% for test in tests %}
-                            <div class="test-data" tsid="{{test.tsid}}" data="{{test.elapsed}}"></div>
-                          {% endfor %}
+                {%- if adj_tests -%}
+                  {%- for test_name, tests in adj_tests.iteritems() -%}
+                    <div class="col-md-4">
+                      <div class="panel panel-default">
+                        <div class="panel-heading test-name">{{loop.index}}. {{test_name}}</div>
+                        <div class="panel-body">
+                          <div class="test" name="{{test_name}}">
+                            <div id="{{test_name}}"></div>
+                            {% for test in tests %}
+                              <div class="test-data" tsid="{{test.tsid}}" data="{{test.elapsed}}"></div>
+                            {% endfor %}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                {% endfor %}
+                  {%-endfor-%}
+                {%-endif-%}
               </div>
             </div>
             <div class="tab-pane" id="build">

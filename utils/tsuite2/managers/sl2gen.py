@@ -226,3 +226,20 @@ def stop_slash2_socks(tsuite, sock_name, sl2objects, res_bin_type):
     cmd = "{0} -S {1}/{2}.{3}.sock stop".format(res_bin_type, tsuite.build_dirs["ctl"], sock_name, host)
     ssh.run(cmd)
     ssh.close()
+
+def store_build_time(tsuite, res, host, build_time):
+  """Handle storing the build time for processing.
+
+  Args:
+    tsuite: runtime tsuite instance
+    res: resource listing type
+    host: host of the process
+    build_time: time in seconds required to create"""
+
+  if res not in tsuite.test_report:
+    tsuite.test_report["build"][res] = {}
+
+  tsuite.test_report["build"][res][host] = {
+      "build_time": build_time
+  }
+
