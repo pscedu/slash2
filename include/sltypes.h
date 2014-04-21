@@ -74,12 +74,13 @@ enum rw {
 };
 
 /*
- * Defines a storage system which can hold a block or blocks of a file.  A number
- * of these structures are statically allocated within the inode of the file and
- * are fixed for the lifetime of the file.  They apply to snapshots as well as
- * the active file.  Such an arrangement saves us from storing the I/O system id
- * within each block at the cost of limiting the number of I/O systems which may
- * manage the blocks of a given file.
+ * Defines a storage system which can hold a block or blocks of a file.
+ * A number of these structures are statically allocated within the
+ * inode of the file and are fixed for the lifetime of the file.  They
+ * apply to snapshots as well as the active file.  Such an arrangement
+ * saves us from storing the I/O system ID within each block at the cost
+ * of limiting the number of I/O systems which may manage the blocks of
+ * a given file.
  */
 typedef struct {
 	sl_ios_id_t		bs_id;		/* ID of this block store    */
