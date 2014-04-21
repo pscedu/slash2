@@ -113,20 +113,20 @@ _fidc_lookup_load(const struct pfl_callerinfo *pci, slfid_t fid,
 	return (_fidc_lookup(pci, &fg, FIDC_LOOKUP_CREATE |
 	    FIDC_LOOKUP_LOAD, NULL, 0, fcmhp, pfcc));
 }
+
 static __inline int
 _fidc_lookup_peek(const struct pfl_callerinfo *pci, slfid_t fid,
     struct fidc_membh **fcmhp, struct pscfs_clientctx *pfcc)
 {
 	struct slash_fidgen fg = { fid, FGEN_ANY };
 
-	return (_fidc_lookup(pci, &fg, FIDC_LOOKUP_NONE, 
+	return (_fidc_lookup(pci, &fg, FIDC_LOOKUP_NONE,
 	    NULL, 0, fcmhp, pfcc));
 }
-
+#undef _pfl_callerinfo
 
 #define fidc_lookup_peek(fid, fcmhp, pfcc)				\
 	_fidc_lookup_peek(PFL_CALLERINFOSS(SLSS_FCMH), (fid),		\
 	    (fcmhp), (pfcc))
-#undef _pfl_callerinfo
 
 #endif /* _FIDC_CLI_H_ */
