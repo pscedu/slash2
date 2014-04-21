@@ -95,6 +95,7 @@ slctlrep_getconn(int fd, struct psc_ctlmsghdr *mh, void *m)
 			continue;
 
 		slctl_fillconn(scc, resm->resm_csvc);
+		/* XXX fix which nid is being used */
 		mn = psc_dynarray_getpos(&resm->resm_nids, 0);
 		strlcpy(scc->scc_addrbuf, mn->resmnid_addrbuf,
 		    sizeof(scc->scc_addrbuf));
