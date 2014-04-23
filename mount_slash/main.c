@@ -876,13 +876,13 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	sl_internalize_stat(&mp->cattr, &stb);
 
  out:
+	psclog_diag("mkdir: pfid="SLPRI_FID", cfid="SLPRI_FID", mode=%#o, name='%s', rc=%d",
+	    pinum, c ? c->fcmh_sstb.sst_fid : FID_ANY, mode, name, rc);
+
 	if (c)
 		fcmh_op_done(c);
 	if (p)
 		fcmh_op_done(p);
-
-	psclog_diag("pfid="SLPRI_FID" mode=%#o name='%s' rc=%d",
-	    pinum, mode, name, rc);
 
 	pscfs_reply_mkdir(pfr, mp ? mp->cattr.sst_fid : 0,
 	    mp ? mp->cattr.sst_gen : 0, pscfs_entry_timeout, &stb,
