@@ -148,7 +148,7 @@ dircache_walk(struct fidc_membh *d, void (*cbf)(struct dircache_page *,
  * @name: name to lookup.
  */
 slfid_t
-dircache_lookup(struct fidc_membh *d, const char *name, off_t *nextoffp)
+dircache_lookup(struct fidc_membh *d, const char *name, off_t *nextoffp, int invalidate)
 {
 	struct dircache_page *p, *np;
 	struct dircache_ent q, *dce;
@@ -221,6 +221,12 @@ dircache_lookup(struct fidc_membh *d, const char *name, off_t *nextoffp)
 				ino = dirent->pfd_ino;
 				found = 1;
 				OPSTAT_INCR(SLC_OPST_DIRCACHE_LOOKUP_HIT);
+					
+				if (invalidate) {
+				    found = 0;
+				    dce->dce_hash++;
+				    OPSTAT_INCR(SLC_OPST_DIRCACHE_LOOKUP_DEL);
+				}
 			}
 
 			psclog_debug("fid="SLPRI_FID" off=%"PRId64" "

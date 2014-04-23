@@ -189,7 +189,7 @@ struct dircache_page *
 int	dircache_hasoff(struct dircache_page *, off_t);
 int	_dircache_free_page(const struct pfl_callerinfo *,
 	    struct fidc_membh *, struct dircache_page *, int);
-slfid_t	dircache_lookup(struct fidc_membh *, const char *, off_t *);
+slfid_t	dircache_lookup(struct fidc_membh *, const char *, off_t *, int);
 void	dircache_mgr_init(void);
 void	dircache_purge(struct fidc_membh *);
 void	dircache_reg_ents(struct fidc_membh *, struct dircache_page *,

@@ -466,7 +466,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	bmap_op_done(b);
 
  out:
-	psclog_info("create: pfid="SLPRI_FID" name='%s' mode=%#x flag=%#o rc=%d",
+	psclog_diag("create: pfid="SLPRI_FID" name='%s' mode=%#x flag=%#o rc=%d",
 	    pinum, name, mode, oflags, rc);
 
 	if (c)
@@ -951,7 +951,7 @@ msl_lookuprpc(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	// XXX add to dircache
 
  out:
-	psclog_diag("pfid="SLPRI_FID" name='%s' cfid="SLPRI_FID" rc=%d",
+	psclog_diag("lookup: pfid="SLPRI_FID" name='%s' cfid="SLPRI_FID" rc=%d",
 	    pinum, name, m ? m->fcmh_sstb.sst_fid : FID_ANY, rc);
 	if (rc == 0 && fp)
 		*fp = m;
@@ -1084,7 +1084,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 		PFL_GOTOERR(out, rc);
 	}
 
-	cfid = dircache_lookup(p, name, &nextoff);
+	cfid = dircache_lookup(p, name, &nextoff, 0);
 	FCMH_ULOCK(p);
 	if (cfid == FID_ANY || fidc_lookup_fid(cfid, &c)) {
 		OPSTAT_INCR(SLC_OPST_DIRCACHE_LOOKUP_MISS);
@@ -1119,7 +1119,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 	else if (c)
 		fcmh_op_done(c);
 
-	psclog_info("look for file: %s under inode: "SLPRI_FID" rc=%d",
+	psclog_diag("look for file: %s under inode: "SLPRI_FID" rc=%d",
 	    name, pinum, rc);
 
 	return (rc);
@@ -1193,10 +1193,13 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc == 0)
 		rc = mp->rc;
 
-	if (!rc) {
+	if (!rc || rc == -ENOENT) {
 		FCMH_LOCK(p);
-		uidmap_int_stat(&mp->pattr);
-		fcmh_setattr_locked(p, &mp->pattr);
+		if (!rc) {
+			uidmap_int_stat(&mp->pattr);
+			fcmh_setattr_locked(p, &mp->pattr);
+		}
+		dircache_lookup(p, name, NULL, 1);
 		FCMH_ULOCK(p);
 	}
 
@@ -1218,7 +1221,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 			OPSTAT_INCR(SLC_OPST_DELETE_SKIPPED);
 	}
 
-	psclog_info("delete: fid="SLPRI_FG" valid = %d name='%s' isfile=%d rc=%d",
+	psclog_diag("delete: fid="SLPRI_FG" valid = %d name='%s' isfile=%d rc=%d",
 	    SLPRI_FG_ARGS(&mp->cattr.sst_fg), mp->valid, name, isfile, rc);
 
  out:
@@ -2068,7 +2071,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	if (rc == 0)
 		rc = mp->rc;
 
-	psclog_diag("opfid="SLPRI_FID" npfid="SLPRI_FID" from='%s' "
+	psclog_diag("rename: opfid="SLPRI_FID" npfid="SLPRI_FID" from='%s' "
 	    "to='%s' rc=%d", opinum, npinum, oldname, newname, rc);
 
 	if (rc)
@@ -2078,6 +2081,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	FCMH_LOCK(op);
 	uidmap_int_stat(&mp->srr_opattr);
 	fcmh_setattr_locked(op, &mp->srr_opattr);
+	dircache_lookup(op, oldname, NULL, 1);
 	FCMH_ULOCK(op);
 
 	if (np != op) {
@@ -2085,6 +2089,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		FCMH_LOCK(np);
 		uidmap_int_stat(&mp->srr_npattr);
 		fcmh_setattr_locked(np, &mp->srr_npattr);
+		dircache_lookup(np, newname, NULL, 1);
 		FCMH_ULOCK(np);
 	}
 
