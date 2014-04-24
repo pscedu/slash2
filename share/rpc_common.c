@@ -663,7 +663,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 		locked = CONF_RLOCK();
 		if (*csvcp == NULL) {
 			/* initialize service */
-			csvc = *csvcp = sl_csvc_create(rqptl, rpptl);
+			csvc = sl_csvc_create(rqptl, rpptl);
 			csvc->csvc_params.scp_csvcp = csvcp;
 			psc_atomic32_set(&csvc->csvc_flags, flags);
 			csvc->csvc_peertype = peertype;
@@ -734,6 +734,8 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 			}
 			if (peertype == SLCONNT_CLI)
 				addlist = 1;
+
+			*csvcp = csvc;
 		}
 		CONF_URLOCK(locked);
 	}
