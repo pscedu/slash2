@@ -817,6 +817,8 @@ slm_rcm_try_readdir_ra(struct pscrpc_export *exp, struct sl_fidgen *fgp,
 		/*
 		 * Found an inactive slot; save in case we can't find an
 		 * empty slot.
+		 *
+		 * XXX: This macro overwrites the last bit of the nanosecond value.
 		 */
 		if (!CRAP_GET_ACTIVE(cv))
 			inact = cv;
