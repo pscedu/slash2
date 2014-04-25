@@ -1198,6 +1198,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		if (!rc) {
 			uidmap_int_stat(&mp->pattr);
 			fcmh_setattr_locked(p, &mp->pattr);
+			fcmh_2_gen(p)++;
 		}
 		dircache_lookup(p, name, NULL, 1);
 		FCMH_ULOCK(p);
@@ -2081,6 +2082,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	FCMH_LOCK(op);
 	uidmap_int_stat(&mp->srr_opattr);
 	fcmh_setattr_locked(op, &mp->srr_opattr);
+	fcmh_2_gen(op)++;
 	dircache_lookup(op, oldname, NULL, 1);
 	FCMH_ULOCK(op);
 
@@ -2089,6 +2091,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		FCMH_LOCK(np);
 		uidmap_int_stat(&mp->srr_npattr);
 		fcmh_setattr_locked(np, &mp->srr_npattr);
+		fcmh_2_gen(np)++;
 		dircache_lookup(np, newname, NULL, 1);
 		FCMH_ULOCK(np);
 	}

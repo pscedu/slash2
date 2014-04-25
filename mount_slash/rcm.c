@@ -296,6 +296,7 @@ slc_rcm_handle_readdir(struct pscrpc_request *rq)
 	struct fidc_membh *d = NULL;
 	struct dircache_page *p;
 	struct iovec iov[2];
+	int stale=0;
 
 	memset(iov, 0, sizeof(iov));
 
@@ -322,7 +323,11 @@ slc_rcm_handle_readdir(struct pscrpc_request *rq)
 		mp->rc = slrpc_bulkserver(rq, BULK_GET_SINK,
 		    SRCM_BULK_PORTAL, iov, nitems(iov));
 
-	if (mp->rc) {
+	if (mq->fg.fg_gen != fcmh_2_gen(d)) {
+		stale = 1;
+		OPSTAT_INCR(SLC_OPST_READDIR_STALE);
+	}
+	if (mp->rc || stale) {
 		msl_readdir_error(d, p, mp->rc);
 		PSCFREE(iov[0].iov_base);
 	} else
