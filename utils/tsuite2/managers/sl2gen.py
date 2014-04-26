@@ -152,7 +152,7 @@ def launch_gdb_sl(tsuite, sock_name, sl2objects, res_bin_type, gdbcmd_path):
 
     #Create gdbcmd from template
     gdbcmd_build_path = path.join(tsuite.build_dirs["base"],
-        "{0}.{1}.gdbcmd".format(res_bin_type, sl2object["id"]))
+        "{0}_{1}".format(sl2object["id"], path.basename(gdbcmd_path)))
 
     new_gdbcmd = repl_file(repl_dict, gdbcmd_path)
 

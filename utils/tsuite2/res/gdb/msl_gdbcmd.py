@@ -9,7 +9,11 @@ def check_resource_usage(event):
 
         rusage = gdb.execute("info proc status", to_string=True)
         fields = ["VmPeak", "VmSize", "Threads",]
-        [[logfile.write(line) if field in line for field in fields] for line in rusage.split("\n")]
+        for line in rusage.split("\n"):
+          for field in fields:
+            if field in line:
+              logfile.write(line)
+              continue
         logfile.write("%s\n" % ("-"*10))
         logfile.close()
 
@@ -18,6 +22,6 @@ def check_resource_usage(event):
 gdb.execute("set confirm off")
 gdb.execute("set height 0")
 gdb.execute("handle SIGUSR1 ignore")
+gdb.events.stop.connect(check_resource_usage)
 gdb.execute("run -f %base%/slash.conf -S %base%/ctl/msl.%h.sock -D %datadir% mp")
 
-gdb.events.stop.connect(check_resource_usage)
