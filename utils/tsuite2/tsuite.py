@@ -9,7 +9,6 @@ from paramiko import SSHException
 
 from utils.sl2 import SL2Res
 from utils.ssh import SSH
-from utils.mongohelper import MongoHelper
 from managers.sl2gen import repl, repl_file
 
 from managers import sl2gen, mds, ion, mnt
@@ -197,6 +196,7 @@ class TSuite(object):
     Must be ran after run_tests"""
 
     try:
+      from utils.mongohelper import MongoHelper
       self.mongo = MongoHelper(self.conf)
     except Exception:
       log.critical("Unable to connect to mongodb.")
@@ -270,7 +270,7 @@ class TSuite(object):
 
     sock_name = "sl2.{0}.tset".format(self.conf["tests"]["runtime_tsetname"])
 
-    killed_clients = sum(map(lambda ssh: ssh.kill_screens(sock_name), ssh_clients))
+    killed_clients = sum(map(lambda ssh: ssh.kill_screens(sock_name, exact_sock=True), ssh_clients))
     if killed_clients > 0:
       log.debug("Killed {0} stagnant tset sessions. Please take care of them next time.".format(killed_clients))
 

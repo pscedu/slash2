@@ -66,7 +66,7 @@ class API(object):
             i = tsid - 1
             while i >= 0 and i < tsid and len(lower[test_name]) < positions:
                 for test in tsets[i]["tests"]:
-                    if test["test_name"] == test_name:
+                    if test["test_name"] == test_name and test["pass"]:
                         test["tsid"] = i+1
                         assert(i+1 == test["tsid"])
                         lower[test_name] = [test] + lower[test_name]
@@ -74,7 +74,7 @@ class API(object):
             i = tsid
             while i < len(tsets) and len(higher[test_name]) < positions:
                 for test in tsets[i]["tests"]:
-                    if test["test_name"] == test_name:
+                    if test["test_name"] == test_name and test["pass"]:
                         test["tsid"] = i+1
                         higher[test_name].append(test)
                 i += 1

@@ -1,6 +1,11 @@
 google.load("visualization", "1", {packages:["corechart"]});
 
 $(function() {
+
+  var blue = "#0F4D92";
+  var green = "#00703C";
+  var red = "#A45A52";
+
   var change_thresh = 10.0;
 
   var test_names = [];
@@ -16,11 +21,11 @@ $(function() {
     var val = parseFloat($(this).text());
     test_change_data.push(val);
     if(val >= change_thresh) {
-      change_colors.push("#b20000");
+      change_colors.push(red);
     } else if(val <= -change_thresh) {
-      change_colors.push("#009900");
+      change_colors.push(green);
     } else {
-      change_colors.push("#0000b2");
+      change_colors.push(blue);
     }
   });
 

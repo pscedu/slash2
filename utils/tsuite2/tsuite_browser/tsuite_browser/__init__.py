@@ -59,7 +59,7 @@ def dashboard(tsid = None):
         adj_tests = api.get_neighboring_tests(session["active_tsid"], 10)
 
     return render_template("new.html",
-        tsets = api.get_tsets(100),
+        tsets = api.get_tsets(),
         display_tset = display_tset,
         adj_tests = adj_tests
     )
