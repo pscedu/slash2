@@ -639,6 +639,7 @@ slmctlthr_main(const char *fn)
 	psc_ctlparam_register("pool", psc_ctlparam_pool);
 	psc_ctlparam_register("rlim", psc_ctlparam_rlim);
 	psc_ctlparam_register("run", psc_ctlparam_run);
+	psc_ctlparam_register("rusage", psc_ctlparam_rusage);
 
 	psc_ctlparam_register("namespace.stats", slmctlparam_namespace_stats);
 	psc_ctlparam_register_simple("nextfid", slmctlparam_nextfid_get,
