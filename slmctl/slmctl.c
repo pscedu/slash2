@@ -100,7 +100,7 @@ packshow_fcmhs(char *fid)
 
 	if (strcmp(fid, "busy") == 0)
 		scf->scf_fg.fg_gen = SLCTL_FCL_BUSY;
-	else
+	else if (fid)
 		psclog_errorx("unrecognized fidcache class: %s", fid);
 }
 
