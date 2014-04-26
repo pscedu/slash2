@@ -10,7 +10,7 @@ from managers.mds import *
 from managers.ion import *
 from managers.mnt import *
 
-log = logging.getLogger("sl2")
+log = logging.getLogger("sl2.run")
 
 def main():
   """Entry point into the SLASH2 Test Suite.

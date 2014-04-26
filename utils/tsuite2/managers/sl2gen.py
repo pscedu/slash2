@@ -5,7 +5,7 @@ from os import path
 from utils.ssh import SSH
 from tsuite import *
 
-log = logging.getLogger("sl2")
+log = logging.getLogger("sl2.gen")
 
 def repl(lookup, string):
   """Replaces keywords within a string.
