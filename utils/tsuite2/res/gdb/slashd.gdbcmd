@@ -1,5 +1,12 @@
 # $Id: slashd.gdbcmd 17046 2011-06-14 23:44:55Z yanovich $
 
-set confirm off
 set height 0
+set confirm off
+set logging on
+set logging file %base%/slashd_gdb_output
+catch signal SIGUSR1
+info proc status
+c
+end
+
 run -S %base%/ctl/slashd.%h.sock -f %base%/slash.conf -D %datadir% -p %zpool_cache% %zpool_name%

@@ -1,5 +1,11 @@
 # $Id: msl.gdbcmd 17061 2011-06-15 20:40:26Z yanovich $
 
-set confirm off
 set height 0
+set confirm off
+set logging on
+set logging file %base%/msl_gdb_output
+catch signal SIGUSR1
+info proc status
+c
+end
 run -f %base%/slash.conf -S %base%/ctl/msl.%h.sock -D %datadir% mp
