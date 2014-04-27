@@ -1,4 +1,6 @@
-- compile slash2 before starting
+- pull and compile slash2 before starting (wrapper scipt)
 - add more intense tests
 - finish web UI
 - collect resource usage (of tests and slash2)
+  * getrusage() doesn't implement memory statistics on linux.
+  * We can use gdbcmd files and signals to handle this on linux, but we need a newer version of gdb
