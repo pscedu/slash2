@@ -266,7 +266,12 @@ class TSuite(object):
 
     test_handler_path = path.join(self.cwd, "handlers", "test_handle.py")
     remote_test_handler_path = path.join(self.build_dirs["mp"], "test_handle.py")
+
+    ssh_path = path.join(self.cwd, "utils" , "ssh.py")
+    remote_ssh_path = path.join(self.build_dirs["mp"], "ssh.py")
+
     map(lambda ssh: ssh.copy_file(test_handler_path, remote_test_handler_path), ssh_clients)
+    map(lambda ssh: ssh.copy_file(ssh_path, remote_ssh_path), ssh_clients)
 
     sock_name = "sl2.{0}.tset".format(self.conf["tests"]["runtime_tsetname"])
 
@@ -276,7 +281,20 @@ class TSuite(object):
 
     log.debug("Running tests on clients.")
 
-    runtime = {"build_dirs": self.build_dirs, "daemons" : self.sl2objects}
+    # create list of daemons running and their information to be sent to test_handler
+    daemons = []
+    for type in self.sl2objects.keys():
+      for sl2object in self.sl2objects[type]:
+        if type == "mds":
+          ctl_path = self.src_dirs['slmctl']
+        elif type == "ion":
+          ctl_path = self.src_dirs['slictl']
+        elif type == "client":
+          ctl_path = self.src_dirs['msctl']
+
+        daemons.append((sl2object["host"], ctl_path , sl2object["pid"]))
+
+    runtime = {"build_dirs": self.build_dirs, "daemons" : daemons}
     runtime_arg = base64.b64encode(json.dumps(runtime))
 
     map(lambda ssh: ssh.run_screen("python {0} {1}".format(remote_test_handler_path, runtime_arg),
@@ -289,12 +307,11 @@ class TSuite(object):
 
     get_results = lambda ssh: (ssh.host,
         json.loads(ssh.run("cat "+result_path, quiet=True)["out"][0])
-      )
+    )
 
     self.test_results = map(get_results, ssh_clients)
 
     log.debug("Retrieved results from tests.")
-
     map(lambda ssh: ssh.close(), ssh_clients)
 
   def parse_slash2_conf(self):

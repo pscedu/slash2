@@ -17,16 +17,18 @@ class TestHandler(object):
     self.modules_folder = path.join(self.cwd, "modules")
     self.modules = self.load_all_modules_from_dir(self.modules_folder)
 
-
     self.run_tests()
     self.cleanup()
 
-  def get_resouce_usage():
+  def get_resource_usages(self):
       #query each slash2 compenent for resource usage
-      for host, daemon_type, pid in self.runtime["daemons"]:
+      for host, daemon_path, pid in self.runtime["daemons"]:
           user = os.getenv("USER")
           ssh = SSH(user, host, '');
-
+          ssh.run("sudo kill -s SIGUSR1 {0}".format(pid)) # linux
+          log = open("/home/beckert/log", "w")
+          log.write(str(ssh.run("sudo {0} -S {1}/*.sock -s rusage".format(daemon_path, self.runtime["build_dirs"]["ctl"])))) #bsd
+          log.close()
 
   def run_tests(self):
     """Run all tests from the tests directory and print results"""
@@ -43,7 +45,7 @@ class TestHandler(object):
 
       test["cleanup"]=module.cleanup()
 
-      test["resource_usage"]=get_resouce_usage()
+      test["resource_usage"]=self.get_resource_usages()
 
       tset_results["tests"].append(test)
 

@@ -4,9 +4,9 @@ set height 0
 set confirm off
 set logging on
 set logging file %base%/sliod_gdb_output
-catch signal SIGUSR1
-info proc status
-c
-end
+#catch signal SIGUSR1
+#info proc status
+#c
+#end
 
 run -S %base%/ctl/sliod.%h.sock -f %base%/slash.conf -D %datadir% %prefmds%

@@ -197,8 +197,7 @@ def launch_gdb_sl(tsuite, sock_name, sl2objects, res_bin_type, gdbcmd_path):
           tsuite.shutdown()
 
     #grab pid for resouce querying later
-    print ssh.run("ps aux | grep {0}".format(res_bin_type))
-
+    sl2object["pid"] =  ssh.run("pgrep {0}".format(res_bin_type))['out'][0].strip()
 
     if need_authbuf:
       pull_authbuf(tsuite, ssh)
@@ -226,7 +225,7 @@ def stop_slash2_socks(tsuite, sock_name, sl2objects, res_bin_type):
     ssh = SSH(user, host, '')
     ssh.kill_screens(res_bin_type)
 
-    cmd = "{0} -S {1}/{2}.{3}.sock stop".format(res_bin_type, tsuite.build_dirs["ctl"], sock_name, host)
+    cmd = "{0} -S {1}/{2}.{3}.sock stop".format(tsuite.src_dirs[res_bin_type], tsuite.build_dirs["ctl"], sock_name, host)
     ssh.run(cmd)
     ssh.close()
 
