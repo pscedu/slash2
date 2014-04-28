@@ -2,5 +2,5 @@
 - add more intense tests
 - finish web UI
 - collect resource usage (of tests and slash2)
-  * getrusage() doesn't implement memory statistics on linux.
-  * We can use gdbcmd files and signals to handle this on linux, but we need a newer version of gdb
+  * getrusage() doesn't implement memory statistics on linux. We can use gdbcmd files and signals to handle this on linux, but we need a newer version of gdb
+  * test_hander needs to recieve the hosts and of each slash2 resource, so it can query for resource statistics

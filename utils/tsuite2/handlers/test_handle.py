@@ -1,6 +1,7 @@
 import sys, json, pkgutil, time
 import shutil, base64, json
 import os
+from ssh import SSH
 from os import path
 
 class TestHandler(object):
@@ -16,12 +17,16 @@ class TestHandler(object):
     self.modules_folder = path.join(self.cwd, "modules")
     self.modules = self.load_all_modules_from_dir(self.modules_folder)
 
+
     self.run_tests()
     self.cleanup()
 
   def get_resouce_usage():
-      #query each slash2 compenent for ressource usage
-      pass
+      #query each slash2 compenent for resource usage
+      for host, daemon_type, pid in self.runtime["daemons"]:
+          user = os.getenv("USER")
+          ssh = SSH(user, host, '');
+
 
   def run_tests(self):
     """Run all tests from the tests directory and print results"""

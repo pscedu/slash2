@@ -276,7 +276,7 @@ class TSuite(object):
 
     log.debug("Running tests on clients.")
 
-    runtime = self.build_dirs
+    runtime = {"build_dirs": self.build_dirs, "daemons" : self.sl2objects}
     runtime_arg = base64.b64encode(json.dumps(runtime))
 
     map(lambda ssh: ssh.run_screen("python {0} {1}".format(remote_test_handler_path, runtime_arg),

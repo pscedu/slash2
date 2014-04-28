@@ -196,6 +196,9 @@ def launch_gdb_sl(tsuite, sock_name, sl2objects, res_bin_type, gdbcmd_path):
             .format(res_bin_type, sl2object["id"], screen_sock_name))
           tsuite.shutdown()
 
+    #grab pid for resouce querying later
+    print ssh.run("ps aux | grep {0}".format(res_bin_type))
+
 
     if need_authbuf:
       pull_authbuf(tsuite, ssh)
