@@ -27,10 +27,10 @@
 
 #include <sys/types.h>
 
-#include "pfl/fs.h"
-#include "pfl/service.h"
 #include "pfl/atomic.h"
+#include "pfl/fs.h"
 #include "pfl/multiwait.h"
+#include "pfl/service.h"
 
 #include "bmap.h"
 #include "fidcache.h"
