@@ -19,6 +19,10 @@ class TestHandler(object):
     self.run_tests()
     self.cleanup()
 
+  def get_resouce_usage():
+      #query each slash2 compenent for ressource usage
+      pass
+
   def run_tests(self):
     """Run all tests from the tests directory and print results"""
     tset_results = {"tests": []}
@@ -33,6 +37,8 @@ class TestHandler(object):
       test["operate"]["elapsed"] = elapsed
 
       test["cleanup"]=module.cleanup()
+
+      test["resource_usage"]=get_resouce_usage()
 
       tset_results["tests"].append(test)
 
