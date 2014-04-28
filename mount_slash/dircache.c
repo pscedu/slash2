@@ -278,8 +278,6 @@ dircache_hasoff(struct dircache_page *p, off_t off)
 	struct dircache_ent q, *dce;
 	int n;
 
-	if (p->dcp_flags & DIRCACHEPGF_LOADING)
-		return (0);
 	if (p->dcp_rc)
 		return (0);
 
