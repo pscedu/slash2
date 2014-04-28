@@ -325,6 +325,8 @@ slc_rcm_handle_readdir(struct pscrpc_request *rq)
 
 	if (mq->fg.fg_gen != fcmh_2_gen(d)) {
 		stale = 1;
+		if (!mp->rc)
+			mp->rc = -ESTALE;
 		OPSTAT_INCR(SLC_OPST_READDIR_STALE);
 	}
 	if (mp->rc || stale) {
