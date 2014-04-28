@@ -214,7 +214,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 			if (maxpages < npages)
 				maxpages = npages;
 
-			DEBUG_BMAP(PLL_DIAG, b, "maxpages=%d npages=%d ", 
+			DEBUG_BMAP(PLL_DIAG, b, "maxpages=%d npages=%d ",
 			    maxpages, npages);
 		} else {
 			maxpages = npages;
@@ -1121,7 +1121,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 
 	csvc = msl_bmap_to_csvc(b, op == SRMT_WRITE);
 	if (csvc == NULL) {
-		rc = -ENOTCONN;
+		rc = -ENOTCONN; // xxx
 		goto error;
 	}
 
@@ -1315,7 +1315,7 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 
 	csvc = msl_bmap_to_csvc(b, 0);
 	if (csvc == NULL) {
-		rc = -ENOTCONN;
+		rc = -ENOTCONN; // xxx
 		goto error;
 	}
 
@@ -1436,25 +1436,24 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	csvc = msl_bmap_to_csvc(r->biorq_bmap,
 	    r->biorq_bmap->bcm_flags & BMAP_WR);
 	if (csvc == NULL)
-		PFL_GOTOERR(error, rc = -ENOTCONN);
+		PFL_GOTOERR(error, rc = -ENOTCONN); // xxx
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
 	if (rc)
-		goto error;
+		PFL_GOTOERR(error, rc);
 
 	rq->rq_bulk_abortable = 1;
 	rc = slrpc_bulkclient(rq, BULK_PUT_SINK, SRIC_BULK_PORTAL, iovs,
 	    npages);
 	if (rc)
-		goto error;
-
+		PFL_GOTOERR(error, rc);
 
 	mq->offset = off;
 	mq->size = npages * BMPC_BUFSZ;
 	mq->op = SRMIOP_RD;
 	memcpy(&mq->sbd, bmap_2_sbd(r->biorq_bmap), sizeof(mq->sbd));
 
-	DEBUG_BIORQ(PLL_INFO, r, "fid="SLPRI_FG" launching read req", 
+	DEBUG_BIORQ(PLL_INFO, r, "fid="SLPRI_FG" launching read req",
 	    SLPRI_FG_ARGS(&mq->sbd.sbd_fg));
 
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
@@ -1477,12 +1476,12 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	if (rc) {
 		OPSTAT_INCR(SLC_OPST_RPC_PUSH_REQ_FAIL);
 		pscrpc_set_remove_req(r->biorq_rqset, rq);
-		goto error;
+		PFL_GOTOERR(error, rc);
 	}
 
 	BIORQ_LOCK(r);
 	r->biorq_ref++;
-	DEBUG_BIORQ(PLL_DIAG, r, "rpc launch");
+	DEBUG_BIORQ(PLL_DIAG, r, "RPC launch");
 	BIORQ_ULOCK(r);
 
 	PSCFREE(iovs);
@@ -1514,7 +1513,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 		BMPCE_ULOCK(e);
 	}
 
-	DEBUG_BIORQ(PLL_DIAG, r, "rpc launch failed (rc=%d)", rc);
+	DEBUG_BIORQ(PLL_DIAG, r, "RPC launch failed (rc=%d)", rc);
 	return (rc);
 }
 
@@ -1882,8 +1881,8 @@ msl_setra(struct msl_fhent *mfh, size_t size, off_t off)
 	/*
 	 * If the first read starts from offset 0, the following
 	 * will trigger a read-ahead.
-	 */ 	
-	if ((mfh->mfh_ra.mra_loff + mfh->mfh_ra.mra_lsz) == off)
+	 */
+	if (mfh->mfh_ra.mra_loff + mfh->mfh_ra.mra_lsz == off)
 		mfh->mfh_ra.mra_nseq++;
 	else
 		mfh->mfh_ra.mra_nseq = 0;
@@ -2089,12 +2088,12 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 		rc = bmap_get(f, start + i, rw, &b);
 		if (rc)
-			goto out;
+			PFL_GOTOERR(out, rc);
 
 		rc = msl_bmap_lease_tryext(b, 1);
 		if (rc) {
 			bmap_op_done(b);
-			goto out;
+			PFL_GOTOERR(out, rc);
 		}
 
 		/*
