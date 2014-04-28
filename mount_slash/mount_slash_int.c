@@ -1120,10 +1120,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	op = r->biorq_flags & BIORQ_WRITE ? SRMT_WRITE : SRMT_READ;
 
 	csvc = msl_bmap_to_csvc(b, op == SRMT_WRITE);
-	if (csvc == NULL) {
-		rc = -ENOTCONN; // xxx
-		goto error;
-	}
+	if (csvc == NULL)
+		PFL_GOTOERR(error, rc = -ENOTCONN);
 
 	if (r->biorq_rqset == NULL)
 		r->biorq_rqset = pscrpc_prep_set();
@@ -1137,7 +1135,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 
 		rc = SL_RSX_NEWREQ(csvc, op, rq, mq, mp);
 		if (rc)
-			goto error;
+			PFL_GOTOERR(error, rc);
 
 		rq->rq_bulk_abortable = 1;
 		rq->rq_interpret_reply = msl_dio_cb0;
@@ -1150,7 +1148,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		    BULK_GET_SOURCE : BULK_PUT_SINK), SRIC_BULK_PORTAL,
 		    &iovs[i], 1);
 		if (rc)
-			goto error;
+			PFL_GOTOERR(error, rc);
 
 		mq->offset = r->biorq_off + nbytes;
 		mq->size = len;
@@ -1165,7 +1163,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		if (rc) {
 			OPSTAT_INCR(SLC_OPST_RPC_PUSH_REQ_FAIL);
 			pscrpc_set_remove_req(r->biorq_rqset, rq);
-			goto error;
+			PFL_GOTOERR(error, rc);
 		}
 		BIORQ_LOCK(r);
 		r->biorq_ref++;
@@ -1314,19 +1312,17 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 	}
 
 	csvc = msl_bmap_to_csvc(b, 0);
-	if (csvc == NULL) {
-		rc = -ENOTCONN; // xxx
-		goto error;
-	}
+	if (csvc == NULL)
+		PFL_GOTOERR(error, rc = -ENOTCONN);
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
 	if (rc)
-		goto error;
+		PFL_GOTOERR(error, rc);
 
 	rc = slrpc_bulkclient(rq, BULK_PUT_SINK, SRIC_BULK_PORTAL, iovs,
 	    nbmpce);
 	if (rc)
-		goto error;
+		PFL_GOTOERR(error, rc);
 
 	PSCFREE(iovs);
 
@@ -1464,8 +1460,8 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQ] = r;
 
 	if (!r->biorq_rqset)
-		/* XXX Using a set for any type of read may be
-		 *   overkill.
+		/*
+		 * XXX Using a set for any type of read may be overkill.
 		 */
 		r->biorq_rqset = pscrpc_prep_set();
 
