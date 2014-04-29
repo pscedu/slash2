@@ -195,8 +195,10 @@ def launch_gdb_sl(tsuite, sock_name, sl2objects, res_bin_type, gdbcmd_path):
           .format(res_bin_type, sl2object["id"], screen_sock_name))
         tsuite.shutdown()
 
-    #grab pid for resouce querying later
-    sl2object["pid"] =  ssh.run("pgrep {0}".format(res_bin_type))['out'][0].strip()
+    #grab pid for resouce querying later 
+    #TODO: do not grab other running instances
+    sl2object["pid"] = ssh.run("pgrep {0}".format(res_bin_type))['out'][0].strip()
+    log.debug("Found {0} pid on {1} : {2}".format(res_bin_type, host, sl2object["pid"]))
 
     if need_authbuf:
       pull_authbuf(tsuite, ssh)

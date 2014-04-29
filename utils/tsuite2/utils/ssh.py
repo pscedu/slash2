@@ -1,5 +1,6 @@
 import paramiko, getpass, logging
 import os, re, errno
+from os import path
 
 from time import sleep
 
@@ -82,6 +83,7 @@ class SSH(object):
         f = self.sftp.open(dst, "wb")
         f.write(contents)
         f.close()
+        log.debug("Copied file {0} to {1} on {2}".format(path.basename(src), dst, self.host))
         return True
       else:
         log.error(src + " does not exist locally!")
@@ -105,11 +107,12 @@ class SSH(object):
 
     return True
 
-  def make_dirs(self, dirs_path):
+  def make_dirs(self, dirs_path, force=False):
     """Create remote directories.
 
     Args:
-      dirs_path: directory path."""
+      dirs_path: directory path.
+      force: attempt to elevate and create"""
 
     log.debug("Making directory {0} on {1}.".format(dirs_path, self.host))
     levels = dirs_path.split(os.sep)
@@ -118,8 +121,11 @@ class SSH(object):
         path = os.sep.join(levels[:level+1])
         self.sftp.mkdir(path)
       except IOError as error:
-        if error.errno != None:
-          log.error("Could not make directory {0} on {1}.".format(path, self.host))
+        if error.errno != None: #directory doesn't exist
+          if not self.run("sudo mkdir {0}".format(path))['err'] == []: #try to force it
+            log.error("Could not make directory {0} on {1}.".format(path, self.host))
+            return
+          self.run("sudo chmod 0777 {0}".format(path))
 
   def list_screen_socks(self):
     """Return a list of open screen sockets."""
@@ -267,7 +273,7 @@ class SSH(object):
 
     #Debug -- log the cmds being run
     if not quiet:
-      [log.debug(c) for c in cmd.split(";")]
+      [log.debug("{0}@{1}:/$ {2}".format(self.user, self.host, c)) for c in cmd.split(";")]
 
     if timeout:
       cmd = "timeout --signal=9 {0} {1}".format(timeout, cmd)

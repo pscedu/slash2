@@ -1,6 +1,6 @@
 import logging, re, os, sys
 import glob, time, base64
-import json
+import json, signal
 
 from random import randrange
 from os import path
@@ -79,6 +79,15 @@ class TSuite(object):
 
     self.local_setup()
     self.create_remote_setups()
+
+  
+
+    #register a safe exit method
+    def exit_handler(signal, frame):
+      log.critical("Stopping tsuite!")
+      self.shutdown()
+
+    signal.signal(signal.SIGINT, exit_handler)
 
 
   def all_objects(self):
@@ -251,6 +260,10 @@ class TSuite(object):
         ssh_clients.append(SSH(self.user, host))
       except SSHException:
         log.error("Unable to connect to %s@%s", self.user, host)
+
+
+    #ensure directory has necessary permissions
+    #map(lambda ssh: ssh.run("sudo chmod -R a+rwx {0}".format(self.build_dirs["mp"])), ssh_clients)
 
     remote_modules_path = path.join(self.build_dirs["mp"], "modules", "")
     map(lambda ssh: ssh.make_dirs(remote_modules_path), ssh_clients)
@@ -562,7 +575,6 @@ class TSuite(object):
     log.info("Exiting tsuite.")
     sys.exit(1)
 
-
 def check_subset(necessary, check):
   """Determines missing elements from necessary list.
 
@@ -578,4 +590,3 @@ def check_subset(necessary, check):
     map(necessary.remove, present)
     return necessary
   return []
-
