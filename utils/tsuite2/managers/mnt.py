@@ -22,8 +22,7 @@ def kill_mnt(tsuite):
   
   for client in tsuite.sl2objects["client"]:
     ssh = SSH(tsuite.user, client["host"])
-    if not ssh.run("umount {0}".format(tsuite.build_dirs["mp"]))["err"] == []:
+    if not ssh.run("sudo umount {0}".format(tsuite.build_dirs["mp"]))["err"] == []:
       log.critical("Cannot unmount client mountpoint at {0} @ {1}.".format(tsuite.build_dirs["mp"], client["host"]))
-      return
 
   sl2gen.stop_slash2_socks(tsuite, "client", tsuite.sl2objects["client"], "msctl", "mount_slash")

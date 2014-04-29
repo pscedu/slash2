@@ -1,5 +1,5 @@
 import paramiko, getpass, logging
-import os, re
+import os, re, errno
 
 from time import sleep
 
@@ -74,17 +74,20 @@ class SSH(object):
       True if it copied successfully, False if the src file does not exist.
       Can also throw an IOException"""
 
-    if os.path.isfile(src):
-      s = open(src, "rb")
-      contents = s.read()
-      s.close()
-      f = self.sftp.open(dst, "wb")
-      f.write(contents)
-      f.close()
-      return True
-    else:
-      log.error(src + " does not exist locally!")
-      return False
+    try:
+      if os.path.isfile(src):
+        s = open(src, "rb")
+        contents = s.read()
+        s.close()
+        f = self.sftp.open(dst, "wb")
+        f.write(contents)
+        f.close()
+        return True
+      else:
+        log.error(src + " does not exist locally!")
+        return False
+    except IOError as error:
+      log.error("Cannot copy file {0} to {1} on {2}!".format(src, dst, self.host))
 
   def pull_file(self, rmt, local):
     """Download remote file. Not elevated.
@@ -110,13 +113,13 @@ class SSH(object):
 
     log.debug("Making directory {0} on {1}.".format(dirs_path, self.host))
     levels = dirs_path.split(os.sep)
-    for level in range(len(levels)):
+    for level in range(1, len(levels)):
       try:
         path = os.sep.join(levels[:level+1])
         self.sftp.mkdir(path)
-      except IOError:
-        #Directory may already exist.
-        pass
+      except IOError as error:
+        if error.errno != None:
+          log.error("Could not make directory {0} on {1}.".format(path, self.host))
 
   def list_screen_socks(self):
     """Return a list of open screen sockets."""

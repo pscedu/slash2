@@ -262,8 +262,6 @@ class TSuite(object):
         if not test.startswith(".") and test != "__init__.py":
           tests.append(test)
         remote_test_path = path.join(remote_modules_path, test)
-        print test_path
-        print remote_test_path
         map(lambda ssh: ssh.copy_file(test_path, remote_test_path), ssh_clients)
     log.debug("Found tests: {0}".format(", ".join(tests)))
 
@@ -305,14 +303,16 @@ class TSuite(object):
 
     if not all(map(lambda ssh: ssh.wait_for_screen(sock_name)["finished"], ssh_clients)):
       log.error("Some of the screen sessions running the tset encountered errors! Please check out the clients and rectify the issue.")
+      self.shutdown()
 
     result_path = path.join(self.build_dirs["mp"], "results.json")
 
-    get_results = lambda ssh: (ssh.host,
-        json.loads(ssh.run("cat "+result_path, quiet=True)["out"][0])
-    )
-
-    self.test_results = map(get_results, ssh_clients)
+    try:
+      get_results = lambda ssh: (ssh.host, json.loads(ssh.run("cat "+result_path, quiet=True)["out"][0]))
+      self.test_results = map(get_results, ssh_clients)
+    except IndexError:
+      log.critical("Tests did not return output!")
+      self.shutdown()
 
     log.debug("Retrieved results from tests.")
     map(lambda ssh: ssh.close(), ssh_clients)
@@ -559,7 +559,7 @@ class TSuite(object):
     if "ion" in self.sl2objects:
       ion.kill_ion(self)
 
-    log.debug("Exiting tsuite.")
+    log.info("Exiting tsuite.")
     sys.exit(1)
 
 

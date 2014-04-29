@@ -216,7 +216,7 @@ def stop_slash2_socks(tsuite, sock_name, sl2objects, ctl_type, daemon_type):
   assert(daemon_type in tsuite.src_dirs)
 
   for sl2object in sl2objects:
-    log.debug("Killing {0} @ {1}".format(sl2object["name"], sl2object["host"]))
+    log.info("Killing {0} @ {1}".format(sl2object["name"], sl2object["host"]))
 
     #Remote connection
     user, host = tsuite.user, sl2object["host"]
