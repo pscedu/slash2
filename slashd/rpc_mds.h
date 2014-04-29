@@ -119,6 +119,7 @@ struct batchrq {
 };
 
 #define BATCHF_PNDG			(1 << 0)
+#define BATCHF_SENT			(1 << 1)
 
 #define batchrq_2_lc(br)		(&res2rpmi(br->br_res)->rpmi_batchrqs)
 

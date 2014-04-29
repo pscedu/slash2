@@ -258,7 +258,7 @@ batchrq_finish(struct batchrq *br, int rc)
 	struct psc_listcache *l;
 
 	br->br_cbf(br, rc);
-	if (br->br_rq)
+	if (br->br_rq && (br->br_flags & BATCHF_SENT) == 0)
 		pscrpc_req_finished(br->br_rq);
 	if (br->br_csvc)
 		sl_csvc_decref(br->br_csvc);
@@ -318,7 +318,7 @@ batchrq_send(struct batchrq *br)
 
 	LIST_CACHE_ENSURE_LOCKED(ml);
 
-	br->br_flags |= BATCHF_PNDG;
+	br->br_flags |= BATCHF_PNDG | BATCHF_SENT;
 	lc_remove(ml, br);
 
 	lc_add(&batchrqs_wait, br);
@@ -335,9 +335,11 @@ batchrq_send(struct batchrq *br)
 	rq->rq_interpret_reply = batchrq_send_cb;
 	rq->rq_async_args.pointer_arg[0] = br;
 	rc = SL_NBRQSET_ADD(br->br_csvc, rq);
-	if (rc)
+	if (rc) {
  err:
+		br->br_flags &= ~BATCHF_SENT;
 		batchrq_finish(br, rc);
+	}
 }
 
 int
