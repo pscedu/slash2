@@ -3,7 +3,7 @@
 set height 0
 set confirm off
 set logging on
-set logging file %base%/sliod_gdb_output
+set logging file base%/rusage
 #catch signal SIGUSR1
 #info proc status
 #c

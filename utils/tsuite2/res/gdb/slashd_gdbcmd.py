@@ -4,7 +4,7 @@ query_num = 0
 def check_resource_usage(event):
     global query_num
     if isinstance(event, gdb.SignalEvent) and event.stop_signal == "SIGUSR1":
-        logfile = open("%base%/mds_resource_usage", "a")
+        logfile = open("%base%/rusage", "a")
         logfile.write("Query %d:\n" % query_num)
         query_num += 1
 

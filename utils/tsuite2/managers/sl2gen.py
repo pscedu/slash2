@@ -203,14 +203,14 @@ def launch_gdb_sl(tsuite, sock_name, sl2objects, res_bin_type, gdbcmd_path):
 
     ssh.close()
 
-def stop_slash2_socks(tsuite, sock_name, sl2objects, ctl_type):
+def stop_slash2_socks(tsuite, sock_name, sl2objects, ctl_type, daemon_type):
   """ Terminates all slash2 socks and screen socks on a generic host.
   Args:
     tsuite: tsuite runtime.
     sock_name: name of sl2 sock.
     sl2objects: list of objects to be launched.
-    ctl_type: key to ctl path in src_dirs.
-    gdbcmd_path: path to gdbcmd file."""
+    ctl_type: key to ctl path in src_dirs
+    daemon_type: key to daemon path in src_dirs"""
 
   assert(ctl_type in tsuite.src_dirs)
   assert(daemon_type in tsuite.src_dirs)
@@ -223,13 +223,13 @@ def stop_slash2_socks(tsuite, sock_name, sl2objects, ctl_type):
     log.debug("Connecting to {0}@{1}".format(user, host))
     ssh = SSH(user, host, '')
 
-    cmd = "{0} -S {1}/{2}.{3}.sock stop".format(tsuite.src_dirs[ctl_type], tsuite.build_dirs["ctl"], sock_name, host)
+    cmd = "{0} -S {1}/{2}.{3}.sock stop".format(tsuite.src_dirs[ctl_type], tsuite.build_dirs["ctl"], daemon_type, host)
     ssh.run(cmd)
 
     if "id" not in sl2object.keys():
       sl2object["id"] = 0
 
-    screen_sock_name = "sl.{0}.{1}".format(daemon_type, sl2object["id"])
+    screen_sock_name = "sl.{0}.{1}".format(sock_name, sl2object["id"])
     ssh.kill_screens(screen_sock_name, exact_sock=True)
 
     ssh.close()

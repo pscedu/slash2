@@ -252,7 +252,7 @@ class TSuite(object):
       except SSHException:
         log.error("Unable to connect to %s@%s", self.user, host)
 
-    remote_modules_path = path.join(self.build_dirs["mp"], "modules")
+    remote_modules_path = path.join(self.build_dirs["mp"], "modules", "")
     map(lambda ssh: ssh.make_dirs(remote_modules_path), ssh_clients)
 
     tests = []
@@ -261,7 +261,10 @@ class TSuite(object):
         test_path = path.join(tset_dir, test)
         if not test.startswith(".") and test != "__init__.py":
           tests.append(test)
-        map(lambda ssh: ssh.copy_file(test_path, path.join(remote_modules_path, test)), ssh_clients)
+        remote_test_path = path.join(remote_modules_path, test)
+        print test_path
+        print remote_test_path
+        map(lambda ssh: ssh.copy_file(test_path, remote_test_path), ssh_clients)
     log.debug("Found tests: {0}".format(", ".join(tests)))
 
     test_handler_path = path.join(self.cwd, "handlers", "test_handle.py")

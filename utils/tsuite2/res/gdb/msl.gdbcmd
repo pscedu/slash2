@@ -3,9 +3,9 @@
 set height 0
 set confirm off
 set logging on
-set logging file %base%/msl_gdb_output
+set logging file %base%/rusage
 #catch signal SIGUSR1
 #info proc status
 #c
 #end
-run -f %base%/slash.conf -S %base%/ctl/msl.%h.sock -D %datadir% mp
+run -f %base%/slash.conf -S %base%/ctl/mount_slash.%h.sock -D %datadir% %mp%

@@ -108,6 +108,7 @@ class SSH(object):
     Args:
       dirs_path: directory path."""
 
+    log.debug("Making directory {0} on {1}.".format(dirs_path, self.host))
     levels = dirs_path.split(os.sep)
     for level in range(len(levels)):
       try:
@@ -140,6 +141,7 @@ class SSH(object):
     Returns: number of socks killed."""
 
     sock_list = self.list_screen_socks()
+    log.debug("Quitting {0}screen sessions: {1}".format("exact " if exact_sock else "", sock_name_prefix))
 
     check = lambda sock: sock == sock_name_prefix if exact_sock else\
             lambda sock: sock.startswith(sock_name_prefix)

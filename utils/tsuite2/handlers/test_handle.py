@@ -25,9 +25,17 @@ class TestHandler(object):
       for host, daemon_path, pid in self.runtime["daemons"]:
           user = os.getenv("USER")
           ssh = SSH(user, host, '');
-          ssh.run("sudo kill -s SIGUSR1 {0}".format(pid)) # linux
+          kernel = "".join(ssh.run("uname -s")["out"]).lower()
+          if "linux" in kernel:
+            ssh.run("sudo kill -s SIGUSR1 {0}".format(pid)) #use our gdb signal handler
+            output = ssh.run("cat {0}/{1}".format(self.runtime["build_dirs"]["base"], "rusage"))
+          elif "bsd" in kernel:
+            output = ssh.run("sudo {0} -S {1}/*.sock -s rusage".format(daemon_path, self.runtime["build_dirs"]["ctl"])) #use the ctl daemons' resource usage
+          else:
+            pass
+
           log = open("/home/beckert/log", "w")
-          log.write(str(ssh.run("sudo {0} -S {1}/*.sock -s rusage".format(daemon_path, self.runtime["build_dirs"]["ctl"])))) #bsd
+          log.write(str(output) + "\n")
           log.close()
 
   def run_tests(self):
