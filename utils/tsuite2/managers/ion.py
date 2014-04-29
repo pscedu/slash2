@@ -56,5 +56,4 @@ def kill_ion(tsuite):
 
   Args:
     tsuite: runtime tsuite."""
-
-  sl2gen.stop_slash2_socks(tsuite, "sliod", tsuite.sl2objects["ion"], "slictl")
+  sl2gen.stop_slash2_socks(tsuite, "ion", tsuite.sl2objects["ion"], "slictl")

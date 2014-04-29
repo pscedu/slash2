@@ -168,7 +168,7 @@ def launch_gdb_sl(tsuite, sock_name, sl2objects, res_bin_type, gdbcmd_path):
       tsuite.shutdown()
 
     cmd = "sudo gdb -f -x {0} {1}".format(gdbcmd_build_path, tsuite.src_dirs[res_bin_type])
-    screen_sock_name = "sl.{0}.{1}".format(res_bin_type, sl2object["id"])
+    screen_sock_name = "sl.{0}.{1}".format(sock_name, sl2object["id"])
 
     #Launch slash2 in gdb within a screen session
     ssh.run_screen(cmd, screen_sock_name)
@@ -182,19 +182,18 @@ def launch_gdb_sl(tsuite, sock_name, sl2objects, res_bin_type, gdbcmd_path):
           .format(sl2object["name"], sl2object["id"], screen_sock_name+"-error"))
       tsuite.shutdown()
 
-    if sock_name != "client":
-      log.debug("Waiting for {0} sock on {1} to appear.".format(sock_name, host))
-      count = 0
-      while True:
-        result = ssh.run(ls_cmd, quiet=True)
-        if not all(res_bin_type not in sock for sock in result["out"]):
-          break
-        time.sleep(1)
-        count += 1
-        if count == int(tsuite.conf["slash2"]["timeout"]):
-          log.fatal("Cannot find {0} sock on {1}. Resume to {2} and resolve it. "\
-            .format(res_bin_type, sl2object["id"], screen_sock_name))
-          tsuite.shutdown()
+    log.debug("Waiting for {0} sock on {1} to appear.".format(sock_name, host))
+    count = 0
+    while True:
+      result = ssh.run(ls_cmd, quiet=True)
+      if not all(res_bin_type not in sock for sock in result["out"]):
+        break
+      time.sleep(1)
+      count += 1
+      if count == int(tsuite.conf["slash2"]["timeout"]):
+        log.fatal("Cannot find {0} sock on {1}. Resume to {2} and resolve it. "\
+          .format(res_bin_type, sl2object["id"], screen_sock_name))
+        tsuite.shutdown()
 
     #grab pid for resouce querying later
     sl2object["pid"] =  ssh.run("pgrep {0}".format(res_bin_type))['out'][0].strip()
@@ -204,29 +203,35 @@ def launch_gdb_sl(tsuite, sock_name, sl2objects, res_bin_type, gdbcmd_path):
 
     ssh.close()
 
-def stop_slash2_socks(tsuite, sock_name, sl2objects, res_bin_type):
+def stop_slash2_socks(tsuite, sock_name, sl2objects, ctl_type):
   """ Terminates all slash2 socks and screen socks on a generic host.
   Args:
     tsuite: tsuite runtime.
     sock_name: name of sl2 sock.
     sl2objects: list of objects to be launched.
-    res_bin_type: key to bin path in src_dirs.
+    ctl_type: key to ctl path in src_dirs.
     gdbcmd_path: path to gdbcmd file."""
 
-  #res_bin_type NEEDS to be a path in src_dirs
-  assert(res_bin_type in tsuite.src_dirs)
+  assert(ctl_type in tsuite.src_dirs)
+  assert(daemon_type in tsuite.src_dirs)
 
   for sl2object in sl2objects:
-    log.debug("Initializing environment > {0} @ {1}".format(sl2object["name"], sl2object["host"]))
+    log.debug("Killing {0} @ {1}".format(sl2object["name"], sl2object["host"]))
 
     #Remote connection
     user, host = tsuite.user, sl2object["host"]
     log.debug("Connecting to {0}@{1}".format(user, host))
     ssh = SSH(user, host, '')
-    ssh.kill_screens(res_bin_type)
 
-    cmd = "{0} -S {1}/{2}.{3}.sock stop".format(tsuite.src_dirs[res_bin_type], tsuite.build_dirs["ctl"], sock_name, host)
+    cmd = "{0} -S {1}/{2}.{3}.sock stop".format(tsuite.src_dirs[ctl_type], tsuite.build_dirs["ctl"], sock_name, host)
     ssh.run(cmd)
+
+    if "id" not in sl2object.keys():
+      sl2object["id"] = 0
+
+    screen_sock_name = "sl.{0}.{1}".format(daemon_type, sl2object["id"])
+    ssh.kill_screens(screen_sock_name, exact_sock=True)
+
     ssh.close()
 
 def store_build_time(tsuite, res, host, build_time):

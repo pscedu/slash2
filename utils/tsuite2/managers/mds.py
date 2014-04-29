@@ -73,4 +73,4 @@ def launch_mds(tsuite):
 
 def kill_mds(tsuite):
   """Kill MDS/slashd daemons."""
-  sl2gen.stop_slash2_socks(tsuite, "slashd", tsuite.sl2objects["mds"], "slmctl")
+  sl2gen.stop_slash2_socks(tsuite, "mds", tsuite.sl2objects["mds"], "slmctl")
