@@ -1531,16 +1531,16 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 
 	issue = 1;
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
-		if (DIRCACHEPG_EXPIRED(d, p, &dexp)) {
-			dircache_free_page(d, p);
-			continue;
-		}
 
 		if (p->dcp_flags & DIRCACHEPGF_LOADING) {
 			/// XXX need to wake up if csvc fails
 			OPSTAT_INCR(SLC_OPST_DIRCACHE_WAIT);
 			fcmh_wait_nocond_locked(d);
 			goto restart;
+		}
+		if (DIRCACHEPG_EXPIRED(d, p, &dexp)) {
+			dircache_free_page(d, p);
+			continue;
 		}
 
 		/* We found the last page; return EOF. */

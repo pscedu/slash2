@@ -106,7 +106,6 @@ struct dircache_expire {
 
 #define DIRCACHEPG_EXPIRED(d, p, dexp)					\
 	((p)->dcp_refcnt == 0 &&					\
-	 ((p)->dcp_flags & DIRCACHEPGF_LOADING) == 0 &&			\
 	 ((timespeccmp(&(dexp)->dexp_def, &(p)->dcp_tm, >) &&		\
 	    (p)->dcp_flags & DIRCACHEPGF_READ) ||			\
 	  timespeccmp(&(dexp)->dexp_max, &(p)->dcp_tm, >) ||		\
