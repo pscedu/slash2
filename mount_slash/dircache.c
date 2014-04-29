@@ -24,8 +24,7 @@
 
 /*
  * The dircache interface caches READDIR bufs after reception from the
- * MDS via RPC for the consequent LOOKUPs on each item by pscfs that
- * follow.
+ * MDS via RPC for the subsequent LOOKUPs on each item by pscfs.
  */
 
 #include <sys/types.h>
