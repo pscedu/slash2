@@ -261,12 +261,11 @@ class TSuite(object):
       except SSHException:
         log.error("Unable to connect to %s@%s", self.user, host)
 
-
-    #ensure directory has necessary permissions
-    #map(lambda ssh: ssh.run("sudo chmod -R a+rwx {0}".format(self.build_dirs["mp"])), ssh_clients)
-
     remote_modules_path = path.join(self.build_dirs["mp"], "modules", "")
     map(lambda ssh: ssh.make_dirs(remote_modules_path), ssh_clients)
+
+    #ensure directory has necessary permissions
+    map(lambda ssh: ssh.run("sudo chown {0}:{0} {1}".format(self.user, remote_modules_path)), ssh_clients)
 
     tests = []
     for test in os.listdir(tset_dir):

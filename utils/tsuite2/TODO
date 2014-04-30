@@ -4,3 +4,8 @@
 - collect resource usage (of tests and slash2)
   * getrusage() doesn't implement memory statistics on linux. We can use gdbcmd files and signals to handle this on linux, but we need a newer version of gdb
   * test_hander needs to recieve the hosts and of each slash2 resource, so it can query for resource statistics
+
+
+- fix the fact that mount_slash repeats this error when causing tsuite hang:
+[1398834300:824618 msfsthr09:7ffecb5fe700:bmap mount_slash_int.c msl_io 2090] req@0x8c24d0 x707/t0 cb=(nil) c0 o10->@54321-128.182.99.26@tcp1:10 lens 208/528 ref 1 res 0 ret 0 fl Rpc:R/0/0 replyc 0 rc 0/-1005 to=60 sent=1398834300 :: type == PSCRPC_MSG_ERR, err == -1005
+[1398834300:824637 msfsthr09:7ffecb5fe700:bmap mount_slash_in]

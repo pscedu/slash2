@@ -273,7 +273,7 @@ class SSH(object):
 
     #Debug -- log the cmds being run
     if not quiet:
-      [log.debug("{0}@{1}:/$ {2}".format(self.user, self.host, c)) for c in cmd.split(";")]
+      [log.debug("{0}@{1}:~/$ {2}".format(self.user, self.host, c)) for c in cmd.split(";")]
 
     if timeout:
       cmd = "timeout --signal=9 {0} {1}".format(timeout, cmd)
