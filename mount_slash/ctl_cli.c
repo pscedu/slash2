@@ -511,7 +511,7 @@ msctlparam_prefios_set(const char *val)
 	r = libsl_str2res(val);
 	if (r == NULL)
 		return (-1);
-	prefIOS = r->res_id;
+	slc_setprefios(r->res_id);
 	return (0);
 }
 

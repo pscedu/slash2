@@ -32,14 +32,14 @@
 
 #include <sys/param.h>
 
-#include "pfl/hashtbl.h"
-#include "pfl/types.h"
-#include "pfl/dynarray.h"
-#include "pfl/list.h"
-#include "pfl/rpc.h"
 #include "pfl/alloc.h"
+#include "pfl/dynarray.h"
+#include "pfl/hashtbl.h"
+#include "pfl/list.h"
 #include "pfl/log.h"
 #include "pfl/net.h"
+#include "pfl/rpc.h"
+#include "pfl/types.h"
 
 #include "sltypes.h"
 
@@ -91,6 +91,7 @@ struct sl_resource {
 
 /* res_flags */
 #define RESF_DISABLE_BIA	(1 << 0)	/* disable write assignments */
+#define RESF_PREFIOS		(1 << 1)	/* is in pref_ios (CLI) */
 
 #define RES_MAXID		((UINT64_C(1) << (sizeof(sl_ios_id_t) * \
 				    NBBY - SLASH_FID_SITE_BITS)) - 1)
@@ -219,6 +220,13 @@ struct sl_config {
 #define RES_FOREACH_MEMB_CONT(r, m, j)	DYNARRAY_FOREACH_CONT((m), (j), &(r)->res_members)
 #define RESM_FOREACH_NID_CONT(m, n, k)	DYNARRAY_FOREACH_CONT((n), (k), &(m)->resm_nids)
 
+#define CLUSTER_FOREACH_RES(cluster, ri, i)				\
+	for ((i) = 0, (ri) = NULL; RES_ISCLUSTER(cluster) ?		\
+	    ((i) < psc_dynarray_len(&(cluster)->res_peers) ||		\
+	      ((ri) = NULL)) && (((ri) = psc_dynarray_getpos(		\
+		&(cluster)->res_peers, (i))) || 1) :			\
+	    (ri) = (ri) ? NULL : (cluster); (i)++)
+
 #define CONF_FOREACH_RES(s, r, i)					\
 	CONF_FOREACH_SITE(s)						\
 		SITE_FOREACH_RES((s), (r), (i))
@@ -228,6 +236,7 @@ struct sl_config {
 		SITE_FOREACH_RES((s), (r), (i))				\
 			RES_FOREACH_MEMB((r), (m), (j))
 
+/* XXX this can be rewritten with a goto (shudder) */
 #define SL_MDS_WALK(resm, code)						\
 	do {								\
 		struct sl_resource *_res;				\

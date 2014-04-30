@@ -3125,6 +3125,29 @@ unmount_mp(void)
 }
 
 void
+slc_setprefios(sl_ios_id_t id)
+{
+	struct sl_resource *r, *ri;
+	int j;
+
+//	CONF_LOCK();
+	r = libsl_id2res(prefIOS);
+	if (r) {
+		r->res_flags &= ~RESF_PREFIOS;
+		if (RES_ISCLUSTER(r))
+			DYNARRAY_FOREACH(ri, j, &r->res_peers)
+				ri->res_flags &= ~RESF_PREFIOS;
+	}
+	prefIOS = id;
+	r = libsl_id2res(id);
+	r->res_flags |= RESF_PREFIOS;
+	if (RES_ISCLUSTER(r))
+		DYNARRAY_FOREACH(ri, j, &r->res_peers)
+			ri->res_flags &= ~RESF_PREFIOS;
+//	CONF_ULOCK();
+}
+
+void
 msl_init(void)
 {
 	char *name;
@@ -3196,10 +3219,14 @@ msl_init(void)
 
 	name = getenv("SLASH2_PIOS_ID");
 	if (name) {
-		prefIOS = libsl_str2id(name);
-		if (prefIOS == IOS_ID_ANY)
+		struct sl_resource *r;
+
+		r = libsl_str2res(name);
+		if (r == NULL)
 			psclog_warnx("SLASH2_PIOS_ID (%s) does not resolve to "
 			    "a valid IOS; defaulting to IOS_ID_ANY", name);
+		else
+			slc_setprefios(r->res_id);
 	}
 	atexit(unmount_mp);
 }
