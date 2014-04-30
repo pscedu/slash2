@@ -1,0 +1,52 @@
+04/30/2014
+----------
+
+
+Jared Yanovich
+	
+6:17 PM (15 hours ago)
+		
+to archproj
+- odtable note
+
+slashd odtable startup crash
+
+Hi,
+
+There is a persistent "on disk" table that caches I/O leases that mount_slash
+clients are currently using.
+
+This file is stored *inside* the MDS ZFS file system, and you can view it here:
+
+  flashback# odtable -sD -X"%X %X %u %u %u %u" /arc_s2ssd/.slmd/bmap.odtab
+
+Anyway, there is obviously a bug in the form of an invalid sanity check that
+fails an assertion because one section of the lease handling code does not do
+the right thing on startup:
+
+  [1393607934:553134 slmctlthr0:5004:def mds_bmap_bml_add mds.c 945] [assert] !bmi->bmi_wr_ion
+
+That will be the last message before the stack dump if you are watching the
+slashd.sh screen.  Or, it will be the last message in the logs before the stack
+dump if you watch the e-mail report.  Or, it will be the last line in the debug
+log file (`tail -f /local/arc.s2/log/illusion2.slashd/latest`).  You can do any
+of these to verify this is the problem when slashd.sh is not coming online.
+
+Now, to workaround this issue (until the code is fixed), here is what I do to
+wipe out the current client I/O leases (note that this will fail all pending
+client I/Os, so doing this is also undesirable from a consistency/reliability
+point of view):
+
+  illusion2# pkill slashd
+  illusion2# sleep 8
+  illusion2# zfs-fuse
+  illusion2# sleep 2
+  illusion2# zfs mount arc_s2ssd_prod
+  illusion2# rm /arc_s2ssd_prod/.slmd/bmap.odtab
+  illusion2# odtable -C -o /arc_s2ssd_prod/.slmd/bmap.odtab
+  illusion2# sync
+  illusion2# umount /arc_s2ssd_prod
+  illusion2# pkill zfs-fuse
+  illusion2# sleep 8
+
+Then rerun screen/slashd.sh.
