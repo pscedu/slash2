@@ -495,8 +495,20 @@ reimport
   - should shuffle all available IOS
 - open file descriptors after UNLINK run into risk of accessing
   reclaimed data on the IOS
+- verify backfs on sense7 md5deep between bsd and linux
+- change notion of mtime clocks in readdir to deal with time
+  synchronization problems in a more robust fashion
 
+- add crcalg=old option
+- art's md5deep failures
 
+- this breaks:
+	dd if=/dev/urandom of=r000 seek=1M count=1 bs=64k
+	md5sum r000
+
+- this breaks:
+	dd if=/dev/urandom of=r000 seek=1G count=1 bs=64k
+	dd if=/dev/urandom of=r000 seek=1M count=1 bs=64k
 
 upsch
 - optimize queries by reordering SELECT verbs
