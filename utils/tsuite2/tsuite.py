@@ -80,7 +80,7 @@ class TSuite(object):
     self.local_setup()
     self.create_remote_setups()
 
-  
+    print self.sl2objects["mds"]
 
     #register a safe exit method
     def exit_handler(signal, frame):
@@ -220,8 +220,8 @@ class TSuite(object):
     self.test_report["tsid"] = latest_tset["tsid"]+1 if latest_tset else 1
     self.test_report["tset_name"] = "#" + str(self.test_report["tsid"])
 
-    #log.info(self.test_report)
-    #log.info(self.test_results)
+    log.info(self.test_report)
+    log.info(self.test_results)
 
     #TODO: Currently assuming we only have one client
     results = [self.test_results[0][1]]
@@ -297,21 +297,22 @@ class TSuite(object):
 
     # create list of daemons running and their information to be sent to test_handler
     daemons = []
-    for type in self.sl2objects.keys():
-      for sl2object in self.sl2objects[type]:
-        if type == "mds":
-          ctl_path = self.src_dirs['slmctl']
-        elif type == "ion":
-          ctl_path = self.src_dirs['slictl']
-        elif type == "client":
-          ctl_path = self.src_dirs['msctl']
+    for daemon_type in self.sl2objects.keys():
+      for sl2object in self.sl2objects[daemon_type]:
+        if "pid" in sl2object:
+          if daemon_type == "mds":
+            ctl_path = self.src_dirs['slmctl']
+          elif daemon_type == "ion":
+            ctl_path = self.src_dirs['slictl']
+          elif daemon_type == "client":
+            ctl_path = self.src_dirs['msctl']
 
-        daemons.append((sl2object["host"], ctl_path , sl2object["pid"]))
+          daemons.append((sl2object["host"], ctl_path , sl2object["pid"]))
 
     runtime = {"build_dirs": self.build_dirs, "daemons" : daemons}
     runtime_arg = base64.b64encode(json.dumps(runtime))
 
-    map(lambda ssh: ssh.run_screen("python {0} {1}".format(remote_test_handler_path, runtime_arg),
+    map(lambda ssh: ssh.run_screen("python2 {0} {1}".format(remote_test_handler_path, runtime_arg),
         sock_name, quiet=True), ssh_clients)
 
     if not all(map(lambda ssh: ssh.wait_for_screen(sock_name)["finished"], ssh_clients)):

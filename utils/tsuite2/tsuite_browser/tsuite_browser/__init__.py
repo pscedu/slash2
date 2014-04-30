@@ -54,13 +54,15 @@ def dashboard(tsid = None):
 
     display_tset = None
     adj_tests = []
+    print session["active_tsid"]
     if session["active_tsid"]:
         display_tset = api.get_tset_display(session["active_tsid"]),
         adj_tests = api.get_neighboring_tests(session["active_tsid"], 10)
 
+    print display_tset
     return render_template("new.html",
         tsets = api.get_tsets(),
-        display_tset = display_tset,
+        display_tset = display_tset[0],
         adj_tests = adj_tests
     )
 
