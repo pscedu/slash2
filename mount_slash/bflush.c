@@ -129,10 +129,10 @@ msl_fd_should_retry(struct msl_fhent *mfh, int rc)
 {
 	int retry = 1;
 
-	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "nretries=%d, maxretries=%d "
-	    "(non-blocking=%d)", mfh->mfh_retries,
-	    psc_atomic32_read(&max_nretries),
-	    (mfh->mfh_oflags & O_NONBLOCK));
+	DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh,
+	    "nretries=%d, maxretries=%d (non-blocking=%d)",
+	    mfh->mfh_retries, psc_atomic32_read(&max_nretries),
+	    mfh->mfh_oflags & O_NONBLOCK);
 
 	/* test for retryable error codes */
 	if (rc != -ENOTCONN && rc != -PFLERR_KEYEXPIRED)
@@ -141,6 +141,8 @@ msl_fd_should_retry(struct msl_fhent *mfh, int rc)
 		retry = 0;
 	else if (++mfh->mfh_retries >= psc_atomic32_read(&max_nretries))
 		retry = 0;
+
+	// is mfh racy?  process has multiple threads??
 
 	if (retry) {
 		if (mfh->mfh_retries < 10)
