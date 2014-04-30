@@ -559,6 +559,7 @@ msl_try_get_replica_res(struct bmap *b, int iosidx)
 		return (NULL);
 	}
 
+	/* XXX not a real shuffle */
 	FOREACH_RND(&it, psc_dynarray_len(&res->res_members)) {
 		m = psc_dynarray_getpos(&res->res_members,
 		    it.ri_rnd_idx);

@@ -489,7 +489,7 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
 	return (rc);
 }
 
-/**
+/*
  * Compare entries in a file's replica table for ordering purposes:
  * - replicas on any member of our preferred IOS(es).
  * - replicas on non-archival resources.
@@ -497,37 +497,32 @@ msl_bmap_lease_tryext(struct bmap *b, int blockable)
  * - anything else.
  */
 int
-slc_reptbl_cmp(const void *a, const void *b)
+#ifdef HAVE_QSORT_R_THUNK
+slc_reptbl_cmp(void *arg, const void *a, const void *b)
+#else
+slc_reptbl_cmp(const void *a, const void *b, void *arg)
+#endif
 {
-	const sl_replica_t *x = a, *y = b;
-	struct sl_resource *r, *xr, *yr;
-	struct sl_resm *m;
-	int rc, i, xv, yv;
+	const int *ta = a, *tb = b;
+	const struct fcmh_cli_info *fci = arg;
+	struct sl_resource *xr, *yr;
+	int rc, xv, yv;
 
-	/* try preferred IOS */
-	xv = yv = 1;
-	r = libsl_id2res(prefIOS);
-	DYNARRAY_FOREACH(m, i, &r->res_members) {
-		if (x->bs_id == m->resm_res_id) {
-			xv = -1;
-			if (yv == -1)
-				break;
-		} else if (y->bs_id == m->resm_res_id) {
-			yv = -1;
-			if (xv == -1)
-				break;
-		}
-	}
-	rc = CMP(xv, yv);
-	if (rc)
-		return (rc);
+	xr = libsl_id2res(fci->fci_inode.reptbl[*ta].bs_id);
+	yr = libsl_id2res(fci->fci_inode.reptbl[*tb].bs_id);
 
-	xr = libsl_id2res(x->bs_id);
-	yr = libsl_id2res(y->bs_id);
+	/* check general validity */
 	xv = xr == NULL ? 1 : -1;
 	yv = yr == NULL ? 1 : -1;
 	rc = CMP(xv, yv);
 	if (rc || (xr == NULL && yr == NULL))
+		return (rc);
+
+	/* check if preferred I/O system */
+	xv = xr->res_flags & RESF_PREFIOS ? 1 : -1;
+	yv = yr->res_flags & RESF_PREFIOS ? 1 : -1;
+	rc = CMP(xv, yv);
+	if (rc)
 		return (rc);
 
 	/* try non-archival and non-degraded IOS */
@@ -581,10 +576,11 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw,
 	mq->prefios[0] = prefIOS; /* Tell MDS of our preferred ION */
 	mq->bmapno = bmap->bcm_bmapno;
 	mq->rw = rw;
-	mq->flags |= SRM_LEASEBMAPF_GETINODE;
+	if ((f->fcmh_flags & FCMH_CLI_HAVEINODE) == 0)
+		mq->flags |= SRM_LEASEBMAPF_GETINODE;
 
 	DEBUG_FCMH(PLL_DIAG, f, "retrieving bmap (bmapno=%u) (rw=%s)",
-	    bmap->bcm_bmapno, (rw == SL_READ) ? "read" : "write");
+	    bmap->bcm_bmapno, rw == SL_READ ? "read" : "write");
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
@@ -597,10 +593,7 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw,
 
 	msl_bmap_reap_init(bmap, &mp->sbd);
 
-	fci->fci_inode = mp->ino;
-	qsort(fci->fci_inode.reptbl, fci->fci_inode.nrepls,
-	    sizeof(fci->fci_inode.reptbl[0]), slc_reptbl_cmp);
-	f->fcmh_flags |= FCMH_CLI_HAVEINODE;
+	slc_fcmh_load_inode(f, &mp->ino);
 
 	DEBUG_BMAP(PLL_DIAG, bmap, "rw=%d repls=%d ios=%#x seq=%"PRId64,
 	    rw, mp->ino.nrepls, mp->sbd.sbd_ios, mp->sbd.sbd_seq);
@@ -711,7 +704,6 @@ msl_bmap_reap_init(struct bmap *b, const struct srt_bmapdesc *sbd)
 	lc_addtail(&bmapTimeoutQ, bci);
 }
 
-
 int
 msl_bmap_release_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
@@ -741,7 +733,7 @@ msl_bmap_release_cb(struct pscrpc_request *rq,
 	return (rc);
 }
 
-static void
+void
 msl_bmap_release(struct sl_resm *resm)
 {
 	struct slashrpc_cservice *csvc = NULL;
@@ -951,7 +943,6 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive)
 		m = libsl_ios2resm(bmap_2_ios(b));
 		psc_assert(m->resm_res->res_id == bmap_2_ios(b));
 		BMAP_URLOCK(b, locked);
-
 		return (slc_geticsvc(m));
 	}
 
@@ -961,11 +952,20 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive)
 	if (msl_bmap_check_replica(b))
 		return (NULL);
 
+	FCMH_LOCK(b->bcm_fcmh);
+	if (++fci->fcif_mapstircnt >= MAPSTIR_THRESH) {
+		pfl_qsort_r(fci->fcif_idxmap, fci->fci_inode.nrepls,
+		    sizeof(fci->fcif_idxmap[0]), slc_reptbl_cmp, fci);
+		fci->fcif_mapstircnt = 0;
+	}
+	FCMH_ULOCK(b->bcm_fcmh);
+
 	for (j = 0; j < 2; j++) {
 		psc_multiwait_reset(mw);
 		psc_multiwait_entercritsect(mw);
 		for (i = 0; i < fci->fci_inode.nrepls; i++) {
-			csvc = msl_try_get_replica_res(b, i);
+			csvc = msl_try_get_replica_res(b,
+			    fci->fcif_idxmap[i]);
 			if (csvc) {
 				psc_multiwait_leavecritsect(mw);
 				return (csvc);

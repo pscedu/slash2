@@ -36,6 +36,24 @@ struct pscfs_clientctx;
 
 struct fidc_membh;
 
+/*
+ * slfile mount_slash specific data, comes after slfile in memory.
+ * @fci_resm: MDS resource who owns this file.
+ * @fci_age: when we populated this file in our cache (used for
+ *	expiration).
+ * @fci_inode: mirror of MDS's inode table grabbed on GETBMAP.
+ * @fci_xattrsize: extended attributes size, cached for optimizations
+ *	(i.e. return from GETXATTR immediately when size is zero).
+ * @fcif_idxmap: priority ordering of inode residency table entries for
+ *	quick access.
+ * @fcif_mapstircnt: how many times @idxmap has been used since last
+ *	stir.
+ * @fci_dc_pages: dircache pages.
+ * @fcid_lookup_age: second-resolution of last dircache LOOKUP miss.
+ * @fcid_lookup_misses: how many LOOKUPs did not hit dircache since @age.
+ * @fci_lentry: cache membership.
+ * @fci_etime: attribute expiration time.
+ */
 struct fcmh_cli_info {
 	struct sl_resm			*fci_resm;
 	struct timeval			 fci_age;
@@ -43,9 +61,13 @@ struct fcmh_cli_info {
 		struct {
 			struct srt_inode inode;
 			uint64_t	 xattrsize;
+			int		 idxmap[SL_MAX_REPLICAS];
+			int		 mapstircnt;
 		} f;
 #define fci_xattrsize		u.f.xattrsize
 #define fci_inode		u.f.inode
+#define fcif_idxmap		u.f.idxmap
+#define fcif_mapstircnt		u.f.mapstircnt
 		struct {
 			struct psc_lockedlist
 					 pages; // XXX tree?
@@ -66,6 +88,8 @@ struct fcmh_cli_info {
 };
 
 #define fcmh_2_nrepls(f)	fcmh_2_fci(f)->fci_inode.nrepls
+
+#define MAPSTIR_THRESH			10
 
 #define DIR_LOOKUP_MISSES_INCR		1000
 #define DIR_LOOKUP_MISSES_THRES		400001
@@ -95,7 +119,8 @@ fci_2_fcmh(struct fcmh_cli_info *fci)
 
 int	fcmh_checkcreds(struct fidc_membh *, const struct pscfs_creds *, int);
 
-int	slc_fcmh_load_inode(struct fidc_membh *);
+int	slc_fcmh_fetch_inode(struct fidc_membh *);
+void	slc_fcmh_load_inode(struct fidc_membh *, struct srt_inode *);
 
 #define fidc_lookup_load(fid, fcmhp, pfcc)				\
 	_fidc_lookup_load(PFL_CALLERINFOSS(SLSS_FCMH), (fid),		\

@@ -73,8 +73,27 @@ slc_fcmh_refresh_age(struct fidc_membh *f)
 	}
 }
 
+void
+slc_fcmh_load_inode(struct fidc_membh *f, struct srt_inode *ino)
+{
+	struct fcmh_cli_info *fci;
+	int locked, i;
+
+	fci = fcmh_2_fci(f);
+
+	locked = FCMH_RLOCK(f);
+	if ((f->fcmh_flags & FCMH_CLI_HAVEINODE) == 0) {
+		fci->fci_inode = *ino;
+		for (i = 0; i < fci->fci_inode.nrepls; i++)
+			fci->fcif_idxmap[i] = i;
+		fci->fcif_mapstircnt = MAPSTIR_THRESH;
+		f->fcmh_flags |= FCMH_CLI_HAVEINODE;
+	}
+	FCMH_URLOCK(f, locked);
+}
+
 int
-slc_fcmh_load_inode(struct fidc_membh *f)
+slc_fcmh_fetch_inode(struct fidc_membh *f)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -101,10 +120,7 @@ slc_fcmh_load_inode(struct fidc_membh *f)
 	if (rc)
 		goto out;
 
-	FCMH_LOCK(f);
-	fci->fci_inode = mp->ino;
-	f->fcmh_flags |= FCMH_CLI_HAVEINODE;
-	FCMH_ULOCK(f);
+	slc_fcmh_load_inode(f, &mp->ino);
 
  out:
 	if (rq)
@@ -183,9 +199,9 @@ dump_fcmh_flags(int flags)
 #endif
 
 struct sl_fcmh_ops sl_fcmh_ops = {
-	slc_fcmh_ctor,		/* sfop_ctor */		
-	slc_fcmh_dtor,		/* sfop_dtor */		
-	msl_stat,		/* sfop_getattr */		
-	slc_fcmh_refresh_age,	/* sfop_postsetattr */	
-	NULL			/* sfop_modify */		
+	slc_fcmh_ctor,		/* sfop_ctor */
+	slc_fcmh_dtor,		/* sfop_dtor */
+	msl_stat,		/* sfop_getattr */
+	slc_fcmh_refresh_age,	/* sfop_postsetattr */
+	NULL			/* sfop_modify */
 };

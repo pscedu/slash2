@@ -30,13 +30,13 @@
 #include <sys/socket.h>
 
 #include "pfl/cdefs.h"
-#include "pfl/fs.h"
-#include "pfl/str.h"
-#include "pfl/rpc.h"
-#include "pfl/rsx.h"
 #include "pfl/ctl.h"
 #include "pfl/ctlsvr.h"
+#include "pfl/fs.h"
 #include "pfl/net.h"
+#include "pfl/rpc.h"
+#include "pfl/rsx.h"
+#include "pfl/str.h"
 
 #include "bmap.h"
 #include "bmap_cli.h"
@@ -318,7 +318,7 @@ msctlhnd_get_fattr(int fd, struct psc_ctlmsghdr *mh, void *m)
 	FCMH_ULOCK(f);
 
 	if (rc == 0)
-		rc = slc_fcmh_load_inode(f);
+		rc = slc_fcmh_fetch_inode(f);
 
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, SLPRI_FID": %s",
@@ -706,7 +706,7 @@ msctlthr_spawn(void)
 	psc_ctlparam_register("rusage", psc_ctlparam_rusage);
 
 	psc_ctlparam_register_simple("nbrq.outstanding",
-	    slctlparam_nbrq_outstanding_get, NULL); 
+	    slctlparam_nbrq_outstanding_get, NULL);
 	psc_ctlparam_register_simple("uptime", slctlparam_uptime_get,
 	    NULL);
 	psc_ctlparam_register_simple("version", slctlparam_version_get,
