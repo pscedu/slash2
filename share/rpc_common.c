@@ -689,7 +689,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 					    exp->exp_connection->c_peer,
 					    buf);
 				psc_multiwaitcond_init(&csvc->csvc_mwc,
-				    csvc, 0, "cli-%s", buf);
+				    csvc, PMWCF_WAKEALL, "cli-%s", buf);
 				expc = (void *)csvc->csvc_params.scp_csvcp;
 				stkversp = &expc->stkvers;
 				break;
@@ -707,7 +707,8 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 				csvc->csvc_import->imp_hldrop_arg =
 				    resm;
 				psc_multiwaitcond_init(&csvc->csvc_mwc,
-				    csvc, 0, "res-%s", resm->resm_name);
+				    csvc, PMWCF_WAKEALL, "res-%s",
+				    resm->resm_name);
 				stkversp = &resm->resm_stkvers;
 				break;
 			    }
@@ -724,7 +725,8 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 				csvc->csvc_import->imp_hldrop_arg =
 				    resm;
 				psc_multiwaitcond_init(&csvc->csvc_mwc,
-				    csvc, 0, "res-%s", resm->resm_name);
+				    csvc, PMWCF_WAKEALL, "res-%s",
+				    resm->resm_name);
 				stkversp = &resm->resm_stkvers;
 				break;
 			    }
