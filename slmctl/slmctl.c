@@ -201,21 +201,25 @@ slm_statfs_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    scsf->scsf_flags & SIF_DISABLE_BIA ? 'W' : '-',
 	    scsf->scsf_flags & SIF_DISABLE_GC  ? 'G' : '-');
 	printf(" ");
+	/*
+	 * The following uses the formula from df.c in coreutils. However,
+	 * we don't do integer arithmetic.
+	 */
 	b->sf_blocks ? psc_ctl_prhuman(b->sf_blocks * b->sf_bsize) :
 	    printf("%7s", "-");
 	printf(" ");
 	b->sf_blocks ? psc_ctl_prhuman((b->sf_blocks - b->sf_bfree) *
 	    b->sf_bsize) : printf("%7s", "-");
 	printf(" ");
-	b->sf_blocks ? psc_ctl_prhuman(b->sf_bavail * b->sf_bsize) :
+	b->sf_blocks ? psc_ctl_prhuman(b->sf_bfree * b->sf_bsize) :
 	    printf("%7s", "-");
 	printf(" ");
 
 	if (col)
 		setcolor(col);
 	if (b->sf_blocks)
-		psc_fmt_ratio(cbuf, b->sf_blocks -
-		    (int64_t)b->sf_bavail, b->sf_blocks);
+		psc_fmt_ratio(cbuf, b->sf_blocks - b->sf_bfree, 
+		    b->sf_blocks - b->sf_bfree + b->sf_bavail);
 	else
 		strlcpy(cbuf, "-", sizeof(cbuf));
 	printf("%6s", cbuf);

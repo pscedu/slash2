@@ -1362,6 +1362,9 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 	mp->rc = slfid_to_vfsid(mq->fid, &vfsid);
 	if (mp->rc)
 		return (0);
+	/*
+	 * statfs information are gathered from the MDS and its IOSes.
+	 */
 	mp->rc = mdsio_statfs(vfsid, &sfb);
 	sl_externalize_statfs(&sfb, &mp->ssfb);
 	r = libsl_id2res(mq->iosid);
@@ -1370,6 +1373,7 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 		return (0);
 	}
 	mp->ssfb.sf_bsize = 0;
+	mp->ssfb.sf_iosize = 0;
 	mp->ssfb.sf_blocks = 0;
 	mp->ssfb.sf_bfree = 0;
 	mp->ssfb.sf_bavail = 0;
@@ -1389,6 +1393,8 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 		}
 		if (mp->ssfb.sf_bsize == 0)
 			mp->ssfb.sf_bsize = si->si_ssfb.sf_bsize;
+		if (mp->ssfb.sf_iosize == 0)
+			mp->ssfb.sf_iosize = si->si_ssfb.sf_iosize;
 		adj = mp->ssfb.sf_bsize * 1. / si->si_ssfb.sf_bsize;
 		mp->ssfb.sf_blocks	+= adj * si->si_ssfb.sf_blocks;
 		mp->ssfb.sf_bfree	+= adj * si->si_ssfb.sf_bfree;
