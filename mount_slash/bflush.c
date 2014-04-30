@@ -92,8 +92,8 @@ bmap_flush_biorq_expired(const struct bmpc_ioreq *a)
 void
 bmap_free_all_locked(struct fidc_membh *f)
 {
-	struct bmap *a, *b;
 	struct bmap_cli_info *bci;
+	struct bmap *a, *b;
 
 	FCMH_LOCK_ENSURE(f);
 
