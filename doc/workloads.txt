@@ -1,0 +1,22 @@
+04/30/2014
+----------
+
+The following tests are known to work, at least most of the time. They should be
+able to run in parallel:
+
+(1) slash2 self build in a loop
+
+	$ ~/build-stress.sh HEAD mydir 5
+
+(2) Linux kernel build
+
+	$ tar xvf ~/linux-3.14.2.tar.xz
+	$ make menuconfig
+	$ make -j 3
+
+(3) iozone -a
+
+(4) tar over ssh 
+
+	$ ssh lemon "mkdir /zzh-slash2/zhihui/ssh1"
+	$ tar cf - linux-3.7.1 | ssh lemon "tar xf - -C /zzh-slash2/zhihui/ssh1"
