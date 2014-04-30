@@ -65,25 +65,32 @@ class SSH(object):
         remote_path = os.path.join(dst_root, f)
         self.copy_file(path, remote_path)
 
-  def copy_file(self, src, dst):
+  def copy_file(self, src, dst, elevated=False):
     """Copy local file to remote server. Will not be elevated. :(
 
     Args:
       src: path to local file.
       dst: path to copy to on remote server.
+      elevated: attempt to hackily escalate privileges
     Returns:
       True if it copied successfully, False if the src file does not exist.
       Can also throw an IOException"""
 
     try:
       if os.path.isfile(src):
-        s = open(src, "rb")
-        contents = s.read()
-        s.close()
-        f = self.sftp.open(dst, "wb")
-        f.write(contents)
-        f.close()
-        log.debug("Copied file {0} to {1} on {2}".format(path.basename(src), dst, self.host))
+        if elevated:
+          temp_dst = "/tmp/{0}".format(path.basename(dst))
+          self.copy_file(src, temp_dst)
+          print self.run("sudo cp {0} {1}".format(temp_dst, dst))
+          log.debug("Copied file {0} to {1} on {2} with elevated privileges".format(path.basename(src), dst, self.host))
+        else:
+          s = open(src, "rb")
+          contents = s.read()
+          s.close()
+          f = self.sftp.open(dst, "wb")
+          f.write(contents)
+          f.close()
+          log.debug("Copied file {0} to {1} on {2}".format(path.basename(src), dst, self.host))
         return True
       else:
         log.error(src + " does not exist locally!")
@@ -107,7 +114,7 @@ class SSH(object):
 
     return True
 
-  def make_dirs(self, dirs_path, force=False):
+  def make_dirs(self, dirs_path, escalate=False):
     """Create remote directories.
 
     Args:
@@ -119,13 +126,16 @@ class SSH(object):
     for level in range(1, len(levels)):
       try:
         path = os.sep.join(levels[:level+1])
-        self.sftp.mkdir(path)
+        if escalate:
+          if self.run("sudo mkdir {0}".format(path))['err'] == []:
+            self.run("sudo chmod 0777 {0}".format(path))
+            log.debug("Created directory {0} on {1} with escalated priveleges.".format(path, self.host))
+        else:
+          self.sftp.mkdir(path)
       except IOError as error:
         if error.errno != None: #directory doesn't exist
-          if not self.run("sudo mkdir {0}".format(path))['err'] == []: #try to force it
-            log.error("Could not make directory {0} on {1}.".format(path, self.host))
-            return
-          self.run("sudo chmod 0777 {0}".format(path))
+          log.error("Could not make directory {0} on {1}.".format(path, self.host))
+
 
   def list_screen_socks(self):
     """Return a list of open screen sockets."""

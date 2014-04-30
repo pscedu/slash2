@@ -80,11 +80,9 @@ class TSuite(object):
     self.local_setup()
     self.create_remote_setups()
 
-    print self.sl2objects["mds"]
-
-    #register a safe exit method
+    #register a cleanup exit method
     def exit_handler(signal, frame):
-      log.critical("Stopping tsuite!")
+      log.critical("User killing tsuite!")
       self.shutdown()
 
     signal.signal(signal.SIGINT, exit_handler)
@@ -262,10 +260,7 @@ class TSuite(object):
         log.error("Unable to connect to %s@%s", self.user, host)
 
     remote_modules_path = path.join(self.build_dirs["mp"], "modules", "")
-    map(lambda ssh: ssh.make_dirs(remote_modules_path), ssh_clients)
-
-    #ensure directory has necessary permissions
-    map(lambda ssh: ssh.run("sudo chown {0}:{0} {1}".format(self.user, remote_modules_path)), ssh_clients)
+    map(lambda ssh: ssh.make_dirs(remote_modules_path, escalate=True), ssh_clients)
 
     tests = []
     for test in os.listdir(tset_dir):
@@ -283,8 +278,8 @@ class TSuite(object):
     ssh_path = path.join(self.cwd, "utils" , "ssh.py")
     remote_ssh_path = path.join(self.build_dirs["mp"], "ssh.py")
 
-    map(lambda ssh: ssh.copy_file(test_handler_path, remote_test_handler_path), ssh_clients)
-    map(lambda ssh: ssh.copy_file(ssh_path, remote_ssh_path), ssh_clients)
+    map(lambda ssh: ssh.copy_file(test_handler_path, remote_test_handler_path, elevated=True), ssh_clients)
+    map(lambda ssh: ssh.copy_file(ssh_path, remote_ssh_path, elevated=True), ssh_clients)
 
     sock_name = "sl2.{0}.tset".format(self.conf["tests"]["runtime_tsetname"])
 
@@ -316,18 +311,18 @@ class TSuite(object):
 
     if not all(map(lambda ssh: ssh.wait_for_screen(sock_name)["finished"], ssh_clients)):
       log.error("Some of the screen sessions running the tset encountered errors! Please check out the clients and rectify the issue.")
-      self.shutdown()
+      #self.shutdown()
 
     result_path = path.join(self.build_dirs["mp"], "results.json")
 
     try:
       get_results = lambda ssh: (ssh.host, json.loads(ssh.run("cat "+result_path, quiet=True)["out"][0]))
       self.test_results = map(get_results, ssh_clients)
+      log.debug("Retrieved results from tests.")
     except IndexError:
       log.critical("Tests did not return output!")
-      self.shutdown()
+      #self.shutdown()
 
-    log.debug("Retrieved results from tests.")
     map(lambda ssh: ssh.close(), ssh_clients)
 
   def parse_slash2_conf(self):

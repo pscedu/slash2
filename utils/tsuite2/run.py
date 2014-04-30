@@ -252,27 +252,25 @@ def main():
 
           if item_lookup == "mds":
             if parent_lookup == "create":
-              log.info("Creating mds")
-              log.info("Finished creating mds")
+              log.info("Creating all MDSs")
               create_mds(t)
             elif parent_lookup == "launch":
-              log.info("Launching mds")
+              log.info("Launching all MDSs")
               launch_mds(t)
             elif parent_lookup == "kill":
               kill_mds(t)
           elif item_lookup == "ion":
             if parent_lookup == "create":
-              log.info("Creating ion")
+              log.info("Creating all IONs")
               create_ion(t)
-              log.info("Finished creating ion")
             elif parent_lookup == "launch":
-              log.info("Launching ion")
+              log.info("Launching all IONs")
               launch_ion(t)
             elif parent_lookup == "kill":
               kill_ion(t)
           elif item_lookup == "mnt":
             if parent_lookup == "launch":
-              log.info("Launching client")
+              log.info("Launching all clients")
               launch_mnt(t)
             elif parent_lookup == "kill":
               kill_mnt(t)
