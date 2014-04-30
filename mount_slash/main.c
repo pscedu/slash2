@@ -445,6 +445,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	fci->fci_inode.reptbl[0].bs_id = mp->sbd.sbd_ios;
 	fci->fci_inode.nrepls = 1;
 	c->fcmh_flags |= FCMH_CLI_HAVEINODE;
+	// XXX bug fci->fci_inode.reptbl inherited?
 	// XXX bug fci->fci_inode.flags inherited?
 	// XXX bug fci->fci_inode.newreplpol inherited?
 	FCMH_ULOCK(c);
@@ -2174,9 +2175,10 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 		PFL_GOTOERR(out, rc);
 
 	sl_internalize_statfs(&mp->ssfb, &sfb);
-	sfb.f_blocks = sfb.f_blocks / MSL_FS_BLKSIZ * sfb.f_frsize;
-	sfb.f_bfree = sfb.f_bfree / MSL_FS_BLKSIZ * sfb.f_frsize;
-	sfb.f_bavail = sfb.f_bavail / MSL_FS_BLKSIZ * sfb.f_frsize;
+
+	sfb.f_blocks = sfb.f_blocks * 1. / MSL_FS_BLKSIZ * sfb.f_frsize;
+	sfb.f_bfree = sfb.f_bfree * 1. / MSL_FS_BLKSIZ * sfb.f_frsize;
+	sfb.f_bavail = sfb.f_bavail * 1. / MSL_FS_BLKSIZ * sfb.f_frsize;
 	sfb.f_bsize = MSL_FS_BLKSIZ;
 	sfb.f_fsid = SLASH_FSID;
 
@@ -2841,7 +2843,8 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	iov.iov_base = (char *)value;
 	iov.iov_len = mq->valuelen;
 
-	slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMC_BULK_PORTAL, &iov, 1);
+	slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMC_BULK_PORTAL, &iov,
+	    1);
 
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc && slc_rmc_retry(pfr, &rc))
@@ -2850,7 +2853,7 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	if (rc == 0) {
 		rc = mp->rc;
 		FCMH_LOCK(f);
-		// XXX fix
+		// XXX we should just load the new attr in
 		fcmh_2_fci(f)->fci_xattrsize = 1;
 	}
 
