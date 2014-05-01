@@ -894,27 +894,6 @@ msbmaprlsthr_main(struct psc_thread *thr)
 	psc_dynarray_free(&bcis);
 }
 
-static int
-msl_bmap_check_replica(struct bmap *b)
-{
-	int i, off;
-	struct fcmh_cli_info *fci;
-	struct bmap_cli_info *bci = bmap_2_bci(b);
-
-	fci = fcmh_get_pri(b->bcm_fcmh);
-	for (i = 0, off = 0; i < fci->fci_inode.nrepls;
-	    i++, off += SL_BITS_PER_REPLICA)
-		if (SL_REPL_GET_BMAP_IOS_STAT(bci->bci_repls,
-		    off))
-			break;
-	if (i == fci->fci_inode.nrepls) {
-		DEBUG_BMAP(PLL_ERROR, b,
-		    "corrupt bmap!  no valid replicas!");
-		return (1);
-	}
-	return 0;
-}
-
 /**
  * msl_bmap_to_csvc - Given a bmap, perform a series of lookups to
  *	locate the ION csvc.  The ION was chosen by the MDS and
@@ -929,11 +908,11 @@ msl_bmap_check_replica(struct bmap *b)
 struct slashrpc_cservice *
 msl_bmap_to_csvc(struct bmap *b, int exclusive)
 {
+	int i, j, locked, rc, allzeroes, hasdata;
 	struct slashrpc_cservice *csvc;
 	struct fcmh_cli_info *fci;
 	struct psc_multiwait *mw;
 	struct sl_resm *m;
-	int i, j, locked;
 	void *p;
 
 	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
@@ -949,9 +928,6 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive)
 	fci = fcmh_get_pri(b->bcm_fcmh);
 	mw = msl_getmw();
 
-	if (msl_bmap_check_replica(b))
-		return (NULL);
-
 	FCMH_LOCK(b->bcm_fcmh);
 	if (++fci->fcif_mapstircnt >= MAPSTIR_THRESH) {
 		pfl_qsort_r(fci->fcif_idxmap, fci->fci_inode.nrepls,
@@ -963,13 +939,30 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive)
 	for (j = 0; j < 2; j++) {
 		psc_multiwait_reset(mw);
 		psc_multiwait_entercritsect(mw);
+
+		allzeroes = 1;
 		for (i = 0; i < fci->fci_inode.nrepls; i++) {
-			csvc = msl_try_get_replica_res(b,
-			    fci->fcif_idxmap[i]);
-			if (csvc) {
+			rc = msl_try_get_replica_res(b,
+			    fci->fcif_idxmap[i], j, &csvc);
+			if (rc == 0) {
 				psc_multiwait_leavecritsect(mw);
 				return (csvc);
 			}
+			if (rc == -1)
+				allzeroes = 0;
+		}
+
+		hasdata = !!(bmap_2_sbd(b)->sbd_flags &
+		    SRM_LEASEBMAPF_DATA);
+		if (psc_dynarray_len(&mw->mw_conds))
+			psc_assert(!allzeroes && hasdata);
+		else {
+			/*
+			 * Residency scan revealed no VALID replicas.
+			 * I.e. a hole in the file.
+			 */
+			psc_assert(allzeroes && !hasdata);
+			continue;
 		}
 
 		/*
@@ -977,9 +970,9 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive)
 		 * amount of time for any to finish connection
 		 * (re)establishment.
 		 */
-		if (!psc_dynarray_len(&mw->mw_conds))
-			break;
 		psc_multiwait_secs(mw, &p, BMAP_CLI_MAX_LEASE);
+		// XXX if ETIMEDOUT, return NULL, otherwise nonblock
+		// recheck
 	}
 	psc_multiwait_leavecritsect(mw);
 	return (NULL);

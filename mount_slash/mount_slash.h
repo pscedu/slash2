@@ -248,8 +248,8 @@ void	 msl_readdir_finish(struct fidc_membh *, struct dircache_page *, int,
 size_t	 msl_pages_copyout(struct bmpc_ioreq *);
 int	 msl_fd_should_retry(struct msl_fhent *, int);
 
-struct slashrpc_cservice *
-	 msl_try_get_replica_res(struct bmapc_memb *, int);
+int	 msl_try_get_replica_res(struct bmapc_memb *, int, int,
+	    struct slashrpc_cservice **);
 struct msl_fhent *
 	 msl_fhent_new(struct pscfs_req *, struct fidc_membh *);
 

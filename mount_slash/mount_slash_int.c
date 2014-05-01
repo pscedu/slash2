@@ -535,39 +535,38 @@ msl_fhent_new(struct pscfs_req *pfr, struct fidc_membh *f)
 	return (mfh);
 }
 
-struct slashrpc_cservice *
-msl_try_get_replica_res(struct bmap *b, int iosidx)
+int
+msl_try_get_replica_res(struct bmap *b, int iosidx, int reqval,
+    struct slashrpc_cservice **csvcp)
 {
-	struct slashrpc_cservice *csvc;
+	struct bmap_cli_info *bci = bmap_2_bci(b);
 	struct fcmh_cli_info *fci;
 	struct sl_resource *res;
 	struct rnd_iterator it;
 	struct sl_resm *m;
-	struct bmap_cli_info *bci = bmap_2_bci(b);
+
+	if (reqval && SL_REPL_GET_BMAP_IOS_STAT(bci->bci_repls,
+	    iosidx * SL_BITS_PER_REPLICA) != BREPLST_VALID)
+		return (-2);
 
 	fci = fcmh_2_fci(b->bcm_fcmh);
-
-	if (SL_REPL_GET_BMAP_IOS_STAT(bci->bci_repls,
-	    iosidx * SL_BITS_PER_REPLICA) != BREPLST_VALID)
-		return (NULL);
-
 	res = libsl_id2res(fci->fci_inode.reptbl[iosidx].bs_id);
 	if (res == NULL) {
 		DEBUG_FCMH(PLL_ERROR, b->bcm_fcmh,
 		    "unknown IOS in reptbl: %#x",
 		    fci->fci_inode.reptbl[iosidx].bs_id);
-		return (NULL);
+		return (-1);
 	}
 
 	/* XXX not a real shuffle */
 	FOREACH_RND(&it, psc_dynarray_len(&res->res_members)) {
 		m = psc_dynarray_getpos(&res->res_members,
 		    it.ri_rnd_idx);
-		csvc = slc_geticsvc_nb(m);
-		if (csvc)
-			return (csvc);
+		*csvcp = slc_geticsvc_nb(m);
+		if (*csvcp)
+			return (0);
 	}
-	return (NULL);
+	return (-1);
 }
 
 #define msl_fsrq_aiowait_tryadd_locked(e, r)				\
