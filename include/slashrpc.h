@@ -446,6 +446,7 @@ struct srm_leasebmap_req {
 
 #define SRM_LEASEBMAPF_DIO	(1 << 0)	/* client wants direct I/O */
 #define SRM_LEASEBMAPF_GETINODE	(1 << 1)	/* fetch inode (replica table, etc.) */
+#define SRM_LEASEBMAPF_DATA	(1 << 2)	/* true if any crcstates has SLVR_DATA */
 
 struct srm_leasebmap_rep {
 	struct srt_bmapdesc	sbd;		/* descriptor for bmap */

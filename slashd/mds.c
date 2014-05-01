@@ -1687,7 +1687,7 @@ mds_bmap_load_fg(const struct slash_fidgen *fg, sl_bmapno_t bmapno,
  *	be in DIO mode.
  * @f: the FID cache handle for the inode.
  * @bmapno: bmap index number.
- * @flags: bmap lease flags (BML_*).
+ * @flags: bmap lease flags (SRM_LEASEBMAPF_*).
  * @rw: read/write access to the bmap.
  * @prefios: client preferred I/O system ID.
  * @sbd: value-result bmap descriptor to pass back to client.
@@ -1705,7 +1705,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	struct bmap_mds_lease *bml;
 	struct bmap_mds_info *bmi;
 	struct bmap *b;
-	int rc, flag;
+	int i, rc, flag;
 
 	FCMH_LOCK(f);
 	rc = (f->fcmh_flags & FCMH_IN_PTRUNC) &&
@@ -1760,9 +1760,9 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	sbd->sbd_nid = exp->exp_connection->c_peer.nid;
 	sbd->sbd_pid = exp->exp_connection->c_peer.pid;
 
-	if (rw == SL_WRITE) {
-		struct bmap_mds_info *bmi = bmap_2_bmi(b);
+	bmi = bmap_2_bmi(b);
 
+	if (rw == SL_WRITE) {
 		psc_assert(bmi->bmi_wr_ion);
 		sbd->sbd_ios = rmmi2resm(bmi->bmi_wr_ion)->resm_res_id;
 	} else
@@ -1772,10 +1772,14 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	if (b->bcm_flags & BMAP_DIO)
 		sbd->sbd_flags |= SRM_LEASEBMAPF_DIO;
 
-	if (repls) {
-		bmi = bmap_2_bmi(b);
+	for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++)
+		if (bmi->bmi_crcstates[i] & BMAP_SLVR_DATA) {
+			sbd->sbd_flags |= SRM_LEASEBMAPF_DATA;
+			break;
+		}
+
+	if (repls)
 		memcpy(repls, bmi->bmi_repls, sizeof(bmi->bmi_repls));
-	}
 
  out:
 	mds_bmap_bml_release(bml);
