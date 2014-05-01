@@ -2409,7 +2409,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	}
 
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
-		struct psc_dynarray a = DYNARRAY_INIT;
 		struct bmapc_memb *b;
 		int j;
 
@@ -2429,6 +2428,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			goto out;
 
 		} else {
+			struct psc_dynarray a = DYNARRAY_INIT;
 			uint32_t x = stb->st_size / SLASH_BMAP_SIZE;
 
 			OPSTAT_INCR(SLC_OPST_TRUNCATE_PART);
@@ -2443,7 +2443,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 				/*
 				 * Take a reference to ensure the bmap
 				 * is still valid.
-				 * bmap_biorq_waitempty() shoudn't be
+				 * bmap_biorq_waitempty() shouldn't be
 				 * called while holding the fcmh lock.
 				 */
 				bmap_op_start_type(b,
@@ -2466,9 +2466,8 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 				psc_assert(atomic_read(&b->bcm_opcnt) == 1);
 				bmap_op_done_type(b, BMAP_OPCNT_TRUNCWAIT);
 			}
+			psc_dynarray_free(&a);
 		}
-		psc_dynarray_free(&a);
-
 	}
 
 	(void)FCMH_RLOCK(c);
