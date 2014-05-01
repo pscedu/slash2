@@ -254,7 +254,7 @@ slm_upsch_tryrepl(struct bmap *b, int off, struct sl_resm *src_resm,
 	}
 	freelock(&repl_busytable_lock);
 	if (amt == 0)
-		return (1);
+		return (0);
 
 	bsr = PSCALLOC(sizeof(*bsr));
 	bsr->bsr_off = off;
