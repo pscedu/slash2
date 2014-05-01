@@ -717,7 +717,8 @@ upd_proc_bmap(struct slm_update_data *upd)
 		iosid = fcmh_2_repl(f, dst_res_i.ri_rnd_idx);
 		dst_res = libsl_id2res(iosid);
 		if (dst_res == NULL) {
-			psclog_errorx("invalid iosid %u", iosid);
+			DEBUG_BMAP(PLL_ERROR, b, "invalid iosid: %u",
+			    iosid);
 			continue;
 		}
 		off = SL_BITS_PER_REPLICA * dst_res_i.ri_rnd_idx;
@@ -750,7 +751,8 @@ upd_proc_bmap(struct slm_update_data *upd)
 					 * Skip ourself and old/inactive
 					 * replicas.
 					 */
-					if (src_res_i.ri_rnd_idx == iosidx ||
+					if (src_res == NULL ||
+					    src_res_i.ri_rnd_idx == iosidx ||
 					    SL_REPL_GET_BMAP_IOS_STAT(bmi->bmi_repls,
 					    SL_BITS_PER_REPLICA *
 					    src_res_i.ri_rnd_idx) != BREPLST_VALID)
