@@ -79,8 +79,6 @@ class TSuite(object):
     self.local_setup()
     self.create_remote_setups()
 
-    print self.sl2objects
-
     #register a cleanup exit method
     def exit_handler(signal, frame):
       log.critical("User killing tsuite!")
@@ -298,14 +296,14 @@ class TSuite(object):
 
     # create list of daemons running and their information to be sent to test_handler
     daemons = []
-    for daemon_type in self.sl2objects.keys():
+    for object_type in self.sl2objects.keys():
       for sl2object in self.sl2objects[daemon_type]:
         if "pid" in sl2object:
-          if daemon_type == "mds":
+          if object_type == "mds":
             ctl_path = self.src_dirs['slmctl']
-          elif daemon_type == "ion":
+          elif object_type == "ion":
             ctl_path = self.src_dirs['slictl']
-          elif daemon_type == "client":
+          elif object_type == "client":
             ctl_path = self.src_dirs['msctl']
 
           daemons.append((sl2object["host"], ctl_path , sl2object["pid"]))
@@ -318,7 +316,7 @@ class TSuite(object):
 
     if not all(map(lambda ssh: ssh.wait_for_screen(sock_name)["finished"], ssh_clients)):
       log.error("Some of the screen sessions running the tset encountered errors! Please check out the clients and rectify the issue.")
-      #self.shutdown()
+      self.shutdown()
 
     result_path = path.join(self.build_dirs["mp"], "results.json")
 
@@ -328,7 +326,7 @@ class TSuite(object):
       log.debug("Retrieved results from tests.")
     except IndexError:
       log.critical("Tests did not return output!")
-      #self.shutdown()
+      self.shutdown()
 
     map(lambda ssh: ssh.close(), ssh_clients)
 
@@ -369,8 +367,7 @@ class TSuite(object):
             r"^\s*set\s*fsuuid\s*=\s*\"?(0x[a-fA-F\d]+|\d+)\"?\s*;\s*$"
           ),
           "fsroot" : re.compile(
-            "^\s*?fsroot\s*?=\s*?(\S+?)\s*?;\s*$"
-          ),
+            "^\s*?fsroot\s*?=\s*?(\S+?)\s*?;\s*$"),
           "nids"    : re.compile(
             "^\s*?nids\s*?=\s*?(.*)$"
           ),

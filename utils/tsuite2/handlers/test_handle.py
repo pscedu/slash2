@@ -22,21 +22,73 @@ class TestHandler(object):
 
   def get_resource_usages(self):
       #query each slash2 compenent for resource usage
-      for host, daemon_path, pid in self.runtime["daemons"]:
+      for host, ctl_path, pid in self.runtime["daemons"]:
           user = os.getenv("USER")
           ssh = SSH(user, host, '');
           kernel = "".join(ssh.run("uname -s")["out"]).lower()
           if "linux" in kernel:
-            ssh.run("sudo kill -s SIGUSR1 {0}".format(pid)) #use our gdb signal handler
-            output = ssh.run("cat {0}/{1}".format(self.runtime["build_dirs"]["base"], "rusage"))
+            check_status(ssh)
           elif "bsd" in kernel:
-            output = ssh.run("sudo {0} -S {1}/*.sock -s rusage".format(daemon_path, self.runtime["build_dirs"]["ctl"])) #use the ctl daemons' resource usage
+            query_ctl_rusage(ssh, ctl_type)
           else:
             pass
 
           log = open("/home/beckert/log", "w")
           log.write(str(output) + "\n")
           log.close()
+
+   def query_ctl_rusage(self, ssh, ctl_path, daemon_type):
+     output = ssh.run("sudo {0} -S {1}/*.sock -s rusage".format(ctl_path, self.runtime["build_dirs"]["ctl"])) #use the ctl daemons' resource usage
+    
+   def check_status(self, ssh):
+    """Generate general status report for all sl2 objects.
+
+    Returns: {
+      "type":[ {"host": ..., "reports": ... } ],
+      ...
+    }"""
+    report = {}
+
+    #Operations based on type
+    ops = {
+        "all": {
+          "load": "cat /proc/loadavg | cut -d' ' -f1,2,3",
+          "mem_total": "cat /proc/meminfo | head -n1",
+          "mem_free": "sed -n 2,2p /proc/meminfo",
+          "uptime": "cat /proc/uptime | head -d' ' -f1",
+          "disk_stats": "df -hl"
+        },
+        "mds": {
+          "connections":"{slmctl} -sconnections",
+          "iostats":"{slmctl} -siostats"
+        },
+        "ion": {
+          "connections": "{slictl} -sconnections",
+          "iostats": "{slictl} -siostats"
+        }
+    }
+      report[sl2_restype] = []
+
+      obj_ops = ops["all"]
+      if sl2_obj[sl2_restype] in ops:
+        obj_ops = dict(ops["all"].items() + ops[sl2_restype].items())
+
+      for sl2_obj in self.sl2objects[sl2_restype]:
+        obj_report = {
+          "host": sl2_obj["host"],
+          "id": sl2_obj["id"],
+          "reports": {}
+        }
+        user, host = self.user, sl2_obj["host"]
+        log.debug("Connecting to {0}@{1}".format(user, host))
+        ssh = SSH(user, host, '')
+        for op, cmd in obj_ops.items():
+          obj_report["reports"][op] = ssh.run(cmd, timeout=2)
+
+        report[sl2_restype].append(obj_report)
+        log.debug("Status check completed for {0} [{1}]".format(host, sl2_restype))
+        ssh.close()
+    return report
 
   def run_tests(self):
     """Run all tests from the tests directory and print results"""
