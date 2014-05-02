@@ -564,14 +564,21 @@ class TSuite(object):
       self.tsid = tsid
       self.build_dirs["base"] = base
 
-  def shutdown(self):
-    """Shuts down test suite process, stops all sl2 objects and exits"""
+  def shutdown(self, ignore = None):
+    """Shuts down test suite process, stops all sl2 objects and exits
+    Args:
+      ingore_list: dict with strings to parse.
+    """
 
-    if "client" in self.sl2objects:
+    log.info("Shutting down Tsuite objects")
+    if ignore != None:
+      log.info("Ignoring shutdown of {0} for debug purposes.".format(ignore))
+
+    if "client" in self.sl2objects and "client" != ignore:
       mnt.kill_mnt(self)
-    if "mds" in self.sl2objects:
+    if "mds" in self.sl2objects and "mds" != ignore:
       mds.kill_mds(self)
-    if "ion" in self.sl2objects:
+    if "ion" in self.sl2objects and "ion" != ignore:
       ion.kill_ion(self)
 
     log.info("Exiting tsuite.")

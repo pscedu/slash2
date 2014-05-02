@@ -1,5 +1,4 @@
 import time, logging, sys
-
 from os import path
 
 from utils.ssh import SSH
@@ -180,7 +179,7 @@ def launch_gdb_sl(tsuite, sock_name, sl2objects, res_bin_type, gdbcmd_path):
     if screen_sock_name + "-error" in screen_socks or screen_sock_name not in screen_socks:
       log.fatal("sl2object {0}:{1} launched with an error. Resume to {2} and resolve it."\
           .format(sl2object["name"], sl2object["id"], screen_sock_name+"-error"))
-      tsuite.shutdown()
+      tsuite.shutdown(ignore=sock_name)
 
     log.debug("Waiting for {0} sock on {1} to appear.".format(sock_name, host))
     count = 0
@@ -193,7 +192,7 @@ def launch_gdb_sl(tsuite, sock_name, sl2objects, res_bin_type, gdbcmd_path):
       if count == int(tsuite.conf["slash2"]["timeout"]):
         log.fatal("Cannot find {0} sock on {1}. Resume to {2} and resolve it. "\
           .format(res_bin_type, sl2object["id"], screen_sock_name))
-        tsuite.shutdown()
+        tsuite.shutdown(ignore=sock_name)
 
     #grab pid for resouce querying later
     #TODO: do not grab other running instances
