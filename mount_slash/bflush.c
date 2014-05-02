@@ -43,6 +43,7 @@
 #include "pfl/rsx.h"
 #include "pfl/tree.h"
 #include "pfl/treeutil.h"
+#include "pfl/fsmod.h"
 
 #include "bmap.h"
 #include "bmap_cli.h"
@@ -125,7 +126,7 @@ bmap_free_all_locked(struct fidc_membh *f)
 }
 
 int
-msl_fd_should_retry(struct msl_fhent *mfh, int rc)
+msl_fd_should_retry(struct msl_fhent *mfh, struct pscfs_req *pfr, int rc)
 {
 	int retry = 1;
 
@@ -142,7 +143,10 @@ msl_fd_should_retry(struct msl_fhent *mfh, int rc)
 	else if (++mfh->mfh_retries >= psc_atomic32_read(&max_nretries))
 		retry = 0;
 
-	// is mfh racy?  process has multiple threads??
+	/*
+	 * Is mfh racy?  process has multiple threads??  We might want to
+	 * make decision based on individual request instead.
+	 */
 
 	if (retry) {
 		if (mfh->mfh_retries < 10)
@@ -152,6 +156,9 @@ msl_fd_should_retry(struct msl_fhent *mfh, int rc)
 		OPSTAT_INCR(SLC_OPST_OFFLINE_RETRY);
 	} else
 		OPSTAT_INCR(SLC_OPST_OFFLINE_NO_RETRY);
+
+	if (pfr->pfr_interrupted)
+		retry = 0;
 
 	return (retry);
 }
