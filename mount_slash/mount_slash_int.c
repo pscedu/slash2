@@ -2002,8 +2002,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	struct fidc_membh *f;
 	struct bmpc_ioreq *r;
 	uint64_t fsz;
-	int nr, i, j;
-	ssize_t rc;
+	int nr, i, j, rc;
 	off_t roff;
 	char *bufp;
 
@@ -2162,7 +2161,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	if (rc) {
 		DEBUG_FCMH(PLL_ERROR, f,
 		    "q=%p bno=%zd sz=%zu tlen=%zu off=%"PSCPRIdOFFT" "
-		    "roff=%"PSCPRIdOFFT" rw=%s rc=%zd",
+		    "roff=%"PSCPRIdOFFT" rw=%s rc=%d",
 		    q, start + i, tsize, tlen, off,
 		    roff, (rw == SL_READ) ? "read" : "write", rc);
 
