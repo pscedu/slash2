@@ -385,6 +385,9 @@ class TSuite(object):
           ),
           "site_id": re.compile(
             "^\s*site_id\s*=\s*(0x[a-fA-F\d]+|\d+)\s*;\s*$"
+          ),
+          "jrnldev": re.compile(
+            "^\s*jrnldev\s*=\s*([/\w+])+\s*;\s*$"
           )
         }
 
@@ -424,6 +427,9 @@ class TSuite(object):
 
                 elif name == "zpool_path":
                   res["zpool_path"] = groups[0].strip()
+
+                elif name == "jrnldev":
+                  res["jrnldev"] = groups[0]
 
                 elif name == "zpool":
                   res["zpool_name"] = groups[0]
