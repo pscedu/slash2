@@ -41,7 +41,6 @@ class TSuite(object):
     #Determine where the module is being ran
     self.cwd = path.realpath(__file__).split(os.sep)[:-1]
     self.cwd = os.sep.join(self.cwd)
-
     self.authbuf_key = None
 
     self.src_dirs = {
@@ -79,6 +78,8 @@ class TSuite(object):
 
     self.local_setup()
     self.create_remote_setups()
+
+    print self.sl2objects
 
     #register a cleanup exit method
     def exit_handler(signal, frame):
@@ -209,6 +210,9 @@ class TSuite(object):
       log.critical("Unable to connect to mongodb.")
       self.shutdown()
 
+    #Resource information
+    self.test_report["resources"] = self.sl2objects
+
     self.test_report["total_time"] = 0.0
     self.test_report["total_tests"] = 0
     self.test_report["failed_tests"] = 0
@@ -218,10 +222,12 @@ class TSuite(object):
     self.test_report["tsid"] = latest_tset["tsid"]+1 if latest_tset else 1
     self.test_report["tset_name"] = "#" + str(self.test_report["tsid"])
 
-    log.info(self.test_report)
-    log.info(self.test_results)
 
     #TODO: Currently assuming we only have one client
+    if not hasattr(self, "test_results"):
+        log.critical("There are no test results to store!")
+        self.shutdown()
+
     results = [self.test_results[0][1]]
     for result in results:
       for test in result["tests"]:
@@ -240,6 +246,7 @@ class TSuite(object):
         self.test_report["total_time"] += test["operate"]["elapsed"]
 
     self.mongo.col.save(self.test_report)
+    log.info(self.test_report)
 
   def run_tests(self):
     """Uploads and runs each test on each client."""

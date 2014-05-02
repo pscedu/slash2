@@ -195,7 +195,7 @@ def launch_gdb_sl(tsuite, sock_name, sl2objects, res_bin_type, gdbcmd_path):
           .format(res_bin_type, sl2object["id"], screen_sock_name))
         tsuite.shutdown()
 
-    #grab pid for resouce querying later 
+    #grab pid for resouce querying later
     #TODO: do not grab other running instances
     sl2object["pid"] = ssh.run("pgrep {0}".format(res_bin_type))['out'][0].strip()
     log.debug("Found {0} pid on {1} : {2}".format(res_bin_type, host, sl2object["pid"]))
@@ -223,7 +223,13 @@ def stop_slash2_socks(tsuite, sock_name, sl2objects, ctl_type, daemon_type):
     #Remote connection
     user, host = tsuite.user, sl2object["host"]
     log.debug("Connecting to {0}@{1}".format(user, host))
-    ssh = SSH(user, host, '')
+
+    ssh = None
+    try:
+      ssh = SSH(user, host, '')
+    except Exception:
+      log.error("Unable to connect to {0}@{1}".format(user, host))
+      return
 
     cmd = "{0} -S {1}/{2}.{3}.sock stop".format(tsuite.src_dirs[ctl_type], tsuite.build_dirs["ctl"], daemon_type, host)
     ssh.run(cmd)

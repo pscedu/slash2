@@ -79,10 +79,11 @@ class SSH(object):
     try:
       if os.path.isfile(src):
         if elevated:
-          temp_dst = "/tmp/{0}".format(path.basename(dst))
+          temp_dst = path.join("/tmp", path.basename(dst))
           self.copy_file(src, temp_dst)
-          print self.run("sudo cp {0} {1}".format(temp_dst, dst))
-          log.debug("Copied file {0} to {1} on {2} with elevated privileges".format(path.basename(src), dst, self.host))
+          self.run("sudo mv {0} {1}".format(temp_dst, dst))
+          #Seems unnecessary
+          #log.debug("Copied file {0} to {1} on {2} with elevated privileges".format(path.basename(src), dst, self.host))
         else:
           s = open(src, "rb")
           contents = s.read()
@@ -90,13 +91,15 @@ class SSH(object):
           f = self.sftp.open(dst, "wb")
           f.write(contents)
           f.close()
-          log.debug("Copied file {0} to {1} on {2}".format(path.basename(src), dst, self.host))
+
+          #log.debug("Copied file {0} to {1} on {2}".format(path.basename(src), dst, self.host))
         return True
       else:
         log.error(src + " does not exist locally!")
         return False
-    except IOError as error:
+    except IOError, e:
       log.error("Cannot copy file {0} to {1} on {2}!".format(src, dst, self.host))
+      log.error(str(e))
 
   def pull_file(self, rmt, local):
     """Download remote file. Not elevated.
@@ -121,15 +124,15 @@ class SSH(object):
       dirs_path: directory path.
       force: attempt to elevate and create"""
 
-    log.debug("Making directory {0} on {1}.".format(dirs_path, self.host))
+    #log.debug("Making directory {0} on {1}.".format(dirs_path, self.host))
     levels = dirs_path.split(os.sep)
     for level in range(1, len(levels)):
       try:
         path = os.sep.join(levels[:level+1])
         if escalate:
-          if self.run("sudo mkdir {0}".format(path))['err'] == []:
+          if self.run("sudo mkdir {0}".format(path), quiet=True)['err'] == []:
             self.run("sudo chmod 0777 {0}".format(path))
-            log.debug("Created directory {0} on {1} with escalated priveleges.".format(path, self.host))
+            #log.debug("Created directory {0} on {1} with escalated priveleges.".format(path, self.host))
         else:
           self.sftp.mkdir(path)
       except IOError as error:
