@@ -839,7 +839,7 @@ _sl_csvc_get(const struct pfl_callerinfo *pci,
 	CSVC_WAKE(*csvcp);
 
 	if (addlist)
-		pll_add_sorted(&sl_clients, csvc, csvc_cli_cmp);
+		pll_add_sorted(&sl_clients, *csvcp, csvc_cli_cmp);
 
  out:
 	if (csvc)
@@ -1091,14 +1091,12 @@ slrpc_bulk_check(struct pscrpc_request *rq, const void *hbuf,
 	char tbuf[AUTHBUF_ALGLEN];
 	int rc = 0;
 
-#if 0
 	slrpc_bulk_sign(rq, tbuf, iov, n);
 	if (memcmp(tbuf, hbuf, AUTHBUF_ALGLEN)) {
 		DEBUG_REQ(PLL_FATAL, rq, "authbuf did not hash "
 		    "correctly -- ensure key files are synced");
 		rc = SLERR_AUTHBUF_BADHASH;
 	}
-#endif
 	return (rc);
 }
 
