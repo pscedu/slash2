@@ -384,7 +384,7 @@ class TSuite(object):
             "^\s*site_id\s*=\s*(0x[a-fA-F\d]+|\d+)\s*;\s*$"
           ),
           "jrnldev": re.compile(
-            "^\s*jrnldev\s*=\s*([/\w+])+\s*;\s*$"
+            "^\s*jrnldev\s*=\s*([/\w]+)\s*;\s*$"
           )
         }
 
