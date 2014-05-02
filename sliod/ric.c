@@ -314,7 +314,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			rv = slvr_fsbytes_wio(slvr[i], tsz, sblk);
 			if (rv) {
 				psc_assert(rv != -SLERR_AIOWAIT);
-				psclog_warnx("write error, rc = %d", rc);
+				psclog_warnx("write error rc=%d", rv);
 				rc = rv;
 				goto out;
 			}
