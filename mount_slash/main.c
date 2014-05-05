@@ -250,8 +250,8 @@ msfsthr_ensure(void)
  * @lookupflags: fid cache lookup flags.
  * @fp: value-result fcmh.
  */
-#define msl_create_fcmh(pfr, sstb, safl, fp)				\
-	_fidc_lookup(PFL_CALLERINFOSS(SLSS_FCMH), &(sstb)->sst_fg,	\
+#define msl_create_fcmh(pfr, fg, sstb, safl, fp)				\
+	_fidc_lookup(PFL_CALLERINFOSS(SLSS_FCMH), fg,	\
 	    FIDC_LOOKUP_CREATE, (sstb), (safl), (fp), pscfs_getclientctx(pfr))
 
 void
@@ -410,9 +410,10 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	fcmh_setattr(p, &mp->pattr);
 
 	uidmap_int_stat(&mp->cattr);
-	rc = msl_create_fcmh(pfr, &mp->cattr, FCMH_SETATTRF_NONE, &c);
+	rc = msl_create_fcmh(pfr, &mp->cattr.sst_fg, NULL, 0, &c);
 	if (rc)
 		PFL_GOTOERR(out, rc);
+	fcmh_setattrf(c, &mp->cattr, FCMH_SETATTRF_NONE);
 
 #if 0
 	if (oflags & O_APPEND) {
@@ -870,9 +871,10 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	fcmh_setattr(p, &mp->pattr);
 
 	uidmap_int_stat(&mp->cattr);
-	rc = msl_create_fcmh(pfr, &mp->cattr, FCMH_SETATTRF_NONE, &c);
+	rc = msl_create_fcmh(pfr, &mp->cattr.sst_fg, NULL, 0, &c);
 	if (rc)
 		PFL_GOTOERR(out, rc);
+	fcmh_setattrf(c, &mp->cattr, FCMH_SETATTRF_NONE);
 
 	sl_internalize_stat(&mp->cattr, &stb);
 
@@ -935,11 +937,11 @@ msl_lookuprpc(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	 * visible in the cache.
 	 */
 	uidmap_int_stat(&mp->attr);
-	rc = msl_create_fcmh(pfr, &mp->attr, FCMH_SETATTRF_SAVELOCAL,
-	    &m);
+	rc = msl_create_fcmh(pfr, &mp->attr.sst_fg, NULL, 0, &m);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	fcmh_setattrf(m, &mp->attr, FCMH_SETATTRF_SAVELOCAL);
 	if (fgp)
 		*fgp = mp->attr.sst_fg;
 
@@ -1328,10 +1330,11 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	fcmh_setattr(p, &mp->pattr);
 
 	uidmap_int_stat(&mp->cattr);
-	rc = msl_create_fcmh(pfr, &mp->cattr, FCMH_SETATTRF_NONE, &c);
+	rc = msl_create_fcmh(pfr, &mp->cattr.sst_fg, NULL, 0, &c);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	fcmh_setattrf(c, &mp->cattr, FCMH_SETATTRF_NONE);
 	sl_internalize_stat(&mp->cattr, &stb);
 
  out:
@@ -2253,9 +2256,11 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	fcmh_setattr(p, &mp->pattr);
 
 	uidmap_int_stat(&mp->cattr);
-	rc = msl_create_fcmh(pfr, &mp->cattr, FCMH_SETATTRF_NONE, &c);
+	rc = msl_create_fcmh(pfr, &mp->cattr.sst_fg, NULL, 0, &c);
 	if (rc)
 		PFL_GOTOERR(out, rc);
+
+	fcmh_setattrf(c, &mp->cattr, FCMH_SETATTRF_NONE);
 	sl_internalize_stat(&mp->cattr, &stb);
 
  out:
