@@ -121,7 +121,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	mp->rc = bmapdesc_access_check(&mq->sbd, rw,
 	    nodeResm->resm_res->res_id);
 	if (mp->rc) {
-		psclog_info("bmapdesc resid mismatch for "
+		psclog_info("bmapdesc check failed for "
 		    SLPRI_FG" self %x, peer %x",
 		    SLPRI_FG_ARGS(fgp),
 		    nodeResm->resm_res->res_id, mq->sbd.sbd_ios);

@@ -311,10 +311,10 @@ bmapdesc_access_check(struct srt_bmapdesc *sbd, enum rw rw,
 		/* Read requests can get by with looser authentication. */
 		if (sbd->sbd_ios != ios_id &&
 		    sbd->sbd_ios != IOS_ID_ANY) {
-			psclog_errorx("bmapdesc check failed; "
+			psclog_info("bmapdesc check failed; "
 			    "type=rd ios_id sbd:%#x != %#x", sbd->sbd_ios,
 			    ios_id);
-			return (EBADF);
+			//return (EBADF);
 		}
 	} else if (rw == SL_WRITE) {
 		if (sbd->sbd_ios != ios_id) {
