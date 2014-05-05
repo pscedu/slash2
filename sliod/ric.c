@@ -56,7 +56,6 @@ uint32_t sli_benchmark_bufsiz;
 __static int
 sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 {
-	lnet_process_id_t *pp;
 	sl_bmapno_t bmapno, slvrno;
 	int rc, nslvrs = 0, i, needaio = 0;
 	uint32_t tsize, sblk, roff, len[RIC_MAX_SLVRS_PER_IO];
@@ -309,7 +308,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			rv = slvr_fsbytes_wio(slvr[i], tsz, sblk);
 			if (rv) {
 				psc_assert(rv != -SLERR_AIOWAIT);
-				psclog_warnx("write error rc=%d", rv);
+				psclog_warnx("write error rc=%zd", rv);
 				rc = rv;
 				goto out;
 			}
