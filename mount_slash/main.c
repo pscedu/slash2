@@ -2254,7 +2254,8 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 
 	uidmap_int_stat(&mp->cattr);
 	rc = msl_create_fcmh(pfr, &mp->cattr, FCMH_SETATTRF_NONE, &c);
-
+	if (rc)
+		PFL_GOTOERR(out, rc);
 	sl_internalize_stat(&mp->cattr, &stb);
 
  out:
