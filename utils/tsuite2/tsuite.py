@@ -297,7 +297,7 @@ class TSuite(object):
     # create list of daemons running and their information to be sent to test_handler
     daemons = []
     for object_type in self.sl2objects.keys():
-      for sl2object in self.sl2objects[daemon_type]:
+      for sl2object in self.sl2objects[object_type]:
         if "pid" in sl2object:
           if object_type == "mds":
             ctl_path = self.src_dirs['slmctl']
@@ -323,6 +323,7 @@ class TSuite(object):
     try:
       get_results = lambda ssh: (ssh.host, json.loads(ssh.run("cat "+result_path, quiet=True)["out"][0]))
       self.test_results = map(get_results, ssh_clients)
+      print self.test_results
       log.debug("Retrieved results from tests.")
     except IndexError:
       log.critical("Tests did not return output!")

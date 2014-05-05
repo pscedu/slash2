@@ -20,34 +20,17 @@ class TestHandler(object):
     self.run_tests()
     self.cleanup()
 
-  def get_resource_usages(self):
-      #query each slash2 compenent for resource usage
-      for host, ctl_path, pid in self.runtime["daemons"]:
-          user = os.getenv("USER")
-          ssh = SSH(user, host, '');
-          kernel = "".join(ssh.run("uname -s")["out"]).lower()
-          if "linux" in kernel:
-            check_status(ssh)
-          elif "bsd" in kernel:
-            query_ctl_rusage(ssh, ctl_type)
-          else:
-            pass
-
-          log = open("/home/beckert/log", "w")
-          log.write(str(output) + "\n")
-          log.close()
-
-   def query_ctl_rusage(self, ssh, ctl_path, daemon_type):
+  def query_ctl_rusage(self, ssh, ctl_path):
      output = ssh.run("sudo {0} -S {1}/*.sock -s rusage".format(ctl_path, self.runtime["build_dirs"]["ctl"])) #use the ctl daemons' resource usage
-    
-   def check_status(self, ssh):
+     return {"output":output}
+
+  def check_status(self, ssh, ctl_path):
     """Generate general status report for all sl2 objects.
 
     Returns: {
-      "type":[ {"host": ..., "reports": ... } ],
+      "load": ..., "disk_stats": ... " 
       ...
     }"""
-    report = {}
 
     #Operations based on type
     ops = {
@@ -58,37 +41,52 @@ class TestHandler(object):
           "uptime": "cat /proc/uptime | head -d' ' -f1",
           "disk_stats": "df -hl"
         },
-        "mds": {
-          "connections":"{slmctl} -sconnections",
-          "iostats":"{slmctl} -siostats"
+        "slmctl": {
+          "connections":"sudo {0} -sconnections",
+          "iostats":"sudo {0} -siostats"
         },
-        "ion": {
-          "connections": "{slictl} -sconnections",
-          "iostats": "{slictl} -siostats"
+        "slictl": {
+          "connections": "sudo {0} -sconnections",
+          "iostats": "sudo {0} -siostats"
         }
     }
-      report[sl2_restype] = []
 
-      obj_ops = ops["all"]
-      if sl2_obj[sl2_restype] in ops:
-        obj_ops = dict(ops["all"].items() + ops[sl2_restype].items())
+    report = {}
 
-      for sl2_obj in self.sl2objects[sl2_restype]:
-        obj_report = {
-          "host": sl2_obj["host"],
-          "id": sl2_obj["id"],
-          "reports": {}
-        }
-        user, host = self.user, sl2_obj["host"]
-        log.debug("Connecting to {0}@{1}".format(user, host))
-        ssh = SSH(user, host, '')
-        for op, cmd in obj_ops.items():
-          obj_report["reports"][op] = ssh.run(cmd, timeout=2)
+    obj_ops = ops["all"]
+    if path.basename(ctl_path) in ops:
+      obj_ops = dict(ops["all"].items() + ops[path.basename(ctl_path)].items())
 
-        report[sl2_restype].append(obj_report)
-        log.debug("Status check completed for {0} [{1}]".format(host, sl2_restype))
-        ssh.close()
+    for op, cmd in obj_ops.items():
+      if "{0}" in cmd: #needs the path
+        cmd = cmd.format(ctl_path)
+      report[op] = ssh.run(cmd, timeout=2)
+
+    print "Status check completed for {0}".format(ssh.host)
+
     return report
+
+  def get_resource_usages(self):
+    #query each slash2 compenent for resource usage
+    rusages = {}
+    for host, ctl_path, pid in self.runtime["daemons"]:
+      user = os.getenv("USER")
+      ssh = SSH(user, host, '');
+      kernel = "".join(ssh.run("uname -s")["out"]).lower()
+      if "linux" in kernel:
+        output = self.check_status(ssh, ctl_path)
+      elif "bsd" in kernel:
+        output = self.query_ctl_rusage(ssh, ctl_path)
+      else:
+        pass
+
+      log = open("/home/beckert/log", "w")
+      log.write(str(output) + "\n")
+      log.close()
+
+      rusages["{0} [{1}]".format(host, pid)] = output
+
+    return rusages
 
   def run_tests(self):
     """Run all tests from the tests directory and print results"""
@@ -109,13 +107,19 @@ class TestHandler(object):
 
       tset_results["tests"].append(test)
 
+    # user may not have write privileges to mp -- hacky mv
     results_file = path.join(self.cwd, "results.json")
-    f = open(results_file, "w")
+    temp_file = path.join("/tmp", "results.json")
+    f = open(temp_file, "w")
     f.write(json.dumps(tset_results))
     f.close()
 
+    os.system("sudo mv {0} {1}".format(temp_file, results_file))
+
   def cleanup(self):
-    shutil.rmtree(self.modules_folder)
+    pass
+    # TODO: we don't have permissions to delete these.. 
+    #shutil.rmtree(self.modules_folder)
 
   def load_all_modules_from_dir(self, dirname):
     modules = []
@@ -129,4 +133,3 @@ class TestHandler(object):
 if __name__ == "__main__":
   #Ran from script
   TestHandler(sys.argv[1])
-

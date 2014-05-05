@@ -50,9 +50,7 @@ def create_mds(tsuite):
       pkill zfs-fuse || true
       sleep 2
       mkdir -p {datadir}
-      {slmkjrnl} -D {datadir} -b {jrnldev} -f""".format(**repl_dict)
-
-      print "\n\n " + cmd + "\n\n"
+      {slmkjrnl} -D {datadir} -b {jrnldev} -f -u {fsuuid}""".format(**repl_dict)
 
       screen_name = "ts.mds."+mds["id"]
 
