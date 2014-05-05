@@ -119,21 +119,16 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 * A RBW (read-before-write) request from the client may have a
 	 * write enabled bmapdesc which he uses to fault in his page.
 	 */
-	DYNARRAY_FOREACH(pp, i, &sl_lnet_prids) {
-		mp->rc = bmapdesc_access_check(&mq->sbd, rw,
-		    nodeResm->resm_res->res_id);
-		if (mp->rc == 0) {
-			psclog_info("bmapdesc check okay");
-			break;
-		}
-		psclog_notice("bmapdesc resid mismatch - mine %x, peer %x",
-		    nodeResm->resm_res->res_id, mq->sbd.sbd_ios);
-	}
+	mp->rc = bmapdesc_access_check(&mq->sbd, rw,
+	    nodeResm->resm_res->res_id);
 	if (mp->rc) {
-		psclog_warnx("bmapdesc_access_check failed for fid "SLPRI_FG,
-		    SLPRI_FG_ARGS(fgp));
+		psclog_info("bmapdesc resid mismatch for "
+		    SLPRI_FG" self %x, peer %x",
+		    SLPRI_FG_ARGS(fgp),
+		    nodeResm->resm_res->res_id, mq->sbd.sbd_ios);
 		return (mp->rc);
 	}
+	psclog_diag("bmapdesc check okay");
 
 	seqno = bim_getcurseq();
 	if (mq->sbd.sbd_seq < seqno) {
