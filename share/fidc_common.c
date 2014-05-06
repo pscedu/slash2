@@ -226,8 +226,7 @@ fidc_reap(struct psc_poolmgr *m)
  */
 int
 _fidc_lookup(const struct pfl_callerinfo *pci,
-    const struct slash_fidgen *fgp, int flags, struct srt_stat *sstb,
-    int setattrflags, struct fidc_membh **fp, void *arg)
+    const struct slash_fidgen *fgp, int flags, struct fidc_membh **fp, void *arg)
 {
 	struct fidc_membh *tmp, *fcmh, *fcmh_new;
 	struct psc_hashbkt *b;
@@ -242,8 +241,6 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 #ifndef _SLASH_CLIENT
 	psc_assert(!(flags & FIDC_LOOKUP_EXCL));
 #endif
-
-	psc_assert(sstb == NULL);
 
 	/* OK.  Now check if it is already in the cache. */
 	b = psc_hashbkt_get(&fidcHtable, &fgp->fg_fid);
@@ -303,10 +300,6 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 		}
 
 		psc_assert(fgp->fg_fid == fcmh_2_fid(fcmh));
-		/* apply provided attributes to the cache */
-		if (sstb)
-			fcmh_setattrf(fcmh, sstb, setattrflags |
-			    FCMH_SETATTRF_HAVELOCK);
 
 		/* keep me around after unlocking later */
 		fcmh_op_start_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
@@ -374,20 +367,10 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	 * safe to not lock because we don't touch the state, and other
 	 * thread should be waiting for us.
 	 */
-	if (sstb) {
-		FCMH_LOCK(fcmh);
-		fcmh_setattrf(fcmh, sstb, setattrflags |
-		    FCMH_SETATTRF_HAVELOCK);
-		rc = sl_fcmh_ops.sfop_ctor(fcmh, flags);
-		if (rc)
-			fcmh->fcmh_flags |= FCMH_CTOR_FAILED;
+	rc = sl_fcmh_ops.sfop_ctor(fcmh, flags);
+	if (rc) {
+		fcmh->fcmh_flags |= FCMH_CTOR_FAILED;
 		goto finish;
-	} else {
-		rc = sl_fcmh_ops.sfop_ctor(fcmh, flags);
-		if (rc) {
-			fcmh->fcmh_flags |= FCMH_CTOR_FAILED;
-			goto finish;
-		}
 	}
 
 	if (flags & FIDC_LOOKUP_LOAD) {

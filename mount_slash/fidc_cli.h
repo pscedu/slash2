@@ -138,7 +138,7 @@ _fidc_lookup_load(const struct pfl_callerinfo *pci, slfid_t fid,
 	struct slash_fidgen fg = { fid, FGEN_ANY };
 
 	return (_fidc_lookup(pci, &fg, FIDC_LOOKUP_CREATE |
-	    FIDC_LOOKUP_LOAD, NULL, 0, fcmhp, pfcc));
+	    FIDC_LOOKUP_LOAD, fcmhp, pfcc));
 }
 
 static __inline int
@@ -148,7 +148,7 @@ _fidc_lookup_peek(const struct pfl_callerinfo *pci, slfid_t fid,
 	struct slash_fidgen fg = { fid, FGEN_ANY };
 
 	return (_fidc_lookup(pci, &fg, FIDC_LOOKUP_NONE,
-	    NULL, 0, fcmhp, pfcc));
+	    fcmhp, pfcc));
 }
 #undef _pfl_callerinfo
 

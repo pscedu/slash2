@@ -250,9 +250,9 @@ msfsthr_ensure(void)
  * @lookupflags: fid cache lookup flags.
  * @fp: value-result fcmh.
  */
-#define msl_create_fcmh(pfr, fg, sstb, safl, fp)				\
+#define msl_create_fcmh(pfr, fg, fp)			\
 	_fidc_lookup(PFL_CALLERINFOSS(SLSS_FCMH), fg,	\
-	    FIDC_LOOKUP_CREATE, (sstb), (safl), (fp), pscfs_getclientctx(pfr))
+	    FIDC_LOOKUP_CREATE, (fp), pscfs_getclientctx(pfr))
 
 void
 mslfsop_access(struct pscfs_req *pfr, pscfs_inum_t inum, int accmode)
@@ -410,7 +410,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	fcmh_setattr(p, &mp->pattr);
 
 	uidmap_int_stat(&mp->cattr);
-	rc = msl_create_fcmh(pfr, &mp->cattr.sst_fg, NULL, 0, &c);
+	rc = msl_create_fcmh(pfr, &mp->cattr.sst_fg, &c);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	fcmh_setattrf(c, &mp->cattr, FCMH_SETATTRF_NONE);
@@ -871,7 +871,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	fcmh_setattr(p, &mp->pattr);
 
 	uidmap_int_stat(&mp->cattr);
-	rc = msl_create_fcmh(pfr, &mp->cattr.sst_fg, NULL, 0, &c);
+	rc = msl_create_fcmh(pfr, &mp->cattr.sst_fg, &c);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 	fcmh_setattrf(c, &mp->cattr, FCMH_SETATTRF_NONE);
@@ -937,7 +937,7 @@ msl_lookuprpc(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	 * visible in the cache.
 	 */
 	uidmap_int_stat(&mp->attr);
-	rc = msl_create_fcmh(pfr, &mp->attr.sst_fg, NULL, 0, &m);
+	rc = msl_create_fcmh(pfr, &mp->attr.sst_fg, &m);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -1330,7 +1330,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	fcmh_setattr(p, &mp->pattr);
 
 	uidmap_int_stat(&mp->cattr);
-	rc = msl_create_fcmh(pfr, &mp->cattr.sst_fg, NULL, 0, &c);
+	rc = msl_create_fcmh(pfr, &mp->cattr.sst_fg, &c);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
@@ -1389,7 +1389,7 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		uidmap_int_stat(&e->sstb);
 
 		fidc_lookup(&e->sstb.sst_fg, FIDC_LOOKUP_CREATE,
-		    NULL, 0, &f);
+		    &f);
 
 		if (f) {
 			FCMH_LOCK(f);
@@ -2258,7 +2258,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	fcmh_setattr(p, &mp->pattr);
 
 	uidmap_int_stat(&mp->cattr);
-	rc = msl_create_fcmh(pfr, &mp->cattr.sst_fg, NULL, 0, &c);
+	rc = msl_create_fcmh(pfr, &mp->cattr.sst_fg, &c);
 	if (rc)
 		PFL_GOTOERR(out, rc);
 

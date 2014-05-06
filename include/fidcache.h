@@ -274,15 +274,15 @@ void	 fcmh_setattrf(struct fidc_membh *, struct srt_stat *, int);
 #define FIDC_LOOKUP_NOLOG		(1 << 3)
 
 int	_fidc_lookup(const struct pfl_callerinfo *,
-	    const struct slash_fidgen *, int, struct srt_stat *, int,
+	    const struct slash_fidgen *, int, 
 	    struct fidc_membh **, void *);
 
-#define fidc_lookup(fgp, lkfl, sstb, safl, fcmhp)			\
+#define fidc_lookup(fgp, lkfl, fcmhp)			\
 	_fidc_lookup(PFL_CALLERINFOSS(SLSS_FCMH), (fgp), (lkfl),	\
-	    (sstb), (safl), (fcmhp), NULL)
+	    (fcmhp), NULL)
 
 #define fidc_lookup_fg(fgp, fp)						\
-	fidc_lookup((fgp), 0, NULL, 0, (fp))
+	fidc_lookup((fgp), 0, (fp))
 
 #define fidc_lookup_fid(fid, fp)					\
 	_PFL_RVSTART {							\
