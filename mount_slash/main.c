@@ -1389,10 +1389,12 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 		uidmap_int_stat(&e->sstb);
 
 		fidc_lookup(&e->sstb.sst_fg, FIDC_LOOKUP_CREATE,
-		    &e->sstb, FCMH_SETATTRF_SAVELOCAL, &f);
+		    NULL, 0, &f);
 
 		if (f) {
 			FCMH_LOCK(f);
+			fcmh_setattrf(f, &e->sstb, FCMH_SETATTRF_SAVELOCAL |
+			    FCMH_SETATTRF_HAVELOCK);
 			fcmh_2_fci(f)->fci_xattrsize =
 			    e->xattrsize;
 			fcmh_op_done(f);

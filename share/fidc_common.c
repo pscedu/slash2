@@ -243,10 +243,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	psc_assert(!(flags & FIDC_LOOKUP_EXCL));
 #endif
 
-	if (sstb)
-		psc_assert((flags & FIDC_LOOKUP_LOAD) == 0);
-	if (flags & FIDC_LOOKUP_LOAD)
-		psc_assert(sstb == NULL);
+	psc_assert(sstb == NULL);
 
 	/* OK.  Now check if it is already in the cache. */
 	b = psc_hashbkt_get(&fidcHtable, &fgp->fg_fid);
