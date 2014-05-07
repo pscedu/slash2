@@ -233,7 +233,7 @@ mds_bmap_ios_restart(struct bmap_mds_lease *bml)
 
 	bml->bml_bmi->bmi_seq = bml->bml_seq;
 
-	DEBUG_BMAP(PLL_INFO, bml_2_bmap(bml), "res(%s) seq=%"PRIx64,
+	DEBUG_BMAP(PLL_DIAG, bml_2_bmap(bml), "res(%s) seq=%"PRIx64,
 	    resm->resm_res->res_name, bml->bml_seq);
 
 	return (rc);
@@ -588,7 +588,7 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	bmi->bmi_wr_ion = rmmi = resm2rmmi(resm);
 	atomic_inc(&rmmi->rmmi_refcnt);
 
-	DEBUG_BMAP(PLL_INFO, b, "online res(%s)",
+	DEBUG_BMAP(PLL_DIAG, b, "online res(%s)",
 	    resm->resm_res->res_name);
 
 	/*
@@ -625,9 +625,9 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 
 	bml->bml_seq = bia.bia_seq;
 
-	DEBUG_FCMH(PLL_INFO, b->bcm_fcmh, "bmap assign, elem=%zd",
+	DEBUG_FCMH(PLL_DIAG, b->bcm_fcmh, "bmap assign, elem=%zd",
 	    bmi->bmi_assign->odtr_elem);
-	DEBUG_BMAP(PLL_INFO, b, "using res(%s) "
+	DEBUG_BMAP(PLL_DIAG, b, "using res(%s) "
 	    "rmmi(%p) bia(%p)", resm->resm_res->res_name,
 	    bmi->bmi_wr_ion, bmi->bmi_assign);
 
@@ -677,7 +677,7 @@ mds_bmap_ios_update(struct bmap_mds_lease *bml)
 	if (rc)
 		return (rc);
 
-	DEBUG_FCMH(PLL_INFO, b->bcm_fcmh, "bmap update, elem=%zd",
+	DEBUG_FCMH(PLL_DIAG, b->bcm_fcmh, "bmap update, elem=%zd",
 	    bmi->bmi_assign->odtr_elem);
 
 	return (0);
@@ -720,7 +720,7 @@ mds_bmap_dupls_find(struct bmap_mds_info *bmi, lnet_process_id_t *cnp,
 		else
 			(*wlease)++;
 
-		DEBUG_BMAP(PLL_INFO, bmi_2_bmap(bmi), "bml=%p tmp=%p "
+		DEBUG_BMAP(PLL_DIAG, bmi_2_bmap(bmi), "bml=%p tmp=%p "
 		    "(wlease=%d rlease=%d) (nwtrs=%d nrdrs=%d)",
 		    bml, tmp, *wlease, *rlease,
 		    bmi->bmi_writers, bmi->bmi_readers);
@@ -750,7 +750,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 	bmap_wait_locked(b, b->bcm_flags & BMAP_IONASSIGN);
 	b->bcm_flags |= BMAP_IONASSIGN;
 
-	DEBUG_BMAP(PLL_INFO, b, "bml=%p bmi_writers=%d bmi_readers=%d",
+	DEBUG_BMAP(PLL_DIAG, b, "bml=%p bmi_writers=%d bmi_readers=%d",
 	    bml, bmi->bmi_writers, bmi->bmi_readers);
 
 	if (bml->bml_flags & BML_WRITE) {
@@ -772,7 +772,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 
 	BMAP_LOCK(b);
 
-	DEBUG_BMAP(PLL_INFO, b, "bml=%p rc=%d "
+	DEBUG_BMAP(PLL_DIAG, b, "bml=%p rc=%d "
 	    "bmi_writers=%d bmi_readers=%d",
 	    bml, rc, bmi->bmi_writers, bmi->bmi_readers);
 
@@ -891,7 +891,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 	obml = mds_bmap_dupls_find(bmi, &bml->bml_cli_nidpid, &wlease,
 	    &rlease);
 
-	DEBUG_BMAP(PLL_INFO, b, "bml=%p obml=%p (wlease=%d rlease=%d) "
+	DEBUG_BMAP(PLL_DIAG, b, "bml=%p obml=%p (wlease=%d rlease=%d) "
 	    "(nwtrs=%d nrdrs=%d)", bml, obml, wlease, rlease,
 	    bmi->bmi_writers, bmi->bmi_readers);
 
@@ -975,7 +975,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 	}
 
  out:
-	DEBUG_BMAP(rc && rc != -SLERR_BMAP_DIOWAIT ? PLL_WARN : PLL_INFO,
+	DEBUG_BMAP(rc && rc != -SLERR_BMAP_DIOWAIT ? PLL_WARN : PLL_DIAG,
 	    b, "bml_add (mion=%p) bml=%p (seq=%"PRId64") (rw=%d) "
 	    "(nwtrs=%d nrdrs=%d) (rc=%d)",
 	    bmi->bmi_wr_ion, bml, bml->bml_seq, rw,
@@ -1053,7 +1053,7 @@ mds_bmap_bml_del_locked(struct bmap_mds_lease *bml)
 			psc_assert(bmi->bmi_writers > 0);
 			bmi->bmi_writers--;
 
-			DEBUG_BMAP(PLL_INFO, bmi_2_bmap(bmi),
+			DEBUG_BMAP(PLL_DIAG, bmi_2_bmap(bmi),
 			   "bml=%p bmi_writers=%d bmi_readers=%d",
 			   bml, bmi->bmi_writers, bmi->bmi_readers);
 
@@ -1283,7 +1283,7 @@ mds_handle_rls_bmap(struct pscrpc_request *rq, __unusedx int sliod)
 		if (slm_fcmh_get(&fg, &f))
 			continue;
 
-		DEBUG_FCMH(PLL_INFO, f, "rls bmap=%u", sbd->sbd_bmapno);
+		DEBUG_FCMH(PLL_DIAG, f, "rls bmap=%u", sbd->sbd_bmapno);
 
 		if (bmap_lookup(f, sbd->sbd_bmapno, &b))
 			goto next;
@@ -1456,7 +1456,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t iosid,
 	if (fcmh_2_gen(f) != c->fg.fg_gen) {
 		int x = (fcmh_2_gen(f) > c->fg.fg_gen) ? 1 : 0;
 
-		DEBUG_FCMH(x ? PLL_INFO : PLL_ERROR, f,
+		DEBUG_FCMH(x ? PLL_DIAG : PLL_ERROR, f,
 		    "MDS gen (%"PRIu64") %s than crcup gen (%"PRIu64")",
 		    fcmh_2_gen(f), x ? ">" : "<", c->fg.fg_gen);
 
@@ -1479,7 +1479,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t iosid,
 	}
 	BMAP_LOCK(bmap);
 
-	DEBUG_BMAP(PLL_INFO, bmap, "blkno=%u sz=%"PRId64" ios(%s)",
+	DEBUG_BMAP(PLL_DIAG, bmap, "blkno=%u sz=%"PRId64" ios(%s)",
 	    c->blkno, c->fsize, res->res_name);
 
 	psc_assert(psc_atomic32_read(&bmap->bcm_opcnt) > 1);
@@ -1886,7 +1886,7 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
  out2:
 	if (obml)
 		mds_bmap_bml_release(obml);
-	DEBUG_BMAP(rc ? PLL_WARN : PLL_INFO, b,
+	DEBUG_BMAP(rc ? PLL_WARN : PLL_DIAG, b,
 	    "reassign oseq=%"PRIu64" nseq=%"PRIu64" "
 	    "nid=%"PRIu64" pid=%u rc=%d",
 	    sbd_in->sbd_seq, (obml ? obml->bml_seq : 0),
@@ -1973,7 +1973,7 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 		mds_bmap_bml_release(bml);
 	if (obml)
 		mds_bmap_bml_release(obml);
-	DEBUG_BMAP(rc ? PLL_WARN : PLL_INFO, b,
+	DEBUG_BMAP(rc ? PLL_WARN : PLL_DIAG, b,
 	   "renew oseq=%"PRIu64" nseq=%"PRIu64" nid=%"PRIu64" pid=%u",
 	   sbd_in->sbd_seq, bml ? bml->bml_seq : 0,
 	   exp->exp_connection->c_peer.nid,
