@@ -392,11 +392,11 @@ batchrq_handle(struct pscrpc_request *rq)
 		if (mq->bid == br->br_bid) {
 			if (!mp->rc) {
 				br->br_reply = iov.iov_base;
-				iov.iov_base = NULL;
 				iov.iov_len = br->br_replen = mq->len;
 				mp->rc = slrpc_bulkserver(rq,
 				    BULK_GET_SINK, br->br_rcv_ptl,
 				    &iov, 1);
+				iov.iov_base = NULL;
 			}
 
 			batchrq_sched_finish(br, mq->rc ? mq->rc :
