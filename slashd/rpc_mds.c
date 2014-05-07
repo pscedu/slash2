@@ -362,7 +362,6 @@ batchrq_send(struct batchrq *br)
 int
 batchrq_handle(struct pscrpc_request *rq)
 {
-	struct slm_wkdata_batchrq_cb *wk;
 	struct psc_listcache *lc;
 	struct srm_batch_req *mq;
 	struct srm_batch_rep *mp;
@@ -541,7 +540,6 @@ sl_resm_hldrop(struct sl_resm *resm)
 {
 	if (resm->resm_type == SLREST_MDS) {
 	} else {
-		struct slm_wkdata_batchrq_cb *wk;
 		struct psc_listcache *l;
 		struct batchrq *br;
 		sl_replica_t repl;
