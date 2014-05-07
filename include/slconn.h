@@ -244,9 +244,9 @@ struct sl_expcli_ops {
 #define SL_GET_RQ_STATUS(csvc, rq, mp, error)				\
 	do {								\
 		(mp) = NULL;						\
-		(error) = (rq)->rq_status;				\
+		(error) = (rq)->rq_repmsg->status;			\
 		if ((error) == 0)					\
-			(error) = (rq)->rq_repmsg->status;		\
+			(error) = (rq)->rq_status;			\
 		if ((error) == 0 && (rq)->rq_err)			\
 			(error) = SLERR_RPCIO;				\
 		if ((error) == 0)					\
