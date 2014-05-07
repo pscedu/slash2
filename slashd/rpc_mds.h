@@ -96,6 +96,7 @@ struct slm_exp_cli {
 };
 
 struct batchrq {
+	struct psc_spinlock		  br_lock;
 	uint64_t			  br_bid;		/* batch RPC ID */
 	struct psc_listentry		  br_lentry;
 	struct psc_listentry		  br_lentry_ml;
@@ -118,8 +119,9 @@ struct batchrq {
 	void				(*br_cbf)(struct batchrq *, int);
 };
 
-#define BATCHF_PNDG			(1 << 0)
-#define BATCHF_SENT			(1 << 1)
+#define BATCHF_PNDG			(1 << 0)	/* on pending list */
+#define BATCHF_SENT			(1 << 1)	/* sent in RPC */
+#define BATCHF_FINISHQ			(1 << 2)	/* on queue for finishing */
 
 #define batchrq_2_lc(br)		(&res2rpmi(br->br_res)->rpmi_batchrqs)
 

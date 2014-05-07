@@ -257,15 +257,16 @@ batchrq_finish(struct batchrq *br, int rc)
 {
 	struct psc_listcache *l;
 
-	br->br_cbf(br, rc);
+	lc_remove(&batchrqs_wait, br);
+	l = batchrq_2_lc(br);
+	lc_remove(l, br);
+
 	if (br->br_rq && (br->br_flags & BATCHF_SENT) == 0)
 		pscrpc_req_finished(br->br_rq);
 	if (br->br_csvc)
 		sl_csvc_decref(br->br_csvc);
 
-	lc_remove(&batchrqs_wait, br);
-	l = batchrq_2_lc(br);
-	lc_remove(l, br);
+	br->br_cbf(br, rc);
 
 	PSCFREE(br->br_buf);
 	PSCFREE(br->br_reply);
@@ -283,26 +284,41 @@ batchrq_handle_wkcb(void *p)
 	return (0);
 }
 
-int
-batchrq_send_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
+void
+batchrq_sched_finish(struct batchrq *br, int rc)
 {
-	struct batchrq *br = av->pointer_arg[0];
-	struct slm_wkdata_batchrq_cb *wk;
-	int rc;
+	spinlock(&br->br_lock);
+	if (br->br_flags & BATCHF_FINISHQ)
+		br = NULL;
+	else
+		br->br_flags |= BATCHF_FINISHQ;
+	freelock(&br->br_lock);
 
-	SL_GET_RQ_STATUS_TYPE(br->br_csvc, rq, struct srm_batch_rep,
-	    rc);
-	if (rc == 0)
-		slrpc_rep_in(br->br_csvc, rq);
-	/* nbrqset clears this for us */
-	br->br_rq = NULL;
-	if (rc) {
+	if (br) {
+		struct slm_wkdata_batchrq_cb *wk;
+
 		wk = pfl_workq_getitem(batchrq_handle_wkcb,
 		    struct slm_wkdata_batchrq_cb);
 		wk->br = br;
 		wk->rc = rc;
 		pfl_workq_putitem(wk);
 	}
+}
+
+int
+batchrq_send_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
+{
+	struct batchrq *br = av->pointer_arg[0];
+	int rc;
+
+	SL_GET_RQ_STATUS_TYPE(br->br_csvc, rq, struct srm_batch_rep,
+	    rc);
+	if (rc == 0)
+		slrpc_rep_in(br->br_csvc, rq);
+
+	/* nbrqset finishes the request for us */
+	br->br_rq = NULL;
+	batchrq_sched_finish(br, rc);
 	return (0);
 }
 
@@ -321,6 +337,7 @@ batchrq_send(struct batchrq *br)
 	br->br_flags |= BATCHF_PNDG | BATCHF_SENT;
 	lc_remove(ml, br);
 
+	/* XXX remove ml lock? */
 	lc_add(&batchrqs_wait, br);
 
 	rq = br->br_rq;
@@ -374,13 +391,8 @@ batchrq_handle(struct pscrpc_request *rq)
 				    &iov, 1);
 			}
 
-			wk = pfl_workq_getitem(batchrq_handle_wkcb,
-			    struct slm_wkdata_batchrq_cb);
-			wk->br = br;
-			wk->rc = mq->rc;
-			if (wk->rc == 0)
-				wk->rc = mp->rc;
-			pfl_workq_putitem(wk);
+			batchrq_sched_finish(br, mq->rc ? mq->rc :
+			    mp->rc);
 
 			iov.iov_base = NULL;
 
@@ -434,6 +446,7 @@ batchrq_add(struct sl_resource *r, struct slashrpc_cservice *csvc,
 	psc_dynarray_init(&br->br_scratch);
 	INIT_PSC_LISTENTRY(&br->br_lentry);
 	INIT_PSC_LISTENTRY(&br->br_lentry_ml);
+	INIT_SPINLOCK(&br->br_lock);
 	br->br_rq = rq;
 	br->br_rcv_ptl = rcvptl;
 	br->br_snd_ptl = sndptl;
@@ -540,13 +553,8 @@ sl_resm_hldrop(struct sl_resm *resm)
 		l = &res2rpmi(resm->resm_res)->rpmi_batchrqs;
 		LIST_CACHE_LOCK(l);
 		LIST_CACHE_FOREACH(br, l)
-			if (br->br_flags & BATCHF_PNDG) {
-				wk = pfl_workq_getitem(batchrq_handle_wkcb,
-				    struct slm_wkdata_batchrq_cb);
-				wk->br = br;
-				wk->rc = -ECONNRESET;
-				pfl_workq_putitem(wk);
-			}
+			if (br->br_flags & BATCHF_PNDG)
+				batchrq_sched_finish(br, -ECONNRESET);
 		LIST_CACHE_ULOCK(l);
 	}
 }
