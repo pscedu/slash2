@@ -320,7 +320,8 @@ batchrq_send_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 
 	/* nbrqset finishes the request for us */
 	br->br_rq = NULL;
-	batchrq_sched_finish(br, rc);
+	if (rc)
+		batchrq_sched_finish(br, rc);
 	return (0);
 }
 
@@ -361,6 +362,11 @@ batchrq_send(struct batchrq *br)
 	}
 }
 
+/*
+ * Handle a BATCHRP (i.e. a reply to a BATCHRQ) that arrives after a
+ * recipient of a BATCHRQ is done processing the contents and sends us a
+ * response indicating success/failure.
+ */
 int
 batchrq_handle(struct pscrpc_request *rq)
 {
@@ -386,6 +392,7 @@ batchrq_handle(struct pscrpc_request *rq)
 		if (mq->bid == br->br_bid) {
 			if (!mp->rc) {
 				br->br_reply = iov.iov_base;
+				iov.iov_base = NULL;
 				iov.iov_len = br->br_replen = mq->len;
 				mp->rc = slrpc_bulkserver(rq,
 				    BULK_GET_SINK, br->br_rcv_ptl,
@@ -394,8 +401,6 @@ batchrq_handle(struct pscrpc_request *rq)
 
 			batchrq_sched_finish(br, mq->rc ? mq->rc :
 			    mp->rc);
-
-			iov.iov_base = NULL;
 
 			break;
 		}
