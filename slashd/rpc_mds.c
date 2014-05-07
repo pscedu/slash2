@@ -287,14 +287,16 @@ batchrq_handle_wkcb(void *p)
 void
 batchrq_sched_finish(struct batchrq *br, int rc)
 {
+	int sched = 1;
+
 	spinlock(&br->br_lock);
 	if (br->br_flags & BATCHF_FINISHQ)
-		br = NULL;
+		sched = 0;
 	else
 		br->br_flags |= BATCHF_FINISHQ;
 	freelock(&br->br_lock);
 
-	if (br) {
+	if (sched) {
 		struct slm_wkdata_batchrq_cb *wk;
 
 		wk = pfl_workq_getitem(batchrq_handle_wkcb,
