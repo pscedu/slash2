@@ -45,26 +45,6 @@
 #include "slashd/ctl_mds.h"
 #include "slashd/repl_mds.h"
 
-int				 has_col;
-
-void
-setcolor(int col)
-{
-	if (!has_col || col == -1)
-		return;
-	putp(tparm(enter_bold_mode));
-	putp(tparm(set_a_foreground, col));
-}
-
-void
-uncolor(void)
-{
-	if (!has_col)
-		return;
-	putp(tparm(orig_pair));
-	putp(tparm(exit_attribute_mode));
-}
-
 void
 slmrmcthr_pr(const struct psc_ctlmsg_thread *pcst)
 {
@@ -215,16 +195,14 @@ slm_statfs_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    printf("%7s", "-");
 	printf(" ");
 
-	if (col)
-		setcolor(col);
+	setcolor(col);
 	if (b->sf_blocks)
-		psc_fmt_ratio(cbuf, b->sf_blocks - b->sf_bfree, 
+		psc_fmt_ratio(cbuf, b->sf_blocks - b->sf_bfree,
 		    b->sf_blocks - b->sf_bfree + b->sf_bavail);
 	else
 		strlcpy(cbuf, "-", sizeof(cbuf));
 	printf("%6s", cbuf);
-	if (col)
-		uncolor();
+	uncolor();
 	printf(" %-17s\n", b->sf_type);
 }
 
@@ -361,14 +339,8 @@ struct psc_ctlopt opts[] = {
 int
 main(int argc, char *argv[])
 {
-	int rc;
-
 	pfl_init();
 	progname = argv[0];
-
-	setupterm(NULL, STDOUT_FILENO, &rc);
-	start_color();
-	has_col = isatty(STDOUT_FILENO) && has_colors();
 
 	psc_ctlcli_main(SL_PATH_SLMCTLSOCK, argc, argv, opts,
 	    nitems(opts));

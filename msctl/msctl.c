@@ -61,7 +61,6 @@
 	    (recursive ? PFL_FILEWALKF_RECURSIVE : 0), NULL, (func), (arg))
 
 int				 verbose;
-int				 has_col;
 int				 recursive;
 
 const char			*progname;
@@ -672,24 +671,6 @@ fnstat_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 }
 
 void
-setcolor(int col)
-{
-	if (!has_col || col == -1)
-		return;
-	putp(tparm(enter_bold_mode));
-	putp(tparm(set_a_foreground, col));
-}
-
-void
-uncolor(void)
-{
-	if (!has_col)
-		return;
-	putp(tparm(orig_pair));
-	putp(tparm(exit_attribute_mode));
-}
-
-void
 fnstat_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
@@ -1066,16 +1047,10 @@ struct psc_ctlopt opts[] = {
 int
 main(int argc, char *argv[])
 {
-	int rc;
-
 	pfl_init();
 	progname = argv[0];
 	psc_hashtbl_init(&fnfidpairs, 0, struct fnfidpair, ffp_fid,
 	    ffp_hentry, 97, NULL, "fnfidpairs");
-
-	setupterm(NULL, STDOUT_FILENO, &rc);
-	start_color();
-	has_col = isatty(STDOUT_FILENO) && has_colors();
 
 	psc_ctlcli_main(SL_PATH_MSCTLSOCK, argc, argv, opts,
 	    nitems(opts));
