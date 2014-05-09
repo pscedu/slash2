@@ -198,22 +198,11 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	bmpc = bmap_2_bmpc(b);
 	/*
 	 * How many pages are needed to accommodate the request?
-	 * Determine and record whether RBW (read-before-write)
-	 * operations are needed on the first or last pages.
 	 */
-	if (roff & BMPC_BUFMASK && op == BIORQ_WRITE)
-		rbw = BIORQ_RBWFP;
-
 	npages = alen / BMPC_BUFSZ;
 
 	if (alen % BMPC_BUFSZ) {
 		npages++;
-		if (op == BIORQ_WRITE) {
-			if (npages == 1 && !rbw)
-				rbw = BIORQ_RBWFP;
-			else if (npages > 1)
-				rbw |= BIORQ_RBWLP;
-		}
 	}
 
 	psc_assert(npages <= BMPC_IOMAXBLKS);
@@ -358,39 +347,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 
 	maxpages = psc_dynarray_len(&r->biorq_pages);
 
-	if (op == BIORQ_READ || op == BIORQ_WRITE)
-		return;
-
-	/* Deal with RBW pages. */
-	for (i = 0; i < npages; i++) {
-		e = psc_dynarray_getpos(&r->biorq_pages, i);
-		BMPCE_LOCK(e);
-
-		if (biorq_is_my_bmpce(r, e)) {
-			uint32_t rfsz = fsz - bmap_foff(b);
-
-			/*
-			 * Increase the rdref cnt in preparation for any
-			 * RBW ops but only on new pages owned by this
-			 * page cache entry.
-			 */
-			if (!i && (rbw & BIORQ_RBWFP) &&
-			    (fsz > foff ||
-			     /* If file ends in this page then fetch */
-			     (rfsz > e->bmpce_off &&
-			      rfsz < e->bmpce_off + BMPC_BUFSZ))) {
-				    r->biorq_flags |= BIORQ_RBWFP;
-
-			} else if ((i == (npages - 1) &&
-				    (rbw & BIORQ_RBWLP)) &&
-				   (fsz > (foff + len) ||
-				    (rfsz > e->bmpce_off &&
-				     rfsz < e->bmpce_off + BMPC_BUFSZ))) {
-				r->biorq_flags |= BIORQ_RBWLP;
-			}
-		}
-		BMPCE_ULOCK(e);
-	}
 }
 
 /**
@@ -1648,27 +1604,6 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 	if (r->biorq_flags & BIORQ_READ)
 		rc = msl_launch_read_rpcs(r, &sched);
 
-	else if (r->biorq_flags & (BIORQ_RBWFP | BIORQ_RBWLP)) {
-		int i;
-
-		for (i = 0; i < 2; i++) {
-			if ((!i && !(r->biorq_flags & BIORQ_RBWFP)) ||
-			    (i && !(r->biorq_flags & BIORQ_RBWLP)))
-				continue;
-
-			e = psc_dynarray_getpos(&r->biorq_pages,
-			    i ? (npages - 1) : 0);
-
-			psc_assert(!(e->bmpce_flags & BMPCE_DATARDY));
-
-			OPSTAT_INCR(SLC_OPST_PREFETCH);
-			rc = msl_read_rpc_launch(r, i ? (npages - 1) : 0, 1);
-			if (rc)
-				break;
-			sched++;
-		}
-	}
-
 	if (sched)
 		BIORQ_SETATTR(r, BIORQ_SCHED);
 	if (rc)
@@ -1705,7 +1640,6 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 			BIORQ_CLEARATTR(r, BIORQ_SCHED);
 
 		if (!rc) {
-			BIORQ_CLEARATTR(r, BIORQ_RBWLP | BIORQ_RBWFP);
 			DEBUG_BIORQ(PLL_DIAG, r, "read cb complete");
 		}
 		BIORQ_ULOCK(r);

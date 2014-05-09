@@ -175,8 +175,8 @@ struct bmpc_ioreq {
 
 #define	BIORQ_READ			(1 <<  0)
 #define	BIORQ_WRITE			(1 <<  1)
-#define	BIORQ_RBWFP			(1 <<  2)	/* read before write - first page */
-#define	BIORQ_RBWLP			(1 <<  3)	/* read before write - last page */
+#define	BIORQ_OPEN1			(1 <<  2)
+#define	BIORQ_OPEN2			(1 <<  3)
 #define	BIORQ_SCHED			(1 <<  4)	/* guard race between threads and callback */
 #define	BIORQ_DIO			(1 <<  5)
 #define	BIORQ_FORCE_EXPIRE		(1 <<  6)
@@ -199,7 +199,7 @@ struct bmpc_ioreq {
 
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP, "biorq@%p flg=%#x:"			\
-	    "%s%s%s%s%s%s%s%s%s%s%s%s%s "				\
+	    "%s%s%s%s%s%s%s%s%s%s%s "					\
 	    "ref=%d off=%u len=%u "					\
 	    "retry=%u buf=%p rqi=%p "					\
 	    "sliod=%x np=%d "						\
@@ -207,8 +207,6 @@ struct bmpc_ioreq {
 	    (b), (b)->biorq_flags,					\
 	    (b)->biorq_flags & BIORQ_READ		? "r" : "",	\
 	    (b)->biorq_flags & BIORQ_WRITE		? "w" : "",	\
-	    (b)->biorq_flags & BIORQ_RBWFP		? "f" : "",	\
-	    (b)->biorq_flags & BIORQ_RBWLP		? "l" : "",	\
 	    (b)->biorq_flags & BIORQ_SCHED		? "s" : "",	\
 	    (b)->biorq_flags & BIORQ_DIO		? "d" : "",	\
 	    (b)->biorq_flags & BIORQ_FORCE_EXPIRE	? "x" : "",	\
