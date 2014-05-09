@@ -143,6 +143,9 @@ bmpce_lookup_locked(struct bmapc_memb *b, struct bmpc_ioreq *r,
 			e->bmpce_off = search.bmpce_off;
 
 			psc_atomic32_set(&e->bmpce_ref, 1);
+			e->bmpce_start = e->bmpce_off;
+			e->bmpce_len = 0;
+			e->bmpce_waitq = wq;
 			e->bmpce_owner = r;
 			e->bmpce_waitq = wq;
 
@@ -315,6 +318,36 @@ bmpc_biorq_seterr(struct bmpc_ioreq *r, int err)
 
 	/* Note that r->biorq_fsrqi may have been freed by now. */
 	mfh_seterr(r->biorq_mfh, err);
+}
+
+void
+bmpc_biorqs_flush(struct bmapc_memb *b)
+{
+	int expired;
+	struct bmpc_ioreq *r, *tmp;
+	struct bmap_pagecache *bmpc;
+
+	bmpc = bmap_2_bmpc(b);
+
+retry:
+	expired = 0;
+	BMAP_LOCK(b);
+	for (r = SPLAY_MIN(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs); r; 
+	    r = tmp) {
+
+		tmp = SPLAY_NEXT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
+		BIORQ_LOCK(r);
+		r->biorq_flags |= BIORQ_FORCE_EXPIRE;
+		BIORQ_ULOCK(r);
+		expired = 1;
+	}
+	BMAP_ULOCK(b);
+	if (expired) {
+		bmap_flushq_wake(BMAPFLSH_EXPIRE);
+		spinlock(&bmpc->bmpc_lock);
+		psc_waitq_waitrel_s(&bmpc->bmpc_waitq, &bmpc->bmpc_lock, 1);
+		goto retry;
+	}
 }
 
 void

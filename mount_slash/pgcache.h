@@ -62,6 +62,8 @@ struct bmap_pagecache_entry {
 	psc_atomic32_t		 bmpce_ref;	/* biorq and readahead refs	*/
 	uint32_t		 bmpce_flags;	/* BMPCE_* flag bits		*/
 	uint32_t		 bmpce_off;	/* filewise, bmap relative	*/
+	uint32_t		 bmpce_start;	/* region where data are valid  */
+	uint32_t		 bmpce_len;
 	psc_spinlock_t		 bmpce_lock;	/* serialize			*/
 	void			*bmpce_base;	/* base pointer from slb	*/
 	void			*bmpce_owner;
@@ -75,12 +77,13 @@ struct bmap_pagecache_entry {
 
 /* bmpce_flags */
 #define BMPCE_DATARDY		(1 <<  0)
-#define BMPCE_LRU		(1 <<  1)
-#define BMPCE_TOFREE		(1 <<  2)
-#define BMPCE_EIO		(1 <<  3)	/* I/O error */
-#define BMPCE_READA		(1 <<  4)	/* brought in by readahead logic */
-#define BMPCE_AIOWAIT		(1 <<  5)	/* wait on async read */
-#define BMPCE_DISCARD		(1 <<  6)	/* don't cache after I/O */
+#define BMPCE_FAULTING		(1 <<  1)
+#define BMPCE_LRU		(1 <<  2)
+#define BMPCE_TOFREE		(1 <<  3)
+#define BMPCE_EIO		(1 <<  4)	/* I/O error */
+#define BMPCE_READA		(1 <<  5)	/* brought in by readahead logic */
+#define BMPCE_AIOWAIT		(1 <<  6)	/* wait on async read */
+#define BMPCE_DISCARD		(1 <<  7)	/* don't cache after I/O */
 
 #define BMPCE_LOCK(b)		spinlock(&(b)->bmpce_lock)
 #define BMPCE_ULOCK(b)		freelock(&(b)->bmpce_lock)
@@ -244,6 +247,8 @@ struct bmap_pagecache {
 	struct bmap_pagecachetree	 bmpc_tree;		/* tree of entries */
 	struct timespec			 bmpc_oldest;		/* LRU's oldest item */
 	struct psc_lockedlist		 bmpc_lru;		/* cleancnt can be kept here  */
+	struct psc_waitq		 bmpc_waitq;
+	psc_spinlock_t			 bmpc_lock;
 	/*
 	 * List for new requests minus BIORQ_READ and BIORQ_DIO.  All
 	 * requests are sorted based on their starting offsets to
@@ -296,6 +301,7 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
 
 void	 bmpc_global_init(void);
 void	 bmpc_freeall_locked(struct bmap_pagecache *);
+void	 bmpc_biorqs_flush(struct bmapc_memb *);
 void	 bmpc_biorqs_destroy(struct bmapc_memb *, int);
 
 struct bmpc_ioreq *
@@ -337,6 +343,9 @@ bmpc_init(struct bmap_pagecache *bmpc)
 
 	pll_init(&bmpc->bmpc_pndg_biorqs, struct bmpc_ioreq,
 	    biorq_lentry, NULL);
+
+	psc_waitq_init(&bmpc->bmpc_waitq);
+	INIT_SPINLOCK(&bmpc->bmpc_lock);
 
 	SPLAY_INIT(&bmpc->bmpc_new_biorqs);
 

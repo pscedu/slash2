@@ -204,7 +204,7 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 		if (rc) {
 			bmap_flush_resched(r, rc);
 		} else {
-			BIORQ_CLEARATTR(r, BIORQ_SCHED);
+			//BIORQ_CLEARATTR(r, BIORQ_SCHED);
 			msl_biorq_destroy(r);
 		}
 	}
@@ -325,8 +325,10 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r)
 	 * Limit the amount of scanning done by this thread.  Move
 	 * pending biorqs out of the way.
 	 */
+#if 0
 	r->biorq_flags &= ~BIORQ_SPLAY;
 	PSC_SPLAY_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
+#endif
 	BIORQ_ULOCK(r);
 	BMAP_ULOCK(r->biorq_bmap);
 }
