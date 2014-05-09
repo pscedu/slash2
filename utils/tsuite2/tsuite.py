@@ -323,13 +323,27 @@ class TSuite(object):
     try:
       get_results = lambda ssh: (ssh.host, json.loads(ssh.run("cat "+result_path, quiet=True)["out"][0]))
       self.test_results = map(get_results, ssh_clients)
-      print self.test_results
+      for line in flatten(self.test_results):
+        print line
       log.debug("Retrieved results from tests.")
     except IndexError:
       log.critical("Tests did not return output!")
       self.shutdown()
 
     map(lambda ssh: ssh.close(), ssh_clients)
+
+
+  def flatten(l):
+    '''Flatten a arbitrarily nested lists and return the result as a single list. '''
+    ret = []
+    for i in l:
+        if isinstance(i, list) or isinstance(i, tuple):
+            ret.extend(flatten(i))
+        elif isinstance(i, dict):
+            [ret.extend(flatten(a)) for a in i.items()]
+        else:
+            ret.append(i)
+    return ret 
 
   def parse_slash2_conf(self):
     """Reads and parses slash2 conf for tokens.

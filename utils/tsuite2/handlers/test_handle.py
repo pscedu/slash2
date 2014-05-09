@@ -42,12 +42,12 @@ class TestHandler(object):
           "disk_stats": "df -hl"
         },
         "slmctl": {
-          "connections":"sudo {0} -sconnections",
-          "iostats":"sudo {0} -siostats"
+          "connections":"sudo {0} -S {1}/slashd.*.sock -sconnections",
+          "iostats":"sudo {0} -S {1}/slashd.*.sock -siostats"
         },
         "slictl": {
-          "connections": "sudo {0} -sconnections",
-          "iostats": "sudo {0} -siostats"
+          "connections": "sudo {0} -S {1}/sliod.*.sock -sconnections",
+          "iostats": "sudo {0} -S {1}/sliod.*.sock -siostats"
         }
     }
 
@@ -58,8 +58,8 @@ class TestHandler(object):
       obj_ops = dict(ops["all"].items() + ops[path.basename(ctl_path)].items())
 
     for op, cmd in obj_ops.items():
-      if "{0}" in cmd: #needs the path
-        cmd = cmd.format(ctl_path)
+      if "{0}" in cmd and "{1}" in cmd: #needs the paths
+        cmd = cmd.format(ctl_path, self.runtime["build_dirs"]["ctl"])
       report[op] = ssh.run(cmd, timeout=2)
 
     print "Status check completed for {0}".format(ssh.host)
@@ -113,7 +113,6 @@ class TestHandler(object):
     f = open(temp_file, "w")
     f.write(json.dumps(tset_results))
     f.close()
-
     os.system("sudo mv {0} {1}".format(temp_file, results_file))
 
   def cleanup(self):
