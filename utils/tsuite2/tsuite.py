@@ -299,12 +299,9 @@ class TSuite(object):
     for object_type in self.sl2objects.keys():
       for sl2object in self.sl2objects[object_type]:
         if "pid" in sl2object:
-          if object_type == "mds":
-            ctl_path = self.src_dirs['slmctl']
-          elif object_type == "ion":
-            ctl_path = self.src_dirs['slictl']
-          elif object_type == "client":
-            ctl_path = self.src_dirs['msctl']
+          if object_type == "mds":      ctl_path = self.src_dirs['slmctl']
+          elif object_type == "ion":    ctl_path = self.src_dirs['slictl']
+          elif object_type == "client": ctl_path = self.src_dirs['msctl']
 
           daemons.append((sl2object["host"], ctl_path , sl2object["pid"]))
 
@@ -320,19 +317,22 @@ class TSuite(object):
 
     result_path = path.join(self.build_dirs["mp"], "results.json")
 
+    self.test_results = {}
     try:
-      get_results = lambda ssh: (ssh.host, json.loads(ssh.run("cat "+result_path, quiet=True)["out"][0]))
-      self.test_results = map(get_results, ssh_clients)
-      for line in flatten(self.test_results):
-        print line
-      log.debug("Retrieved results from tests.")
-    except IndexError:
+      for ssh in ssh_clients:
+        results = json.loads(ssh.run("cat "+result_path, quiet=True)["out"][0])
+        for test in results:
+          if test["name"] not in self.test_results:
+            self.test_results[test["name"]] = []
+          self.test_results[test["name"]].append({"client": ssh.host, "result": test})
+      print self.test_results
+    except Exception:
       log.critical("Tests did not return output!")
       self.shutdown()
 
     map(lambda ssh: ssh.close(), ssh_clients)
 
-
+  #?
   def flatten(l):
     '''Flatten a arbitrarily nested lists and return the result as a single list. '''
     ret = []
@@ -343,7 +343,7 @@ class TSuite(object):
             [ret.extend(flatten(a)) for a in i.items()]
         else:
             ret.append(i)
-    return ret 
+    return ret
 
   def parse_slash2_conf(self):
     """Reads and parses slash2 conf for tokens.
@@ -502,7 +502,9 @@ class TSuite(object):
                 .format(new_conf_path))
             for sl2_obj in self.all_objects():
               try:
+                print "start", self.user, sl2_obj["host"]
                 ssh = SSH(self.user, sl2_obj["host"], "")
+                print "nop"
                 log.debug("Copying new config to {0}".format(sl2_obj["host"]))
                 try:
                   ssh.copy_file(new_conf_path, new_conf_path)

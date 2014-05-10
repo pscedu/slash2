@@ -1,4 +1,4 @@
-from flask import Flask, render_template, send_from_directory, session
+from flask import Flask, render_template, send_from_directory, request
 
 import json, datetime
 from bson.objectid import ObjectId
@@ -30,41 +30,35 @@ def return_json(f):
         return json.dumps(f(*args, **kwds), cls=MongoJsonEncoder)
     return wrapper
 
-@app.route("/api/tsets", methods=["GET"])
+@app.route("/api/tsets")
 @return_json
 def get_tsets():
     return list(api.get_tsets())
 
-@app.route("/l")
+@app.route("/api/tsets/<int:tsid>", methods=["GET"])
+@return_json
+def get_tset(tsid = None):
+    return api.get_tset(tsid)
+
+@app.route("/api/tsets/latest", methods=["GET"])
+@return_json
+def get_latest_tset():
+    return api.get_latest_tset()
+
+@app.route("/api/tsets/adj/<int:tsid>/<int:adj_tsets>", methods=["GET"])
+@return_json
+def get_adj_tsets(tsid = None, adj_tsets = None):
+    return api.get_neighboring_tests(tsid, adj_tsets)
+
+@app.route("/api/clear")
 def logout():
     session.clear()
-    return "ok"
+    return "Session cleared."
 
 @app.route("/")
 @app.route("/<int:tsid>")
 def dashboard(tsid = None):
-    if not tsid:
-        latest = api.get_latest_tset()
-        if latest:
-            session["active_tsid"] = latest["tsid"]
-        else:
-            session["active_tsid"] = None
-    else:
-        session["active_tsid"] = tsid
-
-    display_tset = None
-    adj_tests = []
-    print session["active_tsid"]
-    if session["active_tsid"]:
-        display_tset = api.get_tset_display(session["active_tsid"]),
-        adj_tests = api.get_neighboring_tests(session["active_tsid"], 10)
-
-    print display_tset
-    return render_template("new.html",
-        tsets = api.get_tsets(),
-        display_tset = display_tset[0],
-        adj_tests = adj_tests
-    )
+    return render_template("new.html", active_tsid=tsid)
 
 @app.route('/s/<path:filename>')
 def base_static(filename):

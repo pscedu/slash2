@@ -28,7 +28,7 @@ class TestHandler(object):
     """Generate general status report for all sl2 objects.
 
     Returns: {
-      "load": ..., "disk_stats": ... " 
+      "load": ..., "disk_stats": ... "
       ...
     }"""
 
@@ -90,22 +90,21 @@ class TestHandler(object):
 
   def run_tests(self):
     """Run all tests from the tests directory and print results"""
-    tset_results = {"tests": []}
+    tset_results = []
     for module in self.modules:
       test = {"name": module.__name__.split(".")[-1]}
       print "Running", test["name"]
-      test["setup"]=module.setup()
+
+      #TODO: do something with this
+      #test["setup"]=module.setup()
+      #test["cleanup"]=module.cleanup()
 
       start = time.time()
       test["operate"]=module.operate()
-      elapsed = time.time() - start
-      test["operate"]["elapsed"] = elapsed
-
-      test["cleanup"]=module.cleanup()
+      test["operate"]["elapsed"] = time.time() - start
 
       test["resource_usage"]=self.get_resource_usages()
-
-      tset_results["tests"].append(test)
+      tset_results.append(test)
 
     # user may not have write privileges to mp -- hacky mv
     results_file = path.join(self.cwd, "results.json")
@@ -117,7 +116,7 @@ class TestHandler(object):
 
   def cleanup(self):
     pass
-    # TODO: we don't have permissions to delete these.. 
+    # TODO: we don't have permissions to delete these..
     #shutil.rmtree(self.modules_folder)
 
   def load_all_modules_from_dir(self, dirname):

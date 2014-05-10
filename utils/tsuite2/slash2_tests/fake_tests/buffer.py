@@ -1,9 +1,12 @@
+import time
+
 def setup():
   print "setting up 1"
   return {"pass": True, "error": None}
 
 def operate():
   print "running 1"
+  time.sleep(1.2)
   return {"pass": True, "error": None}
 
 def cleanup():
