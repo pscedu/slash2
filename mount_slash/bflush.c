@@ -125,8 +125,23 @@ bmap_free_all_locked(struct fidc_membh *f)
 	bmap_flushq_wake(BMAPFLSH_TRUNCATE);
 }
 
+/*
+ * Determine if an I/O operation should be retried after successive
+ * RPC/communication failures.
+ *
+ * We want to check:
+ *	- administration/control/configuration policy (e.g. "5
+ *	  retries").
+ *	- user process/environment/file descriptor policy
+ *	- user process interrupt
+ *
+ * XXX this should likely be merged with slc_rmc_retry_pfcc().
+ * XXX mfh_retries access and modification is racy here, e.g. if the
+ *	process has multiple threads or forks.
+ */
 int
-msl_fd_should_retry(struct msl_fhent *mfh, struct pscfs_req *pfr, int rc)
+msl_fd_should_retry(struct msl_fhent *mfh, struct pscfs_req *pfr,
+    int rc)
 {
 	int retry = 1;
 
@@ -136,17 +151,32 @@ msl_fd_should_retry(struct msl_fhent *mfh, struct pscfs_req *pfr, int rc)
 	    mfh->mfh_oflags & O_NONBLOCK);
 
 	/* test for retryable error codes */
-	if (rc != -ENOTCONN && rc != -PFLERR_KEYEXPIRED)
+	switch (rc) {
+	case -ENOTCONN:
+	case -PFLERR_KEYEXPIRED:
+	case -SLERR_ION_OFFLINE:
+//	case -ECONNABORTED:
+//	case -ECONNREFUSED:
+//	case -ECONNRESET:
+//	case -EHOSTDOWN:
+//	case -EHOSTUNREACH:
+//	case -EIO:
+//	case -ENETDOWN:
+//	case -ENETRESET:
+//	case -ENETUNREACH:
+#ifdef ENONET
+//	case -ENONET:
+#endif
+//	case -ETIMEDOUT:
+		break;
+	default:
 		retry = 0;
-	else if (mfh->mfh_oflags & O_NONBLOCK)
+		break;
+	}
+	if (mfh->mfh_oflags & O_NONBLOCK)
 		retry = 0;
 	else if (++mfh->mfh_retries >= psc_atomic32_read(&max_nretries))
 		retry = 0;
-
-	/*
-	 * Is mfh racy?  process has multiple threads??  We might want to
-	 * make decision based on individual request instead.
-	 */
 
 	if (retry) {
 		if (mfh->mfh_retries < 10)
