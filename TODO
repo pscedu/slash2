@@ -498,6 +498,7 @@ reimport
 - verify backfs on sense7 md5deep between bsd and linux
 - change notion of mtime clocks in readdir to deal with time
   synchronization problems in a more robust fashion
+- increment directory fcmh generation on modification
 - changes made by upsch dont get reverted in sqlite because they aren't
   written to disk so don't go through slm_repl_upd_write
 - when write IO is done in mount_slash, we should set BREPLST_VALID
