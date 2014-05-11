@@ -154,11 +154,11 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		f->fcmh_sstb.sst_utimgen = mq->utimgen;
 	FCMH_ULOCK(f);
 
-	rc = bmap_get(f, bmapno, rw, &bmap);
+	rc = mp->rc = bmap_get(f, bmapno, rw, &bmap);
 	if (rc) {
-		mp->rc = rc;
-		psclog_errorx("failed to load bmap %u", bmapno);
-		goto out;
+		DEBUG_FCMH(PLL_ERROR, f, "failed to load bmap %u",
+		    bmapno);
+		PFL_GOTOERR(out, rc);
 	}
 
 	DEBUG_FCMH(PLL_DIAG, f, "bmapno=%u size=%u off=%u rw=%s "
@@ -211,10 +211,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		if (rv) {
 			if (rv == -SLERR_AIOWAIT)
 				needaio = 1;
-			else {
-				rc = rv;
-				goto out;
-			}
+			else
+				PFL_GOTOERR(out, rc = mp->rc = rv);
 		}
 
 		/*
@@ -265,7 +263,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 				SLVR_ULOCK(slvr[i]);
 
 				DEBUG_SLVR(PLL_INFO, slvr[i], "aio wait");
-				mp->rc = SLERR_AIOWAIT;
+				rc = mp->rc = -SLERR_AIOWAIT;
 				pscrpc_msg_add_flags(rq->rq_repmsg,
 				    MSG_ABORT_BULK);
 				goto aio_out;
@@ -280,13 +278,13 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 * We must return an error code to the RPC itself if we don't
 	 * call slrpc_bulkserver() or slrpc_bulkclient() as expected.
 	 */
-	rc = slrpc_bulkserver(rq,
+	rc = mp->rc = slrpc_bulkserver(rq,
 	    (rw == SL_WRITE ? BULK_GET_SINK : BULK_PUT_SOURCE),
 	    SRIC_BULK_PORTAL, iovs, nslvrs);
 	if (rc) {
 		psclog_warnx("bulkserver error on %s, rc = %d",
 		    rw == SL_WRITE ? "write" : "read", rc);
-		goto out;
+		PFL_GOTOERR(out, rc);
 	}
 
 	/*
@@ -309,8 +307,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			if (rv) {
 				psc_assert(rv != -SLERR_AIOWAIT);
 				psclog_warnx("write error rc=%zd", rv);
-				rc = rv;
-				goto out;
+				PFL_GOTOERR(out, mp->rc = rv);
 			}
 
 			/* Only the first sliver may use a blk offset. */
