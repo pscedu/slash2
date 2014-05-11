@@ -629,13 +629,14 @@ csvc_cli_cmp(const void *a, const void *b)
  * @flags: CSVCF_* flags the connection should take on, only used for
  *	csvc initialization.
  * @exp: RPC peer export.  This or @peernid is required.
- * @peernid: RPC peer network address (NID).  This or @exp is required.
+ * @peernids: RPC peer network address(es) (NID).  This or @exp is
+ *	required.
  * @rqptl: request portal ID.
  * @rpptl: reply portal ID.
  * @magic: connection magic bits.
  * @version: version of application protocol.
  * @peertype: peer type.
- * @arg: user data.
+ * @mw: multiwait structure, used in non-blocking acquisitions.
  *
  * If we acquire a connection successfully, this function will return
  * the same slashrpc_cservice struct pointer as referred to by its
