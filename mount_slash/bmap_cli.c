@@ -949,7 +949,7 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive)
 				return (csvc);
 			}
 			if (rc == -1)
-				hasvalid = 0;
+				hasvalid = 1;
 		}
 
 		hasdataflag = !!(bmap_2_sbd(b)->sbd_flags &
