@@ -125,7 +125,7 @@ bmap_lookup_cache(struct fidc_membh *f, sl_bmapno_t n,
 	lb.bcm_bmapno = n;
 
  restart:
-	if (sl_bmap_ops.bmo_free)
+	if (sl_bmap_ops.bmo_free) // xxx rename to 'reap'
 		sl_bmap_ops.bmo_free();
 
 	FCMH_LOCK(f);
