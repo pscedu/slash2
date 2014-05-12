@@ -61,7 +61,7 @@ struct msl_fsrqinfo;
 struct bmap_pagecache_entry {
 	psc_atomic32_t		 bmpce_ref;	/* biorq and readahead refs	*/
 	uint32_t		 bmpce_flags;	/* BMPCE_* flag bits		*/
-	uint32_t		 bmpce_off;	/* filewise, bmap relative	*/
+	uint32_t		 bmpce_off;	/* relative to inside bmap	*/
 	uint32_t		 bmpce_start;	/* region where data are valid  */
 	uint32_t		 bmpce_len;
 	psc_spinlock_t		 bmpce_lock;	/* serialize			*/
