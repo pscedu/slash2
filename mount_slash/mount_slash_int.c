@@ -169,7 +169,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	struct bmap_pagecache_entry *e;
 	struct bmap_pagecache *bmpc;
 	struct bmpc_ioreq *r;
-	uint64_t foff = roff + bmap_foff(b); /* filewise offset */
 	uint64_t fsz = fcmh_getsize(mfh->mfh_fcmh);
 	uint32_t aoff = (roff & ~BMPC_BUFMASK); /* aligned, relative offset */
 	uint32_t alen = len + (roff & BMPC_BUFMASK);
