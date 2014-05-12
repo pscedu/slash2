@@ -191,7 +191,7 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 		 * bother with further retry attempts.
 		 */
 		if (rc == -SLERR_ION_OFFLINE)
-			bmap_2_bci(b)->bci_nreassigns = SLERR_ION_OFFLINE;
+			bmap_2_bci(b)->bci_nreassigns = SLERR_ION_OFFLINE; /* XXX wtf is this */
 		OPSTAT_INCR(SLC_OPST_BMAP_REASSIGN_FAIL);
 	} else {
 		memcpy(&bmap_2_bci(b)->bci_sbd, &mp->sbd,
@@ -908,7 +908,7 @@ msbmaprlsthr_main(struct psc_thread *thr)
 struct slashrpc_cservice *
 msl_bmap_to_csvc(struct bmap *b, int exclusive)
 {
-	int i, j, locked, rc, allzeroes, hasdata;
+	int i, j, locked, rc, allvalid, hasdataflag;
 	struct slashrpc_cservice *csvc;
 	struct fcmh_cli_info *fci;
 	struct psc_multiwait *mw;
@@ -940,7 +940,7 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive)
 		psc_multiwait_reset(mw);
 		psc_multiwait_entercritsect(mw);
 
-		allzeroes = 1;
+		hasvalid = 0;
 		for (i = 0; i < fci->fci_inode.nrepls; i++) {
 			rc = msl_try_get_replica_res(b,
 			    fci->fcif_idxmap[i], j, &csvc);
@@ -949,19 +949,19 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive)
 				return (csvc);
 			}
 			if (rc == -1)
-				allzeroes = 0;
+				hasvalid = 0;
 		}
 
-		hasdata = !!(bmap_2_sbd(b)->sbd_flags &
+		hasdataflag = !!(bmap_2_sbd(b)->sbd_flags &
 		    SRM_LEASEBMAPF_DATA);
 		if (psc_dynarray_len(&mw->mw_conds))
-			psc_assert(!allzeroes && hasdata);
+			psc_assert(hasvalid && hasdataflag);
 		else {
 			/*
 			 * Residency scan revealed no VALID replicas.
 			 * I.e. a hole in the file.
 			 */
-			psc_assert(allzeroes && !hasdata);
+			//psc_assert(!hasvalid && !hasdataflag);
 			continue;
 		}
 
