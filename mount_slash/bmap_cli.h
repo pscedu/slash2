@@ -32,6 +32,7 @@
 #include "pgcache.h"
 #include "slashrpc.h"
 
+/* number of bmaps to allow before reaper kicks into gear */
 #define	BMAP_CACHE_MAX			1024
 
 /* number of bmap flush threads */
