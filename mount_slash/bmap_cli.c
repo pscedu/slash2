@@ -961,7 +961,7 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive)
 			 * Residency scan revealed no VALID replicas.
 			 * I.e. a hole in the file.
 			 */
-			//psc_assert(!hasvalid && !hasdataflag);
+			psc_assert(!hasvalid && !hasdataflag);
 			continue;
 		}
 
