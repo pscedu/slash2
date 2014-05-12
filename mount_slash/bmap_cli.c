@@ -908,7 +908,7 @@ msbmaprlsthr_main(struct psc_thread *thr)
 struct slashrpc_cservice *
 msl_bmap_to_csvc(struct bmap *b, int exclusive)
 {
-	int i, j, locked, rc, allvalid, hasdataflag;
+	int i, j, locked, rc, hasvalid, hasdataflag;
 	struct slashrpc_cservice *csvc;
 	struct fcmh_cli_info *fci;
 	struct psc_multiwait *mw;
