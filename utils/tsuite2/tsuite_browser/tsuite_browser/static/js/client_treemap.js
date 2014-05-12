@@ -84,7 +84,7 @@ var test_data ={
     "resource_usage": {},
     "name": "write",
     "operate": {
-     "elapsed": 1.201253890991211,
+     "elapsed": 1.501253890991211,
      "error": null,
      "pass": true
     }
@@ -96,32 +96,16 @@ var test_data ={
     "resource_usage": {},
     "name": "write",
     "operate": {
-     "elapsed": 1.201253890991211,
+     "elapsed": 0.901253890991211,
      "error": null,
-     "pass": true
+     "pass": false
     }
    }
   }
  ]
 }
  
-google.load("visualization", "1", {packages:["treemap"]});
-
-function get_test_size(results) {
-  var sum = _.reduce(results, function(memo, next) {
-    return memo + next.result.operate.elapsed;
-  }, 0);
-
-  return sum;
-}
-
-function get_test_color(results) {
-  var sum = _.reduce(results, function(memo, next) {
-    return memo + next.result.operate.elapsed;
-  }, 0);
-
-  return sum;
-}
+google.load("visualization", "1", {packages:["treemap", "table"]});
 
 function get_average_elapsed(results) {
   return _.reduce(results, function(memo, next) {
@@ -129,37 +113,49 @@ function get_average_elapsed(results) {
   }, 0) / results.length;
 }
 
-$(function() {
+function render_treemap(active_test) {
 
   var data = [
     ['Test', 'Parent', 'Time (size)', 'Time (color)'],
-    ['Tests', null, 0, 0]
+    ["Clients", null, 0, 0]
   ];
   
-  _.map(test_data, function(results, test_name) {
-    var size = get_test_size(results);
-    var color = get_test_color(results);
-    
-    data.push([test_name, "Tests", size, color]);
-
-    _.each(results, function(test) {
-      console.log(test);
-      data.push([test_name+"@"+test.client, test_name, test.result.operate.elapsed, test.result.operate.elapsed]);
-    });
+  _.each(test_data[active_test], function(test) {
+    var size = test.result.operate.elapsed;
+    var color = test.result.operate.pass ? 0 : 100;
+    data.push([test.client, "Clients", size, color]);
   });
   
   // Create and draw the visualization.
-  var tree = new google.visualization.TreeMap($("#client_treemap")[0]);
+  var tree = new google.visualization.TreeMap($("#active_treemap")[0]);
   tree.draw(google.visualization.arrayToDataTable(data), {
-    minColor: '#f00',
-    midColor: '#ddd',
-    maxColor: '#0d0',
+    minColor: '#D3D3D3',
+    midColor: '#D3D3D3',
+    maxColor: '#FF0000',
     headerHeight: 15,
     fontColor: 'black',
-    title: "Test Results",
+    title: active_test + " Results",
     showScale: false,
     useWeightedAverageForAggregation: true
   });
+}
 
+function render_table() {
+  var data = new google.visualization.DataTable();
+          data.addColumn('string', 'Name');
+          data.addColumn('number', 'Salary');
+          data.addColumn('boolean', 'Full Time Employee');
+          data.addRows([
+            ['Mike',  {v: 10000, f: '$10,000'}, true],
+            ['Jim',   {v:8000,   f: '$8,000'},  false],
+            ['Alice', {v: 12500, f: '$12,500'}, true],
+            ['Bob',   {v: 7000,  f: '$7,000'},  true]
+          ]);
+  var table = new google.visualization.Table($("#test_table")[0]);
+  table.draw(data, {});
+}
 
+$(function() {
+  render_treemap("write");
+  render_table();
 });
