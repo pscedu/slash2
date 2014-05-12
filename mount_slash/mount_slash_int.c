@@ -164,7 +164,7 @@ __static void
 msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
     int rqnum, uint32_t roff, uint32_t len, int op)
 {
-	int i, npages = 0, rbw = 0, maxpages;
+	int i, npages = 0, maxpages;
 	struct msl_fhent *mfh = q->mfsrq_mfh;
 	struct bmap_pagecache_entry *e;
 	struct bmap_pagecache *bmpc;
