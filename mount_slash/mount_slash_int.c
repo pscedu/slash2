@@ -145,7 +145,7 @@ msl_biorq_page_valid(struct bmpc_ioreq *r, int idx)
 		if (e->bmpce_flags & BMPCE_DATARDY)
 			return 1;
 
-		if (toff >= e->bmpce_start && 
+		if (toff >= e->bmpce_start &&
 		    toff + nbytes <= e->bmpce_start + e->bmpce_len) {
 			OPSTAT_INCR(SLC_OPST_READ_PART_VALID);
 			return 1;
@@ -1548,7 +1548,7 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r, int *psched)
 
 	if (needflush)
 		bmpc_biorqs_flush(r->biorq_bmap);
-		
+
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 		if (!psc_dynarray_exists(&pages, e)) {
 			if (j >= 0)  {
@@ -1758,27 +1758,26 @@ msl_pages_copyin(struct bmpc_ioreq *r)
 		memcpy(dest, src, nbytes);
 
 		BMPCE_LOCK(e);
-		
+
 		if (toff == e->bmpce_off && nbytes == BMPC_BUFSZ)
-		    e->bmpce_flags |= BMPCE_DATARDY;
+			e->bmpce_flags |= BMPCE_DATARDY;
 		else if (e->bmpce_len == 0) {
 			e->bmpce_start = toff;
 			e->bmpce_len = nbytes;
-		} else {
-			if (toff + nbytes >= e->bmpce_start ||
-			    e->bmpce_start + e->bmpce_len >= toff) {
-				
-				uint32_t start, end;
+		} else if (toff + nbytes >= e->bmpce_start ||
+		    e->bmpce_start + e->bmpce_len >= toff) {
 
-				start = toff < e->bmpce_start ? toff : e->bmpce_start;
-				end = (toff + nbytes) > (e->bmpce_start + e->bmpce_len) ?
-					toff + nbytes : e->bmpce_start + e->bmpce_len;
-				e->bmpce_start = start;
-				e->bmpce_len = start - end;
-			}
+			uint32_t start, end;
+
+			start = toff < e->bmpce_start ? toff : e->bmpce_start;
+			end = (toff + nbytes) > (e->bmpce_start + e->bmpce_len) ?
+			    toff + nbytes : e->bmpce_start + e->bmpce_len;
+			e->bmpce_start = start;
+			e->bmpce_len = start - end;
 		}
 
-		DEBUG_BMPCE(PLL_INFO, e, "tsize=%u nbytes=%u toff=%u, start=%u, len=%u",
+		DEBUG_BMPCE(PLL_DIAG, e,
+		    "tsize=%u nbytes=%u toff=%u, start=%u, len=%u",
 		    tsize, nbytes, toff, e->bmpce_start, e->bmpce_len);
 
 		BMPCE_WAKE(e);
