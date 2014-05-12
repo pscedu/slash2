@@ -2136,6 +2136,9 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			bmap_op_done_type(r->biorq_bmap, BMAP_OPCNT_BIORQ);
 			r->biorq_bmap = b;
 		} else {
+			/*
+			 * roff - (i * SLASH_BMAP_SIZE) should be zero if i == 1.
+			 */
 			msl_biorq_build(q, b, bufp, i,
 			    roff - (i * SLASH_BMAP_SIZE), tlen,
 			    (rw == SL_READ) ? BIORQ_READ : BIORQ_WRITE);
