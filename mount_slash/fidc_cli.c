@@ -82,13 +82,12 @@ slc_fcmh_load_inode(struct fidc_membh *f, struct srt_inode *ino)
 	fci = fcmh_2_fci(f);
 
 	locked = FCMH_RLOCK(f);
-	if ((f->fcmh_flags & FCMH_CLI_HAVEINODE) == 0) {
-		fci->fci_inode = *ino;
-		for (i = 0; i < fci->fci_inode.nrepls; i++)
-			fci->fcif_idxmap[i] = i;
-		fci->fcif_mapstircnt = MAPSTIR_THRESH;
-		f->fcmh_flags |= FCMH_CLI_HAVEINODE;
-	}
+//	if ((f->fcmh_flags & FCMH_CLI_HAVEINODE) == 0) {
+	fci->fci_inode = *ino;
+	for (i = 0; i < fci->fci_inode.nrepls; i++)
+		fci->fcif_idxmap[i] = i;
+	fci->fcif_mapstircnt = MAPSTIR_THRESH;
+	f->fcmh_flags |= FCMH_CLI_HAVEINODE;
 	FCMH_URLOCK(f, locked);
 }
 
