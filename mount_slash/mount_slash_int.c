@@ -472,8 +472,6 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 	psc_assert(!(r->biorq_flags & BIORQ_DESTROY));
 	r->biorq_flags |= BIORQ_DESTROY;
 
-	//psc_assert(!(r->biorq_flags & BIORQ_SCHED));
-
 #if FHENT_EARLY_RELEASE
 	if (r->biorq_flags & BIORQ_NOFHENT)
 		fhent = 0;

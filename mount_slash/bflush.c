@@ -234,7 +234,6 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 		if (rc) {
 			bmap_flush_resched(r, rc);
 		} else {
-			//BIORQ_CLEARATTR(r, BIORQ_SCHED);
 			msl_biorq_destroy(r);
 		}
 	}
