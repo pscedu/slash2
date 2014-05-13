@@ -350,14 +350,6 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r)
 	    "("PSCPRI_TIMESPEC")", old ? "expired: -" : "",
 	    PSCPRI_TIMESPEC_ARGS(&t));
 
-	/*
-	 * Limit the amount of scanning done by this thread.  Move
-	 * pending biorqs out of the way.
-	 */
-#if 0
-	r->biorq_flags &= ~BIORQ_SPLAY;
-	PSC_SPLAY_XREMOVE(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
-#endif
 	BIORQ_ULOCK(r);
 	BMAP_ULOCK(r->biorq_bmap);
 }
