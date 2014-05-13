@@ -593,7 +593,8 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw,
 
 	msl_bmap_reap_init(bmap, &mp->sbd);
 
-	slc_fcmh_load_inode(f, &mp->ino);
+	if (mq->flags & SRM_LEASEBMAPF_GETINODE)
+		slc_fcmh_load_inode(f, &mp->ino);
 
 	DEBUG_BMAP(PLL_DIAG, bmap, "rw=%d repls=%d ios=%#x seq=%"PRId64,
 	    rw, mp->ino.nrepls, mp->sbd.sbd_ios, mp->sbd.sbd_seq);
@@ -902,6 +903,7 @@ msbmaprlsthr_main(struct psc_thread *thr)
  * @exclusive: whether to return connections to the specific ION the MDS
  *	told us to use instead of any ION in any IOS whose state is
  *	marked VALID for this bmap.
+ *
  * XXX: If the bmap is a read-only then any replica may be accessed (so
  *	long as it is recent).
  */
@@ -959,9 +961,12 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive)
 		else {
 			/*
 			 * Residency scan revealed no VALID replicas.
-			 * I.e. a hole in the file.
+			 * I.e. a hole in the file.  Try the next
+			 * iteration which will return the first IOS
+			 * online since any will suffice.
 			 */
-			psc_assert(!hasvalid && !hasdataflag);
+//			if (!exclusive)
+//				psc_assert(!hasvalid && !hasdataflag);
 			continue;
 		}
 
