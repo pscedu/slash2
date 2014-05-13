@@ -503,6 +503,8 @@ reimport
   written to disk so don't go through slm_repl_upd_write
 - when write IO is done in mount_slash, we should set BREPLST_VALID
   if it isn't
+- we should reload the inode table from MDS in CLI always in GETBMAP
+  in case a new bmap changed the reptbl
 
 - add crcalg=old option
 - art's md5deep failures
