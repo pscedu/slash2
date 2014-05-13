@@ -2008,7 +2008,7 @@ msl_update_attributes(struct msl_fsrqinfo *q)
  */
 ssize_t
 msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
-    const size_t size, const off_t off, enum rw rw)
+    size_t size, const off_t off, enum rw rw)
 {
 	size_t start, end, tlen, tsize;
 	struct bmap_pagecache_entry *e;
@@ -2027,8 +2027,25 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	DEBUG_FCMH(PLL_DIAG, f, "buf=%p size=%zu off=%"PRId64" rw=%s",
 	    buf, size, off, (rw == SL_READ) ? "read" : "write");
 
-	if (rw == SL_READ)
+	FCMH_LOCK(f);
+	/*
+	 * All I/O's block here for pending truncate requests.
+	 *
+	 * XXX there is a race here.  We should set CLI_TRUNC ourselves
+	 * until we are done setting up the I/O to block intervening
+	 * truncates.
+	 */
+	fcmh_wait_locked(f, f->fcmh_flags & FCMH_CLI_TRUNC);
+	fsz = fcmh_getsize(f);
+
+	FCMH_ULOCK(f);
+
+	if (rw == SL_READ) {
+		/* Catch read ops which extend beyond EOF. */
+		if (rw == SL_READ && size + (uint64_t)off > fsz)
+			size = fsz - off;
 		msl_setra(mfh, size, off);
+	}
 
 	/*
 	 * Get the start and end block regions from the input
@@ -2047,37 +2064,13 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 * Initialize some state in the pfr to help with aio requests.
 	 */
 	q = msl_fsrqinfo_init(pfr, mfh, buf, size, off, rw);
+	if (rw == SL_READ && off >= (off_t)fsz)
+		PFL_GOTOERR(out, rc = 0);
 
  restart:
+
 	rc = 0;
 	tsize = size;
-
-	FCMH_LOCK(f);
-	/*
-	 * All I/O's block here for pending truncate requests.
-	 *
-	 * XXX there is a race here.  We should set CLI_TRUNC ourselves
-	 * until we are done setting up the I/O to block intervening
-	 * truncates.
-	 */
-	fcmh_wait_locked(f, f->fcmh_flags & FCMH_CLI_TRUNC);
-
-	fsz = fcmh_getsize(f);
-
-	if (rw == SL_READ && off >= (off_t)fsz) {
-		FCMH_ULOCK(f);
-		PFL_GOTOERR(out, 0);
-	}
-
-#if 0
-	/* XXX: we already calculated n above, so this can cause !tsize assert later */
-
-	/* Catch read ops which extend beyond EOF. */
-	if (rw == SL_READ && tsize + (uint64_t)off > fsz)
-		tsize = fsz - off;
-#endif
-
-	FCMH_ULOCK(f);
 
 	/* Relativize the length and offset (roff is not aligned). */
 	roff = off - (start * SLASH_BMAP_SIZE);
