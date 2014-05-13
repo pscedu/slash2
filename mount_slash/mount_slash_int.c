@@ -907,8 +907,6 @@ msl_read_cb(struct pscrpc_request *rq, int rc,
 	DYNARRAY_FOREACH(e, i, a)
 		msl_bmpce_rpc_done(e, rc);
 
-	BIORQ_CLEARATTR(r, BIORQ_SCHED);
-
 	if (rc) {
 		if (rc == -PFLERR_KEYEXPIRED) {
 			BMAP_LOCK(b);
@@ -1598,13 +1596,11 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 	 * cache entries owned by this request as determined by
 	 * biorq_is_my_bmpce().
 	 */
-	if (r->biorq_flags & BIORQ_READ)
+	if (r->biorq_flags & BIORQ_READ) {
 		rc = msl_launch_read_rpcs(r, &sched);
-
-	if (sched)
-		BIORQ_SETATTR(r, BIORQ_SCHED);
-	if (rc)
-		goto out;
+		if (rc)
+			goto out;
+	}
 
 	/*
 	 * Wait for all read activities (include RBW) associated with the
@@ -1628,13 +1624,6 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 		 * now, the following lines will be moved here.
 		 */
 		BIORQ_LOCK(r);
-
-		/*
-		 * XXX, rc seems to be the last rq_status of a bunch of
-		 * requests.
-		 */
-		if (rc != -SLERR_AIOWAIT)
-			BIORQ_CLEARATTR(r, BIORQ_SCHED);
 
 		if (!rc) {
 			DEBUG_BIORQ(PLL_DIAG, r, "read cb complete");
