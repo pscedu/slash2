@@ -2110,13 +2110,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		r = q->mfsrq_biorq[i];
 		if (r) {
 			r->biorq_retries++;
-			/*
-			 * On retry, clear EIO and DATARDY flag.
-			 * Waiters should not see the transition because
-			 * no wakeup is made until the biorq is done.
-			 * We lose a bit by clearing DATARDY, but it is
-			 * simpler.
-			 */
 			DYNARRAY_FOREACH(e, j, &r->biorq_pages) {
 				BMPCE_LOCK(e);
 				if (e->bmpce_flags & BMPCE_EIO) {
