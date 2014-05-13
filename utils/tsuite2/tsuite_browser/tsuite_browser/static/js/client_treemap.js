@@ -113,6 +113,14 @@ function get_average_elapsed(results) {
   }, 0) / results.length;
 }
 
+function get_pass_fail(results) {
+  var pass = _.reduce(results, function(memo, next) {
+    var passInt = next.result.operate.pass ? 1 : 0;
+    return memo + passInt;
+  },0);
+  return [pass, results.length];
+}
+
 function render_treemap(active_test) {
 
   var data = [
@@ -141,21 +149,27 @@ function render_treemap(active_test) {
 }
 
 function render_table() {
-  var data = new google.visualization.DataTable();
-          data.addColumn('string', 'Name');
-          data.addColumn('number', 'Salary');
-          data.addColumn('boolean', 'Full Time Employee');
-          data.addRows([
-            ['Mike',  {v: 10000, f: '$10,000'}, true],
-            ['Jim',   {v:8000,   f: '$8,000'},  false],
-            ['Alice', {v: 12500, f: '$12,500'}, true],
-            ['Bob',   {v: 7000,  f: '$7,000'},  true]
-          ]);
-  var table = new google.visualization.Table($("#test_table")[0]);
-  table.draw(data, {});
+  var items = [];
+  _.map(test_data, function(results, test) {
+    var pass_fails = get_pass_fail(results);
+    items.push({
+      test: test,
+      passed: pass_fails[0],
+      failed: pass_fails[1],
+      time: get_average_elapsed(results),
+      change: 0
+    });
+  });
+  var template = $("#table_template").html();
+  $("#test_table").html(_.template(template,{items:items}));
+  
+  $(".tree_link").click(function (){
+    render_treemap($(this).text());
+  });
 }
 
 $(function() {
-  render_treemap("write");
+  var first_test = _.first(_.keys(test_data));
+  render_treemap(first_test);
   render_table();
 });
