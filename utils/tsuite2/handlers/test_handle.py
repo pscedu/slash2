@@ -22,49 +22,60 @@ class TestHandler(object):
 
   def query_ctl_rusage(self, ssh, ctl_path):
      output = ssh.run("sudo {0} -S {1}/*.sock -s rusage".format(ctl_path, self.runtime["build_dirs"]["ctl"])) #use the ctl daemons' resource usage
+     log = open("/home/beckert/blah", "w")
+     log.write(output)
+     log.close()
      return {"output":output}
 
-  def check_status(self, ssh, ctl_path):
-    """Generate general status report for all sl2 objects.
-
-    Returns: {
-      "load": ..., "disk_stats": ... "
-      ...
-    }"""
+  def check_status(self, ssh, ctl_path, pid):
+    """Generate general status report for a sl2 object.  """
 
     #Operations based on type
-    ops = {
-        "all": {
-          "load": "cat /proc/loadavg | cut -d' ' -f1,2,3",
-          "mem_total": "cat /proc/meminfo | head -n1",
-          "mem_free": "sed -n 2,2p /proc/meminfo",
-          "uptime": "cat /proc/uptime | head -d' ' -f1",
+    base_ops = {
+        "machine": {
+          "machine_load": "cat /proc/loadavg | cut -d' ' -f1,2,3",
+          "machine_mem": "cat /proc/meminfo | head -n1",
+          "cpu_uptime": "cat /proc/uptime | cut -d' ' -f1",
           "disk_stats": "df -hl"
         },
-        "slmctl": {
-          "connections":"sudo {0} -S {1}/slashd.*.sock -sconnections",
-          "iostats":"sudo {0} -S {1}/slashd.*.sock -siostats"
+        "daemon":{
+          "process_mem_usage": "cat /proc/{0}/status | grep VmSize | cut -f2",
+          "process_mem_peak": "cat /proc/{0}/status | grep VmPeak | cut -f2",
+          "process_threads": "cat /proc/{0}/status | grep Threads | cut -f2"
         },
-        "slictl": {
-          "connections": "sudo {0} -S {1}/sliod.*.sock -sconnections",
-          "iostats": "sudo {0} -S {1}/sliod.*.sock -siostats"
-        }
+    }
+
+    mds_ops = {
+      "connections":"sudo {0} -S {1}/slashd.*.sock -sconnections",
+      "iostats":"sudo {0} -S {1}/slashd.*.sock -siostats"
+    }
+
+    ion_ops = {
+      "connections": "sudo {0} -S {1}/sliod.*.sock -sconnections",
+      "iostats": "sudo {0} -S {1}/sliod.*.sock -siostats"
     }
 
     report = {}
 
-    obj_ops = ops["all"]
-    if path.basename(ctl_path) in ops:
-      obj_ops = dict(ops["all"].items() + ops[path.basename(ctl_path)].items())
+    for set, checks in base_ops.items():
+      report[set] = {}
+      for op, cmd in checks.items():
+        if "{0}" in cmd: #needs pid
+          cmd = cmd.format(pid)
+        report[set][op] = "".join(ssh.run(cmd, timeout=2)["out"])
 
-    for op, cmd in obj_ops.items():
-      if "{0}" in cmd and "{1}" in cmd: #needs the paths
-        cmd = cmd.format(ctl_path, self.runtime["build_dirs"]["ctl"])
-      report[op] = ssh.run(cmd, timeout=2)
+    if "slmctl" in ctl_path:
+      for op, cmd in mds_ops.items():
+        if "{0}" in cmd and "{1}" in cmd: #needs the paths
+          cmd = cmd.format(ctl_path, self.runtime["build_dirs"]["ctl"])
+        report[set][op] = "".join(ssh.run(cmd, timeout=2)["out"])
+    elif "slictl" in ctl_path:
+      for op, cmd in ion_ops.items():
+        if "{0}" in cmd and "{1}" in cmd: #needs the paths
+          cmd = cmd.format(ctl_path, self.runtime["build_dirs"]["ctl"])
+        report[set][op] = "".join(ssh.run(cmd, timeout=2)["out"])
 
     print "Status check completed for {0}".format(ssh.host)
-
-    return report
 
   def get_resource_usages(self):
     #query each slash2 compenent for resource usage
@@ -74,13 +85,13 @@ class TestHandler(object):
       ssh = SSH(user, host, '');
       kernel = "".join(ssh.run("uname -s")["out"]).lower()
       if "linux" in kernel:
-        output = self.check_status(ssh, ctl_path)
+        output = self.check_status(ssh, ctl_path, pid)
       elif "bsd" in kernel:
         output = self.query_ctl_rusage(ssh, ctl_path)
       else:
         pass
 
-      log = open("/home/beckert/log", "w")
+      log = open("/home/beckert/log", "a")
       log.write(str(output) + "\n")
       log.close()
 
