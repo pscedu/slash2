@@ -309,17 +309,6 @@ bmpc_freeall_locked(struct bmap_pagecache *bmpc)
 	psc_assert(pll_empty(&bmpc->bmpc_lru));
 }
 
-__static void
-bmpc_biorq_seterr(struct bmpc_ioreq *r, int err)
-{
-	/* XXX, this could also be a lease expire situation. */
-	DEBUG_BIORQ(PLL_ERROR, r, "write-back flush failure (err=%d)",
-	    err);
-
-	/* Note that r->biorq_fsrqi may have been freed by now. */
-	mfh_seterr(r->biorq_mfh, err);
-}
-
 void
 bmpc_biorqs_flush(struct bmapc_memb *b, int wait)
 {
