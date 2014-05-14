@@ -12,8 +12,8 @@ set nets="tcp7 10.201.*.*; tcp8 *.*.*.*";
 set pref_mds="md0@PITT";
 set pref_ios="ice@PITT";
 set fsuuid="98bb0e98163f7745";
-set zpool_name="pittsam_s2mds";
-set zpool_cache="/opt/pittsam_slash2/pittsam_s2md.zcf";
+set zpool_name="pittsam_pool";
+set zpool_cache="/opt/pittsam.s2/pittsam_s2md.zcf";
 
 site @PITT {
 	site_desc	= "Pitt SaM SuperCell";
@@ -25,7 +25,7 @@ site @PITT {
 		id	= 1;
 		nids	= app0-priv.frank.sam.pitt.edu,
 			  app0.frank.sam.pitt.edu;
-		jrnldev	= /dev/disk/by-id/dm-name-vg_head0-lv_data;
+		jrnldev	= /dev/disk/by-id/dm-name-vg_head0-lv_data0;
 	}
 
 	resource ice {
