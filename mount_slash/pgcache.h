@@ -299,7 +299,7 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
 
 void	 bmpc_global_init(void);
 void	 bmpc_freeall_locked(struct bmap_pagecache *);
-void	 bmpc_biorqs_flush(struct bmapc_memb *);
+void	 bmpc_biorqs_flush(struct bmapc_memb *, int);
 void	 bmpc_biorqs_destroy(struct bmapc_memb *, int);
 
 struct bmpc_ioreq *

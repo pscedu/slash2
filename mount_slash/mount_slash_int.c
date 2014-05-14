@@ -1542,7 +1542,7 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r, int *psched)
 	}
 
 	if (needflush)
-		bmpc_biorqs_flush(r->biorq_bmap);
+		bmpc_biorqs_flush(r->biorq_bmap, 1);
 
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 		if (!psc_dynarray_exists(&pages, e)) {
