@@ -2010,7 +2010,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	off_t roff;
 	char *bufp;
 
-	psc_assert(size);
 	f = mfh->mfh_fcmh;
 
 	DEBUG_FCMH(PLL_DIAG, f, "buf=%p size=%zu off=%"PRId64" rw=%s",
@@ -2053,7 +2052,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 * Initialize some state in the pfr to help with aio requests.
 	 */
 	q = msl_fsrqinfo_init(pfr, mfh, buf, size, off, rw);
-	if (rw == SL_READ && off >= (off_t)fsz)
+	if (rw == SL_READ && (!size || off >= (off_t)fsz))
 		PFL_GOTOERR(out, rc = 0);
 
  restart:

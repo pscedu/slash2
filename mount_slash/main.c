@@ -2686,8 +2686,6 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 	/* XXX EBADF if fd is not open for writing */
 	if (fcmh_isdir(f))
 		PFL_GOTOERR(out, rc = EISDIR);
-	if (!size)
-		goto out;
 
 	rc = msl_write(pfr, mfh, buf, size, off);
 
@@ -2725,8 +2723,6 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 //		psclog_errorx("regular file is a directory");
 		PFL_GOTOERR(out, rc = EISDIR);
 	}
-	if (!size)
-		goto out;
 
 	rc = msl_read(pfr, mfh, buf, size, off);
 
