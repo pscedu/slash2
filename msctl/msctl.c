@@ -806,7 +806,7 @@ void
 ms_biorq_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	printf("%-16s %5s %3s %9s %6s "
-	    "%14s %3s %10s %10s %2s %2s\n",
+	    "%12s %3s %10s %10s %2s %2s\n",
 	    "fid", "bno", "ref", "off", "len",
 	    "flags", "try", "sliod", "expire", "np", "nr");
 }
@@ -823,16 +823,14 @@ ms_biorq_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    msr->msr_len,
 	    msr->msr_flags & BIORQ_READ			? 'r' : '-',
 	    msr->msr_flags & BIORQ_WRITE		? 'w' : '-',
-//	    msr->msr_flags & BIORQ_RBWFP		? 'f' : '-',
-//	    msr->msr_flags & BIORQ_RBWLP		? 'l' : '-',
 	    msr->msr_flags & BIORQ_SCHED		? 's' : '-',
 	    msr->msr_flags & BIORQ_DIO			? 'd' : '-',
 	    msr->msr_flags & BIORQ_FORCE_EXPIRE		? 'x' : '-',
 	    msr->msr_flags & BIORQ_DESTROY		? 'D' : '-',
 	    msr->msr_flags & BIORQ_FLUSHRDY		? 'L' : '-',
 	    msr->msr_flags & BIORQ_NOFHENT		? 'n' : '-',
-	    msr->msr_flags & BIORQ_AIOWAIT		? 'S' : '-',
-	    msr->msr_flags & BIORQ_SPLAY		? 't' : '-',
+	    msr->msr_flags & BIORQ_AIOWAIT		? 'A' : '-',
+	    msr->msr_flags & BIORQ_SPLAY		? 'S' : '-',
 	    msr->msr_flags & BIORQ_WAIT			? 'W' : '-',
 	    msr->msr_flags & BIORQ_MFHLIST		? 'm' : '-',
 	    msr->msr_retries, msr->msr_last_sliod,
@@ -843,7 +841,7 @@ void
 ms_bmpce_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	printf("%-16s %6s %3s %9s "
-	    "%7s %4s %4s %10s\n",
+	    "%8s %4s %4s %10s\n",
 	    "fid", "bno", "ref", "off",
 	    "flags", "nwtr", "naio", "lastacc");
 }
@@ -854,12 +852,13 @@ ms_bmpce_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	const struct msctlmsg_bmpce *mpce = m;
 
 	printf("%016"SLPRIxFID" %6d %3d %9d "
-	    "%c%c%c%c%c%c%c "
+	    "%c%c%c%c%c%c%c%c "
 	    "%4d %4d "
 	    "%10"PRId64"\n",
 	    mpce->mpce_fid, mpce->mpce_bno, mpce->mpce_ref,
 	    mpce->mpce_off,
 	    mpce->mpce_flags & BMPCE_DATARDY	? 'd' : '-',
+	    mpce->mpce_flags & BMPCE_FAULTING	? 'f' : '-',
 	    mpce->mpce_flags & BMPCE_LRU	? 'l' : '-',
 	    mpce->mpce_flags & BMPCE_TOFREE	? 'T' : '-',
 	    mpce->mpce_flags & BMPCE_EIO	? 'E' : '-',
