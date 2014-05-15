@@ -1,0 +1,74 @@
+Running
+-------
+
+  1) Run MongoDB
+  2) Launch tsuite:
+
+     $ python ./run.py -c $config_file
+
+Modifying the deployment configuration
+--------------------------------------
+
+  Edit tsuite configuration: conf/tsuite.conf
+  Edit corresponding slcfg:  res/tsuite.conf
+
+Runtesting an existing tree (for testing patches)
+-----------------------------------------------
+
+Set `srcroot' to the location of a tree with binaries in the expected
+location and `svnroot' to null and launch tsuite:
+
+  [source]
+  srcroot = /home/joeuser/sl2.ts/projects
+  [svn]
+  svnroot = ""
+
+Runtesting old repo revisions
+------------------------------
+
+Set `srcroot' to a location for the checkout and workdir and set
+`svnroot' and `srcrev' parameters and launch tsuite:
+
+  [source]
+  srcroot = /home/joeuser/sl2.ts/projects
+  [svn]
+  svnroot = ""
+
+Runtesting HEAD
+------------------------------
+
+The ideal setup would be a nightly crontab for historical performance
+reference.  This could probably be arranged with the following setup
+similiar to the usage above:
+
+  [source]
+  srcroot = /home/joeuser/sl2.ts/projects
+  [svn]
+  svnroot = svn+ssh://frodo/cluster/svn/projects
+  srcrev = HEAD
+
+Killing daemon mode?
+--------------------
+
+  Is there a way to kill all services listed in a deployment in case the
+  execution gets goofed up?
+
+Modifying the testing behavior units
+------------------------------------
+
+  It would be nice if tests could be language agnostic in `slash2_tests'
+  subdir.  A batch of standard testing programs would be tremendously
+  useful:
+
+    - IOZone
+    - POSIX compliancy
+    - slash2 self-build
+    - Linux kernel build
+    - assortment of fio tests
+
+Analyzing results
+-----------------
+
+  $ python tsuite_browser/run.py
+  $ firefox localhost:$port
+
