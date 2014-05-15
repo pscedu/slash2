@@ -20,7 +20,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES ctl fuse rpc %
-.Dd February 5, 2014
+.Dd May 15, 2014
 .Dt MSCTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -595,10 +595,11 @@ The default is
 .\" }%
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/show.mdoc {
 .\"	show => {
-.\"		bmap		=> qq{In-memory bmaps},
+.\"		biorqs		=> qq{I/O requests.},
+.\"		bmaps		=> qq{In-memory bmaps},
+.\"		bmpces		=> qq{Page cache entries.},
 .\"		connections	=> qq{Status of\n.Tn SLASH\npeers on network.},
 .\"		fidcache	=> qq{.Tn FID\n.Pq file- Ns Tn ID\ncache members.},
-.\"		requests	=> qq{I/O requests.},
 .\"	},
 .\"	hashtables => {
 .\"		fidc		=> qq{files\n.Po file\n.Tn ID\ncache\n.Pc},
@@ -631,8 +632,12 @@ may be specified as any non-ambiguous prefix abbreviation of the
 following:
 .Pp
 .Bl -tag -width 1n -offset 3n
-.It Cm bmap
+.It Cm biorqs
+I/O requests.
+.It Cm bmaps
 In-memory bmaps
+.It Cm bmpces
+Page cache entries.
 .It Cm connections
 Status of
 .Tn SLASH
@@ -780,8 +785,6 @@ Block map structures
 If
 .Ar subspec
 is left unspecified, all pools will be accessed.
-.It Cm requests
-I/O requests.
 .It Cm rpcsvcs
 .Tn RPC
 services.
