@@ -175,18 +175,16 @@ struct bmpc_ioreq {
 
 #define	BIORQ_READ		(1 <<  0)
 #define	BIORQ_WRITE		(1 <<  1)
-#define	BIORQ_OPEN1		(1 <<  2)
-#define	BIORQ_OPEN2		(1 <<  3)
-#define	BIORQ_SCHED		(1 <<  4)	/* flush in progress, don't clear unless retry happen */
-#define	BIORQ_DIO		(1 <<  5)
-#define	BIORQ_FORCE_EXPIRE	(1 <<  6)
-#define	BIORQ_DESTROY		(1 <<  7)
-#define	BIORQ_FLUSHRDY		(1 <<  8)
-#define	BIORQ_NOFHENT		(1 <<  9)	/* release a file handle before flush is complete */
-#define BIORQ_AIOWAIT		(1 << 10)
-#define BIORQ_SPLAY		(1 << 11)
-#define BIORQ_WAIT		(1 << 12)
-#define BIORQ_MFHLIST		(1 << 13)
+#define	BIORQ_SCHED		(1 <<  2)	/* flush in progress, don't clear unless retry happen */
+#define	BIORQ_DIO		(1 <<  3)
+#define	BIORQ_FORCE_EXPIRE	(1 <<  4)
+#define	BIORQ_DESTROY		(1 <<  5)
+#define	BIORQ_FLUSHRDY		(1 <<  6)
+#define	BIORQ_NOFHENT		(1 <<  7)	/* release a file handle before flush is complete */
+#define BIORQ_AIOWAIT		(1 <<  8)
+#define BIORQ_SPLAY		(1 <<  9)
+#define BIORQ_WAIT		(1 << 10)
+#define BIORQ_MFHLIST		(1 << 11)
 
 #define BIORQ_LOCK(r)			spinlock(&(r)->biorq_lock)
 #define BIORQ_ULOCK(r)			freelock(&(r)->biorq_lock)
