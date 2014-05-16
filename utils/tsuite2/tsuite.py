@@ -202,8 +202,9 @@ class TSuite(object):
     Must be ran after run_tests"""
 
     try:
-      from utils.mongohelper import MongoHelper
-      self.mongo = MongoHelper(self.conf)
+      #from utils.mongohelper import MongoHelper
+      #self.mongo = MongoHelper(self.conf)
+      pass
     except Exception:
       log.critical("Unable to connect to mongodb.")
       self.shutdown()
@@ -216,35 +217,28 @@ class TSuite(object):
     self.test_report["failed_tests"] = 0
     self.test_report["tests"] = []
 
-    latest_tset = self.mongo.get_latest_tset()
-    self.test_report["tsid"] = latest_tset["tsid"]+1 if latest_tset else 1
-    self.test_report["tset_name"] = "#" + str(self.test_report["tsid"])
+    #latest_tset = self.mongo.get_latest_tset()
+    #self.test_report["tsid"] = latest_tset["tsid"]+1 if latest_tset else 1
+    #self.test_report["tset_name"] = "#" + str(self.test_report["tsid"])
 
+    self.test_report["tsid"] = 1
+    self.test_report["tset_name"] = "#1"
 
     #TODO: Currently assuming we only have one client
     if not hasattr(self, "test_results"):
         log.critical("There are no test results to store!")
         self.shutdown()
 
-    results = [self.test_results[0][1]]
-    for result in results:
-      for test in result["tests"]:
-        mongo_test = {
-          "elapsed": test["operate"]["elapsed"],
-          "desc": "generic description",
-          "test_name": test["name"],
-          "pass": test["operate"]["pass"] and test["cleanup"]["pass"] and test["setup"]["pass"]
-        }
-
+    for test, clients in self.test_results.items():
+      for client in clients:
         self.test_report["total_tests"] += 1
-        if not mongo_test["pass"]:
+        if not client["result"]["pass"]:
           self.test_report["failed_tests"] += 1
+        self.test_report["total_time"] += client["result"]["elapsed"]
 
-        self.test_report["tests"].append(mongo_test)
-        self.test_report["total_time"] += test["operate"]["elapsed"]
-
-    self.mongo.col.save(self.test_report)
-    log.info(self.test_report)
+    self.test_report["tests"] = self.test_results
+    #self.mongo.col.save(self.test_report)
+    log.info(json.dumps(self.test_report, indent=True))
 
   def run_tests(self):
     """Uploads and runs each test on each client."""
