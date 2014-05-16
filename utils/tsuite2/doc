@@ -1,3 +1,8 @@
+Installing Dependencies
+-----------------------
+
+  $ pip install -r requirements.txt
+
 Running
 -------
 
@@ -47,11 +52,13 @@ similiar to the usage above:
   svnroot = svn+ssh://frodo/cluster/svn/projects
   srcrev = HEAD
 
-Killing daemon mode?
---------------------
+Killing all tsuite running services
+------------------------------------
 
-  Is there a way to kill all services listed in a deployment in case the
-  execution gets goofed up?
+In case execution fails, some services may still be running for debug purposes. 
+These can be killed with:
+
+  $ python run.py --only kill:all
 
 Modifying the testing behavior units
 ------------------------------------
