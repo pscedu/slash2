@@ -45,6 +45,11 @@ def get_tset(tsid = None):
 def get_latest_tset():
     return api.get_latest_tset()
 
+@app.route("/api/tsets/display/<int:tsid>", methods=["GET"])
+@return_json
+def get_tset_display(tsid = None):
+    return api.get_tset_display(tsid)
+
 @app.route("/api/tsets/adj/<int:tsid>/<int:adj_tsets>", methods=["GET"])
 @return_json
 def get_adj_tsets(tsid = None, adj_tsets = None):
@@ -58,7 +63,7 @@ def logout():
 @app.route("/")
 @app.route("/<int:tsid>")
 def dashboard(tsid = None):
-    return render_template("new.html", active_tsid=tsid)
+    return render_template("summary.html", active_tsid=tsid)
 
 @app.route('/s/<path:filename>')
 def base_static(filename):

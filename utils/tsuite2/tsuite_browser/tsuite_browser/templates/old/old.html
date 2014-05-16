@@ -84,10 +84,6 @@
   </head>
   <!-- HTML code from Bootply.com editor -->
   <body>
-    
-    <!-- runtime -->
-    <div id="active_tsid" tsid="{{active_tsid}}"></div>
-
     <div id="header" class="navbar navbar-default navbar-fixed-top">
       <div class="col-md-4">
         <div class="navbar-header">
@@ -112,13 +108,32 @@
     </div>
     <div id="wrapper">
       <div id="sidebar-wrapper" class="col-md-2">
-        <div id="sidebar"></div>
+        <div id="sidebar">
+          <ul class="nav list-group">
+            {% for tset in tsets %}
+              <li>
+                <a href="/{{ tset.tsid }}" class="list-group-item">
+                  <i class = "fa fa-fw {% if tset.failed_tests == 0 %} fa-tasks {% else %} fa-warning {% endif %}"></i>
+                  {{ tset.tset_name }} 
+                  <span class="pull-right small">
+                    {% if tset.failed_tests != 0 %}
+                      <em class="text-danger">Failed: {{ tset.failed_tests }}</em>
+                    {% else %}
+                      {{tset.total_time}}s 
+                    {% endif %}
+                    <!--<em>{{ tset._id }}</em>-->
+                  </span>
+                </a>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
       </div>
       <div id="main-wrapper" class="col-md-10 pull-right">
         <div id="main">
           <div class="row">
             <div class="col-md-6">
-              Active Test Set: <a href="/{{active_tsid}}">{{active_tsid}}</a>
+                Active Test Set: <a href="/{{display_tset.tsid}}">{{display_tset.tset_name}}</a>
             </div>
             <div class="col-md-6">
             </div>
@@ -128,37 +143,10 @@
       </div>
     </div>
   </body>
-
-  <!-- Templates -->
-  <script type="text/template" id="sidebar_template">
-    <ul class="nav list-group">
-      <%
-        _.each(items, function(tset,key,list){
-      %>
-        <li>
-          <a href="/<%- tset.tsid %>" class="list-group-item">
-            <i class = "fa fa-fw <% if(tset.failed == 0) { %> fa-tasks <% } else { %> fa-warning <% } %>"></i>
-            <%- tset.tset_name %>
-            <span class="pull-right small">
-              <% if(tset.failed_tests > 0) { %>
-                <em class="text-danger">Failed: <%= tset.failed_tests %></em>
-              <% } else { %>
-                <%= tset.total_time.toFixed(3) %>s 
-              <% } %>
-            </span>
-          </a>
-        </li>
-      <% }); %>
-    </ul>
-  </script>
-
-
-    <!-- Dependencies -->
     <script type='text/javascript' src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
     <script type="text/javascript" src="http://www.google.com/jsapi"></script>
     <script type='text/javascript' src="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
     <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.6.0/underscore.js"></script>
-    <script type="text/javascript" src="/s/js/sidebar.js"></script>
-    <!--<script type='text/javascript' src="/s/js/visualization.js"></script>
-    <script type='text/javascript' src="/s/js/test_visual.js"></script>-->
+    <script type='text/javascript' src="/s/js/visualization.js"></script>
+    <script type='text/javascript' src="/s/js/test_visual.js"></script>
 </html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+
+{% extends "base.html" %}
+
+{% block content %}
+<!--<div class="alert alert-warning alert-dismissable">
+  <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+  <strong>Warning!</strong> Better check yourself, you're not looking too good.
+</div>-->
+<div id="page-wrapper">
+<div class="panel panel-default">
+    <div class="panel-heading">
+      <h3 class="panel-title">Dashboard</h3>
+    </div>
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="pull-left">
+                  <div class="btn-group">
+                      <ul class="dropdown-menu pull-right" role="menu">
+                          <li><a href="#">Action</a>
+                          </li>
+                          <li><a href="#">Another action</a>
+                          </li>
+                          <li><a href="#">Something else here</a>
+                          </li>
+                          <li class="divider"></li>
+                          <li><a href="#">Separated link</a>
+                          </li>
+                      </ul>
+                  </div>
+            </div>
+          </div>
+          <!-- /.col-lg-12 -->
+      </div>
+      <!-- /.row -->
+      <div class="row">
+          <div class="col-lg-8">
+              <div class="panel panel-default">
+                  <div class="panel-heading">
+                    <i class="fa fa-terminal fa-fw"></i> Active Test Set
+                      <a href="/tset/{{display_tset.tsid}}">{{display_tset.tset_name}}</a>
+                      <div class="pull-right">
+                          <div class="btn-group">
+                              <button type="button" class="btn btn-default btn-xs dropdown-toggle" data-toggle="dropdown">
+                                  Actions
+                                  <span class="caret"></span>
+                              </button>
+                              <ul class="dropdown-menu pull-right" role="menu">
+                                  <li><a href="#">Action</a>
+                                  </li>
+                                  <li><a href="#">Another action</a>
+                                  </li>
+                                  <li><a href="#">Something else here</a>
+                                  </li>
+                                  <li class="divider"></li>
+                                  <li><a href="#">Separated link</a>
+                                  </li>
+                              </ul>
+                          </div>
+                      </div>
+                  </div>
+                  <!-- /.panel-heading -->
+                  <div class="panel-body">
+                      <div class="row">
+                          <div class="col-lg-4">
+                              <div class="table-responsive">
+                                  <table class="table table-bordered table-hover table-striped">
+                                      <thead>
+                                          <tr>
+                                              <th>#</th>
+                                              <th>Test Name</th>
+                                              <th>Result</th>
+                                              <th>Recent</th>
+                                          </tr>
+                                      </thead>
+                                      <tbody>
+                                      {% for test in display_tset.tests %}
+                                        <tr class="test-result">
+                                          <td>{{loop.index}}</td>
+                                          <td class="text-info test-name">{{ test.test_name }}</td>
+                                          {% if test.pass %}
+                                            <td class="text-primary">{{ test.elapsed | round(3) }}</td>
+                                            {% if test.change_delta -%}
+                                            <td class="{% if (test.change_percent | abs) > 5 -%}
+                                                          {%- if test.change_delta <= 0 -%}
+                                                            text-success
+                                                          {%-else-%}
+                                                            text-warning
+                                                          {%- endif -%}
+                                                        {%else%}
+                                                          text-default
+                                                        {%endif%} change-delta">
+                                                <em class="text-left">{{test.change_percent}}%</em> <em class="text-right"><a href="/{{test.change_tsid}}/{{test.test_name}}">#{{test.change_tsid}}</a></em>
+                                              </td>
+                                            {% else %}
+                                              <td>Not available</td>
+                                            {% endif %}
+                                          {% else %}
+                                            <td class = "text-danger test-msg">{{ test.msg }}</td>
+                                            <td class = "text-warning test-msg">N/A</td>
+                                          {% endif %}
+                                        </tr>
+                                      {% endfor %}
+                                      </tbody>
+                                  </table>
+                              </div>
+                              <!-- /.table-responsive -->
+                          </div>
+                          <!-- /.col-lg-4 (nested) -->
+                          <div class="col-lg-8">
+                              <div id="change-chart"></div>
+                          </div>
+                          <!-- /.col-lg-8 (nested) -->
+                      </div>
+                      <!-- /.row -->
+                  </div>
+                  <!-- /.panel-body -->
+              </div>
+              <!-- /.panel -->
+          </div>
+          <!-- /.col-lg-8 -->
+          <div class="col-lg-4">
+              <div class="panel panel-default">
+                  <div class="panel-heading">
+                      <i class="fa fa-bell fa-fw"></i> Test Panel
+                  </div>
+                  <!-- /.panel-heading -->
+                  <div class="panel-body">
+                      <div class="list-group">
+                        {% for tset in tsets %}
+                          <a href="/{{ tset.tsid }}" class="list-group-item">
+                            <i class = "fa fa-fw {% if tset.failed_tests == 0 %} fa-tasks {% else %} fa-warning {% endif %}"></i>
+                            {{ tset.tset_name }}
+                            <span class="pull-right text-muted small">
+                              
+                              {% if tset.failed_tests != 0 %}
+                                <em class="text-danger">Failed: {{ tset.failed_tests }}</em>
+                              {% endif %}
+                              <em>{{ tset._id }}</em>
+                            </span>
+                          </a>
+                        {% endfor %}
+                      </div>
+                      <!-- /.list-group -->
+                      <a href="/tsets" class="btn btn-default btn-block">View All Test Sets</a>
+                  </div>
+                  <!-- /.panel-body -->
+              </div>
+              <!-- /.panel -->
+          </div>
+          <!-- /.col-lg-4 -->
+      </div>
+      <!-- /.row -->
+  </div>
+  <!-- /#page-wrapper -->
+</div>
+</div>
+<!-- /#wrapper -->
+ 
+
+{% endblock %}
