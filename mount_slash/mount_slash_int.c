@@ -200,9 +200,8 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	 */
 	npages = alen / BMPC_BUFSZ;
 
-	if (alen % BMPC_BUFSZ) {
+	if (alen % BMPC_BUFSZ)
 		npages++;
-	}
 
 	psc_assert(npages <= BMPC_IOMAXBLKS);
 
