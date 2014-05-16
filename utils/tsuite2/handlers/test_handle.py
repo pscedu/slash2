@@ -103,12 +103,9 @@ class TestHandler(object):
     """Run all tests from the tests directory and print results"""
     tset_results = []
     available_tests = [file for file in glob.glob(self.tests_dir + "/*") if os.access(file, os.X_OK)]
-    results_file = path.join(self.runtime["build_dirs"]["base"], "results.json")
-    f = open(results_file, "w")
     for test_file in available_tests:
-      results = {"name": test_file.split(".")[-1]}
+      results = {"name": test_file.split(".")[-2]}
       print "Running", results["name"]
-      f.write(results["name"] + "\n")
 
       start = time.time()
       results["retcode"] = subprocess.call([test_file, self.runtime_file])
@@ -118,6 +115,8 @@ class TestHandler(object):
       results["rusage"] = self.get_resource_usages()
       tset_results.append(results)
 
+    results_file = path.join(self.runtime["build_dirs"]["base"], "results.json")
+    f = open(results_file, "w")
     f.write(json.dumps(tset_results))
     f.close()
 

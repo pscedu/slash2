@@ -273,9 +273,6 @@ class TSuite(object):
       if os.access(test_path, os.X_OK): #is executable
         tests.append(test)
         remote_test_path = path.join(remote_tests_path, test)
-        print test_path
-        print remote_tests_path
-        print remote_test_path
         map(lambda ssh: ssh.copy_file(test_path, remote_test_path), ssh_clients)
         map(lambda ssh: ssh.run("sudo chmod +x {0}".format(remote_test_path)), ssh_clients)
     log.debug("Found tests: {0}".format(", ".join(tests)))
