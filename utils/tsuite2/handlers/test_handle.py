@@ -1,6 +1,6 @@
 import sys, json, pkgutil, time
 import shutil, base64, json
-import os
+import os, glob, subprocess
 from ssh import SSH
 from os import path
 
@@ -10,22 +10,26 @@ class TestHandler(object):
   def __init__(self, json_constants):
     self.runtime = json.loads(base64.b64decode(json_constants))
 
-    #Determine where the module is being ran
+    #Determine where the test is being ran
     self.cwd = path.realpath(__file__).split(os.sep)[:-1]
     self.cwd = os.sep.join(self.cwd)
 
-    self.modules_folder = path.join(self.cwd, "modules")
-    self.modules = self.load_all_modules_from_dir(self.modules_folder)
+    self.tests_dir = path.join(self.cwd, "tests")
+
+    # Write runtime information to a file for tests to access
+    self.runtime_file = path.join(self.runtime["build_dirs"]["base"], "runtime.json")
+    rt_file = open(self.runtime_file, 'w')
+    rt_file.write(json.dumps(self.runtime))
+    rt_file.close()
 
     self.run_tests()
     self.cleanup()
 
+
   def query_ctl_rusage(self, ssh, ctl_path):
-     output = ssh.run("sudo {0} -S {1}/*.sock -s rusage".format(ctl_path, self.runtime["build_dirs"]["ctl"])) #use the ctl daemons' resource usage
-     log = open("/home/beckert/blah", "w")
-     log.write(output)
-     log.close()
-     return {"output":output}
+    """ NOT IMPLEMENTED """
+    output = ssh.run("sudo {0} -S {1}/*.sock -s rusage".format(ctl_path, self.runtime["build_dirs"]["ctl"])) #use the ctl daemons' resource usage
+    return {"output":output}
 
   def check_status(self, ssh, ctl_path, pid):
     """Generate general status report for a sl2 object.  """
@@ -91,11 +95,6 @@ class TestHandler(object):
         output = self.query_ctl_rusage(ssh, ctl_path)
       else:
         pass
-
-      log = open("/home/beckert/log", "a")
-      log.write(str(output) + "\n")
-      log.close()
-
       rusages["{0} [{1}]".format(host, pid)] = output
 
     return rusages
@@ -103,42 +102,29 @@ class TestHandler(object):
   def run_tests(self):
     """Run all tests from the tests directory and print results"""
     tset_results = []
-    for module in self.modules:
-      test = {"name": module.__name__.split(".")[-1]}
-      print "Running", test["name"]
-
-      #TODO: do something with this
-      #test["setup"]=module.setup()
-      #test["cleanup"]=module.cleanup()
+    available_tests = [file for file in glob.glob(self.tests_dir + "/*") if os.access(file, os.X_OK)]
+    results_file = path.join(self.runtime["build_dirs"]["base"], "results.json")
+    f = open(results_file, "w")
+    for test_file in available_tests:
+      results = {"name": test_file.split(".")[-1]}
+      print "Running", results["name"]
+      f.write(results["name"] + "\n")
 
       start = time.time()
-      test["operate"]=module.operate()
-      test["operate"]["elapsed"] = time.time() - start
+      results["retcode"] = subprocess.call([test_file, self.runtime_file])
+      results["pass"] = results["retcode"] == 0
+      results["elapsed"] = time.time() - start
 
-      test["resource_usage"]=self.get_resource_usages()
-      tset_results.append(test)
+      results["rusage"] = self.get_resource_usages()
+      tset_results.append(results)
 
-    # user may not have write privileges to mp -- hacky sudo mv
-    results_file = path.join(self.cwd, "results.json")
-    temp_file = path.join("/tmp", "results.json")
-    f = open(temp_file, "w")
     f.write(json.dumps(tset_results))
     f.close()
-    os.system("sudo mv {0} {1}".format(temp_file, results_file))
 
   def cleanup(self):
     pass
     # TODO: we don't have permissions to delete these..
     #shutil.rmtree(self.modules_folder)
-
-  def load_all_modules_from_dir(self, dirname):
-    modules = []
-    for importer, package_name, _ in pkgutil.iter_modules([dirname]):
-      full_package_name = '%s.%s' % (dirname, package_name)
-      if full_package_name not in sys.modules:
-        module = importer.find_module(package_name).load_module(full_package_name)
-        modules.append(module)
-    return modules
 
 if __name__ == "__main__":
   #Ran from script

@@ -264,17 +264,20 @@ class TSuite(object):
       except SSHException:
         log.error("Unable to connect to %s@%s", self.user, host)
 
-    remote_modules_path = path.join(self.build_dirs["mp"], "modules", "")
-    map(lambda ssh: ssh.make_dirs(remote_modules_path, escalate=True), ssh_clients)
+    remote_tests_path = path.join(self.build_dirs["mp"], "tests")
+    map(lambda ssh: ssh.make_dirs(remote_tests_path, escalate=True), ssh_clients)
 
     tests = []
     for test in os.listdir(tset_dir):
-      if test.endswith(".py"):
-        test_path = path.join(tset_dir, test)
-        if not test.startswith(".") and test != "__init__.py":
-          tests.append(test)
-        remote_test_path = path.join(remote_modules_path, test)
+      test_path = path.join(tset_dir, test)
+      if os.access(test_path, os.X_OK): #is executable
+        tests.append(test)
+        remote_test_path = path.join(remote_tests_path, test)
+        print test_path
+        print remote_tests_path
+        print remote_test_path
         map(lambda ssh: ssh.copy_file(test_path, remote_test_path), ssh_clients)
+        map(lambda ssh: ssh.run("sudo chmod +x {0}".format(remote_test_path)), ssh_clients)
     log.debug("Found tests: {0}".format(", ".join(tests)))
 
     test_handler_path = path.join(self.cwd, "handlers", "test_handle.py")
@@ -315,7 +318,7 @@ class TSuite(object):
       log.error("Some of the screen sessions running the tset encountered errors! Please check out the clients and rectify the issue.")
       self.shutdown()
 
-    result_path = path.join(self.build_dirs["mp"], "results.json")
+    result_path = path.join(self.build_dirs["base"], "results.json")
 
     self.test_results = {}
     try:
@@ -326,24 +329,12 @@ class TSuite(object):
             self.test_results[test["name"]] = []
           self.test_results[test["name"]].append({"client": ssh.host, "result": test})
       print self.test_results
-    except Exception:
+    except Exception as e:
+      print e
       log.critical("Tests did not return output!")
       self.shutdown()
 
     map(lambda ssh: ssh.close(), ssh_clients)
-
-  #?
-  def flatten(l):
-    '''Flatten a arbitrarily nested lists and return the result as a single list. '''
-    ret = []
-    for i in l:
-        if isinstance(i, list) or isinstance(i, tuple):
-            ret.extend(flatten(i))
-        elif isinstance(i, dict):
-            [ret.extend(flatten(a)) for a in i.items()]
-        else:
-            ret.append(i)
-    return ret
 
   def parse_slash2_conf(self):
     """Reads and parses slash2 conf for tokens.

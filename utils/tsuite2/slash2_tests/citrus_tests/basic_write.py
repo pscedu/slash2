@@ -35,7 +35,6 @@ def operate(max_size=3):
     data = ''.join([chr(a + 97) for a in xrange(26)]) # a-z
 
     try:
-
         # write data
         f = open(test_file, 'w')
         f.write(data)
@@ -71,3 +70,5 @@ def cleanup():
         results["error"] = 'Could not remove file'
 
     return results
+
+
