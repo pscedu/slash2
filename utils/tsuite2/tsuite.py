@@ -502,9 +502,7 @@ class TSuite(object):
                 .format(new_conf_path))
             for sl2_obj in self.all_objects():
               try:
-                print "start", self.user, sl2_obj["host"]
                 ssh = SSH(self.user, sl2_obj["host"], "")
-                print "nop"
                 log.debug("Copying new config to {0}".format(sl2_obj["host"]))
                 try:
                   ssh.copy_file(new_conf_path, new_conf_path)

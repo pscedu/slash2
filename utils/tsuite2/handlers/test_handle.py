@@ -33,26 +33,26 @@ class TestHandler(object):
     #Operations based on type
     base_ops = {
         "machine": {
-          "machine_load": "cat /proc/loadavg | cut -d' ' -f1,2,3",
-          "machine_mem": "cat /proc/meminfo | head -n1",
+          "load": "cat /proc/loadavg | cut -d' ' -f1,2,3",
+          "meminfo": "cat /proc/meminfo | head -n1",
           "cpu_uptime": "cat /proc/uptime | cut -d' ' -f1",
-          "disk_stats": "df -hl"
+          "disk_stats": "df -hl | grep sltest"
         },
         "daemon":{
-          "process_mem_usage": "cat /proc/{0}/status | grep VmSize | cut -f2",
-          "process_mem_peak": "cat /proc/{0}/status | grep VmPeak | cut -f2",
-          "process_threads": "cat /proc/{0}/status | grep Threads | cut -f2"
+          "mem_usage": "cat /proc/{0}/status | grep VmSize | cut -f2",
+          "mem_peak": "cat /proc/{0}/status | grep VmPeak | cut -f2",
+          "threads": "cat /proc/{0}/status | grep Threads | cut -f2"
         },
     }
 
     mds_ops = {
-      "connections":"sudo {0} -S {1}/slashd.*.sock -sconnections",
-      "iostats":"sudo {0} -S {1}/slashd.*.sock -siostats"
+      "connections":"sudo {0} -S {1}/slashd.*.sock -sconnections | wc -l",
+      "iostats":""#sudo {0} -S {1}/slashd.*.sock -siostats | wc "
     }
 
     ion_ops = {
-      "connections": "sudo {0} -S {1}/sliod.*.sock -sconnections",
-      "iostats": "sudo {0} -S {1}/sliod.*.sock -siostats"
+      "connections": "sudo {0} -S {1}/sliod.*.sock -sconnections | wc -l",
+      "iostats": ""#sudo {0} -S {1}/sliod.*.sock -siostats"
     }
 
     report = {}
@@ -76,6 +76,7 @@ class TestHandler(object):
         report[set][op] = "".join(ssh.run(cmd, timeout=2)["out"])
 
     print "Status check completed for {0}".format(ssh.host)
+    return report
 
   def get_resource_usages(self):
     #query each slash2 compenent for resource usage
@@ -117,7 +118,7 @@ class TestHandler(object):
       test["resource_usage"]=self.get_resource_usages()
       tset_results.append(test)
 
-    # user may not have write privileges to mp -- hacky mv
+    # user may not have write privileges to mp -- hacky sudo mv
     results_file = path.join(self.cwd, "results.json")
     temp_file = path.join("/tmp", "results.json")
     f = open(temp_file, "w")
