@@ -34,15 +34,20 @@ class TestHandler(object):
   def check_status(self, ssh, ctl_path, pid):
     """Generate general status report for a sl2 object.  """
 
+    if "slmctl" in ctl_path:
+      type = "mds"
+    elif "slictl" in ctl_path:
+      type = "ion"
+
     #Operations based on type
     base_ops = {
         "machine": {
           "load": "cat /proc/loadavg | cut -d' ' -f1,2,3",
           "meminfo": "cat /proc/meminfo | head -n1",
-          "cpu_uptime": "cat /proc/uptime | cut -d' ' -f1",
-          "disk_stats": "df -hl | grep sltest"
+          "cpu_uptime": "cat /proc/uptime | cut -d' ' -f1"
+          #"disk_stats": "df -hl | grep sltest | grep G | cut -f2"
         },
-        "daemon":{
+        "daemon [{0}]".format(type):{
           "mem_usage": "cat /proc/{0}/status | grep VmSize | cut -f2",
           "mem_peak": "cat /proc/{0}/status | grep VmPeak | cut -f2",
           "threads": "cat /proc/{0}/status | grep Threads | cut -f2"
@@ -50,13 +55,13 @@ class TestHandler(object):
     }
 
     mds_ops = {
-      "connections":"sudo {0} -S {1}/slashd.*.sock -sconnections | wc -l",
-      "iostats":""#sudo {0} -S {1}/slashd.*.sock -siostats | wc "
+      "connections":"sudo {0} -S {1}/slashd.*.sock -sconnections | wc -l"
+      #"iostats":""sudo {0} -S {1}/slashd.*.sock -siostats | wc "
     }
 
     ion_ops = {
-      "connections": "sudo {0} -S {1}/sliod.*.sock -sconnections | wc -l",
-      "iostats": ""#sudo {0} -S {1}/sliod.*.sock -siostats"
+      "connections": "sudo {0} -S {1}/sliod.*.sock -sconnections | wc -l"
+      #"iostats": ""sudo {0} -S {1}/sliod.*.sock -siostats"
     }
 
     report = {}
@@ -68,12 +73,12 @@ class TestHandler(object):
           cmd = cmd.format(pid)
         report[set][op] = "".join(ssh.run(cmd, timeout=2)["out"])
 
-    if "slmctl" in ctl_path:
+    if type == "mds":
       for op, cmd in mds_ops.items():
         if "{0}" in cmd and "{1}" in cmd: #needs the paths
           cmd = cmd.format(ctl_path, self.runtime["build_dirs"]["ctl"])
         report[set][op] = "".join(ssh.run(cmd, timeout=2)["out"])
-    elif "slictl" in ctl_path:
+    elif type == "ion"
       for op, cmd in ion_ops.items():
         if "{0}" in cmd and "{1}" in cmd: #needs the paths
           cmd = cmd.format(ctl_path, self.runtime["build_dirs"]["ctl"])
@@ -95,7 +100,7 @@ class TestHandler(object):
         output = self.query_ctl_rusage(ssh, ctl_path)
       else:
         pass
-      rusages["{0} [{1}]".format(host, pid)] = output
+      rusages[host] = output
 
     return rusages
 
