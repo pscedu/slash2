@@ -1,0 +1,325 @@
+[{
+ "total_time": 0.21806240081787109, 
+ "tests": {
+  "test_fail": [
+   {
+    "client": "localhost", 
+    "result": {
+     "pass": false, 
+     "retcode": 1, 
+     "rusage": {
+      "orange": {
+       "machine": {
+        "load": "0.06 0.06 0.09", 
+        "cpu_uptime": "8051056.59", 
+        "meminfo": "MemTotal:        8187828 kB"
+       }, 
+       "daemon": {
+        "connections": "6", 
+        "threads": "98", 
+        "mem_peak": "5385668 kB", 
+        "type": "ion", 
+        "mem_usage": "5385668 kB"
+       }
+      }, 
+      "lemon": {
+       "machine": {
+        "load": "0.57 0.26 0.14", 
+        "cpu_uptime": "8051391.26", 
+        "meminfo": "MemTotal:        8187772 kB"
+       }, 
+       "daemon": {
+        "connections": "6", 
+        "threads": "202", 
+        "mem_peak": "6402996 kB", 
+        "type": "mds", 
+        "mem_usage": "6402996 kB"
+       }
+      }, 
+      "localhost": {
+       "machine": {
+        "load": "0.57 0.26 0.14", 
+        "cpu_uptime": "8051391.84", 
+        "meminfo": "MemTotal:        8187772 kB"
+       }, 
+       "daemon": {
+        "threads": "79", 
+        "mem_peak": "5039148 kB", 
+        "type": "client", 
+        "mem_usage": "5039016 kB"
+       }
+      }, 
+      "127.0.0.1": {
+       "machine": {
+        "load": "0.57 0.26 0.14", 
+        "cpu_uptime": "8051392.36", 
+        "meminfo": "MemTotal:        8187772 kB"
+       }, 
+       "daemon": {
+        "threads": "79", 
+        "mem_peak": "5039148 kB", 
+        "type": "client", 
+        "mem_usage": "5039016 kB"
+       }
+      }
+     }, 
+     "name": "test_fail", 
+     "elapsed": 0.054593086242675781
+    }
+   }, 
+   {
+    "client": "127.0.0.1", 
+    "result": {
+     "pass": false, 
+     "retcode": 1, 
+     "rusage": {
+      "orange": {
+       "machine": {
+        "load": "0.06 0.06 0.09", 
+        "cpu_uptime": "8051056.59", 
+        "meminfo": "MemTotal:        8187828 kB"
+       }, 
+       "daemon": {
+        "connections": "6", 
+        "threads": "98", 
+        "mem_peak": "5385668 kB", 
+        "type": "ion", 
+        "mem_usage": "5385668 kB"
+       }
+      }, 
+      "lemon": {
+       "machine": {
+        "load": "0.57 0.26 0.14", 
+        "cpu_uptime": "8051391.26", 
+        "meminfo": "MemTotal:        8187772 kB"
+       }, 
+       "daemon": {
+        "connections": "6", 
+        "threads": "202", 
+        "mem_peak": "6402996 kB", 
+        "type": "mds", 
+        "mem_usage": "6402996 kB"
+       }
+      }, 
+      "localhost": {
+       "machine": {
+        "load": "0.57 0.26 0.14", 
+        "cpu_uptime": "8051391.84", 
+        "meminfo": "MemTotal:        8187772 kB"
+       }, 
+       "daemon": {
+        "threads": "79", 
+        "mem_peak": "5039148 kB", 
+        "type": "client", 
+        "mem_usage": "5039016 kB"
+       }
+      }, 
+      "127.0.0.1": {
+       "machine": {
+        "load": "0.57 0.26 0.14", 
+        "cpu_uptime": "8051392.36", 
+        "meminfo": "MemTotal:        8187772 kB"
+       }, 
+       "daemon": {
+        "threads": "79", 
+        "mem_peak": "5039148 kB", 
+        "type": "client", 
+        "mem_usage": "5039016 kB"
+       }
+      }
+     }, 
+     "name": "test_fail", 
+     "elapsed": 0.054593086242675781
+    }
+   }
+  ], 
+  "test_pass": [
+   {
+    "client": "localhost", 
+    "result": {
+     "pass": true, 
+     "retcode": 0, 
+     "rusage": {
+      "orange": {
+       "machine": {
+        "load": "0.06 0.06 0.09", 
+        "cpu_uptime": "8051054.30", 
+        "meminfo": "MemTotal:        8187828 kB"
+       }, 
+       "daemon": {
+        "connections": "6", 
+        "threads": "98", 
+        "mem_peak": "5385668 kB", 
+        "type": "ion", 
+        "mem_usage": "5385668 kB"
+       }
+      }, 
+      "lemon": {
+       "machine": {
+        "load": "0.27 0.20 0.12", 
+        "cpu_uptime": "8051388.89", 
+        "meminfo": "MemTotal:        8187772 kB"
+       }, 
+       "daemon": {
+        "connections": "6", 
+        "threads": "202", 
+        "mem_peak": "6402996 kB", 
+        "type": "mds", 
+        "mem_usage": "6402996 kB"
+       }
+      }, 
+      "localhost": {
+       "machine": {
+        "load": "0.27 0.20 0.12", 
+        "cpu_uptime": "8051389.52", 
+        "meminfo": "MemTotal:        8187772 kB"
+       }, 
+       "daemon": {
+        "threads": "79", 
+        "mem_peak": "5039148 kB", 
+        "type": "client", 
+        "mem_usage": "5039016 kB"
+       }
+      }, 
+      "127.0.0.1": {
+       "machine": {
+        "load": "0.57 0.26 0.14", 
+        "cpu_uptime": "8051390.06", 
+        "meminfo": "MemTotal:        8187772 kB"
+       }, 
+       "daemon": {
+        "threads": "79", 
+        "mem_peak": "5039148 kB", 
+        "type": "client", 
+        "mem_usage": "5039016 kB"
+       }
+      }
+     }, 
+     "name": "test_pass", 
+     "elapsed": 0.054438114166259766
+    }
+   }, 
+   {
+    "client": "127.0.0.1", 
+    "result": {
+     "pass": true, 
+     "retcode": 0, 
+     "rusage": {
+      "orange": {
+       "machine": {
+        "load": "0.06 0.06 0.09", 
+        "cpu_uptime": "8051054.30", 
+        "meminfo": "MemTotal:        8187828 kB"
+       }, 
+       "daemon": {
+        "connections": "6", 
+        "threads": "98", 
+        "mem_peak": "5385668 kB", 
+        "type": "ion", 
+        "mem_usage": "5385668 kB"
+       }
+      }, 
+      "lemon": {
+       "machine": {
+        "load": "0.27 0.20 0.12", 
+        "cpu_uptime": "8051388.89", 
+        "meminfo": "MemTotal:        8187772 kB"
+       }, 
+       "daemon": {
+        "connections": "6", 
+        "threads": "202", 
+        "mem_peak": "6402996 kB", 
+        "type": "mds", 
+        "mem_usage": "6402996 kB"
+       }
+      }, 
+      "localhost": {
+       "machine": {
+        "load": "0.27 0.20 0.12", 
+        "cpu_uptime": "8051389.52", 
+        "meminfo": "MemTotal:        8187772 kB"
+       }, 
+       "daemon": {
+        "threads": "79", 
+        "mem_peak": "5039148 kB", 
+        "type": "client", 
+        "mem_usage": "5039016 kB"
+       }
+      }, 
+      "127.0.0.1": {
+       "machine": {
+        "load": "0.57 0.26 0.14", 
+        "cpu_uptime": "8051390.06", 
+        "meminfo": "MemTotal:        8187772 kB"
+       }, 
+       "daemon": {
+        "threads": "79", 
+        "mem_peak": "5039148 kB", 
+        "type": "client", 
+        "mem_usage": "5039016 kB"
+       }
+      }
+     }, 
+     "name": "test_pass", 
+     "elapsed": 0.054438114166259766
+    }
+   }
+  ]
+ }, 
+ "tset_name": "#1", 
+ "tsid": 1, 
+ "total_tests": 4, 
+ "build": {}, 
+ "failed_tests": 2, 
+ "resources": {
+  "mds": [
+   {
+    "zpool_path": "/local/sl2_pool", 
+    "name": "mds1", 
+    "fsuuid": "0x1337beef", 
+    "jrnldev": "/dev/sdh1", 
+    "pid": "4132", 
+    "zpool_args": "/dev/sdm1", 
+    "site_id": "10", 
+    "site": "MYSITE", 
+    "zpool_cache": "/home/beckert/tsuite/sltest.3200853/sl2_pool.zcf", 
+    "host": "lemon", 
+    "zpool_name": "sl2_pool", 
+    "type": "mds", 
+    "id": "1"
+   }
+  ], 
+  "client": [
+   {
+    "name": "localhost", 
+    "pid": "4541", 
+    "site": null, 
+    "host": "localhost", 
+    "type": "client", 
+    "id": 0
+   }, 
+   {
+    "name": "127.0.0.1", 
+    "pid": "4541", 
+    "site": null, 
+    "host": "127.0.0.1", 
+    "type": "client", 
+    "id": 0
+   }
+  ], 
+  "ion": [
+   {
+    "fsroot": "/local/cg.s2", 
+    "name": "ion1", 
+    "fsuuid": "0x1337beef", 
+    "pid": "2253", 
+    "site_id": "10", 
+    "site": "MYSITE", 
+    "host": "orange", 
+    "prefmds": "mds1@MYSITE", 
+    "type": "standalone_fs", 
+    "id": "2"
+   }
+  ]
+ }
+}]

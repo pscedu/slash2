@@ -101,34 +101,47 @@ class API(object):
 
         return adj_tests
 
+    def get_tset_averages(self, tsid, tests=None):
+        """Get averages over all clients of the tests in a single tset.
+
+        Args:
+            tsid: tset id to get averages of.
+            tests: skips lookup and uses this object instead."""
+
+        if not tests:
+            tests = self.get_tset(tsid)
+
+        test_averages = {}
+        for test in tests:
+            test_averages[test] = 0.0
+            for client in tests[test]:
+                test_averages[test] += client["result"]["elapsed"]
+            test_averages[test] /= len(tests[test])
+        return test_averages
+
     def get_tset_display(self, tsid):
         """Get tset ready for display with simple statistics.
 
         Args:
             tsid: tset id for display."""
 
+
         tset = self.get_tset(tsid)
-        for test in tset["tests"]:
-            most_recent_tests = list(self.mongo.db.tsets.find(
-                {
-                    "tsid": {"$lt": tsid},
-                    "tests": {
-                        "$elemMatch": {"test_name": test["test_name"], "pass": True}
-                    }
-                },
-                {
-                    "tsid": "",
-                    "tests":{
-                        "$elemMatch": {"test_name": test["test_name"], "pass": True}
-                    }
-                }
-            ).sort([("_id", -1),]).limit(1))
-            if len(most_recent_tests) == 0:
-                test["change_percent"] = None
-            else:
-                recent_test = most_recent_tests[0]["tests"][0]
-                test["change_delta"] = test["elapsed"] - recent_test["elapsed"]
-                test["change_percent"] = round(test["change_delta"] / recent_test["elapsed"], 3) * 100
-                test["change_tsid"] = most_recent_tests[0]["tsid"]
+        tset_averages = self.get_tset_averages(None, tset["tests"])
+        print tset_averages
+        recent_tsets = list(self.mongo.db.tsets.find(
+            {
+                "tsid": {"$lt": tsid},
+            }
+        ).sort([("_id", -1),]))
+
+
+        for test in tset:
+            for old_tset in recent_tsets:
+                recent_averages = self.get_tset_averages(None, old_tset["tests"])
+                if test in recent_averages:
+                    test["change_delta"] = tset_averages[test] - recent_averags[test]
+                    test["change_percent"] = round(test["change_delta"] / recent_averages[test], 3) * 100
+                    test["change_tsid"] = old_tset["tsid"]
         return tset
 
