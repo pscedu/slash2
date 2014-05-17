@@ -238,7 +238,7 @@ class TSuite(object):
 
     self.test_report["tests"] = self.test_results
     #self.mongo.col.save(self.test_report)
-    log.info(json.dumps(self.test_report, indent=True))
+    print json.dumps(self.test_report, indent=True)
 
   def run_tests(self):
     """Uploads and runs each test on each client."""
@@ -297,12 +297,12 @@ class TSuite(object):
           elif object_type == "ion":    ctl_path = self.src_dirs['slictl']
           elif object_type == "client": ctl_path = self.src_dirs['msctl']
 
-          daemons.append((sl2object["host"], ctl_path , sl2object["pid"]))
+          daemons.append((sl2object["host"], object_type, ctl_path, sl2object["pid"]))
 
     runtime = {"build_dirs": self.build_dirs, "daemons" : daemons}
     runtime_arg = base64.b64encode(json.dumps(runtime))
 
-    map(lambda ssh: ssh.run_screen("python2 {0} {1}".format(remote_test_handler_path, runtime_arg),
+    map(lambda ssh: ssh.run_screen("python2 {0} {1} > ~/log".format(remote_test_handler_path, runtime_arg),
         sock_name, quiet=True), ssh_clients)
 
     if not all(map(lambda ssh: ssh.wait_for_screen(sock_name)["finished"], ssh_clients)):
@@ -319,7 +319,7 @@ class TSuite(object):
           if test["name"] not in self.test_results:
             self.test_results[test["name"]] = []
           self.test_results[test["name"]].append({"client": ssh.host, "result": test})
-      print json.dumps(self.test_results, indent=True)
+    #  print json.dumps(self.test_results, indent=True)
     except Exception as e:
       print e
       log.critical("Tests did not return output!")

@@ -26,28 +26,23 @@ class TestHandler(object):
     self.cleanup()
 
 
-  def query_ctl_rusage(self, ssh, ctl_path):
+  def query_ctl_rusage(self, ssh, type, ctl_path):
     """ NOT IMPLEMENTED """
     output = ssh.run("sudo {0} -S {1}/*.sock -s rusage".format(ctl_path, self.runtime["build_dirs"]["ctl"])) #use the ctl daemons' resource usage
     return {"output":output}
 
-  def check_status(self, ssh, ctl_path, pid):
+  def check_status(self, ssh, type, ctl_path, pid):
     """Generate general status report for a sl2 object.  """
-
-    if "slmctl" in ctl_path:
-      type = "mds"
-    elif "slictl" in ctl_path:
-      type = "ion"
 
     #Operations based on type
     base_ops = {
         "machine": {
           "load": "cat /proc/loadavg | cut -d' ' -f1,2,3",
-          "meminfo": "cat /proc/meminfo | head -n1",
+          "meminfo": "cat /proc/meminfo | head -n1 | cut -c 18-",
           "cpu_uptime": "cat /proc/uptime | cut -d' ' -f1"
-          #"disk_stats": "df -hl | grep sltest | grep G | cut -f2"
         },
-        "daemon [{0}]".format(type):{
+        "daemon":{
+          "type":"echo {0}".format(type),
           "mem_usage": "cat /proc/{0}/status | grep VmSize | cut -f2",
           "mem_peak": "cat /proc/{0}/status | grep VmPeak | cut -f2",
           "threads": "cat /proc/{0}/status | grep Threads | cut -f2"
@@ -56,12 +51,13 @@ class TestHandler(object):
 
     mds_ops = {
       "connections":"sudo {0} -S {1}/slashd.*.sock -sconnections | wc -l"
-      #"iostats":""sudo {0} -S {1}/slashd.*.sock -siostats | wc "
     }
 
     ion_ops = {
       "connections": "sudo {0} -S {1}/sliod.*.sock -sconnections | wc -l"
-      #"iostats": ""sudo {0} -S {1}/sliod.*.sock -siostats"
+    }
+
+    client_ops = {
     }
 
     report = {}
@@ -71,18 +67,18 @@ class TestHandler(object):
       for op, cmd in checks.items():
         if "{0}" in cmd: #needs pid
           cmd = cmd.format(pid)
-        report[set][op] = "".join(ssh.run(cmd, timeout=2)["out"])
+        report[set][op] = "".join(ssh.run(cmd, timeout=2)["out"]).strip()
 
     if type == "mds":
       for op, cmd in mds_ops.items():
         if "{0}" in cmd and "{1}" in cmd: #needs the paths
           cmd = cmd.format(ctl_path, self.runtime["build_dirs"]["ctl"])
-        report[set][op] = "".join(ssh.run(cmd, timeout=2)["out"])
-    elif type == "ion"
+        report[set][op] = "".join(ssh.run(cmd, timeout=2)["out"]).strip()
+    elif type == "ion":
       for op, cmd in ion_ops.items():
         if "{0}" in cmd and "{1}" in cmd: #needs the paths
           cmd = cmd.format(ctl_path, self.runtime["build_dirs"]["ctl"])
-        report[set][op] = "".join(ssh.run(cmd, timeout=2)["out"])
+        report[set][op] = "".join(ssh.run(cmd, timeout=2)["out"]).strip()
 
     print "Status check completed for {0}".format(ssh.host)
     return report
@@ -90,26 +86,29 @@ class TestHandler(object):
   def get_resource_usages(self):
     #query each slash2 compenent for resource usage
     rusages = {}
-    for host, ctl_path, pid in self.runtime["daemons"]:
+    for host, type, ctl_path, pid in self.runtime["daemons"]:
+      print type
       user = os.getenv("USER")
       ssh = SSH(user, host, '');
       kernel = "".join(ssh.run("uname -s")["out"]).lower()
       if "linux" in kernel:
-        output = self.check_status(ssh, ctl_path, pid)
+        output = self.check_status(ssh, type, ctl_path, pid)
       elif "bsd" in kernel:
-        output = self.query_ctl_rusage(ssh, ctl_path)
+        output = self.query_ctl_rusage(ssh, type, ctl_path)
       else:
+        # do something
         pass
       rusages[host] = output
 
     return rusages
+    sys.exit(1)
 
   def run_tests(self):
     """Run all tests from the tests directory and print results"""
     tset_results = []
     available_tests = [file for file in glob.glob(self.tests_dir + "/*") if os.access(file, os.X_OK)]
     for test_file in available_tests:
-      results = {"name": test_file.split(".")[-2]}
+      results = {"name": test_file.split(".")[-2].split("/")[-1]}
       print "Running", results["name"]
 
       start = time.time()
@@ -126,9 +125,9 @@ class TestHandler(object):
     f.close()
 
   def cleanup(self):
-    pass
     # TODO: we don't have permissions to delete these..
     #shutil.rmtree(self.modules_folder)
+    pass
 
 if __name__ == "__main__":
   #Ran from script

@@ -258,6 +258,7 @@ def main():
               log.info("Launching all MDSs")
               launch_mds(t)
             elif parent_lookup == "kill":
+              log.info("Killing all MDSs")
               kill_mds(t)
           elif item_lookup == "ion":
             if parent_lookup == "create":
@@ -267,18 +268,23 @@ def main():
               log.info("Launching all IONs")
               launch_ion(t)
             elif parent_lookup == "kill":
+              log.info("Killing all IONs")
               kill_ion(t)
           elif item_lookup == "mnt":
             if parent_lookup == "launch":
               log.info("Launching all clients")
               launch_mnt(t)
             elif parent_lookup == "kill":
+              log.info("Killing all clients")
               kill_mnt(t)
           elif item_lookup == "tests" and parent_lookup == "run":
+            log.info("Running tests on clients")
             t.run_tests()
           elif item_lookup == "mongo" and parent_lookup == "store":
+            log.info("Storing test results in database")
             t.store_report()
           elif item_lookup == "all" and parent_lookup == "kill":
+            log.info("Finished Execution")
             t.shutdown()
 
 
