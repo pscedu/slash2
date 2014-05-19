@@ -1582,10 +1582,8 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r, int *psched)
 __static int
 msl_pages_prefetch(struct bmpc_ioreq *r)
 {
-	int i, sched = 0, rc = 0, waitflag = 0, npages = 0, aiowait = 0;
+	int i, sched = 0, rc = 0, waitflag = 0, aiowait = 0;
 	struct bmap_pagecache_entry *e;
-
-	npages = psc_dynarray_len(&r->biorq_pages);
 
 	psc_assert(!r->biorq_rqset);
 
