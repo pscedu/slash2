@@ -165,7 +165,7 @@ slc_rmc_retry_pfcc(struct pscfs_clientctx *pfcc, int *rc)
 	else
 		retry = 0;
 //	retry = hard timeout
-	*rc = retry ? 0 : ENOTCONN;
+	*rc = retry ? 0 : ETIMEDOUT;
 	return (retry);
 }
 

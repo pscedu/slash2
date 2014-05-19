@@ -440,7 +440,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 
 	csvc = msl_bmap_to_csvc(r->biorq_bmap, 1);
 	if (csvc == NULL) {
-		rc = -ENOTCONN;
+		rc = -ETIMEDOUT;
 		goto error;
 	}
 
