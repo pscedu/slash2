@@ -28,12 +28,12 @@
 #include <stdio.h>
 
 #include "pfl/cdefs.h"
-#include "pfl/str.h"
-#include "pfl/tree.h"
 #include "pfl/rpc.h"
 #include "pfl/rpclog.h"
 #include "pfl/rsx.h"
 #include "pfl/service.h"
+#include "pfl/str.h"
+#include "pfl/tree.h"
 
 #include "bmap_iod.h"
 #include "mkfn.h"
@@ -205,9 +205,9 @@ sli_rpc_mds_unpack_fsuuid(struct pscrpc_request *rq, int msgtype)
 	}
 
 	if (globalConfig.gconf_fsuuid != fsuuid)
-		psc_fatalx("Mismatching UUIDs detected!  "
-		   "gconf_fsuuid=%"PRIx64" mds_fsuuid=%"PRIx64,
-		   globalConfig.gconf_fsuuid, fsuuid);
+		psc_fatalx("mismatching UUIDs detected!  "
+		    "gconf_fsuuid=%"PRIx64" mds_fsuuid=%"PRIx64,
+		    globalConfig.gconf_fsuuid, fsuuid);
 
 	return;
 

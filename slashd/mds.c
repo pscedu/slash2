@@ -1054,8 +1054,8 @@ mds_bmap_bml_del_locked(struct bmap_mds_lease *bml)
 			bmi->bmi_writers--;
 
 			DEBUG_BMAP(PLL_DIAG, bmi_2_bmap(bmi),
-			   "bml=%p bmi_writers=%d bmi_readers=%d",
-			   bml, bmi->bmi_writers, bmi->bmi_readers);
+			    "bml=%p bmi_writers=%d bmi_readers=%d",
+			    bml, bmi->bmi_writers, bmi->bmi_readers);
 
 			if (rlease)
 				bmi->bmi_readers++;
@@ -1974,10 +1974,10 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	if (obml)
 		mds_bmap_bml_release(obml);
 	DEBUG_BMAP(rc ? PLL_WARN : PLL_DIAG, b,
-	   "renew oseq=%"PRIu64" nseq=%"PRIu64" nid=%"PRIu64" pid=%u",
-	   sbd_in->sbd_seq, bml ? bml->bml_seq : 0,
-	   exp->exp_connection->c_peer.nid,
-	   exp->exp_connection->c_peer.pid);
+	    "renew oseq=%"PRIu64" nseq=%"PRIu64" nid=%"PRIu64" pid=%u",
+	    sbd_in->sbd_seq, bml ? bml->bml_seq : 0,
+	    exp->exp_connection->c_peer.nid,
+	    exp->exp_connection->c_peer.pid);
 
 	bmap_op_done(b);
 	return (rc);

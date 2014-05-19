@@ -26,13 +26,13 @@
  * Routines for handling RPC requests for ION from ION.
  */
 
+#include "pfl/ctlsvr.h"
 #include "pfl/list.h"
+#include "pfl/pool.h"
 #include "pfl/rpc.h"
 #include "pfl/rpclog.h"
 #include "pfl/rsx.h"
 #include "pfl/service.h"
-#include "pfl/ctlsvr.h"
-#include "pfl/pool.h"
 
 #include "authbuf.h"
 #include "bmap.h"
@@ -289,7 +289,7 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 
 	if (slvridx == (int)nitems(w->srw_slvr)) {
 		DEBUG_SLVR(PLL_ERROR, s,
-		   "failed to find slvr in wq=%p", w);
+		    "failed to find slvr in wq=%p", w);
 		PFL_GOTOERR(out, mp->rc = -ENOENT);
 	}
 

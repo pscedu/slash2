@@ -267,7 +267,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 			BMAP_ULOCK(b);
 
 			DEBUG_BMAP(PLL_INFO, b,
-			   "about to mode change (rw=%d)", rw);
+			    "about to mode change (rw=%d)", rw);
 
 			rc = sl_bmap_ops.bmo_mode_chngf(b, rw, 0);
 			BMAP_LOCK(b);
