@@ -28,9 +28,9 @@
 #include <sys/time.h>
 
 #include "pfl/lockedlist.h"
-#include "pfl/rpc.h"
 #include "pfl/odtable.h"
 #include "pfl/pthrutil.h"
+#include "pfl/rpc.h"
 
 #include "bmap.h"
 #include "inode.h"
