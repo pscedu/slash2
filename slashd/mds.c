@@ -2300,7 +2300,7 @@ slmbkdbthr_main(struct psc_thread *thr)
 	while (pscthr_run(thr)) {
 		// XXX sqlite3_backup_init()
 		sleep(120);
-		system(cmd);
+		(void)system(cmd);
 	}
 }
 
@@ -2363,7 +2363,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 				snprintf(cmd, sizeof(cmd),
 				    "echo .dump | sqlite3 '%s' > '%s'",
 				    qdbfn, qtmpfn);
-				system(cmd);
+				(void)system(cmd);
 
 				unlink(dbfn);
 			}
@@ -2371,7 +2371,7 @@ _dbdo(const struct pfl_callerinfo *pci,
 			/* rollback to backup */
 			snprintf(cmd, sizeof(cmd),
 			    "sqlite3 '%s' < '%s'", qdbfn, qbkfn);
-			system(cmd);
+			(void)system(cmd);
 
 			rc = sqlite3_open(dbfn, &dbh->dbh);
 			if (rc)
