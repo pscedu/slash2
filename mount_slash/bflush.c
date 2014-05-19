@@ -328,9 +328,6 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r)
 {
 	struct timespec t;
 	int old = 0;
-	struct bmap_pagecache *bmpc;
-
-	bmpc = bmap_2_bmpc(r->biorq_bmap);
 
 	PFL_GETTIMESPEC(&t);
 
