@@ -569,11 +569,7 @@ __static void
 _msl_fsrq_aiowait_tryadd_locked(const struct pfl_callerinfo *pci,
     struct bmap_pagecache_entry *e, struct bmpc_ioreq *r)
 {
-	int locked;
-
 	LOCK_ENSURE(&e->bmpce_lock);
-
-	locked = MFH_RLOCK(r->biorq_mfh);
 
 	BIORQ_LOCK(r);
 	if (!(r->biorq_flags & BIORQ_WAIT)) {
@@ -583,8 +579,6 @@ _msl_fsrq_aiowait_tryadd_locked(const struct pfl_callerinfo *pci,
 		pll_add(&e->bmpce_pndgaios, r);
 	}
 	BIORQ_ULOCK(r);
-
-	MFH_URLOCK(r->biorq_mfh, locked);
 }
 
 __static int
