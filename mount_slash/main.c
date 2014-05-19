@@ -463,6 +463,8 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	    libsl_ios2name(mp->sbd.sbd_ios), mp->sbd.sbd_seq);
 
 	bci = bmap_2_bci(b);
+	// XXX this is wrong if the fcmh inherited from a dir with a
+	// repltbl!
 	SL_REPL_SET_BMAP_IOS_STAT(bci->bci_repls, 0, BREPLST_VALID);
 
 	bmap_op_done(b);
