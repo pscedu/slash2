@@ -117,13 +117,14 @@ struct bmap_pagecache_entry {
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP,					\
-	    "bmpce@%p fl=%u:%s%s%s%s%s%s%s "				\
+	    "bmpce@%p fl=%u:%s%s%s%s%s%s%s%s "				\
 	    "o=%#x b=%p "						\
 	    "ts="PSCPRI_TIMESPEC" "					\
 	    "ref=%u "							\
 	    "owner=%p : " fmt,						\
 	    (b), (b)->bmpce_flags,					\
 	    (b)->bmpce_flags & BMPCE_DATARDY		? "d" : "",	\
+	    (b)->bmpce_flags & BMPCE_FAULTING		? "f" : "",	\
 	    (b)->bmpce_flags & BMPCE_LRU		? "l" : "",	\
 	    (b)->bmpce_flags & BMPCE_TOFREE		? "T" : "",	\
 	    (b)->bmpce_flags & BMPCE_EIO		? "E" : "",	\
@@ -197,7 +198,7 @@ struct bmpc_ioreq {
 
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP, "biorq@%p flg=%#x:"			\
-	    "%s%s%s%s%s%s%s%s%s%s%s "					\
+	    "%s%s%s%s%s%s%s%s%s%s%s%s "					\
 	    "ref=%d off=%u len=%u "					\
 	    "retry=%u buf=%p rqi=%p "					\
 	    "sliod=%x np=%d "						\
@@ -211,7 +212,8 @@ struct bmpc_ioreq {
 	    (b)->biorq_flags & BIORQ_DESTROY		? "D" : "",	\
 	    (b)->biorq_flags & BIORQ_FLUSHRDY		? "L" : "",	\
 	    (b)->biorq_flags & BIORQ_NOFHENT		? "n" : "",	\
-	    (b)->biorq_flags & BIORQ_AIOWAIT		? "S" : "",	\
+	    (b)->biorq_flags & BIORQ_AIOWAIT		? "A" : "",	\
+	    (b)->biorq_flags & BIORQ_SPLAY		? "S" : "",	\
 	    (b)->biorq_flags & BIORQ_WAIT		? "W" : "",	\
 	    (b)->biorq_flags & BIORQ_MFHLIST		? "m" : "",	\
 	    (b)->biorq_ref, (b)->biorq_off, (b)->biorq_len,		\
