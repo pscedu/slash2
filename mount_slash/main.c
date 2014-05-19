@@ -1836,7 +1836,7 @@ slc_getprog(pid_t pid, char fn[])
 
 	fn[0] = '\0';
 	snprintf(buf, sizeof(buf), "/proc/%d/exe", pid);
-	readlink(buf, fn, PATH_MAX);
+	(void)readlink(buf, fn, PATH_MAX);
 }
 
 /**
