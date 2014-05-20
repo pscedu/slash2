@@ -288,16 +288,18 @@ slvr_aio_tryreply(struct sli_aiocb_reply *a)
 		SLVR_LOCK(s);
 
 		/*
-		 * FixMe: What if the sliver get reused for another purpose?
+		 * XXX: What if the sliver get reused for another
+		 * purpose?
 		 */
 		if (s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR))
 			ready++;
 
 		else if (s->slvr_flags & SLVR_AIOWAIT) {
 			/*
-			 * One of our slvrs is still waiting on aio completion.
-			 * Add this reply to that slvr. Note that a has already
-			 * been removed from the pending list of previous slvr.
+			 * One of our slvrs is still waiting on aio
+			 * completion.  Add this reply to that slvr.
+			 * Note that a has already been removed from the
+			 * pending list of previous slvr.
 			 */
 			pll_add(&s->slvr_pndgaios, a);
 			OPSTAT_INCR(SLI_OPST_AIO_INSERT);
@@ -539,10 +541,11 @@ slvr_fsio(struct slvr *s, int sblk, uint32_t size, enum rw rw)
 			int crc_rc;
 
 			/*
-			 * When a file is truncated, the generation number
-			 * increments and all CRCs should be invalid. Luckily
-			 * we can use a simple check here without resorting
-			 * to a complicated protocol.
+			 * When a file is truncated, the generation
+			 * number increments and all CRCs should be
+			 * invalid.  Luckily we can use a simple check
+			 * here without resorting to a complicated
+			 * protocol.
 			 */
 			SLVR_LOCK(s);
 			crc_rc = slvr_do_crc(s, NULL);
