@@ -279,7 +279,8 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	    &rq->rq_timeout, -1);
 
 	if (rq->rq_timeout < 0) {
-		DEBUG_REQ(PLL_ERROR, rq, "off=%u sz=%u op=%u",
+		rc = -EAGAIN;
+		DEBUG_REQ(PLL_ERROR, rq, "negative timeout: off=%u sz=%u op=%u",
 			  mq->offset, mq->size, mq->op);
 		goto error;
 	}
