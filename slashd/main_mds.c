@@ -131,9 +131,9 @@ append_path(const char *newpath)
 }
 
 /*
- * Use system() calls to import pool and mount file systems. Note that the paths
- * needed by the system() is built in at compile time and added by append_path()
- * at run time.
+ * Use system() calls to import pool and mount file systems.  Note that
+ * the paths needed by the system() is built in at compile time and
+ * added by append_path() at run time.
  */
 void
 import_zpool(const char *zpoolname, const char *zfspoolcf)

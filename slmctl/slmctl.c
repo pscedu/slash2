@@ -182,8 +182,8 @@ slm_statfs_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    scsf->scsf_flags & SIF_DISABLE_GC  ? 'G' : '-');
 	printf(" ");
 	/*
-	 * The following uses the formula from df.c in coreutils. However,
-	 * we don't do integer arithmetic.
+	 * The following uses the formula from df.c in GNU coreutils.
+	 * However, we don't do integer arithmetic.
 	 */
 	b->sf_blocks ? psc_ctl_prhuman(b->sf_blocks * b->sf_bsize) :
 	    printf("%7s", "-");

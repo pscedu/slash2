@@ -113,7 +113,7 @@ bmap_free_all_locked(struct fidc_membh *f)
 		 *
 		 * Finally, a read comes in, we request a read bmap.  At
 		 * this point, all bmaps of the file have been freed at
-		 * both MDS and client. And the MDS can not find a
+		 * both MDS and client.  And the MDS can not find a
 		 * replica for a bmap in the metafile.
 		 */
 		BMAP_LOCK(a);

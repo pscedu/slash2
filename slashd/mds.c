@@ -614,7 +614,7 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 		bml->bml_flags |= BML_ASSFAIL;
 
 		DEBUG_BMAP(PLL_ERROR, b, "failed odtable_putitem()");
-		// XXX fix me - dont leak the journal buf!
+		// XXX fix me - don't leak the journal buf!
 		return (-SLERR_XACT_FAIL);
 	}
 	b->bcm_flags &= ~BMAP_MDS_NOION;

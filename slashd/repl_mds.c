@@ -465,7 +465,7 @@ mds_repl_inv_requeue(struct bmapc_memb *b, int idx, int val, void *arg)
  *	table that should be marked "valid".
  *
  * Note: All callers must journal log these bmap replica changes
- *	themselves. In addition, they must log any changes to the inode
+ *	themselves.  In addition, they must log any changes to the inode
  *	_before_ the bmap changes.  Otherwise, we could end up actually
  *	having bmap replicas that are not recognized by the information
  *	stored in the inode during log replay.
