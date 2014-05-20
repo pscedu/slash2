@@ -503,9 +503,16 @@ reimport
   written to disk so don't go through slm_repl_upd_write
 - when write IO is done in mount_slash, we should set BREPLST_VALID
   if it isn't
-- check svn histories for when small I/Os performance broke 
+- check svn histories for when small I/Os performance broke
 - we should reload the inode table from MDS in CLI always in GETBMAP
   in case a new bmap changed the reptbl
+- is fuse OPEN for mmap/dio still broke?  double check and open
+  turn off PSCFS_OPENF_DIO for non-X_OK files on older fuse
+- we should move the mds_bmap_crc_write() code that turns off SGID and
+  SUID bits on the file to mds_bmap_ion_assign()
+- we should use a flag SETATTRF_MTIME_NOW that updates a file's mtim
+  to whatever is the current time on MDS instead of using the client's
+  time specified
 
 - add crcalg=old option
 - art's md5deep failures
