@@ -540,6 +540,12 @@ slictlparam_reclaim_batchno_get(char *val)
 	snprintf(val, PCP_VALUE_MAX, "%"PRIu64, current_reclaim_batchno);
 }
 
+void
+slictlparam_selftestrc_get(char *val)
+{
+	snprintf(val, PCP_VALUE_MAX, "%d", sli_selftest_rc);
+}
+
 struct psc_ctlop slictlops[] = {
 	PSC_CTLDEFOPS,
 	{ slictlrep_getreplwkst,	sizeof(struct slictlmsg_replwkst ) },
@@ -593,6 +599,8 @@ slictlthr_main(const char *fn)
 	    NULL);
 	psc_ctlparam_register_simple("version", slctlparam_version_get,
 	    NULL);
+	psc_ctlparam_register_simple("selftestrc",
+	    slictlparam_selftestrc_get, NULL);
 
 	psc_ctlthr_main(fn, slictlops, nitems(slictlops), SLITHRT_CTLAC);
 }
