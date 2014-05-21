@@ -224,8 +224,7 @@ resm2rmci(struct sl_resm *resm)
 
 #define msl_biorq_destroy(r)	_msl_biorq_destroy(PFL_CALLERINFOSS(SLSS_BMAP), (r))
 
-struct slashrpc_cservice *
-	 msl_bmap_to_csvc(struct bmapc_memb *, int);
+int	 msl_bmap_to_csvc(struct bmapc_memb *, int, struct slashrpc_cservice **);
 void	 msl_bmap_reap_init(struct bmapc_memb *, const struct srt_bmapdesc *);
 void	 msl_bmpces_fail(struct bmpc_ioreq *, int);
 void	_msl_biorq_destroy(const struct pfl_callerinfo *, struct bmpc_ioreq *);
