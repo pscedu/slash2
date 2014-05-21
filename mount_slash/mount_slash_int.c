@@ -2155,7 +2155,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			goto restart;
 		}
 		if (abs(rc) == SLERR_ION_OFFLINE)
-			rc = -EIO;
+			rc = -ETIMEDOUT;
 
 		/*
 		 * Make sure we don't copy pages from biorq in
