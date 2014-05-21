@@ -439,11 +439,9 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 
 	r = pll_peekhead(&bwc->bwc_pll);
 
-	csvc = msl_bmap_to_csvc(r->biorq_bmap, 1);
-	if (csvc == NULL) {
-		rc = -ETIMEDOUT;
-		goto error;
-	}
+	rc = msl_bmap_to_csvc(r->biorq_bmap, 1, &csvc);
+	if (rc)
+		PFL_GOTOERR(error, rc);
 
 	b = r->biorq_bmap;
 	psc_assert(bwc->bwc_soff == r->biorq_off);

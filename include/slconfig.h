@@ -133,7 +133,7 @@ resm_get_pri(struct sl_resm *resm)
 #define resm_getcsvcerr(m)						\
 	((m)->resm_csvc ?						\
 	   ((m)->resm_csvc->csvc_lasterrno ?				\
-	    (m)->resm_csvc->csvc_lasterrno : -ENOTCONN) : -ENOTCONN)
+	    (m)->resm_csvc->csvc_lasterrno : -ETIMEDOUT) : -ETIMEDOUT)
 
 /* Site (a collection of I/O systems) */
 struct sl_site {

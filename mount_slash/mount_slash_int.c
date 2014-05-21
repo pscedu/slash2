@@ -1109,9 +1109,9 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 
 	op = r->biorq_flags & BIORQ_WRITE ? SRMT_WRITE : SRMT_READ;
 
-	csvc = msl_bmap_to_csvc(b, op == SRMT_WRITE);
-	if (csvc == NULL)
-		PFL_GOTOERR(error, rc = -ENOTCONN);
+	rc = msl_bmap_to_csvc(b, op == SRMT_WRITE, &csvc);
+	if (rc)
+		PFL_GOTOERR(error, rc);
 
 	if (r->biorq_rqset == NULL)
 		r->biorq_rqset = pscrpc_prep_set();
@@ -1301,9 +1301,9 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 		iovs[i].iov_len  = BMPC_BUFSZ;
 	}
 
-	csvc = msl_bmap_to_csvc(b, 0);
-	if (csvc == NULL)
-		PFL_GOTOERR(error, rc = -ENOTCONN);
+	rc = msl_bmap_to_csvc(b, 0, &csvc);
+	if (rc)
+		PFL_GOTOERR(error, rc);
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
 	if (rc)
@@ -1415,13 +1415,13 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	}
 
 	(void)psc_fault_here_rc(SLC_FAULT_READRPC_OFFLINE, &rc,
-	    -ENOTCONN);
+	    -ETIMEDOUT);
 	if (rc)
 		PFL_GOTOERR(error, rc);
-	csvc = msl_bmap_to_csvc(r->biorq_bmap,
-	    r->biorq_bmap->bcm_flags & BMAP_WR);
-	if (csvc == NULL)
-		PFL_GOTOERR(error, rc = -ENOTCONN); // xxx
+	rc = msl_bmap_to_csvc(r->biorq_bmap,
+	    r->biorq_bmap->bcm_flags & BMAP_WR, &csvc);
+	if (rc)
+		PFL_GOTOERR(error, rc);
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
 	if (rc)

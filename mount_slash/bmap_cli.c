@@ -749,10 +749,9 @@ msl_bmap_release(struct sl_resm *resm)
 	csvc = (resm == slc_rmc_resm) ?
 	    slc_getmcsvc(resm) : slc_geticsvc(resm);
 	if (csvc == NULL) {
-		if (resm->resm_csvc)
-			rc = resm->resm_csvc->csvc_lasterrno; /* XXX race */
-		else
-			rc = -ENOTCONN;
+		rc = -abs(resm->resm_csvc->csvc_lasterrno); /* XXX race */
+		if (rc == 0)
+			rc = -ETIMEDOUT;
 		goto out;
 	}
 
@@ -907,15 +906,17 @@ msbmaprlsthr_main(struct psc_thread *thr)
  * XXX: If the bmap is a read-only then any replica may be accessed (so
  *	long as it is recent).
  */
-struct slashrpc_cservice *
-msl_bmap_to_csvc(struct bmap *b, int exclusive)
+int
+msl_bmap_to_csvc(struct bmap *b, int exclusive,
+    struct slashrpc_cservice **csvcp)
 {
 	int i, j, locked, rc, hasvalid, hasdataflag;
-	struct slashrpc_cservice *csvc;
 	struct fcmh_cli_info *fci;
 	struct psc_multiwait *mw;
 	struct sl_resm *m;
 	void *p;
+
+	*csvcp = NULL;
 
 	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
 
@@ -924,7 +925,13 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive)
 		m = libsl_ios2resm(bmap_2_ios(b));
 		psc_assert(m->resm_res->res_id == bmap_2_ios(b));
 		BMAP_URLOCK(b, locked);
-		return (slc_geticsvc(m));
+		*csvcp = slc_geticsvc(m);
+		if (*csvcp)
+			return (0);
+		rc = m->resm_csvc->csvc_lasterrno;
+		if (rc)
+			return (-abs(rc));
+		return (-ETIMEDOUT);
 	}
 
 	fci = fcmh_get_pri(b->bcm_fcmh);
@@ -945,10 +952,10 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive)
 		hasvalid = 0;
 		for (i = 0; i < fci->fci_inode.nrepls; i++) {
 			rc = msl_try_get_replica_res(b,
-			    fci->fcif_idxmap[i], j, &csvc);
+			    fci->fcif_idxmap[i], j, csvcp);
 			if (rc == 0) {
 				psc_multiwait_leavecritsect(mw);
-				return (csvc);
+				return (0);
 			}
 			if (rc == -1)
 				hasvalid = 1;
@@ -980,7 +987,7 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive)
 		// recheck
 	}
 	psc_multiwait_leavecritsect(mw);
-	return (NULL);
+	return (-ETIMEDOUT);
 }
 
 void
