@@ -1321,8 +1321,8 @@ msl_reada_rpc_launch(struct bmap_pagecache_entry **bmpces, int nbmpce)
 	mq->offset = off;
 	memcpy(&mq->sbd, bmap_2_sbd(b), sizeof(mq->sbd));
 
-	DEBUG_BMAP(PLL_DIAG, b, "reada req off=%u, npages=%d", off,
-	    nbmpce);
+	DEBUG_BMAP(PLL_DIAG, b, "reada req off=%u, npages=%d, ios=%u", off,
+	    nbmpce, bmap_2_ios(b));
 
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 
@@ -1438,8 +1438,8 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	mq->op = SRMIOP_RD;
 	memcpy(&mq->sbd, bmap_2_sbd(r->biorq_bmap), sizeof(mq->sbd));
 
-	DEBUG_BIORQ(PLL_INFO, r, "fid="SLPRI_FG" launching read req",
-	    SLPRI_FG_ARGS(&mq->sbd.sbd_fg));
+	DEBUG_BIORQ(PLL_INFO, r, "fid="SLPRI_FG" launching read req, ios=%u",
+	    SLPRI_FG_ARGS(&mq->sbd.sbd_fg), bmap_2_ios(r->biorq_bmap));
 
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 
