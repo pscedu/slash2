@@ -576,7 +576,7 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw,
 	mq->prefios[0] = prefIOS; /* Tell MDS of our preferred ION */
 	mq->bmapno = bmap->bcm_bmapno;
 	mq->rw = rw;
-	if ((f->fcmh_flags & FCMH_CLI_HAVEINODE) == 0)
+	//if ((f->fcmh_flags & FCMH_CLI_HAVEINODE) == 0)
 		mq->flags |= SRM_LEASEBMAPF_GETINODE;
 
 	DEBUG_FCMH(PLL_DIAG, f, "retrieving bmap (bmapno=%u) (rw=%s)",
