@@ -639,6 +639,65 @@ msctlrep_getbiorq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
+int
+msctlmsg_bmpce_send(int fd, struct psc_ctlmsghdr *mh,
+    struct msctlmsg_bmpce *mpce, struct bmap *b,
+    struct bmap_pagecache_entry *e)
+{
+	// XXX lock
+	memset(mpce, 0, sizeof(*mpce));
+	mpce->mpce_fid = b->bcm_fcmh->fcmh_sstb.sst_fid;
+	mpce->mpce_bno = b->bcm_bmapno;
+	mpce->mpce_ref = psc_atomic32_read(&e->bmpce_ref);
+	mpce->mpce_flags = e->bmpce_flags;
+	mpce->mpce_off = e->bmpce_off;
+//	mpce->mpce_start = e->bmpce_start;
+	mpce->mpce_laccess = e->bmpce_laccess;
+	mpce->mpce_nwaiters =e->bmpce_waitq ?
+	    psc_waitq_nwaiters(e->bmpce_waitq) : 0;
+	mpce->mpce_npndgaios = pll_nitems(&e->bmpce_pndgaios);
+	return (psc_ctlmsg_sendv(fd, mh, mpce));
+}
+
+int
+msctlrep_getbmpce(int fd, struct psc_ctlmsghdr *mh, void *m)
+{
+	struct msctlmsg_bmpce *mpce = m;
+	struct bmap_pagecache_entry *e;
+	struct psc_hashbkt *hb;
+	struct fidc_membh *f;
+	struct bmap *b;
+	int rc = 1;
+
+	PSC_HASHTBL_FOREACH_BUCKET(hb, &fidcHtable) {
+		psc_hashbkt_lock(hb);
+		PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, f, hb) {
+			FCMH_LOCK(f);
+			SPLAY_FOREACH(b, bmap_cache, &f->fcmh_bmaptree) {
+				BMAP_LOCK(b);
+				SPLAY_FOREACH(e, bmap_pagecachetree,
+				    &bmap_2_bmpc(b)->bmpc_tree) {
+					rc = msctlmsg_bmpce_send(fd, mh,
+					    mpce, b, e);
+					if (!rc)
+						break;
+				}
+				BMAP_ULOCK(b);
+				if (!rc)
+					break;
+			}
+			FCMH_ULOCK(f);
+			if (!rc)
+				break;
+		}
+		psc_hashbkt_unlock(hb);
+		if (!rc)
+			break;
+	}
+	return (rc);
+}
+
+
 const struct slctl_res_field slctl_resmds_fields[] = { { NULL, NULL } };
 const struct slctl_res_field slctl_resios_fields[] = { { NULL, NULL } };
 
@@ -656,6 +715,7 @@ struct psc_ctlop msctlops[] = {
 /* SET_FATTR		*/ , { msctlhnd_set_fattr,	sizeof(struct msctlmsg_fattr) }
 /* GETBMAP		*/ , { slctlrep_getbmap,	sizeof(struct slctlmsg_bmap) }
 /* GETBIORQ		*/ , { msctlrep_getbiorq,	sizeof(struct msctlmsg_biorq) }
+/* GETBMPCE		*/ , { msctlrep_getbmpce,	sizeof(struct msctlmsg_bmpce) }
 };
 
 psc_ctl_thrget_t psc_ctl_thrgets[] = {
