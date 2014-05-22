@@ -906,8 +906,8 @@ ms_ctlmsg_error_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 	PSC_CTLSHOW_DEFS,
-	{ "biorqs",		packshow_biorqs },
 	{ "bmaps",		packshow_bmaps },
+	{ "biorqs",		packshow_biorqs },
 	{ "bmpces",		packshow_bmpces },
 	{ "connections",	packshow_conns },
 	{ "fcmhs",		packshow_fcmhs },
