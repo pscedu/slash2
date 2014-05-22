@@ -203,7 +203,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *e,
 	if ((e->bmpce_flags & BMPCE_DATARDY) &&
 	   !(e->bmpce_flags & BMPCE_DISCARD)) {
 		DEBUG_BMPCE(PLL_INFO, e, "put on LRU");
-		PFL_GETTIMESPEC(&e->bmpce_laccess);
+		PFL_GETPTIMESPEC(&e->bmpce_laccess);
 		e->bmpce_flags |= BMPCE_LRU;
 		pll_add(&bmpc->bmpc_lru, e);
 		BMPCE_ULOCK(e);
