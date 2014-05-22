@@ -220,7 +220,7 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 	*bp = NULL;
 
 	if (rw)
-		bmaprw = ((rw == SL_WRITE) ? BMAP_WR : BMAP_RD);
+		bmaprw = rw == SL_WRITE ? BMAP_WR : BMAP_RD;
 
 	new_bmap = flags & BMAPGETF_LOAD;
 	b = bmap_lookup_cache(f, n, &new_bmap);
@@ -239,37 +239,38 @@ _bmap_get(const struct pfl_callerinfo *pci, struct fidc_membh *f,
 		BMAP_LOCK(b);
 		b->bcm_flags &= ~BMAP_INIT;
 		bmap_wake_locked(b);
-
 	} else {
-
-		/* Wait while BMAP_INIT is set.
+		/*
+		 * Wait while BMAP_INIT is set.
 		 *
-		 * Others wishing to access this bmap in the
-		 *   same mode must wait until MDCHNG ops have
-		 *   completed.  If the desired mode is present
-		 *   then a thread may proceed without blocking
-		 *   here so long as it only accesses structures
-		 *   which pertain to its mode.
+		 * Others wishing to access this bmap in the same mode
+		 * must wait until MDCHNG ops have completed.  If the
+		 * desired mode is present then a thread may proceed
+		 * without blocking here so long as it only accesses
+		 * structures which pertain to its mode.
 		 */
-		bmap_wait_locked(b, (b->bcm_flags & (BMAP_INIT|BMAP_MDCHNG)));
+		bmap_wait_locked(b, b->bcm_flags & (BMAP_INIT | BMAP_MDCHNG));
 
 		/*
-		 * Not all lookups are done with the intent of
-		 *   changing the bmap mode.  bmap_lookup() does not
-		 *   specify a rw value.
+		 * Not all lookups are done with the intent of changing
+		 * the bmap mode.  bmap_lookup() does not specify a rw
+		 * value.
 		 *
-		 * bmo_mode_chngf client side only and is msl_bmap_modeset().
+		 * bmo_mode_chngf is currently CLI only and is
+		 * msl_bmap_modeset().
 		 */
 		if (bmaprw && !(bmaprw & b->bcm_flags) &&
 		    sl_bmap_ops.bmo_mode_chngf) {
 
 			b->bcm_flags |= BMAP_MDCHNG;
-			BMAP_ULOCK(b);
 
 			DEBUG_BMAP(PLL_INFO, b,
 			    "about to mode change (rw=%d)", rw);
 
+			BMAP_ULOCK(b);
+
 			rc = sl_bmap_ops.bmo_mode_chngf(b, rw, 0);
+
 			BMAP_LOCK(b);
 			b->bcm_flags &= ~BMAP_MDCHNG;
 			if (!rc)
