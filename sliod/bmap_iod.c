@@ -396,8 +396,10 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw, __unusedx int flags)
 	}
 
 	BMAP_ULOCK(b);
+
  out:
-	/* Unblock threads no matter what.
+	/*
+	 * Unblock threads no matter what.
 	 *  XXX need some way to denote that a CRCGET RPC failed?
 	 */
 	if (rc)
