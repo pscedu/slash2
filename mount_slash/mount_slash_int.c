@@ -532,7 +532,11 @@ msl_fhent_new(struct pscfs_req *pfr, struct fidc_membh *f)
  * Obtain a csvc connection to an IOS that has residency.
  * @b: bmap.
  * @iosidx: numeric index into file inode replica table for IOS to try.
- * @allownonvalid:
+ * @allow_nonvalid: as a hack, when READ is performed on a non-existent
+ *	bmap, a lease is obtained for a newly created bmap with no VALID
+ *	states.  So, we honor a flag to return a csvc to an IOS so the
+ *	READ can no-op.
+ *	XXX This entire approach should be changed.
  * @csvcp: value-result service handle.
  */
 int
