@@ -112,23 +112,21 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, __unusedx int flags)
 
 	rc = slc_rmc_getcsvc1(&csvc, fci->fci_resm);
 	if (rc)
-		goto out;
+		PFL_GOTOERR(out, rc);
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_BMAPCHWRMODE, rq, mq, mp);
 	if (rc)
-		goto out;
+		PFL_GOTOERR(out, rc);
 
 	memcpy(&mq->sbd, bmap_2_sbd(b), sizeof(struct srt_bmapdesc));
 	mq->prefios[0] = prefIOS;
 	rc = SL_RSX_WAITREP(csvc, rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
-	if (rc == 0)
-		memcpy(bmap_2_sbd(b), &mp->sbd,
-		    sizeof(struct srt_bmapdesc));
-	else
-		goto out;
+	memcpy(bmap_2_sbd(b), &mp->sbd, sizeof(struct srt_bmapdesc));
 
 	r = libsl_id2res(bmap_2_sbd(b)->sbd_ios);
 	psc_assert(r);
@@ -160,7 +158,7 @@ msl_bmap_modeset(struct bmap *b, enum rw rw, __unusedx int flags)
 		nretries++;
 		/*
 		 * XXX need some sort of randomizer here so that many
-		 * clients do not flood mds.
+		 * clients do not flood the MDS.
 		 */
 		usleep(10000 * (nretries * nretries));
 		goto retry;
@@ -567,10 +565,10 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw,
 	OPSTAT_INCR(SLC_OPST_BMAP_RETRIEVE);
 	rc = slc_rmc_getcsvc1(&csvc, fci->fci_resm);
 	if (rc)
-		goto out;
+		PFL_GOTOERR(out, rc);
 	rc = SL_RSX_NEWREQ(csvc, SRMT_GETBMAP, rq, mq, mp);
 	if (rc)
-		goto out;
+		PFL_GOTOERR(out, rc);
 
 	mq->fg = f->fcmh_fg;
 	mq->prefios[0] = prefIOS; /* Tell MDS of our preferred ION */
@@ -586,7 +584,7 @@ msl_bmap_retrieve(struct bmap *bmap, enum rw rw,
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
-		goto out;
+		PFL_GOTOERR(out, rc);
 	memcpy(bci->bci_repls, mp->repls, sizeof(mp->repls));
 
 	FCMH_LOCK(f);
