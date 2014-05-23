@@ -1811,8 +1811,8 @@ msl_pages_copyout(struct bmpc_ioreq *r)
 
 		BMPCE_LOCK(e);
 		src = e->bmpce_base;
-		if (!i && (toff > e->bmpce_off)) {
-			psc_assert((toff - e->bmpce_off) < BMPC_BUFSZ);
+		if (!i && toff > e->bmpce_off) {
+			psc_assert(toff - e->bmpce_off < BMPC_BUFSZ);
 			src += toff - e->bmpce_off;
 			nbytes = MIN(BMPC_BUFSZ - (toff - e->bmpce_off),
 			    tsize);
