@@ -528,8 +528,15 @@ msl_fhent_new(struct pscfs_req *pfr, struct fidc_membh *f)
 	return (mfh);
 }
 
+/*
+ * Obtain a csvc connection to an IOS that has residency.
+ * @b: bmap.
+ * @iosidx: numeric index into file inode replica table for IOS to try.
+ * @allownonvalid:
+ * @csvcp: value-result service handle.
+ */
 int
-msl_try_get_replica_res(struct bmap *b, int iosidx, int reqval,
+msl_try_get_replica_res(struct bmap *b, int iosidx, int allow_nonvalid,
     struct slashrpc_cservice **csvcp)
 {
 	struct bmap_cli_info *bci = bmap_2_bci(b);
@@ -538,7 +545,7 @@ msl_try_get_replica_res(struct bmap *b, int iosidx, int reqval,
 	struct rnd_iterator it;
 	struct sl_resm *m;
 
-	if (reqval && SL_REPL_GET_BMAP_IOS_STAT(bci->bci_repls,
+	if (!allow_nonvalid && SL_REPL_GET_BMAP_IOS_STAT(bci->bci_repls,
 	    iosidx * SL_BITS_PER_REPLICA) != BREPLST_VALID)
 		return (-2);
 
