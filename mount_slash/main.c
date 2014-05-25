@@ -757,9 +757,15 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	if (rc)
 		PFL_GOTOERR(out, rc);
 
+	/* XXX this is wrong, it needs to check sticky */
 	rc = fcmh_checkcreds(p, &pcr, W_OK);
 	if (rc)
 		PFL_GOTOERR(out, rc);
+
+	/* XXX missing checks/return conditions
+	 *
+	 * [EACCES]     The current process cannot access the existing file.
+	 */
 
 	/* Check the child inode. */
 	rc = msl_load_fcmh(pfr, c_inum, &c);
@@ -1983,7 +1989,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 			if (op->fcmh_sstb.sst_uid == pcr.pcr_uid)
 				sticky = 0;
 		} else
-			rc = fcmh_checkcreds(op, &pcr, W_OK);
+			rc = fcmh_checkcreds(op, &pcr, W_OK); // X_OK?
 		FCMH_ULOCK(op);
 		if (rc)
 			PFL_GOTOERR(out, rc);
@@ -2016,7 +2022,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 				if (np->fcmh_sstb.sst_uid == pcr.pcr_uid)
 					sticky = 0;
 			} else
-				rc = fcmh_checkcreds(np, &pcr, W_OK);
+				rc = fcmh_checkcreds(np, &pcr, W_OK); // X_OK
 			FCMH_ULOCK(np);
 			if (rc)
 				PFL_GOTOERR(out, rc);
