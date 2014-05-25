@@ -137,19 +137,17 @@ slistatfsthr_main(struct psc_thread *thr)
 void
 slihealththr_main(struct psc_thread *thr)
 {
+	struct psc_waitq dummy = PSC_WAITQ_INIT;
 	struct slashrpc_cservice *csvc;
-	struct itimerval itv;
+	struct timespec ts;
 	int rc;
 
 	signal(SIGALRM, SIG_IGN);
+	PFL_GETTIMEVAL(&ts);
 	while (pscthr_run(thr)) {
-		memset(&itv, 0, sizeof(itv));
-		PFL_GETTIMEVAL(&itv.it_value);
-		itv.it_value.tv_sec += 30;
-		setitimer(ITIMER_REAL, &itv, NULL);
+		ts.tv_sec += 60;
+		psc_waitq_waitabs(&dummy, NULL, &ts);
 		rc = system(nodeResm->resm_res->res_selftest);
-		memset(&itv, 0, sizeof(itv));
-		setitimer(ITIMER_REAL, &itv, NULL);
 
 		/*
 		 * Code		Description
@@ -173,7 +171,6 @@ slihealththr_main(struct psc_thread *thr)
 			PLL_ULOCK(&sl_clients);
 		}
 		sli_selftest_rc = rc;
-		sleep(30);
 	}
 }
 
