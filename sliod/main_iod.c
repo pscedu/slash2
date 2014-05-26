@@ -143,7 +143,7 @@ slihealththr_main(struct psc_thread *thr)
 	int rc;
 
 	signal(SIGALRM, SIG_IGN);
-	PFL_GETTIMEVAL(&ts);
+	PFL_GETTIMESPEC(&ts);
 	while (pscthr_run(thr)) {
 		ts.tv_sec += 60;
 		psc_waitq_waitabs(&dummy, NULL, &ts);
