@@ -25,6 +25,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#define sys_strerror(rc)		strerror(rc)
+
 #include "pfl/cdefs.h"
 
 #include "slerr.h"
@@ -43,7 +45,7 @@ char *slash_errstrs[] = {
 /*  0 */ "Specified replica(s) already exist",
 /*  1 */ "Specified replica(s) do not exist",
 /*  2 */ "Generic RPC error",
-/*  3 */ "",
+/*  3 */ "unknown code 3",
 /*  4 */ "Invalid bmap",
 /*  5 */ "Bmap direct I/O must wait",
 /*  6 */ "Uninitialized bmap",
@@ -68,30 +70,28 @@ char *slash_errstrs[] = {
 /* 25 */ "Asynchronous I/O would block",
 /* 26 */ "Reimport failed because target is newer",
 /* 27 */ "Import additional replica registration failed because source and target differ",
-/* 28 */ "",
-/* 29 */ "",
+/* 28 */ "unknown code 28",
+/* 29 */ "unknown code 29",
 /* 30 */ "Peer resource is of wrong type",
 /* 31 */ "Activity already in progress",
-/* 32 */ "",
-/* 33 */ "",
+/* 32 */ "unknown code 32",
+/* 33 */ "unknown code 33",
 /* 34 */ "CRC absent",
 /* 35 */ "Bad message",
 /* 36 */ "Key expired",
 	 NULL
 };
 
-char *
-slstrerror(int error)
+const char *
+pfl_strerror(int error)
 {
 	error = abs(error);
 
 	if (error >= _PFLERR_START &&
 	    error < _PFLERR_START + nitems(pfl_errstrs))
 		return (pfl_errstrs[error - _PFLERR_START]);
-
 	if (error >= _SLERR_START &&
 	    error < _SLERR_START + nitems(slash_errstrs))
-		/* XXX ensure strerror(error) == unknown) */
 		return (slash_errstrs[error - _SLERR_START]);
-	return (strerror(error));
+	return (sys_strerror(error));
 }

@@ -29,7 +29,7 @@
 
 #include "pfl/err.h"
 
-char *slstrerror(int);
+#define slstrerror(rc)			strerror(rc)
 
 #define _SLERR_START			1000		/* must be >max errno */
 
