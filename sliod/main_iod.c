@@ -291,7 +291,7 @@ main(int argc, char *argv[])
 	pscthr_init(SLITHRT_STATFS, 0, slistatfsthr_main, NULL, 0,
 	    "slistatfsthr");
 
-	if (nodeResm->resm_res->res_selftest[0] || 1)
+	if (nodeResm->resm_res->res_selftest[0])
 		pscthr_init(SLITHRT_HEALTH, 0, slihealththr_main, NULL,
 		    0, "slihealththr");
 
