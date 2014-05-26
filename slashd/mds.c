@@ -313,8 +313,25 @@ slm_try_sliodresm(struct sl_resm *resm)
 	return (ok);
 }
 
+/*
+ * Do proper shuffling to avoid statistical bias when some IOS
+ * are offline, which would give unfair advantage to the first
+ * IOS that was online if we simply filled this list in
+ * sequentially.
+ */
+void
+slm_res_shuffle(struct psc_dynarray *a, int begin)
+{
+	int i;
+
+	for (i = 1; i < psc_dynarray_len(a) - begin; i++)
+		psc_dynarray_swap(a, begin + i, begin +
+		    psc_random32u(i + 1));
+}
+
 __static void
-slm_res_fillmembers(struct sl_resource *r, struct psc_dynarray *a)
+slm_res_fillmembers(struct sl_resource *r, struct psc_dynarray *a,
+    int shuffle)
 {
 	struct sl_resm *m;
 	int begin, i;
@@ -323,26 +340,21 @@ slm_res_fillmembers(struct sl_resource *r, struct psc_dynarray *a)
 	DYNARRAY_FOREACH(m, i, &r->res_members)
 		psc_dynarray_add_ifdne(a, m);
 
-	/*
-	 * Do proper shuffling to avoid statistical bias when some IOS
-	 * are offline, which would give unfair advantage to the first
-	 * IOS that was online if we simply filled this list in
-	 * sequentially.
-	 */
-	for (i = 1; i < psc_dynarray_len(a) - begin; i++)
-		psc_dynarray_swap(a, begin + i, begin +
-		    psc_random32u(i + 1));
+	if (shuffle)
+		slm_res_shuffle(a, begin);
 }
 
-/**
- * slm_get_ioslist
+/*
+ * Gather a list of I/O servers.  This is used by the IOS selector and
+ * should the client's preferred choices as well as factor in other
+ * considerations.
  */
 void
 slm_get_ioslist(struct fidc_membh *f, sl_ios_id_t piosid,
     struct psc_dynarray *a)
 {
 	struct sl_resource *pios, *r;
-	int i;
+	int begin, i;
 
 	pios = libsl_id2res(piosid);
 	if (!pios || (!RES_ISFS(pios) && !RES_ISCLUSTER(pios)))
@@ -352,14 +364,16 @@ slm_get_ioslist(struct fidc_membh *f, sl_ios_id_t piosid,
 	if (fcmh_2_inoh(f)->inoh_flags & INOF_IOS_AFFINITY) {
 		r = libsl_id2res(fcmh_getrepl(f, 0).bs_id);
 		if (r)
-			slm_res_fillmembers(r, a);
+			slm_res_fillmembers(r, a, 1);
 	}
 
 	/*
 	 * Add the preferred IOS member(s) next.  Note that PIOS may be
 	 * a CNOS, parallel IOS, or stand-alone.
 	 */
-	slm_res_fillmembers(pios, a);
+	slm_res_fillmembers(pios, a, 1);
+
+	begin = psc_dynarray_len(a);
 
 	/*
 	 * Add everything else.  Archival are not considered and must be
@@ -370,8 +384,10 @@ slm_get_ioslist(struct fidc_membh *f, sl_ios_id_t piosid,
 		    r->res_type == SLREST_ARCHIVAL_FS)
 			continue;
 
-		slm_res_fillmembers(r, a);
+		slm_res_fillmembers(r, a, 0);
 	}
+
+	slm_res_shuffle(a, begin);
 }
 
 /**
