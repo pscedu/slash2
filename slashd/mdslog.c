@@ -226,21 +226,25 @@ mds_record_update_prog(void)
 static void
 mds_record_reclaim_prog(void)
 {
-	struct sl_mds_iosinfo *iosinfo;
-	struct sl_resource *res;
 	int ri, rc, index, lastindex = 0;
+	struct sl_mds_iosinfo *iosinfo;
+	struct resprof_mds_info *rmpi;
+	struct sl_resource *res;
 	size_t size;
 
 	SITE_FOREACH_RES(nodeSite, res, ri) {
 		if (!RES_ISFS(res))
 			continue;
-		iosinfo = res2rpmi(res)->rpmi_info;
+		rpmi = res2rpmi(res);
+		iosinfo = rpmi->rpmi_info;
 
 		index = iosinfo->si_index;
+		RPMI_LOCK(rpmi);
 		if (iosinfo->si_flags & SIF_NEW_PROG_ENTRY) {
 			iosinfo->si_flags &= ~SIF_NEW_PROG_ENTRY;
 			reclaim_prog_buf[index].res_id = res->res_id;
 		}
+		RPMI_ULOCK(rpmi);
 		psc_assert(reclaim_prog_buf[index].res_id == res->res_id);
 
 		reclaim_prog_buf[index].res_xid = iosinfo->si_xid;
@@ -1946,13 +1950,16 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 			continue;
 		}
 
-		iosinfo = res2rpmi(res)->rpmi_info;
+		rpmi = res2rpmi(res);
+		iosinfo = rpmi->rpmi_info;
+		RPMI_LOCK(rpmi);
 		iosinfo->si_xid = reclaim_prog_buf[i].res_xid;
 		iosinfo->si_batchno = reclaim_prog_buf[i].res_batchno;
 		iosinfo->si_flags &= ~SIF_NEED_JRNL_INIT;
 		iosinfo->si_index = i;
 		if (iosinfo->si_batchno > batchno)
 			batchno = iosinfo->si_batchno;
+		RPMI_ULOCK(rpmi);
 	}
 	if (stale) {
 		rc = mds_write_file(reclaim_progfile_handle, reclaim_prog_buf,
@@ -2058,9 +2065,11 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 		if (!(iosinfo->si_flags & SIF_NEED_JRNL_INIT))
 			continue;
 
+		RPMI_LOCK(rpmi);
 		iosinfo->si_index = index++;
 		iosinfo->si_flags &= ~SIF_NEED_JRNL_INIT;
 		iosinfo->si_flags |= SIF_NEW_PROG_ENTRY;
+		RPMI_ULOCK(rpmi);
 	}
 
 	psclog_info("current_reclaim_batchno=%"PRId64" "

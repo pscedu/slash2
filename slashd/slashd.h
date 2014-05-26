@@ -274,12 +274,13 @@ struct sl_mds_iosinfo {
 };
 
 #define	SIF_NEED_JRNL_INIT	(1 << 0)		/* journal fields need initialized */
-#define SIF_DISABLE_BIA		(1 << 1)		/* disable bmap lease assignments */
-#define SIF_DISABLE_GC		(1 << 2)		/* disable garbage collection temporarily */
-#define SIF_BUSY		(1 << 3)
-#define SIF_UPSCH_PAGING	(1 << 4)
-#define	SIF_NEW_PROG_ENTRY	(1 << 5)		/* new entry in the reclaim prog file */
-#define	SIF_PRECLAIM_NOTSUP	(1 << 6)		/* can punch holes for replica ejection */
+#define SIF_DISABLE_LEASE	(1 << 1)		/* disable bmap lease assignments */
+#define SIF_DISABLE_ADVLEASE	(1 << 2)		/* advisory (from sliod) control */
+#define SIF_DISABLE_GC		(1 << 3)		/* disable garbage collection temporarily */
+#define SIF_BUSY		(1 << 4)
+#define SIF_UPSCH_PAGING	(1 << 5)
+#define	SIF_NEW_PROG_ENTRY	(1 << 6)		/* new entry in the reclaim prog file */
+#define	SIF_PRECLAIM_NOTSUP	(1 << 7)		/* can punch holes for replica ejection */
 
 #define res2iosinfo(r)		((struct sl_mds_iosinfo *)res2rpmi(r)->rpmi_info)
 

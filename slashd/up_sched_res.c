@@ -765,14 +765,16 @@ upd_proc_bmap(struct slm_update_data *upd)
 					    "pass=%d siflg=%d",
 					    src_res->res_name,
 					    dst_res->res_name,
-					    pass, !!(si->si_flags
-					    & SIF_DISABLE_BIA));
+					    pass, !!(si->si_flags &
+					    (SIF_DISABLE_LEASE |
+					     SIF_DISABLE_ADVLEASE)));
 
 					if (pass ^
 					    (src_res->res_type ==
 					     SLREST_ARCHIVAL_FS ||
 					     !!(si->si_flags &
-					     SIF_DISABLE_BIA)))
+					     (SIF_DISABLE_LEASE |
+					      SIF_DISABLE_ADVLEASE)))
 						continue;
 
 					psclog_debug("trying to arrange "

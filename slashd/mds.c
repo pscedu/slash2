@@ -286,9 +286,9 @@ slm_try_sliodresm(struct sl_resm *resm)
 	 * like a CNOS.
 	 */
 	si = res2iosinfo(resm->resm_res);
-	if (si->si_flags & SIF_DISABLE_BIA) {
-		psclog_diag("res=%s skipped due to SIF_DISABLE_BIA",
-		    resm->resm_res->res_name);
+	if (si->si_flags & (SIF_DISABLE_LEASE | SIF_DISABLE_ADVLEASE)) {
+		psclog_diag("res=%s skipped due to DISABLE_LEASE",
+		    resm->resm_name);
 		return (0);
 	}
 
@@ -297,7 +297,7 @@ slm_try_sliodresm(struct sl_resm *resm)
 	if (!csvc) {
 		/* This sliod hasn't established a connection to us. */
 		psclog_diag("res=%s skipped due to NULL csvc",
-		    resm->resm_res->res_name);
+		    resm->resm_name);
 		return (0);
 	}
 
@@ -305,7 +305,7 @@ slm_try_sliodresm(struct sl_resm *resm)
 	if (!ok) {
 		OPSTAT_INCR(SLM_OPST_SLIOD_PING_FAIL);
 		psclog_notice("res=%s skipped due to lastcomm",
-		    resm->resm_res->res_name);
+		    resm->resm_name);
 	}
 
 	sl_csvc_decref(csvc);

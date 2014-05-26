@@ -60,7 +60,7 @@ slcfg_init_res(struct sl_resource *r)
 			    &current_reclaim_batchno;
 		}
 		if (r->res_flags & RESF_DISABLE_BIA)
-			si->si_flags |= SIF_DISABLE_BIA;
+			si->si_flags |= SIF_DISABLE_LEASE;
 	}
 	if (RES_ISFS(r) || r->res_type == SLREST_MDS)
 		lc_reginit(&rpmi->rpmi_batchrqs, struct batchrq,

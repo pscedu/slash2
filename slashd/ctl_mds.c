@@ -250,10 +250,11 @@ slmctl_resfieldi_batchno(int fd, struct psc_ctlmsghdr *mh,
 }
 
 int
-slmctl_resfieldi_disable_bia(int fd, struct psc_ctlmsghdr *mh,
+slmctl_resfieldi_disable_lease(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels, int set,
     struct sl_resource *r)
 {
+	struct resprof_mds_info *rpmi;
 	struct sl_mds_iosinfo *si;
 	char nbuf[20];
 
@@ -262,14 +263,17 @@ slmctl_resfieldi_disable_bia(int fd, struct psc_ctlmsghdr *mh,
 		if (pcp->pcp_flags & (PCPF_ADD | PCPF_SUB))
 			return (psc_ctlsenderr(fd, mh,
 			    "invalid operation"));
+		rpmi = res2rpmi(r);
+		RPMI_LOCK(rpmi);
 		if (strcmp(pcp->pcp_value, "0"))
-			si->si_flags |= SIF_DISABLE_BIA;
+			si->si_flags |= SIF_DISABLE_LEASE;
 		else
-			si->si_flags &= ~SIF_DISABLE_BIA;
+			si->si_flags &= ~SIF_DISABLE_LEASE;
+		RPMI_ULOCK(rpmi);
 		return (1);
 	}
 	snprintf(nbuf, sizeof(nbuf), "%d",
-	    si->si_flags & SIF_DISABLE_BIA ? 1 : 0);
+	    si->si_flags & SIF_DISABLE_LEASE ? 1 : 0);
 	return (psc_ctlmsg_param_send(fd, mh, pcp, PCTHRNAME_EVERYONE,
 	    levels, nlevels, nbuf));
 }
@@ -279,6 +283,7 @@ slmctl_resfieldi_disable_gc(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels, int set,
     struct sl_resource *r)
 {
+	struct resprof_mds_info *rpmi;
 	struct sl_mds_iosinfo *si;
 	char nbuf[20];
 
@@ -287,10 +292,13 @@ slmctl_resfieldi_disable_gc(int fd, struct psc_ctlmsghdr *mh,
 		if (pcp->pcp_flags & (PCPF_ADD | PCPF_SUB))
 			return (psc_ctlsenderr(fd, mh,
 			    "invalid operation"));
+		rpmi = res2rpmi(r);
+		RPMI_LOCK(rpmi);
 		if (strcmp(pcp->pcp_value, "0"))
 			si->si_flags |= SIF_DISABLE_GC;
 		else
 			si->si_flags &= ~SIF_DISABLE_GC;
+		RPMI_ULOCK(rpmi);
 		return (1);
 	}
 	snprintf(nbuf, sizeof(nbuf), "%d",
@@ -342,7 +350,8 @@ const struct slctl_res_field slctl_resmds_fields[] = {
 
 const struct slctl_res_field slctl_resios_fields[] = {
 	{ "batchno",		slmctl_resfieldi_batchno },
-	{ "disable_bia",	slmctl_resfieldi_disable_bia },
+	{ "disable_lease",	slmctl_resfieldi_disable_lease },
+	{ "disable_bia",	slmctl_resfieldi_disable_lease },
 	{ "disable_gc",		slmctl_resfieldi_disable_gc },
 	{ "preclaim",		slmctl_resfieldi_preclaim },
 	{ "upschq",		slmctl_resfieldi_upschq },

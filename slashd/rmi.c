@@ -506,7 +506,10 @@ int
 slm_rmi_handle_ping(struct pscrpc_request *rq)
 {
 	const struct srm_ping_req *mq;
+	struct resprof_mds_info *rpmi;
+	struct sl_mds_iosinfo *si;
 	struct srm_ping_rep *mp;
+	struct sl_resource *r;
 	struct sl_resm *m;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -514,19 +517,29 @@ slm_rmi_handle_ping(struct pscrpc_request *rq)
 	if (m == NULL)
 		mp->rc = -SLERR_ION_UNKNOWN;
 	else {
+		si = res2iosinfo(m->resm_res);
 		if (clock_gettime(CLOCK_MONOTONIC,
-		    &res2iosinfo(m->resm_res)->si_lastcomm) == -1)
+		    &si->si_lastcomm) == -1)
 			psc_fatal("clock_gettime");
 
-		if (mq->rc) {
-			if (!(res2iosinfo(m->resm_res)->si_flags &
-			      SIF_DISABLE_BIA)) {
-				psclog_warnx("self-test from %s failed, "
-				    "disabling write lease assignment",
-				    m->resm_name);
-				res2iosinfo(m->resm_res)->si_flags |=
-				    SIF_DISABLE_BIA;
-			}
+		rpmi = res2rpmi(m->resm_res);
+		if (si->si_flags & SIF_DISABLE_ADVLEASE &&
+		    !mq->rc) {
+			psclog_warnx("self-test from %s succeeded; "
+			    "re-enabling write lease assignment",
+			    m->resm_name);
+			RPMI_LOCK(rpmi);
+			si->si_flags &= ~SIF_DISABLE_ADVLEASE;
+			RPMI_ULOCK(rpmi);
+		}
+		if ((si->si_flags & SIF_DISABLE_ADVLEASE) == 0 &&
+		    mq->rc) {
+			psclog_warnx("self-test from %s failed; "
+			    "disabling write lease assignment",
+			    m->resm_name);
+			RPMI_LOCK(rpmi);
+			si->si_flags |= SIF_DISABLE_ADVLEASE;
+			RPMI_ULOCK(rpmi);
 		}
 	}
 	return (0);
