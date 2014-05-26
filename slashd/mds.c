@@ -595,11 +595,13 @@ mds_bmap_ios_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 		BMAP_ULOCK(b);
 		bml->bml_flags |= BML_ASSFAIL;
 
-		psclog_warnx("unable to contact ION %#x for lease", pios);
+		psclog_warnx("unable to contact ION %#x for lease",
+		    pios);
 
 		return (-SLERR_ION_OFFLINE);
-	} else
-		BMAP_ULOCK(b);
+	}
+
+	BMAP_ULOCK(b);
 
 	bmi->bmi_wr_ion = rmmi = resm2rmmi(resm);
 	atomic_inc(&rmmi->rmmi_refcnt);
