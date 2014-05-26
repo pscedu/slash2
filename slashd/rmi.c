@@ -509,7 +509,6 @@ slm_rmi_handle_ping(struct pscrpc_request *rq)
 	struct resprof_mds_info *rpmi;
 	struct sl_mds_iosinfo *si;
 	struct srm_ping_rep *mp;
-	struct sl_resource *r;
 	struct sl_resm *m;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
