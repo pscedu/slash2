@@ -228,7 +228,7 @@ mds_record_reclaim_prog(void)
 {
 	int ri, rc, index, lastindex = 0;
 	struct sl_mds_iosinfo *iosinfo;
-	struct resprof_mds_info *rmpi;
+	struct resprof_mds_info *rpmi;
 	struct sl_resource *res;
 	size_t size;
 

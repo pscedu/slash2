@@ -774,7 +774,7 @@ upd_proc_bmap(struct slm_update_data *upd)
 					     SLREST_ARCHIVAL_FS ||
 					     !!(si->si_flags &
 					     (SIF_DISABLE_LEASE |
-					      SIF_DISABLE_ADVLEASE)))
+					      SIF_DISABLE_ADVLEASE))))
 						continue;
 
 					psclog_debug("trying to arrange "
