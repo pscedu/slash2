@@ -250,7 +250,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	 * which correspond to this request.
 	 */
 	i = 0;
-	BMAP_LOCK(b);
 	while (i < maxpages) {
 
 		bmpce_off = aoff + (i * BMPC_BUFSZ);
@@ -264,8 +263,10 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 		}
 		MFH_ULOCK(mfh);
 
+		BMAP_LOCK(b);
 		e = bmpce_lookup_locked(b, r, bmpce_off,
 		    &r->biorq_bmap->bcm_fcmh->fcmh_waitq);
+		BMAP_ULOCK(b);
 
 		BMPCE_LOCK(e);
 
@@ -339,7 +340,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 
 		i++;
 	}
-	BMAP_ULOCK(b);
 
 	psc_assert(psc_dynarray_len(&r->biorq_pages) == npages);
 
