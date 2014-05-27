@@ -491,11 +491,8 @@ reimport
     - write generic archiver visual monitor
 - vtune license for profiling
 - illusion2 can use more RAM?
-- MDS: the first available IOS is always used when pref IOS is not available
-  - should shuffle all available IOS
 - open file descriptors after UNLINK run into risk of accessing
   reclaimed data on the IOS
-- verify backfs on sense7 md5deep between bsd and linux
 - change notion of mtime clocks in readdir to deal with time
   synchronization problems in a more robust fashion
 - increment directory fcmh generation on modification
@@ -504,8 +501,9 @@ reimport
 - when write IO is done in mount_slash, we should set BREPLST_VALID
   if it isn't
 - check svn histories for when small I/Os performance broke
-- we should reload the inode table from MDS in CLI always in GETBMAP
-  in case a new bmap changed the reptbl
+- we should reload the file inode in CLI from MDS
+  (o) normal attr expiration
+  (o) specifically when mtime gets updated (uptime mtime when ino changes)
 - is fuse OPEN for mmap/dio still broke?  double check and open
   turn off PSCFS_OPENF_DIO for non-X_OK files on older fuse
 - we should move the mds_bmap_crc_write() code that turns off SGID and
