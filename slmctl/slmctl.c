@@ -178,8 +178,9 @@ slm_statfs_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	if (p)
 		*p = '\0';
 	printf("%-27s %c%c ", name,
-	    scsf->scsf_flags & SIF_DISABLE_BIA ? 'W' : '-',
-	    scsf->scsf_flags & SIF_DISABLE_GC  ? 'G' : '-');
+	    scsf->scsf_flags & (SIF_DISABLE_LEASE |
+	      SIF_DISABLE_ADVLEASE)		? 'W' : '-',
+	    scsf->scsf_flags & SIF_DISABLE_GC   ? 'G' : '-');
 	printf(" ");
 	/*
 	 * The following uses the formula from df.c in GNU coreutils.
