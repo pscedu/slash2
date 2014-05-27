@@ -4,21 +4,20 @@
 prog=sliod
 ctl=slictl
 
-. ${0%/*}/pfl_daemon.sh
+. $(dirname $0)/pfl_daemon.sh
 
 usage()
 {
-	echo "usage: $0 [-P profile] [-Ggsv] [instance]" >&2
+	echo "usage: $0 [-F filter] [-P profile] [-gv] [instance]" >&2
 	exit 1
 }
 
 bkav=("$@")
-while getopts "GgP:sv" c; do
+while getopts "F:gP:v" c; do
 	case $c in
-	G) mygprof='mygprof'	;;
-	g) mygdb='mygdb'	;;
+	F) filter=$OPTARG	;;
+	g) filter=mygdb		;;
 	P) prof=$OPTARG		;;
-	s) mystrace='strace'	;;
 	v) verbose=1		;;
 	*) usage		;;
 	esac
@@ -41,7 +40,7 @@ export PSC_LOG_FILE_LINK=$(dirname $PSC_LOG_FILE)/latest
 export CONFIG_FILE=$base/slcfg
 
 preproc
-$mystrace $mygprof $mygdb $prog -D $base/var
+$filter $prog -D $base/var
 postproc $?
 
 sleep 10
