@@ -396,7 +396,7 @@ msl_biorq_del(struct bmpc_ioreq *r)
 		}
 	}
 
-	DEBUG_BMAP(PLL_DIAG, b, "remove biorq=%p nitems_pndg(%d)",
+	DEBUG_BMAP(PLL_INFO, b, "remove biorq=%p nitems_pndg(%d)",
 		   r, pll_nitems(&bmpc->bmpc_pndg_biorqs));
 
 	spinlock(&bmpc->bmpc_lock);
@@ -412,7 +412,6 @@ msl_bmpces_fail(struct bmpc_ioreq *r, int rc)
 	struct bmap_pagecache_entry *e;
 	int i;
 
-	mfh_seterr(r->biorq_mfh, rc);
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 		BMPCE_LOCK(e);
 		if (biorq_is_my_bmpce(r, e)) {
@@ -428,7 +427,6 @@ void
 _msl_biorq_destroy(const struct pfl_callerinfo *pci,
     struct bmpc_ioreq *r)
 {
-	struct msl_fhent *mfh = r->biorq_mfh;
 	struct bmap_pagecache_entry *e;
 	int i, needflush;
 
@@ -477,22 +475,6 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 
 	msl_biorq_del(r);
 
-#if FHENT_EARLY_RELEASE
-	if (fhent) {
-		spinlock(&mfh->mfh_lock);
-		pll_remove(&mfh->mfh_biorqs, r);
-		psc_waitq_wakeall(&msl_fhent_flush_waitq);
-		freelock(&mfh->mfh_lock);
-	}
-#else
-	if (pll_conjoint(&mfh->mfh_biorqs, r)) {
-		spinlock(&mfh->mfh_lock);
-		pll_remove(&mfh->mfh_biorqs, r);
-		psc_waitq_wakeall(&msl_fhent_flush_waitq);
-		freelock(&mfh->mfh_lock);
-	}
-#endif
-
 	psc_dynarray_free(&r->biorq_pages);
 
 	if (r->biorq_rqset) {
@@ -500,7 +482,6 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 		r->biorq_rqset = NULL;
 	}
 
-	mfh_decref(r->biorq_mfh);
 
 	OPSTAT_INCR(SLC_OPST_BIORQ_DESTROY);
 	DEBUG_BIORQ(PLL_DIAG, r, "destroying");
@@ -520,8 +501,6 @@ msl_fhent_new(struct pscfs_req *pfr, struct fidc_membh *f)
 	mfh->mfh_fcmh = f;
 	mfh->mfh_pid = pscfs_getclientctx(pfr)->pfcc_pid;
 	INIT_SPINLOCK(&mfh->mfh_lock);
-	pll_init(&mfh->mfh_biorqs, struct bmpc_ioreq, biorq_mfh_lentry,
-	    &mfh->mfh_lock);
 	pll_init(&mfh->mfh_ra_bmpces, struct bmap_pagecache_entry,
 	    bmpce_ralentry, &mfh->mfh_lock);
 	INIT_PSC_LISTENTRY(&mfh->mfh_lentry);
@@ -1262,7 +1241,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	r->biorq_ref++;
 	r->biorq_flags |= BIORQ_FLUSHRDY | BIORQ_SPLAY;
 	PSC_SPLAY_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
-	DEBUG_BIORQ(PLL_DIAG, r, "sched flush");
+	DEBUG_BIORQ(PLL_INFO, r, "sched flush");
 	BIORQ_ULOCK(r);
 
 	bmpc->bmpc_pndgwr++;
@@ -1899,13 +1878,11 @@ void
 msl_fsrqinfo_biorq_add(struct msl_fsrqinfo *q, struct bmpc_ioreq *r,
     int biorq_num)
 {
-	psc_assert(q->mfsrq_mfh == r->biorq_mfh);
-
-	MFH_LOCK(r->biorq_mfh);
+	MFH_LOCK(q->mfsrq_mfh);
 	psc_assert(!q->mfsrq_biorq[biorq_num]);
 	q->mfsrq_biorq[biorq_num] = r;
 	q->mfsrq_ref++;
-	MFH_ULOCK(r->biorq_mfh);
+	MFH_ULOCK(q->mfsrq_mfh);
 }
 
 __static struct msl_fsrqinfo *
@@ -2137,7 +2114,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 		r = q->mfsrq_biorq[i];
 		if (!(r->biorq_flags & BIORQ_MFHLIST)) {
 			r->biorq_flags |= BIORQ_MFHLIST;
-			pll_addtail(&mfh->mfh_biorqs, r);
 		}
 
 		if (r->biorq_flags & BIORQ_DIO)

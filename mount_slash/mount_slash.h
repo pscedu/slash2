@@ -156,7 +156,6 @@ struct msl_fhent {					/* file handle in struct fuse_file_info */
 	int				 mfh_retries;
 	int				 mfh_oflags;	/* open(2) flags */
 	int				 mfh_flush_rc;	/* fsync(2) status */
-	struct psc_lockedlist		 mfh_biorqs;	/* track biorqs (flush) */
 	struct psc_lockedlist		 mfh_ra_bmpces;	/* read ahead bmpce's */
 	struct msl_ra			 mfh_ra;	/* readahead tracking */
 

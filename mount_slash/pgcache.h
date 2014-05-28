@@ -164,13 +164,11 @@ struct bmpc_ioreq {
 	struct timespec			 biorq_expire;
 	struct psc_dynarray		 biorq_pages;	/* array of bmpce		*/
 	struct psclist_head		 biorq_lentry;	/* chain on bmpc_pndg_biorqs	*/
-	struct psclist_head		 biorq_mfh_lentry; /* chain on file handle	*/
 	struct psclist_head		 biorq_bwc_lentry;
 	struct psclist_head		 biorq_png_lentry;
 	SPLAY_ENTRY(bmpc_ioreq)		 biorq_tentry;	/* splay tree */
 	struct bmapc_memb		*biorq_bmap;	/* backpointer to our bmap	*/
 	struct pscrpc_request_set	*biorq_rqset;
-	struct msl_fhent		*biorq_mfh;	/* back pointer to msl_fhent */
 	struct msl_fsrqinfo		*biorq_fsrqi;
 };
 

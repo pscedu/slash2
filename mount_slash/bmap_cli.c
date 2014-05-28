@@ -69,6 +69,7 @@ msl_bmap_init(struct bmap *b)
 {
 	struct bmap_cli_info *bci;
 
+	DEBUG_BMAP(PLL_INFO, b, "start initing");
 	bci = bmap_2_bci(b);
 	bmpc_init(&bci->bci_bmpc);
 
@@ -1030,13 +1031,12 @@ msl_bmap_final_cleanup(struct bmap *b)
 {
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 
-	BMAP_LOCK(b);
 	psc_assert(!(b->bcm_flags & BMAP_FLUSHQ));
 
 	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
 	psc_assert(SPLAY_EMPTY(&bmpc->bmpc_new_biorqs));
 
-	DEBUG_BMAP(PLL_DIAG, b, "start freeing");
+	DEBUG_BMAP(PLL_INFO, b, "start freeing");
 
 	/* Mind lock ordering; remove from LRU first. */
 	if (b->bcm_flags & BMAP_DIO &&
@@ -1060,7 +1060,6 @@ msl_bmap_final_cleanup(struct bmap *b)
 	psc_assert(psclist_disjoint(&bmpc->bmpc_lentry));
 
 	bmpc_freeall_locked(bmpc);
-	BMAP_ULOCK(b);
 
 	DEBUG_BMAP(PLL_DIAG, b, "done freeing");
 }

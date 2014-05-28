@@ -1728,38 +1728,38 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 __static int
 msl_flush_int_locked(struct msl_fhent *mfh, int wait)
 {
-	struct bmpc_ioreq *r;
+	struct fidc_membh *f;
+	struct bmapc_memb *b;
+	int i, rc = 0;
+	struct psc_dynarray a = DYNARRAY_INIT;
+	struct bmap_cli_info *bci;
 
-	if (mfh->mfh_flush_rc) {
-		int rc;
+	f = mfh->mfh_fcmh;
 
-		rc = mfh->mfh_flush_rc;
-		mfh->mfh_flush_rc = 0;
-		return (rc);
-	}
-
-	if (pll_empty(&mfh->mfh_biorqs)) {
-		mfh->mfh_flush_rc = 0;
-		return (0);
-	}
-
-	PLL_FOREACH(r, &mfh->mfh_biorqs) {
-		BIORQ_LOCK(r);
-		if (!r->biorq_ref)
-			r->biorq_flags |= BIORQ_FORCE_EXPIRE;
-		DEBUG_BIORQ(PLL_DIAG, r, "force expire");
-		BIORQ_ULOCK(r);
-	}
-	bmap_flushq_wake(BMAPFLSH_EXPIRE);
-
-	if (wait)
-		while (!pll_empty(&mfh->mfh_biorqs)) {
-			psc_waitq_wait(&msl_fhent_flush_waitq,
-			    &mfh->mfh_lock);
-			spinlock(&mfh->mfh_lock);
+	FCMH_LOCK(f);
+	SPLAY_FOREACH(b, bmap_cache, &f->fcmh_bmaptree) {
+		BMAP_LOCK(b);
+		if (!(b->bcm_flags & BMAP_TOFREE)) {
+			bmap_op_start_type(b, BMAP_OPCNT_FLUSH);
+			psc_dynarray_add(&a, b);
 		}
+		BMAP_ULOCK(b);
+	}
+	FCMH_ULOCK(f);
+		
+	DYNARRAY_FOREACH(b, i, &a) {
+		bmpc_biorqs_flush(b, wait);
+		BMAP_LOCK(b);
+		if (!rc) {
+			bci = bmap_2_bci(b);
+			rc = bci->bci_flush_rc;
+		} 
+		bmap_op_done_type(b, BMAP_OPCNT_FLUSH);
+			
+	}
+	psc_dynarray_free(&a);
 
-	return (0);
+	return (rc);
 }
 
 void
@@ -1872,7 +1872,6 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 		BIORQ_SETATTR(r, BIORQ_NOFHENT);
 #else
 	rc = msl_flush_int_locked(mfh, 1);
-	psc_assert(pll_empty(&mfh->mfh_biorqs));
 #endif
 	while (!pll_empty(&mfh->mfh_ra_bmpces) ||
 	    (mfh->mfh_flags & MSL_FHENT_RASCHED)) {

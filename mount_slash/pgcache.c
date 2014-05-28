@@ -226,7 +226,6 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	memset(r, 0, sizeof(*r));
 
 	INIT_PSC_LISTENTRY(&r->biorq_lentry);
-	INIT_PSC_LISTENTRY(&r->biorq_mfh_lentry);
 	INIT_PSC_LISTENTRY(&r->biorq_bwc_lentry);
 	INIT_PSC_LISTENTRY(&r->biorq_png_lentry);
 	INIT_SPINLOCK(&r->biorq_lock);
@@ -240,11 +239,8 @@ bmpc_biorq_new(struct msl_fsrqinfo *q, struct bmapc_memb *b, char *buf,
 	r->biorq_buf = buf;
 	r->biorq_bmap = b;
 	r->biorq_flags = op;
-	r->biorq_mfh = q->mfsrq_mfh;
 	r->biorq_fsrqi = q;
 	r->biorq_last_sliod = IOS_ID_ANY;
-
-	mfh_incref(r->biorq_mfh);
 
 	/* Add the biorq to the fsrq. */
 	msl_fsrqinfo_biorq_add(q, r, rqnum);
@@ -328,7 +324,8 @@ retry:
 		BIORQ_LOCK(r);
 		r->biorq_flags |= BIORQ_FORCE_EXPIRE;
 		BIORQ_ULOCK(r);
-		expired = 1;
+		expired++;
+		DEBUG_BIORQ(PLL_INFO, r, "force expire");
 	}
 	BMAP_ULOCK(b);
 	if (expired) {
@@ -348,13 +345,17 @@ bmpc_biorqs_destroy(struct bmapc_memb *b, int rc)
 	struct bmpc_ioreq *r, *tmp;
 	struct psc_dynarray a = DYNARRAY_INIT;
 	struct bmap_pagecache *bmpc;
+	struct bmap_cli_info *bci;
 
-	bmpc = bmap_2_bmpc(b);
+	bci = bmap_2_bci(b);
+	if (rc && !bci->bci_flush_rc)
+		bci->bci_flush_rc = rc;
 
 	/*
 	 * Inflight biorqs are off the splay tree.  So we shouldn't race
 	 * to destroy the same biorq.
 	 */
+	bmpc = bmap_2_bmpc(b);
 	for (r = SPLAY_MIN(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs); r; 
 	    r = tmp) {
 
@@ -463,10 +464,13 @@ bmpce_reap(struct psc_poolmgr *m)
 			continue;
 
 		/* First check for LRU items. */
-		if (pll_nitems(&bmpc->bmpc_lru))
+		if (pll_nitems(&bmpc->bmpc_lru)) {
+			DEBUG_BMAP(PLL_INFO, b, "try free");
 			nfreed += bmpc_lru_tryfree(bmpc, waiters);
-		else
+			DEBUG_BMAP(PLL_INFO, b, "try free done");
+		} else
 			psclog_debug("skip bmpc=%p, nothing on lru", bmpc);
+
 
 		BMAP_ULOCK(b);
 		if (nfreed >= waiters)
