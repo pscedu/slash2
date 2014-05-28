@@ -183,7 +183,6 @@ struct bmpc_ioreq {
 #define BIORQ_AIOWAIT		(1 <<  8)
 #define BIORQ_SPLAY		(1 <<  9)
 #define BIORQ_WAIT		(1 << 10)
-#define BIORQ_MFHLIST		(1 << 11)
 
 #define BIORQ_LOCK(r)			spinlock(&(r)->biorq_lock)
 #define BIORQ_ULOCK(r)			freelock(&(r)->biorq_lock)
@@ -196,7 +195,7 @@ struct bmpc_ioreq {
 
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
 	psclogs((level), SLSS_BMAP, "biorq@%p flg=%#x:"			\
-	    "%s%s%s%s%s%s%s%s%s%s%s%s "					\
+	    "%s%s%s%s%s%s%s%s%s%s%s "					\
 	    "ref=%d off=%u len=%u "					\
 	    "retry=%u buf=%p rqi=%p "					\
 	    "sliod=%x np=%d "						\
@@ -213,7 +212,6 @@ struct bmpc_ioreq {
 	    (b)->biorq_flags & BIORQ_AIOWAIT		? "A" : "",	\
 	    (b)->biorq_flags & BIORQ_SPLAY		? "S" : "",	\
 	    (b)->biorq_flags & BIORQ_WAIT		? "W" : "",	\
-	    (b)->biorq_flags & BIORQ_MFHLIST		? "m" : "",	\
 	    (b)->biorq_ref, (b)->biorq_off, (b)->biorq_len,		\
 	    (b)->biorq_retries, (b)->biorq_buf, (b)->biorq_fsrqi,	\
 	    (b)->biorq_last_sliod, psc_dynarray_len(&(b)->biorq_pages),	\

@@ -2112,9 +2112,6 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 */
 	for (i = 0; i < nr; i++) {
 		r = q->mfsrq_biorq[i];
-		if (!(r->biorq_flags & BIORQ_MFHLIST)) {
-			r->biorq_flags |= BIORQ_MFHLIST;
-		}
 
 		if (r->biorq_flags & BIORQ_DIO)
 			rc = msl_pages_dio_getput(r);
