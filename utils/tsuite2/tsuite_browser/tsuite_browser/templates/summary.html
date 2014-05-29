@@ -2,79 +2,72 @@
 
 {% block content %}
   <script type="text/javascript" src="/s/js/summary.js"></script>
+  
+  <script type="text/template" id="change_table_template">
+    <table class="table table-bordered table-striped table-responsive nopadding">
+      <thead>
+        <tr>
+          <th>Test Name</th>
+          <th>Result</th>
+          <th>Recent</th>
+        </tr>
+      </thead>
+      <tbody>
+        <%
+          _.each(items, function(item,key,list) {
+            var passed = item.passed; var total = item.passed + item.failed; 
+            var test_state = passed === total ? "label-success" : "label-danger";
+
+            var change_state = "default";
+            if(Math.abs(item.change_percent) >= 10.0) {
+              change_state = item.change_percent <= 0 ? "text-success" : "text-danger";
+            }
+            
+        %>
+          <tr>
+            <td>
+              <h4>
+                <a href="#" class="tree_link"><%- key %></a>
+                <span class="pull-right label <%- test_state %>"><%- item.passed %>/<%- item.passed + item.failed %></span>
+              </h4>
+            </td>
+            <td class="center">
+              <h5>
+                <span class="pull-left <%- change_state %>">
+                  <%- item.change_percent.toFixed(2) %>% 
+                </span>
+                <span class="pull-right">
+                  <%- item.average.toFixed(2) %>s
+                </span>
+              </h5>
+            </td>
+            <td>
+              <h5>
+                <a href="/<%- item.change_tsid %>">#<%- item.change_tsid %></a>
+              </h5>
+            </td>
+          </tr>
+        <%
+          });
+        %>
+      </tbody>
+    </table>
+  </script>
+
   <div class="tab-content">
     <div class="tab-pane active" id="tset">
       <div class="row">
         <div class="col-md-4">
-          <br/>
-          <div class="table-responsive">
-              <table class="table table-bordered table-hover table-striped">
-                  <thead>
-                      <tr>
-                          <th>#</th>
-                          <th>Test Name</th>
-                          <th>Result</th>
-                          <th>Recent</th>
-                      </tr>
-                  </thead>
-                  <tbody>
-                  {% for test in display_tset.tests %}
-                    <tr class="test-result">
-                      <td>{{loop.index}}</td>
-                      <td class="text-info"><a class="test-name" href="#{{test.test_name}}">{{test.test_name}}</a></td>
-                      {% if test.pass %}
-                        <td class="text-default">{{ test.elapsed | round(3) }}</td>
-                        {% if test.change_delta -%}
-                        <td class="{% if (test.change_percent | abs) > 5 -%}
-                                      {%- if test.change_delta <= 0 -%}
-                                        text-success
-                                      {%-else-%}
-                                        text-warning
-                                      {%- endif -%}
-                                    {%else%}
-                                      text-default
-                                    {%endif%}">
-                            <em class="text-left change-delta">{{test.change_percent}}%</em> <em class="text-right"><a href="/{{test.change_tsid}}#{{test.test_name}}">#{{test.change_tsid}}</a></em>
-                          </td>
-                        {% else %}
-                          <td>Not available</td>
-                        {% endif %}
-                      {% else %}
-                        <td class = "text-danger test-msg">{{ test.msg }}</td>
-                        <td class = "text-warning test-msg">N/A</td>
-                      {% endif %}
-                    </tr>
-                  {% endfor %}
-                  </tbody>
-              </table>
-          </div>
+          <div class="table-responsive" id="change_table"></div>
         </div>
         <div class="col-md-8">
-          <div id="chart_div"></div>
+          <div id="active_treemap"></div>
         </div>
-      </div>
-      <div class="row">
-        {%- if adj_tests -%}
-          {%- for test_name, tests in adj_tests.iteritems() -%}
-            <div class="col-md-4">
-              <div class="panel panel-default">
-                <div class="panel-heading test-name">{{loop.index}}. {{test_name}}</div>
-                <div class="panel-body">
-                  <div class="test" name="{{test_name}}">
-                    <div id="{{test_name}}"></div>
-                    {% for test in tests %}
-                      <div class="test-data" tsid="{{test.tsid}}" data="{{test.elapsed}}"></div>
-                    {% endfor %}
-                  </div>
-                </div>
-              </div>
-            </div>
-          {%-endfor-%}
-        {%-endif-%}
       </div>
     </div>
     <div class="tab-pane" id="build">
       ....
     </div>
   </div>
+
 {% endblock %}

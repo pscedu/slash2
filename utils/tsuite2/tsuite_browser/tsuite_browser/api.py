@@ -40,7 +40,7 @@ class API(object):
         tset = self.mongo.db.tsets.find().sort([("_id", -1),])
         return None if tset.count() == 0 else tset[0]
 
-    def get_neighboring_tests(self, tsid, positions):
+    def get_neighboring_tests(self, tsid, test_name, positions):
         """Get neighboring test results n positions away from tsid.
 
         Args:
@@ -50,6 +50,7 @@ class API(object):
 
         Returns:
             list of relevant tsets."""
+
         tsets = self.get_tsets(sort=1)
         tsid -= 1
 
@@ -113,10 +114,23 @@ class API(object):
 
         test_averages = {}
         for test in tests:
-            test_averages[test] = 0.0
-            for client in tests[test]:
-                test_averages[test] += client["result"]["elapsed"]
-            test_averages[test] /= len(tests[test])
+            for test_name, clients in test.items():
+                valid_clients = 0
+                test_averages[test_name] = {
+                    "average": 0.0,
+                    "passed": 0,
+                    "failed": 0
+                }
+                for client in clients:
+                    if client["result"]["pass"]:
+                        test_averages[test_name]["average"] += client["result"]["elapsed"]
+                        test_averages[test_name]["passed"] += 1
+                    else:
+                        test_averages[test_name]["failed"] += 1
+                if test_averages[test_name]["average"] != 0.0:
+                    test_averages[test_name]["average"] /= test_averages[test_name]["passed"]
+                else:
+                    test_averages.pop(test_name, None)
         return test_averages
 
     def get_tset_display(self, tsid):
@@ -128,20 +142,19 @@ class API(object):
 
         tset = self.get_tset(tsid)
         tset_averages = self.get_tset_averages(None, tset["tests"])
-        print tset_averages
         recent_tsets = list(self.mongo.db.tsets.find(
             {
                 "tsid": {"$lt": tsid},
             }
         ).sort([("_id", -1),]))
 
-
-        for test in tset:
+        for test in tset_averages:
             for old_tset in recent_tsets:
                 recent_averages = self.get_tset_averages(None, old_tset["tests"])
                 if test in recent_averages:
-                    test["change_delta"] = tset_averages[test] - recent_averags[test]
-                    test["change_percent"] = round(test["change_delta"] / recent_averages[test], 3) * 100
-                    test["change_tsid"] = old_tset["tsid"]
-        return tset
+                    tset_averages[test]["change_delta"] = tset_averages[test]["average"] - recent_averages[test]["average"]
+                    tset_averages[test]["change_percent"] = round(tset_averages[test]["change_delta"] / recent_averages[test]["average"], 3) * 100
+                    tset_averages[test]["change_tsid"] = old_tset["tsid"]
+                    break
+        return tset_averages
 
