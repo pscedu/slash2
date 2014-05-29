@@ -742,6 +742,9 @@ msl_biorq_complete_fsrq(struct bmpc_ioreq *r0)
 
 	q = r0->biorq_fsrqi;
 
+	/* Don't use me later */
+	r0->biorq_fsrqi = NULL;
+
 	MFH_LOCK(q->mfsrq_mfh);
 	rc = q->mfsrq_err;
 	MFH_ULOCK(q->mfsrq_mfh);
