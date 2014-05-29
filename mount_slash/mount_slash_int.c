@@ -347,19 +347,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 
 }
 
-/**
- * mfh_seterr - Apply error to the mfh_flush_rc so that threads
- *	blocked in flush may error out.
- */
-void
-mfh_seterr(struct msl_fhent *mfh, int err)
-{
-	MFH_LOCK(mfh);
-	if (!mfh->mfh_flush_rc)
-		mfh->mfh_flush_rc = err;
-	MFH_ULOCK(mfh);
-}
-
 __static void
 msl_biorq_del(struct bmpc_ioreq *r)
 {
