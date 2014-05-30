@@ -1,5 +1,9 @@
 google.load("visualization", "1", {packages:["treemap"]});
 
+function exists(p) {
+  return typeof(p) !== 'undefined';
+}
+
 function render_change_table() {
   var active_call = "api/tsets/display/"+get_active_tsid();
   $.get(active_call, function(data) {

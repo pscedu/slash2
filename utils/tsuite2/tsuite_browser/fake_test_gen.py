@@ -14,7 +14,7 @@ tests = [
     ["test_test", 20]
 ]
 
-clients = ["stark", "lannister", "grayjoy", "baratheon"]
+clients = ["stark", "lannister", "grayjoy", "baratheon", "dorn", "bravos"]
 #clients = ["stark", "lannister"]
 
 tests = sorted(tests, key = lambda k: k[0])
@@ -48,7 +48,7 @@ for i in range(tsets):
                 past_clients = db[i-1]["tests"][j][test_name]
                 for p in past_clients:
                     if p["client"] == client:
-                        time =  p["result"]["elapsed"] * random.uniform(l, h)
+                        time = p["result"]["elapsed"] * random.uniform(l, h)
 
             client_test = {
                 "client": client,

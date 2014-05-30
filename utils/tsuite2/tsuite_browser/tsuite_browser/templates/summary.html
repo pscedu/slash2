@@ -26,15 +26,15 @@
         %>
           <tr>
             <td>
-              <h4>
+              <h5>
                 <a href="#" class="tree_link"><%- key %></a>
                 <span class="pull-right label <%- test_state %>"><%- item.passed %>/<%- item.passed + item.failed %></span>
-              </h4>
+              </h5>
             </td>
             <td class="center">
               <h5>
                 <span class="pull-left <%- change_state %>">
-                  <%- item.change_percent.toFixed(2) %>% 
+                  <%- exists(item.change_percent) ? item.change_percent.toFixed(2) : "NaN" %>% 
                 </span>
                 <span class="pull-right">
                   <%- item.average.toFixed(2) %>s
@@ -43,7 +43,7 @@
             </td>
             <td>
               <h5>
-                <a href="/<%- item.change_tsid %>">#<%- item.change_tsid %></a>
+                <a href="/<%- item.change_tsid %>"><%- exists(item.change_tsid) ? "#"+item.change_tsid : "NaN"%></a>
               </h5>
             </td>
           </tr>
