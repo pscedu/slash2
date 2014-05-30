@@ -702,6 +702,10 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 				}
 				OPSTAT_INCR(SLC_OPST_BMAP_FLUSH_COALESCE_CONTIG);
 			}
+			/*
+			 * All subsequent requests that do not extend our range
+			 * should be collapsed here.
+			 */
 			pll_addtail(&bwc->bwc_pll, t);
 
 			/* keep the old e if we didn't extend */
