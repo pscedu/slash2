@@ -578,11 +578,10 @@ bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
 	     i++, bmpce = bwc->bwc_bmpces[i]) {
 
 		bwc->bwc_iovs[i].iov_base = bmpce->bmpce_base +
-		    (!i ? (r->biorq_off - bmpce->bmpce_off) : 0);
+		    (i ? 0: (r->biorq_off - bmpce->bmpce_off));
 
 		bwc->bwc_iovs[i].iov_len = MIN(tot_reqsz,
-		    (!i ? BMPC_BUFSZ - (r->biorq_off - bmpce->bmpce_off) :
-		     BMPC_BUFSZ));
+		    (i ? BMPC_BUFSZ: BMPC_BUFSZ - (r->biorq_off - bmpce->bmpce_off)));
 
 		tot_reqsz -= bwc->bwc_iovs[i].iov_len;
 		bwc->bwc_niovs++;
