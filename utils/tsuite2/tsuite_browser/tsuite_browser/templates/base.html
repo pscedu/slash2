@@ -6,7 +6,7 @@
     <title>{{site_title}}</title>
     <meta name="generator" content="Bootply" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <link href="http://netdna.bootstrapcdn.com/bootswatch/3.1.1/yeti/bootstrap.min.css" rel="stylesheet">
+    <link href="http://netdna.bootstrapcdn.com/bootswatch/3.1.1/slate/bootstrap.min.css" rel="stylesheet">
     <!--[if lt IE 9]>
     <script src="//html5shim.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
@@ -23,6 +23,8 @@
     <script type="text/javascript" src="/s/js/sidebar.js"></script>
     <!-- CSS code from Bootply.com editor -->
     <style type="text/css">
+      { text-decoration: none !important}
+      .nounderline{text-decoration: none !important}
       body {
       padding-top: 50px;
       overflow: hidden;
@@ -129,7 +131,7 @@
         <div id="main">
           <div class="row">
             <div class="col-md-6">
-              Active Test Set: <a href="/{{active_tsid}}">{{active_tsid}}</a>
+              Active Test Set: <a href="/{{active_tsid}}">#{{active_tsid}}</a>
             </div>
             <div class="col-md-6">
             </div>
@@ -153,9 +155,8 @@
             <span class="pull-right small">
               <% if(tset.failed_tests > 0) { %>
                 <em class="text-danger">Failed: <%= tset.failed_tests %></em>
-              <% } else { %>
-                <%= tset.total_time.toFixed(3) %>s 
               <% } %>
+                <%= tset.total_time.toFixed(3) %>s 
             </span>
           </a>
         </li>

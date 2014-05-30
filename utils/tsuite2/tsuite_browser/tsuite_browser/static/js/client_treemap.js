@@ -160,6 +160,7 @@ function render_table() {
       change: 0
     });
   });
+
   var template = $("#table_template").html();
   $("#test_table").html(_.template(template,{items:items}));
   

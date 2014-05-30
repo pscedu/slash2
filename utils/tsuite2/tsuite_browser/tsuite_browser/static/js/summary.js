@@ -23,6 +23,30 @@ function render_change_table() {
   });
 }
 
+function render_client_blob() {
+  var active_call = "api/tsets/"+get_active_tsid();
+
+
+
+  $.get(active_call, function(data) {
+    var template = $("#client_blob_template").html()
+    var json = $.parseJSON(data)
+
+
+    var client_objs = {};
+    _.each(json.tests, function(test) {
+      var clients = _.pairs(test)[0][1];
+      _.each(clients, function(client) {
+        console.log(client);
+      });
+    });
+
+    var compiled = _.template(template, {
+      items:client_objs
+    });
+    $("#client_blob").html(compiled);
+  });
+}
 function get_average_elapsed(results) {
   return _.reduce(results, function(memo, next) {
     return memo + next.result.operate.elapsed;
@@ -79,6 +103,5 @@ function render_treemap(active_test) {
 
 $(function() {
   render_change_table();
-  console.log($(".tree_link")); 
-
+  render_client_blob();
 });

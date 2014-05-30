@@ -8,8 +8,7 @@
       <thead>
         <tr>
           <th>Test Name</th>
-          <th>Result</th>
-          <th>Recent</th>
+          <th>Δ Results</th>
         </tr>
       </thead>
       <tbody>
@@ -27,23 +26,20 @@
           <tr>
             <td>
               <h5>
-                <a href="#" class="tree_link"><%- key %></a>
+                <a href="#" class="tree_link nounderline"><%- key %></a>
                 <span class="pull-right label <%- test_state %>"><%- item.passed %>/<%- item.passed + item.failed %></span>
               </h5>
             </td>
             <td class="center">
               <h5>
                 <span class="pull-left <%- change_state %>">
-                  <%- exists(item.change_percent) ? item.change_percent.toFixed(2) : "NaN" %>% 
+                  <%- exists(item.change_percent) ? item.change_percent.toFixed(2) + "%" : "N/A" %>    
+
                 </span>
                 <span class="pull-right">
                   <%- item.average.toFixed(2) %>s
+                  <a class="nounderline" href="/<%- item.change_tsid %>"><%- exists(item.change_tsid) ? "#"+item.change_tsid : "N/A"%></a>
                 </span>
-              </h5>
-            </td>
-            <td>
-              <h5>
-                <a href="/<%- item.change_tsid %>"><%- exists(item.change_tsid) ? "#"+item.change_tsid : "NaN"%></a>
               </h5>
             </td>
           </tr>
@@ -56,12 +52,15 @@
 
   <div class="tab-content">
     <div class="tab-pane active" id="tset">
-      <div class="row">
-        <div class="col-md-4">
-          <div class="table-responsive" id="change_table"></div>
-        </div>
-        <div class="col-md-8">
-          <div id="active_treemap"></div>
+      <div class="well">
+        <div class="row">
+          <div class="col-md-4">
+            <div class="table-responsive" id="change_table"></div>
+          </div>
+          <div class="col-md-8">
+            <!--<div id="active_treemap"></div>-->
+            <div id="client_blob"></div>
+          </div>
         </div>
       </div>
     </div>
