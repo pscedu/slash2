@@ -78,4 +78,3 @@ Analyzing results
 
   $ python tsuite_browser/run.py
   $ firefox localhost:$port
-

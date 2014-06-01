@@ -319,7 +319,7 @@ class TSuite(object):
           if test["name"] not in self.test_results:
             self.test_results[test["name"]] = []
           self.test_results[test["name"]].append({"client": ssh.host, "result": test})
-    #  print json.dumps(self.test_results, indent=True)
+      print json.dumps(self.test_results, indent=True)
     except Exception as e:
       print e
       log.critical("Tests did not return output!")
