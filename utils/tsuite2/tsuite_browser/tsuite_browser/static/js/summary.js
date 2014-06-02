@@ -5,7 +5,7 @@ function exists(p) {
 }
 
 function render_change_table() {
-  var active_call = "api/tsets/display/"+get_active_tsid();
+  var active_call = "/api/tsets/display/"+get_active_tsid();
   $.get(active_call, function(data) {
     var template = $("#change_table_template").html()
     var json = $.parseJSON(data)
@@ -14,33 +14,36 @@ function render_change_table() {
     });
     $("#change_table").html(compiled);
     
-    $(".tree_link").click(function (){
+   /*$(".tree_link").click(function (){
       render_treemap($(this).text());
     });
 
     var first_test = $(".tree_link")[0].text;
-    render_treemap(first_test);
+    render_treemap(first_test);*/
   });
 }
 
 function render_client_blob() {
-  var active_call = "api/tsets/"+get_active_tsid();
-
-
+  var active_call = "/api/tsets/"+get_active_tsid();
 
   $.get(active_call, function(data) {
     var template = $("#client_blob_template").html()
     var json = $.parseJSON(data)
 
-
-    var client_objs = {};
+    client_objs = {};
     _.each(json.tests, function(test) {
-      var clients = _.pairs(test)[0][1];
+      var clients = _.flatten(_.values(test));
       _.each(clients, function(client) {
-        console.log(client);
+        if(!client_objs.hasOwnProperty(client.client)) {
+          client_objs[client.client] = {
+            name: client.client,
+            tests: []
+          };
+        }
+        client_objs[client.client].tests.push(client.result);
       });
     });
-
+    
     var compiled = _.template(template, {
       items:client_objs
     });
@@ -61,45 +64,6 @@ function get_pass_fail(results) {
   return [pass, results.length];
 }
 
-function render_treemap(active_test) {
-
-  var treemap_call = "api/tsets/"+get_active_tsid();
-  $.get(treemap_call, function(api_data) {
-  
-    api_data = $.parseJSON(api_data);
-
-    var data = [
-      ['Test', 'Parent', 'Time (size)', 'Time (color)'],
-      ["Clients", null, 0, 0]
-    ];
-  
-    var test = _.find(api_data["tests"], function(test) {
-      return test.hasOwnProperty(active_test);
-    });
-
-    _.each(test[active_test], function(client) {
-      console.log(client);
-      var size = client.result.elapsed;
-      var color = client.result.pass ? 0 : 100;
-      data.push([client.client, "Clients", size, color]);
-    });
-    
-
-    // Create and draw the visualization.
-    var tree = new google.visualization.TreeMap($("#active_treemap")[0]);
-    tree.draw(google.visualization.arrayToDataTable(data), {
-      minColor: '#D3D3D3',
-      midColor: '#D3D3D3',
-      maxColor: '#FF0000',
-      headerHeight: 15,
-      fontColor: 'black',
-      title: active_test + " Results",
-      showScale: false,
-      useWeightedAverageForAggregation: true
-    });
-  });
-
-}
 
 $(function() {
   render_change_table();

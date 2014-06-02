@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+  
+  <div id="active_tsid" tsid="{{active_tsid}}"></div>
+  <div id="active_test_name" name="{{test_name}}"></div>
+
+  <script type="text/javascript" src="/s/js/test_summary.js"></script>
+
+    <div class="col-md-8">
+      <div class="well">
+        <div id="test_graph"></div>
+        test
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="well">
+        otherside
+      </div>
+    </div>
+
+{% endblock %}
+

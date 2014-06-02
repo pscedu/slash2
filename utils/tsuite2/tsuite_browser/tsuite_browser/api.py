@@ -102,35 +102,35 @@ class API(object):
 
         return adj_tests
 
-    def get_tset_averages(self, tsid, tests=None):
+    def get_tset_averages(self, tset):
         """Get averages over all clients of the tests in a single tset.
 
         Args:
-            tsid: tset id to get averages of.
-            tests: skips lookup and uses this object instead."""
-
-        if not tests:
-            tests = self.get_tset(tsid)
+            tset: tset to get the average test data from."""
 
         test_averages = {}
-        for test in tests:
-            for test_name, clients in test.items():
-                valid_clients = 0
-                test_averages[test_name] = {
-                    "average": 0.0,
-                    "passed": 0,
-                    "failed": 0
-                }
-                for client in clients:
-                    if client["result"]["pass"]:
-                        test_averages[test_name]["average"] += client["result"]["elapsed"]
-                        test_averages[test_name]["passed"] += 1
-                    else:
-                        test_averages[test_name]["failed"] += 1
-                if test_averages[test_name]["average"] != 0.0:
-                    test_averages[test_name]["average"] /= test_averages[test_name]["passed"]
+
+        print tset
+
+        for test_name, clients in tset["tests"].items():
+            print test_name, clients
+
+            valid_clients = 0
+            test_averages[test_name] = {
+                "average": 0.0,
+                "passed": 0,
+                "failed": 0
+            }
+
+
+            for client in clients:
+                if client["result"]["pass"]:
+                    test_averages[test_name]["average"] += client["result"]["elapsed"]
+                    test_averages[test_name]["passed"] += 1
                 else:
-                    test_averages.pop(test_name, None)
+                    test_averages[test_name]["failed"] += 1
+            if test_averages[test_name]["average"] != 0.0:
+                test_averages[test_name]["average"] /= test_averages[test_name]["passed"]
         return test_averages
 
     def get_tset_display(self, tsid):
@@ -141,20 +141,22 @@ class API(object):
 
 
         tset = self.get_tset(tsid)
-        tset_averages = self.get_tset_averages(None, tset["tests"])
+        tset_averages = self.get_tset_averages(tset)
         recent_tsets = list(self.mongo.db.tsets.find(
             {
                 "tsid": {"$lt": tsid},
             }
         ).sort([("_id", -1),]))
 
+        #Needs optimized
         for test in tset_averages:
             for old_tset in recent_tsets:
-                recent_averages = self.get_tset_averages(None, old_tset["tests"])
+                recent_averages = self.get_tset_averages(old_tset)
                 if test in recent_averages:
                     tset_averages[test]["change_delta"] = tset_averages[test]["average"] - recent_averages[test]["average"]
-                    tset_averages[test]["change_percent"] = round(tset_averages[test]["change_delta"] / recent_averages[test]["average"], 3) * 100
+                    tset_averages[test]["change_percent"] = round(tset_averages[test]["change_delta"] / max(1, recent_averages[test]["average"]), 3) * 100
                     tset_averages[test]["change_tsid"] = old_tset["tsid"]
                     break
+
         return tset_averages
 

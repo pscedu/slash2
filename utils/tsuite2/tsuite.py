@@ -60,10 +60,6 @@ class TSuite(object):
       "msctl" : "%slbase%/msctl/msctl"
     }
 
-    self.test_report = {
-      "build": {}
-    }
-
     self.tsid = None
     self.rootdir = None
 
@@ -202,43 +198,38 @@ class TSuite(object):
     Must be ran after run_tests"""
 
     try:
-      #from utils.mongohelper import MongoHelper
-      #self.mongo = MongoHelper(self.conf)
+      from utils.mongohelper import MongoHelper
+      self.mongo = MongoHelper(self.conf)
       pass
     except Exception:
       log.critical("Unable to connect to mongodb.")
       self.shutdown()
 
     #Resource information
-    self.test_report["resources"] = self.sl2objects
 
-    self.test_report["total_time"] = 0.0
-    self.test_report["total_tests"] = 0
-    self.test_report["failed_tests"] = 0
-    self.test_report["tests"] = []
+    test_report = {}
 
-    #latest_tset = self.mongo.get_latest_tset()
-    #self.test_report["tsid"] = latest_tset["tsid"]+1 if latest_tset else 1
-    #self.test_report["tset_name"] = "#" + str(self.test_report["tsid"])
+    test_report["resources"] = self.sl2objects
 
-    self.test_report["tsid"] = 1
-    self.test_report["tset_name"] = "#1"
+    test_report["total_time"] = 0.0
+    test_report["total_tests"] = 0
+    test_report["failed_tests"] = 0
+    test_report["tests"] = []
 
-    #TODO: Currently assuming we only have one client
-    if not hasattr(self, "test_results"):
-        log.critical("There are no test results to store!")
-        self.shutdown()
+    latest_tset = self.mongo.get_latest_tset()
+    test_report["tsid"] = latest_tset["tsid"]+1 if latest_tset else 1
+    test_report["tset_name"] = "#" + str(test_report["tsid"])
 
     for test, clients in self.test_results.items():
       for client in clients:
-        self.test_report["total_tests"] += 1
+        test_report["total_tests"] += 1
         if not client["result"]["pass"]:
-          self.test_report["failed_tests"] += 1
-        self.test_report["total_time"] += client["result"]["elapsed"]
+          test_report["failed_tests"] += 1
+        test_report["total_time"] += client["result"]["elapsed"]
 
-    self.test_report["tests"] = self.test_results
-    #self.mongo.col.save(self.test_report)
-    print json.dumps(self.test_report, indent=True)
+    test_report["tests"] = self.test_results
+    self.mongo.col.save(test_report)
+
 
   def run_tests(self):
     """Uploads and runs each test on each client."""

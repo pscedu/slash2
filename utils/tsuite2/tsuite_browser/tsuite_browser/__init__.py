@@ -63,7 +63,15 @@ def logout():
 @app.route("/")
 @app.route("/<int:tsid>")
 def dashboard(tsid = None):
+    if not tsid:
+        tsid = api.get_latest_tset()["tsid"]
     return render_template("summary.html", active_tsid=tsid)
+
+@app.route("/<string:test_name>")
+@app.route("/<int:tsid>/<string:test_name>")
+def test_summary(tsid = None, test_name = None):
+    return render_template("test_summary.html",
+            active_tsid=tsid, test_name = test_name)
 
 @app.route('/s/<path:filename>')
 def base_static(filename):

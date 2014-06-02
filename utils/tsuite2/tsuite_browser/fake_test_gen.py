@@ -1,11 +1,11 @@
 import json, random
 
-tsets = 50
+tsets = 200
 tests = [
     ["basic_read", 10],
-   # ["basic_write", 10],
-    #["complex_read", 20],
-    #["multi_write", 20],
+    ["basic_write", 10],
+    ["complex_read", 20],
+    ["multi_write", 20],
     #["huge_seek", 15],
     #["dev_zero", 5],
     #["scatter", 20],
@@ -48,8 +48,8 @@ setup = {
   ]
  }
 }
-#clients = ["stark", "lannister", "grayjoy", "baratheon", "dorn", "bravos"]
-clients = ["stark", "lannister"]
+clients = ["stark", "lannister", "grayjoy", "baratheon", "dorn", "bravos"]
+#clients = ["stark", "lannister"]
 
 tests = sorted(tests, key = lambda k: k[0])
 
@@ -63,7 +63,7 @@ for i in range(tsets):
     tset["tsid"] = i+1
     tset["failed_tests"] = 0
     tset["total_tests"] = len(tests)
-    tset["tests"] = []
+    tset["tests"] = {}
     tset["total_time"] = 0.0
     tset["resources"] = setup["resources"]
     tset["resources"]["client"] = []
@@ -78,23 +78,30 @@ for i in range(tsets):
             "site": 100
         })
 
-    test = {}
     for j in range(len(tests)):
+
+        test = {}
         test_name = tests[j][0]
+
         test[test_name] = []
 
         for client in clients:
-            time = tests[j][1]
+            time = tests[j][1] * random.uniform(.80, 1.20)
 
+            """
             if i > 0:
                 if random.random() > 0.70:
                     l, h = 0.8, 1.2
                 else:
                     l, h = 0.95, 1.05
-                past_clients = db[i-1]["tests"][j][test_name]
+                try:
+                    past_clients = db[i-1]["tests"][j-1][test_name]
+                except Exception:
+                    continue
                 for p in past_clients:
                     if p["client"] == client:
                         time = p["result"]["elapsed"] * random.uniform(l, h)
+            """
 
             client_test = {
                 "client": client,
@@ -116,6 +123,6 @@ for i in range(tsets):
 
             test[test_name].append(client_test)
             tset["total_time"] += round(time, 2)
-        tset["tests"].append(test)
+        tset["tests"][test_name] = test[test_name]
     db.append(tset)
 print json.dumps(db, indent=True)

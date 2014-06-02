@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 
 {% block content %}
+
+  <div id="active_tsid" tsid="{{active_tsid}}"></div>
   <script type="text/javascript" src="/s/js/summary.js"></script>
   
   <script type="text/template" id="change_table_template">
@@ -26,7 +28,7 @@
           <tr>
             <td>
               <h5>
-                <a href="#" class="tree_link nounderline"><%- key %></a>
+                <a href="<%- get_active_tsid() %>/<%- key %>" class="tree_link nounderline"><%- key %></a>
                 <span class="pull-right label <%- test_state %>"><%- item.passed %>/<%- item.passed + item.failed %></span>
               </h5>
             </td>
@@ -48,6 +50,41 @@
         %>
       </tbody>
     </table>
+  </script>
+
+  <script type="text/template" id="client_blob_template">
+    <%
+      _.each(items, function(client, key, list) {
+    %>
+      <div class="col-md-3">
+        <div class="well">
+          <p class="text-center text-primary"><%- client.name %></p>
+            <%
+              _.each(client.tests, function(test, key, list) {
+                console.log(test);
+            %>
+                <% if(!test.pass) { %>
+                  <p class="text-warning">
+                    <%- test.name %>
+                    
+                    <i class="fa fa-warning pull-right">
+                      <%- test.retcode %>
+                    </i>
+
+                  </p>
+                <% } else { %>
+                  <p class="text-success">
+                    <%- test.name %>
+                  </p>
+                <% } %>
+            <%
+              });
+            %>
+        </div>
+      </div>
+    <%
+      });
+    %>
   </script>
 
   <div class="tab-content">
