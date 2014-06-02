@@ -25,7 +25,11 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define sys_strerror(rc)		strerror(rc)
+const char *
+sys_strerror(int rc)
+{
+	return (strerror(rc));
+}
 
 #include "pfl/cdefs.h"
 
