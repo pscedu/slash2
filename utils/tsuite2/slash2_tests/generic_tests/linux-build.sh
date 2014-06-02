@@ -4,4 +4,4 @@ cd linux
 make defconfig
 make -j4
 cd ..
-#rm -rf linux
+rm -rf linux

@@ -63,14 +63,14 @@ These can be killed with:
 Modifying the testing behavior units
 ------------------------------------
 
-  It would be nice if tests could be language agnostic in `slash2_tests'
-  subdir.  A batch of standard testing programs would be tremendously
-  useful:
+  Tests are now language agnostic. Any executable file in a test directory 
+  will be ran on all clients. The pass/fail result is indicated by the return
+  code (0 is pass, anything else if fail). Currently, there is a linux kernel 
+  build test written. Other useful tests to be implemented include:
 
     - IOZone
     - POSIX compliancy
     - slash2 self-build
-    - Linux kernel build
     - assortment of fio tests
 
 Analyzing results
