@@ -884,7 +884,7 @@ slconnthr_main(struct psc_thread *thr)
 			if (timespeccmp(&diff, &intv, >=)) {
 				pingrc = sct->sct_pingupc(sct->sct_pingupcarg);
 				if (pingrc)
-					psclog_errorx("sct_pingupc "
+					psclog_diag("sct_pingupc "
 					    "failed (rc=%d)", pingrc);
 				memcpy(&ts0, &ts1, sizeof(ts0));
 			}
