@@ -1220,9 +1220,12 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 			if (fcmh_2_nrepls(f) > SL_DEF_REPLICAS)
 				mds_inox_ensure_loaded(fcmh_2_inoh(f));
 
+			psc_assert(!FCMH_HAS_LOCK(f));
+
 			if (!FCMH_HAS_BUSY(f))
 				BMAP_ULOCK(b);
 			FCMH_WAIT_BUSY(f);
+			FCMH_ULOCK(f);
 			BMAP_WAIT_BUSY(b);
 			BMAPOD_RDLOCK(bmi);
 
