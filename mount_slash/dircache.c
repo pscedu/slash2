@@ -220,7 +220,7 @@ dircache_lookup(struct fidc_membh *d, const char *name, off_t *nextoffp, int inv
 				ino = dirent->pfd_ino;
 				found = 1;
 				OPSTAT_INCR(SLC_OPST_DIRCACHE_LOOKUP_HIT);
-					
+
 				if (invalidate) {
 				    found = 0;
 				    dce->dce_hash++;
@@ -271,6 +271,12 @@ dircache_cmp(const void *a, const void *b)
 	return (CMP(pa->dcp_off, pb->dcp_off));
 }
 
+/*
+ * Determine if a dircache page contains an entry at the specified
+ * directory 'offset' (which is more like a cookie/ID).
+ * @d: directory handle.
+ * @off: offset of desired dirent.
+ */
 int
 dircache_hasoff(struct dircache_page *p, off_t off)
 {
@@ -297,6 +303,7 @@ dircache_hasoff(struct dircache_page *p, off_t off)
  * Allocate a new page of dirents.
  * @d: directory handle.
  * @off: offset into directory for this slew of dirents.
+ * @wait: whether this call should be non-blocking or not.
  */
 struct dircache_page *
 dircache_new_page(struct fidc_membh *d, off_t off, int wait)
@@ -314,6 +321,10 @@ dircache_new_page(struct fidc_membh *d, off_t off, int wait)
 
 	fci = fcmh_2_fci(d);
 	PLL_FOREACH_SAFE(p, np, &fci->fci_dc_pages) {
+		if (DIRCACHEPG_EXPIRED(d, p, &dexp)) {
+			dircache_free_page(d, p);
+			continue;
+		}
 		if (p->dcp_flags & DIRCACHEPGF_LOADING) {
 			if (p->dcp_off == off) {
 				/* Page is waiting for us; use it. */
@@ -325,10 +336,6 @@ dircache_new_page(struct fidc_membh *d, off_t off, int wait)
 				fcmh_wait_nocond_locked(d);
 				goto restart;
 			}
-			continue;
-		}
-		if (DIRCACHEPG_EXPIRED(d, p, &dexp)) {
-			dircache_free_page(d, p);
 			continue;
 		}
 		if (dircache_hasoff(p, off)) {
