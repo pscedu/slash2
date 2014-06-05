@@ -511,6 +511,7 @@ reimport
 - we should use a flag SETATTRF_MTIME_NOW that updates a file's mtim
   to whatever is the current time on MDS instead of using the client's
   time specified
+- when doing self builds, specify OBJBASE as ./obj
 
 - add crcalg=old option
 - art's md5deep failures
