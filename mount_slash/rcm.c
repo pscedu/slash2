@@ -150,7 +150,7 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 
 	mrsq = mrsq_lookup(mq->id);
 	if (mrsq == NULL) {
-		mp->rc = -ECANCELED;
+		mp->rc = -PFLERR_CANCELED;
 		return (mp->rc);
 	}
 
@@ -272,7 +272,7 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 	/* Verify that the sequence number matches. */
 	bci = bmap_2_bci(b);
 	if (bci->bci_sbd.sbd_seq != mq->seq)
-		PFL_GOTOERR(out, mp->rc = -ESTALE);
+		PFL_GOTOERR(out, mp->rc = -PFLERR_STALE);
 
 	/* All new read and write I/O's will get BIORQ_DIO. */
 	b->bcm_flags |= BMAP_DIO;
@@ -296,7 +296,6 @@ slc_rcm_handle_readdir(struct pscrpc_request *rq)
 	struct fidc_membh *d = NULL;
 	struct dircache_page *p;
 	struct iovec iov[2];
-	int stale=0;
 
 	memset(iov, 0, sizeof(iov));
 
@@ -310,8 +309,18 @@ slc_rcm_handle_readdir(struct pscrpc_request *rq)
 		PFL_GOTOERR(out, mp->rc);
 
 	p = dircache_new_page(d, mq->offset, 0);
-	if (p == NULL)
-		PFL_GOTOERR(out, mp->rc = -ECANCELED);
+	if (p == NULL) {
+		if (mq->size)
+			pscrpc_msg_add_flags(rq->rq_repmsg,
+			    MSG_ABORT_BULK);
+		OPSTAT_INCR(SLC_OPST_READDIR_DROP);
+		PFL_GOTOERR(out, 0);
+	}
+
+	if (d->fcmh_sstb.sst_fg.fg_gen != mq->fg.fg_gen) {
+		OPSTAT_INCR(SLC_OPST_READDIR_STALE);
+		PFL_GOTOERR(error, mp->rc = -PFLERR_STALE);
+	}
 
 	iov[0].iov_base = PSCALLOC(mq->size);
 	iov[0].iov_len = mq->size;
@@ -323,13 +332,8 @@ slc_rcm_handle_readdir(struct pscrpc_request *rq)
 		mp->rc = slrpc_bulkserver(rq, BULK_GET_SINK,
 		    SRCM_BULK_PORTAL, iov, nitems(iov));
 
-	if (mq->fg.fg_gen != fcmh_2_gen(d)) {
-		stale = 1;
-		if (!mp->rc)
-			mp->rc = -ESTALE;
-		OPSTAT_INCR(SLC_OPST_READDIR_STALE);
-	}
-	if (mp->rc || stale) {
+	if (mp->rc) {
+ error:
 		msl_readdir_error(d, p, mp->rc);
 		PSCFREE(iov[0].iov_base);
 	} else

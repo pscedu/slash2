@@ -76,8 +76,6 @@ _dircache_free_page(const struct pfl_callerinfo *pci,
 	FCMH_LOCK_ENSURE(d);
 	fci = fcmh_2_fci(d);
 
-//	psc_assert((p->dcp_flags & DIRCACHEPGF_LOADING) == 0);
-
 	if (p->dcp_flags & DIRCACHEPGF_FREEING)
 		return (0);
 
@@ -145,9 +143,11 @@ dircache_walk(struct fidc_membh *d, void (*cbf)(struct dircache_page *,
  *	failure when the iterating item's hash changes.
  * @d: directory handle.
  * @name: name to lookup.
+ * @nextoffp: value-result next directory entry 'offset' cookie for
+ *	issuing readahead.
  */
 slfid_t
-dircache_lookup(struct fidc_membh *d, const char *name, off_t *nextoffp, int invalidate)
+dircache_lookup(struct fidc_membh *d, const char *name, off_t *nextoffp)
 {
 	struct dircache_page *p, *np;
 	struct dircache_ent q, *dce;
@@ -220,12 +220,6 @@ dircache_lookup(struct fidc_membh *d, const char *name, off_t *nextoffp, int inv
 				ino = dirent->pfd_ino;
 				found = 1;
 				OPSTAT_INCR(SLC_OPST_DIRCACHE_LOOKUP_HIT);
-
-				if (invalidate) {
-				    found = 0;
-				    dce->dce_hash++;
-				    OPSTAT_INCR(SLC_OPST_DIRCACHE_LOOKUP_DEL);
-				}
 			}
 
 			psclog_debug("fid="SLPRI_FID" off=%"PRId64" "
@@ -458,7 +452,8 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	p->dcp_base0 = base0;
 	p->dcp_base = base;
 	p->dcp_size = size;
-	PFL_GETPTIMESPEC(&p->dcp_tm);
+	PFL_GETPTIMESPEC(&p->dcp_local_tm);
+	p->dcp_remote_tm = d->fcmh_sstb.sst_mtim;
 	psc_assert(p->dcp_flags & DIRCACHEPGF_LOADING);
 	p->dcp_flags &= ~DIRCACHEPGF_LOADING;
 	p->dcp_flags |= DIRCACHEPGF_LOADED;

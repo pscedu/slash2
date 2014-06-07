@@ -65,8 +65,8 @@
 
 struct fidc_membh;
 
-#define DIRCACHEPG_TIMEO	4	/* expiration after page read */
-#define DIRCACHEPG_MAXTIMEO	30	/* expiration regardless if read */
+#define DIRCACHEPG_SOFT_TIMEO	4	/* expiration after page read */
+#define DIRCACHEPG_HARD_TIMEO	30	/* expiration regardless if read */
 
 /*
  * This consitutes a block of 'struct dirent' members (dircache_ent)
@@ -76,10 +76,11 @@ struct fidc_membh;
 struct dircache_page {
 	int			 dcp_flags;	/* see DIRCACHEPGF_* below */
 	int			 dcp_rc;	/* readdir(3) error */
-	size_t			 dcp_size;
-	off_t			 dcp_off;
-	off_t			 dcp_nextoff;
-	struct pfl_timespec	 dcp_tm;
+	size_t			 dcp_size;	/* length of page (# dirents in page) */
+	off_t			 dcp_off;	/* getdents(2) 'offset' cookie of first dirent */
+	off_t			 dcp_nextoff;	/* next getdents(2) 'offset' cookie */
+	struct pfl_timespec	 dcp_local_tm;	/* local clock when populated */
+	struct pfl_timespec	 dcp_remote_tm;	/* remote clock when populated */
 	struct psc_listentry	 dcp_lentry;	/* chain on dci  */
 	struct psc_dynarray	*dcp_dents_name;/* dircache_ents sorted by hash(basename) */
 	struct psc_dynarray	*dcp_dents_off;	/* dircache_ents sorted by d_off */
@@ -96,27 +97,38 @@ struct dircache_page {
 #define DIRCACHEPGF_FREEING	(1 << 4)	/* a thread is trying to free */
 
 /*
- * This is NOT the expire timestamp of a cache page. It is used to calculate 
- * the largest timestamp that a cache page can have in order to expire right now.
+ * This structure is used to decide when to evict a page.  It is
+ * assigned the 'now' timestamp minus the page timeout intervals then
+ * these values are checked against the time stored when the page was
+ * populated.
  */
 struct dircache_expire {
-	struct pfl_timespec	 dexp_def;
-	struct pfl_timespec	 dexp_max;
+	struct pfl_timespec	 dexp_soft;	/* used if page was read */
+	struct pfl_timespec	 dexp_hard;	/* max */
 };
 
+/*
+ * Determine if a page of dirents should be evicted.
+ * Conditions:
+ *   (1) no current references to this page
+ *   (2) page was READ and is older than soft timeout: evict.
+ *   (3) page is older than hard timeout: evict.
+ *   (4) page is older than directory's mtime: evict.
+ */
 #define DIRCACHEPG_EXPIRED(d, p, dexp)					\
 	((p)->dcp_refcnt == 0 &&					\
-	 ((timespeccmp(&(dexp)->dexp_def, &(p)->dcp_tm, >) &&		\
-	    (p)->dcp_flags & DIRCACHEPGF_READ) ||			\
-	  timespeccmp(&(dexp)->dexp_max, &(p)->dcp_tm, >) ||		\
-	  timespeccmp(&(d)->fcmh_sstb.sst_mtim, &p->dcp_tm, >)))
+	 (((p)->dcp_flags & DIRCACHEPGF_READ &&				\
+	  timespeccmp(&(dexp)->dexp_soft, &(p)->dcp_local_tm, >)) ||	\
+	  timespeccmp(&(dexp)->dexp_hard, &(p)->dcp_local_tm, >) ||	\
+	  memcmp(&(d)->fcmh_sstb.sst_mtim, &(p)->dcp_remote_tm,		\
+	    sizeof((p)->dcp_remote_tm))))
 
 #define DIRCACHEPG_INITEXP(dexp)					\
 	do {								\
-		PFL_GETPTIMESPEC(&(dexp)->dexp_def);			\
-		(dexp)->dexp_max = (dexp)->dexp_def;			\
-		(dexp)->dexp_def.tv_sec -= DIRCACHEPG_TIMEO;		\
-		(dexp)->dexp_max.tv_sec -= DIRCACHEPG_MAXTIMEO;		\
+		PFL_GETPTIMESPEC(&(dexp)->dexp_soft);			\
+		(dexp)->dexp_hard = (dexp)->dexp_soft;			\
+		(dexp)->dexp_soft.tv_sec -= DIRCACHEPG_SOFT_TIMEO;	\
+		(dexp)->dexp_hard.tv_sec -= DIRCACHEPG_HARD_TIMEO;	\
 	} while (0)
 
 #define DBGPR_DIRCACHEPG(lvl, dcp, fmt, ...)				\
@@ -188,7 +200,7 @@ struct dircache_page *
 int	dircache_hasoff(struct dircache_page *, off_t);
 int	_dircache_free_page(const struct pfl_callerinfo *,
 	    struct fidc_membh *, struct dircache_page *, int);
-slfid_t	dircache_lookup(struct fidc_membh *, const char *, off_t *, int);
+slfid_t	dircache_lookup(struct fidc_membh *, const char *, off_t *);
 void	dircache_mgr_init(void);
 void	dircache_purge(struct fidc_membh *);
 void	dircache_reg_ents(struct fidc_membh *, struct dircache_page *,

@@ -1095,7 +1095,7 @@ msl_lookup_fidcache(struct pscfs_req *pfr,
 		PFL_GOTOERR(out, rc);
 	}
 
-	cfid = dircache_lookup(p, name, &nextoff, 0);
+	cfid = dircache_lookup(p, name, &nextoff);
 	FCMH_ULOCK(p);
 	if (cfid == FID_ANY || fidc_lookup_fid(cfid, &c)) {
 		OPSTAT_INCR(SLC_OPST_DIRCACHE_LOOKUP_MISS);
@@ -1204,19 +1204,13 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc == 0)
 		rc = mp->rc;
 
-	if (!rc || rc == -ENOENT) {
-		FCMH_LOCK(p);
-		if (!rc) {
-			uidmap_int_stat(&mp->pattr);
-			fcmh_setattr_locked(p, &mp->pattr);
-			fcmh_2_gen(p)++;
-		}
-		dircache_lookup(p, name, NULL, 1);
-		FCMH_ULOCK(p);
-	}
-
 	if (!rc) {
 		int tmprc;
+
+		FCMH_LOCK(p);
+		uidmap_int_stat(&mp->pattr);
+		fcmh_setattr_locked(p, &mp->pattr);
+		FCMH_ULOCK(p);
 
 		tmprc = msl_peek_fcmh(pfr, mp->cattr.sst_fid, &c);
 		if (!tmprc) {
@@ -1237,7 +1231,6 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	    SLPRI_FG_ARGS(&mp->cattr.sst_fg), mp->valid, name, isfile, rc);
 
  out:
-
 	if (c)
 		fcmh_op_done(c);
 	if (p)
@@ -1369,7 +1362,8 @@ msl_readdir_error(struct fidc_membh *d, struct dircache_page *p, int rc)
 		p->dcp_flags &= ~DIRCACHEPGF_LOADING;
 		p->dcp_flags |= DIRCACHEPGF_LOADED;
 		p->dcp_rc = rc;
-		PFL_GETPTIMESPEC(&p->dcp_tm);
+		PFL_GETPTIMESPEC(&p->dcp_local_tm);
+		p->dcp_remote_tm = d->fcmh_sstb.sst_mtim;
 		fcmh_wake_locked(d);
 	}
 	FCMH_ULOCK(d);
@@ -1396,8 +1390,7 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 
 		uidmap_int_stat(&e->sstb);
 
-		fidc_lookup(&e->sstb.sst_fg, FIDC_LOOKUP_CREATE,
-		    &f);
+		fidc_lookup(&e->sstb.sst_fg, FIDC_LOOKUP_CREATE, &f);
 
 		if (f) {
 			FCMH_LOCK(f);
@@ -1746,16 +1739,15 @@ msl_flush_int_locked(struct msl_fhent *mfh, int wait)
 		BMAP_ULOCK(b);
 	}
 	FCMH_ULOCK(f);
-		
+
 	DYNARRAY_FOREACH(b, i, &a) {
 		bmpc_biorqs_flush(b, wait);
 		BMAP_LOCK(b);
 		if (!rc) {
 			bci = bmap_2_bci(b);
 			rc = bci->bci_flush_rc;
-		} 
+		}
 		bmap_op_done_type(b, BMAP_OPCNT_FLUSH);
-			
 	}
 	psc_dynarray_free(&a);
 
@@ -2095,8 +2087,6 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	FCMH_LOCK(op);
 	uidmap_int_stat(&mp->srr_opattr);
 	fcmh_setattr_locked(op, &mp->srr_opattr);
-	fcmh_2_gen(op)++;
-	dircache_lookup(op, oldname, NULL, 1);
 	FCMH_ULOCK(op);
 
 	if (np != op) {
@@ -2104,8 +2094,6 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		FCMH_LOCK(np);
 		uidmap_int_stat(&mp->srr_npattr);
 		fcmh_setattr_locked(np, &mp->srr_npattr);
-		fcmh_2_gen(np)++;
-		dircache_lookup(np, newname, NULL, 1);
 		FCMH_ULOCK(np);
 	}
 
