@@ -275,7 +275,6 @@ API rename
   chunks of code
 - ensure all system errno values in rpc msgs are standardized
   - ETIMEDOUT 60 (BSD) vs 110 (linux)
-  - ESTALE 70 (BSD) vs 116 (linux)
   - ECONNABORTED
   - ECONNREFUSED
   - ECONNRESET
