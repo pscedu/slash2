@@ -717,7 +717,6 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw)
 		goto out;
 	}
 
-
  do_read:
 	SLVR_ULOCK(s);
 	/*
