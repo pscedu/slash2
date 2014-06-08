@@ -190,7 +190,7 @@ msl_bmap_lease_reassign_cb(struct pscrpc_request *rq,
 		 * bother with further retry attempts.
 		 */
 		if (rc == -SLERR_ION_OFFLINE)
-			bmap_2_bci(b)->bci_nreassigns = SLERR_ION_OFFLINE; /* XXX wtf is this */
+			bmap_2_bci(b)->bci_nreassigns = 0;
 		OPSTAT_INCR(SLC_OPST_BMAP_REASSIGN_FAIL);
 	} else {
 		memcpy(&bmap_2_bci(b)->bci_sbd, &mp->sbd,
