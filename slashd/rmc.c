@@ -117,13 +117,14 @@ slm_get_next_slashfid(slfid_t *fidp)
 	spinlock(&slm_fid_lock);
 	/*
 	 * This should never happen.  If it does, we crash to let the
-	 * sys admin know.  He could fix this if there are still room in
-	 * the cycle bits.  We have to let sys admin know, otherwise,
-	 * he/she does not know how to bump the cycle bits.
+	 * sysadmin know.  He could fix this if there is still room in
+	 * the cycle bits.  We have to let the sysadmin know otherwise
+	 * they will not know to bump the cycle bits.
 	 */
 	if (FID_GET_INUM(slm_next_fid) >= FID_MAX_INUM) {
 		psclog_warnx("max FID "SLPRI_FID" reached, manual "
-		    "intervention needed", slm_next_fid);
+		    "intervention needed (bump the cycle bits)",
+		    slm_next_fid);
 		freelock(&slm_fid_lock);
 		return (ENOSPC);
 	}
