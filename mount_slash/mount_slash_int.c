@@ -1513,6 +1513,9 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r, int *psched)
 		needflush = 1;
 	}
 
+	/*
+	 * We must flush any pending writes first before reading from the storage.
+	 */
 	if (needflush)
 		bmpc_biorqs_flush(r->biorq_bmap, 1);
 
