@@ -1558,7 +1558,7 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r, int *psched)
 __static int
 msl_pages_prefetch(struct bmpc_ioreq *r)
 {
-	int i, sched = 0, rc = 0, waitflag = 0, aiowait = 0;
+	int i, sched = 0, rc = 0, aiowait = 0;
 	struct bmap_pagecache_entry *e;
 
 	psc_assert(!r->biorq_rqset);
@@ -1612,42 +1612,31 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 		rc = 0;
 	}
 
-	waitflag = BMPCE_DATARDY | BMPCE_EIO;
-	if (r->biorq_flags & BIORQ_READ)
-		waitflag |= BMPCE_AIOWAIT;
-
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
-		BMPCE_LOCK(e);
-		if (r->biorq_flags & BIORQ_WRITE) {
-			while (e->bmpce_flags & BMPCE_FAULTING) {
-				DEBUG_BMPCE(PLL_DIAG, e, "waiting");
-				BMPCE_WAIT(e);
-				BMPCE_LOCK(e);
-			}
-			BMPCE_ULOCK(e);
-			continue;
-		}
-		if (msl_biorq_page_valid(r, i)) {
-			BMPCE_ULOCK(e);
-			continue;
-		}
 
-		while (!(e->bmpce_flags & waitflag)) {
+		BMPCE_LOCK(e);
+		while (e->bmpce_flags & BMPCE_FAULTING) {
 			DEBUG_BMPCE(PLL_DIAG, e, "waiting");
 			BMPCE_WAIT(e);
 			BMPCE_LOCK(e);
 		}
+
 		if (e->bmpce_flags & BMPCE_EIO) {
 			rc = -EIO;
 			BMPCE_ULOCK(e);
 			break;
 		}
-		if (e->bmpce_flags & BMPCE_DATARDY) {
+		if (r->biorq_flags & BIORQ_WRITE) {
 			BMPCE_ULOCK(e);
 			continue;
 		}
+
+		if (msl_biorq_page_valid(r, i)) {
+			BMPCE_ULOCK(e);
+			continue;
+		}
+
 		psc_assert(e->bmpce_flags & BMPCE_AIOWAIT);
-		psc_assert(r->biorq_flags & BIORQ_READ);
 
 		msl_fsrq_aiowait_tryadd_locked(e, r);
 
@@ -1657,8 +1646,8 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 		break;
 	}
  out:
-	DEBUG_BIORQ(PLL_DIAG, r, "sched=%d wait=%#x aio=%d rc=%d",
-	    sched, waitflag, aiowait, rc);
+	DEBUG_BIORQ(PLL_DIAG, r, "sched=%d aio=%d rc=%d",
+	    sched, aiowait, rc);
 	return (rc);
 }
 
