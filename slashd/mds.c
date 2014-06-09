@@ -933,17 +933,20 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 	bml->bml_flags |= BML_BMI;
 
 	if (rw == SL_WRITE) {
-		/* Drop the lock prior to doing disk and possibly network
-		 *    I/O.
+		/*
+		 * Drop the lock prior to doing disk and possibly
+		 * network I/O.
 		 */
 		b->bcm_flags |= BMAP_IONASSIGN;
 
-		/* For any given chain of leases, the bmi_[readers|writers]
-		 *    value may only be 1rd or 1wr.  In the case where 2
-		 *    wtrs are present, the value is 1wr.  Mixed readers and
-		 *    wtrs == 1wtr.  1-N rdrs, 1rd.
-		 * Only increment writers if this is the first
-		 *    write lease from the respective client.
+		/*
+		 * For any given chain of leases, the
+		 * bmi_[readers|writers] value may only be 1rd or 1wr.
+		 * In the case where 2 wtrs are present, the value is
+		 * 1wr.  Mixed readers and wtrs == 1wtr.  1-N rdrs, 1rd.
+		 *
+		 * Only increment writers if this is the first write
+		 * lease from the respective client.
 		 */
 		if (!wlease) {
 			/* This is the first write from the client. */
@@ -967,7 +970,8 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 			rc = mds_bmap_ios_restart(bml);
 
 		} else if (!wlease && bmi->bmi_writers == 1) {
-			/* No duplicate lease detected and this client
+			/*
+			 * No duplicate lease detected and this client
 			 * is the first writer.
 			 */
 			psc_assert(!bmi->bmi_wr_ion);
@@ -1299,7 +1303,7 @@ mds_handle_rls_bmap(struct pscrpc_request *rq, __unusedx int sliod)
 		sbd = &mq->sbd[i];
 
 		fg.fg_fid = sbd->sbd_fg.fg_fid;
-		fg.fg_gen = 0;
+		fg.fg_gen = 0; // XXX FGEN_ANY
 
 		if (slm_fcmh_get(&fg, &f))
 			continue;
