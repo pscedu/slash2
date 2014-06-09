@@ -452,6 +452,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	p->dcp_base0 = base0;
 	p->dcp_base = base;
 	p->dcp_size = size;
+	p->dcp_dirgen = fcmh_2_fgen(f);
 	PFL_GETPTIMESPEC(&p->dcp_local_tm);
 	p->dcp_remote_tm = d->fcmh_sstb.sst_mtim;
 	psc_assert(p->dcp_flags & DIRCACHEPGF_LOADING);

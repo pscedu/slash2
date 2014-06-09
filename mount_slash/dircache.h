@@ -86,6 +86,7 @@ struct dircache_page {
 	struct psc_dynarray	*dcp_dents_off;	/* dircache_ents sorted by d_off */
 	void			*dcp_base;	/* pscfs_dirents */
 	void			*dcp_base0;	/* dircache_ents */
+	int64_t			 dcp_dirgen;	/* directory generation; used to detect stale pages */
 	int			 dcp_refcnt;
 };
 
@@ -114,6 +115,7 @@ struct dircache_expire {
  *   (2) page was READ and is older than soft timeout: evict.
  *   (3) page is older than hard timeout: evict.
  *   (4) page is older than directory's mtime: evict.
+ *   (5) page references an older directory generation: evict.
  */
 #define DIRCACHEPG_EXPIRED(d, p, dexp)					\
 	((p)->dcp_refcnt == 0 &&					\
@@ -121,7 +123,8 @@ struct dircache_expire {
 	  timespeccmp(&(dexp)->dexp_soft, &(p)->dcp_local_tm, >)) ||	\
 	  timespeccmp(&(dexp)->dexp_hard, &(p)->dcp_local_tm, >) ||	\
 	  memcmp(&(d)->fcmh_sstb.sst_mtim, &(p)->dcp_remote_tm,		\
-	    sizeof((p)->dcp_remote_tm))))
+	    sizeof((p)->dcp_remote_tm)) ||				\
+	  (p)->dcp_dirgen != fcmh_2_gen(d)))
 
 #define DIRCACHEPG_INITEXP(dexp)					\
 	do {								\
@@ -131,11 +134,11 @@ struct dircache_expire {
 		(dexp)->dexp_hard.tv_sec -= DIRCACHEPG_HARD_TIMEO;	\
 	} while (0)
 
-#define DBGPR_DIRCACHEPG(lvl, dcp, fmt, ...)				\
-	psclog((lvl), "dcp@%p off %"PSCPRIdOFFT" rf %d sz %zu "		\
-	    "fl %#x nextoff %"PSCPRIdOFFT": " fmt,			\
-	    (dcp), (dcp)->dcp_off, (dcp)->dcp_refcnt, (dcp)->dcp_size,	\
-	    (dcp)->dcp_flags, (dcp)->dcp_nextoff, ## __VA_ARGS__)
+#define DBGPR_DIRCACHEPG(lvl, p, fmt, ...)				\
+	psclog((lvl), "dcp@%p off %"PSCPRIdOFFT" rf %d gen %"PRId64" "	\
+	    "sz %zu fl %#x nextoff %"PSCPRIdOFFT": " fmt,		\
+	    (p), (p)->dcp_off, (p)->dcp_refcnt, (p)->dcp_dirgen,	\
+	    (p)->dcp_size, (p)->dcp_flags, (p)->dcp_nextoff, ## __VA_ARGS__)
 
 /* This is analogous to 'struct dirent' many of which reside in a page. */
 struct dircache_ent {
