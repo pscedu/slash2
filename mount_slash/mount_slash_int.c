@@ -1584,7 +1584,6 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 		 * Note: This can trigger invocation of our read
 		 * callback in this same thread.
 		 */
-
 		rc = pscrpc_set_wait(r->biorq_rqset);
 
 		/*
@@ -1595,9 +1594,8 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 		 */
 		BIORQ_LOCK(r);
 
-		if (!rc) {
+		if (!rc)
 			DEBUG_BIORQ(PLL_DIAG, r, "read cb complete");
-		}
 		BIORQ_ULOCK(r);
 
 		/* Destroy and cleanup the set now. */
