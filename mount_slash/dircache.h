@@ -86,7 +86,7 @@ struct dircache_page {
 	struct psc_dynarray	*dcp_dents_off;	/* dircache_ents sorted by d_off */
 	void			*dcp_base;	/* pscfs_dirents */
 	void			*dcp_base0;	/* dircache_ents */
-	int64_t			 dcp_dirgen;	/* directory generation; used to detect stale pages */
+	slfgen_t		 dcp_dirgen;	/* directory generation; used to detect stale pages */
 	int			 dcp_refcnt;
 };
 
