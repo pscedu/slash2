@@ -416,10 +416,6 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 	struct bmap_pagecache_entry *e;
 	int i, needflush;
 
-#if FHENT_EARLY_RELEASE
-	int fhent = 1;
-#endif
-
 	BIORQ_LOCK(r);
 	psc_assert(r->biorq_ref > 0);
 	r->biorq_ref--;
@@ -453,11 +449,6 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
  destroy:
 	psc_assert(!(r->biorq_flags & BIORQ_DESTROY));
 	r->biorq_flags |= BIORQ_DESTROY;
-
-#if FHENT_EARLY_RELEASE
-	if (r->biorq_flags & BIORQ_NOFHENT)
-		fhent = 0;
-#endif
 
 	msl_biorq_del(r);
 

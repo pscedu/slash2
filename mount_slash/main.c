@@ -1857,14 +1857,10 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 
 	MFH_LOCK(mfh);
 	mfh->mfh_flags |= MSL_FHENT_CLOSING;
-#if FHENT_EARLY_RELEASE
 	struct bmpc_ioreq *r;
 
-	PLL_FOREACH(r, &mfh->mfh_biorqs)
-		BIORQ_SETATTR(r, BIORQ_NOFHENT);
-#else
 	rc = msl_flush_int_locked(mfh, 1);
-#endif
+
 	while (!pll_empty(&mfh->mfh_ra_bmpces) ||
 	    (mfh->mfh_flags & MSL_FHENT_RASCHED)) {
 		psc_waitq_wait(&c->fcmh_waitq, &mfh->mfh_lock);
