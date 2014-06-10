@@ -155,6 +155,18 @@ msl_biorq_page_valid(struct bmpc_ioreq *r, int idx)
 	psc_fatalx("biorq %p does not have page %d", r, idx);
 }
 
+__static int
+msl_biorq_readahead_page(struct bmap_pagecache_entry *e)
+{
+	if (e->bmpce_flags & BMPCE_FAULTING)
+		return 0;
+	if (e->bmpce_flags & BMPCE_DATARDY)
+		return 0;
+	if (e->bmpce_flags & BMPCE_DIRTY)
+		return 0;
+	return 1;
+}
+
 /**
  * msl_biorq_build - Construct a request structure for an I/O issued on
  *	a bmap.
@@ -295,7 +307,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 		 * because it is not part of the original
 		 * request.
 		 */
-		if (biorq_is_my_bmpce(r, e)) {
+		if (msl_biorq_readahead_page(e)) {
 			/*
 			 * Other threads will block on the reada
 			 * completion.  The cb handler will
