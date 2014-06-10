@@ -120,7 +120,7 @@ struct bmap_pagecache_entry {
 	psclogs((level), SLSS_BMAP,					\
 	    "bmpce@%p fl=%u:%s%s%s%s%s%s%s%s "				\
 	    "o=%#x b=%p "						\
-	    "ts="PSCPRI_TIMESPEC" "					\
+	    "ts="PSCPRI_PTIMESPEC" "					\
 	    "ref=%u "							\
 	    "owner=%p : " fmt,						\
 	    (b), (b)->bmpce_flags,					\
