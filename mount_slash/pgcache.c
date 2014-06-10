@@ -535,7 +535,6 @@ dump_biorq_flags(uint32_t flags)
 	PFL_PRFLAG(BIORQ_FORCE_EXPIRE, &flags, &seq);
 	PFL_PRFLAG(BIORQ_DESTROY, &flags, &seq);
 	PFL_PRFLAG(BIORQ_FLUSHRDY, &flags, &seq);
-	PFL_PRFLAG(BIORQ_NOFHENT, &flags, &seq);
 	PFL_PRFLAG(BIORQ_AIOWAIT, &flags, &seq);
 	PFL_PRFLAG(BIORQ_WAIT, &flags, &seq);
 	if (flags)

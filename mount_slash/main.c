@@ -1857,7 +1857,6 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 
 	MFH_LOCK(mfh);
 	mfh->mfh_flags |= MSL_FHENT_CLOSING;
-	struct bmpc_ioreq *r;
 
 	rc = msl_flush_int_locked(mfh, 1);
 
