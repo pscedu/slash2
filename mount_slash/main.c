@@ -2378,11 +2378,11 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		PFL_GOTOERR(out, rc = EPERM);
 
 	if (to_set & PSCFS_SETATTRF_ATIME_NOW)
-	    stb->st_ctim = stb->st_atim;
+		stb->st_pfl_ctim = stb->st_pfl_atim;
 	else if (to_set & PSCFS_SETATTRF_MTIME_NOW)
-	    stb->st_ctim = stb->st_mtim;
+		stb->st_pfl_ctim = stb->st_pfl_mtim;
 	else
-	    PFL_GETPTIMESPEC(&stb->st_ctim);
+		PFL_GETPTIMESPEC(&stb->st_pfl_ctim);
 	to_set |= PSCFS_SETATTRF_CTIME;
 
 	if (to_set & PSCFS_SETATTRF_UID) {
