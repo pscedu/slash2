@@ -331,6 +331,17 @@ _msl_progallowed(struct pscfs_req *pfr)
 	return (0);
 }
 
+int
+msl_io_convert_errno(int rc)
+{
+	switch (rc) {
+	case -SLERR_ION_OFFLINE:
+		rc = ETIMEDOUT;
+		break;
+	}
+	return (rc);
+}
+
 void
 mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name, int oflags, mode_t mode)
@@ -439,23 +450,24 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	FCMH_LOCK(c);
 	sl_internalize_stat(&c->fcmh_sstb, &stb);
 
-	if (mp->rc2)
-		PFL_GOTOERR(out, rc = mp->rc2);
+	rc = msl_io_convert_errno(mp->rc2);
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
 	fci = fcmh_2_fci(c);
+	// XXX bug fci->fci_inode.reptbl inherited?
 	fci->fci_inode.reptbl[0].bs_id = mp->sbd.sbd_ios;
 	fci->fci_inode.nrepls = 1;
-	c->fcmh_flags |= FCMH_CLI_HAVEINODE;
-	// XXX bug fci->fci_inode.reptbl inherited?
 	// XXX bug fci->fci_inode.flags inherited?
 	// XXX bug fci->fci_inode.newreplpol inherited?
+	c->fcmh_flags |= FCMH_CLI_HAVEINODE;
 	FCMH_ULOCK(c);
 
-	/* XXX this load should be async so we can reply quickly */
-	mp->rc2 = bmap_getf(c, 0, SL_WRITE, BMAPGETF_LOAD |
+	/* XXX this load should be nonblocking so we can reply quickly */
+	rc = bmap_getf(c, 0, SL_WRITE, BMAPGETF_LOAD |
 	    BMAPGETF_NORETRIEVE, &b);
-	if (mp->rc2)
-		PFL_GOTOERR(out, rc = mp->rc2);
+	if (rc)
+		PFL_GOTOERR(out, rc);
 
 	msl_bmap_reap_init(b, &mp->sbd);
 
@@ -470,8 +482,8 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	bmap_op_done(b);
 
  out:
-	psclog_diag("create: pfid="SLPRI_FID" name='%s' mode=%#x flag=%#o rc=%d",
-	    pinum, name, mode, oflags, rc);
+	psclog_diag("create: pfid="SLPRI_FID" name='%s' mode=%#x "
+	    "flag=%#o rc=%d", pinum, name, mode, oflags, rc);
 
 	if (c)
 		fcmh_op_done(c);
