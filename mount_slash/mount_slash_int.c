@@ -1527,7 +1527,8 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r, int *psched)
 		if (j < 0)
 			j = i;
 
-		if ((i-j+1) == BMPC_MAXBUFSRPC || i == psc_dynarray_len(&r->biorq_pages) - 1) {
+		if (i - j + 1 == BMPC_MAXBUFSRPC ||
+		    i == psc_dynarray_len(&r->biorq_pages) - 1) {
 			rc = msl_read_rpc_launch(r, j, i - j + 1);
 			if (rc)
 				break;
@@ -1563,15 +1564,15 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 	if (r->biorq_flags & BIORQ_READ) {
 		rc = msl_launch_read_rpcs(r, &sched);
 		if (rc)
-			goto out;
+			PFL_GOTOERR(out, rc);
 	}
 
 	/*
-	 * Wait for all read activities (include RBW) associated with the
-	 * bioreq to complete.
+	 * Wait for all read activities (include RBW) associated with
+	 * the bioreq to complete.
 	 *
-	 * This set wait makes sure that pages belong to the current request
-	 * are faulted in.
+	 * This set wait makes sure that pages belong to the current
+	 * request are faulted in.
 	 */
 	if (r->biorq_rqset) {
 		/*
