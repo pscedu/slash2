@@ -1011,8 +1011,7 @@ msbmaprathr_main(struct psc_thread *thr)
 			pll_remove(&mfh->mfh_ra_bmpces, bmpce);
 			bmpces[nbmpces++] = bmpce;
 
-			if (nbmpces == mfh->mfh_ra.mra_nseq ||
-			    nbmpces == MAX_BMPCES_PER_RPC)
+			if (nbmpces == MAX_BMPCES_PER_RPC)
 				break;
 		}
 
