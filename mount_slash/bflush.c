@@ -219,7 +219,8 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 	struct sl_resm *m = args->pointer_arg[MSL_CBARG_RESM];
 	struct resm_cli_info *rmci = resm2rmci(m);
 	struct bmpc_ioreq *r;
-	int rc;
+	struct bmap_pagecache_entry *e;
+	int i, rc;
 
 	psc_atomic32_dec(&rmci->rmci_infl_rpcs);
 
@@ -229,6 +230,15 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 	    m->resm_res_id, psc_atomic32_read(&rmci->rmci_infl_rpcs));
 
 	OPSTAT_INCR(SLC_OPST_SRMT_WRITE_CALLBACK);
+
+	if (!rc) {
+		for (i = 0; i < bwc->bwc_nbmpces; i++)  {
+			e = bwc->bwc_bmpces[i];
+			BMPCE_LOCK(e);
+			e->bmpce_flags &= ~BMPCE_DIRTY;
+			BMPCE_ULOCK(e);
+		}
+	}
 
 	while ((r = pll_get(&bwc->bwc_pll))) {
 		if (rc) {
