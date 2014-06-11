@@ -295,10 +295,9 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 
 		BMPCE_LOCK(e);
 		DEBUG_BMPCE(PLL_DIAG, e, "ra (npndg=%d) i=%d "
-		    "biorq_is_my_bmpce=%d raoff=%"PRIx64
-		    " bmpce_foff=%"PRIx64,
+		    "raoff=%"PRIx64" bmpce_foff=%"PRIx64,
 		    pll_nitems(&mfh->mfh_ra_bmpces), i,
-		    biorq_is_my_bmpce(r, e), mfh->mfh_ra.mra_raoff,
+		    mfh->mfh_ra.mra_raoff,
 		    (off_t)(bmpce_off + bmap_foff(b)));
 
 		/*
