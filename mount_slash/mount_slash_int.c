@@ -404,13 +404,14 @@ msl_bmpces_fail(struct bmpc_ioreq *r, int rc)
 	struct bmap_pagecache_entry *e;
 	int i;
 
+	if (!(r->biorq_flags & BIORQ_WRITE))
+		return;
+
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 		BMPCE_LOCK(e);
-		if (biorq_is_my_bmpce(r, e)) {
-			DEBUG_BMPCE(PLL_DIAG, e, "set BMPCE_EIO");
-			e->bmpce_flags |= BMPCE_EIO;
-			BMPCE_WAKE(e);
-		}
+		DEBUG_BMPCE(PLL_DIAG, e, "set BMPCE_EIO");
+		e->bmpce_flags |= BMPCE_EIO;
+		BMPCE_WAKE(e);
 		BMPCE_ULOCK(e);
 	}
 }
