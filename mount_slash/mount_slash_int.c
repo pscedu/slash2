@@ -1555,12 +1555,6 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 
 	psc_assert(!r->biorq_rqset);
 
-	/*
-	 * Only read in the pages owned by this request.  To do this the
-	 * below loop marks only the iov slots which correspond to page
-	 * cache entries owned by this request as determined by
-	 * biorq_is_my_bmpce().
-	 */
 	if (r->biorq_flags & BIORQ_READ) {
 		rc = msl_launch_read_rpcs(r, &sched);
 		if (rc)

@@ -279,14 +279,6 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
 	ureqlock(&bmpce->bmpce_lock, locked);
 }
 
-/**
- * biorq_is_my_bmpce - Informs the caller that biorq, r, owns the
- *	page cache entry, b.  This state implies that the thread
- *	processing 'r' is responsible for allocating a memory page and
- *	possible faulting in that page from the ION.
- */
-#define biorq_is_my_bmpce(r, b)	((r) == (b)->bmpce_owner)
-
 #define biorq_getaligned_off(r, nbmpce)					\
 	(((r)->biorq_off & ~BMPC_BUFMASK) + ((nbmpce) * BMPC_BUFSZ))
 
