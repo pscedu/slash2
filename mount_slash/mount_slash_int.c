@@ -424,8 +424,7 @@ void
 _msl_biorq_destroy(const struct pfl_callerinfo *pci,
     struct bmpc_ioreq *r)
 {
-	struct bmap_pagecache_entry *e;
-	int i, needflush;
+	int needflush;
 
 	BIORQ_LOCK(r);
 	psc_assert(r->biorq_ref > 0);
@@ -446,12 +445,6 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 	 * it as complete until after its reference count drops to zero.
 	 */
 	needflush = msl_biorq_complete_fsrq(r);
-	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
-		BMPCE_LOCK(e);
-		if (biorq_is_my_bmpce(r, e))
-			BMPCE_WAKE(e);
-		BMPCE_ULOCK(e);
-	}
 	if (needflush) {
 		msl_pages_schedflush(r);
 		return;
