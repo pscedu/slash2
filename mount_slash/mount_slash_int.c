@@ -369,11 +369,6 @@ msl_biorq_del(struct bmpc_ioreq *r)
 
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 		BMPCE_LOCK(e);
-		if (biorq_is_my_bmpce(r, e)) {
-			DEBUG_BMPCE(PLL_DIAG, e, "disown");
-			/* avoid reuse trouble */
-			e->bmpce_owner = NULL;
-		}
 		bmpce_release_locked(e, bmpc);
 	}
 
