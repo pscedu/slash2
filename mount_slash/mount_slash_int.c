@@ -1975,7 +1975,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 
 	if (rw == SL_READ) {
 		/* Catch read ops which extend beyond EOF. */
-		if (rw == SL_READ && size + (uint64_t)off > fsz)
+		if (size + (uint64_t)off > fsz)
 			size = fsz - off;
 		msl_setra(mfh, size, off);
 	}
