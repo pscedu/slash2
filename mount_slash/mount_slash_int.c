@@ -174,14 +174,13 @@ msl_biorq_readahead_page(struct bmap_pagecache_entry *e)
  */
 __static void
 msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
-    int rqnum, uint32_t roff, uint32_t len, int op)
+    int rqnum, uint32_t roff, uint32_t len, int op, uint64_t fsz)
 {
 	int i, npages = 0, maxpages;
 	struct msl_fhent *mfh = q->mfsrq_mfh;
 	struct bmap_pagecache_entry *e;
 	struct bmap_pagecache *bmpc;
 	struct bmpc_ioreq *r;
-	uint64_t fsz = fcmh_getsize(mfh->mfh_fcmh);
 	uint32_t aoff = (roff & ~BMPC_BUFMASK); /* aligned, relative offset */
 	uint32_t alen = len + (roff & BMPC_BUFMASK);
 	uint32_t bmpce_off;
@@ -2060,7 +2059,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			 */
 			msl_biorq_build(q, b, bufp, i,
 			    roff - (i * SLASH_BMAP_SIZE), tlen,
-			    (rw == SL_READ) ? BIORQ_READ : BIORQ_WRITE);
+			    (rw == SL_READ) ? BIORQ_READ : BIORQ_WRITE, fsz);
 		}
 
 		bmap_op_done(b);
