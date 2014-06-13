@@ -1697,6 +1697,25 @@ mds_bmap_load_fg(const struct slash_fidgen *fg, sl_bmapno_t bmapno,
 	return (rc);
 }
 
+void
+slm_fill_bmapdesc(struct srt_bmapdesc *sbd, struct bmap *b)
+{
+	struct bmap_mds_info *bmi;
+
+	bmi = bmap_2_bmi(b);
+	locked = BMAP_RLOCK(b);
+	sbd->sbd_fg = b->bcm_fcmh->fcmh_fg;
+	sbd->sbd_bmapno = b->bcm_bmapno;
+	if (b->bcm_flags & BMAP_DIO)
+		sbd->sbd_flags |= SRM_LEASEBMAPF_DIO;
+	for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++)
+		if (bmi->bmi_crcstates[i] & BMAP_SLVR_DATA) {
+			sbd->sbd_flags |= SRM_LEASEBMAPF_DATA;
+			break;
+		}
+	BMAP_URLOCK(b, locked);
+}
+
 /**
  * mds_bmap_load_cli - Routine called to retrieve a bmap, presumably so
  *	that it may be sent to a client.  It first checks for existence
@@ -1767,7 +1786,9 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 		BML_ULOCK(bml);
 		goto out;
 	}
-	sbd->sbd_fg = f->fcmh_fg;
+
+	slm_fill_bmapdesc(sbd, b);
+
 	/*
 	 * SLASH2 monotonic coherency sequence number assigned to this
 	 * lease.
@@ -1792,16 +1813,6 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 		sbd->sbd_ios = rmmi2resm(bmi->bmi_wr_ion)->resm_res_id;
 	} else
 		sbd->sbd_ios = IOS_ID_ANY;
-
-	sbd->sbd_bmapno = bmapno;
-	if (b->bcm_flags & BMAP_DIO)
-		sbd->sbd_flags |= SRM_LEASEBMAPF_DIO;
-
-	for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++)
-		if (bmi->bmi_crcstates[i] & BMAP_SLVR_DATA) {
-			sbd->sbd_flags |= SRM_LEASEBMAPF_DATA;
-			break;
-		}
 
 	if (repls)
 		memcpy(repls, bmi->bmi_repls, sizeof(bmi->bmi_repls));
@@ -1894,9 +1905,8 @@ mds_lease_reassign(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	    sizeof(bia));
 
 	/* Do some post setup on the modified lease. */
+	slm_fill_bmapdesc(sbd_out, b);
 	sbd_out->sbd_seq = obml->bml_seq;
-	sbd_out->sbd_bmapno = b->bcm_bmapno;
-	sbd_out->sbd_fg = b->bcm_fcmh->fcmh_fg;
 	sbd_out->sbd_nid = exp->exp_connection->c_peer.nid;
 	sbd_out->sbd_pid = exp->exp_connection->c_peer.pid;
 	sbd_out->sbd_key = obml->bml_bmi->bmi_assign->odtr_key;
@@ -1958,9 +1968,8 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 	}
 
 	/* Do some post setup on the new lease. */
+	slm_fill_bmapdesc(sbd_out, b);
 	sbd_out->sbd_seq = bml->bml_seq;
-	sbd_out->sbd_bmapno = b->bcm_bmapno;
-	sbd_out->sbd_fg = b->bcm_fcmh->fcmh_fg;
 	sbd_out->sbd_nid = exp->exp_connection->c_peer.nid;
 	sbd_out->sbd_pid = exp->exp_connection->c_peer.pid;
 
@@ -1976,11 +1985,6 @@ mds_lease_renew(struct fidc_membh *f, struct srt_bmapdesc *sbd_in,
 		sbd_out->sbd_key = BMAPSEQ_ANY;
 		sbd_out->sbd_ios = IOS_ID_ANY;
 	}
-
-	BMAP_LOCK(b);
-	if (b->bcm_flags & BMAP_DIO)
-		sbd_out->sbd_flags |= SRM_LEASEBMAPF_DIO;
-	BMAP_ULOCK(b);
 
 	/*
 	 * By this point it should be safe to ignore the error from
