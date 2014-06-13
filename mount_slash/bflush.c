@@ -65,7 +65,7 @@ struct pscrpc_nbreqset		*pndgBmapRlsReqs;	/* bmap release */
 __static struct pscrpc_nbreqset	*pndgWrtReqs;
 psc_atomic32_t			 max_nretries = PSC_ATOMIC32_INIT(256);
 
-#define MAX_OUTSTANDING_RPCS	40
+#define MAX_OUTSTANDING_RPCS	128
 #define MIN_COALESCE_RPC_SZ	LNET_MTU
 #define NUM_READAHEAD_THREADS	4
 
