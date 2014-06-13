@@ -351,9 +351,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	}
 
 	psc_assert(psc_dynarray_len(&r->biorq_pages) == npages);
-
-	maxpages = psc_dynarray_len(&r->biorq_pages);
-
 }
 
 __static void
