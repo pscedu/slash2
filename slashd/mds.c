@@ -1701,6 +1701,7 @@ void
 slm_fill_bmapdesc(struct srt_bmapdesc *sbd, struct bmap *b)
 {
 	struct bmap_mds_info *bmi;
+	int i, locked;
 
 	bmi = bmap_2_bmi(b);
 	locked = BMAP_RLOCK(b);
@@ -1749,7 +1750,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	struct bmap_mds_lease *bml;
 	struct bmap_mds_info *bmi;
 	struct bmap *b;
-	int i, rc, flag;
+	int rc, flag;
 
 	FCMH_LOCK(f);
 	rc = (f->fcmh_flags & FCMH_IN_PTRUNC) &&
