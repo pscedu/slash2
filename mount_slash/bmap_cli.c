@@ -962,9 +962,10 @@ msl_bmap_to_csvc(struct bmap *b, int exclusive,
 
 		hasdataflag = !!(bmap_2_sbd(b)->sbd_flags &
 		    SRM_LEASEBMAPF_DATA);
-		if (psc_dynarray_len(&mw->mw_conds))
-			psc_assert(hasvalid && hasdataflag);
-		else {
+		if (psc_dynarray_len(&mw->mw_conds)) {
+			if (exclusive)
+				psc_assert(hasvalid && hasdataflag);
+		} else {
 			/*
 			 * Residency scan revealed no VALID replicas.
 			 * I.e. a hole in the file.  Try the next
