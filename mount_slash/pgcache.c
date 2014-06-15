@@ -308,19 +308,16 @@ bmpc_freeall_locked(struct bmap_pagecache *bmpc)
 void
 bmpc_biorqs_flush(struct bmapc_memb *b, int wait)
 {
-	int expired;
-	struct bmpc_ioreq *r, *tmp;
 	struct bmap_pagecache *bmpc;
+	struct bmpc_ioreq *r;
+	int expired;
 
 	bmpc = bmap_2_bmpc(b);
 
-retry:
+ retry:
 	expired = 0;
 	BMAP_LOCK(b);
-	for (r = SPLAY_MIN(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs); r;
-	    r = tmp) {
-
-		tmp = SPLAY_NEXT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
+	SPLAY_FOREACH(r, bmpc_biorq_tree, &bmpc->bmpc_new_biorqs) {
 		BIORQ_LOCK(r);
 		r->biorq_flags |= BIORQ_FORCE_EXPIRE;
 		BIORQ_ULOCK(r);
