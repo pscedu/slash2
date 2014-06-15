@@ -317,7 +317,7 @@ bmpc_biorqs_flush(struct bmapc_memb *b, int wait)
 retry:
 	expired = 0;
 	BMAP_LOCK(b);
-	for (r = SPLAY_MIN(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs); r; 
+	for (r = SPLAY_MIN(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs); r;
 	    r = tmp) {
 
 		tmp = SPLAY_NEXT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
@@ -356,7 +356,7 @@ bmpc_biorqs_destroy(struct bmapc_memb *b, int rc)
 	 * to destroy the same biorq.
 	 */
 	bmpc = bmap_2_bmpc(b);
-	for (r = SPLAY_MIN(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs); r; 
+	for (r = SPLAY_MIN(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs); r;
 	    r = tmp) {
 
 		tmp = SPLAY_NEXT(bmpc_biorq_tree,
