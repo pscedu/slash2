@@ -292,6 +292,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 		rc = -EAGAIN;
 		DEBUG_REQ(PLL_ERROR, rq, "negative timeout: off=%u sz=%u op=%u",
 			  mq->offset, mq->size, mq->op);
+		OPSTAT_INCR(SLC_OPST_FLUSH_RPC_EXPIRE);
 		goto error;
 	}
 
@@ -849,7 +850,8 @@ bmap_flush(void)
 	struct bmpc_ioreq *r, *tmp;
 	struct bmapc_memb *b, *tmpb;
 	struct sl_resm *m = NULL;
-	int i, j;
+	int i, j, secs;
+	struct timespec ts;
 
 	LIST_CACHE_LOCK(&bmapFlushQ);
 	LIST_CACHE_FOREACH_SAFE(b, tmpb, &bmapFlushQ) {
@@ -858,6 +860,14 @@ bmap_flush(void)
 
 		if (!BMAP_TRYLOCK(b))
 			continue;
+
+		PFL_GETTIMESPEC(&ts);
+		secs = (int)(bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec);
+		if (secs < BMAP_CLI_EXTREQSECS || (b->bcm_flags & BMAP_CLI_LEASEEXPIRED)) {
+			OPSTAT_INCR(SLC_OPST_FLUSH_SKIP_EXPIRE);
+			BMAP_ULOCK(b);
+			continue;
+		}
 
 		psc_assert(b->bcm_flags & BMAP_FLUSHQ);
 
