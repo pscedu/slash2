@@ -268,7 +268,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 		if (i >= npages && bmap_foff(b) +
 		    bmpce_off <= mfh->mfh_ra.mra_raoff) {
 			MFH_ULOCK(mfh);
-			i++;
 			continue;
 		}
 		MFH_ULOCK(mfh);
