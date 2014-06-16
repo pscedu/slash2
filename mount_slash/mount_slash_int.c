@@ -1822,7 +1822,9 @@ msl_setra(struct msl_fhent *mfh, size_t size, off_t off)
 
 	/*
 	 * If the first read starts from offset 0, the following
-	 * will trigger a read-ahead.
+	 * will trigger a read-ahead.  This is because as part of
+	 * the msl_fhent structure, the fields are zeroed during
+	 * allocation.
 	 */
 	if (mfh->mfh_ra.mra_loff + mfh->mfh_ra.mra_lsz == off)
 		mfh->mfh_ra.mra_nseq++;
