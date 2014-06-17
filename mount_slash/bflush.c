@@ -615,7 +615,8 @@ bmap_flushable(struct bmapc_memb *b)
 {
 	struct bmap_pagecache *bmpc;
 	struct bmpc_ioreq *r, *tmp;
-	int flush = 0;
+	int secs, flush = 0;
+	struct timespec ts;
 
 	bmpc = bmap_2_bmpc(b);
 
@@ -635,6 +636,15 @@ bmap_flushable(struct bmapc_memb *b)
 		flush = 1;
 		break;
 	}
+	if (flush) {
+		PFL_GETTIMESPEC(&ts);
+		secs = (int)(bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec);
+		if (secs < BMAP_CLI_EXTREQSECS || (b->bcm_flags & BMAP_CLI_LEASEEXPIRED)) {
+			OPSTAT_INCR(SLC_OPST_FLUSH_SKIP_EXPIRE);
+			flush = 0;
+		}
+	}
+
 	return (flush);
 }
 
@@ -850,8 +860,7 @@ bmap_flush(void)
 	struct bmpc_ioreq *r, *tmp;
 	struct bmapc_memb *b, *tmpb;
 	struct sl_resm *m = NULL;
-	int i, j, secs;
-	struct timespec ts;
+	int i, j;
 
 	LIST_CACHE_LOCK(&bmapFlushQ);
 	LIST_CACHE_FOREACH_SAFE(b, tmpb, &bmapFlushQ) {
@@ -860,14 +869,6 @@ bmap_flush(void)
 
 		if (!BMAP_TRYLOCK(b))
 			continue;
-
-		PFL_GETTIMESPEC(&ts);
-		secs = (int)(bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec);
-		if (secs < BMAP_CLI_EXTREQSECS || (b->bcm_flags & BMAP_CLI_LEASEEXPIRED)) {
-			OPSTAT_INCR(SLC_OPST_FLUSH_SKIP_EXPIRE);
-			BMAP_ULOCK(b);
-			continue;
-		}
 
 		psc_assert(b->bcm_flags & BMAP_FLUSHQ);
 
