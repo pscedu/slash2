@@ -264,92 +264,25 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 
 		bmpce_off = aoff + (i * BMPC_BUFSZ);
 
-		MFH_LOCK(mfh);
-		if (i >= npages && bmap_foff(b) +
-		    bmpce_off <= mfh->mfh_ra.mra_raoff) {
-			MFH_ULOCK(mfh);
-			continue;
-		}
-		MFH_ULOCK(mfh);
-
 		BMAP_LOCK(b);
 		e = bmpce_lookup_locked(b, r, bmpce_off,
 		    &r->biorq_bmap->bcm_fcmh->fcmh_waitq);
 		BMAP_ULOCK(b);
 
-
-		psclog_diag("biorq = %p, bmpce = %p, i = %d, npages = %d, "
+		psclog_info("biorq = %p, bmpce = %p, i = %d, npages = %d, "
 		    "raoff = %"PRIx64", bmpce_foff = %"PRIx64,
 		    r, e, i, npages,
 		    mfh->mfh_ra.mra_raoff,
 		    (off_t)(bmpce_off + bmap_foff(b)));
 
-		if (i < npages) {
-			psc_dynarray_add(&r->biorq_pages, e);
-			continue;
-		}
+		psc_dynarray_add(&r->biorq_pages, e);
 
-		/* handle read-adhead below */
-
-		BMPCE_LOCK(e);
-		DEBUG_BMPCE(PLL_DIAG, e, "ra (npndg=%d) i=%d "
-		    "raoff=%"PRIx64" bmpce_foff=%"PRIx64,
-		    pll_nitems(&mfh->mfh_ra_bmpces), i,
-		    mfh->mfh_ra.mra_raoff,
-		    (off_t)(bmpce_off + bmap_foff(b)));
-
-		/*
-		 * XXX A failure to prefetch a page should not
-		 * mark the associated request as failure
-		 * because it is not part of the original
-		 * request.
-		 */
-		if (msl_biorq_readahead_page(e)) {
-			/*
-			 * Other threads will block on the reada
-			 * completion.  The cb handler will
-			 * decref the bmpce.
-			 */
-			e->bmpce_flags |= BMPCE_READA | BMPCE_FAULTING;
-			psc_assert(!(e->bmpce_flags & BMPCE_EIO));
-
-			/*
-			 * Stash the bmap pointer in 'owner'.
-			 * As a side effect, the cache is no
-			 * longer mine.
-			 */
-			e->bmpce_owner = b;
-			bmap_op_start_type(b, BMAP_OPCNT_READA);
-
-			/*
-			 * Place the bmpce into our private pll.
-			 * This is done so that the ra thread
-			 * may coalesce bmpces without sorting
-			 * overhead.  In addition, the ra thread
-			 * may now use the fh's ra factor for
-			 * weighing bw (large requests) vs.
-			 * latency (smaller requests).
-			 */
+		if (i >= npages) {
 			MFH_LOCK(mfh);
-			pll_addtail(&mfh->mfh_ra_bmpces, e);
-			if (!(mfh->mfh_flags & MSL_FHENT_RASCHED)) {
-				mfh->mfh_flags |= MSL_FHENT_RASCHED;
-				mfh_incref(mfh);
-				MFH_ULOCK(mfh);
-				lc_addtail(&bmapReadAheadQ, mfh);
-			} else {
-				MFH_ULOCK(mfh);
-			}
-			BMPCE_ULOCK(e);
-		} else
-			bmpce_release_locked(e, bmpc);
-
-		MFH_LOCK(mfh);
-		mfh->mfh_ra.mra_raoff = bmap_foff(b) + bmpce_off;
-		MFH_ULOCK(mfh);
+			mfh->mfh_ra.mra_raoff = bmap_foff(b) + bmpce_off;
+			MFH_ULOCK(mfh);
+		}
 	}
-
-	psc_assert(psc_dynarray_len(&r->biorq_pages) == npages);
 }
 
 __static void
