@@ -1401,7 +1401,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 }
 
 __static int
-msl_launch_read_rpcs(struct bmpc_ioreq *r, int *psched)
+msl_launch_read_rpcs(struct bmpc_ioreq *r)
 {
 	struct bmap_pagecache_entry *e;
 	int rc = 0, i, j = -1, needflush = 0;
@@ -1445,7 +1445,6 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r, int *psched)
 				if (rc)
 					break;
 				j = -1;
-				(*psched)++;
 			}
 			continue;
 		}
@@ -1461,7 +1460,6 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r, int *psched)
 			if (rc)
 				break;
 			j = -1;
-			(*psched)++;
 		}
 	}
 	psc_dynarray_free(&pages);
@@ -1478,13 +1476,13 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r, int *psched)
 __static int
 msl_pages_prefetch(struct bmpc_ioreq *r)
 {
-	int i, sched = 0, rc = 0, aiowait = 0;
+	int i, rc = 0, aiowait = 0;
 	struct bmap_pagecache_entry *e;
 
 	psc_assert(!r->biorq_rqset);
 
 	if (r->biorq_flags & BIORQ_READ) {
-		rc = msl_launch_read_rpcs(r, &sched);
+		rc = msl_launch_read_rpcs(r);
 		if (rc)
 			PFL_GOTOERR(out, rc);
 	}
@@ -1560,8 +1558,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 		break;
 	}
  out:
-	DEBUG_BIORQ(PLL_DIAG, r, "sched=%d aio=%d rc=%d",
-	    sched, aiowait, rc);
+	DEBUG_BIORQ(PLL_DIAG, r, "aio=%d rc=%d", aiowait, rc);
 	return (rc);
 }
 
