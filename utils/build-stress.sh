@@ -53,7 +53,7 @@ do
 	mkdir $dir
 	svn co -r $1 svn+ssh://frodo/cluster/svn/projects $dir
 	cd $dir
-	OBJBASE=./obj PSC_MAKE_STATUS=1 make>$output
+	OBJBASE=$(pwd)/obj PSC_MAKE_STATUS=1 make>$output
 	cd $mydir
 done
 
