@@ -263,6 +263,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slmctlmsg_bml);
 	PRTYPE(struct slmctlmsg_replpair);
 	PRTYPE(struct slmctlmsg_statfs);
+	PRTYPE(struct slmctlmsg_upsch_query);
 	PRTYPE(struct slmdbwk_thread);
 	PRTYPE(struct slmds_jent_assign_rep);
 	PRTYPE(struct slmds_jent_bmap_assign);
@@ -711,6 +712,8 @@ main(int argc, char *argv[])
 	PRVAL(SLC_OPST_FLUSH_ATTR);
 	PRVAL(SLC_OPST_FLUSH_ATTR_WAIT);
 	PRVAL(SLC_OPST_FLUSH_DONE);
+	PRVAL(SLC_OPST_FLUSH_RPC_EXPIRE);
+	PRVAL(SLC_OPST_FLUSH_SKIP_EXPIRE);
 	PRVAL(SLC_OPST_FSRQ_READ);
 	PRVAL(SLC_OPST_FSRQ_READ_FREE);
 	PRVAL(SLC_OPST_FSRQ_WRITE);
