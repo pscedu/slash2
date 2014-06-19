@@ -375,8 +375,8 @@ slmctlcmd_stop(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 }
 
 int
-slmctlcmd_upsch_query(__unusedx int fd, struct psc_ctlmsghdr *mh,
-    __unusedx void *m)
+slmctlcmd_upsch_query(__unusedx int fd,
+    __unusedx struct psc_ctlmsghdr *mh, void *m)
 {
 	struct slmctlmsg_upsch_query *scuq = m;
 
@@ -385,7 +385,7 @@ slmctlcmd_upsch_query(__unusedx int fd, struct psc_ctlmsghdr *mh,
 	 * that will make our va_arg crash
 	 */
 	dbdo(NULL, NULL, scuq->scuq_query);
-
+	return (0);
 }
 
 __static int
