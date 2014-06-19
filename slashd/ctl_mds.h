@@ -57,6 +57,10 @@ struct slmctlmsg_bml {
 	char			scbl_client[PSCRPC_NIDSTR_SIZE];
 };
 
+struct slmctlmsg_upsch_query {
+	char			scuq_query[0];
+};
+
 /* slrmcthr stats */
 #define pcst_nopen		pcst_u32_1
 #define pcst_nstat		pcst_u32_2
@@ -70,3 +74,4 @@ struct slmctlmsg_bml {
 #define SLMCMT_GETSTATFS	(NPCMT + 4)
 #define SLMCMT_STOP		(NPCMT + 5)
 #define SLMCMT_GETBML		(NPCMT + 6)
+#define SLMCMT_UPSCH_QUERY	(NPCMT + 7)

@@ -216,6 +216,19 @@ slmctlcmd_stop(int ac, __unusedx char *av[])
 }
 
 void
+slmctlcmd_upsch_query(int ac, char *av[])
+{
+	struct slmctlmsg_upsch_query *scuq;
+	size_t len;
+
+	if (ac != 1)
+		errx(1, "upsch_query: no query specified");
+	len = strlen(av[0]) + 1;
+	scuq = psc_ctlmsg_push(SLMCMT_UPSCH_QUERY, sizeof(*scuq) + len);
+	strlcpy(scuq->scuq_query, av[0], len);
+}
+
+void
 slm_bml_prhdr(__unusedx struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
@@ -311,7 +324,8 @@ psc_ctl_prthr_t psc_ctl_prthrs[] = {
 };
 
 struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {
-	{ "stop",	slmctlcmd_stop }
+	{ "stop",		slmctlcmd_stop },
+	{ "upsch-query",	slmctlcmd_upsch_query }
 };
 
 PFLCTL_CLI_DEFS;

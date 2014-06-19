@@ -374,6 +374,20 @@ slmctlcmd_stop(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 	exit(0);
 }
 
+int
+slmctlcmd_upsch_query(__unusedx int fd, struct psc_ctlmsghdr *mh,
+    __unusedx void *m)
+{
+	struct slmctlmsg_upsch_query *scuq = m;
+
+	/*
+	 * XXX if there are any bind parameters, users can craft code
+	 * that will make our va_arg crash
+	 */
+	dbdo(NULL, NULL, scuq->scuq_query);
+
+}
+
 __static int
 slmctlrep_replpair_send(int fd, struct psc_ctlmsghdr *mh,
     struct slmctlmsg_replpair *scrp, struct sl_resm *m0,
@@ -598,14 +612,15 @@ slmctlrep_getbml(int fd, struct psc_ctlmsghdr *mh, void *m)
 }
 
 struct psc_ctlop slmctlops[] = {
-	PSC_CTLDEFOPS,
-	{ slctlrep_getbmap,		sizeof(struct slctlmsg_bmap) },
-	{ slctlrep_getconn,		sizeof(struct slctlmsg_conn) },
-	{ slctlrep_getfcmh,		sizeof(struct slctlmsg_fcmh) },
-	{ slmctlrep_getreplpairs,	sizeof(struct slmctlmsg_replpair) },
-	{ slmctlrep_getstatfs,		sizeof(struct slmctlmsg_statfs) },
-	{ slmctlcmd_stop,		0 },
-	{ slmctlrep_getbml,		sizeof(struct slmctlmsg_bml) }
+	PSC_CTLDEFOPS
+	, { slctlrep_getbmap,		sizeof(struct slctlmsg_bmap) }
+	, { slctlrep_getconn,		sizeof(struct slctlmsg_conn) }
+	, { slctlrep_getfcmh,		sizeof(struct slctlmsg_fcmh) }
+	, { slmctlrep_getreplpairs,	sizeof(struct slmctlmsg_replpair) }
+	, { slmctlrep_getstatfs,	sizeof(struct slmctlmsg_statfs) }
+	, { slmctlcmd_stop,		0 }
+	, { slmctlrep_getbml,		sizeof(struct slmctlmsg_bml) }
+	, { slmctlcmd_upsch_query,	0 },
 };
 
 psc_ctl_thrget_t psc_ctl_thrgets[] = {
