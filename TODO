@@ -510,9 +510,6 @@ reimport
 - we should use a flag SETATTRF_MTIME_NOW that updates a file's mtim
   to whatever is the current time on MDS instead of using the client's
   time specified
-- add ability to reap all caches to detect leaks
-- multiple streams for replication (1MB RPCs, 128 per bmap)
-    - do we already do this?
 - ctlsvr messages specified as 0 may accept any sized requests
   (also cap maximum ctlmsg size allowed)
 
