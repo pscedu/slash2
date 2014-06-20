@@ -171,29 +171,6 @@ slc_rci_handle_io(struct pscrpc_request *rq)
 
 		PSCFREE(iovs);
 
-	} else if (car->car_cbf == msl_readahead_cb) {
-		struct bmap_pagecache_entry *e, **bmpces =
-		    car->car_argv.pointer_arg[MSL_CBARG_BMPCE];
-		int i;
-
-		OPSTAT_INCR(SLC_OPST_READ_AHEAD_CB);
-		for (i = 0;; i++) {
-			e = bmpces[i];
-			if (!e)
-				break;
-
-			iovs = PSC_REALLOC(iovs,
-			    sizeof(struct iovec) * (i + 1));
-
-			iovs[i].iov_base = e->bmpce_base;
-			iovs[i].iov_len = BMPC_BUFSZ;
-		}
-		if (mq->rc == 0)
-			mq->rc = slrpc_bulkserver(rq, BULK_GET_SINK,
-			    SRCI_BULK_PORTAL, iovs, i);
-
-		PSCFREE(iovs);
-
 	} else if (car->car_cbf == msl_dio_cb) {
 
 		if (mq->op == SRMIOP_RD)

@@ -56,7 +56,6 @@
 struct timespec			 bmapFlushWaitSecs = { 1, 0L };
 struct timespec			 bmapFlushDefMaxAge = { 0, 10000000L };	/* 10 milliseconds */
 struct psc_listcache		 bmapFlushQ;
-struct psc_listcache		 bmapReadAheadQ;
 struct psc_listcache		 bmapTimeoutQ;
 struct psc_compl		 rpcComp = PSC_COMPL_INIT;
 
@@ -67,7 +66,6 @@ psc_atomic32_t			 max_nretries = PSC_ATOMIC32_INIT(256);
 
 #define MAX_OUTSTANDING_RPCS	128
 #define MIN_COALESCE_RPC_SZ	LNET_MTU
-#define NUM_READAHEAD_THREADS	4
 
 struct psc_waitq		bmapFlushWaitq = PSC_WAITQ_INIT;
 psc_spinlock_t			bmapFlushLock = SPINLOCK_INIT;
@@ -991,56 +989,6 @@ msbmapflushrpcthr_main(struct psc_thread *thr)
 }
 
 void
-msbmaprathr_main(struct psc_thread *thr)
-{
-#define MAX_BMPCES_PER_RPC 32
-	struct bmap_pagecache_entry *bmpces[MAX_BMPCES_PER_RPC], *tmp, *bmpce;
-	struct msl_fhent *mfh;
-	int nbmpces;
-
-	while (pscthr_run(thr)) {
-
-		OPSTAT_INCR(SLC_OPST_READ_AHEAD);
-		nbmpces = 0;
-		mfh = lc_getwait(&bmapReadAheadQ);
-
-		spinlock(&mfh->mfh_lock);
-		psc_assert(mfh->mfh_flags & MSL_FHENT_RASCHED);
-		PLL_FOREACH_SAFE(bmpce, tmp, &mfh->mfh_ra_bmpces) {
-			/*
-			 * Check for sequentiality.  Note that since
-			 * bmpce offsets are intra-bmap, we must check
-			 * that the bmap (bmpce_owner) is the same too.
-			 */
-			if (nbmpces &&
-			    ((bmpce->bmpce_owner !=
-			      bmpces[nbmpces-1]->bmpce_owner) ||
-			     (bmpce->bmpce_off !=
-			      bmpces[nbmpces-1]->bmpce_off + BMPC_BUFSZ)))
-				break;
-
-			pll_remove(&mfh->mfh_ra_bmpces, bmpce);
-			bmpces[nbmpces++] = bmpce;
-
-			if (nbmpces == MAX_BMPCES_PER_RPC)
-				break;
-		}
-
-		if (pll_empty(&mfh->mfh_ra_bmpces)) {
-			mfh->mfh_flags &= ~MSL_FHENT_RASCHED;
-			if (mfh->mfh_flags & MSL_FHENT_CLOSING)
-				psc_waitq_wakeall(&mfh->mfh_fcmh->fcmh_waitq);
-			mfh_decref(mfh);
-		} else {
-			lc_addtail(&bmapReadAheadQ, mfh);
-			freelock(&mfh->mfh_lock);
-		}
-
-		msl_reada_rpc_launch(bmpces, nbmpces);
-	}
-}
-
-void
 msbenchthr_main(struct psc_thread *thr)
 {
 #if 0
@@ -1075,9 +1023,6 @@ msbmapflushthr_spawn(void)
 	lc_reginit(&bmapTimeoutQ, struct bmap_cli_info,
 	    bci_lentry, "bmaptimeout");
 
-	lc_reginit(&bmapReadAheadQ, struct msl_fhent,
-	    mfh_lentry, "bmapreadahead");
-
 	for (i = 0; i < NUM_BMAP_FLUSH_THREADS; i++) {
 		thr = pscthr_init(MSTHRT_BMAPFLSH, 0,
 		    msbmapflushthr_main, NULL,
@@ -1109,12 +1054,4 @@ msbmapflushthr_spawn(void)
 	pscthr_init(MSTHRT_BENCH, 0, msbenchthr_main, NULL, 0,
 	    "msbenchthr");
 
-	for (i = 0; i < NUM_READAHEAD_THREADS; i++) {
-		thr = pscthr_init(MSTHRT_BMAPREADAHEAD, 0,
-		    msbmaprathr_main, NULL,
-		    sizeof(struct msbmflra_thread), "msbrathr%d", i);
-		psc_multiwait_init(&msbmfrathr(thr)->mbfra_mw, "%s",
-		    thr->pscthr_name);
-		pscthr_setready(thr);
-	}
 }

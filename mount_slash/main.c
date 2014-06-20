@@ -1872,12 +1872,6 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 
 	rc = msl_flush_int_locked(mfh, 1);
 
-	while (!pll_empty(&mfh->mfh_ra_bmpces) ||
-	    (mfh->mfh_flags & MSL_FHENT_RASCHED)) {
-		psc_waitq_wait(&c->fcmh_waitq, &mfh->mfh_lock);
-		MFH_LOCK(mfh);
-	}
-
 	/*
 	 * Perhaps this checking should only be done on the mfh, with
 	 * which we have modified the attributes.
