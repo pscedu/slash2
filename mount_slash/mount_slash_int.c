@@ -265,7 +265,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 		bmpce_off = aoff + (i * BMPC_BUFSZ);
 
 		BMAP_LOCK(b);
-		e = bmpce_lookup_locked(b, r, bmpce_off,
+		e = bmpce_lookup_locked(b, bmpce_off,
 		    &r->biorq_bmap->bcm_fcmh->fcmh_waitq);
 		BMAP_ULOCK(b);
 

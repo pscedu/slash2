@@ -103,8 +103,7 @@ bmpce_destroy(void *p)
 }
 
 struct bmap_pagecache_entry *
-bmpce_lookup_locked(struct bmapc_memb *b, struct bmpc_ioreq *r,
-    uint32_t off, struct psc_waitq *wq)
+bmpce_lookup_locked(struct bmapc_memb *b, uint32_t off, struct psc_waitq *wq)
 {
 	struct bmap_pagecache *bmpc;
 	struct bmap_pagecache_entry search, *e = NULL, *e2 = NULL;
