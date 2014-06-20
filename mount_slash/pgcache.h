@@ -69,7 +69,6 @@ struct bmap_pagecache_entry {
 	void			*bmpce_owner;
 	struct psc_waitq	*bmpce_waitq;	/* others block here on I/O	*/
 	struct pfl_timespec	 bmpce_laccess;	/* last page access		*/
-	struct psc_listentry	 bmpce_ralentry;/* queue read ahead		*/
 	struct psc_lockedlist	 bmpce_pndgaios;
 	SPLAY_ENTRY(bmap_pagecache_entry) bmpce_tentry;
 	struct psc_listentry	 bmpce_lentry;	/* chain on bmap LRU		*/

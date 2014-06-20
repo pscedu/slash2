@@ -85,7 +85,6 @@ bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *p)
 	base = e->bmpce_base;
 	memset(e, 0, sizeof(*e));
 	INIT_PSC_LISTENTRY(&e->bmpce_lentry);
-	INIT_PSC_LISTENTRY(&e->bmpce_ralentry);
 	INIT_SPINLOCK(&e->bmpce_lock);
 	pll_init(&e->bmpce_pndgaios, struct bmpc_ioreq,
 	    biorq_png_lentry, &e->bmpce_lock);
