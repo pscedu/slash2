@@ -480,7 +480,7 @@ msl_req_aio_add(struct pscrpc_request *rq,
     struct pscrpc_async_args *av)
 {
 	struct bmpc_ioreq *r = av->pointer_arg[MSL_CBARG_BIORQ];
-	struct bmap_pagecache_entry *e, **bmpces;
+	struct bmap_pagecache_entry *e;
 	struct slc_async_req *car;
 	struct srm_io_rep *mp;
 	struct sl_resm *m;

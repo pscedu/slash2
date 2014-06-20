@@ -66,7 +66,6 @@ struct bmap_pagecache_entry {
 	uint32_t		 bmpce_len;
 	psc_spinlock_t		 bmpce_lock;	/* serialize			*/
 	void			*bmpce_base;	/* base pointer from slb	*/
-	void			*bmpce_owner;
 	struct psc_waitq	*bmpce_waitq;	/* others block here on I/O	*/
 	struct pfl_timespec	 bmpce_laccess;	/* last page access		*/
 	struct psc_lockedlist	 bmpce_pndgaios;
@@ -120,8 +119,7 @@ struct bmap_pagecache_entry {
 	    "bmpce@%p fl=%u:%s%s%s%s%s%s%s%s "				\
 	    "o=%#x b=%p "						\
 	    "ts="PSCPRI_PTIMESPEC" "					\
-	    "ref=%u "							\
-	    "owner=%p : " fmt,						\
+	    "ref=%u : " fmt,						\
 	    (b), (b)->bmpce_flags,					\
 	    (b)->bmpce_flags & BMPCE_DATARDY		? "d" : "",	\
 	    (b)->bmpce_flags & BMPCE_FAULTING		? "f" : "",	\
@@ -134,7 +132,7 @@ struct bmap_pagecache_entry {
 	    (b)->bmpce_off, (b)->bmpce_base,				\
 	    PSCPRI_TIMESPEC_ARGS(&(b)->bmpce_laccess),			\
 	    psc_atomic32_read(&(b)->bmpce_ref),				\
-	    (b)->bmpce_owner, ## __VA_ARGS__)
+	    ## __VA_ARGS__)
 
 static __inline int
 bmpce_cmp(const void *x, const void *y)
