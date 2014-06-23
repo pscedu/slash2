@@ -333,34 +333,6 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	return (rc);
 }
 
-__static void
-bmap_flush_inflight_set(struct bmpc_ioreq *r)
-{
-	struct timespec t;
-	int old = 0;
-
-	PFL_GETTIMESPEC(&t);
-
-	BMAP_LOCK(r->biorq_bmap);
-	BIORQ_LOCK(r);
-	psc_assert(r->biorq_flags & BIORQ_SCHED);
-
-	r->biorq_last_sliod = bmap_2_ios(r->biorq_bmap);
-
-	if (timespeccmp(&r->biorq_expire, &t, <)) {
-		old = 1;
-		timespecsub(&t, &r->biorq_expire, &t);
-	} else
-		timespecsub(&r->biorq_expire, &t, &t);
-
-	DEBUG_BIORQ(old ? PLL_DIAG : PLL_DEBUG, r, "set inflight %s "
-	    "("PSCPRI_TIMESPEC")", old ? "expired: -" : "",
-	    PSCPRI_TIMESPEC_ARGS(&t));
-
-	BIORQ_ULOCK(r);
-	BMAP_ULOCK(r->biorq_bmap);
-}
-
 /**
  * bmap_flush_resched - Called in error contexts where the biorq must be
  *    rescheduled by putting it back to the new request queue.  Typically
@@ -463,7 +435,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 
 	PLL_FOREACH(r, &bwc->bwc_pll) {
 		psc_assert(b == r->biorq_bmap);
-		bmap_flush_inflight_set(r);
+		r->biorq_last_sliod = bmap_2_ios(b);
 	}
 
 	psclog_diag("bwc cb arg (%p) size=%zu nbiorqs=%d",
