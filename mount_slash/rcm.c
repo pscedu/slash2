@@ -306,7 +306,7 @@ slc_rcm_handle_readdir(struct pscrpc_request *rq)
 
 	mp->rc = fidc_lookup_fg(&mq->fg, &d);
 	if (mp->rc)
-		PFL_GOTOERR(out, mp->rc);
+		PFL_GOTOERR(out2, mp->rc);
 
 	p = dircache_new_page(d, mq->offset, 0);
 	if (p == NULL) {
@@ -314,7 +314,7 @@ slc_rcm_handle_readdir(struct pscrpc_request *rq)
 			pscrpc_msg_add_flags(rq->rq_repmsg,
 			    MSG_ABORT_BULK);
 		OPSTAT_INCR(SLC_OPST_READDIR_DROP);
-		PFL_GOTOERR(out, 0);
+		PFL_GOTOERR(out2, 0);
 	}
 
 	if (d->fcmh_sstb.sst_fg.fg_gen != mq->fg.fg_gen) {
@@ -342,7 +342,7 @@ slc_rcm_handle_readdir(struct pscrpc_request *rq)
 
 	PSCFREE(iov[1].iov_base);
 
- out:
+ out2:
 	if (d)
 		fcmh_op_done(d);
 	if (mp->rc)
