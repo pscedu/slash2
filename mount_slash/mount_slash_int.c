@@ -912,7 +912,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 
 	rc = msl_bmap_to_csvc(b, op == SRMT_WRITE, &csvc);
 	if (rc)
-		PFL_GOTOERR(error, rc);
+		PFL_GOTOERR(out, rc);
 
 	if (r->biorq_rqset == NULL)
 		r->biorq_rqset = pscrpc_prep_set();
@@ -926,7 +926,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 
 		rc = SL_RSX_NEWREQ(csvc, op, rq, mq, mp);
 		if (rc)
-			PFL_GOTOERR(error, rc);
+			PFL_GOTOERR(out, rc);
 
 		rq->rq_bulk_abortable = 1;
 		rq->rq_interpret_reply = msl_dio_cb0;
@@ -939,7 +939,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		    BULK_GET_SOURCE : BULK_PUT_SINK), SRIC_BULK_PORTAL,
 		    &iovs[i], 1);
 		if (rc)
-			PFL_GOTOERR(error, rc);
+			PFL_GOTOERR(out, rc);
 
 		mq->offset = r->biorq_off + nbytes;
 		mq->size = len;
@@ -954,7 +954,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 		if (rc) {
 			OPSTAT_INCR(SLC_OPST_RPC_PUSH_REQ_FAIL);
 			pscrpc_set_remove_req(r->biorq_rqset, rq);
-			PFL_GOTOERR(error, rc);
+			PFL_GOTOERR(out, rc);
 		}
 		BIORQ_LOCK(r);
 		r->biorq_ref++;
@@ -1012,7 +1012,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 
 	return (rc);
 
- error:
+ out:
 	if (rq) {
 		DEBUG_REQ(PLL_ERROR, rq, "req failed");
 		pscrpc_req_finished(rq);
@@ -1118,21 +1118,21 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	(void)psc_fault_here_rc(SLC_FAULT_READRPC_OFFLINE, &rc,
 	    -ETIMEDOUT);
 	if (rc)
-		PFL_GOTOERR(error, rc);
+		PFL_GOTOERR(out, rc);
 	rc = msl_bmap_to_csvc(r->biorq_bmap,
 	    r->biorq_bmap->bcm_flags & BMAP_WR, &csvc);
 	if (rc)
-		PFL_GOTOERR(error, rc);
+		PFL_GOTOERR(out, rc);
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_READ, rq, mq, mp);
 	if (rc)
-		PFL_GOTOERR(error, rc);
+		PFL_GOTOERR(out, rc);
 
 	rq->rq_bulk_abortable = 1;
 	rc = slrpc_bulkclient(rq, BULK_PUT_SINK, SRIC_BULK_PORTAL, iovs,
 	    npages);
 	if (rc)
-		PFL_GOTOERR(error, rc);
+		PFL_GOTOERR(out, rc);
 
 	mq->offset = off;
 	mq->size = npages * BMPC_BUFSZ;
@@ -1162,7 +1162,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	if (rc) {
 		OPSTAT_INCR(SLC_OPST_RPC_PUSH_REQ_FAIL);
 		pscrpc_set_remove_req(r->biorq_rqset, rq);
-		PFL_GOTOERR(error, rc);
+		PFL_GOTOERR(out, rc);
 	}
 
 	BIORQ_LOCK(r);
@@ -1173,7 +1173,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	PSCFREE(iovs);
 	return (0);
 
- error:
+ out:
 	if (rq) {
 		DEBUG_REQ(PLL_ERROR, rq, "req failed, rc = %d", rc);
 		pscrpc_req_finished(rq);

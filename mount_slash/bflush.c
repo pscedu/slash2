@@ -273,12 +273,12 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 
 	rc = SL_RSX_NEWREQ(csvc, SRMT_WRITE, rq, mq, mp);
 	if (rc)
-		goto error;
+		goto out;
 
 	rc = slrpc_bulkclient(rq, BULK_GET_SOURCE, SRIC_BULK_PORTAL,
 	    bwc->bwc_iovs, bwc->bwc_niovs);
 	if (rc)
-		goto error;
+		goto out;
 
 	// XXX why 2 ?
 	rq->rq_timeout = msl_bmap_lease_secs_remaining(b) / 2;
@@ -291,7 +291,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 		DEBUG_REQ(PLL_ERROR, rq, "negative timeout: off=%u sz=%u op=%u",
 			  mq->offset, mq->size, mq->op);
 		OPSTAT_INCR(SLC_OPST_FLUSH_RPC_EXPIRE);
-		goto error;
+		goto out;
 	}
 
 	rq->rq_interpret_reply = bmap_flush_rpc_cb;
@@ -320,13 +320,13 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQS] = bwc;
 	if (pscrpc_nbreqset_add(pndgWrtReqs, rq)) {
 		psc_atomic32_dec(&rmci->rmci_infl_rpcs);
-		goto error;
+		goto out;
 	}
 
 	OPSTAT_INCR(SLC_OPST_SRMT_WRITE);
 	return (0);
 
- error:
+ out:
 	sl_csvc_decref(csvc);
 	if (rq)
 		pscrpc_req_finished_locked(rq);
@@ -428,7 +428,7 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 
 	rc = msl_bmap_to_csvc(r->biorq_bmap, 1, &csvc);
 	if (rc)
-		PFL_GOTOERR(error, rc);
+		PFL_GOTOERR(out, rc);
 
 	b = r->biorq_bmap;
 	psc_assert(bwc->bwc_soff == r->biorq_off);
@@ -443,12 +443,12 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 
 	rc = bmap_flush_create_rpc(bwc, csvc, b);
 	if (rc)
-		goto error;
+		goto out;
 
 	sl_csvc_decref(csvc);
 	return;
 
- error:
+ out:
 	while ((r = pll_get(&bwc->bwc_pll)))
 		bmap_flush_resched(r, rc);
 

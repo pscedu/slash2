@@ -319,7 +319,7 @@ slc_rcm_handle_readdir(struct pscrpc_request *rq)
 
 	if (d->fcmh_sstb.sst_fg.fg_gen != mq->fg.fg_gen) {
 		OPSTAT_INCR(SLC_OPST_READDIR_STALE);
-		PFL_GOTOERR(error, mp->rc = -PFLERR_STALE);
+		PFL_GOTOERR(out1, mp->rc = -PFLERR_STALE);
 	}
 
 	iov[0].iov_base = PSCALLOC(mq->size);
@@ -333,7 +333,7 @@ slc_rcm_handle_readdir(struct pscrpc_request *rq)
 		    SRCM_BULK_PORTAL, iov, nitems(iov));
 
 	if (mp->rc) {
- error:
+ out1:
 		msl_readdir_error(d, p, mp->rc);
 		PSCFREE(iov[0].iov_base);
 	} else
