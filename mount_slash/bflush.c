@@ -267,10 +267,6 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	m = libsl_ios2resm(bmap_2_ios(b));
 	rmci = resm2rmci(m);
 
-	CSVC_LOCK(csvc);
-	sl_csvc_incref(csvc);
-	CSVC_ULOCK(csvc);
-
 	rc = SL_RSX_NEWREQ(csvc, SRMT_WRITE, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -327,7 +323,6 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	return (0);
 
  out:
-	sl_csvc_decref(csvc);
 	if (rq)
 		pscrpc_req_finished_locked(rq);
 	return (rc);
@@ -442,11 +437,8 @@ bmap_flush_send_rpcs(struct bmpc_write_coalescer *bwc)
 	    bwc, bwc->bwc_size, pll_nitems(&bwc->bwc_pll));
 
 	rc = bmap_flush_create_rpc(bwc, csvc, b);
-	if (rc)
-		goto out;
-
-	sl_csvc_decref(csvc);
-	return;
+	if (!rc)
+		return;
 
  out:
 	while ((r = pll_get(&bwc->bwc_pll)))
