@@ -106,20 +106,20 @@ int		 yyparse(void);
 #define TABENT_VAR(name, type, max, field, handler)				\
 	{ name, SL_STRUCT_VAR, type, max, offsetof(struct sl_config, field), handler }
 
-#define TABENT_VAR_MEMBSZ(name, type, field, handler)				\
-	TABENT_VAR(name, type, sizeof(((type *)NULL)->field), field, handler)
+#define TABENT_VAR_MBSIZ(name, type, field, handler)				\
+	TABENT_VAR(name, type, sizeof(((struct sl_config *)NULL)->field), field, handler)
 
-#define TABENT_SITE(name, type, max, field, handler)				\
+#define TABENT_SIT(name, type, max, field, handler)				\
 	{ name, SL_STRUCT_SITE, type, max, offsetof(struct sl_site, field), handler }
 
-#define TABENT_SITE_MEMBSZ(name, type, field, handler)				\
-	TABENT_SITE(name, type, sizeof(((type *)NULL)->field), field, handler)
+#define TABENT_SIT_MBSIZ(name, type, field, handler)				\
+	TABENT_SIT(name, type, sizeof(((struct sl_site *)NULL)->field), field, handler)
 
 #define TABENT_RES(name, type, max, field, handler)				\
 	{ name, SL_STRUCT_RES, type, max, offsetof(struct sl_resource, field), handler }
 
-#define TABENT_RES_MEMBSZ(name, type, field, handler)				\
-	TABENT_RES(name, type, sizeof(((type *)NULL)->field), field, handler)
+#define TABENT_RES_MBSIZ(name, type, field, handler)				\
+	TABENT_RES(name, type, sizeof(((struct sl_resource *)NULL)->field), field, handler)
 
 struct slconf_symbol sym_table[] = {
 	TABENT_VAR_MBSIZ("crcalg",	SL_TYPE_STR,			gconf_crcalg,	NULL),
