@@ -154,18 +154,6 @@ msl_biorq_page_valid(struct bmpc_ioreq *r, int idx)
 	psc_fatalx("biorq %p does not have page %d", r, idx);
 }
 
-__static int
-msl_biorq_readahead_page(struct bmap_pagecache_entry *e)
-{
-	if (e->bmpce_flags & BMPCE_FAULTING)
-		return 0;
-	if (e->bmpce_flags & BMPCE_DATARDY)
-		return 0;
-	if (e->bmpce_flags & BMPCE_DIRTY)
-		return 0;
-	return 1;
-}
-
 /**
  * msl_biorq_build - Construct a request structure for an I/O issued on
  *	a bmap.
