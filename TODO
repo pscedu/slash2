@@ -504,9 +504,15 @@ reimport
   time specified
 - ctlsvr messages specified as 0 may accept any sized requests
   (also cap maximum ctlmsg size allowed)
+- think of ways to improve performance for normal users
+   - survey what operations users are doing
+   - parallelize tar/scp
+   - parallelize far and toolchain on tg-login (scp/sftp/ssh-tar)
+   - after successful first I/O: cache all user requests in memory
+- there shouldnt be two fs_root options: one for gconf and one for res,
+  make it just for res
 
 - add crcalg=old option
-- art's md5deep failures
 
 - this breaks:
 	dd if=/dev/urandom of=r000 seek=1M count=1 bs=64k
