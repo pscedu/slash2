@@ -103,43 +103,50 @@ void		 slcfg_store_tok_val(const char *, char *);
 int		 yylex(void);
 int		 yyparse(void);
 
-/*
- * Define a table macro for each structure type filled in by the config
- */
 #define TABENT_VAR(name, type, max, field, handler)				\
 	{ name, SL_STRUCT_VAR, type, max, offsetof(struct sl_config, field), handler }
+
+#define TABENT_VAR_MEMBSZ(name, type, field, handler)				\
+	TABENT_VAR(name, type, sizeof(((type *)NULL)->field), field, handler)
 
 #define TABENT_SITE(name, type, max, field, handler)				\
 	{ name, SL_STRUCT_SITE, type, max, offsetof(struct sl_site, field), handler }
 
+#define TABENT_SITE_MEMBSZ(name, type, field, handler)				\
+	TABENT_SITE(name, type, sizeof(((type *)NULL)->field), field, handler)
+
 #define TABENT_RES(name, type, max, field, handler)				\
 	{ name, SL_STRUCT_RES, type, max, offsetof(struct sl_resource, field), handler }
 
+#define TABENT_RES_MEMBSZ(name, type, field, handler)				\
+	TABENT_RES(name, type, sizeof(((type *)NULL)->field), field, handler)
+
 struct slconf_symbol sym_table[] = {
-	TABENT_VAR("allow_exec",	SL_TYPE_STR,	BUFSIZ,		gconf_allowexe,	NULL),
-	TABENT_VAR("fidns_depth",	SL_TYPE_INT,	32,		gconf_fidnsdepth,NULL),
-	TABENT_VAR("fs_root",		SL_TYPE_STR,	PATH_MAX,	gconf_fsroot,	NULL),
-	TABENT_VAR("fsuuid",		SL_TYPE_HEXU64,	0,		gconf_fsuuid,	NULL),
-	TABENT_VAR("journal",		SL_TYPE_STR,	PATH_MAX,	gconf_journal,	NULL),
-	TABENT_VAR("net",		SL_TYPE_STR,	NAME_MAX,	gconf_lnets,	NULL),
-	TABENT_VAR("nets",		SL_TYPE_STR,	NAME_MAX,	gconf_lnets,	NULL),
-	TABENT_VAR("port",		SL_TYPE_INT,	0,		gconf_port,	NULL),
-	TABENT_VAR("pref_ios",		SL_TYPE_STR,	RES_NAME_MAX,	gconf_prefios,	NULL),
-	TABENT_VAR("pref_mds",		SL_TYPE_STR,	RES_NAME_MAX,	gconf_prefmds,	NULL),
-	TABENT_VAR("routes",		SL_TYPE_STR,	NAME_MAX,	gconf_routes,	NULL),
-	TABENT_VAR("zpool_cache",	SL_TYPE_STR,	PATH_MAX,	gconf_zpcachefn,NULL),
-	TABENT_VAR("zpool_name",	SL_TYPE_STR,	NAME_MAX,	gconf_zpname,	NULL),
+	TABENT_VAR_MBSIZ("crcalg",	SL_TYPE_STR,			gconf_crcalg,	NULL),
+	TABENT_VAR_MBSIZ("allow_exec",	SL_TYPE_STR,			gconf_allowexe,	NULL),
+	TABENT_VAR	("fidns_depth",	SL_TYPE_INT,	32,		gconf_fidnsdepth,NULL),
+	TABENT_VAR_MBSIZ("fs_root",	SL_TYPE_STR,			gconf_fsroot,	NULL),
+	TABENT_VAR	("fsuuid",	SL_TYPE_HEXU64,	0,		gconf_fsuuid,	NULL),
+	TABENT_VAR_MBSIZ("journal",	SL_TYPE_STR,			gconf_journal,	NULL),
+	TABENT_VAR_MBSIZ("net",		SL_TYPE_STR,			gconf_lnets,	NULL),
+	TABENT_VAR_MBSIZ("nets",	SL_TYPE_STR,			gconf_lnets,	NULL),
+	TABENT_VAR	("port",	SL_TYPE_INT,	0,		gconf_port,	NULL),
+	TABENT_VAR_MBSIZ("pref_ios",	SL_TYPE_STR,			gconf_prefios,	NULL),
+	TABENT_VAR_MBSIZ("pref_mds",	SL_TYPE_STR,			gconf_prefmds,	NULL),
+	TABENT_VAR_MBSIZ("routes",	SL_TYPE_STR,			gconf_routes,	NULL),
+	TABENT_VAR_MBSIZ("zpool_cache",	SL_TYPE_STR,			gconf_zpcachefn,NULL),
+	TABENT_VAR_MBSIZ("zpool_name",	SL_TYPE_STR,			gconf_zpname,	NULL),
 
-	TABENT_SITE("site_desc",	SL_TYPE_STRP,	0,		site_desc,	NULL),
-	TABENT_SITE("site_id",		SL_TYPE_INT,	SITE_MAXID,	site_id,	NULL),
+	TABENT_SIT	("site_desc",	SL_TYPE_STRP,	0,		site_desc,	NULL),
+	TABENT_SIT	("site_id",	SL_TYPE_INT,	SITE_MAXID,	site_id,	NULL),
 
-	TABENT_RES("desc",		SL_TYPE_STRP,	0,		res_desc,	NULL),
-	TABENT_RES("flags",		SL_TYPE_INT,	0,		res_flags,	slcfg_str2flags),
-	TABENT_RES("fsroot",		SL_TYPE_STR,	PATH_MAX,	res_fsroot,	NULL),
-	TABENT_RES("id",		SL_TYPE_INT,	RES_MAXID,	res_id,		NULL),
-	TABENT_RES("jrnldev",		SL_TYPE_STR,	PATH_MAX,	res_jrnldev,	NULL),
-	TABENT_RES("selftest",		SL_TYPE_STR,	BUFSIZ,		res_selftest,	NULL),
-	TABENT_RES("type",		SL_TYPE_INT,	0,		res_type,	slcfg_str2restype),
+	TABENT_RES	("desc",	SL_TYPE_STRP,	0,		res_desc,	NULL),
+	TABENT_RES	("flags",	SL_TYPE_INT,	0,		res_flags,	slcfg_str2flags),
+	TABENT_RES_MBSIZ("fsroot",	SL_TYPE_STR,			res_fsroot,	NULL),
+	TABENT_RES	("id",		SL_TYPE_INT,	RES_MAXID,	res_id,		NULL),
+	TABENT_RES_MBSIZ("jrnldev",	SL_TYPE_STR,			res_jrnldev,	NULL),
+	TABENT_RES_MBSIZ("selftest",	SL_TYPE_STR,			res_selftest,	NULL),
+	TABENT_RES	("type",	SL_TYPE_INT,	0,		res_type,	slcfg_str2restype),
 
 	{ NULL, SL_STRUCT_NONE, SL_TYPE_NONE, 0, 0, NULL }
 };

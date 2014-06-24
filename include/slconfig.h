@@ -171,17 +171,18 @@ struct lnetif_pair {
 #define LPF_SKIP		(1 << 1)
 
 struct sl_config {
+	char			 gconf_crcalg[NAME_MAX];
 	char			 gconf_allowexe[BUFSIZ];
 	char			 gconf_routes[NAME_MAX];
 	char			 gconf_lnets[LNETS_MAX];
 	char			 gconf_fsroot[PATH_MAX];
 	int			 gconf_port;
+	int			 gconf_fidnsdepth;
 	char			 gconf_prefmds[RES_NAME_MAX];
 	char			 gconf_prefios[RES_NAME_MAX];
 	char			 gconf_journal[PATH_MAX];
 	char			 gconf_zpcachefn[PATH_MAX];
 	char			 gconf_zpname[NAME_MAX];
-	int			 gconf_fidnsdepth;
 	int			 gconf_async_io:1;
 	int			 gconf_root_squash:1;
 
@@ -189,7 +190,7 @@ struct sl_config {
 	struct psc_lockedlist	 gconf_sites;
 	psc_spinlock_t		 gconf_lock;
 	uint64_t		 gconf_fsuuid;
-	struct psc_hashtbl	 gconf_reshtable;
+	struct psc_hashtbl	 gconf_reshtable;		/* sl_resource hashtable */
 };
 
 #define INIT_GCONF(cf)							\
