@@ -59,6 +59,7 @@ struct msl_fsrqinfo;
 #define BMPC_COALESCE_MAX_IOV	(BMPC_MAXBUFSRPC + 1)
 
 struct bmap_pagecache_entry {
+	int			 bmpce_rc;
 	psc_atomic32_t		 bmpce_ref;	/* biorq and readahead refs	*/
 	uint32_t		 bmpce_flags;	/* BMPCE_* flag bits		*/
 	uint32_t		 bmpce_off;	/* relative to inside bmap	*/

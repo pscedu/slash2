@@ -338,6 +338,7 @@ msl_bmpces_fail(struct bmpc_ioreq *r, int rc)
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 		BMPCE_LOCK(e);
 		DEBUG_BMPCE(PLL_DIAG, e, "set BMPCE_EIO");
+		e->bmpce_rc = rc;
 		e->bmpce_flags |= BMPCE_EIO;
 		BMPCE_WAKE(e);
 		BMPCE_ULOCK(e);
@@ -1337,7 +1338,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 		}
 
 		if (e->bmpce_flags & BMPCE_EIO) {
-			rc = -EIO;
+			rc = e->bmpce_rc; 
 			BMPCE_ULOCK(e);
 			break;
 		}
