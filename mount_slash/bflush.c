@@ -946,7 +946,6 @@ msbmapflushrpcthr_main(struct psc_thread *thr)
 	while (pscthr_run(thr)) {
 		psc_compl_waitrel_s(&rpcComp, 1);
 		pscrpc_nbreqset_reap(pndgWrtReqs);
-		pscrpc_nbreqset_reap(pndgReadaReqs);
 		pscrpc_nbreqset_reap(pndgBmaplsReqs);
 		pscrpc_nbreqset_reap(pndgBmapRlsReqs);
 	}

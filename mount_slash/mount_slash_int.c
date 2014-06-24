@@ -72,9 +72,8 @@ struct timespec		msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
 __static size_t	msl_pages_copyin(struct bmpc_ioreq *);
 __static int	msl_biorq_complete_fsrq(struct bmpc_ioreq *);
 __static void	msl_pages_schedflush(struct bmpc_ioreq *);
-void mfsrq_seterr(struct msl_fsrqinfo *, int);
 
-struct pscrpc_nbreqset *pndgReadaReqs; /* non-blocking set for RA's */
+void mfsrq_seterr(struct msl_fsrqinfo *, int);
 
 struct psc_iostats	msl_diord_stat;
 struct psc_iostats	msl_diowr_stat;
