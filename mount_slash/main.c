@@ -2663,10 +2663,9 @@ void
 mslfsop_umount(void)
 {
 	pscthr_killall();
-	pscrpc_exit_portals();
 	/* XXX wait */
-//	unmount_mp();
-	exit(0);
+	pscrpc_exit_portals();
+//	exit(0);
 }
 
 void
@@ -3120,12 +3119,6 @@ unmount(const char *mp)
 }
 
 void
-unmount_mp(void)
-{
-	unmount(mountpoint);
-}
-
-void
 slc_setprefios(sl_ios_id_t id)
 {
 	struct sl_resource *r, *ri;
@@ -3229,7 +3222,6 @@ msl_init(void)
 		else
 			slc_setprefios(r->res_id);
 	}
-	atexit(unmount_mp);
 }
 
 struct pscfs pscfs = {
