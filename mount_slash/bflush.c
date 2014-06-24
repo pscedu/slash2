@@ -846,7 +846,7 @@ bmap_flush(void)
 
 		BMAP_ULOCK(b);
 
-		if (psc_dynarray_len(&bmaps))
+		if (psc_dynarray_len(&bmaps) >= MAX_OUTSTANDING_RPCS)
 			break;
 	}
 
