@@ -727,6 +727,7 @@ _msl_bmpce_rpc_done(const struct pfl_callerinfo *pci,
 	psc_assert(e->bmpce_waitq);
 
 	if (rc) {
+		e->bmpce_rc = rc;
 		e->bmpce_flags |= BMPCE_EIO;
 		DEBUG_BMPCE(PLL_DIAG, e, "set BMPCE_EIO");
 
@@ -1194,6 +1195,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 		psc_assert(e->bmpce_waitq);
 
 		BMPCE_LOCK(e);
+		e->bmpce_rc = rc;
 		e->bmpce_flags |= BMPCE_EIO;
 		DEBUG_BMPCE(PLL_WARN, e, "set BMPCE_EIO");
 		BMPCE_WAKE(e);
