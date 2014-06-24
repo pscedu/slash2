@@ -1779,6 +1779,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			DYNARRAY_FOREACH(e, j, &r->biorq_pages) {
 				BMPCE_LOCK(e);
 				if (e->bmpce_flags & BMPCE_EIO) {
+					e->bmpce_rc = 0;
 					e->bmpce_flags &= ~BMPCE_EIO;
 					DEBUG_BMPCE(PLL_DIAG, e, "clear BMPCE_EIO");
 				}
