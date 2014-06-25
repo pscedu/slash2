@@ -162,7 +162,7 @@ void
 bmpce_free(struct bmap_pagecache_entry *e,
     struct bmap_pagecache *bmpc)
 {
-	DEBUG_BMPCE(PLL_INFO, e, "freeing");
+	DEBUG_BMPCE(PLL_DIAG, e, "freeing");
 
 	PSC_SPLAY_XREMOVE(bmap_pagecachetree, &bmpc->bmpc_tree, e);
 
@@ -184,7 +184,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *e,
 		psc_fatalx("bmpce = %p, ref = %d", e, rc);
 
 	psc_atomic32_dec(&e->bmpce_ref);
-	DEBUG_BMPCE(PLL_INFO, e, "drop reference");
+	DEBUG_BMPCE(PLL_DIAG, e, "drop reference");
 	if (rc > 1) {
 		BMPCE_ULOCK(e);
 		return;
@@ -199,7 +199,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *e,
 	if ((e->bmpce_flags & BMPCE_DATARDY) &&
 	   !(e->bmpce_flags & BMPCE_EIO) &&
 	   !(e->bmpce_flags & BMPCE_DISCARD)) {
-		DEBUG_BMPCE(PLL_INFO, e, "put on LRU");
+		DEBUG_BMPCE(PLL_DIAG, e, "put on LRU");
 		PFL_GETPTIMESPEC(&e->bmpce_laccess);
 		e->bmpce_flags |= BMPCE_LRU;
 		pll_add(&bmpc->bmpc_lru, e);
@@ -319,7 +319,7 @@ bmpc_biorqs_flush(struct bmapc_memb *b, int wait)
 		r->biorq_flags |= BIORQ_FORCE_EXPIRE;
 		BIORQ_ULOCK(r);
 		expired++;
-		DEBUG_BIORQ(PLL_INFO, r, "force expire");
+		DEBUG_BIORQ(PLL_DIAG, r, "force expire");
 	}
 	BMAP_ULOCK(b);
 	if (expired) {
@@ -408,7 +408,7 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 
 		psc_assert(e->bmpce_flags & BMPCE_LRU);
 		if (psc_atomic32_read(&e->bmpce_ref)) {
-			DEBUG_BMPCE(PLL_INFO, e, "non-zero ref, skip");
+			DEBUG_BMPCE(PLL_DIAG, e, "non-zero ref, skip");
 			BMPCE_ULOCK(e);
 			continue;
 		}
@@ -459,12 +459,11 @@ bmpce_reap(struct psc_poolmgr *m)
 
 		/* First check for LRU items. */
 		if (pll_nitems(&bmpc->bmpc_lru)) {
-			DEBUG_BMAP(PLL_INFO, b, "try free");
+			DEBUG_BMAP(PLL_DIAG, b, "try free");
 			nfreed += bmpc_lru_tryfree(bmpc, waiters);
-			DEBUG_BMAP(PLL_INFO, b, "try free done");
+			DEBUG_BMAP(PLL_DIAG, b, "try free done");
 		} else
 			psclog_debug("skip bmpc=%p, nothing on lru", bmpc);
-
 
 		BMAP_ULOCK(b);
 		if (nfreed >= waiters)
@@ -472,7 +471,7 @@ bmpce_reap(struct psc_poolmgr *m)
 	}
 	LIST_CACHE_ULOCK(&bmpcLru);
 
-	psclog_info("nfreed=%d, waiters=%d", nfreed, waiters);
+	psclog_diag("nfreed=%d, waiters=%d", nfreed, waiters);
 
 	return (nfreed);
 }
