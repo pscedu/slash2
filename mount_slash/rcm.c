@@ -26,12 +26,12 @@
  * Routines for handling RPC requests for CLI from MDS.
  */
 
-#include "pfl/str.h"
-#include "pfl/rpc.h"
-#include "pfl/rsx.h"
 #include "pfl/ctl.h"
 #include "pfl/ctlsvr.h"
 #include "pfl/log.h"
+#include "pfl/rpc.h"
+#include "pfl/rsx.h"
+#include "pfl/str.h"
 
 #include "authbuf.h"
 #include "bmap.h"

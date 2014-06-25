@@ -24,11 +24,11 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/fs.h"
-#include "pfl/str.h"
 #include "pfl/list.h"
 #include "pfl/rpc.h"
 #include "pfl/rsx.h"
 #include "pfl/service.h"
+#include "pfl/str.h"
 
 #include "ctlsvr_cli.h"
 #include "mount_slash.h"

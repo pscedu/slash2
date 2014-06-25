@@ -24,10 +24,10 @@
 
 #include <errno.h>
 
+#include "pfl/ctlsvr.h"
 #include "pfl/fs.h"
 #include "pfl/rpc.h"
 #include "pfl/rsx.h"
-#include "pfl/ctlsvr.h"
 
 #include "pgcache.h"
 #include "rpc_cli.h"
@@ -49,7 +49,7 @@ slc_rci_handle_ctl(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	switch (mq->opc) {
-	case SRM_CTLOP_SETOPT: 
+	case SRM_CTLOP_SETOPT:
 		c = (void *)mq->buf;
 		switch (c->opt) {
 		case SRMCTL_OPT_HEALTH: {

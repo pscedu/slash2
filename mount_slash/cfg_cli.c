@@ -22,9 +22,9 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#include "pfl/alloc.h"
 #include "pfl/cdefs.h"
 #include "pfl/listcache.h"
-#include "pfl/alloc.h"
 #include "pfl/lock.h"
 
 #include "bmap_cli.h"

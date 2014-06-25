@@ -697,7 +697,6 @@ msctlrep_getbmpce(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
-
 const struct slctl_res_field slctl_resmds_fields[] = { { NULL, NULL } };
 const struct slctl_res_field slctl_resios_fields[] = { { NULL, NULL } };
 
