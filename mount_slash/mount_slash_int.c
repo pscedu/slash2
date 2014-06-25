@@ -268,6 +268,11 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 		psc_dynarray_add(&r->biorq_pages, e);
 
 		if (i >= npages) {
+
+			BMPCE_LOCK(e);
+			e->bmpce_flags |= BMPCE_READA;
+			BMPCE_ULOCK(e);
+
 			MFH_LOCK(mfh);
 			mfh->mfh_ra.mra_raoff = bmap_foff(b) + bmpce_off;
 			MFH_ULOCK(mfh);
@@ -1220,7 +1225,15 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 			BMPCE_ULOCK(e);
 			continue;
 		}
-
+		/*
+		 * Although multiple threads can mark the page as read-ahead, only
+		 * one of them can get here due to above checks.
+		 */  	
+		if (e->bmpce_flags & BMPCE_READA) {
+			e->bmpce_flags &= ~BMPCE_READA;
+			psc_iostats_intv_add(&msl_racache_stat, BMPC_BUFSZ);
+		}
+		
 		e->bmpce_flags |= BMPCE_FAULTING;
 		psc_dynarray_add(&pages, e);
 		BMPCE_ULOCK(e);
@@ -1503,9 +1516,6 @@ msl_pages_copyout(struct bmpc_ioreq *r)
 		bmpce_usecheck(e, BIORQ_READ, biorq_getaligned_off(r, i));
 
 		memcpy(dest, src, nbytes);
-
-		if (e->bmpce_flags & BMPCE_READA)
-			psc_iostats_intv_add(&msl_racache_stat, nbytes);
 
 		BMPCE_ULOCK(e);
 
