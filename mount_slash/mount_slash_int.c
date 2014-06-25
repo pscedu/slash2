@@ -360,20 +360,18 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 	BIORQ_ULOCK(r);
 
 	/* there is really no need to lock biorq from now on */
-	if (r->biorq_flags & BIORQ_FLUSHRDY)
-		goto destroy;
-
-	/*
-	 * A request can be split into several RPCs, so we can't declare
-	 * it as complete until after its reference count drops to zero.
-	 */
-	needflush = msl_biorq_complete_fsrq(r);
-	if (needflush) {
-		msl_pages_schedflush(r);
-		return;
+	if (!(r->biorq_flags & BIORQ_FLUSHRDY)) {
+		/*
+		 * A request can be split into several RPCs, so we can't declare
+		 * it as complete until after its reference count drops to zero.
+		 */
+		needflush = msl_biorq_complete_fsrq(r);
+		if (needflush) {
+			msl_pages_schedflush(r);
+			return;
+		}
 	}
 
- destroy:
 	psc_assert(!(r->biorq_flags & BIORQ_DESTROY));
 	r->biorq_flags |= BIORQ_DESTROY;
 
