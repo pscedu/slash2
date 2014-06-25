@@ -141,11 +141,14 @@ msl_biorq_page_valid(struct bmpc_ioreq *r, int idx)
 			continue;
 		}
 
-		if (e->bmpce_flags & BMPCE_DATARDY)
+		if (e->bmpce_flags & BMPCE_DATARDY) {
+			psc_iostats_intv_add(&msl_rdcache_stat, nbytes);
 			return 1;
+		}
 
 		if (toff >= e->bmpce_start &&
 		    toff + nbytes <= e->bmpce_start + e->bmpce_len) {
+			psc_iostats_intv_add(&msl_rdcache_stat, nbytes);
 			OPSTAT_INCR(SLC_OPST_READ_PART_VALID);
 			return 1;
 		} else
@@ -1503,9 +1506,6 @@ msl_pages_copyout(struct bmpc_ioreq *r)
 
 		if (e->bmpce_flags & BMPCE_READA)
 			psc_iostats_intv_add(&msl_racache_stat, nbytes);
-
-		if (!(e->bmpce_flags & BMPCE_FAULTING))
-			psc_iostats_intv_add(&msl_rdcache_stat, nbytes);
 
 		BMPCE_ULOCK(e);
 
