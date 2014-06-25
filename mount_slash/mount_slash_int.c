@@ -303,7 +303,7 @@ msl_biorq_del(struct bmpc_ioreq *r)
 		}
 	}
 
-	DEBUG_BMAP(PLL_INFO, b, "remove biorq=%p nitems_pndg(%d)",
+	DEBUG_BMAP(PLL_DIAG, b, "remove biorq=%p nitems_pndg(%d)",
 		   r, pll_nitems(&bmpc->bmpc_pndg_biorqs));
 
 	spinlock(&bmpc->bmpc_lock);
@@ -374,7 +374,6 @@ _msl_biorq_destroy(const struct pfl_callerinfo *pci,
 		pscrpc_set_destroy(r->biorq_rqset);
 		r->biorq_rqset = NULL;
 	}
-
 
 	OPSTAT_INCR(SLC_OPST_BIORQ_DESTROY);
 	DEBUG_BIORQ(PLL_DIAG, r, "destroying");
@@ -1041,7 +1040,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	r->biorq_ref++;
 	r->biorq_flags |= BIORQ_FLUSHRDY | BIORQ_SPLAY;
 	PSC_SPLAY_XINSERT(bmpc_biorq_tree, &bmpc->bmpc_new_biorqs, r);
-	DEBUG_BIORQ(PLL_INFO, r, "sched flush");
+	DEBUG_BIORQ(PLL_DIAG, r, "sched flush");
 	BIORQ_ULOCK(r);
 
 	bmpc->bmpc_pndgwr++;
@@ -1128,7 +1127,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	mq->op = SRMIOP_RD;
 	memcpy(&mq->sbd, bmap_2_sbd(r->biorq_bmap), sizeof(mq->sbd));
 
-	DEBUG_BIORQ(PLL_INFO, r, "fid="SLPRI_FG" launching read req, ios=%u",
+	DEBUG_BIORQ(PLL_DIAG, r, "fid="SLPRI_FG" launching read req, ios=%u",
 	    SLPRI_FG_ARGS(&mq->sbd.sbd_fg), bmap_2_ios(r->biorq_bmap));
 
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
@@ -1327,7 +1326,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 		}
 
 		if (e->bmpce_flags & BMPCE_EIO) {
-			rc = e->bmpce_rc; 
+			rc = e->bmpce_rc;
 			BMPCE_ULOCK(e);
 			break;
 		}
