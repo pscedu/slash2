@@ -812,7 +812,7 @@ msbmflwthr_main(struct psc_thread *thr)
 /**
  * bmap_flush - Send out SRMT_WRITE RPCs to the I/O server.
  */
-__static void
+__static int
 bmap_flush(void)
 {
 	struct psc_dynarray reqs = DYNARRAY_INIT_NOLOG,
@@ -822,7 +822,7 @@ bmap_flush(void)
 	struct bmpc_ioreq *r, *tmp;
 	struct bmapc_memb *b, *tmpb;
 	struct sl_resm *m = NULL;
-	int i, j;
+	int i, j, didwork = 0;
 
 	LIST_CACHE_LOCK(&bmapFlushQ);
 	LIST_CACHE_FOREACH_SAFE(b, tmpb, &bmapFlushQ) {
@@ -892,6 +892,7 @@ bmap_flush(void)
 		j = 0;
 		while (j < psc_dynarray_len(&reqs) &&
 		    (bwc = bmap_flush_trycoalesce(&reqs, &j))) {
+			didwork = 1;
 			bmap_flush_coalesce_map(bwc);
 			bmap_flush_outstanding_rpcwait(m);
 			bmap_flush_send_rpcs(bwc);
@@ -901,6 +902,8 @@ bmap_flush(void)
 
 	psc_dynarray_free(&reqs);
 	psc_dynarray_free(&bmaps);
+
+	return (didwork);
 }
 
 void
@@ -916,8 +919,9 @@ msbmapflushthr_main(struct psc_thread *thr)
 		OPSTAT_INCR(SLC_OPST_BMAP_FLUSH);
 
 		PFL_GETTIMESPEC(&tmp1);
-		bmap_flush();
+		while (bmap_flush());
 		PFL_GETTIMESPEC(&tmp2);
+
 		timespecsub(&tmp2, &tmp1, &work);
 
 		PFL_GETTIMESPEC(&tmp1);
