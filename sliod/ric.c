@@ -52,6 +52,40 @@ void	*sli_benchmark_buf;
 uint32_t sli_benchmark_bufsiz;
 
 #define NOTIFY_FSYNC_TIMEOUT	10		/* seconds */
+ 
+int
+sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs, int nslvrs)
+{
+	int i, rc = 0;
+	sl_bmapno_t slvrno;
+	uint32_t roff, sblk, tsize;
+
+	slvrno = off / SLASH_SLVR_SIZE;
+	roff = off - (slvrno * SLASH_SLVR_SIZE);
+
+	sblk  = roff / SLASH_SLVR_BLKSZ;
+	tsize = size + (roff & SLASH_SLVR_BLKMASK);
+
+	for (i = 0; i < nslvrs; i++) {
+		uint32_t tsz = MIN((SLASH_BLKS_PER_SLVR - sblk) *
+		    SLASH_SLVR_BLKSZ, tsize);
+
+		tsize -= tsz;
+		rc = slvr_fsbytes_wio(slvrs[i], tsz, sblk);
+		if (rc) {
+			psc_assert(rc != -SLERR_AIOWAIT);
+			psclog_warnx("write error rc=%d", rc);
+			break;
+		}
+
+		/* Only the first sliver may use a blk offset. */
+		sblk = 0;
+	}
+	if (!rc)
+		psc_assert(!tsize);
+
+	return (rc);
+}
 
 __static int
 sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
@@ -292,30 +326,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 * which are marked '0' in the bitmap.  Here we don't care about
 	 * buffer offsets since we're block aligned now
 	 */
-	if (rw == SL_WRITE) {
-		roff = mq->offset - (slvrno * SLASH_SLVR_SIZE);
-
-		sblk  = roff / SLASH_SLVR_BLKSZ;
-		tsize = mq->size + (roff & SLASH_SLVR_BLKMASK);
-
-		for (i = 0; i < nslvrs; i++) {
-			uint32_t tsz = MIN((SLASH_BLKS_PER_SLVR - sblk) *
-			    SLASH_SLVR_BLKSZ, tsize);
-
-			tsize -= tsz;
-			rv = slvr_fsbytes_wio(slvr[i], tsz, sblk);
-			if (rv) {
-				psc_assert(rv != -SLERR_AIOWAIT);
-				psclog_warnx("write error rc=%zd", rv);
-				PFL_GOTOERR(out, mp->rc = rv);
-			}
-
-			/* Only the first sliver may use a blk offset. */
-			sblk = 0;
-		}
-		psc_assert(!tsize);
-	}
-
+	if (rw == SL_WRITE) 
+		mp->rc = sli_ric_write_sliver(mq->offset, mq->size, slvr, nslvrs);
  out:
 	for (i = 0; i < nslvrs && slvr[i]; i++) {
 		if (rw == SL_READ)
