@@ -502,7 +502,7 @@ slvr_fsio(struct slvr *s, int sblk, uint32_t size, enum rw rw)
 	int nblks, save_errno = 0;
 	uint64_t *v8;
 	ssize_t	rc;
-	size_t off;
+	size_t foff;
 
 	struct fidc_membh *f;
 
@@ -519,7 +519,7 @@ slvr_fsio(struct slvr *s, int sblk, uint32_t size, enum rw rw)
 	psc_assert(sblk + nblks <= SLASH_BLKS_PER_SLVR);
 
 	errno = 0;
-	off = slvr_2_fileoff(s, sblk);
+	foff = slvr_2_fileoff(s, sblk);
 
 	if (rw == SL_READ) {
 		OPSTAT_INCR(SLI_OPST_FSIO_READ);
@@ -528,7 +528,7 @@ slvr_fsio(struct slvr *s, int sblk, uint32_t size, enum rw rw)
 			return (sli_aio_register(s));
 
 		rc = pread(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
-		    off);
+		    foff);
 
 		if (psc_fault_here_rc(SLI_FAULT_FSIO_READ_FAIL, &errno,
 		    EBADF))
@@ -554,7 +554,7 @@ slvr_fsio(struct slvr *s, int sblk, uint32_t size, enum rw rw)
 				OPSTAT_INCR(SLI_OPST_FSIO_READ_CRC_BAD);
 				DEBUG_SLVR(PLL_ERROR, s,
 				    "bad crc blks=%d off=%zu",
-				    nblks, off);
+				    nblks, foff);
 			} else {
 				OPSTAT_INCR(SLI_OPST_FSIO_READ_CRC_GOOD);
 			}
@@ -563,7 +563,7 @@ slvr_fsio(struct slvr *s, int sblk, uint32_t size, enum rw rw)
 		OPSTAT_INCR(SLI_OPST_FSIO_WRITE);
 
 		rc = pwrite(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
-		    off);
+		    foff);
 		if (rc == -1) {
 			save_errno = errno;
 			OPSTAT_INCR(SLI_OPST_FSIO_WRITE_FAIL);
@@ -574,21 +574,21 @@ slvr_fsio(struct slvr *s, int sblk, uint32_t size, enum rw rw)
 		DEBUG_SLVR(PLL_ERROR, s, "failed (rc=%zd, size=%u) "
 		    "%s blks=%d off=%zu errno=%d",
 		    rc, size, (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
-		    nblks, off, save_errno);
+		    nblks, foff, save_errno);
 
 	else if ((uint32_t)rc != size) {
-		DEBUG_SLVR(off + size > slvr_2_fcmh(s)->
+		DEBUG_SLVR(foff + size > slvr_2_fcmh(s)->
 		    fcmh_sstb.sst_size ? PLL_DIAG : PLL_NOTICE, s,
 		    "short I/O (rc=%zd, size=%u) "
 		    "%s blks=%d off=%zu errno=%d",
 		    rc, size, (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
-		    nblks, off, save_errno);
+		    nblks, foff, save_errno);
 	} else {
 		v8 = slvr_2_buf(s, sblk);
 		DEBUG_SLVR(PLL_INFO, s, "ok %s size=%u off=%zu"
 		    " rc=%zd nblks=%d v8(%"PRIx64")",
 		    (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
-		    size, off, rc, nblks, *v8);
+		    size, foff, rc, nblks, *v8);
 	}
 
 	return (rc < 0 ? -save_errno : 0);
