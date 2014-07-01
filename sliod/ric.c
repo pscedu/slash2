@@ -92,7 +92,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 {
 	sl_bmapno_t bmapno, slvrno;
 	int rc, nslvrs = 0, i, needaio = 0;
-	uint32_t tsize, sblk, roff, len[RIC_MAX_SLVRS_PER_IO];
+	uint32_t tsize, roff, len[RIC_MAX_SLVRS_PER_IO];
 	struct slvr *slvr[RIC_MAX_SLVRS_PER_IO];
 	struct iovec iovs[RIC_MAX_SLVRS_PER_IO];
 	struct sli_aiocb_reply *aiocbr = NULL;
