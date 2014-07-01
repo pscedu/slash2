@@ -172,7 +172,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	int i, npages = 0, maxpages;
 	struct msl_fhent *mfh = q->mfsrq_mfh;
 	struct bmap_pagecache_entry *e;
-	struct bmap_pagecache *bmpc;
 	struct bmpc_ioreq *r;
 	uint32_t aoff = (roff & ~BMPC_BUFMASK); /* aligned, relative offset */
 	uint32_t alen = len + (roff & BMPC_BUFMASK);
@@ -198,7 +197,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 		 */
 		return;
 
-	bmpc = bmap_2_bmpc(b);
 	/*
 	 * How many pages are needed to accommodate the request?
 	 */
