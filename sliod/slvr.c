@@ -497,12 +497,13 @@ sli_aio_register(struct slvr *s)
 }
 
 __static ssize_t
-slvr_fsio(struct slvr *s, int sblk, uint32_t size, enum rw rw)
+slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 {
 	int nblks, save_errno = 0;
 	uint64_t *v8;
 	ssize_t	rc;
 	size_t foff;
+	int sblk;
 
 	struct fidc_membh *f;
 
@@ -515,17 +516,21 @@ slvr_fsio(struct slvr *s, int sblk, uint32_t size, enum rw rw)
 
 	psc_assert(rw == SL_READ || rw == SL_WRITE);
 
-	nblks = (size + SLASH_SLVR_BLKSZ - 1) / SLASH_SLVR_BLKSZ;
-	psc_assert(sblk + nblks <= SLASH_BLKS_PER_SLVR);
-
 	errno = 0;
-	foff = slvr_2_fileoff(s, sblk);
 
 	if (rw == SL_READ) {
 		OPSTAT_INCR(SLI_OPST_FSIO_READ);
 
 		if (globalConfig.gconf_async_io)
 			return (sli_aio_register(s));
+
+		/*
+		 * Do full sliver read, ignoring off and len.
+		 */
+		sblk = 0;
+		size = SLASH_SLVR_SIZE;
+		foff = slvr_2_fileoff(s, sblk);
+		nblks = (size + SLASH_SLVR_BLKSZ - 1) / SLASH_SLVR_BLKSZ;
 
 		rc = pread(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
 		    foff);
@@ -561,6 +566,11 @@ slvr_fsio(struct slvr *s, int sblk, uint32_t size, enum rw rw)
 		}
 	} else {
 		OPSTAT_INCR(SLI_OPST_FSIO_WRITE);
+
+		sblk = off / SLASH_SLVR_BLKSZ;
+		psc_assert((off % SLASH_SLVR_BLKSZ) == 0);
+		foff = slvr_2_fileoff(s, sblk);
+		nblks = (size + SLASH_SLVR_BLKSZ - 1) / SLASH_SLVR_BLKSZ;
 
 		rc = pwrite(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
 		    foff);
@@ -599,11 +609,11 @@ slvr_fsio(struct slvr *s, int sblk, uint32_t size, enum rw rw)
  * @s: the sliver.
  */
 ssize_t
-slvr_fsbytes_rio(struct slvr *s)
+slvr_fsbytes_rio(struct slvr *s, uint32_t off, uint32_t size)
 {
 	ssize_t rc = 0;
 
-	rc = slvr_fsio(s, 0, SLASH_SLVR_SIZE, SL_READ);
+	rc = slvr_fsio(s, off, size, SL_READ);
 
 	if (rc && rc != -SLERR_AIOWAIT) {
 		/*
@@ -628,7 +638,7 @@ slvr_fsbytes_wio(struct slvr *s, uint32_t size, uint32_t sblk)
 {
 	DEBUG_SLVR(PLL_INFO, s, "sblk=%u size=%u", sblk, size);
 
-	return (slvr_fsio(s, sblk, size, SL_WRITE));
+	return (slvr_fsio(s, sblk*SLASH_SLVR_BLKSZ, size, SL_WRITE));
 }
 
 /**
@@ -723,7 +733,7 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw)
 	 * Execute read to fault in needed blocks after dropping the
 	 * lock.  All should be protected by the FAULTING bit.
 	 */
-	rc = slvr_fsbytes_rio(s);
+	rc = slvr_fsbytes_rio(s, off, len);
 	if (rc)
 		return (rc);
 
