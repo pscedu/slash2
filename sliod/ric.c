@@ -71,7 +71,7 @@ sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs, int nslvr
 		    SLASH_SLVR_BLKSZ, tsize);
 
 		tsize -= tsz;
-		rc = slvr_fsbytes_wio(slvrs[i], tsz, sblk);
+		rc = slvr_fsbytes_wio(slvrs[i], sblk, tsz);
 		if (rc) {
 			psc_assert(rc != -SLERR_AIOWAIT);
 			psclog_warnx("write error rc=%d", rc);

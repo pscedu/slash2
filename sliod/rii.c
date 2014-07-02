@@ -94,7 +94,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 		 * SLVR_DATARDY is set in wio_done when the slvr lock is
 		 * taken again.
 		 */
-		rc = slvr_fsbytes_wio(s, slvrsiz, 0);
+		rc = slvr_fsbytes_wio(s, 0, slvrsiz);
 	}
 
 	SLVR_LOCK(s);

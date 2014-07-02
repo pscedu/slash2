@@ -634,7 +634,7 @@ slvr_fsbytes_rio(struct slvr *s, uint32_t off, uint32_t size)
 }
 
 ssize_t
-slvr_fsbytes_wio(struct slvr *s, uint32_t size, uint32_t sblk)
+slvr_fsbytes_wio(struct slvr *s, uint32_t sblk, uint32_t size)
 {
 	DEBUG_SLVR(PLL_INFO, s, "sblk=%u size=%u", sblk, size);
 
