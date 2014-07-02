@@ -500,12 +500,11 @@ __static ssize_t
 slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 {
 	int nblks, save_errno = 0;
+	struct fidc_membh *f;
 	uint64_t *v8;
 	ssize_t	rc;
 	size_t foff;
 	int sblk;
-
-	struct fidc_membh *f;
 
 	f = slvr_2_fcmh(s);
 	if (f->fcmh_flags & FCMH_NO_BACKFILE) {
@@ -514,10 +513,7 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 		return -EBADF;
 	}
 
-	psc_assert(rw == SL_READ || rw == SL_WRITE);
-
 	errno = 0;
-
 	if (rw == SL_READ) {
 		OPSTAT_INCR(SLI_OPST_FSIO_READ);
 
