@@ -564,7 +564,6 @@ mfsrq_seterr(struct msl_fsrqinfo *q, int rc)
 
 	lk = MFH_RLOCK(q->mfsrq_mfh);
 	if (q->mfsrq_err == 0 && rc) {
-psc_assert(rc != 1);
 		q->mfsrq_err = rc;
 		psclog_warnx("setting rqinfo q=%p err=%d", q, rc);
 	}
