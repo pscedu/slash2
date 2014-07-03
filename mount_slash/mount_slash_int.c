@@ -695,8 +695,7 @@ msl_bmpce_complete_biorq(struct bmap_pagecache_entry *e0, int rc)
 				BMPCE_ULOCK(e);
 				continue;
 			}
-			if (!(e->bmpce_flags & BMPCE_EIO) &&
-			    !(e->bmpce_flags & BMPCE_DATARDY)) {
+			if (e->bmpce_flags & BMPCE_AIOWAIT) {
 				psc_assert(e != e0);
 				msl_fsrq_aiowait_tryadd_locked(e, r);
 				DEBUG_BIORQ(PLL_NOTICE, r,
