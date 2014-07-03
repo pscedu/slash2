@@ -1020,5 +1020,4 @@ msbmapflushthr_spawn(void)
 
 	pscthr_init(MSTHRT_BENCH, 0, msbenchthr_main, NULL, 0,
 	    "msbenchthr");
-
 }
