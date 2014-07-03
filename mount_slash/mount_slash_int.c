@@ -700,6 +700,9 @@ msl_bmpce_complete_biorq(struct bmap_pagecache_entry *e0, int rc)
 				DEBUG_BIORQ(PLL_NOTICE, r,
 				    "still blocked on (bmpce@%p)", e);
 			}
+			/*
+			 * Need to check any error on the page here.
+			 */
 			BMPCE_ULOCK(e);
 		}
 		DEBUG_BIORQ(PLL_NOTICE, r, "unblocked by (bmpce@%p)", e);
