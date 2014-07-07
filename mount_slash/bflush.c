@@ -506,14 +506,10 @@ bmap_flush_coalesce_prep(struct bmpc_write_coalescer *bwc)
 				if (bwc->bwc_bmpces[bwc->bwc_nbmpces-1]->bmpce_off
 				    >= bmpce->bmpce_off)
 					continue;
-				else {
-					psc_assert((bmpce->bmpce_off -
-					    BMPC_BUFSZ) == bwc->bwc_bmpces[
-					   bwc->bwc_nbmpces-1]->bmpce_off);
-					bwc->bwc_bmpces[bwc->bwc_nbmpces++] =
-						bmpce;
-					DEBUG_BMPCE(PLL_INFO, bmpce, "added");
-				}
+				psc_assert((bmpce->bmpce_off - BMPC_BUFSZ) == 
+				    bwc->bwc_bmpces[bwc->bwc_nbmpces-1]->bmpce_off);
+				bwc->bwc_bmpces[bwc->bwc_nbmpces++] = bmpce;
+				DEBUG_BMPCE(PLL_INFO, bmpce, "added");
 			}
 		}
 		psc_assert(!reqsz);
