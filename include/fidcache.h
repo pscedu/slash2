@@ -255,16 +255,7 @@ struct fidc_membh {
 #define	FCMH_OPCNT_UPSCH		(1 << 7)	/* MDS: temporarily held by upsch engine */
 #define	FCMH_OPCNT_READDIR		(1 << 8)	/* CLI: readahead readdir RPC */
 
-/* fcmh_setattr() flags */
-#define FCMH_SETATTRF_NONE		0
-#define FCMH_SETATTRF_SAVELOCAL		(1 << 0)	/* save local updates (file size, etc) */
-#define FCMH_SETATTRF_HAVELOCK		(1 << 1)
-
-void	 fidc_init(int, int);
-void	 fcmh_setattrf(struct fidc_membh *, struct srt_stat *, int);
-
-#define fcmh_setattr(f, sstb)		fcmh_setattrf((f), (sstb), 0)
-#define fcmh_setattr_locked(f, sstb)	fcmh_setattrf((f), (sstb), FCMH_SETATTRF_HAVELOCK)
+void	fidc_init(int, int);
 
 /* fidc_lookup() flags */
 #define FIDC_LOOKUP_NONE		0
