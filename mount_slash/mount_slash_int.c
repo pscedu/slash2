@@ -1010,7 +1010,6 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 	if (rq) {
 		DEBUG_REQ(PLL_ERROR, rq, "req failed");
 		pscrpc_req_finished(rq);
-		rq = NULL;
 	}
 
 	if (r->biorq_rqset) {
@@ -1022,10 +1021,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 			freelock(&r->biorq_rqset->set_lock);
 	}
 
-	if (csvc) {
+	if (csvc)
 		sl_csvc_decref(csvc);
-		csvc = NULL;
-	}
 
 	PSCFREE(iovs);
 	return (rc);
