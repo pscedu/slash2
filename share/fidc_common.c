@@ -143,14 +143,13 @@ fidc_reap(struct psc_poolmgr *m)
 /**
  * _fidc_lookup - Search the FID cache for a member by its FID,
  *	optionally creating it.
+ *
  * @pci: thread caller information.
  * @fgp: FID and GEN #.
  * @flags: access flags.
- * @sstb: statbuf to use if populating a new entry.
- * @setattrflags: SETATTRF_* flags specifying which statbuf fields are
- *	valid.
  * @fp: value-result fcmh return.
  * @arg: argument to GETATTR.
+ *
  * Note:  Newly acquired fcmh's are ref'd with FCMH_OPCNT_NEW, reused
  *	ones are ref'd with FCMH_OPCNT_LOOKUP_FIDC.
  * Note: Returns positive errno.
