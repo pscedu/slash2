@@ -64,7 +64,7 @@
  *     (2) This function should only be used by a client.
  */
 void
-fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb, int flags)
+slc_fcmh_setattrf(struct fidc_membh *f, struct srt_stat *sstb, int flags)
 {
 	if (flags & FCMH_SETATTRF_HAVELOCK)
 		FCMH_LOCK_ENSURE(f);

@@ -122,10 +122,10 @@ fci_2_fcmh(struct fcmh_cli_info *fci)
 #define FCMH_SETATTRF_SAVELOCAL		(1 << 0)	/* save local updates (file size, etc) */
 #define FCMH_SETATTRF_HAVELOCK		(1 << 1)
 
-void	fcmh_setattrf(struct fidc_membh *, struct srt_stat *, int);
+void	slc_fcmh_setattrf(struct fidc_membh *, struct srt_stat *, int);
 
-#define fcmh_setattr(f, sstb)		fcmh_setattrf((f), (sstb), 0)
-#define fcmh_setattr_locked(f, sstb)	fcmh_setattrf((f), (sstb), FCMH_SETATTRF_HAVELOCK)
+#define slc_fcmh_setattr(f, sstb)		slc_fcmh_setattrf((f), (sstb), 0)
+#define slc_fcmh_setattr_locked(f, sstb)	slc_fcmh_setattrf((f), (sstb), FCMH_SETATTRF_HAVELOCK)
 
 int	fcmh_checkcreds(struct fidc_membh *, const struct pscfs_creds *, int);
 
