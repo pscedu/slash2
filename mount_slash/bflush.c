@@ -305,16 +305,18 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	memcpy(&mq->sbd, &bmap_2_bci(b)->bci_sbd, sizeof(mq->sbd));
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 
-	DEBUG_REQ(PLL_INFO, rq, "fid="SLPRI_FG" off=%u sz=%u, ios=%u",
-	    SLPRI_FG_ARGS(&mq->sbd.sbd_fg), mq->offset, mq->size, bmap_2_ios(b));
+	DEBUG_REQ(PLL_DIAG, rq, "fid="SLPRI_FG" off=%u sz=%u, ios=%u",
+	    SLPRI_FG_ARGS(&mq->sbd.sbd_fg), mq->offset, mq->size,
+	    bmap_2_ios(b));
 
 	/* Do we need this inc/dec combo for biorq reference? */
 	psc_atomic32_inc(&rmci->rmci_infl_rpcs);
-	psclog_diag("Send write RPC to %d: %d",
+	psclog_diag("Send write RPC to %d (infl: %d)",
 	    m->resm_res_id, psc_atomic32_read(&rmci->rmci_infl_rpcs));
 
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQS] = bwc;
-	if (pscrpc_nbreqset_add(pndgWrtReqs, rq)) {
+	rc = pscrpc_nbreqset_add(pndgWrtReqs, rq);
+	if (rc) {
 		psc_atomic32_dec(&rmci->rmci_infl_rpcs);
 		goto out;
 	}
