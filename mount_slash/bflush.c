@@ -67,9 +67,9 @@ psc_atomic32_t			 max_nretries = PSC_ATOMIC32_INIT(256);
 #define MAX_OUTSTANDING_RPCS	128
 #define MIN_COALESCE_RPC_SZ	LNET_MTU
 
-struct psc_waitq		bmapFlushWaitq = PSC_WAITQ_INIT;
-psc_spinlock_t			bmapFlushLock = SPINLOCK_INIT;
-int				bmapFlushTimeoFlags = 0;
+struct psc_waitq		slc_bflush_waitq = PSC_WAITQ_INIT;
+psc_spinlock_t			slc_bflush_lock = SPINLOCK_INIT;
+int				slc_bflush_tmout_flags = 0;
 
 __static int
 bmap_flush_biorq_expired(const struct bmpc_ioreq *a)
@@ -196,13 +196,13 @@ _bmap_flushq_wake(const struct pfl_callerinfo *pci, int reason)
 {
 	int wake = 0;
 
-	spinlock(&bmapFlushLock);
-	if (bmapFlushTimeoFlags & BMAPFLSH_RPCWAIT) {
+	spinlock(&slc_bflush_lock);
+	if (slc_bflush_tmout_flags & BMAPFLSH_RPCWAIT) {
 		wake = 1;
-		psc_waitq_wakeall(&bmapFlushWaitq);
+		psc_waitq_wakeall(&slc_bflush_waitq);
 	}
 
-	freelock(&bmapFlushLock);
+	freelock(&slc_bflush_lock);
 
 	psclog_diag("wakeup flusher: reason=%x wake=%d", reason, wake);
 }
@@ -738,17 +738,17 @@ bmap_flush_outstanding_rpcwait(struct sl_resm *m)
 	 * XXX this should really be held in the import/resm on a per
 	 * sliod basis using multiwait instead of a single global value.
 	 */
-	spinlock(&bmapFlushLock);
+	spinlock(&slc_bflush_lock);
 	while (atomic_read(&rmci->rmci_infl_rpcs) >= MAX_OUTSTANDING_RPCS) {
-		bmapFlushTimeoFlags |= BMAPFLSH_RPCWAIT;
+		slc_bflush_tmout_flags |= BMAPFLSH_RPCWAIT;
 		/* RPC completion will wake us up. */
 		OPSTAT_INCR(SLC_OPST_BMAP_FLUSH_RPCWAIT);
-		psc_waitq_waitrel(&bmapFlushWaitq, &bmapFlushLock,
+		psc_waitq_waitrel(&slc_bflush_waitq, &slc_bflush_lock,
 		    &bmapFlushWaitSecs);
-		spinlock(&bmapFlushLock);
+		spinlock(&slc_bflush_lock);
 	}
-	bmapFlushTimeoFlags &= ~BMAPFLSH_RPCWAIT;
-	freelock(&bmapFlushLock);
+	slc_bflush_tmout_flags &= ~BMAPFLSH_RPCWAIT;
+	freelock(&slc_bflush_lock);
 }
 
 /**
@@ -926,13 +926,13 @@ msbmapflushthr_main(struct psc_thread *thr)
 
 		PFL_GETTIMESPEC(&tmp1);
 
-		spinlock(&bmapFlushLock);
-		bmapFlushTimeoFlags |= BMAPFLSH_RPCWAIT;
-		psc_waitq_waitrel(&bmapFlushWaitq,
-		    &bmapFlushLock, &bmapFlushWaitSecs);
-		spinlock(&bmapFlushLock);
-		bmapFlushTimeoFlags &= ~BMAPFLSH_RPCWAIT;
-		freelock(&bmapFlushLock);
+		spinlock(&slc_bflush_lock);
+		slc_bflush_tmout_flags |= BMAPFLSH_RPCWAIT;
+		psc_waitq_waitrel(&slc_bflush_waitq, &slc_bflush_lock,
+		    &bmapFlushWaitSecs);
+		spinlock(&slc_bflush_lock);
+		slc_bflush_tmout_flags &= ~BMAPFLSH_RPCWAIT;
+		freelock(&slc_bflush_lock);
 
 		PFL_GETTIMESPEC(&tmp2);
 		timespecsub(&tmp2, &tmp1, &wait);
@@ -982,7 +982,7 @@ msbmapflushthr_spawn(void)
 	pndgBmaplsReqs = pscrpc_nbreqset_init(NULL, NULL);
 	pndgWrtReqs = pscrpc_nbreqset_init(NULL, NULL);
 
-	psc_waitq_init(&bmapFlushWaitq);
+	psc_waitq_init(&slc_bflush_waitq);
 
 	lc_reginit(&bmapFlushQ, struct bmapc_memb,
 	    bcm_lentry, "bmapflush");
