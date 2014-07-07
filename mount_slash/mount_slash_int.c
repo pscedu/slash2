@@ -64,7 +64,7 @@
 #include "slerr.h"
 
 /* Flushing fs threads wait here for I/O completion. */
-struct psc_waitq	msl_fhent_flush_waitq = PSC_WAITQ_INIT;
+struct psc_waitq	msl_fhent_aio_waitq = PSC_WAITQ_INIT;
 
 struct timespec		msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
 struct timespec		msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
@@ -849,7 +849,7 @@ msl_dio_cb(struct pscrpc_request *rq, int rc, struct pscrpc_async_args *args)
 	if (q->mfsrq_flags & MFSRQ_AIOWAIT) {
 		q->mfsrq_flags &= ~MFSRQ_AIOWAIT;
 		DEBUG_BIORQ(PLL_DIAG, r, "aiowait wakeup, q=%p", q);
-		psc_waitq_wakeall(&msl_fhent_flush_waitq);
+		psc_waitq_wakeall(&msl_fhent_aio_waitq);
 	}
 	BIORQ_ULOCK(r);
 	mfsrq_seterr(q, rc);
@@ -997,7 +997,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 				q->mfsrq_flags |= MFSRQ_AIOWAIT;
 				DEBUG_BIORQ(PLL_DIAG, r,
 				    "aiowait sleep, q=%p", q);
-				psc_waitq_wait(&msl_fhent_flush_waitq,
+				psc_waitq_wait(&msl_fhent_aio_waitq,
 				    &q->mfsrq_mfh->mfh_lock);
 			}
 			rc = -EAGAIN;
