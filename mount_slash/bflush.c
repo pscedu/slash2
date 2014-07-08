@@ -276,8 +276,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	if (rc)
 		goto out;
 
-	// XXX why 2 ?
-	rq->rq_timeout = msl_bmap_lease_secs_remaining(b) / 2;
+	rq->rq_timeout = msl_bmap_lease_secs_remaining(b);
 
 	(void)psc_fault_here_rc(SLC_FAULT_REQUEST_TIMEOUT,
 	    &rq->rq_timeout, -1);
