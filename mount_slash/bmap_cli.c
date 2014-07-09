@@ -636,12 +636,10 @@ msl_bmap_cache_rls(struct bmap *b)
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 
 	BMAP_LOCK(b);
-//	SPLAY_FOREACH()
-	for (e = SPLAY_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); e; ) {
+	SPLAY_FOREACH(e, bmap_pagecachetree, &bmpc->bmpc_tree) {
 		BMPCE_LOCK(e);
 		e->bmpce_flags |= BMPCE_DISCARD;
 		BMPCE_ULOCK(e);
-		e = SPLAY_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree, e);
 	}
 	BMAP_ULOCK(b);
 }
