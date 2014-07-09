@@ -94,8 +94,6 @@ extern struct psc_listcache	attrTimeoutQ;
 void msl_update_attributes(struct msl_fsrqinfo *);
 static int msl_getra(struct msl_fhent *, int);
 
-#define MS_DEF_READAHEAD_PAGES 8
-
 static void
 msl_update_iocounters(int len)
 {
