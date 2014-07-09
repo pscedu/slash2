@@ -1199,7 +1199,7 @@ __static int
 msl_launch_read_rpcs(struct bmpc_ioreq *r)
 {
 	struct bmap_pagecache_entry *e;
-	int rc = 0, i, j = -1, needflush = 0;
+	int rc = 0, i, j = -1, readahead, needflush = 0;
 	struct psc_dynarray pages = DYNARRAY_INIT_NOLOG;
 
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
@@ -1211,6 +1211,11 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 		bmpce_usecheck(e, BIORQ_READ,
 		    biorq_getaligned_off(r, i));
 
+		readahead = 0;
+		if (e->bmpce_flags & BMPCE_READA) {
+			e->bmpce_flags &= ~BMPCE_READA;
+			readahead = 1;
+		}
 		if (e->bmpce_flags & BMPCE_FAULTING) {
 			BMPCE_ULOCK(e);
 			continue;
@@ -1224,10 +1229,8 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 		 * Although multiple threads can mark the page as read-ahead, only
 		 * one of them can get here due to above checks.
 		 */  	
-		if (e->bmpce_flags & BMPCE_READA) {
-			e->bmpce_flags &= ~BMPCE_READA;
+		if (readahead)
 			psc_iostats_intv_add(&msl_racache_stat, BMPC_BUFSZ);
-		}
 		
 		e->bmpce_flags |= BMPCE_FAULTING;
 		psc_dynarray_add(&pages, e);
