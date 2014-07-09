@@ -1169,10 +1169,8 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 		DEBUG_REQ(PLL_ERROR, rq, "req failed, rc = %d", rc);
 		pscrpc_req_finished(rq);
 	}
-	if (csvc) {
+	if (csvc)
 		sl_csvc_decref(csvc);
-		csvc = NULL;
-	}
 
 	psc_dynarray_free(a);
 	PSCFREE(a);
@@ -1186,6 +1184,7 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 		BMPCE_LOCK(e);
 		e->bmpce_rc = rc;
 		e->bmpce_flags |= BMPCE_EIO;
+		e->bmpce_flags &= ~BMPCE_FAULTING;
 		DEBUG_BMPCE(PLL_WARN, e, "set BMPCE_EIO");
 		BMPCE_WAKE(e);
 		BMPCE_ULOCK(e);
