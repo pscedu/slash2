@@ -175,17 +175,17 @@ void
 bmpce_release_locked(struct bmap_pagecache_entry *e,
     struct bmap_pagecache *bmpc)
 {
-	int rc;
+	int ref;
 
 	LOCK_ENSURE(&e->bmpce_lock);
 
-	rc = psc_atomic32_read(&e->bmpce_ref);
-	if (rc <= 0)
-		psc_fatalx("bmpce = %p, ref = %d", e, rc);
+	ref = psc_atomic32_read(&e->bmpce_ref);
+	if (ref <= 0)
+		psc_fatalx("bmpce = %p, ref = %d", e, ref);
 
 	psc_atomic32_dec(&e->bmpce_ref);
 	DEBUG_BMPCE(PLL_DIAG, e, "drop reference");
-	if (rc > 1) {
+	if (ref > 1) {
 		BMPCE_ULOCK(e);
 		return;
 	}
