@@ -364,10 +364,8 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 	/*
 	 * Scan the list of pndg aio's for those ready for completion.
 	 */
-	while ((a = pll_get(&s->slvr_pndgaios))) {
-		OPSTAT_INCR(SLI_OPST_HANDLE_REPLREAD_REMOVE);
+	while ((a = pll_get(&s->slvr_pndgaios)))
 		slvr_aio_tryreply(a);
-	}
 }
 
 __static struct sli_iocb *
