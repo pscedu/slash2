@@ -472,8 +472,9 @@ bmap_flush_coalesce_prep(struct bmpc_write_coalescer *bwc)
 		if (!e)
 			e = r;
 		else {
-			/* Biorq offsets may not decrease and holes are not
-			 * allowed.
+			/*
+			 * biorq offsets may not decrease and holes are
+			 * not allowed.
 			 */
 			psc_assert(r->biorq_off >= loff);
 			psc_assert(r->biorq_off <= biorq_voff_get(e));
@@ -485,9 +486,10 @@ bmap_flush_coalesce_prep(struct bmpc_write_coalescer *bwc)
 		reqsz = r->biorq_len;
 
 		DYNARRAY_FOREACH(bmpce, i, &r->biorq_pages) {
-			DEBUG_BMPCE(PLL_INFO, bmpce,
+			DEBUG_BMPCE(PLL_DIAG, bmpce,
 			    "adding if DNE nbmpces=%d (i=%d) "
-			    "(off=%"PSCPRIdOFFT")", bwc->bwc_nbmpces, i, off);
+			    "(off=%"PSCPRIdOFFT")", bwc->bwc_nbmpces, i,
+			    off);
 
 			bmpce_usecheck(bmpce, BIORQ_WRITE,
 			    !i ? (r->biorq_off & ~BMPC_BUFMASK) : off);
@@ -499,18 +501,19 @@ bmap_flush_coalesce_prep(struct bmpc_write_coalescer *bwc)
 			reqsz -= tlen;
 
 			if (!bwc->bwc_nbmpces) {
-				bwc->bwc_bmpces[bwc->bwc_nbmpces++] = bmpce;
-				DEBUG_BMPCE(PLL_INFO, bmpce, "added");
+				bwc->bwc_bmpces[bwc->bwc_nbmpces++] =
+				    bmpce;
+				DEBUG_BMPCE(PLL_DIAG, bmpce, "added");
 				continue;
-			} 
-			if (bwc->bwc_bmpces[bwc->bwc_nbmpces-1]->bmpce_off
-			    >= bmpce->bmpce_off)
+			}
+			if (bwc->bwc_bmpces[bwc->bwc_nbmpces -
+			    1]->bmpce_off >= bmpce->bmpce_off)
 				continue;
 
-			psc_assert((bmpce->bmpce_off - BMPC_BUFSZ) == 
-			    bwc->bwc_bmpces[bwc->bwc_nbmpces-1]->bmpce_off);
+			psc_assert(bmpce->bmpce_off - BMPC_BUFSZ ==
+			    bwc->bwc_bmpces[bwc->bwc_nbmpces - 1]->bmpce_off);
 			bwc->bwc_bmpces[bwc->bwc_nbmpces++] = bmpce;
-			DEBUG_BMPCE(PLL_INFO, bmpce, "added");
+			DEBUG_BMPCE(PLL_DIAG, bmpce, "added");
 		}
 		psc_assert(!reqsz);
 	}
