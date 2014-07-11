@@ -280,36 +280,18 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 __static void
 slvr_aio_tryreply(struct sli_aiocb_reply *a)
 {
+	int i;
 	struct slvr *s;
-	int i, ready;
 
-	for (ready = 0, i = 0; i < a->aiocbr_nslvrs; i++) {
+	for (i = 0; i < a->aiocbr_nslvrs; i++) {
 		s = a->aiocbr_slvrs[i];
 		SLVR_LOCK(s);
-
-		/*
-		 * XXX: What if the sliver get reused for another
-		 * purpose?
-		 */
-		if (s->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR))
-			ready++;
-
-		else if (s->slvr_flags & SLVR_AIOWAIT) {
-			/*
-			 * One of our slvrs is still waiting on aio
-			 * completion.  Add this reply to that slvr.
-			 * Note that a has already been removed from the
-			 * pending list of previous slvr.
-			 */
-			pll_add(&s->slvr_pndgaios, a);
-			OPSTAT_INCR(SLI_OPST_AIO_INSERT);
+		if (s->slvr_flags & SLVR_AIOWAIT) {
 			SLVR_ULOCK(s);
-			break;
+			return;
 		}
 		SLVR_ULOCK(s);
 	}
-	if (ready != a->aiocbr_nslvrs)
-		return;
 
 	if (a->aiocbr_flags & SLI_AIOCBSF_REPL)
 		slvr_aio_replreply(a);
@@ -358,13 +340,14 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 		s->slvr_flags |= SLVR_DATARDY;
 		DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
 	}
+
+	a = s->slvr_aioreply;
+	s->slvr_aioreply = NULL;
+
 	SLVR_WAKEUP(s);
 	SLVR_ULOCK(s);
 
-	/*
-	 * Scan the list of pndg aio's for those ready for completion.
-	 */
-	while ((a = pll_get(&s->slvr_pndgaios)))
+	if (a) 
 		slvr_aio_tryreply(a);
 }
 
@@ -398,9 +381,10 @@ sli_aio_replreply_setup(
 
 	memcpy(a->aiocbr_iovs, iov, sizeof(*iov));
 	a->aiocbr_slvrs[0] = s;
-	a->aiocbr_nslvrs = a->aiocbr_niov = 1;
+	a->aiocbr_niov = 1;
 	a->aiocbr_len = iov->iov_len;
 	a->aiocbr_off = 0;
+	a->aiocbr_nslvrs = 1;
 
 	/* Ref taken here must persist until reply is attempted. */
 	a->aiocbr_csvc = sli_geticsvcx(libsl_try_nid2resm(
@@ -924,8 +908,6 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 		s->slvr_bii = bii;
 		INIT_PSC_LISTENTRY(&s->slvr_lentry);
 		INIT_SPINLOCK(&s->slvr_lock);
-		pll_init(&s->slvr_pndgaios, struct sli_aiocb_reply,
-		    aiocbr_lentry, &s->slvr_lock);
 
 		memset(tmp2->slb_base, 0, SLASH_SLVR_SIZE);
 		s->slvr_slab = tmp2;

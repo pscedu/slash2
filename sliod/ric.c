@@ -291,15 +291,13 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 				 * waiting for aio and return AIOWAIT to
 				 * client later.
 				 */
-				pll_add(&slvr[i]->slvr_pndgaios, aiocbr);
+				slvr[i]->slvr_aioreply = aiocbr;
 				psc_assert(slvr[i]->slvr_flags & SLVR_AIOWAIT);
 				OPSTAT_INCR(SLI_OPST_AIO_INSERT);
 				SLVR_ULOCK(slvr[i]);
-
 				DEBUG_SLVR(PLL_INFO, slvr[i], "aio wait");
 				rc = mp->rc = -SLERR_AIOWAIT;
-				pscrpc_msg_add_flags(rq->rq_repmsg,
-				    MSG_ABORT_BULK);
+				pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
 				goto aio_out;
 			}
 		}

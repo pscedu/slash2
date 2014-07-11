@@ -59,7 +59,7 @@ struct slvr {
 	struct timespec		 slvr_ts;
 	struct sli_iocb		*slvr_iocb;
 	struct sl_buffer	*slvr_slab;
-	struct psc_lockedlist	 slvr_pndgaios;
+	struct sli_aiocb_reply  *slvr_aioreply;
 	struct psclist_head	 slvr_lentry;	/* dirty queue */
 	SPLAY_ENTRY(slvr)	 slvr_tentry;	/* bmap tree entry */
 };
@@ -152,7 +152,7 @@ struct sli_aiocb_reply {
 	struct iovec		  aiocbr_iovs[RIC_MAX_SLVRS_PER_IO];
 	struct slvr		 *aiocbr_slvrs[RIC_MAX_SLVRS_PER_IO];
 	int			  aiocbr_flags;
-	int			  aiocbr_nslvrs;
+	int		  	  aiocbr_nslvrs;
 	int			  aiocbr_niov;
 	struct slashrpc_cservice *aiocbr_csvc;
 	struct srt_bmapdesc	  aiocbr_sbd;
