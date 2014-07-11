@@ -1223,12 +1223,14 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 			continue;
 		}
 		/*
-		 * Although multiple threads can mark the page as read-ahead, only
-		 * one of them can get here due to above checks.
-		 */  	
+		 * Although multiple threads can mark the page as
+		 * read-ahead, only one of them can get here due to
+		 * above checks.
+		 */
 		if (readahead)
-			psc_iostats_intv_add(&msl_racache_stat, BMPC_BUFSZ);
-		
+			psc_iostats_intv_add(&msl_racache_stat,
+			    BMPC_BUFSZ);
+
 		e->bmpce_flags |= BMPCE_FAULTING;
 		psc_dynarray_add(&pages, e);
 		BMPCE_ULOCK(e);
@@ -1236,7 +1238,8 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 	}
 
 	/*
-	 * We must flush any pending writes first before reading from the storage.
+	 * We must flush any pending writes first before reading from
+	 * the storage.
 	 */
 	if (needflush)
 		bmpc_biorqs_flush(r->biorq_bmap, 1);
@@ -1251,6 +1254,7 @@ msl_launch_read_rpcs(struct bmpc_ioreq *r)
 			}
 			continue;
 		}
+
 		/*
 		 * Try to set the start bmpce if it's not yet assigned.
 		 */
@@ -1709,7 +1713,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	 * parameters.
 	 */
 	start = off / SLASH_BMAP_SIZE;
-	end = ((off + size) - 1) / SLASH_BMAP_SIZE;
+	end = (off + size - 1) / SLASH_BMAP_SIZE;
 	nr = end - start + 1;
 	if (nr > MAX_BMAPS_REQ) {
 		rc = EINVAL;
