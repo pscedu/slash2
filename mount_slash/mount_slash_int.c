@@ -1128,8 +1128,8 @@ msl_read_rpc_launch(struct bmpc_ioreq *r, int startpage, int npages)
 	mq->op = SRMIOP_RD;
 	memcpy(&mq->sbd, bmap_2_sbd(r->biorq_bmap), sizeof(mq->sbd));
 
-	DEBUG_BIORQ(PLL_DIAG, r, "fid="SLPRI_FG" launching read req, ios=%u",
-	    SLPRI_FG_ARGS(&mq->sbd.sbd_fg), bmap_2_ios(r->biorq_bmap));
+	DEBUG_BIORQ(PLL_DIAG, r, "fid="SLPRI_FG", start=%d, pages=%d, ios=%u",
+	    SLPRI_FG_ARGS(&mq->sbd.sbd_fg), startpage, npages, bmap_2_ios(r->biorq_bmap));
 
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 
