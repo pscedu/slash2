@@ -1486,8 +1486,6 @@ msl_pages_copyout(struct bmpc_ioreq *r)
 
 	npages = psc_dynarray_len(&r->biorq_pages);
 
-	psc_assert(npages);
-
 	/*
 	 * Due to page prefetching, the pages contained in biorq_pages
 	 * may exceed the requested len.
