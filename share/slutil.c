@@ -35,10 +35,10 @@
 
 #include "pfl/fcntl.h"
 #include "pfl/fs.h"
+#include "pfl/log.h"
 #include "pfl/stat.h"
 #include "pfl/str.h"
 #include "pfl/types.h"
-#include "pfl/log.h"
 
 #include "creds.h"
 #include "fid.h"
