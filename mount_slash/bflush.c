@@ -80,6 +80,7 @@ bmap_flush_biorq_expired(const struct bmpc_ioreq *a)
 		return (1);
 
 	PFL_GETTIMESPEC(&ts);
+	/* XXX timespeccmp(&a->biorq_expire, &ts, <) */
 	if ((a->biorq_expire.tv_sec < ts.tv_sec ||
 	    (a->biorq_expire.tv_sec == ts.tv_sec &&
 	     a->biorq_expire.tv_nsec <= ts.tv_nsec)))
@@ -98,7 +99,8 @@ bmap_free_all_locked(struct fidc_membh *f)
 
 	for (a = SPLAY_MIN(bmap_cache, &f->fcmh_bmaptree); a; a = b) {
 		b = SPLAY_NEXT(bmap_cache, &f->fcmh_bmaptree, a);
-		DEBUG_BMAP(PLL_INFO, a, "mark bmap free");
+		DEBUG_BMAP(PLL_DIAG, a, "mark bmap free");
+
 		/*
 		 * The MDS truncates the SLASH2 metafile on a full
 		 * truncate.  We need to throw away leases and request a
@@ -341,7 +343,7 @@ bmap_flush_resched(struct bmpc_ioreq *r, int rc)
 	struct bmap_cli_info *bci;
 	int delta;
 
-	DEBUG_BIORQ(PLL_INFO, r, "resched, rc = %d", rc);
+	DEBUG_BIORQ(PLL_DIAG, r, "resched, rc = %d", rc);
 
 	BMAP_LOCK(r->biorq_bmap);
 	BIORQ_LOCK(r);
@@ -552,7 +554,7 @@ bmap_flush_coalesce_map(struct bmpc_write_coalescer *bwc)
 	     i++, bmpce = bwc->bwc_bmpces[i]) {
 
 		bwc->bwc_iovs[i].iov_base = bmpce->bmpce_base +
-		    (i ? 0: (r->biorq_off - bmpce->bmpce_off));
+		    (i ? 0 : (r->biorq_off - bmpce->bmpce_off));
 
 		bwc->bwc_iovs[i].iov_len = MIN(tot_reqsz,
 		    (i ? BMPC_BUFSZ: BMPC_BUFSZ - (r->biorq_off - bmpce->bmpce_off)));
@@ -777,7 +779,7 @@ msbmflwthr_main(struct psc_thread *thr)
 		LIST_CACHE_FOREACH_SAFE(b, tmpb, &bmapFlushQ) {
 			if (!BMAP_TRYLOCK(b))
 				continue;
-			DEBUG_BMAP(PLL_INFO, b, "");
+			DEBUG_BMAP(PLL_DEBUG, b, "begin");
 			if ((b->bcm_flags & BMAP_TOFREE) ||
 			    (b->bcm_flags & BMAP_CLI_LEASEFAILED) ||
 			    (b->bcm_flags & BMAP_CLI_REASSIGNREQ)) {
