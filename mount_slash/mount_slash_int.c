@@ -472,6 +472,7 @@ msl_req_aio_add(struct pscrpc_request *rq,
     struct pscrpc_async_args *av)
 {
 	struct bmpc_ioreq *r = av->pointer_arg[MSL_CBARG_BIORQ];
+	struct psc_dynarray *a = av->pointer_arg[MSL_CBARG_BMPCE];
 	struct bmap_pagecache_entry *e;
 	struct slc_async_req *car;
 	struct srm_io_rep *mp;
@@ -497,15 +498,14 @@ msl_req_aio_add(struct pscrpc_request *rq,
 		int naio = 0;
 
 		OPSTAT_INCR(SLC_OPST_READ_CB_ADD);
-		DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
+		DYNARRAY_FOREACH(e, i, a) {
 			BMPCE_LOCK(e);
 			if (e->bmpce_flags & BMPCE_FAULTING) {
 				naio++;
 				e->bmpce_flags &= ~BMPCE_FAULTING;
 				e->bmpce_flags |= BMPCE_AIOWAIT;
-				DEBUG_BMPCE(PLL_DIAG, e,
-				    "set aio, r=%p", r);
 			}
+			DEBUG_BMPCE(PLL_INFO, e, "naio=%d", naio);
 			BMPCE_ULOCK(e);
 		}
 		/* Should have found at least one aio'd page. */
@@ -721,15 +721,13 @@ _msl_bmpce_rpc_done(const struct pfl_callerinfo *pci,
 	if (rc) {
 		e->bmpce_rc = rc;
 		e->bmpce_flags |= BMPCE_EIO;
-		DEBUG_BMPCE(PLL_DIAG, e, "set BMPCE_EIO");
-
 	} else {
 		e->bmpce_flags |= BMPCE_DATARDY;
-		DEBUG_BMPCE(PLL_DIAG, e, "datardy via read_cb");
 	}
 	/* AIOWAIT is removed no matter what. */
 	e->bmpce_flags &= ~BMPCE_AIOWAIT;
 	e->bmpce_flags &= ~BMPCE_FAULTING;
+	DEBUG_BMPCE(PLL_INFO, e, "rpc_done");
 
 	BMPCE_WAKE(e);
 	BMPCE_ULOCK(e);
