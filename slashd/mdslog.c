@@ -2218,7 +2218,13 @@ mds_journal_init(int disable_propagation, uint64_t fsuuid)
 void
 mds_reserve_slot(int count)
 {
-	pjournal_reserve_slot(slm_journal, count);
+	int nwaits;
+
+	nwaits = pjournal_reserve_slot(slm_journal, count);
+	while (nwaits > 0) {
+		nwaits--;
+		OPSTAT_INCR(SLM_OPST_JOURNAL_WAIT);
+	}
 }
 
 void
