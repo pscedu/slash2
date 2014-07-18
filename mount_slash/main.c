@@ -2314,7 +2314,7 @@ void
 mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
     struct stat *stb, int to_set, void *data)
 {
-	int rc = 0, unset_trunc = 0, getting_attrs = 0, flush_attrs = 0;
+	int i, rc = 0, unset_trunc = 0, getting_attrs = 0, flush_attrs = 0;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct msl_fhent *mfh = data;
@@ -2418,7 +2418,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
 		struct bmapc_memb *b;
-		int j;
 
 		if (!stb->st_size) {
 			DEBUG_FCMH(PLL_DIAG, c,
@@ -2466,10 +2465,10 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			 * XXX some writes can be cancelled, but no api
 			 * exists yet.
 			 */
-			DYNARRAY_FOREACH(b, j, &a)
+			DYNARRAY_FOREACH(b, i, &a)
 				bmap_biorq_expire(b);
 
-			DYNARRAY_FOREACH(b, j, &a) {
+			DYNARRAY_FOREACH(b, i, &a) {
 				bmap_biorq_waitempty(b);
 				psc_assert(atomic_read(&b->bcm_opcnt) == 1);
 				bmap_op_done_type(b, BMAP_OPCNT_TRUNCWAIT);
