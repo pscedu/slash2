@@ -23,9 +23,9 @@ site @PITT {
 		desc	= "SAM metadata";
 		type	= mds;
 		id	= 1;
-		nids	= app0-priv.frank.sam.pitt.edu,
-			  app0.frank.sam.pitt.edu;
-		jrnldev	= /dev/disk/by-id/dm-name-vg_head0-lv_data0;
+		nids	= supercell-mds0-priv.frank.sam.pitt.edu,
+			  supercell-mds0.frank.sam.pitt.edu;
+		jrnldev	= /dev/vg_system/journal;
 	}
 
 	resource ice {
