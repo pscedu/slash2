@@ -447,5 +447,6 @@ extern struct psc_poolmgr	*slc_biorq_pool;
 extern struct psc_poolmgr	*mfh_pool;
 
 extern psc_atomic32_t		 max_nretries;
+extern psc_atomic32_t		 max_readahead;
 
 #endif /* _MOUNT_SLASH_H_ */

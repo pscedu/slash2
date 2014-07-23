@@ -73,6 +73,8 @@ __static size_t	msl_pages_copyin(struct bmpc_ioreq *);
 __static int	msl_biorq_complete_fsrq(struct bmpc_ioreq *);
 __static void	msl_pages_schedflush(struct bmpc_ioreq *);
 
+psc_atomic32_t	max_readahead = PSC_ATOMIC32_INIT(MS_READAHEAD_MAXPGS);
+
 void mfsrq_seterr(struct msl_fsrqinfo *, int);
 
 struct psc_iostats	msl_diord_stat;
@@ -1533,7 +1535,7 @@ msl_getra(struct msl_fhent *mfh, int npages)
 
 	if (mfh->mfh_ra.mra_nseq > 0) {
 		rapages = MIN(npages * mfh->mfh_ra.mra_nseq,
-		    MS_READAHEAD_MAXPGS);
+		    psc_atomic32_read(&max_readahead));
 	}
 
 	DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh, "rapages=%d", rapages);

@@ -516,6 +516,23 @@ msctlparam_prefios_set(const char *val)
 }
 
 void
+msctlparam_readahead_get(char buf[PCP_VALUE_MAX])
+{
+	snprintf(buf, PCP_VALUE_MAX, "%d", 
+	    psc_atomic32_read(&max_readahead));
+}
+
+int
+msctlparam_readahead_set(const char *val)
+{
+	long value;
+
+	value = strtol(val, NULL, 10);
+	psc_atomic32_set(&max_readahead, value);
+	return (0);
+}
+
+void
 msctlparam_offlinenretries_get(char buf[PCP_VALUE_MAX])
 {
 	snprintf(buf, PCP_VALUE_MAX, "%d",
@@ -779,6 +796,8 @@ msctlthr_spawn(void)
 	psc_ctlparam_register_simple("offline_nretries",
 	    msctlparam_offlinenretries_get,
 	    msctlparam_offlinenretries_set);
+	psc_ctlparam_register_simple("readahead",
+	    msctlparam_readahead_get, msctlparam_readahead_set);
 
 	thr = pscthr_init(MSTHRT_CTL, 0, msctlthr_main, NULL,
 	    sizeof(struct psc_ctlthr), "msctlthr0");
