@@ -818,7 +818,6 @@ msl_read_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 int
 msl_dio_cb(struct pscrpc_request *rq, int rc, struct pscrpc_async_args *args)
 {
-	//struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CBARG_CSVC];
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CBARG_BIORQ];
 	struct msl_fsrqinfo *q;
 	struct srm_io_req *mq;
@@ -921,7 +920,6 @@ msl_pages_dio_getput(struct bmpc_ioreq *r)
 
 		rq->rq_bulk_abortable = 1;
 		rq->rq_interpret_reply = msl_dio_cb0;
-		rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 		rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQ] = r;
 		iovs[i].iov_base = r->biorq_buf + nbytes;
 		iovs[i].iov_len  = len;
