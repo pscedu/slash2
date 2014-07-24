@@ -173,9 +173,16 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	struct msl_fhent *mfh = q->mfsrq_mfh;
 	struct bmap_pagecache_entry *e;
 	struct bmpc_ioreq *r;
-	uint32_t aoff = (roff & ~BMPC_BUFMASK); /* aligned, relative offset */
-	uint32_t alen = len + (roff & BMPC_BUFMASK);
+	uint32_t aoff;
+	uint32_t alen;
 	uint32_t bmpce_off;
+	
+	/* 
+	 * Align the offset and length to the start of a page. Note that
+	 * roff is already made relative to the start of the given bmap.
+	 */
+	aoff = roff & ~BMPC_BUFMASK;
+	alen = len + (roff & BMPC_BUFMASK);
 
 	DEBUG_BMAP(PLL_DIAG, b,
 	    "adding req for (off=%u) (size=%u) (nbmpce=%d)", roff, len,
