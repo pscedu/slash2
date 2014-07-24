@@ -169,13 +169,11 @@ __static void
 msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
     int rqnum, uint32_t roff, uint32_t len, int op, uint64_t fsz)
 {
-	int i, npages = 0, maxpages;
+	int i, npages, maxpages;
 	struct msl_fhent *mfh = q->mfsrq_mfh;
 	struct bmap_pagecache_entry *e;
 	struct bmpc_ioreq *r;
-	uint32_t aoff;
-	uint32_t alen;
-	uint32_t bmpce_off;
+	uint32_t aoff, alen, bmpce_off;
 	
 	/* 
 	 * Align the offset and length to the start of a page. Note that
