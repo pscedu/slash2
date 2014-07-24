@@ -210,8 +210,6 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	if (alen % BMPC_BUFSZ)
 		npages++;
 
-	psc_assert(npages <= BMPC_IOMAXBLKS);
-
 	if (op == BIORQ_WRITE)
 		maxpages = npages;
 	else {

@@ -52,7 +52,6 @@ struct msl_fsrqinfo;
 
 #define BMPC_BUFSZ		SLASH_SLVR_BLKSZ
 #define BMPC_BUFMASK		(BMPC_BUFSZ - 1)
-#define BMPC_IOMAXBLKS		64
 #define BMPC_MAXBUFSRPC		(LNET_MTU / BMPC_BUFSZ)
 
 /* plus one because the offset in the first request might not be page aligned */
