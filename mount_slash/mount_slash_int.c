@@ -227,18 +227,16 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 		 */
 		rapages = msl_getra(mfh, npages);
 		if (rapages) {
-
-			i = (SLASH_BMAP_SIZE - aoff) / BMPC_BUFSZ;
-
 			/*
-			 * Read ahead must be contained within this
-			 * bmap.
+			 * Calculate the read size including the readahead 
+			 * portion. The entire read request must fall within
+			 * the current bmap and not exceed the EOF.
 			 */
+			i = (SLASH_BMAP_SIZE - aoff) / BMPC_BUFSZ;
 			maxpages = MIN(rapages, i);
-			/* Don't prefetch past EOF. */
+
 			i = ((fsz - (bmap_foff(b) + roff)) /
-			    BMPC_BUFSZ) +
-				((fsz % BMPC_BUFSZ) ? 1 : 0);
+			    BMPC_BUFSZ) + ((fsz % BMPC_BUFSZ) ? 1 : 0);
 
 			maxpages = MIN(maxpages, i);
 			if (maxpages < npages)
