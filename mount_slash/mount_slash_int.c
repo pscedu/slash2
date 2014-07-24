@@ -222,8 +222,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 		int rapages;
 
 		/*
-		 * First, query the read ahead struct in the mfh to
-		 * obtain rapages and ra direction.
+		 * Query the read ahead struct in the mfh to obtain rapages.
 		 */
 		rapages = msl_getra(mfh, npages);
 		if (rapages) {
@@ -235,8 +234,8 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 			i = (SLASH_BMAP_SIZE - aoff) / BMPC_BUFSZ;
 			maxpages = MIN(rapages, i);
 
-			i = ((fsz - (bmap_foff(b) + roff)) /
-			    BMPC_BUFSZ) + ((fsz % BMPC_BUFSZ) ? 1 : 0);
+			i = ((fsz - (bmap_foff(b) + roff)) / BMPC_BUFSZ) + 
+			    ((fsz % BMPC_BUFSZ) ? 1 : 0);
 
 			maxpages = MIN(maxpages, i);
 			if (maxpages < npages)
