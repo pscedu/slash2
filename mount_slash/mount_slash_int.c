@@ -227,21 +227,20 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 		 */
 		rapages = msl_getra(mfh, npages);
 		if (rapages) {
-			int n;
 
-			n = (SLASH_BMAP_SIZE - aoff) / BMPC_BUFSZ;
+			i = (SLASH_BMAP_SIZE - aoff) / BMPC_BUFSZ;
 
 			/*
 			 * Read ahead must be contained within this
 			 * bmap.
 			 */
-			maxpages = MIN(rapages, n);
+			maxpages = MIN(rapages, i);
 			/* Don't prefetch past EOF. */
-			n = ((fsz - (bmap_foff(b) + roff)) /
+			i = ((fsz - (bmap_foff(b) + roff)) /
 			    BMPC_BUFSZ) +
 				((fsz % BMPC_BUFSZ) ? 1 : 0);
 
-			maxpages = MIN(maxpages, n);
+			maxpages = MIN(maxpages, i);
 			if (maxpages < npages)
 				maxpages = npages;
 
