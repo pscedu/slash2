@@ -118,7 +118,7 @@ PSCTHR_MKCAST(msfsthr, msfs_thread, MSTHRT_FS);
 PSCTHR_MKCAST(msrcithr, msrci_thread, MSTHRT_RCI);
 PSCTHR_MKCAST(msrcmthr, msrcm_thread, MSTHRT_RCM);
 
-#define MS_READAHEAD_MAXPGS		256
+#define MS_READAHEAD_MAXPGS		128
 
 struct msl_ra {
 	off_t				 mra_loff;	/* last offset */
