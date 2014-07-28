@@ -260,22 +260,16 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 		BMAP_ULOCK(b);
 
 		psclog_diag("biorq = %p, bmpce = %p, i = %d, npages = %d, "
-		    "raoff = %"PRIx64", bmpce_foff = %"PRIx64,
+		    "bmpce_foff = %"PRIx64,
 		    r, e, i, npages,
-		    mfh->mfh_ra.mra_raoff,
 		    (off_t)(bmpce_off + bmap_foff(b)));
 
 		psc_dynarray_add(&r->biorq_pages, e);
 
 		if (i >= npages) {
-
 			BMPCE_LOCK(e);
 			e->bmpce_flags |= BMPCE_READA;
 			BMPCE_ULOCK(e);
-
-			MFH_LOCK(mfh);
-			mfh->mfh_ra.mra_raoff = bmap_foff(b) + bmpce_off;
-			MFH_ULOCK(mfh);
 		}
 	}
 }

@@ -122,7 +122,6 @@ PSCTHR_MKCAST(msrcmthr, msrcm_thread, MSTHRT_RCM);
 
 struct msl_ra {
 	off_t				 mra_loff;	/* last offset */
-	off_t				 mra_raoff;	/* current read ahead offset */
 	off_t				 mra_lsz;	/* last size */
 	int				 mra_nseq;	/* num sequential io's */
 };
