@@ -43,6 +43,16 @@ fcmh_2_fii(struct fidc_membh *f)
 	return (fcmh_get_pri(f));
 }
 
+static __inline struct fidc_membh *
+fii_2_fcmh(struct fcmh_iod_info *fii)
+{
+	struct fidc_membh *fcmh;
+
+	psc_assert(fii);
+	fcmh = (void *)fii;
+	return (fcmh - 1);
+}
+
 #define fcmh_2_fd(fcmh)		fcmh_2_fii(fcmh)->fii_fd
 
 #define sli_fcmh_get(fgp, fp)	fidc_lookup((fgp), FIDC_LOOKUP_CREATE, (fp))
