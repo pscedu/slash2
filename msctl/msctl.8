@@ -20,7 +20,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES ctl fuse rpc %
-.Dd May 15, 2014
+.Dd July 30, 2014
 .Dt MSCTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -435,6 +435,7 @@ lookups for network addresses.
 .\"	params => {
 .\"		mountpoint	=> "File hierarchy node where\n.Tn SLASH\nfile system is mounted.",
 .\"		pref_ios	=> "Preferred I/O system.",
+.\"		readahead_pgs	=> "Number of pages to read ahead when read I/O is performed.",
 .\"		offline_nretries=> "Number of times to retry remote peer connection\n" .
 .\"					"establishment per file system request.",
 .\"	},
@@ -542,6 +543,8 @@ information in
 .It Cm pscfs.entry_timeout
 Amount of time to cache name space entries in
 .Tn FUSE .
+.It Cm readahead_pgs
+Number of pages to read ahead when read I/O is performed.
 .It Cm rlim
 Process resource limits.
 See
