@@ -53,6 +53,11 @@ uint32_t sli_benchmark_bufsiz;
 
 #define NOTIFY_FSYNC_TIMEOUT	10		/* seconds */
  
+struct psc_listcache		ReadAheadQ;
+
+psc_spinlock_t			ReadAheadQ_lock = SPINLOCK_INIT;
+struct psc_waitq		ReadAheadQ_wait = PSC_WAITQ_INIT;
+
 int
 sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs, int nslvrs)
 {
@@ -104,6 +109,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	struct fidc_membh *f;
 	uint64_t seqno;
 	ssize_t rv;
+	struct fcmh_iod_info *fii;
 
 	OPSTAT_INCR(SLI_OPST_HANDLE_IO);
 
@@ -324,8 +330,29 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 * which are marked '0' in the bitmap.  Here we don't care about
 	 * buffer offsets since we're block aligned now
 	 */
-	if (rw == SL_WRITE) 
+	if (rw == SL_WRITE) { 
 		mp->rc = sli_ric_write_sliver(mq->offset, mq->size, slvr, nslvrs);
+		goto out;
+	}
+
+#if 0
+	FCMH_LOCK(f);
+	fii = fcmh_2_fii(f);
+	if (fcmh_2_off(f) == mq->offset || mq->offset == 0) {
+		fcmh_2_nseq(f)++;
+		if (!(f->fcmh_flags & FCMH_READAHEAD)) { 
+			f->fcmh_flags |= FCMH_READAHEAD; 
+			lc_addtail(&ReadAheadQ, fii);
+			fcmh_op_start_type(f, FCMH_OPCNT_READAHEAD);
+		}
+	} else
+		fcmh_2_nseq(f) = 0;
+
+	fcmh_2_off(f) = mq->offset + mq->size;
+	fcmh_2_bmap(f) = bmapno;
+	FCMH_ULOCK(f);
+#endif
+
  out:
 	for (i = 0; i < nslvrs && slvr[i]; i++) {
 		if (rw == SL_READ)

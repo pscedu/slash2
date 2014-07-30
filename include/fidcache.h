@@ -91,7 +91,8 @@ struct fidc_membh {
 #define	FCMH_NO_BACKFILE	(1 << 10)	/* fcmh does not have a backing file (sliod) */
 #define	FCMH_BUSY		(1 << 11)	/* fcmh being processed */
 #define	FCMH_DELETED		(1 << 12)	/* fcmh has been deleted */
-#define	_FCMH_FLGSHFT		(1 << 13)
+#define	FCMH_READAHEAD		(1 << 13)	/* fcmh has pending readahead */
+#define	_FCMH_FLGSHFT		(1 << 14)
 
 /* number of seconds in which attribute times out */
 #define FCMH_ATTR_TIMEO		8
@@ -254,6 +255,7 @@ struct fidc_membh {
 #define	FCMH_OPCNT_DIRTY_QUEUE		(1 << 6)	/* CLI: attribute flushing */
 #define	FCMH_OPCNT_UPSCH		(1 << 7)	/* MDS: temporarily held by upsch engine */
 #define	FCMH_OPCNT_READDIR		(1 << 8)	/* CLI: readahead readdir RPC */
+#define	FCMH_OPCNT_READAHEAD		(1 << 9)	/* IOD: readahead */
 
 void	fidc_init(int, int);
 

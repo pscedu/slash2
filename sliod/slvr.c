@@ -65,6 +65,10 @@ struct psc_listcache	 lruSlvrs;   /* LRU list of clean slivers which may be reap
 struct psc_listcache	 crcqSlvrs;  /* Slivers ready to be CRC'd and have their
 				      * CRCs shipped to the MDS. */
 
+extern struct psc_listcache             ReadAheadQ;
+extern psc_spinlock_t			ReadAheadQ_lock;
+extern struct psc_waitq			ReadAheadQ_wait;
+
 SPLAY_GENERATE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp)
 
 /**
@@ -1037,8 +1041,63 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 }
 
 void
+slireadahead_main(struct psc_thread *thr)
+{
+	struct slvr *s;
+	struct timespec ts;
+	struct fidc_membh *f;
+	int i, rc, bmapno, slvrno;
+	struct bmapc_memb *bmap;
+	struct fcmh_iod_info *fii;
+
+	ts.tv_sec = 5;
+	ts.tv_nsec = 0;
+	while (pscthr_run(thr)) {
+		fii = lc_peekhead(&ReadAheadQ);
+		if (!fii) {
+			spinlock(&ReadAheadQ_lock);
+			psc_waitq_waitrel(&ReadAheadQ_wait, &ReadAheadQ_lock, &ts);
+			continue;
+		}
+		f = fii_2_fcmh(fii);
+		FCMH_LOCK(f);
+
+		f->fcmh_flags &= ~FCMH_READAHEAD;
+		lc_remove(&ReadAheadQ, fii);
+
+		if (!fcmh_2_nseq(f)) {
+			fcmh_op_done_type(f, FCMH_OPCNT_READAHEAD);
+			continue;
+		}
+
+		bmapno = fcmh_2_bmap(f);
+		slvrno = fcmh_2_off(f) / SLASH_SLVR_SIZE;
+		if (slvrno >= SLASH_SLVRS_PER_BMAP) {
+			fcmh_op_done_type(f, FCMH_OPCNT_READAHEAD);
+			continue;
+		}
+		FCMH_ULOCK(f);
+	
+		rc = bmap_get(f, bmapno, SL_READ, &bmap);
+		if (!rc) {
+			OPSTAT_INCR(SLI_OPST_READAHEAD);
+			for (i = 0; i < 2; i++) {
+				s = slvr_lookup(slvrno + i, bmap_2_bii(bmap), SL_READ);
+				slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_READ);
+				slvr_rio_done(s);
+			}
+			bmap_op_done(bmap);
+		}
+		fcmh_op_done_type(f, FCMH_OPCNT_READAHEAD);
+	}
+}
+
+
+void
 slvr_cache_init(void)
 {
+	int i;
+
 	psc_poolmaster_init(&slvr_poolmaster,
 	    struct slvr, slvr_lentry, PPMF_AUTO, 64, 64, 0,
 	    NULL, NULL, NULL, "slvr");
@@ -1065,6 +1124,13 @@ slvr_cache_init(void)
 		pscthr_init(SLITHRT_ASYNC_IO, 0, sliaiothr_main, NULL,
 		    0, "sliaiothr");
 	}
+
+	lc_reginit(&ReadAheadQ, struct fcmh_iod_info,
+	    fii_lentry, "readahead");
+
+	for (i = 0; i < NSLVR_READAHEAD_THRS; i++)
+		pscthr_init(SLITHRT_READ_AHEAD, 0, slireadahead_main, NULL,
+		    0, "slireadahead%d", i);
 
 	sl_buffer_cache_init();
 

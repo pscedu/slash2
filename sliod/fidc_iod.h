@@ -35,6 +35,10 @@ struct fidc_membh;
 
 struct fcmh_iod_info {
 	int			fii_fd;		/* open file descriptor */
+	uint32_t		fii_off;
+	int			fii_bmap;
+	int			fii_nseq;	/* num sequential io's */
+	struct psclist_head	fii_lentry;	/* all fcmhs with readahead */
 };
 
 static __inline struct fcmh_iod_info *
@@ -54,6 +58,9 @@ fii_2_fcmh(struct fcmh_iod_info *fii)
 }
 
 #define fcmh_2_fd(fcmh)		fcmh_2_fii(fcmh)->fii_fd
+#define fcmh_2_off(fcmh)	fcmh_2_fii(fcmh)->fii_off
+#define fcmh_2_bmap(fcmh)	fcmh_2_fii(fcmh)->fii_bmap
+#define fcmh_2_nseq(fcmh)	fcmh_2_fii(fcmh)->fii_nseq
 
 #define sli_fcmh_get(fgp, fp)	fidc_lookup((fgp), FIDC_LOOKUP_CREATE, (fp))
 

@@ -53,12 +53,14 @@ enum {
 	SLITHRT_RII,		/* service RPC requests from ION */
 	SLITHRT_RIM,		/* service RPC requests from MDS */
 	SLITHRT_SLVR_CRC,	/* sliver CRC updaters */
+	SLITHRT_READ_AHEAD,	/* sliver read-ahead */
 	SLITHRT_STATFS,		/* statvfs(2) updater */
 	SLITHRT_TIOS,		/* iostats updater */
 	SLITHRT_USKLNDPL	/* userland socket Lustre net dev poll thr */
 };
 
 #define NSLVRCRC_THRS		4	/* perhaps default to ncores + configurable? */
+#define NSLVR_READAHEAD_THRS	2
 
 enum {
 	SLI_OPST_AIO_INSERT,
@@ -99,6 +101,9 @@ enum {
 
 	SLI_OPST_OPEN_FAIL,
 	SLI_OPST_OPEN_SUCCEED,
+
+	SLI_OPST_READAHEAD,
+
 	SLI_OPST_RECLAIM,
 	SLI_OPST_RECLAIM_FILE,
 	SLI_OPST_RECLAIM_CLOSE,
