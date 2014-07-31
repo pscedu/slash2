@@ -526,11 +526,11 @@ int
 msctlparam_readahead_set(const char *val)
 {
 	long value;
-	int endp;
+	char *endp;
 
 	value = strtol(val, &endp, 10);
 	if (*endp || endp == val ||
-	    val < 0 || val > 32 * 1024)
+	    value < 0 || value > 32 * 1024)
 		return (-1);
 	psc_atomic32_set(&max_readahead, value);
 	return (0);
