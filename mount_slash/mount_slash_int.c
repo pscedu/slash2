@@ -1432,7 +1432,8 @@ msl_pages_copyin(struct bmpc_ioreq *r)
 			end = (toff + nbytes) > (e->bmpce_start + e->bmpce_len) ?
 			    toff + nbytes : e->bmpce_start + e->bmpce_len;
 			e->bmpce_start = start;
-			e->bmpce_len = start - end;
+			e->bmpce_len = end - start;
+			psc_assert(e->bmpce_len <= BMPC_BUFSZ);
 		}
 
 		DEBUG_BMPCE(PLL_DIAG, e,
