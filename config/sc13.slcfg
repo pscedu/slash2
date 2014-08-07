@@ -19,7 +19,7 @@ site @SC13 {
 		type	= mds;
 		id	= 101;
 		nids	= lime;
-		jrnldev	= /dev/sdl;
+		jrnldev	= /dev/disk/by-id/scsi-1ATA_ST3500630AS_5QG0D167;
 	}
 
 	resource citron {
