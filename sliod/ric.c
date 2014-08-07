@@ -29,12 +29,12 @@
 #include <errno.h>
 #include <stdio.h>
 
+#include "pfl/ctlsvr.h"
+#include "pfl/iostats.h"
 #include "pfl/rpc.h"
 #include "pfl/rpclog.h"
 #include "pfl/rsx.h"
 #include "pfl/service.h"
-#include "pfl/ctlsvr.h"
-#include "pfl/iostats.h"
 
 #include "authbuf.h"
 #include "bmap_iod.h"
@@ -52,7 +52,7 @@ void	*sli_benchmark_buf;
 uint32_t sli_benchmark_bufsiz;
 
 #define NOTIFY_FSYNC_TIMEOUT	10		/* seconds */
- 
+
 struct psc_listcache		ReadAheadQ;
 
 psc_spinlock_t			ReadAheadQ_lock = SPINLOCK_INIT;
@@ -272,7 +272,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	psc_assert(!tsize);
 
 	if (needaio) {
-
 		aiocbr = sli_aio_reply_setup(rq, mq->size, mq->offset,
 		    slvr, nslvrs, iovs, nslvrs, rw);
 
@@ -286,7 +285,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 			SLVR_LOCK(slvr[i]);
 			if (slvr[i]->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR)) {
-				DEBUG_SLVR(PLL_INFO, slvr[i],
+				DEBUG_SLVR(PLL_DIAG, slvr[i],
 				    "aio early ready, rw=%s",
 				    rw == SL_WRITE ? "wr" : "rd");
 				SLVR_ULOCK(slvr[i]);
@@ -301,7 +300,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 				psc_assert(slvr[i]->slvr_flags & SLVR_AIOWAIT);
 				OPSTAT_INCR(SLI_OPST_AIO_INSERT);
 				SLVR_ULOCK(slvr[i]);
-				DEBUG_SLVR(PLL_INFO, slvr[i], "aio wait");
+				DEBUG_SLVR(PLL_DIAG, slvr[i], "aio wait");
 				rc = mp->rc = -SLERR_AIOWAIT;
 				pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
 				goto aio_out;
@@ -328,10 +327,11 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	/*
 	 * Write the sliver back to the filesystem, but only the blocks
 	 * which are marked '0' in the bitmap.  Here we don't care about
-	 * buffer offsets since we're block aligned now
+	 * buffer offsets since we're block aligned now.
 	 */
-	if (rw == SL_WRITE) { 
-		mp->rc = sli_ric_write_sliver(mq->offset, mq->size, slvr, nslvrs);
+	if (rw == SL_WRITE) {
+		mp->rc = sli_ric_write_sliver(mq->offset, mq->size,
+		    slvr, nslvrs);
 		goto out;
 	}
 
@@ -340,8 +340,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	fii = fcmh_2_fii(f);
 	if (fcmh_2_off(f) == mq->offset || mq->offset == 0) {
 		fcmh_2_nseq(f)++;
-		if (!(f->fcmh_flags & FCMH_READAHEAD)) { 
-			f->fcmh_flags |= FCMH_READAHEAD; 
+		if (!(f->fcmh_flags & FCMH_READAHEAD)) {
+			f->fcmh_flags |= FCMH_READAHEAD;
 			lc_addtail(&ReadAheadQ, fii);
 			fcmh_op_start_type(f, FCMH_OPCNT_READAHEAD);
 		}
