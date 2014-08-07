@@ -658,8 +658,7 @@ slvr_repl_prep(struct slvr *s)
  * @rw: read or write op
  */
 ssize_t
-slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
-    int flags)
+slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw)
 {
 	ssize_t rc = 0;
 
