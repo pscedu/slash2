@@ -26,13 +26,13 @@
 #define _SLIOD_SLVR_H_
 
 #include "pfl/aio.h"
+#include "pfl/atomic.h"
 #include "pfl/dynarray.h"
 #include "pfl/listcache.h"
+#include "pfl/log.h"
 #include "pfl/rpc.h"
 #include "pfl/tree.h"
 #include "pfl/vbitmap.h"
-#include "pfl/atomic.h"
-#include "pfl/log.h"
 
 #include "bmap.h"
 #include "bmap_iod.h"
@@ -65,13 +65,13 @@ struct slvr {
 };
 
 /* slvr_flags */
-#define	SLVR_FAULTING		(1 <<  0)	/* contents loading from disk or net */
-#define	SLVR_PINNED		(1 <<  1)	/* read/write in progress or CRC dirty */
-#define	SLVR_DATARDY		(1 <<  2)	/* ready for read / write activity */
-#define	SLVR_DATAERR		(1 <<  3)
-#define	SLVR_LRU		(1 <<  4)	/* cached but not dirty */
-#define	SLVR_CRCDIRTY		(1 <<  5)	/* crc does not match cached buffer */
-#define	SLVR_FREEING		(1 <<  6)	/* sliver is being reaped */
+#define SLVR_FAULTING		(1 <<  0)	/* contents loading from disk or net */
+#define SLVR_PINNED		(1 <<  1)	/* read/write in progress or CRC dirty */
+#define SLVR_DATARDY		(1 <<  2)	/* ready for read / write activity */
+#define SLVR_DATAERR		(1 <<  3)
+#define SLVR_LRU		(1 <<  4)	/* cached but not dirty */
+#define SLVR_CRCDIRTY		(1 <<  5)	/* crc does not match cached buffer */
+#define SLVR_FREEING		(1 <<  6)	/* sliver is being reaped */
 #define SLVR_AIOWAIT		(1 <<  7)	/* early return for AIO (for both local and remote) */
 #define SLVR_REPLWIRE		(1 <<  8)	/* prevent aio race */
 
@@ -152,7 +152,7 @@ struct sli_aiocb_reply {
 	struct iovec		  aiocbr_iovs[RIC_MAX_SLVRS_PER_IO];
 	struct slvr		 *aiocbr_slvrs[RIC_MAX_SLVRS_PER_IO];
 	int			  aiocbr_flags;
-	int		  	  aiocbr_nslvrs;
+	int			  aiocbr_nslvrs;
 	int			  aiocbr_niov;
 	struct slashrpc_cservice *aiocbr_csvc;
 	struct srt_bmapdesc	  aiocbr_sbd;
@@ -195,7 +195,7 @@ struct sli_aiocb_reply *
 	    struct slvr **, int, struct iovec *, int, enum rw);
 
 struct sli_aiocb_reply *
-	sli_aio_replreply_setup(struct pscrpc_request *, struct slvr *, 
+	sli_aio_replreply_setup(struct pscrpc_request *, struct slvr *,
 	    struct iovec *);
 
 void	sli_aio_aiocbr_release(struct sli_aiocb_reply *);
