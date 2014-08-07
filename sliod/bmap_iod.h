@@ -27,12 +27,12 @@
 
 #include <sys/time.h>
 
-#include "pfl/time.h"
+#include "pfl/bitflag.h"
 #include "pfl/list.h"
 #include "pfl/listcache.h"
-#include "pfl/rpc.h"
-#include "pfl/bitflag.h"
 #include "pfl/lock.h"
+#include "pfl/rpc.h"
+#include "pfl/time.h"
 
 #include "bmap.h"
 #include "slashrpc.h"
