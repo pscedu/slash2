@@ -92,10 +92,10 @@ struct slvr {
 #define SLVR_WAIT(s, cond)						\
 	do {								\
 		SLVR_LOCK_ENSURE(s);					\
-		DEBUG_SLVR(PLL_INFO, (s), "SLVR_WAIT");			\
+		DEBUG_SLVR(PLL_DIAG, (s), "SLVR_WAIT");			\
 		while (cond) {						\
 			psc_waitq_wait(&slvr_2_fcmh(s)->fcmh_waitq,	\
-				       &(s)->slvr_lock);		\
+			    &(s)->slvr_lock);				\
 			SLVR_LOCK(s);					\
 		}							\
 	} while (0)
@@ -124,7 +124,7 @@ struct slvr {
 	psclogs((level), SLISS_SLVR, "slvr@%p num=%hu pw=%u "		\
 	    "pr=%u "							\
 	    "ts="PSCPRI_TIMESPEC" "					\
-	    "bii@%p slab@%p bmap@%p fid:"SLPRI_FID" iocb@%p flgs:"	\
+	    "bii=%p slab=%p bmap=%p fid="SLPRI_FID" iocb=%p flgs="	\
 	    "%s%s%s%s%s%s%s%s%s :: " fmt,				\
 	    (s), (s)->slvr_num, (s)->slvr_pndgwrts,			\
 	    (s)->slvr_pndgreads,					\
