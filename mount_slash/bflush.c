@@ -602,6 +602,7 @@ bmap_flushable(struct bmapc_memb *b)
 		break;
 	}
 	if (flush) {
+		/* assert: the bmap should a write bmap at this point */
 		PFL_GETTIMESPEC(&ts);
 		secs = (int)(bmap_2_bci(b)->bci_etime.tv_sec - ts.tv_sec);
 		if (secs < BMAP_CLI_EXTREQSECS || (b->bcm_flags & BMAP_CLI_LEASEEXPIRED)) {
@@ -843,16 +844,16 @@ bmap_flush(void)
 		}
 
 		if (bmap_flushable(b) ||
-		    (b->bcm_flags & BMAP_TOFREE) ||
-		    (b->bcm_flags & BMAP_CLI_LEASEFAILED))
+		   (b->bcm_flags & BMAP_TOFREE) ||
+		   (b->bcm_flags & BMAP_CLI_LEASEFAILED)) {
 			psc_dynarray_add(&bmaps, b);
-
+			bmap_op_start_type(b, BMAP_OPCNT_FLUSH);
+		}
 		BMAP_ULOCK(b);
 
 		if (psc_dynarray_len(&bmaps) >= MAX_OUTSTANDING_RPCS)
 			break;
 	}
-
 	LIST_CACHE_ULOCK(&bmapFlushQ);
 
 	for (i = 0; i < psc_dynarray_len(&bmaps); i++) {
@@ -866,7 +867,7 @@ bmap_flush(void)
 		BMAP_LOCK(b);
 		if (b->bcm_flags & (BMAP_TOFREE | BMAP_CLI_LEASEFAILED)) {
 			bmpc_biorqs_destroy(b, bmap_2_bci(b)->bci_error);
-			continue;
+			goto next;
 		}
 
 		m = libsl_ios2resm(bmap_2_ios(b));
@@ -901,6 +902,10 @@ bmap_flush(void)
 			bmap_flush_send_rpcs(bwc);
 		}
 		psc_dynarray_reset(&reqs);
+ next:
+
+		BMAP_LOCK(b);
+		bmap_op_done_type(b, BMAP_OPCNT_FLUSH);
 	}
 
 	psc_dynarray_free(&reqs);
