@@ -26,16 +26,16 @@
 #include <inttypes.h>
 #include <time.h>
 
+#include "pfl/alloc.h"
 #include "pfl/cdefs.h"
 #include "pfl/dynarray.h"
 #include "pfl/list.h"
 #include "pfl/listcache.h"
-#include "pfl/rpc.h"
-#include "pfl/vbitmap.h"
-#include "pfl/alloc.h"
 #include "pfl/lock.h"
 #include "pfl/log.h"
 #include "pfl/pool.h"
+#include "pfl/rpc.h"
+#include "pfl/vbitmap.h"
 
 #include "cache_params.h"
 #include "fidcache.h"
