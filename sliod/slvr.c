@@ -470,10 +470,10 @@ sli_aio_register(struct slvr *s)
 	error = aio_read(aio);
 	if (error == 0) {
 		error = SLERR_AIOWAIT;
-		psclog_info("aio_read: fd=%d iocb=%p sliver=%p",
+		psclog_diag("aio_read: fd=%d iocb=%p sliver=%p",
 		    aio->aio_fildes, iocb, s);
 	} else {
-		psclog_warn("aio_read: fd=%d iocb=%p sliver=%p error=%d",
+		psclog_warnx("aio_read: fd=%d iocb=%p sliver=%p error=%d",
 		    aio->aio_fildes, iocb, s, error);
 		lc_remove(&sli_iocb_pndg, iocb);
 		slvr_iocb_release(iocb);
@@ -919,7 +919,7 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 			s->slvr_pndgreads = 1;
 
 		PSC_SPLAY_XINSERT(biod_slvrtree, &bii->bii_slvrs, s);
-		bmap_op_start_type(bii_2_bmap(bii), BMAP_OPCNT_SLVR); 
+		bmap_op_start_type(bii_2_bmap(bii), BMAP_OPCNT_SLVR);
 
 		/*
 		 * Until the slab is added to the sliver, the sliver is
@@ -1086,7 +1086,7 @@ slireadahead_main(struct psc_thread *thr)
 		}
 		fcmh_op_done_type(f, FCMH_OPCNT_READAHEAD);
 	}
-} 
+}
 
 void
 slvr_cache_init(void)
