@@ -191,8 +191,8 @@ sli_rpc_mds_unpack_fsuuid(struct pscrpc_request *rq, int msgtype)
 		struct stat stb;
 
 		xmkfn(fn, "%s/%s/%"PRIx64"/%s",
-		      globalConfig.gconf_fsroot, SL_RPATH_META_DIR,
-		      fsuuid, SL_RPATH_FIDNS_DIR);
+		    globalConfig.gconf_fsroot, SL_RPATH_META_DIR,
+		    fsuuid, SL_RPATH_FIDNS_DIR);
 
 		if (stat(fn, &stb))
 			psc_fatal("stat %s", fn);

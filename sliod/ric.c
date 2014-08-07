@@ -53,13 +53,13 @@ uint32_t sli_benchmark_bufsiz;
 
 #define NOTIFY_FSYNC_TIMEOUT	10		/* seconds */
 
-struct psc_listcache		ReadAheadQ;
-
-psc_spinlock_t			ReadAheadQ_lock = SPINLOCK_INIT;
-struct psc_waitq		ReadAheadQ_wait = PSC_WAITQ_INIT;
+struct psc_listcache		sli_readaheadq;
+struct psc_waitq		sli_readaheadq_waitq = PSC_WAITQ_INIT;
+psc_spinlock_t			sli_readaheadq_lock = SPINLOCK_INIT;
 
 int
-sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs, int nslvrs)
+sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
+    int nslvrs)
 {
 	int i, rc = 0;
 	sl_bmapno_t slvrno;
@@ -342,7 +342,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		fcmh_2_nseq(f)++;
 		if (!(f->fcmh_flags & FCMH_READAHEAD)) {
 			f->fcmh_flags |= FCMH_READAHEAD;
-			lc_addtail(&ReadAheadQ, fii);
+			lc_addtail(&sli_readaheadq, fii);
 			fcmh_op_start_type(f, FCMH_OPCNT_READAHEAD);
 		}
 	} else

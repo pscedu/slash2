@@ -87,7 +87,7 @@ SPLAY_HEAD(biod_slvrtree, slvr);
  */
 struct bmap_iod_info {
 	uint8_t			 bii_crcstates[SLASH_CRCS_PER_BMAP];
-	uint64_t                 bii_crcs[SLASH_CRCS_PER_BMAP];
+	uint64_t		 bii_crcs[SLASH_CRCS_PER_BMAP];
 
 	/*
 	 * Accumulate CRC updates here until its associated bcrcupd

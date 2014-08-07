@@ -65,15 +65,11 @@ struct psc_listcache	 lruSlvrs;   /* LRU list of clean slivers which may be reap
 struct psc_listcache	 crcqSlvrs;  /* Slivers ready to be CRC'd and have their
 				      * CRCs shipped to the MDS. */
 
-extern struct psc_listcache             ReadAheadQ;
-extern psc_spinlock_t			ReadAheadQ_lock;
-extern struct psc_waitq			ReadAheadQ_wait;
-
 SPLAY_GENERATE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp)
 
 /**
  * slvr_do_crc - Take the CRC of the data contained within a sliver
- *	add the update to a bcr.
+ *	and add the update to a bcr.
  * @s: the sliver reference.
  * Notes:  Don't hold the lock while taking the CRC.
  * Returns: errno on failure, 0 on success, -1 on not applicable.
@@ -106,13 +102,11 @@ slvr_do_crc(struct slvr *s, uint64_t *crcp)
 			    SLASH_SLVR_SIZE);
 
 			if (crc != slvr_2_crc(s)) {
-
 				DEBUG_BMAP(PLL_INFO, slvr_2_bmap(s),
 				    "CRC failure: slvr=%hu, crc=%"PSCPRIxCRC64,
 				    s->slvr_num, slvr_2_crc(s));
 				return (SLERR_BADCRC);
 			}
-
 		} else {
 			return (0);
 		}
@@ -222,8 +216,8 @@ slvr_aio_replreply(struct sli_aiocb_reply *a)
 		DEBUG_SLVR(PLL_ERROR, s, "rc=%d", rc);
 
 	slvr_rio_done(s);
- out:
 
+ out:
 	sli_aio_aiocbr_release(a);
 }
 
@@ -270,7 +264,6 @@ slvr_aio_reply(struct sli_aiocb_reply *a)
 	pscrpc_req_finished(rq);
 
  out:
-
 	for (i = 0; i < a->aiocbr_nslvrs; i++) {
 		if (a->aiocbr_rw == SL_READ)
 			slvr_rio_done(a->aiocbr_slvrs[i]);
@@ -342,7 +335,7 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 		s->slvr_err = rc;
 	} else {
 		s->slvr_flags |= SLVR_DATARDY;
-		DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
+		DEBUG_SLVR(PLL_DIAG, s, "FAULTING -> DATARDY");
 	}
 
 	a = s->slvr_aioreply;
@@ -401,14 +394,14 @@ sli_aio_replreply_setup(struct pscrpc_request *rq, struct slvr *s,
 }
 
 struct sli_aiocb_reply *
-sli_aio_reply_setup(struct pscrpc_request *rq,
-    uint32_t len, uint32_t off, struct slvr **slvrs, int nslvrs,
-    struct iovec *iovs, int niovs, enum rw rw)
+sli_aio_reply_setup(struct pscrpc_request *rq, uint32_t len,
+    uint32_t off, struct slvr **slvrs, int nslvrs, struct iovec *iovs,
+    int niovs, enum rw rw)
 {
-	int i;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct sli_aiocb_reply *a;
+	int i;
 
 	a = psc_pool_get(sli_aiocbr_pool);
 	memset(a, 0, sizeof(*a));
@@ -618,9 +611,9 @@ slvr_fsbytes_rio(struct slvr *s, uint32_t off, uint32_t size)
 ssize_t
 slvr_fsbytes_wio(struct slvr *s, uint32_t sblk, uint32_t size)
 {
-	DEBUG_SLVR(PLL_INFO, s, "sblk=%u size=%u", sblk, size);
+	DEBUG_SLVR(PLL_DIAG, s, "sblk=%u size=%u", sblk, size);
 
-	return (slvr_fsio(s, sblk*SLASH_SLVR_BLKSZ, size, SL_WRITE));
+	return (slvr_fsio(s, sblk * SLASH_SLVR_BLKSZ, size, SL_WRITE));
 }
 
 /**
@@ -960,8 +953,9 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 
 	LIST_CACHE_LOCK(&lruSlvrs);
 	LIST_CACHE_FOREACH_SAFE(s, dummy, &lruSlvrs) {
-		DEBUG_SLVR(PLL_INFO, s, "considering for reap, nwaiters=%d",
-			   atomic_read(&m->ppm_nwaiters));
+		DEBUG_SLVR(PLL_DIAG, s,
+		    "considering for reap, nwaiters=%d",
+		    atomic_read(&m->ppm_nwaiters));
 
 		/*
 		 * We are reaping, so it is fine to back off on some
@@ -1042,24 +1036,25 @@ slireadahead_main(struct psc_thread *thr)
 	struct slvr *s;
 	struct timespec ts;
 	struct fidc_membh *f;
-	int i, rc, bmapno, slvrno;
 	struct bmapc_memb *bmap;
 	struct fcmh_iod_info *fii;
+	int i, rc, bmapno, slvrno;
 
 	ts.tv_sec = 5;
 	ts.tv_nsec = 0;
 	while (pscthr_run(thr)) {
-		fii = lc_peekhead(&ReadAheadQ);
+		fii = lc_peekhead(&sli_readaheadq);
 		if (!fii) {
-			spinlock(&ReadAheadQ_lock);
-			psc_waitq_waitrel(&ReadAheadQ_wait, &ReadAheadQ_lock, &ts);
+			spinlock(&sli_readaheadq_lock);
+			psc_waitq_waitrel(&sli_readaheadq_waitq,
+			    &sli_readaheadq_lock, &ts);
 			continue;
 		}
 		f = fii_2_fcmh(fii);
 		FCMH_LOCK(f);
 
 		f->fcmh_flags &= ~FCMH_READAHEAD;
-		lc_remove(&ReadAheadQ, fii);
+		lc_remove(&sli_readaheadq, fii);
 
 		if (!fcmh_2_nseq(f)) {
 			fcmh_op_done_type(f, FCMH_OPCNT_READAHEAD);
@@ -1078,8 +1073,10 @@ slireadahead_main(struct psc_thread *thr)
 		if (!rc) {
 			OPSTAT_INCR(SLI_OPST_READAHEAD);
 			for (i = 0; i < 2; i++) {
-				s = slvr_lookup(slvrno + i, bmap_2_bii(bmap), SL_READ);
-				slvr_io_prep(s, 0, SLASH_SLVR_SIZE, SL_READ);
+				s = slvr_lookup(slvrno + i,
+				    bmap_2_bii(bmap), SL_READ);
+				slvr_io_prep(s, 0, SLASH_SLVR_SIZE,
+				    SL_READ);
 				slvr_rio_done(s);
 			}
 			bmap_op_done(bmap);
@@ -1120,12 +1117,12 @@ slvr_cache_init(void)
 		    0, "sliaiothr");
 	}
 
-	lc_reginit(&ReadAheadQ, struct fcmh_iod_info,
+	lc_reginit(&sli_readaheadq, struct fcmh_iod_info,
 	    fii_lentry, "readahead");
 
 	for (i = 0; i < NSLVR_READAHEAD_THRS; i++)
-		pscthr_init(SLITHRT_READ_AHEAD, 0, slireadahead_main, NULL,
-		    0, "slireadahead%d", i);
+		pscthr_init(SLITHRT_READ_AHEAD, 0, slireadahead_main,
+		    NULL, 0, "slireadahead%d", i);
 
 	sl_buffer_cache_init();
 

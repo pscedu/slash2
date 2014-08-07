@@ -207,6 +207,10 @@ extern struct psc_listcache	lruSlvrs;
 extern struct psc_listcache	crcqSlvrs;
 extern struct psc_waitq		sli_slvr_waitq;
 
+extern struct psc_listcache	sli_readaheadq;
+extern struct psc_waitq		sli_readaheadq_waitq;
+extern psc_spinlock_t		sli_readaheadq_lock;
+
 static __inline int
 slvr_cmp(const void *x, const void *y)
 {
