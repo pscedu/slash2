@@ -1026,6 +1026,8 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 
 	BMAP_LOCK(b);
+	psc_assert(b->bcm_flags & BMAP_WR);
+
 	/*
 	 * The BIORQ_FLUSHRDY bit prevents the request from being
 	 * processed prematurely.
