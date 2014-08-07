@@ -179,6 +179,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		return (mp->rc);
 	}
 
+	/* XXX move this until after success and do accounting for errors */
 	for (rwst = sli_rdwrstats; (rwst + 1)->size; rwst++)
 		if (mq->size < rwst->size)
 			break;
@@ -317,13 +318,13 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	    (rw == SL_WRITE ? BULK_GET_SINK : BULK_PUT_SOURCE),
 	    SRIC_BULK_PORTAL, iovs, nslvrs);
 	if (rc) {
-		psclog_warnx("bulkserver error on %s, rc = %d",
+		psclog_warnx("bulkserver error on %s, rc=%d",
 		    rw == SL_WRITE ? "write" : "read", rc);
 		PFL_GOTOERR(out, rc);
 	}
 
 	/*
-	 * Write the sliver back to the filesystem, but only the blocks
+	 * Write the sliver back to the filesystem but only the blocks
 	 * which are marked '0' in the bitmap.  Here we don't care about
 	 * buffer offsets since we're block aligned now.
 	 */
