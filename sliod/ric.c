@@ -48,14 +48,14 @@
 #include "sliod.h"
 #include "slvr.h"
 
-void	*sli_benchmark_buf;
-uint32_t sli_benchmark_bufsiz;
-
 #define NOTIFY_FSYNC_TIMEOUT	10		/* seconds */
 
-struct psc_listcache		sli_readaheadq;
-struct psc_waitq		sli_readaheadq_waitq = PSC_WAITQ_INIT;
-psc_spinlock_t			sli_readaheadq_lock = SPINLOCK_INIT;
+void				*sli_benchmark_buf;
+uint32_t			 sli_benchmark_bufsiz;
+
+struct psc_listcache		 sli_readaheadq;
+struct psc_waitq		 sli_readaheadq_waitq = PSC_WAITQ_INIT;
+psc_spinlock_t			 sli_readaheadq_lock = SPINLOCK_INIT;
 
 int
 sli_ric_write_sliver(uint32_t off, uint32_t size, struct slvr **slvrs,
@@ -102,6 +102,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	struct iovec iovs[RIC_MAX_SLVRS_PER_IO];
 	struct sli_aiocb_reply *aiocbr = NULL;
 	struct sli_rdwrstats *rwst;
+	struct fcmh_iod_info *fii;
 	struct slash_fidgen *fgp;
 	struct bmapc_memb *bmap;
 	struct srm_io_req *mq;
@@ -109,7 +110,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	struct fidc_membh *f;
 	uint64_t seqno;
 	ssize_t rv;
-	struct fcmh_iod_info *fii;
 
 	OPSTAT_INCR(SLI_OPST_HANDLE_IO);
 
@@ -282,14 +282,12 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		 * have been run.
 		 */
 		for (i = 0; i < nslvrs; i++) {
-
 			SLVR_LOCK(slvr[i]);
 			if (slvr[i]->slvr_flags & (SLVR_DATARDY | SLVR_DATAERR)) {
 				DEBUG_SLVR(PLL_DIAG, slvr[i],
 				    "aio early ready, rw=%s",
 				    rw == SL_WRITE ? "wr" : "rd");
 				SLVR_ULOCK(slvr[i]);
-
 			} else {
 				/*
 				 * Attach the reply to the first sliver
@@ -362,7 +360,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	}
 
  aio_out:
-
 	if (bmap)
 		bmap_op_done(bmap);
 
@@ -376,7 +373,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 }
 
 /*
- * XXX  We probably need a way to make sure that all data have been written before fsync().
+ * XXX  We probably need a way to make sure that all data have been
+ * written before fsync().
  */
 static int
 sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
