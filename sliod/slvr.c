@@ -30,16 +30,16 @@
 #define PSC_SUBSYS SLISS_SLVR
 #include "subsys_iod.h"
 
+#include "pfl/atomic.h"
+#include "pfl/ctlsvr.h"
+#include "pfl/fault.h"
 #include "pfl/listcache.h"
+#include "pfl/lock.h"
+#include "pfl/pthrutil.h"
 #include "pfl/rpc.h"
 #include "pfl/rsx.h"
 #include "pfl/treeutil.h"
 #include "pfl/vbitmap.h"
-#include "pfl/atomic.h"
-#include "pfl/ctlsvr.h"
-#include "pfl/fault.h"
-#include "pfl/lock.h"
-#include "pfl/pthrutil.h"
 
 #include "bmap_iod.h"
 #include "fidc_iod.h"
@@ -351,7 +351,7 @@ slvr_fsaio_done(struct sli_iocb *iocb)
 	SLVR_WAKEUP(s);
 	SLVR_ULOCK(s);
 
-	if (a) 
+	if (a)
 		slvr_aio_tryreply(a);
 }
 
@@ -371,8 +371,8 @@ sli_aio_iocb_new(struct slvr *s)
 }
 
 struct sli_aiocb_reply *
-sli_aio_replreply_setup(
-    struct pscrpc_request *rq, struct slvr *s, struct iovec *iov)
+sli_aio_replreply_setup(struct pscrpc_request *rq, struct slvr *s,
+    struct iovec *iov)
 {
 	struct srm_repl_read_rep *mp;
 	struct sli_aiocb_reply *a;
@@ -496,7 +496,7 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 	if (f->fcmh_flags & FCMH_NO_BACKFILE) {
 		psclog_warnx("no backing file: "SLPRI_FG" fd=%d",
 		    SLPRI_FG_ARGS(&f->fcmh_fg), slvr_2_fd(s));
-		return -EBADF;
+		return (-EBADF);
 	}
 
 	errno = 0;
@@ -577,7 +577,7 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 		    nblks, foff, save_errno);
 	} else {
 		v8 = slvr_2_buf(s, sblk);
-		DEBUG_SLVR(PLL_INFO, s, "ok %s size=%u off=%zu"
+		DEBUG_SLVR(PLL_DIAG, s, "ok %s size=%u off=%zu"
 		    " rc=%zd nblks=%d v8(%"PRIx64")",
 		    (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
 		    size, foff, rc, nblks, *v8);
@@ -640,8 +640,7 @@ slvr_repl_prep(struct slvr *s)
 		 */
 		DEBUG_SLVR(PLL_WARN, s,
 		    "MDS requested repldst of active slvr");
-		SLVR_WAIT(s, ((s->slvr_pndgwrts > 1) ||
-			      s->slvr_pndgreads));
+		SLVR_WAIT(s, s->slvr_pndgwrts > 1 || s->slvr_pndgreads);
 		s->slvr_flags &= ~SLVR_DATARDY;
 	}
 
@@ -749,7 +748,6 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw)
 __static void
 slvr_schedule_crc_locked(struct slvr *s)
 {
-
 	s->slvr_flags &= ~SLVR_LRU;
 
 	lc_remove(&lruSlvrs, s);
@@ -816,15 +814,14 @@ slvr_rio_done(struct slvr *s)
 	SLVR_LOCK(s);
 
 	s->slvr_pndgreads--;
-	DEBUG_SLVR(PLL_INFO, s, "read decref");
+	DEBUG_SLVR(PLL_DIAG, s, "read decref");
 	if (slvr_lru_tryunpin_locked(s)) {
-		DEBUG_SLVR(PLL_INFO, s, "decref, unpinned");
+		DEBUG_SLVR(PLL_DIAG, s, "decref, unpinned");
 	} else
-		DEBUG_SLVR(PLL_INFO, s, "decref, ops still pending or dirty");
+		DEBUG_SLVR(PLL_DIAG, s, "decref, ops still pending or dirty");
 
 	SLVR_ULOCK(s);
 }
-
 
 /**
  * slvr_wio_done - Called after a write on the given sliver has completed.
@@ -922,8 +919,7 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 			s->slvr_pndgreads = 1;
 
 		PSC_SPLAY_XINSERT(biod_slvrtree, &bii->bii_slvrs, s);
-		bmap_op_start_type(bii_2_bmap(bii), BMAP_OPCNT_SLVR);
-
+		bmap_op_start_type(bii_2_bmap(bii), BMAP_OPCNT_SLVR); 
 
 		/*
 		 * Until the slab is added to the sliver, the sliver is
@@ -1077,7 +1073,7 @@ slireadahead_main(struct psc_thread *thr)
 			continue;
 		}
 		FCMH_ULOCK(f);
-	
+
 		rc = bmap_get(f, bmapno, SL_READ, &bmap);
 		if (!rc) {
 			OPSTAT_INCR(SLI_OPST_READAHEAD);
@@ -1090,8 +1086,7 @@ slireadahead_main(struct psc_thread *thr)
 		}
 		fcmh_op_done_type(f, FCMH_OPCNT_READAHEAD);
 	}
-}
-
+} 
 
 void
 slvr_cache_init(void)
