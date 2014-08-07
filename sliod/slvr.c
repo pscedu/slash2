@@ -61,8 +61,8 @@ struct psc_listcache	 sli_iocb_pndg;
 
 psc_atomic64_t		 sli_aio_id = PSC_ATOMIC64_INIT(0);
 
-struct psc_listcache	 lruSlvrs;   /* LRU list of clean slivers which may be reaped */
-struct psc_listcache	 crcqSlvrs;  /* Slivers ready to be CRC'd and have their
+struct psc_listcache	 sli_lruslvrs;   /* LRU list of clean slivers which may be reaped */
+struct psc_listcache	 sli_crcqslvrs;  /* Slivers ready to be CRC'd and have their
 				      * CRCs shipped to the MDS. */
 
 SPLAY_GENERATE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp)
@@ -743,8 +743,8 @@ slvr_schedule_crc_locked(struct slvr *s)
 {
 	s->slvr_flags &= ~SLVR_LRU;
 
-	lc_remove(&lruSlvrs, s);
-	lc_addqueue(&crcqSlvrs, s);
+	lc_remove(&sli_lruslvrs, s);
+	lc_addqueue(&sli_crcqslvrs, s);
 }
 
 __static void
@@ -755,7 +755,7 @@ slvr_remove(struct slvr *s)
 
 	DEBUG_SLVR(PLL_DEBUG, s, "freeing slvr");
 
-	lc_remove(&lruSlvrs, s);
+	lc_remove(&sli_lruslvrs, s);
 
 	bii = slvr_2_bii(s);
 
@@ -794,7 +794,7 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 	 * first before asking for the sliver lock or you should use
 	 * trylock().
 	 */
-	lc_move2tail(&lruSlvrs, s);
+	lc_move2tail(&sli_lruslvrs, s);
 	return (1);
 }
 
@@ -920,7 +920,7 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 		 */
 		s->slvr_flags |= SLVR_LRU;
 		/* note: lc_addtail() will grab the list lock itself */
-		lc_addtail(&lruSlvrs, s);
+		lc_addtail(&sli_lruslvrs, s);
 
 		BII_ULOCK(bii);
 	}
@@ -951,8 +951,8 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 	n = 0;
 	psc_dynarray_init(&a);
 
-	LIST_CACHE_LOCK(&lruSlvrs);
-	LIST_CACHE_FOREACH_SAFE(s, dummy, &lruSlvrs) {
+	LIST_CACHE_LOCK(&sli_lruslvrs);
+	LIST_CACHE_FOREACH_SAFE(s, dummy, &sli_lruslvrs) {
 		DEBUG_SLVR(PLL_DIAG, s,
 		    "considering for reap, nwaiters=%d",
 		    atomic_read(&m->ppm_nwaiters));
@@ -979,7 +979,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 		if (n >= atomic_read(&m->ppm_nwaiters))
 			break;
 	}
-	LIST_CACHE_ULOCK(&lruSlvrs);
+	LIST_CACHE_ULOCK(&sli_lruslvrs);
 
 	for (i = 0; i < psc_dynarray_len(&a); i++) {
 		s = psc_dynarray_getpos(&a, i);
@@ -1095,11 +1095,10 @@ slvr_cache_init(void)
 	    NULL, NULL, NULL, "slvr");
 	slvr_pool = psc_poolmaster_getmgr(&slvr_poolmaster);
 
-	lc_reginit(&lruSlvrs, struct slvr, slvr_lentry, "lruslvrs");
-	lc_reginit(&crcqSlvrs, struct slvr, slvr_lentry, "crcqslvrs");
+	lc_reginit(&sli_lruslvrs, struct slvr, slvr_lentry, "lruslvrs");
+	lc_reginit(&sli_crcqslvrs, struct slvr, slvr_lentry, "crcqslvrs");
 
-	if (globalConfig.gconf_async_io) {
-
+	if (globalConfig.gconf_async_io) { 
 		psc_poolmaster_init(&sli_iocb_poolmaster,
 		    struct sli_iocb, iocb_lentry, PPMF_AUTO, 64, 64,
 		    1024, NULL, NULL, NULL, "iocb");

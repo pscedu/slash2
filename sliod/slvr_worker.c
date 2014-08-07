@@ -312,7 +312,7 @@ slislvrthr_proc(struct slvr *s)
 	 */
 	if (s->slvr_pndgwrts > 0) {
 		s->slvr_flags |= SLVR_LRU;
-		lc_addqueue(&lruSlvrs, s);
+		lc_addqueue(&sli_lruslvrs, s);
 
 		DEBUG_SLVR(PLL_DIAG, s, "descheduled due to pndg writes");
 
@@ -336,7 +336,7 @@ slislvrthr_proc(struct slvr *s)
 	b = bii_2_bmap(bii);
 
 	s->slvr_flags |= SLVR_LRU;
-	lc_addqueue(&lruSlvrs, s);
+	lc_addqueue(&sli_lruslvrs, s);
 	slvr_lru_tryunpin_locked(s);
 
 	bmap_op_start_type(b, BMAP_OPCNT_BCRSCHED);
@@ -418,16 +418,16 @@ slislvrthr_main(struct psc_thread *thr)
 
 		psc_mutex_lock(&mtx);
 
-		LIST_CACHE_LOCK(&crcqSlvrs);
+		LIST_CACHE_LOCK(&sli_crcqslvrs);
 
 		PFL_GETTIMESPEC(&expire);
 		expire.tv_sec -= BCR_MIN_AGE;
 
-		LIST_CACHE_FOREACH_SAFE(s, dummy, &crcqSlvrs) {
+		LIST_CACHE_FOREACH_SAFE(s, dummy, &sli_crcqslvrs) {
 			if (!SLVR_TRYLOCK(s))
 				continue;
 			if (timespeccmp(&expire, &s->slvr_ts, >)) {
-				lc_remove(&crcqSlvrs, s);
+				lc_remove(&sli_crcqslvrs, s);
 				psc_dynarray_add(&ss, s);
 			}
 			SLVR_ULOCK(s);
@@ -435,7 +435,7 @@ slislvrthr_main(struct psc_thread *thr)
 			    MAX_BMAP_NCRC_UPDATES)
 				break;
 		}
-		LIST_CACHE_ULOCK(&crcqSlvrs);
+		LIST_CACHE_ULOCK(&sli_crcqslvrs);
 
 		psc_mutex_unlock(&mtx);
 

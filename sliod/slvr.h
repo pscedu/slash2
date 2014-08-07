@@ -203,8 +203,8 @@ void	sli_aio_aiocbr_release(struct sli_aiocb_reply *);
 
 int	slvr_buffer_reap(struct psc_poolmgr *);
 
-extern struct psc_listcache	lruSlvrs;
-extern struct psc_listcache	crcqSlvrs;
+extern struct psc_listcache	sli_lruslvrs;
+extern struct psc_listcache	sli_crcqslvrs;
 extern struct psc_waitq		sli_slvr_waitq;
 
 extern struct psc_listcache	sli_readaheadq;
