@@ -121,7 +121,8 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w, int slvridx,
 }
 
 /**
- * sli_rii_handle_repl_read - Handler for sliver replication read request.
+ * sli_rii_handle_repl_read - Handler for sliver replication read
+ *	request.  This runs at the source IOS of a replication request.
  */
 __static int
 sli_rii_handle_repl_read(struct pscrpc_request *rq)
@@ -141,17 +142,11 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fg.fg_fid == FID_ANY) {
-		mp->rc = -EINVAL;
-		goto out;
-	}
-	if (mq->len <= 0 || mq->len > SLASH_SLVR_SIZE) {
-		mp->rc = -EINVAL;
-		goto out;
-	}
-	if (mq->slvrno < 0 || mq->slvrno >= SLASH_SLVRS_PER_BMAP) {
-		mp->rc = -EINVAL;
-		goto out;
-	}
+		PFL_GOTOERR(out, mp->rc = -EINVAL);
+	if (mq->len <= 0 || mq->len > SLASH_SLVR_SIZE)
+		PFL_GOTOERR(out, mp->rc = -EINVAL);
+	if (mq->slvrno < 0 || mq->slvrno >= SLASH_SLVRS_PER_BMAP)
+		PFL_GOTOERR(out, mp->rc = -EINVAL);
 
 	mp->rc = sli_fcmh_get(&mq->fg, &f);
 	if (mp->rc)
@@ -163,8 +158,8 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 		 * XXX abort bulk here, otherwise all future RPCs will
 		 * fail
 		 */
-		psclog_errorx("failed to load fid = "SLPRI_FID" bmap = %u: %s",
-		    mq->fg.fg_fid, mq->bmapno, slstrerror(mp->rc));
+		psclog_errorx("failed to load fid="SLPRI_FID" bmap=%u: %d",
+		    mq->fg.fg_fid, mq->bmapno, mp->rc);
 		goto out;
 	}
 
@@ -200,8 +195,19 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 		rv = 0;
 	}
 
-	mp->rc = slrpc_bulkserver(rq, BULK_PUT_SOURCE, SRII_BULK_PORTAL, &iov, 1);
+	SLVR_LOCK(s);
+	SLVR_WAIT(s, s->slvr_flags & SLVR_BLOCKED ||
+	    s->slvr_pndgwrts > 0);
+	s->slvr_flags |= SLVR_BLOCKED;
+	SLVR_ULOCK(s);
 
+	mp->rc = slrpc_bulkserver(rq, BULK_PUT_SOURCE, SRII_BULK_PORTAL,
+	    &iov, 1);
+	authbuf_sign(rq, PSCRPC_MSG_REPLY);
+
+	SLVR_LOCK(s);
+	s->slvr_flags &= ~SLVR_BLOCKED;
+	SLVR_WAKE(s);
 	slvr_rio_done(s);
 
  out:
@@ -212,12 +218,12 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 	return (mp->rc);
 }
 
-
 /**
- * sli_rii_handle_repl_read_aio - Handler for sliver replication aio read request.
+ * sli_rii_handle_repl_read_aio - Handler for sliver replication aio
+ *	read request.
  *
- *    The peer has completed an async I/O of a previously requested sliver and that
- *    sliver has been posted for GET.
+ *	The peer has completed an async I/O of a previously requested
+ *	sliver and that sliver has been posted for GET.
  */
 __static int
 sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
@@ -290,6 +296,7 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 	if (slvridx == (int)nitems(w->srw_slvr)) {
 		DEBUG_SLVR(PLL_ERROR, s,
 		    "failed to find slvr in wq=%p", w);
+		// XXX leak srw
 		PFL_GOTOERR(out, mp->rc = -ENOENT);
 	}
 
@@ -310,8 +317,7 @@ sli_rii_handle_repl_read_aio(struct pscrpc_request *rq)
 
 /**
  * sli_rii_replread_cb - Callback triggered when an SRMT_REPL_READ request
- *	finishes.  This means a replication destination is running this
- *	code.
+ *	finishes, running in the context of the replica destination.
  */
 __static int
 sli_rii_replread_cb(struct pscrpc_request *rq,
@@ -345,6 +351,8 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 
 /*
  * Process a replication request initiated by a SLASH2 client.
+ * This runs at the destination replica IOS and issues a REPL_READ RPC to
+ * a replica source IOS.
  */
 int
 sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
@@ -357,7 +365,7 @@ sli_rii_issue_repl_read(struct slashrpc_cservice *csvc, int slvrno,
 	struct slvr *s;
 	int rc;
 
-	psclog_info("srw %p fg "SLPRI_FID" bmapno %d slvrno %d idx "
+	psclog_diag("srw %p fg "SLPRI_FID" bmapno %d slvrno %d idx "
 	    "%d len %u", w, w->srw_fg.fg_fid, w->srw_bmapno, slvrno,
 	    slvridx, w->srw_len);
 

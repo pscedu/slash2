@@ -43,8 +43,8 @@
 struct bmap_iod_info;
 
 /**
- * slvr - Bmap "sliver" used for scheduling dirty slivers to be CRC'd
- *	and sent to the mds.
+ * Bmap "sliver" used for scheduling dirty slivers to be CRC'd
+ *	and sent to the MDS.
  * Note: slivers are locked through their bmap_iod_info lock.  A slab is
  *	the in-memory data represented by the sliver.
  */
@@ -66,14 +66,15 @@ struct slvr {
 
 /* slvr_flags */
 #define SLVR_FAULTING		(1 <<  0)	/* contents loading from disk or net */
-#define SLVR_PINNED		(1 <<  1)	/* read/write in progress or CRC dirty */
+#define SLVR_PINNED		(1 <<  1)	/* active references or CRC dirty */
 #define SLVR_DATARDY		(1 <<  2)	/* ready for read / write activity */
 #define SLVR_DATAERR		(1 <<  3)
 #define SLVR_LRU		(1 <<  4)	/* cached but not dirty */
-#define SLVR_CRCDIRTY		(1 <<  5)	/* crc does not match cached buffer */
+#define SLVR_CRCDIRTY		(1 <<  5)	/* CRC does not match cached buffer */
 #define SLVR_FREEING		(1 <<  6)	/* sliver is being reaped */
 #define SLVR_AIOWAIT		(1 <<  7)	/* early return for AIO (for both local and remote) */
-#define SLVR_REPLWIRE		(1 <<  8)	/* prevent aio race */
+#define SLVR_REPLWIRE		(1 <<  8)	/* prevent AIO race in repldst */
+#define SLVR_BLOCKED		(1 <<  9)	/* exclusive access */
 
 #define SLVR_LOCK(s)		spinlock(&(s)->slvr_lock)
 #define SLVR_ULOCK(s)		freelock(&(s)->slvr_lock)

@@ -76,6 +76,11 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 	psc_assert(m->bufcount > 1);
 
 	saf = pscrpc_msg_buf(m, m->bufcount - 1, sizeof(*saf));
+
+	/* If already computed, short circuit out of here. */
+	if (saf->saf_secret.sas_magic == AUTHBUF_MAGIC)
+		return;
+
 	saf->saf_secret.sas_magic = AUTHBUF_MAGIC;
 	saf->saf_secret.sas_nonce =
 	    psc_atomic64_inc_getnew(&sl_authbuf_nonce);
