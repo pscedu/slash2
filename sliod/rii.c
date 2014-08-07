@@ -196,9 +196,8 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 	}
 
 	SLVR_LOCK(s);
-	SLVR_WAIT(s, s->slvr_flags & SLVR_BLOCKED ||
-	    s->slvr_pndgwrts > 0);
-	s->slvr_flags |= SLVR_BLOCKED;
+	SLVR_WAIT(s, s->slvr_pndgwrts > 0);
+	s->slvr_blkgreads++;
 	SLVR_ULOCK(s);
 
 	mp->rc = slrpc_bulkserver(rq, BULK_PUT_SOURCE, SRII_BULK_PORTAL,
@@ -206,7 +205,7 @@ sli_rii_handle_repl_read(struct pscrpc_request *rq)
 	authbuf_sign(rq, PSCRPC_MSG_REPLY);
 
 	SLVR_LOCK(s);
-	s->slvr_flags &= ~SLVR_BLOCKED;
+	s->slvr_blkgreads--;
 	SLVR_WAKE(s);
 	slvr_rio_done(s);
 

@@ -61,9 +61,9 @@ struct psc_listcache	 sli_iocb_pndg;
 
 psc_atomic64_t		 sli_aio_id = PSC_ATOMIC64_INIT(0);
 
-struct psc_listcache	 sli_lruslvrs;   /* LRU list of clean slivers which may be reaped */
-struct psc_listcache	 sli_crcqslvrs;  /* Slivers ready to be CRC'd and have their
-				      * CRCs shipped to the MDS. */
+struct psc_listcache	 sli_lruslvrs;		/* LRU list of clean slivers which may be reaped */
+struct psc_listcache	 sli_crcqslvrs;		/* Slivers ready to be CRC'd and have their
+						 * CRCs shipped to the MDS. */
 
 SPLAY_GENERATE(biod_slvrtree, slvr, slvr_tentry, slvr_cmp)
 
@@ -478,12 +478,11 @@ sli_aio_register(struct slvr *s)
 __static ssize_t
 slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 {
-	int nblks, save_errno = 0;
+	int sblk, nblks, save_errno = 0;
 	struct fidc_membh *f;
 	uint64_t *v8;
 	ssize_t	rc;
 	size_t foff;
-	int sblk;
 
 	f = slvr_2_fcmh(s);
 	if (f->fcmh_flags & FCMH_NO_BACKFILE) {
@@ -546,6 +545,14 @@ slvr_fsio(struct slvr *s, uint32_t off, uint32_t size, enum rw rw)
 		psc_assert((off % SLASH_SLVR_BLKSZ) == 0);
 		foff = slvr_2_fileoff(s, sblk);
 		nblks = (size + SLASH_SLVR_BLKSZ - 1) / SLASH_SLVR_BLKSZ;
+
+		SLVR_LOCK(s);
+		SLVR_WAIT(s, s->slvr_blkgreads > 0);
+		SLVR_ULOCK(s);
+		/*
+		 * We incremented pndgwrts so any blocking reads should
+		 * wait for this counter to reach zero.
+		 */
 
 		rc = pwrite(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
 		    foff);
@@ -651,7 +658,8 @@ slvr_repl_prep(struct slvr *s)
  * @rw: read or write op
  */
 ssize_t
-slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw)
+slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw,
+    int flags)
 {
 	ssize_t rc = 0;
 
@@ -661,7 +669,7 @@ slvr_io_prep(struct slvr *s, uint32_t off, uint32_t len, enum rw rw)
 	 * Note we have taken our read or write references, so the
 	 * sliver won't be freed from under us.
 	 */
-	SLVR_WAIT(s, (s->slvr_flags & SLVR_FAULTING));
+	SLVR_WAIT(s, s->slvr_flags & SLVR_FAULTING);
 
 	DEBUG_SLVR(s->slvr_flags & SLVR_DATAERR ?
 	    PLL_ERROR : PLL_DIAG, s,
@@ -827,7 +835,7 @@ slvr_wio_done(struct slvr *s, int repl)
 	psc_assert(s->slvr_pndgwrts > 0);
 
 	s->slvr_pndgwrts--;
-	DEBUG_SLVR(PLL_INFO, s, "write decref");
+	DEBUG_SLVR(PLL_DIAG, s, "write decref");
 
 	PFL_GETTIMESPEC(&s->slvr_ts);
 
@@ -876,10 +884,13 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 
 		s->slvr_flags |= SLVR_PINNED;
 
-		if (rw == SL_WRITE)
-			s->slvr_pndgwrts++;
-		else
-			s->slvr_pndgreads++;
+		if (rw == SL_WRITE) {
+			if (++s->slvr_pndgwrts == 0)
+				psc_fatalx("max pndgwrts limit reached");
+		} else {
+			if (++s->slvr_pndgreads == 0)
+				psc_fatalx("max pndgwrts limit reached");
+		}
 
 		SLVR_ULOCK(s);
 		BII_ULOCK(bii);
@@ -924,9 +935,9 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 		BII_ULOCK(bii);
 	}
 	if (rw == SL_WRITE)
-		DEBUG_SLVR(PLL_INFO, s, "write incref");
+		DEBUG_SLVR(PLL_DIAG, s, "write incref");
 	else
-		DEBUG_SLVR(PLL_INFO, s, "read incref");
+		DEBUG_SLVR(PLL_DIAG, s, "read incref");
 
 	if (alloc) {
 		psc_pool_return(slvr_pool, tmp1);
@@ -1019,7 +1030,7 @@ sliaiothr_main(__unusedx struct psc_thread *thr)
 			(void)psc_fault_here_rc(SLI_FAULT_AIO_FAIL,
 			    &iocb->iocb_rc, EIO);
 
-			psclog_info("got signal: iocb=%p", iocb);
+			psclog_diag("got signal: iocb=%p", iocb);
 			lc_remove(&sli_iocb_pndg, iocb);
 			LIST_CACHE_ULOCK(&sli_iocb_pndg);
 			iocb->iocb_cbf(iocb);	/* slvr_fsaio_done() */

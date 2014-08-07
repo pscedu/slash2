@@ -50,10 +50,11 @@ struct bmap_iod_info;
  */
 struct slvr {
 	uint16_t		 slvr_num;	/* bmap slvr offset */
-	uint32_t		 slvr_pndgwrts;	/* # writes in progess, XXX track AIO reference */
+	uint16_t		 slvr_flags;	/* see SLVR_* flags */
+	uint16_t		 slvr_blkgreads;/* # blocking reads in progress */
+	uint16_t		 slvr_pndgwrts;	/* # writes in progess, XXX track AIO reference */
 	uint32_t		 slvr_pndgreads;/* # reads in progress */
-	uint32_t		 slvr_flags;	/* see SLVR_* flags */
-	int32_t			 slvr_err;
+	 int32_t		 slvr_err;
 	psc_spinlock_t		 slvr_lock;
 	struct bmap_iod_info	*slvr_bii;
 	struct timespec		 slvr_ts;
@@ -74,7 +75,6 @@ struct slvr {
 #define SLVR_FREEING		(1 <<  6)	/* sliver is being reaped */
 #define SLVR_AIOWAIT		(1 <<  7)	/* early return for AIO (for both local and remote) */
 #define SLVR_REPLWIRE		(1 <<  8)	/* prevent AIO race in repldst */
-#define SLVR_BLOCKED		(1 <<  9)	/* exclusive access */
 
 #define SLVR_LOCK(s)		spinlock(&(s)->slvr_lock)
 #define SLVR_ULOCK(s)		freelock(&(s)->slvr_lock)
