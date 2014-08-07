@@ -872,18 +872,17 @@ _slvr_lookup(const struct pfl_callerinfo *pci, uint32_t num,
 			BII_ULOCK(bii);
 			pscthr_yield();
 			goto retry;
-
-		} else {
-			s->slvr_flags |= SLVR_PINNED;
-
-			if (rw == SL_WRITE)
-				s->slvr_pndgwrts++;
-			else
-				s->slvr_pndgreads++;
 		}
+
+		s->slvr_flags |= SLVR_PINNED;
+
+		if (rw == SL_WRITE)
+			s->slvr_pndgwrts++;
+		else
+			s->slvr_pndgreads++;
+
 		SLVR_ULOCK(s);
 		BII_ULOCK(bii);
-
 	} else {
 		if (!alloc) {
 			alloc = 1;
@@ -1098,7 +1097,7 @@ slvr_cache_init(void)
 	lc_reginit(&sli_lruslvrs, struct slvr, slvr_lentry, "lruslvrs");
 	lc_reginit(&sli_crcqslvrs, struct slvr, slvr_lentry, "crcqslvrs");
 
-	if (globalConfig.gconf_async_io) { 
+	if (globalConfig.gconf_async_io) {
 		psc_poolmaster_init(&sli_iocb_poolmaster,
 		    struct sli_iocb, iocb_lentry, PPMF_AUTO, 64, 64,
 		    1024, NULL, NULL, NULL, "iocb");
