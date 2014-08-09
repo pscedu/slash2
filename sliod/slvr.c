@@ -811,7 +811,7 @@ slvr_lru_tryunpin_locked(struct slvr *s)
 void
 slvr_rio_done(struct slvr *s)
 {
-	SLVR_LOCK(s);
+	SLVR_RLOCK(s);
 
 	s->slvr_pndgreads--;
 	DEBUG_SLVR(PLL_DIAG, s, "read decref");
