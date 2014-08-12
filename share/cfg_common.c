@@ -30,12 +30,12 @@
 #include <ctype.h>
 #include <err.h>
 
-#include "pfl/hashtbl.h"
-#include "pfl/str.h"
 #include "pfl/dynarray.h"
+#include "pfl/hashtbl.h"
 #include "pfl/list.h"
 #include "pfl/log.h"
 #include "pfl/net.h"
+#include "pfl/str.h"
 
 #include "slconfig.h"
 #include "slerr.h"
