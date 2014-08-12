@@ -2988,10 +2988,9 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 	 * successfully.
 	 */
 #if 0
-	if (rc == -PFLERR_NOSYS) {
-		OPSTAT_INCR(SLC_OPST_GETXATTR_NOSYS);
+	if (rc == -PFLERR_NOSYS)
 		rc = 0;
-	}
+
 #endif
 	pscfs_reply_getxattr(pfr, buf, retsz, rc);
 
