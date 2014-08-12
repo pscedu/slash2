@@ -261,7 +261,7 @@ mslfsop_access(struct pscfs_req *pfr, pscfs_inum_t inum, int accmode)
 	struct fidc_membh *c;
 	int rc;
 
-	msfsthr_ensure();
+	msfsthr_ensure(pfr);
 
 	pscfs_getcreds(pfr, &pcr);
 	rc = msl_load_fcmh(pfr, inum, &c);
@@ -359,7 +359,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	int rc = 0;
 	struct bmap_cli_info *bci;
 
-	msfsthr_ensure();
+	msfsthr_ensure(pfr);
 
 	psc_assert(oflags & O_CREAT);
 	OPSTAT_INCR(SLC_OPST_CREAT);
@@ -509,7 +509,7 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	struct pscfs_creds pcr;
 	int rc = 0;
 
-	msfsthr_ensure();
+	msfsthr_ensure(pfr);
 
 	pscfs_getcreds(pfr, &pcr);
 
@@ -703,7 +703,7 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 	struct stat stb;
 	int rc;
 
-	msfsthr_ensure();
+	msfsthr_ensure(pfr);
 
 	OPSTAT_INCR(SLC_OPST_GETATTR);
 	pscfs_getcreds(pfr, &pcr);
@@ -748,7 +748,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	struct stat stb;
 	int rc = 0;
 
-	msfsthr_ensure();
+	msfsthr_ensure(pfr);
 
 	OPSTAT_INCR(SLC_OPST_LINK);
 	if (strlen(newname) == 0)
@@ -842,7 +842,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct stat stb;
 	int rc;
 
-	msfsthr_ensure();
+	msfsthr_ensure(pfr);
 	OPSTAT_INCR(SLC_OPST_MKDIR);
 
 	if (strlen(name) == 0)
@@ -1160,7 +1160,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct pscfs_creds pcr;
 	int rc;
 
-	msfsthr_ensure();
+	msfsthr_ensure(pfr);
 
 	if (strlen(name) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
@@ -1283,7 +1283,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct stat stb;
 	int rc;
 
-	msfsthr_ensure();
+	msfsthr_ensure(pfr);
 	OPSTAT_INCR(SLC_OPST_MKNOD);
 
 	if (!S_ISFIFO(mode))
@@ -1515,7 +1515,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 
 	OPSTAT_INCR(SLC_OPST_READDIR);
 
-	msfsthr_ensure();
+	msfsthr_ensure(pfr);
 
 	if (off < 0 || size > 1024 * 1024)
 		PFL_GOTOERR(out, rc = EINVAL);
@@ -1650,7 +1650,7 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct stat stb;
 	int rc;
 
-	msfsthr_ensure();
+	msfsthr_ensure(pfr);
 	memset(&sstb, 0, sizeof(sstb));
 
 	pscfs_getcreds(pfr, &pcr);
@@ -1678,7 +1678,7 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 	char buf[SL_PATH_MAX];
 	int rc;
 
-	msfsthr_ensure();
+	msfsthr_ensure(pfr);
 
 	rc = msl_load_fcmh(pfr, inum, &c);
 	if (rc)
@@ -1860,7 +1860,7 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 	struct fidc_membh *c;
 	int rc = 0, flush_attrs = 0;
 
-	msfsthr_ensure();
+	msfsthr_ensure(pfr);
 	OPSTAT_INCR(SLC_OPST_CLOSE);
 
 	c = mfh->mfh_fcmh;
@@ -1944,7 +1944,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	memset(&dstsstb, 0, sizeof(dstsstb));
 	srcfg.fg_fid = FID_ANY;
 
-	msfsthr_ensure();
+	msfsthr_ensure(pfr);
 	OPSTAT_INCR(SLC_OPST_RENAME);
 
 #if 0
@@ -2152,7 +2152,7 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 	struct statvfs sfb;
 	int rc;
 
-	msfsthr_ensure();
+	msfsthr_ensure(pfr);
 
 //	checkcreds
 
@@ -2203,7 +2203,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	struct stat stb;
 	int rc;
 
-	msfsthr_ensure();
+	msfsthr_ensure(pfr);
 	OPSTAT_INCR(SLC_OPST_SYMLINK);
 
 	if (strlen(buf) == 0 || strlen(name) == 0)
@@ -2323,7 +2323,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	struct pscfs_creds pcr;
 	struct timespec ts;
 
-	msfsthr_ensure();
+	msfsthr_ensure(pfr);
 
 	OPSTAT_INCR(SLC_OPST_SETATTR);
 
@@ -2672,7 +2672,7 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 	struct fidc_membh *f;
 	int rc = 0;
 
-	msfsthr_ensure();
+	msfsthr_ensure(pfr);
 
 	OPSTAT_INCR(SLC_OPST_WRITE);
 
@@ -2705,7 +2705,7 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	ssize_t len = 0;
 	int rc = 0;
 
-	msfsthr_ensure();
+	msfsthr_ensure(pfr);
 
 	OPSTAT_INCR(SLC_OPST_READ);
 
@@ -2746,7 +2746,7 @@ mslfsop_listxattr(struct pscfs_req *pfr, size_t size, pscfs_inum_t inum)
 	char *buf = NULL;
 	int rc;
 
-	msfsthr_ensure();
+	msfsthr_ensure(pfr);
 
 	OPSTAT_INCR(SLC_OPST_LISTXATTR);
 
@@ -2810,7 +2810,7 @@ mslfsop_setxattr(struct pscfs_req *pfr, const char *name,
 	struct iovec iov;
 	int rc;
 
-	msfsthr_ensure();
+	msfsthr_ensure(pfr);
 
 	OPSTAT_INCR(SLC_OPST_SETXATTR);
 
@@ -2879,7 +2879,7 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 
 	iov.iov_base = NULL;
 
-	msfsthr_ensure();
+	msfsthr_ensure(pfr);
 
 	OPSTAT_INCR(SLC_OPST_GETXATTR);
 
@@ -2966,7 +2966,7 @@ mslfsop_removexattr(struct pscfs_req *pfr, const char *name,
 	struct pscfs_creds pcr;
 	int rc;
 
-	msfsthr_ensure();
+	msfsthr_ensure(pfr);
 
 	OPSTAT_INCR(SLC_OPST_REMOVEXATTR);
 
