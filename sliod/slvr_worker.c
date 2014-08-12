@@ -120,10 +120,8 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 	rc = slrpc_bulkclient(rq, BULK_GET_SOURCE, SRMI_BULK_PORTAL,
 	    iovs, mq->ncrc_updates);
 
-	if (rc)
-		goto out;
-
-	rc = SL_NBRQSET_ADD(csvc, rq);
+	if (!rc)
+		rc = SL_NBRQSET_ADD(csvc, rq);
 
   out:
 	PSCFREE(iovs);
