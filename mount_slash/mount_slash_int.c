@@ -127,8 +127,6 @@ msl_biorq_page_valid(struct bmpc_ioreq *r, int idx, int checkonly)
 	toff = r->biorq_off;
 	tsize = r->biorq_len;
 
-	/* XXX does biorq_len cover the readahead pages? */
-
 	DYNARRAY_FOREACH(e, i, &r->biorq_pages) {
 
 		if (!i && toff > e->bmpce_off)

@@ -154,7 +154,7 @@ struct bmpc_ioreq {
 	 * might be not page aligned.
 	 */
 	uint32_t			 biorq_off;	/* filewise, bmap relative	*/
-	uint32_t			 biorq_len;	/* non-aligned, real length	*/
+	uint32_t			 biorq_len;	/* length of the original req	*/
 	uint32_t			 biorq_flags;	/* state and op type bits	*/
 	uint32_t			 biorq_retries;	/* dirty data flush retries	*/
 	sl_ios_id_t			 biorq_last_sliod;
