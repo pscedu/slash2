@@ -216,7 +216,7 @@ msfsthr_teardown(void *arg)
 }
 
 __static void
-msfsthr_ensure(void)
+msfsthr_ensure(struct pscfs_req *pfr)
 {
 	struct msfs_thread *mft;
 	struct psc_thread *thr;
