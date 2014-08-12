@@ -505,7 +505,6 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
-	OPSTAT_INCR(SLC_OPST_CREAT_DONE);
 }
 
 __static int
@@ -1789,7 +1788,10 @@ mslfsop_flush(struct pscfs_req *pfr, void *data)
 	struct msl_fhent *mfh = data;
 	int rc;
 
+	msfsthr_ensure(pfr);
+
 	OPSTAT_INCR(SLC_OPST_FLUSH);
+
 	DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh, "flushing (mfh=%p)", mfh);
 
 	spinlock(&mfh->mfh_lock);
@@ -1800,7 +1802,6 @@ mslfsop_flush(struct pscfs_req *pfr, void *data)
 	    "done flushing (mfh=%p, rc=%d)", mfh, rc);
 
 	pscfs_reply_flush(pfr, rc);
-	OPSTAT_INCR(SLC_OPST_FLUSH_DONE);
 }
 
 void
@@ -1975,7 +1976,6 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 
 	FCMH_UNBUSY(c);
 	mfh_decref(mfh);
-	OPSTAT_INCR(SLC_OPST_CLOSE_DONE);
 }
 
 void
@@ -2191,8 +2191,6 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
-
-	OPSTAT_INCR(SLC_OPST_RENAME_DONE);
 }
 
 void
@@ -2688,8 +2686,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
-
-	OPSTAT_INCR(SLC_OPST_SETATTR_DONE);
 }
 
 void
@@ -2698,8 +2694,11 @@ mslfsop_fsync(struct pscfs_req *pfr, __unusedx int datasync, void *data)
 	struct msl_fhent *mfh;
 	int rc;
 
-	mfh = data;
+	msfsthr_ensure(pfr);
+
 	OPSTAT_INCR(SLC_OPST_FSYNC);
+
+	mfh = data;
 
 	DEBUG_FCMH(PLL_DIAG, mfh->mfh_fcmh, "fsyncing via flush");
 
@@ -2708,7 +2707,6 @@ mslfsop_fsync(struct pscfs_req *pfr, __unusedx int datasync, void *data)
 	freelock(&mfh->mfh_lock);
 
 	pscfs_reply_fsync(pfr, rc);
-	OPSTAT_INCR(SLC_OPST_FSYNC_DONE);
 }
 
 void
@@ -2748,8 +2746,6 @@ psc_assert(rc != 1);
 	}
 	DEBUG_FCMH(PLL_DIAG, f, "write: buf=%p rc=%d sz=%zu "
 	    "off=%"PSCPRIdOFFT, buf, rc, size, off);
-
-	OPSTAT_INCR(SLC_OPST_WRITE_DONE);
 }
 
 void
@@ -2785,8 +2781,6 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 
 	DEBUG_FCMH(PLL_DIAG, f, "read (end): buf=%p rc=%d sz=%zu "
 	    "len=%zd off=%"PSCPRIdOFFT, buf, rc, size, len, off);
-
-	OPSTAT_INCR(SLC_OPST_READ_DONE);
 }
 
 void
