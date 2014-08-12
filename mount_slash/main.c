@@ -3217,6 +3217,8 @@ msl_init(void)
 	    NULL, NULL, "mfh");
 	mfh_pool = psc_poolmaster_getmgr(&mfh_poolmaster);
 
+	pndgReadaReqs = pscrpc_nbreqset_init(NULL, NULL);
+
 	pfl_workq_init(128);
 	pfl_wkthr_spawn(MSTHRT_WORKER, 4, "mswkthr%d");
 

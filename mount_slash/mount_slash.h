@@ -120,12 +120,13 @@ PSCTHR_MKCAST(msfsthr, msfs_thread, MSTHRT_FS);
 PSCTHR_MKCAST(msrcithr, msrci_thread, MSTHRT_RCI);
 PSCTHR_MKCAST(msrcmthr, msrcm_thread, MSTHRT_RCM);
 
-#define MS_READAHEAD_MAXPGS		128
+#define MS_READAHEAD_MAXPGS		32
 
 struct msl_ra {
 	off_t				 mra_loff;	/* last offset */
 	off_t				 mra_lsz;	/* last size */
 	int				 mra_nseq;	/* num sequential io's */
+	off_t				 mra_raoff;
 };
 
 #define MAX_BMAPS_REQ			2
@@ -235,7 +236,7 @@ void	 mfh_seterr(struct msl_fhent *, int);
 int	 msl_dio_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 ssize_t	 msl_io(struct pscfs_req *, struct msl_fhent *, char *, size_t, off_t, enum rw);
 int	 msl_read_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
-void	 msl_reada_rpc_launch(struct bmap_pagecache_entry **, int);
+void	 msl_reada_rpc_launch(struct psc_dynarray *, int, int, struct bmap *);
 int	 msl_readahead_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 int	 msl_stat(struct fidc_membh *, void *);
 

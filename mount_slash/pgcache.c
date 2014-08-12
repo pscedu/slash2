@@ -341,6 +341,7 @@ bmpc_biorqs_destroy(struct bmapc_memb *b, int rc)
 	struct bmap_pagecache *bmpc;
 	struct bmap_cli_info *bci;
 
+	BMAP_LOCK(b);
 	bci = bmap_2_bci(b);
 	if (rc && !bci->bci_flush_rc)
 		bci->bci_flush_rc = rc;

@@ -160,6 +160,7 @@ struct bmpc_ioreq {
 	sl_ios_id_t			 biorq_last_sliod;
 	psc_spinlock_t			 biorq_lock;
 	struct timespec			 biorq_expire;
+	int				 biorq_npages;
 	struct psc_dynarray		 biorq_pages;	/* array of bmpce		*/
 	struct psclist_head		 biorq_lentry;	/* chain on bmpc_pndg_biorqs	*/
 	struct psclist_head		 biorq_bwc_lentry;
