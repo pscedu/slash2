@@ -1886,10 +1886,11 @@ pscthr_log_get_uprog(struct psc_thread *thr)
 	mft = msfsthr(thr);
 
 	if (mft->mft_uprog[0] == '\0') {
+		struct msl_fhent *mfh;
 		pid_t pid;
 
 		pfr = mft->mft_pfr; /* set by GETPFR() */
-		mfh = pfr->pfr_fuse_fi->fh; // XXX protocol violation
+		mfh = (void *)pfr->pfr_fuse_fi->fh; // XXX protocol violation
 		if (mfh)
 			pid = mfh->mfh_pid;
 		else
