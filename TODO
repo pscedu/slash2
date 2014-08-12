@@ -550,6 +550,10 @@ st_blocks
 - cryptographic authentication integration (Kerberos/X.509/etc.)
 - per-client authbuf.key with uid= to control untrusted clients
    slkeymgt to manage/issue keys
+- are crcupdates coalescing?  seems we are generating many mdslog
+  entries for SETSIZE appends
+- support quotas by using s2size in dmu_objset_do_userquota_callbacks ->
+  do_userquota_callback -> zap_increment_int
 
 - replication notification service, informing users when workloads have
   finished, launching a job, etc.
