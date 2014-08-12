@@ -173,6 +173,8 @@ msl_fd_should_retry(struct msl_fhent *mfh, struct pscfs_req *pfr,
 		retry = 0;
 		break;
 	}
+	// XXX can this flag be changed dynamically?
+	// fcntl(2)
 	if (mfh->mfh_oflags & O_NONBLOCK)
 		retry = 0;
 	else if (++mfh->mfh_retries >= psc_atomic32_read(&max_nretries))
