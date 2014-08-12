@@ -247,7 +247,7 @@ msfsthr_ensure(void)
  * @sstb: file stat info.
  * @setattrflags: flags to slc_fcmh_setattrf().
  * @name: base name of file.
- * @lookupflags: fid cache lookup flags.
+ * @lookupflags: FID cache lookup flags.
  * @fp: value-result fcmh.
  */
 #define msl_create_fcmh(pfr, fg, fp)			\
@@ -262,6 +262,8 @@ mslfsop_access(struct pscfs_req *pfr, pscfs_inum_t inum, int accmode)
 	int rc;
 
 	msfsthr_ensure(pfr);
+
+	OPSTAT_INCR(SLC_OPST_ACCESS);
 
 	pscfs_getcreds(pfr, &pcr);
 	rc = msl_load_fcmh(pfr, inum, &c);
@@ -361,8 +363,9 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	msfsthr_ensure(pfr);
 
-	psc_assert(oflags & O_CREAT);
 	OPSTAT_INCR(SLC_OPST_CREAT);
+
+	psc_assert(oflags & O_CREAT);
 
 	if (!msl_progallowed(pfr))
 		PFL_GOTOERR(out, rc = EPERM);
@@ -510,6 +513,8 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	int rc = 0;
 
 	msfsthr_ensure(pfr);
+
+	OPSTAT_INCR(SLC_OPST_OPEN);
 
 	pscfs_getcreds(pfr, &pcr);
 
@@ -706,10 +711,12 @@ mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 	msfsthr_ensure(pfr);
 
 	OPSTAT_INCR(SLC_OPST_GETATTR);
+
 	pscfs_getcreds(pfr, &pcr);
+
 	/*
 	 * Lookup and possibly create a new fidcache handle for inum.
-	 * If the fid does not exist in the cache then a placeholder
+	 * If the FID does not exist in the cache then a placeholder
 	 * will be allocated.  msl_stat() will detect incomplete attrs
 	 * via FCMH_GETTING_ATTRS flag and RPC for them.
 	 */
@@ -751,6 +758,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	msfsthr_ensure(pfr);
 
 	OPSTAT_INCR(SLC_OPST_LINK);
+
 	if (strlen(newname) == 0)
 		PFL_GOTOERR(out, rc = ENOENT);
 	if (strlen(newname) > SL_NAME_MAX)
@@ -843,6 +851,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	int rc;
 
 	msfsthr_ensure(pfr);
+
 	OPSTAT_INCR(SLC_OPST_MKDIR);
 
 	if (strlen(name) == 0)
@@ -1284,6 +1293,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	int rc;
 
 	msfsthr_ensure(pfr);
+
 	OPSTAT_INCR(SLC_OPST_MKNOD);
 
 	if (!S_ISFIFO(mode))
@@ -1513,9 +1523,9 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off,
 	struct pscfs_creds pcr;
 	struct fidc_membh *d;
 
-	OPSTAT_INCR(SLC_OPST_READDIR);
-
 	msfsthr_ensure(pfr);
+
+	OPSTAT_INCR(SLC_OPST_READDIR);
 
 	if (off < 0 || size > 1024 * 1024)
 		PFL_GOTOERR(out, rc = EINVAL);
@@ -1651,6 +1661,9 @@ mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	int rc;
 
 	msfsthr_ensure(pfr);
+
+	OPSTAT_INCR(SLC_OPST_LOOKUP);
+
 	memset(&sstb, 0, sizeof(sstb));
 
 	pscfs_getcreds(pfr, &pcr);
@@ -1679,6 +1692,8 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 	int rc;
 
 	msfsthr_ensure(pfr);
+
+	OPSTAT_INCR(SLC_OPST_READLINK);
 
 	rc = msl_load_fcmh(pfr, inum, &c);
 	if (rc)
@@ -1861,6 +1876,7 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 	int rc = 0, flush_attrs = 0;
 
 	msfsthr_ensure(pfr);
+
 	OPSTAT_INCR(SLC_OPST_CLOSE);
 
 	c = mfh->mfh_fcmh;
@@ -1941,11 +1957,12 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	struct iovec iov[2];
 	int sticky, rc;
 
+	msfsthr_ensure(pfr);
+
+	OPSTAT_INCR(SLC_OPST_RENAME);
+
 	memset(&dstsstb, 0, sizeof(dstsstb));
 	srcfg.fg_fid = FID_ANY;
-
-	msfsthr_ensure(pfr);
-	OPSTAT_INCR(SLC_OPST_RENAME);
 
 #if 0
 	if (strcmp(oldname, ".") == 0 ||
@@ -2154,6 +2171,8 @@ mslfsop_statfs(struct pscfs_req *pfr, pscfs_inum_t inum)
 
 	msfsthr_ensure(pfr);
 
+	OPSTAT_INCR(SLC_OPST_STATFS);
+
 //	checkcreds
 
  retry:
@@ -2204,6 +2223,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	int rc;
 
 	msfsthr_ensure(pfr);
+
 	OPSTAT_INCR(SLC_OPST_SYMLINK);
 
 	if (strlen(buf) == 0 || strlen(name) == 0)
@@ -2877,11 +2897,11 @@ mslfsop_getxattr(struct pscfs_req *pfr, const char *name,
 	size_t retsz = 0;
 	int rc;
 
-	iov.iov_base = NULL;
-
 	msfsthr_ensure(pfr);
 
 	OPSTAT_INCR(SLC_OPST_GETXATTR);
+
+	iov.iov_base = NULL;
 
 	pscfs_getcreds(pfr, &pcr);
 
