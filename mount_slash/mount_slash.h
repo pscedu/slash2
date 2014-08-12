@@ -81,6 +81,8 @@ struct msrci_thread {
 struct msfs_thread {
 	size_t				 mft_uniqid;
 	struct psc_multiwait		 mft_mw;
+	char				 mft_uprog[PATH_MAX];
+	struct pscfs_req		*mft_pfr;
 };
 
 struct msbmfl_thread {

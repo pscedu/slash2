@@ -239,6 +239,9 @@ msfsthr_ensure(void)
 		pscthr_setready(thr);
 	}
 	psc_assert(thr->pscthr_type == MSTHRT_FS);
+
+	mft = thr->pscthr_private;
+	mft->mft_pfr = pfr;
 }
 
 /**
@@ -467,6 +470,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	FCMH_ULOCK(c);
 
 	/* XXX this load should be nonblocking so we can reply quickly */
+	// no-op?
 	rc = bmap_getf(c, 0, SL_WRITE, BMAPGETF_LOAD |
 	    BMAPGETF_NORETRIEVE, &b);
 	if (rc)
@@ -1862,6 +1866,38 @@ slc_getprog(pid_t pid, char fn[])
 	fn[0] = '\0';
 	snprintf(buf, sizeof(buf), "/proc/%d/exe", pid);
 	(void)readlink(buf, fn, PATH_MAX);
+}
+
+const char *
+pscthr_log_get_uprog(struct psc_thread *thr)
+{
+	struct psclog_data *pld;
+	struct msfs_thread *mft;
+	struct pscfs_req *pfr;
+
+	pld = psclog_getdata();
+	if (pld->pld_uprog)
+		return (pld->pld_uprog);
+
+	if (thr->pscthr_type != MSTHRT_FS)
+		return "<n/a>";
+
+	mft = msfsthr(thr);
+
+	if (mft->mft_uprog[0] == '\0') {
+		pid_t pid;
+
+		pfr = mft->mft_pfr; /* set by GETPFR() */
+		mfh = pfr->pfr_fuse_fi->fh; // XXX protocol violation
+		if (mfh)
+			pid = mfh->mfh_pid;
+		else
+			pid = pscfs_getclientctx(pfr)->pfcc_pid;
+
+		slc_getprog(pid, mft->mft_uprog);
+	}
+
+	return (pld->pld_uprog = mft->mft_uprog);
 }
 
 /**
