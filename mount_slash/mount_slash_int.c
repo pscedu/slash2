@@ -1386,6 +1386,7 @@ msl_pages_copyin(struct bmpc_ioreq *r)
 		 */
 		psc_assert(tsize);
 
+		BMPCE_LOCK(e);
 		/*
 		 * Re-check RBW sanity.  The waitq pointer within the
 		 * bmpce must still be valid in order for this check to
@@ -1413,8 +1414,6 @@ msl_pages_copyin(struct bmpc_ioreq *r)
 
 		/* Do the deed. */
 		memcpy(dest, src, nbytes);
-
-		BMPCE_LOCK(e);
 
 		if (toff == e->bmpce_off && nbytes == BMPC_BUFSZ)
 			e->bmpce_flags |= BMPCE_DATARDY;
