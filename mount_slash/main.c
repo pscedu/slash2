@@ -3555,9 +3555,9 @@ main(int argc, char *argv[])
 	parse_allowexe();
 	if (use_mapfile) {
 		psc_hashtbl_init(&slc_uidmap_ext, 0, struct uid_mapping,
-		    um_key, um_hentry, 128, NULL, "uidmapext");
+		    um_key, um_hentry, 191, NULL, "uidmapext");
 		psc_hashtbl_init(&slc_uidmap_int, 0, struct uid_mapping,
-		    um_key, um_hentry, 128, NULL, "uidmapint");
+		    um_key, um_hentry, 191, NULL, "uidmapint");
 		parse_mapfile();
 	}
 	msl_init();
