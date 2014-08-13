@@ -335,7 +335,7 @@ batchrq_send(struct batchrq *br)
 
 	ml = &batchrqs_pndg;
 
-	LIST_CACHE_ENSURE_LOCKED(ml);
+	LIST_CACHE_LOCK_ENSURE(ml);
 
 	br->br_flags |= BATCHF_PNDG | BATCHF_SENT;
 	lc_remove(ml, br);
