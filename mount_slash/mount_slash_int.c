@@ -176,8 +176,8 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	struct bmap_pagecache_entry *e;
 	struct bmpc_ioreq *r;
 	uint32_t aoff, alen, raoff, nbmaps, bmpce_off;
-	
-	/* 
+
+	/*
 	 * Align the offset and length to the start of a page. Note that
 	 * roff is already made relative to the start of the given bmap.
 	 */
@@ -1136,7 +1136,7 @@ msl_readahead_cb0(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	return (msl_readahead_cb(rq, rc, args));
 }
 void
-msl_reada_rpc_launch(struct psc_dynarray *bmpces, int startpage, int npages, 
+msl_reada_rpc_launch(struct psc_dynarray *bmpces, int startpage, int npages,
     struct bmap *b)
 {
 	struct bmap_pagecache_entry *e, **bmpces_cbarg;
@@ -1724,7 +1724,8 @@ msl_pages_copyout(struct bmpc_ioreq *r)
 static int times = 0;
 
 static int
-msl_getra(struct msl_fhent *mfh, int bsize, uint32_t off, int npages, uint32_t *raoff, int *rasize)
+msl_getra(struct msl_fhent *mfh, int bsize, uint32_t off, int npages,
+    uint32_t *raoff, int *rasize)
 {
 	int rapages;
 
@@ -1735,20 +1736,23 @@ msl_getra(struct msl_fhent *mfh, int bsize, uint32_t off, int npages, uint32_t *
 		MFH_ULOCK(mfh);
 		return 0;
 	}
-	if (off + npages * BMPC_BUFSZ + 4*SLASH_SLVR_SIZE < mfh->mfh_ra.mra_raoff) {
+	if (off + npages * BMPC_BUFSZ + 4 * SLASH_SLVR_SIZE <
+	    mfh->mfh_ra.mra_raoff) {
 		MFH_ULOCK(mfh);
 		return 0;
 	}
 
 	if (!mfh->mfh_ra.mra_raoff)
 		*raoff = off + npages * BMPC_BUFSZ;
-	else 
+	else
 		*raoff = mfh->mfh_ra.mra_raoff;
 
 	/* XX if raoff is 128KiB, what to do now */
 
-	rapages = MIN(mfh->mfh_ra.mra_nseq*2, psc_atomic32_read(&max_readahead));
-	rapages = MIN((bsize - (*raoff) + BMPC_BUFSZ - 1) / BMPC_BUFSZ, rapages);
+	rapages = MIN(mfh->mfh_ra.mra_nseq * 2,
+	    psc_atomic32_read(&max_readahead));
+	rapages = MIN((bsize - (*raoff) + BMPC_BUFSZ - 1) / BMPC_BUFSZ,
+	    rapages);
 
 	mfh->mfh_ra.mra_raoff = *raoff + rapages * BMPC_BUFSZ;
 	if (mfh->mfh_ra.mra_raoff >= bsize)
@@ -1766,14 +1770,13 @@ msl_setra(struct msl_fhent *mfh, size_t size, off_t off)
 	spinlock(&mfh->mfh_lock);
 
 	/*
-	 * If the first read starts from offset 0, the following
-	 * will trigger a read-ahead.  This is because as part of
-	 * the msl_fhent structure, the fields are zeroed during
-	 * allocation.
+	 * If the first read starts from offset 0, the following will
+	 * trigger a read-ahead.  This is because as part of the
+	 * msl_fhent structure, the fields are zeroed during allocation.
 	 */
-	if (mfh->mfh_ra.mra_loff + mfh->mfh_ra.mra_lsz == off) {
+	if (mfh->mfh_ra.mra_loff + mfh->mfh_ra.mra_lsz == off)
 		mfh->mfh_ra.mra_nseq++;
-	} else
+	else
 		mfh->mfh_ra.mra_nseq = 0;
 
 	mfh->mfh_ra.mra_loff = off;
@@ -1990,7 +1993,8 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 				if (e->bmpce_flags & BMPCE_EIO) {
 					e->bmpce_rc = 0;
 					e->bmpce_flags &= ~BMPCE_EIO;
-					DEBUG_BMPCE(PLL_DIAG, e, "clear BMPCE_EIO");
+					DEBUG_BMPCE(PLL_DIAG, e,
+					    "clear BMPCE_EIO");
 				}
 				BMPCE_ULOCK(e);
 			}
@@ -1999,11 +2003,13 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 			r->biorq_bmap = b;
 		} else {
 			/*
-			 * roff - (i * SLASH_BMAP_SIZE) should be zero if i == 1.
+			 * roff - (i * SLASH_BMAP_SIZE) should be zero
+			 * if i == 1.
 			 */
 			msl_biorq_build(q, b, bufp, i,
 			    roff - (i * SLASH_BMAP_SIZE), tlen,
-			    (rw == SL_READ) ? BIORQ_READ : BIORQ_WRITE, fsz);
+			    (rw == SL_READ) ? BIORQ_READ : BIORQ_WRITE,
+			    fsz);
 		}
 
 		bmap_op_done(b);
