@@ -793,7 +793,7 @@ msbmaprlsthr_main(struct psc_thread *thr)
 	struct resm_cli_info *rmci;
 	struct bmapc_memb *b;
 	struct sl_resm *resm;
-	struct psc_dynarray bcis = DYNARRAY_INIT_NOLOG;
+	struct psc_dynarray bcis = DYNARRAY_INIT;
 
 	/*
 	 * XXX: just put the resm's in the dynarray.  When pushing out
