@@ -821,8 +821,8 @@ msbmflwthr_main(struct psc_thread *thr)
 __static int
 bmap_flush(void)
 {
-	struct psc_dynarray reqs = DYNARRAY_INIT_NOLOG,
-	    bmaps = DYNARRAY_INIT_NOLOG;
+	struct psc_dynarray reqs = DYNARRAY_INIT,
+	    bmaps = DYNARRAY_INIT;
 	struct bmpc_write_coalescer *bwc;
 	struct bmap_pagecache *bmpc;
 	struct bmpc_ioreq *r, *tmp;
@@ -868,7 +868,8 @@ bmap_flush(void)
 		 */
 		BMAP_LOCK(b);
 		if (b->bcm_flags & (BMAP_TOFREE | BMAP_CLI_LEASEFAILED)) {
-			bmpc_biorqs_destroy(b, bmap_2_bci(b)->bci_error);
+			bmpc_biorqs_destroy_locked(b,
+			    bmap_2_bci(b)->bci_error);
 			goto next;
 		}
 
@@ -904,9 +905,8 @@ bmap_flush(void)
 			bmap_flush_send_rpcs(bwc);
 		}
 		psc_dynarray_reset(&reqs);
- next:
 
-		BMAP_LOCK(b);
+ next:
 		bmap_op_done_type(b, BMAP_OPCNT_FLUSH);
 	}
 
