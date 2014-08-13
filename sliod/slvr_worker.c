@@ -174,7 +174,7 @@ slvr_worker_push_crcups(void)
 
 		timespecsub(&now, &bcr->bcr_age, &diff);
 		if (bcr->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS ||
-		    diff.tv_sec >= BCR_MAX_AGE) {
+		    diff.tv_sec >= BCR_BATCH_AGE) {
 			psc_dynarray_add(bcrs, bcr);
 			bcr->bcr_bii->bii_bcr = NULL;
 			bcr_2_bmap(bcr)->bcm_flags |= BMAP_IOD_INFLIGHT;
@@ -419,7 +419,7 @@ slislvrthr_main(struct psc_thread *thr)
 		LIST_CACHE_LOCK(&sli_crcqslvrs);
 
 		PFL_GETTIMESPEC(&expire);
-		expire.tv_sec -= BCR_MIN_AGE;
+		expire.tv_sec -= CRC_QUEUE_AGE;
 
 		LIST_CACHE_FOREACH_SAFE(s, dummy, &sli_crcqslvrs) {
 			if (!SLVR_TRYLOCK(s))
@@ -442,7 +442,7 @@ slislvrthr_main(struct psc_thread *thr)
 		slvr_worker_push_crcups();
 
 		PFL_GETTIMESPEC(&expire);
-		expire.tv_sec += BCR_MIN_AGE;
+		expire.tv_sec += CRC_QUEUE_AGE;
 		psc_waitq_waitabs(&sli_slvr_waitq, NULL, &expire);
 
 		psc_dynarray_reset(&ss);

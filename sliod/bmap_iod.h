@@ -123,8 +123,8 @@ struct bmap_iod_info {
 #define BII_TRYLOCK(bii)	BMAP_TRYLOCK(bii_2_bmap(bii))
 #define BII_LOCK_ENSURE(bii)	BMAP_LOCK_ENSURE(bii_2_bmap(bii))
 
-#define BCR_MIN_AGE		3			/* in seconds */
-#define BCR_MAX_AGE		6			/* in seconds */
+#define CRC_QUEUE_AGE		6	/* time wait on CRC queue in seconds */
+#define BCR_BATCH_AGE		12	/* time wait for BCR batching in seconds */
 
 uint64_t	bim_getcurseq(void);
 void		bim_init(void);
