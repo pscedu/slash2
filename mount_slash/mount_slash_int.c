@@ -1933,7 +1933,7 @@ msl_io(struct pscfs_req *pfr, struct msl_fhent *mfh, char *buf,
 	end = (off + size - 1) / SLASH_BMAP_SIZE;
 	nr = end - start + 1;
 	if (nr > MAX_BMAPS_REQ) {
-		rc = EINVAL;
+		rc = -EINVAL;
 		return (rc);
 	}
 	mfh->mfh_retries = 0;
