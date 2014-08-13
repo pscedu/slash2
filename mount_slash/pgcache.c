@@ -202,7 +202,10 @@ bmpce_release_locked(struct bmap_pagecache_entry *e,
 		DEBUG_BMPCE(PLL_DIAG, e, "put on LRU");
 		PFL_GETPTIMESPEC(&e->bmpce_laccess);
 		e->bmpce_flags |= BMPCE_LRU;
+
+		// XXX locking order violation?
 		pll_add(&bmpc->bmpc_lru, e);
+
 		BMPCE_ULOCK(e);
 		return;
 	}
@@ -379,7 +382,7 @@ bmpc_biorqs_destroy_locked(struct bmapc_memb *b, int rc)
 	OPSTAT_INCR(SLC_OPST_BIORQ_DESTROY_BATCH);
 	psc_dynarray_free(&a);
 
-	BMAP_ULOCK(b);
+	BMAP_LOCK(b);
 }
 
 static __inline int
