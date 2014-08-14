@@ -1735,19 +1735,18 @@ msl_getra(struct msl_fhent *mfh, int bsize, uint32_t off, int npages,
 	MFH_LOCK(mfh);
 	if (!mfh->mfh_ra.mra_nseq) {
 		MFH_ULOCK(mfh);
-		return 0;
+		return (0);
 	}
 	if (off + npages * BMPC_BUFSZ + 4 * SLASH_SLVR_SIZE <
 	    mfh->mfh_ra.mra_raoff) {
 		MFH_ULOCK(mfh);
-		return 0;
+		return (0);
 	}
 
 	if (!mfh->mfh_ra.mra_raoff)
 		*raoff = off + npages * BMPC_BUFSZ;
 	else
 		*raoff = mfh->mfh_ra.mra_raoff;
-
 
 	rapages = MIN(mfh->mfh_ra.mra_nseq * 2,
 	    psc_atomic32_read(&max_readahead));
@@ -1761,7 +1760,7 @@ msl_getra(struct msl_fhent *mfh, int bsize, uint32_t off, int npages,
 	*rasize = rapages;
 	MFH_ULOCK(mfh);
 
-	return 1;
+	return (1);
 }
 
 static void
