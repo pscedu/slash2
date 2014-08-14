@@ -241,7 +241,7 @@ msl_biorq_build(struct msl_fsrqinfo *q, struct bmap *b, char *buf,
 	if (b->bcm_bmapno < nbmaps - 1)
 		bsize = SLASH_BMAP_SIZE;
 	else
-		bsize = fsz - SLASH_BMAP_SIZE * (nbmaps - 1);
+		bsize = fsz - (uint64_t)SLASH_BMAP_SIZE * (nbmaps - 1);
 
 	if (!msl_getra(mfh, bsize, aoff, npages, &raoff, &rapages))
 		return;
