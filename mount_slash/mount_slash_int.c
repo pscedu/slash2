@@ -1721,15 +1721,16 @@ msl_pages_copyout(struct bmpc_ioreq *r)
 	return (tbytes);
 }
 
-static int times = 0;
-
+/*
+ * msl_getra(): Figure out the location and size of the next readahead based on a number
+ *              of factors: original read size and offset, current block map size which
+ *              can be smaller at the end of a file.
+ */
 static int
 msl_getra(struct msl_fhent *mfh, int bsize, uint32_t off, int npages,
     uint32_t *raoff, int *rasize)
 {
 	int rapages;
-
-	times++;
 
 	MFH_LOCK(mfh);
 	if (!mfh->mfh_ra.mra_nseq) {
@@ -1747,7 +1748,6 @@ msl_getra(struct msl_fhent *mfh, int bsize, uint32_t off, int npages,
 	else
 		*raoff = mfh->mfh_ra.mra_raoff;
 
-	/* XX if raoff is 128KiB, what to do now */
 
 	rapages = MIN(mfh->mfh_ra.mra_nseq * 2,
 	    psc_atomic32_read(&max_readahead));
