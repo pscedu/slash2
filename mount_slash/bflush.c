@@ -840,6 +840,10 @@ bmap_flush(void)
 
 		psc_assert(b->bcm_flags & BMAP_FLUSHQ);
 
+		if (b->bcm_flags & BMAP_CLI_SCHED) {
+			BMAP_ULOCK(b);
+			continue;
+		}
 		if (b->bcm_flags & BMAP_CLI_REASSIGNREQ) {
 			BMAP_ULOCK(b);
 			continue;
@@ -848,6 +852,7 @@ bmap_flush(void)
 		if (bmap_flushable(b) ||
 		   (b->bcm_flags & BMAP_TOFREE) ||
 		   (b->bcm_flags & BMAP_CLI_LEASEFAILED)) {
+			b->bcm_flags |= BMAP_CLI_SCHED;
 			psc_dynarray_add(&bmaps, b);
 			bmap_op_start_type(b, BMAP_OPCNT_FLUSH);
 		}
@@ -868,6 +873,7 @@ bmap_flush(void)
 		 */
 		BMAP_LOCK(b);
 		if (b->bcm_flags & (BMAP_TOFREE | BMAP_CLI_LEASEFAILED)) {
+			b->bcm_flags &= ~BMAP_CLI_SCHED;
 			bmpc_biorqs_destroy_locked(b,
 			    bmap_2_bci(b)->bci_error);
 			goto next;
@@ -907,6 +913,8 @@ bmap_flush(void)
 		psc_dynarray_reset(&reqs);
 
  next:
+		BMAP_LOCK(b);
+		b->bcm_flags &= ~BMAP_CLI_SCHED;
 		bmap_op_done_type(b, BMAP_OPCNT_FLUSH);
 	}
 

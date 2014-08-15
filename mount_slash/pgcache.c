@@ -344,8 +344,6 @@ bmpc_biorqs_destroy_locked(struct bmapc_memb *b, int rc)
 	struct bmap_pagecache *bmpc;
 	struct bmap_cli_info *bci;
 
-	BMAP_LOCK_ENSURE(b);
-
 	bci = bmap_2_bci(b);
 	if (rc && !bci->bci_flush_rc)
 		bci->bci_flush_rc = rc;
@@ -381,8 +379,6 @@ bmpc_biorqs_destroy_locked(struct bmapc_memb *b, int rc)
 	}
 	OPSTAT_INCR(SLC_OPST_BIORQ_DESTROY_BATCH);
 	psc_dynarray_free(&a);
-
-	BMAP_LOCK(b);
 }
 
 static __inline int

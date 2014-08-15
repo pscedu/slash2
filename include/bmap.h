@@ -131,7 +131,7 @@ struct bmap {
 #define BMAP_MDCHNG		(1 <<  9)	/* op mode changing (e.g. READ -> WRITE) */
 #define BMAP_WAITERS		(1 << 10)	/* has bcm_fcmh waiters */
 #define BMAP_BUSY		(1 << 11)	/* temporary processing lock */
-#define _BMAP_FLSHFT		(1 << 12)
+#define _BMAP_FLSHFT		(1 << 13)
 
 #define bmap_2_fid(b)		fcmh_2_fid((b)->bcm_fcmh)
 

@@ -58,7 +58,8 @@ struct bmap_cli_info {
 #define BMAP_CLI_REASSIGNREQ	(_BMAP_FLSHFT << 1)
 #define BMAP_CLI_LEASEFAILED	(_BMAP_FLSHFT << 2)	/* lease request has failed */
 #define BMAP_CLI_LEASEEXPIRED	(_BMAP_FLSHFT << 3)	/* lease has expired, new one is needed */
-#define BMAP_CLI_BENCH		(_BMAP_FLSHFT << 4)
+#define BMAP_CLI_SCHED		(_BMAP_FLSHFT << 4)	/* bmap flush in progress */
+#define BMAP_CLI_BENCH		(_BMAP_FLSHFT << 5)
 
 /* XXX change horribly named flags */
 #define BMAP_CLI_MAX_LEASE	60 /* seconds */
