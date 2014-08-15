@@ -639,7 +639,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 {
 	int idx, large = 0, expired = 0;
 	struct bmpc_write_coalescer *bwc;
-	struct bmpc_ioreq *curr, *e = NULL;
+	struct bmpc_ioreq *curr, *last = NULL;
 	int32_t sz = 0;
 
 	psc_assert(psc_dynarray_len(biorqs) > *indexp);
@@ -647,7 +647,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 	bwc = psc_pool_get(bwc_pool);
 
 	for (idx = 0; idx + *indexp < psc_dynarray_len(biorqs);
-	    idx++, e = curr) {
+	    idx++, last = curr) {
 		curr = psc_dynarray_getpos(biorqs, idx + *indexp);
 
 		/*
@@ -662,7 +662,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 
 		if (idx)
 			/* Assert 'lowest to highest' ordering. */
-			psc_assert(curr->biorq_off >= e->biorq_off);
+			psc_assert(curr->biorq_off >= last->biorq_off);
 		else {
 			bwc->bwc_size = curr->biorq_len;
 			bwc->bwc_soff = curr->biorq_off;
@@ -674,8 +674,8 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 		 * The next request, 't', can be added to the coalesce
 		 * group because 't' overlaps or extends 'e'.
 		 */
-		if (curr->biorq_off <= biorq_voff_get(e)) {
-			sz = biorq_voff_get(curr) - biorq_voff_get(e);
+		if (curr->biorq_off <= biorq_voff_get(last)) {
+			sz = biorq_voff_get(curr) - biorq_voff_get(last);
 			if (sz > 0) {
 				if (sz + bwc->bwc_size >
 				    MIN_COALESCE_RPC_SZ) {
@@ -696,9 +696,9 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 			 */
 			pll_addtail(&bwc->bwc_pll, curr);
 
-			/* keep the old e if we didn't extend */
+			/* keep the old last if we didn't extend */
 			if (sz < 0)
-				curr = e;
+				curr = last;
 
 		} else if (expired) {
 			/*
