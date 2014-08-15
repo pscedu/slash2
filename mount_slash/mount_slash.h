@@ -167,8 +167,7 @@ struct msl_fhent {
 	off_t				 mfh_nbytes_wr;
 };
 
-#define MSL_FHENT_RASCHED		(1 << 0)
-#define MSL_FHENT_CLOSING		(1 << 1)
+#define MSL_FHENT_CLOSING		(1 << 0)
 
 #define MFH_LOCK(m)			spinlock(&(m)->mfh_lock)
 #define MFH_ULOCK(m)			freelock(&(m)->mfh_lock)
@@ -231,7 +230,6 @@ void	_msl_biorq_destroy(const struct pfl_callerinfo *, struct bmpc_ioreq *);
 
 void	 mfh_decref(struct msl_fhent *);
 void	 mfh_incref(struct msl_fhent *);
-void	 mfh_seterr(struct msl_fhent *, int);
 
 int	 msl_dio_cb(struct pscrpc_request *, int, struct pscrpc_async_args *);
 ssize_t	 msl_io(struct pscfs_req *, struct msl_fhent *, char *, size_t, off_t, enum rw);
@@ -331,7 +329,6 @@ enum {
 	SLC_OPST_DIRCACHE_HIT,
 	SLC_OPST_DIRCACHE_HIT_EOF,
 	SLC_OPST_DIRCACHE_ISSUE,
-	SLC_OPST_DIRCACHE_LOOKUP_DEL,
 	SLC_OPST_DIRCACHE_LOOKUP_HIT,
 	SLC_OPST_DIRCACHE_LOOKUP_MISS,
 	SLC_OPST_DIRCACHE_REG_ENTRY,
@@ -365,7 +362,6 @@ enum {
 
 	SLC_OPST_OPEN,
 
-	SLC_OPST_PREFETCH,
 	SLC_OPST_READ,
 	SLC_OPST_READ_PART_VALID,
 
@@ -384,7 +380,7 @@ enum {
 	SLC_OPST_READ_CB_ADD,
 	SLC_OPST_READ_RPC_LAUNCH,
 
-	SLC_OPST_READLINK, 
+	SLC_OPST_READLINK,
 	SLC_OPST_REMOVEXATTR,
 	SLC_OPST_RENAME,
 	SLC_OPST_RMDIR,
