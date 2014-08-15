@@ -840,11 +840,8 @@ bmap_flush(void)
 
 		psc_assert(b->bcm_flags & BMAP_FLUSHQ);
 
-		if (b->bcm_flags & BMAP_CLI_SCHED) {
-			BMAP_ULOCK(b);
-			continue;
-		}
-		if (b->bcm_flags & BMAP_CLI_REASSIGNREQ) {
+		if ((b->bcm_flags & BMAP_CLI_SCHED) ||
+		    (b->bcm_flags & BMAP_CLI_REASSIGNREQ)) {
 			BMAP_ULOCK(b);
 			continue;
 		}
