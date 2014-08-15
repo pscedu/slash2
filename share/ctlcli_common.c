@@ -216,7 +216,7 @@ sl_fcmh_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 
 	w = psc_ctl_get_display_maxwidth() - PSC_CTL_DISPLAY_WIDTH;
 	psc_fmt_human(buf, scf->scf_size);
-	printf("%016"SLPRIxFID" %c%c%c%c%c%c%c%c%c%c%c%c "
+	printf("%016"SLPRIxFID" %c%c%c%c%c%c%c%c%c%c%c "
 	    "%6o %5u %5u %7s "
 	    "%3d %7s "
 	    "%4u %6u",
@@ -230,7 +230,6 @@ sl_fcmh_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    scf->scf_flags & FCMH_HAVE_ATTRS	? 'A' : '-',
 	    scf->scf_flags & FCMH_GETTING_ATTRS	? 'G' : '-',
 	    scf->scf_flags & FCMH_CTOR_FAILED	? 'f' : '-',
-	    scf->scf_flags & FCMH_NO_BACKFILE	? 'N' : '-',
 	    scf->scf_flags & FCMH_BUSY		? 'S' : '-',
 	    scf->scf_flags & FCMH_DELETED	? 'D' : '-',
 	    scf->scf_st_mode, scf->scf_uid, scf->scf_gid, buf,

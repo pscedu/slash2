@@ -406,7 +406,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		 * this bmap.
 		 */
 		FCMH_LOCK(f);
-		if (!(f->fcmh_flags & FCMH_NO_BACKFILE)) {
+		if (!(f->fcmh_flags & FCMH_IOD_NO_BACKFILE)) {
 			FCMH_ULOCK(f);
 			fsync_time = CURRENT_SECONDS;
 			rc = fsync(fcmh_2_fd(f));

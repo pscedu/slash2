@@ -212,7 +212,7 @@ sli_fcmh_reopen(struct fidc_membh *f, const struct slash_fidgen *fg)
 		 * Need to reopen the backing file and possibly remove
 		 * the old one.
 		 */
-		if (!(f->fcmh_flags & FCMH_NO_BACKFILE)) {
+		if (!(f->fcmh_flags & FCMH_IOD_NO_BACKFILE)) {
 			if (close(fcmh_2_fd(f)) == -1) {
 				OPSTAT_INCR(SLI_OPST_CLOSE_FAIL);
 				DEBUG_FCMH(PLL_ERROR, f,
@@ -241,12 +241,12 @@ sli_fcmh_reopen(struct fidc_membh *f, const struct slash_fidgen *fg)
 		DEBUG_FCMH(PLL_INFO, f, "upfront unlink(), errno=%d",
 		    errno);
 
-	} else if (f->fcmh_flags & FCMH_NO_BACKFILE) {
+	} else if (f->fcmh_flags & FCMH_IOD_NO_BACKFILE) {
 
 		rc = sli_open_backing_file(f);
 		if (!rc)
 			f->fcmh_flags &=
-			    ~(FCMH_CTOR_FAILED | FCMH_NO_BACKFILE);
+			    ~(FCMH_CTOR_FAILED | FCMH_IOD_NO_BACKFILE);
 
 	} else if (fg->fg_gen < fcmh_2_gen(f)) {
 		/*
@@ -271,7 +271,7 @@ sli_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 	fii = fcmh_get_pri(f);
 	INIT_PSC_LISTENTRY(&fii->fii_lentry);
 	if (f->fcmh_fg.fg_gen == FGEN_ANY) {
-		f->fcmh_flags |= FCMH_NO_BACKFILE;
+		f->fcmh_flags |= FCMH_IOD_NO_BACKFILE;
 		DEBUG_FCMH(PLL_NOTICE, f, "refusing to open backing file "
 		    "with FGEN_ANY");
 
@@ -291,7 +291,7 @@ sli_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 			    "getattr backing file rc=%d", rc);
 	}
 	if (rc == ENOENT) {
-		f->fcmh_flags |= FCMH_NO_BACKFILE;
+		f->fcmh_flags |= FCMH_IOD_NO_BACKFILE;
 		rc = 0;
 	}
 	return (rc);
@@ -300,7 +300,7 @@ sli_fcmh_ctor(struct fidc_membh *f, __unusedx int flags)
 void
 sli_fcmh_dtor(__unusedx struct fidc_membh *f)
 {
-	if (!(f->fcmh_flags & FCMH_NO_BACKFILE)) {
+	if (!(f->fcmh_flags & FCMH_IOD_NO_BACKFILE)) {
 		if (close(fcmh_2_fd(f)) == -1) {
 			OPSTAT_INCR(SLI_OPST_CLOSE_FAIL);
 			DEBUG_FCMH(PLL_ERROR, f,

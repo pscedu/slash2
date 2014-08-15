@@ -57,6 +57,9 @@ fii_2_fcmh(struct fcmh_iod_info *fii)
 	return (fcmh - 1);
 }
 
+/* ios-specific fcmh_flags */
+#define FCMH_IOD_NO_BACKFILE     (_FCMH_FLGSHFT << 0)    /* no backing file exist */
+
 #define fcmh_2_fd(fcmh)		fcmh_2_fii(fcmh)->fii_fd
 #define fcmh_2_off(fcmh)	fcmh_2_fii(fcmh)->fii_off
 #define fcmh_2_bmap(fcmh)	fcmh_2_fii(fcmh)->fii_bmap
