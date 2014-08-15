@@ -188,7 +188,7 @@ bim_getcurseq(void)
 void
 bcr_ready_add(struct bcrcupd *bcr)
 {
-	DEBUG_BCR(PLL_INFO, bcr, "bcr add");
+	DEBUG_BCR(PLL_DIAG, bcr, "bcr add");
 
 	BII_LOCK_ENSURE(bcr->bcr_bii);
 	lc_addtail(&bcr_ready, bcr);
@@ -199,7 +199,7 @@ void
 bcr_ready_remove(struct bcrcupd *bcr)
 {
 
-	DEBUG_BCR(PLL_INFO, bcr, "bcr remove");
+	DEBUG_BCR(PLL_DIAG, bcr, "bcr remove");
 
 	lc_remove(&bcr_ready, bcr);
 
@@ -239,7 +239,7 @@ slibmaprlsthr_main(struct psc_thread *thr)
 				continue;
 			}
 			i = pll_nitems(&bii->bii_rls);
-			DEBUG_BMAP(PLL_INFO, b, "returning %d bmap leases", i);
+			DEBUG_BMAP(PLL_DIAG, b, "returning %d bmap leases", i);
 			while ((brls = pll_get(&bii->bii_rls))) {
 				memcpy(&brr->sbd[nrls++],
 				    &brls->bir_sbd, sizeof(struct
