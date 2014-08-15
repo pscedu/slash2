@@ -319,7 +319,7 @@ dump_fcmh_flags(int flags)
 	int seq = 0;
 
 	_dump_fcmh_flags_common(&flags, &seq);
-	PFL_PRFLAG(FCMH_IN_PTRUNC, &flags, &seq);
+	PFL_PRFLAG(FCMH_MDS_IN_PTRUNC, &flags, &seq);
 	if (flags)
 		printf(" unknown: %#x", flags);
 	printf("\n");

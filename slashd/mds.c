@@ -1594,7 +1594,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, sl_ios_id_t iosid,
 		}
 
 		FCMH_LOCK(f);
-		f->fcmh_flags &= ~FCMH_IN_PTRUNC;
+		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
 		fcmh_wake_locked(f);
 		FCMH_ULOCK(f);
 
@@ -1753,13 +1753,13 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	int rc, flag;
 
 	FCMH_LOCK(f);
-	rc = (f->fcmh_flags & FCMH_IN_PTRUNC) &&
+	rc = (f->fcmh_flags & FCMH_MDS_IN_PTRUNC) &&
 	    bmapno >= fcmh_2_fsz(f) / SLASH_BMAP_SIZE;
 	FCMH_ULOCK(f);
 	if (rc) {
 		csvc = slm_getclcsvc(exp);
 		FCMH_LOCK(f);
-		if (csvc && (f->fcmh_flags & FCMH_IN_PTRUNC)) {
+		if (csvc && (f->fcmh_flags & FCMH_MDS_IN_PTRUNC)) {
 			psc_dynarray_add(&fcmh_2_fmi(f)->fmi_ptrunc_clients,
 			    csvc);
 			FCMH_ULOCK(f);
@@ -2035,7 +2035,7 @@ slm_setattr_core(struct fidc_membh *f, struct srt_stat *sstb,
 		}
 
 		locked = FCMH_RLOCK(f);
-		f->fcmh_flags |= FCMH_IN_PTRUNC;
+		f->fcmh_flags |= FCMH_MDS_IN_PTRUNC;
 		fmi = fcmh_2_fmi(f);
 		fmi->fmi_ptrunc_size = sstb->sst_size;
 		FCMH_URLOCK(f, locked);
@@ -2121,7 +2121,7 @@ slm_ptrunc_prepare(void *p)
 			    PSCFS_SETATTRF_DATASIZE, &sstb);
 		}
 		(void)FCMH_RLOCK(f);
-		f->fcmh_flags &= ~FCMH_IN_PTRUNC;
+		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
 		FCMH_UNBUSY(f);
 		slm_ptrunc_wake_clients(wk);
 		return (0);
@@ -2243,7 +2243,7 @@ slm_ptrunc_apply(struct slm_wkdata_ptrunc *wk)
 
 	if (done) {
 		FCMH_LOCK(f);
-		f->fcmh_flags &= ~FCMH_IN_PTRUNC;
+		f->fcmh_flags &= ~FCMH_MDS_IN_PTRUNC;
 		fcmh_wake_locked(f);
 		FCMH_ULOCK(f);
 		slm_ptrunc_wake_clients(wk);

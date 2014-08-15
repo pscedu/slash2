@@ -67,7 +67,8 @@ struct fcmh_mds_info {
 #define fmi_ptrunc_clients	u.f.fmif_ptrunc_clients
 };
 
-#define FCMH_IN_PTRUNC		(_FCMH_FLGSHFT << 0)
+/* mds-specific fcmh_flags */
+#define FCMH_MDS_IN_PTRUNC	(_FCMH_FLGSHFT << 0)
 
 #define fcmh_2_inoh(f)		(&fcmh_2_fmi(f)->fmi_inodeh)
 #define fcmh_2_ino(f)		(&fcmh_2_inoh(f)->inoh_ino)

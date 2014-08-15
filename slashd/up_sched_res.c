@@ -1264,7 +1264,7 @@ upsch_enqueue(struct slm_update_data *upd)
 	locked = UPD_RLOCK(upd);
 	if (!psc_mlist_conjoint(&slm_upschq, upd)) {
 		if (upd->upd_type == UPDT_BMAP &&
-		    (upd_2_fcmh(upd)->fcmh_flags & FCMH_IN_PTRUNC) == 0)
+		    (upd_2_fcmh(upd)->fcmh_flags & FCMH_MDS_IN_PTRUNC) == 0)
 			psc_mlist_addtail(&slm_upschq, upd);
 		else
 			psc_mlist_addhead(&slm_upschq, upd);

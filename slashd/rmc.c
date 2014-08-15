@@ -1210,7 +1210,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 PFL_GOTOERR(out, mp->rc = -PFLERR_NOTSUP);
 
 			/* partial truncate */
-			if (f->fcmh_flags & FCMH_IN_PTRUNC)
+			if (f->fcmh_flags & FCMH_MDS_IN_PTRUNC)
 				PFL_GOTOERR(out, mp->rc =
 				    -SLERR_BMAP_IN_PTRUNC);
 			to_set &= ~PSCFS_SETATTRF_DATASIZE;
@@ -1239,7 +1239,7 @@ PFL_GOTOERR(out, mp->rc = -PFLERR_NOTSUP);
 			fcmh_2_gen(f)--;
 	} else if (!flush) {
 		if (tadj & PSCFS_SETATTRF_DATASIZE) {
-			f->fcmh_flags |= FCMH_IN_PTRUNC;
+			f->fcmh_flags |= FCMH_MDS_IN_PTRUNC;
 
 			csvc = slm_getclcsvc(rq->rq_export);
 			psc_dynarray_add(&fcmh_2_fmi(f)->
