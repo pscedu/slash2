@@ -639,7 +639,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 {
 	int idx, large = 0, expired = 0;
 	struct bmpc_write_coalescer *bwc;
-	struct bmpc_ioreq *t, *e = NULL;
+	struct bmpc_ioreq *curr, *e = NULL;
 	int32_t sz = 0;
 
 	psc_assert(psc_dynarray_len(biorqs) > *indexp);
@@ -647,26 +647,26 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 	bwc = psc_pool_get(bwc_pool);
 
 	for (idx = 0; idx + *indexp < psc_dynarray_len(biorqs);
-	    idx++, e = t) {
-		t = psc_dynarray_getpos(biorqs, idx + *indexp);
+	    idx++, e = curr) {
+		curr = psc_dynarray_getpos(biorqs, idx + *indexp);
 
 		/*
 		 * If any member is expired then we'll push everything
 		 * out.
 		 */
 		if (!expired)
-			expired = bmap_flush_biorq_expired(t);
+			expired = bmap_flush_biorq_expired(curr);
 
-		DEBUG_BIORQ(PLL_DIAG, t, "biorq #%d (expired=%d)", idx,
+		DEBUG_BIORQ(PLL_DIAG, curr, "biorq #%d (expired=%d)", idx,
 		    expired);
 
 		if (idx)
 			/* Assert 'lowest to highest' ordering. */
-			psc_assert(t->biorq_off >= e->biorq_off);
+			psc_assert(curr->biorq_off >= e->biorq_off);
 		else {
-			bwc->bwc_size = t->biorq_len;
-			bwc->bwc_soff = t->biorq_off;
-			pll_addtail(&bwc->bwc_pll, t);
+			bwc->bwc_size = curr->biorq_len;
+			bwc->bwc_soff = curr->biorq_off;
+			pll_addtail(&bwc->bwc_pll, curr);
 			continue;
 		}
 
@@ -674,8 +674,8 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 		 * The next request, 't', can be added to the coalesce
 		 * group because 't' overlaps or extends 'e'.
 		 */
-		if (t->biorq_off <= biorq_voff_get(e)) {
-			sz = biorq_voff_get(t) - biorq_voff_get(e);
+		if (curr->biorq_off <= biorq_voff_get(e)) {
+			sz = biorq_voff_get(curr) - biorq_voff_get(e);
 			if (sz > 0) {
 				if (sz + bwc->bwc_size >
 				    MIN_COALESCE_RPC_SZ) {
@@ -694,11 +694,11 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 			 * All subsequent requests that do not extend our range
 			 * should be collapsed here.
 			 */
-			pll_addtail(&bwc->bwc_pll, t);
+			pll_addtail(&bwc->bwc_pll, curr);
 
 			/* keep the old e if we didn't extend */
 			if (sz < 0)
-				t = e;
+				curr = e;
 
 		} else if (expired) {
 			/*
@@ -715,9 +715,9 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *indexp)
 			 * resume activity with 't' as the base.
 			 */
 			bwc_desched(bwc);
-			bwc->bwc_size = t->biorq_len;
-			bwc->bwc_soff = t->biorq_off;
-			pll_add(&bwc->bwc_pll, t);
+			bwc->bwc_size = curr->biorq_len;
+			bwc->bwc_soff = curr->biorq_off;
+			pll_add(&bwc->bwc_pll, curr);
 			OPSTAT_INCR(SLC_OPST_BMAP_FLUSH_COALESCE_RESTART);
 		}
 	}

@@ -1062,7 +1062,7 @@ slireadahead_main(struct psc_thread *thr)
 		f = fii_2_fcmh(fii);
 		FCMH_LOCK(f);
 
-		f->fcmh_flags &= ~FCMH_READAHEAD;
+		f->fcmh_flags &= ~FCMH_IOD_READAHEAD;
 		lc_remove(&sli_readaheadq, fii);
 
 		if (!fcmh_2_nseq(f)) {

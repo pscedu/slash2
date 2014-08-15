@@ -90,8 +90,7 @@ struct fidc_membh {
 #define	FCMH_CTOR_FAILED	(1 <<  9)	/* constructor func failed */
 #define	FCMH_BUSY		(1 << 10)	/* fcmh being processed */
 #define	FCMH_DELETED		(1 << 11)	/* fcmh has been deleted */
-#define	FCMH_READAHEAD		(1 << 12)	/* fcmh has pending readahead */
-#define	_FCMH_FLGSHFT		(1 << 13)
+#define	_FCMH_FLGSHFT		(1 << 12)
 
 /* number of seconds in which attribute times out */
 #define FCMH_ATTR_TIMEO		8

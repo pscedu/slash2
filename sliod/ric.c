@@ -339,8 +339,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	fii = fcmh_2_fii(f);
 	if (fcmh_2_off(f) == mq->offset || mq->offset == 0) {
 		fcmh_2_nseq(f)++;
-		if (!(f->fcmh_flags & FCMH_READAHEAD)) {
-			f->fcmh_flags |= FCMH_READAHEAD;
+		if (!(f->fcmh_flags & FCMH_IOD_READAHEAD)) {
+			f->fcmh_flags |= FCMH_IOD_READAHEAD;
 			lc_addtail(&sli_readaheadq, fii);
 			fcmh_op_start_type(f, FCMH_OPCNT_READAHEAD);
 		}
