@@ -59,6 +59,7 @@ int			 setid;
 int			 setsize = 1;
 int			 show;
 int			 recurse;
+int			 headers = 1;
 pthread_barrier_t	 barrier;
 struct psc_dynarray	 checkpoints;
 struct psc_lockedlist	 excludes = PLL_INIT(&excludes, struct path, lentry);
@@ -77,11 +78,12 @@ const char *progname;
 #define	K_FSIZE		(1 <<  5)
 #define	K_NBLKS		(1 <<  6)
 #define	K_NREPLS	(1 <<  7)
-#define	K_REPLPOL	(1 <<  8)
-#define	K_REPLS		(1 <<  9)
-#define	K_UID		(1 << 10)
-#define	K_VERSION	(1 << 11)
-#define	K_XCRC		(1 << 12)
+#define	K_REPLBLKS	(1 <<  8)
+#define	K_REPLPOL	(1 <<  9)
+#define	K_REPLS		(1 << 10)
+#define	K_UID		(1 << 11)
+#define	K_VERSION	(1 << 12)
+#define	K_XCRC		(1 << 13)
 #define	K_DEF		((~0) & ~K_BMAPS)
 
 const char *show_keywords[] = {
@@ -93,6 +95,7 @@ const char *show_keywords[] = {
 	"fsize",
 	"nblks",
 	"nrepls",
+	"replblks",
 	"replpol",
 	"repls",
 	"uid",
@@ -120,6 +123,19 @@ struct f {
 	struct psc_listentry	 lentry;
 	int			 ftyp;
 };
+
+void
+display(FILE *fp, const char *label, const char *fmt, ...)
+{
+	va_list ap;
+
+	if (headers && label)
+		fprintf(fp, "  %s ", label);
+	va_start(ap, fmt);
+	vfprintf(fp, fmt, ap);
+	va_end(ap);
+	fprintf(fp, "\n");
+}
 
 int
 dumpfid(struct f *f)
@@ -162,12 +178,14 @@ dumpfid(struct f *f)
 	}
 
 	psc_crc64_calc(&crc, &ino, sizeof(ino));
-	fprintf(fp, "%s:\n", f->fn);
+	if (headers)
+		display(fp, NULL, "%s:", f->fn);
 	if (show & K_CRC)
-		fprintf(fp, "  crc: %s %"PSCPRIxCRC64" %"PSCPRIxCRC64"\n",
-		    crc == od_crc ? "OK" : "BAD", crc, od_crc);
+		display(fp, "crc", "%s %"PSCPRIxCRC64" "
+		    "%"PSCPRIxCRC64, crc == od_crc ? "OK" : "BAD",
+		    crc, od_crc);
 	if (show & K_VERSION)
-		fprintf(fp, "  version %u\n", ino.ino_version);
+		display(fp, "version", "%u", ino.ino_version);
 	if (show & K_FLAGS)
 		fprintf(fp, "  flags %#x\n", ino.ino_flags);
 	if (show & K_BSZ)
@@ -183,6 +201,15 @@ dumpfid(struct f *f)
 		else {
 			tbuf[rc] = '\0';
 			fprintf(fp, "  fsize %s\n", tbuf);
+		}
+	}
+	if (show & K_NBLKS && rc > 0) {
+		rc = fgetxattr(fd, SLXAT_NBLKS, tbuf, sizeof(tbuf) - 1);
+		if (rc == -1)
+			warn("%s: getxattr %s", f->fn, SLXAT_NBLKS);
+		else {
+			tbuf[rc] = '\0';
+			display(fp, "nblks", "%s", tbuf);
 		}
 	}
 	if (show & K_FID) {
@@ -230,8 +257,8 @@ dumpfid(struct f *f)
 			    inox.inox_repls[j - SL_DEF_REPLICAS].bs_id);
 		fprintf(fp, "\n");
 	}
-	if (show & K_NBLKS) {
-		fprintf(fp, "  nblks ");
+	if (show & K_REPLBLKS) {
+		fprintf(fp, "  replblks ");
 		for (j = 0; j < nr; j++)
 			fprintf(fp, "%s%"PRIu64, j ? "," : "",
 			    j < SL_DEF_REPLICAS ?
@@ -449,7 +476,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-PR] [-O file] [-o keys] [-S id:size] "
+	    "usage: %s [-HPR] [-O file] [-o keys] [-S id:size] "
 	    "[-t nthr] [-x exclude] file ...\n",
 	    progname);
 	exit(1);
@@ -467,8 +494,11 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "O:o:PRS:t:x:")) != -1) {
+	while ((c = getopt(argc, argv, "HO:o:PRS:t:x:")) != -1) {
 		switch (c) {
+		case 'H':
+			headers = 0;
+			break;
 		case 'O':
 			outfn = optarg;
 			break;
