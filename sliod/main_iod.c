@@ -147,6 +147,7 @@ slihealththr_main(struct psc_thread *thr)
 	while (pscthr_run(thr)) {
 		ts.tv_sec += 60;
 		psc_waitq_waitabs(&dummy, NULL, &ts);
+		errno = 0;
 		rc = system(nodeResm->resm_res->res_selftest);
 
 		/*
@@ -156,10 +157,15 @@ slihealththr_main(struct psc_thread *thr)
 		 * 1		serious error: do not use
 		 * 2		degraded: avoid
 		 */
-		rc = WIFSIGNALED(rc) ? 1 : WEXITSTATUS(rc);
+		if (rc == -1)
+			rc = -errno;
+		else if (WIFEXITED(rc))
+			rc = WEXITSTATUS(rc);
 		if (sli_selftest_rc != rc) {
-			psclog_notice("health changed from %d to %d",
-			    sli_selftest_rc, rc);
+			psclog_notice("health changed from %d to %d "
+			    "(error=%d)", sli_selftest_rc, rc, errno);
+
+			sli_selftest_rc = rc;
 
 			PLL_LOCK(&sl_clients);
 			PLL_FOREACH(csvc, &sl_clients) {
@@ -170,7 +176,6 @@ slihealththr_main(struct psc_thread *thr)
 			}
 			PLL_ULOCK(&sl_clients);
 		}
-		sli_selftest_rc = rc;
 	}
 }
 
