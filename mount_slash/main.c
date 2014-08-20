@@ -1380,7 +1380,7 @@ msl_readdir_error(struct fidc_membh *d, struct dircache_page *p, int rc)
 {
 	FCMH_LOCK(d);
 	p->dcp_refcnt--;
-	DBGPR_DIRCACHEPG(PLL_DEBUG, p, "error rc=%d", rc);
+	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "error rc=%d", rc);
 	if (p->dcp_flags & DIRCACHEPGF_LOADING) {
 		p->dcp_flags &= ~DIRCACHEPGF_LOADING;
 		p->dcp_flags |= DIRCACHEPGF_LOADED;
@@ -1424,7 +1424,7 @@ msl_readdir_finish(struct fidc_membh *d, struct dircache_page *p,
 			fcmh_op_done(f);
 		}
 	}
-	DBGPR_DIRCACHEPG(PLL_DEBUG, p, "registering");
+	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "registering");
 	dircache_reg_ents(d, p, nents, iov[0].iov_base, size, eof);
 }
 
@@ -1459,7 +1459,7 @@ msl_readdir_cb(struct pscrpc_request *rq, struct pscrpc_async_args *av)
 		} else {
 			FCMH_LOCK(d);
 			p->dcp_refcnt--;
-			DBGPR_DIRCACHEPG(PLL_DEBUG, p, "decr");
+			PFLOG_DIRCACHEPG(PLL_DEBUG, p, "decr");
 		}
 	}
 	fcmh_op_done_type(d, FCMH_OPCNT_READDIR);
@@ -1497,7 +1497,7 @@ msl_readdir_issue(struct pscfs_clientctx *pfcc, struct fidc_membh *d,
 	rq->rq_async_args.pointer_arg[MSL_READDIR_CBARG_CSVC] = csvc;
 	rq->rq_async_args.pointer_arg[MSL_READDIR_CBARG_FCMH] = d;
 	rq->rq_async_args.pointer_arg[MSL_READDIR_CBARG_PAGE] = p;
-	DBGPR_DIRCACHEPG(PLL_DEBUG, p, "issuing");
+	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "issuing");
 	rc = SL_NBRQSET_ADD(csvc, rq);
 	if (!rc)
 		return (0);

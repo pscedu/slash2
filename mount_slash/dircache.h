@@ -134,7 +134,7 @@ struct dircache_expire {
 		(dexp)->dexp_hard.tv_sec -= DIRCACHEPG_HARD_TIMEO;	\
 	} while (0)
 
-#define DBGPR_DIRCACHEPG(lvl, p, fmt, ...)				\
+#define PFLOG_DIRCACHEPG(lvl, p, fmt, ...)				\
 	psclog((lvl), "dcp@%p off %"PSCPRIdOFFT" rf %d gen %"PRId64" "	\
 	    "sz %zu fl %#x nextoff %"PSCPRIdOFFT": " fmt,		\
 	    (p), (p)->dcp_off, (p)->dcp_refcnt, (p)->dcp_dirgen,	\

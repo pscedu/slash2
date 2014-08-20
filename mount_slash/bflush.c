@@ -36,6 +36,7 @@
 #include "pfl/dynarray.h"
 #include "pfl/fault.h"
 #include "pfl/fcntl.h"
+#include "pfl/fsmod.h"
 #include "pfl/listcache.h"
 #include "pfl/log.h"
 #include "pfl/rpc.h"
@@ -43,7 +44,6 @@
 #include "pfl/rsx.h"
 #include "pfl/tree.h"
 #include "pfl/treeutil.h"
-#include "pfl/fsmod.h"
 
 #include "bmap.h"
 #include "bmap_cli.h"
@@ -57,7 +57,7 @@ struct timespec			 bmapFlushWaitSecs = { 1, 0L };
 struct timespec			 bmapFlushDefMaxAge = { 0, 10000000L };	/* 10 milliseconds */
 struct psc_listcache		 bmapFlushQ;
 struct psc_listcache		 bmapTimeoutQ;
-struct psc_compl		 rpcComp = PSC_COMPL_INIT;
+struct psc_compl		 slc_rpc_compl = PSC_COMPL_INIT;
 
 struct pscrpc_nbreqset		*pndgBmaplsReqs;	/* bmap lease */
 struct pscrpc_nbreqset		*pndgBmapRlsReqs;	/* bmap release */
@@ -287,8 +287,9 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 
 	if (rq->rq_timeout < 0) {
 		rc = -EAGAIN;
-		DEBUG_REQ(PLL_ERROR, rq, "negative timeout: off=%u sz=%u op=%u",
-			  mq->offset, mq->size, mq->op);
+		DEBUG_REQ(PLL_ERROR, rq,
+		    "negative timeout: off=%u sz=%u op=%u",
+		    mq->offset, mq->size, mq->op);
 		OPSTAT_INCR(SLC_OPST_FLUSH_RPC_EXPIRE);
 		goto out;
 	}
@@ -296,7 +297,7 @@ bmap_flush_create_rpc(struct bmpc_write_coalescer *bwc,
 	rq->rq_interpret_reply = bmap_flush_rpc_cb;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_CSVC] = csvc;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_RESM] = m;
-	pscrpc_req_setcompl(rq, &rpcComp);
+	pscrpc_req_setcompl(rq, &slc_rpc_compl);
 
 	mq->offset = bwc->bwc_soff;
 	mq->size = bwc->bwc_size;
@@ -963,7 +964,7 @@ void
 msbmapflushrpcthr_main(struct psc_thread *thr)
 {
 	while (pscthr_run(thr)) {
-		psc_compl_waitrel_s(&rpcComp, 1);
+		psc_compl_waitrel_s(&slc_rpc_compl, 1);
 		pscrpc_nbreqset_reap(pndgWrtReqs);
 		pscrpc_nbreqset_reap(pndgReadaReqs);
 		pscrpc_nbreqset_reap(pndgBmaplsReqs);

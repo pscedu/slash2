@@ -102,7 +102,7 @@ _dircache_free_page(const struct pfl_callerinfo *pci,
 	PSCFREE(p->dcp_dents_off);
 	PSCFREE(p->dcp_base);
 	PSCFREE(p->dcp_base0);
-	DBGPR_DIRCACHEPG(PLL_DEBUG, p, "free dir=%p", d);
+	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "free dir=%p", d);
 	psc_pool_return(dircache_pool, p);
 
 	fcmh_wake_locked(d);
@@ -356,7 +356,7 @@ dircache_new_page(struct fidc_membh *d, off_t off, int wait)
 	psc_assert((p->dcp_flags & DIRCACHEPGF_LOADING) == 0);
 	p->dcp_flags |= DIRCACHEPGF_LOADING;
 	p->dcp_refcnt++;
-	DBGPR_DIRCACHEPG(PLL_DEBUG, p, "incref");
+	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "incref");
 
  out:
 	FCMH_ULOCK(d);
@@ -436,7 +436,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 		PSCFREE(base0);
 		PSCFREE(base);
 		p->dcp_refcnt--;
-		DBGPR_DIRCACHEPG(PLL_DEBUG, p, "already loaded");
+		PFLOG_DIRCACHEPG(PLL_DEBUG, p, "already loaded");
 		FCMH_ULOCK(d);
 		return;
 	}
@@ -461,7 +461,7 @@ dircache_reg_ents(struct fidc_membh *d, struct dircache_page *p,
 	if (eof)
 		p->dcp_flags |= DIRCACHEPGF_EOF;
 	p->dcp_refcnt--;
-	DBGPR_DIRCACHEPG(PLL_DEBUG, p, "decref");
+	PFLOG_DIRCACHEPG(PLL_DEBUG, p, "decref");
 	fcmh_wake_locked(d);
 	FCMH_ULOCK(d);
 }
@@ -473,7 +473,7 @@ dircache_ent_dbgpr(struct dircache_page *p, struct dircache_ent *e,
 	struct dircache_page **pp = a;
 
 	if (*pp != p) {
-		DBGPR_DIRCACHEPG(PLL_MAX, p, "");
+		PFLOG_DIRCACHEPG(PLL_MAX, p, "");
 		*pp = p;
 	}
 
