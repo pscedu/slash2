@@ -1206,7 +1206,7 @@ msl_reada_rpc_launch(struct psc_dynarray *bmpces, int startpage, int npages,
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BIORQ] = NULL;
 	rq->rq_async_args.pointer_arg[MSL_CBARG_BMAP] = b;
 	rq->rq_interpret_reply = msl_readahead_cb0;
-	pscrpc_req_setcompl(rq, &rpcComp);
+	pscrpc_req_setcompl(rq, &slc_rpc_compl);
 
 	rc = pscrpc_nbreqset_add(pndgReadaReqs, rq);
 	if (!rc)
