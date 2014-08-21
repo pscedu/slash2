@@ -125,13 +125,18 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		return (mp->rc);
 	}
 
-	/* test/benchmarking mode */
+	/* network stack test/benchmarking mode */
 	if (mq->flags & SRM_IOF_BENCH) {
+		static struct psc_spinlock lock = SPINLOCK_INIT;
+
+		spinlock(&lock);
 		if (mq->size > sli_benchmark_bufsiz) {
 			sli_benchmark_buf = psc_realloc(
 			    sli_benchmark_buf, mq->size, 0);
 			sli_benchmark_bufsiz = mq->size;
 		}
+		freelock(&lock);
+
 		iovs[0].iov_base = sli_benchmark_buf;
 		iovs[0].iov_len = mq->size;
 		mp->rc = slrpc_bulkserver(rq, rw == SL_WRITE ?
@@ -249,12 +254,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		    PLL_WARN : PLL_DIAG, slvr[i],
 		    "post io_prep rw=%s rv=%zd",
 		    rw == SL_WRITE ? "wr" : "rd", rv);
-		if (rv) {
-			if (rv == -SLERR_AIOWAIT)
-				needaio = 1;
-			else
-				PFL_GOTOERR(out, rc = mp->rc = rv);
-		}
+		if (rv == -SLERR_AIOWAIT)
+			needaio = 1;
+		else if (rv)
+			PFL_GOTOERR(out, rc = mp->rc = rv);
 
 		/*
 		 * mq->offset is the offset into the bmap, here we must
@@ -264,7 +267,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		tsize -= iovs[i].iov_len = len[i];
 
 		/*
-		 * Avoid more complicated errors within lnet by ensuring
+		 * Avoid more complicated errors within LNET by ensuring
 		 * that len is non-zero.
 		 */
 		psc_assert(iovs[i].iov_len > 0);
@@ -301,7 +304,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 				SLVR_ULOCK(slvr[i]);
 				DEBUG_SLVR(PLL_DIAG, slvr[i], "aio wait");
 				rc = mp->rc = -SLERR_AIOWAIT;
-				pscrpc_msg_add_flags(rq->rq_repmsg, MSG_ABORT_BULK);
+				pscrpc_msg_add_flags(rq->rq_repmsg,
+				    MSG_ABORT_BULK);
 				goto aio_out;
 			}
 		}
