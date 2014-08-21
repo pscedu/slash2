@@ -257,7 +257,7 @@ sli_fcmh_reopen(struct fidc_membh *f, const struct slash_fidgen *fg)
 		 * the MDS.
 		 */
 		DEBUG_FCMH(PLL_INFO, f, "request from old gen "
-		    "(%"SLPRI_FGEN")", fg->fg_gen);
+		    "("SLPRI_FGEN")", fg->fg_gen);
 	}
 	return (rc);
 }
@@ -312,9 +312,9 @@ sli_fcmh_dtor(__unusedx struct fidc_membh *f)
 }
 
 struct sl_fcmh_ops sl_fcmh_ops = {
-	sli_fcmh_ctor,		/* sfop_ctor */		
-	sli_fcmh_dtor,		/* sfop_dtor */		
-	NULL,			/* sfop_getattr */	
-	NULL,			/* sfop_postsetattr */	
-	sli_fcmh_reopen		/* sfop_modify */	
+	sli_fcmh_ctor,		/* sfop_ctor */
+	sli_fcmh_dtor,		/* sfop_dtor */
+	NULL,			/* sfop_getattr */
+	NULL,			/* sfop_postsetattr */
+	sli_fcmh_reopen		/* sfop_modify */
 };
