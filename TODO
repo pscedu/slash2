@@ -481,7 +481,6 @@ reimport
 - discover which JBOD/physical characteristics from sense3 errors
     - write generic archiver visual monitor
 - vtune license for profiling
-- illusion2 can use more RAM?
 - open file descriptors after UNLINK run into risk of accessing
   reclaimed data on the IOS
 - change notion of mtime clocks in readdir to deal with time
@@ -511,6 +510,12 @@ reimport
    - after successful first I/O: cache all user requests in memory
 - there shouldnt be two fs_root options: one for gconf and one for res,
   make it just for res
+- add psclog for slashd to get hostname of client in rmc
+- grace is reporting bogus inums in /arc
+- implement lz4 as compression in zfs
+- illusion2 can use more of its RAM
+- bmap.odtab, ptrunc.odt, op-* should not be on SSD
+- why are cursor and bmap.odt getting updated?
 
 - add crcalg=old option
 
